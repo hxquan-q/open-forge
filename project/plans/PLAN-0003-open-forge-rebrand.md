@@ -1,7 +1,7 @@
 ---
 id: PLAN-0003
 type: plan
-status: draft
+status: in_progress
 priority: P0
 requirement: REQ-0003
 owner: release/desktop/brand
@@ -28,3 +28,9 @@ A. 决策冻结
 采用“薄壳 fork + 品牌外置 + 增量产品层”：尽量不修改上游高频文件，新功能通过新增包、扩展点和独立 Renderer domain 接入。
 
 在域名、更新基建和 Marketplace 坐标未冻结前，不进入发布身份施工。
+
+## 进度
+
+- **A 决策冻结**：完成（TASK-0009 / ISSUE-0001，15 项最终值已定）。
+- **B 构建与更新身份**：进行中——更新链硬校验与打包坐标已落实（generic fail-closed、开源默认 `hxquan-q/open-forge`、workflow 注入、Marketplace 常量与 Linux 元数据）；剩余 prepare-pack 应用身份、installer.iss AppId/参数名、`openforge://` scheme、helper 足迹、数据目录迁移。
+- **C–F**：未开始。
