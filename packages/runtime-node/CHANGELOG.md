@@ -6,6 +6,9 @@ All notable changes to `@vetta/runtime-node` are documented in this file.
 
 ### Added
 
+- `FileConversationRepository` 新增追加写入缓存（LRU，`documentCacheLimit` 缺省 16）：文件锁内以字节数为失效键复用已解析
+  document，长会话的每次事件追加不再全量重读整份 JSONL；任何外部写入都会改变文件大小并自动回退全量读取，版本冲突与
+  损坏检测语义不变，旧 schema 会话不缓存。
 - 新增本地模型网关会话亲和性 Stream 适配器，由 Node 宿主显式把 Runtime Session 映射为
   `X-Session-ID`；远程 Provider 请求与调用方已有 Header 保持不变。
 - HTTP MCP Client 在 initialize 时调用 runtime-only `resolveUrl`，后续鉴权错误使用解析后的地址。
