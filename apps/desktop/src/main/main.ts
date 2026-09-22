@@ -6,7 +6,7 @@ import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
 import { app, type BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, protocol, session, shell } from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
-import { isCloudBuildEnabled } from "../shared/feature-flags.js";
+import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
 import { stopAllOpenMarketplaceMcpRuntimes } from "./abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
 import { ActionApprovalBroker } from "./app-actions/approval-broker.js";
 import { createAppActionSystem } from "./app-actions/index.js";
@@ -848,8 +848,10 @@ if (!gotSingleLock) {
 				}, 500);
 				deferredStartupTimer.unref?.();
 
-				initializePetWindow();
-				startPetIdleGuard();
+				if (isDesktopPetEnabled()) {
+					initializePetWindow();
+					startPetIdleGuard();
+				}
 				// 快捷面板：预创建隐藏窗口（按需 show/hide，不每次重建），随后据配置启停双击功能键监听。
 				// registerAllIpc 已注册快捷面板 IPC（含 RELOAD_HOTKEY），这里仅补窗口与初次触发器同步。
 				createQuickPanelWindow();

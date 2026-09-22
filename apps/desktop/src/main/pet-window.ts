@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions, screen } from "electron";
+import { isDesktopPetEnabled } from "../shared/feature-flags.js";
 import { PET_ACTIONS } from "../shared/pet-actions.js";
 import { getPetBubbleStyle, type PetBubbleStyleId } from "../shared/pet-bubbles.js";
 import {
@@ -452,7 +453,7 @@ function getLivePetWindow(): BrowserWindow | undefined {
 function getOrCreateEnabledPetWindow(): BrowserWindow | undefined {
 	const live = getLivePetWindow();
 	if (live) return live;
-	if (!petConfig.enabled) return undefined;
+	if (!isDesktopPetEnabled() || !petConfig.enabled) return undefined;
 	return createPetWindow();
 }
 
@@ -462,7 +463,7 @@ export function getPetConfig(): PetConfig {
 
 export function initializePetWindow(): BrowserWindow | null {
 	petConfig = getStoredPetConfig();
-	if (!petConfig.enabled) {
+	if (!isDesktopPetEnabled() || !petConfig.enabled) {
 		log.info("startup skipped", petConfig);
 		return null;
 	}
@@ -596,7 +597,8 @@ export function createPetWindow(): BrowserWindow {
 	return petWindow;
 }
 
-export function showPetWindow(): BrowserWindow {
+export function showPetWindow(): BrowserWindow | undefined {
+	if (!isDesktopPetEnabled()) return undefined;
 	const win = petWindow && !petWindow.isDestroyed() ? petWindow : createPetWindow();
 	if (!win.isVisible()) {
 		win.showInactive();
@@ -611,7 +613,7 @@ export function showPetWindow(): BrowserWindow {
 export function applyPetConfig(config: PetConfig): void {
 	petConfig = normalizePetConfig(config);
 
-	if (!petConfig.enabled) {
+	if (!isDesktopPetEnabled() || !petConfig.enabled) {
 		destroyPetWindow();
 		log.debug("config applied destroyed", petConfig);
 		return;

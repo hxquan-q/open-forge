@@ -35,6 +35,11 @@ describe("设置标签可见性", () => {
 			expect(visibleKeys(context)).toEqual(expect.arrayContaining(["general", "appearance", "models"]));
 		}
 	});
+
+	it("桌宠功能下线时 pet 标签不可见（VETTA_DESKTOP_PET_ENABLED 默认关闭）", () => {
+		expect(visibleKeys({ isMac: true })).not.toContain("pet");
+		expect(visibleKeys({ isWindows: true })).not.toContain("pet");
+	});
 });
 
 describe("更多选项入口", () => {
