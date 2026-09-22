@@ -3,7 +3,7 @@ import { render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { codeToHtml } = vi.hoisted(() => ({
-	codeToHtml: vi.fn(async () => "<pre>highlighted</pre>"),
+	codeToHtml: vi.fn(async (_code: string, _options: unknown) => "<pre>highlighted</pre>"),
 }));
 vi.mock("shiki", () => ({
 	codeToHtml,
