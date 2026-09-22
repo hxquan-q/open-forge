@@ -32,5 +32,5 @@ A. 决策冻结
 ## 进度
 
 - **A 决策冻结**：完成（TASK-0009 / ISSUE-0001，15 项最终值已定）。
-- **B 构建与更新身份**：进行中——更新链硬校验与打包坐标已落实（generic fail-closed、开源默认 `hxquan-q/open-forge`、workflow 注入、Marketplace 常量与 Linux 元数据）；剩余 prepare-pack 应用身份、installer.iss AppId/参数名、`openforge://` scheme、helper 足迹、数据目录迁移。
-- **C–F**：未开始。
+- **B 构建与更新身份**：完成——更新链硬校验（generic fail-closed、开源默认 `hxquan-q/open-forge`）、Marketplace 常量、打包身份（`prepare-pack`、electron-builder、`installer.iss`、Windows launcher/产物名、Linux 元数据）、`openforge://` scheme（桌面注册 + OAuth + 配对 + Android 解析）均已切换；E 阶段的数据目录（`~/.openforge` + `~/.vetta` 一次性 rename 迁移 + dev 变体）与远端 helper 足迹（`openforge-ssh-helper` + `~/.cache/openforge/helper/` + 旧目录清理）提前并入本阶段完成。
+- **C 品牌外置骨架 / D 用户可见文案 / F 文档与社区**：未开始。E 阶段仅剩遗留项复核（如有）。
