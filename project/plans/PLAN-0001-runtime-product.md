@@ -29,18 +29,28 @@ Task 不创建第二套 Agent Loop；Artifact 不创建第二套文件事实源�
 
 详细阶段、Owner 和禁止事项以 [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md) 为研究来源。
 
-## 任务分解（2026-09-23）
+## 任务分解（2026-09-22）
 
-- TASK-0015 阶段 1：Task/Artifact 最小纵向切片（ready，依赖 TASK-0008）
-- TASK-0016 阶段 2：Permission/Approval L0-L4 与 Project Trust（draft）
-- TASK-0017 阶段 3a：work 模式骨架 + 文档处理入口（draft）
-- TASK-0018 阶段 3b：work 批处理/研究/数据分析入口（draft）
-- TASK-0019 阶段 4：coding 模式增强（draft）
-- TASK-0020 阶段 5：共享项目目录约定（draft）
-- TASK-0021 阶段 6：Plugin/Skill/MCP/Renderer 生态分层收口（draft）
-- TASK-0022 阶段 7：Pi Adapter 评估（blocked，ISSUE-0002 触发条件常设）
+- TASK-0015 阶段 1：Task/Artifact 最小纵向切片（in_progress；实现显式 Task API）；依赖 TASK-0008，不负责普通 Chat 自动升级。
+- TASK-0016 阶段 2：Permission/Approval L0-L4 与 Project Trust（draft，依赖 0015）。
+- TASK-0017 阶段 3a：Work Agent Profile/Prompt/Memory 基础（blocked：ISSUE-0005 的 Profile/mode 边界）。
+- TASK-0024：Desktop WorkspaceMode Shell 已完成；只管理项目布局，依赖 TASK-0023 的 IA 定稿。
+- TASK-0028 阶段 3a：文档处理纵向切片（blocked：ISSUE-0005/0006；依赖 0015、0016、0017、0024）。
+- TASK-0018 阶段 3b-1：分类/批量重命名文件整理（blocked：Work Profile/授权合同与文档入口）。
+- TASK-0025 阶段 3b-2：本地研究与来源整理（blocked：Work Profile/授权合同与文档入口）。
+- TASK-0026 阶段 3b-3：数据分析纵向切片（blocked：Work Profile/授权合同与文档入口）。
+- TASK-0019 阶段 4：Coding Profile、Diff/Review、Git/ETC 与 Test Artifact（blocked：mode/Profile 决策及 0015/0016）。
+- TASK-0020 阶段 5：`.vetta`/`.vetta-local` 项目共享目录、schema 与迁移（blocked：阶段 1–4 合同）。
+- TASK-0021 阶段 6a：Tool Catalog Profile/project-policy resolver（blocked：ISSUE-0005 与 Task 依赖）。
+- TASK-0027 阶段 6b：Plugin Artifact Renderer Registry（blocked，依赖 TASK-0015/0016/0020）。
+- TASK-0022 阶段 7：Pi Adapter 只读条件评估（blocked：ISSUE-0002；满足条件后另建实现 Task）。
 
 跨阶段 UI/UX 线（`exprot/ui-information-architecture.md`）：
 
-- TASK-0023：双模式 IA 与 Activity/Approval/Artifact 面板交互设计定稿（coordination-only）
-- TASK-0024：Desktop IA 骨架落地——Mode Switcher、双布局容器、面板插槽与空/错/取消态（串行，独占 root-layout）
+- TASK-0023：双模式 IA 与 Activity/Approval/Artifact 面板交互设计定稿（done）。
+- TASK-0024：Desktop WorkspaceMode Shell、Mode Switcher、WorkPanel 空态及 layout persistence（done；仅控制布局，不重配 Agent Profile）。
+
+待决策门：
+
+- ISSUE-0005：区分项目级 WorkspaceMode、会话级 `agentMode` 与 Tool/Memory Profile；决议前不按 Work/Coding 名称过滤工具。
+- ISSUE-0006：冻结何时从 Conversation 创建可恢复 Task；决议前不实现隐式升级。

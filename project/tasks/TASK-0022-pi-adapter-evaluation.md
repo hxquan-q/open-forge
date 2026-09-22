@@ -14,18 +14,19 @@ base_commit: forge/dev
 read_paths: [packages/runtime-core, exprot/kernel-replacement-feasibility.md]
 write_paths: []
 exclusive_paths: []
-depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0018, TASK-0019, TASK-0020, TASK-0021]
+depends_on: [TASK-0002, TASK-0008]
 conflicts_with: []
 integration_status: pending
-created: 2026-09-23
-updated: 2026-09-23
+created: 2026-09-22
+updated: 2026-09-22
 ---
 
 # Pi Adapter 评估（implementation-plan 阶段 7，条件触发）
 
 ## 目标
 
-仅当下列信号同时出现才启动（ISSUE-0002 已裁决当前不启动，触发条件常设）：
+本 Task 只负责只读评估是否满足 ISSUE-0002 的启动条件；不接入 Pi、不改 Runtime API。
+当前决策为暂不启动，只有证据显示以下条件全部满足才重新评审：
 
 - Vetta Engine 缺少重要能力且无法局部吸收；
 - 上游 Pi 能力有明确收益；
@@ -39,16 +40,14 @@ updated: 2026-09-23
 ### 并发评估
 
 - 结论：不支持（触发前只做观察，coordination-only）
-- 前置依赖：阶段 1-6 全部落地（差分基线需要完整产品面）
+- 前置依赖：TASK-0002 与 TASK-0008 的合同基线；是否需要额外产品流程基线由评估结论列明
 - 集成负责人：coordinator
 
-### 做（触发后）
+### 做（条件触发后，只做评估）
 
-1. `runtime-core` 增加通用 `createTurnEngine` 注入合同；
-2. 新建 Adapter 包，Runtime 不依赖 Pi；
-3. 映射消息、工具、Policy、Checkpoint、Abort、Observation、Error；
-4. 先在 CLI/测试宿主 A/B；
-5. 通过差分和生命周期门禁后才考虑 Desktop 灰度。
+1. 逐条收集 ISSUE-0002 的第一方证据和当前 Vetta Engine 基线；
+2. 将可量化收益、无法局部吸收的能力缺口及回退边界写入 `project/research/`；
+3. 更新 ISSUE-0002 的决策状态；若评估批准接入，另建代码 Task 冻结 owner、公开合同、Adapter 包和测试矩阵。
 
 ### 不做
 
@@ -58,9 +57,9 @@ updated: 2026-09-23
 
 ## Given / When / Then
 
-- Given：触发条件被逐条核实并记录在 ISSUE-0002 更新里；
-- When：以 `TurnEnginePort` Adapter 接入 Pi 并在测试宿主跑差分；
-- Then：行为合同与生命周期测试全绿、可独立回退、收益量化报告归档 `project/research/`。
+- Given：外部/源码证据显示 ISSUE-0002 的所有条件可能满足；
+- When：只读评估并将结论、差分基线缺口与收益证据归档；
+- Then：ISSUE-0002 更新为启动或维持不启动，若启动则另建实现 Task；本 Task 不修改生产执行路径。
 
 ## 必须保持
 
@@ -70,8 +69,8 @@ updated: 2026-09-23
 
 ## 测试与验证
 
-- 定向：差分行为合同（复用 TASK-0002 fixture 基线）、生命周期回归；
-- 质量检查：`bun run check:quick`、全量 check。
+- 验证：复核 TASK-0002 Provider 流 fixture 与 TASK-0008 Task 合同的覆盖边界；若不足，列为新实现 Task 的前置验证，不声称其已构成 Turn Engine 差分基线；
+- 本 Task 不改代码，不运行代码测试；核对研究链接与 ISSUE-0002 更新即可。
 
 ## 交付记录
 
