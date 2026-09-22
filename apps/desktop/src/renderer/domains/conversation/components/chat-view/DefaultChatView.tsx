@@ -1,11 +1,13 @@
 import { ActivityPanel, CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { BottomPanelHost } from "@domains/bottom-panel/components/BottomPanelHost";
+import { WorkWorkspacePanel } from "@domains/workspace-mode";
 import { cn } from "@shared/lib/utils";
 import { PerfSendProfiler } from "@shared/lib/perf-send";
-import type { ChatConversationItem } from "@shared/store/atoms";
+import { activityPanelOpenAtom, type ChatConversationItem, type WorkspaceMode } from "@shared/store/atoms";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import type { ActivityTabId } from "@domains/activity-panel/registry/types";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
+import { useAtomValue } from "jotai";
 import { memo, type ReactNode } from "react";
 import { ChatExportHost } from "../ChatExportHost";
 
@@ -26,6 +28,11 @@ export interface DefaultChatViewProps {
 		/** Hosts that do not drive the global scenario atom (Team) pass their own scenario. */
 		readonly pluginScenario?: ConversationScenario;
 	};
+	/**
+	 * 工作区模式（IA 定稿 §2/§3）：work 时右栏换成 WorkWorkspacePanel 插槽面板，
+	 * coding（默认）保持现有 ActivityPanel。Team 等自定义 activity 的宿主不传此值。
+	 */
+	readonly workspaceMode?: WorkspaceMode;
 }
 
 function sameIds(left: readonly string[], right: readonly string[]): boolean {
@@ -49,7 +56,21 @@ function sameActivity(
 }
 
 const ActivityColumn = memo(
-	function ActivityColumn({ workspace, activity }: Pick<DefaultChatViewProps, "workspace" | "activity">) {
+	function ActivityColumn({
+		workspace,
+		activity,
+		workspaceMode,
+	}: Pick<DefaultChatViewProps, "workspace" | "activity" | "workspaceMode">) {
+		const activityPanelOpen = useAtomValue(activityPanelOpenAtom);
+		// work 模式右栏默认是插槽面板（骨架阶段各节渲染空态）；显式 activity 配置的宿主
+		//（Team 会话）不归模式切换管。活动面板被显式打开时（文件预览、浏览器、插件 tab）
+		// 仍让位给它——work 面板是右栏默认内容，不是预览能力的替代。
+		if (workspaceMode === "work" && !activity) {
+			if (activityPanelOpen) {
+				return <CurrentScenarioActivityPanel workspace={workspace} />;
+			}
+			return <WorkWorkspacePanel />;
+		}
 		return activity ? (
 			<ActivityPanel
 				workspace={workspace}
@@ -65,7 +86,8 @@ const ActivityColumn = memo(
 		previous.workspace.id === next.workspace.id &&
 		previous.workspace.cwd === next.workspace.cwd &&
 		sameIds(previous.workspace.runtimeIds, next.workspace.runtimeIds) &&
-		sameActivity(previous.activity, next.activity),
+		sameActivity(previous.activity, next.activity) &&
+		previous.workspaceMode === next.workspaceMode,
 );
 
 export function DefaultChatView({
@@ -76,6 +98,7 @@ export function DefaultChatView({
 	rootClassName,
 	exportState,
 	activity,
+	workspaceMode,
 }: DefaultChatViewProps): JSX.Element {
 	return (
 		<PerfSendProfiler id="ChatView(total)">
@@ -98,7 +121,7 @@ export function DefaultChatView({
 						 */}
 						<BottomPanelHost />
 					</div>
-					<ActivityColumn workspace={workspace} activity={activity} />
+					<ActivityColumn workspace={workspace} activity={activity} workspaceMode={workspaceMode} />
 				</div>
 			</div>
 		</PerfSendProfiler>

@@ -1,13 +1,34 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { getDefaultStore } from "jotai";
+import { activityPanelOpenAtom } from "@shared/store/atoms";
 import { describe, expect, it, vi } from "vitest";
 import { DefaultChatView, ChatComposer, ChatError } from "./DefaultChatView";
+
+vi.hoisted(() => {
+	// activity-atoms 在模块初始化即读 window.innerWidth 与 localStorage（node 环境无 DOM）。
+	const storage = new Map<string, string>();
+	const g = globalThis as Record<string, unknown>;
+	g.window = { innerWidth: 1200 };
+	g.localStorage = {
+		getItem: (key: string) => storage.get(key) ?? null,
+		setItem: (key: string, value: string) => void storage.set(key, String(value)),
+		removeItem: (key: string) => void storage.delete(key),
+		clear: () => storage.clear(),
+		key: () => null,
+		length: 0,
+	};
+});
 
 const workspace = { id: "conversation:test", cwd: null, runtimeIds: [] };
 
 vi.mock("@domains/activity-panel/components/ActivityPanel", () => ({
 	ActivityPanel: () => createElement("aside", { "data-testid": "activity-panel" }),
 	CurrentScenarioActivityPanel: () => createElement("aside", { "data-testid": "activity-panel" }),
+}));
+
+vi.mock("@domains/workspace-mode/components/WorkWorkspacePanel", () => ({
+	WorkWorkspacePanel: () => createElement("aside", { "data-testid": "work-panel" }),
 }));
 
 vi.mock("@domains/bottom-panel/components/BottomPanelHost", () => ({
@@ -58,6 +79,49 @@ describe("DefaultChatView layout", () => {
 		// 不会横穿到右侧活动面板底下把两列看成一块。
 		expect(bottomPanel).toBeGreaterThan(inputBar);
 		expect(bottomPanel).toBeLessThan(activityPanel);
+	});
+
+	it("work 模式右栏换成工作面板；活动面板打开时仍让位给预览", () => {
+		const workHtml = renderToStaticMarkup(
+			<DefaultChatView messages={[]} workspace={workspace} workspaceMode="work">
+				<div />
+			</DefaultChatView>,
+		);
+		expect(workHtml).toContain('data-testid="work-panel"');
+		expect(workHtml).not.toContain('data-testid="activity-panel"');
+
+		// 文件预览/浏览器等显式打开活动面板时，work 面板让位——预览能力不回退。
+		getDefaultStore().set(activityPanelOpenAtom, true);
+		const previewHtml = renderToStaticMarkup(
+			<DefaultChatView messages={[]} workspace={workspace} workspaceMode="work">
+				<div />
+			</DefaultChatView>,
+		);
+		getDefaultStore().set(activityPanelOpenAtom, false);
+		expect(previewHtml).toContain('data-testid="activity-panel"');
+		expect(previewHtml).not.toContain('data-testid="work-panel"');
+
+		const codingHtml = renderToStaticMarkup(
+			<DefaultChatView messages={[]} workspace={workspace} workspaceMode="coding">
+				<div />
+			</DefaultChatView>,
+		);
+		expect(codingHtml).toContain('data-testid="activity-panel"');
+		expect(codingHtml).not.toContain('data-testid="work-panel"');
+
+		// Team 等自带 activity 配置的宿主在 work 模式下仍用自己的面板。
+		const hostHtml = renderToStaticMarkup(
+			<DefaultChatView
+				messages={[]}
+				workspace={workspace}
+				workspaceMode="work"
+				activity={{ enablePluginTabs: true }}
+			>
+				<div />
+			</DefaultChatView>,
+		);
+		expect(hostHtml).toContain('data-testid="activity-panel"');
+		expect(hostHtml).not.toContain('data-testid="work-panel"');
 	});
 
 	it("can compose a read-only feed without mounting a composer", () => {

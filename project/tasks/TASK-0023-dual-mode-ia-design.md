@@ -1,9 +1,9 @@
 ---
 id: TASK-0023
 type: task
-status: draft
+status: done
 priority: P1
-owner: apps-desktop
+owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0001
 source_issue:
@@ -12,13 +12,13 @@ branch: unassigned
 worktree: unassigned
 base_commit: forge/dev
 read_paths: [exprot/ui-information-architecture.md, exprot/mvp-scope.md, apps/desktop/DESIGN.md, apps/desktop/src/renderer]
-write_paths: [apps/desktop/surfaces, project]
+write_paths: [apps/desktop/.impeccable/surfaces, project]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
 integration_status: pending
-created: 2026-09-23
-updated: 2026-09-23
+created: 2026-09-22
+updated: 2026-09-22
 ---
 
 # work/coding 双模式信息架构与面板交互设计定稿（shape）
@@ -96,7 +96,7 @@ impeccable surface-brief 约定）或 `project/` 设计文档：
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：新增 `apps/desktop/.impeccable/surfaces/workspace-modes.md`（IA §1–§8 全节定稿 + Direction contract）；write_paths 由 `apps/desktop/surfaces` 调整为 impeccable 约定的 `.impeccable/surfaces/`。
+- 实际运行：`impeccable context --target apps/desktop`（确认 DESIGN.md 在位、Operate 模式）；IA §1–6 逐节覆盖核对。
+- 未运行及原因：无代码产出，不跑测试套件（按任务约定）。
+- 剩余风险：定稿基于骨架阶段假设；TASK-0015/0016 数据合同落地后 §4/§5 的字段密度可能需要微调。

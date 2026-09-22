@@ -9,6 +9,7 @@
 			"knowledgeHistory": "知识库加工历史",
 			"workflow": "工作流",
 			"plan": "计划",
+			"task": "任务",
 			"ports": "端口映射"
 		},
 		"backgroundTasks": {
@@ -52,6 +53,36 @@
 			"statusDone": "已完成",
 			"statusInProgress": "进行中",
 			"statusPending": "待办"
+		},
+		"task": {
+			"empty": "把当前会话升级为任务后，可以暂停、审阅和留存产出物",
+			"headline": "任务",
+			"create": "升级为任务",
+			"untitled": "未命名任务",
+			"turn": "执行回合：{{turn}}",
+			"resumeHint": "已暂停；发送下一条消息会自动继续这个任务",
+			"artifacts": "产出物",
+			"artifactMissing": "文件缺失",
+			"status": {
+				"draft": "草稿",
+				"planning": "规划中",
+				"awaitingApproval": "等待批准",
+				"running": "执行中",
+				"paused": "已暂停",
+				"awaitingReview": "等待审阅",
+				"completed": "已完成",
+				"failed": "失败",
+				"cancelled": "已取消",
+				"rejected": "已拒绝",
+				"changesRequested": "返工中"
+			},
+			"action": {
+				"pause": "暂停",
+				"approve": "通过",
+				"requestChanges": "要求返工",
+				"reject": "拒绝",
+				"cancel": "取消任务"
+			}
 		},
 		"ports": {
 			"heading": "远端服务",
@@ -1096,5 +1127,37 @@
 		"actionCreate": "新建页面",
 		"actionUpdate": "更新页面",
 		"originalLocation": "原位置：{{path}}"
+	},
+	"workspace": {
+		"mode": {
+			"coding": "编程",
+			"switch": "切换工作区模式",
+			"work": "工作"
+		},
+		"work": {
+			"artifacts": {
+				"empty": "生成的文档、表格等产物会出现在这里",
+				"title": "产物"
+			},
+			"dataset": {
+				"empty": "接入数据分析后，数据集预览会显示在这里",
+				"title": "数据集"
+			},
+			"plan": {
+				"empty": "任务开始后，执行计划与进度会显示在这里",
+				"title": "计划"
+			},
+			"review": {
+				"empty": "产物就绪后，在这里审阅并导出结果",
+				"title": "审阅与导出"
+			},
+			"retry": "重试",
+			"sectionCancelled": "该节内容已随任务取消，重新开始任务后可再次生成",
+			"sectionError": "该节内容加载失败",
+			"sources": {
+				"empty": "任务引用的文件与资料会列在这里",
+				"title": "来源资料"
+			}
+		}
 	}
 }
