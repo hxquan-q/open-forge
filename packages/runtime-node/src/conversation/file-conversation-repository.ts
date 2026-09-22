@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { appendFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
 	applyConversationDocumentCommand,
@@ -56,10 +56,16 @@ import {
 } from "./conversation-file-codec.js";
 import { acquireConversationFileLock } from "./conversation-file-lock.js";
 import { publishConversationFileExclusive } from "./conversation-file-publisher.js";
+import { type ConversationAppendState, ConversationWriteCache } from "./conversation-write-cache.js";
 import { nodeErrorCode } from "./node-error-code.js";
 
 export interface FileConversationRepositoryOptions {
 	readonly rootDir: string;
+	/**
+	 * 追加写入缓存的会话数上限（LRU）。每个活跃会话保留一份已解析 document，
+	 * 使长会话的每次事件追加不必全量重读 JSONL；缺省 16，必须是正整数。
+	 */
+	readonly documentCacheLimit?: number;
 }
 
 export class FileConversationRepository
@@ -67,10 +73,12 @@ export class FileConversationRepository
 {
 	private readonly rootDir: string;
 	private readonly queues = new Map<string, Promise<void>>();
+	private readonly writeCache: ConversationWriteCache;
 	private closed = false;
 
 	constructor(options: FileConversationRepositoryOptions) {
 		this.rootDir = resolve(options.rootDir);
+		this.writeCache = new ConversationWriteCache({ limit: options.documentCacheLimit ?? 16 });
 	}
 
 	/** Stable absolute path used by a composition root as the session identity path. */
@@ -155,21 +163,20 @@ export class FileConversationRepository
 		}
 		return this.exclusive(sessionId, () =>
 			this.withFileLock(sessionId, async () => {
-				const file = await this.readConversationFile(sessionId);
-				if (file.header.schemaVersion !== CONVERSATION_SCHEMA_VERSION) {
+				const state = await this.loadAppendState(sessionId);
+				if (state.schemaVersion !== CONVERSATION_SCHEMA_VERSION) {
 					throw new ConversationStorageError(
 						CONVERSATION_STORAGE_ERROR_CODES.READ_ONLY,
-						`Conversation ${sessionId} uses read-only schema version ${file.header.schemaVersion}`,
+						`Conversation ${sessionId} uses read-only schema version ${state.schemaVersion}`,
 					);
 				}
-				const document = documentFromFile(sessionId, file);
-				if (expectedRevision !== null && document.revision !== expectedRevision) {
+				if (expectedRevision !== null && state.document.revision !== expectedRevision) {
 					throw new ConversationStorageError(
 						CONVERSATION_STORAGE_ERROR_CODES.DOCUMENT_VERSION_CONFLICT,
-						`Conversation document ${sessionId} is at revision ${document.revision}, expected ${expectedRevision}`,
+						`Conversation document ${sessionId} is at revision ${state.document.revision}, expected ${expectedRevision}`,
 					);
 				}
-				const result = applyConversationDocumentCommand(document, command);
+				const result = applyConversationDocumentCommand(state.document, command);
 				if (!result.changed) return result;
 				const record: ConversationDocumentOperationRecord = {
 					recordType: "conversation.document.operation",
@@ -177,7 +184,14 @@ export class FileConversationRepository
 					revision: result.document.revision,
 					command,
 				};
-				await appendFile(this.conversationPath(sessionId), serializeConversationLine(record), "utf8");
+				const serialized = serializeConversationLine(record);
+				await appendFile(this.conversationPath(sessionId), serialized, "utf8");
+				this.writeCache.write(sessionId, {
+					byteSize: state.byteSize + Buffer.byteLength(serialized, "utf8"),
+					schemaVersion: state.schemaVersion,
+					document: result.document,
+					eventCount: state.eventCount,
+				});
 				return result;
 			}),
 		);
@@ -334,6 +348,10 @@ export class FileConversationRepository
 				} catch (error) {
 					if (targetPublished) await rm(sessionPath, { force: true });
 					throw error;
+				} finally {
+					// 源会话文件被直接追加（绕过 append 的缓存维护路径），丢弃缓存条目，
+					// 下次操作回退全量读取。
+					this.writeCache.drop(input.sourceSessionId);
 				}
 
 				return {
@@ -361,24 +379,23 @@ export class FileConversationRepository
 		this.assertOpen();
 		return this.exclusive(sessionId, () =>
 			this.withFileLock(sessionId, async () => {
-				const file = await this.readConversationFile(sessionId);
-				const conversation = conversationFromFile(sessionId, file);
-				if (conversation.version !== expectedVersion) {
+				const state = await this.loadAppendState(sessionId);
+				if (state.eventCount !== expectedVersion) {
 					throw new ConversationStorageError(
 						CONVERSATION_STORAGE_ERROR_CODES.VERSION_CONFLICT,
-						`Conversation ${sessionId} is at version ${conversation.version}, expected ${expectedVersion}`,
+						`Conversation ${sessionId} is at version ${state.eventCount}, expected ${expectedVersion}`,
 					);
 				}
 				for (const event of events) validateConversationEvent(sessionId, event);
 				if (events.length === 0) return { version: expectedVersion };
 
-				let document = documentFromFile(sessionId, file);
+				let document = state.document;
 				const records = events.map((event, index) => {
 					const sequence = expectedVersion + index + 1;
-					if (file.header.schemaVersion !== CONVERSATION_SCHEMA_VERSION) {
+					if (state.schemaVersion !== CONVERSATION_SCHEMA_VERSION) {
 						return {
 							recordType: "conversation.event" as const,
-							schemaVersion: file.header.schemaVersion,
+							schemaVersion: state.schemaVersion,
 							sequence,
 							event,
 						};
@@ -394,7 +411,16 @@ export class FileConversationRepository
 					document = applyStoredEventToConversationDocument(document, event, sequence, documentEntry ?? undefined);
 					return record;
 				});
-				await appendFile(this.conversationPath(sessionId), records.map(serializeConversationLine).join(""), "utf8");
+				const serialized = records.map(serializeConversationLine).join("");
+				await appendFile(this.conversationPath(sessionId), serialized, "utf8");
+				if (state.schemaVersion === CONVERSATION_SCHEMA_VERSION) {
+					this.writeCache.write(sessionId, {
+						byteSize: state.byteSize + Buffer.byteLength(serialized, "utf8"),
+						schemaVersion: state.schemaVersion,
+						document,
+						eventCount: state.eventCount + events.length,
+					});
+				}
 				return {
 					version: expectedVersion + events.length,
 				};
@@ -450,11 +476,48 @@ export class FileConversationRepository
 	async close(): Promise<void> {
 		if (this.closed) return;
 		this.closed = true;
+		this.writeCache.clear();
 		await Promise.all(this.queues.values());
 	}
 
 	private async readConversation(sessionId: string): Promise<StoredConversation> {
 		return conversationFromFile(sessionId, await this.readConversationFile(sessionId));
+	}
+
+	/**
+	 * 锁内获取追加所需的写入状态。文件字节数与缓存一致时复用已解析 document，
+	 * 长会话的每次事件追加不再全量重读 JSONL；会话文件经本仓库只增不减，任何
+	 * 外部写入都会改变字节数，命中失败自动回退全量读取并刷新缓存。旧 schema
+	 * 会话不缓存，始终走全量读取以保持原有读取语义。
+	 */
+	private async loadAppendState(sessionId: string): Promise<ConversationAppendState> {
+		const byteSize = await this.statConversationSize(sessionId);
+		const cached = this.writeCache.read(sessionId, byteSize);
+		if (cached) return cached;
+		const file = await this.readConversationFile(sessionId);
+		const state: ConversationAppendState = {
+			byteSize,
+			schemaVersion: file.header.schemaVersion,
+			document: documentFromFile(sessionId, file),
+			eventCount: file.eventRecords.length,
+		};
+		if (file.header.schemaVersion === CONVERSATION_SCHEMA_VERSION) this.writeCache.write(sessionId, state);
+		return state;
+	}
+
+	private async statConversationSize(sessionId: string): Promise<number> {
+		try {
+			return (await stat(this.conversationPath(sessionId))).size;
+		} catch (error) {
+			if (nodeErrorCode(error) === "ENOENT") {
+				throw new ConversationStorageError(
+					CONVERSATION_STORAGE_ERROR_CODES.NOT_FOUND,
+					`Conversation not found: ${sessionId}`,
+					{ cause: error },
+				);
+			}
+			throw error;
+		}
 	}
 
 	private async readConversationFile(sessionId: string): Promise<ParsedConversationFile> {

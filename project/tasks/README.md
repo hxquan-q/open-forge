@@ -1,6 +1,6 @@
 # Tasks
 
-Task 是可执行的最小工作项，必须能被一个 Agent 或开发者在一次明确的验证闭环中完成。详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)，模板见 [`templates/task.md`](templates/task.md)。
+Task 是可执行的最小工作项，必须能被一个 Agent 或开发者在一次明确的验证闭环中完成。并行执行时必须同时遵守 [`../collaboration/README.md`](../collaboration/README.md)。详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)，模板见 [`templates/task.md`](templates/task.md)。
 
 ## 状态
 

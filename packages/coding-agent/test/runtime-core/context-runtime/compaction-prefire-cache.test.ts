@@ -50,6 +50,70 @@ describe("CompactionPrefireCache", () => {
 		expect(cache.take(ENTRIES)).toBeUndefined();
 	});
 
+	it("settle awaits an in-flight prefire with a matching fingerprint and reuses its result", async () => {
+		const result: CompactionResult = {
+			summary: "prefired",
+			firstKeptEntryId: "entry-3",
+			tokensBefore: 90,
+		};
+		let releaseGeneration: (() => void) | undefined;
+		let notifyStarted: (() => void) | undefined;
+		const started = new Promise<void>((resolve) => {
+			notifyStarted = resolve;
+		});
+		const generateCompaction = vi.fn(
+			(): Promise<CompactionResult> =>
+				new Promise((resolve) => {
+					notifyStarted?.();
+					releaseGeneration = () => resolve(result);
+				}),
+		);
+		const cache = new CompactionPrefireCache({
+			resolveApiKey: () => "key",
+			generateCompaction,
+			canAttempt: () => true,
+		});
+
+		cache.start(ENTRIES, SETTINGS, MODEL);
+		await started;
+		const settled = cache.settle(ENTRIES, new AbortController().signal);
+		releaseGeneration?.();
+
+		await expect(settled).resolves.toEqual(result);
+		expect(generateCompaction).toHaveBeenCalledOnce();
+		expect(cache.take(ENTRIES)).toBeUndefined();
+	});
+
+	it("settle returns promptly when the caller aborts while a prefire is still running", async () => {
+		let releaseGeneration: (() => void) | undefined;
+		let notifyStarted: (() => void) | undefined;
+		const started = new Promise<void>((resolve) => {
+			notifyStarted = resolve;
+		});
+		const generateCompaction = vi.fn(
+			(): Promise<CompactionResult> =>
+				new Promise((resolve) => {
+					notifyStarted?.();
+					releaseGeneration = () => resolve({ summary: "late", firstKeptEntryId: "entry-3", tokensBefore: 90 });
+				}),
+		);
+		const cache = new CompactionPrefireCache({
+			resolveApiKey: () => "key",
+			generateCompaction,
+			canAttempt: () => true,
+		});
+		const controller = new AbortController();
+
+		cache.start(ENTRIES, SETTINGS, MODEL);
+		await started;
+		const settled = cache.settle(ENTRIES, controller.signal);
+		controller.abort();
+
+		await expect(settled).resolves.toBeUndefined();
+		releaseGeneration?.();
+		await vi.waitFor(() => expect(cache.take(ENTRIES)).toBeDefined());
+	});
+
 	it("reports privacy-safe success and failure observations through the injected publisher", async () => {
 		const records: RuntimeObservationRecord[] = [];
 		const observations = createRuntimeObservationPublisher({

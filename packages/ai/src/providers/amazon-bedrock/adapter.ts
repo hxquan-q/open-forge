@@ -75,7 +75,7 @@ async function produceBedrockStream(
 		const commandInput = buildBedrockCommandInput(model, context, options);
 		options.onPayload?.(commandInput);
 		const response = await send(commandInput, options);
-		if (!response.stream) throw new EmptyProviderStreamError();
+		if (!response.stream) throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
 		const reducer = new BedrockEventReducer(output, stream, model);
 		let receivedProviderEvent = false;
 		for await (const item of response.stream) {
@@ -86,7 +86,9 @@ async function produceBedrockStream(
 			});
 			reducer.consume(item);
 		}
-		if (!receivedProviderEvent) throw new EmptyProviderStreamError();
+		if (!receivedProviderEvent) {
+			throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
+		}
 		reducer.finish();
 		if (options.signal?.aborted) throw new AIAbortedError();
 		if (output.stopReason === "error" || output.stopReason === "aborted") {

@@ -118,6 +118,7 @@ export type RuntimeSessionObservationEvent = RuntimeSessionObservationBase &
 		| {
 				readonly type: "compaction.end";
 				readonly success: boolean;
+				readonly cancelled?: boolean;
 				readonly reason?: "threshold" | "overflow" | "manual";
 				readonly tokensBefore?: number;
 				readonly contextPercent?: number | null;

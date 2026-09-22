@@ -834,6 +834,20 @@ export function nextId(prefix: string): string {
 /** Per-session cache for turn stats (survives session switching). Key = sessionPath. */
 export const turnStatsCache = new Map<string, { outputSpeed: number; durationSeconds: number }>();
 
+/** 打开过的会话数远超可回切的范围后，最旧的逐轮统计就让位给新的。 */
+const MAX_TURN_STATS_SESSIONS = 128;
+
+/** Bounded writer for {@link turnStatsCache}: refreshes recency and evicts the oldest session. */
+export function rememberTurnStats(sessionPath: string, stats: { outputSpeed: number; durationSeconds: number }): void {
+	turnStatsCache.delete(sessionPath);
+	turnStatsCache.set(sessionPath, stats);
+	while (turnStatsCache.size > MAX_TURN_STATS_SESSIONS) {
+		const oldestKey = turnStatsCache.keys().next().value;
+		if (oldestKey === undefined) break;
+		turnStatsCache.delete(oldestKey);
+	}
+}
+
 /** Reset streaming state (when switching sessions). */
 export function resetStreamState(): void {
 	draftId = null;

@@ -18,6 +18,7 @@
 | 调研证据 | `project/research/` 与 `exprot/` |
 | 测试/性能基线 | `project/verification/` |
 | 长期上下文 | `project/context/` |
+| 多人/多 Agent 协作 | `project/collaboration/` |
 | Project 管理规范 | `project/CONVENTIONS.md` |
 | 外部协作 Issue | GitHub Issues；本地记录保存关联编号，不复制 GitHub 全文 |
 
@@ -31,6 +32,7 @@
 - `research/`：源码、上游项目和外部资料的证据索引。
 - `verification/`：测试合同、性能指标和质量门禁。
 - `context/`：后续 Agent 需要先读的短上下文。
+- `collaboration/`：多人/多 Agent 的 Worktree、分支、Task DAG 和集成规则。
 - `decisions/`：`docs/adr/` 的索引，不复制 ADR 正文。
 
 ## 编号和状态

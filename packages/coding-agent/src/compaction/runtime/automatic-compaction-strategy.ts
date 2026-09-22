@@ -1,10 +1,11 @@
 import { providerAuthenticationError } from "@vetta/ai";
-import { runtimeFailureFromError } from "@vetta/runtime-core";
+import { type RuntimeObservationPublisher, runtimeFailureFromError } from "@vetta/runtime-core";
 import type {
 	ConsecutiveFailureCircuitBreaker,
 	ContextPreparationInput,
 	PreparedContext,
 } from "@vetta/runtime-core/kernel";
+import { CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION } from "../../runtime-contracts/context-observability.js";
 import type {
 	CodingAgentCompactionExtensionRuntime,
 	CodingAgentContextRuntimeOptions,
@@ -12,7 +13,9 @@ import type {
 	CodingAgentPinnedModelContext,
 } from "../../runtime-contracts/index.js";
 import {
+	type CompactionBackpressureGate,
 	type CompactionSettings,
+	compactionBackpressurePolicy,
 	estimateContextTokens,
 	getCompactThreshold,
 	prepareCompaction,
@@ -40,9 +43,12 @@ export interface CodingAgentAutomaticCompactionStrategyOptions {
 	readonly generateCompaction: NonNullable<CodingAgentContextRuntimeOptions["generateCompaction"]>;
 	readonly failureRecovery: CodingAgentModelCallFailureRecovery;
 	readonly circuitBreaker: ConsecutiveFailureCircuitBreaker;
+	readonly backpressure: CompactionBackpressureGate;
 	readonly prefire: CompactionPrefireCache;
 	readonly recordFactory: CodingAgentCompactionRecordFactoryOptions;
 	readonly recordEstimatedTokens: (tokens: number) => void;
+	readonly resolveCompactionModel?: CodingAgentContextRuntimeOptions["resolveCompactionModel"];
+	readonly observations?: RuntimeObservationPublisher;
 }
 
 /** Coding-specific automatic compaction policy used behind Runtime Core's ContextStrategy contract. */
@@ -109,37 +115,55 @@ export class CodingAgentAutomaticCompactionStrategy {
 			return unchanged(callMessages, assembledTokens);
 		}
 		const compactionReason = overflow ? "overflow" : "threshold";
-		await input.reportObservation({
-			type: "compaction.start",
-			reason: compactionReason,
-			contextTokens: estimate.tokens,
-			contextWindow,
-			thresholdTokens: getCompactThreshold(contextWindow, settings),
-			source: "agent",
-		});
-		if (!this.options.circuitBreaker.canAttempt()) {
-			await input.reportObservation({
-				type: "compaction.end",
-				success: false,
-				reason: compactionReason,
-				errorMessage: "Compaction circuit breaker is open after repeated failures",
-				source: "agent",
+		const policy = compactionBackpressurePolicy(settings);
+		const denial = this.options.backpressure.tryBegin(estimate.tokens, policy, overflow);
+		if (denial) {
+			this.options.observations?.record(CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION, {
+				phase: "suppressed",
+				reason: denial,
+				trigger: compactionReason,
+				contextTokens: estimate.tokens,
+				contextWindow,
 			});
 			return unchanged(callMessages, assembledTokens);
 		}
-
+		let succeeded = false;
+		let baselineTokens = estimate.tokens;
 		try {
-			const apiKey = input.modelBinding?.credential
-				? await input.modelBinding.credential.resolve()
-				: await this.options.resolveApiKey(model);
+			await input.reportObservation({
+				type: "compaction.start",
+				reason: compactionReason,
+				contextTokens: estimate.tokens,
+				contextWindow,
+				thresholdTokens: getCompactThreshold(contextWindow, settings),
+				source: "agent",
+			});
+			if (!this.options.circuitBreaker.canAttempt()) {
+				await input.reportObservation({
+					type: "compaction.end",
+					success: false,
+					reason: compactionReason,
+					errorMessage: "Compaction circuit breaker is open after repeated failures",
+					source: "agent",
+				});
+				return unchanged(callMessages, assembledTokens);
+			}
+			const compactionModel = (await this.options.resolveCompactionModel?.(model)) ?? model;
+			const apiKey =
+				compactionModel === model && input.modelBinding?.credential
+					? await input.modelBinding.credential.resolve()
+					: await this.options.resolveApiKey(compactionModel);
 			if (!apiKey) {
 				await input.reportObservation({
 					type: "compaction.end",
 					success: false,
 					reason: compactionReason,
-					errorMessage: `No API key for ${model.provider}`,
+					errorMessage: `No API key for ${compactionModel.provider}`,
 					failure: runtimeFailureFromError(
-						providerAuthenticationError(model, `No credentials configured for ${model.provider}/${model.id}`),
+						providerAuthenticationError(
+							compactionModel,
+							`No credentials configured for ${compactionModel.provider}/${compactionModel.id}`,
+						),
 					),
 					source: "agent",
 				});
@@ -171,7 +195,12 @@ export class CodingAgentAutomaticCompactionStrategy {
 				});
 				return unchanged(callMessages, assembledTokens);
 			}
-			await this.options.memoryRollover?.beforeCompaction({ preparation, model, apiKey, signal });
+			await this.options.memoryRollover?.beforeCompaction({
+				preparation,
+				model: compactionModel,
+				apiKey,
+				signal,
+			});
 
 			const extensionResult = await extensionRuntime?.beforeCompaction({
 				preparation,
@@ -188,11 +217,11 @@ export class CodingAgentAutomaticCompactionStrategy {
 				});
 				return unchanged(callMessages, assembledTokens);
 			}
-			const prefired = extensionResult?.compaction ? undefined : this.options.prefire.take(entries);
+			const prefired = extensionResult?.compaction ? undefined : await this.options.prefire.settle(entries, signal);
 			const result =
 				extensionResult?.compaction ??
 				prefired ??
-				(await this.options.generateCompaction(preparation, model, apiKey, undefined, signal));
+				(await this.options.generateCompaction(preparation, compactionModel, apiKey, undefined, signal));
 			signal.throwIfAborted();
 			const record = createCodingAgentCompactionRecord(
 				result,
@@ -219,6 +248,8 @@ export class CodingAgentAutomaticCompactionStrategy {
 			);
 			const compactedEstimate = estimateContextTokens(messages).tokens;
 			this.options.recordEstimatedTokens(compactedEstimate);
+			baselineTokens = compactedEstimate;
+			succeeded = true;
 			return { messages, estimatedTokens: compactedEstimate, compaction: record };
 		} catch (error) {
 			this.options.circuitBreaker.recordFailure();
@@ -226,11 +257,14 @@ export class CodingAgentAutomaticCompactionStrategy {
 				type: "compaction.end",
 				success: false,
 				reason: compactionReason,
+				...(signal.aborted ? { cancelled: true } : {}),
 				errorMessage: error instanceof Error ? error.message : String(error),
 				failure: runtimeFailureFromError(error, { origin: "provider", code: "COMPACTION_FAILED" }),
 				source: "agent",
 			});
 			return unchanged(callMessages, assembledTokens);
+		} finally {
+			this.options.backpressure.end(succeeded, baselineTokens, policy);
 		}
 	}
 }

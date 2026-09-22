@@ -71,6 +71,12 @@ export interface CompactionSettings {
 	reserveTokens: number;
 	minFreePercent: number;
 	keepRecentTokens: number;
+	/** 相邻两次自动压缩尝试的最小间隔（ms）；缺省走背压默认值。 */
+	minIntervalMs?: number;
+	/** 未成功压缩（失败/取消/被拦截）后的冷却时间（ms）。 */
+	failureCooldownMs?: number;
+	/** 冷却期内上下文增量超过该 token 数时仍允许重试（滞回带）。 */
+	hysteresisTokens?: number;
 }
 
 export const DEFAULT_COMPACTION_SETTINGS: CompactionSettings = {

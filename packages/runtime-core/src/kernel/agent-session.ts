@@ -25,6 +25,23 @@ import {
 import { type ClearedSessionInputs, SessionInputQueue, type SessionInputQueueSnapshot } from "./session-input-queue.js";
 import type { TurnPipeline } from "./turn-pipeline.js";
 
+/**
+ * 取消宽限到期时交给宿主的信息：用于把 Session 收敛结果投影给用户（错误事件、
+ * 日志或恢复入口），kernel 自身不决定呈现方式。
+ */
+export interface SessionCancelDeadlineInfo {
+	readonly reason?: string;
+	readonly deadlineMs: number;
+}
+
+/**
+ * 取消请求发出后，Session 等待活动 Turn 安全结算的宽限时间。一个忽略 AbortSignal
+ * 的 Provider/Tool/Compaction 不能让 Session 永远停在 `cancelling`：到期后 Session
+ * 收敛到 `recovery_required`（关闭路径收敛到 `closed`），由恢复流程重建会话。
+ * 传入非有限值（如 `Infinity`）可退回无限等待的旧行为。
+ */
+export const DEFAULT_CANCEL_DEADLINE_MS = 10_000;
+
 export interface CreateAgentSessionOptions {
 	readonly id: string;
 	readonly pipeline: TurnPipeline;
@@ -32,6 +49,10 @@ export interface CreateAgentSessionOptions {
 	readonly cwd?: string;
 	readonly steeringMode?: SessionInputQueueMode;
 	readonly followUpMode?: SessionInputQueueMode;
+	/** 取消宽限（毫秒）；到期未结算的活动 Turn 使 Session 进入明确终态。 */
+	readonly cancelDeadlineMs?: number;
+	/** 取消宽限到期的通知；每个「取消纪元」至多触发一次。 */
+	readonly onCancelDeadlineExceeded?: (info: SessionCancelDeadlineInfo) => void;
 	/** 输入队列任何可观察变化后的同步回调；宿主用于镜像广播与持久化（ADR-0060）。 */
 	readonly onQueueChange?: (snapshot: SessionInputQueueSnapshot) => void;
 	/** 执行排到 follow-up 队首的宿主操作；操作不进入 Turn/模型消息。 */
@@ -45,9 +66,18 @@ export class AgentSession {
 	private readonly inputQueue: SessionInputQueue;
 	private readonly onQueueOperation: CreateAgentSessionOptions["onQueueOperation"];
 	private readonly onQueueOperationError: CreateAgentSessionOptions["onQueueOperationError"];
+	private readonly cancelDeadlineMs: number;
+	private readonly onCancelDeadlineExceeded: CreateAgentSessionOptions["onCancelDeadlineExceeded"];
 	private currentState: AgentSessionState = "idle";
 	private activeController: AbortController | undefined;
 	private activeTurn: Promise<SessionSendResult> | undefined;
+	/**
+	 * 与 `activeTurn` 同生共灭的释放屏障：Turn 结算或取消宽限到期都会放行等待者，
+	 * 使 cancel/close/sendRequestWhenAvailable 在忽略 abort 的执行上仍然有界。
+	 */
+	private activeTurnRelease: { readonly promise: Promise<void>; resolve(): void } | undefined;
+	private cancelDeadlineTimer: ReturnType<typeof setTimeout> | undefined;
+	private cancelReason: string | undefined;
 	private activeQueueOperation: { readonly id: string; readonly operation: SessionQueueOperation } | undefined;
 	private continuationRequested = false;
 	private continuationDrain: Promise<void> | undefined;
@@ -70,6 +100,8 @@ export class AgentSession {
 		});
 		this.onQueueOperation = options.onQueueOperation;
 		this.onQueueOperationError = options.onQueueOperationError;
+		this.cancelDeadlineMs = options.cancelDeadlineMs ?? DEFAULT_CANCEL_DEADLINE_MS;
+		this.onCancelDeadlineExceeded = options.onCancelDeadlineExceeded;
 	}
 
 	static async create(options: CreateAgentSessionOptions): Promise<AgentSession> {
@@ -182,7 +214,7 @@ export class AgentSession {
 				await Promise.resolve();
 				continue;
 			}
-			await waitForTurnRelease(activeTurn, signal);
+			await waitForTurnRelease(activeTurn, signal, this.activeTurnRelease?.promise);
 		}
 	}
 
@@ -356,16 +388,22 @@ export class AgentSession {
 		if (this.activeQueueOperation) return { status: "missing" };
 		// 先取出条目再打断：确保这条消息绝不因中途失败而丢失在「已出队未发送」状态——
 		// takeById 失败即早退，成功后它只存在于本调用栈，随 startTurn 进入持久化。
-		const input = this.inputQueue.takeById(id);
-		if (!input) return { status: "missing" };
+		const entry = this.inputQueue.takeById(id);
+		if (!entry) return { status: "missing" };
 		if (this.currentState !== "idle") {
 			await this.cancel("send queued message now");
+		}
+		if (this.currentState !== "idle") {
+			// 取消宽限到期或关闭路径已把 Session 收敛到终态：取出的条目放回队列尾部，
+			// 不静默启动新 Turn，也不把消息丢在调用栈里。
+			this.inputQueue.requeue(entry);
+			throw sessionStateError(this.currentState);
 		}
 		await this.contextWrite;
 		// cancel 的 pause-on-terminal 会冻结其余排队条目；用户点「立即发送」表达的
 		// 是继续消费，解除暂停让它们在新 turn 的自然停止点接力。
 		this.inputQueue.resume();
-		return { status: "started", turn: this.startQueuedInput(input) };
+		return { status: "started", turn: this.startQueuedInput(entry.input) };
 	}
 
 	/**
@@ -395,32 +433,30 @@ export class AgentSession {
 	 * it leaves the next user input to be refused as busy or parked in the queue that the
 	 * cancellation just froze. But a tool ignoring its AbortSignal must not be able to
 	 * hold a user-initiated stop hostage either, so the wait is bounded, not skipped.
-	 * Omit `waitMs` to wait indefinitely.
+	 *
+	 * Independently of `waitMs`, cancellation is armed with `cancelDeadlineMs`: a turn
+	 * that still has not settled when the deadline expires pushes the Session to
+	 * `recovery_required`, so omitting `waitMs` never waits forever.
 	 */
 	async cancel(reason?: string, options?: { readonly waitMs?: number }): Promise<void> {
 		if (this.currentState !== "running" && this.currentState !== "cancelling") return;
+		if (this.currentState !== "cancelling") this.cancelReason = reason;
 		this.currentState = "cancelling";
 		// A continuation queued behind the cancelled turn belongs to that turn's
 		// background outcome. Letting it start after an explicit stop creates an
 		// invisible new turn and can make the next user prompt collide with it.
 		this.rejectContinuationWaiters(continuationCancelledError());
 		this.activeController?.abort(reason);
+		this.armCancelDeadline();
 		const turn = this.activeTurn;
-		if (options?.waitMs === undefined) {
-			await turn;
-			return;
+		if (!turn) return;
+		const released = this.activeTurnRelease?.promise;
+		const waiters: Promise<unknown>[] = [turn];
+		if (released) waiters.push(released);
+		if (options?.waitMs !== undefined) {
+			waiters.push(waitTimeout(options.waitMs));
 		}
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		try {
-			await Promise.race([
-				turn,
-				new Promise<void>((resolve) => {
-					timer = setTimeout(resolve, options.waitMs);
-				}),
-			]);
-		} finally {
-			if (timer) clearTimeout(timer);
-		}
+		await Promise.race(waiters);
 	}
 
 	async close(): Promise<void> {
@@ -436,7 +472,11 @@ export class AgentSession {
 
 		this.currentState = "closing";
 		this.activeController?.abort("Session closed");
-		await this.activeTurn;
+		this.armCancelDeadline();
+		// A turn ignoring its AbortSignal cannot hold teardown open: the release barrier
+		// fires when the turn settles or when the cancel deadline forces `closed`.
+		const released = this.activeTurnRelease?.promise;
+		await Promise.race(released ? [this.activeTurn, released] : [this.activeTurn]);
 		this.inputQueue.clear();
 		this.nextTurnContext.length = 0;
 		this.currentState = "closed";
@@ -471,6 +511,7 @@ export class AgentSession {
 				? this.pipeline.retry(this.identity, controller.signal, this.inputQueue)
 				: this.pipeline.continue(this.identity, controller.signal, this.inputQueue, continuationContext);
 		this.activeTurn = turn;
+		this.activeTurnRelease = createDeferred();
 
 		try {
 			const result = await turn;
@@ -503,12 +544,16 @@ export class AgentSession {
 		const abort = () => {
 			if (this.activeController !== controller) return;
 			this.currentState = "cancelling";
+			this.cancelReason = abortReasonText(signal?.reason);
 			controller.abort(signal?.reason);
+			// 与显式 cancel() 同一宽限：外部 signal 触发的取消同样不能无限等待。
+			this.armCancelDeadline();
 		};
 		signal?.addEventListener("abort", abort, { once: true });
 		if (signal?.aborted) abort();
 		const turn = this.pipeline.runRequest(this.identity, request, controller.signal, this.inputQueue, preparer);
 		this.activeTurn = turn;
+		this.activeTurnRelease = createDeferred();
 		try {
 			const result = await turn;
 			if (result.status !== "completed" && result.status !== "handled" && this.inputQueue.pendingCount > 0) {
@@ -541,6 +586,7 @@ export class AgentSession {
 		this.activeQueueOperation = entry;
 		const controller = new AbortController();
 		this.activeController = controller;
+		this.activeTurnRelease = createDeferred();
 		const work = (async (): Promise<SessionSendResult> => {
 			try {
 				if (!this.onQueueOperation) {
@@ -610,14 +656,65 @@ export class AgentSession {
 	private finishActiveTurn(deferContinuations = false): void {
 		this.activeController = undefined;
 		this.activeTurn = undefined;
+		if (this.cancelDeadlineTimer !== undefined) {
+			clearTimeout(this.cancelDeadlineTimer);
+			this.cancelDeadlineTimer = undefined;
+		}
+		this.cancelReason = undefined;
+		this.activeTurnRelease?.resolve();
+		this.activeTurnRelease = undefined;
 		this.currentState =
-			this.currentState === "closing"
+			this.currentState === "closing" || this.currentState === "closed"
 				? "closed"
 				: this.currentState === "recovery_required"
 					? "recovery_required"
 					: "idle";
 		const operationStarted = this.startQueuedOperationIfHead();
 		if (!deferContinuations && !operationStarted) this.scheduleRequestedContinuations();
+	}
+
+	/**
+	 * 武装取消宽限。只在「取消纪元」起点记录一次 reason；重复 cancel/close 不重置
+	 * 截止时间，否则持续按停止键可以把 deadline 无限推迟。
+	 */
+	private armCancelDeadline(): void {
+		if (this.cancelDeadlineTimer !== undefined) return;
+		if (!Number.isFinite(this.cancelDeadlineMs) || this.cancelDeadlineMs < 0) return;
+		const timer = setTimeout(() => this.expireCancelDeadline(), this.cancelDeadlineMs);
+		// 宽限计时器不应阻止宿主进程退出；浏览器/测试环境的返回值没有 unref。
+		if (typeof timer === "object" && timer !== null && "unref" in timer && typeof timer.unref === "function") {
+			timer.unref();
+		}
+		this.cancelDeadlineTimer = timer;
+	}
+
+	/**
+	 * 宽限到期：取消路径收敛到 `recovery_required`，关闭路径收敛到 `closed`。
+	 * 不伪造终态事件——底层 Turn 仍在后台持有自己的持久化管线，它结算时写入的
+	 * 终态事件由 appendTerminalEvent 的 existingTerminal 防护保证至多一个。
+	 */
+	private expireCancelDeadline(): void {
+		this.cancelDeadlineTimer = undefined;
+		if (!this.activeTurn) return;
+		const reason = this.cancelReason;
+		this.cancelReason = undefined;
+		// 屏障 resolve 后保留引用：后续 cancel/close/waitForTurnRelease 必须立即放行，
+		// 而不是重新挂到仍在悬挂的 Turn promise 上。引用由 finishActiveTurn 统一清理。
+		if (this.currentState === "closing") {
+			this.currentState = "closed";
+			this.activeTurnRelease?.resolve();
+			return;
+		}
+		if (this.currentState !== "cancelling") return;
+		this.currentState = "recovery_required";
+		// 与 pause-on-terminal 同语义：残留排队输入不渗入恢复后的第一个 Turn。
+		this.inputQueue.pause();
+		this.activeTurnRelease?.resolve();
+		try {
+			this.onCancelDeadlineExceeded?.({ reason, deadlineMs: this.cancelDeadlineMs });
+		} catch (error) {
+			console.warn("[runtime-core] failed to report cancel deadline", error);
+		}
 	}
 
 	private scheduleRequestedContinuations(): void {
@@ -645,25 +742,52 @@ function continuationCancelledError(): KernelError {
 	return new KernelError(KERNEL_ERROR_CODES.TURN_INTERRUPTED, "Pending continuation was cancelled");
 }
 
-async function waitForTurnRelease(turn: Promise<SessionSendResult>, signal?: AbortSignal): Promise<void> {
+async function waitForTurnRelease(
+	turn: Promise<SessionSendResult>,
+	signal?: AbortSignal,
+	released?: Promise<void>,
+): Promise<void> {
+	const settled = Promise.race([turn, ...(released ? [released] : [])]).then(
+		() => undefined,
+		() => undefined,
+	);
 	if (!signal) {
-		await turn.then(
-			() => undefined,
-			() => undefined,
-		);
+		await settled;
 		return;
 	}
 	signal.throwIfAborted();
 	await new Promise<void>((resolve, reject) => {
 		const abort = () => reject(signal.reason);
 		signal.addEventListener("abort", abort, { once: true });
-		void turn
-			.then(
-				() => resolve(),
-				() => resolve(),
-			)
-			.finally(() => signal.removeEventListener("abort", abort));
+		void settled.finally(() => signal.removeEventListener("abort", abort)).then(resolve, resolve);
 	});
+}
+
+function createDeferred(): { readonly promise: Promise<void>; resolve(): void } {
+	let resolve!: () => void;
+	const promise = new Promise<void>((done) => {
+		resolve = done;
+	});
+	return { promise, resolve };
+}
+
+function waitTimeout(waitMs: number): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const timer = setTimeout(resolve, waitMs);
+		if (typeof timer === "object" && timer !== null && "unref" in timer && typeof timer.unref === "function") {
+			timer.unref();
+		}
+	});
+}
+
+function sessionStateError(state: AgentSessionState): KernelError {
+	if (state === "closed" || state === "closing") return sessionClosedError();
+	if (state === "recovery_required") return turnPersistenceError();
+	return sessionBusyError();
+}
+
+function abortReasonText(reason: unknown): string | undefined {
+	return typeof reason === "string" ? reason : reason instanceof Error ? reason.message : undefined;
 }
 
 class MutableTurnSessionIdentity implements TurnSessionIdentity {

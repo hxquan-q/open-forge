@@ -4,7 +4,7 @@
 
 当前完整基线见 [`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md)。
 
-当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)。
+当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)。
 
 ## 默认验证顺序
 

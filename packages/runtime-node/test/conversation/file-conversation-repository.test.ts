@@ -640,6 +640,83 @@ describe("FileConversationRepository", () => {
 			code: CONVERSATION_STORAGE_ERROR_CODES.CLOSED,
 		});
 	});
+
+	it("keeps multi-round appends consistent when the write cache is warm", async () => {
+		const { repository } = await createRepository();
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+
+		let version = 0;
+		for (let round = 1; round <= 3; round += 1) {
+			const turnId = `turn-${round}`;
+			const events: StoredSessionEvent[] = [
+				started("session-1", turnId),
+				message("session-1", turnId, `user-${round}`),
+				assistant("session-1", turnId, `assistant-${round}`),
+				completed("session-1", turnId),
+			];
+			const result = await repository.append("session-1", version, events);
+			expect(result.version).toBe(version + events.length);
+			version = result.version;
+		}
+
+		const conversation = await repository.load("session-1");
+		expect(conversation.version).toBe(12);
+		expect(conversation.messages).toHaveLength(6);
+		expect(conversation.messages.map(messageText)).toEqual([
+			"user-1",
+			"assistant-1",
+			"user-2",
+			"assistant-2",
+			"user-3",
+			"assistant-3",
+		]);
+		const document = await repository.readDocument("session-1");
+		expect(document.entries.filter((entry) => entry.type === "message")).toHaveLength(6);
+	});
+
+	it("detects external writes and refreshes the cache instead of trusting it", async () => {
+		const { repository, rootDir } = await createRepository();
+		const external = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+		await repository.append("session-1", 0, [started("session-1", "turn-1")]);
+
+		// 另一实例在锁下追加：本实例缓存的字节数失效，必须回退全量读取。
+		await external.append("session-1", 1, [message("session-1", "turn-1", "external")]);
+
+		await expect(repository.append("session-1", 1, [completed("session-1", "turn-1")])).rejects.toMatchObject({
+			code: CONVERSATION_STORAGE_ERROR_CODES.VERSION_CONFLICT,
+		});
+		const resumed = await repository.append("session-1", 2, [completed("session-1", "turn-1")]);
+		expect(resumed.version).toBe(3);
+
+		const conversation = await repository.load("session-1");
+		expect(conversation.version).toBe(3);
+		expect(conversation.messages.map(messageText)).toEqual(["external"]);
+	});
+
+	it("evicts cached sessions beyond the LRU limit without losing writes", async () => {
+		const { rootDir } = await createRepository();
+		const bounded = new FileConversationRepository({ rootDir, documentCacheLimit: 1 });
+		for (const sessionId of ["session-1", "session-2"]) {
+			await bounded.create({ sessionId, createdAt: 100 });
+		}
+
+		// 两个会话交错追加，持续把对方挤出容量为 1 的缓存。
+		await bounded.append("session-1", 0, [started("session-1", "turn-1"), message("session-1", "turn-1", "one")]);
+		await bounded.append("session-2", 0, [started("session-2", "turn-1"), message("session-2", "turn-1", "two")]);
+		await bounded.append("session-1", 2, [assistant("session-1", "turn-1", "answer-1")]);
+		await bounded.append("session-2", 2, [assistant("session-2", "turn-1", "answer-2")]);
+
+		const first = await bounded.load("session-1");
+		const second = await bounded.load("session-2");
+		expect(first.messages.map(messageText)).toEqual(["one", "answer-1"]);
+		expect(second.messages.map(messageText)).toEqual(["two", "answer-2"]);
+	});
+
+	it("rejects a non-positive document cache limit", async () => {
+		const { rootDir } = await createRepository();
+		expect(() => new FileConversationRepository({ rootDir, documentCacheLimit: 0 })).toThrow(/positive integer/);
+	});
 });
 
 function messageText(value: StoredConversation["messages"][number]): string {

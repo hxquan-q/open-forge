@@ -124,6 +124,7 @@ export class RuntimeHost implements SessionFacade {
 			synchronizeSessionIdentity: (sessionKey, handle) => this.synchronizeSessionIdentity(sessionKey, handle),
 			sessionErrorObserver: options.sessionErrorObserver,
 			sessionCompactionObserver: options.sessionCompactionObserver,
+			inFlightReplayEventLimit: options.inFlightReplayEventLimit,
 			reportFailure: (operation, component, error, sessionId) =>
 				this.recordLifecycleFailure(operation, component, error, sessionId),
 		});

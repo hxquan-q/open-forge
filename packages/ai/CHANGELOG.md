@@ -29,6 +29,7 @@
 - 新增 `@vetta/ai/protocol` 稳定协议子路径，集中导出 Provider 中立的消息、工具、usage、reasoning、终止原因、流事件与结构化 AI 错误类型；旧根入口保持兼容 re-export。
 - 新增隔离的 `LanguageModelAdapter`/`AdapterRegistry`、`@vetta/ai/testing` 脚本模型与可控 Provider transport；OpenAI Completions 和 Anthropic 试点增加 TypeBox wire 校验及无网络 conformance 覆盖。
 - `Context` 新增可选字段 `systemPromptStableLength`：声明 `systemPrompt` 中会话内逐字不变的前缀长度。Anthropic provider 据此把 system 拆成「稳定前缀（打 `cache_control`）+ 易变尾段（不打）」两个 text block，使会话内变化的模式/人设/日期段落不再作废整段 system 前缀缓存；OAuth 分支同样生效。未声明该字段、或 `cacheRetention: "none"`、或切分点落在正文两端时保持单 block 原行为，其他 provider 忽略该字段。
+- `@vetta/ai/testing` 新增确定性 Provider 流协议回归 fixture：OpenAI Responses 与 DeepSeek Completions 的 wire 场景矩阵（错误事件落错 output item、未知/冲突 output item、部分流、`response.failed`、流中 `{error}` 帧、空流）、HTTP 失败分类场景（429/503 可重试、402/401 不可重试）、`settleStreamOutcome` 终态结算辅助与 `providerFailureError` 回放辅助。Session/Turn/Team 层测试可在不访问真实 Provider 的情况下复现线上协议失败。
 
 ### Changed
 
@@ -90,6 +91,7 @@
   - `anthropic-messages` provider 当 `baseUrl`/`gatewayUrl` 不指向官方 Anthropic API 时（LM Studio 等 Anthropic 兼容层），始终下发 `thinking: { type: "disabled" }`，避免底层模型（如 Qwen）按默认思考行为输出 reasoning 内容。
   - `openai-completions` provider 的 `zai`/`qwen`/`nvidia` thinking 格式分支不再要求 `model.reasoning: true`，确保自定义模型的"off"指令能下发为 `enable_thinking: false` / `thinking: { type: "disabled" }`。
   - 副带：当用户启用思考且端点为非官方 Anthropic 兼容层时，即使模型未标 `reasoning: true` 也尝试以 budget 模式启用。
+- `EmptyProviderStreamError` 与 `openai-completions` 的 abort 归一化现在携带 `provider`/`modelId`，与其余适配器一致；空流与发送前取消这两类失败在 Runtime/Team 边界的错误详情里不再丢失失败来源。
 
 ## [0.55.3] - 2026-03-06
 

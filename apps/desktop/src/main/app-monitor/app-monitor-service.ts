@@ -14,6 +14,7 @@ import {
 import { type AppMonitorProfile, createDefaultAppMonitorProfile } from "./app-monitor-profile.js";
 import { appMonitorProfileStore, appMonitorStore, createAppMonitorMonthStore } from "./app-monitor-store.js";
 import { runAppMonitorFileMigrations } from "./migrations/index.js";
+import { observePerfSession, unobservePerfSession } from "./perf-monitor-service.js";
 
 const ACTIVE_TIMEOUT_MS = 2 * 60 * 1000;
 const FLUSH_INTERVAL_MS = 2 * 60 * 1000;
@@ -1163,10 +1164,12 @@ export function getAppMonitorSnapshot(): AppMonitorData {
 }
 
 export function monitorRuntimeSession(runtime: RuntimeHost, sessionId: string, kind: MonitoredSessionKind): void {
+	observePerfSession(runtime, sessionId);
 	appMonitor.monitorSession(runtime, sessionId, kind);
 }
 
 export function stopMonitoringRuntimeSession(sessionId: string): void {
+	unobservePerfSession(sessionId);
 	appMonitor.stopMonitoringSession(sessionId);
 }
 

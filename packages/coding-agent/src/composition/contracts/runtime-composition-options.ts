@@ -215,6 +215,8 @@ export interface CodingAgentRuntimeContextOptions {
 	) => CodingAgentCompactionExtensionRuntime | undefined;
 	/** 测试或宿主可替换摘要调用；生产默认复用 Coding Agent 既有实现。 */
 	readonly generateCompaction?: CodingAgentCompactionRuntimeOptions["generateCompaction"];
+	/** 压缩专用模型解析（自动/手动/Prefire 共用）；未提供时沿用 Turn 绑定模型。 */
+	readonly resolveCompactionModel?: CodingAgentCompactionRuntimeOptions["resolveCompactionModel"];
 	/** 为每个 memory-mode Session 创建产品级 Memory Runtime；文件与其他存储由宿主显式注入。 */
 	readonly createMemoryRolloverRuntime?: (
 		options: CodingAgentMemoryRuntimeFactoryOptions,

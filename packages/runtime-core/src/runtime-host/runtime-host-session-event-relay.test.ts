@@ -1,9 +1,12 @@
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
-import type { SessionEvent } from "../contracts.js";
+import type { MessageFinalEvent, SessionEvent } from "../contracts.js";
 import type { RuntimeHostQueueSidecar } from "./runtime-host-queue-sidecar.js";
-import { RuntimeHostSessionEventRelay } from "./runtime-host-session-event-relay.js";
-import { lifecycleSessionEvent, mapRuntimeSessionObservationEvent } from "./session-events.js";
+import {
+	DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT,
+	RuntimeHostSessionEventRelay,
+} from "./runtime-host-session-event-relay.js";
+import { baseSessionEvent, lifecycleSessionEvent, mapRuntimeSessionObservationEvent } from "./session-events.js";
 import type { RuntimeSessionEventStream } from "./session-ports.js";
 import type { RuntimeHostSessionRecord } from "./types.js";
 
@@ -18,6 +21,25 @@ function createEventStream(): RuntimeSessionEventStream & { emit(event: SessionE
 			for (const handler of handlers) handler(event);
 		},
 	};
+}
+
+function createRelayHandle(stream: RuntimeSessionEventStream): RuntimeHostSessionRecord {
+	return {
+		lifecycle: { sessionId: "session-1", sessionPath: "C:/sessions/session-1.jsonl" },
+		stateReader: { readState: () => ({ activeToolNames: [] }) },
+		eventStream: stream,
+	} as unknown as RuntimeHostSessionRecord;
+}
+
+function createRelay(options?: { readonly inFlightReplayEventLimit?: number }): RuntimeHostSessionEventRelay {
+	return new RuntimeHostSessionEventRelay({
+		queueSidecar: { persist: () => undefined } as unknown as RuntimeHostQueueSidecar,
+		synchronizeSessionIdentity: () => undefined,
+		reportFailure: () => undefined,
+		...(options?.inFlightReplayEventLimit === undefined
+			? {}
+			: { inFlightReplayEventLimit: options.inFlightReplayEventLimit }),
+	});
 }
 
 function assistantEvent(event: AssistantMessageEvent): SessionEvent {
@@ -79,4 +101,107 @@ describe("RuntimeHostSessionEventRelay", () => {
 		unsubscribeLive();
 		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
 	});
+
+	it("bounds the in-flight replay buffer to the configured tail during one streaming message", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay({ inFlightReplayEventLimit: 3 });
+		relay.attach("session-key", handle, stream);
+
+		const deltas = ["a", "b", "c", "d", "e", "f"];
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 100));
+		for (const delta of deltas) {
+			stream.emit(assistantEvent({ type: "text_delta", contentIndex: 0, delta, partial: partialOf(delta) }));
+		}
+
+		const replayed: SessionEvent[] = [];
+		const unsubscribe = relay.subscribe("session-key", handle, (event) => replayed.push(event));
+		const replayedAssistant = replayed.filter((event) => event.channel === "assistant");
+		expect(replayedAssistant.map((event) => (event as { delta?: string }).delta)).toEqual(["d", "e", "f"]);
+		// 保留的事件维持原始顺序与原始 sequence（与在线收到的同一事件一致）。
+		expect(replayedAssistant.map((event) => event.sequence)).toEqual([5, 6, 7]);
+
+		unsubscribe();
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+	});
+
+	it("clears the bounded replay buffer on message.final and bounds the next streaming message independently", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay({ inFlightReplayEventLimit: 2 });
+		relay.attach("session-key", handle, stream);
+
+		const emitDelta = (delta: string): void => {
+			stream.emit(assistantEvent({ type: "text_delta", contentIndex: 0, delta, partial: partialOf(delta) }));
+		};
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 100));
+		emitDelta("a");
+		emitDelta("b");
+		emitDelta("c");
+		// 同一 Turn 内的下一次模型调用：message.final 落盘后缓冲必须清空，
+		// 上一条消息的超限丢弃不得影响下一条消息的回放。
+		stream.emit({
+			...baseMessageFinal("session-1"),
+		});
+
+		const afterFinal: SessionEvent[] = [];
+		const unsubscribe = relay.subscribe("session-key", handle, (event) => afterFinal.push(event));
+		expect(afterFinal.filter((event) => event.channel === "assistant")).toHaveLength(0);
+
+		emitDelta("x");
+		emitDelta("y");
+		emitDelta("z");
+		const replayed: SessionEvent[] = [];
+		const unsubscribeReplay = relay.subscribe("session-key", handle, (event) => replayed.push(event));
+		expect(
+			replayed.filter((event) => event.channel === "assistant").map((event) => (event as { delta?: string }).delta),
+		).toEqual(["y", "z"]);
+
+		unsubscribeReplay();
+		unsubscribe();
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+	});
+
+	it("applies the default replay limit for unbounded single-message streams", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay();
+		relay.attach("session-key", handle, stream);
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 100));
+		for (let index = 0; index < DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT + 500; index += 1) {
+			const delta = `${index}`;
+			stream.emit(assistantEvent({ type: "text_delta", contentIndex: 0, delta, partial: partialOf(delta) }));
+		}
+
+		const replayed: SessionEvent[] = [];
+		const unsubscribe = relay.subscribe("session-key", handle, (event) => replayed.push(event));
+		expect(replayed.filter((event) => event.channel === "assistant")).toHaveLength(
+			DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT,
+		);
+
+		unsubscribe();
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+	});
+
+	it("rejects a non-positive in-flight replay limit at construction", () => {
+		expect(() => createRelay({ inFlightReplayEventLimit: 0 })).toThrow(/positive integer/);
+	});
 });
+
+function partialOf(delta: string): AssistantMessage {
+	return { role: "assistant", content: [{ type: "text", text: delta }] } as unknown as AssistantMessage;
+}
+
+function baseMessageFinal(sessionId: string): SessionEvent {
+	return {
+		...baseSessionEvent(sessionId, "runtime-core"),
+		type: "message.final",
+		message: {
+			role: "assistant",
+			content: [{ type: "text", text: "final" }],
+			stopReason: "stop",
+		} as unknown as MessageFinalEvent["message"],
+	};
+}

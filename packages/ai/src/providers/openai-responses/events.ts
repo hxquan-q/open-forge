@@ -169,7 +169,9 @@ export async function processResponsesStream<TApi extends Api>(
 		}
 	}
 
-	if (!receivedProviderEvent) throw new EmptyProviderStreamError();
+	if (!receivedProviderEvent) {
+		throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
+	}
 	if (!receivedTerminalEvent) throw protocolError(model, "Stream ended without a terminal response event");
 }
 

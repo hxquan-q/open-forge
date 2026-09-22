@@ -6,6 +6,8 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
 
 ### Fixed
 
+- **取消不响应 AbortSignal 的活动 Turn 不再让 Session 永久悬在 `cancelling`**：`AgentSession` 新增 `cancelDeadlineMs` 宽限（默认 10 秒，非有限值退回旧行为），`cancel()`、外部 `AbortSignal` 与 `close()` 共用同一计时；到期后取消路径收敛到 `recovery_required`、关闭路径收敛到 `closed`，并经 `onCancelDeadlineExceeded` 通知宿主（ComposedRuntimeFactory 投影为 `SESSION_CANCEL_DEADLINE_EXCEEDED` error + `agent_end` 观察事件）。所有等待者通过 per-Turn release barrier 有界返回；晚结算的后台 Turn 由终态事件防护保证至多落盘一次，不会翻转已收敛的终态。同批修复：`finishActiveTurn` 曾把强制的 `closed` 回跳成 `idle`；`sendQueuedNow` 在 Session 收敛后曾静默启动新 Turn，现回滚已取出的队列条目（`SessionInputQueue.takeById` 返回完整条目并新增 `requeue`，回滚保留原条目 id 与入队时间）。
+
 - 会话初始化、切模、设置档位与 Turn 绑定保留推理模型请求的原始 effort，修复 GPT-5.6 / GPT-6 及模型别名的 `xhigh` 在发送前被静默降为 `high`；非推理模型仍关闭推理。
 
 - 手动与自动上下文压缩提交后会立即刷新 Context Usage，并通过一次 `compaction.end` 事件通知宿主；队列压缩不再重复发送成功事件。
@@ -26,6 +28,9 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
 
 ### Changed
 
+- RuntimeHost 事件回放的 in-flight 缓冲新增事件数上限（缺省 4096，`RuntimeHostOptions.inFlightReplayEventLimit` 可配置）：
+  单条助手消息流超限时丢弃最旧事件、重连订阅只回放尾部；事件顺序与 sequence 保持不变，
+  恢复事实仍以 Conversation JSONL 与 `message.final` 为准，超长流的瞬时内存不再随消息长度无界增长。
 - **破坏性变更**：标准 Kernel Session 流改为在 `channel: "assistant"` 下顶层无损传输
   `@vetta/ai` 的 `AssistantMessageEvent`，不包进 `assistant.event.event`，也不再生产压平的
   message/thinking/toolcall/final 模型事件；
@@ -35,6 +40,9 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
   Plugin 合同迁至 `@vetta/coding-agent/plugin-runtime`，用户交互由产品扩展与最终宿主组合。
 
 ### Added
+
+- `SessionInputQueueEntry` 与队列快照新增可选 `enqueuedAt` 入队时间戳，宿主可据此计量排队等待时长；`SessionInputQueue` 接受注入 `now` 时钟，旧持久化快照缺省字段时以恢复时刻回填。
+- `compaction.end` 观察事件新增可选 `cancelled` 字段，宿主可区分主动中止与失败的压缩结束，作增量兼容。
 
 - Session 输入队列支持带稳定条目标识的 `steer`/`followUp` 请求，以及只在运行态原子入队的 `queuePromptIfRunning` 入口；宿主可以区分立即优先处理与等待完整 Turn 两种发送意图，并在重启后恢复队列。
 
