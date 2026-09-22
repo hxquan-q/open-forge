@@ -40,6 +40,14 @@
 		"./session-extensions": {
 			"types": "./dist/session-extensions/index.d.ts",
 			"import": "./dist/session-extensions/index.js"
+		},
+		"./task": {
+			"types": "./dist/task/index.d.ts",
+			"import": "./dist/task/index.js"
+		},
+		"./testing": {
+			"types": "./dist/testing/index.d.ts",
+			"import": "./dist/testing/index.js"
 		}
 	},
 	"files": ["dist"],
