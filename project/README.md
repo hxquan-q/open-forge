@@ -1,0 +1,78 @@
+# Open Forge Project Control Plane
+
+`project/` 是当前二开产品的主动管理层；`exprot/` 保留为历史源码分析、调研证据和早期规划归档。
+
+目录、编号、frontmatter、状态、内容和链接规范见 [`CONVENTIONS.md`](CONVENTIONS.md)。任何新的二开管理文件都必须进入 `project/`，不得继续向 `exprot/` 添加主动记录。
+
+## 单一事实源
+
+| 内容 | 权威位置 |
+|---|---|
+| Agent 开发规则 | `AGENTS.md`、目标目录最近的 `AGENTS.md` |
+| 架构决策 | `docs/adr/` |
+| 产品需求 | `project/requirements/` |
+| 实施路线 | `project/plans/` |
+| 可执行工作 | `project/tasks/` |
+| 未决问题 | `project/issues/` |
+| 已确认缺陷 | `project/bugs/` |
+| 调研证据 | `project/research/` 与 `exprot/` |
+| 测试/性能基线 | `project/verification/` |
+| 长期上下文 | `project/context/` |
+| Project 管理规范 | `project/CONVENTIONS.md` |
+| 外部协作 Issue | GitHub Issues；本地记录保存关联编号，不复制 GitHub 全文 |
+
+## 目录
+
+- `requirements/`：稳定的用户目标、边界和验收条件。
+- `plans/`：实现路线、阶段、依赖、取舍和升级信号。
+- `tasks/`：可直接执行的原子工作项。
+- `issues/`：还没有确定答案的产品或技术问题。
+- `bugs/`：可复现或已有证据的实际缺陷。
+- `research/`：源码、上游项目和外部资料的证据索引。
+- `verification/`：测试合同、性能指标和质量门禁。
+- `context/`：后续 Agent 需要先读的短上下文。
+- `decisions/`：`docs/adr/` 的索引，不复制 ADR 正文。
+
+## 编号和状态
+
+- Requirement：`REQ-xxxx`
+- Plan：`PLAN-xxxx`
+- Task：`TASK-xxxx`
+- Issue：`ISSUE-xxxx`
+- Bug：`BUG-xxxx`
+- Research：`RESEARCH-xxxx`
+- Verification：`VERIFY-xxxx`
+
+状态统一使用：
+
+```text
+draft → ready → in_progress → blocked → verifying → done → archived
+```
+
+状态写在 frontmatter 中，不通过移动文件表达状态，避免路径和链接频繁变化。
+
+## 标准流水线
+
+```text
+一句话需求
+  → REQ / BUG / ISSUE
+  → PLAN
+  → TASK
+  → Red：失败测试或基线
+  → Trace：沿真实调用链确认根因
+  → Change：最小可回滚实现
+  → Green：定向测试和用户流程测试
+  → Guard：质量门禁
+  → Release Notes
+  → 关闭并归档
+```
+
+## 三跳读取协议
+
+处理任务时不要全量加载本目录：
+
+1. 读仓库 `AGENTS.md`；
+2. 读本 `project/README.md` 和目标目录 README；
+3. 只读当前 Requirement、Plan、Bug/Issue 以及最多 1–2 篇相关 Research/Verification Note。
+
+`exprot/` 暂不删除。迁移期间，`project/` 通过索引指向 `exprot/`，待链接和事实源审查完成后再决定是否归档或移除旧路径。
