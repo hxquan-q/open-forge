@@ -11,6 +11,13 @@ export type RuntimeHostSessionEventRelayFailureComponent =
 	| "session-error-observer"
 	| "session-compaction-observer";
 
+/**
+ * 单条助手消息流期间 in-flight 回放缓冲保留的最大原始事件数。超限后丢弃最旧
+ * 事件（重放只保证尾部），恢复事实仍以 Conversation JSONL 与 `message.final`
+ * 为准——缓冲只是重连渲染端的尽力回放，不是持久化投影。
+ */
+export const DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT = 4096;
+
 export interface RuntimeHostSessionEventRelayOptions {
 	readonly queueSidecar: RuntimeHostQueueSidecar;
 	readonly synchronizeSessionIdentity: (sessionKey: string, handle: RuntimeHostSessionRecord) => void;
@@ -18,6 +25,12 @@ export interface RuntimeHostSessionEventRelayOptions {
 	readonly sessionCompactionObserver?: (
 		event: Extract<SessionEvent, { readonly type: "compaction.start" | "compaction.end" }>,
 	) => void;
+	/**
+	 * in-flight 回放缓冲的事件数上限。缺省 {@link DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT}；
+	 * 必须是正整数。事件按 `partial` 别名共享累积消息本体，上限约束的是 delta 串
+	 * 总量这条无界轴。
+	 */
+	readonly inFlightReplayEventLimit?: number;
 	readonly reportFailure: (
 		operation: "listener.notify" | "observer.notify",
 		component: RuntimeHostSessionEventRelayFailureComponent,
@@ -47,8 +60,15 @@ export class RuntimeHostSessionEventRelay {
 		(sessionPath: string, running: boolean, sessionId?: string, reason?: RunningChangedReason) => void
 	>();
 	private readonly contextStateEvents = new Map<string, SessionContextStateEvent>();
+	private readonly inFlightReplayEventLimit: number;
 
-	constructor(private readonly options: RuntimeHostSessionEventRelayOptions) {}
+	constructor(private readonly options: RuntimeHostSessionEventRelayOptions) {
+		const limit = options.inFlightReplayEventLimit ?? DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT;
+		if (!Number.isInteger(limit) || limit <= 0) {
+			throw new Error(`inFlightReplayEventLimit must be a positive integer, received: ${limit}`);
+		}
+		this.inFlightReplayEventLimit = limit;
+	}
 
 	attach(sessionKey: string, handle: RuntimeHostSessionRecord, eventStream: RuntimeSessionEventStream): void {
 		const buffer: InFlightBuffer = {
@@ -56,6 +76,7 @@ export class RuntimeHostSessionEventRelay {
 			events: [],
 			isActive: false,
 			terminalReason: undefined,
+			droppedEventCount: 0,
 		};
 		this.inFlightBuffers.set(sessionKey, buffer);
 		const unsubscribe = eventStream.subscribe((unsequencedEvent) => {
@@ -73,6 +94,7 @@ export class RuntimeHostSessionEventRelay {
 				buffer.events = [];
 				buffer.isActive = true;
 				buffer.terminalReason = undefined;
+				buffer.droppedEventCount = 0;
 				this.markRunning(handle.lifecycle.sessionPath, true, handle.lifecycle.sessionId);
 			} else if (event.type === "session.lifecycle" && event.phase === "aborted") {
 				buffer.terminalReason = "aborted";
@@ -82,6 +104,7 @@ export class RuntimeHostSessionEventRelay {
 				this.currentTurnStartedAt.delete(sessionKey);
 				buffer.events = [];
 				buffer.isActive = false;
+				buffer.droppedEventCount = 0;
 				this.markRunning(
 					handle.lifecycle.sessionPath,
 					false,
@@ -91,12 +114,17 @@ export class RuntimeHostSessionEventRelay {
 				buffer.terminalReason = undefined;
 			} else if (event.type === "message.final" || event.type === "usage.update") {
 				buffer.events = [];
+				buffer.droppedEventCount = 0;
 				if (event.type === "message.final" && event.message.role === "assistant") {
 					if (event.message.stopReason === "aborted") buffer.terminalReason = "aborted";
 					else if (event.message.stopReason === "error") buffer.terminalReason = "error";
 					else buffer.terminalReason = undefined;
 				}
 			} else if (event.channel === "assistant" && buffer.isActive) {
+				if (buffer.events.length >= this.inFlightReplayEventLimit) {
+					buffer.events.shift();
+					buffer.droppedEventCount += 1;
+				}
 				buffer.events.push(event);
 				if (event.type === "error") buffer.terminalReason = "error";
 				else if (event.type === "done" && event.message.stopReason === "aborted") {
