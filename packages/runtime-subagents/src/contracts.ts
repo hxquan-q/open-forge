@@ -57,8 +57,15 @@ export interface SubagentTypeRegistryLike<TProfile = unknown> {
 	ids(): readonly SubagentTypeId[];
 }
 
+/** agent_end 的结局；缺省视为 "completed"，兼容只发裸事件的旧 Child 实现。 */
+export type SubagentChildEndReason = "completed" | "failed" | "interrupted";
+
 export interface SubagentChildEvent {
 	readonly type: "agent_start" | "agent_end";
+	readonly reason?: SubagentChildEndReason;
+	/** reason === "failed" 时的稳定失败事实（Provider/Runtime 错误文本与错误码）。 */
+	readonly errorMessage?: string;
+	readonly errorCode?: string;
 }
 
 export interface SubagentChildHandle {
@@ -143,6 +150,17 @@ export interface SubagentCoordinatorOptions<TProfile = unknown> {
 	readonly clock?: { now(): number };
 	readonly idGenerator?: { next(): string };
 	readonly notificationDelayMs?: number;
+	/**
+	 * 子会话创建/重开的宽限（毫秒）。超时按启动失败收敛成员终态；
+	 * 传入非有限值恢复旧的无限等待。
+	 */
+	readonly startDeadlineMs?: number;
+	/**
+	 * 成员中断/释放等收尾的宽限（毫秒）。超时强制收敛并释放并发槽位，
+	 * 避免忽略 AbortSignal 的 Provider/Tool 让 Coordinator 永久等待；
+	 * 传入非有限值恢复旧的无限等待。
+	 */
+	readonly settleDeadlineMs?: number;
 }
 
 export interface SubagentWaitOptions {
@@ -173,6 +191,8 @@ export interface SubagentCoordinatorPort {
 
 export const TASK_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 export const SUBAGENT_FINAL_TEXT_LIMIT = 16 * 1024;
+export const DEFAULT_SUBAGENT_START_DEADLINE_MS = 30_000;
+export const DEFAULT_SUBAGENT_SETTLE_DEADLINE_MS = 10_000;
 
 export function isValidTaskName(name: string): boolean {
 	return name.length > 0 && name !== "root" && TASK_NAME_PATTERN.test(name);

@@ -124,6 +124,7 @@ export class RuntimeHost implements SessionFacade {
 			synchronizeSessionIdentity: (sessionKey, handle) => this.synchronizeSessionIdentity(sessionKey, handle),
 			sessionErrorObserver: options.sessionErrorObserver,
 			sessionCompactionObserver: options.sessionCompactionObserver,
+			inFlightReplayEventLimit: options.inFlightReplayEventLimit,
 			reportFailure: (operation, component, error, sessionId) =>
 				this.recordLifecycleFailure(operation, component, error, sessionId),
 		});
@@ -295,6 +296,14 @@ export class RuntimeHost implements SessionFacade {
 
 	async prompt(sessionId: string, request: PromptRequest): Promise<RuntimeTurnPromptOutcome> {
 		return this.sessionOperations.prompt(sessionId, request);
+	}
+
+	async promptWhenAvailable(
+		sessionId: string,
+		request: PromptRequest,
+		signal?: AbortSignal,
+	): Promise<RuntimeTurnPromptOutcome> {
+		return this.sessionOperations.promptWhenAvailable(sessionId, request, signal);
 	}
 
 	async queuePromptIfRunning(sessionId: string, request: PromptRequest): Promise<RuntimeQueuePromptIfRunningOutcome> {

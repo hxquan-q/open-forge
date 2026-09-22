@@ -16,13 +16,21 @@ import {
 export interface CompactionPrefireCacheOptions {
 	readonly resolveApiKey: CodingAgentContextRuntimeOptions["resolveApiKey"];
 	readonly generateCompaction: NonNullable<CodingAgentContextRuntimeOptions["generateCompaction"]>;
+	readonly resolveCompactionModel?: CodingAgentContextRuntimeOptions["resolveCompactionModel"];
 	readonly canAttempt: () => boolean;
 	readonly observations?: RuntimeObservationPublisher;
+}
+
+interface PendingPrefire {
+	readonly fingerprint: string;
+	readonly firstKeptEntryId: string;
+	readonly promise: Promise<void>;
 }
 
 export class CompactionPrefireCache {
 	private cache: PrefireCache | undefined;
 	private abortController: AbortController | undefined;
+	private pending: PendingPrefire | undefined;
 	private disposed = false;
 
 	constructor(private readonly options: CompactionPrefireCacheOptions) {}
@@ -41,7 +49,14 @@ export class CompactionPrefireCache {
 
 		const controller = new AbortController();
 		this.abortController = controller;
-		void this.generate(preparation, fingerprint, model, credential, controller.signal).finally(() => {
+		const pending: PendingPrefire = {
+			fingerprint,
+			firstKeptEntryId: preparation.firstKeptEntryId,
+			promise: this.generate(preparation, fingerprint, model, credential, controller.signal),
+		};
+		this.pending = pending;
+		void pending.promise.finally(() => {
+			if (this.pending === pending) this.pending = undefined;
 			if (this.abortController === controller) this.abortController = undefined;
 		});
 	}
@@ -53,23 +68,43 @@ export class CompactionPrefireCache {
 		return isPrefireCacheValid(cache, [...entries]) ? cache.result : undefined;
 	}
 
+	/**
+	 * 压缩触发时收敛在途 prefire：指纹匹配则等待其结果并复用，避免同一前缀
+	 * 并发跑第二次摘要（single-flight）。不匹配或已中止时立即返回，由调用方
+	 * 走正常生成路径。
+	 */
+	async settle(entries: readonly SessionEntry[], signal: AbortSignal): Promise<CompactionResult | undefined> {
+		const cached = this.take(entries);
+		if (cached) return cached;
+		const pending = this.pending;
+		if (!pending || this.disposed || signal.aborted) return undefined;
+		if (fingerprintCompactionPrefix([...entries], pending.firstKeptEntryId) !== pending.fingerprint) {
+			return undefined;
+		}
+		await Promise.race([pending.promise, aborted(signal)]);
+		return this.take(entries);
+	}
+
 	dispose(): void {
 		if (this.disposed) return;
 		this.disposed = true;
 		this.abortController?.abort();
 		this.abortController = undefined;
+		this.pending = undefined;
 		this.cache = undefined;
 	}
 
 	private async generate(
 		preparation: CompactionPreparation,
 		fingerprint: string,
-		model: Model<Api>,
+		turnModel: Model<Api>,
 		credential: { resolve(): Promise<string | undefined> | string | undefined } | undefined,
 		signal: AbortSignal,
 	): Promise<void> {
 		try {
-			const apiKey = credential ? await credential.resolve() : await this.options.resolveApiKey(model);
+			const model = (await this.options.resolveCompactionModel?.(turnModel)) ?? turnModel;
+			const apiKey =
+				model === turnModel && credential ? await credential.resolve() : await this.options.resolveApiKey(model);
 			if (!apiKey) return;
 			const result = await this.options.generateCompaction(preparation, model, apiKey, undefined, signal);
 			if (signal.aborted || this.disposed) return;
@@ -86,4 +121,14 @@ export class CompactionPrefireCache {
 			// Prefire is best-effort and does not affect the compaction circuit breaker.
 		}
 	}
+}
+
+function aborted(signal: AbortSignal): Promise<void> {
+	return new Promise((resolve) => {
+		if (signal.aborted) {
+			resolve();
+			return;
+		}
+		signal.addEventListener("abort", () => resolve(), { once: true });
+	});
 }

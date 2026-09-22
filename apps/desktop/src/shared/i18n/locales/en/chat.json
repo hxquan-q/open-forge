@@ -378,6 +378,11 @@
 			"closed": "Open bottom panel",
 			"open": "Close bottom panel"
 		},
+		"terminalButton": {
+			"focused": "Terminal",
+			"open": "Open terminal",
+			"unavailable": "Local terminal is unavailable"
+		},
 		"exportButton": {
 			"title": "Export full session as HTML"
 		},
@@ -625,9 +630,7 @@
 			}
 		},
 		"assistantFoldTip": {
-			"collapse": "Collapse {{count}} items",
 			"collapseLabel": "Collapse",
-			"expand": "Expand {{count}} items",
 			"expandLabel": "Expand",
 			"streaming": "Processing · {{duration}}",
 			"waiting": "Waiting · {{duration}}",
@@ -844,17 +847,9 @@
 			"showMascot": "Show mascot",
 			"playOnce": "Play the current mascot animation once"
 		},
-		"torch": {
-			"light": "Light the torch",
-			"extinguish": "Snuff out the torch"
-		},
 		"mario": {
 			"hit": "Bump out the mushroom",
 			"reset": "Put the mushroom back"
-		},
-		"hand": {
-			"rest": "Let the hand rest",
-			"tap": "Get the hand tapping again"
 		},
 		"projectSelector": {
 			"placeholder": "Select project",

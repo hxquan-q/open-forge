@@ -8,7 +8,16 @@ export interface StdioMcpProcessOptions {
 	readonly name: string;
 	readonly debug?: boolean;
 	readonly startupTimeout?: number;
+	/** 单条换行分隔 JSON-RPC 消息的最大字节数（正整数）；缺省 16 MiB。 */
+	readonly maxMessageBytes?: number;
 }
+
+/**
+ * 单条 stdio JSON-RPC 消息允许的最大字节数。超过上限说明对端不再是可解析的
+ * 消息流（或结果本身超出合同），继续累积只会无界占用内存：立即报错并终止
+ * 进程，而不是把半条消息读进内存。
+ */
+const DEFAULT_MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
 
 type StdioMcpProcessEvents = {
 	message: [message: unknown];
@@ -25,6 +34,8 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	private readonly debug: boolean;
 	private readonly startupTimeout: number;
 	private messageBuffer = "";
+	private bufferedBytes = 0;
+	private readonly maxMessageBytes: number;
 	private isReady = false;
 	private isClosed = false;
 
@@ -34,6 +45,11 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 		this.name = options.name;
 		this.debug = options.debug || options.config.debug || false;
 		this.startupTimeout = options.startupTimeout || options.config.startupTimeout || 10000;
+		const maxMessageBytes = options.maxMessageBytes ?? DEFAULT_MAX_MESSAGE_BYTES;
+		if (!Number.isInteger(maxMessageBytes) || maxMessageBytes <= 0) {
+			throw new Error(`maxMessageBytes must be a positive integer, received: ${maxMessageBytes}`);
+		}
+		this.maxMessageBytes = maxMessageBytes;
 	}
 
 	async start(): Promise<void> {
@@ -118,18 +134,38 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	}
 
 	private handleStdout(data: Buffer): void {
+		this.bufferedBytes += data.byteLength;
 		this.messageBuffer += data.toString();
+		if (this.bufferedBytes > this.maxMessageBytes && !this.messageBuffer.includes("\n")) {
+			// 半条消息已超过上限：流不再可解析，终止进程并保留有界的错误现场。
+			const preview = this.messageBuffer.slice(0, 200);
+			this.messageBuffer = "";
+			this.bufferedBytes = 0;
+			this.log(`Message exceeded ${this.maxMessageBytes} bytes: ${preview}`);
+			this.emit("error", new Error(`MCP server message exceeded ${this.maxMessageBytes} bytes: ${preview}`));
+			this.process?.kill("SIGKILL");
+			return;
+		}
 		const lines = this.messageBuffer.split("\n");
 		this.messageBuffer = lines.pop() || "";
+		this.bufferedBytes = Buffer.byteLength(this.messageBuffer, "utf8");
 		for (const line of lines) {
 			if (!line.trim()) continue;
+			if (Buffer.byteLength(line, "utf8") > this.maxMessageBytes) {
+				const preview = line.slice(0, 200);
+				this.log(`Message exceeded ${this.maxMessageBytes} bytes: ${preview}`);
+				this.emit("error", new Error(`MCP server message exceeded ${this.maxMessageBytes} bytes: ${preview}`));
+				this.process?.kill("SIGKILL");
+				continue;
+			}
 			try {
 				const message: unknown = JSON.parse(line);
 				this.log(`Received: ${line}`);
 				this.emit("message", message);
 			} catch {
-				this.log(`Failed to parse JSON: ${line}`);
-				this.emit("error", new Error(`Invalid JSON from MCP server: ${line}`));
+				const preview = line.slice(0, 200);
+				this.log(`Failed to parse JSON: ${preview}`);
+				this.emit("error", new Error(`Invalid JSON from MCP server: ${preview}`));
 			}
 		}
 	}
@@ -150,6 +186,7 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 		this.isReady = false;
 		this.isClosed = true;
 		this.messageBuffer = "";
+		this.bufferedBytes = 0;
 	}
 
 	private log(message: string): void {

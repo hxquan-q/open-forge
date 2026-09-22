@@ -18,6 +18,7 @@ import { configureRendererCdp } from "./app-debug/ui/renderer-cdp.js";
 import { registerAppLifecycleIpc } from "./app-lifecycle.js";
 import { installApplicationMenu } from "./app-menu.js";
 import { initializeAppMonitor, shutdownAppMonitor } from "./app-monitor/app-monitor-service.js";
+import { initializePerfMonitor, shutdownPerfMonitor } from "./app-monitor/perf-monitor-service.js";
 import { shutdownBatchTaskExecutor } from "./batch-tasks/batch-task-executor.js";
 import { initializeDesktopBatchTaskService } from "./batch-tasks/batch-task-service.js";
 import { shutdownBrowserAutomationService } from "./browser-automation/index.js";
@@ -248,6 +249,8 @@ let localRpcServer: DesktopLocalRpcServerHandle | undefined;
 let appMonitorInitializationPromise: Promise<void> | undefined;
 
 function ensureAppMonitorInitialized(): Promise<void> {
+	// 性能快照是纯内存旁路采样，随 app-monitor 同生命周期启动；其初始化不可失败。
+	initializePerfMonitor();
 	appMonitorInitializationPromise ??= initializeAppMonitor();
 	return appMonitorInitializationPromise;
 }
@@ -969,6 +972,7 @@ setQuitCleanup(async () => {
 	try {
 		await ensureAppMonitorInitialized();
 		await shutdownAppMonitor();
+		await shutdownPerfMonitor();
 	} catch (err) {
 		mainLog.warn("app monitor shutdown failed", err);
 	}

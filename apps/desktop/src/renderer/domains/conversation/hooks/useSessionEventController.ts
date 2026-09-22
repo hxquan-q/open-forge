@@ -52,9 +52,9 @@ import {
 	handleToolPhase,
 	handleToolStart,
 	nextId,
+	rememberTurnStats,
 	startAssistantTurn,
 	toChatErrorDetails,
-	turnStatsCache,
 } from "../services/chat-service";
 import { clearCachedContextComposition, writeCachedContextComposition } from "../services/context-composition-cache";
 import { ConversationProjection } from "../services/conversation-projection";
@@ -474,7 +474,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				setLastTurnUsage(turnStats);
 				// Cache turn stats for session restore
 				const sp = activeSessionRef.current?.sessionPath;
-				if (sp != null) turnStatsCache.set(sp, turnStats);
+				if (sp != null) rememberTurnStats(sp, turnStats);
 				if (sp && event.contextComposition) {
 					writeCachedContextComposition(sp, event.contextComposition);
 				}
@@ -587,7 +587,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				const planModeState = readCodingAgentPlanModeObservation(event);
 				if (planModeState) {
 					const sid = activeSessionRef.current?.runtimeId;
-					if (sid) setPlanModeStates((prev) => ({ ...prev, [sid]: planModeState }));
+					if (sid) {
+						setPlanModeStates((prev) => {
+							// 真相源在会话 Runtime；这里只是投影，「没有记录即视为未开启」。
+							// 回落到 default 且无已提交计划时删键，投影不随打开过的会话数累积。
+							if (planModeState.permissionMode === "default" && planModeState.plan === undefined) {
+								if (!(sid in prev)) return prev;
+								const next = { ...prev };
+								delete next[sid];
+								return next;
+							}
+							return { ...prev, [sid]: planModeState };
+						});
+					}
 					return;
 				}
 				const items = readCodingAgentTodoObservation(event);

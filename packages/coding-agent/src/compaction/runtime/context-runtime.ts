@@ -33,6 +33,7 @@ import type {
 	CodingAgentPinnedModelContext,
 } from "../../runtime-contracts/index.js";
 import {
+	CompactionBackpressureGate,
 	type CompactionSettings,
 	compact,
 	DEFAULT_COMPACTION_SETTINGS,
@@ -68,6 +69,7 @@ export class DefaultCodingAgentContextRuntime
 	private readonly extensionRuntime: CodingAgentCompactionExtensionRuntime | undefined;
 	private readonly now: () => number;
 	private readonly usage: RuntimeContextUsageTracker;
+	private readonly backpressure: CompactionBackpressureGate;
 	private readonly prefire: CompactionPrefireCache;
 	private readonly automaticCompaction: CodingAgentAutomaticCompactionStrategy;
 	private readonly manualCompaction: CodingAgentManualCompactionStrategy;
@@ -84,6 +86,7 @@ export class DefaultCodingAgentContextRuntime
 			((preparation, model, apiKey, customInstructions, signal) =>
 				compact(preparation, model, apiKey, customInstructions, signal));
 		const circuitBreaker = new ConsecutiveFailureCircuitBreaker({ now: this.now });
+		this.backpressure = new CompactionBackpressureGate(this.now);
 		this.usage = new RuntimeContextUsageTracker({
 			estimateDocumentTokens: (document) =>
 				estimateContextTokens(selectConversationDocumentModelMessages(document).filter(isRuntimeMessage)).tokens,
@@ -91,7 +94,9 @@ export class DefaultCodingAgentContextRuntime
 		this.prefire = new CompactionPrefireCache({
 			resolveApiKey: options.resolveApiKey,
 			generateCompaction,
-			canAttempt: () => circuitBreaker.canAttempt(),
+			resolveCompactionModel: options.resolveCompactionModel,
+			// 自动压缩尝试在途时不再启动 prefire，保证全局至多一个摘要生成。
+			canAttempt: () => circuitBreaker.canAttempt() && !this.backpressure.isInFlight(),
 			observations: options.observationPublisher,
 		});
 		const recordFactory = {
@@ -105,9 +110,12 @@ export class DefaultCodingAgentContextRuntime
 			generateCompaction,
 			failureRecovery: options.failureRecovery ?? new CodingAgentImageRequestFailureRecovery(),
 			circuitBreaker,
+			backpressure: this.backpressure,
 			prefire: this.prefire,
 			recordFactory,
 			recordEstimatedTokens: (tokens) => this.usage.recordEstimatedTokens(tokens),
+			resolveCompactionModel: options.resolveCompactionModel,
+			observations: options.observationPublisher,
 		});
 		this.manualCompaction = new CodingAgentManualCompactionStrategy({
 			resolveApiKey: options.resolveApiKey,
@@ -115,6 +123,7 @@ export class DefaultCodingAgentContextRuntime
 			generateCompaction,
 			readSettings: () => this.readSettings(),
 			recordFactory,
+			resolveCompactionModel: options.resolveCompactionModel,
 		});
 		this.contextSummary = new CodingAgentContextSummaryStrategy({
 			resolveApiKey: options.resolveApiKey,

@@ -352,4 +352,51 @@ describe("ModernStatelessMcpClient", () => {
 		).resolves.toMatchObject({ resultType: "complete" });
 		expect(delivered).toEqual(["notifications/subscriptions/acknowledged", "notifications/tools/list_changed"]);
 	});
+
+	it("rejects responses whose streamed body exceeds maxResponseBytes", async () => {
+		const client = new ModernStatelessMcpClient({
+			config: { type: "http", url: "https://mcp.example.test" },
+			name: "fixture",
+			maxResponseBytes: 1024,
+			fetch: async () =>
+				new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { padding: "x".repeat(4096) } }), {
+					headers: { "content-type": "application/json" },
+				}),
+		});
+		await expect(
+			client.initialize({
+				protocolVersion: MCP_MODERN_PROTOCOL_VERSION,
+				clientInfo: { name: "vetta", version: "1" },
+			}),
+		).rejects.toThrow(/exceeded the 1024-byte limit/);
+	});
+
+	it("rejects oversized responses before reading the body when content-length declares the size", async () => {
+		const client = new ModernStatelessMcpClient({
+			config: { type: "http", url: "https://mcp.example.test" },
+			name: "fixture",
+			maxResponseBytes: 1024,
+			fetch: async () =>
+				new Response("{}", {
+					headers: { "content-type": "application/json", "content-length": String(64 * 1024 * 1024 + 1) },
+				}),
+		});
+		await expect(
+			client.initialize({
+				protocolVersion: MCP_MODERN_PROTOCOL_VERSION,
+				clientInfo: { name: "vetta", version: "1" },
+			}),
+		).rejects.toThrow(/exceeded the 1024-byte limit/);
+	});
+
+	it("rejects a non-positive maxResponseBytes at construction", () => {
+		expect(
+			() =>
+				new ModernStatelessMcpClient({
+					config: { type: "http", url: "https://mcp.example.test" },
+					name: "fixture",
+					maxResponseBytes: 0,
+				}),
+		).toThrow(/positive integer/);
+	});
 });

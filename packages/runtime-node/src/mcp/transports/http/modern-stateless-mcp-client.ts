@@ -51,6 +51,12 @@ import { CacheableMcpResultStore } from "./cacheable-result-store.js";
 const MODERN_PROTOCOL_VERSION = "2026-07-28";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const JSON_CONTENT_TYPE = "application/json";
+/**
+ * 单个 MCP HTTP 响应允许的最大字节数。超限时请求以协议错误失败而不是把
+ * 无界响应体读进内存；合法的大结果（如媒体）远小于该值，由结果策略层
+ * 继续做 artifact 化处理。
+ */
+const DEFAULT_MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 
 export interface ModernStatelessMcpClientOptions {
 	readonly config: McpHttpServerConfig;
@@ -64,6 +70,8 @@ export interface ModernStatelessMcpClientOptions {
 	readonly maxInteractionRounds?: number;
 	readonly onDiagnostic?: (message: string) => void;
 	readonly fetch?: (input: string | URL, init?: RequestInit) => Promise<Response>;
+	/** 单个响应的最大字节数（正整数）；缺省 64 MiB。 */
+	readonly maxResponseBytes?: number;
 }
 
 /**
@@ -82,6 +90,7 @@ export class ModernStatelessMcpClient implements McpClientHandle {
 	private readonly maxInteractionRounds: number;
 	private readonly onDiagnostic?: (message: string) => void;
 	private readonly fetchImpl: (input: string | URL, init?: RequestInit) => Promise<Response>;
+	private readonly maxResponseBytes: number;
 	private readonly cache = new CacheableMcpResultStore();
 	private clientInfo: ModernStatelessMcpClientOptions["clientInfo"];
 	private clientCapabilities: McpClientCapabilities;
@@ -98,6 +107,11 @@ export class ModernStatelessMcpClient implements McpClientHandle {
 		this.maxInteractionRounds = Math.max(1, options.maxInteractionRounds ?? 3);
 		this.onDiagnostic = options.onDiagnostic;
 		this.fetchImpl = options.fetch ?? fetch;
+		const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
+		if (!Number.isInteger(maxResponseBytes) || maxResponseBytes <= 0) {
+			throw new Error(`maxResponseBytes must be a positive integer, received: ${maxResponseBytes}`);
+		}
+		this.maxResponseBytes = maxResponseBytes;
 		this.clientInfo = options.clientInfo;
 		this.clientCapabilities = withModernExtensionCapabilities(options.clientCapabilities ?? {});
 	}
@@ -277,10 +291,10 @@ export class ModernStatelessMcpClient implements McpClientHandle {
 		if (response.status === 401 || response.status === 403) {
 			throw new McpAuthRequiredError(this.name, this.config.url, `MCP server returned HTTP ${response.status}`);
 		}
-		if (!response.ok) throw toRpcError(response.status, await readResponsePayload(response));
+		if (!response.ok) throw toRpcError(response.status, await readResponsePayload(response, this.maxResponseBytes));
 
 		let acknowledged = false;
-		for await (const message of readSubscriptionMessages(response)) {
+		for await (const message of readSubscriptionMessages(response, this.maxResponseBytes)) {
 			if (isSubscriptionNotification(message, id)) {
 				if (!acknowledged && message.method !== "notifications/subscriptions/acknowledged") {
 					throw new Error("MCP subscription notification arrived before acknowledgement");
@@ -361,7 +375,7 @@ export class ModernStatelessMcpClient implements McpClientHandle {
 			if (response.status === 401 || response.status === 403) {
 				throw new McpAuthRequiredError(this.name, this.config.url, `MCP server returned HTTP ${response.status}`);
 			}
-			const payload = await readResponsePayload(response);
+			const payload = await readResponsePayload(response, this.maxResponseBytes);
 			if (!response.ok) throw toRpcError(response.status, payload);
 			if (!isRpcResponse(payload)) throw new Error("Invalid MCP JSON-RPC response");
 			if ("error" in payload) {
@@ -457,8 +471,8 @@ function encodeHeaderValue(value: string): string {
 	return `=?base64?${Buffer.from(value, "utf8").toString("base64")}?=`;
 }
 
-async function readResponsePayload(response: Response): Promise<unknown> {
-	const text = await response.text();
+async function readResponsePayload(response: Response, maxResponseBytes: number): Promise<unknown> {
+	const text = await readResponseBody(response, maxResponseBytes);
 	if (!text.trim()) return undefined;
 	if (response.headers.get("content-type")?.includes("text/event-stream")) {
 		const data = text
@@ -469,6 +483,39 @@ async function readResponsePayload(response: Response): Promise<unknown> {
 		return JSON.parse(data);
 	}
 	return JSON.parse(text);
+}
+
+/** 流式读取响应体，超过 maxResponseBytes 立即取消下载并抛出协议错误。 */
+async function readResponseBody(response: Response, maxResponseBytes: number): Promise<string> {
+	const declaredLength = Number(response.headers.get("content-length"));
+	if (Number.isFinite(declaredLength) && declaredLength > maxResponseBytes) {
+		throw oversizedResponseError(declaredLength, maxResponseBytes);
+	}
+	if (!response.body) {
+		const text = await response.text();
+		const byteLength = Buffer.byteLength(text, "utf8");
+		if (byteLength > maxResponseBytes) throw oversizedResponseError(byteLength, maxResponseBytes);
+		return text;
+	}
+	const reader = response.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let received = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		if (!value) continue;
+		received += value.byteLength;
+		if (received > maxResponseBytes) {
+			await reader.cancel().catch(() => undefined);
+			throw oversizedResponseError(received, maxResponseBytes);
+		}
+		chunks.push(value);
+	}
+	return Buffer.concat(chunks).toString("utf8");
+}
+
+function oversizedResponseError(received: number, limit: number): Error {
+	return new Error(`MCP response exceeded the ${limit}-byte limit (received at least ${received} bytes)`);
 }
 
 function isRpcResponse(value: unknown): value is JsonRpcResponse {
@@ -547,9 +594,9 @@ function normalizeSubscriptionFilter(filter: McpSubscriptionFilter): McpJsonObje
 	};
 }
 
-async function* readSubscriptionMessages(response: Response): AsyncGenerator<unknown> {
+async function* readSubscriptionMessages(response: Response, maxResponseBytes: number): AsyncGenerator<unknown> {
 	if (!response.headers.get("content-type")?.includes("text/event-stream")) {
-		yield await readResponsePayload(response);
+		yield await readResponsePayload(response, maxResponseBytes);
 		return;
 	}
 	if (!response.body) return;
@@ -560,6 +607,8 @@ async function* readSubscriptionMessages(response: Response): AsyncGenerator<unk
 		while (true) {
 			const { done, value } = await reader.read();
 			buffer += decoder.decode(value, { stream: !done });
+			// 单个 SSE 事件在边界分隔符之间的缓冲同样必须有界。
+			if (buffer.length > maxResponseBytes) throw oversizedResponseError(buffer.length, maxResponseBytes);
 			const events = buffer.split(/\r?\n\r?\n/);
 			buffer = events.pop() ?? "";
 			for (const event of events) {

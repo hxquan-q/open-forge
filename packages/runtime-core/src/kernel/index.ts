@@ -12,7 +12,9 @@ export {
 	AgentSession,
 	type CreateAgentSessionOptions,
 	createAgentSession,
+	DEFAULT_CANCEL_DEADLINE_MS,
 	resumeAgentSession,
+	type SessionCancelDeadlineInfo,
 } from "./agent-session.js";
 export {
 	ConsecutiveFailureCircuitBreaker,

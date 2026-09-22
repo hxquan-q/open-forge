@@ -81,6 +81,10 @@ export interface CodingAgentContextRuntimeOptions {
 	};
 	readonly bindPinnedModelContext?: CodingAgentPinnedModelContextBinder;
 	readonly failureRecovery?: CodingAgentModelCallFailureRecovery;
+	/** 解析压缩专用模型；返回 undefined 时沿用当前 Turn 绑定的模型。 */
+	readonly resolveCompactionModel?: (
+		turnModel: Model<Api>,
+	) => Model<Api> | undefined | Promise<Model<Api> | undefined>;
 	readonly now?: () => number;
 	readonly readCompactionWorkState?: () => CompactionWorkStateSnapshot;
 	/** Receives privacy-safe Context/Compaction diagnostics; failures are isolated by the publisher. */
@@ -152,4 +156,8 @@ export interface CodingAgentCompactionRuntimeOptions {
 		customInstructions: string | undefined,
 		signal: AbortSignal,
 	) => Promise<CompactionResult>;
+	/** 压缩专用模型解析；未提供或返回 undefined 时沿用 Turn 模型。 */
+	readonly resolveCompactionModel?: (
+		turnModel: Model<Api>,
+	) => Model<Api> | undefined | Promise<Model<Api> | undefined>;
 }
