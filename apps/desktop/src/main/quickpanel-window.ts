@@ -44,6 +44,9 @@ let glassMode: QuickPanelGlassMode = "none";
 // 每个窗口仅 addView 一次：原生玻璃视图挂在原生窗口上、与 web 内容无关，
 // 重复 addView（如 dev HMR 重载）会层叠多张玻璃。
 let glassApplied = false;
+// 首次唤出的就绪挂起：懒创建的窗口要等 ready-to-show 才展示，避免亮出半成品
+// 页面；挂起期间再次触发则立即按常驻路径展示，并靠本标志防止就绪后二次 show。
+let firstShowPending = false;
 
 // 在 macOS 上为面板窗口挂载原生玻璃视图（玻璃绘制在 web 内容之下）。
 // macOS 26+ 得到液态玻璃，更低版本由库自动回退为磨砂玻璃；非 mac 为 no-op。
@@ -96,6 +99,8 @@ function loadQuickPanelEntry(win: BrowserWindow): void {
 	});
 	void win.loadURL(url).catch((error: unknown) => {
 		log.error("loadURL failed", error);
+		// 拒绝路径可能没有 did-fail-load 事件，同样解除首唤挂起，下次触发走常驻立即 show。
+		firstShowPending = false;
 	});
 }
 
@@ -112,7 +117,8 @@ export function getQuickPanelWindow(): BrowserWindow | null {
 	return quickPanelWindow;
 }
 
-export function createQuickPanelWindow(): BrowserWindow {
+// 窗口懒创建：首次触发才建窗，创建后常驻复用（show/hide，不每次重建）。
+function createQuickPanelWindow(): BrowserWindow {
 	if (quickPanelWindow && !quickPanelWindow.isDestroyed()) {
 		return quickPanelWindow;
 	}
@@ -199,17 +205,44 @@ export function createQuickPanelWindow(): BrowserWindow {
 	return quickPanelWindow;
 }
 
-export function showQuickPanelWindow(): void {
-	const win = quickPanelWindow && !quickPanelWindow.isDestroyed() ? quickPanelWindow : createQuickPanelWindow();
+// 常驻展示路径：定位 + show + focus + ON_SHOWN + 补发玻璃模式。
+function revealQuickPanelWindow(win: BrowserWindow): void {
 	positionQuickPanelWindow(win);
 	win.show();
 	win.focus();
 	if (!win.webContents.isDestroyed()) {
+		// mac 上 ready-to-show 可能早于 did-finish-load（本地小页面常见）：先幂等挂
+		// 玻璃再下发模式，避免首次唤出「实心→玻璃」闪变；非 mac 上是 no-op。
+		applyQuickPanelGlass(win);
 		win.webContents.send(QUICK_PANEL_CHANNELS.ON_SHOWN);
 		// 每次唤出补发玻璃模式，避免渲染层错过首帧 did-finish-load 推送。
 		sendQuickPanelGlassMode(win);
 	}
 	log.info("show requested", { bounds: win.getBounds() });
+}
+
+export function showQuickPanelWindow(): void {
+	const win = quickPanelWindow && !quickPanelWindow.isDestroyed() ? quickPanelWindow : null;
+	if (win) {
+		// 就绪挂起期间再次触发：立即按常驻路径展示，并防止 ready-to-show 随后二次 show。
+		firstShowPending = false;
+		revealQuickPanelWindow(win);
+		return;
+	}
+	const created = createQuickPanelWindow();
+	firstShowPending = true;
+	// ready-to-show 是 BrowserWindow 事件；did-fail-load 是 webContents 事件。
+	created.once("ready-to-show", () => {
+		if (!firstShowPending || created.isDestroyed()) return;
+		firstShowPending = false;
+		revealQuickPanelWindow(created);
+	});
+	created.webContents.once("did-fail-load", (_event, _errorCode, _errorDescription, _validatedURL, isMainFrame) => {
+		// 只认主帧失败；子帧失败不解除首唤挂起。加载失败不 show 空窗，
+		// 下次触发走常驻立即 show（与既有加载失败行为同级）。
+		if (!isMainFrame || !firstShowPending) return;
+		firstShowPending = false;
+	});
 }
 
 export function hideQuickPanelWindow(): void {

@@ -1,7 +1,7 @@
 ---
 id: TASK-0013
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/main, .github/release-notes]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
@@ -48,3 +48,11 @@ updated: 2026-09-23
 ## 并发结论
 
 支持；本任务由主会话串行执行。
+
+## 实施摘要（2026-09-23）
+
+- `main.ts` 删除预创建调用与 import（`syncQuickPanelTrigger` 保留），注释更新为懒创建语义。
+- `quickpanel-window.ts`：`createQuickPanelWindow` 收回模块私有；新增 `firstShowPending` 与 `revealQuickPanelWindow`（展示前幂等挂玻璃，消除 mac「实心→玻璃」闪变）；`did-fail-load` 兜底过滤 `isMainFrame`；`loadURL` 拒绝路径同步解除挂起。
+- 实现修正设计一处：`ready-to-show` 是 BrowserWindow 事件而非 webContents 事件（tsc 拦下），挂载点改为窗口。
+- 验证：`quickpanel-window.test.ts` 6 用例（窄 fake Electron + `vi.resetModules` 隔离）+ 源码守卫 1 用例 + 相邻 `shortcut-service.test.ts`、`ipc/quickpanel.test.ts` 回归全过；`tsc -p apps/desktop` 与 `check:quick` 通过。
+- 发布说明 v0.5.59「改进」已补条目（含首唤延迟与最近会话列表加载态的代价说明）。

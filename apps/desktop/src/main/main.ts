@@ -70,7 +70,6 @@ import { createDesktopPluginPackageOpenService } from "./plugins/plugin-package-
 import { PLUGIN_PROTOCOL_PRIVILEGES, registerPluginProtocols } from "./plugins/plugin-protocol.js";
 import { refreshDesktopProxy } from "./proxy/proxy-host.js";
 import { stopAllUiohookConsumers } from "./quickpanel-trigger.js";
-import { createQuickPanelWindow } from "./quickpanel-window.js";
 import { isQuitCleanupStarted, runQuitCleanup, setQuitCleanup } from "./quit-cleanup.js";
 import { startDesktopRemoteAccess, stopDesktopRemoteAccess } from "./remote-control/desktop-remote-access-service.js";
 import {
@@ -852,9 +851,9 @@ if (!gotSingleLock) {
 					initializePetWindow();
 					startPetIdleGuard();
 				}
-				// 快捷面板：预创建隐藏窗口（按需 show/hide，不每次重建），随后据配置启停双击功能键监听。
-				// registerAllIpc 已注册快捷面板 IPC（含 RELOAD_HOTKEY），这里仅补窗口与初次触发器同步。
-				createQuickPanelWindow();
+				// 快捷面板：窗口在首次触发（双击功能键）时惰性创建、创建后常驻 hide/show 复用，
+				// 这里仅据配置启停 uiohook 双击监听（与窗口是否存在无关）。
+				// registerAllIpc 已注册快捷面板 IPC（含 RELOAD_HOTKEY）。
 				void syncQuickPanelTrigger().catch((err) => {
 					mainLog.error("failed to sync quick panel trigger", err);
 				});
