@@ -28,3 +28,14 @@ updated: 2026-09-22
 Task 不创建第二套 Agent Loop；Artifact 不创建第二套文件事实源；Permission/Approval 不依赖 Prompt；Renderer 不持有最终状态。
 
 详细阶段、Owner 和禁止事项以 [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md) 为研究来源。
+
+## 任务分解（2026-09-23）
+
+- TASK-0015 阶段 1：Task/Artifact 最小纵向切片（ready，依赖 TASK-0008）
+- TASK-0016 阶段 2：Permission/Approval L0-L4 与 Project Trust（draft）
+- TASK-0017 阶段 3a：work 模式骨架 + 文档处理入口（draft）
+- TASK-0018 阶段 3b：work 批处理/研究/数据分析入口（draft）
+- TASK-0019 阶段 4：coding 模式增强（draft）
+- TASK-0020 阶段 5：共享项目目录约定（draft）
+- TASK-0021 阶段 6：Plugin/Skill/MCP/Renderer 生态分层收口（draft）
+- TASK-0022 阶段 7：Pi Adapter 评估（blocked，ISSUE-0002 触发条件常设）

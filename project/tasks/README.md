@@ -17,4 +17,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 - 完成后记录实际验证结果；
 - 不把多个可独立回滚的 concern 塞进一个 Task。
 
-当前主动 Task：`TASK-0002`–`TASK-0007` 覆盖性能/可靠性基线，`TASK-0008` 覆盖 Task/Artifact 合同，`TASK-0009` 记录品牌化决策冻结；`TASK-0001` 已完成 Project 控制面整理。
+当前主动 Task：`TASK-0002`–`TASK-0007` 覆盖性能/可靠性基线，`TASK-0008` 覆盖 Task/Artifact 合同，`TASK-0009` 记录品牌化决策冻结；`TASK-0001` 已完成 Project 控制面整理，`TASK-0010`/`TASK-0011` 完成观测与缓存内存上限，`TASK-0012`–`TASK-0014` 驻留上限在途。
+
+`TASK-0015`–`TASK-0022` 对应 `exprot/implementation-plan.md` 阶段 1–7（PLAN-0001）：0015 Task/Artifact 纵向切片（ready）、0016 Permission/Approval L0-L4、0017 work 模式骨架+文档入口、0018 work 其余三入口、0019 coding 增强、0020 共享项目目录、0021 生态分层收口、0022 Pi 评估（blocked，条件触发）。
