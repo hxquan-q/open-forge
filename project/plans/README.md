@@ -9,6 +9,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0001` | work/coding Runtime 产品演进 | ready | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md)、[`exprot/runtime-mapping.md`](../../exprot/runtime-mapping.md) |
 | `PLAN-0002` | 性能与可靠性基线 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md) 阶段 0.5 |
 | `PLAN-0003` | Open Forge 品牌化施工 | draft | [`exprot/development-paradigm.md`](../../exprot/development-paradigm.md)、[`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |
+| `PLAN-0004` | Agent 辅助二开工作流 | verifying | [`.devin/skills/vetta-task-intake/SKILL.md`](../../.devin/skills/vetta-task-intake/SKILL.md)、`AGENTS.md` |
 
 ## Plan 必须说明
 

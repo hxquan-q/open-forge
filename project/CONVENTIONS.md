@@ -23,6 +23,7 @@
 - 正式架构决策：`docs/adr/`；
 - 源码包 README：目标 `packages/*` 或 `apps/*`；
 - 用户公开文档：`apps/docs-site/content/docs/`；
+- 产品定义权威正文：`project/requirements/PRODUCT.md`；根目录 `PRODUCT.md` 只保留发现入口；
 - GitHub 外部 Issue 正文：GitHub Issues / Discussions；
 - 生产代码、测试和生成文件：各自源码目录。
 

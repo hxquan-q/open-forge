@@ -11,6 +11,7 @@
 | Pi/DSH 内核评估 | `exprot/kernel-replacement-feasibility.md` |
 | Open Forge 更名 | `exprot/rebrand-plan.md`、`development-paradigm.md` |
 | 上游 Agent 协同/Notes 方法 | [`colding-code-notes.md`](colding-code-notes.md)、[Colding Code Notes](https://coldingcode.github.io/notes/) |
+| Agent 产品性能实践 | [`RESEARCH-0002-agent-product-performance.md`](RESEARCH-0002-agent-product-performance.md) |
 | 工程控制论方法 | `C:\Users\xquan\.agents\skills\engineering-cybernetics-essence\SKILL.md` |
 
 ## Research Note 约束

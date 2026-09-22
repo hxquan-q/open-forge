@@ -17,4 +17,4 @@ draft → ready → in_progress → blocked → verifying → done → archived
 - 完成后记录实际验证结果；
 - 不把多个可独立回滚的 concern 塞进一个 Task。
 
-当前还没有新增的主动 Task；具体实施应从 `PLAN-0002` 拆出 `TASK-xxxx`。
+当前主动 Task：`TASK-0002`–`TASK-0007` 覆盖性能/可靠性基线，`TASK-0008` 覆盖 Task/Artifact 合同，`TASK-0009` 记录品牌化决策冻结；`TASK-0001` 已完成 Project 控制面整理。

@@ -4,6 +4,8 @@
 
 当前完整基线见 [`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md)。
 
+当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)。
+
 ## 默认验证顺序
 
 ```text

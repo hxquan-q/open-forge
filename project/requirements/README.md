@@ -9,6 +9,8 @@
 | `REQ-0001` | work/coding 本地 Desktop MVP | draft | [`exprot/mvp-scope.md`](../../exprot/mvp-scope.md) |
 | `REQ-0002` | Runtime 性能与可靠性基线 | ready | [`exprot/session-memory.md`](../../exprot/session-memory.md)、[`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md) |
 | `REQ-0003` | Open Forge 品牌化发布 | draft | [`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |
+| `REQ-0004` | Agent 辅助二开工作流 | ready | [`project/CONVENTIONS.md`](../CONVENTIONS.md)、`.devin/skills/vetta-task-intake/SKILL.md` |
+| `PRODUCT` | 产品定义基线 | active | [`PRODUCT.md`](PRODUCT.md) |
 
 ## 需求文件最低结构
 

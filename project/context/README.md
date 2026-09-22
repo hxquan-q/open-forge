@@ -2,7 +2,7 @@
 
 这里保存后续 Agent 必须先读的短上下文，不复制完整研究报告。新增 Context 使用 [`TEMPLATE.md`](TEMPLATE.md)，详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)。
 
-当前长期上下文：[`exprot/session-memory.md`](../../exprot/session-memory.md)。
+当前长期上下文：[`CONTEXT.md`](CONTEXT.md)，详细历史记忆见 [`exprot/session-memory.md`](../../exprot/session-memory.md)。
 
 维护规则：
 

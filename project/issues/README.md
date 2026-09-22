@@ -12,3 +12,10 @@
 - Bug：实际行为偏离稳定合同，已有复现或可靠证据。
 
 Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际行为和回归验证。
+
+当前 Issue：
+
+- `ISSUE-0001`：品牌化发布基建决策未冻结（blocked）；
+- `ISSUE-0002`：是否启动 Pi Adapter 评估（draft）；
+- `ISSUE-0003`：性能观测保存边界（ready）；
+- `ISSUE-0004`：exprot 与 project 管理边界（done）。
