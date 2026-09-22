@@ -15,6 +15,8 @@ export interface SessionInputQueueOptions {
 	readonly followUpMode?: SessionInputQueueMode;
 	/** 队列任何可观察变化（含被 take 消费）后同步回调；用于宿主镜像与持久化。 */
 	readonly onChange?: (snapshot: SessionInputQueueSnapshot) => void;
+	/** 排队时间戳来源；默认 Date.now，测试注入可控时钟。 */
+	readonly now?: () => number;
 }
 
 export interface ClearedSessionInputs {
@@ -32,6 +34,8 @@ export interface SessionInputQueueEntry {
 	 * 面向用户的队列投影必须过滤掉它，否则会被当成"用户排过的队"呈现。
 	 */
 	readonly internal?: boolean;
+	/** 入队时间戳（ms）：宿主据此计算排队等待时长。旧持久化快照可缺省。 */
+	readonly enqueuedAt?: number;
 }
 
 /** 可序列化快照：条目 + 暂停位。持久化与镜像共用（ADR-0060）。 */
@@ -44,6 +48,7 @@ interface QueueSlot {
 	readonly id: string;
 	readonly input: QueuedSessionInput;
 	readonly internal?: boolean;
+	readonly enqueuedAt: number;
 }
 
 export class SessionInputQueue implements TurnInputQueue {
@@ -53,11 +58,13 @@ export class SessionInputQueue implements TurnInputQueue {
 	private currentFollowUpMode: SessionInputQueueMode;
 	private isPaused = false;
 	private readonly onChange: ((snapshot: SessionInputQueueSnapshot) => void) | undefined;
+	private readonly now: () => number;
 
 	constructor(options: SessionInputQueueOptions = {}) {
 		this.currentSteeringMode = options.steeringMode ?? "one-at-a-time";
 		this.currentFollowUpMode = options.followUpMode ?? "one-at-a-time";
 		this.onChange = options.onChange;
+		this.now = options.now ?? Date.now;
 	}
 
 	get pendingCount(): number {
@@ -210,6 +217,7 @@ export class SessionInputQueue implements TurnInputQueue {
 			const slot: QueueSlot = {
 				id: entry.id,
 				input: entry.input,
+				enqueuedAt: entry.enqueuedAt ?? this.now(),
 				...(entry.internal ? { internal: true } : {}),
 			};
 			if (entry.behavior === "steer") this.steeringQueue.push(slot);
@@ -236,9 +244,7 @@ export class SessionInputQueue implements TurnInputQueue {
 	}
 
 	/** 按 id 显式取出一条完整输入（「立即发送」在空闲态直接开 turn 用）；无视 paused。 */
-	takeById(
-		id: string,
-	): { readonly behavior: SessionStreamingBehavior; readonly input: QueuedSessionInput } | undefined {
+	takeById(id: string): SessionInputQueueEntry | undefined {
 		for (const [behavior, queue] of [
 			["steer", this.steeringQueue],
 			["followUp", this.followUpQueue],
@@ -254,14 +260,26 @@ export class SessionInputQueue implements TurnInputQueue {
 			if (index < 0) continue;
 			const [slot] = queue.splice(index, 1);
 			this.notifyChange();
-			return { behavior, input: slot.input };
+			return toEntry(behavior, slot);
 		}
 		return undefined;
 	}
 
-	/** 把此前取出的条目放回队尾；用于调用方无法继续消费时的回滚，避免消息丢失。 */
-	requeue(behavior: SessionStreamingBehavior, input: QueuedSessionInput): void {
-		this.enqueueEntry(behavior, input);
+	/**
+	 * 把此前取出的条目放回队尾；用于调用方无法继续消费时的回滚，避免消息丢失。
+	 * 回滚保留原条目身份与入队时间：它不是一次新的排队，UI 指认 id 与排队等待
+	 * 时长都应连续。
+	 */
+	requeue(entry: SessionInputQueueEntry): void {
+		const slot: QueueSlot = {
+			id: entry.id,
+			input: entry.input,
+			enqueuedAt: entry.enqueuedAt ?? this.now(),
+			...(entry.internal ? { internal: true } : {}),
+		};
+		if (entry.behavior === "steer") this.steeringQueue.push(slot);
+		else this.followUpQueue.push(slot);
+		this.notifyChange();
 	}
 
 	/** 显式取出 followUp 队首一条完整输入（resumeQueue 以队首开启新 turn 用）。 */
@@ -295,6 +313,7 @@ export class SessionInputQueue implements TurnInputQueue {
 			this.followUpQueue.push({
 				id: createRuntimeId(),
 				input: { message },
+				enqueuedAt: this.now(),
 				...(options?.internal ? { internal: true } : {}),
 			});
 		}
@@ -315,7 +334,7 @@ export class SessionInputQueue implements TurnInputQueue {
 	}
 
 	private enqueueEntry(behavior: SessionStreamingBehavior, input: QueuedSessionInput): string {
-		const slot: QueueSlot = { id: createRuntimeId(), input };
+		const slot: QueueSlot = { id: createRuntimeId(), input, enqueuedAt: this.now() };
 		if (behavior === "steer") this.steeringQueue.push(slot);
 		else this.followUpQueue.push(slot);
 		this.notifyChange();
@@ -343,7 +362,13 @@ export class SessionInputQueue implements TurnInputQueue {
 }
 
 function toEntry(behavior: SessionStreamingBehavior, slot: QueueSlot): SessionInputQueueEntry {
-	return { id: slot.id, behavior, input: slot.input, ...(slot.internal ? { internal: true } : {}) };
+	return {
+		id: slot.id,
+		behavior,
+		input: slot.input,
+		enqueuedAt: slot.enqueuedAt,
+		...(slot.internal ? { internal: true } : {}),
+	};
 }
 
 function removeById(queue: QueueSlot[], id: string): boolean {

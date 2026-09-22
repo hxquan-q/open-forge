@@ -396,7 +396,7 @@ export class AgentSession {
 		if (this.currentState !== "idle") {
 			// 取消宽限到期或关闭路径已把 Session 收敛到终态：取出的条目放回队列尾部，
 			// 不静默启动新 Turn，也不把消息丢在调用栈里。
-			this.inputQueue.requeue(entry.behavior, entry.input);
+			this.inputQueue.requeue(entry);
 			throw sessionStateError(this.currentState);
 		}
 		await this.contextWrite;
