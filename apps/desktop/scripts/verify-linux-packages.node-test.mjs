@@ -12,18 +12,18 @@ import {
 } from "./verify-linux-packages.mjs";
 
 const paths = [
-	"/opt/Vetta/Vetta",
-	"/opt/Vetta/resources/package-type",
-	"/usr/share/applications/vetta.desktop",
-	"/usr/share/icons/hicolor/512x512/apps/vetta.png",
+	"/opt/Open Forge/OpenForge",
+	"/opt/Open Forge/resources/package-type",
+	"/usr/share/applications/openforge.desktop",
+	"/usr/share/icons/hicolor/512x512/apps/openforge.png",
 ];
 
 test("Linux package inspection accepts matching Debian and RPM packages", () => {
 	assert.doesNotThrow(() =>
 		verifyLinuxPackageInspection({
 			expectedVersion: "1.2.3",
-			deb: { name: "vetta", version: "1.2.3", arch: "amd64", paths },
-			rpm: { name: "vetta", version: "1.2.3", arch: "x86_64", paths },
+			deb: { name: "openforge", version: "1.2.3", arch: "amd64", paths },
+			rpm: { name: "openforge", version: "1.2.3", arch: "x86_64", paths },
 		}),
 	);
 });
@@ -33,8 +33,8 @@ test("Linux package inspection rejects wrong identities and incomplete payloads"
 		() =>
 			verifyLinuxPackageInspection({
 				expectedVersion: "1.2.3",
-				deb: { name: "vetta", version: "1.2.2", arch: "amd64", paths },
-				rpm: { name: "vetta", version: "1.2.3", arch: "x86_64", paths },
+				deb: { name: "openforge", version: "1.2.2", arch: "amd64", paths },
+				rpm: { name: "openforge", version: "1.2.3", arch: "x86_64", paths },
 			}),
 		/Debian version 1\.2\.2 does not match 1\.2\.3/,
 	);
@@ -42,34 +42,34 @@ test("Linux package inspection rejects wrong identities and incomplete payloads"
 		() =>
 			verifyLinuxPackageInspection({
 				expectedVersion: "1.2.3",
-				deb: { name: "vetta", version: "1.2.3", arch: "amd64", paths },
-				rpm: { name: "vetta", version: "1.2.3", arch: "x86_64", paths: paths.slice(1) },
+				deb: { name: "openforge", version: "1.2.3", arch: "amd64", paths },
+				rpm: { name: "openforge", version: "1.2.3", arch: "x86_64", paths: paths.slice(1) },
 			}),
-		/RPM package is missing \/opt\/Vetta\/Vetta/,
+		/RPM package is missing \/opt\/Open Forge\/OpenForge/,
 	);
 });
 
 test("package command output parsers normalize Debian and RPM metadata", () => {
 	assert.deepEqual(
-		parseDebFields("Package: vetta\nVersion: 1.2.3\nArchitecture: amd64\nDescription: Vetta\n"),
-		{ name: "vetta", version: "1.2.3", arch: "amd64" },
+		parseDebFields("Package: openforge\nVersion: 1.2.3\nArchitecture: amd64\nDescription: Open Forge\n"),
+		{ name: "openforge", version: "1.2.3", arch: "amd64" },
 	);
-	assert.deepEqual(parseRpmFields("vetta\n1.2.3\nx86_64\n"), {
-		name: "vetta",
+	assert.deepEqual(parseRpmFields("openforge\n1.2.3\nx86_64\n"), {
+		name: "openforge",
 		version: "1.2.3",
 		arch: "x86_64",
 	});
 	assert.deepEqual(
 		parseDebContents(
-			"-rwxr-xr-x root/root 123 2026-01-01 00:00 ./opt/Vetta/Vetta\n" +
-				"lrwxrwxrwx root/root 0 2026-01-01 00:00 ./usr/bin/vetta -> /opt/Vetta/Vetta\n",
+			"-rwxr-xr-x root/root 123 2026-01-01 00:00 ./opt/Open Forge/OpenForge\n" +
+				"lrwxrwxrwx root/root 0 2026-01-01 00:00 ./usr/bin/openforge -> /opt/Open Forge/OpenForge\n",
 		),
-		["/opt/Vetta/Vetta", "/usr/bin/vetta"],
+		["/opt/Open Forge/OpenForge", "/usr/bin/openforge"],
 	);
 });
 
 test("native package verification uses the release manifest version", async () => {
-	const releaseDir = await mkdtemp(join(tmpdir(), "vetta-linux-packages-"));
+	const releaseDir = await mkdtemp(join(tmpdir(), "openforge-linux-packages-"));
 	try {
 		await writeFile(join(releaseDir, "latest-linux.yml"), "version: 9.8.7\n");
 		assert.equal(await readExpectedVersion(releaseDir), "9.8.7");

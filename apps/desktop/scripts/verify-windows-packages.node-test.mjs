@@ -13,24 +13,24 @@ async function createLayout(root, version) {
 	const versionDir = join(root, "versions", version);
 	await mkdir(join(versionDir, "resources"), { recursive: true });
 	await Promise.all([
-		writeFile(join(root, "Vetta.exe"), "launcher"),
+		writeFile(join(root, "OpenForge.exe"), "launcher"),
 		writeFile(join(root, "current.json"), `${JSON.stringify({ version })}\n`),
-		writeFile(join(versionDir, "Vetta.exe"), "application"),
+		writeFile(join(versionDir, "OpenForge.exe"), "application"),
 		writeFile(join(versionDir, "resources", "app.asar"), "archive"),
 	]);
 }
 
 test("Windows supplemental package names are stable and versioned", () => {
 	assert.deepEqual(windowsSupplementalArtifactNames("1.2.3"), [
-		"Vetta-1.2.3-win-x64.msi",
-		"Vetta-1.2.3-win-x64.zip",
+		"Open Forge-1.2.3-win-x64.msi",
+		"Open Forge-1.2.3-win-x64.zip",
 	]);
 });
 
 test("Windows package inspection accepts the versioned launcher layout at any extraction depth", async () => {
 	const root = await mkdtemp(join(tmpdir(), "vetta-windows-package-layout-"));
 	try {
-		const layoutRoot = join(root, "Program Files", "Vetta");
+		const layoutRoot = join(root, "Program Files", "OpenForge");
 		await createLayout(layoutRoot, "1.2.3");
 		assert.equal(await verifyExtractedWindowsLayout(root, "1.2.3"), layoutRoot);
 	} finally {

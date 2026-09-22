@@ -12,17 +12,17 @@
 #endif
 
 [Setup]
-AppId={{A2B92798-AB76-4F6B-A9B9-C252DBCB617C}
-AppName=Vetta
-AppVerName=Vetta {#AppVersion}
+AppId={{1A7D5D2A-E570-49DF-8615-754A66F398D5}
+AppName=Open Forge
+AppVerName=Open Forge {#AppVersion}
 AppVersion={#AppVersion}
-AppPublisher=Vetta
-DefaultDirName={localappdata}\Programs\Vetta
-DefaultGroupName=Vetta
+AppPublisher=Open Forge
+DefaultDirName={localappdata}\Programs\OpenForge
+DefaultGroupName=Open Forge
 OutputDir={#OutputDir}
-OutputBaseFilename=Vetta-{#AppVersion}-win-{#Arch}
+OutputBaseFilename=Open Forge-{#AppVersion}-win-{#Arch}
 SetupIconFile={#SourceDir}\versions\{#AppVersion}\resources\build\icon.ico
-UninstallDisplayIcon={app}\Vetta.exe
+UninstallDisplayIcon={app}\OpenForge.exe
 Compression=lzma2/max
 SolidCompression=no
 PrivilegesRequired=lowest
@@ -54,7 +54,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 Name: "{app}\versions"; Check: IsNotBackgroundUpdate
 
 [Files]
-Source: "{#SourceDir}\Vetta.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: IsNotBackgroundUpdate
+Source: "{#SourceDir}\OpenForge.exe"; DestDir: "{app}"; Flags: ignoreversion; Check: IsNotBackgroundUpdate
 Source: "{#SourceDir}\current.json"; DestDir: "{app}"; Flags: ignoreversion; Check: IsNotBackgroundUpdate
 ; app.asar is already an archive. Keeping it uncompressed lets the outer blockmap
 ; reuse unchanged chunks instead of invalidating one large LZMA2 stream.
@@ -64,23 +64,23 @@ Source: "{#SourceDir}\versions\{#AppVersion}\*"; DestDir: "{code:GetUpdateVersio
 Source: "{#SourceDir}\versions\{#AppVersion}\resources\app.asar"; DestDir: "{code:GetUpdateVersionDirectory}\resources"; Flags: ignoreversion nocompression; Check: IsBackgroundUpdate
 
 [Icons]
-Name: "{group}\Vetta"; Filename: "{app}\Vetta.exe"; Check: IsNotBackgroundUpdate
-Name: "{autodesktop}\Vetta"; Filename: "{app}\Vetta.exe"; Tasks: desktopicon; Check: IsNotBackgroundUpdate
+Name: "{group}\Open Forge"; Filename: "{app}\OpenForge.exe"; Check: IsNotBackgroundUpdate
+Name: "{autodesktop}\Open Forge"; Filename: "{app}\OpenForge.exe"; Tasks: desktopicon; Check: IsNotBackgroundUpdate
 
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\vetta"; ValueType: string; ValueName: ""; ValueData: "URL:Vetta Protocol"; Flags: uninsdeletekey; Check: IsNotBackgroundUpdate
-Root: HKCU; Subkey: "Software\Classes\vetta"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Check: IsNotBackgroundUpdate
-Root: HKCU; Subkey: "Software\Classes\vetta\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\Vetta.exe,0"; Check: IsNotBackgroundUpdate
-Root: HKCU; Subkey: "Software\Classes\vetta\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Vetta.exe"" ""%1"""; Check: IsNotBackgroundUpdate
+Root: HKCU; Subkey: "Software\Classes\openforge"; ValueType: string; ValueName: ""; ValueData: "URL:Open Forge Protocol"; Flags: uninsdeletekey; Check: IsNotBackgroundUpdate
+Root: HKCU; Subkey: "Software\Classes\openforge"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Check: IsNotBackgroundUpdate
+Root: HKCU; Subkey: "Software\Classes\openforge\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\OpenForge.exe,0"; Check: IsNotBackgroundUpdate
+Root: HKCU; Subkey: "Software\Classes\openforge\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\OpenForge.exe"" ""%1"""; Check: IsNotBackgroundUpdate
 
 [Run]
-Filename: "{app}\Vetta.exe"; Description: "{cm:LaunchProgram,Vetta}"; Flags: nowait postinstall skipifsilent; Check: IsNotBackgroundUpdate
+Filename: "{app}\OpenForge.exe"; Description: "{cm:LaunchProgram,Open Forge}"; Flags: nowait postinstall skipifsilent; Check: IsNotBackgroundUpdate
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{localappdata}\Vetta\versions"
-Type: filesandordirs; Name: "{localappdata}\Vetta\installer"
-Type: filesandordirs; Name: "{localappdata}\Vetta\staging"
-Type: files; Name: "{localappdata}\Vetta\current.json"
+Type: filesandordirs; Name: "{localappdata}\OpenForge\versions"
+Type: filesandordirs; Name: "{localappdata}\OpenForge\installer"
+Type: filesandordirs; Name: "{localappdata}\OpenForge\staging"
+Type: files; Name: "{localappdata}\OpenForge\current.json"
 
 [Code]
 function CreateHardLinkW(
@@ -92,7 +92,7 @@ function CreateHardLinkW(
 
 function IsBackgroundUpdate(): Boolean;
 begin
-  Result := CompareText(ExpandConstant('{param:VETTAUPDATE|false}'), 'true') = 0;
+  Result := CompareText(ExpandConstant('{param:OPENFORGEUPDATE|false}'), 'true') = 0;
 end;
 
 function IsNotBackgroundUpdate(): Boolean;
@@ -102,15 +102,15 @@ end;
 
 function GetUpdateVersionDirectory(Value: String): String;
 begin
-  Result := AddBackslash(ExpandConstant('{param:VETTASTOREROOT}')) + 'versions\{#AppVersion}';
+  Result := AddBackslash(ExpandConstant('{param:OPENFORGESTOREROOT}')) + 'versions\{#AppVersion}';
 end;
 
 function InitializeSetup(): Boolean;
 begin
   Result := True;
-  if IsBackgroundUpdate() and (Trim(ExpandConstant('{param:VETTASTOREROOT}')) = '') then
+  if IsBackgroundUpdate() and (Trim(ExpandConstant('{param:OPENFORGESTOREROOT}')) = '') then
   begin
-    Log('VETTASTOREROOT is required for a background update.');
+    Log('OPENFORGESTOREROOT is required for a background update.');
     Result := False;
   end;
 end;
@@ -123,7 +123,7 @@ var
   SourceInstallerPath: String;
   TemporaryInstallerPath: String;
 begin
-  CacheDirectory := ExpandConstant('{localappdata}\vetta-updater');
+  CacheDirectory := ExpandConstant('{localappdata}\openforge-updater');
   CachedBlockmapPath := AddBackslash(CacheDirectory) + 'current.blockmap';
   CachedInstallerPath := AddBackslash(CacheDirectory) + 'installer.exe';
   SourceInstallerPath := ExpandConstant('{srcexe}');
@@ -176,7 +176,7 @@ begin
   if not IsBackgroundUpdate() then
     exit;
 
-  ProgressFilePath := ExpandConstant('{param:VETTAPROGRESS}');
+  ProgressFilePath := ExpandConstant('{param:OPENFORGEPROGRESS}');
   if (ProgressFilePath = '') or (MaxProgress <= 0) then
     exit;
 
@@ -208,7 +208,7 @@ begin
     else
     begin
       SeedUpdaterDifferentialCache();
-      DeleteFile(ExpandConstant('{localappdata}\Vetta\current.json'));
+      DeleteFile(ExpandConstant('{localappdata}\OpenForge\current.json'));
     end;
   end;
 end;

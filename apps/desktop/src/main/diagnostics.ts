@@ -42,7 +42,7 @@ export function getDiagnosticsLogPath(): string {
 // mDNS 多播保留作为辅助。
 //
 // 必须在 app.whenReady() 之后调用，否则主进程的 bundle identity 还没在
-// launchd / TCC 子系统里就位，syscall 关联不到 com.vetta.desktop。
+// launchd / TCC 子系统里就位，syscall 关联不到 io.github.hxquanq.openforge。
 const UNICAST_PROBE_TARGETS: ReadonlyArray<{ host: string; port: number }> = [
 	{ host: "192.168.0.1", port: 1 },
 	{ host: "10.0.0.1", port: 1 },

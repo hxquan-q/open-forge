@@ -9,7 +9,7 @@ import (
 	"regexp"
 )
 
-const executableName = "Vetta.exe"
+const executableName = "OpenForge.exe"
 
 var versionPattern = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$`)
 
@@ -110,7 +110,7 @@ func main() {
 		return
 	}
 	installRoot := filepath.Dir(launcherPath)
-	localRoot := filepath.Join(localAppData, "Vetta")
+	localRoot := filepath.Join(localAppData, "OpenForge")
 	target := resolveLaunchTarget(installRoot, localRoot)
 	if target == "" {
 		return

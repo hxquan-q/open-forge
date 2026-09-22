@@ -279,9 +279,9 @@ if (preparedSpeechModel) {
 // externalized runtime deps must be declared here even though we copy them
 // manually below.
 const appPkg = {
-	name: "vetta",
+	name: "openforge",
 	version: appVersion,
-	description: "Vetta Desktop App",
+	description: "Open Forge Desktop App",
 	author: LINUX_PACKAGE_METADATA.author,
 	homepage: LINUX_PACKAGE_METADATA.homepage,
 	license: LINUX_PACKAGE_METADATA.license,
@@ -322,7 +322,7 @@ if (process.platform === "darwin" && !macSigning.enabled) {
 	);
 }
 
-// macOS appshot: swiftc 编译 "Vetta Computer Use.app" 直接落到 staging appshot/，
+// macOS appshot: swiftc 编译 "Open Forge Computer Use.app" 直接落到 staging appshot/，
 // 由 resolveExtraResources 带进 Resources/appshot/（filter "**/*" 递归带入
 // .app bundle 内部结构）。仅 darwin host 可编译。
 if (process.platform === "darwin") {
@@ -709,7 +709,7 @@ function resolveExtraResources() {
 			filter: sandboxFilters,
 		});
 	}
-	// "Vetta Computer Use.app" 仅 darwin 目标需要，且仅 darwin host 能编译（见上方 staging）。
+	// "Open Forge Computer Use.app" 仅 darwin 目标需要，且仅 darwin host 能编译（见上方 staging）。
 	if (resolvePlatformFamilies().has("darwin") && process.platform === "darwin") {
 		extraResources.push({
 			from: "appshot",
@@ -731,9 +731,9 @@ const extraResources = resolveExtraResources();
 
 // Write electron-builder config
 const builderConfig = {
-	appId: "com.vetta.desktop",
-	productName: "Vetta",
-	executableName: "Vetta",
+	appId: "io.github.hxquanq.openforge",
+	productName: "Open Forge",
+	executableName: "OpenForge",
 	afterPack: join(projectRoot, "scripts", "windows-version-layout.mjs"),
 	electronVersion,
 	electronLanguages: ["zh-CN", "en-US"],
@@ -742,8 +742,8 @@ const builderConfig = {
 	...(releaseInfo ? { releaseInfo } : {}),
 	files: ["**/*", ...extraResources.map(({ from }) => `!${from}/**/*`)],
 	protocols: {
-		name: "Vetta",
-		schemes: ["vetta"],
+		name: "Open Forge",
+		schemes: ["openforge"],
 	},
 	fileAssociations: [VETTA_PLUGIN_FILE_ASSOCIATION],
 	mac: {
@@ -773,7 +773,7 @@ const builderConfig = {
 		// 用户的本地模型（Ollama / LM Studio / vLLM 等）通常监听在局域网
 		// 明文 HTTP（http://192.168.x.x:port）。macOS 14+ 的 TCC 与 ATS 默认
 		// 会静默拦截这种请求，表现为 Finder 双击启动后随机出现 "Connection
-		// error."，而从终端启动 Vetta 时 launchd context 不同会偶发放行。
+		// error."，而从终端启动 Open Forge 时 launchd context 不同会偶发放行。
 		// 三个 key 缺一不可：
 		//   - NSAppTransportSecurity.NSAllowsLocalNetworking：放开局域网明文 HTTP
 		//   - NSLocalNetworkUsageDescription：macOS 14+ 触发本地网络权限弹窗
@@ -783,7 +783,7 @@ const builderConfig = {
 				NSAllowsLocalNetworking: true,
 			},
 			NSLocalNetworkUsageDescription:
-				"Vetta 需要访问本地网络以连接你在局域网内运行的 AI 模型服务（如 Ollama、LM Studio、vLLM 等）。",
+				"Open Forge 需要访问本地网络以连接你在局域网内运行的 AI 模型服务（如 Ollama、LM Studio、vLLM 等）。",
 			NSBonjourServices: ["_http._tcp", "_https._tcp"],
 		},
 	},
@@ -793,7 +793,7 @@ const builderConfig = {
 	// 位置必须与那里的 ICON_CENTERS_X_2X 对齐）。
 	// 未签名构建为三图标：多出的「修复已损坏.app」由 scripts/build-mac-repair-helper.js
 	// osacompile 生成，用户首次需 control-click → 「打开」绕过 Gatekeeper，
-	// 之后弹原生密码框对 /Applications/Vetta.app 执行 xattr -dr com.apple.quarantine。
+	// 之后弹原生密码框对 /Applications/Open Forge.app 执行 xattr -dr com.apple.quarantine。
 	// 签名+公证构建不存在「已损坏」问题，退回两图标常规版式。
 	dmg: {
 		background: "build/background.png",
@@ -802,7 +802,7 @@ const builderConfig = {
 		iconTextSize: 12,
 		contents: macSigning.enabled
 			? [
-					{ x: 180, y: 200, type: "file" }, // Vetta.app（electron-builder 自动填入产物路径）
+					{ x: 180, y: 200, type: "file" }, // Open Forge.app（electron-builder 自动填入产物路径）
 					{ x: 480, y: 200, type: "link", path: "/Applications" },
 				]
 			: [
@@ -819,7 +819,7 @@ const builderConfig = {
 	linux: {
 		target: LINUX_RELEASE_TARGETS,
 		category: "Utility",
-		description: "Vetta AI agent desktop application",
+		description: "Open Forge AI agent desktop application",
 		icon: "build/icon.png",
 		maintainer: LINUX_PACKAGE_METADATA.maintainer,
 		synopsis: "AI agent desktop application",

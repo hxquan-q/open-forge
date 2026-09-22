@@ -22,14 +22,14 @@ function resolveWindowsVersionedBinary(unpackedRoot) {
 	) {
 		throw new Error(`Windows packaged E2E has an invalid version pointer: ${String(version)}`);
 	}
-	return join(unpackedRoot, "versions", version, "Vetta.exe");
+	return join(unpackedRoot, "versions", version, "OpenForge.exe");
 }
 
 export function resolvePackagedE2eAppImagePath(packageRoot, version) {
 	if (typeof version !== "string" || !PACKAGE_VERSION_PATTERN.test(version)) {
 		throw new Error(`Linux packaged E2E has an invalid application version: ${String(version)}`);
 	}
-	const appImagePath = join(packageRoot, "release", `Vetta-${version}.AppImage`);
+	const appImagePath = join(packageRoot, "release", `Open Forge-${version}.AppImage`);
 	if (existsSync(appImagePath)) return appImagePath;
 	throw new Error(
 		`Linux packaged E2E AppImage not found: ${appImagePath}. Run bun run dist:linux:test first.`,
@@ -65,12 +65,12 @@ export function resolvePackagedE2eBinaryPath(packageRoot, platform = process.pla
 			? [resolveWindowsVersionedBinary(join(releaseRoot, "win-unpacked"))]
 			: platform === "darwin"
 				? [
-						join(releaseRoot, "mac-arm64", "Vetta.app", "Contents", "MacOS", "Vetta"),
-						join(releaseRoot, "mac", "Vetta.app", "Contents", "MacOS", "Vetta"),
-						join(releaseRoot, "mac-x64", "Vetta.app", "Contents", "MacOS", "Vetta"),
+						join(releaseRoot, "mac-arm64", "Open Forge.app", "Contents", "MacOS", "OpenForge"),
+						join(releaseRoot, "mac", "Open Forge.app", "Contents", "MacOS", "OpenForge"),
+						join(releaseRoot, "mac-x64", "Open Forge.app", "Contents", "MacOS", "OpenForge"),
 					]
 				: platform === "linux"
-					? [join(releaseRoot, "linux-unpacked", "Vetta")]
+					? [join(releaseRoot, "linux-unpacked", "OpenForge")]
 					: [];
 
 	const found = candidates.find((candidate) => existsSync(candidate));

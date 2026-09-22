@@ -15,7 +15,7 @@ import {
 test("contentTypeFor publishes native package formats with package media types", () => {
 	assert.equal(contentTypeFor("vetta_1.2.3_amd64.deb"), "application/vnd.debian.binary-package");
 	assert.equal(contentTypeFor("vetta-1.2.3.x86_64.rpm"), "application/x-rpm");
-	assert.equal(contentTypeFor("Vetta-1.2.3-win-x64.msi"), "application/x-msi");
+	assert.equal(contentTypeFor("Open Forge-1.2.3-win-x64.msi"), "application/x-msi");
 });
 
 test("collectArtifacts uploads updater files and matching Windows supplements before metadata", async () => {
@@ -24,21 +24,21 @@ test("collectArtifacts uploads updater files and matching Windows supplements be
 		await Promise.all([
 			writeFile(
 				join(directory, "latest.yml"),
-				"version: 1.2.3\nfiles:\n  - url: Vetta%20Setup%201.2.3.exe\npath: Vetta Setup 1.2.3.exe\n",
+				"version: 1.2.3\nfiles:\n  - url: Open%20Forge%20Setup%201.2.3.exe\npath: Open Forge Setup 1.2.3.exe\n",
 			),
-			writeFile(join(directory, "Vetta Setup 1.2.3.exe"), "installer"),
-			writeFile(join(directory, "Vetta Setup 1.2.3.exe.blockmap"), "blockmap"),
-			writeFile(join(directory, "Vetta-1.2.3-win-x64.msi"), "msi"),
-			writeFile(join(directory, "Vetta-1.2.3-win-x64.zip"), "zip"),
-			writeFile(join(directory, "Vetta Setup 1.2.2.exe"), "stale"),
-			writeFile(join(directory, "Vetta-1.2.2-win-x64.msi"), "stale"),
+			writeFile(join(directory, "Open Forge Setup 1.2.3.exe"), "installer"),
+			writeFile(join(directory, "Open Forge Setup 1.2.3.exe.blockmap"), "blockmap"),
+			writeFile(join(directory, "Open Forge-1.2.3-win-x64.msi"), "msi"),
+			writeFile(join(directory, "Open Forge-1.2.3-win-x64.zip"), "zip"),
+			writeFile(join(directory, "Open Forge Setup 1.2.2.exe"), "stale"),
+			writeFile(join(directory, "Open Forge-1.2.2-win-x64.msi"), "stale"),
 		]);
 
 		assert.deepEqual(await collectArtifacts(directory), [
-			"Vetta Setup 1.2.3.exe",
-			"Vetta Setup 1.2.3.exe.blockmap",
-			"Vetta-1.2.3-win-x64.msi",
-			"Vetta-1.2.3-win-x64.zip",
+			"Open Forge Setup 1.2.3.exe",
+			"Open Forge Setup 1.2.3.exe.blockmap",
+			"Open Forge-1.2.3-win-x64.msi",
+			"Open Forge-1.2.3-win-x64.zip",
 			"latest.yml",
 		]);
 	} finally {
@@ -55,20 +55,20 @@ test("collectArtifacts uploads the deb and rpm packages listed in Linux metadata
 				[
 					"version: 1.2.3",
 					"files:",
-					"  - url: Vetta-1.2.3.AppImage",
+					"  - url: Open Forge-1.2.3.AppImage",
 					"  - url: vetta_1.2.3_amd64.deb",
 					"  - url: vetta-1.2.3.x86_64.rpm",
-					"path: Vetta-1.2.3.AppImage",
+					"path: Open Forge-1.2.3.AppImage",
 					"",
 				].join("\n"),
 			),
-			writeFile(join(directory, "Vetta-1.2.3.AppImage"), "appimage"),
+			writeFile(join(directory, "Open Forge-1.2.3.AppImage"), "appimage"),
 			writeFile(join(directory, "vetta_1.2.3_amd64.deb"), "deb"),
 			writeFile(join(directory, "vetta-1.2.3.x86_64.rpm"), "rpm"),
 		]);
 
 		assert.deepEqual(await collectArtifacts(directory), [
-			"Vetta-1.2.3.AppImage",
+			"Open Forge-1.2.3.AppImage",
 			"vetta-1.2.3.x86_64.rpm",
 			"vetta_1.2.3_amd64.deb",
 			"latest-linux.yml",
@@ -81,7 +81,7 @@ test("collectArtifacts uploads the deb and rpm packages listed in Linux metadata
 test("collectArtifacts rejects metadata that points to a missing artifact", async () => {
 	const directory = await mkdtemp(join(tmpdir(), "vetta-r2-publish-"));
 	try {
-		await writeFile(join(directory, "latest-linux-arm64.yml"), "version: 1.2.3\npath: Vetta-1.2.3.AppImage\n");
+		await writeFile(join(directory, "latest-linux-arm64.yml"), "version: 1.2.3\npath: Open Forge-1.2.3.AppImage\n");
 		await assert.rejects(() => collectArtifacts(directory), /references missing artifact/);
 	} finally {
 		await rm(directory, { recursive: true, force: true });

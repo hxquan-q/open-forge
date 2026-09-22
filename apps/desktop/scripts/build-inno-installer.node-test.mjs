@@ -24,7 +24,7 @@ test("writes updater config into the version directory installed by Inno", async
 		assert.match(config, /provider: generic/);
 		assert.match(config, /url: https:\/\/releases.example.com\/desktop\/test/);
 		assert.match(config, /useMultipleRangeRequest: true/);
-		assert.match(config, /updaterCacheDirName: vetta-updater/);
+		assert.match(config, /updaterCacheDirName: openforge-updater/);
 	} finally {
 		await rm(sourceDir, { recursive: true, force: true });
 	}
@@ -36,7 +36,7 @@ test("writes a stable versioned file manifest for pre-publish verification", asy
 	const versionDir = join(sourceDir, "version");
 	await mkdir(join(versionDir, "resources"), { recursive: true });
 	await Promise.all([
-		writeFile(join(versionDir, "Vetta.exe"), "exe"),
+		writeFile(join(versionDir, "OpenForge.exe"), "exe"),
 		writeFile(join(versionDir, "resources", "app.asar"), "asar"),
 	]);
 
@@ -45,8 +45,8 @@ test("writes a stable versioned file manifest for pre-publish verification", asy
 		assert.deepEqual(JSON.parse(await readFile(manifestPath, "utf8")), {
 			version: "1.2.3",
 			files: [
+				{ path: "OpenForge.exe", size: 3 },
 				{ path: "resources/app.asar", size: 4 },
-				{ path: "Vetta.exe", size: 3 },
 			],
 		});
 	} finally {
