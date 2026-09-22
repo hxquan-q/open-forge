@@ -39,3 +39,8 @@ Task 不创建第二套 Agent Loop；Artifact 不创建第二套文件事实源�
 - TASK-0020 阶段 5：共享项目目录约定（draft）
 - TASK-0021 阶段 6：Plugin/Skill/MCP/Renderer 生态分层收口（draft）
 - TASK-0022 阶段 7：Pi Adapter 评估（blocked，ISSUE-0002 触发条件常设）
+
+跨阶段 UI/UX 线（`exprot/ui-information-architecture.md`）：
+
+- TASK-0023：双模式 IA 与 Activity/Approval/Artifact 面板交互设计定稿（coordination-only）
+- TASK-0024：Desktop IA 骨架落地——Mode Switcher、双布局容器、面板插槽与空/错/取消态（串行，独占 root-layout）
