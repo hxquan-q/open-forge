@@ -64,6 +64,10 @@ export interface CodingAgentSubagentRuntimeOptions {
 	) => Promise<SubagentChildHandle>;
 	readonly onNotify?: (agents: readonly CodingAgentSubagentSnapshot[]) => void;
 	readonly onUpdate?: (agents: readonly CodingAgentSubagentSnapshot[]) => void;
+	/** 子会话创建/重开宽限（毫秒）；缺省用 Coordinator 默认值。 */
+	readonly startDeadlineMs?: number;
+	/** 成员中断/释放收尾宽限（毫秒）；缺省用 Coordinator 默认值。 */
+	readonly settleDeadlineMs?: number;
 	readonly formatInitialMessage?: (snapshot: SubagentSnapshot, message: string) => string;
 	readonly validateRecoveredChild?: (snapshot: SubagentSnapshot) => Promise<string | undefined>;
 	readonly onRecoveryIssue?: (message: string) => void;
@@ -100,6 +104,8 @@ export class CodingAgentSubagentRuntime
 			maxConcurrent: options.maxConcurrent,
 			lifecycle: options.lifecycle,
 			formatInitialMessage: options.formatInitialMessage,
+			startDeadlineMs: options.startDeadlineMs,
+			settleDeadlineMs: options.settleDeadlineMs,
 			onError: options.onError,
 			onNotify: (agents) => options.onNotify?.(this.todoProjection.projectAll(agents)),
 			onUpdate: (agents) => {

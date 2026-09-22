@@ -20,6 +20,8 @@ export interface FixtureOptions {
 	readonly reopenError?: Error;
 	readonly lifecycle?: SubagentLifecycle;
 	readonly factory?: SubagentChildFactory<TestProfile>;
+	readonly startDeadlineMs?: number;
+	readonly settleDeadlineMs?: number;
 }
 
 export function createFixture(options: FixtureOptions = {}) {
@@ -55,6 +57,8 @@ export function createFixture(options: FixtureOptions = {}) {
 		onUpdate: options.onUpdate,
 		onError: options.onError,
 		lifecycle: options.lifecycle,
+		startDeadlineMs: options.startDeadlineMs,
+		settleDeadlineMs: options.settleDeadlineMs,
 		clock: options.now === undefined ? undefined : { now: () => options.now ?? 0 },
 		idGenerator: { next: () => `reservation-${nextId + 1}` },
 	});

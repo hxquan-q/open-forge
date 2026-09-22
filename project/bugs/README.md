@@ -15,6 +15,6 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0001` | Session 长任务取消/压缩后的终态与性能问题 | investigating | P0 | `PLAN-0002` |
-| `BUG-0002` | DeepSeek Responses 流事件关联错误 | confirmed | P1 | `PLAN-0002` |
+| `BUG-0001` | Session 长任务取消/压缩后的终态与性能问题 | done | P0 | `PLAN-0002` |
+| `BUG-0002` | DeepSeek Responses 流事件关联错误 | done | P1 | `PLAN-0002` |
 | `BUG-0003` | App Monitor 漏记 Compaction | done | P1 | `PLAN-0002` |
