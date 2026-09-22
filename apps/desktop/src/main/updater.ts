@@ -145,7 +145,7 @@ function upgradeE2eStatePaths(): string[] {
 		process.env.VETTA_E2E_UPGRADE_STATE?.trim(),
 		join(getVettaHomePath(), "desktop-upgrade-e2e.json"),
 		// ShipIt can relaunch without the test environment. Keep one fallback marker
-		// under the runner user's normal Vetta home so the second process can find it.
+		// under the runner user's normal Open Forge home so the second process can find it.
 		join(homedir(), ".vetta", "desktop-upgrade-e2e.json"),
 	].filter((path, index, paths): path is string => Boolean(path) && paths.indexOf(path) === index);
 }

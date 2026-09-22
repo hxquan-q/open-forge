@@ -104,7 +104,7 @@ const CONFIG_PATH = join(getVettaHomePath(), "desktop-config.json");
 /**
  * SSH 主机单独成文件，而不是 desktop-config.json 的一个字段。
  *
- * 开发版与已安装的正式版共用 `~/.vetta`。0.5.58 及更早版本按自己的字段白名单整份重写
+ * 开发版与已安装的正式版共用 `~/.openforge`。0.5.58 及更早版本按自己的字段白名单整份重写
  * desktop-config.json，不认识的 sshHosts 随之消失——它们被 openforge:// 链接、通知之类
  * 顺手拉起一次就够了，写回代码里再怎么保留未知字段也管不到已经发出去的旧版本。
  * 旧版本不知道这个文件，也就碰不到它。
@@ -353,7 +353,7 @@ function normalizeSshHosts(value: unknown): SshHost[] | undefined {
 /**
  * 整文件写回，但保留磁盘上本版本不认识的字段。
  *
- * 新旧版本共用同一份 `~/.vetta`（开发版与已安装的正式版、或升级后又回退）。读路径
+ * 新旧版本共用同一份 `~/.openforge`（开发版与已安装的正式版、或升级后又回退）。读路径
  * {@link parseDesktopConfig} 是字段白名单，不认识的字段不进内存；若写回时整份覆盖，
  * 旧版任何一次保存都会把新版的字段抹掉——0.5.58 启动时顺手写回 CLI 路径，就这样清空了
  * sshHosts，远程项目随之全部报「Unknown SSH host」。已知字段仍以传入值为准：显式给

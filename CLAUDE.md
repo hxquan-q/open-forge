@@ -25,8 +25,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **开发：**
 
 ```bash
-cd apps/desktop && bun run dev      # 启动 Desktop（Vite renderer + theme dev server + Electron），数据在 ~/.vetta-dev
-cd apps/desktop && bun run dev:home # 同上，但读写真实用户数据 ~/.vetta
+cd apps/desktop && bun run dev      # 启动 Desktop（Vite renderer + theme dev server + Electron），数据在 ~/.openforge-dev
+cd apps/desktop && bun run dev:home # 同上，但读写真实用户数据 ~/.openforge
 bun run --cwd apps/docs-site dev    # 文档站，http://127.0.0.1:4321
 ```
 

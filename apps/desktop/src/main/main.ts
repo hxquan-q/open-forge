@@ -205,14 +205,14 @@ process.env[VETTA_HOME_ENV] = getVettaHomePath();
 if (isCliMode) {
 	const cliUserDataDir =
 		ocrCliCommand !== null
-			? "vetta-ocr-cli"
+			? "openforge-ocr-cli"
 			: pdfCliCommand !== null
-				? "vetta-pdf-cli"
+				? "openforge-pdf-cli"
 				: actionCliCommand !== null
-					? `vetta-action-cli-${process.pid}`
+					? `openforge-action-cli-${process.pid}`
 					: helpCliCommand !== null
-						? `vetta-help-cli-${process.pid}`
-						: `vetta-agent-rpc-${process.pid}`;
+						? `openforge-help-cli-${process.pid}`
+						: `openforge-agent-rpc-${process.pid}`;
 	app.setPath("userData", join(tmpdir(), cliUserDataDir));
 	app.commandLine.appendSwitch("disable-gpu");
 	app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");

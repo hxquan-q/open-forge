@@ -143,8 +143,8 @@ uses the root Turborepo task graph and local cache to build changed workspace pr
 plugin and theme manifests, then starts the renderer, theme server, and Electron process in parallel.
 
 Normal development is isolated from packaged application data: it defaults to
-`VETTA_CONFIG_DIR=.vetta-dev` and stores the Chromium profile under
-`~/.vetta-dev/electron-user-data`. Packaged builds continue to use `~/.vetta`. Set
+`VETTA_CONFIG_DIR=.openforge-dev` and stores the Chromium profile under
+`~/.openforge-dev/electron-user-data`. Packaged builds continue to use `~/.openforge`. Set
 `VETTA_CONFIG_DIR` and `VETTA_DESKTOP_USER_DATA_DIR` together when a custom isolated development
 environment is required.
 
@@ -153,7 +153,7 @@ switches the whole environment — data root and browser profile — with no sha
 Two scripts make the common pair explicit:
 
 ```bash
-bun run dev:isolated   # ~/.vetta-dev (same as `bun dev`)
+bun run dev:isolated   # ~/.openforge-dev (same as `bun dev`)
 bun run dev:home       # ~/.vetta
 ```
 
@@ -162,7 +162,7 @@ that name is fixed by `src/shared/app-identity.ts` and must stay equal to the na
 packaged `package.json` by `scripts/prepare-pack.js`. Changing it strands every credential already
 encrypted under the old name.
 
-`bun run dev:home` shares `~/.vetta` with packaged builds; do not run both at the same time, since
+`bun run dev:home` shares `~/.openforge` with packaged builds; do not run both at the same time, since
 the single-instance lock keys on the Chromium profile and will not stop the second process. The
 project-level `<cwd>/.vetta` directory is intentionally fixed and does not follow `VETTA_CONFIG_DIR`
 (see `packages/coding-agent/src/config.ts`).
@@ -203,7 +203,7 @@ bun run dist:opensource -- --target dir
 bun run test:e2e:packaged
 ```
 
-Runtime sets `VETTA_E2E=1`, `VETTA_CONFIG_DIR=.vetta-e2e`, and isolates Chromium profile under `.wdio-electron-user-data`.
+Runtime sets `VETTA_E2E=1`, `VETTA_CONFIG_DIR=.openforge-e2e`, and isolates Chromium profile under `.wdio-electron-user-data`.
 When a user explicitly requests agent-driven UI verification, use repo-root `verify:ui:*` (Playwright); UI changes alone do not trigger it. This WebdriverIO suite targets formal E2E / CI.
 
 Current `e2e/smoke.e2e.ts` batch-1 covers boot only: main-process ready/version, main window `index.html`, config/userData isolation, and a `dialog` mock probe. It does not cover login, chat, or other product flows.

@@ -317,7 +317,7 @@ function prepareProfile(layout, sync = false) {
 	mkdirSync(layout.artifactDir, { recursive: true });
 	if (layout.profile !== "debug") return null;
 	return seedDebugProfile({
-		sourceHome: join(homedir(), ".vetta-dev"),
+		sourceHome: join(homedir(), ".openforge-dev"),
 		targetHome: layout.vettaHome,
 		workspacePath: repoRoot,
 		sync,

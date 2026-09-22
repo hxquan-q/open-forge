@@ -96,12 +96,12 @@ export function resolveProfileLayout(
   const profileRuntimeDir = join(runtimeRoot, options.profile);
 
   if (options.profile === "dev") {
-    const vettaHome = join(homeDirectory, ".vetta-dev");
+    const vettaHome = join(homeDirectory, ".openforge-dev");
     return {
       profile: options.profile,
       workspaceId: options.workspaceId,
-      sessionName: `vetta-dev-${options.workspaceId}`,
-      configDir: ".vetta-dev",
+      sessionName: `openforge-dev-${options.workspaceId}`,
+      configDir: ".openforge-dev",
       vettaHome,
       userDataDir: join(vettaHome, "electron-user-data"),
       endpointFile: join(vettaHome, "action-server.json"),
@@ -117,8 +117,8 @@ export function resolveProfileLayout(
   const vettaHome =
     options.profile === "fresh"
       ? join(profileRuntimeDir, "runs", runId as string, "home")
-      : join(homeDirectory, ".vetta-ui-debug", options.workspaceId);
-  const configDir = `.vetta-ui-${options.profile}-${options.workspaceId}`;
+      : join(homeDirectory, ".openforge-ui-debug", options.workspaceId);
+  const configDir = `.openforge-ui-${options.profile}-${options.workspaceId}`;
 
   return {
     profile: options.profile,
