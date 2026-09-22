@@ -31,6 +31,7 @@ export type CodingAgentSessionInitializationProfile = Pick<
 	| "ocrMaxConcurrent"
 	| "promptResourceSource"
 	| "promptSettingsSource"
+	| "resolveCompactionModel"
 	| "resolveCompactionSettings"
 	| "resolveModePrompt"
 	| "resolvePromptResource"
@@ -81,6 +82,7 @@ export function createCodingAgentSessionInitializationProfile(
 		ocrMaxConcurrent: options.ocrMaxConcurrent,
 		promptResourceSource: options.promptResourceSource,
 		promptSettingsSource: options.promptSettingsSource,
+		resolveCompactionModel: options.resolveCompactionModel,
 		resolveCompactionSettings: options.resolveCompactionSettings,
 		resolveModePrompt: options.resolveModePrompt,
 		resolvePromptResource: options.resolvePromptResource,

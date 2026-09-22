@@ -1,3 +1,4 @@
+export * from "./backpressure.js";
 export * from "./branch-summary.js";
 export * from "./circuit-breaker.js";
 export * from "./compaction.js";

@@ -2,6 +2,8 @@
 
 ### Added
 
+- 自动上下文压缩新增背压闸门（会话内内存态）：同一时刻至多一次自动压缩尝试在途，未成功后有 `failureCooldownMs` 冷却、成功后遵守 `minIntervalMs`，冷却期内水位较基线增长超过 `hysteresisTokens` 允许提前重试，overflow 触发可绕过冷却但不绕过在途锁；抑制事件经 `coding-agent.context/compaction-backpressure` 观察通道上报。压缩模型可经 `resolveCompactionModel` 独立配置，自动/手动/Prefire 共用且凭证独立解析；阈值触发会收敛等待指纹匹配的在途 Prefire 而不是并发第二次摘要。
+
 - Runtime Session 新增可选的 `automaticRetry` 策略输入；由外层持久任务调度器负责重试的宿主可以关闭 Runtime Host 内层自动重试，默认行为保持开启。
 
 - Plugin Runtime 的 Skill 路径贡献可携带独立展示策略，宿主能够保留运行时 Skill 的同时控制各产品入口的呈现（ADR-0110）。

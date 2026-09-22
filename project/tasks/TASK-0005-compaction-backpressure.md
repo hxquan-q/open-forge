@@ -1,21 +1,21 @@
 ---
 id: TASK-0005
 type: task
-status: ready
+status: done
 priority: P1
 owner: packages/coding-agent/packages/runtime-core
 requirement: REQ-0002
 plan: PLAN-0002
 execution: parallel
-branch: unassigned
-worktree: unassigned
+branch: forge/dev
+worktree: unassigned（直接在 forge/dev 主工作区执行）
 base_commit: forge/dev
 read_paths: [packages/coding-agent, packages/runtime-core]
 write_paths: [packages/coding-agent, packages/runtime-core]
 exclusive_paths: []
 depends_on: [TASK-0004]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-22
 ---

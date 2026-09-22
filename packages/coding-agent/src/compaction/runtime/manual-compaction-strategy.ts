@@ -17,6 +17,7 @@ export interface CodingAgentManualCompactionStrategyOptions {
 	readonly generateCompaction: NonNullable<CodingAgentContextRuntimeOptions["generateCompaction"]>;
 	readonly readSettings: () => CompactionSettings;
 	readonly recordFactory: CodingAgentCompactionRecordFactoryOptions;
+	readonly resolveCompactionModel?: CodingAgentContextRuntimeOptions["resolveCompactionModel"];
 }
 
 /** Coding-specific manual summary generation; Runtime Core owns cancellation and persistence around this call. */
@@ -31,11 +32,13 @@ export class CodingAgentManualCompactionStrategy {
 		settings: CompactionSettings = this.options.readSettings(),
 	): Promise<ContextCompactionRecord> {
 		signal.throwIfAborted();
-		const model = input.modelBinding?.model;
-		if (!model) throw new Error("No model selected");
-		const apiKey = input.modelBinding?.credential
-			? await input.modelBinding.credential.resolve()
-			: await this.options.resolveApiKey(model);
+		const turnModel = input.modelBinding?.model;
+		if (!turnModel) throw new Error("No model selected");
+		const model = (await this.options.resolveCompactionModel?.(turnModel)) ?? turnModel;
+		const apiKey =
+			model === turnModel && input.modelBinding?.credential
+				? await input.modelBinding.credential.resolve()
+				: await this.options.resolveApiKey(model);
 		if (!apiKey) {
 			throw providerAuthenticationError(model, `No credentials configured for ${model.provider}/${model.id}`);
 		}

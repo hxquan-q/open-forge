@@ -128,6 +128,7 @@ export function createCodingAgentSessionContextAssembly(
 		resolveApiKey: (model) => modelRuntime.resolveApiKey(model),
 		resolveSettings: profile.resolveCompactionSettings,
 		generateCompaction: profile.generateCompaction,
+		resolveCompactionModel: profile.resolveCompactionModel,
 		extensionRuntime: profile.createCompactionExtensionRuntime?.(sessionOptions),
 		memoryRollover: peripherals.memoryRuntime,
 		transformAgentContext: (messages) => options.extensionEvents.transformContext(messages),
