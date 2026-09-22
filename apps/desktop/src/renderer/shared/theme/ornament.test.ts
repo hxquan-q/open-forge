@@ -22,6 +22,11 @@ describe("新会话页装饰件", () => {
 
 		expect(isOrnamentId("not-an-ornament")).toBe(false);
 		expect(getStoredOrnamentId()).toBe(DEFAULT_ORNAMENT_ID);
+
+		window.localStorage.setItem(ORNAMENT_STORAGE_KEY, "orbit");
+
+		expect(isOrnamentId("orbit")).toBe(false);
+		expect(getStoredOrnamentId()).toBe(DEFAULT_ORNAMENT_ID);
 	});
 
 	it.each(ORNAMENT_CATALOG)("保存并读回 $id", ({ id }) => {

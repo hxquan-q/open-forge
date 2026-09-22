@@ -1,7 +1,6 @@
 import { BlazeFlame } from "@shared/components/blaze/BlazeFlame";
 import { PixelHand } from "@shared/components/hand/PixelHand";
 import { PixelMarioBlocks } from "@shared/components/mario/PixelMarioBlocks";
-import { OrbitOrb } from "@shared/components/orb/OrbitOrb";
 import { PixelTorch } from "@shared/components/torch/PixelTorch";
 import { EnergyWell } from "@shared/components/well/EnergyWell";
 import { cn } from "@shared/lib/utils";
@@ -359,9 +358,6 @@ function OrnamentPreview({ id, preview }: { id: OrnamentId; preview?: string }):
 					draggable={false}
 					src={preview}
 				/>
-			) : id === "orbit" ? (
-				// 星轨是实时着色器，没有静帧可放：方格里直接跑一枚球，所见即所得。
-				<OrbitOrb size={76} className="pointer-events-none" />
 			) : id === "torch" ? (
 				// 火把同理，整枚是 CSS 画的。3D 投影的重心比元素盒高 6px（按 unit 折算），
 				// 不补这一下，居中的火把看着会偏上。

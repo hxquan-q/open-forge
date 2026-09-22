@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
- * 星轨装饰件的交互契约：指上去切到 speaking、移开切回 idle；
- * 关掉「头像动效」时球停帧，hover 也不该让它动起来。
+ * 保留星轨组件接口的交互契约，供后续重新启用装饰球时复用；
+ * 当前它不再由装饰件目录注册或在生产 UI 中挂载。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

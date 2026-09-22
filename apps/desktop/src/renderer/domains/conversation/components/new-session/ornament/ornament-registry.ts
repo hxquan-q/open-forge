@@ -4,7 +4,6 @@ import { BlazeOrnament } from "./presets/BlazeOrnament";
 import { EnergyWellOrnament } from "./presets/EnergyWellOrnament";
 import { HandOrnament } from "./presets/HandOrnament";
 import { MarioOrnament } from "./presets/MarioOrnament";
-import { OrbitOrnament } from "./presets/OrbitOrnament";
 import { TorchOrnament } from "./presets/TorchOrnament";
 import { ViviOrnament } from "./presets/ViviOrnament";
 
@@ -26,7 +25,6 @@ export const ORNAMENT_COMPONENTS: Record<OrnamentId, ComponentType<OrnamentProps
 	hand: HandOrnament,
 	mario: MarioOrnament,
 	none: null,
-	orbit: OrbitOrnament,
 	torch: TorchOrnament,
 	vivi: ViviOrnament,
 	well: EnergyWellOrnament,

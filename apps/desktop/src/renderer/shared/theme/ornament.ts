@@ -7,7 +7,7 @@
  * 会话页只要 id。
  */
 
-export type OrnamentId = "blaze" | "hand" | "mario" | "none" | "orbit" | "torch" | "vivi" | "well";
+export type OrnamentId = "blaze" | "hand" | "mario" | "none" | "torch" | "vivi" | "well";
 
 export const ORNAMENT_STORAGE_KEY = "vetta-hero-ornament";
 
@@ -41,8 +41,6 @@ export const ORNAMENT_CATALOG = [
 	{ id: "torch", labelKey: "ornamentTorchTitle", hintKey: "ornamentTorchHint", preview: undefined },
 	// 马里奥同理：砖块是按点阵画的 SVG，预览卡直接画一排小的。
 	{ id: "mario", labelKey: "ornamentMarioTitle", hintKey: "ornamentMarioHint", preview: undefined },
-	// 星轨没有静帧可用：它是实时着色器，预览卡直接跑一枚小球，见 OrnamentPreview。
-	{ id: "orbit", labelKey: "ornamentOrbitTitle", hintKey: "ornamentOrbitHint", preview: undefined },
 	// 玩手同理：整只手是 CSS 盒子摆出来的，预览卡直接摆一只小的。
 	{ id: "hand", labelKey: "ornamentHandTitle", hintKey: "ornamentHandHint", preview: undefined },
 	// 能源井同理：整座井是一张实时动着的 SVG，预览卡直接摆一座小的。
