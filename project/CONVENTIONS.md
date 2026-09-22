@@ -74,6 +74,8 @@ RESEARCH-0001-colding-code-notes.md
 
 ## 3. Frontmatter 规范
 
+并行代码 Task 还必须声明 `execution`、`branch`、`worktree`、`base_commit`、`read_paths`、`write_paths`、`exclusive_paths`、`depends_on`、`conflicts_with` 和 `integration_status`；具体含义见 [`collaboration/README.md`](collaboration/README.md)。
+
 所有编号管理文件必须有 YAML frontmatter：
 
 ```yaml
@@ -164,7 +166,10 @@ Requirement 不写具体类名、函数名和临时实现步骤；实现细节�
 - Given / When / Then；
 - 具体验收标准；
 - 测试层级和验证命令；
-- 完成后的实际修改与验证记录。
+- 完成后的实际修改与验证记录；
+- 并发结论、执行方式、branch/worktree、读写路径、独占路径和集成状态。
+
+Task 规划完成时必须向用户明确报告：支持并发、条件支持还是必须串行；如果支持，说明可并行 Task、前置依赖、冲突路径、Worktree 方式和最终集成顺序。
 
 ### Issue
 

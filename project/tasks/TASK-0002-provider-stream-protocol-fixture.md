@@ -7,9 +7,18 @@ owner: packages/ai
 requirement: REQ-0002
 plan: PLAN-0002
 source_issue: ISSUE-0003
+execution: parallel
+branch: unassigned
+worktree: unassigned
+base_commit: forge/dev
+read_paths: [packages/ai]
+write_paths: [packages/ai]
+exclusive_paths: []
+depends_on: []
+conflicts_with: []
+integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
-depends_on: []
 ---
 
 # Provider 流协议回归 Fixture

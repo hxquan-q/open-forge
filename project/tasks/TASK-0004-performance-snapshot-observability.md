@@ -7,9 +7,18 @@ owner: apps/desktop/packages/runtime-core
 requirement: REQ-0002
 plan: PLAN-0002
 source_issue: ISSUE-0003
+execution: parallel
+branch: unassigned
+worktree: unassigned
+base_commit: forge/dev
+read_paths: [apps/desktop, packages/runtime-core]
+write_paths: [apps/desktop, packages/runtime-core]
+exclusive_paths: []
+depends_on: [TASK-0003]
+conflicts_with: []
+integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
-depends_on: [TASK-0003]
 ---
 
 # Desktop Runtime 性能快照

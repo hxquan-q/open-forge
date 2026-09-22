@@ -6,9 +6,18 @@ priority: P0
 owner: release/product
 requirement: REQ-0003
 plan: PLAN-0003
+execution: coordination-only
+branch: none
+worktree: none
+base_commit: forge/dev
+read_paths: [exprot/rebrand-plan.md, exprot/development-paradigm.md]
+write_paths: [project/issues, project/plans]
+exclusive_paths: [.github/release-notes]
+depends_on: []
+conflicts_with: []
+integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
-depends_on: []
 ---
 
 # 品牌化关键决策冻结

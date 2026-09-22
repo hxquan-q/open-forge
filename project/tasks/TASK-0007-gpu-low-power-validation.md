@@ -7,9 +7,18 @@ owner: apps/desktop
 requirement: REQ-0002
 plan: PLAN-0002
 source: current desktop performance changes and release notes
+execution: parallel
+branch: unassigned
+worktree: unassigned
+base_commit: forge/dev
+read_paths: [apps/desktop]
+write_paths: [apps/desktop]
+exclusive_paths: []
+depends_on: [TASK-0004]
+conflicts_with: []
+integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
-depends_on: [TASK-0004]
 ---
 
 # Desktop GPU 低功耗验证

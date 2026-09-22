@@ -6,9 +6,18 @@ priority: P1
 owner: runtime-core/coding-agent/runtime-storage
 requirement: REQ-0001
 plan: PLAN-0001
+execution: parallel
+branch: unassigned
+worktree: unassigned
+base_commit: forge/dev
+read_paths: [packages/runtime-core, packages/coding-agent, packages/runtime-storage]
+write_paths: [packages/runtime-core, packages/coding-agent, packages/runtime-storage]
+exclusive_paths: []
+depends_on: [TASK-0003, TASK-0004]
+conflicts_with: []
+integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
-depends_on: [TASK-0003, TASK-0004]
 ---
 
 # Task / Artifact / Approval 合同 Fixture
