@@ -108,7 +108,7 @@ import {
 // RuntimeManager.applyEnv() 与 coding-agent 的 bash 执行。详见 fix-path.ts。
 fixPath();
 
-const PROTOCOL = "vetta";
+const PROTOCOL = "openforge";
 // registerSchemesAsPrivileged 整个进程只能调用一次且须在 ready 前：
 // 所有自定义 scheme（插件、主题、应用资源、媒体流）的特权声明在此合并注册。
 protocol.registerSchemesAsPrivileged([
@@ -316,7 +316,7 @@ let cloudMain: CloudMainHandle | null = null;
 function handleProtocolUrl(rawUrl: string): void {
 	try {
 		const parsed = new URL(rawUrl);
-		// OAuth 回调（vetta://oauth/callback）由 cloud 模块处理；
+		// OAuth 回调（openforge://oauth/callback）由 cloud 模块处理；
 		// lite 构建没有 cloud 模块，深链直接忽略。
 		cloudMain?.handleProtocolUrl(parsed);
 	} catch {

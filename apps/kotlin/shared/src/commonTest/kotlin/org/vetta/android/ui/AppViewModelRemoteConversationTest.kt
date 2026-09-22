@@ -315,7 +315,7 @@ class AppViewModelRemoteConversationTest {
             val viewModel = AppViewModel(container(gateway))
             advanceUntilIdle()
 
-            viewModel.handlePairingInvite("vetta://pair?relay=https%3A%2F%2Frelay.example&pairingId=short")
+            viewModel.handlePairingInvite("openforge://pair?relay=https%3A%2F%2Frelay.example&pairingId=short")
             advanceUntilIdle()
 
             assertEquals(0, gateway.connectCalls)
@@ -331,7 +331,7 @@ class AppViewModelRemoteConversationTest {
             val viewModel = AppViewModel(container(gateway))
             advanceUntilIdle()
             val inviteText =
-                "vetta://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz"
+                "openforge://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz"
 
             viewModel.handlePairingInvite(inviteText)
             advanceUntilIdle()
@@ -349,7 +349,7 @@ class AppViewModelRemoteConversationTest {
             val gateway = FakeRemoteConversationGateway().apply { connectResults = listOf(false, true) }
             val preferences = AppPreferences(MapSettings())
             val inviteText =
-                "vetta://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz"
+                "openforge://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz"
             val invite = requireNotNull(parsePairingInvite(inviteText))
             val resume = "resume_0123456789abcdefghijklmnopqrstuvwxyz"
             preferences.remotePairingId = invite.pairingId
@@ -381,7 +381,7 @@ class AppViewModelRemoteConversationTest {
             advanceUntilIdle()
 
             viewModel.connectDesktop(
-                "vetta://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz",
+                "openforge://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz",
             )
             advanceUntilIdle()
 

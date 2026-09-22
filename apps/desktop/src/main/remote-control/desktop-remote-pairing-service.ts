@@ -199,5 +199,5 @@ function normalizeRelayBaseUrl(value: string | undefined): string | undefined {
 
 function buildInviteUri(relay: string, pairingId: string, bootstrap: string): string {
 	const webRelay = relay.replace(/^ws/, "http");
-	return `vetta://pair?relay=${encodeURIComponent(webRelay)}&pairingId=${encodeURIComponent(pairingId)}&bootstrap=${encodeURIComponent(bootstrap)}`;
+	return `openforge://pair?relay=${encodeURIComponent(webRelay)}&pairingId=${encodeURIComponent(pairingId)}&bootstrap=${encodeURIComponent(bootstrap)}`;
 }
