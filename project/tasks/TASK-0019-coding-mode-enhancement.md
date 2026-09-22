@@ -1,7 +1,7 @@
 ---
 id: TASK-0019
 type: task
-status: blocked
+status: ready
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024]
 conflicts_with: [TASK-0017, TASK-0018]
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # coding 模式增强（implementation-plan 阶段 4）

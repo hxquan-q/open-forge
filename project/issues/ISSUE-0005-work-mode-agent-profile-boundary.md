@@ -1,14 +1,14 @@
 ---
 id: ISSUE-0005
 type: issue
-status: draft
+status: done
 priority: P1
 owner: product/runtime
 related_requirement: [REQ-0001]
 related_plan: [PLAN-0001]
 source: exprot/mvp-scope.md; docs/adr/0071-agent-mode-is-a-task-interpretation-prior.md; TASK-0023
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Work/Coding 布局、AgentMode 与能力 Profile 的边界
@@ -54,3 +54,11 @@ updated: 2026-09-22
 
 - TASK-0017、TASK-0018、TASK-0019、TASK-0021 在此决策前不得实现按 Work/Coding 隐藏 Tool 或切换会话能力的行为。
 - TASK-0024 的 WorkspaceMode 继续作为布局状态；若其视觉选择与 Agent Profile 的联动需变化，应由本 Issue 的决议另开 Task。
+
+## 决策（2026-09-23）
+
+**采用方案 C**（用户裁决）：`WorkspaceMode` 只决定项目界面布局；`agentMode` 保持
+ADR-0071 的提示词偏向；Work/Coding 不同的默认 Tool Catalog / Memory 由独立
+`agentProfileId` 表达，创建新 Session 时固化，切换工作区布局不静默重配已存在的
+Session。能力可见性不替代执行授权：写入、网络等副作用一律继续走 Tool Policy 与
+Approval（TASK-0016 落地）。TASK-0017/0018/0019/0021 的阻塞解除，按此合同实施。

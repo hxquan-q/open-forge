@@ -1,7 +1,7 @@
 ---
 id: TASK-0021
 type: task
-status: blocked
+status: ready
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0016, TASK-0017, TASK-0020]
 conflicts_with: []
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Tool Catalog Policy 收敛（implementation-plan 阶段 6a）

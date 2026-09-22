@@ -1,7 +1,7 @@
 ---
 id: TASK-0018
 type: task
-status: blocked
+status: ready
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0017]
 conflicts_with: [TASK-0019, TASK-0025, TASK-0026, TASK-0028]
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Work 文件整理入口：分类与批量重命名（implementation-plan 阶段 3b-1）

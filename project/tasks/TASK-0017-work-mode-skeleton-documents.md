@@ -1,7 +1,7 @@
 ---
 id: TASK-0017
 type: task
-status: blocked
+status: ready
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0016]
 conflicts_with: [TASK-0018, TASK-0019, TASK-0028]
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Work Agent Profile 基础（implementation-plan 阶段 3a）
