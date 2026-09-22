@@ -48,6 +48,8 @@ export interface HttpMcpClientOptions {
 	readonly modernFetch?: (input: string | URL, init?: RequestInit) => Promise<Response>;
 	readonly interactionHandlers?: McpServerInteractionHandlers;
 	readonly maxInteractionRounds?: number;
+	/** 单个 HTTP 响应的最大字节数（正整数），透传给 Modern 客户端；缺省 64 MiB。 */
+	readonly maxResponseBytes?: number;
 	readonly onDiagnostic?: (message: string) => void;
 }
 
@@ -62,6 +64,7 @@ export class HttpMcpClient implements McpClientHandle {
 	private readonly modernFetch?: HttpMcpClientOptions["modernFetch"];
 	private readonly interactionHandlers?: McpServerInteractionHandlers;
 	private readonly maxInteractionRounds: number;
+	private readonly maxResponseBytes: number | undefined;
 	private readonly onDiagnostic?: (message: string) => void;
 	private session: McpHttpSdkSession | null = null;
 	private modernClient: ModernStatelessMcpClient | null = null;
@@ -79,6 +82,7 @@ export class HttpMcpClient implements McpClientHandle {
 		this.modernFetch = options.modernFetch;
 		this.interactionHandlers = options.interactionHandlers;
 		this.maxInteractionRounds = Math.max(1, options.maxInteractionRounds ?? 3);
+		this.maxResponseBytes = options.maxResponseBytes;
 		this.onDiagnostic = options.onDiagnostic;
 	}
 
@@ -98,6 +102,7 @@ export class HttpMcpClient implements McpClientHandle {
 				debug: this.debug,
 				timeout: this.timeout,
 				authProvider: this.authProvider,
+				maxResponseBytes: this.maxResponseBytes,
 				onDiagnostic: this.onDiagnostic,
 				fetch: this.modernFetch,
 				interactionHandlers: this.interactionHandlers,
