@@ -1,4 +1,6 @@
 import {
+	DEFAULT_SUBAGENT_SETTLE_DEADLINE_MS,
+	DEFAULT_SUBAGENT_START_DEADLINE_MS,
 	emptyUsage,
 	isValidTaskName,
 	type SubagentCoordinatorOptions,
@@ -229,6 +231,8 @@ export class SubagentDispatcher<TProfile> {
 			signal: this.lifecycleAbortController.signal,
 			formatInitialMessage: this.options.formatInitialMessage ?? formatDefaultSubagentTaskMessage,
 			hooks,
+			startDeadlineMs: this.options.startDeadlineMs ?? DEFAULT_SUBAGENT_START_DEADLINE_MS,
+			settleDeadlineMs: this.options.settleDeadlineMs ?? DEFAULT_SUBAGENT_SETTLE_DEADLINE_MS,
 		});
 		return run;
 	}

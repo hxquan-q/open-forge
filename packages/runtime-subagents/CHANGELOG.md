@@ -18,3 +18,5 @@ All notable changes to `@vetta/runtime-subagents` are documented in this file.
 ### Fixed
 
 - 修复 stop hook 与 interrupt/dispose 竞争覆盖终态、hook 异常占死槽位、reopen 后才检查容量、异步 abort 提前补位、重复 Child ID 覆盖和观察回调破坏调度状态的问题。
+- `SubagentChildEvent` 的 `agent_end` 现在可携带 `reason`（`completed`/`failed`/`interrupted`）与 `errorMessage`/`errorCode`；成员 Turn 失败或被外部中止不再被误记为 `completed`，失败事实随终态快照投递给父级。
+- 新增 `startDeadlineMs`/`settleDeadlineMs`（默认 30s/10s，传非有限值恢复无限等待）：子会话创建/重开、中断收尾（abort→idle→stop 钩子）与子句柄释放全部有界，忽略 AbortSignal 或悬挂的 Child 不再占死并发槽位、挂死 `spawn`/`followUp`/`dispose`。

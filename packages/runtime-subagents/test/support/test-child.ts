@@ -66,6 +66,22 @@ export class TestChild implements SubagentChildHandle {
 		this.resolvePrompt = undefined;
 	}
 
+	/** 模拟 Turn 终态失败（如 Provider 协议错误）：child 侧事件先行，prompt 照常返回。 */
+	failTurn(errorMessage: string, errorCode?: string): void {
+		this.streaming = false;
+		this.emit({ type: "agent_end", reason: "failed", errorMessage, ...(errorCode ? { errorCode } : {}) });
+		this.resolvePrompt?.();
+		this.resolvePrompt = undefined;
+	}
+
+	/** 模拟不经过 Coordinator interrupt 的外部中止（如子 Session 被宿主取消）。 */
+	interruptExternally(): void {
+		this.streaming = false;
+		this.emit({ type: "agent_end", reason: "interrupted" });
+		this.resolvePrompt?.();
+		this.resolvePrompt = undefined;
+	}
+
 	private emit(event: SubagentChildEvent): void {
 		for (const listener of this.listeners) listener(event);
 	}
