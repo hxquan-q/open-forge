@@ -1,7 +1,7 @@
 ---
 id: TASK-0012
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/shared/store, apps/desktop/src/renderer/
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
@@ -48,3 +48,11 @@ updated: 2026-09-23
 ## 并发结论
 
 支持（独立文件）；本任务由主会话串行执行。
+
+## 实施摘要（2026-09-23）
+
+- `file-editor-document-residency.ts`：`MAX_FILE_EDITOR_DOCUMENTS=32`、`isEditorDocumentClean`、`evictCleanEditorDocuments`（FIFO，仅淘汰「干净且未挂载」，按对抗审查结论**未实现** touch/LRU 触碰机制，消除同遍历重插死循环风险）。
+- `file-atoms.ts`：`fileEditorDocumentsAtom` 改派生写 atom（函数式 updater 签名不变），新增 `fileEditorOpenDocumentCountsAtom` 与 register/release 写 atom；release 计数归零时**删除 counts 键**并顺手删干净文档（审查 major#2 修复锚点已由测试钉住）。
+- `useTextFileEditor.ts`：挂载 register / 卸载与切 path release effect（声明在 load effect 之前）。
+- 验证：store 测试 7 用例 + hook 测试 4 用例（含 StrictMode 对称、切 path、脏草稿保留）全过；`tsc -p apps/desktop` 通过；`check:quick` 通过（Biome 自动格式化 1 处）。
+- 发布说明 v0.5.59「改进」已补条目。

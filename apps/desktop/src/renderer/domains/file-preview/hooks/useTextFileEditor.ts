@@ -1,4 +1,9 @@
-import { type FileEditorDocumentState, fileEditorDocumentsAtom } from "@shared/store/atoms";
+import {
+	type FileEditorDocumentState,
+	fileEditorDocumentsAtom,
+	registerFileEditorDocumentAtom,
+	releaseFileEditorDocumentAtom,
+} from "@shared/store/atoms";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -35,6 +40,15 @@ export function useTextFileEditor(path: string, refreshNonce: number): TextFileE
 	const loadRequestIdRef = useRef(0);
 	const hasDocumentRef = useRef(Boolean(document));
 	hasDocumentRef.current = Boolean(document);
+	const registerDocument = useSetAtom(registerFileEditorDocumentAtom);
+	const releaseDocument = useSetAtom(releaseFileEditorDocumentAtom);
+
+	// 挂载登记 / 卸载与切 path 释放（cleanup 自动覆盖 prev/next 切换）：计数保护
+	// 本文档不被缓存上限淘汰；释放时干净文档顺手删除，脏草稿保留。
+	useEffect(() => {
+		registerDocument(path);
+		return () => releaseDocument(path);
+	}, [path, registerDocument, releaseDocument]);
 
 	const loadFromDisk = useCallback(
 		async (discardDraft: boolean): Promise<void> => {
