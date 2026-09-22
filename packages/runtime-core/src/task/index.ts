@@ -31,6 +31,17 @@ export {
 	readToolRiskDescriptor,
 } from "./read-contracts.js";
 export type {
+	ArtifactDescriptorFactEvent,
+	RuntimeSessionTaskState,
+	RuntimeTaskFactEvent,
+	TaskLifecycleFactEvent,
+} from "./session-projection.js";
+export {
+	collectRuntimeTaskFacts,
+	isRuntimeTaskFactEvent,
+	projectRuntimeSessionTaskState,
+} from "./session-projection.js";
+export type {
 	ArtifactAvailability,
 	ArtifactAvailabilityResult,
 	RuntimeTaskErrorCode,
@@ -51,3 +62,5 @@ export {
 	resolveArtifactAvailability,
 	transitionRuntimeTask,
 } from "./state-machine.js";
+export type { TaskEventBatch, TaskTurnBindingInput, TaskTurnOutcome } from "./turn-binding.js";
+export { planTaskEventsForTurnOutcome, planTaskEventsForTurnStart } from "./turn-binding.js";

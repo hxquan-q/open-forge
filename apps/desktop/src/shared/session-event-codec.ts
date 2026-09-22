@@ -15,6 +15,8 @@ const SESSION_EVENT_TYPES = new Set([
 	"usage.update",
 	"error",
 	"session.extension",
+	"task.lifecycle",
+	"artifact.descriptor",
 	"active_tools_update",
 	"compaction.start",
 	"compaction.end",
@@ -110,6 +112,23 @@ export function decodeSessionEvent(value: unknown): SessionEvent {
 		const compaction = record(state.compaction);
 		if (!usage || !compaction || typeof compaction.status !== "string" || !record(compaction.eligibility)) {
 			fail("invalid session context state payload");
+		}
+	}
+	if (event.type === "task.lifecycle") {
+		const task = record(event.task);
+		if (
+			!task ||
+			typeof task.type !== "string" ||
+			typeof task.taskId !== "string" ||
+			typeof task.eventId !== "string"
+		) {
+			fail("invalid task lifecycle payload");
+		}
+	}
+	if (event.type === "artifact.descriptor") {
+		const artifact = record(event.artifact);
+		if (!artifact || typeof artifact.artifactId !== "string" || typeof artifact.kind !== "string") {
+			fail("invalid artifact descriptor payload");
 		}
 	}
 	return event as unknown as SessionEvent;

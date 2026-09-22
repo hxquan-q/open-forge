@@ -158,6 +158,7 @@ export class RuntimeHostSessionLifecycle {
 			executionObservationStream: assembly.executionObservationStream,
 			toolController: assembly.toolController,
 			...assembly.corePorts,
+			taskView: assembly.corePorts.taskView,
 			queueController: assembly.queueController,
 			metadataController: assembly.metadataController,
 			executionMode,

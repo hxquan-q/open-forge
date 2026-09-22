@@ -1,5 +1,6 @@
 import type {
 	AgentSessionState,
+	ArtifactDescriptorRecordedEvent,
 	QueuedSessionInput,
 	QueuedSessionInputResult,
 	QueueSessionInputIfRunningResult,
@@ -12,6 +13,7 @@ import type {
 	SessionSendOptions,
 	SessionSendResult,
 	SessionStreamingBehavior,
+	TaskLifecycleRecordedEvent,
 	TurnResult,
 	TurnSessionIdentity,
 } from "./contracts.js";
@@ -339,6 +341,20 @@ export class AgentSession {
 		const write = this.contextWrite.then(async () => {
 			if (this.currentState !== "idle") throw sessionBusyError();
 			await this.pipeline.recordContext(this.identity, context);
+		});
+		this.contextWrite = write.catch(() => undefined);
+		return write;
+	}
+
+	/** 追加宿主显式提交的 Task/Artifact 事实；与 `recordContext` 同一串行与 idle 约束。 */
+	recordTaskFacts(facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[]): Promise<void> {
+		if (this.currentState === "closed" || this.currentState === "closing") {
+			return Promise.reject(sessionClosedError());
+		}
+		if (this.currentState === "recovery_required") return Promise.reject(turnPersistenceError());
+		const write = this.contextWrite.then(async () => {
+			if (this.currentState !== "idle") throw sessionBusyError();
+			await this.pipeline.recordTaskFacts(this.identity, facts);
 		});
 		this.contextWrite = write.catch(() => undefined);
 		return write;

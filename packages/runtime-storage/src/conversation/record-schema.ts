@@ -513,6 +513,172 @@ const TurnTransferredEventSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const RuntimeTaskStatusSchema = Type.Union([
+	Type.Literal("draft"),
+	Type.Literal("planning"),
+	Type.Literal("awaiting_approval"),
+	Type.Literal("running"),
+	Type.Literal("paused"),
+	Type.Literal("awaiting_review"),
+	Type.Literal("completed"),
+	Type.Literal("failed"),
+	Type.Literal("cancelled"),
+	Type.Literal("rejected"),
+	Type.Literal("changes_requested"),
+]);
+
+const RuntimeTaskIdentitySchema = Type.Object(
+	{
+		taskId: Type.String(),
+		rootSessionId: Type.String(),
+		generation: Type.String(),
+	},
+	{ additionalProperties: false },
+);
+
+const RuntimeTaskSnapshotSchema = Type.Object(
+	{
+		schemaVersion: Type.Literal(1),
+		identity: RuntimeTaskIdentitySchema,
+		status: RuntimeTaskStatusSchema,
+		title: Type.Optional(Type.String()),
+		createdAt: Type.Number(),
+		updatedAt: Type.Number(),
+		activeTurnId: Type.Optional(Type.String()),
+		artifactIds: Type.Array(Type.String()),
+		pendingApprovalIds: Type.Array(Type.String()),
+	},
+	{ additionalProperties: false },
+);
+
+const RuntimeTaskEventBaseSchema = {
+	schemaVersion: Type.Literal(1),
+	taskId: Type.String(),
+	eventId: Type.String(),
+	at: Type.Number(),
+} as const;
+
+const RuntimeTaskEventSchema = Type.Union([
+	Type.Object(
+		{
+			type: Type.Literal("task.created"),
+			...RuntimeTaskEventBaseSchema,
+			snapshot: RuntimeTaskSnapshotSchema,
+		},
+		{ additionalProperties: false },
+	),
+	Type.Object(
+		{
+			type: Type.Literal("task.status_changed"),
+			...RuntimeTaskEventBaseSchema,
+			from: RuntimeTaskStatusSchema,
+			to: RuntimeTaskStatusSchema,
+			reason: Type.Optional(Type.String()),
+		},
+		{ additionalProperties: false },
+	),
+	Type.Object(
+		{
+			type: Type.Literal("task.turn_bound"),
+			...RuntimeTaskEventBaseSchema,
+			turnId: Type.String(),
+		},
+		{ additionalProperties: false },
+	),
+	Type.Object(
+		{
+			type: Type.Literal("task.artifact_attached"),
+			...RuntimeTaskEventBaseSchema,
+			artifactId: Type.String(),
+		},
+		{ additionalProperties: false },
+	),
+	Type.Object(
+		{
+			type: Type.Literal("task.approval_requested"),
+			...RuntimeTaskEventBaseSchema,
+			approvalId: Type.String(),
+		},
+		{ additionalProperties: false },
+	),
+	Type.Object(
+		{
+			type: Type.Literal("task.approval_resolved"),
+			...RuntimeTaskEventBaseSchema,
+			approvalId: Type.String(),
+			decision: Type.Union([
+				Type.Literal("approve"),
+				Type.Literal("approve_once"),
+				Type.Literal("deny"),
+				Type.Literal("edit"),
+			]),
+		},
+		{ additionalProperties: false },
+	),
+]);
+
+const ArtifactKindSchema = Type.Union([
+	Type.Literal("document"),
+	Type.Literal("dataset"),
+	Type.Literal("analysis"),
+	Type.Literal("code-change"),
+	Type.Literal("execution-result"),
+	Type.Literal("research-evidence"),
+	Type.Literal("bundle"),
+]);
+
+const ArtifactStatusSchema = Type.Union([
+	Type.Literal("draft"),
+	Type.Literal("generated"),
+	Type.Literal("modified"),
+	Type.Literal("validated"),
+	Type.Literal("accepted"),
+	Type.Literal("rejected"),
+]);
+
+const ArtifactDescriptorSchema = Type.Object(
+	{
+		schemaVersion: Type.Literal(1),
+		artifactId: Type.String(),
+		kind: ArtifactKindSchema,
+		status: ArtifactStatusSchema,
+		title: Type.String(),
+		uri: Type.Optional(Type.String()),
+		version: Type.Number(),
+		sourceTaskId: Type.Optional(Type.String()),
+		sourceSessionId: Type.String(),
+		sourceTurnId: Type.Optional(Type.String()),
+		contentType: Type.Optional(Type.String()),
+		checksum: Type.Optional(Type.String()),
+		rendererType: Type.Optional(Type.String()),
+		createdAt: Type.Number(),
+		updatedAt: Type.Number(),
+	},
+	{ additionalProperties: false },
+);
+
+const TaskLifecycleRecordedEventSchema = Type.Object(
+	{
+		type: Type.Literal("task.lifecycle.recorded"),
+		sessionId: Type.String(),
+		turnId: Type.Optional(Type.Never()),
+		task: RuntimeTaskEventSchema,
+		timestamp: Type.Number(),
+	},
+	{ additionalProperties: false },
+);
+
+const ArtifactDescriptorRecordedEventSchema = Type.Object(
+	{
+		type: Type.Literal("artifact.descriptor.recorded"),
+		sessionId: Type.String(),
+		turnId: Type.Optional(Type.Never()),
+		artifact: ArtifactDescriptorSchema,
+		timestamp: Type.Number(),
+	},
+	{ additionalProperties: false },
+);
+
 export const StoredSessionEventSchema = Type.Union([
 	TurnStartedEventSchema,
 	TurnContinuedEventSchema,
@@ -524,6 +690,8 @@ export const StoredSessionEventSchema = Type.Union([
 	TurnCancelledEventSchema,
 	TurnFailedEventSchema,
 	TurnTransferredEventSchema,
+	TaskLifecycleRecordedEventSchema,
+	ArtifactDescriptorRecordedEventSchema,
 ]);
 
 const ReadStoredSessionEventSchema = Type.Union([
@@ -537,6 +705,8 @@ const ReadStoredSessionEventSchema = Type.Union([
 	TurnCancelledEventSchema,
 	ReadTurnFailedEventSchema,
 	TurnTransferredEventSchema,
+	TaskLifecycleRecordedEventSchema,
+	ArtifactDescriptorRecordedEventSchema,
 ]);
 
 function storedSessionEventSchemaForType(type: string): TSchema | undefined {
@@ -561,6 +731,10 @@ function storedSessionEventSchemaForType(type: string): TSchema | undefined {
 			return TurnFailedEventSchema;
 		case "turn.transferred":
 			return TurnTransferredEventSchema;
+		case "task.lifecycle.recorded":
+			return TaskLifecycleRecordedEventSchema;
+		case "artifact.descriptor.recorded":
+			return ArtifactDescriptorRecordedEventSchema;
 		default:
 			return undefined;
 	}
@@ -957,7 +1131,14 @@ export const ConversationSnapshotRecordSchema = Type.Object(
 
 export type ConversationFileHeader = Static<typeof CurrentConversationFileHeaderSchema>;
 export type ReadConversationFileHeader = Static<typeof ConversationFileHeaderSchema>;
-export type ConversationEventRecord = Static<typeof CurrentConversationEventRecordSchema>;
+/**
+ * 写侧 `event` 字段以 runtime-core 的 `StoredSessionEvent` 为准（合同里的
+ * `readonly` 数组比 TypeBox Static 推导的 mutable 数组更严格）；运行时校验仍走
+ * 上面的 Schema，两者只是类型层面的口径统一。
+ */
+export type ConversationEventRecord = Omit<Static<typeof ReadCurrentConversationEventRecordSchema>, "event"> & {
+	readonly event: StoredSessionEvent;
+};
 export type ReadConversationEventRecord = Static<typeof ConversationEventRecordSchema>;
 export type NormalizedReadConversationEventRecord =
 	| (Omit<Extract<ReadConversationEventRecord, { schemaVersion: 1 }>, "event"> & {

@@ -27,6 +27,7 @@ import type {
 	RuntimeSessionModelView,
 	RuntimeSessionQueueController,
 	RuntimeSessionStateReader,
+	RuntimeSessionTaskView,
 	RuntimeSessionToolController,
 	RuntimeSessionTurnControl,
 	RuntimeSessionWorkspaceView,
@@ -62,6 +63,7 @@ export interface RuntimeHostSessionRecord {
 	turnControl: RuntimeSessionTurnControl;
 	eventStream: RuntimeSessionEventStream;
 	stateReader: RuntimeSessionStateReader;
+	taskView: RuntimeSessionTaskView | undefined;
 	/** 可选能力（ADR-0060）：backend 不提供时相应队列/落盘功能静默降级。 */
 	queueController: RuntimeSessionQueueController | undefined;
 	metadataController: RuntimeSessionMetadataController | undefined;

@@ -4,8 +4,12 @@ import type { RuntimeFailure } from "../failure-contract.js";
 import { runtimeFailureFromAIErrorDetails } from "../failure-projection.js";
 import type { RuntimeExecutionObservationEvent, RuntimeMessageEnvelope } from "../runtime-execution-observation.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
+import { projectRuntimeSessionTaskState } from "../task/session-projection.js";
+import type { TaskEventBatch } from "../task/turn-binding.js";
+import { planTaskEventsForTurnOutcome, planTaskEventsForTurnStart } from "../task/turn-binding.js";
 import { ContextCompactionCommitter } from "./context-compaction-committer.js";
 import type {
+	ArtifactDescriptorRecordedEvent,
 	Clock,
 	ContextCompactionCommitResult,
 	ContextCompactionRecord,
@@ -32,6 +36,7 @@ import type {
 	SessionInputRequest,
 	StoredConversation,
 	StoredSessionEvent,
+	TaskLifecycleRecordedEvent,
 	TurnEngineContextCheckpointRequest,
 	TurnEngineContextCheckpointResult,
 	TurnEnginePort,
@@ -173,6 +178,34 @@ export class TurnPipeline {
 		}));
 		await this.repository.append(identity.sessionId, conversation.version, events);
 		for (const event of events) await this.publishSafely(event);
+	}
+
+	/**
+	 * 追加宿主显式提交的 Task/Artifact 事实（创建、计划、审批、Review、Artifact
+	 * descriptor 等）。与 `recordContext` 同一模式：加载当前版本后原子追加并广播；
+	 * 版本竞争由仓库的串行队列与调用方重试语义兜底。
+	 */
+	async recordTaskFacts(
+		sessionIdentity: string | TurnSessionIdentity,
+		facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[],
+	): Promise<void> {
+		if (facts.length === 0) return;
+		const identity = normalizeSessionIdentity(sessionIdentity);
+		const conversation = await this.repository.load(identity.sessionId);
+		await this.repository.append(identity.sessionId, conversation.version, facts);
+		for (const event of facts) await this.publishSafely(event);
+	}
+
+	/** 把状态机推导出的 Task 事件包装成持久化事实记录。 */
+	private taskFactEvents(sessionId: string, batches: readonly TaskEventBatch[]): StoredSessionEvent[] {
+		return batches.flatMap((batch) =>
+			batch.events.map((taskEvent) => ({
+				type: "task.lifecycle.recorded" as const,
+				sessionId,
+				task: taskEvent,
+				timestamp: taskEvent.at,
+			})),
+		);
 	}
 
 	async run(
@@ -338,6 +371,15 @@ export class TurnPipeline {
 					timestamp: record.timestamp ?? startedAt,
 				});
 			}
+			startEvents.push(
+				...this.taskFactEvents(
+					state.sessionId,
+					planTaskEventsForTurnStart(projectRuntimeSessionTaskState(conversation.events).tasks, {
+						turnId,
+						at: startedAt,
+					}),
+				),
+			);
 			await this.append(state, signal, startEvents);
 			state.started = true;
 
@@ -624,14 +666,27 @@ export class TurnPipeline {
 
 			await this.enterStage(state.sessionId, turnId, "finalization");
 			await this.appendRuntimeContext(turnId, state, signal);
+			const completedEvent: StoredSessionEvent = {
+				type: "turn.completed",
+				sessionId: state.sessionId,
+				turnId,
+				stopReason,
+				timestamp: this.clock.now(),
+			};
+			// 成功路径不走 appendTerminalEvent；Task 终态推进（→ awaiting_review）
+			// 在同一事务批里与 turn.completed 一起落盘。
+			const freshConversation = await this.repository.load(state.sessionId);
+			state.version = freshConversation.version;
 			await this.append(state, signal, [
-				{
-					type: "turn.completed",
-					sessionId: state.sessionId,
-					turnId,
-					stopReason,
-					timestamp: this.clock.now(),
-				},
+				completedEvent,
+				...this.taskFactEvents(
+					state.sessionId,
+					planTaskEventsForTurnOutcome(projectRuntimeSessionTaskState(freshConversation.events).tasks, {
+						turnId,
+						outcome: "completed",
+						at: completedEvent.timestamp,
+					}),
+				),
 			]);
 
 			return {
@@ -1005,11 +1060,31 @@ export class TurnPipeline {
 					`Conversation ${state.sessionId} cannot append terminal event for turn ${event.turnId}`,
 				);
 			}
+			const terminalEvents = [
+				event,
+				...this.taskFactEvents(
+					state.sessionId,
+					planTaskEventsForTurnOutcome(projectRuntimeSessionTaskState(conversation.events).tasks, {
+						turnId: event.turnId,
+						outcome:
+							event.type === "turn.completed"
+								? "completed"
+								: event.type === "turn.failed"
+									? "failed"
+									: "cancelled",
+						at: event.timestamp,
+						...(event.type === "turn.cancelled" && event.reason !== undefined ? { reason: event.reason } : {}),
+						...(event.type === "turn.failed" ? { reason: event.error.code } : {}),
+					}),
+				),
+			];
 			try {
-				const result = await this.repository.append(conversation.sessionId, conversation.version, [event]);
+				const result = await this.repository.append(conversation.sessionId, conversation.version, terminalEvents);
 				state.version = result.version;
-				await this.publishSafely(event);
-				await this.notifyObserversSafely(state.snapshot, event, signal);
+				for (const terminalEvent of terminalEvents) {
+					await this.publishSafely(terminalEvent);
+					await this.notifyObserversSafely(state.snapshot, terminalEvent, signal);
+				}
 				return;
 			} catch (error) {
 				if (attempt === 0) continue;

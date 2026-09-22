@@ -117,6 +117,10 @@ export default defineConfig({
 				replacement: resolve(__dirname, "../../packages/runtime-core/src/kernel/index.ts"),
 			},
 			{
+				find: "@vetta/runtime-core/task",
+				replacement: resolve(__dirname, "../../packages/runtime-core/src/task/index.ts"),
+			},
+			{
 				find: "@vetta/runtime-core/conversation",
 				replacement: resolve(__dirname, "../../packages/runtime-core/src/conversation/index.ts"),
 			},

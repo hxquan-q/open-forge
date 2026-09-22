@@ -30,6 +30,26 @@ export function mapKernelEventToSessionEvents(event: KernelEvent): SessionEvent[
 		];
 	}
 
+	if (event.type === "task.lifecycle.recorded") {
+		return [
+			{
+				...baseSessionEvent(event.sessionId, "runtime-core", event.timestamp),
+				type: "task.lifecycle",
+				task: event.task,
+			},
+		];
+	}
+
+	if (event.type === "artifact.descriptor.recorded") {
+		return [
+			{
+				...baseSessionEvent(event.sessionId, "runtime-core", event.timestamp),
+				type: "artifact.descriptor",
+				artifact: event.artifact,
+			},
+		];
+	}
+
 	if (event.type === "message.appended" && event.message.role === "assistant") {
 		return assistantMessageObservations(event.message, event.turnId, event.failure).map((observation) =>
 			mapRuntimeSessionObservationEvent(event.sessionId, observation, event.timestamp),

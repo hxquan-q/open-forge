@@ -25,6 +25,7 @@ import type {
 } from "../runtime-execution-observation.js";
 import type { ContextCompactionEligibility } from "../session-context-state.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
+import type { ArtifactDescriptor, RuntimeTaskEvent } from "../task/contracts.js";
 
 export type AgentSessionState = "idle" | "running" | "cancelling" | "closing" | "recovery_required" | "closed";
 
@@ -810,6 +811,27 @@ export interface TurnContinuedEvent {
 	readonly timestamp: number;
 }
 
+/**
+ * Session 级 Task 生命周期持久化事实。Task 事件只引用 Turn，从不开启或关闭 Turn，
+ * 因此允许出现在活动 Turn 内外；重放时由 `rebuildRuntimeTaskSnapshot` 收敛为快照。
+ */
+export interface TaskLifecycleRecordedEvent {
+	readonly type: "task.lifecycle.recorded";
+	readonly sessionId: string;
+	readonly turnId?: never;
+	readonly task: RuntimeTaskEvent;
+	readonly timestamp: number;
+}
+
+/** Session 级 Artifact descriptor 持久化事实；文件内容才是事实源，descriptor 可重建。 */
+export interface ArtifactDescriptorRecordedEvent {
+	readonly type: "artifact.descriptor.recorded";
+	readonly sessionId: string;
+	readonly turnId?: never;
+	readonly artifact: ArtifactDescriptor;
+	readonly timestamp: number;
+}
+
 export type StoredSessionEvent =
 	| TurnStartedEvent
 	| TurnContinuedEvent
@@ -820,7 +842,9 @@ export type StoredSessionEvent =
 	| TurnCompletedEvent
 	| TurnCancelledEvent
 	| TurnFailedEvent
-	| TurnTransferredEvent;
+	| TurnTransferredEvent
+	| TaskLifecycleRecordedEvent
+	| ArtifactDescriptorRecordedEvent;
 
 export type TurnPipelineStage =
 	| "admission"

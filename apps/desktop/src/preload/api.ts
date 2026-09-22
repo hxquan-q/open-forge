@@ -40,6 +40,7 @@ import type {
 	DesktopTrayApi,
 	DesktopWindowApi,
 } from "./api-types/system.js";
+import type { DesktopTaskApi } from "./api-types/task.js";
 import type { DesktopTelemetryApi } from "./api-types/telemetry.js";
 import type { DesktopTerminalApi } from "./api-types/terminal.js";
 import type { DesktopThemeApi } from "./api-types/theme.js";
@@ -78,6 +79,7 @@ export type * from "./api-types/skills.js";
 export type * from "./api-types/speech-input.js";
 export type * from "./api-types/ssh.js";
 export type * from "./api-types/system.js";
+export type * from "./api-types/task.js";
 export type * from "./api-types/telemetry.js";
 export type * from "./api-types/terminal.js";
 export type * from "./api-types/theme.js";
@@ -136,6 +138,7 @@ export interface DesktopApi {
 	plugins: DesktopPluginsApi;
 	pet: DesktopPetApi;
 	conversationTags: DesktopConversationTagsApi;
+	task: DesktopTaskApi;
 	quickPanel: DesktopQuickPanelApi;
 	runtimeConfiguration: DesktopRuntimeConfigurationApi;
 	appshot: DesktopAppshotApi;

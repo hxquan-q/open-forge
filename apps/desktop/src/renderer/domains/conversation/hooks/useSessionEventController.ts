@@ -9,6 +9,7 @@ import {
 	chatMessagesAtom,
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
+	EMPTY_TASK_STATE,
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
@@ -18,6 +19,7 @@ import {
 	promptSuggestionsAtom,
 	retryProgressAtom,
 	subagentsBySessionAtom,
+	taskStateBySessionAtom,
 	todoItemsBySessionAtom,
 } from "@shared/store/atoms";
 import {
@@ -29,6 +31,7 @@ import {
 	setQueuePausedAtom,
 } from "@shared/store/message-queue-atoms";
 import { showToast } from "@shared/store/toast-atoms";
+import { applyTaskFactEvent } from "@shared/task/task-projection.js";
 import {
 	isCodingAgentMcpReloadStarted,
 	readCodingAgentBackgroundTasksObservation,
@@ -97,6 +100,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	const setSubagents = useSetAtom(subagentsBySessionAtom);
 	const setActiveToolNames = useSetAtom(activeToolNamesAtom);
 	const setTodoItems = useSetAtom(todoItemsBySessionAtom);
+	const setTaskState = useSetAtom(taskStateBySessionAtom);
 	const setPlanModeStates = useSetAtom(planModeStateBySessionAtom);
 	const setPromptSuggestions = useSetAtom(promptSuggestionsAtom);
 	const setPromptPredicting = useSetAtom(promptPredictingAtom);
@@ -545,6 +549,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				return;
 			}
 
+			// ── Task/Artifact 事实投影（真相源在 Runtime 事件日志，这里只折叠） ──
+			if (event.type === "task.lifecycle" || event.type === "artifact.descriptor") {
+				const sid = activeSessionRef.current?.runtimeId;
+				if (sid) {
+					setTaskState((prev) => {
+						const current = prev.get(sid) ?? EMPTY_TASK_STATE;
+						const next = applyTaskFactEvent(current, event);
+						return next === current ? prev : new Map(prev).set(sid, next);
+					});
+				}
+				return;
+			}
+
 			// ── Coding Agent product extension updates ──
 			if (event.type === "session.extension") {
 				if (isCodingAgentMcpReloadStarted(event)) {
@@ -637,6 +654,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			setPromptSuggestions,
 			setRetryProgress,
 			setSubagents,
+			setTaskState,
 			setTodoItems,
 			setCompactionEligibility,
 		],

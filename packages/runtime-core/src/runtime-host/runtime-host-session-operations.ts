@@ -13,9 +13,15 @@ import type {
 import type { ConversationDocument } from "../conversation/document.js";
 import type { ConversationMessageRecord } from "../conversation/message-contract.js";
 import { isSessionError, runtimeError } from "../errors.js";
-import type { RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
+import type {
+	ArtifactDescriptorRecordedEvent,
+	RuntimeToolDefinition,
+	SessionContextRecord,
+	TaskLifecycleRecordedEvent,
+} from "../kernel/contracts.js";
 import { isTurnPersistenceError } from "../kernel/errors.js";
 import type { SessionExtensionEndpointToken } from "../session-extensions/contracts.js";
+import type { RuntimeSessionTaskState } from "../task/session-projection.js";
 import type { RuntimeHostSessionDirectory } from "./runtime-host-session-directory.js";
 import type { RuntimeHostSessionEventRelay } from "./runtime-host-session-event-relay.js";
 import { baseSessionEvent } from "./session-events.js";
@@ -491,6 +497,21 @@ export class RuntimeHostSessionOperations {
 
 	getMessages(sessionId: string): Message[] {
 		return [...this.requireSession(sessionId).stateReader.readMessages()];
+	}
+
+	getTaskState(sessionId: string): RuntimeSessionTaskState {
+		const taskView = this.requireSession(sessionId).taskView;
+		if (!taskView) throw new Error("Session task projection capability is unavailable");
+		return taskView.readTaskState();
+	}
+
+	recordTaskFacts(
+		sessionId: string,
+		facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[],
+	): Promise<void> {
+		const taskView = this.requireSession(sessionId).taskView;
+		if (!taskView) throw new Error("Session task projection capability is unavailable");
+		return taskView.recordTaskFacts(facts);
 	}
 
 	getFullHistory(sessionId: string): HistoryEntry[] {
