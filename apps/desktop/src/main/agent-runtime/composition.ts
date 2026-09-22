@@ -52,6 +52,7 @@ import {
 } from "@vetta/runtime-node/host";
 import { getModePrompt } from "../agent-modes/index.js";
 import { createDesktopAgentObservability } from "../agent-observability/composition.js";
+import { recordRuntimeCompaction } from "../app-monitor/app-monitor-service.js";
 import {
 	DEFAULT_CONVERSATION_CWD,
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
@@ -224,6 +225,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 				agentDir,
 			}),
 		});
+	const compactionLogger = createRuntimeSessionCompactionLogger(log);
 	const runtime = new RuntimeHost({
 		...platformServices,
 		getDefaultExecutionMode,
@@ -300,7 +302,12 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 		]),
 		sharedModelController: createCodingAgentSharedModelController(modelRuntime),
 		sessionErrorObserver: (event) => logRuntimeSessionError(event, log),
-		sessionCompactionObserver: createRuntimeSessionCompactionLogger(log),
+		// 先计数后日志：relay 对整个回调只兜一次底，监控计数放前面，日志实现
+		// 抛错也不会让计数丢失（该回调本身已是旁路，抛错由 RuntimeHost 隔离）。
+		sessionCompactionObserver: (event) => {
+			recordRuntimeCompaction(event);
+			compactionLogger(event);
+		},
 	});
 	return { runtime };
 }
