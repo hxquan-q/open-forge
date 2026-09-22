@@ -2,17 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveUpdatePublishConfig } from "./resolve-update-publish-config.mjs";
 
-const DEFAULT_UPDATE_URL = "https://releases.openvetta.com/desktop/stable";
-
-test("defaults packaged builds to the official stable update feed", () => {
-	assert.deepEqual(resolveUpdatePublishConfig({}), {
-		provider: "generic",
-		url: DEFAULT_UPDATE_URL,
-		useMultipleRangeRequest: true,
-	});
+test("generic provider fails closed when no update URL is configured", () => {
+	// Ship-blocker guard: an unset feed URL must never fall back to upstream
+	// infrastructure, so the build fails instead of shipping a silent default.
+	assert.throws(() => resolveUpdatePublishConfig({}), /VETTA_UPDATE_URL is required/);
+	assert.throws(
+		() => resolveUpdatePublishConfig({ VETTA_UPDATE_PROVIDER: "generic" }),
+		/VETTA_UPDATE_URL is required/,
+	);
 });
 
-test("allows an explicit update URL to override the stable default", () => {
+test("uses the explicitly configured generic update feed", () => {
 	assert.deepEqual(
 		resolveUpdatePublishConfig({
 			VETTA_UPDATE_URL: "https://releases.example.com/desktop/test/",

@@ -32,20 +32,20 @@ test("resolves provider-specific public feed bases", () => {
 	);
 	assert.equal(
 		resolveUpdateFeedBase({
-			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "openvetta", VETTA_UPDATE_GITHUB_REPO: "open-vetta" },
+			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "hxquan-q", VETTA_UPDATE_GITHUB_REPO: "open-forge" },
 			version,
 		}),
-		"https://github.com/openvetta/open-vetta/releases/download/v0.5.46/",
+		"https://github.com/hxquan-q/open-forge/releases/download/v0.5.46/",
 	);
 });
 
 test("accepts a Git tag version with the leading v", () => {
 	assert.equal(
 		resolveUpdateFeedBase({
-			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "openvetta", VETTA_UPDATE_GITHUB_REPO: "open-vetta" },
+			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "hxquan-q", VETTA_UPDATE_GITHUB_REPO: "open-forge" },
 		version: "v0.5.46",
 		}),
-		"https://github.com/openvetta/open-vetta/releases/download/v0.5.46/",
+		"https://github.com/hxquan-q/open-forge/releases/download/v0.5.46/",
 	);
 });
 

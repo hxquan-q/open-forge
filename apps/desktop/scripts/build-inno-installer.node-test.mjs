@@ -15,14 +15,14 @@ test("writes updater config into the version directory installed by Inno", async
 	try {
 		const publishConfig = resolveUpdatePublishConfig({
 			VETTA_UPDATE_PROVIDER: "generic",
-			VETTA_UPDATE_URL: "https://releases.openvetta.com/desktop/test",
+			VETTA_UPDATE_URL: "https://releases.example.com/desktop/test",
 		});
 		assert.ok(publishConfig);
 		await writeAppUpdateConfig(sourceDir, version, publishConfig);
 
 		const config = await readFile(join(resourcesDir, "app-update.yml"), "utf8");
 		assert.match(config, /provider: generic/);
-		assert.match(config, /url: https:\/\/releases\.openvetta\.com\/desktop\/test/);
+		assert.match(config, /url: https:\/\/releases.example.com\/desktop\/test/);
 		assert.match(config, /useMultipleRangeRequest: true/);
 		assert.match(config, /updaterCacheDirName: vetta-updater/);
 	} finally {

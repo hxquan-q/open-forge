@@ -98,10 +98,10 @@ jobs:
         env:
           VETTA_BUILD_ENV: test
           VETTA_CLOUD_ENABLED: "false"
-          VETTA_OPEN_MARKETPLACE_REPOSITORY: openvetta/vetta-official-marketplace
+          VETTA_OPEN_MARKETPLACE_REPOSITORY: hxquan-q/open-forge-marketplace
           VETTA_SPEECH_INPUT_ENABLED: "false"
-          VETTA_UPDATE_GITHUB_OWNER: openvetta
-          VETTA_UPDATE_GITHUB_REPO: open-vetta
+          VETTA_UPDATE_GITHUB_OWNER: hxquan-q
+          VETTA_UPDATE_GITHUB_REPO: open-forge
           VETTA_UPDATE_PROVIDER: github
         run: bun run ${{ matrix.build-command }}
 
