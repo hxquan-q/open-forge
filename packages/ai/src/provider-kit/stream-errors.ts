@@ -1,11 +1,11 @@
-import { AIStreamProtocolError } from "../protocol/index.js";
+import { type AIErrorOptions, AIStreamProtocolError } from "../protocol/index.js";
 
 export class EmptyProviderStreamError extends AIStreamProtocolError {
-	constructor(cause?: unknown) {
+	constructor(options: AIErrorOptions = {}) {
 		super("Stream ended without provider events", {
-			cause,
+			...options,
 			retryable: true,
-			metadata: { reason: "empty_provider_stream" },
+			metadata: { ...options.metadata, reason: "empty_provider_stream" },
 		});
 		this.name = "EmptyProviderStreamError";
 	}
