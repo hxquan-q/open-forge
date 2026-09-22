@@ -1,6 +1,7 @@
 import type { StreamFn } from "@vetta/agent-core";
 import type { SimpleStreamOptions } from "@vetta/ai";
 import type { ConversationDocumentStore } from "../conversation/index.js";
+import { runtimeError } from "../errors.js";
 import {
 	AgentCoreTurnEngine,
 	type AgentCoreTurnEngineOptions,
@@ -19,6 +20,7 @@ import {
 	type RuntimeSessionContextAppender,
 	type RuntimeSnapshotProvider,
 	resumeAgentSession,
+	type SessionCancelDeadlineInfo,
 	type SessionContextRecord,
 	type SessionInputQueueMode,
 	type SessionInputQueueSnapshot,
@@ -101,6 +103,8 @@ export interface ComposedRuntimeFactoryOptions<TCreateOptions> {
 	readonly observationPublisher?: RuntimeObservationPublisher;
 	readonly clock?: Clock;
 	readonly idGenerator?: IdGenerator;
+	/** Kernel Session 的取消宽限；缺省由 AgentSession 的默认值决定。 */
+	readonly cancelDeadlineMs?: number;
 }
 
 /**
@@ -220,6 +224,27 @@ export class ComposedRuntimeFactory<TCreateOptions> implements KernelRuntimeFact
 				cwd: resources.identity.cwd,
 				steeringMode: resources.steeringMode,
 				followUpMode: resources.followUpMode,
+				cancelDeadlineMs: this.options.cancelDeadlineMs,
+				onCancelDeadlineExceeded: (info: SessionCancelDeadlineInfo) => {
+					const detail = info.reason ? ` (${info.reason})` : "";
+					void reportObservation({
+						type: "error",
+						error: runtimeError(
+							"SESSION_CANCEL_DEADLINE_EXCEEDED",
+							`The active turn did not settle within ${info.deadlineMs}ms after cancellation${detail}; the session requires recovery.`,
+							false,
+							"runtime",
+						),
+						source: "runtime-core",
+					}).catch((error) => {
+						console.warn("[runtime-core] failed to report cancel deadline", error);
+					});
+					void reportObservation({ type: "lifecycle", phase: "agent_end", source: "runtime-core" }).catch(
+						(error) => {
+							console.warn("[runtime-core] failed to report cancel deadline", error);
+						},
+					);
+				},
 				// 队列变化以 kernel 事件广播（ADR-0060）：宿主据此镜像 UI 并持久化 sidecar。
 				onQueueChange: (snapshot: SessionInputQueueSnapshot) => {
 					void eventSink

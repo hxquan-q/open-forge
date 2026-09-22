@@ -236,8 +236,13 @@ export class SessionInputQueue implements TurnInputQueue {
 	}
 
 	/** 按 id 显式取出一条完整输入（「立即发送」在空闲态直接开 turn 用）；无视 paused。 */
-	takeById(id: string): QueuedSessionInput | undefined {
-		for (const queue of [this.steeringQueue, this.followUpQueue]) {
+	takeById(
+		id: string,
+	): { readonly behavior: SessionStreamingBehavior; readonly input: QueuedSessionInput } | undefined {
+		for (const [behavior, queue] of [
+			["steer", this.steeringQueue],
+			["followUp", this.followUpQueue],
+		] as const) {
 			const operationIndex = queue.findIndex((slot) => slot.input.operation !== undefined);
 			const index = queue.findIndex(
 				(slot, candidateIndex) =>
@@ -249,9 +254,14 @@ export class SessionInputQueue implements TurnInputQueue {
 			if (index < 0) continue;
 			const [slot] = queue.splice(index, 1);
 			this.notifyChange();
-			return slot.input;
+			return { behavior, input: slot.input };
 		}
 		return undefined;
+	}
+
+	/** 把此前取出的条目放回队尾；用于调用方无法继续消费时的回滚，避免消息丢失。 */
+	requeue(behavior: SessionStreamingBehavior, input: QueuedSessionInput): void {
+		this.enqueueEntry(behavior, input);
 	}
 
 	/** 显式取出 followUp 队首一条完整输入（resumeQueue 以队首开启新 turn 用）。 */

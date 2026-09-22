@@ -6,6 +6,8 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
 
 ### Fixed
 
+- **取消不响应 AbortSignal 的活动 Turn 不再让 Session 永久悬在 `cancelling`**：`AgentSession` 新增 `cancelDeadlineMs` 宽限（默认 10 秒，非有限值退回旧行为），`cancel()`、外部 `AbortSignal` 与 `close()` 共用同一计时；到期后取消路径收敛到 `recovery_required`、关闭路径收敛到 `closed`，并经 `onCancelDeadlineExceeded` 通知宿主（ComposedRuntimeFactory 投影为 `SESSION_CANCEL_DEADLINE_EXCEEDED` error + `agent_end` 观察事件）。所有等待者通过 per-Turn release barrier 有界返回；晚结算的后台 Turn 由终态事件防护保证至多落盘一次，不会翻转已收敛的终态。同批修复：`finishActiveTurn` 曾把强制的 `closed` 回跳成 `idle`；`sendQueuedNow` 在 Session 收敛后曾静默启动新 Turn，现回滚已取出的队列条目（`SessionInputQueue.takeById` 返回 `{behavior, input}` 并新增 `requeue`）。
+
 - 会话初始化、切模、设置档位与 Turn 绑定保留推理模型请求的原始 effort，修复 GPT-5.6 / GPT-6 及模型别名的 `xhigh` 在发送前被静默降为 `high`；非推理模型仍关闭推理。
 
 - 手动与自动上下文压缩提交后会立即刷新 Context Usage，并通过一次 `compaction.end` 事件通知宿主；队列压缩不再重复发送成功事件。
