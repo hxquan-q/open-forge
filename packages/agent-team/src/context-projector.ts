@@ -1,4 +1,4 @@
-import type { TeamMemberAssignment, TeamSessionDocument } from "./contracts.js";
+import { TEAM_DELIVERED_EVENT_ID_WINDOW, type TeamMemberAssignment, type TeamSessionDocument } from "./contracts.js";
 
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
@@ -44,6 +44,26 @@ export function teamDelegationActivityId(
 ): string {
 	return stableTeamEventId(["member-delegation", teamSessionId, requestId, sourceMemberId, targetMemberId]);
 }
+/**
+ * 成员投递回执的写入侧窗口：并集去重保序后只保留最近 limit 条。被窗口裁掉
+ * 的旧 id 若再次进入投影，只会多执行一次幂等的投递标记（restoreDeliveredContext
+ * 的并集本身幂等），不会重复向成员模型投递内容。
+ */
+export function windowTeamDeliveredEventIds(
+	previous: readonly string[],
+	additions: readonly string[],
+	limit: number = TEAM_DELIVERED_EVENT_ID_WINDOW,
+): readonly string[] {
+	const seen = new Set(previous);
+	const merged = [...previous];
+	for (const id of additions) {
+		if (seen.has(id)) continue;
+		seen.add(id);
+		merged.push(id);
+	}
+	return merged.length > limit ? merged.slice(-limit) : merged;
+}
+
 /** Updates the member's private shared-context cursor without duplicating a public message in TeamSessionDocument. */
 export function markTeamMemberContextDelivered(input: {
 	readonly session: TeamSessionDocument;
@@ -61,7 +81,7 @@ export function markTeamMemberContextDelivered(input: {
 			...input.session.memberRuntime,
 			[input.memberId]: {
 				...runtimeState,
-				deliveredEventIds: [...new Set([...runtimeState.deliveredEventIds, ...input.deliveredEventIds])],
+				deliveredEventIds: windowTeamDeliveredEventIds(runtimeState.deliveredEventIds, input.deliveredEventIds),
 			},
 		},
 	};

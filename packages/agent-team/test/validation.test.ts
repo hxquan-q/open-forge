@@ -290,3 +290,64 @@ describe("Agent Team IPC input validation", () => {
 		).toThrow("unknown member");
 	});
 });
+
+describe("parseTeamSessionDocument deliveredEventIds 读侧窗口化", () => {
+	const session = {
+		schemaVersion: 1,
+		revision: 0,
+		id: "session",
+		teamId: "team",
+		name: "Team",
+		cwd: "C:/workspace",
+		leaderMemberId: "leader",
+		memberHandles: { leader: "leader" },
+		createdAt: 1,
+		updatedAt: 1,
+		events: [],
+		memberRuntime: {
+			leader: {
+				sessionId: "runtime",
+				sessionPath: "C:/sessions/runtime.jsonl",
+				agentProfileRevision: 1,
+				deliveredEventIds: [],
+			},
+		},
+	};
+
+	it("接受超窗的历史回执并截断到最近 256 条，其余字段保持", () => {
+		const legacyIds = Array.from({ length: 600 }, (_, index) => `receipt-${index}`);
+		const parsed = parseTeamSessionDocument({
+			...session,
+			memberRuntime: {
+				leader: { ...session.memberRuntime.leader, deliveredEventIds: legacyIds },
+			},
+		});
+		const runtime = parsed.memberRuntime.leader;
+		if (!runtime) throw new Error("missing leader runtime");
+		expect(runtime.deliveredEventIds.length).toBe(256);
+		expect(runtime.deliveredEventIds[0]).toBe("receipt-344");
+		expect(runtime.deliveredEventIds.at(-1)).toBe("receipt-599");
+		expect(runtime.sessionId).toBe("runtime");
+	});
+
+	it("513 条（旧 stringList 上限之外）可解析并截断；非字符串与重复 id 仍然拒绝", () => {
+		const ids = Array.from({ length: 513 }, (_, index) => `r-${index}`);
+		const parsed = parseTeamSessionDocument({
+			...session,
+			memberRuntime: { leader: { ...session.memberRuntime.leader, deliveredEventIds: ids } },
+		});
+		expect(parsed.memberRuntime.leader?.deliveredEventIds.length).toBe(256);
+		expect(() =>
+			parseTeamSessionDocument({
+				...session,
+				memberRuntime: { leader: { ...session.memberRuntime.leader, deliveredEventIds: ["ok", 42] } },
+			}),
+		).toThrow("Invalid Agent Team session document");
+		expect(() =>
+			parseTeamSessionDocument({
+				...session,
+				memberRuntime: { leader: { ...session.memberRuntime.leader, deliveredEventIds: ["dup", "dup"] } },
+			}),
+		).toThrow("Invalid Agent Team session document");
+	});
+});

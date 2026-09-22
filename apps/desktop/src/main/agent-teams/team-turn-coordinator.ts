@@ -53,6 +53,9 @@ export interface TeamTurnCoordinatorOptions {
 	readonly publishSessionUpdated: (session: TeamSessionDocument) => void;
 }
 
+/** workItem 的终态：之外的状态都算持久化未决工作。 */
+const TEAM_TERMINAL_WORK_ITEM_STATES = new Set<TeamWorkItem["state"]>(["completed", "failed", "cancelled"]);
+
 /** Owns Team request admission, member scheduling, cancellation, retries, and attempt settlement. */
 export class TeamTurnCoordinator {
 	private readonly memberScheduler = new TeamMemberScheduler();
@@ -180,6 +183,18 @@ export class TeamTurnCoordinator {
 			this.memberScheduler.hasPending(sessionId) ||
 			this.taskControl.hasPending(sessionId)
 		);
+	}
+
+	/**
+	 * 内存态 hasPending 之外的持久化未决工作：非终态 workItem（含 attention-required
+	 * 这类只存在于协调文档、不进任何内存表的状态）或未被发起者消费的续跑通知。
+	 * 空闲逐出守卫用它保证带未决工作的会话留在内存——恢复监视器与外部条件通知
+	 * 都只扫描已加载会话，逐出等于关掉自动恢复。
+	 */
+	hasDurableUnsettledWork(session: TeamSessionDocument): boolean {
+		const state = this.options.collaborationStore.read(session);
+		if (state.workItems.some((item) => !TEAM_TERMINAL_WORK_ITEM_STATES.has(item.state))) return true;
+		return this.notificationJournal.pending(session).length > 0;
 	}
 
 	private getAttemptRunner(): TeamMemberAttemptRunner {

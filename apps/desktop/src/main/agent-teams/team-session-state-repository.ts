@@ -30,6 +30,14 @@ export class TeamSessionStateRepository {
 		this.coordinationPaths.delete(sessionId);
 	}
 
+	/**
+	 * 只移除内存缓存条目、保留 coordination path（与 remove 的删除语义相对）。
+	 * 空闲驻留逐出用它：会话文件与重开能力保持完整，之后 read(id) 无参仍可恢复。
+	 */
+	removeCached(sessionId: string): void {
+		this.sessions.delete(sessionId);
+	}
+
 	values(): readonly TeamSessionDocument[] {
 		return [...this.sessions.values()];
 	}

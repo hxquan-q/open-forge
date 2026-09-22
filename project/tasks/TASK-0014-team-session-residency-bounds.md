@@ -1,7 +1,7 @@
 ---
 id: TASK-0014
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: packages/agent-team/apps/desktop
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [packages/agent-team, apps/desktop/src/main/agent-teams, .github/re
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
@@ -48,3 +48,12 @@ TASK-0006 遗留：(1) `TeamSessionStateRepository.sessions` 在 team 删除前�
 ## 并发结论
 
 条件支持（跨包改动与 TASK-0013 同在 apps/desktop/src/main 但路径无交集）；本任务由主会话串行执行。
+
+## 实施摘要（2026-09-23）
+
+- **写入侧窗口**：`TEAM_DELIVERED_EVENT_ID_WINDOW=256`（contracts）；`windowTeamDeliveredEventIds` 收敛三处写入（`markTeamMemberContextDelivered` 覆盖 attempt-runner 与 publication-workflow，`team-shared-context-service` 的自并集改调同一函数）；validation 放宽 deliveredEventIds 至 maxItems 4096 并在读侧截断到 256（修复 >512 整会话不可加载的旧隐患）；checkpoint 投影与指纹保持全量。
+- **空闲驻留逐出**：`AgentTeamSessionService` 新增 `teamResidency`（复用 `InteractiveSessionResidencyTracker`，`snapshot()` 收窄为公开以支持守卫预过滤），上限 2；逐出 = dispose 协调+成员 runtime（文件保留）+ detach 订阅 + `removeCached`（新方法，保留 coordination path 供无参重开）；touch 覆盖 readSnapshot 缓存命中、readInternal 两分支、subscribe、publishRunningChanged、deleteSession forget；触发点 = 运行结束、最后订阅者离开（合并去抖 setTimeout 0）。
+- **逐出守卫（审查修正后完整集）**：运行中 / `hasPending` / 有订阅 / warming（三族键形状统一判定 `isWarmingTeamSession`）/ **`hasDurableUnsettledWork`**（TeamTurnCoordinator 新方法：非终态 workItem + 未消费通知；`taskControl.hasPending` 注释同步纠正）；守卫读协调文档失败按受保护处理（安全侧）。
+- 与设计的偏差：未新建独立 `team-session-residency.ts` 模块——守卫判定需要 service 内部状态（warming 三族键、coordinator、eventHub），独立模块只会转发常量；上限常量与逻辑内聚在 service。
+- 验证：agent-team 包 19/19（窗口化 4 新用例）；`team-session-concurrency` 56/56（新增逐出/持久化未决豁免/订阅豁免 3 例，含无参恢复深度相等断言）；相邻 5 套件 24/24；`tsc -p apps/desktop` 通过；变更文件 `check:quick` 通过（全仓 quick 的 5 个错误属并行会话在途 runtime-core 改动）。环境修复：本克隆 electron 二进制未解压完成，已从缓存 zip 恢复 dist 并补 path.txt。
+- 发布说明 v0.5.59「改进」已补条目。

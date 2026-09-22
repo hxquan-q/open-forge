@@ -38,6 +38,10 @@ import {
 	type ConversationOwnershipCatalogPort,
 	conversationOwnershipCatalog,
 } from "../conversations/conversation-ownership-catalog.js";
+import {
+	InteractiveSessionResidencyTracker,
+	selectIdleSessionsToEvict,
+} from "../conversations/idle-session-residency.js";
 import { readDesktopConfig } from "../ipc/fs.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
@@ -66,6 +70,9 @@ import { TeamTurnCoordinator } from "./team-turn-coordinator.js";
 import type { TeamSessionWorkspace } from "./team-workspace.js";
 
 const log = getAppLogger("agent-team-sessions");
+
+/** 空闲 team 会话的热窗口大小；交互会话为 3（IDLE_RESIDENT_SESSION_LIMIT）。 */
+const IDLE_RESIDENT_TEAM_SESSION_LIMIT = 2;
 
 interface TeamSessionCreationOptions {
 	readonly sessionId?: string;
@@ -110,6 +117,13 @@ export class AgentTeamSessionService {
 	private readonly warmingSessions = new Map<string, Promise<unknown>>();
 	/** Per-member readiness lets the first addressed member proceed without waiting for siblings. */
 	private readonly warmingMemberRuntimes = new Map<string, Promise<void>>();
+	/**
+	 * 空闲 team 会话热窗口（对齐交互会话的 conversations/idle-session-residency 策略）：
+	 * 超出上限的空闲会话被逐出内存（dispose 全部 runtime、保留文件），重开走协调
+	 * 会话 JSONL 事实源。受保护会话（运行中 / 未决工作 / 有订阅 / 预热中）不占名额。
+	 */
+	private readonly teamResidency = new InteractiveSessionResidencyTracker();
+	private idleResidencyReconcileScheduled = false;
 	private readonly extensions: AgentTeamExtensionRegistry;
 	private readonly repository: LegacyTeamSessionRepository;
 	private readonly readDocument: () => Promise<AgentTeamDocument>;
@@ -282,14 +296,118 @@ export class AgentTeamSessionService {
 	}
 
 	private publishRunningChanged(sessionId: string, running: boolean): void {
+		this.teamResidency.touch(sessionId);
 		const path = this.coordinationSessionPath(sessionId);
 		if (!path) return;
 		for (const listener of this.runningChangedListeners) listener(path, running, sessionId);
+		if (!running) this.scheduleIdleTeamSessionReconcile();
+	}
+
+	/** 三族预热键形状统一判定：裸 id、`runtime:${id}`、成员级 `runtime:${id}:${memberId}`。 */
+	private isWarmingTeamSession(sessionId: string): boolean {
+		if (this.warmingSessions.has(sessionId) || this.warmingSessions.has(`runtime:${sessionId}`)) return true;
+		for (const key of this.warmingMemberRuntimes.keys()) {
+			if (key.startsWith(`runtime:${sessionId}:`)) return true;
+		}
+		return false;
+	}
+
+	/** 是否可参与空闲逐出：全部守卫（含持久化未决工作）命中即受保护。 */
+	private isEvictableIdleTeamSession(sessionId: string): boolean {
+		if (this.turnCoordinator.hasPending(sessionId)) return false;
+		if (this.eventHub.hasSubscribers(sessionId)) return false;
+		if (this.isWarmingTeamSession(sessionId)) return false;
+		const session = this.sessionState.get(sessionId);
+		if (!session) return false;
+		try {
+			return !this.turnCoordinator.hasDurableUnsettledWork(session);
+		} catch {
+			// 读不到协调文档时按受保护处理（安全侧：宁可多驻留，不可误逐出）。
+			return false;
+		}
+	}
+
+	/**
+	 * 逐出一个空闲 team 会话：dispose 协调 + 全部成员 runtime session（只卸载内存
+	 * 句柄、不删文件），脱离事件订阅并移除内存缓存条目（保留 coordination path，
+	 * 无参 read(id) 仍可恢复）。守卫在逐出前完整重查；任何失败都安全侧保留。
+	 */
+	private async releaseIdleTeamSession(sessionId: string): Promise<void> {
+		const session = this.sessionState.get(sessionId);
+		if (!session) {
+			this.teamResidency.forget(sessionId);
+			return;
+		}
+		if (this.eventHub.runningSessionIds().includes(sessionId) || !this.isEvictableIdleTeamSession(sessionId)) {
+			return;
+		}
+		await this.sessionState.coordinateLoaded(sessionId, async (current) => {
+			if (current.coordinationRuntime) {
+				// 逐出前记住协调会话路径，保证之后无参 read(id) 仍能重开。
+				this.sessionState.rememberCoordinationPath(sessionId, current.coordinationRuntime.sessionPath);
+			}
+			const runtimeIds = [
+				...(current.coordinationRuntime ? [current.coordinationRuntime.sessionId] : []),
+				...Object.values(current.memberRuntime).map((runtimeState) => runtimeState.sessionId),
+			];
+			const disposals = await Promise.allSettled(
+				runtimeIds.map((runtimeId) => this.getRuntime().disposeSession(runtimeId)),
+			);
+			for (const result of disposals) {
+				if (result.status !== "rejected") continue;
+				log.warn("Agent Team idle session dispose failed", {
+					teamSessionId: sessionId,
+					error: errorMessage(result.reason),
+				});
+			}
+			for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
+			// 个别 dispose 失败也移除缓存条目：保留条目会让缓存路径继续引用已释放的
+			// runtime；残留句柄无害，下次 read 走完整恢复重建。
+			this.sessionState.removeCached(sessionId);
+			this.teamResidency.forget(sessionId);
+			log.info("Agent Team idle session released", { teamSessionId: sessionId });
+		});
+	}
+
+	/** 合并同一 tick 内的多次触发（运行结束、订阅离开、读取），推迟到事件循环空隙执行。 */
+	scheduleIdleTeamSessionReconcile(): void {
+		if (this.idleResidencyReconcileScheduled) return;
+		this.idleResidencyReconcileScheduled = true;
+		const timer = setTimeout(() => {
+			this.idleResidencyReconcileScheduled = false;
+			void this.reconcileIdleTeamSessions().catch((error: unknown) => {
+				log.warn("Agent Team idle residency reconcile failed", { error: errorMessage(error) });
+			});
+		}, 0);
+		timer.unref?.();
+	}
+
+	async reconcileIdleTeamSessions(): Promise<readonly string[]> {
+		const running = new Set(this.eventHub.runningSessionIds());
+		const candidates = this.teamResidency
+			.snapshot(running)
+			.filter((entry) => this.isEvictableIdleTeamSession(entry.sessionId));
+		const evicted: string[] = [];
+		for (const sessionId of selectIdleSessionsToEvict(candidates, IDLE_RESIDENT_TEAM_SESSION_LIMIT)) {
+			try {
+				await this.releaseIdleTeamSession(sessionId);
+				evicted.push(sessionId);
+			} catch (error) {
+				log.warn("Agent Team idle session release failed", {
+					teamSessionId: sessionId,
+					error: errorMessage(error),
+				});
+			}
+		}
+		return evicted;
 	}
 
 	async readSnapshot(id: string, coordinationSessionPath?: string): Promise<TeamSessionSnapshot> {
 		const cached = this.sessionState.get(id);
-		if (cached) return this.snapshot(cached);
+		if (cached) {
+			this.teamResidency.touch(id);
+			return this.snapshot(cached);
+		}
 		const path = coordinationSessionPath ?? this.sessionState.coordinationPath(id);
 		if (!path) return this.snapshot(await this.read(id));
 		this.sessionState.rememberCoordinationPath(id, path);
@@ -315,7 +433,8 @@ export class AgentTeamSessionService {
 	}
 
 	subscribe(sessionId: string, handler: (event: DesktopTeamSessionStreamEvent) => void): TeamSessionSubscription {
-		const unsubscribe = this.eventHub.addSubscriber(sessionId, handler);
+		this.teamResidency.touch(sessionId);
+		const unsubscribeEvents = this.eventHub.addSubscriber(sessionId, handler);
 		const session = this.sessionState.get(sessionId);
 		if (!session) {
 			const path = this.sessionState.coordinationPath(sessionId);
@@ -339,7 +458,11 @@ export class AgentTeamSessionService {
 		if (session) this.eventHub.attach(session);
 		return {
 			...(snapshot ? { snapshot } : {}),
-			unsubscribe,
+			unsubscribe: () => {
+				unsubscribeEvents();
+				// 最后一个订阅者离开后（event hub 会 detachIdle），考虑逐出空闲会话。
+				this.scheduleIdleTeamSessionReconcile();
+			},
 		};
 	}
 
@@ -719,6 +842,7 @@ export class AgentTeamSessionService {
 	private async readInternal(id: string, coordinationSessionPath?: string): Promise<TeamSessionDocument> {
 		const cached = this.sessionState.get(id);
 		if (cached) {
+			this.teamResidency.touch(id);
 			const reconciled = await this.reconcileTeamRoster(cached, await this.readDocument());
 			return this.migrateLoadedSession(reconciled);
 		}
@@ -756,6 +880,7 @@ export class AgentTeamSessionService {
 			this.sessionState.set(coordinated);
 			const reconciled = await this.migrateLoadedSession(await this.reconcileTeamRoster(coordinated, document));
 			this.sessionState.set(reconciled);
+			this.teamResidency.touch(id);
 			await this.recoverRestoredSession(reconciled);
 			return this.sessionState.get(id) ?? reconciled;
 		} catch (error) {
@@ -1030,6 +1155,7 @@ export class AgentTeamSessionService {
 		await this.repository.delete?.(session.id);
 		await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
 		this.sessionState.remove(session.id);
+		this.teamResidency.forget(session.id);
 	}
 
 	readCollaborationState(sessionId: string): Promise<TeamCollaborationState> {
