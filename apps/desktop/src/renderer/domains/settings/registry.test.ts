@@ -36,7 +36,7 @@ describe("设置标签可见性", () => {
 		}
 	});
 
-	it("桌宠功能下线时 pet 标签不可见（VETTA_DESKTOP_PET_ENABLED 默认关闭）", () => {
+	it("桌宠功能下线时 pet 标签不可见（isDesktopPetEnabled 恒为 false）", () => {
 		expect(visibleKeys({ isMac: true })).not.toContain("pet");
 		expect(visibleKeys({ isWindows: true })).not.toContain("pet");
 	});

@@ -93,10 +93,6 @@ export default defineConfig(({ mode }) => {
 	return {
 		define: {
 			"process.env.VETTA_SHOW_UI_THEME": JSON.stringify(showUiTheme),
-			// 桌宠（Vivi）：默认关闭；VETTA_DESKTOP_PET_ENABLED=true 时恢复窗口与 UI 入口。
-			"process.env.VETTA_DESKTOP_PET_ENABLED": JSON.stringify(
-				process.env.VETTA_DESKTOP_PET_ENABLED ?? env.VETTA_DESKTOP_PET_ENABLED ?? "",
-			),
 			// 云服务构建期开关：默认 false（lite）；只有 VETTA_CLOUD_ENABLED=true 才产出完全体。
 			// cloud 分支经常量折叠被整体裁掉（含动态 import 的 chunk）。
 			"process.env.VETTA_CLOUD_ENABLED": JSON.stringify(

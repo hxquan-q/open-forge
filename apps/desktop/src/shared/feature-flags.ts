@@ -30,12 +30,13 @@ export function isCloudBuildEnabled(): boolean {
 }
 
 /**
- * 桌宠（Vivi）：**默认关闭**。置 false 时主进程不创建桌宠窗口，设置标签页、
- * AI 助手目录、引导徽章等入口同步隐藏；IPC、renderer 域与媒体资源全部保留。
- * 调试时 `VETTA_DESKTOP_PET_ENABLED=true` 可临时恢复。
+ * 桌宠（Vivi）：功能已下线。返回常量 false——运行时环境变量、配置文件、
+ * IPC 调用都无法让它启动；桌宠窗口不会被创建，设置标签页、AI 助手目录、
+ * 引导徽章等入口同步隐藏。IPC、renderer 域与媒体资源保留，恢复时把
+ * DESKTOP_PET_ENABLED 改回 true。
  */
-export const DESKTOP_PET_ENABLED_ENV = "VETTA_DESKTOP_PET_ENABLED";
+const DESKTOP_PET_ENABLED = false;
 
 export function isDesktopPetEnabled(): boolean {
-	return process.env.VETTA_DESKTOP_PET_ENABLED === "true";
+	return DESKTOP_PET_ENABLED;
 }
