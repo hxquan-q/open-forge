@@ -425,13 +425,13 @@ const stagedSshHelperDir = join(buildStageDir, "ssh-helper");
 rmSync(stagedSshHelperDir, { recursive: true, force: true });
 for (const target of SSH_HELPER_TARGETS) {
 	const outputDir = join(stagedSshHelperDir, `${target.os}-${target.arch}`);
-	const outputPath = join(outputDir, "vetta-ssh-helper");
+	const outputPath = join(outputDir, "openforge-ssh-helper");
 	mkdirSync(outputDir, { recursive: true });
 	console.log(`  -> ${outputPath}`);
 	try {
 		execFileSync(
 			process.platform === "win32" ? "go.exe" : "go",
-			["build", "-trimpath", "-ldflags", "-s -w", "-o", outputPath, "./cmd/vetta-ssh-helper"],
+			["build", "-trimpath", "-ldflags", "-s -w", "-o", outputPath, "./cmd/openforge-ssh-helper"],
 			{
 				cwd: sshHelperDir,
 				env: { ...process.env, CGO_ENABLED: "0", GOARCH: target.arch, GOOS: target.os },

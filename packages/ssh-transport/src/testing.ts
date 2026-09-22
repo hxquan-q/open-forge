@@ -62,8 +62,8 @@ let builtHelper: string | undefined | null = null;
 export function buildSshHelperForTests(): string | undefined {
 	if (builtHelper !== null) return builtHelper;
 	const source = resolve(dirname(fileURLToPath(import.meta.url)), "../../../apps/ssh-helper");
-	const output = join(mkdtempSync(join(tmpdir(), "vetta-helper-build-")), "vetta-ssh-helper");
-	const result = spawnSync("go", ["build", "-o", output, "./cmd/vetta-ssh-helper"], {
+	const output = join(mkdtempSync(join(tmpdir(), "openforge-helper-build-")), "openforge-ssh-helper");
+	const result = spawnSync("go", ["build", "-o", output, "./cmd/openforge-ssh-helper"], {
 		cwd: source,
 		env: { ...process.env, CGO_ENABLED: "0" },
 	});

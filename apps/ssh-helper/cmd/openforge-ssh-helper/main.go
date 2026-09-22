@@ -1,4 +1,4 @@
-// Command vetta-ssh-helper runs on a remote project host and answers requests
+// Command openforge-ssh-helper runs on a remote project host and answers requests
 // from the Vetta desktop app over the SSH channel's stdio.
 //
 // It runs as the login user, listens on no socket, and needs nothing installed
@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"vetta-ssh-helper/internal/protocol"
-	"vetta-ssh-helper/internal/server"
+	"openforge-ssh-helper/internal/protocol"
+	"openforge-ssh-helper/internal/server"
 )
 
 func main() {
@@ -28,11 +28,11 @@ func main() {
 	}
 	stateDir, err := resolveStateDir()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "vetta-ssh-helper:", err)
+		fmt.Fprintln(os.Stderr, "openforge-ssh-helper:", err)
 		os.Exit(1)
 	}
 	if err := server.New(server.Options{StateDir: stateDir}).Serve(os.Stdin, os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "vetta-ssh-helper:", err)
+		fmt.Fprintln(os.Stderr, "openforge-ssh-helper:", err)
 		os.Exit(1)
 	}
 }
@@ -47,5 +47,5 @@ func resolveStateDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".cache", "vetta", "helper", "state"), nil
+	return filepath.Join(home, ".cache", "openforge", "helper", "state"), nil
 }
