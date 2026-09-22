@@ -31,6 +31,13 @@
 | [differential-testing-observability.md](differential-testing-observability.md) | 行为合同测试、未来 Pi Adapter 差分门禁和观测基线 |
 | [implementation-plan.md](implementation-plan.md) | 分阶段实施顺序、所有权、验证和升级信号 |
 
+### 商用更名（Open Forge）
+
+| 文档 | 内容 |
+|---|---|
+| [rebrand-plan.md](rebrand-plan.md) | 全仓品牌资产清查（105 条发现，16 项阻断）与更名施工图：分级处置、15 项待决策、功能性破坏面、Apache-2.0 合规清单、分阶段施工顺序 |
+| [development-paradigm.md](development-paradigm.md) | 二开推进范式：基于实测偏离度与上游活跃度的三选一裁决（薄壳 fork + 品牌外置 + 增量产品层）、三支柱、推进顺序与落地硬规则 |
+
 ## 当前共识
 
 ```text
