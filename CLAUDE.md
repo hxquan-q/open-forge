@@ -1,4 +1,6 @@
-# 交付与提交约束（Delivery & Git Commit Discipline）
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > **最高约束层级与继承关系（Mandatory）**：
 > 0. 提交代码时不要携带`Co-Authored-By`和`Claude-Session`信息
@@ -8,7 +10,85 @@
 
 ---
 
-### 一、原子化提交与风险预防
+### 〇、语言与分支约定
+
+- 使用中文回答用户；代码、协议字段、日志和面向模型的提示词保持其既有语言。Commit message 使用中文多行格式（标题 + 空行 + 正文）。
+- Pull Request 目标分支是 **`dev`**，不是 `main`。
+- 更深目录中的 `AGENTS.md`（如 `apps/desktop/AGENTS.md`、`packages/ai/AGENTS.md` 等）可补充或收紧规则；冲突时以**离目标文件最近的** `AGENTS.md` 为准。
+
+---
+
+### 一、常用命令（Common Commands）
+
+工具链：**Bun 1.3+ 与 Node 20+**（`bun install` 安装依赖；不要切换到 npm/pnpm）。
+
+**开发：**
+
+```bash
+cd apps/desktop && bun run dev      # 启动 Desktop（Vite renderer + theme dev server + Electron），数据在 ~/.vetta-dev
+cd apps/desktop && bun run dev:home # 同上，但读写真实用户数据 ~/.vetta
+bun run --cwd apps/docs-site dev    # 文档站，http://127.0.0.1:4321
+```
+
+根目录的 `bun run dev` 只 watch 核心库（ai/agent-core/coding-agent），**不会**启动 Electron。
+
+**检查（Lint / Types / 架构守卫）：**
+
+```bash
+bun run check:quick               # 编辑轮次中：对变更文件跑 Biome + 架构守卫（不做类型检查）
+bun run check                     # 一轮任务完成后跑一次：全量 lint + types + guards + mobile lint
+bun run fix                       # Biome 自动修复
+```
+
+**测试（有硬性约束，见下）：**
+
+```bash
+bun run test:pkg <name>           # 单个包，如 test:pkg ai；--list 查看包名
+bun run test:impact -- <file...>  # 日常优先：按任务文件选直接测试与依赖相关测试
+bun run test:changed -- <file...> # 按 git 变更与依赖图选包；提 PR 前可不带参数全量核对
+bun scripts/quality/run-vitest.mjs --run <file>  # 单个测试文件
+```
+
+- **禁止裸 `bun test`**（会扫描整个 monorepo）。
+- **禁止 `bunx vitest` / 直接 `vitest`**：Windows 上 Bun worker 会在收集测试前全部失败，必须走 `scripts/quality/run-vitest.mjs`。
+- `bun run check` 不运行测试，不能替代定向行为测试。
+- `bun run verify:ui:*`（Desktop 实机 UI 验收）**仅当用户明确要求时**才能运行；UI 改动本身不构成授权。
+- 只有任务明确需要构建产物时才运行 `bun run build:desktop` / `build:cli` / `build:docs`，不要把全量构建当默认反馈循环。
+
+---
+
+### 二、代码库架构（Architecture）
+
+Open Vetta 桌面 AI Agent 的客户端侧开源仓库：**Bun + Turborepo 的 TypeScript monorepo**，外加 Kotlin（Android 客户端 `apps/kotlin`）与 Go（`apps/im-gateway`、`apps/ssh-helper`）。注意：根 `bun run check` **不覆盖** Go 与 Kotlin，改这些包时用各自 README/Makefile 的定向命令。
+
+**分层与依赖方向**（由 `scripts/quality/check-package-boundaries.mjs` 和 `check-coding-agent-architecture.mjs` 机械验证）：
+
+```text
+apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-relay / ssh-helper)
+                      |
+                      v
+       coding-agent / runtime-* / capability-*
+                      |
+                      v
+                 agent / ai
+```
+
+- `apps/*` 是可交付应用的叶子节点，**不被任何包 import**；`packages/*` 是可复用模块。
+- 跨包调用只走目标包 `package.json#exports` 声明的公开入口，**不得深度导入其他包的 `src/**`**。
+- 包级职责：`packages/ai`（Provider 抽象）、`packages/agent`（agent loop）、`packages/coding-agent`（产品组合）、`packages/runtime-*`（运行时合同、工具、存储、MCP、宿主适配）、`packages/plugins`（插件 SDK/preset）、`packages/themes` + `theme-sdk`/`theme-ui`（主题）、`packages/toolkit`。
+- 商业服务端在私有仓库 `vetta-serv`，不在本仓库；`docs/adr/` 的编号空洞（0016/0017/0019/0038/0039/0051/0052/0056 等）是刻意的。
+- 架构决策记录在 `docs/adr/`，但**当前行为以源码、类型、Schema、测试为事实源**；涉及新依赖、公共 API、协议、持久化格式、包边界、安全模型时先检索 ADR。
+- 源码检出默认产出 **lite** 构建：无账号/订阅/托管 marketplace，密钥留在本地。
+
+**Desktop 硬性规则：**
+
+- 所有用户可见文案必须走 i18n（label、按钮、placeholder、菜单、通知、title、aria 属性），严禁硬编码。
+- 快捷键必须进入现有可配置 keybinding 对象，不得在业务逻辑中写死按键组合。
+- 不新增 `any`；边界数据用 `unknown` 并收窄。
+
+---
+
+### 三、原子化提交与风险预防
 
 **核心准则**：一次提交仅做一件事（Single Responsibility Principle）。
 **自动提交**：在任务完成后，自动提交相关改动。
@@ -26,7 +106,7 @@
 
 ---
 
-### 二、提交前强制动作序列（Pre-commit Checklist）
+### 四、提交前强制动作序列（Pre-commit Checklist）
 
 在执行任何 `git commit` 命令前，必须按顺序执行以下审查，严禁凭推测提交：
 1. **检查暂存区**：执行 `git status` 确认待提交变动范围。
@@ -35,7 +115,7 @@
 
 ---
 
-### 三、Commit Message 编写规范
+### 五、Commit Message 编写规范
 
 - **Header**：简短精炼，严格遵循仓库现有语义化前缀规范（如 `feat(auth): ...`）。
 - **Body**：**重点阐述“为什么改（Why）”而非“改了什么（What）”**（具体变动已由 Diff 呈现）。
@@ -44,16 +124,17 @@
 
 ---
 
-### 四、操作绝对禁区（Zero-Tolerance Rules）
+### 六、操作绝对禁区（Zero-Tolerance Rules）
 
 - **严禁 `git commit --amend`**：除非用户在当前对话中明确要求“amend”。修补上一提交必须追加独立的 fix/refactor commit。
 - **严禁 `--no-verify`**：Pre-commit Hook 失败时必须从根本修复问题，严禁使用参数绕过。
 - **严禁强制推送**：绝不允许对 `main` / `master` 或共享分支执行 `git push --force`。
 - **严禁未经授权 Push**：在用户未明确下达 push 指令前，严禁执行 `git push`。本地 commit 零成本，推送带全局副作用。
+- **严禁破坏并行工作区**：工作区可能同时包含用户或其他 Agent 的改动，禁止 `git reset --hard`、`git checkout .`、`git clean -fd`、`git stash`、`git add .`、`git add -A`；暂存时逐个列出具体路径。
 
 ---
 
-### 五、发布说明补充（Release Notes，强制执行）
+### 七、发布说明补充（Release Notes，强制执行）
 
 **核心准则**：代码改完不等于任务完成，发布说明写完才算。
 
@@ -81,7 +162,7 @@
 - **补救窗口关闭**：流水线由 tag 推送触发，tag 一旦推出即开始构建，此时再补写已无法进入本次发布。
 
 ---
-### 六、Commit 报告规范（强制执行）
+### 八、Commit 报告规范（强制执行）
 
 1. **触发条件**：
    - 仅当在**当前对话中实际执行了 `git commit` 并成功生成提交**时，才必须在最终回复的最底部输出提交记录。
