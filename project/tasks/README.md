@@ -24,3 +24,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 `TASK-0023`/`TASK-0024` 为跨阶段 UI/UX 线（`exprot/ui-information-architecture.md`）：0023 双模式 IA 定稿、0024 WorkspaceMode Shell/Mode Switcher 落地，均已完成；0024 只控制项目布局，不改写会话 `agentMode`。
 
 后续纵向切片：`TASK-0025` 本地研究/引用、`TASK-0026` 数据分析、`TASK-0027` Plugin Artifact Renderer、`TASK-0028` 文档处理。0025/0026/0028 共享 WorkspaceMode 面板路径，默认串行；只有在 `exclusive_paths` 划清且合同冻结后才能并行。ISSUE-0006 决定 TASK-0028 的 Task 创建入口，不阻塞 TASK-0015 的通用生命周期实现。
+
+`TASK-0029`–`TASK-0033` 对应 `RESEARCH-0004` P0 批次内存治理：0031 工具结果媒体引用化、0030 IM 子进程 V8 上限、0032 统一工具结果出口均 done；0029 subagents 会话 LRU 在途；0033 为 0032 遗留的会话执行旁路（ready）。
+
+`TASK-0034`–`TASK-0042` 对应 `RESEARCH-0004` P1 批次：0034 transcript 窗口化合同定稿（coordination-only，产出后按步拆分）；0035 视口外占位、0038 compaction 渲染端联动依赖 0034 合同；0036 文本双份消除、0037 事件分级背压、0040 MCP 生命周期盘点、0041 会话列表 stat 索引无前置依赖；0039 webview pinned 收口与 0042 powerMonitor 收缩为 P2 防御项。RESEARCH-0004 P2 项不预登记，由其触发信号驱动。
