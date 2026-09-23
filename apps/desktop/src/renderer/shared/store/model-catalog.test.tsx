@@ -22,6 +22,7 @@ const models = {
 };
 
 beforeEach(() => {
+	vi.stubEnv("VETTA_CLOUD_ENABLED", "true");
 	vi.useFakeTimers({ shouldAdvanceTime: true });
 	vi.setSystemTime(new Date("2026-08-20T00:00:00Z"));
 	models.get.mockClear();
@@ -37,6 +38,8 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.useRealTimers();
+	vi.unstubAllEnvs();
+	vi.restoreAllMocks();
 });
 
 describe("模型目录与选择器的同步", () => {
@@ -94,6 +97,32 @@ describe("模型目录与选择器的同步", () => {
 		models.fetchRemote.mockResolvedValue({ providers: {} });
 		const { result } = renderHook(() => useModelOptions());
 		await waitFor(() => expect(models.fetchRemote).toHaveBeenCalled());
+		expect(result.current.options).toEqual([]);
+	});
+});
+
+describe("lite 构建（未编入云服务）的模型目录", () => {
+	it("打开选择器、窗口重新获得焦点时只读本地配置，不请求主进程未注册的远程目录，也不报刷新失败", async () => {
+		vi.stubEnv("VETTA_CLOUD_ENABLED", "false");
+		// lite 主进程不注册 vetta:models:fetch-remote，调用即被 Electron 拒绝。
+		models.fetchRemote.mockRejectedValue(new Error("No handler registered for 'vetta:models:fetch-remote'"));
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		const { result } = renderHook(() => {
+			useModelCatalogSync();
+			return useModelOptions();
+		});
+		await waitFor(() => expect(models.get).toHaveBeenCalledTimes(1));
+
+		vi.setSystemTime(new Date("2026-08-20T00:02:00Z"));
+		await act(async () => {
+			window.dispatchEvent(new Event("focus"));
+			await Promise.resolve();
+		});
+		await waitFor(() => expect(models.get).toHaveBeenCalledTimes(2));
+
+		expect(models.fetchRemote).not.toHaveBeenCalled();
+		expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("[modelCatalog] remote"), expect.anything());
 		expect(result.current.options).toEqual([]);
 	});
 });
