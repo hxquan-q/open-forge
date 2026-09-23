@@ -76,6 +76,13 @@ updated: 2026-09-23
 - 用户流程：点选→草稿→发送→Agent snapshot→click/fill→页面实际变化→导航后旧 ref 拒绝→重新 snapshot 恢复。
 - 质量检查：合同测试 + `bun run test:impact -- <files>` + `check:quick`；真实 WebView 跨进程行为用本地 fixture 定向 Electron E2E。
 
+## 架构评估：`<webview>` vs `WebContentsView`（2026-09-28 补记）
+
+- 现状：Browser guest 是 renderer 内 `<webview partition="persist:vetta-browser">`，主进程经 `did-attach-webview` → `bindInAppBrowserWebview` 绑定进 `InAppBrowserSessionController`。`<webview>` 选型是 ADR-0129 的刻意决策（guest 独立进程崩溃不拖垮宿主、`contextIsolation`、共享 partition 登录态）。
+- Electron 官方已把 `<webview>` 列为「架构变动中、不推荐新代码使用」，推荐 `WebContentsView`。`WebContentsView` 由主进程创建持有，同样独立 WebContents + partition，`persist:vetta-browser` 会话语义不变，同会话要求不受影响。
+- 迁移代价集中在用户可见面：renderer 导航控件从 webview DOM 方法改为 IPC；面板需占位 div + bounds 同步；tab 隐藏/尺寸/焦点/缩放等生命周期边界要重新接线。这是独立的回归面，不宜与本任务合并。
+- **结论：本任务维持 `<webview>`，迁移另立 TASK-0069。** 但实现约束：`browser_tab` host function 与动作实现只允许依赖 `InAppBrowserWebContents` 抽象与 session controller（两者对 tag/view 中性），不得在工具路径上引入 `<webview>` DOM 元素特有 API，保证迁移时只重接嵌入层。
+
 ## 交付记录
 
 - 实际修改：
