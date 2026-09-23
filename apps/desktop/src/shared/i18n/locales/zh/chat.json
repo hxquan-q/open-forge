@@ -10,7 +10,9 @@
 			"workflow": "工作流",
 			"plan": "计划",
 			"task": "任务",
-			"ports": "端口映射"
+			"ports": "端口映射",
+			"canvas": "画布",
+			"terminal": "终端"
 		},
 		"backgroundTasks": {
 			"statusRunning": "运行中",
@@ -138,6 +140,26 @@
 			"unnamedHint": "读不到占用进程的名字，通常是因为进程属于其他用户。",
 			"ephemeralToggle": "另有 {{count}} 个临时端口（32768 以上）",
 			"invalidPort": "请填 1 到 65535 之间的端口号"
+		},
+		"canvas": {
+			"empty": "还没有画布内容。对话里生成的 Markdown、HTML 或代码会出现在这里。",
+			"emptyHint": "让助手创建一份说明或预览，然后就可以在这里打开。",
+			"missingFile": "文件缺失",
+			"missingFileHint": "这份内容的文件已经不在原来的位置。可以让助手重新生成。",
+			"externalUpdate": "外部更新",
+			"externalUpdateHint": "文件在画布外被改过，已保存为新版本。",
+			"saveToProject": "保存到项目",
+			"saveToProjectSuccess": "已保存到项目",
+			"saveToProjectConflict": "目标位置已有同名文件，没有覆盖。",
+			"saveToProjectFailed": "没能保存到项目",
+			"groupBySession": "来自会话",
+			"untitledSession": "未命名会话",
+			"version": "第 {{version}} 版",
+			"selectToAsk": "把选中内容附加到输入框",
+			"htmlSandboxLabel": "HTML 预览（隔离运行）",
+			"delete": "删除",
+			"deleteConfirm": "从画布列表删除「{{title}}」？本机文件不会自动回收。",
+			"open": "打开"
 		},
 		"toolCalls": {
 			"filterAll": "全部",
@@ -402,7 +424,14 @@
 		"reload": "刷新",
 		"retry": "重试",
 		"stop": "停止",
-		"tab": "浏览器"
+		"tab": "浏览器",
+		"picker": "选取元素",
+		"pickerActive": "正在选取元素，再点一次或按快捷键退出",
+		"pickerHint": "把指针移到页面上的元素，点击后会附加到输入框，不会触发页面上的按钮。",
+		"elementAttached": "已附加页面元素",
+		"elementReplace": "新的选区会替换当前附件",
+		"staleSelection": "页面已变化，这个选区可能失效",
+		"cropFailed": "没能截取元素图片"
 	},
 	"capability": {
 		"network": "网络",

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { expect, it, vi } from "vitest";
@@ -20,4 +21,12 @@ it("exposes the Desktop bridge without Agent configuration or diagnostic APIs", 
 	expect(api).not.toHaveProperty("agentTraces");
 	expect(api.session.create).toBeTypeOf("function");
 	expect(api.session.prompt).toBeTypeOf("function");
+	expect(api.canvas.list).toBeTypeOf("function");
+	expect(api.canvas.get).toBeTypeOf("function");
+	expect(api.canvas.saveToProject).toBeTypeOf("function");
+	expect(api.canvas.delete).toBeTypeOf("function");
+	expect(api.browserTab.getSession).toBeTypeOf("function");
+	expect(api.browserTab.setPicker).toBeTypeOf("function");
+	expect(api.browserTab.cropScreenshot).toBeTypeOf("function");
+	expect(api.browserTab.onEvent).toBeTypeOf("function");
 });

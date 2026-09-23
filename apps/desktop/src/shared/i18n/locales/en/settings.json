@@ -1542,6 +1542,8 @@
   "shortcutOpenCommandMenuDesc": "Centered palette for projects, sessions, abilities, settings and plugin views",
   "shortcutSaveFileLabel": "Save File",
   "shortcutSaveFileDesc": "Save the current file in the right-side editor",
+  "shortcutBrowserElementPickerLabel": "Pick page element",
+  "shortcutBrowserElementPickerDesc": "Turn element picking on or off in the built-in browser and attach the selection to the message box",
   "kbHiwTitle": "How the Knowledge Base Works",
   "kbHiwSubtitle": "Three simple steps to see how your materials become knowledge the AI can use, and where tokens are spent.",
   "kbHiwStep1Title": "Add Materials",

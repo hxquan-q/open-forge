@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { WebContents } from "electron";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
 import { registerNotificationIpc } from "../notifications/index.js";
@@ -7,6 +8,8 @@ import { registerActionApprovalIpc } from "./action-approval.js";
 import { registerAgentTeamsIpc } from "./agent-teams.js";
 import { registerAppMonitorIpc } from "./app-monitor.js";
 import { registerAppshotIpc } from "./appshot.js";
+import { registerBrowserTabIpc } from "./browser-tab.js";
+import { registerCanvasIpc } from "./canvas.js";
 import { registerClipboardIpc } from "./clipboard.js";
 import { registerConversationTagsIpc } from "./conversation-tags.js";
 import { registerDebugIpc } from "./debug.js";
@@ -77,6 +80,8 @@ interface IpcTeardown {
 	teardownConversationTags: () => void;
 	teardownQuickPanel: () => void;
 	teardownTask: () => void;
+	teardownCanvas: () => void;
+	teardownBrowserTab: () => void;
 	teardownAppshot: () => void;
 	teardownDiagnostics: () => void;
 	teardownOnboarding: () => void;
@@ -127,6 +132,8 @@ export function registerAllIpc(
 		teardownConversationTags: registerConversationTagsIpc(webContents),
 		teardownQuickPanel: registerQuickPanelIpc(),
 		teardownTask: registerTaskIpc(webContents),
+		teardownCanvas: registerCanvasIpc(),
+		teardownBrowserTab: registerBrowserTabIpc(),
 		teardownAppshot: registerAppshotIpc(),
 		teardownDiagnostics: registerDiagnosticsIpc(),
 		teardownOnboarding: registerOnboardingIpc(),
@@ -170,6 +177,8 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownConversationTags();
 	teardown.teardownQuickPanel();
 	teardown.teardownTask();
+	teardown.teardownCanvas();
+	teardown.teardownBrowserTab();
 	teardown.teardownAppshot();
 	teardown.teardownDiagnostics();
 	teardown.teardownOnboarding();

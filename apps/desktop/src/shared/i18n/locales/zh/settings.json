@@ -1542,6 +1542,8 @@
   "shortcutOpenCommandMenuDesc": "居中弹出，搜索项目、会话、能力、设置与插件视图",
   "shortcutSaveFileLabel": "保存文件",
   "shortcutSaveFileDesc": "保存右侧文件编辑器中的当前文件",
+  "shortcutBrowserElementPickerLabel": "选取网页元素",
+  "shortcutBrowserElementPickerDesc": "在内置浏览器里开启或退出元素点选，把选中元素附加到输入框",
   "kbHiwTitle": "知识库是怎么工作的",
   "kbHiwSubtitle": "简单三步，了解资料如何变成 AI 能用的知识，以及 Token 花在哪里。",
   "kbHiwStep1Title": "放入资料",

@@ -10,7 +10,9 @@
 			"workflow": "Workflows",
 			"plan": "Plan",
 			"task": "Tasks",
-			"ports": "Port forwarding"
+			"ports": "Port forwarding",
+			"canvas": "Canvas",
+			"terminal": "Terminal"
 		},
 		"backgroundTasks": {
 			"statusRunning": "Running",
@@ -138,6 +140,26 @@
 			"unnamedHint": "The owning process could not be read, usually because it belongs to another user.",
 			"ephemeralToggle": "{{count}} more ephemeral ports (above 32768)",
 			"invalidPort": "Enter a port number between 1 and 65535"
+		},
+		"canvas": {
+			"empty": "No canvas artifacts yet. Markdown, HTML, or code produced in this workspace will show up here.",
+			"emptyHint": "Ask the assistant to draft a note or preview, then open it here.",
+			"missingFile": "File missing",
+			"missingFileHint": "The file for this artifact is no longer at its original location. Ask the assistant to recreate it.",
+			"externalUpdate": "External update",
+			"externalUpdateHint": "The file was changed outside Canvas and saved as a new version.",
+			"saveToProject": "Save to project",
+			"saveToProjectSuccess": "Saved to the project",
+			"saveToProjectConflict": "A file with that name already exists. Nothing was overwritten.",
+			"saveToProjectFailed": "Could not save to the project",
+			"groupBySession": "From session",
+			"untitledSession": "Untitled session",
+			"version": "Version {{version}}",
+			"selectToAsk": "Attach the selection to the message box",
+			"htmlSandboxLabel": "HTML preview (sandboxed)",
+			"delete": "Delete",
+			"deleteConfirm": "Remove “{{title}}” from the canvas list? The local file is not recycled automatically.",
+			"open": "Open"
 		},
 		"toolCalls": {
 			"filterAll": "All",
@@ -402,7 +424,14 @@
 		"reload": "Reload",
 		"retry": "Retry",
 		"stop": "Stop",
-		"tab": "Browser"
+		"tab": "Browser",
+		"picker": "Pick element",
+		"pickerActive": "Picking an element — click again or use the shortcut to exit",
+		"pickerHint": "Hover a page element, then click to attach it to the message box. The page button will not fire.",
+		"elementAttached": "Page element attached",
+		"elementReplace": "A new selection replaces the current attachment",
+		"staleSelection": "The page changed; this selection may be stale",
+		"cropFailed": "Could not capture the element image"
 	},
 	"capability": {
 		"network": "Network",

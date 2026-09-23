@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 全局应用快捷键（设置 → 快捷键 → 全局快捷键）。
  * 与快捷面板（quickPanel）无关：后者是独立域，勿混写。
@@ -65,6 +66,13 @@ export const SHORTCUT_ACTIONS = [
 		descriptionKey: "shortcutTogglePlanModeDesc",
 		defaultShortcut: "shift+tab",
 		scope: "editor",
+	},
+	{
+		id: "browser-element-picker",
+		labelKey: "shortcutBrowserElementPickerLabel",
+		descriptionKey: "shortcutBrowserElementPickerDesc",
+		defaultShortcut: "mod+shift+d",
+		scope: "app",
 	},
 ] as const satisfies readonly ShortcutActionDef[];
 
