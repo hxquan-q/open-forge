@@ -1,6 +1,11 @@
 ---
 status: accepted
 ---
+<!-- Modified by The Open Forge contributors. -->
+
+> 应用内 WebView 的一等 `browser_tab` 工具面见 ADR-0129。本文对 `agent-browser` CLI
+> 独立 Session、安装锁定与 `VETTA_AGENT_SESSION_ID` 的决策继续有效；Agent 浏览器操作面
+> 不再被描述为只有 CLI。
 
 # Agent 浏览器操作使用独立 CLI Session
 
