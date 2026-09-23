@@ -6,7 +6,7 @@ import { formatBytes, formatDimensions } from "../components/blocks/tool-views/s
 /** Minimal image preview shape for read-image tool UI. */
 export interface ToolImagePreviewLike {
 	mimeType: string;
-	data: string;
+	src: string;
 	processedWidth?: number;
 	processedHeight?: number;
 	originalWidth?: number;
@@ -39,7 +39,7 @@ export function useReadImageViewModel(image: ToolImagePreviewLike): ReadImageVie
 				: null;
 
 		return {
-			src: `data:${image.mimeType};base64,${image.data}`,
+			src: image.src,
 			alt: t("imagePreview.altText"),
 			sizeLinePrefix: wasProcessed ? t("imagePreview.processedLabel") : t("imagePreview.imageLabel"),
 			processedSizeLabel: formatBytes(image.processedSizeBytes),

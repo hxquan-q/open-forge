@@ -306,7 +306,7 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				try {
 					await window.vetta.session.replaceLastUserMessage(session.runtimeId, pendingEdit.entryId);
 					const history = await window.vetta.session.getFullHistory(session.runtimeId);
-					setChatMessages(fullHistoryToChat(history));
+					setChatMessages(fullHistoryToChat(history, session.runtimeId));
 					store.set(pendingMessageEditAtom, null);
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);

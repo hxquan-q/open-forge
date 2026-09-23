@@ -107,7 +107,7 @@ async function reloadChatHistory(runtimeId: string): Promise<void> {
 	const history = await window.vetta.session.getFullHistory(runtimeId);
 	const store = getDefaultStore();
 	if (store.get(activeSessionAtom)?.runtimeId === runtimeId) {
-		store.set(chatMessagesAtom, fullHistoryToChat(history));
+		store.set(chatMessagesAtom, fullHistoryToChat(history, runtimeId));
 	}
 }
 

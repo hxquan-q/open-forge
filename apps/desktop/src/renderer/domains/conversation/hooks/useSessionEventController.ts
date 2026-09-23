@@ -283,7 +283,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							}
 							const mapped = reconcileOptimisticUserMessages(
 								sessionId,
-								conversationProjectionRef.current.projectHistory(history),
+								conversationProjectionRef.current.projectHistory(history, sessionId),
 							);
 							if (elapsed > 0) {
 								for (let i = mapped.length - 1; i >= 0; i--) {
@@ -430,11 +430,18 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			if (event.type === "tool.end") {
 				flushDeltas();
 				setChatMessages((prev) =>
-					handleToolEnd(prev, event.toolCallId, event.result, event.isError, {
-						startedAt: event.startedAt,
-						durationMs: event.durationMs,
-						phases: event.phases,
-					}),
+					handleToolEnd(
+						prev,
+						event.toolCallId,
+						event.result,
+						event.isError,
+						{
+							startedAt: event.startedAt,
+							durationMs: event.durationMs,
+							phases: event.phases,
+						},
+						event.sessionId,
+					),
 				);
 				return;
 			}
@@ -522,7 +529,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 								setChatMessages(
 									reconcileOptimisticUserMessages(
 										sessionId,
-										conversationProjectionRef.current.projectHistory(history),
+										conversationProjectionRef.current.projectHistory(history, sessionId),
 									),
 								);
 							})

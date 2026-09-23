@@ -5,6 +5,11 @@ import { Readable } from "node:stream";
 import { getVettaHomePath } from "@vetta/action-rpc";
 import { isSshProjectUri } from "@vetta/ssh-transport";
 import { type CustomScheme, protocol } from "electron";
+import {
+	type ResolvedToolcallMedia,
+	resolveToolcallMedia,
+	type ToolcallMediaRequest,
+} from "./conversations/toolcall-media-resolver.js";
 import { assertPathReadableForPreview } from "./filesystem/filesystem-service.js";
 import { openRemoteMediaSource } from "./filesystem/remote-filesystem.js";
 import { createEphemeralMediaToken, resolveEphemeralMediaToken } from "./media-token-store.js";
@@ -92,6 +97,60 @@ function parseRange(header: string | null, size: number): { start: number; end: 
 	return { start, end };
 }
 
+/** 解析工具媒体引用 URL；host 不是 toolcall 或段格式非法返回 null（交回常规分支）。 */
+function parseToolcallMediaUrl(rawUrl: string): ToolcallMediaRequest | null {
+	let url: URL;
+	try {
+		url = new URL(rawUrl);
+	} catch {
+		return null;
+	}
+	if (url.host !== "toolcall") return null;
+	const kind = url.searchParams.get("kind");
+	if (kind !== "image" && kind !== "audio") return null;
+	const segments = url.pathname.split("/").filter((segment) => segment.length > 0);
+	if (segments.length !== 3) return null;
+	const sessionId = decodeURIComponent(segments[0] ?? "");
+	const toolCallId = decodeURIComponent(segments[1] ?? "");
+	const index = Number(segments[2]);
+	if (!sessionId || !toolCallId || !Number.isInteger(index) || index < 0) return null;
+	return { sessionId, toolCallId, index, kind };
+}
+
+async function handleToolcallMediaRequest(request: Request, toolcall: ToolcallMediaRequest): Promise<Response> {
+	let media: ResolvedToolcallMedia | null;
+	try {
+		media = await resolveToolcallMedia(toolcall);
+	} catch {
+		return new Response("Tool media lookup failed", { status: 500 });
+	}
+	if (!media) return new Response("Tool media not found", { status: 404 });
+	const body = new Uint8Array(media.data);
+	const baseHeaders: Record<string, string> = {
+		"Content-Type": media.mimeType,
+		"Accept-Ranges": "bytes",
+		"Access-Control-Allow-Origin": "*",
+		// 内容按 (sessionId, toolCallId, index) 不可变：允许 Chromium 永久缓存，
+		// 视口滚出后 bitmap 由缓存淘汰，而不是常驻渲染进程内存。
+		"Cache-Control": "public, max-age=31536000, immutable",
+	};
+	const range = parseRange(request.headers.get("Range"), body.byteLength);
+	if (range) {
+		return new Response(body.subarray(range.start, range.end + 1), {
+			status: 206,
+			headers: {
+				...baseHeaders,
+				"Content-Length": String(range.end - range.start + 1),
+				"Content-Range": `bytes ${range.start}-${range.end}/${body.byteLength}`,
+			},
+		});
+	}
+	return new Response(body, {
+		status: 200,
+		headers: { ...baseHeaders, "Content-Length": String(body.byteLength) },
+	});
+}
+
 interface MediaSource {
 	readonly path: string;
 	readonly size: number;
@@ -132,6 +191,13 @@ async function openMediaSource(rawPath: string): Promise<MediaSource | null> {
 
 /** 协议处理的主体，与 Electron 的注册解耦以便测试。 */
 export async function handleMediaRequest(request: Request): Promise<Response> {
+	// 工具结果媒体引用分支（P0-3）：`vetta-media://toolcall/<sessionId>/<toolCallId>/<index>?kind=`。
+	// 媒体按 (sessionId, toolCallId, index) 不可变，用 immutable 缓存头让 Chromium
+	// 缓存接管 bitmap 生命周期——这正是渲染端不再驻留 base64 的前提。
+	const toolcall = parseToolcallMediaUrl(request.url);
+	if (toolcall) {
+		return handleToolcallMediaRequest(request, toolcall);
+	}
 	let source: MediaSource | null;
 	let mediaKind: string | null = null;
 	let requestedMimeType: string | null | undefined;

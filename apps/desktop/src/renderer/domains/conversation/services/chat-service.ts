@@ -19,8 +19,15 @@ import type {
 } from "@shared/store/atoms";
 import type { Usage } from "@vetta/ai";
 import type { HistoryEntry, PromptAttachmentRef, PromptResourceRef } from "@vetta/runtime-core";
-import { readMcpAppAttachment, selectMcpMediaCandidates } from "@vetta/runtime-mcp/browser";
+import { readMcpAppAttachment } from "@vetta/runtime-mcp/browser";
 import type { CardDescriptor } from "@vetta-org/plugin-sdk";
+import {
+	collectToolAudioCandidates,
+	collectToolImageCandidates,
+	type ToolMediaReference,
+	toolcallInlineDataUrl,
+	toolcallMediaUrl,
+} from "../../../../shared/conversation/tool-media-projection";
 import { classifyChatError } from "./classifyChatError";
 
 export function toChatErrorDetails(
@@ -178,24 +185,25 @@ function base64SizeBytes(data: string): number {
 	return Math.max(0, Math.floor((data.length * 3) / 4) - padding);
 }
 
-export function extractToolImagePreview(result: unknown, details: unknown): ToolImagePreview | undefined {
-	return extractToolImagePreviews(result, details)[0];
+export function extractToolImagePreview(
+	result: unknown,
+	details: unknown,
+	media?: ToolMediaReference,
+): ToolImagePreview | undefined {
+	return extractToolImagePreviews(result, details, media)[0];
 }
 
-export function extractToolImagePreviews(result: unknown, details: unknown): ToolImagePreview[] {
+export function extractToolImagePreviews(
+	result: unknown,
+	details: unknown,
+	media?: ToolMediaReference,
+): ToolImagePreview[] {
 	const resultRecord = asRecord(result);
-	const content = Array.isArray(resultRecord?.content) ? resultRecord.content : Array.isArray(result) ? result : [];
-	const images = selectMcpMediaCandidates(
-		content.filter((part): part is { type: "image"; data: string; mimeType: string } => {
-			const record = asRecord(part);
-			return record?.type === "image" && typeof record.data === "string" && typeof record.mimeType === "string";
-		}),
-	);
-
 	const detailsRecord = asRecord(details) ?? asRecord(resultRecord?.details);
 	const imageDetails = asRecord(detailsRecord?.image);
-	return images.map((image) => ({
-		data: image.data,
+	const candidates = collectToolImageCandidates(result, details);
+	return candidates.map((image, index) => ({
+		src: media ? toolcallMediaUrl(media, index, "image") : toolcallInlineDataUrl(image),
 		mimeType: image.mimeType,
 		originalPath: typeof imageDetails?.originalPath === "string" ? imageDetails.originalPath : undefined,
 		originalMimeType: typeof imageDetails?.originalMimeType === "string" ? imageDetails.originalMimeType : undefined,
@@ -209,23 +217,16 @@ export function extractToolImagePreviews(result: unknown, details: unknown): Too
 	}));
 }
 
-export function extractToolAudioPreviews(result: unknown, details: unknown): ToolAudioPreview[] {
-	const resultRecord = asRecord(result);
-	const detailsRecord = asRecord(details) ?? asRecord(resultRecord?.details);
-	const sources = [
-		Array.isArray(resultRecord?.content) ? resultRecord.content : [],
-		Array.isArray(detailsRecord?.content) ? detailsRecord.content : [],
-		Array.isArray(detailsRecord?.media) ? detailsRecord.media : [],
-	].flat();
-	const candidates = sources.flatMap((part) => {
-		const record = asRecord(part);
-		return record?.type === "audio" && typeof record.data === "string" && typeof record.mimeType === "string"
-			? [{ data: record.data, mimeType: record.mimeType }]
-			: [];
-	});
-	return selectMcpMediaCandidates(candidates.map((candidate) => ({ ...candidate, type: "audio" as const }))).map(
-		({ data, mimeType }) => ({ data, mimeType }),
-	);
+export function extractToolAudioPreviews(
+	result: unknown,
+	details: unknown,
+	media?: ToolMediaReference,
+): ToolAudioPreview[] {
+	const candidates = collectToolAudioCandidates(result, details);
+	return candidates.map((candidate, index) => ({
+		src: media ? toolcallMediaUrl(media, index, "audio") : toolcallInlineDataUrl(candidate),
+		mimeType: candidate.mimeType,
+	}));
 }
 
 export function extractToolMcpApp(result: unknown, details: unknown) {
@@ -476,6 +477,7 @@ export function historyToChat(
 		model?: string;
 		usage?: Usage;
 	}>,
+	mediaSessionId?: string,
 ): ChatConversationItem[] {
 	const messages: ChatConversationItem[] = [];
 	const toolCallIndex = new Map<string, ToolCallBlock>();
@@ -539,9 +541,10 @@ export function historyToChat(
 			const block = toolCallIndex.get(String(m.toolCallId));
 			if (block) {
 				block.result = extractText(m.content);
-				block.imagePreviews = extractToolImagePreviews(m.content, m.details);
+				const media = mediaSessionId ? { sessionId: mediaSessionId, toolCallId: String(m.toolCallId) } : undefined;
+				block.imagePreviews = extractToolImagePreviews(m.content, m.details, media);
 				block.imagePreview = block.imagePreviews[0];
-				block.audioPreviews = extractToolAudioPreviews(m.content, m.details);
+				block.audioPreviews = extractToolAudioPreviews(m.content, m.details, media);
 				block.mcpApp = extractToolMcpApp(m.content, m.details);
 				block.uiDetails = extractToolUiDetails(m.content, m.details);
 				block.cards = extractToolCards(m.content, m.details);
@@ -558,7 +561,7 @@ export function historyToChat(
  * Convert full history entries (including compaction boundaries) into ChatMessages.
  * Unlike historyToChat, this preserves the complete conversation across compactions.
  */
-export function fullHistoryToChat(entries: HistoryEntry[]): ChatConversationItem[] {
+export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: string): ChatConversationItem[] {
 	const messages: ChatConversationItem[] = [];
 	const toolCallIndex = new Map<string, ToolCallBlock>();
 	const historyErrors = createDeferredHistoryErrors();
@@ -761,9 +764,10 @@ export function fullHistoryToChat(entries: HistoryEntry[]): ChatConversationItem
 			const block = toolCallIndex.get(String(m.toolCallId));
 			if (block) {
 				block.result = extractText(m.content);
-				block.imagePreviews = extractToolImagePreviews(m.content, m.details);
+				const media = mediaSessionId ? { sessionId: mediaSessionId, toolCallId: String(m.toolCallId) } : undefined;
+				block.imagePreviews = extractToolImagePreviews(m.content, m.details, media);
 				block.imagePreview = block.imagePreviews[0];
-				block.audioPreviews = extractToolAudioPreviews(m.content, m.details);
+				block.audioPreviews = extractToolAudioPreviews(m.content, m.details, media);
 				block.mcpApp = extractToolMcpApp(m.content, m.details);
 				block.uiDetails = extractToolUiDetails(m.content, m.details);
 				block.cards = extractToolCards(m.content, m.details);
@@ -1188,11 +1192,13 @@ export function handleToolEnd(
 	result: unknown,
 	isError: boolean,
 	timing?: { startedAt: number; durationMs: number; phases: Array<{ label: string; atMs: number }> },
+	mediaSessionId?: string,
 ): ChatConversationItem[] {
+	const media = mediaSessionId ? { sessionId: mediaSessionId, toolCallId } : undefined;
 	const resultText = extractResultText(result);
-	const imagePreviews = extractToolImagePreviews(result, undefined);
+	const imagePreviews = extractToolImagePreviews(result, undefined, media);
 	const imagePreview = imagePreviews[0];
-	const audioPreviews = extractToolAudioPreviews(result, undefined);
+	const audioPreviews = extractToolAudioPreviews(result, undefined, media);
 	const mcpApp = extractToolMcpApp(result, undefined);
 	const uiDetails = extractToolUiDetails(result, undefined);
 	const cards = extractToolCards(result, undefined);
