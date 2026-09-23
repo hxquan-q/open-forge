@@ -17,6 +17,7 @@ import {
 	projectsAtom,
 	promptPredictingAtom,
 	promptSuggestionsAtom,
+	rememberSubagentsForSession,
 	retryProgressAtom,
 	subagentsBySessionAtom,
 	taskStateBySessionAtom,
@@ -589,15 +590,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				if (subagents) {
 					const sid = activeSessionRef.current?.runtimeId;
 					if (sid) {
-						setSubagents((prev) => {
-							const next = new Map(prev);
-							if (subagents.length > 0) {
-								next.set(sid, [...subagents]);
-							} else {
-								next.delete(sid);
-							}
-							return next;
-						});
+						setSubagents((prev) => rememberSubagentsForSession(prev, sid, subagents));
 					}
 					return;
 				}
