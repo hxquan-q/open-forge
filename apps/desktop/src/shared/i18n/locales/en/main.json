@@ -17,6 +17,7 @@
 		"app": {
 			"title": "Vetta",
 			"about": "About Vetta",
+			"credits": "License and third-party attribution details are in the included LICENSE and NOTICE files.",
 			"services": "Services",
 			"hide": "Hide Vetta",
 			"hideOthers": "Hide Others",

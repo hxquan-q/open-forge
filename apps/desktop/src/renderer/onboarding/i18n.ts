@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 引导窗独立 i18next 实例（与 quickpanel 一样自带 Provider，不共用主窗口 runtime 实例）。
 // 复用主窗口 "settings" ns 的 zh/en 资源（而非另起新 ns），
 // 决策见 computer-use 实现规格：省掉新 ns 在 NAMESPACES/resources/i18next.d.ts 的三处注册。
@@ -6,6 +7,7 @@
 
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
+import { initDesktopI18n } from "@/shared/desktop-brand";
 import { type AppLanguage, resolveAppLanguageFromLocale, resources } from "@/shared/i18n/resources";
 
 function detectLanguage(): AppLanguage {
@@ -20,7 +22,7 @@ export const i18n = i18next.createInstance();
 export function initOnboardingI18n(): void {
 	if (i18n.isInitialized) return;
 	const lng = detectLanguage();
-	void i18n.use(initReactI18next).init({
+	void initDesktopI18n(i18n.use(initReactI18next), {
 		resources: {
 			zh: { settings: resources.zh.settings },
 			en: { settings: resources.en.settings },

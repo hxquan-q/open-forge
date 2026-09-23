@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 快速开始
 
 <p align="center"><a href="QUICKSTART.md">English</a> · <b>简体中文</b></p>
@@ -32,12 +33,12 @@ cd apps/desktop
 bun run dev
 ```
 
-会同时启动 Vite renderer、主题开发服务器和 Electron。数据目录是 `~/.vetta-dev`，不会动已安装应用的 `~/.vetta`。
+会同时启动 Vite renderer、主题开发服务器和 Electron。数据目录是 `~/.openforge-dev`，不会动已安装应用的 `~/.openforge`。
 
 | 命令 | 数据根 | 什么时候用 |
 |---|---|---|
-| `bun run dev` | `~/.vetta-dev` | 默认沙箱 |
-| `bun run dev:home` | `~/.vetta` | 希望开发构建读写真实用户数据 |
+| `bun run dev` | `~/.openforge-dev` | 默认沙箱 |
+| `bun run dev:home` | `~/.openforge` | 希望开发构建读写真实用户数据 |
 
 仓库**根目录**的 `bun run dev` 只监视核心库，不会启动应用。
 

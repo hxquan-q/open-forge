@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Vetta Debug
 
 Vetta Debug 是开发环境专用的会话能力，用于从外层 Agent 驱动真实 Vetta Agent，完成创建会话、继续会话、处理 Ask User、等待结果和中止操作。
@@ -25,7 +26,7 @@ bun run verify:ui:status:debug
 - `ui.reachable === true`
 - `ui.targetFound === true`
 
-Debug Profile 使用当前工作树独立且持久的 Vetta home、Electron user-data、RPC endpoint 和 CDP endpoint，不与普通开发实例共用运行状态。首次启动从 `.vetta-dev` 白名单播种模型配置；具体边界见 [Desktop UI 验证](./README.md#验证-profile)。
+Debug Profile 使用当前工作树独立且持久的 Vetta home、Electron user-data、RPC endpoint 和 CDP endpoint，不与普通开发实例共用运行状态。首次启动从 `~/.openforge-dev` 白名单播种模型配置；具体边界见 [Desktop UI 验证](./README.md#验证-profile)。
 
 所有 Debug CLI 调用统一经过仓库入口：
 

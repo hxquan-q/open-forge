@@ -1,8 +1,9 @@
+<!-- Modified by The Open Forge contributors. -->
 <p align="center">
-  <img src="docs/assets/banner.webp" alt="Open Vetta">
+  <img src="docs/assets/banner.webp" alt="Open Forge">
 </p>
 
-<h1 align="center">Open Vetta</h1>
+<h1 align="center">Open Forge</h1>
 
 <p align="center">
   An open-source desktop AI agent for real work — local-first, extensible, and under your control.
@@ -11,7 +12,7 @@
 <p align="center">
   <a href="https://www.openvetta.com"><img src="https://img.shields.io/badge/website-openvetta.com-0b7285" alt="Website"></a>
   <a href="https://docs.openvetta.com"><img src="https://img.shields.io/badge/docs-docs.openvetta.com-f06449" alt="Documentation"></a>
-  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-join%20the%20community-5865F2?logo=discord&logoColor=white" alt="Join the Open Vetta Discord"></a>
+  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-join%20the%20community-5865F2?logo=discord&logoColor=white" alt="Join the Open Forge Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0 license"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows, and Linux">
   <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/openvetta/open-vetta?utm_source=oss&utm_medium=github&utm_campaign=openvetta%2Fopen-vetta&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews"></a>
@@ -29,15 +30,15 @@
 
 ---
 
-Open Vetta brings models, project files, local tools, and reusable capabilities into one desktop workspace. Use it for coding, documents, data, research, creative work, and repeatable workflows without giving up control of the environment where the work happens.
+Open Forge brings models, project files, local tools, and reusable capabilities into one desktop workspace. Use it for coding, documents, data, research, creative work, and repeatable workflows without giving up control of the environment where the work happens.
 
-It is more than a chat interface: Vetta can inspect a workspace, use tools with visible permission boundaries, produce real files, and keep the execution trail available for review.
+It is more than a chat interface: Open Forge can inspect a workspace, use tools with visible permission boundaries, produce real files, and keep the execution trail available for review.
 
 <p align="center">
-  <img src="docs/assets/screenshot.png" alt="Open Vetta desktop workspace">
+  <img src="docs/assets/screenshot.png" alt="Open Forge desktop workspace">
 </p>
 
-## Why Open Vetta
+## Why Open Forge
 
 | | What it means |
 |---|---|
@@ -71,7 +72,7 @@ cd apps/desktop
 bun run dev
 ```
 
-The development app uses `~/.vetta-dev` by default, keeping installed-app data in `~/.vetta` untouched. Root-level `bun run dev` watches core libraries; it does not launch Electron. See [`QUICKSTART.md`](QUICKSTART.md) for the complete setup and validation commands.
+The development app uses `~/.openforge-dev` by default, keeping installed-app data in `~/.openforge` untouched. Root-level `bun run dev` watches core libraries; it does not launch Electron. See [`QUICKSTART.md`](QUICKSTART.md) for the complete setup and validation commands.
 
 ## What you can do
 
@@ -188,10 +189,10 @@ The documentation site also publishes [`llms.txt`](https://docs.openvetta.com/ll
 
 ## Community
 
-Join the Open Vetta Discord to ask questions, share workflows, skills, plugins and themes, follow release news, and talk to the maintainers.
+Join the Open Forge Discord to ask questions, share workflows, skills, plugins and themes, follow release news, and talk to the maintainers.
 
 <p align="center">
-  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Open%20Vetta-Discord-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Open Vetta Discord"></a>
+  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Open%20Forge-Discord-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Open Forge Discord"></a>
 </p>
 
 **https://discord.gg/qGqkk22Vg9**
@@ -200,7 +201,7 @@ Longer, searchable threads still belong in [GitHub Discussions](https://github.c
 
 ## Credits and license
 
-Open Vetta builds on work from the wider open-source ecosystem, including pi, Codex CLI, MCP, Electron, React, Bun, models.dev, and the projects listed in [`NOTICE`](NOTICE). The complete third-party inventory and original notices live there.
+Open Forge is an independently maintained derivative of Open Vetta. It builds on work from the wider open-source ecosystem, including pi, Codex CLI, MCP, Electron, React, Bun, models.dev, and the projects listed in [`NOTICE`](NOTICE). The complete third-party inventory and original notices live there.
 
 Licensed under [Apache-2.0](LICENSE).
 

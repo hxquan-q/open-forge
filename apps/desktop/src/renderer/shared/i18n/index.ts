@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 // Renderer i18next 实例。资源静态内联（见 ADR-0031），故 init 同步生效、首帧不闪。
 // 初值来自主进程同步暴露的 window.vetta.i18n.initialState（preference + language）。
 
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { initDesktopI18n } from "@/shared/desktop-brand";
 import {
 	DEFAULT_LANGUAGE,
 	FALLBACK_LANGUAGE,
@@ -30,7 +32,7 @@ export function initI18n(): void {
 		// 那样 init() 返回后 isInitialized 仍为 false，createRoot 首帧的 useTranslation
 		// 会拿到 key 或触发 Suspense。资源已静态内联、同步装载无 IO，故 init 返回即就绪。
 		// useSuspense:false 再兜一层：即便未就绪也不抛 Suspense（无边界会崩），优雅降级。
-		void i18n.use(initReactI18next).init({
+		void initDesktopI18n(i18n.use(initReactI18next), {
 			resources,
 			lng,
 			fallbackLng: FALLBACK_LANGUAGE,

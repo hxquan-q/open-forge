@@ -17,6 +17,7 @@
 		"app": {
 			"title": "Vetta",
 			"about": "关于 Vetta",
+			"credits": "许可条款和第三方归属信息见随应用附带的 LICENSE 与 NOTICE 文件。",
 			"services": "服务",
 			"hide": "隐藏 Vetta",
 			"hideOthers": "隐藏其他",
