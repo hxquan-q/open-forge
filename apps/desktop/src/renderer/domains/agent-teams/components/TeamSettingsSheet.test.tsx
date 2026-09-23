@@ -253,6 +253,19 @@ describe("TeamSettingsSheet", () => {
 		);
 	});
 
+	it("does not offer an in-team rename to a member who has not joined the team yet", async () => {
+		renderSheet();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "settings.addMember" }));
+		await user.click(screen.getByRole("button", { name: "settings.add" }));
+
+		// 新成员走 new 变体，协议不收 handle：入口会在保存时被静默丢弃，索性不给。
+		expect(screen.getByText("@spare")).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "settings.memberHandleRename:spare" })).toBeNull();
+		expect(screen.getByRole("button", { name: "settings.memberHandleRename:alpha" })).toBeTruthy();
+	});
+
 	it("keeps saving disabled until the draft actually changes", async () => {
 		const { onSave } = renderSheet();
 		const save = screen.getByRole("button", { name: /settings.saveChanges/ });

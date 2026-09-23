@@ -366,7 +366,8 @@ export function TeamSettingsSheet({
 												)}
 											</div>
 
-											{handleAgentId === member.id && !readOnly ? (
+											{/* 队内改名只对已入队成员开放：新成员走 new 变体，协议不收 handle，给了入口也会在保存时被静默丢弃。 */}
+											{handleAgentId === member.id && memberId && !readOnly ? (
 												<MemberHandleEditor
 													value={memberHandle}
 													otherHandles={otherHandles}
@@ -384,7 +385,7 @@ export function TeamSettingsSheet({
 													<span className="min-w-0 truncate text-[11.5px] text-muted-foreground/80">
 														@{memberHandle}
 													</span>
-													{!readOnly && (
+													{!readOnly && memberId && (
 														<Button
 															variant="ghost"
 															size="sm"
