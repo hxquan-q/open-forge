@@ -258,6 +258,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			macosSandboxExecPath: sessionOptions.macosSandboxExecPath,
 			readSessionId: options.readSessionId,
 			resolveToolEntry: (toolName) => options.codingTools.registry.resolve(toolName),
+			resultPolicy: options.codingTools.resultPolicy,
 			resourceContext: options.resourceContext,
 			sandboxAuthorization,
 		});
