@@ -19,12 +19,7 @@ import type {
 import type { ConversationDocument } from "../conversation/document.js";
 import type { ConversationMessageRecord } from "../conversation/message-contract.js";
 import { runtimeError } from "../errors.js";
-import type {
-	ArtifactDescriptorRecordedEvent,
-	RuntimeToolDefinition,
-	SessionContextRecord,
-	TaskLifecycleRecordedEvent,
-} from "../kernel/contracts.js";
+import type { RuntimeSessionFactEvent, RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
 import {
 	createRuntimeObservationPublisher,
 	type RuntimeObservationContext,
@@ -589,10 +584,7 @@ export class RuntimeHost implements SessionFacade {
 		return this.sessionOperations.getTaskState(sessionId);
 	}
 
-	recordTaskFacts(
-		sessionId: string,
-		facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[],
-	): Promise<void> {
+	recordTaskFacts(sessionId: string, facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
 		return this.sessionOperations.recordTaskFacts(sessionId, facts);
 	}
 

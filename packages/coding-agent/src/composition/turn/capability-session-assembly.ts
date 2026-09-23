@@ -24,6 +24,10 @@ import {
 	selectAgentSkillSource,
 } from "../../agent-configuration/resource-selection.js";
 import type { AgentSessionConfiguration } from "../../agent-configuration/session-configuration.js";
+import type { CodingAgentToolApprovalPort } from "../../execution/permissions/approval-contract.js";
+import { createApprovalToolInterceptor } from "../../execution/permissions/approval-tool-interceptor.js";
+import { summarizeToolApproval } from "../../execution/permissions/summarize-tool-approval.js";
+import { defaultToolRiskDescriptor } from "../../execution/permissions/tool-risk-descriptors.js";
 import type { CodingAgentSessionExecutionRuntime } from "../../execution/session/runtime.js";
 import type { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
 import type { CodingAgentExtensionToolRuntime } from "../../extensions/runtime/extension-tool-runtime.js";
@@ -129,6 +133,7 @@ export interface CodingAgentTurnCapabilitySessionAssemblyOptions {
 	readonly continuationSources: readonly SessionExtensionContinuationSource[];
 	readonly todoRuntime: CodingAgentTodoRuntime;
 	readonly planModeRuntime: CodingAgentPlanModeExtensionRuntime;
+	readonly toolApprovalRuntime?: CodingAgentToolApprovalPort;
 	readonly todoToolRegistration?: CodingAgentRuntimeToolRegistration;
 	readonly memoryRuntime?: CodingAgentMemoryRolloverRuntime;
 	readonly subagentRuntime?: CodingAgentSubagentRuntime;
@@ -290,6 +295,18 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 			})
 		: undefined;
 	const toolInterceptionCatalog = new DynamicContributionCatalog<CodingAgentToolInterceptor>();
+	toolInterceptionCatalog.register({
+		sourceId: "tool-approval",
+		localId: "permission-gate",
+		revision: "session",
+		order: CODING_AGENT_TOOL_INTERCEPTION_ORDER.permissionApproval,
+		// 宿主未接入审批端口时端口不可用，闸门自动旁路（isAvailable 检查）。
+		value: createApprovalToolInterceptor({
+			approvalPort: options.toolApprovalRuntime,
+			resolveRiskDescriptor: defaultToolRiskDescriptor,
+			summarize: summarizeToolApproval,
+		}),
+	});
 	toolInterceptionCatalog.register({
 		sourceId: "ecosystem",
 		localId: "tool-hooks",

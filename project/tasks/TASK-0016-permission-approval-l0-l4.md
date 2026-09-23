@@ -1,7 +1,7 @@
 ---
 id: TASK-0016
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,9 +16,9 @@ write_paths: [packages/runtime-core, packages/coding-agent, packages/runtime-nod
 exclusive_paths: [packages/runtime-core/src/task]
 depends_on: [TASK-0015]
 conflicts_with: [TASK-0015]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Permission/Approval：L0-L4 风险分级与 Project Trust（implementation-plan 阶段 2）
@@ -86,3 +86,29 @@ updated: 2026-09-22
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+- 实际修改：
+  - `runtime-core`：`task/risk-policy.ts`（等级只升不降、未知工具合成 L4 fail-closed、
+    per-call 等级默认矩阵）；`approval.requested.recorded` / `approval.decision.recorded`
+    会话事实进事件日志与重放投影（pending 恢复 + 决策审计）；Turn 开始自动重绑
+    `awaiting_approval` 的 Task（重启恢复路径）。
+  - `coding-agent`：`execution/permissions/`——工具风险注册表（内置工具 L0-L3、MCP 默认
+    L3）、审批函数/端口会话扩展（sandbox authorization 同款接线）、执行面审批拦截器
+    （order 40，先于计划模式与生态 Hook；edit 决策生成新请求重新校验、中断 fail closed）、
+    脱敏摘要；模型请求面 `authorizeTool` 注入点（双面检查的准入钩子）。
+  - `runtime-node`：`NodeProjectTrustStore`（`.vetta-local/trust.json`，路径规范化、
+    原子写、过期/撤销/deny-wins、未知版本 fail closed）。
+  - `apps/desktop`：`task-activity/tool-approval-broker.ts`（Trust 命中静默放行、L4 永远
+    逐次确认、复用 ActionApprovalBroker 弹窗、审批事实排队于 Turn 收尾落盘）；
+    渲染端 `ToolExecutionApproval` presenter（允许本次/记住到本项目/拒绝）+ i18n zh/en；
+    Task Review 联动 Artifact 终审状态（approved→accepted / rejected→rejected）。
+- 实际运行：runtime-core / coding-agent / runtime-node 定向新增测试（risk policy、
+  审批拦截器、trust store、审批投影）全部通过；desktop 定向 92 项通过；根 `tsgo`、
+  desktop `tsc`、`check:quick` 通过；runtime-core/coding-agent 全包与全量 `check`
+  见提交记录。
+- 未运行及原因：`verify:ui:*` 未运行（用户未授权实机 UI 验收）；真实 Electron E2E
+  未新增（审批 UI 复用既有 ActionApprovalBroker 链路，弹窗/超时/崩溃清理已有覆盖）。
+- 剩余风险：模型请求面 `authorizeTool` 默认放行、由宿主注入收紧（桌面端按 ISSUE-0005
+  方案 C 的 Profile 轴在 TASK-0017/0019 接入）；审批中进程被杀时该次请求随 Turn 失效
+  （不恢复为 pending，符合「重启后重校验」语义）；hard revoke 的安全检查点立即取消
+  依赖内核后续在工具执行点查询 Trust，当前撤销在读取时即时生效。

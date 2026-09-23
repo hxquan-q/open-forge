@@ -37,6 +37,11 @@ export {
 } from "./legacy-session-host.js";
 export { createLoopbackSessionAffinityStream } from "./loopback-session-affinity-stream.js";
 export {
+	NodeProjectTrustStore,
+	type NodeProjectTrustStoreIo,
+	type NodeProjectTrustStoreOptions,
+} from "./project-trust-store.js";
+export {
 	createNodeResourceAccess,
 	type NodeResourceAccess,
 	type NodeResourceAccessOptions,

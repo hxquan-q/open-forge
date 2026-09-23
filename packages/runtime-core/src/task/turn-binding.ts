@@ -20,8 +20,10 @@ export interface TaskTurnBindingInput {
 }
 
 /**
- * Turn 开始时把处于 `planning` / `paused` 的 Task 绑定到该 Turn（→ `running`）。
- * `draft` 等待显式 `plan`，`changes_requested` 等待用户裁决，都不自动推进。
+ * Turn 开始时把处于 `planning` / `paused` / `awaiting_approval` 的 Task 绑定到该
+ * Turn（→ `running`）。`draft` 等待显式 `plan`，`changes_requested` 等待用户裁决，
+ * 都不自动推进；`awaiting_approval` 纳入绑定是为了重启恢复：进程中断时审批请求
+ * 已随 Turn 失效，用户重新发消息即代表在新 Turn 上重试该动作。
  */
 export function planTaskEventsForTurnStart(
 	tasks: readonly RuntimeTaskSnapshot[],
@@ -30,11 +32,13 @@ export function planTaskEventsForTurnStart(
 	const batches: TaskEventBatch[] = [];
 	for (const snapshot of tasks) {
 		if (!canTransitionRuntimeTask(snapshot.status, "running")) continue;
-		if (snapshot.status !== "planning" && snapshot.status !== "paused") continue;
+		if (snapshot.status !== "planning" && snapshot.status !== "paused" && snapshot.status !== "awaiting_approval") {
+			continue;
+		}
 		const { events } = transitionRuntimeTask(snapshot, {
 			eventId: `${input.turnId}:task:${snapshot.identity.taskId}:start`,
 			at: input.at,
-			intent: { type: snapshot.status === "paused" ? "resume" : "start", turnId: input.turnId },
+			intent: { type: snapshot.status === "planning" ? "start" : "resume", turnId: input.turnId },
 		});
 		batches.push({ taskId: snapshot.identity.taskId, events });
 	}

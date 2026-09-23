@@ -56,6 +56,9 @@ export default defineConfig({
 			"@vetta/runtime-core/kernel": fileURLToPath(
 				new URL("../runtime-core/src/kernel/index.ts", import.meta.url),
 			),
+			"@vetta/runtime-core/task": fileURLToPath(
+				new URL("../runtime-core/src/task/index.ts", import.meta.url),
+			),
 			"@vetta/runtime-core/conversation": fileURLToPath(
 				new URL("../runtime-core/src/conversation/index.ts", import.meta.url),
 			),

@@ -50,6 +50,27 @@ export function mapKernelEventToSessionEvents(event: KernelEvent): SessionEvent[
 		];
 	}
 
+	if (event.type === "approval.requested.recorded") {
+		return [
+			{
+				...baseSessionEvent(event.sessionId, "runtime-core", event.timestamp),
+				type: "approval.requested",
+				request: event.request,
+			},
+		];
+	}
+
+	if (event.type === "approval.decision.recorded") {
+		return [
+			{
+				...baseSessionEvent(event.sessionId, "runtime-core", event.timestamp),
+				type: "approval.decision",
+				approvalId: event.approvalId,
+				decision: event.decision,
+			},
+		];
+	}
+
 	if (event.type === "message.appended" && event.message.role === "assistant") {
 		return assistantMessageObservations(event.message, event.turnId, event.failure).map((observation) =>
 			mapRuntimeSessionObservationEvent(event.sessionId, observation, event.timestamp),

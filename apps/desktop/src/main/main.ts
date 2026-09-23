@@ -83,6 +83,7 @@ import { getRuntimeManager } from "./runtimes/manager.js";
 import { initializeSandboxCapability } from "./sandbox/capability.js";
 import { initScheduler, scheduleTaskInCron, shutdownScheduler, unscheduleTaskInCron } from "./scheduler/scheduler.js";
 import { initializeDesktopSchedulerService } from "./scheduler/scheduler-service.js";
+import { getDesktopToolApprovalBroker } from "./task-activity/tool-approval-broker.js";
 import { initializeMainTelemetry, shutdownMainTelemetry } from "./telemetry/index.js";
 import { registerThemeProtocol, THEME_PROTOCOL_PRIVILEGE } from "./themes/theme-protocol.js";
 import {
@@ -729,6 +730,7 @@ if (!gotSingleLock) {
 
 		if (mainWindow.isDestroyed()) return;
 		const actionApprovalBroker = new ActionApprovalBroker(mainWindow.webContents);
+		getDesktopToolApprovalBroker().bindActionApprovalBroker(actionApprovalBroker);
 		const batchTaskService = initializeDesktopBatchTaskService(getSharedRuntime);
 		// 批量项目元数据参与恢复会话的 scenario 判定，需要尽早加载；初始化 Promise
 		// 本身不作为 appLifecycle ready 的门闩。

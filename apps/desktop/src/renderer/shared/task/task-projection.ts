@@ -100,5 +100,18 @@ export function mergeTaskStateSeed(
 		}
 		if (seedArtifact.version >= artifacts[index].version) artifacts[index] = seedArtifact;
 	}
-	return { tasks, artifacts };
+	const approvals = [...current.pendingApprovals];
+	for (const seedApproval of seed.pendingApprovals) {
+		if (!approvals.some((approval) => approval.approvalId === seedApproval.approvalId)) approvals.push(seedApproval);
+	}
+	const decisions = new Map([...current.approvalDecisions]);
+	for (const [approvalId, decision] of seed.approvalDecisions) {
+		if (!decisions.has(approvalId)) decisions.set(approvalId, decision);
+	}
+	return {
+		tasks,
+		artifacts,
+		pendingApprovals: approvals,
+		approvalDecisions: decisions,
+	};
 }

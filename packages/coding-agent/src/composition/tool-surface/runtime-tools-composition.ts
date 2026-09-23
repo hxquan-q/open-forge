@@ -49,6 +49,11 @@ export interface CodingToolsRuntimeCompositionOptions {
 	readonly tokenBudget?: number;
 	readonly reservedOutputTokens?: number;
 	readonly observationPublisher?: RuntimeObservationPublisher;
+	/**
+	 * 模型请求面的工具准入（与执行面的审批拦截器构成双重检查）。
+	 * 缺省保持放行：per-call 风险等级在模型面仍可见，真正的逐次审批在执行面。
+	 */
+	readonly authorizeTool?: (toolName: string, input: unknown) => Promise<boolean> | boolean;
 }
 
 export interface CodingToolsRuntimeComposition {
@@ -131,9 +136,10 @@ export function createCodingToolsRuntimeComposition(
 	const capabilities: RuntimeCapabilityDefinition = createDefaultRuntimeCapabilityDefinition({
 		features: [feature],
 		toolPolicy: {
-			async authorize(_request, signal) {
+			async authorize(request, signal) {
 				signal.throwIfAborted();
-				return true;
+				if (!options.authorizeTool) return true;
+				return options.authorizeTool(request.toolName, request.input);
 			},
 		},
 		tokenBudget: options.tokenBudget ?? 8_000,

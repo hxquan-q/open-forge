@@ -27,7 +27,7 @@ function statusEvent(to: RuntimeTaskSnapshot["status"], at = 101): RuntimeTaskEv
 	};
 }
 
-const EMPTY: RuntimeSessionTaskState = { tasks: [], artifacts: [] };
+const EMPTY: RuntimeSessionTaskState = { tasks: [], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() };
 
 describe("applyTaskFactEvent", () => {
 	it("task.created 插入快照；同 taskId 的重复 created 幂等忽略", () => {
@@ -128,16 +128,22 @@ describe("mergeTaskStateSeed", () => {
 		const current: RuntimeSessionTaskState = {
 			tasks: [snapshotAt("running", 300)],
 			artifacts: [],
+			pendingApprovals: [],
+			approvalDecisions: new Map<never, never>(),
 		};
 		const seed: RuntimeSessionTaskState = {
 			tasks: [snapshotAt("planning", 200)],
 			artifacts: [],
+			pendingApprovals: [],
+			approvalDecisions: new Map<never, never>(),
 		};
 		const merged = mergeTaskStateSeed(current, seed);
 		expect(merged.tasks[0].status).toBe("running");
 		const mergedNewer = mergeTaskStateSeed(current, {
 			tasks: [snapshotAt("awaiting_review", 400)],
 			artifacts: [],
+			pendingApprovals: [],
+			approvalDecisions: new Map<never, never>(),
 		});
 		expect(mergedNewer.tasks[0].status).toBe("awaiting_review");
 	});

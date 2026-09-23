@@ -2,6 +2,7 @@ import {
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
 	CODING_AGENT_PLAN_REVIEW_FUNCTION,
 	CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION,
+	CODING_AGENT_TOOL_APPROVAL_FUNCTION,
 } from "@vetta/coding-agent/function-extensions";
 import {
 	SessionExtensionFunctionRegistry,
@@ -11,6 +12,7 @@ import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
 import { getAppLogger } from "../logger.js";
+import { getDesktopToolApprovalBroker } from "../task-activity/tool-approval-broker.js";
 
 export interface DesktopCodingAgentFunctionSourceLogger {
 	warn(message: string, context: { readonly functionId: string; readonly errorName?: string }): void;
@@ -27,11 +29,13 @@ export function createDesktopCodingAgentFunctionSource(
 	const questions = getDesktopUserQuestionBroker();
 	const sandbox = getDesktopSandboxAuthorizationBroker();
 	const planReviews = getDesktopPlanReviewBroker();
+	const toolApprovals = getDesktopToolApprovalBroker();
 	const warn: DesktopCodingAgentFunctionSourceLogger["warn"] = (message, context) =>
 		(options.logger ?? getAppLogger("agent-runtime")).warn(message, context);
 	const registry = new SessionExtensionFunctionRegistry();
 	registry.register(CODING_AGENT_ASK_USER_QUESTION_FUNCTION, (request, signal) => questions.handle(request, signal));
 	registry.register(CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION, (request, signal) => sandbox.handle(request, signal));
+	registry.register(CODING_AGENT_TOOL_APPROVAL_FUNCTION, (request, signal) => toolApprovals.handle(request, signal));
 	registry.register(CODING_AGENT_PLAN_REVIEW_FUNCTION, (request, signal) => planReviews.handle(request, signal));
 	const unavailable = new Set<string>();
 	const readAvailability = (functionId: string, available: boolean): boolean => {

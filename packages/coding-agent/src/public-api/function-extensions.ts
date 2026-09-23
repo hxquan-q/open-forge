@@ -1,4 +1,10 @@
 export {
+	CODING_AGENT_TOOL_APPROVAL_EXTENSION_ID,
+	CODING_AGENT_TOOL_APPROVAL_FUNCTION,
+	type CodingAgentToolApprovalDecision,
+	type CodingAgentToolApprovalFunctionRequest,
+} from "../execution/permissions/approval-contract.js";
+export {
 	CODING_AGENT_SANDBOX_AUTHORIZATION_EXTENSION_ID,
 	CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION,
 	type CodingAgentSandboxAuthorizationDecision,

@@ -1,7 +1,12 @@
 import type { RuntimeSessionTaskState } from "@vetta/runtime-core/task";
 import { atom } from "jotai";
 
-export const EMPTY_TASK_STATE: RuntimeSessionTaskState = { tasks: [], artifacts: [] };
+export const EMPTY_TASK_STATE: RuntimeSessionTaskState = {
+	tasks: [],
+	artifacts: [],
+	pendingApprovals: [],
+	approvalDecisions: new Map(),
+};
 
 /**
  * 当前会话的 Task/Artifact 投影。

@@ -19,7 +19,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 当前主动 Task：`TASK-0002`–`TASK-0007` 覆盖性能/可靠性基线，`TASK-0008` 覆盖 Task/Artifact 合同，`TASK-0009` 记录品牌化决策冻结；`TASK-0001` 已完成 Project 控制面整理，`TASK-0010`/`TASK-0011` 完成观测与缓存内存上限，`TASK-0012`–`TASK-0014` 驻留上限在途。
 
-`TASK-0015`–`TASK-0022` 对应 `exprot/implementation-plan.md` 阶段 1–7（PLAN-0001）：0015 Task/Artifact 纵向切片（done；显式 Task API，不做自由文本升级分类）、0016 Permission/Approval（draft）、0017 Work Profile（ready，ISSUE-0005 已裁决方案 C）、0018 文件整理、0019 Coding Profile/Review（ready，ISSUE-0005 已裁决方案 C）、0020 共享项目目录、0021 Catalog Policy（ready，ISSUE-0005 已裁决方案 C）、0022 Pi 只读条件评估（blocked: ISSUE-0002）。
+`TASK-0015`–`TASK-0022` 对应 `exprot/implementation-plan.md` 阶段 1–7（PLAN-0001）：0015 Task/Artifact 纵向切片（done；显式 Task API，不做自由文本升级分类）、0016 Permission/Approval（done）、0017 Work Profile（ready，ISSUE-0005 已裁决方案 C）、0018 文件整理、0019 Coding Profile/Review（ready，ISSUE-0005 已裁决方案 C）、0020 共享项目目录、0021 Catalog Policy（ready，ISSUE-0005 已裁决方案 C）、0022 Pi 只读条件评估（blocked: ISSUE-0002）。
 
 `TASK-0023`/`TASK-0024` 为跨阶段 UI/UX 线（`exprot/ui-information-architecture.md`）：0023 双模式 IA 定稿、0024 WorkspaceMode Shell/Mode Switcher 落地，均已完成；0024 只控制项目布局，不改写会话 `agentMode`。
 

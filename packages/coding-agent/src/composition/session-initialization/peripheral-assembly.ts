@@ -11,6 +11,11 @@ import { SessionExtensionComposition, sessionExtensionObservation } from "@vetta
 import type { McpDeferredToolController } from "@vetta/runtime-mcp";
 import { createAgentConfigurationSessionExtension } from "../../agent-configuration/session-configuration-extension.js";
 import { createCodingAgentBackgroundWorkSessionExtension } from "../../execution/background/background-work-session-extension.js";
+import type { CodingAgentToolApprovalPort } from "../../execution/permissions/approval-contract.js";
+import {
+	CODING_AGENT_TOOL_APPROVAL_RUNTIME,
+	createCodingAgentToolApprovalSessionExtension,
+} from "../../execution/permissions/approval-session-extension.js";
 import {
 	CODING_AGENT_SANDBOX_AUTHORIZATION_RUNTIME,
 	createCodingAgentSandboxAuthorizationSessionExtension,
@@ -91,6 +96,7 @@ export interface CodingAgentSessionPeripheralAssembly {
 	readonly todoEnabled: boolean;
 	readonly askUserQuestionRuntime: CodingAgentAskUserQuestionExtensionRuntime;
 	readonly planModeRuntime: CodingAgentPlanModeExtensionRuntime;
+	readonly toolApprovalRuntime: CodingAgentToolApprovalPort;
 	readonly sessionExtensions: SessionExtensionComposition;
 	readonly baseCapabilities: RuntimeCapabilityDefinition;
 }
@@ -190,6 +196,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 					}),
 			}),
 			createCodingAgentSandboxAuthorizationSessionExtension(),
+			createCodingAgentToolApprovalSessionExtension(),
 			createCodingAgentBackgroundWorkSessionExtension(),
 			createCodingAgentPluginConfigurationSessionExtension(),
 			createCodingAgentSessionAssistanceExtension(),
@@ -219,6 +226,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 	const askUserQuestionRuntime = sessionExtensions.services.require(CODING_AGENT_ASK_USER_QUESTION_RUNTIME);
 	const planModeRuntime = sessionExtensions.services.require(CODING_AGENT_PLAN_MODE_RUNTIME);
 	const sandboxAuthorization = sessionExtensions.services.require(CODING_AGENT_SANDBOX_AUTHORIZATION_RUNTIME);
+	const toolApprovalRuntime = sessionExtensions.services.require(CODING_AGENT_TOOL_APPROVAL_RUNTIME);
 
 	const executionEnvironment = await profile.createSessionExecutionEnvironment({
 		sessionId: options.readSessionId(),
@@ -300,6 +308,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 		configurationState,
 		askUserQuestionRuntime,
 		planModeRuntime,
+		toolApprovalRuntime,
 		specializedToolRegistrations,
 		specializedToolFeature,
 		pluginRuntime,

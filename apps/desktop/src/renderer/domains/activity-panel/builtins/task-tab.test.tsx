@@ -62,7 +62,7 @@ describe("activity panel task tab", () => {
 		cleanup();
 		store.set(taskStateBySessionAtom, new Map());
 		runCommand.mockReset();
-		getState.mockReset().mockResolvedValue({ tasks: [], artifacts: [] });
+		getState.mockReset().mockResolvedValue({ tasks: [], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() });
 		getArtifactViews.mockReset().mockResolvedValue([]);
 	});
 
@@ -71,7 +71,7 @@ describe("activity panel task tab", () => {
 		const meta = renderHook(() => taskTabDefinition.useMeta(), { wrapper });
 		expect(meta.result.current).toBeNull();
 
-		setState({ tasks: [taskSnapshot()], artifacts: [] });
+		setState({ tasks: [taskSnapshot()], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() });
 		meta.rerender();
 		expect(meta.result.current).toMatchObject({ label: "activityPanel.tabs.task", badge: 1 });
 	});
@@ -85,7 +85,7 @@ describe("activity panel task tab", () => {
 	});
 
 	it("等待审阅的任务展示三条裁决路径并发起 review 命令", () => {
-		setState({ tasks: [taskSnapshot({ status: "awaiting_review" })], artifacts: [] });
+		setState({ tasks: [taskSnapshot({ status: "awaiting_review" })], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() });
 		const Tab = taskTabDefinition.component;
 		render(<Tab />, { wrapper: wrapperFor(["runtime-1"]) });
 		expect(screen.getByRole("heading", { name: "activityPanel.task.headline" })).toBeTruthy();
@@ -102,7 +102,7 @@ describe("activity panel task tab", () => {
 	});
 
 	it("不显示其他会话的任务", () => {
-		setState({ tasks: [taskSnapshot()], artifacts: [] });
+		setState({ tasks: [taskSnapshot()], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() });
 		const meta = renderHook(() => taskTabDefinition.useMeta(), { wrapper: wrapperFor(["other-runtime"]) });
 		expect(meta.result.current).toBeNull();
 	});

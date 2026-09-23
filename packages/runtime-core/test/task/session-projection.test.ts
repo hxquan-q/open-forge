@@ -119,4 +119,47 @@ describe("projectRuntimeSessionTaskState", () => {
 		expect(state.tasks).toHaveLength(1);
 		expect(state.tasks[0].identity.taskId).toBe("task-other");
 	});
+
+	it("审批事实：未决策的请求进入 pending，决策后移出并保留审计记录", () => {
+		const request = {
+			schemaVersion: 1 as const,
+			approvalId: "approval-1",
+			taskId: "task-1",
+			sessionId: identity.rootSessionId,
+			turnId: "turn-1",
+			toolName: "bash",
+			risk: {
+				defaultLevel: "L3" as const,
+				executionClass: "exclusive" as const,
+				irreversible: false,
+				externalSideEffect: true,
+				requiredScopes: ["shell"],
+			},
+			summary: "执行 npm install",
+			inputPreview: { command: "npm install" },
+			affectedResources: ["package.json"],
+			createdAt: 100,
+		};
+		const requested = {
+			type: "approval.requested.recorded" as const,
+			sessionId: identity.rootSessionId,
+			turnId: "turn-1",
+			request,
+			timestamp: 100,
+		};
+		const decided = {
+			type: "approval.decision.recorded" as const,
+			sessionId: identity.rootSessionId,
+			turnId: "turn-1",
+			approvalId: "approval-1",
+			decision: "approve" as const,
+			timestamp: 110,
+		};
+		const pending = projectRuntimeSessionTaskState([requested]);
+		expect(pending.pendingApprovals).toHaveLength(1);
+		expect(pending.pendingApprovals[0].approvalId).toBe("approval-1");
+		const resolved = projectRuntimeSessionTaskState([requested, decided]);
+		expect(resolved.pendingApprovals).toHaveLength(0);
+		expect(resolved.approvalDecisions.get("approval-1")).toBe("approve");
+	});
 });

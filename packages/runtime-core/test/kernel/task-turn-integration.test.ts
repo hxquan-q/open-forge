@@ -1,6 +1,7 @@
 import type { AssistantMessage, UserMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
+	type ArtifactDescriptorRecordedEvent,
 	type Clock,
 	type ContextStrategy,
 	type ConversationMetadata,
@@ -18,18 +19,17 @@ import {
 	StaticRuntimeSnapshotProvider,
 	type StoredConversation,
 	type StoredSessionEvent,
+	type TaskLifecycleRecordedEvent,
 	type TurnEngineEvent,
 	type TurnEnginePort,
 	type TurnEngineRequest,
 	TurnPipeline,
 } from "../../src/kernel/index.js";
 import {
-	type ArtifactDescriptorRecordedEvent,
 	createRuntimeTaskSnapshot,
 	projectRuntimeSessionTaskState,
 	type RuntimeTaskEvent,
 	type RuntimeTaskIdentity,
-	type TaskLifecycleRecordedEvent,
 	transitionRuntimeTask,
 } from "../../src/task/index.js";
 

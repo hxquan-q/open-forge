@@ -2,14 +2,10 @@ import type { ThinkingLevel, ToolPhase } from "@vetta/agent-core";
 import type { AssistantMessageEvent, CacheUsageReporting, Message, Model } from "@vetta/ai";
 import type { ContextCompositionReport } from "./context-composition/contracts.js";
 import type { RuntimeFailure, RuntimeFailureDetails, RuntimeFailureOrigin } from "./failure-contract.js";
-import type {
-	ArtifactDescriptorRecordedEvent,
-	SessionContextRecord,
-	TaskLifecycleRecordedEvent,
-} from "./kernel/contracts.js";
+import type { RuntimeSessionFactEvent, SessionContextRecord } from "./kernel/contracts.js";
 import type { SessionContextState, SessionContextStateEvent } from "./session-context-state.js";
 import type { SessionExtensionEndpointToken, SessionExtensionObservation } from "./session-extensions/contracts.js";
-import type { ArtifactDescriptor, RuntimeTaskEvent } from "./task/contracts.js";
+import type { ApprovalDecision, ApprovalRequest, ArtifactDescriptor, RuntimeTaskEvent } from "./task/contracts.js";
 import type { RuntimeSessionTaskState } from "./task/session-projection.js";
 
 export interface PromptResourceRef {
@@ -223,6 +219,19 @@ export interface ArtifactDescriptorEvent extends SessionEventBase {
 	artifact: ArtifactDescriptor;
 }
 
+/** 审批请求事实投影：高风险动作先落盘再阻塞等待，UI 只消费该状态。 */
+export interface ApprovalRequestedEvent extends SessionEventBase {
+	type: "approval.requested";
+	request: ApprovalRequest;
+}
+
+/** 审批决策事实投影：`edit` 不构成批准，随后的新请求有新的 approvalId。 */
+export interface ApprovalDecisionEvent extends SessionEventBase {
+	type: "approval.decision";
+	approvalId: string;
+	decision: ApprovalDecision;
+}
+
 /**
  * 会话激活工具集发生变化（插件在会话创建之后才注册/注销工具时触发）。
  * renderer 据此刷新输入栏 badge 的 `requiresActiveTool` 闸门——否则打开会话那一刻
@@ -284,6 +293,8 @@ export type SessionEvent =
 	| SessionExtensionEvent
 	| TaskLifecycleEvent
 	| ArtifactDescriptorEvent
+	| ApprovalRequestedEvent
+	| ApprovalDecisionEvent
 	| ActiveToolsUpdateEvent
 	| CompactionStartEvent
 	| CompactionEndEvent
@@ -552,10 +563,7 @@ export interface SessionFacade {
 	/** 从持久化 Task/Artifact 事实重放的会话任务投影；重启后同样由事件流重建。 */
 	getTaskState(sessionId: string): RuntimeSessionTaskState;
 	/** 追加宿主显式提交的 Task/Artifact 事实（Task 创建、审批、Review、descriptor 等）。 */
-	recordTaskFacts(
-		sessionId: string,
-		facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[],
-	): Promise<void>;
+	recordTaskFacts(sessionId: string, facts: readonly RuntimeSessionFactEvent[]): Promise<void>;
 	/** Full conversation history including compaction boundaries (for UI display). */
 	getFullHistory(sessionId: string): HistoryEntry[];
 	/**

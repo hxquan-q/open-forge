@@ -25,7 +25,7 @@ import type {
 } from "../runtime-execution-observation.js";
 import type { ContextCompactionEligibility } from "../session-context-state.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
-import type { ArtifactDescriptor, RuntimeTaskEvent } from "../task/contracts.js";
+import type { ApprovalDecision, ApprovalRequest, ArtifactDescriptor, RuntimeTaskEvent } from "../task/contracts.js";
 
 export type AgentSessionState = "idle" | "running" | "cancelling" | "closing" | "recovery_required" | "closed";
 
@@ -832,6 +832,28 @@ export interface ArtifactDescriptorRecordedEvent {
 	readonly timestamp: number;
 }
 
+/**
+ * Session 级 Approval 事实：一次高风险动作的审批请求（绑定 session/turn/tool 与
+ * 脱敏摘要）。请求先于阻塞落盘；决策事后补记，重启后由投影恢复并重新校验有效性。
+ */
+export interface ApprovalRequestedRecordedEvent {
+	readonly type: "approval.requested.recorded";
+	readonly sessionId: string;
+	readonly turnId?: string;
+	readonly request: ApprovalRequest;
+	readonly timestamp: number;
+}
+
+/** Approval 决策事实；`edit` 决策不视作批准，随后的新请求会有新的 approvalId。 */
+export interface ApprovalDecisionRecordedEvent {
+	readonly type: "approval.decision.recorded";
+	readonly sessionId: string;
+	readonly turnId?: string;
+	readonly approvalId: string;
+	readonly decision: ApprovalDecision;
+	readonly timestamp: number;
+}
+
 export type StoredSessionEvent =
 	| TurnStartedEvent
 	| TurnContinuedEvent
@@ -844,7 +866,16 @@ export type StoredSessionEvent =
 	| TurnFailedEvent
 	| TurnTransferredEvent
 	| TaskLifecycleRecordedEvent
-	| ArtifactDescriptorRecordedEvent;
+	| ArtifactDescriptorRecordedEvent
+	| ApprovalRequestedRecordedEvent
+	| ApprovalDecisionRecordedEvent;
+
+/** 宿主可显式提交的 Session 级事实集合（Task/Artifact/Approval）。 */
+export type RuntimeSessionFactEvent =
+	| TaskLifecycleRecordedEvent
+	| ArtifactDescriptorRecordedEvent
+	| ApprovalRequestedRecordedEvent
+	| ApprovalDecisionRecordedEvent;
 
 export type TurnPipelineStage =
 	| "admission"

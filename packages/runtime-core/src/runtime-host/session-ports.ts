@@ -13,12 +13,7 @@ import type {
 } from "../contracts.js";
 import type { ConversationDocument } from "../conversation/document.js";
 import type { ConversationMessageRecord } from "../conversation/message-contract.js";
-import type {
-	ArtifactDescriptorRecordedEvent,
-	RuntimeToolDefinition,
-	SessionContextRecord,
-	TaskLifecycleRecordedEvent,
-} from "../kernel/contracts.js";
+import type { RuntimeSessionFactEvent, RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
 import type { RuntimeExecutionObservationEvent } from "../runtime-execution-observation.js";
 import type { SessionExtensionEndpointHost } from "../session-extensions/contracts.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
@@ -308,6 +303,6 @@ export interface RuntimeSessionCorePorts {
 
 /** Task/Artifact 事实的会话内控制面：显式提交事实 + 从事件流重放的只读投影。 */
 export interface RuntimeSessionTaskView {
-	recordTaskFacts(facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[]): Promise<void>;
+	recordTaskFacts(facts: readonly RuntimeSessionFactEvent[]): Promise<void>;
 	readTaskState(): RuntimeSessionTaskState;
 }

@@ -36,10 +36,19 @@ describe("planTaskEventsForTurnStart", () => {
 		expect(batches[0].events[1].turnId).toBe("turn-9");
 	});
 
+	it("awaiting_approval 的 Task 在新 Turn 自动重绑（重启恢复路径）", () => {
+		const batches = planTaskEventsForTurnStart([snapshotAt("awaiting_approval", "turn-0")], {
+			turnId: "turn-9",
+			at: 200,
+		});
+		expect(batches).toHaveLength(1);
+		if (batches[0].events[0].type !== "task.status_changed") throw new Error("unreachable");
+		expect(batches[0].events[0].to).toBe("running");
+	});
+
 	it("draft、awaiting_review、终态与运行中 Task 不自动绑定", () => {
 		const statuses = [
 			"draft",
-			"awaiting_approval",
 			"running",
 			"awaiting_review",
 			"completed",

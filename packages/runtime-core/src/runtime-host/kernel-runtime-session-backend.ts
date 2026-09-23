@@ -14,18 +14,17 @@ import { createRuntimeId } from "../id-generator.js";
 import type { AgentSession } from "../kernel/agent-session.js";
 import type {
 	AgentSessionState,
-	ArtifactDescriptorRecordedEvent,
 	ConversationRepository,
 	EventSink,
 	KernelEvent,
 	QueuedSessionInput,
 	RuntimeInputRequestPreparer,
+	RuntimeSessionFactEvent,
 	SessionInput,
 	SessionInputQueueMode,
 	SessionInputRequest,
 	SessionSendResult,
 	StoredSessionEvent,
-	TaskLifecycleRecordedEvent,
 	TurnResult,
 } from "../kernel/contracts.js";
 import { sessionBusyError, sessionClosedError } from "../kernel/errors.js";
@@ -336,9 +335,7 @@ export class RuntimeSession {
 	}
 
 	/** 追加宿主显式提交的 Task/Artifact 事实（创建/计划/审批/Review/descriptor）。 */
-	async recordTaskFacts(
-		facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[],
-	): Promise<void> {
+	async recordTaskFacts(facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
 		this.assertOpen();
 		if (this.historyMutation) throw sessionBusyError();
 		await this.session.recordTaskFacts(facts);

@@ -1,4 +1,7 @@
 {
+	"taskApproval": {
+		"title": "Allow {{tool}} to run?"
+	},
 	"tray": {
 		"showWindow": "Show Window",
 		"hideWindow": "Hide Window",

@@ -30,7 +30,16 @@ export {
 	readRuntimeTaskSnapshot,
 	readToolRiskDescriptor,
 } from "./read-contracts.js";
+export type { ToolRiskEvaluation } from "./risk-policy.js";
+export {
+	defaultApprovalRequirement,
+	evaluateToolRisk,
+	raiseToolRiskLevel,
+	UNKNOWN_TOOL_RISK_DESCRIPTOR,
+} from "./risk-policy.js";
 export type {
+	ApprovalDecisionFactEvent,
+	ApprovalRequestedFactEvent,
 	ArtifactDescriptorFactEvent,
 	RuntimeSessionTaskState,
 	RuntimeTaskFactEvent,

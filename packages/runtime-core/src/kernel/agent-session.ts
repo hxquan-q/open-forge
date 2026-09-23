@@ -1,10 +1,10 @@
 import type {
 	AgentSessionState,
-	ArtifactDescriptorRecordedEvent,
 	QueuedSessionInput,
 	QueuedSessionInputResult,
 	QueueSessionInputIfRunningResult,
 	RuntimeInputRequestPreparer,
+	RuntimeSessionFactEvent,
 	SessionContextRecord,
 	SessionInput,
 	SessionInputQueueMode,
@@ -13,7 +13,6 @@ import type {
 	SessionSendOptions,
 	SessionSendResult,
 	SessionStreamingBehavior,
-	TaskLifecycleRecordedEvent,
 	TurnResult,
 	TurnSessionIdentity,
 } from "./contracts.js";
@@ -347,7 +346,7 @@ export class AgentSession {
 	}
 
 	/** 追加宿主显式提交的 Task/Artifact 事实；与 `recordContext` 同一串行与 idle 约束。 */
-	recordTaskFacts(facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[]): Promise<void> {
+	recordTaskFacts(facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			return Promise.reject(sessionClosedError());
 		}

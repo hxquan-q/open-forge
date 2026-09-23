@@ -679,6 +679,71 @@ const ArtifactDescriptorRecordedEventSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const ToolRiskDescriptorSchema = Type.Object(
+	{
+		defaultLevel: Type.Union([
+			Type.Literal("L0"),
+			Type.Literal("L1"),
+			Type.Literal("L2"),
+			Type.Literal("L3"),
+			Type.Literal("L4"),
+		]),
+		executionClass: Type.Union([Type.Literal("parallel-safe"), Type.Literal("exclusive")]),
+		irreversible: Type.Boolean(),
+		externalSideEffect: Type.Boolean(),
+		requiredScopes: Type.Array(Type.String()),
+	},
+	{ additionalProperties: false },
+);
+
+const ApprovalRequestSchema = Type.Object(
+	{
+		schemaVersion: Type.Literal(1),
+		approvalId: Type.String(),
+		taskId: Type.String(),
+		sessionId: Type.String(),
+		turnId: Type.String(),
+		toolName: Type.String(),
+		risk: ToolRiskDescriptorSchema,
+		summary: Type.String(),
+		inputPreview: Type.Unknown(),
+		affectedResources: Type.Array(Type.String()),
+		createdAt: Type.Number(),
+		expiresAt: Type.Optional(Type.Number()),
+	},
+	{ additionalProperties: false },
+);
+
+const ApprovalDecisionSchema = Type.Union([
+	Type.Literal("approve"),
+	Type.Literal("approve_once"),
+	Type.Literal("deny"),
+	Type.Literal("edit"),
+]);
+
+const ApprovalRequestedRecordedEventSchema = Type.Object(
+	{
+		type: Type.Literal("approval.requested.recorded"),
+		sessionId: Type.String(),
+		turnId: Type.Optional(Type.String()),
+		request: ApprovalRequestSchema,
+		timestamp: Type.Number(),
+	},
+	{ additionalProperties: false },
+);
+
+const ApprovalDecisionRecordedEventSchema = Type.Object(
+	{
+		type: Type.Literal("approval.decision.recorded"),
+		sessionId: Type.String(),
+		turnId: Type.Optional(Type.String()),
+		approvalId: Type.String(),
+		decision: ApprovalDecisionSchema,
+		timestamp: Type.Number(),
+	},
+	{ additionalProperties: false },
+);
+
 export const StoredSessionEventSchema = Type.Union([
 	TurnStartedEventSchema,
 	TurnContinuedEventSchema,
@@ -692,6 +757,8 @@ export const StoredSessionEventSchema = Type.Union([
 	TurnTransferredEventSchema,
 	TaskLifecycleRecordedEventSchema,
 	ArtifactDescriptorRecordedEventSchema,
+	ApprovalRequestedRecordedEventSchema,
+	ApprovalDecisionRecordedEventSchema,
 ]);
 
 const ReadStoredSessionEventSchema = Type.Union([
@@ -707,6 +774,8 @@ const ReadStoredSessionEventSchema = Type.Union([
 	TurnTransferredEventSchema,
 	TaskLifecycleRecordedEventSchema,
 	ArtifactDescriptorRecordedEventSchema,
+	ApprovalRequestedRecordedEventSchema,
+	ApprovalDecisionRecordedEventSchema,
 ]);
 
 function storedSessionEventSchemaForType(type: string): TSchema | undefined {
@@ -735,6 +804,10 @@ function storedSessionEventSchemaForType(type: string): TSchema | undefined {
 			return TaskLifecycleRecordedEventSchema;
 		case "artifact.descriptor.recorded":
 			return ArtifactDescriptorRecordedEventSchema;
+		case "approval.requested.recorded":
+			return ApprovalRequestedRecordedEventSchema;
+		case "approval.decision.recorded":
+			return ApprovalDecisionRecordedEventSchema;
 		default:
 			return undefined;
 	}

@@ -1,5 +1,9 @@
 import { stat } from "node:fs/promises";
-import type { ArtifactDescriptorRecordedEvent, TaskLifecycleRecordedEvent } from "@vetta/runtime-core/kernel";
+import type {
+	ArtifactDescriptorRecordedEvent,
+	RuntimeSessionFactEvent,
+	TaskLifecycleRecordedEvent,
+} from "@vetta/runtime-core/kernel";
 import {
 	ARTIFACT_AVAILABILITY,
 	type ArtifactAvailability,
@@ -68,7 +72,7 @@ class DesktopTaskActivityService {
 		} catch (error) {
 			// 会话尚未在宿主打开（或已关闭）时投影为空；打开后会经事件重建。
 			log.warn(`task state unavailable for ${sessionId}: ${errorMessage(error)}`);
-			return { tasks: [], artifacts: [] };
+			return { tasks: [], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() };
 		}
 	}
 
@@ -106,10 +110,7 @@ class DesktopTaskActivityService {
 				case "review":
 					return {
 						ok: true,
-						state: await this.applyIntent(sessionId, findTask(state, command.taskId), {
-							type: "review",
-							decision: command.decision,
-						}),
+						state: await this.reviewTask(sessionId, findTask(state, command.taskId), command.decision, state),
 					};
 				case "attach-artifact":
 					return {
@@ -154,6 +155,43 @@ class DesktopTaskActivityService {
 			sessionId,
 			[created, ...planned.events].map((task) => toFact(sessionId, task)),
 		);
+		return runtime.getTaskState(sessionId);
+	}
+
+	/** Review 三分支同时落 Artifact 终审状态：approved → accepted，rejected → rejected。 */
+	private async reviewTask(
+		sessionId: string,
+		snapshot: RuntimeTaskSnapshot,
+		decision: "approved" | "changes_requested" | "rejected",
+		state: RuntimeSessionTaskState,
+	): Promise<RuntimeSessionTaskState> {
+		const runtime = getSharedRuntime();
+		const now = Date.now();
+		const { events } = transitionRuntimeTask(snapshot, {
+			eventId: `${snapshot.identity.taskId}:review:${now}`,
+			at: now,
+			intent: { type: "review", decision },
+		});
+		const facts: RuntimeSessionFactEvent[] = events.map((task) => toFact(sessionId, task));
+		if (decision === "approved" || decision === "rejected") {
+			const artifactStatus = decision === "approved" ? "accepted" : "rejected";
+			for (const artifact of state.artifacts) {
+				if (!snapshot.artifactIds.includes(artifact.artifactId)) continue;
+				if (artifact.status === artifactStatus) continue;
+				facts.push({
+					type: "artifact.descriptor.recorded",
+					sessionId,
+					artifact: {
+						...artifact,
+						status: artifactStatus,
+						version: artifact.version + 1,
+						updatedAt: now,
+					},
+					timestamp: now,
+				});
+			}
+		}
+		await runtime.recordTaskFacts(sessionId, facts);
 		return runtime.getTaskState(sessionId);
 	}
 

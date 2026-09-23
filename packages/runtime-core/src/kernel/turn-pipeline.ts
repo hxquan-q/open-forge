@@ -9,7 +9,6 @@ import type { TaskEventBatch } from "../task/turn-binding.js";
 import { planTaskEventsForTurnOutcome, planTaskEventsForTurnStart } from "../task/turn-binding.js";
 import { ContextCompactionCommitter } from "./context-compaction-committer.js";
 import type {
-	ArtifactDescriptorRecordedEvent,
 	Clock,
 	ContextCompactionCommitResult,
 	ContextCompactionRecord,
@@ -26,6 +25,7 @@ import type {
 	MessageAppendedEvent,
 	ModelCallFrame,
 	RuntimeInputRequestPreparer,
+	RuntimeSessionFactEvent,
 	RuntimeSnapshot,
 	RuntimeSnapshotAcquireContext,
 	RuntimeSnapshotLease,
@@ -36,7 +36,6 @@ import type {
 	SessionInputRequest,
 	StoredConversation,
 	StoredSessionEvent,
-	TaskLifecycleRecordedEvent,
 	TurnEngineContextCheckpointRequest,
 	TurnEngineContextCheckpointResult,
 	TurnEnginePort,
@@ -187,7 +186,7 @@ export class TurnPipeline {
 	 */
 	async recordTaskFacts(
 		sessionIdentity: string | TurnSessionIdentity,
-		facts: readonly (TaskLifecycleRecordedEvent | ArtifactDescriptorRecordedEvent)[],
+		facts: readonly RuntimeSessionFactEvent[],
 	): Promise<void> {
 		if (facts.length === 0) return;
 		const identity = normalizeSessionIdentity(sessionIdentity);
