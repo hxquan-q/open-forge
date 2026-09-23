@@ -54,7 +54,8 @@
 			"progress": "{{done}} of {{total}} done",
 			"statusDone": "Done",
 			"statusInProgress": "In progress",
-			"statusPending": "Pending"
+			"statusPending": "Pending",
+			"unattributed": "Unattributed"
 		},
 		"task": {
 			"empty": "Turn this conversation into a task to pause, review, and keep its deliverables",
@@ -1019,6 +1020,17 @@
 	},
 	"session": {
 		"emptyMessageLabel": "(image)",
+		"axes": {
+			"badge": "This session: {{interpretation}} · {{profile}} tools",
+			"interpretation": {
+				"work": "office interpretation",
+				"coding": "coding interpretation"
+			},
+			"profile": {
+				"work": "office",
+				"coding": "coding"
+			}
+		},
 		"largeHistory": {
 			"title": "Large session",
 			"message": "This session is about {{sizeMb}} MB. You can load only the most recent turns to open faster, and load the full history later if needed.",
@@ -1120,7 +1132,8 @@
 		"error": "Error",
 		"meta": "meta",
 		"metaLabel": "Local metadata, UI only, not sent to the model",
-		"audioPreview": "MCP audio result"
+		"audioPreview": "MCP audio result",
+		"openInCanvas": "Open in Canvas"
 	},
 	"toolFormat": {
 		"unknown": "Unknown"
@@ -1186,9 +1199,9 @@
 	},
 	"workspace": {
 		"mode": {
-			"coding": "Coding",
-			"switch": "Switch workspace mode",
-			"work": "Work"
+			"coding": "Code",
+			"switch": "Switch workspace layout",
+			"work": "Office"
 		},
 		"work": {
 			"artifacts": {

@@ -54,7 +54,8 @@
 			"progress": "已完成 {{done}} / {{total}}",
 			"statusDone": "已完成",
 			"statusInProgress": "进行中",
-			"statusPending": "待办"
+			"statusPending": "待办",
+			"unattributed": "未归属"
 		},
 		"task": {
 			"empty": "把当前会话升级为任务后，可以暂停、审阅和留存产出物",
@@ -1019,6 +1020,17 @@
 	},
 	"session": {
 		"emptyMessageLabel": "(图片)",
+		"axes": {
+			"badge": "本会话：{{interpretation}} · {{profile}} 工具集",
+			"interpretation": {
+				"work": "办公解释",
+				"coding": "编程解释"
+			},
+			"profile": {
+				"work": "办公",
+				"coding": "编程"
+			}
+		},
 		"largeHistory": {
 			"title": "会话体积较大",
 			"message": "该会话约 {{sizeMb}} MB。可以只加载最近几轮消息以更快打开，之后仍可从菜单加载完整历史。",
@@ -1120,7 +1132,8 @@
 		"error": "Error",
 		"meta": "meta",
 		"metaLabel": "本地元数据，仅 UI 展示，不发送给大模型",
-		"audioPreview": "MCP 音频结果"
+		"audioPreview": "MCP 音频结果",
+		"openInCanvas": "在画布中打开"
 	},
 	"toolFormat": {
 		"unknown": "未知"
@@ -1187,8 +1200,8 @@
 	"workspace": {
 		"mode": {
 			"coding": "编程",
-			"switch": "切换工作区模式",
-			"work": "工作"
+			"switch": "切换工作区布局",
+			"work": "办公"
 		},
 		"work": {
 			"artifacts": {

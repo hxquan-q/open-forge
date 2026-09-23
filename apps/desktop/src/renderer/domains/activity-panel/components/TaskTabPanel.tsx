@@ -6,6 +6,7 @@ import type { RuntimeTaskSnapshot, RuntimeTaskStatus } from "@vetta/runtime-core
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useActivityRuntimeIds, useActivityRuntimeLabels } from "../registry/context";
 import type { TaskPanelModel } from "../hooks/useTaskPanelModel";
 import { useTaskPanelModel } from "../hooks/useTaskPanelModel";
 import { TaskArtifactPreview } from "./TaskArtifactPreview";
@@ -89,6 +90,11 @@ function TaskCard(props: {
 	const { runtimeId, snapshot, statusLabel, actions } = props;
 	const taskId = snapshot.identity.taskId;
 	const status = snapshot.status;
+	// 归属 chip 只在多 Runtime 聚合的工作空间（Team 全景）显示；普通对话仍是单 Runtime。
+	const runtimeIds = useActivityRuntimeIds();
+	const runtimeLabels = useActivityRuntimeLabels();
+	const ownerLabel = runtimeLabels[runtimeId];
+	const showOwner = runtimeIds.length > 1 && Boolean(ownerLabel);
 
 	return (
 		<section className="rounded-xl border border-border/50 bg-card/40 px-3.5 pt-3 pb-3">
@@ -97,8 +103,13 @@ function TaskCard(props: {
 					<h3 className="truncate text-[13px] font-medium text-foreground">
 						{snapshot.title ?? t("activityPanel.task.untitled")}
 					</h3>
-					<p className="mt-0.5 text-[11px] text-muted-foreground/60">
-						{t("activityPanel.task.turn", { turn: snapshot.activeTurnId ?? "—" })}
+					<p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+						<span className="truncate">{t("activityPanel.task.turn", { turn: snapshot.activeTurnId ?? "—" })}</span>
+						{showOwner ? (
+							<span className="shrink-0 rounded-full bg-accent/60 px-1.5 py-px text-[10px] text-muted-foreground">
+								{ownerLabel}
+							</span>
+						) : null}
 					</p>
 				</div>
 				<TaskStatusChip status={status} label={statusLabel} />
