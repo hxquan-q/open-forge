@@ -15,6 +15,9 @@
 | Agent 产品性能实践 | [`RESEARCH-0002-agent-product-performance.md`](RESEARCH-0002-agent-product-performance.md) |
 | 桌面端内存足迹优化路线 | [`RESEARCH-0003-desktop-memory-footprint.md`](RESEARCH-0003-desktop-memory-footprint.md) |
 | 工程控制论方法 | `C:\Users\xquan\.agents\skills\engineering-cybernetics-essence\SKILL.md` |
+| Canvas / Browser / Terminal 支持面 | [`RESEARCH-0005`](RESEARCH-0005-canvas-browser-terminal-support.md) |
+| Cursor Agent Workspace 对照与报告表面 | [`RESEARCH-0006`](RESEARCH-0006-cursor-agent-workspace-and-report-surfaces.md) |
+| 多智能体编排协作对照（Cursor/Claude Code/Codex/Pi） | [`RESEARCH-0008`](RESEARCH-0008-multi-agent-orchestration-comparison.md) |
 
 ## Research Note 约束
 
