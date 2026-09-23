@@ -28,7 +28,10 @@ import {
 	type CodingAgentContextRuntimeOptions,
 } from "../../src/compaction/runtime/index.js";
 import { COMPACTION_SUMMARY_PREFIX, COMPACTION_SUMMARY_SUFFIX } from "../../src/model-context/index.js";
-import { CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION } from "../../src/runtime-contracts/context-observability.js";
+import {
+	CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION,
+	CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+} from "../../src/runtime-contracts/context-observability.js";
 import type {
 	CodingAgentCompactionExtensionRuntime,
 	CodingAgentPinnedModelContext,
@@ -1482,6 +1485,167 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		now += 2_001;
 		await runtime.prepare(makeInput(), new AbortController().signal);
 		expect(generateCompaction).toHaveBeenCalledTimes(2);
+	});
+
+	it("warns once the assembled prompt exceeds the context window while compaction is disabled", async () => {
+		// 用户关闭自动压缩后，超过窗口的 prompt 原本会静默放行到 provider 400；
+		// 现在应在观测流中留下可诊断的 budget 信号，且控制流不变（unchanged、不生成摘要）。
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 120, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const generateCompaction = vi.fn(async (): Promise<CompactionResult> => {
+			throw new Error("must not run");
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => ({ ...compactingSettings(), enabled: false }),
+			generateCompaction,
+			observationPublisher: publisher,
+		});
+		const input: ContextPreparationInput = {
+			...preparationInput(document, history, history, []),
+			reason: "model_call",
+		};
+
+		const prepared = await runtime.prepare(input, new AbortController().signal);
+
+		expect(prepared.compaction).toBeUndefined();
+		expect(prepared.messages).toEqual(history);
+		expect(generateCompaction).not.toHaveBeenCalled();
+		expect(records).toContainEqual(
+			expect.objectContaining({
+				token: CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+				payload: expect.objectContaining({
+					trigger: "model_call",
+					suppression: "compaction_disabled",
+					contextWindow: 100,
+				}),
+			}),
+		);
+		const payload = records.find((record) => record.token === CODING_AGENT_CONTEXT_BUDGET_OBSERVATION)?.payload as
+			| { contextTokens: number; overByTokens: number }
+			| undefined;
+		expect(payload?.contextTokens).toBeGreaterThan(100);
+		expect(payload?.overByTokens).toBe(payload!.contextTokens - 100);
+	});
+
+	it("does not emit a budget observation while the prompt fits the window", async () => {
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 50, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => ({ ...compactingSettings(), enabled: false }),
+			generateCompaction: async () => {
+				throw new Error("must not run");
+			},
+			observationPublisher: publisher,
+		});
+
+		await runtime.prepare(
+			{ ...preparationInput(document, history, history, []), reason: "model_call" },
+			new AbortController().signal,
+		);
+
+		expect(records).toEqual([]);
+	});
+
+	it("flags an assistant error while over budget even when the error is not overflow-shaped", async () => {
+		// 上下文已超窗时 assistant 因非溢出原因失败：观测流应指出预算已超，
+		// 以便把「下次调用仍可能 400」与「普通瞬时错误」区分开。
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 120, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction: async () => {
+				throw new Error("must not run");
+			},
+			observationPublisher: publisher,
+		});
+		const failingAssistant: AssistantMessage = {
+			...assistantMessage("network timeout", 0, 4),
+			stopReason: "error",
+			errorMessage: "network timeout",
+		};
+		const input: ContextPreparationInput = {
+			...preparationInput(document, history, history, []),
+			reason: "assistant_error",
+			triggeringAssistantMessage: failingAssistant,
+			recoveryAttempt: 0,
+		};
+
+		const prepared = await runtime.prepare(input, new AbortController().signal);
+
+		expect(prepared.compaction).toBeUndefined();
+		expect(records).toContainEqual(
+			expect.objectContaining({
+				token: CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+				payload: expect.objectContaining({
+					trigger: "assistant_error",
+					suppression: "non_overflow_error",
+					contextWindow: 100,
+				}),
+			}),
+		);
+	});
+
+	it("does not double-report the budget when enabled compaction handles the overage", async () => {
+		// 启用压缩时超窗由 compaction.start/end 事件覆盖，budget 观测不重复发声。
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 120, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction: async (preparation) => ({
+				summary: "summary",
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+			observationPublisher: publisher,
+		});
+
+		const prepared = await runtime.prepare(
+			{ ...preparationInput(document, history, history, []), reason: "model_call" },
+			new AbortController().signal,
+		);
+
+		expect(prepared.compaction).toBeDefined();
+		expect(records.filter((record) => record.token === CODING_AGENT_CONTEXT_BUDGET_OBSERVATION)).toEqual([]);
 	});
 
 	it("starts cleanly on a fresh runtime after the previous one was abandoned mid-attempt", async () => {
