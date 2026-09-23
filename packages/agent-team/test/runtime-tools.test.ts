@@ -97,6 +97,16 @@ describe("team task runtime tools", () => {
 		expect(createTeamCancelTaskTool(port).description).toContain("Other members' tasks are not cancelled");
 	});
 
+	it("requires self-contained objectives in the delegation contract", () => {
+		const port = {} as TeamTaskControlPort;
+		const description = createTeamDelegateTaskTool(port).description;
+
+		// 成员看不到 leader 私有会话，任务书必须自带目标、背景、交付物与约束。
+		expect(description).toContain("self-contained");
+		expect(description).toContain("completion criteria");
+		expect(description).toContain("cite the entryId from team_read_shared_history");
+	});
+
 	it("publishes public Team communication with the current model identity", async () => {
 		const sendMessage = vi.fn().mockResolvedValue({ messageId: "message", deliveryIds: ["delivery"] });
 		const tool = createTeamSendMessageTool({ sendMessage });

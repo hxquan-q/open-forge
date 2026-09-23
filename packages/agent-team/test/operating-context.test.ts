@@ -94,6 +94,23 @@ describe("buildTeamOperatingContext", () => {
 		expect(buildTeamMemberOperatingContext(roster, "leader", "Lead.")).not.toContain("<team_assignment>");
 		expect(buildTeamMemberOperatingContext(roster, "leader", "Lead.", "")).not.toContain("<team_assignment>");
 	});
+
+	it("teaches the leader the parallel dispatch loop and the verification duty in the shared contract", () => {
+		const shared = buildTeamSharedOperatingContext(roster);
+
+		// 编排方法论属于全队共享合同：拆分 → 并行委派 → 统一等待，以及「completed ≠ 已核验」。
+		expect(shared).toContain("delegate them in parallel instead of one by one");
+		expect(shared).toContain("never sees the leader's private conversation");
+		expect(shared).toContain("The leader verifies before reporting");
+		expect(shared).toContain("never claim completion from the admission of a delegation");
+
+		// 两条规则都落在共享前缀内，因此进入 roster 指纹的输入，也随名册分发给每位成员。
+		const member = buildTeamOperatingContext(roster, "builder", "Build.");
+		const boundary = "</agent_team_operating_context>";
+		const sharedPrefix = member.slice(0, member.indexOf(boundary) + boundary.length);
+		expect(sharedPrefix).toContain("The leader plans before dispatching");
+		expect(sharedPrefix).toContain("The leader verifies before reporting");
+	});
 });
 
 describe("teamRosterFingerprint", () => {

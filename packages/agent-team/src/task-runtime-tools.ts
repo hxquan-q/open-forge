@@ -62,7 +62,7 @@ export function createTeamDelegateTaskTool(port: TeamTaskControlPort): RuntimeTo
 		name: "team_delegate_task",
 		label: "team_delegate_task",
 		description:
-			"Assign a bounded objective to an existing persistent Team member. The leader may delegate; ordinary members must not transfer ownership. Returns a durable teamTaskId immediately after admission, without waiting for completion. You can dispatch other members next, then use team_wait_tasks or team_get_task. Never use this to create or address a subagent; subagents are private temporary helpers, not Team members.",
+			"Assign a bounded objective to an existing persistent Team member. The leader may delegate; ordinary members must not transfer ownership. The objective must be self-contained because the assigned member never sees your private conversation: state the goal, the necessary background, the expected deliverable with completion criteria, and the constraints (scope, files, conventions). When the objective builds on shared facts, cite the entryId from team_read_shared_history instead of paraphrasing from memory. Returns a durable teamTaskId immediately after admission, without waiting for completion. Dispatch independent work to several members in parallel, then use team_wait_tasks or team_get_task to observe all of them. Never use this to create or address a subagent; subagents are private temporary helpers, not Team members.",
 		inputSchema: TeamDelegateTaskInputSchema,
 		async execute({ sessionId, turnId, toolCallId, input, signal }) {
 			const task = await port.delegateTask({
