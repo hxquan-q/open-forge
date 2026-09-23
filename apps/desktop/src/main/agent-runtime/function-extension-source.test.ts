@@ -1,6 +1,7 @@
 import {
 	CODING_AGENT_ARTIFACT_FUNCTION,
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
+	CODING_AGENT_BROWSER_TAB_FUNCTION,
 	CODING_AGENT_PLAN_REVIEW_FUNCTION,
 	CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION,
 	type CodingAgentQuestionFunctionRequest,
@@ -130,5 +131,25 @@ describe("Desktop Coding Agent function source", () => {
 				new AbortController().signal,
 			),
 		).resolves.toEqual({ decision: "revise", feedback: "Split step 2" });
+	});
+
+	it("exposes browser_tab on Desktop and delegates to the in-app WebView host", async () => {
+		const invokeBrowserTab = vi.fn(async () => ({
+			ok: false as const,
+			code: "no_browser_session" as const,
+			message: "no page",
+			action: "snapshot" as const,
+		}));
+		const source = createDesktopCodingAgentFunctionSource({ logger: TEST_LOGGER, invokeBrowserTab });
+		expect(source.has(CODING_AGENT_BROWSER_TAB_FUNCTION)).toBe(true);
+		const signal = new AbortController().signal;
+		const request = { sessionId: "session-1", turnId: "turn-1", input: { action: "snapshot" as const } };
+		await expect(source.invoke(CODING_AGENT_BROWSER_TAB_FUNCTION, request, signal)).resolves.toEqual({
+			ok: false,
+			code: "no_browser_session",
+			message: "no page",
+			action: "snapshot",
+		});
+		expect(invokeBrowserTab).toHaveBeenCalledWith(request, signal);
 	});
 });

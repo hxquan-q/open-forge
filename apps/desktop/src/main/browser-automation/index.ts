@@ -9,6 +9,12 @@ import { BrowserRuntimeManager } from "./browser-runtime-manager.js";
 
 export { BrowserAutomationService } from "./browser-automation-service.js";
 export { BrowserAutomationError } from "./contracts.js";
+export {
+	type BrowserTabHostDependencies,
+	createDesktopBrowserTabHostDependencies,
+	invokeDesktopBrowserTab,
+	resetDesktopBrowserTabHostForTests,
+} from "./in-app-browser-tab-host.js";
 export { createBrowserElementRef, validateBrowserElementRef } from "./webview-element-ref.js";
 export {
 	getInAppBrowserSessionController,

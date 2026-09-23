@@ -70,6 +70,7 @@ export {
 	BrowserTabToolErrorSchema,
 	type BrowserTabToolInput,
 	BrowserTabToolInputSchema,
+	browserTabToolError,
 	CODING_AGENT_BROWSER_TAB_EXTENSION_ID,
 	CODING_AGENT_BROWSER_TAB_FUNCTION,
 	type CodingAgentBrowserTabFunctionRequest,

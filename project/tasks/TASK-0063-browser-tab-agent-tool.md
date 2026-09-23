@@ -1,7 +1,7 @@
 ---
 id: TASK-0063
 type: task
-status: ready
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,9 +16,9 @@ write_paths: [packages/coding-agent/src/features, packages/coding-agent/test, ap
 exclusive_paths: []
 depends_on: [TASK-0062]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；host/guest/controller/function-source 接线与测试均已落地）
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-28
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -86,6 +86,22 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - `apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts`（新）：host function 入口 `invokeDesktopBrowserTab`，工作空间解析（显式 workspaceId → 会话 cwd 回退）、`no_browser_session`/`cancelled` 早期返回、九动作分派、snapshot ref→xpath 定位表、`locateRef` revision 校验（stale_reference 无副作用）；`executeJavaScript` 包装把 WebContents 中途销毁映射为 `no_browser_session`；`createDesktopBrowserTabHostDependencies` 动态 import runtime 避免把 Electron 依赖拉进测试进程。
+  - `apps/desktop/src/main/browser-automation/webview-agent-guest.ts`（新）：受控 guest runtime（snapshot/click/fill/press/scroll/wait/inspect），无任意 JS 面；无 id 元素生成可回查的全路径 xpath；press 发 keydown+keyup；fill 支持 contenteditable；wait 实现 `stable`（MutationObserver 静默窗）。
+  - `webview-session-controller.ts`：`InAppBrowserWebContents` 增加 `capturePage(rect?)`/`loadURL?`；新增 `captureScreenshot`（整页先量文档滚动尺寸，视口不指定 rect，复用既有持久化）。
+  - `function-extension-source.ts`：注册 `CODING_AGENT_BROWSER_TAB_FUNCTION`（Desktop 恒常可用，`has` 恒 true，无页面时 host 回 `no_browser_session`），`invokeBrowserTab` 注入点沿用 `invokeArtifact` 模式。
+  - `packages/coding-agent/src/public-api/function-extensions.ts`：补导出 `browserTabToolError`（host 构造合同形状错误需要）。
+  - `browser-use/SKILL.md`：写明 `browser_tab`（应用内 WebView、同页同 cookie）与 `agent-browser` CLI（独立 headless 会话）的适用边界。
 - 实际运行：
+  - `bun scripts/quality/run-vitest.mjs --run src/main/browser-automation/in-app-browser-tab-host.test.ts src/main/browser-automation/webview-agent-guest.test.ts src/main/agent-runtime/function-extension-source.test.ts` → 18/18 通过（host 9：workspace 缺失/无 WebView/snapshot+ref 定位/stale_reference 无副作用+重 snapshot 恢复/inspect 动作名回显/未知 ref/navigate scheme 拒绝与放行/screenshot 持久化/cancelled；guest 4：无 id xpath 区分与回查/id 定位/截断标记/visible 过滤；source 5 含 browser_tab has+invoke 委托）。
+  - coding-agent 侧既有合同测试（`browser-tab-tool-contract`、`browser-tab-session-extension`）覆盖 schema/L3 提升/无宿主不挂载/取消映射。
+  - `check:quick`：本切片文件 Biome 通过；全量门禁失败均为他人 WIP（picker-target、useCanvasTabModel、chat-service、modes-data 过期等），与本次无关。
 - 未运行及原因：
+  - 真实 Electron E2E（点选→发送→snapshot→click→页面变化）：`verify:ui:*` 需用户明确授权，未跑；行为层已由 host+controller+guest 三层测试覆盖。
+  - `bun run check` 全量：仓库存在他人 WIP 的既有 lint/类型问题，未跑；本切片文件已单独过 Biome。
+  - `test:impact`/`test:changed` 全量：桌面包存在既有环境敏感失败基线，改为定向跑本切片测试文件。
 - 剩余风险：
+  - 审批链路：写动作经 `raiseBrowserTabToolRisk` → L3 → 现有 Tool Approval 管线（合同测试覆盖分类与映射）；端到端「拒绝审批无副作用」依赖 Runtime 通用 L3 审批机制，未做跨进程集成测试。
+  - `navigate` 返回的 `pageRevision` 依赖 `did-navigate` 事件异步 bump，返回时可能滞后一拍；对 ref 校验无影响（旧 ref 仍按旧 revision 判 stale）。
+  - `locatorsByWorkspace` 为模块级 Map，仅随 snapshot 覆盖刷新；WebView 重建后旧 locator 由 revision 校验挡下，无内存泄漏风险但表会保留至下次 snapshot。
+  - Release Notes 由 coordinator 统一写（任务约束），未改 `.github/release-notes/v0.5.59.md`。

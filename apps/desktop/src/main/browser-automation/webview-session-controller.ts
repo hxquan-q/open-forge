@@ -33,7 +33,8 @@ export interface InAppBrowserWebContents {
 	getURL(): string;
 	getTitle(): string;
 	executeJavaScript(code: string): Promise<unknown>;
-	capturePage(): Promise<InAppBrowserNativeImage>;
+	capturePage(rect?: { x: number; y: number; width: number; height: number }): Promise<InAppBrowserNativeImage>;
+	loadURL?(url: string): Promise<void>;
 }
 
 export type InAppBrowserEventSink = (envelope: DesktopBrowserTabEventEnvelope) => void;
@@ -201,6 +202,54 @@ export class InAppBrowserSessionController {
 			};
 		} catch {
 			return { ok: false, code: "crop_failed", message: "could not capture element" };
+		}
+	}
+
+	/**
+	 * `browser_tab.screenshot`：整页或视口截图（与元素裁剪不同路径）。
+	 * fullPage 先量文档滚动尺寸再整段 capturePage，视口截图不指定 rect。
+	 */
+	async captureScreenshot(
+		workspaceId: string,
+		fullPage: boolean,
+	): Promise<
+		| { ok: true; attachmentId: string; mimeType: string; width?: number; height?: number; path: string }
+		| { ok: false; code: string; message: string }
+	> {
+		const session = this.sessions.get(workspaceId);
+		const contents = session?.webContents;
+		if (!session || !contents || contents.isDestroyed()) {
+			return { ok: false, code: "no_browser_session", message: "no in-app browser page" };
+		}
+		try {
+			let rect: { x: number; y: number; width: number; height: number } | undefined;
+			if (fullPage) {
+				const measured = (await contents.executeJavaScript(
+					"({w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight})",
+				)) as { w?: number; h?: number } | undefined;
+				if (measured?.w && measured.h) rect = { x: 0, y: 0, width: measured.w, height: measured.h };
+			}
+			const image = await contents.capturePage(rect);
+			const png = image.toPNG();
+			const pngBytes = new Uint8Array(png.byteLength);
+			pngBytes.set(png);
+			const size = image.getSize();
+			const attachmentId = `browser-shot-${Date.now().toString(36)}`;
+			const persisted = await this.persistScreenshot(`browser-${workspaceId}`, [
+				{ id: attachmentId, mimeType: "image/png", source: { kind: "bytes", data: pngBytes.buffer } },
+			]);
+			const path = persisted[0]?.path;
+			if (!path) return { ok: false, code: "capture_failed", message: "could not persist screenshot" };
+			return {
+				ok: true,
+				attachmentId,
+				mimeType: BROWSER_SCREENSHOT_FORMAT,
+				width: persisted[0]?.width ?? size.width,
+				height: persisted[0]?.height ?? size.height,
+				path,
+			};
+		} catch {
+			return { ok: false, code: "capture_failed", message: "could not capture page" };
 		}
 	}
 
