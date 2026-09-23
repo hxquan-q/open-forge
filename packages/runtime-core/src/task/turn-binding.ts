@@ -16,6 +16,8 @@ export interface TaskEventBatch {
 
 export interface TaskTurnBindingInput {
 	readonly turnId: string;
+	/** Snapshot/Lease generation acquired for this Turn by the Kernel. */
+	readonly generation: string;
 	readonly at: number;
 }
 
@@ -38,7 +40,11 @@ export function planTaskEventsForTurnStart(
 		const { events } = transitionRuntimeTask(snapshot, {
 			eventId: `${input.turnId}:task:${snapshot.identity.taskId}:start`,
 			at: input.at,
-			intent: { type: snapshot.status === "planning" ? "start" : "resume", turnId: input.turnId },
+			intent: {
+				type: snapshot.status === "planning" ? "start" : "resume",
+				turnId: input.turnId,
+				generation: input.generation,
+			},
 		});
 		batches.push({ taskId: snapshot.identity.taskId, events });
 	}

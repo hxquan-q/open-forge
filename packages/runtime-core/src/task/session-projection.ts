@@ -106,6 +106,9 @@ export function projectRuntimeSessionTaskState(events: readonly unknown[]): Runt
 		} else if (fact.type === "artifact.descriptor.recorded") {
 			const descriptor = readArtifactDescriptor(fact.artifact);
 			if (!descriptor) continue;
+			// 版本单调：乱序/迟到的低版本事实不得覆盖已投影的高版本 descriptor。
+			const existing = artifactsById.get(descriptor.artifactId);
+			if (existing !== undefined && existing.version >= descriptor.version) continue;
 			artifactsById.set(descriptor.artifactId, descriptor);
 		} else if (fact.type === "approval.requested.recorded") {
 			const request = readApprovalRequest(fact.request);

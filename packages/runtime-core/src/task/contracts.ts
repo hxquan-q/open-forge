@@ -11,7 +11,8 @@
  * - File content is the Artifact truth source; the descriptor is a
  *   rebuildable projection.
  * - Approval is Runtime state and survives process/UI restarts.
- * - `generation` pins an already-acquired Snapshot/Lease identity.
+ * - Each `task.turn_bound` pins the Snapshot/Lease `generation` acquired for
+ *   that Turn; Task identity itself never fixes a single generation.
  */
 
 export type RuntimeTaskStatus =
@@ -33,8 +34,6 @@ export const RUNTIME_TASK_TERMINAL_STATUSES = ["completed", "failed", "cancelled
 export interface RuntimeTaskIdentity {
 	readonly taskId: string;
 	readonly rootSessionId: string;
-	/** Immutable Snapshot/Lease generation captured when the Task was created. */
-	readonly generation: string;
 }
 
 export interface RuntimeTaskSnapshot {
@@ -46,6 +45,8 @@ export interface RuntimeTaskSnapshot {
 	readonly updatedAt: number;
 	/** Turn of `identity.rootSessionId` the current activity is bound to. */
 	readonly activeTurnId?: string;
+	/** Snapshot/Lease generation acquired for `activeTurnId`; set by `task.turn_bound`. */
+	readonly activeGeneration?: string;
 	readonly artifactIds: readonly string[];
 	readonly pendingApprovalIds: readonly string[];
 }
@@ -84,6 +85,8 @@ export interface RuntimeTaskStatusChangedEvent extends RuntimeTaskEventBase {
 export interface RuntimeTaskTurnBoundEvent extends RuntimeTaskEventBase {
 	readonly type: "task.turn_bound";
 	readonly turnId: string;
+	/** Snapshot/Lease generation acquired for this Turn, recorded per binding. */
+	readonly generation: string;
 }
 
 export interface RuntimeTaskArtifactAttachedEvent extends RuntimeTaskEventBase {
@@ -102,14 +105,18 @@ export interface RuntimeTaskApprovalResolvedEvent extends RuntimeTaskEventBase {
 	readonly decision: ApprovalDecision;
 }
 
-export type ArtifactKind =
-	| "document"
-	| "dataset"
-	| "analysis"
-	| "code-change"
-	| "execution-result"
-	| "research-evidence"
-	| "bundle";
+/** Canonical Artifact kind list; the type is derived so whitelists cannot drift. */
+export const ARTIFACT_KINDS = [
+	"document",
+	"dataset",
+	"analysis",
+	"code-change",
+	"execution-result",
+	"research-evidence",
+	"bundle",
+] as const;
+
+export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
 export type ArtifactStatus = "draft" | "generated" | "modified" | "validated" | "accepted" | "rejected";
 

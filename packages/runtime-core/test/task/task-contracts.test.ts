@@ -77,7 +77,7 @@ describe("task state machine", () => {
 		const completed = runTaskScenario(TASK_SCENARIOS[0]!).snapshot;
 		for (const intent of [
 			{ type: "plan" },
-			{ type: "start", turnId: "t2" },
+			{ type: "start", turnId: "t2", generation: "g2" },
 			{ type: "cancel" },
 			{ type: "fail" },
 		] as const) {
@@ -98,18 +98,32 @@ describe("task state machine", () => {
 			steps: [{ intent: { type: "plan" } }],
 			expectedStatus: "planning",
 		}).snapshot;
-		expect(() => transitionRuntimeTask(planning, step({ type: "start", turnId: "" }))).toThrowError(
+		expect(() => transitionRuntimeTask(planning, step({ type: "start", turnId: "", generation: "" }))).toThrowError(
 			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.MISSING_TURN_BINDING }),
 		);
-		const running = transitionRuntimeTask(planning, step({ type: "start", turnId: TASK_FIXTURE_IDS.turn }));
+		// generation 是每次绑定的必备输入：start 不能只给 turnId 不给已获取的 Snapshot generation
+		expect(() =>
+			transitionRuntimeTask(planning, step({ type: "start", turnId: TASK_FIXTURE_IDS.turn, generation: "" })),
+		).toThrowError(expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.MISSING_TURN_BINDING }));
+		const running = transitionRuntimeTask(
+			planning,
+			step({ type: "start", turnId: TASK_FIXTURE_IDS.turn, generation: TASK_FIXTURE_IDS.generation }),
+		);
 		expect(running.snapshot.activeTurnId).toBe(TASK_FIXTURE_IDS.turn);
+		expect(running.snapshot.activeGeneration).toBe(TASK_FIXTURE_IDS.generation);
 	});
 
-	it("keeps identity immutable across transitions", () => {
+	it("keeps identity immutable across transitions; generation lives on turn_bound", () => {
 		const identity = taskIdentityFixture();
-		const { snapshot } = runTaskScenario({ ...TASK_SCENARIOS[0]!, identity });
+		const { snapshot, events } = runTaskScenario({ ...TASK_SCENARIOS[0]!, identity });
 		expect(snapshot.identity).toEqual(identity);
-		expect(snapshot.identity.generation).toBe(TASK_FIXTURE_IDS.generation);
+		// Task 身份只固定 taskId/rootSessionId；generation 按 task.turn_bound 逐次记录
+		expect(snapshot.identity).not.toHaveProperty("generation");
+		const bound = events.filter((e) => e.type === "task.turn_bound");
+		expect(bound).toHaveLength(1);
+		if (bound[0]?.type !== "task.turn_bound") throw new Error("unreachable");
+		expect(bound[0].generation).toBe(TASK_FIXTURE_IDS.generation);
+		expect(snapshot.activeGeneration).toBe(TASK_FIXTURE_IDS.generation);
 	});
 
 	it("tracks pending approvals through request and resolution", () => {
@@ -198,10 +212,12 @@ describe("task restart recovery", () => {
 				approvalId: TASK_FIXTURE_IDS.approval,
 				decision: "approve",
 				turnId: TASK_FIXTURE_IDS.turn,
+				generation: TASK_FIXTURE_IDS.generation,
 			}),
 		);
 		expect(resolved.snapshot.status).toBe("running");
 		expect(resolved.snapshot.activeTurnId).toBe(TASK_FIXTURE_IDS.turn);
+		expect(resolved.snapshot.activeGeneration).toBe(TASK_FIXTURE_IDS.generation);
 	});
 
 	it("rejects corrupt or foreign event logs with a stable error", () => {
@@ -215,6 +231,104 @@ describe("task restart recovery", () => {
 		);
 		const dupCreated = [...events, events[0]!];
 		expect(() => rebuildRuntimeTaskSnapshot(dupCreated)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+	});
+
+	it("fails closed on status_changed.from mismatch — never silently adopts `to`", () => {
+		const { events } = runTaskScenario(TASK_SCENARIOS[0]!);
+		// 伪造一条 from 与当前快照不符的 status_changed（planning 实为 draft→planning 后的合法 from，
+		// 但这里紧跟 created，当前状态是 draft，from:"planning" 与快照不符）。
+		const corrupted = [
+			events[0]!,
+			{
+				schemaVersion: 1 as const,
+				taskId: TASK_FIXTURE_IDS.task,
+				eventId: "evt-bad-from",
+				at: 1_500,
+				type: "task.status_changed" as const,
+				from: "planning" as const,
+				to: "running" as const,
+			},
+		];
+		expect(() => rebuildRuntimeTaskSnapshot(corrupted)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+	});
+
+	it("fails closed on transitions the state machine cannot reach", () => {
+		const { events } = runTaskScenario(TASK_SCENARIOS[0]!);
+		const corrupted = [
+			events[0]!,
+			{
+				schemaVersion: 1 as const,
+				taskId: TASK_FIXTURE_IDS.task,
+				eventId: "evt-unreachable",
+				at: 1_500,
+				type: "task.status_changed" as const,
+				from: "draft" as const,
+				to: "completed" as const, // draft 不可直达 completed
+			},
+		];
+		expect(() => rebuildRuntimeTaskSnapshot(corrupted)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+	});
+
+	it("fails closed on duplicate eventIds and out-of-order timestamps", () => {
+		const { events } = runTaskScenario(TASK_SCENARIOS[0]!);
+		const dupId = [events[0]!, events[1]!, { ...events[1]!, at: events[1]!.at + 1 }];
+		expect(() => rebuildRuntimeTaskSnapshot(dupId)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+		const reordered = [events[0]!, events[2]!, { ...events[1]!, eventId: "evt-late" }];
+		expect(() => rebuildRuntimeTaskSnapshot(reordered)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+	});
+
+	it("fails closed on duplicate artifacts, approvals and non-pending resolutions", () => {
+		const attached = runTaskScenario({
+			name: "x",
+			description: "",
+			steps: [
+				{ intent: { type: "plan" } },
+				{ intent: { type: "attach_artifact", artifactId: TASK_FIXTURE_IDS.artifact } },
+			],
+			expectedStatus: "planning",
+		});
+		const dupArtifact = [...attached.events, attached.events.at(-1)!];
+		expect(() => rebuildRuntimeTaskSnapshot(dupArtifact)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+
+		const pending = runTaskScenario({
+			name: "x",
+			description: "",
+			steps: [
+				{ intent: { type: "plan" } },
+				{ intent: { type: "request_approval", approvalId: TASK_FIXTURE_IDS.approval } },
+			],
+			expectedStatus: "awaiting_approval",
+		});
+		const requested = pending.events.find((e) => e.type === "task.approval_requested")!;
+		const dupApproval = [...pending.events, { ...requested, eventId: "evt-dup", at: 1_900 }];
+		expect(() => rebuildRuntimeTaskSnapshot(dupApproval)).toThrowError(
+			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
+		);
+		const strayResolve = [
+			...pending.events,
+			{
+				schemaVersion: 1 as const,
+				taskId: TASK_FIXTURE_IDS.task,
+				eventId: "evt-stray",
+				at: 1_901,
+				type: "task.approval_resolved" as const,
+				approvalId: "approval-never-requested",
+				decision: "approve" as const,
+			},
+		];
+		expect(() => rebuildRuntimeTaskSnapshot(strayResolve)).toThrowError(
 			expect.objectContaining({ code: RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID }),
 		);
 	});
@@ -294,6 +408,24 @@ describe("boundary narrowing", () => {
 		expect(readRuntimeTaskSnapshot(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
 		const risk = toolRiskDescriptorFixture("L4");
 		expect(readToolRiskDescriptor(JSON.parse(JSON.stringify(risk)))).toEqual(risk);
+	});
+
+	it("rejects unknown or missing schemaVersion — never normalizes future versions to v1", () => {
+		const snapshot = taskSnapshotFixture();
+		expect(readRuntimeTaskSnapshot({ ...snapshot, schemaVersion: 99 })).toBeUndefined();
+		expect(readRuntimeTaskSnapshot({ ...snapshot, schemaVersion: undefined })).toBeUndefined();
+		expect(readRuntimeTaskSnapshot({ ...snapshot, schemaVersion: "1" })).toBeUndefined();
+
+		const event = runTaskScenario(TASK_SCENARIOS[0]!).events[1]!;
+		expect(readRuntimeTaskEvent({ ...event, schemaVersion: 99 })).toBeUndefined();
+		expect(readRuntimeTaskEvent({ ...event, schemaVersion: undefined })).toBeUndefined();
+
+		const artifact = artifactDescriptorFixture();
+		expect(readArtifactDescriptor({ ...artifact, schemaVersion: 99 })).toBeUndefined();
+		const grant = permissionGrantFixture();
+		expect(readPermissionGrant({ ...grant, schemaVersion: 99 })).toBeUndefined();
+		const approval = approvalRequestFixture();
+		expect(readApprovalRequest({ ...approval, schemaVersion: 99 })).toBeUndefined();
 	});
 
 	it("rejects malformed records instead of throwing", () => {

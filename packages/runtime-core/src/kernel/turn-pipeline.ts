@@ -190,6 +190,14 @@ export class TurnPipeline {
 	): Promise<void> {
 		if (facts.length === 0) return;
 		const identity = normalizeSessionIdentity(sessionIdentity);
+		// 边界不变量：事实只能落进它声明归属的会话日志，串会话的记录直接拒绝。
+		for (const fact of facts) {
+			if (fact.sessionId !== identity.sessionId) {
+				throw turnProtocolError(
+					`task fact belongs to session "${fact.sessionId}", cannot record on "${identity.sessionId}"`,
+				);
+			}
+		}
 		const conversation = await this.repository.load(identity.sessionId);
 		await this.repository.append(identity.sessionId, conversation.version, facts);
 		for (const event of facts) await this.publishSafely(event);
@@ -375,6 +383,7 @@ export class TurnPipeline {
 					state.sessionId,
 					planTaskEventsForTurnStart(projectRuntimeSessionTaskState(conversation.events).tasks, {
 						turnId,
+						generation: snapshot.id,
 						at: startedAt,
 					}),
 				),

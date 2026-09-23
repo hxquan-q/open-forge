@@ -202,7 +202,6 @@ async function createHarness(turnEngine: TurnEnginePort = new CompletingTurnEngi
 const identity: RuntimeTaskIdentity = {
 	taskId: "task-1",
 	rootSessionId: "session-1",
-	generation: "generation-1",
 };
 
 /** 宿主提交「创建 Task 并进入 planning」的事实，等价于用户升级会话为任务。 */
@@ -321,7 +320,7 @@ describe("Task 事实与 Turn 生命周期的内核集成", () => {
 		const started = transitionRuntimeTask(planned.snapshot, {
 			eventId: "task-1:start",
 			at: 102,
-			intent: { type: "start", turnId: "turn-0" },
+			intent: { type: "start", turnId: "turn-0", generation: "gen-0" },
 		});
 		const paused = transitionRuntimeTask(started.snapshot, {
 			eventId: "task-1:pause",
@@ -341,5 +340,30 @@ describe("Task 事实与 Turn 生命周期的内核集成", () => {
 		const finalTasks = taskSnapshots(await repository.load(identity.rootSessionId));
 		expect(finalTasks[0].status).toBe("awaiting_review");
 		expect(finalTasks[0].activeTurnId).toBe("turn-1");
+	});
+
+	it("recordTaskFacts 拒绝把声明属于其他会话的事实写进本会话日志", async () => {
+		const { repository, session } = await createHarness();
+		const snapshot = createRuntimeTaskSnapshot({ identity, at: 100 });
+		const created: RuntimeTaskEvent = {
+			schemaVersion: 1,
+			taskId: identity.taskId,
+			eventId: "task-1:created",
+			at: 100,
+			type: "task.created",
+			snapshot,
+		};
+		const foreignFact = {
+			type: "task.lifecycle.recorded" as const,
+			sessionId: "session-foreign", // 声明归属与目标会话不一致：串会话写入必须拒绝
+			task: created,
+			timestamp: created.at,
+		};
+		await expect(session.recordTaskFacts([foreignFact])).rejects.toThrowError(
+			expect.objectContaining({ code: "turn_protocol" }),
+		);
+		// 拒绝后日志不含该事实，投影为空
+		const conversation = await repository.load(identity.rootSessionId);
+		expect(taskSnapshots(conversation)).toHaveLength(0);
 	});
 });

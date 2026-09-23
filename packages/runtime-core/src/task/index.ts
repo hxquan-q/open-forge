@@ -21,7 +21,7 @@ export type {
 	ToolRiskDescriptor,
 	ToolRiskLevel,
 } from "./contracts.js";
-export { RUNTIME_TASK_TERMINAL_STATUSES } from "./contracts.js";
+export { ARTIFACT_KINDS, RUNTIME_TASK_TERMINAL_STATUSES } from "./contracts.js";
 export {
 	readApprovalRequest,
 	readArtifactDescriptor,

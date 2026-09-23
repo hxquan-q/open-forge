@@ -10,7 +10,6 @@ import {
 const identity: RuntimeTaskIdentity = {
 	taskId: "task-1",
 	rootSessionId: "session-1",
-	generation: "generation-1",
 };
 
 function snapshotAt(status: RuntimeTaskSnapshot["status"], activeTurnId?: string): RuntimeTaskSnapshot {
@@ -20,7 +19,11 @@ function snapshotAt(status: RuntimeTaskSnapshot["status"], activeTurnId?: string
 
 describe("planTaskEventsForTurnStart", () => {
 	it("把 planning 状态的 Task 绑定到新 Turn（start）", () => {
-		const batches = planTaskEventsForTurnStart([snapshotAt("planning")], { turnId: "turn-9", at: 200 });
+		const batches = planTaskEventsForTurnStart([snapshotAt("planning")], {
+			turnId: "turn-9",
+			generation: "gen-9",
+			at: 200,
+		});
 		expect(batches).toHaveLength(1);
 		const types = batches[0].events.map((event) => event.type);
 		expect(types).toEqual(["task.status_changed", "task.turn_bound"]);
@@ -30,15 +33,21 @@ describe("planTaskEventsForTurnStart", () => {
 	});
 
 	it("把 paused 状态的 Task 恢复到新 Turn（resume）", () => {
-		const batches = planTaskEventsForTurnStart([snapshotAt("paused", "turn-1")], { turnId: "turn-9", at: 200 });
+		const batches = planTaskEventsForTurnStart([snapshotAt("paused", "turn-1")], {
+			turnId: "turn-9",
+			generation: "gen-9",
+			at: 200,
+		});
 		expect(batches).toHaveLength(1);
 		if (batches[0].events[1].type !== "task.turn_bound") throw new Error("unreachable");
 		expect(batches[0].events[1].turnId).toBe("turn-9");
+		expect(batches[0].events[1].generation).toBe("gen-9");
 	});
 
 	it("awaiting_approval 的 Task 在新 Turn 自动重绑（重启恢复路径）", () => {
 		const batches = planTaskEventsForTurnStart([snapshotAt("awaiting_approval", "turn-0")], {
 			turnId: "turn-9",
+			generation: "gen-9",
 			at: 200,
 		});
 		expect(batches).toHaveLength(1);
@@ -58,7 +67,13 @@ describe("planTaskEventsForTurnStart", () => {
 			"changes_requested",
 		] as const;
 		for (const status of statuses) {
-			expect(planTaskEventsForTurnStart([snapshotAt(status, "turn-1")], { turnId: "turn-9", at: 200 })).toEqual([]);
+			expect(
+				planTaskEventsForTurnStart([snapshotAt(status, "turn-1")], {
+					turnId: "turn-9",
+					generation: "gen-9",
+					at: 200,
+				}),
+			).toEqual([]);
 		}
 	});
 });

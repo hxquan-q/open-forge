@@ -21,6 +21,7 @@ export const RUNTIME_TASK_ERROR_CODES = {
 	UNKNOWN_APPROVAL: "task_unknown_approval",
 	DUPLICATE_ARTIFACT: "task_duplicate_artifact",
 	EVENT_LOG_INVALID: "task_event_log_invalid",
+	TASK_NOT_FOUND: "task_not_found",
 } as const;
 
 export type RuntimeTaskErrorCode = (typeof RUNTIME_TASK_ERROR_CODES)[keyof typeof RUNTIME_TASK_ERROR_CODES];
@@ -47,10 +48,22 @@ export type RuntimeTaskIntent =
 			readonly decision: ApprovalDecision;
 			/** Approved decisions resume on the approved Turn; required iff decision is not "deny". */
 			readonly turnId?: string;
+			/** Snapshot/Lease generation acquired for `turnId`; required iff decision is not "deny". */
+			readonly generation?: string;
 	  }
-	| { readonly type: "start"; readonly turnId: string }
+	| {
+			readonly type: "start";
+			readonly turnId: string;
+			/** Snapshot/Lease generation acquired for this Turn. */
+			readonly generation: string;
+	  }
 	| { readonly type: "pause" }
-	| { readonly type: "resume"; readonly turnId: string }
+	| {
+			readonly type: "resume";
+			readonly turnId: string;
+			/** Snapshot/Lease generation acquired for this Turn. */
+			readonly generation: string;
+	  }
 	| { readonly type: "submit_review" }
 	| { readonly type: "review"; readonly decision: "approved" | "changes_requested" | "rejected" }
 	| { readonly type: "attach_artifact"; readonly artifactId: string }
@@ -164,6 +177,7 @@ export function transitionRuntimeTask(
 
 	let status = snapshot.status;
 	let activeTurnId = snapshot.activeTurnId;
+	let activeGeneration = snapshot.activeGeneration;
 	let artifactIds = snapshot.artifactIds;
 	let pendingApprovalIds = snapshot.pendingApprovalIds;
 
@@ -216,10 +230,10 @@ export function transitionRuntimeTask(
 			const to = approvalDecisionTarget(intent.decision);
 			assertTransition(status, to, intent);
 			if (to === "running") {
-				if (!intent.turnId) {
+				if (!intent.turnId || !intent.generation) {
 					throw new RuntimeTaskError(
 						RUNTIME_TASK_ERROR_CODES.MISSING_TURN_BINDING,
-						"approved task must resume on the approved Turn",
+						"approved task must resume on the approved Turn and generation",
 					);
 				}
 			}
@@ -237,8 +251,10 @@ export function transitionRuntimeTask(
 					eventId: nextEventId(),
 					type: "task.turn_bound",
 					turnId: intent.turnId as string,
+					generation: intent.generation as string,
 				});
 				activeTurnId = intent.turnId;
+				activeGeneration = intent.generation;
 			}
 			status = to;
 			pendingApprovalIds = pendingApprovalIds.filter((id) => id !== intent.approvalId);
@@ -249,10 +265,10 @@ export function transitionRuntimeTask(
 			const to = "running";
 			assertTransition(status, to, intent);
 			// A Task may only run by binding an existing Turn; it owns no model loop.
-			if (!intent.turnId) {
+			if (!intent.turnId || !intent.generation) {
 				throw new RuntimeTaskError(
 					RUNTIME_TASK_ERROR_CODES.MISSING_TURN_BINDING,
-					`${intent.type} requires a turnId`,
+					`${intent.type} requires a turnId and the acquired generation`,
 				);
 			}
 			statusEvent(status, to);
@@ -261,9 +277,11 @@ export function transitionRuntimeTask(
 				eventId: nextEventId(),
 				type: "task.turn_bound",
 				turnId: intent.turnId,
+				generation: intent.generation,
 			});
 			status = to;
 			activeTurnId = intent.turnId;
+			activeGeneration = intent.generation;
 			break;
 		}
 		case "review": {
@@ -298,6 +316,7 @@ export function transitionRuntimeTask(
 			status,
 			updatedAt: input.at,
 			...(activeTurnId === undefined ? {} : { activeTurnId }),
+			...(activeGeneration === undefined ? {} : { activeGeneration }),
 			artifactIds,
 			pendingApprovalIds,
 		},
@@ -335,35 +354,77 @@ export function rebuildRuntimeTaskSnapshot(events: readonly RuntimeTaskEvent[]):
 		);
 	}
 	let snapshot = first.snapshot;
+	let lastAt = first.at;
+	const seenEventIds = new Set<string>([first.eventId]);
+	const invalid = (message: string, details?: Readonly<Record<string, unknown>>): RuntimeTaskError =>
+		new RuntimeTaskError(RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID, message, details);
 	for (const event of rest) {
 		if (event.taskId !== snapshot.identity.taskId) {
-			throw new RuntimeTaskError(RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID, "event log mixes task ids", {
+			throw invalid("event log mixes task ids", {
 				expected: snapshot.identity.taskId,
 				actual: event.taskId,
 			});
 		}
+		// 损坏/乱序/重复记录一律 fail closed：不静默归一化为有效快照。
+		if (seenEventIds.has(event.eventId)) {
+			throw invalid("duplicate eventId in event log", { eventId: event.eventId });
+		}
+		seenEventIds.add(event.eventId);
+		if (event.at < lastAt) {
+			throw invalid("event log is not ordered by `at`", { previousAt: lastAt, actual: event.at });
+		}
+		lastAt = event.at;
 		switch (event.type) {
-			case "task.status_changed":
+			case "task.status_changed": {
+				if (event.from !== snapshot.status) {
+					throw invalid("status_changed.from does not match current status", {
+						expected: snapshot.status,
+						actual: event.from,
+					});
+				}
+				if (!canTransitionRuntimeTask(event.from, event.to)) {
+					throw invalid("event log contains an unreachable transition", {
+						from: event.from,
+						to: event.to,
+					});
+				}
 				snapshot = { ...snapshot, status: event.to, updatedAt: event.at };
 				break;
+			}
 			case "task.turn_bound":
-				snapshot = { ...snapshot, activeTurnId: event.turnId, updatedAt: event.at };
+				snapshot = {
+					...snapshot,
+					activeTurnId: event.turnId,
+					activeGeneration: event.generation,
+					updatedAt: event.at,
+				};
 				break;
 			case "task.artifact_attached":
-				snapshot = snapshot.artifactIds.includes(event.artifactId)
-					? snapshot
-					: { ...snapshot, artifactIds: [...snapshot.artifactIds, event.artifactId], updatedAt: event.at };
+				if (snapshot.artifactIds.includes(event.artifactId)) {
+					throw invalid("duplicate artifact_attached in event log", { artifactId: event.artifactId });
+				}
+				snapshot = {
+					...snapshot,
+					artifactIds: [...snapshot.artifactIds, event.artifactId],
+					updatedAt: event.at,
+				};
 				break;
 			case "task.approval_requested":
-				snapshot = snapshot.pendingApprovalIds.includes(event.approvalId)
-					? snapshot
-					: {
-							...snapshot,
-							pendingApprovalIds: [...snapshot.pendingApprovalIds, event.approvalId],
-							updatedAt: event.at,
-						};
+				if (snapshot.pendingApprovalIds.includes(event.approvalId)) {
+					throw invalid("duplicate approval_requested in event log", { approvalId: event.approvalId });
+				}
+				snapshot = {
+					...snapshot,
+					pendingApprovalIds: [...snapshot.pendingApprovalIds, event.approvalId],
+					updatedAt: event.at,
+				};
 				break;
 			case "task.approval_resolved":
+				if (!snapshot.pendingApprovalIds.includes(event.approvalId)) {
+					throw invalid("approval_resolved references a non-pending approval", {
+						approvalId: event.approvalId,
+					});
+				}
 				snapshot = {
 					...snapshot,
 					pendingApprovalIds: snapshot.pendingApprovalIds.filter((id) => id !== event.approvalId),
@@ -371,7 +432,7 @@ export function rebuildRuntimeTaskSnapshot(events: readonly RuntimeTaskEvent[]):
 				};
 				break;
 			case "task.created":
-				throw new RuntimeTaskError(RUNTIME_TASK_ERROR_CODES.EVENT_LOG_INVALID, "duplicate task.created in log");
+				throw invalid("duplicate task.created in log");
 		}
 	}
 	return snapshot;

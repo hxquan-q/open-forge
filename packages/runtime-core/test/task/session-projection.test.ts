@@ -12,7 +12,6 @@ import { artifactDescriptorFixture } from "../../src/testing/index.js";
 const identity: RuntimeTaskIdentity = {
 	taskId: "task-1",
 	rootSessionId: "session-1",
-	generation: "generation-1",
 };
 
 function taskLifecycle(task: RuntimeTaskEvent): unknown {
@@ -70,6 +69,20 @@ describe("projectRuntimeSessionTaskState", () => {
 		expect(state.artifacts).toHaveLength(1);
 		expect(state.artifacts[0].title).toBe("修订版");
 		expect(state.artifacts[0].version).toBe(newer.version);
+	});
+
+	it("迟到的低版本 descriptor 事实不得覆盖已投影的高版本（版本单调）", () => {
+		const newer = artifactDescriptorFixture();
+		const older = {
+			...newer,
+			version: newer.version - 1,
+			title: "旧版本",
+			updatedAt: newer.updatedAt + 10, // 时间戳更新但版本更低：不得覆盖
+		};
+		const state = projectRuntimeSessionTaskState([artifactDescriptorRecord(newer), artifactDescriptorRecord(older)]);
+		expect(state.artifacts).toHaveLength(1);
+		expect(state.artifacts[0].version).toBe(newer.version);
+		expect(state.artifacts[0].title).toBe(newer.title);
 	});
 
 	it("载荷结构损坏的事实被丢弃，不阻断其余投影", () => {

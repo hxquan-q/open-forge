@@ -531,7 +531,8 @@ const RuntimeTaskIdentitySchema = Type.Object(
 	{
 		taskId: Type.String(),
 		rootSessionId: Type.String(),
-		generation: Type.String(),
+		// 旧记录遗留的 generation 容忍读取；新合同里 generation 由 task.turn_bound 逐次承载。
+		generation: Type.Optional(Type.String()),
 	},
 	{ additionalProperties: false },
 );
@@ -545,6 +546,7 @@ const RuntimeTaskSnapshotSchema = Type.Object(
 		createdAt: Type.Number(),
 		updatedAt: Type.Number(),
 		activeTurnId: Type.Optional(Type.String()),
+		activeGeneration: Type.Optional(Type.String()),
 		artifactIds: Type.Array(Type.String()),
 		pendingApprovalIds: Type.Array(Type.String()),
 	},
@@ -582,6 +584,7 @@ const RuntimeTaskEventSchema = Type.Union([
 			type: Type.Literal("task.turn_bound"),
 			...RuntimeTaskEventBaseSchema,
 			turnId: Type.String(),
+			generation: Type.String(),
 		},
 		{ additionalProperties: false },
 	),

@@ -32,7 +32,6 @@ export function taskIdentityFixture(overrides: Partial<RuntimeTaskIdentity> = {}
 	return {
 		taskId: TASK_FIXTURE_IDS.task,
 		rootSessionId: TASK_FIXTURE_IDS.session,
-		generation: TASK_FIXTURE_IDS.generation,
 		...overrides,
 	};
 }
@@ -97,7 +96,7 @@ export const TASK_SCENARIO_COMPLETED: TaskScenario = {
 	description: "Plan, bind a Turn, submit review, approve review.",
 	steps: [
 		{ intent: { type: "plan" } },
-		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn } },
+		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn, generation: TASK_FIXTURE_IDS.generation } },
 		{ intent: { type: "attach_artifact", artifactId: TASK_FIXTURE_IDS.artifact } },
 		{ intent: { type: "submit_review" } },
 		{ intent: { type: "review", decision: "approved" } },
@@ -118,6 +117,7 @@ export const TASK_SCENARIO_APPROVED: TaskScenario = {
 				approvalId: TASK_FIXTURE_IDS.approval,
 				decision: "approve",
 				turnId: TASK_FIXTURE_IDS.turn,
+				generation: TASK_FIXTURE_IDS.generation,
 			},
 		},
 		{ intent: { type: "submit_review" } },
@@ -144,11 +144,11 @@ export const TASK_SCENARIO_CHANGES_REQUESTED: TaskScenario = {
 	description: "Review requests changes; task re-plans and completes on second review.",
 	steps: [
 		{ intent: { type: "plan" } },
-		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn } },
+		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn, generation: TASK_FIXTURE_IDS.generation } },
 		{ intent: { type: "submit_review" } },
 		{ intent: { type: "review", decision: "changes_requested" } },
 		{ intent: { type: "plan" } },
-		{ intent: { type: "start", turnId: "turn-fixture-2" } },
+		{ intent: { type: "start", turnId: "turn-fixture-2", generation: "gen-fixture-2" } },
 		{ intent: { type: "submit_review" } },
 		{ intent: { type: "review", decision: "approved" } },
 	],
@@ -161,7 +161,7 @@ export const TASK_SCENARIO_CANCELLED_FROM_PAUSE: TaskScenario = {
 	description: "Running task pauses, then is cancelled.",
 	steps: [
 		{ intent: { type: "plan" } },
-		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn } },
+		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn, generation: TASK_FIXTURE_IDS.generation } },
 		{ intent: { type: "pause" } },
 		{ intent: { type: "cancel", reason: "user" } },
 	],
@@ -174,7 +174,7 @@ export const TASK_SCENARIO_FAILED: TaskScenario = {
 	description: "Running task fails.",
 	steps: [
 		{ intent: { type: "plan" } },
-		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn } },
+		{ intent: { type: "start", turnId: TASK_FIXTURE_IDS.turn, generation: TASK_FIXTURE_IDS.generation } },
 		{ intent: { type: "fail", reason: "provider-error" } },
 	],
 	expectedStatus: "failed",

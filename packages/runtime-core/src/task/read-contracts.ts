@@ -15,6 +15,7 @@ import type {
 	ToolRiskDescriptor,
 	ToolRiskLevel,
 } from "./contracts.js";
+import { ARTIFACT_KINDS } from "./contracts.js";
 
 /**
  * Boundary narrowing for persisted/untrusted Task contracts. Mirrors
@@ -35,16 +36,6 @@ const TASK_STATUSES: readonly RuntimeTaskStatus[] = [
 	"cancelled",
 	"rejected",
 	"changes_requested",
-];
-
-const ARTIFACT_KINDS: readonly ArtifactKind[] = [
-	"document",
-	"dataset",
-	"analysis",
-	"code-change",
-	"execution-result",
-	"research-evidence",
-	"bundle",
 ];
 
 const ARTIFACT_STATUSES: readonly ArtifactStatus[] = [
@@ -80,18 +71,21 @@ function optionalNumber(value: unknown): value is number | undefined {
 
 function readIdentity(value: unknown): RuntimeTaskIdentity | undefined {
 	if (!isRecord(value)) return undefined;
-	if (
-		typeof value.taskId !== "string" ||
-		typeof value.rootSessionId !== "string" ||
-		typeof value.generation !== "string"
-	) {
+	if (typeof value.taskId !== "string" || typeof value.rootSessionId !== "string") {
 		return undefined;
 	}
-	return { taskId: value.taskId, rootSessionId: value.rootSessionId, generation: value.generation };
+	// 旧记录里 identity 可能仍带 generation 字段；generation 已由 task.turn_bound
+	// 逐次承载，读取时忽略遗留字段而不是拒绝整条记录。
+	return { taskId: value.taskId, rootSessionId: value.rootSessionId };
+}
+
+// 未知 schemaVersion 一律 fail closed：不把未来/损坏版本的记录静默归一化为 v1。
+function isCurrentSchemaVersion(value: Record<string, unknown>): boolean {
+	return value.schemaVersion === 1;
 }
 
 export function readRuntimeTaskSnapshot(value: unknown): RuntimeTaskSnapshot | undefined {
-	if (!isRecord(value)) return undefined;
+	if (!isRecord(value) || !isCurrentSchemaVersion(value)) return undefined;
 	const identity = readIdentity(value.identity);
 	if (
 		!identity ||
@@ -102,7 +96,8 @@ export function readRuntimeTaskSnapshot(value: unknown): RuntimeTaskSnapshot | u
 		!isStringArray(value.artifactIds) ||
 		!isStringArray(value.pendingApprovalIds) ||
 		!optionalString(value.title) ||
-		!optionalString(value.activeTurnId)
+		!optionalString(value.activeTurnId) ||
+		!optionalString(value.activeGeneration)
 	) {
 		return undefined;
 	}
@@ -114,13 +109,14 @@ export function readRuntimeTaskSnapshot(value: unknown): RuntimeTaskSnapshot | u
 		createdAt: value.createdAt,
 		updatedAt: value.updatedAt,
 		...(value.activeTurnId === undefined ? {} : { activeTurnId: value.activeTurnId }),
+		...(value.activeGeneration === undefined ? {} : { activeGeneration: value.activeGeneration }),
 		artifactIds: value.artifactIds,
 		pendingApprovalIds: value.pendingApprovalIds,
 	};
 }
 
 export function readRuntimeTaskEvent(value: unknown): RuntimeTaskEvent | undefined {
-	if (!isRecord(value)) return undefined;
+	if (!isRecord(value) || !isCurrentSchemaVersion(value)) return undefined;
 	if (typeof value.taskId !== "string" || typeof value.eventId !== "string" || typeof value.at !== "number") {
 		return undefined;
 	}
@@ -149,8 +145,8 @@ export function readRuntimeTaskEvent(value: unknown): RuntimeTaskEvent | undefin
 			};
 		}
 		case "task.turn_bound":
-			return typeof value.turnId === "string"
-				? { ...base, type: "task.turn_bound", turnId: value.turnId }
+			return typeof value.turnId === "string" && typeof value.generation === "string"
+				? { ...base, type: "task.turn_bound", turnId: value.turnId, generation: value.generation }
 				: undefined;
 		case "task.artifact_attached":
 			return typeof value.artifactId === "string"
@@ -199,7 +195,7 @@ export function readToolRiskDescriptor(value: unknown): ToolRiskDescriptor | und
 }
 
 export function readArtifactDescriptor(value: unknown): ArtifactDescriptor | undefined {
-	if (!isRecord(value)) return undefined;
+	if (!isRecord(value) || !isCurrentSchemaVersion(value)) return undefined;
 	if (
 		typeof value.artifactId !== "string" ||
 		typeof value.kind !== "string" ||
@@ -240,7 +236,7 @@ export function readArtifactDescriptor(value: unknown): ArtifactDescriptor | und
 }
 
 export function readPermissionGrant(value: unknown): PermissionGrant | undefined {
-	if (!isRecord(value)) return undefined;
+	if (!isRecord(value) || !isCurrentSchemaVersion(value)) return undefined;
 	if (
 		typeof value.grantId !== "string" ||
 		typeof value.scope !== "string" ||
@@ -276,7 +272,7 @@ export function readPermissionGrant(value: unknown): PermissionGrant | undefined
 }
 
 export function readApprovalRequest(value: unknown): ApprovalRequest | undefined {
-	if (!isRecord(value)) return undefined;
+	if (!isRecord(value) || !isCurrentSchemaVersion(value)) return undefined;
 	const risk = readToolRiskDescriptor(value.risk);
 	if (
 		!risk ||
