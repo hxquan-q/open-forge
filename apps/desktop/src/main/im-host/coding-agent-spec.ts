@@ -60,6 +60,16 @@ export interface BuildCodingAgentSpecOptions {
 	agentModel?: { provider: string; model: string; reasoningLevel?: string };
 }
 
+/**
+ * IM coding-agent 子进程的 V8 老生代上限（MB）。不设上限时子进程默认可膨胀到
+ * ~4GB 才被系统压制；封顶后超限抛 RangeError，由 sidecar 既有退避重启接管，
+ * 表现为可诊断的失败而不是静默吃内存。会话事实在 JSONL，重启可恢复。
+ * Windows（ELECTRON_RUN_AS_NODE）用 node 式标志；GUI Electron 形态用
+ * Chromium `--js-flags=`（须在 `--agent-rpc` 前作为真实 argv，与 --no-sandbox
+ * 同理：Chromium 在 ContentMain init 解析，main.ts 只转发 --agent-rpc 之后的参数）。
+ */
+const CHILD_MAX_OLD_SPACE_MB = 2048;
+
 export function buildCodingAgentSpec(opts: BuildCodingAgentSpecOptions = {}): CodingAgentSpec {
 	const packageDir = resolveCodingAgentPackageDir();
 	const modelArgs: string[] = opts.agentModel
@@ -85,7 +95,13 @@ export function buildCodingAgentSpec(opts: BuildCodingAgentSpecOptions = {}): Co
 		if (process.platform === "win32") {
 			return {
 				bin: process.execPath,
-				prefixArgs: [join(packageDir, "dist", "agent-rpc-cli.mjs"), ...modelArgs, "--scenario", "im-claw"],
+				prefixArgs: [
+					`--max-old-space-size=${CHILD_MAX_OLD_SPACE_MB}`,
+					join(packageDir, "dist", "agent-rpc-cli.mjs"),
+					...modelArgs,
+					"--scenario",
+					"im-claw",
+				],
 				runAsNode: true,
 				packageDir,
 				serverUrl,
@@ -103,8 +119,21 @@ export function buildCodingAgentSpec(opts: BuildCodingAgentSpecOptions = {}): Co
 		// so disabling the sandbox is safe. macOS keeps the plain argv.
 		const prefixArgs =
 			process.platform === "linux"
-				? ["--no-sandbox", "--agent-rpc", ...modelArgs, "--scenario", "im-claw"]
-				: ["--agent-rpc", ...modelArgs, "--scenario", "im-claw"];
+				? [
+						"--no-sandbox",
+						`--js-flags=--max-old-space-size=${CHILD_MAX_OLD_SPACE_MB}`,
+						"--agent-rpc",
+						...modelArgs,
+						"--scenario",
+						"im-claw",
+					]
+				: [
+						`--js-flags=--max-old-space-size=${CHILD_MAX_OLD_SPACE_MB}`,
+						"--agent-rpc",
+						...modelArgs,
+						"--scenario",
+						"im-claw",
+					];
 		return {
 			bin: process.execPath,
 			prefixArgs,
@@ -115,7 +144,14 @@ export function buildCodingAgentSpec(opts: BuildCodingAgentSpecOptions = {}): Co
 	const appRoot = process.cwd();
 	return {
 		bin: process.execPath,
-		prefixArgs: [join(appRoot, "dist/main/index.js"), "--agent-rpc", ...modelArgs, "--scenario", "im-claw"],
+		prefixArgs: [
+			`--js-flags=--max-old-space-size=${CHILD_MAX_OLD_SPACE_MB}`,
+			join(appRoot, "dist/main/index.js"),
+			"--agent-rpc",
+			...modelArgs,
+			"--scenario",
+			"im-claw",
+		],
 		packageDir,
 		serverUrl,
 	};
