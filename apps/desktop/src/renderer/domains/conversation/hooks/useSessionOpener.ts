@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { applyActiveTagFilterToNewConversation } from "@domains/project/services/new-conversation-tagging";
 import { i18n } from "@shared/i18n";
@@ -18,6 +19,7 @@ import {
 	chatMessagesAtom,
 	claimExistingSessionInputDraft,
 	claimNewSessionInputDraft,
+	confirmDialogAtom,
 	conversationBucketCwd,
 	currentScenarioAtom,
 	defaultConversationCwdAtom,
@@ -49,6 +51,7 @@ import {
 	bumpOpenSessionToken,
 	currentUnsubscribe,
 	fullHistoryToChat,
+	fullHistoryToChatWithSpans,
 	getOpenSessionToken,
 	resetStreamState,
 	restoreAssistantTurn,
@@ -59,6 +62,7 @@ import {
 import { resolveSessionContextComposition } from "../services/context-composition-cache";
 import { reconcileOptimisticUserMessages } from "../services/optimistic-user-message-cache";
 import { applySessionHydrationStateAtom } from "../services/session-hydration-state";
+import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
 import { useSessionEventController } from "./useSessionEventController";
 
 export interface SessionOpenerController {
@@ -77,6 +81,45 @@ function getProjects(): Project[] {
 }
 
 const HISTORY_BACKFILL_IDLE_TIMEOUT_MS = 1_500;
+const LARGE_SESSION_FILE_BYTES = 4 * 1024 * 1024;
+const LARGE_SESSION_TAIL_TURNS = 10;
+
+export function resolveHistoryLoadMode(
+	sessionPath: string | undefined,
+	cwd: string,
+	options: OpenSessionOptions | undefined,
+): Promise<"full" | "tail"> {
+	if (sessionPath === undefined) return Promise.resolve("full");
+	if (options?.historyLoadMode) return Promise.resolve(options.historyLoadMode);
+	const defaultCwd = getDefaultStore().get(defaultConversationCwdAtom);
+	const bucket = conversationBucketCwd(cwd, defaultCwd ?? "");
+	const bytes =
+		options?.fileSizeBytes ??
+		getDefaultStore()
+			.get(sessionsMapAtom)
+			.get(bucket)
+			?.find((session) => session.path === sessionPath)?.fileSizeBytes;
+	if (bytes === undefined || bytes <= LARGE_SESSION_FILE_BYTES) return Promise.resolve("full");
+	return new Promise((resolve) => {
+		const store = getDefaultStore();
+		store.set(confirmDialogAtom, {
+			title: i18n.t("chat:session.largeHistory.title"),
+			message: i18n.t("chat:session.largeHistory.message", {
+				sizeMb: (bytes / (1024 * 1024)).toFixed(1),
+			}),
+			confirmLabel: i18n.t("chat:session.largeHistory.loadTail"),
+			cancelLabel: i18n.t("chat:session.largeHistory.loadFull"),
+			onConfirm: () => {
+				store.set(confirmDialogAtom, null);
+				resolve("tail");
+			},
+			onCancel: () => {
+				store.set(confirmDialogAtom, null);
+				resolve("full");
+			},
+		});
+	});
+}
 
 function scheduleHistoryBackfill(task: () => void): void {
 	if (typeof window.requestIdleCallback === "function") {
@@ -279,6 +322,14 @@ export function useSessionOpener(): SessionOpenerController {
 			// Runtime hydration below remains canonical and will reconcile streaming drafts.
 			let previewMessagesSnapshot: ReturnType<typeof fullHistoryToChat> | undefined;
 			let previewPresentation: Promise<void> | undefined;
+			let historyLoadMode: "full" | "tail" = "full";
+			if (stageExistingSessionOpen) {
+				historyLoadMode = await resolveHistoryLoadMode(sessionPath, cwd, options);
+				if (myOpenToken !== getOpenSessionToken()) {
+					finishCancelledOpen();
+					return;
+				}
+			}
 			if (stageExistingSessionOpen) {
 				markSessionSwitch("session-preview-history-start");
 				previewPresentation = window.vetta.session
@@ -526,7 +577,13 @@ export function useSessionOpener(): SessionOpenerController {
 			perfSendMark("session-state-load-start", interactionId);
 			markSessionSwitch("session-hydration-start");
 			const historyPromise =
-				sessionPath === undefined ? Promise.resolve([]) : window.vetta.session.getFullHistory(sessionId);
+				sessionPath === undefined
+					? Promise.resolve([])
+					: historyLoadMode === "tail"
+						? window.vetta.session
+								.openViewer(sessionPath, { tailTurns: LARGE_SESSION_TAIL_TURNS })
+								.then((snapshot) => snapshot.history)
+						: window.vetta.session.getFullHistory(sessionId);
 			const statePromise = window.vetta.session.getState(sessionId);
 			let state: Awaited<typeof statePromise>;
 			try {
@@ -625,7 +682,15 @@ export function useSessionOpener(): SessionOpenerController {
 						if (myOpenToken !== getOpenSessionToken()) return;
 						scheduleHistoryBackfill(() => {
 							if (myOpenToken !== getOpenSessionToken()) return;
-							const canonical = fullHistoryToChat(history, sessionId);
+							const projected = fullHistoryToChatWithSpans(history, sessionId);
+							const canonical = projected.messages;
+							if (cachedKey) {
+								registerActiveTranscriptBacklog(cachedKey, {
+									entries: history,
+									spans: projected.spans,
+									mediaSessionId: sessionId,
+								});
+							}
 							const reconciled = reconcileOptimisticUserMessages(sessionId, canonical);
 							const canonicalIds = new Set(canonical.map((message) => message.id));
 							const mapped = reconciled.filter((message) => canonicalIds.has(message.id));

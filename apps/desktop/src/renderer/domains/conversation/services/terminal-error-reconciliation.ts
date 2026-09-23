@@ -1,5 +1,5 @@
 import { createConversationAgentMessage, type ErrorBlock } from "@shared/conversation";
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 
 function sameTerminalError(left: ErrorBlock, right: ErrorBlock): boolean {
 	if (left.turnId && right.turnId) return left.turnId === right.turnId;
@@ -21,7 +21,7 @@ function cloneErrorBlock(block: ErrorBlock): ErrorBlock {
  */
 export function reconcileHistoryWithLiveTerminalErrors(
 	history: ChatConversationItem[],
-	liveMessages: readonly ChatConversationItem[],
+	liveMessages: readonly ChatTimelineItem[],
 ): ChatConversationItem[] {
 	const liveAssistant = liveMessages.at(-1);
 	if (liveAssistant?.kind !== "agent") return history;

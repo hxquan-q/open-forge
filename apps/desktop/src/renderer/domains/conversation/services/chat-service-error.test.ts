@@ -1,5 +1,5 @@
 import { createConversationUserMessage } from "@shared/conversation";
-import type { ErrorBlock } from "@shared/store/atoms";
+import type { ChatTimelineItem, ErrorBlock } from "@shared/store/atoms";
 import type { AssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import { appendError, fullHistoryToChat, historyToChat } from "./chat-service";
@@ -32,7 +32,7 @@ function durableAssistant(overrides: Partial<AssistantMessage>): AssistantMessag
 	};
 }
 
-function errorBlocksOf(messages: ReturnType<typeof historyToChat>): ErrorBlock[] {
+function errorBlocksOf(messages: readonly ChatTimelineItem[]): ErrorBlock[] {
 	return messages.flatMap((message) =>
 		message.kind === "agent" ? message.blocks.filter((block): block is ErrorBlock => block.type === "error") : [],
 	);

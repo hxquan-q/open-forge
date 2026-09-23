@@ -1,10 +1,10 @@
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatTimelineItem } from "@shared/store/atoms";
 import { ChatExportHostView } from "@vetta-org/theme-ui/chat";
 import { useChatExportHostModel } from "../hooks/useChatExportHostModel";
 import { ExportMessageList } from "./MessageList";
 
 interface ChatExportHostProps {
-	messages: readonly ChatConversationItem[];
+	messages: readonly ChatTimelineItem[];
 	title: string;
 	onFinished: () => void;
 }

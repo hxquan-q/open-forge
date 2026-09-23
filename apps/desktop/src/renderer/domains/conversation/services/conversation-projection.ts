@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopTeamToolExecutionEvent } from "@preload/api-types/team-conversation-display";
 import {
 	type ConversationMessageEventState,
@@ -6,16 +7,66 @@ import {
 	projectAssistantMessageBlocks,
 	reduceConversationMessageEvent,
 } from "@shared/conversation";
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 import type { AssistantMessage } from "@vetta/ai";
 import type { AssistantSessionEvent, HistoryEntry } from "@vetta/runtime-core";
 import type { ConversationAgentMessageEvent, ConversationToolExecutionEvent } from "@vetta/runtime-core/conversation";
 import type { RuntimeToolResult } from "@vetta/runtime-core/kernel";
-import { fullHistoryToChat, handleToolEnd, handleToolPhase, handleToolStart, resetStreamState } from "./chat-service";
+import {
+	fullHistoryToChat,
+	fullHistoryToChatWithSpans,
+	handleToolEnd,
+	handleToolPhase,
+	handleToolStart,
+	resetStreamState,
+	type TranscriptItemSpan,
+} from "./chat-service";
 
 interface QueuedAssistantEvent {
 	readonly event: AssistantSessionEvent;
 	readonly sequence: number;
+}
+
+const PENDING_ASSISTANT_EVENT_LIMIT = 4096;
+
+const EPHEMERAL_ASSISTANT_EVENT_TYPES = new Set([
+	"text_start",
+	"text_delta",
+	"thinking_start",
+	"thinking_delta",
+	"message.delta",
+	"thinking.delta",
+]);
+
+function isEphemeralAssistantSessionEvent(event: AssistantSessionEvent): boolean {
+	return EPHEMERAL_ASSISTANT_EVENT_TYPES.has(event.type);
+}
+
+/**
+ * reducer 按追加语义消费 delta（appendText/appendThinking），丢弃会真实丢字；
+ * 只有不带 delta 的 marker（text_start/thinking_start）可安全丢弃。
+ */
+function isDroppableAssistantEvent(event: AssistantSessionEvent): boolean {
+	return isEphemeralAssistantSessionEvent(event) && !("delta" in event && typeof event.delta === "string");
+}
+
+function eventContentIndex(event: AssistantSessionEvent): unknown {
+	return "contentIndex" in event ? event.contentIndex : undefined;
+}
+
+/** 相邻同位 delta 拼接后语义不变；marker 以最新值替换。 */
+function mergeQueuedAssistantEvents(
+	pending: QueuedAssistantEvent,
+	queued: QueuedAssistantEvent,
+): QueuedAssistantEvent | undefined {
+	const a = pending.event;
+	const b = queued.event;
+	if (a.sessionId !== b.sessionId || a.type !== b.type) return undefined;
+	if (eventContentIndex(a) !== eventContentIndex(b)) return undefined;
+	if ("delta" in a && "delta" in b && typeof a.delta === "string" && typeof b.delta === "string") {
+		return { event: { ...b, delta: a.delta + b.delta }, sequence: queued.sequence };
+	}
+	return queued;
 }
 
 export interface ConversationToolExecutionProjection {
@@ -36,6 +87,7 @@ export interface ConversationToolExecutionProjection {
  */
 export class ConversationProjection {
 	private pendingAssistantEvents: QueuedAssistantEvent[] = [];
+	private droppedAssistantEvents = 0;
 	private lastHostSequence: number | undefined;
 	private localSequence = 0;
 	private rawAssistantStream = false;
@@ -43,6 +95,14 @@ export class ConversationProjection {
 
 	projectHistory(history: HistoryEntry[], mediaSessionId?: string): ChatConversationItem[] {
 		return fullHistoryToChat(history, mediaSessionId);
+	}
+
+	/** 同 {@link projectHistory}，附带占位恢复所需的 item→entry 区间（TASK-0035）。 */
+	projectHistoryWithSpans(
+		history: HistoryEntry[],
+		mediaSessionId?: string,
+	): { messages: ChatConversationItem[]; spans: Map<string, TranscriptItemSpan> } {
+		return fullHistoryToChatWithSpans(history, mediaSessionId);
 	}
 
 	enqueue(event: AssistantSessionEvent): void {
@@ -56,7 +116,51 @@ export class ConversationProjection {
 		if (event.sequence !== undefined) this.lastHostSequence = event.sequence;
 		this.localSequence = Math.max(this.localSequence + 1, event.sequence ?? 0);
 		this.rawAssistantStream = true;
-		this.pendingAssistantEvents.push({ event, sequence: this.localSequence });
+		this.enqueueAssistantEvent({ event, sequence: this.localSequence });
+	}
+
+	private enqueueAssistantEvent(queued: QueuedAssistantEvent): void {
+		if (isEphemeralAssistantSessionEvent(queued.event)) {
+			if (this.mergeIntoPendingAssistantEvents(queued)) return;
+			if (this.pendingAssistantEvents.length >= PENDING_ASSISTANT_EVENT_LIMIT) {
+				this.dropOldestDroppableAssistantEvent();
+			}
+			this.pendingAssistantEvents.push(queued);
+			return;
+		}
+		this.pendingAssistantEvents.push(queued);
+		if (this.pendingAssistantEvents.length > PENDING_ASSISTANT_EVENT_LIMIT) {
+			this.dropOldestDroppableAssistantEvent();
+		}
+	}
+
+	private mergeIntoPendingAssistantEvents(queued: QueuedAssistantEvent): boolean {
+		for (let index = this.pendingAssistantEvents.length - 1; index >= 0; index -= 1) {
+			const pending = this.pendingAssistantEvents[index];
+			if (!pending) continue;
+			// 非 ephemeral 事件是块边界：跨过它合并会把 delta 归到错误一侧。
+			if (!isEphemeralAssistantSessionEvent(pending.event)) break;
+			const merged = mergeQueuedAssistantEvents(pending, queued);
+			if (!merged) continue;
+			this.pendingAssistantEvents[index] = merged;
+			return true;
+		}
+		return false;
+	}
+
+	/** 超限只驱逐可丢 marker；delta 与终态事件一律不丢，水位可以为正确性超限。 */
+	private dropOldestDroppableAssistantEvent(): void {
+		const dropIndex = this.pendingAssistantEvents.findIndex((entry) => isDroppableAssistantEvent(entry.event));
+		if (dropIndex < 0) return;
+		this.pendingAssistantEvents.splice(dropIndex, 1);
+		this.droppedAssistantEvents += 1;
+	}
+
+	readStats(): { readonly pendingAssistantEvents: number; readonly droppedAssistantEvents: number } {
+		return {
+			pendingAssistantEvents: this.pendingAssistantEvents.length,
+			droppedAssistantEvents: this.droppedAssistantEvents,
+		};
 	}
 
 	hasRawAssistantStream(): boolean {
@@ -67,7 +171,7 @@ export class ConversationProjection {
 		return this.pendingAssistantEvents.length > 0;
 	}
 
-	flush(messages: ChatConversationItem[]): ChatConversationItem[] {
+	flush(messages: ChatTimelineItem[]): ChatTimelineItem[] {
 		const pending = this.pendingAssistantEvents;
 		this.pendingAssistantEvents = [];
 		if (pending.length === 0) return messages;
@@ -94,6 +198,7 @@ export class ConversationProjection {
 
 	reset(): void {
 		this.pendingAssistantEvents = [];
+		this.droppedAssistantEvents = 0;
 		this.lastHostSequence = undefined;
 		this.localSequence = 0;
 		this.rawAssistantStream = false;
@@ -121,7 +226,7 @@ export function projectConversationAgentMessage(input: {
 	const { message, messageId, entryId, turnId, authorId, timestamp, executions = [], mediaSessionId } = input;
 	const phase = message.stopReason === "aborted" ? "aborted" : message.stopReason === "error" ? "failed" : "completed";
 	const toolStatus = phase === "aborted" ? "cancelled" : phase === "failed" ? "error" : "pending";
-	let items: ChatConversationItem[] = [
+	let items: ChatTimelineItem[] = [
 		createConversationAgentMessage({
 			id: messageId,
 			entryId: entryId ?? messageId,
@@ -162,7 +267,7 @@ export function projectConversationAgentMessage(input: {
 		}
 	}
 	const result = items[0];
-	if (!result) throw new Error("Assistant message projection produced no message");
+	if (!result || result.kind === "placeholder") throw new Error("Assistant message projection produced no message");
 	return result;
 }
 
@@ -235,7 +340,7 @@ export function reduceConversationToolExecutionEvent(
 	return { conversationId: event.conversationId, sequence: event.sequence, message };
 }
 
-function requireAgentMessage(message: ChatConversationItem | undefined) {
+function requireAgentMessage(message: ChatTimelineItem | undefined) {
 	if (!message || message.kind !== "agent")
 		throw new Error("Tool execution projection did not produce an Agent message");
 	return message;
@@ -247,7 +352,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 		: {};
 }
 
-function findTargetAgentMessage(messages: readonly ChatConversationItem[], targetMessageId: string | undefined) {
+function findTargetAgentMessage(messages: readonly ChatTimelineItem[], targetMessageId: string | undefined) {
 	if (targetMessageId) {
 		const target = messages.find((item) => item.kind === "agent" && item.id === targetMessageId);
 		if (target?.kind === "agent") return target;

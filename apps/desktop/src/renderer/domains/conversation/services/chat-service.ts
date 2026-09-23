@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	type ConversationAgentMessageViewModel,
 	createConversationAgentMessage,
@@ -9,6 +10,7 @@ import type {
 	AskUserQuestionResolution,
 	ChatConversationItem,
 	ChatErrorDetails,
+	ChatTimelineItem,
 	ContentBlock,
 	KnowledgeToolUiDetails,
 	PlanReviewResolution,
@@ -562,11 +564,32 @@ export function historyToChat(
  * Unlike historyToChat, this preserves the complete conversation across compactions.
  */
 export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: string): ChatConversationItem[] {
+	return fullHistoryToChatWithSpans(entries, mediaSessionId).messages;
+}
+
+export interface TranscriptItemSpan {
+	readonly start: number;
+	readonly end: number;
+}
+
+/**
+ * 同 {@link fullHistoryToChat}，但额外给出每个消息 item 的 entry 区间（TASK-0035
+ * 占位恢复按区间切片重投影）。区间规则：marker 序列（custom/prompt_ref/attachments）
+ * 归入其后第一条 user 消息；其余非消息条目归入当前正在折叠的 item；每个 entry 恰好
+ * 属于一个 item 区间，区间连续覆盖全数组。
+ */
+export function fullHistoryToChatWithSpans(
+	entries: HistoryEntry[],
+	mediaSessionId?: string,
+): { messages: ChatConversationItem[]; spans: Map<string, TranscriptItemSpan> } {
 	const messages: ChatConversationItem[] = [];
+	const spanStarts: number[] = [];
 	const toolCallIndex = new Map<string, ToolCallBlock>();
 	const historyErrors = createDeferredHistoryErrors();
+	/** 当前 marker 序列的首个 entry 下标；下一条 user 消息的 span 从这里开始。 */
+	let markerRunStart: number | undefined;
 
-	function currentAssistant(): ConversationAgentMessageViewModel {
+	function currentAssistant(entryIndex: number): ConversationAgentMessageViewModel {
 		const last = messages.at(-1);
 		if (last?.kind === "agent") return last;
 		const msg = createConversationAgentMessage({
@@ -574,6 +597,7 @@ export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: stri
 			text: "",
 			blocks: [],
 		});
+		spanStarts.push(entryIndex);
 		messages.push(msg);
 		return msg;
 	}
@@ -585,11 +609,14 @@ export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: stri
 	/** Next user message carries structured filesystem attachments. */
 	let pendingAttachments: PromptAttachmentRef[] | undefined;
 
-	for (const entry of entries) {
+	for (let entryIndex = 0; entryIndex < entries.length; entryIndex += 1) {
+		const entry = entries[entryIndex];
 		if (entry.type === "compaction") {
 			pendingSettingsAssistTabId = undefined;
 			pendingPromptRef = undefined;
 			pendingAttachments = undefined;
+			markerRunStart = undefined;
+			spanStarts.push(entryIndex);
 			messages.push({
 				kind: "event",
 				id: entry.entryId ?? `hist-compact-${messages.length}`,
@@ -607,17 +634,23 @@ export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: stri
 					? details.tabId
 					: undefined;
 			pendingSettingsAssistTabId = typeof tabId === "string" ? tabId.trim() || "unknown" : "unknown";
+			markerRunStart ??= entryIndex;
 			continue;
 		}
-		if (entry.type === "custom_marker") continue;
+		if (entry.type === "custom_marker") {
+			markerRunStart ??= entryIndex;
+			continue;
+		}
 
 		if (entry.type === "prompt_ref_marker") {
 			pendingPromptRef = entry.promptRef;
+			markerRunStart ??= entryIndex;
 			continue;
 		}
 
 		if (entry.type === "prompt_attachments_marker") {
 			pendingAttachments = entry.attachments;
+			markerRunStart ??= entryIndex;
 			continue;
 		}
 
@@ -659,7 +692,7 @@ export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: stri
 
 		if (entry.type === "error") {
 			historyErrors.flush();
-			const target = currentAssistant();
+			const target = currentAssistant(entryIndex);
 			pushHistoryError(
 				target.blocks!,
 				entry.message,
@@ -721,14 +754,17 @@ export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: stri
 			}
 			pendingPromptRef = undefined;
 			pendingAttachments = undefined;
+			spanStarts.push(markerRunStart ?? entryIndex);
+			markerRunStart = undefined;
 			messages.push(userMsg);
 		} else if (m.role === "assistant") {
 			if (m.stopReason !== "error" && m.stopReason !== "aborted") historyErrors.recover();
 			pendingSettingsAssistTabId = undefined;
 			pendingPromptRef = undefined;
 			pendingAttachments = undefined;
+			markerRunStart = undefined;
 			const entryId = entry.type === "message" ? entry.entryId : undefined;
-			const target = currentAssistant();
+			const target = currentAssistant(entryIndex);
 			if (m.usage) target.usages = [...(target.usages ?? []), m.usage];
 			if (target.timestamp === undefined && m.timestamp !== undefined) target.timestamp = m.timestamp;
 			// Prefer first assistant entry id for the merged bubble when not set yet.
@@ -777,7 +813,13 @@ export function fullHistoryToChat(entries: HistoryEntry[], mediaSessionId?: stri
 		}
 	}
 	historyErrors.flush();
-	return messages;
+	const spans = new Map<string, TranscriptItemSpan>();
+	for (let i = 0; i < messages.length; i += 1) {
+		const start = spanStarts[i] ?? 0;
+		const end = i + 1 < spanStarts.length ? spanStarts[i + 1] - 1 : entries.length - 1;
+		spans.set(messages[i].id, { start, end });
+	}
+	return { messages, spans };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -817,7 +859,7 @@ export function getOpenSessionToken(): number {
 	return openSessionToken;
 }
 
-function requireAgentMessage(item: ChatConversationItem | undefined): ConversationAgentMessageViewModel {
+function requireAgentMessage(item: ChatTimelineItem | undefined): ConversationAgentMessageViewModel {
 	if (item?.kind !== "agent") throw new Error("Expected an Agent conversation message");
 	return item;
 }
@@ -858,10 +900,10 @@ export function resetStreamState(): void {
 }
 
 function activateAssistantTurn(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	startedAt: number,
 	restorePendingTools: boolean,
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	const last = prev.at(-1);
 	if (last?.kind !== "agent") {
 		return ensureDraft(prev, startedAt)[0];
@@ -893,23 +935,23 @@ function activateAssistantTurn(
 }
 
 /** Project agent_start into the message list before the provider emits its first content event. */
-export function startAssistantTurn(prev: ChatConversationItem[], startedAt: number): ChatConversationItem[] {
+export function startAssistantTurn(prev: ChatTimelineItem[], startedAt: number): ChatTimelineItem[] {
 	return activateAssistantTurn(prev, startedAt, false);
 }
 
 /** Restore the live assistant draft and unresolved tool state after switching back to a running session. */
-export function restoreAssistantTurn(prev: ChatConversationItem[], startedAt: number): ChatConversationItem[] {
+export function restoreAssistantTurn(prev: ChatTimelineItem[], startedAt: number): ChatTimelineItem[] {
 	return activateAssistantTurn(prev, startedAt, true);
 }
 
 /** Absolute start time for the assistant draft that currently owns the tail of the conversation. */
-export function getActiveAssistantTurnStartedAt(messages: ChatConversationItem[]): number | undefined {
+export function getActiveAssistantTurnStartedAt(messages: ChatTimelineItem[]): number | undefined {
 	const last = messages.at(-1);
 	return last?.kind === "agent" && last.endedAt === undefined ? last.startedAt : undefined;
 }
 
 /** Finish the current assistant turn using its message-owned absolute start time. */
-export function finishAssistantTurn(prev: ChatConversationItem[], endedAt: number): ChatConversationItem[] {
+export function finishAssistantTurn(prev: ChatTimelineItem[], endedAt: number): ChatTimelineItem[] {
 	for (let index = prev.length - 1; index >= 0; index--) {
 		const message = prev[index];
 		if (message.kind !== "agent" || message.startedAt === undefined || message.endedAt !== undefined) continue;
@@ -933,10 +975,7 @@ export function finishAssistantTurn(prev: ChatConversationItem[], endedAt: numbe
  * Ensure a draft assistant message exists for the current turn.
  * Returns [newMessages, draftIndex]. Creates a new draft if needed.
  */
-export function ensureDraft(
-	prev: ChatConversationItem[],
-	startedAt: number = Date.now(),
-): [ChatConversationItem[], number] {
+export function ensureDraft(prev: ChatTimelineItem[], startedAt: number = Date.now()): [ChatTimelineItem[], number] {
 	if (draftId) {
 		// Find existing draft
 		for (let i = prev.length - 1; i >= 0; i--) {
@@ -966,7 +1005,7 @@ export function ensureDraft(
 /**
  * Append a text delta to a draft message's last text block (or create one).
  */
-export function appendTextDelta(prev: ChatConversationItem[], delta: string): ChatConversationItem[] {
+export function appendTextDelta(prev: ChatTimelineItem[], delta: string): ChatTimelineItem[] {
 	const [msgs, idx] = ensureDraft(prev);
 	const msg = requireAgentMessage(msgs[idx]);
 	const blocks = [...msg.blocks];
@@ -985,7 +1024,7 @@ export function appendTextDelta(prev: ChatConversationItem[], delta: string): Ch
 /**
  * Append a thinking delta to a draft message's last thinking block (or create one).
  */
-export function appendThinkingDelta(prev: ChatConversationItem[], delta: string): ChatConversationItem[] {
+export function appendThinkingDelta(prev: ChatTimelineItem[], delta: string): ChatTimelineItem[] {
 	const [msgs, idx] = ensureDraft(prev);
 	const msg = requireAgentMessage(msgs[idx]);
 	const blocks = [...msg.blocks];
@@ -1014,7 +1053,7 @@ export function appendThinkingDelta(prev: ChatConversationItem[], delta: string)
  *   blocks exist with correct args.
  * - draftId is NOT cleared here — it persists until resetStreamState() at agent_end.
  */
-export function finalizeMessage(prev: ChatConversationItem[], content: unknown, usage?: Usage): ChatConversationItem[] {
+export function finalizeMessage(prev: ChatTimelineItem[], content: unknown, usage?: Usage): ChatTimelineItem[] {
 	const copy = [...prev];
 
 	// Parse tool calls from the final message
@@ -1119,12 +1158,12 @@ export function finalizeMessage(prev: ChatConversationItem[], content: unknown, 
  * Handle tool.start: find or create a tool_call block on the last assistant message.
  */
 export function handleToolStart(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	toolCallId: string,
 	toolName: string,
 	args: Record<string, unknown>,
 	startedAt?: number,
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	// First: search for a finalized message from the current turn (not a draft)
 	// or the current draft. We only want to attach to the LAST assistant message
 	// that belongs to the current turn, not older history messages.
@@ -1187,13 +1226,13 @@ export function handleToolStart(
  * Handle tool.end: find the matching tool_call block and update it with the result.
  */
 export function handleToolEnd(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	toolCallId: string,
 	result: unknown,
 	isError: boolean,
 	timing?: { startedAt: number; durationMs: number; phases: Array<{ label: string; atMs: number }> },
 	mediaSessionId?: string,
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	const media = mediaSessionId ? { sessionId: mediaSessionId, toolCallId } : undefined;
 	const resultText = extractResultText(result);
 	const imagePreviews = extractToolImagePreviews(result, undefined, media);
@@ -1244,11 +1283,11 @@ export function handleToolEnd(
  * display. Both are out-of-band metadata — never sent to the LLM.
  */
 export function handleToolPhase(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	toolCallId: string,
 	label: string,
 	atMs: number,
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	for (let i = prev.length - 1; i >= 0; i--) {
 		const msg = prev[i];
 		if (msg.kind !== "agent") continue;
@@ -1277,12 +1316,12 @@ export function handleToolPhase(
  * @param attempts 这条错误发出前自动重试过的次数（runtime-core 随 error 事件带出）。
  */
 export function appendError(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	errorMessage: string,
 	attempts?: number,
 	turnId?: string,
 	details?: ChatErrorDetails,
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	const [msgs, idx] = ensureDraft(prev);
 	const msg = requireAgentMessage(msgs[idx]);
 	const blocks = [...msg.blocks];
@@ -1318,9 +1357,9 @@ export function appendError(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function ensureDraftWithRef(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	draftIdRef: { current: string | null },
-): [ChatConversationItem[], number] {
+): [ChatTimelineItem[], number] {
 	if (draftIdRef.current) {
 		for (let i = prev.length - 1; i >= 0; i--) {
 			if (prev[i].id === draftIdRef.current) {
@@ -1344,9 +1383,9 @@ function ensureDraftWithRef(
 }
 
 export function clearDraftMessage(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	draftIdRef: { current: string | null },
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	const did = draftIdRef.current;
 	if (!did) return prev;
 	const idx = prev.findIndex((m) => m.id === did);
@@ -1358,10 +1397,10 @@ export function clearDraftMessage(
 }
 
 export function appendTextDeltaWithRef(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	delta: string,
 	draftIdRef: { current: string | null },
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	const [msgs, idx] = ensureDraftWithRef(prev, draftIdRef);
 	const msg = requireAgentMessage(msgs[idx]);
 	const blocks = [...msg.blocks];
@@ -1376,10 +1415,10 @@ export function appendTextDeltaWithRef(
 }
 
 export function appendThinkingDeltaWithRef(
-	prev: ChatConversationItem[],
+	prev: ChatTimelineItem[],
 	delta: string,
 	draftIdRef: { current: string | null },
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	const [msgs, idx] = ensureDraftWithRef(prev, draftIdRef);
 	const msg = requireAgentMessage(msgs[idx]);
 	const blocks = [...msg.blocks];

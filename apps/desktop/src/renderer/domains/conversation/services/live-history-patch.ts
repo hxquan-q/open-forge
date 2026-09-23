@@ -1,4 +1,4 @@
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 import { reconcileHistoryWithLiveTerminalErrors } from "./terminal-error-reconciliation";
 
 function sameBranch(
@@ -23,7 +23,7 @@ function sameModel(
 	return left.provider === right.provider && left.id === right.id;
 }
 
-function withStableRenderKey<T extends ChatConversationItem>(item: T): T {
+function withStableRenderKey<T extends ChatTimelineItem>(item: T): T {
 	if (item.renderKey) return item;
 	return { ...item, renderKey: item.id };
 }
@@ -34,11 +34,11 @@ function withStableRenderKey<T extends ChatConversationItem>(item: T): T {
  * to a full canonical replace.
  */
 export function patchLiveMessagesWithCanonical(
-	live: readonly ChatConversationItem[],
+	live: readonly ChatTimelineItem[],
 	canonical: readonly ChatConversationItem[],
-): ChatConversationItem[] | null {
+): ChatTimelineItem[] | null {
 	if (live.length !== canonical.length) return null;
-	const next: ChatConversationItem[] = [];
+	const next: ChatTimelineItem[] = [];
 	for (let index = 0; index < live.length; index++) {
 		const liveItem = live[index];
 		const canonicalItem = canonical[index];
@@ -120,8 +120,8 @@ export function patchLiveMessagesWithCanonical(
 }
 
 export function applyAgentEndHistoryRefresh(
-	live: readonly ChatConversationItem[],
+	live: readonly ChatTimelineItem[],
 	canonical: ChatConversationItem[],
-): ChatConversationItem[] {
+): ChatTimelineItem[] {
 	return patchLiveMessagesWithCanonical(live, canonical) ?? reconcileHistoryWithLiveTerminalErrors(canonical, live);
 }

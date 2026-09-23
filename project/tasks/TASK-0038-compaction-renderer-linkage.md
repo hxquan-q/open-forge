@@ -6,7 +6,7 @@ priority: P1
 owner: packages/coding-agent + apps/desktop
 requirement: REQ-0002
 plan: PLAN-0002
-source: RESEARCH-0004 P1-4
+source: RESEARCH-0004 P1-4 / TASK-0034 contract
 execution: serial
 branch: forge/dev
 worktree: unassigned（forge/dev 主工作区串行执行）
@@ -14,56 +14,65 @@ base_commit: forge/dev
 read_paths: [packages/coding-agent/src/compaction, apps/desktop/src/renderer/domains/conversation]
 write_paths: [packages/coding-agent/src/compaction, apps/desktop/src/renderer/domains/conversation, docs/adr, .github/release-notes]
 exclusive_paths: []
-depends_on: [TASK-0034]
-conflicts_with: [TASK-0035]
+depends_on: [TASK-0034, TASK-0051]
+conflicts_with: [TASK-0035, TASK-0050, TASK-0051]
 integration_status: pending
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # compaction 与渲染端驻留联动 + 防抖三件套
 
 ## 目标
 
-压缩参数面已齐（`contracts.ts:82-87`、`backpressure.ts:30-34`）但只省 token：渲染端 `chatMessagesAtom` 驻留与压缩完全解耦。本任务让 compaction 事件成为渲染端投影重建触发器（重放压缩后投影而非原全量），并补防抖三件套（回填检测、失败熔断、溢出尺寸种子），IM sidecar 无人值守长会话尤其需要。
+压缩参数面已齐（`contracts.ts:82-87`、`backpressure.ts:30-34`）但渲染端投影驻留与压缩生命周期尚未联动。本任务负责 compaction 事件触发边界投影重放，以及压缩 thrash 检测、失败熔断和溢出尺寸种子；历史边界前后消息的保留/恢复规则由 TASK-0034 冻结，具体边界重放由 TASK-0051 实现。
 
 ## 范围
 
 ### 并发评估
 
-- 结论：串行——投影重建依赖 TASK-0034 窗口化合同（压缩边界重放语义在其中定稿），且与 TASK-0035 共享 conversation 写路径；
-- 上下文合同有变化，按仓库规则走 ADR 记录；
-- 业界参照：Claude Code 压缩后清内部缓存（v2.1.50）+ thrash 回填检测（v2.1.89）+ 溢出种子（v2.1.142）；Codex `replace_compacted()` 同动作释放；opencode 压缩=剪枝旧工具输出。
+- 结论：不支持并发；依赖 TASK-0051 完成边界重放，并与 Renderer compaction event 接线共享写路径。
+- 执行方式：共享 `forge/dev` 工作区串行。
+- 可并行 Task：无（transcript 链内）。
+- 前置依赖：TASK-0034 合同、TASK-0051 边界重放实现。
+- 冲突文件/独占路径：`packages/coding-agent/src/compaction`、conversation event/controller 与窗口投影、release note。
+- Branch：`forge/dev`。
+- Worktree：共享工作区串行，不建独立 Worktree。
+- 集成负责人：主会话。
+- 集成顺序：TASK-0035 → TASK-0050 → TASK-0051 → TASK-0038。
+- 上下文/压缩合同如有改变，按仓库规则补 ADR；不能仅改 ADR 宣称行为已实现。
 
 ### 做
 
-- compaction 完成事件 → 渲染端以压缩后投影重建（压缩边界语义按 TASK-0034 合同）；
-- 压缩后清理 Shiki/编辑器等派生缓存的钩子；
-- 防抖三件套：连续压缩 thrash 检测、失败熔断、溢出尺寸种子；
-- ADR 记录上下文合同变化。
+- 成功 compaction 事件触发 TASK-0051 定义的有界 Renderer 窗口重建；保持当前稳定消息锚点，释放非窗口内完整 blocks。
+- 实现连续 compaction thrash 检测、失败冷却/熔断和溢出尺寸种子，并保证恢复后仍可继续正常压缩。
+- 失败或取消压缩不重置当前投影；终态、取消和错误反馈保持既有语义。
 
 ### 不做
 
-- 不改压缩触发参数（reserve 36k/空闲阈值 20%/保留最近 20k）；
-- 不重放丢弃用户可见的已发消息——被剪部分以边界/摘要形态可定位。
+- 不改压缩触发参数（reserve 36k/空闲阈值 20%/保留最近 20k）。
+- 不重新定义 boundary/summary 的展示、历史分页或重放行为；这些由 TASK-0034/TASK-0051 负责。
+- 不删除或改写 JSONL 中任何用户可见历史。
 
 ## Given / When / Then
 
-- Given：一次触发 compaction 的长会话
-  When：压缩完成事件到达渲染端
-  Then：渲染端驻留同步下降（重放压缩后投影），用户可见压缩边界而非原始全量；连续异常压缩被熔断而非死循环
+- Given：使用窗口化 transcript 的长会话达到压缩条件。
+- When：压缩成功、失败、取消或连续触发。
+- Then：成功时 Renderer 按既定边界合同重建有界窗口且保留阅读锚点；失败/取消不扰动当前历史；连续异常压缩被限制，不丢终态且不形成无限重试。
 
 ## 必须保持
 
-- 压缩不丢终态：压缩摘要与边界标记可还原会话脉络；
-- 压缩进行中渲染端不闪断、不丢用户正在阅读的位置；
-- JSONL 事实源不被压缩改写。
+- JSONL 仍是唯一事实源；摘要不取代任何旧消息，所有边界之前的消息仍可按页定位和展开。
+- 压缩期间不闪断当前 UI，不丢焦点、滚动锚点或用户正在交互的消息。
+- 背压、重试、取消及 `compaction.start/end` 事件终态严格保持；熔断只限制异常重复，不静默改变人工压缩语义。
 
 ## 测试与验证
 
-- 定向测试：thrash 注入（连续触发）熔断断言、边界重放投影正确性；
-- 用户流程：长会话触发压缩→压缩前后 PerfMonitor renderer `privateBytes` 对比→继续会话；
-- 质量检查：`check:quick`；ADR 评审。
+- 定向：thrash 连续触发熔断、失败冷却结束后可重试、溢出种子更新、事件终态与 Renderer 边界重放集成。
+- 用户流程：长会话浏览旧消息 → 触发 compaction → 保持当前位置并继续对话 → 展开 compaction 前旧消息；另外覆盖失败/取消不改变当前窗口。
+- 性能：固定长会话 compaction 前后对比 Renderer `privateBytes` 峰值/稳态；不得以释放消息行或改写 transcript 冒充窗口化收益。
+- 质量：`bun run test:impact -- <改动文件...>`、`bun run check:quick -- <改动文件...>`；完整实现轮结束后 `bun run check`，补当前版本 Release Notes。
 
 ## 交付记录
 

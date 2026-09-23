@@ -341,7 +341,9 @@ it("turn 内接力消费：第二条回复的流式内容开新气泡、排在�
 	const shape = store
 		.get(chatMessagesAtom)
 		.flatMap((message) =>
-			message.kind !== "event" && (message.text?.length ?? 0) > 0 ? [[message.role, message.text]] : [],
+			message.kind !== "event" && message.kind !== "placeholder" && (message.text?.length ?? 0) > 0
+				? [[message.role, message.text]]
+				: [],
 		);
 	expect(shape).toEqual([
 		["assistant", "回答一"],
@@ -447,7 +449,9 @@ it("立即发送打断插队：上一回合已 streaming 的部分回复保留�
 	const shape = store
 		.get(chatMessagesAtom)
 		.flatMap((message) =>
-			message.kind !== "event" && (message.text?.length ?? 0) > 0 ? [[message.role, message.text]] : [],
+			message.kind !== "event" && message.kind !== "placeholder" && (message.text?.length ?? 0) > 0
+				? [[message.role, message.text]]
+				: [],
 		);
 	// 中途快照与 canonical 落地后都必须保留「部分回复」，且顺序正确。
 	expect(shape).toEqual([
@@ -468,9 +472,11 @@ it("空闲发送：正常上屏乐观气泡并返回 sent", async () => {
 	});
 
 	expect(result).toEqual({ status: "sent" });
-	expect(store.get(chatMessagesAtom).flatMap((message) => (message.kind === "event" ? [] : [message.text]))).toContain(
-		"普通消息",
-	);
+	expect(
+		store
+			.get(chatMessagesAtom)
+			.flatMap((message) => (message.kind === "event" || message.kind === "placeholder" ? [] : [message.text])),
+	).toContain("普通消息");
 });
 
 it("失败回执：即使 error 事件未到达也上屏错误并返回 failed", async () => {

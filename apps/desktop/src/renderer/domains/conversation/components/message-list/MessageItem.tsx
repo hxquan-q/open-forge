@@ -9,7 +9,7 @@ import {
 import { forwardRef, memo } from "react";
 import { useTranslation } from "react-i18next";
 import type { Usage } from "@vetta/ai/protocol";
-import type { ChatConversationItem } from "./types";
+import type { ChatConversationItem, ChatTimelineItem } from "./types";
 import type { ConversationParticipantViewModel } from "@shared/conversation";
 import { AssistantMessage } from "./AssistantMessage";
 import { TeamMemberReplyCard } from "./TeamMemberReplyCard";
@@ -32,7 +32,7 @@ export interface MessageItemProps {
 	isLastUserMessage?: boolean;
 	isStreaming: boolean;
 	isTailMessage: boolean;
-	message: ChatConversationItem;
+	message: ChatTimelineItem;
 	onAbortEdit?: () => void;
 	pendingLabel?: string;
 	participant?: ConversationParticipantViewModel;
@@ -40,6 +40,17 @@ export interface MessageItemProps {
 	onTeamMemberOpen?: (memberId: string) => void;
 	sessionUsages?: readonly Usage[];
 }
+
+/** 视口外消息的轻量行：只渲染摘要，不触碰 blocks/媒体。 */
+const TranscriptPlaceholderView = memo(function TranscriptPlaceholderView({
+	message,
+}: { message: Extract<ChatTimelineItem, { kind: "placeholder" }> }) {
+	return (
+		<div data-transcript-placeholder="true" className="select-none px-1 py-0.5 text-xs text-fg-3 opacity-70">
+			<span className="line-clamp-2 italic">{message.summary || "…"}</span>
+		</div>
+	);
+});
 
 export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
 	const definition = useMessageRendering();
@@ -59,6 +70,9 @@ export const DefaultMessageItem = memo(function DefaultMessageItem({
 	sessionUsages,
 	exportMode = false,
 }: MessageItemProps) {
+	if (message.kind === "placeholder") {
+		return <TranscriptPlaceholderView message={message} />;
+	}
 	if (message.kind === "event") {
 		if (message.event.kind === "compaction") return <CompactionBoundary />;
 		if (message.event.kind === "team-member-summary") {
@@ -92,7 +106,7 @@ export const DefaultMessageItem = memo(function DefaultMessageItem({
 	);
 });
 
-export const ExportMessageList = forwardRef<HTMLDivElement, { messages: readonly ChatConversationItem[] }>(
+export const ExportMessageList = forwardRef<HTMLDivElement, { messages: readonly ChatTimelineItem[] }>(
 	function ExportMessageList({ messages }, ref) {
 		const tailMessageId = messages.at(-1)?.id ?? null;
 		return (

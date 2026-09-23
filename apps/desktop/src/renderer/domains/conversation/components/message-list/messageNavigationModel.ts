@@ -3,15 +3,22 @@ import {
 	type MessageFeedNavigationEntry,
 	type MessageFeedNavigationTurn,
 } from "@shared/components/message-feed/navigationModel";
-import type { ChatConversationItem } from "./types";
+import type { ChatTimelineItem } from "./types";
 
 export type { RenderedFeedItem as RenderedMessageItem } from "@shared/components/message-feed/visibleItemModel";
 export { findTopVisibleItemIndex as findTopVisibleMessageIndex } from "@shared/components/message-feed/visibleItemModel";
 
 export const MESSAGE_NAVIGATION_MIN_TURNS = 8;
 
-function visibleMessageText(message: ChatConversationItem): string {
+function itemRole(message: ChatTimelineItem): "request" | "response" {
+	if (message.kind === "placeholder") return message.role === "user" ? "request" : "response";
+	return message.kind === "user" ? "request" : "response";
+}
+
+function visibleMessageText(message: ChatTimelineItem): string {
 	if (message.kind === "event") return "";
+	// 占位项以摘要参与导航/搜索——全文操作（跳转后复制等）会先经窗口恢复。
+	if (message.kind === "placeholder") return message.summary;
 	if (message.text?.trim()) return message.text;
 	if (message.kind === "user") return message.text;
 	return message.blocks
@@ -21,7 +28,7 @@ function visibleMessageText(message: ChatConversationItem): string {
 }
 
 /** Chat adapter: projects the domain message schema into the shared navigation contract. */
-export function buildMessageNavigationTurns(messages: readonly ChatConversationItem[]): MessageFeedNavigationTurn[] {
+export function buildMessageNavigationTurns(messages: readonly ChatTimelineItem[]): MessageFeedNavigationTurn[] {
 	const turns: Array<{
 		id: string;
 		turnNumber: number;
@@ -33,7 +40,7 @@ export function buildMessageNavigationTurns(messages: readonly ChatConversationI
 		const message = messages[messageIndex];
 		if (message.kind === "event") continue;
 
-		if (message.kind === "user" || !current) {
+		if (message.kind === "user" || (message.kind === "placeholder" && message.role === "user") || !current) {
 			current = {
 				id: `turn-${message.id}`,
 				turnNumber: turns.length + 1,
@@ -47,7 +54,7 @@ export function buildMessageNavigationTurns(messages: readonly ChatConversationI
 			id: message.id,
 			itemIndex: messageIndex,
 			preview: navigationText.preview,
-			role: message.kind === "user" ? "request" : "response",
+			role: itemRole(message),
 			searchText: navigationText.searchText,
 			turnNumber: current.turnNumber,
 		});

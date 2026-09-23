@@ -1,5 +1,5 @@
 import type { ConversationUserMessageViewModel } from "@shared/conversation";
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 
 interface PendingOptimisticUserMessage {
 	message: ConversationUserMessageViewModel;
@@ -32,7 +32,7 @@ const pendingByRuntimeId = new Map<string, PendingOptimisticUserMessage[]>();
 export function rememberOptimisticUserMessage(
 	runtimeId: string,
 	message: ConversationUserMessageViewModel,
-	currentMessages: readonly ChatConversationItem[],
+	currentMessages: readonly ChatTimelineItem[],
 	options?: { matchTextOnly?: boolean },
 ): void {
 	const pending = pendingByRuntimeId.get(runtimeId) ?? [];
@@ -51,15 +51,15 @@ export function rememberOptimisticUserMessage(
  * Text is checked at the recorded ordinal so an identical older prompt cannot
  * accidentally acknowledge a newer pending send.
  */
-export function reconcileOptimisticUserMessages(
+export function reconcileOptimisticUserMessages<T extends ChatConversationItem>(
 	runtimeId: string,
-	history: readonly ChatConversationItem[],
-): ChatConversationItem[] {
+	history: readonly T[],
+): (T | ConversationUserMessageViewModel)[] {
 	const pending = pendingByRuntimeId.get(runtimeId);
 	if (!pending?.length) return [...history];
 
 	const canonicalUsers = history.filter(
-		(message): message is ConversationUserMessageViewModel => message.kind === "user",
+		(message): message is T & ConversationUserMessageViewModel => message.kind === "user",
 	);
 	const confirmedSnapshots = new Map<
 		ConversationUserMessageViewModel,
@@ -100,14 +100,14 @@ export function reconcileOptimisticUserMessages(
 	];
 }
 
-function applyConfirmedInputSnapshots(
-	history: readonly ChatConversationItem[],
+function applyConfirmedInputSnapshots<T extends ChatTimelineItem>(
+	history: readonly T[],
 	snapshots: ReadonlyMap<ConversationUserMessageViewModel, ConversationUserMessageViewModel["inputSegments"]>,
-): ChatConversationItem[] {
+): (T | ConversationUserMessageViewModel)[] {
 	if (snapshots.size === 0) return [...history];
-	return history.map((message) => {
+	return history.map((message): T | ConversationUserMessageViewModel => {
 		if (message.kind !== "user") return message;
-		const inputSegments = snapshots.get(message);
+		const inputSegments = snapshots.get(message as ConversationUserMessageViewModel);
 		return inputSegments ? { ...message, inputSegments } : message;
 	});
 }

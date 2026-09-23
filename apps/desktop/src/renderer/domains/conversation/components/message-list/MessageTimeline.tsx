@@ -5,7 +5,7 @@ import {
 	buildMessageNavigationTurns,
 	MESSAGE_NAVIGATION_MIN_TURNS,
 } from "./messageNavigationModel";
-import type { ChatConversationItem } from "./types";
+import type { ChatTimelineItem } from "./types";
 
 export function MessageTimeline({
 	activeMessageIndex,
@@ -13,7 +13,7 @@ export function MessageTimeline({
 	onNavigate,
 }: {
 	activeMessageIndex: number;
-	messages: readonly ChatConversationItem[];
+	messages: readonly ChatTimelineItem[];
 	onNavigate: (messageIndex: number) => void;
 }): JSX.Element | null {
 	const { t } = useTranslation("chat");

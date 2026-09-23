@@ -57,7 +57,7 @@ import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useRef } from "react";
 import {
 	appendError,
-	fullHistoryToChat,
+	fullHistoryToChatWithSpans,
 	isUserImageFile,
 	nextId,
 	startAssistantTurn,
@@ -72,6 +72,7 @@ import {
 	stagePendingSessionSend,
 	takeStagedPendingSessionSend,
 } from "../services/staged-new-session-send";
+import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
 
 interface SessionMessageSenderOptions {
 	bumpSuggestionToken: (runtimeId: string) => void;
@@ -307,7 +308,15 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				try {
 					await window.vetta.session.replaceLastUserMessage(session.runtimeId, pendingEdit.entryId);
 					const history = await window.vetta.session.getFullHistory(session.runtimeId);
-					setChatMessages(fullHistoryToChat(history, session.runtimeId));
+					const projected = fullHistoryToChatWithSpans(history, session.runtimeId);
+					if (session.sessionPath) {
+						registerActiveTranscriptBacklog(session.sessionPath, {
+							entries: history,
+							spans: projected.spans,
+							mediaSessionId: session.runtimeId,
+						});
+					}
+					setChatMessages(projected.messages);
 					store.set(pendingMessageEditAtom, null);
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);

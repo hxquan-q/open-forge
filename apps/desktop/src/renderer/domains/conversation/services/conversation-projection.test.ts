@@ -118,4 +118,52 @@ describe("ConversationProjection", () => {
 
 		expect(projection.flush([])[0]).toMatchObject({ kind: "agent", text: "a" });
 	});
+
+	it("merges same-index deltas losslessly instead of replacing payloads", () => {
+		const projection = new ConversationProjection();
+		const partial = { role: "assistant", content: [{ type: "text", text: "abc" }] } as unknown as AssistantMessage;
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "a", partial }, 1));
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "b", partial }, 2));
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "c", partial }, 3));
+
+		expect(projection.readStats().droppedAssistantEvents).toBe(0);
+		expect(projection.flush([])[0]).toMatchObject({ kind: "agent", text: "abc" });
+	});
+
+	it("drops only marker events under pressure and exposes the drop count", () => {
+		const projection = new ConversationProjection();
+		const partial = { role: "assistant", content: [] } as unknown as AssistantMessage;
+		for (let index = 0; index < 4096; index += 1) {
+			projection.enqueue(envelope({ type: "text_start", contentIndex: index, partial }, index + 1));
+		}
+		projection.enqueue(envelope({ type: "text_start", contentIndex: 4096, partial }, 4097));
+
+		const stats = projection.readStats();
+		expect(stats.droppedAssistantEvents).toBe(1);
+		expect(stats.pendingAssistantEvents).toBe(4096);
+	});
+
+	it("never drops delta-bearing or terminal events beyond the pending limit", () => {
+		const projection = new ConversationProjection();
+		const partial = { role: "assistant", content: [{ type: "text", text: "x" }] } as unknown as AssistantMessage;
+		for (let index = 0; index < 4096; index += 1) {
+			projection.enqueue(
+				envelope({ type: "text_delta", contentIndex: index, delta: `d${index}`, partial }, index + 1),
+			);
+		}
+		projection.enqueue(
+			envelope(
+				{
+					type: "done",
+					reason: "stop",
+					message: { role: "assistant", content: [{ type: "text", text: "done" }] } as unknown as AssistantMessage,
+				},
+				4097,
+			),
+		);
+
+		const stats = projection.readStats();
+		expect(stats.droppedAssistantEvents).toBe(0);
+		expect(stats.pendingAssistantEvents).toBe(4097);
+	});
 });

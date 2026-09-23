@@ -22,7 +22,11 @@ import {
 	buildMessageHeightEstimates,
 	createMessageItemSizeRecorder,
 } from "./message-height-estimates";
-import type { ChatConversationItem, MessageListModel, MessageListProps } from "./types";
+import {
+	ensureTranscriptItemRestored,
+	noteTranscriptViewportRange,
+} from "../../services/transcript-window-controller";
+import type { ChatTimelineItem, MessageListModel, MessageListProps } from "./types";
 
 export { ExportMessageList };
 
@@ -34,7 +38,7 @@ interface VirtualizerIdentityState {
 	readonly generation: number;
 }
 
-function messageCollectionIdentity(messages: readonly ChatConversationItem[]): string {
+function messageCollectionIdentity(messages: readonly ChatTimelineItem[]): string {
 	const first = messages.at(0);
 	const last = messages.at(-1);
 	return `${messages.length}:${first ? conversationItemRenderKey(first) : ""}:${last ? conversationItemRenderKey(last) : ""}`;
@@ -42,7 +46,7 @@ function messageCollectionIdentity(messages: readonly ChatConversationItem[]): s
 
 function useMessageVirtualizerKey(
 	sessionId: string | null | undefined,
-	messages: readonly ChatConversationItem[],
+	messages: readonly ChatTimelineItem[],
 ): number {
 	const normalizedSessionId = sessionId ?? null;
 	const itemIdentity = messageCollectionIdentity(messages);
@@ -111,7 +115,7 @@ export function MessageListView({
 			return measured;
 		};
 	}, [diagnosticsEnabled, heightEstimates, messages, sessionId]);
-	const activeItem = useMessageFeedActiveItem<ChatConversationItem>({
+	const activeItem = useMessageFeedActiveItem<ChatTimelineItem>({
 		scrollerElement,
 		resetKey: sessionId,
 		initialIndex: Math.max(0, messages.length - 1),
@@ -121,7 +125,7 @@ export function MessageListView({
 		return perfMessageScrollAttach(scrollerElement);
 	}, [diagnosticsEnabled, scrollerElement]);
 	const handleItemsRendered = useCallback(
-		(items: ListItem<ChatConversationItem>[]) => {
+		(items: ListItem<ChatTimelineItem>[]) => {
 			activeItem.onItemsRendered(items);
 			if (diagnosticsEnabled) perfMessageScrollRecordRenderedItems(items);
 		},
@@ -129,9 +133,20 @@ export function MessageListView({
 	);
 	const handleRangeChanged = useCallback(
 		(range: ListRange) => {
+			// TASK-0035：活动窗口（已含 increaseViewportBy 缓冲）驱动占位恢复/降级。
+			noteTranscriptViewportRange(range);
 			if (diagnosticsEnabled) perfMessageScrollRecordRange(range);
 		},
 		[diagnosticsEnabled],
+	);
+	const handleTimelineNavigate = useCallback(
+		(index: number) => {
+			const target = messages[index];
+			// 目录跳转到占位行时先同步恢复，避免目标短暂显示摘要而非完整内容。
+			if (target?.kind === "placeholder") ensureTranscriptItemRestored(target.id);
+			scroll.scrollToMessage(index);
+		},
+		[messages, scroll.scrollToMessage],
 	);
 	const handleTotalListHeightChange = useCallback(
 		(height: number) => {
@@ -154,7 +169,7 @@ export function MessageListView({
 	const sessionUsagesRef = useRef(sessionUsages);
 	sessionUsagesRef.current = sessionUsages;
 	const itemContent = useCallback(
-		(index: number, message: ChatConversationItem) => {
+		(index: number, message: ChatTimelineItem) => {
 			return (
 				<MessageRow message={message} isLast={index === messages.length - 1}>
 					{modelSwitchLabels.has(message.id) && (
@@ -209,7 +224,7 @@ export function MessageListView({
 										followOutput={scroll.followOutput}
 										atBottomThreshold={80}
 										itemsRendered={handleItemsRendered}
-										{...(diagnosticsEnabled ? { rangeChanged: handleRangeChanged } : {})}
+										rangeChanged={handleRangeChanged}
 										overscan={0}
 										increaseViewportBy={VIEWPORT_BUFFER}
 										heightEstimates={heightEstimates}
@@ -232,7 +247,7 @@ export function MessageListView({
 									key={sessionId ?? "message-timeline"}
 									activeMessageIndex={activeItem.activeIndex}
 									messages={messages}
-									onNavigate={scroll.scrollToMessage}
+									onNavigate={handleTimelineNavigate}
 								/>
 							</MessageFeedLayout.RailContent>
 						</MessageFeedLayout.LeftRail> : null}

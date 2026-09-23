@@ -1,15 +1,15 @@
 import type { ConversationParticipantViewModel } from "@shared/conversation";
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import type { ReactNode } from "react";
 import type { MessageListScrollModel } from "../../hooks/useMessageListScrollModel";
 import type { AssistantFoldData, BlockSegment } from "./messageBlockModel";
 import type { WorkSegment } from "./progressGroupModel";
 
-export type { ChatConversationItem };
+export type { ChatConversationItem, ChatTimelineItem };
 
 export interface MessageListProps {
-	messages: readonly ChatConversationItem[];
+	messages: readonly ChatTimelineItem[];
 	isStreaming: boolean;
 	workspace: ActivityWorkspace;
 	sessionId?: string | null;
@@ -24,7 +24,7 @@ export interface MessageListProps {
 
 export interface MessageListModel {
 	isStreaming: boolean;
-	messages: readonly ChatConversationItem[];
+	messages: readonly ChatTimelineItem[];
 	modelSwitchLabels: Map<string, string>;
 	scroll: MessageListScrollModel;
 	tailMessageId: string | null;

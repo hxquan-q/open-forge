@@ -1,4 +1,4 @@
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatTimelineItem } from "@shared/store/atoms";
 
 export interface ChatViewProps {
 	onAbort: () => Promise<void>;
@@ -28,7 +28,7 @@ export interface ChatViewModel {
 	exportTitle: string;
 	header: ChatViewHeaderModel;
 	isStreaming: boolean;
-	messages: ChatConversationItem[];
+	messages: ChatTimelineItem[];
 	rootClassName?: string;
 	sessionId: string | null;
 }

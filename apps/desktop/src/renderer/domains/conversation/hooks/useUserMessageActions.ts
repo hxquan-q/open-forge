@@ -16,9 +16,10 @@ import {
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { type MouseEvent, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { fullHistoryToChat, isUserImageFile } from "../services/chat-service";
+import { fullHistoryToChatWithSpans, isUserImageFile } from "../services/chat-service";
 import { getSessionRuntimeWhenReady } from "../services/session-runtime-readiness";
 import { cancelStagedPendingSessionSend, restoreStagedPendingSessionSend } from "../services/staged-new-session-send";
+import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
 import { copyUserMessageToClipboard } from "../services/user-message-clipboard";
 
 const DELETE_CONFIRMATION_SUPPRESSION_MS = 60_000;
@@ -107,8 +108,17 @@ async function abortAndWait(runtimeId: string): Promise<void> {
 async function reloadChatHistory(runtimeId: string): Promise<void> {
 	const history = await window.vetta.session.getFullHistory(runtimeId);
 	const store = getDefaultStore();
+	const sessionPath = store.get(activeSessionAtom)?.sessionPath;
 	if (store.get(activeSessionAtom)?.runtimeId === runtimeId) {
-		store.set(chatMessagesAtom, fullHistoryToChat(history, runtimeId));
+		const projected = fullHistoryToChatWithSpans(history, runtimeId);
+		if (sessionPath) {
+			registerActiveTranscriptBacklog(sessionPath, {
+				entries: history,
+				spans: projected.spans,
+				mediaSessionId: runtimeId,
+			});
+		}
+		store.set(chatMessagesAtom, projected.messages);
 	}
 }
 

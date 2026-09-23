@@ -10,7 +10,7 @@ import { getDefaultStore, useAtomValue } from "jotai";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ConversationUserMessageViewModel } from "@shared/conversation";
-import type { ChatConversationItem } from "./types";
+import type { ChatTimelineItem } from "./types";
 
 interface ForkOriginBannerProps {
 	/** Source user message text for preview (the forked bubble). */
@@ -71,8 +71,12 @@ export interface ForkOriginPlacement {
  * Place the fork-origin hint under the AI reply of the forked turn
  * (user + following non-user messages; tip = last assistant/compaction in that turn).
  */
+function isUserItem(message: ChatTimelineItem): boolean {
+	return message.kind === "user" || (message.kind === "placeholder" && message.role === "user");
+}
+
 export function resolveForkOriginPlacement(
-	messages: readonly ChatConversationItem[],
+	messages: readonly ChatTimelineItem[],
 	parentEntryId: string | undefined,
 	hasParentSession: boolean,
 ): ForkOriginPlacement | null {
@@ -81,13 +85,13 @@ export function resolveForkOriginPlacement(
 	let sourceUserIndex = -1;
 	if (parentEntryId) {
 		sourceUserIndex = messages.findIndex(
-			(m) => m.kind === "user" && (m.entryId === parentEntryId || m.id === parentEntryId),
+			(m) => isUserItem(m) && (m.entryId === parentEntryId || m.id === parentEntryId),
 		);
 	}
 	if (sourceUserIndex < 0) {
 		// Older forks without parentEntryId: last user message in the export.
 		for (let i = messages.length - 1; i >= 0; i--) {
-			if (messages[i].kind === "user") {
+			if (isUserItem(messages[i])) {
 				sourceUserIndex = i;
 				break;
 			}
@@ -98,7 +102,7 @@ export function resolveForkOriginPlacement(
 	// Walk forward past assistant/compaction of this turn; stop before next user.
 	let anchorIndex = sourceUserIndex;
 	for (let i = sourceUserIndex + 1; i < messages.length; i++) {
-		if (messages[i].kind === "user") break;
+		if (isUserItem(messages[i])) break;
 		anchorIndex = i;
 	}
 	return { anchorIndex, sourceUserIndex };

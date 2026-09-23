@@ -3,7 +3,7 @@ import type { ContentBlock } from "@shared/store/atoms";
 import type { SizeFunction } from "react-virtuoso";
 import { isApprovedPlanBlock } from "../../services/plan-review";
 import { groupBlocks } from "./messageBlockModel";
-import type { ChatConversationItem } from "./types";
+import type { ChatConversationItem, ChatTimelineItem } from "./types";
 
 const DEFAULT_MESSAGE_COLUMN_WIDTH = 728;
 const TEXT_LINE_HEIGHT = 22.4;
@@ -109,13 +109,16 @@ function estimateAgentBlocksHeight(item: Extract<ChatConversationItem, { kind: "
 	}, 0);
 }
 
-function inferMessageItemHeight(item: ChatConversationItem): number {
+function inferMessageItemHeight(item: ChatTimelineItem): number {
 	const revision = itemRevision(item);
 	const cached = inferredHeightCache.get(item);
 	if (cached?.revision === revision) return cached.height;
 
 	let height: number;
-	if (item.kind === "user") {
+	if (item.kind === "placeholder") {
+		// 占位行只有摘要文本——进入窗口恢复后对象替换，revision 随之变化重新测量。
+		height = 40 + Math.min(60, estimateTextHeight(item.summary));
+	} else if (item.kind === "user") {
 		const textHeight = Math.min(USER_COLLAPSED_LINE_COUNT, estimateTextLineCount(item.text)) * TEXT_LINE_HEIGHT;
 		const imagesHeight = (item.images?.length ?? 0) > 0 ? 88 : 0;
 		const appshotHeight = item.appshot ? 176 : 0;
@@ -174,12 +177,14 @@ function blockRevision(block: ContentBlock): string {
 	}
 }
 
-function itemRevision(item: ChatConversationItem): string {
+function itemRevision(item: ChatTimelineItem): string {
 	const cached = itemRevisionCache.get(item);
 	if (cached !== undefined) return cached;
 
 	let revision: string;
-	if (item.kind === "user") {
+	if (item.kind === "placeholder") {
+		revision = `placeholder:${textRevision(item.summary)}`;
+	} else if (item.kind === "user") {
 		revision = [
 			item.deliveryPhase,
 			textRevision(item.text),
@@ -205,7 +210,7 @@ function itemRevision(item: ChatConversationItem): string {
 	return revision;
 }
 
-function measurementKey(scope: string | null | undefined, item: ChatConversationItem): string {
+function measurementKey(scope: string | null | undefined, item: ChatTimelineItem): string {
 	return `${scope ?? "pending"}\u001f${conversationItemRenderKey(item)}\u001f${itemRevision(item)}`;
 }
 
@@ -220,14 +225,14 @@ function cacheMeasuredHeight(key: string, height: number): void {
 }
 
 export function buildMessageHeightEstimates(
-	items: readonly ChatConversationItem[],
+	items: readonly ChatTimelineItem[],
 	scope: string | null | undefined,
 ): number[] {
 	return items.map((item) => measuredHeightCache.get(measurementKey(scope, item)) ?? inferMessageItemHeight(item));
 }
 
 export function createMessageItemSizeRecorder(
-	items: readonly ChatConversationItem[],
+	items: readonly ChatTimelineItem[],
 	scope: string | null | undefined,
 ): SizeFunction {
 	return (element, field) => {
