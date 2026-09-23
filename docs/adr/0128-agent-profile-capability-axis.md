@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # ADR-0128：WorkspaceMode、agentMode 与 agentProfileId 三轴分离
 
 ## 状态

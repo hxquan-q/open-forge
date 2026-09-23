@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createWriteStream } from "node:fs";
 import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";

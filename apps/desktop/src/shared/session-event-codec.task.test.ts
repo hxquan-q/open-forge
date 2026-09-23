@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { decodeSessionEvent } from "./session-event-codec.js";
 

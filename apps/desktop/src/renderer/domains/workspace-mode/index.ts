@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 export { WorkspaceModeSwitcher } from "./components/WorkspaceModeSwitcher";
 export type {
 	WorkPanelSectionId,

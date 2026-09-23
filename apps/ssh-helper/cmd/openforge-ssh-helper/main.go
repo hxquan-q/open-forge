@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // Command openforge-ssh-helper runs on a remote project host and answers requests
 // from the Vetta desktop app over the SSH channel's stdio.
 //

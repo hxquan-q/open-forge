@@ -10,6 +10,7 @@ related_requirement: [REQ-0002]
 related_plan: [PLAN-0002]
 related_bug: [BUG-0001, BUG-0002, BUG-0003]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 本地 Vetta 性能/可靠性基线
 

@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Research
 
 本目录是研究证据索引，不是把所有外部资料全文复制进仓库。新 Research 使用 [`TEMPLATE.md`](TEMPLATE.md)，详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)。

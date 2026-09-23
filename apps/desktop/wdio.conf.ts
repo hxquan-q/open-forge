@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRequire } from "node:module";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";

@@ -5,6 +5,7 @@ status: adopted
 source: https://coldingcode.github.io/notes/
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Colding Code Notes 方法借鉴
 

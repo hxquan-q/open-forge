@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { fileEditorDocumentsAtom, fileEditorOpenDocumentCountsAtom } from "@shared/store/atoms";

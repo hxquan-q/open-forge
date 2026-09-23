@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";

@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Open Forge Project Control Plane
 
 `project/` 是当前二开产品的主动管理层；`exprot/` 保留为历史源码分析、调研证据和早期规划归档。

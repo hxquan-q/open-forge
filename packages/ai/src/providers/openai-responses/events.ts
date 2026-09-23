@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type OpenAI from "openai";
 import type { ResponseCreateParamsStreaming, ResponseStreamEvent } from "openai/resources/responses/responses.js";
 import { calculateCost } from "../../models.js";

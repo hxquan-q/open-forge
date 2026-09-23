@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { constants, writeSync } from "node:fs";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";

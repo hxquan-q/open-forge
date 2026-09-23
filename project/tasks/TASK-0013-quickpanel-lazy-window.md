@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # QuickPanel 预创建窗口改为按需创建
 

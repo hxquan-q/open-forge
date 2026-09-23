@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Desktop Packaging Size Policy
 
 本文记录 `apps/desktop` 构建与打包阶段的体积优化策略。目标是减少发布包中不会被当前运行路径使用的文件，同时避免删除源文件、模型文件或依赖包内容。

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { providerAuthenticationError } from "@vetta/ai";
 import { type RuntimeObservationPublisher, runtimeFailureFromError } from "@vetta/runtime-core";
 import type {

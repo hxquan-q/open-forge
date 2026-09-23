@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { ToolRiskLevel } from "@vetta/runtime-core/task";
 import { defaultApprovalRequirement, evaluateToolRisk, type ToolRiskDescriptor } from "@vetta/runtime-core/task";
 import type { CodingAgentToolInterceptor, ToolInterceptionContext } from "../../interception/tool/contracts.js";

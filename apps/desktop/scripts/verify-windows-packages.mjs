@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";

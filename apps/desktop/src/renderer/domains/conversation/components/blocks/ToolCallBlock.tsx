@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ToolCallBlock } from "@shared/store/atoms";
 import { ToolCall } from "@vetta-org/theme-ui/chat";
 import { Component, type ErrorInfo, type ReactNode } from "react";

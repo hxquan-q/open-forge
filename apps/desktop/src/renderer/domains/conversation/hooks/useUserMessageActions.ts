@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ConversationUserMessageViewModel } from "@shared/conversation";
 import { type InputSegment, parseInputSegments, segmentsToText } from "@shared/lib/input-tokens";
 import {

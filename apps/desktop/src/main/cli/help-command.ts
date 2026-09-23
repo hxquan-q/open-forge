@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { writeSync } from "node:fs";
 
 export interface HelpCliCommand {

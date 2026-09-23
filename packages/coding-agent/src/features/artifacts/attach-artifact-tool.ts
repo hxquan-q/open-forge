@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import type { RuntimeToolDefinition, RuntimeToolResult } from "@vetta/runtime-core/kernel";
 import { defineSessionExtensionFunction } from "@vetta/runtime-core/session-extensions";

@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # fileEditorDocumentsAtom 有界化（保脏草稿）
 

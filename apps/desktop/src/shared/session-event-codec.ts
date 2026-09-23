@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionEvent } from "@vetta/runtime-core";
 
 const SESSION_EVENT_TYPES = new Set([

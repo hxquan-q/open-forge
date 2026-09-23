@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeToolResult } from "@vetta/runtime-core/kernel";
 import type { RuntimeToolResultArtifactStore } from "@vetta/runtime-tools";
 import { describe, expect, it, vi } from "vitest";

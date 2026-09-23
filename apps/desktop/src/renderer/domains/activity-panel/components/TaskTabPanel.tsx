@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import type { DesktopArtifactView } from "@preload/api-types/task";
 import type { RuntimeTaskSnapshot, RuntimeTaskStatus } from "@vetta/runtime-core/task";

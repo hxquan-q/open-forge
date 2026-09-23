@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { ConversationDocumentStore } from "../../src/conversation/index.js";
 import { RUNTIME_ERROR_CODES } from "../../src/errors.js";

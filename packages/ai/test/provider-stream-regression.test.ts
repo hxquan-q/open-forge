@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 import { isAIErrorDetails } from "../src/protocol/index.js";

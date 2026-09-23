@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn } from "node:child_process";
 import { rm as rmPhysicalFallback, statSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";

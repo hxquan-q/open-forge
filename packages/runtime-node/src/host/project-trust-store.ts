@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import type { PermissionGrant } from "@vetta/runtime-core/task";

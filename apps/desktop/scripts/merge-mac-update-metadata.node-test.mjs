@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

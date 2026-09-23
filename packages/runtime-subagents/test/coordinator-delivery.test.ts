@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { SubagentSnapshot } from "../src/index.js";
 import { request } from "./support/builders.js";

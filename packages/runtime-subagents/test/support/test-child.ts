@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SubagentChildEvent, SubagentChildHandle } from "../../src/index.js";
 import { waitUntil } from "./wait.js";
 

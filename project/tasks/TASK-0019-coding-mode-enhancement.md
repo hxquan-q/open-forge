@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # coding 模式增强（implementation-plan 阶段 4）
 

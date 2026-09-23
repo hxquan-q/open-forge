@@ -10,6 +10,7 @@ source: .vetta app-monitor and desktop logs
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 性能观测保存边界
 

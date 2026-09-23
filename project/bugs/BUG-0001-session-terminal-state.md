@@ -10,6 +10,7 @@ source: C:\Users\xquan\.vetta\desktop-app\logs\main\2026-09-22.log
 created: 2026-09-22
 updated: 2026-09-24
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Session 长任务取消/压缩后的终态与性能问题
 

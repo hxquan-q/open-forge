@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # IM coding-agent 子进程 V8 老生代上限
 

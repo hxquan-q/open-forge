@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomBytes } from "node:crypto";
 import { hostname } from "node:os";
 import type { RemoteConnectionState } from "@vetta/remote-control";

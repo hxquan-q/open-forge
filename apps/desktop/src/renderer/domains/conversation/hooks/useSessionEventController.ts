@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createConversationUserMessage } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {

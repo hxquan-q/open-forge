@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import type { NodeProjectTrustStoreIo } from "../../src/host/project-trust-store.js";
 import { NodeProjectTrustStore } from "../../src/host/project-trust-store.js";

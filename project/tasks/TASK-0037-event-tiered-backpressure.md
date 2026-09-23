@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 事件分级背压：中间 delta 可合并、终态必达
 

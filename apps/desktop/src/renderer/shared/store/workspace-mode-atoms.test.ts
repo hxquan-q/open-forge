@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import { createStore } from "jotai";
 import { beforeEach, describe, expect, it, vi } from "vitest";

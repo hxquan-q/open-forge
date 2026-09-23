@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import { taskStateBySessionAtom } from "@shared/store/atoms";
 import { cleanup, render, renderHook, screen } from "@testing-library/react";

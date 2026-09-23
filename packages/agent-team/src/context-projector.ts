@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { TEAM_DELIVERED_EVENT_ID_WINDOW, type TeamMemberAssignment, type TeamSessionDocument } from "./contracts.js";
 
 const FNV_OFFSET = 0xcbf29ce484222325n;

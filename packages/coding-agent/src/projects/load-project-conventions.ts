@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import {

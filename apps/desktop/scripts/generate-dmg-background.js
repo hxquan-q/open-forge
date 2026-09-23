@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 生成 DMG 背景图 build/background.png (660×440) 和 build/background@2x.png (1320×880)。
 //
 // 思路：写一段 SVG → qlmanage 渲染成 PNG → sips 裁剪/缩放，全部用 macOS 自带工具，

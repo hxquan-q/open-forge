@@ -1,4 +1,5 @@
 #!/bin/sh
+# Modified by The Open Forge contributors.
 # 在一台真实主机上验证远端 helper。
 #
 #   scripts/verify-on-host.sh user@host [ssh 的额外参数...]

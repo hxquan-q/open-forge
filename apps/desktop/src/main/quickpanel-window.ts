@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";

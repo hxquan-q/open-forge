@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Agent Team 会话驻留与投递回执有界化
 

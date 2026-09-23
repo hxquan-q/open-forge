@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ReadImageViewProps } from "@vetta-org/theme-ui/chat";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

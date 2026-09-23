@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { writeSync } from "node:fs";
 import { ActionRpcError, createActionRpcClient } from "@vetta/action-rpc";
 import { readLocalRpcServerEndpoint } from "../local-rpc/endpoint-file.js";

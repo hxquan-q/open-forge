@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type AIErrorOptions, AIStreamProtocolError } from "../protocol/index.js";
 
 export class EmptyProviderStreamError extends AIStreamProtocolError {

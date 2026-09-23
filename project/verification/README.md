@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Verification
 
 这里记录行为合同、测试矩阵、性能基线和质量门禁。新 Verification 使用 [`TEMPLATE.md`](TEMPLATE.md)，详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)。

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ChatCompletionChunk } from "openai/resources/chat/completions.js";
 import { getEnvApiKey } from "../../env-api-keys.js";
 import { calculateCost } from "../../models.js";

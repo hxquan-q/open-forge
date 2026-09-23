@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import type { SubagentTask } from "./subagents-atoms";
 import { MAX_SUBAGENT_SESSIONS, rememberSubagentsForSession } from "./subagents-atoms";

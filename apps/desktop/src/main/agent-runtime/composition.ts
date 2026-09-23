@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import {
 	CODING_AGENT_COMPACTION_PREFIRE_OBSERVATION,

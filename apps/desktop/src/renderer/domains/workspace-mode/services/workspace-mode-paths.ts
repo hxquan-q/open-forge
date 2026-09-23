@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Mode Switcher 只在「工作区」路由出现：会话页、新会话页、项目详情页。
  * settings / automation / knowledge / agent-teams 等独立面有自己的页头语义，

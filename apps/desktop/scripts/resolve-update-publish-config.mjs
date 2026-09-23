@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 const SUPPORTED_PROVIDERS = new Set(["generic", "github"]);
 const DEFAULT_UPDATE_PROVIDER = "generic";
 

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { SessionEvent } from "@vetta/runtime-core";
 import { app } from "electron";
 import { getAppLogger } from "../logger.js";

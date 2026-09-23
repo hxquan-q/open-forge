@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { SegmentedControl, type SegmentedControlItem } from "@shared/components/ui/segmented-control";
 import type { WorkspaceMode } from "@shared/store/atoms";
 import { useMemo } from "react";

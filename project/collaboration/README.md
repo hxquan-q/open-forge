@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Collaboration
 
 本目录定义多人/多 Agent 并行开发的协作合同。它只管理开发协作，不等同于产品运行时的 Agent Team。

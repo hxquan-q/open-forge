@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { ARTIFACT_KINDS, type ArtifactKind } from "@vetta/runtime-core/task";
 import { ipcMain, type WebContents } from "electron";
 import { TASK_CHANNELS } from "../../shared/task-ipc.js";

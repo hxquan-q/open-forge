@@ -10,6 +10,7 @@ source: C:\Users\xquan\.vetta\app-monitor\summary.json and desktop logs
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # App Monitor 漏记 Compaction
 

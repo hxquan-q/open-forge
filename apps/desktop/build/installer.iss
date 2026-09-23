@@ -1,3 +1,4 @@
+; Modified by The Open Forge contributors.
 #ifndef AppVersion
   #error AppVersion is required
 #endif

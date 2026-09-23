@@ -2,6 +2,7 @@
 name: vetta-task-intake
 description: 将一句自然语言软件需求编译成 OpenVetta 可执行的任务合同。用于新增、删除、修改、修复、性能优化、UI、IPC、Runtime、Provider、持久化和架构任务；自动读取仓库规则与代码事实，推导所有者、用户流程、不变量、测试层级和验证命令，仅在公共合同、数据兼容、安全边界或不可逆行为存在实质歧义时追问。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # OpenVetta 需求编译器
 

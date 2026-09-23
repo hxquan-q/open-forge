@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { resolve } from "node:path";
 import { coverageConfigDefaults, defineConfig } from "vitest/config";
 

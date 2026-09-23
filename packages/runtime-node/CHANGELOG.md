@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Changelog
 
 All notable changes to `@vetta/runtime-node` are documented in this file.

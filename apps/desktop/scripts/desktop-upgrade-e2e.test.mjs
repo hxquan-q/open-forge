@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { artifactMatches, baselineArtifactName, compareVersions, metadataFile } from "./desktop-upgrade-e2e.mjs";

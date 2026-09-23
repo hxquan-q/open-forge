@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ThinkingLevel } from "@vetta/agent-core";
 import type { Api, Message, Model } from "@vetta/ai";
 import type {

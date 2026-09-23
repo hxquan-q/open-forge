@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /** Task Activity IPC channel 常量：main/preload 两侧共享的唯一事实源。 */
 export const TASK_CHANNELS = {
 	GET_STATE: "vetta:task:get-state",

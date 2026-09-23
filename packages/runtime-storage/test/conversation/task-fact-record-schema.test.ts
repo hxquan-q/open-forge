@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { Value } from "@sinclair/typebox/value";
 import type { TaskLifecycleRecordedEvent } from "@vetta/runtime-core/kernel";
 import { describe, expect, it } from "vitest";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	AI_ERROR_CODES,
 	type Api,

@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Product Brief Pointer
 
 产品定义的唯一事实源已迁移到 [`project/requirements/PRODUCT.md`](project/requirements/PRODUCT.md)。

@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Surface Brief — work/coding 双模式工作区
 
 > 定稿来源：`exprot/ui-information-architecture.md`（IA §1–§8）+ `apps/desktop/DESIGN.md` 硬规范。

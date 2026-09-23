@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopMcpAppAttachment } from "@preload/api";
 import type { CardDescriptor } from "@vetta-org/plugin-sdk";
 

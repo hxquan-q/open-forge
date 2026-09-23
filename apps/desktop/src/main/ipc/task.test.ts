@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 
 // parseCommand 是纯函数；mock 掉领域服务以隔离 electron/runtime 的传递导入。

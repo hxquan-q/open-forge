@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionConfig, SessionExecutionMode } from "../contracts.js";
 import type { RuntimeHostAgentBackendRegistry } from "./agent-backend-admission.js";
 import type { RuntimeHostQueueSidecar } from "./runtime-host-queue-sidecar.js";

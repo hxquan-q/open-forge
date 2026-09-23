@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeHost, SessionEvent } from "@vetta/runtime-core";
 import type { AppMonitorEvent, AppMonitorInputImageAttachment } from "../../preload/api-types/app-monitor.js";
 import { type AbilityLifecycleLogContext, logAbilityLifecycleEvent } from "../abilities/ability-lifecycle-log.js";

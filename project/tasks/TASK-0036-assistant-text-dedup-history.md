@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # assistant 文本双份存储消除（历史回放路径先行）
 

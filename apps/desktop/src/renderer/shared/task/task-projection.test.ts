@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { RuntimeSessionTaskState, RuntimeTaskEvent, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
 import { describe, expect, it } from "vitest";
 import { applyTaskFactEvent, mergeTaskStateSeed } from "./task-projection.js";

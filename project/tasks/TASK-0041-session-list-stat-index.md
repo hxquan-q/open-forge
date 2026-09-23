@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 会话列表/恢复最小化：stat 轻索引 + 大会话恢复选项
 

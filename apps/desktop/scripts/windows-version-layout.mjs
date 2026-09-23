@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execFileSync } from "node:child_process";
 import { mkdir, readdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";

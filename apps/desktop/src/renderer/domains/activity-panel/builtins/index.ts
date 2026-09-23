@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ActivityTabDefinition } from "../registry/types";
 import { backgroundTasksTabDefinition } from "./background-tasks-tab";
 import { batchProgressTabDefinition } from "./batch-progress-tab";

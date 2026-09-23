@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { EcosystemHookAdapterFactory, HookConfigLayer } from "@vetta/ecosystem-adapter";
 import type {
 	RuntimeAgentDefinition,

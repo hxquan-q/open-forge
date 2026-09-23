@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeToolResult } from "@vetta/runtime-core/kernel";
 import { selectMcpMediaCandidates } from "@vetta/runtime-mcp/browser";
 import type {

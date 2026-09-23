@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PromptAttachmentRef, SessionExecutionMode } from "@vetta/runtime-core";
 import type {
 	ConversationAuthorReference,

@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Session 取消与恢复 Deadline
 

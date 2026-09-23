@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // Re-export hub — all domain atoms are in separate files
 
 export * from "./action-approval-atoms";

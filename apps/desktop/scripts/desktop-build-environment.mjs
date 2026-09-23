@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { resolveMacSigningConfig } from "./mac-signing-config.mjs";
 import { resolveSpeechInputBuildConfig } from "./speech-input-build-config.js";
 import { resolveSystemPluginSelection } from "./stage-system-plugins.mjs";

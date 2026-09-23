@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 package org.vetta.android.domain.remote
 
 data class PairingInvite(val relayBaseUrl: String, val pairingId: String, val bootstrapSecret: String)

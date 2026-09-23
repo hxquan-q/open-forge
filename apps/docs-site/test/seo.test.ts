@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { buildPageMetadata, buildRootMetadata } from "../lib/seo/metadata";
 import { buildRobotsConfig } from "../lib/seo/robots";

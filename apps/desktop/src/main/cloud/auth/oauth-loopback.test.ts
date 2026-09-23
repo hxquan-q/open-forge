@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../logger.js", () => ({

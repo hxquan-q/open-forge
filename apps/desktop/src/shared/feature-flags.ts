@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Feature flags driven by environment variables.
  *

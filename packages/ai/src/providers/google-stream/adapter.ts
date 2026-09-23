@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { GenerateContentParameters } from "@google/genai";
 import { AIAbortedError, type Api, type AssistantMessage, createAssistantMessage } from "../../protocol/index.js";
 import { EmptyProviderStreamError, normalizeProviderError, validateWirePayload } from "../../provider-kit/index.js";

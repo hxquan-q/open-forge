@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 交互式会话在主进程的驻留策略。
  *

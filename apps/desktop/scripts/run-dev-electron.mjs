@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn } from "node:child_process";
 import { Socket } from "node:net";
 import { homedir } from "node:os";

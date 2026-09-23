@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export const DEFAULT_MCP_MEDIA_MAX_ITEMS = 16;
 export const DEFAULT_MCP_MEDIA_MAX_ITEM_BYTES = 8 * 1024 * 1024;
 export const DEFAULT_MCP_MEDIA_MAX_TOTAL_BYTES = 24 * 1024 * 1024;

@@ -1,3 +1,4 @@
+-- Modified by The Open Forge contributors.
 -- 修复已损坏.app 的 AppleScript 源。
 -- 由 scripts/build-mac-repair-helper.js 通过 osacompile 编译为 .app 后放入 DMG。
 -- 作用：对用户安装到 /Applications 或 ~/Applications 的 Open Forge.app

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * 自动压缩背压闸门（会话内内存态）。
  *

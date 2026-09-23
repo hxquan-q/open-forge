@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ActivityPanel, CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { BottomPanelHost } from "@domains/bottom-panel/components/BottomPanelHost";
 import { WorkWorkspacePanel } from "@domains/workspace-mode";

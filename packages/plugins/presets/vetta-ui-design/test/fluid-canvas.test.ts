@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * canvas 流体：原来的 CSS 版每帧对大面积重做高斯模糊，GPU 随亮着的 frame 数飙升。
  * 这里守住三件事——画布很小、绘制不用 filter、所有 canvas 共用一个循环并能注销干净。

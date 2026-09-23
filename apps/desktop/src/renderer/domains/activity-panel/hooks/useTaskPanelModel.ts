@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { DesktopArtifactView } from "@preload/api-types/task";
 import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";

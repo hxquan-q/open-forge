@@ -10,6 +10,7 @@ source:
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 问题标题
 

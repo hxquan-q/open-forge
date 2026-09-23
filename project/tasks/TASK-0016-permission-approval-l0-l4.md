@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Permission/Approval：L0-L4 风险分级与 Project Trust（implementation-plan 阶段 2）
 

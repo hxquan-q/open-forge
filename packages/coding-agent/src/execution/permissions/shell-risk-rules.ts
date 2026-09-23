@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { ToolRiskLevel } from "@vetta/runtime-core/task";
 
 /**

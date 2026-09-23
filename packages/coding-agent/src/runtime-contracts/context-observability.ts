@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { defineRuntimeObservation, type RuntimeObservationFailure } from "@vetta/runtime-core";
 
 export interface CodingAgentCompactionPrefireObservation {

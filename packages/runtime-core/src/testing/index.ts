@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Deterministic contract fixtures for runtime-core consumers. Kept behind an
  * explicit `./testing` entry (mirroring `@vetta/ai/testing`) so production

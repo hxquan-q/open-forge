@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import type { McpStdioServerConfig } from "../../protocol/index.js";

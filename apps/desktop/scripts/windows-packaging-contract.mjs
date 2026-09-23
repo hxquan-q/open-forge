@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export const WINDOWS_RELEASE_TARGETS = Object.freeze(["inno", "msi", "zip"]);
 
 export const WINDOWS_SUPPLEMENTAL_EXTENSIONS = Object.freeze([".msi", ".zip"]);

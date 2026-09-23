@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { stat } from "node:fs/promises";
 import type {
 	ArtifactDescriptorRecordedEvent,

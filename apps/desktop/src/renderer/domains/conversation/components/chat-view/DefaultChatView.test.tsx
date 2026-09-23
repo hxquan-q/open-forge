@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getDefaultStore } from "jotai";

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { FileEditorDocumentState } from "./file-atoms";
 
 /** 编辑器文档缓存的常驻上限；脏草稿与打开中的文档不参与淘汰，但计入判定基数。 */

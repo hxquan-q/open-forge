@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export {
 	applyAgentProfileDefaults,
 	CODING_AGENT_PROFILES,

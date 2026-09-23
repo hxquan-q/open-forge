@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 把 native/appshot/main.swift 编译打包成 `Open Forge Computer Use.app`（swiftc 单文件
 // 编译到 Contents/MacOS/、写 Info.plist、拷贝主 app icns、ad-hoc 签名）。
 //

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TeamSessionDocument, TeamSessionStateRecord } from "@vetta/agent-team";
 import type { RuntimeHost } from "@vetta/runtime-core";
 import type { ConversationOwnershipCatalogPort } from "../conversations/conversation-ownership-catalog.js";

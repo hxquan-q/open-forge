@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { StdioMcpProcess } from "../../src/mcp/transports/stdio/stdio-process.js";
 import { shouldUseWindowsCommandShell } from "../../src/mcp/transports/stdio/stdio-shell.js";

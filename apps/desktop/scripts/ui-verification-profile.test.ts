@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";

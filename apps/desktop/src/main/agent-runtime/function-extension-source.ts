@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
 	CODING_AGENT_ATTACH_ARTIFACT_FUNCTION,

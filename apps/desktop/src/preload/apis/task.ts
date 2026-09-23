@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { IpcRenderer } from "electron";
 import { TASK_CHANNELS } from "../../shared/task-ipc.js";
 import type { DesktopApi } from "../api.js";

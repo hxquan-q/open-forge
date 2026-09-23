@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Bugs
 
 这里记录已确认的缺陷、性能回退和可靠性问题。详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)，模板见 [`templates/bug.md`](templates/bug.md)。每个 Bug 必须能回答：

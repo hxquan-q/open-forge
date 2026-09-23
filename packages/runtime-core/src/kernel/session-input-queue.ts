@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRuntimeId } from "../id-generator.js";
 import type {
 	QueuedSessionInput,

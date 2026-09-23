@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 统一工具结果出口（消除插件/扩展无界结果）
 

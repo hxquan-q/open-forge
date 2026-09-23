@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QUICK_PANEL_CHANNELS } from "../shared/quickpanel-ipc.js";
 

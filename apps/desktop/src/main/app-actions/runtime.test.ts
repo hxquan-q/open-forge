@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppActionCatalog } from "./catalog.js";
 import { AppActionRuntime, shouldBypassActionApproval } from "./runtime.js";

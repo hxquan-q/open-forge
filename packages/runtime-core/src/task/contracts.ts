@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Product-neutral Task / Artifact / Permission / Approval contracts.
  *

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { ConversationDocument } from "@vetta/runtime-core/conversation";
 import type { ReadConversationFileHeader } from "@vetta/runtime-storage/conversation";
 

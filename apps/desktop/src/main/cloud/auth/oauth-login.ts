@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 授权登录（deep link）的发起与回调校验。
  *

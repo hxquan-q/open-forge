@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Vetta 云服务主进程入口（唯一入口）。
  *

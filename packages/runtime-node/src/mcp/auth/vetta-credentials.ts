@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 读取 Vetta 客户端下沉的登录态。
  *

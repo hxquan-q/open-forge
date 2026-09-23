@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";

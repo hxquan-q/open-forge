@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { RuntimeSessionTaskState } from "@vetta/runtime-core/task";
 import { atom } from "jotai";
 

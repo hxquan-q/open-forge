@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,

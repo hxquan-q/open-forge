@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Context
 
 这里保存后续 Agent 必须先读的短上下文，不复制完整研究报告。新增 Context 使用 [`TEMPLATE.md`](TEMPLATE.md)，详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)。

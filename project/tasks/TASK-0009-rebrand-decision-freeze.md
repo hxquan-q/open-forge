@@ -19,6 +19,7 @@ integration_status: done
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 品牌化关键决策冻结
 

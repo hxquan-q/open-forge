@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Changelog
 
 All notable changes to `@vetta/runtime-core` are documented in this file.

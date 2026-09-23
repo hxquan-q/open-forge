@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { waitForPluginHostFirstReady } from "@domains/plugins/runtime/plugin-events";
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import type { PersistedImageResult } from "@preload/api";

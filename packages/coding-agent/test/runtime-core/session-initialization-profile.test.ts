@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Api, Model } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import type { CodingAgentRuntimeCompositionOptions } from "../../src/composition/contracts/index.js";
