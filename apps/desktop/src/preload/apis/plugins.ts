@@ -87,6 +87,24 @@ export function createPluginsApi(ipc: IpcRenderer, webUtils: WebUtils): Pick<Des
 					persist: (sessionId, input) => ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_PERSIST, sessionId, input),
 					release: (sessionId, artifactId) =>
 						ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_RELEASE, sessionId, artifactId),
+					readTaskArtifactText: (sessionId, taskSessionId, artifactId, version, rendererType) =>
+						ipc.invoke(
+							PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_READ_TASK_TEXT,
+							sessionId,
+							taskSessionId,
+							artifactId,
+							version,
+							rendererType,
+						),
+					readTaskArtifactBytes: (sessionId, taskSessionId, artifactId, version, rendererType) =>
+						ipc.invoke(
+							PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_READ_TASK_BYTES,
+							sessionId,
+							taskSessionId,
+							artifactId,
+							version,
+							rendererType,
+						),
 				},
 				ai: {
 					listModels: (sessionId) => ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.AI_MODEL_LIST, sessionId),

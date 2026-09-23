@@ -836,7 +836,14 @@ function useConversationMessages(): ConversationMessage[] {
 			messages.flatMap((message) =>
 				message.kind === "event"
 					? []
-					: [{ id: message.id, role: message.role, text: message.text ?? "", timestamp: message.timestamp }],
+					: [
+							{
+								id: message.id,
+								role: message.role,
+								text: message.kind === "placeholder" ? message.summary : (message.text ?? ""),
+								timestamp: message.timestamp,
+							},
+						],
 			),
 		[messages],
 	);

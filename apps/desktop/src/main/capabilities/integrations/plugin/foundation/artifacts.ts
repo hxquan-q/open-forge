@@ -1,4 +1,5 @@
 import { FOUNDATION_ARTIFACT_CAPABILITIES, type PersistedArtifact } from "@vetta-org/capability-sdk";
+import { desktopTaskActivityService } from "../../../task-activity/task-activity-service.js";
 import { PLUGIN_CAPABILITY_PERMISSIONS, type PluginCapabilitySessionAccess } from "../types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,6 +36,42 @@ export const pluginArtifactMethods = {
 			FOUNDATION_ARTIFACT_CAPABILITIES.PERSIST,
 			FOUNDATION_ARTIFACT_CAPABILITIES.PERSIST.parseInput(qualified),
 		);
+	},
+
+	readTaskArtifactText(
+		this: PluginCapabilitySessionAccess,
+		sessionId: string,
+		taskSessionId: string,
+		artifactId: string,
+		version: number,
+		rendererType: string,
+	): Promise<string> {
+		const session = this.session(sessionId, { permission: PLUGIN_CAPABILITY_PERMISSIONS.ARTIFACT_RENDERER });
+		this.session(sessionId, { permission: PLUGIN_CAPABILITY_PERMISSIONS.FILESYSTEM_READ });
+		return desktopTaskActivityService.readArtifactRendererText(session.pluginId, {
+			taskSessionId,
+			artifactId,
+			version,
+			rendererType,
+		});
+	},
+
+	readTaskArtifactBytes(
+		this: PluginCapabilitySessionAccess,
+		sessionId: string,
+		taskSessionId: string,
+		artifactId: string,
+		version: number,
+		rendererType: string,
+	): Promise<ArrayBuffer> {
+		const session = this.session(sessionId, { permission: PLUGIN_CAPABILITY_PERMISSIONS.ARTIFACT_RENDERER });
+		this.session(sessionId, { permission: PLUGIN_CAPABILITY_PERMISSIONS.FILESYSTEM_READ });
+		return desktopTaskActivityService.readArtifactRendererBytes(session.pluginId, {
+			taskSessionId,
+			artifactId,
+			version,
+			rendererType,
+		});
 	},
 
 	async releaseArtifact(this: PluginCapabilitySessionAccess, sessionId: string, artifactId: string): Promise<void> {

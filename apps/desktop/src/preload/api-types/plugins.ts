@@ -523,6 +523,20 @@ export interface DesktopPluginCapabilityArtifactsApi {
 		input: { artifactId: string; destination: PluginArtifactDestination },
 	): Promise<PersistedArtifact>;
 	release(sessionId: string, artifactId: string): Promise<void>;
+	readTaskArtifactText(
+		sessionId: string,
+		taskSessionId: string,
+		artifactId: string,
+		version: number,
+		rendererType: string,
+	): Promise<string>;
+	readTaskArtifactBytes(
+		sessionId: string,
+		taskSessionId: string,
+		artifactId: string,
+		version: number,
+		rendererType: string,
+	): Promise<ArrayBuffer>;
 }
 
 export interface DesktopPluginCapabilityMcpApi {

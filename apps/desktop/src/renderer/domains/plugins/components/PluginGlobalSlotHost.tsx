@@ -4,6 +4,7 @@ import {
 	pluginActivityTabsAtom,
 	pluginBottomPanelsAtom,
 	pluginCardRenderersAtom,
+	pluginArtifactRenderersAtom,
 	pluginFilePreviewsAtom,
 	pluginFileExplorerContextMenuActionsAtom,
 	pluginFileExplorerDecorationProvidersAtom,
@@ -63,6 +64,7 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 	const setInputActions = useSetAtom(pluginInputActionsAtom);
 	const setNewSessionContexts = useSetAtom(pluginNewSessionContextsAtom);
 	const setCardRenderers = useSetAtom(pluginCardRenderersAtom);
+	const setArtifactRenderers = useSetAtom(pluginArtifactRenderersAtom);
 	const setToolCallSlots = useSetAtom(pluginToolCallSlotsAtom);
 	const setTurnCards = useSetAtom(pluginTurnCardsAtom);
 	const setWorkspaceViews = useSetAtom(pluginWorkspaceViewsAtom);
@@ -328,6 +330,19 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 		if (cardRenderers.length > 0 || !hostLoading) setCardRenderers(cardRenderers);
 	}, [plugins, revision, hostLoading, setCardRenderers]);
 
+	useEffect(() => {
+		const registeredArtifactRendererTypes = new Set<string>();
+		const artifactRenderers = plugins.flatMap((plugin) => plugin.artifactRenderers).filter((renderer) => {
+			if (registeredArtifactRendererTypes.has(renderer.type)) {
+				console.warn(`Plugin ${renderer.pluginId} skipped duplicate artifact renderer: ${renderer.type}`);
+				return false;
+			}
+			registeredArtifactRendererTypes.add(renderer.type);
+			return true;
+		});
+		if (artifactRenderers.length > 0 || !hostLoading) setArtifactRenderers(artifactRenderers);
+	}, [plugins, revision, hostLoading, setArtifactRenderers]);
+
 	// Publish per-plugin i18n catalogs so contribution labels and plugin
 	// components (useTranslation) resolve `%key%` against the right catalog.
 	useEffect(() => {
@@ -385,6 +400,7 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 			setBottomPanels([]);
 			setInputActions([]);
 			setCardRenderers([]);
+				setArtifactRenderers([]);
 			setToolCallSlots([]);
 			setTurnCards([]);
 			setWorkspaceViews([]);
@@ -401,6 +417,7 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 		setBottomPanels,
 		setInputActions,
 		setCardRenderers,
+		setArtifactRenderers,
 		setToolCallSlots,
 		setTurnCards,
 		setWorkspaceViews,

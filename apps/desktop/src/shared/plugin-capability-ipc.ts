@@ -49,6 +49,8 @@ export const PLUGIN_CAPABILITY_CHANNELS = {
 	JOB_CANCEL: "vetta:plugins:capabilities:job:cancel",
 	ARTIFACT_PERSIST: "vetta:plugins:capabilities:artifact:persist",
 	ARTIFACT_RELEASE: "vetta:plugins:capabilities:artifact:release",
+	ARTIFACT_READ_TASK_TEXT: "vetta:plugins:capabilities:artifact:read-task-text",
+	ARTIFACT_READ_TASK_BYTES: "vetta:plugins:capabilities:artifact:read-task-bytes",
 	MCP_SERVER_LIST: "vetta:plugins:capabilities:mcp:server:list",
 	MCP_SERVER_GET: "vetta:plugins:capabilities:mcp:server:get",
 	MCP_SERVER_UPSERT: "vetta:plugins:capabilities:mcp:server:upsert",
