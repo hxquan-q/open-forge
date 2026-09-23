@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { isSubPath, pathBasename } from "@shared/lib/utils";
 import type { RuntimeSessionAccess } from "@vetta/runtime-core";
 import { atom } from "jotai";
@@ -68,6 +69,8 @@ export interface SessionInfo {
 	parentSessionPath?: string;
 	/** User entry id in the parent session this fork was created from. */
 	parentEntryId?: string;
+	/** Session JSONL size in bytes when known from list indexing. */
+	fileSizeBytes?: number;
 }
 
 /** Team session fields retained by the shared context-menu state. */

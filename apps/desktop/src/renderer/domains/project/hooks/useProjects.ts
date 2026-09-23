@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	DEFAULT_CONVERSATION_PROJECT_NAME,
 	defaultConversationCwdAtom,
@@ -71,7 +72,8 @@ function sessionListsEqual(a: readonly SessionInfo[], b: readonly SessionInfo[])
 			left.name !== right.name ||
 			left.firstMessage !== right.firstMessage ||
 			left.modifiedAt !== right.modifiedAt ||
-			left.cwd !== right.cwd
+			left.cwd !== right.cwd ||
+			left.fileSizeBytes !== right.fileSizeBytes
 		) {
 			return false;
 		}
