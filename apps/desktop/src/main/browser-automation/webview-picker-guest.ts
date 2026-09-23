@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+import { chooseInAppBrowserPickTarget } from "./webview-picker-target.js";
 
 export const IN_APP_BROWSER_PICKER_ROOT_ID = "__vetta-in-app-browser-picker";
 export const IN_APP_BROWSER_DOM_MUTATION_SENTINEL = "vetta-browser-dom-mutation";
@@ -6,7 +7,7 @@ export const IN_APP_BROWSER_DOM_MUTATION_SENTINEL = "vetta-browser-dom-mutation"
 export type InAppBrowserPickerCommand = "start" | "stop" | "hide-overlay" | "show-overlay" | "install-observer";
 
 export function buildInAppBrowserGuestScript(command: InAppBrowserPickerCommand): string {
-	return `void 0;(${inAppBrowserGuestRuntime.toString()})(${JSON.stringify(command)})`;
+	return `void 0;(function(command){${chooseInAppBrowserPickTarget.toString()};(${inAppBrowserGuestRuntime.toString()})(command)})(${JSON.stringify(command)})`;
 }
 
 function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
@@ -98,14 +99,8 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 	document.documentElement.append(overlay);
 
 	const pickTarget = (event: Event): Element | null => {
-		const fallback = event.target;
-		if (fallback instanceof Element && !fallback.closest(`#${rootId}`)) return fallback;
 		const point = event as MouseEvent;
-		const stack =
-			typeof document.elementsFromPoint === "function" && typeof point.clientX === "number"
-				? document.elementsFromPoint(point.clientX, point.clientY)
-				: [];
-		return stack.find((node) => !node.closest(`#${rootId}`)) ?? null;
+		return chooseInAppBrowserPickTarget(point, document, rootId);
 	};
 
 	const describeNode = (element: Element): string => {

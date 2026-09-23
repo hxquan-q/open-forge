@@ -30,6 +30,36 @@ describe("in-app browser picker guest", () => {
 		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeNull();
 	});
 
+	it("空白点到 body 时不产生 capsule，并保持 picker", async () => {
+		document.body.innerHTML = `<button id="go">Go</button>`;
+		Object.defineProperty(document.body, "getBoundingClientRect", {
+			value: () => ({
+				x: 0,
+				y: 0,
+				width: window.innerWidth,
+				height: window.innerHeight,
+				top: 0,
+				left: 0,
+				right: window.innerWidth,
+				bottom: window.innerHeight,
+				toJSON: () => ({}),
+			}),
+			configurable: true,
+		});
+		document.elementsFromPoint = () => [document.body, document.documentElement];
+		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
+		document.body.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 8, clientY: 8 }));
+		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeTruthy();
+		let settled = false;
+		void pick.then(() => {
+			settled = true;
+		});
+		await Promise.resolve();
+		expect(settled).toBe(false);
+		await runInAppBrowserGuestCommand("stop");
+		await expect(pick).resolves.toEqual({ cancelled: true });
+	});
+
 	it("stop restores browsing and resolves the pending pick as cancelled", async () => {
 		document.body.innerHTML = `<button id="go">Go</button>`;
 		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;

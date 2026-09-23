@@ -142,11 +142,12 @@ async function dispatchBrowserTabAction(
 			return browserTabToolError("unimplemented", "WebView cannot navigate", { action: "navigate" });
 		}
 		await context.loadURL(input.url);
+		const pageRevision = context.controller.bumpRevision(context.workspaceId, { url: input.url });
 		return {
 			ok: true,
 			action: "navigate",
 			pageUrl: input.url,
-			pageRevision: context.controller.getSession(context.workspaceId).pageRevision,
+			pageRevision,
 		};
 	}
 	if (input.action === "screenshot") {

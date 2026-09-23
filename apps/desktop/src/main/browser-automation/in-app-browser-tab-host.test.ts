@@ -3,8 +3,12 @@ import type {
 	CodingAgentBrowserTabFunctionRequest,
 	CodingAgentBrowserTabFunctionResult,
 } from "@vetta/coding-agent/function-extensions";
-import { describe, expect, it, vi } from "vitest";
-import { type BrowserTabHostDependencies, invokeDesktopBrowserTab } from "./in-app-browser-tab-host.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+	type BrowserTabHostDependencies,
+	invokeDesktopBrowserTab,
+	resetDesktopBrowserTabHostForTests,
+} from "./in-app-browser-tab-host.js";
 import {
 	type InAppBrowserNativeImage,
 	InAppBrowserSessionController,
@@ -94,6 +98,10 @@ async function snapshotFirst(deps: BrowserTabHostDependencies): Promise<CodingAg
 }
 
 describe("browser_tab 宿主函数", () => {
+	afterEach(() => {
+		resetDesktopBrowserTabHostForTests();
+	});
+
 	it("工作空间无法解析时返回 no_browser_session，不触碰控制器", async () => {
 		const { controller } = makeDeps(snapshottingContents());
 		const deps: BrowserTabHostDependencies = { resolveWorkspaceId: () => undefined, controller };
@@ -208,7 +216,12 @@ describe("browser_tab 宿主函数", () => {
 			new AbortController().signal,
 			deps,
 		);
-		expect(allowed).toMatchObject({ ok: true, action: "navigate", pageUrl: "https://example.org" });
+		expect(allowed).toMatchObject({
+			ok: true,
+			action: "navigate",
+			pageUrl: "https://example.org",
+			pageRevision: 1,
+		});
 		expect(loadURL).toHaveBeenCalledWith("https://example.org");
 	});
 
