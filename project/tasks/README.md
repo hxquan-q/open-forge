@@ -26,6 +26,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 - `PLAN-0004`：`TASK-0001` done，计划仍在 verifying。
 - `PLAN-0005`：ISSUE-0007/0008/0009 全部裁决（首发 `0.1.0` Preview、§4(b) 文件头声明+审计、不公发 workspace 包）；TASK-0052/0055/0056/0057 done；TASK-0058 done；新增 TASK-0065（发布流水线修复）、TASK-0066（第三方清单审计）、TASK-0067（发包面硬化）。
 - `PLAN-0008`：`TASK-0069`（结构化委派交接与 leader 编排纪律）、`TASK-0070`（Team 聚合视图成员归属）、`TASK-0071`（成员 handle 队内改名）done。
+- code review 修复批（8 角度交叉确认）：`TASK-0078`（capabilityProfile 固化与团队工具面）、`TASK-0079`（canvas workspace 键统一）、`TASK-0080`（session-axes 徽章派生）、`TASK-0081`（压缩投影稳定性）、`TASK-0082`（picker 面积启发式）并行进行中。
 
 `TASK-0001` 已完成 Project 控制面整理；`TASK-0002`–`TASK-0007` 覆盖性能/可靠性基线且均已完成；`TASK-0008` 覆盖 Task/Artifact 合同，`TASK-0009` 记录品牌化决策冻结；`TASK-0010`–`TASK-0014` 的观测、缓存和驻留上限任务均已完成。
 
