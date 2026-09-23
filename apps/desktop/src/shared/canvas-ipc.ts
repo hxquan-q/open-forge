@@ -37,9 +37,23 @@ export interface DesktopCanvasArtifactView {
 	readonly externalUpdate: boolean;
 }
 
+export type DesktopCanvasErrorCode =
+	| DesktopIpcUnimplemented["code"]
+	| "missing_file"
+	| "conflict"
+	| "invalid_input"
+	| "cancelled"
+	| "stale_version";
+
+export interface DesktopCanvasFailure {
+	readonly ok: false;
+	readonly code: DesktopCanvasErrorCode;
+	readonly message: string;
+}
+
 export type DesktopCanvasListResult =
 	| { readonly ok: true; readonly items: readonly DesktopCanvasArtifactView[] }
-	| DesktopIpcUnimplemented;
+	| DesktopCanvasFailure;
 
 export type DesktopCanvasGetResult =
 	| {
@@ -48,13 +62,13 @@ export type DesktopCanvasGetResult =
 			readonly content: string;
 			readonly contentType?: string;
 	  }
-	| DesktopIpcUnimplemented;
+	| DesktopCanvasFailure;
 
 export type DesktopCanvasSaveToProjectResult =
 	| { readonly ok: true; readonly descriptor: ArtifactDescriptor }
-	| DesktopIpcUnimplemented;
+	| DesktopCanvasFailure;
 
-export type DesktopCanvasDeleteResult = { readonly ok: true } | DesktopIpcUnimplemented;
+export type DesktopCanvasDeleteResult = { readonly ok: true } | DesktopCanvasFailure;
 
 export type { ArtifactKind };
 
