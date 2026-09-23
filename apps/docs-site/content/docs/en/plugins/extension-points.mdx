@@ -2,6 +2,7 @@
 title: Choose an extension point
 description: Select UI, file, Agent, provider, or App Action extension points by product goal, and align each with the permission it needs.
 ---
+<!-- Modified by The Open Forge contributors. -->
 
 Choose the extension point closest to the user's task, then register it from `activate(ctx)`. A plugin can combine several extension points, but each one should have a clear purpose and independent permissions.
 
@@ -21,6 +22,7 @@ Every `ctx.ui` registration maps to its own permission:
 | Global overlay | `registerGlobalSlot` | `ui.slot.global` |
 | Workspace view (full page plus sidebar entry) | `registerWorkspaceView`, `openWorkspaceView`, `setWorkspaceViewBadge`, `setWorkspaceViewHeader` | `ui.slot.workspace-view` |
 | File preview | `registerFilePreview` | `ui.slot.file-preview` |
+| Task Artifact renderer | `registerArtifactRenderer` | `ui.slot.artifact-renderer`; file reads also require `fs.read` |
 | Activity panel tab | `registerActivityTab`, `openActivityTab`, `setActivityTabVisible` | `ui.slot.activity-tab` |
 | Composer action and attachment | `registerInputAction`, `setPromptAttachment` | `ui.slot.input-action` |
 | New-session context block | `registerNewSessionContext` | `ui.slot.new-session-context` |
@@ -30,6 +32,8 @@ Every `ctx.ui` registration maps to its own permission:
 | Runtime block on an ability detail page | `registerAbilityDetailSlot` | `ui.slot.ability-detail` |
 | Keyboard shortcut scope | `registerShortcutScope`, `usePluginShortcutScope` | `ui.shortcuts.register` |
 | Open the system browser | `openExternal` | `shell.openExternal` |
+
+Task Artifact renderers require Plugin API `^2.8.0`. Their schema validates a URI-free descriptor, and the host binds the read handle to one Artifact and its source Session root.
 
 Components use the host's shared React runtime and design tokens. Registration functions return a `Disposable`; release it during deactivation so reloads do not register the same UI twice.
 

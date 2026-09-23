@@ -2,6 +2,7 @@
 title: 清单与权限
 description: 声明插件身份、加载入口、样式、权限、命令、网络范围和 Agent 贡献，并理解授权与校验流程。
 ---
+<!-- Modified by The Open Forge contributors. -->
 
 `plugin.json` 位于 `.vettapkg` 插件包的 ZIP 容器根目录（或归档内唯一的顶层文件夹里）。宿主在加载代码前用它校验身份、兼容性和权限，因此清单必须与构建产物一致。
 
@@ -154,7 +155,7 @@ description: 声明插件身份、加载入口、样式、权限、命令、网�
 
 <Accordions type="single">
   <Accordion title="界面与文件浏览器">
-    `ui.slot.global`、`ui.slot.workspace-view`、`ui.slot.file-preview`、`ui.slot.activity-tab`、`ui.slot.input-action`、`ui.slot.new-session-context`、`ui.slot.message`、`ui.slot.tool-call`、`ui.slot.turn-card`、`ui.slot.ability-detail`、`ui.shortcuts.register`、`ui.file-explorer.decorations`、`ui.file-explorer.context-menu`、`ui.file-explorer.toolbar`、`workspace.read`、`conversation.draft.read`、`shell.openExternal`
+    `ui.slot.global`、`ui.slot.workspace-view`、`ui.slot.file-preview`、`ui.slot.artifact-renderer`、`ui.slot.activity-tab`、`ui.slot.input-action`、`ui.slot.new-session-context`、`ui.slot.message`、`ui.slot.tool-call`、`ui.slot.turn-card`、`ui.slot.ability-detail`、`ui.shortcuts.register`、`ui.file-explorer.decorations`、`ui.file-explorer.context-menu`、`ui.file-explorer.toolbar`、`workspace.read`、`conversation.draft.read`、`shell.openExternal`
   </Accordion>
   <Accordion title="对话与命令">
     `agent.session.read`、`agent.session.write`、`agent.command.run`、`agent.command.spawn`、`capture.offscreen`

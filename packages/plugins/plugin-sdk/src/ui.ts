@@ -1,4 +1,7 @@
+// Modified by The Open Forge contributors.
+import type { TSchema } from "@sinclair/typebox";
 import type { ComponentType, ReactNode } from "react";
+import type { PluginArtifactRendererContribution } from "./artifact-renderer.js";
 import type { ConversationMessage } from "./conversation.js";
 import type { Disposable } from "./disposable.js";
 import type { PluginImageRef } from "./images.js";
@@ -687,6 +690,15 @@ export interface PluginUiApi {
 	 * registrant wins on conflict.
 	 */
 	registerFilePreview(contribution: PluginFilePreviewContribution): Disposable;
+	/**
+	 * Register a renderer for a Task Artifact. `type` matches the descriptor's
+	 * `rendererType`, or its `kind` when no renderer type is set. The `schema`
+	 * validates the URI-free descriptor projection before `component` is mounted.
+	 * The host binds `source` to that one Artifact and checks the source Session's
+	 * project root for every read. Requires `ui.slot.artifact-renderer`; reads also
+	 * require `fs.read`.
+	 */
+	registerArtifactRenderer<Schema extends TSchema>(contribution: PluginArtifactRendererContribution<Schema>): Disposable;
 	/**
 	 * Register an activity-panel tab into the addable pool. The user attaches
 	 * it manually via the panel's "+" picker; attach records are keyed by the

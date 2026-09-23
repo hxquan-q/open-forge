@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type {
 	PluginBrowserApi,
@@ -6,7 +7,11 @@ import type {
 	PluginCodingAgentHookResult,
 	PluginContext,
 } from "../src/index.js";
-import { PLUGIN_CODING_AGENT_HOOK_EVENT_NAMES, PLUGIN_PERMISSIONS } from "../src/index.js";
+import {
+	PLUGIN_CODING_AGENT_HOOK_EVENT_NAMES,
+	PLUGIN_PERMISSIONS,
+	PluginArtifactRendererDescriptorSchema,
+} from "../src/index.js";
 
 describe("plugin-sdk public API", () => {
 	it("exports the runtime permission catalog from the package root", () => {
@@ -14,6 +19,8 @@ describe("plugin-sdk public API", () => {
 		expect(PLUGIN_PERMISSIONS).toContain("browser.read");
 		expect(PLUGIN_PERMISSIONS).toContain("browser.open");
 		expect(PLUGIN_PERMISSIONS).toContain("browser.interact");
+		expect(PLUGIN_PERMISSIONS).toContain("ui.slot.artifact-renderer");
+		expect(PluginArtifactRendererDescriptorSchema.properties).not.toHaveProperty("uri");
 		expect(PLUGIN_PERMISSIONS).toContain("shell.openExternal");
 	});
 
