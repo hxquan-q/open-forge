@@ -148,7 +148,6 @@ export class DefaultCodingAgentContextRuntime
 	async bindForTurn(context: RuntimeSnapshotAcquireContext): Promise<CodingAgentBoundContextRuntime> {
 		context.signal.throwIfAborted();
 		const settings = Object.freeze({ ...this.readSettings() });
-		const projectionTimeBoundary = this.now();
 		const pinnedSource = this.options.bindPinnedModelContext?.(context);
 		const pinnedCapture =
 			pinnedSource && "then" in pinnedSource
@@ -209,7 +208,6 @@ export class DefaultCodingAgentContextRuntime
 					input,
 					signal,
 					transformBinding?.transform ?? this.options.transformAgentContext,
-					projectionTimeBoundary,
 					pinnedContext,
 				),
 			releaseTurnBinding: release,
@@ -304,11 +302,9 @@ export class DefaultCodingAgentContextRuntime
 		input: ModelCallContextTransformationInput,
 		signal: AbortSignal,
 		transformAgentContext: CodingAgentContextRuntimeOptions["transformAgentContext"],
-		timeBoundary?: number,
 		pinnedContext?: CodingAgentPinnedModelContext,
 	): Promise<readonly Message[]> {
 		const projected = await projectModelCallContext(input, transformAgentContext, signal, {
-			timeBoundary,
 			pinnedContext,
 		});
 		this.usage.recordEstimatedTokens(projected.estimatedTokens);

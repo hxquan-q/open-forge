@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import type { AgentMessage } from "@vetta/agent-core";
 import type { Message } from "@vetta/ai";
 import type { RuntimeMessageEnvelope } from "@vetta/runtime-core";
@@ -14,8 +16,6 @@ export interface ProjectedModelCallContext {
 }
 
 export interface ModelCallContextProjectionOptions {
-	/** Fixed time boundary shared by every model call admitted for a Turn. */
-	readonly timeBoundary?: number;
 	readonly pinnedContext?: CodingAgentPinnedModelContext;
 }
 
@@ -40,11 +40,13 @@ export async function projectModelCallContext(
 	const invisibleIdentities = readInvisibleIdentityCounts(envelopes);
 	const extensionMessages = transformAgentContext ? await transformAgentContext(agentMessages, signal) : agentMessages;
 	signal.throwIfAborted();
+	// 衰减稳定坐标化：maxAgeMs = 0 使 thinking 清理只由计数尾窗（出窗即清）决定，
+	// 不再吃墙钟——同一消息流在相邻模型调用间渲染相同字节，翻转点确定且单调前移
+	// （RESEARCH-0007 C 节；30s 墙钟门曾把清理推迟到缓存前缀最长的 Turn 边界）。
 	const projectedMessages = microcompact([...extensionMessages], {
 		keepRecent: 8,
-		maxAgeMs: 30 * 1000,
+		maxAgeMs: 0,
 		pruneToolResults: false,
-		now: options.timeBoundary,
 	});
 	const visibleMessages = projectedMessages.filter((message) => !consumeIdentity(invisibleIdentities, message));
 	const messages = applyPinnedModelContext(

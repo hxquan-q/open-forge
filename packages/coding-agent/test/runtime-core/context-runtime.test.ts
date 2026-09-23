@@ -554,7 +554,7 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		expect(releaseExtension).toHaveBeenCalledOnce();
 	});
 
-	it("freezes time-based projection decisions for every model call in a Turn", async () => {
+	it("projects identical context for every model call in a Turn regardless of wall clock", async () => {
 		let now = 100_000;
 		const runtime = new CodingAgentContextRuntime({
 			hookRuntime: createHookRuntime(),
@@ -582,8 +582,12 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		now = 200_000;
 		const second = await bound.transform(input, new AbortController().signal);
 
+		// 衰减是消息流的纯函数：Turn 内相邻模型调用投影逐字节相同，墙钟前进不再制造翻转点。
 		expect(first).toEqual(second);
-		expect(first[0]?.content).toEqual([{ type: "thinking", thinking: "thought-0" }]);
+		// 出窗即清：9 条带 thinking 消息中最近 8 条受保护，最老 1 条无签名块整块移除，
+		// 清除只取决于计数尾窗，与时间戳、墙钟均无关。
+		expect(first[0]?.content).toEqual([]);
+		expect(first[1]?.content).toEqual([{ type: "thinking", thinking: "thought-1" }]);
 		await bound.releaseTurnBinding?.();
 	});
 
