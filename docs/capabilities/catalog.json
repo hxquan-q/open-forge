@@ -6611,6 +6611,10 @@
           "startupTimeout": {
             "type": "number"
           },
+          "idleTimeout": {
+            "minimum": 0,
+            "type": "integer"
+          },
           "debug": {
             "type": "boolean"
           }
@@ -6702,6 +6706,10 @@
                   "cwd": {
                     "type": "string"
                   },
+                  "idleTimeout": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
                   "disabled": {
                     "type": "boolean"
                   },
@@ -6792,6 +6800,10 @@
           },
           "startupTimeout": {
             "type": "number"
+          },
+          "idleTimeout": {
+            "minimum": 0,
+            "type": "integer"
           },
           "debug": {
             "type": "boolean"

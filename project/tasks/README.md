@@ -21,7 +21,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 ## 当前执行焦点
 
 - `PLAN-0002`：P0 治理 Task-0029–0032 均为 done；下一项选定 `TASK-0033`（P1 / ready，尚未开工）。
-- `PLAN-0001`：`ISSUE-0006` 已裁决，`TASK-0028` 已 ready；`TASK-0025`、`TASK-0026` 仍因依赖未完成的 0028 而 blocked；TASK-0068 正在补齐 TASK-0027 所需的 Plugin SDK renderer/schema API，TASK-0027 等该合同完成后串行实施。
+- `PLAN-0001`：`TASK-0028` done（文档处理入口已合入主工作区）；`TASK-0025`、`TASK-0026` 可评估串行顺序，仍共享 WorkspaceMode 写路径；TASK-0068 正在补齐 TASK-0027 所需的 Plugin SDK renderer/schema API，TASK-0027 等该合同完成后串行实施。
 - `PLAN-0003`：`TASK-0043` verifying；`TASK-0044` done（原生 About 品牌/credits），`TASK-0045`–`TASK-0049` 继续按各自合同/外部决策保持 blocked。
 - `PLAN-0004`：`TASK-0001` done，计划仍在 verifying。
 - `PLAN-0005`：ISSUE-0007/0008/0009 全部裁决（首发 `0.1.0` Preview、§4(b) 文件头声明+审计、不公发 workspace 包）；TASK-0052/0055/0056/0057 done；TASK-0058 done；新增 TASK-0065（发布流水线修复）、TASK-0066（第三方清单审计）、TASK-0067（发包面硬化）。
@@ -32,7 +32,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 `TASK-0023`/`TASK-0024` 为跨阶段 UI/UX 线（`exprot/ui-information-architecture.md`）：0023 双模式 IA 定稿、0024 WorkspaceMode Shell/Mode Switcher 落地，均已完成；0024 只控制项目布局，不改写会话 `agentMode`。
 
-后续纵向切片：`TASK-0025` 本地研究/引用、`TASK-0026` 数据分析、`TASK-0027` Plugin Artifact Renderer、`TASK-0028` 文档处理。`ISSUE-0006` 已裁决：普通 Chat 不自动升级，用户显式升级或注册的持久工作流入口创建 Task；`TASK-0028` 的依赖已完成并转为 ready。`TASK-0025`/`TASK-0026` 仍依赖未完成的 `TASK-0028`，且三者共享 WorkspaceMode 面板写路径，当前必须串行。`TASK-0027` 的既有依赖（0015/0016/0020/0021）已完成，新增 Plugin SDK 合同前置 TASK-0068；两步串行，不改变 PLAN-0006 预留的 TASK-0059–0064 编号。
+后续纵向切片：`TASK-0028` 文档处理已 done；`TASK-0025` 本地研究/引用、`TASK-0026` 数据分析共享 WorkspaceMode 写路径，须串行。`ISSUE-0006` 已裁决：普通 Chat 不自动升级，用户显式升级或注册的持久工作流入口创建 Task。`TASK-0027` 的既有依赖（0015/0016/0020/0021）已完成，新增 Plugin SDK 合同前置 TASK-0068；两步串行，不改变 PLAN-0006 预留的 TASK-0059–0064 编号。
 
 `TASK-0029`–`TASK-0032` 对应 `RESEARCH-0004` P0-1 至 P0-4 内存治理，均为 done。`TASK-0033` 是 P1 ready 的会话执行运行时结果策略旁路跟进，已选为下一项执行任务；实际开始实施前保持 ready。
 
@@ -42,8 +42,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 `TASK-0052` 和 `TASK-0055`–`TASK-0057` 对应 PLAN-0005 的 Desktop 双阶段发布、发行物 LICENSE/NOTICE、workspace release fail-closed 与活动范式落地，均已完成定向验证；`TASK-0058` 跟踪 ISSUE-0008 的文件级 Apache 声明迁移，决策已关闭、转 ready。`TASK-0068`（Plugin SDK Artifact Renderer 合同）→ `TASK-0027`（Desktop registry/读取集成）必须串行；二者与 TASK-0059/0061 的 IPC/Activity Panel 改动不得并发。已存在的 `TASK-0053`/`TASK-0054` 属 PLAN-0002 的 MCP 性能工作，不与本计划重用。
 
-`TASK-0059`–`TASK-0064` 对应 `PLAN-0006`（Canvas/Browser/Terminal 右栏集成）：0059 共享合同与接缝已 done（ADR-0129）；0060 lane 实际已含 0061 的 Canvas tab UI（未提交），0062 lane 已建 WebView 会话控制器（`browser_tab` host function 未接），0064 verifying。下游不要再改 IPC 聚合、preload 索引、`shortcuts.ts` 或 i18n locale。
-
-`TASK-0069` 为 `PLAN-0006` 集成收口与 UI 一致性完善（blocked，等 0060/0062/0064 合入）：消解 `builtins/index.ts`、`composition.ts`、`canvas-browser-tab.test.ts` 冲突，补 `browser_tab` host function、Canvas 未读徽标与插件类型兜底卡，统一新 UI 与既有设计体系并备齐 v1 五条演示流程。
+`TASK-0059`–`TASK-0064` 对应 `PLAN-0006`（Canvas/Browser/Terminal 右栏集成）：0059 共享合同与接缝已 done（ADR-0129）；0060 Canvas artifact 服务、0062 Browser 元素点选可并行；0061 Canvas tab 依赖 0060，0063 `browser_tab` 依赖 0062（共享 WebView 会话控制器）；0064 Terminal 右栏 tab 独立，仅与 0061 在 `builtins/index.ts` 注册行冲突。下游不要再改 IPC 聚合、preload 索引、`shortcuts.ts` 或 i18n locale。
 
 `TASK-0065`–`TASK-0067` 对应 `PLAN-0005` 首发前剩余工作：0065 修复 desktop-release workflow 存量缺陷（Release 标题、Linux 冒烟路径、`--prerelease`、macOS 条件化）并在 prepare 写入上游基线行；0066 已产出清单草案（VERIFY-0005）待用户终审；0067 把 `publish:private` 接入 fail-closed 守卫并给无私发意图包补 `private: true`。0058（§4(b) 文件头迁移+审计脚本）已完成：529 文件写入声明头、审计 missing=0。

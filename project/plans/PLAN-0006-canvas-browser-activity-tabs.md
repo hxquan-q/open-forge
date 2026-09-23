@@ -44,6 +44,8 @@ depends_on: []
 - Agent 工具：新增 `artifact`，动作 `create` / `update` / `get` / `list` / `attach_to_task`。
 - 版本语义：单调递增；内容 sha256 与 descriptor.checksum 不一致的 `update` 一律强制新版本，禁止覆盖；外部修改检测 = Canvas 打开时比对 + 可见 artifact 的文件 watcher + `update` 前校验，外部编辑导入为新版本并标记「外部更新」。
 - 归属与 GC：无 Task 时 `sourceSessionId` 即归属；v1 不做自动 GC，删除由用户在列表中显式触发。
+- 新产出提示：Agent `create` artifact 后 Canvas tab 显示未读徽标/选中提示（不抢焦点），由 artifact 事件驱动。
+- 插件类型 artifact 入列：列表按「workspace 全部 artifact」渲染，不区分内置/插件来源；已知类型（如 `.vetd`）点击跳到其已注册 surface（设计画布 tab），未知类型显示元信息卡兜底；插件 renderer registry 的消费归 PLAN-0007（TASK-0027 之后）。
 
 **Browser**
 
@@ -89,20 +91,21 @@ TASK-0059 负责所有共享接缝（IPC channel 常量、preload 桩、组装�
 - 不改 `.vetd` 设计画布本身（仅 tab 标签改名）。
 - 不改底部面板与 Terminal 功能行为。
 - 不做 Git add/commit/push；「保存到项目」只是文件复制。
-- 不做 console/network 采集、多页签、多选/框选、HTML 内点选、artifact 自动 GC、browser partition 隔离。
+- 不做 console/network 采集、多页签、多选/框选、HTML 内点选、artifact 自动 GC、browser partition 隔离、Canvas 直接编辑、图片/媒体 artifact。其中 **console/network 采集、HTML 内点选、Agent 操作可见指示已圈选进 PLAN-0007（draft）**。
 - 不创建第二套 Agent Loop / Task Runner / 存储事实源。
 
 ## 验证与回滚
 
 - 合同层：descriptor 双生命周期、`stale_reference`、capsule schema 走合同测试；取消/超时/审批拒绝路径逐一覆盖。
 - 用户流程：普通会话产出 Markdown→Canvas 出现→选区回引→Agent 更新新版本→重开恢复；Browser 点选→草稿附件→发送→`browser_tab` 操作同一 WebView；HTML artifact 在沙箱运行且无法触达宿主 API。
+- **v1 里程碑判据**（「Agent Workspace v1」达成）：五条代表流程在真实 Desktop 各跑一次有人监督演示——①会话产出→Canvas→选区回引→新版本→恢复；②Task 产出在 Task Review 与 Canvas 同源可见；③Browser 点选→capsule 草稿→`browser_tab` 同页操作→页面变更后 stale_reference；④保存到项目→外部编辑→「外部更新」；⑤HTML 沙箱隔离（脚本触达不到宿主 DOM/Vetta API/Node）。合同/定向 E2E 绿作为防回归资产，不单独构成达成判据。
 - 门禁：`bun run test:impact -- <files>`、`check:quick`、收尾 `check`；真实 WebView 行为用本地 fixture 做定向 Electron E2E。
 - 回滚：每个 Task 独立可回滚；`browser_tab` 为能力驱动注册，撤掉 host function 即整面下线。
 
 ## 升级信号
 
 - 多 workspace 间 cookie/登录态串台的真实投诉或安全事故 → 重议 partition 隔离（评审异议已记录）。
-- Agent 调试网页缺 console 的痛点出现 → 按 ADR 预留路径加采集 + `read_logs`。
+- Agent 调试网页缺 console 的痛点 → **已排期**：console/network 采集 + `read_logs` 进入 PLAN-0007（draft）；若 v1 演示/首发反馈暴露更痛缺口，按反馈重排 PLAN-0007 内部顺序。
 - 单页浏览器成为明确瓶颈 → 引入多页签 session 模型。
 
 ## 需要的 ADR
