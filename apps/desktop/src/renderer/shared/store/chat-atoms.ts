@@ -81,6 +81,7 @@ export interface TranscriptPlaceholderItem {
 export type ChatTimelineItem = ChatConversationItem | TranscriptPlaceholderItem;
 
 export type {
+	ArtifactCanvasOpenDetails,
 	AskUserQuestionResolution,
 	ChatErrorDetails,
 	ContentBlock,
@@ -122,6 +123,10 @@ export interface ActiveSession {
 	 * 仅用于展示（回合头像与昵称）；能力裁剪始终发生在主进程。
 	 */
 	agentProfileId?: string;
+	/** 本会话固化的解释模式；页头切换工作区不会改写它。 */
+	agentMode?: string;
+	/** 本会话固化的能力 Profile；缺省时徽标回落 agentMode。 */
+	capabilityProfile?: "work" | "coding";
 }
 
 /**
@@ -363,7 +368,7 @@ export const promptSuggestionsAtom = atom<Record<string, string[]>>({});
 
 /**
  * 输入预测「生成中」状态，按会话 runtimeId 索引。生成调用在飞时为 true，
- * 用于在该会话末条 assistant 消息的操作栏右侧显示「Vetta 正在预测…」闪光提示。
+ * 用于在该会话末条 assistant 消息的操作栏右侧显示「Open Forge 正在预测…」闪光提示。
  */
 export const promptPredictingAtom = atom<Record<string, boolean>>({});
 

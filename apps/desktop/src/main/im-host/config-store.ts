@@ -223,7 +223,7 @@ export function defaultWhatsappStatePath(): string {
  * Default `--config` directory handed to signal-cli in managed mode.
  *
  * Deliberately NOT signal-cli's own default (~/.local/share/signal-cli):
- * keeping Vetta's linked device in a directory we own means unbinding here
+ * keeping Open Forge's linked device in a directory we own means unbinding here
  * can clear it without touching a signal-cli install the user set up for
  * their own purposes.
  */

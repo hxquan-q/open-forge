@@ -5,7 +5,7 @@
 
 import i18next from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
-import { initDesktopI18n } from "@/shared/desktop-brand";
+import { DESKTOP_BRAND, initDesktopI18n } from "@/shared/desktop-brand";
 import { type AppLanguage, resolveAppLanguageFromLocale } from "@/shared/i18n/resources";
 
 const QUICK_PANEL_NS = "quickpanel";
@@ -13,7 +13,7 @@ const QUICK_PANEL_NS = "quickpanel";
 const resources = {
 	zh: {
 		[QUICK_PANEL_NS]: {
-			placeholder: "向 Vetta 提问…",
+			placeholder: `向 ${DESKTOP_BRAND.displayName} 提问…`,
 			recentTitle: "最近会话",
 			emptyTitle: "暂无最近会话",
 			emptyHint: "在上方输入即可开始新对话",
@@ -34,7 +34,7 @@ const resources = {
 	},
 	en: {
 		[QUICK_PANEL_NS]: {
-			placeholder: "Ask Vetta…",
+			placeholder: `Ask ${DESKTOP_BRAND.displayName}…`,
 			recentTitle: "Recent",
 			emptyTitle: "No recent conversations",
 			emptyHint: "Type above to start a new chat",

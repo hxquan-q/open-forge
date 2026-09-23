@@ -480,7 +480,7 @@ export function reloadPlugin(id: string): InstalledPlugin {
 	pluginRegistry.write(registry);
 	// 台账（ADR-0049）跟着改写为实际生效的版本。
 	recordAbilityInstall("plugin", plugin.id, plugin.activeVersion);
-	// dev 链接期间：注册表照常收敛到实际版本（否则「应用到 Vetta」的新版本会被吞掉，
+	// dev 链接期间：注册表照常收敛到实际版本（否则「应用到 Open Forge」的新版本会被吞掉，
 	// 关热更新后回落旧版本），但返回值与广播叠加 dev 快照（资源仍从工程加载）。
 	if (pluginDevLinkService.has(id)) {
 		return pluginDevLinkService.refresh(id);

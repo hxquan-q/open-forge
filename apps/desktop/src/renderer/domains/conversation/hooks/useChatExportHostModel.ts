@@ -1,3 +1,4 @@
+import { i18n } from "@shared/i18n";
 import type { ChatTimelineItem } from "@shared/store/atoms";
 import { authUserAtom } from "@shared/store/auth-atoms";
 import { useAtomValue } from "jotai";
@@ -12,7 +13,7 @@ function nextPaint(): Promise<void> {
 
 function safeFileName(value: string): string {
 	const normalized = value.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
-	return `${normalized || "Vetta 会话"}.html`;
+	return `${normalized || i18n.t("chat:chatExport.defaultSessionName")}.html`;
 }
 
 export interface ChatExportHostModel {

@@ -3,6 +3,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { basename, join, resolve, sep } from "node:path";
 import AdmZip from "adm-zip";
 import { dialog, ipcMain } from "electron";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import { getAppLogger } from "../logger.js";
 import { allowProjectRoot, readDesktopConfig, writeDesktopConfig } from "./fs.js";
 
@@ -322,8 +323,8 @@ async function handleExport(projectDir: string): Promise<ExportProjectResult> {
 	const projectName = basename(projectDir);
 	const saveResult = await dialog.showSaveDialog({
 		title: "导出项目",
-		defaultPath: `${projectName}.vetta.zip`,
-		filters: [{ name: "Vetta Project Export", extensions: ["zip"] }],
+		defaultPath: `${projectName}.openforge.zip`,
+		filters: [{ name: `${DESKTOP_BRAND.displayName} Project Export`, extensions: ["zip"] }],
 	});
 	if (saveResult.canceled || !saveResult.filePath) {
 		return { saved: false };
@@ -353,7 +354,7 @@ async function handleImport(): Promise<ImportProjectResult | null> {
 	const open = await dialog.showOpenDialog({
 		title: "导入项目",
 		properties: ["openFile"],
-		filters: [{ name: "Vetta Project Export", extensions: ["zip"] }],
+		filters: [{ name: `${DESKTOP_BRAND.displayName} Project Export`, extensions: ["zip"] }],
 	});
 	if (open.canceled || open.filePaths.length === 0) return null;
 	const zipPath = open.filePaths[0];

@@ -5,6 +5,8 @@ import desktopBrandSource from "./desktop-brand.json";
 export const DESKTOP_BRAND = Object.freeze({
 	displayName: desktopBrandSource.displayName,
 	executableName: desktopBrandSource.executableName,
+	appshotHelperName: desktopBrandSource.appshotHelperName,
+	appshotHelperBundleId: desktopBrandSource.appshotHelperBundleId,
 });
 
 export const DESKTOP_BRAND_REPLACEMENTS = Object.freeze(

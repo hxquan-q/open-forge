@@ -15,6 +15,7 @@ import {
 } from "@vetta/runtime-core";
 import { resolveProjectExecutionMode, sanitizeRuntimeErrorMessage } from "@vetta/runtime-desktop";
 import { isSshProjectUri, normalizeProjectCwd } from "@vetta/ssh-transport";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import { type DesktopSessionHistoryInfo, UNAVAILABLE_RUNTIME_SESSION_ACCESS } from "../../shared/session-access.js";
 import { agentTeamStore } from "../agent-teams/agent-team-store.js";
 import { ensureLegacyAgentTeamOwnershipCatalog } from "../agent-teams/team-ownership-backfill.js";
@@ -78,6 +79,8 @@ export interface DesktopConversationSession {
 	source: DesktopConversationSource;
 	/** 生效的 Agent 绑定；渲染层据此展示回合头像与昵称。降级或未绑定时缺省。 */
 	agentProfileId?: string;
+	agentMode?: string;
+	capabilityProfile?: "work" | "coding";
 }
 
 export interface DesktopConversationTurnResult {
@@ -258,6 +261,8 @@ export class DesktopConversationService {
 				listCwd: resolveSessionListCwd(config?.cwd ?? resolvedConfig.cwd),
 				source,
 				...(agentProfile ? { agentProfileId: agentProfile.agentProfileId } : {}),
+				agentMode: resolvedConfig.agentMode,
+				capabilityProfile: resolvedConfig.capabilityProfile,
 			};
 			trace.complete({ sessionId: result.sessionId, kind, source });
 			return session;
@@ -318,9 +323,13 @@ export class DesktopConversationService {
 		}
 		const header = await readDesktopSessionHeader(absolutePath);
 		if (!header) {
-			throw new DesktopConversationError("INVALID_SESSION_PATH", "Session file has no valid Vetta session header.", {
-				sessionPath: absolutePath,
-			});
+			throw new DesktopConversationError(
+				"INVALID_SESSION_PATH",
+				`Session file has no valid ${DESKTOP_BRAND.displayName} session header.`,
+				{
+					sessionPath: absolutePath,
+				},
+			);
 		}
 		return this.createSession(
 			{

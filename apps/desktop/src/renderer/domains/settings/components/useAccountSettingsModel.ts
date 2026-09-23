@@ -3,6 +3,7 @@ import { authTokenAtom, authUserAtom, subscriptionStatusAtom } from "@shared/sto
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 import { recordSettingsUsage } from "./recordSettingsUsage";
 
 export interface AccountSettingsModel {
@@ -58,7 +59,7 @@ export function useAccountSettingsModel(): AccountSettingsModel {
 			? {
 					color: subscription.badge_color || "var(--primary)",
 					text: subscription.badge_text,
-					title: subscription.tier_name || "Vetta Go",
+					title: subscription.tier_name || `${DESKTOP_BRAND.displayName} Go`,
 				}
 			: undefined;
 

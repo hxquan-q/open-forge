@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { MediaDimensions, MediaFailure, MediaProviderJob } from "@vetta-org/capability-sdk";
 import { MEDIA_PROTOCOL_VERSION } from "@vetta-org/capability-sdk";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import {
 	gatewayUnavailableResponse,
 	getCloudBridge,
@@ -157,7 +158,7 @@ export function createVettaImageProvider(
 					status: "failed",
 					error: {
 						code: "operation-unsupported",
-						message: `Vetta image provider does not support ${input.operation}`,
+						message: `${DESKTOP_BRAND.displayName} image provider does not support ${input.operation}`,
 						retryable: false,
 					},
 				});

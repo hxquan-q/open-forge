@@ -68,7 +68,7 @@ function unwrap<T>(status: number, body: string): VettaGatewayResponse<T> {
 	return result;
 }
 
-/** Authenticated Vetta `/api/v1` transport. Callers never receive the token. */
+/** Authenticated Open Forge `/api/v1` transport. Callers never receive the token. */
 export async function requestVettaGateway<T = unknown>(
 	request: VettaGatewayRequest,
 	signal?: AbortSignal,

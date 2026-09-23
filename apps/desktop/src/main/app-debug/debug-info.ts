@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import type { DebugDefinition, JsonValue } from "./types.js";
 import { DebugError } from "./types.js";
 
@@ -22,7 +23,7 @@ export function createDebugInfoDefinition(): DebugDefinition {
 		id: "debug.info",
 		category: "system",
 		title: "Debug runtime information",
-		summary: "Confirm that the development-only Vetta Debug namespace is available.",
+		summary: `Confirm that the development-only ${DESKTOP_BRAND.displayName} Debug namespace is available.`,
 		keywords: ["debug", "development", "runtime", "status"],
 		inputSchema: { description: "An empty JSON object." },
 		examples: [{ description: "Read Debug runtime information", input: {} }],

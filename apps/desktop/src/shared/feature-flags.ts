@@ -18,7 +18,7 @@ export function isSpeechInputBuildEnabled(): boolean {
 	return process.env.VETTA_SPEECH_INPUT_ENABLED === "true";
 }
 
-/** Vetta 云服务（登录 / 订阅 / 远程模型等增值能力）：构建期开关。 */
+/** Open Forge 云服务（登录 / 订阅 / 远程模型等增值能力）：构建期开关。 */
 export const CLOUD_ENABLED_ENV = "VETTA_CLOUD_ENABLED";
 
 /**

@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import type { SettingsTab } from "@shared/store/atoms";
+import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 import { isDesktopPetEnabled } from "../../../shared/feature-flags";
 
 export type SettingsTabLabelKey =
@@ -80,7 +81,7 @@ export const SETTINGS_TABS: readonly SettingsTabRegistration[] = [
 		labelKey: "tabKnowledge",
 		icon: "icon-[mdi--database-outline]",
 	},
-	{ key: "pet", label: "Vetta Vivi", labelKey: "tabPet", icon: "icon-[mdi--paw-outline]" },
+	{ key: "pet", label: `${DESKTOP_BRAND.displayName} Vivi`, labelKey: "tabPet", icon: "icon-[mdi--paw-outline]" },
 	{
 		key: "permissions",
 		label: "权限管理",

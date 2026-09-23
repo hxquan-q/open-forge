@@ -146,6 +146,12 @@ describe("ImBridgeSettingsView", () => {
 		expect(onDismissFeedback).toHaveBeenCalledTimes(1);
 	});
 
+	it("页头走 i18n 而不是硬编码产品名", () => {
+		const view = render(<ImBridgeSettingsView model={model()} />);
+		expect(view.getByRole("heading", { level: 1 }).textContent).toBe("imBridgeTitle");
+		expect(view.container.textContent).not.toContain("Vetta");
+	});
+
 	it("没有反馈消息时不渲染提示条", () => {
 		const view = render(<ImBridgeSettingsView model={model()} />);
 		expect(view.queryByRole("status")).toBeNull();

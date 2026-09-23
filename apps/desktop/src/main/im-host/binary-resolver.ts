@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { app } from "electron";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 
 /**
  * Resolve the absolute path to the im-gateway sidecar binary for the
@@ -68,7 +69,7 @@ export function resolveImGatewayBinary(): ResolvedBinary {
 	if (!existsSync(fullPath)) {
 		throw new Error(
 			`im-gateway sidecar binary not found at ${fullPath}. ` +
-				`Run 'make cross-build' in apps/im-gateway, or rebuild Vetta.app.`,
+				`Run 'make cross-build' in apps/im-gateway, or rebuild ${DESKTOP_BRAND.displayName}.app.`,
 		);
 	}
 

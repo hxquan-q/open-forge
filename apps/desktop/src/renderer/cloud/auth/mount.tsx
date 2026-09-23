@@ -1,5 +1,5 @@
 /**
- * renderer 侧 Vetta 云服务 UI 入口。
+ * renderer 侧 Open Forge 云服务 UI 入口。
  *
  * 宿主只允许经 `@shared/components/cloud-slots` 懒加载本模块——
  * lite 构建（VETTA_CLOUD_ENABLED=false）经常量折叠后整个 chunk 不进产物，

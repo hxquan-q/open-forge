@@ -16,14 +16,17 @@
 
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 
+const require = createRequire(import.meta.url);
 const projectRoot = join(import.meta.dirname, "..");
+const desktopBrand = require("../src/shared/desktop-brand.json");
 const sourcePath = join(projectRoot, "native", "appshot", "main.swift");
 const iconSourcePath = join(projectRoot, "build", "icon.icns");
 
-const APP_NAME = "Open Forge Computer Use";
-const BUNDLE_ID = "io.github.hxquanq.openforge.computer-use";
+const APP_NAME = desktopBrand.appshotHelperName;
+const BUNDLE_ID = desktopBrand.appshotHelperBundleId;
 
 function resolveOutDir() {
 	const outIndex = process.argv.indexOf("--out");
@@ -57,7 +60,7 @@ function infoPlistContents() {
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>Open Forge Computer Use needs to record your screen to capture the active window for the assistant.</string>
+	<string>${APP_NAME} needs to record your screen to capture the active window for the assistant.</string>
 </dict>
 </plist>
 `;

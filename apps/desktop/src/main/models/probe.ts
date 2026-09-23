@@ -12,7 +12,7 @@ import { getCloudBridge } from "../cloud-bridge.js";
  *
  * Resolves the provider from local models.json first (LAN servers like
  * Ollama / vLLM), then falls back to the auth-server's remote provider
- * catalogue (Vetta Go et al.). Re-fetches remote on demand instead of
+ * catalogue (Open Forge Go et al.). Re-fetches remote on demand instead of
  * trusting the renderer's atom, which may be stale.
  *
  * Uses electron.net.fetch deliberately so we go through Chromium's network
@@ -36,7 +36,7 @@ export async function probeModelProvider(ref: {
 		// File missing/unreadable is fine — fall through to remote.
 	}
 
-	// 2) Fall back to the cloud provider catalogue (Vetta Go)。
+	// 2) Fall back to the cloud provider catalogue (Open Forge Go)。
 	//    lite 构建没有云端目录，本地查不到就直接失败。
 	let source: "local" | "remote" = "local";
 	const cloud = getCloudBridge();

@@ -101,6 +101,18 @@ describe("会话级工作模式固化", () => {
 		expect(resumed.agentMode).toBe("coding");
 	});
 
+	it("新建会话优先使用渲染层传入的 agentMode，而不是全局默认值", async () => {
+		const root = await createTemporaryRoot();
+		desktopConfig.defaultAgentMode = "work";
+		const created = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		expect(created.agentMode).toBe("coding");
+		expect(created.capabilityProfile).toBe("coding");
+	});
+
 	it("没有记录的历史会话按常量回落，不跟随当前默认值", async () => {
 		const root = await createTemporaryRoot();
 		const sessionPath = await createSessionFile(root, "legacy.jsonl");

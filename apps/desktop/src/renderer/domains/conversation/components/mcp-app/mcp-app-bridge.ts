@@ -1,4 +1,5 @@
 import type { DesktopMcpAppSurface } from "@preload/api";
+import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 
 const MCP_APP_PROTOCOL_VERSION = "2026-01-26";
 
@@ -99,7 +100,7 @@ export class DesktopMcpAppBridge {
 						...(this.options.surface.capabilities.serverTools ? { serverTools: {} } : {}),
 						serverResources: {},
 					},
-					hostInfo: { name: "Vetta Desktop", version: "1" },
+					hostInfo: { name: `${DESKTOP_BRAND.displayName} Desktop`, version: "1" },
 					hostContext: {
 						displayMode: "inline",
 						availableDisplayModes: ["inline"],

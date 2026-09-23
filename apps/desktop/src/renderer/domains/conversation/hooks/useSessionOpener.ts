@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { applyActiveTagFilterToNewConversation } from "@domains/project/services/new-conversation-tagging";
+import { deriveSessionAxesFromWorkspaceMode } from "@domains/workspace-mode/lib/session-axes";
 import { i18n } from "@shared/i18n";
 import { waitForCommittedPaint } from "@shared/lib/committed-paint";
 import { perfSendMark } from "@shared/lib/perf-send";
@@ -147,7 +148,9 @@ function sameActiveSession(left: ActiveSession | null, right: ActiveSession): bo
 		left.runtimeId === right.runtimeId &&
 		left.parentSessionPath === right.parentSessionPath &&
 		left.parentEntryId === right.parentEntryId &&
-		left.agentProfileId === right.agentProfileId
+		left.agentProfileId === right.agentProfileId &&
+		left.agentMode === right.agentMode &&
+		left.capabilityProfile === right.capabilityProfile
 	);
 }
 
@@ -405,11 +408,10 @@ export function useSessionOpener(): SessionOpenerController {
 						executionMode,
 						scenario,
 						...(options?.agentProfileId ? { agentProfileId: options.agentProfileId } : {}),
-						// 能力 Profile 从当前项目布局派生（ADR-0128）；仅新建会话固化。
-						capabilityProfile:
-							readWorkspaceModeFor(getDefaultStore().get(workspaceModeByProjectAtom), cwd) === "work"
-								? "work"
-								: "coding",
+						// 解释模式与能力 Profile 都从当前项目布局派生（ISSUE-0010 B）；仅新建会话固化。
+						...deriveSessionAxesFromWorkspaceMode(
+							readWorkspaceModeFor(getDefaultStore().get(workspaceModeByProjectAtom), cwd),
+						),
 					},
 					sessionKind,
 					interactionId ? { interactionId } : undefined,
@@ -487,6 +489,8 @@ export function useSessionOpener(): SessionOpenerController {
 				sessionPath: canonicalSessionPath,
 				runtimeId: sessionId,
 				...(createResult.agentProfileId ? { agentProfileId: createResult.agentProfileId } : {}),
+				...(createResult.agentMode ? { agentMode: createResult.agentMode } : {}),
+				...(createResult.capabilityProfile ? { capabilityProfile: createResult.capabilityProfile } : {}),
 			};
 			// Existing-session UI already follows pendingSessionOpen and the tail preview.
 			// Keep Runtime identity out of presentation state until getState can commit the
@@ -658,6 +662,9 @@ export function useSessionOpener(): SessionOpenerController {
 					parentSessionPath,
 					parentEntryId,
 					...(createResult.agentProfileId ? { agentProfileId: createResult.agentProfileId } : {}),
+					...(createResult.agentMode ? { agentMode: createResult.agentMode } : {}),
+					...(createResult.capabilityProfile ? { capabilityProfile: createResult.capabilityProfile } : {}),
+					...(state.agentMode && !createResult.agentMode ? { agentMode: state.agentMode } : {}),
 				};
 				commitActiveSession(sessionInfo);
 			}

@@ -637,7 +637,7 @@ if (!gotSingleLock) {
 			await openExternalUrl(url);
 		});
 
-		// Vetta 云服务（登录 / 订阅 / 远程模型）：构建期开关。lite 构建下该分支
+		// Open Forge 云服务（登录 / 订阅 / 远程模型）：构建期开关。lite 构建下该分支
 		// 被常量折叠，整个 cloud chunk 不进产物。
 		if (isCloudBuildEnabled()) {
 			const { startCloudMain } = await import("./cloud/index.js");

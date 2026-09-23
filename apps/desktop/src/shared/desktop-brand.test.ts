@@ -85,4 +85,64 @@ describe("Desktop brand layer", () => {
 		expect(packagingLayout).toMatch(/\$\{desktopBrand\.displayName\} Plugin Package/);
 		expect(linuxPackaging).toContain("name: desktopBrand.displayName");
 	});
+
+	it("serves the appshot helper name and bundle id from the shared brand source on both ends", () => {
+		expect(DESKTOP_BRAND.appshotHelperName).toBe(`${DESKTOP_BRAND.displayName} Computer Use`);
+		expect(DESKTOP_BRAND.appshotHelperBundleId).toBe("io.github.hxquanq.openforge.computer-use");
+
+		for (const file of ["src/main/appshot/helper-resolver.ts", "scripts/build-appshot-helper.js"]) {
+			const source = readDesktopSource(file);
+			expect(source, file).toContain("appshotHelper");
+			expect(source, file).not.toMatch(/\bVetta\b/);
+		}
+	});
+
+	it("renders Open Forge window titles in every renderer HTML entry", () => {
+		for (const entry of [
+			"src/renderer/index.html",
+			"src/renderer/onboarding.html",
+			"src/renderer/pet.html",
+			"src/renderer/quickpanel.html",
+			"src/renderer/remote-desktop-host.html",
+			"src/renderer-ocr/index.html",
+		]) {
+			const html = readDesktopSource(entry);
+			const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "";
+			expect(title, entry).toContain(DESKTOP_BRAND.displayName);
+			expect(title, entry).not.toMatch(/\bVetta\b/);
+		}
+	});
+
+	it("keeps user-facing surfaces free of hardcoded legacy product names", () => {
+		for (const file of [
+			"src/main/tray-manager.ts",
+			"src/main/mcp/mcp-oauth-service.ts",
+			"src/main/abilities/open-marketplace/marketplace-plugin-artifact.ts",
+			"src/main/abilities/open-marketplace/open-marketplace-mcp-runtime.ts",
+			"src/main/abilities/open-marketplace/open-marketplace-service.ts",
+			"src/main/ipc/project-export.ts",
+			"src/main/cloud-bridge.ts",
+			"src/main/skills/skill-market-install.ts",
+			"src/main/conversations/desktop-conversation-service.ts",
+			"src/main/app-actions/approval-broker.ts",
+			"src/main/app-actions/search.ts",
+			"src/main/im-host/binary-resolver.ts",
+			"src/main/logger.ts",
+			"src/main/media-generation/vetta-image-provider.ts",
+			"src/main/ssh/askpass-assets.ts",
+			"src/main/app-debug/conversation/definitions.ts",
+			"src/main/app-debug/debug-info.ts",
+			"src/renderer/domains/conversation/components/message-list/AssistantMessage.tsx",
+			"src/renderer/domains/conversation/components/mcp-app/mcp-app-bridge.ts",
+			"src/renderer/domains/conversation/hooks/useChatExportHostModel.ts",
+			"src/renderer/domains/conversation/services/chat-html-export.ts",
+			"src/renderer/domains/plugins/runtime/plugin-official-models.ts",
+			"src/renderer/domains/settings/components/ImBridgeSettingsView.tsx",
+			"src/renderer/domains/settings/components/useAccountSettingsModel.ts",
+			"src/renderer/domains/settings/registry.ts",
+			"src/renderer/shared/components/ModelSelect/useModelOptions.ts",
+		]) {
+			expect(readDesktopSource(file), file).not.toMatch(/\bVetta\b/);
+		}
+	});
 });

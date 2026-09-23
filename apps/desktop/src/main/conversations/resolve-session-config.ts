@@ -55,20 +55,25 @@ export interface ResolvedDesktopSessionConfig {
 	includeAgentSkills: boolean;
 	/** 本会话固化的工作模式；创建后由调用方落盘，会话内不可变。 */
 	agentMode: DesktopAgentMode;
+	/** 本会话固化的能力 Profile；新建时由渲染层传入，恢复时回落 agentMode。 */
+	capabilityProfile: "work" | "coding";
 }
 
 /**
  * 工作模式的唯一来源：
- * - 新建会话取 desktop-config 的 defaultAgentMode（新会话默认值）；
+ * - 新建会话优先取渲染层按当前工作区派生的 agentMode，否则回落 desktop-config 默认值；
  * - 恢复已有会话取该会话创建时固化的记录，缺记录时回落常量，绝不回落当前默认值，
  *   否则改默认值会连带改写历史会话的模式。
  */
 async function resolveSessionAgentMode(
 	existingSessionPath: string | undefined,
+	requestedAgentMode: DesktopAgentMode | undefined,
 	defaultAgentMode: DesktopAgentMode,
 ): Promise<DesktopAgentMode> {
-	if (!existingSessionPath) return defaultAgentMode;
-	return (await readSessionAgentMode(existingSessionPath)) ?? LEGACY_SESSION_AGENT_MODE;
+	if (existingSessionPath) {
+		return (await readSessionAgentMode(existingSessionPath)) ?? LEGACY_SESSION_AGENT_MODE;
+	}
+	return requestedAgentMode ?? defaultAgentMode;
 }
 
 /**
@@ -118,11 +123,21 @@ export async function resolveDesktopSessionConfig(
 				? `${config.appendSystemPrompt}\n\n${VETTA_CLI_GUIDANCE}`
 				: VETTA_CLI_GUIDANCE
 			: config?.appendSystemPrompt;
-	const agentMode = await resolveSessionAgentMode(config?.sessionPath, desktopConfig.defaultAgentMode ?? "work");
+	const agentMode = await resolveSessionAgentMode(
+		config?.sessionPath,
+		config?.agentMode,
+		desktopConfig.defaultAgentMode ?? "work",
+	);
+	const capabilityProfile =
+		config?.capabilityProfile === "work" || config?.capabilityProfile === "coding"
+			? config.capabilityProfile
+			: agentMode === "work"
+				? "work"
+				: "coding";
 	// 能力收敛（ADR-0128 + TASK-0021）：Profile 默认折算 → 项目策略只能再收紧。
 	const resolvedAgentConfiguration = await applyProjectToolPolicy(
 		effectiveCwd,
-		applyAgentProfileDefaults(resolveAgentProfile(config?.capabilityProfile), config?.agentConfiguration),
+		applyAgentProfileDefaults(resolveAgentProfile(capabilityProfile), config?.agentConfiguration),
 	);
 	const {
 		scenario: _scenario,
@@ -169,5 +184,6 @@ export async function resolveDesktopSessionConfig(
 		scenario,
 		includeAgentSkills,
 		agentMode,
+		capabilityProfile,
 	};
 }

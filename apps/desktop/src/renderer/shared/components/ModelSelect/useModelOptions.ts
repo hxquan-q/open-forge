@@ -3,6 +3,7 @@ import { localModelsConfigAtom, remoteProvidersAtom } from "@shared/store/atoms"
 import { modelCatalog } from "@shared/store/model-catalog";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo } from "react";
+import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 
 export interface ModelOption {
 	provider: string;
@@ -118,7 +119,7 @@ export function useModelOptions(): UseModelOptionsResult {
 		const remote = (remoteProviders as Record<string, { displayName?: string }>)[provider];
 		if (local?.displayName) return local.displayName;
 		if (remote?.displayName) return remote.displayName;
-		if (provider === "vetta-go") return "Vetta Go";
+		if (provider === "vetta-go") return `${DESKTOP_BRAND.displayName} Go`;
 		return provider;
 	};
 

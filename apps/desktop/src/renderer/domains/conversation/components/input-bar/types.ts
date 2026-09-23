@@ -176,6 +176,8 @@ export interface InputBarModel {
 	drawerActiveTab: string | null;
 	/** 输入卡片外部下方的待办条。 */
 	todo: InputBarTodoModel | null;
+	/** 已开会话固化的工作区轴只读徽标；新会话页为 null。 */
+	sessionAxesLabel?: string | null;
 	/**
 	 * 底部面板缩起时排在待办条右侧的 tab pill。
 	 * 只传数据不传节点：视觉由 theme-ui 的 `BottomPanelPillsView` 统一提供。

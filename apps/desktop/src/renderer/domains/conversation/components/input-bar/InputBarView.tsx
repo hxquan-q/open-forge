@@ -290,6 +290,16 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 				 */}
 				<InputBarFooter.Root>
 					<InputBarFooter.Item>
+						{model.sessionAxesLabel ? (
+							<div
+								className="px-1 pb-1 text-[11px] leading-4 text-muted-foreground"
+								data-testid="session-axes-badge"
+							>
+								{model.sessionAxesLabel}
+							</div>
+						) : null}
+					</InputBarFooter.Item>
+					<InputBarFooter.Item>
 						{/* 插件引用排在下沿最上面：它离卡片最近，跟「这一条要发什么」关系最紧。 */}
 						{model.promptAttachmentLabels?.length ? (
 							<PromptAttachmentLabels
