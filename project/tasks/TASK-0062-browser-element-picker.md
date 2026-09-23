@@ -1,7 +1,7 @@
 ---
 id: TASK-0062
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -10,9 +10,9 @@ source_issue:
 execution: parallel
 branch: task/TASK-0062-browser-element-picker
 worktree: ..\open-forge-wt\TASK-0062-browser-picker
-base_commit: forge/dev
+base_commit: b3a5743c3d03b8cd126b50a266a0a8d4af59913a
 read_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, packages/theme-ui/src/activity, packages/plugins/plugin-sdk/src/prompt-attachment.ts]
-write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts]
+write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/main/ipc/browser-tab.ts, apps/desktop/src/shared/browser-tab-ipc.ts, apps/desktop/src/renderer/root-layout/useRootLayoutModel.ts, apps/desktop/vitest.config.ts, packages/theme-ui/src/activity/BrowserPanelView.tsx]
 exclusive_paths: []
 depends_on: [TASK-0059]
 conflicts_with: []
@@ -54,7 +54,7 @@ updated: 2026-09-23
 - 多选/框选/页面标注/语音（Phase 2）。
 - `browser_tab` 动作实现（TASK-0063）。
 - console/network 采集（non-goal）。
-- Release Notes（coordinator 统一写）。
+- 不把 fork-only 条目写入继承的 Vetta `v0.5.59` Release Notes；候选文案留在本 Task，首发 `0.1.0` 切入后再由 coordinator 写入。
 
 ## Given / When / Then
 
@@ -78,6 +78,18 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - 主进程：`InAppBrowserSessionController` 绑定 workspace↔`persist:vetta-browser` WebView、`pageRevision`/`elementRef`、picker 循环、capsule 提取与按 CSS rect×dpr 裁剪截图；`did-attach-webview` / `before-input-event` 接到 window-manager。
+  - Renderer：Browser tab 去掉 `browserUrl` 门控；工具栏 picker + `mod+shift+d`；选中结果写入 `promptAttachmentAtom`（单 capsule 替换）并插入裁剪图，不自动发送。
+  - 冻结 IPC：`crop-screenshot` 成功带 `path`，失败码 `no_browser_session | crop_failed`；guest 脚本不暴露任意 JS 执行面。
 - 实际运行：
+  - `apps/desktop` 定向 Vitest：12 文件 / 34 通过（提取/脱敏、ref 过期、裁剪换算、guest 点击拦截、会话绑定与再选、IPC 桥、草稿替换、工具栏空态、快捷键合同）。
+  - `bun run check:quick -- <本任务 29 个源/测文件>`：Biome 干净；`check:guards` 仅因仓库既有 `@vetta/coding-agent/projects` 缺根 tsconfig path map 失败（与 TASK-0059 相同，非本任务引入）。
 - 未运行及原因：
+  - 完整 `bun run check` / `test:impact` 全量 related：独立树无 workspace `dist`，`vitest related` 会落到图标 SVG 与其它包构建面；Windows 上也不把全量 `tsc` 当放行条件。
+  - 未跑 `verify:ui:*` 与真实 `<webview>` Electron E2E（现有 e2e 仅 smoke；用户未授权 UI 实机验收）。
 - 剩余风险：
+  - 冻结 IPC 无 `webContentsId`：多个 pending WebView 时按「先到先绑定」；0063 若要精确寻址需后续扩合同。
+  - guest Escape 会关 picker；宿主 `before-input-event` 同时处理快捷键与 Escape，真实页内焦点路径未做 Electron 实机对拍。
+  - Desktop manifest 仍为 `0.5.59`；不得把 fork-only 条目写入继承的 Vetta Release Notes。
+- 候选发布说明（切入 Open Forge 首发版本后再写入对应 `v*.md`，当前阻断）：
+  - 「改进」：内置 Browser 可直接输入地址并点选页面元素；选中结果作为一条可替换的草稿附件（含裁剪截图）进入输入框，不会自动发送，也不会触发页面上的按钮。

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
 import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js";
+import { bindInAppBrowserWebview } from "./browser-automation/webview-session-host.js";
 import { type RendererConsoleLevel, shouldPersistRendererConsoleMessage } from "./logger/renderer-console-policy.js";
 import { getAppLogger } from "./logger.js";
 import { openExternalUrl } from "./open-external.js";
@@ -83,6 +84,7 @@ export function createWindow(): BrowserWindow {
 	// 内置浏览器（<webview>）单窗预览：页面内的 window.open/target=_blank 不另开窗口，
 	// 重定向到同一 webview 加载，保持单窗体验。
 	mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
+		bindInAppBrowserWebview(webviewContents);
 		webviewContents.setWindowOpenHandler(({ url }) => {
 			if (/^https?:\/\//i.test(url)) {
 				void webviewContents.loadURL(url).catch((error: unknown) => {

@@ -13,8 +13,15 @@ vi.mock("electron", () => ({
 	},
 }));
 
+vi.mock("../window-manager.js", () => ({
+	getMainWindow: () => null,
+}));
+
 const { registerBrowserTabIpc } = await import("./browser-tab.js");
 const { registerCanvasIpc } = await import("./canvas.js");
+const { resetInAppBrowserSessionControllerForTests } = await import(
+	"../browser-automation/webview-session-controller.js"
+);
 
 const descriptor = {
 	schemaVersion: 1 as const,
@@ -33,6 +40,7 @@ describe("canvas and browser-tab IPC stubs", () => {
 	beforeEach(() => {
 		mocks.handlers.clear();
 		mocks.removeHandler.mockClear();
+		resetInAppBrowserSessionControllerForTests();
 	});
 
 	it("注册全部 canvas channel，并由注入宿主返回列表与错误形状", async () => {
@@ -75,21 +83,28 @@ describe("canvas and browser-tab IPC stubs", () => {
 		expect(mocks.removeHandler).toHaveBeenCalledTimes(4);
 	});
 
-	it("注册 browser-tab 桥与截图裁剪 channel 并返回 unimplemented", async () => {
+	it("把 browser-tab 桥接到 WebView 会话控制器", async () => {
 		const teardown = registerBrowserTabIpc();
-		for (const channel of [
-			"vetta:browser-tab:session",
-			"vetta:browser-tab:set-picker",
-			"vetta:browser-tab:crop-screenshot",
-		]) {
-			const handler = mocks.handlers.get(channel);
-			expect(handler).toBeDefined();
-			await expect(handler?.({})).resolves.toEqual({
-				ok: false,
-				code: "unimplemented",
-				message: "browserTab is not implemented",
-			});
-		}
+		const sessionHandler = mocks.handlers.get("vetta:browser-tab:session");
+		await expect(sessionHandler?.({}, { workspaceId: "ws-1" })).resolves.toEqual({
+			ok: true,
+			session: {
+				workspaceId: "ws-1",
+				pageUrl: "",
+				title: "",
+				pageRevision: 0,
+				pickerEnabled: false,
+			},
+		});
+		const pickerHandler = mocks.handlers.get("vetta:browser-tab:set-picker");
+		await expect(pickerHandler?.({}, { workspaceId: "ws-1", enabled: true })).resolves.toEqual({
+			ok: true,
+			pickerEnabled: true,
+		});
+		const cropHandler = mocks.handlers.get("vetta:browser-tab:crop-screenshot");
+		await expect(
+			cropHandler?.({}, { workspaceId: "ws-1", rect: { x: 1, y: 2, width: 3, height: 4 }, devicePixelRatio: 1 }),
+		).resolves.toMatchObject({ ok: false, code: "no_browser_session" });
 		teardown();
 		expect(mocks.removeHandler).toHaveBeenCalledTimes(3);
 	});

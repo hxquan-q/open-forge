@@ -8,6 +8,7 @@ import { useMatches, useNavigate } from "@tanstack/react-router";
 import type { CodingAgentPlanReviewRequest } from "@vetta/coding-agent/function-extensions";
 import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BROWSER_ELEMENT_PICKER_TOGGLE_EVENT } from "@/shared/browser-tab-ipc";
 import { FILE_EDITOR_SAVE_EVENT } from "@/shared/shortcuts";
 import { loadNewSessionPage } from "../domains/conversation/components/loadNewSessionPage";
 import { useAppInit } from "../domains/conversation/hooks/useAppInit";
@@ -441,6 +442,10 @@ export function useRootLayoutModel(): RootLayoutModel {
 					}
 					case "save-file": {
 						window.dispatchEvent(new Event(FILE_EDITOR_SAVE_EVENT));
+						break;
+					}
+					case "browser-element-picker": {
+						window.dispatchEvent(new Event(BROWSER_ELEMENT_PICKER_TOGGLE_EVENT));
 						break;
 					}
 				}

@@ -15,6 +15,11 @@ export const BROWSER_TAB_CHANNELS = {
 	EVENT: "vetta:browser-tab:event",
 } as const;
 
+export const IN_APP_BROWSER_PARTITION = "persist:vetta-browser";
+
+/** Host renderer event for the frozen `browser-element-picker` app shortcut. */
+export const BROWSER_ELEMENT_PICKER_TOGGLE_EVENT = "vetta:browser-element-picker";
+
 export const DESKTOP_BROWSER_SCREENSHOT_MAX_LONG_EDGE_PX = BROWSER_SCREENSHOT_MAX_LONG_EDGE_PX;
 export const DESKTOP_BROWSER_SCREENSHOT_FORMAT = BROWSER_SCREENSHOT_FORMAT;
 
@@ -63,7 +68,9 @@ export type DesktopBrowserCropScreenshotResult =
 			readonly mimeType: typeof DESKTOP_BROWSER_SCREENSHOT_FORMAT;
 			readonly width: number;
 			readonly height: number;
+			readonly path: string;
 	  }
+	| { readonly ok: false; readonly code: "no_browser_session" | "crop_failed"; readonly message: string }
 	| DesktopIpcUnimplemented;
 
 export type DesktopBrowserTabEvent =
