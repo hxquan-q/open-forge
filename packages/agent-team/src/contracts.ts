@@ -270,6 +270,8 @@ export type UpdateTeamMemberInput =
 			readonly kind: "existing";
 			readonly memberId: string;
 			readonly leader: boolean;
+			/** Omit to keep the current in-team handle; set to rename within this team only. */
+			readonly handle?: string;
 			readonly assignment?: TeamMemberAssignment;
 	  }
 	| {

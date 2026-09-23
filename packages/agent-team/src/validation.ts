@@ -164,6 +164,7 @@ const updateTeamMember = Type.Union([
 			kind: Type.Literal("existing"),
 			memberId: id,
 			leader: Type.Boolean(),
+			handle: Type.Optional(id),
 			assignment: Type.Optional(assignmentInput),
 		},
 		{ additionalProperties: false },

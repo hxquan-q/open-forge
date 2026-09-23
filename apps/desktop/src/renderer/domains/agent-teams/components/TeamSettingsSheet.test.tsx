@@ -227,6 +227,32 @@ describe("TeamSettingsSheet", () => {
 	});
 
 
+	it("renames a member's in-team handle after validating it against the roster", async () => {
+		const { onSave } = renderSheet();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "settings.memberHandleRename:beta" }));
+		const editor = screen.getByLabelText("settings.memberHandle");
+		expect(editor).toHaveProperty("value", "beta");
+
+		// 撞名（与 alpha 归一化后相同）在应用前就被拦下。
+		await user.clear(editor);
+		await user.type(editor, "Alpha");
+		expect(screen.getByRole("status").textContent).toBe("settings.memberHandleTaken");
+		expect(screen.getByRole("button", { name: "settings.memberHandleApply" })).toHaveProperty("disabled", true);
+
+		await user.clear(editor);
+		await user.type(editor, " reviewer ");
+		await user.click(screen.getByRole("button", { name: "settings.memberHandleApply" }));
+		expect(screen.getByText("@reviewer")).toBeTruthy();
+		await user.click(screen.getByRole("button", { name: /settings.saveChanges/ }));
+		await waitFor(() =>
+			expect(onSave).toHaveBeenCalledWith(
+				expect.objectContaining({ handles: expect.objectContaining({ beta: "reviewer" }) }),
+			),
+		);
+	});
+
 	it("keeps saving disabled until the draft actually changes", async () => {
 		const { onSave } = renderSheet();
 		const save = screen.getByRole("button", { name: /settings.saveChanges/ });

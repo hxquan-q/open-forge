@@ -26,6 +26,8 @@ export interface TeamAssemblyDraft {
 	readonly bindingKinds?: Readonly<Record<string, "reference" | "copy">>;
 	/** 成员在本团队内的任务书，按 Agent 身份存放；空白字段由主进程折算成缺省。 */
 	readonly assignments?: Readonly<Record<string, TeamMemberAssignment>>;
+	/** 成员的队内称呼覆盖，按 Agent 身份存放；与现值相同（trim 后）时提交不携带。 */
+	readonly handles?: Readonly<Record<string, string>>;
 }
 
 export function emptyAssemblyDraft(): TeamAssemblyDraft {
@@ -38,6 +40,7 @@ export function assemblyDraftFromTeam(team: TeamDefinition): TeamAssemblyDraft {
 	const assignments = Object.fromEntries(
 		team.members.flatMap((member) => (member.assignment ? [[member.binding.agentProfileId, member.assignment]] : [])),
 	);
+	const handles = Object.fromEntries(team.members.map((member) => [member.binding.agentProfileId, member.handle]));
 	return {
 		teamId: team.id,
 		name: team.name,
@@ -46,6 +49,7 @@ export function assemblyDraftFromTeam(team: TeamDefinition): TeamAssemblyDraft {
 		memberIds,
 		leaderId: leader?.binding.agentProfileId ?? memberIds[0],
 		assignments,
+		handles,
 	};
 }
 
@@ -144,6 +148,7 @@ export function buildUpdateTeamInput(
 						kind: "existing",
 						memberId: existing.id,
 						leader: agentId === leaderId,
+						...handleInput(draft, agentId, existing.handle),
 						...assignmentInput(draft, agentId),
 					}
 				: {
@@ -170,6 +175,20 @@ export function buildUpdateTeamInput(
  */
 function assignmentInput(draft: TeamAssemblyDraft, agentId: string): { readonly assignment: TeamMemberAssignment } {
 	return { assignment: draft.assignments?.[agentId] ?? {} };
+}
+
+/**
+ * 队内称呼与任务书不同：它没有「清空」语义，未改动就不携带——省略在协议里表示
+ * 「本次没碰」，携带同值只会白增一次无意义的写入面。
+ */
+function handleInput(
+	draft: TeamAssemblyDraft,
+	agentId: string,
+	currentHandle: string,
+): { readonly handle: string } | Record<string, never> {
+	const next = draft.handles?.[agentId]?.trim();
+	if (!next || next === currentHandle) return {};
+	return { handle: next };
 }
 
 function bindingKindFor(draft: TeamAssemblyDraft, agentId: string): "reference" | "copy" {

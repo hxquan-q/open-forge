@@ -350,11 +350,14 @@ export class AgentTeamStore {
 					const member = current.members.find((candidate) => candidate.id === memberInput.memberId);
 					if (!member) throw new Error(`Agent team member not found: ${memberInput.memberId}`);
 					// 不带 assignment 的输入保持原样，带了就整体替换；全空即清除覆盖。
+					// handle 同理：省略保持队内称呼，携带即改名；非空与队内唯一由
+					// assertTeamInvariants 单点兜底（含 normalizeMentionHandle 归一化比较）。
 					const assignment =
 						memberInput.assignment === undefined
 							? member.assignment
 							: normalizeTeamMemberAssignment(memberInput.assignment);
-					return { ...member, assignment, leader: memberInput.leader };
+					const handle = memberInput.handle?.trim() || member.handle;
+					return { ...member, handle, assignment, leader: memberInput.leader };
 				}
 				if (newSourceIds.has(memberInput.agentProfileId)) {
 					throw new Error(`Duplicate agent profile in team: ${memberInput.agentProfileId}`);

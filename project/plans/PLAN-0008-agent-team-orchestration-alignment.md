@@ -1,7 +1,7 @@
 ---
 id: PLAN-0008
 type: plan
-status: in_progress
+status: done
 priority: P1
 owner: packages/agent-team/apps/desktop
 requirement: REQ-0006

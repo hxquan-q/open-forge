@@ -230,6 +230,62 @@ describe("AgentTeamStore transaction boundary", () => {
 		expect(cleared.members[0]?.assignment).toBeUndefined();
 	});
 
+	it("renames a member handle in-team on demand and keeps it when omitted", async () => {
+		const repository = new MemoryRepository();
+		const store = new AgentTeamStore({ repository, createId: createIdSequence(), now: () => 10 });
+		const document = await store.read();
+		const team = document.teams[0];
+		if (!team) throw new Error("Expected an initial team");
+		const memberId = team.members[0]?.id;
+		if (!memberId) throw new Error("Expected a team member");
+		const before = team.members[0]!.handle;
+
+		const renamed = await store.updateTeam(team.id, {
+			expectedRevision: team.revision,
+			name: team.name,
+			description: team.description,
+			members: team.members.map((member) => ({
+				kind: "existing" as const,
+				memberId: member.id,
+				leader: member.id === team.leaderMemberId,
+				...(member.id === memberId ? { handle: "  reviewer  " } : {}),
+			})),
+		});
+		// 携带即改名（含首尾空格折算），团队修订前进，别名只影响本团队。
+		expect(renamed.members[0]?.handle).toBe("reviewer");
+		expect(renamed.revision).toBe(team.revision + 1);
+		expect(renamed.members[0]?.handle).not.toBe(before);
+
+		const untouched = await store.updateTeam(renamed.id, {
+			expectedRevision: renamed.revision,
+			name: renamed.name,
+			description: renamed.description,
+			members: renamed.members.map((member) => ({
+				kind: "existing" as const,
+				memberId: member.id,
+				leader: member.id === renamed.leaderMemberId,
+			})),
+		});
+		// 省略表示「本次没碰称呼」，不能把改名丢回去。
+		expect(untouched.members[0]?.handle).toBe("reviewer");
+
+		// 队内唯一由 assertTeamInvariants 归一化裁决：大小写不同也算撞名。
+		const other = untouched.members[1] ?? untouched.members[0]!;
+		await expect(
+			store.updateTeam(untouched.id, {
+				expectedRevision: untouched.revision,
+				name: untouched.name,
+				description: untouched.description,
+				members: untouched.members.map((member) => ({
+					kind: "existing" as const,
+					memberId: member.id,
+					leader: member.id === untouched.leaderMemberId,
+					...(member.id === other.id ? { handle: "Reviewer" } : {}),
+				})),
+			}),
+		).rejects.toThrow("Duplicate team member handle");
+	});
+
 	it("allows deleting an initially supplied profile like any other profile", async () => {
 		const repository = new MemoryRepository();
 		const store = new AgentTeamStore({ repository, createId: createIdSequence(), now: () => 10 });

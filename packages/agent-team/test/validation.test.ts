@@ -75,6 +75,34 @@ describe("Agent Team IPC input validation", () => {
 		).toMatchObject({ members: [{ assignment: { responsibility: "Owns review" } }, {}] });
 	});
 
+	it("accepts an in-team handle rename only on existing members", () => {
+		const input = {
+			expectedRevision: 1,
+			name: "Product team",
+			description: "",
+			members: [{ kind: "existing", memberId: "member-1", leader: true }],
+		} as const;
+
+		// 已有成员可携带 handle 改队内称呼，省略表示保持现值。
+		expect(parseUpdateTeamInput({ ...input, members: [{ ...input.members[0], handle: "reviewer" }] })).toMatchObject({
+			members: [{ handle: "reviewer" }],
+		});
+		expect(parseUpdateTeamInput(input).members[0]).not.toHaveProperty("handle");
+
+		// 空白称呼没有「清空」语义，进不了协议；新成员变体也不收 handle（入团时定）。
+		expect(() => parseUpdateTeamInput({ ...input, members: [{ ...input.members[0], handle: "  " }] })).toThrow(
+			"Invalid update team input",
+		);
+		expect(() =>
+			parseUpdateTeamInput({
+				...input,
+				members: [
+					{ kind: "new", agentProfileId: "agent-2", bindingKind: "reference", leader: false, handle: "late" },
+				],
+			}),
+		).toThrow("Invalid update team input");
+	});
+
 	it("rejects a blank assignment inside a persisted document", () => {
 		const document = createAgentTeamFixture();
 		const team = document.teams[0];
