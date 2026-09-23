@@ -1,7 +1,7 @@
 ---
 id: TASK-0018
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,7 +16,7 @@ write_paths: [packages/coding-agent, apps/desktop]
 exclusive_paths: []
 depends_on: [TASK-0017]
 conflicts_with: [TASK-0019, TASK-0025, TASK-0026, TASK-0028]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
@@ -79,3 +79,21 @@ updated: 2026-09-23
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+- 实际修改：
+  - `coding-agent`：`features/file-organize/`——计划/逐文件终态合同（`readFileOrganizePlan`
+    边界收窄；`renamed`/`skipped-target-exists`/`skipped-source-missing`/`failed`/
+    `cancelled` 五类终态）、`organize_files` 工具（模型只产出计划，执行全走宿主端口，
+    中断未决视作拒绝）、宿主函数端口与会话扩展（未注册宿主不出现该工具）。
+  - `apps/desktop`：`task-activity/file-organize-broker.ts`——完整计划经
+    ActionApprovalBroker 预览（新 `agent.file-organize` presenter 列出全部
+    from→to 与理由），确认后按文件执行：路径必须落在会话项目根内（越界拒绝）、
+    目标已存在跳过保护、取消标记剩余项；`main.ts` 绑定审批 broker；i18n zh/en。
+- 实际运行：coding-agent file-organize 合同测试 5 项、desktop 执行器逐文件终态
+  （真实临时目录，含重试幂等）4 项通过；根 `tsgo` 与 desktop `tsc` 对本任务文件
+  无错（工作区剩余错误属并行任务在途文件）。
+- 未运行及原因：`verify:ui:*` 未运行（未授权实机验收）；预览弹窗走既有
+  ActionApprovalBroker 链路（超时/崩溃清理已有覆盖）。
+- 剩余风险：`bundle` Artifact 记录未自动挂接（整理结果以逐文件清单进入对话，
+  可经 TASK-0015 的 attach-artifact 命令补挂，自动挂接随 0028 的产物区接线）；
+  0025/0026（研究/数据分析）按重划后的任务由对应任务承接。

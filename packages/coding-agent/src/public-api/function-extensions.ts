@@ -20,6 +20,19 @@ export {
 	type CodingAgentQuestionRequest,
 	type CodingAgentQuestionResult,
 } from "../features/ask-user-question/contracts.js";
+export type {
+	FileOrganizeItemResult,
+	FileOrganizeItemStatus,
+	FileOrganizeOperation,
+	FileOrganizeOutcome,
+	FileOrganizePlan,
+} from "../features/file-organize/contracts.js";
+export { readFileOrganizePlan } from "../features/file-organize/contracts.js";
+export {
+	CODING_AGENT_FILE_ORGANIZE_EXTENSION_ID,
+	CODING_AGENT_FILE_ORGANIZE_FUNCTION,
+	type CodingAgentFileOrganizeFunctionRequest,
+} from "../features/file-organize/organize-files-tool.js";
 export {
 	CODING_AGENT_PLAN_MODE_EXTENSION_ID,
 	CODING_AGENT_PLAN_REVIEW_FUNCTION,

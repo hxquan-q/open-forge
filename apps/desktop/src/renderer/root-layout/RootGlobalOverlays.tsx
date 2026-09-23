@@ -4,6 +4,7 @@ import { PluginGlobalSlotHost } from "../domains/plugins/components/PluginGlobal
 import { SetupWizard } from "../domains/setup-wizard";
 import { ActionApprovalCenter } from "../shared/action-approval/ActionApprovalCenter";
 import { ToolExecutionApproval } from "../shared/action-approval/agent/ToolExecutionApproval";
+import { FileOrganizeApproval } from "../shared/action-approval/agent/FileOrganizeApproval";
 import { AppearancePickerApproval } from "../shared/action-approval/appearance/AppearancePickerApproval";
 import { ThemeChangeApproval } from "../shared/action-approval/appearance/ThemeChangeApproval";
 import { BatchTasksExecutionApproval } from "../shared/action-approval/batch-tasks/BatchTasksExecutionApproval";
@@ -54,6 +55,7 @@ export function RootGlobalOverlays(): JSX.Element {
 			<ActionApprovalCenter />
 			<ThemedGenericActionApproval />
 			<ToolExecutionApproval />
+			<FileOrganizeApproval />
 			<DomainManageApprovals />
 			<ThemedAppearancePickerApproval />
 			<ThemedThemeChangeApproval />

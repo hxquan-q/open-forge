@@ -2,6 +2,10 @@
 	"taskApproval": {
 		"title": "Allow {{tool}} to run?"
 	},
+	"fileOrganize": {
+		"title": "Organize these files?",
+		"summary": "{{count}} move/rename operations; they run only after you confirm"
+	},
 	"tray": {
 		"showWindow": "Show Window",
 		"hideWindow": "Hide Window",

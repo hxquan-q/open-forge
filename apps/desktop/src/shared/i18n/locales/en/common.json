@@ -55,6 +55,11 @@
 			"levelL3": "High risk",
 			"levelL4": "Highest risk"
 		},
+		"fileOrganize": {
+			"title": "Organize these files?",
+			"summary": "The {{count}} operations below run only after you confirm",
+			"confirm": "Run organize"
+		},
 		"genericTitle": "Confirm action",
 		"genericSummary": "Please confirm whether to allow this action.",
 		"genericImpact": "Confirm to run it. Reject cancels the request without changing your data.",

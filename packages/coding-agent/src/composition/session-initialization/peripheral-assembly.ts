@@ -26,6 +26,7 @@ import {
 	type CodingAgentAskUserQuestionExtensionRuntime,
 	createCodingAgentAskUserQuestionSessionExtension,
 } from "../../features/ask-user-question/index.js";
+import { createCodingAgentFileOrganizeSessionExtension } from "../../features/file-organize/file-organize-session-extension.js";
 import {
 	CODING_AGENT_PLAN_MODE_OBSERVATION,
 	CODING_AGENT_PLAN_MODE_RUNTIME,
@@ -197,6 +198,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			}),
 			createCodingAgentSandboxAuthorizationSessionExtension(),
 			createCodingAgentToolApprovalSessionExtension(),
+			createCodingAgentFileOrganizeSessionExtension(),
 			createCodingAgentBackgroundWorkSessionExtension(),
 			createCodingAgentPluginConfigurationSessionExtension(),
 			createCodingAgentSessionAssistanceExtension(),
