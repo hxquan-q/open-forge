@@ -76,6 +76,24 @@ describe("MCP domain capabilities", () => {
 				data: { type: MCP_SERVER_TYPES.STDIO, url: "https://mcp.example.com" },
 			}),
 		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
+		expect(
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "local",
+				data: { command: "npx", idleTimeout: 0 },
+			}),
+		).toEqual({ name: "local", data: { command: "npx", idleTimeout: 0 } });
+		expect(() =>
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "local",
+				data: { command: "npx", idleTimeout: -1 },
+			}),
+		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
+		expect(() =>
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "web",
+				data: { type: MCP_SERVER_TYPES.HTTP, url: "https://mcp.example.com", idleTimeout: 1000 },
+			}),
+		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
 		expect(() => DOMAIN_MCP_CAPABILITIES.SET_SERVER_ENABLED.parseInput({ name: "web", enabled: "yes" })).toThrowError(
 			expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }),
 		);

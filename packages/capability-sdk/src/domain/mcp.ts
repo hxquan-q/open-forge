@@ -42,6 +42,8 @@ const mcpServerDetailType = Type.Object(
 		disabled: Type.Boolean(),
 		autoApprove: Type.Optional(Type.Array(Type.String())),
 		startupTimeout: Type.Optional(Type.Number()),
+		/** stdio-only: idle recycle threshold in ms; 0 disables recycling. */
+		idleTimeout: Type.Optional(Type.Integer({ minimum: 0 })),
 		debug: Type.Optional(Type.Boolean()),
 	},
 	{ additionalProperties: false },
@@ -69,6 +71,8 @@ const mcpStdioServerUpsertDataType = Type.Object(
 		args: Type.Optional(Type.Array(Type.String())),
 		env: Type.Optional(mcpStringMapType),
 		cwd: Type.Optional(Type.String()),
+		/** Idle recycle threshold in ms for the spawned process; 0 disables. */
+		idleTimeout: Type.Optional(Type.Integer({ minimum: 0 })),
 		...mcpServerCommonUpsertFields,
 	},
 	{ additionalProperties: false },

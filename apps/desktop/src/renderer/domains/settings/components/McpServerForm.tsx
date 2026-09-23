@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@vetta-org/ui";
@@ -87,6 +89,16 @@ export function McpServerForm({
 								placeholder={t("default10000")}
 							/>
 						</div>
+						{form.transport === "stdio" && (
+							<div>
+								<label className="mb-1 block text-[11px] text-muted-foreground">{t("idleTimeout")}</label>
+								<InputField
+									value={form.idleTimeout}
+									onChange={(value) => setForm((current) => ({ ...current, idleTimeout: value }))}
+									placeholder="1800000"
+								/>
+							</div>
+						)}
 						<div className="col-span-2">
 							<label className="mb-1 block text-[11px] text-muted-foreground">{t("autoApproveTools")}</label>
 							<InputField
@@ -131,6 +143,7 @@ function hasAdvancedValues(form: McpServerFormState): boolean {
 			form.headers.trim() ||
 			form.autoApprove.trim() ||
 			form.startupTimeout.trim() ||
+			form.idleTimeout.trim() ||
 			form.disabled ||
 			form.debug,
 	);

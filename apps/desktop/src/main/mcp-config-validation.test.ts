@@ -35,3 +35,29 @@ describe("validateMcpConfig managed runtime environment", () => {
 		).toThrow(/managedRuntimeEnv/);
 	});
 });
+
+describe("validateMcpConfig idleTimeout", () => {
+	it("accepts a non-negative integer on stdio servers, including 0", () => {
+		for (const idleTimeout of [0, 60000]) {
+			expect(
+				validateMcpConfig({ mcpServers: { local: { command: "node", idleTimeout } } }).mcpServers.local,
+			).toMatchObject({ idleTimeout });
+		}
+	});
+
+	it("rejects negative or fractional idleTimeout", () => {
+		for (const idleTimeout of [-1, 1.5, "60000"]) {
+			expect(() => validateMcpConfig({ mcpServers: { local: { command: "node", idleTimeout } } })).toThrow(
+				/idleTimeout/,
+			);
+		}
+	});
+
+	it("rejects idleTimeout on http servers", () => {
+		expect(() =>
+			validateMcpConfig({
+				mcpServers: { remote: { type: "http", url: "https://example.com/mcp", idleTimeout: 1000 } },
+			}),
+		).toThrow(/idleTimeout/);
+	});
+});

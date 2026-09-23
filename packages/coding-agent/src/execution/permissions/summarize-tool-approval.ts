@@ -1,9 +1,10 @@
+// Copyright The Open Forge contributors.
 /**
  * 审批请求的脱敏摘要：只保留工具名、少量可读字段与稳定资源路径，
  * 不携带完整参数或文件内容。
  */
 
-const PREVIEW_KEYS = ["command", "path", "file_path", "pattern", "url", "name", "description"] as const;
+const PREVIEW_KEYS = ["command", "path", "file_path", "pattern", "url", "name", "description", "action"] as const;
 const RESOURCE_KEYS = ["path", "file_path", "directory", "dir", "url", "target"] as const;
 
 export function summarizeToolApproval(

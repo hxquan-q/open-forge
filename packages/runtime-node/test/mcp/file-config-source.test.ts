@@ -88,6 +88,15 @@ describe("FileMcpConfigSource", () => {
 		expect(() => parseMcpConfig({ mcpServers: { invalid: { command: "node", startupTimeout: "fast" } } })).toThrow(
 			"'startupTimeout' must be a number",
 		);
+		expect(parseMcpConfig({ mcpServers: { local: { command: "node", idleTimeout: 0 } } })).toEqual({
+			mcpServers: { local: { command: "node", idleTimeout: 0 } },
+		});
+		expect(() => parseMcpConfig({ mcpServers: { invalid: { command: "node", idleTimeout: -1 } } })).toThrow(
+			"'idleTimeout' must be a non-negative integer (ms)",
+		);
+		expect(() => parseMcpConfig({ mcpServers: { invalid: { command: "node", idleTimeout: 1.5 } } })).toThrow(
+			"'idleTimeout' must be a non-negative integer (ms)",
+		);
 	});
 
 	it("changes its signature for content changes without requiring a new source", async () => {

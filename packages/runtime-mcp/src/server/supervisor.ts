@@ -1,9 +1,17 @@
-import { isMcpAuthRequiredError, type McpClientHandle, type RuntimeMcpClientFactory } from "../client/index.js";
+// Modified by The Open Forge contributors.
+
+import {
+	isMcpAuthRequiredError,
+	LazyMcpClientHandle,
+	type McpClientHandle,
+	type RuntimeMcpClientFactory,
+} from "../client/index.js";
 import type { McpConfigSource } from "../config/index.js";
 import type {
 	McpClientCapabilities,
 	McpClientInfo,
 	McpConfig,
+	McpInitializeParams,
 	McpResource,
 	McpServerConfig,
 	McpServerInfo,
@@ -11,6 +19,13 @@ import type {
 	McpServerStatus,
 	McpTool,
 } from "../protocol/index.js";
+import { isStdioServerConfig } from "../protocol/index.js";
+import {
+	computeMcpServerConfigSignature,
+	type McpServerCatalogCache,
+	type McpServerCatalogSnapshot,
+	toMcpServerCatalogSnapshot,
+} from "./catalog-cache.js";
 import type {
 	McpDynamicServerSet,
 	McpServerBinding,
@@ -35,6 +50,8 @@ interface ManagedMcpServer {
 	activeLeases: number;
 	retired: boolean;
 	closePromise?: Promise<void>;
+	lastActivityAt?: number;
+	idleTimer?: ReturnType<typeof setTimeout>;
 	readonly unusedWaiters: Array<() => void>;
 }
 
@@ -52,7 +69,24 @@ export interface McpServerSupervisorOptions {
 	readonly authRequiredErrorMatcher?: (error: unknown) => boolean;
 	/** Product-owned defaults. File config may override the same name. */
 	readonly builtinServers?: Readonly<Record<string, McpServerConfig>>;
+	/**
+	 * Optional durable tool catalog cache. When provided, `initialize()` hydrates
+	 * server catalogs for unchanged configurations and defers the connection to
+	 * first use instead of eagerly spawning every server.
+	 */
+	readonly catalogCache?: McpServerCatalogCache;
+	/**
+	 * Default idle timeout (ms) for stdio servers. Once a spawned server has
+	 * been idle for this long — no in-flight request and no admitted lease —
+	 * the supervisor disconnects it and reclaims the process while keeping the
+	 * catalog published; the next call reconnects transparently. A per-server
+	 * `idleTimeout` config overrides this value; `0` disables recycling.
+	 */
+	readonly idleTimeoutMs?: number;
 }
+
+/** Fallback idle timeout for stdio servers when nothing configures one. */
+export const MCP_DEFAULT_STDIO_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 /**
  * Owns MCP server lifecycle and file/dynamic config reconciliation.
@@ -70,6 +104,8 @@ export class McpServerSupervisor {
 	private readonly interactionHandlers?: McpServerInteractionHandlers;
 	private readonly clientCapabilities?: McpClientCapabilities;
 	private readonly authRequiredErrorMatcher: (error: unknown) => boolean;
+	private readonly catalogCache?: McpServerCatalogCache;
+	private readonly idleTimeoutMs?: number;
 	private enabled: boolean;
 	private readonly builtinServers = new Map<string, McpServerConfig>();
 	private dynamicServers = new Map<string, McpServerConfig>();
@@ -90,6 +126,8 @@ export class McpServerSupervisor {
 		this.interactionHandlers = options.interactionHandlers;
 		this.clientCapabilities = options.clientCapabilities;
 		this.authRequiredErrorMatcher = options.authRequiredErrorMatcher ?? isMcpAuthRequiredError;
+		this.catalogCache = options.catalogCache;
+		this.idleTimeoutMs = options.idleTimeoutMs;
 		for (const [name, config] of Object.entries(options.builtinServers ?? {})) {
 			if (name && !name.includes("_")) this.builtinServers.set(name, config);
 		}
@@ -111,7 +149,10 @@ export class McpServerSupervisor {
 					this.log(`Skipping disabled server: ${name}`);
 					continue;
 				}
-				starts.push(this.startServer(name, serverConfig));
+				// Lazy startup: servers whose catalog cache entry matches the
+				// current configuration signature are hydrated without spawning a
+				// process; the real connection happens on first use.
+				starts.push(this.startServer(name, serverConfig, true, { lazyStart: true }));
 			}
 			await Promise.allSettled(starts);
 			this.lastSignature = this.combinedSignature();
@@ -298,30 +339,76 @@ export class McpServerSupervisor {
 		return `${this.configSource.getMergedSignature()}|dynamic:${this.dynamicSignature}`;
 	}
 
-	private async startServer(name: string, config: McpServerConfig, publish = true): Promise<ManagedMcpServer> {
+	private async startServer(
+		name: string,
+		config: McpServerConfig,
+		publish = true,
+		options?: { readonly lazyStart?: boolean },
+	): Promise<ManagedMcpServer> {
 		this.log(`Initializing server: ${name}`);
 		const server = createManagedServer(name, config, "starting");
 		if (publish) this.servers.set(name, server);
 
 		try {
-			const client = this.clientFactory(name, config, {
-				debug: this.debug || config.debug,
-				onDiagnostic: (message) => this.log(message),
-				interactionHandlers: this.interactionHandlers,
-			});
-			server.client = client;
-			server.startedAt = Date.now();
-			const result = await client.initialize({
+			const signature = computeMcpServerConfigSignature(config);
+			const initParams: McpInitializeParams = {
 				protocolVersion: this.protocolVersion,
 				clientInfo: this.clientInfo,
 				capabilities: buildClientCapabilities(this.interactionHandlers, this.clientCapabilities),
+			};
+			const facade = new LazyMcpClientHandle({
+				name,
+				createClient: () =>
+					this.clientFactory(name, config, {
+						debug: this.debug || config.debug,
+						onDiagnostic: (message) => this.log(message),
+						interactionHandlers: this.interactionHandlers,
+					}),
+				init: (client) => client.initialize(initParams),
+				onConnected: (result) => {
+					server.serverInfo = result.serverInfo;
+					server.pid = facade.getPid();
+					server.startedAt = Date.now();
+					this.noteServerActivity(server);
+				},
+				onConnectFailed: (error) => {
+					// A lazy first-use failure keeps the cached catalog published so
+					// the call site can retry; only auth-required failures move the
+					// server into the terminal needs_auth state.
+					if (this.servers.get(name) === server && this.authRequiredErrorMatcher(error)) {
+						server.status = "needs_auth";
+						server.error = getErrorMessage(error);
+						this.log(`Server ${name} needs OAuth authorization`);
+					}
+				},
+				onInFlightChange: () => this.noteServerActivity(server),
+				onDiagnostic: (message) => this.log(message),
 			});
-			server.serverInfo = result.serverInfo;
-			server.pid = client.getPid();
+			server.client = facade;
+
+			const cached = options?.lazyStart === true ? await this.loadCatalogCache(name, signature) : undefined;
+			if (cached) {
+				server.serverInfo = cached.serverInfo;
+				server.tools = [...cached.tools];
+				server.resources = [...cached.resources];
+				server.status = "ready";
+				server.error = undefined;
+				if (publish && this.servers.get(name) !== server) {
+					await this.retireServer(server);
+					return server;
+				}
+				this.log(
+					`Server ${name} restored ${server.tools.length} tools from the catalog cache; connection deferred until first use`,
+				);
+				return server;
+			}
+
+			const result = await facade.initialize(initParams);
+			// onConnected already recorded serverInfo/pid/startedAt.
 
 			if (result.capabilities?.tools) {
 				try {
-					server.tools = (await client.listTools()).tools;
+					server.tools = (await facade.listTools()).tools;
 					this.log(`Server ${name} provides ${server.tools.length} tools`);
 				} catch (error) {
 					this.log(`Failed to list tools for ${name}: ${getErrorMessage(error)}`);
@@ -329,7 +416,7 @@ export class McpServerSupervisor {
 			}
 			if (result.capabilities?.resources) {
 				try {
-					server.resources = (await client.listResources()).resources;
+					server.resources = (await facade.listResources()).resources;
 					this.log(`Server ${name} provides ${server.resources.length} resources`);
 				} catch (error) {
 					this.log(`Failed to list resources for ${name}: ${getErrorMessage(error)}`);
@@ -342,6 +429,11 @@ export class McpServerSupervisor {
 				await this.retireServer(server);
 				return server;
 			}
+			await this.storeCatalogCache(
+				name,
+				signature,
+				toMcpServerCatalogSnapshot(result, server.tools, server.resources),
+			);
 			this.log(`Server ${name} is ready`);
 		} catch (error) {
 			const failedClient = server.client;
@@ -364,6 +456,87 @@ export class McpServerSupervisor {
 			this.log(`Failed to initialize server ${name}: ${server.error}`);
 		}
 		return server;
+	}
+
+	private async loadCatalogCache(name: string, signature: string): Promise<McpServerCatalogSnapshot | undefined> {
+		if (!this.catalogCache) return undefined;
+		try {
+			return await this.catalogCache.load(name, signature);
+		} catch (error) {
+			this.log(`Failed to read the MCP catalog cache for ${name}: ${getErrorMessage(error)}`);
+			return undefined;
+		}
+	}
+
+	private async storeCatalogCache(name: string, signature: string, snapshot: McpServerCatalogSnapshot): Promise<void> {
+		if (!this.catalogCache) return;
+		try {
+			await this.catalogCache.store(name, signature, snapshot);
+		} catch (error) {
+			this.log(`Failed to persist the MCP catalog cache for ${name}: ${getErrorMessage(error)}`);
+		}
+	}
+
+	/**
+	 * Records server usage and rearms the idle countdown. Called whenever the
+	 * facade's in-flight count changes and whenever a (re)connection completes.
+	 */
+	private noteServerActivity(server: ManagedMcpServer): void {
+		server.lastActivityAt = Date.now();
+		this.scheduleIdleRecycle(server);
+	}
+
+	private effectiveIdleTimeoutMs(server: ManagedMcpServer): number {
+		if (!isStdioServerConfig(server.config)) return 0;
+		const configured = server.config.idleTimeout ?? this.idleTimeoutMs ?? MCP_DEFAULT_STDIO_IDLE_TIMEOUT_MS;
+		return configured > 0 ? configured : 0;
+	}
+
+	private scheduleIdleRecycle(server: ManagedMcpServer): void {
+		if (server.idleTimer !== undefined) {
+			clearTimeout(server.idleTimer);
+			server.idleTimer = undefined;
+		}
+		const timeout = this.effectiveIdleTimeoutMs(server);
+		if (timeout <= 0 || server.retired) return;
+		const client = server.client;
+		if (!(client instanceof LazyMcpClientHandle) || !client.isConnected()) return;
+		// Arm for the remaining idle budget, not a full timeout: a lease released
+		// long after the last request still recycles at the activity deadline.
+		const remaining = Math.max(0, timeout - (Date.now() - (server.lastActivityAt ?? Date.now())));
+		const timer = setTimeout(() => {
+			server.idleTimer = undefined;
+			void this.recycleIdleServer(server);
+		}, remaining);
+		// A pending recycle must never keep a CLI or test process alive on its own.
+		(timer as unknown as { unref?: () => void }).unref?.();
+		server.idleTimer = timer;
+	}
+
+	/**
+	 * Drops the connection of a stdio server that stayed idle past its timeout.
+	 * The catalog stays published and the facade reconnects on the next call, so
+	 * this is only a process-reclaim, never a state reset. A failed recheck
+	 * rearms nothing — the next activity transition schedules a fresh timer.
+	 */
+	private async recycleIdleServer(server: ManagedMcpServer): Promise<void> {
+		if (server.retired || this.servers.get(server.name) !== server) return;
+		const client = server.client;
+		if (!(client instanceof LazyMcpClientHandle) || !client.isConnected()) return;
+		if (server.activeLeases > 0 || client.getInFlightCount() > 0) return;
+		const timeout = this.effectiveIdleTimeoutMs(server);
+		if (timeout <= 0) return;
+		const elapsed = Date.now() - (server.lastActivityAt ?? 0);
+		if (elapsed < timeout) {
+			this.scheduleIdleRecycle(server);
+			return;
+		}
+		this.log(`Recycling idle MCP server ${server.name} after ${elapsed}ms without requests`);
+		server.pid = undefined;
+		server.startedAt = undefined;
+		// disconnect() reports close failures via onDiagnostic instead of
+		// rejecting, so the fire-and-forget timer path cannot leak a rejection.
+		await client.disconnect();
 	}
 
 	private async reconcileToEffectiveConfig(): Promise<boolean> {
@@ -416,8 +589,13 @@ export class McpServerSupervisor {
 			retired.push(current);
 			changed = true;
 		}
-		for (const [name, candidate] of candidates) {
+		// Adopt in configuration order so the tool surface order follows the
+		// declared registration order (ADR-0071), not the race-dependent order in
+		// which each candidate's connection attempt happened to finish.
+		for (const name of Object.keys(config.mcpServers)) {
 			if (this.servers.has(name)) continue;
+			const candidate = candidates.get(name);
+			if (!candidate) continue;
 			this.servers.set(name, candidate);
 			changed = true;
 		}
@@ -447,6 +625,7 @@ export class McpServerSupervisor {
 				released = true;
 				server.activeLeases -= 1;
 				if (server.activeLeases === 0) {
+					this.scheduleIdleRecycle(server);
 					for (const resolve of server.unusedWaiters.splice(0)) resolve();
 					await this.disposeRetiredServer(server);
 				}
@@ -455,6 +634,10 @@ export class McpServerSupervisor {
 	}
 
 	private async retireServer(server: ManagedMcpServer): Promise<void> {
+		if (server.idleTimer !== undefined) {
+			clearTimeout(server.idleTimer);
+			server.idleTimer = undefined;
+		}
 		if (!server.retired) {
 			server.retired = true;
 			this.retiredServers.add(server);

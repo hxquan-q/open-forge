@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import type { McpConfigData, McpServerConfigData } from "../preload/api-types/mcp.js";
 
 const COMMON_SERVER_KEYS = new Set([
@@ -10,7 +12,7 @@ const COMMON_SERVER_KEYS = new Set([
 	"description",
 	"icon",
 ]);
-const STDIO_SERVER_KEYS = new Set([...COMMON_SERVER_KEYS, "command", "args", "env", "cwd"]);
+const STDIO_SERVER_KEYS = new Set([...COMMON_SERVER_KEYS, "command", "args", "env", "cwd", "idleTimeout"]);
 const HTTP_SERVER_KEYS = new Set([
 	...COMMON_SERVER_KEYS,
 	"url",
@@ -101,6 +103,12 @@ function assertServerConfig(value: unknown, path: string): asserts value is McpS
 	assertOptionalStringArray(value.args, `${path}.args`);
 	assertOptionalStringRecord(value.env, `${path}.env`);
 	assertOptionalString(value.cwd, `${path}.cwd`, true);
+	if (
+		value.idleTimeout !== undefined &&
+		(typeof value.idleTimeout !== "number" || !Number.isInteger(value.idleTimeout) || value.idleTimeout < 0)
+	) {
+		throw new Error(`Invalid ${path}.idleTimeout`);
+	}
 }
 
 export function validateMcpConfig(value: unknown): McpConfigData {

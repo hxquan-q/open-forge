@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 export interface McpServerCommonConfigData {
 	disabled?: boolean;
 	autoApprove?: string[];
@@ -17,6 +19,8 @@ export interface McpStdioServerConfigData extends McpServerCommonConfigData {
 	args?: string[];
 	env?: Record<string, string>;
 	cwd?: string;
+	/** stdio 子进程空闲回收阈值（毫秒）：超过后断开连接并回收进程，下次调用自动重连；0 表示不回收。 */
+	idleTimeout?: number;
 }
 
 export interface McpHttpServerConfigData extends McpServerCommonConfigData {

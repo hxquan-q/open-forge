@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /** Transport-neutral MCP protocol and configuration contracts. */
 
 import type { McpCacheScope } from "./cache.js";
@@ -52,6 +54,14 @@ export interface McpStdioServerConfig extends McpServerCommonConfig {
 	args?: string[];
 	env?: Record<string, string>;
 	cwd?: string;
+	/**
+	 * Idle timeout in milliseconds for the spawned process. Once the server has
+	 * been idle (no in-flight request and no admitted lease) for this long the
+	 * supervisor drops the connection and reclaims the process; the catalog
+	 * stays published and the next call reconnects transparently. `0` disables
+	 * recycling for this server; when unset the supervisor default applies.
+	 */
+	idleTimeout?: number;
 }
 
 export interface McpHttpServerConfig extends McpServerCommonConfig {

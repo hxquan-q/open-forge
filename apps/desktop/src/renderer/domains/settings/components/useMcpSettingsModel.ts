@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import type {
 	AbilityInstallOrigin,
 	McpConfigData,
@@ -50,6 +52,7 @@ export interface McpServerFormState {
 	disabled: boolean;
 	autoApprove: string;
 	startupTimeout: string;
+	idleTimeout: string;
 	debug: boolean;
 }
 
@@ -119,6 +122,7 @@ export const emptyMcpServer: McpServerFormState = {
 	disabled: false,
 	autoApprove: "",
 	startupTimeout: "",
+	idleTimeout: "",
 	debug: false,
 };
 
@@ -682,6 +686,7 @@ function serverToForm(name: string, server: McpServerConfigData): McpServerFormS
 		disabled: server.disabled ?? false,
 		autoApprove: server.autoApprove?.join(", ") ?? "",
 		startupTimeout: server.startupTimeout != null ? String(server.startupTimeout) : "",
+		idleTimeout: server.type === "http" || server.idleTimeout == null ? "" : String(server.idleTimeout),
 		debug: server.debug ?? false,
 	};
 	if (isHttpMcpServerConfigData(server)) {
@@ -732,6 +737,8 @@ function formToServer(form: McpServerFormState): McpServerConfigData {
 		: undefined;
 	const env = kvLinesToObject(form.env);
 
+	const idleTimeout = form.idleTimeout.trim() ? Number(form.idleTimeout.trim()) : undefined;
+
 	const config: McpStdioServerConfigData = { command: form.command.trim() };
 	if (args && args.length > 0) config.args = args;
 	if (env) config.env = env;
@@ -739,6 +746,7 @@ function formToServer(form: McpServerFormState): McpServerConfigData {
 	if (form.disabled) config.disabled = true;
 	if (autoApprove && autoApprove.length > 0) config.autoApprove = autoApprove;
 	if (startupTimeout && !Number.isNaN(startupTimeout)) config.startupTimeout = startupTimeout;
+	if (idleTimeout !== undefined && !Number.isNaN(idleTimeout)) config.idleTimeout = idleTimeout;
 	if (form.debug) config.debug = true;
 	return config;
 }

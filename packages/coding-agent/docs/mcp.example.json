@@ -25,6 +25,7 @@
 			},
 			"disabled": true,
 			"startupTimeout": 15000,
+			"idleTimeout": 1800000,
 			"debug": false
 		}
 	}

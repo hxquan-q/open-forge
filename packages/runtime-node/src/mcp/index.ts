@@ -1,6 +1,9 @@
+// Modified by The Open Forge contributors.
+
 export * from "@vetta/runtime-mcp";
 export { NodeMcpToolResultArtifactStore } from "../host/result-artifact-storage.js";
 export * from "./auth/index.js";
+export * from "./catalog/index.js";
 export * from "./client/index.js";
 export * from "./config/index.js";
 export {

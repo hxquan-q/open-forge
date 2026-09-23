@@ -110,6 +110,7 @@ function redactServer(name: string, server: McpServerConfigData): McpServerDetai
 		...(server.args === undefined ? {} : { args: [...server.args] }),
 		...(env === undefined ? {} : { env }),
 		...(server.cwd === undefined ? {} : { cwd: server.cwd }),
+		...(server.idleTimeout === undefined ? {} : { idleTimeout: server.idleTimeout }),
 	};
 }
 

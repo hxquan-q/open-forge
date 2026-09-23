@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type { McpConfig } from "../protocol/index.js";
@@ -26,6 +28,7 @@ export const McpStdioServerConfigSchema = Type.Object(
 		args: Type.Optional(Type.Array(Type.Unknown())),
 		env: Type.Optional(LegacyStringMapSchema),
 		cwd: Type.Optional(Type.String()),
+		idleTimeout: Type.Optional(Type.Integer({ minimum: 0 })),
 	},
 	{ additionalProperties: true },
 );
@@ -96,6 +99,9 @@ function validateServerConfig(name: string, value: unknown): void {
 		}
 		if (value.cwd !== undefined && !Value.Check(Type.String(), value.cwd)) {
 			throw new Error(`Invalid server config for '${name}': 'cwd' must be a string`);
+		}
+		if (value.idleTimeout !== undefined && !Value.Check(Type.Integer({ minimum: 0 }), value.idleTimeout)) {
+			throw new Error(`Invalid server config for '${name}': 'idleTimeout' must be a non-negative integer (ms)`);
 		}
 	}
 	if (value.disabled !== undefined && !Value.Check(Type.Boolean(), value.disabled)) {

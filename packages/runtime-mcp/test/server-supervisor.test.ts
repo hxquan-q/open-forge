@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+// Modified by The Open Forge contributors.
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+	computeMcpServerConfigSignature,
 	McpAuthRequiredError,
 	type McpClientHandle,
 	type McpConfig,
@@ -8,8 +11,11 @@ import {
 	type McpInitializeResult,
 	type McpJsonObject,
 	type McpResourceReadResult,
+	type McpServerCatalogCache,
+	type McpServerCatalogSnapshot,
 	type McpServerConfig,
 	McpServerSupervisor,
+	type McpServerSupervisorOptions,
 	type McpToolCallResult,
 	type RuntimeMcpClientFactory,
 } from "../src/index.js";
@@ -69,7 +75,8 @@ describe("McpServerSupervisor", () => {
 		await supervisor.initialize();
 		const oldBinding = supervisor.getServerBinding("docs");
 		if (!oldBinding?.client) throw new Error("Missing initial MCP binding");
-		const oldClient = oldBinding.client as FakeClient;
+		const oldClient = clients.clients.find((client) => client.name === "docs");
+		if (!oldClient) throw new Error("Missing initial MCP client");
 		const lease = oldBinding.acquireLease();
 
 		source.servers = { docs: stdio("docs-v2") };
@@ -77,7 +84,8 @@ describe("McpServerSupervisor", () => {
 		expect(await supervisor.reloadIfChanged()).toBe(true);
 
 		expect(oldClient.closed).toBe(false);
-		expect(supervisor.getServerBinding("docs")?.client).not.toBe(oldClient);
+		expect(clients.clients.filter((client) => client.name === "docs").at(-1)).not.toBe(oldClient);
+		expect(supervisor.getServerBinding("docs")?.client).not.toBe(oldBinding.client);
 		expect(supervisor.getStats()).toMatchObject({ retiredServers: 1, activeLeases: 1 });
 
 		await lease.release();
@@ -199,6 +207,328 @@ describe("McpServerSupervisor", () => {
 	});
 });
 
+describe("McpServerSupervisor lazy startup", () => {
+	it("restores an unchanged catalog from the cache and defers the connection until first use", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		cache.seed("docs", computeMcpServerConfigSignature(stdio("docs")), {
+			serverInfo: { name: "docs", version: "9" },
+			tools: [{ name: "cached-tool", inputSchema: { type: "object" } }],
+			resources: [{ uri: "test://docs/cached", name: "cached" }],
+		});
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+
+		await supervisor.initialize();
+
+		// 启动完成但底层连接（进而 stdio 子进程）尚未建立。
+		const binding = supervisor.getServerBinding("docs");
+		expect(binding?.view).toMatchObject({
+			status: "ready",
+			serverInfo: { name: "docs", version: "9" },
+			tools: [{ name: "cached-tool" }],
+			resources: [{ uri: "test://docs/cached", name: "cached" }],
+		});
+		expect(binding?.view.pid).toBeUndefined();
+		expect(clients.clients).toHaveLength(0);
+		expect(supervisor.getReadyServerBindings().map((entry) => entry.view.name)).toEqual(["docs"]);
+
+		const lease = binding?.acquireLease();
+		if (!lease?.client) throw new Error("Missing lazy binding client");
+		const result = await lease.client.callTool("cached-tool");
+
+		expect(result.content).toEqual([]);
+		expect(clients.clients).toHaveLength(1);
+		expect(clients.clients[0]?.isClientInitialized()).toBe(true);
+		expect(supervisor.getServerBinding("docs")?.view.pid).toBe(123);
+
+		await lease.release();
+		await supervisor.shutdown();
+	});
+
+	it("cold-starts and persists the catalog when no signature entry exists", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+
+		await supervisor.initialize();
+
+		expect(clients.clients).toHaveLength(1);
+		expect(supervisor.getServerBinding("docs")?.view.tools).toEqual([
+			{ name: "tool-docs", inputSchema: { type: "object" } },
+		]);
+		expect(cache.stored).toHaveLength(1);
+		expect(cache.stored[0]?.name).toBe("docs");
+		expect(cache.stored[0]?.signature).toBe(computeMcpServerConfigSignature(stdio("docs")));
+		expect(cache.stored[0]?.snapshot.tools.map((tool) => tool.name)).toEqual(["tool-docs"]);
+
+		await supervisor.shutdown();
+	});
+
+	it("reconnects through the cache on the next startup when the signature is unchanged", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const cache = new FakeCatalogCache();
+		const first = new FakeClientFactory();
+		const firstSupervisor = createSupervisor(source, first.create, { catalogCache: cache });
+		await firstSupervisor.initialize();
+		expect(first.clients).toHaveLength(1);
+		await firstSupervisor.shutdown();
+
+		const second = new FakeClientFactory();
+		const secondSupervisor = createSupervisor(source, second.create, { catalogCache: cache });
+		await secondSupervisor.initialize();
+
+		expect(second.clients).toHaveLength(0);
+		expect(secondSupervisor.getServerBinding("docs")?.view.tools).toEqual([
+			{ name: "tool-docs", inputSchema: { type: "object" } },
+		]);
+		await secondSupervisor.shutdown();
+	});
+
+	it("invalidates the cached catalog when the configuration signature changes", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs-v1") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		cache.seed("docs", computeMcpServerConfigSignature(stdio("docs-old")), {
+			serverInfo: { name: "docs", version: "1" },
+			tools: [{ name: "stale-tool", inputSchema: { type: "object" } }],
+			resources: [],
+		});
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+
+		await supervisor.initialize();
+
+		expect(clients.clients).toHaveLength(1);
+		expect(supervisor.getServerBinding("docs")?.view.tools).toEqual([
+			{ name: "tool-docs", inputSchema: { type: "object" } },
+		]);
+		await supervisor.shutdown();
+	});
+
+	it("keeps explicit lifecycle operations eager while initialize stays lazy", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		cache.seed("docs", computeMcpServerConfigSignature(stdio("docs")), {
+			serverInfo: { name: "docs", version: "9" },
+			tools: [{ name: "cached-tool", inputSchema: { type: "object" } }],
+			resources: [],
+		});
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+		await supervisor.initialize();
+		expect(clients.clients).toHaveLength(0);
+
+		await supervisor.restartServer("docs", stdio("docs-v2"));
+
+		expect(clients.clients).toHaveLength(1);
+		expect(supervisor.getServerBinding("docs")?.view.tools).toEqual([
+			{ name: "tool-docs", inputSchema: { type: "object" } },
+		]);
+		await supervisor.shutdown();
+	});
+
+	it("retries the connection on the next call after a first-use failure", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		cache.seed("docs", computeMcpServerConfigSignature(stdio("docs")), {
+			serverInfo: { name: "docs", version: "9" },
+			tools: [{ name: "cached-tool", inputSchema: { type: "object" } }],
+			resources: [],
+		});
+		clients.initializeErrors.set("docs", new Error("spawn failed"));
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+		await supervisor.initialize();
+
+		const client = supervisor.getServerBinding("docs")?.client;
+		if (!client) throw new Error("Missing lazy binding client");
+		await expect(client.callTool("cached-tool")).rejects.toThrow("spawn failed");
+		expect(clients.clients).toHaveLength(1);
+		expect(clients.clients[0]?.closed).toBe(true);
+		expect(supervisor.getServerBinding("docs")?.view.status).toBe("ready");
+
+		clients.initializeErrors.delete("docs");
+		await expect(client.callTool("cached-tool")).resolves.toEqual({ content: [] });
+		expect(clients.clients).toHaveLength(2);
+		await supervisor.shutdown();
+	});
+
+	it("moves the server to needs_auth when first use requires authorization", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		cache.seed("docs", computeMcpServerConfigSignature(stdio("docs")), {
+			serverInfo: { name: "docs", version: "9" },
+			tools: [{ name: "cached-tool", inputSchema: { type: "object" } }],
+			resources: [],
+		});
+		clients.initializeErrors.set("docs", new McpAuthRequiredError("docs", "https://auth.test/mcp"));
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+		await supervisor.initialize();
+
+		const client = supervisor.getServerBinding("docs")?.client;
+		if (!client) throw new Error("Missing lazy binding client");
+		await expect(client.callTool("cached-tool")).rejects.toThrow(McpAuthRequiredError);
+		expect(supervisor.getServerBinding("docs")?.view.status).toBe("needs_auth");
+		expect(supervisor.getReadyServerBindings()).toHaveLength(0);
+		await supervisor.shutdown();
+	});
+
+	describe("idle recycling", () => {
+		it("recycles an idle stdio connection and reconnects on the next call", async () => {
+			vi.useFakeTimers();
+			const source = new MutableConfigSource({ docs: stdio("docs") });
+			const clients = new FakeClientFactory();
+			const supervisor = createSupervisor(source, clients.create, { idleTimeoutMs: 1000 });
+			await supervisor.initialize();
+			expect(clients.clients).toHaveLength(1);
+
+			await vi.advanceTimersByTimeAsync(1500);
+
+			// 目录状态（工具列表、ready 状态）保留，进程已回收。
+			expect(clients.clients[0]?.closed).toBe(true);
+			expect(supervisor.getServerBinding("docs")?.view).toMatchObject({ status: "ready", pid: undefined });
+			expect(supervisor.getServerBinding("docs")?.view.tools).toEqual([
+				{ name: "tool-docs", inputSchema: { type: "object" } },
+			]);
+
+			const client = supervisor.getServerBinding("docs")?.client;
+			if (!client) throw new Error("Missing binding client");
+			await expect(client.callTool("tool-docs")).resolves.toEqual({ content: [] });
+			expect(clients.clients).toHaveLength(2);
+			expect(clients.clients[1]?.isClientInitialized()).toBe(true);
+			expect(supervisor.getServerBinding("docs")?.view.pid).toBe(123);
+			await supervisor.shutdown();
+		});
+
+		it("does not recycle while a lease or an in-flight request owns the connection", async () => {
+			vi.useFakeTimers();
+			const source = new MutableConfigSource({ docs: stdio("docs") });
+			const clients = new FakeClientFactory();
+			const supervisor = createSupervisor(source, clients.create, { idleTimeoutMs: 1000 });
+			await supervisor.initialize();
+			const binding = supervisor.getServerBinding("docs");
+			if (!binding?.client) throw new Error("Missing binding client");
+			const lease = binding.acquireLease();
+
+			// 持有 lease 期间即使超过阈值也不回收。
+			await vi.advanceTimersByTimeAsync(5000);
+			expect(clients.clients[0]?.closed).toBe(false);
+
+			// lease 释放后若已无活动且超过阈值，下一次计时即回收。
+			await lease.release();
+			await vi.advanceTimersByTimeAsync(10);
+			expect(clients.clients[0]?.closed).toBe(true);
+
+			// 重连后 gate 住的请求让 in-flight>0，同样阻断回收。
+			const gate = new Deferred<void>();
+			clients.callToolGates.set("docs", gate);
+			const pending = binding.client.callTool("tool-docs");
+			expect(clients.clients).toHaveLength(2);
+			await vi.advanceTimersByTimeAsync(5000);
+			expect(clients.clients[1]?.closed).toBe(false);
+
+			gate.resolve();
+			await pending;
+			await vi.advanceTimersByTimeAsync(1500);
+			expect(clients.clients[1]?.closed).toBe(true);
+			await supervisor.shutdown();
+		});
+
+		it("honours the per-server idleTimeout override and zero disables recycling", async () => {
+			vi.useFakeTimers();
+			const source = new MutableConfigSource({
+				fast: { command: "fast", idleTimeout: 50 },
+				sticky: { command: "sticky", idleTimeout: 0 },
+			});
+			const clients = new FakeClientFactory();
+			const supervisor = createSupervisor(source, clients.create, { idleTimeoutMs: 60_000 });
+			await supervisor.initialize();
+			expect(clients.clients).toHaveLength(2);
+
+			await vi.advanceTimersByTimeAsync(5000);
+			expect(clients.clients.find((client) => client.name === "fast")?.closed).toBe(true);
+			expect(clients.clients.find((client) => client.name === "sticky")?.closed).toBe(false);
+			await supervisor.shutdown();
+		});
+
+		it("never idles out http servers", async () => {
+			vi.useFakeTimers();
+			const source = new MutableConfigSource({ web: http("web") });
+			const clients = new FakeClientFactory();
+			const supervisor = createSupervisor(source, clients.create, { idleTimeoutMs: 100 });
+			await supervisor.initialize();
+
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(clients.clients[0]?.closed).toBe(false);
+			await supervisor.shutdown();
+		});
+	});
+
+	it("fails a pending first-use call when the server generation is retired mid-connect", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs") });
+		const clients = new FakeClientFactory();
+		const cache = new FakeCatalogCache();
+		cache.seed("docs", computeMcpServerConfigSignature(stdio("docs")), {
+			serverInfo: { name: "docs", version: "9" },
+			tools: [{ name: "cached-tool", inputSchema: { type: "object" } }],
+			resources: [],
+		});
+		const gate = new Deferred<void>();
+		clients.initializeGates.set("docs", gate);
+		const supervisor = createSupervisor(source, clients.create, { catalogCache: cache });
+		await supervisor.initialize();
+
+		const client = supervisor.getServerBinding("docs")?.client;
+		if (!client) throw new Error("Missing lazy binding client");
+		const pending = client.callTool("cached-tool");
+		pending.catch(() => undefined);
+		expect(clients.clients).toHaveLength(1);
+
+		// shutdown() 不需要等 gate：facade 会同步标记关闭，随后解除 gate 时
+		// 连接尝试发现自己已被取代并以明确的终态失败。
+		const shutdown = supervisor.shutdown();
+		gate.resolve();
+		await expect(pending).rejects.toThrow(/closed|superseded/);
+		expect(clients.clients[0]?.closed).toBe(true);
+		await shutdown;
+	});
+});
+
+afterEach(() => {
+	vi.useRealTimers();
+});
+
+describe("computeMcpServerConfigSignature", () => {
+	it("is stable across key order and ignores non-serializable fields", () => {
+		const left: McpServerConfig = {
+			command: "server",
+			args: ["a", "b"],
+			env: { ONE: "1", TWO: "2" },
+			startupTimeout: 3000,
+		};
+		const right: McpServerConfig = {
+			startupTimeout: 3000,
+			env: { TWO: "2", ONE: "1" },
+			args: ["a", "b"],
+			command: "server",
+		};
+		expect(computeMcpServerConfigSignature(left)).toBe(computeMcpServerConfigSignature(right));
+		expect(computeMcpServerConfigSignature(left)).not.toBe(
+			computeMcpServerConfigSignature({ ...left, args: ["b", "a"] }),
+		);
+
+		const withResolver = {
+			type: "http",
+			url: "https://server.test/mcp",
+			resolveUrl: () => "https://resolved.test/mcp",
+		} as unknown as McpServerConfig;
+		const plain = { type: "http", url: "https://server.test/mcp" } as McpServerConfig;
+		expect(computeMcpServerConfigSignature(withResolver)).toBe(computeMcpServerConfigSignature(plain));
+	});
+});
+
 class MutableConfigSource implements McpConfigSource {
 	signature = "files-v1";
 	loadError: Error | undefined;
@@ -229,8 +559,11 @@ class MutableConfigSource implements McpConfigSource {
 
 class FakeClientFactory {
 	readonly initializeErrors = new Map<string, Error>();
+	readonly initializeGates = new Map<string, Deferred<void>>();
 	readonly toolListErrors = new Set<string>();
 	readonly resourceListErrors = new Set<string>();
+	readonly callToolErrors = new Set<string>();
+	readonly callToolGates = new Map<string, Deferred<void>>();
 	readonly clients: FakeClient[] = [];
 
 	readonly create: RuntimeMcpClientFactory = (name) => {
@@ -239,10 +572,26 @@ class FakeClientFactory {
 			this.initializeErrors.get(name),
 			this.toolListErrors.has(name),
 			this.resourceListErrors.has(name),
+			this.initializeGates.get(name),
+			this.callToolErrors.has(name),
+			this.callToolGates.get(name),
 		);
 		this.clients.push(client);
 		return client;
 	};
+}
+
+class Deferred<T> {
+	readonly promise: Promise<T>;
+	resolve!: (value: T) => void;
+	reject!: (error: unknown) => void;
+
+	constructor() {
+		this.promise = new Promise<T>((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+		});
+	}
 }
 
 class FakeClient implements McpClientHandle {
@@ -254,9 +603,13 @@ class FakeClient implements McpClientHandle {
 		private readonly initializeError?: Error,
 		private readonly toolListError = false,
 		private readonly resourceListError = false,
+		private readonly initializeGate?: Deferred<void>,
+		private readonly callToolError = false,
+		private readonly callToolGate?: Deferred<void>,
 	) {}
 
 	async initialize(_params: McpInitializeParams): Promise<McpInitializeResult> {
+		await this.initializeGate?.promise;
 		if (this.initializeError) throw this.initializeError;
 		this.initialized = true;
 		return {
@@ -272,6 +625,8 @@ class FakeClient implements McpClientHandle {
 	}
 
 	async callTool(_name: string, _args?: McpJsonObject): Promise<McpToolCallResult> {
+		if (this.callToolError) throw new Error("tool call failed");
+		await this.callToolGate?.promise;
 		return { content: [] };
 	}
 
@@ -305,12 +660,40 @@ class FakeClient implements McpClientHandle {
 	}
 }
 
-function createSupervisor(source: McpConfigSource, clientFactory: RuntimeMcpClientFactory) {
+class FakeCatalogCache implements McpServerCatalogCache {
+	private readonly entries = new Map<string, McpServerCatalogSnapshot>();
+	readonly stored: { name: string; signature: string; snapshot: McpServerCatalogSnapshot }[] = [];
+	loadError: Error | undefined;
+	storeError: Error | undefined;
+
+	seed(name: string, signature: string, snapshot: McpServerCatalogSnapshot): void {
+		this.entries.set(`${name}${signature}`, snapshot);
+	}
+
+	async load(name: string, signature: string): Promise<McpServerCatalogSnapshot | undefined> {
+		if (this.loadError) throw this.loadError;
+		return this.entries.get(`${name}${signature}`);
+	}
+
+	async store(name: string, signature: string, snapshot: McpServerCatalogSnapshot): Promise<void> {
+		if (this.storeError) throw this.storeError;
+		this.stored.push({ name, signature, snapshot });
+		this.entries.set(`${name}${signature}`, snapshot);
+	}
+}
+
+function createSupervisor(
+	source: McpConfigSource,
+	clientFactory: RuntimeMcpClientFactory,
+	options?: Pick<McpServerSupervisorOptions, "catalogCache" | "idleTimeoutMs">,
+) {
 	return new McpServerSupervisor({
 		configSource: source,
 		clientFactory,
 		protocolVersion: "test",
 		clientInfo: { name: "runtime-test", version: "1" },
+		catalogCache: options?.catalogCache,
+		idleTimeoutMs: options?.idleTimeoutMs,
 	});
 }
 

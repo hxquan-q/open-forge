@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { join } from "node:path";
 import {
 	MCP_DEFAULT_PROTOCOL_VERSION,
@@ -13,6 +15,7 @@ import {
 	loadVettaCredentials,
 	McpOAuthProvider,
 } from "./auth/index.js";
+import { FileMcpServerCatalogCache } from "./catalog/index.js";
 import { createMcpClient } from "./client/index.js";
 import { FileMcpConfigSource } from "./config/index.js";
 
@@ -34,6 +37,19 @@ export interface NodeMcpSupervisorOptions {
 	readonly onDiagnostic?: (message: string) => void;
 	readonly interactionHandlers?: McpServerInteractionHandlers;
 	readonly clientCapabilities?: McpClientCapabilities;
+	/**
+	 * Directory that persists per-server tool catalogs keyed by the
+	 * configuration signature and enables lazy startup. Left undefined for
+	 * hosts/tests that do not want durable catalog state; Desktop passes its
+	 * application cache namespace.
+	 */
+	readonly catalogCacheDirectory?: string;
+	/**
+	 * Default idle timeout (ms) for spawned stdio servers before the supervisor
+	 * disconnects and reclaims the process; per-server `idleTimeout` overrides
+	 * it and `0` disables recycling entirely.
+	 */
+	readonly idleTimeoutMs?: number;
 }
 
 export interface NodeMcpSupervisorComposition {
@@ -84,6 +100,13 @@ export function createNodeMcpSupervisor(options: NodeMcpSupervisorOptions): Node
 		onDiagnostic: options.onDiagnostic,
 		interactionHandlers: options.interactionHandlers,
 		clientCapabilities: options.clientCapabilities,
+		catalogCache: options.catalogCacheDirectory
+			? new FileMcpServerCatalogCache({
+					directory: options.catalogCacheDirectory,
+					log: options.onDiagnostic,
+				})
+			: undefined,
+		idleTimeoutMs: options.idleTimeoutMs,
 	});
 	return { supervisor, configSource };
 }

@@ -21,6 +21,8 @@ export {
 	ArtifactToolErrorSchema,
 	type ArtifactToolInput,
 	ArtifactToolInputSchema,
+	type ArtifactToolListItem,
+	artifactToolError,
 	CODING_AGENT_ARTIFACT_EXTENSION_ID,
 	CODING_AGENT_ARTIFACT_FUNCTION,
 	type CodingAgentArtifactFunctionRequest,
@@ -28,6 +30,13 @@ export {
 	readArtifactToolError,
 	readArtifactToolInput,
 } from "../features/artifacts/artifact-tool-contract.js";
+export {
+	type ArtifactUpdateDecision,
+	type ArtifactVersionState,
+	decideArtifactUpdate,
+	isExternalArtifactUpdate,
+	nextArtifactVersion,
+} from "../features/artifacts/artifact-version-policy.js";
 export {
 	CODING_AGENT_ATTACH_ARTIFACT_EXTENSION_ID,
 	CODING_AGENT_ATTACH_ARTIFACT_FUNCTION,
@@ -89,6 +98,11 @@ export {
 	readBrowserElementSelectionContext,
 	readBrowserElementSelectionPayload,
 } from "../features/browser-tab/element-selection-capsule.js";
+export {
+	DOCUMENT_ARTIFACT_KIND,
+	type DocumentExportResult,
+	type DocumentProcessingRequest,
+} from "../features/documents/contracts.js";
 export type {
 	FileOrganizeItemResult,
 	FileOrganizeItemStatus,
