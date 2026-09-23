@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+import type { AssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import type { SessionEvent } from "../contracts.js";
 import {
@@ -8,14 +9,19 @@ import {
 } from "./session-event-subscriber-queue.js";
 import { baseSessionEvent } from "./session-events.js";
 
+function partialOf(text: string): AssistantMessage {
+	return { role: "assistant", content: [{ type: "text", text }] } as unknown as AssistantMessage;
+}
+
 function textDelta(contentIndex: number, delta: string): SessionEvent {
 	return {
 		...baseSessionEvent("session-1", "agent"),
 		channel: "assistant",
+		modelCallIndex: 0,
 		type: "text_delta",
 		contentIndex,
 		delta,
-		partial: { role: "assistant", content: [] },
+		partial: partialOf(delta),
 	} as SessionEvent;
 }
 
@@ -23,9 +29,10 @@ function textStart(contentIndex: number): SessionEvent {
 	return {
 		...baseSessionEvent("session-1", "agent"),
 		channel: "assistant",
+		modelCallIndex: 0,
 		type: "text_start",
 		contentIndex,
-		partial: { role: "assistant", content: [] },
+		partial: partialOf(""),
 	} as SessionEvent;
 }
 
@@ -53,7 +60,11 @@ describe("SessionEventSubscriberQueue", () => {
 		queue.enqueue(textDelta(1, "x"));
 		queue.enqueue(textDelta(0, "b"));
 		await Promise.resolve();
-		expect(delivered.map((event) => [event.contentIndex, event.delta])).toEqual([
+		const positions = delivered.map((event) => {
+			if (event.type !== "text_delta") throw new Error(`unexpected event ${event.type}`);
+			return [event.contentIndex, event.delta];
+		});
+		expect(positions).toEqual([
 			[0, "ab"],
 			[1, "x"],
 		]);
