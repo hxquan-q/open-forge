@@ -1,7 +1,7 @@
 ---
 id: TASK-0037
 type: task
-status: ready
+status: done
 priority: P1
 owner: packages/runtime-core
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [packages/runtime-core/src, .github/release-notes]
 exclusive_paths: [packages/runtime-core/src/kernel]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（forge/dev 工作区，未提交）
 created: 2026-09-23
 updated: 2026-09-23
 ---
@@ -68,6 +68,19 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - `packages/runtime-core/src/runtime-host/session-event-subscriber-queue.ts`：按 (sessionKey, handler) 隔离的有界队列（上限 4096）；同 (sessionId,type,contentIndex) 相邻 ephemeral 合并为**拼接 delta**（字符串 delta 连接，不丢字）；仅 marker 类 ephemeral 可在压下丢弃；delta 携带与终态事件（done/error/compaction 等）一律不丢——无可丢 marker 时允许队列超限也不 shift 必需事件；`flushSync` 移除（原逐事件即排即送使队列永不积累，背压是死代码），改 microtask 批量投递，终态事件先冲出排队 ephemeral 再投递，保持顺序；`dispose`/`release(sessionKey)` 清理。
+  - `packages/runtime-core/src/contracts.ts` + RuntimeHost facade：`readSubscriberDeliveryStats` 暴露每订阅者 `{queued, coalesced, dropped, delivered}` 计数。
+  - `apps/desktop/src/main/app-monitor/perf-monitor-service.ts`/`perf-snapshot.ts`：perf monitor 保留订阅 handler/sessionKey 引用，快照轮询把丢弃/合并计数并入 `aggregates.eventDelivery`，可在诊断包快照中定位背压热点。
+  - `apps/desktop/.../conversation-projection.ts`：renderer 端 pending 队列同样改为 delta 拼接合并 + 终态永不丢 + `readStats()`；合并扫描遇到非 ephemeral 事件即停止（修掉跨 toolcall_start 误并丢块的回归）。
+  - `useSessionEventController`：终态事件（done/error）走即时 `flushDeltas` 不等 100ms 节流。
 - 实际运行：
+  - `packages/runtime-core` runtime-host 测试 19/19 绿（订阅者队列合并/丢弃/终态必达/按 sessionKey 隔离、relay 批量化 live 无损+replayed 保序、stats 访问器）。
+  - `conversation-projection.test.ts` 7/7 绿（新增 delta 拼接、终态不丢、丢弃计数断言）。
+  - `useSessionManager.queue` 9、`useSessionManager.session-switch` 9、`cross-session-leak` 1 绿。
+  - `tsc --noEmit`（runtime-core + desktop 本任务文件）0 错误。
 - 未运行及原因：
+  - `bun run check` 全量：受工作区其他 Agent 在途错误影响暂不可绿，本任务文件已过 lint/format。
+  - 生产环境突发流量实测：合并/丢弃语义由确定性单测覆盖，真实 Provider 突发回放无本地基线场景。
 - 剩余风险：
+  - 投递从逐事件改 microtask 批量后，极短时窗内订阅者看到的事件数减少（合并后）；reducer 按 contentIndex 追加，语义等价，但依赖「每 delta 一次回调」的假设型消费者需注意（现有订阅者均按累积态消费）。
+  - replay_finished 语义：重放流仍按原始事件逐条投递（不合并），live 侧合并——跨断言测试已按「live 无损、replayed 保序」更新。

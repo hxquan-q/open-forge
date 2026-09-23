@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MessageAppendedEvent, TurnCompletedEvent, TurnStartedEvent } from "@vetta/runtime-core/kernel";
@@ -134,6 +134,99 @@ describe("Greenfield runtime session services", () => {
 		expect(existsSync(`${sessionPath}.lock`)).toBe(false);
 		expect(existsSync(`${sessionPath}.owner.lock`)).toBe(false);
 		expect(existsSync(snapshotPath)).toBe(false);
+	});
+
+	it("lists stat-index metadata without building document state", async () => {
+		const rootDir = await createTemporaryRoot();
+		const cwd = join(rootDir, "workspace");
+		const repository = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "indexed", createdAt: 10, cwd });
+		await repository.append("indexed", 0, [
+			started("indexed", 100),
+			userMessage("indexed", "first   user\nquestion", 110),
+			assistantMessage("indexed", "first answer", 120),
+			userMessage("indexed", "second question", 130),
+			assistantMessage("indexed", "last answer", 140),
+			completed("indexed", 150),
+		]);
+		const sessionPath = repository.resolveConversationPath("indexed");
+		await repository.close();
+		const fileSize = (await stat(sessionPath)).size;
+
+		const catalog = new FileConversationRuntimeSessionCatalog();
+		const [session] = await catalog.listSessions(cwd, rootDir);
+
+		expect(session).toMatchObject({
+			id: "indexed",
+			path: sessionPath,
+			cwd,
+			firstMessage: "first user question",
+			modifiedAt: 140,
+			lastMessagePreview: "last answer",
+			fileSizeBytes: fileSize,
+		});
+	});
+
+	it("skips malformed JSONL lines while indexing a session", async () => {
+		const rootDir = await createTemporaryRoot();
+		const cwd = join(rootDir, "workspace");
+		const repository = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "tolerant", createdAt: 10, cwd });
+		await repository.append("tolerant", 0, [
+			started("tolerant", 100),
+			userMessage("tolerant", "surviving question", 110),
+			assistantMessage("tolerant", "surviving answer", 120),
+			completed("tolerant", 130),
+		]);
+		const sessionPath = repository.resolveConversationPath("tolerant");
+		await repository.close();
+		const original = await readFile(sessionPath, "utf8");
+		const lines = original.split("\n");
+		lines.splice(2, 0, "{not-valid-json", "   ");
+		await writeFile(sessionPath, lines.join("\n"), "utf8");
+
+		const catalog = new FileConversationRuntimeSessionCatalog();
+		const [session] = await catalog.listSessions(cwd, rootDir);
+
+		expect(session).toMatchObject({
+			id: "tolerant",
+			firstMessage: "surviving question",
+			lastMessagePreview: "surviving answer",
+		});
+	});
+
+	it("reports empty sessions without a false message preview", async () => {
+		const rootDir = await createTemporaryRoot();
+		const cwd = join(rootDir, "workspace");
+		const repository = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "blank", createdAt: 10, cwd });
+		await repository.close();
+
+		const catalog = new FileConversationRuntimeSessionCatalog();
+		const [session] = await catalog.listSessions(cwd, rootDir);
+
+		expect(session?.firstMessage).toBe("(no messages)");
+		expect(session?.lastMessagePreview).toBeUndefined();
+		expect(session?.fileSizeBytes).toBeGreaterThan(0);
+	});
+
+	it("truncates the last-message preview for the list index", async () => {
+		const rootDir = await createTemporaryRoot();
+		const cwd = join(rootDir, "workspace");
+		const repository = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "verbose", createdAt: 10, cwd });
+		await repository.append("verbose", 0, [
+			started("verbose", 100),
+			userMessage("verbose", "question", 110),
+			assistantMessage("verbose", "x".repeat(400), 120),
+			completed("verbose", 130),
+		]);
+		await repository.close();
+
+		const catalog = new FileConversationRuntimeSessionCatalog();
+		const [session] = await catalog.listSessions(cwd, rootDir);
+
+		expect(session?.lastMessagePreview).toHaveLength(120);
 	});
 
 	it("keeps the session file when auxiliary artifact cleanup fails so deletion can be retried", async () => {

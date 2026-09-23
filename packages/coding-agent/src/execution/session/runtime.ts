@@ -1,4 +1,3 @@
-// Modified by The Open Forge contributors.
 import type {
 	RuntimeExecutionModeUpdate,
 	RuntimeResourceContext,
@@ -13,7 +12,6 @@ import {
 	type CodingToolAvailabilityErrorCode,
 	type CodingToolCatalogEntry,
 	type CodingToolRegistration,
-	type CodingToolResultPolicy,
 	createCodingToolsFeature,
 	GenerationalCodingToolCatalog,
 	guardCodingToolRegistration,
@@ -48,7 +46,6 @@ export interface CodingAgentSessionExecutionRuntimeOptions {
 	readonly macosSandboxExecPath?: string;
 	readonly readSessionId: () => string;
 	readonly resolveToolEntry?: (toolName: string) => CodingToolCatalogEntry | undefined;
-	readonly resultPolicy?: CodingToolResultPolicy;
 	readonly resourceContext: RuntimeResourceContext;
 	readonly sandboxAuthorization: CodingAgentSandboxAuthorizationPort;
 }
@@ -255,7 +252,6 @@ export class CodingAgentSessionExecutionRuntime {
 		this.nextCatalogGeneration += 1;
 		return new InMemoryCodingToolRegistry(registrations.map(toRuntimeExecutionRegistration), {
 			sourceId: `coding-session-execution-tools:${this.nextCatalogGeneration}`,
-			resultPolicy: this.options.resultPolicy,
 		});
 	}
 }

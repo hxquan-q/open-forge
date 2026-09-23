@@ -1,6 +1,12 @@
+// Modified by The Open Forge contributors.
 import type { ErrorEvent, SessionEvent } from "../contracts.js";
 import type { SessionContextStateEvent } from "../session-context-state.js";
 import type { RuntimeHostQueueSidecar } from "./runtime-host-queue-sidecar.js";
+import {
+	DEFAULT_SUBSCRIBER_EVENT_QUEUE_LIMIT,
+	SessionEventSubscriberQueue,
+	type SessionEventSubscriberQueueStats,
+} from "./session-event-subscriber-queue.js";
 import { baseSessionEvent, lifecycleSessionEvent, mapRuntimeSessionObservationEvent } from "./session-events.js";
 import type { RuntimeSessionEventStream } from "./session-ports.js";
 import type { InFlightBuffer, RunningChangedReason, RuntimeHostSessionRecord } from "./types.js";
@@ -31,6 +37,7 @@ export interface RuntimeHostSessionEventRelayOptions {
 	 * 总量这条无界轴。
 	 */
 	readonly inFlightReplayEventLimit?: number;
+	readonly subscriberEventQueueLimit?: number;
 	readonly reportFailure: (
 		operation: "listener.notify" | "observer.notify",
 		component: RuntimeHostSessionEventRelayFailureComponent,
@@ -61,6 +68,11 @@ export class RuntimeHostSessionEventRelay {
 	>();
 	private readonly contextStateEvents = new Map<string, SessionContextStateEvent>();
 	private readonly inFlightReplayEventLimit: number;
+	private readonly subscriberEventQueueLimit: number;
+	private readonly subscriberDeliveryQueues = new Map<
+		string,
+		Map<(event: SessionEvent) => void, SessionEventSubscriberQueue>
+	>();
 
 	constructor(private readonly options: RuntimeHostSessionEventRelayOptions) {
 		const limit = options.inFlightReplayEventLimit ?? DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT;
@@ -68,6 +80,11 @@ export class RuntimeHostSessionEventRelay {
 			throw new Error(`inFlightReplayEventLimit must be a positive integer, received: ${limit}`);
 		}
 		this.inFlightReplayEventLimit = limit;
+		const queueLimit = options.subscriberEventQueueLimit ?? DEFAULT_SUBSCRIBER_EVENT_QUEUE_LIMIT;
+		if (!Number.isInteger(queueLimit) || queueLimit <= 0) {
+			throw new Error(`subscriberEventQueueLimit must be a positive integer, received: ${queueLimit}`);
+		}
+		this.subscriberEventQueueLimit = queueLimit;
 	}
 
 	attach(sessionKey: string, handle: RuntimeHostSessionRecord, eventStream: RuntimeSessionEventStream): void {
@@ -138,23 +155,34 @@ export class RuntimeHostSessionEventRelay {
 
 	subscribe(sessionKey: string, handle: RuntimeHostSessionRecord, handler: (event: SessionEvent) => void): () => void {
 		const canonicalSessionId = handle.lifecycle.sessionId;
-		this.notifyExternalSubscriber(sessionKey, handler, lifecycleSessionEvent(canonicalSessionId, "created"));
+		this.notifyExternalSubscriber(
+			sessionKey,
+			handler,
+			lifecycleSessionEvent(canonicalSessionId, "created"),
+			"immediate",
+		);
 
 		for (const observation of handle.extensionHost?.readInitialObservations() ?? []) {
 			this.notifyExternalSubscriber(
 				sessionKey,
 				handler,
 				mapRuntimeSessionObservationEvent(canonicalSessionId, observation),
+				"immediate",
 			);
 		}
 
-		this.notifyExternalSubscriber(sessionKey, handler, {
-			...baseSessionEvent(canonicalSessionId, "runtime-core"),
-			type: "active_tools_update",
-			activeToolNames: [...handle.stateReader.readState().activeToolNames],
-		});
+		this.notifyExternalSubscriber(
+			sessionKey,
+			handler,
+			{
+				...baseSessionEvent(canonicalSessionId, "runtime-core"),
+				type: "active_tools_update",
+				activeToolNames: [...handle.stateReader.readState().activeToolNames],
+			},
+			"immediate",
+		);
 		const contextState = this.contextStateEvents.get(sessionKey);
-		if (contextState) this.notifyExternalSubscriber(sessionKey, handler, contextState);
+		if (contextState) this.notifyExternalSubscriber(sessionKey, handler, contextState, "immediate");
 		this.replayInFlight(sessionKey, canonicalSessionId, handler);
 
 		let externals = this.externalSubscribers.get(sessionKey);
@@ -169,6 +197,9 @@ export class RuntimeHostSessionEventRelay {
 			if (!subscribers) return;
 			subscribers.delete(handler);
 			this.externalSubscriberActiveToolFingerprints.get(sessionKey)?.delete(handler);
+			const queues = this.subscriberDeliveryQueues.get(sessionKey);
+			queues?.get(handler)?.dispose();
+			queues?.delete(handler);
 			if (subscribers.size > 0) return;
 			this.externalSubscribers.delete(sessionKey);
 			this.externalSubscriberActiveToolFingerprints.delete(sessionKey);
@@ -199,6 +230,10 @@ export class RuntimeHostSessionEventRelay {
 	release(sessionKey: string, sessionPath: string | undefined, sessionId: string): void {
 		this.detach(sessionKey);
 		this.inFlightBuffers.delete(sessionKey);
+		for (const queue of this.subscriberDeliveryQueues.get(sessionKey)?.values() ?? []) {
+			queue.dispose();
+		}
+		this.subscriberDeliveryQueues.delete(sessionKey);
 		this.externalSubscribers.delete(sessionKey);
 		this.externalSubscriberActiveToolFingerprints.delete(sessionKey);
 		this.currentTurnStartedAt.delete(sessionKey);
@@ -211,7 +246,7 @@ export class RuntimeHostSessionEventRelay {
 		const buffer = this.inFlightBuffers.get(sessionKey);
 		if (!buffer?.isActive) return;
 		for (const event of buffer.events) {
-			this.notifyExternalSubscriber(sessionKey, handler, event);
+			this.notifyExternalSubscriber(sessionKey, handler, event, "immediate");
 		}
 	}
 
@@ -231,6 +266,7 @@ export class RuntimeHostSessionEventRelay {
 		sessionKey: string,
 		handler: (event: SessionEvent) => void,
 		event: SessionEvent,
+		delivery: "queued" | "immediate" = "queued",
 	): void {
 		if (event.type === "active_tools_update") {
 			const fingerprint = [...event.activeToolNames].sort().join("\0");
@@ -243,10 +279,56 @@ export class RuntimeHostSessionEventRelay {
 			fingerprints.set(handler, fingerprint);
 		}
 		try {
-			handler(event);
+			if (delivery === "immediate") {
+				this.invokeExternalSubscriber(handler, event);
+				return;
+			}
+			this.deliveryQueueFor(sessionKey, handler).enqueue(event);
 		} catch (error) {
 			this.options.reportFailure("listener.notify", "session-event-listener", error, event.sessionId);
 		}
+	}
+
+	private invokeExternalSubscriber(handler: (event: SessionEvent) => void, event: SessionEvent): void {
+		handler(event);
+	}
+
+	/**
+	 * 订阅者投递队列的累计水位/丢弃计数，供宿主遥测轮询。handler 可能订阅多个
+	 * session，返回其在全部 sessionKey 上的合计。
+	 */
+	readSubscriberDeliveryStats(handler: (event: SessionEvent) => void): SessionEventSubscriberQueueStats | undefined {
+		let queued = 0;
+		let droppedEphemeral = 0;
+		let found = false;
+		for (const queues of this.subscriberDeliveryQueues.values()) {
+			const stats = queues.get(handler)?.readStats();
+			if (!stats) continue;
+			found = true;
+			queued += stats.queued;
+			droppedEphemeral += stats.droppedEphemeral;
+		}
+		return found ? { queued, droppedEphemeral } : undefined;
+	}
+
+	private deliveryQueueFor(sessionKey: string, handler: (event: SessionEvent) => void): SessionEventSubscriberQueue {
+		let queues = this.subscriberDeliveryQueues.get(sessionKey);
+		if (!queues) {
+			queues = new Map();
+			this.subscriberDeliveryQueues.set(sessionKey, queues);
+		}
+		let queue = queues.get(handler);
+		if (!queue) {
+			queue = new SessionEventSubscriberQueue((event) => {
+				try {
+					handler(event);
+				} catch (error) {
+					this.options.reportFailure("listener.notify", "session-event-listener", error, event.sessionId);
+				}
+			}, this.subscriberEventQueueLimit);
+			queues.set(handler, queue);
+		}
+		return queue;
 	}
 
 	private observeSessionError(event: SessionEvent): void {

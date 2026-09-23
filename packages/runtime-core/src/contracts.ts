@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ThinkingLevel, ToolPhase } from "@vetta/agent-core";
 import type { AssistantMessageEvent, CacheUsageReporting, Message, Model } from "@vetta/ai";
 import type { ContextCompositionReport } from "./context-composition/contracts.js";
@@ -382,6 +383,8 @@ export interface SessionHistoryInfo {
 	modifiedAt: number;
 	/** Trimmed preview (~120 chars) of the most recent user/assistant message text. */
 	lastMessagePreview?: string;
+	/** Conversation file size in bytes when known (session list indexing). */
+	fileSizeBytes?: number;
 	/** Parent session jsonl path when this session was forked. */
 	parentSessionPath?: string;
 	/** User entry id in the parent session this fork was created from. */

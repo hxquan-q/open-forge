@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import type { MessageFinalEvent, SessionEvent } from "../contracts.js";
@@ -31,7 +32,10 @@ function createRelayHandle(stream: RuntimeSessionEventStream): RuntimeHostSessio
 	} as unknown as RuntimeHostSessionRecord;
 }
 
-function createRelay(options?: { readonly inFlightReplayEventLimit?: number }): RuntimeHostSessionEventRelay {
+function createRelay(options?: {
+	readonly inFlightReplayEventLimit?: number;
+	readonly subscriberEventQueueLimit?: number;
+}): RuntimeHostSessionEventRelay {
 	return new RuntimeHostSessionEventRelay({
 		queueSidecar: { persist: () => undefined } as unknown as RuntimeHostQueueSidecar,
 		synchronizeSessionIdentity: () => undefined,
@@ -39,6 +43,9 @@ function createRelay(options?: { readonly inFlightReplayEventLimit?: number }): 
 		...(options?.inFlightReplayEventLimit === undefined
 			? {}
 			: { inFlightReplayEventLimit: options.inFlightReplayEventLimit }),
+		...(options?.subscriberEventQueueLimit === undefined
+			? {}
+			: { subscriberEventQueueLimit: options.subscriberEventQueueLimit }),
 	});
 }
 
@@ -52,7 +59,7 @@ function assistantEvent(event: AssistantMessageEvent): SessionEvent {
 }
 
 describe("RuntimeHostSessionEventRelay", () => {
-	it("replays raw assistant events in their original interleaved order with stable sequences", () => {
+	it("replays raw assistant events in their original interleaved order with stable sequences", async () => {
 		const stream = createEventStream();
 		const handle = {
 			lifecycle: { sessionId: "session-1", sessionPath: "C:/sessions/session-1.jsonl" },
@@ -85,17 +92,30 @@ describe("RuntimeHostSessionEventRelay", () => {
 		const unsubscribeLive = relay.subscribe("session-key", handle, (event) => live.push(event));
 		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 100));
 		for (const event of protocolEvents) stream.emit(assistantEvent(event));
+		await Promise.resolve();
 
 		const replayed: SessionEvent[] = [];
 		const unsubscribeReplay = relay.subscribe("session-key", handle, (event) => replayed.push(event));
 		const liveAssistant = live.filter((event) => event.channel === "assistant");
 		const replayedAssistant = replayed.filter((event) => event.channel === "assistant");
 
+		// 重放保留原始事件流；在线投递允许把相邻同位 delta 合并，但拼接后语义一致。
 		expect(replayedAssistant.map((event) => event.type)).toEqual(protocolEvents.map((event) => event.type));
-		expect(replayedAssistant.map((event) => event.sequence)).toEqual(liveAssistant.map((event) => event.sequence));
 		for (let index = 0; index < replayedAssistant.length; index += 1) {
 			expect(replayedAssistant[index]).toMatchObject(protocolEvents[index] ?? {});
 		}
+		const deltaTextByIndex = (events: readonly { readonly type: string }[]): Map<unknown, string> => {
+			const merged = new Map<unknown, string>();
+			for (const event of events) {
+				if (!("delta" in event) || typeof event.delta !== "string") continue;
+				const index = "contentIndex" in event ? event.contentIndex : undefined;
+				merged.set(index, (merged.get(index) ?? "") + event.delta);
+			}
+			return merged;
+		};
+		// 合并按块聚合 delta：各 contentIndex 上的拼接文本必须与原始流一致。
+		expect(deltaTextByIndex(liveAssistant)).toEqual(deltaTextByIndex(protocolEvents));
+		expect(liveAssistant.length).toBeLessThanOrEqual(replayedAssistant.length);
 
 		unsubscribeReplay();
 		unsubscribeLive();
@@ -187,6 +207,40 @@ describe("RuntimeHostSessionEventRelay", () => {
 
 	it("rejects a non-positive in-flight replay limit at construction", () => {
 		expect(() => createRelay({ inFlightReplayEventLimit: 0 })).toThrow(/positive integer/);
+	});
+
+	it("batches ephemeral bursts into merged deliveries and exposes per-subscriber stats", async () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay({ subscriberEventQueueLimit: 2 });
+		relay.attach("session-key", handle, stream);
+
+		const received: SessionEvent[] = [];
+		const handler = (event: SessionEvent): void => {
+			received.push(event);
+		};
+		const unsubscribe = relay.subscribe("session-key", handle, handler);
+		received.length = 0;
+
+		stream.emit(assistantEvent({ type: "text_start", contentIndex: 0, partial: partialOf("") }));
+		stream.emit(assistantEvent({ type: "text_start", contentIndex: 1, partial: partialOf("") }));
+		stream.emit(assistantEvent({ type: "text_start", contentIndex: 2, partial: partialOf("") }));
+		stream.emit(assistantEvent({ type: "text_delta", contentIndex: 0, delta: "a", partial: partialOf("a") }));
+		stream.emit(assistantEvent({ type: "text_delta", contentIndex: 0, delta: "b", partial: partialOf("ab") }));
+		await Promise.resolve();
+
+		const assistantEvents = received.filter((event) => event.channel === "assistant");
+		const deltas = assistantEvents.filter((event) => event.type === "text_delta");
+		expect(deltas).toHaveLength(1);
+		expect(deltas[0]).toMatchObject({ delta: "ab" });
+
+		const stats = relay.readSubscriberDeliveryStats(handler);
+		expect(stats).toBeDefined();
+		expect(stats?.droppedEphemeral).toBeGreaterThanOrEqual(1);
+		expect(stats?.queued).toBe(0);
+
+		unsubscribe();
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
 	});
 });
 
