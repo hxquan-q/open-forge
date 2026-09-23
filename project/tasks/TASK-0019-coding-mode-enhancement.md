@@ -1,7 +1,7 @@
 ---
 id: TASK-0019
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,7 +16,7 @@ write_paths: [packages/coding-agent, apps/desktop, packages/runtime-node]
 exclusive_paths: []
 depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024]
 conflicts_with: [TASK-0017, TASK-0018]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
@@ -78,3 +78,21 @@ coding Activity Panel、Tool/MCP deferred visibility。
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+- 实际修改：
+  - `coding-agent`：`execution/permissions/shell-risk-rules.ts`——参数级风险提升，
+    force push / reset --hard / rm -rf / 管道执行远端脚本等破坏性模式升 L4
+    （项目信任盖不掉，永远逐次确认），常规 git 与普通命令保持 L3；
+    `features/artifacts/`——`attach_artifact` 模型工具：测试结果、报告等产出
+    登记为任务产出物（execution-result 等 descriptor，文件内容仍是事实源），
+    未注册宿主函数的会话不出现该工具。
+  - `apps/desktop`：审批拦截器接 `raise` 规则（装配接线）；attach 函数落点挂到
+    会话当前活跃任务（TASK-0015 任务面）。
+- 实际运行：shell 风险规则 3 项、审批拦截器（含 raise 传播）11 项通过；coding-agent
+  全包回归通过；根 `tsgo` / desktop `tsc` 对本任务文件无错（工作区剩余错误属并行
+  会话在途的 result-policy 改动）。
+- 未运行及原因：Diff 审查与 Shell Sandbox 未新增实现——既有产品面（本轮变更卡片、
+  Git 面板 diff、沙箱授权链）已满足「写文件不静默覆盖、Shell 走既有 Sandbox」，
+  本任务按重写后合同把增量收敛在风险分级与 Test Artifact 接线。
+- 剩余风险：Project Context 展示复用 workspace facts 与 ADR-0128 Profile 轴，
+  未另建面板；coding 信息接入共享 Activity Panel 由 TASK-0015 任务页承担。
