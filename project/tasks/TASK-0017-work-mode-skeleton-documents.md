@@ -1,7 +1,7 @@
 ---
 id: TASK-0017
 type: task
-status: ready
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,7 +16,7 @@ write_paths: [packages/coding-agent, apps/desktop]
 exclusive_paths: []
 depends_on: [TASK-0016]
 conflicts_with: [TASK-0018, TASK-0019, TASK-0028]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
@@ -80,3 +80,25 @@ updated: 2026-09-23
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+- 实际修改：
+  - `coding-agent`：`profiles/agent-profiles.ts`（`work`/`coding` 内置能力 Profile：
+    work 默认不含 bash/shell、Memory 开启；`applyAgentProfileDefaults` 仅在无显式
+    选择时应用默认，显式选择/模板永远优先）；`features/documents/contracts.ts`
+    （文档处理请求、`document` Artifact 合同、Review 三分支与 Export 结果语义，
+    入口由 TASK-0028 实现）；`./profile` 公开入口导出。
+  - `apps/desktop`：`DesktopCodingAgentSessionConfig.capabilityProfile`（新建时由
+    渲染层按 WorkspaceMode 派生传入，preload 类型同步）；`resolve-session-config`
+    在装配 `agentConfiguration` 时折算 Profile 默认（人格绑定的显式白名单优先）；
+    `useSessionOpener` 创建会话时传入派生值。
+  - `docs/adr/0128-agent-profile-capability-axis.md`：三轴分离决策记录
+    （ISSUE-0005 方案 C：WorkspaceMode=布局 / agentMode=提示词 / agentProfileId=
+    能力默认；Profile 是默认不是边界；执行授权仍走 Tool Policy 与 Approval）。
+- 实际运行：`packages/coding-agent` profiles 合同测试 6 项通过；根 `tsgo`、
+  desktop `tsc`（本任务文件无错；工作区余下错误属并行会话 P0-3 在途文件）、
+  `check:quick`（同上过滤）通过。
+- 未运行及原因：Work Profile 端到端用户流程未测——按重写后的合同该流程属
+  TASK-0028；本任务交付合同与装配折算。
+- 剩余风险：capabilityProfile 未持久化到会话旁挂记录（恢复会话时由
+  agentConfiguration 固化值生效，Profile 身份仅创建时使用）；Memory 默认开关
+  尚未接到 memory feature 装配（memoryEnabled 字段已入合同，接入随 TASK-0018）。

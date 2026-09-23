@@ -1,6 +1,7 @@
 import { VETTA_CLI_GUIDANCE } from "@vetta/coding-agent/cli-guidance";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
+import { applyAgentProfileDefaults, resolveAgentProfile } from "@vetta/coding-agent/profile";
 import type {
 	CodingAgentPinnedModelContextBinder,
 	CodingAgentRuntimeToolRegistration,
@@ -28,6 +29,11 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	 * 与 systemPromptVolatileAddon 后再进来，渲染层无从自述能力。
 	 */
 	readonly agentProfileId?: string;
+	/**
+	 * 能力 Profile（ADR-0128）：新建时由渲染层按当前 WorkspaceMode 派生传入，
+	 * 固化本会话的工具/Memory 默认；显式 agentConfiguration 选择优先于默认。
+	 */
+	readonly capabilityProfile?: "work" | "coding";
 	readonly appendSystemPrompt?: string;
 	readonly systemPromptCachePrefixAddon?: string;
 	readonly systemPromptVolatileAddon?: string;
@@ -94,6 +100,7 @@ export async function resolveDesktopSessionConfig(
 		scenario: _scenario,
 		agentMode: _agentMode,
 		agentProfileId: _agentProfileId,
+		capabilityProfile: _capabilityProfile,
 		appendSystemPrompt: _appendSystemPrompt,
 		systemPromptCachePrefixAddon: _systemPromptCachePrefixAddon,
 		systemPromptVolatileAddon: _systemPromptVolatileAddon,
@@ -120,7 +127,10 @@ export async function resolveDesktopSessionConfig(
 					enableBackgroundTasks,
 					includeAgentSkills,
 					automaticRetry: config?.automaticRetry,
-					agentConfiguration: config?.agentConfiguration,
+					agentConfiguration: applyAgentProfileDefaults(
+						resolveAgentProfile(config?.capabilityProfile),
+						config?.agentConfiguration,
+					),
 					sessionRuntimeTools: config?.sessionRuntimeTools,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,

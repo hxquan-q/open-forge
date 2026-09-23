@@ -31,10 +31,12 @@ import {
 	pendingSessionCreationAtom,
 	pendingSessionOpenAtom,
 	projectsAtom,
+	readWorkspaceModeFor,
 	retryProgressAtom,
 	type SessionExecutionMode,
 	selectedModelAtom,
 	sessionsMapAtom,
+	workspaceModeByProjectAtom,
 } from "@shared/store/atoms";
 import { setQueueForSessionAtom, setQueuePausedAtom } from "@shared/store/message-queue-atoms";
 import { useNavigate } from "@tanstack/react-router";
@@ -352,6 +354,11 @@ export function useSessionOpener(): SessionOpenerController {
 						executionMode,
 						scenario,
 						...(options?.agentProfileId ? { agentProfileId: options.agentProfileId } : {}),
+						// 能力 Profile 从当前项目布局派生（ADR-0128）；仅新建会话固化。
+						capabilityProfile:
+							readWorkspaceModeFor(getDefaultStore().get(workspaceModeByProjectAtom), cwd) === "work"
+								? "work"
+								: "coding",
 					},
 					sessionKind,
 					interactionId ? { interactionId } : undefined,
@@ -618,7 +625,7 @@ export function useSessionOpener(): SessionOpenerController {
 						if (myOpenToken !== getOpenSessionToken()) return;
 						scheduleHistoryBackfill(() => {
 							if (myOpenToken !== getOpenSessionToken()) return;
-							const canonical = fullHistoryToChat(history);
+							const canonical = fullHistoryToChat(history, sessionId);
 							const reconciled = reconcileOptimisticUserMessages(sessionId, canonical);
 							const canonicalIds = new Set(canonical.map((message) => message.id));
 							const mapped = reconciled.filter((message) => canonicalIds.has(message.id));
