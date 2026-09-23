@@ -11,6 +11,12 @@ export {
 	type CodingAgentSandboxAuthorizationFunctionRequest,
 } from "../execution/sandbox/authorization-contract.js";
 export {
+	CODING_AGENT_ATTACH_ARTIFACT_EXTENSION_ID,
+	CODING_AGENT_ATTACH_ARTIFACT_FUNCTION,
+	type CodingAgentAttachArtifactRequest,
+	type CodingAgentAttachArtifactResult,
+} from "../features/artifacts/attach-artifact-tool.js";
+export {
 	CODING_AGENT_ASK_USER_QUESTION_EXTENSION_ID,
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
 	type CodingAgentQuestionAnswer,

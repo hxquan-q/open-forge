@@ -16,6 +16,8 @@ import type { CodingAgentToolApprovalPort } from "./approval-contract.js";
 export interface CodingAgentApprovalPolicyOptions {
 	readonly approvalPort: CodingAgentToolApprovalPort | undefined;
 	readonly resolveRiskDescriptor: (toolName: string) => ToolRiskDescriptor | undefined;
+	/** 参数级风险提升（只升不降），例如破坏性 shell/git 命令 → L4。 */
+	readonly raise?: (toolName: string, input: Readonly<Record<string, unknown>>) => ToolRiskLevel | undefined;
 	/** 生成审批摘要与受影响资源；实现负责脱敏。 */
 	readonly summarize: (
 		toolName: string,
@@ -36,6 +38,8 @@ export function createApprovalToolInterceptor(options: CodingAgentApprovalPolicy
 			const evaluation = evaluateToolRisk({
 				toolName: tool.name,
 				descriptor: options.resolveRiskDescriptor(tool.name),
+				args: input,
+				raise: (args) => options.raise?.(tool.name, args as Readonly<Record<string, unknown>>),
 			});
 			if (!requireApproval(evaluation.level)) return undefined;
 

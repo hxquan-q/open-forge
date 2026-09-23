@@ -21,6 +21,7 @@ import {
 	createCodingAgentSandboxAuthorizationSessionExtension,
 } from "../../execution/sandbox/authorization-session-extension.js";
 import { CodingAgentSessionExecutionRuntime } from "../../execution/session/runtime.js";
+import { createCodingAgentAttachArtifactSessionExtension } from "../../features/artifacts/attach-artifact-session-extension.js";
 import {
 	CODING_AGENT_ASK_USER_QUESTION_RUNTIME,
 	type CodingAgentAskUserQuestionExtensionRuntime,
@@ -199,6 +200,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			createCodingAgentSandboxAuthorizationSessionExtension(),
 			createCodingAgentToolApprovalSessionExtension(),
 			createCodingAgentFileOrganizeSessionExtension(),
+			createCodingAgentAttachArtifactSessionExtension(),
 			createCodingAgentBackgroundWorkSessionExtension(),
 			createCodingAgentPluginConfigurationSessionExtension(),
 			createCodingAgentSessionAssistanceExtension(),

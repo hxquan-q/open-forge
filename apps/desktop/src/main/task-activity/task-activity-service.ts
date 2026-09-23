@@ -87,6 +87,26 @@ class DesktopTaskActivityService {
 		);
 	}
 
+	/** 模型侧 attach_artifact 工具的落点：挂到会话当前活跃（非终态）任务。 */
+	async attachToActiveTask(
+		sessionId: string,
+		artifact: {
+			readonly kind: ArtifactKind;
+			readonly title: string;
+			readonly uri: string;
+			readonly contentType?: string;
+		},
+	): Promise<DesktopTaskCommandResult> {
+		const state = this.getState(sessionId);
+		const active = [...state.tasks]
+			.reverse()
+			.find((task) => !["completed", "failed", "cancelled", "rejected"].includes(task.status));
+		if (!active) {
+			return { ok: false, code: "task_not_found", message: "no active task in this session" };
+		}
+		return this.runCommand(sessionId, { type: "attach-artifact", taskId: active.identity.taskId, artifact });
+	}
+
 	async runCommand(sessionId: string, command: DesktopTaskCommand): Promise<DesktopTaskCommandResult> {
 		try {
 			const runtime = getSharedRuntime();
