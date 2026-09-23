@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getVettaHomePath } from "@vetta/action-rpc";
+import { DEFAULT_CONFIG_DIR_NAME, getVettaHomePath } from "@vetta/action-rpc";
 import { app, autoUpdater as nativeAutoUpdater, powerMonitor } from "electron";
 import electronUpdater from "electron-updater";
 
@@ -146,7 +146,7 @@ function upgradeE2eStatePaths(): string[] {
 		join(getVettaHomePath(), "desktop-upgrade-e2e.json"),
 		// ShipIt can relaunch without the test environment. Keep one fallback marker
 		// under the runner user's normal Open Forge home so the second process can find it.
-		join(homedir(), ".vetta", "desktop-upgrade-e2e.json"),
+		join(homedir(), DEFAULT_CONFIG_DIR_NAME, "desktop-upgrade-e2e.json"),
 	].filter((path, index, paths): path is string => Boolean(path) && paths.indexOf(path) === index);
 }
 
