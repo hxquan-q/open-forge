@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024]
 conflicts_with: [TASK-0018, TASK-0025, TASK-0026]
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Work 文档处理纵向切片
@@ -70,7 +70,7 @@ updated: 2026-09-22
 
 ## 阻塞
 
-- ISSUE-0005 的 Profile/WorkspaceMode/AgentMode 关系与 ISSUE-0006 的 Task 创建规则未决；两个决策完成前不进入 `ready`。
+- ISSUE-0005 已裁决方案 C（done）；剩余唯一阻塞是 ISSUE-0006 的 Task 创建规则（draft）；其决议前不进入 `ready`。depends_on 已全部完成（2026-09-23 校准）。
 
 ## 交付记录
 

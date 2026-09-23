@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024, TASK-0028]
 conflicts_with: [TASK-0018, TASK-0025]
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Work 数据分析最小纵向切片
@@ -68,7 +68,7 @@ updated: 2026-09-22
 
 ## 阻塞
 
-- ISSUE-0005 与 TASK-0017 的 Work Profile 合同未决；数据写入授权不由 WorkspaceMode 控制。
+- ISSUE-0005 已裁决方案 C、TASK-0017 已 done（2026-09-23 校准）；当前经 depends_on TASK-0028 传递阻塞，0028 随 ISSUE-0006 裁决解锁后本任务再评估；数据写入授权不由 WorkspaceMode 控制。
 
 ## 交付记录
 

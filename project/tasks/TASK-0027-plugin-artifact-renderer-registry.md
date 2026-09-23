@@ -1,7 +1,7 @@
 ---
 id: TASK-0027
 type: task
-status: blocked
+status: ready
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0020, TASK-0021]
 conflicts_with: []
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Plugin Artifact Renderer Registry 集成
@@ -64,7 +64,7 @@ updated: 2026-09-22
 
 ## 阻塞
 
-- Artifact descriptor、Approval/Grant 与项目 URI 规范化合同完成前，不开放 Plugin Renderer 对文件资源的读取。
+- 已解除（2026-09-23）：depends_on 的 TASK-0015/0016/0020/0021 全部 done，Artifact descriptor、Approval/Grant 与项目 URI 规范化合同已齐，转 ready。
 
 ## 测试与验证
 
