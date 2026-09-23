@@ -65,6 +65,11 @@
 			"resumeHint": "Paused; your next message automatically resumes this task",
 			"artifacts": "Deliverables",
 			"artifactMissing": "File missing",
+			"artifactOpen": "View {{title}}",
+			"artifactPreviewClose": "Close",
+			"artifactRendererFallback": "No dedicated preview is available.",
+			"artifactUnavailable": "The source file cannot be read right now.",
+			"artifactReadFailed": "Reading failed. Close and reopen the preview to try again.",
 			"status": {
 				"draft": "Draft",
 				"planning": "Planning",
@@ -1006,7 +1011,13 @@
 		"stopGenerating": "Stop generating"
 	},
 	"session": {
-		"emptyMessageLabel": "(image)"
+		"emptyMessageLabel": "(image)",
+		"largeHistory": {
+			"title": "Large session",
+			"message": "This session is about {{sizeMb}} MB. You can load only the most recent turns to open faster, and load the full history later if needed.",
+			"loadTail": "Load recent messages only",
+			"loadFull": "Load full history"
+		}
 	},
 	"subagentCard": {
 		"back": "Back to parent session",
@@ -1175,7 +1186,10 @@
 		"work": {
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
-				"title": "Artifacts"
+				"title": "Artifacts",
+				"previewUnavailable": "This artifact cannot be previewed right now",
+				"truncated": "Content is truncated",
+				"sourceMissing": "The artifact source file is missing"
 			},
 			"dataset": {
 				"empty": "Dataset previews appear here once data analysis is wired up",
@@ -1187,14 +1201,25 @@
 			},
 			"review": {
 				"empty": "When artifacts are ready, review and export results here",
-				"title": "Review & Export"
+				"title": "Review & Export",
+				"export": "Export",
+				"exported": "Exported to {{targetUri}}",
+				"cancelled": "Export cancelled",
+				"sourceMissing": "The artifact source file is missing",
+				"notExportable": "This artifact has not been approved for export",
+				"notFound": "This artifact could not be found"
 			},
 			"retry": "Retry",
 			"sectionCancelled": "This section was cancelled with the task; restart the task to regenerate it",
 			"sectionError": "This section failed to load",
 			"sources": {
 				"empty": "Files and materials referenced by the task are listed here",
-				"title": "Sources"
+				"title": "Sources",
+				"pickFile": "Choose source files",
+				"goalPlaceholder": "Describe the goal, e.g. \"Turn this report into a one-page summary\"",
+				"start": "Start",
+				"sendUnavailable": "This session cannot send a message right now. Try again later.",
+				"pickFailed": "Could not choose source files. Try again."
 			}
 		}
 	}

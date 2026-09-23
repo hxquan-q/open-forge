@@ -960,6 +960,7 @@
   "workDirectory": "工作目录",
   "requestHeaders": "请求头",
   "startupTimeout": "启动超时",
+  "idleTimeout": "空闲超时（毫秒）",
   "autoApproveTools": "自动批准工具",
   "default10s": "默认 (10s)",
   "statusEnabled": "开启",

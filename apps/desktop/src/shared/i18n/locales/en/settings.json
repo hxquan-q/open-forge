@@ -960,6 +960,7 @@
   "workDirectory": "Work Directory",
   "requestHeaders": "Request Headers",
   "startupTimeout": "Startup Timeout",
+  "idleTimeout": "Idle Timeout (ms)",
   "autoApproveTools": "Auto Approve Tools",
   "default10s": "Default (10s)",
   "statusEnabled": "On",
