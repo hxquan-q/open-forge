@@ -207,9 +207,11 @@ export {
 	type RuntimeCapabilityReconfigurationResult,
 } from "./runtime-capability-composition.js";
 export {
+	RUNTIME_CONTEXT_STABILITY_OBSERVATION,
 	RUNTIME_PROMPT_CACHE_LAYOUT_ISSUE_OBSERVATION,
 	RUNTIME_PROMPT_FRAME_OBSERVATION,
 	RUNTIME_TOOL_EXECUTION_OBSERVATION,
+	type RuntimeContextStabilityObservation,
 	type RuntimePromptCacheLayoutIssueObservation,
 	type RuntimePromptFrameObservation,
 	type RuntimeToolExecutionObservation,

@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import type { Message } from "@vetta/ai";
 import type { RuntimeMessageEnvelope } from "../runtime-execution-observation.js";
 
@@ -48,7 +50,12 @@ export function projectRuntimeMessageEnvelope(envelope: RuntimeMessageEnvelope):
 	};
 }
 
-function messagesEqual(left: Message, right: Message): boolean {
+/**
+ * 内核唯一的模型消息相等性定义：对象身份快路径 + 归一化内容比较回退。
+ * `reconcileRuntimeMessageEnvelopes` 与消息前缀稳定性度量（`message-prefix-stability.ts`）
+ * 共用本函数，避免两处语义漂移。
+ */
+export function messagesEqual(left: Message, right: Message): boolean {
 	return left === right || JSON.stringify(normalizeTextContent(left)) === JSON.stringify(normalizeTextContent(right));
 }
 

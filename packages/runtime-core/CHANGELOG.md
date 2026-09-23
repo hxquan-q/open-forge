@@ -42,6 +42,10 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
 
 ### Added
 
+- 内核新增消息前缀稳定性观测：Turn 引擎在每个模型调用完成 Provider 侧前缀组装后，比较相邻调用的消息序列并按
+  `first`/`append_only`/`prefix_rewrite`/`prefix_shrink` 分类，经 `runtime.context/stability` 观察通道发布稳定前缀长度、
+  首个分歧下标与内容回退计数（身份快路径未命中但内容相等的次数）。Transform 破坏对象身份合同时产品审计层可直接定位；
+  观察通道异常不影响模型调用，观测负载只含计数与下标，不携带消息正文。
 - `SessionInputQueueEntry` 与队列快照新增可选 `enqueuedAt` 入队时间戳，宿主可据此计量排队等待时长；`SessionInputQueue` 接受注入 `now` 时钟，旧持久化快照缺省字段时以恢复时刻回填。
 - `compaction.end` 观察事件新增可选 `cancelled` 字段，宿主可区分主动中止与失败的压缩结束，作增量兼容。
 

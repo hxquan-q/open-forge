@@ -351,7 +351,14 @@ export interface ModelCallContextTransformationInput {
 	readonly modelBinding: RuntimeTurnModelBinding;
 }
 
-/** 每次 LLM 调用前运行的 transient 消息变换；结果不直接写入会话历史。 */
+/**
+ * 每次 LLM 调用前运行的 transient 消息变换；结果不直接写入会话历史。
+ *
+ * 引用保持合同（SHOULD）：同一 Turn 内对未被裁剪/改写的消息，transform 应原样返回输入中的
+ * 同一对象引用，不得无差别 map 重建。内核以 `===` 快路径 + 内容比较兜底度量前缀稳定性
+ * （`runtime.context.stability` 观察事件），违反本合同不抛错，但会以 `contentFallbackCount`
+ * （内容一致而身份丢失）或 `prefix_rewrite`（内容漂移）的形式可观测，供审计发现。
+ */
 export interface ModelCallContextTransformer {
 	bindForTurn?(
 		context: RuntimeSnapshotAcquireContext,
@@ -367,7 +374,12 @@ export interface ModelCallMessageFinalizationInput {
 	readonly modelBinding: RuntimeTurnModelBinding;
 }
 
-/** Context/压缩完成后、实际调用模型前的最终消息策略。 */
+/**
+ * Context/压缩完成后、实际调用模型前的最终消息策略。
+ *
+ * 引用保持合同（SHOULD）：同 `ModelCallContextTransformer`——未改写的消息应保持输入对象引用，
+ * 违约经 `runtime.context.stability` 观察事件（`contentFallbackCount` / `prefix_rewrite`）可观测。
+ */
 export interface ModelCallMessageFinalizer {
 	/** 在 Turn admission 捕获图片策略等外部设置。 */
 	bindForTurn?(context: RuntimeSnapshotAcquireContext): Promise<ModelCallMessageFinalizer> | ModelCallMessageFinalizer;
