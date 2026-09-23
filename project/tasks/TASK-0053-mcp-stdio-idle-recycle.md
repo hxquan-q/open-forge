@@ -50,3 +50,6 @@ updated: 2026-09-23
 - 剩余风险：
   - `idleTimeout` 仅 stdio 键白名单透传；plugin-sdk `PluginOfficialMcpUpsertData`/manifest 未扩展该字段（插件公开合同需文档同步，超本任务范围，用户可走 mcp.json）。
   - 回收断连后 server 进程内状态丢失属预期语义；发布说明已写明代价。
+- Release Notes（候选，待 ISSUE-0007 首发版本切入后写入 Open Forge 自己的 `v*.md`；此前不写入继承的 Vetta `v0.5.59`）：
+  - 「改进」：本地 MCP server 改为按需启动，开机不再等全部就绪：此前每次启动 Desktop 都会立刻拉起全部 stdio MCP 进程、逐个握手并重新拉取工具清单，装得多时 Agent 要多等几秒才进入可用状态。现在 server 配置没变就直接复用上次落盘的工具目录、不拉起进程，第一次真正调用它的工具时才连接；配置有变化或新增 server 仍走完整启动并把目录写回缓存。代价：server 端在配置不变的情况下增删了工具，工具清单要改一次配置或重启后才会刷新。
+  - 「改进」：闲置的本地 MCP server 自动回收进程，退出时不再留下孤儿：stdio MCP server 空闲超过阈值（默认 30 分钟，可在 mcp.json 里按 server 用 `idleTimeout` 毫秒数调整，设 0 关闭回收）时自动断开并回收子进程，工具目录保持可见、下次调用透明重连；Windows 下按整棵进程树（taskkill /T）回收，server 自己再拉起的子进程不会再漏成孤儿，应用退出时也会兜底清扫所有登记过的 MCP 子进程。代价：长驻型 server 被回收后其进程内状态不保留，重连后是全新会话。

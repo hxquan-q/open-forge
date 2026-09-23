@@ -100,3 +100,5 @@ updated: 2026-09-23
   - `chat-service-agent-text.test.ts`（他人在途新增）断言历史消息 `text` 应为 undefined（blocks 派生去重契约），当前 HEAD 语义仍累积 `text`——该测试属其作者的 RED，落地时需同步更新 `chat-service-error.test.ts:88` 旧断言；本任务 `summarizeItem` 已兼容 `text===undefined` 路径。
   - Virtuoso 未上报 `rangeChanged`（如导出/打印路径）时占位不触发还原；已用 `ensureTranscriptItemRestored` 覆盖导航/操作入口，但非常规消费方需留意。
   - 超大单会话首次打开仍全量投影一次（窗口化释放的是驻留引用，不是首屏成本）；TASK-0041 的 tail 加载模式与之正交互补。
+- Release Notes（候选，待 ISSUE-0007 首发版本切入后写入 Open Forge 自己的 `v*.md`；此前不写入继承的 Vetta `v0.5.59`）：
+  - 「改进」：长会话滚动浏览时内存占用明显下降：此前打开一条几百条消息的旧会话，所有消息的正文、代码块和工具结果会一直完整驻留在内存里，越翻越重。现在视野之外的历史消息只保留摘要、时间和用量等轻量信息，滚动回到对应位置时再原样恢复；消息顺序、目录跳转、分支切换和单条复制的行为不变。代价是回到久未查看的段落时，内容会在进入视野的那一刻还原，极端快速滚动可能看到短暂的摘要行。
