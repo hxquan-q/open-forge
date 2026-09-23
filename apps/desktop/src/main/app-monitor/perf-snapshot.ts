@@ -87,6 +87,8 @@ export interface PerfAggregates {
 	readonly queueWait: PerfAggregateDuration;
 	readonly eventLag: { lastMs?: number; maxMs: number };
 	readonly errors: { runtime: number; provider: number; tool: number; extension: number };
+	/** 订阅者投递队列丢弃的可丢中间态事件累计（终态与 delta 事件不丢）。 */
+	readonly eventDelivery: { droppedEphemeral: number };
 }
 
 export interface DesktopPerfSnapshot {
@@ -401,6 +403,7 @@ export function createPerfAggregates(): PerfAggregates {
 		queueWait: { count: 0, totalMs: 0, maxMs: 0 },
 		eventLag: { maxMs: 0 },
 		errors: { runtime: 0, provider: 0, tool: 0, extension: 0 },
+		eventDelivery: { droppedEphemeral: 0 },
 	};
 }
 

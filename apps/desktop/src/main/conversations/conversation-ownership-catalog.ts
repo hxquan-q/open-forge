@@ -85,6 +85,10 @@ export class ConversationOwnershipCatalog implements ConversationOwnershipCatalo
 		return operation;
 	}
 
+	async list(): Promise<readonly ConversationOwnershipRecord[]> {
+		return (await this.read()).records.map(cloneRecord);
+	}
+
 	async listByTeam(teamId: string): Promise<readonly ConversationOwnershipRecord[]> {
 		return (await this.read()).records.filter((record) => record.owner.teamId === teamId).map(cloneRecord);
 	}

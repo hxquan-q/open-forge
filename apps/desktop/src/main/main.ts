@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
+import { sweepActiveStdioMcpProcesses } from "@vetta/runtime-node/mcp";
 import { app, type BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, protocol, session, shell } from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
 import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
@@ -967,6 +968,14 @@ setQuitCleanup(async () => {
 		await disposeSharedRuntime();
 	} catch (err) {
 		mainLog.error("disposeSharedRuntime failed", err);
+	}
+	// Runtime 层正常关闭（supervisor.shutdown → 逐 server 停止）跑完后仍登记的
+	// stdio MCP 子进程树在这里兜底强杀：Windows 走 taskkill /T、POSIX 走进程组
+	// SIGKILL，退出后不留孤儿进程。
+	try {
+		await sweepActiveStdioMcpProcesses((message) => mainLog.info(message));
+	} catch (err) {
+		mainLog.error("stdio MCP sweep failed", err);
 	}
 	try {
 		await ensureAppMonitorInitialized();

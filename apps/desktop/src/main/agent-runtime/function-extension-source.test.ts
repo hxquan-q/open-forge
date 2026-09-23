@@ -1,10 +1,17 @@
 import {
+	CODING_AGENT_ARTIFACT_FUNCTION,
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
 	CODING_AGENT_PLAN_REVIEW_FUNCTION,
 	CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION,
 	type CodingAgentQuestionFunctionRequest,
 } from "@vetta/coding-agent/function-extensions";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("electron", () => ({
+	app: { isPackaged: false, getPath: () => "", getAppPath: () => "", getVersion: () => "0.0.0" },
+	ipcMain: { handle: () => undefined, removeHandler: () => undefined },
+}));
+
 import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
@@ -81,6 +88,27 @@ describe("Desktop Coding Agent function source", () => {
 		expect(handler).toHaveBeenCalledWith(request, signal);
 		unregister();
 		expect(source.has(CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION)).toBe(false);
+	});
+
+	it("注入 artifact 宿主函数后才暴露工具，并委托给该实现", async () => {
+		expect(createDesktopCodingAgentFunctionSource({ logger: TEST_LOGGER }).has(CODING_AGENT_ARTIFACT_FUNCTION)).toBe(
+			false,
+		);
+		const invokeArtifact = vi.fn(async () => ({
+			ok: true as const,
+			action: "list" as const,
+			items: [],
+		}));
+		const source = createDesktopCodingAgentFunctionSource({ logger: TEST_LOGGER, invokeArtifact });
+		expect(source.has(CODING_AGENT_ARTIFACT_FUNCTION)).toBe(true);
+		const signal = new AbortController().signal;
+		const request = { sessionId: "session-1", turnId: "turn-1", input: { action: "list" as const } };
+		await expect(source.invoke(CODING_AGENT_ARTIFACT_FUNCTION, request, signal)).resolves.toEqual({
+			ok: true,
+			action: "list",
+			items: [],
+		});
+		expect(invokeArtifact).toHaveBeenCalledWith(request, signal);
 	});
 
 	it("offers plan review only while a review surface is attached", async () => {
