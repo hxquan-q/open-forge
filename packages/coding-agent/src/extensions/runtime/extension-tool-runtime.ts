@@ -5,7 +5,9 @@ import type {
 	ModelCallFrameCompositionContext,
 	RuntimeSnapshotAcquireContext,
 	RuntimeToolDefinition,
+	RuntimeToolResult,
 } from "@vetta/runtime-core/kernel";
+import { type CodingToolResultPolicy, PRESERVE_CODING_TOOL_RESULT_POLICY } from "@vetta/runtime-tools";
 import { type ContributionLease, DynamicContributionCatalog } from "../../interception/contribution-catalog.js";
 import { applySystemPromptOperations, type SystemPromptDraft } from "../../model-context/index.js";
 import { ALL_SCENARIOS, resolveToolCategory } from "../../profiles/index.js";
@@ -50,9 +52,34 @@ export class CodingAgentExtensionToolRuntime {
 		}
 	>();
 	private readonly runners = new Map<string, CodingAgentExtensionRunnerPort>();
+	private readonly resultPolicy: CodingToolResultPolicy;
 
-	constructor(extensions: readonly CodingAgentExtensionToolSource[]) {
+	constructor(
+		extensions: readonly CodingAgentExtensionToolSource[],
+		options?: {
+			/** 未注入时保持恒等（PRESERVE）——不隐式写盘，见 README 契约。 */
+			readonly resultPolicy?: CodingToolResultPolicy;
+		},
+	) {
+		this.resultPolicy = options?.resultPolicy ?? PRESERVE_CODING_TOOL_RESULT_POLICY;
 		this.refresh(extensions);
+	}
+
+	/**
+	 * 扩展工具不经过 Runtime Tool 注册表，注册级/注册表级策略都触达不了它；
+	 * 出口处统一套同一份产品策略，大结果走 artifact 化（超限文本截断、
+	 * 图片按 MCP 媒体准入保留）。投影自身失败时返回原样，不吞工具结果。
+	 */
+	private async projectResult(
+		result: RuntimeToolResult,
+		request: { readonly sessionId: string; readonly turnId: string; readonly toolCallId: string },
+		toolName: string,
+	): Promise<RuntimeToolResult> {
+		try {
+			return await this.resultPolicy.project(result, { ...request, toolName });
+		} catch {
+			return result;
+		}
 	}
 
 	refresh(extensions: readonly CodingAgentExtensionToolSource[]): void {
@@ -117,7 +144,7 @@ export class CodingAgentExtensionToolRuntime {
 		const runnerLease = this.runnerGenerations.acquire(context.sessionId, context.operationId);
 		const registrations = Object.freeze(
 			this.readRegistrations(context.sessionId).map((registration) =>
-				runnerLease ? bindRegistrationToRunner(registration, runnerLease.runner) : registration,
+				runnerLease ? bindRegistrationToRunner(registration, runnerLease.runner, this.resultPolicy) : registration,
 			),
 		);
 		const registrationsByName = new Map(registrations.map((registration) => [registration.tool.name, registration]));
@@ -331,13 +358,14 @@ export class CodingAgentExtensionToolRuntime {
 					if (!runner) {
 						throw new Error(`Extension tool runner is not bound: ${request.sessionId}`);
 					}
-					return definition.execute(
+					const result = await definition.execute(
 						request.toolCallId,
 						request.input as Static<TSchema>,
 						request.signal,
 						request.onUpdate,
 						runner.createContext(),
 					);
+					return this.projectResult(result, request, definition.name);
 				},
 			},
 			scopeUse: definition.scope_use ?? ALL_SCENARIOS,
@@ -351,19 +379,26 @@ export class CodingAgentExtensionToolRuntime {
 function bindRegistrationToRunner(
 	registration: AdaptedExtensionToolRegistration,
 	runner: CodingAgentExtensionRunnerPort,
+	resultPolicy: CodingToolResultPolicy,
 ): AdaptedExtensionToolRegistration {
 	return {
 		...registration,
 		tool: {
 			...registration.tool,
-			execute: (request) =>
-				registration.definition.execute(
+			execute: async (request) => {
+				const result = await registration.definition.execute(
 					request.toolCallId,
 					request.input as Static<TSchema>,
 					request.signal,
 					request.onUpdate,
 					runner.createContext(),
-				),
+				);
+				try {
+					return await resultPolicy.project(result, { ...request, toolName: registration.definition.name });
+				} catch {
+					return result;
+				}
+			},
 		},
 	};
 }

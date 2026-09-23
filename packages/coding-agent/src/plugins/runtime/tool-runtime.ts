@@ -7,7 +7,12 @@ import type {
 	RuntimeToolResult,
 } from "@vetta/runtime-core/kernel";
 import { RuntimeToolExecutionError } from "@vetta/runtime-core/kernel";
-import { createModelOnlyToolInputPropertyProjector, RuntimeToolProjectionPipeline } from "@vetta/runtime-tools";
+import {
+	type CodingToolResultPolicy,
+	createModelOnlyToolInputPropertyProjector,
+	PRESERVE_CODING_TOOL_RESULT_POLICY,
+	RuntimeToolProjectionPipeline,
+} from "@vetta/runtime-tools";
 import type {
 	AgentPluginRuntimeConfig,
 	AgentPluginToolContribution,
@@ -42,6 +47,8 @@ export interface CodingAgentPluginToolRuntimeOptions {
 	 */
 	readonly shouldPreserveBaseTool?: (toolName: string) => boolean;
 	readonly bindPreservedBaseToolNames?: () => ReadonlySet<string>;
+	/** 未注入时保持恒等（PRESERVE）；产品装配注入与注册表相同的统一策略。 */
+	readonly resultPolicy?: CodingToolResultPolicy;
 	readonly now?: () => number;
 }
 
@@ -202,7 +209,7 @@ export class CodingAgentPluginToolRuntime {
 		const result = validatePluginToolHandlerResult(rawResult);
 		this.options.runOrchestrator.commitToolEffects(request.turnId, current.pluginId, result.effects);
 		const { cards, rest } = liftPluginToolCards(result.value);
-		return {
+		const built: RuntimeToolResult = {
 			content: [{ type: "text", text: formatPluginToolResult(rest) }],
 			details: {
 				pluginId: current.pluginId,
@@ -211,6 +218,18 @@ export class CodingAgentPluginToolRuntime {
 				...(cards ? { cards } : {}),
 			},
 		};
+		// Plugin Tool 不经过 Runtime Tool 注册表，注册表级策略触达不了它；
+		// 出口套同一份统一策略。details.result 的超大返回值由此走 artifact 化。
+		try {
+			return await (this.options.resultPolicy ?? PRESERVE_CODING_TOOL_RESULT_POLICY).project(built, {
+				sessionId: request.sessionId,
+				turnId: request.turnId,
+				toolCallId: request.toolCallId,
+				toolName: current.name,
+			});
+		} catch {
+			return built;
+		}
 	}
 
 	private shouldPreserveBaseTool(

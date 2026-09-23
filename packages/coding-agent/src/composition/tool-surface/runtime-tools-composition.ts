@@ -63,6 +63,8 @@ export interface CodingToolsRuntimeComposition {
 		context: CodingAgentSpecializedToolRegistrationContext,
 	) => readonly CodingToolRegistration[] | Promise<readonly CodingToolRegistration[]>;
 	readonly registry: CodingToolRegistry;
+	/** 注册表实际生效的默认结果策略；插件/扩展运行时复用同一实例。 */
+	readonly resultPolicy: CodingToolResultPolicy;
 	readonly registerTool: (registration: CodingAgentRuntimeToolRegistration) => void;
 	readonly unregisterTool: (toolName: string) => boolean;
 	readonly readToolDeclaration: (toolName: string) => CodingAgentRuntimeToolRegistration | undefined;
@@ -99,13 +101,14 @@ export function createCodingToolsRuntimeComposition(
 			registration,
 		]),
 	);
+	const effectiveResultPolicy = options.resultPolicy ?? PRESERVE_CODING_TOOL_RESULT_POLICY;
 	const registry = new InMemoryCodingToolRegistry(
 		[
 			...platformRegistrations.map((registration) => toRuntimeToolRegistration(registration)),
 			...codingAgentRegistrations.map((registration) => toRuntimeToolRegistration(registration)),
 		],
 		{
-			resultPolicy: options.resultPolicy ?? PRESERVE_CODING_TOOL_RESULT_POLICY,
+			resultPolicy: effectiveResultPolicy,
 			observationPublisher: options.observationPublisher,
 		},
 	);
@@ -153,6 +156,8 @@ export function createCodingToolsRuntimeComposition(
 		backgroundService,
 		createSpecializedToolRegistrations: options.environment.createSpecializedToolRegistrations,
 		registry,
+		/** 注册表实际生效的默认策略，供插件/扩展运行时复用同一实例，避免二次构造。 */
+		resultPolicy: effectiveResultPolicy,
 		registerTool: (registration) => {
 			if (declarationsByName.has(registration.tool.name)) {
 				throw new Error(`Duplicate Coding Agent tool declaration: ${registration.tool.name}`);
