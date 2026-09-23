@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src
 exclusive_paths: [apps/desktop/src/renderer/domains/activity-panel/builtins/index.ts]
 depends_on: [TASK-0060]
 conflicts_with: [TASK-0064, TASK-0027]
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；渲染层 16 文件与三处冲突文件的三方合并均已落地）
 created: 2026-09-23
 updated: 2026-09-23
 ---
@@ -90,6 +90,7 @@ Activity Panel 新增常驻内置 `canvas` tab：workspace 级 artifact 列表�
   - Canvas 已打开时 Agent 写入新版本，需离开再进入或等可见性变化才会刷新列表
   - 真实 guest 进程崩溃隔离只能由 Electron E2E 证明
   - 与 TASK-0064 集成时需串行合并 `builtins/index.ts` 一行
+- 集成收口：本任务 14 个渲染层文件（canvas tab、`canvas-tab/*` 组件、`useCanvasTabModel`、5 个 canvas service 及其测试、`tab-label.test.ts`）随 `8e785dec6` 并入 `forge/dev`；三处共享文件按三方合并收口——`builtins/index.ts`（与 TASK-0064 的 terminal tab 各占一行）、`chat.json`（en/zh，与 TASK-0028 的 artifact 文案并存）、`vetta-ui-design` 的 locales。集成后 canvas 相关组件/服务测试 16/16 与 `tab-label.test.ts` 1/1 通过，涉及 JSON 全部可解析。
 
 ## 候选发布说明（首发号未定，阻断写入继承的 Vetta Release Notes）
 
