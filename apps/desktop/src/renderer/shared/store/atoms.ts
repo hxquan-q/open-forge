@@ -9,6 +9,7 @@ export * from "./batch-tasks-atoms";
 export * from "./bottom-panel-atoms";
 export * from "./bottom-panel-layout";
 export * from "./browser-atoms";
+export * from "./canvas-atoms";
 export * from "./chat-atoms";
 export * from "./conversation-tags-atoms";
 export * from "./debug-atoms";

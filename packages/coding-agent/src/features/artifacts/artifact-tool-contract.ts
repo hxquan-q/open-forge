@@ -180,11 +180,16 @@ export const CODING_AGENT_ARTIFACT_FUNCTION = defineSessionExtensionFunction<
 
 export const ARTIFACT_TOOL_DESCRIPTION = [
 	"Create, update, read, or list conversation-owned canvas artifacts, or attach one to the active task.",
+	"When the user asks for a report, architecture diagram, audit board, or any standalone visual deliverable,",
+	"you MUST call create (kind: document, analysis, or research-evidence). Do not answer with chat-only Markdown or images.",
+	"The Canvas activity tab is the primary surface; file preview is the same uri, not a second write path.",
+	"Do not implement a report by injecting anonymous HTML into the in-app Browser WebView.",
+	"If you lack the data to draw, ask instead of creating an empty canvas.",
 	"Files are the source of truth; descriptors are recorded as artifact.descriptor.recorded events.",
 	"create/update do not require an active task. update requires artifactId and baseVersion; a stale",
 	"baseVersion or checksum mismatch returns stale_version and never overwrites history.",
 	"attach_to_task requires an active task and returns no_active_task otherwise.",
-	"Do not use this tool to execute code or browse the web.",
+	"Do not use this tool to execute code or browse live http(s) pages — use browser_tab for those.",
 ].join(" ");
 
 export function isArtifactToolAction(value: unknown): value is ArtifactToolAction {
@@ -254,7 +259,7 @@ function formatArtifactToolSuccess(result: ArtifactToolSuccess): string {
 	if (result.action === "attach_to_task") {
 		return `Attached artifact "${result.title ?? result.artifactId}" to the active task.`;
 	}
-	return `Artifact "${result.title ?? result.artifactId}" ${result.action}d as v${result.version ?? "?"}.`;
+	return `Artifact "${result.title ?? result.artifactId}" ${result.action}d as v${result.version ?? "?"}. Open it in the Canvas activity tab${result.artifactId ? ` (artifactId=${result.artifactId})` : ""}.`;
 }
 
 function formatArtifactToolError(error: ArtifactToolError): string {

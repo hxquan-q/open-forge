@@ -4,9 +4,12 @@ import { i18n } from "@shared/i18n";
 import {
 	activeSessionStreamingAtom,
 	activeToolNamesAtom,
+	activityPanelTabByProjectAtom,
 	type BackgroundTask,
 	backgroundTasksBySessionAtom,
 	type ChatTimelineItem,
+	canvasArtifactRevisionAtom,
+	canvasUnreadCountAtom,
 	chatMessagesAtom,
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
@@ -14,6 +17,7 @@ import {
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
+	pendingCanvasArtifactIdAtom,
 	planModeStateBySessionAtom,
 	projectsAtom,
 	promptPredictingAtom,
@@ -578,6 +582,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 						const next = applyTaskFactEvent(current, event);
 						return next === current ? prev : new Map(prev).set(sid, next);
 					});
+				}
+				if (event.type === "artifact.descriptor") {
+					const store = getDefaultStore();
+					store.set(canvasArtifactRevisionAtom, (count) => count + 1);
+					const artifactId = event.artifact?.artifactId;
+					if (typeof artifactId === "string" && artifactId) {
+						store.set(pendingCanvasArtifactIdAtom, artifactId);
+					}
+					const cwd = activeSessionRef.current?.cwd;
+					const activeTab = cwd ? store.get(activityPanelTabByProjectAtom).get(cwd) : undefined;
+					if (activeTab !== "canvas") {
+						store.set(canvasUnreadCountAtom, (count) => count + 1);
+					}
 				}
 				return;
 			}

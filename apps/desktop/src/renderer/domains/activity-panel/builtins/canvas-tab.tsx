@@ -1,4 +1,6 @@
 // Copyright The Open Forge contributors.
+import { canvasUnreadCountAtom } from "@shared/store/atoms";
+import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { CanvasTabPanel } from "../components/canvas-tab/CanvasTabPanel";
 import type { ActivityTabDefinition } from "../registry/types";
@@ -16,9 +18,11 @@ export const canvasTabDefinition: ActivityTabDefinition = {
 	retention: "warm",
 	useMeta: () => {
 		const { t } = useTranslation("chat");
+		const unread = useAtomValue(canvasUnreadCountAtom);
 		return {
 			label: t("activityPanel.tabs.canvas"),
 			icon: "icon-[solar--notes-linear]",
+			badge: unread || undefined,
 		};
 	},
 	component: CanvasActivityTab,

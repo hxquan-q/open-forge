@@ -56,7 +56,15 @@ function expandPartials(file, body) {
  * ask-user-question）都是错误的工具引用——模型会照着错名字调用然后失败。真名变更或
  * mode 提示词要提及新工具时同步维护这份清单。
  */
-const MENTIONABLE_TOOL_NAMES = ["ask_user_question", "progress", "invoke_skill", "spawn_agent", "dispatch_workflows"];
+const MENTIONABLE_TOOL_NAMES = [
+	"ask_user_question",
+	"progress",
+	"invoke_skill",
+	"spawn_agent",
+	"dispatch_workflows",
+	"artifact",
+	"browser_tab",
+];
 const foldName = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 const FOLDED_TOOL_NAMES = new Map(MENTIONABLE_TOOL_NAMES.map((name) => [foldName(name), name]));
 

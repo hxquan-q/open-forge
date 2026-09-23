@@ -34,6 +34,8 @@ On that route, work in the repository with the framework and conventions it alre
 
 {{> deliverables-placement}}
 
+{{> canvas-artifacts}}
+
 {{> deliverables-list}}
 
 ## Communication Specifications

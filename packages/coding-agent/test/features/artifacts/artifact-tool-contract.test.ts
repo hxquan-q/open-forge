@@ -3,6 +3,7 @@ import { Value } from "@sinclair/typebox/value";
 import { describe, expect, it } from "vitest";
 import { createArtifactTool } from "../../../src/features/artifacts/artifact-tool.js";
 import {
+	ARTIFACT_TOOL_DESCRIPTION,
 	ARTIFACT_TOOL_NAME,
 	ArtifactToolErrorSchema,
 	type ArtifactToolInput,
@@ -94,6 +95,10 @@ describe("artifact tool adapter", () => {
 		expect(result.isError).toBeFalsy();
 		expect(result.content[0]).toMatchObject({ type: "text" });
 		expect(result.details).toMatchObject({ ok: true, artifactId: "art-1", version: 1 });
+		expect(String(result.content[0] && "text" in result.content[0] ? result.content[0].text : "")).toContain(
+			"Canvas activity tab",
+		);
+		expect(ARTIFACT_TOOL_DESCRIPTION).toMatch(/MUST call create/);
 	});
 
 	it("宿主不可用时返回 unimplemented，不假装写入成功", async () => {

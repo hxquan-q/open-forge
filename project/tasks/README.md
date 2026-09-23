@@ -43,6 +43,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 `TASK-0052` 和 `TASK-0055`–`TASK-0057` 对应 PLAN-0005 的 Desktop 双阶段发布、发行物 LICENSE/NOTICE、workspace release fail-closed 与活动范式落地，均已完成定向验证；`TASK-0058` 跟踪 ISSUE-0008 的文件级 Apache 声明迁移，决策已关闭、转 ready。`TASK-0068`（Plugin SDK Artifact Renderer 合同）→ `TASK-0027`（Desktop registry/读取集成）必须串行；二者与 TASK-0059/0061 的 IPC/Activity Panel 改动不得并发。已存在的 `TASK-0053`/`TASK-0054` 属 PLAN-0002 的 MCP 性能工作，不与本计划重用。
 
-`TASK-0059`–`TASK-0064` 对应 `PLAN-0006`（Canvas/Browser/Terminal 右栏集成）：0059 共享合同与接缝已 done（ADR-0129）；0060 Canvas artifact 服务、0062 Browser 元素点选可并行；0061 Canvas tab 依赖 0060，0063 `browser_tab` 依赖 0062（共享 WebView 会话控制器）；0064 Terminal 右栏 tab 独立，仅与 0061 在 `builtins/index.ts` 注册行冲突。下游不要再改 IPC 聚合、preload 索引、`shortcuts.ts` 或 i18n locale。
+`TASK-0059`–`TASK-0064` 对应 `PLAN-0006`（Canvas/Browser/Terminal 右栏集成）：0059 共享合同与接缝已 done（ADR-0129）；0060 Canvas artifact 服务、0062 Browser 元素点选可并行；0061 Canvas tab 依赖 0060，0063 `browser_tab` 依赖 0062（共享 WebView 会话控制器）；0064 Terminal 右栏 tab 独立，仅与 0061 在 `builtins/index.ts` 注册行冲突。下游不要再改 IPC 聚合、preload 索引、`shortcuts.ts` 或 i18n locale。`TASK-0077`/`TASK-0074`/`TASK-0075` 收口 ISSUE-0010/0011 与 BUG-0006；`TASK-0072` 留给 WebContentsView 迁移，`TASK-0073` 是内核上下文稳定性，不要复用编号。
 
 `TASK-0065`–`TASK-0067` 对应 `PLAN-0005` 首发前剩余工作：0065 修复 desktop-release workflow 存量缺陷（Release 标题、Linux 冒烟路径、`--prerelease`、macOS 条件化）并在 prepare 写入上游基线行；0066 已产出清单草案（VERIFY-0005）待用户终审；0067 把 `publish:private` 接入 fail-closed 守卫并给无私发意图包补 `private: true`。0058（§4(b) 文件头迁移+审计脚本）已完成：529 文件写入声明头、审计 missing=0。

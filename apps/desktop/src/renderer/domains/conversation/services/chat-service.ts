@@ -7,6 +7,7 @@ import {
 import { isAttachmentPath, isImagePath } from "@shared/lib/input-tokens";
 import { pathBasename } from "@shared/lib/utils";
 import type {
+	ArtifactCanvasOpenDetails,
 	AskUserQuestionResolution,
 	ChatConversationItem,
 	ChatErrorDetails,
@@ -246,12 +247,14 @@ export function extractToolUiDetails(result: unknown, details: unknown): ToolCal
 	const askUserQuestion = extractAskUserQuestion(detailsRecord);
 	const knowledge = extractKnowledge(detailsRecord);
 	const planReview = extractPlanReview(detailsRecord);
+	const artifact = extractArtifactCanvasOpen(detailsRecord);
 	if (
 		diff === undefined &&
 		firstChangedLine === undefined &&
 		askUserQuestion === undefined &&
 		knowledge === undefined &&
-		planReview === undefined
+		planReview === undefined &&
+		artifact === undefined
 	)
 		return undefined;
 
@@ -261,6 +264,7 @@ export function extractToolUiDetails(result: unknown, details: unknown): ToolCal
 		...(askUserQuestion !== undefined ? { askUserQuestion } : {}),
 		...(planReview !== undefined ? { planReview } : {}),
 		...(knowledge !== undefined ? { knowledge } : {}),
+		...(artifact !== undefined ? { artifact } : {}),
 	};
 }
 
@@ -332,6 +336,21 @@ function extractPlanReview(detailsRecord: Record<string, unknown>): PlanReviewRe
 	const { decision, plan } = detailsRecord;
 	if (decision !== "approve" && decision !== "revise" && decision !== "cancelled") return undefined;
 	return { decision, ...(typeof plan === "string" ? { plan } : {}) };
+}
+
+function extractArtifactCanvasOpen(detailsRecord: Record<string, unknown>): ArtifactCanvasOpenDetails | undefined {
+	if (detailsRecord.ok !== true) return undefined;
+	if (detailsRecord.action !== "create" && detailsRecord.action !== "update") return undefined;
+	if (typeof detailsRecord.artifactId !== "string" || detailsRecord.artifactId.length === 0) return undefined;
+	return {
+		artifactId: detailsRecord.artifactId,
+		title:
+			typeof detailsRecord.title === "string" && detailsRecord.title
+				? detailsRecord.title
+				: detailsRecord.artifactId,
+		action: detailsRecord.action,
+		...(typeof detailsRecord.version === "number" ? { version: detailsRecord.version } : {}),
+	};
 }
 
 /** ask_user_question 的 details（{cancelled, answers}）→ transcript 富视图用的 resolution。 */

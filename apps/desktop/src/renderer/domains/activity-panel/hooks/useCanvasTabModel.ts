@@ -1,7 +1,12 @@
 // Copyright The Open Forge contributors.
 import type { DesktopCanvasArtifactView } from "@preload/api-types/canvas";
 import {
+	activityPanelTabByProjectAtom,
+	canvasArtifactRevisionAtom,
+	canvasUnreadCountAtom,
 	confirmDialogAtom,
+	isCanvasTabVisible,
+	pendingCanvasArtifactIdAtom,
 	promptAttachmentAtom,
 	resolvedThemeAtom,
 	sessionDisplayLabel,
@@ -99,6 +104,12 @@ export function useCanvasTabModel(): CanvasTabModel {
 	const theme = useAtomValue(resolvedThemeAtom);
 	const setPromptAttachment = useSetAtom(promptAttachmentAtom);
 	const setConfirm = useSetAtom(confirmDialogAtom);
+	const revision = useAtomValue(canvasArtifactRevisionAtom);
+	const pendingId = useAtomValue(pendingCanvasArtifactIdAtom);
+	const setPendingId = useSetAtom(pendingCanvasArtifactIdAtom);
+	const setUnread = useSetAtom(canvasUnreadCountAtom);
+	const tabByProject = useAtomValue(activityPanelTabByProjectAtom);
+	const canvasVisible = isCanvasTabVisible(tabByProject, [workspace.id, workspace.cwd]);
 
 	const [items, setItems] = useState<readonly DesktopCanvasArtifactView[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -117,13 +128,14 @@ export function useCanvasTabModel(): CanvasTabModel {
 	}, [sessionsMap]);
 
 	const reload = useCallback(async () => {
+		void revision;
 		const result = await window.vetta.canvas.list({ workspaceId: workspace.id });
 		if (!result.ok) {
 			setItems([]);
 			return;
 		}
 		setItems(result.items);
-	}, [workspace.id]);
+	}, [revision, workspace.id]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -135,6 +147,10 @@ export function useCanvasTabModel(): CanvasTabModel {
 			cancelled = true;
 		};
 	}, [reload]);
+
+	useEffect(() => {
+		if (canvasVisible) setUnread(0);
+	}, [canvasVisible, setUnread]);
 
 	useEffect(() => {
 		const onVisible = (): void => {
@@ -215,6 +231,12 @@ export function useCanvasTabModel(): CanvasTabModel {
 		},
 		[items, kindLabel, t, workspace.id],
 	);
+
+	useEffect(() => {
+		if (!pendingId) return;
+		open(pendingId);
+		setPendingId(null);
+	}, [open, pendingId, setPendingId]);
 
 	const back = useCallback(() => {
 		setSelectedId(null);

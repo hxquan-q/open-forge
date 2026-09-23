@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"type": "skill",
+	"slug": "architecture-canvas",
+	"version": "1.0.0",
+	"detail": {
+		"blocks": [
+			{
+				"type": "showcase",
+				"showcase": {
+					"template": "chat-over-canvas",
+					"canvas": "code",
+					"user_prompt": "画一张当前仓库的模块架构图。",
+					"assistant_reply": "我会按真实目录画一张内联 SVG，写入画布产物，而不是在聊天里贴图。"
+				}
+			}
+		],
+		"i18n": {
+			"en": {
+				"blocks": [
+					{
+						"type": "showcase",
+						"showcase": {
+							"template": "chat-over-canvas",
+							"canvas": "code",
+							"user_prompt": "Draw a module architecture diagram of this repository.",
+							"assistant_reply": "I’ll draw an inline SVG from the real directories and store it as a Canvas artifact."
+						}
+					}
+				]
+			}
+		}
+	}
+}
