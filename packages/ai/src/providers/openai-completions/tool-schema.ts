@@ -8,6 +8,11 @@
 // 固定字段集，遇到 JSON Schema 才有的校验关键字会直接报
 // `Unknown name "uniqueItems" ... Cannot find field`。这些关键字对模型同样只是软提示
 // （真正的入参校验在我们自己的 TypeBox 里做），所以一并剔除。
+//
+// 另外，DeepSeek 等严格兼容网关要求 function parameters 顶层必须声明
+// `type: "object"`，缺失时按 `type: null` 拒绝整轮请求。TypeBox Union 这类合法
+// schema 顶层只有 anyOf/oneOf，这里在发出前补齐；工具入参本来就必须是对象，
+// 补上不改变语义。
 
 const warnedTools = new Set<string>();
 
@@ -84,14 +89,20 @@ function sanitizeNode(node: unknown, dropped: string[], isSchema: boolean): unkn
 
 /**
  * 剔除工具参数 schema 中只带约束关键字的 anyOf/oneOf 分支，以及 OpenAPI 子集不认识的
- * 纯约束关键字。没有这类内容时原样返回，不做任何拷贝。
+ * 纯约束关键字；顶层缺 `type` 或为 `null` 时补 `type: "object"`。无需改动时原样返回，
+ * 不做任何拷贝。
  */
 export function sanitizeToolParameters(toolName: string, parameters: unknown): unknown {
-	if (!parameters || typeof parameters !== "object") return parameters;
+	if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) return parameters;
 	const dropped: string[] = [];
-	const sanitized = sanitizeNode(parameters, dropped, true);
-	if (dropped.length === 0) return parameters;
-	if (!warnedTools.has(toolName)) {
+	let sanitized = sanitizeNode(parameters, dropped, true) as Record<string, unknown>;
+	let changed = dropped.length > 0;
+	if (sanitized.type === undefined || sanitized.type === null) {
+		sanitized = { ...sanitized, type: "object" };
+		changed = true;
+	}
+	if (!changed) return parameters;
+	if (dropped.length > 0 && !warnedTools.has(toolName)) {
 		warnedTools.add(toolName);
 		console.warn(
 			`[ai] tool "${toolName}": dropped ${dropped.length} ${[...new Set(dropped)].join("/")} keyword(s)/branch(es) that carry only constraints (no schema structure); this shape is rejected by some OpenAI-compatible gateways, including Gemini-backed gateways. Express the constraint in the property descriptions instead.`,
