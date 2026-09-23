@@ -175,7 +175,7 @@ describe("coding agent coding tool result policy", () => {
 });
 
 function artifactStore(): RuntimeToolResultArtifactStore & { readonly write: ReturnType<typeof vi.fn> } {
-	return { write: vi.fn(async () => ({ reference: "artifact.json" })) };
+	return { write: vi.fn(async () => ({ reference: "artifact.json", byteLength: 8 })) };
 }
 
 function textResult(text: string): RuntimeToolResult {

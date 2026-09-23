@@ -151,8 +151,18 @@ export default defineConfig({
 				),
 			},
 			{
+				find: "@vetta/runtime-core/task",
+				replacement: fileURLToPath(new URL("../../packages/runtime-core/src/task/index.ts", import.meta.url)),
+			},
+			{
 				find: "@vetta/runtime-core",
 				replacement: fileURLToPath(new URL("../../packages/runtime-core/src/index.ts", import.meta.url)),
+			},
+			{
+				find: "@vetta/runtime-mcp/browser",
+				replacement: fileURLToPath(
+					new URL("../../packages/runtime-mcp/src/browser/index.ts", import.meta.url),
+				),
 			},
 			{
 				find: "@vetta/runtime-mcp/auth",

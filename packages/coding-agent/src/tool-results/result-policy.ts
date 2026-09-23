@@ -87,7 +87,7 @@ async function projectLargeResult(
 		(item): item is Extract<(typeof result.content)[number], { type: "image" }> => item.type === "image",
 	);
 	const admitted = new Set(selectMcpMediaCandidates(images));
-	const content: RuntimeToolResult["content"] = [{ type: "text", text: projectedText }];
+	const content: RuntimeToolResult["content"][number][] = [{ type: "text", text: projectedText }];
 	for (const item of images) {
 		if (admitted.has(item)) content.push(item);
 		else {

@@ -118,6 +118,10 @@ export default defineConfig({
 				replacement: fileURLToPath(new URL("../runtime-node/src/mcp/index.ts", import.meta.url)),
 			},
 			{
+				find: "@vetta/runtime-core/task",
+				replacement: fileURLToPath(new URL("../runtime-core/src/task/index.ts", import.meta.url)),
+			},
+			{
 				find: "@vetta/runtime-core",
 				replacement: fileURLToPath(new URL("../runtime-core/src/index.ts", import.meta.url)),
 			},
