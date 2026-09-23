@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import type {
 	ArtifactDescriptorRecordedEvent,
 	RuntimeSessionFactEvent,
@@ -7,7 +7,6 @@ import type {
 } from "@vetta/runtime-core/kernel";
 import {
 	ARTIFACT_AVAILABILITY,
-	type ArtifactAvailability,
 	type ArtifactDescriptor,
 	type ArtifactKind,
 	createRuntimeTaskSnapshot,
@@ -19,8 +18,18 @@ import {
 	type RuntimeTaskSnapshot,
 	transitionRuntimeTask,
 } from "@vetta/runtime-core/task";
+import { isSshProjectUri } from "@vetta/ssh-transport";
+import type { PluginArtifactRendererDescriptor } from "@vetta-org/plugin-sdk";
+import type { DesktopArtifactView } from "../../preload/api-types/task.js";
+import { artifactUriToPath } from "../artifacts/canvas-paths.js";
+import { readSessionCwdFromHeader } from "../conversations/session-paths.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
+import {
+	inspectArtifactRendererResource,
+	readArtifactRendererBytes as readRendererBytes,
+	readArtifactRendererText as readRendererText,
+} from "./artifact-renderer-resource.js";
 
 const log = getAppLogger("task-activity");
 
@@ -49,10 +58,17 @@ export type DesktopTaskCommandResult =
 	| { readonly ok: true; readonly state: RuntimeSessionTaskState }
 	| { readonly ok: false; readonly code: string; readonly message: string };
 
-export interface DesktopArtifactView {
-	readonly descriptor: ArtifactDescriptor;
-	readonly availability: ArtifactAvailability;
-}
+/** 渲染端读取产物内容的 IPC 结果；content 以 UTF-8 解析，超限时截断。 */
+export type DesktopArtifactReadResult =
+	| {
+			readonly status: "ok";
+			readonly content: string;
+			readonly truncated: boolean;
+			readonly contentType?: string;
+			readonly title?: string;
+	  }
+	| { readonly status: "source-missing"; readonly artifactId: string }
+	| { readonly status: "not-found"; readonly artifactId: string };
 
 function newId(prefix: string): string {
 	return `${prefix}-${crypto.randomUUID()}`;
@@ -80,13 +96,91 @@ class DesktopTaskActivityService {
 
 	/** 附加文件可用性后的 Artifact 视图；文件内容才是事实源，缺文件时 descriptor 仍在。 */
 	async getArtifactViews(sessionId: string): Promise<readonly DesktopArtifactView[]> {
+		const runtime = getSharedRuntime();
 		const state = this.getState(sessionId);
 		return Promise.all(
-			state.artifacts.map(async (descriptor) => ({
-				descriptor,
-				availability: descriptor.uri ? await checkAvailability(descriptor.uri) : ARTIFACT_AVAILABILITY.READY,
-			})),
+			state.artifacts.map(async (descriptor) => {
+				const sourceSessionPath = runtime.getSessionPath(descriptor.sourceSessionId);
+				const sourceCwd = sourceSessionPath ? await readSessionCwdFromHeader(sourceSessionPath) : undefined;
+				const resource = await inspectArtifactRendererResource(descriptor.uri, sourceCwd);
+				return {
+					taskSessionId: sessionId,
+					descriptor: toPluginArtifactRendererDescriptor(descriptor),
+					sourceSessionId: descriptor.sourceSessionId,
+					availability:
+						resource.status === "missing" ? ARTIFACT_AVAILABILITY.MISSING : ARTIFACT_AVAILABILITY.READY,
+					rendererStatus: resource.status,
+					sizeBytes: resource.sizeBytes,
+				};
+			}),
 		);
+	}
+
+	/** 工作面板预览产物内容：文件是事实源，descriptor 只提供定位与元信息。 */
+	async readArtifact(sessionId: string, artifactId: string): Promise<DesktopArtifactReadResult> {
+		const descriptor = this.getState(sessionId).artifacts.find((artifact) => artifact.artifactId === artifactId);
+		if (!descriptor) return { status: "not-found", artifactId };
+		const path = descriptor.uri ? artifactUriToPath(descriptor.uri) : undefined;
+		if (!path || isSshProjectUri(path)) return { status: "source-missing", artifactId };
+		try {
+			// 文档合同限定可直接预览的 Markdown/text；超长内容截断，避免整份大文档塞进 Renderer。
+			const maxChars = 512 * 1024;
+			const raw = await readFile(path, "utf8");
+			const truncated = raw.length > maxChars;
+			return {
+				status: "ok",
+				content: truncated ? raw.slice(0, maxChars) : raw,
+				truncated,
+				...(descriptor.contentType ? { contentType: descriptor.contentType } : {}),
+				title: descriptor.title,
+			};
+		} catch {
+			return { status: "source-missing", artifactId };
+		}
+	}
+
+	async readArtifactRendererText(
+		pluginId: string,
+		request: { taskSessionId: string; artifactId: string; version: number; rendererType: string },
+	): Promise<string> {
+		const resource = await this.resolveArtifactRendererResource(pluginId, request);
+		return await readRendererText(resource.uri, resource.sourceCwd);
+	}
+
+	async readArtifactRendererBytes(
+		pluginId: string,
+		request: { taskSessionId: string; artifactId: string; version: number; rendererType: string },
+	): Promise<ArrayBuffer> {
+		const resource = await this.resolveArtifactRendererResource(pluginId, request);
+		return await readRendererBytes(resource.uri, resource.sourceCwd);
+	}
+
+	private async resolveArtifactRendererResource(
+		pluginId: string,
+		request: { taskSessionId: string; artifactId: string; version: number; rendererType: string },
+	): Promise<{ uri: string; sourceCwd: string }> {
+		const runtime = getSharedRuntime();
+		const descriptor = runtime
+			.getTaskState(request.taskSessionId)
+			.artifacts.find((artifact) => artifact.artifactId === request.artifactId);
+		if (!descriptor || descriptor.version !== request.version || !descriptor.uri) {
+			throw new Error("Artifact is missing or has changed");
+		}
+		const rendererType = descriptor.rendererType ?? descriptor.kind;
+		if (
+			rendererType !== request.rendererType ||
+			(descriptor.rendererType !== undefined &&
+				descriptor.rendererType !== descriptor.kind &&
+				!rendererType.startsWith(`${pluginId}:`))
+		) {
+			throw new Error("Artifact renderer is not authorized for this descriptor");
+		}
+		const sourceSessionPath = runtime.getSessionPath(descriptor.sourceSessionId);
+		const sourceCwd = sourceSessionPath ? await readSessionCwdFromHeader(sourceSessionPath) : undefined;
+		if ((await inspectArtifactRendererResource(descriptor.uri, sourceCwd)).status !== "available" || !sourceCwd) {
+			throw new Error("Artifact resource is unavailable or outside its source project");
+		}
+		return { uri: descriptor.uri, sourceCwd };
 	}
 
 	/** 模型侧 attach_artifact 工具的落点：挂到会话当前活跃（非终态）任务。 */
@@ -280,28 +374,19 @@ class DesktopTaskActivityService {
 	}
 }
 
-async function checkAvailability(uri: string): Promise<ArtifactAvailability> {
-	const path = artifactUriToPath(uri);
-	if (!path) return ARTIFACT_AVAILABILITY.READY;
-	try {
-		await stat(path);
-		return ARTIFACT_AVAILABILITY.READY;
-	} catch {
-		return ARTIFACT_AVAILABILITY.MISSING;
-	}
-}
-
-/** 本机 file URI / 绝对路径可校验；其余 scheme 交给对应 renderer 判定。 */
-function artifactUriToPath(uri: string): string | undefined {
-	if (uri.startsWith("file://")) {
-		try {
-			return decodeURIComponent(new URL(uri).pathname).replace(/^\/([A-Za-z]:)/, "$1");
-		} catch {
-			return undefined;
-		}
-	}
-	if (/^([A-Za-z]:[\\/]|\/)/.test(uri)) return uri;
-	return undefined;
+function toPluginArtifactRendererDescriptor(descriptor: ArtifactDescriptor): PluginArtifactRendererDescriptor {
+	return {
+		artifactId: descriptor.artifactId,
+		kind: descriptor.kind,
+		status: descriptor.status,
+		title: descriptor.title,
+		version: descriptor.version,
+		...(descriptor.contentType !== undefined ? { contentType: descriptor.contentType } : {}),
+		...(descriptor.checksum !== undefined ? { checksum: descriptor.checksum } : {}),
+		...(descriptor.rendererType !== undefined ? { rendererType: descriptor.rendererType } : {}),
+		createdAt: descriptor.createdAt,
+		updatedAt: descriptor.updatedAt,
+	};
 }
 
 function findTask(state: RuntimeSessionTaskState, taskId: string): RuntimeTaskSnapshot {
