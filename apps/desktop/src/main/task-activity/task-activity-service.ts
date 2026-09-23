@@ -10,6 +10,7 @@ import {
 	type ArtifactDescriptor,
 	type ArtifactKind,
 	createRuntimeTaskSnapshot,
+	RUNTIME_TASK_ERROR_CODES,
 	type RuntimeSessionTaskState,
 	RuntimeTaskError,
 	type RuntimeTaskEvent,
@@ -154,7 +155,6 @@ class DesktopTaskActivityService {
 		const identity: RuntimeTaskIdentity = {
 			taskId: newId("task"),
 			rootSessionId: sessionId,
-			generation: newId("generation"),
 		};
 		const snapshot = createRuntimeTaskSnapshot({ identity, ...(title ? { title } : {}), at: now });
 		const created: RuntimeTaskEvent = {
@@ -305,7 +305,9 @@ function artifactUriToPath(uri: string): string | undefined {
 
 function findTask(state: RuntimeSessionTaskState, taskId: string): RuntimeTaskSnapshot {
 	const snapshot = state.tasks.find((task) => task.identity.taskId === taskId);
-	if (!snapshot) throw new RuntimeTaskError("task_unknown_approval" as never, `task "${taskId}" not found`);
+	if (!snapshot) {
+		throw new RuntimeTaskError(RUNTIME_TASK_ERROR_CODES.TASK_NOT_FOUND, `task "${taskId}" not found`);
+	}
 	return snapshot;
 }
 

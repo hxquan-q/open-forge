@@ -82,6 +82,15 @@
 				"requestChanges": "要求返工",
 				"reject": "拒绝",
 				"cancel": "取消任务"
+			},
+			"error": {
+				"notFound": "任务不存在或已结束",
+				"invalidTransition": "当前状态下不能执行该操作",
+				"missingTurnBinding": "缺少执行回合，无法继续任务",
+				"unknownApproval": "找不到对应的审批记录",
+				"duplicateArtifact": "该产出物已挂载到任务",
+				"eventLogInvalid": "任务记录已损坏，无法恢复",
+				"commandFailed": "任务操作失败，请重试"
 			}
 		},
 		"ports": {

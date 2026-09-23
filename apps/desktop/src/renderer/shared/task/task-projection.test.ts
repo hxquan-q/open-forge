@@ -5,7 +5,7 @@ import { applyTaskFactEvent, mergeTaskStateSeed } from "./task-projection.js";
 function snapshotAt(status: RuntimeTaskSnapshot["status"], updatedAt = 100): RuntimeTaskSnapshot {
 	return {
 		schemaVersion: 1,
-		identity: { taskId: "task-1", rootSessionId: "session-1", generation: "generation-1" },
+		identity: { taskId: "task-1", rootSessionId: "session-1" },
 		status,
 		title: "整理文档",
 		createdAt: 90,
@@ -68,9 +68,11 @@ describe("applyTaskFactEvent", () => {
 				at: 102,
 				type: "task.turn_bound",
 				turnId: "turn-1",
+				generation: "gen-1",
 			},
 		});
 		expect(state.tasks[0].activeTurnId).toBe("turn-1");
+		expect(state.tasks[0].activeGeneration).toBe("gen-1");
 		state = applyTaskFactEvent(state, {
 			type: "task.lifecycle",
 			task: {

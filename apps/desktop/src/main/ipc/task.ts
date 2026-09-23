@@ -1,22 +1,9 @@
-import type { ArtifactKind } from "@vetta/runtime-core/task";
+import { ARTIFACT_KINDS, type ArtifactKind } from "@vetta/runtime-core/task";
 import { ipcMain, type WebContents } from "electron";
+import { TASK_CHANNELS } from "../../shared/task-ipc.js";
 import { type DesktopTaskCommand, desktopTaskActivityService } from "../task-activity/task-activity-service.js";
 
-const CHANNELS = {
-	GET_STATE: "vetta:task:get-state",
-	GET_ARTIFACT_VIEWS: "vetta:task:get-artifact-views",
-	COMMAND: "vetta:task:command",
-} as const;
-
-const ARTIFACT_KINDS: readonly ArtifactKind[] = [
-	"document",
-	"dataset",
-	"analysis",
-	"code-change",
-	"execution-result",
-	"research-evidence",
-	"bundle",
-];
+const CHANNELS = TASK_CHANNELS;
 
 function asString(value: unknown): string {
 	return typeof value === "string" ? value : "";

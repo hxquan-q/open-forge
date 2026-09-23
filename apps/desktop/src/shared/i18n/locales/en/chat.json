@@ -82,6 +82,15 @@
 				"requestChanges": "Request changes",
 				"reject": "Reject",
 				"cancel": "Cancel task"
+			},
+			"error": {
+				"notFound": "Task not found or already finished",
+				"invalidTransition": "This action is not allowed in the current state",
+				"missingTurnBinding": "No turn is bound, so the task cannot continue",
+				"unknownApproval": "Approval record not found",
+				"duplicateArtifact": "This deliverable is already attached to the task",
+				"eventLogInvalid": "Task history is corrupted and cannot be recovered",
+				"commandFailed": "Task operation failed. Please try again"
 			}
 		},
 		"ports": {

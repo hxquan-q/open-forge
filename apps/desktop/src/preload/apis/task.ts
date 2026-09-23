@@ -1,11 +1,8 @@
 import type { IpcRenderer } from "electron";
+import { TASK_CHANNELS } from "../../shared/task-ipc.js";
 import type { DesktopApi } from "../api.js";
 
-const CHANNELS = {
-	GET_STATE: "vetta:task:get-state",
-	GET_ARTIFACT_VIEWS: "vetta:task:get-artifact-views",
-	COMMAND: "vetta:task:command",
-} as const;
+const CHANNELS = TASK_CHANNELS;
 
 export function createTaskApi(ipc: IpcRenderer): Pick<DesktopApi, "task"> {
 	return {

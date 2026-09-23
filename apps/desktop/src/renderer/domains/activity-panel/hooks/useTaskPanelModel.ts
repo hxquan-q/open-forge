@@ -1,5 +1,5 @@
 import type { DesktopArtifactView } from "@preload/api-types/task";
-import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/task-atoms";
+import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
 import { mergeTaskStateSeed } from "@shared/task/task-projection.js";
 import type { RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
@@ -47,6 +47,17 @@ const STATUS_KEYS = {
 	changes_requested: "activityPanel.task.status.changesRequested",
 } as const satisfies Record<RuntimeTaskSnapshot["status"], string>;
 
+/** 稳定 RuntimeTaskErrorCode → 本地化文案；未知码落到通用失败文案。 */
+const ERROR_KEYS = {
+	task_not_found: "activityPanel.task.error.notFound",
+	task_invalid_transition: "activityPanel.task.error.invalidTransition",
+	task_missing_turn_binding: "activityPanel.task.error.missingTurnBinding",
+	task_unknown_approval: "activityPanel.task.error.unknownApproval",
+	task_duplicate_artifact: "activityPanel.task.error.duplicateArtifact",
+	task_event_log_invalid: "activityPanel.task.error.eventLogInvalid",
+	task_command_failed: "activityPanel.task.error.commandFailed",
+} as const satisfies Record<string, string>;
+
 export function useTaskPanelModel(): TaskPanelModel {
 	const { t } = useTranslation("chat");
 	const runtimeIds = useActivityRuntimeIds();
@@ -89,20 +100,23 @@ export function useTaskPanelModel(): TaskPanelModel {
 
 	const runCommand = useCallback(
 		async (runtimeId: string, command: Parameters<typeof window.vetta.task.runCommand>[1]): Promise<boolean> => {
+			const api = window.vetta?.task;
+			if (!api) return false;
 			try {
-				const outcome = await window.vetta.task.runCommand(runtimeId, command);
+				const outcome = await api.runCommand(runtimeId, command);
 				if (outcome.ok) {
 					setTaskState((prev) => new Map(prev).set(runtimeId, outcome.state));
 				} else {
-					showToast({ message: outcome.message, variant: "error" });
+					const key = ERROR_KEYS[outcome.code as keyof typeof ERROR_KEYS];
+					showToast({ message: key ? t(key) : t("activityPanel.task.error.commandFailed"), variant: "error" });
 				}
 				return outcome.ok;
-			} catch (error) {
-				showToast({ message: error instanceof Error ? error.message : String(error), variant: "error" });
+			} catch {
+				showToast({ message: t("activityPanel.task.error.commandFailed"), variant: "error" });
 				return false;
 			}
 		},
-		[setTaskState],
+		[setTaskState, t],
 	);
 
 	const primaryRuntimeId = runtimeIds[0];

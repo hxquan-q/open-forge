@@ -1,4 +1,9 @@
-import type { ArtifactDescriptor, RuntimeSessionTaskState, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
+import type {
+	ArtifactDescriptor,
+	RuntimeSessionTaskState,
+	RuntimeTaskEvent,
+	RuntimeTaskSnapshot,
+} from "@vetta/runtime-core/task";
 
 /**
  * 渲染端 Task 投影折叠器。
@@ -9,7 +14,7 @@ import type { ArtifactDescriptor, RuntimeSessionTaskState, RuntimeTaskSnapshot }
  */
 
 export type TaskFactSessionEvent =
-	| { readonly type: "task.lifecycle"; readonly task: import("@vetta/runtime-core/task").RuntimeTaskEvent }
+	| { readonly type: "task.lifecycle"; readonly task: RuntimeTaskEvent }
 	| { readonly type: "artifact.descriptor"; readonly artifact: ArtifactDescriptor };
 
 function findTaskIndex(state: RuntimeSessionTaskState, taskId: string): number {
@@ -32,6 +37,8 @@ export function applyTaskFactEvent(
 	if (event.type === "artifact.descriptor") {
 		const index = state.artifacts.findIndex((artifact) => artifact.artifactId === event.artifact.artifactId);
 		if (index < 0) return { ...state, artifacts: [...state.artifacts, event.artifact] };
+		// 版本单调：迟到的低版本事实不得覆盖已投影的高版本 descriptor。
+		if (state.artifacts[index].version >= event.artifact.version) return state;
 		const artifacts = [...state.artifacts];
 		artifacts[index] = event.artifact;
 		return { ...state, artifacts };
@@ -49,7 +56,12 @@ export function applyTaskFactEvent(
 			return replaceTask(state, { ...snapshot, status: task.to, updatedAt: task.at });
 		case "task.turn_bound":
 			if (!snapshot) return state;
-			return replaceTask(state, { ...snapshot, activeTurnId: task.turnId, updatedAt: task.at });
+			return replaceTask(state, {
+				...snapshot,
+				activeTurnId: task.turnId,
+				activeGeneration: task.generation,
+				updatedAt: task.at,
+			});
 		case "task.artifact_attached":
 			if (!snapshot || snapshot.artifactIds.includes(task.artifactId)) return state;
 			return replaceTask(state, {

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { taskStateBySessionAtom } from "@shared/store/atoms";
-import { cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { cleanup, render, renderHook, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { getDefaultStore } from "jotai";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -32,7 +33,7 @@ const store = getDefaultStore();
 function taskSnapshot(overrides: Partial<RuntimeTaskSnapshot> = {}): RuntimeTaskSnapshot {
 	return {
 		schemaVersion: 1,
-		identity: { taskId: "task-1", rootSessionId: "runtime-1", generation: "generation-1" },
+		identity: { taskId: "task-1", rootSessionId: "runtime-1" },
 		status: "running",
 		title: "整理季度材料",
 		createdAt: 100,
@@ -76,28 +77,28 @@ describe("activity panel task tab", () => {
 		expect(meta.result.current).toMatchObject({ label: "activityPanel.tabs.task", badge: 1 });
 	});
 
-	it("空态提供「升级为任务」入口并发起 create 命令", () => {
+	it("空态提供「升级为任务」入口并发起 create 命令", async () => {
 		const Tab = taskTabDefinition.component;
 		render(<Tab />, { wrapper: wrapperFor(["runtime-1"]) });
 		const create = screen.getByRole("button", { name: "activityPanel.task.create" });
-		fireEvent.click(create);
+		await userEvent.click(create);
 		expect(runCommand).toHaveBeenCalledWith("runtime-1", { type: "create" });
 	});
 
-	it("等待审阅的任务展示三条裁决路径并发起 review 命令", () => {
+	it("等待审阅的任务展示三条裁决路径并发起 review 命令", async () => {
 		setState({ tasks: [taskSnapshot({ status: "awaiting_review" })], artifacts: [], pendingApprovals: [], approvalDecisions: new Map() });
 		const Tab = taskTabDefinition.component;
 		render(<Tab />, { wrapper: wrapperFor(["runtime-1"]) });
 		expect(screen.getByRole("heading", { name: "activityPanel.task.headline" })).toBeTruthy();
 		expect(screen.getByText("activityPanel.task.status.awaitingReview")).toBeTruthy();
 
-		fireEvent.click(screen.getByRole("button", { name: "activityPanel.task.action.requestChanges" }));
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.task.action.requestChanges" }));
 		expect(runCommand).toHaveBeenCalledWith("runtime-1", {
 			type: "review",
 			taskId: "task-1",
 			decision: "changes_requested",
 		});
-		fireEvent.click(screen.getByRole("button", { name: "activityPanel.task.action.approve" }));
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.task.action.approve" }));
 		expect(runCommand).toHaveBeenCalledWith("runtime-1", { type: "review", taskId: "task-1", decision: "approved" });
 	});
 
