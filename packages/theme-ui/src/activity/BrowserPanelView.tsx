@@ -161,7 +161,7 @@ export function BrowserPanelView({
 					ref={webviewRef}
 					src="about:blank"
 					partition={partition}
-					allowpopups="true"
+					allowpopups={true}
 					webpreferences="contextIsolation=yes, nodeIntegration=no"
 					className="h-full w-full"
 				/>

@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src
 exclusive_paths: []
 depends_on: [TASK-0059]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；源文件与 15 处类型修正均已落地）
 created: 2026-09-23
 updated: 2026-09-23
 ---
@@ -91,5 +91,7 @@ updated: 2026-09-23
   - 冻结 IPC 无 `webContentsId`：多个 pending WebView 时按「先到先绑定」；0063 若要精确寻址需后续扩合同。
   - guest Escape 会关 picker；宿主 `before-input-event` 同时处理快捷键与 Escape，真实页内焦点路径未做 Electron 实机对拍。
   - Desktop manifest 仍为 `0.5.59`；不得把 fork-only 条目写入继承的 Vetta Release Notes。
+- 集成收口：本任务源文件并入 `forge/dev` 后，桌面类型检查（`bun x tsc -p apps/desktop/tsconfig.json`）暴露 15 处错误，均在本任务范围内并已修正——`waitForPick` 的三态结果与 `pickerWaiter` 字段声明不一致（改为共享 `PickerOutcome`）、截图持久化入参按 `PersistImageFileInput` 合同由 `Buffer` 改为 `ArrayBuffer` 并在 `toPNG()` 处拷贝出 Node 共享 Buffer 池、两处隐式 `any` 的 `parentElement`、`boundingRect` 的 `unknown` 收窄，以及 `<webview allowpopups>` 的 JSX 布尔属性。修正后相关 4 个测试文件 15/15 通过。
 - 候选发布说明（切入 Open Forge 首发版本后再写入对应 `v*.md`，当前阻断）：
   - 「改进」：内置 Browser 可直接输入地址并点选页面元素；选中结果作为一条可替换的草稿附件（含裁剪截图）进入输入框，不会自动发送，也不会触发页面上的按钮。
+  - 「其他」：仅内部类型修正（浏览器元素点选的类型合同对齐），无用户可感知变化。

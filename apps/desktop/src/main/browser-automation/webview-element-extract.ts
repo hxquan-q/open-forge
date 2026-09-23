@@ -146,7 +146,7 @@ export function buildXPath(element: Element, documentRef: Document): string {
 	let current: Element | null = element;
 	while (current) {
 		const tag = current.tagName.toLowerCase();
-		const parent = current.parentElement;
+		const parent: Element | null = current.parentElement;
 		if (!parent) {
 			parts.unshift(`/${tag}`);
 			break;
@@ -185,7 +185,17 @@ export function readExtractedBrowserElement(value: unknown): ExtractedBrowserEle
 	const bounding = record.boundingRect;
 	if (typeof bounding !== "object" || bounding === null) return undefined;
 	const box = bounding as Record<string, unknown>;
-	if (![box.x, box.y, box.width, box.height].every((item) => typeof item === "number" && Number.isFinite(item))) {
+	const { x, y, width, height } = box;
+	if (
+		typeof x !== "number" ||
+		!Number.isFinite(x) ||
+		typeof y !== "number" ||
+		!Number.isFinite(y) ||
+		typeof width !== "number" ||
+		!Number.isFinite(width) ||
+		typeof height !== "number" ||
+		!Number.isFinite(height)
+	) {
 		return undefined;
 	}
 	if (typeof record.role !== "string" || typeof record.accessibleName !== "string") return undefined;
@@ -203,7 +213,7 @@ export function readExtractedBrowserElement(value: unknown): ExtractedBrowserEle
 		computedStyle,
 		outerHTML: sanitizeOuterHTML(record.outerHTML, /value="••••"/.test(record.outerHTML)),
 		surroundingText: record.surroundingText.slice(0, BROWSER_ELEMENT_SURROUNDING_TEXT_MAX_CHARS),
-		boundingRect: { x: box.x, y: box.y, width: box.width, height: box.height },
+		boundingRect: { x, y, width, height },
 		devicePixelRatio:
 			typeof record.devicePixelRatio === "number" && record.devicePixelRatio > 0 ? record.devicePixelRatio : 1,
 	};

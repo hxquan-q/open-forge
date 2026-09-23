@@ -138,7 +138,7 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 		let currentNode: Element | null = element;
 		while (currentNode) {
 			const tag = currentNode.tagName.toLowerCase();
-			const parent = currentNode.parentElement;
+			const parent: Element | null = currentNode.parentElement;
 			if (!parent) {
 				parts.unshift(`/${tag}`);
 				break;

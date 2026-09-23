@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+import type { RegisteredPromptAttachment } from "@shared/store/atoms";
 import {
 	BROWSER_ELEMENT_SELECTION_SCHEMA,
 	BROWSER_ELEMENT_SELECTION_VERSION,
@@ -39,11 +40,14 @@ describe("browser element draft attachment", () => {
 	beforeEach(() => resetBrowserElementDraftForTests());
 
 	it("replaces the previous capsule and screenshot without sending", () => {
-		let attachment = createBrowserElementAttachment(context("Old"), "已附加页面元素");
+		let attachment: RegisteredPromptAttachment | null = createBrowserElementAttachment(
+			context("Old"),
+			"已附加页面元素",
+		);
 		const images: string[] = [];
 		const ports = {
 			getAttachment: () => attachment,
-			setAttachment: (next: typeof attachment) => {
+			setAttachment: (next: RegisteredPromptAttachment | null) => {
 				attachment = next;
 			},
 			insertImage: (path: string) => {
@@ -75,11 +79,11 @@ describe("browser element draft attachment", () => {
 	});
 
 	it("rejects an invalid capsule and leaves the draft untouched", () => {
-		let attachment = null;
+		let attachment: RegisteredPromptAttachment | null = null;
 		const result = applyBrowserElementSelectionToDraft(
 			{
 				getAttachment: () => attachment,
-				setAttachment: (next) => {
+				setAttachment: (next: RegisteredPromptAttachment | null) => {
 					attachment = next;
 				},
 				insertImage: () => undefined,

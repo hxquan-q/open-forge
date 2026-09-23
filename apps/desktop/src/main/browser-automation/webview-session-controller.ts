@@ -38,14 +38,16 @@ export interface InAppBrowserWebContents {
 
 export type InAppBrowserEventSink = (envelope: DesktopBrowserTabEventEnvelope) => void;
 
+type PickerOutcome = "picked" | "cancelled" | "idle";
+
 export type PersistBrowserScreenshot = (
 	sessionId: string,
-	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: Buffer } }[],
+	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
 ) => Promise<readonly { path: string; width?: number; height?: number }[]>;
 
 async function persistBrowserScreenshotDefault(
 	sessionId: string,
-	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: Buffer } }[],
+	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
 ): Promise<readonly { path: string; width?: number; height?: number }[]> {
 	const { persistImageFileCache } = await import("../image-cache/image-cache-service.js");
 	return persistImageFileCache(sessionId, images);
@@ -59,7 +61,7 @@ interface WorkspaceSession {
 	pickerEnabled: boolean;
 	nextElementId: number;
 	webContents: InAppBrowserWebContents | null;
-	pickerWaiter: Promise<void> | null;
+	pickerWaiter: Promise<PickerOutcome> | null;
 	lastPickDevicePixelRatio?: number;
 }
 
@@ -179,10 +181,13 @@ export class InAppBrowserSessionController {
 			let next = image.crop(crop.rect);
 			if (crop.scale < 1) next = next.resize(scaledScreenshotSize(crop));
 			const png = next.toPNG();
+			// Copy out of Node's shared Buffer pool: the image cache owns the bytes past this call.
+			const pngBytes = new Uint8Array(png.byteLength);
+			pngBytes.set(png);
 			const size = next.getSize();
 			const attachmentId = `browser-el-${Date.now().toString(36)}`;
 			const persisted = await this.persistScreenshot(`browser-${workspaceId}`, [
-				{ id: attachmentId, mimeType: "image/png", source: { kind: "bytes", data: png } },
+				{ id: attachmentId, mimeType: "image/png", source: { kind: "bytes", data: pngBytes.buffer } },
 			]);
 			const path = persisted[0]?.path;
 			if (!path) return { ok: false, code: "crop_failed", message: "could not persist screenshot" };
@@ -263,10 +268,7 @@ export class InAppBrowserSessionController {
 		}
 	}
 
-	private async waitForPick(
-		session: WorkspaceSession,
-		contents: InAppBrowserWebContents,
-	): Promise<"picked" | "cancelled" | "idle"> {
+	private async waitForPick(session: WorkspaceSession, contents: InAppBrowserWebContents): Promise<PickerOutcome> {
 		let raw: unknown;
 		try {
 			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start"));
