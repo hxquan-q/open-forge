@@ -1,5 +1,11 @@
 export { ensureVettaLocalGitignore, loadProjectConventions } from "./load-project-conventions.js";
 export {
+	loadProjectToolPolicy,
+	type ProjectToolPolicy,
+	ProjectToolPolicySchema,
+	readProjectToolPolicy,
+} from "./project-tool-policy.js";
+export {
 	CURRENT_VETTA_PROJECT_SCHEMA_VERSION,
 	conventionsFromManifest,
 	gitignoreAdditionForVettaLocal,

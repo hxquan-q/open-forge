@@ -1,3 +1,4 @@
+import { loadProjectToolPolicy, resolveToolCatalogPolicy } from "@vetta/coding-agent";
 import { VETTA_CLI_GUIDANCE } from "@vetta/coding-agent/cli-guidance";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
@@ -69,6 +70,27 @@ async function resolveSessionAgentMode(
 	return (await readSessionAgentMode(existingSessionPath)) ?? LEGACY_SESSION_AGENT_MODE;
 }
 
+/**
+ * 项目工具策略（`.vetta/policies/tools.json`）只能收紧：从已折算的工具集合里
+ * 剔除 deny 名单（TASK-0021）。策略损坏时 fail closed——直接抛错终止创建，
+ * 不带病放宽；无策略文件时原样返回。
+ */
+async function applyProjectToolPolicy(
+	projectRoot: string,
+	selection: AgentConfigurationSelection,
+): Promise<AgentConfigurationSelection> {
+	const policy = await loadProjectToolPolicy(projectRoot);
+	if (!policy) return selection;
+	const selectedTools = selection.overrides.tools;
+	const resolved = resolveToolCatalogPolicy({
+		profileDefaultToolNames: selectedTools ?? null,
+		explicitToolNames: selectedTools === null ? undefined : selectedTools,
+		projectDeniedToolNames: policy.denyTools,
+	});
+	if (resolved.toolNames === undefined) return selection;
+	return { ...selection, overrides: { ...selection.overrides, tools: [...resolved.toolNames] } };
+}
+
 export async function resolveDesktopSessionConfig(
 	config: DesktopCodingAgentSessionConfig | undefined,
 	kind: DesktopSessionKind,
@@ -96,6 +118,11 @@ export async function resolveDesktopSessionConfig(
 				: VETTA_CLI_GUIDANCE
 			: config?.appendSystemPrompt;
 	const agentMode = await resolveSessionAgentMode(config?.sessionPath, desktopConfig.defaultAgentMode ?? "work");
+	// 能力收敛（ADR-0128 + TASK-0021）：Profile 默认折算 → 项目策略只能再收紧。
+	const resolvedAgentConfiguration = await applyProjectToolPolicy(
+		effectiveCwd,
+		applyAgentProfileDefaults(resolveAgentProfile(config?.capabilityProfile), config?.agentConfiguration),
+	);
 	const {
 		scenario: _scenario,
 		agentMode: _agentMode,
@@ -127,10 +154,7 @@ export async function resolveDesktopSessionConfig(
 					enableBackgroundTasks,
 					includeAgentSkills,
 					automaticRetry: config?.automaticRetry,
-					agentConfiguration: applyAgentProfileDefaults(
-						resolveAgentProfile(config?.capabilityProfile),
-						config?.agentConfiguration,
-					),
+					agentConfiguration: resolvedAgentConfiguration,
 					sessionRuntimeTools: config?.sessionRuntimeTools,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,

@@ -1,7 +1,7 @@
 ---
 id: TASK-0021
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,7 +16,7 @@ write_paths: [packages/coding-agent, packages/plugins, apps/desktop]
 exclusive_paths: []
 depends_on: [TASK-0016, TASK-0017, TASK-0020]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
@@ -80,3 +80,20 @@ Plugin Renderer 集成另由 TASK-0027 负责；MCP 仅复用既有 generation/d
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+- 实际修改：
+  - `coding-agent`：`tool-policy/catalog-policy.ts`——单一 Catalog 收敛规则
+    （显式选择 > Profile 默认；项目策略 deny 对任何来源胜出、清空即最小集合；
+    无默认无选择保持 unset 不虚构全集）与同名能力「先到先得、不静默覆盖」裁决；
+    `projects/project-tool-policy.ts`——`.vetta/policies/tools.json` v1 Schema
+    （schemaVersion + denyTools，结构损坏 fail closed）与装载；根入口导出。
+  - `apps/desktop`：`resolve-session-config` 在 Profile 折算后应用项目策略
+    （只能再收紧）；策略文件损坏时创建会话直接报错，不带病放宽。
+- 实际运行：catalog-policy/project-tool-policy 22 项测试（矩阵、deny-wins、
+  清空最小集、同名冲突、fail closed、真实临时目录装载）通过；desktop tsc
+  本任务文件无错。
+- 未运行及原因：双模式端到端工具面对照未跑——mode 维度按 ISSUE-0005/ADR-0071
+  不参与 Catalog，工具面由 Profile × 选择 × 项目策略决定，矩阵已由单元层覆盖。
+- 剩余风险：Plugin Renderer Registry 属 TASK-0027；MCP deferred/generation 复用
+  既有机制未改动；项目策略对 MCP 贡献名的 deny 生效于模型面 schema 装配，
+  执行面复核由 TASK-0016 审批链持有。
