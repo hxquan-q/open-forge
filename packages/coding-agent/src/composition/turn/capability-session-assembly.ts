@@ -307,18 +307,19 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 			})
 		: undefined;
 	const toolInterceptionCatalog = new DynamicContributionCatalog<CodingAgentToolInterceptor>();
+	// 宿主未接入审批端口时端口不可用，闸门自动旁路（isAvailable 检查）。
+	const approvalToolInterceptor = createApprovalToolInterceptor({
+		approvalPort: options.toolApprovalRuntime,
+		resolveRiskDescriptor: defaultToolRiskDescriptor,
+		raise: raiseToolRiskForCall,
+		summarize: summarizeToolApproval,
+	});
 	toolInterceptionCatalog.register({
 		sourceId: "tool-approval",
 		localId: "permission-gate",
 		revision: "session",
 		order: CODING_AGENT_TOOL_INTERCEPTION_ORDER.permissionApproval,
-		// 宿主未接入审批端口时端口不可用，闸门自动旁路（isAvailable 检查）。
-		value: createApprovalToolInterceptor({
-			approvalPort: options.toolApprovalRuntime,
-			resolveRiskDescriptor: defaultToolRiskDescriptor,
-			raise: raiseToolRiskForCall,
-			summarize: summarizeToolApproval,
-		}),
+		value: approvalToolInterceptor,
 	});
 	toolInterceptionCatalog.register({
 		sourceId: "ecosystem",
@@ -427,6 +428,15 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 		bindToolWrapper: (context) => {
 			const boundExtensionEvents = options.extensionEvents.bindAdapterForTurn(context);
 			const catalog = new DynamicContributionCatalog<CodingAgentToolInterceptor>();
+			// 审批闸门无 Turn 绑定状态，与未绑定路径共用同一实例；
+			// Turn 目录必须保留它，否则绑定后的 Tool 表面会丢掉逐次审批。
+			catalog.register({
+				sourceId: "tool-approval",
+				localId: "permission-gate",
+				revision: "turn",
+				order: CODING_AGENT_TOOL_INTERCEPTION_ORDER.permissionApproval,
+				value: approvalToolInterceptor,
+			});
 			catalog.register({
 				sourceId: "plan-mode",
 				localId: "permission-gate",
