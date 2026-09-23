@@ -1,6 +1,7 @@
 {
 	"name": "@vetta/runtime-desktop",
 	"version": "0.0.1",
+	"private": true,
 	"description": "Desktop platform runtime composition and host adapters for Vetta agents",
 	"type": "module",
 	"main": "./dist/index.js",

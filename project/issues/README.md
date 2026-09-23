@@ -19,5 +19,8 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0002`：Pi Adapter 暂不启动，触发条件常设（done）；
 - `ISSUE-0003`：性能观测保存边界已冻结（done）；
 - `ISSUE-0004`：exprot 与 project 管理边界（done）；
-- `ISSUE-0005`：WorkspaceMode、AgentMode 与 capability Profile 边界（draft，阻塞 0017/0019/0021）；
-- `ISSUE-0006`：Conversation → Task promotion 规则（draft，阻塞 0015/0028）。
+- `ISSUE-0005`：WorkspaceMode、AgentMode 与 capability Profile 边界（done，采用方案 C；相关 Task 阻塞已解除）；
+- `ISSUE-0006`：Conversation → Task promotion 规则已裁决（done；用户显式升级/注册工作流创建，普通 Chat 不自动升级；TASK-0028 ready）；
+- `ISSUE-0007`：Open Forge Desktop 首发 SemVer 基线（done：Preview 定位、首发 `0.1.0`、Win+Linux 先行、Release 标 prerelease、上游基线 SHA 记入说明末行、publish 由用户执行）；
+- `ISSUE-0008`：Apache §4(b) 修改文件声明与 Open Forge 归属（done：署名 `The Open Forge contributors`、可注释文件单行声明 + 动态 merge-base 审计脚本、JSON/二进制等白名单清单兜底、第三方清单工程生成用户终审）；
+- `ISSUE-0009`：workspace package release scope（done：不公发任何包；`publish:private` 接 fail-closed 守卫、无 publishConfig 包补 `private: true`；重开需独立 Task）。

@@ -1,6 +1,7 @@
 {
 	"name": "@vetta/runtime-tools",
 	"version": "0.0.1",
+	"private": true,
 	"description": "Platform-neutral coding tool protocols and catalog logic for Vetta runtimes",
 	"type": "module",
 	"main": "./dist/index.js",

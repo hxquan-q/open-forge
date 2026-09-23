@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execFileSync } from "node:child_process";
 import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -5,7 +6,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { resolveBuildResourceFilters } from "./build-resource-filters.mjs";
 import { validateDesktopBuildEnvironment } from "./desktop-build-environment.mjs";
-import { DESKTOP_BUILD_OUTPUTS, VETTA_PLUGIN_FILE_ASSOCIATION } from "./desktop-packaging-layout.mjs";
+import {
+	DESKTOP_BUILD_OUTPUTS,
+	DESKTOP_LEGAL_RESOURCE,
+	VETTA_PLUGIN_FILE_ASSOCIATION,
+} from "./desktop-packaging-layout.mjs";
 import { LINUX_PACKAGE_METADATA, LINUX_RELEASE_TARGETS } from "./linux-packaging-contract.mjs";
 import { loadBuildEnv } from "./load-build-env.mjs";
 import { resolveInstalledPackageRoot } from "./installed-package-root.mjs";
@@ -22,6 +27,7 @@ import {
 } from "./stage-system-plugins.mjs";
 import { stageSystemSkills } from "./stage-system-skills.mjs";
 import { stageSystemThemesFromArchives } from "./stage-system-themes.mjs";
+import { stageDesktopLegalResources } from "./stage-desktop-legal-resources.mjs";
 
 // 从 .env.<mode>/.env 注入构建期变量（如 VETTA_TENANT），命令行内联优先。
 const buildEnvMode = loadBuildEnv();
@@ -55,6 +61,8 @@ const imGatewayTargetByPlatformTag = {
 
 // Resolve electron version from the workspace
 const require = createRequire(import.meta.url);
+const desktopBrand = require("../src/shared/desktop-brand.json");
+const appRuntimeIdentity = require("../src/shared/app-identity.json");
 const electronPkgPath = require.resolve("electron/package.json");
 const electronVersion = JSON.parse(readFileSync(electronPkgPath, "utf8")).version;
 
@@ -265,6 +273,7 @@ assertPackagedMainHasNoWorkspaceImports(join(projectRoot, "dist/main"));
 // Clean previous build stage
 rmSync(buildStageDir, { recursive: true, force: true });
 mkdirSync(buildStageDir, { recursive: true });
+stageDesktopLegalResources(join(projectRoot, "..", ".."), buildStageDir);
 
 const preparedSpeechModel = await prepareSpeechModels({
 	env: process.env,
@@ -279,9 +288,9 @@ if (preparedSpeechModel) {
 // externalized runtime deps must be declared here even though we copy them
 // manually below.
 const appPkg = {
-	name: "openforge",
+	name: appRuntimeIdentity.runtimeName,
 	version: appVersion,
-	description: "Open Forge Desktop App",
+	description: `${desktopBrand.displayName} Desktop App`,
 	author: LINUX_PACKAGE_METADATA.author,
 	homepage: LINUX_PACKAGE_METADATA.homepage,
 	license: LINUX_PACKAGE_METADATA.license,
@@ -701,6 +710,7 @@ function resolveExtraResources() {
 			filter: resolveBuildResourceFilters(resolvePlatformFamilies()),
 		},
 	];
+	extraResources.push({ ...DESKTOP_LEGAL_RESOURCE, filter: [...DESKTOP_LEGAL_RESOURCE.filter] });
 	const sandboxFilters = resolveSandboxResourceFilters();
 	if (sandboxFilters.length > 0) {
 		extraResources.push({
@@ -732,8 +742,8 @@ const extraResources = resolveExtraResources();
 // Write electron-builder config
 const builderConfig = {
 	appId: "io.github.hxquanq.openforge",
-	productName: "Open Forge",
-	executableName: "OpenForge",
+	productName: desktopBrand.displayName,
+	executableName: desktopBrand.executableName,
 	afterPack: join(projectRoot, "scripts", "windows-version-layout.mjs"),
 	electronVersion,
 	electronLanguages: ["zh-CN", "en-US"],
@@ -742,7 +752,7 @@ const builderConfig = {
 	...(releaseInfo ? { releaseInfo } : {}),
 	files: ["**/*", ...extraResources.map(({ from }) => `!${from}/**/*`)],
 	protocols: {
-		name: "Open Forge",
+		name: desktopBrand.displayName,
 		schemes: ["openforge"],
 	},
 	fileAssociations: [VETTA_PLUGIN_FILE_ASSOCIATION],
@@ -783,7 +793,7 @@ const builderConfig = {
 				NSAllowsLocalNetworking: true,
 			},
 			NSLocalNetworkUsageDescription:
-				"Open Forge 需要访问本地网络以连接你在局域网内运行的 AI 模型服务（如 Ollama、LM Studio、vLLM 等）。",
+				`${desktopBrand.displayName} 需要访问本地网络以连接你在局域网内运行的 AI 模型服务（如 Ollama、LM Studio、vLLM 等）。`,
 			NSBonjourServices: ["_http._tcp", "_https._tcp"],
 		},
 	},
@@ -819,7 +829,7 @@ const builderConfig = {
 	linux: {
 		target: LINUX_RELEASE_TARGETS,
 		category: "Utility",
-		description: "Open Forge AI agent desktop application",
+		description: `${desktopBrand.displayName} AI agent desktop application`,
 		icon: "build/icon.png",
 		maintainer: LINUX_PACKAGE_METADATA.maintainer,
 		synopsis: "AI agent desktop application",

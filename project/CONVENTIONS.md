@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Project 管理规范
 
 本文件是 `project/` 的唯一管理规范。它约束 Requirement、Plan、Task、Issue、Bug、Research、Verification 和 Context 文件的命名、元数据、内容和生命周期。
@@ -240,7 +241,8 @@ Verification 必须记录：
 - 用户可见术语与根 `CONTEXT.md`、源码和 i18n 保持一致；
 - 不把实现猜测写成事实；使用“假设 / 证据 / 置信度”区分；
 - 不在文档中保存密钥、Token、Cookie、完整 Prompt、私有文件和可重建用户数据；
-- 内容变化、需求变化和 Bug 修复都要更新当前版本 Release Notes；纯内部文档在 `## 其他` 留一句即可。
+- 内容变化、需求变化和 Bug 修复都要更新当前 Open Forge 开发版本 Release Notes；纯内部文档在 `## 其他` 留一句即可。
+- Open Forge 首发版本尚未由 `ISSUE-0007` 决定并切入 Desktop manifest 时，不得把 fork-only 条目写入继承的 Vetta Release Notes；将候选文案留在 Task 交付记录并保持发布阻断，切换后补入 Open Forge 自己的版本说明。
 
 ## 8. 维护与审查
 
@@ -254,7 +256,7 @@ Verification 必须记录：
 [ ] 不重复 docs/adr 或 exprot 正文
 [ ] 相对链接有效
 [ ] 没有 secrets / 私有数据 / 未验证结论
-[ ] 相关 Release Notes 已更新
+[ ] 相关 Open Forge Release Notes 已更新，或首发版本切换阻断已记录在关联 Task/Issue
 ```
 
 新增模块或长期难以逆转的取舍，应在修改前补 Plan；满足“难以逆转、没有上下文会令人意外、存在真实取舍”三项时才新增 ADR。

@@ -1,6 +1,11 @@
+// Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveUpdateFeedBase, verifyUpdateFeed } from "./verify-update-feed.mjs";
+import {
+	resolveUpdateFeedBase,
+	resolveUpdateFeedMetadataFiles,
+	verifyUpdateFeed,
+} from "./verify-update-feed.mjs";
 
 const version = "0.5.46";
 const metadata = {
@@ -77,6 +82,31 @@ test("falls back to a ranged GET when a CDN rejects HEAD", async () => {
 		retryDelayMs: 0,
 	});
 	assert.ok(fake.calls.some((call) => call.method === "GET"));
+});
+
+test("limits feed verification to the platforms the release actually shipped", async () => {
+	const fake = createFetch();
+	const result = await verifyUpdateFeed({
+		env: { VETTA_UPDATE_PROVIDER: "generic", VETTA_UPDATE_URL: "https://updates.example.com/desktop/stable" },
+		version,
+		metadataFiles: resolveUpdateFeedMetadataFiles({ VETTA_UPDATE_FEED_METADATA: "latest.yml, latest-linux.yml" }),
+		fetchImpl: fake.fetchImpl,
+		retryDelayMs: 0,
+	});
+	assert.deepEqual(result.metadataFiles, ["latest.yml", "latest-linux.yml"]);
+	assert.equal(fake.calls.filter((call) => call.url.endsWith("latest-mac.yml")).length, 0);
+});
+
+test("defaults to all platform metadata and rejects malformed overrides", () => {
+	assert.deepEqual(resolveUpdateFeedMetadataFiles({}), [
+		"latest.yml",
+		"latest-mac.yml",
+		"latest-linux.yml",
+	]);
+	assert.throws(
+		() => resolveUpdateFeedMetadataFiles({ VETTA_UPDATE_FEED_METADATA: "latest.yml,../etc/passwd" }),
+		/invalid metadata file name/,
+	);
 });
 
 test("rejects a feed that serves a different release version", async () => {

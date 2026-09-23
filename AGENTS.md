@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # OpenVetta Agent Guide
 
 > 本文件适用于整个仓库。更深目录中的 `AGENTS.md` 可补充或收紧规则；发生冲突时，以离目标文件最近的规则为准。
@@ -236,6 +237,8 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 
 发布说明写在 `.github/release-notes/v<版本号>.md`，一个版本一个文件，版本号以 `apps/desktop/package.json` 的 `version` 为准。**该文件就是 GitHub Release 的正文**，用户在 Release 页面读到的就是这里写的内容，写法见 [`.github/release-notes/README.md`](.github/release-notes/README.md)。
 
+Open Forge fork 版本切换期间，发布说明只属于 Open Forge 自己的版本线，不得把 fork-only 改动追加到继承的 Vetta Release Notes。首发版本尚未由 `ISSUE-0007` 决定并写入 Desktop manifest 前，将候选发布文案保留在关联 Task 的交付记录中，保持发布阻断；切换后再归入对应 Open Forge 版本说明。已发布上游说明保持不变。
+
 ### 必须写入发布说明
 
 以下任一情况完成后，都要把对应条目补进**当前开发中版本**的发布说明，文件不存在就新建。这是任务的一部分，不是可选的后续工作：
@@ -262,6 +265,13 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 
 - 新增 workspace 包时先判断归属：应用进 `apps/*`，可复用模块进 `packages/*`。随后遵循 [`docs/monorepo-new-package.md`](docs/monorepo-new-package.md)，同时更新 workspace、TypeScript path maps、构建分层和必要的 Desktop 源码映射。
 - 不执行版本发布、制品上传、registry 发布或部署，除非用户明确要求。
+
+## 上游同步与改动归属
+
+- 每个 fork 侧改动归属三类之一，并在对应 Task 中标注：**Upstreamable**（可回馈上游，保持补丁干净、不混入 fork 专属逻辑）、**Open-Forge-only**（留在 fork 新增的包、适配层或扩展点）、**Compatibility**（为兼容凭据、协议、持久化或存量数据而保留的标识与适配，须注明保护的合同）。
+- 同步主线固定为 `upstream/dev → forge/dev`；`upstream` 远端只用于 `git fetch` 与 diff 对照，禁止向其 push、开 PR 或请求合并。
+- 每次同步上游后重跑受影响面的行为合同测试；同一热文件反复冲突时先重评薄壳边界，不沿用历史冲突预算。
+- 已发布的上游 Release Notes 是上游发行物记录，fork 不得改写或追加 fork-only 条目；Open Forge 候选发布文案暂存关联 Issue/Task，首发版本确认后迁入自己的版本说明。
 
 ## Git 与并行工作区
 

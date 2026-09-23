@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Desktop production staging layout.
  *
@@ -5,6 +6,11 @@
  * Electron app archive. Runtime code in packaged mode must resolve resources
  * relative to this layout, not the development dist/ directory.
  */
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const desktopBrand = require("../src/shared/desktop-brand.json");
+
 export const DESKTOP_BUILD_OUTPUTS = Object.freeze([
 	{ source: "dist/main", target: "main" },
 	{ source: "dist/preload", target: "preload" },
@@ -13,10 +19,18 @@ export const DESKTOP_BUILD_OUTPUTS = Object.freeze([
 	{ source: "dist/ocr-runner", target: "ocr-runner" },
 ]);
 
+export const DESKTOP_LEGAL_FILES = Object.freeze(["LICENSE", "NOTICE"]);
+
+export const DESKTOP_LEGAL_RESOURCE = Object.freeze({
+	from: "legal",
+	to: "legal",
+	filter: DESKTOP_LEGAL_FILES,
+});
+
 export const VETTA_PLUGIN_FILE_ASSOCIATION = Object.freeze({
 	ext: "vettapkg",
-	name: "Open Forge Plugin Package",
-	description: "Installable Open Forge plugin package",
+	name: `${desktopBrand.displayName} Plugin Package`,
+	description: `Installable ${desktopBrand.displayName} plugin package`,
 	mimeType: "application/vnd.vetta.plugin+zip",
 	role: "Editor",
 });

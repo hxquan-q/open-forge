@@ -1,27 +1,29 @@
 #!/usr/bin/env node
+// Modified by The Open Forge contributors.
 /**
- * Release script for vetta-mono
+ * Legacy lockstep workspace package release; Desktop releases use release-desktop.mjs.
  *
- * Usage: node scripts/release.mjs <major|minor|patch>
+ * Usage: RELEASE_PACKAGE_SCOPE=lockstep RELEASE_PUSH=true node scripts/release.mjs <major|minor|patch>
  *
  * Steps:
  * 1. Check for uncommitted changes
- * 2. Bump lockstep package versions
- * 3. Update CHANGELOG.md files: [Unreleased] -> [version] - date
+ * 2. Verify every selected package has the same version
+ * 3. Bump package versions and update changelogs
  * 4. Commit and tag
  * 5. Optionally publish to private registry
  * 6. Add new [Unreleased] section to changelogs
- * 7. Commit
- * 8. Push current branch and tag
- * 9. Generate release artifacts and install guide
+ * 7. Commit and push current branch and tag
+ * 8. Generate release artifacts and install guide
  */
 
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, copyFileSync } from "fs";
 import { join } from "path";
+import { validatePackageReleaseScope } from "./release/package-release-policy.mjs";
 
 const BUMP_TYPE = process.argv[2];
 const SHOULD_PUBLISH = process.env.RELEASE_PUBLISH === "true";
+const SHOULD_PUSH = process.env.RELEASE_PUSH === "true";
 const RELEASE_BRANCH = process.env.RELEASE_BRANCH;
 
 if (!["major", "minor", "patch"].includes(BUMP_TYPE)) {
@@ -40,6 +42,11 @@ function run(cmd, options = {}) {
 		}
 		return null;
 	}
+}
+
+function runGit(args) {
+	console.log(`$ git ${args.join(" ")}`);
+	return execFileSync("git", args, { encoding: "utf-8", stdio: "inherit" });
 }
 
 function getCurrentBranch() {
@@ -86,10 +93,16 @@ function getLockstepPackageJsonPaths() {
 	];
 }
 
-function bumpLockstepVersions(bumpType) {
+function readPackageReleaseEntries(packageJsonPaths) {
+	return packageJsonPaths.map((path) => ({
+		path,
+		version: JSON.parse(readFileSync(path, "utf-8")).version,
+	}));
+}
+
+function bumpLockstepVersions(bumpType, packageJsonPaths) {
 	const currentVersion = getVersion();
 	const nextVersion = bumpSemver(currentVersion, bumpType);
-	const packageJsonPaths = getLockstepPackageJsonPaths();
 
 	for (const packageJsonPath of packageJsonPaths) {
 		const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
@@ -112,9 +125,8 @@ function getChangelogs() {
 		.filter((path) => existsSync(path));
 }
 
-function updateChangelogsForRelease(version) {
+function updateChangelogsForRelease(version, changelogs = getChangelogs()) {
 	const date = new Date().toISOString().split("T")[0];
-	const changelogs = getChangelogs();
 
 	for (const changelog of changelogs) {
 		const content = readFileSync(changelog, "utf-8");
@@ -133,8 +145,7 @@ function updateChangelogsForRelease(version) {
 	}
 }
 
-function addUnreleasedSection() {
-	const changelogs = getChangelogs();
+function addUnreleasedSection(changelogs = getChangelogs()) {
 	const unreleasedSection = "## [Unreleased]\n\n";
 
 	for (const changelog of changelogs) {
@@ -227,6 +238,19 @@ function createReleaseArtifacts(version) {
 }
 
 // Main flow
+const releasePackageJsonPaths = getLockstepPackageJsonPaths();
+const releaseChangelogs = getChangelogs();
+try {
+	validatePackageReleaseScope({
+		scope: process.env.RELEASE_PACKAGE_SCOPE,
+		pushAuthorized: SHOULD_PUSH,
+		packages: readPackageReleaseEntries(releasePackageJsonPaths),
+	});
+} catch (error) {
+	console.error(error instanceof Error ? error.message : String(error));
+	process.exit(1);
+}
+
 console.log("\n=== Release Script ===\n");
 
 // 1. Check for uncommitted changes
@@ -241,18 +265,18 @@ console.log("  Working directory clean\n");
 
 // 2. Bump version
 console.log(`Bumping version (${BUMP_TYPE})...`);
-const version = bumpLockstepVersions(BUMP_TYPE);
+const version = bumpLockstepVersions(BUMP_TYPE, releasePackageJsonPaths);
 run("node scripts/sync-versions.js");
 console.log(`  New version: ${version}\n`);
 
 // 3. Update changelogs
 console.log("Updating CHANGELOG.md files...");
-updateChangelogsForRelease(version);
+updateChangelogsForRelease(version, releaseChangelogs);
 console.log();
 
 // 4. Commit and tag
 console.log("Committing and tagging...");
-run("git add .");
+runGit(["add", "--", ...releasePackageJsonPaths, ...releaseChangelogs]);
 run(`git commit -m "Release v${version}"`);
 run(`git tag v${version}`);
 console.log();
@@ -268,20 +292,19 @@ if (SHOULD_PUBLISH) {
 
 // 6. Add new [Unreleased] sections
 console.log("Adding [Unreleased] sections for next cycle...");
-addUnreleasedSection();
+addUnreleasedSection(releaseChangelogs);
 console.log();
 
 // 7. Commit
 console.log("Committing changelog updates...");
-run("git add .");
+if (releaseChangelogs.length > 0) runGit(["add", "--", ...releaseChangelogs]);
 run(`git commit -m "Add [Unreleased] section for next cycle"`);
 console.log();
 
 // 8. Push
-console.log("Pushing to remote...");
+console.log("Pushing to remote (authorized by RELEASE_PUSH=true)...");
 const branch = RELEASE_BRANCH || getCurrentBranch();
-run(`git push origin ${branch}`);
-run(`git push origin v${version}`);
+runGit(["push", "--atomic", "origin", branch, `refs/tags/v${version}`]);
 console.log();
 
 // 9. Release artifacts

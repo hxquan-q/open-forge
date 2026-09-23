@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -9,6 +10,24 @@ export const DESKTOP_UPDATE_METADATA_FILES = Object.freeze([
 	"latest-mac.yml",
 	"latest-linux.yml",
 ]);
+
+// 发布时 macOS leg 可能因签名凭据缺失被剔除，对应 latest-mac.yml 不会存在于
+// 该次发布的 feed；由流水线把当次实际覆盖的元数据清单传入。
+export function resolveUpdateFeedMetadataFiles(env = process.env) {
+	const value = env.VETTA_UPDATE_FEED_METADATA?.trim();
+	if (!value) return [...DESKTOP_UPDATE_METADATA_FILES];
+	const files = value
+		.split(",")
+		.map((file) => file.trim())
+		.filter((file) => file.length > 0);
+	if (files.length === 0) throw new Error("[verify-update-feed] VETTA_UPDATE_FEED_METADATA is empty");
+	for (const file of files) {
+		if (!/^latest[\w-]*\.ya?ml$/.test(file)) {
+			throw new Error(`[verify-update-feed] invalid metadata file name: ${file}`);
+		}
+	}
+	return files;
+}
 
 function requireReleaseVersion(version) {
 	const value = version?.trim().replace(/^v/, "");
@@ -143,7 +162,7 @@ if (isExecutedDirectly()) {
 		}
 	};
 	resolveDirectVersion()
-		.then((version) => verifyUpdateFeed({ version }))
+		.then((version) => verifyUpdateFeed({ version, metadataFiles: resolveUpdateFeedMetadataFiles() }))
 		.then((result) => {
 			console.log(
 				`[verify-update-feed] ${result.version}: ${result.metadataFiles.length} metadata files and ${result.artifacts.length} artifacts are publicly reachable`,
