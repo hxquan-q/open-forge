@@ -9,12 +9,16 @@ import {
 	createAttachArtifactTool,
 } from "./attach-artifact-tool.js";
 
-/** Artifact 登记扩展：宿主注册 attach 函数（TASK-0015 任务面）时贡献工具。 */
+/** Artifact 登记扩展：宿主注册 attach 函数（TASK-0015 任务面）时才贡献工具。 */
 export function createCodingAgentAttachArtifactSessionExtension(): SessionExtensionDefinition {
 	return {
 		id: CODING_AGENT_ATTACH_ARTIFACT_EXTENSION_ID,
 		functionDependencies: [optionalSessionExtensionFunction(CODING_AGENT_ATTACH_ARTIFACT_FUNCTION)],
 		create(context) {
+			// 未注册宿主函数（CLI 等宿主）不贡献工具，不产生不可用入口。
+			if (!context.functions.has(CODING_AGENT_ATTACH_ARTIFACT_FUNCTION)) {
+				return { contributions: [], dispose() {} };
+			}
 			const feature: AgentFeatureDefinition = {
 				id: "coding-agent.attach-artifact",
 				async prepare(prepareContext) {

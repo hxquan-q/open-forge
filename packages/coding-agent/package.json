@@ -57,6 +57,10 @@
 			"types": "./dist/public-api/profile.d.ts",
 			"import": "./dist/public-api/profile.js"
 		},
+		"./projects": {
+			"types": "./dist/projects/index.d.ts",
+			"import": "./dist/projects/index.js"
+		},
 		"./cli-guidance": {
 			"types": "./dist/public-api/cli-guidance.d.ts",
 			"import": "./dist/public-api/cli-guidance.js"

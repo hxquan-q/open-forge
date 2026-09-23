@@ -1,8 +1,8 @@
-import { loadProjectToolPolicy, resolveToolCatalogPolicy } from "@vetta/coding-agent";
 import { VETTA_CLI_GUIDANCE } from "@vetta/coding-agent/cli-guidance";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
 import { applyAgentProfileDefaults, resolveAgentProfile } from "@vetta/coding-agent/profile";
+import { loadProjectToolPolicy, resolveToolCatalogPolicy } from "@vetta/coding-agent/projects";
 import type {
 	CodingAgentPinnedModelContextBinder,
 	CodingAgentRuntimeToolRegistration,

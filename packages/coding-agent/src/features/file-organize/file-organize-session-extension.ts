@@ -14,6 +14,10 @@ export function createCodingAgentFileOrganizeSessionExtension(): SessionExtensio
 		id: "coding-agent.file-organize",
 		functionDependencies: [optionalSessionExtensionFunction(CODING_AGENT_FILE_ORGANIZE_FUNCTION)],
 		create(context) {
+			// 未注册宿主函数（CLI 等宿主）不贡献工具，不产生不可用入口。
+			if (!context.functions.has(CODING_AGENT_FILE_ORGANIZE_FUNCTION)) {
+				return { contributions: [], dispose() {} };
+			}
 			const invoke: Parameters<typeof createFileOrganizeTool>[0]["invoke"] = async (request, signal) => {
 				if (!context.functions.has(CODING_AGENT_FILE_ORGANIZE_FUNCTION)) return undefined;
 				try {
