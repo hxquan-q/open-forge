@@ -126,6 +126,10 @@ export default defineConfig({
 				replacement: fileURLToPath(new URL("../runtime-core/src/index.ts", import.meta.url)),
 			},
 			{
+				find: "@vetta/runtime-mcp/browser",
+				replacement: fileURLToPath(new URL("../runtime-mcp/src/browser/index.ts", import.meta.url)),
+			},
+			{
 				find: "@vetta/runtime-mcp/auth",
 				replacement: fileURLToPath(new URL("../runtime-mcp/src/auth/index.ts", import.meta.url)),
 			},
