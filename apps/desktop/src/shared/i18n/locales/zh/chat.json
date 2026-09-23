@@ -164,7 +164,14 @@
 			"htmlSandboxLabel": "HTML 预览（隔离运行）",
 			"delete": "删除",
 			"deleteConfirm": "从画布列表删除「{{title}}」？本机文件不会自动回收。",
-			"open": "打开"
+			"deleteFailed": "没能从画布列表删除",
+			"open": "打开",
+			"loading": "正在读取画布内容",
+			"kindMarkdown": "说明",
+			"kindHtml": "网页预览",
+			"kindCode": "代码",
+			"openExternalTitle": "在系统浏览器打开链接？",
+			"openExternalMessage": "预览里的链接不会在画布内跳转。要打开 {{url}} 吗？"
 		},
 		"toolCalls": {
 			"filterAll": "全部",

@@ -3,6 +3,7 @@ import type { ActivityTabDefinition } from "../registry/types";
 import { backgroundTasksTabDefinition } from "./background-tasks-tab";
 import { batchProgressTabDefinition } from "./batch-progress-tab";
 import { browserTabDefinition } from "./browser-tab";
+import { canvasTabDefinition } from "./canvas-tab";
 import { debugTabDefinition } from "./debug-tab";
 import { fileTabDefinition } from "./file-tab";
 import { knowledgeHistoryTabDefinition } from "./knowledge-history-tab";
@@ -19,6 +20,7 @@ import { workflowTabDefinition } from "./workflow-tab";
  */
 export const BUILTIN_ACTIVITY_TABS: readonly ActivityTabDefinition[] = [
 	fileTabDefinition,
+	canvasTabDefinition,
 	batchProgressTabDefinition,
 	browserTabDefinition,
 	terminalTabDefinition,
