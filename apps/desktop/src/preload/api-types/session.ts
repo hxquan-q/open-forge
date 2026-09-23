@@ -76,6 +76,8 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	 * 恢复既有会话不必传，主进程从会话目录旁挂的绑定记录读回。
 	 */
 	readonly agentProfileId?: string;
+	/** 能力 Profile（ADR-0128）：新建时按当前 WorkspaceMode 派生；只设默认，主进程折算。 */
+	readonly capabilityProfile?: "work" | "coding";
 	readonly appendSystemPrompt?: string;
 	readonly enableBackgroundTasks?: boolean;
 	readonly includeAgentSkills?: boolean;

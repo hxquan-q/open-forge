@@ -19,6 +19,7 @@ import type {
 	KernelEvent,
 	QueuedSessionInput,
 	RuntimeInputRequestPreparer,
+	RuntimeSessionFactEvent,
 	SessionInput,
 	SessionInputQueueMode,
 	SessionInputRequest,
@@ -30,6 +31,8 @@ import { sessionBusyError, sessionClosedError } from "../kernel/errors.js";
 import type { SessionInputQueueEntry, SessionInputQueueSnapshot } from "../kernel/session-input-queue.js";
 import type { SessionContextState } from "../session-context-state.js";
 import type { SessionExtensionEndpointToken } from "../session-extensions/contracts.js";
+import type { RuntimeSessionTaskState, RuntimeTaskFactEvent } from "../task/session-projection.js";
+import { isRuntimeTaskFactEvent, projectRuntimeSessionTaskState } from "../task/session-projection.js";
 import { ConversationDocumentMutationCoordinator } from "./conversation-document-mutation-coordinator.js";
 import { mapKernelEventToSessionEvents } from "./kernel-session-events.js";
 import { RetryableCleanup } from "./retryable-cleanup.js";
@@ -329,6 +332,19 @@ export class RuntimeSession {
 	subscribe(handler: (event: SessionEvent) => void): () => void {
 		this.assertOpen();
 		return this.eventSink.subscribe(handler);
+	}
+
+	/** 追加宿主显式提交的 Task/Artifact 事实（创建/计划/审批/Review/descriptor）。 */
+	async recordTaskFacts(facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
+		this.assertOpen();
+		if (this.historyMutation) throw sessionBusyError();
+		await this.session.recordTaskFacts(facts);
+	}
+
+	/** 从持久化事实重放的当前 Task/Artifact 投影；重启后由会话事件重新播种。 */
+	readTaskState(): RuntimeSessionTaskState {
+		this.assertOpen();
+		return this.eventSink.readTaskState();
 	}
 
 	subscribeExecutionObservations(
@@ -660,6 +676,10 @@ export class RuntimeSession {
 					readState: () => this.readState(),
 					readMessages: () => this.readMessages(),
 				},
+				taskView: {
+					recordTaskFacts: (facts) => this.recordTaskFacts(facts),
+					readTaskState: () => this.readTaskState(),
+				},
 			},
 		};
 	}
@@ -774,6 +794,7 @@ export class KernelRuntimeSessionBackend<TCreateOptions>
 			eventSink.bindStateSource(assembly.stateSource);
 			eventSink.bindDocumentParticipants(assembly.documentParticipants ?? []);
 			const runtimeSession = new RuntimeSession(assembly, eventSink, projection);
+			eventSink.seedTaskFacts(conversation.events);
 			await runtimeSession.initializeDocumentParticipants(document);
 			eventSink.finishInitialization();
 			return runtimeSession;
@@ -790,6 +811,7 @@ export class KernelRuntimeSessionBackend<TCreateOptions>
 
 class RuntimeSessionEventSink implements EventSink {
 	private readonly contextState = new SessionContextStateProjection();
+	private readonly taskFacts: RuntimeTaskFactEvent[] = [];
 	private readonly listeners = new Set<(event: SessionEvent) => void>();
 	private readonly executionObservationListeners = new Set<
 		(observation: RuntimeSessionExecutionObservation) => Promise<void> | void
@@ -800,6 +822,17 @@ class RuntimeSessionEventSink implements EventSink {
 	private identity: RuntimeSessionIdentity = {};
 	private projection: RuntimeSessionProjection | undefined;
 	private stateSource: RuntimeStateSource | undefined;
+
+	/** 会话装配时用既有事件流播种 Task 投影；live 事实经 `publish` 增量进入。 */
+	seedTaskFacts(events: readonly StoredSessionEvent[]): void {
+		for (const event of events) {
+			if (isRuntimeTaskFactEvent(event)) this.taskFacts.push(event);
+		}
+	}
+
+	readTaskState(): RuntimeSessionTaskState {
+		return projectRuntimeSessionTaskState(this.taskFacts);
+	}
 	private initializing = true;
 
 	async publish(event: KernelEvent): Promise<void> {
@@ -827,6 +860,7 @@ class RuntimeSessionEventSink implements EventSink {
 			}
 		}
 		if (isStoredSessionEvent(event)) {
+			if (isRuntimeTaskFactEvent(event)) this.taskFacts.push(event);
 			if (this.documentMutationCoordinator) {
 				await this.documentMutationCoordinator.synchronizeProjection();
 			} else {
@@ -1004,7 +1038,9 @@ function isStoredSessionEvent(event: KernelEvent): event is StoredSessionEvent {
 		event.type === "turn.completed" ||
 		event.type === "turn.cancelled" ||
 		event.type === "turn.failed" ||
-		event.type === "turn.transferred"
+		event.type === "turn.transferred" ||
+		event.type === "task.lifecycle.recorded" ||
+		event.type === "artifact.descriptor.recorded"
 	);
 }
 

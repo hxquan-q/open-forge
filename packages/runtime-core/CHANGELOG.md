@@ -58,6 +58,13 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
 - 新增可运行、无需真实 Provider 的多主 Agent 示例及功能测试，覆盖平级 Agent 隔离、Definition revision 固定、
   新 Instance 切换、在途 Turn 稳定性与显式 Session rollout。
 
+- 新增 `@vetta/runtime-core/task` 产品无关的 Task/Artifact/Permission/Approval 公共合同：
+  `RuntimeTaskSnapshot` 状态机（`transitionRuntimeTask` 验证合法转换并以稳定错误码拒绝非法跳转，
+  `start`/`resume`/审批放行必须绑定既有 Turn，Task 不拥有第二套模型循环）、可重放的 `RuntimeTaskEvent`
+  日志与 `rebuildRuntimeTaskSnapshot` 重启恢复、`PermissionGrant` 撤销/过期/deny 判定、
+  `ArtifactDescriptor` 缺失语义（descriptor 是可重建投影，内容缺失返回稳定 `missing`），
+  以及持久化边界的 `read*` 收窄函数；确定性场景 fixture 由新的 `@vetta/runtime-core/testing` 入口导出。
+
 - 原生执行 Trace 增加 Turn、模型调用标识与安全 scope 关联 Observation；默认排除错误正文和工具阶段正文，Tracer 的同步/异步异常不会改变执行结果。
 
 - Agent Session 新增通用 Snapshot admission commit/rollback，串行协调捕获与 rollout，关闭等待在途捕获；完整快照成功后才提交上层状态。

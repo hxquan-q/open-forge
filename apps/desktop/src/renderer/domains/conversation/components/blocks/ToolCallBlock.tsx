@@ -145,7 +145,7 @@ function ToolCallContent({
 							controls
 							preload="metadata"
 							aria-label={t("toolCall.audioPreview")}
-							src={`data:${audio.mimeType};base64,${audio.data}`}
+							src={audio.src}
 						/>
 					))}
 				</div>

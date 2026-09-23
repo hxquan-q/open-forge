@@ -13,6 +13,7 @@ export {
 } from "../agent-configuration/configuration-schema.js";
 export {
 	ALL_SCENARIOS,
+	applyAgentProfileDefaults,
 	type ConversationScenario,
 	DEFAULT_PERSONA_ID,
 	DEFAULT_SCENARIO,
@@ -20,6 +21,7 @@ export {
 	isConversationScenario,
 	PERSONAS,
 	type Persona,
+	resolveAgentProfile,
 	shouldEnableCodingAgentSubagents,
 	type ToolCapability,
 	type ToolCategory,

@@ -12,7 +12,7 @@ import type {
 	UpdateTeamInput,
 	UpdateTeamSessionModelSettingsInput,
 } from "./contracts.js";
-import { AGENT_TEAM_SCHEMA_VERSION } from "./contracts.js";
+import { AGENT_TEAM_SCHEMA_VERSION, TEAM_DELIVERED_EVENT_ID_WINDOW } from "./contracts.js";
 import { assertTeamInvariants, normalizeMentionHandle } from "./domain.js";
 import { type AgentTeamExtensionRegistry, DEFAULT_AGENT_TEAM_EXTENSIONS, requireTeamPolicies } from "./extensions.js";
 
@@ -274,7 +274,10 @@ const memberRuntime = Type.Object(
 		agentProfileRevision: Type.Integer({ minimum: 1 }),
 		assignmentFingerprint: Type.Optional(Type.String({ minLength: 1, maxLength: 128 })),
 		rosterFingerprint: Type.Optional(Type.String({ minLength: 1, maxLength: 128 })),
-		deliveredEventIds: stringList,
+		// 投递回执在读取时会被截到 TEAM_DELIVERED_EVENT_ID_WINDOW 条；这里放宽到
+		// 4_096 是为了接受历史版本累积的旧数据（旧 stringList 上限 512 会直接判废
+		// 整份会话文档），截断由 parseTeamSessionDocument 归一化完成。
+		deliveredEventIds: Type.Array(id, { maxItems: 4_096, uniqueItems: true }),
 		sharedCheckpointId: Type.Optional(id),
 	},
 	{ additionalProperties: false },
@@ -366,7 +369,22 @@ export function parseTeamSessionDocument(value: unknown): TeamSessionDocument {
 		eventIds.add(event.id);
 	}
 	assertTeamSessionInvariants(session);
-	return session;
+	// 读侧窗口化归一：历史版本可能累积超过窗口（旧上限 512）的投递回执，截到最近
+	// TEAM_DELIVERED_EVENT_ID_WINDOW 条。窗口未命中只影响一次幂等的重复投递短路，
+	// 模型可见上下文准入由 checkpoint / receipt 体系承担。
+	const overWindowMemberIds = Object.keys(session.memberRuntime).filter(
+		(memberId) => session.memberRuntime[memberId].deliveredEventIds.length > TEAM_DELIVERED_EVENT_ID_WINDOW,
+	);
+	if (overWindowMemberIds.length === 0) return session;
+	const memberRuntime = { ...session.memberRuntime };
+	for (const memberId of overWindowMemberIds) {
+		const runtimeState = memberRuntime[memberId];
+		memberRuntime[memberId] = {
+			...runtimeState,
+			deliveredEventIds: runtimeState.deliveredEventIds.slice(-TEAM_DELIVERED_EVENT_ID_WINDOW),
+		};
+	}
+	return { ...session, memberRuntime };
 }
 
 export function parseUpdateTeamSessionModelSettingsInput(value: unknown): UpdateTeamSessionModelSettingsInput {

@@ -2495,3 +2495,111 @@ function deferred() {
 	});
 	return { promise, resolve };
 }
+
+describe("Team session idle residency", () => {
+	beforeEach(() => registerPresetPluginBlueprints());
+
+	type ResidencyFixture = Awaited<ReturnType<typeof createFixture>>;
+
+	async function createExtraSession(fixture: ResidencyFixture, workspaceId: string) {
+		return fixture.service.create(fixture.team, createAgentTeamFixture(), {
+			kind: "project",
+			id: `project:${workspaceId}`,
+			cwd: `C:/${workspaceId}`,
+		});
+	}
+
+	/** 守卫用例需要第 4 个会话：最旧会话受保护后，仍有 3 个可逐出空闲会话超上限。 */
+	async function loadGuardedFourthSession(fixture: ResidencyFixture) {
+		const fourth = await createExtraSession(fixture, "residency-4");
+		await fixture.service.readSnapshot(fourth.id);
+		return fourth;
+	}
+
+	async function loadThreeIdleSessions(fixture: ResidencyFixture) {
+		const second = await createExtraSession(fixture, "residency-2");
+		const third = await createExtraSession(fixture, "residency-3");
+		// readSnapshot 命中缓存即 touch：创建序即使用序，最旧的是 fixture.session。
+		await fixture.service.readSnapshot(fixture.session.id);
+		await fixture.service.readSnapshot(second.id);
+		await fixture.service.readSnapshot(third.id);
+		return { second, third };
+	}
+
+	it("evicts the oldest idle team session beyond the hot window and restores it parameterless", async () => {
+		const fixture = await createFixture();
+		const { second } = await loadThreeIdleSessions(fixture);
+		const dispose = vi.mocked(fixture.runtime.disposeSession);
+		dispose.mockClear();
+
+		const evicted = await fixture.service.reconcileIdleTeamSessions();
+
+		expect(evicted).toEqual([fixture.session.id]);
+		const evictedRuntimeIds = [
+			fixture.session.coordinationRuntime!.sessionId,
+			...Object.values(fixture.session.memberRuntime).map((runtime) => runtime.sessionId),
+		];
+		expect(new Set(dispose.mock.calls.map((call) => call[0]))).toEqual(new Set(evictedRuntimeIds));
+		// 会话文件从未删除：无参 read 走协调会话事实源完整恢复。
+		const restored = await fixture.service.read(fixture.session.id);
+		expect(restored).toEqual(fixture.session);
+		expect(second.coordinationRuntime).toBeDefined();
+	});
+
+	it("keeps sessions with durable unsettled work resident and evicts the next oldest", async () => {
+		const fixture = await createFixture();
+		const { second } = await loadThreeIdleSessions(fixture);
+		await loadGuardedFourthSession(fixture);
+		const coordinationId = fixture.session.coordinationRuntime!.sessionId;
+		const conversation = fixture.conversations.get(coordinationId);
+		if (!conversation) throw new Error("missing coordination conversation");
+		fixture.conversations.set(coordinationId, {
+			...conversation,
+			entries: [
+				...conversation.entries,
+				{
+					id: "durable-work-entry",
+					parentId: conversation.activeLeafId,
+					type: "custom" as const,
+					customType: "agent-team.work-item.v1",
+					data: {
+						id: "work-item-idle-residency",
+						requestTurnId: "idle-residency-request",
+						createdByParticipantId: "leader",
+						assignedToParticipantId: "member",
+						objective: "Unsettled durable work",
+						contextEntryIds: [],
+						state: "attention-required",
+						createdAt: 2,
+						updatedAt: 2,
+						revision: 1,
+					},
+					timestamp: new Date(2).toISOString(),
+				},
+			],
+		});
+
+		const dispose = vi.mocked(fixture.runtime.disposeSession);
+		dispose.mockClear();
+		const evicted = await fixture.service.reconcileIdleTeamSessions();
+
+		expect(evicted).toEqual([second.id]);
+		expect(dispose).not.toHaveBeenCalledWith(coordinationId);
+		expect(dispose).toHaveBeenCalledWith(second.coordinationRuntime!.sessionId);
+	});
+
+	it("keeps sessions with active renderer subscribers resident", async () => {
+		const fixture = await createFixture();
+		const { second } = await loadThreeIdleSessions(fixture);
+		await loadGuardedFourthSession(fixture);
+		const subscription = fixture.service.subscribe(fixture.session.id, () => undefined);
+
+		const dispose = vi.mocked(fixture.runtime.disposeSession);
+		dispose.mockClear();
+		const evicted = await fixture.service.reconcileIdleTeamSessions();
+
+		expect(evicted).toEqual([second.id]);
+		expect(dispose).not.toHaveBeenCalledWith(fixture.session.coordinationRuntime!.sessionId);
+		subscription.unsubscribe();
+	});
+});

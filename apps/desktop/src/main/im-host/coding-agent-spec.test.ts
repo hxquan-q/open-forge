@@ -66,12 +66,38 @@ describe("IM coding-agent invocation", () => {
 			packageDir: normalizePathSeparators(spec.packageDir),
 		}).toMatchObject({
 			bin: process.execPath,
-			prefixArgs: ["C:/resources/coding-agent/dist/agent-rpc-cli.mjs", "--scenario", "im-claw"],
+			prefixArgs: [
+				"--max-old-space-size=2048",
+				"C:/resources/coding-agent/dist/agent-rpc-cli.mjs",
+				"--scenario",
+				"im-claw",
+			],
 			runAsNode: true,
 			packageDir: "C:/resources/coding-agent",
 			serverUrl: "https://api.test",
 		});
 		expect(spec.prefixArgs).not.toContain("--agent-runtime");
+	});
+
+	test("GUI Electron 形态经 Chromium js-flags 注入子进程堆上限", () => {
+		Object.defineProperty(process, "resourcesPath", {
+			configurable: true,
+			value: "C:\\resources",
+		});
+		const platformSpy = vi.spyOn(process, "platform", "get");
+
+		platformSpy.mockReturnValue("darwin");
+		expect(buildCodingAgentSpec().prefixArgs?.slice(0, 2)).toEqual([
+			"--js-flags=--max-old-space-size=2048",
+			"--agent-rpc",
+		]);
+
+		platformSpy.mockReturnValue("linux");
+		expect(buildCodingAgentSpec().prefixArgs?.slice(0, 3)).toEqual([
+			"--no-sandbox",
+			"--js-flags=--max-old-space-size=2048",
+			"--agent-rpc",
+		]);
 	});
 
 	test("routes the Electron discriminator through the single CLI Runtime host", async () => {

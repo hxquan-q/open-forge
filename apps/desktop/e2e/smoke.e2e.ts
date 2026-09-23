@@ -4,7 +4,7 @@
  * VETTA_E2E_PACKAGED=1.
  */
 
-const EXPECTED_CONFIG_DIR = process.env.VETTA_CONFIG_DIR ?? ".vetta-e2e";
+const EXPECTED_CONFIG_DIR = process.env.VETTA_CONFIG_DIR ?? ".openforge-e2e";
 const EXPECTED_VETTA_HOME = process.env.VETTA_HOME;
 
 function normalizePath(p: string): string {

@@ -1,4 +1,11 @@
 {
+	"taskApproval": {
+		"title": "允许 {{tool}} 执行？"
+	},
+	"fileOrganize": {
+		"title": "整理这些文件？",
+		"summary": "共 {{count}} 个移动/重命名操作，确认后执行"
+	},
 	"tray": {
 		"showWindow": "显示窗口",
 		"hideWindow": "隐藏窗口",

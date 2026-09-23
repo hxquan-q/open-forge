@@ -18,7 +18,7 @@ import {
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 const mainEntry = path.join(packageRoot, "dist", "main", "index.js");
 const userDataDir = path.join(packageRoot, ".wdio-electron-user-data");
-const configDirName = ".vetta-e2e";
+const configDirName = ".openforge-e2e";
 const require = createRequire(import.meta.url);
 const packageVersion = (JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")) as {
 	version: string;

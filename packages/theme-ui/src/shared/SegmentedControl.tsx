@@ -44,6 +44,7 @@ export function SegmentedControl<T extends string>({
 					<button
 						key={key}
 						type="button"
+						aria-pressed={active}
 						onClick={() => onChange(key)}
 						className={cn(
 							"relative flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-[6px] px-2.5 py-[3px] text-[11px] font-medium leading-[16px] transition-colors duration-150 select-none",

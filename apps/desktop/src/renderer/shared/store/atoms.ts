@@ -26,6 +26,8 @@ export * from "./scheduler-atoms";
 export * from "./session-input-draft";
 export * from "./sse-atoms";
 export * from "./subagents-atoms";
+export * from "./task-atoms";
 export * from "./todo-atoms";
 export * from "./ui-atoms";
 export * from "./updater-atoms";
+export * from "./workspace-mode-atoms";

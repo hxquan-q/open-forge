@@ -49,6 +49,11 @@ export interface CodingToolsRuntimeCompositionOptions {
 	readonly tokenBudget?: number;
 	readonly reservedOutputTokens?: number;
 	readonly observationPublisher?: RuntimeObservationPublisher;
+	/**
+	 * 模型请求面的工具准入（与执行面的审批拦截器构成双重检查）。
+	 * 缺省保持放行：per-call 风险等级在模型面仍可见，真正的逐次审批在执行面。
+	 */
+	readonly authorizeTool?: (toolName: string, input: unknown) => Promise<boolean> | boolean;
 }
 
 export interface CodingToolsRuntimeComposition {
@@ -58,6 +63,8 @@ export interface CodingToolsRuntimeComposition {
 		context: CodingAgentSpecializedToolRegistrationContext,
 	) => readonly CodingToolRegistration[] | Promise<readonly CodingToolRegistration[]>;
 	readonly registry: CodingToolRegistry;
+	/** 注册表实际生效的默认结果策略；插件/扩展运行时复用同一实例。 */
+	readonly resultPolicy: CodingToolResultPolicy;
 	readonly registerTool: (registration: CodingAgentRuntimeToolRegistration) => void;
 	readonly unregisterTool: (toolName: string) => boolean;
 	readonly readToolDeclaration: (toolName: string) => CodingAgentRuntimeToolRegistration | undefined;
@@ -94,13 +101,14 @@ export function createCodingToolsRuntimeComposition(
 			registration,
 		]),
 	);
+	const effectiveResultPolicy = options.resultPolicy ?? PRESERVE_CODING_TOOL_RESULT_POLICY;
 	const registry = new InMemoryCodingToolRegistry(
 		[
 			...platformRegistrations.map((registration) => toRuntimeToolRegistration(registration)),
 			...codingAgentRegistrations.map((registration) => toRuntimeToolRegistration(registration)),
 		],
 		{
-			resultPolicy: options.resultPolicy ?? PRESERVE_CODING_TOOL_RESULT_POLICY,
+			resultPolicy: effectiveResultPolicy,
 			observationPublisher: options.observationPublisher,
 		},
 	);
@@ -131,9 +139,10 @@ export function createCodingToolsRuntimeComposition(
 	const capabilities: RuntimeCapabilityDefinition = createDefaultRuntimeCapabilityDefinition({
 		features: [feature],
 		toolPolicy: {
-			async authorize(_request, signal) {
+			async authorize(request, signal) {
 				signal.throwIfAborted();
-				return true;
+				if (!options.authorizeTool) return true;
+				return options.authorizeTool(request.toolName, request.input);
 			},
 		},
 		tokenBudget: options.tokenBudget ?? 8_000,
@@ -147,6 +156,8 @@ export function createCodingToolsRuntimeComposition(
 		backgroundService,
 		createSpecializedToolRegistrations: options.environment.createSpecializedToolRegistrations,
 		registry,
+		/** 注册表实际生效的默认策略，供插件/扩展运行时复用同一实例，避免二次构造。 */
+		resultPolicy: effectiveResultPolicy,
 		registerTool: (registration) => {
 			if (declarationsByName.has(registration.tool.name)) {
 				throw new Error(`Duplicate Coding Agent tool declaration: ${registration.tool.name}`);

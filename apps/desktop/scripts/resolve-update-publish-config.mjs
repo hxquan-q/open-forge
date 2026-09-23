@@ -1,6 +1,5 @@
 const SUPPORTED_PROVIDERS = new Set(["generic", "github"]);
 const DEFAULT_UPDATE_PROVIDER = "generic";
-const DEFAULT_UPDATE_URL = "https://releases.openvetta.com/desktop/stable";
 
 function requireValue(env, key, provider) {
 	const value = env[key]?.trim();
@@ -26,9 +25,11 @@ export function resolveUpdatePublishConfig(env = process.env) {
 		);
 	}
 	if (provider === "generic") {
+		// No built-in feed URL: an unset URL must fail the build rather than
+		// silently point the update channel at upstream infrastructure.
 		return {
 			provider: "generic",
-			url: normalizeHttpUrl(env.VETTA_UPDATE_URL?.trim() || DEFAULT_UPDATE_URL),
+			url: normalizeHttpUrl(requireValue(env, "VETTA_UPDATE_URL", provider)),
 			useMultipleRangeRequest: true,
 		};
 	}

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { resolveSshHelperBinary } from "./helper-assets.js";
 
 function createBinary(root: string, ...segments: string[]): string {
-	const path = join(root, ...segments, "vetta-ssh-helper");
+	const path = join(root, ...segments, "openforge-ssh-helper");
 	mkdirSync(join(root, ...segments), { recursive: true });
 	writeFileSync(path, "");
 	return path;

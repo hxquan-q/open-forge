@@ -6,7 +6,7 @@ import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
 import { app, type BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, protocol, session, shell } from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
-import { isCloudBuildEnabled } from "../shared/feature-flags.js";
+import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
 import { stopAllOpenMarketplaceMcpRuntimes } from "./abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
 import { ActionApprovalBroker } from "./app-actions/approval-broker.js";
 import { createAppActionSystem } from "./app-actions/index.js";
@@ -70,7 +70,6 @@ import { createDesktopPluginPackageOpenService } from "./plugins/plugin-package-
 import { PLUGIN_PROTOCOL_PRIVILEGES, registerPluginProtocols } from "./plugins/plugin-protocol.js";
 import { refreshDesktopProxy } from "./proxy/proxy-host.js";
 import { stopAllUiohookConsumers } from "./quickpanel-trigger.js";
-import { createQuickPanelWindow } from "./quickpanel-window.js";
 import { isQuitCleanupStarted, runQuitCleanup, setQuitCleanup } from "./quit-cleanup.js";
 import { startDesktopRemoteAccess, stopDesktopRemoteAccess } from "./remote-control/desktop-remote-access-service.js";
 import {
@@ -84,6 +83,8 @@ import { getRuntimeManager } from "./runtimes/manager.js";
 import { initializeSandboxCapability } from "./sandbox/capability.js";
 import { initScheduler, scheduleTaskInCron, shutdownScheduler, unscheduleTaskInCron } from "./scheduler/scheduler.js";
 import { initializeDesktopSchedulerService } from "./scheduler/scheduler-service.js";
+import { getDesktopFileOrganizeBroker } from "./task-activity/file-organize-broker.js";
+import { getDesktopToolApprovalBroker } from "./task-activity/tool-approval-broker.js";
 import { initializeMainTelemetry, shutdownMainTelemetry } from "./telemetry/index.js";
 import { registerThemeProtocol, THEME_PROTOCOL_PRIVILEGE } from "./themes/theme-protocol.js";
 import {
@@ -108,7 +109,7 @@ import {
 // RuntimeManager.applyEnv() 与 coding-agent 的 bash 执行。详见 fix-path.ts。
 fixPath();
 
-const PROTOCOL = "vetta";
+const PROTOCOL = "openforge";
 // registerSchemesAsPrivileged 整个进程只能调用一次且须在 ready 前：
 // 所有自定义 scheme（插件、主题、应用资源、媒体流）的特权声明在此合并注册。
 protocol.registerSchemesAsPrivileged([
@@ -205,14 +206,14 @@ process.env[VETTA_HOME_ENV] = getVettaHomePath();
 if (isCliMode) {
 	const cliUserDataDir =
 		ocrCliCommand !== null
-			? "vetta-ocr-cli"
+			? "openforge-ocr-cli"
 			: pdfCliCommand !== null
-				? "vetta-pdf-cli"
+				? "openforge-pdf-cli"
 				: actionCliCommand !== null
-					? `vetta-action-cli-${process.pid}`
+					? `openforge-action-cli-${process.pid}`
 					: helpCliCommand !== null
-						? `vetta-help-cli-${process.pid}`
-						: `vetta-agent-rpc-${process.pid}`;
+						? `openforge-help-cli-${process.pid}`
+						: `openforge-agent-rpc-${process.pid}`;
 	app.setPath("userData", join(tmpdir(), cliUserDataDir));
 	app.commandLine.appendSwitch("disable-gpu");
 	app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
@@ -316,7 +317,7 @@ let cloudMain: CloudMainHandle | null = null;
 function handleProtocolUrl(rawUrl: string): void {
 	try {
 		const parsed = new URL(rawUrl);
-		// OAuth 回调（vetta://oauth/callback）由 cloud 模块处理；
+		// OAuth 回调（openforge://oauth/callback）由 cloud 模块处理；
 		// lite 构建没有 cloud 模块，深链直接忽略。
 		cloudMain?.handleProtocolUrl(parsed);
 	} catch {
@@ -397,7 +398,7 @@ if (!gotSingleLock) {
 			// Privacy 在 socket 层拦截 Node 默认 fetch 对 192.168.x / 10.x
 			// 等私网地址的访问，OpenAI/Anthropic SDK 在这种情况下只能抛
 			// "Connection error."。必须复用主进程对话页同款的两步规避：
-			// 先触发 TCC 探针让 com.vetta.desktop 拿到 LAN 授权，再把
+			// 先触发 TCC 探针让 io.github.hxquanq.openforge 拿到 LAN 授权，再把
 			// globalThis.fetch 换成 electron.net.fetch（Chromium 网络栈，
 			// 不被 LNP 拦截）。PDF / OCR CLI 不需要这条，因为它们不发
 			// 跨进程网络请求。
@@ -430,7 +431,7 @@ if (!gotSingleLock) {
 		const appLifecycle = registerAppLifecycleIpc();
 
 		// 必须放在 whenReady 之后：早于 ready 调用时主进程 bundle identity
-		// 尚未在 launchd/TCC 子系统注册，syscall 关联不到 com.vetta.desktop，
+		// 尚未在 launchd/TCC 子系统注册，syscall 关联不到 io.github.hxquanq.openforge，
 		// 探针白发。
 		registerLocalNetworkAccess();
 
@@ -730,6 +731,8 @@ if (!gotSingleLock) {
 
 		if (mainWindow.isDestroyed()) return;
 		const actionApprovalBroker = new ActionApprovalBroker(mainWindow.webContents);
+		getDesktopToolApprovalBroker().bindActionApprovalBroker(actionApprovalBroker);
+		getDesktopFileOrganizeBroker().bindActionApprovalBroker(actionApprovalBroker);
 		const batchTaskService = initializeDesktopBatchTaskService(getSharedRuntime);
 		// 批量项目元数据参与恢复会话的 scenario 判定，需要尽早加载；初始化 Promise
 		// 本身不作为 appLifecycle ready 的门闩。
@@ -848,11 +851,13 @@ if (!gotSingleLock) {
 				}, 500);
 				deferredStartupTimer.unref?.();
 
-				initializePetWindow();
-				startPetIdleGuard();
-				// 快捷面板：预创建隐藏窗口（按需 show/hide，不每次重建），随后据配置启停双击功能键监听。
-				// registerAllIpc 已注册快捷面板 IPC（含 RELOAD_HOTKEY），这里仅补窗口与初次触发器同步。
-				createQuickPanelWindow();
+				if (isDesktopPetEnabled()) {
+					initializePetWindow();
+					startPetIdleGuard();
+				}
+				// 快捷面板：窗口在首次触发（双击功能键）时惰性创建、创建后常驻 hide/show 复用，
+				// 这里仅据配置启停 uiohook 双击监听（与窗口是否存在无关）。
+				// registerAllIpc 已注册快捷面板 IPC（含 RELOAD_HOTKEY）。
 				void syncQuickPanelTrigger().catch((err) => {
 					mainLog.error("failed to sync quick panel trigger", err);
 				});

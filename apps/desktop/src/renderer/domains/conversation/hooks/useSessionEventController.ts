@@ -9,6 +9,7 @@ import {
 	chatMessagesAtom,
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
+	EMPTY_TASK_STATE,
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
@@ -16,8 +17,10 @@ import {
 	projectsAtom,
 	promptPredictingAtom,
 	promptSuggestionsAtom,
+	rememberSubagentsForSession,
 	retryProgressAtom,
 	subagentsBySessionAtom,
+	taskStateBySessionAtom,
 	todoItemsBySessionAtom,
 } from "@shared/store/atoms";
 import {
@@ -29,6 +32,7 @@ import {
 	setQueuePausedAtom,
 } from "@shared/store/message-queue-atoms";
 import { showToast } from "@shared/store/toast-atoms";
+import { applyTaskFactEvent } from "@shared/task/task-projection.js";
 import {
 	isCodingAgentMcpReloadStarted,
 	readCodingAgentBackgroundTasksObservation,
@@ -97,6 +101,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	const setSubagents = useSetAtom(subagentsBySessionAtom);
 	const setActiveToolNames = useSetAtom(activeToolNamesAtom);
 	const setTodoItems = useSetAtom(todoItemsBySessionAtom);
+	const setTaskState = useSetAtom(taskStateBySessionAtom);
 	const setPlanModeStates = useSetAtom(planModeStateBySessionAtom);
 	const setPromptSuggestions = useSetAtom(promptSuggestionsAtom);
 	const setPromptPredicting = useSetAtom(promptPredictingAtom);
@@ -278,7 +283,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							}
 							const mapped = reconcileOptimisticUserMessages(
 								sessionId,
-								conversationProjectionRef.current.projectHistory(history),
+								conversationProjectionRef.current.projectHistory(history, sessionId),
 							);
 							if (elapsed > 0) {
 								for (let i = mapped.length - 1; i >= 0; i--) {
@@ -425,11 +430,18 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			if (event.type === "tool.end") {
 				flushDeltas();
 				setChatMessages((prev) =>
-					handleToolEnd(prev, event.toolCallId, event.result, event.isError, {
-						startedAt: event.startedAt,
-						durationMs: event.durationMs,
-						phases: event.phases,
-					}),
+					handleToolEnd(
+						prev,
+						event.toolCallId,
+						event.result,
+						event.isError,
+						{
+							startedAt: event.startedAt,
+							durationMs: event.durationMs,
+							phases: event.phases,
+						},
+						event.sessionId,
+					),
 				);
 				return;
 			}
@@ -517,7 +529,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 								setChatMessages(
 									reconcileOptimisticUserMessages(
 										sessionId,
-										conversationProjectionRef.current.projectHistory(history),
+										conversationProjectionRef.current.projectHistory(history, sessionId),
 									),
 								);
 							})
@@ -541,6 +553,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			if (event.type === "active_tools_update") {
 				if (event.sessionId === activeSessionRef.current?.runtimeId) {
 					setActiveToolNames(new Set(event.activeToolNames));
+				}
+				return;
+			}
+
+			// ── Task/Artifact 事实投影（真相源在 Runtime 事件日志，这里只折叠） ──
+			if (event.type === "task.lifecycle" || event.type === "artifact.descriptor") {
+				const sid = activeSessionRef.current?.runtimeId;
+				if (sid) {
+					setTaskState((prev) => {
+						const current = prev.get(sid) ?? EMPTY_TASK_STATE;
+						const next = applyTaskFactEvent(current, event);
+						return next === current ? prev : new Map(prev).set(sid, next);
+					});
 				}
 				return;
 			}
@@ -572,15 +597,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				if (subagents) {
 					const sid = activeSessionRef.current?.runtimeId;
 					if (sid) {
-						setSubagents((prev) => {
-							const next = new Map(prev);
-							if (subagents.length > 0) {
-								next.set(sid, [...subagents]);
-							} else {
-								next.delete(sid);
-							}
-							return next;
-						});
+						setSubagents((prev) => rememberSubagentsForSession(prev, sid, subagents));
 					}
 					return;
 				}
@@ -637,6 +654,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			setPromptSuggestions,
 			setRetryProgress,
 			setSubagents,
+			setTaskState,
 			setTodoItems,
 			setCompactionEligibility,
 		],

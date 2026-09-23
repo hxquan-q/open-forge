@@ -15,7 +15,9 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 
 当前 Issue：
 
-- `ISSUE-0001`：品牌化发布基建决策未冻结（blocked）；
-- `ISSUE-0002`：是否启动 Pi Adapter 评估（draft）；
-- `ISSUE-0003`：性能观测保存边界（ready）；
-- `ISSUE-0004`：exprot 与 project 管理边界（done）。
+- `ISSUE-0001`：品牌化发布基建决策已冻结（done）；
+- `ISSUE-0002`：Pi Adapter 暂不启动，触发条件常设（done）；
+- `ISSUE-0003`：性能观测保存边界已冻结（done）；
+- `ISSUE-0004`：exprot 与 project 管理边界（done）；
+- `ISSUE-0005`：WorkspaceMode、AgentMode 与 capability Profile 边界（draft，阻塞 0017/0019/0021）；
+- `ISSUE-0006`：Conversation → Task promotion 规则（draft，阻塞 0015/0028）。

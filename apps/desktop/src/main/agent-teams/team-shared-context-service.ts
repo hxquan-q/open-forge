@@ -14,6 +14,7 @@ import {
 	type TeamSessionDocument,
 	type TeamSharedContextCheckpoint,
 	type TeamSharedHistoryQuery,
+	windowTeamDeliveredEventIds,
 } from "@vetta/agent-team";
 import type { RuntimeHost } from "@vetta/runtime-core";
 import type { ConversationMessageRecord } from "@vetta/runtime-core/conversation";
@@ -186,7 +187,9 @@ export class TeamSharedContextService {
 					[memberId]: {
 						...member,
 						sharedCheckpointId: generation.checkpointId,
-						deliveredEventIds: [...new Set([...member.deliveredEventIds, ...eventIds])],
+						// 写入侧窗口化：checkpoint 投影与指纹保持全量（见 policy.project），
+						// 只有投递回执列表有界。
+						deliveredEventIds: windowTeamDeliveredEventIds(member.deliveredEventIds, eventIds),
 					},
 				},
 			};

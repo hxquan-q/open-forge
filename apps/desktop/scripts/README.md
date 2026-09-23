@@ -226,18 +226,14 @@ bun run package:win:portable
 
 客户端统一使用 `electron-updater`，更新源由打包时的环境变量决定，与目标操作系统无关：
 
-- `VETTA_UPDATE_PROVIDER=generic`：R2、自建对象存储或任意静态 HTTP/CDN。
-- `VETTA_UPDATE_PROVIDER=github`：公开 GitHub Releases。
-- 未设置 `VETTA_UPDATE_PROVIDER`：默认使用 stable 更新源 `https://releases.openvetta.com/desktop/stable`。
+- `VETTA_UPDATE_PROVIDER=generic`：R2、自建对象存储或任意静态 HTTP/CDN；**必须显式设置 `VETTA_UPDATE_URL`**，未配置时打包直接失败（不允许静默回退到任何默认 feed）。
+- `VETTA_UPDATE_PROVIDER=github`：公开 GitHub Releases，必须显式给出 `VETTA_UPDATE_GITHUB_OWNER` / `VETTA_UPDATE_GITHUB_REPO`；开源构建默认指向 `hxquan-q/open-forge`。
+- 未设置 `VETTA_UPDATE_PROVIDER`：按 generic 处理，即仍要求显式 `VETTA_UPDATE_URL`。
 - `VETTA_UPDATE_PROVIDER=none`：不受支持，打包时直接失败；所有可打包产物都必须有更新源配置。
 
 发布 workflow 的最后一步会执行 `node scripts/verify-update-feed.mjs`：它读取三平台 metadata，确认版本与本次发布版本一致，并对每个引用的安装包执行公开可读性检查。CDN 不支持 HEAD 时会回退到 Range GET。只有不发布的手动构建跳过公开 feed 检查；手动 `test` / `stable` 发布与 tag 发布一样会在上传后执行该检查。
 
-正式环境默认读取：
-
-```text
-https://releases.openvetta.com/desktop/stable
-```
+正式环境由发布 workflow 显式注入 feed 坐标（GitHub Releases 指向 `hxquan-q/open-forge`），不再内置任何默认 URL。
 
 ### 使用 test 通道验证真实升级
 
@@ -287,7 +283,7 @@ VETTA_R2_ACCESS_KEY_ID
 VETTA_R2_SECRET_ACCESS_KEY
 VETTA_R2_BUCKET
 VETTA_R2_PREFIX=desktop/stable
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/stable
+VETTA_UPDATE_URL=https://<自有发布域>/desktop/stable
 ```
 
 脚本解析 `latest*.yml`，发布清单引用的版本化安装包、对应 blockmap，以及与清单版本精确匹配的 Windows MSI/ZIP 补充制品；大文件使用 16 MiB S3 multipart 分片。上传前会读取公开通道的现有清单，拒绝用更低版本覆盖；安装包经公开域名验证可读后才覆盖 `latest*.yml`，避免客户端读到尚未完整发布的版本。R2 自定义域名应对安装包启用长期缓存；`latest*.yml` 保持短缓存，不要被 Cache Everything 规则强制长缓存。

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"vetta-ssh-helper/internal/protocol"
+	"openforge-ssh-helper/internal/protocol"
 )
 
 // maxFrameBytes bounds one request line. File writes arrive base64-encoded in a

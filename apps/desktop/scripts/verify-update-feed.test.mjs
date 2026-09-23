@@ -4,9 +4,9 @@ import { resolveUpdateFeedBase, verifyUpdateFeed } from "./verify-update-feed.mj
 
 const version = "0.5.46";
 const metadata = {
-	"latest.yml": `version: ${version}\npath: Vetta-Setup-${version}.exe\nfiles:\n  - url: Vetta-Setup-${version}.exe\n`,
-	"latest-mac.yml": `version: ${version}\nfiles:\n  - url: Vetta-${version}.zip\n    sha512: test\n`,
-	"latest-linux.yml": `version: ${version}\npath: Vetta-${version}.AppImage\nfiles:\n  - url: Vetta-${version}.AppImage\n`,
+	"latest.yml": `version: ${version}\npath: Open Forge-Setup-${version}.exe\nfiles:\n  - url: Open Forge-Setup-${version}.exe\n`,
+	"latest-mac.yml": `version: ${version}\nfiles:\n  - url: Open Forge-${version}.zip\n    sha512: test\n`,
+	"latest-linux.yml": `version: ${version}\npath: Open Forge-${version}.AppImage\nfiles:\n  - url: Open Forge-${version}.AppImage\n`,
 };
 
 function createFetch() {
@@ -32,20 +32,20 @@ test("resolves provider-specific public feed bases", () => {
 	);
 	assert.equal(
 		resolveUpdateFeedBase({
-			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "openvetta", VETTA_UPDATE_GITHUB_REPO: "open-vetta" },
+			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "hxquan-q", VETTA_UPDATE_GITHUB_REPO: "open-forge" },
 			version,
 		}),
-		"https://github.com/openvetta/open-vetta/releases/download/v0.5.46/",
+		"https://github.com/hxquan-q/open-forge/releases/download/v0.5.46/",
 	);
 });
 
 test("accepts a Git tag version with the leading v", () => {
 	assert.equal(
 		resolveUpdateFeedBase({
-			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "openvetta", VETTA_UPDATE_GITHUB_REPO: "open-vetta" },
+			env: { VETTA_UPDATE_PROVIDER: "github", VETTA_UPDATE_GITHUB_OWNER: "hxquan-q", VETTA_UPDATE_GITHUB_REPO: "open-forge" },
 		version: "v0.5.46",
 		}),
-		"https://github.com/openvetta/open-vetta/releases/download/v0.5.46/",
+		"https://github.com/hxquan-q/open-forge/releases/download/v0.5.46/",
 	);
 });
 

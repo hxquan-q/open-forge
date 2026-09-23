@@ -49,6 +49,35 @@ export const selectedWorkflowIdAtom = atom<string | null>(null);
  */
 export const subagentsBySessionAtom = atom<Map<string, SubagentTask[]>>(new Map());
 
+/** 快照含每个已完成子代理的 finalText 全文，跨会话累积需封顶（对齐 rememberTurnStats 的 128 会话上限）。 */
+export const MAX_SUBAGENT_SESSIONS = 128;
+
+/**
+ * 有界写入：非空快照刷新会话新近度并淘汰最旧会话；空快照沿用删键语义
+ * （子代理全部收尾后该会话不再驻留）。当前写入会话必为最新条目，不会被淘汰。
+ */
+export function rememberSubagentsForSession(
+	map: Map<string, SubagentTask[]>,
+	sessionId: string,
+	subagents: readonly SubagentTask[],
+): Map<string, SubagentTask[]> {
+	if (subagents.length === 0) {
+		if (!map.has(sessionId)) return map;
+		const emptied = new Map(map);
+		emptied.delete(sessionId);
+		return emptied;
+	}
+	const next = new Map(map);
+	next.delete(sessionId);
+	next.set(sessionId, [...subagents]);
+	while (next.size > MAX_SUBAGENT_SESSIONS) {
+		const oldestKey = next.keys().next().value;
+		if (oldestKey === undefined) break;
+		next.delete(oldestKey);
+	}
+	return next;
+}
+
 export function getSubagentsForSession(
 	map: Map<string, SubagentTask[]>,
 	sessionId: string | null | undefined,

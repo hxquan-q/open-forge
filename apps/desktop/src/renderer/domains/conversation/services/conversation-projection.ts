@@ -41,8 +41,8 @@ export class ConversationProjection {
 	private rawAssistantStream = false;
 	private targetMessageId: string | undefined;
 
-	projectHistory(history: HistoryEntry[]): ChatConversationItem[] {
-		return fullHistoryToChat(history);
+	projectHistory(history: HistoryEntry[], mediaSessionId?: string): ChatConversationItem[] {
+		return fullHistoryToChat(history, mediaSessionId);
 	}
 
 	enqueue(event: AssistantSessionEvent): void {
@@ -115,8 +115,10 @@ export function projectConversationAgentMessage(input: {
 	readonly authorId?: string;
 	readonly timestamp?: number;
 	readonly executions?: readonly ConversationToolExecutionProjection[];
+	/** 提供时工具媒体以协议引用驻留（缺省回退 base64 内联）。 */
+	readonly mediaSessionId?: string;
 }): ChatConversationItem {
-	const { message, messageId, entryId, turnId, authorId, timestamp, executions = [] } = input;
+	const { message, messageId, entryId, turnId, authorId, timestamp, executions = [], mediaSessionId } = input;
 	const phase = message.stopReason === "aborted" ? "aborted" : message.stopReason === "error" ? "failed" : "completed";
 	const toolStatus = phase === "aborted" ? "cancelled" : phase === "failed" ? "error" : "pending";
 	let items: ChatConversationItem[] = [
@@ -155,6 +157,7 @@ export function projectConversationAgentMessage(input: {
 							phases: [...(execution.phases ?? [])],
 						}
 					: undefined,
+				mediaSessionId,
 			);
 		}
 	}

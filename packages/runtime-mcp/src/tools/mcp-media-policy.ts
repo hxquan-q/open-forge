@@ -4,7 +4,9 @@ export const DEFAULT_MCP_MEDIA_MAX_TOTAL_BYTES = 24 * 1024 * 1024;
 
 const SAFE_IMAGE_MIME_TYPES = new Set(["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"]);
 const AUDIO_MIME_TYPE = /^audio\/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$/;
-const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+// 线性安全模式：分组量词（如 (?:...){4}*）在百万级字符串上会爆栈；
+// padding 形态由调用处的 length % 4 与本模式的 ={0,2} 尾缀共同约束。
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 
 export interface McpMediaProjectionLimits {
 	readonly maxItems?: number;

@@ -436,7 +436,7 @@ export function projectTeamConversationTimeline({
 		? memberConversations.filter((conversation) => conversation.memberId === memberId)
 		: memberConversations;
 	const projectedMemberItems = visibleMemberConversations.flatMap((conversation) =>
-		projectMemberConversation(conversation.memberId, conversation.history),
+		projectMemberConversation(conversation.memberId, conversation.history, conversation.runtimeSessionId),
 	);
 	const latestProjectedMemberItem = projectedMemberItems.at(-1);
 	const liveMemberTurns = Object.values(streams).filter((turn) => isVisibleTeamStreamPhase(turn.message.phase));
@@ -813,8 +813,10 @@ function dedupeTeamUserItems(items: readonly ChatConversationItem[]): ChatConver
 	});
 }
 
-function projectMemberConversation(memberId: string, history: readonly HistoryEntry[]) {
-	const projected = splitTeamMemberHistoryTurns(history).flatMap((turn) => fullHistoryToChat([...turn]));
+function projectMemberConversation(memberId: string, history: readonly HistoryEntry[], mediaSessionId?: string) {
+	const projected = splitTeamMemberHistoryTurns(history).flatMap((turn) =>
+		fullHistoryToChat([...turn], mediaSessionId),
+	);
 	return projected.map((item, index) => {
 		const renderKey = `team:member:${memberId}:${index}:${item.entryId ?? item.id}`;
 		if (item.kind === "agent") {

@@ -8,6 +8,13 @@ vi.mock("electron", () => ({ protocol: { handle: () => undefined } }));
 const connection = createLoopbackSshConnection();
 vi.mock("./ssh/ssh-runtime.js", () => ({ getSshConnection: () => connection }));
 
+const resolverMock = vi.hoisted(() => ({
+	resolveToolcallMedia: vi.fn(async (): Promise<{ data: Buffer; mimeType: string } | null> => null),
+}));
+vi.mock("./conversations/toolcall-media-resolver.js", () => ({
+	resolveToolcallMedia: resolverMock.resolveToolcallMedia,
+}));
+
 const { handleMediaRequest, MEDIA_PROTOCOL_SCHEME } = await import("./media-protocol.js");
 const { allowProjectRoot } = await import("./filesystem/filesystem-service.js");
 
@@ -70,5 +77,38 @@ describe("媒体协议", () => {
 		expect((await handleMediaRequest(new Request(mediaUrl(`ssh://build-01${remoteRoot}/missing.png`)))).status).toBe(
 			404,
 		);
+	});
+
+	it("toolcall 引用：命中返回字节 + immutable 缓存头，支持 Range，未命中 404", async () => {
+		const bytes = Buffer.from("image-bytes");
+		resolverMock.resolveToolcallMedia.mockResolvedValue({ data: bytes, mimeType: "image/png" });
+
+		const url = "vetta-media://toolcall/session-1/call-1/0?kind=image";
+		const full = await handleMediaRequest(new Request(url));
+		expect(full.status).toBe(200);
+		expect(full.headers.get("Content-Type")).toBe("image/png");
+		expect(full.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+		expect(full.headers.get("Content-Length")).toBe(String(bytes.length));
+		expect(Buffer.from(await full.arrayBuffer()).equals(bytes)).toBe(true);
+		expect(resolverMock.resolveToolcallMedia).toHaveBeenCalledWith({
+			sessionId: "session-1",
+			toolCallId: "call-1",
+			index: 0,
+			kind: "image",
+		});
+
+		const ranged = await handleMediaRequest(new Request(url, { headers: { Range: "bytes=0-4" } }));
+		expect(ranged.status).toBe(206);
+		expect(ranged.headers.get("Content-Range")).toBe(`bytes 0-4/${bytes.length}`);
+		expect(Buffer.from(await ranged.arrayBuffer()).equals(bytes.subarray(0, 5))).toBe(true);
+
+		resolverMock.resolveToolcallMedia.mockResolvedValue(null);
+		expect((await handleMediaRequest(new Request(url))).status).toBe(404);
+		resolverMock.resolveToolcallMedia.mockReset();
+		resolverMock.resolveToolcallMedia.mockResolvedValue(null);
+	});
+
+	it("toolcall 之外的 URL 继续走常规媒体分支（缺 path 400）", async () => {
+		expect((await handleMediaRequest(new Request("vetta-media://local/stream"))).status).toBe(400);
 	});
 });

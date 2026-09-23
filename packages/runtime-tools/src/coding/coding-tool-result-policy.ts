@@ -15,6 +15,7 @@ export interface RuntimeToolResultArtifactWriteRequest extends CodingToolResultC
 
 export interface RuntimeToolResultArtifact {
 	readonly reference: string;
+	readonly byteLength: number;
 }
 
 export interface RuntimeToolResultArtifactStore {

@@ -75,6 +75,8 @@
 			"@vetta/runtime-core/observation": ["./packages/runtime-core/src/observation/index.ts"],
 			"@vetta/runtime-core/sandbox": ["./packages/runtime-core/src/sandbox/index.ts"],
 			"@vetta/runtime-core/session-extensions": ["./packages/runtime-core/src/session-extensions/index.ts"],
+			"@vetta/runtime-core/task": ["./packages/runtime-core/src/task/index.ts"],
+			"@vetta/runtime-core/testing": ["./packages/runtime-core/src/testing/index.ts"],
 			"@vetta/runtime-core/*": ["./packages/runtime-core/src/*"],
 			"@vetta/runtime-desktop": ["./packages/runtime-desktop/src/index.ts"],
 			"@vetta/runtime-desktop/*": ["./packages/runtime-desktop/src/*"],

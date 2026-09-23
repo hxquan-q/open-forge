@@ -1,3 +1,4 @@
+import { existsSync, renameSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -8,11 +9,15 @@ export const VETTA_HOME_ENV = "VETTA_HOME";
 export const VETTA_CONFIG_DIR_ENV = "VETTA_CONFIG_DIR";
 
 /**
- * 默认配置目录名（即品牌名）。这是整个仓库配置目录的唯一来源——
- * 既用于用户主目录根（~/<name>），也用于项目内目录（projectDir/<name>）。
- * 改品牌只改这一处；按环境隔离（如 dev）则用 VETTA_CONFIG_DIR 覆盖。
+ * 默认数据根目录名（即品牌名）：用户主目录根 ~/<name> 的唯一来源。
+ * 项目内目录（projectDir/.vetta）是插件生态合同，由 coding-agent 的
+ * identity.ts 单独承载，不随此值变化。按环境隔离（如 dev）用
+ * VETTA_CONFIG_DIR 覆盖。
  */
-export const DEFAULT_CONFIG_DIR_NAME = ".vetta";
+export const DEFAULT_CONFIG_DIR_NAME = ".openforge";
+
+/** 旧品牌的数据根目录名，仅用于一次性迁移判定。 */
+const LEGACY_CONFIG_DIR_NAME = ".vetta";
 
 function expandTilde(p: string): string {
 	if (p === "~") return homedir();
@@ -21,11 +26,29 @@ function expandTilde(p: string): string {
 }
 
 /**
- * 配置目录名。VETTA_CONFIG_DIR 覆盖，否则用默认品牌名。
- * 用户主目录根与项目内目录都从它派生，保证两者始终一致。
+ * 数据根目录名。VETTA_CONFIG_DIR 覆盖，否则用默认品牌名。
  */
 export function getVettaConfigDirName(): string {
 	return process.env[VETTA_CONFIG_DIR_ENV] || DEFAULT_CONFIG_DIR_NAME;
+}
+
+/**
+ * 旧品牌数据根整体改名迁移：~/.vetta → ~/.openforge。
+ * 仅在新根不存在、旧根存在且未配置任何覆盖时触发；rename 失败（跨盘、占用、
+ * 权限）则退回旧根读写，保证已安装用户不丢数据。
+ */
+function migrateLegacyHomeDir(homeDir: string, configDirName: string): string {
+	if (configDirName !== DEFAULT_CONFIG_DIR_NAME) return join(homeDir, configDirName);
+	const next = join(homeDir, configDirName);
+	if (existsSync(next)) return next;
+	const legacy = join(homeDir, LEGACY_CONFIG_DIR_NAME);
+	if (!existsSync(legacy)) return next;
+	try {
+		renameSync(legacy, next);
+		return next;
+	} catch {
+		return legacy;
+	}
 }
 
 /**
@@ -35,7 +58,7 @@ export function getVettaConfigDirName(): string {
 export function getVettaHomePath(): string {
 	const explicit = process.env[VETTA_HOME_ENV];
 	if (explicit) return expandTilde(explicit);
-	return join(homedir(), getVettaConfigDirName());
+	return migrateLegacyHomeDir(homedir(), getVettaConfigDirName());
 }
 
 export function getActionRpcEndpointFilePath(): string {

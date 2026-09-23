@@ -12,7 +12,7 @@ import { parse } from "yaml";
 const execFileAsync = promisify(execFile);
 const packageDir = resolve(import.meta.dirname, "..");
 const defaultReleaseDir = join(packageDir, "release");
-const expectedBundleIdentifier = "com.vetta.desktop";
+const expectedBundleIdentifier = "io.github.hxquanq.openforge";
 
 function getArtifactFileName(value) {
 	if (typeof value !== "string" || value.length === 0) {

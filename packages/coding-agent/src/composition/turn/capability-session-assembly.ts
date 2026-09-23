@@ -9,6 +9,7 @@ import type {
 	RuntimeToolDefinition,
 } from "@vetta/runtime-core/kernel";
 import type { SessionExtensionContinuationSource } from "@vetta/runtime-core/session-extensions";
+import type { ToolRiskLevel } from "@vetta/runtime-core/task";
 import type { McpDeferredToolController } from "@vetta/runtime-mcp";
 import { guardCodingToolRegistration } from "@vetta/runtime-tools";
 import { createEcosystemToolInterceptor } from "../../adapters/ecosystem/tool-interceptor-adapter.js";
@@ -24,6 +25,11 @@ import {
 	selectAgentSkillSource,
 } from "../../agent-configuration/resource-selection.js";
 import type { AgentSessionConfiguration } from "../../agent-configuration/session-configuration.js";
+import type { CodingAgentToolApprovalPort } from "../../execution/permissions/approval-contract.js";
+import { createApprovalToolInterceptor } from "../../execution/permissions/approval-tool-interceptor.js";
+import { raiseShellRiskLevel } from "../../execution/permissions/shell-risk-rules.js";
+import { summarizeToolApproval } from "../../execution/permissions/summarize-tool-approval.js";
+import { defaultToolRiskDescriptor } from "../../execution/permissions/tool-risk-descriptors.js";
 import type { CodingAgentSessionExecutionRuntime } from "../../execution/session/runtime.js";
 import type { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
 import type { CodingAgentExtensionToolRuntime } from "../../extensions/runtime/extension-tool-runtime.js";
@@ -129,6 +135,7 @@ export interface CodingAgentTurnCapabilitySessionAssemblyOptions {
 	readonly continuationSources: readonly SessionExtensionContinuationSource[];
 	readonly todoRuntime: CodingAgentTodoRuntime;
 	readonly planModeRuntime: CodingAgentPlanModeExtensionRuntime;
+	readonly toolApprovalRuntime?: CodingAgentToolApprovalPort;
 	readonly todoToolRegistration?: CodingAgentRuntimeToolRegistration;
 	readonly memoryRuntime?: CodingAgentMemoryRolloverRuntime;
 	readonly subagentRuntime?: CodingAgentSubagentRuntime;
@@ -160,6 +167,12 @@ export interface CodingAgentTurnCapabilitySessionAssembly {
 	dispose(): Promise<void>;
 }
 
+/** Shell/Git 破坏性命令按参数提升到 L4（TASK-0019）；其余工具无参数级提升。 */
+function raiseToolRiskForCall(toolName: string, input: Readonly<Record<string, unknown>>): ToolRiskLevel | undefined {
+	if (toolName === "bash" || toolName === "shell") return raiseShellRiskLevel(input);
+	return undefined;
+}
+
 /** 组装单个 Session 的 Prompt、Plugin、Continuation、Tool Frame 与 Capability snapshot。 */
 export async function createCodingAgentTurnCapabilitySessionAssembly(
 	options: CodingAgentTurnCapabilitySessionAssemblyOptions,
@@ -183,6 +196,7 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 					readAgentPlugins: options.activation.readAgentPlugins,
 					invokeTool: options.pluginRuntime.invokeTool,
 					runOrchestrator: pluginRunOrchestrator,
+					resultPolicy: options.codingTools.resultPolicy,
 					shouldPreserveBaseTool: (toolName) =>
 						options.mcpController?.isManagedTool(toolName) === true ||
 						options.extensionToolRuntime?.hasTool(toolName, options.session.readSessionId()) === true,
@@ -290,6 +304,19 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 			})
 		: undefined;
 	const toolInterceptionCatalog = new DynamicContributionCatalog<CodingAgentToolInterceptor>();
+	toolInterceptionCatalog.register({
+		sourceId: "tool-approval",
+		localId: "permission-gate",
+		revision: "session",
+		order: CODING_AGENT_TOOL_INTERCEPTION_ORDER.permissionApproval,
+		// 宿主未接入审批端口时端口不可用，闸门自动旁路（isAvailable 检查）。
+		value: createApprovalToolInterceptor({
+			approvalPort: options.toolApprovalRuntime,
+			resolveRiskDescriptor: defaultToolRiskDescriptor,
+			raise: raiseToolRiskForCall,
+			summarize: summarizeToolApproval,
+		}),
+	});
 	toolInterceptionCatalog.register({
 		sourceId: "ecosystem",
 		localId: "tool-hooks",

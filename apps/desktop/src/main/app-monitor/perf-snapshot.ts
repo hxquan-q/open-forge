@@ -187,7 +187,6 @@ export class SessionPerfTracker {
 	readonly sessionId: string;
 	private turn: MutableTurnStats | undefined;
 	private readonly queueEntries = new Map<string, { enqueuedAt?: number }>();
-	private queueWaitSamples: number[] = [];
 
 	constructor(sessionId: string) {
 		this.sessionId = sessionId;
@@ -318,7 +317,6 @@ export class SessionPerfTracker {
 	dispose(): void {
 		this.turn = undefined;
 		this.queueEntries.clear();
-		this.queueWaitSamples = [];
 	}
 
 	private applyQueueChanged(event: SessionEvent): number | undefined {
@@ -337,9 +335,8 @@ export class SessionPerfTracker {
 		}
 		this.queueEntries.clear();
 		for (const [id, entry] of next) this.queueEntries.set(id, entry);
-		if (waitSample !== undefined) {
-			this.queueWaitSamples.push(waitSample);
-			if (this.turn) this.turn.queueWaitMs += waitSample;
+		if (waitSample !== undefined && this.turn) {
+			this.turn.queueWaitMs += waitSample;
 		}
 		return waitSample;
 	}

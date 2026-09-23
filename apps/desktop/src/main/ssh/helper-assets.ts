@@ -17,7 +17,7 @@ export function resolveSshHelperBinary(
 		override: process.env.VETTA_SSH_HELPER_DIR,
 	},
 ): string | undefined {
-	const relative = join(`${target.os}-${target.arch}`, "vetta-ssh-helper");
+	const relative = join(`${target.os}-${target.arch}`, "openforge-ssh-helper");
 	const candidates = [
 		environment.override ? join(environment.override, relative) : undefined,
 		environment.resourcesPath ? join(environment.resourcesPath, "ssh-helper", relative) : undefined,

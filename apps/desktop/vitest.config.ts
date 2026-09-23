@@ -110,11 +110,19 @@ export default defineConfig({
 				find: "@vetta/coding-agent/settings",
 				replacement: resolve(__dirname, "../../packages/coding-agent/src/public-api/settings.ts"),
 			},
+			{
+				find: "@vetta/coding-agent/projects",
+				replacement: resolve(__dirname, "../../packages/coding-agent/src/projects/index.ts"),
+			},
 			{ find: /^@vetta\/coding-agent\/(.+)\.js$/, replacement: `${codingAgentSrc}/$1.ts` },
 			{ find: "@vetta/coding-agent", replacement: resolve(__dirname, "../../packages/coding-agent/src/index.ts") },
 			{
 				find: "@vetta/runtime-core/kernel",
 				replacement: resolve(__dirname, "../../packages/runtime-core/src/kernel/index.ts"),
+			},
+			{
+				find: "@vetta/runtime-core/task",
+				replacement: resolve(__dirname, "../../packages/runtime-core/src/task/index.ts"),
 			},
 			{
 				find: "@vetta/runtime-core/conversation",

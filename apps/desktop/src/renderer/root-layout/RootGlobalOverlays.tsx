@@ -3,6 +3,8 @@ import { KnowledgeDropOverlay } from "../domains/knowledge-base/components/Knowl
 import { PluginGlobalSlotHost } from "../domains/plugins/components/PluginGlobalSlotHost";
 import { SetupWizard } from "../domains/setup-wizard";
 import { ActionApprovalCenter } from "../shared/action-approval/ActionApprovalCenter";
+import { ToolExecutionApproval } from "../shared/action-approval/agent/ToolExecutionApproval";
+import { FileOrganizeApproval } from "../shared/action-approval/agent/FileOrganizeApproval";
 import { AppearancePickerApproval } from "../shared/action-approval/appearance/AppearancePickerApproval";
 import { ThemeChangeApproval } from "../shared/action-approval/appearance/ThemeChangeApproval";
 import { BatchTasksExecutionApproval } from "../shared/action-approval/batch-tasks/BatchTasksExecutionApproval";
@@ -52,6 +54,8 @@ export function RootGlobalOverlays(): JSX.Element {
 			<SshPromptDialog />
 			<ActionApprovalCenter />
 			<ThemedGenericActionApproval />
+			<ToolExecutionApproval />
+			<FileOrganizeApproval />
 			<DomainManageApprovals />
 			<ThemedAppearancePickerApproval />
 			<ThemedThemeChangeApproval />

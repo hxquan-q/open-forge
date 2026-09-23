@@ -10,6 +10,7 @@ const commercialEnv = {
 	VETTA_CLOUD_ENABLED: "true",
 	VETTA_SERVER_URL: "https://api.example.com/api/v1",
 	VETTA_UPDATE_PROVIDER: "generic",
+	VETTA_UPDATE_URL: "https://releases.example.com/desktop/stable",
 	VETTA_VENDOR_PLATFORM: "win32-x64",
 };
 
@@ -44,6 +45,14 @@ test("accepts an open-source Linux build", () => {
 	assert.equal(config.edition, "opensource");
 	assert.equal(config.updateConfig.provider, "github");
 	assert.deepEqual(config.platformTags, ["linux-x64"]);
+});
+
+test("pins open-source update defaults to this fork, never upstream", () => {
+	// Regression pin: the defaults decide where clients look for updates, so
+	// they must stay on hxquan-q/open-forge and must not drift back to upstream.
+	const env = createOpenSourceBuildEnvironment({ VETTA_VENDOR_PLATFORM: "linux-x64" });
+	assert.equal(env.VETTA_UPDATE_GITHUB_OWNER, "hxquan-q");
+	assert.equal(env.VETTA_UPDATE_GITHUB_REPO, "open-forge");
 });
 
 test("does not supply a hard-coded marketplace in open-source build environments", () => {

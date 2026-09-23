@@ -128,7 +128,9 @@ async function assembleCodingAgentRuntimeComposition(
 	const cwd = options.cwd ?? ".";
 	const scenario = options.scenario ?? "cli";
 	const sessionInitializationProfile = createCodingAgentSessionInitializationProfile(options);
-	const extensionToolRuntime = new CodingAgentExtensionToolRuntime(options.extensionTools ?? []);
+	const extensionToolRuntime = new CodingAgentExtensionToolRuntime(options.extensionTools ?? [], {
+		resultPolicy: options.codingToolResultPolicy,
+	});
 	const resourceRegistry = new CodingAgentCompositionResourceRegistry();
 	const imageSettingsSnapshots = new CodingAgentImageSettingsSnapshotRouter(observationPublisher);
 	const toolSurface = await createCodingAgentRuntimeToolSurface({
