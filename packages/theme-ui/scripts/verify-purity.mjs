@@ -37,7 +37,6 @@ const requiredExports = [
 	"CodePreview",
 	"KnowledgeFilesSkeleton",
 	"SkillToggleSwitch",
-	"ProjectsPanelSplitHandle",
 	"AddProjectMenuItem",
 	"SelectField",
 	"AchievementTitle",
@@ -52,10 +51,44 @@ const requiredExports = [
 
 const files = await walk(root);
 const violations = [];
+
+/**
+ * 重型依赖只能经动态 import() 进入渲染进程：实现文件可以静态引用该依赖，
+ * 但任何其它文件（含 barrel）不得对实现文件做静态 value import/export，
+ * 否则重依赖会回到首屏静态图。`export type` / `import type` 在编译期擦除，不
+ * 构成运行时边。
+ */
+const lazyHeavyDeps = [
+	{
+		impl: "settings/achievements/AchievementPromotionBadge3D.tsx",
+		implSpecifier: /["']\.\/AchievementPromotionBadge3D["']/,
+		depPattern: /from\s+["']three["']/,
+	},
+];
+
 for (const file of files) {
 	const text = await readFile(file, "utf8");
+	const rel = path.relative(root, file).split(path.sep).join("/");
 	if (forbidden.test(text)) {
-		violations.push(path.relative(root, file));
+		violations.push(rel);
+	}
+	for (const { impl, implSpecifier, depPattern } of lazyHeavyDeps) {
+		if (depPattern.test(text) && rel !== impl) {
+			violations.push(`${rel} (statically imports a lazy-only dependency)`);
+		}
+		if (rel === impl || rel.includes(".test.")) continue;
+		const staticallyReferencesImpl = text
+			.split("\n")
+			.some(
+				(line) =>
+					implSpecifier.test(line)
+					&& /^\s*(import|export)\b/.test(line)
+					&& !/^\s*(import|export)\s+type\b/.test(line)
+					&& !/\bimport\s*\(/.test(line),
+			);
+		if (staticallyReferencesImpl) {
+			violations.push(`${rel} (statically references lazy-only impl ${impl})`);
+		}
 	}
 }
 
@@ -74,7 +107,6 @@ const exportHome = {
 	CodePreview: "activity",
 	KnowledgeFilesSkeleton: "knowledge",
 	SkillToggleSwitch: "skills",
-	ProjectsPanelSplitHandle: "sidebar",
 	AddProjectMenuItem: "sidebar",
 	SelectField: "settings",
 	AchievementTitle: "settings",
