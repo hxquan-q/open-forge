@@ -63,6 +63,7 @@ dev 环境（`bun run dev`）整机 ~4.6–4.8 GB，用户反馈内存过高；�
 - **renderer 堆上限/V8 flag 调优**：Chromium 渲染进程不适用 node `--max-old-space-size` 思路，且实测 JS 堆只占 ~143 MB，大头在 PartitionAlloc/DOM，调 V8 参数无效。
 - **给 `<webview>` 单独写补丁维持现状**：与官方方向相反，不如直接评估 WebContentsView。
 - **Anthropic 自动缓存以外再显式布点**：`packages/ai` 已实现稳定前缀切分 + TTL，重复建设。
+- **V8 编译缓存（`module.enableCompileCache` / `NODE_COMPILE_CACHE`）**：Electron 34.5.8 内嵌 Node **20.19.1**，该 API 与环境变量均为 Node 22.1+ 才存在——真机冒烟 `enableCompileCache is not a function` 实证不可用；`v8-compile-cache` 包只补丁 CJS `Module._compile`，主进程 ESM bundle 不受益。待 Electron 升级到 Node 22+ 再重估（届时 dev 由启动脚本注入 `NODE_COMPILE_CACHE`、入口首 import 调 `enableCompileCache` 即可覆盖外置包与动态 chunk）。
 
 ## 代码/测试/指标锚点
 
@@ -89,3 +90,4 @@ dev 环境（`bun run dev`）整机 ~4.6–4.8 GB，用户反馈内存过高；�
 - **重依赖懒加载已落地（three）**：`AchievementPromotionBadge3D` 实现改为 `React.lazy` + `import()` 边界（`AchievementPromotionBadge3DLazy.tsx`），settings barrel 只转发懒壳与类型；theme-ui `verify-purity.mjs` 新增 `lazyHeavyDeps` 机械规则禁止 barrel/其它文件静态引入 impl 或 `three`。实测确认 pdfjs 仅在独立 OCR 窗口入口与 office-viewer 插件内、pptx-renderer 经 Module Federation 按需加载，均不在主渲染器首屏静态图，不另动。回归测试：`achievement-badge-lazy-boundary.test.ts`（barrel 静态图不求值 three）+ `AchievementPromotionDialog.lazy-badge.test.tsx`（对话框打开后 impl 才求值并挂载）。顺带修复 `verify-purity` 既有失效条目 `ProjectsPanelSplitHandle`（47bf6f84b 删除组件后清单未更新）。
 - **WebContentsView 评估已落盘**：TASK-0063 增补「架构评估」段——本任务维持 `<webview>`（ADR-0129 刻意选型 + 迁移是独立回归面），约束 host function 只依赖 `InAppBrowserWebContents` 抽象；迁移另立 TASK-0072（backlog, depends_on TASK-0063）。
 - **上下文预算监控已落地**：`coding-agent.context/context-budget-exceeded` warning 观测（`context-observability.ts`），在组装 prompt 超 `contextWindow` 而压缩不介入时发出（`compaction_disabled`/`context_unavailable`/`non_overflow_error`），payload 含 trigger/suppression/contextTokens/contextWindow/overByTokens；不改控制流、不动 runtime-core 事件 union。`context-runtime.test.ts` 新增 4 例（禁用压缩超窗发声、窗内静默、非溢出错误标注、启用压缩不重复发声）。
+- **dev renderer 预热已落地**：`vite.config.ts` 新增 `server.warmup.clientFiles=["./index.html"]`（root=`src/renderer`），主窗口入口依赖图与 Electron 主进程初始化并行完成冷转换；基线 `renderer boot frame visible` ~7.8s（2026-09-24 dev 日志），后续 dev 启动可直接对比该指标。dev 专属配置，打包路径无影响。Electron checklist 其余项核查结论：`show:false`+`ready-to-show`+`backgroundColor`、`backgroundThrottling`、单例锁、worker 拆分、打包 files=production 依赖均已在位；i18n `sendSync` 为首帧防闪的刻意单点保留；V8 compile-cache 因 Electron 34=Node 20 被否决（见「被否决的方案」）。
