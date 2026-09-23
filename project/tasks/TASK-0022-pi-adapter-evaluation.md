@@ -1,7 +1,7 @@
 ---
 id: TASK-0022
 type: task
-status: blocked
+status: archived
 priority: P3
 owner: runtime-core
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0002, TASK-0008]
 conflicts_with: []
 integration_status: pending
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # Pi Adapter 评估（implementation-plan 阶段 7，条件触发）
@@ -78,3 +78,11 @@ updated: 2026-09-22
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+## 归档记录（2026-09-23）
+
+按 ISSUE-0002 常设裁决归档：触发条件（Vetta Engine 能力缺口、上游收益可量化、
+差分基线就绪、Adapter 可独立回退、无需 Pi Session/Harness/Storage）当前均不满足，
+且 TASK-0015~0021 落地后产品面已按自有合同收敛。触发条件再次出现时按
+`exprot/implementation-plan.md` 阶段 7 顺序重启评估（createTurnEngine 注入合同 →
+独立 Adapter 包 → CLI/测试宿主 A/B → 门禁 → 灰度），届时另开新 Task。
