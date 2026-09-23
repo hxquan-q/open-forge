@@ -26,7 +26,8 @@ export interface ActivityTabDefinition {
 	removable?: boolean;
 	/**
 	 * 无显式可见性记录时是否上栏。
-	 * 插件 attach 三态用；内置默认 true，隐藏走 hiddenKeys。
+	 * 插件走 attach 三态；内置默认 true，隐藏走 hiddenKeys。
+	 * 内置设为 false 时默认进「+」池，用户挂出后 hiddenKeys 记 `+<id>`。
 	 */
 	initiallyVisible?: boolean;
 	/** 插件：允许出现的对话场景（fail-closed）。内置省略 = 不按场景过滤。 */

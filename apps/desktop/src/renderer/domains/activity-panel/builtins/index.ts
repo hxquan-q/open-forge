@@ -9,6 +9,7 @@ import { knowledgeHistoryTabDefinition } from "./knowledge-history-tab";
 import { planTabDefinition } from "./plan-tab";
 import { portsTabDefinition } from "./ports-tab";
 import { taskTabDefinition } from "./task-tab";
+import { terminalTabDefinition } from "./terminal-tab";
 import { todoTabDefinition } from "./todo-tab";
 import { workflowTabDefinition } from "./workflow-tab";
 
@@ -20,6 +21,7 @@ export const BUILTIN_ACTIVITY_TABS: readonly ActivityTabDefinition[] = [
 	fileTabDefinition,
 	batchProgressTabDefinition,
 	browserTabDefinition,
+	terminalTabDefinition,
 	planTabDefinition,
 	taskTabDefinition,
 	todoTabDefinition,

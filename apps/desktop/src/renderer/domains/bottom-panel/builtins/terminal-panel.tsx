@@ -1,7 +1,12 @@
+import { useBottomPanelInstance } from "../registry/instance-context";
 import { TerminalSurface } from "../terminal/TerminalSurface";
 import type { BottomPanelBuiltin } from "./types";
 
 export const TERMINAL_PANEL_ID = "terminal";
+
+function BottomPanelTerminalSurface(): JSX.Element {
+	return <TerminalSurface handle={useBottomPanelInstance()} />;
+}
 
 export const terminalPanelBuiltin: BottomPanelBuiltin = {
 	id: TERMINAL_PANEL_ID,
@@ -10,5 +15,5 @@ export const terminalPanelBuiltin: BottomPanelBuiltin = {
 	labelKey: "bottomPanel.terminal.title",
 	// 不设 maxInstances：同时开几个终端是最常见的用法（一个跑 dev server、一个敲命令）。
 	requiresLocalPty: true,
-	component: TerminalSurface,
+	component: BottomPanelTerminalSurface,
 };

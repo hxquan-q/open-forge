@@ -12,8 +12,8 @@ import { type JSX, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TerminalEventEnvelope } from "../../../../shared/terminal-ipc";
 import { bottomPanelFocusRequestAtom } from "../registry/instance-atoms";
-import { useBottomPanelInstance } from "../registry/instance-context";
 import { detectWebgl2Support, selectTerminalRenderer } from "./select-terminal-renderer";
+import type { TerminalSurfaceHandle } from "./terminal-surface-handle";
 import { buildTerminalTheme, createDocumentCssVariableReader } from "./terminal-theme";
 
 /** xterm 自己的回滚历史；主进程那份尾部缓冲只负责补断连期间的输出，不是历史。 */
@@ -33,10 +33,11 @@ type Status = "starting" | "running" | "exited" | "unavailable";
  * 这里是整个功能里唯一持有 xterm 实例的地方，因此不拆「连接层 / 展示层」：
  * xterm 是命令式 DOM 对象，它的生命周期、尺寸测量和 IPC 接线是同一件事，
  * 拆开只会让「谁在什么时候 fit」这个真正易错的点散到两个文件里。
+ *
+ * 宿主身份经 {@link TerminalSurfaceHandle} 注入：底部面板与右栏活动面板各给 adapter。
  */
-export function TerminalSurface(): JSX.Element {
+export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): JSX.Element {
 	const { t } = useTranslation("chat");
-	const handle = useBottomPanelInstance();
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [status, setStatus] = useState<Status>("starting");
 	const [message, setMessage] = useState<string | null>(null);
