@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type { InitializationRollbackTask, RuntimeResourceContext } from "@vetta/runtime-core";
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
@@ -21,12 +22,14 @@ import {
 	createCodingAgentSandboxAuthorizationSessionExtension,
 } from "../../execution/sandbox/authorization-session-extension.js";
 import { CodingAgentSessionExecutionRuntime } from "../../execution/session/runtime.js";
+import { createCodingAgentArtifactSessionExtension } from "../../features/artifacts/artifact-session-extension.js";
 import { createCodingAgentAttachArtifactSessionExtension } from "../../features/artifacts/attach-artifact-session-extension.js";
 import {
 	CODING_AGENT_ASK_USER_QUESTION_RUNTIME,
 	type CodingAgentAskUserQuestionExtensionRuntime,
 	createCodingAgentAskUserQuestionSessionExtension,
 } from "../../features/ask-user-question/index.js";
+import { createCodingAgentBrowserTabSessionExtension } from "../../features/browser-tab/browser-tab-session-extension.js";
 import { createCodingAgentFileOrganizeSessionExtension } from "../../features/file-organize/file-organize-session-extension.js";
 import {
 	CODING_AGENT_PLAN_MODE_OBSERVATION,
@@ -201,6 +204,8 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			createCodingAgentToolApprovalSessionExtension(),
 			createCodingAgentFileOrganizeSessionExtension(),
 			createCodingAgentAttachArtifactSessionExtension(),
+			createCodingAgentArtifactSessionExtension(),
+			createCodingAgentBrowserTabSessionExtension(),
 			createCodingAgentBackgroundWorkSessionExtension(),
 			createCodingAgentPluginConfigurationSessionExtension(),
 			createCodingAgentSessionAssistanceExtension(),

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { EcosystemHookRuntime } from "@vetta/ecosystem-adapter";
 import type { RuntimeModel } from "@vetta/runtime-core";
 import type {
@@ -34,6 +35,7 @@ import type { CodingAgentSessionExecutionRuntime } from "../../execution/session
 import type { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
 import type { CodingAgentExtensionToolRuntime } from "../../extensions/runtime/extension-tool-runtime.js";
 import { CodingAgentStopHookContinuationSource } from "../../extensions/runtime/stop-hook-continuation-source.js";
+import { raiseBrowserTabToolRisk } from "../../features/browser-tab/browser-tab-tool-contract.js";
 import {
 	type CodingAgentPlanModeExtensionRuntime,
 	composePlanModeToolSelection,
@@ -170,6 +172,7 @@ export interface CodingAgentTurnCapabilitySessionAssembly {
 /** Shell/Git 破坏性命令按参数提升到 L4（TASK-0019）；其余工具无参数级提升。 */
 function raiseToolRiskForCall(toolName: string, input: Readonly<Record<string, unknown>>): ToolRiskLevel | undefined {
 	if (toolName === "bash" || toolName === "shell") return raiseShellRiskLevel(input);
+	if (toolName === "browser_tab") return raiseBrowserTabToolRisk(input);
 	return undefined;
 }
 

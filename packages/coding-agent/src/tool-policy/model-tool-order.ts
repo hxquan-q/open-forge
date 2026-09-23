@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Coding Agent Tool Surface 的产品顺序合同。
  *
@@ -26,6 +27,8 @@ export const CODING_AGENT_MODEL_TOOL_ORDER = Object.freeze({
 	knowledgeTags: 1_900,
 	invokeSkill: 2_000,
 	todo: 2_100,
+	artifact: 2_150,
+	browserTab: 2_160,
 	toolSearch: 2_200,
 	taskOutput: 2_300,
 	taskStop: 2_400,
