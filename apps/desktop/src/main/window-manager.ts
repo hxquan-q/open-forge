@@ -3,6 +3,7 @@ import { app, BrowserWindow, nativeTheme } from "electron";
 import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
 import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js";
 import { bindInAppBrowserWebview } from "./browser-automation/webview-session-host.js";
+import { shouldAutoOpenDevTools } from "./devtools-policy.js";
 import { type RendererConsoleLevel, shouldPersistRendererConsoleMessage } from "./logger/renderer-console-policy.js";
 import { getAppLogger } from "./logger.js";
 import { openExternalUrl } from "./open-external.js";
@@ -164,8 +165,7 @@ export async function loadMainWindow(win: BrowserWindow): Promise<void> {
 			await win.loadFile(rendererPath);
 		}
 		windowLog.info("main-renderer-ready", { durationMs: Date.now() - startedAt });
-		// E2E (VETTA_E2E=1): skip auto DevTools so extra windows do not steal WebdriverIO focus.
-		if (app.isPackaged || process.env.VETTA_E2E === "1" || win.isDestroyed()) return;
+		if (win.isDestroyed() || !shouldAutoOpenDevTools({ isPackaged: app.isPackaged, env: process.env })) return;
 		win.webContents.openDevTools({ mode: "detach", activate: true });
 		windowLog.info("open-devtools", { opened: win.webContents.isDevToolsOpened() });
 	} catch (error) {
