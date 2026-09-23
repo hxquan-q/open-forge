@@ -1,5 +1,5 @@
 ---
-id: TASK-0069
+id: TASK-0072
 type: task
 status: backlog
 priority: P2
@@ -8,8 +8,8 @@ requirement: REQ-0001
 plan: PLAN-0006
 source_issue:
 execution: serial
-branch: task/TASK-0069-webcontentsview
-worktree: ..\open-forge-wt\TASK-0069-webcontentsview
+branch: task/TASK-0072-webcontentsview
+worktree: ..\open-forge-wt\TASK-0072-webcontentsview
 base_commit: forge/dev
 read_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/renderer/domains/activity-panel, packages/theme-ui/src/activity, docs/adr/0129-canvas-artifact-dual-lifecycle-and-in-app-browser-tab.md]
 write_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/main/ipc, apps/desktop/src/renderer/domains/activity-panel, packages/theme-ui/src/activity, docs/adr]
