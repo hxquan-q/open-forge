@@ -1173,10 +1173,6 @@
 			"work": "Work"
 		},
 		"work": {
-			"artifacts": {
-				"empty": "Generated documents, sheets and other artifacts appear here",
-				"title": "Artifacts"
-			},
 			"dataset": {
 				"empty": "Dataset previews appear here once data analysis is wired up",
 				"title": "Dataset"
@@ -1185,16 +1181,34 @@
 				"empty": "Once a task starts, its plan and progress show here",
 				"title": "Plan"
 			},
-			"review": {
-				"empty": "When artifacts are ready, review and export results here",
-				"title": "Review & Export"
-			},
 			"retry": "Retry",
 			"sectionCancelled": "This section was cancelled with the task; restart the task to regenerate it",
 			"sectionError": "This section failed to load",
 			"sources": {
 				"empty": "Files and materials referenced by the task are listed here",
-				"title": "Sources"
+				"title": "Sources",
+				"pickFile": "Choose source files",
+				"goalPlaceholder": "Describe the goal, e.g. \"Turn this report into a one-page summary\"",
+				"start": "Start processing",
+				"sendUnavailable": "This session cannot send messages right now. Try again later.",
+				"pickFailed": "Failed to pick the source file. Please try again."
+			},
+			"artifacts": {
+				"empty": "Generated documents, sheets and other artifacts appear here",
+				"title": "Artifacts",
+				"previewUnavailable": "This artifact cannot be previewed right now",
+				"truncated": "Content is long; showing a truncated preview",
+				"sourceMissing": "The artifact source file is missing and cannot be previewed."
+			},
+			"review": {
+				"empty": "When artifacts are ready, review and export results here",
+				"title": "Review & Export",
+				"export": "Export",
+				"exported": "Exported to {{targetUri}}",
+				"cancelled": "Export cancelled",
+				"sourceMissing": "The source file for this artifact is missing",
+				"notExportable": "This artifact has not been approved yet and cannot be exported",
+				"notFound": "This artifact cannot be found; it may have been cleaned up"
 			}
 		}
 	}

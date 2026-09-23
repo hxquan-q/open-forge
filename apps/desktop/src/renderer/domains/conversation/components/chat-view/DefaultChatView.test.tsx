@@ -29,7 +29,12 @@ vi.mock("@domains/activity-panel/components/ActivityPanel", () => ({
 }));
 
 vi.mock("@domains/workspace-mode/components/WorkWorkspacePanel", () => ({
-	WorkWorkspacePanel: () => createElement("aside", { "data-testid": "work-panel" }),
+	WorkWorkspacePanel: ({ children }: { children?: React.ReactNode }) =>
+		createElement("aside", { "data-testid": "work-panel" }, children),
+}));
+
+vi.mock("@domains/workspace-mode/components/WorkDocumentSections", () => ({
+	WorkDocumentSections: () => createElement("div", { "data-testid": "work-document-sections" }),
 }));
 
 vi.mock("@domains/bottom-panel/components/BottomPanelHost", () => ({

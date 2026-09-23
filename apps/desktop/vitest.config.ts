@@ -25,7 +25,19 @@ export default defineConfig({
 				find: "@vetta/runtime-node/conversation/legacy",
 				replacement: resolve(__dirname, "../../packages/runtime-node/src/conversation/legacy.ts"),
 			},
-			{ find: "@", replacement: resolve(__dirname, "./src") },
+			{
+  find: "@vetta/action-rpc",
+  replacement: resolve(__dirname, "../../packages/action-rpc/src/index.ts"),
+},
+{ find: "@", replacement: resolve(__dirname, "./src") },
+			{
+				find: "@vetta/ssh-transport/project-uri",
+				replacement: resolve(__dirname, "../../packages/ssh-transport/src/project-uri.ts"),
+			},
+			{
+				find: "@vetta/toolkit/versioned-config",
+				replacement: resolve(__dirname, "../../packages/toolkit/src/versioned-config.ts"),
+			},
 			{ find: "@shared", replacement: resolve(__dirname, "./src/renderer/shared") },
 			{ find: "@domains", replacement: resolve(__dirname, "./src/renderer/domains") },
 			{ find: "@cloud", replacement: resolve(__dirname, "./src/renderer/cloud") },

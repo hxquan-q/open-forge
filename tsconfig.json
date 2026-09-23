@@ -41,6 +41,7 @@
 			],
 			"@vetta/coding-agent/hooks": ["./packages/coding-agent/src/public-api/hooks.ts"],
 			"@vetta/coding-agent/profile": ["./packages/coding-agent/src/public-api/profile.ts"],
+			"@vetta/coding-agent/projects": ["./packages/coding-agent/src/projects/index.ts"],
 			"@vetta/coding-agent/resources": ["./packages/coding-agent/src/public-api/resources.ts"],
 			"@vetta/coding-agent/rpc": ["./packages/coding-agent/src/public-api/rpc.ts"],
 			"@vetta/coding-agent/runtime": ["./packages/coding-agent/src/public-api/runtime.ts"],

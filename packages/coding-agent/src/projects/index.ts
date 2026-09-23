@@ -1,3 +1,4 @@
+export { resolveCapabilityNameConflict, resolveToolCatalogPolicy } from "../tool-policy/catalog-policy.js";
 export { ensureVettaLocalGitignore, loadProjectConventions } from "./load-project-conventions.js";
 export {
 	loadProjectToolPolicy,

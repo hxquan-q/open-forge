@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import {
+	CODING_AGENT_ARTIFACT_FUNCTION,
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
 	CODING_AGENT_ATTACH_ARTIFACT_FUNCTION,
 	CODING_AGENT_FILE_ORGANIZE_FUNCTION,
@@ -15,6 +16,7 @@ import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
 import { getAppLogger } from "../logger.js";
+import { getDesktopArtifactBroker } from "../task-activity/artifact-broker.js";
 import { getDesktopFileOrganizeBroker } from "../task-activity/file-organize-broker.js";
 import { desktopTaskActivityService } from "../task-activity/task-activity-service.js";
 import { getDesktopToolApprovalBroker } from "../task-activity/tool-approval-broker.js";
@@ -36,6 +38,7 @@ export function createDesktopCodingAgentFunctionSource(
 	const planReviews = getDesktopPlanReviewBroker();
 	const toolApprovals = getDesktopToolApprovalBroker();
 	const fileOrganize = getDesktopFileOrganizeBroker();
+	const artifactBroker = getDesktopArtifactBroker();
 	const warn: DesktopCodingAgentFunctionSourceLogger["warn"] = (message, context) =>
 		(options.logger ?? getAppLogger("agent-runtime")).warn(message, context);
 	const registry = new SessionExtensionFunctionRegistry();
@@ -43,6 +46,7 @@ export function createDesktopCodingAgentFunctionSource(
 	registry.register(CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION, (request, signal) => sandbox.handle(request, signal));
 	registry.register(CODING_AGENT_TOOL_APPROVAL_FUNCTION, (request, signal) => toolApprovals.handle(request, signal));
 	registry.register(CODING_AGENT_FILE_ORGANIZE_FUNCTION, (request, signal) => fileOrganize.handle(request, signal));
+	registry.register(CODING_AGENT_ARTIFACT_FUNCTION, (request) => artifactBroker.handle(request));
 	registry.register(CODING_AGENT_ATTACH_ARTIFACT_FUNCTION, async (request) => {
 		const outcome = await desktopTaskActivityService.attachToActiveTask(request.sessionId, {
 			kind: request.kind,
@@ -68,6 +72,9 @@ export function createDesktopCodingAgentFunctionSource(
 
 	return {
 		has(token) {
+			if (token.id === CODING_AGENT_ARTIFACT_FUNCTION.id) {
+				return readAvailability(token.id, true);
+			}
 			if (token.id === CODING_AGENT_ASK_USER_QUESTION_FUNCTION.id) {
 				return readAvailability(token.id, questions.isAvailable());
 			}

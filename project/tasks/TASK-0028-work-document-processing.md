@@ -1,15 +1,15 @@
 ---
 id: TASK-0028
 type: task
-status: blocked
+status: verifying
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0001
 source_issue: ISSUE-0005
 execution: serial
-branch: unassigned
-worktree: unassigned
+branch: task/TASK-0028-work-document-processing
+worktree: C:/Users/xquan/Desktop/open-forge-wt/TASK-0028-work-document-processing
 base_commit: forge/dev
 read_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 write_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
@@ -70,11 +70,26 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- ISSUE-0005 已裁决方案 C（done）；剩余唯一阻塞是 ISSUE-0006 的 Task 创建规则（draft）；其决议前不进入 `ready`。depends_on 已全部完成（2026-09-23 校准）。
+- ISSUE-0005 已裁决方案 C（done）。ISSUE-0006（Task 创建规则）仍为 draft：本切片按其推荐的方案 B（注册入口声明式创建 Task）实施；其正式决议前保持 `verifying`，不进入 `done`。depends_on 已全部完成（2026-09-23 校准）。
 
 ## 交付记录
 
 - 实际修改：
+  - Work 右栏新增文档处理三节（来源 / 产物 / 审阅与导出）：来源选择走系统文件对话框，目标 + 来源路径经既有全局发送通道发起任务；产物列表支持文本预览；审阅区支持 Review 决策与导出到本地。主进程补齐 artifact 工具（create 落会话旁暂存目录、attach_to_task 委托 Task 控制面）、Task IPC（getState / runCommand / readArtifact / exportArtifact）、document-export 导出服务与 artifact-broker 测试；DefaultChatView 在 workspace 模式下挂载新组件。i18n 补充 zh/en 文案。
+  - 修复 HEAD 既有回归（f3fed63cc 迁移公共导出时遗漏）：`@vetta/coding-agent/projects` 子路径重新导出 `resolveCapabilityNameConflict` / `resolveToolCatalogPolicy`，desktop 的 resolve-session-config 导入恢复可解析；public-api-subpaths 合同测试同步跑绿。同时收敛 artifact-broker 内部联合类型分支，并把 commandErrorMessage 的翻译函数签名对齐仓库既有 `TFunction<"chat">` 模式。
+  - 基础接线：desktop vitest 增加 `@vetta/action-rpc` 等 source alias，tsconfig 增加 `@vetta/coding-agent/projects` path map，function-extensions 公共面导出 document contracts 类型。
+  - Release Notes 候选句（Open Forge 首发版本未定，暂存此处，不写入继承的 Vetta Release Notes）：工作模式新增文档处理入口：选择来源文档并描述目标即可发起任务，产物可在右栏预览、审阅并导出到本地。
 - 实际运行：
+  - `bun run check:quick -- packages/coding-agent/src/projects/index.ts apps/desktop/src/main/task-activity/artifact-broker.ts apps/desktop/src/renderer/domains/workspace-mode/components/WorkDocumentSections.tsx`：通过（Biome + 全部 guards）。
+  - 定向测试（run-vitest.mjs，全绿）：coding-agent public-api-subpaths 3/3；desktop artifact-broker 6/6、ipc/task 6/6、WorkDocumentSections 9/9、DefaultChatView 4/4、document-export 6/6。
+  - desktop 手动 `tsc --noEmit -p apps/desktop/tsconfig.json`：通过，0 错误。
+  - 完整 `bun run check`：lint / guards / docs-site / cli-host / mobile 全绿。
 - 未运行及原因：
+  - 完整 check 中 desktop typecheck 子命令在本机失败：环境缺少 bunx（PATH 无 bunx），非代码问题；已用手动 tsc 等价覆盖并通过。
+  - root tsgo 报 2 个既有错误（runtime-node/test/conversation/task-fact-persistence.test.ts 与 runtime-storage/test/conversation/task-fact-record-schema.test.ts 引用已从 RuntimeTaskIdentity 移除的 generation 字段）：两文件相对 HEAD 无本地改动，属基线滞后，不在本任务范围。
+  - 未运行 verify:ui:*（用户未授权）；Electron 实机流程待授权后验证。
 - 剩余风险：
+  - 主工作区全量 desktop 测试曾出现 SSH 相关 12 个失败（media-protocol、command-spawner.remote、filesystem-service.remote-flow、resource-runtime.remote）：这些测试用 ssh://build-01 硬拼 Windows 临时路径（POSIX 假设），parseProjectLocation 必然抛 Malformed，与本任务改动无关，属测试层既有环境问题。
+  - useSessionManager / date-picker 相关测试在高并行负载下曾超时，涉及文件与本任务无关；本轮已用定向测试覆盖改动面。
+  - artifact create 之外的 update/get/list 分支仍按合同返回 unimplemented，由后续任务承接；document-export 仅支持纯文本内容类型，富格式导出待后续任务。
+  - 未提交：所有改动留在 worktree 工作区，等待集成负责人审阅与合并。

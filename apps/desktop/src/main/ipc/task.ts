@@ -2,6 +2,7 @@
 import { ARTIFACT_KINDS, type ArtifactKind } from "@vetta/runtime-core/task";
 import { ipcMain, type WebContents } from "electron";
 import { TASK_CHANNELS } from "../../shared/task-ipc.js";
+import { desktopDocumentExportService } from "../task-activity/document-export.js";
 import { type DesktopTaskCommand, desktopTaskActivityService } from "../task-activity/task-activity-service.js";
 
 const CHANNELS = TASK_CHANNELS;
@@ -59,6 +60,31 @@ export function parseCommand(value: unknown): DesktopTaskCommand | undefined {
 	}
 }
 
+/** IPC 边界收窄：artifact 读取载荷。 */
+export function parseArtifactRead(value: unknown): { sessionId: string; artifactId: string } | undefined {
+	if (typeof value !== "object" || value === null) return undefined;
+	const raw = value as Record<string, unknown>;
+	const sessionId = asString(raw.sessionId);
+	const artifactId = asString(raw.artifactId);
+	return sessionId && artifactId ? { sessionId, artifactId } : undefined;
+}
+
+/** IPC 边界收窄：artifact 导出载荷。 */
+export function parseArtifactExport(
+	value: unknown,
+): { sessionId: string; artifactId: string; suggestedFileName?: string } | undefined {
+	if (typeof value !== "object" || value === null) return undefined;
+	const raw = value as Record<string, unknown>;
+	const sessionId = asString(raw.sessionId);
+	const artifactId = asString(raw.artifactId);
+	if (!sessionId || !artifactId) return undefined;
+	return {
+		sessionId,
+		artifactId,
+		...(typeof raw.suggestedFileName === "string" ? { suggestedFileName: raw.suggestedFileName } : {}),
+	};
+}
+
 export function registerTaskIpc(_webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.GET_STATE, (_event, sessionId: unknown) =>
 		desktopTaskActivityService.getState(asString(sessionId)),
@@ -77,6 +103,24 @@ export function registerTaskIpc(_webContents: WebContents): () => void {
 			return { ok: false as const, code: "task_command_invalid", message: "invalid command payload" };
 		}
 		return desktopTaskActivityService.runCommand(sessionId, command);
+	});
+	ipcMain.handle(CHANNELS.READ_ARTIFACT, (_event, input: unknown) => {
+		const payload = parseArtifactRead(input);
+		if (!payload) {
+			return { status: "not-found" as const, artifactId: "" };
+		}
+		return desktopTaskActivityService.readArtifact(payload.sessionId, payload.artifactId);
+	});
+	ipcMain.handle(CHANNELS.EXPORT_ARTIFACT, (_event, input: unknown) => {
+		const payload = parseArtifactExport(input);
+		if (!payload) {
+			return { status: "not-found" as const, artifactId: "" };
+		}
+		return desktopDocumentExportService.exportArtifact(
+			payload.sessionId,
+			payload.artifactId,
+			payload.suggestedFileName,
+		);
 	});
 	return () => {
 		for (const channel of Object.values(CHANNELS)) ipcMain.removeHandler(channel);

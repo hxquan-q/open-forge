@@ -103,5 +103,8 @@
 	},
 	"terminal": {
 		"remoteOutputDropped": "[remote output too fast; {{bytes}} bytes omitted]"
+	},
+	"documentExport": {
+		"title": "Export document"
 	}
 }

@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import { ActivityPanel, CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { BottomPanelHost } from "@domains/bottom-panel/components/BottomPanelHost";
+import { WorkDocumentSections } from "@domains/workspace-mode/components/WorkDocumentSections";
 import { WorkWorkspacePanel } from "@domains/workspace-mode";
 import { cn } from "@shared/lib/utils";
 import { PerfSendProfiler } from "@shared/lib/perf-send";
@@ -70,7 +71,11 @@ const ActivityColumn = memo(
 			if (activityPanelOpen) {
 				return <CurrentScenarioActivityPanel workspace={workspace} />;
 			}
-			return <WorkWorkspacePanel />;
+			return (
+				<WorkWorkspacePanel>
+					<WorkDocumentSections runtimeIds={workspace.runtimeIds} />
+				</WorkWorkspacePanel>
+			);
 		}
 		return activity ? (
 			<ActivityPanel

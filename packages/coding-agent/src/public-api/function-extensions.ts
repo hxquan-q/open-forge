@@ -89,6 +89,11 @@ export {
 	readBrowserElementSelectionContext,
 	readBrowserElementSelectionPayload,
 } from "../features/browser-tab/element-selection-capsule.js";
+export {
+	DOCUMENT_ARTIFACT_KIND,
+	type DocumentExportResult,
+	type DocumentProcessingRequest,
+} from "../features/documents/contracts.js";
 export type {
 	FileOrganizeItemResult,
 	FileOrganizeItemStatus,

@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import type {
 	ArtifactDescriptorRecordedEvent,
 	RuntimeSessionFactEvent,
@@ -49,6 +49,18 @@ export type DesktopTaskCommandResult =
 	| { readonly ok: true; readonly state: RuntimeSessionTaskState }
 	| { readonly ok: false; readonly code: string; readonly message: string };
 
+/** 渲染端读取产物内容的 IPC 结果；content 以 UTF-8 解析，超限时截断。 */
+export type DesktopArtifactReadResult =
+	| {
+			readonly status: "ok";
+			readonly content: string;
+			readonly truncated: boolean;
+			readonly contentType?: string;
+			readonly title?: string;
+	  }
+	| { readonly status: "source-missing"; readonly artifactId: string }
+	| { readonly status: "not-found"; readonly artifactId: string };
+
 export interface DesktopArtifactView {
 	readonly descriptor: ArtifactDescriptor;
 	readonly availability: ArtifactAvailability;
@@ -87,6 +99,29 @@ class DesktopTaskActivityService {
 				availability: descriptor.uri ? await checkAvailability(descriptor.uri) : ARTIFACT_AVAILABILITY.READY,
 			})),
 		);
+	}
+
+	/** 渲染端预览产物内容：文件是事实源，descriptor 只提供定位与元信息。 */
+	async readArtifact(sessionId: string, artifactId: string): Promise<DesktopArtifactReadResult> {
+		const descriptor = this.getState(sessionId).artifacts.find((artifact) => artifact.artifactId === artifactId);
+		if (!descriptor) return { status: "not-found", artifactId };
+		const path = descriptor.uri ? artifactUriToPath(descriptor.uri) : undefined;
+		if (!path) return { status: "source-missing", artifactId };
+		try {
+			// 文档合同限定可直接预览的 Markdown/text；超长内容截断，避免整份大文档塞进 Renderer。
+			const maxChars = 512 * 1024;
+			const raw = await readFile(path, "utf8");
+			const truncated = raw.length > maxChars;
+			return {
+				status: "ok",
+				content: truncated ? raw.slice(0, maxChars) : raw,
+				truncated,
+				...(descriptor.contentType ? { contentType: descriptor.contentType } : {}),
+				title: descriptor.title,
+			};
+		} catch {
+			return { status: "source-missing", artifactId };
+		}
 	}
 
 	/** 模型侧 attach_artifact 工具的落点：挂到会话当前活跃（非终态）任务。 */
@@ -292,7 +327,7 @@ async function checkAvailability(uri: string): Promise<ArtifactAvailability> {
 }
 
 /** 本机 file URI / 绝对路径可校验；其余 scheme 交给对应 renderer 判定。 */
-function artifactUriToPath(uri: string): string | undefined {
+export function artifactUriToPath(uri: string): string | undefined {
 	if (uri.startsWith("file://")) {
 		try {
 			return decodeURIComponent(new URL(uri).pathname).replace(/^\/([A-Za-z]:)/, "$1");

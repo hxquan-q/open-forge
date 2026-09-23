@@ -1173,10 +1173,6 @@
 			"work": "工作"
 		},
 		"work": {
-			"artifacts": {
-				"empty": "生成的文档、表格等产物会出现在这里",
-				"title": "产物"
-			},
 			"dataset": {
 				"empty": "接入数据分析后，数据集预览会显示在这里",
 				"title": "数据集"
@@ -1185,16 +1181,34 @@
 				"empty": "任务开始后，执行计划与进度会显示在这里",
 				"title": "计划"
 			},
-			"review": {
-				"empty": "产物就绪后，在这里审阅并导出结果",
-				"title": "审阅与导出"
-			},
 			"retry": "重试",
 			"sectionCancelled": "该节内容已随任务取消，重新开始任务后可再次生成",
 			"sectionError": "该节内容加载失败",
 			"sources": {
 				"empty": "任务引用的文件与资料会列在这里",
-				"title": "来源资料"
+				"title": "来源资料",
+				"pickFile": "选择来源文件",
+				"goalPlaceholder": "描述处理目标，如「把这份报告整理成一页纪要」",
+				"start": "开始处理",
+				"sendUnavailable": "当前会话不能发送消息，请稍后重试",
+				"pickFailed": "选择来源文件失败，请重试"
+			},
+			"artifacts": {
+				"empty": "生成的文档、表格等产物会出现在这里",
+				"title": "产物",
+				"previewUnavailable": "暂时无法读取该产物内容",
+				"truncated": "内容较长，已截断展示",
+				"sourceMissing": "产物源文件缺失，无法预览"
+			},
+			"review": {
+				"empty": "产物就绪后，在这里审阅并导出结果",
+				"title": "审阅与导出",
+				"export": "导出",
+				"exported": "已导出到 {{targetUri}}",
+				"cancelled": "已取消导出",
+				"sourceMissing": "产物源文件缺失，无法导出",
+				"notExportable": "该产物还未通过审阅，不能导出",
+				"notFound": "找不到该产物，可能已被清理"
 			}
 		}
 	}

@@ -103,5 +103,8 @@
 	},
 	"terminal": {
 		"remoteOutputDropped": "[远端输出过快，已省略 {{bytes}} 字节]"
+	},
+	"documentExport": {
+		"title": "导出文档"
 	}
 }
