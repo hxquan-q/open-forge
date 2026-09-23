@@ -1,7 +1,7 @@
 ---
 id: TASK-0029
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/shared/store, apps/desktop/src/renderer/
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
 ---
