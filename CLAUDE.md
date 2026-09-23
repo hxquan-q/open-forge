@@ -92,7 +92,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 ### 三、原子化提交与风险预防
 
 **核心准则**：一次提交仅做一件事（Single Responsibility Principle）。
-**提交授权**：只有用户明确要求提交时才提交，与 `AGENTS.md`「Git 与并行工作区」保持一致；任务完成本身不构成提交授权。
+**提交授权**：每完成一个任务或一组自洽修改且验证通过后就提交，无需每次另行授权，与 `AGENTS.md`「Git 与并行工作区」保持一致；Push 仍需用户明确授权。
 
 **禁止混合多业务提交的风险警告**：
 - **精准回滚失效**：若业务 A 存在缺陷需要回退，与业务 B 混杂的提交将导致无关功能被迫陪葬。
