@@ -1,7 +1,7 @@
 ---
 id: TASK-0027
 type: task
-status: blocked
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/main/task-activity, apps/desktop/src/main/capabil
 exclusive_paths: [apps/desktop/src/main/ipc/plugin-capabilities.ts, apps/desktop/src/preload/api-types/plugins.ts, apps/desktop/src/renderer/domains/activity-panel/components/TaskTabPanel.tsx]
 depends_on: [TASK-0015, TASK-0016, TASK-0020, TASK-0021, TASK-0068]
 conflicts_with: [TASK-0059, TASK-0061, TASK-0068]
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；TASK-0068 SDK 合同与 Desktop 宿主接线已落地，待本轮验证收口）
 created: 2026-09-22
 updated: 2026-09-23
 ---
@@ -81,13 +81,16 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- 已选择新增 Plugin SDK Artifact Renderer API；该公开合同由 TASK-0068 独立完成后，本 Task 才可完成。
-- ISSUE-0007 尚未切换 Open Forge 首发版本；不得把 fork-only 条目写进继承的 v0.5.59 Release Notes，候选说明保留在 Task 交付记录。
+- 已解除：TASK-0068 已把 URI-free Artifact Renderer contribution/source API、`ui.slot.artifact-renderer` 权限与 Plugin API `2.8.0` 合同集成到 `forge/dev`；本任务的 Desktop 注册、只读资源边界和 Activity Panel 接线也已落地。
+- 发布说明仍受版本切换门禁约束：Desktop manifest 尚未从继承的 `0.5.59` 切到 Open Forge `0.1.0`，不得把 fork-only 条目写进继承的 Release Notes，候选说明保留在本 Task 交付记录。
 
 ## 交付记录
 
 - 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Release Notes：受 ISSUE-0007 阻断，候选条目保留于此；不修改继承的 v0.5.59。
-- 剩余风险：
+  - SDK `2.8.0` 的 Artifact Renderer contribution 经 `PluginLocalContributions` / `PluginGlobalSlotHost` 发布到宿主 registry；Activity Panel 按 descriptor 的显式 `rendererType` 或 `kind` 选择 renderer，并通过绑定 Task Session、Artifact id、version 与 renderer type 的只读 source 读取内容。
+  - Main capability 每次读取重新验证 capability session、`ui.slot.artifact-renderer` 与 `fs.read`，再由 Task Activity Service 校验 descriptor 身份、版本、类型、来源 Session 与项目根；Renderer 投影不暴露原始 URI。
+  - 本轮补齐 Desktop 的权限名称/说明/风险展示映射与中英文 catalog，并修正资源服务导入、React Error Boundary 值导入及测试 fixture 类型，使新增 SDK 权限能通过 Desktop 的穷举类型门禁。
+- 实际运行：待本轮验证完成后回填。
+- 未运行及原因：`verify:ui:*` 未运行（用户未授权实机 UI 验收）；由组件、主进程合同测试和 Desktop 类型检查覆盖本轮风险。
+- Release Notes：候选「修复：插件声明的任务产物专用预览器现在可在权限页正确显示并完成宿主注册；读取内容仍需单独的文件读取权限，撤销权限或来源失效时安全回退。」保留于此；Desktop manifest 切换到 Open Forge `0.1.0` 前不修改继承的 Vetta `v0.5.59`。
+- 剩余风险：真实第三方插件与 Electron 窗口的端到端加载未实机验收；低层测试覆盖注册、读取授权、失效回退和宿主投影。

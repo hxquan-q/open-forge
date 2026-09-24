@@ -53,7 +53,7 @@ describe("Plugin Artifact renderer capability", () => {
 	});
 
 	it("denies reads after either permission is missing or the capability session is closed", async () => {
-		const permissions = [PLUGIN_CAPABILITY_PERMISSIONS.ARTIFACT_RENDERER];
+		const permissions: string[] = [PLUGIN_CAPABILITY_PERMISSIONS.ARTIFACT_RENDERER];
 		const adapter = new PluginCapabilityAdapter(new RecordingAccessFactory(), {
 			isOfficialPlugin: () => false,
 			resolvePermissions: () => permissions,

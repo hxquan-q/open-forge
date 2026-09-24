@@ -1,7 +1,6 @@
 import { Button } from "@shared/components/ui/button";
 import type { DesktopArtifactView } from "@preload/api-types/task";
-import { useMemo, useRef, useState, useEffect } from "react";
-import type { Component, ReactNode } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { RegisteredArtifactRenderer } from "@shared/store/atoms";
 

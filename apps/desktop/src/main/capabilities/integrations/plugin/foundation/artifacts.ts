@@ -1,5 +1,5 @@
 import { FOUNDATION_ARTIFACT_CAPABILITIES, type PersistedArtifact } from "@vetta-org/capability-sdk";
-import { desktopTaskActivityService } from "../../../task-activity/task-activity-service.js";
+import { desktopTaskActivityService } from "../../../../task-activity/task-activity-service.js";
 import { PLUGIN_CAPABILITY_PERMISSIONS, type PluginCapabilitySessionAccess } from "../types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -8,6 +8,7 @@ export const PLUGIN_PERMISSION_LABEL_KEYS = {
 	"ui.slot.global": "permission.uiSlotGlobal",
 	"ui.slot.ability-detail": "permission.uiSlotAbilityDetail",
 	"ui.slot.file-preview": "permission.uiSlotFilePreview",
+	"ui.slot.artifact-renderer": "permission.uiSlotArtifactRenderer",
 	"ui.slot.activity-tab": "permission.uiSlotActivityTab",
 	"ui.slot.bottom-panel": "permission.uiSlotBottomPanel",
 	"ui.slot.input-action": "permission.uiSlotInputAction",
@@ -124,6 +125,12 @@ export const PLUGIN_PERMISSION_PRESENTATIONS = {
 		risk: "low",
 		visual: "interface",
 		uiPreview: "filePreview",
+	},
+	"ui.slot.artifact-renderer": {
+		descriptionKey: "permission.description.uiSlotArtifactRenderer",
+		group: "interface",
+		risk: "low",
+		visual: "interface",
 	},
 	"ui.slot.activity-tab": {
 		descriptionKey: "permission.description.uiSlotActivityTab",
