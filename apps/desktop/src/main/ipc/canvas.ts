@@ -11,6 +11,8 @@ import {
 	type DesktopCanvasListResult,
 	type DesktopCanvasSaveToProjectRequest,
 	type DesktopCanvasSaveToProjectResult,
+	type DesktopCanvasUpdateRequest,
+	type DesktopCanvasUpdateResult,
 } from "../../shared/canvas-ipc.js";
 import type { CanvasArtifactService, CanvasArtifactView } from "../artifacts/canvas-artifact-service.js";
 
@@ -18,8 +20,11 @@ const CHANNELS = CANVAS_CHANNELS;
 
 export type CanvasIpcHost = Pick<
 	CanvasArtifactService,
-	"listWorkspace" | "getWorkspace" | "saveToProject" | "deleteWorkspaceArtifact"
+	"listWorkspace" | "getWorkspace" | "applyUpdate" | "saveToProject" | "deleteWorkspaceArtifact"
 >;
+
+/** 用户写入没有会话上下文：中止信号由调用方给出，IPC 路径只做即时应答。 */
+const NEVER_ABORTED = new AbortController().signal;
 
 export interface RegisterCanvasIpcOptions {
 	readonly host?: CanvasIpcHost;
@@ -59,6 +64,24 @@ export function registerCanvasIpc(options: RegisterCanvasIpcOptions = {}): () =>
 			return failureFromUnknown(error);
 		}
 	});
+	ipcMain.handle(CHANNELS.UPDATE, async (_event, request: unknown): Promise<DesktopCanvasUpdateResult> => {
+		const parsed = readUpdateRequest(request);
+		if (!parsed) return invalidInput("workspaceId, artifactId, baseVersion and content are required");
+		try {
+			const outcome = await (await resolveHost()).applyUpdate({
+				workspaceId: parsed.workspaceId,
+				artifactId: parsed.artifactId,
+				baseVersion: parsed.baseVersion,
+				content: parsed.content,
+				...(parsed.title ? { title: parsed.title } : {}),
+				signal: NEVER_ABORTED,
+			});
+			if (!outcome.ok) return toFailure(outcome.error);
+			return { ok: true, descriptor: outcome.descriptor };
+		} catch (error) {
+			return failureFromUnknown(error);
+		}
+	});
 	ipcMain.handle(
 		CHANNELS.SAVE_TO_PROJECT,
 		async (_event, request: unknown): Promise<DesktopCanvasSaveToProjectResult> => {
@@ -90,6 +113,7 @@ export function registerCanvasIpc(options: RegisterCanvasIpcOptions = {}): () =>
 	return () => {
 		ipcMain.removeHandler(CHANNELS.LIST);
 		ipcMain.removeHandler(CHANNELS.GET);
+		ipcMain.removeHandler(CHANNELS.UPDATE);
 		ipcMain.removeHandler(CHANNELS.SAVE_TO_PROJECT);
 		ipcMain.removeHandler(CHANNELS.DELETE);
 	};
@@ -130,6 +154,19 @@ function readSaveRequest(value: unknown): DesktopCanvasSaveToProjectRequest | un
 	const targetPath = readRequiredString(value.targetPath);
 	if (!workspaceId || !artifactId || !targetPath) return undefined;
 	return { workspaceId, artifactId, targetPath };
+}
+
+function readUpdateRequest(value: unknown): DesktopCanvasUpdateRequest | undefined {
+	if (!isRecord(value)) return undefined;
+	const workspaceId = readRequiredString(value.workspaceId);
+	const artifactId = readRequiredString(value.artifactId);
+	// 正文允许空字符串（用户清空 artifact），所以这里只校验类型。
+	const content = typeof value.content === "string" ? value.content : undefined;
+	const baseVersion = value.baseVersion;
+	if (!workspaceId || !artifactId || content === undefined) return undefined;
+	if (typeof baseVersion !== "number" || !Number.isInteger(baseVersion) || baseVersion < 1) return undefined;
+	const title = readRequiredString(value.title);
+	return { workspaceId, artifactId, baseVersion, content, ...(title ? { title } : {}) };
 }
 
 function readDeleteRequest(value: unknown): DesktopCanvasDeleteRequest | undefined {

@@ -8,11 +8,14 @@ import type {
 	DesktopCanvasListResult,
 	DesktopCanvasSaveToProjectRequest,
 	DesktopCanvasSaveToProjectResult,
+	DesktopCanvasUpdateRequest,
+	DesktopCanvasUpdateResult,
 } from "../../shared/canvas-ipc.js";
 
 export interface DesktopCanvasApi {
 	list: (request: DesktopCanvasListRequest) => Promise<DesktopCanvasListResult>;
 	get: (request: DesktopCanvasGetRequest) => Promise<DesktopCanvasGetResult>;
+	update: (request: DesktopCanvasUpdateRequest) => Promise<DesktopCanvasUpdateResult>;
 	saveToProject: (request: DesktopCanvasSaveToProjectRequest) => Promise<DesktopCanvasSaveToProjectResult>;
 	delete: (request: DesktopCanvasDeleteRequest) => Promise<DesktopCanvasDeleteResult>;
 }
@@ -27,4 +30,6 @@ export type {
 	DesktopCanvasListResult,
 	DesktopCanvasSaveToProjectRequest,
 	DesktopCanvasSaveToProjectResult,
+	DesktopCanvasUpdateRequest,
+	DesktopCanvasUpdateResult,
 } from "../../shared/canvas-ipc.js";

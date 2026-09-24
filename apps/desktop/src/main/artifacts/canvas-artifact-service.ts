@@ -70,9 +70,29 @@ export interface CanvasArtifactView {
 	readonly externalUpdate: boolean;
 }
 
+/** 写入请求：Agent 工具路径与用户就地编辑路径共用同一组字段。 */
+export interface CanvasArtifactUpdateInput {
+	readonly workspaceId: string;
+	readonly artifactId: string;
+	readonly baseVersion: number;
+	readonly content: string;
+	readonly title?: string;
+	readonly contentType?: string;
+	/** 归属会话；省略时沿用 artifact 现有 `sourceSessionId`（用户就地编辑）。 */
+	readonly sessionId?: string;
+	readonly turnId?: string;
+	readonly signal: AbortSignal;
+}
+
+export type CanvasArtifactUpdateOutcome =
+	| { readonly ok: true; readonly descriptor: ArtifactDescriptor }
+	| { readonly ok: false; readonly error: ArtifactToolError };
+
 export class CanvasArtifactService {
 	private readonly watchers = new Map<string, () => void>();
 	private readonly suppressUntil = new Map<string, number>();
+	/** 在途的外部改动导入，按 artifact 去重（见 importExternalUpdate）。 */
+	private readonly imports = new Map<string, Promise<ArtifactDescriptor>>();
 
 	constructor(private readonly deps: CanvasArtifactServiceDeps) {}
 
@@ -200,7 +220,28 @@ export class CanvasArtifactService {
 		await this.deps.store.removeArtifact(workspaceId, artifactId);
 	}
 
+	/**
+	 * 同一次外部改动可能被 watcher 与「打开时比对」同时发现。两个导入并发写同一版本
+	 * 会撞在同一个临时文件上（rename ENOENT），也会凭空多出第二个版本；因此在途导入
+	 * 按 artifact 去重，保证「一次外部改动 = 一个新版本」。
+	 */
 	async importExternalUpdate(workspaceId: string, descriptor: ArtifactDescriptor): Promise<ArtifactDescriptor> {
+		const key = watchKey(workspaceId, descriptor.artifactId);
+		const inFlight = this.imports.get(key);
+		if (inFlight) return inFlight;
+		const task = this.importExternalUpdateOnce(workspaceId, descriptor);
+		this.imports.set(key, task);
+		try {
+			return await task;
+		} finally {
+			if (this.imports.get(key) === task) this.imports.delete(key);
+		}
+	}
+
+	private async importExternalUpdateOnce(
+		workspaceId: string,
+		descriptor: ArtifactDescriptor,
+	): Promise<ArtifactDescriptor> {
 		if (!descriptor.uri) return descriptor;
 		const path = artifactUriToPath(descriptor.uri);
 		if (!path) return descriptor;
@@ -283,19 +324,21 @@ export class CanvasArtifactService {
 		return successFromDescriptor("create", descriptor);
 	}
 
-	private async update(
-		request: CodingAgentArtifactFunctionRequest,
-		workspaceId: string,
-		signal: AbortSignal,
-	): Promise<CodingAgentArtifactFunctionResult> {
-		const input = request.input;
-		if (input.action !== "update") return artifactToolError("invalid_input", "expected update");
-		const current = await this.findDescriptor(workspaceId, input.artifactId, request.sessionId);
+	/**
+	 * 单一写入实现：Agent 工具路径与用户就地编辑（IPC）路径共用，保证单调版本递增
+	 * 与 SHA-256 乐观锁只有一份实现。归因由调用方给出——Agent 写当前会话，
+	 * 用户编辑沿用 artifact 自己的来源会话（省略 `sessionId` 即保持原归属）。
+	 */
+	async applyUpdate(input: CanvasArtifactUpdateInput): Promise<CanvasArtifactUpdateOutcome> {
+		const current = await this.findDescriptor(input.workspaceId, input.artifactId, input.sessionId);
 		if (!current) {
-			return artifactToolError("missing_file", "artifact not found", {
-				action: "update",
-				artifactId: input.artifactId,
-			});
+			return {
+				ok: false,
+				error: artifactToolError("missing_file", "artifact not found", {
+					action: "update",
+					artifactId: input.artifactId,
+				}),
+			};
 		}
 		const fileChecksum = await this.fileChecksum(current.uri);
 		const decision = decideArtifactUpdate({
@@ -304,24 +347,27 @@ export class CanvasArtifactService {
 			...(fileChecksum === undefined ? {} : { currentFileChecksum: fileChecksum }),
 		});
 		if (decision.kind === "stale_version") {
-			return artifactToolError("stale_version", "artifact version is stale", {
-				action: "update",
-				artifactId: current.artifactId,
-				baseVersion: input.baseVersion,
-				currentVersion: decision.currentVersion,
-			});
+			return {
+				ok: false,
+				error: artifactToolError("stale_version", "artifact version is stale", {
+					action: "update",
+					artifactId: current.artifactId,
+					baseVersion: input.baseVersion,
+					currentVersion: decision.currentVersion,
+				}),
+			};
 		}
 		const written = await this.deps.store.write({
-			workspaceId,
+			workspaceId: input.workspaceId,
 			artifactId: current.artifactId,
 			version: decision.nextVersion,
 			content: input.content,
 			contentType: input.contentType ?? current.contentType,
 			title: input.title ?? current.title,
 		});
-		if (signal.aborted) {
-			await this.deps.store.removeVersion(workspaceId, current.artifactId, decision.nextVersion);
-			return cancelled("update", current.artifactId);
+		if (input.signal.aborted) {
+			await this.deps.store.removeVersion(input.workspaceId, current.artifactId, decision.nextVersion);
+			return { ok: false, error: cancelled("update", current.artifactId) };
 		}
 		const now = this.deps.now();
 		const descriptor: ArtifactDescriptor = {
@@ -333,11 +379,33 @@ export class CanvasArtifactService {
 			checksum: written.checksum,
 			status: "generated",
 			updatedAt: now,
-			sourceSessionId: request.sessionId,
-			...(request.turnId ? { sourceTurnId: request.turnId } : {}),
+			...(input.sessionId ? { sourceSessionId: input.sessionId } : {}),
+			...(input.turnId ? { sourceTurnId: input.turnId } : {}),
 		};
-		await this.recordDescriptor(request.sessionId, descriptor);
-		return successFromDescriptor("update", descriptor);
+		await this.recordDescriptor(descriptor.sourceSessionId, descriptor);
+		return { ok: true, descriptor };
+	}
+
+	private async update(
+		request: CodingAgentArtifactFunctionRequest,
+		workspaceId: string,
+		signal: AbortSignal,
+	): Promise<CodingAgentArtifactFunctionResult> {
+		const input = request.input;
+		if (input.action !== "update") return artifactToolError("invalid_input", "expected update");
+		const outcome = await this.applyUpdate({
+			workspaceId,
+			artifactId: input.artifactId,
+			baseVersion: input.baseVersion,
+			content: input.content,
+			...(input.title === undefined ? {} : { title: input.title }),
+			...(input.contentType === undefined ? {} : { contentType: input.contentType }),
+			sessionId: request.sessionId,
+			...(request.turnId === undefined ? {} : { turnId: request.turnId }),
+			signal,
+		});
+		if (!outcome.ok) return outcome.error;
+		return successFromDescriptor("update", outcome.descriptor);
 	}
 
 	private async getTool(
