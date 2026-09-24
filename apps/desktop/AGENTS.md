@@ -387,5 +387,5 @@ bun run prepare:workspace:dev
 - 与 `admin` 包完全独立，可安全并行开发
 - 消费 `@vetta/runtime-core` 的事件契约，契约变更需同步适配
 - 主进程和渲染进程通过 IPC 通信，注意安全边界
-- desktop 类型检查：仓库根目录 `bun run check` **已包含** `bunx tsc --noEmit -p apps/desktop/tsconfig.json`（在 Biome + monorepo `tsgo` 之后）。
-- 单独排查时也可：`cd apps/desktop && bunx tsc --noEmit`，或在仓库根目录 `bunx tsc --noEmit -p apps/desktop/tsconfig.json`。不要在仓库根目录裸跑 `bunx tsc --noEmit`（那会用根 tsconfig，**查不到** desktop / i18n 等类型错误）。
+- desktop 类型检查：仓库根目录 `bun run check` **已包含** `bun x tsc --noEmit -p apps/desktop/tsconfig.json`（在 Biome + monorepo `tsgo` 之后）。
+- 单独排查时也可：在仓库根目录运行 `bun x tsc --noEmit -p apps/desktop/tsconfig.json`。不要在仓库根目录裸跑 `bun x tsc --noEmit`（那会用根 tsconfig，**查不到** desktop / i18n 等类型错误）。

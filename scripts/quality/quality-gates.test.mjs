@@ -410,6 +410,14 @@ describe("CI unit test coverage", () => {
 		expect(kotlinWorkflow).toContain(":androidApp:assembleDebug");
 	});
 
+	it("runs Desktop typechecking through the current Bun executable", () => {
+		const checkTypes = rootManifest.scripts["check:types"];
+		expect(checkTypes).toContain(
+			"bun x tsc --noEmit -p apps/desktop/tsconfig.json --incremental --tsBuildInfoFile node_modules/.desktop-check.tsbuildinfo",
+		);
+		expect(checkTypes).not.toContain("bunx tsc --noEmit -p apps/desktop/tsconfig.json");
+	});
+
 	it("typechecks and exports the Expo app when Mobile changes", () => {
 		expect(mobileWorkflow).toContain('      - "apps/mobile/**"');
 		expect(mobileWorkflow).toContain("bun run --cwd apps/mobile typecheck");

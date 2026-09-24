@@ -51,7 +51,7 @@ knip.config.ts                 Knip（可选）
 | `build` / `build:all` | 由 Turborepo 按 workspace manifest 构建库或完整 Desktop 依赖图；Preset 仍走专用制品流程 |
 | `build:desktop` / `build:cli` / `build:docs` / `build:preset` | 构建指定产品或制品，依赖包由任务图自动补齐 |
 | `check:lint` / `check:lint:fix` | 对显式源码根执行 Biome 只读检查 / 写回，避免扫描无关目录 |
-| `check:types` | 并行执行根 `tsgo`、CLI 显式 `tsgo`、带持久增量缓存的 desktop `tsc`、docs check 与 Expo Mobile `tsc` |
+| `check:types` | 并行执行根 `tsgo`、CLI 显式 `tsgo`、通过当前 Bun（`bun x tsc`）执行带持久增量缓存的 desktop `tsc`、docs check 与 Expo Mobile `tsc` |
 | `check:types:build-surfaces` | 使用 CLI build config 验证上游 workspace `dist/*.d.ts` 的真实消费面；要求先生成当前声明 |
 | `check:guards` | 并行执行私钥、冲突标记、包边界等全量守卫 |
 | `check:staged` | 仅 staged Biome |
