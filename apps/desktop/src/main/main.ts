@@ -39,6 +39,7 @@ import {
 	installMainDiagnostics,
 	registerLocalNetworkAccess,
 } from "./diagnostics.js";
+import { initializeDisposableTracking, reportDisposableLeaks } from "./disposable-tracking.js";
 import { FILE_PROTOCOL_PRIVILEGE, registerFileProtocolHandler } from "./file-protocol.js";
 import { fixPath } from "./fix-path.js";
 import { initAppLanguage, mainT } from "./i18n/index.js";
@@ -413,6 +414,7 @@ if (!gotSingleLock) {
 			return;
 		}
 
+		initializeDisposableTracking();
 		mainLog.info("diagnostics log", getDiagnosticsLogPath());
 		mainLog.info("ready", {
 			isPackaged: app.isPackaged,
@@ -988,6 +990,7 @@ setQuitCleanup(async () => {
 		mainLog.warn("app monitor shutdown failed", err);
 	}
 	await shutdownMainTelemetry();
+	reportDisposableLeaks();
 	mainLog.info("quit cleanup finished");
 });
 

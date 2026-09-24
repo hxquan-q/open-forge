@@ -389,3 +389,23 @@ bun run prepare:workspace:dev
 - 主进程和渲染进程通过 IPC 通信，注意安全边界
 - desktop 类型检查：仓库根目录 `bun run check` **已包含** `bun x tsc --noEmit -p apps/desktop/tsconfig.json`（在 Biome + monorepo `tsgo` 之后）。
 - 单独排查时也可：在仓库根目录运行 `bun x tsc --noEmit -p apps/desktop/tsconfig.json`。不要在仓库根目录裸跑 `bun x tsc --noEmit`（那会用根 tsconfig，**查不到** desktop / i18n 等类型错误）。
+
+## Disposable 所有权约定
+
+长期持有、需要显式释放的资源——文件/目录 watcher、IPC 与事件订阅、worker/子进程句柄、计时器、webview 挂载点——统一用 `@vetta/toolkit` 的 Disposable 工具集表达所有权，不再各自维护 `handle | null` + `clearTimeout` 的散装清理：
+
+- `DisposableStore`：一个拥有者（service、supervisor、window）持有多个资源，`dispose()` 一次性释放；释放后再 `add` 会立刻释放新资源。
+- `MutableDisposable<T>`：持有「当前这一个」资源，赋新值即释放旧值（计时器、当前 worker、当前订阅）。
+- `DisposableMap<K, V>`：键控资源表，`deleteAndDispose(key)` 先移除再释放，避免「只删引用不释放」。
+- `toDisposable(fn)` / `disposeAll(...)`：与既有回调式清理互操作。
+- 释放必须幂等；`dispose()` 抛错不得阻断其余资源的释放（`disposeAll` 会聚合失败）。
+
+调试期泄漏追踪：`VETTA_DISPOSABLE_TRACKER=1` 且非打包模式下启动，会在退出时把「被 GC 却从未 dispose」的资源及其创建栈写进诊断日志（`disposable-tracking.ts`）。默认关闭，打包构建里没有常驻开销。
+
+旧代码不要求一次性重写：新写的资源按上述形状持有，被触碰到的旧路径顺手迁移（示例：`uiohook-supervisor.ts` 的看门狗与重试计时器）。
+
+## 规则分级
+
+- **Invariant**：开发规范中的硬条款——面向用户文案一律 i18n（§7）、快捷键禁 ad-hoc keydown（§8）、IPC 边界（§6）、Jotai 原子状态管理（§3）、路由经既有 Router（§4）、主题样式分层（§5）、UI 组件合同（§1）；`日志规范` 中的「不记用户内容/凭据」类条款。
+- **Policy**：`测试`（§9）与 `开发注意事项` 的验证要求、`缓存规范`、`配置迁移`、`日志规范` 的位置/轮转约定、`UI 改动必读设计规范`（§0）。
+- **Guideline**：`技术栈`、`项目结构`、开发规范中的模式建议（不重复造轮子、领域结构）。

@@ -4,6 +4,7 @@
 // 不依赖 electron 与 node:worker_threads，宿主创建由调用方注入
 // （quickpanel-trigger.ts 注入 new Worker(...) 的适配器），便于用 fake child 做单元测试。
 
+import { type Disposable, MutableDisposable, toDisposable } from "@vetta/toolkit";
 import { getAppLogger } from "./logger.js";
 import type { UiohookHostRequest } from "./uiohook-protocol.js";
 import { isUiohookHostMessage } from "./uiohook-protocol.js";
@@ -54,8 +55,10 @@ export class UiohookSupervisor {
 	/** 递增代号：terminate 后在途 worker 的 message/exit 一律按代号失效丢弃。 */
 	private generation = 0;
 	private startAttempts = 0;
-	private watchdog: ReturnType<typeof setTimeout> | null = null;
-	private restartTimer: ReturnType<typeof setTimeout> | null = null;
+	// 看门狗与重试计时器按 Disposable 所有权持有：换新值即释放旧计时器，
+	// 不会再出现「同一时刻挂着两个 watchdog」的悬挂引用（见 apps/desktop/AGENTS.md）。
+	private readonly watchdog = new MutableDisposable<Disposable>();
+	private readonly restartTimer = new MutableDisposable<Disposable>();
 
 	private readonly forkChild: () => UiohookHostChild;
 	private readonly onKeydown: (keycode: number) => void;
@@ -168,7 +171,7 @@ export class UiohookSupervisor {
 			this.handleExit(code);
 		});
 
-		this.watchdog = setTimeout(() => {
+		const watchdogHandle = setTimeout(() => {
 			if (generation !== this.generation || this.state !== "starting") return;
 			log.warn("uiohook host start timed out (疑似 uiohook-napi 启动死锁)，kill 并重试", {
 				attempt: this.startAttempts,
@@ -179,6 +182,7 @@ export class UiohookSupervisor {
 			this.killChild(child);
 			this.scheduleRetryOrFail();
 		}, this.startTimeoutMs);
+		this.watchdog.value = toDisposable(() => clearTimeout(watchdogHandle));
 	}
 
 	private handleMessage(message: unknown): void {
@@ -226,10 +230,11 @@ export class UiohookSupervisor {
 			return;
 		}
 		this.state = "starting";
-		this.restartTimer = setTimeout(() => {
-			this.restartTimer = null;
+		const restartHandle = setTimeout(() => {
+			this.restartTimer.clear();
 			this.spawn();
 		}, this.restartDelayMs);
+		this.restartTimer.value = toDisposable(() => clearTimeout(restartHandle));
 	}
 
 	private killChild(child: UiohookHostChild): void {
@@ -241,17 +246,11 @@ export class UiohookSupervisor {
 	}
 
 	private clearWatchdog(): void {
-		if (this.watchdog !== null) {
-			clearTimeout(this.watchdog);
-			this.watchdog = null;
-		}
+		this.watchdog.clear();
 	}
 
 	private clearTimers(): void {
-		this.clearWatchdog();
-		if (this.restartTimer !== null) {
-			clearTimeout(this.restartTimer);
-			this.restartTimer = null;
-		}
+		this.watchdog.clear();
+		this.restartTimer.clear();
 	}
 }
