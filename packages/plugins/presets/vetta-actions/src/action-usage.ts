@@ -39,9 +39,12 @@ const DOMAIN_USAGE = {
 	},
 	scheduler: {
 		target: "Vetta Desktop 管理的持久定时 Agent 任务",
-		useWhen: "用户要求 Vetta 稍后或周期性执行任务，或查询、修改已有的 Vetta 定时任务。",
-		avoidWhen: "在业务代码中实现定时器或 cron、排查服务器调度、讨论计划但未要求建立自动任务。",
-		alternatives: "代码调度修改对应项目；计划咨询直接解释，不创建定时任务。",
+		useWhen:
+			"用户要求 Vetta 本身稍后或周期性执行任务（含「让 Vetta 每天汇总/提醒」一类请求），或查询、解释、修改已有的 Vetta 定时任务。",
+		avoidWhen:
+			"在业务代码中实现定时器或 cron、排查服务器调度、仅讨论计划而未要求建立自动任务；也不要用创建任务来演示「定时任务支持什么」。",
+		alternatives:
+			"代码调度修改对应项目；能力或「支持什么」类问题先用 scheduler.query help/list 后解释，不要创建或立即执行任务。",
 	},
 	models: {
 		target: "Vetta Desktop 配置的模型服务商与默认模型",

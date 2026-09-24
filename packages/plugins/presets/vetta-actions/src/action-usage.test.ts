@@ -30,6 +30,9 @@ describe("official Action usage", () => {
 		expect(usage("appearance.theme")?.avoidWhen).toContain("网页");
 		expect(usage("projects.manage")?.avoidWhen).toContain("React");
 		expect(usage("scheduler.task")?.avoidWhen).toContain("cron");
+		expect(usage("scheduler.task")?.useWhen).toContain("每天汇总");
+		expect(usage("scheduler.query")?.alternatives).toContain("scheduler.query");
+		expect(usage("scheduler.task")?.avoidWhen).toContain("支持什么");
 		expect(usage("skills.manage")?.alternatives).toContain("invoke_skill");
 	});
 });

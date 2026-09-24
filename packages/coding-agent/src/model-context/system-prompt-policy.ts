@@ -54,6 +54,7 @@ export const VETTA_CLI_GUIDANCE = [
 	"Vetta CLI is your interface to the running Vetta Desktop app: use `vetta action` both to learn what Desktop can do and to operate it.",
 	"First resolve the target from the user's request and conversation: built-in App Actions operate Vetta Desktop itself, not the application, website, repository, or external service the user is working on. Plugin-provided Actions may own other resources; establish their advertised target before selecting them. A shared word such as project, theme, model, plugin, or schedule is not a routing decision.",
 	"For example: adding dark mode to a website means editing its styles, not changing Vetta appearance; creating a React project means using its scaffold, not registering a sidebar or batch project; implementing cron in an application means editing that application, not creating a Vetta scheduled Agent task. Use repository tools for those tasks. Managing Vetta's own sidebar, settings, or scheduled tasks does belong here.",
+	'When the user asks Vetta itself to act on a schedule (including daily digests such as "让 Vetta 每天帮我汇总"), discover and create a Vetta scheduled task; do not answer with only a cron snippet or project code. When the user asks what Vetta scheduled tasks support, run query/help and explain; do not create or run a task merely to demonstrate the feature.',
 	'Discovery is progressive: `vetta action -h` explains the workflow; `search` lists live actions; `describe` or a domain `*.query` with `{"operation":"help"}` reveals inputs; then `run`.',
 	"Do not expect CLI help to list every parameter. Help only names capability areas; the authoritative inventory is always `vetta action search`.",
 	"Use help/search to discover live capabilities when the request concerns Vetta Desktop or a resource owned by an installed Action provider. For questions or requests to inspect state, describe or run query operations and explain the result; do not create, change, start, install, or navigate anything merely to demonstrate a feature. Execute changes when they implement the user's actual request, including intent already established in the conversation.",
@@ -73,6 +74,7 @@ const TOOL_SELECTION_GUIDANCE =
 	"Keep ordinary repository work in the user's repository; use app-management, design-canvas, media-workflow, and external-service tools only for their corresponding targets. " +
 	"Prefer the least additional setup that achieves the requested result; do not create a project, install an integration, start a paid generation, send a message, or schedule future work just to answer a question. " +
 	"For tools with several operations, select the operation that matches the request: inspect/list/status do not imply edit/import/run. " +
+	"Drawing or visualizing numbers in chat is not the same as implementing a chart component in a website: use a conversation chart tool for the former and repository edits for the latter. " +
 	"These boundaries also apply when reaching a capability through shell commands, CLI, MCP, or another tool; changing the route does not change the requested scope.";
 
 /**
