@@ -1,7 +1,7 @@
 ---
 id: TASK-0082
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop main/browser-automation
 requirement: REQ-0003
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/main/browser-automation/webview-picker-target.ts,
 exclusive_paths: [apps/desktop/src/main/browser-automation/webview-picker-target.ts]
 depends_on: [TASK-0075]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 ---
@@ -48,7 +48,9 @@ oversized（≥80% viewport 非交互）拒绝同时作用于物理点击的 `ev
 ## 交付记录
 
 - 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+  - `webview-picker-target.ts`：删除聚合式 `accept()`，拆为按角色区分的两条路径——物理点击目标 `clickTarget` 豁免面积拒绝（只拒 overlay 与文档根）；`walk()` 祖先链上 oversized 元素跳过并继续向上（不致死链），文档根/overlay 拒绝保持（BUG-0006 本体不动）；pass-1 与栈构建逐字未动。函数保持自包含（`.toString()` 注入合同不破）。
+  - `webview-picker-target.test.ts`：抽 `stubRect`/`stubViewportRect` 辅助；原「满屏容器空白处拒绝」期望翻转为回落选中容器；新增 6 测试（文档根拒、遮罩下按钮 pass-1、全屏无 role grid、canvas 应用、容器间空白、面积启发式只拒 walk 链）。
+- 实际运行：`webview-picker-target.test.ts` 10/10、`webview-picker-guest.test.ts` 3/3（注入合同）、Biome 通过、tsc 定向零错误（主线已复跑确认）。
+- 未运行及原因：全量 `bun run check` / desktop 全量 tsc——并行修复批 agent 正在同工作区改其他文件，全量会混入他人半成品；真实 WebView 坐标 E2E 需 `verify:ui:*` 授权（TASK-0075 已注明留给定向 Electron 验证）。
+- 剩余风险：空白点击现在回落到 oversized 容器本身，TASK-0075「不收满屏容器」的原始意图部分让位于「不静默 null」——两种场景边界已由测试锁死；面积启发式实际触发面变窄（主要防 walk 从非 clickTarget 的满屏装饰元素起步时误选），防御价值保留；同目录 `webview-agent-guest.ts` 的 6 个既有 tsc 错误非本任务文件，留待其所有权会话处理。
 - 发布说明候选（ISSUE-0007 门禁，暂存本记录）：【修复】页面元素选取器在全屏表格/画布类应用上不再失灵，空白点击也不会误选页面根。
