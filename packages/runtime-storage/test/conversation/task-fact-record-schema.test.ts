@@ -16,7 +16,7 @@ function taskLifecycleEvent(): TaskLifecycleRecordedEvent {
 			type: "task.created",
 			snapshot: {
 				schemaVersion: 1,
-				identity: { taskId: "task-1", rootSessionId: "session-1", generation: "generation-1" },
+				identity: { taskId: "task-1", rootSessionId: "session-1" },
 				status: "planning",
 				createdAt: 100,
 				updatedAt: 100,
