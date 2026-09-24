@@ -153,6 +153,7 @@ updated: 2026-09-24
   - `bun run check` 全量：包含全仓 typecheck，基线本身有未触碰文件的既有错误，跑完也只会复现上述列表；以 `tsgo`/desktop `tsc` 定向验证替代。
   - `verify:ui:*`：无用户授权。
   - 真库连通：合同测试用 fake client，真库连通为手工可选验收项。
+  - 上游 dist 级复核（npm tarball 2.14.0）：`connect_database` inputSchema 与预设 spec 完全对齐（7 个参数名 ⊆ properties、`port` 为 number、`required: ["type"]`、enum 与 17 个规范值一致）；`get_connection_status` 返回体仅 `connected/type/permissionMode/filePath|host|port|database/schemaCache`，无凭据回显；sqlite 适配器仅消费 `filePath`；`permissionMode` 缺省 `safe`（只读）；`connect_database` 成功响应不含 password。
 - 剩余风险：
   - `useAbilitiesModel.test.tsx` 深链测试的整表断言已按新合成卡片更新（`Universal Database`）——属预期行为变化。
   - `DB_HOST` 是网络库唯一表单必填（`requiredWhen notIn sqlite`）；user/password/database 保持可选以兼容无密码部署（Redis/Mongo 无鉴权），漏填由上游连接错误透出而非表单拦截。
