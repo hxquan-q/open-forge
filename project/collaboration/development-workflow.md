@@ -45,17 +45,18 @@ origin/main（稳定 / 发布分支）
 在自己的 Worktree 内完成：
 
 1. 先跑最小行为回归与常见用户流程测试，再跑 `bun run test:impact -- <Task 文件路径...>`、`bun run check:quick -- <Task 文件路径...>`。
-2. 测试通过后，逐个暂存本 Task 文件，核对后按原子变更提交；功能代码与配套测试同一提交，独立 concern 分开提交。示例：
+2. 测试通过后，逐个暂存本 Task 文件，核对后按原子变更提交；功能代码与配套测试同一提交，独立 concern 分开提交。**提交必须带 pathspec**（共享索引无锁，其他会话可能已把他们的文件暂存进来，不带 pathspec 的 commit 会整索引提交）：
 
    ```bash
    git status --short
    git add -- <本 Task 文件路径...>
    git diff --cached --check
-   git diff --cached
-   git commit -m "feat(scope): 完成 TASK-xxxx 的单一变更" -m "说明为什么需要该改动及其影响。"
+   git diff --cached --name-only   # 确认没有别人的文件混入
+   git commit -F - -- <本 Task 文件路径...>
+   git log -1 --stat               # 提交后核对文件清单
    ```
 
-   使用仓库中文多行格式；严禁 `git add .` / `git add -A`、`--no-verify`、`commit --amend`。
+   若发现他人文件被卷入提交：立即 `git reset --soft HEAD~1`，用 pathspec 重交，暂存区其余内容原样归还。使用仓库中文多行格式；严禁 `git add .` / `git add -A`、`--no-verify`、`commit --amend`。
 3. 向 Coordinator 交接 Task branch/commit、修改文件、实测命令、失败/未运行项和剩余风险；不要自行改主工作区中的 Task 状态或 Project 索引。Coordinator 在本地 `main` 集成时核实证据并更新 Task 交付记录。
 4. Worker **不 push** 到 `origin/dev` 或 `origin/main`，也不删除 Worktree。
 
