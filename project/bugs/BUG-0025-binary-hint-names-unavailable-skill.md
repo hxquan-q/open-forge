@@ -1,7 +1,7 @@
 ---
 id: BUG-0025
 type: bug
-status: fixing
+status: verifying
 priority: P1
 owner: packages/coding-agent
 source: 现场会话诊断（读 .xlsx 后模型空转）+ 代码复核
