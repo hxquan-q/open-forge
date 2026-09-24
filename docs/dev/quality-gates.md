@@ -71,7 +71,7 @@ knip.config.ts                 Knip（可选）
 
 ### 单测覆盖率（可选，不进门禁）
 
-根依赖 `@vitest/coverage-v8`（与 `vitest` 3.x 对齐）。**默认 `test` / husky / `check` / CI 均不启用**覆盖率。
+根依赖 `@vitest/coverage-v8`（与 `vitest` 4.x 对齐）。**默认 `test` / husky / `check` / CI 均不启用**覆盖率。
 
 按需在包根执行：
 
@@ -84,11 +84,11 @@ bun run --cwd apps/desktop test:coverage
 - 分母：`src/**/*.{ts,tsx}`（诚实全量；desktop 总百分比低是现状，不是配置错误）
 - `reportOnFailure: true`：单测失败仍会出报告（coding-agent 在 Windows 上仍有已知基线失败）
 - 不设全局 thresholds；不进 husky / `check` / CI；用户明确要求 UI 验收时使用 `verify:ui:*`
-- `@vitest/coverage-v8` 主版本须与根 `vitest` 对齐（当前均为 3.2.x）
+- `@vitest/coverage-v8` 主版本须与根 `vitest` 对齐（当前均为 4.1.x）
 
 ## Windows 上必须用 Node 跑 Vitest
 
-Vitest 3 默认 `pool: "forks"`。用 Bun 在 Windows 上拉起 worker 时，`import.meta.url` 经常被编成非法 `file://`（例如 `file://C:/...` 而不是 `file:///C:/...`），于是每个分片在收集测试前就报 `File URL path must be an absolute path`。换成 `threads` / `vmThreads` 会改报 `port.addListener is not a function`。
+Vitest 4 默认 `pool: "forks"`。用 Bun 在 Windows 上拉起 worker 时，`import.meta.url` 经常被编成非法 `file://`（例如 `file://C:/...` 而不是 `file:///C:/...`），于是每个分片在收集测试前就报 `File URL path must be an absolute path`。换成 `threads` / `vmThreads` 会改报 `port.addListener is not a function`。
 
 统一入口：
 
@@ -98,7 +98,7 @@ bun run vitest --run <test-file>
 bun run test:pkg <name>
 ```
 
-包装器会查找 Node 20+（可用 `VETTA_TEST_NODE` 指定 `node.exe`），再执行仓库里的 `node_modules/vitest/vitest.mjs`。不要使用 `bunx vitest`、`npx vitest` 或包脚本里的裸 `vitest`。`check-vitest-runner.mjs` 会扫描 workspace `package.json` 并拒绝这些入口。
+包装器会查找 Node 20+（可用 `VETTA_TEST_NODE` 指定 `node.exe`），再执行仓库里的 `node_modules/vitest/vitest.mjs`。在提供 `--no-experimental-webstorage` 的 Node 版本上，包装器会通过 `NODE_OPTIONS` 关闭 Node 原生 Web Storage，使 happy-dom / jsdom 能正常注入测试所需的 `localStorage`。不要使用 `bunx vitest`、`npx vitest` 或包脚本里的裸 `vitest`。`check-vitest-runner.mjs` 会扫描 workspace `package.json`，拒绝这些入口并阻止 Vitest 版本回退到安全下界以下。
 
 ## 包边界规则（`check-package-boundaries`）
 

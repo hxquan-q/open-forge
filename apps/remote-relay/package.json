@@ -15,7 +15,7 @@
 		"@vetta/remote-desktop": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "0.12.21",
+		"@cloudflare/vitest-pool-workers": "0.22.0",
 		"@cloudflare/workers-types": "^5.20260819.1",
 		"wrangler": "^4.39.0"
 	}

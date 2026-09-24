@@ -1,16 +1,15 @@
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { resolve } from "node:path";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
-	test: {
-		poolOptions: {
-			workers: {
-				isolatedStorage: false,
-				singleWorker: true,
-				wrangler: { configPath: "./wrangler.jsonc" },
-			},
-		},
-	},
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			isolatedStorage: false,
+			singleWorker: true,
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
+	],
 	resolve: {
 		alias: {
 			"@vetta/remote-control": resolve(__dirname, "../../packages/remote-control/src/index.ts"),

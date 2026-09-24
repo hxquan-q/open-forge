@@ -57,7 +57,8 @@ describe("Team member concurrency", () => {
 			const leaderRuntime = fixture.session.memberRuntime[leader]!.sessionId;
 			continueLeaderWith(fixture, leaderRuntime, "The delegated task needs attention");
 			const notification = deferred();
-			const deliver = fixture.runtime.deliverSessionContext;
+			const deliver = vi.mocked(fixture.runtime.deliverSessionContext).getMockImplementation();
+			if (!deliver) throw new Error("deliverSessionContext mock implementation is missing");
 			vi.spyOn(fixture.runtime, "deliverSessionContext").mockImplementation(async (id, records, mode) => {
 				await deliver(id, records, mode);
 				if (mode === "triggerTurn") notification.resolve();
@@ -1854,7 +1855,8 @@ describe("Team member concurrency", () => {
 	it("keeps a user message when stop races with Team admission", async () => {
 		const fixture = await createFixture();
 		const [member] = fixture.members;
-		const originalAppend = fixture.runtime.appendConversationMessage;
+		const originalAppend = vi.mocked(fixture.runtime.appendConversationMessage).getMockImplementation();
+		if (!originalAppend) throw new Error("appendConversationMessage mock implementation is missing");
 		const appendStarted = deferred();
 		const releaseAppend = deferred();
 		vi.spyOn(fixture.runtime, "appendConversationMessage").mockImplementation(async (id, record) => {
