@@ -1,7 +1,7 @@
 ---
 id: TASK-0080
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop renderer/conversation + workspace-mode
 requirement: REQ-0004
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/domains/workspace-mode/lib/session-axes.
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode/lib/session-axes.ts, apps/desktop/src/renderer/domains/conversation/components/input-bar/DefaultInputBarConnector.tsx]
 depends_on: [TASK-0077]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 ---
@@ -50,8 +50,12 @@ updated: 2026-09-24
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改（2 源文件 + 2 测试）：
+  - `session-axes.ts`：新增 `resolveSessionAxes(agentMode, capabilityProfile)` 成为徽章轴唯一派生点——axis 只读 agentMode（非 coding 即 work，同 main `normalizeDesktopAgentMode`/`LEGACY_SESSION_AGENT_MODE`）、profile 只读 capabilityProfile（非 work 即 coding，同 main `resolveDesktopSessionConfig`），两轴互不借用取值；`formatSessionAxesBadge` 去掉 `interpretation`/`profile` 参数与手动 `.replace`——i18next `t(key, values)` 是唯一插值层，只保留「无轴返回 null」裁决与模板透传。
+  - `DefaultInputBarConnector.tsx`：删除 `sessionAxesLabel` 里两处逐字相同、互相 OR 的内联三元（复制粘贴缺陷：`(work, coding)` 会话误报 coding/coding），改调 `resolveSessionAxes`，连接层只做取词与拼装。
+  - `session-axes.test.ts`：`resolveSessionAxes` 表驱动 7 例（恒等、双轴分歧、undefined/第三值/脏空串折叠，每例注明与 main 对齐点）+ badge「单轴也展示」「模板透传不做第二遍替换」2 例。
+  - `InputBarView.test.tsx`（新建）：组件级 4 例——有轴展示、无轴不渲染 testid、`(work, coding)` 两标签各自成立（含不泄漏 `{{`）、未知第三值折叠与 main 口径一致；跨包组件按仓库惯例打桩。
+- 实际运行：定向 4 文件（session-axes + InputBarView + 邻居 InputBarFooter/workspace-mode-copy）共 24/24（主线复跑）；Biome 2 个 .ts 文件零问题（2 个 .tsx 被 biome.json `files.includes` 既有策略排除）；desktop 全量 tsc 对本任务文件零命中。
+- 未运行及原因：全量 `bun run check` 混入并行任务在途文件噪声，以定向 Biome + 定向 tsc 过滤替代；发布说明按 ISSUE-0007 门禁暂存本记录。
+- 剩余风险：`(agentMode="work", capabilityProfile=undefined)` 的 ADR-0128 前旧会话，徽标工具面按常量折叠报 coding 而 main 若重算会折 work——main 对已恢复会话不重算，无运行时矛盾，helper 注释已说明；`InputBarView.test.tsx` 的文案断言固定当前 locale 措辞，locale 改名需同步；并行会话的 bun.lock react 版本漂移（react@19.3.0 vs react-dom@19.2.8）使渲染真实 theme-ui 的既有组件测试基线失败（与本任务无关，测试已按惯例打桩规避），需依赖归属会话收敛。
 - 发布说明候选（ISSUE-0007 门禁，暂存本记录）：【修复】输入栏的模式徽章如实区分解释模式与工具面，不再把两者混报为同一档。

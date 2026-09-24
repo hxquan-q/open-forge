@@ -1,5 +1,5 @@
 import { useBottomPanelPills } from "@domains/bottom-panel/hooks/useBottomPanelPills";
-import { formatSessionAxesBadge } from "@domains/workspace-mode/lib/session-axes";
+import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
 import { pathBasename, toVettaFileUrl } from "@shared/lib/utils";
 import type { InputBarContextMenuViewProps } from "@vetta-org/theme-ui/chat";
 import { memo, useMemo } from "react";
@@ -102,16 +102,15 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 	const todo = useMemo<InputBarTodoModel | null>(() => todoItems.length > 0 ? { items: todoItems, onOpenPanel: trigger.openTodoPanel } : null, [todoItems, trigger.openTodoPanel]);
 	const sessionAxesLabel = useMemo(() => {
 		const active = session.activeSession;
-		if (!active?.agentMode && !active?.capabilityProfile) return null;
-		const axis = active.agentMode === "coding" || active.capabilityProfile === "coding" ? "coding" : "work";
-		const profile = active.capabilityProfile === "coding" || active.agentMode === "coding" ? "coding" : "work";
-		const interpretation = t(`session.axes.interpretation.${axis}`);
-		const profileLabel = t(`session.axes.profile.${profile}`);
+		if (!active) return null;
+		// 轴的折叠只发生在 session-axes 的唯一派生点；这里只做 i18n 取词与拼装，
+		// 无轴会话的 null 由 formatSessionAxesBadge 统一裁决。
+		const axes = resolveSessionAxes(active.agentMode, active.capabilityProfile);
+		const interpretation = t(`session.axes.interpretation.${axes.agentMode}`);
+		const profileLabel = t(`session.axes.profile.${axes.capabilityProfile}`);
 		return formatSessionAxesBadge({
 			agentMode: active.agentMode,
 			capabilityProfile: active.capabilityProfile,
-			interpretation,
-			profile: profileLabel,
 			template: t("session.axes.badge", { interpretation, profile: profileLabel }),
 		});
 	}, [session.activeSession, t]);
