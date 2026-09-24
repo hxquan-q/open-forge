@@ -1,7 +1,7 @@
 ---
 id: BUG-0020
 type: bug
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop; packages/coding-agent
 source: user-report

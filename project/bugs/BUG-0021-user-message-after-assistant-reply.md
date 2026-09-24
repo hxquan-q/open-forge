@@ -1,7 +1,7 @@
 ---
 id: BUG-0021
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 source: user-report; screenshot; source inspection

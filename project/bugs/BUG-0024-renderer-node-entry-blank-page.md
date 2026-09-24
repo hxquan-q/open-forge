@@ -1,7 +1,7 @@
 ---
 id: BUG-0024
 type: bug
-status: verifying
+status: done
 priority: P0
 owner: apps/desktop
 source: 用户报告「页面空白」+ 本地复现 `bun run --cwd apps/desktop build:renderer` 失败
@@ -74,6 +74,7 @@ compatibility. Cannot access "node:crypto.createHash" in client code.
   「不要走 barrel，会牵出 node:crypto」的原因。
 - `useSchedulerPermissionTiersModel.ts` 改从 `@vetta/coding-agent/function-extensions` 取这两个符号。
 - 未新增 package 导出条目/未改基线，避免触碰 `check-coding-agent-architecture` 的 manifest exports 计数。
+- 提交：`72115109a`。（`a8f8bffaf`/`c16e34d99`/`6452318ee` 是引入缺陷的提交，不是修复。）
 
 ## 验证与剩余风险
 

@@ -1,7 +1,7 @@
 ---
 id: BUG-0006
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -11,7 +11,7 @@ related_tasks: [TASK-0062, TASK-0063, TASK-0075]
 related_issues: [ISSUE-0011]
 related_bugs: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -75,3 +75,4 @@ depends_on: []
 - 修复：`chooseInAppBrowserPickTarget` 拒绝 html/body 与满屏非交互容器；guest 选不中时保持 picker。
 - 测试：见 `TASK-0075`。
 - 检查：见 `TASK-0075`。
+- 提交：`a7179ab2e`（实现）+ `c67fd8191`（测试/收尾）。

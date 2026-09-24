@@ -1,7 +1,7 @@
 ---
 id: BUG-0019
 type: bug
-status: verifying
+status: done
 priority: P3
 owner: packages/theme-ui
 source: user-report; React console warning
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: [BUG-0016]
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 

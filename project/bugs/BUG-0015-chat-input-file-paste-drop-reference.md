@@ -1,7 +1,7 @@
 ---
 id: BUG-0015
 type: bug
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 source: user-report

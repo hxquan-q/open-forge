@@ -1,7 +1,7 @@
 ---
 id: BUG-0023
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 source: 本地运行 `bun run --cwd apps/desktop test src/main/runtimes/runtime-archive-installer.test.ts` 的失败输出
@@ -68,6 +68,7 @@ cd %TEMP%/t/src && tar -czf ../r.tar.gz --force-local -C . runtime
   `tarPathArgument()`（Windows 转正斜杠）与 `tarForceLocalArgs()`（仅 GNU tar 加
   `--force-local`）；解压参数由这三者组装。
 - 测试与实现共用同一组 helper 构造 fixture，避免「测试和实现各写一套参数」再次漂移。
+- 提交：`e80a16244`。
 
 ## 验证与剩余风险
 
