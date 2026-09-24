@@ -1,7 +1,7 @@
 ---
 id: BUG-0011
 type: bug
-status: in_progress
+status: done
 priority: P0
 owner: apps/desktop
 source: runReleaseChecks typecheck gate
