@@ -1,5 +1,6 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { installVettaBridge } from "./vetta-bridge.js";
 
 /**
  * Node 22 自带一个未启用的 `globalThis.localStorage`（需要 --localstorage-file 才可用），
@@ -26,6 +27,14 @@ if (typeof window !== "undefined" && typeof globalThis.localStorage === "undefin
 	if (globalThis.window !== undefined && window.localStorage === undefined) {
 		Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
 	}
+}
+
+/**
+ * 渲染层模块普遍经 useShortcuts/loadShortcutBindings 触达 window.vetta.config；
+ * 测试环境没有 preload 桥，提供一个可被各测试文件 defineProperty 整体覆盖的最小桥面。
+ */
+if (typeof window !== "undefined" && window.vetta === undefined) {
+	installVettaBridge();
 }
 
 afterEach(() => cleanup());
