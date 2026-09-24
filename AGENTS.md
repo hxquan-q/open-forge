@@ -237,7 +237,7 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 
 发布说明写在 `.github/release-notes/v<版本号>.md`，一个版本一个文件，版本号以 `apps/desktop/package.json` 的 `version` 为准。**该文件就是 GitHub Release 的正文**，用户在 Release 页面读到的就是这里写的内容，写法见 [`.github/release-notes/README.md`](.github/release-notes/README.md)。
 
-Open Forge fork 版本切换期间，发布说明只属于 Open Forge 自己的版本线，不得把 fork-only 改动追加到继承的 Vetta Release Notes。首发版本尚未由 `ISSUE-0007` 决定并写入 Desktop manifest 前，将候选发布文案保留在关联 Task 的交付记录中，保持发布阻断；切换后再归入对应 Open Forge 版本说明。已发布上游说明保持不变。
+**当前版本基线**：Open Forge Desktop 已于 commit `ff5989c6d` 切换至独立版本 **0.1.0**，不再继承上游 0.5.x 版本号。所有后续版本号必须基于 0.1.0 递增（0.1.1, 0.1.2... 或 0.2.0 等），Release Notes 统一写入 `.github/release-notes/v<版本>.md`。**是否执行发布（publish）由用户明确授权**，Agent 不得主动执行 tag 推送或触发构建流水线。
 
 ### 必须写入发布说明
 

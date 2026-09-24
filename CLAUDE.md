@@ -142,7 +142,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 
 **写入位置**：`.github/release-notes/v<版本号>.md`，一个版本一个文件。版本号以 `apps/desktop/package.json` 的 `version` 字段为准，文件不存在时直接新建。该文件会被 `desktop-release` 流水线直接用作 GitHub Release 正文，写法规范见 `.github/release-notes/README.md`。
 
-**Open Forge 首发版本切换门禁**：Release Notes 属于 Open Forge 自己的版本线。首发号尚未由 `ISSUE-0007` 决定并切入 Desktop manifest 前，不得把 fork-only 条目写入继承的 Vetta Release Notes；把候选文案保留在 Task 交付记录，并阻止发布。首发版本确定后再转入对应 Open Forge 说明；已发布上游说明保持不变。
+**当前版本基线**：Open Forge Desktop 已于 commit `ff5989c6d` 切换至独立版本 **0.1.0**，不再继承上游 0.5.x 版本号。所有后续版本号必须基于 0.1.0 递增（0.1.1, 0.1.2... 或 0.2.0 等）。**是否执行发布（publish）由用户明确授权**，Agent 不得主动执行 tag 推送或触发构建流水线。
 
 **强制触发条件**：以下任意一项完成后，必须在同一次任务内把对应条目写入当前版本的发布说明，严禁留作后续工作：
 
