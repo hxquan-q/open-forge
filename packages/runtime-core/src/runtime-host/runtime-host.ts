@@ -19,7 +19,7 @@ import type {
 import type { ConversationDocument } from "../conversation/document.js";
 import type { ConversationMessageRecord } from "../conversation/message-contract.js";
 import { runtimeError } from "../errors.js";
-import type { RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
+import type { RuntimeSessionFactEvent, RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
 import {
 	createRuntimeObservationPublisher,
 	type RuntimeObservationContext,
@@ -27,6 +27,7 @@ import {
 	runtimeObservationFailure,
 } from "../observation/index.js";
 import type { SessionExtensionEndpointToken } from "../session-extensions/contracts.js";
+import type { RuntimeSessionTaskState } from "../task/session-projection.js";
 import { RuntimeHostAgentBackendRegistry } from "./agent-backend-admission.js";
 import {
 	RUNTIME_HOST_LIFECYCLE_OBSERVATION,
@@ -124,6 +125,7 @@ export class RuntimeHost implements SessionFacade {
 			synchronizeSessionIdentity: (sessionKey, handle) => this.synchronizeSessionIdentity(sessionKey, handle),
 			sessionErrorObserver: options.sessionErrorObserver,
 			sessionCompactionObserver: options.sessionCompactionObserver,
+			inFlightReplayEventLimit: options.inFlightReplayEventLimit,
 			reportFailure: (operation, component, error, sessionId) =>
 				this.recordLifecycleFailure(operation, component, error, sessionId),
 		});
@@ -295,6 +297,14 @@ export class RuntimeHost implements SessionFacade {
 
 	async prompt(sessionId: string, request: PromptRequest): Promise<RuntimeTurnPromptOutcome> {
 		return this.sessionOperations.prompt(sessionId, request);
+	}
+
+	async promptWhenAvailable(
+		sessionId: string,
+		request: PromptRequest,
+		signal?: AbortSignal,
+	): Promise<RuntimeTurnPromptOutcome> {
+		return this.sessionOperations.promptWhenAvailable(sessionId, request, signal);
 	}
 
 	async queuePromptIfRunning(sessionId: string, request: PromptRequest): Promise<RuntimeQueuePromptIfRunningOutcome> {
@@ -568,6 +578,14 @@ export class RuntimeHost implements SessionFacade {
 
 	getMessages(sessionId: string): Message[] {
 		return this.sessionOperations.getMessages(sessionId);
+	}
+
+	getTaskState(sessionId: string): RuntimeSessionTaskState {
+		return this.sessionOperations.getTaskState(sessionId);
+	}
+
+	recordTaskFacts(sessionId: string, facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
+		return this.sessionOperations.recordTaskFacts(sessionId, facts);
 	}
 
 	getFullHistory(sessionId: string): HistoryEntry[] {

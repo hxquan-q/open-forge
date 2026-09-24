@@ -66,7 +66,8 @@ export class InteractiveSessionResidencyTracker {
 		return selectIdleSessionsToEvict(this.snapshot(runningIds), idleLimit);
 	}
 
-	private snapshot(runningIds: ReadonlySet<string>): InteractiveSessionResidency[] {
+	/** 暴露快照供调用方先做自有守卫过滤（如 Agent Team 的持久化未决工作豁免）再选择。 */
+	snapshot(runningIds: ReadonlySet<string>): InteractiveSessionResidency[] {
 		return [...this.lastUsedAt.entries()].map(([sessionId, lastUsedAt]) => ({
 			sessionId,
 			lastUsedAt,

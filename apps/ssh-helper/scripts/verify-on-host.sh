@@ -21,8 +21,8 @@ SSH="ssh $* $HOST"
 
 here=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PROTOCOL_VERSION=$(sed -n 's/^const Version = "\(.*\)"$/\1/p' "$here/internal/protocol/protocol.go")
-REMOTE_DIR="\$HOME/.cache/vetta/helper/$PROTOCOL_VERSION"
-REMOTE_BIN="$REMOTE_DIR/vetta-ssh-helper"
+REMOTE_DIR="\$HOME/.cache/openforge/helper/$PROTOCOL_VERSION"
+REMOTE_BIN="$REMOTE_DIR/openforge-ssh-helper"
 
 step() { printf '\n\033[1m== %s\033[0m\n' "$1"; }
 fail() { printf '\033[31m失败: %s\033[0m\n' "$1" >&2; exit 1; }
@@ -40,9 +40,9 @@ Darwin\ x86_64) target=darwin-amd64 ;;
 Darwin\ arm64) target=darwin-arm64 ;;
 *) fail "不支持的远端平台: ${platform}（远程项目要求 Linux 或 macOS）" ;;
 esac
-binary="$here/dist/$target/vetta-ssh-helper"
+binary="$here/dist/$target/openforge-ssh-helper"
 [ -f "$binary" ] || fail "缺少 ${binary}，先跑 make cross-build"
-echo "  用 dist/$target/vetta-ssh-helper"
+echo "  用 dist/$target/openforge-ssh-helper"
 
 step "2/7 上传并校验（与 Vetta 的部署方式一致）"
 # 走 cat 而不是 scp：Vetta 就是这么传的，远端也未必装了 scp。
@@ -127,4 +127,4 @@ step "7/7 收尾"
 printf '{"id":1,"method":"proc.kill","params":{"id":"%s"}}\n{"id":2,"method":"proc.remove","params":{"id":"%s"}}\n' "$id" "$id" | helper >/dev/null
 $SSH "rm -f $probe.sh"
 printf '\n\033[32m全部通过：这台主机可以作为 Vetta 的远程项目使用。\033[0m\n'
-echo "helper 留在 ${REMOTE_BIN}，删掉它只需 rm -rf \$HOME/.cache/vetta"
+echo "helper 留在 ${REMOTE_BIN}，删掉它只需 rm -rf \$HOME/.cache/openforge"

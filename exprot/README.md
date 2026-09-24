@@ -2,7 +2,7 @@
 
 > 目标仓库：`C:\Users\xquan\Desktop\open-forge`
 >
-> 本目录保存从 `open-vetta-main` 同步的源码分析、当前会话记忆，以及面向本地桌面 `work/coding` 双模式产品的实施规划。当前已补充性能/可靠性调研记录，并完成星轨装饰球生产路径下线；未运行真实 Provider、没有提交 Git。
+> 本目录保存从 `open-vetta-main` 同步的源码分析、当前会话记忆，以及面向本地桌面 `work/coding` 双模式产品的实施规划。当前已补充性能/可靠性调研记录，并完成星轨装饰球相关研究；未运行真实 Provider。本目录现作为历史研究归档，主动开发管理统一转到 `project/`。
 
 ## 文档索引
 
@@ -37,6 +37,10 @@
 |---|---|
 | [rebrand-plan.md](rebrand-plan.md) | 全仓品牌资产清查（105 条发现，16 项阻断）与更名施工图：分级处置、15 项待决策、功能性破坏面、Apache-2.0 合规清单、分阶段施工顺序 |
 | [development-paradigm.md](development-paradigm.md) | 二开推进范式：基于实测偏离度与上游活跃度的三选一裁决（薄壳 fork + 品牌外置 + 增量产品层）、三支柱、推进顺序与落地硬规则 |
+
+## 当前管理入口
+
+当前主动开发管理位于 [`../project/README.md`](../project/README.md)：需求、计划、Task、Issue、Bug、验证和上下文使用 `project/` 管理；本目录保留源码分析、历史调研和迁移前的详细证据，不作为第二套主动任务看板。
 
 ## 当前共识
 

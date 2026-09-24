@@ -8,7 +8,7 @@ class PairingInviteTest {
     @Test
     fun parsesInviteAndBuildsBootstrapAndResumeTargets() {
         val invite = parsePairingInvite(
-            "vetta://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz",
+            "openforge://pair?relay=https%3A%2F%2Frelay.example&pairingId=pairing_0123456789abcdefghijklmno&bootstrap=secret_0123456789abcdefghijklmnopqrstuvwxyz",
         )
         requireNotNull(invite)
         assertEquals("https://relay.example", invite.relayBaseUrl)
@@ -25,6 +25,6 @@ class PairingInviteTest {
     @Test
     fun rejectsInvalidInvite() {
         assertNull(parsePairingInvite("https://relay.example"))
-        assertNull(parsePairingInvite("vetta://pair?relay=ftp%3A%2F%2Frelay.example&pairingId=short&bootstrap=short"))
+        assertNull(parsePairingInvite("openforge://pair?relay=ftp%3A%2F%2Frelay.example&pairingId=short&bootstrap=short"))
     }
 }

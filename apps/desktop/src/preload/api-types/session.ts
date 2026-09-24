@@ -76,6 +76,8 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	 * 恢复既有会话不必传，主进程从会话目录旁挂的绑定记录读回。
 	 */
 	readonly agentProfileId?: string;
+	/** 能力 Profile（ADR-0128）：新建时按当前 WorkspaceMode 派生；只设默认，主进程折算。 */
+	readonly capabilityProfile?: "work" | "coding";
 	readonly appendSystemPrompt?: string;
 	readonly enableBackgroundTasks?: boolean;
 	readonly includeAgentSkills?: boolean;
@@ -88,8 +90,6 @@ export interface AgentModeOption {
 	description: string;
 	/** iconify class，如 icon-[solar--code-linear]。 */
 	icon: string;
-	/** 渲染层能力位：staged = 会话流按 progress 阶段折叠；inline = 工具行内联展示。 */
-	narration: "staged" | "inline";
 }
 
 /** 个性化人设选项（由 coding-agent 注册表下发，不含提示词正文）。 */

@@ -68,7 +68,9 @@ async function produceGoogleSdkStream<TApi extends Api, TOptions extends StreamO
 			});
 			reducer.consume(chunk);
 		}
-		if (!receivedProviderEvent) throw new EmptyProviderStreamError();
+		if (!receivedProviderEvent) {
+			throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
+		}
 		reducer.finish();
 		if (options?.signal?.aborted) throw new AIAbortedError();
 		if (output.stopReason === "error" || output.stopReason === "aborted") {

@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo } from "react";
 import { pageHeaderLeftSlotAtom, pageHeaderRightSlotAtom } from "@shared/store/atoms";
 import { useActiveSessionRuntimeIds } from "@shared/workspace/active-session-runtime";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
+import { useWorkspaceMode } from "@domains/workspace-mode";
 import { useBoundAgentParticipants } from "../hooks/useBoundAgentParticipants";
 import { useChatViewModel } from "../hooks/useChatViewModel";
 import { ChatHeaderActionsView } from "./chat-view/ChatHeaderActionsView";
@@ -35,6 +36,7 @@ export const DefaultChatComposer = memo(function DefaultChatComposer({
 
 export function ChatView(props: ChatViewProps): JSX.Element {
 	const { actions, model } = useChatViewModel();
+	const { mode: workspaceMode } = useWorkspaceMode(model.cwd);
 	const participants = useBoundAgentParticipants();
 	const runtimeIds = useActiveSessionRuntimeIds();
 	const setHeaderRightSlot = useSetAtom(pageHeaderRightSlotAtom);
@@ -70,6 +72,7 @@ export function ChatView(props: ChatViewProps): JSX.Element {
 		<DefaultChatView
 			messages={model.messages}
 			workspace={workspace}
+			workspaceMode={workspaceMode}
 			rootClassName={model.rootClassName}
 			exportState={model.exporting ? { title: model.exportTitle, onFinished: actions.finishExport } : undefined}
 		>

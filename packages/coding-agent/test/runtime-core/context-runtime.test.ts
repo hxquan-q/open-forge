@@ -8,6 +8,7 @@ import {
 	type UserMessage,
 } from "@vetta/ai";
 import type { HookDispatchOutcome } from "@vetta/ecosystem-adapter/hooks";
+import { createRuntimeObservationPublisher, type RuntimeObservationRecord } from "@vetta/runtime-core";
 import {
 	applyStoredEventToConversationDocument,
 	type ConversationDocument,
@@ -26,6 +27,7 @@ import {
 	type CodingAgentContextRuntimeOptions,
 } from "../../src/compaction/runtime/index.js";
 import { COMPACTION_SUMMARY_PREFIX, COMPACTION_SUMMARY_SUFFIX } from "../../src/model-context/index.js";
+import { CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION } from "../../src/runtime-contracts/context-observability.js";
 import type {
 	CodingAgentCompactionExtensionRuntime,
 	CodingAgentPinnedModelContext,
@@ -1259,6 +1261,372 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		await runtime.observe(event, new AbortController().signal);
 
 		expect(runtime.readUsage(1_000)).toEqual({ tokens: 250, contextWindow: 1_000, percent: 25 });
+	});
+
+	it("suppresses repeated threshold triggers during the failure cooldown and re-arms afterwards", async () => {
+		let now = 1_000;
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 90, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const observations: RuntimeSessionObservationEvent[] = [];
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: {
+				record: (record) => {
+					records.push(record);
+				},
+			},
+		});
+		const generateCompaction = vi.fn(async (): Promise<CompactionResult> => {
+			throw new Error("provider unavailable");
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => ({
+				...compactingSettings(),
+				minIntervalMs: 1_000,
+				failureCooldownMs: 2_000,
+				hysteresisTokens: 8,
+			}),
+			generateCompaction,
+			now: () => now,
+			observationPublisher: publisher,
+		});
+		const signal = new AbortController().signal;
+		const makeInput = () => ({
+			...preparationInput(document, history, history, observations),
+			reason: "model_call" as const,
+		});
+
+		const first = await runtime.prepare(makeInput(), signal);
+		expect(first.compaction).toBeUndefined();
+		expect(generateCompaction).toHaveBeenCalledOnce();
+		expect(observations).toMatchObject([
+			{ type: "compaction.start", reason: "threshold" },
+			{ type: "compaction.end", success: false, reason: "threshold" },
+		]);
+
+		// 连续阈值触发：冷却期内不再发起第二次摘要，也不重复 compaction.start/end 事件
+		const suppressed = await runtime.prepare(makeInput(), signal);
+		expect(suppressed.compaction).toBeUndefined();
+		expect(generateCompaction).toHaveBeenCalledOnce();
+		expect(observations.filter((event) => event.type === "compaction.start")).toHaveLength(1);
+		expect(records).toContainEqual(
+			expect.objectContaining({
+				token: CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION,
+				payload: expect.objectContaining({ phase: "suppressed", reason: "cooldown", trigger: "threshold" }),
+			}),
+		);
+
+		// 滞回带：冷却期内水位真实增长超过 hysteresisTokens → 允许重试
+		const grown = [...history, userMessage("grow".repeat(20), 4)] satisfies Message[];
+		const escaped = await runtime.prepare(
+			{ ...preparationInput(document, grown, grown, observations), reason: "model_call" as const },
+			signal,
+		);
+		expect(generateCompaction).toHaveBeenCalledTimes(2);
+		expect(escaped.compaction).toBeUndefined();
+
+		// 冷却结束 → 正常重试
+		now += 2_001;
+		await runtime.prepare(makeInput(), signal);
+		expect(generateCompaction).toHaveBeenCalledTimes(3);
+	});
+
+	it("coalesces a concurrent threshold trigger while an automatic compaction is in flight", async () => {
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 90, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: {
+				record: (record) => {
+					records.push(record);
+				},
+			},
+		});
+		let releaseGeneration: (() => void) | undefined;
+		let notifyEntered: (() => void) | undefined;
+		const entered = new Promise<void>((resolve) => {
+			notifyEntered = resolve;
+		});
+		const generateCompaction = vi.fn(
+			(preparation: CompactionPreparation): Promise<CompactionResult> =>
+				new Promise((resolve) => {
+					notifyEntered?.();
+					releaseGeneration = () =>
+						resolve({
+							summary: "summary",
+							firstKeptEntryId: preparation.firstKeptEntryId,
+							tokensBefore: preparation.tokensBefore,
+						});
+				}),
+		);
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction,
+			observationPublisher: publisher,
+		});
+		const signal = new AbortController().signal;
+		const input = {
+			...preparationInput(document, history, history, []),
+			reason: "model_call" as const,
+		};
+
+		const first = runtime.prepare(input, signal);
+		await entered;
+		const second = await runtime.prepare(input, signal);
+
+		// 第二个并发触发立即返回、不等待也不重复发起摘要
+		expect(second.compaction).toBeUndefined();
+		expect(generateCompaction).toHaveBeenCalledOnce();
+		expect(
+			records.some(
+				(record) =>
+					record.token === CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION &&
+					(record.payload as { phase?: string; reason?: string } | undefined)?.phase === "suppressed" &&
+					(record.payload as { phase?: string; reason?: string } | undefined)?.reason === "in_flight",
+			),
+		).toBe(true);
+
+		releaseGeneration?.();
+		const firstResult = await first;
+		expect(firstResult.compaction).toBeDefined();
+		expect(generateCompaction).toHaveBeenCalledOnce();
+	});
+
+	it("marks an aborted compaction as cancelled and releases the in-flight slot", async () => {
+		let now = 0;
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 90, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const observations: RuntimeSessionObservationEvent[] = [];
+		const records: RuntimeObservationRecord[] = [];
+		let resolveStarted: (() => void) | undefined;
+		const started = new Promise<void>((resolve) => {
+			resolveStarted = resolve;
+		});
+		const generateCompaction = vi
+			.fn()
+			.mockImplementationOnce(
+				(_p: CompactionPreparation, _m: Model<Api>, _k: string, _i: string | undefined, signal: AbortSignal) =>
+					new Promise<CompactionResult>((_resolve, reject) => {
+						resolveStarted?.();
+						if (signal.aborted) {
+							reject(new Error("aborted"));
+							return;
+						}
+						signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+					}),
+			)
+			.mockRejectedValue(new Error("provider unavailable"));
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => ({ ...compactingSettings(), failureCooldownMs: 2_000 }),
+			generateCompaction,
+			now: () => now,
+			observationPublisher: createRuntimeObservationPublisher({
+				port: {
+					record: (record) => {
+						records.push(record);
+					},
+				},
+			}),
+		});
+		const controller = new AbortController();
+		const makeInput = () => ({
+			...preparationInput(document, history, history, observations),
+			reason: "model_call" as const,
+		});
+
+		const pending = runtime.prepare(makeInput(), controller.signal);
+		await started;
+		controller.abort();
+		const cancelled = await pending;
+
+		expect(cancelled.compaction).toBeUndefined();
+		expect(
+			observations.some(
+				(event) => event.type === "compaction.end" && event.success === false && event.cancelled === true,
+			),
+		).toBe(true);
+
+		// 在途槽已释放：后续触发进入冷却抑制而不是卡在 in_flight
+		const suppressed = await runtime.prepare(makeInput(), new AbortController().signal);
+		expect(suppressed.compaction).toBeUndefined();
+		expect(
+			records.some(
+				(record) =>
+					record.payload &&
+					typeof record.payload === "object" &&
+					(record.payload as { phase?: string; reason?: string }).phase === "suppressed" &&
+					(record.payload as { phase?: string; reason?: string }).reason === "cooldown",
+			),
+		).toBe(true);
+		expect(generateCompaction).toHaveBeenCalledOnce();
+
+		now += 2_001;
+		await runtime.prepare(makeInput(), new AbortController().signal);
+		expect(generateCompaction).toHaveBeenCalledTimes(2);
+	});
+
+	it("starts cleanly on a fresh runtime after the previous one was abandoned mid-attempt", async () => {
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 90, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const signal = new AbortController().signal;
+		const makeInput = () => ({
+			...preparationInput(document, history, history, []),
+			reason: "model_call" as const,
+		});
+
+		// 旧 runtime 的压缩尝试被「进程重启」遗弃：Promise 永不结算
+		const staleRuntime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction: () => new Promise<CompactionResult>(() => {}),
+		});
+		void staleRuntime.prepare(makeInput(), signal);
+		staleRuntime.dispose();
+
+		const generateCompaction = vi.fn(
+			async (preparation: CompactionPreparation): Promise<CompactionResult> => ({
+				summary: "summary",
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+		);
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction,
+		});
+
+		const prepared = await runtime.prepare(makeInput(), signal);
+		expect(prepared.compaction).toBeDefined();
+		expect(generateCompaction).toHaveBeenCalledOnce();
+	});
+
+	it("uses the configured compaction model for automatic, manual and prefired generation", async () => {
+		const compactionModel: Model<Api> = { ...MODEL, id: "compactor", provider: "compact-provider" };
+		const resolveApiKey = vi.fn(async (model: Model<Api>) => `key-${model.id}`);
+		const generateCompaction = vi.fn(
+			async (
+				preparation: CompactionPreparation,
+				_model: Model<Api>,
+				_apiKey: string,
+			): Promise<CompactionResult> => ({
+				summary: "summary",
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+		);
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey,
+			resolveSettings: compactingSettings,
+			generateCompaction,
+			resolveCompactionModel: () => compactionModel,
+		});
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 90, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const signal = new AbortController().signal;
+
+		await runtime.prepare(
+			{
+				...preparationInput(documentFromMessages(history), history, history, []),
+				reason: "model_call",
+				modelBinding: { model: MODEL, credential: { resolve: () => "turn-key" } },
+			},
+			signal,
+		);
+
+		expect(generateCompaction).toHaveBeenCalledOnce();
+		expect(generateCompaction.mock.calls[0]?.[1]).toEqual(compactionModel);
+		expect(generateCompaction.mock.calls[0]?.[2]).toBe("key-compactor");
+		expect(resolveApiKey).toHaveBeenCalledWith(compactionModel);
+
+		await runtime.compactManual(
+			{
+				sessionId: "session-1",
+				document: documentFromMessages(history),
+				modelBinding: { model: MODEL, credential: { resolve: () => "turn-key" } },
+			},
+			signal,
+		);
+		expect(generateCompaction).toHaveBeenCalledTimes(2);
+		expect(generateCompaction.mock.calls[1]?.[1]).toEqual(compactionModel);
+		expect(generateCompaction.mock.calls[1]?.[2]).toBe("key-compactor");
+	});
+
+	it("reuses an in-flight prefire generation instead of starting a second summarization", async () => {
+		// 水位落在 [threshold-10%, threshold) 预热带内，触发后台 prefire
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 75, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const signal = new AbortController().signal;
+		let resolvePrefire: (() => void) | undefined;
+		const generateCompaction = vi.fn(
+			(preparation: CompactionPreparation): Promise<CompactionResult> =>
+				new Promise((done) => {
+					resolvePrefire = () =>
+						done({
+							summary: "prefired",
+							firstKeptEntryId: preparation.firstKeptEntryId,
+							tokensBefore: preparation.tokensBefore,
+						});
+				}),
+		);
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction,
+		});
+
+		// 第一次检查点：低于阈值但进入预热带 → 后台 prefire 启动
+		const below = await runtime.prepare(
+			{ ...preparationInput(document, history, history, []), reason: "model_call" },
+			signal,
+		);
+		expect(below.compaction).toBeUndefined();
+		await vi.waitFor(() => expect(generateCompaction).toHaveBeenCalledOnce());
+
+		// 第二次检查点：越过阈值 → settle 等待在途 prefire 并直接复用其结果
+		const grown = [...history, userMessage("grow".repeat(40), 4)] satisfies Message[];
+		const triggered = runtime.prepare(
+			{ ...preparationInput(document, grown, grown, []), reason: "model_call" },
+			signal,
+		);
+		resolvePrefire?.();
+		const result = await triggered;
+
+		expect(result.compaction).toMatchObject({ summary: "prefired" });
+		expect(generateCompaction).toHaveBeenCalledOnce();
 	});
 });
 

@@ -35,6 +35,7 @@ import { registerSettingsIpc } from "./settings.js";
 import { registerSkillsIpc } from "./skills.js";
 import { registerSpeechInputIpc } from "./speech-input.js";
 import { registerSshIpc } from "./ssh.js";
+import { registerTaskIpc } from "./task.js";
 import { registerTerminalIpc } from "./terminal.js";
 import { registerThemesIpc } from "./themes.js";
 import { registerUpdaterIpc } from "./updater.js";
@@ -75,6 +76,7 @@ interface IpcTeardown {
 	teardownTerminal: () => void;
 	teardownConversationTags: () => void;
 	teardownQuickPanel: () => void;
+	teardownTask: () => void;
 	teardownAppshot: () => void;
 	teardownDiagnostics: () => void;
 	teardownOnboarding: () => void;
@@ -124,6 +126,7 @@ export function registerAllIpc(
 		teardownTerminal: registerTerminalIpc(),
 		teardownConversationTags: registerConversationTagsIpc(webContents),
 		teardownQuickPanel: registerQuickPanelIpc(),
+		teardownTask: registerTaskIpc(webContents),
 		teardownAppshot: registerAppshotIpc(),
 		teardownDiagnostics: registerDiagnosticsIpc(),
 		teardownOnboarding: registerOnboardingIpc(),
@@ -166,6 +169,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownTerminal();
 	teardown.teardownConversationTags();
 	teardown.teardownQuickPanel();
+	teardown.teardownTask();
 	teardown.teardownAppshot();
 	teardown.teardownDiagnostics();
 	teardown.teardownOnboarding();

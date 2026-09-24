@@ -3,8 +3,11 @@ import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import AdmZip from "adm-zip";
 import { app } from "electron";
+import { getPerfMonitorReport } from "./app-monitor/perf-monitor-service.js";
 import { logRingBuffer } from "./logger/log-ring-buffer.js";
-import { APP_LOG_TYPE_LIST, getAppLogBaseDir } from "./logger.js";
+import { APP_LOG_TYPE_LIST, getAppLogBaseDir, getAppLogger } from "./logger.js";
+
+const diagnosticsLog = getAppLogger("diagnostics");
 
 // 单个诊断包内日志文件的总字节预算：足够带出最近上下文，又不至于产出超大 zip。
 const MAX_LOG_BYTES = 20 * 1024 * 1024;
@@ -24,6 +27,7 @@ export async function buildDiagnosticsBundle(): Promise<DiagnosticsBundleResult>
 	addRecentLogs(zip);
 	addRingBuffer(zip);
 	addSystemInfo(zip);
+	addPerfSnapshot(zip);
 
 	const zipPath = join(app.getPath("temp"), `vetta-diagnostics-${nowStamp()}.zip`);
 	await zip.writeZipPromise(zipPath);
@@ -80,6 +84,15 @@ function addSystemInfo(zip: AdmZip): void {
 		exportedAt: new Date().toISOString(),
 	};
 	zip.addFile("system-info.json", Buffer.from(JSON.stringify(info, null, 2), "utf-8"));
+}
+
+// 性能快照只含数字与稳定 id，随诊断包带出 Turn/排队/压缩/进程指标，供线上回归定位。
+function addPerfSnapshot(zip: AdmZip): void {
+	try {
+		zip.addFile("perf-snapshot.json", Buffer.from(JSON.stringify(getPerfMonitorReport(), null, 2), "utf-8"));
+	} catch (error) {
+		diagnosticsLog.warn("perf snapshot collection failed", error);
+	}
 }
 
 function nowStamp(): string {

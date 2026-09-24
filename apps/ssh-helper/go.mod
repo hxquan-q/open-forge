@@ -1,4 +1,4 @@
-module vetta-ssh-helper
+module openforge-ssh-helper
 
 go 1.25.3
 

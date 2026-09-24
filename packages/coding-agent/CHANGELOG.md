@@ -2,6 +2,8 @@
 
 ### Added
 
+- 自动上下文压缩新增背压闸门（会话内内存态）：同一时刻至多一次自动压缩尝试在途，未成功后有 `failureCooldownMs` 冷却、成功后遵守 `minIntervalMs`，冷却期内水位较基线增长超过 `hysteresisTokens` 允许提前重试，overflow 触发可绕过冷却但不绕过在途锁；抑制事件经 `coding-agent.context/compaction-backpressure` 观察通道上报。压缩模型可经 `resolveCompactionModel` 独立配置，自动/手动/Prefire 共用且凭证独立解析；阈值触发会收敛等待指纹匹配的在途 Prefire 而不是并发第二次摘要。
+
 - Runtime Session 新增可选的 `automaticRetry` 策略输入；由外层持久任务调度器负责重试的宿主可以关闭 Runtime Host 内层自动重试，默认行为保持开启。
 
 - Plugin Runtime 的 Skill 路径贡献可携带独立展示策略，宿主能够保留运行时 Skill 的同时控制各产品入口的呈现（ADR-0110）。
@@ -25,6 +27,9 @@
 - 本地、远程和动态模型配置保留推理档位列表及默认值；SDK / RPC 档位选择使用模型声明，启动时不再按旧模型名称白名单降低 `xhigh`。
 
 - 自动标题和下一问建议现在沿用所属 Conversation 的 `sessionId`，避免同一用户 Turn 的辅助模型请求被本地多账号网关路由到另一份凭据。
+
+- 子代理 Child Handle 把子 Session 的终态失败（非 assistant 通道 `error`）与 `aborted` 相位投影为带 `reason`/`errorMessage`/`errorCode` 的 `agent_end`，`prompt()` 对 `status:"failed"` 回执抛错；成员 Turn 失败不再被 Coordinator 误记为完成。
+- `CodingAgentSubagentRuntime` 新增可选 `startDeadlineMs`/`settleDeadlineMs` 透传协调器收敛宽限。
 
 - Session execution owner 尚未完成索引或正在回滚时，全局工具 Provider 不再贡献 `shell`、`bash`、`read`、`write`、`edit` 等 Session 工具，避免与 Session-local 工具产生重复定义。
 

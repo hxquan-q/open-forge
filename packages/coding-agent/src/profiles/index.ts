@@ -1,4 +1,11 @@
 export {
+	applyAgentProfileDefaults,
+	CODING_AGENT_PROFILES,
+	type CodingAgentAgentProfile,
+	type CodingAgentBuiltInProfileId,
+	resolveAgentProfile,
+} from "./agent-profiles.js";
+export {
 	ALL_SCENARIOS,
 	type ConversationScenario,
 	DEFAULT_SCENARIO,

@@ -86,6 +86,11 @@ export class TeamTaskControlService {
 		};
 	}
 
+	/**
+	 * 仅覆盖内存态在途工作（executions / scheduledRetries）；持久化的 waiting /
+	 * attention-required 不在其中，那类未决工作由 TeamTurnCoordinator.
+	 * hasDurableUnsettledWork 判定。
+	 */
 	hasPending(teamSessionId: string): boolean {
 		return (
 			[...this.executions.values()].some((execution) => execution.teamSessionId === teamSessionId) ||

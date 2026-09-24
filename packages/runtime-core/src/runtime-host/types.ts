@@ -27,6 +27,7 @@ import type {
 	RuntimeSessionModelView,
 	RuntimeSessionQueueController,
 	RuntimeSessionStateReader,
+	RuntimeSessionTaskView,
 	RuntimeSessionToolController,
 	RuntimeSessionTurnControl,
 	RuntimeSessionWorkspaceView,
@@ -62,6 +63,7 @@ export interface RuntimeHostSessionRecord {
 	turnControl: RuntimeSessionTurnControl;
 	eventStream: RuntimeSessionEventStream;
 	stateReader: RuntimeSessionStateReader;
+	taskView: RuntimeSessionTaskView | undefined;
 	/** 可选能力（ADR-0060）：backend 不提供时相应队列/落盘功能静默降级。 */
 	queueController: RuntimeSessionQueueController | undefined;
 	metadataController: RuntimeSessionMetadataController | undefined;
@@ -87,12 +89,18 @@ export interface RuntimeHostSessionRecord {
  * They are cleared when the corresponding assistant message is durably appended
  * (`message.final` in the current compatibility event plane). `isActive` flips
  * on at `agent_start` and off at `agent_end`.
+ *
+ * Retention is bounded: when the stream exceeds the relay's replay event limit,
+ * the oldest events are dropped and only the tail is replayed. Recovery truth
+ * stays in the conversation log; `droppedEventCount` records how much of the
+ * tail-only replay was discarded (reset on every buffer clear).
  */
 export interface InFlightBuffer {
 	turnStartedAt: number;
 	events: SessionEvent[];
 	isActive: boolean;
 	terminalReason: RunningChangedReason | undefined;
+	droppedEventCount: number;
 }
 
 /**
@@ -174,6 +182,12 @@ export interface RuntimeHostOptions {
 	sessionCompactionObserver?: (
 		event: Extract<SessionEvent, { readonly type: "compaction.start" | "compaction.end" }>,
 	) => void;
+	/**
+	 * 单条助手消息流期间 in-flight 回放缓冲的事件数上限（正整数）。缺省
+	 * 4096：超限丢弃最旧事件、重放只保证尾部；恢复事实仍在 Conversation
+	 * JSONL 与 `message.final`，不因上限丢失。
+	 */
+	inFlightReplayEventLimit?: number;
 	getDefaultExecutionMode?: () => SessionExecutionMode | Promise<SessionExecutionMode>;
 	sandboxHostPath?: string;
 	linuxBubblewrapPath?: string;

@@ -25,6 +25,7 @@ import type {
 } from "../runtime-execution-observation.js";
 import type { ContextCompactionEligibility } from "../session-context-state.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
+import type { ApprovalDecision, ApprovalRequest, ArtifactDescriptor, RuntimeTaskEvent } from "../task/contracts.js";
 
 export type AgentSessionState = "idle" | "running" | "cancelling" | "closing" | "recovery_required" | "closed";
 
@@ -810,6 +811,49 @@ export interface TurnContinuedEvent {
 	readonly timestamp: number;
 }
 
+/**
+ * Session 级 Task 生命周期持久化事实。Task 事件只引用 Turn，从不开启或关闭 Turn，
+ * 因此允许出现在活动 Turn 内外；重放时由 `rebuildRuntimeTaskSnapshot` 收敛为快照。
+ */
+export interface TaskLifecycleRecordedEvent {
+	readonly type: "task.lifecycle.recorded";
+	readonly sessionId: string;
+	readonly turnId?: never;
+	readonly task: RuntimeTaskEvent;
+	readonly timestamp: number;
+}
+
+/** Session 级 Artifact descriptor 持久化事实；文件内容才是事实源，descriptor 可重建。 */
+export interface ArtifactDescriptorRecordedEvent {
+	readonly type: "artifact.descriptor.recorded";
+	readonly sessionId: string;
+	readonly turnId?: never;
+	readonly artifact: ArtifactDescriptor;
+	readonly timestamp: number;
+}
+
+/**
+ * Session 级 Approval 事实：一次高风险动作的审批请求（绑定 session/turn/tool 与
+ * 脱敏摘要）。请求先于阻塞落盘；决策事后补记，重启后由投影恢复并重新校验有效性。
+ */
+export interface ApprovalRequestedRecordedEvent {
+	readonly type: "approval.requested.recorded";
+	readonly sessionId: string;
+	readonly turnId?: string;
+	readonly request: ApprovalRequest;
+	readonly timestamp: number;
+}
+
+/** Approval 决策事实；`edit` 决策不视作批准，随后的新请求会有新的 approvalId。 */
+export interface ApprovalDecisionRecordedEvent {
+	readonly type: "approval.decision.recorded";
+	readonly sessionId: string;
+	readonly turnId?: string;
+	readonly approvalId: string;
+	readonly decision: ApprovalDecision;
+	readonly timestamp: number;
+}
+
 export type StoredSessionEvent =
 	| TurnStartedEvent
 	| TurnContinuedEvent
@@ -820,7 +864,18 @@ export type StoredSessionEvent =
 	| TurnCompletedEvent
 	| TurnCancelledEvent
 	| TurnFailedEvent
-	| TurnTransferredEvent;
+	| TurnTransferredEvent
+	| TaskLifecycleRecordedEvent
+	| ArtifactDescriptorRecordedEvent
+	| ApprovalRequestedRecordedEvent
+	| ApprovalDecisionRecordedEvent;
+
+/** 宿主可显式提交的 Session 级事实集合（Task/Artifact/Approval）。 */
+export type RuntimeSessionFactEvent =
+	| TaskLifecycleRecordedEvent
+	| ArtifactDescriptorRecordedEvent
+	| ApprovalRequestedRecordedEvent
+	| ApprovalDecisionRecordedEvent;
 
 export type TurnPipelineStage =
 	| "admission"

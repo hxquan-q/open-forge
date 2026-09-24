@@ -73,7 +73,7 @@ const artifactsRoot = process.env.VETTA_MARKETPLACE_CANDIDATE_ARTIFACTS;
 const sourceArchive = new AdmZip();
 for (const path of entries) {
 	sourceArchive.addFile(
-		`vetta-official-marketplace-candidate/${path.replaceAll("\\", "/")}`,
+		`open-forge-marketplace-candidate/${path.replaceAll("\\", "/")}`,
 		readFileSync(join(candidateRoot!, path)),
 	);
 }

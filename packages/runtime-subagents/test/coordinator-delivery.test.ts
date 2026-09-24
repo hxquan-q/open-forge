@@ -39,6 +39,7 @@ describe("SubagentCoordinator delivery", () => {
 		const fixture = createFixture({ onNotify, notificationDelayMs: 5 });
 		fixture.coordinator.spawnMany([request("first"), request("second")]);
 		await waitUntil(() => fixture.children.length === 2);
+		await waitUntil(() => fixture.children.every(({ prompts }) => prompts.length === 1));
 
 		fixture.children[1]?.complete("second result");
 		fixture.children[0]?.complete("first result");

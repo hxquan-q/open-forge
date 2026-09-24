@@ -7,8 +7,8 @@ export const OPEN_SOURCE_BUILD_DEFAULTS = Object.freeze({
 	VETTA_BUILD_ENV: "opensource",
 	VETTA_CLOUD_ENABLED: "false",
 	VETTA_UPDATE_PROVIDER: "github",
-	VETTA_UPDATE_GITHUB_OWNER: "openvetta",
-	VETTA_UPDATE_GITHUB_REPO: "open-vetta",
+	VETTA_UPDATE_GITHUB_OWNER: "hxquan-q",
+	VETTA_UPDATE_GITHUB_REPO: "open-forge",
 });
 
 const SUPPORTED_PLATFORM_TAGS = new Set([
@@ -90,8 +90,8 @@ function validateMarketplaceRepository(env, errors) {
 		}
 	}
 
-	const ref = readValue(env, "VETTA_OPEN_MARKETPLACE_REF") ?? "main";
-	if (!MARKETPLACE_REF_PATTERN.test(ref) || ref.includes("..") || ref.startsWith("/") || ref.endsWith("/")) {
+	const ref = readValue(env, "VETTA_OPEN_MARKETPLACE_REF");
+	if (ref && (!MARKETPLACE_REF_PATTERN.test(ref) || ref.includes("..") || ref.startsWith("/") || ref.endsWith("/"))) {
 		errors.push("VETTA_OPEN_MARKETPLACE_REF is invalid");
 	}
 	if (readValue(env, "VETTA_OPEN_MARKETPLACE_ARCHIVE_URL")) {

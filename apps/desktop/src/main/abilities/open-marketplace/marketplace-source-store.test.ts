@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MarketplaceSource } from "../../../preload/api-types/abilities";
 import { MarketplaceSourceStore } from "./marketplace-source-store";
-import { OFFICIAL_MARKETPLACE_REF, OFFICIAL_MARKETPLACE_REPOSITORY } from "./official-marketplace-source";
+import {
+	OFFICIAL_MARKETPLACE_NAME,
+	OFFICIAL_MARKETPLACE_REF,
+	OFFICIAL_MARKETPLACE_REPOSITORY,
+} from "./official-marketplace-source";
 
 const temporaryRoots: string[] = [];
 const originalRepository = process.env.VETTA_OPEN_MARKETPLACE_REPOSITORY;
@@ -108,12 +112,14 @@ describe("MarketplaceSourceStore", () => {
 		"registers the Vetta official gh-pages distribution without configuration with cloud=%s",
 		async (cloud) => {
 			vi.stubEnv("VETTA_CLOUD_ENABLED", cloud);
+			vi.stubEnv("VETTA_OPEN_MARKETPLACE_REF", undefined);
+			vi.stubEnv("VETTA_OPEN_MARKETPLACE_ARCHIVE_URL", undefined);
 			for (const repository of [undefined, "", "   "]) {
 				vi.stubEnv("VETTA_OPEN_MARKETPLACE_REPOSITORY", repository);
 				expect(new MarketplaceSourceStore({ filePath: await temporaryFile() }).list()).toMatchObject([
 					{
 						id: "vetta-official",
-						name: "Vetta Official",
+						name: OFFICIAL_MARKETPLACE_NAME,
 						repository: OFFICIAL_MARKETPLACE_REPOSITORY,
 						ref: OFFICIAL_MARKETPLACE_REF,
 						archiveUrl: `${OFFICIAL_MARKETPLACE_REPOSITORY}/archive/refs/heads/${OFFICIAL_MARKETPLACE_REF}.zip`,
@@ -135,6 +141,45 @@ describe("MarketplaceSourceStore", () => {
 				archiveUrl: "https://github.com/example/community-market/archive/refs/heads/main.zip",
 			},
 		]);
+	});
+
+	it("migrates the persisted built-in source from main to the official gh-pages distribution", async () => {
+		vi.stubEnv("VETTA_OPEN_MARKETPLACE_REPOSITORY", undefined);
+		vi.stubEnv("VETTA_OPEN_MARKETPLACE_REF", undefined);
+		vi.stubEnv("VETTA_OPEN_MARKETPLACE_ARCHIVE_URL", undefined);
+		const filePath = await temporaryFile();
+		await writeFile(
+			filePath,
+			JSON.stringify({
+				version: 1,
+				sources: [
+					{
+						...builtinSource(),
+						id: "vetta-official",
+						name: OFFICIAL_MARKETPLACE_NAME,
+						repository: OFFICIAL_MARKETPLACE_REPOSITORY,
+						archiveUrl: `${OFFICIAL_MARKETPLACE_REPOSITORY}/archive/refs/heads/main.zip`,
+						ref: "main",
+						autoUpdate: false,
+					},
+				],
+			}),
+		);
+
+		const store = new MarketplaceSourceStore({ filePath });
+
+		expect(store.list()).toMatchObject([
+			{
+				id: "vetta-official",
+				repository: OFFICIAL_MARKETPLACE_REPOSITORY,
+				ref: OFFICIAL_MARKETPLACE_REF,
+				archiveUrl: `${OFFICIAL_MARKETPLACE_REPOSITORY}/archive/refs/heads/${OFFICIAL_MARKETPLACE_REF}.zip`,
+				autoUpdate: false,
+			},
+		]);
+		expect(JSON.parse(await readFile(filePath, "utf-8"))).toMatchObject({
+			sources: [{ id: "vetta-official", ref: OFFICIAL_MARKETPLACE_REF, autoUpdate: false }],
+		});
 	});
 
 	it("keeps persisted sources when a later distribution registers the official default", async () => {

@@ -88,9 +88,9 @@ async function resolveCandidate(baseUrl, expectedVersion) {
 }
 
 function baselineArtifactName(buildVersion) {
-	if (platform === "win32") return `Vetta-${buildVersion}-win-x64.exe`;
-	if (platform === "linux") return `Vetta-${buildVersion}.AppImage`;
-	return architecture === "arm64" ? `Vetta-${buildVersion}-arm64-mac.zip` : `Vetta-${buildVersion}-mac.zip`;
+	if (platform === "win32") return `Open Forge-${buildVersion}-win-x64.exe`;
+	if (platform === "linux") return `Open Forge-${buildVersion}.AppImage`;
+	return architecture === "arm64" ? `Open Forge-${buildVersion}-arm64-mac.zip` : `Open Forge-${buildVersion}-mac.zip`;
 }
 
 async function installBaseline(installerPath, installRoot) {
@@ -107,7 +107,7 @@ async function installBaseline(installerPath, installRoot) {
 			child.once("error", reject);
 			child.once("exit", (code) => (code === 0 ? resolve() : reject(new Error(`Inno exited with ${code}`))));
 		});
-		return join(installRoot, "Vetta.exe");
+		return join(installRoot, "OpenForge.exe");
 	}
 	if (platform === "linux") {
 		await chmod(installerPath, 0o755);
@@ -120,11 +120,11 @@ async function installBaseline(installerPath, installRoot) {
 		child.once("error", reject);
 		child.once("exit", (code) => (code === 0 ? resolve() : reject(new Error(`ditto exited with ${code}`))));
 	});
-	const appPath = join(extractedRoot, "Vetta.app");
-	const installedApp = join(installRoot, "Vetta.app");
+	const appPath = join(extractedRoot, "Open Forge.app");
+	const installedApp = join(installRoot, "Open Forge.app");
 	await rm(installedApp, { recursive: true, force: true });
 	await rename(appPath, installedApp);
-	return join(installedApp, "Contents", "MacOS", "Vetta");
+	return join(installedApp, "Contents", "MacOS", "OpenForge");
 }
 
 function statePath(home) {

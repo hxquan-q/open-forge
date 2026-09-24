@@ -9,6 +9,7 @@
 			"knowledgeHistory": "Processing history",
 			"workflow": "Workflows",
 			"plan": "Plan",
+			"task": "Tasks",
 			"ports": "Port forwarding"
 		},
 		"backgroundTasks": {
@@ -52,6 +53,45 @@
 			"statusDone": "Done",
 			"statusInProgress": "In progress",
 			"statusPending": "Pending"
+		},
+		"task": {
+			"empty": "Turn this conversation into a task to pause, review, and keep its deliverables",
+			"headline": "Tasks",
+			"create": "Turn into a task",
+			"untitled": "Untitled task",
+			"turn": "Turn: {{turn}}",
+			"resumeHint": "Paused; your next message automatically resumes this task",
+			"artifacts": "Deliverables",
+			"artifactMissing": "File missing",
+			"status": {
+				"draft": "Draft",
+				"planning": "Planning",
+				"awaitingApproval": "Awaiting approval",
+				"running": "Running",
+				"paused": "Paused",
+				"awaitingReview": "Awaiting review",
+				"completed": "Completed",
+				"failed": "Failed",
+				"cancelled": "Cancelled",
+				"rejected": "Rejected",
+				"changesRequested": "Reworking"
+			},
+			"action": {
+				"pause": "Pause",
+				"approve": "Approve",
+				"requestChanges": "Request changes",
+				"reject": "Reject",
+				"cancel": "Cancel task"
+			},
+			"error": {
+				"notFound": "Task not found or already finished",
+				"invalidTransition": "This action is not allowed in the current state",
+				"missingTurnBinding": "No turn is bound, so the task cannot continue",
+				"unknownApproval": "Approval record not found",
+				"duplicateArtifact": "This deliverable is already attached to the task",
+				"eventLogInvalid": "Task history is corrupted and cannot be recovered",
+				"commandFailed": "Task operation failed. Please try again"
+			}
 		},
 		"ports": {
 			"heading": "Remote services",
@@ -378,6 +418,11 @@
 			"closed": "Open bottom panel",
 			"open": "Close bottom panel"
 		},
+		"terminalButton": {
+			"focused": "Terminal",
+			"open": "Open terminal",
+			"unavailable": "Local terminal is unavailable"
+		},
 		"exportButton": {
 			"title": "Export full session as HTML"
 		},
@@ -625,9 +670,7 @@
 			}
 		},
 		"assistantFoldTip": {
-			"collapse": "Collapse {{count}} items",
 			"collapseLabel": "Collapse",
-			"expand": "Expand {{count}} items",
 			"expandLabel": "Expand",
 			"streaming": "Processing · {{duration}}",
 			"waiting": "Waiting · {{duration}}",
@@ -844,17 +887,9 @@
 			"showMascot": "Show mascot",
 			"playOnce": "Play the current mascot animation once"
 		},
-		"torch": {
-			"light": "Light the torch",
-			"extinguish": "Snuff out the torch"
-		},
 		"mario": {
 			"hit": "Bump out the mushroom",
 			"reset": "Put the mushroom back"
-		},
-		"hand": {
-			"rest": "Let the hand rest",
-			"tap": "Get the hand tapping again"
 		},
 		"projectSelector": {
 			"placeholder": "Select project",
@@ -1101,5 +1136,37 @@
 		"actionCreate": "Create page",
 		"actionUpdate": "Update page",
 		"originalLocation": "Original: {{path}}"
+	},
+	"workspace": {
+		"mode": {
+			"coding": "Coding",
+			"switch": "Switch workspace mode",
+			"work": "Work"
+		},
+		"work": {
+			"artifacts": {
+				"empty": "Generated documents, sheets and other artifacts appear here",
+				"title": "Artifacts"
+			},
+			"dataset": {
+				"empty": "Dataset previews appear here once data analysis is wired up",
+				"title": "Dataset"
+			},
+			"plan": {
+				"empty": "Once a task starts, its plan and progress show here",
+				"title": "Plan"
+			},
+			"review": {
+				"empty": "When artifacts are ready, review and export results here",
+				"title": "Review & Export"
+			},
+			"retry": "Retry",
+			"sectionCancelled": "This section was cancelled with the task; restart the task to regenerate it",
+			"sectionError": "This section failed to load",
+			"sources": {
+				"empty": "Files and materials referenced by the task are listed here",
+				"title": "Sources"
+			}
+		}
 	}
 }

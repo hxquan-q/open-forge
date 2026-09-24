@@ -6,8 +6,8 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./tool-views/ReadImageView", () => ({
-	ReadImageView: ({ image }: { image: { data: string; mimeType: string } }) => (
-		<img alt="MCP result" src={`data:${image.mimeType};base64,${image.data}`} />
+	ReadImageView: ({ image }: { image: { src: string; mimeType: string } }) => (
+		<img alt="MCP result" src={image.src} data-mime={image.mimeType} />
 	),
 }));
 
@@ -25,7 +25,7 @@ function block(toolName: string): ToolCallBlock {
 		args: {},
 		status: "success",
 		result: "MCP result",
-		imagePreview: { data: "aW1hZ2U=", mimeType: "image/png" },
+		imagePreview: { src: "data:image/png;base64,aW1hZ2U=", mimeType: "image/png" },
 	};
 }
 
@@ -45,8 +45,8 @@ describe("ToolCallBlock MCP images", () => {
 	it("renders every image block in a gallery", () => {
 		const value = block("mcp_demo_screenshot");
 		value.imagePreviews = [
-			{ data: "aW1hZ2Ux", mimeType: "image/png" },
-			{ data: "aW1hZ2Uy", mimeType: "image/jpeg" },
+			{ src: "data:image/png;base64,aW1hZ2Ux", mimeType: "image/png" },
+			{ src: "data:image/jpeg;base64,aW1hZ2Uy", mimeType: "image/jpeg" },
 		];
 		render(<EmbeddedToolCallBlockView block={value} />, { wrapper: Wrapper });
 

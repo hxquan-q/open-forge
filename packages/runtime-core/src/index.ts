@@ -268,3 +268,4 @@ export type {
 	RuntimeSessionLifecyclePhase,
 	RuntimeSessionObservationEvent,
 } from "./session-observation.js";
+export * from "./task/index.js";

@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 〇、语言与分支约定
 
 - 使用中文回答用户；代码、协议字段、日志和面向模型的提示词保持其既有语言。Commit message 使用中文多行格式（标题 + 空行 + 正文）。
-- Pull Request 目标分支是 **`dev`**，不是 `main`。
+- Pull Request 目标仓库与分支是 **fork（`hxquan-q/open-forge`）的 `dev`**，不是上游 `openvetta/open-vetta`，也不是 `main`。
 - 更深目录中的 `AGENTS.md`（如 `apps/desktop/AGENTS.md`、`packages/ai/AGENTS.md` 等）可补充或收紧规则；冲突时以**离目标文件最近的** `AGENTS.md` 为准。
 
 ---
@@ -25,8 +25,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **开发：**
 
 ```bash
-cd apps/desktop && bun run dev      # 启动 Desktop（Vite renderer + theme dev server + Electron），数据在 ~/.vetta-dev
-cd apps/desktop && bun run dev:home # 同上，但读写真实用户数据 ~/.vetta
+cd apps/desktop && bun run dev      # 启动 Desktop（Vite renderer + theme dev server + Electron），数据在 ~/.openforge-dev
+cd apps/desktop && bun run dev:home # 同上，但读写真实用户数据 ~/.openforge
 bun run --cwd apps/docs-site dev    # 文档站，http://127.0.0.1:4321
 ```
 
@@ -130,6 +130,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 - **严禁 `--no-verify`**：Pre-commit Hook 失败时必须从根本修复问题，严禁使用参数绕过。
 - **严禁强制推送**：绝不允许对 `main` / `master` 或共享分支执行 `git push --force`。
 - **严禁未经授权 Push**：在用户未明确下达 push 指令前，严禁执行 `git push`。本地 commit 零成本，推送带全局副作用。
+- **严禁触碰上游仓库**：所有 commit / push / PR / merge 只能流向 fork `hxquan-q/open-forge`（remote `origin`）。`upstream`（`openvetta/open-vetta`）仅用于 `git fetch` 与 diff 对照，其 push URL 已被禁用；不得对上游发起 push、创建 PR 或请求合并。
 - **严禁破坏并行工作区**：工作区可能同时包含用户或其他 Agent 的改动，禁止 `git reset --hard`、`git checkout .`、`git clean -fd`、`git stash`、`git add .`、`git add -A`；暂存时逐个列出具体路径。
 
 ---

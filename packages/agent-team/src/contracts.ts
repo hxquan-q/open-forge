@@ -7,6 +7,14 @@ import type {
 
 export const AGENT_TEAM_SCHEMA_VERSION = 1 as const;
 
+/**
+ * 成员投递回执（deliveredEventIds）的持久化窗口大小。该列表只服务于
+ * restoreDeliveredContext 的「跳过冗余 persist」短路；模型可见上下文准入由
+ * checkpoint / receipt 体系承担，与本列表无关。窗口化把每成员常驻与落盘的
+ * 回执量锚在常数（小于旧校验上限 512，读侧兼容见 validation）。
+ */
+export const TEAM_DELIVERED_EVENT_ID_WINDOW = 256 as const;
+
 export type AgentAbilityKind = "skill" | "scene" | "mcp" | "plugin" | (string & {});
 
 export interface AgentAbilitySelection {

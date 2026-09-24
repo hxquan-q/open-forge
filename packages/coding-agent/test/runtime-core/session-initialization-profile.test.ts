@@ -66,6 +66,7 @@ describe("Coding Agent session initialization profile", () => {
 			"ocrMaxConcurrent",
 			"promptResourceSource",
 			"promptSettingsSource",
+			"resolveCompactionModel",
 			"resolveCompactionSettings",
 			"resolveModePrompt",
 			"resolvePromptResource",

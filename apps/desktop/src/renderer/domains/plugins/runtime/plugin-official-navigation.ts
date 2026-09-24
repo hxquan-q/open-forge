@@ -1,6 +1,6 @@
 import { prefillNewSessionInputDraft } from "@shared/store/session-input-draft";
 import type { PluginOfficialApi } from "@vetta-org/plugin-sdk";
-import { isAppearanceUiThemeEnabled } from "../../../../shared/feature-flags";
+import { isAppearanceUiThemeEnabled, isDesktopPetEnabled } from "../../../../shared/feature-flags";
 import {
 	SETTINGS_SECTIONS,
 	SETTINGS_TABS,
@@ -120,8 +120,7 @@ function isAbsolutePath(value: string): boolean {
 
 function isSettingsSectionVisible(section: SettingsSectionRegistration): boolean {
 	if (section.id === "appearance-ui-theme") return isAppearanceUiThemeEnabled();
-	// 桌宠装饰分区暂隐藏（与 PetSettingsView.showDecorationSection=false 对齐）
-	if (section.id === "pet-decoration") return false;
+	if (section.tab === "pet") return isDesktopPetEnabled();
 	return true;
 }
 
@@ -160,7 +159,7 @@ function isMcpSettingsTarget(tabKey?: string, section?: SettingsSectionRegistrat
 }
 
 function buildSettingsCatalog(): unknown {
-	const settingsTabs = SETTINGS_TABS.map((tab) => ({
+	const settingsTabs = SETTINGS_TABS.filter((tab) => tab.key !== "pet" || isDesktopPetEnabled()).map((tab) => ({
 		id: tab.key,
 		title: tab.label,
 		target: { type: "open", target: "settings", tab: tab.key },

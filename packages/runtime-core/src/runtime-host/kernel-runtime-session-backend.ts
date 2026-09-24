@@ -19,6 +19,7 @@ import type {
 	KernelEvent,
 	QueuedSessionInput,
 	RuntimeInputRequestPreparer,
+	RuntimeSessionFactEvent,
 	SessionInput,
 	SessionInputQueueMode,
 	SessionInputRequest,
@@ -30,6 +31,8 @@ import { sessionBusyError, sessionClosedError } from "../kernel/errors.js";
 import type { SessionInputQueueEntry, SessionInputQueueSnapshot } from "../kernel/session-input-queue.js";
 import type { SessionContextState } from "../session-context-state.js";
 import type { SessionExtensionEndpointToken } from "../session-extensions/contracts.js";
+import type { RuntimeSessionTaskState, RuntimeTaskFactEvent } from "../task/session-projection.js";
+import { isRuntimeTaskFactEvent, projectRuntimeSessionTaskState } from "../task/session-projection.js";
 import { ConversationDocumentMutationCoordinator } from "./conversation-document-mutation-coordinator.js";
 import { mapKernelEventToSessionEvents } from "./kernel-session-events.js";
 import { RetryableCleanup } from "./retryable-cleanup.js";
@@ -272,6 +275,28 @@ export class RuntimeSession {
 		}
 	}
 
+	async promptWhenAvailable(request: PromptRequest, signal?: AbortSignal): Promise<RuntimePromptResult> {
+		this.assertOpen();
+		if (this.historyMutation) throw sessionBusyError();
+		try {
+			const inputRequest = this.promptAdapter.createRequest(request);
+			this.assertOpen();
+			return await this.session.sendRequestWhenAvailable(inputRequest, this.promptAdapter, signal);
+		} catch (error) {
+			if (this.session.state === "idle") {
+				try {
+					await this.appendEntry("prompt_rejected", {
+						text: request.text,
+						error: error instanceof Error ? error.message : String(error),
+					});
+				} catch (persistError) {
+					console.warn("[runtime-core] failed to persist prompt_rejected entry", persistError);
+				}
+			}
+			throw error;
+		}
+	}
+
 	async queuePromptIfRunning(request: PromptRequest): Promise<RuntimeQueuePromptIfRunningOutcome> {
 		this.assertOpen();
 		const compacting = this.contextController?.readState().isCompacting ?? false;
@@ -307,6 +332,19 @@ export class RuntimeSession {
 	subscribe(handler: (event: SessionEvent) => void): () => void {
 		this.assertOpen();
 		return this.eventSink.subscribe(handler);
+	}
+
+	/** 追加宿主显式提交的 Task/Artifact 事实（创建/计划/审批/Review/descriptor）。 */
+	async recordTaskFacts(facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
+		this.assertOpen();
+		if (this.historyMutation) throw sessionBusyError();
+		await this.session.recordTaskFacts(facts);
+	}
+
+	/** 从持久化事实重放的当前 Task/Artifact 投影；重启后由会话事件重新播种。 */
+	readTaskState(): RuntimeSessionTaskState {
+		this.assertOpen();
+		return this.eventSink.readTaskState();
 	}
 
 	subscribeExecutionObservations(
@@ -610,6 +648,18 @@ export class RuntimeSession {
 							...(result.status === "completed" ? { turnId: result.turnId } : {}),
 						};
 					},
+					promptWhenAvailable: async (request, signal) => {
+						const result = await this.promptWhenAvailable(request, signal);
+						if (result.status === "handled") return { status: "handled" as const };
+						if (result.status === "queued") {
+							return { status: "queued" as const, pendingCount: result.pendingCount, queueItemId: result.id };
+						}
+						return {
+							status: result.status,
+							...(result.status === "failed" ? { error: result.error, turnId: result.turnId } : {}),
+							...(result.status === "completed" ? { turnId: result.turnId } : {}),
+						};
+					},
 					queuePromptIfRunning: async (request) => this.queuePromptIfRunning(request),
 					continue: async () => {
 						await this.continue();
@@ -625,6 +675,10 @@ export class RuntimeSession {
 				stateReader: {
 					readState: () => this.readState(),
 					readMessages: () => this.readMessages(),
+				},
+				taskView: {
+					recordTaskFacts: (facts) => this.recordTaskFacts(facts),
+					readTaskState: () => this.readTaskState(),
 				},
 			},
 		};
@@ -740,6 +794,7 @@ export class KernelRuntimeSessionBackend<TCreateOptions>
 			eventSink.bindStateSource(assembly.stateSource);
 			eventSink.bindDocumentParticipants(assembly.documentParticipants ?? []);
 			const runtimeSession = new RuntimeSession(assembly, eventSink, projection);
+			eventSink.seedTaskFacts(conversation.events);
 			await runtimeSession.initializeDocumentParticipants(document);
 			eventSink.finishInitialization();
 			return runtimeSession;
@@ -756,6 +811,7 @@ export class KernelRuntimeSessionBackend<TCreateOptions>
 
 class RuntimeSessionEventSink implements EventSink {
 	private readonly contextState = new SessionContextStateProjection();
+	private readonly taskFacts: RuntimeTaskFactEvent[] = [];
 	private readonly listeners = new Set<(event: SessionEvent) => void>();
 	private readonly executionObservationListeners = new Set<
 		(observation: RuntimeSessionExecutionObservation) => Promise<void> | void
@@ -766,6 +822,17 @@ class RuntimeSessionEventSink implements EventSink {
 	private identity: RuntimeSessionIdentity = {};
 	private projection: RuntimeSessionProjection | undefined;
 	private stateSource: RuntimeStateSource | undefined;
+
+	/** 会话装配时用既有事件流播种 Task 投影；live 事实经 `publish` 增量进入。 */
+	seedTaskFacts(events: readonly StoredSessionEvent[]): void {
+		for (const event of events) {
+			if (isRuntimeTaskFactEvent(event)) this.taskFacts.push(event);
+		}
+	}
+
+	readTaskState(): RuntimeSessionTaskState {
+		return projectRuntimeSessionTaskState(this.taskFacts);
+	}
 	private initializing = true;
 
 	async publish(event: KernelEvent): Promise<void> {
@@ -793,6 +860,7 @@ class RuntimeSessionEventSink implements EventSink {
 			}
 		}
 		if (isStoredSessionEvent(event)) {
+			if (isRuntimeTaskFactEvent(event)) this.taskFacts.push(event);
 			if (this.documentMutationCoordinator) {
 				await this.documentMutationCoordinator.synchronizeProjection();
 			} else {
@@ -970,7 +1038,9 @@ function isStoredSessionEvent(event: KernelEvent): event is StoredSessionEvent {
 		event.type === "turn.completed" ||
 		event.type === "turn.cancelled" ||
 		event.type === "turn.failed" ||
-		event.type === "turn.transferred"
+		event.type === "turn.transferred" ||
+		event.type === "task.lifecycle.recorded" ||
+		event.type === "artifact.descriptor.recorded"
 	);
 }
 

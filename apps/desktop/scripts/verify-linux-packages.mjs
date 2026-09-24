@@ -8,7 +8,7 @@ import { parse } from "yaml";
 const execFileAsync = promisify(execFile);
 const packageDir = resolve(import.meta.dirname, "..");
 const defaultReleaseDir = join(packageDir, "release");
-const requiredPayloadPaths = ["/opt/Vetta/Vetta", "/opt/Vetta/resources/package-type"];
+const requiredPayloadPaths = ["/opt/Open Forge/OpenForge", "/opt/Open Forge/resources/package-type"];
 
 function requireValue(value, label) {
 	if (typeof value !== "string" || value.trim().length === 0) {
@@ -32,9 +32,11 @@ export function parseDebFields(output) {
 }
 
 export function parseDebContents(output) {
+	// dpkg-deb --contents 列为：perms owner size date time path [-> target]。
+	// 安装路径可能含空格（/opt/Open Forge/...），按列取第五个字段之后的全部内容。
 	return output
 		.split(/\r?\n/)
-		.map((line) => line.match(/\s(\.\/\S+?)(?:\s+->\s+\S+)?$/)?.[1])
+		.map((line) => line.match(/^\S+\s+\S+\s+\d+\s+\S+\s+\S+\s+(\..+?)(?:\s+->\s+.+)?$/)?.[1])
 		.filter(Boolean)
 		.map((filePath) => filePath.replace(/^\./, ""));
 }
@@ -74,8 +76,8 @@ function verifyIdentity(format, actual, expected) {
 }
 
 export function verifyLinuxPackageInspection({ expectedVersion, deb, rpm }) {
-	verifyIdentity("Debian", deb, { name: "vetta", version: expectedVersion, arch: "amd64" });
-	verifyIdentity("RPM", rpm, { name: "vetta", version: expectedVersion, arch: "x86_64" });
+	verifyIdentity("Debian", deb, { name: "openforge", version: expectedVersion, arch: "amd64" });
+	verifyIdentity("RPM", rpm, { name: "openforge", version: expectedVersion, arch: "x86_64" });
 	verifyPayload("Debian", deb.paths);
 	verifyPayload("RPM", rpm.paths);
 }

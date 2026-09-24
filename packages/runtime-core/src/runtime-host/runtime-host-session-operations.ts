@@ -13,9 +13,10 @@ import type {
 import type { ConversationDocument } from "../conversation/document.js";
 import type { ConversationMessageRecord } from "../conversation/message-contract.js";
 import { isSessionError, runtimeError } from "../errors.js";
-import type { RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
+import type { RuntimeSessionFactEvent, RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
 import { isTurnPersistenceError } from "../kernel/errors.js";
 import type { SessionExtensionEndpointToken } from "../session-extensions/contracts.js";
+import type { RuntimeSessionTaskState } from "../task/session-projection.js";
 import type { RuntimeHostSessionDirectory } from "./runtime-host-session-directory.js";
 import type { RuntimeHostSessionEventRelay } from "./runtime-host-session-event-relay.js";
 import { baseSessionEvent } from "./session-events.js";
@@ -96,6 +97,7 @@ export class RuntimeHostSessionOperations {
 			}
 			const outcome = await handle.turnControl.prompt({
 				text: request.text,
+				context: request.context,
 				images: request.images,
 				streamingBehavior: request.streamingBehavior,
 				promptRef: request.promptRef,
@@ -104,6 +106,61 @@ export class RuntimeHostSessionOperations {
 				reasoning: request.reasoning,
 				metadata: request.metadata,
 			});
+			return outcome ?? { status: "completed" };
+		} catch (error) {
+			const message = isSessionError(error) ? error.message : error instanceof Error ? error.message : String(error);
+			const failure = isTurnPersistenceError(error) ? error.failure : undefined;
+			if (failure && isTurnPersistenceError(error)) {
+				return {
+					status: "failed",
+					turnId: error.turnId,
+					error: { ...failure, retryable: false },
+				};
+			}
+			this.options.events.broadcastSyntheticEvent(sessionKey, {
+				...baseSessionEvent(handle.lifecycle.sessionId, "agent"),
+				type: "error",
+				...(isTurnPersistenceError(error) && error.turnId ? { turnId: error.turnId } : {}),
+				error:
+					failure ?? (isSessionError(error) ? error : runtimeError("INTERNAL_ERROR", message, false, "runtime")),
+			});
+			throw error;
+		} finally {
+			this.options.synchronizeSessionIdentity(sessionKey, handle);
+		}
+	}
+
+	async promptWhenAvailable(
+		sessionId: string,
+		request: PromptRequest,
+		signal?: AbortSignal,
+	): Promise<RuntimeTurnPromptOutcome> {
+		const sessionKey = this.options.directory.resolveSessionKey(sessionId);
+		const handle = this.requireSession(sessionId);
+		await this.applyPendingExecutionMode(handle.lifecycle.sessionId, handle);
+
+		const sessionCwd = handle.workspaceView.readWorkingDirectory();
+		if (sessionCwd && this.options.pathServices) {
+			try {
+				await this.options.pathServices.ensureDirectory(sessionCwd);
+			} catch (error) {
+				this.options.reportWorkspacePreparationFailure(error, handle.lifecycle.sessionId);
+			}
+		}
+
+		try {
+			const prompt = {
+				text: request.text,
+				context: request.context,
+				images: request.images,
+				streamingBehavior: request.streamingBehavior,
+				promptRef: request.promptRef,
+				attachments: request.attachments,
+				modelKey: request.modelKey,
+				reasoning: request.reasoning,
+				metadata: request.metadata,
+			};
+			const outcome = await handle.turnControl.promptWhenAvailable(prompt, signal);
 			return outcome ?? { status: "completed" };
 		} catch (error) {
 			const message = isSessionError(error) ? error.message : error instanceof Error ? error.message : String(error);
@@ -435,6 +492,18 @@ export class RuntimeHostSessionOperations {
 
 	getMessages(sessionId: string): Message[] {
 		return [...this.requireSession(sessionId).stateReader.readMessages()];
+	}
+
+	getTaskState(sessionId: string): RuntimeSessionTaskState {
+		const taskView = this.requireSession(sessionId).taskView;
+		if (!taskView) throw new Error("Session task projection capability is unavailable");
+		return taskView.readTaskState();
+	}
+
+	recordTaskFacts(sessionId: string, facts: readonly RuntimeSessionFactEvent[]): Promise<void> {
+		const taskView = this.requireSession(sessionId).taskView;
+		if (!taskView) throw new Error("Session task projection capability is unavailable");
+		return taskView.recordTaskFacts(facts);
 	}
 
 	getFullHistory(sessionId: string): HistoryEntry[] {

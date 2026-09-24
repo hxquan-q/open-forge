@@ -48,6 +48,20 @@
 		"whyConfirm": "AI 请求执行此操作，需你确认后才会生效。",
 		"genericTitle": "操作确认",
 		"genericSummary": "请确认是否允许执行该操作。",
+		"taskApproval": {
+			"title": "允许 {{tool}} 执行？",
+			"allowOnce": "允许本次",
+			"affectedResources": "将影响的资源",
+			"rememberProject": "本项目内以后不再询问该工具",
+			"l4AlwaysConfirm": "最高风险操作：即使已授予项目信任，每次仍需确认。",
+			"levelL3": "高风险",
+			"levelL4": "最高风险"
+		},
+		"fileOrganize": {
+			"title": "整理这些文件？",
+			"summary": "以下 {{count}} 个操作在你确认后才会执行",
+			"confirm": "执行整理"
+		},
 		"genericImpact": "确认后才会执行；拒绝则取消本次请求，不会改动你的数据。",
 		"showTechnicalDetails": "查看技术详情",
 		"hideTechnicalDetails": "收起技术详情",

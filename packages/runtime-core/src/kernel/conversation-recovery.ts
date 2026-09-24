@@ -70,6 +70,14 @@ export class FailInterruptedTurnRecoveryPolicy implements ConversationRecoveryPo
 					assertActiveTurn(conversation.sessionId, activeTurnId, event.turnId, event.type);
 					activeTurnId = undefined;
 					break;
+				// Task/Artifact/Approval 事实只引用 Turn 身份，从不开启或关闭 Turn；
+				// 与活动 Turn 的相对顺序（绑定在 started 后、终态在 completed 后）由
+				// Task 状态机与审批策略自身约束，Turn 协议不重复裁决。
+				case "task.lifecycle.recorded":
+				case "artifact.descriptor.recorded":
+				case "approval.requested.recorded":
+				case "approval.decision.recorded":
+					break;
 			}
 		}
 

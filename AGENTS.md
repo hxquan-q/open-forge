@@ -43,11 +43,13 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / ssh-hel
 
 1. 用 `git status --short` 确认工作区状态，保留用户和其他 Agent 的现有改动。
 2. 确认涉及的包和职责边界，完整阅读目标目录适用的最近一级 `AGENTS.md`。
-3. 阅读目标包的 `README.md`、相关 ADR，以及与任务直接相关的源码和测试，明确当前行为、设计意图和必须保持的不变量。
+3. 阅读目标包的 `README.md`、相关 ADR，以及与任务直接相关的源码和测试，明确当前行为、设计意图和必须保持的不变量；若任务涉及产品需求、计划、Task、Issue 或 Bug，先阅读 `project/README.md`、`project/CONVENTIONS.md` 和对应的管理条目。
 4. 在编码前比较“直接修改”与“先重构再修改”两种方案，按照下文重构条件判断现有结构是否适合承载本次变化，并按照测试规则确定哪些风险必须由自动化测试覆盖。
 5. 以当前源码、`package.json`、类型定义和可执行脚本为事实源。文档与实现冲突时，先核实并在交付中指出。
 
 只有当不同解释会实质改变公共合同、用户行为、数据兼容性或产生不可逆影响时才询问用户。其余情况采用最小、可回退的合理假设并继续执行，同时明确说明关键假设。
+
+新增或更新二开管理文件（Requirement、Plan、Task、Issue、Bug、Research、Verification、Context）必须放在 `project/`，遵循 `project/CONVENTIONS.md`；`exprot/` 仅作为历史研究归档，不再承载主动开发记录。
 
 ## 指令作用域
 
@@ -77,6 +79,8 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 | --- | --- |
 | 选择质量门禁与测试范围 | [`docs/dev/quality-gates.md`](docs/dev/quality-gates.md) |
 | 设计、编写或审查测试 | [`.agents/skills/vetta-testing/SKILL.md`](.agents/skills/vetta-testing/SKILL.md) |
+| 一句话需求自动拆解与任务合同 | [`.devin/skills/vetta-task-intake/SKILL.md`](.devin/skills/vetta-task-intake/SKILL.md) |
+| Project 需求、计划、Task、Issue、Bug 管理 | [`project/README.md`](project/README.md) 与 [`project/CONVENTIONS.md`](project/CONVENTIONS.md) |
 | Desktop 启动、调试与 UI 验证（仅在用户明确要求时） | [`docs/dev/README.md`](docs/dev/README.md) |
 | 新增 workspace 包 | [`docs/monorepo-new-package.md`](docs/monorepo-new-package.md) |
 | Plugin SDK、Preset 或外置插件 | [`packages/plugins/README.md`](packages/plugins/README.md) |

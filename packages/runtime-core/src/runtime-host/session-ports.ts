@@ -13,10 +13,11 @@ import type {
 } from "../contracts.js";
 import type { ConversationDocument } from "../conversation/document.js";
 import type { ConversationMessageRecord } from "../conversation/message-contract.js";
-import type { RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
+import type { RuntimeSessionFactEvent, RuntimeToolDefinition, SessionContextRecord } from "../kernel/contracts.js";
 import type { RuntimeExecutionObservationEvent } from "../runtime-execution-observation.js";
 import type { SessionExtensionEndpointHost } from "../session-extensions/contracts.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
+import type { RuntimeSessionTaskState } from "../task/session-projection.js";
 
 /** 会话身份与资源释放；不承载宿主 UI 绑定或业务外围能力。 */
 export interface RuntimeSessionIdentityLifecycle {
@@ -31,6 +32,7 @@ export interface RuntimeSessionIdentityLifecycle {
 /** RuntimeHost 完成宿主预处理后交给 Turn 执行边界的输入。 */
 export interface RuntimeTurnPrompt {
 	readonly text: string;
+	readonly context?: PromptRequest["context"];
 	readonly promptRef?: PromptRequest["promptRef"];
 	readonly attachments?: PromptRequest["attachments"];
 	readonly images?: PromptRequest["images"];
@@ -43,6 +45,7 @@ export interface RuntimeTurnPrompt {
 /** 只负责启动、继续和中止 Turn。 */
 export interface RuntimeSessionTurnControl {
 	prompt(request: RuntimeTurnPrompt): Promise<RuntimeTurnPromptOutcome | undefined>;
+	promptWhenAvailable(request: RuntimeTurnPrompt, signal?: AbortSignal): Promise<RuntimeTurnPromptOutcome | undefined>;
 	queuePromptIfRunning?(request: RuntimeTurnPrompt): Promise<RuntimeQueuePromptIfRunningOutcome>;
 	continue(): Promise<void>;
 	retry(): Promise<void>;
@@ -294,4 +297,12 @@ export interface RuntimeSessionCorePorts {
 	readonly turnControl: RuntimeSessionTurnControl;
 	readonly eventStream: RuntimeSessionEventStream;
 	readonly stateReader: RuntimeSessionStateReader;
+	/** 可选能力：缺失时（历史导入等非 Kernel Backend）宿主不暴露 Task 投影。 */
+	readonly taskView?: RuntimeSessionTaskView;
+}
+
+/** Task/Artifact 事实的会话内控制面：显式提交事实 + 从事件流重放的只读投影。 */
+export interface RuntimeSessionTaskView {
+	recordTaskFacts(facts: readonly RuntimeSessionFactEvent[]): Promise<void>;
+	readTaskState(): RuntimeSessionTaskState;
 }

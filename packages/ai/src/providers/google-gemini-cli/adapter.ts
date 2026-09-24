@@ -104,14 +104,14 @@ async function produceGoogleGeminiCliStream(
 					output = createGoogleAssistantMessage(model);
 					continue;
 				}
-				throw new EmptyProviderStreamError();
+				throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
 			}
 			reducer.finish();
 			completed = true;
 			break;
 		}
 
-		if (!completed) throw new EmptyProviderStreamError();
+		if (!completed) throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
 		if (options?.signal?.aborted) throw new AIAbortedError();
 		if (output.stopReason === "error" || output.stopReason === "aborted") {
 			throw new Error("Cloud Code Assist returned a failed response status");

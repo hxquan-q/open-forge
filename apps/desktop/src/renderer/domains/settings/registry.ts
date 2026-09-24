@@ -1,4 +1,5 @@
 import type { SettingsTab } from "@shared/store/atoms";
+import { isDesktopPetEnabled } from "../../../shared/feature-flags";
 
 export type SettingsTabLabelKey =
 	| "tabAccount"
@@ -183,6 +184,7 @@ export function filterVisibleSettingsTabs(
 ): readonly SettingsTabRegistration[] {
 	return tabs.filter(
 		(tab) =>
+			(isDesktopPetEnabled() || tab.key !== "pet") &&
 			(!tab.personalOnly || isPersonal) &&
 			(!tab.requireAuth || hasAuthUser) &&
 			(!tab.macOnly || isMac) &&

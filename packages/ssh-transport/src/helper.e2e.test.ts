@@ -21,8 +21,8 @@ interface TaskStatus {
 /** 真的把 helper 编出来、经回环 SSH 上传并运行：协议两端一起测，不是对着一份假的应答。 */
 describe.skipIf(!hasGo)("远端 helper（真实二进制，经回环 SSH）", () => {
 	beforeAll(() => {
-		helperBinary = join(mkdtempSync(join(tmpdir(), "vetta-helper-build-")), "vetta-ssh-helper");
-		execFileSync("go", ["build", "-o", helperBinary, "./cmd/vetta-ssh-helper"], {
+		helperBinary = join(mkdtempSync(join(tmpdir(), "openforge-helper-build-")), "openforge-ssh-helper");
+		execFileSync("go", ["build", "-o", helperBinary, "./cmd/openforge-ssh-helper"], {
 			cwd: helperSource,
 			env: { ...process.env, CGO_ENABLED: "0" },
 		});
@@ -138,7 +138,7 @@ describe.skipIf(!hasGo)("远端 helper（真实二进制，经回环 SSH）", ()
 		await expect(withoutBuild.helper()).resolves.toBeUndefined();
 		expect(noBuild.join("\n")).toContain("using ssh exec");
 
-		const garbage = join(mkdtempSync(join(tmpdir(), "vetta-helper-bad-")), "vetta-ssh-helper");
+		const garbage = join(mkdtempSync(join(tmpdir(), "openforge-helper-bad-")), "openforge-ssh-helper");
 		writeFileSync(garbage, "#!/bin/sh\necho not json\n");
 		const broken = createLoopbackSshConnection("loopback", {
 			helper: { resolveBinary: () => garbage, handshakeTimeoutMs: 1500 },

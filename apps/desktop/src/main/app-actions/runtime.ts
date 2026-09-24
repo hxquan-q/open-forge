@@ -15,7 +15,7 @@ const log = getAppLogger("action-runtime");
 function isDevelopmentConfigDir(value: string | undefined): boolean {
 	if (!value) return false;
 	const normalized = value.trim().replaceAll("\\", "/").replace(/\/+$/u, "");
-	return normalized === ".vetta-dev" || normalized.endsWith("/.vetta-dev");
+	return normalized === ".openforge-dev" || normalized.endsWith("/.openforge-dev");
 }
 
 /** Explicit development-only approval bypass for local action iteration. */

@@ -253,7 +253,9 @@ async function produceOpenAICompletions(
 				}
 			}
 		}
-		if (!receivedProviderChunk) throw new EmptyProviderStreamError();
+		if (!receivedProviderChunk) {
+			throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
+		}
 
 		for (const segment of contentSplitter.flush()) emitContentSegment(segment);
 		finishCurrentBlock(currentBlock);
@@ -276,7 +278,7 @@ async function produceOpenAICompletions(
 	} catch (error) {
 		for (const block of output.content) Reflect.deleteProperty(block, "index");
 		const normalized = options?.signal?.aborted
-			? new AIAbortedError(undefined, { cause: error })
+			? new AIAbortedError(undefined, { provider: model.provider, modelId: model.id, cause: error })
 			: normalizeOpenAISdkError(error, model);
 		resolveMetadata({
 			finishReason: { unified: normalized.code === "AI_ABORTED" ? "aborted" : "error" },

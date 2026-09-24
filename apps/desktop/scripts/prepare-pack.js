@@ -8,6 +8,7 @@ import { validateDesktopBuildEnvironment } from "./desktop-build-environment.mjs
 import { DESKTOP_BUILD_OUTPUTS, VETTA_PLUGIN_FILE_ASSOCIATION } from "./desktop-packaging-layout.mjs";
 import { LINUX_PACKAGE_METADATA, LINUX_RELEASE_TARGETS } from "./linux-packaging-contract.mjs";
 import { loadBuildEnv } from "./load-build-env.mjs";
+import { resolveInstalledPackageRoot } from "./installed-package-root.mjs";
 import { resolvePackagedNativeDependencies } from "./packaged-native-dependencies.mjs";
 import { resolveReleaseInfo } from "./resolve-release-info.mjs";
 import { prepareSpeechModels, SPEECH_MODEL_RESOURCE_ROOT } from "./fetch-speech-models.mjs";
@@ -163,9 +164,9 @@ function resolveSandboxResourceFilters() {
 //
 // Some packages (e.g. modern node-cron) restrict their `exports` map and no
 // longer allow `require.resolve("<pkg>/package.json")`. Resolve the package's
-// main entry instead and trim the path back to the package root inside
-// node_modules. This works regardless of how the package author configured
-// `exports`.
+// main entry first. Binary-only packages such as @lydell/node-pty-* have no
+// JavaScript entry, so those fall back to package.json. In both cases, trim the
+// resolved path back to the package root inside node_modules.
 // 与 vite.main.config.ts 的 rollupOptions.external 保持同步。photon-node 在
 // 主 bundle 被 external 后，代码里 createRequire("@silvia-odwyer/photon-node")
 // 在 packaged AppImage 中找不到包就降级到原图（image-resize 早期日志的
@@ -185,16 +186,6 @@ const packagedNativeDependencies = resolvePackagedNativeDependencies(resolvePlat
 const externalDeps = packagedNativeDependencies.required;
 const optionalExternalDeps = packagedNativeDependencies.optional;
 
-function resolvePackageRoot(dep, fromDir = projectRoot) {
-	const entry = require.resolve(dep, { paths: [fromDir] });
-	const marker = `${join("node_modules", dep)}${process.platform === "win32" ? "\\" : "/"}`;
-	const idx = entry.lastIndexOf(marker);
-	if (idx < 0) {
-		throw new Error(`prepare-pack: cannot locate ${dep} package root in ${entry}`);
-	}
-	return entry.slice(0, idx + marker.length - 1);
-}
-
 // Copy an external dep plus its full production-dependency closure into the
 // staged node_modules. app-builder-lib 26's bun collector walks each package's
 // declared `dependencies` and hard-fails when one is missing from the staged
@@ -209,13 +200,13 @@ function stageDepTree(dep, sourceDir, destDir, seen = new Set()) {
 		const key = `${dep}>${transDep}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
-		const transDir = resolvePackageRoot(transDep, sourceDir);
+		const transDir = resolveInstalledPackageRoot(transDep, sourceDir);
 		stageDepTree(transDep, transDir, join(destDir, "node_modules", transDep), seen);
 	}
 }
 
 function toExternalDepInfo(dep) {
-	const dir = resolvePackageRoot(dep);
+	const dir = resolveInstalledPackageRoot(dep, projectRoot);
 	const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
 	if (typeof pkg.version !== "string" || !pkg.version) {
 		throw new Error(`prepare-pack: ${dep} package.json is missing a version`);
@@ -288,9 +279,9 @@ if (preparedSpeechModel) {
 // externalized runtime deps must be declared here even though we copy them
 // manually below.
 const appPkg = {
-	name: "vetta",
+	name: "openforge",
 	version: appVersion,
-	description: "Vetta Desktop App",
+	description: "Open Forge Desktop App",
 	author: LINUX_PACKAGE_METADATA.author,
 	homepage: LINUX_PACKAGE_METADATA.homepage,
 	license: LINUX_PACKAGE_METADATA.license,
@@ -331,7 +322,7 @@ if (process.platform === "darwin" && !macSigning.enabled) {
 	);
 }
 
-// macOS appshot: swiftc 编译 "Vetta Computer Use.app" 直接落到 staging appshot/，
+// macOS appshot: swiftc 编译 "Open Forge Computer Use.app" 直接落到 staging appshot/，
 // 由 resolveExtraResources 带进 Resources/appshot/（filter "**/*" 递归带入
 // .app bundle 内部结构）。仅 darwin host 可编译。
 if (process.platform === "darwin") {
@@ -434,13 +425,13 @@ const stagedSshHelperDir = join(buildStageDir, "ssh-helper");
 rmSync(stagedSshHelperDir, { recursive: true, force: true });
 for (const target of SSH_HELPER_TARGETS) {
 	const outputDir = join(stagedSshHelperDir, `${target.os}-${target.arch}`);
-	const outputPath = join(outputDir, "vetta-ssh-helper");
+	const outputPath = join(outputDir, "openforge-ssh-helper");
 	mkdirSync(outputDir, { recursive: true });
 	console.log(`  -> ${outputPath}`);
 	try {
 		execFileSync(
 			process.platform === "win32" ? "go.exe" : "go",
-			["build", "-trimpath", "-ldflags", "-s -w", "-o", outputPath, "./cmd/vetta-ssh-helper"],
+			["build", "-trimpath", "-ldflags", "-s -w", "-o", outputPath, "./cmd/openforge-ssh-helper"],
 			{
 				cwd: sshHelperDir,
 				env: { ...process.env, CGO_ENABLED: "0", GOARCH: target.arch, GOOS: target.os },
@@ -718,7 +709,7 @@ function resolveExtraResources() {
 			filter: sandboxFilters,
 		});
 	}
-	// "Vetta Computer Use.app" 仅 darwin 目标需要，且仅 darwin host 能编译（见上方 staging）。
+	// "Open Forge Computer Use.app" 仅 darwin 目标需要，且仅 darwin host 能编译（见上方 staging）。
 	if (resolvePlatformFamilies().has("darwin") && process.platform === "darwin") {
 		extraResources.push({
 			from: "appshot",
@@ -740,9 +731,9 @@ const extraResources = resolveExtraResources();
 
 // Write electron-builder config
 const builderConfig = {
-	appId: "com.vetta.desktop",
-	productName: "Vetta",
-	executableName: "Vetta",
+	appId: "io.github.hxquanq.openforge",
+	productName: "Open Forge",
+	executableName: "OpenForge",
 	afterPack: join(projectRoot, "scripts", "windows-version-layout.mjs"),
 	electronVersion,
 	electronLanguages: ["zh-CN", "en-US"],
@@ -751,8 +742,8 @@ const builderConfig = {
 	...(releaseInfo ? { releaseInfo } : {}),
 	files: ["**/*", ...extraResources.map(({ from }) => `!${from}/**/*`)],
 	protocols: {
-		name: "Vetta",
-		schemes: ["vetta"],
+		name: "Open Forge",
+		schemes: ["openforge"],
 	},
 	fileAssociations: [VETTA_PLUGIN_FILE_ASSOCIATION],
 	mac: {
@@ -782,7 +773,7 @@ const builderConfig = {
 		// 用户的本地模型（Ollama / LM Studio / vLLM 等）通常监听在局域网
 		// 明文 HTTP（http://192.168.x.x:port）。macOS 14+ 的 TCC 与 ATS 默认
 		// 会静默拦截这种请求，表现为 Finder 双击启动后随机出现 "Connection
-		// error."，而从终端启动 Vetta 时 launchd context 不同会偶发放行。
+		// error."，而从终端启动 Open Forge 时 launchd context 不同会偶发放行。
 		// 三个 key 缺一不可：
 		//   - NSAppTransportSecurity.NSAllowsLocalNetworking：放开局域网明文 HTTP
 		//   - NSLocalNetworkUsageDescription：macOS 14+ 触发本地网络权限弹窗
@@ -792,7 +783,7 @@ const builderConfig = {
 				NSAllowsLocalNetworking: true,
 			},
 			NSLocalNetworkUsageDescription:
-				"Vetta 需要访问本地网络以连接你在局域网内运行的 AI 模型服务（如 Ollama、LM Studio、vLLM 等）。",
+				"Open Forge 需要访问本地网络以连接你在局域网内运行的 AI 模型服务（如 Ollama、LM Studio、vLLM 等）。",
 			NSBonjourServices: ["_http._tcp", "_https._tcp"],
 		},
 	},
@@ -802,7 +793,7 @@ const builderConfig = {
 	// 位置必须与那里的 ICON_CENTERS_X_2X 对齐）。
 	// 未签名构建为三图标：多出的「修复已损坏.app」由 scripts/build-mac-repair-helper.js
 	// osacompile 生成，用户首次需 control-click → 「打开」绕过 Gatekeeper，
-	// 之后弹原生密码框对 /Applications/Vetta.app 执行 xattr -dr com.apple.quarantine。
+	// 之后弹原生密码框对 /Applications/Open Forge.app 执行 xattr -dr com.apple.quarantine。
 	// 签名+公证构建不存在「已损坏」问题，退回两图标常规版式。
 	dmg: {
 		background: "build/background.png",
@@ -811,7 +802,7 @@ const builderConfig = {
 		iconTextSize: 12,
 		contents: macSigning.enabled
 			? [
-					{ x: 180, y: 200, type: "file" }, // Vetta.app（electron-builder 自动填入产物路径）
+					{ x: 180, y: 200, type: "file" }, // Open Forge.app（electron-builder 自动填入产物路径）
 					{ x: 480, y: 200, type: "link", path: "/Applications" },
 				]
 			: [
@@ -828,7 +819,7 @@ const builderConfig = {
 	linux: {
 		target: LINUX_RELEASE_TARGETS,
 		category: "Utility",
-		description: "Vetta AI agent desktop application",
+		description: "Open Forge AI agent desktop application",
 		icon: "build/icon.png",
 		maintainer: LINUX_PACKAGE_METADATA.maintainer,
 		synopsis: "AI agent desktop application",

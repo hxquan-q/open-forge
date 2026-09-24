@@ -1,5 +1,5 @@
 import type { AssistantMessage, Message } from "@vetta/ai";
-import type { RuntimeActiveSession } from "@vetta/runtime-core";
+import type { RuntimeActiveSession, RuntimeTurnPromptOutcome } from "@vetta/runtime-core";
 import type { SessionContextRecord } from "@vetta/runtime-core/kernel";
 import type { SubagentChildHandle, SubagentUsageSnapshot } from "@vetta/runtime-subagents";
 import {
@@ -36,7 +36,12 @@ export function createCodingAgentSubagentChildHandle(
 		sessionId: options.session.sessionId,
 		sessionFile: options.sessionFile,
 		prompt: async (text) => {
-			await options.session.prompt({ text });
+			const outcome = (await options.session.prompt({ text })) as RuntimeTurnPromptOutcome | undefined;
+			// Turn 失败时 Runtime 返回 failed 回执而非抛错；转成拒绝让
+			// Coordinator 侧得到稳定的成员失败，而不是静默吞掉（BUG-0002）。
+			if (outcome?.status === "failed") {
+				throw new Error(outcome.error?.message ?? "Subagent turn failed");
+			}
 		},
 		sendMessage: async (text) => {
 			options.appendContext([contextRecord("subagent-message", text)]);
@@ -61,14 +66,43 @@ export function createCodingAgentSubagentChildHandle(
 				await options.disposeComposition();
 			}
 		},
-		subscribe: (listener) =>
-			options.session.subscribe((event) => {
-				if (event.type !== "session.lifecycle") return;
-				if (event.phase === "agent_start") listener({ type: "agent_start" });
-				if (event.phase === "agent_end" || event.phase === "aborted") {
-					listener({ type: "agent_end" });
+		subscribe: (listener) => {
+			// 非 assistant 通道的 error 事件只在 Turn 终态失败时放行（可重试错误被
+			// session-retry 扣留，恢复时清除）；assistant 通道 error 是单次模型调用
+			// 失败，可能仍被救回，不能当作成员终态（BUG-0002）。
+			let pendingFailure: { code?: string; message: string } | undefined;
+			return options.session.subscribe((event) => {
+				if (event.type === "error" && event.channel !== "assistant") {
+					pendingFailure = { code: event.error.code, message: event.error.message };
+					return;
 				}
-			}),
+				if (event.type !== "session.lifecycle") return;
+				if (event.phase === "agent_start") {
+					pendingFailure = undefined;
+					listener({ type: "agent_start" });
+					return;
+				}
+				if (event.phase === "aborted") {
+					pendingFailure = undefined;
+					listener({ type: "agent_end", reason: "interrupted" });
+					return;
+				}
+				if (event.phase === "agent_end") {
+					const failure = pendingFailure;
+					pendingFailure = undefined;
+					listener(
+						failure
+							? {
+									type: "agent_end",
+									reason: "failed",
+									errorMessage: failure.message,
+									...(failure.code ? { errorCode: failure.code } : {}),
+								}
+							: { type: "agent_end", reason: "completed" },
+					);
+				}
+			});
+		},
 	};
 }
 

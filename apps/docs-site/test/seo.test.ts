@@ -28,7 +28,7 @@ describe("site URL helpers", () => {
 	});
 
 	it("prefers DOCS_SITE_URL without a trailing slash", () => {
-		expect(getSiteOrigin("https://docs.openvetta.com/")).toBe(DEFAULT_DOCS_SITE_URL);
+		expect(getSiteOrigin("https://docs.example.com/")).toBe("https://docs.example.com");
 	});
 });
 

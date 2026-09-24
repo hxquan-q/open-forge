@@ -21,7 +21,12 @@ export interface ToolPhaseInfo {
 }
 
 export interface ToolImagePreview {
-	data: string;
+	/**
+	 * `vetta-media:` 协议引用（按视口从主进程取字节，不在消息块驻留 base64）；
+	 * 无会话上下文的提取路径（viewer 预览等）回退 `data:` 内联 URL。mimeType
+	 * 字段保留用于元信息展示与高度估算。
+	 */
+	src: string;
 	mimeType: string;
 	originalPath?: string;
 	originalMimeType?: string;
@@ -35,7 +40,7 @@ export interface ToolImagePreview {
 }
 
 export interface ToolAudioPreview {
-	data: string;
+	src: string;
 	mimeType: string;
 }
 

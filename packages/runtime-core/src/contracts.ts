@@ -2,8 +2,11 @@ import type { ThinkingLevel, ToolPhase } from "@vetta/agent-core";
 import type { AssistantMessageEvent, CacheUsageReporting, Message, Model } from "@vetta/ai";
 import type { ContextCompositionReport } from "./context-composition/contracts.js";
 import type { RuntimeFailure, RuntimeFailureDetails, RuntimeFailureOrigin } from "./failure-contract.js";
+import type { RuntimeSessionFactEvent, SessionContextRecord } from "./kernel/contracts.js";
 import type { SessionContextState, SessionContextStateEvent } from "./session-context-state.js";
 import type { SessionExtensionEndpointToken, SessionExtensionObservation } from "./session-extensions/contracts.js";
+import type { ApprovalDecision, ApprovalRequest, ArtifactDescriptor, RuntimeTaskEvent } from "./task/contracts.js";
+import type { RuntimeSessionTaskState } from "./task/session-projection.js";
 
 export interface PromptResourceRef {
 	/** Extension-owned resource discriminator. Runtime keeps it opaque. */
@@ -204,6 +207,31 @@ export interface RetryEndEvent extends SessionEventBase {
 
 export interface SessionExtensionEvent extends SessionEventBase, SessionExtensionObservation {}
 
+/** Task 生命周期事实投影到宿主/UI；载荷即持久化的 RuntimeTaskEvent，可重放重建快照。 */
+export interface TaskLifecycleEvent extends SessionEventBase {
+	type: "task.lifecycle";
+	task: RuntimeTaskEvent;
+}
+
+/** Artifact descriptor 事实投影到宿主/UI；文件内容是事实源，descriptor 仅作索引。 */
+export interface ArtifactDescriptorEvent extends SessionEventBase {
+	type: "artifact.descriptor";
+	artifact: ArtifactDescriptor;
+}
+
+/** 审批请求事实投影：高风险动作先落盘再阻塞等待，UI 只消费该状态。 */
+export interface ApprovalRequestedEvent extends SessionEventBase {
+	type: "approval.requested";
+	request: ApprovalRequest;
+}
+
+/** 审批决策事实投影：`edit` 不构成批准，随后的新请求有新的 approvalId。 */
+export interface ApprovalDecisionEvent extends SessionEventBase {
+	type: "approval.decision";
+	approvalId: string;
+	decision: ApprovalDecision;
+}
+
 /**
  * 会话激活工具集发生变化（插件在会话创建之后才注册/注销工具时触发）。
  * renderer 据此刷新输入栏 badge 的 `requiresActiveTool` 闸门——否则打开会话那一刻
@@ -263,6 +291,10 @@ export type SessionEvent =
 	| UsageUpdateEvent
 	| ErrorEvent
 	| SessionExtensionEvent
+	| TaskLifecycleEvent
+	| ArtifactDescriptorEvent
+	| ApprovalRequestedEvent
+	| ApprovalDecisionEvent
 	| ActiveToolsUpdateEvent
 	| CompactionStartEvent
 	| CompactionEndEvent
@@ -396,6 +428,11 @@ export interface SessionConfig {
 
 export interface PromptRequest {
 	text: string;
+	/**
+	 * Product-authored context committed in the same Turn as this prompt. Keeping it
+	 * on the request prevents a separate context write from racing with admission.
+	 */
+	context?: readonly SessionContextRecord[];
 	/** Structured extension resource selection. Kept separate from prompt text. */
 	promptRef?: PromptResourceRef;
 	/** Absolute filesystem references attached to this turn. Read by the agent on demand. */
@@ -502,6 +539,12 @@ export interface SessionFacade {
 	setExecutionMode(sessionId: string, mode: SessionExecutionMode): Promise<void>;
 	setGlobalExecutionMode(mode: SessionExecutionMode): Promise<void>;
 	prompt(sessionId: string, request: PromptRequest): Promise<RuntimeTurnPromptOutcome>;
+	/** Waits for the current Turn to release, then atomically admits this prompt. */
+	promptWhenAvailable(
+		sessionId: string,
+		request: PromptRequest,
+		signal?: AbortSignal,
+	): Promise<RuntimeTurnPromptOutcome>;
 	queuePromptIfRunning(sessionId: string, request: PromptRequest): Promise<RuntimeQueuePromptIfRunningOutcome>;
 	continue(sessionId: string): Promise<void>;
 	abort(sessionId: string): Promise<void>;
@@ -517,6 +560,10 @@ export interface SessionFacade {
 	updateGlobalThinkingLevel(level: ThinkingLevel): void;
 	getState(sessionId: string): SessionStateSnapshot;
 	getMessages(sessionId: string): Message[];
+	/** 从持久化 Task/Artifact 事实重放的会话任务投影；重启后同样由事件流重建。 */
+	getTaskState(sessionId: string): RuntimeSessionTaskState;
+	/** 追加宿主显式提交的 Task/Artifact 事实（Task 创建、审批、Review、descriptor 等）。 */
+	recordTaskFacts(sessionId: string, facts: readonly RuntimeSessionFactEvent[]): Promise<void>;
 	/** Full conversation history including compaction boundaries (for UI display). */
 	getFullHistory(sessionId: string): HistoryEntry[];
 	/**

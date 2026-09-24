@@ -1,6 +1,6 @@
 import { getDocsMessages, localeConfig, type DocsLanguage } from "./i18n";
 
-export const DEFAULT_DOCS_SITE_URL = "https://docs.openvetta.com";
+export const DEFAULT_DOCS_SITE_URL = "https://hxquan-q.github.io";
 
 export const site = {
 	name: "Vetta",
@@ -9,9 +9,9 @@ export const site = {
 		"Vetta 把模型、本地文件和本机工具放进同一个桌面 Agent 工作台。本站提供快速开始、实战示例，以及权限、批量、自动化、插件、主题与 SDK 指南。",
 	locale: localeConfig.zh.intlLocale,
 	openGraphLocale: localeConfig.zh.openGraphLocale,
-	marketingUrl: "https://www.openvetta.com",
-	downloadUrl: "https://www.openvetta.com/download",
-	githubUrl: "https://github.com/openvetta/open-vetta",
+	marketingUrl: "https://github.com/hxquan-q/open-forge",
+	downloadUrl: "https://github.com/hxquan-q/open-forge/releases",
+	githubUrl: "https://github.com/hxquan-q/open-forge",
 	discordUrl: "https://discord.gg/qGqkk22Vg9",
 	logoPath: "/images/vetta-app-icon.webp",
 	ogImagePath: "/opengraph-image/",

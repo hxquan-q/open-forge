@@ -62,8 +62,9 @@ export async function connectSshHelper(
 		const binary = await readFile(localPath);
 		const digest = createHash("sha256").update(binary).digest("hex");
 		const home = await connection.resolveHomeDirectory();
-		const directory = `${home.replace(/\/+$/, "")}/.cache/vetta/helper/${HELPER_PROTOCOL_VERSION}`;
-		const remotePath = `${directory}/vetta-ssh-helper`;
+		const remoteHome = home.replace(/\/+$/, "");
+		const directory = `${remoteHome}/.cache/openforge/helper/${HELPER_PROTOCOL_VERSION}`;
+		const remotePath = `${directory}/openforge-ssh-helper`;
 
 		if ((await remoteDigest(connection, remotePath)) !== digest) {
 			await connection.makeDirectory(directory);
@@ -75,6 +76,8 @@ export async function connectSshHelper(
 				return undefined;
 			}
 			note(`installed helper ${HELPER_PROTOCOL_VERSION} (${target.os}-${target.arch})`);
+			// 旧品牌的安装目录在新位置就位后清掉，避免在别人的机器上留孤儿目录。
+			await connection.exec(`rm -rf ${quoteShellArgument(`${remoteHome}/.cache/vetta/helper`)}`);
 		}
 
 		const client = SshHelperClient.attach((feed) => {

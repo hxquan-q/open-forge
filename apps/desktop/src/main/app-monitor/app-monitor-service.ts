@@ -14,6 +14,7 @@ import {
 import { type AppMonitorProfile, createDefaultAppMonitorProfile } from "./app-monitor-profile.js";
 import { appMonitorProfileStore, appMonitorStore, createAppMonitorMonthStore } from "./app-monitor-store.js";
 import { runAppMonitorFileMigrations } from "./migrations/index.js";
+import { observePerfSession, unobservePerfSession } from "./perf-monitor-service.js";
 
 const ACTIVE_TIMEOUT_MS = 2 * 60 * 1000;
 const FLUSH_INTERVAL_MS = 2 * 60 * 1000;
@@ -223,6 +224,18 @@ class AppMonitorService {
 		});
 	}
 
+	recordRuntimeCompaction(
+		event: Extract<SessionEvent, { readonly type: "compaction.start" | "compaction.end" }>,
+	): void {
+		this.mutate((data) => {
+			if (event.type === "compaction.start") {
+				data.compactions.started += 1;
+			} else {
+				data.compactions[event.success ? "succeeded" : "failed"] += 1;
+			}
+		}, event.timestamp);
+	}
+
 	recordKnowledgeBaseSnapshot(snapshot: KnowledgeBaseMonitorSnapshot): void {
 		this.mutate((data) => {
 			data.knowledgeBase.kbCount = normalizeDelta(snapshot.kbCount);
@@ -409,16 +422,9 @@ class AppMonitorService {
 					data.usage.costTotal += Math.max(0, event.costTotal);
 				}, event.timestamp);
 				break;
-			case "compaction.start":
-				this.mutate((data) => {
-					data.compactions.started += 1;
-				}, event.timestamp);
-				break;
-			case "compaction.end":
-				this.mutate((data) => {
-					data.compactions[event.success ? "succeeded" : "failed"] += 1;
-				}, event.timestamp);
-				break;
+			// compaction.* 不在会话订阅路径累计：计数挂在宿主级 sessionCompactionObserver，
+			// 覆盖所有已挂载会话（含 Agent Team 成员/协调会话等不经 monitorSession 的路径），
+			// 与 session-compaction-logger 的日志口径一致；在这里再计会双算。
 			case "error":
 				this.mutate((data) => {
 					data.errors[event.error.origin] += 1;
@@ -1162,11 +1168,23 @@ export function getAppMonitorSnapshot(): AppMonitorData {
 	return appMonitor.getSnapshot();
 }
 
+/**
+ * 压缩计数入口：由 RuntimeHost 的 sessionCompactionObserver 驱动，对宿主内所有
+ * 已挂载会话生效（包括不经 monitorRuntimeSession 的 Agent Team 会话）。
+ */
+export function recordRuntimeCompaction(
+	event: Extract<SessionEvent, { readonly type: "compaction.start" | "compaction.end" }>,
+): void {
+	appMonitor.recordRuntimeCompaction(event);
+}
+
 export function monitorRuntimeSession(runtime: RuntimeHost, sessionId: string, kind: MonitoredSessionKind): void {
+	observePerfSession(runtime, sessionId);
 	appMonitor.monitorSession(runtime, sessionId, kind);
 }
 
 export function stopMonitoringRuntimeSession(sessionId: string): void {
+	unobservePerfSession(sessionId);
 	appMonitor.stopMonitoringSession(sessionId);
 }
 

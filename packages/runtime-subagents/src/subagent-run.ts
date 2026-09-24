@@ -1,4 +1,5 @@
 import type {
+	SubagentChildEvent,
 	SubagentChildFactory,
 	SubagentChildHandle,
 	SubagentLifecycle,
@@ -25,6 +26,8 @@ export interface SubagentRunOptions<TProfile> {
 	readonly signal: AbortSignal;
 	readonly formatInitialMessage: (snapshot: SubagentSnapshot, message: string) => string;
 	readonly hooks: SubagentRunHooks<TProfile>;
+	readonly startDeadlineMs: number;
+	readonly settleDeadlineMs: number;
 }
 
 export class SubagentRun<TProfile> {
@@ -98,7 +101,13 @@ export class SubagentRun<TProfile> {
 		if (!request) throw new Error(`Subagent "${this.taskName}" has no queued request`);
 		this.queuedRequest = undefined;
 		const epoch = this.executionEpoch;
-		const handle = await this.options.factory.create(request, type, this.options.signal);
+		const creation = this.options.factory.create(request, type, this.options.signal);
+		const handle = await this.withDeadline(
+			creation,
+			this.options.startDeadlineMs,
+			`create subagent "${this.taskName}"`,
+			() => this.disposeLateHandle(creation, "dispose late-arriving created child"),
+		);
 		if (!this.isCurrent(epoch) || this.disposed) {
 			await this.disposeForeignHandle(handle, "dispose stale created child");
 			throw new Error(
@@ -149,7 +158,13 @@ export class SubagentRun<TProfile> {
 		if (!this.handle) {
 			const reopen = this.options.factory.reopen;
 			if (!reopen) throw new Error(`Subagent "${this.id}" is not live and reopen is not supported`);
-			const handle = await reopen(this.readSnapshot(), type, this.options.signal);
+			const reopening = reopen(this.readSnapshot(), type, this.options.signal);
+			const handle = await this.withDeadline(
+				reopening,
+				this.options.startDeadlineMs,
+				`reopen subagent "${this.taskName}"`,
+				() => this.disposeLateHandle(reopening, "dispose late-arriving reopened child"),
+			);
 			if (!this.isCurrent(epoch) || this.disposed) {
 				await this.disposeForeignHandle(handle, "dispose stale reopened child");
 				throw new Error(
@@ -242,7 +257,7 @@ export class SubagentRun<TProfile> {
 				this.snapshot.status = "running";
 				this.options.hooks.onChanged();
 			}
-			if (event.type === "agent_end") void this.onChildAgentEnd(this.executionEpoch);
+			if (event.type === "agent_end") void this.onChildAgentEnd(this.executionEpoch, event);
 		});
 	}
 
@@ -254,45 +269,64 @@ export class SubagentRun<TProfile> {
 			this.options.hooks.onChanged();
 			await handle.prompt(message);
 			if (this.isCurrent(epoch) && !handle.isStreaming() && this.snapshot.status === "running") {
-				await this.onChildAgentEnd(epoch);
+				await this.onChildAgentEnd(epoch, { type: "agent_end" });
 			}
 		} catch (error) {
 			if (this.isCurrent(epoch) && isActiveStatus(this.snapshot.status)) await this.fail(error);
 		}
 	}
 
-	private async onChildAgentEnd(epoch: number): Promise<void> {
+	private async onChildAgentEnd(epoch: number, event: SubagentChildEvent): Promise<void> {
 		if (!this.isCurrent(epoch) || !isActiveStatus(this.snapshot.status) || this.endingEpoch === epoch) return;
 		this.endingEpoch = epoch;
 		try {
 			this.snapshot.finalText = this.handle?.getLastAssistantText();
 			this.updateUsage();
+			const reason = event.reason ?? "completed";
 			let continuation: string | undefined;
 			if (this.startLifecycleCompleted) {
 				try {
+					// stop 钩子是产品代码而非 Provider 边界，但悬挂同样会卡住终态收敛，与中断收尾共用同一宽限。
 					continuation = (
-						await this.options.lifecycle?.beforeStop?.({
-							id: this.snapshot.id,
-							agentType: this.snapshot.agentType,
-							generation: this.snapshot.generation,
-							stopHookActive: this.stopContinuationCount > 0,
-							lastAssistantText: this.snapshot.finalText,
-							sessionFile: this.snapshot.sessionFile,
-							interrupted: false,
-						})
+						await this.withDeadline(
+							Promise.resolve(
+								this.options.lifecycle?.beforeStop?.({
+									id: this.snapshot.id,
+									agentType: this.snapshot.agentType,
+									generation: this.snapshot.generation,
+									stopHookActive: this.stopContinuationCount > 0,
+									lastAssistantText: this.snapshot.finalText,
+									sessionFile: this.snapshot.sessionFile,
+									interrupted: reason !== "completed",
+								}),
+							),
+							this.options.settleDeadlineMs,
+							`subagent "${this.taskName}" beforeStop lifecycle`,
+						)
 					)?.continuation;
 				} catch (error) {
 					this.options.hooks.onError(error, "subagent beforeStop lifecycle");
 				}
 			}
 			if (!this.isCurrent(epoch) || !isActiveStatus(this.snapshot.status)) return;
-			if (continuation && this.handle && this.stopContinuationCount < MAX_STOP_CONTINUATIONS) {
+			if (
+				reason === "completed" &&
+				continuation &&
+				this.handle &&
+				this.stopContinuationCount < MAX_STOP_CONTINUATIONS
+			) {
 				this.stopContinuationCount += 1;
 				this.endingEpoch = undefined;
 				void this.runPrompt(epoch, continuation);
 				return;
 			}
-			this.commitTerminal("completed");
+			if (reason === "failed") {
+				this.commitTerminal("failed", event.errorMessage ?? "Subagent turn failed");
+			} else if (reason === "interrupted") {
+				this.commitTerminal("interrupted");
+			} else {
+				this.commitTerminal("completed");
+			}
 			this.options.hooks.onTerminal(this.readSnapshot());
 			this.markSettled();
 		} finally {
@@ -301,28 +335,40 @@ export class SubagentRun<TProfile> {
 	}
 
 	private async settleInterruptedExecution(epoch: number, handle: SubagentChildHandle | undefined): Promise<void> {
-		if (handle) {
-			try {
-				await handle.abort();
-				await handle.waitForIdle();
-			} catch (error) {
-				this.options.hooks.onError(error, "abort subagent child");
-			}
-		}
-		if (this.startLifecycleCompleted) {
-			try {
-				await this.options.lifecycle?.beforeStop?.({
-					id: this.snapshot.id,
-					agentType: this.snapshot.agentType,
-					generation: this.snapshot.generation,
-					stopHookActive: this.stopContinuationCount > 0,
-					lastAssistantText: this.snapshot.finalText,
-					sessionFile: this.snapshot.sessionFile,
-					interrupted: true,
-				});
-			} catch (error) {
-				this.options.hooks.onError(error, "interrupted subagent beforeStop lifecycle");
-			}
+		// 成员可能忽略 AbortSignal：整个收尾（abort→idle→stop 钩子）必须有界，
+		// 否则并发槽位永不释放、Coordinator dispose 永久等待（BUG-0001）。
+		try {
+			await this.withDeadline(
+				(async () => {
+					if (handle) {
+						try {
+							await handle.abort();
+							await handle.waitForIdle();
+						} catch (error) {
+							this.options.hooks.onError(error, "abort subagent child");
+						}
+					}
+					if (this.startLifecycleCompleted) {
+						try {
+							await this.options.lifecycle?.beforeStop?.({
+								id: this.snapshot.id,
+								agentType: this.snapshot.agentType,
+								generation: this.snapshot.generation,
+								stopHookActive: this.stopContinuationCount > 0,
+								lastAssistantText: this.snapshot.finalText,
+								sessionFile: this.snapshot.sessionFile,
+								interrupted: true,
+							});
+						} catch (error) {
+							this.options.hooks.onError(error, "interrupted subagent beforeStop lifecycle");
+						}
+					}
+				})(),
+				this.options.settleDeadlineMs,
+				`settle interrupted subagent "${this.taskName}"`,
+			);
+		} catch (error) {
+			this.options.hooks.onError(error, "settle interrupted subagent");
 		}
 		if (this.executionEpoch === epoch + 1) this.markSettled();
 	}
@@ -347,10 +393,35 @@ export class SubagentRun<TProfile> {
 
 	private async disposeForeignHandle(handle: SubagentChildHandle, operation: string): Promise<void> {
 		try {
-			await handle.dispose();
+			const disposal = (async () => {
+				await handle.dispose();
+			})();
+			await this.withDeadline(disposal, this.options.settleDeadlineMs, operation);
 		} catch (error) {
 			this.options.hooks.onError(error, operation);
 		}
+	}
+
+	/** 超时后迟到的子句柄仍归属本 run：到达即释放，避免僵尸子会话泄漏。 */
+	private disposeLateHandle(work: Promise<SubagentChildHandle>, operation: string): void {
+		void work.then(
+			(handle) => this.disposeForeignHandle(handle, operation),
+			() => undefined,
+		);
+	}
+
+	private withDeadline<T>(work: Promise<T>, ms: number, label: string, onTimeout?: () => void): Promise<T> {
+		if (!Number.isFinite(ms)) return work;
+		// 超时后 work 仍在后台挂兜底，避免迟到拒绝变成 unhandled rejection。
+		void work.catch(() => undefined);
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const guard = new Promise<never>((_, reject) => {
+			timer = setTimeout(() => {
+				onTimeout?.();
+				reject(new Error(`${label} exceeded ${ms}ms deadline`));
+			}, ms);
+		});
+		return Promise.race([work, guard]).finally(() => clearTimeout(timer));
 	}
 
 	private isCurrent(epoch: number): boolean {

@@ -36,6 +36,9 @@ export default defineConfig({
 				new URL("../runtime-tools/src/coding/index.ts", import.meta.url),
 			),
 			"@vetta/runtime-tools": fileURLToPath(new URL("../runtime-tools/src/index.ts", import.meta.url)),
+			"@vetta/runtime-mcp/browser": fileURLToPath(
+				new URL("../runtime-mcp/src/browser/index.ts", import.meta.url),
+			),
 			"@vetta/runtime-mcp/auth": fileURLToPath(new URL("../runtime-mcp/src/auth/index.ts", import.meta.url)),
 			"@vetta/runtime-mcp/client": fileURLToPath(
 				new URL("../runtime-mcp/src/client/index.ts", import.meta.url),
@@ -55,6 +58,9 @@ export default defineConfig({
 			),
 			"@vetta/runtime-core/kernel": fileURLToPath(
 				new URL("../runtime-core/src/kernel/index.ts", import.meta.url),
+			),
+			"@vetta/runtime-core/task": fileURLToPath(
+				new URL("../runtime-core/src/task/index.ts", import.meta.url),
 			),
 			"@vetta/runtime-core/conversation": fileURLToPath(
 				new URL("../runtime-core/src/conversation/index.ts", import.meta.url),

@@ -46,6 +46,20 @@
 		"permission": "Permission: {{permission}}",
 		"permissionPrefix": "Permission: ",
 		"whyConfirm": "The AI is requesting this action. It will run only after you confirm.",
+		"taskApproval": {
+			"title": "Allow {{tool}} to run?",
+			"allowOnce": "Allow once",
+			"affectedResources": "Resources affected",
+			"rememberProject": "Do not ask again for this tool in this project",
+			"l4AlwaysConfirm": "Highest-risk action: confirmation is required every time, even with project trust.",
+			"levelL3": "High risk",
+			"levelL4": "Highest risk"
+		},
+		"fileOrganize": {
+			"title": "Organize these files?",
+			"summary": "The {{count}} operations below run only after you confirm",
+			"confirm": "Run organize"
+		},
 		"genericTitle": "Confirm action",
 		"genericSummary": "Please confirm whether to allow this action.",
 		"genericImpact": "Confirm to run it. Reject cancels the request without changing your data.",

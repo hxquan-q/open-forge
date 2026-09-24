@@ -153,7 +153,9 @@ async function produceAnthropicStream(
 			});
 			reducer.consume(event);
 		}
-		if (!receivedProviderEvent) throw new EmptyProviderStreamError();
+		if (!receivedProviderEvent) {
+			throw new EmptyProviderStreamError({ provider: model.provider, modelId: model.id });
+		}
 		reducer.finish();
 		if (options?.signal?.aborted) throw new AIAbortedError();
 		if (output.stopReason === "error" || output.stopReason === "aborted") {
@@ -184,7 +186,9 @@ function normalizeAnthropicSdkStreamError(
 	receivedProviderEvent: boolean,
 	model: Model<"anthropic-messages">,
 ): unknown {
-	if (!receivedProviderEvent && isSdkEmptyStreamError(error)) return new EmptyProviderStreamError(error);
+	if (!receivedProviderEvent && isSdkEmptyStreamError(error)) {
+		return new EmptyProviderStreamError({ provider: model.provider, modelId: model.id, cause: error });
+	}
 	if (error instanceof Error && /unexpected event order|expected .* event/i.test(error.message)) {
 		return new AIStreamProtocolError(error.message, {
 			provider: model.provider,
