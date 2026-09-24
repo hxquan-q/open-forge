@@ -94,10 +94,50 @@ export function reconcileOptimisticUserMessages<T extends ChatConversationItem>(
 	pendingByRuntimeId.set(runtimeId, unresolved);
 
 	const historyIds = new Set(history.map((message) => message.id));
-	return [
-		...applyConfirmedInputSnapshots(history, confirmedSnapshots),
-		...unresolved.map(({ message }) => message).filter((message) => !historyIds.has(message.id)),
-	];
+	return insertUnresolvedOptimisticMessages(
+		applyConfirmedInputSnapshots(history, confirmedSnapshots),
+		unresolved,
+		historyIds,
+	);
+}
+
+function insertUnresolvedOptimisticMessages<T extends ChatConversationItem>(
+	history: readonly T[],
+	unresolved: readonly PendingOptimisticUserMessage[],
+	historyIds: ReadonlySet<string>,
+): (T | ConversationUserMessageViewModel)[] {
+	const canonicalUserCount = history.filter((message) => message.kind === "user").length;
+	const byPrecedingUserCount = new Map<number, ConversationUserMessageViewModel[]>();
+	const tailFallback: ConversationUserMessageViewModel[] = [];
+	for (const { message, precedingUserCount } of unresolved) {
+		if (historyIds.has(message.id)) continue;
+		// A history snapshot with a different user ordinal cannot safely locate this
+		// bubble (it may already contain a later/different canonical send). Preserve
+		// the existing tail fallback until the canonical user confirms or expires it.
+		if (precedingUserCount !== canonicalUserCount) {
+			tailFallback.push(message);
+			continue;
+		}
+		const messages = byPrecedingUserCount.get(precedingUserCount) ?? [];
+		messages.push(message);
+		byPrecedingUserCount.set(precedingUserCount, messages);
+	}
+
+	const result: (T | ConversationUserMessageViewModel)[] = [];
+	const appendAtUserOrdinal = (ordinal: number): void => {
+		const messages = byPrecedingUserCount.get(ordinal);
+		if (messages) result.push(...messages);
+	};
+	appendAtUserOrdinal(0);
+	let userCount = 0;
+	for (const message of history) {
+		result.push(message);
+		if (message.kind !== "user") continue;
+		userCount += 1;
+		appendAtUserOrdinal(userCount);
+	}
+	result.push(...tailFallback);
+	return result;
 }
 
 function applyConfirmedInputSnapshots<T extends ChatTimelineItem>(
