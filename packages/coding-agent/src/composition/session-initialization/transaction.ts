@@ -13,6 +13,7 @@ import {
 	allowsAgentResource,
 	selectAgentPlugins,
 	validateAgentResourceSelection,
+	withAgentProfileDefaultToolTolerance,
 } from "../../agent-configuration/resource-selection.js";
 import { AGENT_SESSION_CONFIGURATION } from "../../agent-configuration/session-configuration-extension.js";
 import { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
@@ -413,7 +414,15 @@ async function initializeSession<TOwnershipBinding>(
 							(configuration.mcpServers === null ||
 								(tool.serverName !== undefined && configuration.mcpServers.includes(tool.serverName))),
 					);
-					validateAgentResourceSelection(configuration, agentConfiguration.readCatalog());
+					// Profile 默认折算的工具名按软默认校验（BUG-0014）：宿主没注册的默认项
+					// 降级而不是让整个会话创建失败；显式选择仍逐名严格核对。
+					validateAgentResourceSelection(
+						configuration,
+						withAgentProfileDefaultToolTolerance(
+							agentConfiguration.readCatalog(),
+							sessionOptions.profileDefaultToolNames,
+						),
+					);
 					appliedPluginSelection = selection;
 				}),
 			async activate(binding) {

@@ -89,3 +89,18 @@ export function applyAgentProfileDefaults(
 		overrides: { ...(selection?.overrides ?? {}), tools: [...profile.defaultToolNames] },
 	};
 }
+
+/**
+ * {@link applyAgentProfileDefaults} 这次是否真的把 Profile 默认工具折算进了显式选择。
+ * 宿主据此把同一份清单作为 `profileDefaultToolNames` 证据随会话下发（BUG-0014）：
+ * 准入校验对其中宿主未注册的名字按软默认降级，而显式选择不受影响。
+ */
+export function appliesAgentProfileDefaultTools(
+	profile: CodingAgentAgentProfile,
+	selection: AgentConfigurationSelection | undefined,
+): boolean {
+	if (profile.defaultToolNames === null) return false;
+	if (selection?.overrides.tools !== undefined && selection?.overrides.tools !== null) return false;
+	if (selection?.template?.configuration.tools) return false;
+	return true;
+}
