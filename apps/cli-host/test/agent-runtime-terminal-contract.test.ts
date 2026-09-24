@@ -33,13 +33,14 @@ describe("Agent Runtime terminal contract", () => {
 		});
 	}, 30_000);
 
-	it("emits one terminal outcome and recovers after a Provider stream disconnect", async () => {
+	it("recovers a Provider stream disconnect within the same Turn when turn retry is disabled", async () => {
 		const observation = await runStreamDisconnectRecovery();
 		expect(observation).toEqual({
-			failureTerminalKinds: legacyRuntimeContract.rpc.terminalFailureKinds,
-			idleAfterFailure: true,
-			partialText: "partial-before-disconnect",
-			providerRequestCount: 2,
+			terminalKinds: ["agent_end"],
+			idleAfterTurn: true,
+			partialText: "partial-before-disconnectstream-disconnect-recovered",
+			providerRequestCount: 3,
+			providerRetryAttempts: [1],
 		});
 	}, 30_000);
 
@@ -59,8 +60,12 @@ interface TerminalRecoveryObservation {
 	readonly providerRequestCount: number;
 }
 
-interface StreamRecoveryObservation extends TerminalRecoveryObservation {
+interface StreamRecoveryObservation {
+	readonly terminalKinds: readonly string[];
+	readonly idleAfterTurn: boolean;
 	readonly partialText: string;
+	readonly providerRequestCount: number;
+	readonly providerRetryAttempts: readonly number[];
 }
 
 async function runHttpFailureRecovery(): Promise<TerminalRecoveryObservation> {
@@ -140,8 +145,9 @@ async function runStreamDisconnectRecovery(): Promise<StreamRecoveryObservation>
 		server.disconnectHeldRequest();
 		await server.waitForHeldRequestClosed();
 		await process.waitFor((frame) => frame.type === "agent_end", failureMark);
-		const failedState = await process.request("state-after-stream-disconnect", "get_state");
+		const recoveredState = await process.request("state-after-stream-retry", "get_state");
 		const failureTerminalKinds = readTerminalKinds(process, failureMark);
+		const providerRetryAttempts = readProviderRetryAttempts(process.framesSince(failureMark));
 		const partialText = process
 			.framesSince(failureMark)
 			.flatMap((frame) => {
@@ -158,10 +164,11 @@ async function runStreamDisconnectRecovery(): Promise<StreamRecoveryObservation>
 		await process.waitFor((frame) => frame.type === "agent_end", recoveryMark);
 
 		return {
-			failureTerminalKinds,
-			idleAfterFailure: failedState.data?.isStreaming === false,
+			terminalKinds: failureTerminalKinds,
+			idleAfterTurn: recoveredState.data?.isStreaming === false,
 			partialText,
 			providerRequestCount: server.requests.length,
+			providerRetryAttempts,
 		};
 	} finally {
 		await process?.close();
@@ -223,5 +230,15 @@ function readTerminalKinds(process: AgentRpcProcess, afterIndex: number): readon
 		if (frame.type === "agent_end") return ["agent_end"];
 		if (frame.type === "response" && frame.command === "prompt" && frame.success === false) return ["prompt_error"];
 		return [];
+	});
+}
+
+function readProviderRetryAttempts(frames: readonly unknown[]): number[] {
+	return frames.flatMap((frame) => {
+		if (typeof frame !== "object" || frame === null || Reflect.get(frame, "type") !== "message_update") return [];
+		const event = Reflect.get(frame, "assistantMessageEvent");
+		if (typeof event !== "object" || event === null || Reflect.get(event, "type") !== "retry") return [];
+		const attempt = Reflect.get(event, "attempt");
+		return typeof attempt === "number" ? [attempt] : [];
 	});
 }
