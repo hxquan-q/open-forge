@@ -35,6 +35,7 @@ import { registerReviewChangesIpc } from "./review-changes.js";
 import { registerRuntimeConfigurationIpc } from "./runtime-configuration.js";
 import { registerRuntimesIpc } from "./runtimes.js";
 import { registerSessionIpc } from "./session.js";
+import { registerSessionArchiveIpc } from "./session-archive.js";
 import { registerSettingsIpc } from "./settings.js";
 import { registerSkillsIpc } from "./skills.js";
 import { registerSpeechInputIpc } from "./speech-input.js";
@@ -51,6 +52,7 @@ interface IpcTeardown {
 	teardownActionApproval: () => void;
 	teardownAppMonitor: () => void;
 	teardownSession: () => void;
+	teardownSessionArchive: () => void;
 	teardownSettings: () => void;
 	teardownUpdater: () => void;
 	teardownSkills: () => void;
@@ -104,6 +106,10 @@ export function registerAllIpc(
 		teardownActionApproval: registerActionApprovalIpc(options.actionApprovalBroker),
 		teardownAppMonitor: registerAppMonitorIpc(),
 		teardownSession: registerSessionIpc(webContents),
+		teardownSessionArchive: (() => {
+			registerSessionArchiveIpc();
+			return () => undefined;
+		})(),
 		teardownSettings: registerSettingsIpc(),
 		teardownUpdater: registerUpdaterIpc(),
 		teardownSkills: registerSkillsIpc(),
@@ -150,6 +156,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownActionApproval();
 	teardown.teardownAppMonitor();
 	teardown.teardownSession();
+	teardown.teardownSessionArchive();
 	teardown.teardownSettings();
 	teardown.teardownUpdater();
 	teardown.teardownSkills();

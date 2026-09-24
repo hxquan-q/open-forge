@@ -556,6 +556,23 @@
 		"exportButton": {
 			"title": "导出完整会话 HTML"
 		},
+		"archiveExportButton": {
+			"title": "导出可迁移会话归档"
+		},
+		"archiveImportButton": {
+			"title": "导入会话归档"
+		},
+		"archiveExport": {
+			"failed": "导出会话归档失败：{{message}}",
+			"passphrasePrompt": "为归档设置口令（可留空）"
+		},
+		"archiveImport": {
+			"failed": "导入会话归档失败：{{message}}",
+			"passphrasePrompt": "输入归档口令（无口令可留空）",
+			"doneSkip": "已跳过相同会话（指纹幂等）",
+			"doneCopy": "已导入为新会话副本",
+			"canceled": "已取消导入"
+		},
 		"newSessionButton": {
 			"title": "新会话"
 		},

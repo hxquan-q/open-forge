@@ -106,5 +106,10 @@
 	},
 	"documentExport": {
 		"title": "Export document"
+	},
+	"sessionArchive": {
+		"exportDialogTitle": "Export session archive",
+		"importDialogTitle": "Import session archive",
+		"filterName": "Open Forge session archive"
 	}
 }
