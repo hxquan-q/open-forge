@@ -86,6 +86,6 @@ const MCP_TOOL: ToolRiskDescriptor = EXTERNAL_TOOL;
 export function defaultToolRiskDescriptor(toolName: string): ToolRiskDescriptor | undefined {
 	const builtIn = BUILT_IN[toolName];
 	if (builtIn) return builtIn;
-	if (toolName.startsWith("mcp__")) return MCP_TOOL;
+	if (toolName.startsWith("mcp_")) return MCP_TOOL;
 	return undefined;
 }

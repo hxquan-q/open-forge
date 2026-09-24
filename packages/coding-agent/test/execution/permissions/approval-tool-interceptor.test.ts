@@ -105,6 +105,13 @@ describe("approval tool interceptor", () => {
 		expect(blocked?.block).toBeDefined();
 	});
 
+	it("MCP 工具按外部工具档请求 L3 审批，而非 fail closed 的 L4", async () => {
+		const { port, requests } = fakePort([{ decision: "approve" }]);
+		const allowed = await interceptorWith(port).before?.(contextFor("mcp_filesystem_list_directory", { path: "/" }));
+		expect(allowed).toEqual({});
+		expect((requests[0] as { level: string }).level).toBe("L3");
+	});
+
 	it("edit 决策生成新审批请求并采用改写参数；改写后批准才放行", async () => {
 		const { port, requests } = fakePort([
 			{ decision: "edit", input: { command: "npm ci" } },
