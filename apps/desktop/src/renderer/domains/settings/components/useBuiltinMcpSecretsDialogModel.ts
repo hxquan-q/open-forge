@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	type BuiltinMcpPreset,
+	isSecretFieldRequired,
 	resolveMcpPresetDisplayName,
 	resolveMcpPresetIconUrl,
 } from "../mcp/builtin-mcp-presets";
@@ -17,8 +18,11 @@ export interface BuiltinMcpSecretsFieldView {
 	readonly label: string;
 	readonly optionalSuffix: string;
 	readonly placeholder?: string;
+	/** 当前取值下的有效必填态（requiredWhen 已按其它字段值求值）。 */
 	readonly required: boolean;
 	readonly secret: boolean;
+	/** 限定枚举时渲染 select 而非输入框。 */
+	readonly options?: readonly { value: string; label: string }[];
 }
 
 export interface BuiltinMcpSecretsDialogModel {
@@ -83,7 +87,7 @@ export function useBuiltinMcpSecretsDialogModel({
 
 	const canSubmit = useMemo(() => {
 		return fields.every((field) => {
-			if (!field.required) return true;
+			if (!isSecretFieldRequired(field, values)) return true;
 			return Boolean(values[field.envKey]?.trim());
 		});
 	}, [fields, values]);
@@ -108,8 +112,9 @@ export function useBuiltinMcpSecretsDialogModel({
 				label: field.label?.trim() || (field.labelKey ? t(field.labelKey) : field.envKey),
 				optionalSuffix: `（${t("optional")}）`,
 				placeholder: field.placeholder,
-				required: Boolean(field.required),
+				required: isSecretFieldRequired(field, values),
 				secret: Boolean(field.secret),
+				options: field.options?.map((value) => ({ value, label: value })),
 			})),
 			guideLines,
 			hasFields,

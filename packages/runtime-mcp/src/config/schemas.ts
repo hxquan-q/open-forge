@@ -21,6 +21,11 @@ const McpServerCommonConfigProperties = {
 	protocolMode: Type.Optional(Type.Union([Type.Literal("legacy"), Type.Literal("modern"), Type.Literal("auto")])),
 };
 
+const McpPostConnectToolCallSchema = Type.Object({
+	tool: Type.String({ minLength: 1 }),
+	args: Type.Optional(Type.Record(Type.String(), Type.String())),
+});
+
 export const McpStdioServerConfigSchema = Type.Object(
 	{
 		...McpServerCommonConfigProperties,
@@ -30,6 +35,7 @@ export const McpStdioServerConfigSchema = Type.Object(
 		env: Type.Optional(LegacyStringMapSchema),
 		cwd: Type.Optional(Type.String()),
 		idleTimeout: Type.Optional(Type.Integer({ minimum: 0 })),
+		postConnectToolCalls: Type.Optional(Type.Array(McpPostConnectToolCallSchema)),
 	},
 	{ additionalProperties: true },
 );
@@ -103,6 +109,14 @@ function validateServerConfig(name: string, value: unknown): void {
 		}
 		if (value.idleTimeout !== undefined && !Value.Check(Type.Integer({ minimum: 0 }), value.idleTimeout)) {
 			throw new Error(`Invalid server config for '${name}': 'idleTimeout' must be a non-negative integer (ms)`);
+		}
+		if (
+			value.postConnectToolCalls !== undefined &&
+			!Value.Check(Type.Array(McpPostConnectToolCallSchema), value.postConnectToolCalls)
+		) {
+			throw new Error(
+				`Invalid server config for '${name}': 'postConnectToolCalls' must be an array of { tool, args? }`,
+			);
 		}
 	}
 	if (value.disabled !== undefined && !Value.Check(Type.Boolean(), value.disabled)) {

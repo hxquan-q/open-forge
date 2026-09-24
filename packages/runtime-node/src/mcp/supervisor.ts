@@ -16,7 +16,7 @@ import {
 	McpOAuthProvider,
 } from "./auth/index.js";
 import { FileMcpServerCatalogCache } from "./catalog/index.js";
-import { createMcpClient } from "./client/index.js";
+import { createMcpClient, withPostConnectToolCalls } from "./client/index.js";
 import { FileMcpConfigSource } from "./config/index.js";
 
 const MCP_PROTOCOL_VERSION = MCP_DEFAULT_PROTOCOL_VERSION;
@@ -78,21 +78,26 @@ export function createNodeMcpSupervisor(options: NodeMcpSupervisorOptions): Node
 					}),
 		configSource,
 		clientFactory: (name, config, clientOptions) =>
-			clientFactory(name, config, {
-				...clientOptions,
-				httpAuthProviderFactory: ({ serverName, serverUrl, config: httpConfig }) => {
-					if (!oauthStore.hasTokens(serverName)) return undefined;
-					return new McpOAuthProvider({
-						serverName,
-						serverUrl,
-						redirectUri: oauthStore.load(serverName)?.redirectUri ?? PLACEHOLDER_REDIRECT_URI,
-						onRedirect: () => undefined,
-						store: oauthStore,
-						clientName: options.oauthClientName ?? "Vetta",
-						clientId: httpConfig.oauthClientId,
-					});
-				},
-			}),
+			withPostConnectToolCalls(
+				clientFactory(name, config, {
+					...clientOptions,
+					httpAuthProviderFactory: ({ serverName, serverUrl, config: httpConfig }) => {
+						if (!oauthStore.hasTokens(serverName)) return undefined;
+						return new McpOAuthProvider({
+							serverName,
+							serverUrl,
+							redirectUri: oauthStore.load(serverName)?.redirectUri ?? PLACEHOLDER_REDIRECT_URI,
+							onRedirect: () => undefined,
+							store: oauthStore,
+							clientName: options.oauthClientName ?? "Vetta",
+							clientId: httpConfig.oauthClientId,
+						});
+					},
+				}),
+				name,
+				config,
+				options.onDiagnostic,
+			),
 		protocolVersion: MCP_PROTOCOL_VERSION,
 		clientInfo: { name: options.clientName ?? "vetta", version: options.clientVersion },
 		enabled: options.enabled,

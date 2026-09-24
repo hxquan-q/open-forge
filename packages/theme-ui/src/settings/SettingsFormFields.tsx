@@ -15,16 +15,19 @@ export function SelectField({
 	value,
 	onChange,
 	options,
+	placeholder,
 }: {
 	value: string;
 	onChange: (v: string) => void;
 	options: { value: string; label: string }[];
+	placeholder?: string;
 }): JSX.Element {
 	return (
 		<MotionSelect
 			value={value}
 			onValueChange={onChange}
 			options={options}
+			placeholder={placeholder}
 			triggerClassName="w-full"
 		/>
 	);

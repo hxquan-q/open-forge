@@ -19,6 +19,7 @@ import { getSkillDisplayDescription, getSkillDisplayName, isSkillVisibleOnSurfac
 import type { TFunction } from "i18next";
 import {
 	type BuiltinMcpPreset,
+	getListedBuiltinMcpPresets,
 	isBuiltinMcpServer,
 	matchBuiltinMcpPreset,
 	missingRequiredSecrets,
@@ -29,13 +30,14 @@ import {
 	resolveMcpPresetIconUrl,
 	serverUsesOAuth,
 } from "../../settings/mcp/builtin-mcp-presets";
-import type {
-	AbilityCatalogSource,
-	AbilityItem,
-	BundleAbility,
-	McpAbility,
-	PluginAbility,
-	SkillAbility,
+import {
+	ABILITY_CATEGORY_CONNECTORS,
+	type AbilityCatalogSource,
+	type AbilityItem,
+	type BundleAbility,
+	type McpAbility,
+	type PluginAbility,
+	type SkillAbility,
 } from "../types";
 import { buildMarketAbilityId, getMarketCatalogSource, getOpenCatalogOrigin } from "./merge-ability-catalogs";
 
@@ -441,6 +443,8 @@ export function buildMcpAbilities(
 	const marketEntries = market.filter((entry) => entry.type === "mcp");
 	const slugCounts = new Map<string, number>();
 	for (const entry of marketEntries) slugCounts.set(entry.slug, (slugCounts.get(entry.slug) ?? 0) + 1);
+	const listedPresets = getListedBuiltinMcpPresets();
+	const presetNames = new Set(listedPresets.map((preset) => preset.name));
 	const items: McpAbility[] = [];
 	const claimedServerNames = new Set<string>();
 	const marketItems: McpAbility[] = [];
@@ -449,7 +453,7 @@ export function buildMcpAbilities(
 		const catalogSource = getMarketCatalogSource(entry);
 		const id = buildMarketAbilityId(entry);
 		const ledgerMatch = findMcpLedgerEntry(state.ledger, id, catalogSource, entry.slug);
-		const hasCatalogConflict = (slugCounts.get(entry.slug) ?? 0) > 1;
+		const hasCatalogConflict = (slugCounts.get(entry.slug) ?? 0) > 1 || presetNames.has(entry.slug);
 		const preferredName = hasCatalogConflict ? qualifiedMcpServerName(entry.slug, id) : entry.slug;
 		const serverName =
 			ledgerMatch?.runtimeName ?? availableMcpServerName(preferredName, state.mcpConfig?.mcpServers ?? {});
@@ -469,6 +473,35 @@ export function buildMcpAbilities(
 		marketItems.push(item);
 	}
 
+	for (const preset of listedPresets) {
+		const serverName = preset.name;
+		const ledgerEntry = state.ledger[physicalLedgerKey("mcp", serverName)];
+		const claimedByMarket = claimedServerNames.has(serverName);
+		const item = createMcpAbility(
+			{
+				slug: preset.name,
+				serverName,
+				catalogSource: BUILTIN_SOURCE,
+				id: abilityId("mcp", preset.name, BUILTIN_SOURCE),
+				preset,
+				ledgerEntry: claimedByMarket ? undefined : ledgerEntry,
+			},
+			{
+				...state,
+				mcpConfig: claimedByMarket
+					? {
+							mcpServers: Object.fromEntries(
+								Object.entries(state.mcpConfig?.mcpServers ?? {}).filter(([name]) => name !== serverName),
+							),
+						}
+					: state.mcpConfig,
+			},
+			t,
+		);
+		if (item.installed) claimedServerNames.add(serverName);
+		// 内置预设没有服务端分类，统一归到「连接」分组
+		items.push({ ...item, category: ABILITY_CATEGORY_CONNECTORS });
+	}
 	items.push(...marketItems);
 	for (const serverName of Object.keys(state.mcpConfig?.mcpServers ?? {})) {
 		if (claimedServerNames.has(serverName)) continue;

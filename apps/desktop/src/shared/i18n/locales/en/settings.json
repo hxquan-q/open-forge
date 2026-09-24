@@ -1459,7 +1459,8 @@
       "gmail": "After adding, the first use in chat opens a browser to sign in with Google\nComplete authorization—no key paste required in most cases",
       "googleCalendar": "In Google Cloud Console, create an OAuth client (Desktop app)\nEnable the Google Calendar API\nCopy Client ID and Client Secret below\nComplete account authorization on first use",
       "googleDrive": "After adding, first use usually starts a Google authorization flow\nIf a local credentials file is required, set the path later via the key icon",
-      "canva": "After adding, first use opens a browser to sign in to Canva\nAuthorize once—no API key paste required"
+      "canva": "After adding, first use opens a browser to sign in to Canva\nAuthorize once—no API key paste required",
+      "universalDb": "Pick the database type and fill in connection info (SQLite only needs a file path)\nUse a read-only account: the connector is read-only by default and credentials stay on this machine\nSupports mysql, postgres, redis, mongodb, sqlite, oracle, sqlserver and more\nOnce added, you can inspect schemas and run read-only queries in chat"
     },
     "canva": {
       "displayName": "Canva",
@@ -1481,12 +1482,23 @@
       "displayName": "Google Drive",
       "description": "Find and read Drive files so cloud documents can be used in chat (authorization may be required)."
     },
+    "universalDb": {
+      "displayName": "Universal Database",
+      "description": "Connect MySQL, PostgreSQL, SQLite, MongoDB, Redis and other databases to inspect schemas and run read-only queries in chat."
+    },
     "secrets": {
       "slackBotToken": "Slack bot token",
       "slackTeamId": "Slack workspace ID",
       "googleClientId": "Google client ID",
       "googleClientSecret": "Google client secret",
-      "gdriveCredentialsPath": "Credentials file path (optional)"
+      "gdriveCredentialsPath": "Credentials file path (optional)",
+      "dbType": "Database type",
+      "dbHost": "Host",
+      "dbPort": "Port",
+      "dbUser": "Username",
+      "dbPassword": "Password",
+      "dbName": "Database name",
+      "dbFilePath": "Database file path (SQLite)"
     }
   },
   "unknown": "Unknown",

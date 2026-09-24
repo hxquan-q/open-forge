@@ -7,7 +7,7 @@ import {
 	DialogDescription,
 	DialogTitle,
 } from "@vetta-org/ui";
-import { InputField } from "./SettingsFormFields";
+import { InputField, SelectField } from "./SettingsFormFields";
 import { McpDefaultIcon } from "./McpDefaultIcon";
 
 export interface BuiltinMcpSecretFieldView {
@@ -18,6 +18,8 @@ export interface BuiltinMcpSecretFieldView {
 	readonly helpUrl?: string;
 	readonly secret?: boolean;
 	readonly placeholder?: string;
+	/** 限定枚举时渲染 select 而非输入框。 */
+	readonly options?: readonly { value: string; label: string }[];
 }
 
 export interface BuiltinMcpSecretsDialogViewLabels {
@@ -239,12 +241,21 @@ export function BuiltinMcpSecretsDialogView({
 										</Button>
 									)}
 								</div>
-								<InputField
-									type={field.secret ? "password" : "text"}
-									value={values[field.envKey] ?? ""}
-									onChange={(value) => onChangeValue(field.envKey, value)}
-									placeholder={field.placeholder}
-								/>
+								{field.options ? (
+									<SelectField
+										value={values[field.envKey] ?? ""}
+										onChange={(value) => onChangeValue(field.envKey, value)}
+										options={[...field.options]}
+										placeholder={field.placeholder}
+									/>
+								) : (
+									<InputField
+										type={field.secret ? "password" : "text"}
+										value={values[field.envKey] ?? ""}
+										onChange={(value) => onChangeValue(field.envKey, value)}
+										placeholder={field.placeholder}
+									/>
+								)}
 							</div>
 						))}
 					</div>

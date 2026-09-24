@@ -13,7 +13,15 @@ const COMMON_SERVER_KEYS = new Set([
 	"description",
 	"icon",
 ]);
-const STDIO_SERVER_KEYS = new Set([...COMMON_SERVER_KEYS, "command", "args", "env", "cwd", "idleTimeout"]);
+const STDIO_SERVER_KEYS = new Set([
+	...COMMON_SERVER_KEYS,
+	"command",
+	"args",
+	"env",
+	"cwd",
+	"idleTimeout",
+	"postConnectToolCalls",
+]);
 const HTTP_SERVER_KEYS = new Set([
 	...COMMON_SERVER_KEYS,
 	"url",
@@ -110,6 +118,21 @@ function assertServerConfig(value: unknown, path: string): asserts value is McpS
 		(typeof value.idleTimeout !== "number" || !Number.isInteger(value.idleTimeout) || value.idleTimeout < 0)
 	) {
 		throw new Error(`Invalid ${path}.idleTimeout`);
+	}
+	if (value.postConnectToolCalls !== undefined) {
+		if (
+			!Array.isArray(value.postConnectToolCalls) ||
+			value.postConnectToolCalls.some(
+				(call) =>
+					!isRecord(call) ||
+					typeof call.tool !== "string" ||
+					call.tool.length === 0 ||
+					(call.args !== undefined &&
+						(!isRecord(call.args) || Object.values(call.args).some((arg) => typeof arg !== "string"))),
+			)
+		) {
+			throw new Error(`Invalid ${path}.postConnectToolCalls`);
+		}
 	}
 }
 

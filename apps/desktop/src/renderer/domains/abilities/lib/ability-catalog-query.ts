@@ -55,9 +55,18 @@ export function isManuallyInstalledAbility(item: AbilityItem): boolean {
 	return false;
 }
 
-/** 「公开」展示已列入市场的条目以及 Open Forge 内置能力。 */
+/**
+ * 「公开」展示已列入市场的条目、Open Forge 内置能力，以及内置 MCP 连接器预设。
+ * 后者没有市场行（fromMarket=false），未添加时 installed 也为 false，只按
+ * fromMarket/isBuiltin 过滤会让它们在发现页不可见。buildMcpAbilities 只为
+ * listedInDiscover 的预设建 builtin 条目，未放行的预设不会漏出。
+ */
 export function isAbilityListedInDiscover(item: AbilityItem): boolean {
-	return (item.fromMarket && (!item.market || isMarketAbilityListed(item.market))) || item.isBuiltin;
+	return (
+		(item.fromMarket && (!item.market || isMarketAbilityListed(item.market))) ||
+		item.isBuiltin ||
+		(item.type === "mcp" && item.catalogSource.kind === "builtin")
+	);
 }
 
 /** 「个人」只展示通用 skill 和手动安装的能力。 */

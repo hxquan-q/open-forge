@@ -61,3 +61,41 @@ describe("validateMcpConfig idleTimeout", () => {
 		).toThrow(/idleTimeout/);
 	});
 });
+
+describe("validateMcpConfig postConnectToolCalls", () => {
+	const calls = [
+		{
+			tool: "connect_database",
+			args: {
+				type: "{env:DB_TYPE}",
+				port: "{env:DB_PORT:number}",
+				password: "{env:DB_PASSWORD}",
+			},
+		},
+	];
+
+	it("接受 stdio server 上的 { tool, args? } 声明（模板 token 原样透传）", () => {
+		const parsed = validateMcpConfig({
+			mcpServers: { "universal-db": { command: "npx", args: ["-y", "pkg"], postConnectToolCalls: calls } },
+		});
+		expect(parsed.mcpServers["universal-db"]).toMatchObject({ postConnectToolCalls: calls });
+	});
+
+	it("拒绝畸形 spec，且不允许出现在 http server 上", () => {
+		for (const postConnectToolCalls of [
+			"connect_database",
+			[{ tool: "" }],
+			[{ args: {} }],
+			[{ tool: "x", args: { port: 3306 } }],
+		]) {
+			expect(() => validateMcpConfig({ mcpServers: { local: { command: "node", postConnectToolCalls } } })).toThrow(
+				/postConnectToolCalls/,
+			);
+		}
+		expect(() =>
+			validateMcpConfig({
+				mcpServers: { remote: { type: "http", url: "https://example.com/mcp", postConnectToolCalls: calls } },
+			}),
+		).toThrow(/postConnectToolCalls/);
+	});
+});
