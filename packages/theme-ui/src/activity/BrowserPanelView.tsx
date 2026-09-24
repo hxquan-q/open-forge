@@ -160,12 +160,15 @@ export function BrowserPanelView({
 			<div className="relative flex min-h-0 flex-1">
 				{/* src 用静态 about:blank 让 guest 立即挂载（dom-ready 才会触发），
 				    真实地址由 effect 通过 loadURL 加载；src 不绑 targetUrl 以免页内跳转触发重载。 */}
+				{/* Electron 的 JSX 声明把 allowpopups 定为 boolean，但 React DOM 对
+				    非布尔属性只写字符串：传 true 会被丢弃并告警（BUG-0019）。运行时
+				    合同是字符串 "true"，断言只为弥合两份类型声明的差异。 */}
 				<webview
 					key={workspaceId}
 					ref={webviewRef}
 					src="about:blank"
 					partition={partition}
-					allowpopups={true}
+					allowpopups={"true" as unknown as boolean}
 					webpreferences="contextIsolation=yes, nodeIntegration=no"
 					className="h-full w-full"
 				/>

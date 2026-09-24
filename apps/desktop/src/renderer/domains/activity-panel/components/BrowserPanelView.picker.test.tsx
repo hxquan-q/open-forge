@@ -156,6 +156,20 @@ describe("BrowserPanelView picker chrome", () => {
 		);
 	}
 
+	it("renders Electron popup permission without a React warning or weakening webview isolation", () => {
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		try {
+			const { container } = renderPanel();
+			const webview = container.querySelector("webview");
+
+			expect(webview?.getAttribute("allowpopups")).toBe("true");
+			expect(webview?.getAttribute("webpreferences")).toBe("contextIsolation=yes, nodeIntegration=no");
+			expect(errorSpy.mock.calls.flat().join("\n")).not.toContain("non-boolean attribute `allowpopups`");
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
 	it("选中后渲染即时预览卡：文本/样式提交、逐条与全部撤销、发送与放弃", async () => {
 		const user = userEvent.setup();
 		const model = liveEditModel({
