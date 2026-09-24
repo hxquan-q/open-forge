@@ -3,6 +3,7 @@ import stripAnsi from "strip-ansi";
 import { createNodeCodingToolEnvironment, type NodeCodingToolEnvironment } from "../node-tool-environment.js";
 import type { BackgroundCommandService } from "../shared/background-command-service.js";
 import type { CommandToolExecutor } from "../shared/command-tool.js";
+import type { ReviewSnapshotBinding } from "../shared/review-capture.js";
 import { sanitizeBinaryOutput } from "../shared/text-decoding.js";
 import type { EditPathPolicy } from "../tools/edit/index.js";
 import type { ReadToolOptions } from "../tools/read/index.js";
@@ -31,6 +32,7 @@ export interface NodeHostCodingToolEnvironmentOptions {
 	readonly normalizeBackgroundOutput?: (value: string) => string;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 
 /**
@@ -62,5 +64,6 @@ export function createNodeHostCodingToolEnvironment(
 		writePathPolicy: options.writePathPolicy,
 		configurationSource: options.configurationSource,
 		readOptions: options.readOptions,
+		reviewSnapshots: options.reviewSnapshots,
 	});
 }

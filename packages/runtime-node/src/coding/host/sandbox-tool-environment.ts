@@ -2,6 +2,7 @@ import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/con
 import type { CodingToolRegistration } from "@vetta/runtime-tools";
 import { createNodeSandboxHost, type NodeSandboxHost, type NodeSandboxHostOptions } from "../../sandbox/index.js";
 import { createForegroundCommandToolExecutor } from "../shared/foreground-command-executor.js";
+import type { ReviewSnapshotBinding } from "../shared/review-capture.js";
 import { createBashToolRegistration } from "../tools/bash/index.js";
 import { createEditToolRegistration, type EditPathPolicy } from "../tools/edit/index.js";
 import { createReadToolRegistration, type ReadToolOptions } from "../tools/read/index.js";
@@ -16,6 +17,7 @@ export interface NodeSandboxCodingToolEnvironmentOptions extends NodeSandboxHost
 	readonly writePathPolicy: WritePathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 
 export interface NodeSandboxCodingToolEnvironment {
@@ -47,8 +49,14 @@ export function createNodeSandboxCodingToolEnvironment(
 			...options.readOptions,
 			configurationSource: options.configurationSource,
 		}),
-		write: createWriteToolRegistration(options.cwd, { pathPolicy: options.writePathPolicy }),
-		edit: createEditToolRegistration(options.cwd, { pathPolicy: options.editPathPolicy }),
+		write: createWriteToolRegistration(options.cwd, {
+			pathPolicy: options.writePathPolicy,
+			reviewSnapshots: options.reviewSnapshots,
+		}),
+		edit: createEditToolRegistration(options.cwd, {
+			pathPolicy: options.editPathPolicy,
+			reviewSnapshots: options.reviewSnapshots,
+		}),
 		command,
 		hostServices,
 	};

@@ -4,6 +4,7 @@ export {
 	createWriteTool,
 	type WriteOperations,
 	type WritePathPolicy,
+	type WriteToolDetails,
 	type WriteToolInput,
 	WriteToolInputSchema,
 	type WriteToolOptions,

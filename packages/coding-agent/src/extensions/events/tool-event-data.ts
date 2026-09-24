@@ -1,3 +1,5 @@
+import type { ToolResultReview } from "@vetta/runtime-storage/conversation";
+
 export interface ToolEventInputBase {
 	description?: string;
 }
@@ -113,6 +115,7 @@ export interface EditToolDetails {
 	readonly diff: string;
 	readonly firstChangedLine?: number;
 	readonly appliedEdits?: number;
+	readonly review?: ToolResultReview;
 }
 
 export interface GrepToolDetails {
