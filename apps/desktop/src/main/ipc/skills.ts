@@ -4,9 +4,9 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, sep } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
-import AdmZip from "adm-zip";
 import { ipcMain } from "electron";
 import { recordAbilityInstall } from "../abilities/ability-ledger.js";
+import { extractZipArchiveSafely } from "../archive/safe-zip-extract.js";
 import { getBuiltinSkillPaths } from "../builtin-skills.js";
 import { pluginAgentContributionService } from "../plugins/plugin-catalog.js";
 import { parseFrontmatter, rewriteFrontmatterDescription } from "../skills/skill-frontmatter.js";
@@ -162,8 +162,7 @@ export function registerSkillsIpc(): () => void {
 			const isGzip = buffer[0] === 0x1f && buffer[1] === 0x8b;
 
 			if (isZip) {
-				const zip = new AdmZip(buffer);
-				zip.extractAllTo(extractDir, true);
+				await extractZipArchiveSafely(buffer, extractDir);
 			} else if (isGzip) {
 				const tmpFile = join(tmpBaseDir, `_import_${stamp}.tar.gz`);
 				try {
