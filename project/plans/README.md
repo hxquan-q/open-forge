@@ -16,6 +16,9 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0007` | Agent Workspace Phase 2（Browser 调试闭环 + Canvas 富交互） | draft | PLAN-0006 推迟项圈选、用户确认的 Phase 2 决策；v1 演示/首发反馈可重排 |
 | `PLAN-0008` | Agent Team 编排协作对齐 | done | [`REQ-0006`](../requirements/REQ-0006-agent-team-orchestration-alignment.md)、[`RESEARCH-0008`](../research/RESEARCH-0008-multi-agent-orchestration-comparison.md) |
 | `PLAN-0009` | Canvas 体验演进（原生 Data Grid、高带宽组件、直接编辑与试跑） | ready | [`PLAN-0006`](PLAN-0006-canvas-browser-activity-tabs.md)、已确认的 P0~P2 演进案 |
+| `PLAN-0010` | 桌面端内存与发布体积优化（VS Code 借鉴） | in_progress | [`RESEARCH-0013`](../research/RESEARCH-0013-vscode-footprint-optimization.md) |
+| `PLAN-0011` | 仓库架构治理升级（Avernet 借鉴） | ready | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
+| `PLAN-0012` | 无人值守会话与自动化产品化（WorkDaddy 借鉴） | in_progress | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
 
 ## 当前执行焦点
 
