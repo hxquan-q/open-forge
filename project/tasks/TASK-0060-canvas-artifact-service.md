@@ -1,7 +1,7 @@
 ---
 id: TASK-0060
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001

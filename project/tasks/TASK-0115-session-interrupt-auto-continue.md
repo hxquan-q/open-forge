@@ -1,7 +1,7 @@
 ---
 id: TASK-0115
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: []
@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/main/, apps/desktop/src/renderer/domains/, packag
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0106]
-integration_status: pending
+integration_status: integrated（c16e34d99，随本批推送 origin/dev）
 created: 2026-09-24
 updated: 2026-09-24
 ---

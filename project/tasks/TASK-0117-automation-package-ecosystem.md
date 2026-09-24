@@ -1,7 +1,7 @@
 ---
 id: TASK-0117
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: []
@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/main/scheduler/, apps/desktop/src/renderer/domain
 exclusive_paths: []
 depends_on: [TASK-0116]
 conflicts_with: [TASK-0116, TASK-0118]
-integration_status: pending
+integration_status: integrated（a8f8bffaf，随本批推送 origin/dev）
 created: 2026-09-24
 updated: 2026-09-25
 ---

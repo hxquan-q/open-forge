@@ -1,7 +1,7 @@
 ---
 id: TASK-0116
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: []
@@ -21,7 +21,7 @@ write_paths: [packages/coding-agent/src/features/scheduled-tasks/, apps/desktop/
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0117, TASK-0118]
-integration_status: pending
+integration_status: integrated（a8f8bffaf，随本批推送 origin/dev）
 created: 2026-09-24
 updated: 2026-09-25
 ---
