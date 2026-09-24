@@ -74,7 +74,7 @@ updated: 2026-09-24
 ## 交付记录
 
 - 实际修改：`workspace-session-flow` 收口右栏与徽标种类；页头补后果说明与文档图标；新会话选项行加只读确认句；新会话页 work 档出工作面板；工作面板加标题引导；对齐徽标改为「按…开的 · 切页头不会改」。
-- 实际运行：workspace-session-flow 7、workspace-mode-copy 5、WorkspaceModeSwitcher 4、WorkWorkspacePanel 4、NewSessionWorkspaceHint 2、NewSessionOptionsRow 2、DefaultChatView 4、InputBarView 4，均通过。Biome 已对本切片 TS 文件执行 `--write`。
-- 未运行及原因：`verify:ui:*` 需用户授权；全量 `bun run check` 被工作区其他 WIP 污染。Desktop `tsc` 现存错误在 webview-picker / abilities / date-picker，不在本切片。
-- 剩余风险：页头「文档与研究」五字偏长，窄栏可能折行；新会话 work 面板是空骨架（尚无会话任务投影）。
+- 实际运行：workspace-session-flow 7、workspace-mode-copy 5、WorkspaceModeSwitcher 4、WorkWorkspacePanel 4、NewSessionWorkspaceHint 2、NewSessionOptionsRow 2、DefaultChatView 4、InputBarView 4，均通过。Biome 已对本切片 TS 文件执行 `--write`。`bun run check`（2026-09-24）：lint 6 条、types 失败，均落在其他 WIP（live-edit CRLF、webview-agent-guest、PluginPermissionVisual、date-picker 双份 react-day-picker、coding-agent/runtime 测试合同），本切片文件未出现。`verify:ui:status:dev` 不可达。Fresh 冷启动 120s 超时；热缓存后 CDP 可达，但脚本仍按「Vetta Desktop」选窗失败。随后把选窗改读 `desktop-brand.json`（现为 Open Forge），`desktop-brand` + diagnostics 测试 11 通过；`check:quick` 对这 3 个文件通过。Debug 实例 `running/ready/ui.reachable/targetFound` 均为 true，主窗标题 Open Forge；实机首屏在 `ThemeRuntimeProvider` 选 default 主题后 Invalid hook call（`useCallback` 读到 null），无法走到页头/新会话/右栏。已 `verify:ui:stop:debug`。
+- 未运行及原因：页头「文档与研究 / 代码」实机点击流程未完成，原因是 Debug Renderer 在主题加载后崩溃，不是本切片断言失败。
+- 剩余风险：页头「文档与研究」五字偏长，窄栏可能折行；新会话 work 面板是空骨架（尚无会话任务投影）；全仓 `check` 与实机 Renderer 仍被其他 WIP / 双份 React 挡住。
 - 发布说明候选（ISSUE-0007 门禁，暂存本记录）：【改进】页头「文档与研究 / 代码」会立刻换右侧工作台；新会话页用一句话确认即将按哪档开；已开会话标明切页头不会改它。
