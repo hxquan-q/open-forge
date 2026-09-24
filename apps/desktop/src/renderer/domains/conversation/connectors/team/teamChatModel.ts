@@ -12,6 +12,7 @@ import type {
 import {
 	abortConversationAgentMessage,
 	reduceConversationMessageEvent,
+	resolveConversationAgentText,
 	settlePendingToolCalls,
 } from "@shared/conversation";
 import type { InputSegment } from "@shared/lib/input-tokens";
@@ -1076,7 +1077,7 @@ function itemTimestamp(item: ChatConversationItem): number {
 }
 
 function publicAgentText(item: ChatConversationItem): string {
-	return item.kind === "agent" ? (item.text ?? "") : "";
+	return item.kind === "agent" ? resolveConversationAgentText(item) : "";
 }
 
 function sameMemberTurnEvidence(

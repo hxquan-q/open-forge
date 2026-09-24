@@ -3,6 +3,7 @@ import {
 	type ConversationAgentMessageViewModel,
 	createConversationAgentMessage,
 	createConversationUserMessage,
+	joinAgentTextBlocks,
 } from "@shared/conversation";
 import { isAttachmentPath, isImagePath } from "@shared/lib/input-tokens";
 import { pathBasename } from "@shared/lib/utils";
@@ -477,7 +478,8 @@ function createDeferredHistoryErrors() {
 		flush(): void {
 			for (const { target, message, details } of pending) {
 				pushHistoryError(target.blocks!, message, undefined, details);
-				if (!target.text) target.text = message;
+				// `text` 只是 blocks 无可派生正文时的兜底，不得与 blocks 派生值分叉。
+				if (!target.text && joinAgentTextBlocks(target.blocks!) === "") target.text = message;
 			}
 			pending = [];
 		},
@@ -515,7 +517,6 @@ export function historyToChat(
 		if (last?.kind === "agent") return last;
 		const msg = createConversationAgentMessage({
 			id: `hist-asst-${messages.length}`,
-			text: "",
 			blocks: [],
 		});
 		messages.push(msg);
@@ -552,9 +553,8 @@ export function historyToChat(
 				if (b.type === "tool_call") toolCallIndex.set(b.toolCallId, b);
 			}
 			target.blocks!.push(...blocks);
-			// Accumulate text
-			const text = extractText(m.content);
-			if (text) target.text = target.text ? `${target.text}\n${text}` : text;
+			// 历史回放的正文只保留 blocks 一份：`text` 由 blocks 派生（resolveConversationAgentText），
+			// 不再预拼整段字符串，避免同一段文本在 Renderer 驻留两份（TASK-0036）。
 			// Handle error messages (e.g. provider 404)
 			if (m.stopReason === "error" && m.errorMessage) {
 				historyErrors.defer({
@@ -618,7 +618,6 @@ export function fullHistoryToChatWithSpans(
 		if (last?.kind === "agent") return last;
 		const msg = createConversationAgentMessage({
 			id: `hist-asst-${messages.length}`,
-			text: "",
 			blocks: [],
 		});
 		spanStarts.push(entryIndex);
@@ -728,7 +727,7 @@ export function fullHistoryToChatWithSpans(
 					details: entry.details,
 				}),
 			);
-			if (!target.text) target.text = entry.message;
+			if (!target.text && joinAgentTextBlocks(target.blocks!) === "") target.text = entry.message;
 			if (target.timestamp === undefined) target.timestamp = new Date(entry.timestamp).getTime();
 			continue;
 		}
@@ -801,8 +800,7 @@ export function fullHistoryToChatWithSpans(
 				if (b.type === "tool_call") toolCallIndex.set(b.toolCallId, b);
 			}
 			target.blocks!.push(...blocks);
-			const text = extractText(m.content);
-			if (text) target.text = target.text ? `${target.text}\n${text}` : text;
+			// 同上：历史回放的 text 由 blocks 派生，不在投影时预拼。
 			if (m.stopReason === "error" && m.errorMessage) {
 				historyErrors.defer({
 					target,

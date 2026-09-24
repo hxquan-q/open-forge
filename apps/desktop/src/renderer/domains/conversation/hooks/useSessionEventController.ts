@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { createConversationUserMessage } from "@shared/conversation";
+import { createConversationUserMessage, resolveConversationAgentText } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {
 	activeSessionStreamingAtom,
@@ -720,7 +720,13 @@ function buildRecentConversation(messages: ChatTimelineItem[]): string {
 	}
 	const lines: string[] = [];
 	for (const message of relevant.slice(startIndex)) {
-		const text = (message.kind === "placeholder" ? message.summary : (message.text ?? "")).trim();
+		const text = (
+			message.kind === "placeholder"
+				? message.summary
+				: message.kind === "agent"
+					? resolveConversationAgentText(message)
+					: message.text
+		).trim();
 		if (!text) continue;
 		const role = message.kind === "user" || (message.kind === "placeholder" && message.role === "user");
 		lines.push(`${role ? "User" : "Assistant"}: ${text.slice(0, 600)}`);

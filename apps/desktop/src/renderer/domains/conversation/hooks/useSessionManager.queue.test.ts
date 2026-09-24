@@ -1,10 +1,23 @@
 // @vitest-environment jsdom
 
-import type { OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
+import { resolveConversationAgentText } from "@shared/conversation";
+import type { ChatTimelineItem, OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
 import { getDefaultStore } from "jotai";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
+/** 历史回放的助手消息只保留 blocks，比较可见文本时按 blocks 派生（TASK-0036）。 */
+function visibleMessageText(message: ChatTimelineItem): string {
+	if (message.kind === "event" || message.kind === "placeholder") return "";
+	return message.kind === "agent" ? resolveConversationAgentText(message) : message.text;
+}
+
+function visibleMessageShape(message: ChatTimelineItem): [string, string][] {
+	if (message.kind === "event" || message.kind === "placeholder") return [];
+	const text = visibleMessageText(message);
+	return text.length > 0 ? [[message.role, text]] : [];
+}
 
 const mocks = vi.hoisted(() => ({
 	applyLocalRename: vi.fn(),
@@ -338,13 +351,7 @@ it("turn 内接力消费：第二条回复的流式内容开新气泡、排在�
 		await new Promise((resolve) => setTimeout(resolve, 150));
 	});
 
-	const shape = store
-		.get(chatMessagesAtom)
-		.flatMap((message) =>
-			message.kind !== "event" && message.kind !== "placeholder" && (message.text?.length ?? 0) > 0
-				? [[message.role, message.text]]
-				: [],
-		);
+	const shape = store.get(chatMessagesAtom).flatMap((message) => visibleMessageShape(message) ?? []);
 	expect(shape).toEqual([
 		["assistant", "回答一"],
 		["user", "第二条消息"],
@@ -446,13 +453,7 @@ it("立即发送打断插队：上一回合已 streaming 的部分回复保留�
 	// 等 canonical 重拉落地。
 	await flushTimers();
 
-	const shape = store
-		.get(chatMessagesAtom)
-		.flatMap((message) =>
-			message.kind !== "event" && message.kind !== "placeholder" && (message.text?.length ?? 0) > 0
-				? [[message.role, message.text]]
-				: [],
-		);
+	const shape = store.get(chatMessagesAtom).flatMap((message) => visibleMessageShape(message) ?? []);
 	// 中途快照与 canonical 落地后都必须保留「部分回复」，且顺序正确。
 	expect(shape).toEqual([
 		["user", "第一条"],
@@ -475,7 +476,9 @@ it("空闲发送：正常上屏乐观气泡并返回 sent", async () => {
 	expect(
 		store
 			.get(chatMessagesAtom)
-			.flatMap((message) => (message.kind === "event" || message.kind === "placeholder" ? [] : [message.text])),
+			.flatMap((message) =>
+				message.kind === "event" || message.kind === "placeholder" ? [] : [visibleMessageText(message)],
+			),
 	).toContain("普通消息");
 });
 
