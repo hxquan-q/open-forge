@@ -119,6 +119,17 @@ async function createCodingAgentRuntimeCompositionInternal(
 	}
 }
 
+/**
+ * 二进制读提示的技能可用性来源：与 `invoke_skill` 共享同一份资源源，按调用时刻取名字快照。
+ * 资源源缺省时返回 `undefined`，让读工具按「没有可用技能」处理。
+ */
+function createAvailableSkillNamesProvider(
+	source: { getSkills(): { readonly skills: readonly { readonly name: string }[] } } | undefined,
+): (() => ReadonlySet<string> | undefined) | undefined {
+	if (!source) return undefined;
+	return () => new Set(source.getSkills().skills.map((skill) => skill.name));
+}
+
 async function assembleCodingAgentRuntimeComposition(
 	options: CodingAgentRuntimeCompositionOptions,
 	inheritedMcpView: McpRuntimeToolView,
@@ -139,6 +150,9 @@ async function assembleCodingAgentRuntimeComposition(
 		agentDir: options.agentDir,
 		scenario,
 		activation: options.activation,
+		// 二进制读提示需要知道「当前会话真有哪些技能」；来源与 invoke_skill 共享同一份资源源，
+		// 缺省（无 promptResourceSource）时按「没有可用技能」处理，绝不自造技能名（BUG-0025）。
+		availableSkillNames: createAvailableSkillNamesProvider(sessionInitializationProfile.promptResourceSource),
 		knowledgeRuntime: options.knowledgeRuntime,
 		inheritedMcpView,
 		mcpSource: options.mcpSource,

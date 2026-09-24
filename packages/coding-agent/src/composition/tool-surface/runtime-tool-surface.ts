@@ -51,6 +51,8 @@ export interface CodingAgentRuntimeToolSurfaceOptions {
 	readonly resultPolicy?: CodingToolResultPolicy;
 	readonly observationPublisher?: RuntimeObservationPublisher;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
+	/** 当前会话可调用的技能名；供二进制读提示判断能否点名技能。缺省=未知。 */
+	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 }
 
 export interface CodingAgentRuntimeToolSurface {
@@ -89,6 +91,7 @@ export async function createCodingAgentRuntimeToolSurface(
 		agentDir: options.agentDir,
 		scenario: options.scenario,
 		configurationSource: options.configurationSource,
+		availableSkillNames: options.availableSkillNames,
 	});
 	const tools = createCodingToolsRuntimeComposition({
 		cwd: options.cwd,

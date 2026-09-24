@@ -50,7 +50,7 @@ export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironment
 			remoteCwd: location.remotePath,
 			editPathPolicy: policies.editPathPolicy,
 			writePathPolicy: policies.writePathPolicy,
-			readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 			localReadRoots: resolveLocalReadRoots(context.agentDir),
 			// PDF / OCR / 文档转换依赖本机的引擎：远端文件取回本机处理，产物再传回去。
 			createLocalFileToolRegistrations: (localCwd, { ocrExecutionGate }) =>
@@ -67,7 +67,7 @@ export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironment
 		editPathPolicy: host.editPathPolicy,
 		writePathPolicy: host.writePathPolicy,
 		configurationSource: context.configurationSource,
-		readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+		readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 	});
 };
 
