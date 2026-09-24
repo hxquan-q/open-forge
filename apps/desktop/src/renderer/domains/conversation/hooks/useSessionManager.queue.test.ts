@@ -391,7 +391,7 @@ it("history 回填：canonical 缺少已消费 follow-up 时，乐观用户气�
 		(message) => message.kind === "user" && message.text === "第二条消息",
 	);
 	const replyIndex = canonicalTimeline.findIndex(
-		(message) => message.kind === "agent" && message.text.includes("回答二"),
+		(message) => message.kind === "agent" && visibleMessageText(message).includes("回答二"),
 	);
 	expect(followUpIndex).toBeGreaterThanOrEqual(0);
 	expect(replyIndex).toBeGreaterThan(followUpIndex);
