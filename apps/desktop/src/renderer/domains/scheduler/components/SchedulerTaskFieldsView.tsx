@@ -1,9 +1,12 @@
 import { TaskFormDialogView } from "@vetta-org/theme-ui/scheduler";
 import { SkillPromptArea } from "@domains/conversation/components/SkillPromptArea";
 import { ModelSelect } from "@shared/components/ModelSelect";
+import type { ScheduledTaskTrigger } from "@shared/store/atoms";
 import { Popover, PopoverContent, PopoverTrigger } from "@vetta-org/ui";
 import { useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { useSchedulerPermissionTiersModel } from "../hooks/useSchedulerPermissionTiersModel";
 import type {
 	CompactScheduleMode,
 	SchedulerTaskFieldsModel,
@@ -18,6 +21,28 @@ import {
 	type Schedule,
 } from "./schedule-picker/cron-utils";
 import type { SchedulerTaskDraft } from "./SchedulerTaskFields";
+import { SchedulerPermissionTiersView } from "./SchedulerPermissionTiersView";
+
+const HOST_EVENTS = [
+	"session.created",
+	"project.opened",
+	"automation.panelOpened",
+	"session.switched",
+] as const;
+
+function triggerKind(value: SchedulerTaskDraft): "cron" | "event" | "manual" {
+	return value.trigger?.type ?? "cron";
+}
+
+function triggerLabel(value: SchedulerTaskDraft, t: TFunction<"automation">): string {
+	const kind = triggerKind(value);
+	if (kind === "manual") return t("trigger.manual");
+	if (kind === "event") {
+		const event = value.trigger?.type === "event" ? value.trigger.event : "session.created";
+		return t(`trigger.events.${event}`);
+	}
+	return t("trigger.cron");
+}
 
 export interface SchedulerTaskFieldsViewProps extends SchedulerTaskFieldsModel {
 	readonly promptMinHeight: number;
@@ -58,8 +83,16 @@ export function SchedulerTaskFieldsView({
 }: SchedulerTaskFieldsViewProps): JSX.Element {
 	const { t } = useTranslation("automation");
 	const [workDirPopoverOpen, setWorkDirPopoverOpen] = useState(false);
+	const [triggerPopoverOpen, setTriggerPopoverOpen] = useState(false);
 	const [schedulePopoverOpen, setSchedulePopoverOpen] = useState(false);
 	const [executionPopoverOpen, setExecutionPopoverOpen] = useState(false);
+	const permissionTiers = useSchedulerPermissionTiersModel(value, onFieldChange);
+	const kind = triggerKind(value);
+
+	const setTrigger = (next: ScheduledTaskTrigger): void => {
+		onFieldChange("trigger", next);
+		setTriggerPopoverOpen(false);
+	};
 
 	return (
 		<div className="space-y-4">
@@ -122,6 +155,62 @@ export function SchedulerTaskFieldsView({
 					</Popover>
 				)}
 
+				<Popover open={triggerPopoverOpen} onOpenChange={setTriggerPopoverOpen}>
+					<PopoverTrigger asChild>
+						<button
+							type="button"
+							className="flex h-8 items-center gap-1.5 rounded-lg border border-border/50 bg-card/40 px-2.5 text-[12px] text-muted-foreground transition-colors hover:border-primary/30 hover:bg-card/70 hover:text-foreground"
+						>
+							<span className="icon-[mdi--flash-outline] h-3.5 w-3.5" />
+							<span className="max-w-[180px] truncate">{triggerLabel(value, t)}</span>
+							<span className="icon-[mdi--chevron-down] h-3.5 w-3.5 opacity-60" />
+						</button>
+					</PopoverTrigger>
+					<PopoverContent align="start" className="w-64 p-1">
+						{(
+							[
+								{ type: "cron" as const, label: t("trigger.cron") },
+								{ type: "event" as const, label: t("trigger.event") },
+								{ type: "manual" as const, label: t("trigger.manual") },
+							] as const
+						).map((option) => (
+							<button
+								key={option.type}
+								type="button"
+								onClick={() => {
+									if (option.type === "cron") setTrigger({ type: "cron" });
+									else if (option.type === "manual") setTrigger({ type: "manual" });
+									else setTrigger({ type: "event", event: "session.created" });
+								}}
+								className={`flex w-full items-center rounded-md px-2.5 py-1.5 text-[12px] transition-colors ${
+									kind === option.type ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent/50"
+								}`}
+							>
+								{option.label}
+							</button>
+						))}
+						{kind === "event" ? (
+							<div className="mt-1 border-t border-border/40 pt-1">
+								{HOST_EVENTS.map((event) => (
+									<button
+										key={event}
+										type="button"
+										onClick={() => setTrigger({ type: "event", event })}
+										className={`flex w-full items-center rounded-md px-2.5 py-1.5 text-[12px] transition-colors ${
+											value.trigger?.type === "event" && value.trigger.event === event
+												? "bg-primary/10 text-primary"
+												: "text-foreground hover:bg-accent/50"
+										}`}
+									>
+										{t(`trigger.events.${event}`)}
+									</button>
+								))}
+							</div>
+						) : null}
+					</PopoverContent>
+				</Popover>
+
+				{kind === "cron" ? (
 				<Popover open={schedulePopoverOpen} onOpenChange={setSchedulePopoverOpen}>
 					<PopoverTrigger asChild>
 						<button
@@ -161,6 +250,11 @@ export function SchedulerTaskFieldsView({
 						)}
 					</PopoverContent>
 				</Popover>
+				) : (
+					<span className="flex h-8 items-center rounded-lg border border-border/40 bg-card/20 px-2.5 text-[11px] text-muted-foreground/70">
+						{kind === "manual" ? t("trigger.manualHint") : t("trigger.eventHint")}
+					</span>
+				)}
 
 				<Popover open={executionPopoverOpen} onOpenChange={setExecutionPopoverOpen}>
 					<PopoverTrigger asChild>
@@ -225,6 +319,8 @@ export function SchedulerTaskFieldsView({
 					</button>
 				)}
 			</div>
+
+			<SchedulerPermissionTiersView {...permissionTiers} />
 		</div>
 	);
 }

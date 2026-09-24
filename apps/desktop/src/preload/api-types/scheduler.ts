@@ -1,6 +1,14 @@
 import type { SessionExecutionMode } from "@vetta/runtime-core";
 import type { ExecutionModeOverride, SelectedSkillRef } from "./shared.js";
 
+export interface ScheduledTaskPermissionTiers {
+	allowWorkspaceWrite?: boolean;
+	allowCommonCommands?: boolean;
+	allowBatchDelete?: boolean;
+	allowSystemTools?: boolean;
+	autoApprovePrompts?: boolean;
+}
+
 export interface ScheduledTask {
 	id: string;
 	name: string;
@@ -13,6 +21,7 @@ export interface ScheduledTask {
 	modelKey?: string;
 	executionMode?: ExecutionModeOverride;
 	skill?: SelectedSkillRef;
+	permissionTiers?: ScheduledTaskPermissionTiers;
 	createdAt: number;
 	updatedAt: number;
 	lastRunAt: number | null;
@@ -53,6 +62,47 @@ export type TaskEvent =
 	| { type: "record.updated"; taskId: string; sessionId: string; status: "success" | "aborted" }
 	| { type: "tasks.changed" };
 
+export interface AutomationPackagePreview {
+	pkg: {
+		schemaVersion: 1;
+		id: string;
+		version: string;
+		name: string;
+		description?: string;
+		requires: {
+			minAppVersion?: string;
+			taskSchemaVersion: number;
+			capabilities?: string[];
+			platforms?: Array<"win32" | "darwin" | "linux">;
+		};
+		task: {
+			name: string;
+			prompt: string;
+			cron: string;
+			isOnce?: boolean;
+		};
+	};
+	contentSha256: string;
+	compatible: boolean;
+	reasons: string[];
+}
+
+export type AutomationPackageImportResult =
+	| { status: "imported"; taskId: string; enabled: false }
+	| { status: "canceled" }
+	| { status: "rejected"; reasons: string[] };
+
+export type AutomationPackageExportResult = { status: "exported"; path: string } | { status: "canceled" };
+
+export interface DiscoveredAutomationPackage {
+	pkg: AutomationPackagePreview["pkg"];
+	contentSha256: string;
+	sourceRepository: string;
+	sourceUrl: string;
+	stars: number;
+	updatedAt: string;
+}
+
 export interface DesktopSchedulerApi {
 	getTasks(): Promise<ScheduledTask[]>;
 	createTask(
@@ -73,4 +123,13 @@ export interface DesktopSchedulerApi {
 	runTaskNow(id: string): Promise<void>;
 	abortTask(id: string): Promise<void>;
 	onTaskEvent(handler: (event: TaskEvent) => void): () => void;
+	exportAutomationPackages(taskIds: string[]): Promise<AutomationPackageExportResult>;
+	importAutomationPackage(defaultCwd: string): Promise<AutomationPackageImportResult>;
+	importAutomationPackageFromUrl(url: string, defaultCwd: string): Promise<AutomationPackageImportResult>;
+	previewAutomationPackage(text: string): Promise<AutomationPackagePreview>;
+	discoverAutomationPackages(): Promise<DiscoveredAutomationPackage[]>;
+	emitAutomationHostEvent(
+		eventName: "automation.panelOpened" | "session.switched",
+		context?: { cwd?: string; sessionId?: string; sessionPath?: string },
+	): Promise<void>;
 }
