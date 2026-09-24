@@ -22,6 +22,7 @@ import { BashTerminalCard } from "./tool-views/BashTerminalCard";
 import { EditDiffView } from "./tool-views/EditDiffView";
 import { KbFilterByTagsView, KbListTagsView, KbWritePageView } from "./tool-views/KnowledgeToolViews";
 import { ReadImageView } from "./tool-views/ReadImageView";
+import { ReviewChangeControls } from "./tool-views/ReviewChangeControls";
 import { ArtifactCanvasOpenButton } from "./ArtifactCanvasOpenButton";
 import { WriteContentView } from "./tool-views/WriteContentView";
 import { formatDurationPrecise, formatPhases, formatStartedAt } from "./tool-views/shared/format";
@@ -179,6 +180,7 @@ function ToolSpecificContent({
 		return (
 			<>
 				<WriteContentView block={block} />
+				<ReviewChangeControls review={block.uiDetails?.review} interactive={!projection.exportMode} />
 				<ToolErrorResult block={block} />
 			</>
 		);
@@ -187,6 +189,7 @@ function ToolSpecificContent({
 		return (
 			<>
 				<EditDiffView block={block} />
+				<ReviewChangeControls review={block.uiDetails?.review} interactive={!projection.exportMode} />
 				<ToolErrorResult block={block} />
 			</>
 		);

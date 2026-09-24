@@ -1029,6 +1029,25 @@
 		"submitButton": "提交",
 		"title": "Vetta 需要你的选择"
 	},
+	"reviewChange": {
+		"status": {
+			"added": "新建文件",
+			"modified": "修改文件",
+			"deleted": "删除文件"
+		},
+		"lines": "+{{added}} −{{removed}}",
+		"binary": "二进制内容",
+		"truncated": "内容过大，未生成行数统计",
+		"revert": "撤销此修改",
+		"reverting": "撤销中…",
+		"confirmTitle": "撤销此修改？",
+		"confirmMessage": "文件将恢复到此工具执行前的内容，之后无法再通过此入口还原这次修改。",
+		"confirmLabel": "撤销",
+		"restored": "已撤销",
+		"alreadyRolledBack": "此前已撤销",
+		"conflict": "文件在执行后被外部修改，已保留当前内容，未执行撤销",
+		"unavailable": "无法撤销：快照不可用"
+	},
 	"sandboxGrantsBadge": {
 		"revoke": "撤销",
 		"revokeAll": "全部撤销",

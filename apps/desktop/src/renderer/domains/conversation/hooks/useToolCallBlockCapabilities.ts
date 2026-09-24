@@ -42,7 +42,7 @@ export function projectToolCallBlock(block: ToolCallBlock, exportMode = false) {
 
 	return {
 		exportMode,
-		canExpand: hasResult || hasMeta || hasToolSpecificResult,
+		canExpand: hasResult || hasMeta || hasToolSpecificResult || block.uiDetails?.review !== undefined,
 		hasResult,
 		hasMeta,
 		icon: toolIcon(block.toolName),

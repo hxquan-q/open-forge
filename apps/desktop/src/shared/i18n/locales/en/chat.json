@@ -1029,6 +1029,25 @@
 		"submitButton": "Submit",
 		"title": "Vetta needs your choice"
 	},
+	"reviewChange": {
+		"status": {
+			"added": "Created file",
+			"modified": "Modified file",
+			"deleted": "Deleted file"
+		},
+		"lines": "+{{added}} −{{removed}}",
+		"binary": "Binary content",
+		"truncated": "Content too large for line statistics",
+		"revert": "Revert this change",
+		"reverting": "Reverting…",
+		"confirmTitle": "Revert this change?",
+		"confirmMessage": "The file will be restored to its content before this tool ran. This action cannot be undone here.",
+		"confirmLabel": "Revert",
+		"restored": "Reverted",
+		"alreadyRolledBack": "Already reverted",
+		"conflict": "The file was changed externally after execution; current content was kept and nothing was reverted",
+		"unavailable": "Cannot revert: snapshot unavailable"
+	},
 	"sandboxGrantsBadge": {
 		"revoke": "Revoke",
 		"revokeAll": "Revoke all",
