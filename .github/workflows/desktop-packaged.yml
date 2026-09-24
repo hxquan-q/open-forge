@@ -23,7 +23,7 @@ jobs:
         run: node apps/desktop/scripts/verify-packaging-contract.mjs
 
       - name: Test packaging contract helpers
-        run: node --test apps/desktop/scripts/desktop-packaging-layout.test.mjs apps/desktop/scripts/electron-e2e-service-options.node-test.mjs apps/desktop/scripts/packaged-e2e-binary.node-test.mjs apps/desktop/scripts/packaged-native-dependencies.test.mjs
+        run: node --test apps/desktop/scripts/desktop-packaging-layout.test.mjs apps/desktop/scripts/staged-deps-cleanlist.node-test.mjs apps/desktop/scripts/electron-e2e-service-options.node-test.mjs apps/desktop/scripts/packaged-e2e-binary.node-test.mjs apps/desktop/scripts/packaged-native-dependencies.test.mjs
 
   scope:
     name: Detect packaged smoke scope
@@ -105,6 +105,12 @@ jobs:
           VETTA_UPDATE_GITHUB_REPO: open-forge
           VETTA_UPDATE_PROVIDER: github
         run: bun run ${{ matrix.build-command }}
+
+      - name: Verify staged dependency cleanlist
+        working-directory: apps/desktop
+        env:
+          VETTA_BUILD_ENV: test
+        run: bun run verify:staged-deps --staging
 
       - name: Run packaged Electron smoke and updater E2E
         working-directory: apps/desktop

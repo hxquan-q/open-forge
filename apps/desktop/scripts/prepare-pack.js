@@ -28,6 +28,16 @@ import {
 import { stageSystemSkills } from "./stage-system-skills.mjs";
 import { stageSystemThemesFromArchives } from "./stage-system-themes.mjs";
 import { stageDesktopLegalResources } from "./stage-desktop-legal-resources.mjs";
+import {
+	assertStagedDependencyPlan,
+	collectStagedDependencyTree,
+	createStagedDepPlanFilter,
+	findStagedNodeModulesBlacklistHits,
+	listStagedDepFiles,
+	planStagedDepStripping,
+	readStagedDepFileSizes,
+	summarizeStagedDepCleaning,
+} from "./staged-deps-cleanlist.mjs";
 
 // 从 .env.<mode>/.env 注入构建期变量（如 VETTA_TENANT），命令行内联优先。
 const buildEnvMode = loadBuildEnv();
@@ -201,16 +211,38 @@ const optionalExternalDeps = packagedNativeDependencies.optional;
 // node-addon-api). Transitive deps are nested under the owner's node_modules so
 // both the collector and runtime require() resolve them; the asarUnpack glob
 // `node_modules/<dep>/**/*` then unpacks them alongside the native module.
-function stageDepTree(dep, sourceDir, destDir, seen = new Set()) {
-	cpSync(sourceDir, destDir, { recursive: true });
-	const pkg = JSON.parse(readFileSync(join(sourceDir, "package.json"), "utf8"));
-	for (const transDep of Object.keys(pkg.dependencies ?? {})) {
-		const key = `${dep}>${transDep}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		const transDir = resolveInstalledPackageRoot(transDep, sourceDir);
-		stageDepTree(transDep, transDir, join(destDir, "node_modules", transDep), seen);
-	}
+//
+// 清洗清单（scripts/staged-deps-cleanlist.mjs）在复制时逐条应用，对应 VS Code 的
+// `build/.moduleignore` 两级清单：测试、文档、构建脚本、调试符号与异平台预编译
+// 二进制不进 app.asar。闭包计算与规则都从那个模块读取，verify-staged-deps.mjs
+// 的产物断言与这里共用同一份实现。
+function formatMegabyteCount(bytes) {
+	return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+}
+
+// 哪些原生变体目录会被裁掉由目标产物平台决定；平台未知（本地显式构建）时保留全部。
+const stagedDependencyPlatforms = [...resolvePlatformFamilies()];
+
+function stageExternalDependency(dep, sourceDir, destDir) {
+	const packageJson = JSON.parse(readFileSync(join(sourceDir, "package.json"), "utf8"));
+	const filePaths = listStagedDepFiles(sourceDir);
+	const plan = planStagedDepStripping({ filePaths, platforms: stagedDependencyPlatforms, packageJson });
+	// 计划一旦碰到运行时入口立刻失败：破损的依赖不能被打进安装包。
+	assertStagedDependencyPlan({ label: dep, filePaths, plan, packageJson });
+	const summary = summarizeStagedDepCleaning({
+		filePaths,
+		sizesByPath: readStagedDepFileSizes(sourceDir, filePaths),
+		plan,
+	});
+	cpSync(sourceDir, destDir, {
+		recursive: true,
+		filter: createStagedDepPlanFilter({ sourceDir, plan }),
+	});
+	console.log(
+		`[prepare-pack] staged ${dep}: ${summary.files}→${summary.keptFiles} files, ` +
+			`${formatMegabyteCount(summary.bytes)}→${formatMegabyteCount(summary.keptBytes)} ` +
+			`(-${formatMegabyteCount(summary.strippedBytes)})`,
+	);
 }
 
 function toExternalDepInfo(dep) {
@@ -342,8 +374,26 @@ if (process.platform === "darwin") {
 	);
 }
 
-for (const { dep, dir } of externalDepInfos) {
-	stageDepTree(dep, dir, join(buildStageDir, "node_modules", dep));
+const stagedDependencyEntries = collectStagedDependencyTree({
+	roots: externalDepInfos.map((info) => info.dep),
+	destinationRoot: join(buildStageDir, "node_modules"),
+	fromDir: projectRoot,
+	resolvePackageRoot: (dep, fromDir) => resolveInstalledPackageRoot(dep, fromDir),
+});
+for (const { dep, sourceDir, destDir } of stagedDependencyEntries) {
+	stageExternalDependency(dep, sourceDir, destDir);
+}
+
+// 复制之后的成品校验：staging 树里一旦还有黑名单命中，说明 filter 没接上清洗规则。
+const stagedBlacklistHits = findStagedNodeModulesBlacklistHits({
+	nodeModulesDirectory: join(buildStageDir, "node_modules"),
+	platforms: stagedDependencyPlatforms,
+});
+if (stagedBlacklistHits.length > 0) {
+	throw new Error(
+		`[prepare-pack] staged node_modules still contains cleanlist blacklist entries:\n- ` +
+			stagedBlacklistHits.join("\n- "),
+	);
 }
 
 // =============================================================================

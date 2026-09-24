@@ -65,6 +65,18 @@ export function findDesktopPackagingContractViolations(rootDirectory = repoRoot)
 	if (!preparePack.includes('from "./desktop-packaging-layout.mjs"')) {
 		violations.push("prepare-pack.js does not consume the shared Desktop packaging layout");
 	}
+	if (!preparePack.includes('from "./staged-deps-cleanlist.mjs"')) {
+		violations.push("prepare-pack.js does not consume the staged dependency cleanlist");
+	}
+	if (
+		!preparePack.includes("assertStagedDependencyPlan(") ||
+		!preparePack.includes("findStagedNodeModulesBlacklistHits(")
+	) {
+		violations.push("prepare-pack.js does not assert the staged dependency cleanlist");
+	}
+	if (!preparePack.includes("createStagedDepPlanFilter(")) {
+		violations.push("prepare-pack.js does not apply the staged dependency cleanlist while copying dependencies");
+	}
 	if (!preparePack.includes("stageDesktopLegalResources(") || !preparePack.includes("DESKTOP_LEGAL_RESOURCE")) {
 		violations.push("prepare-pack.js does not stage the required Desktop LICENSE and NOTICE resources");
 	}
