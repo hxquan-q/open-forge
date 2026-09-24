@@ -33,6 +33,22 @@ function actionSteps(name) {
 	return parse(readFileSync(join(import.meta.dirname, `../../.github/actions/${name}/action.yml`), "utf8")).runs.steps;
 }
 
+/**
+ * Render a path the way the bash step will read it.
+ *
+ * The checkpoint steps are POSIX shell: they run `tar` and redirect into `$GITHUB_ENV`.
+ * Node builds Windows paths with backslashes, and MSYS leaves a mixed
+ * `C:\dir/apps/desktop` untouched — tar then reads the leading `C:` as a remote host and
+ * fails with "Cannot open". Converting to the `/c/...` form the shell actually expects
+ * keeps these steps testable on Windows instead of skipping them there.
+ */
+function shellPath(value) {
+	if (process.platform !== "win32") return value;
+	const normalized = value.replaceAll("\\", "/");
+	const drive = normalized.match(/^([A-Za-z]):\/(.*)$/);
+	return drive ? `/${drive[1].toLowerCase()}/${drive[2]}` : normalized;
+}
+
 describe("Desktop release workflow contracts", () => {
 	it("saves successful dependency downloads before later build or verification failures", () => {
 		const steps = actionSteps("install-bun-dependencies");
@@ -110,9 +126,9 @@ describe("Desktop release workflow contracts", () => {
 			const envFile = join(root, "github-env");
 			const env = {
 				...process.env,
-				RUNNER_TEMP: runnerTemp,
-				GITHUB_WORKSPACE: root,
-				GITHUB_ENV: envFile,
+				RUNNER_TEMP: shellPath(runnerTemp),
+				GITHUB_WORKSPACE: shellPath(root),
+				GITHUB_ENV: shellPath(envFile),
 				VETTA_REQUIRE_MAC_SIGNATURE: "1",
 				BUILD_VERSION: "0.5.59",
 			};
