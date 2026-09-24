@@ -1,7 +1,7 @@
 ---
 id: TASK-0086
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0007
@@ -9,14 +9,14 @@ plan: []
 source: user-request; REQ-0007
 execution: serial
 branch: forge/dev
-worktree: unassigned（主工作区串行）
+worktree: unassigned（forge/dev 主工作区串行执行）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/renderer/domains/abilities, apps/desktop/src/renderer/domains/settings/mcp, apps/desktop/src/renderer/domains/settings/components, apps/desktop/src/main/mcp, apps/desktop/src/main/mcp-config-validation.ts, apps/desktop/src/preload/api-types/mcp.ts, packages/runtime-mcp/src, packages/runtime-node/src/mcp, packages/theme-ui/src/settings, apps/desktop/src/shared/i18n, docs/adr/0049-abilities-unify-storage-and-presentation-not-installation.md, docs/adr/0092-declarative-managed-runtimes-for-mcp-abilities.md, packages/runtime-mcp/AGENTS.md, packages/runtime-node/AGENTS.md]
 write_paths: [apps/desktop/src/renderer/domains/settings/mcp/builtin-mcp-presets.ts, apps/desktop/src/renderer/domains/abilities/lib/build-ability-items.ts, apps/desktop/src/renderer/domains/abilities/lib/ability-catalog-query.ts, apps/desktop/src/renderer/domains/abilities/lib/build-ability-items.test.ts, apps/desktop/src/renderer/domains/abilities/lib/ability-catalog-query.test.ts, apps/desktop/src/renderer/domains/abilities/hooks/useAbilityMcpInstall.test.tsx, apps/desktop/src/renderer/domains/settings/components/useBuiltinMcpSecretsDialogModel.ts, apps/desktop/src/main/mcp-config-validation.ts, apps/desktop/src/main/mcp-config-validation.test.ts, apps/desktop/src/preload/api-types/mcp.ts, packages/runtime-mcp/src/protocol/types.ts, packages/runtime-mcp/src/config/schemas.ts, packages/runtime-node/src/mcp, packages/runtime-node/test/mcp, packages/theme-ui/src/settings/BuiltinMcpSecretsDialogView.tsx, packages/theme-ui/src/settings/SettingsFormFields.tsx, apps/desktop/src/shared/i18n/locales/zh/settings.json, apps/desktop/src/shared/i18n/locales/en/settings.json, apps/desktop/src/renderer/public/mcp]
 exclusive_paths: [apps/desktop/src/renderer/domains/settings/mcp/builtin-mcp-presets.ts, apps/desktop/src/renderer/domains/abilities/lib/build-ability-items.ts, apps/desktop/src/renderer/domains/abilities/lib/ability-catalog-query.ts, apps/desktop/src/main/mcp-config-validation.ts, apps/desktop/src/preload/api-types/mcp.ts, packages/runtime-mcp/src/protocol/types.ts, packages/runtime-mcp/src/config/schemas.ts, packages/runtime-node/src/mcp, packages/theme-ui/src/settings/BuiltinMcpSecretsDialogView.tsx]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；随 811fb3661/12bf88357 落地）
 created: 2026-09-24
 updated: 2026-09-24
 ---
