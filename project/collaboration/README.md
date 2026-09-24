@@ -75,6 +75,16 @@ bun run worktree:doctor
 
 等价的直接入口是 `bun scripts/worktree/cli.mjs <command> [options]`；上面每个别名都可用 `--help` 查看选项。
 
+### 并行派工前门禁
+
+Coordinator 在创建任何一批并行 Worktree 前先运行：
+
+```bash
+bun run worktree:check --all
+```
+
+必须先处理所有 Task 合同错误和未登记的写范围冲突；`--all` 对尚未创建的 Worktree 会报告机器状态漂移，协调者需确认这是预期的 ready Task，不能把警告误当作代码失败，也不能跳过真实合同错误。每个工作树创建后再对目标 Task 运行 `bun run worktree:check --task <ID>`。若检查发现路径/分支与已有工作树不一致，先找 Owner 核实，不要移动、覆盖或清理该工作树。
+
 ### 创建合同
 
 `create` 只接受满足以下条件的 Task，任一不满足即拒绝且不产生任何副作用：
@@ -207,7 +217,7 @@ integration_status: pending
 - `write_paths`：允许修改的范围；`worktree` 已声明时不得为空；
 - `exclusive_paths`：需要独占的共享文件；
 - `depends_on`：前置 Task ID（也可指向 `ISSUE-` / `BUG-` / `REQ-` / `PLAN-` 等跨模块阻断项，此类引用只校验 ID 形态，不在本树内解析）；
-- `conflicts_with`：不能并行的 Task ID；
+- `conflicts_with`：写入范围重叠、需要协调执行或串行集成的 Task ID；独立 Worktree 中可以并行实现，但必须按声明顺序集成。冲突关系通常在两端都登记；若一端正在其他 Worktree 中修改，Coordinator 可先在未被占用的 Task 登记并在交接时补齐另一端。
 - `integration_status`：`pending`、`reviewing`、`integrated`、`rejected`。
 
 路径字段是仓库相对的具体路径，允许 `*` / `**` glob（例如 `packages/**/package.json`），但必须留在仓库内；重叠判定按 glob 之前的静态前缀做保守比较。`status`、`execution`、`integration_status`、`priority` 的取值必须落在各自枚举内，写错会被 `check:task-worktrees` 报为告警、被 `worktree:check` 报为失败。
@@ -242,13 +252,25 @@ TASK-0008 Task/Artifact contracts
 6. Worker 不执行 force push、reset --hard、checkout 覆盖或 stash；
 7. 只有用户明确授权时才 Push 共享分支。
 
+## 测试失败分流与交接
+
+测试失败先记录证据、再判断归属，不将一次红灯自动归因于最近的代码改动：
+
+1. **行为可复现且违反既定合同**：建立或更新 `BUG`，记录用户流程、期望/实际、最小复现、平台/版本，并关联修复 Task 与回归测试。
+2. **预期或合同尚未明确**：建立 `ISSUE` 调查决策；结论明确后再转 Bug 或执行 Task。
+3. **测试设施、Runner、依赖或既有基线问题**：未查明时用 `ISSUE` 调查；已确认且可复用的合同/性能基线记入 `VERIFY`。Task 交接中注明是否在基线/隔离重跑中复现，不能将环境失败写成代码通过。
+
+每个失败交接至少写明：Task/PR 与提交、操作系统和相关工具版本、完整命令与失败用例、期望/实际、可复现步骤、脱敏的关键输出、重跑/基线结果。CI 失败附 Actions run URL、job 与平台。产品缺陷优先用 `project/bugs/templates/bug.md`；验证合同与环境记录用 `project/verification/TEMPLATE.md`，不另建重复的测试失败实体。
+
+失败未解决或必要验证未通过时，Task 保持 `verifying` 或 `blocked` 并写清责任人、后续动作和风险，不标记 `done`。不得删减断言、跳过门禁或把未运行的检查记为通过来消除红灯。
+
 ## 交接
 
 Worker 完成时在 Task 中记录：
 
 - 已完成的行为；
 - 修改文件；
-- 测试和命令结果；
+- 测试和命令结果（包括失败用例、提交、平台/工具版本、重跑与基线对照；CI 失败附 run URL）；
 - 未运行的验证及原因；
 - 已知风险；
 - 后续 Worker 需要注意的上下文。

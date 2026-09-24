@@ -9,7 +9,7 @@ plan: PLAN-0007
 source: RESEARCH-0006; user-request（browser 元素选择→修改页面实时联动，Cursor Design Mode 边界）
 execution: serial
 branch: forge/dev
-worktree: forge/dev 主工作区
+worktree: unassigned（forge/dev 主工作区串行执行）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/preload]
 write_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/main/ipc, apps/desktop/src/preload, apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/shared/i18n/locales]

@@ -195,6 +195,33 @@ describe("per-task contract findings", () => {
 		expect(findTaskProblems(parsed, { knownIds: new Set(["TASK-0100"]), strict: true })).toEqual([]);
 	});
 
+	it("rejects an active non-parallel task that declares a separate worktree", () => {
+		const parsed = task({
+			...base,
+			execution: "serial",
+			branch: "task/TASK-0100-probe-task",
+			worktree: "../open-forge-wt/task-0100-probe-task",
+			base_commit: "abc1234",
+			write_paths: ["packages/ai/src"],
+		});
+		expect(
+			findTaskProblems(parsed)
+				.map((finding) => finding.message)
+				.join("\\n"),
+		).toContain("active serial task must not declare an independent worktree");
+	});
+
+	it("does not retroactively reject completed serial task worktree history", () => {
+		const parsed = task({
+			...base,
+			status: "done",
+			execution: "serial",
+			branch: "forge/dev",
+			worktree: "../open-forge-wt/task-0100-probe-task",
+		});
+		expect(findTaskProblems(parsed)).toEqual([]);
+	});
+
 	it("errors when id and filename disagree, because depends_on resolves by id", () => {
 		const parsed = task({ ...base, id: "TASK-0101" });
 		const messages = findTaskProblems(parsed)
@@ -329,6 +356,11 @@ describe("concurrent scope conflicts", () => {
 			worktreeTask("TASK-0100", { conflicts_with: ["TASK-0101"] }),
 			worktreeTask("TASK-0101", { conflicts_with: ["TASK-0100"] }),
 		];
+		expect(findScopeConflicts(tasks)).toEqual([]);
+	});
+
+	it("ignores serial tasks because they do not claim concurrent worktree scope", () => {
+		const tasks = [worktreeTask("TASK-0100"), worktreeTask("TASK-0101", { execution: "serial" })];
 		expect(findScopeConflicts(tasks)).toEqual([]);
 	});
 

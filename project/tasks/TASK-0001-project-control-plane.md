@@ -6,6 +6,7 @@ priority: P1
 owner: project/agent-workflow
 requirement: REQ-0004
 plan: PLAN-0004
+execution: coordination-only
 created: 2026-09-22
 updated: 2026-09-22
 depends_on: []

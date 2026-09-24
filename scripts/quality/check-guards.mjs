@@ -24,6 +24,8 @@ const steps = [
 	["scripts/quality/check-vitest-runner.mjs"],
 	["scripts/quality/check-source-path-maps.mjs"],
 	["scripts/quality/check-task-worktrees.mjs"],
+	["scripts/quality/check-project-indexes.mjs"],
+	["scripts/release/release-notes.mjs", "--check"],
 	["scripts/quality/check-turbo-config.mjs"],
 ];
 

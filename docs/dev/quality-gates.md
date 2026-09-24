@@ -8,7 +8,7 @@
 |------|------|--------|------|
 | 提交前（快） | `bun run check:precommit`（husky 自动） | 每次 commit | staged 私钥/冲突标记 + Biome `--staged --write`；格式化后重新暂存整文件 |
 | 开发中（快） | `bun run check:quick` | 一轮编辑后 | 准确合并分支已提交差异、暂存、未暂存和未跟踪文件；对变更文件运行 Biome，并运行架构守卫；不做类型检查 |
-| 完整本地/PR | `bun run check` | 一轮代码任务完成、交付或开 PR 前一次 | 对显式源码根运行 Biome，并行执行根 `tsgo`、CLI 显式 `tsgo`、增量 desktop `tsc`、docs check 与架构守卫 |
+| 完整本地/PR | `bun run check` | 一轮代码任务完成、交付或开 PR 前一次 | 对显式源码根运行 Biome，并行执行根 `tsgo`、CLI 显式 `tsgo`、增量 desktop `tsc`、docs check 与架构守卫；守卫还校验 Task/Plan 索引与活动并行写范围，并确认当前 Desktop 版本的 Release Notes 存在 |
 | 构建声明消费 | `bun run check:types:build-surfaces` | workspace 前置声明生成后 | 按 `cli-host/tsconfig.build.json` 验证真实包声明消费；会拒绝陈旧 `dist/*.d.ts` |
 | 质量脚本测试 | `bun run test:quality` | 修改 `scripts/quality` | 变更选择、依赖传播与包边界规则 |
 | 单元测试 | `bun run test` / `bun run test:unit` | 逻辑变更 | 先由 Turbo 生成测试消费的 workspace 依赖产物，再顺序运行所有声明 `test` 的 TypeScript workspace |
@@ -17,6 +17,7 @@
 | 按变更 | `bun run test:changed` | 提 PR 前可选 | 合并已提交/工作区/未跟踪改动，测试触达包及其下游依赖 |
 | 按需 Desktop UI 验收 | `bun run verify:ui:*` | 仅用户明确要求使用 UI 验证或具体命令时 | 不由 UI、图标、样式或 Renderer/Main 改动自动触发；见 [README](./README.md) |
 | Desktop 生产边界 | `bun run verify:desktop:contracts`；受影响时由 GitHub Actions 在 Windows/macOS/Linux 运行 packaged smoke 与 updater E2E | 修改 Desktop 主进程、preload、打包脚本、原生依赖或远程控制 | 见下文 |
+| Task / Project 合同 | `bun run check` 与 `bun run worktree:check --all` | 日常静态门禁；并行批次派工/集成前显式门禁 | `check` 校验 README 索引状态、Task frontmatter 结构和未登记的活动并行 scope 冲突；Coordinator CLI 额外核对机器上的 Git Worktree、分支和实际漂移 |
 | 死代码（可选） | `bun run deadcode:report` | 清理时 | Knip 报告，**默认不阻断** `check` |
 
 ## 新增脚本
@@ -37,11 +38,14 @@ scripts/quality/
   check-vitest-runner.mjs      package.json 测试脚本必须走 run-vitest.mjs
   check-turbo-config.mjs       Turbo 输入、环境、入口与 Remote Cache 安全合同
   check-source-path-maps.mjs   根 tsconfig path map 必须显式覆盖 workspace 包的 types 子路径导出
-  check-task-worktrees.mjs     Task ↔ Worktree 合同的结构不变量（ID/文件名、路径形态、依赖引用与环）
+  check-task-worktrees.mjs     Task ↔ Worktree 结构与活动并行范围合同
+  check-project-indexes.mjs    Plan / Task 状态索引与 frontmatter 一致性
   test-pkg.mjs                 按包名跑 vitest
   test-impact.mjs              按任务文件选择直接测试与 Vitest 相关测试
   test-changed.mjs             按 git 变更和依赖图选包
-  quality-gates.test.mjs       质量脚本定向测试
+  quality-gates.test.mjs       质量门禁与配置测试
+  check-task-worktrees.test.mjs Task scope 门禁
+  project-indexes.test.mjs     Project 状态索引门禁
 scripts/worktree/              开发协作 Worktree 生命周期（不属产品运行时）
   cli.mjs                      create / status / check / remove / doctor
   contract.mjs                 Task ↔ Worktree 合同校验（守卫与 CLI 共用的事实源）
@@ -61,7 +65,7 @@ knip.config.ts                 Knip（可选）
 | `check:lint` / `check:lint:fix` | 对显式源码根执行 Biome 只读检查 / 写回，避免扫描无关目录 |
 | `check:types` | 并行执行根 `tsgo`、CLI 显式 `tsgo`、通过当前 Bun（`bun x tsc`）执行带持久增量缓存的 desktop `tsc`、docs check 与 Expo Mobile `tsc` |
 | `check:types:build-surfaces` | 使用 CLI build config 验证上游 workspace `dist/*.d.ts` 的真实消费面；要求先生成当前声明 |
-| `check:guards` | 并行执行私钥、冲突标记、包边界等全量守卫 |
+| `check:guards` | 并行执行私钥、冲突标记、包边界、Task/Project 索引与并行范围合同、当前版本 Release Notes 存在性等全量守卫 |
 | `check:staged` | 仅 staged Biome |
 | `check:precommit` | husky 使用的快路径 |
 | `check:quick` | 变更文件 Biome + 全量 guards；Biome 配置变化时自动回退全量 Biome |
@@ -144,9 +148,9 @@ Greenfield/Legacy 名称墓碑、固定文件数量、行数阈值及实施日�
 
 `project/tasks/*.md` 的 frontmatter 是并行开发的合同，写错的后果不可见：`id` 与文件名不一致会让所有指向它的 `depends_on` 失效，`depends_on` 成环意味着不存在合法集成顺序，`write_paths` 里的 `..` 让 scope 声明失去意义。该守卫把这类**结构矛盾**做成机械检查，不依赖 Git，在任何 checkout 上都能跑。
 
-它检查：ID 与文件名一致、`status`/`execution`/`integration_status`/`priority` 落在枚举内、路径字段是仓库相对路径且不越界、`depends_on`/`conflicts_with` 的 ID 形态与 TASK 引用可解析、无自引用、`depends_on` 无环；`worktree` 已声明时必须有 `branch`（`task/TASK-xxxx-<slug>`）、`base_commit` 和非空 `write_paths`。
+该守卫校验 Task frontmatter 的结构矛盾，并对生命周期内的 parallel Worktree Task 检查 `write_paths` / `exclusive_paths` 的未登记重叠；重叠关系必须写入至少一端的 `conflicts_with`，以便协调者安排独立 Worktree 实施与串行集成。活动 serial / coordination-only Task 不得声明独立 Worktree。该检查只读项目文件，不检查某台机器上的 Worktree 是否存在或干净；真实 Git 状态由 `bun run worktree:check` / `doctor` 检查。
 
-**刻意不检查**（见 `check-task-worktrees.mjs` 的说明）：跨 Task 的 scope 重叠与"某台机器上 worktree 是否存在"。前者是调度决策（`conflicts_with` 就是为此存在），存量条目里已有合法重叠；后者是每个 checkout 的本地状态。二者由 `bun run worktree:check` / `doctor` 显式报告，不拦截无关的 `check`。枚举漂移（如 `integration_status: done`）在该守卫中只告警，在 `worktree:check` 中才是失败。
+`check-project-indexes.mjs` 将计划索引和 Task 当前焦点表的状态与对应 frontmatter 对照；README 是导航副本，frontmatter 是状态事实源。`check-guards` 还运行 `bun run scripts/release/release-notes.mjs --check`，保证当前 Desktop manifest 版本对应的 Release Notes 文件存在；发布工作流会再次执行同一校验。
 
 ## Workspace 构建编排（Turborepo）
 
@@ -251,7 +255,8 @@ bun run test:changed
 bun run check:quick
 bun run check
 
-# 并行 Task：创建独立 worktree，集成前检查，完成后清理
+# 并行 Task：先检查协调合同，再创建独立 worktree；集成前复查并完成清理
+bun run worktree:check --all
 bun run task:worktree -- create --task TASK-0096
 bun run worktree:check --task TASK-0096
 bun run worktree:remove --task TASK-0096

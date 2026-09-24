@@ -6,16 +6,21 @@ priority: P2
 owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0006
-source_issue:
+source: user-request（WebContentsView migration）
 execution: serial
-branch: task/TASK-0072-webcontentsview
-worktree: ..\open-forge-wt\TASK-0072-webcontentsview
+branch: unassigned（尚未开工）
+worktree: unassigned（serial task；不创建独立 Worktree）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/renderer/domains/activity-panel, packages/theme-ui/src/activity, docs/adr/0129-canvas-artifact-dual-lifecycle-and-in-app-browser-tab.md]
 write_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/main/ipc, apps/desktop/src/renderer/domains/activity-panel, packages/theme-ui/src/activity, docs/adr]
 exclusive_paths: []
 depends_on: [TASK-0063]
 conflicts_with: []
+related_requirement: [REQ-0001]
+related_plan: [PLAN-0006]
+related_tasks: [TASK-0063]
+related_issues: []
+related_bugs: []
 integration_status: pending
 created: 2026-09-28
 updated: 2026-09-28

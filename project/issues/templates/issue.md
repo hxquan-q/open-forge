@@ -4,8 +4,8 @@ type: issue
 status: draft
 priority: P1
 owner:
-related_requirement:
-related_plan:
+related_requirement: []
+related_plan: []
 source:
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
