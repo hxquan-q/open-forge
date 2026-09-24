@@ -98,12 +98,12 @@ function snapshotXPath(element: Element): string {
 	let current: Element | null = element;
 	while (current) {
 		const tag = current.tagName.toLowerCase();
-		const parent = current.parentElement;
+		const parent: Element | null = current.parentElement;
 		if (!parent) {
 			parts.unshift(`/${tag}`);
 			break;
 		}
-		const siblings = Array.from(parent.children).filter((node) => node.tagName === current?.tagName);
+		const siblings = Array.from(parent.children).filter((node: Element) => node.tagName === current?.tagName);
 		parts.unshift(`/${tag}[${siblings.indexOf(current) + 1}]`);
 		current = parent;
 	}
@@ -169,12 +169,12 @@ function browserTabGuestRuntime(command: {
 		let current: Element | null = element;
 		while (current) {
 			const tag = current.tagName.toLowerCase();
-			const parent = current.parentElement;
+			const parent: Element | null = current.parentElement;
 			if (!parent) {
 				parts.unshift(`/${tag}`);
 				break;
 			}
-			const siblings = Array.from(parent.children).filter((node) => node.tagName === current?.tagName);
+			const siblings = Array.from(parent.children).filter((node: Element) => node.tagName === current?.tagName);
 			parts.unshift(`/${tag}[${siblings.indexOf(current) + 1}]`);
 			current = parent;
 		}
@@ -232,7 +232,7 @@ function browserTabGuestRuntime(command: {
 		if (!target) return { ok: false };
 		if ("focus" in target) (target as HTMLElement).focus();
 		if ("value" in target) (target as HTMLInputElement).value = command.value ?? "";
-		else if (target.isContentEditable) target.innerText = command.value ?? "";
+		else if (target instanceof HTMLElement && target.isContentEditable) target.innerText = command.value ?? "";
 		target.dispatchEvent(new Event("input", { bubbles: true }));
 		target.dispatchEvent(new Event("change", { bubbles: true }));
 		return { ok: true };

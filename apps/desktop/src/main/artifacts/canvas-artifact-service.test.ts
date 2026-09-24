@@ -247,7 +247,7 @@ interface Harness {
 	readonly sessionId: string;
 	readonly projectRoot: string;
 	readonly store: CanvasStore;
-	readonly service: CanvasArtifactService;
+	service: CanvasArtifactService;
 	readonly facts: RuntimeSessionFactEvent[];
 	readonly projectFiles: Map<string, string>;
 	readonly watchers: Map<string, () => void | Promise<void>>;
@@ -272,7 +272,7 @@ async function createHarness(): Promise<Harness> {
 		projectFiles,
 		watchers,
 		activeTask: undefined,
-		service: undefined as unknown as CanvasArtifactService,
+		service: null as unknown as CanvasArtifactService,
 	};
 	harness.service = createService(harness);
 	return harness;

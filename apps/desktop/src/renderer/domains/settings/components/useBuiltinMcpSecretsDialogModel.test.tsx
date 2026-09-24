@@ -14,7 +14,7 @@ const preset = getBuiltinMcpPresetById("universal-db");
 if (!preset) throw new Error("universal-db preset missing");
 
 function openDialog() {
-	return renderHook(() => useBuiltinMcpSecretsDialogModel({ open: true, preset }));
+	return renderHook(() => useBuiltinMcpSecretsDialogModel({ open: true, preset: preset ?? null }));
 }
 
 describe("universal-db secrets 对话框动态必填", () => {
