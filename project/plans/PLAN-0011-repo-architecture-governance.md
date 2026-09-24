@@ -1,7 +1,7 @@
 ---
 id: PLAN-0011
 type: plan
-status: ready
+status: done
 priority: P1
 requirement: []
 owner: scripts/quality + 各包 README
