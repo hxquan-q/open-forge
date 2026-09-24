@@ -561,6 +561,7 @@ describe("canvas tab panel user flow", () => {
 		await userEvent.click(fileRow);
 		expect(screen.getByText("new-a")).toBeTruthy();
 		// 选中行必须有可见态，否则用户无法把下方 diff 对应回文件。
+		expect(fileRow.getAttribute("aria-pressed")).toBe("true");
 		expect(fileRow.className).toContain("bg-primary/10");
 	});
 
@@ -573,7 +574,7 @@ describe("canvas tab panel user flow", () => {
 		expect(screen.getByText("activityPanel.canvas.changesEmptyHint")).toBeTruthy();
 	});
 
-	it("放弃全部变更需确认，确认后清空画布列表", async () => {
+	it("放弃全部产物需确认，确认后清空画布列表", async () => {
 		const store = createStore();
 		remove.mockResolvedValue({ ok: true });
 		renderPanel(store);

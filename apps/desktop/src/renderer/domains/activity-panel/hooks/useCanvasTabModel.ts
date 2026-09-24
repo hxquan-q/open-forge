@@ -555,7 +555,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 		})();
 	}, [items, setRevision, t, workspace.id]);
 
-	// 放弃全部变更 = 清空画布列表（走既有 DELETE，带确认框）；会话历史与项目文件不动。
+	// 放弃全部产物 = 清空画布列表（走既有 DELETE，带确认框）；会话历史与项目文件不动。
 	const discardAllArtifacts = useCallback(() => {
 		if (items.length === 0) return;
 		setConfirm({
