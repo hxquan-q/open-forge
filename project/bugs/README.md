@@ -22,3 +22,12 @@
 | `BUG-0004` | Windows 上 Desktop 类型检查未可靠执行 | in_progress | P1 | — |
 | `BUG-0005` | DeepSeek 拒绝顶层无 `type` 的工具 schema | verifying | P1 | — |
 | `BUG-0006` | Browser 点选可命中 html/body，附件变成整页截图 | verifying | P1 | `PLAN-0006` |
+| `BUG-0014` | 选择项目后首次对话创建会话失败 | investigating | P1 | — |
+| `BUG-0015` | 对话输入框无法通过粘贴或拖放引用文件 | investigating | P2 | — |
+| `BUG-0016` | Desktop 阶段性刷新后长时间白屏 | investigating | P1 | — |
+| `BUG-0017` | 工作区 Work/Coding 切换响应迟缓 | investigating | P2 | — |
+| `BUG-0018` | 对话中断及中断后继续不流畅 | investigating | P1 | — |
+| `BUG-0019` | Browser 面板 allowpopups 属性产生 React 警告 | investigating | P3 | — |
+| `BUG-0020` | 同一会话中的 Canvas 操作连续被通道占用错误拒绝 | investigating | P2 | — |
+| `BUG-0021` | 用户消息可能在 Assistant 回复之后显示 | investigating | P1 | — |
+| `BUG-0022` | Desktop 当前环境无法启用沙盒执行模式 | investigating | P1 | `PLAN-0001` |
