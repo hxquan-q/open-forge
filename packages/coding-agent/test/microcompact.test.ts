@@ -112,6 +112,60 @@ describe("microcompact", () => {
 		expect(rerun[1]).toBe(projected[1]);
 	});
 
+	it("reuses cleared message identity on rerun (idempotent)", () => {
+		const messages = thinkingHistory(12, () => signedThinking());
+
+		const first = microcompact(messages, { keepRecent: 8, maxAgeMs: 0, pruneToolResults: false });
+		// 首轮：出窗的 4 条重建为新对象。
+		for (let index = 0; index < 4; index += 1) {
+			expect(first[index]).not.toBe(messages[index]);
+		}
+
+		// 二轮：候选已全部清空 → 返回原数组，逐条身份保持，不再重建对象。
+		const second = microcompact(first, { keepRecent: 8, maxAgeMs: 0, pruneToolResults: false });
+		expect(second).toBe(first);
+		for (let index = 0; index < first.length; index += 1) {
+			expect(second[index]).toBe(first[index]);
+		}
+	});
+
+	it("keeps rerun identity stable when unsigned blocks were removed entirely", () => {
+		const messages = thinkingHistory(12, (index) => (index % 2 === 0 ? signedThinking() : unsignedThinking()));
+
+		const first = microcompact(messages, { keepRecent: 8, maxAgeMs: 0, pruneToolResults: false });
+		const second = microcompact(first, { keepRecent: 8, maxAgeMs: 0, pruneToolResults: false });
+
+		// 无签名块整块移除后的消息不再是候选；带签名已清空的候选按原引用复用——
+		// 混合历史的重跑同样是零重建。
+		expect(second).toBe(first);
+		for (let index = 0; index < first.length; index += 1) {
+			expect(second[index]).toBe(first[index]);
+		}
+	});
+
+	it("honors a frozen thinking-clear predicate over the sliding count window", () => {
+		const messages: AgentMessage[] = [];
+		for (let index = 0; index < 12; index += 1) {
+			messages.push(thinkingAssistant(`thought ${index}`, index + 1, true, signedThinking()));
+		}
+		// 冻结集合刻意包含最老与最新各一条：判定命中即清，滑窗与 keepRecent 让位。
+		const frozen = new Set([messages[0], messages[11]]);
+
+		const projected = microcompact(messages, {
+			keepRecent: 8,
+			maxAgeMs: 0,
+			pruneToolResults: false,
+			frozenThinkingClear: (message) => frozen.has(message),
+		});
+
+		expect(thinkingText(projected[0])).toBe("");
+		expect(thinkingSignature(projected[0])).toBe("sig");
+		expect(thinkingText(projected[11])).toBe("");
+		for (let index = 1; index < 11; index += 1) {
+			expect(projected[index]).toBe(messages[index]);
+		}
+	});
+
 	it("exposes a 30s default age gate for direct callers", () => {
 		expect(DEFAULT_MICROCOMPACT_OPTIONS).toMatchObject({ keepRecent: 8, maxAgeMs: 30 * 1000 });
 	});

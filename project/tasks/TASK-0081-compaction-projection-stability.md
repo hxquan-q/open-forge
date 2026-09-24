@@ -1,7 +1,7 @@
 ---
 id: TASK-0081
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: packages/coding-agent + runtime-core
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [packages/coding-agent/src/compaction/microcompact.ts, packages/cod
 exclusive_paths: [packages/coding-agent/src/compaction/, packages/runtime-core/src/kernel/]
 depends_on: [TASK-0073]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 ---
@@ -49,8 +49,13 @@ updated: 2026-09-24
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改（9 文件 +417/−29）：
+  - `microcompact.ts`：抽出 `thinkingMessageIndices`，导出 `selectDecayedThinkingIndices`（滑动计数尾窗外将被清除的下标，纯计数坐标）；`pruneThinkingBlocks` 补 changed-flag 幂等早退——全部清除候选已是清除形时返回原数组（镜像 `pruneToolResults` 的 CLEARED_MESSAGE 身份复用），新增 `prunedThinkingFormCache` WeakMap 记忆每消息已清除形，重复调用零重分配；`options.frozenThinkingClear` 可选谓词（Turn 冻结判定命中即清，让位 keepRecent 窗口）。
+  - `model-call-context-projection.ts`：新增 `ModelCallDecayBoundary`（freeze/shouldClearThinking）与 `createModelCallDecayBoundary`——Turn 首次投影时按同一计数规则一次性冻结 `role:timestamp` 身份键集合，同 Turn 后续投影只做成员判定；计数式、确定性，不复活被 TASK-0073 删除的墙钟（maxAgeMs）行为；无 Turn 作用域的直连 `transform()` 保持逐调用滑动窗。
+  - `context-runtime.ts`：`bindForTurn` 创建 boundary 并经 `transformWith` 注入——同一 Turn 的全部模型调用共享同一清除集合，投影 append-only。
+  - `runtime-message-context.ts`：`messagesEqual` 改走 `serializeMessage`（`stableStringify` 字典序键稳定序列化 + `messageSerializationCache` WeakMap）——键序漂移不再误判不等，重复比较不再重序列化。
+  - 测试：`microcompact.test.ts`（幂等身份复用/冻结谓词）、`model-call-context-projection-stability.test.ts`（Turn 内多投影字节稳定）、`context-runtime.test.ts`（bindForTurn 边界共享）、`message-prefix-stability.test.ts` / `runtime-message-context.test.ts`（键序无关判等）。
+- 实际运行：定向 5 测试文件 70/70（主线复跑）；`test:pkg runtime-core` 通过（19.3s）、`test:pkg coding-agent` 通过（64.9s）；Biome 9 文件零问题。
+- 未运行及原因：desktop 全量 tsc/check——同工作区并行修复批 agent 在途文件混入噪声，以定向测试 + 定向 Biome + 包级回归替代。
+- 剩余风险：Turn 冻结集合在跨 Turn 重绑后按 grown 流重算，依赖「流只追加」的既有不变量（集合单调只增，测试已锁）；`stableStringify` 按值序列化在超深消息树上成本接近原 JSON.stringify，WeakMap 缓存已把重复比较摊薄为查表。**提交范围说明**：工作树中 `system-prompt-policy.ts` / `system-prompt.test.ts` 的改动属并行会话的提示词调优，与本任务无关，已从本次 pathspec 提交中排除。
 - 发布说明候选（ISSUE-0007 门禁，暂存本记录）：【改进】长工具循环的上下文压缩不再逐次改写已见消息，提示词缓存命中率与稳定性观测恢复。

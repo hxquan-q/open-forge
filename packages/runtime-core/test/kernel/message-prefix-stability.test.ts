@@ -81,6 +81,18 @@ describe("message prefix stability", () => {
 		});
 	});
 
+	it("keeps append-only when a rebuilt message only differs in key insertion order", () => {
+		const previous: readonly Message[] = [{ role: "user", content: [{ type: "text", text: "same" }], timestamp: 1 }];
+		const current: readonly Message[] = [{ timestamp: 1, content: [{ text: "same", type: "text" }], role: "user" }];
+
+		// 重建消息的键序漂移是内容判等的规范形差异，不是前缀改写。
+		expect(compareMessagePrefixes(previous, current)).toMatchObject({
+			kind: "append_only",
+			stablePrefixMessageCount: 1,
+			contentFallbackCount: 1,
+		});
+	});
+
 	it("re-observing an unchanged projection stays append-only with zero appended messages", () => {
 		const tracker = createMessagePrefixStabilityTracker();
 		const projection = [user("a"), user("b")];

@@ -1,6 +1,10 @@
 import type { Api, AssistantMessage, Message, Model, UserMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
-import { projectModelCallContext } from "../src/compaction/runtime/model-call-context-projection.js";
+import {
+	createModelCallDecayBoundary,
+	type ModelCallContextProjectionOptions,
+	projectModelCallContext,
+} from "../src/compaction/runtime/model-call-context-projection.js";
 
 describe("model call context projection stability", () => {
 	it("projects byte-identical context for repeated calls on the same history", async () => {
@@ -36,9 +40,59 @@ describe("model call context projection stability", () => {
 			expect(projectedMessages[index]).toBe(messages[index]);
 		}
 	});
+
+	it("freezes the clear set for every projection of one turn while the stream grows", async () => {
+		const boundary = createModelCallDecayBoundary();
+		const messages: Message[] = [user("request", 1)];
+		for (let index = 0; index < 12; index += 1) {
+			messages.push(thinkingAssistant(`thought ${index}`, index + 2));
+		}
+
+		const first = await project(messages, { decayBoundary: boundary });
+		// 模拟 Turn 内工具循环追加 4 条带 thinking 的 assistant 消息。
+		for (let index = 12; index < 16; index += 1) {
+			messages.push(thinkingAssistant(`thought ${index}`, index + 2));
+		}
+		const second = await project(messages, { decayBoundary: boundary });
+
+		// Turn 内 append-only：清除集合冻结在准入时的最老 4 条（下标 1..4），
+		// 尽管计数窗已滑到会清 1..8——无中间翻转，无 prefix_rewrite 信号源。
+		expect(clearedThinkingIndices(first.messages)).toEqual([1, 2, 3, 4]);
+		expect(clearedThinkingIndices(second.messages)).toEqual([1, 2, 3, 4]);
+		// 已见前缀逐条身份稳定（含已清空消息的备忘复用），观察器全等快路径全程命中。
+		for (let index = 1; index <= 12; index += 1) {
+			expect(second.messages[index]).toBe(first.messages[index]);
+		}
+		// 新追加的尾部消息本 Turn 内不受衰减剪枝影响，身份原样保留。
+		expect(second.messages[16]).toBe(messages[16]);
+	});
+
+	it("grows the frozen clear set monotonically across turn rebinds", async () => {
+		const firstTurn = createModelCallDecayBoundary();
+		const messages: Message[] = [user("request", 1)];
+		for (let index = 0; index < 12; index += 1) {
+			messages.push(thinkingAssistant(`thought ${index}`, index + 2));
+		}
+		const first = await project(messages, { decayBoundary: firstTurn });
+		for (let index = 12; index < 16; index += 1) {
+			messages.push(thinkingAssistant(`thought ${index}`, index + 2));
+		}
+
+		// 跨 Turn 重新绑定：清除集合按 grown 流重算，单调只增、不回翻。
+		const second = await project(messages, { decayBoundary: createModelCallDecayBoundary() });
+
+		expect(clearedThinkingIndices(second.messages)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+		for (let index = 1; index <= 4; index += 1) {
+			// 上一 Turn 已清的消息在新 Turn 保持相同的清除字节。
+			expect(JSON.stringify(second.messages[index])).toBe(JSON.stringify(first.messages[index]));
+		}
+	});
 });
 
-async function project(messages: readonly Message[]): Promise<{ messages: readonly Message[] }> {
+async function project(
+	messages: readonly Message[],
+	options: ModelCallContextProjectionOptions = {},
+): Promise<{ messages: readonly Message[] }> {
 	const result = await projectModelCallContext(
 		{
 			sessionId: "session-1",
@@ -48,8 +102,19 @@ async function project(messages: readonly Message[]): Promise<{ messages: readon
 		},
 		undefined,
 		new AbortController().signal,
+		options,
 	);
 	return result;
+}
+
+function clearedThinkingIndices(messages: readonly Message[]): number[] {
+	const indices: number[] = [];
+	messages.forEach((message, index) => {
+		if (message.role === "assistant" && thinkingText(message) === "" && thinkingSignature(message) !== undefined) {
+			indices.push(index);
+		}
+	});
+	return indices;
 }
 
 function user(content: string, timestamp: number): UserMessage {

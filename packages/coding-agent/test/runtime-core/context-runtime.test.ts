@@ -222,6 +222,51 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		}
 	});
 
+	it("freezes the decay prune boundary across model calls of one turn binding", async () => {
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+		});
+		const signal = new AbortController().signal;
+		const bound = await runtime.bindForTurn({
+			sessionId: "session-1",
+			operationId: "turn-1",
+			reason: "turn",
+			signal,
+		});
+		try {
+			const messages: Message[] = [userMessage("request", 1)];
+			for (let index = 0; index < 12; index += 1) {
+				messages.push(signedThinkingAssistant(`thought ${index}`, index + 2));
+			}
+			const input = {
+				sessionId: "session-1",
+				turnId: "turn-1",
+				messages,
+				modelBinding: { model: PROJECTION_MODEL },
+			};
+
+			const first = await bound.transform(input, signal);
+			// 模拟 Turn 内工具循环追加 4 条带 thinking 的 assistant 消息。
+			for (let index = 12; index < 16; index += 1) {
+				messages.push(signedThinkingAssistant(`thought ${index}`, index + 2));
+			}
+			const second = await bound.transform({ ...input, messages }, signal);
+
+			// 绑定（Turn）作用域内清除集合冻结：追加后计数窗已滑到会清 1..8，
+			// 实际仍只清准入时的最老 4 条（下标 1..4），已见前缀身份稳定。
+			expect(clearedSignedThinkingIndices(second)).toEqual([1, 2, 3, 4]);
+			expect(clearedSignedThinkingIndices(first)).toEqual([1, 2, 3, 4]);
+			for (let index = 1; index <= 12; index += 1) {
+				expect(second[index]).toBe(first[index]);
+			}
+			// 新追加的尾部消息本 Turn 内不受衰减剪枝影响。
+			expect(second[16]).toBe(messages[16]);
+		} finally {
+			await bound.releaseTurnBinding?.();
+		}
+	});
+
 	it.each(["invalid", "cancelled"] as const)(
 		"releases captures when asynchronous pinned materialization is %s",
 		async (failure) => {
@@ -1946,3 +1991,28 @@ const MODEL: Model<Api> = {
 	contextWindow: 100,
 	maxTokens: 20,
 };
+
+// 衰减剪枝合同测试专用：大上下文窗口，避免压力截断介入剪枝断言。
+const PROJECTION_MODEL: Model<Api> = { ...MODEL, contextWindow: 200_000, maxTokens: 4_096 };
+
+function signedThinkingAssistant(thinking: string, timestamp: number): AssistantMessage {
+	return {
+		...assistantMessage(`answer ${thinking}`, 1, timestamp),
+		content: [
+			{ type: "thinking", thinking, thinkingSignature: "sig" },
+			{ type: "text", text: `answer ${thinking}` },
+		],
+	};
+}
+
+function clearedSignedThinkingIndices(messages: readonly Message[]): number[] {
+	const indices: number[] = [];
+	messages.forEach((message, index) => {
+		if (message.role !== "assistant") return;
+		const blocks = message.content.filter(
+			(block): block is Extract<(typeof message.content)[number], { type: "thinking" }> => block.type === "thinking",
+		);
+		if (blocks.some((block) => block.thinking === "" && block.thinkingSignature !== undefined)) indices.push(index);
+	});
+	return indices;
+}
