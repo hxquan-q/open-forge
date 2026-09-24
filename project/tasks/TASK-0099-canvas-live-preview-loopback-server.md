@@ -1,7 +1,7 @@
 ---
 id: TASK-0099
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
@@ -9,14 +9,14 @@ plan: PLAN-0009
 source: PLAN-0009 需要的 ADR（ADR-0130 候选）
 execution: parallel
 branch: task/TASK-0099-canvas-live-preview-loopback-server
-worktree: ../open-forge-wt/task-0099-canvas-live-preview-loopback-server
+worktree: unassigned（worktree 已淘汰，落地提交 00f178323）
 base_commit: 6a94d6dad6091715443e5f9622661f6ba02dacf3
 read_paths: [apps/desktop/src/main, apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/renderer/shared/store, apps/desktop/src/shared, docs/adr]
 write_paths: [apps/desktop/src/main/canvas-server, apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/shared]
 exclusive_paths: []
 depends_on: [TASK-0096]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 related_requirement: [REQ-0001]
@@ -121,8 +121,8 @@ HTML artifact 可一键在右栏 Browser Tab 中以完整浏览器环境运行�
 ## 交付记录
 
 - 实际修改：
-  - 新增 `apps/desktop/src/main/canvas-server/`：`canvas-preview-paths.ts`（URL ↔ 路径字面合同、入口选择、内容类型、包含性判定）、`canvas-preview-server.ts`（`127.0.0.1` 只读回环伺服、授权集、realpath 双重包含检查）、`canvas-preview-desktop.ts`（单例启停与 artifact 判定），以及三份测试共 49 例。
-  - `apps/desktop/src/shared/canvas-ipc.ts`：新增 `vetta:canvas:open-in-browser` 通道与 `DesktopCanvasOpenInBrowserRequest/Result`；`canvas-browser-contracts.test.ts` 同步冻结 channel 名单。
+  - 新增 `apps/desktop/src/main/canvas-server/`：`canvas-preview-paths.ts`（URL ↔ 路径字面合同、入口选择、内容类型、包含性判定）、`canvas-preview-server.ts`（`127.0.0.1` 只读回环伺服、授权集、realpath 双重包含检查）、`canvas-preview-desktop.ts`（单例启停与 artifact 判定），以及三份测试共 50 例。
+  - `apps/desktop/src/shared/canvas-ipc.ts`：新增 `vetta:canvas:open-in-browser` 通道与 `DesktopCanvasOpenInBrowserRequest/Result`；`canvas-browser-contracts.test.ts` 冻结 channel 名单时补齐 TASK-0097 引入后漏登记的 `UPDATE`（该文件在集成前即为红，随本次改动一并修正）。
   - `apps/desktop/src/main/ipc/canvas.ts`：新增 handler，窗口 teardown 释放伺服；`apps/desktop/src/main/main.ts`：退出清理纳入伺服释放。
   - `apps/desktop/src/preload/apis/canvas.ts`、`apps/desktop/src/preload/api-types/canvas.ts`：暴露 `canvas.openInBrowser`。
   - `useCanvasTabModel.ts` / `CanvasTabPanel.tsx`：HTML 预览栏「在浏览器打开」按钮，成功后走既有 `openUrlInActivityWorkspaceAtom` 切 Browser Tab；选中态不是 HTML 或文件缺失时不渲染按钮。
@@ -131,7 +131,9 @@ HTML artifact 可一键在右栏 Browser Tab 中以完整浏览器环境运行�
 - 实际运行：
   - `bun ../../scripts/quality/run-vitest.mjs --run src/main/canvas-server/`（apps/desktop 下）：3 文件 49 例全绿（含目录穿越矩阵、写方法 405、未授权 artifact 403、符号链接逃逸 404、端口启停释放、新版本热更新、回环地址仍通过 `isAllowedBrowserTabUrl`）。
   - `bun ../../scripts/quality/run-vitest.mjs --run src/renderer/domains/activity-panel/components/canvas-tab/CanvasTabPanel.test.tsx src/preload/apis/canvas-browser-tab.test.ts src/shared/canvas-browser-contracts.test.ts`：3 文件 14 例全绿（含「在浏览器打开」用户流程、失败提示不切走预览、非 HTML 不显示入口、preload channel 映射）。
-  - `bun run check`：见集成记录（本 Task 交付时先在 worktree 内跑 `check:quick`，合并后跑完整 `check`）。
+  - `bun run check`（集成后于 worktree 内跑完整门禁）：lint / types（root、cli、desktop、docs、mobile）/ guards / mobile lint 全部通过；`[task-worktrees] contract passed (102 task(s), 0 warning(s))`。
+  - 集成前重跑受影响文件：`src/main/canvas-server/`、`src/main/ipc/canvas-browser-tab.test.ts`、`src/preload/apis/canvas-browser-tab.test.ts`、`src/shared/canvas-browser-contracts.test.ts`、`src/renderer/domains/activity-panel/components/canvas-tab/CanvasTabPanel.test.tsx`：7 文件 75 例全绿（含 TASK-0097/0098/0100 的全部面板用例）。
+  - 集成：`git rebase main`（TASK-0097/0098/0100 已先行落地）后手工解决 `canvas-ipc.ts`、`ipc/canvas.ts`、preload 两文件、`CanvasTabPanel.tsx`、`CanvasTabPanel.test.tsx`、`canvas-browser-tab.test.ts` 的 7 处冲突（双方改动均为新增，逐处保留），`git merge --ff-only` 进 `main` 并推送；落地提交 `00f178323`。
 - 未运行及原因：
   - `verify:ui:*` 真实 Electron 验收：本次未获用户明确授权，按根 `AGENTS.md` 不默认运行。
   - `mod+shift+d` 在回环页上的真实点选：选取器实现、快捷键注册表与 Browser 侧 WebView 接线本次一行未改，回环地址经同一个 `openUrlInActivityWorkspaceAtom` 进入同一 Browser Tab，故以「地址仍通过 `isAllowedBrowserTabUrl`」+ 既有选取器测试作为回归证据，真实点选留给后续 UI 验收。
