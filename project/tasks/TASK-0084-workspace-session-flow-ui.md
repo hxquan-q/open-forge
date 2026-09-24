@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/domains/workspace-mode, apps/desktop/src
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode/lib/workspace-session-flow.ts]
 depends_on: [TASK-0083]
 conflicts_with: [TASK-0077, TASK-0080, TASK-0083]
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；随 f9a79d399 落地。status 保持 verifying：实机页头/新会话/右栏点击流程因 Debug Renderer 主题加载后 Invalid hook call 未走通）
 created: 2026-09-24
 updated: 2026-09-24
 ---
