@@ -1,7 +1,7 @@
 ---
 id: TASK-0109
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/plugins
 requirement: []
@@ -21,7 +21,7 @@ write_paths: [packages/plugins/, apps/desktop/scripts/, .github/release-notes]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 ---
