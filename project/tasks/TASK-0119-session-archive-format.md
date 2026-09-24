@@ -1,7 +1,7 @@
 ---
 id: TASK-0119
 type: task
-status: verifying
+status: done
 priority: P2
 owner: packages/runtime-storage
 requirement: []
@@ -21,7 +21,7 @@ write_paths: [packages/runtime-storage/, apps/desktop/src/main/conversations/, a
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（dd3847e1c，随本批推送 origin/dev）
 created: 2026-09-24
 updated: 2026-09-25
 ---
