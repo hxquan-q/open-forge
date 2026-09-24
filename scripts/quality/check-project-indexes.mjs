@@ -40,6 +40,7 @@ function documentStatuses(root, directory, prefix) {
 	}
 
 	const statuses = new Map();
+	const seenIds = new Set();
 	const problems = [];
 	const filePattern = new RegExp(`^(${prefix}-\\d{4})-[a-z0-9][a-z0-9-]*\\.md$`);
 	for (const entry of entries) {
@@ -49,6 +50,11 @@ function documentStatuses(root, directory, prefix) {
 		const file = join(path, entry.name);
 		const { present, fields, problems: frontmatterProblems } = parseFrontmatter(readFileSync(file, "utf8"));
 		const id = match[1];
+		if (seenIds.has(id)) {
+			problems.push(`project/${directory}/${entry.name}: duplicate document id ${id}`);
+			continue;
+		}
+		seenIds.add(id);
 		const status = asText(fields, "status").split(/\s/u, 1)[0];
 		if (!present || frontmatterProblems.length > 0) {
 			problems.push(`project/${directory}/${entry.name}: invalid frontmatter`);

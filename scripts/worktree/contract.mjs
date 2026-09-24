@@ -83,6 +83,7 @@ export function scopePrefix(path) {
 	const segments = toComparable(path).split("/");
 	const staticSegments = [];
 	for (const segment of segments) {
+		if (segment === ".") continue;
 		if (GLOB_CHARS.test(segment)) break;
 		staticSegments.push(segment);
 	}
@@ -108,7 +109,11 @@ export function normalizeContractPath(raw) {
 	if (segments.some((segment) => segment === "")) {
 		return { problem: `path "${value}" contains an empty segment` };
 	}
-	return { path: normalized };
+	const canonicalSegments = segments.filter((segment) => segment !== ".");
+	if (canonicalSegments.length === 0) {
+		return { problem: `path "${value}" resolves to the repository root` };
+	}
+	return { path: canonicalSegments.join("/") };
 }
 
 /**

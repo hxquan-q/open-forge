@@ -73,8 +73,10 @@ describe("scope path validation", () => {
 		}
 	});
 
-	it("normalizes Windows separators and trailing slashes", () => {
+	it("normalizes Windows separators, dot segments and trailing slashes", () => {
 		expect(normalizeContractPath("packages\\ai\\src\\")).toEqual({ path: "packages/ai/src" });
+		expect(normalizeContractPath("apps/desktop/./src")).toEqual({ path: "apps/desktop/src" });
+		expect(normalizeContractPath("./.").problem).toContain("repository root");
 	});
 
 	it("rejects paths that leave the repository or name nothing", () => {
@@ -104,6 +106,7 @@ describe("scope overlap", () => {
 		["packages/ai/src", "packages/ai/test", false],
 		["packages/ai", "packages/agent", false],
 		["packages/ai/src", "packages/ai/src-extra", false],
+		["apps/desktop/./src", "apps/desktop/src", true],
 		["packages/**/package.json", "packages/ai/src", true],
 		["**/package.json", "apps/desktop/src/main.ts", true],
 	];
@@ -349,6 +352,14 @@ describe("concurrent scope conflicts", () => {
 			worktreeTask("TASK-0101", { write_paths: ["packages/agent/src"] }),
 		];
 		expect(findScopeConflicts(tasks)).toEqual([]);
+	});
+
+	it("detects overlapping scopes when a declaration contains a dot segment", () => {
+		const tasks = [
+			worktreeTask("TASK-0100", { write_paths: ["apps/desktop/./src"] }),
+			worktreeTask("TASK-0101", { write_paths: ["apps/desktop/src"] }),
+		];
+		expect(findScopeConflicts(tasks)).toHaveLength(1);
 	});
 
 	it("stays silent when conflicts_with already records the relationship", () => {

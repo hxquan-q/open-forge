@@ -46,6 +46,12 @@ describe("project status index guard", () => {
 		expect(problems).toContain("TASK-0001 says ready, frontmatter says in_progress");
 	});
 
+	it("rejects duplicate documents with the same Task ID", () => {
+		writeIndexes();
+		write("project/tasks/TASK-0001-another.md", "---\\nid: TASK-0001\\nstatus: ready\\n---\\n");
+		expect(findProjectIndexProblems(root).join("\\n")).toContain("duplicate document id TASK-0001");
+	});
+
 	it("requires every Plan to appear in the Plan index", () => {
 		writeIndexes();
 		write("project/plans/PLAN-0002-another.md", "---\nid: PLAN-0002\nstatus: draft\n---\n");
