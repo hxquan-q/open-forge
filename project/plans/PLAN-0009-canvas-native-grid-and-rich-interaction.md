@@ -188,18 +188,18 @@ depends_on: [PLAN-0006]
 ## 阶段实施划分（Task DAG）
 
 ```text
-TASK-0091: P0 原生 Data Grid 预览（serial，先行）
-    ├─ TASK-0092: P1~P2 直接双向编辑与快捷宏操作（Canvas 写入通道与 UI）
-    ├─ TASK-0093: P1 原生声明式组件库（Chart / Diff / Checklist）
-    ├─ TASK-0094: P2 Canvas 到 Browser Tab 实时试跑（回环伺服与联动）
-    └─ TASK-0095: P2 任务级跨文件变更总览（Session Diff 聚合面板）
+TASK-0096: P0 原生 Data Grid 预览（serial，先行）
+    ├─ TASK-0097: P1~P2 直接双向编辑与快捷宏操作（Canvas 写入通道与 UI）
+    ├─ TASK-0098: P1 原生声明式组件库（Chart / Diff / Checklist）
+    ├─ TASK-0099: P2 Canvas 到 Browser Tab 实时试跑（回环伺服与联动）
+    └─ TASK-0100: P2 任务级跨文件变更总览（Session Diff 聚合面板）
 ```
 
-* **TASK-0091**：Data Grid 合同扩展、`CanvasDataGridPreview` 组件、CSV 极速解析、单元测试；
-* **TASK-0092**：`vetta:canvas:update` 主进程/Preload 接入、Monaco/文本直接编辑态、选区快捷宏气泡；
-* **TASK-0093**：声明式 Chart/Checklist 渲染器接入、`chart-canvas` 预设技能；
-* **TASK-0094**：本地安全回环服务、Canvas 顶部跳转接线、Browser 选取器回归验证；
-* **TASK-0095**：会话 Diff 聚合器、Canvas 分段切换视图、批量保存逻辑。
+* **TASK-0096**：Data Grid 合同扩展、`CanvasDataGridPreview` 组件、CSV 极速解析、单元测试；
+* **TASK-0097**：`vetta:canvas:update` 主进程/Preload 接入、Monaco/文本直接编辑态、选区快捷宏气泡；
+* **TASK-0098**：声明式 Chart/Checklist 渲染器接入、`chart-canvas` 预设技能；
+* **TASK-0099**：本地安全回环服务、Canvas 顶部跳转接线、Browser 选取器回归验证；
+* **TASK-0100**：会话 Diff 聚合器、Canvas 分段切换视图、批量保存逻辑。
 
 ---
 
