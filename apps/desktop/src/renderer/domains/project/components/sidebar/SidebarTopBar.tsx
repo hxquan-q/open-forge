@@ -15,7 +15,7 @@ interface SidebarTopBarProps {
 
 /** Desktop adapter: 只做 i18n 文案注入。 */
 export function SidebarTopBar({ className, classNames, floating, onCollapse }: SidebarTopBarProps): JSX.Element {
-	const { t } = useTranslation("project");
+	const { t } = useTranslation(["project", "common"]);
 
 	return (
 		<ThemeSidebarTopBar
@@ -24,6 +24,7 @@ export function SidebarTopBar({ className, classNames, floating, onCollapse }: S
 			actions={<SidebarCommandMenuTrigger />}
 			floating={floating}
 			labels={{
+				brand: t("common:appName"),
 				hide: t("sidebar.hide"),
 			}}
 			onCollapse={onCollapse}
