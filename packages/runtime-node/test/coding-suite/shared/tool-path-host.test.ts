@@ -14,7 +14,9 @@ import { rewriteQuotedPathLiterals } from "../../../src/coding/shared/quoted-pat
 describe("本机路径宿主（缺省）", () => {
 	it("~ 展开为本机家目录，相对路径落到 cwd 下", () => {
 		expect(resolveToCwd("~/notes.md", "/work")).toBe(`${homedir()}/notes.md`);
-		expect(resolveToCwd("src/a.ts", "/work", localToolPathHost)).toBe(join("/work", "src/a.ts"));
+		// cwd 必须是带盘符/根的真实绝对路径："/work" 这类无根路径在 win32 上会被 resolve 到当前盘符。
+		const cwd = join(tmpdir(), "vetta-path-cwd");
+		expect(resolveToCwd("src/a.ts", cwd, localToolPathHost)).toBe(join(cwd, "src/a.ts"));
 	});
 
 	it("照旧按磁盘上的真实文件名纠正弯引号写法", () => {
@@ -27,7 +29,8 @@ describe("本机路径宿主（缺省）", () => {
 describe("远端路径宿主", () => {
 	it("不拿本机磁盘上碰巧存在的文件名去改写远端目标", () => {
 		// 本机恰好有弯引号版本：若仍探本机，远端的读写目标会被悄悄换成这个名字。
-		const dir = mkdtempSync(join(tmpdir(), "vetta-path-"));
+		// 远端宿主按 POSIX 解释路径，tmpdir() 在 win32 下的盘符路径会被当成相对路径，故用字面 POSIX 前缀。
+		const dir = mkdtempSync("/tmp/vetta-path-");
 		writeFileSync(join(dir, "it’s.md"), "x");
 		expect(resolveExistingPath("it's.md", dir, remotePosixToolPathHost)).toBe(`${dir}/it's.md`);
 		expect(resolveWritablePath("it's.md", dir, remotePosixToolPathHost)).toBe(`${dir}/it's.md`);
@@ -44,7 +47,7 @@ describe("远端路径宿主", () => {
 	});
 
 	it("找不到路径时不把本机父目录里的文件名当成提示报给模型", () => {
-		const dir = mkdtempSync(join(tmpdir(), "vetta-path-"));
+		const dir = mkdtempSync("/tmp/vetta-path-");
 		writeFileSync(join(dir, "config.local.json"), "x");
 		const message = formatNotFoundPath(`${dir}/config.json`, dir, remotePosixToolPathHost);
 		expect(message).not.toContain("Similar entries");
@@ -52,7 +55,7 @@ describe("远端路径宿主", () => {
 	});
 
 	it("bash 命令里带引号的路径不按本机磁盘改写", () => {
-		const dir = mkdtempSync(join(tmpdir(), "vetta-path-"));
+		const dir = mkdtempSync("/tmp/vetta-path-");
 		writeFileSync(join(dir, "it’s.md"), "x");
 		const command = `cat "./it's.md"`;
 		expect(rewriteQuotedPathLiterals(command, dir).pathCorrections).toHaveLength(1);

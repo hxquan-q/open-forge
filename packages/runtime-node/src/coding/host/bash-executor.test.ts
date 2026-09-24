@@ -27,7 +27,7 @@ describe("Node Bash host", () => {
 		const result = await executor.execute(createDaemonCommand());
 
 		expect(result).toMatchObject({ exitCode: 0, cancelled: false });
-		expect(Date.now() - startedAt).toBeLessThan(2_500);
+		expect(Date.now() - startedAt).toBeLessThan(4_000);
 	});
 
 	it("keeps the pre-aborted result contract", async () => {

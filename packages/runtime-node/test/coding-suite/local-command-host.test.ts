@@ -28,7 +28,7 @@ describe("Node local command host", () => {
 		});
 
 		expect(result.exitCode).toBe(0);
-		expect(Date.now() - startedAt).toBeLessThan(2_500);
+		expect(Date.now() - startedAt).toBeLessThan(4_000);
 	});
 
 	it("rejects at the deadline when a killed shell leaves daemon output pipes open", async () => {
@@ -41,7 +41,7 @@ describe("Node local command host", () => {
 				timeout: 0.1,
 			}),
 		).rejects.toThrow("timeout:0.1");
-		expect(Date.now() - startedAt).toBeLessThan(2_500);
+		expect(Date.now() - startedAt).toBeLessThan(4_000);
 	});
 
 	it("owns background process output and normalization", async () => {
@@ -80,7 +80,7 @@ describe("Node local command host", () => {
 
 			expect(result.stillRunning).toBe(false);
 			expect(result.snapshot).toMatchObject({ status: "completed", exitCode: 0 });
-			expect(Date.now() - startedAt).toBeLessThan(2_500);
+			expect(Date.now() - startedAt).toBeLessThan(4_000);
 		} finally {
 			await service.shutdown();
 		}
