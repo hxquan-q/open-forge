@@ -41,6 +41,7 @@ scripts/quality/
   test-impact.mjs              按任务文件选择直接测试与 Vitest 相关测试
   test-changed.mjs             按 git 变更和依赖图选包
   quality-gates.test.mjs       质量脚本定向测试
+scripts/eval/                  开发期 Agent 评测旁路（不进默认门禁）
 knip.config.ts                 Knip（可选）
 ```
 
@@ -65,6 +66,7 @@ knip.config.ts                 Knip（可选）
 | `test:pkg` | 见 `bun run test:pkg --list` |
 | `test:impact` | 显式任务文件走精确测试；公共合同、删除和配置变化自动回退 `test:changed` |
 | `test:changed` | 默认比较 `origin/dev`；`--base origin/main` 可改基线 |
+| `eval:agent` | 开发期 Agent 评测旁路；默认只跑无网络 harness，`OPENFORGE_EVAL=1` 才用 DeepSeek 跑 DeepEval + Promptfoo + MASEval |
 | `deadcode` / `deadcode:report` | Knip 严格 / 仅报告 |
 
 ### 单测覆盖率（可选，不进门禁）

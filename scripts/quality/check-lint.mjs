@@ -12,6 +12,7 @@ const ROOT_TARGETS = [
 	"package.json",
 	"knip.config.ts",
 	"scripts/quality",
+	"scripts/eval",
 	"packages/coding-agent/examples",
 	"packages/runtime-core/examples",
 ];
