@@ -5,7 +5,7 @@
 
 当前完整基线见 [`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md)。
 
-当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)、[`VERIFY-0006-deepeval-tool-routing-sidecar.md`](VERIFY-0006-deepeval-tool-routing-sidecar.md)、[`VERIFY-0007-three-framework-tool-routing.md`](VERIFY-0007-three-framework-tool-routing.md)。
+当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)、[`VERIFY-0006-deepeval-tool-routing-sidecar.md`](VERIFY-0006-deepeval-tool-routing-sidecar.md)、[`VERIFY-0007-three-framework-tool-routing.md`](VERIFY-0007-three-framework-tool-routing.md)、[`VERIFY-0008-task-tree-consolidation.md`](VERIFY-0008-task-tree-consolidation.md)。
 
 ## 默认验证顺序
 
