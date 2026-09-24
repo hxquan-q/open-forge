@@ -25,7 +25,7 @@ export function HomeHeroCopy({ children }: { children: ReactNode }) {
 
 export function HomeTitle({ children }: { children: ReactNode }) {
 	return (
-		<h1 className="m-0 max-w-[34rem] font-display text-[2.55rem] font-semibold leading-[1.16] tracking-[-0.02em] text-pretty md:text-[3.15rem] lg:text-[3.25rem] 2xl:text-[3.65rem]">
+		<h1 className="m-0 max-w-[34rem] font-display text-[2.45rem] font-semibold leading-[1.16] tracking-[-0.02em] text-pretty md:text-[2.8rem] lg:text-[3.5rem] 2xl:text-[3.8rem]">
 			{children}
 		</h1>
 	);
@@ -231,7 +231,7 @@ export function HomeFooter({ kicker, children }: { kicker: string; children: Rea
 				height="72"
 			/>
 			<DocsKicker className="mx-auto mb-[1.15rem] flex max-w-[78rem] text-vetta-binding-fg/60">{kicker}</DocsKicker>
-			<div className="mx-auto grid max-w-[78rem] grid-cols-1 items-end gap-8 md:gap-16 lg:grid-cols-[1.25fr_0.75fr] [&_h2]:m-0 [&_h2]:font-display [&_h2]:text-[2.15rem] [&_h2]:font-semibold [&_h2]:leading-[1.2] [&_h2]:tracking-[-0.02em] [&_h2]:text-pretty lg:[&_h2]:text-5xl [&>p]:m-0 [&>p]:text-[0.9rem] [&>p]:leading-[1.8] [&>p]:text-vetta-binding-fg/70 [&_a]:text-vetta-coral [&_a]:underline [&_a]:underline-offset-[0.2em]">
+			<div className="mx-auto grid max-w-[78rem] grid-cols-1 items-end gap-8 md:gap-16 lg:grid-cols-[1.25fr_0.75fr] [&_h2]:m-0 [&_h2]:font-display [&_h2]:text-[2.15rem] [&_h2]:font-semibold [&_h2]:leading-[1.2] [&_h2]:tracking-[-0.02em] [&_h2]:text-pretty [&_h2]:text-vetta-binding-fg lg:[&_h2]:text-5xl [&>p]:m-0 [&>p]:text-[0.9rem] [&>p]:leading-[1.8] [&>p]:text-vetta-binding-fg/70 [&_a]:text-vetta-coral [&_a]:underline [&_a]:underline-offset-[0.2em]">
 				{children}
 			</div>
 		</footer>
