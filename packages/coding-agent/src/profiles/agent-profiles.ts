@@ -48,6 +48,10 @@ const WORK_PROFILE: CodingAgentAgentProfile = Object.freeze({
 		"im_send_attachment",
 		"artifact",
 		"browser_tab",
+		"scheduled_task_list",
+		"scheduled_task_create",
+		"scheduled_task_update",
+		"scheduled_task_delete",
 	],
 	memoryEnabled: true,
 });

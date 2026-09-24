@@ -1,7 +1,8 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { parseCodingAgentRuntimeSessionConfiguration } from "@vetta/coding-agent/composition";
+import type { CodingAgentRuntimeToolRegistration } from "@vetta/coding-agent/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /** 可变的 desktop-config 桩：模拟用户在新会话页改「默认工作模式」。 */
@@ -151,5 +152,64 @@ describe("能力 Profile 固化（TASK-0078）", () => {
 		const tools = resolvedDefaultToolNames(created);
 		expect(Array.isArray(tools)).toBe(true);
 		expect(tools).not.toContain("bash");
+	});
+});
+
+describe("会话注入工具（TASK-0095）", () => {
+	const markerTool: CodingAgentRuntimeToolRegistration = {
+		tool: {
+			name: "marker_tool",
+			label: "marker",
+			description: "marker",
+			inputSchema: { type: "object", properties: {} },
+			async execute() {
+				return { content: [] };
+			},
+		},
+		scopeUse: ["conversation"],
+		category: "agent-control",
+	};
+
+	it("工厂收到按生效 cwd 归一的项目根，产出并入 sessionRuntimeTools", async () => {
+		const root = await createTemporaryRoot();
+		let receivedScope: string | undefined;
+		const resolved = await resolveDesktopSessionConfig({ cwd: root }, "conversation", "interactive", {
+			createSessionRuntimeTools: (projectCwd) => {
+				receivedScope = projectCwd;
+				return [markerTool];
+			},
+		});
+		expect(receivedScope).toBe(resolve(root));
+		const sessionConfiguration = resolved.config.agent?.sessionConfiguration as
+			| { sessionRuntimeTools?: readonly unknown[] }
+			| undefined;
+		expect(sessionConfiguration?.sessionRuntimeTools).toHaveLength(1);
+	});
+
+	it("恢复会话按头部 cwd 固化作用域，不跟随前台 cwd", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "scoped.jsonl");
+		const other = await createTemporaryRoot();
+		let receivedScope: string | undefined;
+		await resolveDesktopSessionConfig({ cwd: other, sessionPath }, "conversation", "interactive", {
+			createSessionRuntimeTools: (projectCwd) => {
+				receivedScope = projectCwd;
+				return [];
+			},
+		});
+		expect(receivedScope).toBe(resolve(root));
+	});
+
+	it("未提供工厂时不注入，显式 sessionRuntimeTools 原样透传", async () => {
+		const root = await createTemporaryRoot();
+		const resolved = await resolveDesktopSessionConfig(
+			{ cwd: root, sessionRuntimeTools: [markerTool] },
+			"conversation",
+			"interactive",
+		);
+		const sessionConfiguration = resolved.config.agent?.sessionConfiguration as
+			| { sessionRuntimeTools?: readonly unknown[] }
+			| undefined;
+		expect(sessionConfiguration?.sessionRuntimeTools).toHaveLength(1);
 	});
 });

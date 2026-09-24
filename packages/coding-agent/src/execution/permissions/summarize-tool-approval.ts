@@ -4,7 +4,18 @@
  * 不携带完整参数或文件内容。
  */
 
-const PREVIEW_KEYS = ["command", "path", "file_path", "pattern", "url", "name", "description", "action"] as const;
+const PREVIEW_KEYS = [
+	"command",
+	"path",
+	"file_path",
+	"pattern",
+	"url",
+	"name",
+	"description",
+	"action",
+	"cron",
+	"task_id",
+] as const;
 const RESOURCE_KEYS = ["path", "file_path", "directory", "dir", "url", "target"] as const;
 
 export function summarizeToolApproval(

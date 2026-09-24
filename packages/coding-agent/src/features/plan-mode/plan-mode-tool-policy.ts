@@ -30,6 +30,7 @@ const READ_ONLY_TOOL_NAMES: ReadonlySet<string> = new Set([
 	"kb_filter_by_tags",
 	"kb_list_available_tags",
 	"task_output",
+	"scheduled_task_list",
 	"list_agents",
 	"wait_agent",
 	"interrupt_agent",
