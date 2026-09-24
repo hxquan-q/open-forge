@@ -1,0 +1,19 @@
+# Files copied from the primary checkout into every new Task worktree.
+#
+# A worktree is a fresh checkout: gitignored local files do not exist there. List the
+# ones a new checkout genuinely needs. Patterns use .gitignore syntax, and a file is only
+# copied when it is BOTH matched here AND ignored by git — tracked files are never
+# duplicated, because the checkout already has them.
+#
+# Credentials are refused no matter what is written here: .env (except *.example /
+# *.sample / *.template), *.pem, *.key, *.p12, *.pfx, *.jks, id_rsa*/id_ed25519*/…,
+# .npmrc, .netrc, .git-credentials, *credential*/*secret*/*token*, settings.local.json,
+# and deploy/config.*.yaml. `bun scripts/worktree/cli.mjs doctor` fails if a pattern here
+# targets one of them.
+#
+# No pattern is active by default: the shipped configuration copies nothing, so a new
+# worktree never silently receives local state. Add patterns below when a checkout needs
+# them, for example:
+#
+#   .vscode/settings.json
+#   apps/desktop/.desktop-dev/config.json

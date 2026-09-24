@@ -1,0 +1,15 @@
+{
+	"$comment": "Task worktree contract for development collaboration. See project/collaboration/README.md. Read by scripts/worktree/cli.mjs; nothing here affects the shipped product.",
+	"worktreeRoot": "../open-forge-wt",
+	"baseRef": "origin/forge/dev",
+	"baseRefFallbacks": ["origin/dev", "origin/main", "HEAD"],
+	"setup": {
+		"windows": ["bun install --frozen-lockfile"],
+		"unix": ["bun install --frozen-lockfile"]
+	},
+	"copyIgnored": true,
+	"cleanup": {
+		"intervalHours": 24,
+		"maxWorktrees": 12
+	}
+}
