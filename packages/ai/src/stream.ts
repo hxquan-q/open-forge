@@ -3,7 +3,7 @@ import "./utils/http-proxy.js";
 
 import { getApiProvider, getApiProviderSource } from "./api-registry.js";
 import { withProviderFetch } from "./provider-fetch.js";
-import { streamWithProviderRetry } from "./provider-kit/provider-retry.js";
+import { streamWithProviderRetry, withoutDerivedOutputLimit } from "./provider-kit/provider-retry.js";
 import { projectLanguageModelAdapter, projectLanguageModelSimpleAdapter } from "./providers/legacy-adapter-stream.js";
 import { getDefaultAdapterRegistry } from "./runtime/default-adapter-registry.js";
 import type {
@@ -52,6 +52,9 @@ function providerRetryConfig<TApi extends Api>(model: Model<TApi>, resolved?: St
 		maxRetries: resolved?.providerRetry?.maxRetries,
 		streamIdleTimeoutMs: resolved?.streamIdleTimeoutMs,
 		maxRetryDelayMs: resolved?.maxRetryDelayMs,
+		// The repair only strips auto-derived output limits; a caller-set
+		// maxTokens is user intent and is never removed.
+		outputLimitRepair: resolved?.maxTokens === undefined && resolved?.providerRetry?.outputLimitRepair !== false,
 	};
 }
 
@@ -62,10 +65,14 @@ export function stream<TApi extends Api>(
 ): AssistantMessageEventStream {
 	const resolved = withProviderFetch(model, options as StreamOptions | undefined);
 	return streamWithProviderRetry(
-		(attemptSignal) => {
+		(attemptSignal, mode) => {
 			// The unified retry layer owns retry policy for this call, so transport-local
 			// retries stay disabled to keep backoff single-owned.
 			const attemptOptions = { ...resolved, signal: attemptSignal, maxRetries: 0 } as ProviderStreamOptions;
+			if (mode === "output_limit_repair") {
+				const repaired = withoutDerivedOutputLimit(attemptOptions);
+				attemptOptions.onPayload = repaired.onPayload;
+			}
 			const nativeAdapter = resolveNativeAdapter(model.api);
 			if (nativeAdapter && shouldUseNativeAdapter(model.api)) {
 				return projectLanguageModelAdapter(nativeAdapter, model, context, attemptOptions);
@@ -93,8 +100,12 @@ export function streamSimple<TApi extends Api>(
 ): AssistantMessageEventStream {
 	const resolved = withProviderFetch(model, options);
 	return streamWithProviderRetry(
-		(attemptSignal) => {
+		(attemptSignal, mode) => {
 			const attemptOptions = { ...resolved, signal: attemptSignal, maxRetries: 0 } as SimpleStreamOptions;
+			if (mode === "output_limit_repair") {
+				const repaired = withoutDerivedOutputLimit(attemptOptions);
+				attemptOptions.onPayload = repaired.onPayload;
+			}
 			const nativeAdapter = resolveNativeAdapter(model.api);
 			if (nativeAdapter?.streamSimple && shouldUseNativeSimpleAdapter(model.api)) {
 				return projectLanguageModelSimpleAdapter(nativeAdapter, model, context, attemptOptions);

@@ -13,7 +13,13 @@ import {
 	getAIErrorDetails,
 	isAssistantMessageTerminalEvent,
 } from "../src/protocol/index.js";
-import { streamWithProviderRetry } from "../src/provider-kit/provider-retry.js";
+import {
+	isOpaqueBadRequest,
+	type ProviderRetryAttemptMode,
+	streamWithProviderRetry,
+	stripOutputLimitFieldsInPlace,
+	withoutDerivedOutputLimit,
+} from "../src/provider-kit/provider-retry.js";
 import { streamSimple } from "../src/stream.js";
 import { ScriptedLanguageModel } from "../src/testing/scripted-language-model.js";
 import type { Model } from "../src/types.js";
@@ -62,6 +68,15 @@ function invalidRequestFailure(message = "invalid request"): AIErrorDetails {
 	);
 }
 
+function opaqueBadRequestFailure(statusCode: 400 | 422 = 400): AIErrorDetails {
+	return getAIErrorDetails(
+		new AIError(AI_ERROR_CODES.INVALID_REQUEST, `${statusCode} status code (no body)`, {
+			retryable: false,
+			statusCode,
+		}),
+	);
+}
+
 function errorEvent(failure: AIErrorDetails): AssistantMessageEvent {
 	return {
 		type: "error",
@@ -95,13 +110,14 @@ interface AttemptSpec {
 
 interface OpenedAttempt {
 	readonly signal: AbortSignal;
+	readonly mode?: ProviderRetryAttemptMode;
 }
 
 /** Deterministic provider-attempt factory: each call consumes one spec in order. */
 function scriptedOpener(specs: readonly AttemptSpec[], opened: OpenedAttempt[] = []) {
-	return (signal: AbortSignal) => {
+	return (signal: AbortSignal, mode?: ProviderRetryAttemptMode) => {
 		const spec = specs[opened.length] ?? { fail: new Error("unexpected provider attempt") };
-		opened.push({ signal });
+		opened.push({ signal, mode });
 		if (spec.throwError !== undefined) throw spec.throwError;
 		const stream = new AssistantMessageEventStream();
 		const onAbort = () => {
@@ -493,5 +509,251 @@ describe("streamSimple unified retry", () => {
 		expect(scripted.calls).toHaveLength(1);
 		expect(retryEvents(events)).toHaveLength(0);
 		expect(events.at(-1)?.type).toBe("error");
+	});
+});
+
+describe("isOpaqueBadRequest", () => {
+	it("matches the narrow opaque 400/422 shape only", () => {
+		expect(isOpaqueBadRequest(opaqueBadRequestFailure(400))).toBe(true);
+		expect(isOpaqueBadRequest(opaqueBadRequestFailure(422))).toBe(true);
+	});
+
+	it("rejects structured, non-4xx, retryable, or body-carrying failures", () => {
+		expect(isOpaqueBadRequest(invalidRequestFailure())).toBe(false);
+		expect(
+			isOpaqueBadRequest(
+				getAIErrorDetails(
+					new AIError(AI_ERROR_CODES.INVALID_REQUEST, "403 status code (no body)", {
+						retryable: false,
+						statusCode: 403,
+					}),
+				),
+			),
+		).toBe(false);
+		expect(isOpaqueBadRequest(rateLimitedFailure())).toBe(false);
+		expect(
+			isOpaqueBadRequest(
+				getAIErrorDetails(
+					new AIError(AI_ERROR_CODES.INVALID_REQUEST, "400 status code (no body)", {
+						retryable: false,
+						statusCode: 400,
+						responseBodyPreview: '{"error":"max_tokens unsupported"}',
+					}),
+				),
+			),
+		).toBe(false);
+	});
+});
+
+describe("stripOutputLimitFieldsInPlace", () => {
+	it("removes only the derived output-limit fields", () => {
+		const payload = { model: "m", max_tokens: 1, max_completion_tokens: 2, max_output_tokens: 3, other: "keep" };
+		stripOutputLimitFieldsInPlace(payload);
+		expect(payload).toEqual({ model: "m", other: "keep" });
+		expect(stripOutputLimitFieldsInPlace("raw")).toBeUndefined();
+	});
+});
+
+describe("withoutDerivedOutputLimit", () => {
+	it("runs the caller hook then strips the outgoing payload in place", async () => {
+		const observed: unknown[] = [];
+		const options = withoutDerivedOutputLimit({ onPayload: (payload: unknown) => observed.push(payload) });
+		const payload = { max_output_tokens: 8_192, keep: true };
+		options.onPayload?.(payload);
+		expect(observed).toHaveLength(1);
+		expect(payload).toEqual({ keep: true });
+	});
+});
+
+describe("streamWithProviderRetry output-limit repair", () => {
+	afterEach(() => {
+		unregisterApiProviders(TEST_SOURCE);
+	});
+
+	it("silently repairs one opaque request-phase 400 and emits no retry activity", async () => {
+		const opened: OpenedAttempt[] = [];
+		const stream = streamWithProviderRetry(
+			scriptedOpener(
+				[{ events: [errorEvent(opaqueBadRequestFailure())] }, { events: [startEvent(), doneEvent("ok")] }],
+				opened,
+			),
+			{ model: MODEL, sleep: async () => undefined },
+		);
+		const { events, result } = await collect(stream);
+
+		expect(opened).toHaveLength(2);
+		expect(opened[0].mode).toBe("normal");
+		expect(opened[1].mode).toBe("output_limit_repair");
+		expect(result.stopReason).toBe("stop");
+		expect(retryEvents(events)).toHaveLength(0);
+		expect(events.map((event) => event.type)).toEqual(["start", "done"]);
+	});
+
+	it("repairs opaque failures thrown while opening the attempt", async () => {
+		const opened: OpenedAttempt[] = [];
+		const stream = streamWithProviderRetry(
+			scriptedOpener(
+				[
+					{
+						throwError: new AIError(AI_ERROR_CODES.INVALID_REQUEST, "422 status code (no body)", {
+							statusCode: 422,
+						}),
+					},
+					{ events: [startEvent(), doneEvent("ok")] },
+				],
+				opened,
+			),
+			{ model: MODEL, sleep: async () => undefined },
+		);
+		const { events, result } = await collect(stream);
+		expect(opened).toHaveLength(2);
+		expect(opened[1].mode).toBe("output_limit_repair");
+		expect(result.stopReason).toBe("stop");
+		expect(retryEvents(events)).toHaveLength(0);
+		expect(events.map((event) => event.type)).toEqual(["start", "done"]);
+	});
+
+	it("repairs at most once and surfaces the second opaque failure untouched", async () => {
+		const opened: OpenedAttempt[] = [];
+		const stream = streamWithProviderRetry(
+			scriptedOpener(
+				[{ events: [errorEvent(opaqueBadRequestFailure())] }, { events: [errorEvent(opaqueBadRequestFailure())] }],
+				opened,
+			),
+			{ model: MODEL, sleep: async () => undefined },
+		);
+		const { events } = await collect(stream);
+
+		expect(opened).toHaveLength(2);
+		expect(retryEvents(events)).toHaveLength(0);
+		const terminal = events.at(-1);
+		expect(terminal?.type).toBe("error");
+		if (terminal?.type === "error") {
+			expect(terminal.failure?.statusCode).toBe(400);
+			expect(terminal.failure?.code).toBe(AI_ERROR_CODES.INVALID_REQUEST);
+		}
+	});
+
+	it("does not repair opaque failures that arrive after the stream started", async () => {
+		const opened: OpenedAttempt[] = [];
+		const stream = streamWithProviderRetry(
+			scriptedOpener([{ events: [startEvent(), errorEvent(opaqueBadRequestFailure())] }], opened),
+			{ model: MODEL, sleep: async () => undefined },
+		);
+		const { events } = await collect(stream);
+		expect(opened).toHaveLength(1);
+		expect(events.at(-1)?.type).toBe("error");
+	});
+
+	it("keeps repair attempts budget-free so both tracks stay untouched", async () => {
+		const opened: OpenedAttempt[] = [];
+		const stream = streamWithProviderRetry(
+			scriptedOpener(
+				[
+					{ events: [errorEvent(opaqueBadRequestFailure())] },
+					{ events: [errorEvent(rateLimitedFailure())] },
+					{ events: [startEvent(), doneEvent("ok")] },
+				],
+				opened,
+			),
+			{ model: MODEL, sleep: async () => undefined, random: () => 0.5 },
+		);
+		const { events, result } = await collect(stream);
+
+		expect(opened).toHaveLength(3);
+		expect(result.stopReason).toBe("stop");
+		const retries = retryEvents(events);
+		expect(retries).toHaveLength(1);
+		expect(retries[0].attempt).toBe(1);
+		expect(retries[0].reason).toBe("rate_limit");
+	});
+
+	it("strips derived output-limit fields through the provider payload hook", async () => {
+		const scripted = new ScriptedLanguageModel([
+			{ error: new AIError(AI_ERROR_CODES.INVALID_REQUEST, "400 status code (no body)", { statusCode: 400 }) },
+			{ events: [startEvent(), doneEvent("recovered")] },
+		]);
+		registerApiProvider(
+			{
+				api: TEST_API,
+				stream: (model, context, options) => scripted.stream(model, context, options),
+				streamSimple: (model, context, options) => scripted.stream(model, context, options),
+			},
+			TEST_SOURCE,
+		);
+
+		const { events, result } = await collect(streamSimple(MODEL, CONTEXT));
+
+		expect(result.stopReason).toBe("stop");
+		expect(scripted.calls).toHaveLength(2);
+		expect(scripted.calls[0].options?.onPayload).toBeUndefined();
+		// The repair attempt wraps onPayload so the outgoing payload drops every
+		// auto-derived output-limit field while keeping the rest of the request.
+		const payload = { model: "m", max_tokens: 1, max_completion_tokens: 2, max_output_tokens: 3, other: "keep" };
+		scripted.calls[1].options?.onPayload?.(payload);
+		expect(payload).toEqual({ model: "m", other: "keep" });
+		expect(retryEvents(events)).toHaveLength(0);
+		expect(events.map((event) => event.type)).toEqual(["start", "done"]);
+	});
+
+	it("still runs the caller onPayload hook before stripping on the repair attempt", async () => {
+		const scripted = new ScriptedLanguageModel([
+			{ error: new AIError(AI_ERROR_CODES.INVALID_REQUEST, "422 status code (no body)", { statusCode: 422 }) },
+			{ events: [startEvent(), doneEvent("recovered")] },
+		]);
+		registerApiProvider(
+			{
+				api: TEST_API,
+				stream: (model, context, options) => scripted.stream(model, context, options),
+				streamSimple: (model, context, options) => scripted.stream(model, context, options),
+			},
+			TEST_SOURCE,
+		);
+		const observed: unknown[] = [];
+
+		await collect(streamSimple(MODEL, CONTEXT, { onPayload: (payload) => observed.push(payload) }));
+
+		const payload = { max_output_tokens: 1_024, keep: true };
+		scripted.calls[1].options?.onPayload?.(payload);
+		expect(observed).toHaveLength(1);
+		expect(payload).toEqual({ keep: true });
+	});
+
+	it("never strips a caller-provided maxTokens and leaves the error terminal", async () => {
+		const scripted = new ScriptedLanguageModel([
+			{ error: new AIError(AI_ERROR_CODES.INVALID_REQUEST, "400 status code (no body)", { statusCode: 400 }) },
+			{ events: [startEvent(), doneEvent("unreached")] },
+		]);
+		registerApiProvider(
+			{
+				api: TEST_API,
+				stream: (model, context, options) => scripted.stream(model, context, options),
+				streamSimple: (model, context, options) => scripted.stream(model, context, options),
+			},
+			TEST_SOURCE,
+		);
+
+		const { events } = await collect(streamSimple(MODEL, CONTEXT, { maxTokens: 4_096 }));
+
+		expect(scripted.calls).toHaveLength(1);
+		expect(events.at(-1)?.type).toBe("error");
+	});
+
+	it("skips repair when outputLimitRepair is disabled or the layer is off", async () => {
+		for (const config of [
+			{ outputLimitRepair: false },
+			{ maxRetries: 0 },
+			// An explicit repair opt-in still loses to a disabled unified layer.
+			{ maxRetries: 0, outputLimitRepair: true },
+		] as const) {
+			const opened: OpenedAttempt[] = [];
+			const stream = streamWithProviderRetry(
+				scriptedOpener([{ events: [errorEvent(opaqueBadRequestFailure())] }], opened),
+				{ model: MODEL, sleep: async () => undefined, ...config },
+			);
+			const { events } = await collect(stream);
+			expect(opened).toHaveLength(1);
+			expect(events.at(-1)?.type).toBe("error");
+		}
 	});
 });

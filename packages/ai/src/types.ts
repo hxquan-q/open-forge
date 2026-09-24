@@ -100,7 +100,16 @@ export interface StreamOptions {
 	 * unified layer; `Infinity` opts into unbounded retries for hosts that
 	 * intentionally want them.
 	 */
-	providerRetry?: { maxRetries?: number };
+	providerRetry?: {
+		maxRetries?: number;
+		/**
+		 * One silent repair attempt for opaque 400/422 rejections caused by
+		 * auto-derived output-limit fields (`max_tokens`/`max_completion_tokens`/
+		 * `max_output_tokens`). It fires at most once per call, consumes no retry
+		 * budget, and never strips a caller-provided `maxTokens`. Default: true.
+		 */
+		outputLimitRepair?: boolean;
+	};
 	/**
 	 * Zero-event idle watchdog for provider streams. When an attempt produces no
 	 * provider event for this long, the attempt is aborted, drained, and

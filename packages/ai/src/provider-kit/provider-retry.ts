@@ -33,6 +33,59 @@ const PROVIDER_TRANSIENT_MAX_DELAY_MS = 8_000;
 const STREAM_IDLE_STALLED = Symbol("provider-stream-idle-stalled");
 const CALLER_ABORTED = Symbol("provider-stream-caller-aborted");
 
+/**
+ * OpenAI-style SDK clients summarize an unreadable failure as
+ * "<status> status code (no body)". A pre-stream 400/422 with that shape
+ * gives the caller nothing to act on; the request was assembled from
+ * catalog-derived values (the auto-filled output limit above all) that an
+ * OpenAI-compatible gateway is free to reject without a word.
+ */
+const OPAQUE_ERROR_BODY_PATTERN = /\(\s*no\s+body\s*\)\s*$/i;
+
+/** Output-limit fields providers derive from model catalog or caller options. */
+export const OUTPUT_LIMIT_FIELDS = ["max_tokens", "max_completion_tokens", "max_output_tokens"] as const;
+
+/**
+ * Whether a failure is the narrow opaque 400/422 shape that one output-limit
+ * repair attempt may fix: non-retryable, carries no usable response body, and
+ * surfaced before the stream produced any events.
+ */
+export function isOpaqueBadRequest(failure: AIErrorDetails): boolean {
+	return (
+		failure.code === AI_ERROR_CODES.INVALID_REQUEST &&
+		!failure.retryable &&
+		(failure.statusCode === 400 || failure.statusCode === 422) &&
+		OPAQUE_ERROR_BODY_PATTERN.test(failure.message) &&
+		!failure.responseBodyPreview?.trim()
+	);
+}
+
+/** Drop the auto-derived output-limit fields, leaving the provider's own default in effect. */
+export function stripOutputLimitFieldsInPlace(payload: unknown): void {
+	if (typeof payload !== "object" || payload === null) return;
+	const record = payload as Record<string, unknown>;
+	for (const field of OUTPUT_LIMIT_FIELDS) delete record[field];
+}
+
+/**
+ * Request options for the one repair attempt: the outgoing payload keeps every
+ * caller- and catalog-derived field except the output limit. The caller
+ * `onPayload` hook still runs (the strip applies to the final outgoing object).
+ */
+export function withoutDerivedOutputLimit<T extends { onPayload?: (payload: unknown) => void }>(options: T): T {
+	// Capture the hook value: callers may assign the wrapped onPayload back onto
+	// the same options object, and reading options.onPayload lazily would then
+	// recurse into the wrapper itself.
+	const callerOnPayload = options.onPayload;
+	return {
+		...options,
+		onPayload: (payload: unknown) => {
+			callerOnPayload?.(payload);
+			stripOutputLimitFieldsInPlace(payload);
+		},
+	};
+}
+
 /** How the next provider attempt assembles its request. */
 export type ProviderRetryAttemptMode = "normal" | "output_limit_repair";
 export type ProviderRetryOpenAttempt = (
@@ -50,6 +103,13 @@ export interface ProviderRetryStreamConfig {
 	readonly streamIdleTimeoutMs?: number;
 	/** Fail-fast cap on server-declared retry delays. `0`/unset disables the cap. */
 	readonly maxRetryDelayMs?: number;
+	/**
+	 * Allow one silent output-limit repair attempt for opaque 400/422 rejections.
+	 * The repair strips auto-derived output-limit fields and never consumes the
+	 * retry budgets; it fires at most once and only before any stream events.
+	 * Disabled when `false` or when `maxRetries` is 0.
+	 */
+	readonly outputLimitRepair?: boolean;
 	/** Sleep implementation, injectable for deterministic tests. */
 	readonly sleep?: ProviderRetrySleep;
 	/** Jitter source for the rate-limit backoff, injectable for deterministic tests. */
@@ -99,7 +159,8 @@ async function driveProviderRetryStream(
 	const sleep = config.sleep ?? delayWithAbort;
 	const random = config.random ?? Math.random;
 	const budgets: Record<ProviderRetryReason, number> = { rate_limit: 0, transient: 0 };
-	const attemptMode: ProviderRetryAttemptMode = "normal";
+	let attemptMode: ProviderRetryAttemptMode = "normal";
+	let outputLimitRepairTried = false;
 	let sharedPartial: AssistantMessage | undefined;
 	let emittedStart = false;
 
@@ -155,6 +216,21 @@ async function driveProviderRetryStream(
 		};
 	};
 
+	/**
+	 * One silent repair per logical call: an opaque request-phase 400/422 lets the
+	 * next attempt drop the auto-derived output limit. The repair is attempted
+	 * before ordinary retry classification, consumes no budget, and emits no
+	 * retry activity; a second opaque failure surfaces untouched.
+	 */
+	const tryOutputLimitRepair = (failure: AIErrorDetails, requestPhase: boolean): boolean => {
+		if (!requestPhase || outputLimitRepairTried) return false;
+		if (config.outputLimitRepair === false || maxRetries === 0) return false;
+		if (!isOpaqueBadRequest(failure)) return false;
+		outputLimitRepairTried = true;
+		attemptMode = "output_limit_repair";
+		return true;
+	};
+
 	for (;;) {
 		if (signal?.aborted) {
 			pushAborted();
@@ -172,6 +248,9 @@ async function driveProviderRetryStream(
 				return;
 			}
 			const failure = toFailureDetails(error, model);
+			// A synchronous open failure is always request-phase, so the narrow
+			// opaque-400/422 repair may apply before ordinary classification.
+			if (tryOutputLimitRepair(failure, true)) continue;
 			const decision = decideRetry(failure);
 			if (!decision) {
 				pushSynthesizedError(outer, model, failure);
@@ -188,6 +267,7 @@ async function driveProviderRetryStream(
 		let terminal: AssistantMessageErrorEvent | undefined;
 		let thrown: unknown;
 		let stalled = false;
+		let attemptSawStart = false;
 		const iterator = inner[Symbol.asyncIterator]();
 		try {
 			for (;;) {
@@ -208,6 +288,7 @@ async function driveProviderRetryStream(
 				}
 				if (step.done) break;
 				const event = step.value;
+				if (event.type === "start") attemptSawStart = true;
 				if (event.type === "error") {
 					terminal = event;
 					break;
@@ -242,6 +323,7 @@ async function driveProviderRetryStream(
 			failure = endedFailureDetails(model);
 		}
 
+		if (tryOutputLimitRepair(failure, !attemptSawStart)) continue;
 		const decision = decideRetry(failure);
 		if (decision) {
 			pushRetryEvent(outer, decision, failure);

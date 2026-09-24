@@ -1,7 +1,7 @@
 ---
 id: TASK-0093
 type: task
-status: ready
+status: done
 priority: P0
 owner: packages/ai
 requirement: []
@@ -16,7 +16,7 @@ write_paths: [packages/ai/src, packages/ai/test]
 exclusive_paths: [packages/ai/src]
 depends_on: [TASK-0092]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 related_requirement: []
@@ -89,6 +89,18 @@ related_bugs: []
 ## 交付记录
 
 - 实际修改：
+  - `packages/ai/src/provider-kit/provider-retry.ts`：新增 `isOpaqueBadRequest`（窄触发：`AI_INVALID_REQUEST` + 非可重试 + status∈{400,422} + 消息以 `(no body)` 结尾 + 无 `responseBodyPreview`）、`OUTPUT_LIMIT_FIELDS`（`max_tokens`/`max_completion_tokens`/`max_output_tokens`）、`stripOutputLimitFieldsInPlace`、`withoutDerivedOutputLimit`（包装 `onPayload`，先跑调用方钩子再原地剥字段）；`ProviderRetryStreamConfig` 新增 `outputLimitRepair`；驱动层在 `decideRetry` 之前先评估 opaque 修复——仅 request 阶段（attempt 未发出 `start`）命中，至多一次、不占双轨预算、不发 `retry` 事件（静默），修复 attempt 以 `output_limit_repair` mode 重新打开。
+  - `packages/ai/src/stream.ts`：`stream()`/`streamSimple()` 的 openAttempt 按 mode 套用 `withoutDerivedOutputLimit`；`outputLimitRepair` 资格 = `options.maxTokens === undefined && providerRetry.outputLimitRepair !== false`（调用方显式上限不剥）。
+  - `packages/ai/src/types.ts`：`StreamOptions.providerRetry` 新增 `outputLimitRepair?: boolean`（默认 true）。
+  - 覆盖面：修复作用于 `onPayload` 边界，openai-completions/openai-responses/openai-codex/azure-openai-responses/google-stream/google-gemini-cli/anthropic/amazon-bedrock 等所有在发送前回调 `onPayload` 的组装点自动生效，无需逐 provider 改动。
+  - 测试：`packages/ai/test/provider-retry.test.ts` 新增 13 例——`isOpaqueBadRequest` 命中/拒绝矩阵、`stripOutputLimitFieldsInPlace`、`withoutDerivedOutputLimit` 钩子顺序、request 阶段静默修复且不发 retry 事件、open-throw 修复、至多一次后透传第二 opaque 失败、`start` 后不修、不占预算、`outputLimitRepair:false`/`maxRetries:0` 关闭、`streamSimple` 端到端剥字段+调用方 `onPayload` 仍运行+显式 `maxTokens` 不修。
 - 实际运行：
+  - `bun scripts/quality/run-vitest.mjs --run packages/ai/test/provider-retry.test.ts`：29/29 通过。
+  - `bun run test:pkg ai`：62 文件 / 484 测试全绿。
+  - `bunx tsgo --noEmit -p packages/ai/tsconfig.build.json`：0 错误。
+  - `bunx biome check --write` 变更文件：格式与 import 序已修。
 - 未运行及原因：
+  - `bun run check` 全量门禁：留待 TASK-0091 完成后统一执行。
 - 剩余风险：
+  - 修复仅覆盖经 `onPayload` 暴露 payload 的 provider；未回调 `onPayload` 的 provider（或把上限字段写进 URL/header/SDK 客户端选项而非 body 的）不会剥离，opaque 400 照常落错。
+  - `maxTokens` 由调用方显式给出时完全跳过修复；调用方通过 `onPayload` 自行注入上限字段属于边界用法，修复仍会剥除（与 PI 行为一致：剥的是最终外发 payload）。
