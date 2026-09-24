@@ -77,7 +77,7 @@ export const pluginSystemCatalog = new SystemPluginCatalog({
 	preferences: systemPluginPreferences,
 	requiredPluginIds: REQUIRED_SYSTEM_PLUGIN_IDS,
 	hostApiVersion: PLUGIN_API_VERSION,
-	isPackaged: app.isPackaged,
+	isPackaged: app?.isPackaged ?? false,
 	registerModeGate: (id) => pluginAgentContributionService.registerModeGate(id),
 	logger: pluginLog,
 });
@@ -136,7 +136,7 @@ function broadcastPluginChanged(pluginId: string): void {
 
 /** 系统插件只读根目录：打包后在 Resources，dev 下读取 zip 解压后的 staging。 */
 function systemPluginsBaseDir(): string {
-	return app.isPackaged
+	return app?.isPackaged
 		? join(process.resourcesPath, "system-plugins")
 		: join(process.cwd(), ".artifacts", "system-plugins");
 }

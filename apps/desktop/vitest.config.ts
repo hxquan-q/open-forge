@@ -10,6 +10,9 @@ export default defineConfig({
 	root: __dirname,
 	resolve: {
 		alias: [
+			// 非 Electron 进程下 electron 只导出二进制路径字符串，模块级 `app.isPackaged` 直接崩；
+			// 测试统一解析到共享 stub（见 src/test/electron-stub.ts），vi.mock("electron") 仍按 specifier 优先。
+			{ find: /^electron$/, replacement: resolve(__dirname, "src/test/electron-stub.ts") },
 			{ find: /^@vetta\/agent-team$/, replacement: resolve(__dirname, "../../packages/agent-team/src/index.ts") },
 			{ find: "@vetta/runtime-telemetry/langfuse", replacement: resolve(__dirname, "../../packages/runtime-telemetry/src/langfuse.ts") },
 			{ find: "@vetta/runtime-telemetry", replacement: resolve(__dirname, "../../packages/runtime-telemetry/src/index.ts") },
