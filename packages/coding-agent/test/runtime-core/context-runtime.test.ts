@@ -1547,7 +1547,11 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		const document = documentFromMessages(history);
 		const records: RuntimeObservationRecord[] = [];
 		const publisher = createRuntimeObservationPublisher({
-			port: { record: (record) => records.push(record) },
+			port: {
+				record: (record) => {
+					records.push(record);
+				},
+			},
 		});
 		const generateCompaction = vi.fn(async (): Promise<CompactionResult> => {
 			throw new Error("must not run");
@@ -1595,7 +1599,11 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		const document = documentFromMessages(history);
 		const records: RuntimeObservationRecord[] = [];
 		const publisher = createRuntimeObservationPublisher({
-			port: { record: (record) => records.push(record) },
+			port: {
+				record: (record) => {
+					records.push(record);
+				},
+			},
 		});
 		const runtime = new CodingAgentContextRuntime({
 			hookRuntime: createHookRuntime(),
@@ -1626,7 +1634,11 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		const document = documentFromMessages(history);
 		const records: RuntimeObservationRecord[] = [];
 		const publisher = createRuntimeObservationPublisher({
-			port: { record: (record) => records.push(record) },
+			port: {
+				record: (record) => {
+					records.push(record);
+				},
+			},
 		});
 		const runtime = new CodingAgentContextRuntime({
 			hookRuntime: createHookRuntime(),
@@ -1674,7 +1686,11 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		const document = documentFromMessages(history);
 		const records: RuntimeObservationRecord[] = [];
 		const publisher = createRuntimeObservationPublisher({
-			port: { record: (record) => records.push(record) },
+			port: {
+				record: (record) => {
+					records.push(record);
+				},
+			},
 		});
 		const runtime = new CodingAgentContextRuntime({
 			hookRuntime: createHookRuntime(),
