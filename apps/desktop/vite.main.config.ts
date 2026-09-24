@@ -76,6 +76,11 @@ export default defineConfig(({ mode }) => {
 	return {
 		define,
 		plugins: [toolkitSourceAlias(), ...sentry.plugins],
+		// prod 主进程走 esbuild minify：dist/main 20.12MB → 15.17MB（-24.6%）。默认会改写
+		// 函数/类名，用户日志里的主进程栈只剩行列号；keepNames 保留具名函数后为
+		// 15.90MB（-20.9%，比纯 minify 多 0.74MB），在体积与可诊断性之间取后者。
+		// dev 模式本就不做 minify。实测方法与产物字节见 TASK-0104 交付记录。
+		esbuild: { keepNames: true },
 		resolve: {
 			alias: [
 				{
@@ -120,7 +125,7 @@ export default defineConfig(({ mode }) => {
 					...resolveMainBundleExternals({ speechInputEnabled: speechInputBuildConfig.enabled }),
 				],
 			},
-			minify: false,
+			minify: true,
 			sourcemap: sentry.enabled ? "hidden" : sourcemapEnabled,
 		},
 	};
