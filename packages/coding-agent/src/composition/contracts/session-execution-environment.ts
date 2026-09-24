@@ -52,6 +52,11 @@ export interface CodingAgentSessionExecutionEnvironmentContext {
 	readonly scenario: ConversationScenario;
 	readonly env?: Readonly<Record<string, string>>;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
+	/**
+	 * 当前会话真实可调用的技能名。会话文件工具的二进制读提示据此决定「能不能点名某个技能」；
+	 * 缺省表示宿主无法确认，提示侧一律按「没有可用技能」处理（绝不自造技能名）。
+	 */
+	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 }
 
 /** Session 独占的命令 Tool 与后台任务宿主；任务控制 Tool、产品模式和激活策略不属于该环境。 */
