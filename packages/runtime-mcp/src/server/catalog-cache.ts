@@ -14,7 +14,10 @@ export interface McpServerCatalogCache {
 }
 
 export function computeMcpServerConfigSignature(config: McpServerConfig): string {
-	return canonicalizeForSignature(config);
+	// disabledTools 只控制宿主侧可见性，不影响 server 发现的 catalog 内容；
+	// 计入签名会让每次开关切换都打穿缓存、迫使下次会话真实重连。
+	const { disabledTools: _excluded, ...discoverable } = config;
+	return canonicalizeForSignature(discoverable);
 }
 
 export function toMcpServerCatalogSnapshot(

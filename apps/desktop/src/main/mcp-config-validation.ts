@@ -5,6 +5,7 @@ import type { McpConfigData, McpServerConfigData } from "../preload/api-types/mc
 const COMMON_SERVER_KEYS = new Set([
 	"type",
 	"disabled",
+	"disabledTools",
 	"autoApprove",
 	"startupTimeout",
 	"debug",
@@ -61,6 +62,7 @@ function assertOptionalStringRecord(value: unknown, path: string): void {
 
 function assertCommonServerConfig(server: Record<string, unknown>, path: string): void {
 	assertOptionalBoolean(server.disabled, `${path}.disabled`);
+	assertOptionalStringArray(server.disabledTools, `${path}.disabledTools`);
 	assertOptionalStringArray(server.autoApprove, `${path}.autoApprove`);
 	if (
 		server.startupTimeout !== undefined &&

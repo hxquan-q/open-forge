@@ -225,6 +225,7 @@ export function createSystemApi(
 			startSetupLogin: (serverName, requestId) => ipc.invoke("vetta:mcp:start-setup-login", serverName, requestId),
 			cancelSetupLogin: (requestId) => ipc.invoke("vetta:mcp:cancel-setup-login", requestId),
 			clearSetupLogin: (serverName) => ipc.invoke("vetta:mcp:clear-setup-login", serverName),
+			listServerTools: (serverName) => ipc.invoke("vetta:mcp:list-server-tools", serverName),
 		},
 		media: {
 			listProviders: () => ipc.invoke("vetta:media:list-providers"),

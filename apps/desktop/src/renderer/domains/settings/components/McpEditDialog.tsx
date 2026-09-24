@@ -32,6 +32,7 @@ export function McpEditDialog({ model }: { model: McpSettingsModel }): JSX.Eleme
 							onCancel={model.onCancelEditServer}
 							saving={model.saving}
 							saveLabel={t("save")}
+							serverTools={model.editingServerTools}
 						/>
 					) : null}
 				</div>

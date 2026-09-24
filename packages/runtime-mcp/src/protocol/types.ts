@@ -39,6 +39,11 @@ export interface McpToolAnnotations {
 
 export interface McpServerCommonConfig {
 	disabled?: boolean;
+	/**
+	 * 按 server 原始工具名停用个别工具：停用项不进 catalog、不进 deferred 索引、
+	 * 对模型零可见。作用于 Agent 调用与 MCP Apps 两侧；与整 server `disabled` 互补。
+	 */
+	disabledTools?: string[];
 	autoApprove?: string[];
 	startupTimeout?: number;
 	debug?: boolean;

@@ -81,6 +81,7 @@ function redactServer(name: string, server: McpServerConfigData): McpServerDetai
 	const common = {
 		name,
 		disabled: Boolean(server.disabled),
+		...(server.disabledTools === undefined ? {} : { disabledTools: [...server.disabledTools] }),
 		...(server.autoApprove === undefined ? {} : { autoApprove: [...server.autoApprove] }),
 		...(server.startupTimeout === undefined ? {} : { startupTimeout: server.startupTimeout }),
 		...(server.debug === undefined ? {} : { debug: server.debug }),
@@ -170,6 +171,7 @@ export class McpSettingsService {
 					type: "http",
 					url,
 					...(data.headers === undefined ? {} : { headers: { ...data.headers } }),
+					...(data.disabledTools === undefined ? {} : { disabledTools: [...data.disabledTools] }),
 					...(data.autoApprove === undefined ? {} : { autoApprove: [...data.autoApprove] }),
 				} satisfies McpHttpServerConfigData;
 			} else {
@@ -183,6 +185,7 @@ export class McpSettingsService {
 					command,
 					...(data.args === undefined ? {} : { args: [...data.args] }),
 					...(data.env === undefined ? {} : { env: { ...data.env } }),
+					...(data.disabledTools === undefined ? {} : { disabledTools: [...data.disabledTools] }),
 					...(data.autoApprove === undefined ? {} : { autoApprove: [...data.autoApprove] }),
 				} satisfies McpStdioServerConfigData;
 			}

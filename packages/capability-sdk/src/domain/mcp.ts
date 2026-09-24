@@ -40,6 +40,8 @@ const mcpServerDetailType = Type.Object(
 		url: Type.Optional(Type.String()),
 		headers: Type.Optional(mcpStringMapType),
 		disabled: Type.Boolean(),
+		/** 按 server 原始工具名停用个别工具；停用项不进入 Agent 工具面。 */
+		disabledTools: Type.Optional(Type.Array(Type.String())),
 		autoApprove: Type.Optional(Type.Array(Type.String())),
 		startupTimeout: Type.Optional(Type.Number()),
 		/** stdio-only: idle recycle threshold in ms; 0 disables recycling. */
@@ -58,6 +60,7 @@ const mcpServerNameInputType = Type.Object(
 
 const mcpServerCommonUpsertFields = {
 	disabled: Type.Optional(Type.Boolean()),
+	disabledTools: Type.Optional(Type.Array(Type.String())),
 	autoApprove: Type.Optional(Type.Array(Type.String())),
 	startupTimeout: Type.Optional(Type.Integer({ minimum: 1 })),
 	debug: Type.Optional(Type.Boolean()),

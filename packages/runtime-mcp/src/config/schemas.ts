@@ -12,6 +12,7 @@ const LegacyStringMapSchema = Type.Union([
 
 const McpServerCommonConfigProperties = {
 	disabled: Type.Optional(Type.Boolean()),
+	disabledTools: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 	autoApprove: Type.Optional(Type.Array(Type.Unknown())),
 	startupTimeout: Type.Optional(Type.Number()),
 	debug: Type.Optional(Type.Boolean()),
@@ -106,6 +107,12 @@ function validateServerConfig(name: string, value: unknown): void {
 	}
 	if (value.disabled !== undefined && !Value.Check(Type.Boolean(), value.disabled)) {
 		throw new Error(`Invalid server config for '${name}': 'disabled' must be a boolean`);
+	}
+	if (
+		value.disabledTools !== undefined &&
+		!Value.Check(Type.Array(Type.String({ minLength: 1 })), value.disabledTools)
+	) {
+		throw new Error(`Invalid server config for '${name}': 'disabledTools' must be an array of non-empty strings`);
 	}
 	if (value.autoApprove !== undefined && !Value.Check(Type.Array(Type.Unknown()), value.autoApprove)) {
 		throw new Error(`Invalid server config for '${name}': 'autoApprove' must be an array`);

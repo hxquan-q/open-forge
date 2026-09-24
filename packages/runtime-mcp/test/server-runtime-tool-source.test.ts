@@ -93,6 +93,26 @@ describe("McpServerRuntimeToolSource", () => {
 		});
 	});
 
+	it("excludes disabledTools from the published view and restores them when re-enabled", async () => {
+		const client = new FakeClient();
+		const base = binding(client, 1);
+		const withDisabled: McpServerBinding = {
+			...base,
+			view: {
+				...base.view,
+				config: { ...base.view.config, disabledTools: ["lookup"] },
+			},
+		};
+		const port = new MutableServerRuntimePort([withDisabled]);
+		const source = createMcpServerRuntimeToolSource(port);
+
+		expect((await source.refresh()).tools).toHaveLength(0);
+
+		port.bindings = [base];
+		const restored = await source.refresh();
+		expect(restored.tools.map(({ tool }) => tool.name)).toEqual(["mcp_search_lookup"]);
+	});
+
 	it("does not publish app-only MCP Apps tools to the model surface", async () => {
 		const client = new FakeClient();
 		const base = binding(client, 1);

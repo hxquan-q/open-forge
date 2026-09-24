@@ -2,6 +2,8 @@
 
 export interface McpServerCommonConfigData {
 	disabled?: boolean;
+	/** 按 server 原始工具名停用个别工具；停用项不进入 Agent 工具面。 */
+	disabledTools?: string[];
 	autoApprove?: string[];
 	startupTimeout?: number;
 	debug?: boolean;
@@ -76,6 +78,24 @@ export interface DesktopMcpApi {
 	cancelSetupLogin(requestId: string): Promise<void>;
 	/** 调用上游声明的退出端点并重新读取真实登录态。 */
 	clearSetupLogin(serverName: string): Promise<McpSetupLoginStatus>;
+	/**
+	 * 读取该 server 最近一次成功发现的工具清单（catalog 缓存，不触发连接）。
+	 * `cached: false` 表示尚无发现记录。
+	 */
+	listServerTools(serverName: string): Promise<McpServerToolList>;
+}
+
+export interface McpServerToolListItem {
+	readonly name: string;
+	readonly description: string;
+	readonly enabled: boolean;
+	/** 在 disabledTools 中但已不在最近目录里（server 侧已改名或移除）。 */
+	readonly stale: boolean;
+}
+
+export interface McpServerToolList {
+	readonly tools: readonly McpServerToolListItem[];
+	readonly cached: boolean;
 }
 
 export interface McpSetupLoginStatus {

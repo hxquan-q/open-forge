@@ -52,6 +52,13 @@ export class FileMcpServerCatalogCache implements McpServerCatalogCache {
 		return { serverInfo: entry.serverInfo, tools: entry.tools, resources: entry.resources };
 	}
 
+	/** 最近一次成功发现的目录（不限签名）。供设置 UI 展示工具清单；签名匹配仍走 `load`。 */
+	async latest(name: string): Promise<McpServerCatalogSnapshot | undefined> {
+		const entry = (await this.readFile(name))?.entries[0];
+		if (!entry) return undefined;
+		return { serverInfo: entry.serverInfo, tools: entry.tools, resources: entry.resources };
+	}
+
 	async store(name: string, signature: string, snapshot: McpServerCatalogSnapshot): Promise<void> {
 		const file = await this.readFile(name);
 		const entries: CatalogCacheEntry[] = [
