@@ -1,7 +1,7 @@
 ---
 id: TASK-0076
 type: task
-status: in_progress
+status: done
 priority: P0
 owner: apps/desktop
 requirement: REQ-0003
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/shared/desktop-brand.json, apps/desktop/src/share
 exclusive_paths: [apps/desktop/src/shared/desktop-brand.json, apps/desktop/src/shared/desktop-brand.ts, apps/desktop/src/shared/desktop-brand.test.ts, apps/desktop/src/main/appshot/helper-resolver.ts, apps/desktop/scripts/build-appshot-helper.js, project/tasks/TASK-0076-desktop-frontend-brand-sweep.md, project/bugs/BUG-0008-appshot-helper-name-mismatch.md]
 depends_on: [TASK-0043, TASK-0044]
 conflicts_with: [TASK-0045, TASK-0047, TASK-0048]
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；品牌收尾与 BUG-0008 修复随 5978460b6 落地——该提交标题为「工作区只留一处办公/编程开关」，实际混入了本任务改动，属既有混提交，不回写历史）
 created: 2026-09-24
 updated: 2026-09-24
 ---
@@ -101,6 +101,7 @@ updated: 2026-09-24
 - `check:quick` Biome：本任务文件已通过 organizeImports/format 修复；其余诊断属并行工作区。
 - 全量 `bun run test`：3554/3912 通过、98 个文件失败，全部归因于既有环境问题——React 19.3.0/19.2.8 双版本漂移（`@openai/codex-security` 拉入，凡经 radix-ui 渲染的组件测试均 `useState` dispatcher 为 null）、Windows 平台远端 SSH/文件协议套件、及其他并行改动（mock 缺导出、spy 断言）。本任务文件 0 新增失败；`agent-team-storage-layout.test.ts` 单跑 3/3 通过（全量中为临时目录并发 flake）。
 - `ImBridgeSettingsView.test.tsx` 受同一 React 漂移阻塞（`react@19.3.0` vs `react-dom@19.2.8`），相同断言已由合同测试覆盖，依赖收敛后即可跑通。
+- 2026-09-24 复跑：`da40543a9` 收敛 override 至 react/react-dom 19.2.8 后，`bun run test:impact -- apps/desktop/src/renderer/domains/settings/components/ImBridgeSettingsView.test.tsx` 结果 6/6 通过，原阻塞项解除（见 VERIFY-0008）。
 - macOS appshot 打包/TCC 链路未实机验证（本机 Windows），见 BUG-0008 剩余风险。
 
 **code-review 反馈与处置（双轴 Standards/Spec）**
