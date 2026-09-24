@@ -14,6 +14,24 @@ import { WorkspaceModeSwitcher } from "./WorkspaceModeSwitcher";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
+// 透传真实实现，只记「探针在什么状态下被拉开」：切换耗时基线靠这一段把窗口开在
+// setMode 之前，否则被测的那次提交已经跑完，marks / commits 全是空的。
+const perfProbe = vi.hoisted(() => ({
+	begin: vi.fn(),
+	persistedModeAtBegin: null as string | null,
+}));
+vi.mock("@shared/lib/perf-send", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@shared/lib/perf-send")>();
+	return {
+		...actual,
+		perfSendBegin: (trigger: string) => {
+			perfProbe.begin(trigger);
+			perfProbe.persistedModeAtBegin = localStorage.getItem(WORKSPACE_MODE_STORAGE_KEY);
+			return actual.perfSendBegin(trigger);
+		},
+	};
+});
+
 vi.mock("@shared/components/ui/segmented-control", () => ({
 	SegmentedControl: ({
 		items,
@@ -77,6 +95,8 @@ beforeEach(() => {
 	vi.stubGlobal("localStorage", memoryStorage());
 	routeParams = {};
 	routeSearch = {};
+	perfProbe.begin.mockReset();
+	perfProbe.persistedModeAtBegin = null;
 });
 
 afterEach(cleanup);
@@ -122,5 +142,18 @@ describe("WorkspaceModeSwitcher", () => {
 		);
 		expect(screen.getByRole("group").getAttribute("aria-label")).toBe("workspace.mode.switch");
 		expect(screen.getByTestId("workspace-mode-hint").textContent).toBe("workspace.mode.hint");
+	});
+
+	it("切换点击拉开既有交互探针，且窗口早于模式落盘", async () => {
+		routeParams = { cwd: encodeURIComponent("/repo/a") };
+		renderSwitcher();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /workspace\.mode\.work/ }));
+
+		expect(perfProbe.begin).toHaveBeenCalledExactlyOnceWith("workspace-mode-switch");
+		// 落盘发生在 setMode 内；窗口打开时还不该有新值，否则量到的是已经跑完的提交。
+		expect(perfProbe.persistedModeAtBegin).toBeNull();
+		expect(JSON.parse(localStorage.getItem(WORKSPACE_MODE_STORAGE_KEY)!)).toEqual({ "/repo/a": "work" });
 	});
 });
