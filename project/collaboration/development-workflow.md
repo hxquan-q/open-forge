@@ -119,3 +119,10 @@ bun run worktree:remove --task TASK-xxxx
 `remove` 默认拒绝 dirty、锁定、未跟踪、未推送提交或 Git 状态未知的 Worktree；不要把 `--force` 当常规清理方式。只在 origin/dev 推送成功后运行清理。`worktree` 已在集成提交中标记为“已集成、待清理”，因此清理成功后不需再单独提交一次仅更新该字段的 Project 元数据；`branch` 保留为已集成 Task 的来源记录。若清理因 dirty/lock 等原因失败，Worktree 和 Task branch 均保留，查明 Owner 与内容后再重试。未完成、未集成、仍在使用或 owner 未确认的 Worktree 一律保留。
 
 本地没有活动 Task 时应只保留长期 `main` 分支；活跃 Task 的本地 `task/*` 分支仅作为其 Worktree 生命周期的一部分。远端 `origin/dev` / `origin/main` 是远端 refs，不因此创建长期本地 `dev` / `forge/dev` 分支。
+
+## PR 标题与结构变更门禁
+
+`.github/workflows/pr-title.yml` 在 PR opened/edited/reopened/ready_for_review 时校验标题形如 `<type>(<scope>): <description>`；type 与 scope 白名单由 `scripts/quality/check-pr-title.mjs` 维护——scope 自动派生自 `package.json#workspaces` 各包目录名（含 presets/externals 展开项），外加 `EXTRA_SCOPES` 中的非包域（`quality`、`project`、`docs`、`ci`、`release`、`runtime`、`mcp` 等）。本地预检：`bun run scripts/quality/check-pr-title.mjs -- "<title>"`。
+
+- 只校验 PR 标题，不校验 commit message；不追溯历史 PR；不新增第三方 Action 依赖。
+- `pull_request_template.md` 的 `## Structural changes` 段在勾选 `Public contract` 时必填：受影响消费者/实现、兼容性影响、迁移计划与豁免引用（waiver/ADR/OWNERS）。

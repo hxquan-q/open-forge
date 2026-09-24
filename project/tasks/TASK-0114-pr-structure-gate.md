@@ -1,7 +1,7 @@
 ---
 id: TASK-0114
 type: task
-status: ready
+status: done
 priority: P3
 owner: scripts/quality
 requirement: []
@@ -81,7 +81,19 @@ Avernet 在 CI 里强制 PR title 为 `<type>(<scope>): <outcome>`（`scripts/ci
 ## 交付记录
 
 - 实际修改：
+  - `scripts/quality/check-pr-title.mjs`（新增）：`<type>(<scope>): <description>` 校验；type 白名单（feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert/i18n/merge）；scope = `package.json#workspaces` 全部包目录 basename（含 presets/externals 展开）+ `EXTRA_SCOPES` 非包域；支持逗号多 scope。
+  - `scripts/quality/check-pr-title.test.mjs`（新增）：6 例——合法包 scope、多 scope、缺 scope/缺冒号/空描述等形状错误、未知 type/scope、边界 scope（`runtime` 合法域 vs `runtime-mcp2`/`runtime-nod` 拒绝、大写/空格拒绝）、常用 scope 覆盖断言。
+  - `.github/workflows/pr-title.yml`（新增）：`pull_request` opened/edited/reopened/ready_for_review 触发，`contents: read` 权限，复用仓库既有 `actions/checkout` + `oven-sh/setup-bun`（无新第三方 Action），运行 `check-pr-title.mjs`。
+  - `.github/pull_request_template.md`：新增 `## Structural changes` 段（合同变更与否、受影响消费者/实现、兼容性、迁移计划、waiver/ADR/OWNERS 引用），勾选 `Public contract` 时必填。
+  - `project/collaboration/development-workflow.md`：新增「PR 标题与结构变更门禁」节（含本地预检命令与边界说明）。
+  - `package.json`：`check-pr-title.test.mjs` 加入 `test:quality`。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
+  - `bun scripts/quality/run-vitest.mjs --run scripts/quality/check-pr-title.test.mjs` — 6/6 通过。
+  - 本地模拟：`bun run scripts/quality/check-pr-title.mjs -- "feat(desktop): add canvas batch save"` → 放行；`-- "update stuff"` → exit 1 并提示形状。
+  - workflow YAML 用 `yaml` 包实解析通过（并当场抓到并修复 job name 未加引号的真实语法错误）。
+- 未运行及原因：真实 GitHub PR 触发未验证（需授权发测试 PR）；`bun run check` 全量留到树末统一验收。
+- Worktree：主工作区。
 - 剩余风险：
+  - scope 允许逗号多值与 `merge` type，比 strict conventional-commits 宽松——与仓库现状对齐，收紧属后续治理决定；
+  - `EXTRA_SCOPES` 需人工维护，非包域新增要同步两处（脚本常量+文档）；
+  - workflow 未在真实 PR 上跑过，首个 PR 若误报可按错误信息定位 scope/type 修正。
