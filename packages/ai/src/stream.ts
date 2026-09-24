@@ -3,6 +3,7 @@ import "./utils/http-proxy.js";
 
 import { getApiProvider, getApiProviderSource } from "./api-registry.js";
 import { withProviderFetch } from "./provider-fetch.js";
+import { streamWithProviderRetry } from "./provider-kit/provider-retry.js";
 import { projectLanguageModelAdapter, projectLanguageModelSimpleAdapter } from "./providers/legacy-adapter-stream.js";
 import { getDefaultAdapterRegistry } from "./runtime/default-adapter-registry.js";
 import type {
@@ -44,18 +45,36 @@ function shouldUseNativeSimpleAdapter(api: Api): boolean {
 	return legacySource === undefined || legacySource === "built-in";
 }
 
+function providerRetryConfig<TApi extends Api>(model: Model<TApi>, resolved?: StreamOptions) {
+	return {
+		model,
+		signal: resolved?.signal,
+		maxRetries: resolved?.providerRetry?.maxRetries,
+		streamIdleTimeoutMs: resolved?.streamIdleTimeoutMs,
+		maxRetryDelayMs: resolved?.maxRetryDelayMs,
+	};
+}
+
 export function stream<TApi extends Api>(
 	model: Model<TApi>,
 	context: Context,
 	options?: ProviderStreamOptions,
 ): AssistantMessageEventStream {
 	const resolved = withProviderFetch(model, options as StreamOptions | undefined);
-	const nativeAdapter = resolveNativeAdapter(model.api);
-	if (nativeAdapter && shouldUseNativeAdapter(model.api)) {
-		return projectLanguageModelAdapter(nativeAdapter, model, context, resolved);
-	}
-	const provider = resolveApiProvider(model.api);
-	return provider.stream(model, context, resolved);
+	return streamWithProviderRetry(
+		(attemptSignal) => {
+			// The unified retry layer owns retry policy for this call, so transport-local
+			// retries stay disabled to keep backoff single-owned.
+			const attemptOptions = { ...resolved, signal: attemptSignal, maxRetries: 0 } as ProviderStreamOptions;
+			const nativeAdapter = resolveNativeAdapter(model.api);
+			if (nativeAdapter && shouldUseNativeAdapter(model.api)) {
+				return projectLanguageModelAdapter(nativeAdapter, model, context, attemptOptions);
+			}
+			const provider = resolveApiProvider(model.api);
+			return provider.stream(model, context, attemptOptions);
+		},
+		providerRetryConfig(model, resolved),
+	);
 }
 
 export async function complete<TApi extends Api>(
@@ -73,12 +92,18 @@ export function streamSimple<TApi extends Api>(
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
 	const resolved = withProviderFetch(model, options);
-	const nativeAdapter = resolveNativeAdapter(model.api);
-	if (nativeAdapter?.streamSimple && shouldUseNativeSimpleAdapter(model.api)) {
-		return projectLanguageModelSimpleAdapter(nativeAdapter, model, context, resolved);
-	}
-	const provider = resolveApiProvider(model.api);
-	return provider.streamSimple(model, context, resolved);
+	return streamWithProviderRetry(
+		(attemptSignal) => {
+			const attemptOptions = { ...resolved, signal: attemptSignal, maxRetries: 0 } as SimpleStreamOptions;
+			const nativeAdapter = resolveNativeAdapter(model.api);
+			if (nativeAdapter?.streamSimple && shouldUseNativeSimpleAdapter(model.api)) {
+				return projectLanguageModelSimpleAdapter(nativeAdapter, model, context, attemptOptions);
+			}
+			const provider = resolveApiProvider(model.api);
+			return provider.streamSimple(model, context, attemptOptions);
+		},
+		providerRetryConfig(model, resolved),
+	);
 }
 
 export async function completeSimple<TApi extends Api>(

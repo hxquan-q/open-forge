@@ -102,9 +102,19 @@ export async function streamAssistantResponse(
 			switch (event.type) {
 				case "start":
 					partialMessage = event.partial;
-					context.messages.push(partialMessage);
-					addedPartial = true;
-					stream.push({ type: "message_start", message: { ...partialMessage } });
+					if (addedPartial) {
+						// A restarted provider attempt reuses the established bubble.
+						context.messages[context.messages.length - 1] = partialMessage;
+						stream.push({
+							type: "message_update",
+							assistantMessageEvent: event,
+							message: { ...partialMessage },
+						});
+					} else {
+						context.messages.push(partialMessage);
+						addedPartial = true;
+						stream.push({ type: "message_start", message: { ...partialMessage } });
+					}
 					break;
 				case "text_start":
 				case "text_delta":
@@ -119,6 +129,17 @@ export async function streamAssistantResponse(
 						partialMessage = event.partial;
 						context.messages[context.messages.length - 1] = partialMessage;
 						stream.push({ type: "message_update", assistantMessageEvent: event, message: { ...partialMessage } });
+					}
+					break;
+				case "retry":
+					// Provider retry activity rides on the in-flight message; it is
+					// lightweight activity state, never a new message row.
+					if (partialMessage) {
+						stream.push({
+							type: "message_update",
+							assistantMessageEvent: event,
+							message: { ...partialMessage },
+						});
 					}
 					break;
 				case "done": {
