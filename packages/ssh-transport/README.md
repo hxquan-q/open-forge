@@ -68,3 +68,16 @@ node scripts/quality/run-vitest.mjs run packages/ssh-transport
 ```
 
 `SshProcessRunner` 是可注入端口，因此以上全部可以在没有 SSH 服务器的情况下验证。
+
+
+## Context Boundary
+
+```yaml
+purpose: SSH transport for remote Vetta projects: host model, connection reuse, remote exec and file operations.
+provides:  
+  - "@vetta/ssh-transport"
+  - "@vetta/ssh-transport/project-uri"
+  - "@vetta/ssh-transport/testing"
+consumes:  []
+internal_dependencies:  []
+```

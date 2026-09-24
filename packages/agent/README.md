@@ -436,3 +436,14 @@ for await (const event of agentLoopContinue(context, config)) {
 ## License
 
 MIT
+
+
+## Context Boundary
+
+```yaml
+purpose: General-purpose agent with transport abstraction, state management, and attachment support
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta/ai"
+```

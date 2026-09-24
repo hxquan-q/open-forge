@@ -13,6 +13,7 @@ const steps = [
 	["scripts/quality/check-private-keys.mjs"],
 	["scripts/quality/check-conflict-markers.mjs"],
 	["scripts/quality/check-package-boundaries.mjs"],
+	["scripts/quality/check-context-boundaries.mjs"],
 	["scripts/quality/check-coding-agent-architecture.mjs"],
 	["scripts/quality/check-runtime-coding-agent-independence.mjs"],
 	["scripts/quality/check-runtime-subagents-boundary.mjs"],

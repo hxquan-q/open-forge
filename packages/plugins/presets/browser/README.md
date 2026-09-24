@@ -41,3 +41,15 @@ bun run build
 ```
 
 单元测试使用 fake `ctx.browser`，不启动真实浏览器、不读取用户 profile。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+```

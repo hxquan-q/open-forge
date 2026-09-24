@@ -221,3 +221,36 @@ When a user explicitly requests agent-driven UI verification, use repo-root `ver
 Current `e2e/smoke.e2e.ts` batch-1 covers boot only: main-process ready/version, main window `index.html`, config/userData isolation, and a `dialog` mock probe. It does not cover login, chat, or other product flows.
 
 Packaged E2E permits one immediate spec-file retry. WebdriverIO creates a fresh browser instance for the retry, which recovers the upstream CDP bridge when its initialization promise is transiently collected during a packaged process. Unpackaged E2E does not retry; assertions are unchanged and a second failure remains fatal.
+
+
+## Context Boundary
+
+```yaml
+purpose: Vetta Desktop App
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/capability-sdk"
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/theme-sdk"
+  - "@vetta-org/theme-ui"
+  - "@vetta-org/ui"
+  - "@vetta/action-rpc"
+  - "@vetta/agent-team"
+  - "@vetta/ai"
+  - "@vetta/capability-runtime"
+  - "@vetta/cli-host"
+  - "@vetta/coding-agent"
+  - "@vetta/remote-control"
+  - "@vetta/remote-desktop"
+  - "@vetta/runtime-core"
+  - "@vetta/runtime-desktop"
+  - "@vetta/runtime-knowledge"
+  - "@vetta/runtime-mcp"
+  - "@vetta/runtime-node"
+  - "@vetta/runtime-storage"
+  - "@vetta/runtime-telemetry"
+  - "@vetta/runtime-tools"
+  - "@vetta/ssh-transport"
+  - "@vetta/toolkit"
+```

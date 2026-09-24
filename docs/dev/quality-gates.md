@@ -32,6 +32,7 @@ scripts/quality/
   check-private-keys.mjs       私钥形态检测
   check-conflict-markers.mjs   未解决冲突标记
   check-package-boundaries.mjs 库/插件不得依赖 app 宿主
+  check-context-boundaries.mjs 每模块 Context Boundary 声明与 internal_dependencies 白名单
   check-coding-agent-architecture.mjs
                                Coding Agent 当前架构依赖与公开面
   run-vitest.mjs               用 Node 启动 Vitest（Windows 上禁止 Bun 拉起 worker）
@@ -123,6 +124,19 @@ bun run test:pkg <name>
 - plugin presets/externals **deep-import** `desktop/src/**`
 
 `coding-agent/examples/**` 已排除。
+
+## 模块边界声明（`check-context-boundaries`）
+
+每个模块在自己的 `README.md`（无 README 时为 `AGENTS.md`）内嵌 `## Context Boundary` yaml 块，声明 `purpose` / `provides` / `consumes` / `internal_dependencies`；声明与模块同处一地，新增包改的是自己的声明而不是中心守卫表（ADR-0131）。
+
+- `internal_dependencies` 是本模块**允许 import 的 workspace 包名白名单**；扫描真实 import specifier，凡未声明的跨模块 import 即失败。
+- 相对路径逃逸出模块根一律违规；`@pkg/src/**` 深链一律违规——白名单不豁免深链。
+- 例外仅限测试文件：`*.test.*` / `*.spec.*` 与 `test/` 树允许相对逃逸进**已声明**依赖的模块（既有测试耦合模式，依赖方向仍受白名单约束）。
+- 非 workspace 交付物（`apps/im-gateway`、`apps/kotlin`、`apps/ssh-helper`）同样带声明块。
+- `docs/architecture/dependents.md` 是机器生成的反向依赖视图，禁止手写；由 `--write-dependents` 重新生成，守卫校验其新鲜度。
+- 新包补齐声明可运行 `--apply` 脚手架生成首版 yaml 块。
+
+`coding-agent/examples/extensions/*` 作为 workspace 模块同样受管。
 
 ## Coding Agent 架构规则（`check-coding-agent-architecture`）
 

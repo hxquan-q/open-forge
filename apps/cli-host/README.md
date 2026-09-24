@@ -35,3 +35,22 @@ session files remain readable through the explicit pre-open import boundary, but
 ## Who Depends On It
 
 - shell users and packaging targets that want a dedicated CLI package
+
+
+## Context Boundary
+
+```yaml
+purpose: CLI host application: headless agent session entry point and RPC surface
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta/action-rpc"
+  - "@vetta/agent-core"
+  - "@vetta/ai"
+  - "@vetta/coding-agent"
+  - "@vetta/ecosystem-adapter"
+  - "@vetta/runtime-core"
+  - "@vetta/runtime-mcp"
+  - "@vetta/runtime-node"
+  - "@vetta/runtime-storage"
+```

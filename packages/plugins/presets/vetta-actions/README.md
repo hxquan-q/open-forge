@@ -22,3 +22,15 @@ Catalog 冲突策略：同一 action id **先注册为准**，后到者只记日
 本插件只通过受信任的 `ctx.official` 能力读写宿主数据。写操作仍由宿主根据 `effect`
 统一审批，并复用宿主已有的领域审批界面。引用实体的写操作通过 `assertReady` 在审批前
 确认实体存在。远端更新、签名和灰度服务暂不在本插件内实现。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+```

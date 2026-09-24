@@ -11,7 +11,8 @@
 - `package.json`：`name`（`@vetta/<name>`）、`type: "module"`、`main` / `types` / `exports` 指向 `dist/`、`scripts.build`（通常 `tsgo -p tsconfig.build.json`）
 - `tsconfig.build.json`：extend `../../tsconfig.base.json`，配置 `rootDir` / `outDir`，`include: ["src/**/*.ts"]`
 - `src/` 与公开入口（`index.ts` 及 subpath exports）
-- 可选：`README.md`、`CHANGELOG.md`
+- `README.md` 内嵌 `## Context Boundary` yaml 块（`purpose` / `provides` / `consumes` / `internal_dependencies`；可运行 `bun run scripts/quality/check-context-boundaries.mjs --apply` 生成首版再修订，见 `docs/dev/quality-gates.md`「模块边界声明」）
+- 可选：`CHANGELOG.md`
 
 ### 2. Workspace 注册
 

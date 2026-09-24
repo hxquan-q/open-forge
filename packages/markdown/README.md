@@ -26,3 +26,15 @@ import "@vetta/markdown/markdown.css";
 ## 安全
 
 不启用 `rehype-raw`。正文虽然来自后台，仍按不可信内容处理，内联 HTML 一律不渲染。
+
+
+## Context Boundary
+
+```yaml
+purpose: Shared Markdown parsing and rendering components
+provides:  
+  - "@vetta/markdown"
+  - "@vetta/markdown/markdown.css"
+consumes:  []
+internal_dependencies:  []
+```

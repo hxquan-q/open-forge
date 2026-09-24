@@ -82,3 +82,17 @@ bunx vite build       # 产出 dist/ 与 release/kanban-<version>.zip
 | `storage.read` / `storage.write` | 看板数据存在插件私有存储 |
 | `agent.tools.register` / `agent.toolHandler.execute` | 四个看板工具 |
 | `agent.session.read` / `agent.session.write` | 通过 `official.sessions` 建会话、发 prompt、读运行态 |
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/theme-ui"
+  - "@vetta-org/ui"
+```
