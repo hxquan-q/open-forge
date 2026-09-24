@@ -52,7 +52,7 @@ export function HomeActions({ children }: { children: ReactNode }) {
 export function HomePrimary({ href, children }: { href: string; children: ReactNode }) {
 	return (
 		<a
-			className="inline-flex min-h-11 items-center gap-4 rounded-full bg-vetta-ink px-[1.05rem] text-[0.9rem] font-semibold whitespace-nowrap text-vetta-paper no-underline dark:bg-vetta-binding-fg dark:text-vetta-binding [&_span]:transition-transform [&_span]:duration-150 hover:[&_span]:translate-x-[0.2rem]"
+			className="inline-flex min-h-11 items-center gap-4 rounded-full bg-vetta-ink px-[1.05rem] text-[0.9rem] font-semibold whitespace-nowrap text-vetta-paper no-underline transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--vetta-ink)_86%,var(--vetta-coral))] dark:bg-vetta-binding-fg dark:text-vetta-binding dark:hover:bg-[color-mix(in_srgb,var(--vetta-binding-fg)_86%,var(--vetta-coral))] [&_span]:transition-transform [&_span]:duration-150 hover:[&_span]:translate-x-[0.2rem]"
 			href={href}
 		>
 			{children}
@@ -63,7 +63,7 @@ export function HomePrimary({ href, children }: { href: string; children: ReactN
 export function HomeSecondary({ href, children }: { href: string; children: ReactNode }) {
 	return (
 		<a
-			className="inline-flex items-center gap-4 border-b border-current py-[0.55rem] text-[0.9rem] font-semibold whitespace-nowrap text-fd-foreground no-underline"
+			className="inline-flex items-center gap-4 border-b border-current py-[0.55rem] text-[0.9rem] font-semibold whitespace-nowrap text-fd-foreground no-underline transition-colors duration-150 hover:border-vetta-coral hover:text-vetta-coral"
 			href={href}
 		>
 			{children}
@@ -209,7 +209,7 @@ export function HomeIndexLink({ href, title, description }: { href: string; titl
 
 export function HomeOutcomes({ children }: { children: ReactNode }) {
 	return (
-		<div className="grid grid-cols-1 border-t border-s border-fd-border md:grid-cols-2 [&>div]:grid [&>div]:min-h-56 [&>div]:border-e [&>div]:border-b [&>div]:border-fd-border [&>div]:p-[1.4rem] [&>div]:transition-colors hover:[&>div]:bg-vetta-coral/[0.06] [&>div>span]:font-display [&>div>span]:text-[0.92rem] [&>div>span]:font-semibold [&>div>span]:text-vetta-coral [&>div>h3]:mt-[1.4rem] [&>div>h3]:text-[1.12rem] [&>div>h3]:font-semibold [&>div>p]:mt-[0.7rem] [&>div>p]:mb-6 [&>div>p]:max-w-[28rem] [&>div>p]:text-[0.82rem] [&>div>p]:leading-[1.7] [&>div>p]:text-fd-muted-foreground [&>div>a]:self-end [&>div>a]:text-[0.78rem] [&>div>a]:font-semibold [&>div>a]:text-inherit [&>div>a]:no-underline">
+		<div className="grid grid-cols-1 border-t border-s border-fd-border md:grid-cols-2 [&>div]:grid [&>div]:min-h-56 [&>div]:border-e [&>div]:border-b [&>div]:border-fd-border [&>div]:p-[1.4rem] [&>div]:transition-colors hover:[&>div]:bg-vetta-coral/[0.06] [&>div>span]:font-display [&>div>span]:text-[0.92rem] [&>div>span]:font-semibold [&>div>span]:text-vetta-coral [&>div>h3]:mt-[1.4rem] [&>div>h3]:text-[1.12rem] [&>div>h3]:font-semibold [&>div>p]:mt-[0.7rem] [&>div>p]:mb-6 [&>div>p]:max-w-[28rem] [&>div>p]:text-[0.82rem] [&>div>p]:leading-[1.7] [&>div>p]:text-fd-muted-foreground [&>div>a]:self-end [&>div>a]:text-[0.78rem] [&>div>a]:font-semibold [&>div>a]:text-inherit [&>div>a]:no-underline [&>div>a]:transition-colors [&>div>a:hover]:text-vetta-coral">
 			{children}
 		</div>
 	);
@@ -231,7 +231,7 @@ export function HomeFooter({ kicker, children }: { kicker: string; children: Rea
 				height="72"
 			/>
 			<DocsKicker className="mx-auto mb-[1.15rem] flex max-w-[78rem] text-vetta-binding-fg/60">{kicker}</DocsKicker>
-			<div className="mx-auto grid max-w-[78rem] grid-cols-1 items-end gap-8 md:gap-16 lg:grid-cols-[1.25fr_0.75fr] [&_h2]:m-0 [&_h2]:font-display [&_h2]:text-[2.15rem] [&_h2]:font-semibold [&_h2]:leading-[1.2] [&_h2]:tracking-[-0.02em] [&_h2]:text-pretty [&_h2]:text-vetta-binding-fg lg:[&_h2]:text-5xl [&>p]:m-0 [&>p]:text-[0.9rem] [&>p]:leading-[1.8] [&>p]:text-vetta-binding-fg/70 [&_a]:text-vetta-coral [&_a]:underline [&_a]:underline-offset-[0.2em]">
+			<div className="mx-auto grid max-w-[78rem] grid-cols-1 items-end gap-8 md:gap-16 lg:grid-cols-[1.25fr_0.75fr] [&_h2]:m-0 [&_h2]:font-display [&_h2]:text-[2.15rem] [&_h2]:font-semibold [&_h2]:leading-[1.2] [&_h2]:tracking-[-0.02em] [&_h2]:text-pretty [&_h2]:text-vetta-binding-fg lg:[&_h2]:text-5xl [&>p]:m-0 [&>p]:text-[0.9rem] [&>p]:leading-[1.8] [&>p]:text-vetta-binding-fg/70 [&_a]:text-vetta-coral [&_a]:underline [&_a]:underline-offset-[0.2em] [&_a]:transition-[text-underline-offset] [&_a:hover]:underline-offset-[0.35em]">
 				{children}
 			</div>
 		</footer>
