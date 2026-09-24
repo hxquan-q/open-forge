@@ -30,7 +30,7 @@ describe("useScheduledTasks", () => {
 			abortTask: vi.fn(async () => undefined),
 			onTaskEvent: vi.fn((handler) => {
 				emitTaskEvent = handler;
-				return unsubscribe;
+				return unsubscribe as () => void;
 			}),
 		};
 		Object.defineProperty(window, "vetta", {

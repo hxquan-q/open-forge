@@ -28,20 +28,20 @@ function model(
 		actions?: Partial<AppearanceSettingsModel["actions"]>;
 	} = {},
 ): AppearanceSettingsModel {
+	const { actions: actionOverrides, ...rest } = overrides;
+	const actions = {
+		changeLanguage: vi.fn(),
+		changeMode: vi.fn(),
+		changeThemeName: vi.fn(),
+		selectUiTheme: vi.fn(),
+		setCursorStyle: vi.fn(),
+		setOrnament: vi.fn(),
+		setSidebarStyle: vi.fn(),
+		setTexture: vi.fn(),
+		...actionOverrides,
+	} as unknown as AppearanceSettingsModel["actions"];
 	return {
-		actions: Object.assign(
-			{
-				changeLanguage: vi.fn(),
-				changeMode: vi.fn(),
-				changeThemeName: vi.fn(),
-				selectUiTheme: vi.fn(),
-				setCursorStyle: vi.fn(),
-				setOrnament: vi.fn(),
-				setSidebarStyle: vi.fn(),
-				setTexture: vi.fn(),
-			},
-			overrides.actions,
-		),
+		actions,
 		activeUiThemeId: "default",
 		cursorOptions: [],
 		cursorStyle: "default",
@@ -81,7 +81,7 @@ function model(
 		themeName: "default",
 		themes: [],
 		uiThemes: [],
-		...overrides,
+		...rest,
 	};
 }
 

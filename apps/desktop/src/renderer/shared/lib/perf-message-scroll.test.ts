@@ -49,12 +49,18 @@ it("一次滚动结束后持久化高度修正、渲染范围和 React 提交的
 	});
 	vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-	const observers: Array<{ callback: PerformanceObserverCallback; disconnect: ReturnType<typeof vi.fn> }> = [];
+	const observers: Array<{
+		callback: PerformanceObserverCallback;
+		disconnect: ReturnType<typeof vi.fn<() => void>>;
+	}> = [];
 	class FakePerformanceObserver {
-		readonly record: { callback: PerformanceObserverCallback; disconnect: ReturnType<typeof vi.fn> };
+		readonly record: {
+			callback: PerformanceObserverCallback;
+			disconnect: ReturnType<typeof vi.fn<() => void>>;
+		};
 
 		constructor(callback: PerformanceObserverCallback) {
-			this.record = { callback, disconnect: vi.fn() };
+			this.record = { callback, disconnect: vi.fn<() => void>(() => undefined) };
 			observers.push(this.record);
 		}
 
