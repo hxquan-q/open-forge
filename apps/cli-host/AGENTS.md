@@ -33,3 +33,9 @@
 - 使用 Vitest Node 测试命令参数、stdout/stderr、退出码、信号/取消、初始化失败和资源关闭；进程级行为使用可控子进程或已安装制品测试，不调用真实 Provider。
 - CLI 参数、默认值、输出格式、RPC 或 Runtime 选择变化时必须更新相应合同测试，并运行 `bun run verify:runtime-contract`。
 - 入口、package exports、bin 或构建制品变化时必须运行 `bun run verify:artifact:installed`；无运行时逻辑的薄导出变化可以不新增单测，但不能省略制品/类型验证。
+
+## 规则分级
+
+- **Invariant**：`职责范围` 边界（不拥有 TUI/Agent Loop；不得反向依赖 `@vetta/desktop`；`scripts/compile-standalone.mjs` 为独立可执行文件唯一编译入口）。
+- **Policy**：`测试要求` 全节（含合同测试与制品验证的触发条件）。
+- **Guideline**：`关键模块` 索引、`注意事项` 中的 bin 名与打包布局事实提示。

@@ -29,3 +29,9 @@
 - 差：`ipc/pet.ts` 自己读取配置、拼媒体路径、决定动作策略并直接操作窗口。
 - 好：`ipc/session.ts` 收到 runtime event 后调用 `main/pet/session-event-action-policy.ts` 的映射函数。
 - 差：在 `ipc/session.ts` 或 `ipc/pet-event-mapper.ts` 内维护 session 事件到桌宠动作的业务规则。
+
+## 规则分级
+
+- **Invariant**：`职责边界`（IPC 层保持薄、不承载业务、其他模块不得反向 import `main/ipc/*`）。
+- **Policy**：`放置规则`、`设计要求`。
+- **Guideline**：`示例`。

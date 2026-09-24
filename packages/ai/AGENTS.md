@@ -25,3 +25,9 @@
 - Provider 协议、流解析或消息转换发生变化时，上述成功、部分流、畸形输入、Provider 错误和中止路径属于必测合同；不能只测试最终文本。
 - 需要本地协议服务器或 SDK 集成环境的测试放入 `test:integration`，运行 `bun run test:integration`。必须与默认单测隔离并保持确定性。
 - `bun run test:live` 会访问真实 Provider，只能在用户明确授权、凭证已由环境安全提供且任务确实需要时运行；live 结果不能替代可重复的单元/集成回归测试。
+
+## 规则分级
+
+- **Invariant**：`models.generated.ts` 等生成文件禁手改；`test:live` 需用户明确授权且凭证由环境安全提供。
+- **Policy**：`注意事项`（`types.ts` 变更的下游适配检查、新 Provider 文件/测试/文档清单）、`测试要求` 全节。
+- **Guideline**：`关键模块` 索引。
