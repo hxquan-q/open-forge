@@ -97,6 +97,14 @@ describe("Desktop brand layer", () => {
 		}
 	});
 
+	it("selects the branded main window in UI verification", () => {
+		const source = readDesktopSource("scripts/ui-verification.mjs");
+		expect(source).toContain("desktop-brand.json");
+		expect(source).toContain("displayName");
+		expect(source).not.toContain('title === "Vetta Desktop"');
+		expect(source).not.toContain("[Vetta Desktop](");
+	});
+
 	it("renders Open Forge window titles in every renderer HTML entry", () => {
 		for (const entry of [
 			"src/renderer/index.html",
