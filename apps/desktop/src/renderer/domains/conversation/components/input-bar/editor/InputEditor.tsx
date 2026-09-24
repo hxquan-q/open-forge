@@ -6,6 +6,7 @@ import { ControlledHistoryNavPlugin } from "./plugins/ControlledHistoryNavPlugin
 import { ControlledValueBridgePlugin } from "./plugins/ControlledValueBridgePlugin";
 import { EditorHandlePlugin } from "./plugins/EditorHandlePlugin";
 import { HistoryNavPlugin } from "./plugins/HistoryNavPlugin";
+import { PasteFilePlugin } from "./plugins/PasteFilePlugin";
 import { PasteImagePlugin } from "./plugins/PasteImagePlugin";
 import { StructuredClipboardPlugin } from "./plugins/StructuredClipboardPlugin";
 import { TriggerPlugin } from "./plugins/TriggerPlugin";
@@ -69,6 +70,7 @@ export const InputEditor = memo(function InputEditor({
 						{onTriggerChange ? <TriggerPlugin onTriggerChange={onTriggerChange} /> : null}
 						<StructuredClipboardPlugin />
 						<PasteImagePlugin local runtimeId={persistenceId} />
+						<PasteFilePlugin />
 						</>
 					) : (
 						<>
@@ -77,6 +79,7 @@ export const InputEditor = memo(function InputEditor({
 						{onTriggerChange ? <TriggerPlugin onTriggerChange={onTriggerChange} /> : null}
 						<StructuredClipboardPlugin />
 						<PasteImagePlugin />
+						<PasteFilePlugin />
 						</>
 					)}
 				</>
