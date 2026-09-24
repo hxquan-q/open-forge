@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { createStore, getDefaultStore, Provider } from "jotai";
 import type { PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ChatTimelineItem } from "@shared/store/atoms";
 import { ActivityPanelContextProvider } from "../../registry/context";
 import { CANVAS_ARTIFACT_SELECTION_SCHEMA } from "../../services/canvas-selection-attachment";
 
@@ -509,30 +510,30 @@ describe("canvas tab panel user flow", () => {
 
 	it("会话内文件变更在「任务变更」分段按文件汇总并可查看差异", async () => {
 		const store = createStore();
-		store.set(chatMessagesAtom, [
-			{
-				blocks: [
-					{
-						type: "tool_call",
-						toolCallId: "call-a",
-						toolName: "edit_file",
-						status: "success",
-						args: { file_path: "src/a.ts" },
-						uiDetails: {
-							diff: "--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1,2 @@\n-old-a\n+new-a\n+extra-a\n",
-						},
+		// 只关心块数组：变更聚合是只读投影，不依赖消息 ViewModel 的其余字段。
+		const changeMessage = {
+			blocks: [
+				{
+					type: "tool_call",
+					toolCallId: "call-a",
+					toolName: "edit_file",
+					status: "success",
+					args: { file_path: "src/a.ts" },
+					uiDetails: {
+						diff: "--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1,2 @@\n-old-a\n+new-a\n+extra-a\n",
 					},
-					{
-						type: "tool_call",
-						toolCallId: "call-b",
-						toolName: "write_to_file",
-						status: "success",
-						args: { path: "src/b.ts" },
-						uiDetails: { diff: "--- /dev/null\n+++ b/src/b.ts\n@@\n+fresh-b\n" },
-					},
-				],
-			},
-		]);
+				},
+				{
+					type: "tool_call",
+					toolCallId: "call-b",
+					toolName: "write_to_file",
+					status: "success",
+					args: { path: "src/b.ts" },
+					uiDetails: { diff: "--- /dev/null\n+++ b/src/b.ts\n@@\n+fresh-b\n" },
+				},
+			],
+		} as unknown as ChatTimelineItem;
+		store.set(chatMessagesAtom, [changeMessage]);
 		renderPanel(store);
 		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
 		await userEvent.click(screen.getByRole("button", { name: /activityPanel\.canvas\.sectionChanges/ }));
