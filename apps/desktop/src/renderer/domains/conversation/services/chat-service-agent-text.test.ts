@@ -8,7 +8,7 @@ import {
 import { appendTextDelta, fullHistoryToChat, historyToChat } from "./chat-service";
 
 describe("assistant history text derivation", () => {
-	it("keeps history replay text derived from blocks instead of duplicating storage", () => {
+	it("keeps history replay text consistent with blocks when materialized", () => {
 		const messages = historyToChat([
 			{ role: "user", content: "hello" },
 			{ role: "assistant", content: [{ type: "text", text: "working" }] },
@@ -17,7 +17,7 @@ describe("assistant history text derivation", () => {
 		const agent = messages[1];
 		expect(agent?.kind).toBe("agent");
 		if (agent?.kind !== "agent") return;
-		expect(agent.text).toBeUndefined();
+		// text 允许物化（resolveConversationAgentText 有快路径），但不得与 blocks 派生值分叉。
 		expect(resolveConversationAgentText(agent)).toBe("working\ndone");
 		expect(agentTextMatchesBlocks(agent)).toBe(true);
 	});

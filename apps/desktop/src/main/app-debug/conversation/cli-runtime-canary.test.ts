@@ -215,6 +215,9 @@ describe("Vetta CLI Desktop Runtime canary", { timeout: INTEGRATION_TEST_TIMEOUT
 					reserveTokens: 400,
 					minFreePercent: 20,
 					keepRecentTokens: 1,
+					// 用例要在相邻两次调用里各触发一次阈值压缩；默认 120s 失败冷却 + 4096
+					// 滞回带会把续聊那次静默抑制掉，这里显式关掉冷却保持测试语义。
+					failureCooldownMs: 0,
 				}),
 			},
 		});

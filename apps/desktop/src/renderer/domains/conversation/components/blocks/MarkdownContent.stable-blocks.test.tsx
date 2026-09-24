@@ -66,13 +66,14 @@ describe("MarkdownContent 稳定块冻结", () => {
 		expect(screen.getByText(/Beta continues now/)).toBe(tail);
 		expect(view.container.querySelectorAll(".streaming-chunk").length).toBe(chunksBefore);
 
-		// settle 之后撤掉分段，冻结块依旧是同一实例。
+		// settle 之后撤掉「最新短语略暗」的包裹类；分段 span 按设计保留到实例卸载，
+		// 撤掉 rehype 分段会让已上屏的尾块整段重挂、再包成 .streaming-chunk 重放淡入。
 		act(() => {
 			vi.advanceTimersByTime(4000);
 		});
 		expect(screen.getByText("Hello frozen paragraph.")).toBe(frozen);
 		expect(view.container.querySelector("pre, code")).toBe(frozenCode);
-		expect(view.container.querySelector(".streaming-chunk")).toBeNull();
+		expect(view.container.querySelectorAll(".streaming-chunk").length).toBe(chunksBefore);
 		expect(view.container.querySelector(".markdown-streaming-tail")).toBeNull();
 	});
 

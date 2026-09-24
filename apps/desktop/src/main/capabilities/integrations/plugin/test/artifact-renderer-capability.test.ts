@@ -59,16 +59,17 @@ describe("Plugin Artifact renderer capability", () => {
 			resolvePermissions: () => permissions,
 		});
 		const capabilitySessionId = adapter.openSession("artifact-viewer");
-		await expect(
+		// session() 权限闸是同步校验，与适配器其余方法的同步 throw 惯例一致。
+		expect(() =>
 			adapter.readTaskArtifactText(capabilitySessionId, "task-session", "artifact-1", 2, "artifact-viewer:analysis"),
-		).rejects.toThrow("Plugin capability permission denied: fs.read");
+		).toThrowError("Plugin capability permission denied: fs.read");
 		expect(artifactReads.readText).not.toHaveBeenCalled();
 
 		permissions.push(PLUGIN_CAPABILITY_PERMISSIONS.FILESYSTEM_READ);
 		await adapter.closeSession(capabilitySessionId);
-		await expect(
+		expect(() =>
 			adapter.readTaskArtifactText(capabilitySessionId, "task-session", "artifact-1", 2, "artifact-viewer:analysis"),
-		).rejects.toThrow("Plugin capability session is not active");
+		).toThrowError("Plugin capability session is not active");
 		expect(artifactReads.readText).not.toHaveBeenCalled();
 	});
 });
