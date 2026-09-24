@@ -15,7 +15,7 @@ write_paths: [packages/runtime-core, packages/coding-agent, packages/runtime-sto
 exclusive_paths: []
 depends_on: [TASK-0003, TASK-0004]
 conflicts_with: []
-integration_status: done
+integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-22
 ---
