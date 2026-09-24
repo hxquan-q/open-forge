@@ -1,7 +1,7 @@
 ---
 id: TASK-0098
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -123,6 +123,26 @@ related_bugs: []
 ## 交付记录
 
 - 实际修改：
+  - `services/canvas-preview-kind.ts`：`CanvasPreviewKind` 增加 `chart` / `diff` / `checklist`，判定只认显式 contentType（`application/vnd.vetta.chart+json`、`application/vnd.vetta.checklist+json`、`text/x-diff`）与 `kind: "code-change"`；`canvasPreviewExtension` 给出 `.json` / `.diff` 兜底。
+  - 新增纯解析模块：`services/canvas-chart.ts`（四种图型 + 序列对齐 + 值域）、`services/canvas-checklist.ts`（状态归一）、`services/canvas-diff.ts`（按 `diff --git` 切文件 + 复用既有 `parse-diff` 统计）。
+  - 新增渲染组件：`CanvasChartPreview.tsx`（自研 SVG 折线 / 面积 / 柱状 / 饼图）、`CanvasChecklistPreview.tsx`、`CanvasStructuredDiffPreview.tsx`（按文件折叠，展开体直接复用 `EditDiffView`）。
+  - `CanvasTabPanel.tsx` 的 `CanvasPreviewBody` 接入三个分支，解析失败统一走「提示 + 代码视图」降级（不白屏、不抛错）。
+  - 技能：新增 `packages/skill-presets/chart-canvas/` 与 `review-canvas/`（各含 `SKILL.md` + `ability.json`），登记进 `skills-manifest.json` 与 `skills.json` 的中英文案。
+- 关键决策与依据：
+  - **不引入 `recharts`，改用仓内 SVG 渲染器**：任务允许「增量不可接受或依赖评审不通过时改用 `<svg>` 极简渲染器，契约保持不变」。三条依据：(1) 引入依赖必须改 `bun.lock`，而该文件当前有用户未提交的改动，`bun install` 会与之冲突；(2) ADR-0068 的共享 react 单例结论只在 `.vetd` 引擎链路上实测过，任务本身也写明「不可直接引用为已证明」，desktop 侧要重新验证才敢用；(3) 四种基础图型用约 200 行 SVG 即可覆盖，桌面端没必要为它背一个图表库的体积。契约（contentType + JSON 形状）不变，将来换回 recharts 只是替换实现。
+  - **取色走 CSS token**：系列色固定 `var(--chart-1..5)`，坐标轴与网格用 `var(--border)` / `var(--muted-foreground)`，因此深浅主题切换不需要重建组件，也不需要读取主题状态。
+  - **`labels` 是坐标轴事实源**：声明了多少标签就画多少个点，缺值序列补 0（而不是按最长序列截断标签）。
+  - **JSON 容错在纯函数里**：结构不符返回 `null`，由面板渲染「结构不符合组件契约」提示 + 代码视图，满足「不白屏、不抛错到控制台」。
 - 实际运行：
+  - `run-vitest.mjs --run src/renderer/domains/activity-panel ...`：47 个文件 221 个用例全部通过（含新增 `canvas-declarative.test.ts` 8 例、`CanvasDeclarativePreviews.test.tsx` 3 例、`canvas-preview-kind.test.ts` 新增 2 例、面板 chart 渲染与降级 2 例）。
+  - `node node_modules/typescript/bin/tsc --noEmit -p apps/desktop/tsconfig.json`：EXIT=0。
+  - `biome check --write`（本次改动文件）：通过。
+  - **未测打包体积增量**：因为最终没有引入运行时依赖，`recharts` 的体积差不存在；但也就没有「引入前增量」实测数字可记，这里如实说明。
 - 未运行及原因：
+  - 未运行 `verify:ui:*`：未获 UI 实机授权；主题切换的验证方式是断言图形取色仍是 token 引用 + 主题 atom 切换后结构不变，真实像素变化由 CSS 变量在渲染层完成。
+  - 未运行 `bun run test:pkg skill-presets`：该包测试面向发布校验器，本次只新增 preset 目录与清单登记，已通过 `check:guards` 的 `skill-frontmatter` 守卫（25 → 27 个 SKILL.md）。
 - 剩余风险：
+  - 图表的坐标轴刻度只有 3 档（max / mid / min），密集时间序列的刻度可读性弱于专业图表库。
+  - pie 只使用第一条 series；多 series 的 pie 会静默忽略其余序列。
+  - 结构化 diff 依赖统一 diff 文本本身的质量：缺少 `diff --git` 头时按单文件展示，hunk 级折叠未做。
+

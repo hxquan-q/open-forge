@@ -1,7 +1,7 @@
 ---
 id: TASK-0097
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -120,6 +120,25 @@ related_bugs: []
 ## 交付记录
 
 - 实际修改：
+  - **主进程重构（先行）**：`canvas-artifact-service.ts` 把 `update` 分支抽成公开 `applyUpdate()`，Agent 工具路径与 IPC 路径共用同一份单调版本递增 + SHA-256 乐观锁实现；抽取后 `invokeTool("update")` 的错误码与事件派发顺序保持不变（新增 4 个 `applyUpdate` 用例 + 既有 9 个用例全绿证明）。
+  - **顺带修复的并发缺陷**：同一次外部改动可能被 watcher 与「打开时比对」同时导入，两个导入并发写同一版本会撞同名临时文件（rename ENOENT）并凭空多出版本；改为按 artifact 在途去重，一次外部改动只产生一个新版本。既有 `watcher 触发时把外部变更导入为新版本` 用例由偶发失败变为确定性通过。
+  - **IPC 合同**：`canvas-ipc.ts` 增加 `CANVAS_CHANNELS.UPDATE`、`DesktopCanvasUpdateRequest`、`DesktopCanvasUpdateResult`；`main/ipc/canvas.ts` 增加 handler（校验 workspaceId/artifactId/baseVersion/content，`title` 可选）并把 `stale_version` 原样透出；preload 三处同构接线。
+  - **Renderer**：`useCanvasTabModel` 增加编辑态（`baseVersion` 只在进入编辑时取一次）、`saveDraft`/`updateDraft`/`toggleEditing`/`reloadSelected`；`CanvasTabPanel` 增加「编辑 / 预览」开关、受控 `Textarea` 编辑器、`stale_version` 提示 + 载入最新版本入口；新增 `services/canvas-macros.ts` 与划选区快捷宏按钮（代码类 4 个、文档类 3 个），点击后写入既有 `promptAttachmentAtom` 并把结构化指令预填进 `inputValueAtom`。
+  - i18n：`activityPanel.canvas.enterEdit/exitEdit/save/savingLabel/editorLabel/staleVersion/staleVersionHint/reload/saveFailed/macrosLabel/macros.*`。
+- 关键决策与依据：
+  - **编辑器选型**：用共享 `Textarea` 而不是引入 Monaco。TASK 要求是「受控编辑器 + 光标打字 + `mod+s` 保存」，Textarea 即可满足；把 Monaco 拉进 Canvas 属于本 Task 之外的体积与生命周期变更。
+  - **保存键不写死**：编辑态监听既有 `save-file` keybinding 广播（`FILE_EDITOR_SAVE_EVENT`，默认 `mod+s`，用户可在设置里改），面板不硬编码按键组合。
+  - **宏入口位置**：沿用面板既有的划选区动作条（在按钮旁成组渲染宏），而不是新造浮动 overlay；这样划选、追问、宏三件事在同一处收口，`selectionActionVisible` 的既有可见性规则不变。
+  - **冲突不丢草稿**：`stale_version` 只置冲突标记并保留 `editor.draft`；「载入最新版本」是显式动作，提示文案已写明它会覆盖当前编辑内容。
 - 实际运行：
+  - `run-vitest.mjs --run src/main/artifacts/canvas-artifact-service.test.ts src/main/ipc/canvas-browser-tab.test.ts src/renderer/domains/activity-panel ...`：47 个文件 221 个用例全部通过（含本 Task 新增的 `applyUpdate` 4 例、IPC 合同 2 例、编辑与冲突 2 例、宏 1 例）。
+  - `node node_modules/typescript/bin/tsc --noEmit -p apps/desktop/tsconfig.json`：EXIT=0。
+  - `biome check --write`（本次改动文件）：通过。
 - 未运行及原因：
+  - 未运行 `verify:ui:*`：未获 UI 实机授权；真实键入、IME 与 `mod+s` 的实机手感未测，组件测试覆盖的是接线与状态机。
+  - 未做 HTML / data-grid 的编辑：属任务明确的「不做」项，`editable` 只对 markdown / code 为真。
 - 剩余风险：
+  - 编辑器为纯文本，不做 Markdown 预览分栏或语法高亮（Monaco 留待后续）。
+  - 用户编辑期间 Agent 更新同一 artifact 时，保存必然撞 `stale_version`（基线固定），用户需手动载入最新版本后再改——这是刻意选择，避免盲覆盖。
+  - `importExternalUpdate` 去重只覆盖同一进程内的并发；跨进程导入仍依赖 store 的写入时序。
+
