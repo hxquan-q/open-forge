@@ -88,6 +88,7 @@ import { getRuntimeManager } from "./runtimes/manager.js";
 import { initializeSandboxCapability } from "./sandbox/capability.js";
 import { initScheduler, scheduleTaskInCron, shutdownScheduler, unscheduleTaskInCron } from "./scheduler/scheduler.js";
 import { initializeDesktopSchedulerService } from "./scheduler/scheduler-service.js";
+import { StartupPhaseScheduler } from "./startup-phases.js";
 import { getDesktopFileOrganizeBroker } from "./task-activity/file-organize-broker.js";
 import { getDesktopToolApprovalBroker } from "./task-activity/tool-approval-broker.js";
 import { initializeMainTelemetry, shutdownMainTelemetry } from "./telemetry/index.js";
@@ -260,6 +261,18 @@ function ensureAppMonitorInitialized(): Promise<void> {
 	appMonitorInitializationPromise ??= initializeAppMonitor();
 	return appMonitorInitializationPromise;
 }
+
+// 启动相位调度器：blocking 是 whenReady 里的直行序列，postFirstPaint 起由窗口内容绘制
+// 完成触发，idle/eventually 走空闲时间片（见 startup-phases.ts）。单件耗时与慢任务告警
+// 都经 mainLog 进诊断日志，启动变慢时先看「startup phases drained」里的 slowest。
+const startupPhases = new StartupPhaseScheduler({
+	idleStartDelayMs: 500,
+	logger: {
+		info: (message, meta) => mainLog.info(message, meta),
+		warn: (message, meta) => mainLog.warn(message, meta),
+		error: (message, meta) => mainLog.error(message, meta),
+	},
+});
 
 function attachMainWindowLifecycle(mainWindow: BrowserWindow): void {
 	const sendWindowMaximizedChanged = () => {
@@ -507,8 +520,10 @@ if (!gotSingleLock) {
 		// 提前发现系统插件（ADR-0024）：填充 id 集合供协议解析，staging 不完整时早告警。
 		discoverSystemPlugins();
 
-		// 旧 contributes.settings 值搬进插件私有存储（ADR-0105）；只在首次启动做一次。
-		void migrateLegacyPluginSettings(mainLog);
+		// 一次性旧设置迁移：fire-and-forget、首帧路径不读它，从 blocking 移进空闲相位。
+		startupPhases.register("eventually", "plugin-legacy-settings-migration", () =>
+			migrateLegacyPluginSettings(mainLog),
+		);
 
 		const initializeSandbox = async (): Promise<void> => {
 			const sandboxProbeStartedAt = Date.now();
@@ -842,12 +857,11 @@ if (!gotSingleLock) {
 					mainLog.warn("app monitor background initialization failed", error);
 				});
 
-				const deferredStartupTimer = setTimeout(() => {
-					void Promise.all([initializeManagedRuntimeAndCli(), initializeSandbox()]).catch((error: unknown) => {
-						mainLog.error("deferred startup initialization failed", error);
-					});
-				}, 500);
-				deferredStartupTimer.unref?.();
+				// runtime/CLI 与 sandbox 预热：原先靠固定 500ms 定时器躲开首帧，
+				// 现在由 idle 相位统一调度（同样的 500ms 静默期 + 时间片 + 兜底超时 + 耗时记录）。
+				startupPhases.register("idle", "runtime-and-cli", initializeManagedRuntimeAndCli);
+				startupPhases.register("idle", "sandbox-warmup", initializeSandbox);
+				void startupPhases.advanceTo("postFirstPaint");
 
 				if (isDesktopPetEnabled()) {
 					initializePetWindow();
