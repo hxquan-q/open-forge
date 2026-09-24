@@ -167,6 +167,8 @@
 			"deleteConfirm": "从画布列表删除「{{title}}」？本机文件不会自动回收。",
 			"deleteFailed": "没能从画布列表删除",
 			"open": "打开",
+			"openInBrowser": "在浏览器打开",
+			"openInBrowserFailed": "没能在浏览器里打开这份预览",
 			"loading": "正在读取画布内容",
 			"kindMarkdown": "说明",
 			"kindHtml": "网页预览",

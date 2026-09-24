@@ -255,6 +255,11 @@ function CanvasPreview({
 						{model.editor ? model.labels.exitEdit : model.labels.enterEdit}
 					</Button>
 				) : null}
+				{selected.previewKind === "html" && !selected.missing ? (
+					<Button size="sm" variant="outline" onClick={model.actions.openInBrowser}>
+						{model.labels.openInBrowser}
+					</Button>
+				) : null}
 				<Button size="sm" variant="outline" onClick={model.actions.saveToProject} disabled={selected.missing}>
 					{model.labels.saveToProject}
 				</Button>

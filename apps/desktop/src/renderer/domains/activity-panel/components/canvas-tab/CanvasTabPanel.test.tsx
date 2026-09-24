@@ -12,6 +12,9 @@ import type { ChatTimelineItem } from "@shared/store/atoms";
 import { ActivityPanelContextProvider } from "../../registry/context";
 import { CANVAS_ARTIFACT_SELECTION_SCHEMA } from "../../services/canvas-selection-attachment";
 
+// 「在浏览器打开」把地址交给共享的工作空间打开入口；这里记录它收到的载荷。
+const openedInWorkspace = vi.hoisted(() => vi.fn());
+
 vi.mock("@shared/store/atoms", async () => {
 	const { atom: createAtom } = await import("jotai");
 	return {
@@ -23,6 +26,10 @@ vi.mock("@shared/store/atoms", async () => {
 		focusInputRequestAtom: createAtom(0),
 		inputValueAtom: createAtom(""),
 		isCanvasTabVisible: () => true,
+		openUrlInActivityWorkspaceAtom: createAtom(
+			null,
+			(_get, _set, input: { workspaceId: string; url: string }) => openedInWorkspace(input),
+		),
 		pendingCanvasArtifactIdAtom: createAtom(null),
 		promptAttachmentAtom: createAtom(null),
 		resolvedThemeAtom: createAtom("dark"),
@@ -91,6 +98,7 @@ const saveToProject = vi.fn();
 const remove = vi.fn();
 const selectFolder = vi.fn();
 const openExternal = vi.fn();
+const openPreviewInBrowser = vi.fn();
 
 vi.stubGlobal(
 	"window",
@@ -100,6 +108,7 @@ vi.stubGlobal(
 				list: (...args: unknown[]) => list(...args),
 				get: (...args: unknown[]) => get(...args),
 				update: (...args: unknown[]) => update(...args),
+				openInBrowser: (...args: unknown[]) => openPreviewInBrowser(...args),
 				saveToProject: (...args: unknown[]) => saveToProject(...args),
 				delete: (...args: unknown[]) => remove(...args),
 			},
@@ -166,6 +175,8 @@ describe("canvas tab panel user flow", () => {
 		update.mockReset();
 		selectFolder.mockReset();
 		openExternal.mockReset();
+		openPreviewInBrowser.mockReset();
+		openedInWorkspace.mockReset();
 	});
 
 	afterEach(() => cleanup());
@@ -597,5 +608,72 @@ describe("canvas tab panel user flow", () => {
 					.some((toast) => toast.message === "activityPanel.canvas.batchSaveSummary"),
 			).toBe(true),
 		);
+	});
+
+	it("HTML 产物「在浏览器打开」后切到 Browser Tab 并载入回环地址", async () => {
+		const store = createStore();
+		const html = view({
+			descriptor: descriptor({ artifactId: "art-html", title: "演示页", contentType: "text/html" }),
+		});
+		list.mockResolvedValue({ ok: true, items: [html] });
+		get.mockResolvedValue({ ok: true, view: html, content: "<h1>hello</h1>", contentType: "text/html" });
+		openPreviewInBrowser.mockResolvedValue({
+			ok: true,
+			url: "http://127.0.0.1:41234/canvas/dG9rZW4/art-html/index.html",
+		});
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("演示页")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 演示页" }));
+		await waitFor(() => expect(screen.getByLabelText("activityPanel.canvas.htmlSandboxLabel")).toBeTruthy());
+
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.openInBrowser" }));
+
+		await waitFor(() => {
+			expect(openPreviewInBrowser).toHaveBeenCalledWith({
+				workspaceId: "/work/project",
+				artifactId: "art-html",
+			});
+			expect(openedInWorkspace).toHaveBeenCalledWith({
+				workspaceId: "/work/project",
+				url: "http://127.0.0.1:41234/canvas/dG9rZW4/art-html/index.html",
+			});
+		});
+	});
+
+	it("回环伺服起不来时提示错误，且不切走当前预览", async () => {
+		const store = createStore();
+		const html = view({
+			descriptor: descriptor({ artifactId: "art-html", title: "演示页", contentType: "text/html" }),
+		});
+		list.mockResolvedValue({ ok: true, items: [html] });
+		get.mockResolvedValue({ ok: true, view: html, content: "<h1>hello</h1>", contentType: "text/html" });
+		openPreviewInBrowser.mockResolvedValue({ ok: false, code: "missing_file", message: "no html version" });
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("演示页")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 演示页" }));
+		await waitFor(() => expect(screen.getByLabelText("activityPanel.canvas.htmlSandboxLabel")).toBeTruthy());
+
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.openInBrowser" }));
+
+		await waitFor(() => {
+			expect(
+				getDefaultStore()
+					.get(toastsAtom)
+					.some((toast) => toast.message === "activityPanel.canvas.openInBrowserFailed"),
+			).toBe(true);
+		});
+		expect(openedInWorkspace).not.toHaveBeenCalled();
+		// 预览还在原地：失败不会把用户从当前 artifact 弹出去。
+		expect(screen.getByLabelText("activityPanel.canvas.htmlSandboxLabel")).toBeTruthy();
+	});
+
+	it("非 HTML 产物不提供「在浏览器打开」", async () => {
+		const store = createStore();
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 调研摘要" }));
+		await waitFor(() => expect(screen.getByTestId("canvas-text-preview")).toBeTruthy());
+
+		expect(screen.queryByRole("button", { name: "activityPanel.canvas.openInBrowser" })).toBeNull();
 	});
 });

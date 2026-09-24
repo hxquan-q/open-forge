@@ -7,6 +7,7 @@ export const CANVAS_CHANNELS = {
 	LIST: "vetta:canvas:list",
 	GET: "vetta:canvas:get",
 	UPDATE: "vetta:canvas:update",
+	OPEN_IN_BROWSER: "vetta:canvas:open-in-browser",
 	SAVE_TO_PROJECT: "vetta:canvas:save-to-project",
 	DELETE: "vetta:canvas:delete",
 } as const;
@@ -19,6 +20,15 @@ export interface DesktopCanvasGetRequest {
 	readonly workspaceId: string;
 	readonly artifactId: string;
 	readonly version?: number;
+}
+
+/**
+ * 「在浏览器打开」：主进程按需在本机回环地址上起只读伺服，回一个可加载的地址。
+ * 页面由内置 Browser Tab 承载，`<webview>` 预览沙箱基线不变。
+ */
+export interface DesktopCanvasOpenInBrowserRequest {
+	readonly workspaceId: string;
+	readonly artifactId: string;
 }
 
 export interface DesktopCanvasSaveToProjectRequest {
@@ -76,6 +86,8 @@ export type DesktopCanvasGetResult =
 			readonly contentType?: string;
 	  }
 	| DesktopCanvasFailure;
+
+export type DesktopCanvasOpenInBrowserResult = { readonly ok: true; readonly url: string } | DesktopCanvasFailure;
 
 export type DesktopCanvasSaveToProjectResult =
 	| { readonly ok: true; readonly descriptor: ArtifactDescriptor }

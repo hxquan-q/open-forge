@@ -9,6 +9,7 @@ import {
 	focusInputRequestAtom,
 	inputValueAtom,
 	isCanvasTabVisible,
+	openUrlInActivityWorkspaceAtom,
 	pendingCanvasArtifactIdAtom,
 	promptAttachmentAtom,
 	resolvedThemeAtom,
@@ -143,6 +144,7 @@ export interface CanvasTabModel {
 		readonly back: string;
 		readonly open: string;
 		readonly saveToProject: string;
+		readonly openInBrowser: string;
 		readonly delete: string;
 		readonly selectToAsk: string;
 		readonly missingFile: string;
@@ -197,6 +199,7 @@ export interface CanvasTabModel {
 		readonly back: () => void;
 		readonly attachSelection: () => void;
 		readonly saveToProject: () => void;
+		readonly openInBrowser: () => void;
 		readonly deleteSelected: () => void;
 		readonly onPreviewSelectionChange: (target: EventTarget | null) => void;
 		readonly onDataGridSelectionChange: (selection: CanvasDataGridSelection) => void;
@@ -221,6 +224,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 	const theme = useAtomValue(resolvedThemeAtom);
 	const setPromptAttachment = useSetAtom(promptAttachmentAtom);
 	const setConfirm = useSetAtom(confirmDialogAtom);
+	const openUrlInWorkspace = useSetAtom(openUrlInActivityWorkspaceAtom);
 	const revision = useAtomValue(canvasArtifactRevisionAtom);
 	const setRevision = useSetAtom(canvasArtifactRevisionAtom);
 	const setInputValue = useSetAtom(inputValueAtom);
@@ -682,6 +686,22 @@ export function useCanvasTabModel(): CanvasTabModel {
 		});
 	}, [selected, setConfirm, t, tCommon, workspace.id]);
 
+	const openInBrowser = useCallback(() => {
+		if (!selected || selected.missing || selected.previewKind !== "html") return;
+		void (async () => {
+			const result = await window.vetta.canvas.openInBrowser({
+				workspaceId: workspace.id,
+				artifactId: selected.artifactId,
+			});
+			if (!result.ok) {
+				showToast({ variant: "error", message: t("activityPanel.canvas.openInBrowserFailed") });
+				return;
+			}
+			// 切 Tab、展开面板与写入地址都交给既有原子，本处只把回环地址递过去。
+			openUrlInWorkspace({ workspaceId: workspace.id, url: result.url });
+		})();
+	}, [openUrlInWorkspace, selected, t, workspace.id]);
+
 	const onPreviewSelectionChange = useCallback((target: EventTarget | null) => {
 		setSelectionExcerpt(readCanvasSelectionFromTarget(target));
 		setSelectionRange(undefined);
@@ -733,6 +753,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 			back: tCommon("actions.back"),
 			open: t("activityPanel.canvas.open"),
 			saveToProject: t("activityPanel.canvas.saveToProject"),
+			openInBrowser: t("activityPanel.canvas.openInBrowser"),
 			delete: t("activityPanel.canvas.delete"),
 			selectToAsk: t("activityPanel.canvas.selectToAsk"),
 			missingFile: t("activityPanel.canvas.missingFile"),
@@ -801,6 +822,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 			back,
 			attachSelection,
 			saveToProject,
+			openInBrowser,
 			deleteSelected,
 			onPreviewSelectionChange,
 			onDataGridSelectionChange,

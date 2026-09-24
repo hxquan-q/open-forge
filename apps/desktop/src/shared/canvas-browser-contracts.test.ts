@@ -14,6 +14,8 @@ describe("canvas / browser tab IPC stubs", () => {
 		expect(CANVAS_CHANNELS).toEqual({
 			LIST: "vetta:canvas:list",
 			GET: "vetta:canvas:get",
+			UPDATE: "vetta:canvas:update",
+			OPEN_IN_BROWSER: "vetta:canvas:open-in-browser",
 			SAVE_TO_PROJECT: "vetta:canvas:save-to-project",
 			DELETE: "vetta:canvas:delete",
 		});

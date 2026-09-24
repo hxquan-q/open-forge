@@ -167,6 +167,8 @@
 			"deleteConfirm": "Remove “{{title}}” from the canvas list? The local file is not recycled automatically.",
 			"deleteFailed": "Could not remove this from the canvas list",
 			"open": "Open",
+			"openInBrowser": "Open in browser",
+			"openInBrowserFailed": "Could not open this preview in the browser",
 			"loading": "Loading canvas artifacts",
 			"kindMarkdown": "Note",
 			"kindHtml": "Web preview",
