@@ -1,7 +1,7 @@
 ---
 id: TASK-0084
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: packages/runtime-mcp + apps/desktop
 requirement: REQ-0001
@@ -16,7 +16,7 @@ write_paths: [packages/runtime-mcp/src, packages/capability-sdk/src/domain/mcp.t
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；随 523c28005 落地）
 created: 2026-09-24
 updated: 2026-09-24
 ---
