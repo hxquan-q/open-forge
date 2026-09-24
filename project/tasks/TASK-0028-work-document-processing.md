@@ -9,7 +9,7 @@ plan: PLAN-0001
 source_issue: ISSUE-0006
 execution: serial
 branch: forge/dev
-worktree: C:/Users/xquan/Desktop/open-forge-wt/TASK-0028-work-document-processing
+worktree: unassigned（原 worktree 与分支 task/TASK-0028-work-document-processing 已淘汰；WIP 46dfc54ed 保留在 origin/task/TASK-0028-work-document-processing）
 base_commit: forge/dev
 read_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 write_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]

@@ -8,8 +8,8 @@ requirement: REQ-0001
 plan: PLAN-0006
 source_issue:
 execution: parallel
-branch: task/TASK-0062-browser-element-picker
-worktree: ..\open-forge-wt\TASK-0062-browser-picker
+branch: forge/dev
+worktree: unassigned（原 ..\open-forge-wt\TASK-0062-browser-picker 目录已淘汰；实现在 forge/dev 主工作区）
 base_commit: b3a5743c3d03b8cd126b50a266a0a8d4af59913a
 read_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, packages/theme-ui/src/activity, packages/plugins/plugin-sdk/src/prompt-attachment.ts]
 write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/main/ipc/browser-tab.ts, apps/desktop/src/shared/browser-tab-ipc.ts, apps/desktop/src/renderer/root-layout/useRootLayoutModel.ts, apps/desktop/vitest.config.ts, packages/theme-ui/src/activity/BrowserPanelView.tsx]

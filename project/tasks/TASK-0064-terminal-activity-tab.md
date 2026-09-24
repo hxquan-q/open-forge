@@ -8,8 +8,8 @@ requirement: REQ-0001
 plan: PLAN-0006
 source_issue:
 execution: parallel
-branch: task/TASK-0064-terminal-activity-tab
-worktree: ..\open-forge-wt\TASK-0064-terminal-tab
+branch: forge/dev
+worktree: unassigned（原 ..\open-forge-wt\TASK-0064-terminal-tab 目录已淘汰；实现在 forge/dev 主工作区，随 da8de8fc0 落地）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/renderer/domains/bottom-panel, apps/desktop/src/renderer/domains/activity-panel]
 write_paths: [apps/desktop/src/renderer/domains/bottom-panel, apps/desktop/src/renderer/domains/activity-panel]

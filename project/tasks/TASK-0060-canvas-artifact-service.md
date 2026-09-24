@@ -8,8 +8,8 @@ requirement: REQ-0001
 plan: PLAN-0006
 source_issue:
 execution: parallel
-branch: task/TASK-0060-canvas-artifact-service
-worktree: ..\open-forge-wt\TASK-0060-canvas-service
+branch: forge/dev
+worktree: unassigned（原 ..\open-forge-wt\TASK-0060-canvas-service 目录已淘汰；实现在 forge/dev 主工作区，随 c1f931648 落地）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/main, packages/coding-agent/src/features/artifacts, packages/runtime-core/src/task, packages/runtime-storage/src/conversation]
 write_paths: [apps/desktop/src/main/artifacts, apps/desktop/src/main/agent-runtime, packages/coding-agent/src/features/artifacts, packages/coding-agent/test]
