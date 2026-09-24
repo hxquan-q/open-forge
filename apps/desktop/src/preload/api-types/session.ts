@@ -159,6 +159,19 @@ export interface DesktopSessionApi {
 	): Promise<RuntimeTurnPromptOutcome>;
 	continue(sessionId: string): Promise<void>;
 	abort(sessionId: string): Promise<void>;
+	/** 同步输入草稿非空态到主进程，供中断续接判定否决。 */
+	setInterruptDraftNonEmpty(sessionId: string, nonEmpty: boolean): Promise<void>;
+	/** 会话中断续接监视器判定结果（notify / auto-retried）。 */
+	onInterruptHealth(
+		handler: (payload: {
+			sessionId: string;
+			sessionPath?: string;
+			state: string;
+			trigger: string | null;
+			action: "notify" | "auto-retried";
+			shouldAutoContinue: boolean;
+		}) => void,
+	): () => void;
 	/** kernel 输入队列快照（ADR-0060）。 */
 	getQueueState(sessionId: string): Promise<RuntimeSessionQueueStateView>;
 	/** 在当前回复自然结束后压缩上下文；空闲时立即从队列执行。 */

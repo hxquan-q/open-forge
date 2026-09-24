@@ -44,6 +44,38 @@ export function registerSettingsIpc(): () => void {
 		return DEFAULT_SITE_URL;
 	});
 
+	ipcMain.handle("vetta:settings:get-session-interrupt-continue", () => {
+		const settings = readSettings();
+		const raw = settings.sessionInterruptContinue;
+		if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+			return { mode: "notify", maxAttempts: 1 };
+		}
+		const mode = (raw as { mode?: unknown }).mode;
+		const maxAttempts = (raw as { maxAttempts?: unknown }).maxAttempts;
+		return {
+			mode: mode === "off" || mode === "notify" || mode === "auto" ? mode : "notify",
+			maxAttempts:
+				typeof maxAttempts === "number" && Number.isFinite(maxAttempts) && maxAttempts >= 1
+					? Math.floor(maxAttempts)
+					: 1,
+		};
+	});
+
+	ipcMain.handle("vetta:settings:set-session-interrupt-continue", (_event, mode: unknown) => {
+		if (mode !== "off" && mode !== "notify" && mode !== "auto") {
+			throw new Error("Invalid sessionInterruptContinue mode");
+		}
+		updateSettings((settings) => {
+			const prev =
+				settings.sessionInterruptContinue &&
+				typeof settings.sessionInterruptContinue === "object" &&
+				!Array.isArray(settings.sessionInterruptContinue)
+					? (settings.sessionInterruptContinue as Record<string, unknown>)
+					: {};
+			settings.sessionInterruptContinue = { ...prev, mode, maxAttempts: 1 };
+		});
+	});
+
 	// 预设服务商目录内置在客户端(见 ADR-0050);模型清单取自 models.dev 公共目录,免 key 可见。
 	ipcMain.handle("vetta:models:list-presets", async () => {
 		return listPresetProviders();
@@ -69,6 +101,8 @@ export function registerSettingsIpc(): () => void {
 	return () => {
 		stopPresetAutoSync();
 		ipcMain.removeHandler("vetta:settings:get-server-url");
+		ipcMain.removeHandler("vetta:settings:get-session-interrupt-continue");
+		ipcMain.removeHandler("vetta:settings:set-session-interrupt-continue");
 		ipcMain.removeHandler("vetta:models:list-presets");
 		ipcMain.removeHandler("vetta:models:refresh-preset-catalog");
 		ipcMain.removeHandler("vetta:models:refresh-preset-models");

@@ -43,6 +43,13 @@ import type { DesktopMcpElicitationResponse, DesktopMcpElicitationValue } from "
 import { PLUGIN_CONTRIBUTION_CHANNELS } from "../../shared/plugin-ipc.js";
 import { SESSION_SEARCH_CHANNELS } from "../../shared/session-search.js";
 import { DEFAULT_AGENT_MODE, isAgentMode, MODE_PROMPTS } from "../agent-modes/index.js";
+import { startSessionInterruptMonitor } from "../agent-runtime/session-interrupt-bootstrap.js";
+import { setSessionInterruptDraftNonEmpty } from "../agent-runtime/session-interrupt-draft-registry.js";
+import {
+	clearSessionManualStop,
+	markSessionManualStop,
+	watchSessionForInterruptContinue,
+} from "../agent-runtime/session-interrupt-watch-registry.js";
 import { stopSessionBackgroundWork } from "../agent-runtime/stop-session-work.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service.js";
@@ -235,6 +242,10 @@ const CHANNELS = {
 	/** 有会话在跑的项目 cwd 列表；会话路径无法反推项目，见处理器上的说明。 */
 	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
+	/** Renderer → Main：草稿非空镜像，供中断续接否决。 */
+	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
+	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
+	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
 	PENDING_QUESTION_CHANGED: "vetta:session:pending-question-changed",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
@@ -993,6 +1004,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.PROMPT, async (_event, sessionId: unknown, request: unknown, rawTraceContext: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		interactiveResidency.touch(sessionId);
+		clearSessionManualStop(sessionId);
 		const traceContext = parseSessionTraceContext(rawTraceContext);
 		const req = parsePromptRequest(request);
 		sessionLog.info(
@@ -1008,15 +1020,23 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 
 	ipcMain.handle(CHANNELS.CONTINUE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
+		clearSessionManualStop(sessionId);
 		await runtime.continue(sessionId);
 	});
 
 	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
+		markSessionManualStop(sessionId);
 		// Stopping is unconditional: the turn comes down together with the work it
 		// spawned. Subagents and background commands outlive the turn by design, so
 		// cancelling the turn alone would leave workflows running behind the button.
 		await Promise.allSettled([runtime.abort(sessionId), stopSessionBackgroundWork(runtime, sessionId)]);
+	});
+
+	ipcMain.handle(CHANNELS.INTERRUPT_DRAFT, (_event, sessionId: unknown, nonEmpty: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		if (typeof nonEmpty !== "boolean") throw new Error("nonEmpty must be boolean");
+		setSessionInterruptDraftNonEmpty(sessionId, nonEmpty);
 	});
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
@@ -1405,12 +1425,26 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	};
 	const unsubscribeRunning = runtime.onRunningChanged((sessionPath, running, sessionId, reason) => {
 		broadcastRunningChanged({ sessionPath, running, sessionId, reason });
+		if (sessionId) {
+			if (running) {
+				clearSessionManualStop(sessionId);
+				watchSessionForInterruptContinue(sessionId);
+			} else {
+				watchSessionForInterruptContinue(sessionId);
+			}
+		}
 		if (!sessionId || !interactiveResidency.has(sessionId)) return;
 		interactiveResidency.touch(sessionId);
 		if (!running) scheduleIdleInteractiveSessionReconcile();
 	});
 	const unsubscribeTeamRunning = agentTeamSessionService.onRunningChanged((sessionPath, running, sessionId) =>
 		broadcastRunningChanged({ sessionPath, running, sessionId }),
+	);
+	const stopInterruptMonitor = startSessionInterruptMonitor(
+		(channel, payload) => {
+			if (!webContents.isDestroyed()) webContents.send(channel, payload);
+		},
+		(sessionId) => sessionCwdMap.get(sessionId),
 	);
 
 	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
@@ -1783,6 +1817,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	return () => {
+		stopInterruptMonitor();
 		unsubscribeConversationListChanged();
 		webContents.removeListener("did-start-navigation", onDidStartNavigation);
 		webContents.removeListener("render-process-gone", onRenderGone);

@@ -105,11 +105,16 @@ export function persistSessionInputDraft(key: string, draft: SessionInputDraft):
 	if (!key) return;
 	const store = getDefaultStore();
 	const prev = store.get(sessionInputDraftMapAtom);
-	if (isSessionInputDraftEmpty(draft)) {
-		if (!(key in prev)) return;
+	const empty = isSessionInputDraftEmpty(draft);
+	if (empty) {
+		if (!(key in prev)) {
+			syncInterruptDraftMirror(key, false);
+			return;
+		}
 		const next = { ...prev };
 		delete next[key];
 		store.set(sessionInputDraftMapAtom, next);
+		syncInterruptDraftMirror(key, false);
 		return;
 	}
 	const existing = prev[key];
@@ -122,6 +127,15 @@ export function persistSessionInputDraft(key: string, draft: SessionInputDraft):
 		return;
 	}
 	store.set(sessionInputDraftMapAtom, { ...prev, [key]: draft });
+	syncInterruptDraftMirror(key, true);
+}
+
+function syncInterruptDraftMirror(key: string, nonEmpty: boolean): void {
+	// 新会话页 key（new:…）尚无 runtime session；已有会话用 sessionPath 作镜像键。
+	if (!key || key.startsWith("new:")) return;
+	void window.vetta?.session?.setInterruptDraftNonEmpty?.(key, nonEmpty).catch(() => {
+		/* 主进程未就绪时忽略 */
+	});
 }
 
 export function loadSessionInputDraft(key: string): SessionInputDraft {

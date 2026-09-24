@@ -45,6 +45,8 @@ export interface DesktopSettingsApi {
 	setServerToken(token: string | undefined): Promise<void>;
 	getServerRefreshToken(): Promise<string | undefined>;
 	setServerRefreshToken(token: string | undefined): Promise<void>;
+	getSessionInterruptContinue(): Promise<{ mode: "off" | "notify" | "auto"; maxAttempts: number }>;
+	setSessionInterruptContinue(mode: "off" | "notify" | "auto"): Promise<void>;
 }
 
 /** 套餐配额窗口：5 小时 / 周 / 月三档。 */

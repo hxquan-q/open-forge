@@ -3,6 +3,7 @@ import { UpdateCheckerAction, UpdateCheckerDetail } from "@vetta-org/theme-ui/ov
 import { GeneralSettingsView as ThemeGeneralSettingsView } from "@vetta-org/theme-ui/settings";
 import { SETTINGS_SECTION } from "../registry";
 import { ProxySettingsSection } from "./ProxySettingsSection";
+import { SessionInterruptContinueSettings } from "./SessionInterruptContinueSettings";
 import type { GeneralSettingsModel } from "./useGeneralSettingsModel";
 import { useProxySettingsModel } from "./useProxySettingsModel";
 
@@ -61,7 +62,12 @@ export function GeneralSettingsView({ model }: GeneralSettingsViewProps): JSX.El
 			exportingDiagnostics={model.exportingDiagnostics}
 			onExportDiagnostics={() => void model.actions.exportDiagnostics()}
 			onStartAppGuide={model.actions.startAppGuide}
-			networkSection={<ProxySettingsSection model={proxy} />}
+			networkSection={
+				<div className="flex flex-col gap-4">
+					<SessionInterruptContinueSettings />
+					<ProxySettingsSection model={proxy} />
+				</div>
+			}
 		/>
 	);
 }
