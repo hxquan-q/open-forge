@@ -127,7 +127,13 @@ export function DefaultChatView({
 						 */}
 						<BottomPanelHost />
 					</div>
-					<ActivityColumn workspace={workspace} activity={activity} workspaceMode={workspaceMode} />
+					{/*
+					 * 右栏单独一个 profiler id：工作区模式切换的耗时要在「右栏换装」与
+					 * 「其余重渲」之间可归因，否则两者挤在 ChatView(total) 里分不开。
+					 */}
+					<PerfSendProfiler id="ChatView:rightColumn">
+						<ActivityColumn workspace={workspace} activity={activity} workspaceMode={workspaceMode} />
+					</PerfSendProfiler>
 				</div>
 			</div>
 		</PerfSendProfiler>

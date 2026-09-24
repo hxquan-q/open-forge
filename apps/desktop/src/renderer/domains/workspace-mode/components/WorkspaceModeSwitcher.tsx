@@ -1,8 +1,9 @@
 // Copyright The Open Forge contributors.
 import { SegmentedControl, type SegmentedControlItem } from "@shared/components/ui/segmented-control";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@shared/components/ui/tooltip";
+import { perfSendBegin } from "@shared/lib/perf-send";
 import type { WorkspaceMode } from "@shared/store/atoms";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspaceMode } from "../hooks/useWorkspaceMode";
 import { WORKSPACE_MODE_ICON } from "../lib/workspace-session-flow";
@@ -21,13 +22,24 @@ export function WorkspaceModeSwitcher(): JSX.Element | null {
 		],
 		[t],
 	);
+	/**
+	 * 用户体感的「切换响应」是点击到右栏换完这一段，与发送链路同一套探针口径量：
+	 * 窗口必须在 setMode 之前打开，否则被测的那次提交已经跑完，marks / commits 全是空的。
+	 */
+	const handleChange = useCallback(
+		(next: WorkspaceMode) => {
+			perfSendBegin("workspace-mode-switch");
+			setMode(next);
+		},
+		[setMode],
+	);
 	if (!cwd) return null;
 	const hint = t("workspace.mode.hint");
 	return (
 		<Tooltip delayDuration={400}>
 			<TooltipTrigger asChild>
 				<div role="group" aria-label={t("workspace.mode.switch")}>
-					<SegmentedControl items={[...items]} value={mode} onChange={setMode} />
+					<SegmentedControl items={[...items]} value={mode} onChange={handleChange} />
 				</div>
 			</TooltipTrigger>
 			<TooltipContent side="bottom" sideOffset={6}>
