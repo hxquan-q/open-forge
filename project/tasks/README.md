@@ -38,7 +38,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 `TASK-0029`–`TASK-0032` 对应 `RESEARCH-0004` P0-1 至 P0-4 内存治理，均为 done。`TASK-0033` 是 P1 ready 的会话执行运行时结果策略旁路跟进，已选为下一项执行任务；实际开始实施前保持 ready。
 
-`TASK-0034`–`TASK-0042` 对应 `RESEARCH-0004` 后续路线：TASK-0034 transcript 窗口化合同已定稿；TASK-0035 视口外占位已 ready；新增 TASK-0050 游标分页和 TASK-0051 compaction 边界重放，均依赖前一阶段并保持串行；TASK-0038 compaction 事件联动/防抖依赖 TASK-0051。TASK-0036 文本双份消除、TASK-0037 事件分级背压、TASK-0040 MCP 生命周期盘点、TASK-0041 会话列表 stat 索引为 ready；TASK-0039 webview pinned 收口与 TASK-0042 powerMonitor 收缩为 P2 draft。RESEARCH-0004 P2 其他项不预登记，由触发信号驱动。
+`TASK-0034`–`TASK-0042` 对应 `RESEARCH-0004` 后续路线：TASK-0034 transcript 窗口化合同已定稿；TASK-0035 视口外占位已 ready；新增 TASK-0050 游标分页和 TASK-0051 compaction 边界重放，均依赖前一阶段并保持串行；TASK-0038 compaction 事件联动/防抖依赖 TASK-0051。TASK-0036 文本双份消除、TASK-0037 事件分级背压、TASK-0040 MCP 生命周期盘点、TASK-0041 会话列表 stat 索引为 ready；TASK-0039 webview pinned 收口与 TASK-0042 powerMonitor 收缩为 P2 draft。RESEARCH-0004 P2 其他项不预登记，由触发信号驱动。`TASK-0101` 在同一链内补 transcript 恢复源 backlog 的字节预算驱逐（RESEARCH-0011 footprint 计费借鉴），已 done。
 
 `TASK-0043`–`TASK-0049` 跟踪 PLAN-0003 剩余品牌工作：0043 品牌外置层 verifying；0044 Desktop 原生 About 品牌/credits done；0045 生态身份、0046 npm scope、0047 仓库文档、0048 公开文档站和 0049 社区目标确认按依赖/决策保持 blocked。CLI 命令名、npm 组织和社区地址未确认前不猜测或执行外部操作。
 

@@ -10,6 +10,7 @@ import {
 	isTranscriptItemEvictable,
 	isTranscriptPlaceholder,
 	materializeTranscriptItem,
+	measureHistoryEntryFootprint,
 	readTranscriptBacklog,
 	registerTranscriptBacklog,
 	TRANSCRIPT_SUMMARY_MAX_CHARS,
@@ -43,6 +44,21 @@ function assistantMessage(text: string): Message {
 
 function assistantEntry(entryId: string, text: string): HistoryEntry {
 	return { type: "message", entryId, message: assistantMessage(text) };
+}
+
+function toolResultEntry(entryId: string, toolCallId: string, output: string): HistoryEntry {
+	return {
+		type: "message",
+		entryId,
+		message: {
+			role: "toolResult",
+			toolCallId,
+			toolName: "bash",
+			content: [{ type: "text", text: output }],
+			isError: false,
+			timestamp: 3,
+		},
+	};
 }
 
 function sampleHistory(turns: number): HistoryEntry[] {
@@ -282,5 +298,80 @@ describe("registerTranscriptBacklog", () => {
 		expect(readTranscriptBacklog("s3")).toBe(backlog);
 		clearTranscriptBacklog("s2");
 		expect(readTranscriptBacklog("s2")).toBeUndefined();
+	});
+});
+
+describe("backlog 字节预算", () => {
+	beforeEach(() => clearTranscriptBacklog());
+
+	function heavyBacklog(outputChars: number): TranscriptBacklog {
+		return { entries: [toolResultEntry("e", "tc", "x".repeat(outputChars))], spans: new Map() };
+	}
+
+	it("footprint 按驻留计费：toolResult 重型 entry 远大于轻量 entry，且随 payload 缩放", () => {
+		const heavy = measureHistoryEntryFootprint(toolResultEntry("e-1", "tc-1", "x".repeat(10_000)));
+		const light = measureHistoryEntryFootprint(userEntry("e-2", "hi"));
+		// 工具结果正文计入账单——按条目数或可见文本计费都会漏掉它。
+		expect(heavy).toBeGreaterThan(20_000);
+		expect(heavy).toBeGreaterThan(light * 50);
+		const heavier = measureHistoryEntryFootprint(toolResultEntry("e-3", "tc-3", "x".repeat(20_000)));
+		expect(heavier).toBeGreaterThan(heavy);
+	});
+
+	it("超字节预算驱逐最旧的非活跃 backlog", () => {
+		const oneEntryBytes = measureHistoryEntryFootprint(toolResultEntry("e", "tc", "x".repeat(5000)));
+		// 预算恰好容纳两份重 backlog，第三份注册后最旧的被逐。
+		const byteBudget = oneEntryBytes * 2 + 1;
+		registerTranscriptBacklog("s1", heavyBacklog(5000), { byteBudget });
+		registerTranscriptBacklog("s2", heavyBacklog(5000), { byteBudget });
+		expect(readTranscriptBacklog("s1")).toBeDefined();
+		expect(readTranscriptBacklog("s2")).toBeDefined();
+
+		registerTranscriptBacklog("s3", heavyBacklog(5000), { byteBudget });
+		expect(readTranscriptBacklog("s1")).toBeUndefined();
+		expect(readTranscriptBacklog("s2")).toBeDefined();
+		expect(readTranscriptBacklog("s3")).toBeDefined();
+	});
+
+	it("仅剩一份时即使超预算也不驱逐（活跃会话恢复源保底）", () => {
+		const backlog = heavyBacklog(5000);
+		registerTranscriptBacklog("s1", backlog, { byteBudget: 1 });
+		expect(readTranscriptBacklog("s1")).toBe(backlog);
+	});
+
+	it("同 key 重复注册不重复计费", () => {
+		const backlog = heavyBacklog(5000);
+		const heavyEntry = backlog.entries[0];
+		const smallEntry = userEntry("x", "y");
+		const small = { entries: [smallEntry], spans: new Map() };
+		// 预算恰好容纳 s1+s2 各一份；若 s1 重注册时旧字节泄漏进总额，s2 会被误逐。
+		const byteBudget =
+			(heavyEntry ? measureHistoryEntryFootprint(heavyEntry) : 0) + measureHistoryEntryFootprint(smallEntry) + 1;
+		registerTranscriptBacklog("s1", backlog, { byteBudget });
+		registerTranscriptBacklog("s2", small, { byteBudget });
+		registerTranscriptBacklog("s1", backlog, { byteBudget });
+		expect(readTranscriptBacklog("s2")).toBeDefined();
+		expect(readTranscriptBacklog("s1")).toBe(backlog);
+	});
+
+	it("被逐会话重新注册后占位照常恢复（驱逐不打断恢复合同）", () => {
+		const entries = sampleHistory(4);
+		const { messages, backlog } = backlogFor(entries);
+		registerTranscriptBacklog("s1", backlog);
+		// 视口外降级出占位。
+		const applied = applyTranscriptWindow(messages, { startIndex: 6, endIndex: 7 }, backlog, {});
+		const placeholder = applied?.items[0] as TranscriptPlaceholderItem;
+		expect(placeholder.kind).toBe("placeholder");
+
+		// 另一会话的极小预算注册把 s1 挤出。
+		registerTranscriptBacklog("s2", { entries: [userEntry("x", "y")], spans: new Map() }, { byteBudget: 1 });
+		expect(readTranscriptBacklog("s1")).toBeUndefined();
+		expect(materializeTranscriptItem(placeholder, readTranscriptBacklog("s1"))).toBeUndefined();
+
+		// 切回 s1：canonical backfill 重新注册，占位照常恢复。
+		registerTranscriptBacklog("s1", backlog);
+		const restored = materializeTranscriptItem(placeholder, readTranscriptBacklog("s1"));
+		expect(restored?.kind).toBe("user");
+		expect(restored?.id).toBe(messages[0]?.id);
 	});
 });

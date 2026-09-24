@@ -27,14 +27,53 @@ export interface TranscriptViewportRange {
 }
 
 /** 每会话一份 backlog；会话切换时整体替换，避免跨会话误恢复。 */
-const backlogs = new Map<string, TranscriptBacklog>();
+interface BacklogRecord {
+	readonly backlog: TranscriptBacklog;
+	readonly bytes: number;
+}
+const backlogs = new Map<string, BacklogRecord>();
 /** 保留的 backlog 上限——主 transcript 同时只有一个活跃会话，留少量余量给会话快速来回切换。 */
 const BACKLOG_LIMIT = 2;
+/**
+ * 恢复源整体字节预算（默认 ~128MB）：计数上限之外的字节约束，
+ * 防止少数超长会话把恢复源膨胀成全量 transcript 驻留。
+ */
+export const TRANSCRIPT_BACKLOG_BYTE_BUDGET = 128 * 1024 * 1024;
 
-export function registerTranscriptBacklog(sessionKey: string, backlog: TranscriptBacklog): void {
+/**
+ * HistoryEntry 驻留字节近似：序列化长度 × UTF-16 双字节。
+ * 按 footprint 计费——message content 的 tool args/results、text、
+ * thinking、usage 全部计入，不只算用户可见文本。
+ */
+export function measureHistoryEntryFootprint(entry: HistoryEntry): number {
+	return JSON.stringify(entry).length * 2;
+}
+
+export interface RegisterTranscriptBacklogOptions {
+	/** 覆盖默认字节预算（宿主调优/测试注入）。 */
+	readonly byteBudget?: number;
+}
+
+function totalBacklogBytes(): number {
+	let total = 0;
+	for (const record of backlogs.values()) total += record.bytes;
+	return total;
+}
+
+export function registerTranscriptBacklog(
+	sessionKey: string,
+	backlog: TranscriptBacklog,
+	options?: RegisterTranscriptBacklogOptions,
+): void {
 	backlogs.delete(sessionKey);
-	backlogs.set(sessionKey, backlog);
-	while (backlogs.size > BACKLOG_LIMIT) {
+	let bytes = 0;
+	for (const entry of backlog.entries) bytes += measureHistoryEntryFootprint(entry);
+	backlogs.set(sessionKey, { backlog, bytes });
+	const byteBudget = options?.byteBudget ?? TRANSCRIPT_BACKLOG_BYTE_BUDGET;
+	// 计数与字节任一超限即按 LRU 驱逐；保底保留最后一份——
+	// 它是最近注册（活跃）会话的恢复源，逐掉会打断占位恢复。
+	while (backlogs.size > 1) {
+		if (backlogs.size <= BACKLOG_LIMIT && totalBacklogBytes() <= byteBudget) break;
 		const oldest = backlogs.keys().next().value;
 		if (oldest === undefined) break;
 		backlogs.delete(oldest);
@@ -42,7 +81,7 @@ export function registerTranscriptBacklog(sessionKey: string, backlog: Transcrip
 }
 
 export function readTranscriptBacklog(sessionKey: string): TranscriptBacklog | undefined {
-	return backlogs.get(sessionKey);
+	return backlogs.get(sessionKey)?.backlog;
 }
 
 export function clearTranscriptBacklog(sessionKey?: string): void {
