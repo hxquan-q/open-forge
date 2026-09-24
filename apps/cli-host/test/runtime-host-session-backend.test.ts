@@ -233,7 +233,7 @@ class RecordedAssistantStream extends EventStream<AssistantMessageEvent, Assista
 function assistantMessage(stopReason: "stop" | "error", errorMessage?: string): AssistantMessage {
 	return {
 		role: "assistant",
-		content: [],
+		content: stopReason === "stop" ? [{ type: "text", text: "retry recovered" }] : [],
 		api: "openai-responses",
 		provider: "test",
 		model: MODEL.id,
