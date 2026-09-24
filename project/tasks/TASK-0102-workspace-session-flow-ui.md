@@ -1,5 +1,5 @@
 ---
-id: TASK-0084
+id: TASK-0102
 type: task
 status: verifying
 priority: P1
@@ -12,7 +12,7 @@ branch: forge/dev
 worktree: unassigned（forge/dev 主工作区串行执行）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/renderer/domains/workspace-mode, apps/desktop/src/renderer/domains/conversation, apps/desktop/src/shared/i18n/locales]
-write_paths: [apps/desktop/src/renderer/domains/workspace-mode, apps/desktop/src/renderer/domains/conversation/components/new-session, apps/desktop/src/renderer/domains/conversation/components/chat-view/DefaultChatView.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar, apps/desktop/src/shared/i18n/locales/zh/chat.json, apps/desktop/src/shared/i18n/locales/en/chat.json, project/tasks/TASK-0084-workspace-session-flow-ui.md]
+write_paths: [apps/desktop/src/renderer/domains/workspace-mode, apps/desktop/src/renderer/domains/conversation/components/new-session, apps/desktop/src/renderer/domains/conversation/components/chat-view/DefaultChatView.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar, apps/desktop/src/shared/i18n/locales/zh/chat.json, apps/desktop/src/shared/i18n/locales/en/chat.json, project/tasks/TASK-0102-workspace-session-flow-ui.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode/lib/workspace-session-flow.ts]
 depends_on: [TASK-0083]
 conflicts_with: [TASK-0077, TASK-0080, TASK-0083]
@@ -78,3 +78,4 @@ updated: 2026-09-24
 - 未运行及原因：页头「文档与研究 / 代码」实机点击流程未完成，原因是 Debug Renderer 在主题加载后崩溃，不是本切片断言失败。
 - 剩余风险：页头「文档与研究」五字偏长，窄栏可能折行；新会话 work 面板是空骨架（尚无会话任务投影）；全仓 `check` 与实机 Renderer 仍被其他 WIP / 双份 React 挡住。
 - 发布说明候选（ISSUE-0007 门禁，暂存本记录）：【改进】页头「文档与研究 / 代码」会立刻换右侧工作台；新会话页用一句话确认即将按哪档开；已开会话标明切页头不会改它。
+- 编号修订：本 Task 原编号 `TASK-0084` 与 MCP 按工具可见性任务撞号（`VERIFY-0008`「异常发现」2），经裁决改名为 `TASK-0102`；交付内容、验收面与剩余风险不变。
