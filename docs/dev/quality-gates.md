@@ -37,10 +37,17 @@ scripts/quality/
   check-vitest-runner.mjs      package.json 测试脚本必须走 run-vitest.mjs
   check-turbo-config.mjs       Turbo 输入、环境、入口与 Remote Cache 安全合同
   check-source-path-maps.mjs   根 tsconfig path map 必须显式覆盖 workspace 包的 types 子路径导出
+  check-task-worktrees.mjs     Task ↔ Worktree 合同的结构不变量（ID/文件名、路径形态、依赖引用与环）
   test-pkg.mjs                 按包名跑 vitest
   test-impact.mjs              按任务文件选择直接测试与 Vitest 相关测试
   test-changed.mjs             按 git 变更和依赖图选包
   quality-gates.test.mjs       质量脚本定向测试
+scripts/worktree/              开发协作 Worktree 生命周期（不属产品运行时）
+  cli.mjs                      create / status / check / remove / doctor
+  contract.mjs                 Task ↔ Worktree 合同校验（守卫与 CLI 共用的事实源）
+  config.mjs                   .worktreeconfig.json 与 .worktreeinclude（含凭据拒绝表）
+  frontmatter.mjs              project/** frontmatter 的最小 YAML 子集读取
+  git.mjs                      Git 适配与 worktree list --porcelain 解析
 scripts/eval/                  开发期 Agent 评测旁路（不进默认门禁）
 knip.config.ts                 Knip（可选）
 ```
@@ -66,6 +73,7 @@ knip.config.ts                 Knip（可选）
 | `test:pkg` | 见 `bun run test:pkg --list` |
 | `test:impact` | 显式任务文件走精确测试；公共合同、删除和配置变化自动回退 `test:changed` |
 | `test:changed` | 默认比较 `origin/dev`；`--base origin/main` 可改基线 |
+| `task:worktree` / `worktree:*` | Task Worktree 生命周期：`create` / `status` / `check` / `remove` / `doctor`；合同见 [`project/collaboration/README.md`](../../project/collaboration/README.md) |
 | `eval:agent` | 开发期 Agent 评测旁路；默认只跑无网络 harness，`OPENFORGE_EVAL=1` 才用 DeepSeek 跑 DeepEval + Promptfoo + MASEval |
 | `deadcode` / `deadcode:report` | Knip 严格 / 仅报告 |
 
@@ -131,6 +139,14 @@ bun run test:pkg <name>
 公开子路径以 manifest 为唯一事实来源，不在守卫中维护第二份符号或子路径快照。旧迁移进度基线、
 Greenfield/Legacy 名称墓碑、固定文件数量、行数阈值及实施日志格式不再进入构建门禁。
 架构规则测试位于 `scripts/quality/coding-agent-architecture.test.mjs`。
+
+## Task Worktree 合同（`check-task-worktrees`）
+
+`project/tasks/*.md` 的 frontmatter 是并行开发的合同，写错的后果不可见：`id` 与文件名不一致会让所有指向它的 `depends_on` 失效，`depends_on` 成环意味着不存在合法集成顺序，`write_paths` 里的 `..` 让 scope 声明失去意义。该守卫把这类**结构矛盾**做成机械检查，不依赖 Git，在任何 checkout 上都能跑。
+
+它检查：ID 与文件名一致、`status`/`execution`/`integration_status`/`priority` 落在枚举内、路径字段是仓库相对路径且不越界、`depends_on`/`conflicts_with` 的 ID 形态与 TASK 引用可解析、无自引用、`depends_on` 无环；`worktree` 已声明时必须有 `branch`（`task/TASK-xxxx-<slug>`）、`base_commit` 和非空 `write_paths`。
+
+**刻意不检查**（见 `check-task-worktrees.mjs` 的说明）：跨 Task 的 scope 重叠与"某台机器上 worktree 是否存在"。前者是调度决策（`conflicts_with` 就是为此存在），存量条目里已有合法重叠；后者是每个 checkout 的本地状态。二者由 `bun run worktree:check` / `doctor` 显式报告，不拦截无关的 `check`。枚举漂移（如 `integration_status: done`）在该守卫中只告警，在 `worktree:check` 中才是失败。
 
 ## Workspace 构建编排（Turborepo）
 
@@ -234,6 +250,11 @@ bun run check
 bun run test:changed
 bun run check:quick
 bun run check
+
+# 并行 Task：创建独立 worktree，集成前检查，完成后清理
+bun run task:worktree -- create --task TASK-0096
+bun run worktree:check --task TASK-0096
+bun run worktree:remove --task TASK-0096
 
 # 改 Desktop UI（默认不启动 verify:ui）
 bun run check

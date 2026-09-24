@@ -14,11 +14,18 @@
 ```text
 一个 TASK
   → 一个 owner
-  → 一个 branch
-  → 一个 worktree
   → 一个验证闭环
   → 一个集成提交
 ```
+
+当该 Task 需要与其它 Task 并行时，中间再插入两个一对一环节：
+
+```text
+  → 一个 branch（task/TASK-xxxx-<slug>）
+  → 一个 worktree（<worktreeRoot>/task-xxxx-<slug>）
+```
+
+`execution: parallel` 只说明这个 Task **可以**被拆出去并行执行，不要求一定有 worktree——在集成分支上串行完成的并行候选 Task 同样合法，`worktree: unassigned（…）` 就是这种情形。是否真的拆出 worktree，由协调者按上文的推荐/不推荐场景决定。
 
 ### 产品运行时并发
 
@@ -36,15 +43,6 @@ Desktop 内部的 Agent Team、Subagent、Tool 并发和 Task 执行。
 - 一个 Task 需要长时间运行测试或构建；
 - 需要保持协调者工作区干净。
 
-示例：
-
-```bash
-git fetch origin dev
-git worktree add ..\open-forge-wt\TASK-0002 -b task/TASK-0002-provider origin/dev
-```
-
-实际基线以当前 `git branch --show-current`、`git branch -avv` 和远程状态为准，不要盲目假定分支存在。
-
 ### 不使用 Worktree 的场景
 
 - 只做只读研究；
@@ -53,6 +51,93 @@ git worktree add ..\open-forge-wt\TASK-0002 -b task/TASK-0002-provider origin/de
 - 不产生文件改动的讨论或审查。
 
 多个 Agent 不得在同一个工作树同时改同一文件。
+
+## Worktree 生命周期（标准入口）
+
+创建、诊断、检查与清理统一走 `scripts/worktree/cli.mjs`；手工 `git worktree add/remove` 只保留为故障恢复手段。
+
+```bash
+# 创建：读 Task 合同 → 建 worktree 与分支 → 初始化 → 回填 frontmatter
+bun run task:worktree -- create --task TASK-0002
+
+# 状态：Task、worktree、分支、脏树、未推送提交、孤儿与缺失
+bun run worktree:status
+
+# 检查：合同、依赖、跨 Task scope 冲突与 frontmatter/git 漂移
+bun run worktree:check --all
+
+# 清理：默认保留任何可能丢失工作的工作树
+bun run worktree:remove --task TASK-0002
+
+# 诊断链：环境 → 配置 → 合同 → 真实 Git 状态
+bun run worktree:doctor
+```
+
+等价的直接入口是 `bun scripts/worktree/cli.mjs <command> [options]`；上面每个别名都可用 `--help` 查看选项。
+
+### 创建合同
+
+`create` 只接受满足以下条件的 Task，任一不满足即拒绝且不产生任何副作用：
+
+- `execution: parallel` 且状态处于生命周期内（`draft`…`verifying`）；
+- frontmatter 已含 `branch`、`worktree`、`base_commit` 三行（缺失则要求先补齐，脚本不代写新字段）；
+- frontmatter 通过严格合同校验（见下）。
+
+创建成功后回填的是**相对路径**（`.worktreeconfig.json` 的 `worktreeRoot` 形式，如 `../open-forge-wt/task-0002-provider`）和解析出的 `base_commit`，使合同在其他机器与 CI 上同样成立。绝对路径会被 `doctor` 报为 portability 告警。
+
+### 基线（base）
+
+基线来自 `.worktreeconfig.json`，`--base <ref>` 或 `--base head` 可覆盖：
+
+```text
+--base <ref>  →  baseRef  →  baseRefFallbacks（origin/forge/dev → origin/dev → origin/main）  →  HEAD
+```
+
+无法解析出任何基线时命令失败，不会静默回退到某个"看起来像"的分支。
+
+### 初始化（setup）
+
+`.worktreeconfig.json` 的 `setup.windows` / `setup.unix` 按平台选择，缺失时回退 `setup.fallback`；显式空数组表示该平台不执行任何命令。命令在工作树目录内执行，并获得：
+
+- `WORKTREE_ROOT_PATH`：主检出绝对路径（用于从主检出复制配置）；
+- `WORKTREE_TASK_ID`：当前 Task ID。
+
+setup 失败时工作树保留在原地并打印恢复指引，命令以非零退出；用 `--no-setup` 可跳过。初始化的本地文件复制只发生在 `copyIgnored: true` 且 `.worktreeinclude` 有匹配模式时。
+
+### 本地文件复制边界（`.worktreeinclude`）
+
+`.worktreeinclude` 使用 gitignore 语法，且只复制**同时被 git 忽略**的文件（已跟踪文件不会重复）。凭据类路径一律拒绝，无论模式怎么写：`.env`（`*.example` / `*.sample` / `*.template` 除外）、`*.pem` / `*.key` / `*.p12` / `*.pfx` / `*.jks`、`id_rsa` 等私钥、`.npmrc` / `.netrc` / `.git-credentials`、`*credential*` / `*secret*` / `*token*`、`settings.local.json`、`deploy/config.*.yaml`。模式命中这些路径时 `doctor` 直接报错。
+
+默认不复制任何文件：新工作树不会静默继承本机状态。
+
+### 清理判定
+
+`remove` 在下列任一情况成立时**保留**工作树并给出原因，只有显式 `--force` 才删除：
+
+- worktree 被锁；
+- 存在未提交或未跟踪文件；
+- 存在不在任何远端上的提交；
+- Git 无法报告状态（未知不等于干净）。
+
+无论是否 `--force`，删除路径必须位于 `.worktreeconfig.json` 的 `worktreeRoot` 之内，且不得是主检出本身。`--dry-run` 只打印判定结果。默认连带删除分支（`-d`，未合并时 Git 会拒绝）；`--keep-branch` 保留分支。
+
+## 合同检查的两个层级
+
+| 层级 | 入口 | 范围 | 失败语义 |
+| --- | --- | --- | --- |
+| 结构守卫 | `bun run check`（`check-task-worktrees.mjs`） | 全部 Task 的结构矛盾：ID/文件名不一致、路径越界、依赖引用与环、声明 worktree 却缺 branch/base_commit | **error 失败**；枚举漂移只告警 |
+| 协调者门禁 | `bun run worktree:check` | 结构 + 跨 Task scope 冲突 + frontmatter 与真实 Git 漂移 | 全部视为失败；`--task <ID>` 时还会把该 Task 的 worktree 缺失升级为失败 |
+
+分层的原因：结构矛盾是任何消费者都会读错的客观缺陷，必须机械拦截；而"两个 Task 的写范围重叠"是调度决策（`conflicts_with` 就是为此存在），且存量条目里已有合法重叠，"某个 worktree 在这台机器上已被删除"也是任务生命周期的正常终点。把它们放进每次 `check` 会让无关改动无法提交，因此由协调者在集成前显式运行。
+
+## 集成前检查顺序
+
+1. `bun run worktree:status` 确认 worker 的 worktree、分支与脏树状态；
+2. `bun run worktree:check --task <ID>` 确认该 Task 的合同、依赖与 scope；
+3. 运行 worker 交付记录中的定向测试；
+4. 合并或 cherry-pick 到集成分支；
+5. 运行 `bun run test:impact` 与 `bun run check`；
+6. 更新 Task 的 `integration_status`，必要时更新 `worktree` 字段（淘汰后写明"已淘汰"及落地的提交）。
 
 ## 分工模型
 
@@ -92,14 +177,14 @@ git worktree add ..\open-forge-wt\TASK-0002 -b task/TASK-0002-provider origin/de
 
 每次创建或拆分 Task 时，先向用户报告“支持并发 / 条件支持 / 不支持”，并说明依赖、冲突路径、Worktree 方式和集成顺序；这些结论随后写入 Task frontmatter 和正文。
 
-每个并行 Task 必须在 frontmatter 中声明：
+每个 Task 在 frontmatter 中声明：
 
 ```yaml
 execution: parallel
 owner: packages/ai
-branch: task/TASK-0002-provider
-worktree: ..\open-forge-wt\TASK-0002-provider
-base_commit: <commit>
+branch: task/TASK-0002-provider          # 未拆出 worktree 时写 unassigned 或集成分支
+worktree: ../open-forge-wt/task-0002-provider   # 未拆出时写 unassigned（原因）
+base_commit: <commit>                    # 创建工作树时记录
 read_paths:
   - packages/ai/
 write_paths:
@@ -115,14 +200,17 @@ integration_status: pending
 
 - `execution`：`serial`、`parallel` 或 `coordination-only`；
 - `owner`：明确到包、目录或责任人；
-- `branch` / `worktree`：并行代码 Task 必填；
-- `base_commit`：创建工作树时记录；
+- `branch`：拆出 worktree 时必填，且必须是 `task/TASK-xxxx-<slug>`；未拆出时写 `unassigned` 或集成分支名；
+- `worktree`：拆出时写 `worktreeRoot` 下的**相对路径**；未拆出时写 `unassigned（原因）` 这类占位说明；
+- `base_commit`：`worktree` 已声明时必填，记录创建时的基线提交；
 - `read_paths`：允许读取的主要范围；
-- `write_paths`：允许修改的范围；
+- `write_paths`：允许修改的范围；`worktree` 已声明时不得为空；
 - `exclusive_paths`：需要独占的共享文件；
-- `depends_on`：前置 Task ID；
+- `depends_on`：前置 Task ID（也可指向 `ISSUE-` / `BUG-` / `REQ-` / `PLAN-` 等跨模块阻断项，此类引用只校验 ID 形态，不在本树内解析）；
 - `conflicts_with`：不能并行的 Task ID；
 - `integration_status`：`pending`、`reviewing`、`integrated`、`rejected`。
+
+路径字段是仓库相对的具体路径，允许 `*` / `**` glob（例如 `packages/**/package.json`），但必须留在仓库内；重叠判定按 glob 之前的静态前缀做保守比较。`status`、`execution`、`integration_status`、`priority` 的取值必须落在各自枚举内，写错会被 `check:task-worktrees` 报为告警、被 `worktree:check` 报为失败。
 
 ## DAG 示例
 

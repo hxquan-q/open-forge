@@ -65,4 +65,5 @@ updated: YYYY-MM-DD
 - 实际修改：
 - 实际运行：
 - 未运行及原因：
+- Worktree：创建/初始化/检查/清理结果（未拆出 worktree 时说明原因）
 - 剩余风险：
