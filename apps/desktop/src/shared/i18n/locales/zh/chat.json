@@ -196,7 +196,7 @@
 			"statusDeleted": "删除",
 			"changeCount": "改过 {{count}} 次",
 			"saveAllToProject": "全部保存到项目",
-			"discardAll": "放弃全部变更",
+			"discardAll": "放弃全部产物",
 			"discardAllConfirm": "放弃画布列表里的 {{count}} 个产物？本机文件不会自动回收，会话历史与项目文件不受影响。",
 			"batchSaveSummary": "已保存 {{saved}} 个产物，冲突 {{conflicts}} 个，失败 {{failed}} 个。",
 			"batchDiscardSummary": "已放弃 {{count}} 个产物。",

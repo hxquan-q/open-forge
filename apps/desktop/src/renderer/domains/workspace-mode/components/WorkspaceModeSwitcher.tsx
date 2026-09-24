@@ -26,7 +26,7 @@ export function WorkspaceModeSwitcher(): JSX.Element | null {
 	return (
 		<Tooltip delayDuration={400}>
 			<TooltipTrigger asChild>
-				<div role="group" aria-label={t("workspace.mode.switch")} title={hint}>
+				<div role="group" aria-label={t("workspace.mode.switch")}>
 					<SegmentedControl items={[...items]} value={mode} onChange={setMode} />
 				</div>
 			</TooltipTrigger>

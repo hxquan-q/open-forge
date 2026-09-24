@@ -20,6 +20,8 @@ const PAD_BOTTOM = 34;
 
 export interface CanvasChartLabels {
 	readonly empty: string;
+	/** SVG 的可访问名兜底（spec 无标题时用，如「图表」）。 */
+	readonly chart: string;
 }
 
 export function CanvasChartPreview({
@@ -40,19 +42,31 @@ export function CanvasChartPreview({
 		);
 	}
 
+	const a11yName = spec.title ?? labels.chart;
+	// 饼图的着色维度是类目（labels），不是系列——图例必须逐类目给出，否则扇区对不上名字。
+	const legend =
+		spec.type === "pie"
+			? spec.labels
+					.map((label, index) => ({ name: label, color: SERIES_COLORS[index % SERIES_COLORS.length] }))
+					.filter((_item, index) => (spec.series[0]?.values[index] ?? 0) > 0)
+			: spec.series.map((series, index) => ({
+					name: series.name,
+					color: SERIES_COLORS[index % SERIES_COLORS.length],
+				}));
+
 	return (
 		<div className="min-h-0 flex-1 overflow-auto px-4 py-3">
 			{spec.title ? <h3 className="mb-2 text-[12px] font-medium text-foreground">{spec.title}</h3> : null}
-			{spec.type === "pie" ? <PieChart spec={spec} /> : <CartesianChart spec={spec} />}
+			{spec.type === "pie" ? <PieChart spec={spec} name={a11yName} /> : <CartesianChart spec={spec} name={a11yName} />}
 			<div className="mt-2 flex flex-wrap items-center gap-3">
-				{spec.series.map((series, index) => (
-					<span key={series.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+				{legend.map((item) => (
+					<span key={item.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
 						<span
 							aria-hidden
 							className="h-2.5 w-2.5 shrink-0 rounded-sm"
-							style={{ backgroundColor: SERIES_COLORS[index % SERIES_COLORS.length] }}
+							style={{ backgroundColor: item.color }}
 						/>
-						{series.name}
+						{item.name}
 					</span>
 				))}
 			</div>
@@ -60,7 +74,7 @@ export function CanvasChartPreview({
 	);
 }
 
-function CartesianChart({ spec }: { readonly spec: CanvasChartSpec }): JSX.Element {
+function CartesianChart({ spec, name }: { readonly spec: CanvasChartSpec; readonly name: string }): JSX.Element {
 	const { min, max } = chartValueRange(spec);
 	const plotWidth = WIDTH - PAD_LEFT - PAD_RIGHT;
 	const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
@@ -70,7 +84,13 @@ function CartesianChart({ spec }: { readonly spec: CanvasChartSpec }): JSX.Eleme
 	const toY = (value: number): number => PAD_TOP + ((max - value) / (max - min)) * plotHeight;
 
 	return (
-		<svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" className="w-full" preserveAspectRatio="xMidYMid meet">
+		<svg
+			viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+			role="img"
+			aria-label={name}
+			className="w-full"
+			preserveAspectRatio="xMidYMid meet"
+		>
 			{[max, (max + min) / 2, min].map((tick) => (
 				<g key={tick}>
 					<line
@@ -145,7 +165,7 @@ function CartesianChart({ spec }: { readonly spec: CanvasChartSpec }): JSX.Eleme
 	);
 }
 
-function PieChart({ spec }: { readonly spec: CanvasChartSpec }): JSX.Element {
+function PieChart({ spec, name }: { readonly spec: CanvasChartSpec; readonly name: string }): JSX.Element {
 	const series = spec.series[0];
 	const total = series ? series.values.reduce((sum, value) => sum + Math.max(0, value), 0) : 0;
 	if (!series || total <= 0) {
@@ -157,7 +177,13 @@ function PieChart({ spec }: { readonly spec: CanvasChartSpec }): JSX.Element {
 	let angle = -Math.PI / 2;
 
 	return (
-		<svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" className="w-full" preserveAspectRatio="xMidYMid meet">
+		<svg
+			viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+			role="img"
+			aria-label={name}
+			className="w-full"
+			preserveAspectRatio="xMidYMid meet"
+		>
 			{series.values.map((value, index) => {
 				const share = Math.max(0, value) / total;
 				const sweep = share * Math.PI * 2;

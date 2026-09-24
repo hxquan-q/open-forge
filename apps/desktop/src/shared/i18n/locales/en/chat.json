@@ -196,7 +196,7 @@
 			"statusDeleted": "Deleted",
 			"changeCount": "changed {{count}}×",
 			"saveAllToProject": "Save all to project",
-			"discardAll": "Discard all changes",
+			"discardAll": "Discard all artifacts",
 			"discardAllConfirm": "Discard all {{count}} artifacts from the canvas list? Local files are not recycled automatically, and session history plus project files are untouched.",
 			"batchSaveSummary": "Saved {{saved}} artifacts, {{conflicts}} conflicts, {{failed}} failed.",
 			"batchDiscardSummary": "Discarded {{count}} artifacts.",

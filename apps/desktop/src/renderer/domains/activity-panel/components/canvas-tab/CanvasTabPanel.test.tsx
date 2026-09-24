@@ -553,9 +553,15 @@ describe("canvas tab panel user flow", () => {
 		expect(screen.getByText("src/b.ts")).toBeTruthy();
 		expect(screen.getByText("activityPanel.canvas.statusAdded")).toBeTruthy();
 		expect(screen.getByText("activityPanel.canvas.changePickHint")).toBeTruthy();
+		// 变更分区是只读汇总：产物级批量操作只出现在「产物列表」分区。
+		expect(screen.queryByRole("button", { name: "activityPanel.canvas.discardAll" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "activityPanel.canvas.saveAllToProject" })).toBeNull();
 
-		await userEvent.click(screen.getByRole("button", { name: /src\/a\.ts/ }));
+		const fileRow = screen.getByRole("button", { name: /src\/a\.ts/ });
+		await userEvent.click(fileRow);
 		expect(screen.getByText("new-a")).toBeTruthy();
+		// 选中行必须有可见态，否则用户无法把下方 diff 对应回文件。
+		expect(fileRow.className).toContain("bg-primary/10");
 	});
 
 	it("没有文件变更时「任务变更」显示空态而不是报错", async () => {

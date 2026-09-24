@@ -165,7 +165,7 @@ export interface CanvasTabModel {
 		readonly reload: string;
 		readonly saveFailed: string;
 		readonly macrosLabel: string;
-		readonly chart: { readonly empty: string };
+		readonly chart: { readonly empty: string; readonly chart: string };
 		readonly checklist: {
 			readonly empty: string;
 			readonly done: string;
@@ -787,7 +787,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 			reload: t("activityPanel.canvas.reload"),
 			saveFailed: t("activityPanel.canvas.saveFailed"),
 			macrosLabel: t("activityPanel.canvas.macrosLabel"),
-			chart: { empty: t("activityPanel.canvas.chartEmpty") },
+			chart: { empty: t("activityPanel.canvas.chartEmpty"), chart: t("activityPanel.canvas.kindChart") },
 			checklist: {
 				empty: t("activityPanel.canvas.checklistEmpty"),
 				done: t("activityPanel.canvas.checklistDone"),
