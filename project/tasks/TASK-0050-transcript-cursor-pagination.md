@@ -1,7 +1,7 @@
 ---
 id: TASK-0050
 type: task
-status: draft
+status: ready
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0035]
 conflicts_with: [TASK-0051, TASK-0038]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -36,6 +36,7 @@ updated: 2026-09-23
 - 执行方式：共享 `forge/dev` 工作区串行。
 - 可并行 Task：无（transcript 链内）。
 - 前置依赖：TASK-0034 合同、TASK-0035 占位实现、TASK-0031 媒体引用化。
+- 就绪确认（2026-09-24）：`depends_on` 的 TASK-0034 / TASK-0035 与正文列出的 TASK-0031 均为 `done`，状态由 `draft` 提为 `ready`；链内 TASK-0051 / TASK-0038 仍等本 Task 落地。
 - 冲突文件/独占路径：`session.ts`、preload session API/types、`useSessionOpener`、`useSessionEventController`、viewer model、message actions/navigation、export。
 - Branch：`forge/dev`。
 - Worktree：共享工作区串行，不建独立 Worktree。

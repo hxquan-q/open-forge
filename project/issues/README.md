@@ -29,6 +29,9 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0012`：团队内成员能力收窄的编辑交互（draft；推荐 assignment 负向增量 `excludedAbilities`，只收窄不扩张，pinned 不可收窄）。
 - `ISSUE-0013`：团队内动态增员与成员子代理边界（draft；推荐最小步——仅 leader 获得 subagent 工具，完整动态成员待反馈再评估）。
 - `ISSUE-0014`：多成员共享 cwd 的并发写防护（draft；推荐先做检测与提示，同路径排队仅窄场景兜底，工作区隔离需用户确认合并心智）。
+- `ISSUE-0015`：Desktop 本地控制协议门面（draft；推荐 B——在 `apps/desktop` 起 loopback MCP server，把 `app-actions` catalog 映射为 MCP tools 并复用 approval broker 与 endpoint-file + token 发现；A（维持 `action-rpc` + `action` CLI）为保守备选，属架构变更，立项需 ADR）。
+- `ISSUE-0016`：插件工作台能力面扩展（draft；推荐 A——按 views → services → bus → widget 逐项独立立项，不一次性扩 manifest 贡献面）。
+- `ISSUE-0017`：特权宿主下沉（draft；推荐先做 A——把 session 绑定 workspace 解析、参数面去特权根与工具准入预算固化为 capability 合同，子进程/Rust 宿主等触发信号再评估）。
 - `ISSUE-0018`：对话输入区能力建议面板信息层级待优化（draft；待确认 Skills/MCP/计划/图像/插件入口优先级与运行中交互规则）。
 - `ISSUE-0019`：Work/Coding 模式与模型选择范围需要明确区分（draft；待裁决模型用途分类、切换生效时机与活动会话入口）。
 - `ISSUE-0020`：Desktop 内存占用偏高需要建立基线并定位主导进程（draft；先采集进程级内存曲线，再决定是否转 Bug）。
