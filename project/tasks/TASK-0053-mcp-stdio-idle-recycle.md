@@ -9,14 +9,14 @@ plan: PLAN-0002
 source: TASK-0040 / VERIFICATION-0004
 execution: serial
 branch: forge/dev
-worktree: open-forge-wt/TASK-0053-mcp-lifecycle（提交 95f92d8）
+worktree: unassigned（原 open-forge-wt/TASK-0053-mcp-lifecycle 未落盘，分支 95f92d8 已淘汰；实现在 forge/dev 主工作区收口）
 base_commit: forge/dev
 read_paths: [packages/runtime-node/src/mcp/transports/stdio, packages/runtime-mcp/src/server/supervisor.ts, apps/desktop/src/main]
 write_paths: [packages/runtime-node/src/mcp, apps/desktop/src/main, .github/release-notes]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: integrated（forge/dev 工作区，未提交）
+integration_status: integrated（forge/dev 主工作区；随 d7175210e 落地，非「未提交」）
 created: 2026-09-23
 updated: 2026-09-23
 ---
