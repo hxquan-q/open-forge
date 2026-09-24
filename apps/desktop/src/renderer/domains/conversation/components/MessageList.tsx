@@ -9,6 +9,7 @@ import { MessageCardsScope } from "../hooks/useMessageCardsHostModel";
 import { useMessageListModel } from "../hooks/useMessageListModel";
 import { useMessageListScrollModel } from "../hooks/useMessageListScrollModel";
 import { useDeferredMessageEnhancements } from "../hooks/useDeferredMessageEnhancements";
+import { ChatActivityWorkspaceIdProvider } from "./blocks/ArtifactCanvasOpenButton";
 import { MessageListView, ExportMessageList } from "./message-list/MessageListView";
 import type { MessageListProps } from "./message-list/types";
 import { MessageExpansionScope } from "./message-list/expansionStore";
@@ -45,23 +46,27 @@ export function MessageList(props: MessageListProps): JSX.Element {
 	const model = useMessageListModel(props, scroll, derivationMessages);
 	return (
 		<RendererMarkdownScope value={markdown}>
-			<SubagentCardsScope sessionId={subagentSessionId}>
-				<MessageCardsScope scope={props.sessionId ?? null} messages={derivationMessages}>
-					<MessageExpansionScope scope={props.sessionId ?? null}>
-						<PerfSessionSwitchProfiler id={`MessageList:${deferredContentReady ? "deferred-ready" : "tail-first"}`}>
-							<MessageListView
-								model={model}
-								deferredContentReady={deferredContentReady}
-								onAbort={props.onAbort}
-								sessionId={props.sessionId}
-								pendingLabel={props.pendingLabel}
-							>
-								{props.children}
-							</MessageListView>
-						</PerfSessionSwitchProfiler>
-					</MessageExpansionScope>
-				</MessageCardsScope>
-			</SubagentCardsScope>
+			{/* 把聊天工作空间键下发给消息块（「在画布中打开」按钮）：与右栏活动面板
+			    同一个 workspace.id，Team 会话里按钮才能命中 agent-team:<…> 页签键。 */}
+			<ChatActivityWorkspaceIdProvider workspaceId={props.workspace.id}>
+				<SubagentCardsScope sessionId={subagentSessionId}>
+					<MessageCardsScope scope={props.sessionId ?? null} messages={derivationMessages}>
+						<MessageExpansionScope scope={props.sessionId ?? null}>
+							<PerfSessionSwitchProfiler id={`MessageList:${deferredContentReady ? "deferred-ready" : "tail-first"}`}>
+								<MessageListView
+									model={model}
+									deferredContentReady={deferredContentReady}
+									onAbort={props.onAbort}
+									sessionId={props.sessionId}
+									pendingLabel={props.pendingLabel}
+								>
+									{props.children}
+								</MessageListView>
+							</PerfSessionSwitchProfiler>
+						</MessageExpansionScope>
+					</MessageCardsScope>
+				</SubagentCardsScope>
+			</ChatActivityWorkspaceIdProvider>
 		</RendererMarkdownScope>
 	);
 }

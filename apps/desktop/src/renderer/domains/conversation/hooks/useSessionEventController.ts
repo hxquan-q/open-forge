@@ -14,15 +14,18 @@ import {
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
 	EMPTY_TASK_STATE,
+	isCanvasTabVisible,
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
+	mountedActivityWorkspacesAtom,
 	pendingCanvasArtifactIdAtom,
 	planModeStateBySessionAtom,
 	projectsAtom,
 	promptPredictingAtom,
 	promptSuggestionsAtom,
 	rememberSubagentsForSession,
+	resolveActivityWorkspaceKey,
 	retryProgressAtom,
 	subagentsBySessionAtom,
 	taskStateBySessionAtom,
@@ -587,12 +590,23 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					const store = getDefaultStore();
 					store.set(canvasArtifactRevisionAtom, (count) => count + 1);
 					const artifactId = event.artifact?.artifactId;
-					if (typeof artifactId === "string" && artifactId) {
-						store.set(pendingCanvasArtifactIdAtom, artifactId);
-					}
+					// 未读抑制与 pending 归属都以「当前挂载的活动工作空间」为键（TASK-0079）：
+					// 面板页签挂在 workspace.id 上——普通对话是 cwd，Team 是 agent-team:<…>，
+					// 按 cwd 直查在 Team 视图永远落空，页签开着也照样累加幻影未读。
+					const mountedWorkspaces = store.get(mountedActivityWorkspacesAtom);
+					const mountedKeys = mountedWorkspaces.flatMap((workspace) => [workspace.id, workspace.cwd]);
+					const canvasVisible = isCanvasTabVisible(store.get(activityPanelTabByProjectAtom), mountedKeys);
 					const cwd = activeSessionRef.current?.cwd;
-					const activeTab = cwd ? store.get(activityPanelTabByProjectAtom).get(cwd) : undefined;
-					if (activeTab !== "canvas") {
+					if (!canvasVisible) {
+						if (typeof artifactId === "string" && artifactId && cwd) {
+							// 画布不可见才排队（可见时用户可能正在阅读，交给 revision 刷新列表）；
+							// workspaceId 用挂载表把 cwd 反查成真正的工作空间键，查不到时退回 cwd，
+							// 保证只有归属面板会消费这条 pending。
+							store.set(pendingCanvasArtifactIdAtom, {
+								workspaceId: resolveActivityWorkspaceKey(mountedWorkspaces, cwd),
+								artifactId,
+							});
+						}
 						store.set(canvasUnreadCountAtom, (count) => count + 1);
 					}
 				}

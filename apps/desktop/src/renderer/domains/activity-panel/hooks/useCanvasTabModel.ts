@@ -105,9 +105,10 @@ export function useCanvasTabModel(): CanvasTabModel {
 	const setPromptAttachment = useSetAtom(promptAttachmentAtom);
 	const setConfirm = useSetAtom(confirmDialogAtom);
 	const revision = useAtomValue(canvasArtifactRevisionAtom);
-	const pendingId = useAtomValue(pendingCanvasArtifactIdAtom);
+	const pending = useAtomValue(pendingCanvasArtifactIdAtom);
 	const setPendingId = useSetAtom(pendingCanvasArtifactIdAtom);
 	const setUnread = useSetAtom(canvasUnreadCountAtom);
+	const unread = useAtomValue(canvasUnreadCountAtom);
 	const tabByProject = useAtomValue(activityPanelTabByProjectAtom);
 	const canvasVisible = isCanvasTabVisible(tabByProject, [workspace.id, workspace.cwd]);
 
@@ -148,9 +149,11 @@ export function useCanvasTabModel(): CanvasTabModel {
 		};
 	}, [reload]);
 
+	// 未读复位还要依赖计数本身：若增量恰好发生在画布可见期间（写入方与复位方的
+	// 时序竞态），仅靠可见性翻转的 effect 会把徽章挂死——增量到达时立即归零。
 	useEffect(() => {
-		if (canvasVisible) setUnread(0);
-	}, [canvasVisible, setUnread]);
+		if (canvasVisible && unread > 0) setUnread(0);
+	}, [canvasVisible, unread, setUnread]);
 
 	useEffect(() => {
 		const onVisible = (): void => {
@@ -233,10 +236,15 @@ export function useCanvasTabModel(): CanvasTabModel {
 	);
 
 	useEffect(() => {
-		if (!pendingId) return;
-		open(pendingId);
+		// 归属闸门（TASK-0079）：pending 写入方标注了工作空间。不属于本面板的排队项
+		// 既不消费也不清全局槽——否则多面板挂载时会拿错 workspace 去拉 artifact，
+		// 渲染出标题为原始 artifactId 的假「文件缺失」条目。
+		if (!pending || pending.workspaceId !== workspace.id) return;
+		// 可见性守卫：画布页签未激活时不抢选区，等用户切回画布再消费。
+		if (!canvasVisible) return;
+		open(pending.artifactId);
 		setPendingId(null);
-	}, [open, pendingId, setPendingId]);
+	}, [canvasVisible, open, pending, setPendingId, workspace.id]);
 
 	const back = useCallback(() => {
 		setSelectedId(null);
