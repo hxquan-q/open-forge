@@ -159,6 +159,8 @@
 		"rimraf": "6.1.2",
 		"@wdio/native-utils": "2.6.0",
 		"react": "19.2.8",
-		"react-dom": "19.2.8"
+		"react-dom": "19.2.8",
+		"adm-zip": "^0.6.1",
+		"svgo": "^4.1.0"
 	}
 }

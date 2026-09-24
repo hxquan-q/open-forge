@@ -645,7 +645,7 @@ if (!gotSingleLock) {
 		}
 
 		if (process.platform === "darwin") {
-			app.dock.setIcon(nativeImage.createFromPath(join(buildDir, "icon-dock.png")));
+			app.dock?.setIcon(nativeImage.createFromPath(join(buildDir, "icon-dock.png")));
 		}
 
 		// 默认「对话」项目目录：保证一直存在。
