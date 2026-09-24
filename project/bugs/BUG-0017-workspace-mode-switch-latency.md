@@ -1,7 +1,7 @@
 ---
 id: BUG-0017
 type: bug
-status: investigating
+status: blocked
 priority: P2
 owner: apps/desktop
 source: user-report
@@ -12,7 +12,7 @@ related_issues: [ISSUE-0010]
 related_bugs: []
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -53,11 +53,20 @@ updated: 2026-09-24
 
 ## 回归测试
 
-- 尚未补充。先建立切换响应时间基线，再覆盖页头切换后的选中态/布局即时反馈及已打开会话配置保持不变；性能目标应基于真实基线确定。
+- 已补充（安装探针的可测合同，先红后绿）：`WorkspaceModeSwitcher.test.tsx` 断言切换点击以同一口径打开 `workspace-mode-switch` 交互窗口且**早于** `setMode`（否则被测提交已跑完、窗口全空）；右栏单独套 `ChatView:rightColumn` profiler id，使报告可归因「右栏换装」与其余重渲。探针关闭时零开销直通。
+- 红测实证：把 switcher 还原到基线后 1 失败/4 通过。
+- 相关套件：`workspace-mode/` + `chat-view/` + `activity-panel/` 共 53 文件 270/270 通过；`check:quick` 7 文件全绿。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 状态：**阻塞（等待实机基线）**。未获 UI 验证/实机启动授权，jsdom 无 pty/WebContentsView/真实 IPC，其数字不能作为延迟基线；按用户要求「先接 perf monitor 量基线再谈优化」，本次只完成度量接线，未做任何推测性优化。
+- 度量入口：渲染层既有交互探针 `@shared/lib/perf-send`（`localStorage["vetta-perf-send"]="1"` + reload），不用 `diagnostics-bundle` 的 `perf-snapshot.json`（那是按间隔采进程 CPU/内存，无法归因 ~100ms 的点击→绘制窗口，只适合事后佐证）。`project/verification/` 现有 7 份基线无切换延迟记录。
+- 提交：`c047f722a`（分支 `worktree-agent-af2e44ff2e986a335`，待集成）。
+- 源码级已确认/已排除的候选（非延迟实测）：
+  - 排除「切换重配会话」：`useSessionOpener.ts:416-417` 只在建会话时读 mode，切换不重开会话、不改 `agentMode`/`capabilityProfile`，与 ISSUE-0010 裁决一致。
+  - 确认布局换装机制：`ActivityColumn`（`DefaultChatView.tsx:59-97`）对 work/coding 返回不同元素类型 → 卸载一棵挂载另一棵；`resolveWorkspaceRightPanel` 决定面板开启时切换不改右栏。
+  - 确认切入 work 有冗余拉取：`WorkDocumentSections.tsx:61-87` 每次挂载都发 `window.vetta.task.getState(runtimeId)`，而 `taskStateBySessionAtom` 已持有合并投影（异步、不解释点击→绘制延迟，但可消除）。
+  - 确认切换丢状态（UX 缺陷，非延迟）：`SourcesSection` 已选来源与 goal 存本地 `useState`，切换即丢——建议另行立项。
+  - 内置 tab 的 `useMeta` 只有 i18n 文案与图标，**不主张**面板挂载是瓶颈；这正是待实测项。
+- 阈值提案（须由首次实测确认，非既定基线）：面板关闭时 frame#1 ＜100ms 且无 ＞50ms longtask；≥200ms 才值得动手。
+- 需用户配合的实机步骤：① DevTools 执行 `localStorage.setItem("vetta-perf-send","1"); location.reload()`；② 打开项目会话并**关闭活动面板**后交替切换 5-10 次，另覆盖长消息流与面板开启+文件树展开各一次；③ 回贴每条 `interaction=workspace-mode-switch` 的 `marks`/`commits`/`longTasks` 并标注场景；④ 同机跑一次 `trigger=send-button` 作「已知可接受」参照；⑤ `localStorage.removeItem("vetta-perf-send")` 关闭。

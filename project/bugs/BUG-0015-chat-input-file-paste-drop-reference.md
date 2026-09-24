@@ -1,7 +1,7 @@
 ---
 id: BUG-0015
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop
 source: user-report
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -53,11 +53,14 @@ updated: 2026-09-24
 
 ## 回归测试
 
-- 尚未补充。需分别覆盖普通对话输入的粘贴文件、文件拖入，以及侧边栏已有选择路径保持可用；必要时覆盖团队输入是否共享合同。
+- 已补充（先红后绿）：`apps/desktop/src/renderer/domains/conversation/components/input-bar/InputBarFileReference.test.tsx` 从真实入口断言——原生 `paste` 事件打在真实 `[contenteditable]`、`drop`/`dragover` 打在真实 `[data-vetta-drop-scope="input"]`、侧边栏点真实工具栏按钮，结果断言 `mentionedFilesAtom`（发送链路读取的草稿投影）与 `inputValueAtom`。
+- 红测实证：回退实现到基线后 1 失败/4 通过（4 条为拖放、侧边栏、图片粘贴、纯文本不接管的防护断言，修复前即绿，精确锁定唯一缺口）。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 根因：**粘贴路径**未接线（拖放路径本就完整）。`PasteImagePlugin` 只认 `image/*` 剪贴板项，`StructuredClipboardPlugin` 只认应用私有 MIME；从资源管理器复制的 pdf/md/代码文件是 `kind:"file"` 且非图片，两个插件均不接管，最终落到 `@lexical/plain-text` 把文件当纯文本插入。
+- 修复：新增 `PasteFilePlugin.tsx`（只认非图片文件项，与图片落盘路径互斥），`clipboard-images.ts` 增加 `readClipboardReferenceFiles`，在 `InputEditor.tsx` 两个分支挂载。团队输入无需单独接线：`TeamComposerConnector` → `InputBar` → `InputBarView` → `InputEditor` 全仓唯一挂载点，拖放共用同一 `dropZone`。
+- 提交：`69bdf2702`（分支 `worktree-agent-af2e44ff2e986a335`，待集成）。
+- 测试：目标用例 5/5；input-bar 全目录 + `InputBar.test.tsx` + `message-input/` 共 28 文件 99/99 通过。
+- 检查：7 个变更文件 `check:quick` 全绿。
+- 未运行及原因：未实机验证 Windows 资源管理器粘贴——未获 UI 验证授权；`webUtils.getPathForFile` 对粘贴 File 的路径解析在 jsdom 无法证明（preload 与拖放共用同一实现，解析失败按设计静默跳过），建议随下次实机验证顺带确认。
