@@ -5,6 +5,7 @@ import { SegmentedControl } from "@shared/components/ui/segmented-control";
 import { Textarea } from "@shared/components/ui/textarea";
 import { cn } from "@shared/lib/utils";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type {
 	CanvasEditorView,
 	CanvasSelectedView,
@@ -427,6 +428,7 @@ function CanvasTextPreview({
 	readonly model: CanvasTabModel;
 	readonly selected: CanvasSelectedView;
 }): JSX.Element {
+	const { t } = useTranslation("chat");
 	return (
 		<div
 			data-testid="canvas-text-preview"
@@ -436,7 +438,12 @@ function CanvasTextPreview({
 			onKeyUp={(event) => model.actions.onPreviewSelectionChange(event.currentTarget)}
 		>
 			{selected.previewKind === "code" ? (
-				<CodePreview content={selected.content} extension={selected.extension.replace(/^\./, "")} theme={model.theme} />
+				<CodePreview
+					content={selected.content}
+					extension={selected.extension.replace(/^\./, "")}
+					theme={model.theme}
+					degradationNotice={t("preview.degraded.artifact")}
+				/>
 			) : (
 				<MarkdownPreview content={selected.content} />
 			)}

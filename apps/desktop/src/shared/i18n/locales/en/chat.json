@@ -310,6 +310,15 @@
 			"headline": "Current plan"
 		}
 	},
+	"preview": {
+		"degraded": {
+			"artifact": "This content is too large — showing plain text without syntax highlighting.",
+			"textFile": "This file is too large — syntax highlighting and search indexing are off.",
+			"codeBlock": "This code block is too large — showing plain text.",
+			"transcript": "This conversation is very large — only the visible range is loaded."
+		}
+	},
+
 	"fileExplorer": {
 		"display": {
 			"invalidPatterns": "Use up to 100 patterns, each no longer than 1024 characters",
@@ -1362,5 +1371,11 @@
 				"pickFailed": "Could not choose source files. Try again."
 			}
 		}
+	},
+	"sessionInterrupt": {
+		"notifyTitle": "Session reply interrupted",
+		"notifyBody": "The reply may have stopped due to network or timeout. Open the session and continue.",
+		"autoRetriedTitle": "Auto-continued",
+		"autoRetriedBody": "An interrupt was detected and the reply was automatically continued in the same bubble."
 	}
 }

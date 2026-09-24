@@ -1,7 +1,7 @@
 ---
 id: TASK-0106
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/renderer/domains/, apps/desktop/src/main/conversa
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0050, TASK-0051, TASK-0038, TASK-0115]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 ---
@@ -81,7 +81,38 @@ VS Code 在模型创建时按尺寸阈值一次性判定并关闭高耗功能（
 ## 交付记录
 
 - 实际修改：
+  - `packages/theme-ui/src/shared/large-object-limits.ts`（新增）：对象尺寸阈值表
+    （artifact 2MB、文本文件 2MB/2 万行、transcript 8MB，与既有 2MB 编辑上限同一口径）、
+    纯判定 `evaluateLargeObjectDegradation`、一次性锁定 `latchLargeObjectDegradation`
+    （内容缩小不重开）、提示文案 key 派生 `largeObjectDegradationNoticeKey`；从
+    `theme-ui/shared` 导出。
+  - `packages/theme-ui/src/activity/CodePreview.tsx`：打开预览时一次性判定，命中即跳过
+    Shiki、改纯文本渲染并输出 `data-degraded`，新增 `degradationKind`（artifact / textFile）
+    与 `degradationNotice` 两个可选 prop。
+  - `apps/desktop/.../activity-panel/components/canvas-tab/CanvasTabPanel.tsx`（Canvas artifact
+    代码预览）与 `apps/desktop/.../file-preview/components/TextPreviewRenderer.tsx`（文件预览）：
+    传入按 `preview.degraded.*` key 取到的提示文案。
+  - `apps/desktop/src/shared/i18n/locales/{zh,en}/chat.json`：新增 `preview.degraded.*`
+    （artifact / textFile / codeBlock / transcript）。
+  - 测试：`apps/desktop/src/renderer/shared/components/large-object-limits.test.ts`（纯函数
+    7 例：正常体量、边界值 ±1 字节、artifact 与 textFile 关闭的功能不同、行数闸、
+    transcript 走窗口化、不可逆锁定、提示 key）、
+    `apps/desktop/.../previews/CodePreview.degradation.test.tsx`（组件 3 例：超阈值不调用
+    Shiki 且显示提示、行数超限同样降级、正常体量仍高亮）。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
+  - `bun run --cwd apps/desktop test` 定向三文件 → 3 文件 / 13 例全绿，其中包含既有的
+    `SyntaxHighlightedCode.test.tsx`（多兆代码块仍执行高亮并能自愈），证明聊天气泡路径未被
+    本次改动影响。
+  - `bun run --cwd apps/desktop typecheck`、`bun run check:quick -- <本次改动文件>`。
+- 已知范围收口（明确未做）：
+  - transcript 的「超阈值走既有窗口化/占位路径」只提供了判定函数（`kind: "transcript"`），
+    未改动 `transcript-window`/投影：那是 PLAN-0002 窗口化链（TASK-0050）与在途的 TASK-0115
+    的共同写面，本 Task 按合同「不重复造、不改其语义」只留下共用阈值口径。
+  - 聊天气泡代码块未接入阈值：其既有实现已有高亮缓存预算 + 流式纯文本兜底，且测试锁定
+    「多兆代码块仍要高亮」，加闸会改掉这条既有行为；表里因此不含该类型，避免留下未使用阈值。
+  - `privateKb` 前后对比未采集：降级只影响渲染层功能开关，量化需要 GUI 验证实例（用户未授权）。
+- Worktree：主工作区（`branch: main`）。
 - 剩余风险：
+  - 阈值按 UTF-16 长度近似字节数，非 ASCII 内容会略微保守（更早降级，不会更晚）。
+  - 降级是「打开时一次」，同一 artifact 在会话内重新打开时按那时的体量重新判定。
+  - 行数闸需要遍历一次内容（`countLines`），仅发生在预览打开时，O(n) 且不重复执行。

@@ -12,6 +12,18 @@ export type { CollapsePanelProps } from "./CollapsePanel";
 export { CollapsePanel } from "./CollapsePanel";
 export type { ContextMenuNode, ContextMenuViewProps } from "./ContextMenuView";
 export { ContextMenuView } from "./ContextMenuView";
+export {
+	evaluateLargeObjectDegradation,
+	LARGE_OBJECT_LIMITS,
+	type LargeObjectDegradation,
+	type LargeObjectFeatures,
+	type LargeObjectKind,
+	type LargeObjectLimits,
+	type LargeObjectMeasure,
+	type LatchedLargeObjectDegradation,
+	largeObjectDegradationNoticeKey,
+	latchLargeObjectDegradation,
+} from "./large-object-limits";
 export type { MacKeyboardPreviewProps, MacKeyId } from "./MacKeyboardPreview";
 export { MacKeyboardPreview } from "./MacKeyboardPreview";
 export type { MarkdownTableProps } from "./MarkdownTable";
