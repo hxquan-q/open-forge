@@ -341,6 +341,96 @@ describe("StatelessAgentCoreTurnEngine", () => {
 		await expect(execution).rejects.toMatchObject({ name: "AbortError" });
 	});
 
+	it("reruns a silent empty reply once inside the same assistant row", async () => {
+		const contexts: Message[][] = [];
+		const responses = [assistant([]), assistant([{ type: "text", text: "recovered" }])];
+		let responseIndex = 0;
+		const engine = new StatelessAgentCoreTurnEngine({
+			model: model(),
+			streamFn: (_model, context) => {
+				contexts.push([...context.messages]);
+				const response = responses[responseIndex];
+				if (!response) throw new Error(`Missing response at index ${responseIndex}`);
+				responseIndex += 1;
+				return recordedStream(response);
+			},
+		});
+
+		const events = await run(engine, snapshot());
+
+		expect(responseIndex).toBe(2);
+		// 同一 assistant 行：只有一次 message.start/message.end，没有空行与中间 turn 边界。
+		const observations = events
+			.filter(
+				(event): event is Extract<TurnEngineEvent, { type: "execution_observation" }> =>
+					event.type === "execution_observation",
+			)
+			.map(({ observation }) => observation);
+		expect(observations.filter(({ type }) => type === "message.start")).toHaveLength(1);
+		expect(observations.filter(({ type }) => type === "message.end")).toHaveLength(1);
+		expect(observations.filter(({ type }) => type === "turn.end")).toHaveLength(1);
+		const assistantEvents = events.filter(
+			(event): event is Extract<TurnEngineEvent, { type: "message" }> =>
+				event.type === "message" && event.message.role === "assistant",
+		);
+		expect(assistantEvents).toHaveLength(1);
+		expect(assistantEvents[0]?.message.content).toEqual([{ type: "text", text: "recovered" }]);
+		expect(events.at(-1)).toMatchObject({ type: "completed", stopReason: "stop" });
+		// 第二次模型调用在模型视图尾部看到恢复指令，durable 上下文不受影响。
+		expect(contexts).toHaveLength(2);
+		const nudge = contexts[1]?.at(-1);
+		expect(nudge?.role).toBe("user");
+		expect(typeof nudge?.content === "string" ? nudge.content : "").toContain("<no_output_recovery>");
+	});
+
+	it("fails a twice-silent reply as an explicit retriable EMPTY_MODEL_RESPONSE", async () => {
+		const responses = [assistant([]), assistant([])];
+		let responseIndex = 0;
+		const engine = new StatelessAgentCoreTurnEngine({
+			model: model(),
+			streamFn: () => {
+				const response = responses[responseIndex];
+				if (!response) throw new Error(`Missing response at index ${responseIndex}`);
+				responseIndex += 1;
+				return recordedStream(response);
+			},
+		});
+
+		await expect(run(engine, snapshot())).rejects.toMatchObject({
+			failure: { code: "AI_EMPTY_MODEL_RESPONSE", retryable: true, origin: "provider" },
+		});
+		expect(responseIndex).toBe(2);
+	});
+
+	it("treats a repeated provider start event as an update on the open assistant row", async () => {
+		const engine = new StatelessAgentCoreTurnEngine({
+			model: model(),
+			streamFn: () => {
+				const stream = new AssistantMessageEventStream();
+				queueMicrotask(() => {
+					const partial = assistant([]);
+					const message = assistant([{ type: "text", text: "after retry" }]);
+					stream.push({ type: "start", partial });
+					stream.push({ type: "start", partial });
+					stream.push({ type: "done", reason: "stop", message });
+				});
+				return stream;
+			},
+		});
+
+		const events = await run(engine, snapshot());
+
+		const observations = events
+			.filter(
+				(event): event is Extract<TurnEngineEvent, { type: "execution_observation" }> =>
+					event.type === "execution_observation",
+			)
+			.map(({ observation }) => observation);
+		expect(observations.filter(({ type }) => type === "message.start")).toHaveLength(1);
+		expect(observations.filter(({ type }) => type === "message.update")).toHaveLength(1);
+		expect(observations.filter(({ type }) => type === "message.end")).toHaveLength(1);
+	});
+
 	it("never mirrors continuation-policy messages through the user input queue", async () => {
 		// 续跑消息一旦进 inputQueue，queue.changed 镜像（ADR-0060）就会在 UI 上补出
 		// 一个用户气泡，而规范历史按 origin 过滤掉它 —— 两侧永远对不上账。

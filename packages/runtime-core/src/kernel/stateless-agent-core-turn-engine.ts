@@ -165,6 +165,7 @@ export class StatelessAgentCoreTurnEngine implements TurnEnginePort {
 			limits: resolveLimits(this.options.limits),
 			signal: request.signal,
 			observer: () => eventDelivery.recordEmission(),
+			...(request.allowSilentCompletion ? { allowSilentCompletion: true } : {}),
 			resolveTools: async ({ modelCallIndex, messages: frameMessages, signal }) => {
 				const frame = await resolveFrame(modelCallIndex, frameMessages, signal);
 				return [...frame.tools.values()].map((tool) => toAgentTool(tool, request, identities));
@@ -428,7 +429,8 @@ class AgentEventProjector {
 		}
 		if (event.type === "model_call_start") {
 			this.modelCallIndex += 1;
-			this.assistantMessageStarted = false;
+			// 静默重跑的模型调用延续同一 assistant 行；普通调用才重置行状态。
+			if (!event.continuesAssistant) this.assistantMessageStarted = false;
 			this.terminalAssistantError = false;
 			return this.startNextTurnIfNeeded();
 		}
@@ -628,8 +630,23 @@ class AgentEventProjector {
 			},
 		};
 		if (event.type === "start") {
-			this.assistantMessageStarted = true;
 			const envelope = toRuntimeMessageEnvelope(event.partial, this.identities);
+			if (this.assistantMessageStarted) {
+				// Provider 重试或静默重跑会再次发出 start：assistant 行已打开，
+				// 只能更新既有行，不能开第二条。
+				return [
+					...(envelope
+						? [
+								{
+									type: "execution_observation",
+									observation: { type: "message.update", message: envelope, assistantMessageEvent: event },
+								} as const,
+							]
+						: []),
+					rawObservation,
+				];
+			}
+			this.assistantMessageStarted = true;
 			return [
 				...(envelope
 					? [{ type: "execution_observation", observation: { type: "message.start", message: envelope } } as const]

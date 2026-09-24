@@ -3,8 +3,14 @@
  * Transforms to Message[] only at the LLM call boundary.
  */
 
-import { EventStream, type ToolResultMessage } from "@vetta/ai";
-import { streamAssistantResponse } from "./loop/assistant-stream.js";
+import {
+	type AssistantMessage,
+	EmptyModelResponseError,
+	EventStream,
+	getAIErrorDetails,
+	type ToolResultMessage,
+} from "@vetta/ai";
+import { type SilentTurnStreamOptions, streamAssistantResponse } from "./loop/assistant-stream.js";
 import { AgentContextCheckpointFailure, requestContextCheckpoint } from "./loop/context-checkpoint.js";
 import { assertWithinAgentLoopLimit, resolveAgentLoopLimits } from "./loop/limits.js";
 import {
@@ -17,6 +23,7 @@ import {
 	traceAttributes,
 } from "./loop/telemetry.js";
 import { executeToolCalls } from "./loop/tool-execution.js";
+import { isSilentAssistantMessage, silentTurnNudgeMessage } from "./silent-turn.js";
 import type { AgentContext, AgentEvent, AgentLoopConfig, AgentMessage, StreamFn } from "./types.js";
 
 /**
@@ -96,6 +103,16 @@ function createAgentStream(): EventStream<AgentEvent, AgentMessage[]> {
 	);
 }
 
+/** Land a twice-silent turn as an explicit, retriable failure on the message itself. */
+function markSilentTurnFailed(message: AssistantMessage, config: AgentLoopConfig): void {
+	const failure = getAIErrorDetails(
+		new EmptyModelResponseError({ provider: config.model.provider, modelId: config.model.id }),
+	);
+	message.stopReason = "error";
+	message.errorMessage = failure.message;
+	message.failure = failure;
+}
+
 async function runLoop(
 	currentContext: AgentContext,
 	newMessages: AgentMessage[],
@@ -127,6 +144,10 @@ async function runLoop(
 	let modelCallCount = 0;
 	let toolCallCount = 0;
 	let recoveryAttempt = 0;
+	let silentTurnRerunAttempted = false;
+	let silentRerunActive = false;
+	let suppressTurnStart = false;
+	let silentRowOpen = false;
 	let pendingMessages: AgentMessage[] = (await config.getSteeringMessages?.()) || [];
 
 	try {
@@ -135,8 +156,12 @@ async function runLoop(
 			let steeringAfterTools: AgentMessage[] | null = null;
 
 			while (hasMoreToolCalls || pendingMessages.length > 0) {
-				if (!firstTurn) stream.push({ type: "turn_start" });
-				else firstTurn = false;
+				// A silent-turn re-run continues the same logical turn; its boundary
+				// events stay suppressed so no duplicate turn appears downstream.
+				if (!firstTurn) {
+					if (!suppressTurnStart) stream.push({ type: "turn_start" });
+				} else firstTurn = false;
+				suppressTurnStart = false;
 
 				if (config.getTools) currentContext.tools = config.getTools();
 				if (config.getSystemPrompt) currentContext.systemPrompt = config.getSystemPrompt();
@@ -155,6 +180,17 @@ async function runLoop(
 				if (limits.maxModelCalls !== undefined) {
 					assertWithinAgentLoopLimit("model_calls", modelCallCount, limits.maxModelCalls);
 				}
+				const silentTurn: SilentTurnStreamOptions | undefined = silentRerunActive
+					? {
+							reuseRow: silentRowOpen,
+							keepOpenOnEmpty: true,
+							markEmptyReply: (reply) => markSilentTurnFailed(reply, config),
+							extraMessages: [silentTurnNudgeMessage()],
+						}
+					: !silentTurnRerunAttempted && config.allowSilentCompletion !== true
+						? { keepOpenOnEmpty: true }
+						: undefined;
+				silentRerunActive = false;
 				const message = await streamAssistantResponse(
 					currentContext,
 					config,
@@ -163,14 +199,33 @@ async function runLoop(
 					streamFn,
 					traceChildren ? agentObservation : undefined,
 					limits,
+					silentTurn,
 				);
 				newMessages.push(message);
+				silentRowOpen = silentTurn?.rowOpen ?? false;
 
 				if (message.stopReason === "aborted") {
 					stream.push({ type: "turn_end", message, toolResults: [] });
 					stream.push({ type: "agent_end", messages: newMessages });
 					stream.end(newMessages);
 					return;
+				}
+
+				if (isSilentAssistantMessage(message) && config.allowSilentCompletion !== true) {
+					if (!silentTurnRerunAttempted) {
+						// Re-run an invisible answer once before surfacing a finished turn.
+						// The empty assistant message is dropped from both message lists;
+						// the re-run reuses the same bubble, so the transcript keeps one row.
+						silentTurnRerunAttempted = true;
+						if (currentContext.messages.at(-1) === message) currentContext.messages.pop();
+						if (newMessages.at(-1) === message) newMessages.pop();
+						silentRerunActive = true;
+						suppressTurnStart = true;
+						hasMoreToolCalls = true;
+						continue;
+					}
+					// The re-run already landed as an explicit EMPTY_MODEL_RESPONSE
+					// error via markEmptyReply; fall through to the error path.
 				}
 
 				if (message.stopReason === "error") {

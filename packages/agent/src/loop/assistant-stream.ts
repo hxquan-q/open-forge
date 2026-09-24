@@ -1,5 +1,6 @@
-import { type AssistantMessage, type Context, type EventStream, streamSimple } from "@vetta/ai";
+import { type AssistantMessage, type Context, type EventStream, type Message, streamSimple } from "@vetta/ai";
 import { salvageTextToolCalls } from "../salvage-text-tool-calls.js";
+import { isSilentAssistantMessage } from "../silent-turn.js";
 import type { AgentObservation, AgentObservationUpdate } from "../telemetry.js";
 import type { AgentContext, AgentEvent, AgentLoopConfig, AgentMessage, StreamFn } from "../types.js";
 import { requestContextCheckpoint } from "./context-checkpoint.js";
@@ -12,6 +13,24 @@ import {
 	traceAttributes,
 } from "./telemetry.js";
 
+/**
+ * Silent-turn re-run plumbing for one automatic retry of an empty model reply.
+ * `keepOpenOnEmpty` suppresses the terminal message events of an empty reply so
+ * the bubble stays open for the re-run; `reuseRow` makes the re-run adopt the
+ * established row instead of opening a second one; `extraMessages` carries the
+ * one-shot recovery nudge into the model-call view only. On the re-run call,
+ * `markEmptyReply` marks a second empty reply before its row closes so the
+ * terminal event lands an explicit error; `rowOpen` is written back by the
+ * keep-open call so the caller knows whether a row was ever started.
+ */
+export interface SilentTurnStreamOptions {
+	readonly keepOpenOnEmpty?: boolean;
+	readonly reuseRow?: boolean;
+	readonly extraMessages?: readonly Message[];
+	readonly markEmptyReply?: (message: AssistantMessage) => void;
+	rowOpen?: boolean;
+}
+
 export async function streamAssistantResponse(
 	context: AgentContext,
 	config: AgentLoopConfig,
@@ -20,6 +39,7 @@ export async function streamAssistantResponse(
 	streamFn?: StreamFn,
 	traceParent?: AgentObservation,
 	limits?: ResolvedAgentLoopLimits,
+	silentTurn?: SilentTurnStreamOptions,
 ): Promise<AssistantMessage> {
 	if (config.resolveCallContext) {
 		signal?.throwIfAborted();
@@ -49,6 +69,7 @@ export async function streamAssistantResponse(
 	}
 
 	const llmMessages = await config.convertToLlm(messages);
+	if (silentTurn?.extraMessages?.length) llmMessages.push(...silentTurn.extraMessages);
 	const llmContext: Context = {
 		systemPrompt: context.systemPrompt,
 		messages: llmMessages,
@@ -110,6 +131,16 @@ export async function streamAssistantResponse(
 							assistantMessageEvent: event,
 							message: { ...partialMessage },
 						});
+					} else if (silentTurn?.reuseRow) {
+						// Silent-turn re-run: the bubble opened by the empty attempt stays
+						// the message row; this attempt only refreshes its content.
+						context.messages.push(partialMessage);
+						addedPartial = true;
+						stream.push({
+							type: "message_update",
+							assistantMessageEvent: event,
+							message: { ...partialMessage },
+						});
 					} else {
 						context.messages.push(partialMessage);
 						addedPartial = true;
@@ -146,6 +177,24 @@ export async function streamAssistantResponse(
 					const finalMessage = await response.result();
 					if (config.salvageTextToolCalls?.length) {
 						salvageTextToolCalls(finalMessage, llmContext.tools, config.salvageTextToolCalls);
+					}
+					if (isSilentAssistantMessage(finalMessage) && silentTurn?.keepOpenOnEmpty) {
+						if (silentTurn.markEmptyReply) {
+							// The re-run came back silent too: mark the failure on the message
+							// and close the row through the normal terminal path.
+							silentTurn.markEmptyReply(finalMessage);
+							return await finishModelMessage(finalMessage);
+						}
+						// Hold the bubble open: the re-run streams into this same row, so
+						// a recovered turn leaves no empty message behind in the
+						// transcript and the user never learns it happened. rowOpen records
+						// whether this attempt actually emitted message_start.
+						silentTurn.rowOpen = addedPartial;
+						if (addedPartial) context.messages[context.messages.length - 1] = finalMessage;
+						else context.messages.push(finalMessage);
+						failureReported = await reportModelCallTerminal(config, llmContext, finalMessage, signal);
+						endGeneration(assistantTelemetryUpdate(finalMessage, config.tracing?.captureContent === true));
+						return finalMessage;
 					}
 					return await finishModelMessage(finalMessage);
 				}

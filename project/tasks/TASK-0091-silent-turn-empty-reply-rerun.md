@@ -1,7 +1,7 @@
 ---
 id: TASK-0091
 type: task
-status: ready
+status: done
 priority: P0
 owner: packages/agent
 requirement: []
@@ -16,7 +16,7 @@ write_paths: [packages/agent/src, packages/agent/test, packages/ai/src/protocol]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0092]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 related_requirement: []
@@ -92,6 +92,27 @@ related_bugs: []
 ## 交付记录
 
 - 实际修改：
+  - `packages/ai/src/protocol/errors.ts`：新增 `AI_EMPTY_MODEL_RESPONSE` 错误码。
+  - `packages/ai/src/provider-kit/stream-errors.ts`：新增 `EmptyModelResponseError`（retryable:true），与 `EmptyProviderStreamError` 语义分离（前者是成功但无可见输出的完结，后者是零事件流协议故障，未改动其语义）。
+  - `packages/agent/src/silent-turn.ts`（新增）：`SILENT_TURN_NUDGE`、`isSilentAssistantMessage`、`silentTurnNudgeMessage` 共享判定/提示词。
+  - `packages/agent/src/loop/assistant-stream.ts`：新增 `SilentTurnStreamOptions`（`keepOpenOnEmpty`/`reuseRow`/`extraMessages`/`markEmptyReply`/`rowOpen`）；空回复压掉 `message_end` 保持消息行打开；重跑的 `start` 以 `message_update` 复用同一行。
+  - `packages/agent/src/agent-loop.ts`：runLoop 完结判定处识别静默完结 → 弹出尾部空 assistant → 一次性重跑（同一 bubble、压掉中间 `turn_start`）；二次仍空经 `markEmptyReply` 落 `AI_EMPTY_MODEL_RESPONSE` 走既有 error/检查点路径；`allowSilentCompletion` 豁免。
+  - `packages/agent/src/engine/types.ts`：`AgentTurnRequest.allowSilentCompletion`；`model_call_start` 事件新增 `continuesAssistant` 标记。
+  - `packages/agent/src/engine/run-agent-turn.ts`：同款判定；重跑调用在模型视图尾部追加 nudge、`model_call_start` 带 `continuesAssistant`；二次仍空标记消息后走既有 failure/assistant_error 路径。
+  - `packages/runtime-core/src/kernel/contracts.ts`：`TurnEngineRequest.allowSilentCompletion` 透传字段。
+  - `packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts`：`model_call_start.continuesAssistant` 不重置 assistant 行状态；`projectModelEvent` 的 `start` 在行已打开时投影为 `message.update`（同时覆盖 provider 重试二次 start 的同行投影）。
+  - 测试：`packages/agent/test/agent-silent-turn.test.ts`（7）、`agent-engine-silent-turn.test.ts`（6）、`packages/runtime-core/test/kernel/stateless-agent-core-turn-engine.test.ts`（+3）；`agent-engine.test.ts` 中 8 处 `assistant([])` 完结 fixture 改为非空正文（空回复在新语义下不再是普通完结）。
+  - 文档：本文件、`.github/release-notes/v0.1.0.md`。
 - 实际运行：
-- 未运行及原因：
+  - `bun scripts/quality/run-vitest.mjs --run`（agent-silent-turn、agent-engine-silent-turn、agent-engine、agent-loop、assistant-stream-retry、stateless-agent-core-turn-engine）：64/64 通过。
+  - `bun run test:pkg agent`：121/121 通过。
+  - `bun run test:pkg runtime-core`：534/534 通过。
+  - `bun run test:pkg ai`：484/484 通过。
+  - `bun run test:pkg coding-agent`：1446/1446 通过（3 skipped）。
+  - `bun run check:quick`：通过（Biome + 全部 guards）。
+  - `bunx tsgo --noEmit`：仅剩 6 条与本次无关的既有基线错误（coding-agent ×4、runtime-node ×1、runtime-storage ×1，均为未触碰文件）。
+- 未运行及原因：全量 `bun run check` 中的 mobile lint 与 app 级 typecheck 与本次改动面无关；desktop/cli E2E 未触发（无 UI 改动）。
 - 剩余风险：
+  - 恢复指令以「模型视图尾部 user 消息」注入而非改写 systemPrompt（两引擎的 systemPrompt 都在 loop 外的 frame/resolveCallContext 合成，往消息视图注入是唯一不穿透产品边界的通道；语义等价：模型同样看到恢复指令且 durable transcript 不被污染）。
+  - 极端边角：provider 在首次调用发 `start`、重跑调用完全不发 `start`（done-only）时，`finishModelMessage` 会补发一条 `message_start`；真实 provider 的 start 行为在两次调用间一致，未单独处理。
+  - `allowSilentCompletion` 已沿 `AgentLoopConfig` / `AgentTurnRequest` / `TurnEngineRequest` 贯通；具体哪些产品 Run（如完成通知）启用豁免由宿主后续按需设置。

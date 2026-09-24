@@ -1012,6 +1012,8 @@ export interface TurnEngineRequest {
 	readonly signal: AbortSignal;
 	readonly inputQueue?: TurnInputQueue;
 	readonly input?: SessionInput;
+	/** 允许静默完成的 Run（如完成通知）：空回复不触发一次性静默重跑。 */
+	readonly allowSilentCompletion?: boolean;
 	/** Engine 消费流式队列上下文时，必须先交回 Pipeline 持久化。 */
 	appendQueuedContext?(records: readonly SessionContextRecord[]): Promise<void>;
 	/** 模型调用边界的持久化/压缩请求，沿普通异步调用栈完成。 */

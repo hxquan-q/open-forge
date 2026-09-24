@@ -163,6 +163,16 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	salvageTextToolCalls?: string[];
 
 	/**
+	 * 允许一次“静默完成”：assistant 回复成功结束但没有任何可见正文和工具调用时，
+	 * 仍视为正常完成而不自动重跑。
+	 *
+	 * 默认行为是注入一次恢复指令并以同一消息行重跑模型调用（完成通知类消息
+	 * 会另行携带显式信号告知宿主可见性已满足）。仅当宿主明确知道一次空完成
+	 * 对结果无害时才设为 true；普通完成保持关闭。
+	 */
+	allowSilentCompletion?: boolean;
+
+	/**
 	 * Returns steering messages to inject into the conversation mid-run.
 	 *
 	 * Called after each tool execution to check for user interruptions.
