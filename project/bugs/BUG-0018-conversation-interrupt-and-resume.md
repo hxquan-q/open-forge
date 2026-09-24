@@ -1,7 +1,7 @@
 ---
 id: BUG-0018
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop
 source: user-report; screenshot
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: [BUG-0001]
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -54,11 +54,16 @@ updated: 2026-09-24
 
 ## 回归测试
 
-- 尚未补充。定位路径后，从会话输入与停止控件的真实用户入口覆盖“生成 → 停止 → aborted 终态 → 同一会话继续发送”；对忽略 AbortSignal 的外部 Provider/工具使用可控 Fake 或既有边界合同，确保取消与资源收尾有界。
+- 已补充（合同锁定而非缺陷修复）：`apps/desktop/src/renderer/domains/conversation/hooks/useSessionManager.abort-resume.test.ts` 三个用例，从真实入口（挂载真实 `useSessionManager` + `useRunningSessionsSync`，Fake 后端 + 显式同步点）覆盖「生成 → 停止 → aborted 终态 → 同会话续发」「停止窗口内消息入暂停队列、恢复后补气泡」「abort IPC 悬挂不阻塞终态与续发」。提交 `c565cbc53`，集成 merge `ed56509c7`，3/3 通过。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 修复：五个候选方向经上述合同测试逐项证伪，均非缺陷，未做推测性修改：
+  1. kernel `cancel` 有界（waitMs 2s + cancelDeadline 10s → `recovery_required`），deadline 亦广播 error+agent_end；`turn.cancelled` 必映射 aborted+agent_end。
+  2. `promptInteractiveSession` 无 admission 锁，终态 idle 后新 prompt 直发。
+  3. 停止窗口内的 prompt 入暂停队列（ADR-0060 有意设计）：消息不丢失、镜像可见、恢复即消费。
+  4. `runtime.abort` 有 2s 界，`WORK_STOP_ALL` 同步 kill；abort IPC 悬挂不阻塞界面终态与续发。
+  5. 「紧邻时序竞争」即场景 3，结果可恢复、无丢失、无死锁。
+- 测试：abort-resume 3/3；与 BUG-0021 修复相关三文件合跑 22/22；`check:quick` 全绿。
+- 未运行及原因：无实机事件日志/trace，真实环境根因无法闭环；合同测试已把五条路径行为钉死，复发时可分层二分（kernel/runtime-core vs desktop main vs renderer）。
+- 剩余风险与后续：「停止窗口内消息需手动点继续」若产品侧认为构成体验问题，应作为独立 UX 改进立项（如 agent_end 后自动恢复），属产品决策而非缺陷。

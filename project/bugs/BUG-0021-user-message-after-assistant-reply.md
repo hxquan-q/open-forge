@@ -1,7 +1,7 @@
 ---
 id: BUG-0021
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop
 source: user-report; screenshot; source inspection
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -53,11 +53,12 @@ updated: 2026-09-24
 
 ## 回归测试
 
-- 尚未补充。复现定位后覆盖“用户消息待对账 + 历史已含对应 Assistant Turn”的竞态，并从会话可见时间线断言用户请求始终先于对应回复；同时保持正常慢落盘时乐观气泡不丢失、成功对账时不重复。
+- 已补充：`apps/desktop/src/renderer/domains/conversation/hooks/useSessionManager.queue.test.ts` 新增「历史已含对应 Assistant 回复、canonical user entry 暂缺、乐观用户消息仍在缓存」的回填顺序用例，从真实会话事件/历史回填入口断言用户消息索引必须早于其触发的回复。
+- 该用例在旧实现下失败（`replyIndex=1` 不大于 follow-up index `2`），随修复转绿。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 修复：未确认的乐观用户消息按 user ordinal 插入回填时间线，不再无条件追加到历史末尾（`apps/desktop/src/renderer/domains/conversation/services/optimistic-user-message-cache.ts`）。提交 `c70d9b787`（自隔离分支 `800d7ac13` 移植到当前 main 基线，与 `246afb79e` blocks 派生改动无冲突），用例适配 `e8a948fa5`，集成 merge `ed56509c7`。
+- 保持的不变量：慢落盘时乐观气泡不丢失；canonical user entry 到达后正常对账、不重复。
+- 测试：queue 9/9、optimistic-user-message-cache 10/10、三文件合跑 22/22 通过；目标文件 `bun run check:quick` 全绿。
+- 未运行及原因：未运行实机 `verify:ui:*`——未经用户授权；因果顺序合同已由真实入口的组件/服务测试覆盖。

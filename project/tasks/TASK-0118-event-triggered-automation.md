@@ -1,7 +1,7 @@
 ---
 id: TASK-0118
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: []
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0116, TASK-0117]
 integration_status: pending
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -81,8 +81,8 @@ updated: 2026-09-24
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：
-- 剩余风险：
+- 实际修改：`automation-trigger` 合同；`ScheduledTask.trigger`；事件派发器（错过不补跑/运行中跳过）；挂接 session.created / project.opened / automation.panelOpened；表单触发器选择器；release notes。步骤化 DSL 评估后置（本轮仅事件→既有 prompt 执行）。
+- 实际运行：见本轮定向测试与 check:quick。
+- 未运行及原因：未跑 `verify:ui:*`；`session.switched` 已留 IPC，渲染侧切换接线可后续补齐。
+- Worktree：主工作区串行。
+- 剩余风险：事件任务高频时依赖 `isTaskRunning` 抑制；步骤化工作流未落地。

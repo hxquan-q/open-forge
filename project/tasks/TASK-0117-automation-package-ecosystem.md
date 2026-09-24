@@ -1,7 +1,7 @@
 ---
 id: TASK-0117
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: []
@@ -17,13 +17,13 @@ branch: main
 worktree: unassigned（主工作区串行执行）
 base_commit: main
 read_paths: [apps/desktop/src/main/scheduler/, apps/desktop/src/renderer/domains/scheduler/, packages/coding-agent/src/features/scheduled-tasks/, apps/desktop/src/main/abilities/]
-write_paths: [apps/desktop/src/main/scheduler/, apps/desktop/src/renderer/domains/scheduler/, packages/coding-agent/src/features/scheduled-tasks/, schemas/ 或等价 schema 目录, .github/release-notes]
+write_paths: [apps/desktop/src/main/scheduler/, apps/desktop/src/renderer/domains/scheduler/, packages/coding-agent/src/features/scheduled-tasks/, packages/coding-agent/schemas/, .github/release-notes]
 exclusive_paths: []
 depends_on: [TASK-0116]
 conflicts_with: [TASK-0116, TASK-0118]
 integration_status: pending
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -82,8 +82,8 @@ updated: 2026-09-24
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：
-- 剩余风险：
+- 实际修改：`packages/coding-agent` automation-package 纯逻辑 + schema JSON；`apps/desktop` 安全下载/发现/导入导出服务 + IPC/preload + 自动化页导入/导出/发现 UI + i18n；release notes。
+- 实际运行：见本轮 `test:impact` / `check:quick` 记录。
+- 未运行及原因：未跑 `verify:ui:*`（用户未授权）；未对真实 GitHub 做联调（发现链用 mock/边界单测覆盖）。
+- Worktree：主工作区串行。
+- 剩余风险：公开 topic 仓数量可能为 0，发现面板空态属预期；导入 cwd 取默认对话目录，用户需自行确认后再启用。

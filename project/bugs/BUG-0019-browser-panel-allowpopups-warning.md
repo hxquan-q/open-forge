@@ -1,7 +1,7 @@
 ---
 id: BUG-0019
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: packages/theme-ui
 source: user-report; React console warning
@@ -51,17 +51,20 @@ If you want to write it to the DOM, pass a string instead: allowpopups="true" or
 
 - `packages/theme-ui/src/activity/BrowserPanelView.tsx:163` 渲染 Electron `<webview>`。
 - 同文件 `:168` 将 `allowpopups={true}` 作为 React boolean prop 传入，与用户提供的 React 警告一致。
-- 需要核对 Electron `webview` 的属性语义及 React 渲染方式，不能仅为了消除警告而改变弹窗权限。
+- React DOM 对非布尔属性不序列化 boolean 值：`true` 被丢弃并告警，webview 实际拿不到 `allowpopups` 属性——弹窗许可此前一直处于「意外失效」状态（属性缺失即拒绝弹窗）。
+- Electron 自带 JSX 声明（`electron.d.ts`）把该属性定为 `boolean`，与 React DOM 的字符串合同冲突，是原代码写成 boolean 的类型层诱因。
 
-根因置信度：高；警告与源码赋值吻合。弹窗合同影响待确认。
+根因置信度：高；警告与源码赋值吻合，回归测试在 jsdom 下证实 boolean 形式属性缺失、字符串形式属性真实写入 DOM。
 
 ## 回归测试
 
-- 尚未补充。至少验证渲染属性符合 webview 合同且不触发 React 警告；同时断言安全策略没有被放宽。
+- 已补充：`apps/desktop/src/renderer/domains/activity-panel/components/BrowserPanelView.picker.test.tsx` 新增用例，断言 `webview` 的 `allowpopups` 属性序列化为 `"true"`、`webpreferences` 保持 `contextIsolation=yes, nodeIntegration=no`，且渲染期间无该 React 警告。
+- 该用例在旧实现（`allowpopups={true}`）下失败（属性为 `null`），随修复转绿。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 修复：commit `aa053afe7`（`fix(desktop): Browser 面板以字符串形式传递 webview allowpopups`）。组件以 `allowpopups={"true" as unknown as boolean}` 单点断言弥合 Electron JSX 声明与 React DOM 字符串合同的差异，并附注释说明；未改动 plugin preset 的 `webview.d.ts`（对 desktop tsc 不生效且会引起声明合并冲突）。
+- 行为变化说明：修复后 webview 真正获得弹窗许可（此前因属性被丢弃而意外禁用）；`contextIsolation` / `nodeIntegration` 安全配置不变。
+- 测试：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/renderer/domains/activity-panel/components/BrowserPanelView.picker.test.tsx --exclude '**/.claude/worktrees/**'` → 5/5 通过（修复前新增用例失败）。
+- 检查：`bun run --cwd apps/desktop typecheck` 通过；根 `bunx tsgo --noEmit` 过滤本包零错误；`bun run check:quick` 对两个变更文件全绿；pre-commit 门禁通过。
+- 未运行及原因：未运行 `verify:ui:*` 实机检查——用户未授权 UI 验证流程，属性序列化合同已由组件测试证明；真实 Electron 环境的弹窗行为建议随下次实机验证顺带确认。

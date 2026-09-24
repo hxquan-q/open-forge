@@ -1,7 +1,7 @@
 ---
 id: BUG-0020
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop; packages/coding-agent
 source: user-report
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -52,11 +52,16 @@ updated: 2026-09-24
 
 ## 回归测试
 
-- 尚未补充。定位通道实现后覆盖连续调用、并发调用、第一项失败/取消后释放，以及拒绝后重试；按真实用户会话入口验证结果，而不只断言锁函数调用。
+- 已补充（均先红后绿）：
+  - `apps/desktop/src/main/artifacts/canvas-artifact-service.test.ts`：同一 artifact 的两次并发 `applyUpdate`（模型并行工具调用、用户与 Agent 同时保存的形态）都必须完成，版本序列 `[1, 2]`、最新内容有效。
+  - `packages/toolkit/test/atomic-write.test.ts`：24 个并发写同一目标文件全部成功、无 `.tmp` 残留。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 根因：不存在所谓「Canvas 会话通道锁」。拒绝来自文件层原子写的临时文件命名——旧实现临时名只带 pid（`<target>.<pid>.tmp`），同一进程内并发写同一版本文件会共用同一临时路径：先完成的一方 rename 把路径搬走，后写方 rename 直接 ENOENT；Windows 上第二个仍打开的句柄会让 rename 以 EPERM/EBUSY 失败（「文件被占用/正在使用」）。误差以「通道被占用」形式暴露在连续 Canvas 操作上。
+- 修复（`packages/toolkit/src/atomic-write.ts`）：临时文件按调用的 pid+序号唯一命名；同进程内对同一目标路径的异步写串行排队，重叠 rename 不再互相冲掉；跨进程仍依赖唯一临时名与调用方协调。文档注释同步说明该约束。
+- 提交：测试 `590fa67a1` + 修复 `a771f6c1f`（分支 `worktree-agent-ae8aa7e4727ba35e8`，待集成）。
+- 测试：desktop 两文件 26/26、toolkit 1/1 通过；红测实证：回退修复源码后 toolkit 用例 1/1 失败。
+- 检查：12 个变更文件 `bun run check:quick` 全绿。
+- 未运行及原因：未实机复现「连续两次 Canvas 操作」的完整 UI 流程——未获 UI 验证授权；文件层并发与 Canvas 服务层并发两条合同均已覆盖。
+- 剩余风险：跨进程并发写同一 artifact 不在本次串行化范围（现有调用均在 Desktop 主进程内）；若未来引入多进程写路径需另评估。
