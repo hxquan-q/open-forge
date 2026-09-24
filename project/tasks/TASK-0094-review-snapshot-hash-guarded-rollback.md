@@ -1,7 +1,7 @@
 ---
 id: TASK-0094
 type: task
-status: ready
+status: done
 priority: P1
 owner: packages/runtime-storage
 requirement: []
@@ -9,14 +9,14 @@ plan: []
 source: RESEARCH-0010（PI-Desktop `review.rs` 快照库 + hash 守卫回滚机制对照）
 execution: parallel
 branch: forge/dev
-worktree: unassigned（主工作区或独立 Worktree）
-base_commit: forge/dev
+worktree: ..\open-forge-wt\task-0094-review-snapshot
+base_commit: 3b5ec8bad
 read_paths: [packages/runtime-storage/src, packages/runtime-node/src/coding, apps/desktop/src/main, apps/desktop/src/renderer/domains/conversation, project/research/RESEARCH-0010-pi-desktop-borrowing-opportunities.md]
 write_paths: [packages/runtime-storage/src, packages/runtime-node/src/coding, apps/desktop/src/main, apps/desktop/src/renderer/domains/conversation]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 related_requirement: []
@@ -90,6 +90,21 @@ Write/Edit 工具执行前把被改文件的 before 字节快照持久化入库�
 ## 交付记录
 
 - 实际修改：
+  - `packages/runtime-storage/src/conversation/review-snapshot.ts`：`details.review` 合同（`snapshotId/relativePath/operation/status/state/addedLines/removedLines/rollbackable/binary/truncated`）、`meta.json` 持久化 Schema、`decideReviewRollback` hash 守卫纯函数与 `ReviewSnapshotStore` Port；16 MiB 快照界值、512 KiB diff 界值。
+  - `packages/runtime-node/src/host/review-snapshot-store.ts`：`<agentDir>/review-snapshots/<sessionId>/<snapshotId>/{before,meta.json}` 文件系统实现，含 prepare/finalize/discard/load/rollback/deleteSessionArtifacts，目录名复用 artifact 段清洗防穿越，还原前校验快照 hash 完整性。
+  - `packages/runtime-node/src/coding/shared/`：`display-diff.ts`（既有展示 diff 上移共用）与 `review-capture.ts`（快照绑定、prepare/complete/discard 流程、Write 预览统计）；Write/Edit 两种模式都在写入前捕获 before 字节，成功后落 `details.review`，失败/中止清理快照目录。
+  - `packages/runtime-desktop/`：`review-snapshot-runtime.ts`（快照根 = `agentDir/review-snapshots`，sessionId → 根目录登记）；本机会话执行环境注入 `reviewSnapshots` 绑定（远端/SSH 不注入，宁可不产出 review 也不给假入口）；会话产物清理器改为 Composite 连带清理审查快照。
+  - `apps/desktop`：`main/ipc/review-changes.ts` 薄 IPC（只收 sessionId+snapshotId，写回目标由 meta 决定）；preload `reviewChanges.rollback`；renderer `ReviewChangeControls`（状态+增删行+确认框回滚，冲突/已撤销/不可用分态提示，导出模式只读）；`chat-service` 经 `parseToolResultReview` 安全解析，旧记录无 review 时静默降级；中英文 i18n。
+  - `packages/coding-agent/src/extensions/events/tool-event-data.ts`：Extension 边界 `EditToolDetails` 补 `review?` 字段保持与 Node 实现同形。
 - 实际运行：
-- 未运行及原因：
+  - `packages/runtime-storage`：conversation 测试 44/44 通过（新增 review-snapshot 合同测试 21 例）。
+  - `packages/runtime-node`：coding-suite write/edit/host 全量 93/93 通过（新增 store 11 例 + write 5 例 + edit 5 例）；`test:impact` 关联套件 244/244 通过。
+  - `packages/runtime-desktop`：48/48 通过。
+  - `apps/desktop`：`chat-service-review.test.ts` 等 7/7 通过；`tsc --noEmit` 通过。
+  - `bun run check:quick`：通过（Biome + 全部架构守卫）。
+  - `bun run check`：lint/guards/mobile/desktop/cli/docs 全绿；root `tsgo --noEmit` 仅剩 6 处**本分支既有**类型错误（`context-runtime.test.ts` observation publisher 签名、`task-fact-*.test.ts` 的 `generation` 字段），均位于本 Task 未触碰文件，属并行在途改动。
+- 未运行及原因：`verify:ui:*` 实机 UI 验收未运行（用户未明确要求）；交互状态由组件行为与 store 合同测试覆盖。
 - 剩余风险：
+  - 历史会话的 `details.review.state` 恒为执行时的 `active`；刷新后再次回滚由 store 判 `already-rolled-back`/`conflict`，语义安全但 UI 文案依赖本地 phase。
+  - 回滚按 `activeSessionAtom.runtimeId` 定位会话目录；跨会话查看旧记录时回滚返回 unavailable（不误伤其他会话，符合预期降级）。
+  - 上述 6 处既有 tsgo 错误需由对应在途 Task 收口，本 Task 不代改。
