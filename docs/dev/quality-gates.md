@@ -33,6 +33,8 @@ scripts/quality/
   check-conflict-markers.mjs   未解决冲突标记
   check-package-boundaries.mjs 库/插件不得依赖 app 宿主
   check-context-boundaries.mjs 每模块 Context Boundary 声明与 internal_dependencies 白名单
+  check-waivers.mjs            Policy 级豁免的字段完整性与到期检查
+  check-protocol-suites.mjs    跨边界协议必须有 conformance 套件或受控豁免
   check-coding-agent-architecture.mjs
                                Coding Agent 当前架构依赖与公开面
   run-vitest.mjs               用 Node 启动 Vitest（Windows 上禁止 Bun 拉起 worker）
@@ -137,6 +139,12 @@ bun run test:pkg <name>
 - 新包补齐声明可运行 `--apply` 脚手架生成首版 yaml 块。
 
 `coding-agent/examples/extensions/*` 作为 workspace 模块同样受管。
+
+## 规则豁免与协议套件（`check-waivers` / `check-protocol-suites`）
+
+- `project/decisions/waivers/` 登记 Policy 级规则豁免（规则/理由/风险/补偿/owner/到期日）；`active` 且到期即红，到期不自动撤销也不自动续期。格式见 `waivers/README.md`。
+- `tests/contracts/protocol-registry.json` 是跨边界协议清单（runtime-* Port、plugin SDK、action-rpc、MCP 桥接、remote-* 线协议等）。每个协议必须列出存在的 conformance 套件文件，或进入 `check-protocol-suites.mjs` 内的 `EXEMPT_PROTOCOLS`——该集合只缩不增（不得超出冻结基线），且每项必须在 `tests/contracts/OWNERS` 记录批准人。已有套件后仍留在豁免集合同样报错。
+- 新增跨边界协议面时，先登记注册表并附套件；套件必须经消费者公共 API 驱动真实实现，纯自 mock 不算。
 
 ## Coding Agent 架构规则（`check-coding-agent-architecture`）
 

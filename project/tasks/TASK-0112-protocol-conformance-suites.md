@@ -1,7 +1,7 @@
 ---
 id: TASK-0112
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/plugins
 requirement: []
@@ -81,7 +81,21 @@ Avernet 要求每个 `agentclaw.plugins` Plugin Protocol 必须有对应 `tests/
 ## 交付记录
 
 - 实际修改：
+  - `tests/contracts/protocol-registry.json`（新增）：19 项跨边界协议清单——`ai-provider-stream`、`runtime-core-session`、`runtime-storage-conversation`、`runtime-tools-coding`、`runtime-mcp-ports`、`runtime-knowledge-ports`、`runtime-subagents-coordination`、`runtime-telemetry-observation`、`runtime-ssh-remote-fs`、`action-rpc`、`plugin-sdk-host`、`plugin-mcp-bridge`、`cli-agent-runtime-rpc`、`capability-sdk-contracts`、`capability-runtime-access`、`remote-control-wire`、`remote-desktop-signaling`、`remote-relay-transport`、`plugin-vite-build`。每项列出 surface 与既有 conformance 套件文件（全部落位到既有 `*.contract.test.ts`/协议测试，不改断言内容）。
+  - `tests/contracts/OWNERS`（新增）：豁免批准记录格式（`<id> <owner> <evidence>`）。
+  - `scripts/quality/check-protocol-suites.mjs`（新增）：注册表完整性校验（id 唯一、套件文件存在）；无套件且未豁免即红；`EXEMPT_PROTOCOLS` 必须 ⊆ 冻结基线 `EXEMPT_PROTOCOLS_BASELINE`（只缩不增）、每项须在 OWNERS 有批准人；已有套件仍挂豁免同样报错。当前两项皆为空集——全部协议已有真实套件，无豁免。
+  - `scripts/quality/check-protocol-suites.test.mjs`（新增）：7 例——套件存在放行、无套件未豁免报红、套件文件缺失报红、基线内豁免+OWNERS 放行、扩集拒绝、无 OWNERS 拒绝、有套件仍豁免拒绝。
+  - `scripts/quality/check-guards.mjs`、`package.json`（`test:quality`）：注册新守卫与测试。
+  - `docs/dev/quality-gates.md`：脚本清单补两条、新增「规则豁免与协议套件」节。
+  - `docs/dev/review-red-flags.md`：补「新增跨边界协议未登记套件」红旗。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
+  - `bun scripts/quality/run-vitest.mjs --run scripts/quality/check-protocol-suites.test.mjs` — 7/7 通过。
+  - `bun run scripts/quality/check-protocol-suites.mjs` — `every registered protocol has a conformance suite (0 exemptions)`（19 项全绿）。
+  - 用户流程验证：临时把协议 `suites` 置空且无豁免 → 守卫报 `no conformance suite and not exempt`；fixture 中补套件或基线内豁免+OWNERS → 转绿（由单测覆盖该闭环）。
+  - 校验期间发现 `session-archive-codec.test.ts` 引用被并发改动移除，已改用现存套件文件。
+- 未运行及原因：`bun run check` 全量留到树末统一验收（共享工作区并发改动）；各套件内容未逐文件复跑（守卫只断言套件存在与映射，套件自身由 `test:pkg`/CI 既有入口执行）。
+- Worktree：主工作区（单 Agent 串行实现）。
 - 剩余风险：
+  - 注册表是声明式清单，「新增协议面但未登记」不会自动发现——已写入 red-flag 清单靠评审拦截；后续可考虑从 `packages/runtime-*` 的 Port 导出机械推导候选集；
+  - `EXEMPT_PROTOCOLS_BASELINE` 为空集意味着未来任何豁免都必须同时改动守卫内常量——是有意的评审摩擦，但需评审者理解；
+  - 「套件断言真实调用链」目前靠既有测试质量背书，守卫不扫描套件内部是否纯 mock。

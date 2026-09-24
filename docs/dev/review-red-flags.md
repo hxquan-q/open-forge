@@ -20,6 +20,7 @@
 
 ## 规则与例外
 
+- 新增跨边界协议面却不在 `tests/contracts/protocol-registry.json` 登记 conformance 套件；
 - 豁免规则却不写 waiver，或 waiver 没有到期日/owner/补偿条款；
 - waiver 到期后「顺手再延一次」而没有新的证据；
 - 通过删除守卫、放宽基线、加 ignore 注释来让检查转绿；
