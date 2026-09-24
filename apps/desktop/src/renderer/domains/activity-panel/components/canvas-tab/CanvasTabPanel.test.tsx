@@ -42,10 +42,30 @@ vi.mock("@shared/store/toast-atoms", async () => {
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({
-		t: (key: string, options?: { version?: number; title?: string; url?: string }) => {
+		t: (
+			key: string,
+			options?: {
+				version?: number;
+				title?: string;
+				url?: string;
+				index?: number;
+				from?: number;
+				to?: number;
+				page?: number;
+				pageCount?: number;
+				rows?: number;
+			},
+		) => {
 			if (key === "activityPanel.canvas.version") return `version-${options?.version ?? 0}`;
 			if (key === "activityPanel.canvas.deleteConfirm") return `delete:${options?.title ?? ""}`;
 			if (key === "activityPanel.canvas.openExternalMessage") return `open:${options?.url ?? ""}`;
+			// 数据表的行列范围摘要必须真实插值，才能断言附件里拿到的是哪一段范围。
+			if (key === "activityPanel.canvas.dataGrid.rangeRow") return `row-${options?.index ?? 0}`;
+			if (key === "activityPanel.canvas.dataGrid.rangeRows") return `rows-${options?.from ?? 0}-${options?.to ?? 0}`;
+			if (key === "activityPanel.canvas.dataGrid.rangeColumn") return `column-${options?.index ?? 0}`;
+			if (key === "activityPanel.canvas.dataGrid.rangeColumns") {
+				return `columns-${options?.from ?? 0}-${options?.to ?? 0}`;
+			}
 			return key;
 		},
 	}),
@@ -253,5 +273,80 @@ describe("canvas tab panel user flow", () => {
 		});
 		store.get(confirmDialogAtom)?.onConfirm(false);
 		expect(openExternal).toHaveBeenCalledWith("https://example.com/docs");
+	});
+
+	it("CSV artifact 打开为原生数据表，排序、过滤与划选追问串联可用", async () => {
+		const store = createStore();
+		const csv = view({
+			descriptor: descriptor({
+				artifactId: "art-csv",
+				title: "销售明细",
+				kind: "dataset",
+				contentType: "text/csv",
+			}),
+		});
+		list.mockResolvedValue({ ok: true, items: [csv] });
+		get.mockResolvedValue({
+			ok: true,
+			view: csv,
+			content: "name,qty\n苹果,20\nBanana,10\n樱桃,30\n",
+			contentType: "text/csv",
+		});
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("销售明细")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 销售明细" }));
+		await waitFor(() => expect(screen.getByRole("table")).toBeTruthy());
+		// data-grid 不再回落到文本预览容器。
+		expect(screen.queryByTestId("canvas-text-preview")).toBeNull();
+
+		const firstDataRow = (): string => screen.getAllByRole("row")[1]?.textContent ?? "";
+		expect(firstDataRow()).toContain("苹果");
+		const qtyHeader = screen.getByRole("button", { name: "qty" });
+		await userEvent.click(qtyHeader);
+		expect(firstDataRow()).toContain("Banana");
+		await userEvent.click(qtyHeader);
+		expect(firstDataRow()).toContain("樱桃");
+		await userEvent.click(qtyHeader);
+		expect(firstDataRow()).toContain("苹果");
+
+		await userEvent.type(
+			screen.getByRole("searchbox", { name: "activityPanel.canvas.dataGrid.filterPlaceholder" }),
+			"Banana",
+		);
+		expect(screen.getAllByRole("row")).toHaveLength(2);
+
+		const nameCell = screen.getByText("Banana").closest("td");
+		const qtyCell = screen.getByText("10").closest("td");
+		if (!nameCell || !qtyCell) throw new Error("单元格未渲染");
+		vi.spyOn(window, "getSelection").mockReturnValue({
+			isCollapsed: false,
+			rangeCount: 1,
+			toString: () => "Banana 10",
+			getRangeAt: () => ({
+				commonAncestorContainer: nameCell,
+				startContainer: nameCell,
+				endContainer: qtyCell,
+			}),
+		} as unknown as Selection);
+		await userEvent.click(qtyCell);
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.selectToAsk" }));
+
+		expect(store.get(promptAttachmentAtom)).toMatchObject({
+			ownerPluginId: "builtin.canvas",
+			context: {
+				schema: CANVAS_ARTIFACT_SELECTION_SCHEMA,
+				version: 1,
+				payload: {
+					artifactId: "art-csv",
+					version: 2,
+					excerpt: "Banana 10",
+					title: "销售明细",
+					kind: "data-grid",
+					contentType: "text/csv",
+					// name 是第 1 列、qty 是第 2 列；过滤后 Banana 是当前结果的第 1 行。
+					range: "row-1 · columns-1-2",
+				},
+			},
+		});
 	});
 });

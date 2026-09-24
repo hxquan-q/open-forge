@@ -4,6 +4,7 @@ import type { CanvasSelectedView, CanvasTabModel, CanvasTabRowView } from "../..
 import { useCanvasTabModel } from "../../hooks/useCanvasTabModel";
 import { CodePreview } from "../previews/CodePreview";
 import { MarkdownPreview } from "../previews/MarkdownPreview";
+import { CanvasDataGridPreview } from "./CanvasDataGridPreview";
 import { CanvasHtmlSandbox } from "./CanvasHtmlSandbox";
 
 export function CanvasTabPanel(): JSX.Element {
@@ -164,6 +165,16 @@ function CanvasPreviewBody({
 				src={selected.htmlSrc}
 				label={model.labels.htmlSandboxLabel}
 				onNavigate={model.actions.onHtmlNavigation}
+			/>
+		);
+	}
+	if (selected.previewKind === "data-grid" && selected.dataGridFormat) {
+		return (
+			<CanvasDataGridPreview
+				content={selected.content}
+				format={selected.dataGridFormat}
+				labels={model.labels.dataGrid}
+				onSelectionChange={model.actions.onDataGridSelectionChange}
 			/>
 		);
 	}

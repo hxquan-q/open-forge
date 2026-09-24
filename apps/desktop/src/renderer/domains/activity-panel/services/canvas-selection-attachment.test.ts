@@ -40,4 +40,26 @@ describe("canvas selection attachment", () => {
 		expect(excerpt.endsWith("…")).toBe(true);
 		expect(excerpt.length).toBe(CANVAS_SELECTION_EXCERPT_LIMIT);
 	});
+
+	it("表格选区额外带上行列范围摘要，既有字段不变", () => {
+		const attachment = createCanvasSelectionAttachment({
+			artifactId: "art-2",
+			version: 1,
+			excerpt: "苹果 3",
+			title: "销售明细",
+			kind: "data-grid",
+			contentType: "text/csv",
+			range: "第 1-2 行 · 第 1-2 列",
+		});
+		expect(attachment.id).toBe("canvas:art-2:v1");
+		expect(attachment.context?.payload).toEqual({
+			artifactId: "art-2",
+			version: 1,
+			excerpt: "苹果 3",
+			title: "销售明细",
+			kind: "data-grid",
+			contentType: "text/csv",
+			range: "第 1-2 行 · 第 1-2 列",
+		});
+	});
 });

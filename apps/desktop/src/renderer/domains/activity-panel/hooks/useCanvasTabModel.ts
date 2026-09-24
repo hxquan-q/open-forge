@@ -13,11 +13,17 @@ import {
 	sessionsMapAtom,
 } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
+import type { TFunction } from "i18next";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActivityWorkspace } from "../registry/context";
 import { groupCanvasArtifactsBySession, resolveCanvasSessionTitle } from "../services/canvas-artifact-groups";
+import {
+	type CanvasDataGridCellRange,
+	type CanvasDataGridFormat,
+	resolveCanvasDataGridFormat,
+} from "../services/canvas-data-grid";
 import { canvasHtmlDataUrl, classifyCanvasHtmlNavigation } from "../services/canvas-html-sandbox";
 import {
 	type CanvasPreviewKind,
@@ -56,10 +62,32 @@ export interface CanvasSelectedView {
 	readonly missing: boolean;
 	readonly externalUpdate: boolean;
 	readonly previewKind: CanvasPreviewKind;
+	/** 仅 `previewKind === "data-grid"` 时有值；其余预览类型为 null。 */
+	readonly dataGridFormat: CanvasDataGridFormat | null;
 	readonly contentType?: string;
 	readonly content: string;
 	readonly extension: string;
 	readonly htmlSrc?: string;
+}
+
+/** 表格选区：文本摘录加「过滤 + 排序结果」中的行列范围（解析不到单元格时省略）。 */
+export interface CanvasDataGridSelection {
+	readonly text: string;
+	readonly range?: CanvasDataGridCellRange;
+}
+
+export interface CanvasDataGridLabels {
+	readonly table: string;
+	readonly filterPlaceholder: string;
+	readonly sortToAscending: string;
+	readonly sortToDescending: string;
+	readonly sortToDefault: string;
+	readonly rowsPerPage: string;
+	readonly previousPage: string;
+	readonly nextPage: string;
+	readonly empty: string;
+	readonly noMatch: string;
+	readonly pageSummary: (page: number, pageCount: number, rows: number) => string;
 }
 
 export interface CanvasTabModel {
@@ -84,6 +112,7 @@ export interface CanvasTabModel {
 		readonly htmlSandboxLabel: string;
 		readonly groupBySession: string;
 		readonly loading: string;
+		readonly dataGrid: CanvasDataGridLabels;
 	};
 	readonly actions: {
 		readonly open: (artifactId: string) => void;
@@ -92,6 +121,7 @@ export interface CanvasTabModel {
 		readonly saveToProject: () => void;
 		readonly deleteSelected: () => void;
 		readonly onPreviewSelectionChange: (target: EventTarget | null) => void;
+		readonly onDataGridSelectionChange: (selection: CanvasDataGridSelection) => void;
 		readonly onHtmlNavigation: (url: string) => void;
 	};
 }
@@ -117,6 +147,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [selected, setSelected] = useState<CanvasSelectedView | null>(null);
 	const [selectionExcerpt, setSelectionExcerpt] = useState("");
+	const [selectionRange, setSelectionRange] = useState<CanvasDataGridCellRange | undefined>(undefined);
 	// items 的最新快照供选中态刷新读，不把它挂进 effect 依赖（避免列表刷新连带重取内容）。
 	const itemsRef = useRef(items);
 	itemsRef.current = items;
@@ -170,6 +201,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 		(kind: CanvasPreviewKind): string => {
 			if (kind === "html") return t("activityPanel.canvas.kindHtml");
 			if (kind === "code") return t("activityPanel.canvas.kindCode");
+			if (kind === "data-grid") return t("activityPanel.canvas.kindDataGrid");
 			return t("activityPanel.canvas.kindMarkdown");
 		},
 		[t],
@@ -208,6 +240,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 	const open = useCallback((artifactId: string) => {
 		setSelectedId(artifactId);
 		setSelectionExcerpt("");
+		setSelectionRange(undefined);
 	}, []);
 
 	// 打开中的 artifact 订阅 artifact revision 事件（TASK-0085 Phase2）：agent 写新版本时
@@ -241,6 +274,8 @@ export function useCanvasTabModel(): CanvasTabModel {
 								missing: true,
 								externalUpdate: false,
 								previewKind: "markdown",
+								dataGridFormat: null,
+
 								content: "",
 								extension: ".md",
 							},
@@ -270,11 +305,13 @@ export function useCanvasTabModel(): CanvasTabModel {
 		setSelectedId(null);
 		setSelected(null);
 		setSelectionExcerpt("");
+		setSelectionRange(undefined);
 		void reload();
 	}, [reload]);
 
 	const attachSelection = useCallback(() => {
 		if (!selected || !selectionExcerpt) return;
+		const range = selectionRange ? formatCanvasDataGridRange(t, selectionRange) : "";
 		const attachment = createCanvasSelectionAttachment({
 			artifactId: selected.artifactId,
 			version: selected.version,
@@ -282,12 +319,14 @@ export function useCanvasTabModel(): CanvasTabModel {
 			title: selected.title,
 			kind: selected.previewKind,
 			contentType: selected.contentType,
+			// range 必须整体省略：PluginPromptContext 的 JSON 守卫会拒绝 undefined 值。
+			...(range ? { range } : {}),
 		});
 		setPromptAttachment({
 			...attachment,
 			ownerPluginId: CANVAS_ATTACHMENT_OWNER_ID,
 		});
-	}, [selected, selectionExcerpt, setPromptAttachment]);
+	}, [selected, selectionExcerpt, selectionRange, setPromptAttachment, t]);
 
 	const saveToProject = useCallback(() => {
 		if (!selected) return;
@@ -359,6 +398,13 @@ export function useCanvasTabModel(): CanvasTabModel {
 
 	const onPreviewSelectionChange = useCallback((target: EventTarget | null) => {
 		setSelectionExcerpt(readCanvasSelectionFromTarget(target));
+		setSelectionRange(undefined);
+	}, []);
+
+	// 表格预览是「单元格选区」而不是可滚动文本节点，行列范围由组件从 DOM 解出后一起回传。
+	const onDataGridSelectionChange = useCallback((selection: CanvasDataGridSelection) => {
+		setSelectionExcerpt(selection.text);
+		setSelectionRange(selection.text ? selection.range : undefined);
 	}, []);
 
 	const onHtmlNavigation = useCallback(
@@ -404,6 +450,20 @@ export function useCanvasTabModel(): CanvasTabModel {
 			htmlSandboxLabel: t("activityPanel.canvas.htmlSandboxLabel"),
 			groupBySession: t("activityPanel.canvas.groupBySession"),
 			loading: t("activityPanel.canvas.loading"),
+			dataGrid: {
+				table: t("activityPanel.canvas.dataGrid.table"),
+				filterPlaceholder: t("activityPanel.canvas.dataGrid.filterPlaceholder"),
+				sortToAscending: t("activityPanel.canvas.dataGrid.sortToAscending"),
+				sortToDescending: t("activityPanel.canvas.dataGrid.sortToDescending"),
+				sortToDefault: t("activityPanel.canvas.dataGrid.sortToDefault"),
+				rowsPerPage: t("activityPanel.canvas.dataGrid.rowsPerPage"),
+				previousPage: t("activityPanel.canvas.dataGrid.previousPage"),
+				nextPage: t("activityPanel.canvas.dataGrid.nextPage"),
+				empty: t("activityPanel.canvas.dataGrid.empty"),
+				noMatch: t("activityPanel.canvas.dataGrid.noMatch"),
+				pageSummary: (page, pageCount, rows) =>
+					t("activityPanel.canvas.dataGrid.pageSummary", { page, pageCount, rows }),
+			},
 		},
 		actions: {
 			open,
@@ -412,6 +472,7 @@ export function useCanvasTabModel(): CanvasTabModel {
 			saveToProject,
 			deleteSelected,
 			onPreviewSelectionChange,
+			onDataGridSelectionChange,
 			onHtmlNavigation,
 		},
 	};
@@ -419,6 +480,19 @@ export function useCanvasTabModel(): CanvasTabModel {
 
 function formatCanvasTime(value: number): string {
 	return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(value);
+}
+
+/** 行列范围摘要：单行 / 单列不显示区间，避免出现「第 3-3 行」。 */
+function formatCanvasDataGridRange(t: TFunction<"chat">, range: CanvasDataGridCellRange): string {
+	const rows =
+		range.rowStart === range.rowEnd
+			? t("activityPanel.canvas.dataGrid.rangeRow", { index: range.rowStart })
+			: t("activityPanel.canvas.dataGrid.rangeRows", { from: range.rowStart, to: range.rowEnd });
+	const columns =
+		range.columnStart === range.columnEnd
+			? t("activityPanel.canvas.dataGrid.rangeColumn", { index: range.columnStart })
+			: t("activityPanel.canvas.dataGrid.rangeColumns", { from: range.columnStart, to: range.columnEnd });
+	return `${rows} · ${columns}`;
 }
 
 function upsertView(
@@ -446,6 +520,7 @@ function toSelectedView(
 		missing: view.missing,
 		externalUpdate: view.externalUpdate,
 		previewKind,
+		dataGridFormat: previewKind === "data-grid" ? resolveCanvasDataGridFormat(view.descriptor) : null,
 		contentType: view.descriptor.contentType,
 		content: view.missing ? "" : content,
 		extension: canvasPreviewExtension(view.descriptor),

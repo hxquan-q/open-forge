@@ -1,7 +1,7 @@
 ---
 id: TASK-0096
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -12,7 +12,7 @@ branch: forge/dev
 worktree: unassigned（主工作区）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/renderer/domains/activity-panel, packages/coding-agent/src/features/artifacts, packages/runtime-core/src/task]
-write_paths: [apps/desktop/src/renderer/domains/activity-panel, packages/toolkit/src]
+write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/shared/i18n/locales, packages/toolkit/src]
 exclusive_paths: [apps/desktop/src/renderer/domains/activity-panel/services/canvas-preview-kind.ts, apps/desktop/src/renderer/domains/activity-panel/hooks/useCanvasTabModel.ts]
 depends_on: []
 conflicts_with: [TASK-0097, TASK-0098]
@@ -116,6 +116,34 @@ CSV / TSV / 行列 JSON 表格类 artifact 在 Canvas Tab 中以原生 React 表
 ## 交付记录
 
 - 实际修改：
+  - `services/canvas-preview-kind.ts`：`CanvasPreviewKind` 增加 `"data-grid"`，`canvasPreviewExtension()` 对 data-grid 返回 `.csv` / `.tsv` / `.json`；既有 html / markdown / code 判定顺序与返回值不变。
+  - `services/canvas-data-grid.ts`（新增）：格式判定、RFC 4180 CSV / TSV 状态机、行列 JSON 解析、过滤 / 三态排序 / 分页视图，全部为纯函数。
+  - `services/canvas-selection-attachment.ts`：`CanvasArtifactSelectionPayload` 增加可选 `range`，既有字段不变。
+  - `components/canvas-tab/CanvasDataGridPreview.tsx`（新增）：表头固定、列头三态排序、筛选框、20/50/100 分页、单元格划选回传文本与行列范围。
+  - `components/canvas-tab/CanvasTabPanel.tsx`：`CanvasPreviewBody` 接线 `"data-grid"` 分支，其余 kind 不改。
+  - `hooks/useCanvasTabModel.ts`：`dataGridFormat`、data-grid 文案、`onDataGridSelectionChange`、附件 `range` 组装。
+  - `shared/i18n/locales/{zh,en}/chat.json`：`activityPanel.canvas.kindDataGrid` 与 `activityPanel.canvas.dataGrid.*`。
+  - 测试：`canvas-data-grid.test.ts`（新增）、`CanvasDataGridPreview.test.tsx`（新增）、`canvas-preview-kind.test.ts` / `canvas-save-filename.test.ts` / `canvas-selection-attachment.test.ts` / `CanvasTabPanel.test.tsx`（扩展）。
+  - `.github/release-notes/v0.1.1.md` 新增「新增」小节条目。
+- 关键决策与依据：
+  - **解析器落点**：`packages/toolkit` 现无表格类工具，且其 `AGENTS.md` 声明 toolkit 是 Node 工具集、不得引入 renderer 运行时；renderer 也从未依赖过该包。因此解析与视图逻辑落在 `activity-panel/services/canvas-data-grid.ts`，与 `canvas-preview-kind.ts` 同层，未改动 workspace 导出与构建分层。
+  - **`.json` 不升级为表格**：普通 `application/json` / `.json` 必须继续走代码预览（既有行为），只有显式 `application/vnd.vetta.data-grid+json` 才是行列 JSON 表格；`text/csv; charset=utf-8` 这类带参数 contentType 按规范化后的 MIME 判定。
+  - **行列 JSON 合同**：接受 `{ columns, rows }`（cells 允许非字符串，按文本投影）与「数组的数组」（首行表头）；结构不符或解析失败返回空表，由组件渲染空状态。
+  - **范围摘要**：新增可选 `range` 字段而不是把范围塞进 `excerpt`；`PluginPromptContext` 的 JSON 守卫会拒绝 `undefined` 值，因此无范围时整体省略该字段。
+  - `write_paths` 增补 `apps/desktop/src/shared/i18n/locales`：本 Task 明确要求新增文案走 i18n，原声明遗漏；TASK-0083 / TASK-0084 曾以独占方式声明同一 chat.json，但二者均为主工作区串行任务且各自改动已落地，本次只在 canvas 段新增 key。
 - 实际运行：
+  - 定向测试（cwd `apps/desktop`，`bun ../../scripts/quality/run-vitest.mjs --run …`）：`canvas-data-grid.test.ts`(17)、`CanvasDataGridPreview.test.tsx`(8)、`canvas-preview-kind.test.ts`(4)、`canvas-save-filename.test.ts`(3)、`canvas-selection-attachment.test.ts`(3)、`CanvasTabPanel.test.tsx`(5)，共 6 个文件 40 个用例全部通过。
+  - 关联测试 `run-vitest.mjs related <4 个源文件> --run`：29 个文件 137 个用例全部通过，确认使用这些模块的既有测试（plugin runtime、activity panel、conversation 等）无回归。
+  - 性能基线：1000 行 × 10 列 CSV 解析三次实测 1.59ms / 1.61ms / 2.07ms（末次在并发负载下），产品目标 <16ms 达标；断言阈值取 50ms 只守数量级回归。
+  - `node node_modules/typescript/bin/tsc --noEmit -p apps/desktop/tsconfig.json`（删除 tsbuildinfo 后全量重跑）：EXIT=0，无诊断输出。
+  - `bun run check:guards`：全部 guard 通过（含 `task-worktrees` 合同 102 个 task / 0 warning）。
+  - `biome check --write`（本次改动文件）：通过，无残留告警。
 - 未运行及原因：
+  - 未运行 `verify:ui:*`：本任务未获得 UI 实机验证授权；表头固定、滚动与划选属于真实渲染行为，组件测试覆盖了事件接线与可见结果，但滚动帧率未做真机测量。
+  - 未运行完整 `bun run check`：`check:types` 的 root `tsgo`、cli、docs、mobile 与 `check:lint` 全仓扫描与本次改动无交集，已单独执行 biome、guards 与 desktop 全量 tsc 覆盖受影响面。
 - 剩余风险：
+  - 表格列很宽或单元格极长时，`max-w-[320px]` + `truncate` 只保证不撑破布局，未做列宽拖拽（属「不做」项）。
+  - 行列 JSON 只覆盖 `{ columns, rows }` 与数组的数组；对象数组（`[{a:1},{a:2}]`）会落到空状态，如需支持须由产生方改 contentType 合同。
+  - 划选仍建立在浏览器原生选区之上，跨分页选择不会自动拼接（与既有文本预览一致）。
+- 并发与分支说明：任务声明的 `branch: forge/dev` 已是当前 `main` 的祖先，本次交付在主工作区当前分支完成；`conflicts_with` 的 TASK-0097 / TASK-0098 尚未开工，`exclusive_paths` 两个文件只被本 Task 修改，无并行写入。
+

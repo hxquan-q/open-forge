@@ -1,6 +1,11 @@
 // Copyright The Open Forge contributors.
+import { canvasDataGridExtension, resolveCanvasDataGridFormat } from "./canvas-data-grid";
 
-export type CanvasPreviewKind = "markdown" | "html" | "code";
+/**
+ * `data-grid` 只由 `text/csv`、`text/tab-separated-values`、`application/vnd.vetta.data-grid+json`
+ * 与 `.csv` / `.tsv` 后缀触发；普通 `application/json` 与 `.json` 仍走 `code`。
+ */
+export type CanvasPreviewKind = "markdown" | "html" | "code" | "data-grid";
 
 export function resolveCanvasPreviewKind(input: {
 	readonly contentType?: string;
@@ -25,6 +30,7 @@ export function resolveCanvasPreviewKind(input: {
 	) {
 		return "markdown";
 	}
+	if (resolveCanvasDataGridFormat(input)) return "data-grid";
 	return "code";
 }
 
@@ -37,6 +43,7 @@ export function canvasPreviewExtension(input: {
 	if (named) return named;
 	const kind = resolveCanvasPreviewKind(input);
 	if (kind === "html") return ".html";
+	if (kind === "data-grid") return canvasDataGridExtension(resolveCanvasDataGridFormat(input));
 	if (kind === "code") return contentTypeExtension(input.contentType) ?? ".txt";
 	return ".md";
 }
