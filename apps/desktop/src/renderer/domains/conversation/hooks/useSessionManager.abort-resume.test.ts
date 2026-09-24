@@ -245,9 +245,11 @@ async function startStreamingTurn(
 	const firstPromptOutcome = new Promise<unknown>((resolve) => {
 		releaseFirstPrompt = resolve;
 	});
-	const followUpOutcomes: unknown[] = followUpPromptOutcomes ?? [
-		{ status: "completed" },
-		{ status: "queued", pendingCount: 1, queueItemId: "q-extra" },
+	const followUpOutcomes: unknown[] = [
+		...(followUpPromptOutcomes ?? [
+			{ status: "completed" },
+			{ status: "queued", pendingCount: 1, queueItemId: "q-extra" },
+		]),
 	];
 	const handlers: Array<() => Promise<unknown>> = [
 		() => firstPromptOutcome,

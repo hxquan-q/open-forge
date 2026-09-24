@@ -2,7 +2,8 @@
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getDefaultStore } from "jotai";
-import { activityPanelOpenAtom } from "@shared/store/atoms";
+import { activityPanelOpenAtom, taskStateBySessionAtom } from "@shared/store/atoms";
+import type { RuntimeSessionTaskState } from "@vetta/runtime-core/task";
 import { describe, expect, it, vi } from "vitest";
 import { DefaultChatView, ChatComposer, ChatError } from "./DefaultChatView";
 
@@ -87,12 +88,43 @@ describe("DefaultChatView layout", () => {
 		expect(bottomPanel).toBeLessThan(activityPanel);
 	});
 
-	it("work 模式右栏换成工作面板；活动面板打开时仍让位给预览", () => {
-		const workHtml = renderToStaticMarkup(
-			<DefaultChatView messages={[]} workspace={workspace} workspaceMode="work">
+	it("work 模式右栏：空态不占位，有任务/产物才出工作面板；预览仍让位", () => {
+		const store = getDefaultStore();
+		const workWorkspace = { ...workspace, runtimeIds: ["runtime-1"] };
+		const stateWithTask: RuntimeSessionTaskState = {
+			tasks: [
+				{
+					schemaVersion: 1,
+					identity: { taskId: "task-1", rootSessionId: "runtime-1" },
+					status: "running",
+					createdAt: 100,
+					updatedAt: 120,
+					artifactIds: [],
+					pendingApprovalIds: [],
+				},
+			],
+			artifacts: [],
+			pendingApprovals: [],
+			approvalDecisions: new Map(),
+		};
+
+		// 空投影：右侧整条不占位，也不退回执行轨迹。
+		const emptyHtml = renderToStaticMarkup(
+			<DefaultChatView messages={[]} workspace={workWorkspace} workspaceMode="work">
 				<div />
 			</DefaultChatView>,
 		);
+		expect(emptyHtml).not.toContain('data-testid="work-panel"');
+		expect(emptyHtml).not.toContain('data-testid="activity-panel"');
+
+		// 投影出现任务/产物后，右栏出工作面板。
+		store.set(taskStateBySessionAtom, new Map([["runtime-1", stateWithTask]]));
+		const workHtml = renderToStaticMarkup(
+			<DefaultChatView messages={[]} workspace={workWorkspace} workspaceMode="work">
+				<div />
+			</DefaultChatView>,
+		);
+		store.set(taskStateBySessionAtom, new Map());
 		expect(workHtml).toContain('data-testid="work-panel"');
 		expect(workHtml).toContain('data-testid="work-document-sections"');
 		expect(workHtml).not.toContain('data-testid="activity-panel"');
@@ -100,7 +132,7 @@ describe("DefaultChatView layout", () => {
 		// 文件预览/浏览器等显式打开活动面板时，work 面板让位——预览能力不回退。
 		getDefaultStore().set(activityPanelOpenAtom, true);
 		const previewHtml = renderToStaticMarkup(
-			<DefaultChatView messages={[]} workspace={workspace} workspaceMode="work">
+			<DefaultChatView messages={[]} workspace={workWorkspace} workspaceMode="work">
 				<div />
 			</DefaultChatView>,
 		);

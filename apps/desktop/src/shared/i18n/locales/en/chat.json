@@ -1061,7 +1061,7 @@
 		},
 		"workspace": {
 			"hint": {
-				"work": "This chat will start as Docs & research: the right side shows plan and deliverables, no terminal by default.",
+				"work": "This chat will start as Docs & research: plan and deliverables appear on the right once work starts, no terminal by default.",
 				"coding": "This chat will start as Code: terminal and Git are available, the right side shows the execution trail."
 			}
 		}
@@ -1326,7 +1326,7 @@
 	"workspace": {
 		"mode": {
 			"coding": "Code",
-			"hint": "The right-hand workspace changes now. New chats follow this choice; the current chat does not.",
+			"hint": "The right-hand workspace follows this choice. New chats follow it; the current chat does not.",
 			"switch": "Switch workspace: docs & research or code",
 			"work": "Docs & research"
 		},

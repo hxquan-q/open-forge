@@ -5,6 +5,7 @@ import type {
 	RuntimeTaskEvent,
 	RuntimeTaskSnapshot,
 } from "@vetta/runtime-core/task";
+import { EMPTY_TASK_STATE } from "../store/task-atoms.js";
 
 /**
  * 渲染端 Task 投影折叠器。
@@ -127,4 +128,40 @@ export function mergeTaskStateSeed(
 		pendingApprovals: approvals,
 		approvalDecisions: decisions,
 	};
+}
+
+const inflightTaskStateSeeds = new Map<string, Promise<void>>();
+
+/**
+ * 用主进程 `getState` 快照补齐会话投影（重启后历史 Task/Artifact 由此恢复）。
+ * 同一 runtime 的并发拉取共享一次 IPC——右栏门槛与面板可能同时挂载，各拉一遍是浪费。
+ * 补齐是尽力而为：拉取失败时事件流折叠仍会继续更新投影。
+ */
+export function seedSessionTaskState(
+	runtimeId: string,
+	setTaskState: (
+		updater: (prev: Map<string, RuntimeSessionTaskState>) => Map<string, RuntimeSessionTaskState>,
+	) => void,
+): Promise<void> {
+	const api = window.vetta?.task;
+	if (!api) return Promise.resolve();
+	const inflight = inflightTaskStateSeeds.get(runtimeId);
+	if (inflight) return inflight;
+	const request = api
+		.getState(runtimeId)
+		.then((state) => {
+			setTaskState((prev) => {
+				const current = prev.get(runtimeId) ?? EMPTY_TASK_STATE;
+				const next = mergeTaskStateSeed(current, state);
+				return next === current ? prev : new Map(prev).set(runtimeId, next);
+			});
+		})
+		.catch(() => {
+			// 快照补齐是尽力而为：事件流折叠仍会继续更新投影。
+		})
+		.finally(() => {
+			inflightTaskStateSeeds.delete(runtimeId);
+		});
+	inflightTaskStateSeeds.set(runtimeId, request);
+	return request;
 }

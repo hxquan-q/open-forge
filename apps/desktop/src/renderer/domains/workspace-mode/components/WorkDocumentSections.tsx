@@ -2,15 +2,15 @@
 import { Button } from "@shared/components/ui/button";
 import { Textarea } from "@shared/components/ui/textarea";
 import { pathTokenText } from "@shared/lib/input-tokens";
-import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
+import { taskStateBySessionAtom } from "@shared/store/atoms";
 import { sendMessageFnRef } from "@shared/store/chat-atoms";
 import { showToast } from "@shared/store/toast-atoms";
-import { mergeTaskStateSeed } from "@shared/task/task-projection.js";
-import type { ArtifactDescriptor, RuntimeSessionTaskState, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
+import type { ArtifactDescriptor, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
 import type { TFunction } from "i18next";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useSetAtom } from "jotai";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useTaskProjection } from "../hooks/useTaskProjection";
 import { WorkPanelSection } from "./WorkWorkspacePanel";
 
 /**
@@ -55,35 +55,6 @@ type TaskCommand = Parameters<typeof window.vetta.task.runCommand>[1];
 function commandErrorMessage(t: TFunction<"chat">, code: string): string {
 	const key = ERROR_KEYS[code as keyof typeof ERROR_KEYS] ?? "activityPanel.task.error.commandFailed";
 	return t(key);
-}
-
-/** 打开/切换会话时用主进程快照补齐 Task/Artifact 投影（重启后历史状态由此恢复）。 */
-function useTaskProjection(runtimeId: string | undefined): RuntimeSessionTaskState {
-	const taskMap = useAtomValue(taskStateBySessionAtom);
-	const setTaskState = useSetAtom(taskStateBySessionAtom);
-
-	useEffect(() => {
-		let cancelled = false;
-		if (!runtimeId) return;
-		void (async () => {
-			try {
-				const state = await window.vetta.task.getState(runtimeId);
-				if (cancelled) return;
-				setTaskState((prev) => {
-					const current = prev.get(runtimeId) ?? EMPTY_TASK_STATE;
-					const next = mergeTaskStateSeed(current, state);
-					return next === current ? prev : new Map(prev).set(runtimeId, next);
-				});
-			} catch {
-				// 快照补齐是尽力而为：事件流折叠仍会继续更新投影。
-			}
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [runtimeId, setTaskState]);
-
-	return runtimeId ? getTaskStateForSession(taskMap, runtimeId) : EMPTY_TASK_STATE;
 }
 
 /** 统一执行 Task 命令：成功时更新投影，失败分支收敛为可读错误 toast。 */
@@ -385,7 +356,7 @@ export interface WorkDocumentSectionsProps {
 /** work 右栏的文档处理四节内容。 */
 export function WorkDocumentSections({ runtimeIds }: WorkDocumentSectionsProps): JSX.Element {
 	const runtimeId = runtimeIds[0];
-	const { tasks, artifacts } = useTaskProjection(runtimeId);
+	const { tasks, artifacts } = useTaskProjection(runtimeIds);
 
 	return (
 		<>
