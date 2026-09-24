@@ -7,6 +7,12 @@ import { mkdir, readFile, readdir, readlink, rename, rm, writeFile } from "node:
 import { dirname, join, relative } from "node:path";
 import { loadBuildEnv } from "./load-build-env.mjs";
 import {
+	buildSystemPluginsManifest,
+	createPluginIntegrityEntry,
+	resolveSystemPluginsManifestPath,
+	writeSystemPluginsManifest,
+} from "./plugins-integrity-manifest.mjs";
+import {
 	devSystemPluginsDir,
 	isSystemPluginStaged,
 	presetsDir,
@@ -244,6 +250,30 @@ for (const name of entries) {
 		pluginsToStage.add(name);
 	}
 }
+
+// 先写完整性清单（版本 + 归档 sha256 + plugin.json sha256），再交给 staging 校验。
+// staging 会拒绝清单里没有或指纹不符的归档，所以这一步必须在它之前。
+const presetsManifest = buildSystemPluginsManifest(
+	await Promise.all(
+		entries.map(async (name) => {
+			const pluginDir = join(presetsDir, name);
+			const pluginManifest = await readJson(join(pluginDir, "plugin.json"));
+			const archiveRelativePath = join(
+				name,
+				"release",
+				`${pluginManifest.id}-${pluginManifest.version}.vettapkg`,
+			);
+			return createPluginIntegrityEntry({
+				pluginId: pluginManifest.id,
+				version: pluginManifest.version,
+				archivePath: join(presetsDir, archiveRelativePath),
+				archiveRelativePath,
+				manifestPath: join(pluginDir, "plugin.json"),
+			});
+		}),
+	),
+);
+writeSystemPluginsManifest(resolveSystemPluginsManifestPath(presetsDir), presetsManifest);
 
 stageSystemPluginsFromArchives(devSystemPluginsDir, "build-presets", {
 	pluginIds: pluginsToStage,
