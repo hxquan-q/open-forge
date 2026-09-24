@@ -15,6 +15,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0006` | Canvas / Browser / Terminal 右栏集成 | ready | [`RESEARCH-0005`](../research/RESEARCH-0005-canvas-browser-terminal-support.md)、用户确认的决策索引 |
 | `PLAN-0007` | Agent Workspace Phase 2（Browser 调试闭环 + Canvas 富交互） | draft | PLAN-0006 推迟项圈选、用户确认的 Phase 2 决策；v1 演示/首发反馈可重排 |
 | `PLAN-0008` | Agent Team 编排协作对齐 | done | [`REQ-0006`](../requirements/REQ-0006-agent-team-orchestration-alignment.md)、[`RESEARCH-0008`](../research/RESEARCH-0008-multi-agent-orchestration-comparison.md) |
+| `PLAN-0009` | Canvas 体验演进（原生 Data Grid、高带宽组件、直接编辑与试跑） | draft | [`PLAN-0006`](PLAN-0006-canvas-browser-activity-tabs.md)、用户审批中的 P0~P2 演进案 |
 
 ## 当前执行焦点
 
