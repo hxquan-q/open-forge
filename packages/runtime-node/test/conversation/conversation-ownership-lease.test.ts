@@ -91,6 +91,35 @@ describe("FileConversationOwnershipManager", () => {
 		await lease.release();
 	});
 
+	it("keeps a live owner whose recorded start lags the os-reported start", async () => {
+		// processStartedAt 取自持有进程的 performance.timeOrigin，慢机器上比 OS 报告的
+		// 进程启动晚数秒——同一进程的正常偏差，不得当成 PID 复用回收活跃锁。
+		const conversationPath = await temporaryConversationPath();
+		const lockPath = `${conversationPath}.owner.lock`;
+		const manager = new FileConversationOwnershipManager({
+			heartbeatIntervalMs: 10_000,
+			staleAfterMs: 20_000,
+			hostname: "test-host",
+			isProcessAlive: () => true,
+			readProcessStartedAtMs: () => Date.parse("2026-01-01T00:00:00.000Z"),
+		});
+		await writeFile(
+			lockPath,
+			JSON.stringify({
+				token: "slow-start",
+				pid: 1234,
+				hostname: "test-host",
+				acquiredAt: "2026-01-01T00:00:10.000Z",
+				processStartedAt: "2026-01-01T00:00:08.000Z",
+			}),
+			"utf8",
+		);
+
+		await expect(manager.acquire(conversationPath)).rejects.toMatchObject({
+			code: CONVERSATION_STORAGE_ERROR_CODES.OWNERSHIP_CONFLICT,
+		});
+	});
+
 	it("reclaims a reused pid when the process start time no longer matches", async () => {
 		const conversationPath = await temporaryConversationPath();
 		const lockPath = `${conversationPath}.owner.lock`;
