@@ -116,3 +116,22 @@ export function validateAgentResourceSelection(
 	if (configuration.modelKey !== null && !catalog.models.some(({ key }) => key === configuration.modelKey))
 		throw new AgentConfigurationError("AGENT_CONFIGURATION_RESOURCE_UNAVAILABLE");
 }
+
+/**
+ * 能力 Profile 折算进 `overrides.tools` 的默认清单是「开箱默认」而不是硬性白名单
+ * （ADR-0128：Profile 只决定开箱默认，不构成硬边界）。宿主没有注册某个默认工具
+ * （如未开启 memoryMode 时的 `memory`、只有 RPC host-bridge 才注册的
+ * `im_send_attachment`）时，按软默认降级——把缺省名并入目录让准入通过；这些名字
+ * 本来就不在模型工具面上，降级不会让不可用工具复活。宿主/用户的显式选择仍由
+ * {@link validateAgentResourceSelection} 严格校验。
+ */
+export function withAgentProfileDefaultToolTolerance(
+	catalog: AgentConfigurationResourceCatalog,
+	profileDefaultToolNames: readonly string[] | undefined,
+): AgentConfigurationResourceCatalog {
+	if (!profileDefaultToolNames?.length) return catalog;
+	const available = new Set(catalog.tools);
+	const missingDefaults = [...new Set(profileDefaultToolNames)].filter((name) => !available.has(name));
+	if (missingDefaults.length === 0) return catalog;
+	return { ...catalog, tools: [...catalog.tools, ...missingDefaults].sort() };
+}

@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 import { VETTA_CLI_GUIDANCE } from "@vetta/coding-agent/cli-guidance";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
-import { applyAgentProfileDefaults, resolveAgentProfile } from "@vetta/coding-agent/profile";
+import {
+	appliesAgentProfileDefaultTools,
+	applyAgentProfileDefaults,
+	resolveAgentProfile,
+} from "@vetta/coding-agent/profile";
 import { loadProjectToolPolicy, resolveToolCatalogPolicy } from "@vetta/coding-agent/projects";
 import type {
 	CodingAgentPinnedModelContextBinder,
@@ -185,10 +189,18 @@ export async function resolveDesktopSessionConfig(
 	);
 	const capabilityProfile = resolveSessionCapabilityProfile(config?.capabilityProfile, frozenAgentMode);
 	// 能力收敛（ADR-0128 + TASK-0021）：Profile 默认折算 → 项目策略只能再收紧。
+	// BUG-0014：默认清单折算成显式 `overrides.tools` 时，agent 侧准入会按可用目录
+	// 逐名核对，Desktop 没注册的默认项（memory / im_send_attachment 等）会让整个
+	// session.create 以 AGENT_CONFIGURATION_RESOURCE_UNAVAILABLE 失败。把同一份
+	// 清单作为软默认证据随会话下发，agent 侧据此降级而不是判创建失败。
+	const agentProfile = resolveAgentProfile(capabilityProfile);
 	const resolvedAgentConfiguration = await applyProjectToolPolicy(
 		effectiveCwd,
-		applyAgentProfileDefaults(resolveAgentProfile(capabilityProfile), config?.agentConfiguration),
+		applyAgentProfileDefaults(agentProfile, config?.agentConfiguration),
 	);
+	const profileDefaultToolNames = appliesAgentProfileDefaultTools(agentProfile, config?.agentConfiguration)
+		? (agentProfile.defaultToolNames ?? undefined)
+		: undefined;
 	// 会话绑定项目的工具注入：作用域在配置解析期按生效 cwd 固化一次。
 	const projectScopeCwd = normalizeProjectCwd(resolveSessionListCwd(effectiveCwd), resolve);
 	const injectedRuntimeTools = [
@@ -228,6 +240,7 @@ export async function resolveDesktopSessionConfig(
 					includeAgentSkills,
 					automaticRetry: config?.automaticRetry,
 					agentConfiguration: resolvedAgentConfiguration,
+					...(profileDefaultToolNames ? { profileDefaultToolNames } : {}),
 					sessionRuntimeTools,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,

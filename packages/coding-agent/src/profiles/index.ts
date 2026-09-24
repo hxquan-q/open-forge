@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 export {
+	appliesAgentProfileDefaultTools,
 	applyAgentProfileDefaults,
 	CODING_AGENT_PROFILES,
 	type CodingAgentAgentProfile,
