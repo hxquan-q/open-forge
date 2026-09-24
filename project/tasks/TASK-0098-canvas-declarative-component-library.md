@@ -38,7 +38,7 @@ related_bugs: []
 - `CanvasPreviewKind` 现有三态（`canvas-preview-kind.ts:3`），本 Task 依赖 TASK-0096 已扩展出的判定结构。
 - 复用资产已就位：`EditDiffView.tsx`（136 行，消费 `DiffPreviewView`）与 `parse-diff.ts` 提供完整 Unified Diff 解析与染色，**本 Task 只消费不重写**。
 - `apps/desktop` 当前**没有任何图表 / 可视化运行时依赖**（全仓 `package.json` grep `recharts|d3|chart.js|echarts|victory|visx|nivo` 无命中）。
-- `packages/skill-presets/src/` 已有 `architecture-canvas`、`report-canvas` 两个 canvas 类技能，是新增技能的模板。
+- `packages/skill-presets/` 下每个技能是**包根的一级目录**（无 `src/` 层），内含 `SKILL.md` + `ability.json`；已有 `architecture-canvas`、`report-canvas` 两个 canvas 类技能可作模板，并需登记到 `packages/skill-presets/skills-manifest.json`。
 - ADR-0068 记录 `recharts` 在共享 react 单例 alias 下可与宿主共用同一预打包 chunk（该结论在 `.vetd` 引擎 vite 配置下实测；`apps/desktop` 的 vite/electron 构建链需独立验证，**不可直接引用为已证明**）。
 
 ## 范围
@@ -62,7 +62,7 @@ related_bugs: []
 - **Structured Diff**：识别 `contentType: "text/x-diff"` 或 `kind: "code-change"`，复用 `parse-diff.ts` + `EditDiffView` / `DiffPreviewView`，支持按文件折叠；在 Canvas 宽幅面板中展示多文件差异。
 - **Checklist**：识别 `application/vnd.vetta.checklist+json`，渲染任务步骤 / 评测失败模式聚类 / 实验进展，含完成态与进行态。
 - **接线**：在 `CanvasTabPanel.tsx` 的 `CanvasPreviewBody` 接入三个新分支，既有分支行为不变。
-- **技能**：`packages/skill-presets/src/` 新增 `chart-canvas` 与 `review-canvas`，引导模型在对应场景输出结构化 JSON，并登记到 `skills-manifest.json`。
+- **技能**：在 `packages/skill-presets/` 下新增 `chart-canvas/` 与 `review-canvas/`（各含 `SKILL.md` + `ability.json`），引导模型在对应场景输出结构化 JSON，并登记到 `packages/skill-presets/skills-manifest.json`。
 - **容错**：JSON 解析失败或契约字段缺失时降级为代码视图 + 明确提示，不白屏。
 - 文案走 i18n。
 
