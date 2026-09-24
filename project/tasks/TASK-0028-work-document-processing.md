@@ -16,7 +16,7 @@ write_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode]
 depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024]
 conflicts_with: [TASK-0018, TASK-0025, TASK-0026]
-integration_status: pending
+integration_status: integrated（forge/dev；以 a728de9e5 的主树实现为准，46dfc54ed 为被当前架构替代的历史 WIP）
 created: 2026-09-22
 updated: 2026-09-23
 ---
@@ -87,7 +87,7 @@ updated: 2026-09-23
 - 未运行及原因：
   - 未运行 `verify:ui:*`（用户未授权实机验收）。
   - 未跑全仓 `bun run check`：主工作区同时有其他任务的未提交改动，全量检查不能单独代表本切片。
+- 分支收口：`origin/task/TASK-0028-work-document-processing` 的 `46dfc54ed` 基于陈旧主树保存未验证 WIP，不直接 cherry-pick。其 `artifact-broker` 仅实现 `create/attach_to_task`，并在 Function Source 中直接注册 `CODING_AGENT_ARTIFACT_FUNCTION`；当前主树已由 Composition 注入完整的 Canvas Artifact Service（支持 create/update/get/list/attach）作为该 token 的唯一宿主，因此该 broker 会形成重复事实源并被明确淘汰。其余文档处理文件已由 `a728de9e5` 以更新的主树版本落地。
 - 剩余风险：
   - document-export / 右栏预览仅支持本机纯文本内容；远程 SSH 产物返回不可导出/无法预览。
   - 保存对话框由用户选定目标路径，覆盖确认交给原生对话框，不另实现 `target-exists` 分支。
-  - 改动尚未提交。
