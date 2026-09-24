@@ -4,7 +4,7 @@ import { activityPanelOpenAtom, taskStateBySessionAtom } from "@shared/store/ato
 import type { WorkspaceMode } from "@shared/store/atoms";
 import type { ArtifactDescriptor, RuntimeSessionTaskState, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
-import { createStore, Provider, type Store } from "jotai";
+import { createStore, Provider } from "jotai";
 import type { PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTaskProjection } from "./useTaskProjection";
@@ -76,7 +76,7 @@ const workInput = (overrides: Partial<PanelInput> = {}): PanelInput => ({
 	...overrides,
 });
 
-function renderPanel(input: PanelInput, setup?: (store: Store) => void) {
+function renderPanel(input: PanelInput, setup?: (store: ReturnType<typeof createStore>) => void) {
 	const store = createStore();
 	setup?.(store);
 	const wrapper = ({ children }: PropsWithChildren) => <Provider store={store}>{children}</Provider>;
