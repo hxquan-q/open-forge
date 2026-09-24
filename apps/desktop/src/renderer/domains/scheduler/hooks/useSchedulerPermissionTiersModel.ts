@@ -1,7 +1,10 @@
 // Copyright The Open Forge contributors.
 import type { ScheduledTaskPermissionTiers } from "@shared/store/atoms";
 import { confirmDialogAtom } from "@shared/store/atoms";
-import { enableAllUnattendedPermissionTiers, UNATTENDED_PERMISSION_TIER_KEYS } from "@vetta/coding-agent/runtime";
+import {
+	enableAllUnattendedPermissionTiers,
+	UNATTENDED_PERMISSION_TIER_KEYS,
+} from "@vetta/coding-agent/function-extensions";
 import { useSetAtom } from "jotai";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
