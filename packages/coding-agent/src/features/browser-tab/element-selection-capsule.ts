@@ -113,6 +113,57 @@ export const BrowserElementBoundingRectSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+/** 允许用户在 WebView 内即时预览的样式属性白名单（与 computedStyle 子集一致，v1 不放开任意 CSS）。 */
+export const BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS = [
+	"color",
+	"backgroundColor",
+	"fontSize",
+	"fontWeight",
+	"fontFamily",
+	"lineHeight",
+	"textAlign",
+	"padding",
+	"margin",
+	"width",
+	"height",
+	"opacity",
+	"borderRadius",
+	"display",
+	"visibility",
+] as const;
+
+export type BrowserElementLiveEditStyleKey = (typeof BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS)[number];
+
+/** picker 选中后用户在页面上即时预览的改动记录；`before`/`after` 供 Agent 定位与落地源码。 */
+export const BrowserElementLiveEditSchema = Type.Union(
+	[
+		Type.Object(
+			{
+				kind: Type.Literal("style"),
+				property: Type.String({ minLength: 1, maxLength: 64 }),
+				before: Type.String({ maxLength: 512 }),
+				after: Type.String({ maxLength: 512 }),
+				target: Type.Optional(Type.String({ maxLength: 2048 })),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				kind: Type.Literal("text"),
+				before: Type.String({ maxLength: 2048 }),
+				after: Type.String({ maxLength: 2048 }),
+				target: Type.Optional(Type.String({ maxLength: 2048 })),
+			},
+			{ additionalProperties: false },
+		),
+	],
+	{ additionalProperties: false },
+);
+
+export type BrowserElementLiveEdit = Static<typeof BrowserElementLiveEditSchema>;
+
+export const BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS = 64;
+
 export const BrowserElementSelectionPayloadSchema = Type.Object(
 	{
 		pageUrl: Type.String({ minLength: 1, maxLength: 2048 }),
@@ -129,6 +180,9 @@ export const BrowserElementSelectionPayloadSchema = Type.Object(
 		surroundingText: Type.String({ maxLength: BROWSER_ELEMENT_SURROUNDING_TEXT_MAX_CHARS }),
 		boundingRect: BrowserElementBoundingRectSchema,
 		screenshotAttachmentId: Type.Optional(Type.String({ minLength: 1, maxLength: 160 })),
+		liveEdits: Type.Optional(
+			Type.Array(BrowserElementLiveEditSchema, { maxItems: BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS }),
+		),
 	},
 	{ additionalProperties: false },
 );

@@ -444,7 +444,22 @@
 		"elementAttached": "Page element attached",
 		"elementReplace": "A new selection replaces the current attachment",
 		"staleSelection": "The page changed; this selection may be stale",
-		"cropFailed": "Could not capture the element image"
+		"cropFailed": "Could not capture the element image",
+		"liveEdit": {
+			"title": "Adjust selected element",
+			"textPlaceholder": "Replace text content",
+			"applyText": "Apply text",
+			"styleProperty": "Style property",
+			"styleValuePlaceholder": "Value (empty clears)",
+			"applyStyle": "Apply style",
+			"edits": "Edits",
+			"revertOne": "Revert this edit",
+			"revertAll": "Revert all",
+			"send": "Send to Agent",
+			"discard": "Discard",
+			"stale": "The page changed; this selection is stale",
+			"failed": "Could not apply the edit"
+		}
 	},
 	"capability": {
 		"network": "Network",

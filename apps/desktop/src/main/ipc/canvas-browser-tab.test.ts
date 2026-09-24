@@ -105,7 +105,18 @@ describe("canvas and browser-tab IPC stubs", () => {
 		await expect(
 			cropHandler?.({}, { workspaceId: "ws-1", rect: { x: 1, y: 2, width: 3, height: 4 }, devicePixelRatio: 1 }),
 		).resolves.toMatchObject({ ok: false, code: "no_browser_session" });
+		const liveEditHandler = mocks.handlers.get("vetta:browser-tab:live-edit");
+		await expect(
+			liveEditHandler?.(
+				{},
+				{
+					workspaceId: "ws-1",
+					elementRef: { domPath: "html/body/div[1]", pageRevision: 0 },
+					action: { type: "apply", edit: { kind: "style", property: "color", value: "red" } },
+				},
+			),
+		).resolves.toMatchObject({ ok: false, code: "no_browser_session" });
 		teardown();
-		expect(mocks.removeHandler).toHaveBeenCalledTimes(3);
+		expect(mocks.removeHandler).toHaveBeenCalledTimes(4);
 	});
 });

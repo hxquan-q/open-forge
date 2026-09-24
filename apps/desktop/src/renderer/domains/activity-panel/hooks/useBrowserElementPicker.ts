@@ -7,26 +7,43 @@ import {
 import { useEffectiveShortcut } from "@shared/hooks/useShortcuts";
 import { useShortcutScope } from "@shared/shortcuts";
 import { promptAttachmentAtom } from "@shared/store/plugin-atoms";
+import {
+	type BrowserElementLiveEdit,
+	type BrowserElementRef,
+	type BrowserElementSelectionContext,
+	readBrowserElementSelectionContext,
+} from "@vetta/coding-agent/function-extensions";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BROWSER_ELEMENT_PICKER_TOGGLE_EVENT } from "@/shared/browser-tab-ipc";
 import { applyBrowserElementSelectionToDraft } from "../services/browser-element-draft";
 
+/** 点选命中后的编辑态：胶囊先停在卡片上，确认后才写入输入框附件（TASK-0085）。 */
+export interface BrowserElementPickedSelection {
+	readonly context: BrowserElementSelectionContext;
+	readonly screenshotPath?: string;
+}
+
 export function useBrowserElementPicker(input: { workspaceId: string; hasPage: boolean }): {
 	pickerEnabled: boolean;
 	pickerShortcut: string;
+	selection: BrowserElementPickedSelection | null;
+	selectionRef: BrowserElementRef | null;
 	onTogglePicker: () => void;
+	confirmSelection: (edits: readonly BrowserElementLiveEdit[]) => void;
+	discardSelection: () => void;
 } {
 	const { t } = useTranslation("chat");
 	const workspaceId = input.workspaceId;
 	const [pickerEnabled, setPickerEnabled] = useState(false);
+	const [selection, setSelection] = useState<BrowserElementPickedSelection | null>(null);
 	const [promptAttachment, setPromptAttachment] = useAtom(promptAttachmentAtom);
 	const attachmentRef = useRef(promptAttachment);
 	attachmentRef.current = promptAttachment;
 	const pickerShortcut = useEffectiveShortcut("browser-element-picker");
 
-	const applyResult = useCallback(
+	const captureSelection = useCallback(
 		async (
 			context: unknown,
 			rect: { x: number; y: number; width: number; height: number },
@@ -47,21 +64,11 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 							},
 						}
 					: context;
-			applyBrowserElementSelectionToDraft(
-				{
-					getAttachment: () => attachmentRef.current,
-					setAttachment: setPromptAttachment,
-					insertImage: insertImageToken,
-					removeImage: removeImageToken,
-				},
-				{
-					context: nextContext,
-					label: t("browser.elementAttached"),
-					...(crop.ok ? { screenshotPath: crop.path } : {}),
-				},
-			);
+			const parsed = readBrowserElementSelectionContext(nextContext);
+			if (!parsed) return;
+			setSelection({ context: parsed, ...(crop.ok ? { screenshotPath: crop.path } : {}) });
 		},
-		[setPromptAttachment, t, workspaceId],
+		[workspaceId],
 	);
 
 	useEffect(() => {
@@ -75,15 +82,20 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 				setPickerEnabled(envelope.event.session.pickerEnabled);
 				return;
 			}
+			if (envelope.event.kind === "page-revision") {
+				// 导航/改版后旧选中引用即失效，页面 DOM 也随之消失。
+				setSelection(null);
+				return;
+			}
 			if (envelope.event.kind !== "picker-result") return;
 			const { payload } = envelope.event.context;
-			void applyResult(envelope.event.context, payload.boundingRect, 1);
+			void captureSelection(envelope.event.context, payload.boundingRect, 1);
 		});
 		return () => {
 			cancelled = true;
 			unsubscribe();
 		};
-	}, [applyResult, workspaceId]);
+	}, [captureSelection, workspaceId]);
 
 	const togglePicker = useCallback(() => {
 		if (!input.hasPage) return;
@@ -91,6 +103,36 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			if (result.ok) setPickerEnabled(result.pickerEnabled);
 		});
 	}, [input.hasPage, pickerEnabled, workspaceId]);
+
+	const confirmSelection = useCallback(
+		(edits: readonly BrowserElementLiveEdit[]) => {
+			if (!selection) return;
+			const context: BrowserElementSelectionContext =
+				edits.length > 0
+					? { ...selection.context, payload: { ...selection.context.payload, liveEdits: [...edits] } }
+					: selection.context;
+			applyBrowserElementSelectionToDraft(
+				{
+					getAttachment: () => attachmentRef.current,
+					setAttachment: setPromptAttachment,
+					insertImage: insertImageToken,
+					removeImage: removeImageToken,
+				},
+				{
+					context,
+					label: t("browser.elementAttached"),
+					...(selection.screenshotPath ? { screenshotPath: selection.screenshotPath } : {}),
+				},
+			);
+			setSelection(null);
+			void window.vetta.browserTab.setPicker({ workspaceId, enabled: false });
+		},
+		[selection, setPromptAttachment, t, workspaceId],
+	);
+
+	const discardSelection = useCallback(() => {
+		setSelection(null);
+	}, []);
 
 	useEffect(() => {
 		const onToggle = (): void => togglePicker();
@@ -114,6 +156,10 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	return {
 		pickerEnabled,
 		pickerShortcut,
+		selection,
+		selectionRef: selection?.context.payload.elementRef ?? null,
 		onTogglePicker: togglePicker,
+		confirmSelection,
+		discardSelection,
 	};
 }

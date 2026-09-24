@@ -1,4 +1,5 @@
 import type { FormEvent, JSX, Ref } from "react";
+import { BrowserLiveEditCard, type BrowserLiveEditCardProps } from "./BrowserLiveEditCard";
 
 export interface BrowserPanelLabels {
 	noSession: string;
@@ -41,6 +42,8 @@ export interface BrowserPanelViewProps {
 	pickerEnabled: boolean;
 	pickerDisabled: boolean;
 	onTogglePicker: () => void;
+	/** 点选命中后的即时预览卡模型；undefined 时不渲染。 */
+	liveEdit?: BrowserLiveEditCardProps;
 }
 
 function ToolbarButton({
@@ -99,6 +102,7 @@ export function BrowserPanelView({
 	pickerEnabled,
 	pickerDisabled,
 	onTogglePicker,
+	liveEdit,
 }: BrowserPanelViewProps): JSX.Element {
 	if (!workspaceId) {
 		return (
@@ -190,6 +194,7 @@ export function BrowserPanelView({
 						</button>
 					</div>
 				)}
+				{liveEdit ? <BrowserLiveEditCard {...liveEdit} /> : null}
 			</div>
 		</div>
 	);

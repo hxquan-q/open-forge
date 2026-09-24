@@ -11,6 +11,7 @@ export function createBrowserTabApi(ipc: IpcRenderer): Pick<DesktopApi, "browser
 			getSession: (request) => ipc.invoke(CHANNELS.GET_SESSION, request),
 			setPicker: (request) => ipc.invoke(CHANNELS.SET_PICKER, request),
 			cropScreenshot: (request) => ipc.invoke(CHANNELS.CROP_SCREENSHOT, request),
+			liveEdit: (request) => ipc.invoke(CHANNELS.LIVE_EDIT, request),
 			onEvent: (listener) => {
 				const handler = (_event: IpcRendererEvent, envelope: DesktopBrowserTabEventEnvelope): void => {
 					listener(envelope);

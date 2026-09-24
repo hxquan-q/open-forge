@@ -167,4 +167,147 @@ describe("InAppBrowserSessionController", () => {
 			},
 		);
 	});
+
+	describe("liveEdit（TASK-0085 页面内即时预览）", () => {
+		const pickCapsule = {
+			role: "button",
+			accessibleName: "Save",
+			attributes: { id: "save" },
+			domPath: "button#save",
+			xpath: '//*[@id="save"]',
+			computedStyle: { display: "inline-block" },
+			outerHTML: '<button id="save">Save</button>',
+			surroundingText: "Save",
+			boundingRect: { x: 10, y: 20, width: 80, height: 24 },
+			devicePixelRatio: 1,
+		};
+
+		function liveEditContents(guestResult: unknown = { ok: true, edits: [], hasElement: true }) {
+			let started = 0;
+			return fakeContents({
+				executeJavaScript: async (code) => {
+					// 注入脚本尾部调用形如 `})("apply-edit",…,{deps}`；runtime 源码本身也含命令名，故只认调用点。
+					const invoked = /\)\("([a-z-]+)",/.exec(code)?.[1];
+					if (
+						invoked === "apply-edit" ||
+						invoked === "revert-edit" ||
+						invoked === "revert-all-edits" ||
+						invoked === "edit-state"
+					) {
+						return guestResult;
+					}
+					if (invoked === "start") {
+						started += 1;
+						if (started > 1) return new Promise(() => undefined);
+						return pickCapsule;
+					}
+					return { ok: true };
+				},
+			});
+		}
+
+		async function pickOnce(controller: InAppBrowserSessionController, events: DesktopBrowserTabEventEnvelope[]) {
+			await controller.setPicker("ws-1", true);
+			await vi.waitFor(() => {
+				expect(events.some((item) => item.event.kind === "picker-result")).toBe(true);
+			});
+		}
+
+		it("点选命中后 apply 注入 apply-edit 脚本并回报 edits", async () => {
+			const events: DesktopBrowserTabEventEnvelope[] = [];
+			const controller = new InAppBrowserSessionController((event) => events.push(event));
+			const scripts: string[] = [];
+			let started = 0;
+			const contents = fakeContents({
+				executeJavaScript: async (code) => {
+					scripts.push(code);
+					const invoked = /\)\("([a-z-]+)",/.exec(code)?.[1];
+					if (invoked === "apply-edit")
+						return { ok: true, edits: [{ kind: "style", property: "color", before: "", after: "red" }] };
+					if (invoked === "start") {
+						started += 1;
+						if (started > 1) return new Promise(() => undefined);
+						return pickCapsule;
+					}
+					return { ok: true };
+				},
+			});
+			controller.attachWebContents("ws-1", contents);
+			await pickOnce(controller, events);
+			const pick = events.find((item) => item.event.kind === "picker-result");
+			const elementRef =
+				pick?.event.kind === "picker-result"
+					? (pick.event.context.payload as { elementRef: unknown }).elementRef
+					: undefined;
+			const result = await controller.liveEdit("ws-1", elementRef, {
+				type: "apply",
+				edit: { kind: "style", property: "color", value: "red" },
+			});
+			expect(result).toMatchObject({ ok: true, edits: [{ kind: "style", property: "color", after: "red" }] });
+			expect(
+				scripts.some((code) => code.includes(')("apply-edit",{"kind":"style","property":"color","value":"red"}')),
+			).toBe(true);
+		});
+
+		it("无浏览器会话 / 非最新选中 / 翻页或停止 picker 后拒绝 stale_reference", async () => {
+			const events: DesktopBrowserTabEventEnvelope[] = [];
+			const controller = new InAppBrowserSessionController((event) => events.push(event));
+			controller.attachWebContents("ws-1", liveEditContents());
+			await pickOnce(controller, events);
+			const pick = events.find((item) => item.event.kind === "picker-result");
+			const elementRef =
+				pick?.event.kind === "picker-result"
+					? (pick.event.context.payload as { elementRef: unknown }).elementRef
+					: undefined;
+
+			await expect(controller.liveEdit("missing", elementRef, { type: "state" })).resolves.toMatchObject({
+				ok: false,
+				code: "no_browser_session",
+			});
+			await expect(
+				controller.liveEdit("ws-1", { id: "e99", pageRevision: 0 }, { type: "state" }),
+			).resolves.toMatchObject({ ok: false, code: "stale_reference" });
+
+			controller.bumpRevision("ws-1", { url: "https://example.com/next" });
+			await expect(controller.liveEdit("ws-1", elementRef, { type: "state" })).resolves.toMatchObject({
+				ok: false,
+				code: "stale_reference",
+			});
+		});
+
+		it("停止 picker 后再改同一条 ref 被拒", async () => {
+			const events: DesktopBrowserTabEventEnvelope[] = [];
+			const controller = new InAppBrowserSessionController((event) => events.push(event));
+			controller.attachWebContents("ws-1", liveEditContents());
+			await pickOnce(controller, events);
+			const pick = events.find((item) => item.event.kind === "picker-result");
+			const elementRef =
+				pick?.event.kind === "picker-result"
+					? (pick.event.context.payload as { elementRef: unknown }).elementRef
+					: undefined;
+			await controller.setPicker("ws-1", false);
+			await expect(controller.liveEdit("ws-1", elementRef, { type: "state" })).resolves.toMatchObject({
+				ok: false,
+				code: "stale_reference",
+			});
+		});
+
+		it("guest 返回失败或脚本不可达时映射为 apply_failed", async () => {
+			const events: DesktopBrowserTabEventEnvelope[] = [];
+			const controller = new InAppBrowserSessionController((event) => events.push(event));
+			controller.attachWebContents("ws-1", liveEditContents({ ok: false, code: "unknown_property" }));
+			await pickOnce(controller, events);
+			const pick = events.find((item) => item.event.kind === "picker-result");
+			const elementRef =
+				pick?.event.kind === "picker-result"
+					? (pick.event.context.payload as { elementRef: unknown }).elementRef
+					: undefined;
+			await expect(
+				controller.liveEdit("ws-1", elementRef, {
+					type: "apply",
+					edit: { kind: "style", property: "display", value: "none" },
+				}),
+			).resolves.toMatchObject({ ok: false, code: "apply_failed", message: "unknown_property" });
+		});
+	});
 });

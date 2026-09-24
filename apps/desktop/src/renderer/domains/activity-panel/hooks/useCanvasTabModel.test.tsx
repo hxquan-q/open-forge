@@ -4,6 +4,7 @@ import type { DesktopCanvasArtifactView } from "@preload/api-types/canvas";
 import type { ActivityTabKey } from "@shared/lib/project-profile";
 import {
 	activityPanelTabByProjectAtom,
+	canvasArtifactRevisionAtom,
 	canvasUnreadCountAtom,
 	pendingCanvasArtifactIdAtom,
 } from "@shared/store/atoms";
@@ -142,5 +143,72 @@ describe("useCanvasTabModel pending 归属与可见性", () => {
 		rerender();
 
 		expect(store.get(canvasUnreadCountAtom)).toBe(2);
+	});
+});
+
+describe("useCanvasTabModel 选中 artifact 实时刷新", () => {
+	beforeEach(() => {
+		list.mockReset().mockResolvedValue({ ok: true, items: [view("art-1")] });
+		get.mockReset();
+	});
+
+	afterEach(() => cleanup());
+
+	it("打开中的 artifact 在 revision 事件到达时重取并展示新版本内容", async () => {
+		const store = createStore();
+		store.set(activityPanelTabByProjectAtom, new Map<string, ActivityTabKey>([[WORKSPACE_ID, "canvas"]]));
+		get.mockResolvedValueOnce({ ok: true, view: view("art-1"), content: "v1 内容", contentType: "text/markdown" });
+		const { result } = renderModel(store);
+
+		act(() => {
+			result.current.actions.open("art-1");
+		});
+		await waitFor(() => expect(result.current.selected?.content).toBe("v1 内容"));
+
+		const updated = view("art-1");
+		get.mockResolvedValueOnce({ ok: true, view: updated, content: "v2 内容", contentType: "text/markdown" });
+		act(() => {
+			store.set(canvasArtifactRevisionAtom, 1);
+		});
+
+		await waitFor(() => expect(result.current.selected?.content).toBe("v2 内容"));
+		expect(get).toHaveBeenLastCalledWith({ workspaceId: WORKSPACE_ID, artifactId: "art-1" });
+	});
+
+	it("打开中的 artifact 被删除或取不到时回落为 missing 展示", async () => {
+		const store = createStore();
+		store.set(activityPanelTabByProjectAtom, new Map<string, ActivityTabKey>([[WORKSPACE_ID, "canvas"]]));
+		// 删除后主进程 list 也不再返回该 artifact，get 失败时没有列表兜底 → missing。
+		list.mockResolvedValue({ ok: true, items: [] });
+		get.mockResolvedValueOnce({ ok: true, view: view("art-1"), content: "内容", contentType: "text/markdown" });
+		const { result } = renderModel(store);
+
+		act(() => {
+			result.current.actions.open("art-1");
+		});
+		await waitFor(() => expect(result.current.selected?.missing).toBe(false));
+
+		get.mockResolvedValueOnce({ ok: false, code: "not_found" });
+		act(() => {
+			store.set(canvasArtifactRevisionAtom, 1);
+		});
+
+		await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+		await waitFor(() => expect(result.current.selected?.missing).toBe(true));
+	});
+
+	it("未打开任何 artifact 时 revision 事件不触发内容拉取", async () => {
+		const store = createStore();
+		store.set(activityPanelTabByProjectAtom, new Map<string, ActivityTabKey>([[WORKSPACE_ID, "canvas"]]));
+		const { result } = renderModel(store);
+
+		await waitFor(() => expect(result.current.loading).toBe(false));
+		act(() => {
+			store.set(canvasArtifactRevisionAtom, 1);
+		});
+
+		await waitFor(() => expect(result.current.loading).toBe(false));
+		expect(get).not.toHaveBeenCalled();
+		expect(result.current.selected).toBeNull();
 	});
 });

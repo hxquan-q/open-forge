@@ -2,6 +2,7 @@
 import {
 	BROWSER_SCREENSHOT_FORMAT,
 	BROWSER_SCREENSHOT_MAX_LONG_EDGE_PX,
+	type BrowserElementLiveEdit,
 	type BrowserElementRef,
 	type BrowserElementSelectionContext,
 } from "@vetta/coding-agent/function-extensions";
@@ -12,6 +13,7 @@ export const BROWSER_TAB_CHANNELS = {
 	GET_SESSION: "vetta:browser-tab:session",
 	SET_PICKER: "vetta:browser-tab:set-picker",
 	CROP_SCREENSHOT: "vetta:browser-tab:crop-screenshot",
+	LIVE_EDIT: "vetta:browser-tab:live-edit",
 	EVENT: "vetta:browser-tab:event",
 } as const;
 
@@ -73,6 +75,31 @@ export type DesktopBrowserCropScreenshotResult =
 	| { readonly ok: false; readonly code: "no_browser_session" | "crop_failed"; readonly message: string }
 	| DesktopIpcUnimplemented;
 
+/** 页面内即时预览改动（TASK-0085）：只改 WebView DOM，不写源码。 */
+export type DesktopBrowserLiveEditCommand =
+	| { readonly kind: "style"; readonly property: string; readonly value: string }
+	| { readonly kind: "text"; readonly value: string };
+
+export type DesktopBrowserLiveEditAction =
+	| { readonly type: "apply"; readonly edit: DesktopBrowserLiveEditCommand }
+	| { readonly type: "revert"; readonly index?: number }
+	| { readonly type: "state" };
+
+export interface DesktopBrowserTabLiveEditRequest {
+	readonly workspaceId: string;
+	readonly elementRef: BrowserElementRef;
+	readonly action: DesktopBrowserLiveEditAction;
+}
+
+export type DesktopBrowserTabLiveEditResult =
+	| { readonly ok: true; readonly edits: readonly BrowserElementLiveEdit[]; readonly hasElement: boolean }
+	| {
+			readonly ok: false;
+			readonly code: "no_browser_session" | "stale_reference" | "invalid_input" | "apply_failed";
+			readonly message: string;
+	  }
+	| DesktopIpcUnimplemented;
+
 export type DesktopBrowserTabEvent =
 	| { readonly kind: "session-changed"; readonly session: DesktopBrowserTabSession }
 	| { readonly kind: "picker-result"; readonly context: BrowserElementSelectionContext }
@@ -83,7 +110,7 @@ export interface DesktopBrowserTabEventEnvelope {
 	readonly event: DesktopBrowserTabEvent;
 }
 
-export type { BrowserElementRef, BrowserElementSelectionContext };
+export type { BrowserElementLiveEdit, BrowserElementRef, BrowserElementSelectionContext };
 
 export function unimplementedBrowserTabResult(): DesktopIpcUnimplemented {
 	return unimplementedDesktopIpcResult("browserTab");

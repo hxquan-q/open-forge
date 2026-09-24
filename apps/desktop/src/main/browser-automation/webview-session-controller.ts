@@ -3,6 +3,7 @@ import {
 	BROWSER_ELEMENT_SELECTION_SCHEMA,
 	BROWSER_ELEMENT_SELECTION_VERSION,
 	BROWSER_SCREENSHOT_FORMAT,
+	type BrowserElementLiveEdit,
 	type BrowserElementRef,
 	type BrowserElementSelectionContext,
 	readBrowserElementSelectionContext,
@@ -10,7 +11,9 @@ import {
 import type {
 	DesktopBrowserCropRect,
 	DesktopBrowserCropScreenshotResult,
+	DesktopBrowserLiveEditAction,
 	DesktopBrowserTabEventEnvelope,
+	DesktopBrowserTabLiveEditResult,
 	DesktopBrowserTabSession,
 } from "../../shared/browser-tab-ipc.js";
 import { readExtractedBrowserElement } from "./webview-element-extract.js";
@@ -64,6 +67,8 @@ interface WorkspaceSession {
 	webContents: InAppBrowserWebContents | null;
 	pickerWaiter: Promise<PickerOutcome> | null;
 	lastPickDevicePixelRatio?: number;
+	/** 最近一次 picker-result 的 ref；live-edit 只作用于它，防止改到过期元素。 */
+	lastPickedRef: BrowserElementRef | null;
 }
 
 export class InAppBrowserSessionController {
@@ -142,6 +147,7 @@ export class InAppBrowserSessionController {
 	bumpRevision(workspaceId: string, page?: { url?: string; title?: string }): number {
 		const session = this.ensureSession(workspaceId);
 		session.pageRevision += 1;
+		session.lastPickedRef = null;
 		if (page?.url && page.url !== "about:blank") session.pageUrl = page.url;
 		if (typeof page?.title === "string") session.title = page.title;
 		this.emitRevision(session);
@@ -266,6 +272,7 @@ export class InAppBrowserSessionController {
 			webContents: null,
 			pickerWaiter: null,
 			lastPickDevicePixelRatio: undefined,
+			lastPickedRef: null,
 		};
 		this.sessions.set(workspaceId, created);
 		return created;
@@ -292,8 +299,55 @@ export class InAppBrowserSessionController {
 		}
 	}
 
+	/**
+	 * 点选命中后的页面内即时预览（TASK-0085）：改动只落到 WebView DOM，
+	 * 不写源码；picker 停止/页面改版时自动还原。
+	 */
+	async liveEdit(
+		workspaceId: string,
+		elementRef: unknown,
+		action: DesktopBrowserLiveEditAction,
+	): Promise<DesktopBrowserTabLiveEditResult> {
+		const session = this.sessions.get(workspaceId);
+		const contents = session?.webContents;
+		if (!session || !contents || contents.isDestroyed()) {
+			return { ok: false, code: "no_browser_session", message: "no in-app browser page" };
+		}
+		const parsed = this.validateElementRef(workspaceId, elementRef);
+		if (!parsed.ok) return { ok: false, code: parsed.code, message: parsed.code };
+		if (!session.lastPickedRef || parsed.ref.id !== session.lastPickedRef.id) {
+			return { ok: false, code: "stale_reference", message: "element is not the latest pick" };
+		}
+		const [command, arg] =
+			action.type === "apply"
+				? (["apply-edit", action.edit] as const)
+				: action.type === "revert"
+					? typeof action.index === "number"
+						? (["revert-edit", { index: action.index }] as const)
+						: (["revert-all-edits", undefined] as const)
+					: (["edit-state", undefined] as const);
+		try {
+			const raw = (await contents.executeJavaScript(buildInAppBrowserGuestScript(command, arg))) as
+				| { ok: true; edits?: unknown; hasElement?: boolean }
+				| { ok: false; code: string }
+				| undefined;
+			if (!raw || typeof raw !== "object" || raw.ok !== true) {
+				return {
+					ok: false,
+					code: "apply_failed",
+					message: raw && typeof raw === "object" && "code" in raw ? String(raw.code) : "guest rejected edit",
+				};
+			}
+			const edits = Array.isArray(raw.edits) ? (raw.edits as BrowserElementLiveEdit[]) : [];
+			return { ok: true, edits, hasElement: raw.hasElement === true };
+		} catch {
+			return { ok: false, code: "apply_failed", message: "could not reach in-app browser page" };
+		}
+	}
+
 	private async stopPicker(session: WorkspaceSession): Promise<void> {
 		const contents = session.webContents;
+		session.lastPickedRef = null;
 		if (!contents || contents.isDestroyed()) return;
 		try {
 			await contents.executeJavaScript(buildInAppBrowserGuestScript("stop"));
@@ -339,6 +393,7 @@ export class InAppBrowserSessionController {
 		session.lastPickDevicePixelRatio = extracted.devicePixelRatio;
 		session.nextElementId += 1;
 		const elementRef = createBrowserElementRef(session.pageRevision, session.nextElementId);
+		session.lastPickedRef = elementRef;
 		const context = readBrowserElementSelectionContext({
 			schema: BROWSER_ELEMENT_SELECTION_SCHEMA,
 			version: BROWSER_ELEMENT_SELECTION_VERSION,

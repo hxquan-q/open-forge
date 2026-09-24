@@ -444,7 +444,22 @@
 		"elementAttached": "已附加页面元素",
 		"elementReplace": "新的选区会替换当前附件",
 		"staleSelection": "页面已变化，这个选区可能失效",
-		"cropFailed": "没能截取元素图片"
+		"cropFailed": "没能截取元素图片",
+		"liveEdit": {
+			"title": "调整选中元素",
+			"textPlaceholder": "替换文本内容",
+			"applyText": "改文本",
+			"styleProperty": "样式属性",
+			"styleValuePlaceholder": "值（留空即清除）",
+			"applyStyle": "改样式",
+			"edits": "改动",
+			"revertOne": "撤销这条",
+			"revertAll": "全部还原",
+			"send": "发送给 Agent",
+			"discard": "放弃",
+			"stale": "页面已变化，这个选区已失效",
+			"failed": "没能应用改动"
+		}
 	},
 	"capability": {
 		"network": "网络",

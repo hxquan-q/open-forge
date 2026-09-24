@@ -14,7 +14,7 @@ import {
 } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActivityWorkspace } from "../registry/context";
 import { groupCanvasArtifactsBySession, resolveCanvasSessionTitle } from "../services/canvas-artifact-groups";
@@ -117,6 +117,9 @@ export function useCanvasTabModel(): CanvasTabModel {
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [selected, setSelected] = useState<CanvasSelectedView | null>(null);
 	const [selectionExcerpt, setSelectionExcerpt] = useState("");
+	// items 的最新快照供选中态刷新读，不把它挂进 effect 依赖（避免列表刷新连带重取内容）。
+	const itemsRef = useRef(items);
+	itemsRef.current = items;
 
 	const sessionTitles = useMemo(() => {
 		const titles = new Map<string, string>();
@@ -202,38 +205,55 @@ export function useCanvasTabModel(): CanvasTabModel {
 		[items, sessionTitles, t, toRow],
 	);
 
-	const open = useCallback(
-		(artifactId: string) => {
-			setSelectedId(artifactId);
-			setSelectionExcerpt("");
-			void (async () => {
-				const result = await window.vetta.canvas.get({ workspaceId: workspace.id, artifactId });
-				if (!result.ok) {
-					const listed = items.find((item) => item.descriptor.artifactId === artifactId);
-					setSelected(
-						listed
-							? toSelectedView(listed, "", kindLabel, t)
-							: {
-									artifactId,
-									title: artifactId,
-									version: 1,
-									versionLabel: t("activityPanel.canvas.version", { version: 1 }),
-									kindLabel: kindLabel("markdown"),
-									missing: true,
-									externalUpdate: false,
-									previewKind: "markdown",
-									content: "",
-									extension: ".md",
-								},
-					);
-					return;
-				}
-				setItems((current) => upsertView(current, result.view));
-				setSelected(toSelectedView(result.view, result.content, kindLabel, t));
-			})();
-		},
-		[items, kindLabel, t, workspace.id],
-	);
+	const open = useCallback((artifactId: string) => {
+		setSelectedId(artifactId);
+		setSelectionExcerpt("");
+	}, []);
+
+	// 打开中的 artifact 订阅 artifact revision 事件（TASK-0085 Phase2）：agent 写新版本时
+	// 预览实时重取，不再只靠 mount/visibilitychange；refreshNonce 供 saveToProject 后强制重取。
+	// t/kindLabel 经 ref 读取最新值——i18n mock 或语言切换会换函数引用，不能进 deps 否则每次渲染重取。
+	const [refreshNonce, setRefreshNonce] = useState(0);
+	const formatRef = useRef({ kindLabel, t });
+	formatRef.current = { kindLabel, t };
+	useEffect(() => {
+		if (!selectedId) return;
+		let cancelled = false;
+		void revision;
+		void refreshNonce;
+		void (async () => {
+			const result = await window.vetta.canvas.get({ workspaceId: workspace.id, artifactId: selectedId });
+			if (cancelled) return;
+			const { kindLabel: label, t: translate } = formatRef.current;
+			if (!result.ok) {
+				// get 失败意味着内容不可读（missing_file 等）；列表里的旧视图可能还记着
+				// missing:false，这里以「读不到」为准，listed 只用于保留标题/kind 元数据。
+				const listed = itemsRef.current.find((item) => item.descriptor.artifactId === selectedId);
+				setSelected(
+					listed
+						? { ...toSelectedView(listed, "", label, translate), missing: true, content: "", htmlSrc: undefined }
+						: {
+								artifactId: selectedId,
+								title: selectedId,
+								version: 1,
+								versionLabel: translate("activityPanel.canvas.version", { version: 1 }),
+								kindLabel: label("markdown"),
+								missing: true,
+								externalUpdate: false,
+								previewKind: "markdown",
+								content: "",
+								extension: ".md",
+							},
+				);
+				return;
+			}
+			setItems((current) => upsertView(current, result.view));
+			setSelected(toSelectedView(result.view, result.content, label, translate));
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [selectedId, revision, refreshNonce, workspace.id]);
 
 	useEffect(() => {
 		// 归属闸门（TASK-0079）：pending 写入方标注了工作空间。不属于本面板的排队项
@@ -304,10 +324,10 @@ export function useCanvasTabModel(): CanvasTabModel {
 				),
 			);
 			if (selectedId === result.descriptor.artifactId) {
-				open(result.descriptor.artifactId);
+				setRefreshNonce((nonce) => nonce + 1);
 			}
 		})();
-	}, [items, open, selected, selectedId, t, workspace.id]);
+	}, [items, selected, selectedId, t, workspace.id]);
 
 	const deleteSelected = useCallback(() => {
 		if (!selected) return;

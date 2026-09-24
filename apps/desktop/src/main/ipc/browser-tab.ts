@@ -3,7 +3,9 @@ import { ipcMain } from "electron";
 import {
 	BROWSER_TAB_CHANNELS,
 	type DesktopBrowserCropScreenshotRequest,
+	type DesktopBrowserLiveEditAction,
 	type DesktopBrowserTabGetSessionRequest,
+	type DesktopBrowserTabLiveEditRequest,
 	type DesktopBrowserTabSetPickerRequest,
 } from "../../shared/browser-tab-ipc.js";
 import {
@@ -33,6 +35,27 @@ function readCropRequest(value: unknown): DesktopBrowserCropScreenshotRequest | 
 	return { workspaceId, rect, devicePixelRatio: record.devicePixelRatio };
 }
 
+function readLiveEditAction(value: unknown): DesktopBrowserLiveEditAction | undefined {
+	if (typeof value !== "object" || value === null) return undefined;
+	const action = value as { type?: unknown; edit?: unknown; index?: unknown };
+	if (action.type === "state") return { type: "state" };
+	if (action.type === "revert") {
+		return typeof action.index === "number" && Number.isInteger(action.index) && action.index >= 0
+			? { type: "revert", index: action.index }
+			: { type: "revert" };
+	}
+	if (action.type !== "apply") return undefined;
+	const edit = action.edit;
+	if (typeof edit !== "object" || edit === null) return undefined;
+	const record = edit as { kind?: unknown; property?: unknown; value?: unknown };
+	if (typeof record.value !== "string" || record.value.length > 2048) return undefined;
+	if (record.kind === "text") return { type: "apply", edit: { kind: "text", value: record.value } };
+	if (record.kind === "style" && typeof record.property === "string" && record.property.trim()) {
+		return { type: "apply", edit: { kind: "style", property: record.property, value: record.value } };
+	}
+	return undefined;
+}
+
 /** Browser picker / WebView 桥 / 截图裁剪：委托给 in-app WebView 会话控制器。 */
 export function registerBrowserTabIpc(): () => void {
 	const controller = getInAppBrowserSessionController();
@@ -57,9 +80,18 @@ export function registerBrowserTabIpc(): () => void {
 		if (!parsed) return { ok: false as const, code: "crop_failed" as const, message: "invalid crop request" };
 		return controller.cropScreenshot(parsed.workspaceId, parsed.rect, parsed.devicePixelRatio);
 	});
+	ipcMain.handle(CHANNELS.LIVE_EDIT, async (_event, request: DesktopBrowserTabLiveEditRequest) => {
+		const workspaceId = readWorkspaceId(request);
+		const action = readLiveEditAction(request?.action);
+		if (!workspaceId || !action || typeof request?.elementRef !== "object" || request.elementRef === null) {
+			return { ok: false as const, code: "invalid_input" as const, message: "invalid live-edit request" };
+		}
+		return controller.liveEdit(workspaceId, request.elementRef, action);
+	});
 	return () => {
 		ipcMain.removeHandler(CHANNELS.GET_SESSION);
 		ipcMain.removeHandler(CHANNELS.SET_PICKER);
 		ipcMain.removeHandler(CHANNELS.CROP_SCREENSHOT);
+		ipcMain.removeHandler(CHANNELS.LIVE_EDIT);
 	};
 }

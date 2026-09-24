@@ -1,19 +1,59 @@
 // Copyright The Open Forge contributors.
+import {
+	BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS,
+	BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
+} from "@vetta/coding-agent/function-extensions";
+import {
+	applyInAppBrowserLiveEdit,
+	type InAppBrowserLiveEditEntry,
+	revertInAppBrowserLiveEditEntries,
+	revertInAppBrowserLiveEditEntry,
+} from "./webview-live-edit.js";
 import { chooseInAppBrowserPickTarget } from "./webview-picker-target.js";
 
 export const IN_APP_BROWSER_PICKER_ROOT_ID = "__vetta-in-app-browser-picker";
 export const IN_APP_BROWSER_DOM_MUTATION_SENTINEL = "vetta-browser-dom-mutation";
 
-export type InAppBrowserPickerCommand = "start" | "stop" | "hide-overlay" | "show-overlay" | "install-observer";
+export type InAppBrowserPickerCommand =
+	| "start"
+	| "stop"
+	| "hide-overlay"
+	| "show-overlay"
+	| "install-observer"
+	| "apply-edit"
+	| "revert-edit"
+	| "revert-all-edits"
+	| "edit-state";
 
-export function buildInAppBrowserGuestScript(command: InAppBrowserPickerCommand): string {
-	return `void 0;(function(command){${chooseInAppBrowserPickTarget.toString()};(${inAppBrowserGuestRuntime.toString()})(command)})(${JSON.stringify(command)})`;
+/**
+ * guest runtime 的全部外部依赖。注入时经 `.toString()` 逐个内联成函数值/JSON 字面量，
+ * 测试直调时传真实绑定——runtime 函数体只能引用 `deps.*` 与全局对象，不得引用模块裸标识符
+ * （打包器/vitest SSR 会改写模块绑定名，裸引用在注入脚本里必然 ReferenceError）。
+ */
+interface InAppBrowserGuestDeps {
+	readonly choosePickTarget: typeof chooseInAppBrowserPickTarget;
+	readonly applyLiveEdit: typeof applyInAppBrowserLiveEdit;
+	readonly revertLiveEditEntry: typeof revertInAppBrowserLiveEditEntry;
+	readonly revertLiveEditEntries: typeof revertInAppBrowserLiveEditEntries;
+	readonly styleKeys: readonly string[];
+	readonly maxEdits: number;
 }
 
-function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
+const guestDepsLiteral = `{choosePickTarget:${chooseInAppBrowserPickTarget.toString()},applyLiveEdit:${applyInAppBrowserLiveEdit.toString()},revertLiveEditEntry:${revertInAppBrowserLiveEditEntry.toString()},revertLiveEditEntries:${revertInAppBrowserLiveEditEntries.toString()},styleKeys:${JSON.stringify([...BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS])},maxEdits:${JSON.stringify(BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS)}}`;
+
+export function buildInAppBrowserGuestScript(command: InAppBrowserPickerCommand, arg?: unknown): string {
+	return `void 0;(function(command,arg,deps){(${inAppBrowserGuestRuntime.toString()})(command,arg,deps)})(${JSON.stringify(command)},${JSON.stringify(arg ?? null)},${guestDepsLiteral})`;
+}
+
+function inAppBrowserGuestRuntime(
+	command: InAppBrowserPickerCommand,
+	arg: unknown,
+	deps: InAppBrowserGuestDeps,
+): unknown {
 	const rootId = "__vetta-in-app-browser-picker";
 	const stateKey = "__vettaInAppBrowserPicker";
 	const observerKey = "__vettaInAppBrowserObserver";
+	const editKey = "__vettaInAppBrowserLiveEdit";
 	const mutationSentinel = "vetta-browser-dom-mutation";
 	const store = window as unknown as Record<string, unknown>;
 	const cssEscape = (value: string): string => {
@@ -34,6 +74,78 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 	};
 
 	const current = store[stateKey] as PickerState | undefined;
+
+	type LiveEditStore = { current: Element | null; entries: InAppBrowserLiveEditEntry[] };
+	// 函数声明提升：stop 分支与命令分发都先于函数体其余 const 执行。
+	function editStore(): LiveEditStore {
+		let entry = store[editKey] as LiveEditStore | undefined;
+		if (!entry) {
+			entry = { current: null, entries: [] };
+			store[editKey] = entry;
+		}
+		return entry;
+	}
+	function publicEdits(entries: readonly InAppBrowserLiveEditEntry[]): unknown[] {
+		return entries.map(({ kind, property, before, after, target }) =>
+			property === undefined ? { kind, before, after, target } : { kind, property, before, after, target },
+		);
+	}
+	function revertAllLiveEdits(): void {
+		const entry = editStore();
+		deps.revertLiveEditEntries(entry.entries);
+		entry.entries = [];
+	}
+	function describeEditTarget(element: Element): string {
+		return buildDomPath(element);
+	}
+
+	if (command === "apply-edit") {
+		const entry = editStore();
+		const edit = (arg && typeof arg === "object" ? arg : {}) as {
+			kind?: "style" | "text";
+			property?: string;
+			value?: string;
+		};
+		const result = deps.applyLiveEdit(
+			entry.current,
+			{
+				kind: edit.kind === "text" ? "text" : "style",
+				property: edit.property,
+				value: typeof edit.value === "string" ? edit.value : "",
+			},
+			deps.styleKeys,
+			entry.entries.length,
+			deps.maxEdits,
+		);
+		if (!result.ok) return { ok: false, code: result.code };
+		entry.entries.push({
+			element: entry.current as Element,
+			target: describeEditTarget(entry.current as Element),
+			...result.record,
+		});
+		return { ok: true, edits: publicEdits(entry.entries) };
+	}
+	if (command === "revert-edit") {
+		const entry = editStore();
+		const index = typeof (arg as { index?: unknown })?.index === "number" ? (arg as { index: number }).index : -1;
+		const target = index >= 0 && index < entry.entries.length ? entry.entries[index] : undefined;
+		if (!target) return { ok: false, code: "invalid_index" };
+		deps.revertLiveEditEntry(target);
+		entry.entries.splice(index, 1);
+		return { ok: true, edits: publicEdits(entry.entries) };
+	}
+	if (command === "revert-all-edits") {
+		revertAllLiveEdits();
+		return { ok: true, edits: [] };
+	}
+	if (command === "edit-state") {
+		const entry = editStore();
+		return {
+			ok: true,
+			hasElement: Boolean(entry.current && entry.current.isConnected !== false),
+			edits: publicEdits(entry.entries),
+		};
+	}
 
 	if (command === "install-observer") {
 		if (store[observerKey]) return { ok: true, already: true };
@@ -71,6 +183,8 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 		return { ok: true };
 	}
 	if (command === "stop") {
+		revertAllLiveEdits();
+		store[editKey] = undefined;
 		if (!current) return { ok: true, stopped: true };
 		current.disposed = true;
 		window.removeEventListener("mousemove", current.onMove, true);
@@ -100,10 +214,10 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 
 	const pickTarget = (event: Event): Element | null => {
 		const point = event as MouseEvent;
-		return chooseInAppBrowserPickTarget(point, document, rootId);
+		return deps.choosePickTarget(point, document, rootId);
 	};
 
-	const describeNode = (element: Element): string => {
+	function describeNode(element: Element): string {
 		const tag = element.tagName.toLowerCase();
 		if (element.id && document.querySelectorAll(`#${cssEscape(element.id)}`).length === 1) {
 			return `${tag}#${element.id}`;
@@ -112,9 +226,9 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 		if (!parent) return tag;
 		const typed = Array.from(parent.children).filter((node) => node.tagName === element.tagName);
 		return typed.length > 1 ? `${tag}:nth-of-type(${typed.indexOf(element) + 1})` : tag;
-	};
+	}
 
-	const buildDomPath = (element: Element): string => {
+	function buildDomPath(element: Element): string {
 		const parts: string[] = [];
 		let currentNode: Element | null = element;
 		while (currentNode && currentNode !== document.documentElement) {
@@ -123,7 +237,7 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 			currentNode = currentNode.parentElement;
 		}
 		return (parts.join(" > ") || element.tagName.toLowerCase()).slice(0, 2048);
-	};
+	}
 
 	const buildXPath = (element: Element): string => {
 		if (element.id && document.querySelectorAll(`#${cssEscape(element.id)}`).length === 1) {
@@ -294,6 +408,7 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 			window.removeEventListener("auxclick", state.onClick, true);
 			window.removeEventListener("keydown", state.onKey, true);
 			overlay.remove();
+			editStore().current = target;
 			store[stateKey] = undefined;
 			state.resolve(collect(target));
 		},
@@ -302,7 +417,7 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 			if (keyEvent.key !== "Escape") return;
 			event.preventDefault();
 			event.stopPropagation();
-			void inAppBrowserGuestRuntime("stop");
+			void inAppBrowserGuestRuntime("stop", null, deps);
 		},
 	};
 	store[stateKey] = state;
@@ -316,6 +431,17 @@ function inAppBrowserGuestRuntime(command: InAppBrowserPickerCommand): unknown {
 	return promise;
 }
 
-export function runInAppBrowserGuestCommand(command: InAppBrowserPickerCommand): unknown {
-	return inAppBrowserGuestRuntime(command);
+/**
+ * 单测入口：直接调用真实 runtime + 真实依赖绑定，与注入路径执行同一份函数体
+ * （注入脚本只是把同样的函数按 `.toString()` 值传进 `deps`）。
+ */
+export function runInAppBrowserGuestCommand(command: InAppBrowserPickerCommand, arg?: unknown): unknown {
+	return inAppBrowserGuestRuntime(command, arg ?? null, {
+		choosePickTarget: chooseInAppBrowserPickTarget,
+		applyLiveEdit: applyInAppBrowserLiveEdit,
+		revertLiveEditEntry: revertInAppBrowserLiveEditEntry,
+		revertLiveEditEntries: revertInAppBrowserLiveEditEntries,
+		styleKeys: BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
+		maxEdits: BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS,
+	});
 }

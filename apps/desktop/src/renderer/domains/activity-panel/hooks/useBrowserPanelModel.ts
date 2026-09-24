@@ -3,13 +3,15 @@ import {
 	getBrowserUrlForWorkspace,
 	setBrowserUrlForWorkspaceAtom,
 } from "@shared/store/browser-atoms";
-import type { BrowserPanelLabels } from "@vetta-org/theme-ui/activity";
+import { BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS } from "@vetta/coding-agent/function-extensions";
+import type { BrowserLiveEditCardProps, BrowserPanelLabels } from "@vetta-org/theme-ui/activity";
 import { useAtomValue, useSetAtom } from "jotai";
 import { type FormEvent, type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IN_APP_BROWSER_PARTITION } from "@/shared/browser-tab-ipc";
 import { useActivityWorkspace } from "../registry/context";
 import { useBrowserElementPicker } from "./useBrowserElementPicker";
+import { useBrowserLiveEdit } from "./useBrowserLiveEdit";
 
 /** 所有会话的内置浏览器共享一份持久 cookie/会话，登录一次到处复用。 */
 const BROWSER_PARTITION = IN_APP_BROWSER_PARTITION;
@@ -57,6 +59,7 @@ export interface BrowserPanelModel {
 	pickerEnabled: boolean;
 	pickerDisabled: boolean;
 	onTogglePicker: () => void;
+	liveEdit?: BrowserLiveEditCardProps;
 }
 
 export function useBrowserPanelModel(): BrowserPanelModel {
@@ -181,6 +184,45 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 
 	const hasPage = currentUrl !== "" || targetUrl != null;
 	const picker = useBrowserElementPicker({ workspaceId, hasPage });
+	const liveEdit = useBrowserLiveEdit({ workspaceId, elementRef: picker.selectionRef });
+
+	const liveEditView = useMemo((): BrowserLiveEditCardProps | undefined => {
+		const selection = picker.selection;
+		if (!selection) return undefined;
+		const payload = selection.context.payload;
+		return {
+			title: payload.accessibleName || payload.role || payload.domPath,
+			target: payload.domPath,
+			edits: liveEdit.edits,
+			busy: liveEdit.busy,
+			hasElement: liveEdit.hasElement,
+			error: liveEdit.error,
+			styleProperties: BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
+			labels: {
+				title: t("browser.liveEdit.title"),
+				textPlaceholder: t("browser.liveEdit.textPlaceholder"),
+				applyText: t("browser.liveEdit.applyText"),
+				styleProperty: t("browser.liveEdit.styleProperty"),
+				styleValuePlaceholder: t("browser.liveEdit.styleValuePlaceholder"),
+				applyStyle: t("browser.liveEdit.applyStyle"),
+				edits: t("browser.liveEdit.edits"),
+				revertOne: t("browser.liveEdit.revertOne"),
+				revertAll: t("browser.liveEdit.revertAll"),
+				send: t("browser.liveEdit.send"),
+				discard: t("browser.liveEdit.discard"),
+				stale: t("browser.liveEdit.stale"),
+				failed: t("browser.liveEdit.failed"),
+			},
+			onApplyText: (value) => void liveEdit.applyText(value),
+			onApplyStyle: (property, value) => void liveEdit.applyStyle(property, value),
+			onRevertEdit: (index) => void liveEdit.revertEdit(index),
+			onRevertAll: () => void liveEdit.revertAll(),
+			onSend: () => picker.confirmSelection(liveEdit.edits),
+			onDiscard: () => {
+				void liveEdit.revertAll().finally(() => picker.discardSelection());
+			},
+		};
+	}, [liveEdit, picker, t]);
 
 	const labels = useMemo(
 		(): BrowserPanelLabels => ({
@@ -225,5 +267,6 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		pickerEnabled: picker.pickerEnabled,
 		pickerDisabled: !hasPage,
 		onTogglePicker: picker.onTogglePicker,
+		liveEdit: liveEditView,
 	};
 }

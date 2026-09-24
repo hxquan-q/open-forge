@@ -21,6 +21,7 @@ describe("canvas / browser tab IPC stubs", () => {
 			GET_SESSION: "vetta:browser-tab:session",
 			SET_PICKER: "vetta:browser-tab:set-picker",
 			CROP_SCREENSHOT: "vetta:browser-tab:crop-screenshot",
+			LIVE_EDIT: "vetta:browser-tab:live-edit",
 			EVENT: "vetta:browser-tab:event",
 		});
 	});

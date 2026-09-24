@@ -14,7 +14,12 @@ import { CANVAS_ARTIFACT_SELECTION_SCHEMA } from "../../services/canvas-selectio
 vi.mock("@shared/store/atoms", async () => {
 	const { atom: createAtom } = await import("jotai");
 	return {
+		activityPanelTabByProjectAtom: createAtom(new Map()),
+		canvasArtifactRevisionAtom: createAtom(0),
+		canvasUnreadCountAtom: createAtom(0),
 		confirmDialogAtom: createAtom(null),
+		isCanvasTabVisible: () => true,
+		pendingCanvasArtifactIdAtom: createAtom(null),
 		promptAttachmentAtom: createAtom(null),
 		resolvedThemeAtom: createAtom("dark"),
 		sessionsMapAtom: createAtom(new Map()),
