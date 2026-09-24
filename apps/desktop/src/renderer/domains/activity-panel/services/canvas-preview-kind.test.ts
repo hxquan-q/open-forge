@@ -1,7 +1,13 @@
 // Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { CANVAS_DATA_GRID_JSON_CONTENT_TYPE } from "./canvas-data-grid";
-import { canvasPreviewExtension, resolveCanvasPreviewKind } from "./canvas-preview-kind";
+import {
+	CANVAS_CHART_CONTENT_TYPE,
+	CANVAS_CHECKLIST_CONTENT_TYPE,
+	CANVAS_DIFF_CONTENT_TYPE,
+	canvasPreviewExtension,
+	resolveCanvasPreviewKind,
+} from "./canvas-preview-kind";
 
 describe("resolveCanvasPreviewKind", () => {
 	it("把 Markdown 与 HTML 从 contentType / 文件名分开，其余当代码", () => {
@@ -23,6 +29,16 @@ describe("resolveCanvasPreviewKind", () => {
 		// HTML / Markdown 的既有优先级不变。
 		expect(resolveCanvasPreviewKind({ contentType: "text/markdown", title: "report.csv.md" })).toBe("markdown");
 	});
+
+	it("声明式组件 contentType 与 code-change 映射到各自分支", () => {
+		expect(resolveCanvasPreviewKind({ contentType: CANVAS_CHART_CONTENT_TYPE })).toBe("chart");
+		expect(resolveCanvasPreviewKind({ contentType: CANVAS_CHECKLIST_CONTENT_TYPE })).toBe("checklist");
+		expect(resolveCanvasPreviewKind({ contentType: CANVAS_DIFF_CONTENT_TYPE })).toBe("diff");
+		expect(resolveCanvasPreviewKind({ kind: "code-change", contentType: "text/plain" })).toBe("diff");
+		// 既有优先级不变：Markdown 内容即使标了 code-change 也仍走 Markdown 预览。
+		expect(resolveCanvasPreviewKind({ kind: "code-change", contentType: "text/markdown" })).toBe("markdown");
+		expect(resolveCanvasPreviewKind({ contentType: "application/json", title: "chart.json" })).toBe("code");
+	});
 });
 
 describe("canvasPreviewExtension", () => {
@@ -36,5 +52,12 @@ describe("canvasPreviewExtension", () => {
 		expect(canvasPreviewExtension({ contentType: "text/csv", title: "销售数据" })).toBe(".csv");
 		expect(canvasPreviewExtension({ contentType: "text/tab-separated-values", title: "导出" })).toBe(".tsv");
 		expect(canvasPreviewExtension({ contentType: CANVAS_DATA_GRID_JSON_CONTENT_TYPE, title: "导出" })).toBe(".json");
+	});
+
+	it("声明式组件与 diff 的兜底后缀", () => {
+		expect(canvasPreviewExtension({ contentType: CANVAS_CHART_CONTENT_TYPE, title: "收入趋势" })).toBe(".json");
+		expect(canvasPreviewExtension({ contentType: CANVAS_CHECKLIST_CONTENT_TYPE, title: "发版清单" })).toBe(".json");
+		expect(canvasPreviewExtension({ contentType: CANVAS_DIFF_CONTENT_TYPE, title: "变更" })).toBe(".diff");
+		expect(canvasPreviewExtension({ contentType: "text/plain", kind: "code-change", title: "变更" })).toBe(".diff");
 	});
 });

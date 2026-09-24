@@ -89,6 +89,14 @@
 		"architecture-canvas": {
 			"name": "Architecture canvas",
 			"description": "When the user wants an architecture, module, or system diagram, create an HTML canvas artifact with inline SVG instead of pasting an image in chat."
+		},
+		"chart-canvas": {
+			"name": "Data chart",
+			"description": "When the user wants a trend, comparison, or share-of-total chart, write the declarative chart JSON with artifact so Canvas renders it natively instead of listing numbers in chat."
+		},
+		"review-canvas": {
+			"name": "Change review",
+			"description": "When the user wants a cross-file code review, write the full unified diff with artifact so Canvas groups it by file with line stats."
 		}
 	}
 }

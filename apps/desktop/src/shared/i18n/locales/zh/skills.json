@@ -89,6 +89,14 @@
 		"architecture-canvas": {
 			"name": "架构图画布",
 			"description": "用户要架构图、模块图或系统图时，用 artifact 创建带内联 SVG 的 HTML 画布，不要只在聊天里贴图。"
+		},
+		"chart-canvas": {
+			"name": "数据图表",
+			"description": "用户要趋势图、对比图或占比图时，用 artifact 写入声明式图表 JSON，由画布原生渲染，不要只在聊天里贴数字。"
+		},
+		"review-canvas": {
+			"name": "变更审查",
+			"description": "用户要跨文件代码评审时，用 artifact 写入完整 Unified Diff，画布按文件分组展示差异与增删行。"
 		}
 	}
 }

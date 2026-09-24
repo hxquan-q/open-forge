@@ -1,4 +1,4 @@
-// Copyright The Open Forge contributors.
+﻿// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import type { DesktopCanvasArtifactView } from "@preload/api-types/canvas";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
@@ -17,7 +17,10 @@ vi.mock("@shared/store/atoms", async () => {
 		activityPanelTabByProjectAtom: createAtom(new Map()),
 		canvasArtifactRevisionAtom: createAtom(0),
 		canvasUnreadCountAtom: createAtom(0),
+		chatMessagesAtom: createAtom([]),
 		confirmDialogAtom: createAtom(null),
+		focusInputRequestAtom: createAtom(0),
+		inputValueAtom: createAtom(""),
 		isCanvasTabVisible: () => true,
 		pendingCanvasArtifactIdAtom: createAtom(null),
 		promptAttachmentAtom: createAtom(null),
@@ -54,6 +57,7 @@ vi.mock("react-i18next", () => ({
 				page?: number;
 				pageCount?: number;
 				rows?: number;
+				count?: number;
 			},
 		) => {
 			if (key === "activityPanel.canvas.version") return `version-${options?.version ?? 0}`;
@@ -81,6 +85,7 @@ vi.mock("../previews/CodePreview", () => ({
 
 const list = vi.fn();
 const get = vi.fn();
+const update = vi.fn();
 const saveToProject = vi.fn();
 const remove = vi.fn();
 const selectFolder = vi.fn();
@@ -93,6 +98,7 @@ vi.stubGlobal(
 			canvas: {
 				list: (...args: unknown[]) => list(...args),
 				get: (...args: unknown[]) => get(...args),
+				update: (...args: unknown[]) => update(...args),
 				saveToProject: (...args: unknown[]) => saveToProject(...args),
 				delete: (...args: unknown[]) => remove(...args),
 			},
@@ -102,7 +108,9 @@ vi.stubGlobal(
 	}),
 );
 
-const { confirmDialogAtom, promptAttachmentAtom } = await import("@shared/store/atoms");
+const { chatMessagesAtom, confirmDialogAtom, inputValueAtom, promptAttachmentAtom, resolvedThemeAtom } = await import(
+	"@shared/store/atoms"
+);
 const { toastsAtom } = await import("@shared/store/toast-atoms");
 const { CanvasTabPanel } = await import("./CanvasTabPanel.js");
 
@@ -154,6 +162,7 @@ describe("canvas tab panel user flow", () => {
 		});
 		saveToProject.mockReset();
 		remove.mockReset();
+		update.mockReset();
 		selectFolder.mockReset();
 		openExternal.mockReset();
 	});
@@ -264,6 +273,8 @@ describe("canvas tab panel user flow", () => {
 		await waitFor(() => {
 			expect(screen.getByLabelText("activityPanel.canvas.htmlSandboxLabel")).toBeTruthy();
 		});
+		// HTML 走隔离沙箱，不提供就地编辑开关。
+		expect(screen.queryByRole("button", { name: /activityPanel.canvas.enterEdit/ })).toBeNull();
 		const guest = document.querySelector("webview");
 		guest?.dispatchEvent(
 			Object.assign(new Event("will-navigate", { cancelable: true }), { url: "https://example.com/docs" }),
@@ -348,5 +359,242 @@ describe("canvas tab panel user flow", () => {
 				},
 			},
 		});
+	});
+
+	it("Markdown artifact 可进入编辑并保存为新版本，成功后回到预览", async () => {
+		const store = createStore();
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 调研摘要" }));
+		await waitFor(() => expect(screen.getByTestId("canvas-text-preview")).toBeTruthy());
+
+		await userEvent.click(screen.getByRole("button", { name: /activityPanel.canvas.enterEdit/ }));
+		const editor = screen.getByRole<HTMLTextAreaElement>("textbox", {
+			name: "activityPanel.canvas.editorLabel",
+		});
+		expect(editor.value).toBe("请把第二节改成要点列表");
+
+		await userEvent.clear(editor);
+		await userEvent.type(editor, "改好的正文");
+		update.mockResolvedValue({ ok: true, descriptor: descriptor({ version: 3 }) });
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.save" }));
+
+		await waitFor(() => {
+			expect(update).toHaveBeenCalledWith({
+				workspaceId: "/work/project",
+				artifactId: "art-md",
+				baseVersion: 2,
+				content: "改好的正文",
+				title: "调研摘要",
+			});
+		});
+		// 保存成功后退出编辑态并回到只读预览。
+		await waitFor(() => expect(screen.getByTestId("canvas-text-preview")).toBeTruthy());
+		expect(screen.queryByRole("textbox", { name: "activityPanel.canvas.editorLabel" })).toBeNull();
+	});
+
+	it("保存遇到 stale_version 时提示冲突、保留草稿并可从冲突态载入最新版本", async () => {
+		const store = createStore();
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 调研摘要" }));
+		await waitFor(() => expect(screen.getByTestId("canvas-text-preview")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: /activityPanel.canvas.enterEdit/ }));
+		const editor = screen.getByRole<HTMLTextAreaElement>("textbox", {
+			name: "activityPanel.canvas.editorLabel",
+		});
+		await userEvent.clear(editor);
+		await userEvent.type(editor, "我的草稿");
+		update.mockResolvedValue({ ok: false, code: "stale_version", message: "stale" });
+
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.save" }));
+		await waitFor(() => expect(screen.getByText("activityPanel.canvas.staleVersion")).toBeTruthy());
+		expect(screen.getByText("activityPanel.canvas.staleVersionHint")).toBeTruthy();
+		// 草稿没有被静默丢弃。
+		expect(
+			screen.getByRole<HTMLTextAreaElement>("textbox", { name: "activityPanel.canvas.editorLabel" }).value,
+		).toBe("我的草稿");
+
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.reload" }));
+		await waitFor(() => expect(screen.getByTestId("canvas-text-preview")).toBeTruthy());
+	});
+
+	it("划选后点击快捷宏把结构化指令与选区胶囊一起送进输入框", async () => {
+		const store = createStore();
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 调研摘要" }));
+		await waitFor(() => expect(screen.getByTestId("canvas-text-preview")).toBeTruthy());
+
+		const preview = screen.getByTestId("canvas-text-preview");
+		const textNode = preview.firstChild;
+		vi.spyOn(window, "getSelection").mockReturnValue({
+			isCollapsed: false,
+			rangeCount: 1,
+			toString: () => "第二节",
+			getRangeAt: () => ({ commonAncestorContainer: textNode ?? preview }),
+		} as unknown as Selection);
+		await userEvent.click(preview);
+
+		// Markdown 只给文档类宏。
+		expect(screen.queryByRole("button", { name: /activityPanel.canvas.macros.addLogs/ })).toBeNull();
+		await userEvent.click(screen.getByRole("button", { name: /activityPanel.canvas.macros.makeShorter/ }));
+
+		expect(store.get(inputValueAtom)).toBe("activityPanel.canvas.macros.makeShorterPrompt");
+		expect(store.get(promptAttachmentAtom)).toMatchObject({
+			ownerPluginId: "builtin.canvas",
+			context: {
+				schema: CANVAS_ARTIFACT_SELECTION_SCHEMA,
+				payload: { artifactId: "art-md", version: 2, excerpt: "第二节" },
+			},
+		});
+	});
+
+	it("chart artifact 渲染原生图表，主题切换不重建结构", async () => {
+		const store = createStore();
+		const chart = view({
+			descriptor: descriptor({
+				artifactId: "art-chart",
+				title: "收入趋势",
+				kind: "analysis",
+				contentType: "application/vnd.vetta.chart+json",
+			}),
+		});
+		list.mockResolvedValue({ ok: true, items: [chart] });
+		get.mockResolvedValue({
+			ok: true,
+			view: chart,
+			content: JSON.stringify({ type: "line", labels: ["1月", "2月"], series: [{ name: "收入", values: [1, 2] }] }),
+			contentType: "application/vnd.vetta.chart+json",
+		});
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("收入趋势")).toBeTruthy());
+		expect(screen.getByText("activityPanel.canvas.kindChart")).toBeTruthy();
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 收入趋势" }));
+		await waitFor(() => expect(screen.getByRole("img")).toBeTruthy());
+
+		// 取色是 CSS 变量引用：切主题只换变量值，图表结构不变。
+		expect(screen.getByRole("img").querySelector("polyline")?.getAttribute("stroke")).toBe("var(--chart-1)");
+		store.set(resolvedThemeAtom, "light");
+		expect(store.get(resolvedThemeAtom)).toBe("light");
+		expect(screen.getByRole("img").querySelector("polyline")?.getAttribute("stroke")).toBe("var(--chart-1)");
+	});
+
+	it("声明式组件结构非法时降级为代码视图并给出提示", async () => {
+		const store = createStore();
+		const broken = view({
+			descriptor: descriptor({
+				artifactId: "art-broken",
+				title: "坏图表",
+				kind: "analysis",
+				contentType: "application/vnd.vetta.chart+json",
+			}),
+		});
+		list.mockResolvedValue({ ok: true, items: [broken] });
+		get.mockResolvedValue({
+			ok: true,
+			view: broken,
+			content: "{not json",
+			contentType: "application/vnd.vetta.chart+json",
+		});
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("坏图表")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.open 坏图表" }));
+
+		await waitFor(() => expect(screen.getByText("activityPanel.canvas.invalidStructured")).toBeTruthy());
+		expect(screen.queryByRole("img")).toBeNull();
+		// 降级到代码视图，原文可读而不是白屏。
+		expect(screen.getByTestId("canvas-text-preview").textContent).toContain("{not json");
+	});
+
+	it("会话内文件变更在「任务变更」分段按文件汇总并可查看差异", async () => {
+		const store = createStore();
+		store.set(chatMessagesAtom, [
+			{
+				blocks: [
+					{
+						type: "tool_call",
+						toolCallId: "call-a",
+						toolName: "edit_file",
+						status: "success",
+						args: { file_path: "src/a.ts" },
+						uiDetails: {
+							diff: "--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1,2 @@\n-old-a\n+new-a\n+extra-a\n",
+						},
+					},
+					{
+						type: "tool_call",
+						toolCallId: "call-b",
+						toolName: "write_to_file",
+						status: "success",
+						args: { path: "src/b.ts" },
+						uiDetails: { diff: "--- /dev/null\n+++ b/src/b.ts\n@@\n+fresh-b\n" },
+					},
+				],
+			},
+		]);
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: /activityPanel\.canvas\.sectionChanges/ }));
+
+		expect(screen.getByText("src/a.ts")).toBeTruthy();
+		expect(screen.getByText("src/b.ts")).toBeTruthy();
+		expect(screen.getByText("activityPanel.canvas.statusAdded")).toBeTruthy();
+		expect(screen.getByText("activityPanel.canvas.changePickHint")).toBeTruthy();
+
+		await userEvent.click(screen.getByRole("button", { name: /src\/a\.ts/ }));
+		expect(screen.getByText("new-a")).toBeTruthy();
+	});
+
+	it("没有文件变更时「任务变更」显示空态而不是报错", async () => {
+		const store = createStore();
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+		await userEvent.click(screen.getByRole("button", { name: /activityPanel\.canvas\.sectionChanges/ }));
+		expect(screen.getByText("activityPanel.canvas.changesEmpty")).toBeTruthy();
+		expect(screen.getByText("activityPanel.canvas.changesEmptyHint")).toBeTruthy();
+	});
+
+	it("放弃全部变更需确认，确认后清空画布列表", async () => {
+		const store = createStore();
+		remove.mockResolvedValue({ ok: true });
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.discardAll" }));
+		// 只有确认框被打开，还没有任何删除。
+		expect(remove).not.toHaveBeenCalled();
+		expect(store.get(confirmDialogAtom)?.title).toBe("activityPanel.canvas.discardAll");
+
+		store.get(confirmDialogAtom)?.onConfirm(false);
+		await waitFor(() =>
+			expect(remove).toHaveBeenCalledWith({ workspaceId: "/work/project", artifactId: "art-md" }),
+		);
+		await waitFor(() => expect(screen.getByText("activityPanel.canvas.empty")).toBeTruthy());
+	});
+
+	it("全部保存到项目只选一次目录并汇总冲突", async () => {
+		const store = createStore();
+		selectFolder.mockResolvedValue("/work/project/docs");
+		list.mockResolvedValue({
+			ok: true,
+			items: [view(), view({ descriptor: descriptor({ artifactId: "art-2", title: "第二份" }) })],
+		});
+		saveToProject
+			.mockResolvedValueOnce({ ok: true, descriptor: descriptor({ version: 3 }) })
+			.mockResolvedValueOnce({ ok: false, code: "conflict", message: "exists" });
+		renderPanel(store);
+		await waitFor(() => expect(screen.getByText("调研摘要")).toBeTruthy());
+
+		await userEvent.click(screen.getByRole("button", { name: "activityPanel.canvas.saveAllToProject" }));
+		await waitFor(() => expect(selectFolder).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(saveToProject).toHaveBeenCalledTimes(2));
+		await waitFor(() =>
+			expect(
+				getDefaultStore()
+					.get(toastsAtom)
+					.some((toast) => toast.message === "activityPanel.canvas.batchSaveSummary"),
+			).toBe(true),
+		);
 	});
 });
