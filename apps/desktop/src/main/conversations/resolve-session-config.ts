@@ -34,6 +34,8 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	/**
 	 * 能力 Profile（ADR-0128）：新建时由渲染层按当前 WorkspaceMode 派生传入，
 	 * 固化本会话的工具/Memory 默认；显式 agentConfiguration 选择优先于默认。
+	 * 恢复已有会话时不采纳该值（TASK-0078）：渲染层页头会随用户切换变化，
+	 * 按它恢复等于把固化工具面改写成「当前」工作区。
 	 */
 	readonly capabilityProfile?: "work" | "coding";
 	readonly appendSystemPrompt?: string;
@@ -55,8 +57,18 @@ export interface ResolvedDesktopSessionConfig {
 	includeAgentSkills: boolean;
 	/** 本会话固化的工作模式；创建后由调用方落盘，会话内不可变。 */
 	agentMode: DesktopAgentMode;
-	/** 本会话固化的能力 Profile；新建时由渲染层传入，恢复时回落 agentMode。 */
+	/**
+	 * 本会话固化的能力 Profile。新建时取渲染层传入值，缺省回落 coding；
+	 * 恢复时按创建时固化的 agentMode 记录折算，无记录（历史会话）回落 coding
+	 * 缺省——不跟随当前工作区，也不做能力收紧（TASK-0078）。
+	 */
 	capabilityProfile: "work" | "coding";
+}
+
+interface ResolvedSessionAgentAxes {
+	agentMode: DesktopAgentMode;
+	/** 该会话创建时固化的 agentMode 记录；新建会话与无记录的历史会话为 undefined。 */
+	frozenAgentMode: DesktopAgentMode | undefined;
 }
 
 /**
@@ -64,16 +76,44 @@ export interface ResolvedDesktopSessionConfig {
  * - 新建会话优先取渲染层按当前工作区派生的 agentMode，否则回落 desktop-config 默认值；
  * - 恢复已有会话取该会话创建时固化的记录，缺记录时回落常量，绝不回落当前默认值，
  *   否则改默认值会连带改写历史会话的模式。
+ * 同时带回「记录是否存在」：能力 Profile 的固化守卫要靠它区分
+ * 「会话固化过记录」与「历史会话从无记录」两条恢复路径（TASK-0078）。
  */
 async function resolveSessionAgentMode(
 	existingSessionPath: string | undefined,
 	requestedAgentMode: DesktopAgentMode | undefined,
 	defaultAgentMode: DesktopAgentMode,
-): Promise<DesktopAgentMode> {
+): Promise<ResolvedSessionAgentAxes> {
 	if (existingSessionPath) {
-		return (await readSessionAgentMode(existingSessionPath)) ?? LEGACY_SESSION_AGENT_MODE;
+		const frozenAgentMode = await readSessionAgentMode(existingSessionPath);
+		return { agentMode: frozenAgentMode ?? LEGACY_SESSION_AGENT_MODE, frozenAgentMode };
 	}
-	return requestedAgentMode ?? defaultAgentMode;
+	return { agentMode: requestedAgentMode ?? defaultAgentMode, frozenAgentMode: undefined };
+}
+
+/**
+ * 能力 Profile（ADR-0128）的来源与固化守卫（TASK-0078），优先级从高到低：
+ * 1. 恢复会话且存在创建时固化的 agentMode 记录：按记录折算，**不采纳请求值**——
+ *    渲染层曾把「当前」页头派生的 Profile 随 resume 下发，一旦采纳就会把 coding
+ *    会话静默改写成 work 工具子集；
+ * 2. 其余（新建会话、无记录的历史会话）：显式请求值优先（团队 Runtime 据此声明
+ *    coding 裁决）；未传时维持 `resolveAgentProfile(undefined)` 的 coding 缺省——
+ *    debug/remote-control 等未传方不做能力收紧，也不会被 agentMode 的默认值
+ *    （work）连带收窄工具面。
+ * 无记录的历史会话按 coding 恢复而不是 LEGACY 常量折算的 work：Profile 轴自己的
+ * 合同是「缺省回落 coding，避免静默改变既有会话」，与 agentMode 轴的提示词回落
+ * 各自独立、互不影响。
+ */
+function resolveSessionCapabilityProfile(
+	requestedCapabilityProfile: DesktopCodingAgentSessionConfig["capabilityProfile"],
+	frozenAgentMode: DesktopAgentMode | undefined,
+): "work" | "coding" {
+	if (frozenAgentMode !== undefined) return frozenAgentMode === "work" ? "work" : "coding";
+	const requested =
+		requestedCapabilityProfile === "work" || requestedCapabilityProfile === "coding"
+			? requestedCapabilityProfile
+			: undefined;
+	return requested ?? "coding";
 }
 
 /**
@@ -123,17 +163,12 @@ export async function resolveDesktopSessionConfig(
 				? `${config.appendSystemPrompt}\n\n${VETTA_CLI_GUIDANCE}`
 				: VETTA_CLI_GUIDANCE
 			: config?.appendSystemPrompt;
-	const agentMode = await resolveSessionAgentMode(
+	const { agentMode, frozenAgentMode } = await resolveSessionAgentMode(
 		config?.sessionPath,
 		config?.agentMode,
 		desktopConfig.defaultAgentMode ?? "work",
 	);
-	const capabilityProfile =
-		config?.capabilityProfile === "work" || config?.capabilityProfile === "coding"
-			? config.capabilityProfile
-			: agentMode === "work"
-				? "work"
-				: "coding";
+	const capabilityProfile = resolveSessionCapabilityProfile(config?.capabilityProfile, frozenAgentMode);
 	// 能力收敛（ADR-0128 + TASK-0021）：Profile 默认折算 → 项目策略只能再收紧。
 	const resolvedAgentConfiguration = await applyProjectToolPolicy(
 		effectiveCwd,
