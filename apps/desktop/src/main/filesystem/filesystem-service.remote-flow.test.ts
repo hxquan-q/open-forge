@@ -23,7 +23,8 @@ const PNG_1X1 = Buffer.from(
 	"base64",
 );
 
-describe("远程项目的文件树：用户在面板里的一串常见操作", () => {
+// 回环 SSH 顶替脚本是 /bin/sh POSIX shell，win32 下无 shebang 执行与合法远端 POSIX 路径。
+describe.skipIf(process.platform === "win32")("远程项目的文件树：用户在面板里的一串常见操作", () => {
 	let remoteRoot: string;
 	let root: string;
 

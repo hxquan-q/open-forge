@@ -37,65 +37,72 @@ function createRemoteProject(): { dir: string; uri: string } {
 }
 
 describe("插件的长驻进程与远程项目", () => {
-	it("npm install 这类长跑命令在项目所在的机器上执行——本机跑它看不到任何项目文件", async () => {
-		// 回归：守卫原先拒绝一切带远程 cwd 的 spawn，设计稿的依赖因此装不上。
-		const project = createRemoteProject();
-		writeFileSync(join(project.dir, "package.json"), '{"name":"demo"}');
+	// 回环 SSH 顶替脚本是 /bin/sh POSIX shell：win32 下无 shebang 执行与合法远端 POSIX 路径。
+	it.skipIf(process.platform === "win32")(
+		"npm install 这类长跑命令在项目所在的机器上执行——本机跑它看不到任何项目文件",
+		async () => {
+			// 回归：守卫原先拒绝一切带远程 cwd 的 spawn，设计稿的依赖因此装不上。
+			const project = createRemoteProject();
+			writeFileSync(join(project.dir, "package.json"), '{"name":"demo"}');
 
-		const started = await spawnPluginCommand("demo", "sh", ["-c", "cat package.json; echo done"], {
-			cwd: project.uri,
-		});
+			const started = await spawnPluginCommand("demo", "sh", ["-c", "cat package.json; echo done"], {
+				cwd: project.uri,
+			});
 
-		await vi.waitFor(
-			() => {
-				const status = getPluginCommandSpawnStatus("demo", started.spawnId);
-				expect(status.running).toBe(false);
-				expect(status.exit?.exitCode).toBe(0);
-				// 输出来自远端那份 package.json，证明命令确实在项目所在的机器上跑过。
-				expect(status.recentOutput).toContain('"name":"demo"');
-				expect(status.recentOutput).toContain("done");
-			},
-			{ timeout: 15_000 },
-		);
-	});
+			await vi.waitFor(
+				() => {
+					const status = getPluginCommandSpawnStatus("demo", started.spawnId);
+					expect(status.running).toBe(false);
+					expect(status.exit?.exitCode).toBe(0);
+					// 输出来自远端那份 package.json，证明命令确实在项目所在的机器上跑过。
+					expect(status.recentOutput).toContain('"name":"demo"');
+					expect(status.recentOutput).toContain("done");
+				},
+				{ timeout: 15_000 },
+			);
+		},
+	);
 
-	it("要端口的进程：端口在远端分配，再转发回本机——插件拿到的始终是本机可连的那个", async () => {
-		// 界面只能连本机端口，而服务器必须跑在项目所在的机器上。宿主把这两件事接起来，
-		// 插件不必知道自己的进程在哪。
-		const project = createRemoteProject();
-		const forwards: { localPort: number; remotePort: number }[] = [];
-		const cancelled: { localPort: number; remotePort: number }[] = [];
-		connection.forwardPort = async (localPort: number, remotePort: number) => {
-			forwards.push({ localPort, remotePort });
-		};
-		connection.cancelPortForward = async (localPort: number, remotePort: number) => {
-			cancelled.push({ localPort, remotePort });
-		};
+	it.skipIf(process.platform === "win32")(
+		"要端口的进程：端口在远端分配，再转发回本机——插件拿到的始终是本机可连的那个",
+		async () => {
+			// 界面只能连本机端口，而服务器必须跑在项目所在的机器上。宿主把这两件事接起来，
+			// 插件不必知道自己的进程在哪。
+			const project = createRemoteProject();
+			const forwards: { localPort: number; remotePort: number }[] = [];
+			const cancelled: { localPort: number; remotePort: number }[] = [];
+			connection.forwardPort = async (localPort: number, remotePort: number) => {
+				forwards.push({ localPort, remotePort });
+			};
+			connection.cancelPortForward = async (localPort: number, remotePort: number) => {
+				cancelled.push({ localPort, remotePort });
+			};
 
-		const started = await spawnPluginCommand("demo", "sh", ["-c", "echo port=$MY_PORT; sleep 30"], {
-			cwd: project.uri,
-			allocatePort: true,
-			env: { MY_PORT: "{{PORT}}" },
-		});
+			const started = await spawnPluginCommand("demo", "sh", ["-c", "echo port=$MY_PORT; sleep 30"], {
+				cwd: project.uri,
+				allocatePort: true,
+				env: { MY_PORT: "{{PORT}}" },
+			});
 
-		expect(started.port).toBeGreaterThan(0);
-		expect(forwards).toHaveLength(1);
-		expect(forwards[0].localPort).toBe(started.port);
-		// 进程拿到的是远端那个端口，与插件看到的本机端口不是同一个。
-		expect(forwards[0].remotePort).not.toBe(started.port);
-		await vi.waitFor(
-			() =>
-				expect(getPluginCommandSpawnStatus("demo", started.spawnId).recentOutput).toContain(
-					`port=${forwards[0].remotePort}`,
-				),
-			{ timeout: 15_000 },
-		);
+			expect(started.port).toBeGreaterThan(0);
+			expect(forwards).toHaveLength(1);
+			expect(forwards[0].localPort).toBe(started.port);
+			// 进程拿到的是远端那个端口，与插件看到的本机端口不是同一个。
+			expect(forwards[0].remotePort).not.toBe(started.port);
+			await vi.waitFor(
+				() =>
+					expect(getPluginCommandSpawnStatus("demo", started.spawnId).recentOutput).toContain(
+						`port=${forwards[0].remotePort}`,
+					),
+				{ timeout: 15_000 },
+			);
 
-		await stopPluginCommandSpawn("demo", started.spawnId);
-		expect(cancelled).toEqual(forwards);
-	});
+			await stopPluginCommandSpawn("demo", started.spawnId);
+			expect(cancelled).toEqual(forwards);
+		},
+	);
 
-	it("停止远端进程后状态转为已结束", async () => {
+	it.skipIf(process.platform === "win32")("停止远端进程后状态转为已结束", async () => {
 		const project = createRemoteProject();
 		const started = await spawnPluginCommand("demo", "sh", ["-c", "echo up; sleep 60"], { cwd: project.uri });
 		await vi.waitFor(
