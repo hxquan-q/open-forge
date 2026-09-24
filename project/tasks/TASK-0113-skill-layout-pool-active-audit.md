@@ -1,7 +1,7 @@
 ---
 id: TASK-0113
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/plugins
 requirement: []
@@ -80,7 +80,15 @@ updated: 2026-09-24
 ## 交付记录
 
 - 实际修改：
+  - `project/research/RESEARCH-0014-skill-layout-pool-active-audit.md`（新增）：审计报告——五类来源落盘位置、两层发现机制、逐来源证据（文件+行号）、直接回答与裁决。
+  - `project/research/README.md`：索引补 RESEARCH-0014 行。
+  - 零产品代码变更（审计任务）。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
+  - 源码审计：`discovery.ts`（loadSkills 递归扫描根目录）、`skill-resource-state.ts`（manifest 禁用过滤）、`session-resource-runtime.ts`（skillPaths 组装与 updateSkills）、`resource-selection.ts`（配置层白名单）、`skill-service.ts`/`builtin-skills.ts`/`skill-market-install.ts`（落盘与启停）、`node-path-policy.ts`/`path-resolution.ts`（写侧保护与读路径解析）。
+  - 结论坐实：激活=配置项+路径注入，非软链；`getSkills()` 层已封闭；文件工具层未封闭（`resolveToCwd` 绝对路径原样放行，保护只在写侧）。
+- 未运行及原因：任务要求「dev desktop 里用 agent 工具枚举 skill 目录」的实机流程未跑（`verify:ui:*` 需用户明确授权，审计任务未授权启动桌面端）；该步由静态证据替代——`resolveToCwd` 与 `loadSkills` 代码路径已足以证明未激活正文可读。
+- Worktree：主工作区（只读审计+新增报告）。
 - 剩余风险：
+  - 裁决建立在「未激活 skill 正文不算秘密数据」的威胁模型上；若未来将敏感模板放入 skill 再禁用，结论需重评；
+  - 报告记录了 3 项次级观察（禁用项参与碰撞遮蔽、`.agents/skills` 等无启停语义、fingerprint 仍遍历禁用项），未立项；
+  - 未实测 dev desktop 枚举，若实机行为与源码路径推断不符，以实机为准复审。
