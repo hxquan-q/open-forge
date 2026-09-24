@@ -17,8 +17,12 @@ export interface RuntimeDirectoryInstallOptions {
 
 function extractArchive(archivePath: string, destination: string, archiveType: string): void {
 	// Windows 10+ 的 bsdtar 与 Unix tar 都支持项目使用的 tar.gz；Windows
-	// bsdtar 同时支持 Node 官方发布的 zip。
-	const result = spawnSync("tar", ["-xf", archivePath, "-C", destination], {
+	// bsdtar 同时支持 Node 官方发布的 zip。PATH 里也可能是 GNU tar（Git Bash/MSYS2
+	// 环境优先命中），它会把 `C:\…` 误判成 `host:path` 远程语法、且 `-C` 的 chdir 不认
+	// 反斜杠盘符；统一转成正斜杠路径并以 --force-local 禁止远程猜测，bsdtar/Unix tar
+	// 对该形态同样接受。
+	const toTarPath = (value: string) => (process.platform === "win32" ? value.replaceAll("\\", "/") : value);
+	const result = spawnSync("tar", ["-xf", toTarPath(archivePath), "--force-local", "-C", toTarPath(destination)], {
 		encoding: "utf-8",
 		timeout: 180_000,
 	});
