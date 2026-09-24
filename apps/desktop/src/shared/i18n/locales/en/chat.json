@@ -565,6 +565,23 @@
 		"exportButton": {
 			"title": "Export full session as HTML"
 		},
+		"archiveExportButton": {
+			"title": "Export portable session archive"
+		},
+		"archiveImportButton": {
+			"title": "Import session archive"
+		},
+		"archiveExport": {
+			"failed": "Failed to export session archive: {{message}}",
+			"passphrasePrompt": "Set an archive passphrase (leave empty for none)"
+		},
+		"archiveImport": {
+			"failed": "Failed to import session archive: {{message}}",
+			"passphrasePrompt": "Enter archive passphrase (leave empty if none)",
+			"doneSkip": "Skipped identical session (fingerprint idempotent)",
+			"doneCopy": "Imported as a new session copy",
+			"canceled": "Import canceled"
+		},
 		"newSessionButton": {
 			"title": "New session"
 		},

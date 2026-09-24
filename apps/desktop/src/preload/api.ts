@@ -31,6 +31,7 @@ import type { DesktopReviewChangesApi } from "./api-types/review-changes.js";
 import type { DesktopRuntimeConfigurationApi } from "./api-types/runtime-configuration.js";
 import type { DesktopSchedulerApi } from "./api-types/scheduler.js";
 import type { DesktopSessionApi } from "./api-types/session.js";
+import type { DesktopSessionArchiveApi } from "./api-types/session-archive.js";
 import type { DesktopSkillsApi } from "./api-types/skills.js";
 import type { DesktopSpeechInputApi } from "./api-types/speech-input.js";
 import type { DesktopSshApi } from "./api-types/ssh.js";
@@ -107,6 +108,7 @@ export interface DesktopApi {
 	appLifecycle: DesktopAppLifecycleApi;
 	appMonitor: DesktopAppMonitorApi;
 	session: DesktopSessionApi;
+	sessionArchive: DesktopSessionArchiveApi;
 	speechInput: DesktopSpeechInputApi;
 	dialog: DesktopDialogApi;
 	theme: DesktopThemeApi;

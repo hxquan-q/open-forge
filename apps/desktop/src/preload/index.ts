@@ -25,6 +25,7 @@ import { createReviewChangesApi } from "./apis/review-changes.js";
 import { createRuntimeConfigurationApi } from "./apis/runtime-configuration.js";
 import { createSchedulerApi } from "./apis/scheduler.js";
 import { createSessionApi } from "./apis/session.js";
+import { createSessionArchiveApi } from "./apis/session-archive.js";
 import { createSpeechInputApi } from "./apis/speech-input.js";
 import { createSshApi } from "./apis/ssh.js";
 import { createSystemApi } from "./apis/system.js";
@@ -49,6 +50,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createAppLifecycleApi(ipcRenderer),
 	...createAppMonitorApi(ipcRenderer),
 	...createSessionApi(ipcRenderer),
+	...createSessionArchiveApi(ipcRenderer),
 	...createSpeechInputApi(ipcRenderer),
 	...createImApi(ipcRenderer),
 	...createDownloadsApi(ipcRenderer),
