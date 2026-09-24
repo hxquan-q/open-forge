@@ -14,6 +14,10 @@
 		"./conversation": {
 			"types": "./dist/conversation/index.d.ts",
 			"import": "./dist/conversation/index.js"
+		},
+		"./session-archive": {
+			"types": "./dist/conversation/session-archive/index.d.ts",
+			"import": "./dist/conversation/session-archive/index.js"
 		}
 	},
 	"files": ["dist"],

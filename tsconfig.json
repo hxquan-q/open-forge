@@ -133,6 +133,9 @@
 			"@vetta/runtime-mcp/*": ["./packages/runtime-mcp/src/*"],
 			"@vetta/runtime-storage": ["./packages/runtime-storage/src/index.ts"],
 			"@vetta/runtime-storage/conversation": ["./packages/runtime-storage/src/conversation/index.ts"],
+			"@vetta/runtime-storage/session-archive": [
+				"./packages/runtime-storage/src/conversation/session-archive/index.ts"
+			],
 			"@vetta/runtime-storage/*": ["./packages/runtime-storage/src/*"],
 			"@vetta/runtime-node": ["./packages/runtime-node/src/index.ts"],
 			"@vetta/runtime-node/conversation": ["./packages/runtime-node/src/conversation/index.ts"],
