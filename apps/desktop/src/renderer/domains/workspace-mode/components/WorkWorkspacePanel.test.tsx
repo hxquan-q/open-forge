@@ -9,6 +9,8 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => k
 describe("WorkWorkspacePanel", () => {
 	it("默认渲染四节插槽空态（plan/sources/artifacts/review），dataset 预留不出节", () => {
 		const html = renderToStaticMarkup(<WorkWorkspacePanel />);
+		expect(html).toContain("workspace.work.panelTitle");
+		expect(html).toContain("workspace.work.panelLead");
 		for (const id of ["plan", "sources", "artifacts", "review"]) {
 			expect(html).toContain(`data-section="${id}"`);
 			expect(html).toContain(`workspace.work.${id}.empty`);

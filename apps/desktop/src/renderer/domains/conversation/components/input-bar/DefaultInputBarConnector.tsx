@@ -1,4 +1,5 @@
 import { useBottomPanelPills } from "@domains/bottom-panel/hooks/useBottomPanelPills";
+import { sessionAxesBadgeKind } from "@domains/workspace-mode";
 import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
 import { pathBasename, toVettaFileUrl } from "@shared/lib/utils";
 import type { InputBarContextMenuViewProps } from "@vetta-org/theme-ui/chat";
@@ -108,10 +109,14 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 		const axes = resolveSessionAxes(active.agentMode, active.capabilityProfile);
 		const interpretation = t(`session.axes.interpretation.${axes.agentMode}`);
 		const profileLabel = t(`session.axes.profile.${axes.capabilityProfile}`);
+		const template =
+			sessionAxesBadgeKind(axes) === "aligned"
+				? t(`session.axes.aligned.${axes.agentMode}`)
+				: t("session.axes.divergent", { interpretation, profile: profileLabel });
 		return formatSessionAxesBadge({
 			agentMode: active.agentMode,
 			capabilityProfile: active.capabilityProfile,
-			template: t("session.axes.badge", { interpretation, profile: profileLabel }),
+			template,
 		});
 	}, [session.activeSession, t]);
 	const defaultPlaceholders = useMemo(() => {

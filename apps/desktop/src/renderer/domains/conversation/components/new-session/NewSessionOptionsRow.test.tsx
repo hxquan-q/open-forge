@@ -18,6 +18,12 @@ vi.mock("./NewSessionAgentSelector", () => ({
 	NewSessionAgentSelector: () => <button type="button">newSession.agentSelector.pickTitle</button>,
 }));
 
+vi.mock("./NewSessionWorkspaceHint", () => ({
+	NewSessionWorkspaceHint: ({ mode }: { mode: string }) => (
+		<p data-testid="new-session-workspace-hint">{mode}</p>
+	),
+}));
+
 function renderRow(showProjectSelector: boolean): void {
 	render(
 		<Provider store={createStore()}>
@@ -29,6 +35,7 @@ function renderRow(showProjectSelector: boolean): void {
 				onSelectProject={vi.fn()}
 				onSelectPendingProject={vi.fn()}
 				showProjectSelector={showProjectSelector}
+				workspaceMode="work"
 			/>
 		</Provider>,
 	);
@@ -43,10 +50,11 @@ describe("NewSessionOptionsRow", () => {
 		expect(await screen.findByRole("button", { name: "newSession.agentSelector.pickTitle" })).toBeDefined();
 	});
 
-	it("默认仍把项目选择器留在行里，且不再放第二套工作/编程开关", async () => {
+	it("默认仍把项目选择器留在行里，只读确认句代替第二套开关", async () => {
 		renderRow(true);
 
 		expect(screen.queryByRole("button", { name: "agentMode.work" })).toBeNull();
 		expect(screen.getByRole("button", { name: "newSession.projectSelector.triggerTitle" })).toBeDefined();
+		expect(screen.getByTestId("new-session-workspace-hint").textContent).toBe("work");
 	});
 });

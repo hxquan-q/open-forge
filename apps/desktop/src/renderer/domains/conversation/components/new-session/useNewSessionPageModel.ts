@@ -1,5 +1,7 @@
 import { useProjectActions } from "@domains/project/hooks/useProjects";
+import { useWorkspaceMode } from "@domains/workspace-mode";
 import { i18n } from "@shared/i18n";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import {
 	abortMessageFnRef,
 	activeSessionAtom,
@@ -57,6 +59,7 @@ import { useShortViewport } from "./useShortViewport";
 interface NewSessionPageModel {
 	/** 右侧活动面板是否展开（与会话页、项目详情页共用同一状态）。 */
 	activityOpen: boolean;
+	workspaceMode: WorkspaceMode;
 	avatarAutoplay: boolean;
 	/** 命令区（`/` 或「+」展开）是否打开：hero 随之淡出让位。 */
 	commandPanelExpanded: boolean;
@@ -130,6 +133,7 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 	const { open: activityOpen, toggle: handleToggleActivity } = useNewSessionActivityPanel(
 		projectSelection.activityPanelCwd,
 	);
+	const { mode: workspaceMode } = useWorkspaceMode(contextCwd);
 	const [pinned, setPinned] = useState(false);
 	const setAttachedImages = useSetAtom(attachedImagesAtom);
 	const setHeaderTitle = useSetAtom(pageHeaderTitleAtom);
@@ -308,6 +312,7 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 	return {
 		contextBlock,
 		activityOpen,
+		workspaceMode,
 		avatarAutoplay,
 		commandPanelExpanded,
 		commandPanelShift: commandPanelExpanded && skillItems.length > PANEL_SHIFT_MIN_ITEMS,

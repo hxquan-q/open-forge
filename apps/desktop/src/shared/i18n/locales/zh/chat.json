@@ -961,6 +961,12 @@
 			"pick": "切换智能体",
 			"pickTitle": "指定一个团队或单个智能体来完成这次任务",
 			"switchTitle": "更换本次会话的团队或智能体"
+		},
+		"workspace": {
+			"hint": {
+				"work": "这次按「文档与研究」开：右侧是计划与产物，默认不含终端。",
+				"coding": "这次按「代码」开：可用终端和 Git，右侧是执行轨迹。"
+			}
 		}
 	},
 	"planMode": {
@@ -1021,14 +1027,18 @@
 	"session": {
 		"emptyMessageLabel": "(图片)",
 		"axes": {
-			"badge": "本会话：{{interpretation}} · {{profile}} 工具集",
+			"aligned": {
+				"work": "本会话按文档与研究开的 · 切页头不会改",
+				"coding": "本会话按代码开的 · 切页头不会改"
+			},
+			"divergent": "本会话：{{interpretation}} · {{profile}}",
 			"interpretation": {
-				"work": "办公解释",
-				"coding": "编程解释"
+				"work": "文档向",
+				"coding": "代码向"
 			},
 			"profile": {
-				"work": "办公",
-				"coding": "编程"
+				"work": "文档与研究",
+				"coding": "代码"
 			}
 		},
 		"largeHistory": {
@@ -1199,11 +1209,14 @@
 	},
 	"workspace": {
 		"mode": {
-			"coding": "编程",
-			"switch": "切换工作区布局",
-			"work": "办公"
+			"coding": "代码",
+			"hint": "右侧工作台立刻更换。新会话会跟着走；当前会话不会变。",
+			"switch": "切换工作区：文档与研究或代码",
+			"work": "文档与研究"
 		},
 		"work": {
+			"panelTitle": "文档与研究",
+			"panelLead": "计划、资料和产物会出现在这里",
 			"artifacts": {
 				"empty": "生成的文档、表格等产物会出现在这里",
 				"title": "产物",

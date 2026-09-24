@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import { ActivityPanel, CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { BottomPanelHost } from "@domains/bottom-panel/components/BottomPanelHost";
-import { WorkDocumentSections, WorkWorkspacePanel } from "@domains/workspace-mode";
+import { resolveWorkspaceRightPanel, WorkDocumentSections, WorkWorkspacePanel } from "@domains/workspace-mode";
 import { cn } from "@shared/lib/utils";
 import { PerfSendProfiler } from "@shared/lib/perf-send";
 import { activityPanelOpenAtom, type ChatTimelineItem, type WorkspaceMode } from "@shared/store/atoms";
@@ -63,13 +63,14 @@ const ActivityColumn = memo(
 		workspaceMode,
 	}: Pick<DefaultChatViewProps, "workspace" | "activity" | "workspaceMode">) {
 		const activityPanelOpen = useAtomValue(activityPanelOpenAtom);
-		// work 模式右栏默认是插槽面板（骨架阶段各节渲染空态）；显式 activity 配置的宿主
-		//（Team 会话）不归模式切换管。活动面板被显式打开时（文件预览、浏览器、插件 tab）
-		// 仍让位给它——work 面板是右栏默认内容，不是预览能力的替代。
-		if (workspaceMode === "work" && !activity) {
-			if (activityPanelOpen) {
-				return <CurrentScenarioActivityPanel workspace={workspace} />;
-			}
+		// work 模式右栏默认是插槽面板；Team 等显式 activity、以及用户打开的预览，都不走这槽。
+		if (
+			resolveWorkspaceRightPanel({
+				mode: workspaceMode,
+				activityPanelOpen,
+				hasExplicitActivity: Boolean(activity),
+			}) === "work"
+		) {
 			return (
 				<WorkWorkspacePanel>
 					<WorkDocumentSections runtimeIds={workspace.runtimeIds} />

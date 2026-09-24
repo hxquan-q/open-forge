@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import zhChat from "@/shared/i18n/locales/zh/chat.json";
 import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
+import { sessionAxesBadgeKind } from "@domains/workspace-mode/lib/workspace-session-flow";
 import { InputBarView } from "./InputBarView";
 import type { InputBarModel } from "./types";
 
@@ -76,12 +77,14 @@ function connectorSessionAxesLabel(
 	const axes = resolveSessionAxes(agentMode, capabilityProfile);
 	const interpretation = AXES_LABELS.interpretation[axes.agentMode];
 	const profile = AXES_LABELS.profile[axes.capabilityProfile];
+	const template =
+		sessionAxesBadgeKind(axes) === "aligned"
+			? AXES_LABELS.aligned[axes.agentMode]
+			: AXES_LABELS.divergent.replaceAll("{{interpretation}}", interpretation).replaceAll("{{profile}}", profile);
 	return formatSessionAxesBadge({
 		agentMode,
 		capabilityProfile,
-		template: AXES_LABELS.badge
-			.replaceAll("{{interpretation}}", interpretation)
-			.replaceAll("{{profile}}", profile),
+		template,
 	});
 }
 
@@ -160,9 +163,9 @@ afterEach(cleanup);
 describe("InputBarView 会话轴徽标", () => {
 	it("已固化轴的会话在输入卡片下沿展示只读徽标", () => {
 		const label = connectorSessionAxesLabel("work", "work");
-		expect(label).toBe("本会话：文档向 · 文档与研究 工具集");
+		expect(label).toBe("本会话按文档与研究开的 · 切页头不会改");
 		render(<InputBarView model={{ ...createBaseModel(), sessionAxesLabel: label }} />);
-		expect(screen.getByTestId("session-axes-badge").textContent).toBe("本会话：文档向 · 文档与研究 工具集");
+		expect(screen.getByTestId("session-axes-badge").textContent).toBe("本会话按文档与研究开的 · 切页头不会改");
 	});
 
 	it("普通会话（无固化轴）不渲染徽标", () => {
@@ -172,7 +175,7 @@ describe("InputBarView 会话轴徽标", () => {
 
 	it("(work, coding) 分歧会话两标签各自成立，不再混报为同一档", () => {
 		const label = connectorSessionAxesLabel("work", "coding");
-		expect(label).toBe("本会话：文档向 · 代码 工具集");
+		expect(label).toBe("本会话：文档向 · 代码");
 		render(<InputBarView model={{ ...createBaseModel(), sessionAxesLabel: label }} />);
 		const badge = screen.getByTestId("session-axes-badge");
 		expect(badge.textContent).toContain("文档向");
@@ -184,7 +187,7 @@ describe("InputBarView 会话轴徽标", () => {
 		// main 侧（resolve-session-config）对 profile 折叠为「非 work 即 coding」，
 		// 手编第三值的旧会话徽标必须与其实际生效的工具面一致，而不是谎报 work。
 		const label = connectorSessionAxesLabel("architect", undefined);
-		expect(label).toBe("本会话：文档向 · 代码 工具集");
+		expect(label).toBe("本会话：文档向 · 代码");
 		render(<InputBarView model={{ ...createBaseModel(), sessionAxesLabel: label }} />);
 		expect(screen.getByTestId("session-axes-badge").textContent).toBe(label);
 	});

@@ -961,6 +961,12 @@
 			"pick": "Switch agent",
 			"pickTitle": "Pick a team or a single agent for this task",
 			"switchTitle": "Switch the team or agent for this session"
+		},
+		"workspace": {
+			"hint": {
+				"work": "This chat will start as Docs & research: the right side shows plan and deliverables, no terminal by default.",
+				"coding": "This chat will start as Code: terminal and Git are available, the right side shows the execution trail."
+			}
 		}
 	},
 	"planMode": {
@@ -1021,14 +1027,18 @@
 	"session": {
 		"emptyMessageLabel": "(image)",
 		"axes": {
-			"badge": "This session: {{interpretation}} · {{profile}} tools",
+			"aligned": {
+				"work": "This session started as docs & research · the header switch will not change it",
+				"coding": "This session started as code · the header switch will not change it"
+			},
+			"divergent": "This session: {{interpretation}} · {{profile}}",
 			"interpretation": {
-				"work": "office interpretation",
-				"coding": "coding interpretation"
+				"work": "document-oriented",
+				"coding": "code-oriented"
 			},
 			"profile": {
-				"work": "office",
-				"coding": "coding"
+				"work": "docs & research",
+				"coding": "code"
 			}
 		},
 		"largeHistory": {
@@ -1200,10 +1210,13 @@
 	"workspace": {
 		"mode": {
 			"coding": "Code",
-			"switch": "Switch workspace layout",
-			"work": "Office"
+			"hint": "The right-hand workspace changes now. New chats follow this choice; the current chat does not.",
+			"switch": "Switch workspace: docs & research or code",
+			"work": "Docs & research"
 		},
 		"work": {
+			"panelTitle": "Docs & research",
+			"panelLead": "Plans, sources, and deliverables show up here",
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
 				"title": "Artifacts",

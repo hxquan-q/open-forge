@@ -292,7 +292,7 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 					<InputBarFooter.Item>
 						{model.sessionAxesLabel ? (
 							<div
-								className="px-1 pb-1 text-[11px] leading-4 text-muted-foreground"
+								className="mb-1 inline-flex max-w-full items-center rounded-lg bg-muted/50 px-2 py-1 text-[11px] leading-4 text-muted-foreground"
 								data-testid="session-axes-badge"
 							>
 								{model.sessionAxesLabel}

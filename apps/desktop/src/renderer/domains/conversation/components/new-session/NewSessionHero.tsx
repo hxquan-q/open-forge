@@ -97,7 +97,7 @@ export function DefaultNewSessionHero({
 				transition={{ duration: 0.5, ease: easeOut }}
 				className="flex w-full flex-col items-start"
 			>
-				{/* 欢迎语上方：引导 badge 轮播。工作模式切换已移到输入框上方的选项行。 */}
+				{/* 欢迎语上方：引导 badge 轮播。工作区类型在页头，本页只做只读确认。 */}
 				<GuideBadgeSwiper mounted={mounted} />
 
 				{/* 标题块：身份头像组压在标题上方 + 问候语/身份名 + 副标题（装饰件改为绝对定位，见下） */}

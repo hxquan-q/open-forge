@@ -1,0 +1,80 @@
+---
+id: TASK-0084
+type: task
+status: verifying
+priority: P1
+owner: apps/desktop renderer/workspace-mode + conversation
+requirement: REQ-0001
+plan: PLAN-0001
+source: ISSUE-0010; user-request 设计好 UI 页面与流程
+execution: serial
+branch: forge/dev
+worktree: unassigned（forge/dev 主工作区串行执行）
+base_commit: forge/dev
+read_paths: [apps/desktop/src/renderer/domains/workspace-mode, apps/desktop/src/renderer/domains/conversation, apps/desktop/src/shared/i18n/locales]
+write_paths: [apps/desktop/src/renderer/domains/workspace-mode, apps/desktop/src/renderer/domains/conversation/components/new-session, apps/desktop/src/renderer/domains/conversation/components/chat-view/DefaultChatView.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar, apps/desktop/src/shared/i18n/locales/zh/chat.json, apps/desktop/src/shared/i18n/locales/en/chat.json, project/tasks/TASK-0084-workspace-session-flow-ui.md]
+exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode/lib/workspace-session-flow.ts]
+depends_on: [TASK-0083]
+conflicts_with: [TASK-0077, TASK-0080, TASK-0083]
+integration_status: pending
+created: 2026-09-24
+updated: 2026-09-24
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# 工作区任务类型：页头、新会话、右栏同一条流程
+
+## 用户语言推演
+
+用户打开项目是为了**让这次活落在对的工作台**。页头选「文档与研究 / 代码」必须立刻换右侧；新会话页要说清即将按哪档开；已开会话用白话说明「切页头不会改它」。不把三轴、Profile、agentMode 暴露给用户。
+
+## 范围
+
+### 并发评估
+
+- 结论：不支持与改同一 chat catalog / 新会话页 / 右栏分支的 Task 并行
+- 执行方式：serial
+
+### 做
+
+- 右栏选择收成 `resolveWorkspaceRightPanel`：work 且未打开预览时出工作面板；新会话页与会话页共用。
+- 页头开关补后果说明（aria + tooltip），work 图标改为文档。
+- 新会话选项行下增加只读确认句，不是第二套开关。
+- 工作面板加标题与一句引导。
+- 已开会话徽标：对齐轴用「按…开的 · 切页头不会改」；分歧轴仍分写两面。
+
+### 不做
+
+- 不重开三轴合同，不热切换已开会话工具集。
+- 不写继承的 Vetta Release Notes。
+- 不改 Team 自带 activity 宿主。
+
+## Given / When / Then
+
+- Given：页头切到文档与研究，新会话页未打开预览；When：看右侧；Then：出现工作面板空态，不是执行轨迹。
+- Given：新会话页为文档与研究；When：看选项行下方；Then：只读一句说明即将按文档与研究开，没有第二套开关。
+- Given：已固化 work/work 会话；When：输入栏徽标渲染；Then：说明本会话按文档与研究开的，切页头不会改。
+- Given：work 会话且用户打开文件预览；When：右栏更新；Then：工作面板让位给活动面板。
+
+## 必须保持
+
+- 切页头不改已开会话工具与提示词。
+- Team 等显式 activity 配置仍走自己的右栏。
+- 无项目 cwd 时页头不渲染开关。
+
+## 测试与验证
+
+- `workspace-session-flow.test.ts`、`workspace-mode-copy.test.ts`、`NewSessionWorkspaceHint.test.tsx`、`NewSessionOptionsRow.test.tsx`、`WorkWorkspacePanel.test.tsx`、`DefaultChatView.test.tsx`、`InputBarView.test.tsx`、`WorkspaceModeSwitcher.test.tsx`
+- `bun run --cwd apps/desktop typecheck`；`check:quick` 对本切片
+
+## 发布说明候选（Open Forge 首发前不写入继承的 Vetta Release Notes）
+
+【改进】页头「文档与研究 / 代码」会立刻换右侧工作台；新会话页用一句话确认即将按哪档开；已开会话标明切页头不会改它。
+
+## 交付记录
+
+- 实际修改：`workspace-session-flow` 收口右栏与徽标种类；页头补后果说明与文档图标；新会话选项行加只读确认句；新会话页 work 档出工作面板；工作面板加标题引导；对齐徽标改为「按…开的 · 切页头不会改」。
+- 实际运行：workspace-session-flow 7、workspace-mode-copy 5、WorkspaceModeSwitcher 4、WorkWorkspacePanel 4、NewSessionWorkspaceHint 2、NewSessionOptionsRow 2、DefaultChatView 4、InputBarView 4，均通过。Biome 已对本切片 TS 文件执行 `--write`。
+- 未运行及原因：`verify:ui:*` 需用户授权；全量 `bun run check` 被工作区其他 WIP 污染。Desktop `tsc` 现存错误在 webview-picker / abilities / date-picker，不在本切片。
+- 剩余风险：页头「文档与研究」五字偏长，窄栏可能折行；新会话 work 面板是空骨架（尚无会话任务投影）。
+- 发布说明候选（ISSUE-0007 门禁，暂存本记录）：【改进】页头「文档与研究 / 代码」会立刻换右侧工作台；新会话页用一句话确认即将按哪档开；已开会话标明切页头不会改它。
