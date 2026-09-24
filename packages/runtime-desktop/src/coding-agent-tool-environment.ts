@@ -32,6 +32,7 @@ import { NodeScopedTextStorage } from "@vetta/runtime-node/host";
 import { createSshCodingToolEnvironment, createSshPathPolicies } from "@vetta/runtime-ssh";
 import { parseProjectLocation } from "@vetta/ssh-transport";
 import { resolveProjectSettingsPath } from "./project-settings-path.js";
+import { getDesktopReviewSnapshotStore, registerDesktopReviewSnapshotSession } from "./review-snapshot-runtime.js";
 import { resolveDesktopSshConnection } from "./ssh-connection-resolver.js";
 
 /**
@@ -101,6 +102,13 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 		};
 	}
 	const host = createDesktopNodeToolHost(context.cwd, context.agentDir);
+	// 审查快照只挂本机会话执行环境：远端项目的 before 字节在远端机器上，
+	// 本机快照库回滚时写不回去，宁可不产出 review 也不给出不可回滚的假入口。
+	registerDesktopReviewSnapshotSession(context.sessionId, context.agentDir);
+	const reviewSnapshots = {
+		store: getDesktopReviewSnapshotStore(context.agentDir),
+		sessionId: context.sessionId,
+	};
 	const command = createNodeHostSessionCommandEnvironment({
 		cwd: context.cwd,
 		resolveShell: host.resolveShell,
@@ -116,6 +124,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 				writePathPolicy: host.writePathPolicy,
 				configurationSource: context.configurationSource,
 				readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+				reviewSnapshots,
 			}),
 			...command.registrations,
 		],
@@ -132,6 +141,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 					writePathPolicy: host.writePathPolicy,
 					configurationSource: context.configurationSource,
 					readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+					reviewSnapshots,
 				}),
 		},
 		dispose: () => command.dispose(),

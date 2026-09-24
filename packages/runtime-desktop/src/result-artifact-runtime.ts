@@ -1,8 +1,13 @@
 import { join } from "node:path";
 import { createCodingAgentCodingToolResultPolicy } from "@vetta/coding-agent/composition";
 import { createMcpToolResultPolicy, type McpToolResultPolicy } from "@vetta/runtime-mcp";
-import { createNodeResultArtifactStorage, type NodeSessionArtifactStore } from "@vetta/runtime-node/host";
+import {
+	CompositeNodeSessionArtifactCleaner,
+	createNodeResultArtifactStorage,
+	type NodeSessionArtifactStore,
+} from "@vetta/runtime-node/host";
 import type { CodingToolResultPolicy } from "@vetta/runtime-tools";
+import { getDesktopReviewSnapshotStore } from "./review-snapshot-runtime.js";
 
 export interface DesktopResultArtifactRuntime {
 	readonly codingToolResultPolicy: CodingToolResultPolicy;
@@ -18,6 +23,10 @@ export function createDesktopResultArtifactRuntime(agentDir: string): DesktopRes
 	return {
 		codingToolResultPolicy: createCodingAgentCodingToolResultPolicy({ artifactStore: storage.coding }),
 		mcpToolResultPolicy: createMcpToolResultPolicy({ artifactStore: storage.mcp }),
-		sessionArtifactCleaner: storage.cleaner,
+		// 会话删除要连审查快照一起清：它是按 sessionId 分目录的会话产物。
+		sessionArtifactCleaner: new CompositeNodeSessionArtifactCleaner([
+			storage.cleaner,
+			getDesktopReviewSnapshotStore(agentDir),
+		]),
 	};
 }
