@@ -1,4 +1,5 @@
-import { createElement } from "react";
+// Modified by The Open Forge contributors.
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getDefaultStore } from "jotai";
 import { activityPanelOpenAtom } from "@shared/store/atoms";
@@ -28,7 +29,12 @@ vi.mock("@domains/activity-panel/components/ActivityPanel", () => ({
 }));
 
 vi.mock("@domains/workspace-mode/components/WorkWorkspacePanel", () => ({
-	WorkWorkspacePanel: () => createElement("aside", { "data-testid": "work-panel" }),
+	WorkWorkspacePanel: ({ children }: { children?: ReactNode }) =>
+		createElement("aside", { "data-testid": "work-panel" }, children),
+}));
+
+vi.mock("@domains/workspace-mode/components/WorkDocumentSections", () => ({
+	WorkDocumentSections: () => createElement("div", { "data-testid": "work-document-sections" }),
 }));
 
 vi.mock("@domains/bottom-panel/components/BottomPanelHost", () => ({
@@ -88,6 +94,7 @@ describe("DefaultChatView layout", () => {
 			</DefaultChatView>,
 		);
 		expect(workHtml).toContain('data-testid="work-panel"');
+		expect(workHtml).toContain('data-testid="work-document-sections"');
 		expect(workHtml).not.toContain('data-testid="activity-panel"');
 
 		// 文件预览/浏览器等显式打开活动面板时，work 面板让位——预览能力不回退。

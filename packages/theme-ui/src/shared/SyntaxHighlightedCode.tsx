@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useEffect, useRef, useState, type JSX } from "react";
 import { codeToHtml } from "shiki";
 import { highlightHtmlCache } from "./syntax-highlight-cache";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Desktop Electron batch-1 smoke: boot contract / config isolation / main-process mock probe.
  * Does not cover product UI. Requires dist/ artifacts, or release/*-unpacked when

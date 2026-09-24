@@ -30,7 +30,7 @@ export function registerDesktopMediaProviders(
 	const providers = new MediaProviderRegistry(jobs, getAppLogger("media-generation"));
 	const artifacts = new MediaArtifactStore(artifactStore);
 	desktopMediaRuntime = { providers, artifacts };
-	// Vetta 图像生成走云端网关：lite 构建不注册，provider 列表中不出现。
+	// Open Forge 图像生成走云端网关：lite 构建不注册，provider 列表中不出现。
 	const vettaRegistration = isCloudBuildEnabled()
 		? providers.registerProvider(createVettaImageProvider(artifacts))
 		: undefined;

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawnSync } from "node:child_process";
 
 /**

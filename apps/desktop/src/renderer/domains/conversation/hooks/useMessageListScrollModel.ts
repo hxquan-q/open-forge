@@ -2,13 +2,13 @@ import {
 	type MessageFeedScrollModel,
 	useMessageFeedScrollModel,
 } from "@shared/components/message-feed/useMessageFeedScrollModel";
-import { activityPanelResizingAtom, type ChatConversationItem } from "@shared/store/atoms";
+import { activityPanelResizingAtom, type ChatTimelineItem } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 
 interface MessageListScrollModelInput {
 	isStreaming: boolean;
-	messages: readonly ChatConversationItem[];
+	messages: readonly ChatTimelineItem[];
 	sessionId?: string | null;
 	initialTargetKey?: string | null;
 	onInitialTargetHandled?: () => void;
@@ -18,8 +18,9 @@ export interface MessageListScrollModel extends Omit<MessageFeedScrollModel, "sc
 	scrollToMessage: (index: number) => void;
 }
 
-const getMessageKey = (message: ChatConversationItem): string => message.entryId ?? message.id;
-const shouldFollowUserMessage = (message: ChatConversationItem): boolean => message.kind === "user";
+const getMessageKey = (message: ChatTimelineItem): string => message.entryId ?? message.id;
+const shouldFollowUserMessage = (message: ChatTimelineItem): boolean =>
+	message.kind === "user" || (message.kind === "placeholder" && message.role === "user");
 
 /** Chat adapter for the shared feed viewport controller. */
 export function useMessageListScrollModel({

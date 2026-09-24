@@ -13,7 +13,7 @@
  * 所以这里额外要求：出错的 agent 消息**紧邻**那条用户消息，且除 error 块外没有
  * 任何实质产出。两者任一不满足，就按普通追加发送——宁可重复也不丢历史。
  */
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatTimelineItem } from "@shared/store/atoms";
 
 export interface FailedResendRollbackPlan {
 	/** 要回退（连同子树删除）的用户消息 entry。 */
@@ -30,7 +30,7 @@ export interface FailedResendRollbackPlan {
  * @returns 可以回退时返回计划，否则返回 null
  */
 export function planFailedResendRollback(
-	messages: readonly ChatConversationItem[],
+	messages: readonly ChatTimelineItem[],
 	text: string,
 ): FailedResendRollbackPlan | null {
 	const lastIndex = messages.length - 1;

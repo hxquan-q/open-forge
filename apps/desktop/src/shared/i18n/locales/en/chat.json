@@ -10,7 +10,9 @@
 			"workflow": "Workflows",
 			"plan": "Plan",
 			"task": "Tasks",
-			"ports": "Port forwarding"
+			"ports": "Port forwarding",
+			"canvas": "Canvas",
+			"terminal": "Terminal"
 		},
 		"backgroundTasks": {
 			"statusRunning": "Running",
@@ -52,7 +54,8 @@
 			"progress": "{{done}} of {{total}} done",
 			"statusDone": "Done",
 			"statusInProgress": "In progress",
-			"statusPending": "Pending"
+			"statusPending": "Pending",
+			"unattributed": "Unattributed"
 		},
 		"task": {
 			"empty": "Turn this conversation into a task to pause, review, and keep its deliverables",
@@ -63,6 +66,11 @@
 			"resumeHint": "Paused; your next message automatically resumes this task",
 			"artifacts": "Deliverables",
 			"artifactMissing": "File missing",
+			"artifactOpen": "View {{title}}",
+			"artifactPreviewClose": "Close",
+			"artifactRendererFallback": "No dedicated preview is available.",
+			"artifactUnavailable": "The source file cannot be read right now.",
+			"artifactReadFailed": "Reading failed. Close and reopen the preview to try again.",
 			"status": {
 				"draft": "Draft",
 				"planning": "Planning",
@@ -138,6 +146,33 @@
 			"unnamedHint": "The owning process could not be read, usually because it belongs to another user.",
 			"ephemeralToggle": "{{count}} more ephemeral ports (above 32768)",
 			"invalidPort": "Enter a port number between 1 and 65535"
+		},
+		"canvas": {
+			"empty": "No canvas artifacts yet. Markdown, HTML, or code produced in this workspace will show up here.",
+			"emptyHint": "Ask the assistant to draft a note or preview, then open it here.",
+			"missingFile": "File missing",
+			"missingFileHint": "The file for this artifact is no longer at its original location. Ask the assistant to recreate it.",
+			"externalUpdate": "External update",
+			"externalUpdateHint": "The file was changed outside Canvas and saved as a new version.",
+			"saveToProject": "Save to project",
+			"saveToProjectSuccess": "Saved to the project",
+			"saveToProjectConflict": "A file with that name already exists. Nothing was overwritten.",
+			"saveToProjectFailed": "Could not save to the project",
+			"groupBySession": "From session",
+			"untitledSession": "Untitled session",
+			"version": "Version {{version}}",
+			"selectToAsk": "Attach the selection to the message box",
+			"htmlSandboxLabel": "HTML preview (sandboxed)",
+			"delete": "Delete",
+			"deleteConfirm": "Remove “{{title}}” from the canvas list? The local file is not recycled automatically.",
+			"deleteFailed": "Could not remove this from the canvas list",
+			"open": "Open",
+			"loading": "Loading canvas artifacts",
+			"kindMarkdown": "Note",
+			"kindHtml": "Web preview",
+			"kindCode": "Code",
+			"openExternalTitle": "Open this link in your browser?",
+			"openExternalMessage": "Links inside the preview stay sandboxed. Open {{url}}?"
 		},
 		"toolCalls": {
 			"filterAll": "All",
@@ -402,7 +437,29 @@
 		"reload": "Reload",
 		"retry": "Retry",
 		"stop": "Stop",
-		"tab": "Browser"
+		"tab": "Browser",
+		"picker": "Pick element",
+		"pickerActive": "Picking an element — click again or use the shortcut to exit",
+		"pickerHint": "Hover a page element, then click to attach it to the message box. The page button will not fire.",
+		"elementAttached": "Page element attached",
+		"elementReplace": "A new selection replaces the current attachment",
+		"staleSelection": "The page changed; this selection may be stale",
+		"cropFailed": "Could not capture the element image",
+		"liveEdit": {
+			"title": "Adjust selected element",
+			"textPlaceholder": "Replace text content",
+			"applyText": "Apply text",
+			"styleProperty": "Style property",
+			"styleValuePlaceholder": "Value (empty clears)",
+			"applyStyle": "Apply style",
+			"edits": "Edits",
+			"revertOne": "Revert this edit",
+			"revertAll": "Revert all",
+			"send": "Send to Agent",
+			"discard": "Discard",
+			"stale": "The page changed; this selection is stale",
+			"failed": "Could not apply the edit"
+		}
 	},
 	"capability": {
 		"network": "Network",
@@ -919,6 +976,12 @@
 			"pick": "Switch agent",
 			"pickTitle": "Pick a team or a single agent for this task",
 			"switchTitle": "Switch the team or agent for this session"
+		},
+		"workspace": {
+			"hint": {
+				"work": "This chat will start as Docs & research: the right side shows plan and deliverables, no terminal by default.",
+				"coding": "This chat will start as Code: terminal and Git are available, the right side shows the execution trail."
+			}
 		}
 	},
 	"planMode": {
@@ -977,7 +1040,28 @@
 		"stopGenerating": "Stop generating"
 	},
 	"session": {
-		"emptyMessageLabel": "(image)"
+		"emptyMessageLabel": "(image)",
+		"axes": {
+			"aligned": {
+				"work": "This session started as docs & research · the header switch will not change it",
+				"coding": "This session started as code · the header switch will not change it"
+			},
+			"divergent": "This session: {{interpretation}} · {{profile}}",
+			"interpretation": {
+				"work": "document-oriented",
+				"coding": "code-oriented"
+			},
+			"profile": {
+				"work": "docs & research",
+				"coding": "code"
+			}
+		},
+		"largeHistory": {
+			"title": "Large session",
+			"message": "This session is about {{sizeMb}} MB. You can load only the most recent turns to open faster, and load the full history later if needed.",
+			"loadTail": "Load recent messages only",
+			"loadFull": "Load full history"
+		}
 	},
 	"subagentCard": {
 		"back": "Back to parent session",
@@ -1073,7 +1157,8 @@
 		"error": "Error",
 		"meta": "meta",
 		"metaLabel": "Local metadata, UI only, not sent to the model",
-		"audioPreview": "MCP audio result"
+		"audioPreview": "MCP audio result",
+		"openInCanvas": "Open in Canvas"
 	},
 	"toolFormat": {
 		"unknown": "Unknown"
@@ -1139,14 +1224,20 @@
 	},
 	"workspace": {
 		"mode": {
-			"coding": "Coding",
-			"switch": "Switch workspace mode",
-			"work": "Work"
+			"coding": "Code",
+			"hint": "The right-hand workspace changes now. New chats follow this choice; the current chat does not.",
+			"switch": "Switch workspace: docs & research or code",
+			"work": "Docs & research"
 		},
 		"work": {
+			"panelTitle": "Docs & research",
+			"panelLead": "Plans, sources, and deliverables show up here",
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
-				"title": "Artifacts"
+				"title": "Artifacts",
+				"previewUnavailable": "This artifact cannot be previewed right now",
+				"truncated": "Content is truncated",
+				"sourceMissing": "The artifact source file is missing"
 			},
 			"dataset": {
 				"empty": "Dataset previews appear here once data analysis is wired up",
@@ -1158,14 +1249,25 @@
 			},
 			"review": {
 				"empty": "When artifacts are ready, review and export results here",
-				"title": "Review & Export"
+				"title": "Review & Export",
+				"export": "Export",
+				"exported": "Exported to {{targetUri}}",
+				"cancelled": "Export cancelled",
+				"sourceMissing": "The artifact source file is missing",
+				"notExportable": "This artifact has not been approved for export",
+				"notFound": "This artifact could not be found"
 			},
 			"retry": "Retry",
 			"sectionCancelled": "This section was cancelled with the task; restart the task to regenerate it",
 			"sectionError": "This section failed to load",
 			"sources": {
 				"empty": "Files and materials referenced by the task are listed here",
-				"title": "Sources"
+				"title": "Sources",
+				"pickFile": "Choose source files",
+				"goalPlaceholder": "Describe the goal, e.g. \"Turn this report into a one-page summary\"",
+				"start": "Start",
+				"sendUnavailable": "This session cannot send a message right now. Try again later.",
+				"pickFailed": "Could not choose source files. Try again."
 			}
 		}
 	}

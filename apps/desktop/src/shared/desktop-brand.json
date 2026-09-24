@@ -1,0 +1,7 @@
+{
+	"displayName": "Open Forge",
+	"executableName": "OpenForge",
+	"appshotHelperName": "Open Forge Computer Use",
+	"appshotHelperBundleId": "io.github.hxquanq.openforge.computer-use",
+	"legacyProductNames": ["Open Vetta", "Vetta"]
+}

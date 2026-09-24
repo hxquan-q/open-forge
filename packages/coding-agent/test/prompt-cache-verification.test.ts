@@ -119,7 +119,6 @@ async function project(messages: readonly Message[], contextWindow: number): Pro
 		},
 		async (input) => input,
 		new AbortController().signal,
-		{ timeBoundary: 1_000 },
 	);
 	return result.messages;
 }

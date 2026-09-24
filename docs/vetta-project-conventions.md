@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # 项目共享约定：`.vetta/` 与 `.vetta-local/`
 
 适用版本：清单 schema v1（`packages/coding-agent/src/projects/shared-project-conventions.ts` 为事实源）。

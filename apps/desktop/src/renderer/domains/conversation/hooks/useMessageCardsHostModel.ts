@@ -1,7 +1,7 @@
 import type { ContentBlock, ConversationAgentMessageViewModel } from "@shared/conversation";
 import { resolvePluginIconNode } from "@shared/lib/plugin-icon";
 import { pluginCardRenderersAtom, type RegisteredCardRenderer } from "@shared/store/atoms";
-import type { ChatConversationItem } from "@shared/store/chat-atoms";
+import type { ChatTimelineItem } from "@shared/store/chat-atoms";
 import type { CardDescriptor, PluginCardProps } from "@vetta-org/plugin-sdk";
 import { useAtomValue } from "jotai";
 import type { ComponentType, ReactNode } from "react";
@@ -29,7 +29,7 @@ export function MessageCardsScope({
 	scope,
 	children,
 }: {
-	messages: readonly ChatConversationItem[];
+	messages: readonly ChatTimelineItem[];
 	scope: string | null;
 	children: ReactNode;
 }) {
@@ -104,7 +104,7 @@ function cardsForMessage(
 
 /** 丢掉已经不在消息列表里、或已不再处于 pending 的 tool call 记忆。 */
 function collectPendingDescriptorCache(
-	messages: readonly ChatConversationItem[],
+	messages: readonly ChatTimelineItem[],
 	pendingDescriptorCache: PendingDescriptorCache,
 ): void {
 	if (pendingDescriptorCache.size === 0) return;

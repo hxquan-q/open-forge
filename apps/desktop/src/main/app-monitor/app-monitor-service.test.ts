@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { RuntimeHost, SessionEvent } from "@vetta/runtime-core";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type AppMonitorData, normalizeAppMonitorData } from "./app-monitor-data";

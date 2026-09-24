@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { providerAuthenticationError } from "@vetta/ai";
 import { type RuntimeObservationPublisher, runtimeFailureFromError } from "@vetta/runtime-core";
 import type {
@@ -5,7 +6,11 @@ import type {
 	ContextPreparationInput,
 	PreparedContext,
 } from "@vetta/runtime-core/kernel";
-import { CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION } from "../../runtime-contracts/context-observability.js";
+import {
+	CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION,
+	CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+	type CodingAgentContextBudgetObservation,
+} from "../../runtime-contracts/context-observability.js";
 import type {
 	CodingAgentCompactionExtensionRuntime,
 	CodingAgentContextRuntimeOptions,
@@ -100,6 +105,12 @@ export class CodingAgentAutomaticCompactionStrategy {
 		this.options.recordEstimatedTokens(assembledTokens);
 		if (reason === "turn_start") return unchanged(callMessages, assembledTokens);
 		if (!model || !input.document || contextWindow <= 0 || !settings.enabled) {
+			this.reportBudgetExceeded(
+				reason,
+				estimate.tokens,
+				contextWindow,
+				settings.enabled ? "context_unavailable" : "compaction_disabled",
+			);
 			return unchanged(callMessages, assembledTokens);
 		}
 
@@ -107,7 +118,10 @@ export class CodingAgentAutomaticCompactionStrategy {
 			projectPinnedConversationDocument(input.compactionSourceDocument ?? input.document, pinnedContext),
 		);
 
-		if (reason === "assistant_error" && !overflow) return unchanged(callMessages, assembledTokens);
+		if (reason === "assistant_error" && !overflow) {
+			this.reportBudgetExceeded(reason, estimate.tokens, contextWindow, "non_overflow_error");
+			return unchanged(callMessages, assembledTokens);
+		}
 		if (!overflow && !shouldCompact(estimate.tokens, contextWindow, settings)) {
 			if (shouldPrefire(estimate.tokens, contextWindow, settings)) {
 				this.options.prefire.start(entries, settings, model, input.modelBinding?.credential);
@@ -266,6 +280,22 @@ export class CodingAgentAutomaticCompactionStrategy {
 		} finally {
 			this.options.backpressure.end(succeeded, baselineTokens, policy);
 		}
+	}
+
+	private reportBudgetExceeded(
+		trigger: CodingAgentContextBudgetObservation["trigger"],
+		contextTokens: number,
+		contextWindow: number,
+		suppression: CodingAgentContextBudgetObservation["suppression"],
+	): void {
+		if (contextWindow <= 0 || contextTokens <= contextWindow) return;
+		this.options.observations?.record(CODING_AGENT_CONTEXT_BUDGET_OBSERVATION, {
+			trigger,
+			suppression,
+			contextTokens,
+			contextWindow,
+			overByTokens: contextTokens - contextWindow,
+		});
 	}
 }
 

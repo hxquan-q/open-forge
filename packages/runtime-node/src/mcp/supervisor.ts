@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { join } from "node:path";
 import {
 	MCP_DEFAULT_PROTOCOL_VERSION,
@@ -13,7 +15,8 @@ import {
 	loadVettaCredentials,
 	McpOAuthProvider,
 } from "./auth/index.js";
-import { createMcpClient } from "./client/index.js";
+import { FileMcpServerCatalogCache } from "./catalog/index.js";
+import { createMcpClient, withPostConnectToolCalls } from "./client/index.js";
 import { FileMcpConfigSource } from "./config/index.js";
 
 const MCP_PROTOCOL_VERSION = MCP_DEFAULT_PROTOCOL_VERSION;
@@ -34,6 +37,19 @@ export interface NodeMcpSupervisorOptions {
 	readonly onDiagnostic?: (message: string) => void;
 	readonly interactionHandlers?: McpServerInteractionHandlers;
 	readonly clientCapabilities?: McpClientCapabilities;
+	/**
+	 * Directory that persists per-server tool catalogs keyed by the
+	 * configuration signature and enables lazy startup. Left undefined for
+	 * hosts/tests that do not want durable catalog state; Desktop passes its
+	 * application cache namespace.
+	 */
+	readonly catalogCacheDirectory?: string;
+	/**
+	 * Default idle timeout (ms) for spawned stdio servers before the supervisor
+	 * disconnects and reclaims the process; per-server `idleTimeout` overrides
+	 * it and `0` disables recycling entirely.
+	 */
+	readonly idleTimeoutMs?: number;
 }
 
 export interface NodeMcpSupervisorComposition {
@@ -62,21 +78,26 @@ export function createNodeMcpSupervisor(options: NodeMcpSupervisorOptions): Node
 					}),
 		configSource,
 		clientFactory: (name, config, clientOptions) =>
-			clientFactory(name, config, {
-				...clientOptions,
-				httpAuthProviderFactory: ({ serverName, serverUrl, config: httpConfig }) => {
-					if (!oauthStore.hasTokens(serverName)) return undefined;
-					return new McpOAuthProvider({
-						serverName,
-						serverUrl,
-						redirectUri: oauthStore.load(serverName)?.redirectUri ?? PLACEHOLDER_REDIRECT_URI,
-						onRedirect: () => undefined,
-						store: oauthStore,
-						clientName: options.oauthClientName ?? "Vetta",
-						clientId: httpConfig.oauthClientId,
-					});
-				},
-			}),
+			withPostConnectToolCalls(
+				clientFactory(name, config, {
+					...clientOptions,
+					httpAuthProviderFactory: ({ serverName, serverUrl, config: httpConfig }) => {
+						if (!oauthStore.hasTokens(serverName)) return undefined;
+						return new McpOAuthProvider({
+							serverName,
+							serverUrl,
+							redirectUri: oauthStore.load(serverName)?.redirectUri ?? PLACEHOLDER_REDIRECT_URI,
+							onRedirect: () => undefined,
+							store: oauthStore,
+							clientName: options.oauthClientName ?? "Vetta",
+							clientId: httpConfig.oauthClientId,
+						});
+					},
+				}),
+				name,
+				config,
+				options.onDiagnostic,
+			),
 		protocolVersion: MCP_PROTOCOL_VERSION,
 		clientInfo: { name: options.clientName ?? "vetta", version: options.clientVersion },
 		enabled: options.enabled,
@@ -84,6 +105,13 @@ export function createNodeMcpSupervisor(options: NodeMcpSupervisorOptions): Node
 		onDiagnostic: options.onDiagnostic,
 		interactionHandlers: options.interactionHandlers,
 		clientCapabilities: options.clientCapabilities,
+		catalogCache: options.catalogCacheDirectory
+			? new FileMcpServerCatalogCache({
+					directory: options.catalogCacheDirectory,
+					log: options.onDiagnostic,
+				})
+			: undefined,
+		idleTimeoutMs: options.idleTimeoutMs,
 	});
 	return { supervisor, configSource };
 }

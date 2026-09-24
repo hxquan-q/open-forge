@@ -30,3 +30,8 @@ export function useActivityWorkspace(): ActivityWorkspace {
 export function useActivityRuntimeIds(): readonly string[] {
 	return useContext(ActivityPanelContext).workspace.runtimeIds;
 }
+
+/** Optional runtimeId → owner display names for attributing aggregated rows (Team workspaces). */
+export function useActivityRuntimeLabels(): Readonly<Record<string, string>> {
+	return useContext(ActivityPanelContext).workspace.runtimeLabels ?? {};
+}

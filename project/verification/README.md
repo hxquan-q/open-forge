@@ -1,10 +1,11 @@
+<!-- Copyright The Open Forge contributors. -->
 # Verification
 
 这里记录行为合同、测试矩阵、性能基线和质量门禁。新 Verification 使用 [`TEMPLATE.md`](TEMPLATE.md)，详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)。
 
 当前完整基线见 [`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md)。
 
-当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)。
+当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)、[`VERIFY-0006-deepeval-tool-routing-sidecar.md`](VERIFY-0006-deepeval-tool-routing-sidecar.md)、[`VERIFY-0007-three-framework-tool-routing.md`](VERIFY-0007-three-framework-tool-routing.md)、[`VERIFY-0008-task-tree-consolidation.md`](VERIFY-0008-task-tree-consolidation.md)。
 
 ## 默认验证顺序
 

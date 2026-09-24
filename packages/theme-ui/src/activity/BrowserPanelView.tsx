@@ -1,4 +1,5 @@
 import type { FormEvent, JSX, Ref } from "react";
+import { BrowserLiveEditCard, type BrowserLiveEditCardProps } from "./BrowserLiveEditCard";
 
 export interface BrowserPanelLabels {
 	noSession: string;
@@ -12,6 +13,9 @@ export interface BrowserPanelLabels {
 	loading: string;
 	failed: string;
 	retry: string;
+	picker: string;
+	pickerActive: string;
+	pickerHint: string;
 }
 
 export interface BrowserPanelViewProps {
@@ -35,17 +39,24 @@ export interface BrowserPanelViewProps {
 	onReload: () => void;
 	onOpenExternal: () => void;
 	onRetry: () => void;
+	pickerEnabled: boolean;
+	pickerDisabled: boolean;
+	onTogglePicker: () => void;
+	/** 点选命中后的即时预览卡模型；undefined 时不渲染。 */
+	liveEdit?: BrowserLiveEditCardProps;
 }
 
 function ToolbarButton({
 	icon,
 	title,
 	disabled,
+	pressed,
 	onClick,
 }: {
 	icon: string;
 	title: string;
 	disabled?: boolean;
+	pressed?: boolean;
 	onClick: () => void;
 }): JSX.Element {
 	return (
@@ -53,9 +64,12 @@ function ToolbarButton({
 			type="button"
 			title={title}
 			aria-label={title}
+			aria-pressed={pressed}
 			disabled={disabled}
 			onClick={onClick}
-			className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+			className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-muted-foreground/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent ${
+				pressed ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+			}`}
 		>
 			<span className={`${icon} h-4 w-4`} />
 		</button>
@@ -85,6 +99,10 @@ export function BrowserPanelView({
 	onReload,
 	onOpenExternal,
 	onRetry,
+	pickerEnabled,
+	pickerDisabled,
+	onTogglePicker,
+	liveEdit,
 }: BrowserPanelViewProps): JSX.Element {
 	if (!workspaceId) {
 		return (
@@ -120,12 +138,24 @@ export function BrowserPanelView({
 					/>
 				</form>
 				<ToolbarButton
+					icon="icon-[mdi--cursor-default-click-outline]"
+					title={pickerEnabled ? labels.pickerActive : labels.picker}
+					disabled={pickerDisabled}
+					pressed={pickerEnabled}
+					onClick={onTogglePicker}
+				/>
+				<ToolbarButton
 					icon="icon-[mdi--open-in-new]"
 					title={labels.openExternal}
 					disabled={!currentUrl}
 					onClick={onOpenExternal}
 				/>
 			</div>
+			{pickerEnabled ? (
+				<div className="shrink-0 border-b border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
+					{labels.pickerHint}
+				</div>
+			) : null}
 
 			<div className="relative flex min-h-0 flex-1">
 				{/* src 用静态 about:blank 让 guest 立即挂载（dom-ready 才会触发），
@@ -136,6 +166,7 @@ export function BrowserPanelView({
 					src="about:blank"
 					partition={partition}
 					allowpopups={true}
+					webpreferences="contextIsolation=yes, nodeIntegration=no"
 					className="h-full w-full"
 				/>
 				{!hasPage && (
@@ -163,6 +194,7 @@ export function BrowserPanelView({
 						</button>
 					</div>
 				)}
+				{liveEdit ? <BrowserLiveEditCard {...liveEdit} /> : null}
 			</div>
 		</div>
 	);

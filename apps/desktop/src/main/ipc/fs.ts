@@ -70,6 +70,7 @@ import { watchRemoteDirectory } from "../filesystem/remote-directory-watch.js";
 import { getDesktopMcpOAuthService } from "../mcp/mcp-oauth-service.js";
 import { getDesktopMcpSettingsService, readMcpConfig, writeMcpConfig } from "../mcp/mcp-settings-service.js";
 import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.js";
+import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
 import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import type { ModelsConfig } from "../models/model-settings-service.js";
@@ -164,6 +165,7 @@ const CHANNELS = {
 	MCP_START_SETUP_LOGIN: "vetta:mcp:start-setup-login",
 	MCP_CANCEL_SETUP_LOGIN: "vetta:mcp:cancel-setup-login",
 	MCP_CLEAR_SETUP_LOGIN: "vetta:mcp:clear-setup-login",
+	MCP_LIST_SERVER_TOOLS: "vetta:mcp:list-server-tools",
 } as const;
 
 function assertNonEmptyString(value: unknown, fieldName: string): asserts value is string {
@@ -624,6 +626,11 @@ export function registerFsIpc(): () => void {
 		return getDesktopMcpSetupLoginService().clear(serverName.trim());
 	});
 
+	ipcMain.handle(CHANNELS.MCP_LIST_SERVER_TOOLS, async (_event, serverName: unknown) => {
+		assertNonEmptyString(serverName, "serverName");
+		return listMcpServerTools(serverName.trim());
+	});
+
 	return () => {
 		void getDesktopMcpSetupLoginService().cancelAll();
 		// Close all directory watchers
@@ -668,6 +675,7 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.MCP_START_SETUP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_CANCEL_SETUP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_CLEAR_SETUP_LOGIN);
+		ipcMain.removeHandler(CHANNELS.MCP_LIST_SERVER_TOOLS);
 		disposeModelChanged();
 	};
 }

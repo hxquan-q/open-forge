@@ -29,8 +29,20 @@ import { inputBlankAtom, inputImagePathsAtom, inputPlaceholderVisibleAtom } from
 
 const inputActiveSessionAtom = selectAtom(
 	activeSessionAtom,
-	(session) => (session ? { cwd: session.cwd, runtimeId: session.runtimeId } : null),
-	(left, right) => left?.cwd === right?.cwd && left?.runtimeId === right?.runtimeId,
+	(session) =>
+		session
+			? {
+					cwd: session.cwd,
+					runtimeId: session.runtimeId,
+					agentMode: session.agentMode,
+					capabilityProfile: session.capabilityProfile,
+				}
+			: null,
+	(left, right) =>
+		left?.cwd === right?.cwd &&
+		left?.runtimeId === right?.runtimeId &&
+		left?.agentMode === right?.agentMode &&
+		left?.capabilityProfile === right?.capabilityProfile,
 );
 
 export function useInputBarSessionSource(cwdOverride?: string) {

@@ -26,5 +26,23 @@
     "type": "skill",
     "alias": "发布能力",
     "description": "把 skill、scene、MCP、插件或能力套装提交到 Vetta 能力市场，讲清必填字段、多语言与审核流程。"
+  },
+  "report-canvas": {
+    "name": "report-canvas",
+    "version": "1.0.0",
+    "source": "builtin",
+    "enabled": true,
+    "type": "skill",
+    "alias": "画布报告",
+    "description": "用户要独立报告、审计看板或长文分析时，用 artifact 写入画布，不要只在聊天里贴 Markdown。"
+  },
+  "architecture-canvas": {
+    "name": "architecture-canvas",
+    "version": "1.0.0",
+    "source": "builtin",
+    "enabled": true,
+    "type": "skill",
+    "alias": "架构图画布",
+    "description": "用户要架构图、模块图或系统图时，用 artifact 创建带内联 SVG 的 HTML 画布，不要只在聊天里贴图。"
   }
 }

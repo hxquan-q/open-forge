@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -17,7 +18,7 @@ export interface ProjectEntry {
 
 /** 实验性功能开关分组（设置页「Agent配置 → 扩展功能」）。新增实验项只加一个键。 */
 export interface ExperimentalConfig {
-	/** Vetta CLI 提示词：开启后仅注入桌面端对话会话。缺省开。 */
+	/** Open Forge CLI 提示词：开启后仅注入桌面端对话会话。缺省开。 */
 	vettaCli?: boolean;
 	/** 输入预测：每轮正常回答后预测用户下一个可能输入的 prompt。缺省关。 */
 	promptPrediction?: boolean;

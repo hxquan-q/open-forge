@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import "./telemetry.js";
 import type { DesktopApi } from "./api.js";
@@ -8,6 +9,8 @@ import { createAppLifecycleApi } from "./apis/app-lifecycle.js";
 import { createAppMonitorApi } from "./apis/app-monitor.js";
 import { createAppshotApi } from "./apis/appshot.js";
 import { createBatchTasksApi } from "./apis/batch-tasks.js";
+import { createBrowserTabApi } from "./apis/browser-tab.js";
+import { createCanvasApi } from "./apis/canvas.js";
 import { createConversationTagsApi } from "./apis/conversation-tags.js";
 import { createDownloadsApi } from "./apis/downloads.js";
 import { createI18nApi } from "./apis/i18n.js";
@@ -49,6 +52,8 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createImApi(ipcRenderer),
 	...createDownloadsApi(ipcRenderer),
 	...createBatchTasksApi(ipcRenderer),
+	...createCanvasApi(ipcRenderer),
+	...createBrowserTabApi(ipcRenderer),
 	...createSchedulerApi(ipcRenderer),
 	...createWebhookApi(ipcRenderer),
 	...createNotificationApi(ipcRenderer),

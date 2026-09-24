@@ -1,12 +1,17 @@
+// Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
 	DESKTOP_BUILD_OUTPUTS,
+	DESKTOP_LEGAL_FILES,
+	DESKTOP_LEGAL_RESOURCE,
 	DESKTOP_REQUIRED_SOURCE_FILES,
 	VETTA_PLUGIN_FILE_ASSOCIATION,
 } from "./desktop-packaging-layout.mjs";
+import { stageDesktopLegalResources } from "./stage-desktop-legal-resources.mjs";
 
 const desktopRoot = join(import.meta.dirname, "..");
 
@@ -37,4 +42,23 @@ test("packaged Desktop registers the dedicated Vetta plugin package type", () =>
 		mimeType: "application/vnd.vetta.plugin+zip",
 		role: "Editor",
 	});
+});
+
+test("Desktop legal resources are staged with the complete repository license files", () => {
+	const repoRoot = join(desktopRoot, "..", "..");
+	const stagingRoot = mkdtempSync(join(tmpdir(), "openforge-desktop-legal-"));
+	try {
+		const legalDirectory = stageDesktopLegalResources(repoRoot, stagingRoot);
+		assert.deepEqual(readdirSync(legalDirectory).sort(), [...DESKTOP_LEGAL_FILES].sort());
+		for (const filename of DESKTOP_LEGAL_FILES) {
+			assert.deepEqual(readFileSync(join(legalDirectory, filename)), readFileSync(join(repoRoot, filename)));
+		}
+		assert.deepEqual(DESKTOP_LEGAL_RESOURCE, {
+			from: "legal",
+			to: "legal",
+			filter: DESKTOP_LEGAL_FILES,
+		});
+	} finally {
+		rmSync(stagingRoot, { recursive: true, force: true });
+	}
 });

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import {
 	type ContextCompactionEligibility,
@@ -47,7 +48,11 @@ import { CodingAgentContextSummaryStrategy } from "./context-summary-strategy.js
 import { isRuntimeMessage, toCompactionSessionEntries } from "./conversation-compaction-projection.js";
 import { CodingAgentImageRequestFailureRecovery } from "./image-request-failure-recovery.js";
 import { CodingAgentManualCompactionStrategy } from "./manual-compaction-strategy.js";
-import { projectModelCallContext } from "./model-call-context-projection.js";
+import {
+	createModelCallDecayBoundary,
+	type ModelCallDecayBoundary,
+	projectModelCallContext,
+} from "./model-call-context-projection.js";
 import { requireCodingAgentPinnedModelContext } from "./pinned-model-context-projection.js";
 
 /**
@@ -147,7 +152,6 @@ export class DefaultCodingAgentContextRuntime
 	async bindForTurn(context: RuntimeSnapshotAcquireContext): Promise<CodingAgentBoundContextRuntime> {
 		context.signal.throwIfAborted();
 		const settings = Object.freeze({ ...this.readSettings() });
-		const projectionTimeBoundary = this.now();
 		const pinnedSource = this.options.bindPinnedModelContext?.(context);
 		const pinnedCapture =
 			pinnedSource && "then" in pinnedSource
@@ -163,6 +167,10 @@ export class DefaultCodingAgentContextRuntime
 		const extensionRuntime = extensionResult.status === "fulfilled" ? extensionResult.value : undefined;
 		const transformBinding = transformResult.status === "fulfilled" ? transformResult.value : undefined;
 		let released = false;
+		// Turn 冻结的衰减剪枝边界：本 Turn 全部模型调用共享同一 thinking 清除集合
+		// （投影 append-only，已见消息不随计数窗滑动而中途翻转）；绑定释放后随闭包
+		// 回收，跨 Turn 重新绑定按 grown 流重算，集合单调只增。
+		const decayBoundary = createModelCallDecayBoundary();
 		const release = async () => {
 			if (released) return;
 			released = true;
@@ -208,8 +216,8 @@ export class DefaultCodingAgentContextRuntime
 					input,
 					signal,
 					transformBinding?.transform ?? this.options.transformAgentContext,
-					projectionTimeBoundary,
 					pinnedContext,
+					decayBoundary,
 				),
 			releaseTurnBinding: release,
 		};
@@ -303,12 +311,12 @@ export class DefaultCodingAgentContextRuntime
 		input: ModelCallContextTransformationInput,
 		signal: AbortSignal,
 		transformAgentContext: CodingAgentContextRuntimeOptions["transformAgentContext"],
-		timeBoundary?: number,
 		pinnedContext?: CodingAgentPinnedModelContext,
+		decayBoundary?: ModelCallDecayBoundary,
 	): Promise<readonly Message[]> {
 		const projected = await projectModelCallContext(input, transformAgentContext, signal, {
-			timeBoundary,
 			pinnedContext,
+			decayBoundary,
 		});
 		this.usage.recordEstimatedTokens(projected.estimatedTokens);
 		return projected.messages;

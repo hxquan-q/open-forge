@@ -63,7 +63,13 @@ describe("注册表校验入口", () => {
 
 describe("模式间只有提示词正文不同", () => {
 	// 叙事、Deliverables 文件清单、写代码底线纪律对所有模式一致；各写一遍会漂移，只能引用同一份 partial。
-	const SHARED_PARTIALS = ["narration", "deliverables-placement", "deliverables-list", "code-discipline"];
+	const SHARED_PARTIALS = [
+		"narration",
+		"deliverables-placement",
+		"deliverables-list",
+		"code-discipline",
+		"canvas-artifacts",
+	];
 
 	it.each(modeFiles.map((mode) => mode.id))("%s 模式引用全部共享 partial", (id) => {
 		const raw = readFileSync(join(modesDir, `${id}.md`), "utf-8");
@@ -79,6 +85,15 @@ describe("路径声明（方案 1.3）", () => {
 		expect(coding).toMatch(/UI and page work happens in the current codebase/);
 		expect(coding).toMatch(/design-exploration tools/i);
 		expect(coding).toMatch(/Never switch routes on your own/);
+	});
+
+	it("两种模式都要求报告与架构图走 artifact 而不是聊天贴图", () => {
+		for (const id of ["work", "coding"]) {
+			const prompt = getModePrompt(id);
+			expect(prompt).toContain("## Canvas artifacts");
+			expect(prompt).toContain("artifact");
+			expect(prompt).toMatch(/Do not create an empty canvas/);
+		}
 	});
 
 	it("work 模式声明何时应转向代码实现", () => {

@@ -1,17 +1,17 @@
 import { createContext, useContext, useMemo } from "react";
 import type { ComponentType, ReactNode } from "react";
-import type { ChatConversationItem } from "./types";
+import type { ChatTimelineItem } from "./types";
 import type { MessageItemProps } from "./MessageItem";
 
 export interface MessageRendering {
 	/** A local display projection; the durable source is never mutated. */
-	readonly project?: (message: ChatConversationItem) => ChatConversationItem;
-	readonly renderers?: Partial<Record<ChatConversationItem["kind"], ComponentType<MessageItemProps>>>;
+	readonly project?: (message: ChatTimelineItem) => ChatTimelineItem;
+	readonly renderers?: Partial<Record<ChatTimelineItem["kind"], ComponentType<MessageItemProps>>>;
 	readonly row?: ComponentType<MessageRowProps>;
 }
 
 export interface MessageRowProps {
-	message: ChatConversationItem;
+	message: ChatTimelineItem;
 	isLast: boolean;
 	children: ReactNode;
 }

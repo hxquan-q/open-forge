@@ -9,6 +9,8 @@
  * 类型定义放在宿主侧，供宿主消费方与 cloud 实现共同引用。
  */
 
+import { DESKTOP_BRAND } from "../shared/desktop-brand.js";
+
 export interface RemoteProvidersResult {
 	providers: Record<string, unknown>;
 	error?: string;
@@ -36,7 +38,7 @@ export type CloudRefreshOutcome =
 	| { status: "transient" };
 
 export interface CloudBridge {
-	/** 云端 provider 目录（Vetta Go 等远程模型）。 */
+	/** 云端 provider 目录（Open Forge Go 等远程模型）。 */
 	fetchRemoteProviders(): Promise<RemoteProvidersResult>;
 	/** 经 vetta 服务端 `/api/v1` 的带鉴权中转（图像生成等增值能力）。 */
 	requestGateway<T = unknown>(request: VettaGatewayRequest, signal?: AbortSignal): Promise<VettaGatewayResponse<T>>;
@@ -57,5 +59,10 @@ export function getCloudBridge(): CloudBridge | null {
 
 /** 云服务不可用时的统一网关失败回执（envelope 形状，调用方按 !ok 处理）。 */
 export function gatewayUnavailableResponse<T = unknown>(): VettaGatewayResponse<T> {
-	return { ok: false, status: 0, code: -1, message: "Vetta cloud services are not available in this build" };
+	return {
+		ok: false,
+		status: 0,
+		code: -1,
+		message: `${DESKTOP_BRAND.displayName} cloud services are not available in this build`,
+	};
 }

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useNavigate } from "@tanstack/react-router";
 import type { GuideBadgeSwiperViewProps, GuideBadgeViewItem } from "@vetta-org/theme-ui/chat";
 import { useCallback, useEffect, useMemo, useState } from "react";

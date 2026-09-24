@@ -39,6 +39,8 @@ export type {
 export { BackgroundTasksTabPanelView } from "./BackgroundTasksTabPanelView";
 export type { BatchProgressTabPanelViewProps } from "./BatchProgressTabPanelView";
 export { BatchProgressTabPanelView } from "./BatchProgressTabPanelView";
+export type { BrowserLiveEditCardProps, BrowserLiveEditEntryView, BrowserLiveEditLabels } from "./BrowserLiveEditCard";
+export { BrowserLiveEditCard } from "./BrowserLiveEditCard";
 export type { BrowserPanelLabels, BrowserPanelViewProps } from "./BrowserPanelView";
 export { BrowserPanelView } from "./BrowserPanelView";
 export type { ChatTabPanelViewProps } from "./ChatTabPanelView";

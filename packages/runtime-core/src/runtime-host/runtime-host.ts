@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ThinkingLevel } from "@vetta/agent-core";
 import type { Api, Message, Model } from "@vetta/ai";
 import { RuntimeAgentRuntime } from "../agents/index.js";
@@ -44,6 +45,7 @@ import { RuntimeHostSessionEventRelay } from "./runtime-host-session-event-relay
 import { RuntimeHostSessionLifecycle } from "./runtime-host-session-lifecycle.js";
 import { RuntimeHostSessionOperations } from "./runtime-host-session-operations.js";
 import { RuntimeHostSessionRequestFactory } from "./runtime-host-session-request-factory.js";
+import type { SessionEventSubscriberQueueStats } from "./session-event-subscriber-queue.js";
 import type {
 	RuntimeContextCompactionRequest,
 	RuntimeContextCompactionResult,
@@ -380,6 +382,14 @@ export class RuntimeHost implements SessionFacade {
 
 	subscribe(sessionId: string, handler: (event: SessionEvent) => void): () => void {
 		return this.sessionOperations.subscribe(sessionId, handler);
+	}
+
+	/**
+	 * 单个订阅者的投递队列水位/丢弃计数（合计其订阅的全部 session）。旁路遥测
+	 * 轮询使用；队列不存在时返回 undefined。
+	 */
+	readSubscriberDeliveryStats(handler: (event: SessionEvent) => void): SessionEventSubscriberQueueStats | undefined {
+		return this.sessionOperations.readSubscriberDeliveryStats(handler);
 	}
 
 	subscribeExecutionObservations(

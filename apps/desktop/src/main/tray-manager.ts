@@ -1,4 +1,5 @@
 import { app, Menu, nativeImage, Tray } from "electron";
+import { DESKTOP_BRAND } from "../shared/desktop-brand.js";
 import { mainT } from "./i18n/index.js";
 import { getAppLogger } from "./logger.js";
 import { getMainWindow, iconPath, macTrayIconPath, showMainWindow } from "./window-manager.js";
@@ -100,7 +101,7 @@ export function createTray(): void {
 
 	tray = new Tray(trayIcon);
 	log.info("Created successfully");
-	tray.setToolTip("Vetta");
+	tray.setToolTip(DESKTOP_BRAND.displayName);
 	tray.setContextMenu(buildTrayMenu());
 
 	// Mac 状态栏惯例：左/右键都由 setContextMenu 默认弹菜单，不另绑 click。

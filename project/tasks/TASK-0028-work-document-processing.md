@@ -1,25 +1,26 @@
 ---
 id: TASK-0028
 type: task
-status: blocked
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0001
-source_issue: ISSUE-0005
+source_issue: ISSUE-0006
 execution: serial
-branch: unassigned
-worktree: unassigned
+branch: forge/dev
+worktree: unassigned（原 worktree 与分支 task/TASK-0028-work-document-processing 已淘汰；WIP 46dfc54ed 保留在 origin/task/TASK-0028-work-document-processing）
 base_commit: forge/dev
 read_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 write_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode]
 depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024]
 conflicts_with: [TASK-0018, TASK-0025, TASK-0026]
-integration_status: pending
+integration_status: integrated（forge/dev；以 a728de9e5 的主树实现为准，46dfc54ed 为被当前架构替代的历史 WIP）
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Work 文档处理纵向切片
 
@@ -42,7 +43,7 @@ updated: 2026-09-23
 - 文档读取与输出路径由 Host 限定；生成计划和目标文件名供用户 Review；
 - 生成内容先保存为新版本/暂存 Artifact，不静默覆盖来源文件；导出时检查目标与授权；
 - Activity Panel 展示计划、生成状态、Artifact 预览、Review 与导出结果；取消/失败后保留原文和已生成版本；
-- 文档 Task 由 TASK-0006 冻结的 promotion rule 创建，不从任意 Prompt 隐式推断权限。
+- 文档 Task 仅由用户明确升级或注册的持久工作流入口创建；普通 Chat 不按 Prompt 复杂度自动升级，遵循 [`ISSUE-0006`](../issues/ISSUE-0006-conversation-task-promotion-policy.md) 决议。
 
 ### 不做
 
@@ -52,7 +53,7 @@ updated: 2026-09-23
 
 ## Given / When / Then
 
-- Given：用户在 Work 文档入口选择一个本地文档并输入“总结成一页会议纪要”；
+- Given：用户在 Work 中明确启动文档处理 Task（显式升级当前会话或使用注册的文档工作流），选择一个本地文档并输入“总结成一页会议纪要”；
 - When：Agent 生成内容，用户在 Artifact Preview 检查并批准导出位置；
 - Then：源文档保持不变，产出有来源与版本的 document Artifact，Review 前不写到目标位置；重开会话后 Artifact/Review 状态可恢复。
 
@@ -70,11 +71,23 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- ISSUE-0005 已裁决方案 C（done）；剩余唯一阻塞是 ISSUE-0006 的 Task 创建规则（draft）；其决议前不进入 `ready`。depends_on 已全部完成（2026-09-23 校准）。
+- 已解除：TASK-0015/0016/0017/0024 均 done，REQ-0001 验收条件已补齐，[`ISSUE-0006`](../issues/ISSUE-0006-conversation-task-promotion-policy.md) 已裁决。实现已从独立 worktree 合入主工作区。
 
 ## 交付记录
 
 - 实际修改：
+  - Work 右栏接入文档处理四节（计划 / 来源 / 产物 / 审阅与导出）：来源选择走系统文件对话框，必须选中来源并描述目标后才通过注册工作流入口发送 `create` 并走全局发送通道；产物列表支持文本预览；审阅区支持 Review 决策与导出到本地。主进程补齐 Task IPC（readArtifact / exportArtifact）与 document-export 导出服务。`DefaultChatView` 在 work 模式下挂载新组件。i18n 补充 zh/en 文案。
+  - 不平行注册第二套 `artifact` 宿主函数：create/update/get/list/attach_to_task 继续由已合入主线的 Canvas Artifact Service（TASK-0060）承接，避免覆盖同一 function token。文档切片只消费其 `document` kind 与版本化落盘。
+  - `coding-agent` 公开导出文档处理合同类型（`DocumentProcessingRequest` / `DocumentExportResult`）。
+  - Release Notes 候选句（Open Forge 首发版本已定为 `0.1.0`，但 Desktop manifest 仍继承 `0.5.59`，不写入继承的 Vetta Release Notes）：工作模式新增文档处理入口：选择来源文档并描述目标即可发起任务，产物可在右栏预览、审阅并导出到本地。
 - 实际运行：
+  - Desktop 定向测试（`apps/desktop` vitest 配置）30/30：document-export 7、document-read 2、ipc/task 6、DefaultChatView 4、WorkDocumentSections 11。
+  - 回归：task-activity-service.artifact-renderer 3/3、function-extension-source 4/4。
+  - `bun run check:quick -- <本任务文件>`：Biome + guards 通过。
 - 未运行及原因：
+  - 未运行 `verify:ui:*`（用户未授权实机验收）。
+  - 未跑全仓 `bun run check`：主工作区同时有其他任务的未提交改动，全量检查不能单独代表本切片。
+- 分支收口：`origin/task/TASK-0028-work-document-processing` 的 `46dfc54ed` 基于陈旧主树保存未验证 WIP，不直接 cherry-pick。其 `artifact-broker` 仅实现 `create/attach_to_task`，并在 Function Source 中直接注册 `CODING_AGENT_ARTIFACT_FUNCTION`；当前主树已由 Composition 注入完整的 Canvas Artifact Service（支持 create/update/get/list/attach）作为该 token 的唯一宿主，因此该 broker 会形成重复事实源并被明确淘汰。其余文档处理文件已由 `a728de9e5` 以更新的主树版本落地。
 - 剩余风险：
+  - document-export / 右栏预览仅支持本机纯文本内容；远程 SSH 产物返回不可导出/无法预览。
+  - 保存对话框由用户选定目标路径，覆盖确认交给原生对话框，不另实现 `target-exists` 分支。

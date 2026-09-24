@@ -18,7 +18,7 @@ function quoteForShell(value: string): string {
 }
 
 const ASKPASS_ENTRY_SOURCE = `#!/usr/bin/env node
-// 由 Vetta 运行时生成，手工修改会在下次启动时被覆盖。
+// 由 Open Forge 运行时生成，手工修改会在下次启动时被覆盖。
 //
 // OpenSSH 把提示文本作为 argv[2] 传进来，期待答案打到 stdout。确认类提示（首次主机
 // 指纹核对）不看 stdout，只看退出码：0 视为「是」，非 0 视为「否」。
@@ -88,7 +88,7 @@ export function ensureAskpassAssets(electronExecutablePath: string): AskpassAsse
 	const scriptPath = join(directory, "askpass.sh");
 	const script = [
 		"#!/bin/sh",
-		"# 由 Vetta 运行时生成。",
+		"# 由 Open Forge 运行时生成。",
 		`ELECTRON_RUN_AS_NODE=1 exec ${quoteForShell(electronExecutablePath)} ${quoteForShell(entryPath)} "$@"`,
 		"",
 	].join("\n");

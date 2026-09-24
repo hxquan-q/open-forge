@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { SshHelperTarget } from "@vetta/ssh-transport";

@@ -6,9 +6,10 @@ priority: P1
 owner: project/agent-workflow
 source: user-request and session-history
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 related_plan: [PLAN-0004]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Agent 辅助二开工作流
 

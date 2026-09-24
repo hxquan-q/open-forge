@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 // 快捷面板独立 i18next 实例（面板窗口走独立 ns、内联自己的文案目录）。语言真相源
 // = main 解析结果（config.language 或系统 locale）：preload 经 sendSync 暴露
 // window.vettaQuickPanel.initialLanguage，与主窗口同源；navigator 仅作 bridge 缺失时的兜底。
 
 import i18next from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
+import { DESKTOP_BRAND, initDesktopI18n } from "@/shared/desktop-brand";
 import { type AppLanguage, resolveAppLanguageFromLocale } from "@/shared/i18n/resources";
 
 const QUICK_PANEL_NS = "quickpanel";
@@ -11,7 +13,7 @@ const QUICK_PANEL_NS = "quickpanel";
 const resources = {
 	zh: {
 		[QUICK_PANEL_NS]: {
-			placeholder: "向 Vetta 提问…",
+			placeholder: `向 ${DESKTOP_BRAND.displayName} 提问…`,
 			recentTitle: "最近会话",
 			emptyTitle: "暂无最近会话",
 			emptyHint: "在上方输入即可开始新对话",
@@ -32,7 +34,7 @@ const resources = {
 	},
 	en: {
 		[QUICK_PANEL_NS]: {
-			placeholder: "Ask Vetta…",
+			placeholder: `Ask ${DESKTOP_BRAND.displayName}…`,
 			recentTitle: "Recent",
 			emptyTitle: "No recent conversations",
 			emptyHint: "Type above to start a new chat",
@@ -76,7 +78,7 @@ export const i18n = i18next.createInstance();
 export function initQuickPanelI18n(): void {
 	if (i18n.isInitialized) return;
 	const lng = detectLanguage();
-	void i18n.use(initReactI18next).init({
+	void initDesktopI18n(i18n.use(initReactI18next), {
 		resources,
 		lng,
 		fallbackLng: "zh",

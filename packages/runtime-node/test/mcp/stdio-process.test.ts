@@ -1,5 +1,10 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { StdioMcpProcess } from "../../src/mcp/transports/stdio/stdio-process.js";
+import {
+	getActiveStdioMcpProcessCount,
+	sweepActiveStdioMcpProcesses,
+} from "../../src/mcp/transports/stdio/stdio-process-registry.js";
 import { shouldUseWindowsCommandShell } from "../../src/mcp/transports/stdio/stdio-shell.js";
 
 describe("Windows MCP stdio process launch", () => {
@@ -70,10 +75,129 @@ describe("MCP stdio message bounds", () => {
 	});
 });
 
+describe("MCP stdio process tree lifecycle", () => {
+	// 真实子进程 + taskkill/进程组信号：机器繁忙时起停与退出事件都比单元测试慢，
+	// 显式放宽 vitest 的默认 5s 上限；失败时 finally 兜底，避免泄漏拖垮后续用例。
+	it("stop() kills the whole process tree, including grandchildren", { timeout: 30_000 }, async () => {
+		const server = new StdioMcpProcess({
+			config: {
+				type: "stdio",
+				command: process.execPath,
+				args: ["-e", GRANDCHILD_SCRIPT],
+			},
+			name: "tree",
+		});
+		try {
+			const pids = collectGrandchildPids(server);
+			await server.start();
+			const parentPid = server.getPid();
+			if (parentPid === undefined) throw new Error("Missing stdio parent pid");
+			const grandchildPid = await pids.next();
+			expect(isProcessAlive(parentPid)).toBe(true);
+			expect(isProcessAlive(grandchildPid)).toBe(true);
+
+			await server.stop();
+			await waitForCondition(() => !isProcessAlive(parentPid) && !isProcessAlive(grandchildPid), 10_000);
+		} finally {
+			await server.stop();
+		}
+	});
+
+	it(
+		"sweepActiveStdioMcpProcesses force-kills registered servers and unregisters them",
+		{ timeout: 30_000 },
+		async () => {
+			const server = new StdioMcpProcess({
+				config: {
+					type: "stdio",
+					command: process.execPath,
+					args: ["-e", GRANDCHILD_SCRIPT],
+				},
+				name: "swept",
+			});
+			try {
+				const pids = collectGrandchildPids(server);
+				await server.start();
+				const parentPid = server.getPid();
+				if (parentPid === undefined) throw new Error("Missing stdio parent pid");
+				const grandchildPid = await pids.next();
+				const registered = getActiveStdioMcpProcessCount();
+				expect(registered).toBeGreaterThan(0);
+
+				await sweepActiveStdioMcpProcesses();
+				await waitForCondition(() => !isProcessAlive(parentPid) && !isProcessAlive(grandchildPid), 10_000);
+				await waitForCondition(() => getActiveStdioMcpProcessCount() === registered - 1, 10_000);
+			} finally {
+				await server.stop();
+			}
+		},
+	);
+
+	it("unregisters the child after a normal stop", { timeout: 30_000 }, async () => {
+		const baseline = getActiveStdioMcpProcessCount();
+		const server = new StdioMcpProcess({
+			config: {
+				type: "stdio",
+				command: process.execPath,
+				args: ["-e", "setInterval(() => undefined, 1000)"],
+			},
+			name: "short-lived",
+		});
+		try {
+			await server.start();
+			expect(getActiveStdioMcpProcessCount()).toBe(baseline + 1);
+			await server.stop();
+			expect(getActiveStdioMcpProcessCount()).toBe(baseline);
+		} finally {
+			await server.stop();
+		}
+	});
+});
+
 async function waitForCondition(condition: () => boolean, timeoutMs: number): Promise<void> {
 	const deadline = Date.now() + timeoutMs;
 	while (!condition()) {
 		if (Date.now() > deadline) throw new Error("Timed out waiting for stdio message");
 		await new Promise((resolve) => setTimeout(resolve, 25));
+	}
+}
+
+/**
+ * 父进程拉起一个长驻孙子进程并把其 pid 以 JSON 行上报——验证树杀时断言
+ * 「父、孙一起死」的夹具脚本。stdio: ignore 让孙子不继承管道、脱离
+ * stdout/stderr 生命周期，否则它会随父进程 stdin 关闭自然退出，测不出区别。
+ */
+const GRANDCHILD_SCRIPT = [
+	'const { spawn } = require("node:child_process");',
+	'const child = spawn(process.execPath, ["-e", "setInterval(() => undefined, 1000)"], { stdio: "ignore" });',
+	'process.stdout.write(JSON.stringify({ grandchildPid: child.pid }) + "\\n");',
+	"setInterval(() => undefined, 1000);",
+].join(" ");
+
+function collectGrandchildPids(server: StdioMcpProcess): { next(): Promise<number> } {
+	const queue: number[] = [];
+	const waiters: Array<(pid: number) => void> = [];
+	server.on("message", (message) => {
+		const pid = (message as { grandchildPid?: unknown }).grandchildPid;
+		if (typeof pid !== "number") return;
+		const waiter = waiters.shift();
+		if (waiter) waiter(pid);
+		else queue.push(pid);
+	});
+	return {
+		next(): Promise<number> {
+			const queued = queue.shift();
+			if (queued !== undefined) return Promise.resolve(queued);
+			return new Promise((resolve) => waiters.push(resolve));
+		},
+	};
+}
+
+function isProcessAlive(pid: number): boolean {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (error) {
+		return (error as NodeJS.ErrnoException).code === "EPERM";
 	}
 }

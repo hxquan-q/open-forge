@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 

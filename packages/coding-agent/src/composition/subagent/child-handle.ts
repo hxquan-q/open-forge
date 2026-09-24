@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AssistantMessage, Message } from "@vetta/ai";
 import type { RuntimeActiveSession, RuntimeTurnPromptOutcome } from "@vetta/runtime-core";
 import type { SessionContextRecord } from "@vetta/runtime-core/kernel";

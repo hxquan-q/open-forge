@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import { type ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import type { McpStdioServerConfig } from "../../protocol/index.js";
+import { registerActiveStdioMcpProcess, terminateMcpProcessTree } from "./stdio-process-registry.js";
 import { shouldUseWindowsCommandShell } from "./stdio-shell.js";
 
 export interface StdioMcpProcessOptions {
@@ -38,6 +40,7 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	private readonly maxMessageBytes: number;
 	private isReady = false;
 	private isClosed = false;
+	private unregisterFromRegistry?: () => void;
 
 	constructor(options: StdioMcpProcessOptions) {
 		super();
@@ -57,7 +60,10 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 
 		return new Promise((resolve, reject) => {
 			const timeout = setTimeout(() => {
+				this.log("Startup timeout, killing the spawned process tree");
+				const child = this.process;
 				this.cleanup();
+				if (child) void terminateMcpProcessTree(child, { force: true, log: (message) => this.log(message) });
 				reject(new Error(`MCP server '${this.name}' startup timeout after ${this.startupTimeout}ms`));
 			}, this.startupTimeout);
 
@@ -68,7 +74,11 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 					cwd: this.config.cwd,
 					stdio: ["pipe", "pipe", "pipe"],
 					shell: shouldUseWindowsCommandShell(this.config.command),
+					// POSIX: lead a dedicated process group so kill(-pid) reaches every
+					// descendant the server spawned. Windows relies on taskkill /T.
+					detached: process.platform !== "win32",
 				});
+				this.unregisterFromRegistry = registerActiveStdioMcpProcess(this.process, this.name);
 				this.process.stdout?.on("data", (data: Buffer) => this.handleStdout(data));
 				this.process.stderr?.on("data", (data: Buffer) => this.handleStderr(data));
 				this.process.on("exit", (code, signal) => {
@@ -105,19 +115,29 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	}
 
 	async stop(): Promise<void> {
-		if (!this.process) return;
+		const child = this.process;
+		if (!child) return;
 		return new Promise((resolve) => {
-			const timeout = setTimeout(() => {
-				this.log("Graceful shutdown timeout, force killing");
-				this.process?.kill("SIGKILL");
-			}, 5000);
-			this.process?.once("exit", () => {
-				clearTimeout(timeout);
+			const finish = () => {
+				clearTimeout(graceTimer);
+				clearTimeout(giveUpTimer);
 				this.cleanup();
 				resolve();
-			});
-			this.log("Stopping process");
-			this.process?.kill("SIGTERM");
+			};
+			// taskkill 或进程组信号连发不出去时 exit 事件可能永远不到——不能让
+			// shutdown/退出清扫无限挂住，到时释放句柄；仍活着的子进程由 registry
+			// 的 exit 兜底覆盖（entry 已随 cleanup 移除，属极端退化场景）。
+			const giveUpTimer = setTimeout(() => {
+				this.log("Kill confirmation timed out, releasing the process handle");
+				finish();
+			}, 10_000);
+			const graceTimer = setTimeout(() => {
+				this.log("Graceful shutdown timeout, force killing the process tree");
+				void terminateMcpProcessTree(child, { force: true, log: (message) => this.log(message) });
+			}, 5000);
+			child.once("exit", finish);
+			this.log("Stopping process tree");
+			void terminateMcpProcessTree(child, { log: (message) => this.log(message) });
 		});
 	}
 
@@ -143,7 +163,9 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 			this.bufferedBytes = 0;
 			this.log(`Message exceeded ${this.maxMessageBytes} bytes: ${preview}`);
 			this.emit("error", new Error(`MCP server message exceeded ${this.maxMessageBytes} bytes: ${preview}`));
-			this.process?.kill("SIGKILL");
+			if (this.process) {
+				void terminateMcpProcessTree(this.process, { force: true, log: (message) => this.log(message) });
+			}
 			return;
 		}
 		const lines = this.messageBuffer.split("\n");
@@ -155,7 +177,9 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 				const preview = line.slice(0, 200);
 				this.log(`Message exceeded ${this.maxMessageBytes} bytes: ${preview}`);
 				this.emit("error", new Error(`MCP server message exceeded ${this.maxMessageBytes} bytes: ${preview}`));
-				this.process?.kill("SIGKILL");
+				if (this.process) {
+					void terminateMcpProcessTree(this.process, { force: true, log: (message) => this.log(message) });
+				}
 				continue;
 			}
 			try {
@@ -176,6 +200,8 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	}
 
 	private cleanup(): void {
+		this.unregisterFromRegistry?.();
+		this.unregisterFromRegistry = undefined;
 		if (this.process) {
 			this.process.removeAllListeners();
 			this.process.stdout?.removeAllListeners();

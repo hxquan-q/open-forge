@@ -11,21 +11,31 @@ export type BuiltinMcpLabelKey =
 	| "mcpPresets.googleCalendar.displayName"
 	| "mcpPresets.googleCalendar.description"
 	| "mcpPresets.googleDrive.displayName"
-	| "mcpPresets.googleDrive.description";
+	| "mcpPresets.googleDrive.description"
+	| "mcpPresets.universalDb.displayName"
+	| "mcpPresets.universalDb.description";
 
 export type BuiltinMcpSecretLabelKey =
 	| "mcpPresets.secrets.slackBotToken"
 	| "mcpPresets.secrets.slackTeamId"
 	| "mcpPresets.secrets.googleClientId"
 	| "mcpPresets.secrets.googleClientSecret"
-	| "mcpPresets.secrets.gdriveCredentialsPath";
+	| "mcpPresets.secrets.gdriveCredentialsPath"
+	| "mcpPresets.secrets.dbType"
+	| "mcpPresets.secrets.dbHost"
+	| "mcpPresets.secrets.dbPort"
+	| "mcpPresets.secrets.dbUser"
+	| "mcpPresets.secrets.dbPassword"
+	| "mcpPresets.secrets.dbName"
+	| "mcpPresets.secrets.dbFilePath";
 
 export type BuiltinMcpGuideKey =
 	| "mcpPresets.guides.slack"
 	| "mcpPresets.guides.gmail"
 	| "mcpPresets.guides.googleCalendar"
 	| "mcpPresets.guides.googleDrive"
-	| "mcpPresets.guides.canva";
+	| "mcpPresets.guides.canva"
+	| "mcpPresets.guides.universalDb";
 
 /** 添加/配置时需要用户填写的密钥或标识 */
 export interface BuiltinMcpSecretField {
@@ -36,8 +46,16 @@ export interface BuiltinMcpSecretField {
 	label?: string;
 	/** 是否必填 */
 	required?: boolean;
+	/**
+	 * 动态必填：引用字段 `envKey` 当前值 ∈ values 时按 mode 判定。
+	 * `mode: "in"`（缺省）— 命中列表才必填；`mode: "notIn"` — 未命中才必填。
+	 * 存在时覆盖 `required` 的静态值（如 DB_HOST 仅在 DB_TYPE ≠ sqlite 时必填）。
+	 */
+	requiredWhen?: { envKey: string; values: readonly string[]; mode?: "in" | "notIn" };
 	/** 输入框用 password */
 	secret?: boolean;
+	/** 限定枚举时以 select 渲染；值为选项原值（如上游规范化的类型 token）。 */
+	options?: readonly string[];
 	placeholder?: string;
 	/** 官方获取密钥/凭证的页面，一键在浏览器打开 */
 	helpUrl?: string;
@@ -77,11 +95,98 @@ export interface BuiltinMcpPreset {
 	postInstallSetup?: { kind: "http-qrcode" };
 	/** args 中用于回退识别的包名片段 */
 	packageHint?: string;
+	/**
+	 * 是否在「发现」列表中展示。
+	 * 缺省/false：仅保留配置与匹配逻辑（已添加识别、图标、OAuth 等），UI 不展示。
+	 */
+	listedInDiscover?: boolean;
 }
 
 const MCP_ICON_BASE = "./mcp";
 
+/**
+ * universal-db-mcp@2.14.0 `normalizeDbType` 接受的规范值（17 个）。
+ * 别名 mssql/opengauss 由上游归一化，表单只暴露规范值避免重复语义。
+ */
+export const UNIVERSAL_DB_TYPES = [
+	"mysql",
+	"postgres",
+	"redis",
+	"oracle",
+	"dm",
+	"sqlserver",
+	"mongodb",
+	"sqlite",
+	"kingbase",
+	"gaussdb",
+	"oceanbase",
+	"tidb",
+	"clickhouse",
+	"polardb",
+	"vastbase",
+	"highgo",
+	"goldendb",
+] as const;
+
+/** DB_TYPE=sqlite 时无需网络连接参数。 */
+const DB_NETWORK_REQUIRED_WHEN = { envKey: "DB_TYPE", values: ["sqlite"], mode: "notIn" } as const;
+
 export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
+	{
+		id: "universal-db",
+		name: "universal-db",
+		iconFile: "universal-db.svg",
+		displayNameKey: "mcpPresets.universalDb.displayName",
+		descriptionKey: "mcpPresets.universalDb.description",
+		packageHint: "universal-db-mcp",
+		listedInDiscover: true,
+		setupGuideKey: "mcpPresets.guides.universalDb",
+		setupHelpUrl: "https://github.com/Anarkh-Lee/universal-db-mcp",
+		config: {
+			command: "npx",
+			// 无连接模式启动：stdio 上游只认 argv 或运行时 connect_database，
+			// DB_* env 由宿主在每次（重）连后自发调用 connect_database 注入，不进 argv/LLM。
+			args: ["-y", "universal-db-mcp@2.14.0"],
+			disabledTools: ["connect_database", "disconnect_database"],
+			postConnectToolCalls: [
+				{
+					tool: "connect_database",
+					args: {
+						type: "{env:DB_TYPE}",
+						host: "{env:DB_HOST}",
+						port: "{env:DB_PORT:number}",
+						user: "{env:DB_USER}",
+						password: "{env:DB_PASSWORD}",
+						database: "{env:DB_DATABASE}",
+						filePath: "{env:DB_FILE_PATH}",
+					},
+				},
+			],
+		},
+		secrets: [
+			{
+				envKey: "DB_TYPE",
+				labelKey: "mcpPresets.secrets.dbType",
+				required: true,
+				options: UNIVERSAL_DB_TYPES,
+				placeholder: "mysql / postgres / sqlite / …",
+			},
+			{
+				envKey: "DB_HOST",
+				labelKey: "mcpPresets.secrets.dbHost",
+				requiredWhen: DB_NETWORK_REQUIRED_WHEN,
+			},
+			{ envKey: "DB_PORT", labelKey: "mcpPresets.secrets.dbPort" },
+			{ envKey: "DB_USER", labelKey: "mcpPresets.secrets.dbUser" },
+			{ envKey: "DB_PASSWORD", labelKey: "mcpPresets.secrets.dbPassword", secret: true },
+			{ envKey: "DB_DATABASE", labelKey: "mcpPresets.secrets.dbName" },
+			{
+				envKey: "DB_FILE_PATH",
+				labelKey: "mcpPresets.secrets.dbFilePath",
+				requiredWhen: { envKey: "DB_TYPE", values: ["sqlite"] },
+			},
+		],
+	},
 	{
 		id: "canva",
 		name: "canva",
@@ -224,6 +329,11 @@ export function getBuiltinMcpPresetById(id: string): BuiltinMcpPreset | undefine
 	return BUILTIN_MCP_PRESETS.find((preset) => preset.id === id);
 }
 
+/** 「发现」页可见的内置预设（listedInDiscover !== true 的仅保留数据与匹配）。 */
+export function getListedBuiltinMcpPresets(): readonly BuiltinMcpPreset[] {
+	return BUILTIN_MCP_PRESETS.filter((preset) => preset.listedInDiscover === true);
+}
+
 /** 是否为内置预设对应的已添加条目（按 name 命中，或按包名特征回退匹配）。 */
 export function isBuiltinMcpServer(name: string, config: McpServerConfigData): boolean {
 	if (getBuiltinMcpPresetByName(name)) return true;
@@ -299,12 +409,22 @@ export function buildBuiltinMcpServerConfig(
 	return { ...base, env: { ...base.env, ...env } };
 }
 
+/** 字段在当前取值下的有效必填态（requiredWhen 存在时按引用字段值动态判定）。 */
+export function isSecretFieldRequired(
+	field: BuiltinMcpSecretField,
+	values: Record<string, string | undefined>,
+): boolean {
+	if (!field.requiredWhen) return Boolean(field.required);
+	const refValue = values[field.requiredWhen.envKey]?.trim() ?? "";
+	const inList = field.requiredWhen.values.includes(refValue);
+	return field.requiredWhen.mode === "notIn" ? !inList : inList;
+}
+
 /** 已配置条目是否缺少必填密钥 */
 export function missingRequiredSecrets(preset: BuiltinMcpPreset, config: McpServerConfigData): BuiltinMcpSecretField[] {
-	const secrets = preset.secrets?.filter((field) => field.required) ?? [];
-	if (secrets.length === 0) return [];
 	const env =
 		config.type === "http" ? (config.managedRuntimeId ? config.managedRuntimeEnv : config.headers) : config.env;
+	const secrets = preset.secrets?.filter((field) => isSecretFieldRequired(field, env ?? {})) ?? [];
 	return secrets.filter((field) => !env?.[field.envKey]?.trim());
 }
 

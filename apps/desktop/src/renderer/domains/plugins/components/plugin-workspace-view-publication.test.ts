@@ -12,6 +12,7 @@ function loadedPlugin(): LoadedPlugin {
 		slots: [],
 		abilityDetailSlots: [],
 		filePreviews: [],
+		artifactRenderers: [],
 		fileExplorerContextMenuActions: [],
 		fileExplorerToolbarActions: [],
 		fileExplorerDecorationProviders: [],

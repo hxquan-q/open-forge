@@ -2,7 +2,7 @@
 
 import { createConversationUserMessage } from "@shared/conversation";
 import { type InputSegment, segmentsToText } from "@shared/lib/input-tokens";
-import type { ChatConversationItem, OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
+import type { ChatTimelineItem, OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
 import { getDefaultStore } from "jotai";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -19,8 +19,10 @@ const mocks = vi.hoisted(() => ({
 	prompt: vi.fn(),
 }));
 
-function visibleTexts(messages: readonly ChatConversationItem[]): Array<string | undefined> {
-	return messages.flatMap((message) => (message.kind === "event" ? [] : [message.text]));
+function visibleTexts(messages: readonly ChatTimelineItem[]): Array<string | undefined> {
+	return messages.flatMap((message) =>
+		message.kind === "event" ? [] : [message.kind === "placeholder" ? message.summary : message.text],
+	);
 }
 
 vi.mock("@tanstack/react-router", () => ({
@@ -483,6 +485,132 @@ it("已有会话先提交加载态，快速切换时只有最后一次打开可�
 	expect(store.get(chatMessagesAtom)).toBe(previewMessages);
 	expect(mocks.perfSessionSwitchComplete).toHaveBeenCalledWith("cancelled", "open-first");
 	expect(mocks.perfSessionSwitchComplete).toHaveBeenCalledWith("completed", "open-second");
+});
+
+it("大会话经确认后只载尾部历史窗口，取消则走完整历史", { timeout: 10_000 }, async () => {
+	const { activeSessionAtom, chatMessagesAtom, confirmDialogAtom, sessionsMapAtom } = await import(
+		"@shared/store/atoms"
+	);
+	const { useSessionManager } = await import("./useSessionManager");
+	const store = getDefaultStore();
+	const largeSessionPath = "C:\\sessions\\large.jsonl";
+	const largeSessionEntry = {
+		id: "large",
+		path: largeSessionPath,
+		cwd,
+		firstMessage: "big session",
+		modifiedAt: 1,
+		fileSizeBytes: 8 * 1024 * 1024,
+	};
+	const sessionApi = {
+		autoTitle: vi.fn(),
+		create: vi.fn(async () => ({ cwd, sessionId: "runtime-large", sessionPath: largeSessionPath })),
+		getFullHistory: vi.fn(async () => userHistory("full history", "full-1")),
+		getQueueState: vi.fn(async () => ({ paused: false, entries: [] })),
+		getSessionPath: vi.fn(async () => largeSessionPath),
+		openViewer: vi.fn(async () => ({ history: userHistory("tail preview", "tail-1") })),
+		getState: vi.fn(async () => ({
+			activeToolNames: [],
+			contextPercent: null,
+			contextWindow: 128_000,
+			executionMode: "full-access" as const,
+			isStreaming: false,
+			messageCount: 0,
+			model: null,
+			scenario: "project" as const,
+		})),
+		prompt: vi.fn(),
+		subscribe: vi.fn(async () => vi.fn()),
+		updateSettings: vi.fn(async () => undefined),
+	};
+	Object.defineProperty(window, "vetta", {
+		configurable: true,
+		value: {
+			batchTasks: { resumeTaskWithText: vi.fn() },
+			config: { get: vi.fn() },
+			dialog: { persistImages: vi.fn() },
+			session: sessionApi,
+		},
+	});
+	store.set(sessionsMapAtom, new Map([[cwd, [largeSessionEntry]]]));
+
+	function Probe() {
+		manager = useSessionManager();
+		return null;
+	}
+
+	await act(async () => {
+		root = createRoot(container as HTMLDivElement);
+		root.render(createElement(Probe));
+	});
+
+	let opening: Promise<void> | undefined;
+	await act(async () => {
+		opening = manager?.openSession(cwd, largeSessionPath);
+		await Promise.resolve();
+		await Promise.resolve();
+	});
+
+	const dialog = store.get(confirmDialogAtom);
+	expect(dialog).not.toBeNull();
+
+	await act(async () => {
+		dialog?.onConfirm(false);
+		await opening;
+	});
+
+	expect(store.get(confirmDialogAtom)).toBeNull();
+	expect(store.get(activeSessionAtom)?.runtimeId).toBe("runtime-large");
+	expect(sessionApi.openViewer).toHaveBeenCalledWith(largeSessionPath, { tailTurns: 10 });
+	expect(sessionApi.getFullHistory).not.toHaveBeenCalled();
+	expect(visibleTexts(store.get(chatMessagesAtom))).toContain("tail preview");
+
+	// 取消选择 → 完整历史路径：getFullHistory 提供 canonical 历史。
+	sessionApi.openViewer.mockClear();
+	await act(async () => {
+		opening = manager?.openSession(cwd, largeSessionPath, undefined, { historyLoadMode: undefined });
+		await Promise.resolve();
+		await Promise.resolve();
+	});
+	const secondDialog = store.get(confirmDialogAtom);
+	expect(secondDialog).not.toBeNull();
+	await act(async () => {
+		secondDialog?.onCancel?.();
+		await opening;
+	});
+	expect(sessionApi.openViewer).not.toHaveBeenCalledWith(largeSessionPath, { tailTurns: 10 });
+	expect(sessionApi.getFullHistory).toHaveBeenCalledWith("runtime-large");
+});
+
+it("resolveHistoryLoadMode 尊重显式模式并在小文件时直接走完整历史", async () => {
+	const { confirmDialogAtom, sessionsMapAtom } = await import("@shared/store/atoms");
+	const { resolveHistoryLoadMode } = await import("./useSessionOpener");
+	const store = getDefaultStore();
+	const smallPath = "C:\\sessions\\small.jsonl";
+	const largePath = "C:\\sessions\\big.jsonl";
+	store.set(
+		sessionsMapAtom,
+		new Map([
+			[
+				cwd,
+				[
+					{ id: "small", path: smallPath, cwd, firstMessage: "s", modifiedAt: 1, fileSizeBytes: 1024 },
+					{ id: "big", path: largePath, cwd, firstMessage: "b", modifiedAt: 1, fileSizeBytes: 16 * 1024 * 1024 },
+				],
+			],
+		]),
+	);
+
+	await expect(resolveHistoryLoadMode(smallPath, cwd, undefined)).resolves.toBe("full");
+	expect(store.get(confirmDialogAtom)).toBeNull();
+	await expect(resolveHistoryLoadMode(largePath, cwd, { historyLoadMode: "tail" })).resolves.toBe("tail");
+	expect(store.get(confirmDialogAtom)).toBeNull();
+
+	const pending = resolveHistoryLoadMode(largePath, cwd, undefined);
+	const dialog = store.get(confirmDialogAtom);
+	expect(dialog).not.toBeNull();
+	dialog?.onConfirm(false);
+	await expect(pending).resolves.toBe("tail");
 });
 
 it("会话恢复期间立即接受发送并在订阅就绪后派发到目标 Runtime", { timeout: 10_000 }, async () => {

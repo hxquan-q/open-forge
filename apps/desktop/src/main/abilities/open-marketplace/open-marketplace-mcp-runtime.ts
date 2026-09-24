@@ -8,6 +8,7 @@ import type {
 	OpenMarketplaceMcpRuntimeProgressPhase,
 } from "../../../preload/api-types/abilities.js";
 import type { McpServerConfigData } from "../../../preload/api-types/mcp.js";
+import { DESKTOP_BRAND } from "../../../shared/desktop-brand.js";
 import { validateMcpConfig } from "../../mcp-config-validation.js";
 import {
 	MANAGED_HTTP_PORT_TOKEN,
@@ -145,7 +146,7 @@ async function downloadArtifact(
 	const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
 	try {
 		const response = await fetchArtifact(url, {
-			headers: { Accept: "application/octet-stream", "User-Agent": "Vetta-Desktop" },
+			headers: { Accept: "application/octet-stream", "User-Agent": `${DESKTOP_BRAND.executableName}-Desktop` },
 			redirect: "follow",
 			signal: controller.signal,
 		});

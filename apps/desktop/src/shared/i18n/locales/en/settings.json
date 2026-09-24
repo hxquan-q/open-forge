@@ -960,7 +960,13 @@
   "workDirectory": "Work Directory",
   "requestHeaders": "Request Headers",
   "startupTimeout": "Startup Timeout",
+  "idleTimeout": "Idle Timeout (ms)",
   "autoApproveTools": "Auto Approve Tools",
+  "mcpServerTools": "Tools",
+  "mcpServerToolsLoading": "Loading tool list…",
+  "mcpServerToolsNotDiscovered": "The tool list appears after the server connects for the first time",
+  "mcpServerToolsEmpty": "This server does not provide any tools",
+  "mcpServerToolStale": "no longer in catalog",
   "default10s": "Default (10s)",
   "statusEnabled": "On",
   "statusDisabled": "Off",
@@ -1453,7 +1459,8 @@
       "gmail": "After adding, the first use in chat opens a browser to sign in with Google\nComplete authorization—no key paste required in most cases",
       "googleCalendar": "In Google Cloud Console, create an OAuth client (Desktop app)\nEnable the Google Calendar API\nCopy Client ID and Client Secret below\nComplete account authorization on first use",
       "googleDrive": "After adding, first use usually starts a Google authorization flow\nIf a local credentials file is required, set the path later via the key icon",
-      "canva": "After adding, first use opens a browser to sign in to Canva\nAuthorize once—no API key paste required"
+      "canva": "After adding, first use opens a browser to sign in to Canva\nAuthorize once—no API key paste required",
+      "universalDb": "Pick the database type and fill in connection info (SQLite only needs a file path)\nUse a read-only account: the connector is read-only by default and credentials stay on this machine\nSupports mysql, postgres, redis, mongodb, sqlite, oracle, sqlserver and more\nOnce added, you can inspect schemas and run read-only queries in chat"
     },
     "canva": {
       "displayName": "Canva",
@@ -1475,12 +1482,23 @@
       "displayName": "Google Drive",
       "description": "Find and read Drive files so cloud documents can be used in chat (authorization may be required)."
     },
+    "universalDb": {
+      "displayName": "Universal Database",
+      "description": "Connect MySQL, PostgreSQL, SQLite, MongoDB, Redis and other databases to inspect schemas and run read-only queries in chat."
+    },
     "secrets": {
       "slackBotToken": "Slack bot token",
       "slackTeamId": "Slack workspace ID",
       "googleClientId": "Google client ID",
       "googleClientSecret": "Google client secret",
-      "gdriveCredentialsPath": "Credentials file path (optional)"
+      "gdriveCredentialsPath": "Credentials file path (optional)",
+      "dbType": "Database type",
+      "dbHost": "Host",
+      "dbPort": "Port",
+      "dbUser": "Username",
+      "dbPassword": "Password",
+      "dbName": "Database name",
+      "dbFilePath": "Database file path (SQLite)"
     }
   },
   "unknown": "Unknown",
@@ -1542,6 +1560,8 @@
   "shortcutOpenCommandMenuDesc": "Centered palette for projects, sessions, abilities, settings and plugin views",
   "shortcutSaveFileLabel": "Save File",
   "shortcutSaveFileDesc": "Save the current file in the right-side editor",
+  "shortcutBrowserElementPickerLabel": "Pick page element",
+  "shortcutBrowserElementPickerDesc": "Turn element picking on or off in the built-in browser and attach the selection to the message box",
   "kbHiwTitle": "How the Knowledge Base Works",
   "kbHiwSubtitle": "Three simple steps to see how your materials become knowledge the AI can use, and where tokens are spent.",
   "kbHiwStep1Title": "Add Materials",
@@ -1739,6 +1759,7 @@
   "subTeam": "Team",
   "subCancel": "Cancel Subscription",
   "imbridge": "Claw",
+  "imBridgeTitle": "Open Forge Claw",
   "imbAdded": "Added",
   "imbProcessing": "Processing…",
   "imbRemove": "Remove",

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # OpenVetta Agent Guide
 
 > 本文件适用于整个仓库。更深目录中的 `AGENTS.md` 可补充或收紧规则；发生冲突时，以离目标文件最近的规则为准。
@@ -236,6 +237,8 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 
 发布说明写在 `.github/release-notes/v<版本号>.md`，一个版本一个文件，版本号以 `apps/desktop/package.json` 的 `version` 为准。**该文件就是 GitHub Release 的正文**，用户在 Release 页面读到的就是这里写的内容，写法见 [`.github/release-notes/README.md`](.github/release-notes/README.md)。
 
+**当前版本基线**：Open Forge Desktop 已于 commit `ff5989c6d` 切换至独立版本 **0.1.0**，不再继承上游 0.5.x 版本号。所有后续版本号必须基于 0.1.0 递增（0.1.1, 0.1.2... 或 0.2.0 等），Release Notes 统一写入 `.github/release-notes/v<版本>.md`。**是否执行发布（publish）由用户明确授权**，Agent 不得主动执行 tag 推送或触发构建流水线。
+
 ### 必须写入发布说明
 
 以下任一情况完成后，都要把对应条目补进**当前开发中版本**的发布说明，文件不存在就新建。这是任务的一部分，不是可选的后续工作：
@@ -263,11 +266,18 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 - 新增 workspace 包时先判断归属：应用进 `apps/*`，可复用模块进 `packages/*`。随后遵循 [`docs/monorepo-new-package.md`](docs/monorepo-new-package.md)，同时更新 workspace、TypeScript path maps、构建分层和必要的 Desktop 源码映射。
 - 不执行版本发布、制品上传、registry 发布或部署，除非用户明确要求。
 
+## 上游同步与改动归属
+
+- 每个 fork 侧改动归属三类之一，并在对应 Task 中标注：**Upstreamable**（可回馈上游，保持补丁干净、不混入 fork 专属逻辑）、**Open-Forge-only**（留在 fork 新增的包、适配层或扩展点）、**Compatibility**（为兼容凭据、协议、持久化或存量数据而保留的标识与适配，须注明保护的合同）。
+- 同步主线固定为 `upstream/dev → forge/dev`；`upstream` 远端只用于 `git fetch` 与 diff 对照，禁止向其 push、开 PR 或请求合并。
+- 每次同步上游后重跑受影响面的行为合同测试；同一热文件反复冲突时先重评薄壳边界，不沿用历史冲突预算。
+- 已发布的上游 Release Notes 是上游发行物记录，fork 不得改写或追加 fork-only 条目；Open Forge 候选发布文案暂存关联 Issue/Task，首发版本确认后迁入自己的版本说明。
+
 ## Git 与并行工作区
 
 - 工作区可能同时包含用户或其他 Agent 的改动。不要覆盖、回退、移动或删除不是本次任务产生的变更。
 - 禁止使用 `git reset --hard`、`git checkout .`、`git clean -fd`、`git stash`、`git add .`、`git add -A` 和 `git commit --no-verify`。
-- 只有用户明确要求提交时才提交。暂存时逐个列出本次修改的具体路径，并在提交前用 `git status` 核对 staged 内容。
+- 每完成一个任务或一组自洽修改且验证通过后就提交，无需每次另行征求提交授权；仍按原子化原则拆分，一次提交只做一件事。暂存时逐个列出本次修改的具体路径，并在提交前用 `git status` 核对 staged 内容。Push 仍需用户明确授权。
 - Commit message 必须使用中文多行格式，至少包含标题、空行和正文，不得只写单行标题。
 - 标题应简短概括单一逻辑变更，并遵循仓库现有的语义化前缀风格（如 `feat(auth): ...`）；标题与正文之间保留一个空行。
 - 正文用 1–3 句说明改动动机、背景和影响，重点解释“为什么”，避免逐项复述 diff；长段落按约 72 个字符换行，使用Markdown列表来分别列出做了什么。

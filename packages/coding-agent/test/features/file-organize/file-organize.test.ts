@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { RuntimeToolExecutionRequest } from "@vetta/runtime-core/kernel";
 import { describe, expect, it } from "vitest";
 import {

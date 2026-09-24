@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # webview 剩余口子收口：插件 pinned 上限 + 面板收起卸载校验
 

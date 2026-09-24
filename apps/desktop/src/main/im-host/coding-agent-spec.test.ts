@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test, vi } from "vitest";

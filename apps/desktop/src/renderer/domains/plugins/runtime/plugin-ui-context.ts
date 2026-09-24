@@ -50,6 +50,7 @@ import QRCode from "qrcode";
 import type { ComponentType } from "react";
 import { explicitTabVisibility, withPluginTabVisibility } from "./attached-tabs";
 import type { PluginAgentApiRegistration } from "./plugin-agent-context";
+import { createPluginArtifactRenderer } from "./plugin-artifact-renderer-contribution";
 import { copyTextToClipboard, formatPluginErrorDetail, resolvePluginDisplayText } from "./plugin-host-apis";
 import { activateInputActionIds } from "./plugin-input-action-state";
 import type {
@@ -237,6 +238,7 @@ export function createPluginUiApi({
 		inputActions,
 		newSessionContexts,
 		cardRenderers,
+		artifactRenderers,
 		toolCallSlots,
 		turnCards,
 		workspaceViews,
@@ -502,6 +504,23 @@ export function createPluginUiApi({
 				if (hardIsolation) {
 					void window.vetta.plugins.setContributionMode(plugin.id, false);
 				}
+				onChanged();
+			},
+		};
+	};
+	const registerArtifactRenderer: PluginContext["ui"]["registerArtifactRenderer"] = (contribution) => {
+		const normalized = createPluginArtifactRenderer(plugin, capabilitySessionId, contribution);
+		if (!normalized) return noopDisposable;
+		if (artifactRenderers.some((renderer) => renderer.type === normalized.type)) {
+			console.warn(`Plugin ${plugin.id} skipped duplicate artifact renderer: ${normalized.type}`);
+			return noopDisposable;
+		}
+		artifactRenderers.push(normalized);
+		onChanged();
+		return {
+			dispose: () => {
+				const index = artifactRenderers.indexOf(normalized);
+				if (index >= 0) artifactRenderers.splice(index, 1);
 				onChanged();
 			},
 		};
@@ -945,6 +964,7 @@ export function createPluginUiApi({
 		registerBottomPanel,
 		registerInputAction,
 		registerNewSessionContext,
+		registerArtifactRenderer,
 		registerCardRenderer,
 		registerToolCallSlot,
 		registerTurnCard,

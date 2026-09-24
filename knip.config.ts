@@ -38,6 +38,8 @@ const config = {
 				"@radix-ui/react-slot",
 				"@vetta/cli-host",
 				"@vetta/coding-agent",
+				"deepeval",
+				"promptfoo",
 				"date-fns",
 				"get-east-asian-width",
 				"koffi",

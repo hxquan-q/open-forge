@@ -324,6 +324,42 @@ export function registerPluginCapabilitiesIpc(): () => void {
 	ipcMain.handle(PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_RELEASE, (_event, sessionId: unknown, artifactId: unknown) =>
 		adapter.releaseArtifact(requireString(sessionId, "sessionId"), requireString(artifactId, "artifactId")),
 	);
+	ipcMain.handle(
+		PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_READ_TASK_TEXT,
+		(
+			_event,
+			capabilitySessionId: unknown,
+			taskSessionId: unknown,
+			artifactId: unknown,
+			version: unknown,
+			rendererType: unknown,
+		) =>
+			adapter.readTaskArtifactText(
+				requireString(capabilitySessionId, "sessionId"),
+				requireString(taskSessionId, "taskSessionId"),
+				requireString(artifactId, "artifactId"),
+				requireNumber(version, "version"),
+				requireString(rendererType, "rendererType"),
+			),
+	);
+	ipcMain.handle(
+		PLUGIN_CAPABILITY_CHANNELS.ARTIFACT_READ_TASK_BYTES,
+		(
+			_event,
+			capabilitySessionId: unknown,
+			taskSessionId: unknown,
+			artifactId: unknown,
+			version: unknown,
+			rendererType: unknown,
+		) =>
+			adapter.readTaskArtifactBytes(
+				requireString(capabilitySessionId, "sessionId"),
+				requireString(taskSessionId, "taskSessionId"),
+				requireString(artifactId, "artifactId"),
+				requireNumber(version, "version"),
+				requireString(rendererType, "rendererType"),
+			),
+	);
 	ipcMain.handle(PLUGIN_CAPABILITY_CHANNELS.MCP_SERVER_LIST, (_event, sessionId: unknown) =>
 		adapter.listMcpServers(requireString(sessionId, "sessionId")),
 	);

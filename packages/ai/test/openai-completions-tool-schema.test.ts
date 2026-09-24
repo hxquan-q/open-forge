@@ -139,6 +139,52 @@ describe("convertTools tool parameter sanitization", () => {
 		warn.mockRestore();
 	});
 
+	it("顶层只有 anyOf/oneOf 的联合 schema 补上 type: object", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const parameters = convert(
+			{
+				anyOf: [
+					{
+						type: "object",
+						properties: { action: { const: "create" }, title: { type: "string" } },
+						required: ["action", "title"],
+						additionalProperties: false,
+					},
+					{
+						type: "object",
+						properties: { action: { const: "list" } },
+						required: ["action"],
+						additionalProperties: false,
+					},
+				],
+			},
+			"artifact",
+		);
+
+		expect(parameters.type).toBe("object");
+		expect(parameters.anyOf).toHaveLength(2);
+		expect(warn).not.toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
+	it("顶层 type 为 null 时归一化为 object", () => {
+		const parameters = convert({ type: null, properties: { a: { type: "string" } } }, "null_type_tool");
+
+		expect(parameters).toEqual({ type: "object", properties: { a: { type: "string" } } });
+	});
+
+	it("顶层缺 type 但有 properties 时也补上 type: object", () => {
+		const parameters = convert({ properties: { a: { type: "string" } } }, "no_type_tool");
+
+		expect(parameters).toEqual({ type: "object", properties: { a: { type: "string" } } });
+	});
+
+	it("顶层已声明非 object 类型的 schema 保持原样", () => {
+		const original = { type: "string", description: "scalar param" };
+
+		expect(convert(original, "scalar_tool")).toBe(original);
+	});
+
 	it("没有约束分支时原样透传，不告警", () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		const original = {

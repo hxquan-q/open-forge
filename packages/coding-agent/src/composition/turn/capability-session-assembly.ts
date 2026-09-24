@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { EcosystemHookRuntime } from "@vetta/ecosystem-adapter";
 import type { RuntimeModel } from "@vetta/runtime-core";
 import type {
@@ -34,6 +35,7 @@ import type { CodingAgentSessionExecutionRuntime } from "../../execution/session
 import type { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
 import type { CodingAgentExtensionToolRuntime } from "../../extensions/runtime/extension-tool-runtime.js";
 import { CodingAgentStopHookContinuationSource } from "../../extensions/runtime/stop-hook-continuation-source.js";
+import { raiseBrowserTabToolRisk } from "../../features/browser-tab/browser-tab-tool-contract.js";
 import {
 	type CodingAgentPlanModeExtensionRuntime,
 	composePlanModeToolSelection,
@@ -170,6 +172,7 @@ export interface CodingAgentTurnCapabilitySessionAssembly {
 /** Shell/Git 破坏性命令按参数提升到 L4（TASK-0019）；其余工具无参数级提升。 */
 function raiseToolRiskForCall(toolName: string, input: Readonly<Record<string, unknown>>): ToolRiskLevel | undefined {
 	if (toolName === "bash" || toolName === "shell") return raiseShellRiskLevel(input);
+	if (toolName === "browser_tab") return raiseBrowserTabToolRisk(input);
 	return undefined;
 }
 
@@ -304,18 +307,19 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 			})
 		: undefined;
 	const toolInterceptionCatalog = new DynamicContributionCatalog<CodingAgentToolInterceptor>();
+	// 宿主未接入审批端口时端口不可用，闸门自动旁路（isAvailable 检查）。
+	const approvalToolInterceptor = createApprovalToolInterceptor({
+		approvalPort: options.toolApprovalRuntime,
+		resolveRiskDescriptor: defaultToolRiskDescriptor,
+		raise: raiseToolRiskForCall,
+		summarize: summarizeToolApproval,
+	});
 	toolInterceptionCatalog.register({
 		sourceId: "tool-approval",
 		localId: "permission-gate",
 		revision: "session",
 		order: CODING_AGENT_TOOL_INTERCEPTION_ORDER.permissionApproval,
-		// 宿主未接入审批端口时端口不可用，闸门自动旁路（isAvailable 检查）。
-		value: createApprovalToolInterceptor({
-			approvalPort: options.toolApprovalRuntime,
-			resolveRiskDescriptor: defaultToolRiskDescriptor,
-			raise: raiseToolRiskForCall,
-			summarize: summarizeToolApproval,
-		}),
+		value: approvalToolInterceptor,
 	});
 	toolInterceptionCatalog.register({
 		sourceId: "ecosystem",
@@ -424,6 +428,15 @@ export async function createCodingAgentTurnCapabilitySessionAssembly(
 		bindToolWrapper: (context) => {
 			const boundExtensionEvents = options.extensionEvents.bindAdapterForTurn(context);
 			const catalog = new DynamicContributionCatalog<CodingAgentToolInterceptor>();
+			// 审批闸门无 Turn 绑定状态，与未绑定路径共用同一实例；
+			// Turn 目录必须保留它，否则绑定后的 Tool 表面会丢掉逐次审批。
+			catalog.register({
+				sourceId: "tool-approval",
+				localId: "permission-gate",
+				revision: "turn",
+				order: CODING_AGENT_TOOL_INTERCEPTION_ORDER.permissionApproval,
+				value: approvalToolInterceptor,
+			});
 			catalog.register({
 				sourceId: "plan-mode",
 				localId: "permission-gate",

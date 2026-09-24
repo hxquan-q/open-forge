@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { StoredConversation } from "./contracts.js";
 import { turnProtocolError } from "./errors.js";
 

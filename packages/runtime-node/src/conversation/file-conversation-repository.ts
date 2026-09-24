@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";

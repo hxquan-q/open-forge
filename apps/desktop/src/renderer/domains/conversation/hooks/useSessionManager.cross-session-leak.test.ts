@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { ChatConversationItem, OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
+import type { ChatTimelineItem, OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
 import { getDefaultStore } from "jotai";
 import { act, createElement, Fragment } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -95,7 +95,7 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
-function toolPhases(messages: readonly ChatConversationItem[]): string[] {
+function toolPhases(messages: readonly ChatTimelineItem[]): string[] {
 	const phases: string[] = [];
 	for (const message of messages) {
 		if (message.kind !== "agent") continue;

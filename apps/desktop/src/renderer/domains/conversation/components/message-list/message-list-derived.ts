@@ -1,25 +1,39 @@
-import type { ChatConversationItem } from "@shared/store/atoms";
+import type { ChatTimelineItem } from "@shared/store/atoms";
 import type { Usage } from "@vetta/ai/protocol";
 
+/** user 消息（含占位）的模型标注参与模型切换徽标推导。 */
+function userItemModel(message: ChatTimelineItem): { readonly provider: string; readonly id: string } | undefined {
+	if (message.kind === "user") return message.model;
+	if (message.kind === "placeholder" && message.role === "user") return message.model;
+	return undefined;
+}
+
 /** User-message identity that drives model-switch banners; ignores streaming assistant ticks. */
-export function userModelSwitchFingerprint(messages: readonly ChatConversationItem[]): string {
+export function userModelSwitchFingerprint(messages: readonly ChatTimelineItem[]): string {
 	const parts: string[] = [];
 	for (const message of messages) {
-		if (message.kind !== "user") continue;
-		parts.push(message.id, message.model?.provider ?? "", message.model?.id ?? "");
+		const model = userItemModel(message);
+		if (
+			model === undefined &&
+			message.kind !== "user" &&
+			!(message.kind === "placeholder" && message.role === "user")
+		)
+			continue;
+		parts.push(message.id, model?.provider ?? "", model?.id ?? "");
 	}
 	return parts.join("\0");
 }
 
 export function collectModelSwitchLabels(
-	messages: readonly ChatConversationItem[],
+	messages: readonly ChatTimelineItem[],
 	modelNames: ReadonlyMap<string, string>,
 ): Map<string, string> {
 	const switches = new Map<string, string>();
 	let previousKey: string | null = null;
 	for (const message of messages) {
-		if (message.kind !== "user") continue;
-		const key = message.model ? `${message.model.provider}/${message.model.id}` : null;
+		if (message.kind !== "user" && !(message.kind === "placeholder" && message.role === "user")) continue;
+		const model = userItemModel(message);
+		const key = model ? `${model.provider}/${model.id}` : null;
 		if (key && previousKey && key !== previousKey) {
 			switches.set(message.id, modelNames.get(key) ?? key);
 		}
@@ -28,10 +42,12 @@ export function collectModelSwitchLabels(
 	return switches;
 }
 
-export function collectAgentUsages(messages: readonly ChatConversationItem[]): readonly Usage[] {
+export function collectAgentUsages(messages: readonly ChatTimelineItem[]): readonly Usage[] {
 	const usages: Usage[] = [];
 	for (const message of messages) {
 		if (message.kind === "agent" && message.usages) usages.push(...message.usages);
+		if (message.kind === "placeholder" && message.role === "assistant" && message.usages)
+			usages.push(...message.usages);
 	}
 	return usages;
 }

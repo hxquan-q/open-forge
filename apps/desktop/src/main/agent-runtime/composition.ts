@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import {
 	CODING_AGENT_COMPACTION_PREFIRE_OBSERVATION,
@@ -53,6 +54,7 @@ import {
 import { getModePrompt } from "../agent-modes/index.js";
 import { createDesktopAgentObservability } from "../agent-observability/composition.js";
 import { recordRuntimeCompaction } from "../app-monitor/app-monitor-service.js";
+import { getApplicationCacheService } from "../cache/application-cache-service.js";
 import {
 	DEFAULT_CONVERSATION_CWD,
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
@@ -130,7 +132,12 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 	const sandboxHostPath = resolveWindowsSandboxHostBinary()?.path;
 	const linuxBubblewrapPath = getAvailableLinuxBubblewrapPath();
 	const macosSandboxExecPath = getAvailableMacosSandboxExecPath();
-	const sessionExtensionFunctions = createDesktopCodingAgentFunctionSource();
+	const sessionExtensionFunctions = createDesktopCodingAgentFunctionSource({
+		invokeArtifact: async (request, signal) => {
+			const { getDesktopCanvasArtifactService } = await import("../artifacts/canvas-artifact-desktop.js");
+			return getDesktopCanvasArtifactService().invokeTool(request, signal);
+		},
+	});
 	const historicalFormat = createDesktopHistoricalSessionFormat();
 	const defaultResultArtifacts = createDesktopResultArtifactRuntime(getAgentDir());
 	const conversationCatalog = new DesktopRuntimeSessionCatalog({
@@ -189,6 +196,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 							agentDir: resolvedAgentDir,
 							debug: readDesktopMcpDebug(cwd, resolvedAgentDir),
 							dynamicOnly: true,
+							catalogCacheDirectory: getApplicationCacheService().namespace("mcp-tool-catalog").rootDir,
 						}),
 						debug: readDesktopMcpDebug(cwd, resolvedAgentDir),
 						resultPolicy: resultArtifacts.mcpToolResultPolicy,
@@ -214,6 +222,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 						projectRoot: cwd,
 						agentDir: resolvedAgentDir,
 						debug: readDesktopMcpDebug(cwd, resolvedAgentDir),
+						catalogCacheDirectory: getApplicationCacheService().namespace("mcp-tool-catalog").rootDir,
 					}),
 					resultPolicy: resultArtifacts.mcpToolResultPolicy,
 					taskCoordinator: mcpTaskCoordinator,

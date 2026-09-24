@@ -1,14 +1,16 @@
 #!/usr/bin/env node
+// Modified by The Open Forge contributors.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { requireReleaseNotes } from "./release/release-notes.mjs";
+import { releaseNotesPath } from "./release/release-notes.mjs";
 
 const DESKTOP_PACKAGE_PATH = "apps/desktop/package.json";
 const LOCKFILE_PATH = "bun.lock";
-const RELEASE_FILES = [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH];
+const BUMP_TYPES = new Set(["major", "minor", "patch"]);
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
 
 function run(command, args, options = {}) {
 	console.log(`$ ${command} ${args.join(" ")}`);
@@ -30,34 +32,51 @@ export function bumpVersion(version, bumpType) {
 	const major = Number(match[1]);
 	const minor = Number(match[2]);
 	const patch = Number(match[3]);
-	return bumpType === "minor" ? `${major}.${minor + 1}.0` : `${major}.${minor}.${patch + 1}`;
+	if (bumpType === "major") return `${major + 1}.0.0`;
+	if (bumpType === "minor") return `${major}.${minor + 1}.0`;
+	if (bumpType === "patch") return `${major}.${minor}.${patch + 1}`;
+	throw new Error(`Invalid desktop version bump: ${bumpType}`);
 }
 
-function assertCleanWorktree() {
-	const status = run("git", ["status", "--porcelain"], { capture: true }).trim();
-	if (status) throw new Error(`Uncommitted changes detected:\n${status}`);
-}
-
-function assertBranch() {
-	const branch = run("git", ["branch", "--show-current"], { capture: true }).trim();
-	if (!branch) throw new Error("Desktop release must run on a branch, not a detached HEAD");
-	return branch;
-}
-
-function assertTagAvailable(tag) {
-	try {
-		run("git", ["rev-parse", "--quiet", "--verify", `refs/tags/${tag}`], { capture: true });
-		throw new Error(`Tag already exists locally: ${tag}`);
-	} catch (error) {
-		if (error instanceof Error && error.message.startsWith("Tag already exists")) throw error;
+export function parseDesktopReleaseCommand(args) {
+	const [command, ...rest] = args;
+	if (command === "prepare") {
+		if (rest.length === 1 && BUMP_TYPES.has(rest[0])) {
+			return { command, kind: "bump", value: rest[0] };
+		}
+		if (
+			rest.length === 3 &&
+			rest[0] === "--version" &&
+			SEMVER_PATTERN.test(rest[1]) &&
+			rest[2] === "--initial"
+		) {
+			return { command, kind: "set", version: rest[1], initial: true };
+		}
+		throw new Error(
+			"Usage: node scripts/release-desktop.mjs prepare <major|minor|patch> | prepare --version <X.Y.Z> --initial",
+		);
 	}
-
-	try {
-		run("git", ["ls-remote", "--exit-code", "--tags", "origin", `refs/tags/${tag}`], { capture: true });
-		throw new Error(`Tag already exists on origin: ${tag}`);
-	} catch (error) {
-		if (error instanceof Error && error.message.startsWith("Tag already exists")) throw error;
+	if (command === "publish") {
+		if (rest.length !== 2 || !SEMVER_PATTERN.test(rest[0])) {
+			throw new Error("Usage: node scripts/release-desktop.mjs publish <X.Y.Z> --confirm-publish");
+		}
+		if (rest[1] !== "--confirm-publish") {
+			throw new Error("Publishing requires the explicit --confirm-publish flag");
+		}
+		return { command, version: rest[0] };
 	}
+	throw new Error(
+		"Usage: node scripts/release-desktop.mjs prepare <major|minor|patch> | publish <X.Y.Z> --confirm-publish",
+	);
+}
+
+export function releaseNotesTemplate(version, upstreamBaseline = "<merge-base sha>") {
+	if (!SEMVER_PATTERN.test(version)) throw new Error(`Invalid release version: ${version}`);
+	return `# Open Forge ${version}\n\n发布日期：待定\n\nUpstream baseline: upstream/dev@${upstreamBaseline}\n`;
+}
+
+export function upstreamBaselineSha() {
+	return run("git", ["merge-base", "upstream/dev", "HEAD"], { capture: true }).trim();
 }
 
 /**
@@ -77,56 +96,144 @@ export function parsePorcelainPaths(stdout) {
 		.map((line) => line.slice(3).replaceAll("\\", "/"));
 }
 
-function assertOnlyReleaseFilesChanged() {
-	const changedFiles = parsePorcelainPaths(run("git", ["status", "--porcelain"], { capture: true }));
-	const allowedFiles = new Set(RELEASE_FILES);
-	const unexpectedFiles = changedFiles.filter((file) => !allowedFiles.has(file));
+export function getUnexpectedReleaseChanges(stdout, notesPath) {
+	const allowedFiles = new Set([DESKTOP_PACKAGE_PATH, LOCKFILE_PATH, notesPath]);
+	return parsePorcelainPaths(stdout).filter((file) => !allowedFiles.has(file));
+}
+
+function assertCleanWorktree() {
+	const status = run("git", ["status", "--porcelain"], { capture: true }).trim();
+	if (status) throw new Error(`Uncommitted changes detected:\n${status}`);
+}
+
+function assertOnlyReleaseFilesChanged(notesPath, requiredFiles) {
+	const status = run("git", ["status", "--porcelain"], { capture: true });
+	const changedFiles = parsePorcelainPaths(status);
+	const unexpectedFiles = getUnexpectedReleaseChanges(status, notesPath);
 	if (unexpectedFiles.length > 0) {
 		throw new Error(`Desktop release changed unexpected files:\n${unexpectedFiles.join("\n")}`);
 	}
+	for (const file of requiredFiles) {
+		if (!changedFiles.includes(file)) throw new Error(`Desktop release is missing an expected change: ${file}`);
+	}
 }
 
-function main() {
-	const bumpType = process.argv[2];
-	if (bumpType !== "patch" && bumpType !== "minor") {
-		console.error("Usage: node scripts/release-desktop.mjs <patch|minor>");
-		process.exit(1);
-	}
+function assertBranch() {
+	const branch = run("git", ["branch", "--show-current"], { capture: true }).trim();
+	if (!branch) throw new Error("Desktop release must run on a branch, not a detached HEAD");
+	return branch;
+}
 
-	assertCleanWorktree();
-	const branch = assertBranch();
+function assertLocalTagAvailable(tag) {
+	if (run("git", ["tag", "--list", tag], { capture: true }).trim()) {
+		throw new Error(`Tag already exists locally: ${tag}`);
+	}
+}
+
+function assertRemoteTagAvailable(tag) {
+	const refs = run("git", ["ls-remote", "--tags", "origin", `refs/tags/${tag}`], { capture: true }).trim();
+	if (refs) throw new Error(`Tag already exists on origin: ${tag}`);
+}
+
+function assertTagAvailable(tag) {
+	assertLocalTagAvailable(tag);
+	assertRemoteTagAvailable(tag);
+}
+
+function runReleaseChecks() {
 	run("bun", ["run", "check:lint"]);
 	run("bun", ["run", "--cwd", "apps/desktop", "typecheck"]);
 	run("bun", ["run", "check:guards"]);
+}
+
+function resolvePreparedVersion(currentVersion, command) {
+	return command.kind === "bump" ? bumpVersion(currentVersion, command.value) : command.version;
+}
+
+function prepareRelease(command) {
+	assertCleanWorktree();
+	assertBranch();
+	runReleaseChecks();
 	assertCleanWorktree();
 
 	const desktopPackage = readDesktopPackage();
-	const version = bumpVersion(desktopPackage.version, bumpType);
-	const tag = `v${version}`;
-	assertTagAvailable(tag);
-	// 发布说明是 Release 的正文，必须在打 tag 之前就已经写好并提交：
-	// 流水线由 tag 触发，这时再补文件已经来不及进这次发布。
-	requireReleaseNotes(version);
+	const currentVersion = desktopPackage.version;
+	const version = resolvePreparedVersion(currentVersion, command);
+	if (version === currentVersion) throw new Error(`Desktop release version is already ${version}`);
+	const notesPath = releaseNotesPath(version);
+	const notesAlreadyExist = existsSync(notesPath);
+	assertLocalTagAvailable(`v${version}`);
 
+	if (!notesAlreadyExist) writeFileSync(notesPath, releaseNotesTemplate(version, upstreamBaselineSha()));
 	desktopPackage.version = version;
 	writeFileSync(DESKTOP_PACKAGE_PATH, `${JSON.stringify(desktopPackage, null, "\t")}\n`);
 	run("bun", ["install", "--lockfile-only"]);
-	assertOnlyReleaseFilesChanged();
-
-	run("git", ["add", "--", ...RELEASE_FILES]);
-	run("git", ["commit", "-m", `release(desktop): 发布 ${tag}`]);
-	run("git", ["tag", tag]);
-	run("git", ["push", "--atomic", "origin", branch, `refs/tags/${tag}`]);
-
-	console.log(`Desktop ${tag} 已推送，等待 desktop-release 工作流完成。`);
+	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+	console.log(`Desktop ${version} is prepared locally. Review ${notesPath} before publishing.`);
 }
 
-// 顶层直接执行会让测试一 import 就触发真实发版，因此与 resolve-desktop-release-config.mjs
-// 保持同一模式：只有作为入口脚本运行时才执行。
+function assertReleaseNotesReady(version) {
+	const notesPath = releaseNotesPath(version);
+	if (!existsSync(notesPath)) throw new Error(`Missing release notes: ${notesPath}`);
+	const notes = readFileSync(notesPath, "utf8");
+	const [title, , date] = notes.split(/\r?\n/);
+	if (title !== `# Open Forge ${version}`) throw new Error(`Release notes must start with "# Open Forge ${version}"`);
+	if (!date || date.includes("待定")) throw new Error("Release notes need a confirmed publication date");
+	if (!/^## (新增|改进|修复|其他)$/m.test(notes) || !/^\s*- .+/m.test(notes)) {
+		throw new Error("Release notes need at least one populated section");
+	}
+	if (!/^Upstream baseline: upstream\/dev@[0-9a-f]{7,40}$/m.test(notes)) {
+		throw new Error(`Release notes must record the upstream baseline as "Upstream baseline: upstream/dev@<sha>"`);
+	}
+	return notesPath;
+}
+
+export function desktopPublishCommands(version, branch) {
+	return [
+		["add", "--", DESKTOP_PACKAGE_PATH, LOCKFILE_PATH, releaseNotesPath(version)],
+		["commit", "-m", `release(desktop): 发布 v${version}`],
+		["tag", `v${version}`],
+		["push", "--atomic", "origin", branch, `refs/tags/v${version}`],
+	];
+}
+
+function publishRelease(version) {
+	assertBranch();
+	const desktopPackage = readDesktopPackage();
+	if (desktopPackage.version !== version) {
+		throw new Error(`Desktop package version ${desktopPackage.version} does not match requested release ${version}`);
+	}
+
+	const notesPath = assertReleaseNotesReady(version);
+	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+	assertTagAvailable(`v${version}`);
+	runReleaseChecks();
+	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+
+	// Release notes are the GitHub Release body and must be present before the tag triggers CI.
+	const branch = assertBranch();
+	for (const args of desktopPublishCommands(version, branch)) run("git", args);
+	console.log(`Desktop v${version} was pushed; waiting for the desktop-release workflow.`);
+}
+
+function main(argv) {
+	const command = parseDesktopReleaseCommand(argv);
+	if (command.command === "prepare") prepareRelease(command);
+	else publishRelease(command.version);
+}
+
+// Top-level direct execution can make an import trigger a real release; keep the side-effect behind this guard.
 function isExecutedDirectly() {
 	const invoked = process.argv[1];
 	if (!invoked) return false;
 	return fileURLToPath(import.meta.url).toLowerCase() === resolve(invoked).toLowerCase();
 }
 
-if (isExecutedDirectly()) main();
+if (isExecutedDirectly()) {
+	try {
+		main(process.argv.slice(2));
+	} catch (error) {
+		console.error(error instanceof Error ? error.message : String(error));
+		process.exitCode = 1;
+	}
+}

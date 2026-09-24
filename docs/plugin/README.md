@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Vetta 桌面插件开发手册
 
 面向第三方开发者的 Vetta 桌面端插件**对接与开发**完整手册。读完本目录你应当能从零写出、打包、安装、调试一个插件，并用上所有可用扩展点。
@@ -61,6 +62,7 @@
 | 全局浮层 UI | `ctx.ui.registerGlobalSlot` | `ui.slot.global` | [ui-slots](./ui-slots.md#全局浮层-registerglobalslot) |
 | **工作区视图**（整页 + 侧边栏入口） | `ctx.ui.registerWorkspaceView` | `ui.slot.workspace-view` | [ui-slots](./ui-slots.md#工作区视图-registerworkspaceview) |
 | 文件预览 | `ctx.ui.registerFilePreview` | `ui.slot.file-preview` | [ui-slots](./ui-slots.md#文件预览-registerfilepreview) |
+| Task Artifact Renderer | `ctx.ui.registerArtifactRenderer` | `ui.slot.artifact-renderer` + `fs.read` | [ui-slots](./ui-slots.md#task-artifact-renderer-registerartifactrenderer) |
 | 文件列表扩展 | `ctx.fileExplorer.*` | `ui.file-explorer.*` / `workspace.read` | [file-explorer](./file-explorer.md) |
 | 活动面板 Tab | `ctx.ui.registerActivityTab` / `openActivityTab` | `ui.slot.activity-tab` | [ui-slots](./ui-slots.md#活动面板-tab-registeractivitytab) |
 | 会话底部面板 | `ctx.ui.registerBottomPanel` | `ui.slot.bottom-panel` | [ui-slots](./ui-slots.md#会话底部面板-registerbottompanel) |

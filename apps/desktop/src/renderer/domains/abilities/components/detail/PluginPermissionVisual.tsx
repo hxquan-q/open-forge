@@ -51,8 +51,11 @@ function CapabilityFlow({ kind }: { kind: Exclude<PluginPermissionVisualKind, "i
 
 export function PluginPermissionVisual({ permission }: { permission: PluginPermission }): JSX.Element {
 	const presentation = PLUGIN_PERMISSION_PRESENTATIONS[permission];
-	if (presentation.visual === "interface" && presentation.uiPreview) {
+	if (presentation.visual === "interface" && "uiPreview" in presentation && presentation.uiPreview) {
 		return <PluginPermissionUiPreview preview={presentation.uiPreview} />;
+	}
+	if (presentation.visual === "interface") {
+		return <CapabilityFlow kind="data" />;
 	}
 	return <CapabilityFlow kind={presentation.visual} />;
 }

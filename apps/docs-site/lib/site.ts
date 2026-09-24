@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { getDocsMessages, localeConfig, type DocsLanguage } from "./i18n";
 
 export const DEFAULT_DOCS_SITE_URL = "https://hxquan-q.github.io";

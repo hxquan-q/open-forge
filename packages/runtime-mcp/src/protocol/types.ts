@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /** Transport-neutral MCP protocol and configuration contracts. */
 
 import type { McpCacheScope } from "./cache.js";
@@ -37,6 +39,11 @@ export interface McpToolAnnotations {
 
 export interface McpServerCommonConfig {
 	disabled?: boolean;
+	/**
+	 * 按 server 原始工具名停用个别工具：停用项不进 catalog、不进 deferred 索引、
+	 * 对模型零可见。作用于 Agent 调用与 MCP Apps 两侧；与整 server `disabled` 互补。
+	 */
+	disabledTools?: string[];
 	autoApprove?: string[];
 	startupTimeout?: number;
 	debug?: boolean;
@@ -46,12 +53,41 @@ export interface McpServerCommonConfig {
 	protocolMode?: McpProtocolMode;
 }
 
+/**
+ * 连接建立后由宿主自发执行的工具调用声明。
+ *
+ * 该机制服务于「server 启动后需要先做一次带凭据的工具调用才可使用」的上游
+ * （如只认 argv/工具参数、不认 env 的 stdio server）：宿主在每次（重）连的
+ * initialize 之后、catalog 发布与任何 agent 调用之前执行这些调用，凭据不进
+ * argv、不进 LLM 上下文。
+ *
+ * 落盘合同：`args` 值只允许字面量或 `{env:KEY}` 模板 token（可选
+ * `:number` / `:boolean` 类型后缀），resolve 只发生在宿主内存并随
+ * tools/call 发出，绝不回写磁盘。
+ */
+export interface McpPostConnectToolCall {
+	/** 目标工具名（server 原始工具名）。 */
+	tool: string;
+	/** 参数模板：字面量原样透传；`{env:KEY}` 从 server `env` 取值，env 缺失时整个 key 从 arguments 剔除。 */
+	args?: Record<string, string>;
+}
+
 export interface McpStdioServerConfig extends McpServerCommonConfig {
 	type?: "stdio";
 	command: string;
 	args?: string[];
 	env?: Record<string, string>;
 	cwd?: string;
+	/** 每次（重）连后由宿主依次执行的工具调用；执行失败视同连接失败。 */
+	postConnectToolCalls?: McpPostConnectToolCall[];
+	/**
+	 * Idle timeout in milliseconds for the spawned process. Once the server has
+	 * been idle (no in-flight request and no admitted lease) for this long the
+	 * supervisor drops the connection and reclaims the process; the catalog
+	 * stays published and the next call reconnects transparently. `0` disables
+	 * recycling for this server; when unset the supervisor default applies.
+	 */
+	idleTimeout?: number;
 }
 
 export interface McpHttpServerConfig extends McpServerCommonConfig {

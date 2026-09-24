@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Desktop 双模式 IA 骨架落地（Shell / Mode Switcher / 面板容器）
 

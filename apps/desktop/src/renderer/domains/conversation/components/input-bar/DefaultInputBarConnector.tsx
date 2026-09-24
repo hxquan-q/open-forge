@@ -1,4 +1,6 @@
 import { useBottomPanelPills } from "@domains/bottom-panel/hooks/useBottomPanelPills";
+import { sessionAxesBadgeKind } from "@domains/workspace-mode";
+import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
 import { pathBasename, toVettaFileUrl } from "@shared/lib/utils";
 import type { InputBarContextMenuViewProps } from "@vetta-org/theme-ui/chat";
 import { memo, useMemo } from "react";
@@ -99,6 +101,24 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 	}, [props.onSendQueued, session.activeSession, queue.items.length, queue.paused, interactions.sandboxPermission, t]);
 	const bottomPanelPills = useBottomPanelPills();
 	const todo = useMemo<InputBarTodoModel | null>(() => todoItems.length > 0 ? { items: todoItems, onOpenPanel: trigger.openTodoPanel } : null, [todoItems, trigger.openTodoPanel]);
+	const sessionAxesLabel = useMemo(() => {
+		const active = session.activeSession;
+		if (!active) return null;
+		// 轴的折叠只发生在 session-axes 的唯一派生点；这里只做 i18n 取词与拼装，
+		// 无轴会话的 null 由 formatSessionAxesBadge 统一裁决。
+		const axes = resolveSessionAxes(active.agentMode, active.capabilityProfile);
+		const interpretation = t(`session.axes.interpretation.${axes.agentMode}`);
+		const profileLabel = t(`session.axes.profile.${axes.capabilityProfile}`);
+		const template =
+			sessionAxesBadgeKind(axes) === "aligned"
+				? t(`session.axes.aligned.${axes.agentMode}`)
+				: t("session.axes.divergent", { interpretation, profile: profileLabel });
+		return formatSessionAxesBadge({
+			agentMode: active.agentMode,
+			capabilityProfile: active.capabilityProfile,
+			template,
+		});
+	}, [session.activeSession, t]);
 	const defaultPlaceholders = useMemo(() => {
 		const raw = t("inputBar.placeholder.defaults", { returnObjects: true });
 		return (Array.isArray(raw) ? raw : []).filter((item): item is string => typeof item === "string" && item.length > 0);
@@ -153,6 +173,7 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 		drawerItems,
 		drawerActiveTab: trigger.drawerActiveTab,
 		todo,
+		sessionAxesLabel,
 		bottomPanelPills,
 		speechInput: speechInput,
 		hasPromptAttachment: Boolean(draft.promptAttachment),

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createReadStream } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { createServer } from "node:http";

@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { APP_RUNTIME_NAME } from "./app-identity.js";
+import appIdentity from "./app-identity.json";
 
 const packageRoot = join(import.meta.dirname, "..", "..");
 
@@ -15,8 +17,10 @@ describe("app runtime name", () => {
 	// 共享 ~/.vetta 时表现为“API key 丢失”，且互相覆盖对方的密文。
 	it("matches the name written into the packaged app package.json", () => {
 		const preparePack = readPackageSource("scripts/prepare-pack.js");
-		const appPkgName = /const appPkg = \{[^}]*?\bname:\s*"([^"]+)"/s.exec(preparePack)?.[1];
-		expect(appPkgName).toBe(APP_RUNTIME_NAME);
+		expect(appIdentity.runtimeName).toBe(APP_RUNTIME_NAME);
+		expect(APP_RUNTIME_NAME).toBe("vetta");
+		expect(preparePack).toContain('const appRuntimeIdentity = require("../src/shared/app-identity.json");');
+		expect(preparePack).toMatch(/const appPkg = \{[^}]*?\bname:\s*appRuntimeIdentity\.runtimeName/s);
 	});
 
 	it("is applied to app.name unconditionally in the main process", () => {

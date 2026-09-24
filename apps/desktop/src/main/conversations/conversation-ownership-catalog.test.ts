@@ -56,6 +56,7 @@ describe("ConversationOwnershipCatalog", () => {
 				{ id: "ordinary", path: ordinaryPath },
 			]),
 		).resolves.toEqual([{ id: "ordinary", path: ordinaryPath }]);
+		await expect(catalog.list()).resolves.toHaveLength(2);
 		await expect(catalog.listByTeam("team-1")).resolves.toEqual([
 			expect.objectContaining({ workspaceKind: "session", workspaceId: "agent-team:team-1:session:workspace-a" }),
 			expect.objectContaining({ owner: expect.objectContaining({ role: "member" }) }),

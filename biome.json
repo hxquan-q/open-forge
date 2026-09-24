@@ -29,6 +29,8 @@
 			"knip.config.ts",
 			".claude/hooks/**/*.mjs",
 			"scripts/quality/**/*.mjs",
+			"scripts/eval/**/*.ts",
+			"scripts/eval/**/*.mjs",
 			"packages/*/src/**/*.ts",
 			"packages/*/test/**/*.ts",
 			"apps/*/src/**/*.ts",

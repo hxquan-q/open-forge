@@ -7,8 +7,9 @@ owner: runtime-core/desktop
 source: .vetta logs and exprot/session-memory.md
 related_plan: [PLAN-0002]
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Runtime 性能与可靠性基线
 

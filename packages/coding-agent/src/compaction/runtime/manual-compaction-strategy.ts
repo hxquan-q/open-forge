@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { providerAuthenticationError } from "@vetta/ai";
 import type { ContextCompactionRecord, ManualContextCompactionInput } from "@vetta/runtime-core/kernel";
 import type {

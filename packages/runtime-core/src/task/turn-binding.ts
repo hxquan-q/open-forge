@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { RuntimeTaskEvent, RuntimeTaskSnapshot } from "./contracts.js";
 import { canTransitionRuntimeTask, transitionRuntimeTask } from "./state-machine.js";
 

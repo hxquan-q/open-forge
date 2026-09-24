@@ -908,14 +908,30 @@ export function useTeamChatModel(
 	// Team 里可用、页签却永不上栏」的错位（scope_use 是 fail-closed 的）。
 	const pluginScenario: ConversationScenario = "project";
 	const feedKey = `${session?.id ?? preferredSessionId ?? teamId}:${memberViewId ?? "team"}`;
+	// 聚合视图的归属标注：协调 Runtime 是队长的执行处，标队长名；成员 Runtime 标成员名。
+	// 名字缺失（如旧文档引用的 Profile 已删）时留空，该 Runtime 的行保持无标注。
+	const activityRuntimeLabels = useMemo(() => {
+		if (!session) return undefined;
+		const labels: Record<string, string> = {};
+		const nameByMemberId = new Map(members.map((member) => [member.id, member.name]));
+		const coordination = session.coordinationRuntime?.sessionId;
+		const leaderName = nameByMemberId.get(session.leaderMemberId);
+		if (coordination && leaderName) labels[coordination] = leaderName;
+		for (const [memberId, runtime] of Object.entries(session.memberRuntime)) {
+			const name = nameByMemberId.get(memberId);
+			if (name) labels[runtime.sessionId] = name;
+		}
+		return Object.keys(labels).length > 0 ? labels : undefined;
+	}, [session, members]);
 	const workspace = useMemo(
 		() =>
 			createActivityWorkspace(
 				session?.workspaceId ?? `agent-team:${teamId}`,
 				session?.cwd ?? null,
 				activityRuntimeIds,
+				activityRuntimeLabels,
 			),
-		[activityRuntimeIds, session?.cwd, session?.workspaceId, teamId],
+		[activityRuntimeIds, activityRuntimeLabels, session?.cwd, session?.workspaceId, teamId],
 	);
 	const runtimeSessionIds = useMemo(() => Object.values(memberRuntimeIds), [memberRuntimeIds]);
 	const sessionOptions = useMemo(

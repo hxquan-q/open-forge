@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Research
 
 本目录是研究证据索引，不是把所有外部资料全文复制进仓库。新 Research 使用 [`TEMPLATE.md`](TEMPLATE.md)，详细规则见 [`../CONVENTIONS.md`](../CONVENTIONS.md)。
@@ -14,6 +15,12 @@
 | Agent 产品性能实践 | [`RESEARCH-0002-agent-product-performance.md`](RESEARCH-0002-agent-product-performance.md) |
 | 桌面端内存足迹优化路线 | [`RESEARCH-0003-desktop-memory-footprint.md`](RESEARCH-0003-desktop-memory-footprint.md) |
 | 工程控制论方法 | `C:\Users\xquan\.agents\skills\engineering-cybernetics-essence\SKILL.md` |
+| Canvas / Browser / Terminal 支持面 | [`RESEARCH-0005`](RESEARCH-0005-canvas-browser-terminal-support.md) |
+| Cursor Agent Workspace 对照与报告表面 | [`RESEARCH-0006`](RESEARCH-0006-cursor-agent-workspace-and-report-surfaces.md) |
+| 内核上下文管理三家对标（magic-context / pi / CometixCode） | [`RESEARCH-0007`](RESEARCH-0007-context-cache-stability-references.md) |
+| 多智能体编排协作对照（Cursor/Claude Code/Codex/Pi） | [`RESEARCH-0008`](RESEARCH-0008-multi-agent-orchestration-comparison.md) |
+| DeepEval 开发期旁路 | [`RESEARCH-0006`](RESEARCH-0006-deepeval-agent-quality.md) |
+| DeepEval / Promptfoo / MASEval 三框架旁路 | [`RESEARCH-0009`](RESEARCH-0009-three-framework-agent-eval.md) |
 
 ## Research Note 约束
 

@@ -1,6 +1,8 @@
-import { closeSync, type Dirent, openSync, readFileSync, readSync } from "node:fs";
-import { type FileHandle, open, readdir, readFile, rm, stat } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { closeSync, createReadStream, type Dirent, openSync, readFileSync, readSync } from "node:fs";
+import { type FileHandle, open, readdir, rm, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import type {
 	HistoryEntry,
 	ProjectInfo,
@@ -169,47 +171,116 @@ export class FileConversationRuntimeSessionFileHistoryReader implements RuntimeS
 	}
 }
 
+interface SessionListIndexAccumulator {
+	sessionId?: string;
+	agentId?: string;
+	cwd?: string;
+	name?: string;
+	parentSessionPath?: string;
+	parentEntryId?: string;
+	firstUserMessage?: string;
+	lastMessage?: { readonly role: "user" | "assistant"; readonly text: string; readonly timestamp?: number };
+}
+
 async function readSessionHistoryInfo(sessionPath: string, fallbackCwd: string): Promise<SessionHistoryInfo> {
-	const text = await readFile(sessionPath, "utf8");
-	const header = parseConversationHeader(text);
-	if (!header || !isCanonicalConversationPath(sessionPath, header.sessionId)) {
-		throw new Error(`Unsupported native conversation file: ${sessionPath}`);
+	const path = resolve(sessionPath);
+	const fileStat = await stat(path);
+	const summary = await summarizeConversationFileForList(path);
+	if (!summary.sessionId || !isCanonicalConversationPath(path, summary.sessionId)) {
+		throw new Error(`Unsupported native conversation file: ${path}`);
 	}
-	const document = documentFromFile(header.sessionId, parseConversationFile(text, header.sessionId));
-	const history = projectConversationDocumentHistory(document);
-	const conversationMessages = history.flatMap((entry) => {
-		if (entry.type !== "message" || (entry.message.role !== "user" && entry.message.role !== "assistant")) {
-			return [];
-		}
-		return [entry.message];
-	});
-	const messageTexts = conversationMessages.flatMap((message) => {
-		const text = extractMessageText(message.content);
-		return text ? [{ role: message.role, text }] : [];
-	});
-	const firstMessage = messageTexts.find(({ role }) => role === "user")?.text ?? "(no messages)";
-	const lastMessagePreview = messageTexts.at(-1)?.text.slice(0, LAST_MESSAGE_PREVIEW_LENGTH);
-	// File mtime is a storage implementation detail: importing/resuming an existing
-	// conversation may rewrite or recover the JSONL without any new user activity.
-	// Use the already validated history projection so previews, branches and activity
-	// time share one source of truth instead of inspecting opaque document entries here.
-	const lastMessageActivityAt = conversationMessages.reduce<number | undefined>((latest, message) => {
-		if (!Number.isFinite(message.timestamp) || message.timestamp <= 0) return latest;
-		return Math.max(latest ?? 0, message.timestamp);
-	}, undefined);
-	const modifiedAt = lastMessageActivityAt ?? (await stat(sessionPath)).mtimeMs;
+	const modifiedAt = summary.lastMessage?.timestamp ?? fileStat.mtimeMs;
 	return {
-		id: header.sessionId,
-		path: resolve(sessionPath),
-		agentId: document.identity.agentId,
-		cwd: document.identity.cwd ?? fallbackCwd,
-		name: document.name,
-		firstMessage,
+		id: summary.sessionId,
+		path,
+		agentId: summary.agentId,
+		cwd: summary.cwd ?? fallbackCwd,
+		name: summary.name,
+		firstMessage: summary.firstUserMessage ?? "(no messages)",
 		modifiedAt,
-		lastMessagePreview,
-		parentSessionPath: document.identity.parentSessionPath,
-		parentEntryId: document.identity.parentEntryId,
+		lastMessagePreview: summary.lastMessage?.text.slice(0, LAST_MESSAGE_PREVIEW_LENGTH),
+		parentSessionPath: summary.parentSessionPath,
+		parentEntryId: summary.parentEntryId,
+		fileSizeBytes: fileStat.size,
 	};
+}
+
+async function summarizeConversationFileForList(sessionPath: string): Promise<SessionListIndexAccumulator> {
+	const accumulator: SessionListIndexAccumulator = {};
+	const stream = createReadStream(sessionPath, { encoding: "utf8" });
+	const lines = createInterface({ input: stream, crlfDelay: Infinity });
+	try {
+		for await (const line of lines) {
+			const trimmed = line.trim();
+			if (!trimmed) continue;
+			summarizeConversationListRecord(parseJsonLine(trimmed), accumulator);
+		}
+	} finally {
+		stream.destroy();
+	}
+	return accumulator;
+}
+
+function parseJsonLine(line: string): unknown {
+	try {
+		return JSON.parse(line) as unknown;
+	} catch {
+		return undefined;
+	}
+}
+
+function summarizeConversationListRecord(record: unknown, accumulator: SessionListIndexAccumulator): void {
+	if (!record || typeof record !== "object") return;
+	if (isConversationFileHeader(record)) {
+		accumulator.sessionId = record.sessionId;
+		if ("agentId" in record && typeof record.agentId === "string") accumulator.agentId = record.agentId;
+		if ("cwd" in record && typeof record.cwd === "string") accumulator.cwd = record.cwd;
+		if ("parentSessionPath" in record && typeof record.parentSessionPath === "string") {
+			accumulator.parentSessionPath = record.parentSessionPath;
+		}
+		if ("parentEntryId" in record && typeof record.parentEntryId === "string") {
+			accumulator.parentEntryId = record.parentEntryId;
+		}
+		return;
+	}
+	const value = record as Record<string, unknown>;
+	if (value.recordType === "conversation.header" && typeof value.sessionId === "string") {
+		accumulator.sessionId = value.sessionId;
+		if (typeof value.agentId === "string") accumulator.agentId = value.agentId;
+		if (typeof value.cwd === "string") accumulator.cwd = value.cwd;
+		return;
+	}
+	if (value.recordType === "conversation.seed" && typeof value.name === "string") {
+		accumulator.name = value.name;
+	}
+	if (value.recordType === "conversation.document.operation") {
+		const command = value.command;
+		if (command && typeof command === "object") {
+			const op = command as Record<string, unknown>;
+			if (op.type === "session.name.set" && typeof op.name === "string") accumulator.name = op.name;
+		}
+	}
+	if (value.recordType === "conversation.event") {
+		summarizeKernelListEvent(value.event, accumulator);
+	}
+}
+
+function summarizeKernelListEvent(event: unknown, accumulator: SessionListIndexAccumulator): void {
+	if (!event || typeof event !== "object") return;
+	const value = event as Record<string, unknown>;
+	if (value.type !== "message.appended") return;
+	const payload = value.message;
+	if (!payload || typeof payload !== "object") return;
+	const message = payload as Record<string, unknown>;
+	if (message.role !== "user" && message.role !== "assistant") return;
+	const text = extractMessageText(message.content);
+	if (!text) return;
+	const timestamp = typeof message.timestamp === "number" ? message.timestamp : undefined;
+	if (message.role === "user" && !accumulator.firstUserMessage) accumulator.firstUserMessage = text;
+	const current = accumulator.lastMessage;
+	if (!current || (timestamp ?? 0) >= (current.timestamp ?? 0)) {
+		accumulator.lastMessage = { role: message.role, text, timestamp };
+	}
 }
 
 function extractMessageText(content: unknown): string | undefined {

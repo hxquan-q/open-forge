@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { HighlightHtmlCache } from "./syntax-highlight-cache";
 

@@ -6,6 +6,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { installVettaBridge } from "../../../../test/vetta-bridge.js";
 import { ActivityPanel } from "./ActivityPanel";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -64,14 +65,9 @@ describe("activity panel tabs driven by live session state", () => {
 	// 端口只有「远端」才有。本机项目下这个 tab 不该占位，远程项目下它必须在——它同时是
 	// 手动添加端口的唯一入口，没有转发时也要能进去。
 	it("shows the ports tab for a remote project only", async () => {
-		vi.stubGlobal(
-			"window",
-			Object.assign(globalThis.window, {
-				vetta: {
-					ssh: { listPortForwards: async () => [], onPortForwardsChanged: () => () => {} },
-				},
-			}),
-		);
+		installVettaBridge({
+			ssh: { listPortForwards: async () => [], onPortForwardsChanged: () => () => {} },
+		});
 		const store = createStore();
 		store.set(activityPanelOpenAtom, true);
 		render(

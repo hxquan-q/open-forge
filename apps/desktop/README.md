@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/desktop
 
 Electron desktop host for the Vetta runtime.
@@ -186,6 +187,17 @@ plugins, or set it to an empty string to disable plugin dev servers and use stag
 Each project uses its own exported `@vetta-org/plugin-vite/cli`. The stable staged or installed
 plugin remains active until the development server completes its versioned ready handshake; an
 unexpected server exit rolls back that overlay before bounded restart attempts.
+
+Development also opens DevTools for the main window after it loads. Set `VETTA_DEV_AUTO_DEVTOOLS=0`
+to skip that; the menu and shortcut still open it on demand. While DevTools is attached it keeps every
+CSS/Web animation the page has created — including those whose elements were already unmounted — so
+long streaming sessions inflate Renderer memory and heap snapshots report detached DOM that a closed
+DevTools would not retain. Close DevTools before taking memory measurements.
+
+When you are not iterating on presets, `bun run dev:lean` combines both switches: no plugin dev
+servers (each one is a separate Node process with its own Vite graph, roughly 100–175 MB apiece, and
+its unbundled modules also load into the Renderer) and no automatic DevTools. Staged preset archives
+remain active, so plugin behaviour is unchanged.
 
 ## Electron E2E (WebdriverIO)
 

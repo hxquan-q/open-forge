@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentMessage } from "@vetta/agent-core";
 import type { Api, AssistantMessage, Message, Model } from "@vetta/ai";
 import type { EcosystemHookRuntime } from "@vetta/ecosystem-adapter/hooks";

@@ -3,6 +3,16 @@ Copyright 2026 Vetta
 
 This product includes software developed at Vetta (https://www.openvetta.com).
 
+Open Forge is a modified downstream product based on Open Vetta. The Vetta attribution above identifies the upstream work and does not imply Vetta endorsement.
+
+Files modified by the Open Forge fork carry a per-file notice
+("Modified by The Open Forge contributors") as required by Apache License
+§4(b). Modified files whose format cannot carry a comment (JSON manifests,
+lockfiles, binary assets) and upstream-published materials are recorded in
+the modification inventory produced by
+`node scripts/quality/check-modified-file-notices.mjs`, computed against the
+upstream merge base (`git merge-base upstream/dev HEAD`).
+
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 this file except in compliance with the License. You may obtain a copy of the
 License in the LICENSE file distributed with this work, or at:
@@ -110,6 +120,24 @@ License: MIT
 
 Used as the distribution source for the portable Node runtime provisioned on
 demand.
+
+--------------------------------------------------------------------------------
+Sherpa-ONNX
+--------------------------------------------------------------------------------
+Copyright (c) k2-fsa / sherpa-onnx contributors
+Source:  https://github.com/k2-fsa/sherpa-onnx
+License: Apache License, Version 2.0
+
+When speech input is enabled on Windows builds, this product redistributes:
+  - the sherpa-onnx-win-x64 native library (staged with node_modules); and
+  - the streaming Zipformer Chinese speech model
+    sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30
+    (encoder / decoder / joiner / tokens), under speech-models/,
+    distributed via Hugging Face (csukuangfj) and derived from the
+    k2-fsa / icefall model ecosystem.
+
+Licensed under the Apache License, Version 2.0.
+See the Apache-2.0 license text distributed with this product for the full terms.
 
 --------------------------------------------------------------------------------
 Cowart

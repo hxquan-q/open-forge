@@ -1,8 +1,10 @@
 /**
- * Require package.json Vitest scripts to launch through Node via
- * scripts/quality/run-vitest.mjs. Bun workers on Windows fail before
- * collecting tests (forks: File URL path must be an absolute path;
- * threads: port.addListener is not a function).
+ * Enforce repository-wide Vitest infrastructure policy:
+ * - test scripts launch through Node via scripts/quality/run-vitest.mjs
+ * - every direct Vitest declaration stays at or above the security floor
+ *
+ * Bun workers on Windows fail before collecting tests (forks: File URL path
+ * must be an absolute path; threads: port.addListener is not a function).
  *
  * Usage:
  *   bun run scripts/quality/check-vitest-runner.mjs
@@ -14,6 +16,7 @@ import { isDirectRun, repoRoot } from "./lib.mjs";
 
 const WRAPPER_MARKER = "scripts/quality/run-vitest.mjs";
 const DIRECT_VITEST = /(?:^|[\s;&|])(?:bunx\s+|npx\s+)?vitest(?:\s|$)/;
+const MINIMUM_VITEST_VERSION = [4, 1, 11];
 const SKIP_DIRS = new Set([
 	"node_modules",
 	"dist",
@@ -48,6 +51,33 @@ export function findVitestRunnerViolations(manifestPath, manifest) {
 		({ script, command }) =>
 			`${manifestPath}: script "${script}" 必须通过 ${WRAPPER_MARKER} 启动 Vitest，不能直接执行 ${JSON.stringify(command)}`,
 	);
+}
+
+function parseMinimumVersion(specifier) {
+	if (typeof specifier !== "string") return undefined;
+	const match = specifier.trim().match(/^(?:\^|~|>=|=)?\s*v?(\d+)\.(\d+)\.(\d+)(?:\s|$|[-+])/);
+	if (!match) return undefined;
+	return match.slice(1, 4).map(Number);
+}
+
+function compareVersions(left, right) {
+	for (let index = 0; index < 3; index += 1) {
+		if (left[index] !== right[index]) return left[index] - right[index];
+	}
+	return 0;
+}
+
+export function findVitestVersionViolations(manifestPath, manifest) {
+	const specifier =
+		manifest?.dependencies?.vitest ?? manifest?.devDependencies?.vitest ?? manifest?.peerDependencies?.vitest;
+	if (specifier === undefined) return [];
+
+	const minimum = parseMinimumVersion(specifier);
+	if (minimum && compareVersions(minimum, MINIMUM_VITEST_VERSION) >= 0) return [];
+
+	return [
+		`${manifestPath}: vitest ${JSON.stringify(specifier)} 必须声明不低于 ${MINIMUM_VITEST_VERSION.join(".")} 的简单版本下界`,
+	];
 }
 
 function collectPackageManifests(rootPath) {
@@ -85,6 +115,7 @@ export function checkVitestRunner(rootPath = repoRoot) {
 		}
 		const manifestPath = relative(rootPath, absolute).replaceAll("\\", "/");
 		violations.push(...findVitestRunnerViolations(manifestPath, manifest));
+		violations.push(...findVitestVersionViolations(manifestPath, manifest));
 	}
 	return violations;
 }

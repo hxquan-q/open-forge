@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { SessionEvent } from "@vetta/runtime-core";
 import { app } from "electron";
 import { getAppLogger } from "../logger.js";
@@ -28,6 +29,10 @@ const log = getAppLogger("perf-monitor");
 /** 会话事件源：RuntimeHost.subscribe 的最小结构面，测试用 fake 注入。 */
 export interface PerfSessionEventSource {
 	subscribe(sessionId: string, handler: (event: SessionEvent) => void): () => void;
+	/** 订阅者投递队列水位/丢弃计数（合计该 handler 订阅的全部 session）。 */
+	readSubscriberDeliveryStats?(
+		handler: (event: SessionEvent) => void,
+	): { readonly queued: number; readonly droppedEphemeral: number } | undefined;
 }
 
 export interface PerfMonitorOptions {
@@ -40,9 +45,16 @@ export interface PerfMonitorOptions {
 	readonly maxTurnRecords?: number;
 }
 
+interface PerfSessionSubscription {
+	readonly unsubscribe: () => void;
+	readonly handler: (event: SessionEvent) => void;
+	readonly source: PerfSessionEventSource;
+	lastDroppedEphemeral: number;
+}
+
 export class PerfMonitorService {
 	private readonly trackers = new Map<string, SessionPerfTracker>();
-	private readonly subscriptions = new Map<string, () => void>();
+	private readonly subscriptions = new Map<string, PerfSessionSubscription>();
 	private readonly samples: DesktopPerfSnapshot[] = [];
 	private readonly aggregates: PerfAggregates = createPerfAggregates();
 	private readonly turnRecords: PerfTurnRecord[] = [];
@@ -81,24 +93,31 @@ export class PerfMonitorService {
 		if (this.subscriptions.has(sessionId)) return;
 		this.trackers.set(sessionId, new SessionPerfTracker(sessionId));
 		try {
-			const unsubscribe = runtime.subscribe(sessionId, (event) => {
+			const handler = (event: SessionEvent): void => {
 				try {
 					this.recordSessionEvent(sessionId, event);
 				} catch (error) {
 					log.warn("perf event reduction failed", { sessionId, type: event.type }, error);
 				}
+			};
+			const unsubscribe = runtime.subscribe(sessionId, handler);
+			this.subscriptions.set(sessionId, {
+				unsubscribe,
+				handler,
+				source: runtime,
+				lastDroppedEphemeral: 0,
 			});
-			this.subscriptions.set(sessionId, unsubscribe);
 		} catch (error) {
 			log.warn("perf session subscription failed", { sessionId }, error);
 		}
 	}
 
 	unobserveSession(sessionId: string): void {
-		const unsubscribe = this.subscriptions.get(sessionId);
-		if (!unsubscribe) return;
+		const subscription = this.subscriptions.get(sessionId);
+		if (!subscription) return;
+		this.collectDeliveryDrops(subscription);
 		try {
-			unsubscribe();
+			subscription.unsubscribe();
 		} catch (error) {
 			log.warn("perf session unsubscribe failed", { sessionId }, error);
 		}
@@ -164,6 +183,19 @@ export class PerfMonitorService {
 		}
 	}
 
+	/** 轮询订阅者投递队列的累计丢弃数，把增量折进聚合；失败只跳过本轮。 */
+	private collectDeliveryDrops(subscription: PerfSessionSubscription): void {
+		try {
+			const stats = subscription.source.readSubscriberDeliveryStats?.(subscription.handler);
+			if (!stats) return;
+			const delta = Math.max(0, stats.droppedEphemeral - subscription.lastDroppedEphemeral);
+			subscription.lastDroppedEphemeral = stats.droppedEphemeral;
+			this.aggregates.eventDelivery.droppedEphemeral += delta;
+		} catch (error) {
+			log.warn("perf delivery stats collection failed", error);
+		}
+	}
+
 	private bumpActivity(now: number): void {
 		this.activeUntil = now + this.options.activityTailMs;
 	}
@@ -194,6 +226,9 @@ export class PerfMonitorService {
 			metrics = this.collectProcessMetrics?.() ?? collectElectronProcessMetrics();
 		} catch (error) {
 			log.warn("perf process sampling failed", error);
+		}
+		for (const subscription of this.subscriptions.values()) {
+			this.collectDeliveryDrops(subscription);
 		}
 		try {
 			const snapshot = buildPerfSnapshot({

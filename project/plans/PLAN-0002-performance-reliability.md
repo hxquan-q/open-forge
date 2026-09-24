@@ -7,8 +7,9 @@ requirement: REQ-0002
 owner: runtime-core/desktop/ai
 source: exprot/session-memory.md and exprot/differential-testing-observability.md
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 性能与可靠性基线
 
@@ -21,6 +22,21 @@ updated: 2026-09-22
 5. Main/Renderer/GPU/Heap/EventBuffer/Queue 快照。
 6. 长会话与 Agent Team 内存上限。
 7. WebGL、视频窗口和后台 Renderer 低功耗策略。
+
+## 当前进度
+
+- 第一阶段核心任务 `TASK-0002`–`TASK-0007` 与驻留/观测补强 `TASK-0010`–`TASK-0014` 均已记录为 `done`；`VERIFY-0001`、`VERIFY-0002` 也已完成。
+- `RESEARCH-0004` 的 P0-1 至 P0-4 治理均已完成：`TASK-0032`（统一结果策略）、`TASK-0030`（IM 子进程堆上限）、`TASK-0031`（媒体引用化）、`TASK-0029`（子代理会话 LRU）。
+- 本轮 P1 并发批次（Coordinator 主工作区 + 2 个 Worker worktree）：
+  - `TASK-0033` 会话执行结果策略旁路：done，worktree 提交 `6a267ea` 同内容已落主工作区，6/6 测试绿。
+  - `TASK-0035` transcript 视口占位：已实现并登记交付（`transcript-window` 服务+控制器、`fullHistoryToChatWithSpans` span 投影、`ChatTimelineItem` union、backlog 注册点×4、`rangeChanged` 驱动窗口化、占位行渲染与恢复），14 新单测 + 相关回归全绿，desktop typecheck 本任务文件 0 错误。
+  - `TASK-0037` 事件分级背压：订阅者队列 delta 拼接合并、marker 可丢、终态与 delta 必达、microtask 批量投递（修掉逐事件 `flushSync` 空转与 `shift()` 丢终态）、`readSubscriberDeliveryStats` 接入 perf 快照 `eventDelivery`；19 runtime-core + 7 projection 测试绿。
+  - `TASK-0041` 会话列表 stat 索引：流式 JSONL 元信息提取替代全量物化，120 会话合成库 72ms→29.9ms；`fileSizeBytes` 透传 + >4MB 会话打开确认（tail 末 10 轮 / full）。
+  - `TASK-0054` MCP 懒启动+工具目录缓存：done，worktree 提交 `85ecb03`，已集成主工作区（lazy handle/签名缓存/原子写/命中不拉起进程），27+5 测试绿。
+  - `TASK-0053` MCP stdio 空闲回收/退出杀树：done，worktree 提交 `95f92d8`，已集成主工作区（idleTimeout 30min 默认/0 关闭、进程树杀、退出 sweep），runtime-node mcp 18+desktop 10+sdk 3 测试绿。
+  - 集成方式：两个 worktree 分支经 `git diff merge-base` 应用为 forge/dev 未提交改动（与在途工作共存，不产生提交）；`.github/release-notes/v0.5.59.md` 六条用户视角条目已归并。
+- 其余 P1 ready 项为 `TASK-0034`（done 待核）、`TASK-0036`（在途）、`TASK-0038`（draft）。P2 防御项 `TASK-0039`、`TASK-0042` 仍为 draft。
+- 已知在途干扰：`check`/`check:quick` 全量暂不可绿——工作区含多个其他 Agent 在途改动（plugin artifacts、task-activity、agent-text 去重契约 RED 测试、coding-agent/projects 路径映射守卫），本批任务文件自身 lint/format/typecheck 已清。
 
 ## 完成标准
 

@@ -11,6 +11,7 @@ related_plan: [PLAN-0002]
 related_task: [TASK-0004, TASK-0007]
 related_bug: []
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Desktop GPU 低功耗策略验证
 

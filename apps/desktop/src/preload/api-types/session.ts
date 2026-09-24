@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type {
 	CodingAgentPlanReviewRequest,
@@ -129,7 +130,14 @@ export interface DesktopSessionApi {
 		config: DesktopCodingAgentSessionConfig | undefined,
 		kind: DesktopSessionKind,
 		traceContext?: DesktopSessionTraceContext,
-	): Promise<{ sessionId: string; sessionPath: string; cwd?: string; agentProfileId?: string }>;
+	): Promise<{
+		sessionId: string;
+		sessionPath: string;
+		cwd?: string;
+		agentProfileId?: string;
+		agentMode?: AgentMode;
+		capabilityProfile?: "work" | "coding";
+	}>;
 	listProjects(): Promise<ProjectInfo[]>;
 	listSessions(cwd: string): Promise<DesktopSessionHistoryInfo[]>;
 	searchSessions(

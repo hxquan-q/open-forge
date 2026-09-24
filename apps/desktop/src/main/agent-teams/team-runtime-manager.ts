@@ -28,6 +28,15 @@ import type { TeamSessionStateRepository } from "./team-session-state-repository
 
 const log = getAppLogger("agent-team-runtime-manager");
 
+/**
+ * 团队 Runtime 的能力 Profile 裁决（TASK-0078）：成员与协调 Runtime 是委派合同的
+ * 执行者（TASK-0069 自包含任务书、实现并自验证），必须保有 bash 等全量工具面，
+ * 静默收窄到 WORK_PROFILE 没有产品依据。团队会话绕过 desktop-conversation-service
+ * 创建（agent-modes.json 永不落盘），恢复时没有任何固化记录可回落，因此三处建/恢复
+ * Runtime 的入口都显式声明 coding，不依赖缺省推导。
+ */
+const TEAM_CAPABILITY_PROFILE = "coding" as const;
+
 export interface TeamMemberPromptContext {
 	readonly systemPromptCachePrefixAddon: string;
 	readonly systemPromptVolatileAddon: string;
@@ -88,6 +97,7 @@ export class TeamRuntimeManager {
 				cwd,
 				executionMode,
 				automaticRetry: false,
+				capabilityProfile: TEAM_CAPABILITY_PROFILE,
 				...promptContext,
 				agentConfiguration: {
 					template: null,
@@ -123,6 +133,7 @@ export class TeamRuntimeManager {
 			{
 				cwd,
 				executionMode,
+				capabilityProfile: TEAM_CAPABILITY_PROFILE,
 				...(sessionPath ? { sessionPath } : {}),
 				...(sessionId ? { sessionId } : {}),
 			},
@@ -276,6 +287,7 @@ export class TeamRuntimeManager {
 					executionMode,
 					sessionPath,
 					automaticRetry: false,
+					capabilityProfile: TEAM_CAPABILITY_PROFILE,
 					...this.createMemberPromptContext(
 						session.id,
 						memberId,

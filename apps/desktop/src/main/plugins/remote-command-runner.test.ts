@@ -19,7 +19,8 @@ function createRemoteRepository(): string {
 
 const limits = { env: undefined, timeoutMs: 20_000, maxBufferBytes: 1024 * 1024 };
 
-describe("插件命令在远程项目所在的机器上执行", () => {
+// 回环 SSH 顶替脚本是 /bin/sh POSIX shell，win32 下无 shebang 执行与合法远端 POSIX 路径。
+describe.skipIf(process.platform === "win32")("插件命令在远程项目所在的机器上执行", () => {
 	it("Git 面板的探测命令在远端仓库里回答「是仓库」，并看得到那里的改动", async () => {
 		const root = createRemoteRepository();
 		const cwd = `ssh://build-01${root}`;

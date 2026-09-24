@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # openforge-ssh-helper
 
 远程项目（ADR-0124）第二阶段的远端 helper：一个静态单文件二进制，由 Desktop 经 SSH 上传到项目所在的主机，通过该 SSH 通道的 stdio 与 Desktop 通信。

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * @vetta-org/plugin-sdk public surface.
  *
@@ -96,6 +97,13 @@ export type {
 	PluginNotifyOptions,
 	PluginUiApi,
 } from "./ui.js";
+export type {
+	PluginArtifactRendererDescriptor,
+	PluginArtifactRendererSource,
+	PluginArtifactRendererProps,
+	PluginArtifactRendererContribution,
+} from "./artifact-renderer.js";
+export { PluginArtifactRendererDescriptorSchema } from "./artifact-renderer.js";
 
 // Keyboard shortcuts (host ShortcutScopeStack)
 export type {

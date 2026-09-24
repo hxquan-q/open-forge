@@ -7,11 +7,12 @@ import {
 	McpOAuthProvider,
 	runMcpDeviceAuthorizationFlow,
 } from "@vetta/runtime-node/mcp";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import { mainT } from "../i18n/index.js";
 import { openExternalUrl } from "../open-external.js";
 import { createDeviceCodePresentation, createOAuthCallbackSession } from "./mcp-oauth-host-ui.js";
 
-const CLIENT_NAME = "Vetta";
+const CLIENT_NAME = DESKTOP_BRAND.displayName;
 const CLIENT_VERSION = "1.0.0";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const AUTH_WAIT_TIMEOUT_MS = 5 * 60_000;

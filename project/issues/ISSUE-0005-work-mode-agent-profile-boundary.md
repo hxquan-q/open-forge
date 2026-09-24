@@ -10,6 +10,7 @@ source: exprot/mvp-scope.md; docs/adr/0071-agent-mode-is-a-task-interpretation-p
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Work/Coding 布局、AgentMode 与能力 Profile 的边界
 

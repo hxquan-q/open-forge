@@ -10,6 +10,7 @@ created: 2026-09-22
 updated: 2026-09-22
 depends_on: []
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 建立 Project 控制面
 

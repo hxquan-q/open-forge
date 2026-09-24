@@ -1,18 +1,20 @@
 # 发布说明（Release Notes）
 
-每个桌面端版本一个文件，命名为 `v<major>.<minor>.<patch>.md`，例如 `v0.5.58.md`。
-`desktop-release` 工作流发布 GitHub Release 时，直接把对应文件作为 Release 正文，
-所以这里写的就是用户在 Release 页面读到的内容。
+每个 Open Forge 桌面端版本一个文件，命名为 `v<major>.<minor>.<patch>.md`，例如 `v1.2.3.md`。
+`desktop-release` 工作流发布 Open Forge GitHub Release 时，直接把对应文件作为 Release 正文，
+所以这里写的就是用户在 Release 页面读到的内容；不要把上游 Vetta 发布说明复制或改写为 Open Forge 说明。
 
 ## 什么时候写
 
-新增功能、修复缺陷、合并 PR、关闭 issue 之后，把对应条目补进**当前开发中版本**的文件里
+新增功能、修复缺陷、合并 PR、关闭 issue 之后，把对应条目补进**当前 Open Forge 开发版本**的文件里
 （版本号以 `apps/desktop/package.json` 的 `version` 为准）。文件不存在就新建。
 发布流水线会校验该文件存在，缺失即发版失败。
 
+首发 Open Forge 版本尚未由 `ISSUE-0007` 决定并切入 Desktop manifest 时，不得将 fork-only 内容写入继承的 Vetta Release Notes；候选文案暂记在关联 Task 中，首发版本确定后归入自己的 Release Notes。
+
 ## 怎么写
 
-- 标题用 `# Vetta <版本号>`，下一行写发布日期。
+- 标题用 `# Open Forge <版本号>`，下一行写发布日期。
 - 分 `## 新增` / `## 改进` / `## 修复` / `## 其他` 四节，没有内容的小节直接省略。
 - 面向用户描述影响：说清楚用户会看到什么变化，而不是改了哪个函数。行为有取舍时把代价一并写出来。
 - 关联 PR 或 issue 时统一用 `owner/repo#123` 格式，例如 `openvetta/open-vetta#8`。

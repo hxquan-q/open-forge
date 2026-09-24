@@ -1,23 +1,31 @@
+// Modified by The Open Forge contributors.
 import { createConversationUserMessage } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {
 	activeSessionStreamingAtom,
 	activeToolNamesAtom,
+	activityPanelTabByProjectAtom,
 	type BackgroundTask,
 	backgroundTasksBySessionAtom,
-	type ChatConversationItem,
+	type ChatTimelineItem,
+	canvasArtifactRevisionAtom,
+	canvasUnreadCountAtom,
 	chatMessagesAtom,
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
 	EMPTY_TASK_STATE,
+	isCanvasTabVisible,
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
+	mountedActivityWorkspacesAtom,
+	pendingCanvasArtifactIdAtom,
 	planModeStateBySessionAtom,
 	projectsAtom,
 	promptPredictingAtom,
 	promptSuggestionsAtom,
 	rememberSubagentsForSession,
+	resolveActivityWorkspaceKey,
 	retryProgressAtom,
 	subagentsBySessionAtom,
 	taskStateBySessionAtom,
@@ -68,6 +76,7 @@ import {
 	rememberOptimisticUserMessage,
 } from "../services/optimistic-user-message-cache";
 import { diffConsumedQueueEntries } from "../services/queue-mirror";
+import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
 import type { ActiveSessionHandle } from "./session-manager-types";
 
 const DELTA_FLUSH_INTERVAL_MS = 100;
@@ -281,10 +290,16 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							if (getQueuedDispatchSeq(sessionId) !== (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
 								return;
 							}
-							const mapped = reconcileOptimisticUserMessages(
-								sessionId,
-								conversationProjectionRef.current.projectHistory(history, sessionId),
-							);
+							const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
+							const activeSessionPath = activeSessionRef.current?.sessionPath;
+							if (activeSessionPath) {
+								registerActiveTranscriptBacklog(activeSessionPath, {
+									entries: history,
+									spans: projected.spans,
+									mediaSessionId: sessionId,
+								});
+							}
+							const mapped = reconcileOptimisticUserMessages(sessionId, projected.messages);
 							if (elapsed > 0) {
 								for (let i = mapped.length - 1; i >= 0; i--) {
 									const message = mapped[i];
@@ -314,7 +329,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 						// 输入预测：仅交互式会话（排除批量 / 流转），且开关开启时。每轮
 						// 正常完成后基于最近几轮对话异步生成 0-3 条建议，回填时校验过期。
 						if (rid && projectType !== "batch") {
-							let predictSnapshot: ChatConversationItem[] = [];
+							let predictSnapshot: ChatTimelineItem[] = [];
 							setChatMessages((prev) => {
 								predictSnapshot = prev;
 								return prev;
@@ -526,12 +541,16 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							.getFullHistory(sessionId)
 							.then((history) => {
 								if (activeSessionRef.current?.runtimeId !== sessionId) return;
-								setChatMessages(
-									reconcileOptimisticUserMessages(
-										sessionId,
-										conversationProjectionRef.current.projectHistory(history, sessionId),
-									),
-								);
+								const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
+								const activeSessionPath = activeSessionRef.current?.sessionPath;
+								if (activeSessionPath) {
+									registerActiveTranscriptBacklog(activeSessionPath, {
+										entries: history,
+										spans: projected.spans,
+										mediaSessionId: sessionId,
+									});
+								}
+								setChatMessages(reconcileOptimisticUserMessages(sessionId, projected.messages));
 							})
 							.catch((error) =>
 								console.warn("[useSessionManager] history refresh after compaction failed", error),
@@ -566,6 +585,30 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 						const next = applyTaskFactEvent(current, event);
 						return next === current ? prev : new Map(prev).set(sid, next);
 					});
+				}
+				if (event.type === "artifact.descriptor") {
+					const store = getDefaultStore();
+					store.set(canvasArtifactRevisionAtom, (count) => count + 1);
+					const artifactId = event.artifact?.artifactId;
+					// 未读抑制与 pending 归属都以「当前挂载的活动工作空间」为键（TASK-0079）：
+					// 面板页签挂在 workspace.id 上——普通对话是 cwd，Team 是 agent-team:<…>，
+					// 按 cwd 直查在 Team 视图永远落空，页签开着也照样累加幻影未读。
+					const mountedWorkspaces = store.get(mountedActivityWorkspacesAtom);
+					const mountedKeys = mountedWorkspaces.flatMap((workspace) => [workspace.id, workspace.cwd]);
+					const canvasVisible = isCanvasTabVisible(store.get(activityPanelTabByProjectAtom), mountedKeys);
+					const cwd = activeSessionRef.current?.cwd;
+					if (!canvasVisible) {
+						if (typeof artifactId === "string" && artifactId && cwd) {
+							// 画布不可见才排队（可见时用户可能正在阅读，交给 revision 刷新列表）；
+							// workspaceId 用挂载表把 cwd 反查成真正的工作空间键，查不到时退回 cwd，
+							// 保证只有归属面板会消费这条 pending。
+							store.set(pendingCanvasArtifactIdAtom, {
+								workspaceId: resolveActivityWorkspaceKey(mountedWorkspaces, cwd),
+								artifactId,
+							});
+						}
+						store.set(canvasUnreadCountAtom, (count) => count + 1);
+					}
 				}
 				return;
 			}
@@ -663,12 +706,13 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers };
 }
 
-function buildRecentConversation(messages: ChatConversationItem[]): string {
+function buildRecentConversation(messages: ChatTimelineItem[]): string {
 	const relevant = messages.filter((message) => message.kind !== "event");
 	let startIndex = relevant.length;
 	let userCount = 0;
 	for (let index = relevant.length - 1; index >= 0; index--) {
-		if (relevant[index].kind === "user") {
+		const item = relevant[index];
+		if (item.kind === "user" || (item.kind === "placeholder" && item.role === "user")) {
 			userCount++;
 			startIndex = index;
 			if (userCount >= 3) break;
@@ -676,9 +720,10 @@ function buildRecentConversation(messages: ChatConversationItem[]): string {
 	}
 	const lines: string[] = [];
 	for (const message of relevant.slice(startIndex)) {
-		const text = (message.text ?? "").trim();
+		const text = (message.kind === "placeholder" ? message.summary : (message.text ?? "")).trim();
 		if (!text) continue;
-		lines.push(`${message.kind === "user" ? "User" : "Assistant"}: ${text.slice(0, 600)}`);
+		const role = message.kind === "user" || (message.kind === "placeholder" && message.role === "user");
+		lines.push(`${role ? "User" : "Assistant"}: ${text.slice(0, 600)}`);
 	}
 	return lines.join("\n\n").slice(0, 4000);
 }

@@ -5,6 +5,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { TeamAssemblyDraft } from "../lib/team-assembly";
 import { TeamSettingsSheet } from "./TeamSettingsSheet";
 
 vi.mock("react-i18next", () => ({
@@ -103,22 +104,22 @@ beforeEach(() => {
 
 function renderSheet(
 	overrides: {
-		onSave?: ReturnType<typeof vi.fn>;
-		onOpenMember?: ReturnType<typeof vi.fn>;
+		onSave?: (draft: TeamAssemblyDraft) => Promise<TeamDefinition | undefined>;
+		onOpenMember?: (agentId: string) => void;
 		team?: TeamDefinition;
 	} = {},
 ) {
-	const onSave = overrides.onSave ?? vi.fn(async () => team);
-	const onOpenMember = overrides.onOpenMember ?? vi.fn();
+	const onSave = overrides.onSave ?? (vi.fn(async () => team) as unknown as (draft: TeamAssemblyDraft) => Promise<TeamDefinition | undefined>);
+	const onOpenMember = overrides.onOpenMember ?? (vi.fn() as unknown as (agentId: string) => void);
 	render(
 		<TeamSettingsSheet
 			open
 			team={overrides.team ?? team}
 			agents={agents}
 			agentsById={new Map(agents.map((item) => [item.id, item]))}
-			onClose={vi.fn()}
+			onClose={vi.fn() as unknown as () => void}
 			onSave={onSave}
-			onDelete={vi.fn()}
+			onDelete={vi.fn() as unknown as () => void}
 			onOpenMember={onOpenMember}
 		/>,
 	);
@@ -226,6 +227,45 @@ describe("TeamSettingsSheet", () => {
 		);
 	});
 
+
+	it("renames a member's in-team handle after validating it against the roster", async () => {
+		const { onSave } = renderSheet();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "settings.memberHandleRename:beta" }));
+		const editor = screen.getByLabelText("settings.memberHandle");
+		expect(editor).toHaveProperty("value", "beta");
+
+		// 撞名（与 alpha 归一化后相同）在应用前就被拦下。
+		await user.clear(editor);
+		await user.type(editor, "Alpha");
+		expect(screen.getByRole("status").textContent).toBe("settings.memberHandleTaken");
+		expect(screen.getByRole("button", { name: "settings.memberHandleApply" })).toHaveProperty("disabled", true);
+
+		await user.clear(editor);
+		await user.type(editor, " reviewer ");
+		await user.click(screen.getByRole("button", { name: "settings.memberHandleApply" }));
+		expect(screen.getByText("@reviewer")).toBeTruthy();
+		await user.click(screen.getByRole("button", { name: /settings.saveChanges/ }));
+		await waitFor(() =>
+			expect(onSave).toHaveBeenCalledWith(
+				expect.objectContaining({ handles: expect.objectContaining({ beta: "reviewer" }) }),
+			),
+		);
+	});
+
+	it("does not offer an in-team rename to a member who has not joined the team yet", async () => {
+		renderSheet();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "settings.addMember" }));
+		await user.click(screen.getByRole("button", { name: "settings.add" }));
+
+		// 新成员走 new 变体，协议不收 handle：入口会在保存时被静默丢弃，索性不给。
+		expect(screen.getByText("@spare")).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "settings.memberHandleRename:spare" })).toBeNull();
+		expect(screen.getByRole("button", { name: "settings.memberHandleRename:alpha" })).toBeTruthy();
+	});
 
 	it("keeps saving disabled until the draft actually changes", async () => {
 		const { onSave } = renderSheet();

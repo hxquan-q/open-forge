@@ -9,7 +9,8 @@ vi.mock("../ssh/ssh-runtime.js", () => ({ getSshConnection: () => connection }))
 
 const { createDesktopPromptRuntimeSources } = await import("./resource-runtime.js");
 
-describe("远程项目会话的资源发现", () => {
+// 回环 SSH 顶替脚本是 /bin/sh POSIX shell，win32 下无 shebang 执行与合法远端 POSIX 路径。
+describe.skipIf(process.platform === "win32")("远程项目会话的资源发现", () => {
 	it("读到远端项目自己的 AGENTS.md 与项目技能，不读本机的", async () => {
 		const remoteRoot = realpathSync(mkdtempSync(join(tmpdir(), "vetta-remote-project-")));
 		mkdirSync(join(remoteRoot, ".agents/skills/deploy"), { recursive: true });

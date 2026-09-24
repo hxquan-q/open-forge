@@ -1,4 +1,5 @@
 import { BotAvatar } from "@shared/components/BotAvatar";
+import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 import type { ConversationParticipantViewModel } from "@shared/conversation";
 import type { ChatAgentMessageViewModel, ChatToolCallPresentationViewModel } from "@shared/store/atoms";
 import { useThemeSurface } from "@vetta-org/theme-sdk/appearance";
@@ -161,7 +162,7 @@ export const AssistantMessage = memo(function AssistantMessage({
 								<BotAvatar active={isCurrentlyStreaming} />
 							)}
 						</MessageLayout.HeaderLeading>
-						<Message.Author>{participant?.name ?? "Vetta"}</Message.Author>
+						<Message.Author>{participant?.name ?? DESKTOP_BRAND.displayName}</Message.Author>
 						{message.timestamp ? <Message.Meta>{formatTime(message.timestamp)}</Message.Meta> : null}
 						{durationAvailable ? (
 							<>

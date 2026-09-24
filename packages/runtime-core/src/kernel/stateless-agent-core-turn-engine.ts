@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import {
 	type AgentExecutionEvent,
 	type AgentRunResult,
@@ -45,8 +47,10 @@ import type {
 	TurnEngineRequest,
 } from "./contracts.js";
 import { KERNEL_ERROR_CODES, TurnExecutionError, turnProtocolError } from "./errors.js";
+import { createMessagePrefixStabilityTracker } from "./message-prefix-stability.js";
 import { withPromptCacheDiagnostics } from "./model-call-diagnostics.js";
 import { composeModelCallSystemPrompt, resolveModelCallFrame } from "./model-call-frame.js";
+import { RUNTIME_CONTEXT_STABILITY_OBSERVATION } from "./runtime-observations.js";
 import { RuntimeToolExecutionError } from "./tool-execution-error.js";
 
 const DEFAULT_MAX_RECOVERY_ATTEMPTS = 100;
@@ -122,6 +126,7 @@ export class StatelessAgentCoreTurnEngine implements TurnEnginePort {
 		let currentFrame = initialFrame;
 		const inputQueue = request.inputQueue;
 		const frames = new Map<number, ModelCallFrame>();
+		const messageStability = createMessagePrefixStabilityTracker();
 		const lifecycle = request.snapshot.contextCompositionPublisher
 			? createContextCompositionLifecycle({
 					turnId: request.turnId,
@@ -199,6 +204,21 @@ export class StatelessAgentCoreTurnEngine implements TurnEnginePort {
 					messages: finalizedMessages,
 					tools: tools.map(toModelTool),
 				};
+				// 消息前缀稳定性度量：在最终 provider 侧前缀组装完成后按模型调用发布（fail-safe）。
+				const stability = messageStability.observe(finalizedMessages);
+				try {
+					request.snapshot.observationPublisher?.record(
+						RUNTIME_CONTEXT_STABILITY_OBSERVATION,
+						{ phase: "compared", ...stability },
+						{
+							sessionId: request.sessionId,
+							turnId: request.turnId,
+							modelCallId: `${request.turnId}:model-call:${modelCallIndex + 1}`,
+						},
+					);
+				} catch {
+					// 观察通道违约不得影响模型调用；内核 Publisher 已内建隔离，这里兜底自定义实现。
+				}
 				const effectiveStreamOptions = {
 					...this.options.streamOptions,
 					...(request.modelBinding ? { reasoning: request.modelBinding.reasoning } : {}),

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type SubagentTypeId = string;
 
 export type SubagentStatus = "queued" | "pending" | "running" | "completed" | "failed" | "interrupted";

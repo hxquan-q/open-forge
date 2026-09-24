@@ -69,6 +69,7 @@ describe("team assembly draft", () => {
 			memberIds: ["a", "b"],
 			leaderId: "b",
 			assignments: {},
+			handles: { a: "a", b: "b" },
 		});
 	});
 
@@ -168,6 +169,22 @@ describe("team assembly submission", () => {
 			leader: false,
 			assignment: { responsibility: "Owns review" },
 		});
+	});
+
+	it("carries a drafted handle into the update input only when it actually changes", () => {
+		const base = { teamId: "team", name: "Existing", memberIds: ["a", "b"], leaderId: "b" };
+
+		// 与现值相同（含仅首尾空格差异）或空白都不携带：省略在协议里表示「本次没碰称呼」。
+		const untouched = buildUpdateTeamInput({ ...base, handles: { a: "  a  " } }, team, agentsById);
+		expect(untouched.members[0]).not.toHaveProperty("handle");
+
+		const blanked = buildUpdateTeamInput({ ...base, handles: { a: "   " } }, team, agentsById);
+		expect(blanked.members[0]).not.toHaveProperty("handle");
+
+		const renamed = buildUpdateTeamInput({ ...base, handles: { a: "reviewer" } }, team, agentsById);
+		expect(renamed.members[0]).toMatchObject({ memberId: "member-a", handle: "reviewer" });
+		// 其他成员不受牵连：b 没改名就不携带。
+		expect(renamed.members[1]).not.toHaveProperty("handle");
 	});
 
 	it("falls back to the first member when the recorded leader was released", () => {

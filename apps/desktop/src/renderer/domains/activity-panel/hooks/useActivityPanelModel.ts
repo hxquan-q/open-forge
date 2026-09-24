@@ -26,6 +26,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ActivityPanelActions, ActivityPanelModel } from "../components/activity-panel/types";
 import { resolveActivityTabs } from "../registry/resolve-activity-tabs";
 import type { ActivityTabDefinition, ActivityTabId, ActivityTabMeta, ResolvedActivityTab } from "../registry/types";
+import {
+	defaultHiddenBuiltinTabIds,
+	effectiveHiddenActivityTabKeys,
+	hideActivityTabKeys,
+	revealActivityTabKeys,
+} from "../services/activity-tab-visibility";
 import { mergeDockedTabOrder } from "../services/floating-activity-tab";
 import { useActivityTabResidency } from "./useActivityTabResidency";
 import { useFloatingActivityTabs } from "./useFloatingActivityTabs";
@@ -86,7 +92,12 @@ export function useActivityPanelModel({
 	);
 	const [hiddenTabsMap, setHiddenTabsMap] = useAtom(hiddenActivityTabsAtom);
 	const [tabOrderMap, setTabOrderMap] = useAtom(activityTabOrderAtom);
-	const hiddenKeys = useMemo(() => hiddenTabsMap.get(workspaceId) ?? [], [workspaceId, hiddenTabsMap]);
+	const storedHiddenKeys = hiddenTabsMap.get(workspaceId);
+	const defaultHiddenIds = useMemo(() => defaultHiddenBuiltinTabIds(definitions), [definitions]);
+	const hiddenKeys = useMemo(
+		() => effectiveHiddenActivityTabKeys(storedHiddenKeys, defaultHiddenIds),
+		[defaultHiddenIds, storedHiddenKeys],
+	);
 	const tabOrder = useMemo(() => tabOrderMap.get(workspaceId) ?? [], [workspaceId, tabOrderMap]);
 
 	const resolved = useMemo(
@@ -320,12 +331,9 @@ export function useActivityPanelModel({
 		if (!remembered || !hiddenKeys.includes(remembered)) return;
 		if (!resolved.candidates.some((item) => item.id === remembered)) return;
 		const next = new Map(hiddenTabsMap);
-		next.set(
-			workspaceId,
-			(next.get(workspaceId) ?? []).filter((key) => key !== remembered),
-		);
+		next.set(workspaceId, revealActivityTabKeys(next.get(workspaceId), remembered, defaultHiddenIds));
 		setHiddenTabsMap(next);
-	}, [workspaceId, tabByProject, hiddenKeys, resolved.candidates, hiddenTabsMap, setHiddenTabsMap]);
+	}, [workspaceId, tabByProject, hiddenKeys, resolved.candidates, hiddenTabsMap, setHiddenTabsMap, defaultHiddenIds]);
 
 	const onTabDragStart = useCallback<ActivityPanelActions["onTabDragStart"]>(
 		(event) => {
@@ -361,8 +369,7 @@ export function useActivityPanelModel({
 				return;
 			}
 			const next = new Map(hiddenTabsMap);
-			const current = next.get(workspaceId) ?? [];
-			if (!current.includes(key)) next.set(workspaceId, [...current, key]);
+			next.set(workspaceId, hideActivityTabKeys(next.get(workspaceId), key, defaultHiddenIds));
 			setHiddenTabsMap(next);
 			if (activeTab === key) {
 				onTabChange(dockedTabItems.find((item) => item.key !== key)?.key ?? "file");
@@ -379,19 +386,17 @@ export function useActivityPanelModel({
 			dockedTabItems,
 			onTabChange,
 			floating.actions.clearFloatingTab,
+			defaultHiddenIds,
 		],
 	);
 	const onRestoreTab = useCallback(
 		(key: string) => {
 			const next = new Map(hiddenTabsMap);
-			next.set(
-				workspaceId,
-				(next.get(workspaceId) ?? []).filter((hiddenKey) => hiddenKey !== key),
-			);
+			next.set(workspaceId, revealActivityTabKeys(next.get(workspaceId), key, defaultHiddenIds));
 			setHiddenTabsMap(next);
 			onTabChange(key as ActivityTabKey);
 		},
-		[workspaceId, hiddenTabsMap, setHiddenTabsMap, onTabChange],
+		[workspaceId, hiddenTabsMap, setHiddenTabsMap, onTabChange, defaultHiddenIds],
 	);
 	/** 从可添加池显式上栏插件 tab 并切过去（与 openActivityTab 同语义，不强制改宽度）。 */
 	const onAttachPluginTab = useCallback(

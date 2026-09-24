@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Api, Model } from "@vetta/ai";
 import { type RuntimeObservationPublisher, runtimeObservationFailure } from "@vetta/runtime-core";
 import { CODING_AGENT_COMPACTION_PREFIRE_OBSERVATION } from "../../runtime-contracts/context-observability.js";

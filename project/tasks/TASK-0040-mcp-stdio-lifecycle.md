@@ -1,7 +1,7 @@
 ---
 id: TASK-0040
 type: task
-status: ready
+status: done
 priority: P1
 owner: packages/runtime-mcp
 requirement: REQ-0002
@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # MCP stdio 子进程生命周期盘点与补强
 
@@ -62,7 +63,7 @@ runtime-mcp 已有 64/16MiB 响应上限与 deferred tools，但 stdio 连接生
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：`project/verification/VERIFICATION-0004-mcp-stdio-lifecycle-audit.md`；登记 `TASK-0053`、`TASK-0054`。
+- 实际运行：源码走读（supervisor + stdio-process + stdio-mcp-client）。
+- 未运行及原因：本 Task 为盘点，无运行时测试要求。
+- 剩余风险：Windows 杀树与 eager 启动仍待 0053/0054 实现。

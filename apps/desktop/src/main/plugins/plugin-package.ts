@@ -17,6 +17,7 @@ import type {
 	PluginLocales,
 	PluginManifest,
 } from "../../preload/api-types/plugins.js";
+import { extractZipArchiveSafely } from "../archive/safe-zip-extract.js";
 import { effectivePluginCommands, effectivePluginPermissions } from "./plugin-permission-policy.js";
 
 interface PluginPackageLogger {
@@ -198,7 +199,7 @@ export function createInstalledPluginFromManifest(input: {
 export async function extractPluginArchive(buffer: Buffer, targetDir: string): Promise<void> {
 	await rm(targetDir, { recursive: true, force: true });
 	await mkdir(targetDir, { recursive: true });
-	new AdmZip(buffer).extractAllTo(targetDir, true);
+	await extractZipArchiveSafely(buffer, targetDir);
 }
 
 export async function findPluginManifest(extractDir: string): Promise<{ manifest: PluginManifest; sourceDir: string }> {

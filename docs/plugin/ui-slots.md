@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # UI 扩展点
 
 `ctx.ui` 提供 UI 注册点（消息卡片另见 [message-cards.md](./message-cards.md)）。每个注册都返回 `Disposable`（`{ dispose() }`）；插件卸载时宿主会统一处置，无需手动调用。
@@ -340,6 +341,40 @@ const bytes = url
 // ✅ 最佳：引擎自己拉流
 pdfjs.getDocument({ url: file.getUrl() });
 ```
+
+## Task Artifact renderer registerArtifactRenderer
+
+为 Task Artifact 注册按类型解析的只读 Renderer。宿主先用 contribution 的 TypeBox schema 校验安全 descriptor 投影，再挂载组件；`rendererType` 存在时精确匹配，缺省时按 Artifact `kind` 匹配。未知显式类型不会猜测或静默改用其它 Renderer。
+
+- 权限：`ui.slot.artifact-renderer`（缺权限 **warn+noop**）；内容读取另需 `fs.read`
+- 使用该 API 的插件应声明 `pluginApiVersion: ^2.8.0`
+- `descriptor` 不包含 `uri`、绝对路径或 source session id；`source` 是宿主绑定到单个 Artifact 的只读句柄，只提供 `readText()` / `readBytes()`，不接受路径参数
+- 每次读取都由宿主重新校验插件 capability session、Artifact id/version/renderer type 及来源 Session 项目根；缺文件、越界或 Session/插件已释放时拒绝读取
+- descriptor 的 schema 只验证 URI-free 投影，不是权限；Renderer 组件不能靠自述字段扩大读权限
+- 同一 type 有多个注册时首个有效注册胜；冲突不会覆盖已有 renderer，注册返回的 `Disposable` 随插件停用/重载释放
+
+```tsx
+import { Type, type Static } from "@sinclair/typebox";
+import {
+  PluginArtifactRendererDescriptorSchema,
+  type PluginArtifactRendererProps,
+} from "@vetta-org/plugin-sdk";
+
+const analysisSchema = Type.Intersect([
+  PluginArtifactRendererDescriptorSchema,
+  Type.Object({ kind: Type.Literal("analysis") }),
+]);
+type AnalysisArtifact = Static<typeof analysisSchema>;
+
+function AnalysisRenderer({ descriptor, source }: PluginArtifactRendererProps<AnalysisArtifact>) {
+  // source.readText() / source.readBytes() only read this descriptor's host-authorized file.
+  return <AnalysisPreview title={descriptor.title} source={source} />;
+}
+
+ctx.ui.registerArtifactRenderer({ type: "analysis", schema: analysisSchema, component: AnalysisRenderer });
+```
+
+只读文件预览与 Task Artifact Renderer 的分工：前者按扩展名渲染用户打开的文件；后者按 descriptor `rendererType`/`kind` 渲染 Task 交付物，且通过 `source` 将资源访问绑定到一个 Artifact。若没有匹配 Renderer，宿主保留通用 Artifact 卡片。
 
 ## 活动面板 Tab registerActivityTab
 

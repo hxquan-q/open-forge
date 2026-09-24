@@ -11,6 +11,7 @@ related_requirement: []
 related_plan: []
 related_issue: []
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 研究标题
 

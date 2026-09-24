@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { prefillNewSessionInputDraft } from "@shared/store/session-input-draft";
 import type { PluginOfficialApi } from "@vetta-org/plugin-sdk";
 import { isAppearanceUiThemeEnabled, isDesktopPetEnabled } from "../../../../shared/feature-flags";

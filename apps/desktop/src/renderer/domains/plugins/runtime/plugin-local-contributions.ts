@@ -1,4 +1,5 @@
 import type { InstalledPlugin } from "@preload/api";
+import type { RegisteredArtifactRenderer } from "@shared/store/atoms";
 import type {
 	PluginAbilityDetailSlotContribution,
 	PluginActivityTabContribution,
@@ -54,6 +55,7 @@ export interface LoadedPlugin {
 	inputActions: PluginInputActionContribution[];
 	newSessionContexts: ResolvedPluginNewSessionContextContribution[];
 	cardRenderers: PluginCardRendererContribution[];
+	artifactRenderers: RegisteredArtifactRenderer[];
 	toolCallSlots: PluginToolCallSlotContribution[];
 	turnCards: PluginTurnCardContribution[];
 	workspaceViews: ResolvedPluginWorkspaceViewContribution[];
@@ -78,6 +80,7 @@ export class PluginLocalContributions {
 	readonly inputActions: PluginInputActionContribution[] = [];
 	readonly newSessionContexts: ResolvedPluginNewSessionContextContribution[] = [];
 	readonly cardRenderers: PluginCardRendererContribution[] = [];
+	readonly artifactRenderers: RegisteredArtifactRenderer[] = [];
 	readonly toolCallSlots: PluginToolCallSlotContribution[] = [];
 	readonly turnCards: PluginTurnCardContribution[] = [];
 	readonly workspaceViews: ResolvedPluginWorkspaceViewContribution[] = [];
@@ -95,6 +98,7 @@ export class PluginLocalContributions {
 		this.inputActions.length = 0;
 		this.newSessionContexts.length = 0;
 		this.cardRenderers.length = 0;
+		this.artifactRenderers.length = 0;
 		this.toolCallSlots.length = 0;
 		this.turnCards.length = 0;
 		this.workspaceViews.length = 0;
@@ -119,6 +123,7 @@ export class PluginLocalContributions {
 			inputActions: this.inputActions,
 			newSessionContexts: this.newSessionContexts,
 			cardRenderers: this.cardRenderers,
+			artifactRenderers: this.artifactRenderers,
 			toolCallSlots: this.toolCallSlots,
 			turnCards: this.turnCards,
 			workspaceViews: this.workspaceViews,

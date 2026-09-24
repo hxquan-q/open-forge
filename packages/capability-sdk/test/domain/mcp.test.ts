@@ -76,6 +76,24 @@ describe("MCP domain capabilities", () => {
 				data: { type: MCP_SERVER_TYPES.STDIO, url: "https://mcp.example.com" },
 			}),
 		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
+		expect(
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "local",
+				data: { command: "npx", idleTimeout: 0 },
+			}),
+		).toEqual({ name: "local", data: { command: "npx", idleTimeout: 0 } });
+		expect(() =>
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "local",
+				data: { command: "npx", idleTimeout: -1 },
+			}),
+		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
+		expect(() =>
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "web",
+				data: { type: MCP_SERVER_TYPES.HTTP, url: "https://mcp.example.com", idleTimeout: 1000 },
+			}),
+		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
 		expect(() => DOMAIN_MCP_CAPABILITIES.SET_SERVER_ENABLED.parseInput({ name: "web", enabled: "yes" })).toThrowError(
 			expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }),
 		);
@@ -85,6 +103,53 @@ describe("MCP domain capabilities", () => {
 		expect(() => DOMAIN_MCP_CAPABILITIES.LIST_SERVERS.parseInput({ ignored: true })).toThrowError(
 			expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }),
 		);
+	});
+
+	it("round-trips disabledTools through upsert input and sanitized detail output", () => {
+		expect(
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "web",
+				data: {
+					type: MCP_SERVER_TYPES.HTTP,
+					url: "https://mcp.example.com",
+					disabledTools: ["delete_thing"],
+				},
+			}),
+		).toEqual({
+			name: "web",
+			data: {
+				type: MCP_SERVER_TYPES.HTTP,
+				url: "https://mcp.example.com",
+				disabledTools: ["delete_thing"],
+			},
+		});
+		expect(
+			DOMAIN_MCP_CAPABILITIES.GET_SERVER.parseOutput({
+				name: "web",
+				type: MCP_SERVER_TYPES.HTTP,
+				url: "https://mcp.example.com",
+				disabled: false,
+				disabledTools: ["delete_thing"],
+			}),
+		).toEqual({
+			name: "web",
+			type: MCP_SERVER_TYPES.HTTP,
+			url: "https://mcp.example.com",
+			disabled: false,
+			disabledTools: ["delete_thing"],
+		});
+		expect(() =>
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "web",
+				data: { type: MCP_SERVER_TYPES.HTTP, url: "https://mcp.example.com", disabledTools: "read_file" },
+			}),
+		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
+		expect(() =>
+			DOMAIN_MCP_CAPABILITIES.UPSERT_SERVER.parseInput({
+				name: "web",
+				data: { type: MCP_SERVER_TYPES.HTTP, url: "https://mcp.example.com", disabledTools: [42] },
+			}),
+		).toThrowError(expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }));
 	});
 
 	it("publishes MCP server schemas in its catalog", () => {

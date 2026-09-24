@@ -1,14 +1,17 @@
+// Modified by The Open Forge contributors.
 import type { DesktopMcpElicitationRequest } from "@preload/api";
 import type {
 	AppshotAttachment,
 	ChatErrorDetails,
 	ConversationAgentMessageViewModel,
+	ConversationMessageBranchViewModel,
 	ConversationTimelineItemViewModel,
 	ConversationUserMessageViewModel,
 	MentionedFile,
 	PendingQuestion,
 } from "@shared/conversation";
 import type { InputSegment } from "@shared/lib/input-tokens";
+import type { Usage } from "@vetta/ai";
 import type { ContextCompactionEligibility, ContextCompositionReport } from "@vetta/runtime-core";
 import { atom } from "jotai";
 import { selectAtom } from "jotai/utils";
@@ -49,7 +52,36 @@ export type ChatConversationItem =
 	| Exclude<BaseChatConversationItem, ConversationAgentMessageViewModel>
 	| ChatAgentMessageViewModel;
 
+/**
+ * 视口外持久化消息的轻量占位（TASK-0035）。独立的 ViewModel 联合成员——不是
+ * 完整 ChatConversationItem，下游不得把空 blocks 当作真实空消息。字段刻意与
+ * 消息基类对齐（id/entryId/renderKey/role/时间/分支/usage），渲染键与 timeline
+ * 位置在占位↔完整互换间保持不变。
+ */
+export interface TranscriptPlaceholderItem {
+	readonly kind: "placeholder";
+	readonly id: string;
+	readonly entryId?: string;
+	readonly renderKey?: string;
+	readonly parentId?: string | null;
+	readonly turnId: string;
+	readonly authorId: string;
+	readonly timestamp?: number;
+	readonly role: "user" | "assistant";
+	/** ≤120 Unicode 字符的展示摘要。 */
+	readonly summary: string;
+	readonly branch?: ConversationMessageBranchViewModel;
+	readonly model?: { readonly provider: string; readonly id: string };
+	/** 轻量 usage 摘要随占位保留，供会话级用量聚合。 */
+	readonly usages?: readonly Usage[];
+	readonly deliveryPhase?: "pending" | "completed" | "failed";
+	readonly phase?: "completed" | "failed" | "aborted";
+}
+
+export type ChatTimelineItem = ChatConversationItem | TranscriptPlaceholderItem;
+
 export type {
+	ArtifactCanvasOpenDetails,
 	AskUserQuestionResolution,
 	ChatErrorDetails,
 	ContentBlock,
@@ -91,6 +123,10 @@ export interface ActiveSession {
 	 * 仅用于展示（回合头像与昵称）；能力裁剪始终发生在主进程。
 	 */
 	agentProfileId?: string;
+	/** 本会话固化的解释模式；页头切换工作区不会改写它。 */
+	agentMode?: string;
+	/** 本会话固化的能力 Profile；缺省时徽标回落 agentMode。 */
+	capabilityProfile?: "work" | "coding";
 }
 
 /**
@@ -183,7 +219,7 @@ export interface SelectedSkill {
 
 export type { AppshotAttachment, MentionedFile } from "@shared/conversation";
 
-export const chatMessagesAtom = atom<ChatConversationItem[]>([]);
+export const chatMessagesAtom = atom<ChatTimelineItem[]>([]);
 
 /** Pending latest-message replacement, deferred until send. */
 export const pendingMessageEditAtom = atom<PendingMessageEdit | null>(null);
@@ -332,7 +368,7 @@ export const promptSuggestionsAtom = atom<Record<string, string[]>>({});
 
 /**
  * 输入预测「生成中」状态，按会话 runtimeId 索引。生成调用在飞时为 true，
- * 用于在该会话末条 assistant 消息的操作栏右侧显示「Vetta 正在预测…」闪光提示。
+ * 用于在该会话末条 assistant 消息的操作栏右侧显示「Open Forge 正在预测…」闪光提示。
  */
 export const promptPredictingAtom = atom<Record<string, boolean>>({});
 
@@ -438,6 +474,10 @@ export interface OpenSessionOptions {
 	 * 打开既有会话不必传，主进程从会话目录旁挂的绑定记录读回。
 	 */
 	agentProfileId?: string;
+	/** Known JSONL size; used to offer tail-only history recovery for large sessions. */
+	fileSizeBytes?: number;
+	/** Skip prompting when the caller already chose a history load mode. */
+	historyLoadMode?: "full" | "tail";
 }
 
 /** Immutable input captured before a new session has a runtimeId. */

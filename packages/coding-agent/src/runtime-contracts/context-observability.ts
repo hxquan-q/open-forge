@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { defineRuntimeObservation, type RuntimeObservationFailure } from "@vetta/runtime-core";
 
 export interface CodingAgentCompactionPrefireObservation {
@@ -27,3 +28,17 @@ export const CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION =
 		"compaction-backpressure",
 		"debug",
 	);
+
+export interface CodingAgentContextBudgetObservation {
+	readonly trigger: "turn_start" | "model_call" | "assistant_result" | "assistant_error";
+	readonly suppression: "compaction_disabled" | "context_unavailable" | "non_overflow_error";
+	readonly contextTokens: number;
+	readonly contextWindow: number;
+	readonly overByTokens: number;
+}
+
+export const CODING_AGENT_CONTEXT_BUDGET_OBSERVATION = defineRuntimeObservation<CodingAgentContextBudgetObservation>(
+	"coding-agent.context",
+	"context-budget-exceeded",
+	"warning",
+);

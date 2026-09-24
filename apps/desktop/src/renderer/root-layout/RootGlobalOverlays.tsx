@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { FilePreviewDialog } from "../domains/file-preview/components/FilePreviewDialog";
 import { KnowledgeDropOverlay } from "../domains/knowledge-base/components/KnowledgeDropOverlay";
 import { PluginGlobalSlotHost } from "../domains/plugins/components/PluginGlobalSlotHost";

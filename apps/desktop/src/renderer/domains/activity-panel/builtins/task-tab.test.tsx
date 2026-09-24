@@ -1,11 +1,14 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
-import { taskStateBySessionAtom } from "@shared/store/atoms";
+import { pluginArtifactRenderersAtom, taskStateBySessionAtom, type RegisteredArtifactRenderer } from "@shared/store/atoms";
 import { cleanup, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getDefaultStore } from "jotai";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeSessionTaskState, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
+import type { PluginArtifactRendererProps } from "@vetta-org/plugin-sdk";
 import { ActivityPanelContextProvider } from "../registry/context";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));

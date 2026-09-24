@@ -1,0 +1,122 @@
+// Copyright The Open Forge contributors.
+import { Value } from "@sinclair/typebox/value";
+import { describe, expect, it } from "vitest";
+import { createBrowserTabTool } from "../../../src/features/browser-tab/browser-tab-tool.js";
+import {
+	BROWSER_TAB_READ_ACTIONS,
+	BROWSER_TAB_TOOL_NAME,
+	BROWSER_TAB_WRITE_ACTIONS,
+	BrowserTabToolErrorSchema,
+	type BrowserTabToolInput,
+	BrowserTabToolInputSchema,
+	browserTabToolError,
+	encodeBrowserElementRef,
+	formatBrowserTabToolResult,
+	isAllowedBrowserTabUrl,
+	isBrowserTabReadAction,
+	isBrowserTabWriteAction,
+	raiseBrowserTabToolRisk,
+	readBrowserElementRef,
+	readBrowserTabToolInput,
+} from "../../../src/features/browser-tab/browser-tab-tool-contract.js";
+
+const ref = { id: "e1", pageRevision: 3 };
+
+describe("browser_tab action classification", () => {
+	it("读类与写类互斥且覆盖全部动作", () => {
+		for (const action of BROWSER_TAB_READ_ACTIONS) {
+			expect(isBrowserTabReadAction(action)).toBe(true);
+			expect(isBrowserTabWriteAction(action)).toBe(false);
+			expect(raiseBrowserTabToolRisk({ action })).toBeUndefined();
+		}
+		for (const action of BROWSER_TAB_WRITE_ACTIONS) {
+			expect(isBrowserTabWriteAction(action)).toBe(true);
+			expect(isBrowserTabReadAction(action)).toBe(false);
+			expect(raiseBrowserTabToolRisk({ action })).toBe("L3");
+		}
+	});
+});
+
+describe("browser_tab elementRef encoding", () => {
+	it("结构化 ref 与 v1:revision:id 编码双向兼容", () => {
+		expect(encodeBrowserElementRef(ref)).toBe("v1:3:e1");
+		expect(readBrowserElementRef("v1:3:e1")).toEqual(ref);
+		expect(readBrowserElementRef(ref)).toEqual(ref);
+		expect(readBrowserElementRef("e1")).toBeUndefined();
+		expect(readBrowserElementRef("v1:-1:e1")).toBeUndefined();
+		expect(readBrowserElementRef({ id: "e1" })).toBeUndefined();
+	});
+});
+
+describe("browser_tab input schema", () => {
+	it("接受各动作的合法参数", () => {
+		const cases: BrowserTabToolInput[] = [
+			{ action: "snapshot", interactiveOnly: true },
+			{ action: "inspect", elementRef: ref },
+			{ action: "screenshot", fullPage: false },
+			{ action: "wait", timeoutMs: 1000, state: "visible" },
+			{ action: "scroll", deltaY: 200 },
+			{ action: "click", elementRef: ref },
+			{ action: "fill", elementRef: ref, value: "hello" },
+			{ action: "press", key: "Enter" },
+			{ action: "navigate", url: "https://example.com/path" },
+		];
+		for (const input of cases) {
+			expect(readBrowserTabToolInput(input)).toEqual(input);
+		}
+	});
+
+	it("拒绝 javascript 面、缺 revision 的 ref、非 http(s) 导航和多余字段", () => {
+		expect(readBrowserTabToolInput({ action: "evaluate", script: "1+1" })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "click", elementRef: { id: "e1" } })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "navigate", url: "file:///etc/passwd" })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "navigate", url: "javascript:alert(1)" })).toBeUndefined();
+		expect(isAllowedBrowserTabUrl("http://localhost:3000")).toBe(true);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "snapshot", eval: "no" })).toBe(false);
+	});
+});
+
+describe("browser_tab error shape", () => {
+	it("接受 stale_reference / no_browser_session / policy_denied", () => {
+		expect(
+			Value.Check(
+				BrowserTabToolErrorSchema,
+				browserTabToolError("stale_reference", "stale", { action: "click", pageRevision: 4, elementRef: ref }),
+			),
+		).toBe(true);
+		expect(Value.Check(BrowserTabToolErrorSchema, browserTabToolError("no_browser_session", "closed"))).toBe(true);
+		expect(Value.Check(BrowserTabToolErrorSchema, browserTabToolError("policy_denied", "not https"))).toBe(true);
+		expect(Value.Check(BrowserTabToolErrorSchema, { ok: false, code: "stale_snapshot", message: "old" })).toBe(false);
+	});
+});
+
+describe("browser_tab tool adapter", () => {
+	it("宿主不可用时返回 unimplemented", async () => {
+		const tool = createBrowserTabTool({ invoke: async () => undefined });
+		expect(tool.name).toBe(BROWSER_TAB_TOOL_NAME);
+		const result = await tool.execute({
+			sessionId: "s1",
+			turnId: "t1",
+			toolCallId: "c1",
+			input: { action: "snapshot" },
+			signal: new AbortController().signal,
+		});
+		expect(result.isError).toBe(true);
+		expect(result.details).toMatchObject({ code: "unimplemented" });
+	});
+
+	it("validateInput 拒绝非 http(s) navigate", () => {
+		const tool = createBrowserTabTool({ invoke: async () => undefined });
+		expect(() => tool.validateInput?.({ action: "navigate", url: "ftp://example.com" })).toThrow();
+	});
+
+	it("stale_reference 进入 details 且 isError，content 只给摘要", () => {
+		const result = formatBrowserTabToolResult(
+			browserTabToolError("stale_reference", "page changed", { action: "click", pageRevision: 8 }),
+		);
+		expect(result.isError).toBe(true);
+		expect(result.details).toMatchObject({ code: "stale_reference", pageRevision: 8 });
+		expect(result.content[0]).toMatchObject({ type: "text" });
+		expect(String((result.content[0] as { text: string }).text)).toContain("take a new snapshot");
+	});
+});

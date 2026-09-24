@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execFileSync } from "node:child_process";
 import {
 	chmodSync,
@@ -148,9 +149,9 @@ describe("Desktop release workflow contracts", () => {
 		const warm = parse(readFileSync(join(import.meta.dirname, "../../.github/workflows/desktop-cache.yml"), "utf8"));
 		expect(warm.on.schedule).toHaveLength(1);
 		expect(warm.jobs.warm.if).toContain("github.event.repository.default_branch");
-		expect([...warm.jobs.warm.strategy.matrix.runner].sort()).toEqual(
-			jobs.build.strategy.matrix.include.map((entry) => entry.runner).sort(),
-		);
+		// 发布矩阵由 prepare 动态生成；runner 集合取平台 JSON 字面量的并集。
+		const releaseRunners = [...new Set([...workflow.matchAll(/"runner":"([^"]+)"/g)].map((m) => m[1]))].sort();
+		expect([...warm.jobs.warm.strategy.matrix.runner].sort()).toEqual(releaseRunners);
 		expect(warm.jobs.warm.steps.some((step) => /dist:|publish:/.test(step.run ?? ""))).toBe(false);
 	});
 
@@ -206,15 +207,18 @@ describe("Desktop release workflow contracts", () => {
 	});
 
 	it("builds, verifies, installs, and uploads all Linux release formats", () => {
-		expect(workflow).toContain("command: dist:linux");
-		expect(workflow).toContain("verify: verify:updates:linux:release");
+		expect(workflow).toContain('"command":"dist:linux"');
+		expect(workflow).toContain('"verify":"verify:updates:linux:release"');
 		expect(workflow).toContain("pkg-config xz-utils rpm");
 		expect(workflow).toContain("Verify native Linux package installation");
 		expect(workflow).toContain("ubuntu:24.04");
 		expect(workflow).toContain("fedora:latest");
 		expect(workflow).toContain("dnf install --assumeyes --nogpgcheck");
-		expect(workflow).toContain('test "$(cat /opt/Vetta/resources/package-type)" = "deb"');
-		expect(workflow).toContain('test "$(cat /opt/Vetta/resources/package-type)" = "rpm"');
+		expect(workflow).toContain('test "$(cat "/opt/Open Forge/resources/package-type")" = "deb"');
+		expect(workflow).toContain('test "$(cat "/opt/Open Forge/resources/package-type")" = "rpm"');
+		expect(workflow).toContain('test -x "/opt/Open Forge/OpenForge"');
+		expect(workflow).toContain('-iname "*openforge*.desktop"');
+		expect(workflow).not.toContain("/opt/Vetta");
 		expect(workflow).toContain("apps/desktop/release/*.AppImage");
 		expect(workflow).toContain("apps/desktop/release/*.deb");
 		expect(workflow).toContain("apps/desktop/release/*.rpm");
@@ -229,8 +233,8 @@ describe("Desktop release workflow contracts", () => {
 	});
 
 	it("builds, verifies, and uploads all Windows release formats", () => {
-		expect(workflow).toContain("command: dist:win");
-		expect(workflow).toContain("verify: verify:updates:windows");
+		expect(workflow).toContain('"command":"dist:win"');
+		expect(workflow).toContain('"verify":"verify:updates:windows"');
 		expect(workflow).toContain("Verify supplemental Windows packages");
 		expect(workflow).toContain("run: bun run verify:packages:windows");
 		expect(workflow).toContain("apps/desktop/release/*.exe");
@@ -299,8 +303,10 @@ describe("Desktop release workflow contracts", () => {
 
 	it("builds each macOS architecture on a matching hosted runner", () => {
 		expect(workflow).toContain("runs-on: $" + "{{ matrix.runner }}");
-		expect(workflow).toContain("runner: macos-15\n");
-		expect(workflow).toContain("runner: macos-15-intel\n");
+		expect(workflow).toContain('"runner":"macos-15"');
+		expect(workflow).toContain('"runner":"macos-15-intel"');
+		expect(workflow).toContain('"platform":"macos-arm64"');
+		expect(workflow).toContain('"platform":"macos-x64"');
 		expect(workflow).not.toContain("vetta-mac");
 	});
 
@@ -325,6 +331,29 @@ describe("Desktop release workflow contracts", () => {
 		// 正文缺失要在质量阶段就失败，而不是等平台矩阵签名公证跑完。
 		const qualityJob = workflow.slice(workflow.indexOf("\n  quality:"), workflow.indexOf("\n  build:"));
 		expect(qualityJob).toContain("node scripts/release/release-notes.mjs --check");
+	});
+
+	it("publishes the Release under the Open Forge brand and marks 0.x as pre-release", () => {
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: asserting the literal workflow shell expression
+		expect(workflow).toContain('--title "Open Forge ${VERSION}"');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: asserting the literal workflow shell expression
+		expect(workflow).not.toContain('"Vetta ${VERSION}"');
+		expect(workflow).toContain("=~ ^0\\.");
+		expect(workflow).toContain('PRERELEASE_ARGS+=("--prerelease")');
+	});
+
+	it("excludes macOS legs from published releases when signing secrets are absent", () => {
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: asserting the literal GitHub Actions expression
+		expect(jobs.build.strategy.matrix.include).toBe("${{ fromJSON(needs.prepare.outputs.platform-matrix) }}");
+		expect(jobs.verify.strategy.matrix.include).toBe(jobs.build.strategy.matrix.include);
+		expect(jobs.prepare.outputs["platform-matrix"]).toContain("platform-matrix");
+		expect(jobs.prepare.outputs["macos-enabled"]).toContain("macos-enabled");
+		expect(jobs.prepare.outputs["update-metadata-files"]).toContain("update-metadata-files");
+		expect(workflow).toContain("VAR_MACOS_RELEASE");
+		expect(workflow).toContain("excluding macOS legs");
+		for (const target of ["r2", "github"]) {
+			expect(JSON.stringify(jobs[`verify-feed-${target}`])).toContain("VETTA_UPDATE_FEED_METADATA");
+		}
 	});
 
 	it("provides an isolated test-channel workflow for real install and restart upgrades", () => {

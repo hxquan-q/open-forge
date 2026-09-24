@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ThinkingLevel } from "@vetta/agent-core";
 import type { Api, Message, Model } from "@vetta/ai";
 import type {
@@ -19,6 +20,7 @@ import type { SessionExtensionEndpointToken } from "../session-extensions/contra
 import type { RuntimeSessionTaskState } from "../task/session-projection.js";
 import type { RuntimeHostSessionDirectory } from "./runtime-host-session-directory.js";
 import type { RuntimeHostSessionEventRelay } from "./runtime-host-session-event-relay.js";
+import type { SessionEventSubscriberQueueStats } from "./session-event-subscriber-queue.js";
 import { baseSessionEvent } from "./session-events.js";
 import type {
 	RuntimeContextCompactionRequest,
@@ -269,6 +271,10 @@ export class RuntimeHostSessionOperations {
 	subscribe(sessionId: string, handler: (event: SessionEvent) => void): () => void {
 		const sessionKey = this.options.directory.resolveSessionKey(sessionId);
 		return this.options.events.subscribe(sessionKey, this.requireSession(sessionId), handler);
+	}
+
+	readSubscriberDeliveryStats(handler: (event: SessionEvent) => void): SessionEventSubscriberQueueStats | undefined {
+		return this.options.events.readSubscriberDeliveryStats(handler);
 	}
 
 	subscribeExecutionObservations(

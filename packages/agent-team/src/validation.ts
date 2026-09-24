@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type {
@@ -163,6 +164,7 @@ const updateTeamMember = Type.Union([
 			kind: Type.Literal("existing"),
 			memberId: id,
 			leader: Type.Boolean(),
+			handle: Type.Optional(id),
 			assignment: Type.Optional(assignmentInput),
 		},
 		{ additionalProperties: false },

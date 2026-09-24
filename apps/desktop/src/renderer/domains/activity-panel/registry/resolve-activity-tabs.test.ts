@@ -77,6 +77,35 @@ describe("resolveActivityTabs", () => {
 		expect(result.onBar.map((t) => t.id)).toEqual(["file"]);
 	});
 
+	it("puts initially-hidden builtins into restorable until revealed", () => {
+		const terminal = def({ id: "terminal", source: "builtin", order: 16, initiallyVisible: false });
+		const hidden = resolveActivityTabs({
+			definitions: [file, terminal],
+			metaById: metaMap({
+				file: { label: "Files" },
+				terminal: { label: "Terminal" },
+			}),
+			tabVisibilityRecords: [],
+			hiddenKeys: ["terminal"],
+			tabOrder: [],
+		});
+		expect(hidden.onBar.map((t) => t.id)).toEqual(["file"]);
+		expect(hidden.restorable.map((t) => t.id)).toEqual(["terminal"]);
+
+		const revealed = resolveActivityTabs({
+			definitions: [file, terminal],
+			metaById: metaMap({
+				file: { label: "Files" },
+				terminal: { label: "Terminal" },
+			}),
+			tabVisibilityRecords: [],
+			hiddenKeys: [],
+			tabOrder: [],
+		});
+		expect(revealed.onBar.map((t) => t.id)).toEqual(["file", "terminal"]);
+		expect(revealed.restorable).toEqual([]);
+	});
+
 	it("splits builtin hidden into restorable", () => {
 		const result = resolveActivityTabs({
 			definitions: [file, todo],

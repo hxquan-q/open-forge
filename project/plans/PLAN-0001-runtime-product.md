@@ -9,6 +9,7 @@ source: exprot/implementation-plan.md
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # work/coding Runtime 产品演进
 
@@ -45,11 +46,11 @@ Task 不创建第二套 Agent Loop；Artifact 不创建第二套文件事实源�
 
 剩余切片：
 
-- TASK-0027 阶段 6b：Plugin Artifact Renderer Registry（ready；depends_on 0015/0016/0020/0021 已全部完成）。
-- TASK-0028 阶段 3a：文档处理纵向切片（blocked；depends_on 已全部完成，剩余唯一阻塞为 ISSUE-0006 的 Task 创建入口）。
-- TASK-0025 阶段 3b-2 本地研究、TASK-0026 阶段 3b-3 数据分析（blocked；经 depends_on TASK-0028 传递阻塞，0025/0026/0028 共享 WorkspaceMode 面板路径默认串行）。
+- TASK-0027 阶段 6b：Plugin Artifact Renderer Registry（blocked，依赖 TASK-0068 Plugin SDK renderer/schema API；0015/0016/0020/0021 均已完成）。
+- TASK-0028 阶段 3a：文档处理纵向切片（done；ISSUE-0006 显式 Task 创建边界，Work 右栏入口已合入主工作区）。
+- TASK-0025 阶段 3b-2 本地研究、TASK-0026 阶段 3b-3 数据分析（ready；前置 TASK-0028 已完成；0025 与 0026 共享 WorkspaceMode 面板路径并互相冲突，不支持并行）。
 
-待决策门：
+已裁决决策门：
 
 - ISSUE-0005：done——已裁决方案 C：`WorkspaceMode` 只管项目布局，`agentMode` 保持提示词偏向，Tool/Memory 差异由 `agentProfileId` 固化到新 Session；切换布局不静默重配在运行 Session。
-- ISSUE-0006：draft——冻结何时从 Conversation 创建可恢复 Task；决议前不实现隐式升级，TASK-0028 不进入 ready。
+- ISSUE-0006：done——普通 Chat 保持 Conversation；只有用户显式升级或注册的持久工作流入口创建 Task，不按 Prompt 复杂度自动升级；TASK-0028 已按此合同实施。

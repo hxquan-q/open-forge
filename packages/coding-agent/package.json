@@ -1,6 +1,7 @@
 {
 	"name": "@vetta/coding-agent",
 	"version": "0.0.1",
+	"private": true,
 	"description": "Coding Agent features, policies, and stable API semantics",
 	"type": "module",
 	"piConfig": {

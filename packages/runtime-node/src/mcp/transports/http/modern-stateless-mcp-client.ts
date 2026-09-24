@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
 import type { McpClientHandle } from "@vetta/runtime-mcp/client";
 import { McpAuthRequiredError, McpInputRequiredError, McpTaskCreatedError } from "@vetta/runtime-mcp/client";

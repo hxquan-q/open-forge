@@ -20,6 +20,7 @@ integration_status: integrated
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Tool Catalog Policy 收敛（implementation-plan 阶段 6a）
 

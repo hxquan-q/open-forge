@@ -282,7 +282,7 @@ it("seeds the search keyword from an external deep link and lets the page take o
 
 	// 播种之后由页面状态接管：清空搜索框应恢复整表，而不是被 URL 值粘住。
 	act(() => result.current.setSearchQuery(""));
-	await waitFor(() => expect(result.current.items.map((item) => item.title).sort()).toEqual(["Figma", "Notion"]));
+	await waitFor(() => expect(result.current.items.map((item) => item.title).sort()).toEqual(["Figma", "Notion", "Universal Database"]));
 
 	// 未带 q 的深链不应残留上一次的搜索词。
 	const plain = renderHook(() => useAbilitiesModel());

@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 export const PLUGIN_PERMISSIONS = [
 	"ui.slot.global",
 	"ui.slot.ability-detail",
 	"ui.slot.file-preview",
+	"ui.slot.artifact-renderer",
 	"ui.slot.activity-tab",
 	"ui.slot.bottom-panel",
 	"ui.slot.input-action",

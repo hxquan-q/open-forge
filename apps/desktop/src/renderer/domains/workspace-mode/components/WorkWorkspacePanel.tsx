@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -101,6 +102,7 @@ export interface WorkWorkspacePanelProps {
 }
 
 export function WorkWorkspacePanel({ children }: WorkWorkspacePanelProps): JSX.Element {
+	const { t } = useTranslation("chat");
 	return (
 		// 窄屏（<640px，与侧边栏悬浮阈值同源）没有右栏位置：coding 侧此时改走底部
 		// 抽屉，work 骨架直接隐藏。
@@ -108,6 +110,10 @@ export function WorkWorkspacePanel({ children }: WorkWorkspacePanelProps): JSX.E
 			className="hidden w-[340px] shrink-0 flex-col gap-2 overflow-y-auto min-[640px]:flex"
 			data-workspace-panel="work"
 		>
+			<header className="px-1 pb-0.5">
+				<h2 className="text-[13px] font-medium text-foreground">{t("workspace.work.panelTitle")}</h2>
+				<p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">{t("workspace.work.panelLead")}</p>
+			</header>
 			{children ?? WORK_PANEL_SECTIONS.map((id) => <WorkPanelSection key={id} id={id} />)}
 		</aside>
 	);

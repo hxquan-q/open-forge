@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopAbilitiesApi } from "./api-types/abilities.js";
 import type { DesktopActionApprovalApi } from "./api-types/action-approval.js";
 import type { DesktopAgentTeamsApi } from "./api-types/agent-teams.js";
@@ -6,6 +7,8 @@ import type { DesktopAppMonitorApi } from "./api-types/app-monitor.js";
 import type { DesktopAppshotApi } from "./api-types/appshot.js";
 import type { DesktopAuthApi } from "./api-types/auth.js";
 import type { DesktopBatchTasksApi } from "./api-types/batch-tasks.js";
+import type { DesktopBrowserTabApi } from "./api-types/browser-tab.js";
+import type { DesktopCanvasApi } from "./api-types/canvas.js";
 import type { DesktopConfigApi } from "./api-types/config.js";
 import type { DesktopConversationTagsApi } from "./api-types/conversation-tags.js";
 import type { DesktopDebugApi } from "./api-types/debug.js";
@@ -57,6 +60,8 @@ export type * from "./api-types/app-monitor.js";
 export type * from "./api-types/appshot.js";
 export type * from "./api-types/auth.js";
 export type * from "./api-types/batch-tasks.js";
+export type * from "./api-types/browser-tab.js";
+export type * from "./api-types/canvas.js";
 export type * from "./api-types/config.js";
 export type * from "./api-types/debug.js";
 export type * from "./api-types/dialog.js";
@@ -124,6 +129,8 @@ export interface DesktopApi {
 	tray: DesktopTrayApi;
 	scheduler: DesktopSchedulerApi;
 	batchTasks: DesktopBatchTasksApi;
+	canvas: DesktopCanvasApi;
+	browserTab: DesktopBrowserTabApi;
 	downloads: DesktopDownloadsApi;
 	im: DesktopImApi;
 	debug: DesktopDebugApi;

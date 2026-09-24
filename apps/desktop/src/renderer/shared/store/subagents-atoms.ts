@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { atom } from "jotai";
 
 /** Mirrors the validated Coding Agent subagent Session Extension snapshot. */

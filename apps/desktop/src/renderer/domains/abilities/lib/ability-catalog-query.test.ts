@@ -248,7 +248,7 @@ describe("queryAbilityCatalog", () => {
 		expect(page.items.map((item) => item.id)).toEqual([first.id, second.id]);
 	});
 
-	it("does not synthesize retired built-in MCP entries in discover", () => {
+	it("synthesizes only listedInDiscover built-in MCP presets in discover", () => {
 		const t = ((key: string) => key) as unknown as TFunction<"settings">;
 		const presets = buildMcpAbilities(
 			[],
@@ -265,9 +265,24 @@ describe("queryAbilityCatalog", () => {
 			t,
 		);
 
-		const page = queryAbilityCatalog(presets, { scope: "discover", page: 1, pageSize: 60 });
+		// 只有 universal-db 放行 listedInDiscover；Canva/Slack/Gmail 等未列出预设仍不合成
+		expect(presets.map((item) => item.slug)).toEqual(["universal-db"]);
+		expect(presets[0]).toMatchObject({
+			type: "mcp",
+			serverName: "universal-db",
+			catalogSource: { kind: "builtin", id: "builtin" },
+			category: "__connectors__",
+			isBuiltin: false,
+			installed: false,
+			fromMarket: false,
+		});
 
-		expect(page.items).toEqual([]);
+		const page = queryAbilityCatalog(presets, { scope: "discover", page: 1, pageSize: 60 });
+		expect(page.items.map((item) => item.slug)).toEqual(["universal-db"]);
+
+		// 预设支撑的 MCP 不算手动安装能力，不进「我的」
+		const mine = queryAbilityCatalog(presets, { scope: "mine", page: 1, pageSize: 60 });
+		expect(mine.items).toEqual([]);
 	});
 
 	it("keeps discover ordering stable when installation state changes", () => {

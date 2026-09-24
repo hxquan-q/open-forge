@@ -24,6 +24,7 @@
       "disabled": false,
       "autoApprove": ["read_file"],
       "startupTimeout": 10000,
+      "idleTimeout": 1800000,
       "debug": false
     }
   }
@@ -31,6 +32,8 @@
 ```
 
 - `env` 支持 `${VAR}`；`cwd` 支持 `${PROJECT_ROOT}`。
+- `idleTimeout`（毫秒，仅 stdio）：连接空闲超过该时长后断开并回收子进程，工具目录保持可见，
+  下次调用自动重连；`0` 表示不回收，缺省走宿主默认值（Desktop 为 30 分钟）。
 - HTTP 远程 server 由运行时支持（含 OAuth 流程时凭证在 `~/.vetta/agent/mcp-auth/`，不写回 `mcp.json`）。
 - 插件可贡献第三配置源（不回写用户文件），命名 `plugin-<id>-<local>`。见仓库 ADR-0040。
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { McpInputRequiredError, McpTaskCreatedError } from "@vetta/runtime-mcp/client";
 import { MCP_MODERN_PROTOCOL_VERSION } from "@vetta/runtime-mcp/protocol";
 import { describe, expect, it } from "vitest";

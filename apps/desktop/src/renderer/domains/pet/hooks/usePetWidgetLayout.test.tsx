@@ -3,6 +3,7 @@
 import { renderHook } from "@testing-library/react";
 import { createRef, type RefObject } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PetContentBounds, PetVideoHitbox } from "../../../../shared/pet-ipc";
 import { usePetWidgetLayout } from "./usePetWidgetLayout";
 
 class FakeResizeObserver {
@@ -48,11 +49,11 @@ describe("usePetWidgetLayout", () => {
 			endWindowMove: async () => undefined,
 			beginWindowResize: async () => undefined,
 			setWindowSize: async () => undefined,
-			setContentSize,
+			setContentSize: setContentSize as unknown as (content: number | PetContentBounds) => Promise<void>,
 			endWindowResize: async () => undefined,
 			setVideoBaseSize: async () => undefined,
 			setMousePassthrough: async () => undefined,
-			setVideoHitbox,
+			setVideoHitbox: setVideoHitbox as unknown as (hitbox: PetVideoHitbox | undefined) => Promise<void>,
 		};
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 });
 		Object.defineProperty(window, "innerHeight", { configurable: true, value: 300 });

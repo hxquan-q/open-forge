@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ToolPhase } from "@vetta/agent-core";
 import type { AssistantMessageEvent, CacheUsageReporting, Message } from "@vetta/ai";
 import type { RuntimeEventSource, SessionError } from "./contracts.js";

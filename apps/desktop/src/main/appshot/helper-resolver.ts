@@ -2,19 +2,20 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { app } from "electron";
+import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 
-const APP_BUNDLE_NAME = "Vetta Computer Use.app";
-const EXECUTABLE_NAME = "Vetta Computer Use";
+const APP_BUNDLE_NAME = `${DESKTOP_BRAND.appshotHelperName}.app`;
+const EXECUTABLE_NAME = DESKTOP_BRAND.appshotHelperName;
 
 /**
- * Resolve the absolute path to the `Vetta Computer Use.app` bundle (macOS only).
+ * Resolve the absolute path to the `Open Forge Computer Use.app` bundle (macOS only).
  *
  * In packaged builds the bundle lives under
- *   <Resources>/appshot/Vetta Computer Use.app
+ *   <Resources>/appshot/Open Forge Computer Use.app
  * (staged by scripts/prepare-pack.js via extraResources).
  *
  * In dev mode (`!app.isPackaged`) we fall back to
- *   <apps/desktop>/resources/appshot/bin/Vetta Computer Use.app
+ *   <apps/desktop>/resources/appshot/bin/Open Forge Computer Use.app
  * which scripts/build-appshot-helper.js compiles as part of `bun run dev`.
  * We resolve relative to `process.cwd()`, which is `apps/desktop`
  * when running via `bun run dev` (same trick as im-host/binary-resolver.ts;
@@ -28,7 +29,7 @@ export function resolveHelperAppBundlePath(): string {
 
 /**
  * Resolve the absolute path to the helper's Mach-O executable inside
- * `Vetta Computer Use.app`.
+ * `Open Forge Computer Use.app`.
  *
  * Throws if the resolved path does not exist on disk so the caller can
  * surface a precise error instead of failing later in spawn.
@@ -39,7 +40,7 @@ export function resolveAppshotHelperBinary(): string {
 	if (!existsSync(fullPath)) {
 		throw new Error(
 			`appshot helper binary not found at ${fullPath}. ` +
-				`Run 'node scripts/build-appshot-helper.js' in apps/desktop, or rebuild Vetta.app.`,
+				`Run 'node scripts/build-appshot-helper.js' in apps/desktop, or rebuild ${DESKTOP_BRAND.displayName}.app.`,
 		);
 	}
 

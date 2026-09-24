@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { type ActiveActionApproval, useActionApproval } from "../useActionApproval";
 import { useManageApprovalFrame } from "../manage/useManageApprovalShell";
 

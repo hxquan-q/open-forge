@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Pi Adapter 评估（implementation-plan 阶段 7，条件触发）
 

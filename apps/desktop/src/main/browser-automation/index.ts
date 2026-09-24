@@ -9,6 +9,21 @@ import { BrowserRuntimeManager } from "./browser-runtime-manager.js";
 
 export { BrowserAutomationService } from "./browser-automation-service.js";
 export { BrowserAutomationError } from "./contracts.js";
+export {
+	type BrowserTabHostDependencies,
+	createDesktopBrowserTabHostDependencies,
+	invokeDesktopBrowserTab,
+	resetDesktopBrowserTabHostForTests,
+} from "./in-app-browser-tab-host.js";
+export { createBrowserElementRef, validateBrowserElementRef } from "./webview-element-ref.js";
+export {
+	getInAppBrowserSessionController,
+	IN_APP_BROWSER_PARTITION,
+	InAppBrowserSessionController,
+	resetInAppBrowserSessionControllerForTests,
+	setInAppBrowserEventSink,
+} from "./webview-session-controller.js";
+export { bindInAppBrowserWebview, isInAppBrowserWebContents } from "./webview-session-host.js";
 
 let sharedService: BrowserAutomationService | undefined;
 

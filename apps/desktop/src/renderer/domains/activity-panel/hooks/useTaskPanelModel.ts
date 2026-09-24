@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { DesktopArtifactView } from "@preload/api-types/task";
 import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
@@ -15,6 +16,7 @@ export interface TaskPanelTaskView {
 }
 
 export interface TaskPanelModel {
+	primaryRuntimeId: string | null;
 	tasks: readonly TaskPanelTaskView[];
 	artifacts: readonly DesktopArtifactView[];
 	headline: string;
@@ -63,7 +65,10 @@ export function useTaskPanelModel(): TaskPanelModel {
 	const runtimeIds = useActivityRuntimeIds();
 	const taskMap = useAtomValue(taskStateBySessionAtom);
 	const setTaskState = useSetAtom(taskStateBySessionAtom);
-	const [artifacts, setArtifacts] = useState<readonly DesktopArtifactView[]>([]);
+	const [artifactSnapshot, setArtifactSnapshot] = useState<{
+		sessionId: string;
+		views: readonly DesktopArtifactView[];
+	} | null>(null);
 
 	const tasks = useMemo(
 		() =>
@@ -72,31 +77,58 @@ export function useTaskPanelModel(): TaskPanelModel {
 			),
 		[runtimeIds, taskMap],
 	);
+	const primaryRuntimeId = runtimeIds[0] ?? null;
+	const artifacts = artifactSnapshot?.sessionId === primaryRuntimeId ? artifactSnapshot.views : [];
+	const projectedArtifacts = useMemo(
+		() => (primaryRuntimeId ? getTaskStateForSession(taskMap, primaryRuntimeId).artifacts : []),
+		[primaryRuntimeId, taskMap],
+	);
+	const artifactRevision = projectedArtifacts
+		.map((artifact) => `${artifact.artifactId}:${artifact.version}:${artifact.updatedAt}`)
+		.join("|");
 
 	// 打开/切换会话时用主进程快照补齐投影（重启后历史 Task 由此恢复）。
 	useEffect(() => {
 		let cancelled = false;
-		const primary = runtimeIds[0];
-		if (!primary || !window.vetta?.task) return;
-		void (async () => {
-			try {
-				const state = await window.vetta.task.getState(primary);
+		if (!primaryRuntimeId || !window.vetta?.task) return;
+		void window.vetta.task
+			.getState(primaryRuntimeId)
+			.then((state) => {
 				if (cancelled) return;
 				setTaskState((prev) => {
-					const current = prev.get(primary) ?? EMPTY_TASK_STATE;
+					const current = prev.get(primaryRuntimeId) ?? EMPTY_TASK_STATE;
 					const next = mergeTaskStateSeed(current, state);
-					return next === current ? prev : new Map(prev).set(primary, next);
+					return next === current ? prev : new Map(prev).set(primaryRuntimeId, next);
 				});
-				const views = await window.vetta.task.getArtifactViews(primary);
-				if (!cancelled) setArtifacts(views);
-			} catch {
+			})
+			.catch(() => {
 				// 快照补齐是尽力而为：事件流折叠仍会继续更新投影。
-			}
-		})();
+			});
 		return () => {
 			cancelled = true;
 		};
-	}, [runtimeIds, setTaskState]);
+	}, [primaryRuntimeId, setTaskState]);
+
+	// artifact 版本一变就重新拉取视图快照，否则新版本写入后预览仍停留在旧视图。
+	// biome-ignore lint/correctness/useExhaustiveDependencies: 依赖是「重新拉取时机」而非读取值
+	useEffect(() => {
+		let cancelled = false;
+		if (!primaryRuntimeId || !window.vetta?.task) {
+			setArtifactSnapshot(null);
+			return;
+		}
+		void window.vetta.task
+			.getArtifactViews(primaryRuntimeId)
+			.then((views) => {
+				if (!cancelled) setArtifactSnapshot({ sessionId: primaryRuntimeId, views });
+			})
+			.catch(() => {
+				if (!cancelled) setArtifactSnapshot({ sessionId: primaryRuntimeId, views: [] });
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [primaryRuntimeId, artifactRevision]);
 
 	const runCommand = useCallback(
 		async (runtimeId: string, command: Parameters<typeof window.vetta.task.runCommand>[1]): Promise<boolean> => {
@@ -119,9 +151,8 @@ export function useTaskPanelModel(): TaskPanelModel {
 		[setTaskState, t],
 	);
 
-	const primaryRuntimeId = runtimeIds[0];
-
 	return {
+		primaryRuntimeId,
 		tasks,
 		artifacts,
 		headline: t("activityPanel.task.headline"),

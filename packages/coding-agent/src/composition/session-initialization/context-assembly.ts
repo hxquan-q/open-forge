@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import { createEcosystemHookRuntime, type EcosystemHookRuntime } from "@vetta/ecosystem-adapter";
 import {

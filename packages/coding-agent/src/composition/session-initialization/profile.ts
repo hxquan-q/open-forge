@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { CodingAgentRuntimeCompositionOptions } from "../contracts/index.js";
 
 export type CodingAgentSessionInitializationProfile = Pick<

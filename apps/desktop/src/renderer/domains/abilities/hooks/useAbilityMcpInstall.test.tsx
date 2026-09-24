@@ -71,7 +71,7 @@ function marketEntry(parameters: Parameter[]): MarketAbility {
 	} as unknown as MarketAbility;
 }
 
-function setupHarness(entry: MarketAbility) {
+function setupHarness(entries: MarketAbility[], cardSlug: string) {
 	const disk = { mcp: { mcpServers: {} } as McpConfigData, ledger: {} as AbilityLedger };
 	// 渲染层持有的台账快照：只有 refresh() 才与磁盘同步，与 useAbilityData 一致。
 	let ledgerSnapshot: AbilityLedger = {};
@@ -108,7 +108,7 @@ function setupHarness(entry: MarketAbility) {
 
 	const card = (): McpAbility =>
 		buildMcpAbilities(
-			[entry],
+			entries,
 			{
 				ledger: ledgerSnapshot,
 				skillManifest: {},
@@ -120,7 +120,7 @@ function setupHarness(entry: MarketAbility) {
 				busyIds: new Set(),
 			},
 			t,
-		)[0] as McpAbility;
+		).find((item) => item.slug === cardSlug) as McpAbility;
 
 	return { disk, rendered, card };
 }
@@ -132,7 +132,7 @@ describe("市场 MCP 添加闭环", () => {
 
 	it("参数全可选时直接安装，不弹配置引导", async () => {
 		const entry = marketEntry([{ key: "XHS_PROXY", label: "Proxy URL", required: false, secret: false }]);
-		const { disk, rendered, card } = setupHarness(entry);
+		const { disk, rendered, card } = setupHarness([entry], "demo-mcp");
 		await waitFor(() => expect(rendered.result.current.mcp.config).not.toBeNull());
 
 		await act(async () => {
@@ -146,7 +146,7 @@ describe("市场 MCP 添加闭环", () => {
 
 	it("引导弹窗完成安装后卡片立即变为已安装，重复点击不会装出第二个 server", async () => {
 		const entry = marketEntry([{ key: "API_KEY", label: "API Key", required: true, secret: true }]);
-		const { disk, rendered, card } = setupHarness(entry);
+		const { disk, rendered, card } = setupHarness([entry], "demo-mcp");
 		await waitFor(() => expect(rendered.result.current.mcp.config).not.toBeNull());
 
 		await act(async () => {
@@ -168,5 +168,48 @@ describe("市场 MCP 添加闭环", () => {
 		});
 		await waitFor(() => expect(rendered.result.current.mcp.saving).toBe(false));
 		expect(Object.keys(disk.mcp.mcpServers)).toEqual(["demo-mcp"]);
+	});
+});
+
+describe("内置 universal-db 预设添加闭环", () => {
+	it("发现页卡片 → 必填引导 → 写入 env 与 postConnectToolCalls 模板 → 已装", async () => {
+		const { disk, rendered, card } = setupHarness([], "universal-db");
+		await waitFor(() => expect(rendered.result.current.mcp.config).not.toBeNull());
+
+		const item = card();
+		expect(item.installed).toBe(false);
+		expect(item.catalogSource.kind).toBe("builtin");
+
+		await act(async () => {
+			rendered.result.current.actions.install(item);
+		});
+		await waitFor(() => expect(rendered.result.current.mcp.secretsDialogPreset).not.toBeNull());
+		expect(disk.mcp.mcpServers).toEqual({});
+
+		await act(async () => {
+			await rendered.result.current.mcp.onConfirmSecretsDialog({
+				DB_TYPE: "mysql",
+				DB_HOST: "db.internal",
+				DB_PORT: "3306",
+				DB_USER: "readonly",
+				DB_PASSWORD: "s3cret-pw",
+				DB_DATABASE: "appdb",
+				DB_FILE_PATH: "",
+			});
+		});
+
+		const server = disk.mcp.mcpServers["universal-db"];
+		expect(server).toBeDefined();
+		if (server?.type === "http") throw new Error("expected stdio config");
+		// disabledTools 随预设落盘；凭据进 env；空值字段不写入
+		expect(server?.disabledTools).toEqual(["connect_database", "disconnect_database"]);
+		expect(server?.env).toMatchObject({ DB_TYPE: "mysql", DB_PASSWORD: "s3cret-pw" });
+		expect(server?.env?.DB_FILE_PATH).toBeUndefined();
+		// postConnectToolCalls 只持久化模板 token，序列化后不含任何 secrets 明文
+		const serializedCalls = JSON.stringify(server?.postConnectToolCalls);
+		expect(serializedCalls).not.toContain("s3cret-pw");
+		expect(serializedCalls).not.toContain("db.internal");
+		expect(server?.postConnectToolCalls?.[0]?.args?.password).toBe("{env:DB_PASSWORD}");
+		expect(card().installed).toBe(true);
 	});
 });

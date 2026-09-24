@@ -106,3 +106,9 @@ agent-tools
 .playwright-cli
 .tmp*
 .ai
+scripts/eval/results/
+scripts/eval/.venv/
+scripts/eval/**/__pycache__/
+# Local live-eval credentials; keep the example tracked.
+scripts/eval/.env
+!scripts/eval/.env.example

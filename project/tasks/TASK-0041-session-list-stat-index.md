@@ -1,7 +1,7 @@
 ---
 id: TASK-0041
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -16,10 +16,11 @@ write_paths: [apps/desktop/src/main, apps/desktop/src/renderer/domains/conversat
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（forge/dev 工作区，未提交）
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 会话列表/恢复最小化：stat 轻索引 + 大会话恢复选项
 
@@ -66,6 +67,20 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - `packages/runtime-node/src/conversation/file-conversation-session-services.ts`：`listSessions` 从 readFile→document→project 全量物化改为 `createReadStream`+`readline` 流式 JSONL stat 索引——只提取 header/首条 user/末条消息 role+text+timestamp，不再构建完整 document/history 对象图；`modifiedAt` 取最后一条消息 timestamp，无有效时间戳才回落 `mtimeMs`；v1/v2 header 均兼容，`parentSessionPath`/`parentEntryId` 用 `"in"` 收窄安全提取；新增 `fileSizeBytes` 到 `SessionInfo`。
+  - `useProjects.ts`：`sessionListsEqual` 纳入 `fileSizeBytes` 比较，避免索引字段变化被去重吞掉。
+  - `useSessionOpener.ts`：`resolveHistoryLoadMode`（已导出）——`fileSizeBytes > 4MB` 弹确认对话框（i18n `chat:session.largeHistory.*`），确认走 tail 模式（末 10 轮）否则 full；优先取 `options.fileSizeBytes`，回落 `sessionsMapAtom` 查找，bucket key 用 `conversationBucketCwd`。
+  - `useProjectsPanelModel.ts`：最终保持 3 参 `onOpenSession` 调用（opener 内部 sessionsMap 兜底已覆盖 fileSizeBytes，4 参管道冗余且会破坏 props 类型链）。
+  - i18n：en/zh `chat.json` 增加 largeHistory 文案。
 - 实际运行：
+  - `file-conversation-session-services` 定向测试 + `useSessionManager.session-switch` 9/9（新增 tail/取消/resolveHistoryLoadMode 分支）、`useProjectsPanelModel.selectSession` 12/12 绿。
+  - 120 会话合成库 A/B：旧全量解析路径 ~72ms → 新 stat 索引 ~29.9ms（≈2.4×）；单会话 ~9MB 大文件场景 wall-time 基本持平（流式按行解析与一次性 parse 同量级），结构性收益是**不再物化 document/history 对象图**——堆峰值与 GC 压力随历史规模线性下降。
+  - `tsc --noEmit`（runtime-node + desktop 本任务文件）0 错误。
 - 未运行及原因：
+  - `bun run check` 全量：受工作区其他 Agent 在途错误影响暂不可绿。
+  - 真实 ~/.openforge 库实机测量：无授权的本地数据目录不做端到端读盘；合成语料可复现（脚本见交付说明）。
 - 剩余风险：
+  - stat 索引逐行扫全文件，极端超大单文件（>100MB）wall-time 与旧路径相当；真正跳读需要后续 offset/索引持久化（超出本任务范围）。
+  - 会话文件尾部损坏行只影响该行解析（逐行 try/catch 沿用旧语义）。
+- Release Notes（候选，待 ISSUE-0007 首发版本切入后写入 Open Forge 自己的 `v*.md`；此前不写入继承的 Vetta `v0.5.59`）：
+  - 「改进」：会话列表打开更快，超大会话可选择只载入最近回合：此前生成会话列表会把每个会话文件从头到尾完整读进内存，会话一多就慢。现在列表只提取每条的元信息与首条消息，实测 120 条会话的库耗时约降为原来的四成。文件超过 4MB 的会话在打开时会先询问，可只看最近几个回合立即开始对话、较早历史按需再补，也可照旧完整载入。

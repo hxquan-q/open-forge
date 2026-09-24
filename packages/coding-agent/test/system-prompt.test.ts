@@ -15,6 +15,12 @@ describe("VETTA_CLI_GUIDANCE", () => {
 		expect(VETTA_CLI_GUIDANCE).toContain("authoritative inventory is always `vetta action search`");
 		expect(VETTA_CLI_GUIDANCE).toContain("Do not expect CLI help to list every parameter");
 	});
+	test("encodes the scheduler create vs capability-query pair from tool-routing evaluation", () => {
+		expect(VETTA_CLI_GUIDANCE).toContain("让 Vetta 每天帮我汇总");
+		expect(VETTA_CLI_GUIDANCE).toContain("create a Vetta scheduled task");
+		expect(VETTA_CLI_GUIDANCE).toContain("what Vetta scheduled tasks support");
+		expect(VETTA_CLI_GUIDANCE).toContain("do not create or run a task merely to demonstrate");
+	});
 });
 
 describe("buildSystemPrompt", () => {
@@ -24,6 +30,9 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toContain("explanation, inspection, or execution");
 		expect(prompt).toContain("inspect/list/status do not imply edit/import/run");
 		expect(prompt).toContain("Use fitting capabilities and their necessary supporting steps proactively");
+		expect(prompt).toContain(
+			"Drawing or visualizing numbers in chat is not the same as implementing a chart component",
+		);
 	});
 	describe("tool surface deduplication", () => {
 		// 工具清单与 params.tools 中每个 tool 的 description 是同一份字符串，不再重复渲染进提示词。

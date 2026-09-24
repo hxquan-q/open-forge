@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

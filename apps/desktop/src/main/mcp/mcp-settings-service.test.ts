@@ -15,6 +15,7 @@ function createConfig(): McpConfigData {
 				command: "node",
 				args: ["server.js"],
 				env: { API_KEY: "secret", REGION: "us" },
+				idleTimeout: 60000,
 			},
 		},
 	};
@@ -43,6 +44,20 @@ describe("McpSettingsService", () => {
 		});
 	});
 
+	it("keeps idleTimeout through the stdio upsert path", async () => {
+		let config: McpConfigData = { mcpServers: {} };
+		const service = new McpSettingsService({
+			readConfig: async () => config,
+			writeConfig: async (next) => {
+				config = next;
+			},
+		});
+
+		const detail = await service.upsert("local", { command: "node", idleTimeout: 0 });
+		expect(detail.idleTimeout).toBe(0);
+		expect(config.mcpServers.local).toMatchObject({ command: "node", idleTimeout: 0 });
+	});
+
 	it("returns redacted server details without exposing secrets", async () => {
 		const service = new McpSettingsService({
 			readConfig: async () => createConfig(),
@@ -62,6 +77,7 @@ describe("McpSettingsService", () => {
 			command: "node",
 			args: ["server.js"],
 			env: { API_KEY: "***", REGION: "us" },
+			idleTimeout: 60000,
 			disabled: false,
 		});
 	});
@@ -104,6 +120,7 @@ describe("McpSettingsService", () => {
 					command: "node",
 					args: ["server.js"],
 					env: { API_KEY: "secret", REGION: "us" },
+					idleTimeout: 60000,
 				},
 			},
 		});
@@ -135,6 +152,7 @@ describe("McpSettingsService", () => {
 					command: "node",
 					args: ["server.js"],
 					env: { API_KEY: "secret", REGION: "us" },
+					idleTimeout: 60000,
 					disabled: true,
 				},
 			},

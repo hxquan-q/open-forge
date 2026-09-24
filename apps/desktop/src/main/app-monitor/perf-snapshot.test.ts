@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { type AssistantMessage, type AssistantMessageEvent, createAssistantMessage } from "@vetta/ai";
 import type { SessionEvent } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";

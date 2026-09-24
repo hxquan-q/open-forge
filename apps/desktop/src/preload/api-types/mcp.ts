@@ -1,5 +1,9 @@
+// Modified by The Open Forge contributors.
+
 export interface McpServerCommonConfigData {
 	disabled?: boolean;
+	/** 按 server 原始工具名停用个别工具；停用项不进入 Agent 工具面。 */
+	disabledTools?: string[];
 	autoApprove?: string[];
 	startupTimeout?: number;
 	debug?: boolean;
@@ -11,12 +15,23 @@ export interface McpServerCommonConfigData {
 	icon?: string;
 }
 
+export interface McpPostConnectToolCallData {
+	/** 目标工具名（server 原始工具名）。 */
+	tool: string;
+	/** 参数模板：字面量或 `{env:KEY}` / `{env:KEY:number}` / `{env:KEY:boolean}`；resolve 只在宿主内存发生，不落盘。 */
+	args?: Record<string, string>;
+}
+
 export interface McpStdioServerConfigData extends McpServerCommonConfigData {
 	type?: "stdio";
 	command: string;
 	args?: string[];
 	env?: Record<string, string>;
 	cwd?: string;
+	/** stdio 子进程空闲回收阈值（毫秒）：超过后断开连接并回收进程，下次调用自动重连；0 表示不回收。 */
+	idleTimeout?: number;
+	/** 每次（重）连后由宿主依次执行的工具调用；凭据经 `{env:…}` 模板注入，不进 argv/LLM 上下文。 */
+	postConnectToolCalls?: McpPostConnectToolCallData[];
 }
 
 export interface McpHttpServerConfigData extends McpServerCommonConfigData {
@@ -72,6 +87,24 @@ export interface DesktopMcpApi {
 	cancelSetupLogin(requestId: string): Promise<void>;
 	/** 调用上游声明的退出端点并重新读取真实登录态。 */
 	clearSetupLogin(serverName: string): Promise<McpSetupLoginStatus>;
+	/**
+	 * 读取该 server 最近一次成功发现的工具清单（catalog 缓存，不触发连接）。
+	 * `cached: false` 表示尚无发现记录。
+	 */
+	listServerTools(serverName: string): Promise<McpServerToolList>;
+}
+
+export interface McpServerToolListItem {
+	readonly name: string;
+	readonly description: string;
+	readonly enabled: boolean;
+	/** 在 disabledTools 中但已不在最近目录里（server 侧已改名或移除）。 */
+	readonly stale: boolean;
+}
+
+export interface McpServerToolList {
+	readonly tools: readonly McpServerToolListItem[];
+	readonly cached: boolean;
 }
 
 export interface McpSetupLoginStatus {

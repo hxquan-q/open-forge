@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message, TextContent } from "@vetta/ai";
 import type { SessionEvent } from "../contracts.js";
 import { runtimeError } from "../errors.js";

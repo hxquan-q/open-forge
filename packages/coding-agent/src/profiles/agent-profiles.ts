@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { AgentConfigurationSelection } from "../agent-configuration/configuration-schema.js";
 
 /**
@@ -45,6 +46,8 @@ const WORK_PROFILE: CodingAgentAgentProfile = Object.freeze({
 		"kb_filter_by_tags",
 		"kb_list_available_tags",
 		"im_send_attachment",
+		"artifact",
+		"browser_tab",
 	],
 	memoryEnabled: true,
 });

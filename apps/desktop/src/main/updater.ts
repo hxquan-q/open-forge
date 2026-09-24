@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";

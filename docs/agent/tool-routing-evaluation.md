@@ -44,4 +44,11 @@
 
 自动化合同测试覆盖说明是否实际进入模型入口、Action 注册/IPC/search/describe 是否保留元数据、无关权限命中是否消失、操作名是否仍可检索，以及 Skill 索引的转义和可见性是否保持。它们不能证明模型会遵循说明，也不能代表真实误调用率。
 
+调度器「每天汇总 / 支持什么」与「对话画图 / 网站实现图表」成对边界已写入：
+
+- `packages/plugins/presets/vetta-actions` 的 `scheduler` usage；
+- `packages/coding-agent` 的 `VETTA_CLI_GUIDANCE` 与通用工具选择指引；
+- `packages/plugins/presets/chart-renderer` 的 `render_chart` description / Skill；
+- `scripts/eval/` 隔离 Golden 与夹具合同（`unstable-routing-contract.test.ts`）。
+
 后续模型评测应使用隔离工作区、假的工具处理器和固定上下文，按上述成对样例记录首个有状态调用、目标资源、查询/修改操作、无必要确认与最终任务完成情况。对修改前后使用同一模型和采样设置，重复运行并单独统计误调用与漏调用；真实 Provider 或付费接口须先获得授权。任何错误率结果都应附运行配置、次数与失败轨迹，不能从关键词断言推导。

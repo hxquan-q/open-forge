@@ -18,7 +18,8 @@ const { allowProjectRoot } = await import("./filesystem/filesystem-service.js");
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 describe("vetta-file 协议", () => {
-	it("远程项目里的文件能取回，Content-Type 与本机同一套", async () => {
+	// 回环 SSH 顶替脚本是 /bin/sh POSIX shell：win32 下既无 shebang 执行也没有合法的远端 POSIX 路径。
+	it.skipIf(process.platform === "win32")("远程项目里的文件能取回，Content-Type 与本机同一套", async () => {
 		// 回归：此前只有 vetta-media 支持远端。同一个插件用 vetta-file 只得到一张破图，
 		// 没有任何提示——两个协议的能力不对称本身就是个陷阱。
 		const remoteRoot = realpathSync(mkdtempSync(join(tmpdir(), "vetta-file-remote-")));

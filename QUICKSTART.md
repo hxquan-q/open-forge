@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Quickstart
 
 <p align="center"><b>English</b> · <a href="QUICKSTART.zh-CN.md">简体中文</a></p>
@@ -32,12 +33,12 @@ cd apps/desktop
 bun run dev
 ```
 
-That starts the Vite renderer, the theme dev server, and Electron together. The process uses `~/.vetta-dev`, so your installed-app data in `~/.vetta` is left alone.
+That starts the Vite renderer, the theme dev server, and Electron together. The process uses `~/.openforge-dev`, so your installed-app data in `~/.openforge` is left alone.
 
 | Command | Data root | When to use it |
 |---|---|---|
-| `bun run dev` | `~/.vetta-dev` | Default sandbox |
-| `bun run dev:home` | `~/.vetta` | You want the dev build to read and write real user data |
+| `bun run dev` | `~/.openforge-dev` | Default sandbox |
+| `bun run dev:home` | `~/.openforge` | You want the dev build to read and write real user data |
 
 `bun run dev` **at the repository root** only watches core libraries. It does not launch the app.
 

@@ -1,3 +1,4 @@
+# Modified by The Open Forge contributors.
 # golangci-lint config for apps/ssh-helper.
 #
 # Mirrors apps/im-gateway so both Go packages in this repo are held to the same

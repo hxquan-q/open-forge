@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { AIAbortedError } from "../../protocol/index.js";
 import { EmptyProviderStreamError, normalizeProviderError, validateWirePayload } from "../../provider-kit/index.js";
 import {

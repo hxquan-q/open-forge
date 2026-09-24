@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentMessage } from "@vetta/agent-core";
 import type { ImageContent, TextContent } from "@vetta/ai";
 

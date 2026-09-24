@@ -1,4 +1,6 @@
 import { CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
+import { resolveWorkspaceRightPanel, WorkWorkspacePanel } from "@domains/workspace-mode";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import { motion, useReducedMotion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@shared/lib/utils";
@@ -32,7 +34,9 @@ import { isTeamTarget, type NewSessionTargetKey } from "./target";
 const PANEL_SHIFT_Y = 120;
 
 interface NewSessionPageViewProps {
+	activityOpen: boolean;
 	activityPanelCwd: string | null;
+	workspaceMode: WorkspaceMode;
 	avatarAutoplay: boolean;
 	className?: string;
 	commandPanelExpanded: boolean;
@@ -61,7 +65,9 @@ interface NewSessionPageViewProps {
 }
 
 export function NewSessionPageView({
+	activityOpen,
 	activityPanelCwd,
+	workspaceMode,
 	avatarAutoplay,
 	className,
 	commandPanelExpanded,
@@ -160,6 +166,7 @@ export function NewSessionPageView({
 							targetKey={targetKey}
 							onSelectTarget={onSelectTarget}
 							showProjectSelector={!stackProjectSelector}
+							workspaceMode={workspaceMode}
 						/>
 					</motion.div>
 				}
@@ -233,13 +240,21 @@ export function NewSessionPageView({
 			/>
 			{/* 会话尚未创建：选中项目时活动面板按项目根取上下文；「对话」与待创建项目没有
 			    可浏览目录，传 null 走空态（conversation 根是所有会话工作区的父目录，不展示）。 */}
-			<CurrentScenarioActivityPanel
-				workspace={createActivityWorkspace(
-					activityPanelCwd ?? "new-session:unbound",
-					activityPanelCwd,
-					activeRuntimeIds,
-				)}
-			/>
+			{resolveWorkspaceRightPanel({
+				mode: workspaceMode,
+				activityPanelOpen: activityOpen,
+				hasExplicitActivity: isTeamTarget(targetKey),
+			}) === "work" ? (
+				<WorkWorkspacePanel />
+			) : (
+				<CurrentScenarioActivityPanel
+					workspace={createActivityWorkspace(
+						activityPanelCwd ?? "new-session:unbound",
+						activityPanelCwd,
+						activeRuntimeIds,
+					)}
+				/>
+			)}
 		</div>
 	);
 }

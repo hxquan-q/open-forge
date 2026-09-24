@@ -1,8 +1,14 @@
-import type { InstalledPlugin } from "@preload/api";
+import type { InstalledPlugin, McpStdioServerConfigData } from "@preload/api";
 import type { AbilityMember, MarketAbility } from "@shared/lib/api";
 import type { TFunction } from "i18next";
 import { describe, expect, it } from "vitest";
-import { buildBuiltinMcpServerConfig } from "../../settings/mcp/builtin-mcp-presets";
+import {
+	buildBuiltinMcpServerConfig,
+	getBuiltinMcpPresetByName,
+	isSecretFieldRequired,
+	matchBuiltinMcpPreset,
+	UNIVERSAL_DB_TYPES,
+} from "../../settings/mcp/builtin-mcp-presets";
 import type { AbilityItem, McpAbility } from "../types";
 import {
 	buildBundleAbilities,
@@ -460,7 +466,9 @@ describe("buildMcpAbilities", () => {
 			},
 		} as unknown as Partial<LocalAbilityState>;
 
-		const pending = buildMcpAbilities([ability], createState(installed), t)[0];
+		const pending = buildMcpAbilities([ability], createState(installed), t).find(
+			(item) => item.slug === "xiaohongshu-mcp",
+		);
 		expect(pending?.postInstallSetup).toEqual({ kind: "http-qrcode" });
 		expect(pending?.setupRequired).toBe(true);
 		expect(pending?.canEdit).toBe(false);
@@ -479,7 +487,7 @@ describe("buildMcpAbilities", () => {
 			[ability],
 			createState({ ...installed, mcpSetupStatus: { "official:xiaohongshu-mcp": true } }),
 			t,
-		)[0];
+		).find((item) => item.slug === "xiaohongshu-mcp");
 		expect(done?.setupRequired).toBe(false);
 	});
 
@@ -509,8 +517,12 @@ describe("buildMcpAbilities", () => {
 			});
 
 		// 装的时候是 configVersion 2，市场已经是 3：命令行写法变了，必须重写
-		expect(buildMcpAbilities([ability], state(2), t)[0]?.needsUpdate).toBe(true);
-		expect(buildMcpAbilities([ability], state(3), t)[0]?.needsUpdate).toBe(false);
+		expect(buildMcpAbilities([ability], state(2), t).find((item) => item.slug === "demo-mcp")?.needsUpdate).toBe(
+			true,
+		);
+		expect(buildMcpAbilities([ability], state(3), t).find((item) => item.slug === "demo-mcp")?.needsUpdate).toBe(
+			false,
+		);
 	});
 
 	it("applies a valueTemplate to an HTTP header secret", () => {
@@ -583,6 +595,126 @@ describe("buildMcpAbilities", () => {
 		expect(local).toMatchObject({ installed: true, serverName: "github" });
 		expect(github).toMatchObject({ installed: false });
 		expect(github?.serverName).toBe("github-2");
+	});
+
+	it("市场条目与内置预设同 slug 时使用限定名且仍保留预设卡片", () => {
+		const ability = {
+			...createBundle([]),
+			type: "mcp" as const,
+			slug: "universal-db",
+			name: "Universal DB (Market)",
+			config: { mcp: { command: "npx", args: ["-y", "universal-db-mcp"] } },
+			origin: {
+				kind: "github-marketplace" as const,
+				sourceId: "test-source",
+				marketplace: "vetta-open-abilities",
+				marketplaceVersion: "2026.09.1",
+				repository: "https://github.com/example/vetta-abilities",
+			},
+		} as unknown as MarketAbility;
+
+		const items = buildMcpAbilities([ability], createState(), t);
+		const market = items.find((item) => item.fromMarket);
+		const preset = items.find((item) => item.catalogSource.kind === "builtin");
+
+		// slug 冲突：市场项退限定名，预设卡片照常合成（两张卡语义不同源）
+		expect(market?.serverName).toContain("universal-db--");
+		expect(preset?.serverName).toBe("universal-db");
+		expect(preset?.slug).toBe("universal-db");
+	});
+
+	it("已装 universal-db 复用同名 server 状态，删除后重新出现在发现源", () => {
+		const installedState = createState({
+			mcpConfig: {
+				mcpServers: { "universal-db": { command: "npx", args: ["-y", "universal-db-mcp@2.14.0"] } },
+			},
+		});
+		const installed = buildMcpAbilities([], installedState, t).find((item) => item.slug === "universal-db");
+		expect(installed?.installed).toBe(true);
+		expect(installed?.catalogSource.kind).toBe("builtin");
+		// 同名 server 不再另出一条 local 条目
+		expect(
+			installedState && buildMcpAbilities([], installedState, t).filter((i) => i.slug === "universal-db"),
+		).toHaveLength(1);
+
+		const removed = buildMcpAbilities([], createState(), t).find((item) => item.slug === "universal-db");
+		expect(removed?.installed).toBe(false);
+	});
+});
+
+describe("universal-db 内置预设", () => {
+	const preset = getBuiltinMcpPresetByName("universal-db");
+	const secretValues = {
+		DB_TYPE: "mysql",
+		DB_HOST: "db.internal",
+		DB_PORT: "3306",
+		DB_USER: "readonly",
+		DB_PASSWORD: "s3cret-pw-9x2",
+		DB_DATABASE: "appdb",
+	};
+
+	it("预设登记：listedInDiscover、packageHint、disabledTools、17 个规范库类型选项", () => {
+		expect(preset).toBeDefined();
+		expect(preset?.listedInDiscover).toBe(true);
+		expect(preset?.packageHint).toBe("universal-db-mcp");
+		expect(preset?.config.disabledTools).toEqual(["connect_database", "disconnect_database"]);
+		expect(UNIVERSAL_DB_TYPES).toHaveLength(17);
+		expect(preset?.secrets?.find((field) => field.envKey === "DB_TYPE")?.options).toEqual(UNIVERSAL_DB_TYPES);
+		// 不暴露写库开关
+		expect(preset?.secrets?.some((field) => field.envKey === "DB_ALLOW_WRITE")).toBe(false);
+		expect(preset?.secrets?.some((field) => field.envKey === "DB_AUTH_SOURCE")).toBe(false);
+	});
+
+	it("写盘 spec 的 postConnectToolCalls.args 只含 {env:…} 模板，不含任何 secrets 明文", () => {
+		if (!preset) throw new Error("universal-db preset missing");
+		const config = buildBuiltinMcpServerConfig(
+			preset,
+			{ displayName: "通用数据库", description: "" },
+			secretValues,
+		) as McpStdioServerConfigData;
+
+		// 凭据按现有预设惯例落 env
+		expect(config.env).toMatchObject(secretValues);
+		// postConnectToolCalls 是模板：序列化后 args 子树不出现任何明文值
+		const serializedCalls = JSON.stringify(config.postConnectToolCalls);
+		for (const value of Object.values(secretValues)) {
+			expect(serializedCalls).not.toContain(value);
+		}
+		expect(config.postConnectToolCalls).toEqual([
+			{
+				tool: "connect_database",
+				args: {
+					type: "{env:DB_TYPE}",
+					host: "{env:DB_HOST}",
+					port: "{env:DB_PORT:number}",
+					user: "{env:DB_USER}",
+					password: "{env:DB_PASSWORD}",
+					database: "{env:DB_DATABASE}",
+					filePath: "{env:DB_FILE_PATH}",
+				},
+			},
+		]);
+		// argv 不携带连接参数
+		expect(config.args?.join(" ")).not.toContain("password");
+		expect(config.args).toEqual(["-y", "universal-db-mcp@2.14.0"]);
+	});
+
+	it("已装条目按 packageHint 回退匹配预设", () => {
+		expect(matchBuiltinMcpPreset("my-db", { command: "npx", args: ["-y", "universal-db-mcp@2.14.0"] })?.name).toBe(
+			"universal-db",
+		);
+	});
+
+	it("DB_HOST 仅在 DB_TYPE ≠ sqlite 时必填，DB_FILE_PATH 仅 sqlite 必填", () => {
+		const fields = new Map((preset?.secrets ?? []).map((field) => [field.envKey, field]));
+		const host = fields.get("DB_HOST");
+		const filePath = fields.get("DB_FILE_PATH");
+		if (!host || !filePath) throw new Error("universal-db secrets missing");
+
+		expect(isSecretFieldRequired(host, { DB_TYPE: "mysql" })).toBe(true);
+		expect(isSecretFieldRequired(host, { DB_TYPE: "sqlite" })).toBe(false);
+		expect(isSecretFieldRequired(filePath, { DB_TYPE: "sqlite" })).toBe(true);
+		expect(isSecretFieldRequired(filePath, { DB_TYPE: "mysql" })).toBe(false);
 	});
 });
 

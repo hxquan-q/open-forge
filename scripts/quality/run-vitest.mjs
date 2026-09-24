@@ -16,6 +16,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(scriptDir, "..", "..");
 const vitestEntry = join(repoRoot, "node_modules", "vitest", "vitest.mjs");
 const minimumNodeMajor = 20;
+const disableWebStorageOption = "--no-experimental-webstorage";
 
 function versionOf(command) {
 	try {
@@ -51,13 +52,30 @@ function findNode() {
 	);
 }
 
+function supportsNodeOption(command, option) {
+	try {
+		const output = execFileSync(command, ["--help"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+		return output.includes(option);
+	} catch {
+		return false;
+	}
+}
+
 if (!existsSync(vitestEntry)) {
 	throw new Error(`Vitest entry was not found at ${vitestEntry}. Run bun install first.`);
 }
 
-const result = spawnSync(findNode(), [vitestEntry, ...process.argv.slice(2)], {
+const nodeCommand = findNode();
+const env = { ...process.env };
+if (
+	supportsNodeOption(nodeCommand, disableWebStorageOption) &&
+	!env.NODE_OPTIONS?.split(/\s+/).includes(disableWebStorageOption)
+) {
+	env.NODE_OPTIONS = [env.NODE_OPTIONS, disableWebStorageOption].filter(Boolean).join(" ");
+}
+const result = spawnSync(nodeCommand, [vitestEntry, ...process.argv.slice(2)], {
 	cwd: process.cwd(),
-	env: process.env,
+	env,
 	stdio: "inherit",
 	shell: false,
 });

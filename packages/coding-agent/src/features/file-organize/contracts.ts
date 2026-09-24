@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Work 文件整理合同（TASK-0018）：分类/批量重命名的可审查执行。
  *

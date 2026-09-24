@@ -62,7 +62,7 @@ export interface DesktopConfigData {
 	notificationsEnabled?: boolean;
 	/** 实验性功能开关分组（「Agent配置 → 扩展功能」）。缺省视为全部开启。 */
 	experimental?: {
-		/** Vetta CLI 提示词开关。仅对桌面端对话会话生效，缺省开。 */
+		/** Open Forge CLI 提示词开关。仅对桌面端对话会话生效，缺省开。 */
 		vettaCli?: boolean;
 		/** 输入预测开关。缺省关；批量/流转会话不适用。 */
 		promptPrediction?: boolean;

@@ -1,9 +1,10 @@
+// Modified by The Open Forge contributors.
 import { ActivityPanel, CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { BottomPanelHost } from "@domains/bottom-panel/components/BottomPanelHost";
-import { WorkWorkspacePanel } from "@domains/workspace-mode";
+import { resolveWorkspaceRightPanel, WorkDocumentSections, WorkWorkspacePanel } from "@domains/workspace-mode";
 import { cn } from "@shared/lib/utils";
 import { PerfSendProfiler } from "@shared/lib/perf-send";
-import { activityPanelOpenAtom, type ChatConversationItem, type WorkspaceMode } from "@shared/store/atoms";
+import { activityPanelOpenAtom, type ChatTimelineItem, type WorkspaceMode } from "@shared/store/atoms";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import type { ActivityTabId } from "@domains/activity-panel/registry/types";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
@@ -15,7 +16,7 @@ export interface DefaultChatViewProps {
 	readonly children: ReactNode;
 	/** 消息流上方的常驻条（Team 的成员胶囊条就住在这里）。 */
 	readonly subHeader?: ReactNode;
-	readonly messages: readonly ChatConversationItem[];
+	readonly messages: readonly ChatTimelineItem[];
 	readonly workspace: ActivityWorkspace;
 	readonly rootClassName?: string;
 	readonly exportState?: {
@@ -62,14 +63,19 @@ const ActivityColumn = memo(
 		workspaceMode,
 	}: Pick<DefaultChatViewProps, "workspace" | "activity" | "workspaceMode">) {
 		const activityPanelOpen = useAtomValue(activityPanelOpenAtom);
-		// work 模式右栏默认是插槽面板（骨架阶段各节渲染空态）；显式 activity 配置的宿主
-		//（Team 会话）不归模式切换管。活动面板被显式打开时（文件预览、浏览器、插件 tab）
-		// 仍让位给它——work 面板是右栏默认内容，不是预览能力的替代。
-		if (workspaceMode === "work" && !activity) {
-			if (activityPanelOpen) {
-				return <CurrentScenarioActivityPanel workspace={workspace} />;
-			}
-			return <WorkWorkspacePanel />;
+		// work 模式右栏默认是插槽面板；Team 等显式 activity、以及用户打开的预览，都不走这槽。
+		if (
+			resolveWorkspaceRightPanel({
+				mode: workspaceMode,
+				activityPanelOpen,
+				hasExplicitActivity: Boolean(activity),
+			}) === "work"
+		) {
+			return (
+				<WorkWorkspacePanel>
+					<WorkDocumentSections runtimeIds={workspace.runtimeIds} />
+				</WorkWorkspacePanel>
+			);
 		}
 		return activity ? (
 			<ActivityPanel

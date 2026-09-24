@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Electron `app.getName()` 的唯一事实源。
  *
@@ -10,4 +11,6 @@
  *
  * 修改此常量会让所有存量用户已保存的凭据无法解密，必须同时提供迁移方案。
  */
-export const APP_RUNTIME_NAME = "vetta";
+import appIdentity from "./app-identity.json";
+
+export const APP_RUNTIME_NAME = appIdentity.runtimeName;

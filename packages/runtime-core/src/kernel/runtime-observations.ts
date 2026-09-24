@@ -1,4 +1,7 @@
+// Modified by The Open Forge contributors.
+
 import { defineRuntimeObservation, type RuntimeObservationFailure } from "../observation/index.js";
+import type { MessagePrefixStabilityKind } from "./message-prefix-stability.js";
 
 export type RuntimePromptFrameObservation =
 	| { readonly phase: "started"; readonly providerCount: number }
@@ -52,3 +55,22 @@ export const RUNTIME_PROMPT_CACHE_LAYOUT_ISSUE_OBSERVATION =
 		"cache-layout-issue",
 		"warning",
 	);
+
+/**
+ * 相邻两次模型调用投影的前缀稳定性度量。payload 只含计数与分类，不含任何消息正文。
+ * `contentFallbackCount` 是 `===` 未命中但内容一致的消息数（transformer 引用保持合同违约信号）。
+ */
+export interface RuntimeContextStabilityObservation {
+	readonly phase: "compared";
+	readonly kind: MessagePrefixStabilityKind;
+	readonly previousMessageCount: number;
+	readonly currentMessageCount: number;
+	readonly stablePrefixMessageCount: number;
+	readonly firstDivergenceIndex?: number;
+	readonly contentFallbackCount: number;
+}
+
+export const RUNTIME_CONTEXT_STABILITY_OBSERVATION = defineRuntimeObservation<RuntimeContextStabilityObservation>(
+	"runtime.context",
+	"stability",
+);

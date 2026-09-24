@@ -117,7 +117,7 @@ async function flush(): Promise<void> {
 beforeEach(() => {
 	vi.useFakeTimers();
 	(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
-	localStorage.clear();
+	window.localStorage.clear();
 	mocks.servers.length = 0;
 	mocks.startDesignServer.mockReset();
 	mocks.stopDesignServer.mockClear();

@@ -12,7 +12,7 @@ import {
 } from "./check-source-path-maps.mjs";
 import { findStandaloneCliBuildViolations } from "./check-standalone-cli-build.mjs";
 import { findTurboConfigurationProblems, readTurboConfiguration } from "./check-turbo-config.mjs";
-import { findVitestRunnerViolations } from "./check-vitest-runner.mjs";
+import { findVitestRunnerViolations, findVitestVersionViolations } from "./check-vitest-runner.mjs";
 import {
 	buildableTestDependencies,
 	changedFiles,
@@ -148,6 +148,27 @@ describe("vitest runner 守卫", () => {
 		expect(
 			findVitestRunnerViolations("packages/foo/package.json", {
 				scripts: { build: "tsgo -p tsconfig.build.json", "test:e2e": "wdio run ./wdio.conf.ts" },
+			}),
+		).toEqual([]);
+	});
+
+	it("拒绝低于安全下界的 Vitest 直接依赖", () => {
+		expect(
+			findVitestVersionViolations("packages/foo/package.json", {
+				devDependencies: { vitest: "^3.2.4" },
+			}),
+		).toEqual(['packages/foo/package.json: vitest "^3.2.4" 必须声明不低于 4.1.11 的简单版本下界']);
+	});
+
+	it("接受不低于安全下界的 Vitest 简单版本范围", () => {
+		expect(
+			findVitestVersionViolations("packages/foo/package.json", {
+				devDependencies: { vitest: "^4.1.11" },
+			}),
+		).toEqual([]);
+		expect(
+			findVitestVersionViolations("packages/foo/package.json", {
+				devDependencies: { vitest: ">=4.1.11" },
 			}),
 		).toEqual([]);
 	});
@@ -408,6 +429,14 @@ describe("CI unit test coverage", () => {
 		expect(kotlinWorkflow).toContain('      - "apps/kotlin/**"');
 		expect(kotlinWorkflow).toContain(":shared:testAndroidHostTest");
 		expect(kotlinWorkflow).toContain(":androidApp:assembleDebug");
+	});
+
+	it("runs Desktop typechecking through the current Bun executable", () => {
+		const checkTypes = rootManifest.scripts["check:types"];
+		expect(checkTypes).toContain(
+			"bun x tsc --noEmit -p apps/desktop/tsconfig.json --incremental --tsBuildInfoFile node_modules/.desktop-check.tsbuildinfo",
+		);
+		expect(checkTypes).not.toContain("bunx tsc --noEmit -p apps/desktop/tsconfig.json");
 	});
 
 	it("typechecks and exports the Expo app when Mobile changes", () => {

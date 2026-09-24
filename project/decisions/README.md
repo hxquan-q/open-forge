@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Decisions
 
 架构决策正文的唯一事实源仍是 [`docs/adr/`](../../docs/adr/)。本目录只做项目管理索引，不复制 ADR 正文，也不创建第二套 ADR 模板；新 ADR 必须使用 `docs/adr/` 现有格式。

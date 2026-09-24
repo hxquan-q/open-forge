@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Api, AssistantMessage, Model, UserMessage } from "@vetta/ai";
 import { createRuntimeObservationPublisher, type RuntimeObservationRecord } from "@vetta/runtime-core";
 import { describe, expect, it, vi } from "vitest";

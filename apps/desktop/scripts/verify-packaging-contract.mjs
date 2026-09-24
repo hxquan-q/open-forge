@@ -1,7 +1,13 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
-import { DESKTOP_BUILD_OUTPUTS, DESKTOP_REQUIRED_SOURCE_FILES } from "./desktop-packaging-layout.mjs";
+import {
+	DESKTOP_BUILD_OUTPUTS,
+	DESKTOP_LEGAL_FILES,
+	DESKTOP_LEGAL_RESOURCE,
+	DESKTOP_REQUIRED_SOURCE_FILES,
+} from "./desktop-packaging-layout.mjs";
 import { resolveMainBundleExternals, resolvePackagedNativeDependencies } from "./packaged-native-dependencies.mjs";
 
 const desktopRoot = join(import.meta.dirname, "..");
@@ -32,6 +38,12 @@ export function findDesktopPackagingContractViolations(rootDirectory = repoRoot)
 			violations.push(`missing Desktop source entry: ${relativePath}`);
 		}
 	}
+	for (const filename of DESKTOP_LEGAL_FILES) {
+		if (!existsSync(join(rootDirectory, filename))) violations.push(`missing repository legal source: ${filename}`);
+	}
+	if (DESKTOP_LEGAL_RESOURCE.from !== DESKTOP_LEGAL_RESOURCE.to || DESKTOP_LEGAL_RESOURCE.filter !== DESKTOP_LEGAL_FILES) {
+		violations.push("Desktop legal resources must preserve the shared staging directory and file list");
+	}
 
 	for (const relativeDirectory of desktopBundleSourceDirectories) {
 		const sourceDirectory = join(packageRoot, relativeDirectory);
@@ -52,6 +64,9 @@ export function findDesktopPackagingContractViolations(rootDirectory = repoRoot)
 	const preparePack = readFileSync(join(packageRoot, "scripts", "prepare-pack.js"), "utf8");
 	if (!preparePack.includes('from "./desktop-packaging-layout.mjs"')) {
 		violations.push("prepare-pack.js does not consume the shared Desktop packaging layout");
+	}
+	if (!preparePack.includes("stageDesktopLegalResources(") || !preparePack.includes("DESKTOP_LEGAL_RESOURCE")) {
+		violations.push("prepare-pack.js does not stage the required Desktop LICENSE and NOTICE resources");
 	}
 
 	const remoteHost = readFileSync(

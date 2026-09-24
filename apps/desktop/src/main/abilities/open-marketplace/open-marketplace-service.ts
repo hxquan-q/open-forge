@@ -10,6 +10,7 @@ import type {
 	OpenMarketplaceSnapshot,
 } from "../../../preload/api-types/abilities.js";
 import type { McpServerConfigData } from "../../../preload/api-types/mcp.js";
+import { DESKTOP_BRAND } from "../../../shared/desktop-brand.js";
 import { getApplicationCacheService } from "../../cache/application-cache-service.js";
 import { getAppLogger } from "../../logger.js";
 import { PLUGIN_API_VERSION } from "../../plugins/plugin-api-version.js";
@@ -212,7 +213,7 @@ function githubZipballUrl(repository: string, ref: string): string {
 }
 
 function githubHeaders(accept: string): Record<string, string> {
-	return { Accept: accept, "User-Agent": "Vetta-Desktop" };
+	return { Accept: accept, "User-Agent": `${DESKTOP_BRAND.executableName}-Desktop` };
 }
 
 function githubApiHeaders(accept: string, token: string): Record<string, string> {

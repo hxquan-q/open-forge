@@ -7,6 +7,7 @@ export const PLUGIN_CAPABILITY_PERMISSIONS = {
 	AI_COMPLETE: "ai.complete",
 	FILESYSTEM_READ: "fs.read",
 	FILESYSTEM_WRITE: "fs.write",
+	ARTIFACT_RENDERER: "ui.slot.artifact-renderer",
 	NETWORK_FETCH: "network.fetch",
 	STORAGE_READ: "storage.read",
 	STORAGE_WRITE: "storage.write",

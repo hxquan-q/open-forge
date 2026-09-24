@@ -127,6 +127,7 @@ export const readJsonFile = sdk.readJsonFile;
 export const writeJsonFile = sdk.writeJsonFile;
 export const definePluginPromptContext = sdk.definePluginPromptContext;
 export const PluginAppActionError = sdk.PluginAppActionError;
+export const PluginArtifactRendererDescriptorSchema = sdk.PluginArtifactRendererDescriptorSchema;
 export const PluginMediaError = sdk.PluginMediaError;
 export const usePluginShortcutScope = sdk.usePluginShortcutScope;
 `);

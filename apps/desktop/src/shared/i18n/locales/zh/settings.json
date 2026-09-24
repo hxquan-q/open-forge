@@ -960,7 +960,13 @@
   "workDirectory": "工作目录",
   "requestHeaders": "请求头",
   "startupTimeout": "启动超时",
+  "idleTimeout": "空闲超时（毫秒）",
   "autoApproveTools": "自动批准工具",
+  "mcpServerTools": "工具清单",
+  "mcpServerToolsLoading": "正在读取工具清单…",
+  "mcpServerToolsNotDiscovered": "工具清单将在该 server 首次连接后出现",
+  "mcpServerToolsEmpty": "该 server 未提供工具",
+  "mcpServerToolStale": "已不在目录中",
   "default10s": "默认 (10s)",
   "statusEnabled": "开启",
   "statusDisabled": "关闭",
@@ -1453,7 +1459,8 @@
       "gmail": "添加后，首次在对话中使用时会打开浏览器登录 Google\n按提示完成授权即可，一般无需手动填密钥",
       "googleCalendar": "打开 Google Cloud 控制台创建 OAuth 客户端（桌面应用类型）\n启用 Google Calendar API\n复制 Client ID 与 Client Secret 粘贴到下方\n首次使用时再按提示完成账号授权",
       "googleDrive": "添加后首次使用会走 Google 授权流程\n如官方要求本地凭证文件，可用钥匙图标补填路径",
-      "canva": "添加后，首次使用会打开浏览器登录 Canva\n完成授权后即可在对话里创建和编辑设计，无需粘贴 API Key"
+      "canva": "添加后，首次使用会打开浏览器登录 Canva\n完成授权后即可在对话里创建和编辑设计，无需粘贴 API Key",
+      "universalDb": "选择数据库类型，填写连接信息（SQLite 只需文件路径）\n建议使用只读账号：该连接器默认只读查询，凭据仅保存在本机\n支持 mysql、postgres、redis、mongodb、sqlite、oracle、sqlserver 等常见数据库\n添加后可在对话中查看表结构、执行只读查询"
     },
     "canva": {
       "displayName": "Canva",
@@ -1475,12 +1482,23 @@
       "displayName": "Google 云端硬盘",
       "description": "查找与阅读云端文件，方便把网盘资料带进对话（首次使用可能需授权）。"
     },
+    "universalDb": {
+      "displayName": "通用数据库",
+      "description": "连接 MySQL、PostgreSQL、SQLite、MongoDB、Redis 等常见数据库，在对话中查看表结构并执行只读查询。"
+    },
     "secrets": {
       "slackBotToken": "Slack 机器人令牌",
       "slackTeamId": "Slack 工作区 ID",
       "googleClientId": "Google 客户端 ID",
       "googleClientSecret": "Google 客户端密钥",
-      "gdriveCredentialsPath": "凭证文件路径（可选）"
+      "gdriveCredentialsPath": "凭证文件路径（可选）",
+      "dbType": "数据库类型",
+      "dbHost": "主机地址",
+      "dbPort": "端口",
+      "dbUser": "用户名",
+      "dbPassword": "密码",
+      "dbName": "数据库名",
+      "dbFilePath": "数据库文件路径（SQLite）"
     }
   },
   "unknown": "未知",
@@ -1542,6 +1560,8 @@
   "shortcutOpenCommandMenuDesc": "居中弹出，搜索项目、会话、能力、设置与插件视图",
   "shortcutSaveFileLabel": "保存文件",
   "shortcutSaveFileDesc": "保存右侧文件编辑器中的当前文件",
+  "shortcutBrowserElementPickerLabel": "选取网页元素",
+  "shortcutBrowserElementPickerDesc": "在内置浏览器里开启或退出元素点选，把选中元素附加到输入框",
   "kbHiwTitle": "知识库是怎么工作的",
   "kbHiwSubtitle": "简单三步，了解资料如何变成 AI 能用的知识，以及 Token 花在哪里。",
   "kbHiwStep1Title": "放入资料",
@@ -1739,6 +1759,7 @@
   "subTeam": "团队版",
   "subCancel": "取消订阅",
   "imbridge": "Claw",
+  "imBridgeTitle": "Open Forge Claw",
   "imbAdded": "已添加",
   "imbProcessing": "处理中…",
   "imbRemove": "移除",

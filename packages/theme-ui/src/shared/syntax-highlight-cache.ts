@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * 高亮 HTML 缓存：在条数上限之外增加字符预算。
  *

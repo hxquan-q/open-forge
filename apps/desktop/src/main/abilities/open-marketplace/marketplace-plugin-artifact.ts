@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { parsePluginManifest } from "@vetta-org/plugin-sdk/manifest";
 import AdmZip from "adm-zip";
+import { DESKTOP_BRAND } from "../../../shared/desktop-brand.js";
 import type { MarketplacePluginRelease } from "./marketplace-schema.js";
 
 const MAX_PLUGIN_ARCHIVE_BYTES = 50 * 1024 * 1024;
@@ -60,7 +61,7 @@ export async function fetchVerifiedMarketplacePluginArtifact(
 				redirect: "follow",
 				headers: {
 					Accept: "application/octet-stream",
-					"User-Agent": "Vetta-Desktop",
+					"User-Agent": `${DESKTOP_BRAND.executableName}-Desktop`,
 				},
 			});
 		} else {
@@ -71,7 +72,7 @@ export async function fetchVerifiedMarketplacePluginArtifact(
 					redirect: "manual",
 					headers: {
 						Accept: "application/octet-stream",
-						"User-Agent": "Vetta-Desktop",
+						"User-Agent": `${DESKTOP_BRAND.executableName}-Desktop`,
 						...(authorization ? { Authorization: authorization } : {}),
 					},
 				});

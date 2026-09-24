@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionError } from "./contracts.js";
 import type { RuntimeFailureDetails } from "./failure-contract.js";
 

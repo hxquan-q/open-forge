@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { useState } from "react";
 import { Button } from "@shared/components/ui/button";
 import { type ActiveActionApproval, useActionApproval } from "../useActionApproval";

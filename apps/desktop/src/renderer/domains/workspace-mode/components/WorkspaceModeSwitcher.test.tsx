@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -12,6 +13,38 @@ import {
 import { WorkspaceModeSwitcher } from "./WorkspaceModeSwitcher";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+
+vi.mock("@shared/components/ui/segmented-control", () => ({
+	SegmentedControl: ({
+		items,
+		value,
+		onChange,
+	}: {
+		items: ReadonlyArray<{ key: string; label: string; icon?: string }>;
+		value: string;
+		onChange: (key: string) => void;
+	}) => (
+		<div>
+			{items.map((item) => (
+				<button
+					key={item.key}
+					type="button"
+					aria-pressed={item.key === value}
+					data-icon={item.icon}
+					onClick={() => onChange(item.key)}
+				>
+					{item.label}
+				</button>
+			))}
+		</div>
+	),
+}));
+
+vi.mock("@shared/components/ui/tooltip", () => ({
+	Tooltip: ({ children }: PropsWithChildren) => <>{children}</>,
+	TooltipTrigger: ({ children }: PropsWithChildren) => <>{children}</>,
+	TooltipContent: ({ children }: PropsWithChildren) => <span data-testid="workspace-mode-hint">{children}</span>,
+}));
 
 let routeParams: { cwd?: string } = {};
 let routeSearch: { cwd?: string } = {};
@@ -79,5 +112,15 @@ describe("WorkspaceModeSwitcher", () => {
 		expect(screen.getByRole("button", { name: /workspace\.mode\.coding/ }).getAttribute("aria-pressed")).toBe(
 			"false",
 		);
+	});
+
+	it("文档与研究用文档图标，并说明切页头不改当前会话", () => {
+		routeParams = { cwd: encodeURIComponent("/repo/a") };
+		renderSwitcher();
+		expect(screen.getByRole("button", { name: /workspace\.mode\.work/ }).getAttribute("data-icon")).toBe(
+			"icon-[solar--document-text-linear]",
+		);
+		expect(screen.getByRole("group").getAttribute("aria-label")).toBe("workspace.mode.switch");
+		expect(screen.getByTestId("workspace-mode-hint").textContent).toBe("workspace.mode.hint");
 	});
 });

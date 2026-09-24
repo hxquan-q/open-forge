@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { pathBasename } from "@shared/lib/utils";

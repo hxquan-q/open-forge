@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

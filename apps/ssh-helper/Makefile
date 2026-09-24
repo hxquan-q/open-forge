@@ -1,3 +1,4 @@
+# Modified by The Open Forge contributors.
 .PHONY: build test vet tidy lint smoke clean cross-build dist-clean
 
 BIN_DIR  := bin

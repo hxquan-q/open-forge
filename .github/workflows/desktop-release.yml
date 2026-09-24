@@ -1,3 +1,4 @@
+# Modified by The Open Forge contributors.
 name: desktop-release
 
 on:
@@ -78,6 +79,9 @@ jobs:
       build-version: ${{ steps.config.outputs.build_version }}
       channel: ${{ steps.config.outputs.channel }}
       cloud_enabled: ${{ steps.config.outputs.cloud_enabled }}
+      macos-enabled: ${{ steps.platforms.outputs.macos-enabled }}
+      platform-matrix: ${{ steps.platforms.outputs.platform-matrix }}
+      update-metadata-files: ${{ steps.platforms.outputs.update-metadata-files }}
       marketplace_repository: ${{ steps.config.outputs.marketplace_repository }}
       marketplace_ref: ${{ steps.config.outputs.marketplace_ref }}
       notes: ${{ steps.config.outputs.notes }}
@@ -173,6 +177,60 @@ jobs:
           OUTPUT_UPDATE_URL: ${{ steps.config.outputs.update_url }}
         run: node scripts/release/resolve-desktop-release-config.mjs --from-outputs --summary >> "${GITHUB_STEP_SUMMARY}"
 
+      # 进入发布 job 的 macOS 构建必须有生产签名凭据；凭据缺失时把 macOS leg
+      # 从矩阵剔除，让 Win+Linux 首发不被未配置的签名阻塞。vars.VETTA_MACOS_RELEASE
+      # 可显式覆盖：always（自持签名 runner 从 runner 环境取凭据）/ never / auto。
+      - name: Resolve platform matrix
+        if: steps.scope.outputs.should-build == 'true'
+        id: platforms
+        shell: bash
+        env:
+          OUTPUT_SHOULD_PUBLISH: ${{ steps.config.outputs.should_publish }}
+          VAR_MACOS_RELEASE: ${{ vars.VETTA_MACOS_RELEASE }}
+          SECRET_MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          SECRET_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SECRET_APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          SECRET_APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          SECRET_APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          SECRET_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          MAC_SIGNED=1
+          for NAME in \
+            SECRET_MACOS_CERTIFICATE_P12_BASE64 SECRET_MACOS_CERTIFICATE_PASSWORD \
+            SECRET_APPLE_API_KEY_P8_BASE64 SECRET_APPLE_API_KEY_ID \
+            SECRET_APPLE_API_ISSUER SECRET_APPLE_TEAM_ID; do
+            [[ -z "${!NAME}" ]] && MAC_SIGNED=0
+          done
+          case "${VAR_MACOS_RELEASE:-auto}" in
+            always) INCLUDE_MAC=1 ;;
+            never) INCLUDE_MAC=0 ;;
+            auto)
+              if [[ "${OUTPUT_SHOULD_PUBLISH}" == "true" && "${MAC_SIGNED}" -eq 0 ]]; then
+                INCLUDE_MAC=0
+                echo "macOS signing secrets are not configured; excluding macOS legs from this published release." >&2
+              else
+                INCLUDE_MAC=1
+              fi
+              ;;
+            *) echo "Invalid VETTA_MACOS_RELEASE: ${VAR_MACOS_RELEASE} (expected always|never|auto)" >&2; exit 1 ;;
+          esac
+          WIN='{"platform":"windows","runner":"windows-latest","command":"dist:win","verify":"verify:updates:windows","macArch":""}'
+          LINUX='{"platform":"linux","runner":"ubuntu-latest","command":"dist:linux","verify":"verify:updates:linux:release","macArch":""}'
+          if [[ "${INCLUDE_MAC}" -eq 1 ]]; then
+            MAC_ARM='{"platform":"macos-arm64","runner":"macos-15","command":"dist:mac:arm64","verify":"verify:updates:mac","macArch":"arm64"}'
+            MAC_X64='{"platform":"macos-x64","runner":"macos-15-intel","command":"dist:mac:x64","verify":"verify:updates:mac","macArch":"x64"}'
+            MATRIX="[${WIN},${MAC_ARM},${MAC_X64},${LINUX}]"
+            METADATA="latest.yml,latest-mac.yml,latest-linux.yml"
+          else
+            MATRIX="[${WIN},${LINUX}]"
+            METADATA="latest.yml,latest-linux.yml"
+          fi
+          {
+            echo "platform-matrix=${MATRIX}"
+            echo "macos-enabled=${INCLUDE_MAC}"
+            echo "update-metadata-files=${METADATA}"
+          } >> "${GITHUB_OUTPUT}"
+
   quality:
     name: validate and test Desktop release
     needs: prepare
@@ -233,33 +291,12 @@ jobs:
     environment: ${{ needs.prepare.outputs.channel == 'test' && 'desktop-test' || 'desktop-production' }}
     strategy:
       fail-fast: false
-      matrix: &release-platforms
-        include:
-          - platform: windows
-            runner: windows-latest
-            command: dist:win
-            verify: verify:updates:windows
-            macArch: ""
-          # arm64 与 x64 必须分两次构建：内置的 node/python 运行时按
-          # VETTA_VENDOR_PLATFORM 单架构落盘，一次构建出不了两套。两次都会写同名的
-          # latest-mac.yml，因此各自重命名后上传，由发布任务合并回单一元数据。
-          # 两个架构各自使用匹配的 GitHub-hosted runner：签名与公证凭据来自 CI Secret，
-          # notarytool 只需要网络，不依赖任何一台固定的签名机。
-          - platform: macos-arm64
-            runner: macos-15
-            command: dist:mac:arm64
-            verify: verify:updates:mac
-            macArch: arm64
-          - platform: macos-x64
-            runner: macos-15-intel
-            command: dist:mac:x64
-            verify: verify:updates:mac
-            macArch: x64
-          - platform: linux
-            runner: ubuntu-latest
-            command: dist:linux
-            verify: verify:updates:linux:release
-            macArch: ""
+      # 平台矩阵由 prepare 的 "Resolve platform matrix" 动态生成：发布构建缺
+      # macOS 签名凭据时 macOS leg 被剔除；arm64/x64 仍分两次构建（内置的
+      # node/python 运行时按 VETTA_VENDOR_PLATFORM 单架构落盘，两次都会写同名
+      # latest-mac.yml，各自重命名上传后由发布任务合并回单一元数据）。
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.platform-matrix) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -438,7 +475,8 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix: *release-platforms
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.platform-matrix) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -507,15 +545,15 @@ jobs:
           docker run --rm --volume "${PWD}/release:/release:ro" ubuntu:24.04 bash -euo pipefail -c '
             apt-get update
             apt-get install --yes /release/*.deb
-            test -x /opt/Vetta/Vetta
-            test "$(cat /opt/Vetta/resources/package-type)" = "deb"
-            find /usr/share/applications -maxdepth 1 -type f -iname "*vetta*.desktop" -print -quit | grep -q .
+            test -x "/opt/Open Forge/OpenForge"
+            test "$(cat "/opt/Open Forge/resources/package-type")" = "deb"
+            find /usr/share/applications -maxdepth 1 -type f -iname "*openforge*.desktop" -print -quit | grep -q .
           '
           docker run --rm --volume "${PWD}/release:/release:ro" fedora:latest bash -euo pipefail -c '
             dnf install --assumeyes --nogpgcheck /release/*.rpm
-            test -x /opt/Vetta/Vetta
-            test "$(cat /opt/Vetta/resources/package-type)" = "rpm"
-            find /usr/share/applications -maxdepth 1 -type f -iname "*vetta*.desktop" -print -quit | grep -q .
+            test -x "/opt/Open Forge/OpenForge"
+            test "$(cat "/opt/Open Forge/resources/package-type")" = "rpm"
+            find /usr/share/applications -maxdepth 1 -type f -iname "*openforge*.desktop" -print -quit | grep -q .
           '
 
       - name: Run packaged app and updater E2E
@@ -670,6 +708,9 @@ jobs:
           VERSION="${BUILD_VERSION:-$(node -p "require('./apps/desktop/package.json').version")}"
           TAG="v${VERSION}"
           NOTES_FILE="$(node scripts/release/release-notes.mjs --version "${VERSION}")"
+          # 0.x 为 Preview 时代：Release 标记 Pre-release，1.0.0 起自动转正式。
+          PRERELEASE_ARGS=()
+          if [[ "${VERSION}" =~ ^0\. ]]; then PRERELEASE_ARGS+=("--prerelease"); fi
           if gh release view "${TAG}" >/dev/null 2>&1; then
             IS_DRAFT="$(gh release view "${TAG}" --json isDraft --jq .isDraft)"
             if [[ "${IS_DRAFT}" != "true" ]]; then
@@ -677,9 +718,9 @@ jobs:
               exit 1
             fi
             echo "Resuming draft release ${TAG}"
-            gh release edit "${TAG}" --notes-file "${NOTES_FILE}"
+            gh release edit "${TAG}" --notes-file "${NOTES_FILE}" "${PRERELEASE_ARGS[@]}"
           else
-            gh release create "${TAG}" --draft --notes-file "${NOTES_FILE}" --title "Vetta ${VERSION}" --target "${GITHUB_SHA}"
+            gh release create "${TAG}" --draft --notes-file "${NOTES_FILE}" --title "Open Forge ${VERSION}" --target "${GITHUB_SHA}" "${PRERELEASE_ARGS[@]}"
           fi
           find apps/desktop/release -maxdepth 1 -type f -print0 \
             | xargs -0 gh release upload "${TAG}" --clobber
@@ -705,6 +746,7 @@ jobs:
           BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
           VETTA_UPDATE_PROVIDER: generic
           VETTA_UPDATE_URL: ${{ needs.prepare.outputs.update_url }}
+          VETTA_UPDATE_FEED_METADATA: ${{ needs.prepare.outputs.update-metadata-files }}
         run: |
           export VETTA_DESKTOP_RELEASE_VERSION="${BUILD_VERSION:-$(node -p "require('./package.json').version")}"
           node scripts/verify-update-feed.mjs
@@ -730,6 +772,7 @@ jobs:
           VETTA_UPDATE_PROVIDER: github
           VETTA_UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           VETTA_UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
+          VETTA_UPDATE_FEED_METADATA: ${{ needs.prepare.outputs.update-metadata-files }}
         run: |
           export VETTA_DESKTOP_RELEASE_VERSION="${BUILD_VERSION:-$(node -p "require('./package.json').version")}"
           node scripts/verify-update-feed.mjs

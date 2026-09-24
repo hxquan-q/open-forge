@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { raiseShellRiskLevel } from "../../../src/execution/permissions/shell-risk-rules.js";
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Open Forge 官方能力市场坐标。
  *

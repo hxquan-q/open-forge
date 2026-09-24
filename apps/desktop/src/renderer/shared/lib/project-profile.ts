@@ -16,6 +16,9 @@ export type ActivityTabKey =
 	| "debug"
 	| "knowledge-history"
 	| "browser"
+	| "canvas"
+	| "terminal"
+	| "task"
 	| `plugin:${string}`;
 
 /** 内置 tab 的 i18n key（chat 命名空间）——模块级常量只存 key，渲染期解析。 */

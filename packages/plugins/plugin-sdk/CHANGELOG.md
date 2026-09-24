@@ -1,9 +1,11 @@
+<!-- Modified by The Open Forge contributors. -->
 # Changelog
 
 All notable changes to `@vetta-org/plugin-sdk` are documented in this file.
 
 ## [Unreleased]
 
+- 新增 `ctx.ui.registerArtifactRenderer()` 与 `ui.slot.artifact-renderer`，允许插件按 schema 渲染 Task Artifact 的安全 descriptor 投影；内容读取通过宿主绑定的只读 source，插件看不到原始 URI。使用者应声明 `pluginApiVersion: ^2.8.0`；源文件读取仍需 `fs.read` 授权。
 - 新增会话底部面板贡献点 `ctx.ui.registerBottomPanel()` 与配套权限 `ui.slot.bottom-panel`，要求 Plugin API `^2.7.0`。它与活动面板标签卡的分工是：活动面板在右侧、一个贡献一个实例，适合看某个东西的当前状态；底部面板横跨会话页下沿、可分屏、**同一个贡献可以开多个实例**，适合终端、日志跟随这类长驻工作面。实例的名字、图标、状态点与关闭前裁决都走命令式的 `useBottomPanel()`——多实例下「每帧返回 meta 的 hook」拿不到实例身份，会让改名在两份事实源之间打架。
 
 - 文件浏览器装饰新增语义 `color`、`faded`、`strikethrough`、父目录 `propagate` 与 `onDidChangeDecorations` 精确失效事件；新增用户可选的 `registerIconTheme`，支持精确文件名、复合扩展名、文件夹展开态及浅色/深色/高对比覆盖。旧 `icon` / `badge` / `tooltip` provider 保持兼容。使用新合同的插件应声明 Plugin API `^2.7.0`。

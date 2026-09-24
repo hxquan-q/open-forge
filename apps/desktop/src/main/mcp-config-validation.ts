@@ -1,8 +1,11 @@
+// Modified by The Open Forge contributors.
+
 import type { McpConfigData, McpServerConfigData } from "../preload/api-types/mcp.js";
 
 const COMMON_SERVER_KEYS = new Set([
 	"type",
 	"disabled",
+	"disabledTools",
 	"autoApprove",
 	"startupTimeout",
 	"debug",
@@ -10,7 +13,15 @@ const COMMON_SERVER_KEYS = new Set([
 	"description",
 	"icon",
 ]);
-const STDIO_SERVER_KEYS = new Set([...COMMON_SERVER_KEYS, "command", "args", "env", "cwd"]);
+const STDIO_SERVER_KEYS = new Set([
+	...COMMON_SERVER_KEYS,
+	"command",
+	"args",
+	"env",
+	"cwd",
+	"idleTimeout",
+	"postConnectToolCalls",
+]);
 const HTTP_SERVER_KEYS = new Set([
 	...COMMON_SERVER_KEYS,
 	"url",
@@ -59,6 +70,7 @@ function assertOptionalStringRecord(value: unknown, path: string): void {
 
 function assertCommonServerConfig(server: Record<string, unknown>, path: string): void {
 	assertOptionalBoolean(server.disabled, `${path}.disabled`);
+	assertOptionalStringArray(server.disabledTools, `${path}.disabledTools`);
 	assertOptionalStringArray(server.autoApprove, `${path}.autoApprove`);
 	if (
 		server.startupTimeout !== undefined &&
@@ -101,6 +113,27 @@ function assertServerConfig(value: unknown, path: string): asserts value is McpS
 	assertOptionalStringArray(value.args, `${path}.args`);
 	assertOptionalStringRecord(value.env, `${path}.env`);
 	assertOptionalString(value.cwd, `${path}.cwd`, true);
+	if (
+		value.idleTimeout !== undefined &&
+		(typeof value.idleTimeout !== "number" || !Number.isInteger(value.idleTimeout) || value.idleTimeout < 0)
+	) {
+		throw new Error(`Invalid ${path}.idleTimeout`);
+	}
+	if (value.postConnectToolCalls !== undefined) {
+		if (
+			!Array.isArray(value.postConnectToolCalls) ||
+			value.postConnectToolCalls.some(
+				(call) =>
+					!isRecord(call) ||
+					typeof call.tool !== "string" ||
+					call.tool.length === 0 ||
+					(call.args !== undefined &&
+						(!isRecord(call.args) || Object.values(call.args).some((arg) => typeof arg !== "string"))),
+			)
+		) {
+			throw new Error(`Invalid ${path}.postConnectToolCalls`);
+		}
+	}
 }
 
 export function validateMcpConfig(value: unknown): McpConfigData {

@@ -1,6 +1,7 @@
 {
 	"name": "@vetta/runtime-node",
 	"version": "0.0.1",
+	"private": true,
 	"description": "Shared Node.js runtime adapters for Vetta agents",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -70,7 +71,7 @@
 		"@types/node": "^22.10.5",
 		"@types/proper-lockfile": "^4.1.4",
 		"typescript": "^5.9.2",
-		"vitest": "^3.2.4"
+		"vitest": "^4.1.11"
 	},
 	"engines": {
 		"node": ">=20.0.0"

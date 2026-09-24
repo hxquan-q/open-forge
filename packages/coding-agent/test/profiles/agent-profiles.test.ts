@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import type { AgentConfigurationSelection } from "../../src/agent-configuration/configuration-schema.js";
 import { applyAgentProfileDefaults, resolveAgentProfile } from "../../src/profiles/agent-profiles.js";
@@ -13,7 +14,7 @@ describe("resolveAgentProfile", () => {
 		const work = resolveAgentProfile("work");
 		expect(work.defaultToolNames).not.toContain("bash");
 		expect(work.defaultToolNames).not.toContain("shell");
-		for (const tool of ["read", "write", "edit", "doc_to_pdf", "kb_write_page"]) {
+		for (const tool of ["read", "write", "edit", "doc_to_pdf", "kb_write_page", "artifact", "browser_tab"]) {
 			expect(work.defaultToolNames).toContain(tool);
 		}
 	});

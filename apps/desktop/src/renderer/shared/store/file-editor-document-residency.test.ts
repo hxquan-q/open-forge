@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { createStore } from "jotai";
 import { describe, expect, it } from "vitest";
 import type { FileEditorDocumentState } from "./file-atoms";

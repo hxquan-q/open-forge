@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";

@@ -10,6 +10,7 @@ source: exprot/kernel-replacement-feasibility.md
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 是否启动 Pi Adapter 评估
 

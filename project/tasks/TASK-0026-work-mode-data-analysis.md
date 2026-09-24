@@ -1,7 +1,7 @@
 ---
 id: TASK-0026
 type: task
-status: blocked
+status: ready
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-22
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Work 数据分析最小纵向切片
 
@@ -68,7 +69,7 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- ISSUE-0005 已裁决方案 C、TASK-0017 已 done（2026-09-23 校准）；当前经 depends_on TASK-0028 传递阻塞，0028 随 ISSUE-0006 裁决解锁后本任务再评估；数据写入授权不由 WorkspaceMode 控制。
+- TASK-0028 已 done。本 Task 与 TASK-0025 共享 Work Panel 写路径并互相冲突，当前必须串行，由 coordinator 选定下一项。数据写入授权不由 WorkspaceMode 控制。
 
 ## 交付记录
 

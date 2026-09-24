@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";

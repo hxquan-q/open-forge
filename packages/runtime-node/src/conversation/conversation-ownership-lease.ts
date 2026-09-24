@@ -150,7 +150,10 @@ export class FileConversationOwnershipManager implements ConversationOwnershipMa
 			if (liveStartedAt === undefined) return false;
 			const recordedStartedAt = holder.processStartedAt ? Date.parse(holder.processStartedAt) : Number.NaN;
 			if (Number.isFinite(recordedStartedAt)) {
-				return Math.abs(liveStartedAt - recordedStartedAt) > PROCESS_START_TOLERANCE_MS;
+				// processStartedAt 来自持有进程的 performance.timeOrigin——运行时初始化把它推到
+				// 真实启动之后（慢机器上可差数秒）。只有 live 显著晚于记录才证明 PID 被复用；
+				// live 更早是同一进程的正常启动偏差，不能用绝对差判定。
+				return liveStartedAt - recordedStartedAt > PROCESS_START_TOLERANCE_MS;
 			}
 			const acquiredAt = Date.parse(holder.acquiredAt);
 			return Number.isFinite(acquiredAt) && liveStartedAt > acquiredAt + PROCESS_START_TOLERANCE_MS;

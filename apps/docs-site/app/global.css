@@ -507,3 +507,41 @@
 		transition-duration: 0.01ms !important;
 	}
 }
+
+/* 打印回归纸墨本色：白纸黑字，隐去界面铬件，保留编号与分隔的印刷语言。 */
+@media print {
+	:root,
+	.dark {
+		--vetta-paper: #ffffff;
+		--vetta-ink: #141414;
+		--vetta-binding: #ffffff;
+		--vetta-binding-fg: #141414;
+		--color-fd-background: #ffffff;
+		--color-fd-foreground: #141414;
+		--color-fd-muted-foreground: #444444;
+		--color-fd-border: #d6d3ca;
+		color-scheme: light;
+	}
+
+	body {
+		background-image: none;
+	}
+
+	/* 纸面只留文字与结构：hero 图版是发光的屏幕产物，打印即是废墨。 */
+	.docs-home-body header figure,
+	.docs-home-body header img {
+		display: none !important;
+	}
+
+	.docs-home-body header a {
+		background: transparent !important;
+		color: var(--vetta-ink) !important;
+		padding-inline: 0;
+	}
+
+	#nd-sidebar,
+	#nd-subnav,
+	[grid-area="toc"] {
+		display: none !important;
+	}
+}

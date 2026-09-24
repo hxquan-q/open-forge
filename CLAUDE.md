@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -91,7 +92,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 ### 三、原子化提交与风险预防
 
 **核心准则**：一次提交仅做一件事（Single Responsibility Principle）。
-**自动提交**：在任务完成后，自动提交相关改动。
+**提交授权**：每完成一个任务或一组自洽修改且验证通过后就提交，无需每次另行授权，与 `AGENTS.md`「Git 与并行工作区」保持一致；Push 仍需用户明确授权。
 
 **禁止混合多业务提交的风险警告**：
 - **精准回滚失效**：若业务 A 存在缺陷需要回退，与业务 B 混杂的提交将导致无关功能被迫陪葬。
@@ -140,6 +141,8 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 **核心准则**：代码改完不等于任务完成，发布说明写完才算。
 
 **写入位置**：`.github/release-notes/v<版本号>.md`，一个版本一个文件。版本号以 `apps/desktop/package.json` 的 `version` 字段为准，文件不存在时直接新建。该文件会被 `desktop-release` 流水线直接用作 GitHub Release 正文，写法规范见 `.github/release-notes/README.md`。
+
+**当前版本基线**：Open Forge Desktop 已于 commit `ff5989c6d` 切换至独立版本 **0.1.0**，不再继承上游 0.5.x 版本号。所有后续版本号必须基于 0.1.0 递增（0.1.1, 0.1.2... 或 0.2.0 等）。**是否执行发布（publish）由用户明确授权**，Agent 不得主动执行 tag 推送或触发构建流水线。
 
 **强制触发条件**：以下任意一项完成后，必须在同一次任务内把对应条目写入当前版本的发布说明，严禁留作后续工作：
 

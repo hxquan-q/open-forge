@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	AI_ERROR_CODES,
 	type Api,
@@ -27,7 +28,10 @@ import {
 	type CodingAgentContextRuntimeOptions,
 } from "../../src/compaction/runtime/index.js";
 import { COMPACTION_SUMMARY_PREFIX, COMPACTION_SUMMARY_SUFFIX } from "../../src/model-context/index.js";
-import { CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION } from "../../src/runtime-contracts/context-observability.js";
+import {
+	CODING_AGENT_COMPACTION_BACKPRESSURE_OBSERVATION,
+	CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+} from "../../src/runtime-contracts/context-observability.js";
 import type {
 	CodingAgentCompactionExtensionRuntime,
 	CodingAgentPinnedModelContext,
@@ -213,6 +217,51 @@ describe("DefaultCodingAgentContextRuntime", () => {
 					)
 				).map(messageText),
 			).toEqual(["shared", "transform-1"]);
+		} finally {
+			await bound.releaseTurnBinding?.();
+		}
+	});
+
+	it("freezes the decay prune boundary across model calls of one turn binding", async () => {
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+		});
+		const signal = new AbortController().signal;
+		const bound = await runtime.bindForTurn({
+			sessionId: "session-1",
+			operationId: "turn-1",
+			reason: "turn",
+			signal,
+		});
+		try {
+			const messages: Message[] = [userMessage("request", 1)];
+			for (let index = 0; index < 12; index += 1) {
+				messages.push(signedThinkingAssistant(`thought ${index}`, index + 2));
+			}
+			const input = {
+				sessionId: "session-1",
+				turnId: "turn-1",
+				messages,
+				modelBinding: { model: PROJECTION_MODEL },
+			};
+
+			const first = await bound.transform(input, signal);
+			// 模拟 Turn 内工具循环追加 4 条带 thinking 的 assistant 消息。
+			for (let index = 12; index < 16; index += 1) {
+				messages.push(signedThinkingAssistant(`thought ${index}`, index + 2));
+			}
+			const second = await bound.transform({ ...input, messages }, signal);
+
+			// 绑定（Turn）作用域内清除集合冻结：追加后计数窗已滑到会清 1..8，
+			// 实际仍只清准入时的最老 4 条（下标 1..4），已见前缀身份稳定。
+			expect(clearedSignedThinkingIndices(second)).toEqual([1, 2, 3, 4]);
+			expect(clearedSignedThinkingIndices(first)).toEqual([1, 2, 3, 4]);
+			for (let index = 1; index <= 12; index += 1) {
+				expect(second[index]).toBe(first[index]);
+			}
+			// 新追加的尾部消息本 Turn 内不受衰减剪枝影响。
+			expect(second[16]).toBe(messages[16]);
 		} finally {
 			await bound.releaseTurnBinding?.();
 		}
@@ -550,7 +599,7 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		expect(releaseExtension).toHaveBeenCalledOnce();
 	});
 
-	it("freezes time-based projection decisions for every model call in a Turn", async () => {
+	it("projects identical context for every model call in a Turn regardless of wall clock", async () => {
 		let now = 100_000;
 		const runtime = new CodingAgentContextRuntime({
 			hookRuntime: createHookRuntime(),
@@ -578,8 +627,12 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		now = 200_000;
 		const second = await bound.transform(input, new AbortController().signal);
 
+		// 衰减是消息流的纯函数：Turn 内相邻模型调用投影逐字节相同，墙钟前进不再制造翻转点。
 		expect(first).toEqual(second);
-		expect(first[0]?.content).toEqual([{ type: "thinking", thinking: "thought-0" }]);
+		// 出窗即清：9 条带 thinking 消息中最近 8 条受保护，最老 1 条无签名块整块移除，
+		// 清除只取决于计数尾窗，与时间戳、墙钟均无关。
+		expect(first[0]?.content).toEqual([]);
+		expect(first[1]?.content).toEqual([{ type: "thinking", thinking: "thought-1" }]);
 		await bound.releaseTurnBinding?.();
 	});
 
@@ -1483,6 +1536,167 @@ describe("DefaultCodingAgentContextRuntime", () => {
 		expect(generateCompaction).toHaveBeenCalledTimes(2);
 	});
 
+	it("warns once the assembled prompt exceeds the context window while compaction is disabled", async () => {
+		// 用户关闭自动压缩后，超过窗口的 prompt 原本会静默放行到 provider 400；
+		// 现在应在观测流中留下可诊断的 budget 信号，且控制流不变（unchanged、不生成摘要）。
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 120, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const generateCompaction = vi.fn(async (): Promise<CompactionResult> => {
+			throw new Error("must not run");
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => ({ ...compactingSettings(), enabled: false }),
+			generateCompaction,
+			observationPublisher: publisher,
+		});
+		const input: ContextPreparationInput = {
+			...preparationInput(document, history, history, []),
+			reason: "model_call",
+		};
+
+		const prepared = await runtime.prepare(input, new AbortController().signal);
+
+		expect(prepared.compaction).toBeUndefined();
+		expect(prepared.messages).toEqual(history);
+		expect(generateCompaction).not.toHaveBeenCalled();
+		expect(records).toContainEqual(
+			expect.objectContaining({
+				token: CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+				payload: expect.objectContaining({
+					trigger: "model_call",
+					suppression: "compaction_disabled",
+					contextWindow: 100,
+				}),
+			}),
+		);
+		const payload = records.find((record) => record.token === CODING_AGENT_CONTEXT_BUDGET_OBSERVATION)?.payload as
+			| { contextTokens: number; overByTokens: number }
+			| undefined;
+		expect(payload?.contextTokens).toBeGreaterThan(100);
+		expect(payload?.overByTokens).toBe(payload!.contextTokens - 100);
+	});
+
+	it("does not emit a budget observation while the prompt fits the window", async () => {
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 50, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => ({ ...compactingSettings(), enabled: false }),
+			generateCompaction: async () => {
+				throw new Error("must not run");
+			},
+			observationPublisher: publisher,
+		});
+
+		await runtime.prepare(
+			{ ...preparationInput(document, history, history, []), reason: "model_call" },
+			new AbortController().signal,
+		);
+
+		expect(records).toEqual([]);
+	});
+
+	it("flags an assistant error while over budget even when the error is not overflow-shaped", async () => {
+		// 上下文已超窗时 assistant 因非溢出原因失败：观测流应指出预算已超，
+		// 以便把「下次调用仍可能 400」与「普通瞬时错误」区分开。
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 120, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction: async () => {
+				throw new Error("must not run");
+			},
+			observationPublisher: publisher,
+		});
+		const failingAssistant: AssistantMessage = {
+			...assistantMessage("network timeout", 0, 4),
+			stopReason: "error",
+			errorMessage: "network timeout",
+		};
+		const input: ContextPreparationInput = {
+			...preparationInput(document, history, history, []),
+			reason: "assistant_error",
+			triggeringAssistantMessage: failingAssistant,
+			recoveryAttempt: 0,
+		};
+
+		const prepared = await runtime.prepare(input, new AbortController().signal);
+
+		expect(prepared.compaction).toBeUndefined();
+		expect(records).toContainEqual(
+			expect.objectContaining({
+				token: CODING_AGENT_CONTEXT_BUDGET_OBSERVATION,
+				payload: expect.objectContaining({
+					trigger: "assistant_error",
+					suppression: "non_overflow_error",
+					contextWindow: 100,
+				}),
+			}),
+		);
+	});
+
+	it("does not double-report the budget when enabled compaction handles the overage", async () => {
+		// 启用压缩时超窗由 compaction.start/end 事件覆盖，budget 观测不重复发声。
+		const history = [
+			userMessage("old request".repeat(40), 1),
+			assistantMessage("old response", 120, 2),
+			userMessage("kept request", 3),
+		] satisfies Message[];
+		const document = documentFromMessages(history);
+		const records: RuntimeObservationRecord[] = [];
+		const publisher = createRuntimeObservationPublisher({
+			port: { record: (record) => records.push(record) },
+		});
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: compactingSettings,
+			generateCompaction: async (preparation) => ({
+				summary: "summary",
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+			observationPublisher: publisher,
+		});
+
+		const prepared = await runtime.prepare(
+			{ ...preparationInput(document, history, history, []), reason: "model_call" },
+			new AbortController().signal,
+		);
+
+		expect(prepared.compaction).toBeDefined();
+		expect(records.filter((record) => record.token === CODING_AGENT_CONTEXT_BUDGET_OBSERVATION)).toEqual([]);
+	});
+
 	it("starts cleanly on a fresh runtime after the previous one was abandoned mid-attempt", async () => {
 		const history = [
 			userMessage("old request".repeat(40), 1),
@@ -1777,3 +1991,28 @@ const MODEL: Model<Api> = {
 	contextWindow: 100,
 	maxTokens: 20,
 };
+
+// 衰减剪枝合同测试专用：大上下文窗口，避免压力截断介入剪枝断言。
+const PROJECTION_MODEL: Model<Api> = { ...MODEL, contextWindow: 200_000, maxTokens: 4_096 };
+
+function signedThinkingAssistant(thinking: string, timestamp: number): AssistantMessage {
+	return {
+		...assistantMessage(`answer ${thinking}`, 1, timestamp),
+		content: [
+			{ type: "thinking", thinking, thinkingSignature: "sig" },
+			{ type: "text", text: `answer ${thinking}` },
+		],
+	};
+}
+
+function clearedSignedThinkingIndices(messages: readonly Message[]): number[] {
+	const indices: number[] = [];
+	messages.forEach((message, index) => {
+		if (message.role !== "assistant") return;
+		const blocks = message.content.filter(
+			(block): block is Extract<(typeof message.content)[number], { type: "thinking" }> => block.type === "thinking",
+		);
+		if (blocks.some((block) => block.thinking === "" && block.thinkingSignature !== undefined)) indices.push(index);
+	});
+	return indices;
+}

@@ -154,6 +154,11 @@ export default defineConfig(({ mode }) => {
 			host: "127.0.0.1",
 			port: devServerPort,
 			strictPort: true,
+			warmup: {
+				// 主窗口入口在 Electron 主进程初始化期间并行完成 transform，
+				// 首帧不再串行等待整棵依赖图的冷转换（dev 专属，打包无影响）。
+				clientFiles: ["./index.html"],
+			},
 		},
 	};
 });

@@ -3,7 +3,7 @@ import { ModelSelect } from "@shared/components/ModelSelect";
 import { useModelOptions } from "@shared/components/ModelSelect/useModelOptions";
 import type { TeamMemberModelPreference, TeamMemberModelSelection } from "../../../../shared/agent-team-member-model";
 import { resolveReasoning } from "@shared/components/ModelSelect/resolveReasoning";
-import { DEFAULT_TEAM_AUTOMATIC_RETRIES } from "@vetta/agent-team";
+import { DEFAULT_TEAM_AUTOMATIC_RETRIES, normalizeMentionHandle } from "@vetta/agent-team";
 import type { AgentProfile, TeamDefinition, TeamMemberAssignment } from "@vetta/agent-team";
 import { AgentAvatarView } from "@vetta-org/theme-ui/chat";
 import { DetailDrawer, DetailDrawerEnter } from "@vetta-org/theme-ui/overlays";
@@ -73,6 +73,8 @@ export function TeamSettingsSheet({
 	const [addBindingKind, setAddBindingKind] = useState<"reference" | "copy">("reference");
 	/** 正在展开任务书编辑区的成员（Agent 身份）；任务书随团队一起保存，不单独落盘。 */
 	const [assignmentAgentId, setAssignmentAgentId] = useState<string>();
+	/** 正在展开队内称呼编辑的成员（Agent 身份）；同样随团队一起保存。 */
+	const [handleAgentId, setHandleAgentId] = useState<string>();
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string>();
 	const [memberModels, setMemberModels] = useState<Readonly<Record<string, TeamMemberModelPreference>>>({});
@@ -302,6 +304,10 @@ export function TeamSettingsSheet({
 								{members.map((member) => {
 									const isLeader = member.id === leaderId;
 									const memberId = team.members.find((candidate) => candidate.binding.agentProfileId === member.id)?.id;
+									const memberHandle = draft.handles?.[member.id] ?? member.mentionHandle;
+									const otherHandles = members
+										.filter((candidate) => candidate.id !== member.id)
+										.map((candidate) => draft.handles?.[candidate.id] ?? candidate.mentionHandle);
 									const selectedModel = memberId ? memberModels[memberId]?.modelKey : undefined;
 									const modelUnavailable = Boolean(selectedModel && modelOptions.length > 0 && !modelOptions.some((option) => option.key === selectedModel));
 									return (
@@ -359,6 +365,40 @@ export function TeamSettingsSheet({
 													</Button>
 												)}
 											</div>
+
+											{/* 队内改名只对已入队成员开放：新成员走 new 变体，协议不收 handle，给了入口也会在保存时被静默丢弃。 */}
+											{handleAgentId === member.id && memberId && !readOnly ? (
+												<MemberHandleEditor
+													value={memberHandle}
+													otherHandles={otherHandles}
+													onCancel={() => setHandleAgentId(undefined)}
+													onSave={(handle) => {
+														setDraft((current) => ({
+															...current,
+															handles: { ...current.handles, [member.id]: handle },
+														}));
+														setHandleAgentId(undefined);
+													}}
+												/>
+											) : (
+												<div className="flex items-center gap-2 border-t border-border/40 pt-2">
+													<span className="min-w-0 truncate text-[11.5px] text-muted-foreground/80">
+														@{memberHandle}
+													</span>
+													{!readOnly && memberId && (
+														<Button
+															variant="ghost"
+															size="sm"
+															className="ml-auto h-6 shrink-0 gap-1 px-2 text-[11px] text-muted-foreground"
+															aria-label={t("settings.memberHandleRename", { name: member.name })}
+															onClick={() => setHandleAgentId(member.id)}
+														>
+															<span className="icon-[solar--pen-2-linear] h-3 w-3" aria-hidden="true" />
+															<span className="font-medium">{t("settings.memberHandleRenameAction")}</span>
+														</Button>
+													)}
+												</div>
+											)}
 
 											{assignmentAgentId === member.id && readOnly ? (
 												<MemberAssignmentView
@@ -616,6 +656,68 @@ function MemberAssignmentEditor({
 	);
 }
 
+/**
+ * 队内称呼编辑：单字段即时校验（空值、与队内其他成员撞名——归一化比较，大小写同算），
+ * 通过后才允许应用；最终裁决仍在主进程 `assertTeamInvariants`，这里只做体验层反馈。
+ */
+function MemberHandleEditor({
+	value,
+	otherHandles,
+	onCancel,
+	onSave,
+}: {
+	readonly value: string;
+	readonly otherHandles: readonly string[];
+	readonly onCancel: () => void;
+	readonly onSave: (handle: string) => void;
+}): JSX.Element {
+	const { t } = useTranslation("agent-teams");
+	const [handle, setHandle] = useState(value);
+	const trimmed = handle.trim();
+	const empty = trimmed.length === 0;
+	const taken =
+		!empty && otherHandles.some((other) => normalizeMentionHandle(other) === normalizeMentionHandle(trimmed));
+
+	return (
+		<div className="flex flex-col gap-1.5 rounded-lg border border-border/50 bg-background/40 p-2.5">
+			<label className="flex items-center gap-2">
+				<span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/60">
+					{t("settings.memberHandle")}
+				</span>
+				<span aria-hidden className="shrink-0 text-[12px] text-muted-foreground/50">
+					@
+				</span>
+				<Input
+					autoFocus
+					value={handle}
+					onChange={(event) => setHandle(event.target.value)}
+					aria-label={t("settings.memberHandle")}
+					className="h-8"
+				/>
+			</label>
+			{empty ? (
+				<span role="status" className="text-[11px] text-destructive">
+					{t("settings.memberHandleEmpty")}
+				</span>
+			) : taken ? (
+				<span role="status" className="text-[11px] text-destructive">
+					{t("settings.memberHandleTaken")}
+				</span>
+			) : (
+				<span className="text-[11px] text-muted-foreground/60">{t("settings.memberHandleHint")}</span>
+			)}
+			<div className="flex justify-end gap-2">
+				<Button variant="outline" size="sm" onClick={onCancel}>
+					<span className="text-[12px] font-medium">{t("settings.memberHandleCancel")}</span>
+				</Button>
+				<Button variant="primary" size="sm" disabled={empty || taken} onClick={() => onSave(trimmed)}>
+					<span className="text-[12px] font-medium">{t("settings.memberHandleApply")}</span>
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 /** 提供方维护的任务书：只摆 label 与内容，不给任何输入框的外观——这里本来就没有可改的东西。 */
 function MemberAssignmentView({
 	agent,
@@ -689,8 +791,17 @@ function sameDraft(left: TeamAssemblyDraft, right: TeamAssemblyDraft): boolean {
 		left.leaderId === right.leaderId &&
 		left.memberIds.length === right.memberIds.length &&
 		left.memberIds.every((id, index) => id === right.memberIds[index]) &&
-		sameAssignments(left, right)
+		sameAssignments(left, right) &&
+		sameHandles(left, right)
 	);
+}
+
+function sameHandles(left: TeamAssemblyDraft, right: TeamAssemblyDraft): boolean {
+	const ids = new Set([...Object.keys(left.handles ?? {}), ...Object.keys(right.handles ?? {})]);
+	for (const id of ids) {
+		if ((left.handles?.[id] ?? "") !== (right.handles?.[id] ?? "")) return false;
+	}
+	return true;
 }
 
 function sameAssignments(left: TeamAssemblyDraft, right: TeamAssemblyDraft): boolean {

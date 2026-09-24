@@ -1,3 +1,7 @@
+// Copyright The Open Forge contributors.
+
+/** 单一 Catalog 收敛规则（Profile × 显式选择 × 项目策略，TASK-0021）。 */
+export { resolveCapabilityNameConflict, resolveToolCatalogPolicy } from "../tool-policy/catalog-policy.js";
 export { ensureVettaLocalGitignore, loadProjectConventions } from "./load-project-conventions.js";
 export {
 	loadProjectToolPolicy,

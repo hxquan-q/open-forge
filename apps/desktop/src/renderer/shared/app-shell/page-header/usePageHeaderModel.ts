@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useActiveWorkspaceViewHeader } from "@domains/plugins/components/WorkspaceViewHeaderSlot";
 import { WorkspaceModeSwitcher } from "@domains/workspace-mode/components/WorkspaceModeSwitcher";
 import { isWorkspaceModePath } from "@domains/workspace-mode/services/workspace-mode-paths";

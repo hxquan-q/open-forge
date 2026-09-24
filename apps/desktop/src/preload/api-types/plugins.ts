@@ -523,6 +523,20 @@ export interface DesktopPluginCapabilityArtifactsApi {
 		input: { artifactId: string; destination: PluginArtifactDestination },
 	): Promise<PersistedArtifact>;
 	release(sessionId: string, artifactId: string): Promise<void>;
+	readTaskArtifactText(
+		sessionId: string,
+		taskSessionId: string,
+		artifactId: string,
+		version: number,
+		rendererType: string,
+	): Promise<string>;
+	readTaskArtifactBytes(
+		sessionId: string,
+		taskSessionId: string,
+		artifactId: string,
+		version: number,
+		rendererType: string,
+	): Promise<ArrayBuffer>;
 }
 
 export interface DesktopPluginCapabilityMcpApi {
@@ -956,7 +970,7 @@ export interface DesktopPluginsApi {
 	/** Fired when plugins are installed/uninstalled/enabled/reloaded (host should re-load remotes). */
 	onPluginsChanged(listener: (event?: PluginsChangedEvent) => void): () => void;
 	networkRequest<T = unknown>(sessionId: string, request: PluginNetworkRequest): Promise<PluginNetworkResponse<T>>;
-	/** 带登录身份打 Vetta 服务端；仅 official 插件的 session 会被主进程放行（ADR-0056）。 */
+	/** 带登录身份打 Open Forge 服务端；仅 official 插件的 session 会被主进程放行（ADR-0056）。 */
 	gatewayRequest<T = unknown>(sessionId: string, request: PluginGatewayRequest): Promise<PluginGatewayResponse<T>>;
 	secretsGet(sessionId: string, key: string): Promise<string | undefined>;
 	secretsHas(sessionId: string, key: string): Promise<boolean>;

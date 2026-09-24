@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 /**
- * Vetta 云服务主进程入口（唯一入口）。
+ * Open Forge 云服务主进程入口（唯一入口）。
  *
  * 宿主只允许通过 `startCloudMain()` 挂载本模块，且必须包在
  * `isCloudBuildEnabled()` 判断里用动态 import 加载——lite 构建

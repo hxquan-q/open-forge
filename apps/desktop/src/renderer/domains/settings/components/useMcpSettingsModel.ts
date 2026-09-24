@@ -1,8 +1,11 @@
+// Modified by The Open Forge contributors.
+
 import type {
 	AbilityInstallOrigin,
 	McpConfigData,
 	McpHttpServerConfigData,
 	McpServerConfigData,
+	McpServerToolList,
 	McpStdioServerConfigData,
 } from "@preload/api.js";
 import type { MarketMcpServer } from "@shared/lib/api";
@@ -48,8 +51,11 @@ export interface McpServerFormState {
 	url: string;
 	headers: string;
 	disabled: boolean;
+	/** 已停用的 server 原始工具名；编辑态由工具清单勾选维护，非逗号文本。 */
+	disabledTools: string[];
 	autoApprove: string;
 	startupTimeout: string;
+	idleTimeout: string;
 	debug: boolean;
 }
 
@@ -61,6 +67,8 @@ export interface McpSettingsModel {
 	addedServerNames: Set<string>;
 	addingServer: boolean;
 	editingServer: string | null;
+	/** 正在编辑的 server 的最近目录工具清单；未进入编辑态或加载失败为 null。 */
+	editingServerTools: McpServerToolList | null;
 	serverForm: McpServerFormState;
 	jsonText: string;
 	jsonError: string | null;
@@ -117,8 +125,10 @@ export const emptyMcpServer: McpServerFormState = {
 	url: "",
 	headers: "",
 	disabled: false,
+	disabledTools: [],
 	autoApprove: "",
 	startupTimeout: "",
+	idleTimeout: "",
 	debug: false,
 };
 
@@ -138,6 +148,8 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 	const [saving, setSaving] = useState(false);
 	const [addingServer, setAddingServer] = useState(false);
 	const [editingServer, setEditingServer] = useState<string | null>(null);
+	const editingServerRef = useRef<string | null>(null);
+	const [editingServerTools, setEditingServerTools] = useState<McpServerToolList | null>(null);
 	const [serverForm, setServerForm] = useState<McpServerFormState>({ ...emptyMcpServer });
 	const [jsonText, setJsonText] = useState("");
 	const [jsonError, setJsonError] = useState<string | null>(null);
@@ -211,7 +223,9 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 	);
 
 	const closeEditor = useCallback(() => {
+		editingServerRef.current = null;
 		setEditingServer(null);
+		setEditingServerTools(null);
 		setServerForm({ ...emptyMcpServer });
 	}, []);
 
@@ -247,6 +261,7 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 					? {
 							...next,
 							disabled: existing.disabled,
+							disabledTools: existing.disabledTools,
 							autoApprove: existing.autoApprove,
 							startupTimeout: existing.startupTimeout,
 							debug: existing.debug,
@@ -537,8 +552,18 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 				return;
 			}
 			setServerForm(serverToForm(name, server));
+			editingServerRef.current = name;
 			setEditingServer(name);
 			setAddingServer(false);
+			setEditingServerTools(null);
+			void window.vetta.mcp
+				.listServerTools(name)
+				.then((list) => setEditingServerTools((current) => (editingServerRef.current === name ? list : current)))
+				.catch(() =>
+					setEditingServerTools((current) =>
+						editingServerRef.current === name ? { tools: [], cached: false } : current,
+					),
+				);
 		},
 		[closeEditor, config, editingServer],
 	);
@@ -603,6 +628,7 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 		addedServerNames: new Set(serverNames),
 		addingServer,
 		editingServer,
+		editingServerTools,
 		serverForm,
 		jsonText,
 		jsonError,
@@ -680,8 +706,10 @@ function serverToForm(name: string, server: McpServerConfigData): McpServerFormS
 	const common = {
 		name,
 		disabled: server.disabled ?? false,
+		disabledTools: [...(server.disabledTools ?? [])],
 		autoApprove: server.autoApprove?.join(", ") ?? "",
 		startupTimeout: server.startupTimeout != null ? String(server.startupTimeout) : "",
+		idleTimeout: server.type === "http" || server.idleTimeout == null ? "" : String(server.idleTimeout),
 		debug: server.debug ?? false,
 	};
 	if (isHttpMcpServerConfigData(server)) {
@@ -718,6 +746,7 @@ function formToServer(form: McpServerFormState): McpServerConfigData {
 		const headers = kvLinesToObject(form.headers);
 		if (headers) config.headers = headers;
 		if (form.disabled) config.disabled = true;
+		if (form.disabledTools.length > 0) config.disabledTools = [...form.disabledTools];
 		if (autoApprove && autoApprove.length > 0) config.autoApprove = autoApprove;
 		if (startupTimeout && !Number.isNaN(startupTimeout)) config.startupTimeout = startupTimeout;
 		if (form.debug) config.debug = true;
@@ -732,13 +761,17 @@ function formToServer(form: McpServerFormState): McpServerConfigData {
 		: undefined;
 	const env = kvLinesToObject(form.env);
 
+	const idleTimeout = form.idleTimeout.trim() ? Number(form.idleTimeout.trim()) : undefined;
+
 	const config: McpStdioServerConfigData = { command: form.command.trim() };
 	if (args && args.length > 0) config.args = args;
 	if (env) config.env = env;
 	if (form.cwd.trim()) config.cwd = form.cwd.trim();
 	if (form.disabled) config.disabled = true;
+	if (form.disabledTools.length > 0) config.disabledTools = [...form.disabledTools];
 	if (autoApprove && autoApprove.length > 0) config.autoApprove = autoApprove;
 	if (startupTimeout && !Number.isNaN(startupTimeout)) config.startupTimeout = startupTimeout;
+	if (idleTimeout !== undefined && !Number.isNaN(idleTimeout)) config.idleTimeout = idleTimeout;
 	if (form.debug) config.debug = true;
 	return config;
 }
@@ -767,6 +800,7 @@ function mergeMarketServer(existing: McpServerConfigData | undefined, next: McpS
 	if (!existing) return next;
 	const localOnly = {
 		...(existing.disabled === undefined ? {} : { disabled: existing.disabled }),
+		...(existing.disabledTools === undefined ? {} : { disabledTools: [...existing.disabledTools] }),
 		...(existing.autoApprove === undefined ? {} : { autoApprove: [...existing.autoApprove] }),
 	};
 	if (isHttpMcpServerConfigData(existing) && isHttpMcpServerConfigData(next)) {

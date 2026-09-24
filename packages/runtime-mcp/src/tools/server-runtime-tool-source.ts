@@ -45,7 +45,9 @@ export class McpServerRuntimeToolSource implements McpRuntimeToolSource {
 		for (const binding of bindings) {
 			const client = binding.client;
 			if (!client) continue;
+			const disabledTools = new Set(binding.view.config.disabledTools ?? []);
 			for (const mcpTool of binding.view.tools) {
+				if (disabledTools.has(mcpTool.name)) continue;
 				if (!isMcpAppToolVisibleToModel(mcpTool)) continue;
 				const createTool = (boundClient: typeof client): RuntimeToolDefinition => {
 					const baseTool = createMcpRuntimeTool(mcpTool, boundClient, binding.view.name, {

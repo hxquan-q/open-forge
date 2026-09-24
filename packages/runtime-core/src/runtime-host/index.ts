@@ -149,6 +149,7 @@ export {
 	CatalogRoutedRuntimeHostSessionBackend,
 	RUNTIME_HOST_SESSION_PORT_NAMES,
 } from "./session-backend.js";
+export type { SessionEventSubscriberQueueStats } from "./session-event-subscriber-queue.js";
 export { mapRuntimeSessionObservationEvent } from "./session-events.js";
 export {
 	createRuntimeSessionExtensionHost,

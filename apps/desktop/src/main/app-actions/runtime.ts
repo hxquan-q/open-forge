@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { getAppLogger } from "../logger.js";
 import type { AppActionCatalog } from "./catalog.js";
 import {

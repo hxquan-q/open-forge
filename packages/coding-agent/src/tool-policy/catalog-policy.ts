@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * 单一 Catalog 收敛规则（TASK-0021）：Profile 默认 × 显式选择 × 项目策略。
  *

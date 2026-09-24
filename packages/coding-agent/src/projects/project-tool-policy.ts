@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { type Static, Type } from "@sinclair/typebox";

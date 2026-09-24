@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";

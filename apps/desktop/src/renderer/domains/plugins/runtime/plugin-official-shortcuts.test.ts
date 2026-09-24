@@ -40,6 +40,7 @@ describe("createOfficialShortcutsApi", () => {
 			{ id: "save-file", defaultShortcut: "mod+s" },
 			{ id: "steer-message", defaultShortcut: "mod+enter" },
 			{ id: "toggle-plan-mode", defaultShortcut: "shift+tab" },
+			{ id: "browser-element-picker", defaultShortcut: "mod+shift+d" },
 		]);
 		await expect(api.get()).resolves.toEqual(settings);
 		await expect(api.setBinding("new-session", "mod+shift+n")).resolves.toEqual({ bindings: [] });

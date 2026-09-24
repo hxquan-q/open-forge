@@ -16,6 +16,10 @@ afterEach(async () => {
 	await rm(testRoot, { recursive: true, force: true });
 });
 
+// GNU tar 会把 `C:\…` 盘符路径误判成远程 host:path、且 -C chdir 不认反斜杠；
+// 与实现侧一致地转成正斜杠并加 --force-local。
+const toTarPath = (value: string) => (process.platform === "win32" ? value.replaceAll("\\", "/") : value);
+
 describe("installRuntimeArchive", () => {
 	it("extracts a complete runtime before replacing the target directory", async () => {
 		const sourceRoot = join(testRoot, "source");
@@ -24,9 +28,11 @@ describe("installRuntimeArchive", () => {
 		await writeFile(join(sourceRuntime, "tool"), "new-runtime", "utf8");
 
 		const archivePath = join(testRoot, "runtime.tar.gz");
-		const archive = spawnSync("tar", ["-czf", archivePath, "-C", sourceRoot, "runtime"], {
-			encoding: "utf8",
-		});
+		const archive = spawnSync(
+			"tar",
+			["-czf", toTarPath(archivePath), "--force-local", "-C", toTarPath(sourceRoot), "runtime"],
+			{ encoding: "utf8" },
+		);
 		expect(archive.status, archive.stderr || archive.stdout).toBe(0);
 
 		const targetDirectory = join(testRoot, "managed", "22.22.2");
@@ -52,9 +58,11 @@ describe("installRuntimeArchive", () => {
 		await writeFile(join(sourceRuntime, "node.exe"), "node-runtime", "utf8");
 
 		const archivePath = join(testRoot, "node.zip");
-		const archive = spawnSync("tar", ["-a", "-cf", archivePath, "-C", sourceRoot, "node-v22.22.2-win-x64"], {
-			encoding: "utf8",
-		});
+		const archive = spawnSync(
+			"tar",
+			["-a", "-cf", toTarPath(archivePath), "--force-local", "-C", toTarPath(sourceRoot), "node-v22.22.2-win-x64"],
+			{ encoding: "utf8" },
+		);
 		expect(archive.status, archive.stderr || archive.stdout).toBe(0);
 
 		const targetDirectory = join(testRoot, "managed", "22.22.2");

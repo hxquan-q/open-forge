@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";

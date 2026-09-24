@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # Product
 
 <!-- impeccable:product-schema 1 -->
@@ -15,7 +16,7 @@ adaptive
 
 ## Product Purpose
 
-Open Vetta 是一个开源桌面 AI Agent，"for real work — local-first, extensible, and under your control"。它把模型、项目文件、本地工具与可复用能力放进同一个桌面工作区：能检查工作区、在可见权限边界内使用工具、产出真实文件，并保留可审查的执行轨迹。它不只是聊天界面。
+Open Forge 是一个开源桌面 AI Agent，"for real work — local-first, extensible, and under your control"。它把模型、项目文件、本地工具与可复用能力放进同一个桌面工作区：能检查工作区、在可见权限边界内使用工具、产出真实文件，并保留可审查的执行轨迹。它不只是聊天界面。
 
 成功意味着：用户在自己选择的环境里完成真实任务，全程看得到计划、工具调用、权限、结果与恢复路径。
 
@@ -43,12 +44,13 @@ Open Vetta 是一个开源桌面 AI Agent，"for real work — local-first, exte
 
 ## Brand Commitments
 
-- 名称：Open Vetta / Vetta；许可证 Apache-2.0。
-- 站点与入口：openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord。
-- 双语承诺：English + 简体中文（README 双语、桌面端 i18n 以 zh 为 fallback 基准）。
-- 社区背书：LINUX DO 链接与认可（README "Friends & Links"）。
-- 已有视觉资产：`docs/assets/banner.webp`、`docs/assets/screenshot.png`。
-- 桌面端既有视觉规范见 `apps/desktop/DESIGN.md`（暗色默认、token 化颜色、克制动效），init 不改动它。
+- **面向用户的产品品牌**：Open Forge；许可证 Apache-2.0。
+- **现有外部入口**：openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord 暂作为当前有效链接保留；它们不是内部运行时身份，也不代表品牌迁移已全部完成。
+- **内部兼容身份**：`@vetta/*`、`VETTA_*` 等包名和协议/环境变量维持现状，按各自合同渐进处理，不做全局字符串替换。Desktop `APP_RUNTIME_NAME` 当前保持 `vetta`，它参与 Electron `safeStorage` 密钥定位；更改会使已有凭据无法解密，必须先设计并验证迁移方案。
+- **双语承诺**：English + 简体中文（README 双语、桌面端 i18n 以 zh 为 fallback 基准）。
+- **社区背书**：LINUX DO 链接与认可（README "Friends & Links"）。
+- **已有视觉资产**：`docs/assets/banner.webp`、`docs/assets/screenshot.png`。
+- **桌面端既有视觉规范**见 `apps/desktop/DESIGN.md`（暗色默认、token 化颜色、克制动效），init 不改动它。
 
 ## Evidence on Hand
 

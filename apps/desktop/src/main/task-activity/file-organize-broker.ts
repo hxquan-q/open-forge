@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { rename, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type {

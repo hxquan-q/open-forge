@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message, StopReason } from "@vetta/ai";
 import type { ConversationDocument, ConversationDocumentReader } from "../conversation/document.js";
 import type { RuntimeFailure } from "../failure-contract.js";

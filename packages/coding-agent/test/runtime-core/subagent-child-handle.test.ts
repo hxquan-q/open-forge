@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeSession, SessionEvent } from "@vetta/runtime-core";
 import type { SubagentChildEvent } from "@vetta/runtime-subagents";
 import { describe, expect, it, vi } from "vitest";

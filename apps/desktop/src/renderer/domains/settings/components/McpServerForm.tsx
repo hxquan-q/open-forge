@@ -1,9 +1,12 @@
+// Modified by The Open Forge contributors.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@vetta-org/ui";
 import { SegmentedControl } from "@shared/components/ui/segmented-control";
 import { cn } from "@shared/lib/utils";
 import { CheckboxField, InputField, TextareaField } from "@vetta-org/theme-ui/settings";
+import type { McpServerToolList } from "@preload/api.js";
 import {
 	isMcpFormValid,
 	type McpServerFormState,
@@ -17,6 +20,7 @@ export function McpServerForm({
 	onCancel,
 	saving,
 	saveLabel,
+	serverTools,
 }: {
 	form: McpServerFormState;
 	setForm: React.Dispatch<React.SetStateAction<McpServerFormState>>;
@@ -24,6 +28,8 @@ export function McpServerForm({
 	onCancel: () => void;
 	saving: boolean;
 	saveLabel: string;
+	/** 编辑态注入的最近目录工具清单；新增态不传（尚未有发现记录）。 */
+	serverTools?: McpServerToolList | null;
 }): JSX.Element {
 	const { t } = useTranslation("settings");
 	const [advancedOpen, setAdvancedOpen] = useState(() => hasAdvancedValues(form));
@@ -45,6 +51,50 @@ export function McpServerForm({
 					<HttpBasicFields form={form} setForm={setForm} />
 				)}
 			</div>
+
+			{serverTools !== undefined && (
+				<div className="mt-3">
+					<label className="mb-1 block text-[11px] text-muted-foreground">{t("mcpServerTools")}</label>
+					{serverTools === null ? (
+						<p className="text-[12px] text-muted-foreground">{t("mcpServerToolsLoading")}</p>
+					) : serverTools.tools.length === 0 ? (
+						<p className="text-[12px] text-muted-foreground">
+							{serverTools.cached ? t("mcpServerToolsEmpty") : t("mcpServerToolsNotDiscovered")}
+						</p>
+					) : (
+						<div className="flex max-h-44 flex-col gap-2 overflow-y-auto rounded-lg border border-border/50 px-3 py-2.5">
+							{serverTools.tools.map((tool) => (
+								<div key={tool.name} className="flex flex-col">
+									<div className="flex items-center gap-2">
+										<CheckboxField
+											checked={tool.enabled}
+											onChange={(enabled) =>
+												setForm((current) => ({
+													...current,
+													disabledTools: enabled
+														? current.disabledTools.filter((name) => name !== tool.name)
+														: [...new Set([...current.disabledTools, tool.name])],
+												}))
+											}
+											label={tool.name}
+										/>
+										{tool.stale ? (
+											<span className="text-[10px] text-muted-foreground">
+												{t("mcpServerToolStale")}
+											</span>
+										) : null}
+									</div>
+									{tool.description ? (
+										<p className="ml-6 truncate text-[11px] text-muted-foreground/70">
+											{tool.description}
+										</p>
+									) : null}
+								</div>
+							))}
+						</div>
+					)}
+				</div>
+			)}
 
 			<div className="mt-3">
 				<button
@@ -87,6 +137,16 @@ export function McpServerForm({
 								placeholder={t("default10000")}
 							/>
 						</div>
+						{form.transport === "stdio" && (
+							<div>
+								<label className="mb-1 block text-[11px] text-muted-foreground">{t("idleTimeout")}</label>
+								<InputField
+									value={form.idleTimeout}
+									onChange={(value) => setForm((current) => ({ ...current, idleTimeout: value }))}
+									placeholder="1800000"
+								/>
+							</div>
+						)}
 						<div className="col-span-2">
 							<label className="mb-1 block text-[11px] text-muted-foreground">{t("autoApproveTools")}</label>
 							<InputField
@@ -131,6 +191,8 @@ function hasAdvancedValues(form: McpServerFormState): boolean {
 			form.headers.trim() ||
 			form.autoApprove.trim() ||
 			form.startupTimeout.trim() ||
+			form.idleTimeout.trim() ||
+			form.disabledTools.length > 0 ||
 			form.disabled ||
 			form.debug,
 	);

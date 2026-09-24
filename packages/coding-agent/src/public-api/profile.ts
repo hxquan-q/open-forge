@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export {
 	AGENT_CONFIGURATION_DEFINITION,
 	type AgentConfiguration,

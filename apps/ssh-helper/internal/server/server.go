@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // Package server implements the helper side of the Vetta remote-project protocol.
 package server
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeObservationPublisher } from "@vetta/runtime-core";
 import {
 	type AgentFeatureDefinition,

@@ -38,6 +38,8 @@ If you think a design pass genuinely belongs first, say so and let the user pick
 
 {{> deliverables-placement}}
 
+{{> canvas-artifacts}}
+
 {{> deliverables-list}}
 
 ## Reviews

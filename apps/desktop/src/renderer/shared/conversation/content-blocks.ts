@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopMcpAppAttachment } from "@preload/api";
 import type { CardDescriptor } from "@vetta-org/plugin-sdk";
 
@@ -44,12 +45,20 @@ export interface ToolAudioPreview {
 	mimeType: string;
 }
 
+export interface ArtifactCanvasOpenDetails {
+	readonly artifactId: string;
+	readonly title: string;
+	readonly action: "create" | "update";
+	readonly version?: number;
+}
+
 export interface ToolCallUiDetails {
 	diff?: string;
 	firstChangedLine?: number;
 	askUserQuestion?: AskUserQuestionResolution;
 	planReview?: PlanReviewResolution;
 	knowledge?: KnowledgeToolUiDetails;
+	artifact?: ArtifactCanvasOpenDetails;
 }
 
 /** exit_plan_mode 的审批结论；`plan` 是用户批准的定稿（可能与模型提交的不同）。 */

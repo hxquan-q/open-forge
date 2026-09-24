@@ -1,8 +1,9 @@
+<!-- Modified by The Open Forge contributors. -->
 <p align="center">
-  <img src="docs/assets/banner.webp" alt="Open Vetta">
+  <img src="docs/assets/banner.webp" alt="Open Forge">
 </p>
 
-<h1 align="center">Open Vetta</h1>
+<h1 align="center">Open Forge</h1>
 
 <p align="center">
   面向真实工作的开源桌面 AI Agent——本地优先、可扩展，由你掌控。
@@ -11,7 +12,7 @@
 <p align="center">
   <a href="https://www.openvetta.com"><img src="https://img.shields.io/badge/官网-openvetta.com-0b7285" alt="官网"></a>
   <a href="https://docs.openvetta.com"><img src="https://img.shields.io/badge/文档-docs.openvetta.com-f06449" alt="文档"></a>
-  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-加入社区-5865F2?logo=discord&logoColor=white" alt="加入 Open Vetta Discord"></a>
+  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-加入社区-5865F2?logo=discord&logoColor=white" alt="加入 Open Forge Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/许可-Apache--2.0-blue" alt="Apache-2.0 许可"></a>
   <img src="https://img.shields.io/badge/平台-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS、Windows 与 Linux">
   <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/openvetta/open-vetta?utm_source=oss&utm_medium=github&utm_campaign=openvetta%2Fopen-vetta&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews"></a>
@@ -29,15 +30,15 @@
 
 ---
 
-Open Vetta 把模型、项目文件、本机工具和可复用能力放进同一个桌面工作区。它适用于编码、文档、数据、研究、创意生产和可重复工作流，同时让工作继续发生在你选择的环境中。
+Open Forge 把模型、项目文件、本机工具和可复用能力放进同一个桌面工作区。它适用于编码、文档、数据、研究、创意生产和可重复工作流，同时让工作继续发生在你选择的环境中。
 
-它不只是聊天界面：Vetta 能理解工作区、在可见的权限边界内调用工具、交付真实文件，并保留可供检查的执行过程。
+它不只是聊天界面：Open Forge 能理解工作区、在可见的权限边界内调用工具、交付真实文件，并保留可供检查的执行过程。
 
 <p align="center">
-  <img src="docs/assets/screenshot.png" alt="Open Vetta 桌面工作区">
+  <img src="docs/assets/screenshot.png" alt="Open Forge 桌面工作区">
 </p>
 
-## 为什么选择 Open Vetta
+## 为什么选择 Open Forge
 
 | | 对你意味着什么 |
 |---|---|
@@ -71,7 +72,7 @@ cd apps/desktop
 bun run dev
 ```
 
-开发应用默认使用 `~/.vetta-dev`，不会改动正式安装版位于 `~/.vetta` 的数据。仓库根目录的 `bun run dev` 只监听核心库，不会启动 Electron。完整环境准备与检查命令见 [`QUICKSTART.zh-CN.md`](QUICKSTART.zh-CN.md)。
+开发应用默认使用 `~/.openforge-dev`，不会改动正式安装版位于 `~/.openforge` 的数据。仓库根目录的 `bun run dev` 只监听核心库，不会启动 Electron。完整环境准备与检查命令见 [`QUICKSTART.zh-CN.md`](QUICKSTART.zh-CN.md)。
 
 ## 可以用它做什么
 
@@ -159,10 +160,10 @@ Pull Request 发往 **`dev`** 分支。贡献地图、测试要求与评审门�
 
 ## 社区
 
-欢迎加入 Open Vetta 的 Discord 服务器：提问、交流工作流，分享技能、插件与主题，获取版本发布动态，并直接和维护者对话。
+欢迎加入 Open Forge 的 Discord 服务器：提问、交流工作流，分享技能、插件与主题，获取版本发布动态，并直接和维护者对话。
 
 <p align="center">
-  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Open%20Vetta-Discord-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Open Vetta Discord"></a>
+  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Open%20Forge-Discord-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Open Forge Discord"></a>
 </p>
 
 **https://discord.gg/qGqkk22Vg9**
@@ -171,7 +172,7 @@ Pull Request 发往 **`dev`** 分支。贡献地图、测试要求与评审门�
 
 ## 致谢与许可
 
-Open Vetta 建立在广泛的开源生态之上，包括 pi、Codex CLI、MCP、Electron、React、Bun、models.dev，以及 [`NOTICE`](NOTICE) 中列出的项目。完整第三方清单与原始版权声明以该文件为准。
+Open Forge 是基于 Open Vetta 独立维护的下游衍生项目。它建立在广泛的开源生态之上，包括 pi、Codex CLI、MCP、Electron、React、Bun、models.dev，以及 [`NOTICE`](NOTICE) 中列出的项目。完整第三方清单与原始版权声明以该文件为准。
 
 本项目采用 [Apache-2.0](LICENSE) 许可。
 

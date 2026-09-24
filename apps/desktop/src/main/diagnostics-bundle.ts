@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { join } from "node:path";

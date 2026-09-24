@@ -20,6 +20,7 @@ integration_status: pending
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # work/coding 双模式信息架构与面板交互设计定稿（shape）
 

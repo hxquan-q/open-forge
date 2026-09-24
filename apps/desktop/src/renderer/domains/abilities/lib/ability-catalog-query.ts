@@ -55,9 +55,18 @@ export function isManuallyInstalledAbility(item: AbilityItem): boolean {
 	return false;
 }
 
-/** 「公开」展示已列入市场的条目以及 Vetta 内置能力。 */
+/**
+ * 「公开」展示已列入市场的条目、Open Forge 内置能力，以及内置 MCP 连接器预设。
+ * 后者没有市场行（fromMarket=false），未添加时 installed 也为 false，只按
+ * fromMarket/isBuiltin 过滤会让它们在发现页不可见。buildMcpAbilities 只为
+ * listedInDiscover 的预设建 builtin 条目，未放行的预设不会漏出。
+ */
 export function isAbilityListedInDiscover(item: AbilityItem): boolean {
-	return (item.fromMarket && (!item.market || isMarketAbilityListed(item.market))) || item.isBuiltin;
+	return (
+		(item.fromMarket && (!item.market || isMarketAbilityListed(item.market))) ||
+		item.isBuiltin ||
+		(item.type === "mcp" && item.catalogSource.kind === "builtin")
+	);
 }
 
 /** 「个人」只展示通用 skill 和手动安装的能力。 */
@@ -80,7 +89,7 @@ export function queryAbilityCatalog(items: AbilityItem[], query: AbilityCatalogQ
 		.filter((item) => !sourceIds || sourceIds.has(sourceId(item)))
 		.sort(compareAbilities);
 	// 内置能力随 App 分发、数量有限，整组返回不参与分页：它们 downloadCount 为 0 会排在最后，
-	// 若按扁平列表切片，「Vetta 内置」分组只会出现零星几条，分组计数也跟着显示成已加载数。
+	// 若按扁平列表切片，「Open Forge 内置」分组只会出现零星几条，分组计数也跟着显示成已加载数。
 	const builtin = filtered.filter((item) => item.isBuiltin);
 	const paged = filtered.filter((item) => !item.isBuiltin);
 	const total = filtered.length;

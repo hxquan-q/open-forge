@@ -2,6 +2,9 @@ import type {
 	ConversationScenario,
 	PluginAbilityDetailSlotContribution,
 	PluginActivityTabContribution,
+	PluginArtifactRendererDescriptor,
+	PluginArtifactRendererProps,
+	PluginArtifactRendererSource,
 	PluginBottomPanelContribution,
 	PluginCardRendererContribution,
 	PluginFileExplorerContextMenuContribution,
@@ -21,6 +24,7 @@ import type {
 	PluginWorkspaceViewHeader,
 } from "@vetta-org/plugin-sdk";
 import { atom, getDefaultStore } from "jotai";
+import type { ComponentType } from "react";
 
 /** A loaded plugin's i18n catalogs + fallback locale, keyed by plugin id. */
 export interface PluginI18nEntry {
@@ -422,6 +426,25 @@ export interface RegisteredCardRenderer {
  * card host. The host resolves each card descriptor's `type` to one of these.
  */
 export const pluginCardRenderersAtom = atom<RegisteredCardRenderer[]>([]);
+
+export interface ArtifactRendererResourceBinding {
+	taskSessionId: string;
+	artifactId: string;
+	version: number;
+	rendererType: string;
+	sizeBytes: number;
+}
+
+export interface RegisteredArtifactRenderer {
+	pluginId: string;
+	type: string;
+	canRead: boolean;
+	validateDescriptor: (descriptor: unknown) => boolean;
+	component: ComponentType<PluginArtifactRendererProps<PluginArtifactRendererDescriptor>>;
+	createSource: (binding: ArtifactRendererResourceBinding) => PluginArtifactRendererSource;
+}
+
+export const pluginArtifactRenderersAtom = atom<RegisteredArtifactRenderer[]>([]);
 
 /** A plugin renderer that replaces the default transcript UI for a specific tool. */
 export interface RegisteredToolCallSlot {

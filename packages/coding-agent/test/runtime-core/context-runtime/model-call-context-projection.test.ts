@@ -47,7 +47,6 @@ describe("model call context projection", () => {
 			undefined,
 			new AbortController().signal,
 			{
-				timeBoundary: 3,
 				pinnedContext: {
 					id: "generation",
 					records: [{ type: "public", content: "public answer", modelVisible: true, timestamp: 2 }],

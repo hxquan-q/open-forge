@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type { StoredSessionEvent } from "@vetta/runtime-core/kernel";

@@ -10,6 +10,7 @@ source: exprot/rebrand-plan.md
 created: 2026-09-22
 updated: 2026-09-22
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 品牌化发布基建决策（已冻结）
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import type { ToolCallBlock } from "@shared/store/atoms";
 import { render, screen } from "@testing-library/react";

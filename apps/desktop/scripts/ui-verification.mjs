@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn, spawnSync } from "node:child_process";
 import {
 	closeSync,
@@ -28,6 +29,9 @@ import {
 	formatPlaywrightAttachFailure,
 	validatePlaywrightArguments,
 } from "./ui-verification-diagnostics.ts";
+import desktopBrand from "../src/shared/desktop-brand.json" with { type: "json" };
+
+const mainWindowTitle = desktopBrand.displayName;
 
 const desktopRoot = join(import.meta.dirname, "..");
 const repoRoot = realpathSync(join(desktopRoot, "..", ".."));
@@ -136,7 +140,7 @@ async function inspectCdp(endpoint) {
 			(target) => typeof target.url === "string" && target.url.startsWith("devtools://"),
 		).length;
 		const mainWindow =
-			pages.find((target) => target.title === "Vetta Desktop") ??
+			pages.find((target) => target.title === mainWindowTitle) ??
 			pages.find((target) => typeof target.url === "string" && target.url.startsWith("http")) ??
 			null;
 		return {
@@ -305,11 +309,11 @@ function selectMainWindow(layout, uiInfo) {
 	const mainWindowUrl = uiInfo.mainWindow?.url;
 	const matchingLine = tabListResult.stdout
 		.split(/\r?\n/)
-		.find((line) => line.includes("[Vetta Desktop](") && (!mainWindowUrl || line.includes(mainWindowUrl)));
+		.find((line) => line.includes(`[${mainWindowTitle}](`) && (!mainWindowUrl || line.includes(mainWindowUrl)));
 	const index = matchingLine?.match(/^- (\d+):/)?.[1];
-	if (index === undefined) throw new Error("Unable to find the Vetta Desktop renderer tab");
+	if (index === undefined) throw new Error(`Unable to find the ${mainWindowTitle} renderer tab`);
 	const selectResult = runPlaywright(layout, ["tab-select", index]);
-	if (selectResult.status !== 0) throw new Error("Unable to select the Vetta Desktop renderer tab");
+	if (selectResult.status !== 0) throw new Error(`Unable to select the ${mainWindowTitle} renderer tab`);
 }
 
 function prepareProfile(layout, sync = false) {

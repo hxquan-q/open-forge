@@ -1,9 +1,4 @@
-import type { ChatConversationItem } from "@shared/store/atoms";
-
-export interface SharedChatMessageSnapshot {
-	messages: ChatConversationItem[];
-	reusedCount: number;
-}
+import type { ChatTimelineItem } from "@shared/store/atoms";
 
 /**
  * Reconcile two independently mapped views of the same persisted history.
@@ -14,18 +9,19 @@ export interface SharedChatMessageSnapshot {
  * contract is unchanged. React.memo can then retain already-painted rows while
  * still replacing any message that Runtime canonicalization actually changed.
  *
- * ChatConversationItem is a JSON-compatible renderer DTO. Keep this comparison out of
- * render paths: it is only meant for the one-off preview -> canonical handoff.
+ * ChatTimelineItem is a JSON-compatible renderer DTO（占位项同样不含函数/循环引用）。
+ * Keep this comparison out of render paths: it is only meant for the one-off
+ * preview -> canonical handoff.
  */
-export function shareChatMessageSnapshot(
-	preview: readonly ChatConversationItem[],
-	canonical: readonly ChatConversationItem[],
-): SharedChatMessageSnapshot {
+export function shareChatMessageSnapshot<T extends ChatTimelineItem>(
+	preview: readonly T[],
+	canonical: readonly T[],
+): { messages: T[]; reusedCount: number } {
 	if (preview === canonical) {
-		return { messages: preview as ChatConversationItem[], reusedCount: preview.length };
+		return { messages: preview as T[], reusedCount: preview.length };
 	}
 	if (preview.length === 0 || canonical.length === 0) {
-		return { messages: canonical as ChatConversationItem[], reusedCount: 0 };
+		return { messages: canonical as T[], reusedCount: 0 };
 	}
 
 	const previewById = new Map(preview.map((message) => [message.id, message]));
@@ -44,7 +40,7 @@ export function shareChatMessageSnapshot(
 		reusedCount === canonical.length &&
 		messages.every((message, index) => message === preview[index])
 	) {
-		return { messages: preview as ChatConversationItem[], reusedCount };
+		return { messages: preview as T[], reusedCount };
 	}
 	return { messages, reusedCount };
 }
@@ -54,11 +50,11 @@ export function shareChatMessageSnapshot(
  * replacing that persisted base with Runtime-canonical history.
  */
 export function preserveMessagesAddedAfterSnapshot(
-	_preview: readonly ChatConversationItem[],
-	canonical: readonly ChatConversationItem[],
-	current: readonly ChatConversationItem[],
-): ChatConversationItem[] {
+	_preview: readonly ChatTimelineItem[],
+	canonical: readonly ChatTimelineItem[],
+	current: readonly ChatTimelineItem[],
+): ChatTimelineItem[] {
 	const persistedIds = new Set(canonical.map((message) => message.id));
 	const additions = current.filter((message) => !persistedIds.has(message.id));
-	return additions.length === 0 ? (canonical as ChatConversationItem[]) : [...canonical, ...additions];
+	return additions.length === 0 ? (canonical as ChatTimelineItem[]) : [...canonical, ...additions];
 }

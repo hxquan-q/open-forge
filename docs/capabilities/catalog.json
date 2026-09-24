@@ -6602,6 +6602,12 @@
           "disabled": {
             "type": "boolean"
           },
+          "disabledTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "autoApprove": {
             "type": "array",
             "items": {
@@ -6610,6 +6616,10 @@
           },
           "startupTimeout": {
             "type": "number"
+          },
+          "idleTimeout": {
+            "minimum": 0,
+            "type": "integer"
           },
           "debug": {
             "type": "boolean"
@@ -6659,6 +6669,12 @@
                   "disabled": {
                     "type": "boolean"
                   },
+                  "disabledTools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "autoApprove": {
                     "type": "array",
                     "items": {
@@ -6702,8 +6718,18 @@
                   "cwd": {
                     "type": "string"
                   },
+                  "idleTimeout": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
                   "disabled": {
                     "type": "boolean"
+                  },
+                  "disabledTools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   },
                   "autoApprove": {
                     "type": "array",
@@ -6784,6 +6810,12 @@
           "disabled": {
             "type": "boolean"
           },
+          "disabledTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "autoApprove": {
             "type": "array",
             "items": {
@@ -6792,6 +6824,10 @@
           },
           "startupTimeout": {
             "type": "number"
+          },
+          "idleTimeout": {
+            "minimum": 0,
+            "type": "integer"
           },
           "debug": {
             "type": "boolean"

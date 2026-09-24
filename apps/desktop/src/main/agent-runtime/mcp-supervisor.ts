@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 import { CONFIG_DIR_NAME, VERSION } from "@vetta/coding-agent/config";
@@ -22,6 +24,10 @@ export interface DesktopMcpSupervisorOptions {
 	readonly dynamicOnly?: boolean;
 	/** Sampling stays unavailable unless the product composition injects an approved model policy. */
 	readonly samplingHandler?: McpServerInteractionHandlers["sampling"];
+	/** Directory for the persisted MCP tool catalog cache; omit to disable disk caching. */
+	readonly catalogCacheDirectory?: string;
+	/** Default idle timeout (ms) for spawned stdio servers; per-server `idleTimeout` overrides it. */
+	readonly idleTimeoutMs?: number;
 }
 
 export function createDesktopMcpInteractionHandlers(
@@ -98,5 +104,7 @@ export function createDesktopMcpSupervisor(options: DesktopMcpSupervisorOptions)
 		clientCapabilities: {
 			extensions: { [MCP_APPS_EXTENSION_ID]: MCP_APP_CLIENT_CAPABILITY },
 		},
+		catalogCacheDirectory: options.catalogCacheDirectory,
+		idleTimeoutMs: options.idleTimeoutMs,
 	}).supervisor;
 }

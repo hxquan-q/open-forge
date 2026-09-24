@@ -15,7 +15,7 @@ import {
 } from "./clipboard-images";
 
 /**
- * 粘贴图片 → 立即落盘 → 插入行内缩略图 token。Vetta 富消息剪贴板还会
+ * 粘贴图片 → 立即落盘 → 插入行内缩略图 token。Open Forge 富消息剪贴板还会
  * 恢复正文并用新落盘路径替换旧图片 token；纯文本仍走 Lexical 默认实现。
  */
 export function PasteImagePlugin({

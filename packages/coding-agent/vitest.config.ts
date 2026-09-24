@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 import { fileURLToPath } from "node:url";
-import { coverageConfigDefaults, defineConfig } from "vitest/config";
+import { configDefaults, coverageConfigDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
 	resolve: {
@@ -78,6 +79,7 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: "node",
+		exclude: [...configDefaults.exclude, "**/dist/**"],
 		testTimeout: 30000, // 30 seconds for API calls
 		server: {
 			deps: {

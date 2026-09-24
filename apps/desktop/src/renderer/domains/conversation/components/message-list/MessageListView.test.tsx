@@ -72,6 +72,7 @@ vi.mock("@vetta-org/theme-ui/chat", () => ({
 		RailContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	},
 	MessageSelectionContextMenuView: () => null,
+	NewSessionBackground: () => null,
 }));
 
 vi.mock("../../hooks/useMessageSelectionContextMenu", () => ({

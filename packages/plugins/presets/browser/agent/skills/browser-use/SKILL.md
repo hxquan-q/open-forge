@@ -5,7 +5,14 @@ description: Install and operate the agent-browser CLI for interactive pages, fo
 
 # Browser Use
 
-Use the `agent-browser` CLI through the shell when the task needs a real browser, login state, or page interaction. Prefer web search for ordinary public information lookup. Do not look for a dedicated browser Tool. If the CLI is missing or outdated, bootstrap the Vetta-managed runtime yourself as described below; use the plugin panel only as a fallback after automated setup fails.
+There are two different browser sessions. Do not mix them.
+
+- `browser_tab` operates the in-app Browser WebView the user is looking at (same page, same cookies as the activity-panel tab). Use it for "click this button on the page I opened" after the host exposes the tool.
+- This Skill's `agent-browser` CLI is a **separate** headless session. Use it when you need login isolation, a second account, or the in-app tab is not available.
+
+Use the `agent-browser` CLI through the shell when the task needs a real browser, login state, or page interaction **and** `browser_tab` is not the right session. Prefer web search for ordinary public information lookup. If the CLI is missing or outdated, bootstrap the Vetta-managed runtime yourself as described below; use the plugin panel only as a fallback after automated setup fails.
+
+Do not use either browser path to render a generated report. Reports go through `artifact` and the Canvas tab.
 
 Runtime readiness and installation:
 

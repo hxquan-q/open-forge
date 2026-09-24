@@ -81,6 +81,14 @@
 		"publish-ability": {
 			"name": "Publish Ability",
 			"description": "Submit a skill, scene, MCP server, plugin, or ability bundle to the Vetta marketplace, covering required fields, localization, and the review flow."
+		},
+		"report-canvas": {
+			"name": "Canvas report",
+			"description": "When the user wants a standalone report, audit board, or long-form analysis, write it with artifact to Canvas instead of chat-only Markdown."
+		},
+		"architecture-canvas": {
+			"name": "Architecture canvas",
+			"description": "When the user wants an architecture, module, or system diagram, create an HTML canvas artifact with inline SVG instead of pasting an image in chat."
 		}
 	}
 }

@@ -30,12 +30,20 @@ it.each(HOSTS_WITHOUT_MODE_ENTRY)("%s renders no agent-mode entry", (relative) =
 	expect(source).not.toMatch(/AgentMode/);
 });
 
-it("keeps the new-session toggle as the only consumer of the default-mode hook", () => {
-	const toggle = readFileSync(
-		join(rendererRoot, "domains/conversation/components/new-session/AgentModeIconToggle.tsx"),
+it("new-session options row is not a second Work/Coding control", () => {
+	const row = readFileSync(
+		join(rendererRoot, "domains/conversation/components/new-session/NewSessionOptionsRow.tsx"),
 		"utf8",
 	);
-	expect(toggle).toContain("useDefaultAgentMode");
-	// 旧 hook 文件名/导出必须彻底消失，否则会留下第二条读写模式的路径。
+	expect(row).not.toMatch(/AgentModeIconToggle/);
 	expect(existsSync(join(rendererRoot, "shared/hooks/useAgentMode.ts"))).toBe(false);
+});
+
+it("page-header workspace switcher is the only user-facing Work/Coding control", () => {
+	const switcher = readFileSync(
+		join(rendererRoot, "domains/workspace-mode/components/WorkspaceModeSwitcher.tsx"),
+		"utf8",
+	);
+	expect(switcher).toContain("workspace.mode");
+	expect(switcher).not.toContain("useDefaultAgentMode");
 });

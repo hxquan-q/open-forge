@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { atom } from "jotai";
 import {
 	FILE_EXPLORER_PREFERENCES_KEY,

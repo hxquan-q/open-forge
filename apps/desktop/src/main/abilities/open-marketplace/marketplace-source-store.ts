@@ -129,7 +129,7 @@ function parseSource(value: unknown): MarketplaceSource | null {
 
 function createDefaultSources(now: Date): MarketplaceSource[] {
 	const configuredRepository = process.env.VETTA_OPEN_MARKETPLACE_REPOSITORY?.trim();
-	// 发行方可用 fork 仓库替换官方源；未配置时始终注册 Vetta 官方源。
+	// 发行方可用 fork 仓库替换官方源；未配置时始终注册 Open Forge 官方源。
 	const normalizedRepository = normalizeGitHubRepository(configuredRepository || OFFICIAL_MARKETPLACE_REPOSITORY);
 	const defaultRef = normalizedRepository === OFFICIAL_MARKETPLACE_REPOSITORY ? OFFICIAL_MARKETPLACE_REF : "main";
 	const ref = validateRef(process.env.VETTA_OPEN_MARKETPLACE_REF, defaultRef);

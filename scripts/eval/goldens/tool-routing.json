@@ -1,0 +1,121 @@
+[
+	{
+		"id": "website-dark-mode",
+		"input": "给网页加深色模式",
+		"expectedFirstTool": "edit_website_theme",
+		"forbiddenTools": ["vetta_appearance"],
+		"criteria": "The first stateful tool must edit the website project theme. Calling vetta_appearance fails the case."
+	},
+	{
+		"id": "vetta-window-dark",
+		"input": "把 Vetta 窗口切成深色",
+		"expectedFirstTool": "vetta_appearance",
+		"forbiddenTools": ["edit_website_theme"],
+		"criteria": "The first stateful tool must change the Vetta app window appearance. Editing the website project fails the case."
+	},
+	{
+		"id": "install-vetta-plugin",
+		"input": "安装 Vetta 插件",
+		"expectedFirstTool": "vetta_plugins_manage",
+		"forbiddenTools": ["project_package_install"],
+		"criteria": "The first stateful tool must manage Vetta application plugins. Installing a project Vite/npm package fails the case."
+	},
+	{
+		"id": "install-project-vite-plugin",
+		"input": "给项目装一个 Vite 插件",
+		"expectedFirstTool": "project_package_install",
+		"forbiddenTools": ["vetta_plugins_manage"],
+		"criteria": "The first stateful tool must install a package into the current website project. Managing Vetta plugins fails the case."
+	},
+	{
+		"id": "create-react-project",
+		"input": "创建 React 项目",
+		"expectedFirstTool": "project_scaffold",
+		"forbiddenTools": ["vetta_batch_project"],
+		"criteria": "The first stateful tool must scaffold a normal React/code project. Creating a Vetta batch project fails the case."
+	},
+	{
+		"id": "add-dir-to-sidebar",
+		"input": "把这个目录加到 Vetta 侧边栏",
+		"expectedFirstTool": "vetta_projects_add",
+		"forbiddenTools": ["project_scaffold"],
+		"criteria": "The first stateful tool must add the existing folder to the Vetta sidebar. Regenerating project code fails the case."
+	},
+	{
+		"id": "business-cron",
+		"input": "在业务代码里实现每天执行的 cron",
+		"expectedFirstTool": "project_code_edit",
+		"forbiddenTools": ["vetta_scheduler_create"],
+		"criteria": "The first stateful tool must edit project business code. Creating a Vetta scheduled Agent fails the case."
+	},
+	{
+		"id": "vetta-daily-summary",
+		"input": "让 Vetta 每天帮我汇总这些资料",
+		"expectedFirstTool": "vetta_scheduler_create",
+		"forbiddenTools": ["project_code_edit"],
+		"criteria": "The first stateful tool must create a Vetta scheduled task. Only editing project cron code fails the case."
+	},
+	{
+		"id": "scheduler-capabilities",
+		"input": "Vetta 定时任务支持什么？",
+		"expectedFirstTool": "vetta_scheduler_query",
+		"forbiddenTools": ["vetta_scheduler_create"],
+		"criteria": "The first tool must query/explain scheduler capabilities. Creating or running a scheduled task fails the case."
+	},
+	{
+		"id": "use-pdf-skill",
+		"input": "用当前可用 Skill 处理 PDF",
+		"expectedFirstTool": "skill_pdf",
+		"forbiddenTools": ["vetta_plugins_manage"],
+		"criteria": "The first stateful tool must use the available PDF skill. Installing a Vetta plugin fails the case."
+	},
+	{
+		"id": "list-execution-plan",
+		"input": "给当前任务列个执行计划",
+		"expectedFirstTool": "session_todo",
+		"forbiddenTools": ["vetta_board_create"],
+		"criteria": "The first stateful tool must write a session todo/plan. Creating a persistent Vetta board card fails the case."
+	},
+	{
+		"id": "add-to-vetta-board",
+		"input": "把这项需求加入 Vetta 看板",
+		"expectedFirstTool": "vetta_board_create",
+		"forbiddenTools": ["session_todo"],
+		"criteria": "The first stateful tool must add a Vetta board card. Only writing a session todo fails the case."
+	},
+	{
+		"id": "who-is-max",
+		"input": "12、47、9 这几个值谁最大？",
+		"expectedFirstTool": "",
+		"forbiddenTools": ["render_chart"],
+		"criteria": "Answer the factual question in text. Calling render_chart or any other tool fails the case."
+	},
+	{
+		"id": "draw-monthly-trend",
+		"input": "把这些月度趋势画成图：1月 12、2月 18、3月 15",
+		"expectedFirstTool": "render_chart",
+		"forbiddenTools": ["project_code_edit"],
+		"criteria": "The first stateful tool must render a conversation chart. Implementing a chart component in the website fails the case."
+	},
+	{
+		"id": "implement-trend-chart",
+		"input": "在这个网站实现趋势图组件",
+		"expectedFirstTool": "project_code_edit",
+		"forbiddenTools": ["render_chart"],
+		"criteria": "The first stateful tool must edit the website project. Calling the conversation chart renderer fails the case."
+	},
+	{
+		"id": "preview-react-app",
+		"input": "预览当前 React 应用",
+		"expectedFirstTool": "project_preview",
+		"forbiddenTools": ["remotion_render"],
+		"criteria": "The first stateful tool must preview the React/website project. Rendering a Remotion MP4 fails the case."
+	},
+	{
+		"id": "export-remotion-mp4",
+		"input": "把这个 Remotion composition 导出 MP4",
+		"expectedFirstTool": "remotion_render",
+		"forbiddenTools": ["project_preview"],
+		"criteria": "The first stateful tool must render the Remotion composition. Using the website preview flow fails the case."
+	}
+]

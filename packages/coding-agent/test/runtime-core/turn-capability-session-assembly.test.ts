@@ -19,6 +19,7 @@ import { AgentSessionConfiguration } from "../../src/agent-configuration/session
 import { createCodingToolsRuntimeComposition } from "../../src/composition/tool-surface/runtime-tools-composition.js";
 import { createCodingAgentTurnCapabilitySessionAssembly } from "../../src/composition/turn/capability-session-assembly.js";
 import { CodingAgentImageSettingsSnapshotRouter } from "../../src/composition/turn/image-settings-snapshot-router.js";
+import type { CodingAgentToolApprovalPort } from "../../src/execution/permissions/approval-contract.js";
 import type { CodingAgentSessionExecutionRuntime } from "../../src/execution/session/runtime.js";
 import { CodingAgentExtensionRunBridge } from "../../src/extensions/runtime/extension-run-bridge.js";
 import { CodingAgentPlanModeRuntime } from "../../src/features/plan-mode/index.js";
@@ -403,6 +404,101 @@ describe("Coding Agent Turn Capability session assembly", () => {
 
 		expect(executed).toEqual([toolName, toolName]);
 	});
+	it("browser_tab 写动作经装配层提升 L3：拒绝则阻塞不执行，读动作直通不请示", async () => {
+		const codingTools = createCodingToolsRuntimeComposition({
+			cwd: "C:\\workspace",
+			environment: emptyToolEnvironment(),
+			activation: { mode: "explicit", toolNames: [] },
+		});
+		disposals.push(() => codingTools.dispose());
+		const todoRuntime = new CodingAgentTodoRuntime();
+		disposals.push(() => todoRuntime.dispose());
+		const executed: string[] = [];
+		const approvalRequests: Array<{ toolName: string; level: string }> = [];
+		const toolApprovalRuntime: CodingAgentToolApprovalPort = {
+			isAvailable: () => true,
+			request: async (request) => {
+				approvalRequests.push({ toolName: request.toolName, level: request.level });
+				return { decision: "deny" };
+			},
+		};
+		const assembly = await createCodingAgentTurnCapabilitySessionAssembly({
+			agentConfiguration: createConfiguration(),
+			readAllAgentPlugins: () => undefined,
+			session: {
+				initialSessionId: "session-1",
+				readSessionId: () => "session-1",
+				cwd: "C:\\workspace",
+				scenario: "cli",
+			},
+			activation: {
+				resolve: () => ({ mode: "explicit", toolNames: [] }),
+				readAgentMode: () => undefined,
+				readAgentPlugins: () => undefined,
+				readActiveToolNamesOverride: () => undefined,
+			},
+			prompt: { systemPromptOptionsResolver: async () => ({ cwd: "C:\\workspace" }) },
+			baseCapabilities: codingTools.capabilities,
+			codingTools,
+			executionRuntime: {
+				feature: createFeature("execution", []),
+				ownsTool: () => false,
+				readAvailableTools: () => new Map(),
+			} as unknown as CodingAgentSessionExecutionRuntime,
+			specializedToolFeature: createFeature("specialized", []),
+			specializedToolRegistrations: [],
+			continuationSources: [],
+			planModeRuntime: inactivePlanMode(),
+			todoRuntime,
+			contextRuntime: createContextRuntime(),
+			conversationContextProjector: { project: () => [] } satisfies ConversationContextProjector,
+			modelRuntime: { bind: () => undefined } as unknown as RuntimeModel,
+			hookRuntime: createPassthroughHookRuntime(),
+			extensionEvents: new CodingAgentExtensionRunBridge(),
+			imageSettingsSnapshots: new CodingAgentImageSettingsSnapshotRouter(),
+			toolApprovalRuntime,
+		});
+		disposals.push(() => assembly.dispose());
+		const capabilities = await compileAssemblyCapabilities(assembly);
+		disposals.push(() => capabilities.close());
+
+		const lease = await capabilities.acquire({
+			sessionId: "session-1",
+			operationId: "turn-1",
+			reason: "turn",
+			signal: new AbortController().signal,
+		});
+		try {
+			const composer = lease.snapshot.modelCallFrameComposer!;
+			const frame = await composer.compose({
+				sessionId: "session-1",
+				turnId: "turn-1",
+				signal: new AbortController().signal,
+				messages: [],
+				modelBinding: { model: TEST_MODEL },
+				frame: { instructions: [], tools: new Map([["browser_tab", createTool("browser_tab", executed)]]) },
+			} as unknown as Parameters<typeof composer.compose>[0]);
+			const tool = frame.tools.get("browser_tab")!;
+
+			// 写动作：用户拒绝 → 抛拦截错误，底层工具一次都没执行，审批请求等级为 L3。
+			await expect(
+				tool.execute({
+					...toolRequest("call-deny"),
+					input: { action: "click", elementRef: { id: "e1", pageRevision: 0 } },
+				}),
+			).rejects.toThrow("denied by user approval");
+			expect(executed).toHaveLength(0);
+			expect(approvalRequests).toEqual([{ toolName: "browser_tab", level: "L3" }]);
+
+			// 读动作：同一工具同一装配，不再请示审批端口。
+			await tool.execute({ ...toolRequest("call-read"), input: { action: "snapshot" } });
+			expect(executed).toEqual(["browser_tab"]);
+			expect(approvalRequests).toHaveLength(1);
+		} finally {
+			await lease.release();
+		}
+	});
+
 	it("closes the tool surface and the execution path while plan mode is active", async () => {
 		const codingTools = createCodingToolsRuntimeComposition({
 			cwd: "C:\\workspace",

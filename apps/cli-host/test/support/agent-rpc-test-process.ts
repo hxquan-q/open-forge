@@ -125,7 +125,8 @@ export async function createAgentRpcFixture(options: CreateAgentRpcFixtureOption
 	]);
 	return {
 		...fixture,
-		dispose: () => rm(root, { force: true, recursive: true }),
+		// Windows 上子进程退出后句柄释放有滞后，裸 rm 会撞 EBUSY/ENOTEMPTY；交给 rm 的重试吸收。
+		dispose: () => rm(root, { force: true, recursive: true, maxRetries: 10, retryDelay: 200 }),
 	};
 }
 

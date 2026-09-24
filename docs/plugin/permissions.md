@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 权限
 
 插件必须在 `plugin.json` 的 `permissions` 数组里声明它要用的宿主 API。宿主在插件管理页**单独授权**，并在运行时校验。
@@ -25,7 +26,7 @@ ctx.permissions.require("fs.read");  // 缺则抛 Plugin permission denied: fs.r
 不同注册点对「声明了但未授权」的处理不同：
 
 - **抛错（require）**：`registerInputAction`、`registerCardRenderer`、`registerToolCallSlot`、`registerTurnCard`、`registerShortcutScope`、`openActivityTab`、`setActivityTabVisible`、`setPromptAttachment`、`fileExplorer.*`、`agent.registerContinuationProvider`、`agent.registerSystemPromptProvider`、`conversation.*`、`fs.*`、`network.*`、`storage.*`、`media.*`、`ai.*`、`command.run`。缺权限直接抛 `Plugin permission denied: <permission>`，中断该次调用。
-- **跳过 + 警告（warn+noop）**：`registerGlobalSlot`、`registerFilePreview`、`registerActivityTab`、`registerNewSessionContext`、`agent.registerTool`、`agent.registerHook`、`appActions.register`。缺权限时静默跳过该贡献并打 `console.warn`，**不影响**插件其它已授权能力。
+- **跳过 + 警告（warn+noop）**：`registerGlobalSlot`、`registerFilePreview`、`registerArtifactRenderer`、`registerActivityTab`、`registerNewSessionContext`、`agent.registerTool`、`agent.registerHook`、`appActions.register`。缺权限时静默跳过该贡献并打 `console.warn`，**不影响**插件其它已授权能力。
 
 > 设计上一个缺失权限不应拖垮插件的其它能力——`activate()` 里建议把可选能力的注册各自独立，避免一处 throw 掉整段。
 
@@ -36,6 +37,7 @@ ctx.permissions.require("fs.read");  // 缺则抛 Plugin permission denied: fs.r
 | `ui.slot.global` | `ctx.ui.registerGlobalSlot()` | [ui-slots](./ui-slots.md#全局浮层-registerglobalslot) |
 | `ui.slot.workspace-view` | `ctx.ui.registerWorkspaceView()` / `openWorkspaceView()` / `setWorkspaceViewBadge()` | [ui-slots](./ui-slots.md#工作区视图-registerworkspaceview) |
 | `ui.slot.file-preview` | `ctx.ui.registerFilePreview()` | [ui-slots](./ui-slots.md#文件预览-registerfilepreview) |
+| `ui.slot.artifact-renderer` | `ctx.ui.registerArtifactRenderer()`；资源读取另需 `fs.read` | [ui-slots](./ui-slots.md#task-artifact-renderer-registerartifactrenderer) |
 | `ui.slot.activity-tab` | `registerActivityTab` / `openActivityTab` / `setActivityTabVisible` | [ui-slots](./ui-slots.md#活动面板-tab-registeractivitytab) |
 | `ui.slot.bottom-panel` | `registerBottomPanel` | [ui-slots](./ui-slots.md#会话底部面板-registerbottompanel) |
 | `ui.slot.input-action` | `registerInputAction` / `setPromptAttachment` | [ui-slots](./ui-slots.md#输入栏动作-registerinputaction) |
@@ -67,7 +69,7 @@ ctx.permissions.require("fs.read");  // 缺则抛 Plugin permission denied: fs.r
 | `agent.continuation.register` | `registerContinuationProvider` | [conversation-and-agent](./conversation-and-agent.md#注册-agent-自动续跑策略) |
 | `app.actions.register` | `ctx.appActions.register()`（注册声明） | [app-actions](./app-actions.md) |
 | `app.actionHandler.execute` | Action handler 被本地 Action RPC 调用时执行 | 同上 |
-| `fs.read` | `readDir` / `readFile` / `stat` / `listFilesRecursive` | [conversation-and-agent](./conversation-and-agent.md#文件-api) |
+| `fs.read` | `readDir` / `readFile` / `stat` / `listFilesRecursive` / `PluginArtifactRendererSource.readText/readBytes` | [conversation-and-agent](./conversation-and-agent.md#文件-api) / [ui-slots](./ui-slots.md#task-artifact-renderer-registerartifactrenderer) |
 | `fs.write` | `writeFile` / `rename` / `delete` / `move` / `createDirectory` | 同上 |
 | `network.fetch` | `ctx.network.request` | [conversation-and-agent](./conversation-and-agent.md#网络-api) |
 | `browser.read` | 创建/查询/关闭 session，导航、快照、文本与截图 | [browser](./browser.md) |

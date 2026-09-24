@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { AgentFeatureDefinition } from "@vetta/runtime-core/kernel";
 import {
 	optionalSessionExtensionFunction,

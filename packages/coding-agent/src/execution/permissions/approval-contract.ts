@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { defineSessionExtensionFunction } from "@vetta/runtime-core/session-extensions";
 import type { ToolRiskDescriptor, ToolRiskLevel } from "@vetta/runtime-core/task";
 

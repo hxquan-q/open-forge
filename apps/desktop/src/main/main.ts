@@ -1,13 +1,16 @@
+// Modified by The Open Forge contributors.
 import "./telemetry/bootstrap.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
+import { sweepActiveStdioMcpProcesses } from "@vetta/runtime-node/mcp";
 import { app, type BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, protocol, session, shell } from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
 import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
 import { stopAllOpenMarketplaceMcpRuntimes } from "./abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
+import { createAboutPanelOptions } from "./app-about-panel.js";
 import { ActionApprovalBroker } from "./app-actions/approval-broker.js";
 import { createAppActionSystem } from "./app-actions/index.js";
 import { createActionRpcRuntime } from "./app-actions/rpc.js";
@@ -37,7 +40,7 @@ import {
 } from "./diagnostics.js";
 import { FILE_PROTOCOL_PRIVILEGE, registerFileProtocolHandler } from "./file-protocol.js";
 import { fixPath } from "./fix-path.js";
-import { initAppLanguage } from "./i18n/index.js";
+import { initAppLanguage, mainT } from "./i18n/index.js";
 import { getImHost } from "./im-host/index.js";
 import { syncAppshotGesture } from "./ipc/appshot.js";
 import { persistVettaCliPaths } from "./ipc/fs.js";
@@ -512,15 +515,7 @@ if (!gotSingleLock) {
 		// sandbox 会在首次请求 sandbox mode 时按需探测；主动预热放到真实内容绘制后，
 		// 避免与 renderer 首屏和会话恢复竞争。
 
-		// 开发模式下覆盖 About 面板信息，避免显示 Electron 框架版本
-		if (!app.isPackaged) {
-			const appVersion = getAppVersion();
-			app.setAboutPanelOptions({
-				applicationName: "Vetta",
-				applicationVersion: appVersion,
-				version: "",
-			});
-		}
+		app.setAboutPanelOptions(createAboutPanelOptions(getAppVersion(), mainT("menu.app.credits"), app.isPackaged));
 
 		// Theme IPC
 		ipcMain.handle("vetta:theme:set", (_event, mode: string) => {
@@ -642,7 +637,7 @@ if (!gotSingleLock) {
 			await openExternalUrl(url);
 		});
 
-		// Vetta 云服务（登录 / 订阅 / 远程模型）：构建期开关。lite 构建下该分支
+		// Open Forge 云服务（登录 / 订阅 / 远程模型）：构建期开关。lite 构建下该分支
 		// 被常量折叠，整个 cloud chunk 不进产物。
 		if (isCloudBuildEnabled()) {
 			const { startCloudMain } = await import("./cloud/index.js");
@@ -650,7 +645,7 @@ if (!gotSingleLock) {
 		}
 
 		if (process.platform === "darwin") {
-			app.dock.setIcon(nativeImage.createFromPath(join(buildDir, "icon-dock.png")));
+			app.dock?.setIcon(nativeImage.createFromPath(join(buildDir, "icon-dock.png")));
 		}
 
 		// 默认「对话」项目目录：保证一直存在。
@@ -973,6 +968,14 @@ setQuitCleanup(async () => {
 		await disposeSharedRuntime();
 	} catch (err) {
 		mainLog.error("disposeSharedRuntime failed", err);
+	}
+	// Runtime 层正常关闭（supervisor.shutdown → 逐 server 停止）跑完后仍登记的
+	// stdio MCP 子进程树在这里兜底强杀：Windows 走 taskkill /T、POSIX 走进程组
+	// SIGKILL，退出后不留孤儿进程。
+	try {
+		await sweepActiveStdioMcpProcesses((message) => mainLog.info(message));
+	} catch (err) {
+		mainLog.error("stdio MCP sweep failed", err);
 	}
 	try {
 		await ensureAppMonitorInitialized();
