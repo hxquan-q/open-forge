@@ -53,3 +53,21 @@ depends_on: []
 ## 后续 Task
 
 - 采集并记录 Desktop 启动、空闲、持续对话、Canvas/Browser/插件使用与资源关闭后的进程级内存样本；确认主导进程后再拆实现 Task。
+
+## 首轮采样（2026-09-25，隔离 dev 实例，**非空载**）
+
+采样状态：dev 实例打开项目 `E:\demo`、加载 1 个历史会话、无生成中（应用自身 perf 快照 `sampling:"idle"`、`activeSessions:0`、`queueDepth:0`、`sessionCount:1`）。dev home 有前序会话数据，**不能当空载基线**。
+
+- 操作系统层（CIM `WorkingSetSize`/`PrivatePageCount`，按 PID + `--type`/`--utility-sub-type` 分类）：
+
+| 时刻 (UTC) | main | renderer A | renderer B | gpu | utility(Node) | utility(Network) | 合计 |
+|---|---|---|---|---|---|---|---|
+| S1 04:29:04 | 254.7 MB | 436.2 | 301.3 | 134.4 | 327.6 | 64.3 | 1518.5 MB |
+| S3 04:43:44 | 281.9 MB | 688.1 | 418.9 | 129.5 | 327.6 | 65.3 | 1911.3 MB |
+
+- 应用自身观测（`perf-snapshot.json`，`2026-09-25T04:43:05.591Z`，`sampling:"idle"`）：main workingSet 267.7 MB / private 223.0 MB / heapUsed 113.3 MB（heapTotal 117.8、rss 274.1）；renderers 890.7 MB + 342.6 MB；gpu 133.7 MB；utility 335.4 MB + 65.3 MB；**totals: workingSet 2 035 420 KB / 6 进程**，cpu 3.72%。
+- 诊断包：`%TEMP%\vetta-diagnostics-2026-09-25T04-43-26-065Z.zip`（只读了 `perf-snapshot.json` 与 `system-info.json`，未读日志）。
+- 产品事实：perf monitor 只驻留**内存**（`perf-monitor-service.ts` 的 `this.samples`），仅随诊断包落盘；`~/.openforge-dev/app-monitor/summary.json` 无进程内存字段。
+- 口径提醒：同一时刻 `tasklist` 的 Mem Usage 与 CIM 读数存在差异（读数时刻/口径不同），引用数字时必须标注来源与时刻。
+
+**结论**：拿到一组可重复的"非空载"样本，但**尚不足以**触发决策条件（需要空载基线 + 持续对话/Canvas/Browser 前后对照）。下一步：在同一固定版本上补一组空载基线，再按文档的 A 方案做资源关闭前后的回落对照。

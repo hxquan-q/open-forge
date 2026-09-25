@@ -70,3 +70,14 @@ updated: 2026-09-25
   - 内置 tab 的 `useMeta` 只有 i18n 文案与图标，**不主张**面板挂载是瓶颈；这正是待实测项。
 - 阈值提案（须由首次实测确认，非既定基线）：面板关闭时 frame#1 ＜100ms 且无 ＞50ms longtask；≥200ms 才值得动手。
 - 需用户配合的实机步骤：① DevTools 执行 `localStorage.setItem("vetta-perf-send","1"); location.reload()`；② 打开项目会话并**关闭活动面板**后交替切换 5-10 次，另覆盖长消息流与面板开启+文件树展开各一次；③ 回贴每条 `interaction=workspace-mode-switch` 的 `marks`/`commits`/`longTasks` 并标注场景；④ 同机跑一次 `trigger=send-button` 作「已知可接受」参照；⑤ `localStorage.removeItem("vetta-perf-send")` 关闭。
+
+### 实机采证结果（2026-09-25，隔离 dev 实例）：**未取得任何切换耗时数字**
+
+本条不是"没跑"，而是采集过程被两个可复现的环境事实挡住，且每个都有原始证据：
+
+1. **该实例的 Renderer 文档永久 `hidden`，rAF 完全不触发**：`document.visibilityState === "hidden"`、`document.hasFocus() === true`、原生窗口在屏未最小化（rect 320,140→1600,940，`IsIconic=False`）。实测 1.2s / 3s 内 **0 帧**；探针的 `waitForCommittedPaint`（`shared/lib/committed-paint.ts:13`）直接短路返回 `skipped-hidden`。因此 `marks`（frame#1..#5，即"点击→首帧"这一核心口径）**无法产生**；Playwright 点击全部 `locator.click: Timeout`（元素可解析但不可交互）。已排除普通遮挡：强制 `HWND_TOP`/位移/`SetForegroundWindow` 后 `visibilityState` 不变 → 更像 Electron 自身的 webContents 可见性（hide-to-tray 状态），而非窗口被覆盖。
+2. **同一 checkout 被并发编辑，Vite 全量重载风暴**：控制台实测 `[vite-hmr] before-full-reload {"path":"*","triggeredBy":"...i18n/locales/en/chat.json"}`，以及 `packages/capability-sdk/dist/*`、`capability-runtime/dist/*` 重写触发的批量全量重载，伴随 `500` → `Failed to initialize renderer` → 白屏骨架；冷启动在此状态下耗时约 2.7 分钟。一次重载正好落在测量窗口（`timeOrigin` 变化）使该次迭代作废。
+
+- 未做的两项：`trigger=send-button` 参照（dev profile 有 deepseek 凭据，但发一条即真实计费调用，未做）；任何优化结论（无数据不下结论）。
+- **解除阻塞的最小方案（择一）**：① 让 dev 窗口的 webContents 真正可见（应用层 show 而非 OS 层）后重跑 bug 文档第 ①–⑤ 步；② 在固定 revision 的隔离 worktree 上启动实例，避开当前 checkout 的并发编辑与 dist 重写。
+- 探针开关 `localStorage["vetta-perf-send"]` 已按协议关闭（`"1"` → `null`），`vetta-workspace-mode` 全程未变，证明点击从未真正生效。

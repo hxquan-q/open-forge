@@ -1,7 +1,7 @@
 ---
 id: BUG-0022
 type: bug
-status: investigating
+status: blocked
 priority: P1
 owner: apps/desktop; packages/runtime-node
 source: user-report; screenshot; source inspection
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -58,7 +58,31 @@ updated: 2026-09-24
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+### 实机采证（2026-09-25，隔离 dev 实例，用户授权）
+
+`window.vetta.config.get()`（原样，经 Renderer 自己的 host-api 读取）：
+
+```json
+"sandbox": {"status":"unavailable","backend":null,"platform":"win32",
+  "reason":"binary_not_found",
+  "details":"No bundled or configured Windows sandbox host binary was found.",
+  "checkedAt": <实例启动时刻，非实时重探>}
+"defaultExecutionMode": "full-access"
+```
+
+- `features` 键不存在：`capability.ts:326-336` 在 host 未解析时提前返回，不带该字段。
+- 磁盘核对（全部实测）：`packages/runtime-core/sandbox/` 只有 `docs/`，**没有 `bin/`**；全仓（排除 node_modules）无任何 `*sandbox-host*.exe`；`VETTA_WINDOWS_SANDBOX_HOST_PATH` 未设置；本机**没有已安装的 Open Forge**（`%LOCALAPPDATA%\Programs`、Program Files 均无），因此打包路径的 host 同样无从存在。
+- 被动能力查询 `<host> --capabilities --json` 未执行：磁盘上不存在可执行对象（不是失败，也不是"没跑"）。
+
+### 根因（高置信度）
+
+沙盒能力取决于 `resolveWindowsSandboxHostBinary()` 能否解析到 host 二进制；本仓库既**不包含**该二进制、也**没有**任何构建/下载步骤产出它。打包脚本 `apps/desktop/scripts/prepare-pack.js:614-628` 只在 `packages/runtime-core/sandbox/bin` 存在时才把它 staged 进 `Resources/sandbox/windows/`，**缺失时静默跳过、不告警**（与 vendor 运行时缺 Node/Python 时的显式告警形成对照）。因此当前构建产物在 Windows 上必然 `binary_not_found` → 选择器置灰、`defaultExecutionMode=full-access`。这不是探测失败、也不是权限被裁剪。
+
+### 下一步（三类，A/C 可不等决策先做）
+
+- **A（无决策依赖，可立即做）**：执行模式选择器在沙盒不可用时给出**明确原因与指引**（读 `sandbox.reason/details`，i18n 文案），而不是只灰掉选项——这是本 Bug「预期行为」中"显示明确原因"的部分。
+- **B（需用户/产品决策）**：是否在构建中获取并内置 Windows 沙盒 host（上游 codex 的 `codex-windows-sandbox-host.exe`：来源、许可、体积、更新节奏），或明确声明 Windows 上暂不提供沙盒。
+- **C（技术守卫，可立即做）**：打包时若目标平台声明支持沙盒却没有 staged 任何二进制，应像 vendor 运行时那样显式告警（或 fail），避免再次"静默无沙盒"发版。
+
+- 状态：转 blocked（等 B 的产品决策）；A/C 待排期实施。
+- 未运行及原因：未在 Windows 打包产物上验证（本机无已安装实例、构建非本任务所需）；`features` 字段与实时重探行为已由源码与缓存 `checkedAt` 证实。
