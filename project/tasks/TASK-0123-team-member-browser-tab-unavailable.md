@@ -13,14 +13,14 @@ related_tasks: []
 related_issues: [ISSUE-0026]
 related_bugs: []
 execution: parallel
-branch: task/0123-member-browser-tab
+branch: task/TASK-0123-member-browser-tab
 worktree: .worktrees/task-0123
 base_commit: main
 read_paths: [apps/desktop/src/main/agent-teams/, packages/runtime-*/src/（browser_tab 装配与过滤处）, packages/agent/src/]
 write_paths: [apps/desktop/src/main/agent-teams/, packages/runtime-*/src/, .github/release-notes/]
 exclusive_paths: []
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0122]
 integration_status: pending
 created: 2026-09-26
 updated: 2026-09-26
@@ -39,13 +39,15 @@ updated: 2026-09-26
 
 ### 并发评估
 
-- 结论：支持并行——成员会话工具装配/过滤面与 TASK-0122 的 leader 侧文件无交集。
+- 结论：条件支持并行——成员会话工具装配/过滤面与 TASK-0122 在
+  `apps/desktop/src/main/agent-teams/` 与 `.github/release-notes/` 有写范围重叠，已登记
+  `conflicts_with`，按声明顺序集成。
 - 执行方式：parallel（独立 worktree）。
 - 可并行 Task：TASK-0122。
 - 前置依赖：先核实 `browser_tab` 在成员会话的注册路径（是直接进成员 toolDefinitions 还是经
   宿主能力收窄），确认不可用判定的实现位置再定改法。
 - 冲突文件/独占路径：成员工具装配处（待定位后回填）。
-- Branch：`task/0123-member-browser-tab`。
+- Branch：`task/TASK-0123-member-browser-tab`。
 - Worktree：独立 worktree。
 - 集成负责人：Coordinator。
 - 集成顺序：PLAN-0013 阶段 1 次项。

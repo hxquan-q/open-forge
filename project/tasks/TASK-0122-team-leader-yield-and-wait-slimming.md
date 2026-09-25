@@ -13,14 +13,14 @@ related_tasks: []
 related_issues: [ISSUE-0025]
 related_bugs: []
 execution: parallel
-branch: task/0122-team-leader-yield
+branch: task/TASK-0122-team-leader-yield
 worktree: .worktrees/task-0122
 base_commit: main
 read_paths: [packages/agent-team/src/, packages/plugins/presets/preset-agent/agent/prompts/, apps/desktop/src/main/agent-teams/team-task-control-service.ts, apps/desktop/src/main/agent-teams/team-session-concurrency.test.ts]
 write_paths: [packages/agent-team/src/task-runtime-tools.ts, packages/agent-team/test/, packages/plugins/presets/preset-agent/agent/prompts/master.md, apps/desktop/src/main/agent-teams/, .github/release-notes/]
 exclusive_paths: [packages/agent-team/src/task-runtime-tools.ts, packages/plugins/presets/preset-agent/agent/prompts/master.md]
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0123]
 integration_status: pending
 created: 2026-09-26
 updated: 2026-09-26
@@ -39,13 +39,15 @@ updated: 2026-09-26
 
 ### 并发评估
 
-- 结论：条件支持并行——写面集中在 agent-team 工具合同与 preset 提示词，与 TASK-0123
-  （browser_tab 声明）无文件交集；与同目录其它在途改动需先 `git status` 确认。
+- 结论：条件支持并行——写面集中在 agent-team 工具合同与 preset 提示词；与 TASK-0123 在
+  `apps/desktop/src/main/agent-teams/` 与 `.github/release-notes/` 有写范围重叠，已登记
+  `conflicts_with`，两者可各自独立实施但必须按声明顺序集成；与同目录其它在途改动需先
+  `git status` 确认。
 - 执行方式：parallel（独立 worktree）。
 - 可并行 Task：TASK-0123；TASK-0124/0125 与本任务有逻辑依赖不在同一批。
 - 前置依赖：无。
 - 冲突文件/独占路径：`task-runtime-tools.ts`、`master.md`。
-- Branch：`task/0122-team-leader-yield`。
+- Branch：`task/TASK-0122-team-leader-yield`。
 - Worktree：独立 worktree。
 - 集成负责人：Coordinator。
 - 集成顺序：PLAN-0013 阶段 1 首项。
