@@ -1,7 +1,7 @@
 ---
 id: BUG-0027
 type: bug
-status: ready
+status: done
 priority: P3
 owner: apps/cli-host
 source: BUG-0026 修复过程中的调用点复核
@@ -55,3 +55,14 @@ updated: 2026-09-25
 
 - 修复方向：与 BUG-0026 相同的「展开 + 转发」，复用 `packages/coding-agent` 已有的共享 provider；不改提示语本身、不放宽权限。
 - 未运行及原因：尚未实施（BUG-0026 修复时按范围纪律未扩到 `apps/cli-host`，用户另行立项）。
+
+## 交付记录（2026-09-25）
+
+- 实施与集成：`24e3d5dcc`（2 文件，+263/−3），集成 merge `71a130f0e`。
+- 前置核实（避免补来源的误判）：CLI 侧三处站点的上游上下文**本就能拿到**技能来源——主工具环境由 `runtime-composition.ts:145` 的 `createAvailableSkillNamesProvider(...)` 填充并经 `runtime-tool-surface.ts:94` 传入；会话执行环境由 BUG-0026 的 `peripheral-assembly.ts:250` 填充，CLI 走同一装配。装配点用例在修复前即为绿（Red 轮 5 例中 2 例通过）即为证。
+- Red：`test/cli-tool-environment-skill-availability.test.ts` → 3 failed | 2 passed，失败信息即缺陷症状（三处站点提示均未点名技能）。
+- Green：同文件 5/5；集成后复跑 5/5；cli-host 契约回归（`runtime-composition-contract`、`agent-print-mode`）31/31。
+- 检查：`check:quick` exit 0、根 `bunx tsgo --noEmit` exit 0、`bun run --cwd apps/cli-host typecheck` exit 0。
+- 站点完整性：全仓 grep 确认 `apps/cli-host` 下读工具选项/文件工具注册**只有这三处**，且 CLI 唯一装配路径（`runtime-host.ts prepareRuntimeHost`）覆盖 rpc/print/im 三种入口；`packages/coding-agent` 的 deprecated Node SDK 装配（根本不传 `readOptions`）不在本 Bug 范围。
+- 用户可见说明：并入 BUG-0025/BUG-0026 的既有发布说明条目（同一症状），未新增条目。
+- 未运行及原因：未跑 cli-host 整包（较慢且会派生嵌套 Node/MCP 子进程），留待协调者的最终门禁串行执行。
