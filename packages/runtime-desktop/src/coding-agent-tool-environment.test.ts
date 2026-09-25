@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
+import { addSessionGrant, clearSessionGrants, findSessionGrant } from "@vetta/runtime-node/sandbox";
 import { afterEach, describe, expect, it } from "vitest";
 import { createDesktopCodingAgentSessionExecutionEnvironment } from "./coding-agent-tool-environment.js";
 
@@ -69,6 +70,53 @@ describe("Desktop 会话执行环境的二进制读提示", () => {
 		await writeFile(join(root, "book.xlsx"), WORKBOOK_BYTES);
 		return root;
 	}
+});
+
+describe("Desktop 会话执行环境的沙箱授权缓存接线", () => {
+	// ADR-0133 §5(TM-07):mode flip 时 session runtime 会调 sandbox.clearSessionGrants 清本会话
+	// grant。这里锁定生产接线确实把它接到 runtime-node 的真实 grant store——上层测试若用
+	// fixture 手工注入同名字段,删掉这处接线仍然全绿,所以要单独钉住。
+	const grantSessionId = "desktop-clear-grants-session";
+	const otherSessionId = "desktop-clear-grants-other";
+	const temporaryRoots: string[] = [];
+	const grantRequest = {
+		capability: "file.write" as const,
+		toolName: "write",
+		target: "outside.txt",
+		resolvedTarget: `${process.cwd()}-outside`,
+		grantRoot: `${process.cwd()}-outside`,
+		reason: "wiring test",
+	};
+
+	afterEach(async () => {
+		clearSessionGrants(grantSessionId);
+		clearSessionGrants(otherSessionId);
+		for (const root of temporaryRoots.splice(0)) await rm(root, { recursive: true, force: true });
+	});
+
+	it("本机会话环境暴露的 clearSessionGrants 清掉本会话缓存且不影响其他会话", async () => {
+		const root = await mkdtemp(join(tmpdir(), "desktop-clear-grants-"));
+		temporaryRoots.push(root);
+		await mkdir(join(root, "agent"), { recursive: true });
+		const environment = await createDesktopCodingAgentSessionExecutionEnvironment({
+			sessionId: grantSessionId,
+			cwd: root,
+			agentDir: join(root, "agent"),
+			scenario: "project",
+		});
+		try {
+			addSessionGrant(grantSessionId, grantRequest);
+			addSessionGrant(otherSessionId, grantRequest);
+			expect(environment.sandbox.clearSessionGrants).toBeTypeOf("function");
+
+			environment.sandbox.clearSessionGrants?.(grantSessionId);
+
+			expect(findSessionGrant(grantSessionId, grantRequest)).toBeUndefined();
+			expect(findSessionGrant(otherSessionId, grantRequest)).toBeDefined();
+		} finally {
+			await environment.dispose();
+		}
+	});
 });
 
 async function readBinaryHint(tool: RuntimeToolDefinition, path: string): Promise<string> {

@@ -29,6 +29,7 @@ import {
 	resolveNodeShell,
 } from "@vetta/runtime-node/coding";
 import { NodeScopedTextStorage } from "@vetta/runtime-node/host";
+import { clearSessionGrants } from "@vetta/runtime-node/sandbox";
 import { createSshCodingToolEnvironment, createSshPathPolicies } from "@vetta/runtime-ssh";
 import { parseProjectLocation } from "@vetta/ssh-transport";
 import { resolveProjectSettingsPath } from "./project-settings-path.js";
@@ -143,6 +144,9 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 					readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 					reviewSnapshots,
 				}),
+			// ADR-0133 §5(TM-07):mode flip 时清掉本会话 grant 缓存。
+			// 远程分支不提供本机沙箱,自然也没有可清的 grant。
+			clearSessionGrants,
 		},
 		dispose: () => command.dispose(),
 	};
