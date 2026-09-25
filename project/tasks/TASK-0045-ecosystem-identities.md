@@ -11,14 +11,14 @@ execution: parallel
 branch: task/TASK-0045-ecosystem-identities
 worktree: ../open-forge-wt/task-0045-ecosystem-identities
 base_commit: 0e2e1ae3f9089b77aa05d88f5ac2f8f3ff38de1a
-read_paths: [apps/cli-host/AGENTS.md, apps/cli-host, apps/im-gateway/README.md, apps/im-gateway/Makefile, packages/runtime-mcp/AGENTS.md, packages/runtime-mcp, packages/plugins/AGENTS.md, packages/plugins, apps/desktop/src/main]
-write_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
-exclusive_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
+read_paths: [apps/cli-host/AGENTS.md, apps/cli-host, apps/im-gateway/README.md, apps/im-gateway/Makefile, packages/runtime-mcp/AGENTS.md, packages/runtime-mcp, packages/runtime-node, packages/plugins/AGENTS.md, packages/plugins, apps/desktop/src/main]
+write_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/runtime-node, packages/plugins, apps/desktop/src/main, scripts/link.sh, .github/release-notes]
+exclusive_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/runtime-node, packages/plugins, apps/desktop/src/main, scripts/link.sh, .github/release-notes]
 depends_on: [TASK-0043]
-conflicts_with: [TASK-0044, TASK-0046]
+conflicts_with: [TASK-0044, TASK-0046, TASK-0122, TASK-0123]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-25
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -36,7 +36,8 @@ updated: 2026-09-25
 - 执行方式：parallel 泳道（2026-09-26 用户指定独立 Worktree 实施），任务内部按宿主顺序串行落地。
 - 可并行 Task：无。
 - 前置依赖：`TASK-0043` 的品牌事实源完成；CLI 命令目标、旧命令别名/迁移策略需先明确。
-- 冲突文件/独占路径：各宿主的命令入口、IM/MCP 展示元数据、插件清单和 Release Notes。
+- 冲突文件/独占路径：各宿主的命令入口、IM/MCP 展示元数据、插件清单和 Release Notes。与活跃的 `TASK-0122`/`TASK-0123` 在 `.github/release-notes`、`apps/desktop/src/main`、`packages/plugins`、`packages/runtime-*` 存在写范围重叠，已登记 `conflicts_with`；集成顺序：本任务先集成，0122/0123 后续集成时按其合同处理残留冲突。
+- 实施更正：MCP client 身份与沙箱 shim 的品牌字面量真实所有权在 `packages/runtime-node`（原合同漏列），CLI bin 软链在 `scripts/link.sh`；两处已并入 write_paths。
 - Branch：`task/TASK-0045-ecosystem-identities`；Worktree：由 `worktree:create` 按当前协作状态分配。
 - 集成负责人：coordinator。
 - 集成顺序：TASK-0043 → TASK-0044 → 本任务；完成后进入文档迁移。
