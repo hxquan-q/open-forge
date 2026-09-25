@@ -83,6 +83,24 @@ settings.local.json
 !.claude/hooks/check-file-lines.mjs
 !.claude/hooks/check-file-lines.test.mjs
 .codex/
+# 其它 Agent 工具各自生成的技能/配置镜像；技能事实源在 .agents/skills/
+.augment/
+.codebuddy/
+.codewhale/
+.commandcode/
+.continue/
+.cursor/
+.factory/
+.gemini/
+.kilocode/
+.kiro/
+.qoder/
+.roo/
+.stepcode/
+.trae/
+.warp/
+.windsurf/
+.github/prompts/
 prompt/
 spec/
 !docs/agent/extension/spec/
