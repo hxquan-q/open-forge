@@ -9,7 +9,7 @@ plan: PLAN-0003
 source_issue: ISSUE-0001
 execution: serial
 branch: forge/dev
-worktree: unassigned（等待 npm 组织注册确认）
+worktree: unassigned（用户决策暂缓：不注册 npm org，任务休眠待重启指示）
 base_commit: c3d42690fb5b0abc6a5c080d79111747e352728f
 read_paths: [project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, packages/plugins/AGENTS.md, packages/plugins/README.md, package.json, bun.lock]
 write_paths: [packages, apps, package.json, bun.lock, docs/plugin, .github/release-notes]
@@ -18,7 +18,7 @@ depends_on: [TASK-0043, TASK-0045]
 conflicts_with: [TASK-0045]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,7 +71,8 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- `ISSUE-0001` 记录了 `@openforge` 目标 scope，但 npm 组织尚需注册并确认；在确认前保持 blocked。
+- 用户决策（2026-09-25）：**暂不注册** `@openforge` npm 组织，本任务随之休眠（blocked，非取消、非 archived）。
+- `ISSUE-0001` 决策 #9 的对外 7 包 `@openforge/*` scope 迁移目标不变；待用户后续给出组织注册或迁移指示时重启。重启前不得自行注册组织、登录 registry 或执行任何 `npm publish`。
 
 ## 交付记录
 

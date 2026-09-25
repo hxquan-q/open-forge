@@ -18,7 +18,7 @@ depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0047]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,7 +71,7 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- 等待 TASK-0044、TASK-0045 与 TASK-0049；当前正式站点与社区 URL 未确认前只使用已冻结目标，不引入新地址。
+- 仅剩 `TASK-0045`（已 ready：CLI 命令名 `openforge`、旧命令直接切换不保留别名、`vetta-serv` 改 `openforge-serv`，2026-09-25 决策齐）实施收口，及随之关闭的 `TASK-0049`；`TASK-0044` 已完成，社区入口已决策暂不建设（2026-09-25，保留现有外部链接）。当前正式站点与社区 URL 未确认前只使用已冻结目标，不引入新地址。
 
 ## 交付记录
 

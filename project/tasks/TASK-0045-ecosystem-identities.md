@@ -1,7 +1,7 @@
 ---
 id: TASK-0045
 type: task
-status: blocked
+status: ready
 priority: P1
 owner: release/brand
 requirement: REQ-0003
@@ -9,7 +9,7 @@ plan: PLAN-0003
 source_issue: ISSUE-0001
 execution: serial
 branch: forge/dev
-worktree: unassigned（等待品牌源和生态命名决策）
+worktree: unassigned（命名决策已齐，待排期实施）
 base_commit: c3d42690fb5b0abc6a5c080d79111747e352728f
 read_paths: [apps/cli-host/AGENTS.md, apps/cli-host, apps/im-gateway/README.md, apps/im-gateway/Makefile, packages/runtime-mcp/AGENTS.md, packages/runtime-mcp, packages/plugins/AGENTS.md, packages/plugins, apps/desktop/src/main]
 write_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
@@ -18,7 +18,7 @@ depends_on: [TASK-0043]
 conflicts_with: [TASK-0044, TASK-0046]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,7 +71,7 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- 除 `TASK-0043` 外，CLI 可执行名称及旧别名策略尚无最终决策；不得从产品名自行猜测命令合同。
+- 无。命名决策已齐（2026-09-25 用户确认）：CLI 命令名 `openforge`；旧命令（`vetta`、`vetta-agent`、`vetta-cli-app`、`vetta-agent-rpc`）**直接切换、不保留别名**；`vetta-serv` 代号改 `openforge-serv`（按 ISSUE-0001 决策 #12，同步 SECURITY.md、`.coderabbit.yaml` 与 ADR 引用）。本任务 blocked → ready，可排期实施。
 
 ## 交付记录
 
