@@ -99,8 +99,15 @@ export interface ConfirmDialogState {
 		label: string;
 		checked: boolean;
 	};
+	/** 可选单行输入（如归档口令）；确认时把当前值传给 onConfirm。 */
+	input?: {
+		label?: string;
+		placeholder?: string;
+		defaultValue?: string;
+		password?: boolean;
+	};
 	variant?: "danger" | "default";
-	onConfirm: (checkboxChecked: boolean) => void;
+	onConfirm: (checkboxChecked: boolean, inputValue?: string) => void;
 	onCancel?: () => void;
 }
 

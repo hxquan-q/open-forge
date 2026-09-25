@@ -9,6 +9,7 @@ import {
 	captureInputActionWorkingState,
 	chatMessagesAtom,
 	closeInlineFilePreviewAtom,
+	confirmDialogAtom,
 	defaultConversationCwdAtom,
 	dispatchBottomPanelAtom,
 	emptySessionInputActionState,
@@ -153,40 +154,56 @@ export function useChatViewModel(): ChatViewModelResult {
 		return getProjectDisplayName(activeSessionCwd ?? "", defaultCwd);
 	}, [activeSessionPath, activeSessionCwd, defaultCwd, sessionsMap]);
 
+	const setConfirmDialog = useSetAtom(confirmDialogAtom);
+
+	// Electron 不支持 window.prompt；归档口令统一走应用内确认对话框的 input 字段。
 	const exportArchive = useCallback(() => {
 		if (!activeSessionPath || archiveExporting) return;
-		setArchiveExporting(true);
-		void (async () => {
-			try {
-				await exportPortableSessionArchive({
-					sessionPath: activeSessionPath,
-					defaultFileName: sessionTitle ?? undefined,
-				});
-			} catch (error) {
-				alert(
-					i18n.t("chat:chatView.archiveExport.failed", {
-						message: error instanceof Error ? error.message : String(error),
-					}),
-				);
-			} finally {
-				setArchiveExporting(false);
-			}
-		})();
-	}, [activeSessionPath, archiveExporting, sessionTitle]);
+		const sessionPath = activeSessionPath;
+		const defaultFileName = sessionTitle ?? undefined;
+		setConfirmDialog({
+			title: i18n.t("chat:chatView.archiveExportButton.title"),
+			message: i18n.t("chat:chatView.archiveExport.passphrasePrompt"),
+			input: { password: true },
+			onConfirm: (_checkboxChecked, passphrase = "") => {
+				setArchiveExporting(true);
+				void (async () => {
+					try {
+						await exportPortableSessionArchive({ sessionPath, passphrase, defaultFileName });
+					} catch (error) {
+						alert(
+							i18n.t("chat:chatView.archiveExport.failed", {
+								message: error instanceof Error ? error.message : String(error),
+							}),
+						);
+					} finally {
+						setArchiveExporting(false);
+					}
+				})();
+			},
+		});
+	}, [activeSessionPath, archiveExporting, sessionTitle, setConfirmDialog]);
 	const importArchive = useCallback(() => {
-		void (async () => {
-			try {
-				const result = await importPortableSessionArchive();
-				alert(i18n.t(`chat:chatView.archiveImport.${result.messageKey}`));
-			} catch (error) {
-				alert(
-					i18n.t("chat:chatView.archiveImport.failed", {
-						message: error instanceof Error ? error.message : String(error),
-					}),
-				);
-			}
-		})();
-	}, []);
+		setConfirmDialog({
+			title: i18n.t("chat:chatView.archiveImportButton.title"),
+			message: i18n.t("chat:chatView.archiveImport.passphrasePrompt"),
+			input: { password: true },
+			onConfirm: (_checkboxChecked, passphrase = "") => {
+				void (async () => {
+					try {
+						const result = await importPortableSessionArchive(passphrase);
+						alert(i18n.t(`chat:chatView.archiveImport.${result.messageKey}`));
+					} catch (error) {
+						alert(
+							i18n.t("chat:chatView.archiveImport.failed", {
+								message: error instanceof Error ? error.message : String(error),
+							}),
+						);
+					}
+				})();
+			},
+		});
+	}, [setConfirmDialog]);
 
 	useEffect(() => {
 		setHeaderTitle(sessionTitle);
