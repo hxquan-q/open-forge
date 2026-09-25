@@ -74,7 +74,7 @@ export function AbilitiesPageView({
 
 			<div className="relative shrink-0 px-8 pt-1 pb-3 max-sm:px-4" data-tour="capabilities-banner">
 				<motion.div
-					className="mx-auto flex w-full max-w-5xl items-end justify-between gap-4"
+					className="mx-auto flex w-full max-w-5xl flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between"
 					initial={reduceMotion ? false : { opacity: 0, y: -8 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5, ease: easeOut }}
@@ -93,7 +93,7 @@ export function AbilitiesPageView({
 							{t("page.subtitle")}
 						</p>
 					</div>
-					<div className="flex shrink-0 flex-col items-end gap-3">
+					<div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end">
 						<div className="hidden items-center gap-3 text-[11px] text-muted-foreground sm:flex">
 							<span className="inline-flex items-center gap-1.5">
 								<span className="icon-[solar--widget-2-linear] size-3.5" aria-hidden="true" />
