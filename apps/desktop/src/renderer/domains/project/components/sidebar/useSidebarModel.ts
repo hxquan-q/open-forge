@@ -284,7 +284,11 @@ export function useSidebarModel({
 			// sidebar:false 的视图不占导航位，只在「设置 → 更多选项」里出现。
 			...sortWorkspaceViews(workspaceViews.filter((view) => view.sidebar)).map((view) =>
 				toWorkspaceNavItem(
-					view,
+					// label 与 description 都是插件原文（可能是 %key% 占位符），统一在模型层解析。
+					{
+						...view,
+						...(view.description ? { description: resolvePluginText(view.pluginId, view.description) } : {}),
+					},
 					resolvePluginText(view.pluginId, view.label),
 					view.pluginName,
 					currentPath,
