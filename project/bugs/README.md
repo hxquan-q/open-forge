@@ -45,3 +45,6 @@
 | `BUG-0034` | 多分屏终端持续新增 WebGL context，触发 Too many active contexts 告警 | investigating | P3 | — |
 | `BUG-0035` | Debug Profile 播种复制的 safeStorage 凭据跨 user-data 目录不可解密，Provider 鉴权必失败 | investigating | P2 | — |
 | `BUG-0036` | 组队草稿点击操作区外任意位置即静默丢弃，无确认、不可恢复 | investigating | P3 | — |
+| `BUG-0037` | 新会话页选中项目后工作区档位切换写错 cwd 键，高亮与确认句相反且切换不生效 | investigating | P1 | `PLAN-0001` |
+| `BUG-0038` | Runtime Canary 的 Action RPC endpoint 契约不一致，`verify:ui:debug -- runtime-canary` 必失败 | investigating | P1 | — |
+| `BUG-0039` | 新会话页 axe 审计命中三类可访问性违规（无名称按钮 / 交互嵌套 / 缺 landmark） | investigating | P2 | — |
