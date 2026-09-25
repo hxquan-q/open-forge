@@ -1,7 +1,10 @@
 {
 	"page": {
 		"title": "能力",
-		"subtitle": "给 agent 加点本事：技能、场景、MCP、插件与能力套装"
+		"subtitle": "查找、添加并管理 agent 可用的技能、连接器和插件",
+		"kicker": "OPEN FORGE · 能力库",
+		"stampInstalled": "已装 {{count}} 项",
+		"stampTotal": "共 {{count}} 项"
 	},
 	"banner": {
 		"title": "发现更多能力",
@@ -34,6 +37,13 @@
 		"openSource": "开源",
 		"sameName": "{{count}} 个同名",
 		"builtin": "内建"
+	},
+	"attention": {
+		"title": "待处理",
+		"open": "打开 {{name}}，{{status}}",
+		"updateAndSetup": "可更新 · 需配置",
+		"more": "等 {{count}} 项",
+		"overflow": "另有 {{count}} 项待处理"
 	},
 	"card": {
 		"noDescription": "暂无能力说明"

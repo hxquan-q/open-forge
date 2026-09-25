@@ -148,6 +148,18 @@ it("keeps bundle-only members out of discovery and its banner while preserving d
 	act(() => { result.current.setSearchQuery(""); result.current.setScope("mine"); result.current.refresh(); });
 	await waitFor(() => expect(result.current.findById(guideId)).toMatchObject({ id: guideId, installed: true, enabled: false, needsUpdate: true }));
 	expect(result.current.items.filter((item) => item.id === guideId)).toHaveLength(0);
+
+	const attentionView = render(
+		<AbilitiesPageView
+			model={result.current}
+			onOpenAbilityDetail={(detailId) => navigation({ to: "/abilities", search: { detail: detailId } })}
+		/>,
+	);
+	const attentionAction = screen.getByRole("button", { name: /打开 检索指南，可更新/ });
+	await userEvent.click(attentionAction);
+	expect(navigation).toHaveBeenLastCalledWith({ to: "/abilities", search: { detail: guideId } });
+	attentionView.unmount();
+
 	act(() => result.current.setScope("discover"));
 	expect(result.current.items.filter((item) => item.fromMarket).map((item) => item.id)).toEqual([bundleId]);
 	// Independently listing the same package changes visibility, not its catalog identity.
@@ -209,7 +221,7 @@ it("follows the application language broadcast for cached GitHub names, descript
 	const itemId = "github:official:mcp:xiaohongshu-mcp";
 	expect(result.current.findById(itemId)).toMatchObject({ title: "Xiaohongshu MCP", description: "Search social content" });
 	const categoryIds = result.current.groups.map((group) => group.category);
-	render(<AbilitiesPageView model={result.current} categorized={true} />);
+	render(<AbilitiesPageView model={result.current} onOpenAbilityDetail={navigation} categorized={true} />);
 	expect(screen.getByRole("heading", { name: "Social" })).toBeTruthy();
 	act(() => result.current.setSearchQuery("小红书"));
 	expect(result.current.items).toHaveLength(0);
@@ -326,7 +338,7 @@ it("renders abilities in a flat grid by default when ENABLE_ABILITY_CATEGORIES i
 	initI18n();
 	const { result } = renderHook(() => useAbilitiesModel());
 	await waitFor(() => expect(result.current.refreshing).toBe(false));
-	const view = render(<AbilitiesPageView model={result.current} />);
+	const view = render(<AbilitiesPageView model={result.current} onOpenAbilityDetail={navigation} />);
 	expect(screen.queryByRole("heading", { name: "CategoryA" })).toBeNull();
 	expect(screen.queryByRole("heading", { name: "CategoryB" })).toBeNull();
 	expect(screen.getByText("Skill A")).toBeTruthy();
