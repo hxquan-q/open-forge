@@ -1,12 +1,12 @@
 ---
 id: ISSUE-0019
 type: issue
-status: draft
+status: done
 priority: P1
 owner: apps/desktop
 source: user-request; source inspection
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-26
 related_requirement: []
 related_plan: []
 related_tasks: []
