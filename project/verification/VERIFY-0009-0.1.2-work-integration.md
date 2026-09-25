@@ -61,7 +61,7 @@ bun run build:desktop
 
 - 台账提交 `da00d55d3`：6 文件 / +20 −18，pre-commit 钩子通过。
 - 合并 `01baa7bc0`：18 文件 / +737 −12；`ort` 策略**自动**合并 `.github/release-notes/v0.1.2.md`，无冲突。合并后该文件同时含 main 的「改进 / 其他」与分支新增的「修复」沙箱条目。
-- `bun run check`：`check:lint` ✅（4601 文件）；`check:types` ✅（root / cli / desktop / docs / mobile 全绿）；`mobile:lint` ✅；`check:guards` ❌ —— 仅 `task-worktrees` 3 项，均属 `TASK-0122` / `TASK-0123` 存量问题（详见「剩余风险」1），与本次整合无关。
+- `bun run check`：首轮 `check:guards` ❌ —— 仅 `task-worktrees` 3 项，均属 `TASK-0122` / `TASK-0123` 存量问题（由 `2f03d6e0f` 引入，与本次整合无关）。随后经用户确认修正两端合同（`branch` 规范化 + 互登 `conflicts_with`，提交 `3db03732e`），复跑已全绿：lint ✅（4601 文件）、types ✅（root / cli / desktop / docs / mobile）、guards ✅（`task-worktrees` 126 task(s) / 0 warning(s)）、mobile lint ✅。
 - `bun run test:impact`（7 文件）：cli-host 2 文件 6 测试、coding-agent 3 文件 10 测试、runtime-desktop 1 文件 3 测试、runtime-node 1 文件 4 测试，**全部通过**（7 文件 / 23 测试）；其依赖构建 15 包全部成功，证明新公开入口 `@vetta/coding-agent/sandbox/errors` 可解析。
 - `bun run build:desktop`：退出 0。
 - Worktree：`881f/open-forge` 已删除；`8314/open-forge` 因索引为空（git 视整树为未跟踪）被拒，经临时索引比对确认其无 `main` 之外的新增文件、HEAD `1476219e2` 是 `main` 祖先，故保留未强删。
@@ -74,7 +74,7 @@ bun run build:desktop
 
 ## 剩余风险
 
-1. **`bun run check` 为红，会阻塞 0.1.2 发布质量门禁**：`check:guards` 的 `task-worktrees` 报 `TASK-0122` / `TASK-0123` 三项——`branch` 值 `task/0122-...` / `task/0123-...` 不符 `task/TASK-<4 位>-<kebab-slug>` 约定；两者写范围重叠（`.github/release-notes`、`apps/desktop/src/main/agent-teams`、`packages/runtime-*/src` 等）却未登记 `conflicts_with`。由 `2f03d6e0f` 引入，非本次整合产生，需 PLAN-0013 负责人修改其 frontmatter。
+1. **`bun run check` 红灯已解除**：`TASK-0122` / `TASK-0123` 的 `branch` 已规范化为 `task/TASK-<4 位>-<kebab-slug>` 并互登 `conflicts_with`（`3db03732e`），`task-worktrees` 门禁随 `bun run check` 复跑恢复全绿。
 2. **沙箱 fail-closed 行为变更未实机验证**：合入后，无沙箱环境下 `sandbox` 模式会话创建将显式失败（逃生口 `VETTA_SANDBOX_FAIL_OPEN=1`）。发布流水线的 staging guard 声称保障打包版，但 `BUG-0022` 记录的「发行包未内置沙箱组件」需在打包产物上复核。
 3. **`8314` codex 工作树未清理**：索引异常（空），需 Codex 侧或用户裁决后以 `--force` 清理；已确认无独有文件，清理无损。
 4. **0.1.2 发布说明与版本号未定稿**：`发布日期` 仍为「待发布定稿」且缺 `Upstream baseline: upstream/dev@<sha>` 行（`scripts/release-desktop.mjs publish` 会硬校验）；`apps/desktop/package.json` 仍为 `0.1.1`。
