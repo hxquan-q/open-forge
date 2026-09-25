@@ -93,5 +93,9 @@ passes: 31   violations: 3（共 4 个节点）   incomplete: 1（color-contrast
   - `ProjectRowView.a11y.test.tsx`：图标按钮以 `toggleTitle` 为名称；折叠态点击仍展开并导航、展开态只折叠。
   - `GuideBadgeSwiperView.a11y.test.tsx`：正文动作内无可聚焦嵌套控件、两者各自触发自己的回调、不可关闭时没有「不再提示」。
 - 实机验证（axe-core 4.12.1，CDP 附着新会话页）：`violations 3 → 1`、节点数 `4 → 2`；`button-name`（critical）与 `nested-interactive`（serious）归零；侧栏无名按钮计数从 1 → 0；项目行图标按钮实测名称「展开或折叠「demo」的会话」。
-- 仍开放：`region`（moderate，best-practice，非 WCAG A/AA）——标题栏品牌块不在 landmark 内。修它要动自定义标题栏结构（含主题覆盖面），本轮不做，留给后续独立变更。
+- 补充修复（2026-09-26，`region` 与收口项，同工作区并行会话补做）：
+  3. `packages/theme-ui/src/sidebar/SidebarPanel.tsx`：面板根节点加 `role="complementary"` 与 `aria-label`（经 `DefaultSidebar.panelLabel` 由桌面宿主传入 `sidebar.regionLabel`，zh「侧边栏」/ en「Sidebar」）——品牌、导航、项目区全部落入该 landmark，`region` 违规闭合；不动标题栏结构。新增 `SidebarPanelLandmark.test.tsx` 锁定。
+  4. `GuideBadgeSwiperView` 的「不再提示」去掉 `tabIndex={-1}`：成为并列控件后不应再把键盘用户挡在焦点序列之外；`GuideBadgeSwiperView.a11y.test.tsx` 补 tabbable 断言。
+  5. `BotAvatar` 新增 `interactive` prop（默认 true 不变），`interactive={false}` 时渲染非按钮装饰节点；`NewSessionAgentSelector` 的触发器用它替代 inert 包裹方案，DOM 中不再存在第二颗按钮。`BotAvatar.test.tsx` 与 `NewSessionAgentSelector.test.tsx` 各补一例。
+- 仍开放：无。`region` 已按上条闭合（component 级断言已绿；axe 全量复跑建议随下一轮实机验收进行）。
 - 未运行及原因：其它页面（能力库、设置、会话页）未逐个跑 axe。另注：`packages/theme-ui` 自身测试未被任何门禁收集（该包没有 `test` 脚本、desktop vitest 的 include 也不含它），因此这两个回归测试放在 desktop 侧，确保会随 `test:pkg desktop` / `test:changed` 运行。
