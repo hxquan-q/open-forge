@@ -115,6 +115,7 @@ export type {
 export { AnchorEditsFallbackView, DiffPreviewView, EditTextFallbackView } from "./EditDiffView";
 export type {
 	ExecutionModeOptionView,
+	ExecutionModeSandboxNotice,
 	ExecutionModeSelectorViewProps,
 } from "./ExecutionModeSelectorView";
 export { ExecutionModeSelectorView } from "./ExecutionModeSelectorView";

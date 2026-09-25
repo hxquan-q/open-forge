@@ -669,7 +669,20 @@
 			"label": "沙盒受限",
 			"title": "仅允许工作区受限访问"
 		},
-		"sandboxUnavailable": "{{platform}} 沙盒不可用：{{reason}}",
+		"sandboxUnavailable": {
+			"reason": {
+				"notBundled": "当前安装未包含沙盒组件",
+				"notExecutable": "本机的沙盒组件无法执行",
+				"namespacesUnavailable": "当前系统不允许沙盒所需的命名空间操作",
+				"probeFailed": "沙盒自检未通过，隔离未按预期生效",
+				"hostLimited": "沙盒组件能力不足，无法提供完整隔离",
+				"hostTooOld": "沙盒组件版本过旧，不支持所需能力",
+				"unsupportedPlatform": "当前平台不支持沙盒执行模式",
+				"unknown": "未能确定沙盒不可用的原因"
+			},
+			"currentMode": "当前以「完全访问」运行，命令不受沙盒隔离约束",
+			"requestedModeNotEffective": "当前选中的沙盒受限无法生效，请改选「完全访问」"
+		},
 		"sandboxUnavailableRemote": "远程项目没有沙盒：沙盒只能约束这台电脑上的进程，而远程项目的命令在远端主机上执行"
 	},
 	"export": {
