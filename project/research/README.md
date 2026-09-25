@@ -24,6 +24,7 @@
 | Avernet 治理/TaskGuard/Skills 池化与 WorkDaddy 无人值守自动化对照 | [`RESEARCH-0012`](RESEARCH-0012-avernet-workdaddy-references.md) |
 | VS Code 内存足迹与发布体积优化机制源码取证 | [`RESEARCH-0013`](RESEARCH-0013-vscode-footprint-optimization.md) |
 | Skill 落盘布局审计（pool/active 必要性裁决，TASK-0113） | [`RESEARCH-0014`](RESEARCH-0014-skill-layout-pool-active-audit.md) |
+| Cordis 元框架机制调研（fiber/effect/inject 与可借鉴点） | [`RESEARCH-0015`](RESEARCH-0015-cordis-meta-framework.md) |
 
 ## Research Note 约束
 
