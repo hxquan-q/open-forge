@@ -28,19 +28,19 @@ const debugCommandSchema = z.discriminatedUnion("type", [
 type DebugCommand = z.infer<typeof debugCommandSchema>;
 type DebugErrorCommand = z.infer<typeof debugErrorCommandSchema>;
 
-const HELP_TEXT = `Vetta Debug command line interface
+const HELP_TEXT = `Open Forge Debug command line interface
 
 Usage:
-  vetta debug search [query] [--category <category>]
-  vetta debug describe <debug-id>
-  vetta debug run <debug-id> [json-input]
-  vetta debug -h
-  vetta debug --help
+  openforge debug search [query] [--category <category>]
+  openforge debug describe <debug-id>
+  openforge debug run <debug-id> [json-input]
+  openforge debug -h
+  openforge debug --help
 
 Description:
-  Operate development-only Vetta Debug capabilities through the same local
-  RPC server used by Vetta actions. The development Desktop app must already
-  be running. Packaged builds do not register the Debug runtime.
+  Operate development-only Open Forge Debug capabilities through the same
+  local RPC server used by Open Forge actions. The development Desktop app
+  must already be running. Packaged builds do not register the Debug runtime.
 
 Progressive discovery:
   1. search ""                    list available Debug capabilities
@@ -49,9 +49,9 @@ Progressive discovery:
   4. run <debug-id> [json-input]  execute the capability
 
 Examples:
-  vetta debug search ""
-  vetta debug describe debug.info
-  vetta debug run debug.info '{}'
+  openforge debug search ""
+  openforge debug describe debug.info
+  openforge debug run debug.info '{}'
 
 Output:
   stdout contains one JSON object:
