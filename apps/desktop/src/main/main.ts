@@ -32,7 +32,7 @@ import { parseHelpCliCommand, runHelpCliCommand } from "./cli/help-command.js";
 import { parseOcrCliCommand, runOcrCliCommand } from "./cli/ocr-command.js";
 import { parsePdfCliCommand, runPdfCliCommand } from "./cli/pdf-command.js";
 import type { CloudMainHandle } from "./cloud/index.js";
-import { ensureDevCliShim, ensureDevVettaCliShim, ensureVettaCommandShim } from "./dev-cli-shim.js";
+import { ensureDevCliShim, ensureDevOpenForgeCliShim, ensureOpenForgeCommandShim } from "./dev-cli-shim.js";
 import {
 	getDiagnosticsLogPath,
 	installChromiumFetchForMain,
@@ -129,7 +129,7 @@ const isMac = process.platform === "darwin";
 const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
 const buildDir = join(appRoot, "build");
 const devMainEntryPath = join(appRoot, "dist/main/index.js");
-const packagedCliBinaryName = process.platform === "win32" ? "vetta.exe" : "vetta";
+const packagedCliBinaryName = process.platform === "win32" ? "openforge.exe" : "openforge";
 const packagedCliPlatformTag = `${process.platform}-${process.arch}`;
 const packagedCliAppPath = join(process.resourcesPath, "cli-app", "bin", packagedCliPlatformTag, packagedCliBinaryName);
 // Command-specific parsers run before the top-level help parser so commands
@@ -728,14 +728,14 @@ if (!gotSingleLock) {
 						electronPath: process.execPath,
 						mainEntryPath: devMainEntryPath,
 					});
-					vettaCliPath = await ensureDevVettaCliShim({
+					vettaCliPath = await ensureDevOpenForgeCliShim({
 						appRoot,
 						cliAppRoot: join(appRoot, "..", "cli-host"),
 					});
 				}
 				process.env.VETTA_DESKTOP_EXE = vettaAppPath;
 				process.env.VETTA_CLI_APP_PATH = vettaCliPath;
-				await ensureVettaCommandShim(vettaCliPath);
+				await ensureOpenForgeCommandShim(vettaCliPath);
 				await persistVettaCliPaths({ vettaAppPath, vettaCliAppPath: vettaCliPath });
 			} catch (err) {
 				mainLog.error("failed to install vetta CLI paths", err);

@@ -59,11 +59,11 @@ const cliAppDir = join(projectRoot, "..", "cli-host");
 const runtimeCoreWindowsSandboxDir = join(projectRoot, "..", "..", "packages", "runtime-core", "sandbox", "bin");
 const runtimeCoreSandboxDir = join(projectRoot, "..", "..", "packages", "runtime-core", "sandbox", "linux");
 const cliAppCompileTargets = {
-	"darwin-arm64": { platformTag: "darwin-arm64", bunTarget: "bun-darwin-arm64", binaryName: "vetta" },
-	"darwin-x64": { platformTag: "darwin-x64", bunTarget: "bun-darwin-x64", binaryName: "vetta" },
-	"linux-arm64": { platformTag: "linux-arm64", bunTarget: "bun-linux-arm64", binaryName: "vetta" },
-	"linux-x64": { platformTag: "linux-x64", bunTarget: "bun-linux-x64", binaryName: "vetta" },
-	"win32-x64": { platformTag: "win32-x64", bunTarget: "bun-windows-x64", binaryName: "vetta.exe" },
+	"darwin-arm64": { platformTag: "darwin-arm64", bunTarget: "bun-darwin-arm64", binaryName: "openforge" },
+	"darwin-x64": { platformTag: "darwin-x64", bunTarget: "bun-darwin-x64", binaryName: "openforge" },
+	"linux-arm64": { platformTag: "linux-arm64", bunTarget: "bun-linux-arm64", binaryName: "openforge" },
+	"linux-x64": { platformTag: "linux-x64", bunTarget: "bun-linux-x64", binaryName: "openforge" },
+	"win32-x64": { platformTag: "win32-x64", bunTarget: "bun-windows-x64", binaryName: "openforge.exe" },
 };
 const imGatewayTargetByPlatformTag = {
 	"darwin-arm64": { arch: "arm64", os: "darwin" },
@@ -567,12 +567,12 @@ if (!existsSync(bundledAgentRpcCli)) {
 }
 
 // =============================================================================
-// vetta CLI app (extraResources)
+// openforge CLI app (extraResources)
 // =============================================================================
 //
-// The agent-facing `vetta` command is @vetta/cli-host, not the desktop
+// The agent-facing `openforge` command is @vetta/cli-host, not the desktop
 // executable. Stage it into Resources/cli-app/ so Desktop can write
-// ~/.vetta/agent/bin/vetta as a stable shim to this entry.
+// ~/.vetta/agent/bin/openforge as a stable shim to this entry.
 const stagedCliAppDir = join(buildStageDir, "cli-app");
 rmSync(stagedCliAppDir, { recursive: true, force: true });
 mkdirSync(stagedCliAppDir, { recursive: true });
@@ -586,7 +586,7 @@ for (const target of resolveCliAppCompileTargets()) {
 	const stagedCliAppBinDir = join(stagedCliAppDir, "bin", target.platformTag);
 	const stagedCliAppBinary = join(stagedCliAppBinDir, target.binaryName);
 	mkdirSync(stagedCliAppBinDir, { recursive: true });
-	console.log(`[prepare-pack] compiling vetta CLI (${target.platformTag}) -> ${stagedCliAppBinary}`);
+	console.log(`[prepare-pack] compiling openforge CLI (${target.platformTag}) -> ${stagedCliAppBinary}`);
 	execFileSync(process.platform === "win32" ? "bun.exe" : "bun", [
 		join(cliAppDir, "scripts", "compile-standalone.mjs"),
 		"--target",
