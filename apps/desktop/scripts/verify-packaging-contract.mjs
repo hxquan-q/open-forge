@@ -68,6 +68,12 @@ export function findDesktopPackagingContractViolations(rootDirectory = repoRoot)
 	if (!preparePack.includes('from "./staged-deps-cleanlist.mjs"')) {
 		violations.push("prepare-pack.js does not consume the staged dependency cleanlist");
 	}
+	if (!preparePack.includes('from "./sandbox-staging-guard.mjs"')) {
+		violations.push("prepare-pack.js does not consume the sandbox staging guard");
+	}
+	if (!preparePack.includes("collectMissingSandboxBinaries(")) {
+		violations.push("prepare-pack.js does not warn about declared platforms without sandbox binaries");
+	}
 	if (
 		!preparePack.includes("assertStagedDependencyPlan(") ||
 		!preparePack.includes("findStagedNodeModulesBlacklistHits(")

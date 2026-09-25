@@ -16,6 +16,10 @@ import { loadBuildEnv } from "./load-build-env.mjs";
 import { resolveInstalledPackageRoot } from "./installed-package-root.mjs";
 import { resolvePackagedNativeDependencies } from "./packaged-native-dependencies.mjs";
 import { resolveReleaseInfo } from "./resolve-release-info.mjs";
+import {
+	collectMissingSandboxBinaries,
+	formatSandboxStagingWarning,
+} from "./sandbox-staging-guard.mjs";
 import { prepareSpeechModels, SPEECH_MODEL_RESOURCE_ROOT } from "./fetch-speech-models.mjs";
 import { prepareVendorRuntimes } from "./fetch-vendor-runtimes.mjs";
 import {
@@ -609,6 +613,8 @@ for (const target of resolveCliAppCompileTargets()) {
 //
 // Sandbox executables live under Resources/sandbox/<platform>/ so the Electron
 // main process can resolve them from process.resourcesPath after packaging.
+// 来源目录缺失时下面的 staged 会被静默跳过，产物于是没有沙盒（BUG-0022）——末尾的
+// 守卫专门把这件事喊出来，但刻意不让构建失败。
 const stagedSandboxDir = join(buildStageDir, "sandbox");
 mkdirSync(stagedSandboxDir, { recursive: true });
 if (existsSync(runtimeCoreWindowsSandboxDir)) {
@@ -641,6 +647,15 @@ if (existsSync(runtimeCoreSandboxDir)) {
 			// best effort on Windows / FAT
 		}
 	}
+}
+
+// 「声明要打包该平台、却没有 staged 任何该平台沙盒二进制」= 发一个没有沙盒的包。
+// 只告警不失败（见 sandbox-staging-guard.mjs 的取舍说明）。
+for (const gap of collectMissingSandboxBinaries({
+	declaredFamilies: resolvePlatformFamilies(),
+	sourceDirs: { win32: runtimeCoreWindowsSandboxDir, linux: runtimeCoreSandboxDir },
+})) {
+	console.warn(formatSandboxStagingWarning(gap));
 }
 
 // =============================================================================
