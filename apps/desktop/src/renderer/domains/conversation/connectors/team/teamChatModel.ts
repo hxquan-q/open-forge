@@ -27,6 +27,7 @@ import {
 	projectConversationAgentMessage,
 	reduceConversationToolExecutionEvent,
 } from "../../services/conversation-projection";
+import type { TeamSessionProgress } from "./team-session-progress";
 
 export type TeamChatStatus = "loading" | "ready" | "sending" | "streaming" | "cancelling" | "error";
 
@@ -56,6 +57,8 @@ export interface TeamChatViewModel {
 	readonly leaderMemberId?: string;
 	readonly feedItems: readonly ChatConversationItem[];
 	readonly pendingLabel?: string;
+	/** Session-level phase strip projected from durable work items; absent until work is delegated. */
+	readonly teamProgress?: TeamSessionProgress;
 	readonly editorEnabled: boolean;
 	readonly canSend: boolean;
 	readonly workspace: ActivityWorkspace | null;
@@ -196,7 +199,7 @@ export interface TeamTimelineLabels {
 
 const SUMMARY_TEXT_MAX_CHARACTERS = 72;
 
-function compactTeamActivityText(text: string, maxCharacters = SUMMARY_TEXT_MAX_CHARACTERS): string {
+export function compactTeamActivityText(text: string, maxCharacters = SUMMARY_TEXT_MAX_CHARACTERS): string {
 	const normalized = text.replace(/\s+/g, " ").trim();
 	if (!normalized || maxCharacters <= 0) return "";
 	const characters = Array.from(normalized);
