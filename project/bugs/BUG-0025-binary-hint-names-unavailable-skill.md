@@ -1,7 +1,7 @@
 ---
 id: BUG-0025
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: packages/coding-agent
 source: 现场会话诊断（读 .xlsx 后模型空转）+ 代码复核
@@ -71,11 +71,11 @@ bun -e "const m = await import('./packages/coding-agent/src/tool-policy/read-too
 
 ## 已知边界
 
-- `CodingAgentToolEnvironmentContext`（主工具环境与 SSH 工具环境）已转发可用性；但
-  `CodingAgentSessionExecutionEnvironmentContext`（会话执行环境/沙箱文件工具）尚未携带该字段，
-  这条路径的 `read` 目前一律按「没有可用技能」渲染。行为是安全的（绝不点名），只是文案退化；
-  接入该上下文时即可补齐，届时同步删掉本条说明。
-  接入该上下文时即可补齐，届时同步删掉本条说明。
+- ~~`CodingAgentSessionExecutionEnvironmentContext`（会话执行环境/沙箱文件工具）尚未携带该字段~~
+  **已于 2026-09-25 补齐**：`BUG-0026` 给该上下文加入可选 `availableSkillNames` 并在装配点填充、
+  runtime-desktop 三处站点恢复转发（`411e92d88` + `b4bc56ce0`，集成 `1f2c4d2a0`），本条说明随之失效。
+- 仍存在的同类面：`apps/cli-host` 三处工具环境站点未转发（见 `BUG-0027`）；deprecated 的
+  `node-session-execution-environment.ts` 装配根本不传 `readOptions`，其提示为「无提示」而非失真提示。
 
 ## 验证
 
@@ -85,3 +85,4 @@ bun -e "const m = await import('./packages/coding-agent/src/tool-policy/read-too
   断言可用性集合确实传到了注入提示（有 / 无宿主提供两种情况）。
 - 回归：`bun run test:impact -- packages/coding-agent/src/tool-policy/read-tool-policy.ts
   packages/runtime-node/src/coding/tools/read/read-tool.ts packages/coding-agent/src/composition/runtime-composition.ts`
+- 提交：`f65ba352c`（修复）与 `0f3197e4b`（记录）；已推送 `origin/dev`（2026-09-25，随 18 提交批次 `f1ce23711`）。
