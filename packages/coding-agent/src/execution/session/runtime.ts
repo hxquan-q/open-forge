@@ -246,6 +246,14 @@ export class CodingAgentSessionExecutionRuntime {
 					linuxBubblewrapPath: update.linuxBubblewrapPath,
 					macosSandboxExecPath: update.macosSandboxExecPath,
 					getSessionId: this.options.readSessionId,
+					hostInfo: {
+						platform: process.platform,
+						// ADR-0133 §2 escape hatch: 仅开发场景下允许 fail-open;生产构建该 env 无效。
+						allowFailOpen: process.env.NODE_ENV !== "production" && process.env.VETTA_SANDBOX_FAIL_OPEN === "1",
+						warn: (message) => {
+							process.stderr.write(`${message}\n`);
+						},
+					},
 				}),
 			).map((registration) =>
 				inheritModelOrder(registration, this.options.resolveToolEntry?.(registration.tool.name)),

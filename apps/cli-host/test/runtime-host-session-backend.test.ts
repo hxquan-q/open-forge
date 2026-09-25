@@ -154,7 +154,9 @@ describe("Coding Agent RuntimeHost backend", () => {
 		const { sessionId } = await runtime.createSession(
 			createCodingAgentRuntimeHostSessionConfig(
 				composition.agentRuntime,
-				{ sessionId: "retry-session", cwd },
+				// 无沙箱测试环境 + ADR-0133 fail-closed:显式 full-access,避免默认 sandbox 触发
+				// SandboxUnavailableError 让会话创建失败(本测试只关注模型重试)。
+				{ sessionId: "retry-session", cwd, executionMode: "full-access" },
 				{ sessionDir: conversationDir, scenario: "batch" },
 			),
 		);
