@@ -172,4 +172,96 @@ describe("TeamSessionEventHub active replay", () => {
 		]);
 		expect(hub.activeStreamEvents(session.id).map((event) => event.sequence)).toEqual([1, 2, 3, 4, 5]);
 	});
+
+	it("publishes provider retry activity to the member stream instead of dropping it", () => {
+		const { beginLeaderTurn, live, emitSessionEvent } = createActiveMemberHub();
+		beginLeaderTurn();
+
+		emitSessionEvent({
+			schemaVersion: 1,
+			channel: "assistant",
+			sessionId: "leader-runtime",
+			eventId: "assistant-retry",
+			timestamp: 3,
+			source: "agent",
+			sequence: 2,
+			turnId: "leader-turn",
+			modelCallIndex: 0,
+			type: "retry",
+			reason: "transient",
+			attempt: 1,
+			maxAttempts: 3,
+			delayMs: 1500,
+			errorMessage: "Provider stream stalled: no events for 180000ms (stream_idle_timeout)",
+			failure: {
+				code: "AI_TRANSPORT_FAILED",
+				message: "Provider stream stalled: no events for 180000ms (stream_idle_timeout)",
+				retryable: true,
+				phase: "stream",
+			},
+		} as SessionEvent);
+
+		// 重连活动是活动状态而非消息行：它按 live 事件下发，不参与重放重建。
+		const messageEvents = live.filter((event) => event.type === "conversation.agent-message-event");
+		expect(messageEvents).toHaveLength(1);
+		// 公开面只保留重连进度与可读原因；provider 诊断细节留在本机主进程。
+		expect(messageEvents[0]?.event).toEqual({
+			type: "retry",
+			reason: "transient",
+			attempt: 1,
+			maxAttempts: 3,
+			delayMs: 1500,
+			errorMessage: "Provider stream stalled: no events for 180000ms (stream_idle_timeout)",
+		});
+	});
 });
+
+function createActiveMemberHub(): {
+	readonly beginLeaderTurn: () => void;
+	readonly live: DesktopTeamSessionStreamEvent[];
+	readonly emitSessionEvent: (event: SessionEvent) => void;
+} {
+	let sessionListener: ((event: SessionEvent) => void) | undefined;
+	const runtime = {
+		subscribe: vi.fn((_sessionId: string, listener: (event: SessionEvent) => void) => {
+			sessionListener = listener;
+			return () => undefined;
+		}),
+		subscribeExecutionObservations: vi.fn(() => () => undefined),
+	} as unknown as RuntimeHost;
+	const session = {
+		id: "team-session",
+		teamId: "team",
+		memberRuntime: {
+			leader: { sessionId: "leader-runtime", sessionPath: "C:/sessions/leader.jsonl" },
+		},
+	} as unknown as TeamSessionDocument;
+	const hub = new TeamSessionEventHub({
+		runtime: () => runtime,
+		getSession: () => session,
+		observe: () => undefined,
+	});
+	const live: DesktopTeamSessionStreamEvent[] = [];
+	hub.addSubscriber(session.id, (event) => live.push(event));
+	hub.attach(session);
+	return {
+		beginLeaderTurn: () =>
+			hub.beginTurn("leader-runtime", {
+				teamSessionId: session.id,
+				memberId: "leader",
+				requestId: "request",
+				turnId: "leader-turn",
+				messageId: "leader-result",
+				author: { kind: "agent", id: "leader" },
+				workItemId: "work-item",
+				attemptId: "attempt",
+				startedAt: 1,
+				seq: 0,
+				text: "",
+				rawAssistantStream: false,
+				toolExecutionEvents: [],
+			}),
+		live,
+		emitSessionEvent: (event) => sessionListener?.(event),
+	};
+}
