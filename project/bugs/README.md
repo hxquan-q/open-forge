@@ -33,6 +33,6 @@
 | `BUG-0022` | Desktop 当前环境无法启用沙盒执行模式 | investigating | P1 | `PLAN-0001` |
 | `BUG-0023` | Windows 自带 bsdtar 不认识 `--force-local`，托管运行时安装失败 | done | P1 | — |
 | `BUG-0024` | Renderer 引入 coding-agent Node 入口导致空白页与 renderer 构建失败 | done | P0 | `PLAN-0012` |
-| `BUG-0025` | 二进制读提示点名当前会话不存在的技能，把模型引向死路 | verifying | P1 | `PLAN-0010` |
+| `BUG-0025` | 二进制读提示点名当前会话不存在的技能，把模型引向死路 | done | P1 | `PLAN-0010` |
 | `BUG-0026` | 会话执行环境路径未转发技能可用性，二进制提示文案与事实不符 | done | P3 | `PLAN-0010` |
 | `BUG-0027` | CLI 宿主工具环境未转发技能可用性，二进制读提示与事实不符 | ready | P3 | `PLAN-0010` |
