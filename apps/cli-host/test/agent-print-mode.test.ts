@@ -731,8 +731,8 @@ function readFrameType(frame: unknown): string | undefined {
 }
 
 async function buildAgentCliExecutable(): Promise<AgentCliExecutable> {
-	const directory = await mkdtemp(join(tmpdir(), "vetta-agent-cli-executable-"));
-	const path = join(directory, process.platform === "win32" ? "vetta-agent.exe" : "vetta-agent");
+	const directory = await mkdtemp(join(tmpdir(), "openforge-agent-cli-executable-"));
+	const path = join(directory, process.platform === "win32" ? "openforge-agent.exe" : "openforge-agent");
 	const platformTag = `${process.platform}-${process.arch}` as keyof typeof compileTargetByPlatform;
 	const compileTarget = compileTargetByPlatform[platformTag];
 	if (!compileTarget) throw new Error(`Unsupported Print artifact test platform: ${platformTag}`);

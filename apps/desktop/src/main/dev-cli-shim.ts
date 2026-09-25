@@ -10,9 +10,10 @@ const execFileAsync = promisify(execFile);
 const DEV_CLI_DIR = ".desktop-dev";
 const LAUNCHER_SOURCE_NAME = "vetta-dev-cli-launcher.js";
 const LAUNCHER_BINARY_BASE_NAME = "vetta-dev-cli-launcher";
-const VETTA_CLI_BINARY_BASE_NAME = "vetta-cli-app";
-const VETTA_COMMAND_NAMES = process.platform === "win32" ? ["vetta.exe"] : ["vetta"];
-const WINDOWS_LEGACY_VETTA_COMMAND_NAMES = ["vetta.cmd", "vetta"];
+const OPENFORGE_CLI_BINARY_BASE_NAME = "openforge-cli-app";
+const OPENFORGE_COMMAND_NAMES = process.platform === "win32" ? ["openforge.exe"] : ["openforge"];
+// 旧品牌命令名：换名后不保留别名，这些历史 shim 文件在所有平台一并清理。
+const LEGACY_COMMAND_NAMES = ["vetta", "vetta.cmd", "vetta.exe"];
 
 interface DevCliShimOptions {
 	appRoot: string;
@@ -20,7 +21,7 @@ interface DevCliShimOptions {
 	mainEntryPath: string;
 }
 
-interface DevVettaCliShimOptions {
+interface DevOpenForgeCliShimOptions {
 	appRoot: string;
 	cliAppRoot: string;
 }
@@ -145,8 +146,8 @@ function getLauncherBinaryName(): string {
 	return process.platform === "win32" ? `${LAUNCHER_BINARY_BASE_NAME}.exe` : LAUNCHER_BINARY_BASE_NAME;
 }
 
-function getVettaCliBinaryName(): string {
-	return process.platform === "win32" ? `${VETTA_CLI_BINARY_BASE_NAME}.exe` : VETTA_CLI_BINARY_BASE_NAME;
+function getOpenForgeCliBinaryName(): string {
+	return process.platform === "win32" ? `${OPENFORGE_CLI_BINARY_BASE_NAME}.exe` : OPENFORGE_CLI_BINARY_BASE_NAME;
 }
 
 function resolveBunCommand(): string {
@@ -193,10 +194,10 @@ export async function ensureDevCliShim(options: DevCliShimOptions): Promise<stri
 	return binaryPath;
 }
 
-export async function ensureDevVettaCliShim(options: DevVettaCliShimOptions): Promise<string> {
+export async function ensureDevOpenForgeCliShim(options: DevOpenForgeCliShimOptions): Promise<string> {
 	const shimDir = join(options.appRoot, DEV_CLI_DIR, getCurrentPlatformArchId());
 	const sourceDir = join(options.cliAppRoot, "src");
-	const binaryPath = join(shimDir, getVettaCliBinaryName());
+	const binaryPath = join(shimDir, getOpenForgeCliBinaryName());
 	await mkdir(shimDir, { recursive: true });
 
 	try {
@@ -219,18 +220,17 @@ export async function ensureDevVettaCliShim(options: DevVettaCliShimOptions): Pr
 	return binaryPath;
 }
 
-function createVettaCommandShim(vettaCliAppPath: string): string {
+function createOpenForgeCommandShim(cliAppBinaryPath: string): string {
 	if (process.platform === "win32") {
-		return ["@echo off", `"${vettaCliAppPath}" %*`, ""].join("\r\n");
+		return ["@echo off", `"${cliAppBinaryPath}" %*`, ""].join("\r\n");
 	}
 
-	return ["#!/usr/bin/env sh", `exec "${vettaCliAppPath}" "$@"`, ""].join("\n");
+	return ["#!/usr/bin/env sh", `exec "${cliAppBinaryPath}" "$@"`, ""].join("\n");
 }
 
-async function removeLegacyWindowsCommandShims(binDir: string): Promise<void> {
-	if (process.platform !== "win32") return;
+async function removeLegacyCommandShims(binDir: string): Promise<void> {
 	await Promise.all(
-		WINDOWS_LEGACY_VETTA_COMMAND_NAMES.map(async (name) => {
+		LEGACY_COMMAND_NAMES.map(async (name) => {
 			try {
 				await unlink(join(binDir, name));
 			} catch {
@@ -240,17 +240,17 @@ async function removeLegacyWindowsCommandShims(binDir: string): Promise<void> {
 	);
 }
 
-export async function ensureVettaCommandShim(vettaCliAppPath: string): Promise<string> {
-	await assertExecutable(vettaCliAppPath);
+export async function ensureOpenForgeCommandShim(cliAppBinaryPath: string): Promise<string> {
+	await assertExecutable(cliAppBinaryPath);
 	const binDir = join(getAgentDir(), "bin");
 	await mkdir(binDir, { recursive: true });
-	await removeLegacyWindowsCommandShims(binDir);
-	const shimPaths = VETTA_COMMAND_NAMES.map((name) => join(binDir, name));
+	await removeLegacyCommandShims(binDir);
+	const shimPaths = OPENFORGE_COMMAND_NAMES.map((name) => join(binDir, name));
 	await Promise.all(
 		shimPaths.map((shimPath) =>
 			process.platform === "win32" && shimPath.endsWith(".exe")
-				? copyFileIfChanged(vettaCliAppPath, shimPath)
-				: writeFileIfChanged(shimPath, createVettaCommandShim(vettaCliAppPath)),
+				? copyFileIfChanged(cliAppBinaryPath, shimPath)
+				: writeFileIfChanged(shimPath, createOpenForgeCommandShim(cliAppBinaryPath)),
 		),
 	);
 	for (const shimPath of shimPaths) {

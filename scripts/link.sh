@@ -41,12 +41,12 @@ if [[ -z "$BUN_GLOBAL_BIN" ]]; then
 fi
 
 mkdir -p "$BUN_GLOBAL_BIN"
-ln -sf "$CLI_APP_DIR/dist/cli.js" "$BUN_GLOBAL_BIN/vetta"
-ln -sf "$CLI_APP_DIR/dist/agent-cli.js" "$BUN_GLOBAL_BIN/vetta-agent"
-ln -sf "$CLI_APP_DIR/dist/agent-rpc-cli.js" "$BUN_GLOBAL_BIN/vetta-agent-rpc"
+ln -sf "$CLI_APP_DIR/dist/cli.js" "$BUN_GLOBAL_BIN/openforge"
+ln -sf "$CLI_APP_DIR/dist/agent-cli.js" "$BUN_GLOBAL_BIN/openforge-agent"
+ln -sf "$CLI_APP_DIR/dist/agent-rpc-cli.js" "$BUN_GLOBAL_BIN/openforge-agent-rpc"
 
 echo "Bun global bin: $BUN_GLOBAL_BIN"
 
 echo ""
-echo "Done. You can now run 'vetta', 'vetta-agent', or 'vetta-agent-rpc' from any directory."
-echo "Check: vetta --help"
+echo "Done. You can now run 'openforge', 'openforge-agent', or 'openforge-agent-rpc' from any directory."
+echo "Check: openforge --help"

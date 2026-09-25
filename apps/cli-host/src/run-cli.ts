@@ -3,10 +3,10 @@ import { parseDebugCommand, runDebugCommand } from "./debug-command.js";
 import { type RunAgentCliOptions, runAgentCli } from "./run-agent-cli.js";
 
 const HELP_TEXT = `Usage:
-  vetta [options] [@files...] [messages...]
-  vetta action <subcommand> [options]
-  vetta debug <subcommand> [options]
-  vetta agent [options] [@files...] [messages...]
+  openforge [options] [@files...] [messages...]
+  openforge action <subcommand> [options]
+  openforge debug <subcommand> [options]
+  openforge agent [options] [@files...] [messages...]
 
 Options:
   -h, --help            Show this help text.
@@ -21,9 +21,9 @@ Commands:
   debug run             Run a Debug capability.
   agent                 Run the coding agent explicitly.
 
-Run "vetta agent --help" for coding-agent options.
-Run "vetta action --help" for GUI action options.
-Run "vetta debug --help" for development Debug options.
+Run "openforge agent --help" for coding-agent options.
+Run "openforge action --help" for GUI action options.
+Run "openforge debug --help" for development Debug options.
 `;
 
 function isTopLevelHelp(argv: string[]): boolean {

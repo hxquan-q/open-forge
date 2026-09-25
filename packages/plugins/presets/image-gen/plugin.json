@@ -24,7 +24,7 @@
 		"fs.read"
 	],
 	"description": "%plugin.description%",
-	"author": "Vetta",
+	"author": "Open Forge",
 	"defaultLocale": "zh",
 	"guidingWords": []
 }

@@ -77,7 +77,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 - `apps/*` 是可交付应用的叶子节点，**不被任何包 import**；`packages/*` 是可复用模块。
 - 跨包调用只走目标包 `package.json#exports` 声明的公开入口，**不得深度导入其他包的 `src/**`**。
 - 包级职责：`packages/ai`（Provider 抽象）、`packages/agent`（agent loop）、`packages/coding-agent`（产品组合）、`packages/runtime-*`（运行时合同、工具、存储、MCP、宿主适配）、`packages/plugins`（插件 SDK/preset）、`packages/themes` + `theme-sdk`/`theme-ui`（主题）、`packages/toolkit`。
-- 商业服务端在私有仓库 `vetta-serv`，不在本仓库；`docs/adr/` 的编号空洞（0016/0017/0019/0038/0039/0051/0052/0056 等）是刻意的。
+- 商业服务端在私有仓库 `openforge-serv`，不在本仓库；`docs/adr/` 的编号空洞（0016/0017/0019/0038/0039/0051/0052/0056 等）是刻意的。
 - 架构决策记录在 `docs/adr/`，但**当前行为以源码、类型、Schema、测试为事实源**；涉及新依赖、公共 API、协议、持久化格式、包边界、安全模型时先检索 ADR。
 - 源码检出默认产出 **lite** 构建：无账号/订阅/托管 marketplace，密钥留在本地。
 
