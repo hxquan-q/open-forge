@@ -35,6 +35,14 @@ depends_on: []
   它没有可用 WebView 后端——**工具广告了不可用能力**，模型要撞上错误才知道降级。
 - 主会话（普通 agent 会话）的浏览器能力走的是哪个后端、为何团队成员会话拿不到同一能力，
   尚未核实。
+- **DSH 子系统的标准解法（fail loud, no silent degradation）**：`ctx.subagents` 要求
+  提供方用静态 `SubagentCapabilities` 描述符声明启动期能力（`agentOptions`/`outputSchema`/
+  `depthLimit`/`toolFilter`/`persona`），服务在 `start()` **之前**校验——请求需要的能力
+  提供方不具备时以类型化错误 `UNSUPPORTED_CAPABILITY` 拒绝，绝不接受后静默忽略。
+  更进一步的 `toolFilter` 语义是「one visibility」：被过滤的工具**从子 agent 的 prompt
+  消失且执行期拒绝**，两层一致。我们的问题是同一类缺陷的实例（广告了不可用的
+  `browser_tab`），解法应升级为类：工具装配时按宿主实际可用能力显式收窄，而不是
+  等运行时撞错。
 
 ## 未决问题
 

@@ -10,7 +10,7 @@ source: 开发团队实测会话（91c32cf7）耗时拆解
 created: 2026-09-26
 updated: 2026-09-26
 related_tasks: [TASK-0124, TASK-0125]
-related_issues: [ISSUE-0025]
+related_issues: [ISSUE-0025, ISSUE-0028]
 related_bugs: []
 depends_on: []
 ---
@@ -37,6 +37,19 @@ depends_on: []
   workflows 分级，且明示「teams 显著增加 token 消耗，串行/高依赖任务用单会话更优」；
   Codex 则把 spawn 决策交给显式请求并默认收敛为单回合整合。
 - 当前主控没有任何「任务规模→质检深度」的显式刻度，只有模型自由心证。
+- 行业里有三种可参照的分级形态：
+  - **GitHub HydraFusion**（2026-09 研究预览）：按任务路由 Single / Cascade / Critique
+    三档——简单任务单模型直达、中等任务低成本模型先行+质量检查不过再升级、高价值任务
+    才走「A 生成 B 独立评审 C 修订」；官方离线评测质量 +4.9pt、成本 −67%。核心结论是
+    「把昂贵推理集中到真正需要的任务上」，不是模型越多越好。
+  - **multica-best-practices**：门禁阶梯（G0 需求收敛人工确认 → G1/G2/G2.5/G3 → G4
+    人工验收），且**角色按范围条件路由可缺失**（Tester 无后端时跳过、轻量版 squad 只有
+    单层门禁）；关键约束「所有门禁由 Leader 用独立 verification skill 复跑，不采信成员
+    自述」「产物修改后下游门禁立即失效」。
+  - **pi-task / pi-goal-x**：确定性任务管线把质检做成 verify/enforce **门**而非默认角色；
+    goal 规划配独立 completion auditor——审计作为「按需挂的门」而非「常驻成员」。
+- 对「返工回路」的防护参照：multica 写死「返工超 2 次 / 证据矛盾 → 升级人类」；
+  我们没有这条规则（见 ISSUE-0028）。
 
 ## 未决问题
 
