@@ -88,7 +88,9 @@ describe("沙盒能力缺失时的执行模式选择器", () => {
 		await openMenu();
 
 		// binary_not_found 要落到「当前安装未包含沙盒组件」，而不是把原始 reason 码甩给用户。
-		expect(await screen.findByText(REASON.notBundled)).toBeTruthy();
+		const reasonLine = await screen.findByText(REASON.notBundled);
+		// 主进程原文（可能是未本地化的英文/ stderr）只挂悬停提示，不混进可见文案。
+		expect(reasonLine.getAttribute("title")).toBe(SANDBOX_BINARY_NOT_FOUND.details);
 		// 用户必须知道现在实际按哪种模式在执行，不能把置灰的沙盒当成已生效的隔离。
 		expect(screen.getByText(zhChat.executionModeSelector.sandboxUnavailable.currentMode)).toBeTruthy();
 		// 措辞不得承诺用户自己能恢复：真实原因是安装包里就没有这个组件。
