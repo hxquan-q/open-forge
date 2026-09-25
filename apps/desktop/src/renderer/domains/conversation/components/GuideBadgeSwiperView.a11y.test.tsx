@@ -3,10 +3,12 @@
  * 指引浮条里「不再提示」曾嵌在正文按钮内部，命中 axe `nested-interactive`
  * （BUG-0039）：嵌套的可聚焦控件会让键盘与读屏语义混乱。两者现在是并列控件。
  */
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { GuideBadgeSwiperView } from "@vetta-org/theme-ui/chat";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(cleanup);
 
 function renderBadge(dismissible: boolean) {
 	const onClick = vi.fn();
@@ -47,6 +49,11 @@ describe("GuideBadgeSwiperView 的控件边界", () => {
 
 		expect(onDismiss).toHaveBeenCalledExactlyOnceWith("quick-panel");
 		expect(onClick).not.toHaveBeenCalled();
+	});
+
+	it("「不再提示」可经键盘 Tab 聚焦：独立控件不再藏在负 tabindex 里", () => {
+		renderBadge(true);
+		expect(screen.getByRole("button", { name: "不再提示" }).tabIndex).toBe(0);
 	});
 
 	it("不可关闭的浮条没有「不再提示」控件", () => {

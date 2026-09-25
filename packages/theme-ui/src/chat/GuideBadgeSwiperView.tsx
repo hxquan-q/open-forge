@@ -63,7 +63,6 @@ export function GuideBadgeSwiperView({
 						{current.dismissible && (
 							<button
 								type="button"
-								tabIndex={-1}
 								aria-label={labels.dismissTooltip}
 								title={labels.dismissTooltip}
 								onClick={() => onDismiss(current.id)}

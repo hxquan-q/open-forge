@@ -11,6 +11,8 @@ export interface DefaultSidebarProps {
 	bottomBar: ReactNode;
 	/** 「更多」自定义面板文案（宿主解析 i18n 后传入）。 */
 	navCustomizeLabels?: SidebarNavMorePanelLabels;
+	/** 面板 landmark 名（宿主解析 i18n 后传入），axe `region` 合同见 SidebarPanel.label。 */
+	panelLabel?: string;
 	classNames?: SidebarClassNames;
 	model: SidebarModel;
 	projects: ReactNode;
@@ -26,6 +28,7 @@ export function DefaultSidebar({
 	classNames,
 	model,
 	navCustomizeLabels,
+	panelLabel,
 	projects,
 	topBar,
 }: DefaultSidebarProps): JSX.Element {
@@ -35,6 +38,7 @@ export function DefaultSidebar({
 		<SidebarPanel
 			className={classNames?.panel}
 			contentClassName={classNames?.panelContent}
+			label={panelLabel}
 			panelRef={model.setPanelRef}
 			width={model.width}
 			onResize={model.actions.resize}

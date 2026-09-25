@@ -23,6 +23,7 @@
 		},
 		"clawConnected": "Claw connected",
 		"hide": "Hide sidebar",
+		"regionLabel": "Sidebar",
 		"empty": {
 			"title": "No projects yet",
 			"description": "Click + above to create a project"

@@ -3,10 +3,12 @@
  * 项目行左侧的图标按钮只画一个图标：没有可访问名称时读屏用户听到的是无名按钮
  * （axe `button-name`，critical，BUG-0039）。名称由宿主经 `toggleTitle` 下发。
  */
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ProjectRowView } from "@vetta-org/theme-ui/project";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(cleanup);
 
 function renderRow(expanded: boolean) {
 	const actions = { collapse: vi.fn(), expand: vi.fn(), navigate: vi.fn(), newSession: vi.fn() };
