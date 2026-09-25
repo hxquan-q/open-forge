@@ -69,3 +69,19 @@ depends_on: []
   与停滞分支的结构化日志（向后兼容，不改事件顺序）。
 - `apps/desktop`：`classifyChatError` 识别 `stream_idle`；`chat.messageList.retryIndicatorStreamIdle`
   的 zh/en 文案；`MessageListFooter` 组件断言「停滞重连可见、且不新增消息行」。
+
+## 事实更正与裁决输入（2026-09-25 源码复核）
+
+**原「已知事实」结论有误**：「渲染侧与事件通道都已存在」只对一半——
+
+- provider 层**确实**发射 `retry` 事件且带结构化 `failure`（`packages/agent/src/loop/assistant-stream.ts:165`、`packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts:622-631`）；
+- 但**桌面 IPC 边界把它拒了**：`apps/desktop/src/shared/session-event-codec.ts:30-43` 的 `ASSISTANT_EVENT_TYPES` 白名单缺 `"retry"`，`decodeSessionEvent` 直接抛 `TypeError`；`preload/apis/helper.ts` 的 `subscribeById` 对 `decode()` 无 try/catch。`git log -S'"retry"'` 显示该文件无相关历史 → 属**遗漏而非刻意排除**。
+- 团队会话同样丢弃：`apps/desktop/src/main/agent-teams/team-session-event-hub.ts:392-401` 静默过滤。
+- 因此现状：页脚指示只由 **runtime 回合级** `retry.start` 驱动（整轮失败重跑时才出现）；180s 停滞恢复窗口内用户只见转圈，且被拒事件在 preload 侧抛异常，可能影响后续事件处理。
+
+**附带的分类缺陷**：即便文案到达 UI，`classifyChatError` 会因 `stream_idle_timeout` 含 `timeout` 子串误判为 `network`（显示「网络没连上」），语义误导。
+
+**结论**：候选方案 **B 成立且范围已收窄**——先修 IPC 白名单与团队 hub 的放行（缺陷面），再定展示语义（`cause` 与文案）。仍未改重试预算/退避/终止条件。原「先做判别性复现」的步骤已被本次源码复核取代（链路已确定），实施时按 BUG 流程先立红测。
+
+- 待用户拍板的一点：provider 级重连与 runtime 级重连**是否共用同一页脚指示与计数语义**（本 Issue 起草时列的未知项，现仍开放）。
+
