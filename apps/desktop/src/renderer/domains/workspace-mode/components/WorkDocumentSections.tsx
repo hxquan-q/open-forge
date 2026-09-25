@@ -43,6 +43,27 @@ const STATUS_KEYS = {
 	changes_requested: "activityPanel.task.status.changesRequested",
 } as const;
 
+/**
+ * 计划状态的颜色分级（DESIGN §1.3 语义色白名单）：执行中/规划中用成功/运行色，
+ * 需要用户处理或返工的用警告色，终态失败用错误色，其余停驻态保持弱化灰。
+ * running 额外挂共享呼吸点——「还在跑」的动效统一走 live-animations 登记表。
+ */
+const STATUS_TONES = {
+	draft: "text-muted-foreground/60",
+	planning: "text-emerald-400",
+	awaiting_approval: "text-amber-400",
+	running: "text-emerald-400",
+	paused: "text-muted-foreground/60",
+	awaiting_review: "text-amber-400",
+	completed: "text-muted-foreground/60",
+	failed: "text-destructive",
+	cancelled: "text-muted-foreground/60",
+	rejected: "text-destructive",
+	changes_requested: "text-emerald-400",
+} as const satisfies Record<keyof typeof STATUS_KEYS, string>;
+
+const LIVE_STATUSES = new Set<keyof typeof STATUS_KEYS>(["planning", "running"]);
+
 const REVIEW_ACTION_KEYS = {
 	approved: "activityPanel.task.action.approve",
 	changes_requested: "activityPanel.task.action.requestChanges",
@@ -55,6 +76,12 @@ type TaskCommand = Parameters<typeof window.vetta.task.runCommand>[1];
 function commandErrorMessage(t: TFunction<"chat">, code: string): string {
 	const key = ERROR_KEYS[code as keyof typeof ERROR_KEYS] ?? "activityPanel.task.error.commandFailed";
 	return t(key);
+}
+
+/** 来源列表只显示文件名降低噪音；完整路径留在 title 供悬停与读屏确认。 */
+function sourceDisplayName(path: string): string {
+	const segments = path.split(/[\\/]/).filter((segment) => segment.length > 0);
+	return segments[segments.length - 1] ?? path;
 }
 
 /** 统一执行 Task 命令：成功时更新投影，失败分支收敛为可读错误 toast。 */
@@ -88,14 +115,25 @@ function PlanSection({ tasks }: { readonly tasks: readonly RuntimeTaskSnapshot[]
 	return (
 		<WorkPanelSection id="plan">
 			<ul className="space-y-1">
-				{tasks.map((task) => (
-					<li key={task.identity.taskId} className="flex min-w-0 items-center gap-2">
-						<span className="min-w-0 flex-1 truncate text-[12px] text-foreground" title={task.title ?? t("activityPanel.task.untitled")}>
-							{task.title ?? t("activityPanel.task.untitled")}
-						</span>
-						<span className="shrink-0 text-[11px] text-muted-foreground">{t(STATUS_KEYS[task.status])}</span>
-					</li>
-				))}
+				{tasks.map((task) => {
+					const isLive = LIVE_STATUSES.has(task.status);
+					return (
+						<li key={task.identity.taskId} className="flex min-w-0 items-center gap-2">
+							<span
+								className="min-w-0 flex-1 truncate text-[12px] text-foreground"
+								title={task.title ?? t("activityPanel.task.untitled")}
+							>
+								{task.title ?? t("activityPanel.task.untitled")}
+							</span>
+							{isLive ? (
+								<span className="vetta-live-dot h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/80" aria-hidden />
+							) : null}
+							<span className={`shrink-0 text-[11px] ${STATUS_TONES[task.status]}`}>
+								{t(STATUS_KEYS[task.status])}
+							</span>
+						</li>
+					);
+				})}
 			</ul>
 		</WorkPanelSection>
 	);
@@ -120,6 +158,10 @@ function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 			showToast({ message: t("workspace.work.sources.pickFailed"), variant: "error" });
 		}
 	}, [t]);
+
+	const removeSource = useCallback((source: string) => {
+		setSources((prev) => prev.filter((item) => item !== source));
+	}, []);
 
 	const start = useCallback(async () => {
 		const trimmedGoal = goal.trim();
@@ -151,14 +193,25 @@ function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 	return (
 		<WorkPanelSection id="sources">
 			<div className="space-y-2">
-				<Button variant="outline" size="sm" onClick={() => void pickSources()}>
+				<Button variant="primary" size="sm" onClick={() => void pickSources()}>
 					{t("workspace.work.sources.pickFile")}
 				</Button>
 				{sources.length > 0 ? (
 					<ul className="space-y-1">
 						{sources.map((source) => (
-							<li key={source} className="truncate text-[12px] text-foreground" title={source}>
-								{source}
+							<li key={source} className="flex min-w-0 items-center gap-1.5">
+								<span className="min-w-0 flex-1 truncate text-[12px] text-foreground" title={source}>
+									{sourceDisplayName(source)}
+								</span>
+								<Button
+									aria-label={t("workspace.work.sources.remove", { file: sourceDisplayName(source) })}
+									className="h-6 w-6 shrink-0 p-0"
+									size="icon-xs"
+									variant="ghost"
+									onClick={() => removeSource(source)}
+								>
+									<span className="icon-[solar--close-circle-linear] h-3.5 w-3.5" aria-hidden />
+								</Button>
 							</li>
 						))}
 					</ul>
@@ -319,7 +372,7 @@ function ReviewSection({ runtimeId, tasks, artifacts }: ReviewSectionProps): JSX
 							<Button
 								key={decision}
 								size="sm"
-								variant={decision === "approved" ? "default" : "outline"}
+								variant={decision === "approved" ? "primary" : "outline"}
 								onClick={() => void review(reviewTask.identity.taskId, decision)}
 							>
 								{t(REVIEW_ACTION_KEYS[decision])}

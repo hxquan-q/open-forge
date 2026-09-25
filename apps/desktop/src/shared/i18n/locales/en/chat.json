@@ -1078,7 +1078,7 @@
 		},
 		"workspace": {
 			"hint": {
-				"work": "This chat will start as Docs & research: plan and deliverables appear on the right once work starts, no terminal by default.",
+				"work": "This chat will start as Docs & research: plans, sources, and deliverables appear on the right once work starts; no terminal by default.",
 				"coding": "This chat will start as Code: terminal and Git are available, the right side shows the execution trail."
 			}
 		}
@@ -1343,13 +1343,13 @@
 	"workspace": {
 		"mode": {
 			"coding": "Code",
-			"hint": "The right-hand workspace follows this choice. New chats follow it; the current chat does not.",
+			"hint": "The right-hand workspace switches right away. New chats start in this mode; the current chat does not change.",
 			"switch": "Switch workspace: docs & research or code",
 			"work": "Docs & research"
 		},
 		"work": {
 			"panelTitle": "Docs & research",
-			"panelLead": "Plans, sources, and deliverables show up here",
+			"panelLead": "This session\u2019s plans, sources, and deliverables live here",
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
 				"title": "Artifacts",
@@ -1384,6 +1384,7 @@
 				"pickFile": "Choose source files",
 				"goalPlaceholder": "Describe the goal, e.g. \"Turn this report into a one-page summary\"",
 				"start": "Start",
+				"remove": "Remove {{file}}",
 				"sendUnavailable": "This session cannot send a message right now. Try again later.",
 				"pickFailed": "Could not choose source files. Try again."
 			}

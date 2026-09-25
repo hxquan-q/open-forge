@@ -5,7 +5,7 @@ import { pathTokenText } from "@shared/lib/input-tokens";
 import { taskStateBySessionAtom } from "@shared/store/atoms";
 import { sendMessageFnRef } from "@shared/store/chat-atoms";
 import type { ArtifactDescriptor, RuntimeSessionTaskState, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createStore, Provider } from "jotai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -121,7 +121,8 @@ describe("WorkDocumentSections sources", () => {
 
 		renderSections();
 		await user.click(await screen.findByRole("button", { name: "workspace.work.sources.pickFile" }));
-		await screen.findByText("C:/资料/报告.docx");
+		const source = await screen.findByText("报告.docx");
+		expect(source.getAttribute("title")).toBe("C:/资料/报告.docx");
 		await user.type(screen.getByPlaceholderText("workspace.work.sources.goalPlaceholder"), "整理成一页纪要");
 		await user.click(screen.getByRole("button", { name: "workspace.work.sources.start" }));
 
@@ -147,6 +148,28 @@ describe("WorkDocumentSections sources", () => {
 		expect(sendMessage).not.toHaveBeenCalled();
 	});
 
+	it("来源列表只显示文件名并支持移除，移除后不再随任务发送", async () => {
+		const user = userEvent.setup();
+		const sendMessage = vi.fn().mockResolvedValue({ status: "sent" });
+		sendMessageFnRef.current = sendMessage;
+		selectFiles.mockResolvedValue(["C:/资料/报告.docx", "C:/资料/附录.md"]);
+		runCommand.mockResolvedValue({ ok: true, state: taskState() });
+
+		renderSections();
+		await user.click(await screen.findByRole("button", { name: "workspace.work.sources.pickFile" }));
+		await screen.findByText("报告.docx");
+		await screen.findByText("附录.md");
+
+		const reportItem = screen.getByText("报告.docx").closest("li");
+		await user.click(within(reportItem!).getByRole("button"));
+
+		expect(screen.queryByText("报告.docx")).toBeNull();
+		await user.type(screen.getByPlaceholderText("workspace.work.sources.goalPlaceholder"), "整理成一页纪要");
+		await user.click(screen.getByRole("button", { name: "workspace.work.sources.start" }));
+		await waitFor(() => {
+			expect(sendMessage).toHaveBeenCalledWith(`${pathTokenText("C:/资料/附录.md")} 整理成一页纪要`);
+		});
+	});
 	it("create 失败时提示任务命令失败，不发送消息", async () => {
 		const user = userEvent.setup();
 		const sendMessage = vi.fn();
@@ -169,6 +192,21 @@ describe("WorkDocumentSections sources", () => {
 });
 
 describe("WorkDocumentSections plan", () => {
+	it("计划状态按语义分级：等待审阅用警告色，执行中带共享呼吸点", () => {
+		const seed = taskState({
+			tasks: [
+				taskSnapshot({ identity: { taskId: "task-live", rootSessionId: "runtime-1" }, status: "running" }),
+				taskSnapshot({ identity: { taskId: "task-review", rootSessionId: "runtime-1" }, status: "awaiting_review" }),
+			],
+			artifacts: [],
+		});
+		renderSections(["runtime-1"], seed);
+
+		const plan = document.querySelector('[data-section="plan"]');
+		expect(plan?.querySelector(".text-amber-400")?.textContent).toBe("activityPanel.task.status.awaitingReview");
+		expect(plan?.querySelector(".text-emerald-400")?.textContent).toBe("activityPanel.task.status.running");
+		expect(plan?.querySelector(".vetta-live-dot")).not.toBeNull();
+	});
 	it("已有任务时展示标题与状态，重开会话后主进程快照补齐产物", async () => {
 		const seed = taskState({ artifacts: [] });
 		renderSections(["runtime-1"], seed);
