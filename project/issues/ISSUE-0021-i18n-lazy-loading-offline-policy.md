@@ -53,3 +53,10 @@ updated: 2026-09-24
 ## 后续 Task
 
 - 裁决 B/C 后立项：`apps/desktop/src/shared/i18n/` 懒加载改造 + 类型增强保留 + 主进程 `mainT` 分面处理。
+
+## 事实补充与首轮测量（2026-09-25）
+
+- 源码事实核对（与文档一致）：`apps/desktop/src/shared/i18n/` 下 12 个 namespace 全部静态打包，`fallbackLng = "zh"`（`config.ts:26`），`i18next.d.ts` 用 `import type` 因此**零运行时开销**，主进程 `mainT` 共用同一 resources 对象；仓库无 backend / 动态 import / 下载渠道。文档里的路径需带 `apps/desktop/` 前缀。
+- **首轮体积测量（补上「触发条件不可测」的缺口）**：`apps/desktop/src/shared/i18n/locales/{zh,en}` 各 12 个 JSON，源码体积 zh ≈ 267 KB / en ≈ 276 KB，合计 ≈ 543 KB；单文件最大为 `settings.json`（zh 104 KB / en 108 KB）与 `chat.json`（≈ 48/52 KB）。
+- 说明：以上是源码态 JSON 体积，不是打包后体积；bundle 占比需要 `bun run --cwd apps/desktop build:renderer` 后的产物审计（未运行：构建非本任务所需，且 renderer 构建耗时不菲）。因此「占比 >5%」这一触发条件**仍未被证伪或证实**，下一步若推进 B 方案，应以一次 renderer 构建产物审计为准。
+- 结论：Issue 维持 draft；B 的技术前提（i18next backend + 类型链路）与风险（文案闪烁）已在文档中列明，缺的只是产物占比这一条量化输入。
