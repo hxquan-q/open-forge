@@ -1,7 +1,7 @@
 ---
 id: BUG-0016
 type: bug
-status: investigating
+status: done
 priority: P1
 owner: apps/desktop
 source: user-report
@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: [BUG-0019]
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -57,15 +57,29 @@ Renderer 不应无故重载；确需重载时应可靠完成初始化并恢复�
 - `BrowserPanelView` 的 `allowpopups` React 警告是独立可见诊断，尚无调用链证据表明它会触发整页重载或造成白屏。
 - `remote-desktop-host.ts` 中存在特定远程宿主错误后的 `window.location.reload()`，但未确认用户是否运行该宿主，也未证明与此报告有关。
 
-根因置信度：低；白屏和阶段性刷新是用户报告，具体刷新来源及恢复阻塞点待采集证据。
+2026-09-25 复现定位：渲染进程入口 `main.tsx` 的 `bootPaintedPromise` 依赖双层
+`requestAnimationFrame`，而窗口被最小化或被 Windows 遮挡检测判为隐藏时
+`document.visibilityState === "hidden"`，Chromium 会暂停 rAF——此时发生任何重载
+（HMR、插件快照重载、远程宿主错误重载），`Promise.all` 的门闩永不释放，渲染进程
+被锁死在启动骨架屏（`AppBootLoadingView`）。通过 CDP 实测：窗口最小化状态下
+`location.reload()` 后 rAF 在 3s+ 内不触发，`document.body` 仅剩骨架屏；将窗口
+置前台后 rAF 恢复、启动完成。用户侧表现即「刷新后长时间空白」。
+
+根因置信度：高（可复现的阻塞机制已确认；不排除报告场景下另有刷新触发源）。
 
 ## 回归测试
 
-- 尚未补充。定位触发的 reload/初始化路径后，增加相应生命周期测试，证明重载期间界面可恢复且加载终态不会永久空白；若根因跨越真实 Electron Renderer 生命周期，再评估定向集成测试。
+- `apps/desktop/src/renderer/shared/lib/committed-paint.test.ts` 已覆盖
+  `waitForCommittedPaint` 的 hidden 短路（`skipped-hidden`）与 `timeoutMs: null`
+  不下放 visible 路径的合同，本次直接复用该实现。
+- 端到端验证：CDP 连接 dev 实例，最小化窗口后触发 `location.reload()`，
+  渲染进程在 `document.hidden === true` 下依然完成挂载，body 渲染出完整
+  导航与会话内容而非骨架屏。
 
 ## 修复与验证
 
-- 修复：待调查。
-- 测试：待调查。
-- 检查：待调查。
-- 未运行及原因：尚未开始实现。
+- 修复：`main.tsx` 的启动绘制等待改用既有 `waitForCommittedPaint({ timeoutMs: null })`，
+  隐藏时立即放行（无可绘制画面），可见时仍等待两个真实帧后再向主进程上报 painted。
+- 测试：`bun run test -- src/renderer/shared/lib/committed-paint.test.ts`（既有用例，
+  语义未变）+ 实测最小化窗口重载恢复。
+- 检查：见交付说明。
