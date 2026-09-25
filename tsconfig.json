@@ -45,6 +45,9 @@
 			"@vetta/coding-agent/resources": ["./packages/coding-agent/src/public-api/resources.ts"],
 			"@vetta/coding-agent/rpc": ["./packages/coding-agent/src/public-api/rpc.ts"],
 			"@vetta/coding-agent/runtime": ["./packages/coding-agent/src/public-api/runtime.ts"],
+			"@vetta/coding-agent/sandbox/errors": [
+				"./packages/coding-agent/src/execution/sandbox/errors.ts"
+			],
 			"@vetta/coding-agent/sdk": ["./packages/coding-agent/src/public-api/sdk.ts"],
 			"@vetta/coding-agent/settings": ["./packages/coding-agent/src/public-api/settings.ts"],
 			"@vetta/coding-agent/session-extensions": [
