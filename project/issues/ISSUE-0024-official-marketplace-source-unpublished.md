@@ -1,7 +1,7 @@
 ---
 id: ISSUE-0024
 type: issue
-status: draft
+status: done
 priority: P2
 owner: apps/desktop
 related_requirement: []
@@ -55,3 +55,13 @@ updated: 2026-09-25
 ## 后续 Task
 
 - `TASK-0121`：落地选定方案并验证能力页无误导横幅。
+
+## 结论（2026-09-25）
+
+按方案 A 执行：创建公开仓库 `hxquan-q/open-forge-marketplace`，
+`main` 放说明文档，`gh-pages` 承载 `.vetta/marketplace.json`
+（schemaVersion 3、`marketplaceVersion 0.1.0`、`minAppVersion 0.1.0`、
+空 abilities 骨架）。manifest 先经仓库内 `parseMarketplaceManifest`
+校验通过。实机验证：能力页手动刷新后失败横幅消失，来源页显示
+「Open Forge Official · gh-pages · 已同步 0.1.0」。
+后续市场内容按需向 gh-pages 递增 `marketplaceVersion` 发布即可。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0121
 type: task
-status: draft
+status: done
 priority: P2
 owner: apps/desktop
 requirement:
@@ -96,4 +96,13 @@ updated: 2026-09-25
 
 ## 交付记录
 
-- 待 ISSUE-0024 决策后实施。
+- 2026-09-25 按 ISSUE-0024 方案 A 完成：创建公开仓库
+  `hxquan-q/open-forge-marketplace`（`main` 说明文档 + `gh-pages`
+  分发分支）；`.vetta/marketplace.json` 为 schemaVersion 3 空骨架
+  （`marketplaceVersion 0.1.0`、`minAppVersion 0.1.0`），经仓库内
+  `parseMarketplaceManifest` 校验通过。
+- 实机验证：`raw/.../marketplace.json` 与 `archive/.../gh-pages.zip`
+  均 200；能力页手动刷新后「GitHub 来源同步失败」横幅消失，来源页
+  显示「已同步 · 0.1.0」。
+- 仓库内无代码改动；本 Task 属外部发布动作 + 实机验收。后续能力发布
+  走 gh-pages 递增 `marketplaceVersion`。
