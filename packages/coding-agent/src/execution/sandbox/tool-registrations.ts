@@ -4,13 +4,13 @@ import type { CodingAgentSandboxAuthorizationPort } from "./authorization-contra
 import { formatSandboxRemediation, SandboxUnavailableError } from "./errors.js";
 import { createSandboxToolRegistrations } from "./tool-utils.js";
 
-/** ADR-0133 §2:sandbox 模式的环境探头,由宿主注入以避免 sandbox policy 直接读 Node 全局。 */
+/** ADR-0133 §2:sandbox 模式的环境探头,避免 sandbox policy 直接读 Node 全局。 */
 export interface CodingAgentSandboxEnvironmentHostInfo {
-	/** 当前 OS 平台标识(如 darwin/linux/win32);由宿主注入便于 guard/UT 替换。 */
+	/** 当前 OS 平台标识(如 darwin/linux/win32);由 session runtime 默认构造,测试可显式替换。 */
 	readonly platform: string;
-	/** 是否允许 fail-open(ADR-0133 §2 escape hatch);宿主决定是否检测 VETTA_SANDBOX_FAIL_OPEN。 */
+	/** 是否允许 fail-open(ADR-0133 §2 escape hatch);由 session runtime 读取 VETTA_SANDBOX_FAIL_OPEN 决定。 */
 	readonly allowFailOpen: boolean;
-	/** fail-open 时宿主用来向诊断通道写 warning 的回调。 */
+	/** fail-open 时向诊断通道写 warning 的回调。 */
 	readonly warn: (message: string) => void;
 }
 
@@ -22,7 +22,7 @@ export interface CodingAgentSandboxToolsOptions {
 	readonly macosSandboxExecPath?: string;
 	readonly getSessionId?: () => string | undefined;
 	readonly environment: CodingAgentSandboxEnvironment;
-	/** ADR-0133 §2:host 注入的环境探头;缺失时视为 fail-closed 严格模式。 */
+	/** ADR-0133 §2:环境探头;缺失时视为 fail-closed 严格模式。 */
 	readonly hostInfo?: CodingAgentSandboxEnvironmentHostInfo;
 }
 
@@ -38,8 +38,9 @@ export function createCodingAgentSandboxToolRegistrations(
 			macosSandboxExecPath: options.macosSandboxExecPath,
 		});
 	} catch (error) {
-		// ADR-0133 §2:bwrap / sandbox-exec / Windows sandbox host 缺失或不可启动时,
-		// 统一映射为 asset-missing,保留原始错误便于定位。
+		// ADR-0133 §2:createToolSet 在装配阶段同步解析 bwrap / sandbox-exec / Windows
+		// sandbox host 与 shell 路径;此阶段的任何失败都意味着环境给不出沙箱工具集,
+		// 统一归类 asset-missing 并把原始错误留在 cause(修复指引会提示看 cause 详情)。
 		if (error instanceof SandboxUnavailableError) throw error;
 		throw new SandboxUnavailableError({
 			kind: "asset-missing",

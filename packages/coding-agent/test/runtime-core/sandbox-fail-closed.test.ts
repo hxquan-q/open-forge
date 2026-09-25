@@ -70,7 +70,10 @@ describe("ADR-0133 fail-closed: sandbox 模式在平台不支持时必须显式�
 			const unavailable = thrown as InstanceType<typeof SandboxUnavailableError>;
 			expect(unavailable.kind).toBe("asset-missing");
 			expect(unavailable.cause).toBe(originalError);
+			// 原始报错与修复指引都必须出现在 message 里:宿主只展示 error.message,
+			// 用户也要能因此看到「装 bwrap / 配 VETTA_WINDOWS_SANDBOX_HOST_PATH」的下一步。
 			expect(unavailable.message).toContain("bubblewrap");
+			expect(unavailable.message).toContain("Install bwrap");
 		} finally {
 			await rm(cwd, { recursive: true, force: true });
 		}

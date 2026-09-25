@@ -78,6 +78,10 @@
 			"types": "./dist/public-api/runtime.d.ts",
 			"import": "./dist/public-api/runtime.js"
 		},
+		"./sandbox/errors": {
+			"types": "./dist/execution/sandbox/errors.d.ts",
+			"import": "./dist/execution/sandbox/errors.js"
+		},
 		"./sdk": {
 			"types": "./dist/public-api/sdk.d.ts",
 			"import": "./dist/public-api/sdk.js"

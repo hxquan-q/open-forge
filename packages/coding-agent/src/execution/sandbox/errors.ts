@@ -1,10 +1,9 @@
-/** ADR-0133 §2 fail-closed:沙箱不可用时要落到哪一种问题,便于按 kind 分流诊断。 */
-export type SandboxFailureKind =
-	| "platform-unsupported"
-	| "asset-missing"
-	| "spawn-wrap-failed"
-	| "iam-unavailable"
-	| "grant-conflict";
+/**
+ * ADR-0133 §2 fail-closed:沙箱不可用时要落到哪一种问题,便于按 kind 分流诊断。
+ * 只保留 createToolSet 装配阶段实际可达的两种;tool 执行期的 spawn/授权失败
+ * 属于各自工具的错误路径,不在这里冒充「沙箱不可用」。
+ */
+export type SandboxFailureKind = "platform-unsupported" | "asset-missing";
 
 export interface SandboxUnavailableErrorOptions {
 	readonly kind: SandboxFailureKind;
@@ -21,7 +20,12 @@ export class SandboxUnavailableError extends Error {
 	readonly remediation?: string;
 
 	constructor(options: SandboxUnavailableErrorOptions) {
-		super(options.message, options.cause === undefined ? undefined : { cause: options.cause });
+		// message 自带修复指引:宿主只要展示 error.message 用户就能看到下一步,
+		// 不必依赖按类型分流;remediation 字段保留给需要程序化处理的调用方。
+		super(
+			[options.message, options.remediation].filter((part) => part !== undefined).join("\n"),
+			options.cause === undefined ? undefined : { cause: options.cause },
+		);
 		this.name = "SandboxUnavailableError";
 		this.kind = options.kind;
 		this.platform = options.platform;
@@ -40,14 +44,9 @@ export function formatSandboxRemediation(kind: SandboxFailureKind, platform: str
 			);
 		case "asset-missing":
 			return (
-				`Sandbox binary not found. Install bwrap (Linux), sandbox-exec (macOS), ` +
-				`or set VETTA_WINDOWS_SANDBOX_HOST_PATH to codex-windows-sandbox-host.exe.`
+				`Sandbox backend failed to assemble. Install bwrap (Linux) or sandbox-exec (macOS), ` +
+				`or set VETTA_WINDOWS_SANDBOX_HOST_PATH to codex-windows-sandbox-host.exe (Windows); ` +
+				`see the original error above for what exactly failed to resolve.`
 			);
-		case "spawn-wrap-failed":
-			return "The OS sandbox accepted the launch request but failed to start the sandboxed child.";
-		case "iam-unavailable":
-			return "Sandbox authorization port is not registered in this session's extension composition.";
-		case "grant-conflict":
-			return "The requested grant conflicts with a denied path (deny path always wins over session grants).";
 	}
 }
