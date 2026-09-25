@@ -39,3 +39,5 @@
 | `BUG-0028` | 内置插件完整性清单锚定源码 plugin.json，全部系统插件运行时校验被拒 | done | P0 | — |
 | `BUG-0029` | 插件工作区视图 description 未过 i18n 解析，侧边栏 tooltip 显示原始占位符 | done | P3 | — |
 | `BUG-0030` | 窗口遮挡期间 Virtuoso 列表不渲染行，遮挡粘滞时可见窗口内空白 | done | P3 | — |
+| `BUG-0031` | 会话归档导出/导入用 window.prompt 收集口令，Electron 不支持导致功能必失败 | done | P1 | — |
+| `BUG-0032` | 项目会话归档导入副本写进默认对话目录，侧边栏不可见且幂等失效 | done | P1 | — |
