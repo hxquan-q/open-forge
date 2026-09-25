@@ -47,7 +47,14 @@ describe("CommandPanelView built-in operation", () => {
 					emptyNoMatchHint: "",
 					emptyNoSkills: "无技能",
 					emptyNoSkillsHint: "",
+					emptyClearFilterAction: "清除筛选",
+					emptyOpenMarketAction: "去能力市场安装",
+					scenesSection: "场景",
+					skillsSection: "技能",
+					sectionCount: (count) => `${count} 项`,
 				}}
+				ariaLabel="命令"
+				emptyAction={{ kind: "clearFilter", label: "清除筛选", onAction: vi.fn() }}
 				resolveIcon={() => undefined}
 				panelRef={createRef<HTMLDivElement>()}
 				onHoverItem={vi.fn()}

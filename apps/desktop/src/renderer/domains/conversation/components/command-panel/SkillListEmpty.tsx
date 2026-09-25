@@ -1,5 +1,6 @@
+import { Button } from "@shared/components/ui/button";
 import { motion } from "motion/react";
-import type { SkillListLabels } from "./types";
+import type { SkillListEmptyAction, SkillListLabels } from "./types";
 
 const CARD_IN = { duration: 0.2, ease: [0.22, 0.61, 0.36, 1] as const };
 
@@ -7,14 +8,22 @@ interface SkillListEmptyProps {
 	/** true = 有过滤词但没命中；false = 本来就没有可用的 skill / 场景。 */
 	filtering: boolean;
 	labels: SkillListLabels;
+	/** filter 时给「清除筛选」，无可用项时给「去能力市场安装」。 */
+	action?: SkillListEmptyAction;
 }
 
 /**
- * skill 列表的空态卡片：占满命令区宽度的一张虚线卡片，左图标右文案（标题 + 提示）。
- * 只有一行灰字时空态看起来像「加载没完」，卡片能明确「这就是结果」；
- * 横排是为了不把命令区撑高——空态本身不该比几行结果还占地方。
+ * skill 列表的空态卡片：占满命令区宽度的一张虚线卡片，左图标右文案（标题 + 提示 + 主 CTA）。
+ * 不再只是「提示一行字」：可操作的恢复动作（清除筛选 / 去能力市场）必须直接出现在卡片里。
  */
-export function SkillListEmpty({ filtering, labels }: SkillListEmptyProps): JSX.Element {
+export function SkillListEmpty({ filtering, labels, action }: SkillListEmptyProps): JSX.Element {
+	const title = filtering ? labels.emptyNoMatch : labels.emptyNoSkills;
+	const hint = filtering ? labels.emptyNoMatchHint : labels.emptyNoSkillsHint;
+	const cta: SkillListEmptyAction = action ?? {
+		kind: filtering ? "clearFilter" : "openMarket",
+		label: filtering ? labels.emptyClearFilterAction : labels.emptyOpenMarketAction,
+		onAction: () => undefined,
+	};
 	return (
 		<div className="px-3 py-2">
 			<motion.div
@@ -31,14 +40,15 @@ export function SkillListEmpty({ filtering, labels }: SkillListEmptyProps): JSX.
 						].join(" ")}
 					/>
 				</span>
-				<span className="flex min-w-0 flex-col text-left">
-					<span className="truncate text-[12.5px] font-medium text-foreground/80">
-						{filtering ? labels.emptyNoMatch : labels.emptyNoSkills}
-					</span>
-					<span className="truncate text-[11px] text-muted-foreground/50">
-						{filtering ? labels.emptyNoMatchHint : labels.emptyNoSkillsHint}
-					</span>
+				<span className="flex min-w-0 flex-1 flex-col text-left">
+					<span className="truncate text-[13px] font-medium text-foreground/80">{title}</span>
+					<span className="truncate text-[12px] text-muted-foreground/60">{hint}</span>
 				</span>
+				{cta ? (
+					<Button variant="ghost" size="sm" onClick={cta.onAction} className="shrink-0">
+						{cta.label}
+					</Button>
+				) : null}
 			</motion.div>
 		</div>
 	);
