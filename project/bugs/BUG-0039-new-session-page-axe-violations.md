@@ -1,7 +1,7 @@
 ---
 id: BUG-0039
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop renderer (sidebar / guide banner / agent selector)
 requirement:
@@ -86,6 +86,12 @@ passes: 31   violations: 3（共 4 个节点）   incomplete: 1（color-contrast
 
 ## 修复与验证
 
-- 修复：待定（本轮只做验收）。方向：给图标按钮补 `aria-label`；把「不再提示」与「戳一下」移出外层可点击容器（改为兄弟节点，视觉与行为不变）；把标题栏品牌与空态文本放入 landmark。
-- 检查：修复后重跑同一 `a11y --json`，确认 `violations` 中的 `button-name` 与 `nested-interactive` 归零（`region` 视 landmark 调整结果）。
-- 未运行及原因：修复未实施；其它页面（能力市场、设置、会话页）的 axe 审计本轮未逐个执行。
+- 修复（2026-09-26，两项 WCAG 违规）：
+  1. `packages/theme-ui/src/project/ProjectRowView.tsx`：新增可选 `toggleTitle` 并把它作为图标按钮的 `aria-label`/`title`；宿主链路 `useProjectGroupModel`（新增 `sidebar.projects.toggleSessions` 文案，zh/en 同步）→ `ProjectGroup` → `ProjectRow` → `useProjectRowModel` 一路下发。
+  2. `packages/theme-ui/src/chat/GuideBadgeSwiperView.tsx`：药丸改成容器 `div`，「正文动作」与「不再提示」成为并列按钮（不再嵌套）；`apps/desktop/.../NewSessionAgentSelector.tsx`：触发器里的装饰头像用 `<span class="contents" aria-hidden inert>` 包住，把 `BotAvatar` 自身的 `<button>` 移出无障碍树与焦点序列（指针行为本来就是 `pointer-events-none`，视觉不变）。
+- 测试（新增 2 个 desktop 侧回归文件，共 5 例）：
+  - `ProjectRowView.a11y.test.tsx`：图标按钮以 `toggleTitle` 为名称；折叠态点击仍展开并导航、展开态只折叠。
+  - `GuideBadgeSwiperView.a11y.test.tsx`：正文动作内无可聚焦嵌套控件、两者各自触发自己的回调、不可关闭时没有「不再提示」。
+- 实机验证（axe-core 4.12.1，CDP 附着新会话页）：`violations 3 → 1`、节点数 `4 → 2`；`button-name`（critical）与 `nested-interactive`（serious）归零；侧栏无名按钮计数从 1 → 0；项目行图标按钮实测名称「展开或折叠「demo」的会话」。
+- 仍开放：`region`（moderate，best-practice，非 WCAG A/AA）——标题栏品牌块不在 landmark 内。修它要动自定义标题栏结构（含主题覆盖面），本轮不做，留给后续独立变更。
+- 未运行及原因：其它页面（能力库、设置、会话页）未逐个跑 axe。另注：`packages/theme-ui` 自身测试未被任何门禁收集（该包没有 `test` 脚本、desktop vitest 的 include 也不含它），因此这两个回归测试放在 desktop 侧，确保会随 `test:pkg desktop` / `test:changed` 运行。

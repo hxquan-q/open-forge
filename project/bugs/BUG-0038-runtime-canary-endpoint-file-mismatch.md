@@ -1,7 +1,7 @@
 ---
 id: BUG-0038
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop scripts (ui-verification)
 requirement:
@@ -97,9 +97,8 @@ apps/desktop/scripts/ui-verification.mjs:511 / :551
 
 ## 修复与验证
 
-- 修复：待定（本轮只做验收）。两个方向二选一并保持 host 断言一致：
-  1. host 侧：`resolveVerificationEnv` 的 canary 分支补 `VETTA_ACTION_RPC_ENDPOINT_FILE: join(state.runtimeCanary.vettaHome, "action-server.json")`；
-  2. Desktop 侧：`VETTA_DESKTOP_RUNTIME_CANARY=1` 时按 `VETTA_HOME` 派生 endpoint 文件并忽略显式 env。
-- 另需处理首次调用的 `EBUSY: … uv_spawn`：CLI 安装落盘（文件可执行且未被占用）后才允许 spawn，否则 canary 首次调用会随机失败。
-- 检查：修复后重跑 `bun run verify:ui:debug -- runtime-canary`，并确认 `endpointRemoved` 断言拿到真实值。
-- 未运行及原因：修复尚未实施；本轮 canary 的会话创建 / 二代重启恢复 / Tool Loop / 锁释放断言**未取得任何实机证据**。
+- 修复（2026-09-26）：把 canary 模式的环境派生收敛成 `apps/desktop/scripts/ui-verification-profile.ts` 的纯函数 `createUiVerificationEnvironment(layout, canary)`——canary 下统一把 `VETTA_ACTION_RPC_ENDPOINT_FILE` 指向 `join(canary.vettaHome, "action-server.json")`，同时覆盖 `VETTA_HOME` / `VETTA_CODING_AGENT_DIR` / `VETTA_DESKTOP_RUNTIME_CANARY`；`ui-verification.mjs` 的 `resolveVerificationEnv` 改为调用它。Desktop、host 与 runner 从此共用同一路径合同。
+- 测试：`apps/desktop/scripts/ui-verification-profile.test.ts` 新增「canary env keeps Desktop, host and runner on the canary home endpoint file」：断言 canary 下 endpoint 文件 = canary home 的 `action-server.json`、且不等于 Profile 的 `endpointFile`，非 canary 仍用 Profile 路径。5/5 通过。
+- 检查：`bun run check` 的 lint / 类型（含 `apps/desktop/scripts/**` 的 `scripts/**/*.test.ts` 收集）通过；`check:guards` 仅 `task-worktrees` 红（与本修复无关，见 BUG-0037 的并行情况）。
+- 未运行及原因：`bun run verify:ui:debug -- runtime-canary` 的**完整端到端重跑未执行**（串行两次 Desktop 生成 + 本地产 provider 需要较长时间，本轮预算用于产品侧修复与验收记录）。因此 canary 的会话创建 / 二代重启恢复 / Tool Loop 断言仍未取得实机证据。
+- 仍开放：首次调用的 `EBUSY: … uv_spawn` 竞态未修（CLI 刚安装完可能仍被占用）；建议在 spawn 前等待产物可执行并加一次有界重试。当前行为是第二次调用即可越过。
