@@ -43,3 +43,4 @@
 | `BUG-0032` | 项目会话归档导入副本写进默认对话目录，侧边栏不可见且幂等失效 | done | P1 | — |
 | `BUG-0033` | 项目详情页会话计数依赖侧边栏展开懒加载，重载后误显「0 个会话」 | done | P3 | — |
 | `BUG-0034` | 多分屏终端持续新增 WebGL context，触发 Too many active contexts 告警 | investigating | P3 | — |
+| `BUG-0035` | Debug Profile 播种复制的 safeStorage 凭据跨 user-data 目录不可解密，Provider 鉴权必失败 | investigating | P2 | — |
