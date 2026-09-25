@@ -7,10 +7,10 @@ owner: release/brand
 requirement: REQ-0003
 plan: PLAN-0003
 source_issue: ISSUE-0001
-execution: serial
-branch: forge/dev
-worktree: unassigned（命名决策已齐，待排期实施）
-base_commit: c3d42690fb5b0abc6a5c080d79111747e352728f
+execution: parallel
+branch: task/TASK-0045-ecosystem-identities
+worktree: ../open-forge-wt/task-0045-ecosystem-identities
+base_commit: 0e2e1ae3f9089b77aa05d88f5ac2f8f3ff38de1a
 read_paths: [apps/cli-host/AGENTS.md, apps/cli-host, apps/im-gateway/README.md, apps/im-gateway/Makefile, packages/runtime-mcp/AGENTS.md, packages/runtime-mcp, packages/plugins/AGENTS.md, packages/plugins, apps/desktop/src/main]
 write_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
 exclusive_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
@@ -32,12 +32,12 @@ updated: 2026-09-25
 
 ### 并发评估
 
-- 结论：不支持并发；跨 CLI、Go IM Gateway、MCP、Plugin 和 Desktop Host，且需要统一核对外显身份与兼容值。
-- 执行方式：serial，共享工作区串行。
+- 结论：与活跃 Task 无并发冲突（`TASK-0044` 已完成、`TASK-0046` blocked）；跨 CLI、Go IM Gateway、MCP、Plugin 和 Desktop Host，需统一核对外显身份与兼容值，任务内部串行推进。
+- 执行方式：parallel 泳道（2026-09-26 用户指定独立 Worktree 实施），任务内部按宿主顺序串行落地。
 - 可并行 Task：无。
 - 前置依赖：`TASK-0043` 的品牌事实源完成；CLI 命令目标、旧命令别名/迁移策略需先明确。
 - 冲突文件/独占路径：各宿主的命令入口、IM/MCP 展示元数据、插件清单和 Release Notes。
-- Branch：`forge/dev`；Worktree：实施前按当前协作状态确认。
+- Branch：`task/TASK-0045-ecosystem-identities`；Worktree：由 `worktree:create` 按当前协作状态分配。
 - 集成负责人：coordinator。
 - 集成顺序：TASK-0043 → TASK-0044 → 本任务；完成后进入文档迁移。
 
