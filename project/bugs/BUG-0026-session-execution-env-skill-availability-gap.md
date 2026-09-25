@@ -1,7 +1,7 @@
 ---
 id: BUG-0026
 type: bug
-status: ready
+status: done
 priority: P3
 owner: packages/coding-agent
 source: BUG-0025 修复过程中的类型检查报错与调用点复核
@@ -69,3 +69,10 @@ updated: 2026-09-25
 - 验证：`bun run test:impact --` 覆盖 session execution environment 与会话文件工具的既有用例；
   类型检查通过即为最小证据。
 - 未运行及原因：本轮未实施（BUG-0025 已交付用户可见的主路径修复，此项为同一缺陷的边界补齐）。
+
+## 交付记录（2026-09-25）
+
+- 实施：`411e92d88`（技能可用性来源抽成共享模块 `composition/available-skill-names.ts`）+ `b4bc56ce0`（会话执行环境补齐透传，7 文件），集成 merge `1f2c4d2a0`。
+- 红测实证：runtime-desktop 2 用例失败（提示未点名技能）、coding-agent 装配点 1 用例失败（`[]` ≠ `['xlsx']`）；修复后 runtime-desktop 50/50、coding-agent 全包通过、`check:quick` 与全仓 `tsgo` 全绿。
+- 范围外遗留（已另立 `BUG-0027`）：`apps/cli-host` 三处同类站点；另 `node-session-execution-environment.ts`（deprecated Node SDK 兼容装配）根本不传 `readOptions`，其提示为「无提示」而非失真提示，需单独立项。
+- 用户可见说明并入 BUG-0025 的发布说明条目（同一症状，避免重复叙述）。
