@@ -3,7 +3,7 @@ import type { DesktopMcpAppAttachment } from "@preload/api";
 import type { ToolResultReview } from "@vetta/runtime-storage/conversation";
 import type { CardDescriptor } from "@vetta-org/plugin-sdk";
 
-export type ChatErrorKind = "rate_limit" | "quota" | "network" | "auth" | "server" | "unknown";
+export type ChatErrorKind = "rate_limit" | "quota" | "network" | "stream_idle" | "auth" | "server" | "unknown";
 
 export interface TextBlock {
 	type: "text";

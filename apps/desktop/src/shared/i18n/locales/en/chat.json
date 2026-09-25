@@ -953,6 +953,10 @@
 					"title": "No network connection",
 					"hint": "Check your network or proxy, then send again."
 				},
+				"stream_idle": {
+					"title": "Timed out waiting for the model",
+					"hint": "The connection is fine, the upstream just stopped sending; it reconnected automatically and usually recovers."
+				},
 				"auth": {
 					"title": "Model key is invalid or expired",
 					"hint": "Update the key in model settings and try again.",
