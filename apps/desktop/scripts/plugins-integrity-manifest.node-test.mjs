@@ -104,6 +104,32 @@ test("归档被替换后指纹校验失败并给出期望值与实际值", () =>
 	}
 });
 
+test("manifestData 锚定归档内字节，源码 plugin.json 排版差异不影响校验", () => {
+	const fixture = createFixture();
+	try {
+		// 打包会对 plugin.json 做归一化（压缩空白、调整键序），归档内字节与源码不同。
+		const archiveManifestData = Buffer.from(`${JSON.stringify({ id: "demo", version: "1.2.3" })}\n`);
+		const entry = createPluginIntegrityEntry({
+			pluginId: "demo",
+			version: "1.2.3",
+			archivePath: fixture.archivePath,
+			archiveRelativePath: "demo/release/demo-1.2.3.vettapkg",
+			manifestData: archiveManifestData,
+		});
+		assert.equal(entry.manifestSha256, sha256Hex(archiveManifestData));
+		assert.notEqual(entry.manifestSha256, sha256Hex(readFileSync(fixture.manifestPath)));
+
+		// staging 解出的是归档内字节：校验必须通过。
+		writeFileSync(fixture.manifestPath, archiveManifestData);
+		assert.equal(
+			verifyStagedPluginManifestIntegrity({ pluginDir: fixture.pluginDir, entry }).ok,
+			true,
+		);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
 test("staging 目录里的 plugin.json 被改过即判为不通过", () => {
 	const fixture = createFixture();
 	try {

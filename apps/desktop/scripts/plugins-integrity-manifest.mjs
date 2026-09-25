@@ -4,7 +4,7 @@
  * 内置扩展的做法）。
  *
  * `build-presets.mjs` 在产出 `.vettapkg` 之后把「插件 id + 版本 + 归档 sha256 +
- * plugin.json sha256」写进清单；`stage-system-plugins.mjs` 解包前校验归档指纹，
+ * 归档内 plugin.json sha256」写进清单；`stage-system-plugins.mjs` 解包前校验归档指纹，
  * 运行时 `SystemPluginCatalog` 加载前校验 plugin.json 指纹。三者共用一个格式：
  *
  * ```json
@@ -40,14 +40,25 @@ export function resolveSystemPluginsManifestPath(presetsDir) {
 	return join(presetsDir, "release", SYSTEM_PLUGINS_MANIFEST_FILENAME);
 }
 
-/** 单个插件的指纹条目：版本和归档路径进清单，便于人工核对「哪一版」。 */
-export function createPluginIntegrityEntry({ pluginId, version, archivePath, archiveRelativePath, manifestPath }) {
+/**
+ * 单个插件的指纹条目：版本和归档路径进清单，便于人工核对「哪一版」。
+ * `manifestData` 必须是归档内 plugin.json 的原始字节——加载侧校验的是解包后的
+ * 文件内容，锚定源码文件会因打包期归一化（压缩空白等）而永远不匹配。
+ */
+export function createPluginIntegrityEntry({
+	pluginId,
+	version,
+	archivePath,
+	archiveRelativePath,
+	manifestPath,
+	manifestData,
+}) {
 	return {
 		id: pluginId,
 		version,
 		archive: archiveRelativePath.replaceAll("\\", "/"),
 		sha256: sha256FileHex(archivePath),
-		manifestSha256: sha256FileHex(manifestPath),
+		manifestSha256: manifestData === undefined ? sha256FileHex(manifestPath) : sha256Hex(manifestData),
 	};
 }
 
