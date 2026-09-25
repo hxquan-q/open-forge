@@ -669,7 +669,20 @@
 			"label": "Sandboxed",
 			"title": "Allow restricted access within the workspace only"
 		},
-		"sandboxUnavailable": "{{platform}} sandbox unavailable: {{reason}}",
+		"sandboxUnavailable": {
+			"reason": {
+				"notBundled": "This installation does not include the sandbox component",
+				"notExecutable": "The sandbox component on this machine cannot be executed",
+				"namespacesUnavailable": "This system does not allow the namespace operations the sandbox requires",
+				"probeFailed": "The sandbox self-check did not pass; isolation is not in effect",
+				"hostLimited": "The sandbox component lacks the capabilities needed for full isolation",
+				"hostTooOld": "The sandbox component is too old to support the required capabilities",
+				"unsupportedPlatform": "Sandboxed mode is not supported on this platform",
+				"unknown": "The reason the sandbox is unavailable could not be determined"
+			},
+			"currentMode": "Commands currently run with full access, without sandbox isolation",
+			"requestedModeNotEffective": "The selected sandboxed mode cannot take effect — choose Full access"
+		},
 		"sandboxUnavailableRemote": "Sandbox is not available for remote projects: it only constrains processes on this computer, and a remote project's commands run on the remote host"
 	},
 	"export": {
