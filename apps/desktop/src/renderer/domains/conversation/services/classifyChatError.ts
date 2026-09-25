@@ -36,12 +36,20 @@ const NETWORK =
 	/fetch failed|connection.?(error|refused|reset|closed)|other side closed|reset before headers|socket hang up|network.?error|ETIMEDOUT|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|terminated|timed? ?out|超时/i;
 
 /**
+ * provider 流停滞换连（等待期间上游一个事件都没吐，到达 idle 上限后换一次连接）。
+ * 连接是活的，与「本地网络够不着服务」不是一回事：用户无事可做，换连通常自愈。
+ * 该文案由 `packages/ai` 的 `stalledFailureDetails` 产出，标记串是稳定的机器 token。
+ */
+const STREAM_IDLE = /stream[ _]idle[ _]timeout|provider stream stalled/i;
+
+/**
  * 归类一条错误文本。
  *
  * 顺序即优先级，按「用户能做什么」从确定到模糊排：配额和鉴权要人工介入，必须
  * 先于泛化的限流 / 5xx 命中（网关把配额耗尽也报成 429，只看状态码会误判成
  * 「等等就好」）。server 早于 network：`upstream connect error` 一类同时含连接
- * 词和上游语义，归到服务端更接近真相。
+ * 词和上游语义，归到服务端更接近真相。stream_idle 必须早于 network：停滞文案里
+ * 的 `stream_idle_timeout` 含 `timeout` 子串，否则会被 NETWORK 抢先判成断网。
  */
 export function classifyChatError(text: string): ChatErrorKind {
 	if (!text) return "unknown";
@@ -49,6 +57,7 @@ export function classifyChatError(text: string): ChatErrorKind {
 	if (AUTH.test(text)) return "auth";
 	if (RATE_LIMIT.test(text)) return "rate_limit";
 	if (SERVER.test(text)) return "server";
+	if (STREAM_IDLE.test(text)) return "stream_idle";
 	if (NETWORK.test(text)) return "network";
 	return "unknown";
 }
