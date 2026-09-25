@@ -76,6 +76,10 @@ export function createWindow(): BrowserWindow {
 			preload: preloadPath,
 			// 会话级内置浏览器用 <webview> 标签渲染预览页面。
 			webviewTag: true,
+			// 遮挡（document.hidden）会暂停 rAF/ResizeObserver，Virtuoso 列表停摆成空列表；
+			// 而 Electron 的遮挡检测存在滞留问题（锁屏/RDP/显示器休眠后可见窗口仍报 hidden），
+			// 叠加会把用户困在「可见但全空」的状态。参考 remote-desktop host 的同款配置。
+			backgroundThrottling: false,
 		},
 	});
 	if (isSpeechInputBuildEnabled()) {
