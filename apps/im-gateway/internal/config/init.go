@@ -93,7 +93,7 @@ transport:
   #   allowedHandles: []
 
 hostClient:
-  # Path to the coding-agent binary. Empty = search $PATH for "vetta".
+  # Path to the coding-agent binary. Empty = search $PATH for "openforge".
   codingAgentBin: ""
   # Maximum number of concurrent coding-agent subprocesses. Default 8.
   poolMaxSize: 8
@@ -115,7 +115,7 @@ logging:
 #   logsDir: ~/.vetta/im-gateway/logs
 `
 
-const credentialsTemplate = `# vetta im-gateway credentials
+const credentialsTemplate = `# openforge im-gateway credentials
 # Permissions MUST be 0600. ` + "`im-gateway init`" + ` sets that automatically.
 #
 # Preferred storage is the OS keychain (macOS Keychain / linux Secret Service /
