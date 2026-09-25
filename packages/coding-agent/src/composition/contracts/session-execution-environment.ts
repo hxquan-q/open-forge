@@ -43,6 +43,11 @@ export interface CodingAgentSandboxToolSet {
 
 export interface CodingAgentSandboxEnvironment {
 	createToolSet(options: CodingAgentSandboxHostOptions): CodingAgentSandboxToolSet | undefined;
+	/**
+	 * ADR-0133 §5(TM-07):执行模式切换时清空该会话的 sandbox grant 缓存。
+	 * 旧 mode 下批准过的越界授权不得带入新 mode;缺省实现视为无可清缓存(如远程会话)。
+	 */
+	clearSessionGrants?(sessionId: string): void;
 }
 
 export interface CodingAgentSessionExecutionEnvironmentContext {
