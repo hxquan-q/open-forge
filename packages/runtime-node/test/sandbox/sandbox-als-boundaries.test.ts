@@ -1,7 +1,9 @@
-// ADR-0133 §3 ALS 失败边界。这五个 case 决定了"读到了不该读到的 grant"的所有可能路径。
+// ADR-0133 §3 ALS 失败边界。这些 case 决定了"读到了不该读到的 grant"的主要路径。
 //
-// ALS-1 (顺序两次 grant) 已由 node-sandbox-host.test.ts 覆盖,这里不再重复。
-// 本文件锁定 ALS-2..ALS-5。
+// ALS-1 (顺序两次 grant) 已由 node-sandbox-host.test.ts 覆盖,这里不再重复;
+// ALS-5 (mode flip 中途,运行中的 tool 沿用发起时的 grant) 属 runtime-host 层
+// 语义,由 execution-mode-turn-boundary.test.ts 的 Turn 边界用例承载。
+// 本文件锁定 ALS-2..ALS-4 与 grant 的跨异步可见性窗口。
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -78,7 +80,7 @@ describe("ADR-0133 ALS 边界", () => {
 		});
 	});
 
-	it("ALS-5: callback 内 await 期间 grant 仍可见;callback 结束后立刻不可见", async () => {
+	it("callback 内跨 await/macrotask 期间 grant 仍可见,结束后立刻不可见", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "vetta-als-d-"));
 		cleanups.push(async () => {
 			await rm(cwd, { recursive: true, force: true });
