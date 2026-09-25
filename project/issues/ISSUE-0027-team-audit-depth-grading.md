@@ -5,11 +5,11 @@ status: draft
 priority: P3
 owner: plugins/preset-agent + apps/desktop
 related_requirement: []
-related_plan: []
+related_plan: [PLAN-0013]
 source: 开发团队实测会话（91c32cf7）耗时拆解
 created: 2026-09-26
 updated: 2026-09-26
-related_tasks: []
+related_tasks: [TASK-0124, TASK-0125]
 related_issues: [ISSUE-0025]
 related_bugs: []
 depends_on: []

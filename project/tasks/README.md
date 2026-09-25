@@ -18,6 +18,11 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0027` | `verifying` | `PLAN-0001` | Plugin Artifact Renderer 注册表；SDK 合同与 Desktop 宿主接线已落地，待本轮验证收口。 |
 | `TASK-0050` | `ready` | `PLAN-0002` | transcript 窗口化第 2 步（`beforeEntry` 游标分页）；依赖已齐，主工作区串行，链内 TASK-0051 / TASK-0038 仍为 draft。 |
 | `TASK-0072` | `ready` | `PLAN-0006` | WebContentsView 迁移；serial，不创建独立 Worktree。 |
+| `TASK-0045` | `ready` | `PLAN-0003` | CLI/IM/MCP/插件外显身份迁移；命名决策已齐（2026-09-25：`openforge`、旧命令直接切换、`openforge-serv`），serial 实施后收口 `TASK-0049` → `TASK-0047`/`TASK-0048`。 |
+| `TASK-0122` | `ready` | `PLAN-0013` | 团队主控「分派后让出回合」提示词引导 + `team_wait_tasks` timeout 载荷瘦身；parallel 可独立 worktree，与 TASK-0123 无文件交集。 |
+| `TASK-0123` | `ready` | `PLAN-0013` | 成员会话 `browser_tab` 不可用性显式声明（剔除或标注降级路径）；parallel，先定位装配点再定改法。 |
+| `TASK-0124` | `draft` | `PLAN-0013` | 团队会话阶段化进度展示；serial，依赖 TASK-0122 回合语义落地后细化设计。 |
+| `TASK-0125` | `draft` | `PLAN-0013` | rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122。 |
 
 ## Task 要求
 

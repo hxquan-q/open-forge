@@ -19,6 +19,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0010` | 桌面端内存与发布体积优化（VS Code 借鉴） | in_progress | [`RESEARCH-0013`](../research/RESEARCH-0013-vscode-footprint-optimization.md) |
 | `PLAN-0011` | 仓库架构治理升级（Avernet 借鉴） | done | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
 | `PLAN-0012` | 无人值守会话与自动化产品化（WorkDaddy 借鉴） | in_progress | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
+| `PLAN-0013` | 团队会话编排效率：消除主控轮询空转与协作摩擦 | draft | [`ISSUE-0025`/`0026`/`0027`](../issues/)、开发团队实测会话量化基线（38 waits / 44.9min / $0.376）、上游 `887017560` 与 Pi/Codex/Claude Code 参照 |
 
 ## 当前执行焦点
 
