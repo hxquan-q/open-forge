@@ -21,9 +21,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0045` | `ready` | `PLAN-0003` | CLI/IM/MCP/插件外显身份迁移；命名决策已齐（2026-09-25：`openforge`、旧命令直接切换、`openforge-serv`），serial 实施后收口 `TASK-0049` → `TASK-0047`/`TASK-0048`。 |
 | `TASK-0122` | `ready` | `PLAN-0013` | 团队主控「分派后让出回合」提示词引导 + `team_wait_tasks` timeout 载荷瘦身；parallel 可独立 worktree，与 TASK-0123 无文件交集。 |
 | `TASK-0123` | `ready` | `PLAN-0013` | 成员会话 `browser_tab` 不可用性显式声明（剔除或标注降级路径）；parallel，先定位装配点再定改法。 |
-| `TASK-0124` | `draft` | `PLAN-0013` | 团队会话阶段化进度展示；serial，依赖 TASK-0122 回合语义落地后细化设计。 |
-| `TASK-0125` | `draft` | `PLAN-0013` | rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122。 |
-| `TASK-0126` | `draft` | `PLAN-0013` | 团队会话预算可视化（ISSUE-0028 候选 C：成员/会话级 token·回合·时长只读投影）；serial，复用 TASK-0124 投影面。 |
+| `TASK-0124` | `done` | `PLAN-0013` | 团队会话阶段化进度展示；serial，依赖 TASK-0122 回合语义落地后细化设计。 |
+| `TASK-0125` | `blocked` | `PLAN-0013` | rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
+| `TASK-0126` | `done` | `PLAN-0013` | 团队会话预算可视化（ISSUE-0028 候选 C：成员/会话级 token·回合·时长只读投影）；serial，复用 TASK-0124 投影面。 |
 
 ## Task 要求
 

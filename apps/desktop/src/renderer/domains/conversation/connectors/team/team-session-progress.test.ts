@@ -1,6 +1,13 @@
 import type { TeamSessionActivity } from "@vetta/agent-team";
+import type { AssistantMessage } from "@vetta/ai";
+import type { HistoryEntry } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";
-import { projectTeamSessionProgress, type TeamSessionPhase, type TeamWorkItemPhase } from "./team-session-progress";
+import {
+	projectMemberUsage,
+	projectTeamSessionProgress,
+	type TeamSessionPhase,
+	type TeamWorkItemPhase,
+} from "./team-session-progress";
 import type { TeamMemberViewModel } from "./teamChatModel";
 
 const leader: TeamMemberViewModel = {
@@ -121,14 +128,15 @@ describe("projectTeamSessionProgress", () => {
 
 	it("keeps roster order and marks rows openable only when a member session exists", () => {
 		const progress = project([activity("developer", "running"), activity("reviewer", "waiting")]);
-		expect(progress?.rows.map((row) => row.memberId)).toEqual(["developer", "reviewer"]);
+		expect(progress?.rows.map((row) => row.memberId)).toEqual(["leader", "developer", "reviewer"]);
 		expect(progress?.rows.find((row) => row.memberId === "reviewer")?.openable).toBe(false);
 	});
 
-	it("omits members with no work items so the leader does not appear until delegated work exists", () => {
+	it("keeps members with no delegated work as not-started rows instead of hiding them", () => {
 		const progress = project([activity("developer", "running")]);
-		expect(progress?.rows.map((row) => row.memberId)).toEqual(["developer"]);
-		expect(progress?.rows.every((row) => !row.isLeader)).toBe(true);
+		const leaderRow = progress?.rows.find((row) => row.memberId === "leader");
+		expect(leaderRow).toMatchObject({ isLeader: true, itemCount: 0 });
+		expect(leaderRow?.state).toBeUndefined();
 	});
 
 	it.each<{ readonly state: TeamSessionActivity["state"]; readonly row: TeamWorkItemPhase }>([
@@ -137,6 +145,113 @@ describe("projectTeamSessionProgress", () => {
 		{ state: "failed", row: "failed" },
 	])("keeps work item state $state on the member row", ({ state, row }) => {
 		const progress = project([activity("developer", state)]);
-		expect(progress?.rows[0]?.state).toBe(row);
+		expect(progress?.rows.find((item) => item.memberId === "developer")?.state).toBe(row);
+	});
+
+	it("attaches member usage and session totals without inventing data for missing runtimes", () => {
+		const progress = projectTeamSessionProgress({
+			activities: [activity("developer", "running")],
+			members: [leader, developer, reviewer],
+			leaderMemberId: "leader",
+			memberRuntimeIds: { leader: "leader-rt", developer: "dev-rt" },
+			leaderBusy: false,
+			memberUsages: {
+				developer: { rounds: 2, toolCalls: 3, inputTokens: 1200, outputTokens: 300, durationMs: 5000 },
+				leader: { rounds: 1, toolCalls: 0, inputTokens: 4000, outputTokens: 150, durationMs: 1000 },
+			},
+			contextPercentByMember: { developer: 42, leader: null },
+		});
+		expect(progress?.rows.find((row) => row.memberId === "developer")).toMatchObject({
+			usage: { inputTokens: 1200, outputTokens: 300 },
+			contextPercent: 42,
+		});
+		expect(progress?.rows.find((row) => row.memberId === "reviewer")?.usage).toBeUndefined();
+		expect(progress?.totals).toEqual({
+			rounds: 3,
+			toolCalls: 3,
+			inputTokens: 5200,
+			outputTokens: 450,
+			durationMs: 6000,
+		});
+	});
+});
+
+function assistantMessage(usage: { input: number; output: number }, toolCalls = 0): AssistantMessage {
+	return {
+		role: "assistant",
+		content: [
+			{ type: "text", text: "step" },
+			...Array.from({ length: toolCalls }, (_, index) => ({
+				type: "toolCall" as const,
+				id: `call-${index}`,
+				name: "read",
+				arguments: {},
+			})),
+		],
+		api: "test",
+		provider: "test",
+		model: "test",
+		usage: {
+			input: usage.input,
+			output: usage.output,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: 1,
+	};
+}
+
+describe("projectMemberUsage", () => {
+	it("aggregates rounds, tool calls, tokens and busy time from persisted history", () => {
+		const history: HistoryEntry[] = [
+			{
+				type: "message",
+				message: { role: "user", content: "委托任务", timestamp: 1 },
+			},
+			{ type: "message", message: assistantMessage({ input: 1000, output: 200 }, 2) },
+			{
+				type: "tool_timing",
+				toolCallId: "call-0",
+				toolName: "read",
+				startedAt: 1,
+				durationMs: 500,
+				phases: [],
+				timestamp: "t",
+			},
+			{
+				type: "assistant_turn_timing",
+				timing: { startedAt: 1, endedAt: 2001, durationMs: 2000 },
+				timestamp: "t",
+			},
+			{ type: "message", message: assistantMessage({ input: 500, output: 100 }) },
+			{
+				type: "assistant_turn_timing",
+				timing: { startedAt: 2001, endedAt: 5001, durationMs: 3000 },
+				timestamp: "t",
+			},
+		];
+		expect(projectMemberUsage(history)).toEqual({
+			rounds: 2,
+			toolCalls: 2,
+			inputTokens: 1500,
+			outputTokens: 300,
+			durationMs: 5500,
+		});
+	});
+
+	it("returns an all-zero aggregate for a member that has not started", () => {
+		const history: HistoryEntry[] = [
+			{ type: "message", message: { role: "user", content: "启动提示词", timestamp: 1 } },
+		];
+		expect(projectMemberUsage(history)).toEqual({
+			rounds: 0,
+			toolCalls: 0,
+			inputTokens: 0,
+			outputTokens: 0,
+			durationMs: 0,
+		});
 	});
 });

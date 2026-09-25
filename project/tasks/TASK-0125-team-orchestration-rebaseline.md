@@ -1,7 +1,7 @@
 ---
 id: TASK-0125
 type: task
-status: draft
+status: blocked
 priority: P2
 owner: apps/desktop
 requirement: []
@@ -73,8 +73,12 @@ PLAN-0013 的验证闸。在合并上游（≥`887017560`）且 TASK-0122 落地
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
+- 实际修改：无实现改动；登记阻塞状态与前置条件。
+- 实际运行：无（复跑须用真实 provider 产生真实费用，需用户明确授权与可用的真实环境）。
 - 未运行及原因：
-- Worktree：
-- 剩余风险：
+  - TASK-0122 未集成（status: ready，无分支/无集成提交）；
+  - 上游 commit `887017560`（perf(agent-teams): 优先准备队长与首轮响应）不在本地 `main` 祖先链中，上游 rebase 前提未满足；
+  - 任务要求同形态真实团队会话 ~45min 复跑并记录真实 usage/成本，本会话内不可诚实执行。
+- Worktree：unassigned
+- 剩余风险：前置就绪前任何「复跑数据」都属伪造，不得凭空填写基线对比；
+  TASK-0122 落地后需先确认 `887017560` 已在 main 历史，再启动实测。

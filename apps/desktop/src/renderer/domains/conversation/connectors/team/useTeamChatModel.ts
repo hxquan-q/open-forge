@@ -42,7 +42,7 @@ import {
 	type TeamSessionHandoff,
 	type TeamSessionSendHandoff,
 } from "./team-session-handoff";
-import { projectTeamSessionProgress } from "./team-session-progress";
+import { projectMemberUsage, projectTeamSessionProgress, type TeamMemberUsage } from "./team-session-progress";
 import {
 	placeTeamErrorInTimeline,
 	projectTeamConversationTimeline,
@@ -574,6 +574,24 @@ export function useTeamChatModel(
 
 	// 阶段条只出现在团队全景：成员视图本身就是明细，且条内点成员会再次进入成员视图。
 	const leaderMemberId = session?.leaderMemberId ?? team?.leaderMemberId;
+	// 成员预算数据来自各成员 runtime 的持久化历史，纯读投影；记录不可读时对应成员整体省略。
+	const memberUsages = useMemo(() => {
+		const conversations = snapshot?.display?.memberConversations;
+		if (!conversations?.length) return undefined;
+		const map: Record<string, TeamMemberUsage> = {};
+		for (const conversation of conversations) {
+			map[conversation.memberId] = projectMemberUsage(conversation.history);
+		}
+		return map;
+	}, [snapshot?.display?.memberConversations]);
+	const contextPercentByMember = useMemo(() => {
+		const map: Record<string, number | null> = {};
+		for (const [memberId, runtimeId] of Object.entries(memberRuntimeIds)) {
+			const usage = contextUsages[runtimeId];
+			if (usage) map[memberId] = usage.percent;
+		}
+		return Object.keys(map).length > 0 ? map : undefined;
+	}, [contextUsages, memberRuntimeIds]);
 	const teamProgress = useMemo(() => {
 		if (memberViewId) return undefined;
 		const activities = snapshot?.activities;
@@ -587,8 +605,19 @@ export function useTeamChatModel(
 			...(leaderMemberId ? { leaderMemberId } : {}),
 			memberRuntimeIds,
 			leaderBusy: leaderWorking || visiblePending !== undefined,
+			...(memberUsages ? { memberUsages } : {}),
+			...(contextPercentByMember ? { contextPercentByMember } : {}),
 		});
-	}, [leaderMemberId, memberRuntimeIds, memberViewId, members, snapshot?.activities, visiblePending]);
+	}, [
+		contextPercentByMember,
+		leaderMemberId,
+		memberRuntimeIds,
+		memberUsages,
+		memberViewId,
+		members,
+		snapshot?.activities,
+		visiblePending,
+	]);
 
 	const addAttachments = useCallback(
 		(additions: readonly TeamAttachmentViewModel[]) => {

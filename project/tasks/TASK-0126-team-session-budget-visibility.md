@@ -1,7 +1,7 @@
 ---
 id: TASK-0126
 type: task
-status: draft
+status: done
 priority: P3
 owner: apps/desktop
 requirement: []
@@ -13,11 +13,11 @@ related_tasks: [TASK-0124]
 related_issues: [ISSUE-0028]
 related_bugs: []
 execution: serial
-branch:
-worktree:
+branch: task/TASK-0126-team-session-budget-visibility
+worktree: unassigned（主工作区串行执行）
 base_commit: main
 read_paths: [apps/desktop/src/main/agent-teams/, apps/desktop/src/renderer/]
-write_paths: [apps/desktop/src/renderer/, .github/release-notes/]
+write_paths: [apps/desktop/src/renderer/, apps/desktop/src/shared/i18n/locales/, .github/release-notes/, project/tasks/]
 exclusive_paths: []
 depends_on: [TASK-0124]
 conflicts_with: [TASK-0124]
@@ -90,7 +90,22 @@ A/A'/B）提供数据入口与用户心智。
 ## 交付记录
 
 - 实际修改：
+  - `team-session-progress.ts`：新增 `projectMemberUsage`（成员 runtime 持久化 history →
+    回合/工具调用/input·output token/累计时长纯聚合）；成员行扩展为全名册（无委派工作项的
+    成员显示「未开始」而非 0），行上挂 `usage` 与 `contextPercent`，会话级 `totals` 合计。
+  - `useTeamChatModel`：从 `snapshot.display.memberConversations` 与 `contextUsages`
+    组装 `memberUsages`/`contextPercentByMember` 传入投影。
+  - `TeamSessionProgress.tsx`：成员行第二行渲染 `↻回合 · 工具 N · ↑in ↓out · 时长`
+    （复用 `formatCompactTokens`/`formatDurationCompact`），列表底部加合计行。
+  - i18n：`agent-teams` 的 `chat.teamProgress` 增加 `metrics/context/total/item.notStarted`（中英）。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
-- 剩余风险：
+  - `run-vitest --run team-session-progress.test.ts TeamSessionProgress.test.tsx
+    TeamChatDelegationFlow.test.tsx TeamWaitTasksView.test.tsx`（46 用例全过，含
+    memberConversations→阶段条的接线流程用例与聚合表驱动用例）。
+  - `bun run check:quick`（Biome/guards；`task-worktrees` 存量告警同 0124）。
+  - `tsc --noEmit -p apps/desktop/tsconfig.json`。
+- 未运行及原因：`verify:ui:*`（用户未授权）；真实 provider 数据未复跑（本任务纯只读投影，
+  计量与持久化格式未改）。
+- Worktree：unassigned（serial，主 checkout 上 task 分支叠于 TASK-0124）
+- 剩余风险：工具数按发出的 toolCall 部件计（含在途），回合按 assistant 步数计；
+  若 TASK-0122 改变回合/步语义需重评口径。
