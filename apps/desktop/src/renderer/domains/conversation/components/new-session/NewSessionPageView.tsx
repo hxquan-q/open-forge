@@ -167,6 +167,7 @@ export function NewSessionPageView({
 							onSelectTarget={onSelectTarget}
 							showProjectSelector={!stackProjectSelector}
 							workspaceMode={workspaceMode}
+							workspaceCwd={cwd}
 						/>
 					</motion.div>
 				}

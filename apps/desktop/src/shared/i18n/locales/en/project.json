@@ -30,6 +30,7 @@
 		"projects": {
 			"noSessions": "No sessions",
 			"collapseSessions": "Collapse sessions",
+			"toggleSessions": "Expand or collapse sessions for {{name}}",
 			"expandMore": "Show more ({{count}})",
 			"scrollToTop": "Scroll to top",
 			"scrollToBottom": "Scroll to bottom"

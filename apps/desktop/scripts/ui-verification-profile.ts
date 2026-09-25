@@ -160,6 +160,32 @@ export function createProfileEnvironment(
   return profileEnvironment;
 }
 
+export interface UiVerificationCanaryTarget {
+  agentDir: string;
+  vettaHome: string;
+}
+
+/**
+ * Runtime Canary 下 Desktop、host 与 runner 必须共享同一份 Action RPC endpoint 合同：
+ * endpoint 文件落在 canary home 里，runner 按它连 Desktop，host 也按它断言退出后已清理。
+ * Profile 自带的 `endpointFile` 是给普通验证实例用的另一条路径，二者混用会让 canary 在第一次
+ * CLI 调用就报 `LOCAL_RPC_SERVER_NOT_FOUND`（BUG-0038）。
+ */
+export function createUiVerificationEnvironment(
+  layout: UiVerificationProfileLayout,
+  canary?: UiVerificationCanaryTarget | null,
+): NodeJS.ProcessEnv {
+  const environment = createProfileEnvironment(layout);
+  if (!canary) return environment;
+  return {
+    ...environment,
+    VETTA_ACTION_RPC_ENDPOINT_FILE: join(canary.vettaHome, "action-server.json"),
+    VETTA_CODING_AGENT_DIR: canary.agentDir,
+    VETTA_DESKTOP_RUNTIME_CANARY: "1",
+    VETTA_HOME: canary.vettaHome,
+  };
+}
+
 export function seedDebugProfile(options: SeedDebugProfileOptions): SeedDebugProfileResult {
   const sourceHome = resolve(options.sourceHome);
   const targetHome = resolve(options.targetHome);

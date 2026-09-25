@@ -16,6 +16,7 @@ interface ProjectRowProps {
 	newSessionTitle: string;
 	project: Project;
 	projectType: ProjectType;
+	toggleTitle: string;
 }
 
 export function ProjectRow(props: ProjectRowProps): JSX.Element {

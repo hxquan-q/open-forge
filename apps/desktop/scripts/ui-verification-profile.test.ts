@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   createProfileEnvironment,
+  createUiVerificationEnvironment,
   resolveProfileLayout,
   seedDebugProfile,
 } from "./ui-verification-profile";
@@ -45,6 +46,32 @@ describe("UI verification profiles", () => {
     expect(layout.statePath).toBeNull();
     expect(layout.vettaHome).toBe(join(root, ".openforge-dev"));
     expect(environment.VETTA_UI_VERIFICATION).toBeUndefined();
+  });
+
+  test("canary env keeps Desktop, host and runner on the canary home endpoint file", () => {
+    const root = temporaryDirectory("canary-env");
+    const layout = resolveProfileLayout({
+      profile: "fresh",
+      workspaceId: "12345678",
+      homeDirectory: root,
+      runtimeRoot: join(root, "runtime"),
+      runId: "run",
+    });
+    const canaryHome = join(layout.runtimeDir, "runtime-canary", "fixture", "home");
+    const environment = createUiVerificationEnvironment(layout, {
+      agentDir: join(canaryHome, "agent"),
+      vettaHome: canaryHome,
+    });
+
+    // canary 的 endpoint 必须落在 canary home，否则 runner 与 host 都找不到（BUG-0038）。
+    expect(environment.VETTA_ACTION_RPC_ENDPOINT_FILE).toBe(join(canaryHome, "action-server.json"));
+    expect(environment.VETTA_ACTION_RPC_ENDPOINT_FILE).not.toBe(layout.endpointFile);
+    expect(environment.VETTA_HOME).toBe(canaryHome);
+    expect(environment.VETTA_CODING_AGENT_DIR).toBe(join(canaryHome, "agent"));
+    expect(environment.VETTA_DESKTOP_RUNTIME_CANARY).toBe("1");
+
+    // 非 canary 仍用 Profile 自己的 endpoint 文件。
+    expect(createUiVerificationEnvironment(layout).VETTA_ACTION_RPC_ENDPOINT_FILE).toBe(layout.endpointFile);
   });
 });
 

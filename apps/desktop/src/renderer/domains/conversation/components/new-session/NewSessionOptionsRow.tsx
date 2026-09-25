@@ -18,6 +18,8 @@ interface NewSessionOptionsRowProps {
 	/** 窄插槽下项目选择器改挂到输入框下方，这一行只留智能体 chip。 */
 	readonly showProjectSelector?: boolean;
 	readonly workspaceMode: WorkspaceMode;
+	/** 模式归属的 cwd：新会话页传待创建会话的 cwd，切换器据此读写（BUG-0037）。 */
+	readonly workspaceCwd: string;
 }
 
 /**
@@ -36,6 +38,7 @@ export function NewSessionOptionsRow({
 	onSelectTarget = () => undefined,
 	showProjectSelector = true,
 	workspaceMode,
+	workspaceCwd,
 }: NewSessionOptionsRowProps): JSX.Element {
 	return (
 		// 与 hero 标题、输入框卡片共用 max-w-2xl 且不加横向 padding：chip 左缘压在标题基线上。
@@ -52,8 +55,9 @@ export function NewSessionOptionsRow({
 					/>
 				)}
 				<NewSessionAgentSelector selectedKey={targetKey} onSelect={onSelectTarget} />
-				{/* work/coding 切换只在这里出现：进入对话后不再有「切换」语义，由底部 hint 转述。 */}
-				<WorkspaceModeSwitcher />
+				{/* work/coding 切换只在这里出现：进入对话后不再有「切换」语义，由底部 hint 转述。
+				    模式按待创建会话的 cwd 归属，因此显式下发 workspaceCwd（BUG-0037）。 */}
+				<WorkspaceModeSwitcher cwdOverride={workspaceCwd} />
 			</div>
 			<NewSessionWorkspaceHint mode={workspaceMode} />
 		</div>

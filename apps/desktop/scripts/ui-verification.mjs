@@ -19,6 +19,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	createProfileEnvironment,
+	createUiVerificationEnvironment,
 	createWorkspaceId,
 	parseUiVerificationProfile,
 	resolveProfileLayout,
@@ -56,14 +57,7 @@ function resolveStateLayout(profile, state) {
 }
 
 function resolveVerificationEnv(layout, state) {
-	const environment = createProfileEnvironment(layout);
-	if (!state?.runtimeCanary) return environment;
-	return {
-		...environment,
-		VETTA_CODING_AGENT_DIR: state.runtimeCanary.agentDir,
-		VETTA_DESKTOP_RUNTIME_CANARY: "1",
-		VETTA_HOME: state.runtimeCanary.vettaHome,
-	};
+	return createUiVerificationEnvironment(layout, state?.runtimeCanary ?? null);
 }
 
 function resolveDebugCli(state) {

@@ -26,15 +26,20 @@ vi.mock("./NewSessionWorkspaceHint", () => ({
 	),
 }));
 
+const switcherProps = vi.hoisted(() => ({ cwdOverride: undefined as string | null | undefined }));
+
 vi.mock("@domains/workspace-mode", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@domains/workspace-mode")>();
 	return {
 		...actual,
-		WorkspaceModeSwitcher: () => (
-			<div role="group" aria-label="workspace.mode.switch">
-				workspace.mode.switch
-			</div>
-		),
+		WorkspaceModeSwitcher: ({ cwdOverride }: { cwdOverride?: string | null }) => {
+			switcherProps.cwdOverride = cwdOverride;
+			return (
+				<div role="group" aria-label="workspace.mode.switch">
+					workspace.mode.switch
+				</div>
+			);
+		},
 	};
 });
 
@@ -50,6 +55,7 @@ function renderRow(showProjectSelector: boolean): void {
 				onSelectPendingProject={vi.fn()}
 				showProjectSelector={showProjectSelector}
 				workspaceMode="work"
+				workspaceCwd="/repo/session-cwd"
 			/>
 		</Provider>,
 	);
@@ -70,5 +76,12 @@ describe("NewSessionOptionsRow", () => {
 		expect(screen.getByRole("button", { name: "newSession.projectSelector.triggerTitle" })).toBeDefined();
 		expect(screen.getByRole("group", { name: "workspace.mode.switch" })).toBeDefined();
 		expect(screen.getByTestId("new-session-workspace-hint").textContent).toBe("work");
+	});
+
+	it("把生效的 workspace cwd 下发给切换器，避免高亮与确认句分叉（BUG-0037）", async () => {
+		switcherProps.cwdOverride = undefined;
+		renderRow(true);
+
+		expect(switcherProps.cwdOverride).toBe("/repo/session-cwd");
 	});
 });

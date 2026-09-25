@@ -86,9 +86,9 @@ function memoryStorage(): Storage {
 	};
 }
 
-function renderSwitcher(store = createStore()) {
+function renderSwitcher(store = createStore(), cwdOverride?: string) {
 	const wrapper = ({ children }: PropsWithChildren) => <Provider store={store}>{children}</Provider>;
-	return { store, ...render(<WorkspaceModeSwitcher />, { wrapper }) };
+	return { store, ...render(<WorkspaceModeSwitcher cwdOverride={cwdOverride} />, { wrapper }) };
 }
 
 beforeEach(() => {
@@ -132,6 +132,26 @@ describe("WorkspaceModeSwitcher", () => {
 		expect(screen.getByRole("button", { name: /workspace\.mode\.coding/ }).getAttribute("aria-pressed")).toBe(
 			"false",
 		);
+	});
+
+	it("显式 cwdOverride 时按该 cwd 读写，不跟随路由 cwd（新会话页选中项目后仍能切档）", async () => {
+		routeParams = { cwd: encodeURIComponent("/repo/other") };
+		const store = createStore();
+		store.set(workspaceModeByProjectAtom, new Map<string, WorkspaceMode>([["/repo/session-cwd", "work"]]));
+		renderSwitcher(store, "/repo/session-cwd");
+		const user = userEvent.setup();
+
+		// 读：呈现的是 override cwd 的档位，而不是路由 cwd 的默认档。
+		expect(screen.getByRole("button", { name: /workspace\.mode\.work/ }).getAttribute("aria-pressed")).toBe(
+			"true",
+		);
+
+		// 写：切回 coding 也落在 override cwd 上，路由 cwd 不受影响。
+		await user.click(screen.getByRole("button", { name: /workspace\.mode\.coding/ }));
+
+		expect(store.get(workspaceModeByProjectAtom).get("/repo/session-cwd")).toBeUndefined();
+		expect(store.get(workspaceModeByProjectAtom).get("/repo/other")).toBeUndefined();
+		expect(JSON.parse(localStorage.getItem(WORKSPACE_MODE_STORAGE_KEY)!)).toEqual({});
 	});
 
 	it("文档与研究用文档图标，并说明切页头不改当前会话", () => {

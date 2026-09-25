@@ -11,10 +11,18 @@ import { WORKSPACE_MODE_ICON } from "../lib/workspace-session-flow";
 /**
  * work/coding 模式切换（IA 定稿 §1）：住在 PageHeader 左簇的项目级偏好。
  * 没有可归属的项目 cwd 时不渲染——一个切了也不生效的控件比没有控件更糟。
+ *
+ * `cwdOverride` 给「生效的 cwd 不是路由 cwd」的宿主用：新会话页的模式归属性按待创建
+ * 会话的 cwd（选中项目时是项目路径），若这里仍按路由 cwd 读写，控件高亮会与只读确认句、
+ * 实际开口径分叉，用户切了也不生效（BUG-0037）。
  */
-export function WorkspaceModeSwitcher(): JSX.Element | null {
+export function WorkspaceModeSwitcher({
+	cwdOverride,
+}: {
+	readonly cwdOverride?: string | null;
+} = {}): JSX.Element | null {
 	const { t } = useTranslation("chat");
-	const { cwd, mode, setMode } = useWorkspaceMode();
+	const { cwd, mode, setMode } = useWorkspaceMode(cwdOverride);
 	const items = useMemo<readonly SegmentedControlItem<WorkspaceMode>[]>(
 		() => [
 			{ key: "coding", label: t("workspace.mode.coding"), icon: WORKSPACE_MODE_ICON.coding },

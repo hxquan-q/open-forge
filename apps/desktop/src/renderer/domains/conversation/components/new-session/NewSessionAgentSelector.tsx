@@ -140,8 +140,8 @@ export function NewSessionAgentSelector({
 			value={selectedKey}
 			onValueChange={handleSelect}
 		>
-			{/* BotAvatar 自身是 <button>，套在默认 button 触发器里会被 HTML 解析器提前闭合，
-			    因此这里用 asChild + div 手写键盘行为。 */}
+			{/* 触发器就是本控件唯一的交互宿主；头像只作展示（interactive=false 渲染为
+			    非按钮元素），否则按钮套按钮命中 axe `nested-interactive`（BUG-0039）。 */}
 			<NewSessionPicker.Trigger
 				asChild
 				className={className}
@@ -161,7 +161,7 @@ export function NewSessionAgentSelector({
 					{selectedOption?.avatarUrls?.length ? (
 						<AvatarStackView avatarUrls={selectedOption.avatarUrls} />
 					) : (
-						<BotAvatar size="sm" className="pointer-events-none -ml-1" />
+						<BotAvatar interactive={false} size="sm" className="pointer-events-none -ml-1" />
 					)}
 					<span className="min-w-0 truncate">{selectedOption?.title ?? t("newSession.agentSelector.pick")}</span>
 					<span className="icon-[solar--alt-arrow-down-linear] h-3 w-3 shrink-0 opacity-70" aria-hidden />
