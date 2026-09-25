@@ -24,7 +24,7 @@
 | `BUG-0006` | Browser 点选可命中 html/body，附件变成整页截图 | done | P1 | `PLAN-0006` |
 | `BUG-0014` | 选择项目后首次对话创建会话失败 | done | P1 | — |
 | `BUG-0015` | 对话输入框无法通过粘贴或拖放引用文件 | done | P2 | — |
-| `BUG-0016` | Desktop 阶段性刷新后长时间白屏 | investigating | P1 | — |
+| `BUG-0016` | Desktop 阶段性刷新后长时间白屏 | done | P1 | — |
 | `BUG-0017` | 工作区 Work/Coding 切换响应迟缓 | blocked | P2 | — |
 | `BUG-0018` | 对话中断及中断后继续不流畅 | done | P1 | — |
 | `BUG-0019` | Browser 面板 allowpopups 属性产生 React 警告 | done | P3 | — |
@@ -36,3 +36,5 @@
 | `BUG-0025` | 二进制读提示点名当前会话不存在的技能，把模型引向死路 | done | P1 | `PLAN-0010` |
 | `BUG-0026` | 会话执行环境路径未转发技能可用性，二进制提示文案与事实不符 | done | P3 | `PLAN-0010` |
 | `BUG-0027` | CLI 宿主工具环境未转发技能可用性，二进制读提示与事实不符 | done | P3 | `PLAN-0010` |
+| `BUG-0028` | 内置插件完整性清单锚定源码 plugin.json，全部系统插件运行时校验被拒 | done | P0 | — |
+| `BUG-0029` | 插件工作区视图 description 未过 i18n 解析，侧边栏 tooltip 显示原始占位符 | done | P3 | — |
