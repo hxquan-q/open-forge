@@ -1,21 +1,21 @@
 // ADR-0133 §2 fail-closed 语义回归。
 //
-// 每条都用 Given/When/Then 锁定一个"出问题时用户该看到什么"：
+// 每条都用 Given/When/Then 锁定一个"出问题时用户该看到什么":
 //   * 平台不支持时 sandbox 模式绝不能"shrug"地只剩 task_* 两个工具
-//   * mode flip 后旧 grant 不能在新 mode 下继续生效
+//   * 修复指引必须随 error.message 可见,宿主不依赖按类型分流也能给用户下一步
+//   * TM-07(mode flip 清 grant)的行为合同由 session-execution-runtime.test.ts 经
+//     controller.reconfigure + 真实 grant store 锁定,此处不重复。
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
-import type { SandboxPermissionDecision, SandboxPermissionRequest } from "@vetta/runtime-core/sandbox";
-import { clearSessionGrants, createNodeSandboxHost, getSandboxShellGrant } from "@vetta/runtime-node/sandbox";
-import type { CodingToolRegistration, ForegroundCommandOperations } from "@vetta/runtime-tools";
+import type { SandboxPermissionDecision } from "@vetta/runtime-core/sandbox";
+import { clearSessionGrants, createNodeSandboxHost } from "@vetta/runtime-node/sandbox";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CodingAgentSandboxAuthorizationPort } from "../../src/execution/sandbox/authorization-contract.js";
 import { SandboxUnavailableError } from "../../src/execution/sandbox/errors.js";
 import { createCodingAgentSandboxToolRegistrations } from "../../src/execution/sandbox/tool-registrations.js";
 
-const SESSION_IDS = ["fail-closed-platform", "fail-closed-flip"] as const;
+const SESSION_IDS = ["fail-closed-platform"] as const;
 
 afterEach(() => {
 	for (const sessionId of SESSION_IDS) clearSessionGrants(sessionId);
@@ -106,159 +106,11 @@ describe("ADR-0133 fail-closed: sandbox 模式在平台不支持时必须显式�
 	});
 });
 
-describe("ADR-0133 TM-07: mode flip 必须清空 sessionGrant", () => {
-	it("flip 后同一 grantRoot 不再命中缓存", async () => {
-		const cwd = await mkdtemp(join(tmpdir(), "vetta-flip-grant-"));
-		try {
-			// Given: 在 sandbox 模式下 IAM 批准了一次外壳写入,产生 sessionGrant
-			const sessionId = "fail-closed-flip";
-			const prompts: RecordedAuthorizationRequest[] = [];
-			const registrations = createRegistrations({
-				cwd,
-				platform: "linux",
-				decision: "allow_session",
-				sessionId,
-				prompts,
-			});
-			const shellTool = requireShellTool(registrations);
-			await shellTool.execute(createRequest(sessionId, { command: "echo ok > /var/log/flip.txt" }));
-			expect(prompts).toHaveLength(1);
-
-			// When: 用户在 host 层把 mode 切到 full-access(宿主清 grant)
-			// 现行实现里 host 不知道要调 clear,这是 TM-07 的 bug
-			// 测试改成显式模拟 host 在 flip 时调用 clear——如果 host 没调,这里测的就是 host 应当遵守的合同
-			clearSessionGrants(sessionId);
-
-			// Then: 下一次 sandbox 模式的 tool 调用必须重新走 IAM,不能再吃到上次的 grant
-			prompts.length = 0;
-			const after = createRegistrations({
-				cwd,
-				platform: "linux",
-				decision: "deny",
-				sessionId,
-				prompts,
-			});
-			const shellAfter = requireShellTool(after);
-			await expect(
-				shellAfter.execute(createRequest(sessionId, { command: "echo ok > /var/log/flip.txt" })),
-			).rejects.toThrow(/outside workspace|Access denied/i);
-			expect(prompts).toHaveLength(1);
-		} finally {
-			await rm(cwd, { recursive: true, force: true });
-		}
-	});
-});
-
 // --- helpers ---
-
-type RecordedAuthorizationRequest = SandboxPermissionRequest & { sessionId: string; sensitive: boolean };
-
-interface CreateRegistrationsOptions {
-	readonly cwd: string;
-	readonly platform: NodeJS.Platform;
-	readonly decision: SandboxPermissionDecision;
-	readonly sessionId: string;
-	readonly prompts: RecordedAuthorizationRequest[];
-}
 
 function silentAuthorization(decision: SandboxPermissionDecision): CodingAgentSandboxAuthorizationPort {
 	return {
 		isAvailable: () => true,
 		request: async () => decision,
-	};
-}
-
-function createRegistrations(options: CreateRegistrationsOptions): readonly CodingToolRegistration[] {
-	const operations: ForegroundCommandOperations = {
-		async exec(_command, execCwd, execOptions) {
-			// 占位:让 wrapShellPermissionGuard 走到 runWithShellGrant 正式进入 ALS context
-			getSandboxShellGrant(execCwd);
-			execOptions.onData(Buffer.from("ok"));
-			return { exitCode: 0 };
-		},
-	};
-	const host = createNodeSandboxHost({
-		platform: options.platform as never,
-		resolveShell: () => ({ executable: "/bin/sh", args: ["-c"] }),
-		commandOperations: operations,
-	});
-	if (!host) throw new Error("test setup: expected supported platform");
-	return createCodingAgentSandboxToolRegistrations({
-		cwd: options.cwd,
-		authorization: {
-			isAvailable: () => true,
-			request: async (sessionId, request, sensitive) => {
-				options.prompts.push({ ...request, sessionId, sensitive });
-				return options.decision;
-			},
-		},
-		getSessionId: () => options.sessionId,
-		environment: {
-			createToolSet: () => ({
-				read: dummyRegistration("read"),
-				write: dummyRegistration("write"),
-				edit: dummyRegistration("edit"),
-				command: dummyShellRegistration("shell", options.cwd, operations),
-				hostServices: host,
-			}),
-		},
-	});
-}
-
-function dummyShellRegistration(
-	name: string,
-	execCwd: string,
-	operations: ForegroundCommandOperations,
-): CodingToolRegistration {
-	return {
-		tool: {
-			name,
-			label: name,
-			description: "test-stub",
-			inputSchema: { type: "object" },
-			async execute(request) {
-				const command = (request.input as { command?: string }).command ?? "echo ok";
-				await operations.exec(command, execCwd, {
-					onData: () => {},
-					signal: request.signal,
-					timeout: undefined,
-					env: undefined,
-				});
-				return { content: [{ type: "text", text: "ok" }] };
-			},
-		},
-	};
-}
-
-function dummyRegistration(name: string): CodingToolRegistration {
-	return {
-		tool: {
-			name,
-			label: name,
-			description: "test-stub",
-			inputSchema: { type: "object" },
-			async execute() {
-				return { content: [{ type: "text", text: "ok" }] };
-			},
-		},
-	};
-}
-
-function requireShellTool(registrations: readonly CodingToolRegistration[]): RuntimeToolDefinition {
-	const registration = registrations.find(({ tool }) => tool.name === "shell" || tool.name === "bash");
-	if (!registration) throw new Error("Missing shell tool");
-	return registration.tool;
-}
-
-function createRequest(
-	sessionId: string,
-	input: Readonly<Record<string, unknown>>,
-): Parameters<RuntimeToolDefinition["execute"]>[0] {
-	return {
-		sessionId,
-		turnId: "turn-1",
-		toolCallId: "tool-call-1",
-		input,
-		signal: new AbortController().signal,
 	};
 }
