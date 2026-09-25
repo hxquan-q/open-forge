@@ -38,22 +38,19 @@
 
 ### 2. Fail-Closed 语义
 
-新增单一顶层异常（放在 `packages/coding-agent/src/execution/sandbox/errors.ts`,re-export 自 `packages/runtime-node`):
+新增单一顶层异常（`packages/coding-agent/src/execution/sandbox/errors.ts`,公开入口 `@vetta/coding-agent/sandbox/errors`）:
 
 ```typescript
-export type SandboxFailureKind =
-  | "platform-unsupported"
-  | "asset-missing"
-  | "spawn-wrap-failed"
-  | "iam-unavailable"
-  | "grant-conflict";
+export type SandboxFailureKind = "platform-unsupported" | "asset-missing";
 
 export class SandboxUnavailableError extends Error {
   readonly kind: SandboxFailureKind;
-  readonly platform: NodeJS.Platform;
+  readonly platform: string;
   readonly remediation?: string;
 }
 ```
+
+`kind` 只保留两个实际可达的值,都产生于会话装配阶段:`createToolSet` 返回 `undefined`（宿主声明无沙箱/平台不支持）→ `platform-unsupported`;`createToolSet` 同步抛错（bwrap / sandbox-exec / Windows host / shell 的路径解析失败）→ `asset-missing`,原始错误保留在 `cause`,修复指引随 `error.message` 一并给出,宿主不按类型分流也能让用户看到下一步。tool 执行期的 spawn 失败、授权拒绝走各自工具的错误路径,不在这里冒充「沙箱不可用」。
 
 **Fail 行为表**(写在 ADR 就视为合同，任何一处违反属于回归）:
 
@@ -64,14 +61,14 @@ export class SandboxUnavailableError extends Error {
 | `authorization-session-extension.request()` | `CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION` 未注册 | 返回 `"deny"`（已有，正确） |
 | `wrapWorkspaceGuard` / `wrapShellPermissionGuard` | 显式 deny | 抛 `Access denied by sandbox`（已有，正确） |
 | `runWithShellGrant` → spawn child 失败 | bwrap 启动错误 | 把起 spawn 错误透传，**tool 执行失败**，不降级 |
-| `buildModeRegistrations`(runtime.ts:225) | sandbox 模式但 `createCodingAgentSandboxToolRegistrations` 返回 `[]` | **抛 `SandboxUnavailableError(kind="platform-unsupported")`，会话创建失败**，不允许继续以残缺工具集跑 |
+| `buildModeRegistrations`(session runtime) | sandbox 模式但 `createCodingAgentSandboxToolRegistrations` 返回 `[]` | **抛 `SandboxUnavailableError(kind="platform-unsupported")`，会话创建失败**，不允许继续以残缺工具集跑 |
 
 **唯一 escape hatch**：环境变量 `VETTA_SANDBOX_FAIL_OPEN=1`。
 
-- 仅开发/紧急迁移使用；
+- 仅紧急迁移使用；
 - 必须往 stderr 打 warning:"sandbox unavailable, running without OS-level containment";
 - 不接受从 settings/配置文件设置；
-- 在生产 release 构建中，该 env 是 no-op(`process.env.NODE_ENV === "production"` 分支忽略）。
+- **该变量在任何构建（含打包版）下都生效**。不使用 `NODE_ENV` 做生产判别——打包后的 Electron 主进程通常不设置它,判别形同虚设;设置该变量即显式放弃沙箱 containment 提示,是用户主动拉开的逃生口,风险由设置者承担。
 
 **兼容性影响**（实现时确认的事实）：
 
@@ -89,7 +86,7 @@ export class SandboxUnavailableError extends Error {
 | ALS-2 | 同一进程并发两个 session 各自 `runWithShellGrant` | 两边的 `getSandboxShellGrant` 各自只看见自己的 grant，不互串 | 新增 |
 | ALS-3 | callback 内同步 throw | throw 不会污染外层，外层 `getSandboxShellGrant` 为 `undefined` | 新增 |
 | ALS-4 | run 后 spawn cwd 不等于 grant 时注册的 cwd | `getSandboxShellGrant(otherCwd)` 返回 `undefined` | 新增 |
-| ALS-5 | mode flip 中途：tool 被发起时 mode=sandbox 且 ALS 已带 grant；用户切到 full-access;tool 继续执行 | tool 沿用其被发起时的 grant 完成执行，**新 mode 不回溯影响**；下一次 tool 调用才走新 mode | 新增（runtime-host 层） |
+| ALS-5 | mode flip 中途：tool 被发起时 mode=sandbox 且 ALS 已带 grant；用户切到 full-access;tool 继续执行 | tool 沿用其被发起时的 grant 完成执行，**新 mode 不回溯影响**；下一次 tool 调用才走新 mode | `packages/runtime-core/test/runtime-host/execution-mode-turn-boundary.test.ts`("keeps a running Turn on its admitted mode and applies the update before the next Turn"):运行中的 Turn 停留在其获准的 mode,reconfigure 在下一 Turn 前生效——这正是 ALS-5 的运行时承载,grant 的跨异步可见性窗口另由 `sandbox-als-boundaries.test.ts` 锁定 |
 
 ### 4. Full-Access 路径的改名与最小防线
 
@@ -101,10 +98,10 @@ export class SandboxUnavailableError extends Error {
 
 ### 5. Mode Flip 时清空 Session Grant
 
-`RuntimeHost.setExecutionMode()`(runtime-host.ts:292）落到 `applyExecutionMode` 后，**无论成功与否**:
+`RuntimeHost.setExecutionMode()` 落到 session execution controller 的 `reconfigure` 后，在装配新工具集**之前**:
 
-1. 拿到 `nodeSandboxGrantStore`(`packages/runtime-node/src/sandbox/sandbox-permissions.ts:106` 已有导出）;
-2. 对当前 sessionId 调 `clear(sessionId)`;
+1. 检测到 mode 实际变化即调用 `environment.sandbox.clearSessionGrants(sessionId)`——这是 `CodingAgentSandboxEnvironment` 上的合同方法,由 Node SDK 与 Desktop 宿主环境接线到 runtime-node 的 session grant store(两处接线各有合同测试钉住);远程项目等无沙箱环境可不提供该方法;
+2. 即使后续装配失败(如切向 sandbox 但沙箱不可用),grant 也已被清空——flip 失败不会把旧授权留在缓存里;
 3. 在下一次 tool 执行时，上次 mode 下批准过的 grant 不再生效；
 4. flip 中途正在执行的 tool 不受影响（ALS-5)。
 
@@ -125,3 +122,4 @@ export class SandboxUnavailableError extends Error {
 - Windows `codex-windows-sandbox-host.exe` 签名/校验和（独立 ADR)
 - pi-compat tool `sandboxSurface` 字段（excluded / path-only / fully-wrapped)
 - deny error 文本带 grantRoot + capability + hint,agent 可自我学习提权
+- Desktop UI 按 `SandboxFailureKind` 映射 i18n 文案:`SandboxUnavailableError.message` 是面向开发者的英文诊断文本,桌面端展示前应按 kind 走 i18n key（公开入口 `@vetta/coding-agent/sandbox/errors` 已就绪),避免英文原文直接进用户界面
