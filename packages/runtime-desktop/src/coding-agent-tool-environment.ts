@@ -89,7 +89,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 			remoteCwd: location.remotePath,
 			editPathPolicy: policies.editPathPolicy,
 			writePathPolicy: policies.writePathPolicy,
-			readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 			localReadRoots: resolveLocalReadRoots(context.agentDir),
 		});
 		return {
@@ -123,7 +123,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 				editPathPolicy: host.editPathPolicy,
 				writePathPolicy: host.writePathPolicy,
 				configurationSource: context.configurationSource,
-				readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+				readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 				reviewSnapshots,
 			}),
 			...command.registrations,
@@ -140,7 +140,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 					editPathPolicy: host.editPathPolicy,
 					writePathPolicy: host.writePathPolicy,
 					configurationSource: context.configurationSource,
-					readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+					readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 					reviewSnapshots,
 				}),
 		},
