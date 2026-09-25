@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type FileHandle, mkdir, open } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
+import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import { isSshProjectUri } from "@vetta/ssh-transport";
 import {
 	DEFAULT_CONVERSATION_CWD,
@@ -31,6 +32,13 @@ export function resolveSessionDirForCwd(cwd: string | undefined): string | undef
 		return KB_PROCESSING_SESSION_DIR;
 	}
 	return undefined;
+}
+
+export function resolveSessionImportDir(cwd: string | undefined): string {
+	const special = resolveSessionDirForCwd(cwd);
+	if (special) return special;
+	if (cwd?.trim()) return codingAgentSessionShardPath(cwd);
+	return DEFAULT_CONVERSATION_SESSION_DIR;
 }
 
 export function isConversationSubCwd(cwd: string): boolean {

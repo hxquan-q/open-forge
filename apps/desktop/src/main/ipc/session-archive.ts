@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { getAgentDir } from "@vetta/coding-agent/config";
 import { ipcMain } from "electron";
 import { DEFAULT_CONVERSATION_SESSION_DIR } from "../config/desktop-config-store.js";
 import {
@@ -9,7 +10,7 @@ import {
 	type KnownArchiveFingerprint,
 	SESSION_ARCHIVE_EXTENSION,
 } from "../conversations/session-archive-service.js";
-import { resolveSessionDirForCwd } from "../conversations/session-paths.js";
+import { resolveSessionImportDir } from "../conversations/session-paths.js";
 
 export const SESSION_ARCHIVE_CHANNELS = {
 	EXPORT: "vetta:session-archive:export",
@@ -18,6 +19,15 @@ export const SESSION_ARCHIVE_CHANNELS = {
 
 async function listKnownFingerprints(): Promise<Map<string, KnownArchiveFingerprint>> {
 	const roots = new Set<string>([DEFAULT_CONVERSATION_SESSION_DIR]);
+	// Project sessions live in agent-owned cwd shards; without them re-import dedupe misses.
+	try {
+		const shardRoot = join(getAgentDir(), "sessions");
+		for (const entry of await readdir(shardRoot, { withFileTypes: true })) {
+			if (entry.isDirectory()) roots.add(join(shardRoot, entry.name));
+		}
+	} catch {
+		// Sessions root may not exist yet.
+	}
 	const map = new Map<string, KnownArchiveFingerprint>();
 	for (const root of roots) {
 		try {
@@ -42,8 +52,7 @@ async function listKnownFingerprints(): Promise<Map<string, KnownArchiveFingerpr
 }
 
 async function resolveImportDirectory(cwdHint?: string): Promise<string> {
-	const fromCwd = cwdHint ? resolveSessionDirForCwd(cwdHint) : undefined;
-	return fromCwd ?? DEFAULT_CONVERSATION_SESSION_DIR;
+	return resolveSessionImportDir(cwdHint);
 }
 
 export function registerSessionArchiveIpc(): void {
