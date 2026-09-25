@@ -86,3 +86,19 @@ updated: 2026-09-25
 
 - 状态：转 blocked（等 B 的产品决策）；A/C 待排期实施。
 - 未运行及原因：未在 Windows 打包产物上验证（本机无已安装实例、构建非本任务所需）；`features` 字段与实时重探行为已由源码与缓存 `checkedAt` 证实。
+
+### A/C 交付记录（2026-09-25，集成 merge `9df33ee39`）
+
+**A（用户可见，`4e082866b` + 测试补强 `7f0f2826e`）**：执行模式选择器在能力缺失时说明原因与当前真实模式。
+
+- 实现形态：`useExecutionModeSelectorModel` 把 10 个内部 reason 码映射为 7 条本地化文案，随 view model 下发 `sandboxNotice {reason, mode, details?}`；视图侧按 `apps/desktop/docs/composable-ui-components.md` §5 用**数据 prop**（不是 `showX`/ReactNode 区域），宿主不下发时 DOM 原样。
+- 诚实性处理：模式仍停在 `sandbox` 却说「以完全访问运行」是谎话，故该状态改说「当前选中的沙盒受限无法生效，请改选完全访问」（与主进程 `assertSandboxAvailableForMode` 的 fail closed 一致）；主进程未本地化的 `details` **只挂 `title`**，不进入可见文案；测试机械断言文案不含「重新安装/重新下载/请更新/重试」。
+- 红→绿：实现前 4 failed | 1 passed（唯一通过的是「禁用态仍不可选」这条既有守卫）→ 实现后 5/5，连带既有选择器 7/7 与输入区 18/18；集成后 7/7、相关面 181/181。
+
+**C（构建工具链，`73811a378`）**：打包时对声明平台缺失沙盒二进制显式告警。
+
+- 新增 `apps/desktop/scripts/sandbox-staging-guard.mjs`（`missing`/`empty`/`present` 分类 + 与 `VETTA_SKIP_VENDOR` 同形态的告警文案），`prepare-pack.js` 在 staging 后无条件调用；`verify-packaging-contract.mjs` 增加静态断言防止告警被无声删除。
+- **有意不让构建失败**：是否内置 host 属 B 项产品决策，决策前加失败开关会挡住现有发版路径且无消费方；告警文本可 grep，待 B 落定后再升级。
+- 验证：`test:packaging` 104/104（含新增 6 例，覆盖「目录存在但为空」、darwin/未声明平台不告警等）；真仓路径实测输出告警原文；`node --check` 通过。未跑全量打包（会编译 CLI、拉取 vendor 运行时）。
+
+**仍未做（等 B 决策）**：内置二进制；以及按**架构**而非平台族判定缺口（linux 只 staged x64 时当前不告警）。
