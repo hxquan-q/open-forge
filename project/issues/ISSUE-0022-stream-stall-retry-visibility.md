@@ -85,3 +85,20 @@ depends_on: []
 
 - 待用户拍板的一点：provider 级重连与 runtime 级重连**是否共用同一页脚指示与计数语义**（本 Issue 起草时列的未知项，现仍开放）。
 
+## 缺陷面交付记录（2026-09-25）
+
+**已实施并集成**（merge `667f194b5`，四个可独立回滚的提交）：
+
+1. `b7c30ab62` 白名单放行 `retry` 事件 + 解码器按**形态**校验（`reason` 不列枚举——provider 新增重试轨道时不应再被边界拒掉，这正是本次缺陷的成因）。
+2. `154d03fa8` `subscribeById` 单条坏载荷跳过并上报（不吞），连续失败达 `MAX_CONSECUTIVE_DECODE_FAILURES = 5` 才上抛；快照坏掉不再留悬挂监听器；事件顺序不变。
+3. `36becd7cb` 团队 hub 按公开面投影重连活动（保留 `reason/attempt/maxAttempts/delayMs/errorMessage`，丢弃 `failure` 以对齐既有错误拦截权衡），不再静默丢弃。
+4. `cb168d4eb` 新增 `stream_idle` 分类并排在 `NETWORK` 之前（`stream_idle_timeout` 含 `timeout` 子串的成因已写入注释），补齐 zh/en 文案与图标。
+
+验证：红测在 codec / preload / 团队 hub / 分类四处分别失败；集成后目标 4 文件 38/38、相关面 62 文件 415/415 全绿；`check:quick` 与根 `tsgo` exit 0。**未动**重试预算/退避/终止条件；`packages/ai` 零改动（现有 `failure.message` 已带 `stream_idle_timeout` 机器标记，无需新增 `cause`）。
+
+**仍未解决（等展示语义裁决）**：
+
+- 页脚指示仍只由 runtime 级 `retry.start/end` 驱动：provider 级事件现在能到达渲染层，但 `ConversationProjection` 对 `retry` 无副作用，故 180s 停滞窗口内用户**依然只见转圈**；团队渲染链路同理。
+- 新增的 `stream_idle` 文案目前只在「错误文本能到达 `classifyChatError`」的路径生效，尚未与停滞期的重连指示联动。
+- 范围外观察（只记录）：若 `retry` 真的成为某条 streaming 气泡的首个 assistant 事件，`flush()` 会新建空气泡——当前不可达（`assistant-stream.ts:168` 把 retry 前推门控在 `start` 之后），属展示语义范畴。
+
