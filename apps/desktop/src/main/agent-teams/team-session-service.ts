@@ -35,6 +35,7 @@ import type {
 	DesktopTeamConversationDisplay,
 	DesktopTeamSessionStreamEvent,
 } from "../../preload/api-types/team-conversation-display.js";
+import { getDesktopCodingAgentFunctionSource } from "../agent-runtime/function-extension-source.js";
 import {
 	type ConversationOwnershipCatalogPort,
 	conversationOwnershipCatalog,
@@ -57,6 +58,7 @@ import {
 	type TeamLegacySessionMigrationPort,
 } from "./team-legacy-session-migration.js";
 import { TeamMemberAttemptRunner } from "./team-member-attempt-runner.js";
+import { createTeamMemberFunctionSource } from "./team-member-function-source.js";
 import { type TeamMemberModelPreference, teamMemberModelPreferences } from "./team-member-model-preferences.js";
 import { ensureLegacyAgentTeamOwnershipCatalog } from "./team-ownership-backfill.js";
 import { TeamPublicationWorkflow } from "./team-publication-workflow.js";
@@ -187,6 +189,11 @@ export class AgentTeamSessionService {
 			createTeamToolRegistrations: (teamSessionId) => this.createTeamToolRegistrations(teamSessionId),
 			sessionState: this.sessionState,
 			collaborationStore: this.collaborationStore,
+			// 成员会话无应用内 WebView 后端（ISSUE-0026）：收窄函数源隐藏 browser_tab。
+			memberSessionExtensionFunctions: () => {
+				const base = getDesktopCodingAgentFunctionSource();
+				return base ? createTeamMemberFunctionSource(base) : undefined;
+			},
 		});
 		this.sharedContextService = new TeamSharedContextService({
 			runtime: () => this.getRuntime(),

@@ -75,7 +75,10 @@ import { getAvailableLinuxBubblewrapPath, getAvailableMacosSandboxExecPath } fro
 import { resolveWindowsSandboxHostBinary } from "../sandbox/windows-binary-resolver.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
 import { createCodingAgentObservationLogPort } from "./coding-agent-observation-log-port.js";
-import { createDesktopCodingAgentFunctionSource } from "./function-extension-source.js";
+import {
+	createDesktopCodingAgentFunctionSource,
+	setDesktopCodingAgentFunctionSource,
+} from "./function-extension-source.js";
 import { getOrCreateSharedModelRuntime, readDesktopMcpDebug } from "./host-services.js";
 import { createDesktopMcpSupervisor } from "./mcp-supervisor.js";
 import { getDesktopProviderObservationRuntime } from "./provider-observation.js";
@@ -138,6 +141,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 			return getDesktopCanvasArtifactService().invokeTool(request, signal);
 		},
 	});
+	setDesktopCodingAgentFunctionSource(sessionExtensionFunctions);
 	const historicalFormat = createDesktopHistoricalSessionFormat();
 	const defaultResultArtifacts = createDesktopResultArtifactRuntime(getAgentDir());
 	const conversationCatalog = new DesktopRuntimeSessionCatalog({

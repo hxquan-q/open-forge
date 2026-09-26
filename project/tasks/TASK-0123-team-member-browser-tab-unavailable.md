@@ -1,7 +1,7 @@
 ---
 id: TASK-0123
 type: task
-status: ready
+status: verifying
 priority: P3
 owner: apps/desktop + packages/runtime-*
 requirement: []
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122]
 integration_status: pending
 created: 2026-09-26
-updated: 2026-09-26
+updated: 2026-09-27
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -88,7 +88,32 @@ updated: 2026-09-26
 ## 交付记录
 
 - 实际修改：
+  - 选定剔除方案（ISSUE-0026 推荐 A）：`browser_tab` 由 `browser-tab` Session Extension 按
+    `functions.has(CODING_AGENT_BROWSER_TAB_FUNCTION)` 能力驱动贡献——CLI 本就因此不广告它。
+    成员会话经 `sessionOptions.sessionExtensionFunctions` 会话级函数源收窄即可让工具不进入
+    模型清单，无需改扩展本身。
+  - `agent-runtime/function-extension-source.ts`：Composition 创建后把共享函数源登记进
+    `set/getDesktopCodingAgentFunctionSource` 存取器，供成员会话包装。
+  - 新增 `agent-teams/team-member-function-source.ts`：`createTeamMemberFunctionSource` 包装
+    共享源，`has(browser_tab)` 恒 false、其余 token 与 `invoke` 全透传。
+  - `conversations/resolve-session-config.ts`：`DesktopCodingAgentSessionConfig` 新增
+    `sessionExtensionFunctions` 透传字段（不计入 runtimeConfig 顶层）。
+  - `agent-teams/team-runtime-manager.ts`：新增可选 `memberSessionExtensionFunctions` 注入，
+    新建成员（`createMemberRuntime`）与恢复成员（`resolveMemberSessionConfig`）两条路径都携带；
+    协调 Runtime 不触碰。
+  - `agent-teams/team-session-service.ts`：接线——成员函数源 = 桌面共享源经
+    `createTeamMemberFunctionSource` 收窄，未初始化（如测试宿主）时回落默认源。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
+  - 定向测试：`team-member-function-source.test.ts`（browser_tab 不可见、其余透传、invoke 直通）；
+    `team-runtime-manager.test.ts` 新增 3 例（新建/恢复成员携带收窄源、协调 Runtime 不收窄）。
+  - agent-teams + agent-runtime + conversations/ipc 关联测试 49 文件 316 用例全绿；
+    `bun run typecheck`（apps/desktop）与 `bun run check:quick` 全绿。
+- 未运行及原因：真实团队会话的成员工具清单复核未跑（需起一次真实 Team 会话读 members 的
+  model frame）——装配链 `sessionOptions.sessionExtensionFunctions → functions.has` 是既有
+  合同（node-session-host 同款路径），判定为定向测试可证明范围，残余风险记录在案。
+- Worktree：主工作区（serial 于 TASK-0122 集成之后，conflicts_with 窗口已闭合）。
 - 剩余风险：
+  - 仅隐藏成员会话；协调（队长）会话仍保留 `browser_tab`——其在有 WebView 面板的 workspace
+    下真实可用，符合「剔除只覆盖成员」边界。
+  - 若后续成员会话获得 WebView/headless 后端（ISSUE-0026 方案 B），需在函数源恢复可见性
+    并同步移除本收窄。

@@ -14,6 +14,7 @@ import type {
 	CodingAgentRuntimeToolRegistration,
 } from "@vetta/coding-agent/runtime";
 import type { SessionConfig } from "@vetta/runtime-core";
+import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
 import { normalizeProjectCwd } from "@vetta/ssh-transport";
 import { allowProjectRoot, readDesktopConfig } from "../ipc/fs.js";
 import { type DesktopAgentMode, LEGACY_SESSION_AGENT_MODE, readSessionAgentMode } from "./session-agent-mode-store.js";
@@ -53,6 +54,11 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	readonly automaticRetry?: boolean;
 	readonly agentConfiguration?: AgentConfigurationSelection;
 	readonly sessionRuntimeTools?: readonly CodingAgentRuntimeToolRegistration[];
+	/**
+	 * 会话级 Session Extension 函数源（TASK-0123）：缺省用 Composition 共享源；
+	 * 团队成员会话经收窄源隐藏无 WebView 后端的 browser_tab。
+	 */
+	readonly sessionExtensionFunctions?: SessionExtensionFunctionSource;
 	readonly bindPinnedModelContext?: CodingAgentPinnedModelContextBinder;
 	readonly promptCacheKey?: string;
 }
@@ -223,6 +229,7 @@ export async function resolveDesktopSessionConfig(
 		promptCacheKey: _promptCacheKey,
 		agentConfiguration: _agentConfiguration,
 		sessionRuntimeTools: _sessionRuntimeTools,
+		sessionExtensionFunctions: _sessionExtensionFunctions,
 		...runtimeConfig
 	} = config ?? {};
 	return {
@@ -242,6 +249,7 @@ export async function resolveDesktopSessionConfig(
 					agentConfiguration: resolvedAgentConfiguration,
 					...(profileDefaultToolNames ? { profileDefaultToolNames } : {}),
 					sessionRuntimeTools,
+					sessionExtensionFunctions: config?.sessionExtensionFunctions,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,
 				},
