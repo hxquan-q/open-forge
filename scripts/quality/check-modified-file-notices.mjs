@@ -111,6 +111,7 @@ const EXCLUDED_PATH_RULES = [
 	{ pattern: /^NOTICE$/, reason: "声明载体本身" },
 	{ pattern: /^LICENSE$/, reason: "许可证正文" },
 	{ pattern: /^docs\/legal\//, reason: "法务原文" },
+	{ pattern: /^temp\//, reason: "未入库草稿与资产暂存" },
 ];
 
 const NON_COMMENTABLE_EXTENSIONS = new Set([
