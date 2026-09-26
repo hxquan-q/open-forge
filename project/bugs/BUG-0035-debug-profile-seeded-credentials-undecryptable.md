@@ -1,7 +1,7 @@
 ---
 id: BUG-0035
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop
 source: verify:ui Debug Profile 实测（dev/debug 双实例对照）
@@ -11,7 +11,7 @@ related_tasks: []
 related_issues: []
 related_bugs: []
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -101,4 +101,17 @@ Windows 上 safeStorage（Chromium OSCrypt）的 AES 主密钥按 **user-data �
 
 ## 修复与验证
 
-- 待立项 TASK 实施。
+- 采用修复方向 1：`verify:ui:sync:debug` 播种凭据时把源 `electron-user-data/Local State`
+  的 `os_crypt` 节整体同步进目标 `Local State`（纯文件级同步；同机同 Windows
+  用户下 DPAPI 可正常解包，无需解密重加密）。
+  - `seedDebugProfile` 仅在 `credentialsCopied > 0` 时同步，结果与 manifest
+    新增 `osCryptSynced` 字段；
+  - 目标已有不同主密钥时先写 `Local State.os-crypt-backup.json` 留档（不覆盖
+    既有备份），目标 `Local State` 的其余字段保留；
+  - 源无 `os_crypt`（macOS/Linux safeStorage 路径）时为 no-op，行为不变。
+- 回归测试：`ui-verification-profile.test.ts` 新增三例——播种后目标
+  `Local State` 携带源 `os_crypt.encrypted_key`；覆盖既有目标密钥时留备份且
+  其余字段保留；未复制凭据时不触碰目标 `Local State`。
+- 验证：定向测试 8 用例与 `check:quick` 通过。真实 `verify:ui:sync:debug`
+  → Debug 实例 `provider.preflight` 链路未实测（需运行真实 Desktop 实例），
+  保持 verifying 待复核。

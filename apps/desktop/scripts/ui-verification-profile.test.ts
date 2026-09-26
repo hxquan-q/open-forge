@@ -177,6 +177,88 @@ describe("debug profile seeding", () => {
     expect(readJson(join(targetHome, "desktop-app", "credentials", "v2.credential.json")))
       .toMatchObject({ ciphertext: "cipher-v2" });
   });
+
+  // BUG-0035：Windows safeStorage 主密钥按 user-data 目录生成，只复制密文不同步
+  // os_crypt.encrypted_key 时，Debug 实例解出乱码、Provider 鉴权必失败。
+  test("seeded credentials carry the source os_crypt master key into target Local State", () => {
+    const root = temporaryDirectory("oscrypt");
+    const sourceHome = join(root, "source");
+    const targetHome = join(root, "target");
+    const credentialDir = join(sourceHome, "desktop-app", "credentials");
+    mkdirSync(join(sourceHome, "agent"), { recursive: true });
+    mkdirSync(credentialDir, { recursive: true });
+    writeJson(join(sourceHome, "agent", "models.json"), {
+      providers: { openai: { credentialRef: "openai-ref" } },
+    });
+    writeCredential(credentialDir, "referenced", "models", "openai-ref", "cipher");
+    mkdirSync(join(sourceHome, "electron-user-data"), { recursive: true });
+    writeJson(join(sourceHome, "electron-user-data", "Local State"), {
+      os_crypt: { encrypted_key: "source-master-key" },
+      other_source_field: "kept",
+    });
+
+    const result = seedDebugProfile({ sourceHome, targetHome, workspacePath: "C:/workspace" });
+
+    expect(result).toMatchObject({ seeded: true, credentialsCopied: 1, osCryptSynced: true });
+    const targetLocalState = readJson(
+      join(targetHome, "electron-user-data", "Local State"),
+    ) as Record<string, unknown>;
+    expect(targetLocalState.os_crypt).toEqual({ encrypted_key: "source-master-key" });
+    expect(readJson(join(targetHome, ".ui-verification-seed.json"))).toMatchObject({
+      osCryptSynced: true,
+    });
+  });
+
+  test("overwriting an existing target os_crypt keeps a backup of the old key", () => {
+    const root = temporaryDirectory("oscrypt-backup");
+    const sourceHome = join(root, "source");
+    const targetHome = join(root, "target");
+    const credentialDir = join(sourceHome, "desktop-app", "credentials");
+    mkdirSync(join(sourceHome, "agent"), { recursive: true });
+    mkdirSync(credentialDir, { recursive: true });
+    writeJson(join(sourceHome, "agent", "models.json"), {
+      providers: { openai: { credentialRef: "openai-ref" } },
+    });
+    writeCredential(credentialDir, "referenced", "models", "openai-ref", "cipher");
+    mkdirSync(join(sourceHome, "electron-user-data"), { recursive: true });
+    writeJson(join(sourceHome, "electron-user-data", "Local State"), {
+      os_crypt: { encrypted_key: "source-master-key" },
+    });
+    const targetLocalStatePath = join(targetHome, "electron-user-data", "Local State");
+    mkdirSync(join(targetHome, "electron-user-data"), { recursive: true });
+    writeJson(targetLocalStatePath, {
+      os_crypt: { encrypted_key: "target-master-key" },
+      target_setting: "preserved",
+    });
+
+    seedDebugProfile({ sourceHome, targetHome, workspacePath: "C:/workspace" });
+
+    const targetLocalState = readJson(targetLocalStatePath) as Record<string, unknown>;
+    expect(targetLocalState.os_crypt).toEqual({ encrypted_key: "source-master-key" });
+    expect(targetLocalState.target_setting).toBe("preserved");
+    expect(readJson(`${targetLocalStatePath}.os-crypt-backup.json`)).toEqual({
+      os_crypt: { encrypted_key: "target-master-key" },
+    });
+  });
+
+  test("does not touch target Local State when no credentials are seeded", () => {
+    const root = temporaryDirectory("oscrypt-skip");
+    const sourceHome = join(root, "source");
+    const targetHome = join(root, "target");
+    mkdirSync(join(sourceHome, "agent"), { recursive: true });
+    writeJson(join(sourceHome, "agent", "models.json"), {
+      providers: { local: { apiKey: "env:LOCAL_MODEL_KEY" } },
+    });
+    mkdirSync(join(sourceHome, "electron-user-data"), { recursive: true });
+    writeJson(join(sourceHome, "electron-user-data", "Local State"), {
+      os_crypt: { encrypted_key: "source-master-key" },
+    });
+
+    const result = seedDebugProfile({ sourceHome, targetHome, workspacePath: "C:/workspace" });
+
+    expect(result).toMatchObject({ seeded: true, credentialsCopied: 0, osCryptSynced: false });
+    expect(() => readFileSync(join(targetHome, "electron-user-data", "Local State"))).toThrow();
+  });
 });
 
 function temporaryDirectory(name: string): string {
