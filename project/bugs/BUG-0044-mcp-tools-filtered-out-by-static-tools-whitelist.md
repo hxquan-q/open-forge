@@ -34,10 +34,11 @@ updated: 2026-09-27
 
 ## 根因
 
-会话的 agent configuration 里 `overrides.tools` 是 work/coding Profile 折算出的**静态内置工具名单**（28 个名字）。两处闸门把这份名单同时套到 MCP 工具上：
+会话的 agent configuration 里 `overrides.tools` 是 work/coding Profile 折算出的**静态内置工具名单**（28 个名字）。三处闸门把这份名单同时套到 MCP 工具上：
 
 1. `transaction.ts` 给 `mcpController.setToolFilter` 的谓词要求 `allowsAgentResource(configuration.tools, tool.name)` 且 server 命中 `mcpServers`；
-2. `createAgentToolSelection`（资源选择最终交集）同样先过 `selectedTools` 再查 server。
+2. `createAgentToolSelection`（资源选择最终交集）同样先过 `selectedTools` 再查 server；
+3. `context-assembly.ts` 的 `readInheritedMcpView`（子智能体继承父会话 MCP 视图）同一交集——子智能体/Agent Team 同样看不到 MCP 工具。
 
 而 MCP 工具名由 server 运行时上报（`execute_query` 之类），任何配置界面都不可能把它们预先写进 `tools` 名单——交集必然为空，所有已装 MCP server 的工具对模型不可见。上游 `resource-selection.test.ts` 的交集测试证实这是有意的旧语义，但它与「安装连接器即可用」的产品目标矛盾。
 
@@ -47,7 +48,7 @@ updated: 2026-09-27
 
 ## 修复与验证
 
-- 修复：新增共享谓词 `allowsAgentMcpTool`——`serverName` 已知的 MCP 工具只由 `mcpServers` 约束；无 `serverName` 的描述符维持旧的 `tools ∩ mcpServers` 交集。`createAgentToolSelection` 与 `transaction.ts` 的 `setToolFilter` 两处改用它，语义收敛为单一事实源。
+- 修复：新增共享谓词 `allowsAgentMcpTool`——`serverName` 已知的 MCP 工具只由 `mcpServers` 约束；无 `serverName` 的描述符维持旧的 `tools ∩ mcpServers` 交集。`createAgentToolSelection`、`transaction.ts` 的 `setToolFilter`、`context-assembly.ts` 的 `readInheritedMcpView` 三处统一改用它，语义收敛为单一事实源（含子智能体继承路径）。
 - 测试：`resource-selection.test.ts` 8 用例全绿；`check:quick`（Biome + 全部架构守卫）通过；dev 重启后 `universal-db` server 正常拉起、会话重建、无 MCP 报错。
 - 未运行及原因：`verify:ui:*` 未跑（需用户明确授权）；模型侧「看得见工具」需用户在会话中实际追问确认。
 - 影响面：显式 pin 了 `tools` 名单的会话现在会看到 `mcpServers` 允许的全部 MCP 工具；需要「无 MCP」的智能体可把 `mcpServers` 设为 `[]`。
