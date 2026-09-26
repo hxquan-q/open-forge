@@ -27,6 +27,8 @@ export interface DesktopBrowserViewAttachRequest {
 	readonly workspaceId: string;
 	readonly bounds: DesktopBrowserViewBounds;
 	readonly url?: string;
+	/** 挂载时已知不可见（隐藏 tab/空态）时传 false，避免原生 view 闪一帧。 */
+	readonly visible?: boolean;
 }
 
 export interface DesktopBrowserViewUpdateRequest {

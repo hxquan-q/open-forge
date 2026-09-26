@@ -46,7 +46,12 @@ export function registerBrowserViewIpc(): () => void {
 		const workspaceId = readWorkspaceId(request);
 		const bounds = readBounds(request?.bounds);
 		if (!workspaceId || !bounds) return { ok: false as const, code: "no_window" as const };
-		const state = host.attach({ workspaceId, bounds, url: request.url });
+		const state = host.attach({
+			workspaceId,
+			bounds,
+			url: request.url,
+			visible: typeof request.visible === "boolean" ? request.visible : undefined,
+		});
 		return state ? { ok: true as const, state } : { ok: false as const, code: "no_window" as const };
 	});
 	ipcMain.handle(CHANNELS.UPDATE, async (_event, request: DesktopBrowserViewUpdateRequest) => {

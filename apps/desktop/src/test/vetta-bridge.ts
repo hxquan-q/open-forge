@@ -22,6 +22,15 @@ export function createVettaBridgeDefaults(): Record<string, unknown> {
 			liveEdit: async () => ({ ok: false }),
 			onEvent: () => () => {},
 		},
+		browserView: {
+			attach: async () => ({ ok: false, code: "no_window" }),
+			update: async () => undefined,
+			detach: async () => undefined,
+			navigate: async () => ({ ok: false, code: "no_view" }),
+			control: async () => undefined,
+			setInputPassthrough: async () => undefined,
+			onEvent: () => () => {},
+		},
 		ssh: {
 			listPortForwards: async () => [],
 			onPortForwardsChanged: () => () => {},

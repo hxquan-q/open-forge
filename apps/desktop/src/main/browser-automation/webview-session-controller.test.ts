@@ -31,20 +31,21 @@ function fakeContents(overrides: Partial<InAppBrowserWebContents> = {}): InAppBr
 }
 
 describe("InAppBrowserSessionController", () => {
-	it("binds the first pending webview when getSession names the workspace", () => {
+	it("attachWebContents 把 contents 直连到具名 workspace（TASK-0072：guest 归属创建时已知）", () => {
 		const controller = new InAppBrowserSessionController(() => undefined);
 		const contents = fakeContents({ id: 22 });
-		controller.attachUnboundWebContents(contents);
+		controller.attachWebContents("ws-9", contents);
 		expect(controller.getSession("ws-9").workspaceId).toBe("ws-9");
 		expect(controller.getWebContents("ws-9")).toBe(contents);
 		expect(controller.workspaceIdForContents(22)).toBe("ws-9");
 	});
 
-	it("binds a later webview to a workspace that already asked for a session", () => {
+	it("先问会话再建 view：getSession 先登记 workspace，view 创建后 attach 即联通", () => {
 		const controller = new InAppBrowserSessionController(() => undefined);
+		expect(controller.getWebContents("ws-2")).toBeNull();
 		controller.getSession("ws-2");
 		const contents = fakeContents({ id: 33 });
-		controller.attachUnboundWebContents(contents);
+		controller.attachWebContents("ws-2", contents);
 		expect(controller.getWebContents("ws-2")).toBe(contents);
 		expect(controller.workspaceIdForContents(33)).toBe("ws-2");
 	});

@@ -147,6 +147,16 @@ describe("InAppBrowserViewHost", () => {
 		expect(again?.url).toBe("https://a.example");
 	});
 
+	it("attach 携带 visible:false 时挂窗但不显示（隐藏 tab/空态挂载不闪帧）", () => {
+		const { host, win, views } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: false });
+		expect(win.added).toEqual([views[0]]);
+		expect(views[0].visible).toBe(false);
+		// 后续可见性仍由 update 驱动
+		host.setVisible("ws-1", true);
+		expect(views[0].visible).toBe(true);
+	});
+
 	it("attach 时 URL 与当前页不同才加载（view 常驻，不每回重挂页面）", async () => {
 		const { host, views } = makeHost();
 		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, url: "https://a.example" });

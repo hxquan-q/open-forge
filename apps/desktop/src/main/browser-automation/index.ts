@@ -29,11 +29,7 @@ export {
 	resetInAppBrowserSessionControllerForTests,
 	setInAppBrowserEventSink,
 } from "./webview-session-controller.js";
-export {
-	bindInAppBrowserViewContents,
-	bindInAppBrowserWebview,
-	isInAppBrowserWebContents,
-} from "./webview-session-host.js";
+export { bindInAppBrowserViewContents } from "./webview-session-host.js";
 
 let sharedService: BrowserAutomationService | undefined;
 

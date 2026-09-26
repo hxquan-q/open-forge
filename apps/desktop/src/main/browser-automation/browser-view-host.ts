@@ -75,6 +75,7 @@ export class InAppBrowserViewHost {
 		workspaceId: string;
 		bounds: DesktopBrowserViewBounds;
 		url?: string;
+		visible?: boolean;
 	}): DesktopBrowserViewState | null {
 		const win = this.deps.getWindow();
 		if (!win || win.isDestroyed()) return null;
@@ -84,8 +85,8 @@ export class InAppBrowserViewHost {
 			record.attached = true;
 		}
 		record.view.setBounds(request.bounds);
-		record.view.setVisible(true);
-		record.visible = true;
+		record.visible = request.visible ?? true;
+		record.view.setVisible(record.visible);
 		const url = request.url?.trim();
 		if (url && url !== record.view.webContents.getURL()) {
 			void record.view.webContents.loadURL(url).catch(() => this.markFailed(record));
