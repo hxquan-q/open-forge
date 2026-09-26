@@ -1,7 +1,7 @@
 ---
 id: BUG-0040
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop renderer (agent-teams domain)
 requirement:
@@ -59,7 +59,7 @@ updated: 2026-09-26
 
 ## 修复与验证
 
-- 修复：待定——候选方案（a）`buildDraftAgent` 直接取 `blueprint.defaultAbilities`；（b）草稿的 `abilities` 允许为 `undefined`，创建链路仅在用户实际改动过能力 tab 时才回写。
-- 测试：—
-- 检查：—
-- 未运行及原因：仅登记，未修复。
+- 修复：采用方案（a）——`buildDraftAgent` 以 `blueprint.defaultAbilities` 播种草稿能力（克隆数组与 extensions），用户未碰能力 tab 时保存即落盘蓝图默认；`useAgentCenterModel.createAgentFromDraft` 的回写链路不变。
+- 测试：`AgentProfileSheet.test.tsx` 新增两条组件用例——「未打开能力 tab 直接保存 → `onCreate` 收到 `selectionMode: "all"`」（旧实现收到 `custom`+空清单，红色确认）；「能力 tab 中取消勾选一项后保存 → `custom` 且该项缺席」。同领域 44 个测试文件 307 用例全绿。
+- 检查：定向 vitest 通过；`check:quick`/`check` 待随提交前执行。
+- 未运行及原因：实机复验未跑（需 `verify:ui:*`，待用户授权）。
