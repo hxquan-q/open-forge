@@ -37,7 +37,7 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0022`：流式停滞换连对用户是否可见（**前提已更正**：桌面 IPC 白名单缺 `"retry"` 致事件被拒并抛异常、团队 hub 静默丢弃——属缺陷面；修复进行中，展示语义待用户拍板）。
 - `ISSUE-0020`：Desktop 内存占用偏高需要建立基线并定位主导进程（draft；先采集进程级内存曲线，再决定是否转 Bug）。
 - `ISSUE-0021`：i18n 懒加载与离线策略（draft；已补首轮源码态 locale 体积 ≈543KB，打包产物占比待一次 renderer 构建审计）。
-- `ISSUE-0023`：修改声明头守卫未接入任何门禁且全仓大面积缺失（ready；实测 553 文件缺声明头、守卫从不运行；推荐先 ratchet 后 sweep）。
+- `ISSUE-0023`：修改声明头守卫 ratchet 已落地（done）：`--baseline` 快照豁免存量 671 条、挡住新增，接入 check-guards；剩余 quiet-window 一次性 sweep 待拆 Task。
 - `ISSUE-0024`：官方能力市场源 `hxquan-q/open-forge-marketplace` 未发布，能力页常驻同步失败横幅（done；按方案 A 发布仓库 gh-pages 骨架，实机验证「已同步 · 0.1.0」、横幅消除）。
 - `ISSUE-0025`：团队主控以 `team_wait_tasks` 轮询挂起回合 45min、38 次等待/34 次 timeout，已有的 `triggerTurn` 完成唤醒路径未被使用（draft；推荐 A+B——提示词引导让出回合 + timeout 载荷瘦身，C 运行时自动挂起列入评估）。
 - `ISSUE-0026`：团队成员会话无 in-app WebView，`browser_tab` 报 `no_browser_session` 后靠自建 http server + agent-browser 降级（draft；推荐先剔除/标注不可用，headless 渲染工具作为正式解法评估；DSH `SubagentCapabilities` 提供了「委派前校验、fail loud」的类级解法形态）。

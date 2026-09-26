@@ -1,3 +1,4 @@
+# Copyright The Open Forge contributors.
 # Files copied from the primary checkout into every new Task worktree.
 #
 # A worktree is a fresh checkout: gitignored local files do not exist there. List the
