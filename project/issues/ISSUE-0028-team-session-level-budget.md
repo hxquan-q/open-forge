@@ -1,14 +1,14 @@
 ---
 id: ISSUE-0028
 type: issue
-status: draft
+status: in_progress
 priority: P3
 owner: apps/desktop
 related_requirement: []
 related_plan: [PLAN-0013]
 source: 开发团队实测会话（91c32cf7）耗时拆解 + DSH goal 子系统 + multica 门禁升级规则
 created: 2026-09-26
-updated: 2026-09-26
+updated: 2026-09-27
 related_tasks: [TASK-0125, TASK-0126]
 related_issues: [ISSUE-0025, ISSUE-0027]
 related_bugs: []

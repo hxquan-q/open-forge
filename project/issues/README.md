@@ -39,7 +39,7 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0021`：i18n 懒加载与离线策略（draft；已补首轮源码态 locale 体积 ≈543KB，打包产物占比待一次 renderer 构建审计）。
 - `ISSUE-0023`：修改声明头守卫 ratchet 已落地（done）：`--baseline` 快照豁免存量 671 条、挡住新增，接入 check-guards；剩余 quiet-window 一次性 sweep 待拆 Task。
 - `ISSUE-0024`：官方能力市场源 `hxquan-q/open-forge-marketplace` 未发布，能力页常驻同步失败横幅（done；按方案 A 发布仓库 gh-pages 骨架，实机验证「已同步 · 0.1.0」、横幅消除）。
-- `ISSUE-0025`：团队主控以 `team_wait_tasks` 轮询挂起回合 45min、38 次等待/34 次 timeout，已有的 `triggerTurn` 完成唤醒路径未被使用（draft；推荐 A+B——提示词引导让出回合 + timeout 载荷瘦身，C 运行时自动挂起列入评估）。
-- `ISSUE-0026`：团队成员会话无 in-app WebView，`browser_tab` 报 `no_browser_session` 后靠自建 http server + agent-browser 降级（draft；推荐先剔除/标注不可用，headless 渲染工具作为正式解法评估；DSH `SubagentCapabilities` 提供了「委派前校验、fail loud」的类级解法形态）。
+- `ISSUE-0025`：团队主控以 `team_wait_tasks` 轮询挂起回合 45min、38 次等待/34 次 timeout，已有的 `triggerTurn` 完成唤醒路径未被使用（verifying；A+B 短期项已由 TASK-0122 落地——提示词引导让出回合 + timeout 载荷瘦身，量化收口待 TASK-0125 真实会话复跑）。
+- `ISSUE-0026`：团队成员会话无 in-app WebView，`browser_tab` 报 `no_browser_session` 后靠自建 http server + agent-browser 降级（verifying；A 路径「工具清单剔除不可用项」已由 TASK-0123 落地，B headless 渲染工具仍为未决后续）。
 - `ISSUE-0027`：团队质检深度无分级，「简单页面」任务仍走全量独立审计+修复回路占全程 ~47%（draft；短期做阶段化进度可见，中期委派合同引入质检级别；参照 HydraFusion Single/Cascade/Critique 与 multica 门禁阶梯）。
-- `ISSUE-0028`：团队会话无会话级预算与可路由的阻塞/升级态，收敛全靠主控自觉（draft；参照 DSH goal `maxGoalRounds`+`blocked` code、multica「返工超 2 次升级人类」；候选 A 双上限+blocked 持久态、B 返工计数升级、C 预算可视化先行）。
+- `ISSUE-0028`：团队会话无会话级预算与可路由的阻塞/升级态，收敛全靠主控自觉（in_progress；候选 C 预算只读投影已由 TASK-0126 落地，A/B 熔断按决策触发条件待立）。

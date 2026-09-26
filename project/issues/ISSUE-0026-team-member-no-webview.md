@@ -1,14 +1,14 @@
 ---
 id: ISSUE-0026
 type: issue
-status: draft
+status: verifying
 priority: P3
 owner: apps/desktop + packages/runtime-*
 related_requirement: []
 related_plan: [PLAN-0013]
 source: 开发团队实测会话（91c32cf7）审计员/开发员会话日志
 created: 2026-09-26
-updated: 2026-09-26
+updated: 2026-09-27
 related_tasks: [TASK-0123]
 related_issues: [ISSUE-0025]
 related_bugs: []
