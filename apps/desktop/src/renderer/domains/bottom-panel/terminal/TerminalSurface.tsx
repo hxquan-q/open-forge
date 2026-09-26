@@ -88,6 +88,11 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			if (terminalRef.current === terminal) terminalRef.current = null;
 		});
 
+		// 渲染 addon 必须在 terminal.dispose 之前单独摘除：canvas/webgl addon 的收尾回调会用
+		// linkifier 重建一次 DOM renderer，而 xterm 6 的销毁顺序先清掉 linkifier 再轮到 addon，
+		// 放进 terminal.dispose 内部触发必然抛 TypeError、击穿路由错误边界。提前摘掉后它已从
+		// AddonManager 移除，terminal.dispose 不会再碰。
+		let rendererAddon: CanvasAddon | WebglAddon | undefined;
 		const renderer = selectTerminalRenderer({
 			hasWebgl2: detectWebgl2Support(),
 			hardwareAccelerated: true,
@@ -96,15 +101,22 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 		});
 		if (renderer === "webgl") {
 			const webgl = new WebglAddon();
+			rendererAddon = webgl;
 			// 丢上下文不处理的话整个终端永久黑屏，必须当场降级。
 			webgl.onContextLoss(() => {
 				contextLost = true;
+				rendererAddon = undefined;
 				webgl.dispose();
-				if (!disposed) terminal.loadAddon(new CanvasAddon());
+				if (!disposed) {
+					const fallback = new CanvasAddon();
+					terminal.loadAddon(fallback);
+					rendererAddon = fallback;
+				}
 			});
 			terminal.loadAddon(webgl);
 		} else {
-			terminal.loadAddon(new CanvasAddon());
+			rendererAddon = new CanvasAddon();
+			terminal.loadAddon(rendererAddon);
 		}
 
 		/** 只有容器有真实尺寸时才 fit：折叠时容器高度是 0，fit 会算出 0 行并抛。 */
@@ -231,7 +243,17 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			disposed = true;
 			for (const cleanup of cleanups) cleanup();
 			if (terminalId) void window.vetta.terminal.close(terminalId);
-			terminal.dispose();
+			try {
+				rendererAddon?.dispose();
+			} catch {
+				// 摘除失败不阻塞收尾；terminal.dispose 仍会兜底走完整销毁链。
+			}
+			try {
+				terminal.dispose();
+			} catch (error) {
+				// 销毁期异常没有可恢复动作，但绝不能升级为整页路由错误。
+				console.warn("terminal dispose failed", error);
+			}
 		};
 	}, [cwd, tabId, t]);
 

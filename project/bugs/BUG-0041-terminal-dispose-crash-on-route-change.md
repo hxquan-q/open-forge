@@ -1,7 +1,7 @@
 ---
 id: BUG-0041
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop renderer (bottom-panel terminal)
 requirement:
@@ -76,7 +76,7 @@ TypeError: Cannot read properties of undefined (reading 'onShowLinkUnderline')
 
 ## 修复与验证
 
-- 修复：待定——候选方案（a）cleanup 中先显式 dispose addons 再 `terminal.dispose()`；（b）`terminal.dispose()` 外包 try/catch 并 warn（治标）；（c）升级到修复了该竞态的 xterm 版本（若上游已修）。
-- 测试：—
-- 检查：—
-- 未运行及原因：仅登记，未修复。
+- 修复：方案（a）+（b）组合——cleanup 中先显式 `rendererAddon.dispose()`（此刻 linkifier 尚存活，CanvasAddon 收尾重建 DOM renderer 不会再读崩），被摘除的 addon 由 xterm AddonManager 移除、不会二次 dispose；`terminal.dispose()` 另包 try/catch + warn，销毁期异常不再击穿路由错误边界。根因定位：xterm 6.0.0 销毁顺序先清 `MutableDisposable` 包装的 linkifier（构造期注册，FIFO 先轮到），再让 AddonManager 逐个 dispose addon。
+- 测试：`TerminalSurface.host.test.tsx` 新增三条——canvas/webgl 两条路径断言「渲染 addon dispose 先于 terminal.dispose」、dispose 抛错时 unmount 不向外抛；旧实现下三条全红（红绿已验）。
+- 检查：bottom-panel 域 6 文件 41 用例全绿；`check:quick` 通过。
+- 未运行及原因：真实路由切换的实机复验未跑（需 `verify:ui:*`，待用户授权）。
