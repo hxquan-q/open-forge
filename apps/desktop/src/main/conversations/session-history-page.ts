@@ -6,6 +6,8 @@ import type {
 	HistoryPageResult,
 	ViewerHistoryUpdate,
 } from "../../preload/api-types/session.js";
+// 签名规则与 renderer 的 transcript-window 差分共用，单一事实源在 shared 侧。
+import { historyEntrySignature } from "../../shared/history-entry-signature.js";
 
 /**
  * transcript 窗口化第 2 步（TASK-0050）：有界历史页。
@@ -57,22 +59,8 @@ export function parseHistoryPageRequest(options: unknown): HistoryPageRequest {
 	};
 }
 
-export function historyEntrySignature(entry: HistoryEntry | undefined): string {
-	if (!entry) return "∅";
-	const withId = entry as { entryId?: string };
-	if (typeof withId.entryId === "string" && withId.entryId.length > 0) {
-		return `id:${withId.entryId}`;
-	}
-	// timing/marker 类条目没有 entryId，用内容哈希锚定；同一历史源内
-	// JSON 形状稳定，改写任一字节都会失配。
-	let hash = 0x811c9dc5;
-	const text = JSON.stringify(entry);
-	for (let i = 0; i < text.length; i += 1) {
-		hash ^= text.charCodeAt(i);
-		hash = Math.imul(hash, 0x01000193) >>> 0;
-	}
-	return `h:${hash.toString(36)}`;
-}
+// 既有调用方保留 re-export 路径。
+export { historyEntrySignature };
 
 function encodeCursor(endExclusive: number, boundary: HistoryEntry | undefined): string {
 	const raw = `e:${endExclusive}:${historyEntrySignature(boundary)}`;

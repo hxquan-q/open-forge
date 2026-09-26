@@ -76,7 +76,11 @@ import {
 	rememberOptimisticUserMessage,
 } from "../services/optimistic-user-message-cache";
 import { diffConsumedQueueEntries } from "../services/queue-mirror";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import {
+	refreshTranscriptTail,
+	registerActiveTranscriptBacklog,
+	resetTranscriptWindowToTail,
+} from "../services/transcript-window-controller";
 import type { ActiveSessionHandle } from "./session-manager-types";
 
 const DELTA_FLUSH_INTERVAL_MS = 100;
@@ -280,9 +284,39 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					// Reload history identities so user bubbles get session entryId / branch siblings
 					// (optimistic messages use synthetic ids and cannot be edited until this).
 					// Matching timelines keep live assistant blocks; mismatched shapes still replace.
-					void window.vetta.session
-						.getFullHistory(sessionId)
-						.then((history) => {
+					void (async () => {
+						// TASK-0050：窗口化会话只取最新 head 页推进窗口末端；跨轮对账/计时
+						// 补丁经 shouldCommit/patchCanonical 注入同一提交闸。
+						const windowedSessionPath = activeSessionRef.current?.sessionPath;
+						if (
+							windowedSessionPath &&
+							(await refreshTranscriptTail({
+								sessionPath: windowedSessionPath,
+								shouldCommit: () =>
+									activeSessionRef.current?.runtimeId === sessionId &&
+									getQueuedDispatchSeq(sessionId) === (turnStartDispatchSeqRef.current.get(sessionId) ?? 0),
+								patchCanonical: (items) => {
+									if (elapsed <= 0) return items;
+									const mapped = items.slice();
+									for (let i = mapped.length - 1; i >= 0; i--) {
+										const message = mapped[i];
+										if (message?.kind === "agent") {
+											mapped[i] = {
+												...message,
+												startedAt: message.startedAt ?? startedAt,
+												endedAt: message.endedAt ?? endedAt,
+												durationSeconds: message.durationSeconds ?? elapsed,
+											};
+											break;
+										}
+									}
+									return mapped;
+								},
+							}))
+						) {
+							return;
+						}
+						await window.vetta.session.getFullHistory(sessionId).then((history) => {
 							if (activeSessionRef.current?.runtimeId !== sessionId) return;
 							// 判活：本轮结束时/后若发生过队列派发（立即发送 / 自然出队），这次历史
 							// 回流已「跨到下一轮」——会冲掉下一轮的乐观用户气泡、令 draft 串台，或与
@@ -293,10 +327,13 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
 							const activeSessionPath = activeSessionRef.current?.sessionPath;
 							if (activeSessionPath) {
+								// 全量回落登记的是完整 transcript——标 unbounded，否则下一轮
+								// refreshTranscriptTail 会把它误当窗口化会话收窄成尾页。
 								registerActiveTranscriptBacklog(activeSessionPath, {
 									entries: history,
 									spans: projected.spans,
 									mediaSessionId: sessionId,
+									unbounded: true,
 								});
 							}
 							const mapped = reconcileOptimisticUserMessages(sessionId, projected.messages);
@@ -315,10 +352,10 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 								}
 							}
 							setChatMessages((liveMessages) => applyAgentEndHistoryRefresh(liveMessages, mapped));
-						})
-						.catch((err) => {
-							console.warn("[useSessionManager] getFullHistory after agent_end failed", err);
 						});
+					})().catch((err) => {
+						console.warn("[useSessionManager] history refresh after agent_end failed", err);
+					});
 
 					if (event.phase === "agent_end") {
 						const active = activeSessionRef.current;
@@ -537,9 +574,12 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 						event.reason === "manual" &&
 						getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0
 					) {
-						void window.vetta.session
-							.getFullHistory(sessionId)
-							.then((history) => {
+						// TASK-0050：压缩是历史改写，窗口化会话整窗重置为最新 head 页；
+						// 非窗口化会话回退旧的全量回载。
+						void (async () => {
+							const windowedPath = activeSessionRef.current?.sessionPath;
+							if (windowedPath && (await resetTranscriptWindowToTail(windowedPath))) return;
+							await window.vetta.session.getFullHistory(sessionId).then((history) => {
 								if (activeSessionRef.current?.runtimeId !== sessionId) return;
 								const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
 								const activeSessionPath = activeSessionRef.current?.sessionPath;
@@ -548,13 +588,14 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 										entries: history,
 										spans: projected.spans,
 										mediaSessionId: sessionId,
+										unbounded: true,
 									});
 								}
 								setChatMessages(reconcileOptimisticUserMessages(sessionId, projected.messages));
-							})
-							.catch((error) =>
-								console.warn("[useSessionManager] history refresh after compaction failed", error),
-							);
+							});
+						})().catch((error) =>
+							console.warn("[useSessionManager] history refresh after compaction failed", error),
+						);
 					}
 				} else if (event.reason === "manual") {
 					showToast({

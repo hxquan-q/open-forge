@@ -1,7 +1,7 @@
 ---
 id: TASK-0050
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0035]
 conflicts_with: [TASK-0051, TASK-0038]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-24
+updated: 2026-09-27
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -120,6 +120,52 @@ updated: 2026-09-24
   - 测试：`session-history-page.test.ts` 补 diff 用例（追加/改写回退/
     同首变体不误发/无变化不发送）；新增 `viewer-history-update.test.ts`
     覆盖三类更新在渲染侧的合并行为。desktop typecheck 与 check:quick 绿。
+- 阶段 3（2026-09-27，Renderer 窗口化迁移）：
+  - `transcript-window.ts`：backlog 扩展为「已加载窗口」（entries +
+    `nextBeforeEntry`/`hasMore`/`unbounded` 标记）；新增
+    `prependTranscriptPage`（老页前置）、`mergeTranscriptHeadPage`
+    （append-only 延展 / 重叠区签名失配 → 整窗 replaced）、
+    `reconcileWindowedProjection`（重投影后按 durable key/身份/同 kind
+    有序配对回收 live item，live-only 尾部原样保留，`excludeLiveIds`
+    剔除已被吸收的乐观气泡）。条目签名单一事实源沉到
+    `shared/history-entry-signature.ts`（main/renderer 共用 FNV-1a
+    规则）。
+  - `transcript-window-controller.ts`：`loadOlderTranscriptPage`
+    （beforeEntry 回传、在途去重、stale → head 页对账、prependedCount →
+    firstItemIndex 前移）、`refreshTranscriptTail`（head 页推进窗口末端，
+    保留已加载旧页）、`resetTranscriptWindowToTail`（改写后整窗重置）、
+    `drainActiveTranscriptWindow`（导出前排空窗口并物化占位）；
+    `commitTranscriptWindow` 统一登记窗口/游标/视图态。
+  - `optimistic-user-message-cache.ts`：新增尾对齐变体
+    `reconcileOptimisticUserMessagesTail`——有界页拿不到全局 user 序号，
+    改为对 canonical 末几条 user 尾对齐确认，返回 `confirmedIds` 让窗口
+    reconcile 剔除已吸收的旧气泡（修掉重复气泡残留），
+    `inputSegments` 照带回填。
+  - Virtuoso 接入：`MessageFeedView` 转发 `startReached`/`firstItemIndex`；
+    `MessageListView` 以 `transcriptWindowStateAtom.firstItemIndex`（基数
+    1M）做绝对↔相对索引换算，`itemContent`/`itemsRendered`/`rangeChanged`
+    全部走相对空间；`useMessageFeedScrollModel` 新增 `indexOffset`，
+    `scrollToIndex`/初始目标跳转命令侧补同一偏移。
+  - 消费迁移：opener tail 模式登记游标、full 模式与全部全量回落登记
+    `unbounded: true`；`agent_end` 走 `refreshTranscriptTail`（队列序守卫
+    + 计时补丁经 `shouldCommit`/`patchCanonical` 注入），手动压缩与
+    编辑/重发/分支回载走 `resetTranscriptWindowToTail`；编辑入口的末条
+    user entryId 查找改用 `tailTurns:1` 有界页；HTML 导出前
+    `drainActiveTranscriptWindow` 保证完整 transcript。
+  - 测试：`transcript-window.test.ts` 增分页合并/reconcile 用例（老页
+    前置序、head 延展、同形条目重复签名锚定、改写 replaced、占位复用、
+    prependedCount、字段 patch 保留 live blocks）；
+    `optimistic-user-message-cache.test.ts` 增尾对齐确认/多未决保序/
+    未决不入 canonical/超次过期/inputSegments 回填；
+    新增 `transcript-window-controller.test.ts`（jsdom）覆盖翻页、
+    stale 回退、firstItemIndex 前移、会话切换丢弃、head 延展/占位
+    不打散、改写重置、unbounded 回落、drain 排空+物化；
+    `useMessageListScrollModel.test.tsx` 更新绝对索引断言并新增偏移
+    随动用例；顺手修正 `AgentProfileEditor` 头像数断言（库已扩至 24）。
+    typecheck、check:quick、test:impact 全绿。
+  - 已知限制：MessageTimeline/会话内搜索只覆盖已加载窗口（翻页后随窗口
+    扩）；opener 回填中 preview 复用对象的 span 键错位是 TASK-0035 存量
+    行为，本轮未扩大处理。
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：

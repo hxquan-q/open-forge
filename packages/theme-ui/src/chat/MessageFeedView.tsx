@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@vetta-org/ui";
 import { Slot } from "radix-ui";
 import type { ComponentPropsWithoutRef, JSX, ReactNode, Ref } from "react";
@@ -57,6 +58,10 @@ export interface MessageFeedVirtualListProps<T> extends Omit<ComponentPropsWitho
 	readonly restoreStateFrom?: StateSnapshot;
 	readonly followOutput?: FollowOutput;
 	readonly initialTopMostItemIndex?: IndexLocationWithAlign | number;
+	/** 滚动到列表首端时触发（向上翻更早历史页的钩子）。 */
+	readonly startReached?: () => void;
+	/** Virtuoso 前置索引基数：prepend 时调用方前移它保住视口锚点。 */
+	readonly firstItemIndex?: number;
 	readonly overscan?: number | { main: number; reverse: number };
 	readonly minOverscanItemCount?: number | { readonly top: number; readonly bottom: number };
 	readonly increaseViewportBy?: number | { readonly top: number; readonly bottom: number };
@@ -80,6 +85,8 @@ export function MessageFeedVirtualList<T>({
 	restoreStateFrom,
 	followOutput,
 	initialTopMostItemIndex,
+	startReached,
+	firstItemIndex,
 	overscan,
 	increaseViewportBy,
 	minOverscanItemCount,
@@ -116,6 +123,8 @@ export function MessageFeedVirtualList<T>({
 			{...(restoreStateFrom ? { restoreStateFrom } : {})}
 			{...(followOutput !== undefined ? { followOutput } : {})}
 			{...(initialTopMostItemIndex !== undefined ? { initialTopMostItemIndex } : {})}
+			{...(startReached ? { startReached } : {})}
+			{...(firstItemIndex !== undefined ? { firstItemIndex } : {})}
 			{...(overscan !== undefined ? { overscan } : {})}
 			{...(minOverscanItemCount !== undefined ? { minOverscanItemCount } : {})}
 			{...(increaseViewportBy !== undefined ? { increaseViewportBy } : {})}

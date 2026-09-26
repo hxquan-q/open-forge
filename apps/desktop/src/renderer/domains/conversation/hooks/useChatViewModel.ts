@@ -37,6 +37,7 @@ import { useTranslation } from "react-i18next";
 import { useOpenTerminal } from "../../bottom-panel/hooks/useOpenTerminal";
 import type { ChatViewModelResult } from "../components/chat-view/types";
 import { exportPortableSessionArchive, importPortableSessionArchive } from "../services/session-archive";
+import { drainActiveTranscriptWindow } from "../services/transcript-window-controller";
 
 /**
  * ChatView 只需要当前会话的 path / cwd。订阅 activeSession 整个对象会让流式期间
@@ -124,7 +125,14 @@ export function useChatViewModel(): ChatViewModelResult {
 		setPinned(next);
 	}, []);
 	const finishExport = useCallback(() => setExporting(false), []);
-	const openExport = useCallback(() => setExporting(true), []);
+	// TASK-0050：窗口化会话只加载了尾部若干页——导出前先把整个 transcript
+	// 拉进窗口并物化占位，否则 HTML 只含已加载窗口、旧条目以摘要行出现。
+	const openExport = useCallback(() => {
+		void (async () => {
+			await drainActiveTranscriptWindow();
+			setExporting(true);
+		})();
+	}, []);
 	// 底部面板的展开态是会话级持久化状态，所以读写都走它自己的 atom，
 	// 不在这里再存一份 useState。
 	const bottomPanelState = useAtomValue(bottomPanelStateAtom);

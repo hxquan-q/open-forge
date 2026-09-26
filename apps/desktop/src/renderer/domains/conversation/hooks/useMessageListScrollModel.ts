@@ -2,7 +2,7 @@ import {
 	type MessageFeedScrollModel,
 	useMessageFeedScrollModel,
 } from "@shared/components/message-feed/useMessageFeedScrollModel";
-import { activityPanelResizingAtom, type ChatTimelineItem } from "@shared/store/atoms";
+import { activityPanelResizingAtom, type ChatTimelineItem, transcriptWindowStateAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 
@@ -31,6 +31,8 @@ export function useMessageListScrollModel({
 	onInitialTargetHandled,
 }: MessageListScrollModelInput): MessageListScrollModel {
 	const activityPanelResizing = useAtomValue(activityPanelResizingAtom);
+	// TASK-0050：窗口化会话向 Virtuoso 传 firstItemIndex，命令侧滚动要加同一偏移。
+	const transcriptWindow = useAtomValue(transcriptWindowStateAtom);
 	const feed = useMessageFeedScrollModel({
 		active: isStreaming,
 		items: messages,
@@ -40,6 +42,7 @@ export function useMessageListScrollModel({
 		getItemKey: getMessageKey,
 		onInitialTargetHandled,
 		shouldFollowOnAppend: shouldFollowUserMessage,
+		indexOffset: transcriptWindow.firstItemIndex,
 	});
 	return useMemo(
 		() => ({

@@ -2,6 +2,7 @@
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { applyActiveTagFilterToNewConversation } from "@domains/project/services/new-conversation-tagging";
 import { deriveSessionAxesFromWorkspaceMode } from "@domains/workspace-mode/lib/session-axes";
+import type { HistoryPage } from "@preload/api-types/session";
 import { i18n } from "@shared/i18n";
 import { waitForCommittedPaint } from "@shared/lib/committed-paint";
 import { perfSendMark } from "@shared/lib/perf-send";
@@ -43,6 +44,7 @@ import {
 } from "@shared/store/atoms";
 import { setQueueForSessionAtom, setQueuePausedAtom } from "@shared/store/message-queue-atoms";
 import { useNavigate } from "@tanstack/react-router";
+import type { HistoryEntry } from "@vetta/runtime-core";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { type MutableRefObject, startTransition, useCallback, useRef } from "react";
@@ -63,7 +65,7 @@ import {
 import { resolveSessionContextComposition } from "../services/context-composition-cache";
 import { reconcileOptimisticUserMessages } from "../services/optimistic-user-message-cache";
 import { applySessionHydrationStateAtom } from "../services/session-hydration-state";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import { commitTranscriptWindow, resetTranscriptWindowState } from "../services/transcript-window-controller";
 import { useSessionEventController } from "./useSessionEventController";
 
 export interface SessionOpenerController {
@@ -294,6 +296,8 @@ export function useSessionOpener(): SessionOpenerController {
 			// instead of staring at the old session while history loads.
 			if (!options?.preserveMessagesBeforeCreate) setChatMessages([]);
 			getDefaultStore().set(pendingMessageEditAtom, null);
+			// TASK-0050：切会话时清掉上一会话的窗口游标态；新会话在回填阶段重新登记。
+			resetTranscriptWindowState();
 			// 切会话先把激活工具集置未知（null）→ badge 回退显示，等 getState 回填真实集合。
 			setActiveToolNames(null);
 			// 场景同样置未知（null）→ 插件插槽 fail-closed 暂不显示，等 getState 回填后按场景显隐。
@@ -587,14 +591,18 @@ export function useSessionOpener(): SessionOpenerController {
 			// session is interactive; the tail preview already owns the first screen.
 			perfSendMark("session-state-load-start", interactionId);
 			markSessionSwitch("session-hydration-start");
-			const historyPromise =
+			// TASK-0050：tail 模式返回带游标的有界页（向上翻页由此续）；full 模式保持
+			// 无界全量。tail 页不可能 stale，stale 收窄为空页走防御兜底。
+			const historyPromise: Promise<{ entries: HistoryEntry[]; page?: HistoryPage }> =
 				sessionPath === undefined
-					? Promise.resolve([])
+					? Promise.resolve({ entries: [] })
 					: historyLoadMode === "tail"
 						? window.vetta.session
 								.openViewer(sessionPath, { tailTurns: LARGE_SESSION_TAIL_TURNS })
-								.then((snapshot) => ("stale" in snapshot ? [] : snapshot.history))
-						: window.vetta.session.getFullHistory(sessionId);
+								.then((snapshot) =>
+									"stale" in snapshot ? { entries: [] } : { entries: snapshot.history, page: snapshot },
+								)
+						: window.vetta.session.getFullHistory(sessionId).then((entries) => ({ entries }));
 			const statePromise = window.vetta.session.getState(sessionId);
 			let state: Awaited<typeof statePromise>;
 			try {
@@ -690,7 +698,7 @@ export function useSessionOpener(): SessionOpenerController {
 
 			if (sessionPath !== undefined) {
 				void historyPromise
-					.then((history) => {
+					.then(({ entries: history, page }) => {
 						perfSendMark("session-history-loaded", interactionId);
 						markSessionSwitch("session-history-loaded");
 						if (myOpenToken !== getOpenSessionToken()) return;
@@ -699,11 +707,18 @@ export function useSessionOpener(): SessionOpenerController {
 							const projected = fullHistoryToChatWithSpans(history, sessionId);
 							const canonical = projected.messages;
 							if (cachedKey) {
-								registerActiveTranscriptBacklog(cachedKey, {
-									entries: history,
-									spans: projected.spans,
-									mediaSessionId: sessionId,
-								});
+								commitTranscriptWindow(
+									cachedKey,
+									{
+										entries: history,
+										spans: projected.spans,
+										mediaSessionId: sessionId,
+										nextBeforeEntry: page?.nextBeforeEntry,
+										hasMore: page?.hasMore === true,
+										unbounded: page === undefined,
+									},
+									{ resetFirstIndex: true },
+								);
 							}
 							const reconciled = reconcileOptimisticUserMessages(sessionId, canonical);
 							const canonicalIds = new Set(canonical.map((message) => message.id));

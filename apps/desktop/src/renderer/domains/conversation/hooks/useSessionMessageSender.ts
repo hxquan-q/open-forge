@@ -72,7 +72,7 @@ import {
 	stagePendingSessionSend,
 	takeStagedPendingSessionSend,
 } from "../services/staged-new-session-send";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import { registerActiveTranscriptBacklog, resetTranscriptWindowToTail } from "../services/transcript-window-controller";
 
 interface SessionMessageSenderOptions {
 	bumpSuggestionToken: (runtimeId: string) => void;
@@ -307,16 +307,22 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				}
 				try {
 					await window.vetta.session.replaceLastUserMessage(session.runtimeId, pendingEdit.entryId);
-					const history = await window.vetta.session.getFullHistory(session.runtimeId);
-					const projected = fullHistoryToChatWithSpans(history, session.runtimeId);
-					if (session.sessionPath) {
-						registerActiveTranscriptBacklog(session.sessionPath, {
-							entries: history,
-							spans: projected.spans,
-							mediaSessionId: session.runtimeId,
-						});
+					// TASK-0050：改写末条消息是历史重写——窗口化会话整窗重置为最新 head
+					// 页（live-only 尾部仍保留）；非窗口化回退全量回载。
+					const reset = session.sessionPath && (await resetTranscriptWindowToTail(session.sessionPath));
+					if (!reset) {
+						const history = await window.vetta.session.getFullHistory(session.runtimeId);
+						const projected = fullHistoryToChatWithSpans(history, session.runtimeId);
+						if (session.sessionPath) {
+							registerActiveTranscriptBacklog(session.sessionPath, {
+								entries: history,
+								spans: projected.spans,
+								mediaSessionId: session.runtimeId,
+								unbounded: true,
+							});
+						}
+						setChatMessages(projected.messages);
 					}
-					setChatMessages(projected.messages);
 					store.set(pendingMessageEditAtom, null);
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
