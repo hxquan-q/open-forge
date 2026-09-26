@@ -1,6 +1,6 @@
 # Vetta Actions
 
-Vetta 官方 App Action 插件。当前已迁移 Desktop 全部 App Action 域：
+Open Forge 官方 App Action 插件（插件 id 仍为 `vetta-actions`）。当前已迁移 Desktop 全部 App Action 域：
 
 - 首批：`general`、`agent`、`downloads`、`updater`、`webhook`
 - 第二批：`skills`（产品文案：能力）、`shortcuts`、`im`、`mcp`、`models`、`projects`、`knowledge`、`plugins`

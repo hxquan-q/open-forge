@@ -1,4 +1,4 @@
 {
-	"plugin.name": "Vetta Actions",
-	"plugin.description": "Provides official App Actions that can evolve independently."
+	"plugin.name": "Open Forge Actions",
+	"plugin.description": "Official action set: the standard actions the UI and agents can invoke across 17 domains — sessions, projects, models, abilities, downloads, updates, and more."
 }
