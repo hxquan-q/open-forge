@@ -21,6 +21,7 @@ import {
 	formatSandboxStagingWarning,
 } from "./sandbox-staging-guard.mjs";
 import { prepareSpeechModels, SPEECH_MODEL_RESOURCE_ROOT } from "./fetch-speech-models.mjs";
+import { MCP_SERVERS_VENDOR_ROOT, prepareMcpServers } from "./fetch-mcp-servers.mjs";
 import { prepareVendorRuntimes } from "./fetch-vendor-runtimes.mjs";
 import {
 	resolveSpeechInputBuildConfig,
@@ -710,6 +711,28 @@ async function stageVendorRuntimes() {
 await stageVendorRuntimes();
 
 // =============================================================================
+// 内置 MCP servers（extraResources）
+// =============================================================================
+//
+// 能力页「内置」连接器不再依赖 npx 现装：vendor/mcp-servers/<id>/ 下是
+// fetch-mcp-servers.mjs 预装好的完整依赖树（含裁剪与 node:sqlite 垫片），
+// 运行时以 ELECTRON_RUN_AS_NODE=1 + process.execPath 拉起（见
+// src/main/mcp/builtin-mcp-server-runtime.ts）。缺失视为打包失败——静默退回
+// npx 会让产物退化成「联网装依赖」的旧行为。
+const stagedMcpServersDir = join(buildStageDir, "mcp-servers");
+rmSync(stagedMcpServersDir, { recursive: true, force: true });
+await prepareMcpServers();
+for (const entry of readdirSync(MCP_SERVERS_VENDOR_ROOT)) {
+	const src = join(MCP_SERVERS_VENDOR_ROOT, entry);
+	if (!existsSync(join(src, "node_modules"))) continue;
+	cpSync(src, join(stagedMcpServersDir, entry), { recursive: true });
+	console.log(`[prepare-pack] mcp-server staged: ${entry}`);
+}
+if (!existsSync(stagedMcpServersDir) || readdirSync(stagedMcpServersDir).length === 0) {
+	throw new Error("[prepare-pack] mcp-servers staging is empty; run scripts/fetch-mcp-servers.mjs first");
+}
+
+// =============================================================================
 // 系统插件（extraResources）—— ADR-0024
 // =============================================================================
 //
@@ -753,6 +776,11 @@ function resolveExtraResources() {
 			from: "vendor",
 			to: "vendor",
 			filter: ["**/*", "!**/*.pdb"],
+		},
+		{
+			from: "mcp-servers",
+			to: "mcp-servers",
+			filter: ["**/*", "!**/*.map", "!**/*.ts"],
 		},
 		{
 			from: "system-plugins",
