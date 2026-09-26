@@ -10,7 +10,7 @@ export interface SkillListSection {
 	/** 当前分组内的条目数，交由 header 做次级计数。 */
 	count: number;
 	items: readonly SkillInfo[];
-	/** 在当前面板里整条 flat items 的起始下标。 */
+	/** 渲染序中的起始下标：分组内条目的显示位置基线，仅用于 limit 截断。 */
 	startIndex: number;
 }
 

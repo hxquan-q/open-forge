@@ -6,9 +6,10 @@ import { SkillListEmpty } from "./SkillListEmpty";
 import type { SkillListProps, SkillListSection } from "./types";
 
 /**
- * 把扁平 items 切成「场景 / 技能」两段：排序仍保持上游 useSkillList 的输出，
- * 只是在渲染时按 type 做 stable partition，并为每组算出 flat 起始下标。
- * activeIndex 概念沿用「按 flat items 的全局行号」，保证上下游键盘逻辑不变。
+ * 把扁平 items 切成「场景 / 技能」两段：渲染顺序按 type 做 stable partition，
+ * 但每行的身份索引仍是它在原始 items 里的 flat 下标——父级的 activeIndex、
+ * Enter 选中（items[activeIndex]）与 data-index 滚动定位都按原始序工作，
+ * 分组只重排视觉顺序，不重编号。
  */
 function buildSections(items: readonly SkillInfo[], scenesTitle: string, skillsTitle: string): SkillListSection[] {
 	const scenes: SkillInfo[] = [];
@@ -157,6 +158,9 @@ export function SkillList({
 		() => buildSections(items, labels.scenesSection, labels.skillsSection),
 		[items, labels.scenesSection, labels.skillsSection],
 	);
+	// 分组只改渲染顺序：每行的身份索引仍是它在原始 items 里的 flat 下标，
+	// 与父级 items[activeIndex] 选中、data-index 滚动定位同一份坐标。
+	const flatIndexBySkill = useMemo(() => new Map(items.map((skill, index) => [skill, index])), [items]);
 	if (sections.length === 0) {
 		return <SkillListEmpty filtering={filtering} labels={labels} action={emptyAction} />;
 	}
@@ -168,15 +172,16 @@ export function SkillList({
 					<SectionHeader section={section} countLabel={labels.sectionCount(section.count)} />
 					<div className="px-1.5">
 						{section.items.map((skill, sectionIndex) => {
-							const sectionGlobalIndex = section.startIndex + sectionIndex;
-							if (limit !== undefined && sectionGlobalIndex >= visible.length) return null;
-							const globalIndex = sectionGlobalIndex + indexOffset;
+							const displayIndex = section.startIndex + sectionIndex;
+							if (limit !== undefined && displayIndex >= visible.length) return null;
+							const flatIndex = flatIndexBySkill.get(skill) ?? displayIndex;
+							const globalIndex = flatIndex + indexOffset;
 							return (
 								<SkillListItem
 									key={`${skill.type}-${skill.source}-${skill.name}`}
 									skill={skill}
 									globalIndex={globalIndex}
-									active={sectionGlobalIndex === activeIndex}
+									active={flatIndex === activeIndex}
 									icon={resolveIcon?.(skill)}
 									sourceLabel={labels.sourceLabel?.(skill.source, skill.type)}
 									onHover={() => onHover(globalIndex)}

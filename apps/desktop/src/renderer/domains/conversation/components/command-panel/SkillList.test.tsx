@@ -62,13 +62,17 @@ describe("SkillList 分组与 ARIA", () => {
 		const options = screen.getAllByRole("option");
 		expect(options).toHaveLength(3);
 
-		// stable partition：渲染顺序为 场景组（b) → 技能组（a, c)，但 global index 沿用原 items 顺序：
-		// - b 是 场景组 startIndex=0 的第 0 项 → global index 0
-		// - a 是 技能组 startIndex=1 的第 0 项 → global index 1（activeIndex=1 → 高亮）
-		// - c 是 技能组 startIndex=1 的第 1 项 → global index 2
-		expect(options[0].getAttribute("aria-selected")).toBe("false"); // b（场景）
-		expect(options[1].getAttribute("aria-selected")).toBe("true"); // a（技能，高亮）
-		expect(options[2].getAttribute("aria-selected")).toBe("false"); // c（技能）
+		// stable partition：渲染顺序为 场景组（b) → 技能组（a, c)。
+		// 每行的身份索引是它在原始 items 里的 flat 下标——父级用 items[activeIndex]
+		// 做 Enter 选中、data-index 做滚动定位，分组只重排视觉顺序，不重编号：
+		// - b 显示在第 0 行，flat index 1 → activeIndex=1 时高亮
+		// - a 显示在第 1 行，flat index 0；c 显示在第 2 行，flat index 2
+		expect(options[0].getAttribute("aria-selected")).toBe("true"); // b（场景，flat index 1，高亮）
+		expect(options[0].getAttribute("data-index")).toBe("1");
+		expect(options[1].getAttribute("aria-selected")).toBe("false"); // a（技能，flat index 0）
+		expect(options[1].getAttribute("data-index")).toBe("0");
+		expect(options[2].getAttribute("aria-selected")).toBe("false"); // c（技能，flat index 2）
+		expect(options[2].getAttribute("data-index")).toBe("2");
 	});
 
 	it("描述放在第二行（非右侧 truncate），空描述则省略该行", () => {
