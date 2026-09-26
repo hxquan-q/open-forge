@@ -28,6 +28,10 @@ const LABELS: Record<string, string> = {
 	"chat.teamProgress.item.completed": "已完成",
 	"chat.teamProgress.item.failed": "失败",
 	"chat.teamProgress.item.cancelled": "已取消",
+	"chat.teamProgress.item.notStarted": "未开始",
+	"chat.teamProgress.metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
+	"chat.teamProgress.context": "上下文 {{percent}}%",
+	"chat.teamProgress.total": "合计",
 	"chat.leaderRoute": "负责人",
 	"chat.memberSession": "查看 {{name}} 的独立会话",
 };
@@ -58,6 +62,13 @@ function progress(overrides: Partial<TeamSessionProgressModel> = {}): TeamSessio
 		counts: { queued: 0, running: 1, waiting: 1, attention: 0, completed: 1, failed: 0, cancelled: 0 },
 		rows: [
 			{
+				memberId: "leader",
+				name: "Lead",
+				isLeader: true,
+				itemCount: 0,
+				openable: false,
+			},
+			{
 				memberId: "developer",
 				name: "Dev",
 				isLeader: false,
@@ -65,6 +76,7 @@ function progress(overrides: Partial<TeamSessionProgressModel> = {}): TeamSessio
 				objective: "实现页面",
 				itemCount: 1,
 				openable: true,
+				usage: { rounds: 2, toolCalls: 3, inputTokens: 1200, outputTokens: 300, durationMs: 62_500 },
 			},
 			{
 				memberId: "reviewer",
@@ -76,6 +88,7 @@ function progress(overrides: Partial<TeamSessionProgressModel> = {}): TeamSessio
 				openable: false,
 			},
 		],
+		totals: { rounds: 2, toolCalls: 3, inputTokens: 1200, outputTokens: 300, durationMs: 62_500 },
 		...overrides,
 	};
 }
@@ -96,11 +109,27 @@ describe("TeamSessionProgress", () => {
 		fireEvent.click(screen.getByRole("button", { expanded: false }));
 		expect(screen.getByRole("button", { expanded: true })).toBeTruthy();
 		const rows = screen.getAllByRole("listitem");
-		expect(rows).toHaveLength(2);
-		expect(rows[0]?.textContent).toContain("Dev");
-		expect(rows[0]?.textContent).toContain("执行中");
-		expect(rows[0]?.textContent).toContain("实现页面");
-		expect(rows[1]?.textContent).toContain("×2");
+		expect(rows).toHaveLength(4);
+		expect(rows[0]?.textContent).toContain("未开始");
+		expect(rows[1]?.textContent).toContain("Dev");
+		expect(rows[1]?.textContent).toContain("执行中");
+		expect(rows[1]?.textContent).toContain("实现页面");
+		expect(rows[2]?.textContent).toContain("×2");
+	});
+
+	it("shows each member's rounds, tool calls, tokens and duration plus a session total", () => {
+		render(<TeamSessionProgress progress={progress()} onOpenMember={vi.fn()} />);
+		fireEvent.click(screen.getByRole("button", { expanded: false }));
+		const devRow = document.querySelector('[data-team-progress-member="developer"]');
+		expect(devRow?.textContent).toContain("↻2 · 工具 3 · ↑1.2K ↓300 · 1m02s");
+		expect(devRow?.textContent).not.toContain("未开始");
+		// 未开始成员显示占位态而不是一串 0。
+		const leaderRow = document.querySelector('[data-team-progress-member="leader"]');
+		expect(leaderRow?.textContent).toContain("未开始");
+		expect(leaderRow?.textContent).not.toContain("↻");
+		const totalRow = document.querySelector('[data-team-progress-total]');
+		expect(totalRow?.textContent).toContain("合计");
+		expect(totalRow?.textContent).toContain("↻2 · 工具 3");
 	});
 
 	it("opens the member session only for members that have one", () => {

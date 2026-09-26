@@ -246,8 +246,12 @@
         "attention": "Needs attention",
         "completed": "Done",
         "failed": "Failed",
-        "cancelled": "Cancelled"
-      }
+        "cancelled": "Cancelled",
+        "notStarted": "Not started"
+      },
+      "metrics": "↻{{rounds}} · {{tools}} tool calls · ↑{{input}} ↓{{output}} · {{duration}}",
+      "context": "ctx {{percent}}%",
+      "total": "Total"
     },
     "readyTitle": "Your team is ready",
     "readyDescription": "Describe the goal and the team lead will coordinate it, or mention a member with @ in the composer toolbar."

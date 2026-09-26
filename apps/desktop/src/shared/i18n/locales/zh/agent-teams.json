@@ -246,8 +246,12 @@
         "attention": "需要处理",
         "completed": "已完成",
         "failed": "失败",
-        "cancelled": "已取消"
-      }
+        "cancelled": "已取消",
+        "notStarted": "未开始"
+      },
+      "metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
+      "context": "上下文 {{percent}}%",
+      "total": "合计"
     },
     "readyTitle": "团队已经就绪",
     "readyDescription": "直接描述目标即可由负责人协调处理，也可以用输入框左下角的 @ 指定成员。"

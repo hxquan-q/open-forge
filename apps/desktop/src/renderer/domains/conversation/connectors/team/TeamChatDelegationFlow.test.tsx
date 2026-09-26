@@ -53,6 +53,10 @@ vi.mock("react-i18next", () => ({
 				"chat.teamProgress.item.completed": "已完成",
 				"chat.teamProgress.item.failed": "失败",
 				"chat.teamProgress.item.cancelled": "已取消",
+				"chat.teamProgress.item.notStarted": "未开始",
+				"chat.teamProgress.metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
+				"chat.teamProgress.context": "上下文 {{percent}}%",
+				"chat.teamProgress.total": "合计",
 			};
 			if (key === "chat.delegation") return `${values?.from} -> ${values?.to}`;
 			if (key === "chat.memberActivity.openSession") return `打开 ${values?.name} 的成员会话`;
@@ -748,8 +752,61 @@ describe("Team delegation message-to-UI flow", () => {
 				reason: "completed",
 				timestamp: 3,
 			});
+			update("completed", 4);
 		});
 		await waitFor(() => expect(strip.textContent).toContain("已结束"));
 		expect(strip.textContent).toContain("已完成 1");
+	});
+
+	it("shows member usage aggregates from runtime history inside the expanded strip", async () => {
+		render(<TeamFlow />);
+		await waitFor(() => expect(streamListener).toBeTypeOf("function"));
+		act(() => {
+			streamListener?.({
+				type: "session-updated",
+				teamSessionId: session.id,
+				snapshot: {
+					...emptySnapshot,
+					activities: [
+						{
+							kind: "delegation",
+							id: "delegate-architect",
+							requestId: "architect-turn",
+							sourceMemberId: leader.id,
+							targetMemberId: architect.id,
+							objective: "设计实现方案",
+							state: "completed",
+							timestamp: 1,
+						},
+					],
+					display: {
+						memberConversations: [
+							{
+								memberId: architect.id,
+								runtimeSessionId: "architect-runtime",
+								history: [
+									{
+										type: "message",
+										entryId: "architect-step",
+										message: assistantMessage("架构方案已完成", 1),
+									},
+									{
+										type: "assistant_turn_timing",
+										timing: { startedAt: 1, endedAt: 2001, durationMs: 2000 },
+										timestamp: "t",
+									},
+								],
+							},
+						],
+					},
+				},
+			});
+		});
+		const strip = screen.getByLabelText("团队任务进度");
+		fireEvent.click(within(strip).getByRole("button"));
+		const devRow = strip.querySelector(`[data-team-progress-member="${architect.id}"]`);
+		expect(devRow?.textContent).toContain("↻1");
+		expect(devRow?.textContent).toContain("2.0s");
+		expect(strip.querySelector('[data-team-progress-total]')?.textContent).toContain("合计");
 	});
 });
