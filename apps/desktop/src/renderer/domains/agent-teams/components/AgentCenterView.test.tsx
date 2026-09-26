@@ -55,6 +55,7 @@ function buildModel(overrides: Partial<AgentCenterModel> = {}): AgentCenterModel
 		teamsExpanded: false,
 		selectedTeam: undefined,
 		assembly: undefined,
+		assemblyDirty: false,
 		assemblyLeaderId: undefined,
 		assemblySubmittable: false,
 		sheet: undefined,
@@ -106,6 +107,7 @@ function renderView(
 		onDeleteTeam?: () => void;
 		onOpenTeamSettings?: () => void;
 		onOpenTeamChat?: (teamId: string) => void;
+		onDiscardAssemblyDraft?: () => void;
 	} = {},
 ) {
 	return render(
@@ -117,6 +119,7 @@ function renderView(
 			onDeleteTeam={handlers.onDeleteTeam ?? vi.fn()}
 			onOpenAgent={onOpenAgent}
 			onCreateAgent={vi.fn()}
+			onDiscardAssemblyDraft={handlers.onDiscardAssemblyDraft ?? vi.fn()}
 		/>,
 	);
 }
@@ -223,14 +226,13 @@ describe("AgentCenterView", () => {
 		expect(model.actions.selectTeam).toHaveBeenCalledWith(undefined);
 	});
 
-	it("leaves recruiting mode when the pointer lands outside the assembly regions", async () => {
+	it("leaves recruiting mode when the pointer lands outside the assembly regions and the draft is untouched", async () => {
 		const teams = [team("squad")];
 		const model = buildModel({
 			teams,
 			selectedTeam: teams[0],
-			assembly: { name: "squad", memberIds: ["alpha"], leaderId: "alpha" },
-			assemblyLeaderId: "alpha",
-			assemblySubmittable: true,
+			assembly: { name: "", memberIds: [], leaderId: undefined },
+			assemblyDirty: false,
 		} as Partial<AgentCenterModel>);
 		const user = userEvent.setup();
 		renderView(model);
@@ -243,6 +245,31 @@ describe("AgentCenterView", () => {
 		await user.click(screen.getByText("center.agentsSection"));
 		expect(model.actions.cancelAssembly).toHaveBeenCalled();
 		expect(model.actions.selectTeam).toHaveBeenCalledWith(undefined);
+	});
+
+	it("requests confirmation instead of silently discarding a dirty assembly draft on a blank click", async () => {
+		const onDiscardAssemblyDraft = vi.fn();
+		const teams = [team("squad")];
+		const model = buildModel({
+			teams,
+			selectedTeam: teams[0],
+			assembly: { name: "squad", memberIds: ["alpha"], leaderId: "alpha" },
+			assemblyDirty: true,
+			assemblyLeaderId: "alpha",
+			assemblySubmittable: true,
+		} as Partial<AgentCenterModel>);
+		const user = userEvent.setup();
+		renderView(model, vi.fn(), { onDiscardAssemblyDraft });
+
+		// 操作区内的点击照常工作，不会触发丢弃确认。
+		await user.click(screen.getByText("center.assemblyTitle"));
+		expect(onDiscardAssemblyDraft).not.toHaveBeenCalled();
+
+		// BUG-0036：草稿有实质改动时点空白不再静默丢弃，先交给连接层弹确认。
+		await user.click(screen.getByText("center.agentsSection"));
+		expect(onDiscardAssemblyDraft).toHaveBeenCalledTimes(1);
+		expect(model.actions.cancelAssembly).not.toHaveBeenCalled();
+		expect(model.actions.selectTeam).not.toHaveBeenCalledWith(undefined);
 	});
 
 	it("switches recruiting to another team when its card is clicked", async () => {

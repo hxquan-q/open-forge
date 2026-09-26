@@ -62,7 +62,10 @@
     "saving": "Saving…",
     "providedBy": "From {{name}}",
     "providedByHint": "Provided and maintained by an extension; it cannot be edited or deleted",
-    "providedReadOnly": "Provided and maintained by an extension: it is replaced wholesale on plugin updates and cannot be edited here"
+    "providedReadOnly": "Provided and maintained by an extension: it is replaced wholesale on plugin updates and cannot be edited here",
+    "discardAssemblyTitle": "Discard team draft?",
+    "discardAssemblyMessage": "Recruited members and everything you typed will be lost. This cannot be undone.",
+    "discardAssemblyConfirm": "Discard draft"
   },
   "profile": {
     "fixedPrompt": "Role: {{role}}",

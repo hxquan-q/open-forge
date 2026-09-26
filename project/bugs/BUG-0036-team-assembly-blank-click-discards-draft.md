@@ -1,7 +1,7 @@
 ---
 id: BUG-0036
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: apps/desktop
 source: verify:ui Dev Profile 实测（Agent Team 组队流程）
@@ -11,7 +11,7 @@ related_tasks: []
 related_issues: []
 related_bugs: []
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -83,4 +83,23 @@ updated: 2026-09-25
 
 ## 修复与验证
 
-- 待立项 TASK 实施。
+- 采用修复方向 1：非空草稿 + 操作区外点击 → 复用现有确认对话框确认后退出。
+  - `team-assembly.ts` 新增 `assemblyBaseline()`（新建草稿的种子是空草稿，编辑
+    草稿的种子是按当前团队重放的快照）与 `sameAssemblyDraft()`（trim 后等价
+    视为未改动；成员顺序按序比对，因为顺延队长取首位）。
+  - `useAgentCenterModel` 基于二者导出 `assemblyDirty`：种子找不到对应团队
+    （已被删除）时按脏处理，交给确认而不是静默丢。
+  - `AgentCenterView` 的 `pointerdown` 分级：干净草稿点空白照旧直接退出；
+    脏草稿改为回调 `onDiscardAssemblyDraft`，由 `AgentCenterPage` 经既有
+    `confirmDialogAtom` 弹危险确认，确认后才 `cancelAssembly()` + 清除选中。
+  - 中英文案：`center.discardAssemblyTitle/Message/Confirm`。
+- 回归测试：
+  - `team-assembly.test.ts`：种子比对（新建/编辑/种子缺失）、空白输入不算
+    改动、阵容/队长/任务书实质改动判脏。
+  - `useAgentCenterModel.test.tsx`：新建拉拢成员转脏、编辑草稿移出再拉回
+    同一成员恢复干净、改名转脏。
+  - `AgentCenterView.test.tsx`：干净草稿点空白照旧退出；脏草稿点空白回调
+    确认而非直接 `cancelAssembly`（该用例已对旧实现验证为红）。
+  - `AgentCenterPage.test.tsx`：连接层触发确认框，确认后才退出组队并清选中。
+- 验证：`run-vitest.mjs` 定向 4 文件 32 用例与 `agent-teams/` 目录 79 用例全绿；
+  `check:quick` 通过。真实路由级 UI 验证（verify:ui）未运行，待验收时复核。
