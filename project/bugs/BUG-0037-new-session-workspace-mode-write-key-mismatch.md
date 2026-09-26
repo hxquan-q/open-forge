@@ -1,7 +1,7 @@
 ---
 id: BUG-0037
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop renderer/conversation + renderer/workspace-mode
 requirement:
@@ -111,8 +111,12 @@ apps/desktop/src/renderer/domains/conversation/hooks/useSessionOpener.ts:416-418
 
 ## 修复与验证
 
-- 修复：待定（本轮只做验收，未改代码）。建议方向：让新会话页的切换器显式接收上下文 cwd——`WorkspaceModeSwitcher` 增加可选 `cwdOverride`（内部继续走 `useWorkspaceMode(cwdOverride)`），由 `NewSessionOptionsRow` 传入 `contextCwd`，删除这条路径上对路由 cwd 的隐式依赖。
-- 测试：见上。
-- 检查：修复后需重跑 `bun run check` 与 `apps/desktop` 相关测试（`useExecutionModeSelectorModel`、`NewSessionOptionsRow`、`WorkspaceModeSwitcher`、`useNewSessionProjectSelection` 现有用例）。
-- 未运行及原因：修复尚未实施，因此没有对应测试结果。
-- 必须保持的不变量：`/project/$cwd` 与会话页上 `useWorkspaceMode()` 的现有语义不变；未选中项目时新会话页的档位仍按「对话」cwd 记录。
+- 修复（2026-09-26）：`WorkspaceModeSwitcher` 增加可选 `cwdOverride`，并让新会话页把它显式下发下去——`NewSessionPageView` 传 `workspaceCwd={cwd}`（= `contextCwd`），`NewSessionOptionsRow` 转交给切换器。切换器此时直接按该 cwd 读写，不再隐式依赖路由 cwd；未传 `cwdOverride` 的宿主（`/project/$cwd`、会话页）行为不变。
+- 测试：
+  - `apps/desktop/src/renderer/domains/workspace-mode/components/WorkspaceModeSwitcher.test.tsx`：新增「显式 cwdOverride 时按该 cwd 读写，不跟随路由 cwd」——读到的档位来自 override cwd，写回的键也落在 override cwd，路由 cwd 键保持不受影响。6/6 通过。
+  - `apps/desktop/src/renderer/domains/conversation/components/new-session/NewSessionOptionsRow.test.tsx`：新增「把生效的 workspace cwd 下发给切换器」护栏（接线回归）。3/3 通过。
+- 检查：`bun run check` 的 lint（4602 files）、root/cli/desktop/docs/mobile 类型检查、mobile lint 均通过；`check:guards` 仅 `task-worktrees` 红，原因见「剩余风险」，与本修复无关。
+- 实机验证（CDP，Debug Profile `04987e4e`）：选中项目 `demo` 后点击「文档与研究」→ 分段控件高亮、只读确认句（「这次按「文档与研究」开…」）与 `localStorage["vetta-workspace-mode"]` 三者一致，且写入的键是 `E:\demo`（会话派生读取的同一个键）；修复前该操作写的是对话目录键、确认句仍显示「代码」。
+- 未运行及原因：真实 Provider 会话按该档创建的能力面断言未单独跑（需要一次真实模型调用）；本轮已用「同一 cwd 键」的静态链路 + 组件测试覆盖。
+- 补充修复（2026-09-26，「新建项目」路径）：待创建项目在落盘前没有自己的 cwd 键，期间切换器把档位写在路由 cwd 上，而会话创建按新项目 cwd 派生——不处理仍会静默回落默认档。`useNewSessionProjectSelection.applyCreatedProject` 在项目落盘时把 `contextCwd` 上的档位随迁到新项目键，路由 cwd 上的原记录保留；`useNewSessionProjectSelection.test.tsx` 新增「待创建项目落盘时档位随迁」回归（8/8 通过）。至此「选中已有项目 / 未选中 / 新建项目」三条路径的切换器、确认句与会话派生全部按同一口径读写。
+- 并行情况（已消解）：上轮记录中提到的「另一版修复」实为上面的 pending-create 随迁补丁——它与 `cwdOverride` 接线覆盖的是同一缺陷的不同路径，不是替代关系，两者均已保留。

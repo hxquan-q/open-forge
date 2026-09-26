@@ -1331,6 +1331,7 @@
 			"spawn_agent": "Spawn agent",
 			"task_output": "Task output",
 			"task_stop": "Stop task",
+			"team_wait_tasks": "Waiting for member tasks",
 			"todo": "Todo",
 			"tool_search": "Tool search",
 			"tree": "Directory tree",
@@ -1341,6 +1342,20 @@
 			"filterByTags": "Knowledge · Filter by tags",
 			"listTags": "Knowledge · List tags",
 			"writePage": "Knowledge · Write page"
+		}
+	},
+	"teamWaitTasks": {
+		"waiting": "Waiting for member task results",
+		"timeout": "Still waiting for members to finish ({{count}} in progress)",
+		"progress": "Member task updates",
+		"state": {
+			"queued": "{{count}} queued",
+			"running": "{{count}} running",
+			"waiting": "{{count}} waiting",
+			"attention-required": "{{count}} need attention",
+			"completed": "{{count}} done",
+			"failed": "{{count}} failed",
+			"cancelled": "{{count}} cancelled"
 		}
 	},
 	"mcpApp": {

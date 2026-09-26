@@ -1331,6 +1331,7 @@
 			"spawn_agent": "派生子代理",
 			"task_output": "任务输出",
 			"task_stop": "停止任务",
+			"team_wait_tasks": "等待成员任务",
 			"todo": "待办",
 			"tool_search": "检索工具",
 			"tree": "目录树",
@@ -1341,6 +1342,20 @@
 			"filterByTags": "知识库·标签筛选",
 			"listTags": "知识库·标签列表",
 			"writePage": "知识库·写页"
+		}
+	},
+	"teamWaitTasks": {
+		"waiting": "等待成员任务的结果",
+		"timeout": "仍在等待成员完成（{{count}} 项进行中）",
+		"progress": "成员任务有更新",
+		"state": {
+			"queued": "待开始 {{count}}",
+			"running": "进行中 {{count}}",
+			"waiting": "等待中 {{count}}",
+			"attention-required": "需要处理 {{count}}",
+			"completed": "已完成 {{count}}",
+			"failed": "失败 {{count}}",
+			"cancelled": "已取消 {{count}}"
 		}
 	},
 	"mcpApp": {

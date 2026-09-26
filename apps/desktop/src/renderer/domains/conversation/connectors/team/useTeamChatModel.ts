@@ -42,6 +42,7 @@ import {
 	type TeamSessionHandoff,
 	type TeamSessionSendHandoff,
 } from "./team-session-handoff";
+import { projectTeamSessionProgress } from "./team-session-progress";
 import {
 	placeTeamErrorInTimeline,
 	projectTeamConversationTimeline,
@@ -571,6 +572,24 @@ export function useTeamChatModel(
 		],
 	);
 
+	// 阶段条只出现在团队全景：成员视图本身就是明细，且条内点成员会再次进入成员视图。
+	const leaderMemberId = session?.leaderMemberId ?? team?.leaderMemberId;
+	const teamProgress = useMemo(() => {
+		if (memberViewId) return undefined;
+		const activities = snapshot?.activities;
+		if (!activities || activities.length === 0) return undefined;
+		const leaderWorking = leaderMemberId
+			? members.some((member) => member.id === leaderMemberId && member.status === "working")
+			: false;
+		return projectTeamSessionProgress({
+			activities,
+			members,
+			...(leaderMemberId ? { leaderMemberId } : {}),
+			memberRuntimeIds,
+			leaderBusy: leaderWorking || visiblePending !== undefined,
+		});
+	}, [leaderMemberId, memberRuntimeIds, memberViewId, members, snapshot?.activities, visiblePending]);
+
 	const addAttachments = useCallback(
 		(additions: readonly TeamAttachmentViewModel[]) => {
 			const existingPaths = new Set(deriveAttachments(parseInputSegments(draft).segments).map((item) => item.path));
@@ -956,6 +975,7 @@ export function useTeamChatModel(
 			...(session?.leaderMemberId ? { leaderMemberId: session.leaderMemberId } : {}),
 			feedItems,
 			...(pendingLabel ? { pendingLabel } : {}),
+			...(teamProgress ? { teamProgress } : {}),
 			editorEnabled: Boolean(session || createNewSession || preferredSessionId) && !memberViewId,
 			canSend: Boolean(
 				(session || createNewSession || preferredSessionId) &&
@@ -993,6 +1013,7 @@ export function useTeamChatModel(
 			members,
 			feedItems,
 			pendingLabel,
+			teamProgress,
 			session,
 			pending,
 			preferredSessionId,

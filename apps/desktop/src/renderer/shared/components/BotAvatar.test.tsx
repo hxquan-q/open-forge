@@ -32,6 +32,13 @@ it("autoplay 的小动作之间至少空 1.4s", () => {
 	expect(screen.queryByText("z")).toBeTruthy();
 });
 
+it("interactive=false 时渲染纯展示节点：无障碍树里没有第二颗按钮（BUG-0039）", () => {
+	render(<BotAvatar interactive={false} title="戳一下" />);
+	// 宿主本身是交互控件时用它：头像不再贡献按钮，也不会把「戳一下」的名字泄露给读屏。
+	expect(screen.queryByRole("button")).toBeNull();
+	expect(screen.queryByTitle("戳一下")).toBeNull();
+});
+
 it("用户戳头像触发打瞌睡后，「z」会随姿态结束而消失，不留下常驻动画", async () => {
 	// ACTIVE_MOODS 最后一项是 sleep
 	vi.spyOn(Math, "random").mockReturnValue(0.99);

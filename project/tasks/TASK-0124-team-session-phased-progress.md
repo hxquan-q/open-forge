@@ -1,7 +1,7 @@
 ---
 id: TASK-0124
 type: task
-status: draft
+status: done
 priority: P3
 owner: apps/desktop
 requirement: []
@@ -13,15 +13,15 @@ related_tasks: []
 related_issues: [ISSUE-0025, ISSUE-0027]
 related_bugs: []
 execution: serial
-branch:
-worktree:
+branch: task/TASK-0124-team-session-phased-progress
+worktree: unassigned（主工作区串行执行）
 base_commit: main
-read_paths: [apps/desktop/src/renderer/domains/agent-teams/, apps/desktop/src/main/agent-teams/]
-write_paths: [apps/desktop/src/renderer/domains/agent-teams/, .github/release-notes/]
+read_paths: [apps/desktop/src/renderer/domains/conversation/, apps/desktop/src/main/agent-teams/]
+write_paths: [apps/desktop/src/renderer/domains/conversation/, apps/desktop/src/shared/i18n/locales/, .github/release-notes/, project/tasks/]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-26
 updated: 2026-09-26
 ---
@@ -84,7 +84,23 @@ running/waiting/completed）投影为团队会话页的阶段化进度条/阶段
 ## 交付记录
 
 - 实际修改：
+  - 新增 `connectors/team/team-session-progress.ts` 纯投影（snapshot.activities → 阶段/状态计数/成员行）
+    与 `TeamSessionProgress.tsx` 阶段条组件，挂到 `TeamChatView` subHeader（成员胶囊条下方）；
+    `useTeamChatModel`/`teamChatModel` 暴露 `teamProgress` 视图模型字段。
+  - 新增 `tool-views/TeamWaitTasksView.tsx`，在 `ToolCallBlock` 对 `team_wait_tasks` 结构化
+    JSON 结果折叠为中性文案（仍在等待/有更新 + 各状态计数），原始载荷仍可从工具卡展开查看。
+  - i18n：`agent-teams` 加 `chat.teamProgress.*`，`chat` 加 `teamWaitTasks.*` 与
+    `toolLabel.alias.team_wait_tasks`（中英）。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
-- 剩余风险：
+  - `run-vitest --run team-session-progress.test.ts TeamSessionProgress.test.tsx
+    TeamWaitTasksView.test.tsx TeamChatDelegationFlow.test.tsx`（41 用例全过，含新增的全链路
+    流程用例：queued→running→收尾→settled 经真实 model + IPC 边界 mock）
+  - `bun run check:quick`：Biome/guards 通过；`task-worktrees` 告警为 TASK-0045∩0122/0123
+    的存量重叠，与本任务无关。
+  - `tsc --noEmit -p apps/desktop/tsconfig.json`（desktop 定向类型检查）
+- 未运行及原因：`verify:ui:*`（用户未授权）；E2E 不必要——组件级流程测试已覆盖真实接线。
+- Worktree：unassigned（serial 任务按合同在主 checkout 的 task 分支执行，未建独立 worktree）
+- 集成记录：`--no-ff` 合入 main（`v0.1.2.md`「其他」与 TASK-0045 各增一条、双双保留）；
+  合入后定向 4 文件 46 用例与 `check:quick` 复跑通过（`task-worktrees` 存量告警不变）。
+- 剩余风险：阶段语义是只读投影，不改动 workItem 状态机；TASK-0122 落地后若回合边界语义变化，
+  仅需重评 `wrapping` 判定（leaderBusy 输入点）。

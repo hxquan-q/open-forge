@@ -1,5 +1,11 @@
-import { defaultConversationCwdAtom, projectsAtom } from "@shared/store/atoms";
-import { useAtomValue } from "jotai";
+import {
+	defaultConversationCwdAtom,
+	projectsAtom,
+	readWorkspaceModeFor,
+	workspaceModeByProjectAtom,
+	writeWorkspaceMode,
+} from "@shared/store/atoms";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useMemo, useState } from "react";
 import {
 	type ProjectOption,
@@ -84,14 +90,27 @@ export function useNewSessionProjectSelection(routeCwd: string): NewSessionProje
 		[setSelection],
 	);
 
+	const setWorkspaceModes = useSetAtom(workspaceModeByProjectAtom);
+	const contextCwd = resolveContextCwd({ selection, routeCwd, defaultConversationCwd });
+
 	const applyCreatedProject = useCallback(
-		(cwd: string, name: string) => setSelection({ kind: "project", cwd, name }),
-		[setSelection],
+		(cwd: string, name: string) => {
+			// 待创建期间目录尚不存在，模式档位挂在路由 cwd 键上（切换器与确认句都按
+			// contextCwd 读写）；落盘这一刻会话派生改按新 cwd 读，用户刚选的档位必须随迁，
+			// 否则新会话静默回落默认档（BUG-0037）。
+			setWorkspaceModes((prev) => {
+				const mode = readWorkspaceModeFor(prev, contextCwd);
+				if (readWorkspaceModeFor(prev, cwd) === mode) return prev;
+				return writeWorkspaceMode(prev, cwd, mode);
+			});
+			setSelection({ kind: "project", cwd, name });
+		},
+		[contextCwd, setSelection, setWorkspaceModes],
 	);
 
 	return {
 		selection,
-		contextCwd: resolveContextCwd({ selection, routeCwd, defaultConversationCwd }),
+		contextCwd,
 		activityPanelCwd: resolveActivityPanelCwd(selection),
 		options,
 		takenNames,

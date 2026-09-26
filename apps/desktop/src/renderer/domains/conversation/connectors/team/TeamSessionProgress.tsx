@@ -1,0 +1,162 @@
+import { cn } from "@shared/lib/utils";
+import { AgentAvatarView } from "@vetta-org/theme-ui/chat";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TeamSessionProgress as TeamSessionProgressModel, TeamWorkItemPhase } from "./team-session-progress";
+
+const PHASE_ICON: Record<TeamSessionProgressModel["phase"], string> = {
+	dispatching: "icon-[solar--clipboard-list-linear]",
+	running: "icon-[solar--play-circle-linear]",
+	waiting: "icon-[solar--pause-circle-linear]",
+	attention: "icon-[solar--bell-linear]",
+	wrapping: "icon-[solar--flag-linear]",
+	settled: "icon-[solar--check-circle-linear]",
+};
+
+const STATE_DOT: Record<TeamWorkItemPhase, string> = {
+	queued: "bg-muted-foreground/40",
+	running: "vetta-live-dot bg-emerald-500",
+	waiting: "bg-amber-400",
+	attention: "bg-amber-400",
+	completed: "bg-emerald-500/70",
+	failed: "bg-destructive",
+	cancelled: "bg-muted-foreground/40",
+};
+
+const SUMMARY_ORDER: readonly TeamWorkItemPhase[] = [
+	"running",
+	"queued",
+	"waiting",
+	"attention",
+	"failed",
+	"completed",
+	"cancelled",
+];
+
+export interface TeamSessionProgressProps {
+	readonly progress: TeamSessionProgressModel;
+	readonly onOpenMember?: (memberId: string) => void;
+}
+
+/**
+ * 成员胶囊条下方的会话阶段条：一行说明团队进行到哪一步（分派/执行/等待/收尾），
+ * 展开后按成员列出在做的那件任务。事实全部来自快照里的持久化 work item 状态，
+ * 组件本身不维护第二套状态机，长按会话期间也不会累积挂载。
+ */
+export function TeamSessionProgress({ progress, onOpenMember }: TeamSessionProgressProps): JSX.Element {
+	const { t } = useTranslation("agent-teams");
+	const [expanded, setExpanded] = useState(false);
+	const phaseLabel = t(`chat.teamProgress.phase.${progress.phase}`);
+	const summary = SUMMARY_ORDER.filter((state) => progress.counts[state] > 0)
+		.map((state) => t(`chat.teamProgress.count.${state}`, { count: progress.counts[state] }))
+		.join(" · ");
+	const highlight =
+		progress.phase === "attention" || (progress.phase === "settled" && progress.counts.failed > 0);
+
+	return (
+		<div
+			data-team-session-progress="true"
+			aria-label={t("chat.teamProgress.title")}
+			className="mx-3 mb-2 shrink-0"
+		>
+			<button
+				type="button"
+				aria-expanded={expanded}
+				data-team-progress-toggle="true"
+				className={cn(
+					"flex h-7 w-full items-center gap-2 rounded-lg border border-border/40 bg-muted/40 px-2.5 text-left text-[11px] transition-colors",
+					"hover:border-border/60 hover:bg-muted/60",
+				)}
+				onClick={() => setExpanded((value) => !value)}
+			>
+				<span
+					className={cn(
+						"h-3.5 w-3.5 shrink-0",
+						PHASE_ICON[progress.phase],
+						highlight ? "text-destructive" : "text-muted-foreground",
+					)}
+					aria-hidden="true"
+				/>
+				<span className="flex min-w-0 flex-1 items-baseline gap-1.5" role="status">
+					<span className={cn("shrink-0 font-medium", highlight ? "text-destructive" : "text-foreground")}>
+						{phaseLabel}
+					</span>
+					<span className="min-w-0 truncate text-muted-foreground/70">{summary}</span>
+				</span>
+				<span
+					className={cn(
+						"h-3 w-3 shrink-0 text-muted-foreground/60",
+						expanded ? "icon-[solar--alt-arrow-up-linear]" : "icon-[solar--alt-arrow-down-linear]",
+					)}
+					aria-hidden="true"
+				/>
+			</button>
+			{expanded ? (
+				<div role="list" className="mt-1 flex flex-col gap-0.5">
+					{progress.rows.map((row) => {
+						const stateLabel = t(`chat.teamProgress.item.${row.state}`);
+						const content = (
+							<>
+								<span
+									className={cn("h-2 w-2 shrink-0 rounded-full", STATE_DOT[row.state])}
+									aria-hidden="true"
+								/>
+								<AgentAvatarView name={row.name} avatar={row.avatar} size="xs" />
+								<span className="shrink-0 font-medium text-foreground">
+									{row.name}
+									{row.isLeader ? (
+										<span
+											className="icon-[solar--crown-star-bold] ml-1 inline-block h-3 w-3 align-[-2px] text-amber-400"
+											title={t("chat.leaderRoute")}
+											aria-hidden="true"
+										/>
+									) : null}
+								</span>
+								<span className="shrink-0 text-muted-foreground">
+									{stateLabel}
+									{row.itemCount > 1 ? ` ×${row.itemCount}` : ""}
+								</span>
+								{row.objective ? (
+									<span className="min-w-0 flex-1 truncate text-muted-foreground/60">{row.objective}</span>
+								) : (
+									<span className="min-w-0 flex-1" />
+								)}
+								{row.openable ? (
+									<span
+										className="icon-[solar--alt-arrow-right-linear] h-3 w-3 shrink-0 text-muted-foreground/50"
+										aria-hidden="true"
+									/>
+								) : null}
+							</>
+						);
+						return (
+							<div
+								key={row.memberId}
+								role="listitem"
+								data-team-progress-member={row.memberId}
+								className={cn(
+									"flex h-7 w-full items-center gap-2 rounded-md px-2 text-[11px]",
+									!(row.openable && onOpenMember) && "opacity-80",
+								)}
+							>
+								{row.openable && onOpenMember ? (
+									<button
+										type="button"
+										title={t("chat.memberSession", { name: row.name })}
+										aria-label={t("chat.memberSession", { name: row.name })}
+										className="flex h-full w-full min-w-0 items-center gap-2 rounded-md text-left transition-colors hover:bg-accent"
+										onClick={() => onOpenMember(row.memberId)}
+									>
+										{content}
+									</button>
+								) : (
+									content
+								)}
+							</div>
+						);
+					})}
+				</div>
+			) : null}
+		</div>
+	);
+}

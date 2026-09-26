@@ -1,7 +1,7 @@
 ---
 id: BUG-0039
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop renderer (sidebar / guide banner / agent selector)
 requirement:
@@ -86,6 +86,16 @@ passes: 31   violations: 3（共 4 个节点）   incomplete: 1（color-contrast
 
 ## 修复与验证
 
-- 修复：待定（本轮只做验收）。方向：给图标按钮补 `aria-label`；把「不再提示」与「戳一下」移出外层可点击容器（改为兄弟节点，视觉与行为不变）；把标题栏品牌与空态文本放入 landmark。
-- 检查：修复后重跑同一 `a11y --json`，确认 `violations` 中的 `button-name` 与 `nested-interactive` 归零（`region` 视 landmark 调整结果）。
-- 未运行及原因：修复未实施；其它页面（能力市场、设置、会话页）的 axe 审计本轮未逐个执行。
+- 修复（2026-09-26，两项 WCAG 违规）：
+  1. `packages/theme-ui/src/project/ProjectRowView.tsx`：新增可选 `toggleTitle` 并把它作为图标按钮的 `aria-label`/`title`；宿主链路 `useProjectGroupModel`（新增 `sidebar.projects.toggleSessions` 文案，zh/en 同步）→ `ProjectGroup` → `ProjectRow` → `useProjectRowModel` 一路下发。
+  2. `packages/theme-ui/src/chat/GuideBadgeSwiperView.tsx`：药丸改成容器 `div`，「正文动作」与「不再提示」成为并列按钮（不再嵌套）；`apps/desktop/.../NewSessionAgentSelector.tsx`：触发器里的装饰头像用 `<span class="contents" aria-hidden inert>` 包住，把 `BotAvatar` 自身的 `<button>` 移出无障碍树与焦点序列（指针行为本来就是 `pointer-events-none`，视觉不变）。
+- 测试（新增 2 个 desktop 侧回归文件，共 5 例）：
+  - `ProjectRowView.a11y.test.tsx`：图标按钮以 `toggleTitle` 为名称；折叠态点击仍展开并导航、展开态只折叠。
+  - `GuideBadgeSwiperView.a11y.test.tsx`：正文动作内无可聚焦嵌套控件、两者各自触发自己的回调、不可关闭时没有「不再提示」。
+- 实机验证（axe-core 4.12.1，CDP 附着新会话页）：`violations 3 → 1`、节点数 `4 → 2`；`button-name`（critical）与 `nested-interactive`（serious）归零；侧栏无名按钮计数从 1 → 0；项目行图标按钮实测名称「展开或折叠「demo」的会话」。
+- 补充修复（2026-09-26，`region` 与收口项，同工作区并行会话补做）：
+  3. `packages/theme-ui/src/sidebar/SidebarPanel.tsx`：面板根节点加 `role="complementary"` 与 `aria-label`（经 `DefaultSidebar.panelLabel` 由桌面宿主传入 `sidebar.regionLabel`，zh「侧边栏」/ en「Sidebar」）——品牌、导航、项目区全部落入该 landmark，`region` 违规闭合；不动标题栏结构。新增 `SidebarPanelLandmark.test.tsx` 锁定。
+  4. `GuideBadgeSwiperView` 的「不再提示」去掉 `tabIndex={-1}`：成为并列控件后不应再把键盘用户挡在焦点序列之外；`GuideBadgeSwiperView.a11y.test.tsx` 补 tabbable 断言。
+  5. `BotAvatar` 新增 `interactive` prop（默认 true 不变），`interactive={false}` 时渲染非按钮装饰节点；`NewSessionAgentSelector` 的触发器用它替代 inert 包裹方案，DOM 中不再存在第二颗按钮。`BotAvatar.test.tsx` 与 `NewSessionAgentSelector.test.tsx` 各补一例。
+- 仍开放：无。`region` 已按上条闭合（component 级断言已绿；axe 全量复跑建议随下一轮实机验收进行）。
+- 未运行及原因：其它页面（能力库、设置、会话页）未逐个跑 axe。另注：`packages/theme-ui` 自身测试未被任何门禁收集（该包没有 `test` 脚本、desktop vitest 的 include 也不含它），因此这两个回归测试放在 desktop 侧，确保会随 `test:pkg desktop` / `test:changed` 运行。

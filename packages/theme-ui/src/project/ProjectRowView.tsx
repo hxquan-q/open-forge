@@ -21,6 +21,11 @@ export interface ProjectRowViewProps {
 	/** 远程（SSH）项目：折叠态用服务器图标替代项目类型图标。 */
 	remote?: boolean;
 	rowRef?: Ref<HTMLDivElement>;
+	/**
+	 * 项目图标按钮的可访问名称。它只画图标，没有它时读屏用户听到的是一个无名按钮
+	 * （axe `button-name`，BUG-0039）。
+	 */
+	toggleTitle?: string;
 }
 
 export function ProjectRowView({
@@ -40,6 +45,7 @@ export function ProjectRowView({
 	projectType,
 	remote = false,
 	rowRef,
+	toggleTitle,
 }: ProjectRowViewProps): JSX.Element {
 	return (
 		<div
@@ -53,6 +59,8 @@ export function ProjectRowView({
 		>
 			<button
 				type="button"
+				aria-label={toggleTitle}
+				title={toggleTitle}
 				onClick={() => {
 					onInteract?.();
 					if (expanded) {

@@ -85,6 +85,13 @@ describe("NewSessionAgentSelector", () => {
 		expect(selectedTrigger.querySelectorAll("img")).toHaveLength(1);
 	});
 
+	it("trigger 是唯一交互宿主：头像装饰不再嵌套可聚焦控件（BUG-0039）", () => {
+		render(<Harness onSelect={vi.fn()} />);
+
+		const trigger = screen.getByRole("button", { name: "newSession.agentSelector.pickTitle" });
+		expect(within(trigger).queryByRole("button")).toBeNull();
+	});
+
 	it("splits teams and agents into their own labelled groups", async () => {
 		const user = userEvent.setup();
 		render(<Harness onSelect={vi.fn()} />);

@@ -221,6 +221,7 @@ export function useProjectGroupModel({
 		hiddenCount: ordering.hiddenCount,
 		isActive,
 		newSessionTitle: t("sidebar.nav.newSession"),
+		toggleTitle: t("sidebar.projects.toggleSessions", { name: displayName }),
 		noSessionsLabel: t("sidebar.projects.noSessions"),
 		project,
 		projectBadge,

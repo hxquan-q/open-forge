@@ -16,6 +16,7 @@ interface Args {
 	newSessionTitle: string;
 	project: Project;
 	projectType: ProjectType;
+	toggleTitle: string;
 }
 
 export function useProjectRowModel({
@@ -32,6 +33,7 @@ export function useProjectRowModel({
 	newSessionTitle,
 	project,
 	projectType,
+	toggleTitle,
 }: Args): ProjectRowViewProps {
 	return {
 		badge,
@@ -43,6 +45,7 @@ export function useProjectRowModel({
 		projectCwd: project.cwd,
 		projectType,
 		remote: isSshProjectUri(project.cwd),
+		toggleTitle,
 		onCollapse: () => onCollapse(project.cwd),
 		onExpand: () => onExpand(project.cwd),
 		onNavigateProject: () => onNavigateProject(project.cwd),

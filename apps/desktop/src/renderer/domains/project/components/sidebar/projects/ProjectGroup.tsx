@@ -77,6 +77,7 @@ export const ProjectGroup = memo(function ProjectGroup(props: ProjectGroupProps)
 				hasRunning: model.hasRunning,
 				isActive: model.isActive,
 				newSessionTitle: model.newSessionTitle,
+				toggleTitle: model.toggleTitle,
 				onCollapse: model.actions.collapse,
 				onExpand: model.actions.expand,
 				onNavigateProject: model.actions.navigateProject,
