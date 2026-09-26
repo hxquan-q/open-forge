@@ -84,7 +84,27 @@ updated: 2026-09-24
 
 ## 交付记录
 
-- 实际修改：
+- 阶段 1（2026-09-27，Main 侧有界页合同）：
+  - 新增 `conversations/session-history-page.ts`：`HistoryPageRequest`/`HistoryPage`
+    wire 合同落在 `preload/api-types/session.ts`；`sliceHistoryPage` 从完整
+    projection 裁剪（任务允许的过渡形态），游标 = 排他下标 + 边界条目签名
+    （entryId 或内容哈希），append-only 不失效、改写/删除/截断报 `stale`；
+    `parseHistoryPageRequest` 统一校验 limit（默认 100/上限 200）与
+    tailTurns（1-10）。
+  - IPC：`GET_FULL_HISTORY` 与 `VIEWER_OPEN` 传分页 options 即回有界页；
+    无参调用保留旧全量语义，`openViewer({})` 空对象亦按旧全量快照返回。
+    `openViewer({tailTurns})` 现在返回 `HistoryPage`（`history` 字段兼容，
+    尾部按 limit 截断），旧 `session-history-preview.ts` 已删除（职能并入
+    page 模块）。
+  - preload：`getFullHistory`/`openViewer` 重载签名，`{stale:true}` 进
+    返回联合类型；`useSessionOpener` 两处 tail 消费点做防御性收窄。
+  - 测试：`session-history-page.test.ts` 9 用例（默认尾页/连翻无重漏/排他
+    边界/append 稳定/改写 stale/无 id 条目锚定/非法游标/limit 校验/
+    tailTurns 限界/空历史）；desktop typecheck 与 check:quick 绿。
+  - 未做（后续阶段）：Renderer 聊天面板的尾页+上滚插页迁移、live/optimistic
+    与 canonical 尾页合并、stale 重对账、滚动锚点；viewer 订阅增量/reset
+    模式；MessageTimeline 分页摘要与导出逐页 drain。这些需要独立的
+    renderer 改动轮次。
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：

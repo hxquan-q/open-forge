@@ -1,0 +1,144 @@
+// Copyright The Open Forge contributors.
+import type { HistoryEntry } from "@vetta/runtime-core";
+import type { HistoryPageRequest, HistoryPageResult } from "../../preload/api-types/session.js";
+
+/**
+ * transcript 窗口化第 2 步（TASK-0050）：有界历史页。
+ *
+ * 游标是服务端生成的不透明字符串，Renderer 原样回传。编码内容为
+ * `end:<exclusiveIndex>:<sig>`：`end` 是「本页第一条之后」的下标，
+ * `sig` 是该下标处条目的身份签名（entryId 或内容哈希）。append-only
+ * 增长不改写既有下标处的条目，游标保持有效；分支切换、编辑、删除或
+ * compaction 改写会让签名失配，返回 stale 而不是伪空页。
+ */
+
+export const HISTORY_PAGE_DEFAULT_LIMIT = 100;
+export const HISTORY_PAGE_MAX_LIMIT = 200;
+export const HISTORY_PAGE_MAX_TAIL_TURNS = 10;
+
+/**
+ * 把 IPC 传入的分页 options 收窄成 HistoryPageRequest。任一字段出现即进入
+ * 分页模式；字段非法（非整数/越界/非对象）抛 TypeError，由 IPC 层按参数
+ * 错误回传。
+ */
+export function parseHistoryPageRequest(options: unknown): HistoryPageRequest {
+	if (!options || typeof options !== "object" || Array.isArray(options)) {
+		throw new TypeError("options must be an object");
+	}
+	const { limit, beforeEntry, tailTurns } = options as {
+		limit?: unknown;
+		beforeEntry?: unknown;
+		tailTurns?: unknown;
+	};
+	if (
+		limit !== undefined &&
+		(!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > HISTORY_PAGE_MAX_LIMIT)
+	) {
+		throw new TypeError(`options.limit must be an integer between 1 and ${HISTORY_PAGE_MAX_LIMIT}`);
+	}
+	if (beforeEntry !== undefined && typeof beforeEntry !== "string") {
+		throw new TypeError("options.beforeEntry must be a string cursor returned by a previous page");
+	}
+	if (
+		tailTurns !== undefined &&
+		(!Number.isInteger(tailTurns) || (tailTurns as number) < 1 || (tailTurns as number) > HISTORY_PAGE_MAX_TAIL_TURNS)
+	) {
+		throw new TypeError(`options.tailTurns must be an integer between 1 and ${HISTORY_PAGE_MAX_TAIL_TURNS}`);
+	}
+	return {
+		...(limit !== undefined ? { limit: limit as number } : {}),
+		...(beforeEntry !== undefined ? { beforeEntry: beforeEntry as string } : {}),
+		...(tailTurns !== undefined ? { tailTurns: tailTurns as number } : {}),
+	};
+}
+
+function entrySignature(entry: HistoryEntry | undefined): string {
+	if (!entry) return "∅";
+	const withId = entry as { entryId?: string };
+	if (typeof withId.entryId === "string" && withId.entryId.length > 0) {
+		return `id:${withId.entryId}`;
+	}
+	// timing/marker 类条目没有 entryId，用内容哈希锚定；同一历史源内
+	// JSON 形状稳定，改写任一字节都会失配。
+	let hash = 0x811c9dc5;
+	const text = JSON.stringify(entry);
+	for (let i = 0; i < text.length; i += 1) {
+		hash ^= text.charCodeAt(i);
+		hash = Math.imul(hash, 0x01000193) >>> 0;
+	}
+	return `h:${hash.toString(36)}`;
+}
+
+function encodeCursor(endExclusive: number, boundary: HistoryEntry | undefined): string {
+	const raw = `e:${endExclusive}:${entrySignature(boundary)}`;
+	return Buffer.from(raw, "utf8").toString("base64url");
+}
+
+function decodeCursor(cursor: string): { end: number; sig: string } | null {
+	try {
+		const raw = Buffer.from(cursor, "base64url").toString("utf8");
+		const match = /^e:(\d+):(.+)$/.exec(raw);
+		if (!match) return null;
+		return { end: Number.parseInt(match[1]!, 10), sig: match[2]! };
+	} catch {
+		return null;
+	}
+}
+
+function resolveLimit(limit: number | undefined): number {
+	if (limit === undefined) return HISTORY_PAGE_DEFAULT_LIMIT;
+	if (!Number.isInteger(limit) || limit < 1 || limit > HISTORY_PAGE_MAX_LIMIT) {
+		throw new TypeError(`options.limit must be an integer between 1 and ${HISTORY_PAGE_MAX_LIMIT}`);
+	}
+	return limit;
+}
+
+function tailStartByTurns(history: readonly HistoryEntry[], tailTurns: number): number {
+	let remainingTurns = tailTurns;
+	for (let index = history.length - 1; index >= 0; index -= 1) {
+		const entry = history[index];
+		if (entry?.type !== "message" || entry.message.role !== "user") continue;
+		remainingTurns -= 1;
+		if (remainingTurns === 0) return index;
+	}
+	return 0;
+}
+
+/**
+ * 从完整历史 projection 中裁出一页。Main 现阶段仍读全量再裁剪（任务
+ * 明确允许的过渡形态），游标签名保证裁剪边界在改写时可检测。
+ */
+export function sliceHistoryPage(
+	history: readonly HistoryEntry[],
+	request: HistoryPageRequest = {},
+): HistoryPageResult {
+	const limit = resolveLimit(request.limit);
+
+	if (request.beforeEntry !== undefined) {
+		const cursor = decodeCursor(request.beforeEntry);
+		if (!cursor) return { stale: true };
+		const boundary = history[cursor.end];
+		if (cursor.end > history.length || entrySignature(boundary) !== cursor.sig) {
+			return { stale: true };
+		}
+		const start = Math.max(0, cursor.end - limit);
+		const page = history.slice(start, cursor.end);
+		return {
+			history: [...page],
+			nextBeforeEntry: start > 0 ? encodeCursor(start, history[start]) : undefined,
+			hasMore: start > 0,
+			head: false,
+		};
+	}
+
+	const tailStart = request.tailTurns !== undefined ? tailStartByTurns(history, request.tailTurns) : 0;
+	const end = history.length;
+	const start = Math.max(tailStart, end - limit);
+	const page = history.slice(start, end);
+	return {
+		history: [...page],
+		nextBeforeEntry: start > 0 ? encodeCursor(start, history[start]) : undefined,
+		hasMore: start > 0,
+		head: true,
+	};
+}

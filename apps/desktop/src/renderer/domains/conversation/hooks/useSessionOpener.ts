@@ -343,7 +343,9 @@ export function useSessionOpener(): SessionOpenerController {
 							markSessionSwitch("session-preview-history-superseded");
 							return;
 						}
-						const previewMessages = fullHistoryToChat(snapshot.history);
+						// tailTurns 首页不可能 stale；防御性收窄，stale 时退为空预览，
+						// 由下方 canonical 历史加载兜底。
+						const previewMessages = fullHistoryToChat("stale" in snapshot ? [] : snapshot.history);
 						previewMessagesSnapshot = previewMessages;
 						markSessionSwitch("session-preview-history-mapped");
 						if (myOpenToken !== getOpenSessionToken()) {
@@ -591,7 +593,7 @@ export function useSessionOpener(): SessionOpenerController {
 					: historyLoadMode === "tail"
 						? window.vetta.session
 								.openViewer(sessionPath, { tailTurns: LARGE_SESSION_TAIL_TURNS })
-								.then((snapshot) => snapshot.history)
+								.then((snapshot) => ("stale" in snapshot ? [] : snapshot.history))
 						: window.vetta.session.getFullHistory(sessionId);
 			const statePromise = window.vetta.session.getState(sessionId);
 			let state: Awaited<typeof statePromise>;
