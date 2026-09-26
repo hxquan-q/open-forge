@@ -19,20 +19,26 @@ vi.mock("react-i18next", () => ({
 }));
 
 const selectFiles = vi.fn();
+const selectFolders = vi.fn();
 const getState = vi.fn();
 const runCommand = vi.fn();
 const readArtifact = vi.fn();
+const verifyArtifactSources = vi.fn();
 const exportArtifact = vi.fn();
 
 vi.stubGlobal(
 	"window",
 	Object.assign(globalThis.window, {
 		vetta: {
-			dialog: { selectFiles: (...args: unknown[]) => selectFiles(...args) },
+			dialog: {
+				selectFiles: (...args: unknown[]) => selectFiles(...args),
+				selectFolders: (...args: unknown[]) => selectFolders(...args),
+			},
 			task: {
 				getState: (...args: unknown[]) => getState(...args),
 				runCommand: (...args: unknown[]) => runCommand(...args),
 				readArtifact: (...args: unknown[]) => readArtifact(...args),
+				verifyArtifactSources: (...args: unknown[]) => verifyArtifactSources(...args),
 				exportArtifact: (...args: unknown[]) => exportArtifact(...args),
 			},
 		},
@@ -101,8 +107,10 @@ beforeEach(() => {
 	getState.mockReset().mockResolvedValue(taskState());
 	runCommand.mockReset();
 	readArtifact.mockReset();
+	verifyArtifactSources.mockReset();
 	exportArtifact.mockReset();
 	selectFiles.mockReset().mockResolvedValue([]);
+	selectFolders.mockReset().mockResolvedValue([]);
 	showToastMock.mockClear();
 });
 
@@ -170,6 +178,48 @@ describe("WorkDocumentSections sources", () => {
 			expect(sendMessage).toHaveBeenCalledWith(`${pathTokenText("C:/资料/附录.md")} 整理成一页纪要`);
 		});
 	});
+	it("本地研究模式：选择资料集目录并提问，走同一创建+发送通道", async () => {
+		const user = userEvent.setup();
+		const sendMessage = vi.fn().mockResolvedValue({ status: "sent" });
+		sendMessageFnRef.current = sendMessage;
+		selectFolders.mockResolvedValue(["C:/资料集/行业报告"]);
+		runCommand.mockResolvedValue({ ok: true, state: taskState() });
+
+		renderSections();
+		await user.click(await screen.findByRole("button", { name: "workspace.work.sources.mode.research" }));
+		await user.click(screen.getByRole("button", { name: "workspace.work.sources.pickFolder" }));
+		expect(selectFiles).not.toHaveBeenCalled();
+		expect(selectFolders).toHaveBeenCalled();
+
+		await user.type(
+			screen.getByPlaceholderText("workspace.work.sources.questionPlaceholder"),
+			"这套资料对出海的结论是？",
+		);
+		await user.click(screen.getByRole("button", { name: "workspace.work.sources.startResearch" }));
+
+		await waitFor(() => {
+			expect(runCommand).toHaveBeenCalledWith("runtime-1", {
+				type: "create",
+				title: "这套资料对出海的结论是？",
+			});
+		});
+		await waitFor(() => {
+			expect(sendMessage).toHaveBeenCalledWith(
+				`${pathTokenText("C:/资料集/行业报告")} 这套资料对出海的结论是？`,
+			);
+		});
+	});
+
+	it("切换入口模式会清空已选来源，避免文件/目录混带", async () => {
+		const user = userEvent.setup();
+		selectFiles.mockResolvedValue(["C:/资料/报告.docx"]);
+		renderSections();
+		await user.click(await screen.findByRole("button", { name: "workspace.work.sources.pickFile" }));
+		await screen.findByText("报告.docx");
+		await user.click(screen.getByRole("button", { name: "workspace.work.sources.mode.research" }));
+		expect(screen.queryByText("报告.docx")).toBeNull();
+	});
+
 	it("create 失败时提示任务命令失败，不发送消息", async () => {
 		const user = userEvent.setup();
 		const sendMessage = vi.fn();
@@ -247,6 +297,54 @@ describe("WorkDocumentSections artifacts", () => {
 			);
 		});
 		expect(screen.queryByText("第二行")).toBeNull();
+	});
+
+	it("research-evidence 预览时复查引用来源，缺失/已变更逐项标注", async () => {
+		const user = userEvent.setup();
+		const seed = taskState({
+			artifacts: [artifactDescriptor({ kind: "research-evidence", title: "调研结论.md" })],
+		});
+		getState.mockResolvedValue(seed);
+		readArtifact.mockResolvedValue({
+			status: "ok",
+			content: "结论正文",
+			truncated: false,
+			title: "调研结论.md",
+		} satisfies DesktopArtifactReadOutcome);
+		verifyArtifactSources.mockResolvedValue({
+			status: "ok",
+			sources: [
+				{ uri: "file:///C:/set/a.md", path: "C:/set/a.md", name: "a.md", status: "ok" },
+				{ uri: "file:///C:/set/b.pdf", path: "C:/set/b.pdf", name: "b.pdf", status: "missing" },
+				{ uri: "file:///C:/set/c.md", path: "C:/set/c.md", name: "c.md", status: "changed" },
+			],
+		});
+		renderSections(["runtime-1"], seed);
+
+		await user.click(await screen.findByRole("button", { name: "调研结论.md" }));
+		const list = await screen.findByRole("list", { name: "workspace.work.artifacts.citedSourcesTitle" });
+		const text = list.textContent ?? "";
+		expect(text).toContain("a.md");
+		expect(text).toContain("workspace.work.artifacts.citedOk");
+		expect(text).toContain("workspace.work.artifacts.citedMissing");
+		expect(text).toContain("workspace.work.artifacts.citedChanged");
+		expect(verifyArtifactSources).toHaveBeenCalledWith("runtime-1", "artifact-1");
+	});
+
+	it("非 research-evidence 产物不触发来源复查", async () => {
+		const user = userEvent.setup();
+		readArtifact.mockResolvedValue({
+			status: "ok",
+			content: "文档内容",
+			truncated: false,
+		} satisfies DesktopArtifactReadOutcome);
+		renderSections();
+		await user.click(await screen.findByRole("button", { name: "季度纪要.md" }));
+		await screen.findByLabelText("季度纪要.md");
+		expect(verifyArtifactSources).not.toHaveBeenCalled();
+		expect(
+			screen.queryByRole("list", { name: "workspace.work.artifacts.citedSourcesTitle" }),
+		).toBeNull();
 	});
 
 	it("读取异常走通用失败 toast", async () => {

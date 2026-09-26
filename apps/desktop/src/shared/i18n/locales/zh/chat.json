@@ -1391,7 +1391,11 @@
 				"title": "产物",
 				"previewUnavailable": "暂时无法读取该产物内容",
 				"truncated": "内容较长，已截断展示",
-				"sourceMissing": "产物源文件缺失，无法预览"
+				"sourceMissing": "产物源文件缺失，无法预览",
+				"citedSourcesTitle": "引用来源",
+				"citedOk": "来源正常",
+				"citedMissing": "来源缺失",
+				"citedChanged": "来源已变更"
 			},
 			"dataset": {
 				"empty": "接入数据分析后，数据集预览会显示在这里",
@@ -1422,7 +1426,15 @@
 				"start": "开始处理",
 				"remove": "移除 {{file}}",
 				"sendUnavailable": "当前会话不能发送消息，请稍后重试",
-				"pickFailed": "选择来源文件失败，请重试"
+				"pickFailed": "选择来源文件失败，请重试",
+				"modeLabel": "来源类型",
+				"mode": {
+					"document": "文档处理",
+					"research": "本地研究"
+				},
+				"pickFolder": "选择资料集目录",
+				"questionPlaceholder": "提出研究问题，如「这套资料对 X 的结论是什么？」",
+				"startResearch": "开始研究"
 			}
 		}
 	},

@@ -5,6 +5,7 @@ import { pathTokenText } from "@shared/lib/input-tokens";
 import { taskStateBySessionAtom } from "@shared/store/atoms";
 import { sendMessageFnRef } from "@shared/store/chat-atoms";
 import { showToast } from "@shared/store/toast-atoms";
+import type { DesktopArtifactSourceCheck } from "@preload/api-types/task";
 import type { ArtifactDescriptor, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
 import type { TFunction } from "i18next";
 import { useSetAtom } from "jotai";
@@ -143,21 +144,31 @@ interface SourcesSectionProps {
 	readonly runtimeIds: readonly string[];
 }
 
+/** 来源节的双入口：既有文档处理（选文件）与 TASK-0025 本地研究（选资料集目录）。 */
+type SourcesEntryMode = "document" | "research";
+
 function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 	const { t } = useTranslation("chat");
 	const runCommand = useRunTaskCommand(runtimeIds[0]);
+	const [mode, setMode] = useState<SourcesEntryMode>("document");
 	const [sources, setSources] = useState<readonly string[]>([]);
 	const [goal, setGoal] = useState("");
 	const [busy, setBusy] = useState(false);
 
+	const switchMode = useCallback((next: SourcesEntryMode) => {
+		setMode(next);
+		setSources([]);
+	}, []);
+
 	const pickSources = useCallback(async () => {
 		try {
-			const selected = await window.vetta.dialog.selectFiles();
+			const selected =
+				mode === "research" ? await window.vetta.dialog.selectFolders() : await window.vetta.dialog.selectFiles();
 			if (selected.length > 0) setSources(selected);
 		} catch {
 			showToast({ message: t("workspace.work.sources.pickFailed"), variant: "error" });
 		}
-	}, [t]);
+	}, [mode, t]);
 
 	const removeSource = useCallback((source: string) => {
 		setSources((prev) => prev.filter((item) => item !== source));
@@ -193,8 +204,21 @@ function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 	return (
 		<WorkPanelSection id="sources">
 			<div className="space-y-2">
+				<div className="flex gap-1" role="group" aria-label={t("workspace.work.sources.modeLabel")}>
+					{(["document", "research"] as const).map((entry) => (
+						<Button
+							key={entry}
+							size="sm"
+							variant={mode === entry ? "primary" : "outline"}
+							aria-pressed={mode === entry}
+							onClick={() => switchMode(entry)}
+						>
+							{t(`workspace.work.sources.mode.${entry}`)}
+						</Button>
+					))}
+				</div>
 				<Button variant="primary" size="sm" onClick={() => void pickSources()}>
-					{t("workspace.work.sources.pickFile")}
+					{t(mode === "research" ? "workspace.work.sources.pickFolder" : "workspace.work.sources.pickFile")}
 				</Button>
 				{sources.length > 0 ? (
 					<ul className="space-y-1">
@@ -219,7 +243,11 @@ function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 				<Textarea
 					value={goal}
 					rows={2}
-					placeholder={t("workspace.work.sources.goalPlaceholder")}
+					placeholder={t(
+						mode === "research"
+							? "workspace.work.sources.questionPlaceholder"
+							: "workspace.work.sources.goalPlaceholder",
+					)}
 					onChange={(event) => setGoal(event.target.value)}
 				/>
 				<Button
@@ -227,7 +255,7 @@ function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 					disabled={runtimeIds.length === 0 || busy || goal.trim().length === 0 || sources.length === 0}
 					onClick={() => void start()}
 				>
-					{t("workspace.work.sources.start")}
+					{t(mode === "research" ? "workspace.work.sources.startResearch" : "workspace.work.sources.start")}
 				</Button>
 			</div>
 		</WorkPanelSection>
@@ -238,19 +266,48 @@ interface ArtifactsSectionProps {
 	readonly artifacts: readonly ArtifactDescriptor[];
 }
 
+const SOURCE_STATUS_KEYS = {
+	ok: "workspace.work.artifacts.citedOk",
+	missing: "workspace.work.artifacts.citedMissing",
+	changed: "workspace.work.artifacts.citedChanged",
+} as const;
+
+const SOURCE_STATUS_TONES = {
+	ok: "text-muted-foreground/60",
+	missing: "text-destructive",
+	changed: "text-amber-400",
+} as const;
+
+interface ArtifactPreviewState {
+	readonly title: string;
+	readonly content: string;
+	readonly truncated: boolean;
+	/** research-evidence 的来源复查；no-manifest/未复查为 undefined。 */
+	readonly citedSources?: readonly DesktopArtifactSourceCheck[];
+}
+
 function ArtifactsSection({ artifacts }: ArtifactsSectionProps): JSX.Element {
 	const { t } = useTranslation("chat");
-	const [preview, setPreview] = useState<{ title: string; content: string; truncated: boolean } | null>(null);
+	const [preview, setPreview] = useState<ArtifactPreviewState | null>(null);
 
 	const openPreview = useCallback(
 		async (artifact: ArtifactDescriptor): Promise<void> => {
 			try {
 				const outcome = await window.vetta.task.readArtifact(artifact.sourceSessionId, artifact.artifactId);
 				if (outcome.status === "ok") {
+					let citedSources: readonly DesktopArtifactSourceCheck[] | undefined;
+					if (artifact.kind === "research-evidence") {
+						const verified = await window.vetta.task.verifyArtifactSources(
+							artifact.sourceSessionId,
+							artifact.artifactId,
+						);
+						if (verified.status === "ok") citedSources = verified.sources;
+					}
 					setPreview({
 						title: outcome.title ?? artifact.title,
 						content: outcome.content,
 						truncated: outcome.truncated,
+						citedSources,
 					});
 					return;
 				}
@@ -287,17 +344,36 @@ function ArtifactsSection({ artifacts }: ArtifactsSectionProps): JSX.Element {
 				))}
 			</ul>
 			{preview ? (
-				<pre
-					aria-label={preview.title}
-					className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-background/60 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
-				>
-					{preview.content}
-					{preview.truncated ? (
-						<span className="mt-1 block text-[10px] text-muted-foreground/60">
-							{t("workspace.work.artifacts.truncated")}
-						</span>
+				<>
+					<pre
+						aria-label={preview.title}
+						className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-background/60 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
+					>
+						{preview.content}
+						{preview.truncated ? (
+							<span className="mt-1 block text-[10px] text-muted-foreground/60">
+								{t("workspace.work.artifacts.truncated")}
+							</span>
+						) : null}
+					</pre>
+					{preview.citedSources ? (
+						<ul
+							aria-label={t("workspace.work.artifacts.citedSourcesTitle")}
+							className="mt-1 space-y-0.5"
+						>
+							{preview.citedSources.map((source) => (
+								<li key={source.uri} className="flex min-w-0 items-center gap-1.5 text-[11px]">
+									<span className="min-w-0 flex-1 truncate text-muted-foreground" title={source.path}>
+										{source.name}
+									</span>
+									<span className={`shrink-0 ${SOURCE_STATUS_TONES[source.status]}`}>
+										{t(SOURCE_STATUS_KEYS[source.status])}
+									</span>
+								</li>
+							))}
+						</ul>
 					) : null}
-				</pre>
+				</>
 			) : null}
 		</WorkPanelSection>
 	);

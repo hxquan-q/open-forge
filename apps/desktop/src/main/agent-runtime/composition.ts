@@ -45,6 +45,7 @@ import {
 	PathFilteredRuntimeSessionCatalog,
 	setDesktopSshConnectionResolver,
 } from "@vetta/runtime-desktop";
+import { scanLocalSources } from "@vetta/runtime-knowledge";
 import { FileConversationRuntimeSessionFileHistoryReader } from "@vetta/runtime-node/conversation";
 import {
 	createLoopbackSessionAffinityStream,
@@ -177,6 +178,8 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 					process.env.VETTA_KNOWLEDGE_DISABLED === "1"
 						? undefined
 						: createNodeKnowledgeRuntime(getKnowledgeRoot()),
+				// 本地研究来源枚举只认显式传入的目录，不回落默认 knowledge home。
+				researchScope: { scanSources: scanLocalSources },
 				createMemoryRolloverRuntime: (options) => {
 					const memoryFile = options.memoryFile ?? join(options.cwd, "MEMORY.md");
 					return createCodingAgentMemoryRolloverRuntime({

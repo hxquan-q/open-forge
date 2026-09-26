@@ -1391,7 +1391,11 @@
 				"title": "Artifacts",
 				"previewUnavailable": "This artifact cannot be previewed right now",
 				"truncated": "Content is truncated",
-				"sourceMissing": "The artifact source file is missing"
+				"sourceMissing": "The artifact source file is missing",
+				"citedSourcesTitle": "Cited sources",
+				"citedOk": "available",
+				"citedMissing": "missing",
+				"citedChanged": "changed"
 			},
 			"dataset": {
 				"empty": "Dataset previews appear here once data analysis is wired up",
@@ -1422,7 +1426,15 @@
 				"start": "Start",
 				"remove": "Remove {{file}}",
 				"sendUnavailable": "This session cannot send a message right now. Try again later.",
-				"pickFailed": "Could not choose source files. Try again."
+				"pickFailed": "Could not choose source files. Try again.",
+				"modeLabel": "Source type",
+				"mode": {
+					"document": "Documents",
+					"research": "Local research"
+				},
+				"pickFolder": "Choose a material folder",
+				"questionPlaceholder": "Ask a research question, e.g. \"What does this material set conclude about X?\"",
+				"startResearch": "Start research"
 			}
 		}
 	},

@@ -55,6 +55,18 @@ export type DesktopArtifactReadOutcome =
 	| { readonly status: "source-missing"; readonly artifactId: string }
 	| { readonly status: "not-found"; readonly artifactId: string };
 
+/** research-evidence 产物的来源复查结果（TASK-0025）。 */
+export interface DesktopArtifactSourceCheck {
+	readonly uri: string;
+	readonly path: string;
+	readonly name: string;
+	readonly status: "ok" | "missing" | "changed";
+}
+
+export type DesktopArtifactSourcesVerifyOutcome =
+	| { readonly status: "ok"; readonly sources: readonly DesktopArtifactSourceCheck[] }
+	| { readonly status: "no-manifest" | "not-found" | "source-missing" };
+
 /** 渲染端导出文档产物的结果：cancelled 表示用户放弃保存对话框。 */
 export type DocumentExportOutcome =
 	| { readonly status: "exported"; readonly targetUri: string }
@@ -68,6 +80,7 @@ export interface DesktopTaskApi {
 	getArtifactViews: (sessionId: string) => Promise<readonly DesktopArtifactView[]>;
 	runCommand: (sessionId: string, command: DesktopTaskCommandInput) => Promise<DesktopTaskCommandOutcome>;
 	readArtifact: (sessionId: string, artifactId: string) => Promise<DesktopArtifactReadOutcome>;
+	verifyArtifactSources: (sessionId: string, artifactId: string) => Promise<DesktopArtifactSourcesVerifyOutcome>;
 	exportArtifact: (
 		sessionId: string,
 		artifactId: string,

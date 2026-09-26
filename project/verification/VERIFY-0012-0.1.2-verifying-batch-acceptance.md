@@ -62,6 +62,14 @@ agent-browser 经 CDP 附着逐项断言；验收只写隔离 Profile，不动�
 - Given：终端页打开；When：快速切换路由离开；Then：不发生 xterm dispose
   崩溃落到错误边界（BUG-0041 回归）。
 
+### D2. Work 本地研究（TASK-0025）
+
+- Given：Work 模式「来源」面板切到「本地研究」，选一个含 Markdown/文本的
+  本地目录并提出问题；When：Agent 完成；Then：产出 `research-evidence`
+  产物，附逐条来源清单；打开产物可复查每条来源为可用/缺失/已变更；
+  删除其中一个源文件后复查，该条标为「缺失」而非静默通过。会话全程
+  不访问默认知识库目录、不触发联网检索。
+
 ### E. 其余 bug 实机回归
 
 - BUG-0035：`verify:ui:sync:debug` 播种后 Debug Profile 里凭据可解密
