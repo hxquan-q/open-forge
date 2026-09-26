@@ -1,7 +1,7 @@
 ---
 id: ISSUE-0010
 type: issue
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 related_requirement: [REQ-0001]
@@ -11,7 +11,7 @@ related_issues: [ISSUE-0005]
 related_bugs: []
 source: "user-request; RESEARCH-0006; ISSUE-0005 scheme C implementation"
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-26
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->

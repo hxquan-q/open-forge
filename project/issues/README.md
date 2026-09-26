@@ -24,7 +24,7 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0007`：Open Forge Desktop 首发 SemVer 基线（done：Preview 定位、首发 `0.1.0`、Win+Linux 先行、Release 标 prerelease、上游基线 SHA 记入说明末行、publish 由用户执行）；
 - `ISSUE-0008`：Apache §4(b) 修改文件声明与 Open Forge 归属（done：署名 `The Open Forge contributors`、可注释文件单行声明 + 动态 merge-base 审计脚本、JSON/二进制等白名单清单兜底、第三方清单工程生成用户终审）；
 - `ISSUE-0009`：workspace package release scope（done：不公发任何包；`publish:private` 接 fail-closed 守卫、无 publishConfig 包补 `private: true`；重开需独立 Task）。
-- `ISSUE-0010`：Work/Coding 两套开关共用文案造成干扰（verifying；已确认方案 B，TASK-0077）。
+- `ISSUE-0010`：Work/Coding 两套开关共用文案造成干扰（done；方案 B 落地：TASK-0077 单一开关、TASK-0083 改称任务类型、TASK-0102 页头/新会话/右栏同一流程，BUG-0037 复验通过）。
 - `ISSUE-0011`：报告/架构图单一生成路径（verifying；已确认方案 B，TASK-0074）。
 - `ISSUE-0012`：团队内成员能力收窄的编辑交互（draft；推荐 assignment 负向增量 `excludedAbilities`，只收窄不扩张，pinned 不可收窄）。
 - `ISSUE-0013`：团队内动态增员与成员子代理边界（draft；推荐最小步——仅 leader 获得 subagent 工具，完整动态成员待反馈再评估）。

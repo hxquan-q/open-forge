@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0027` | `verifying` | `PLAN-0001` | Plugin Artifact Renderer 注册表；SDK 合同与 Desktop 宿主接线已落地，待本轮验证收口。 |
+| `TASK-0027` | `done` | `PLAN-0001` | Plugin Artifact Renderer 注册表；SDK 合同（TASK-0068）与 Desktop 宿主接线已落地并通过合同/集成测试收口。 |
 | `TASK-0050` | `ready` | `PLAN-0002` | transcript 窗口化第 2 步（`beforeEntry` 游标分页）；依赖已齐，主工作区串行，链内 TASK-0051 / TASK-0038 仍为 draft。 |
 | `TASK-0072` | `ready` | `PLAN-0006` | WebContentsView 迁移；serial，不创建独立 Worktree。 |
 | `TASK-0045` | `done` | `PLAN-0003` | CLI/IM/MCP/插件外显身份迁移完成（CLI 命令 `openforge` 直接切换、IM 预填名/Signal 设备名/MCP client 名/插件 author/产品 UA、`openforge-serv` 代号）；解锁 `TASK-0049` 复核关闭 → `TASK-0047`/`TASK-0048`。 |

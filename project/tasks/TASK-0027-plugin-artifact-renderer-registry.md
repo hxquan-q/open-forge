@@ -1,7 +1,7 @@
 ---
 id: TASK-0027
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0020, TASK-0021, TASK-0068]
 conflicts_with: [TASK-0059, TASK-0061, TASK-0068]
 integration_status: integrated（forge/dev 主工作区；TASK-0068 SDK 合同与 Desktop 宿主接线已落地，待本轮验证收口）
 created: 2026-09-22
-updated: 2026-09-23
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 

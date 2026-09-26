@@ -42,9 +42,11 @@
 | `BUG-0031` | 会话归档导出/导入用 window.prompt 收集口令，Electron 不支持导致功能必失败 | done | P1 | — |
 | `BUG-0032` | 项目会话归档导入副本写进默认对话目录，侧边栏不可见且幂等失效 | done | P1 | — |
 | `BUG-0033` | 项目详情页会话计数依赖侧边栏展开懒加载，重载后误显「0 个会话」 | done | P3 | — |
-| `BUG-0034` | 多分屏终端持续新增 WebGL context，触发 Too many active contexts 告警 | investigating | P3 | — |
-| `BUG-0035` | Debug Profile 播种复制的 safeStorage 凭据跨 user-data 目录不可解密，Provider 鉴权必失败 | investigating | P2 | — |
-| `BUG-0036` | 组队草稿点击操作区外任意位置即静默丢弃，无确认、不可恢复 | investigating | P3 | — |
-| `BUG-0037` | 新会话页选中项目后工作区档位切换写错 cwd 键，高亮与确认句相反且切换不生效 | verifying | P1 | `PLAN-0001` |
+| `BUG-0034` | 多分屏终端持续新增 WebGL context，触发 Too many active contexts 告警 | verifying | P3 | — |
+| `BUG-0035` | Debug Profile 播种复制的 safeStorage 凭据跨 user-data 目录不可解密，Provider 鉴权必失败 | verifying | P2 | — |
+| `BUG-0036` | 组队草稿点击操作区外任意位置即静默丢弃，无确认、不可恢复 | verifying | P3 | — |
+| `BUG-0037` | 新会话页选中项目后工作区档位切换写错 cwd 键，高亮与确认句相反且切换不生效 | done | P1 | `PLAN-0001` |
 | `BUG-0038` | Runtime Canary 的 Action RPC endpoint 契约不一致，`verify:ui:debug -- runtime-canary` 必失败 | verifying | P1 | — |
-| `BUG-0039` | 新会话页 axe 审计命中三类可访问性违规（无名称按钮 / 交互嵌套 / 缺 landmark） | verifying | P2 | — |
+| `BUG-0039` | 新会话页 axe 审计命中三类可访问性违规（无名称按钮 / 交互嵌套 / 缺 landmark） | done | P2 | — |
+| `BUG-0040` | 新建智能体未打开「能力」tab 时静默落盘零能力，无任何提示 | verifying | P1 | — |
+| `BUG-0041` | 路由切换时 xterm dispose 竞态崩溃，整页落到错误边界 | verifying | P2 | — |

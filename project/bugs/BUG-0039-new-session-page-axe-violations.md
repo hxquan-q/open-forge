@@ -1,7 +1,7 @@
 ---
 id: BUG-0039
 type: bug
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop renderer (sidebar / guide banner / agent selector)
 requirement:

@@ -1,7 +1,7 @@
 ---
 id: BUG-0037
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop renderer/conversation + renderer/workspace-mode
 requirement:
