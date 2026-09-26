@@ -105,6 +105,21 @@ updated: 2026-09-24
     与 canonical 尾页合并、stale 重对账、滚动锚点；viewer 订阅增量/reset
     模式；MessageTimeline 分页摘要与导出逐页 drain。这些需要独立的
     renderer 改动轮次。
+- 阶段 2（2026-10-05，viewer 订阅增量推送）：
+  - `subscribeViewer` 推送改为结构化更新：`snapshot`（首发快照）/
+    `append`（仅追加增量）/ `reset`（非追加改写回退有界页）；watch
+    去抖回调不再向 renderer 重发整表，重复文件事件直接抑制。
+  - `diffViewerHistory`（`main/conversations/session-history-page.ts`）：
+    按前缀条目签名判定 append-only；前缀任一条目失配（分支改写、压缩、
+    外部重写）即回退 `reset`，`reset` 携带以当前 limit 截取的有界尾页。
+  - renderer 侧由 `applyViewerUpdate`
+    （`renderer/domains/conversation/services/viewer-history-update.ts`）
+    统一合并增量，`useSessionViewerPageModel`/`useWorkflowTabPanelModel`
+    不再每事件重建整份历史数组；raw `HistoryEntry[]` 仍完整保留以维持
+    `fullHistoryToChat` 跨条目的 marker/tool-call 分组语义。
+  - 测试：`session-history-page.test.ts` 补 diff 用例（追加/改写回退/
+    同首变体不误发/无变化不发送）；新增 `viewer-history-update.test.ts`
+    覆盖三类更新在渲染侧的合并行为。desktop typecheck 与 check:quick 绿。
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：

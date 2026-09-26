@@ -153,6 +153,18 @@ export interface HistoryPage {
  */
 export type HistoryPageResult = HistoryPage | { stale: true };
 
+/**
+ * read-only viewer 订阅的增量载荷（TASK-0050）：
+ * - `snapshot`：订阅后首轮全量（等价旧行为）；
+ * - `append`：JSONL append-only 追加，只含新增条目；
+ * - `reset`：非追加改写（编辑/分支/外部重写），带一个有界最新页，
+ *   调用方应整体替换本地视图。
+ */
+export type ViewerHistoryUpdate =
+	| { kind: "snapshot"; history: HistoryEntry[] }
+	| { kind: "append"; appended: HistoryEntry[] }
+	| { kind: "reset"; page: HistoryPage };
+
 export interface DesktopSessionApi {
 	create(
 		config: DesktopCodingAgentSessionConfig | undefined,
@@ -347,5 +359,5 @@ export interface DesktopSessionApi {
 	 * whenever the underlying .jsonl is written. Returns an unsubscribe
 	 * function — caller MUST call it on unmount to release the fs.watch.
 	 */
-	subscribeViewer(path: string, handler: (snapshot: { history: HistoryEntry[] }) => void): Promise<() => void>;
+	subscribeViewer(path: string, handler: (update: ViewerHistoryUpdate) => void): Promise<() => void>;
 }

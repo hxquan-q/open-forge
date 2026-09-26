@@ -1,7 +1,12 @@
 // Copyright The Open Forge contributors.
 import type { HistoryEntry } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";
-import { HISTORY_PAGE_DEFAULT_LIMIT, HISTORY_PAGE_MAX_LIMIT, sliceHistoryPage } from "./session-history-page.js";
+import {
+	diffViewerHistory,
+	HISTORY_PAGE_DEFAULT_LIMIT,
+	HISTORY_PAGE_MAX_LIMIT,
+	sliceHistoryPage,
+} from "./session-history-page.js";
 
 function message(id: string, role: "user" | "assistant" = "assistant"): HistoryEntry {
 	return {
@@ -145,5 +150,47 @@ describe("sliceHistoryPage（TASK-0050 游标分页合同）", () => {
 	it("空历史返回空页、无游标、hasMore=false", () => {
 		const page = sliceHistoryPage([]);
 		expect(page).toEqual({ history: [], nextBeforeEntry: undefined, hasMore: false, head: true });
+	});
+});
+
+describe("diffViewerHistory（TASK-0050 viewer 增量订阅）", () => {
+	it("首轮推送回 snapshot 全量", () => {
+		const next = historyOf(5);
+		expect(diffViewerHistory(null, next)).toEqual({ kind: "snapshot", history: next });
+	});
+
+	it("append-only 追加只下发新增条目", () => {
+		const prev = historyOf(5);
+		const next = [...prev, message("n1"), message("n2")];
+		const update = diffViewerHistory(prev, next);
+		expect(update).toMatchObject({ kind: "append" });
+		if (update?.kind !== "append") throw new Error("not append");
+		expect(update.appended.map(entryId)).toEqual(["n1", "n2"]);
+	});
+
+	it("内容无变化的写事件返回 null（调用方跳过推送）", () => {
+		const prev = historyOf(4);
+		expect(diffViewerHistory(prev, [...prev])).toBeNull();
+	});
+
+	it("中间改写或截断回 reset + 有界最新页，而非伪增量", () => {
+		const prev = historyOf(150);
+		const rewritten = [...prev];
+		rewritten[40] = message("mutated");
+		const update = diffViewerHistory(prev, rewritten);
+		if (update?.kind !== "reset") throw new Error("expected reset");
+		expect(update.page.history).toHaveLength(HISTORY_PAGE_DEFAULT_LIMIT);
+		expect(update.page.head).toBe(true);
+
+		const truncated = prev.slice(0, 10);
+		expect(diffViewerHistory(prev, truncated)?.kind).toBe("reset");
+	});
+
+	it("无 entryId 条目参与的前缀比较同样可靠", () => {
+		const prev: HistoryEntry[] = [message("a"), timing("t1")];
+		const appended: HistoryEntry[] = [...prev, message("b")];
+		expect(diffViewerHistory(prev, appended)).toMatchObject({ kind: "append" });
+		const mutated: HistoryEntry[] = [message("a"), timing("t1-changed"), message("b")];
+		expect(diffViewerHistory(prev, mutated)?.kind).toBe("reset");
 	});
 });
