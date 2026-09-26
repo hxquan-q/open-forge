@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import type {
 	AgentProfile,
@@ -224,7 +225,16 @@ function isPresetOwned(agent: AgentProfile, presets: readonly PluginAgentPreset[
 function matchesAgentPreset(agent: AgentProfile, preset: PluginAgentPreset): boolean {
 	if (agent.scope.kind !== "library") return false;
 	if (agent.id === pluginAgentProfileId(preset.pluginId, preset.agentId)) return true;
-	return agent.blueprintId === preset.blueprint.id || preset.legacyBlueprintIds.includes(agent.blueprintId);
+	if (agent.source?.kind === "plugin") {
+		// 已盖章的档案继续跟着原提供方走：被认领的档案保留自己的 id，只能靠 blueprint 归属认回来。
+		return (
+			agent.source.pluginId === preset.pluginId &&
+			(agent.blueprintId === preset.blueprint.id || preset.legacyBlueprintIds.includes(agent.blueprintId))
+		);
+	}
+	// 未盖章的档案只按历史 blueprint id 认领。当前 blueprintId 同时是「用户从哪张蓝图新建」的
+	// 记录，按它认领会把自建档案改写成预设——人设被吃掉，若真身还在还会撞 handle 判废整份配置。
+	return preset.legacyBlueprintIds.includes(agent.blueprintId);
 }
 
 /**
