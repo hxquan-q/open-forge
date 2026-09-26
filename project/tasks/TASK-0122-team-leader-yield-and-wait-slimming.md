@@ -1,7 +1,7 @@
 ---
 id: TASK-0122
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: packages/agent-team + plugins/preset-agent
 requirement: []
@@ -21,7 +21,7 @@ write_paths: [packages/agent-team/src/task-runtime-tools.ts, packages/agent-team
 exclusive_paths: [packages/agent-team/src/task-runtime-tools.ts, packages/plugins/presets/preset-agent/agent/prompts/master.md]
 depends_on: []
 conflicts_with: [TASK-0123]
-integration_status: pending
+integration_status: integrated（主工作区串行实施；未创建独立 worktree，因本轮无并行 Task 同写这些路径）
 created: 2026-09-26
 updated: 2026-09-26
 ---
@@ -93,7 +93,10 @@ updated: 2026-09-26
 ## 交付记录
 
 - 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：
-- 剩余风险：
+  - `packages/plugins/presets/preset-agent/agent/prompts/master.md`：分派句后补「全部分派完且只剩等待时结束回合而非轮询；完成通知会自动唤醒；`team_wait_tasks` 仅用于回合内短等待或快照」。
+  - `packages/agent-team/src/task-runtime-tools.ts`：`team_wait_tasks` 描述同步让出回合指引；`reason:"timeout"` 分支对模型可见文本只回 `{teamTaskId, state, revision, updatedAt}` 四元组，`details`（UI 工具卡）仍保留全量快照；`state-changed`/快照路径外的分支不变。
+  - `team_get_task` 保持全量返回（观察用快照语义，按要求不动）。
+- 实际运行：`bun run test:pkg agent-team` 12 文件 85 例通过（新增 timeout 瘦身与 state-changed 全量两例，旧实现下瘦身用例红）；desktop 侧 `TeamWaitTasksView`/`team-task-waiter` 11 例通过；`bun run check:quick` 全绿。
+- 未运行及原因：真实 ~45 分钟团队会话量化复跑属 TASK-0125（本任务前置项），未在本轮执行；「分派→回合结束→通知唤醒」链路由 `team-session-concurrency.test.ts` 既有用例（durable delegate / interrupted leader continuation）覆盖。
+- Worktree：主工作区（无并行 Task 占用这些路径）。
+- 剩余风险：提示词引导是软约束，模型仍可能轮询（方案 C 运行时强制挂起按 ISSUE-0025 待复测数据再评估）；timeoutMs=0 快照同走 timeout 分支，模型侧也只回四元组，需要全量时用 `team_get_task`。
