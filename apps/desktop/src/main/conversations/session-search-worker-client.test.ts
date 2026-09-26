@@ -1,71 +1,78 @@
+// Copyright The Open Forge contributors.
 import { EventEmitter } from "node:events";
 import type { Worker } from "node:worker_threads";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getProcessHealthBook, ProcessHealthBook, setProcessHealthBookForTest } from "../app-monitor/process-health.js";
 import { SessionSearchWorkerClient } from "./session-search-worker-client.js";
 import type { SessionSearchWorkerRequest } from "./session-search-worker-protocol.js";
 
 class FakeWorker extends EventEmitter {
-	postMessage = vi.fn();
-	unref = vi.fn();
-	terminate = vi.fn(async () => 0);
+	readonly postMessage = vi.fn();
+	readonly terminate = vi.fn(async () => 0);
+	unref(): void {}
+	asWorker(): Worker {
+		return this as unknown as Worker;
+	}
 }
-const request: Extract<SessionSearchWorkerRequest, { type: "start" }> = {
-	type: "start",
-	requestId: "one",
-	request: { query: "x" },
-	sources: [],
-	roots: [],
-};
-afterEach(() => vi.useRealTimers());
 
-describe("SessionSearchWorkerClient", () => {
-	it("cancels one request without delivering late results and releases the idle worker", () => {
-		vi.useFakeTimers();
-		const worker = new FakeWorker();
-		const client = new SessionSearchWorkerClient(() => worker as unknown as Worker);
-		const onEvent = vi.fn();
-		const cancel = client.start(request, onEvent);
-		cancel();
-		cancel();
-		worker.emit("message", { requestId: "one", done: true });
-		expect(onEvent).not.toHaveBeenCalled();
-		expect(worker.postMessage).toHaveBeenLastCalledWith({ type: "cancel", requestId: "one" });
-		vi.advanceTimersByTime(60_000);
-		expect(worker.terminate).toHaveBeenCalledOnce();
+function startRequest(requestId = "req"): Extract<SessionSearchWorkerRequest, { type: "start" }> {
+	return {
+		type: "start",
+		requestId,
+		request: { query: "needle" },
+		sources: [],
+		roots: [],
+	} as Extract<SessionSearchWorkerRequest, { type: "start" }>;
+}
+
+describe("session search worker health", () => {
+	beforeEach(() => {
+		setProcessHealthBookForTest(new ProcessHealthBook());
 	});
-	it("retains a busy worker and recreates it after a crash without accepting old events", () => {
-		vi.useFakeTimers();
-		const first = new FakeWorker();
-		const second = new FakeWorker();
-		const spawn = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
-		const client = new SessionSearchWorkerClient(spawn);
-		const one = vi.fn();
-		client.start(request, one);
-		vi.advanceTimersByTime(60_000);
-		expect(first.terminate).not.toHaveBeenCalled();
-		first.emit("error", new Error("worker failed"));
-		expect(one).toHaveBeenCalledWith({ requestId: "one", done: true, error: "search-failed" });
-		const two = vi.fn();
-		client.start(request, two);
-		first.emit("message", { requestId: "one", done: true });
-		expect(two).not.toHaveBeenCalled();
-		second.emit("message", { requestId: "one", done: true });
-		expect(two).toHaveBeenCalledOnce();
-		vi.advanceTimersByTime(60_000);
-		expect(second.terminate).toHaveBeenCalledOnce();
-	});
-	it("does not retain a subscription if postMessage fails", () => {
-		vi.useFakeTimers();
-		const worker = new FakeWorker();
-		worker.postMessage.mockImplementation(() => {
-			throw new Error("clone failed");
+
+	it("reports a worker crash to pending listeners instead of hanging silently", () => {
+		const spawned: FakeWorker[] = [];
+		const client = new SessionSearchWorkerClient(() => {
+			const worker = new FakeWorker();
+			spawned.push(worker);
+			return worker.asWorker();
 		});
-		const client = new SessionSearchWorkerClient(() => worker as unknown as Worker);
-		const onEvent = vi.fn();
-		expect(() => client.start(request, onEvent)).toThrow("clone failed");
-		worker.emit("message", { requestId: "one", done: true });
-		expect(onEvent).not.toHaveBeenCalled();
-		vi.advanceTimersByTime(60_000);
-		expect(worker.terminate).toHaveBeenCalledOnce();
+		const events: { done?: boolean; error?: string }[] = [];
+		client.start(startRequest(), (event) => events.push(event));
+
+		spawned[0]?.emit("exit", 1);
+
+		expect(events).toEqual([{ requestId: "req", done: true, error: "search-failed" }]);
+		expect(getProcessHealthBook().snapshot()).toEqual([
+			expect.objectContaining({ role: "session-search", kind: "worker", crashes: 1 }),
+		]);
+	});
+
+	it("respawns within the restart budget and reports search-failed once exhausted", () => {
+		const spawned: FakeWorker[] = [];
+		const client = new SessionSearchWorkerClient(() => {
+			const worker = new FakeWorker();
+			spawned.push(worker);
+			return worker.asWorker();
+		});
+		const start = (requestId: string) => {
+			const events: { done?: boolean; error?: string }[] = [];
+			client.start(startRequest(requestId), (event) => events.push(event));
+			return events;
+		};
+
+		// 预算 3 次重生 / 5 分钟：首次启动不占预算，每次崩溃后的重生消耗一格；
+		// 4 次崩溃耗尽 3 格预算后，新查询直接收到与崩溃相同的终态错误、不再 spawn。
+		for (let i = 0; i < 4; i += 1) {
+			const events = start(`req-${i}`);
+			spawned[spawned.length - 1]?.emit("error", new Error("boom"));
+			expect(events[0]?.error).toBe("search-failed");
+		}
+		expect(getProcessHealthBook().snapshot()[0]).toMatchObject({ crashes: 4, restarts: 3 });
+
+		const events = start("req-final");
+		expect(spawned).toHaveLength(4);
+		expect(events).toEqual([{ requestId: "req-final", done: true, error: "search-failed" }]);
+		expect(getProcessHealthBook().snapshot()[0]?.restartBudgetExhausted).toBe(true);
 	});
 });

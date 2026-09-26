@@ -1,5 +1,6 @@
 // Copyright The Open Forge contributors.
 import type { SessionEvent } from "@vetta/runtime-core";
+import type { ProcessRoleHealth } from "./process-health.js";
 
 /**
  * `queue.changed` 的 `snapshot` 字段在公共合同里是 `unknown`；这里只取监控所需的
@@ -19,6 +20,8 @@ export type PerfProcessType = "main" | "renderer" | "gpu" | "utility" | "other";
 export interface PerfProcessSample {
 	readonly pid: number;
 	readonly type: PerfProcessType;
+	/** 后台进程健康契约注册的 role 名（按 pid 归因）；未注册的进程不带此字段。 */
+	readonly role?: string;
 	/** getAppMetrics 语义：自上一次采样以来的 CPU 百分比。 */
 	readonly cpuPercent: number;
 	readonly workingSetKb: number;
@@ -102,6 +105,8 @@ export interface DesktopPerfSnapshot {
 		readonly utility: readonly PerfProcessSample[];
 		readonly totals: { readonly cpuPercent: number; readonly workingSetKb: number; readonly processCount: number };
 	};
+	/** 已注册后台进程的按 role 健康记账（崩溃/重启计数、预算耗尽、当前 pid）。 */
+	readonly background?: readonly ProcessRoleHealth[];
 	readonly runtime: {
 		readonly sessions: readonly PerfSessionActivity[];
 		readonly totals: {
@@ -444,6 +449,7 @@ export function buildPerfSnapshot(input: {
 	readonly metrics?: PerfProcessMetrics;
 	readonly sessions: readonly PerfSessionActivity[];
 	readonly aggregates: PerfAggregates;
+	readonly background?: readonly ProcessRoleHealth[];
 }): DesktopPerfSnapshot {
 	const processes = input.metrics?.processes ?? [];
 	const renderers: PerfProcessSample[] = [];
@@ -479,6 +485,7 @@ export function buildPerfSnapshot(input: {
 			utility,
 			totals: { cpuPercent, workingSetKb, processCount: processes.length },
 		},
+		...(input.background && input.background.length > 0 ? { background: input.background } : {}),
 		runtime: {
 			sessions: input.sessions,
 			totals: { activeSessions, queuedInputs, inFlightEvents },

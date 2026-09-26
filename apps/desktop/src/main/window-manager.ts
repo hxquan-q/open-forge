@@ -4,6 +4,7 @@ import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
 import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js";
 import { bindInAppBrowserWebview } from "./browser-automation/webview-session-host.js";
 import { shouldAutoOpenDevTools } from "./devtools-policy.js";
+import { sampleJavaScriptCallStack } from "./diagnostics.js";
 import { type RendererConsoleLevel, shouldPersistRendererConsoleMessage } from "./logger/renderer-console-policy.js";
 import { getAppLogger } from "./logger.js";
 import { openExternalUrl } from "./open-external.js";
@@ -143,6 +144,7 @@ export function createWindow(): BrowserWindow {
 	});
 	mainWindow.webContents.on("unresponsive", () => {
 		windowLog.error("unresponsive");
+		if (mainWindow) sampleJavaScriptCallStack(mainWindow.webContents, "unresponsive");
 	});
 	mainWindow.webContents.on("responsive", () => {
 		windowLog.info("responsive");

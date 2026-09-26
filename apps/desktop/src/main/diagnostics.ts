@@ -190,6 +190,32 @@ function patchFetch(): void {
 	}) as typeof fetch;
 }
 
+/**
+ * unresponsive / render-process-gone 时尝试采一份 JS 调用栈进诊断日志。
+ * 采样是旁路能力：webContents 已销毁、mainFrame 不可用或超时都只记 warn。
+ */
+export function sampleJavaScriptCallStack(
+	webContents: { id: number; mainFrame?: { collectJavaScriptCallStack?: () => Promise<unknown> } },
+	reason: string,
+	log: Pick<typeof diagnosticsLog, "warn"> = diagnosticsLog,
+): void {
+	try {
+		const collect = webContents.mainFrame?.collectJavaScriptCallStack;
+		if (!collect) return;
+		void Promise.resolve(collect.call(webContents.mainFrame)).then(
+			(stack) =>
+				log.warn("renderer js call stack", {
+					reason,
+					id: webContents.id,
+					stack: (typeof stack === "string" ? stack : String(stack)).slice(0, 32_000),
+				}),
+			(error) => log.warn("renderer js call stack sampling failed", { reason, id: webContents.id }, error),
+		);
+	} catch (error) {
+		log.warn("renderer js call stack sampling failed", { reason, id: webContents.id }, error);
+	}
+}
+
 export function installMainDiagnostics(): void {
 	if (diagnosticsInstalled) return;
 	diagnosticsInstalled = true;
@@ -215,6 +241,7 @@ export function installMainDiagnostics(): void {
 			url: webContents.getURL(),
 			details,
 		});
+		sampleJavaScriptCallStack(webContents, "render-process-gone");
 	});
 
 	app.on("child-process-gone", (_event, details) => {

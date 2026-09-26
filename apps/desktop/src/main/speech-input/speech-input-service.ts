@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 import { app, utilityProcess } from "electron";
 import type { SpeechInputEvent, SpeechInputStatus } from "../../preload/api-types/speech-input.js";
 import { isSpeechInputBuildEnabled } from "../../shared/feature-flags.js";
+import { attributeProcessPid, recordProcessCrash, registerProcessRole } from "../app-monitor/process-health.js";
 import { getAppLogger } from "../logger.js";
 import { resolveSpeechModelPaths, WINDOWS_ZIPFORMER_MODEL } from "./model-catalog.js";
 import { SpeechModelManager } from "./model-manager.js";
 import { isSpeechHostEvent, type SpeechHostCommand, type SpeechHostEvent } from "./protocol.js";
 
 const log = getAppLogger("speech-input");
+const ROLE = "speech-input-host";
 const HOST_SPAWN_TIMEOUT_MS = 10_000;
 const HOST_INITIALIZE_TIMEOUT_MS = 60_000;
 
@@ -17,6 +19,7 @@ interface SpeechHostChild {
 	on(event: "message", listener: (message: unknown) => void): unknown;
 	on(event: "exit", listener: (code: number) => void): unknown;
 	on(event: "spawn", listener: () => void): unknown;
+	readonly pid?: number;
 	readonly stderr?: NodeJS.ReadableStream | null;
 	readonly stdout?: NodeJS.ReadableStream | null;
 	postMessage(message: SpeechHostCommand): void;
@@ -92,6 +95,8 @@ export class SpeechInputService {
 					? join(process.resourcesPath, "speech-models")
 					: join(process.cwd(), "resources", "speech-models"),
 			});
+		// 宿主无自动重启（会话级失败显式回报给调用方），记账簿只做崩溃计数与 pid 归因。
+		registerProcessRole({ role: ROLE, kind: "utility-process" });
 	}
 
 	async getStatus(): Promise<SpeechInputStatus> {
@@ -189,6 +194,7 @@ export class SpeechInputService {
 		this.captureHostOutput(child, "stderr");
 		child.on("spawn", () => {
 			if (this.hostDiagnostic) this.hostDiagnostic.phase = "spawned";
+			attributeProcessPid(ROLE, child.pid);
 		});
 		child.on("message", (message) => this.handleHostMessage(message));
 		child.on("exit", (code) => this.handleHostExit(code));
@@ -275,7 +281,9 @@ export class SpeechInputService {
 	private handleHostExit(code: number): void {
 		this.child = null;
 		this.initialized = false;
+		attributeProcessPid(ROLE, undefined);
 		if (!this.initializeWaiter && !this.activeSessionId) return;
+		recordProcessCrash(ROLE);
 		log.error("speech recognition host exited unexpectedly", {
 			code,
 			phase: this.hostDiagnostic?.phase,
