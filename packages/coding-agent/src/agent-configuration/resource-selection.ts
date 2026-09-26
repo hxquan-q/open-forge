@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
 import type { McpRuntimeToolDescriptor } from "@vetta/runtime-mcp";
 import type { AgentPluginRuntimeConfig } from "../model-context/plugin-runtime.js";
@@ -10,6 +11,19 @@ import type { AgentConfigurationResourceCatalog } from "./session-configuration-
 
 export function allowsAgentResource(selection: readonly string[] | null, id: string): boolean {
 	return selection === null || selection.includes(id);
+}
+
+/**
+ * MCP 工具名由 server 在运行时上报，静态 `tools` 白名单在配置时点根本无法
+ * 枚举它们——把 MCP 工具也压进 tools 名单等于让所有已装连接器永远不可见。
+ * 归属已知 server 的 MCP 工具只受 `mcpServers` 轴约束；`serverName` 缺失的
+ * 描述符无法映射到白名单，维持旧的 tools ∩ mcpServers 交集语义。
+ */
+export function allowsAgentMcpTool(configuration: AgentConfiguration, tool: McpRuntimeToolDescriptor): boolean {
+	if (tool.serverName !== undefined) {
+		return configuration.mcpServers === null || configuration.mcpServers.includes(tool.serverName);
+	}
+	return allowsAgentResource(configuration.tools, tool.name) && configuration.mcpServers === null;
 }
 
 export function selectAgentPlugins(
@@ -69,14 +83,12 @@ export function createAgentToolSelection(
 	configuration: AgentConfiguration,
 	mcpTools: readonly McpRuntimeToolDescriptor[],
 ): (name: string) => boolean {
-	const mcp = new Map(mcpTools.map((tool) => [tool.name, tool.serverName]));
+	const mcp = new Map(mcpTools.map((tool) => [tool.name, tool]));
 	const selectedTools = configuration.tools === null ? null : new Set(configuration.tools);
-	const selectedServers = configuration.mcpServers === null ? null : new Set(configuration.mcpServers);
 	return (name) => {
-		if (selectedTools !== null && !selectedTools.has(name)) return false;
-		if (selectedServers === null || !mcp.has(name)) return true;
-		const server = mcp.get(name);
-		return server !== undefined && selectedServers.has(server);
+		const mcpTool = mcp.get(name);
+		if (mcpTool !== undefined) return allowsAgentMcpTool(configuration, mcpTool);
+		return selectedTools === null || selectedTools.has(name);
 	};
 }
 
