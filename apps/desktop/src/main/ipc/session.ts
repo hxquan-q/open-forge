@@ -33,7 +33,7 @@ import {
 	CODING_AGENT_TODO_CLEAR,
 	isCodingAgentPermissionMode,
 } from "@vetta/coding-agent/session-extensions";
-import type { SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
+import type { HistoryEntry, SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
 import { assertProjectSupportsExecutionMode } from "@vetta/runtime-desktop";
 import { isMcpJsonValue, type McpJsonObject } from "@vetta/runtime-mcp";
@@ -68,7 +68,7 @@ import { purgeProjectSessions } from "../conversations/project-session-purge.js"
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
-import { parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
+import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
 import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations/session-paths.js";
 import { listRuntimeSessionProjects, listSessionHistory } from "../conversations/session-query-service.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
@@ -1760,6 +1760,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	interface ViewerSub {
 		watcher: FSWatcher;
 		path: string;
+		/** 上一轮已下发的历史，用于 append-only 增量差分（TASK-0050）。 */
+		lastEntries?: HistoryEntry[];
 	}
 	const viewerSubs = new Map<string, ViewerSub>();
 	let viewerSeq = 0;
@@ -1788,9 +1790,16 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		const emit = () => {
 			pending = undefined;
 			if (webContents.isDestroyed()) return;
+			const sub = viewerSubs.get(subscriptionId);
+			// 已退订后仍在 debounce 窗口内触发的残留事件不再读取与下发。
+			if (!sub) return;
 			try {
 				const snapshot = runtime.readSessionHistoryFromFile(abs);
-				webContents.send(CHANNELS.VIEWER_EVENT, subscriptionId, snapshot);
+				const update = diffViewerHistory(sub.lastEntries ?? null, snapshot.history);
+				sub.lastEntries = snapshot.history;
+				// 无变化的写事件（编辑器 flush/fs 抖动）不再发送。
+				if (update === null) return;
+				webContents.send(CHANNELS.VIEWER_EVENT, subscriptionId, update);
 			} catch {
 				// File may have been deleted between events; ignore.
 			}

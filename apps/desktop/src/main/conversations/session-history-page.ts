@@ -1,6 +1,11 @@
 // Copyright The Open Forge contributors.
 import type { HistoryEntry } from "@vetta/runtime-core";
-import type { HistoryPageRequest, HistoryPageResult } from "../../preload/api-types/session.js";
+import type {
+	HistoryPage,
+	HistoryPageRequest,
+	HistoryPageResult,
+	ViewerHistoryUpdate,
+} from "../../preload/api-types/session.js";
 
 /**
  * transcript 窗口化第 2 步（TASK-0050）：有界历史页。
@@ -52,7 +57,7 @@ export function parseHistoryPageRequest(options: unknown): HistoryPageRequest {
 	};
 }
 
-function entrySignature(entry: HistoryEntry | undefined): string {
+export function historyEntrySignature(entry: HistoryEntry | undefined): string {
 	if (!entry) return "∅";
 	const withId = entry as { entryId?: string };
 	if (typeof withId.entryId === "string" && withId.entryId.length > 0) {
@@ -70,7 +75,7 @@ function entrySignature(entry: HistoryEntry | undefined): string {
 }
 
 function encodeCursor(endExclusive: number, boundary: HistoryEntry | undefined): string {
-	const raw = `e:${endExclusive}:${entrySignature(boundary)}`;
+	const raw = `e:${endExclusive}:${historyEntrySignature(boundary)}`;
 	return Buffer.from(raw, "utf8").toString("base64url");
 }
 
@@ -108,6 +113,8 @@ function tailStartByTurns(history: readonly HistoryEntry[], tailTurns: number): 
  * 从完整历史 projection 中裁出一页。Main 现阶段仍读全量再裁剪（任务
  * 明确允许的过渡形态），游标签名保证裁剪边界在改写时可检测。
  */
+export function sliceHistoryPage(history: readonly HistoryEntry[]): HistoryPage;
+export function sliceHistoryPage(history: readonly HistoryEntry[], request: HistoryPageRequest): HistoryPageResult;
 export function sliceHistoryPage(
 	history: readonly HistoryEntry[],
 	request: HistoryPageRequest = {},
@@ -118,7 +125,7 @@ export function sliceHistoryPage(
 		const cursor = decodeCursor(request.beforeEntry);
 		if (!cursor) return { stale: true };
 		const boundary = history[cursor.end];
-		if (cursor.end > history.length || entrySignature(boundary) !== cursor.sig) {
+		if (cursor.end > history.length || historyEntrySignature(boundary) !== cursor.sig) {
 			return { stale: true };
 		}
 		const start = Math.max(0, cursor.end - limit);
@@ -141,4 +148,39 @@ export function sliceHistoryPage(
 		hasMore: start > 0,
 		head: true,
 	};
+}
+
+// read-only viewer 订阅的增量载荷类型见 preload api-types/session.ts
+// （ViewerHistoryUpdate）：JSONL 是 append-only 的，常规写入只增量下发
+// 新增条目；非追加改写回有界最新页并标记 reset。
+
+function isPrefix(prev: readonly HistoryEntry[], next: readonly HistoryEntry[]): boolean {
+	if (next.length < prev.length) return false;
+	for (let index = 0; index < prev.length; index += 1) {
+		if (historyEntrySignature(next[index]) !== historyEntrySignature(prev[index])) return false;
+	}
+	return true;
+}
+
+/**
+ * 比较订阅方上一轮已知历史与最新快照：
+ * - prev 为空（首次推送）→ snapshot 全量；
+ * - prev 是 next 的真前缀 → append 增量；
+ * - 完全相等 → null（调用方跳过本次推送）；
+ * - 其余 → reset + 有界尾页。
+ */
+export function diffViewerHistory(
+	prev: readonly HistoryEntry[] | null,
+	next: readonly HistoryEntry[],
+): ViewerHistoryUpdate | null {
+	// 无 beforeEntry 的尾页切片不可能 stale，由重载签名直接收窄为 HistoryPage。
+	const reset = (): ViewerHistoryUpdate => ({ kind: "reset", page: sliceHistoryPage(next) });
+	if (prev === null) return { kind: "snapshot", history: [...next] };
+	if (next.length === prev.length) {
+		return isPrefix(prev, next) ? null : reset();
+	}
+	if (isPrefix(prev, next)) {
+		return { kind: "append", appended: next.slice(prev.length) };
+	}
+	return reset();
 }
