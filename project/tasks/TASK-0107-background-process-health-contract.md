@@ -1,7 +1,7 @@
 ---
 id: TASK-0107
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0105, TASK-0108]
 integration_status: pending
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-27
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -81,7 +81,16 @@ VS Code 的后台进程（sharedProcess、fileWatcher、ptyHost、extensionHost�
 ## 交付记录
 
 - 实际修改：
+  - 新增 `apps/desktop/src/main/app-monitor/process-health.ts`：`ProcessRoleContract`（role + 启动方式 + 可选窗口化重启预算）与 `ProcessHealthBook` 记账簿——按 role 记 crash/restart 计数、pid→role 内存归因、窗口化预算裁决（`mayRestart`）；全部 API 走 `registerProcessRole`/`recordProcessCrash` 等旁路包装，失败只降级 warn（遵循 app-monitor「监控不影响业务」约束）。
+  - 接线五个后台执行体：session-search Worker（崩溃记账 + 5 分钟内 3 次重启预算由记账簿裁决，预算耗尽后新请求直接回 `search-failed` 终态事件，与崩溃同形状）、uiohook（role 注册 + crash/restart 记账，重启策略仍归其 supervisor）、im-sidecar（role 注册 + pid 归因 + crash/restart 记账，既有 backoff/budget 不变）、speech-input 宿主（utilityProcess：pid 归因 + 崩溃计数，不加自动重启）、browser-cli（短生命周期 child：运行期 pid 归因 + 进程错误计 crash）。
+  - `diagnostics.ts`：`sampleJavaScriptCallStack(webContents, reason)` 在 `render-process-gone` 与 `window-manager` 的 `unresponsive` 上触发 `mainFrame.collectJavaScriptCallStack()`，产出截断至 32K 字符进诊断日志，失败仅 warn。
+  - `perf-snapshot.ts`：快照新增可选 `background` 字段，按 role 带出 crash/restart/pid/预算耗尽标记；诊断包经既有 `perf-snapshot.json` 自动携带。
 - 实际运行：
-- 未运行及原因：
-- Worktree：
+  - 定向测试：`process-health.test.ts`（契约注册/pid 归因/窗口预算）、`session-search-worker-client.test.ts`（崩溃→重启计数→预算耗尽→终态 `search-failed`）、`diagnostics-call-stack.test.ts`（栈采样成功/失败路径）、`perf-snapshot.test.ts`（background 字段进出）；另覆盖 uiohook、sidecar、speech、browser 域全部既有测试——im-host + browser-automation + session-search 共 27 文件 190 用例、app-monitor 等 7 文件 38 用例，全绿。
+  - `bun run check:quick` 绿；`bun run typecheck`（apps/desktop）绿。
+- 未运行及原因：`bun run check` 全量与真实 Desktop 冒烟（kill sidecar/worker 观察重启预算与记账、模拟 unresponsive 观察栈采样产出）——前者留待批次集成，后者需真实应用运行窗口，记入剩余风险。
+- Worktree：主工作区 serial。
 - 剩余风险：
+  - speech-input 宿主与 browser-cli 不自动重启是刻意的（前者向调用方报会话级失败，后者短生命周期），与「有界重启或转人工提示」的兜底语义一致，但真实设备上的重启风暴抑制只覆盖了 session-search/uiohook/im-sidecar。
+  - `unresponsive` 栈采样依赖 `collectJavaScriptCallStack` 真实可用性（Electron 在 renderer 卡死时仍可能采不出栈），未在真机验证；失败路径仅 warn，不扩大故障面。
+  - perf-snapshot `background` 为新增可选字段，旧消费方忽略即可，无兼容性代价。

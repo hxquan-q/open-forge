@@ -100,7 +100,7 @@ function createdWith(input: AgentProfileEditInput): AgentProfile {
 		description: input.description,
 		mentionHandle: input.mentionHandle,
 		blueprintId: blueprint.id,
-		abilities: { skills: [], mcpServers: [], plugins: [], ...input.abilities },
+		abilities: input.abilities,
 		scope: { kind: "library" },
 		createdAt: 0,
 		updatedAt: 0,
