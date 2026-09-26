@@ -147,6 +147,10 @@ export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
 			// 无连接模式启动：stdio 上游只认 argv 或运行时 connect_database，
 			// DB_* env 由宿主在每次（重）连后自发调用 connect_database 注入，不进 argv/LLM。
 			args: ["-y", "universal-db-mcp@2.14.0"],
+			// 首次连接的 initialize 要等 npx 冷装完整棵依赖树（mysql2/oracledb/原生
+			// better-sqlite3 等可达分钟级）；普通请求超时 30s 会把还在安装的进程杀掉，
+			// 留下缺 package.json 的 _npx 半成品缓存导致后续连接全部瞬间失败。
+			startupTimeout: 180_000,
 			disabledTools: ["connect_database", "disconnect_database"],
 			postConnectToolCalls: [
 				{

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { McpTaskCreatedError } from "../../client/client-errors.js";
 import type { McpClientHandle } from "../../client/client-handle.js";
 import { runMcpMrtrRequest } from "../../interaction/mrtr-request-coordinator.js";
@@ -99,6 +100,10 @@ export class StdioMcpClient implements McpClientHandle {
 	async initialize(params: McpInitializeParams): Promise<McpInitializeResult> {
 		await this.process.start();
 		this.clientInfo = params.clientInfo;
+		// 握手超时用 config.startupTimeout：`npx -y <pkg>` 这类 server 首次连接时还在
+		// 现场安装依赖，进程已 spawn 但 initialize 要等它真正起来；请求级 timeout
+		// 只面向已就绪的常规调用，套在握手上会把还在安装的进程树当成失败杀掉。
+		const handshakeTimeoutMs = this.config.startupTimeout ?? this.timeout;
 		const mode = this.config.protocolMode ?? "legacy";
 		if (mode === "modern" || mode === "auto") {
 			this.clientCapabilities = {
@@ -111,7 +116,13 @@ export class StdioMcpClient implements McpClientHandle {
 				},
 			};
 			try {
-				const discovery = await this.request<unknown>("server/discover", this.modernParams({}));
+				const discovery = await this.request<unknown>(
+					"server/discover",
+					this.modernParams({}),
+					undefined,
+					undefined,
+					handshakeTimeoutMs,
+				);
 				if (!isMcpDiscoverResult(discovery, { era: "modern" }))
 					throw new Error("Invalid MCP server/discover result");
 				this.resolvedEra = "modern";
@@ -134,7 +145,7 @@ export class StdioMcpClient implements McpClientHandle {
 		}
 		const result = assertResult(
 			"initialize",
-			await this.request<unknown>("initialize", params),
+			await this.request<unknown>("initialize", params, undefined, undefined, handshakeTimeoutMs),
 			isMcpInitializeResult,
 			(message) => this.log(message),
 		);
@@ -545,7 +556,9 @@ export class StdioMcpClient implements McpClientHandle {
 
 	private handleProcessExit(code: number | null, signal: string | null): void {
 		this.log(`Process exited: code=${code}, signal=${signal}`);
-		this.rejectPending(new Error(`MCP server exited: code=${code}, signal=${signal}`));
+		const stderrTail = this.process.getStderrTail().trim();
+		const detail = stderrTail ? `; stderr: ${stderrTail.slice(-800)}` : "";
+		this.rejectPending(new Error(`MCP server '${this.name}' exited: code=${code}, signal=${signal}${detail}`));
 		this.initialized = false;
 		this.resolvedEra = undefined;
 	}
