@@ -25,6 +25,7 @@ export const CODING_AGENT_MODEL_TOOL_ORDER = Object.freeze({
 	knowledgeWrite: 1_700,
 	knowledgeFilter: 1_800,
 	knowledgeTags: 1_900,
+	researchScope: 1_950,
 	invokeSkill: 2_000,
 	todo: 2_100,
 	artifact: 2_150,

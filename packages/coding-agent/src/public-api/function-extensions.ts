@@ -128,6 +128,14 @@ export {
 	type CodingAgentPlanReviewRequest,
 	type CodingAgentPlanReviewResult,
 } from "../features/plan-mode/contracts.js";
+export {
+	formatResearchSourcesManifest,
+	parseResearchSourcesManifest,
+	RESEARCH_SOURCES_FENCE,
+	type ResearchSourceEntry,
+	type ResearchSourcesManifest,
+	ResearchSourcesManifestSchema,
+} from "../features/research/research-manifest.js";
 // 无人值守授权分档是纯策略常量与纯函数。刻意从 features/scheduled-tasks 的**具体模块**
 // 导出，而不是那条 barrel：barrel 会牵出 automation-package 的 canonical（node:crypto），
 // Renderer 一旦 import 就会在浏览器里抛「node:crypto has been externalized」并让

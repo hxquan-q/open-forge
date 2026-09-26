@@ -144,6 +144,7 @@ async function assembleCodingAgentRuntimeComposition(
 		// 缺省（无 promptResourceSource）时按「没有可用技能」处理，绝不自造技能名（BUG-0025）。
 		availableSkillNames: createAvailableSkillNamesProvider(sessionInitializationProfile.promptResourceSource),
 		knowledgeRuntime: options.knowledgeRuntime,
+		researchScope: options.researchScope,
 		inheritedMcpView,
 		mcpSource: options.mcpSource,
 		indexes: resourceRegistry.indexes,
