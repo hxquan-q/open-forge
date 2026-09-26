@@ -47,6 +47,7 @@ import {
 } from "@vetta/runtime-desktop";
 import { scanLocalSources } from "@vetta/runtime-knowledge";
 import { FileConversationRuntimeSessionFileHistoryReader } from "@vetta/runtime-node/conversation";
+import { profileDatasetFile } from "@vetta/runtime-node/dataset";
 import {
 	createLoopbackSessionAffinityStream,
 	createNodeKnowledgeRuntime,
@@ -180,6 +181,8 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 						: createNodeKnowledgeRuntime(getKnowledgeRoot()),
 				// 本地研究来源枚举只认显式传入的目录，不回落默认 knowledge home。
 				researchScope: { scanSources: scanLocalSources },
+				// 数据集剖析只读用户显式选择的文件；不修改源文件、不联网。
+				datasetProfile: { profileDataset: profileDatasetFile },
 				createMemoryRolloverRuntime: (options) => {
 					const memoryFile = options.memoryFile ?? join(options.cwd, "MEMORY.md");
 					return createCodingAgentMemoryRolloverRuntime({

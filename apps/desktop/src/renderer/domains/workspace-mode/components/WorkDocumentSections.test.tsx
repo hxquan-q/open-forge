@@ -241,6 +241,36 @@ describe("WorkDocumentSections sources", () => {
 	});
 });
 
+describe("WorkDocumentSections dataset", () => {
+	it("选择数据文件并填写分析目标后发起任务，路径与目标经同一发送通道", async () => {
+		const user = userEvent.setup();
+		const sendMessage = vi.fn().mockResolvedValue({ status: "sent" });
+		sendMessageFnRef.current = sendMessage;
+		selectFiles.mockResolvedValue(["C:/数据/销售表.csv"]);
+		runCommand.mockResolvedValue({ ok: true, state: taskState() });
+
+		renderSections();
+		const dataset = document.querySelector('[data-section="dataset"]');
+		expect(dataset).not.toBeNull();
+		await user.click(within(dataset as HTMLElement).getByRole("button", { name: "workspace.work.dataset.pickFile" }));
+		await screen.findByText("销售表.csv");
+		await user.type(
+			screen.getByPlaceholderText("workspace.work.dataset.goalPlaceholder"),
+			"按地区汇总销售额",
+		);
+		await user.click(
+			within(dataset as HTMLElement).getByRole("button", { name: "workspace.work.dataset.start" }),
+		);
+
+		await waitFor(() => {
+			expect(runCommand).toHaveBeenCalledWith("runtime-1", { type: "create", title: "按地区汇总销售额" });
+		});
+		await waitFor(() => {
+			expect(sendMessage).toHaveBeenCalledWith(`${pathTokenText("C:/数据/销售表.csv")} 按地区汇总销售额`);
+		});
+	});
+});
+
 describe("WorkDocumentSections plan", () => {
 	it("计划状态按语义分级：等待审阅用警告色，执行中带共享呼吸点", () => {
 		const seed = taskState({
@@ -331,7 +361,33 @@ describe("WorkDocumentSections artifacts", () => {
 		expect(verifyArtifactSources).toHaveBeenCalledWith("runtime-1", "artifact-1");
 	});
 
-	it("非 research-evidence 产物不触发来源复查", async () => {
+	it("dataset/analysis 产物同样复查输入来源", async () => {
+		const user = userEvent.setup();
+		const seed = taskState({
+			artifacts: [
+				artifactDescriptor({ kind: "dataset", title: "清洗后.csv" }),
+				artifactDescriptor({ artifactId: "artifact-2", kind: "analysis", title: "分析结论.md" }),
+			],
+		});
+		getState.mockResolvedValue(seed);
+		readArtifact.mockResolvedValue({
+			status: "ok",
+			content: "数据正文",
+			truncated: false,
+		} satisfies DesktopArtifactReadOutcome);
+		verifyArtifactSources.mockResolvedValue({ status: "no-manifest" });
+		renderSections(["runtime-1"], seed);
+
+		await user.click(await screen.findByRole("button", { name: "清洗后.csv" }));
+		await screen.findByLabelText("清洗后.csv");
+		expect(verifyArtifactSources).toHaveBeenCalledWith("runtime-1", "artifact-1");
+
+		await user.click(await screen.findByRole("button", { name: "分析结论.md" }));
+		await screen.findByLabelText("分析结论.md");
+		expect(verifyArtifactSources).toHaveBeenCalledWith("runtime-1", "artifact-2");
+	});
+
+	it("白名单外产物（document）不触发来源复查", async () => {
 		const user = userEvent.setup();
 		readArtifact.mockResolvedValue({
 			status: "ok",

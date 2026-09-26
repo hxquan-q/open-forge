@@ -145,6 +145,7 @@ async function assembleCodingAgentRuntimeComposition(
 		availableSkillNames: createAvailableSkillNamesProvider(sessionInitializationProfile.promptResourceSource),
 		knowledgeRuntime: options.knowledgeRuntime,
 		researchScope: options.researchScope,
+		datasetProfile: options.datasetProfile,
 		inheritedMcpView,
 		mcpSource: options.mcpSource,
 		indexes: resourceRegistry.indexes,

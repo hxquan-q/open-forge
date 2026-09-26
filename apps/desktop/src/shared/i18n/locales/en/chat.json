@@ -1399,7 +1399,11 @@
 			},
 			"dataset": {
 				"empty": "Dataset previews appear here once data analysis is wired up",
-				"title": "Dataset"
+				"title": "Dataset",
+				"pickFile": "Choose a data file",
+				"goalPlaceholder": "Describe the analysis goal, e.g. \"sum sales by region and flag abnormal rows\"",
+				"start": "Analyze",
+				"pickFailed": "Could not choose the data file. Try again."
 			},
 			"plan": {
 				"empty": "Once a task starts, its plan and progress show here",

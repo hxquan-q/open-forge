@@ -8,7 +8,7 @@ created: 2026-09-27
 updated: 2026-09-27
 related_requirement: [REQ-0001]
 related_plan: [PLAN-0002, PLAN-0006, PLAN-0010, PLAN-0013]
-related_tasks: [TASK-0050, TASK-0064, TASK-0072, TASK-0074, TASK-0107, TASK-0120, TASK-0122, TASK-0123]
+related_tasks: [TASK-0025, TASK-0026, TASK-0050, TASK-0064, TASK-0072, TASK-0074, TASK-0107, TASK-0120, TASK-0122, TASK-0123]
 related_issues: [ISSUE-0011, ISSUE-0025, ISSUE-0026, ISSUE-0028]
 related_bugs: [BUG-0034, BUG-0035, BUG-0036, BUG-0038, BUG-0040, BUG-0041, BUG-0042]
 ---
@@ -16,7 +16,7 @@ related_bugs: [BUG-0034, BUG-0035, BUG-0036, BUG-0038, BUG-0040, BUG-0041, BUG-0
 
 # 0.1.2 verifying 批次：Desktop 实机验收清单
 
-本轮把 9 个 `verifying` Task、7 个 `verifying` Bug 与 ISSUE-0011 的实机证据一次性收掉。
+本轮把 10 个 `verifying` Task、7 个 `verifying` Bug 与 ISSUE-0011 的实机证据一次性收掉。
 环境与 VERIFY-0010 同构：隔离 Debug Profile（`~/.openforge-ui-debug`），Desktop dev 构建，
 agent-browser 经 CDP 附着逐项断言；验收只写隔离 Profile，不动用户真实数据目录。
 
@@ -69,6 +69,17 @@ agent-browser 经 CDP 附着逐项断言；验收只写隔离 Profile，不动�
   产物，附逐条来源清单；打开产物可复查每条来源为可用/缺失/已变更；
   删除其中一个源文件后复查，该条标为「缺失」而非静默通过。会话全程
   不访问默认知识库目录、不触发联网检索。
+
+### D3. Work 数据分析（TASK-0026）
+
+- Given：Work 模式「数据集」面板选一个 CSV/JSON 或 .xlsx 文件并填写
+  明确分析目标（如「按地区汇总销售额」）；When：发起任务；Then：Agent
+  先走 `dataset_profile` 画像（列/类型/问题行可见），产出 `dataset` 或
+  `analysis` 产物，产物带来源清单；打开产物复查显示输入文件为「可用」；
+  将源文件改名/删除后复查，该条标为「缺失」。全程源文件未被修改、
+  未发生联网上传。
+- Given：选一个非数据格式或超大文件；When：Agent 调用 `dataset_profile`；
+  Then：返回明确的不支持格式/超限错误，不静默换路径、不猜目录。
 
 ### E. 其余 bug 实机回归
 

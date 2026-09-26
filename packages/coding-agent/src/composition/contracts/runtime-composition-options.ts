@@ -19,6 +19,7 @@ import type { McpRuntimeToolSource } from "@vetta/runtime-mcp";
 import type { ConversationOwnershipManager } from "@vetta/runtime-storage/conversation";
 import type { SubagentTypeRegistryLike } from "@vetta/runtime-subagents";
 import type { CodingToolResultPolicy } from "@vetta/runtime-tools";
+import type { CodingAgentDatasetOperations } from "../../features/dataset/contracts.js";
 import type { CodingAgentKnowledgeRuntime } from "../../features/knowledge/contracts.js";
 import type { CodingAgentResearchScopeOperations } from "../../features/research/contracts.js";
 import type { CodingAgentTodoRuntime } from "../../features/todo/contracts.js";
@@ -97,6 +98,8 @@ export interface CodingAgentRuntimeToolOptions {
 	readonly knowledgeRuntime?: CodingAgentKnowledgeRuntime;
 	/** 本地研究来源枚举实现由最终宿主选择；缺省时不注册 research_scope。 */
 	readonly researchScope?: CodingAgentResearchScopeOperations;
+	/** 数据集文件剖析实现由最终宿主选择；缺省时不注册 dataset_profile。 */
+	readonly datasetProfile?: CodingAgentDatasetOperations;
 	/** 仅用于保留宿主既有系统提示词合同；不会把名称对应的工具加入可执行 Tool Frame。 */
 	readonly systemPromptAdvertisedToolNames?: readonly string[];
 	readonly mcpSource?: McpRuntimeToolSource;

@@ -8,6 +8,10 @@ import {
 	isCodingAgentSessionExecutionToolName,
 } from "../../execution/session/runtime.js";
 import {
+	type CodingAgentDatasetOperations,
+	createCodingAgentDatasetProfileToolRegistration,
+} from "../../features/dataset/index.js";
+import {
 	type CodingAgentKnowledgeRuntime,
 	createCodingAgentKnowledgeFilterByTagsToolRegistration,
 	createCodingAgentKnowledgeListTagsToolRegistration,
@@ -48,6 +52,8 @@ export interface CodingAgentRuntimeToolSurfaceOptions {
 	readonly knowledgeRuntime?: CodingAgentKnowledgeRuntime;
 	/** 本地研究来源枚举实现由宿主注入；缺省时不注册 research_scope。 */
 	readonly researchScope?: CodingAgentResearchScopeOperations;
+	/** 数据集剖析实现由宿主注入；缺省时不注册 dataset_profile。 */
+	readonly datasetProfile?: CodingAgentDatasetOperations;
 	readonly inheritedMcpView: McpRuntimeToolView;
 	readonly mcpSource?: McpRuntimeToolSource;
 	readonly indexes: CodingAgentRuntimeToolSurfaceIndexes;
@@ -141,6 +147,14 @@ export async function createCodingAgentRuntimeToolSurface(
 						createCodingAgentResearchScopeToolRegistration({
 							operations: options.researchScope,
 							modelOrder: CODING_AGENT_MODEL_TOOL_ORDER.researchScope,
+						}),
+					]
+				: []),
+			...(options.datasetProfile
+				? [
+						createCodingAgentDatasetProfileToolRegistration({
+							operations: options.datasetProfile,
+							modelOrder: CODING_AGENT_MODEL_TOOL_ORDER.datasetProfile,
 						}),
 					]
 				: []),

@@ -46,6 +46,7 @@ const WORK_PROFILE: CodingAgentAgentProfile = Object.freeze({
 		"kb_filter_by_tags",
 		"kb_list_available_tags",
 		"research_scope",
+		"dataset_profile",
 		"im_send_attachment",
 		"artifact",
 		"browser_tab",
