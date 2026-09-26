@@ -8,6 +8,7 @@ import type { DesktopAppshotApi } from "./api-types/appshot.js";
 import type { DesktopAuthApi } from "./api-types/auth.js";
 import type { DesktopBatchTasksApi } from "./api-types/batch-tasks.js";
 import type { DesktopBrowserTabApi } from "./api-types/browser-tab.js";
+import type { DesktopBrowserViewApi } from "./api-types/browser-view.js";
 import type { DesktopCanvasApi } from "./api-types/canvas.js";
 import type { DesktopConfigApi } from "./api-types/config.js";
 import type { DesktopConversationTagsApi } from "./api-types/conversation-tags.js";
@@ -135,6 +136,7 @@ export interface DesktopApi {
 	batchTasks: DesktopBatchTasksApi;
 	canvas: DesktopCanvasApi;
 	browserTab: DesktopBrowserTabApi;
+	browserView: DesktopBrowserViewApi;
 	downloads: DesktopDownloadsApi;
 	im: DesktopImApi;
 	debug: DesktopDebugApi;

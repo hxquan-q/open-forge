@@ -17,11 +17,26 @@ export function isInAppBrowserWebContents(webContents: WebContents): boolean {
 
 export function bindInAppBrowserWebview(webContents: WebContents): void {
 	if (!isInAppBrowserWebContents(webContents)) return;
-	const controller = getInAppBrowserSessionController();
-	controller.attachUnboundWebContents(webContents);
+	wireInAppBrowserContents(webContents, null);
+}
 
+/**
+ * WebContentsView 路径（TASK-0072）：view 按 workspace 创建时就已知归属，
+ * 直接 attach，不走 did-attach-webview 的 attachUnbound 竞态。
+ */
+export function bindInAppBrowserViewContents(webContents: WebContents, workspaceId: string): void {
+	getInAppBrowserSessionController().attachWebContents(workspaceId, webContents);
+	wireInAppBrowserContents(webContents, workspaceId);
+}
+
+function wireInAppBrowserContents(webContents: WebContents, workspaceId: string | null): void {
+	const controller = getInAppBrowserSessionController();
+	if (!workspaceId) controller.attachUnboundWebContents(webContents);
+
+	const resolveWorkspaceId = (): string | undefined =>
+		workspaceId ?? controller.workspaceIdForContents(webContents.id);
 	const bump = (url?: string): void => {
-		const id = controller.workspaceIdForContents(webContents.id);
+		const id = resolveWorkspaceId();
 		if (!id) return;
 		controller.bumpRevision(id, { url, title: webContents.getTitle() });
 	};
@@ -35,13 +50,13 @@ export function bindInAppBrowserWebview(webContents: WebContents): void {
 		bump(url);
 	});
 	webContents.on("dom-ready", () => {
-		const id = controller.workspaceIdForContents(webContents.id);
+		const id = resolveWorkspaceId();
 		if (id) controller.attachWebContents(id, webContents);
 		else controller.attachUnboundWebContents(webContents);
 	});
 	webContents.on("console-message", (_event, _level, message) => {
 		if (message !== IN_APP_BROWSER_DOM_MUTATION_SENTINEL) return;
-		const id = controller.workspaceIdForContents(webContents.id);
+		const id = resolveWorkspaceId();
 		if (id) controller.bumpRevision(id);
 	});
 	webContents.on("before-input-event", (event, input) => {

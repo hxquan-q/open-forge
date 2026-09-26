@@ -10,6 +10,7 @@ import { createAppMonitorApi } from "./apis/app-monitor.js";
 import { createAppshotApi } from "./apis/appshot.js";
 import { createBatchTasksApi } from "./apis/batch-tasks.js";
 import { createBrowserTabApi } from "./apis/browser-tab.js";
+import { createBrowserViewApi } from "./apis/browser-view.js";
 import { createCanvasApi } from "./apis/canvas.js";
 import { createConversationTagsApi } from "./apis/conversation-tags.js";
 import { createDownloadsApi } from "./apis/downloads.js";
@@ -57,6 +58,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createBatchTasksApi(ipcRenderer),
 	...createCanvasApi(ipcRenderer),
 	...createBrowserTabApi(ipcRenderer),
+	...createBrowserViewApi(ipcRenderer),
 	...createSchedulerApi(ipcRenderer),
 	...createWebhookApi(ipcRenderer),
 	...createNotificationApi(ipcRenderer),
