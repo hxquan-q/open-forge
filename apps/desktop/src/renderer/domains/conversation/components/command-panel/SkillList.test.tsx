@@ -9,8 +9,6 @@ import type { SkillListEmptyAction, SkillListLabels } from "./types";
 const defaultLabels: SkillListLabels = {
 	emptyNoMatch: "未找到匹配项",
 	emptyNoMatchHint: "换个关键词试试。",
-	emptyClearFilterAction: "清除筛选",
-	emptyOpenMarketAction: "去能力市场安装",
 	emptyNoSkills: "暂无可用的技能或场景",
 	emptyNoSkillsHint: "去能力广场安装后即可调用。",
 	scenesSection: "场景",
@@ -154,6 +152,25 @@ describe("SkillList 分组与 ARIA", () => {
 		);
 		fireEvent.click(screen.getByRole("option"));
 		expect(onSelect).toHaveBeenCalledWith(target);
+	});
+
+	it("分组的可访问名引用可见分组头，不复制第二份文本", () => {
+		render(
+			<SkillList
+				items={[skill({ name: "a" }), skill({ name: "b", type: "scene" })]}
+				activeIndex={0}
+				labels={defaultLabels}
+				filtering={false}
+				emptyAction={noopEmptyAction}
+				ariaLabel="选择技能"
+				onHover={() => undefined}
+				onSelect={() => undefined}
+			/>,
+		);
+		const group = screen.getByRole("group", { name: "场景" });
+		const headerId = group.getAttribute("aria-labelledby");
+		expect(headerId).toBeTruthy();
+		expect(document.getElementById(headerId ?? "")?.textContent).toBe("场景");
 	});
 
 	it("limit 截断只影响渲染行数，不重排分组", () => {

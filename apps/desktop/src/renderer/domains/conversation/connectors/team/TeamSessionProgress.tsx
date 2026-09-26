@@ -1,6 +1,6 @@
 import { cn } from "@shared/lib/utils";
 import { AgentAvatarView } from "@vetta-org/theme-ui/chat";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatDurationCompact } from "../../components/blocks/tool-views/shared/format";
 import { formatCompactTokens } from "../../components/message-list/MessageTokenUsage";
@@ -23,7 +23,7 @@ const STATE_DOT: Record<TeamWorkItemPhase, string> = {
 	queued: "bg-muted-foreground/40",
 	running: "vetta-live-dot bg-emerald-500",
 	waiting: "bg-amber-400",
-	attention: "bg-amber-400",
+	attention: "vetta-live-dot bg-amber-400",
 	completed: "bg-emerald-500/70",
 	failed: "bg-destructive",
 	cancelled: "bg-muted-foreground/40",
@@ -52,6 +52,7 @@ export interface TeamSessionProgressProps {
 export function TeamSessionProgress({ progress, onOpenMember }: TeamSessionProgressProps): JSX.Element {
 	const { t } = useTranslation("agent-teams");
 	const [expanded, setExpanded] = useState(false);
+	const listId = useId();
 	const phaseLabel = t(`chat.teamProgress.phase.${progress.phase}`);
 	const summary = SUMMARY_ORDER.filter((state) => progress.counts[state] > 0)
 		.map((state) => t(`chat.teamProgress.count.${state}`, { count: progress.counts[state] }))
@@ -70,16 +71,23 @@ export function TeamSessionProgress({ progress, onOpenMember }: TeamSessionProgr
 	return (
 		<div
 			data-team-session-progress="true"
+			role="group"
 			aria-label={t("chat.teamProgress.title")}
 			className="mx-3 mb-2 shrink-0"
 		>
+			{/* button 的后代在真实浏览器里是 presentational，live region 必须挂在外面才播报；
+			    只报阶段——计数随任务流转频繁变化，全报会刷屏。 */}
+			<span role="status" className="sr-only">
+				{t("chat.teamProgress.liveStatus", { title: t("chat.teamProgress.title"), phase: phaseLabel })}
+			</span>
 			<button
 				type="button"
 				aria-expanded={expanded}
+				aria-controls={expanded ? listId : undefined}
 				data-team-progress-toggle="true"
 				className={cn(
 					"flex h-7 w-full items-center gap-2 rounded-lg border border-border/40 bg-muted/40 px-2.5 text-left text-[11px] transition-colors",
-					"hover:border-border/60 hover:bg-muted/60",
+					"hover:border-border/60 hover:bg-muted/60 focus-visible:border-ring",
 				)}
 				onClick={() => setExpanded((value) => !value)}
 			>
@@ -91,7 +99,7 @@ export function TeamSessionProgress({ progress, onOpenMember }: TeamSessionProgr
 					)}
 					aria-hidden="true"
 				/>
-				<span className="flex min-w-0 flex-1 items-baseline gap-1.5" role="status">
+				<span className="flex min-w-0 flex-1 items-baseline gap-1.5">
 					<span className={cn("shrink-0 font-medium", highlight ? "text-destructive" : "text-foreground")}>
 						{phaseLabel}
 					</span>
@@ -106,7 +114,7 @@ export function TeamSessionProgress({ progress, onOpenMember }: TeamSessionProgr
 				/>
 			</button>
 			{expanded ? (
-				<div role="list" className="mt-1 flex flex-col gap-0.5">
+				<div role="list" id={listId} className="mt-1 flex flex-col gap-0.5">
 					{progress.rows.map((row) => {
 						const stateLabel = row.state
 							? t(`chat.teamProgress.item.${row.state}`)
@@ -167,17 +175,14 @@ export function TeamSessionProgress({ progress, onOpenMember }: TeamSessionProgr
 								key={row.memberId}
 								role="listitem"
 								data-team-progress-member={row.memberId}
-								className={cn(
-									"flex w-full flex-col gap-0.5 rounded-md px-2 py-1 text-[11px]",
-									!(row.openable && onOpenMember) && "opacity-80",
-								)}
+								className="flex w-full flex-col gap-0.5 rounded-md px-2 py-1 text-[11px]"
 							>
 								{row.openable && onOpenMember ? (
 									<button
 										type="button"
 										title={t("chat.memberSession", { name: row.name })}
 										aria-label={t("chat.memberSession", { name: row.name })}
-										className="flex w-full min-w-0 flex-col gap-0.5 rounded-md text-left transition-colors hover:bg-accent"
+										className="flex w-full min-w-0 flex-col gap-0.5 rounded-md text-left transition-colors hover:bg-accent focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 										onClick={() => onOpenMember(row.memberId)}
 									>
 										{content}

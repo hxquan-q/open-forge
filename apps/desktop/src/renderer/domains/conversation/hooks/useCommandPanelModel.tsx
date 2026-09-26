@@ -217,8 +217,6 @@ export function useCommandPanelModel({
 			connectorsSection: t("slashPanel.connectorsSection"),
 			emptyNoMatch: t("slashPanel.emptyNoMatch"),
 			emptyNoMatchHint: t("slashPanel.emptyNoMatchHint"),
-			emptyClearFilterAction: t("slashPanel.emptyClearFilterAction"),
-			emptyOpenMarketAction: t("slashPanel.emptyOpenMarketAction"),
 			emptyNoSkills: t("slashPanel.emptyNoSkills"),
 			emptyNoSkillsHint: t("slashPanel.emptyNoSkillsHint"),
 			scenesSection: t("slashPanel.scenesSection"),

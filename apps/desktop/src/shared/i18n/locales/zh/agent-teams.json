@@ -251,6 +251,7 @@
       },
       "metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
       "context": "上下文 {{percent}}%",
+      "liveStatus": "{{title}}：{{phase}}",
       "total": "合计"
     },
     "readyTitle": "团队已经就绪",

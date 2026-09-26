@@ -1091,7 +1091,8 @@
 			"groupAgents": "Agents",
 			"pick": "Switch agent",
 			"pickTitle": "Pick a team or a single agent for this task",
-			"switchTitle": "Switch the team or agent for this session"
+			"switchTitle": "Switch the team or agent for this session",
+			"triggerLabel": "{{label}}, {{hint}}"
 		},
 		"workspace": {
 			"hint": {

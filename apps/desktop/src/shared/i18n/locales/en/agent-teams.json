@@ -251,6 +251,7 @@
       },
       "metrics": "↻{{rounds}} · {{tools}} tool calls · ↑{{input}} ↓{{output}} · {{duration}}",
       "context": "ctx {{percent}}%",
+      "liveStatus": "{{title}}: {{phase}}",
       "total": "Total"
     },
     "readyTitle": "Your team is ready",

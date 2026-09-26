@@ -115,8 +115,6 @@ export function useSkillPickerModel({
 			resultCount: t("slashPanel.resultCount", { count: items.length }),
 			emptyNoMatch: t("slashPanel.emptyNoMatch"),
 			emptyNoMatchHint: t("slashPanel.emptyNoMatchHint"),
-			emptyClearFilterAction: t("slashPanel.emptyClearFilterAction"),
-			emptyOpenMarketAction: t("slashPanel.emptyOpenMarketAction"),
 			emptyNoSkills: t("slashPanel.emptyNoSkills"),
 			emptyNoSkillsHint: t("slashPanel.emptyNoSkillsHint"),
 			scenesSection: t("slashPanel.scenesSection"),

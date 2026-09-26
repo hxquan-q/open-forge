@@ -8,8 +8,8 @@ interface SkillListEmptyProps {
 	/** true = 有过滤词但没命中；false = 本来就没有可用的 skill / 场景。 */
 	filtering: boolean;
 	labels: SkillListLabels;
-	/** filter 时给「清除筛选」，无可用项时给「去能力市场安装」。 */
-	action?: SkillListEmptyAction;
+	/** filter 时给「清除筛选」，无可用项时给「去能力市场安装」。必填——空态的恢复动作不能是摆设。 */
+	action: SkillListEmptyAction;
 }
 
 /**
@@ -19,18 +19,13 @@ interface SkillListEmptyProps {
 export function SkillListEmpty({ filtering, labels, action }: SkillListEmptyProps): JSX.Element {
 	const title = filtering ? labels.emptyNoMatch : labels.emptyNoSkills;
 	const hint = filtering ? labels.emptyNoMatchHint : labels.emptyNoSkillsHint;
-	const cta: SkillListEmptyAction = action ?? {
-		kind: filtering ? "clearFilter" : "openMarket",
-		label: filtering ? labels.emptyClearFilterAction : labels.emptyOpenMarketAction,
-		onAction: () => undefined,
-	};
 	return (
 		<div className="px-3 py-2">
 			<motion.div
 				initial={{ opacity: 0, y: 4 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={CARD_IN}
-				className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border bg-foreground/[0.02] px-3 py-2.5"
+				className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border bg-foreground/5 px-3 py-2.5"
 			>
 				<span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground/70">
 					<span
@@ -44,11 +39,9 @@ export function SkillListEmpty({ filtering, labels, action }: SkillListEmptyProp
 					<span className="truncate text-[13px] font-medium text-foreground/80">{title}</span>
 					<span className="truncate text-[12px] text-muted-foreground/60">{hint}</span>
 				</span>
-				{cta ? (
-					<Button variant="ghost" size="sm" onClick={cta.onAction} className="shrink-0">
-						{cta.label}
-					</Button>
-				) : null}
+				<Button variant="ghost" size="sm" onClick={action.onAction} className="shrink-0">
+					{action.label}
+				</Button>
 			</motion.div>
 		</div>
 	);

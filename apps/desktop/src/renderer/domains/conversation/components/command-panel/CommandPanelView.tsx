@@ -103,13 +103,17 @@ export function CommandPanelView({
 						</div>
 						<FadingScrollArea className="pt-1.5" suspended={!revealed}>
 							{operation ? (
-								<div role="option" aria-selected={activeIndex === 0} data-index={0} className="px-1.5">
+								// 这一行不参与 listbox：option 语义需要 listbox 祖先，而它不是 skill 选项；
+								// 激活态用 aria-current 挂在可聚焦按钮自身上（与 SkillListItem 的焦点模型一致）。
+								<div className="px-1.5">
 									<button
 										type="button"
+										data-index={0}
+										aria-current={activeIndex === 0}
 										disabled={operation.disabled}
 										onMouseEnter={() => onHoverItem(0)}
 										onClick={operation.onSelect}
-										className="relative flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
+										className="relative flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-foreground/5 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 										style={{
 											background:
 												activeIndex === 0
@@ -174,10 +178,12 @@ export function CommandPanelView({
 									<button
 										key={action.id}
 										type="button"
+										aria-pressed={action.active}
 										onClick={action.onToggle}
 										title={action.label}
 										className={[
 											"flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-0.5 text-[12px] font-medium transition-colors",
+											"focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
 											action.active
 												? "bg-primary/10 text-primary"
 												: "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",

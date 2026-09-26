@@ -1091,7 +1091,8 @@
 			"groupAgents": "智能体",
 			"pick": "切换智能体",
 			"pickTitle": "指定一个团队或单个智能体来完成这次任务",
-			"switchTitle": "更换本次会话的团队或智能体"
+			"switchTitle": "更换本次会话的团队或智能体",
+			"triggerLabel": "{{label}}，{{hint}}"
 		},
 		"workspace": {
 			"hint": {

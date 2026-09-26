@@ -1,7 +1,7 @@
 import type { SkillInfo } from "@preload/api";
 import { SkillTypeIcon } from "@vetta-org/theme-ui/skills";
 import { motion } from "motion/react";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { SkillListEmpty } from "./SkillListEmpty";
 import type { SkillListProps, SkillListSection } from "./types";
 
@@ -67,14 +67,13 @@ function SkillListItem({
 			type="button"
 			role="option"
 			aria-selected={active}
-			id={`skill-option-${globalIndex}`}
 			data-index={globalIndex}
 			onMouseEnter={onHover}
 			onClick={onSelect}
 			title={skill.description || displayName}
 			className={[
 				"relative flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition-colors",
-				"hover:bg-foreground/5",
+				"hover:bg-foreground/5 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
 			].join(" ")}
 			style={{
 				background: active ? "color-mix(in srgb, var(--primary) 9%, transparent)" : undefined,
@@ -116,11 +115,22 @@ function SkillListItem({
 	);
 }
 
-/** 分组头：纯展示（不参与 flat 计数）。与 §6 字号档位一致（10px）。 */
-function SectionHeader({ section, countLabel }: { section: SkillListSection; countLabel: string }): JSX.Element {
+/** 分组头：纯展示（不参与 flat 计数）。与 §6 字号档位一致（10px）。id 供分组容器的 aria-labelledby 引用。 */
+function SectionHeader({
+	section,
+	countLabel,
+	titleId,
+}: {
+	section: SkillListSection;
+	countLabel: string;
+	titleId: string;
+}): JSX.Element {
 	return (
 		<div className="flex items-center justify-between px-3 pt-2.5 pb-1">
-			<span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/60">
+			<span
+				id={titleId}
+				className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/60"
+			>
 				{section.title}
 			</span>
 			<span className="text-[10px] normal-case tracking-normal text-muted-foreground/50">{countLabel}</span>
@@ -161,19 +171,25 @@ export function SkillList({
 	// 分组只改渲染顺序：每行的身份索引仍是它在原始 items 里的 flat 下标，
 	// 与父级 items[activeIndex] 选中、data-index 滚动定位同一份坐标。
 	const flatIndexBySkill = useMemo(() => new Map(items.map((skill, index) => [skill, index])), [items]);
+	const listId = useId();
 	if (sections.length === 0) {
 		return <SkillListEmpty filtering={filtering} labels={labels} action={emptyAction} />;
 	}
-	const visible = limit === undefined ? items : items.slice(0, limit);
+	const visibleCount = limit === undefined ? items.length : Math.min(limit, items.length);
 	return (
 		<div role="listbox" aria-label={ariaLabel} className="py-1.5">
 			{sections.map((section) => (
-				<div key={section.kind} role="group" aria-label={section.title}>
-					<SectionHeader section={section} countLabel={labels.sectionCount(section.count)} />
+				// 分组名来自可见标题本身（aria-labelledby），避免同一份文案维护两处。
+				<div key={section.kind} role="group" aria-labelledby={`${listId}-${section.kind}`}>
+					<SectionHeader
+						section={section}
+						countLabel={labels.sectionCount(section.count)}
+						titleId={`${listId}-${section.kind}`}
+					/>
 					<div className="px-1.5">
 						{section.items.map((skill, sectionIndex) => {
 							const displayIndex = section.startIndex + sectionIndex;
-							if (limit !== undefined && displayIndex >= visible.length) return null;
+							if (displayIndex >= visibleCount) return null;
 							const flatIndex = flatIndexBySkill.get(skill) ?? displayIndex;
 							const globalIndex = flatIndex + indexOffset;
 							return (

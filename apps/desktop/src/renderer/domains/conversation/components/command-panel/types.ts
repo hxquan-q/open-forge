@@ -23,9 +23,6 @@ export interface SkillListLabels {
 	emptyNoSkills: string;
 	/** 空态卡片里的第二行提示（本来就没有可用条目）。 */
 	emptyNoSkillsHint: string;
-	/** 空态主 CTA（filter 时 = 清空筛选；无可用时 = 打开能力市场）。 */
-	emptyClearFilterAction: string;
-	emptyOpenMarketAction: string;
 	/** 分组标题（场景 / 技能）。 */
 	scenesSection: string;
 	skillsSection: string;

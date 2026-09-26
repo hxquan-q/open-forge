@@ -31,6 +31,7 @@ const LABELS: Record<string, string> = {
 	"chat.teamProgress.item.notStarted": "未开始",
 	"chat.teamProgress.metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
 	"chat.teamProgress.context": "上下文 {{percent}}%",
+	"chat.teamProgress.liveStatus": "{{title}}：{{phase}}",
 	"chat.teamProgress.total": "合计",
 	"chat.leaderRoute": "负责人",
 	"chat.memberSession": "查看 {{name}} 的独立会话",
@@ -150,5 +151,50 @@ describe("TeamSessionProgress", () => {
 	] as const)("announces the $phase phase as $label", ({ phase, label }) => {
 		render(<TeamSessionProgress progress={progress({ phase })} onOpenMember={vi.fn()} />);
 		expect(screen.getByRole("status").textContent).toContain(label);
+	});
+
+	it("keeps the live status outside the toggle button so it survives children-presentational", () => {
+		render(<TeamSessionProgress progress={progress()} onOpenMember={vi.fn()} />);
+		const toggle = screen.getByRole("button", { expanded: false });
+		const status = screen.getByRole("status");
+		// button 的后代在真实浏览器里是 presentational：status 挂在里面永远不播报。
+		expect(toggle.contains(status)).toBe(false);
+		expect(status.textContent).toContain("执行中");
+	});
+
+	it("points aria-controls at the expanded member list", () => {
+		render(<TeamSessionProgress progress={progress()} onOpenMember={vi.fn()} />);
+		const toggle = screen.getByRole("button", { expanded: false });
+		expect(toggle.getAttribute("aria-controls")).toBeNull();
+		fireEvent.click(toggle);
+		const target = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+		expect(target?.getAttribute("role")).toBe("list");
+	});
+
+	it("marks the member needing attention with the registered live indicator", () => {
+		render(
+			<TeamSessionProgress
+				progress={progress({
+					phase: "attention",
+					counts: { queued: 0, running: 0, waiting: 0, attention: 1, completed: 0, failed: 0, cancelled: 0 },
+					rows: [
+						{
+							memberId: "reviewer",
+							name: "Review",
+							isLeader: false,
+							state: "attention",
+							objective: "等待确认方案",
+							itemCount: 1,
+							openable: true,
+						},
+					],
+				})}
+				onOpenMember={vi.fn()}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { expanded: false }));
+		// 需要处理是唯一要用户行动的状态，与 running 一样挂登记过的呼吸点。
+		const row = document.querySelector('[data-team-progress-member="reviewer"]');
+		expect(row?.querySelector(".vetta-live-dot")).not.toBeNull();
 	});
 });
