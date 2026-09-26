@@ -1,14 +1,14 @@
 ---
 id: TASK-0072
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0006
 source: user-request（WebContentsView migration）
 execution: serial
-branch: unassigned（尚未开工）
+branch: main（serial 任务直接在本地 main 上分阶段提交）
 worktree: unassigned（serial task；不创建独立 Worktree）
 base_commit: forge/dev
 read_paths: [apps/desktop/src/main/browser-automation, apps/desktop/src/main/window-manager.ts, apps/desktop/src/renderer/domains/activity-panel, packages/theme-ui/src/activity, docs/adr/0129-canvas-artifact-dual-lifecycle-and-in-app-browser-tab.md]
@@ -21,9 +21,9 @@ related_plan: [PLAN-0006]
 related_tasks: [TASK-0063]
 related_issues: []
 related_bugs: []
-integration_status: pending
+integration_status: integrated（main：1364d1376 / ebb8fc942 / 文档提交）
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-09-27
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,7 +74,57 @@ updated: 2026-09-28
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 阶段 1（2026-09-27，main 宿主 + IPC 合同，commit `1364d1376`）：
+  - 新增 `shared/browser-view-ipc.ts` wire 合同（attach/update/detach/
+    navigate/control/passthrough/event 七通道 + `DesktopBrowserViewState`）。
+  - 新增 `browser-automation/browser-view-host.ts`：`InAppBrowserViewHost`
+    按 workspace 持有 `WebContentsView`（`persist:vetta-browser`、
+    contextIsolation、无 nodeIntegration），attach 挂窗摆位、detach
+    摘窗保活、setIgnoreMouseEvents 指针穿透、http(s) `window.open`
+    同 view 原地加载（沿用旧 webview 行为）、导航/加载/失败事件聚合回推。
+  - `webview-session-host.ts` 新增 `bindInAppBrowserViewContents`：
+    guest 归属创建时已知，直连 `InAppBrowserSessionController`（复用
+    revision/picker/DOM sentinel/快捷键接线），绕开 did-attach-webview 竞态。
+  - `ipc/browser-view.ts` 薄层注册 + `ipc/index.ts` 接线；preload
+    `browserView` API 面落地。
+  - 测试：`browser-view-host.test.ts` 10 用例（attach/bounds/可见性/
+    导航控制/弹窗同 view/穿透/销毁重建/多 workspace/无窗口）。
+- 阶段 2（2026-09-27，renderer 切换，commit `ebb8fc942`）：
+  - `BrowserPanelView`：`<webview>` 换成 `data-browser-view-host` 占位
+    div；加载徽标移入工具栏；`BrowserLiveEditCard` 从绝对定位浮层改为
+    页面上方停靠条（原生 view 恒在 DOM 之上，覆盖层挡不住）。
+  - `useBrowserPanelModel` 重写：attach 携带占位 bounds/初始 URL/初始
+    可见性（viewVisibleRef 快照避免隐藏 tab 首帧闪现）；ResizeObserver
+    上报 bounds；tab activation/空态/失败态驱动 `setVisible`；
+    地址栏→workspace URL atom→navigate IPC；toolbar 四键走 control IPC；
+    分栏拖拽 atom + tab 拖拽 atom + `OVERLAY_DRAG_EVENT` 广播合成
+    `setInputPassthrough`。
+  - `theme-ui/layout/overlay-drag.ts` 新增 CustomEvent 广播工具，
+    `ResizeHandle`/`FloatingActivityTabView` 全屏兜底 overlay 展开/收起
+    （含 pointercancel）时派发；layout 桶导出。
+  - `window-manager.ts` 移除内置浏览器的 `did-attach-webview` 处理与
+    window.open 兜底（宿主内部完成）；`closed` 时 `disposeAll` 清表；
+    `webviewTag: true` 仅保留给 Canvas HTML artifact 沙箱。
+  - 移除 `attachUnboundWebContents`/`pendingContents`/`getSession`
+    pending 回落与 `bindInAppBrowserWebview`/`isInAppBrowserWebContents`。
+  - 测试：`useBrowserPanelModel.test.tsx` 6 用例（attach 合同/事件同步
+    回写 workspace atom/地址栏导航+control/隐藏与失败隐 view/拖拽穿透/
+    卸载 detach）；`webview-session-controller.test.ts` unbound 用例改写
+    为直连 attach 语义；`BrowserPanelView.picker.test.tsx` 改断言占位符
+    契约；`browser-view-host.test.ts` 补 `visible:false` 挂载用例；
+    `vetta-bridge` 测试桥补 `browserView` 底线面。
+- 阶段 3（2026-09-27，文档）：新增 ADR-0134 记录背景/候选/代价/回滚并
+  回链 ADR-0129；本任务台账与索引同步。
+- 实际运行：desktop typecheck 绿；check:quick 绿（声明头 ratchet 新增=0）；
+  定向测试 webview-session-controller/browser-view-host/model/picker/
+  browser-tab/picker-hook/liveEdit-hook 全绿；test:impact 全量 desktop
+  852 文件 4446 用例通过，仅 4 个既有 flaky 超时（knowledge-round、
+  model-call-frame、coding-agent-spec、conversation-visibility）单独
+  复跑全绿，与本改动无交集。
+- 未运行及原因：真实 Desktop 冒烟（原生 view 遮挡边界、拖拽穿透手感、
+  picker/liveEdit 与 view 叠加、workspace 切换、窗口 resize 撕裂）需
+  实机验证，故状态挂 `verifying`。
+- 剩余风险：WebContentsView 原生图层与 DOM overlay 的遮挡交互在真实
+  Electron 下可能有未覆盖的边缘（对话框、右键菜单、devtools detach 未
+  经 IPC 暴露——与旧 webview 面一致，非回退）；窗口多显示器/DPI 变化
+  时 bounds 跟随未实机验证。
