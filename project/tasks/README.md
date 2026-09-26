@@ -28,7 +28,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0125` | `blocked` | `PLAN-0013` | rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
 | `TASK-0126` | `done` | `PLAN-0013` | 团队会话预算可视化（ISSUE-0028 候选 C：成员/会话级 token·回合·时长只读投影）；serial，复用 TASK-0124 投影面。 |
 | `TASK-0127` | `blocked` | — | 修改声明头存量缺失一次性 `--write` sweep（ISSUE-0023 A 阶段收尾）；等无并行代码线的安静窗口，执行后删除 ratchet 基线并关闭 WAIVER-0002。 |
-| `TASK-0128` | `verifying` | — | 对话 token 预算审计；修复有效预压缩摘要随历史追加重复生成，保留默认上下文策略。 |
 
 ## Task 要求
 
