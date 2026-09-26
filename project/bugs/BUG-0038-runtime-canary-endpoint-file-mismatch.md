@@ -101,4 +101,9 @@ apps/desktop/scripts/ui-verification.mjs:511 / :551
 - 测试：`apps/desktop/scripts/ui-verification-profile.test.ts` 新增「canary env keeps Desktop, host and runner on the canary home endpoint file」：断言 canary 下 endpoint 文件 = canary home 的 `action-server.json`、且不等于 Profile 的 `endpointFile`，非 canary 仍用 Profile 路径。5/5 通过。
 - 检查：`bun run check` 的 lint / 类型（含 `apps/desktop/scripts/**` 的 `scripts/**/*.test.ts` 收集）通过；`check:guards` 仅 `task-worktrees` 红（与本修复无关，见 BUG-0037 的并行情况）。
 - 未运行及原因：`bun run verify:ui:debug -- runtime-canary` 的**完整端到端重跑未执行**（串行两次 Desktop 生成 + 本地产 provider 需要较长时间，本轮预算用于产品侧修复与验收记录）。因此 canary 的会话创建 / 二代重启恢复 / Tool Loop 断言仍未取得实机证据。
-- 仍开放：首次调用的 `EBUSY: … uv_spawn` 竞态未修（CLI 刚安装完可能仍被占用）；建议在 spawn 前等待产物可执行并加一次有界重试。当前行为是第二次调用即可越过。
+- EBUSY 竞态已修（2026-09-26）：`runtime-canary-runner.ts` 的 `runVettaDebug` 改走
+  `runProcessWithSpawnRetry`——spawn 报 `EBUSY`/`EPERM`（CLI 刚安装完仍被占用）
+  时做最多 10 次 × 300ms 的有界重试，其余错误不吞、不延时。
+- 仍开放：`bun run verify:ui:debug -- runtime-canary` 的完整端到端重跑未执行
+  （串行两代 Desktop + 本地产 provider），会话创建 / 二代重启恢复 / Tool Loop /
+  锁释放仍待实机证据；保持 verifying。
