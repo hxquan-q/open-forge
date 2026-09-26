@@ -83,9 +83,11 @@ vi.mock("./terminal-theme", () => ({
 	createDocumentCssVariableReader: () => () => "",
 	buildTerminalTheme: () => ({}),
 }));
-vi.mock("react-i18next", () => ({
-	useTranslation: () => ({ t: (key: string, opts?: { code?: number }) => `${key}:${opts?.code ?? ""}` }),
-}));
+vi.mock("react-i18next", () => {
+	// t 身份必须稳定：真实 i18next 的 t 不变，effect 才不会因依赖抖动反复重建终端。
+	const t = (key: string, opts?: { code?: number }) => `${key}:${opts?.code ?? ""}`;
+	return { useTranslation: () => ({ t }) };
+});
 
 const { TerminalSurface } = await import("./TerminalSurface.js");
 
@@ -234,6 +236,32 @@ describe("TerminalSurface host adapters", () => {
 
 			expect(disposeLog.indexOf("webgl")).toBeGreaterThanOrEqual(0);
 			expect(disposeLog.indexOf("webgl")).toBeLessThan(disposeLog.indexOf("terminal"));
+		} finally {
+			rendererChoice = "canvas";
+		}
+	});
+
+	it("反复挂载/卸载后每个 WebGL addon 都被释放，context 不累积", async () => {
+		rendererChoice = "webgl";
+		try {
+			const ipc = createTerminalIpc();
+			vi.stubGlobal("window", Object.assign(window, { vetta: { terminal: ipc } }));
+
+			disposeLog.length = 0;
+			for (let cycle = 0; cycle < 3; cycle += 1) {
+				const view = render(
+					<Provider store={createStore()}>
+						<Surface value={handle({ tabId: `tab-cycle-${cycle}`, cwd: "/repo" })} />
+					</Provider>,
+				);
+				await vi.waitFor(() => expect(ipc.open.mock.calls.length).toBeGreaterThanOrEqual(cycle + 1));
+				view.unmount();
+			}
+
+			// BUG-0034：分屏/收起重开每轮都新建 xterm + WebglAddon，卸载必须成对释放，
+			// 否则 Chromium 的 WebGL context 上限被耗尽、最旧终端黑屏。
+			expect(disposeLog.filter((entry) => entry === "webgl")).toHaveLength(3);
+			expect(disposeLog.filter((entry) => entry === "terminal")).toHaveLength(3);
 		} finally {
 			rendererChoice = "canvas";
 		}

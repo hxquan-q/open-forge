@@ -1,7 +1,7 @@
 ---
 id: TASK-0120
 type: task
-status: ready
+status: verifying
 priority: P3
 owner: apps/desktop
 requirement:
@@ -93,4 +93,18 @@ updated: 2026-09-25
 
 ## 交付记录
 
-- 待实施。
+- 2026-09-26：定位结论——`TerminalSurface` 建终端 effect 是唯一持有 xterm
+  实例的位置；context 积累根因与 BUG-0041 同源：卸载时 WebglAddon 只在
+  `terminal.dispose()` 内部被连带销毁，而 xterm 6 先清 linkifier 再轮 addon，
+  canvas/webgl 收尾回调必抛 TypeError，异常路径上 context 残留。
+  BUG-0041 修复（卸载时先单独摘除渲染 addon 再销毁终端，并包防御性
+  try/catch）已覆盖本任务核心修复点。
+- 本次补充定向测试：
+  - `select-terminal-renderer.test.ts`：钉死「仅活动 leaf 用 WebGL、其余
+    canvas」的存量缓解合同；
+  - `TerminalSurface.host.test.tsx` 新增「反复挂载/卸载后每个 WebGL addon
+    都被释放，context 不累积」（已对旧实现验证为红：0/3 次释放）。
+  - 顺带修正 host 测试的 i18n mock：`t` 身份稳定化，避免 effect 依赖抖动。
+- 验证状态：`run-vitest.mjs` 定向测试与 `check:quick` 待本轮跑绿后记绿；
+  验收项 1（实机 DevTools 控制台复核 WebGL 告警消失）需要 verify:ui，
+  未获授权前保持 verifying。

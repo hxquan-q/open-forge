@@ -1,7 +1,7 @@
 ---
 id: BUG-0034
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: apps/desktop
 source: agent-browser 现场测试（底部面板三分屏终端控制台持续告警）
@@ -13,7 +13,7 @@ related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -69,4 +69,17 @@ updated: 2026-09-25
 
 ## 修复与验证
 
-- 待 TASK-0120 实施。
+- 根因确认：与 BUG-0041 同源——卸载时 WebglAddon 只在 `terminal.dispose()`
+  内部被连带销毁，xterm 6 先清 linkifier 再轮 addon 的销毁顺序使渲染 addon
+  收尾必抛 TypeError，异常路径上 WebGL context 残留；反复分屏/重开即累积。
+  置信度从「中」升为「高」：host 测试对旧实现复现 0/3 次释放。
+- 修复：BUG-0041 已实施——卸载时先单独摘除渲染 addon（`rendererAddon.dispose()`）
+  再 `terminal.dispose()`，销毁期异常只记日志；叠加既有缓解（仅活动 leaf 用
+  WebGL，见 `select-terminal-renderer.ts`）。
+- 回归测试（TASK-0120 验收项 2）：
+  - `TerminalSurface.host.test.tsx` 新增挂载/卸载循环用例：3 轮后 3 个 WebGL
+    addon 全部 dispose（对旧实现验证为红，0/3）；
+  - `select-terminal-renderer.test.ts`：钉死活动格/非活动格/无 WebGL2/
+    context 丢失后的渲染后端选择合同。
+- 验证：定向测试与 `check:quick` 通过；验收项 1（实机 DevTools 控制台复核
+  告警消失）需 verify:ui，未运行，故保持 verifying。
