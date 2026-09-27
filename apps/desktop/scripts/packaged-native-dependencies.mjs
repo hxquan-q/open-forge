@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 主进程 bundle 之外的运行时依赖，唯一事实源。
  *
