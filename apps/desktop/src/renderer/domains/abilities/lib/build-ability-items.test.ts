@@ -669,7 +669,7 @@ describe("universal-db 内置预设", () => {
 		if (!preset) throw new Error("universal-db preset missing");
 		const config = buildBuiltinMcpServerConfig(
 			preset,
-			{ displayName: "通用数据库", description: "" },
+			{ displayName: "数据库查询", description: "" },
 			secretValues,
 		) as McpStdioServerConfigData;
 

@@ -1528,7 +1528,7 @@
 			"googleCalendar": "打开 Google Cloud 控制台创建 OAuth 客户端（桌面应用类型）\n启用 Google Calendar API\n复制 Client ID 与 Client Secret 粘贴到下方\n首次使用时再按提示完成账号授权",
 			"googleDrive": "添加后首次使用会走 Google 授权流程\n如官方要求本地凭证文件，可用钥匙图标补填路径",
 			"canva": "添加后，首次使用会打开浏览器登录 Canva\n完成授权后即可在对话里创建和编辑设计，无需粘贴 API Key",
-			"universalDb": "选择数据库类型，填写连接信息（SQLite 只需文件路径）\n建议使用只读账号：该连接器默认只读查询，凭据仅保存在本机\n支持 mysql、postgres、redis、mongodb、sqlite、oracle、sqlserver 等常见数据库\n添加后可在对话中查看表结构、执行只读查询"
+			"universalDb": "连接器已随应用内置，无需联网安装\n选择数据库类型，填写连接信息（SQLite 只需文件路径）\n建议使用只读账号：该连接器默认只读查询，凭据仅保存在本机\n支持 mysql、postgres、redis、mongodb、sqlite、oracle、sqlserver 等常见数据库\n添加后可在对话中查看表结构、执行只读查询"
 		},
 		"canva": {
 			"displayName": "Canva",
@@ -1551,8 +1551,8 @@
 			"description": "查找与阅读云端文件，方便把网盘资料带进对话（首次使用可能需授权）。"
 		},
 		"universalDb": {
-			"displayName": "通用数据库",
-			"description": "连接 MySQL、PostgreSQL、SQLite、MongoDB、Redis 等常见数据库，在对话中查看表结构并执行只读查询。"
+			"displayName": "数据库查询",
+			"description": "内置连接器，开箱即用：连接 MySQL、PostgreSQL、SQLite、MongoDB、达梦等 17 种数据库，在对话中用自然语言查看表结构、执行只读查询和分析数据。"
 		},
 		"secrets": {
 			"slackBotToken": "Slack 机器人令牌",
