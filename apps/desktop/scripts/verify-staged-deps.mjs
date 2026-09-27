@@ -65,7 +65,13 @@ function summarizeDirectoryBytes(rootDirectory, filePaths, sizesByPath) {
  * `required` 依赖解析不到即失败；`optional` 依赖（异架构 pty 包、异平台原生包）
  * 在本机装不到属正常情况，跳过而不是误报。
  */
-export function planStagedDependencyCleaning({ platforms, fromDir = desktopRoot, speechInputEnabled = true }) {
+export function planStagedDependencyCleaning({
+	platforms,
+	fromDir = desktopRoot,
+	speechInputEnabled = true,
+	hostPlatform = process.platform,
+	resolveRoot = resolveInstalledPackageRoot,
+}) {
 	const selection = resolvePackagedNativeDependencies(new Set(platforms), { speechInputEnabled });
 	const candidateRoots = [
 		...selection.required.map((dep) => ({ dep, required: true })),
@@ -75,16 +81,22 @@ export function planStagedDependencyCleaning({ platforms, fromDir = desktopRoot,
 	const roots = [];
 	for (const candidate of candidateRoots) {
 		try {
-			resolveInstalledPackageRoot(candidate.dep, fromDir);
+			resolveRoot(candidate.dep, fromDir);
 			roots.push(candidate.dep);
 		} catch {
-			if (candidate.required) errors.push(`declared external dependency is not installed: ${candidate.dep}`);
+			if (!candidate.required) continue;
+			// os/cpu 受限的异平台包（如 sherpa-onnx-win-x64）在其他系统的主机上本就
+			// 装不进 node_modules，缺席不构成校验错误；它所属目标平台的原生构建
+			// 主机上该包可装、仍走 required 强校验。
+			const gate = selection.platformsByDep[candidate.dep];
+			const hostCanInstall = gate === "all" || !Array.isArray(gate) || gate.includes(hostPlatform);
+			if (hostCanInstall) errors.push(`declared external dependency is not installed: ${candidate.dep}`);
 		}
 	}
 	const entries = collectStagedDependencyTree({
 		roots,
 		destinationRoot: "",
-		resolvePackageRoot: (dep, fromDirForDep) => resolveInstalledPackageRoot(dep, fromDirForDep),
+		resolvePackageRoot: (dep, fromDirForDep) => resolveRoot(dep, fromDirForDep),
 		fromDir,
 	});
 	return {

@@ -18,6 +18,7 @@ import {
 	planStagedDepStripping,
 	summarizeStagedDepCleaning,
 } from "./staged-deps-cleanlist.mjs";
+import { resolveInstalledPackageRoot } from "./installed-package-root.mjs";
 import { planStagedDependencyCleaning } from "./verify-staged-deps.mjs";
 
 const desktopRoot = join(import.meta.dirname, "..");
@@ -370,6 +371,36 @@ test("已安装的真实依赖在三个目标平台上都不触碰运行时入�
 			assert.deepEqual(dependency.violations, [], `${dependency.dep} (${platform})`);
 		}
 	}
+});
+
+test("异平台专属的 required 依赖在构建主机缺席时不误报", () => {
+	// sherpa-onnx-win-x64 声明 os=win32：Linux/macOS 主机的 node_modules 里不会
+	// 有它，在异平台主机上校验 win32 清洗计划时缺席不算违规；换到该包的目标平台
+	// 主机（win32 runner）上仍必须缺席即报错，保住真实打包前的兜底校验。
+	const resolveWithoutSherpa = (dep, fromDir) => {
+		if (dep === "sherpa-onnx-win-x64") throw new Error("not installed");
+		return resolveInstalledPackageRoot(dep, fromDir);
+	};
+
+	const foreignHost = planStagedDependencyCleaning({
+		platforms: ["win32"],
+		hostPlatform: "linux",
+		resolveRoot: resolveWithoutSherpa,
+	});
+	assert.deepEqual(foreignHost.errors, []);
+	assert.ok(
+		foreignHost.dependencies.every((dependency) => dependency.dep !== "sherpa-onnx-win-x64"),
+		"foreign-platform dep absent on host should be excluded from the cleaning plan",
+	);
+
+	const matchingHost = planStagedDependencyCleaning({
+		platforms: ["win32"],
+		hostPlatform: "win32",
+		resolveRoot: resolveWithoutSherpa,
+	});
+	assert.deepEqual(matchingHost.errors, [
+		"declared external dependency is not installed: sherpa-onnx-win-x64",
+	]);
 });
 
 test("真实原生依赖保留本平台二进制，裁掉异平台二进制与调试产物", () => {
