@@ -18,7 +18,7 @@ read_paths: [packages/skill-presets, apps/desktop/src/main/builtin-skills.ts, ap
 write_paths: [packages/skill-presets, apps/desktop/src/main/database-analysis-skill.test.ts, apps/desktop/src/shared/i18n/locales/zh/skills.json, apps/desktop/src/shared/i18n/locales/en/skills.json, .github/release-notes/v0.1.1.md, project/tasks/TASK-0129-database-question-analysis.md, project/tasks/README.md]
 exclusive_paths: [packages/skill-presets/database-analysis]
 depends_on: []
-conflicts_with: [TASK-0128]
+conflicts_with: []
 integration_status: integrated
 created: 2026-09-27
 updated: 2026-09-27
