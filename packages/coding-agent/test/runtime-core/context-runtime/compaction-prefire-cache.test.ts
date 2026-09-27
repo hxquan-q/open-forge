@@ -2,7 +2,7 @@
 import type { Api, AssistantMessage, Model, UserMessage } from "@vetta/ai";
 import { createRuntimeObservationPublisher, type RuntimeObservationRecord } from "@vetta/runtime-core";
 import { describe, expect, it, vi } from "vitest";
-import type { CompactionResult, CompactionSettings } from "../../../src/compaction/index.js";
+import type { CompactionPreparation, CompactionResult, CompactionSettings } from "../../../src/compaction/index.js";
 import { CompactionPrefireCache } from "../../../src/compaction/runtime/compaction-prefire-cache.js";
 import { CODING_AGENT_COMPACTION_PREFIRE_OBSERVATION } from "../../../src/runtime-contracts/context-observability.js";
 import type { CodingAgentSessionEntry as SessionEntry } from "../../../src/sessions/index.js";
@@ -25,6 +25,96 @@ describe("CompactionPrefireCache", () => {
 		await vi.waitFor(() => expect(generateCompaction).toHaveBeenCalledOnce());
 		await vi.waitFor(() => expect(cache.take(ENTRIES)).toEqual(result));
 		expect(cache.take(ENTRIES)).toBeUndefined();
+	});
+
+	it("keeps a completed summary across appended history instead of paying for a moving cut point", async () => {
+		const records: RuntimeObservationRecord[] = [];
+		const generateCompaction = vi.fn(
+			async (preparation: CompactionPreparation): Promise<CompactionResult> => ({
+				summary: "prefired once",
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+		);
+		const cache = new CompactionPrefireCache({
+			resolveApiKey: () => "key",
+			generateCompaction,
+			canAttempt: () => true,
+			observations: createRuntimeObservationPublisher({
+				port: {
+					record: (record) => {
+						records.push(record);
+					},
+				},
+			}),
+		});
+		try {
+			cache.start(ENTRIES, SETTINGS, MODEL);
+			await vi.waitFor(() => expect(records).toHaveLength(1));
+			const grown: readonly SessionEntry[] = [
+				...ENTRIES,
+				{
+					type: "message",
+					id: "entry-4",
+					parentId: "entry-3",
+					timestamp: new Date(4).toISOString(),
+					message: userMessage("follow-up request", 4),
+				},
+			];
+
+			cache.start(grown, SETTINGS, MODEL);
+			const signal = new AbortController().signal;
+			await expect(cache.settle(grown, signal)).resolves.toMatchObject({
+				summary: "prefired once",
+				firstKeptEntryId: "entry-3",
+			});
+			// No second result may arrive after the original cached summary is consumed.
+			await expect(cache.settle(grown, signal)).resolves.toBeUndefined();
+			expect(generateCompaction).toHaveBeenCalledOnce();
+		} finally {
+			cache.dispose();
+		}
+	});
+
+	it("replaces a completed summary when a branch no longer contains its summarized prefix", async () => {
+		const records: RuntimeObservationRecord[] = [];
+		const generateCompaction = vi.fn(
+			async (preparation: CompactionPreparation): Promise<CompactionResult> => ({
+				summary: `summary-${preparation.firstKeptEntryId}`,
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+		);
+		const cache = new CompactionPrefireCache({
+			resolveApiKey: () => "key",
+			generateCompaction,
+			canAttempt: () => true,
+			observations: createRuntimeObservationPublisher({
+				port: {
+					record: (record) => {
+						records.push(record);
+					},
+				},
+			}),
+		});
+		try {
+			cache.start(ENTRIES, SETTINGS, MODEL);
+			await vi.waitFor(() => expect(records).toHaveLength(1));
+			const branched = ENTRIES.map((entry) => ({
+				...entry,
+				id: `branch-${entry.id}`,
+				parentId: entry.parentId ? `branch-${entry.parentId}` : null,
+			}));
+
+			cache.start(branched, SETTINGS, MODEL);
+			await expect(cache.settle(branched, new AbortController().signal)).resolves.toMatchObject({
+				summary: "summary-branch-entry-3",
+				firstKeptEntryId: "branch-entry-3",
+			});
+			expect(generateCompaction).toHaveBeenCalledTimes(2);
+		} finally {
+			cache.dispose();
+		}
 	});
 
 	it("aborts an in-flight prefire when disposed", async () => {
