@@ -1528,7 +1528,7 @@
 			"googleCalendar": "In Google Cloud Console, create an OAuth client (Desktop app)\nEnable the Google Calendar API\nCopy Client ID and Client Secret below\nComplete account authorization on first use",
 			"googleDrive": "After adding, first use usually starts a Google authorization flow\nIf a local credentials file is required, set the path later via the key icon",
 			"canva": "After adding, first use opens a browser to sign in to Canva\nAuthorize once—no API key paste required",
-			"universalDb": "Bundled with the app — nothing to install\nPick the database type and fill in connection info (SQLite only needs a file path)\nUse a read-only account: the connector is read-only by default and credentials stay on this machine\nSupports mysql, postgres, redis, mongodb, sqlite, oracle, sqlserver and more\nOnce added, you can inspect schemas and run read-only queries in chat"
+			"universalDb": "Pick the database type and fill in connection info (SQLite only needs a file path)\nUse a read-only account: the connector is read-only by default and credentials stay on this machine\nSupports mysql, postgres, redis, mongodb, sqlite, oracle, sqlserver and more\nOnce added, you can inspect schemas and run read-only queries in chat"
 		},
 		"canva": {
 			"displayName": "Canva",
@@ -1553,6 +1553,25 @@
 		"universalDb": {
 			"displayName": "Database Query",
 			"description": "Bundled and ready out of the box: connect MySQL, PostgreSQL, SQLite, MongoDB, Dameng and 12 other databases to inspect schemas and run read-only queries in chat."
+		},
+		"dbTypes": {
+			"mysql": "MySQL",
+			"postgres": "PostgreSQL",
+			"redis": "Redis",
+			"oracle": "Oracle",
+			"dm": "Dameng (DM)",
+			"sqlserver": "SQL Server",
+			"mongodb": "MongoDB",
+			"sqlite": "SQLite",
+			"kingbase": "KingbaseES",
+			"gaussdb": "GaussDB / openGauss",
+			"oceanbase": "OceanBase",
+			"tidb": "TiDB",
+			"clickhouse": "ClickHouse",
+			"polardb": "PolarDB",
+			"vastbase": "Vastbase",
+			"highgo": "HighGo",
+			"goldendb": "GoldenDB"
 		},
 		"secrets": {
 			"slackBotToken": "Slack bot token",

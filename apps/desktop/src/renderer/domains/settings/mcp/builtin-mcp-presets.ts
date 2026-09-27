@@ -37,6 +37,32 @@ export type BuiltinMcpGuideKey =
 	| "mcpPresets.guides.canva"
 	| "mcpPresets.guides.universalDb";
 
+/** select 选项的可读名 i18n key（须与 locales 的 mcpPresets.dbTypes 同步） */
+export type BuiltinMcpOptionLabelKey =
+	| "mcpPresets.dbTypes.mysql"
+	| "mcpPresets.dbTypes.postgres"
+	| "mcpPresets.dbTypes.redis"
+	| "mcpPresets.dbTypes.oracle"
+	| "mcpPresets.dbTypes.dm"
+	| "mcpPresets.dbTypes.sqlserver"
+	| "mcpPresets.dbTypes.mongodb"
+	| "mcpPresets.dbTypes.sqlite"
+	| "mcpPresets.dbTypes.kingbase"
+	| "mcpPresets.dbTypes.gaussdb"
+	| "mcpPresets.dbTypes.oceanbase"
+	| "mcpPresets.dbTypes.tidb"
+	| "mcpPresets.dbTypes.clickhouse"
+	| "mcpPresets.dbTypes.polardb"
+	| "mcpPresets.dbTypes.vastbase"
+	| "mcpPresets.dbTypes.highgo"
+	| "mcpPresets.dbTypes.goldendb";
+
+/** select 单选项：value 是写入 env 的原值，labelKey 提供面向用户的可读名 */
+export interface BuiltinMcpSecretOption {
+	readonly value: string;
+	readonly labelKey?: BuiltinMcpOptionLabelKey;
+}
+
 /** 添加/配置时需要用户填写的密钥或标识 */
 export interface BuiltinMcpSecretField {
 	/** 写入 mcpServers[].env 的键名 */
@@ -52,10 +78,16 @@ export interface BuiltinMcpSecretField {
 	 * 存在时覆盖 `required` 的静态值（如 DB_HOST 仅在 DB_TYPE ≠ sqlite 时必填）。
 	 */
 	requiredWhen?: { envKey: string; values: readonly string[]; mode?: "in" | "notIn" };
+	/**
+	 * 动态可见：引用字段 `envKey` 当前值 ∈ values 时按 mode 判定显隐。
+	 * 与 requiredWhen 同语义；隐藏的字段不渲染、不参与必填校验，其值在提交前清除
+	 * （如网络连接参数仅在 DB_TYPE ≠ sqlite 时展示）。
+	 */
+	visibleWhen?: { envKey: string; values: readonly string[]; mode?: "in" | "notIn" };
 	/** 输入框用 password */
 	secret?: boolean;
-	/** 限定枚举时以 select 渲染；值为选项原值（如上游规范化的类型 token）。 */
-	options?: readonly string[];
+	/** 限定枚举时以 select 渲染；value 是写入 env 的原值，labelKey 给可读名。 */
+	options?: readonly BuiltinMcpSecretOption[];
 	placeholder?: string;
 	/** 官方获取密钥/凭证的页面，一键在浏览器打开 */
 	helpUrl?: string;
@@ -128,8 +160,16 @@ export const UNIVERSAL_DB_TYPES = [
 	"goldendb",
 ] as const;
 
+/** DB_TYPE 下拉选项：value 保持上游规范 token，labelKey 给可读产品名。 */
+const UNIVERSAL_DB_TYPE_OPTIONS: readonly BuiltinMcpSecretOption[] = UNIVERSAL_DB_TYPES.map((value) => ({
+	value,
+	labelKey: `mcpPresets.dbTypes.${value}` as BuiltinMcpOptionLabelKey,
+}));
+
 /** DB_TYPE=sqlite 时无需网络连接参数。 */
 const DB_NETWORK_REQUIRED_WHEN = { envKey: "DB_TYPE", values: ["sqlite"], mode: "notIn" } as const;
+/** 仅 sqlite 需要文件路径字段。 */
+const DB_FILE_VISIBLE_WHEN = { envKey: "DB_TYPE", values: ["sqlite"] } as const;
 
 export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
 	{
@@ -172,22 +212,41 @@ export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
 				envKey: "DB_TYPE",
 				labelKey: "mcpPresets.secrets.dbType",
 				required: true,
-				options: UNIVERSAL_DB_TYPES,
+				options: UNIVERSAL_DB_TYPE_OPTIONS,
 				placeholder: "mysql / postgres / sqlite / …",
+			},
+			{
+				envKey: "DB_FILE_PATH",
+				labelKey: "mcpPresets.secrets.dbFilePath",
+				requiredWhen: DB_FILE_VISIBLE_WHEN,
+				visibleWhen: DB_FILE_VISIBLE_WHEN,
 			},
 			{
 				envKey: "DB_HOST",
 				labelKey: "mcpPresets.secrets.dbHost",
 				requiredWhen: DB_NETWORK_REQUIRED_WHEN,
+				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
 			},
-			{ envKey: "DB_PORT", labelKey: "mcpPresets.secrets.dbPort" },
-			{ envKey: "DB_USER", labelKey: "mcpPresets.secrets.dbUser" },
-			{ envKey: "DB_PASSWORD", labelKey: "mcpPresets.secrets.dbPassword", secret: true },
-			{ envKey: "DB_DATABASE", labelKey: "mcpPresets.secrets.dbName" },
 			{
-				envKey: "DB_FILE_PATH",
-				labelKey: "mcpPresets.secrets.dbFilePath",
-				requiredWhen: { envKey: "DB_TYPE", values: ["sqlite"] },
+				envKey: "DB_PORT",
+				labelKey: "mcpPresets.secrets.dbPort",
+				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+			},
+			{
+				envKey: "DB_USER",
+				labelKey: "mcpPresets.secrets.dbUser",
+				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+			},
+			{
+				envKey: "DB_PASSWORD",
+				labelKey: "mcpPresets.secrets.dbPassword",
+				secret: true,
+				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+			},
+			{
+				envKey: "DB_DATABASE",
+				labelKey: "mcpPresets.secrets.dbName",
+				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
 			},
 		],
 	},
@@ -413,6 +472,17 @@ export function buildBuiltinMcpServerConfig(
 	return { ...base, env: { ...base.env, ...env } };
 }
 
+/** 字段在当前取值下的可见态（visibleWhen 缺省即恒可见）。 */
+export function isSecretFieldVisible(
+	field: BuiltinMcpSecretField,
+	values: Record<string, string | undefined>,
+): boolean {
+	if (!field.visibleWhen) return true;
+	const refValue = values[field.visibleWhen.envKey]?.trim() ?? "";
+	const inList = field.visibleWhen.values.includes(refValue);
+	return field.visibleWhen.mode === "notIn" ? !inList : inList;
+}
+
 /** 字段在当前取值下的有效必填态（requiredWhen 存在时按引用字段值动态判定）。 */
 export function isSecretFieldRequired(
 	field: BuiltinMcpSecretField,
@@ -428,7 +498,10 @@ export function isSecretFieldRequired(
 export function missingRequiredSecrets(preset: BuiltinMcpPreset, config: McpServerConfigData): BuiltinMcpSecretField[] {
 	const env =
 		config.type === "http" ? (config.managedRuntimeId ? config.managedRuntimeEnv : config.headers) : config.env;
-	const secrets = preset.secrets?.filter((field) => isSecretFieldRequired(field, env ?? {})) ?? [];
+	const secrets =
+		preset.secrets?.filter(
+			(field) => isSecretFieldVisible(field, env ?? {}) && isSecretFieldRequired(field, env ?? {}),
+		) ?? [];
 	return secrets.filter((field) => !env?.[field.envKey]?.trim());
 }
 
