@@ -31,7 +31,9 @@ const BUNDLED_MCP_SERVERS: readonly BundledMcpServerDef[] = [
 		packageName: "universal-db-mcp",
 		pinnedVersion: "2.14.0",
 		directory: "universal-db",
-		entry: join("node_modules", "universal-db-mcp", "dist", "index.js"),
+		// 走自带 launcher 而非上游 index.js：commander 在 Electron-as-Node 下
+		// 会把脚本路径当成位置参数报「too many arguments」。
+		entry: "launcher.mjs",
 	},
 ];
 

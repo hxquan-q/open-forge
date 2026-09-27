@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { type BundledMcpRuntimeRoots, resolveBundledMcpServerConfig } from "./builtin-mcp-server-runtime.js";
 
-const UNIVERSAL_DB_ENTRY = join("node_modules", "universal-db-mcp", "dist", "index.js");
+const UNIVERSAL_DB_ENTRY = "launcher.mjs";
 
 function createRoots(): { dir: string; roots: BundledMcpRuntimeRoots; entryPath: string } {
 	const dir = mkdtempSync(join(tmpdir(), "bundled-mcp-"));
@@ -15,7 +15,7 @@ function createRoots(): { dir: string; roots: BundledMcpRuntimeRoots; entryPath:
 		executable: "C:\\Apps\\OpenForge\\open-forge.exe",
 	};
 	const entryPath = join(roots.devRoot, "universal-db", UNIVERSAL_DB_ENTRY);
-	mkdirSync(join(roots.devRoot, "universal-db", "node_modules", "universal-db-mcp", "dist"), { recursive: true });
+	mkdirSync(join(roots.devRoot, "universal-db"), { recursive: true });
 	writeFileSync(entryPath, "// stub");
 	return { dir, roots, entryPath };
 }
@@ -61,9 +61,7 @@ describe("resolveBundledMcpServerConfig", () => {
 	it("packaged 根优先于 dev 根", () => {
 		const { roots } = trackedRoots();
 		const packagedEntry = join(roots.packagedRoot!, "universal-db", UNIVERSAL_DB_ENTRY);
-		mkdirSync(join(roots.packagedRoot!, "universal-db", "node_modules", "universal-db-mcp", "dist"), {
-			recursive: true,
-		});
+		mkdirSync(join(roots.packagedRoot!, "universal-db"), { recursive: true });
 		writeFileSync(packagedEntry, "// stub");
 		const resolved = resolveBundledMcpServerConfig({ command: "npx", args: ["universal-db-mcp@2.14.0"] }, roots);
 		expect(resolved?.args).toEqual([packagedEntry]);
