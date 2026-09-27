@@ -1554,6 +1554,12 @@
 			"displayName": "数据库查询",
 			"description": "内置连接器，开箱即用：连接 MySQL、PostgreSQL、SQLite、MongoDB、达梦等 17 种数据库，在对话中用自然语言查看表结构、执行只读查询和分析数据。"
 		},
+		"dbDialog": {
+			"lead": "填写数据库的连接信息。无需注册账号或获取密钥，凭据仅保存在本机。",
+			"fieldsTitle": "连接信息",
+			"helpCta": "查看连接器说明",
+			"continueCta": "连接数据库"
+		},
 		"dbTypes": {
 			"mysql": "MySQL",
 			"postgres": "PostgreSQL",

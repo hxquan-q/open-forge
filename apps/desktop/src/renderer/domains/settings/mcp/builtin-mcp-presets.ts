@@ -63,6 +63,13 @@ export interface BuiltinMcpSecretOption {
 	readonly labelKey?: BuiltinMcpOptionLabelKey;
 }
 
+/** 密钥弹窗里可按预设覆盖的文案槽位（缺省回落到通用「粘贴密钥」语境） */
+export type BuiltinMcpDialogLabelKey =
+	| "mcpPresets.dbDialog.lead"
+	| "mcpPresets.dbDialog.fieldsTitle"
+	| "mcpPresets.dbDialog.helpCta"
+	| "mcpPresets.dbDialog.continueCta";
+
 /** 添加/配置时需要用户填写的密钥或标识 */
 export interface BuiltinMcpSecretField {
 	/** 写入 mcpServers[].env 的键名 */
@@ -132,6 +139,16 @@ export interface BuiltinMcpPreset {
 	 * 缺省/false：仅保留配置与匹配逻辑（已添加识别、图标、OAuth 等），UI 不展示。
 	 */
 	listedInDiscover?: boolean;
+	/**
+	 * 密钥弹窗的文案覆盖：默认文案是「获取并粘贴密钥」语境，
+	 * 连接参数型连接器（数据库等）需要换成自己的引导/标题/CTA。
+	 */
+	dialogCopy?: {
+		readonly leadKey?: BuiltinMcpDialogLabelKey;
+		readonly fieldsTitleKey?: BuiltinMcpDialogLabelKey;
+		readonly helpCtaKey?: BuiltinMcpDialogLabelKey;
+		readonly continueCtaKey?: BuiltinMcpDialogLabelKey;
+	};
 }
 
 const MCP_ICON_BASE = "./mcp";
@@ -182,6 +199,12 @@ export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
 		listedInDiscover: true,
 		setupGuideKey: "mcpPresets.guides.universalDb",
 		setupHelpUrl: "https://github.com/Anarkh-Lee/universal-db-mcp",
+		dialogCopy: {
+			leadKey: "mcpPresets.dbDialog.lead",
+			fieldsTitleKey: "mcpPresets.dbDialog.fieldsTitle",
+			helpCtaKey: "mcpPresets.dbDialog.helpCta",
+			continueCtaKey: "mcpPresets.dbDialog.continueCta",
+		},
 		config: {
 			command: "npx",
 			// 无连接模式启动：stdio 上游只认 argv 或运行时 connect_database，
@@ -220,22 +243,26 @@ export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
 				labelKey: "mcpPresets.secrets.dbFilePath",
 				requiredWhen: DB_FILE_VISIBLE_WHEN,
 				visibleWhen: DB_FILE_VISIBLE_WHEN,
+				placeholder: "/data/app.db",
 			},
 			{
 				envKey: "DB_HOST",
 				labelKey: "mcpPresets.secrets.dbHost",
 				requiredWhen: DB_NETWORK_REQUIRED_WHEN,
 				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+				placeholder: "db.example.com",
 			},
 			{
 				envKey: "DB_PORT",
 				labelKey: "mcpPresets.secrets.dbPort",
 				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+				placeholder: "3306",
 			},
 			{
 				envKey: "DB_USER",
 				labelKey: "mcpPresets.secrets.dbUser",
 				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+				placeholder: "readonly_user",
 			},
 			{
 				envKey: "DB_PASSWORD",
@@ -247,6 +274,7 @@ export const BUILTIN_MCP_PRESETS: readonly BuiltinMcpPreset[] = [
 				envKey: "DB_DATABASE",
 				labelKey: "mcpPresets.secrets.dbName",
 				visibleWhen: DB_NETWORK_REQUIRED_WHEN,
+				placeholder: "my_database",
 			},
 		],
 	},

@@ -64,6 +64,21 @@ describe("universal-db secrets 对话框动态必填", () => {
 		expect(result.current?.values.DB_PASSWORD).toBeUndefined();
 	});
 
+	it("弹窗文案走预设的 dialogCopy 槽位，而非默认「粘贴密钥」语境", () => {
+		const { result } = openDialog();
+		expect(result.current?.labels.setupBody).toBe("mcpPresets.dbDialog.lead");
+		expect(result.current?.labels.stepPasteKey).toBe("mcpPresets.dbDialog.fieldsTitle");
+		expect(result.current?.labels.openKeyPage).toBe("mcpPresets.dbDialog.helpCta");
+		expect(result.current?.labels.continueCta).toBe("mcpPresets.dbDialog.continueCta");
+	});
+
+	it("无 dialogCopy 的预设回落到通用密钥文案", () => {
+		const slack = getBuiltinMcpPresetById("slack");
+		const { result } = renderHook(() => useBuiltinMcpSecretsDialogModel({ open: true, preset: slack ?? null }));
+		expect(result.current?.labels.stepPasteKey).toBe("mcpPresets.stepPasteKey");
+		expect(result.current?.labels.setupBody).toBe("mcpPresets.secretsDialogLead");
+	});
+
 	it("DB_HOST 填空白串仍按未填处理", () => {
 		const { result } = openDialog();
 		act(() => result.current?.onChangeValue("DB_TYPE", "postgres"));

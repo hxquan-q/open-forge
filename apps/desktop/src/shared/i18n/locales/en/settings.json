@@ -1554,6 +1554,12 @@
 			"displayName": "Database Query",
 			"description": "Bundled and ready out of the box: connect MySQL, PostgreSQL, SQLite, MongoDB, Dameng and 12 other databases to inspect schemas and run read-only queries in chat."
 		},
+		"dbDialog": {
+			"lead": "Fill in your database connection info. No account or API key needed — credentials stay on this device.",
+			"fieldsTitle": "Connection info",
+			"helpCta": "View connector docs",
+			"continueCta": "Connect database"
+		},
 		"dbTypes": {
 			"mysql": "MySQL",
 			"postgres": "PostgreSQL",

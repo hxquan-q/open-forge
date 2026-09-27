@@ -138,17 +138,19 @@ export function useBuiltinMcpSecretsDialogModel({
 			guideLines,
 			hasFields,
 			labels: {
-				continueCta: t("mcpPresets.continueCta", { name: connectorName }),
+				continueCta: t(preset.dialogCopy?.continueCtaKey ?? "mcpPresets.continueCta", { name: connectorName }),
 				getKey: t("mcpPresets.getKey"),
 				openAuthPage: t("mcpPresets.openAuthPage"),
-				openKeyPage: t("mcpPresets.openKeyPage"),
+				openKeyPage: t(preset.dialogCopy?.helpCtaKey ?? "mcpPresets.openKeyPage"),
 				privacyTooltip: t("mcpPresets.privacyTooltip"),
 				privacyTooltipAria: t("mcpPresets.privacyTooltipAria"),
 				saving: t("saving"),
 				authorizing: t("mcpPresets.authorizing"),
-				setupBody: hasFields ? t("mcpPresets.secretsDialogLead") : t("mcpPresets.browserAuthDialogLead"),
+				setupBody: hasFields
+					? t(preset.dialogCopy?.leadKey ?? "mcpPresets.secretsDialogLead")
+					: t("mcpPresets.browserAuthDialogLead"),
 				setupTitle: t("mcpPresets.setupTitle"),
-				stepPasteKey: t("mcpPresets.stepPasteKey"),
+				stepPasteKey: t(preset.dialogCopy?.fieldsTitleKey ?? "mcpPresets.stepPasteKey"),
 				title: t("mcpPresets.secretsDialogTitle", { name: connectorName }),
 			},
 			onChangeValue: (envKey: string, value: string) => {
