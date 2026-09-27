@@ -30,12 +30,15 @@ export const VENDORED_MCP_SERVERS = [
 			"pino-abstract-transport",
 			"pino-std-serializers",
 			"commander",
-			"dotenv",
 			"@types",
 			"better-sqlite3",
+			"dotenv",
 		],
 		// 覆盖进 node_modules 的垫片包（目录名 = 包名）
-		shims: ["better-sqlite3"],
+		// dotenv 必须垫片而不是裸裁剪：上游 config-loader 顶层 `import { config } from
+		// 'dotenv'`，删包后会沿父目录解析到仓库根的 dotenv@17，其 stdout 横幅会污染
+		// MCP stdio 的 JSON-RPC 流（宿主按 Invalid JSON 判负杀进程）。
+		shims: ["better-sqlite3", "dotenv"],
 	},
 ];
 
