@@ -684,9 +684,10 @@ if (!gotSingleLock) {
 			mainLog.error("failed to ensure im-gateway conversation dir", err);
 		}
 
-		// 托管运行时(ADR-0011):首启从内置 vendor 拷贝 node/python 到 ~/.vetta/runtimes,
-		// 再把它们 + 国内镜像源注入全局 process.env。必须早于 getImHost().bootstrap()——
-		// 快速应用已经存在的托管运行时路径；vendor seed、系统探测和 shim 修复放到
+		// 托管运行时(ADR-0011):安装后由 RuntimeManager 下载 node/python 到
+		// ~/.vetta/runtimes（内置 vendor 仅为可选打包形态），再把它们 + 国内镜像源
+		// 注入全局 process.env。必须早于 getImHost().bootstrap()——
+		// 快速应用已经存在的托管运行时路径；vendor seed、下载和 shim 修复放到
 		// 首帧之后执行，避免这些维护工作阻塞窗口出现。
 		const runtimeManager = getRuntimeManager();
 		runtimeManager.applyEnv();

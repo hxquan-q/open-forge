@@ -312,12 +312,19 @@ rmSync(buildStageDir, { recursive: true, force: true });
 mkdirSync(buildStageDir, { recursive: true });
 stageDesktopLegalResources(join(projectRoot, "..", ".."), buildStageDir);
 
-const preparedSpeechModel = await prepareSpeechModels({
-	env: process.env,
-	platformTags: resolvePlatformTagsFromEnv(),
-});
-if (preparedSpeechModel) {
-	cpSync(SPEECH_MODEL_RESOURCE_ROOT, join(buildStageDir, "speech-models"), { recursive: true });
+// 语音模型默认不进安装包：首次使用语音输入时由主进程按 model-manifest.json
+// 按需下载到用户目录。离分发场景可设 VETTA_BUNDLE_SPEECH_MODELS=1 恢复内置。
+const bundleSpeechModels = process.env.VETTA_BUNDLE_SPEECH_MODELS === "1";
+if (bundleSpeechModels) {
+	const preparedSpeechModel = await prepareSpeechModels({
+		env: process.env,
+		platformTags: resolvePlatformTagsFromEnv(),
+	});
+	if (preparedSpeechModel) {
+		cpSync(SPEECH_MODEL_RESOURCE_ROOT, join(buildStageDir, "speech-models"), { recursive: true });
+	}
+} else {
+	console.log("[prepare-pack] speech models not bundled (runtime downloads on demand)");
 }
 
 // Write the staged package metadata. Electron-builder decides which
@@ -663,18 +670,20 @@ for (const gap of collectMissingSandboxBinaries({
 // 托管运行时 vendor 二进制 (extraResources) —— ADR-0011
 // =============================================================================
 //
-// 把当前构建目标平台的 Node + Python(python-build-standalone)原始归档内置进
-// Resources/vendor/{node,python}/,首启时由 main 进程解压到 ~/.vetta/runtimes/。
-// 这是普通用户「下载下来就有环境」的本体。Node 走 npmmirror、Python 走 GitHub
-// (国内无稳定公共镜像,故必须内置)。构建机有网即可;无法联网的构建可设
-// VETTA_SKIP_VENDOR=1 跳过(产物退化为「面板手动下载」,不推荐发版用)。
+// 默认不再内置：安装后由 RuntimeManager 按 manifest 后台下载到
+// ~/.vetta/runtimes/（离线环境可在设置面板重试）。离分发/免网络场景可设
+// VETTA_BUNDLE_VENDOR=1 恢复旧行为——把目标平台的 Node + Python 原始归档打进
+// Resources/vendor/{node,python}/，首启零网络解压。
+// macOS 内置的是解压目录（归档内的 Mach-O 过不了 Apple 公证），详见
+// docs/desktop/macos-auto-update.md；其余平台内置原始归档。
 //
 // 默认按构建宿主平台;跨平台打包请设 VETTA_VENDOR_PLATFORM,取值与
 // src/main/runtimes/manifest.json 的 platforms 键一致(如 darwin-arm64 /
 // win32-x64 / linux-x64)。
 async function stageVendorRuntimes() {
-	if (process.env.VETTA_SKIP_VENDOR === "1") {
-		console.warn("[prepare-pack] VETTA_SKIP_VENDOR=1 —— 跳过内置运行时,产物将依赖面板手动下载");
+	const bundle = process.env.VETTA_BUNDLE_VENDOR === "1" && process.env.VETTA_SKIP_VENDOR !== "1";
+	if (!bundle) {
+		console.log("[prepare-pack] vendor runtimes not bundled (downloaded post-install)");
 		return;
 	}
 	const platformTag = process.env.VETTA_VENDOR_PLATFORM || `${process.platform}-${process.arch}`;
@@ -772,11 +781,9 @@ function resolveExtraResources() {
 			to: "cli-app",
 			filter: ["**/*"],
 		},
-		{
-			from: "vendor",
-			to: "vendor",
-			filter: ["**/*", "!**/*.pdb"],
-		},
+		...(existsSync(join(buildStageDir, "vendor"))
+			? [{ from: "vendor", to: "vendor", filter: ["**/*", "!**/*.pdb"] }]
+			: []),
 		{
 			from: "mcp-servers",
 			to: "mcp-servers",
@@ -820,7 +827,7 @@ function resolveExtraResources() {
 			filter: ["**/*"],
 		});
 	}
-	if (speechInputBuildConfig.enabled) {
+	if (existsSync(join(buildStageDir, "speech-models"))) {
 		extraResources.push({
 			from: "speech-models",
 			to: "speech-models",

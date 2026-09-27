@@ -776,16 +776,19 @@
 		"speech": {
 			"actions": {
 				"start": "Start voice input",
-				"stop": "Stop voice input"
+				"stop": "Stop voice input",
+				"download": "Download speech model to start voice input"
 			},
 			"states": {
 				"loading": "Loading offline speech model…",
+				"downloading": "Downloading speech model",
 				"stopping": "Finishing speech recognition…"
 			},
 			"errors": {
 				"unsupported": "Voice input currently requires Windows x64",
-				"missing": "The speech model is missing from this installation. Reinstall the app",
-				"integrity": "The bundled speech model is incomplete. Reinstall the app",
+				"missing": "Speech model is not downloaded yet. Click the microphone to download",
+				"integrity": "Speech model files are incomplete. Click the microphone to re-download",
+				"download": "Speech model download failed. Click to retry",
 				"recognizer": "Speech recognition failed to start. Click to retry"
 			}
 		},

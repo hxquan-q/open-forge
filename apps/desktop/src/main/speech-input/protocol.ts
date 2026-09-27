@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SpeechInputErrorCode } from "../../preload/api-types/speech-input.js";
 import type { SpeechModelPaths } from "./model-catalog.js";
 
@@ -24,8 +25,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const ERROR_CODES = new Set([
 	"unsupported-platform",
-	"bundled-model-missing",
-	"bundled-model-invalid",
+	"model-missing",
+	"model-invalid",
+	"model-download-failed",
 	"recognizer-start-failed",
 	"recognizer-failed",
 ]);

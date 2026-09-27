@@ -776,16 +776,19 @@
 		"speech": {
 			"actions": {
 				"start": "开始语音输入",
-				"stop": "停止语音输入"
+				"stop": "停止语音输入",
+				"download": "下载语音模型后开始语音输入"
 			},
 			"states": {
 				"loading": "正在加载离线语音模型…",
+				"downloading": "正在下载语音模型",
 				"stopping": "正在完成语音识别…"
 			},
 			"errors": {
 				"unsupported": "语音输入目前仅支持 Windows x64",
-				"missing": "安装包中缺少语音模型，请重新安装应用",
-				"integrity": "安装包中的语音模型不完整，请重新安装应用",
+				"missing": "语音模型尚未下载，点击麦克风开始下载",
+				"integrity": "语音模型文件不完整，点击麦克风重新下载",
+				"download": "语音模型下载失败，点击重试",
 				"recognizer": "语音识别启动失败，点击重试"
 			}
 		},

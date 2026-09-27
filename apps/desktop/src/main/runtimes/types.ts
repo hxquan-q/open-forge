@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeType } from "./paths.js";
 
 export type { RuntimeType };
@@ -22,6 +23,8 @@ export interface RuntimeStatus {
 	system?: { path: string; version: string };
 	/** 当前平台是否被 manifest 支持。 */
 	supported: boolean;
+	/** 后台下载进行中(未就绪时的自动安装态)。 */
+	downloading?: boolean;
 }
 
 export interface RuntimesStatus {
