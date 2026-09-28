@@ -25,6 +25,7 @@
 | VS Code 内存足迹与发布体积优化机制源码取证 | [`RESEARCH-0013`](RESEARCH-0013-vscode-footprint-optimization.md) |
 | Skill 落盘布局审计（pool/active 必要性裁决，TASK-0113） | [`RESEARCH-0014`](RESEARCH-0014-skill-layout-pool-active-audit.md) |
 | Cordis 元框架机制调研（fiber/effect/inject 与可借鉴点） | [`RESEARCH-0015`](RESEARCH-0015-cordis-meta-framework.md) |
+| Northline 长程 Agent 委派与 OpenVetta Task/Worktree 治理对照 | [`RESEARCH-0016`](RESEARCH-0016-northline-openvetta-reference.md) |
 
 ## Research Note 约束
 
