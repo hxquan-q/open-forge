@@ -9,9 +9,9 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * 归档入口的交互合同：普通会话右键即可归档（可逆，不弹确认框），归档后菜单关闭、
- * toast 给出去设置页恢复的入口；agent-team 会话与只读来源看不到这一项；运行中的
- * 会话置灰——归档会藏掉它唯一的进度指示。
+ * 归档入口的交互合同：普通会话与团队会话右键即可归档（可逆，不弹确认框），归档后
+ * 菜单关闭、toast 给出去设置页恢复的入口；只有只读来源看不到这一项；运行中的会话
+ * 置灰——归档会藏掉它唯一的进度指示。
  */
 
 const navigateSpy = vi.fn();
@@ -82,17 +82,46 @@ describe("useSessionContextMenuModel archiving", () => {
 		expect(navigateSpy).toHaveBeenCalledWith({ to: "/settings/$tab", params: { tab: "archive" } });
 	});
 
-	it("hides archiving for agent-team sessions and for read-only sources", () => {
+	it("archives an idle agent-team conversation under its team title, keeping its team identity", () => {
+		const { result, onClose } = renderModel({ session: TEAM_SESSION });
+
+		expect(result.current.canArchive).toBe(true);
+		act(() => result.current.onArchive());
+
+		// 团队身份随快照一起存：设置页删除时据此走团队级删除，而不是普通会话删除。
+		expect(archive).toHaveBeenCalledWith({
+			path: TEAM_SESSION.path,
+			cwd: TEAM_SESSION.cwd,
+			label: "Team task",
+			teamId: "team",
+			teamSessionId: "team-session",
+		});
+		expect(onClose).toHaveBeenCalledOnce();
+	});
+
+	it("falls back to the untitled-team name when archiving a nameless team conversation", () => {
+		const { result } = renderModel({ session: { ...TEAM_SESSION, sessionTitle: "" } as SessionContextMenuSession });
+
+		act(() => result.current.onArchive());
+
+		// 与侧栏行同名：未命名团队会话在设置页里也是团队占位名，而不是「未命名会话」。
+		expect(archive).toHaveBeenCalledWith(expect.objectContaining({ label: "sidebar.session.untitledTeam" }));
+	});
+
+	it("hides archiving only for read-only sources", () => {
 		expect(renderModel().result.current.canArchive).toBe(true);
-		expect(renderModel({ session: TEAM_SESSION }).result.current.canArchive).toBe(false);
+		expect(renderModel({ session: TEAM_SESSION }).result.current.canArchive).toBe(true);
 		expect(renderModel({ allowMutations: false }).result.current.canArchive).toBe(false);
 	});
 
 	it("disables archiving while the session is running, with the reason as its label", () => {
 		const { result } = renderModel({ running: true });
+		const team = renderModel({ session: TEAM_SESSION, running: true });
 
 		expect(result.current.canArchive).toBe(true);
 		expect(result.current.archiveDisabled).toBe(true);
 		expect(result.current.labels.archiveDisabled).toBe("contextMenu.archiveDisabled");
+		// 团队会话同样先停再归档：藏掉行会丢掉它唯一的运行指示。
+		expect(team.result.current.archiveDisabled).toBe(true);
 	});
 });

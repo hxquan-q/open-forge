@@ -73,6 +73,9 @@ export interface ArchiveSessionRequest {
 	path: string;
 	label?: string;
 	cwd?: string;
+	/** 团队会话的身份（可选）；设置页据此走团队级删除。 */
+	teamId?: string;
+	teamSessionId?: string;
 	/** 仅供测试注入固定时钟；缺省取当前时间。 */
 	archivedAt?: number;
 }
@@ -85,6 +88,8 @@ export function archiveSession(input: ArchiveSessionRequest, filePath = DEFAULT_
 			path: input.path,
 			label: input.label,
 			cwd: input.cwd,
+			teamId: input.teamId,
+			teamSessionId: input.teamSessionId,
 			archivedAt: input.archivedAt ?? nextArchivedAt(current),
 		}),
 	);

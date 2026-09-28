@@ -37,8 +37,8 @@ export function useSessionContextMenuModel(
 	const tags = useAtomValue(conversationTagsAtom);
 	const openTagEditor = useSetAtom(conversationTagEditorAtom);
 	const pinned = pinnedSessionPaths.has(session.path);
-	// agent-team 会话的生命周期归团队：归档项只对普通会话给出，运行中的会话另需先停止。
-	const canArchive = allowMutations && !isAgentTeamSession(session);
+	// 归档只隐藏侧栏行、随时可恢复，团队会话与普通会话同等对待；运行中的会话另需先停止。
+	const canArchive = allowMutations;
 	const archiveDisabled = runningSessionPaths.has(session.path);
 
 	const handleRename = useCallback(() => {
@@ -60,10 +60,17 @@ export function useSessionContextMenuModel(
 	}, [onClose, pinned, session.path, setSessionPinned]);
 
 	const handleArchive = useCallback(() => {
-		// 归档可逆且不留数据痕迹，因此不弹确认框；落点信息（名字、路径）随快照一起存，
-		// 设置页据此列出条目，不必回读会话文件。
-		const label = sessionDisplayLabel(session);
-		void window.vetta.archivedSessions.archive({ path: session.path, cwd: session.cwd, label });
+		// 归档可逆且不留数据痕迹，因此不弹确认框；落点信息（名字、路径、团队身份）随快照一起存，
+		// 设置页据此列出条目、删除团队会话时走团队级删除，都不必回读会话文件。
+		const team = isAgentTeamSession(session) ? session : null;
+		// 名字与侧栏行一致：团队会话用团队标题（未命名时用团队占位名），不落成「未命名会话」。
+		const label = team ? team.sessionTitle || t("sidebar.session.untitledTeam") : sessionDisplayLabel(session);
+		void window.vetta.archivedSessions.archive({
+			path: session.path,
+			cwd: session.cwd,
+			label,
+			...(team ? { teamId: team.teamId, teamSessionId: team.teamSessionId } : {}),
+		});
 		onClose();
 		showToast({
 			variant: "success",

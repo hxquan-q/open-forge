@@ -43,8 +43,20 @@ function wrapperWith(store: ReturnType<typeof createStore>) {
 
 const ARCHIVED = session(`${CWD}/archived.jsonl`, 3);
 const KEPT = session(`${CWD}/kept.jsonl`, 2);
+const ARCHIVED_TEAM: SidebarConversationInfo = {
+	kind: "agent-team",
+	id: "team-session",
+	path: `${CWD}/team.jsonl`,
+	cwd: CWD,
+	firstMessage: "Team task",
+	modifiedAt: 4,
+	teamId: "team",
+	teamSessionId: "team-session",
+	memberAvatarUrls: [],
+	sessionTitle: "Team task",
+};
 
-function renderDefaultList(archivedPaths: readonly string[]) {
+function renderDefaultList(archivedPaths: readonly string[], sessions: SidebarConversationInfo[] = [ARCHIVED, KEPT]) {
 	const store = createStore();
 	store.set(archivedSessionsAtom, archivedSnapshot(archivedPaths));
 	return renderHook(
@@ -57,7 +69,7 @@ function renderDefaultList(archivedPaths: readonly string[]) {
 				onNewSession: () => {},
 				onRenameSession: () => {},
 				onSelectSession: () => {},
-				sessions: [ARCHIVED, KEPT],
+				sessions,
 			}),
 		{ wrapper: wrapperWith(store) },
 	);
@@ -101,6 +113,14 @@ describe("archived sessions in the direct conversation list", () => {
 		const { result } = renderDefaultList([]);
 
 		expect(result.current.sessions.map((view) => view.path)).toEqual([ARCHIVED.path, KEPT.path]);
+	});
+
+	it("hides an archived agent-team conversation the same way as an ordinary one", () => {
+		const { result } = renderDefaultList([ARCHIVED_TEAM.path], [ARCHIVED_TEAM, KEPT]);
+
+		// 团队会话走同一条过滤管线：归档后行消失，其余行原样保留。
+		expect(result.current.sessions.map((view) => view.path)).toEqual([KEPT.path]);
+		expect(result.current.sessions[0]?.session.kind).toBe("conversation");
 	});
 });
 

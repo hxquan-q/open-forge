@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
+import { TEAM_SESSIONS_CHANGED_EVENT } from "@shared/agent-teams/team-session-events";
 import { confirmDialogAtom } from "@shared/store/atoms";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
@@ -23,10 +24,15 @@ const list = vi.fn();
 const unarchive = vi.fn(async () => ({ sessions: [] }));
 const forget = vi.fn(async () => ({ sessions: [] }));
 const deleteSession = vi.fn(async () => undefined);
+const deleteTeamSession = vi.fn(async () => undefined);
 vi.stubGlobal(
 	"window",
 	Object.assign(globalThis.window, {
-		vetta: { archivedSessions: { list, unarchive, forget }, session: { delete: deleteSession } },
+		vetta: {
+			archivedSessions: { list, unarchive, forget },
+			session: { delete: deleteSession },
+			agentTeams: { deleteSession: deleteTeamSession },
+		},
 	}),
 );
 
@@ -39,6 +45,13 @@ const RECENT = {
 	archivedAt: Date.UTC(2026, 0, 15),
 };
 const OLDER = { path: "C:/sessions/refactor.jsonl", label: "", cwd: "C:/repo", archivedAt: Date.UTC(2025, 5, 1) };
+const TEAM = {
+	path: "C:/sessions/team-coordination.jsonl",
+	label: "团队任务",
+	cwd: "C:/repo",
+	archivedAt: Date.UTC(2026, 0, 16),
+	team: { teamId: "team", teamSessionId: "team-session" },
+};
 
 function renderModel() {
 	const store = createStore();
@@ -93,5 +106,28 @@ describe("useArchivedSessionsSettingsModel", () => {
 		await waitFor(() => expect(result.current.sessions.map((item) => item.path)).toEqual([OLDER.path]));
 		expect(deleteSession).toHaveBeenCalledWith(RECENT.path);
 		expect(forget).toHaveBeenCalledWith([RECENT.path]);
+	});
+
+	it("deletes an archived team conversation through the team-level delete and refreshes the team list", async () => {
+		list.mockResolvedValue({ sessions: [TEAM] });
+		const teamSessionsChanged = vi.fn();
+		window.addEventListener(TEAM_SESSIONS_CHANGED_EVENT, teamSessionsChanged);
+		const { result, store } = renderModel();
+		await waitFor(() => expect(result.current.sessions).toHaveLength(1));
+
+		act(() => result.current.actions.delete(TEAM.path));
+		act(() => store.get(confirmDialogAtom)?.onConfirm(false));
+
+		await waitFor(() => expect(result.current.sessions).toHaveLength(0));
+		// 团队会话不能走普通会话删除（主进程会以「由 Agent Team 管理」拒绝），必须带上团队身份。
+		expect(deleteSession).not.toHaveBeenCalled();
+		expect(deleteTeamSession).toHaveBeenCalledWith({
+			id: "team-session",
+			coordinationSessionPath: TEAM.path,
+		});
+		// 侧栏的团队列表靠这条事件重取，缺了它删除后的行会留在侧栏。
+		expect(teamSessionsChanged).toHaveBeenCalledOnce();
+		expect(forget).toHaveBeenCalledWith([TEAM.path]);
+		window.removeEventListener(TEAM_SESSIONS_CHANGED_EVENT, teamSessionsChanged);
 	});
 });

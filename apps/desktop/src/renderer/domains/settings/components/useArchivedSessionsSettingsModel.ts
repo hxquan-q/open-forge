@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { pathBasename } from "@shared/lib/utils";
 import { confirmDialogAtom } from "@shared/store/atoms";
 import { useSetAtom } from "jotai";
@@ -54,13 +55,21 @@ export function useArchivedSessionsSettingsModel(): ArchivedSessionsSettingsMode
 		(path: string) => {
 			const entry = archivedSessions.find((item) => item.path === path);
 			if (!entry) return;
+			const team = entry.team;
 			setConfirm({
 				title: t("deleteArchivedSessionConfirm"),
 				message: t("deleteArchivedSessionMessage", { name: sessionName(entry) }),
 				confirmLabel: t("archiveDelete"),
 				variant: "danger",
 				onConfirm: () => {
-					void window.vetta.session.delete(path).then(() => {
+					// 团队会话必须走团队级删除：它会先中止团队，再连同成员会话与团队记录一起清掉；
+					// 普通会话删除由会话运行时负责，而运行时明确拒绝团队会话。
+					const removal = team
+						? window.vetta.agentTeams
+								.deleteSession({ id: team.teamSessionId, coordinationSessionPath: path })
+								.then(() => notifyTeamSessionsChanged(team.teamId))
+						: window.vetta.session.delete(path);
+					void removal.then(() => {
 						// 会话没了，归档标记就是孤儿；与侧边栏删除会话的清理时机保持一致。
 						void window.vetta.archivedSessions.forget([path]);
 						setArchivedSessions((prev) => prev.filter((item) => item.path !== path));

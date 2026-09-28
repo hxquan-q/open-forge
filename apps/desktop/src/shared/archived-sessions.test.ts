@@ -52,12 +52,37 @@ describe("archived session mutations", () => {
 		expect([...archivedSessionPaths(withBoth())].sort()).toEqual(["/a.jsonl", "/b.jsonl"]);
 		expect(archivedSessionPaths(emptyArchivedSessions()).size).toBe(0);
 	});
+
+	it("records the team identity only for a complete pair", () => {
+		const team = archiveSession(emptyArchivedSessions(), { ...A, teamId: "team", teamSessionId: "session" });
+		expect(team.sessions[0]?.team).toEqual({ teamId: "team", teamSessionId: "session" });
+		expect(archiveSession(emptyArchivedSessions(), A).sessions[0]?.team).toBeUndefined();
+		// 半个身份不如没有：缺一个字段会让设置页把团队会话交给普通删除（主进程会拒绝）。
+		expect(
+			archiveSession(emptyArchivedSessions(), { ...A, teamId: "team", teamSessionId: "  " }).sessions[0]?.team,
+		).toBeUndefined();
+	});
 });
 
 describe("archived session persistence shape", () => {
 	it("round-trips a snapshot through serialize and parse", () => {
 		const both = withBoth();
 		expect(parseArchivedSessionsFile(serializeArchivedSessions(both))).toEqual(both);
+	});
+
+	it("round-trips the team identity and drops a malformed one without losing the entry", () => {
+		const withTeam = archiveSession(emptyArchivedSessions(), { ...A, teamId: "team", teamSessionId: "session" });
+		expect(parseArchivedSessionsFile(serializeArchivedSessions(withTeam))).toEqual(withTeam);
+
+		const parsed = parseArchivedSessionsFile({
+			version: ARCHIVED_SESSIONS_SCHEMA_VERSION,
+			sessions: [
+				{ ...A, team: { teamId: "team" } },
+				{ ...B, team: "nope" },
+			],
+		});
+		expect(parsed.sessions.map((entry) => entry.path)).toEqual(["/b.jsonl", "/a.jsonl"]);
+		expect(parsed.sessions.every((entry) => entry.team === undefined)).toBe(true);
 	});
 
 	it("drops corrupt entries instead of voiding the whole file", () => {

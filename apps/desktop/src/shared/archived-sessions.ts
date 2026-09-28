@@ -18,6 +18,12 @@ export const ARCHIVED_SESSIONS_SCHEMA_VERSION = 1;
 /** 归档变更广播通道：主进程在每次写盘后推送最新快照。 */
 export const ARCHIVED_SESSIONS_CHANGED_CHANNEL = "vetta:archived-sessions:changed";
 
+/** 团队会话的身份快照：设置页据此走团队级删除（连同成员会话与团队记录）。 */
+export interface ArchivedSessionTeam {
+	readonly teamId: string;
+	readonly teamSessionId: string;
+}
+
 export interface ArchivedSessionEntry {
 	/** 会话 JSONL 的磁盘路径，同时是条目标识。 */
 	path: string;
@@ -27,6 +33,8 @@ export interface ArchivedSessionEntry {
 	cwd: string;
 	/** epoch ms；一律按它倒序（最近归档在前），让新归档的条目稳定停在最上面。 */
 	archivedAt: number;
+	/** 仅团队会话携带；普通会话删除走会话运行时，不需要它。 */
+	team?: ArchivedSessionTeam;
 }
 
 export interface ArchivedSessionsSnapshot {
@@ -41,6 +49,25 @@ function sortByArchivedAtDesc(sessions: ArchivedSessionEntry[]): ArchivedSession
 	return [...sessions].sort((a, b) => b.archivedAt - a.archivedAt || a.path.localeCompare(b.path));
 }
 
+/** 团队身份要么两个字段都在、要么不要：半个身份会让设置页把团队会话交给普通删除。 */
+export function normalizeArchiveTeam(
+	team: { readonly teamId?: string; readonly teamSessionId?: string } | undefined,
+): ArchivedSessionTeam | undefined {
+	if (!team) return undefined;
+	const teamId = team.teamId?.trim() ?? "";
+	const teamSessionId = team.teamSessionId?.trim() ?? "";
+	return teamId.length > 0 && teamSessionId.length > 0 ? { teamId, teamSessionId } : undefined;
+}
+
+function sanitizeTeam(value: unknown): ArchivedSessionTeam | undefined {
+	if (typeof value !== "object" || value === null) return undefined;
+	const input = value as Partial<ArchivedSessionTeam>;
+	return normalizeArchiveTeam({
+		teamId: typeof input.teamId === "string" ? input.teamId : "",
+		teamSessionId: typeof input.teamSessionId === "string" ? input.teamSessionId : "",
+	});
+}
+
 /** 坏条目只丢自己：一个写坏的字段不该让用户的整份归档列表消失。 */
 function sanitizeEntry(value: unknown): ArchivedSessionEntry | null {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -50,11 +77,14 @@ function sanitizeEntry(value: unknown): ArchivedSessionEntry | null {
 		typeof input.archivedAt === "number" && Number.isFinite(input.archivedAt) && input.archivedAt > 0
 			? input.archivedAt
 			: 0;
+	// 团队标记写坏只丢标记不丢条目：会话本身照样能从设置页恢复。
+	const team = sanitizeTeam(input.team);
 	return {
 		path: input.path,
 		label: typeof input.label === "string" ? input.label : "",
 		cwd: typeof input.cwd === "string" ? input.cwd : "",
 		archivedAt,
+		...(team ? { team } : {}),
 	};
 }
 
@@ -89,6 +119,9 @@ export interface ArchiveSessionInput {
 	path: string;
 	label?: string;
 	cwd?: string;
+	/** 团队会话的身份；两个字段齐全才落盘（见 normalizeArchiveTeam）。 */
+	teamId?: string;
+	teamSessionId?: string;
 	archivedAt: number;
 }
 
@@ -100,11 +133,13 @@ export function archiveSession(
 	const path = input.path.trim();
 	if (path.length === 0) return snapshot;
 	if (snapshot.sessions.some((entry) => entry.path === path)) return snapshot;
+	const team = normalizeArchiveTeam({ teamId: input.teamId, teamSessionId: input.teamSessionId });
 	const entry: ArchivedSessionEntry = {
 		path,
 		label: input.label?.trim() ?? "",
 		cwd: input.cwd ?? "",
 		archivedAt: input.archivedAt,
+		...(team ? { team } : {}),
 	};
 	return { sessions: sortByArchivedAtDesc([...snapshot.sessions, entry]) };
 }

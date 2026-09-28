@@ -51,6 +51,16 @@ describe("archived sessions store", () => {
 		expect(stored.sessions.map((entry) => entry.path)).toEqual(["/b.jsonl"]);
 	});
 
+	it("persists the team identity of an archived team conversation", () => {
+		const filePath = tempFile();
+		const snapshot = archiveSession(
+			{ path: "/team.jsonl", label: "团队任务", teamId: "team", teamSessionId: "session" },
+			filePath,
+		);
+		expect(snapshot.sessions[0]?.team).toEqual({ teamId: "team", teamSessionId: "session" });
+		expect(onDisk(filePath).sessions[0]?.team).toEqual({ teamId: "team", teamSessionId: "session" });
+	});
+
 	it("reloads the persisted snapshot after the cache is dropped", () => {
 		const filePath = tempFile();
 		archiveSession({ path: "/a.jsonl", label: "修复登录" }, filePath);

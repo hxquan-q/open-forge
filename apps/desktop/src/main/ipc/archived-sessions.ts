@@ -33,6 +33,9 @@ export function registerArchivedSessionsIpc(webContents: WebContents): () => voi
 			path: asString(raw.path),
 			label: asOptionalString(raw.label),
 			cwd: asOptionalString(raw.cwd),
+			// 缺一不可由模型层统一裁定（normalizeArchiveTeam），这里只做类型收窄。
+			teamId: asOptionalString(raw.teamId),
+			teamSessionId: asOptionalString(raw.teamSessionId),
 		});
 	});
 
