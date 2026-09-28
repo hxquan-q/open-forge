@@ -1,7 +1,7 @@
 ---
 id: TASK-0130
 type: task
-status: ready
+status: in_progress
 priority: P1
 owner: desktop
 requirement:
@@ -12,12 +12,12 @@ related_plan: []
 related_tasks: []
 related_issues: []
 related_bugs: [BUG-0046]
-execution: serial
-branch: main
-worktree: .
+execution: parallel
+branch: task/TASK-0130-runtime-zip-extract-without-tar
+worktree: ../open-forge-wt/task-0130-runtime-zip-extract-without-tar
 base_commit: aaf85f02e238fce2d25e8bfa80b112bdac98b3cd
 read_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts, apps/desktop/src/main/archive/safe-zip-extract.ts, apps/desktop/src/main/runtimes/manifest.json]
-write_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts, apps/desktop/src/main/runtimes, .github/release-notes/v0.1.2.md, project/tasks/TASK-0130-runtime-zip-extract-without-tar.md, project/tasks/README.md, project/bugs/BUG-0046-windows-gnu-tar-runtime-zip-extract.md, project/bugs/README.md]
+write_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts, apps/desktop/src/main/runtimes, .github/release-notes/v0.1.3.md, project/tasks/TASK-0130-runtime-zip-extract-without-tar.md, project/tasks/README.md, project/bugs/BUG-0046-windows-gnu-tar-runtime-zip-extract.md, project/bugs/README.md]
 exclusive_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts]
 depends_on: []
 conflicts_with: []
@@ -38,12 +38,12 @@ updated: 2026-09-28
 ### 并发评估
 
 - 结论：支持
-- 执行方式：serial
+- 执行方式：parallel（独立 Worktree）
 - 可并行 Task：TASK-0131、TASK-0132（写路径不相交）
 - 前置依赖：无
 - 冲突文件/独占路径：`apps/desktop/src/main/runtimes/runtime-archive-installer.ts`
-- Branch：main
-- Worktree：.（改动小且与其他两任务不相交，不拆 worktree）
+- Branch：task/TASK-0130-runtime-zip-extract-without-tar
+- Worktree：`../open-forge-wt/task-0130-runtime-zip-extract-without-tar`
 - 集成负责人：Coordinator
 - 集成顺序：与 TASK-0131 / TASK-0132 任意顺序
 
@@ -52,7 +52,7 @@ updated: 2026-09-28
 - `runtime-archive-installer.ts` 中 `archiveType === "zip"` 时改用仓库已有的 `extractZipArchiveSafely`（`src/main/archive/safe-zip-extract.ts`，adm-zip 实现，带路径穿越/大小上限防护），不再 spawn `tar`。
 - tar.gz 路径保持现有 tar + flavor 探测逻辑不变（BUG-0023 的兼容面不回退）。
 - 补回归测试：zip 路径在 GNU tar 环境（或不调用 tar 的可证伪断言）下安装成功；tar.gz 路径仍走 tar。
-- 发布说明写入当前版本 `.github/release-notes/v0.1.2.md`。
+- 发布说明写入当前版本 `.github/release-notes/v0.1.3.md`。
 
 ### 不做
 

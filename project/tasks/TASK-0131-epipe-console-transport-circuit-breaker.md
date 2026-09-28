@@ -1,7 +1,7 @@
 ---
 id: TASK-0131
 type: task
-status: ready
+status: in_progress
 priority: P1
 owner: desktop
 requirement:
@@ -12,12 +12,12 @@ related_plan: []
 related_tasks: []
 related_issues: []
 related_bugs: [BUG-0047]
-execution: serial
-branch: main
-worktree: .
+execution: parallel
+branch: task/TASK-0131-epipe-console-transport-circuit-breaker
+worktree: ../open-forge-wt/task-0131-epipe-console-transport-circuit-breaker
 base_commit: aaf85f02e238fce2d25e8bfa80b112bdac98b3cd
 read_paths: [apps/desktop/src/main/diagnostics.ts, apps/desktop/src/main/logger.ts]
-write_paths: [apps/desktop/src/main/diagnostics.ts, apps/desktop/src/main/logger.ts, .github/release-notes/v0.1.2.md, project/tasks/TASK-0131-epipe-console-transport-circuit-breaker.md, project/tasks/README.md, project/bugs/BUG-0047-epipe-uncaught-exception-log-storm.md, project/bugs/README.md]
+write_paths: [apps/desktop/src/main/diagnostics.ts, apps/desktop/src/main/logger.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0131-epipe-console-transport-circuit-breaker.md, project/tasks/README.md, project/bugs/BUG-0047-epipe-uncaught-exception-log-storm.md, project/bugs/README.md]
 exclusive_paths: [apps/desktop/src/main/diagnostics.ts]
 depends_on: []
 conflicts_with: []
@@ -38,12 +38,12 @@ updated: 2026-09-28
 ### 并发评估
 
 - 结论：支持
-- 执行方式：serial
+- 执行方式：parallel（独立 Worktree）
 - 可并行 Task：TASK-0130、TASK-0132（写路径不相交）
 - 前置依赖：无
 - 冲突文件/独占路径：`apps/desktop/src/main/diagnostics.ts`
-- Branch：main
-- Worktree：.（改动小且与其他两任务不相交，不拆 worktree）
+- Branch：task/TASK-0131-epipe-console-transport-circuit-breaker
+- Worktree：`../open-forge-wt/task-0131-epipe-console-transport-circuit-breaker`
 - 集成负责人：Coordinator
 - 集成顺序：与 TASK-0130 / TASK-0132 任意顺序
 
@@ -52,7 +52,7 @@ updated: 2026-09-28
 - 在 `diagnostics.ts` 的 `uncaughtException`（必要时含 `unhandledRejection`）处理器中识别 stdout/stderr 流错误（EPIPE、ERR_STREAM_DESTROYED 等写端已毁类错误）：首次命中即把 app logger 的 console transport 关停（`transports.console.level = false`），本条及后续错误只落文件日志，并记录一条「console 镜像已熔断」的单条说明。
 - 熔断后不再对同类流错误逐条全量写堆栈（去重/节流），避免文件日志也被风暴灌爆。
 - 补回归测试：模拟 console transport 写抛 EPIPE，验证熔断只发生一次、后续错误不再进入 console transport。
-- 发布说明写入当前版本 `.github/release-notes/v0.1.2.md`。
+- 发布说明写入当前版本 `.github/release-notes/v0.1.3.md`。
 
 ### 不做
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0132
 type: task
-status: ready
+status: in_progress
 priority: P3
 owner: desktop
 requirement:
@@ -12,12 +12,12 @@ related_plan: []
 related_tasks: []
 related_issues: []
 related_bugs: [BUG-0048]
-execution: serial
-branch: main
-worktree: .
+execution: parallel
+branch: task/TASK-0132-resize-observer-filter-dev-sourceid
+worktree: ../open-forge-wt/task-0132-resize-observer-filter-dev-sourceid
 base_commit: aaf85f02e238fce2d25e8bfa80b112bdac98b3cd
 read_paths: [apps/desktop/src/main/window-manager.ts]
-write_paths: [apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.2.md, project/tasks/TASK-0132-resize-observer-filter-dev-sourceid.md, project/tasks/README.md, project/bugs/BUG-0048-resize-observer-filter-dev-mode.md, project/bugs/README.md]
+write_paths: [apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0132-resize-observer-filter-dev-sourceid.md, project/tasks/README.md, project/bugs/BUG-0048-resize-observer-filter-dev-mode.md, project/bugs/README.md]
 exclusive_paths: [apps/desktop/src/main/window-manager.ts]
 depends_on: []
 conflicts_with: []
@@ -38,12 +38,12 @@ updated: 2026-09-28
 ### 并发评估
 
 - 结论：支持
-- 执行方式：serial
+- 执行方式：parallel（独立 Worktree）
 - 可并行 Task：TASK-0130、TASK-0131（写路径不相交）
 - 前置依赖：无
 - 冲突文件/独占路径：`apps/desktop/src/main/window-manager.ts`
-- Branch：main
-- Worktree：.（改动小且与其他两任务不相交，不拆 worktree）
+- Branch：task/TASK-0132-resize-observer-filter-dev-sourceid
+- Worktree：`../open-forge-wt/task-0132-resize-observer-filter-dev-sourceid`
 - 集成负责人：Coordinator
 - 集成顺序：与 TASK-0130 / TASK-0131 任意顺序
 
@@ -51,7 +51,7 @@ updated: 2026-09-28
 
 - `isChromiumResizeObserverDiagnostic` 放宽为「消息精确匹配 + 行号为 0」，去掉 `sourceId === ""` 限制（消息文本本身足够特异，行号 0 保留以区别真实业务 throw）。
 - 补回归测试：sourceId 为 dev 页面 URL 时过滤命中；packaged 空 sourceId 形态仍命中；真实错误（同消息但行号非 0，或不同消息）不被误杀。
-- 发布说明写入当前版本 `.github/release-notes/v0.1.2.md`（「其他」一节一句话即可，无用户可感知影响）。
+- 发布说明写入当前版本 `.github/release-notes/v0.1.3.md`（「其他」一节一句话即可，无用户可感知影响）。
 
 ### 不做
 
