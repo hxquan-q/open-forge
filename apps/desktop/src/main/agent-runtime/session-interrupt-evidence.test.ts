@@ -55,4 +55,21 @@ describe("buildSessionInterruptEvidence", () => {
 		});
 		expect(evidence.hasCompletionMarker).toBe(true);
 	});
+
+	it("activityAtMs 覆盖消息时间戳：streaming 的 idle 以逐事件活动为准", () => {
+		// 健康长回合的消息时间戳很旧（助手消息未落盘），但事件活动是新鲜的——
+		// idle 必须取活动证据而不是消息时间戳，否则长回合全被误判成悬挂。
+		const evidence = buildSessionInterruptEvidence({
+			isStreaming: true,
+			messages: [assistant({ stopReason: "stop", timestamp: 1_000 })],
+			nowMs: 100_000,
+			manualStop: false,
+			draftNonEmpty: false,
+			hasPendingAction: false,
+			continueAttemptCount: 0,
+			maxContinueAttempts: 1,
+			activityAtMs: 99_000,
+		});
+		expect(evidence.idleMs).toBe(1_000);
+	});
 });

@@ -43,6 +43,12 @@ export class SessionInterruptMonitor {
 	private active = false;
 	private generation = 0;
 	private readonly attemptCounts = new Map<string, number>();
+	/**
+	 * 每个会话最近一次已提示的判定 key（`state:trigger`）。悬挂判定会持续命中
+	 * （每 15s 扫描一次），不去重则同一条未解决提示会反复发系统通知与 toast；
+	 * 判定化解（回到 running/completed 等不再可绑定状态）后清除，允许再发生。
+	 */
+	private readonly lastNotifiedDecision = new Map<string, string>();
 
 	constructor(private readonly ports: SessionInterruptMonitorPorts) {}
 
@@ -61,6 +67,7 @@ export class SessionInterruptMonitor {
 
 	forgetSession(sessionId: string): void {
 		this.attemptCounts.delete(sessionId);
+		this.lastNotifiedDecision.delete(sessionId);
 	}
 
 	/** 立即巡检一轮（测试与手动触发）；正常路径走定时 schedule。 */
@@ -104,7 +111,14 @@ export class SessionInterruptMonitor {
 		} catch {
 			return;
 		}
-		if (state.isStreaming) return;
+		let activityAtMs: number | undefined;
+		if (state.isStreaming) {
+			// streaming 不再直接跳过：零事件悬挂（turn 永不结算）的会话同样可能
+			// 异常中断。但判定必须基于逐事件活动证据；宿主尚未观察到任何事件时
+			// 无法区分健康长回合与悬挂，宁沉默不误报。
+			if (state.lastEventAt === undefined) return;
+			activityAtMs = state.lastEventAt;
+		}
 
 		const maxAttempts = Math.max(1, this.ports.readMaxAttempts());
 		const continueAttemptCount = this.attemptCounts.get(sessionId) ?? 0;
@@ -119,9 +133,14 @@ export class SessionInterruptMonitor {
 			hasPendingAction: this.ports.hasPendingAction(sessionId),
 			continueAttemptCount,
 			maxContinueAttempts: maxAttempts,
+			...(activityAtMs !== undefined ? { activityAtMs } : {}),
 		});
 		const classification = classifySessionInterruptHealth(evidence);
-		if (!classification.eligibleForBinding) return;
+		if (!classification.eligibleForBinding) {
+			// 判定已化解（回到 running/completed/stopped 等）：允许下一次中断再次提示。
+			this.lastNotifiedDecision.delete(sessionId);
+			return;
+		}
 
 		if (mode === "auto" && classification.shouldAutoContinue) {
 			this.attemptCounts.set(sessionId, continueAttemptCount + 1);
@@ -147,6 +166,9 @@ export class SessionInterruptMonitor {
 		}
 
 		if (classification.shouldNotify || classification.shouldAutoContinue) {
+			const decisionKey = `${classification.state}:${classification.trigger ?? "none"}`;
+			if (this.lastNotifiedDecision.get(sessionId) === decisionKey) return;
+			this.lastNotifiedDecision.set(sessionId, decisionKey);
 			this.ports.onDecision({
 				sessionId,
 				sessionPath: runtime.getSessionPath(sessionId),
