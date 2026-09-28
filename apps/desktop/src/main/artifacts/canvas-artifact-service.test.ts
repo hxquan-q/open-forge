@@ -94,6 +94,111 @@ describe("Canvas artifact service", () => {
 		expect(stale).toMatchObject({ ok: false, code: "stale_version" });
 		expect(await harness.store.readContent(path)).toBe("externally-changed");
 	});
+	it("用户写入沿用 artifact 归属会话、自增版本并保留历史版本文件", async () => {
+		const harness = await createHarness();
+		const created = await createArtifact(harness);
+		const outcome = await harness.service.applyUpdate({
+			workspaceId: harness.workspaceId,
+			artifactId: created.artifactId,
+			baseVersion: 1,
+			content: "user-edit",
+			signal,
+		});
+		expect(outcome.ok).toBe(true);
+		if (!outcome.ok) throw new Error("expected update success");
+		expect(outcome.descriptor).toMatchObject({
+			version: 2,
+			status: "generated",
+			sourceSessionId: harness.sessionId,
+		});
+		// 历史版本不覆盖：v1 仍是原内容，v2 是新写入。
+		expect(await harness.store.readContent(artifactUriToPath(created.uri) ?? "")).toBe("# Hello");
+		const writtenUri = outcome.descriptor.uri;
+		if (!writtenUri) throw new Error("expected written uri");
+		expect(await harness.store.readContent(artifactUriToPath(writtenUri) ?? "")).toBe("user-edit");
+		expect(harness.facts.at(-1)).toMatchObject({
+			type: "artifact.descriptor.recorded",
+			sessionId: harness.sessionId,
+			artifact: { version: 2, sourceSessionId: harness.sessionId },
+		});
+	});
+
+	it("用户写入基线落后或文件被外部改动时都拦截为 stale_version", async () => {
+		const harness = await createHarness();
+		const created = await createArtifact(harness);
+		const first = await harness.service.applyUpdate({
+			workspaceId: harness.workspaceId,
+			artifactId: created.artifactId,
+			baseVersion: 1,
+			content: "v2",
+			signal,
+		});
+		expect(first.ok).toBe(true);
+		if (!first.ok) throw new Error("expected update success");
+
+		const stale = await harness.service.applyUpdate({
+			workspaceId: harness.workspaceId,
+			artifactId: created.artifactId,
+			baseVersion: 1,
+			content: "should-not-write",
+			signal,
+		});
+		expect(stale.ok).toBe(false);
+		if (stale.ok) throw new Error("expected stale");
+		expect(stale.error).toMatchObject({ code: "stale_version", currentVersion: 2, baseVersion: 1 });
+
+		// 外部改动落在当前版本文件上：checksum 不符同样拦截，不覆盖别人的内容。
+		const currentUri = first.descriptor.uri;
+		if (!currentUri) throw new Error("expected updated uri");
+		const currentPath = artifactUriToPath(currentUri);
+		if (!currentPath) throw new Error("expected path");
+		await writeFile(currentPath, "externally-changed", "utf8");
+		const external = await harness.service.applyUpdate({
+			workspaceId: harness.workspaceId,
+			artifactId: created.artifactId,
+			baseVersion: 2,
+			content: "user-edit",
+			signal,
+		});
+		expect(external.ok).toBe(false);
+		if (external.ok) throw new Error("expected stale after external change");
+		expect(external.error.code).toBe("stale_version");
+		expect(await harness.store.readContent(currentPath)).toBe("externally-changed");
+	});
+
+	it("用户写入中途取消时回滚刚写入的版本，不留半成品", async () => {
+		const harness = await createHarness();
+		const created = await createArtifact(harness);
+		const controller = new AbortController();
+		controller.abort();
+		const outcome = await harness.service.applyUpdate({
+			workspaceId: harness.workspaceId,
+			artifactId: created.artifactId,
+			baseVersion: 1,
+			content: "aborted",
+			signal: controller.signal,
+		});
+		expect(outcome.ok).toBe(false);
+		if (outcome.ok) throw new Error("expected cancel");
+		expect(outcome.error).toMatchObject({ code: "cancelled" });
+		expect(await harness.store.read(harness.workspaceId, created.artifactId, 2)).toBeUndefined();
+		expect(await harness.store.readContent(artifactUriToPath(created.uri) ?? "")).toBe("# Hello");
+		expect(harness.facts).toHaveLength(1);
+	});
+
+	it("用户写入不存在的 artifact 返回 missing_file", async () => {
+		const harness = await createHarness();
+		const outcome = await harness.service.applyUpdate({
+			workspaceId: harness.workspaceId,
+			artifactId: "ghost",
+			baseVersion: 1,
+			content: "x",
+			signal,
+		});
+		expect(outcome.ok).toBe(false);
+		if (outcome.ok) throw new Error("expected missing_file");
+		expect(outcome.error).toMatchObject({ code: "missing_file", action: "update", artifactId: "ghost" });
+	});
 
 	it("attach_to_task 在无活动 Task 时明确失败，有活动 Task 时复用同一 artifactId", async () => {
 		const harness = await createHarness();

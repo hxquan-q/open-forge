@@ -156,7 +156,13 @@ describe("provider stream failure fixtures", () => {
 
 		it("resolves the same terminal failure on the public stream surface", async () => {
 			const transport = createProviderTestTransport([sseResponse(scenario.records)]);
-			const events = stream(responsesModel, context, { apiKey: "test", fetch: transport.fetch });
+			// Retryable fixtures would spend real backoff inside the unified retry
+			// layer; this test asserts terminal classification, so it opts out.
+			const events = stream(responsesModel, context, {
+				apiKey: "test",
+				fetch: transport.fetch,
+				providerRetry: { maxRetries: 0 },
+			});
 			const settled = await settleStreamOutcome(events, events.result());
 			expectLegacyFailure(settled, scenario.failure, responsesModel);
 		});
@@ -176,7 +182,11 @@ describe("provider stream failure fixtures", () => {
 
 		it("resolves the same terminal failure on the public stream surface", async () => {
 			const transport = createProviderTestTransport([sseResponse(scenario.records)]);
-			const events = stream(completionsModel, context, { apiKey: "test", fetch: transport.fetch });
+			const events = stream(completionsModel, context, {
+				apiKey: "test",
+				fetch: transport.fetch,
+				providerRetry: { maxRetries: 0 },
+			});
 			const settled = await settleStreamOutcome(events, events.result());
 			expectLegacyFailure(settled, scenario.failure, completionsModel);
 		});
@@ -186,7 +196,11 @@ describe("provider stream failure fixtures", () => {
 		it("preserves retryable semantics on both wire families", async () => {
 			for (const model of [responsesModel, completionsModel]) {
 				const transport = createProviderTestTransport([scenario.response()]);
-				const events = stream(model, context, { apiKey: "test", fetch: transport.fetch });
+				const events = stream(model, context, {
+					apiKey: "test",
+					fetch: transport.fetch,
+					providerRetry: { maxRetries: 0 },
+				});
 				const settled = await settleStreamOutcome(events, events.result());
 				expectLegacyFailure(settled, scenario.failure, model);
 			}

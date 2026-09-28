@@ -3,6 +3,16 @@ export {
 	type CodingAgentCompactionExtensionResult,
 	createCodingAgentCompactionExtensionRuntime,
 } from "../adapters/extensions/compaction-extension-adapter.js";
+export {
+	type AgentScheduledTask,
+	type AgentScheduledTaskCreate,
+	type AgentScheduledTaskPatch,
+	createScheduledTaskToolRegistrations,
+	SCHEDULED_TASK_TOOL_NAMES,
+	type ScheduledTaskStore,
+	type ScheduledTaskToolContext,
+	type ScheduledTaskToolRegistration,
+} from "../features/scheduled-tasks/index.js";
 export type {
 	CodingAgentCompactionExtensionRuntime,
 	CodingAgentPinnedConversationProjection,

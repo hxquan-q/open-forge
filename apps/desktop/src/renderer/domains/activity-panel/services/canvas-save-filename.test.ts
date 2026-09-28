@@ -1,5 +1,6 @@
 // Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
+import { CANVAS_DATA_GRID_JSON_CONTENT_TYPE } from "./canvas-data-grid";
 import { joinCanvasTargetPath, suggestedCanvasSaveFileName } from "./canvas-save-filename";
 
 describe("suggestedCanvasSaveFileName", () => {
@@ -7,6 +8,15 @@ describe("suggestedCanvasSaveFileName", () => {
 		expect(suggestedCanvasSaveFileName({ title: "调研摘要", contentType: "text/markdown" })).toBe("调研摘要.md");
 		expect(suggestedCanvasSaveFileName({ title: "preview.html", contentType: "text/html" })).toBe("preview.html");
 		expect(suggestedCanvasSaveFileName({ title: "a<b>:c", contentType: "text/plain" })).toBe("a-b--c.txt");
+	});
+
+	it("表格 artifact 落 .csv / .tsv / .json，普通 JSON 仍是代码后缀", () => {
+		expect(suggestedCanvasSaveFileName({ title: "销售数据", contentType: "text/csv" })).toBe("销售数据.csv");
+		expect(suggestedCanvasSaveFileName({ title: "导出", contentType: "text/tab-separated-values" })).toBe("导出.tsv");
+		expect(suggestedCanvasSaveFileName({ title: "导出", contentType: CANVAS_DATA_GRID_JSON_CONTENT_TYPE })).toBe(
+			"导出.json",
+		);
+		expect(suggestedCanvasSaveFileName({ title: "配置", contentType: "application/json" })).toBe("配置.json");
 	});
 });
 

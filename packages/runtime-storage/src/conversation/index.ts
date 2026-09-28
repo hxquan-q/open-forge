@@ -43,3 +43,4 @@ export {
 	type UnrepresentableLegacySessionImportAnalysis,
 } from "./legacy-session-import-analyzer.js";
 export * from "./record-schema.js";
+export * from "./review-snapshot.js";

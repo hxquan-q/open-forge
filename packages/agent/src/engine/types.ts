@@ -171,6 +171,11 @@ export interface AgentTurnRequest {
 	readonly limits: AgentRunLimits;
 	readonly signal: AbortSignal;
 	readonly observer?: (event: AgentExecutionEvent) => void;
+	/**
+	 * 允许本次 Run 的静默完成：assistant 成功结束但无可见正文与工具调用时仍视为
+	 * 正常完成，不做一次性自动重跑。仅完成通知类等明确无需可见输出的 Run 设置。
+	 */
+	readonly allowSilentCompletion?: boolean;
 }
 
 export type AgentExecutionEvent =
@@ -180,6 +185,11 @@ export type AgentExecutionEvent =
 			readonly modelCallIndex: number;
 			readonly callId: string;
 			readonly snapshotId: string;
+			/**
+			 * 本次调用延续已打开的 assistant 消息行（静默重跑）：投影层不得新开
+			 * message 行或发出中间 turn 边界。
+			 */
+			readonly continuesAssistant?: boolean;
 	  }
 	| {
 			readonly type: "model_event";

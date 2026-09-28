@@ -13,6 +13,11 @@ export interface CanvasArtifactSelectionPayload {
 	readonly title: string;
 	readonly kind: string;
 	readonly contentType?: string;
+	/**
+	 * 表格选区在「过滤 + 排序结果」中的行列范围摘要，例如「第 3-7 行 · 第 2-4 列」。
+	 * 可选且必须整体省略：PluginPromptContext 的 JSON 守卫不接受 `undefined` 值。
+	 */
+	readonly range?: string;
 }
 
 export function excerptCanvasSelection(text: string, limit = CANVAS_SELECTION_EXCERPT_LIMIT): string {

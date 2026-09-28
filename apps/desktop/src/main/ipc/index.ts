@@ -31,6 +31,7 @@ import { registerProjectExportIpc } from "./project-export.js";
 import { registerProjectsIpc } from "./projects.js";
 import { registerQuickPanelIpc } from "./quickpanel.js";
 import { registerRemotePairingIpc } from "./remote-pairing.js";
+import { registerReviewChangesIpc } from "./review-changes.js";
 import { registerRuntimeConfigurationIpc } from "./runtime-configuration.js";
 import { registerRuntimesIpc } from "./runtimes.js";
 import { registerSessionIpc } from "./session.js";
@@ -86,6 +87,7 @@ interface IpcTeardown {
 	teardownDiagnostics: () => void;
 	teardownOnboarding: () => void;
 	teardownRemotePairing: () => void;
+	teardownReviewChanges: () => void;
 }
 
 export function registerAllIpc(
@@ -138,6 +140,7 @@ export function registerAllIpc(
 		teardownDiagnostics: registerDiagnosticsIpc(),
 		teardownOnboarding: registerOnboardingIpc(),
 		teardownRemotePairing: registerRemotePairingIpc(options.remotePairingService),
+		teardownReviewChanges: registerReviewChangesIpc(),
 	};
 }
 
@@ -183,6 +186,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownDiagnostics();
 	teardown.teardownOnboarding();
 	teardown.teardownRemotePairing();
+	teardown.teardownReviewChanges();
 }
 
 export { registerBatchTasksIpc } from "./batch-tasks.js";

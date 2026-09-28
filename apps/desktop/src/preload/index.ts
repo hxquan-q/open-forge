@@ -21,6 +21,7 @@ import { createPluginsApi } from "./apis/plugins.js";
 import { createProjectApi } from "./apis/project.js";
 import { createQuickPanelApi } from "./apis/quick-panel.js";
 import { createRemotePairingApi } from "./apis/remote-pairing.js";
+import { createReviewChangesApi } from "./apis/review-changes.js";
 import { createRuntimeConfigurationApi } from "./apis/runtime-configuration.js";
 import { createSchedulerApi } from "./apis/scheduler.js";
 import { createSessionApi } from "./apis/session.js";
@@ -61,6 +62,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createThemesApi(ipcRenderer),
 	...createPetApi(ipcRenderer),
 	...createConversationTagsApi(ipcRenderer),
+	...createReviewChangesApi(ipcRenderer),
 	...createProjectApi(ipcRenderer),
 	...createSshApi(ipcRenderer),
 	...createTerminalApi(ipcRenderer),

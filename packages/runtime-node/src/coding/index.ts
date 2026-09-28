@@ -112,6 +112,7 @@ export {
 	type ToolPathHost,
 	type ToolPathSyntax,
 } from "./shared/path-resolution.js";
+export type { ReviewSnapshotBinding } from "./shared/review-capture.js";
 export { decodeTextBuffer, sanitizeBinaryOutput } from "./shared/text-decoding.js";
 export {
 	collectToolProcess,
@@ -292,6 +293,7 @@ export {
 	WRITE_TOOL_DESCRIPTION,
 	type WriteOperations,
 	type WritePathPolicy,
+	type WriteToolDetails,
 	type WriteToolInput,
 	WriteToolInputSchema,
 	type WriteToolOptions,

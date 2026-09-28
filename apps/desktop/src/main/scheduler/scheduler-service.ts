@@ -309,3 +309,8 @@ export function getDesktopSchedulerService(): SchedulerService {
 	if (!desktopSchedulerService) throw new Error("Desktop scheduler service is not initialized");
 	return desktopSchedulerService;
 }
+
+/** 调度服务未初始化（测试/轻量进程）时返回 undefined，供「能装就装」的宿主装配路径使用。 */
+export function tryGetDesktopSchedulerService(): SchedulerService | undefined {
+	return desktopSchedulerService;
+}

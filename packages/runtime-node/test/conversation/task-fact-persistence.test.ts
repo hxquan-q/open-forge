@@ -48,7 +48,7 @@ function taskCreated(sessionId: string): TaskLifecycleRecordedEvent {
 			type: "task.created",
 			snapshot: {
 				schemaVersion: 1,
-				identity: { taskId: "task-1", rootSessionId: sessionId, generation: "generation-1" },
+				identity: { taskId: "task-1", rootSessionId: sessionId },
 				status: "draft",
 				title: "整理项目文档",
 				createdAt: 100,

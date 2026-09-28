@@ -10,6 +10,7 @@ import {
 	createForegroundCommandToolExecutor,
 	type ForegroundCommandExecutorOptions,
 } from "./shared/foreground-command-executor.js";
+import type { ReviewSnapshotBinding } from "./shared/review-capture.js";
 import { createBashToolRegistration } from "./tools/bash/index.js";
 import { createEditToolRegistration, type EditPathPolicy } from "./tools/edit/index.js";
 import { createFindToolRegistration } from "./tools/find/index.js";
@@ -33,6 +34,8 @@ export interface NodeCodingToolEnvironmentOptions {
 	readonly writePathPolicy: WritePathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	/** 会话级审查快照；只应注入有会话身份的共享/会话环境。 */
+	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 
 export interface NodeFileToolEnvironmentOptions {
@@ -41,6 +44,7 @@ export interface NodeFileToolEnvironmentOptions {
 	readonly writePathPolicy: WritePathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 
 export interface NodeCommandToolEnvironmentOptions {
@@ -83,8 +87,14 @@ export function createNodeFileToolRegistrations(
 			...options.readOptions,
 			configurationSource: options.configurationSource,
 		}),
-		createEditToolRegistration(options.cwd, { pathPolicy: options.editPathPolicy }),
-		createWriteToolRegistration(options.cwd, { pathPolicy: options.writePathPolicy }),
+		createEditToolRegistration(options.cwd, {
+			pathPolicy: options.editPathPolicy,
+			reviewSnapshots: options.reviewSnapshots,
+		}),
+		createWriteToolRegistration(options.cwd, {
+			pathPolicy: options.writePathPolicy,
+			reviewSnapshots: options.reviewSnapshots,
+		}),
 	];
 }
 
@@ -134,14 +144,20 @@ export function createNodeCodingToolEnvironment(options: NodeCodingToolEnvironme
 				...options.readOptions,
 				configurationSource: options.configurationSource,
 			}),
-			createEditToolRegistration(options.cwd, { pathPolicy: options.editPathPolicy }),
+			createEditToolRegistration(options.cwd, {
+				pathPolicy: options.editPathPolicy,
+				reviewSnapshots: options.reviewSnapshots,
+			}),
 			...commandEnvironment.registrations,
 			createLsToolRegistration(options.cwd),
 			createGlobToolRegistration(options.cwd),
 			createGrepToolRegistration(options.cwd, { executableResolver: options.executableResolver }),
 			createFindToolRegistration(options.cwd, { executableResolver: options.executableResolver }),
 			createTreeToolRegistration(options.cwd, { executableResolver: options.executableResolver }),
-			createWriteToolRegistration(options.cwd, { pathPolicy: options.writePathPolicy }),
+			createWriteToolRegistration(options.cwd, {
+				pathPolicy: options.writePathPolicy,
+				reviewSnapshots: options.reviewSnapshots,
+			}),
 		],
 		backgroundService: commandEnvironment.backgroundService,
 		createSpecializedToolRegistrations: ({ cwd, ocrExecutionGate }) =>

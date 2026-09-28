@@ -23,6 +23,7 @@ import type {
 import type { Usage } from "@vetta/ai";
 import type { HistoryEntry, PromptAttachmentRef, PromptResourceRef } from "@vetta/runtime-core";
 import { readMcpAppAttachment } from "@vetta/runtime-mcp/browser";
+import { parseToolResultReview } from "@vetta/runtime-storage/conversation";
 import type { CardDescriptor } from "@vetta-org/plugin-sdk";
 import {
 	collectToolAudioCandidates,
@@ -248,13 +249,16 @@ export function extractToolUiDetails(result: unknown, details: unknown): ToolCal
 	const knowledge = extractKnowledge(detailsRecord);
 	const planReview = extractPlanReview(detailsRecord);
 	const artifact = extractArtifactCanvasOpen(detailsRecord);
+	// Schema 级解析：旧记录或畸形字段静默降级为无 review，不回溯猜测。
+	const review = parseToolResultReview(detailsRecord.review);
 	if (
 		diff === undefined &&
 		firstChangedLine === undefined &&
 		askUserQuestion === undefined &&
 		knowledge === undefined &&
 		planReview === undefined &&
-		artifact === undefined
+		artifact === undefined &&
+		review === undefined
 	)
 		return undefined;
 
@@ -265,6 +269,7 @@ export function extractToolUiDetails(result: unknown, details: unknown): ToolCal
 		...(planReview !== undefined ? { planReview } : {}),
 		...(knowledge !== undefined ? { knowledge } : {}),
 		...(artifact !== undefined ? { artifact } : {}),
+		...(review !== undefined ? { review } : {}),
 	};
 }
 

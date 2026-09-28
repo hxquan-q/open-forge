@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import type { DesktopMcpAppAttachment } from "@preload/api";
+import type { ToolResultReview } from "@vetta/runtime-storage/conversation";
 import type { CardDescriptor } from "@vetta-org/plugin-sdk";
 
 export type ChatErrorKind = "rate_limit" | "quota" | "network" | "auth" | "server" | "unknown";
@@ -59,6 +60,8 @@ export interface ToolCallUiDetails {
 	planReview?: PlanReviewResolution;
 	knowledge?: KnowledgeToolUiDetails;
 	artifact?: ArtifactCanvasOpenDetails;
+	/** Write/Edit 执行期审查元数据（TASK-0094）；旧记录没有该字段。 */
+	review?: ToolResultReview;
 }
 
 /** exit_plan_mode 的审批结论；`plan` 是用户批准的定稿（可能与模型提交的不同）。 */

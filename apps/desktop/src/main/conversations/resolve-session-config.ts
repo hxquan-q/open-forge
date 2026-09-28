@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+import { resolve } from "node:path";
 import { VETTA_CLI_GUIDANCE } from "@vetta/coding-agent/cli-guidance";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
@@ -9,6 +10,7 @@ import type {
 	CodingAgentRuntimeToolRegistration,
 } from "@vetta/coding-agent/runtime";
 import type { SessionConfig } from "@vetta/runtime-core";
+import { normalizeProjectCwd } from "@vetta/ssh-transport";
 import { allowProjectRoot, readDesktopConfig } from "../ipc/fs.js";
 import { type DesktopAgentMode, LEGACY_SESSION_AGENT_MODE, readSessionAgentMode } from "./session-agent-mode-store.js";
 import {
@@ -16,6 +18,7 @@ import {
 	ensureSessionWorkingCwd,
 	readSessionCwdFromHeader,
 	resolveSessionDirForCwd,
+	resolveSessionListCwd,
 } from "./session-paths.js";
 
 export type DesktopConversationSource = "interactive" | "debug";
@@ -69,6 +72,17 @@ interface ResolvedSessionAgentAxes {
 	agentMode: DesktopAgentMode;
 	/** 该会话创建时固化的 agentMode 记录；新建会话与无记录的历史会话为 undefined。 */
 	frozenAgentMode: DesktopAgentMode | undefined;
+}
+
+export interface ResolveDesktopSessionConfigOptions {
+	/**
+	 * 按会话绑定项目构造本会话注入的运行时工具（如定时任务）。入参是按会话
+	 * listCwd 归一后的项目根；恢复既有会话时同样以它为准，前台项目切换不会
+	 * 改变后台会话的作用域。
+	 */
+	readonly createSessionRuntimeTools?: (
+		projectCwd: string,
+	) => readonly CodingAgentRuntimeToolRegistration[] | undefined;
 }
 
 /**
@@ -141,6 +155,7 @@ export async function resolveDesktopSessionConfig(
 	config: DesktopCodingAgentSessionConfig | undefined,
 	kind: DesktopSessionKind,
 	source: DesktopConversationSource,
+	options?: ResolveDesktopSessionConfigOptions,
 ): Promise<ResolvedDesktopSessionConfig> {
 	const requestedCwd = config?.cwd ?? process.cwd();
 	allowProjectRoot(requestedCwd);
@@ -174,6 +189,13 @@ export async function resolveDesktopSessionConfig(
 		effectiveCwd,
 		applyAgentProfileDefaults(resolveAgentProfile(capabilityProfile), config?.agentConfiguration),
 	);
+	// 会话绑定项目的工具注入：作用域在配置解析期按生效 cwd 固化一次。
+	const projectScopeCwd = normalizeProjectCwd(resolveSessionListCwd(effectiveCwd), resolve);
+	const injectedRuntimeTools = [
+		...(config?.sessionRuntimeTools ?? []),
+		...(options?.createSessionRuntimeTools?.(projectScopeCwd) ?? []),
+	];
+	const sessionRuntimeTools = injectedRuntimeTools.length > 0 ? injectedRuntimeTools : undefined;
 	const {
 		scenario: _scenario,
 		agentMode: _agentMode,
@@ -206,7 +228,7 @@ export async function resolveDesktopSessionConfig(
 					includeAgentSkills,
 					automaticRetry: config?.automaticRetry,
 					agentConfiguration: resolvedAgentConfiguration,
-					sessionRuntimeTools: config?.sessionRuntimeTools,
+					sessionRuntimeTools,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,
 				},

@@ -1,11 +1,27 @@
 // Copyright The Open Forge contributors.
+import { canvasDataGridExtension, resolveCanvasDataGridFormat } from "./canvas-data-grid";
 
-export type CanvasPreviewKind = "markdown" | "html" | "code";
+/** 声明式原生组件的 contentType：模型输出结构化 JSON 即可获得高带宽呈现。 */
+export const CANVAS_CHART_CONTENT_TYPE = "application/vnd.vetta.chart+json";
+export const CANVAS_CHECKLIST_CONTENT_TYPE = "application/vnd.vetta.checklist+json";
+export const CANVAS_DIFF_CONTENT_TYPE = "text/x-diff";
+
+/**
+ * 预览分支：
+ * - `data-grid`：CSV / TSV / 行列 JSON 表格
+ * - `chart`：声明式图表（line / bar / pie / area）
+ * - `diff`：Unified Diff（`text/x-diff` 或 `kind: "code-change"`）
+ * - `checklist`：任务 / 评测清单
+ *
+ * 判定只认显式 contentType（`.json` 后缀仍走 `code`），未知类型一律回落 `code`。
+ */
+export type CanvasPreviewKind = "markdown" | "html" | "code" | "data-grid" | "chart" | "diff" | "checklist";
 
 export function resolveCanvasPreviewKind(input: {
 	readonly contentType?: string;
 	readonly title?: string;
 	readonly uri?: string;
+	readonly kind?: string;
 }): CanvasPreviewKind {
 	const contentType = input.contentType?.toLowerCase() ?? "";
 	const name = `${input.title ?? ""} ${input.uri ?? ""}`.toLowerCase();
@@ -25,6 +41,10 @@ export function resolveCanvasPreviewKind(input: {
 	) {
 		return "markdown";
 	}
+	if (resolveCanvasDataGridFormat(input)) return "data-grid";
+	if (contentType === CANVAS_CHART_CONTENT_TYPE) return "chart";
+	if (contentType === CANVAS_CHECKLIST_CONTENT_TYPE) return "checklist";
+	if (contentType === CANVAS_DIFF_CONTENT_TYPE || input.kind === "code-change") return "diff";
 	return "code";
 }
 
@@ -32,11 +52,15 @@ export function canvasPreviewExtension(input: {
 	readonly contentType?: string;
 	readonly title?: string;
 	readonly uri?: string;
+	readonly kind?: string;
 }): string {
 	const named = extensionOf(input.title) ?? extensionOf(input.uri);
 	if (named) return named;
 	const kind = resolveCanvasPreviewKind(input);
 	if (kind === "html") return ".html";
+	if (kind === "data-grid") return canvasDataGridExtension(resolveCanvasDataGridFormat(input));
+	if (kind === "diff") return ".diff";
+	if (kind === "chart" || kind === "checklist") return ".json";
 	if (kind === "code") return contentTypeExtension(input.contentType) ?? ".txt";
 	return ".md";
 }

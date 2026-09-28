@@ -200,7 +200,7 @@ describe("runAgentTurn", () => {
 		const run = runAgentTurn({
 			...request([
 				successResponse(assistant([toolCall("decode-1", "decode", { value: "7" })], "toolUse")),
-				successResponse(assistant([])),
+				successResponse(assistant([{ type: "text", text: "done" }])),
 			]),
 			resolveTools: async () => [tool],
 		});
@@ -212,7 +212,10 @@ describe("runAgentTurn", () => {
 	it("retries a failed model call only through the checkpoint callback", async () => {
 		const checkpointReasons: string[] = [];
 		const run = runAgentTurn({
-			...request([failedResponse(new AIError("AI_TRANSPORT_FAILED", "network")), successResponse(assistant([]))]),
+			...request([
+				failedResponse(new AIError("AI_TRANSPORT_FAILED", "network")),
+				successResponse(assistant([{ type: "text", text: "done" }])),
+			]),
 			checkpoint: async ({ reason }) => {
 				checkpointReasons.push(reason);
 				return reason === "assistant_error" ? { retry: true } : undefined;
@@ -265,7 +268,7 @@ describe("runAgentTurn", () => {
 				successResponse(assistant([toolCall("progress", "noop", {})], "toolUse")),
 				failedResponse(new Error("overflow-2")),
 				failedResponse(new Error("overflow-3")),
-				successResponse(assistant([])),
+				successResponse(assistant([{ type: "text", text: "done" }])),
 			]),
 			limits: { ...DEFAULT_LIMITS, maxRecoveryAttempts: 5 },
 			resolveTools: async () => [noopTool()],
@@ -301,7 +304,7 @@ describe("runAgentTurn", () => {
 
 	it("ends a checkpoint callback that never settles", async () => {
 		const run = runAgentTurn({
-			...request([successResponse(assistant([]))]),
+			...request([successResponse(assistant([{ type: "text", text: "done" }]))]),
 			limits: { ...DEFAULT_LIMITS, checkpointTimeoutMs: 5 },
 			checkpoint: () => new Promise(() => undefined),
 		});
@@ -382,9 +385,12 @@ describe("runAgentTurn", () => {
 		const run = runAgentTurn({
 			...request([]),
 			signal: controller.signal,
-			resolveModelCall: scriptedResolver([successResponse(assistant([]))], ({ signal }) => {
-				observedSignal = signal;
-			}),
+			resolveModelCall: scriptedResolver(
+				[successResponse(assistant([{ type: "text", text: "done" }]))],
+				({ signal }) => {
+					observedSignal = signal;
+				},
+			),
 		});
 
 		await expect(run.result).resolves.toMatchObject({ status: "completed" });
@@ -652,7 +658,7 @@ describe("runAgentTurn", () => {
 		const run = runAgentTurn({
 			...request([
 				successResponse(assistant([toolCall("progress-1", "progress", { value: "done" })], "toolUse")),
-				successResponse(assistant([])),
+				successResponse(assistant([{ type: "text", text: "done" }])),
 			]),
 			resolveTools: async () => [tool],
 		});
@@ -684,7 +690,7 @@ describe("runAgentTurn", () => {
 		const run = runAgentTurn({
 			...request([
 				successResponse(assistant([toolCall("call-1", "typed", { value: "x" })], "toolUse")),
-				successResponse(assistant([])),
+				successResponse(assistant([{ type: "text", text: "done" }])),
 			]),
 			resolveTools: async () => [typedTool(() => undefined)],
 			checkpoint: async ({ reason }) => {
@@ -717,7 +723,7 @@ describe("runAgentTurn", () => {
 
 	it("isolates observer failures and emits diagnostics", async () => {
 		const run = runAgentTurn({
-			...request([successResponse(assistant([]))]),
+			...request([successResponse(assistant([{ type: "text", text: "done" }]))]),
 			observer: (event) => {
 				if (event.type === "model_event") throw new Error("observer failed");
 			},

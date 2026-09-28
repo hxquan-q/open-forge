@@ -14,8 +14,34 @@ export type AssistantMessageEvent =
 	| { type: "toolcall_start"; contentIndex: number; partial: AssistantMessage }
 	| { type: "toolcall_delta"; contentIndex: number; delta: string; partial: AssistantMessage }
 	| { type: "toolcall_end"; contentIndex: number; toolCall: ToolCall; partial: AssistantMessage }
+	| AssistantMessageRetryEvent
 	| AssistantMessageDoneEvent
 	| AssistantMessageErrorEvent;
+
+/** Retry budget track claimed by a provider retry attempt. */
+export type ProviderRetryReason = "rate_limit" | "transient";
+
+/**
+ * Provider retry activity for the in-flight assistant call. It is emitted
+ * between attempts of the same logical call: consumers must keep the current
+ * assistant message identity and surface this as lightweight activity, never
+ * as a new message row.
+ */
+export interface AssistantMessageRetryEvent {
+	type: "retry";
+	/** Budget track claimed by the upcoming attempt. */
+	reason: ProviderRetryReason;
+	/** 1-based retry count already consumed from this track. */
+	attempt: number;
+	/** Per-track retry budget configured for this call; `0` means unbounded. */
+	maxAttempts: number;
+	/** Delay in milliseconds before the next attempt starts. */
+	delayMs: number;
+	/** Human-readable summary of the failure that triggered the retry. */
+	errorMessage: string;
+	/** Structured failure details when available. */
+	failure?: AIErrorDetails;
+}
 
 export interface AssistantMessageDoneEvent {
 	type: "done";

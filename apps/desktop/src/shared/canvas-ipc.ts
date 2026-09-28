@@ -6,6 +6,8 @@ import { type DesktopIpcUnimplemented, unimplementedDesktopIpcResult } from "./d
 export const CANVAS_CHANNELS = {
 	LIST: "vetta:canvas:list",
 	GET: "vetta:canvas:get",
+	UPDATE: "vetta:canvas:update",
+	OPEN_IN_BROWSER: "vetta:canvas:open-in-browser",
 	SAVE_TO_PROJECT: "vetta:canvas:save-to-project",
 	DELETE: "vetta:canvas:delete",
 } as const;
@@ -20,10 +22,31 @@ export interface DesktopCanvasGetRequest {
 	readonly version?: number;
 }
 
+/**
+ * 「在浏览器打开」：主进程按需在本机回环地址上起只读伺服，回一个可加载的地址。
+ * 页面由内置 Browser Tab 承载，`<webview>` 预览沙箱基线不变。
+ */
+export interface DesktopCanvasOpenInBrowserRequest {
+	readonly workspaceId: string;
+	readonly artifactId: string;
+}
+
 export interface DesktopCanvasSaveToProjectRequest {
 	readonly workspaceId: string;
 	readonly artifactId: string;
 	readonly targetPath: string;
+}
+
+/**
+ * 用户就地编辑写入。`baseVersion` 是编辑器打开时看到的版本：落后或文件校验和不符
+ * 一律回 `stale_version`，绝不覆盖 Agent / 外部的新版本。
+ */
+export interface DesktopCanvasUpdateRequest {
+	readonly workspaceId: string;
+	readonly artifactId: string;
+	readonly baseVersion: number;
+	readonly content: string;
+	readonly title?: string;
 }
 
 export interface DesktopCanvasDeleteRequest {
@@ -64,7 +87,14 @@ export type DesktopCanvasGetResult =
 	  }
 	| DesktopCanvasFailure;
 
+export type DesktopCanvasOpenInBrowserResult = { readonly ok: true; readonly url: string } | DesktopCanvasFailure;
+
 export type DesktopCanvasSaveToProjectResult =
+	| { readonly ok: true; readonly descriptor: ArtifactDescriptor }
+	| DesktopCanvasFailure;
+
+/** 成功回新版本的 descriptor；`stale_version` 表示编辑器基线落后，未写入任何文件。 */
+export type DesktopCanvasUpdateResult =
 	| { readonly ok: true; readonly descriptor: ArtifactDescriptor }
 	| DesktopCanvasFailure;
 

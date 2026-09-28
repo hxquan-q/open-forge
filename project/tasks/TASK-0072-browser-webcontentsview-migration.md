@@ -1,7 +1,7 @@
 ---
 id: TASK-0072
 type: task
-status: backlog
+status: ready
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001

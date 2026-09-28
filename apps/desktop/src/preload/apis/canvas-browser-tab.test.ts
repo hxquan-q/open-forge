@@ -12,6 +12,8 @@ describe("canvas / browserTab preload 桩", () => {
 		expect(invoke).toHaveBeenCalledWith("vetta:canvas:list", { workspaceId: "ws-1" });
 		await api.canvas.get({ workspaceId: "ws-1", artifactId: "art-1" });
 		expect(invoke).toHaveBeenCalledWith("vetta:canvas:get", { workspaceId: "ws-1", artifactId: "art-1" });
+		await api.canvas.openInBrowser({ workspaceId: "ws-1", artifactId: "art-1" });
+		expect(invoke).toHaveBeenCalledWith("vetta:canvas:open-in-browser", { workspaceId: "ws-1", artifactId: "art-1" });
 		await api.canvas.saveToProject({ workspaceId: "ws-1", artifactId: "art-1", targetPath: "docs/a.md" });
 		expect(invoke).toHaveBeenCalledWith("vetta:canvas:save-to-project", {
 			workspaceId: "ws-1",

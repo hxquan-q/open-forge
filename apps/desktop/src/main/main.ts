@@ -25,6 +25,7 @@ import { initializePerfMonitor, shutdownPerfMonitor } from "./app-monitor/perf-m
 import { shutdownBatchTaskExecutor } from "./batch-tasks/batch-task-executor.js";
 import { initializeDesktopBatchTaskService } from "./batch-tasks/batch-task-service.js";
 import { shutdownBrowserAutomationService } from "./browser-automation/index.js";
+import { disposeCanvasPreviewServer } from "./canvas-server/canvas-preview-desktop.js";
 import { parseActionCliCommand, runActionCliCommand } from "./cli/action-command.js";
 import { parseAgentRpcCommand, runAgentRpcCommand } from "./cli/agent-rpc-command.js";
 import { parseHelpCliCommand, runHelpCliCommand } from "./cli/help-command.js";
@@ -936,6 +937,8 @@ setQuitCleanup(async () => {
 		shutdownScheduler(),
 		shutdownBatchTaskExecutor(),
 		shutdownBrowserAutomationService(),
+		// 画布试跑的回环端口不留给下一个进程：退出即关闭监听。
+		disposeCanvasPreviewServer(),
 		stopAllOpenMarketplaceMcpRuntimes(),
 		knowledgeShutdown,
 		uiohookShutdown,

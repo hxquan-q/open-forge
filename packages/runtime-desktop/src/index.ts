@@ -9,6 +9,7 @@ export * from "./project-settings-path.js";
 export * from "./remote-execution-mode.js";
 export * from "./remote-workspace-facts.js";
 export * from "./result-artifact-runtime.js";
+export * from "./review-snapshot-runtime.js";
 export * from "./runtime-controller.js";
 export * from "./runtime-host-platform.js";
 export * from "./session-catalog.js";

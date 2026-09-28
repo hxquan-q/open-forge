@@ -1,11 +1,13 @@
 import {
 	type AssistantMessage,
 	createAIErrorFromDetails,
+	EmptyModelResponseError,
 	EventStream,
 	getAIErrorDetails,
 	isAIError,
 	type Message,
 } from "@vetta/ai";
+import { isSilentAssistantMessage, silentTurnNudgeMessage } from "../silent-turn.js";
 import { validateAgentRunLimits } from "./limits.js";
 import { executeRuntimeToolCalls } from "./tool-executor.js";
 import type {
@@ -65,6 +67,11 @@ async function executeRun(
 
 	try {
 		let pendingInput = await takeInput(request, "steering", state, signal);
+		// 静默重跑：空回复先压掉 terminal 事件并以同一 assistant 行重跑一次。
+		// attempted 限制为一次；pending 仅在重跑调用期间有效，用于注入 nudge 与
+		// 标记模型调用延续既有消息行。
+		let silentRerunAttempted = false;
+		let silentRerunPending = false;
 		while (true) {
 			signal.throwIfAborted();
 			if (pendingInput) {
@@ -93,7 +100,7 @@ async function executeRun(
 				const resolving = request
 					.resolveModelCall({
 						modelCallIndex,
-						messages: [...modelMessages],
+						messages: silentRerunPending ? [...modelMessages, silentTurnNudgeMessage()] : [...modelMessages],
 						tools,
 						signal,
 					})
@@ -107,10 +114,28 @@ async function executeRun(
 					modelCallIndex,
 					callId: resolved.callId,
 					snapshotId: resolved.snapshotId,
+					...(silentRerunPending ? { continuesAssistant: true } : {}),
 				});
 				const consumed = await consumeModelResponse(resolved, modelCallIndex, emit, signal);
 				const assistant = consumed.message;
 				state.lastAssistantMessage = assistant;
+				if (!consumed.failure && isSilentAssistantMessage(assistant) && request.allowSilentCompletion !== true) {
+					if (!silentRerunAttempted) {
+						// 空回复先不重进消息历史、不发 assistant_message：同一消息行交给
+						// 下一次模型调用继续写，投影层不会产生空行或中间 turn 边界。
+						silentRerunAttempted = true;
+						silentRerunPending = true;
+						emit({ type: "model_call_finish", modelCallIndex, callId: resolved.callId, status: "completed" });
+						continue;
+					}
+					// 重跑仍无可见输出：落成显式可重试失败，让宿主给出继续入口而非无声结束。
+					const failure = new EmptyModelResponseError({ provider: assistant.provider, modelId: assistant.model });
+					assistant.stopReason = "error";
+					assistant.errorMessage = failure.message;
+					assistant.failure = getAIErrorDetails(failure);
+					consumed.failure = failure;
+				}
+				silentRerunPending = false;
 				state.messages.push(assistant);
 				if (consumed.failure) {
 					failedAssistant = assistant;

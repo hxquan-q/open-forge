@@ -1,13 +1,14 @@
 ---
 id: PLAN-0009
 type: plan
-status: draft
+status: ready
 priority: P1
 requirement: REQ-0001
 owner: apps/desktop
 created: 2026-09-24
 updated: 2026-09-24
 depends_on: [PLAN-0006]
+related_tasks: [TASK-0096, TASK-0097, TASK-0098, TASK-0099, TASK-0100]
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -39,7 +40,29 @@ depends_on: [PLAN-0006]
 4. **安全与沙箱事实**：
    [`CanvasHtmlSandbox`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/components/canvas-tab/CanvasHtmlSandbox.tsx) 基于独立进程 `<webview>`，默认 CSP deny、禁用 Node/window.vetta；内置 Browser Tab 遵循 ADR-0129 仅接收 HTTP/HTTPS 页面，禁止向 Browser 注入匿名 HTML。
 5. **已有组件资产**：
-   [`EditDiffView.tsx`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/EditDiffView.tsx) 与 [`parse-diff.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/shared/parse-diff.ts) 已经具备完整、高性能的 Unified Diff 解析与染色渲染能力。
+   [`EditDiffView.tsx`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/EditDiffView.tsx) 与 [`parse-diff.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/shared/parse-diff.ts) 已经具备完整、高性能的 Unified Diff 解析与染色渲染能力（`DiffPreviewView` 由 `@vetta-org/ui` 提供）。
+6. **锚点校正（评审期核实）**：
+   - 预览容器不是独立文件 `CanvasPreview.tsx`，而是 [`CanvasTabPanel.tsx`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/components/canvas-tab/CanvasTabPanel.tsx) 内的局部组件 `CanvasPreview` / `CanvasPreviewBody`（全文 185 行）。编辑态与跳转按钮必须落在该文件，涉及它的 Task 需串行。
+   - `CanvasArtifactService` 没有公开的 `update()` 方法：自增与乐观锁逻辑内联在 `invokeTool()` 的 `"update"` 分支中（`canvas-artifact-service.ts:292-340`）。用户写入通道必须先把该分支抽成可复用方法，不得复制一份写入实现。
+   - `stale_version` 已是 `DesktopCanvasErrorCode` 的既有成员，用户写入的冲突反馈无需新增错误码。
+   - `mod+shift+d` 元素选取器与 `openUrlInActivityWorkspaceAtom` 均已存在（`browser-atoms.ts`），P2 只接线，不新建原子。
+   - `vetta.canvas.artifact-selection` capsule 合同位于 [`canvas-selection-attachment.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/services/canvas-selection-attachment.ts)。
+
+---
+
+## 决策索引（已与用户确认，实现期不再重议）
+
+1. **可视化渲染选型：Phase 1 采用 `recharts`**。
+   理由：声明式 JSON → 图形的映射与 React 组件模型天然对齐，四种图形（line / bar / pie / area）开箱可用；ADR-0068 已实测 `recharts` 可与共享 react 单例共用同一预打包 chunk，不存在双 react 风险。
+   代价与约束：为 `apps/desktop` 引入新的运行时依赖（约 200KB 量级，待 TASK-0098 实测打包增量）。若实测增量不可接受或依赖评审不通过，回退为基于 `<svg>` 的极简自研渲染器，**契约不变**（仍消费 `application/vnd.vetta.chart+json`），仅替换实现。
+   附带要求：新增依赖须在同一次任务中检索并遵守 ADR 依赖规则，并在 Release Notes 中说明体积影响。
+
+2. **双向编辑冲突策略：Phase 1 只拦截报错，不做 3-way merge**。
+   理由：`baseVersion` + SHA-256 乐观锁已经能可靠判定冲突；引入自动合并需要处理文本、Markdown、代码三种语义，边界成本远高于收益。
+   代价：用户遇到 `stale_version` 时需自行比对后重做，UI 必须给出明确的「内容已被 Agent 或外部更新」提示与刷新入口，且**不得静默丢弃用户未保存的草稿**。
+   触发重议的信号：出现用户因放弃编辑而显著损失的反馈，或并发编辑成为常态操作。
+
+3. **顶层 Tab 数量：维持 4 个**，变更总览作为 Canvas Tab 内部一级分段控制器。
 
 ---
 
@@ -134,11 +157,11 @@ depends_on: [PLAN-0006]
   }
   ```
 * **主进程实现**：
-  `CanvasArtifactService.update()` 复用现有单调自增逻辑，成功后派发 `artifact.descriptor.recorded` 会话事实，写入新版本并自动重置 `externalUpdate: false`。
+  先把 `invokeTool()` 的 `"update"` 分支抽成可复用方法（如 `applyUpdate()`），再让 Agent 工具路径与新的 IPC 路径共同调用它，复用同一份单调自增逻辑；成功后派发 `artifact.descriptor.recorded` 会话事实，写入新版本并自动重置 `externalUpdate: false`。**禁止另写一份写入实现**。
 * **Renderer 交互**：
-  * 在 `CanvasPreview` 顶部增加「编辑 / 预览」Toggle 开关；
+  * 在 `CanvasTabPanel.tsx` 的局部组件 `CanvasPreview` 顶部增加「编辑 / 预览」Toggle 开关；
   * Markdown / Code 类型在编辑模式下挂载受控编辑器，支持直接光标打字与快捷键保存（`mod+s`）；
-  * 保存时调用 `vetta.canvas.update()`，通过 `canvasArtifactRevisionAtom` 触发静默热更新。
+  * 保存时调用 `vetta.canvas.update()`，经 `canvasArtifactRevisionAtom`（`renderer/shared/store/canvas-atoms.ts`）触发静默热更新。
 
 #### 选区快捷宏操作（Macro Shortcuts）
 * 对标 OpenAI Canvas，在用户划选文本/代码时的浮动工具条中，增加一等宏操作入口：
@@ -188,18 +211,18 @@ depends_on: [PLAN-0006]
 ## 阶段实施划分（Task DAG）
 
 ```text
-TASK-0091: P0 原生 Data Grid 预览（serial，先行）
-    ├─ TASK-0092: P1~P2 直接双向编辑与快捷宏操作（Canvas 写入通道与 UI）
-    ├─ TASK-0093: P1 原生声明式组件库（Chart / Diff / Checklist）
-    ├─ TASK-0094: P2 Canvas 到 Browser Tab 实时试跑（回环伺服与联动）
-    └─ TASK-0095: P2 任务级跨文件变更总览（Session Diff 聚合面板）
+TASK-0096: P0 原生 Data Grid 预览（serial，先行）
+    ├─ TASK-0097: P1~P2 直接双向编辑与快捷宏操作（Canvas 写入通道与 UI）
+    ├─ TASK-0098: P1 原生声明式组件库（Chart / Diff / Checklist）
+    ├─ TASK-0099: P2 Canvas 到 Browser Tab 实时试跑（回环伺服与联动）
+    └─ TASK-0100: P2 任务级跨文件变更总览（Session Diff 聚合面板）
 ```
 
-* **TASK-0091**：Data Grid 合同扩展、`CanvasDataGridPreview` 组件、CSV 极速解析、单元测试；
-* **TASK-0092**：`vetta:canvas:update` 主进程/Preload 接入、Monaco/文本直接编辑态、选区快捷宏气泡；
-* **TASK-0093**：声明式 Chart/Checklist 渲染器接入、`chart-canvas` 预设技能；
-* **TASK-0094**：本地安全回环服务、Canvas 顶部跳转接线、Browser 选取器回归验证；
-* **TASK-0095**：会话 Diff 聚合器、Canvas 分段切换视图、批量保存逻辑。
+* **TASK-0096**：Data Grid 合同扩展、`CanvasDataGridPreview` 组件、CSV 极速解析、单元测试；
+* **TASK-0097**：`vetta:canvas:update` 主进程/Preload 接入、Monaco/文本直接编辑态、选区快捷宏气泡；
+* **TASK-0098**：声明式 Chart/Checklist 渲染器接入、`chart-canvas` 预设技能；
+* **TASK-0099**：本地安全回环服务、Canvas 顶部跳转接线、Browser 选取器回归验证；
+* **TASK-0100**：会话 Diff 聚合器、Canvas 分段切换视图、批量保存逻辑。
 
 ---
 

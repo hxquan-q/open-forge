@@ -24,6 +24,7 @@ import { allowProjectRoot, readDesktopConfig } from "../ipc/fs.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
+import { createDesktopScheduledTaskSessionTools } from "../scheduler/agent-task-tools.js";
 import { emitConversationListChanged } from "./conversation-list-events.js";
 import {
 	type ConversationOwnershipCatalogPort,
@@ -228,6 +229,7 @@ export class DesktopConversationService {
 						: config,
 					kind,
 					source,
+					{ createSessionRuntimeTools: createDesktopScheduledTaskSessionTools },
 				),
 			);
 			const result = await trace.measure("runtime-create", () => this.runtime.createSession(resolvedConfig.config));

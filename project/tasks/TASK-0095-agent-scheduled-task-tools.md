@@ -1,22 +1,22 @@
 ---
 id: TASK-0095
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/coding-agent
 requirement: []
 plan: []
 source: RESEARCH-0010（PI-Desktop `scheduled_tools.rs` Agent 工具 + project 作用域圈定机制对照）
 execution: parallel
-branch: forge/dev
-worktree: unassigned（主工作区或独立 Worktree）
-base_commit: forge/dev
+branch: task/TASK-0095-scheduled-tools
+worktree: C:\Users\xquan\Desktop\open-forge-wt\task-0095-scheduled-tools
+base_commit: 3b5ec8bad
 read_paths: [packages/coding-agent/src/features, apps/desktop/src/main/scheduler, apps/desktop/src/main/ipc, packages/plugins/presets/vetta-actions/src/domains/scheduler.ts, project/research/RESEARCH-0010-pi-desktop-borrowing-opportunities.md]
 write_paths: [packages/coding-agent/src/features, apps/desktop/src/main/scheduler, apps/desktop/src/main/ipc]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 related_requirement: []
@@ -94,6 +94,16 @@ Coding Agent 获得一组读写定时任务的工具，用户可直接对 Agent 
 ## 交付记录
 
 - 实际修改：
+  - `packages/coding-agent` 新增 `features/scheduled-tasks/`：TypeBox 输入合同、项目作用域判定（`scheduledTaskScopeKey`，Windows 路径大小写不敏感）、`scheduled_task_list/create/update/delete` 四个工具与注册工厂；list 为 L0 直放并入 plan 模式只读白名单，create/update/delete 为 L3 外部副作用逐次审批（delete 标记 `irreversible`），审批摘要键补充 `cron`/`task_id`；WORK_PROFILE 显式纳入四个工具，公共 API `runtime.ts` 导出合同与注册。
+  - `apps/desktop` 新增 `scheduler/agent-task-tools.ts`：`createSchedulerServiceTaskStore` 把现有 `SchedulerService` 适配成窄端口 `ScheduledTaskStore`（仅翻译 + NOT_FOUND 收敛，无第二份存储/执行路径）；`createDesktopScheduledTaskSessionTools` 按会话项目根构造注册，scheduler 未初始化时经新增 `tryGetDesktopSchedulerService()` 返回空注册。
+  - `resolveDesktopSessionConfig` 新增 `createSessionRuntimeTools` 选项：按会话 listCwd（恢复会话取头部 cwd，不随前台 cwd 漂移）归一出项目作用域，与显式 `sessionRuntimeTools` 合并后注入；`DesktopConversationService.createSession` 接入。
 - 实际运行：
-- 未运行及原因：
-- 剩余风险：
+  - `bun ../../scripts/quality/run-vitest.mjs --run test/features/scheduled-tasks/scheduled-task-tools.test.ts`（coding-agent）：15 通过；
+  - `bun ../../scripts/quality/run-vitest.mjs --run src/main/scheduler/agent-task-tools.test.ts src/main/conversations/resolve-session-config.test.ts`（desktop）：14 通过；
+  - `bun run test:pkg coding-agent`：234 文件 / 1461 用例全绿（3 skipped）；
+  - `bun run test:pkg desktop`：771 文件 / 3861 用例通过，37 套件收集失败均为本机 Electron 二进制未安装（`Electron failed to install correctly`）等环境问题，与本改动无关；改动相关套件全绿；
+  - `bun run check:quick`：Biome + 全部架构守卫通过；
+  - `bun run check`：lint/guards/mobile-lint/desktop tsc 全绿；根 `tsgo` 仅剩 3 个基线存量错误（`context-runtime.test.ts` 4 处、`task-fact-persistence.test.ts`、`task-fact-record-schema.test.ts`），在 base_commit `3b5ec8bad` 原样存在，与本次无关。
+- 未运行及原因：未做端到端会话实跑（需真实模型与桌面运行态）；`verify:ui:*` 未获授权且本改动无 UI 变化。
+- 剩余风险：任务归属以 `cwd` 判定，AutomationPage 手工建的任务若 `cwd` 与会话项目根拼写不一致（符号链接、8.3 短名等极端形态）可能被排除在本会话视野外；现有归一化覆盖盘符/分隔符/尾斜杠/大小写。
+- 发布说明候选（Open Forge 0.1.0，`## 新增`）：「对话中可直接让 Agent 管理本项目的定时任务：说出「把这个项目的静态检查改成每天下午 2 点自动跑一次」，Agent 经权限确认后写入现有调度引擎；Agent 只能看到并操作当前项目的任务，创建的任务照常出现在自动化页可手动管理。」

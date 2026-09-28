@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"type": "skill",
+	"slug": "chart-canvas",
+	"version": "1.0.0",
+	"detail": {
+		"blocks": [
+			{
+				"type": "showcase",
+				"showcase": {
+					"template": "chat-over-canvas",
+					"canvas": "docs",
+					"user_prompt": "把这几个月的收入和成本画成一张趋势图。",
+					"assistant_reply": "我会用声明式图表契约写到画布上，而不是在聊天里贴一张 ASCII 图。"
+				}
+			}
+		],
+		"i18n": {
+			"en": {
+				"blocks": [
+					{
+						"type": "showcase",
+						"showcase": {
+							"template": "chat-over-canvas",
+							"canvas": "docs",
+							"user_prompt": "Chart revenue and cost over the last few months.",
+							"assistant_reply": "I'll write it to the Canvas with the declarative chart contract instead of ASCII art in chat."
+						}
+					}
+				]
+			}
+		}
+	}
+}

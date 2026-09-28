@@ -90,6 +90,34 @@ export interface StreamOptions {
 	 */
 	maxRetries?: number;
 	/**
+	 * Unified provider retry policy shared by the request-establishment and
+	 * stream-transport phases of `stream()` / `streamSimple()`. Two independent
+	 * budgets (HTTP 429 rate-limit and transient/network/stream) each allow
+	 * `maxRetries` retries, so switching phases never resets or multiplies them;
+	 * only a fully successful response ends the attempt loop. While this layer
+	 * is active it forces transport-local `maxRetries` to 0 so backoff stays
+	 * single-owned. Default: 10 retries per track. `maxRetries: 0` disables the
+	 * unified layer; `Infinity` opts into unbounded retries for hosts that
+	 * intentionally want them.
+	 */
+	providerRetry?: {
+		maxRetries?: number;
+		/**
+		 * One silent repair attempt for opaque 400/422 rejections caused by
+		 * auto-derived output-limit fields (`max_tokens`/`max_completion_tokens`/
+		 * `max_output_tokens`). It fires at most once per call, consumes no retry
+		 * budget, and never strips a caller-provided `maxTokens`. Default: true.
+		 */
+		outputLimitRepair?: boolean;
+	};
+	/**
+	 * Zero-event idle watchdog for provider streams. When an attempt produces no
+	 * provider event for this long, the attempt is aborted, drained, and
+	 * classified as a transient failure fed into the unified retry budgets.
+	 * Default: 180_000 ms. Set to 0 to disable.
+	 */
+	streamIdleTimeoutMs?: number;
+	/**
 	 * Optional metadata to include in API requests.
 	 * Providers extract the fields they understand and ignore the rest.
 	 * For example, Anthropic uses `user_id` for abuse tracking and rate limiting.

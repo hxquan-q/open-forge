@@ -110,8 +110,8 @@ function createView(
 	available: readonly Model<Api>[],
 	resolve: (model: Model<Api>) => Promise<string | undefined>,
 ): RuntimeSessionModelView & {
-	refreshAvailableModels: ReturnType<typeof vi.fn>;
-	resolveApiKey: ReturnType<typeof vi.fn>;
+	refreshAvailableModels: ReturnType<typeof vi.fn<RuntimeSessionModelView["refreshAvailableModels"]>>;
+	resolveApiKey: ReturnType<typeof vi.fn<RuntimeSessionModelView["resolveApiKey"]>>;
 } {
 	return {
 		readCurrentModel: () => current,

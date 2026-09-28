@@ -96,7 +96,7 @@ export function createNodeResultArtifactStorage(options: NodeResultArtifactStora
 	};
 }
 
-function safeResultArtifactSegment(value: string): string {
+export function safeResultArtifactSegment(value: string): string {
 	const readable =
 		value
 			.replace(/[^a-zA-Z0-9._-]+/g, "-")

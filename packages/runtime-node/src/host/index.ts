@@ -75,7 +75,9 @@ export {
 	type NodeResultArtifactStorage,
 	type NodeResultArtifactStorageOptions,
 	type NodeSessionArtifactStore,
+	safeResultArtifactSegment,
 } from "./result-artifact-storage.js";
+export { createNodeReviewSnapshotStore } from "./review-snapshot-store.js";
 export { nodeRuntimeHostPathServices, nodeRuntimeQueueSidecarStore } from "./runtime-host-services.js";
 export { NodeScopedTextStorage } from "./scoped-text-storage.js";
 export { nodeSyncTextFileSource } from "./sync-text-file-source.js";

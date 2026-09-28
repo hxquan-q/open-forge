@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"type": "skill",
+	"slug": "review-canvas",
+	"version": "1.0.0",
+	"detail": {
+		"blocks": [
+			{
+				"type": "showcase",
+				"showcase": {
+					"template": "chat-over-canvas",
+					"canvas": "code",
+					"user_prompt": "这次改动碰了 4 个文件，放到画布上让我整体过一遍。",
+					"assistant_reply": "我把完整统一差异写到画布，按文件分组并标出增删行，聊天里只讲需要重点看的风险点。"
+				}
+			}
+		],
+		"i18n": {
+			"en": {
+				"blocks": [
+					{
+						"type": "showcase",
+						"showcase": {
+							"template": "chat-over-canvas",
+							"canvas": "code",
+							"user_prompt": "This touched four files — put the whole change on the Canvas so I can review it.",
+							"assistant_reply": "I'll put the full unified diff on the Canvas grouped by file with line stats, and keep chat for the risky parts."
+						}
+					}
+				]
+			}
+		}
+	}
+}

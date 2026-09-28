@@ -57,6 +57,7 @@ function eventType(event: AssistantMessageEvent): AssistantMessageEvent["type"] 
 		case "toolcall_start":
 		case "toolcall_delta":
 		case "toolcall_end":
+		case "retry":
 		case "done":
 		case "error":
 			return event.type;

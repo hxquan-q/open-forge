@@ -1,7 +1,7 @@
 ---
 id: TASK-0092
 type: task
-status: ready
+status: done
 priority: P0
 owner: packages/ai
 requirement: []
@@ -16,7 +16,7 @@ write_paths: [packages/ai/src, packages/ai/test, packages/agent/src]
 exclusive_paths: [packages/ai/src]
 depends_on: []
 conflicts_with: [TASK-0091]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-24
 updated: 2026-09-24
 related_requirement: []
@@ -94,6 +94,24 @@ related_bugs: []
 ## 交付记录
 
 - 实际修改：
+  - `packages/ai/src/protocol/stream-event.ts`：新增 `AssistantMessageRetryEvent`（`type:"retry"`，含 `reason:"rate_limit"|"transient"`、`attempt`/`maxAttempts`/`delayMs`/`errorMessage`/`failure`）与 `ProviderRetryReason` 类型。
+  - `packages/ai/src/types.ts`：`StreamOptions` 新增 `providerRetry?: { maxRetries?: number }`（默认每轨 10 次，0 关闭统一层，`Infinity` opt-in 无限）与 `streamIdleTimeoutMs?: number`（默认 180_000ms，0 关闭看门狗）。
+  - `packages/ai/src/provider-kit/provider-retry.ts`（新增）：`streamWithProviderRetry` 统一重试层。每次 attempt 以 attempt 级 AbortController 重新打开 provider stream；`retry` 事件以活动态上抛；`start` 仅首个 attempt 透传，后续 attempt 的 partial 重基到同一 assistant 对象保留气泡身份；429 → rate_limit 轨（2s 指数 + 25% jitter，30s 封顶）、其他可重试失败 → transient 轨（1/2/4/8s 封顶）；`retryAfterMs` 服务端声明优先并按轨封顶，`maxRetryDelayMs` 声明超长即 fail-fast；两轨预算跨 request/stream 两相共享且只在完整 `done` 后结束；零事件看门狗把 attempt 掐成 transient 失败并 abort+drain 旧请求防双重计费；caller abort 即时终止不耗预算；预算耗尽原样透传最后一个失败。
+  - `packages/ai/src/provider-kit/index.ts`：导出新模块。
+  - `packages/ai/src/stream.ts`：`stream()`/`streamSimple()` 入口统一接入重试层；每次 attempt 强制 transport-local `maxRetries:0`，避免与统一层双重退避。
+  - `packages/agent/src/loop/assistant-stream.ts`：`case "retry"` 以 `message_update`（同一 partialMessage 快照）上抛活动态；`case "start"` 防御性改为已存在 partial 时替换尾部而非新增消息行，保证重试感知流不产生重复消息行。
+  - 测试：`packages/ai/test/provider-retry.test.ts`（16 例：429 跨 request/stream 共享预算、Retry-After 兑现、两轨独立、耗尽落错、idle 看门狗入 transient + 旧请求 abort、sleep 中/流中取消即停、partial 同一对象、retry 事件形状、`streamSimple` 端到端连续 429 恢复 + transport `maxRetries:0` 内层禁用、`providerRetry:{maxRetries:0}` 关闭）；`packages/agent/test/assistant-stream-retry.test.ts`（2 例：retry 事件不产生第二消息行、二次 start 复用 bubble）；`packages/ai/test/protocol-contract.test.ts` 穷举 switch 增加 `retry`；`packages/ai/test/provider-stream-regression.test.ts` 公开面分类测试显式 `providerRetry:{maxRetries:0}` 保持终端分类语义。
 - 实际运行：
+  - `bun scripts/quality/run-vitest.mjs --run packages/ai/test/provider-retry.test.ts`：16/16 通过。
+  - `bun scripts/quality/run-vitest.mjs --run packages/ai/test/protocol-contract.test.ts packages/ai/test/provider-stream-regression.test.ts packages/ai/test/provider-retry.test.ts`：61/61 通过。
+  - `cd packages/agent && bun ../../scripts/quality/run-vitest.mjs --run test/assistant-stream-retry.test.ts`：2/2 通过。
+  - `bun run test:pkg ai`：62 文件 / 471 测试全绿（含 `@vetta/ai` tsgo 构建）。
+  - `bun run test:pkg agent`：18 文件 / 108 测试全绿。
+  - `bunx tsgo --noEmit`：本变更相关文件 0 错误；仓库基线另有 6 个无关既有类型错误（`packages/coding-agent`、`packages/runtime-node`、`packages/runtime-storage` 测试文件）。
+  - `bun run check:quick`：变更文件 Biome 与架构守卫全绿。
 - 未运行及原因：
+  - `bun run check` 全量门禁：留待 TASK-0091 完成后统一执行；`check:types` 当前存在与本次无关的基线失败。
 - 剩余风险：
+  - `stream()`/`streamSimple()` 默认启用统一重试：可重试失败的最长重试窗口为预期行为；追加型事件通道（`assistant.event` 文本 delta）在中段重试时会把旧 attempt 已流出内容与新 attempt 内容拼接显示，执行观察与最终消息始终正确。
+  - `streamModel`/`generateModel` 原生表面不经 `stream()` 入口，不在统一层覆盖范围；生产 Agent 路径走 `streamSimple` 已覆盖。
+  - `retry` 事件经 `assistant.event` 通道透传为 SessionEvent（`type:"retry"`），`apps/desktop` 渲染层尚未消费（范围外），活动态对 SDK/RPC 消费者可见。
