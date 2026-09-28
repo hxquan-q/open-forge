@@ -69,6 +69,13 @@ export interface SessionInterruptClassification {
 export const SESSION_INTERRUPT_SETTLING_IDLE_MS = 2_500;
 /** 长空闲：若无完成证据则进入 suspected，不自动发。 */
 export const SESSION_INTERRUPT_SUSPECT_IDLE_MS = 8_000;
+/**
+ * 流式悬挂：streaming 期间零事件活动超过该窗口即视为异常。
+ * 必须大于 provider 零事件看门狗窗口（180s）与重试退避的和——停滞恢复循环
+ * 本身会周期发射 retry 事件（活动证据），只有恢复循环之外/已死的悬挂才会
+ * 跨越该阈值。
+ */
+export const SESSION_INTERRUPT_STREAM_STALL_IDLE_MS = 240_000;
 
 export function classifySessionInterruptHealth(evidence: SessionInterruptEvidence): SessionInterruptClassification {
 	const vetoes: SessionInterruptVeto[] = [];
@@ -86,9 +93,27 @@ export function classifySessionInterruptHealth(evidence: SessionInterruptEvidenc
 	}
 
 	if (evidence.isStreaming) {
+		if (evidence.idleMs < SESSION_INTERRUPT_STREAM_STALL_IDLE_MS) {
+			return buildResult({
+				state: "running",
+				confidence: "high",
+				trigger: null,
+				vetoes,
+			});
+		}
+		// 零事件悬挂：streaming 期间远超 provider 看门狗窗口仍无任何事件活动，
+		// 只剩「turn 悬挂」与「活动证据失修」两种解释——两者都必须浮出水面。
+		// 手动停止/待审交互是合法安静，保持否决；置信度不足故只提示不自动续。
+		if (vetoes.includes("manualStop")) {
+			return buildResult({ state: "stopped", confidence: "high", trigger: null, vetoes });
+		}
+		if (vetoes.includes("pendingAction")) {
+			return buildResult({ state: "blocked", confidence: "high", trigger: null, vetoes });
+		}
+		if (!vetoes.includes("insufficientConfidence")) vetoes.push("insufficientConfidence");
 		return buildResult({
-			state: "running",
-			confidence: "high",
+			state: "suspected",
+			confidence: "low",
 			trigger: null,
 			vetoes,
 		});

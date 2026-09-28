@@ -32,6 +32,27 @@ describe("classifySessionInterruptHealth", () => {
 		expect(result.eligibleForBinding).toBe(false);
 	});
 
+	it("streaming 且活动新鲜（健康长回合）保持沉默，不误报中断", () => {
+		// 长回合模型可以安静思考数十秒：streaming + 短 idle 是健康形态，
+		// 任何修复「悬挂失明」的方案都不得把它误判成中断。
+		const result = classifySessionInterruptHealth(evidence({ isStreaming: true, idleMs: 1_000 }));
+		expect(result.state).toBe("running");
+		expect(result.shouldNotify).toBe(false);
+		expect(result.shouldAutoContinue).toBe(false);
+		expect(result.eligibleForBinding).toBe(false);
+	});
+
+	it("streaming 但零活动远超 provider 看门狗窗口（异常悬挂）不得沉默", () => {
+		// 「会话异常中断后转圈无输出」复现：turn 永不结算（工具/审批等待悬挂等），
+		// kernel 停在 running、事件流彻底安静。provider 零事件看门狗窗口是 180s，
+		// 远超该窗口仍 streaming 的会话只剩两种解释：悬挂，或事件证据失修——
+		// 两者都必须浮出水面提示用户，而不是按「streaming = 健康 running」短路。
+		const result = classifySessionInterruptHealth(
+			evidence({ isStreaming: true, idleMs: 10 * 60_000, stopReason: null }),
+		);
+		expect(result.shouldNotify).toBe(true);
+	});
+
 	it("短空闲处于 settling，不触发", () => {
 		const result = classifySessionInterruptHealth(
 			evidence({ idleMs: SESSION_INTERRUPT_SETTLING_IDLE_MS - 1, stopReason: "error", errorMessage: "boom" }),
