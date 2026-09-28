@@ -226,6 +226,24 @@ describe("品牌档案（VETTA_BRAND_PROFILE 构建期开关）", () => {
 		expect(instance.t("main:menu.app.about")).toBe("About Allstr ai");
 	});
 
+	it("外部分发档打包图标随档案覆盖暂存 build/，且品牌资产已入库可复现构建", () => {
+		const preparePack = readDesktopSource("scripts/prepare-pack.js");
+		expect(preparePack).toContain('"brand", "distribution"');
+		// exe 图标 / 安装器图标 / 运行时窗口与托盘图标（window-manager）同源自暂存 build/icon.*，
+		// 暂存期覆盖一处即全链生效；文件名保持不变以维持兼容标识。
+		for (const icon of ["icon.ico", "icon.png", "icon.icns", "icon-dock.png"]) {
+			expect(preparePack, icon).toContain(`"${icon}"`);
+			const asset = readFileSync(join(desktopRoot, "build", "brand", "distribution", icon));
+			expect(asset.length, icon).toBeGreaterThan(1000);
+		}
+		// 容器魔数：ICO（reserved=0, type=1）与 ICNS（"icns"）
+		const ico = readFileSync(join(desktopRoot, "build", "brand", "distribution", "icon.ico"));
+		expect(ico.readUInt16LE(0)).toBe(0);
+		expect(ico.readUInt16LE(2)).toBe(1);
+		const icns = readFileSync(join(desktopRoot, "build", "brand", "distribution", "icon.icns"));
+		expect(icns.toString("ascii", 0, 4)).toBe("icns");
+	});
+
 	it("两档共用冻结的兼容标识（可执行名 / bundleId），分发档归一全部遗留名且不与自己冲突", () => {
 		const selfSource = JSON.parse(readFileSync(join(desktopRoot, "src/shared/desktop-brand.json"), "utf8")) as {
 			displayName: string;

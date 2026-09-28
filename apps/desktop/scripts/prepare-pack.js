@@ -371,6 +371,17 @@ if (process.platform === "darwin") {
 // Copy icons
 cpSync(join(projectRoot, "build"), join(buildStageDir, "build"), { recursive: true });
 
+// 分发档打包图标随品牌档案：exe 图标（win.icon）、安装器图标（extraResources 的
+// build/icon.ico）与运行时窗口/托盘图标（window-manager 读 resources/build/icon.*）
+// 全部取自暂存 build/，在这里一次性覆盖成指定品牌资产；文件名不变，兼容标识不受影响。
+if (process.env.VETTA_BRAND_PROFILE === "distribution") {
+	for (const iconName of ["icon.ico", "icon.png", "icon.icns", "icon-dock.png"]) {
+		cpSync(join(projectRoot, "build", "brand", "distribution", iconName), join(buildStageDir, "build", iconName), {
+			force: true,
+		});
+	}
+}
+
 // macOS DMG: 编译「修复已损坏.app」直接落到 staging build/，由下面 dmg.contents 引用。
 // 仅未签名构建需要；签名+公证后 quarantine 不再拦截，且该 helper 自身未签名会拖累公证。
 if (process.platform === "darwin" && !macSigning.enabled) {
