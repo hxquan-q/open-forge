@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const scopedLogger = {
