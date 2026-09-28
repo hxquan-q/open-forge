@@ -79,6 +79,11 @@ export const STAGED_DEP_STRIP_PATTERNS = Object.freeze([
 	{ pattern: "tsconfig*.json", category: "build-script" },
 	{ pattern: "jest.config*", category: "build-script" },
 	{ pattern: "vitest.config*", category: "build-script" },
+	// ESLint 的 JS 形态配置：只在开发期被 ESLint 加载，运行时永远不会 require。
+	// 单列 lint-config 分类：它们带 .js/.cjs 运行时扩展名，落进 build-script
+	// 会被入口守卫判为「运行时文件被不安全分类裁剪」（首个命中的是 ssh2）。
+	{ pattern: ".eslintrc.js", category: "lint-config" },
+	{ pattern: ".eslintrc.cjs", category: "lint-config" },
 	{ pattern: ".eslintrc*", category: "build-script" },
 	{ pattern: ".prettierrc*", category: "build-script" },
 	{ pattern: ".babelrc*", category: "build-script" },
@@ -178,6 +183,7 @@ const RUNTIME_SAFE_CATEGORIES = Object.freeze([
 	"documentation",
 	"foreign-platform",
 	"native-source",
+	"lint-config",
 ]);
 
 export function normalizeStagedPath(value) {
