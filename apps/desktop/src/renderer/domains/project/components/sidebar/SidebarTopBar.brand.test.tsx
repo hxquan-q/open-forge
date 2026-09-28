@@ -23,4 +23,13 @@ describe("SidebarTopBar 品牌区", () => {
 		expect(screen.getByText(DESKTOP_BRAND.displayName)).toBeTruthy();
 		expect(screen.queryByText("Vetta")).toBeNull();
 	});
+
+	it("品牌名旁渲染当前品牌档案的图标（alt 为空，避免与名称重复朗读）", () => {
+		render(<SidebarTopBar floating={false} />);
+
+		const brandIcon = document.querySelector("img");
+		expect(brandIcon).toBeTruthy();
+		expect(brandIcon?.getAttribute("src")).toMatch(/brand-icon/);
+		expect(brandIcon?.getAttribute("alt")).toBe("");
+	});
 });

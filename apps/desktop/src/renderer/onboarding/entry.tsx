@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
+import { resolveDesktopBrandName } from "@/shared/desktop-brand";
 import { applyInitialTheme, applyStoredTheme, MODE_STORAGE_KEY, THEME_STORAGE_KEY } from "../shared/theme/apply";
 import { initializeRendererErrorMonitoring } from "../telemetry/error-monitoring";
 import "../styles.css";
@@ -12,6 +14,8 @@ initializeRendererErrorMonitoring("onboarding");
 // 挂载前同步注入主题变量与 i18n，避免冷启动闪烁（对齐 quickpanel/entry.tsx）。
 applyInitialTheme();
 initOnboardingI18n();
+// 引导窗标题随品牌口径（onboarding.html 静态标题只覆盖默认口径）。
+document.title = `${resolveDesktopBrandName(i18n.language)} Computer Use Onboarding`;
 
 // 主窗口改主题会写 localStorage，本引导窗监听 storage 同步跟随。
 window.addEventListener("storage", (event) => {
