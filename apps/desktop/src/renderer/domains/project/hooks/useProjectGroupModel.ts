@@ -2,6 +2,7 @@ import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-even
 import { pathBasename } from "@shared/lib/utils";
 import type { Project, ProjectType } from "@shared/store/atoms";
 import {
+	archivedSessionPathsAtom,
 	pinnedSessionPathsAtom,
 	projectContextMenuAtom,
 	renamingSessionPathAtom,
@@ -21,7 +22,7 @@ import {
 	sidebarConversationIdentity,
 	sidebarConversationKey,
 } from "../services/sidebar-conversation-projection";
-import { buildSidebarSessionOrdering } from "../services/sidebar-session-order";
+import { buildSidebarSessionOrdering, withoutArchivedSessions } from "../services/sidebar-session-order";
 import { reuseUnchangedSessionViews } from "./stableSessionViews";
 
 export interface ProjectGroupSessionView {
@@ -84,13 +85,20 @@ export function useProjectGroupModel({
 		for (const path of scheduledSessionPaths) basenames.add(path.slice(path.lastIndexOf("/") + 1));
 		return basenames;
 	}, [scheduledSessionPaths]);
+	// 运行标记覆盖整个项目：归档行即使不显示，项目这个事实仍然成立。
 	const projectHasRunning = useMemo(
 		() => sessions.some((session) => runningSessionPaths.has(session.path)),
 		[sessions, runningSessionPaths],
 	);
+	const archivedSessionPaths = useAtomValue(archivedSessionPathsAtom);
+	const unarchivedSessions = useMemo(
+		() => withoutArchivedSessions(sessions, archivedSessionPaths),
+		[archivedSessionPaths, sessions],
+	);
 	const ordering = useMemo(
-		() => buildSidebarSessionOrdering(sessions, pinnedSessionPaths, DEFAULT_VISIBLE_SESSIONS, showAllSessions),
-		[pinnedSessionPaths, sessions, showAllSessions],
+		() =>
+			buildSidebarSessionOrdering(unarchivedSessions, pinnedSessionPaths, DEFAULT_VISIBLE_SESSIONS, showAllSessions),
+		[pinnedSessionPaths, showAllSessions, unarchivedSessions],
 	);
 
 	useEffect(() => {
@@ -113,9 +121,14 @@ export function useProjectGroupModel({
 		);
 		if (activeIndex < 0) return;
 		revealedActiveSessionRef.current = activeConversationKey;
-		const collapsed = buildSidebarSessionOrdering(sessions, pinnedSessionPaths, DEFAULT_VISIBLE_SESSIONS, false);
+		const collapsed = buildSidebarSessionOrdering(
+			unarchivedSessions,
+			pinnedSessionPaths,
+			DEFAULT_VISIBLE_SESSIONS,
+			false,
+		);
 		if (activeIndex >= collapsed.visible.length) setShowAllSessions(true);
-	}, [activeConversationKey, ordering.all, pinnedSessionPaths, sessions]);
+	}, [activeConversationKey, ordering.all, pinnedSessionPaths, unarchivedSessions]);
 
 	const displayName = project.name ?? pathBasename(project.cwd);
 	const projectType = project.type;

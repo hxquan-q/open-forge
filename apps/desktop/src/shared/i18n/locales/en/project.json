@@ -113,6 +113,10 @@
 		"unpin": "Unpin",
 		"openArtifactDir": "Open artifact folder",
 		"delete": "Delete",
+		"archive": "Archive conversation",
+		"archiveDisabled": "Stop the running session first",
+		"archiveToast": "Archived “{{name}}”",
+		"archiveToastAction": "View archived",
 		"tags": {
 			"label": "Tags",
 			"new": "New tag…",

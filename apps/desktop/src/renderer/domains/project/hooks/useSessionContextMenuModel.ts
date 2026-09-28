@@ -1,11 +1,16 @@
+// Modified by The Open Forge contributors.
 import type { SessionContextMenuSession } from "@shared/store/atoms";
 import {
 	conversationTagEditorAtom,
 	conversationTagsAtom,
 	pinnedSessionPathsAtom,
 	renamingSessionPathAtom,
+	runningSessionPathsAtom,
+	sessionDisplayLabel,
 	setSessionPinnedAtom,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
+import { useNavigate } from "@tanstack/react-router";
 import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
 import type { SessionContextMenuViewProps } from "@vetta-org/theme-ui/project";
 import type { ContextMenuNode } from "@vetta-org/theme-ui/shared";
@@ -24,12 +29,17 @@ export function useSessionContextMenuModel(
 	onDelete: (session: SessionContextMenuSession) => void,
 ): Omit<SessionContextMenuViewProps, "x" | "y"> {
 	const { t } = useTranslation("project");
+	const navigate = useNavigate();
 	const setRenamingSessionPath = useSetAtom(renamingSessionPathAtom);
 	const pinnedSessionPaths = useAtomValue(pinnedSessionPathsAtom);
 	const setSessionPinned = useSetAtom(setSessionPinnedAtom);
+	const runningSessionPaths = useAtomValue(runningSessionPathsAtom);
 	const tags = useAtomValue(conversationTagsAtom);
 	const openTagEditor = useSetAtom(conversationTagEditorAtom);
 	const pinned = pinnedSessionPaths.has(session.path);
+	// agent-team 会话的生命周期归团队：归档项只对普通会话给出，运行中的会话另需先停止。
+	const canArchive = allowMutations && !isAgentTeamSession(session);
+	const archiveDisabled = runningSessionPaths.has(session.path);
 
 	const handleRename = useCallback(() => {
 		setRenamingSessionPath(session.path);
@@ -48,6 +58,22 @@ export function useSessionContextMenuModel(
 		setSessionPinned({ path: session.path, pinned: !pinned });
 		onClose();
 	}, [onClose, pinned, session.path, setSessionPinned]);
+
+	const handleArchive = useCallback(() => {
+		// 归档可逆且不留数据痕迹，因此不弹确认框；落点信息（名字、路径）随快照一起存，
+		// 设置页据此列出条目，不必回读会话文件。
+		const label = sessionDisplayLabel(session);
+		void window.vetta.archivedSessions.archive({ path: session.path, cwd: session.cwd, label });
+		onClose();
+		showToast({
+			variant: "success",
+			message: t("contextMenu.archiveToast", { name: label }),
+			action: {
+				label: t("contextMenu.archiveToastAction"),
+				onClick: () => void navigate({ to: "/settings/$tab", params: { tab: "archive" } }),
+			},
+		});
+	}, [navigate, onClose, session, t]);
 
 	const extraItems = useMemo<readonly ContextMenuNode[] | undefined>(() => {
 		if (!canTag) return undefined;
@@ -109,6 +135,8 @@ export function useSessionContextMenuModel(
 	}, [canTag, onClose, openTagEditor, session.path, t, tags]);
 
 	return {
+		archiveDisabled,
+		canArchive,
 		canDelete: allowMutations && session.access?.delete !== false,
 		// 远程项目下的会话，工作目录在远端，系统文件管理器无从显示。
 		canOpenInFolder: !isSshProjectUri(session.cwd),
@@ -119,11 +147,20 @@ export function useSessionContextMenuModel(
 			rename: t("contextMenu.rename"),
 			openInFolder: isMac ? t("contextMenu.openInFinder") : t("contextMenu.openInExplorer"),
 			delete: t("contextMenu.delete"),
+			archive: t("contextMenu.archive"),
+			archiveDisabled: t("contextMenu.archiveDisabled"),
 		},
+		onArchive: handleArchive,
 		onClose,
 		onDelete: handleDelete,
 		onOpenInFolder: handleOpenInFolder,
 		onRename: handleRename,
 		onTogglePin: handleTogglePin,
 	};
+}
+
+function isAgentTeamSession(
+	session: SessionContextMenuSession,
+): session is Extract<SessionContextMenuSession, { readonly kind: "agent-team" }> {
+	return "kind" in session && session.kind === "agent-team";
 }

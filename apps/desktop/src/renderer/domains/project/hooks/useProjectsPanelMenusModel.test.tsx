@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { confirmDialogAtom } from "@shared/store/atoms";
 import { createStore, Provider } from "jotai";
@@ -11,9 +12,15 @@ vi.mock("react-i18next", () => ({
 	useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-// 删除确认后还要摘掉该会话的标签标注，走 preload 的 conversationTags 通道。
+// 删除确认后还要摘掉该会话的标签标注与归档标记，走 preload 的 conversationTags / archivedSessions 通道。
 const forgetConversations = vi.fn();
-vi.stubGlobal("window", Object.assign(globalThis.window, { vetta: { conversationTags: { forgetConversations } } }));
+const forgetArchivedSessions = vi.fn();
+vi.stubGlobal(
+	"window",
+	Object.assign(globalThis.window, {
+		vetta: { conversationTags: { forgetConversations }, archivedSessions: { forget: forgetArchivedSessions } },
+	}),
+);
 
 const teamSession = {
 	kind: "agent-team" as const,
@@ -57,5 +64,17 @@ describe("useProjectsPanelMenusModel", () => {
 
 		act(() => confirmation?.onConfirm(false));
 		expect(deleteSession).toHaveBeenCalledWith(teamSession);
+	});
+
+	it("clears the deleted session's tag and archive flags", () => {
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.deleteSession(teamSession));
+		act(() => store.get(confirmDialogAtom)?.onConfirm(false));
+
+		expect(forgetConversations).toHaveBeenCalledWith([teamSession.path]);
+		expect(forgetArchivedSessions).toHaveBeenCalledWith([teamSession.path]);
 	});
 });
