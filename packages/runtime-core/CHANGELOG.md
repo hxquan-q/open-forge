@@ -42,6 +42,8 @@ All notable changes to `@vetta/runtime-core` are documented in this file.
 
 ### Added
 
+- `SessionStateSnapshot` 新增 `lastEventAt`：宿主事件中继最近一次观察到该会话事件的时间戳（事件自身时钟，尚无事件时缺省）。它是流式会话唯一的逐事件活动证据，宿主据此区分「健康长回合」（事件持续流动）与「零事件悬挂」（turn 永不结算、事件流彻底安静）；消息时间戳做不到这一点——turn 进行中助手消息尚未落盘，健康长回合的消息空闲同样持续增大。
+
 - 内核新增消息前缀稳定性观测：Turn 引擎在每个模型调用完成 Provider 侧前缀组装后，比较相邻调用的消息序列并按
   `first`/`append_only`/`prefix_rewrite`/`prefix_shrink` 分类，经 `runtime.context/stability` 观察通道发布稳定前缀长度、
   首个分歧下标与内容回退计数（身份快路径未命中但内容相等的次数）。Transform 破坏对象身份合同时产品审计层可直接定位；

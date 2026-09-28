@@ -348,6 +348,7 @@ export class RuntimeHostSessionOperations {
 			executionMode: handle.executionMode,
 			isStreaming: state.isStreaming,
 			currentTurnStartedAt: this.options.events.readCurrentTurnStartedAt(sessionKey),
+			lastEventAt: this.options.events.readLastEventAt(sessionKey),
 			messageCount: state.messageCount,
 			...(state.contextState ? { contextState: state.contextState } : {}),
 			contextPercent: state.contextPercent,
