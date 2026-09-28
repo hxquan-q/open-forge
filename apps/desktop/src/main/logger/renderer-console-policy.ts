@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 export type RendererConsoleLevel = "log" | "info" | "warn" | "error";
 
 const LOW_SIGNAL_PREFIXES = ["[plugin-agent]", "[activity-tab-debug]", "[vite-hmr]", "[skills] loaded"] as const;

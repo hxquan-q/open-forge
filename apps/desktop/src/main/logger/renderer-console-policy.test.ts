@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { isChromiumResizeObserverDiagnostic, shouldPersistRendererConsoleMessage } from "./renderer-console-policy.js";
 
