@@ -1,7 +1,7 @@
 ---
 id: BUG-0049
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement:

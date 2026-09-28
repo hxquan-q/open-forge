@@ -1,7 +1,7 @@
 ---
 id: TASK-0133
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ssh-transport + desktop
 requirement:
@@ -21,7 +21,7 @@ write_paths: [packages/ssh-transport, apps/desktop/src/main/ssh, .github/release
 exclusive_paths: [packages/ssh-transport, apps/desktop/src/main/ssh]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（main：6be8e68c5 合入 + 81bcae1b3 打包修正；端到端 probe 实测 connected）
 created: 2026-09-28
 updated: 2026-09-28
 ---
@@ -78,4 +78,4 @@ updated: 2026-09-28
 - 门禁：`bun run check`（lint + types + guards + mobile-lint）全绿；包内既有测试在 Windows 上因无 `/bin/sh` 的失败为基线既有问题，与本次改动无关。
 - 真实主机验收：`ubuntu@13.192.213.39` + `win.pem` 走完整 argv 合同，主机密钥指纹回调、exec 输出、退出码 7 透传、第二条命令复用同一连接——全部实测通过。
 - ADR-0124「传输层」已补 ssh2 落地记录；`v0.1.2.md` 发布说明已写入修复条目。
-- 待办：Coordinator 集成到 main（`integration_status: pending`）。
+- 待办：Coordinator 集成到 main（`integration_status: integrated（main：6be8e68c5 合入 + 81bcae1b3 打包修正；端到端 probe 实测 connected）`）。
