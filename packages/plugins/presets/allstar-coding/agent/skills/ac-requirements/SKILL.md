@@ -2,6 +2,7 @@
 name: ac-requirements
 description: AllstarCoding 流水环节 1-3（需求评估、原型+需求文档产出、用户确认门）使用。当用户提出开发需求、需要勘察项目现状、需要产出 HTML 原型与需求文档、或准备提交用户批准时加载本技能。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 需求评估与原型+需求文档（流水环节 1-3）
 

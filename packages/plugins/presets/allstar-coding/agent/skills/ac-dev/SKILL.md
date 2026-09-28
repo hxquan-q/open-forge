@@ -2,6 +2,7 @@
 name: ac-dev
 description: AllstarCoding 流水环节 8 的开发执行环节使用。当需要启动任务开发子、拼装自包含任务书、处理开发子的自测循环与沙箱拒绝、接收开发子报告时加载本技能。含开发子工作契约与任务书模板。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 任务开发执行（流水环节 8 · 开发侧）
 

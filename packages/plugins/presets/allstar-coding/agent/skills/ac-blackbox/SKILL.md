@@ -2,6 +2,7 @@
 name: ac-blackbox
 description: AllstarCoding 流水环节 10-11 使用。当白盒测试完成、需要产出带状态的黑盒测试文档交用户手动执行、收集用户反馈、把用户问题转交修复时加载本技能。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 黑盒测试（流水环节 10-11）
 

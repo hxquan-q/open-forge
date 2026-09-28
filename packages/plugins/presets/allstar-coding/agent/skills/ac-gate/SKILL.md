@@ -2,6 +2,7 @@
 name: ac-gate
 description: AllstarCoding 流水产物校验技能（v1 提示词层）。主控在每个环节收口时必须加载本技能，按清单逐项核对环节产物——文件存在性、state.md 状态机合法迁移、artifacts 与实际文件对应、executions 与打回记录一致。不通过不放行下一环节。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 产物校验门（v1 提示词层）
 

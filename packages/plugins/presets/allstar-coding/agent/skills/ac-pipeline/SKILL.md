@@ -2,6 +2,7 @@
 name: ac-pipeline
 description: AllstarCoding 流水线总纲手册。在流水线会话开始时、每个环节推进前、不确定下一步时、以及会话中断后恢复时使用。定义 13 环节流水、产物落盘规范、确认门协议、state.md JSON 规范、打回与跳回规则、子代理生命周期与主控职责。其他 ac-* 技能是各环节的细化，本技能负责把它们串起来。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AllstarCoding 全流程开发总纲
 

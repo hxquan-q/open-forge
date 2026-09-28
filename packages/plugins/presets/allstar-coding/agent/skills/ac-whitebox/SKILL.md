@@ -2,6 +2,7 @@
 name: ac-whitebox
 description: AllstarCoding 流水环节 9 使用。当所有任务通过评审、需要对项目完整状态做白盒测试、产出白盒测试文档、执行测试、解析问题清单、驱动修复循环时加载本技能。评估对象是当前项目的完整状态，不只改动面。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 白盒测试（流水环节 9）
 

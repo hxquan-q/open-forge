@@ -2,6 +2,7 @@
 name: ac-deploy
 description: AllstarCoding 流水环节 12 使用。当白盒黑盒全部通过、需要执行部署（专用分支提交→等合并→拉产物→更新服务）时加载本技能。部署动作经用户确认后尽量自动执行，失败即上报。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 部署（流水环节 12）
 

@@ -2,6 +2,7 @@
 name: ac-review
 description: AllstarCoding 流水环节 8 的评审环节使用。当需要委派评审子检查任务开发产出、判断 pass/fail、把评审结果转达打回、或复核被打回后的修正时加载本技能。含评审维度 checklist 与 verdict 输出规范。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 任务评审（流水环节 8 · 评审侧）
 

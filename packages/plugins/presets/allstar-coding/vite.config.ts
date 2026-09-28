@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { vettaPluginFederation } from "@vetta-org/plugin-vite";
 import { defineConfig } from "vite";
 

@@ -2,6 +2,7 @@
 name: ac-finalize
 description: AllstarCoding 流水环节 13 使用。当部署完成、需要清理残留文件、清点并关闭全部挂起的开发子会话、执行收尾特殊 git 提交时加载本技能。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 收尾（流水环节 13）
 

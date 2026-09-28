@@ -2,6 +2,7 @@
 name: ac-design
 description: AllstarCoding 流水环节 4-5（架构评估与开发文档）使用。当原型与需求文档已批准、需要设计实现方案、分析改动面、评估风险，或准备产出 docs/ac/design.md 时加载本技能。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 开发评估与开发文档（流水环节 4-5）
 

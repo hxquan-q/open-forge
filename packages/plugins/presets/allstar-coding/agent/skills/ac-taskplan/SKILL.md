@@ -2,6 +2,7 @@
 name: ac-taskplan
 description: AllstarCoding 流水环节 6-7（任务清单产出与可选确认）使用。当开发文档已定稿、需要把改动面拆成按依赖链排序的任务清单、产出 docs/ac/tasks.md 时加载本技能。
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # AC 任务清单拆分（流水环节 6-7）
 
