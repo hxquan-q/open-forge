@@ -25,6 +25,10 @@ const DEFINITIONS = [
 	// Windows 远程输入注入通过 koffi 调用 user32.dll：原生模块（dlopen），必须 unpack。
 	// 只有 win32 产物会走到这条路径（createRequire 懒加载）。
 	{ name: "koffi", platforms: ["win32"], unpack: true },
+	// win32 的进程内 SSH 传输（ControlMaster 在 Windows 不可用，见 BUG-0049）。
+	// 纯 JS；cpu-features 与 sshcrypto.node 是它的 optionalDependencies，
+	// stageDepTree 不会带入，运行时自动回退纯 JS 实现，不需要 unpack。
+	{ name: "ssh2", platforms: "all", unpack: false },
 	// 底部面板终端的 PTY。`@lydell/node-pty` 本身是纯 JS 壳，真正的 pty.node 在按
 	// 平台+架构拆分的包里，而 prepare-pack 的 stageDepTree 只走 `dependencies`、
 	// 不走 `optionalDependencies`——所以每个平台包都必须在这里显式声明，否则打出来的

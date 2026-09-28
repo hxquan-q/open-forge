@@ -1,7 +1,8 @@
 // Copyright The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:net";
-import { Client, type ClientChannel, type ConnectConfig, utils } from "ssh2";
+import type { Client, ClientChannel, ConnectConfig } from "ssh2";
+import ssh2 from "ssh2";
 import { formatHostKeyFingerprint } from "./known-hosts.js";
 import {
 	SSH_TRANSPORT_FAILURE_EXIT_CODE,
@@ -403,7 +404,7 @@ class Ssh2Session {
 				continue;
 			}
 			let passphrase: string | undefined;
-			const parseError = utils.parseKey(pem);
+			const parseError = ssh2.utils.parseKey(pem);
 			if (parseError instanceof Error) {
 				// 只有加密错误才问口令——文件本身坏掉时弹口令窗只会误导用户。
 				if (!/passphrase|encrypt/i.test(parseError.message)) {
@@ -425,7 +426,7 @@ class Ssh2Session {
 					round,
 				});
 				if (passphrase === undefined) continue; // 用户取消——换下一个方法，不算连接失败
-				if (utils.parseKey(pem, passphrase) instanceof Error) {
+				if (ssh2.utils.parseKey(pem, passphrase) instanceof Error) {
 					this.options.logger?.(`ssh2 ${resolved.hostname}: identity file ${identityFile} rejected passphrase`);
 					continue;
 				}
@@ -455,7 +456,7 @@ class Ssh2Session {
 		round: number,
 		spec: ParsedInvocation,
 	): Promise<Client> {
-		const client = (this.options.makeClient ?? (() => new Client()))();
+		const client = (this.options.makeClient ?? (() => new ssh2.Client()))();
 		const { askSecret } = this.options;
 		const config: ConnectConfig = {
 			host: resolved.hostname,
