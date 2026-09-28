@@ -76,7 +76,13 @@ const imGatewayTargetByPlatformTag = {
 
 // Resolve electron version from the workspace
 const require = createRequire(import.meta.url);
-const desktopBrand = require("../src/shared/desktop-brand.json");
+// 品牌档案与 vite 同开关（VETTA_BRAND_PROFILE）：分发档安装器身份走 Allstr ai，
+// 兼容标识（executableName / appId / 安装目录）跨档冻结。
+const desktopBrand = require(
+	process.env.VETTA_BRAND_PROFILE === "distribution"
+		? "../src/shared/desktop-brand.distribution.json"
+		: "../src/shared/desktop-brand.json",
+);
 const appRuntimeIdentity = require("../src/shared/app-identity.json");
 const electronPkgPath = require.resolve("electron/package.json");
 const electronVersion = JSON.parse(readFileSync(electronPkgPath, "utf8")).version;

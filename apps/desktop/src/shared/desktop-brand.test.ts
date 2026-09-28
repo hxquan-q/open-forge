@@ -82,6 +82,11 @@ describe("Desktop brand layer", () => {
 		expect(preparePack).toContain('schemes: ["openforge"]');
 		expect(preparePack).toMatch(/artifactName:\s*"\$\{productName\}-\$\{version\}-win-\$\{arch\}\.\$\{ext\}"/);
 		expect(preparePack).toContain("publish: [updatePublishConfig]");
+		// 打包身份与 vite 同开关选档：分发档安装器身份（产品名/安装器显示名）随档案，
+		// AppId / 安装目录 / 可执行名保持冻结。
+		expect(preparePack).toContain("desktop-brand.distribution.json");
+		expect(readDesktopSource("build/installer.iss")).toContain("{#AppDisplayName}");
+		expect(readDesktopSource("scripts/build-inno-installer.mjs")).toContain("resolveInnoInstallerIdentity");
 		expect(packagingLayout).toMatch(/\$\{desktopBrand\.displayName\} Plugin Package/);
 		expect(linuxPackaging).toContain("name: desktopBrand.displayName");
 	});
