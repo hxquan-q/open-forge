@@ -9,7 +9,9 @@ export type {
 	WorkWorkspacePanelProps,
 } from "./components/WorkWorkspacePanel";
 export { WORK_PANEL_SECTIONS, WorkPanelSection, WorkWorkspacePanel } from "./components/WorkWorkspacePanel";
+export { useTaskProjection } from "./hooks/useTaskProjection";
 export { useWorkspaceMode } from "./hooks/useWorkspaceMode";
+export { useWorkspaceRightPanel } from "./hooks/useWorkspaceRightPanel";
 export {
 	resolveWorkspaceRightPanel,
 	sessionAxesBadgeKind,

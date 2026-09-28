@@ -1,4 +1,4 @@
-import type { TextBlock } from "@shared/conversation";
+import { resolveConversationAgentText, type TextBlock } from "@shared/conversation";
 import type { ChatAgentMessageViewModel } from "@shared/store/atoms";
 import { pluginToolCallSlotsAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
@@ -93,11 +93,12 @@ export function useAssistantMessageModel({
 		}
 		return -1;
 	}, [segments, isCurrentlyStreaming]);
-	// foldData 上面已经算过一遍，这里复用；deps 也收窄到 blocks/text，
+	// foldData 上面已经算过一遍，这里复用；deps 收窄到 blocks 与派生正文，
 	// 否则 message 引用一变（流式每帧都变）就整段重算。
+	const agentText = resolveConversationAgentText(message);
 	const conclusionText = useMemo(() => {
 		const blocks = message.blocks;
-		if (blocks.length === 0) return (message.text ?? "").trim();
+		if (blocks.length === 0) return agentText.trim();
 		if (foldData) {
 			return foldData.outputBlocks
 				.map((block) => block.text.trim())
@@ -110,7 +111,7 @@ export function useAssistantMessageModel({
 			.map((block) => block.text.trim())
 			.filter(Boolean)
 			.join("\n\n");
-	}, [message.blocks, message.text, foldData, customToolNames]);
+	}, [message.blocks, agentText, foldData, customToolNames]);
 
 	return {
 		conclusionText,

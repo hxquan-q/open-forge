@@ -62,7 +62,10 @@
     "saving": "Saving…",
     "providedBy": "From {{name}}",
     "providedByHint": "Provided and maintained by an extension; it cannot be edited or deleted",
-    "providedReadOnly": "Provided and maintained by an extension: it is replaced wholesale on plugin updates and cannot be edited here"
+    "providedReadOnly": "Provided and maintained by an extension: it is replaced wholesale on plugin updates and cannot be edited here",
+    "discardAssemblyTitle": "Discard team draft?",
+    "discardAssemblyMessage": "Recruited members and everything you typed will be lost. This cannot be undone.",
+    "discardAssemblyConfirm": "Discard draft"
   },
   "profile": {
     "fixedPrompt": "Role: {{role}}",
@@ -219,6 +222,40 @@
       "failed": "Failed",
       "cancelled": "Cancelled",
       "recent": "Recent: {{text}}"
+    },
+    "teamProgress": {
+      "title": "Team task progress",
+      "phase": {
+        "dispatching": "Dispatched",
+        "running": "Running",
+        "waiting": "Waiting",
+        "attention": "Needs attention",
+        "wrapping": "Wrapping up",
+        "settled": "Finished"
+      },
+      "count": {
+        "queued": "{{count}} queued",
+        "running": "{{count}} running",
+        "waiting": "{{count}} waiting",
+        "attention": "{{count}} to handle",
+        "completed": "{{count}} done",
+        "failed": "{{count}} failed",
+        "cancelled": "{{count}} cancelled"
+      },
+      "item": {
+        "queued": "Waiting to start",
+        "running": "Running",
+        "waiting": "Waiting",
+        "attention": "Needs attention",
+        "completed": "Done",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "notStarted": "Not started"
+      },
+      "metrics": "↻{{rounds}} · {{tools}} tool calls · ↑{{input}} ↓{{output}} · {{duration}}",
+      "context": "ctx {{percent}}%",
+      "liveStatus": "{{title}}: {{phase}}",
+      "total": "Total"
     },
     "readyTitle": "Your team is ready",
     "readyDescription": "Describe the goal and the team lead will coordinate it, or mention a member with @ in the composer toolbar."

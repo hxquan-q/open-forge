@@ -56,6 +56,13 @@ export interface ModelSelectorLabels {
 	 * 宿主的计费口径，视图不猜。
 	 */
 	multiplierLabel?: (option: ModelSelectorOptionView) => string | undefined;
+	/**
+	 * 生效边界说明（如「仅影响后续回合」），渲染在菜单顶部。宿主不下发就不渲染：
+	 * 「选择从哪一条消息开始生效」是宿主的会话语义，视图不猜。
+	 */
+	turnScopeHint?: string;
+	/** 禁用态的悬停说明（如「当前回合进行中」）。缺省时回落模型名/占位文案。 */
+	disabledReason?: string;
 }
 
 export interface ModelSelectorProviderGroup {
@@ -73,6 +80,8 @@ export interface ModelSelectorViewProps {
 	groups: readonly ModelSelectorProviderGroup[];
 	defaultKey?: string;
 	labels: ModelSelectorLabels;
+	/** 宿主在活动 Turn 期间整体禁用选择器（如回合进行中不允许改模型）。 */
+	disabled?: boolean;
 	className?: string;
 	classNames?: {
 		trigger?: string;
@@ -105,6 +114,7 @@ export function ModelSelectorView({
 	groups,
 	defaultKey,
 	labels,
+	disabled = false,
 	className,
 	classNames,
 	onModelSelect,
@@ -189,21 +199,28 @@ export function ModelSelectorView({
 	};
 
 	const handleModelSelect = (key: string) => {
+		// 宿主可能在菜单已经打开后才进入禁用态（例如回合开始），此时点击仍会走到这里；
+		// 兜一层是为了让「禁用 = 什么都不发生」不被一次点击绕过。
+		if (disabled) return;
 		onModelSelect(key);
 		setSearchQuery("");
 	};
+
+	// 禁用时把原因顶到悬停提示：此时菜单打不开，触发器上的 title 是唯一能说明为什么的出口。
+	const triggerTitle = selectedOption?.displayName ?? labels.placeholder;
+	const resolvedTriggerTitle = disabled ? (labels.disabledReason ?? triggerTitle) : triggerTitle;
 
 	return (
 		// 搜索型选择器不需要锁住页面；modal 模式会改写 body 的滚动与 pointer-events，
 		// 在长会话页面触发整棵 DOM 的同步样式重算。
 		<DropdownMenu open={open} modal={false} onOpenChange={handleOpenChange}>
-			<DropdownMenuTrigger asChild>
+			<DropdownMenuTrigger asChild disabled={disabled}>
 				<button
 					type="button"
-					title={selectedOption?.displayName ?? labels.placeholder}
+					title={resolvedTriggerTitle}
 					className={cn(
 						// 输入卡 @container：窄宽缩短模型名、藏推理档，避免工具栏换行
-						"flex min-w-0 max-w-[5.5rem] items-center gap-1 rounded-full border border-transparent px-1.5 py-0.5 text-[11px] text-foreground transition-colors focus:outline-none focus-visible:outline-none data-[state=open]:bg-accent/60 data-[state=open]:text-foreground @[22rem]:max-w-[9rem] @[28rem]:max-w-[13rem]",
+						"flex min-w-0 max-w-[5.5rem] items-center gap-1 rounded-full border border-transparent px-1.5 py-0.5 text-[11px] text-foreground transition-colors focus:outline-none focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:bg-accent/60 data-[state=open]:text-foreground @[22rem]:max-w-[9rem] @[28rem]:max-w-[13rem]",
 						className,
 						classNames?.trigger,
 					)}
@@ -280,6 +297,11 @@ export function ModelSelectorView({
 											)}
 										</div>
 									</div>
+									{labels.turnScopeHint && (
+										<p className="shrink-0 px-2 pb-1 text-[10px] leading-snug text-muted-foreground">
+											{labels.turnScopeHint}
+										</p>
+									)}
 									{menuLevels.length > 0 && (
 										<>
 											<DropdownMenuSub open={reasoningOpen} onOpenChange={setReasoningOpen}>

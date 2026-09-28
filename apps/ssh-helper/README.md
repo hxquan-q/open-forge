@@ -93,3 +93,13 @@ scripts/verify-on-host.sh build-01 -p 2222 -i ~/.ssh/id_ed25519
 ```bash
 go run ./cmd/openforge-ssh-helper serve
 ```
+
+
+## Context Boundary
+
+```yaml
+purpose: Remote SSH helper (Go): agent-side helper for SSH remote projects
+provides:  []
+consumes:  []
+internal_dependencies:  []
+```

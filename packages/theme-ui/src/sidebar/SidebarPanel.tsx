@@ -8,6 +8,12 @@ export interface SidebarPanelProps {
 	children: ReactNode;
 	className?: string;
 	contentClassName?: string;
+	/**
+	 * 面板整棵子树的 landmark 名（宿主解析 i18n 后传入）。面板承载品牌、导航与项目区，
+	 * 不给 complementary landmark 时读屏只能把整栏内容当「无主文本」念（axe `region`，BUG-0039）。
+	 * 根节点仍保持 div：拖拽宽度时宿主按 panelRef 直接写 style.width，见 setPanelRef 注释。
+	 */
+	label?: string;
 	onResize: (delta: number) => void;
 	onResizeEnd: () => void;
 	/**
@@ -24,6 +30,7 @@ export function SidebarPanel({
 	children,
 	className,
 	contentClassName,
+	label,
 	onResize,
 	onResizeEnd,
 	panelRef,
@@ -33,6 +40,8 @@ export function SidebarPanel({
 
 	return (
 		<div
+			role="complementary"
+			aria-label={label}
 			className={cn(
 				"group/sidebar sidebar-surface relative h-full shrink-0 rounded-[10px] border border-border bg-muted",
 				surface?.rootClassName,

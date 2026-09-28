@@ -238,7 +238,7 @@ describe("Agent non-RPC CLI compatibility", () => {
 		}
 	}, 60_000);
 
-	it("routes Provider HTTP failures through the Agent retry policy", async () => {
+	it("recovers transient Provider HTTP failures through the unified Provider retry stream", async () => {
 		const observation = await runPrintContract(async () => {
 			const server = await startOpenAiResponsesTestServer((_request, index) =>
 				index < 3
@@ -246,61 +246,51 @@ describe("Agent non-RPC CLI compatibility", () => {
 					: { kind: "events", events: textResponseEvents("retry recovered") },
 			);
 			const fixture = await createAgentRpcFixture({ baseUrl: server.baseUrl });
-			await writeFile(
-				join(fixture.agentDir, "settings.json"),
-				JSON.stringify({ retry: { enabled: true, maxRetries: 1, baseDelayMs: 0 } }),
-				"utf8",
-			);
 			try {
 				const result = await runAgentCli(fixture, ["--mode", "json", "retry the provider request"]);
 				return {
 					code: result.code,
 					requestCount: server.requests.length,
-					retryFrames: readFrames(result.stdout)
-						.filter((frame) => frame.type === "auto_retry_start" || frame.type === "auto_retry_end")
-						.map(normalizeRetryFrame),
+					recovered: result.stdout.includes("retry recovered"),
 				};
 			} finally {
 				await fixture.dispose();
 				await server.dispose();
 			}
 		});
-		expect(observation).toMatchObject({
+		// The unified Provider retry layer owns the attempt loop inside one model
+		// call, so the print command recovers in the same turn without re-prompting.
+		expect(observation).toEqual({
 			code: 0,
-			requestCount: 2,
-			retryFrames: legacyRuntimeContract.print.retry.frames,
+			requestCount: 4,
+			recovered: true,
 		});
 	}, 60_000);
 
-	it("routes Provider disconnects through the Agent retry policy", async () => {
+	it("recovers a Provider disconnect in the same print turn", async () => {
 		const observation = await runPrintContract(async () => {
 			const server = await startOpenAiResponsesTestServer((_request, index) =>
-				index < 3 ? { kind: "disconnect" } : { kind: "events", events: textResponseEvents("disconnect recovered") },
+				index === 0
+					? { kind: "disconnect", events: textResponseEvents("partial-before-disconnect").slice(0, 3) }
+					: { kind: "events", events: textResponseEvents("disconnect recovered") },
 			);
 			const fixture = await createAgentRpcFixture({ baseUrl: server.baseUrl });
-			await writeFile(
-				join(fixture.agentDir, "settings.json"),
-				JSON.stringify({ retry: { enabled: true, maxRetries: 1, baseDelayMs: 0 } }),
-				"utf8",
-			);
 			try {
 				const result = await runAgentCli(fixture, ["--mode", "json", "retry after disconnect"]);
 				return {
 					code: result.code,
 					requestCount: server.requests.length,
-					retryFrames: readFrames(result.stdout)
-						.filter((frame) => frame.type === "auto_retry_start" || frame.type === "auto_retry_end")
-						.map(normalizeRetryFrame),
+					recovered: result.stdout.includes("disconnect recovered"),
 				};
 			} finally {
 				await fixture.dispose();
 				await server.dispose();
 			}
 		});
-		expect(observation).toMatchObject({
+		expect(observation).toEqual({
 			code: 0,
 			requestCount: 2,
-			retryFrames: legacyRuntimeContract.print.retry.frames,
+			recovered: true,
 		});
 	}, 60_000);
 
@@ -573,7 +563,7 @@ async function runAgentCli(
 		);
 		let stdout = "";
 		let stderr = "";
-		const timeout = setTimeout(() => child.kill(), 20_000);
+		const timeout = setTimeout(() => child.kill(), 60_000);
 		child.stdout.setEncoding("utf8");
 		child.stderr.setEncoding("utf8");
 		child.stdout.on("data", (chunk: string) => {
@@ -694,16 +684,6 @@ function readToolFrames(stdout: string, fixture: AgentRpcFixture): readonly Tool
 	return observations;
 }
 
-function normalizeRetryFrame(frame: JsonFrame): Readonly<Record<string, unknown>> {
-	return {
-		type: frame.type,
-		attempt: frame.attempt,
-		...(frame.type === "auto_retry_start"
-			? { maxAttempts: frame.maxAttempts, delayMs: frame.delayMs }
-			: { success: frame.success, finalError: frame.finalError }),
-	};
-}
-
 function normalizeFixtureValue(value: unknown, fixture: AgentRpcFixture): unknown {
 	if (typeof value === "string") {
 		let normalized = value;
@@ -751,8 +731,8 @@ function readFrameType(frame: unknown): string | undefined {
 }
 
 async function buildAgentCliExecutable(): Promise<AgentCliExecutable> {
-	const directory = await mkdtemp(join(tmpdir(), "vetta-agent-cli-executable-"));
-	const path = join(directory, process.platform === "win32" ? "vetta-agent.exe" : "vetta-agent");
+	const directory = await mkdtemp(join(tmpdir(), "openforge-agent-cli-executable-"));
+	const path = join(directory, process.platform === "win32" ? "openforge-agent.exe" : "openforge-agent");
 	const platformTag = `${process.platform}-${process.arch}` as keyof typeof compileTargetByPlatform;
 	const compileTarget = compileTargetByPlatform[platformTag];
 	if (!compileTarget) throw new Error(`Unsupported Print artifact test platform: ${platformTag}`);

@@ -1,12 +1,12 @@
 ---
 id: TASK-0060
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0006
-source_issue:
+source: PLAN-0006 Canvas artifact service workstream
 execution: parallel
 branch: forge/dev
 worktree: unassigned（原 ..\open-forge-wt\TASK-0060-canvas-service 目录已淘汰；实现在 forge/dev 主工作区，随 c1f931648 落地）
@@ -16,6 +16,11 @@ write_paths: [apps/desktop/src/main/artifacts, apps/desktop/src/main/agent-runti
 exclusive_paths: []
 depends_on: [TASK-0059]
 conflicts_with: []
+related_requirement: [REQ-0001]
+related_plan: [PLAN-0006]
+related_tasks: [TASK-0059, TASK-0061]
+related_issues: [ISSUE-0006]
+related_bugs: []
 integration_status: integrated
 created: 2026-09-23
 updated: 2026-09-23
@@ -79,5 +84,5 @@ updated: 2026-09-23
 - 实际修改：在 Desktop 主树集成 Canvas artifact store/service、Agent 工具与宿主接线；保持会话 artifact 不依赖活动 Task，版本/checksum 冲突显式拒绝，保存到项目不覆盖目标文件。
 - 实际运行：`bun run --cwd packages/coding-agent test test/runtime-core/session-execution-result-policy.test.ts test/features/artifacts/artifact-version-policy.test.ts`（10 项通过）；`bun run --cwd apps/desktop test src/main/agent-runtime/function-extension-source.test.ts src/main/artifacts/canvas-artifact-service.test.ts src/main/artifacts/canvas-session-scan.test.ts src/main/artifacts/canvas-store.test.ts src/main/ipc/canvas-browser-tab.test.ts`（21 项通过）。
 - 未运行及原因：完整 `bun run check` 尚未运行，待本批任务集成后统一执行。
-- Release Notes：候选文案（新增）「Agent 产出的文件可作为会话 Artifact 独立保存、查看版本并在冲突时拒绝覆盖；保存到项目会复制文件，保留会话历史。」留存于此；ISSUE-0007 首发版本切换前不修改继承的 Vetta v0.5.59。
+- Release Notes：候选文案应由 Coordinator 按本次交付和用户可见影响核实后纳入当前 Desktop manifest 对应的 `.github/release-notes/v0.1.1.md`；不再等待首发版本切换，也不修改上游已发布的 Vetta Release Notes。
 - 剩余风险：等待 TASK-0061 UI 集成及整批完整质量检查。

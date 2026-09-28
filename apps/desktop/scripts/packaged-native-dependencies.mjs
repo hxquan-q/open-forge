@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 主进程 bundle 之外的运行时依赖，唯一事实源。
  *
@@ -59,6 +60,11 @@ export function resolvePackagedNativeDependencies(platformFamilies, { speechInpu
 	return {
 		required: selected.filter((definition) => !definition.optional).map((definition) => definition.name),
 		optional: selected.filter((definition) => definition.optional).map((definition) => definition.name),
+		// 每个选中包的目标平台族（"all" 或平台数组）。verify-staged-deps 用它判断
+		// 构建主机本机能不能装上这个包：像 sherpa-onnx-win-x64 这种 os/cpu 受限的
+		// 单平台包在其他系统的 runner 上必然缺席，只能算「异平台 required」，
+		// 真正的存在性校验由该目标平台的原生构建承担。
+		platformsByDep: Object.fromEntries(selected.map((definition) => [definition.name, definition.platforms])),
 		asarUnpack: selected
 			.filter((definition) => definition.unpack)
 			.map((definition) => `node_modules/${definition.name}/**/*`),

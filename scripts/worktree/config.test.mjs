@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -145,6 +145,18 @@ describe("baseline selection", () => {
 		expect(chooseBaseRef({ requested: null, config, exists: existsOnly("HEAD") })).toBe("HEAD");
 	});
 
+	it("pins repository-created worktrees to local main and fails closed if it is missing", () => {
+		const repositoryConfig = JSON.parse(
+			readFileSync(join(import.meta.dirname, "../../.worktreeconfig.json"), "utf8"),
+		);
+		expect(repositoryConfig.baseRef).toBe("main");
+		expect(repositoryConfig.baseRefFallbacks).toEqual([]);
+		expect(chooseBaseRef({ requested: null, config: repositoryConfig, exists: existsOnly("main", "HEAD") })).toBe(
+			"main",
+		);
+		expect(chooseBaseRef({ requested: null, config: repositoryConfig, exists: existsOnly("HEAD") })).toBeNull();
+	});
+
 	it("returns null rather than guessing when nothing resolves", () => {
 		expect(chooseBaseRef({ requested: "missing", config, exists: () => false })).toBeNull();
 		expect(chooseBaseRef({ requested: null, config, exists: () => false })).toBeNull();
@@ -155,7 +167,12 @@ describe("config loading", () => {
 	it("reports an absent config and keeps the inert defaults", () => {
 		const loaded = loadWorktreeConfig(tempRoot());
 		expect(loaded.present).toBe(false);
-		expect(loaded.config).toMatchObject({ worktreeRoot: DEFAULT_CONFIG.worktreeRoot, copyIgnored: false });
+		expect(loaded.config).toMatchObject({
+			worktreeRoot: DEFAULT_CONFIG.worktreeRoot,
+			baseRef: "main",
+			baseRefFallbacks: [],
+			copyIgnored: false,
+		});
 	});
 
 	it("surfaces invalid JSON instead of silently using defaults", () => {

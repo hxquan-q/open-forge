@@ -1,4 +1,5 @@
 import type { ContentBlock, ConversationAgentMessageViewModel } from "@shared/conversation";
+import { resolveConversationAgentText } from "@shared/conversation";
 import { resolvePluginIconNode } from "@shared/lib/plugin-icon";
 import { pluginCardRenderersAtom, type RegisteredCardRenderer } from "@shared/store/atoms";
 import type { ChatTimelineItem } from "@shared/store/chat-atoms";
@@ -214,9 +215,11 @@ export function useMessageCardsHostModel(
 		return resolved;
 	}, [message.id, rawCards, rendererByType, latestOwnerByKey, trPlugin]);
 
+	// 历史回放的助手消息只保留 blocks，插件卡片读到的文本同样按 blocks 派生。
+	const agentText = resolveConversationAgentText(message);
 	const convMessage = useMemo(
-		() => ({ id: message.id, role: message.role, text: message.text ?? "", timestamp: message.timestamp }),
-		[message.id, message.role, message.text, message.timestamp],
+		() => ({ id: message.id, role: message.role, text: agentText, timestamp: message.timestamp }),
+		[message.id, message.role, agentText, message.timestamp],
 	);
 
 	if (cards.length === 0) return null;

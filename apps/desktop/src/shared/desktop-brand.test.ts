@@ -149,6 +149,8 @@ describe("Desktop brand layer", () => {
 			"src/renderer/domains/settings/components/useAccountSettingsModel.ts",
 			"src/renderer/domains/settings/registry.ts",
 			"src/renderer/shared/components/ModelSelect/useModelOptions.ts",
+			// theme-ui 侧栏顶栏随 Desktop 一起发布，品牌名必须经 labels 由宿主注入。
+			"../../packages/theme-ui/src/sidebar/SidebarTopBar.tsx",
 		]) {
 			expect(readDesktopSource(file), file).not.toMatch(/\bVetta\b/);
 		}

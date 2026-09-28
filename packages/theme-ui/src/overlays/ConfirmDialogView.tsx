@@ -9,6 +9,13 @@ export interface ConfirmDialogViewState {
 		readonly label: string;
 	};
 	readonly confirmLabel?: string;
+	readonly input?: {
+		readonly defaultValue?: string;
+		readonly label?: string;
+		readonly password?: boolean;
+		readonly placeholder?: string;
+		readonly value: string;
+	};
 	readonly message: string;
 	readonly title: string;
 	readonly variant?: "danger" | "default";
@@ -24,6 +31,7 @@ export interface ConfirmDialogViewProps {
 	readonly onCancel: () => void;
 	readonly onCheckboxCheckedChange: (checked: boolean) => void;
 	readonly onConfirm: () => void;
+	readonly onInputChange: (value: string) => void;
 	readonly overlayRef: RefObject<HTMLDivElement | null>;
 	readonly state: ConfirmDialogViewState | null;
 }
@@ -36,6 +44,7 @@ export function ConfirmDialogView({
 	onCancel,
 	onCheckboxCheckedChange,
 	onConfirm,
+	onInputChange,
 	overlayRef,
 	state,
 }: ConfirmDialogViewProps): JSX.Element {
@@ -78,6 +87,26 @@ export function ConfirmDialogView({
 										className="h-3.5 w-3.5 accent-primary"
 									/>
 									<span>{state.checkbox.label}</span>
+								</label>
+							)}
+							{state.input && (
+								<label className="mt-4 block text-[12px] text-muted-foreground">
+									{state.input.label && <span className="mb-1 block">{state.input.label}</span>}
+									<input
+										// biome-ignore lint/a11y/noAutofocus: 模态内唯一输入，打开即聚焦是预期
+										autoFocus
+										type={state.input.password ? "password" : "text"}
+										value={state.input.value}
+										placeholder={state.input.placeholder}
+										onChange={(event) => onInputChange(event.currentTarget.value)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter") {
+												event.preventDefault();
+												onConfirm();
+											}
+										}}
+										className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-[13px] text-foreground outline-none focus-visible:border-ring"
+									/>
 								</label>
 							)}
 							<div className="mt-5 flex justify-end gap-2">

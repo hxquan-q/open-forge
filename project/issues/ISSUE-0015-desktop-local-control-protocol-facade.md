@@ -1,14 +1,14 @@
 ---
 id: ISSUE-0015
 type: issue
-status: draft
+status: done
 priority: P1
 owner: apps/desktop/packages/action-rpc
 requirement: []
 plan: []
 source: RESEARCH-0010（PI-Desktop `mcp-control.ts` + ADR-0203 loopback MCP 控制面对照）
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 related_tasks: []
 depends_on: [RESEARCH-0010]
 ---
@@ -55,3 +55,11 @@ depends_on: [RESEARCH-0010]
 - Task：action 元数据 read/write/dangerous 风险标补全（独立可做，不依赖本决策结论）；
 - Plan：MCP 门面方案（catalog→tools 映射、approval 交互语义、token/清单发现、renderer 收敛）；
 - 需求：若 B 成立，REQ + ADR 先行。
+
+## 决策记录（2026-09-25）
+
+- **裁决：暂不做（维持现状，方案 A 的保守形态）**。用户在本轮 backlog 收口中明确选择不为「外部 agent 驱动桌面」新增协议门面；ADR-0078 已划定的外部面边界保持。
+- 依据与代价：新增对外协议面（含 MCP 门面）意味着长期兼容承诺与无人值守 approval 语义设计成本；当前 `action` CLI（`OpenForge.exe action search/describe/run` + action-rpc + approval broker）已能满足自有外部脚本场景。
+- 事实更正（分析时核实，供未来重启时直接用）：`app-actions` 是 `apps/desktop` 下的目录而非独立包，且无 `settings` 域（实际为 general/appearance/shortcuts）；插件 action 的风险标**已存在**（`effect: read|write|execute`，17/18/2 分布），只是未进入 `search`/`describe` 输出；仓库目前仅有一个插件自带 MCP server。
+- 触发重启条件（任一）：用户确认需要「外部 agent/编辑器驱动 Open Forge 桌面」；插件/marketplace 提出控制面集成需求；`action` CLI 的外部集成方明确提出 MCP 诉求。重启时先评估按 ADR-0104 做成**插件 loopback 服务**而非新增核心协议面的形态。
+- 零决策遗留（未做，可随时单独立项）：把已存在的 `effect` 风险标接进 `action search`/`describe` 输出。

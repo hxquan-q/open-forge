@@ -2,6 +2,7 @@ import { resolveReasoning } from "@shared/components/ModelSelect/resolveReasonin
 import { type ModelOption, useModelOptions } from "@shared/components/ModelSelect/useModelOptions";
 import {
 	activeSessionAtom,
+	isStreamingAtom,
 	modelSupportsImagesAtom,
 	reasoningByModelAtom,
 	SELECTED_MODEL_STORAGE_KEY,
@@ -65,6 +66,7 @@ export function useModelSelectorModel({
 	const [reasoningByModel, setReasoningByModel] = useAtom(reasoningByModelAtom);
 	const selectedModel = scope ? scope.modelKey : globalSelectedModel;
 	const activeSession = useAtomValue(activeSessionAtom);
+	const isStreaming = useAtomValue(isStreamingAtom);
 	const setModelSupportsImages = useSetAtom(modelSupportsImagesAtom);
 	const { options, grouped, defaultKey, iconFor, labelFor } = useModelOptions();
 
@@ -133,8 +135,24 @@ export function useModelSelectorModel({
 		}
 	}, [selectedModel, resolved, reasoningByModel, setReasoningByModel, isValidLevel, scope]);
 
+	/**
+	 * 活动 Turn 期间禁止切换会话模型（ISSUE-0019 方案 A）。
+	 *
+	 * 运行中的回合已经按开始时的模型绑定执行，此时写会话设置只会在 UI 上造成
+	 * 「已选中」的假象，并可能把变更提前落到紧随其后的回合上——用户以为自己改的是
+	 * 以后才生效的配置。选择器在回合进行中整体置灰，回合结束后按既有语义恢复：
+	 * 选择写给活动会话，从下一个回合开始生效。
+	 *
+	 * 只在真正会写活动会话的路径上生效：scoped 输入框（团队等）不写会话设置，
+	 * 那条路径的行为保持不变。
+	 */
+	const activeTurnLocksSelection = !scope && updateActiveSession && Boolean(activeSession?.runtimeId) && isStreaming;
+
 	const handleModelSelect = useCallback(
 		(key: string) => {
+			// 视图侧已按同一信号置灰；这里再兜一层，保证「回合进行中不写会话设置」这个
+			// 不变量不依赖某一个主题视图是否尊重 disabled。
+			if (activeTurnLocksSelection) return;
 			if (scope) {
 				const defaultReasoning = resolveReasoning(options.find((option) => option.key === key))?.default;
 				scope.onModelSelect(key, defaultReasoning);
@@ -148,7 +166,7 @@ export function useModelSelectorModel({
 				void window.vetta.session.updateSettings(activeSession.runtimeId, { modelKey: key });
 			}
 		},
-		[setSelectedModel, activeSession, updateActiveSession, scope, options],
+		[setSelectedModel, activeSession, updateActiveSession, scope, options, activeTurnLocksSelection],
 	);
 
 	/**
@@ -186,6 +204,7 @@ export function useModelSelectorModel({
 		viewProps: {
 			currentLevel,
 			defaultKey,
+			disabled: activeTurnLocksSelection,
 			groups: [...grouped.entries()].map(([provider, models]) => ({
 				icon: iconFor(provider),
 				label: labelFor(provider),
@@ -197,6 +216,7 @@ export function useModelSelectorModel({
 				multiplierLabel: multiplierLabelFor,
 				cloudOnly: t("modelSelect.cloudOnly"),
 				defaultBadge: t("modelSelect.defaultBadge"),
+				disabledReason: t("modelSelect.disabledDuringTurn"),
 				levelLabel,
 				modelHeader: t("modelSelect.modelHeader"),
 				noResults: t("modelSelect.noResults"),
@@ -204,6 +224,7 @@ export function useModelSelectorModel({
 				placeholder: t("modelSelect.placeholder"),
 				reasoningHeader: t("modelSelect.reasoningHeader"),
 				searchPlaceholder: t("modelSelect.searchPlaceholder"),
+				turnScopeHint: t("modelSelect.turnScopeHint"),
 				visionBadge: t("modelSelect.visionBadge"),
 			},
 			menuLevels,

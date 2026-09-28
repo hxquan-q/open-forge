@@ -1,8 +1,11 @@
-// Prepare the Windows-only Sherpa-ONNX model before build/package.
+// Modified by The Open Forge contributors.
+// Optional prefetch of the Windows-only Sherpa-ONNX model.
 //
-// Files are kept under resources/speech-models (gitignored), verified against
-// the source-controlled manifest, and later copied into Electron
-// extraResources. Runtime code never downloads model files.
+// Packaged builds no longer ship the model — the main process downloads it on
+// first speech-input use (src/main/speech-input/model-downloader.ts) and
+// verifies it against the same source-controlled manifest. This script only
+// fills resources/speech-models for dev convenience, or for opt-in bundles
+// built with VETTA_BUNDLE_SPEECH_MODELS=1.
 
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";

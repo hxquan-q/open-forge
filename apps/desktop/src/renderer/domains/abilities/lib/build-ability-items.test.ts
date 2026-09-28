@@ -659,7 +659,9 @@ describe("universal-db 内置预设", () => {
 		expect(preset?.packageHint).toBe("universal-db-mcp");
 		expect(preset?.config.disabledTools).toEqual(["connect_database", "disconnect_database"]);
 		expect(UNIVERSAL_DB_TYPES).toHaveLength(17);
-		expect(preset?.secrets?.find((field) => field.envKey === "DB_TYPE")?.options).toEqual(UNIVERSAL_DB_TYPES);
+		expect(preset?.secrets?.find((field) => field.envKey === "DB_TYPE")?.options?.map((o) => o.value)).toEqual(
+			UNIVERSAL_DB_TYPES,
+		);
 		// 不暴露写库开关
 		expect(preset?.secrets?.some((field) => field.envKey === "DB_ALLOW_WRITE")).toBe(false);
 		expect(preset?.secrets?.some((field) => field.envKey === "DB_AUTH_SOURCE")).toBe(false);
@@ -669,7 +671,7 @@ describe("universal-db 内置预设", () => {
 		if (!preset) throw new Error("universal-db preset missing");
 		const config = buildBuiltinMcpServerConfig(
 			preset,
-			{ displayName: "通用数据库", description: "" },
+			{ displayName: "数据库查询", description: "" },
 			secretValues,
 		) as McpStdioServerConfigData;
 

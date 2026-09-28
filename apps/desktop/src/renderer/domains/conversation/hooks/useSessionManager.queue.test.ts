@@ -1,10 +1,23 @@
 // @vitest-environment jsdom
 
-import type { OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
+import { resolveConversationAgentText } from "@shared/conversation";
+import type { ChatTimelineItem, OpenSessionOptions, SessionExecutionMode } from "@shared/store/atoms";
 import { getDefaultStore } from "jotai";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
+/** 历史回放的助手消息只保留 blocks，比较可见文本时按 blocks 派生（TASK-0036）。 */
+function visibleMessageText(message: ChatTimelineItem): string {
+	if (message.kind === "event" || message.kind === "placeholder") return "";
+	return message.kind === "agent" ? resolveConversationAgentText(message) : message.text;
+}
+
+function visibleMessageShape(message: ChatTimelineItem): [string, string][] {
+	if (message.kind === "event" || message.kind === "placeholder") return [];
+	const text = visibleMessageText(message);
+	return text.length > 0 ? [[message.role, text]] : [];
+}
 
 const mocks = vi.hoisted(() => ({
 	applyLocalRename: vi.fn(),
@@ -291,7 +304,7 @@ it("失步竞态：以为空闲实则已在跑（回执 queued）时撤掉抢先
 	expect(store.get(chatMessagesAtom).filter((message) => message.kind === "user")).toEqual([]);
 });
 
-it("turn 内接力消费：第二条回复的流式内容开新气泡、排在补出的用户气泡之后", async () => {
+it("history 回填：canonical 缺少已消费 follow-up 时，乐观用户气泡仍排在它触发的回复前", async () => {
 	let eventHandler: SessionEventHandler | undefined;
 	const sessionApi = (window as unknown as { vetta: { session: Record<string, unknown> } }).vetta.session;
 	sessionApi.create = vi.fn(async () => ({ cwd, sessionId: runtimeId, sessionPath }));
@@ -310,6 +323,10 @@ it("turn 内接力消费：第二条回复的流式内容开新气泡、排在�
 		eventHandler = handler;
 		return vi.fn();
 	});
+	const firstHistory = [{ type: "message", entryId: "u-1", message: { role: "user", content: "第一条消息" } }];
+	const historyRef: { current: unknown[] } = { current: firstHistory };
+	sessionApi.openViewer = vi.fn(async () => ({ history: historyRef.current }));
+	sessionApi.getFullHistory = vi.fn(async () => historyRef.current);
 	const store = await mount("", false);
 	const { chatMessagesAtom } = await import("@shared/store/atoms");
 	await act(async () => {
@@ -338,18 +355,46 @@ it("turn 内接力消费：第二条回复的流式内容开新气泡、排在�
 		await new Promise((resolve) => setTimeout(resolve, 150));
 	});
 
-	const shape = store
-		.get(chatMessagesAtom)
-		.flatMap((message) =>
-			message.kind !== "event" && message.kind !== "placeholder" && (message.text?.length ?? 0) > 0
-				? [[message.role, message.text]]
-				: [],
-		);
+	const shape = store.get(chatMessagesAtom).flatMap((message) => visibleMessageShape(message) ?? []);
 	expect(shape).toEqual([
+		["user", "第一条消息"],
 		["assistant", "回答一"],
 		["user", "第二条消息"],
 		["assistant", "回答二"],
 	]);
+
+	// History already contains the assistant output caused by the consumed follow-up,
+	// while Runtime intentionally has no canonical user entry for that queue mirror.
+	historyRef.current = [
+		...firstHistory,
+		{
+			type: "message",
+			entryId: "a-1",
+			message: { role: "assistant", content: [{ type: "text", text: "回答一" }] },
+		},
+		{
+			type: "message",
+			entryId: "a-2",
+			message: { role: "assistant", content: [{ type: "text", text: "回答二" }] },
+		},
+	];
+	emit({ ...base, type: "session.lifecycle", phase: "agent_end" });
+	await act(async () => {
+		await vi.waitFor(() => {
+			expect(
+				store.get(chatMessagesAtom).some((message) => message.kind === "agent" && message.entryId === "a-1"),
+			).toBe(true);
+		});
+	});
+	const canonicalTimeline = store.get(chatMessagesAtom);
+	const followUpIndex = canonicalTimeline.findIndex(
+		(message) => message.kind === "user" && message.text === "第二条消息",
+	);
+	const replyIndex = canonicalTimeline.findIndex(
+		(message) => message.kind === "agent" && visibleMessageText(message).includes("回答二"),
+	);
+	expect(followUpIndex).toBeGreaterThanOrEqual(0);
+	expect(replyIndex).toBeGreaterThan(followUpIndex);
 });
 
 it("立即发送打断插队：上一回合已 streaming 的部分回复保留，不被吞掉", async () => {
@@ -446,13 +491,7 @@ it("立即发送打断插队：上一回合已 streaming 的部分回复保留�
 	// 等 canonical 重拉落地。
 	await flushTimers();
 
-	const shape = store
-		.get(chatMessagesAtom)
-		.flatMap((message) =>
-			message.kind !== "event" && message.kind !== "placeholder" && (message.text?.length ?? 0) > 0
-				? [[message.role, message.text]]
-				: [],
-		);
+	const shape = store.get(chatMessagesAtom).flatMap((message) => visibleMessageShape(message) ?? []);
 	// 中途快照与 canonical 落地后都必须保留「部分回复」，且顺序正确。
 	expect(shape).toEqual([
 		["user", "第一条"],
@@ -475,7 +514,9 @@ it("空闲发送：正常上屏乐观气泡并返回 sent", async () => {
 	expect(
 		store
 			.get(chatMessagesAtom)
-			.flatMap((message) => (message.kind === "event" || message.kind === "placeholder" ? [] : [message.text])),
+			.flatMap((message) =>
+				message.kind === "event" || message.kind === "placeholder" ? [] : [visibleMessageText(message)],
+			),
 	).toContain("普通消息");
 });
 

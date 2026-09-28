@@ -3,6 +3,7 @@ import {
 	type MessageFeedNavigationEntry,
 	type MessageFeedNavigationTurn,
 } from "@shared/components/message-feed/navigationModel";
+import { resolveConversationAgentText } from "@shared/conversation";
 import type { ChatTimelineItem } from "./types";
 
 export type { RenderedFeedItem as RenderedMessageItem } from "@shared/components/message-feed/visibleItemModel";
@@ -19,12 +20,9 @@ function visibleMessageText(message: ChatTimelineItem): string {
 	if (message.kind === "event") return "";
 	// 占位项以摘要参与导航/搜索——全文操作（跳转后复制等）会先经窗口恢复。
 	if (message.kind === "placeholder") return message.summary;
-	if (message.text?.trim()) return message.text;
-	if (message.kind === "user") return message.text;
-	return message.blocks
-		.filter((block) => block.type === "text")
-		.map((block) => block.text)
-		.join("\n");
+	// 历史回放的助手消息不再物化 text，统一按 blocks 派生，避免出现第二份正文事实源。
+	if (message.kind === "agent") return resolveConversationAgentText(message);
+	return message.text;
 }
 
 /** Chat adapter: projects the domain message schema into the shared navigation contract. */

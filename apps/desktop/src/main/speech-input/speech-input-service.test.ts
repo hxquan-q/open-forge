@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { SpeechInputEvent, SpeechInputStatus } from "../../preload/api-types/speech-input.js";
 import type { SpeechHostCommand, SpeechHostEvent } from "./protocol.js";
@@ -70,6 +71,7 @@ describe("SpeechInputService", () => {
 			supported: true,
 			modelDirectory: "C:/cache/model",
 			getStatus: vi.fn(async () => READY_STATUS),
+			ensureModel: vi.fn(async () => undefined),
 		};
 		const service = new SpeechInputService({
 			sendEvent: (event) => events.push(event),
@@ -94,6 +96,7 @@ describe("SpeechInputService", () => {
 			supported: true,
 			modelDirectory: "C:/cache/model",
 			getStatus: vi.fn(async () => READY_STATUS),
+			ensureModel: vi.fn(async () => undefined),
 		};
 		const service = new SpeechInputService({
 			sendEvent: (event) => events.push(event),
@@ -110,5 +113,78 @@ describe("SpeechInputService", () => {
 		expect(events.at(-1)).toMatchObject({ type: "status", status: { phase: "ready" } });
 		service.dispose();
 		expect(child.kill).toHaveBeenCalledOnce();
+	});
+
+	it("downloads the model on first use, reports progress, then starts listening", async () => {
+		const child = new FakeSpeechHostChild();
+		const events: SpeechInputEvent[] = [];
+		let ready = false;
+		const modelManager: SpeechModelAccess = {
+			supported: true,
+			modelDirectory: "C:/cache/model",
+			getStatus: vi.fn(
+				async (): Promise<SpeechInputStatus> =>
+					ready
+						? READY_STATUS
+						: { supported: true, phase: "not-downloaded", modelId: "test-model", errorCode: "model-missing" },
+			),
+			ensureModel: vi.fn(async (onProgress) => {
+				onProgress?.(80, 160);
+				onProgress?.(160, 160);
+				ready = true;
+			}),
+		};
+		const service = new SpeechInputService({
+			sendEvent: (event) => events.push(event),
+			forkChild: () => child,
+			modelManager,
+		});
+
+		await service.start();
+
+		expect(modelManager.ensureModel).toHaveBeenCalledOnce();
+		expect(events).toContainEqual({
+			type: "status",
+			status: { supported: true, phase: "downloading", modelId: "test-model", downloadProgress: 0.5 },
+		});
+		expect(events).toContainEqual({
+			type: "status",
+			status: { supported: true, phase: "downloading", modelId: "test-model", downloadProgress: 1 },
+		});
+		expect(child.commands.map((command) => command.type)).toEqual(["initialize", "start"]);
+		service.dispose();
+	});
+
+	it("surfaces a model download failure as a retryable error", async () => {
+		const child = new FakeSpeechHostChild();
+		const events: SpeechInputEvent[] = [];
+		const modelManager: SpeechModelAccess = {
+			supported: true,
+			modelDirectory: "C:/cache/model",
+			getStatus: vi.fn(
+				async (): Promise<SpeechInputStatus> => ({
+					supported: true,
+					phase: "not-downloaded",
+					modelId: "test-model",
+					errorCode: "model-missing",
+				}),
+			),
+			ensureModel: vi.fn(async () => {
+				throw new Error("network unreachable");
+			}),
+		};
+		const service = new SpeechInputService({
+			sendEvent: (event) => events.push(event),
+			forkChild: () => child,
+			modelManager,
+		});
+
+		await expect(service.start()).rejects.toThrow("download failed");
+		expect(events.at(-1)).toMatchObject({
+			type: "status",
+			status: { phase: "error", errorCode: "model-download-failed" },
+		});
+		expect(child.commands).toHaveLength(0);
+		service.dispose();
 	});
 });

@@ -3,6 +3,7 @@ import type {
 	CodingAgentToolApprovalDecision,
 	CodingAgentToolApprovalFunctionRequest,
 } from "@vetta/coding-agent/function-extensions";
+import { evaluateUnattendedToolAutoApprove } from "@vetta/coding-agent/runtime";
 import type { ApprovalDecisionRecordedEvent, ApprovalRequestedRecordedEvent } from "@vetta/runtime-core/kernel";
 import { NodeProjectTrustStore } from "@vetta/runtime-node/host";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
@@ -10,6 +11,7 @@ import { readSessionCwdFromHeader } from "../conversations/session-paths.js";
 import { mainT } from "../i18n/index.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
+import { getUnattendedPermissionTiersForSession } from "../scheduler/unattended-permission-session-registry.js";
 
 const log = getAppLogger("tool-approval");
 
@@ -24,9 +26,11 @@ const FLUSH_RETRY_INTERVAL_MS = 2_000;
 const FLUSH_MAX_ATTEMPTS = 15;
 
 /**
- * 高风险工具审批的 Desktop 侧实现（TASK-0016）：
+ * 高风险工具审批的 Desktop 侧实现（TASK-0016 / TASK-0116）：
  *
- * - L3 命中 Project Trust（`.vetta-local/trust.json`）时静默放行；L4 永远弹窗；
+ * - 自动化会话若绑定无人值守分档，已授权档可对非 L4 静默放行（ADR-0132）；
+ * - 计费/配额语境与 L4 永远弹窗；
+ * - L3 命中 Project Trust（`.vetta-local/trust.json`）时静默放行；
  * - 弹窗复用 ActionApprovalBroker（超时、崩溃清理、窗口唤起语义一致）；
  * - 请求与决策作为会话事实排队，Turn 收尾后落盘（重启后由投影恢复审计轨迹）。
  */
@@ -58,6 +62,20 @@ export class DesktopToolApprovalBroker {
 		signal: AbortSignal | undefined,
 	): Promise<CodingAgentToolApprovalDecision> {
 		this.queueRequested(request);
+
+		// 自动化会话无人值守分档（ADR-0132）：已授权档可对非 L4 静默放行；
+		// 计费语境与 L4 仍强制人工；未授权档落入下方 Trust/UI 路径。
+		const unattended = evaluateUnattendedToolAutoApprove({
+			tiers: getUnattendedPermissionTiersForSession(request.sessionId),
+			toolName: request.toolName,
+			level: request.level,
+			summary: request.summary,
+			inputPreview: request.inputPreview,
+		});
+		if (unattended.outcome === "autoApprove") {
+			this.queueDecision(request, "approve");
+			return { decision: "approve" };
+		}
 
 		// Trust 命中：L3 及以下静默放行（grant 由宿主管理）；L4 永远逐次确认。
 		if (request.level !== "L4") {

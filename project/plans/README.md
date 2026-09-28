@@ -15,16 +15,15 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0006` | Canvas / Browser / Terminal 右栏集成 | ready | [`RESEARCH-0005`](../research/RESEARCH-0005-canvas-browser-terminal-support.md)、用户确认的决策索引 |
 | `PLAN-0007` | Agent Workspace Phase 2（Browser 调试闭环 + Canvas 富交互） | draft | PLAN-0006 推迟项圈选、用户确认的 Phase 2 决策；v1 演示/首发反馈可重排 |
 | `PLAN-0008` | Agent Team 编排协作对齐 | done | [`REQ-0006`](../requirements/REQ-0006-agent-team-orchestration-alignment.md)、[`RESEARCH-0008`](../research/RESEARCH-0008-multi-agent-orchestration-comparison.md) |
-| `PLAN-0009` | Canvas 体验演进（原生 Data Grid、高带宽组件、直接编辑与试跑） | draft | [`PLAN-0006`](PLAN-0006-canvas-browser-activity-tabs.md)、用户审批中的 P0~P2 演进案 |
+| `PLAN-0009` | Canvas 体验演进（原生 Data Grid、高带宽组件、直接编辑与试跑） | ready | [`PLAN-0006`](PLAN-0006-canvas-browser-activity-tabs.md)、已确认的 P0~P2 演进案 |
+| `PLAN-0010` | 桌面端内存与发布体积优化（VS Code 借鉴） | in_progress | [`RESEARCH-0013`](../research/RESEARCH-0013-vscode-footprint-optimization.md) |
+| `PLAN-0011` | 仓库架构治理升级（Avernet 借鉴） | done | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
+| `PLAN-0012` | 无人值守会话与自动化产品化（WorkDaddy 借鉴） | in_progress | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
+| `PLAN-0013` | 团队会话编排效率：消除主控轮询空转与协作摩擦 | draft | [`ISSUE-0025`/`0026`/`0027`](../issues/)、开发团队实测会话量化基线（38 waits / 44.9min / $0.376）、上游 `887017560` 与 Pi/Codex/Claude Code 参照 |
 
 ## 当前执行焦点
 
-- `PLAN-0002`：P0 治理已完成；下一项选定 `TASK-0033`（P1 / ready，尚未开工）。
-- `PLAN-0001`：`TASK-0028` done；`TASK-0027` 仍依赖 TASK-0068；`TASK-0025`、`TASK-0026` 可串行评估，共享 WorkspaceMode 写路径。
-- `PLAN-0003`：`TASK-0043` 是当前 ready 的首项；C/D 和 F 后续项按任务依赖推进。
-- `PLAN-0004`：处于 verifying，待后续真实任务验证闭环。
-- `PLAN-0005`：独立 SemVer 已确认；首发号、Apache §4(b) 修改文件声明和 workspace package release scope 由 ISSUE-0007/0008/0009 阻断；TASK-0052、TASK-0056、TASK-0057 in progress。
-- `PLAN-0006`：决策已冻结；`TASK-0059`（合同与接缝）先行串行，之后 Canvas lane（0060→0061）与 Browser lane（0062→0063）条件并行，`TASK-0064` 独立。
+Task 状态以各 Task frontmatter 为准；精选执行焦点见 [`tasks/README.md`](../tasks/README.md)，依赖与集成顺序以对应 Plan/Task 合同为准。不要从历史路线叙述推断当前 Task 状态。
 
 ## Plan 必须说明
 

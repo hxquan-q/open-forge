@@ -16,7 +16,12 @@ import { loadBuildEnv } from "./load-build-env.mjs";
 import { resolveInstalledPackageRoot } from "./installed-package-root.mjs";
 import { resolvePackagedNativeDependencies } from "./packaged-native-dependencies.mjs";
 import { resolveReleaseInfo } from "./resolve-release-info.mjs";
+import {
+	collectMissingSandboxBinaries,
+	formatSandboxStagingWarning,
+} from "./sandbox-staging-guard.mjs";
 import { prepareSpeechModels, SPEECH_MODEL_RESOURCE_ROOT } from "./fetch-speech-models.mjs";
+import { MCP_SERVERS_VENDOR_ROOT, prepareMcpServers } from "./fetch-mcp-servers.mjs";
 import { prepareVendorRuntimes } from "./fetch-vendor-runtimes.mjs";
 import {
 	resolveSpeechInputBuildConfig,
@@ -28,6 +33,16 @@ import {
 import { stageSystemSkills } from "./stage-system-skills.mjs";
 import { stageSystemThemesFromArchives } from "./stage-system-themes.mjs";
 import { stageDesktopLegalResources } from "./stage-desktop-legal-resources.mjs";
+import {
+	assertStagedDependencyPlan,
+	collectStagedDependencyTree,
+	createStagedDepPlanFilter,
+	findStagedNodeModulesBlacklistHits,
+	listStagedDepFiles,
+	planStagedDepStripping,
+	readStagedDepFileSizes,
+	summarizeStagedDepCleaning,
+} from "./staged-deps-cleanlist.mjs";
 
 // 从 .env.<mode>/.env 注入构建期变量（如 VETTA_TENANT），命令行内联优先。
 const buildEnvMode = loadBuildEnv();
@@ -45,11 +60,11 @@ const cliAppDir = join(projectRoot, "..", "cli-host");
 const runtimeCoreWindowsSandboxDir = join(projectRoot, "..", "..", "packages", "runtime-core", "sandbox", "bin");
 const runtimeCoreSandboxDir = join(projectRoot, "..", "..", "packages", "runtime-core", "sandbox", "linux");
 const cliAppCompileTargets = {
-	"darwin-arm64": { platformTag: "darwin-arm64", bunTarget: "bun-darwin-arm64", binaryName: "vetta" },
-	"darwin-x64": { platformTag: "darwin-x64", bunTarget: "bun-darwin-x64", binaryName: "vetta" },
-	"linux-arm64": { platformTag: "linux-arm64", bunTarget: "bun-linux-arm64", binaryName: "vetta" },
-	"linux-x64": { platformTag: "linux-x64", bunTarget: "bun-linux-x64", binaryName: "vetta" },
-	"win32-x64": { platformTag: "win32-x64", bunTarget: "bun-windows-x64", binaryName: "vetta.exe" },
+	"darwin-arm64": { platformTag: "darwin-arm64", bunTarget: "bun-darwin-arm64", binaryName: "openforge" },
+	"darwin-x64": { platformTag: "darwin-x64", bunTarget: "bun-darwin-x64", binaryName: "openforge" },
+	"linux-arm64": { platformTag: "linux-arm64", bunTarget: "bun-linux-arm64", binaryName: "openforge" },
+	"linux-x64": { platformTag: "linux-x64", bunTarget: "bun-linux-x64", binaryName: "openforge" },
+	"win32-x64": { platformTag: "win32-x64", bunTarget: "bun-windows-x64", binaryName: "openforge.exe" },
 };
 const imGatewayTargetByPlatformTag = {
 	"darwin-arm64": { arch: "arm64", os: "darwin" },
@@ -201,16 +216,38 @@ const optionalExternalDeps = packagedNativeDependencies.optional;
 // node-addon-api). Transitive deps are nested under the owner's node_modules so
 // both the collector and runtime require() resolve them; the asarUnpack glob
 // `node_modules/<dep>/**/*` then unpacks them alongside the native module.
-function stageDepTree(dep, sourceDir, destDir, seen = new Set()) {
-	cpSync(sourceDir, destDir, { recursive: true });
-	const pkg = JSON.parse(readFileSync(join(sourceDir, "package.json"), "utf8"));
-	for (const transDep of Object.keys(pkg.dependencies ?? {})) {
-		const key = `${dep}>${transDep}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		const transDir = resolveInstalledPackageRoot(transDep, sourceDir);
-		stageDepTree(transDep, transDir, join(destDir, "node_modules", transDep), seen);
-	}
+//
+// 清洗清单（scripts/staged-deps-cleanlist.mjs）在复制时逐条应用，对应 VS Code 的
+// `build/.moduleignore` 两级清单：测试、文档、构建脚本、调试符号与异平台预编译
+// 二进制不进 app.asar。闭包计算与规则都从那个模块读取，verify-staged-deps.mjs
+// 的产物断言与这里共用同一份实现。
+function formatMegabyteCount(bytes) {
+	return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+}
+
+// 哪些原生变体目录会被裁掉由目标产物平台决定；平台未知（本地显式构建）时保留全部。
+const stagedDependencyPlatforms = [...resolvePlatformFamilies()];
+
+function stageExternalDependency(dep, sourceDir, destDir) {
+	const packageJson = JSON.parse(readFileSync(join(sourceDir, "package.json"), "utf8"));
+	const filePaths = listStagedDepFiles(sourceDir);
+	const plan = planStagedDepStripping({ filePaths, platforms: stagedDependencyPlatforms, packageJson });
+	// 计划一旦碰到运行时入口立刻失败：破损的依赖不能被打进安装包。
+	assertStagedDependencyPlan({ label: dep, filePaths, plan, packageJson });
+	const summary = summarizeStagedDepCleaning({
+		filePaths,
+		sizesByPath: readStagedDepFileSizes(sourceDir, filePaths),
+		plan,
+	});
+	cpSync(sourceDir, destDir, {
+		recursive: true,
+		filter: createStagedDepPlanFilter({ sourceDir, plan }),
+	});
+	console.log(
+		`[prepare-pack] staged ${dep}: ${summary.files}→${summary.keptFiles} files, ` +
+			`${formatMegabyteCount(summary.bytes)}→${formatMegabyteCount(summary.keptBytes)} ` +
+			`(-${formatMegabyteCount(summary.strippedBytes)})`,
+	);
 }
 
 function toExternalDepInfo(dep) {
@@ -275,12 +312,19 @@ rmSync(buildStageDir, { recursive: true, force: true });
 mkdirSync(buildStageDir, { recursive: true });
 stageDesktopLegalResources(join(projectRoot, "..", ".."), buildStageDir);
 
-const preparedSpeechModel = await prepareSpeechModels({
-	env: process.env,
-	platformTags: resolvePlatformTagsFromEnv(),
-});
-if (preparedSpeechModel) {
-	cpSync(SPEECH_MODEL_RESOURCE_ROOT, join(buildStageDir, "speech-models"), { recursive: true });
+// 语音模型默认不进安装包：首次使用语音输入时由主进程按 model-manifest.json
+// 按需下载到用户目录。离分发场景可设 VETTA_BUNDLE_SPEECH_MODELS=1 恢复内置。
+const bundleSpeechModels = process.env.VETTA_BUNDLE_SPEECH_MODELS === "1";
+if (bundleSpeechModels) {
+	const preparedSpeechModel = await prepareSpeechModels({
+		env: process.env,
+		platformTags: resolvePlatformTagsFromEnv(),
+	});
+	if (preparedSpeechModel) {
+		cpSync(SPEECH_MODEL_RESOURCE_ROOT, join(buildStageDir, "speech-models"), { recursive: true });
+	}
+} else {
+	console.log("[prepare-pack] speech models not bundled (runtime downloads on demand)");
 }
 
 // Write the staged package metadata. Electron-builder decides which
@@ -342,8 +386,26 @@ if (process.platform === "darwin") {
 	);
 }
 
-for (const { dep, dir } of externalDepInfos) {
-	stageDepTree(dep, dir, join(buildStageDir, "node_modules", dep));
+const stagedDependencyEntries = collectStagedDependencyTree({
+	roots: externalDepInfos.map((info) => info.dep),
+	destinationRoot: join(buildStageDir, "node_modules"),
+	fromDir: projectRoot,
+	resolvePackageRoot: (dep, fromDir) => resolveInstalledPackageRoot(dep, fromDir),
+});
+for (const { dep, sourceDir, destDir } of stagedDependencyEntries) {
+	stageExternalDependency(dep, sourceDir, destDir);
+}
+
+// 复制之后的成品校验：staging 树里一旦还有黑名单命中，说明 filter 没接上清洗规则。
+const stagedBlacklistHits = findStagedNodeModulesBlacklistHits({
+	nodeModulesDirectory: join(buildStageDir, "node_modules"),
+	platforms: stagedDependencyPlatforms,
+});
+if (stagedBlacklistHits.length > 0) {
+	throw new Error(
+		`[prepare-pack] staged node_modules still contains cleanlist blacklist entries:\n- ` +
+			stagedBlacklistHits.join("\n- "),
+	);
 }
 
 // =============================================================================
@@ -513,12 +575,12 @@ if (!existsSync(bundledAgentRpcCli)) {
 }
 
 // =============================================================================
-// vetta CLI app (extraResources)
+// openforge CLI app (extraResources)
 // =============================================================================
 //
-// The agent-facing `vetta` command is @vetta/cli-host, not the desktop
+// The agent-facing `openforge` command is @vetta/cli-host, not the desktop
 // executable. Stage it into Resources/cli-app/ so Desktop can write
-// ~/.vetta/agent/bin/vetta as a stable shim to this entry.
+// ~/.vetta/agent/bin/openforge as a stable shim to this entry.
 const stagedCliAppDir = join(buildStageDir, "cli-app");
 rmSync(stagedCliAppDir, { recursive: true, force: true });
 mkdirSync(stagedCliAppDir, { recursive: true });
@@ -532,7 +594,7 @@ for (const target of resolveCliAppCompileTargets()) {
 	const stagedCliAppBinDir = join(stagedCliAppDir, "bin", target.platformTag);
 	const stagedCliAppBinary = join(stagedCliAppBinDir, target.binaryName);
 	mkdirSync(stagedCliAppBinDir, { recursive: true });
-	console.log(`[prepare-pack] compiling vetta CLI (${target.platformTag}) -> ${stagedCliAppBinary}`);
+	console.log(`[prepare-pack] compiling openforge CLI (${target.platformTag}) -> ${stagedCliAppBinary}`);
 	execFileSync(process.platform === "win32" ? "bun.exe" : "bun", [
 		join(cliAppDir, "scripts", "compile-standalone.mjs"),
 		"--target",
@@ -559,6 +621,8 @@ for (const target of resolveCliAppCompileTargets()) {
 //
 // Sandbox executables live under Resources/sandbox/<platform>/ so the Electron
 // main process can resolve them from process.resourcesPath after packaging.
+// 来源目录缺失时下面的 staged 会被静默跳过，产物于是没有沙盒（BUG-0022）——末尾的
+// 守卫专门把这件事喊出来，但刻意不让构建失败。
 const stagedSandboxDir = join(buildStageDir, "sandbox");
 mkdirSync(stagedSandboxDir, { recursive: true });
 if (existsSync(runtimeCoreWindowsSandboxDir)) {
@@ -593,22 +657,33 @@ if (existsSync(runtimeCoreSandboxDir)) {
 	}
 }
 
+// 「声明要打包该平台、却没有 staged 任何该平台沙盒二进制」= 发一个没有沙盒的包。
+// 只告警不失败（见 sandbox-staging-guard.mjs 的取舍说明）。
+for (const gap of collectMissingSandboxBinaries({
+	declaredFamilies: resolvePlatformFamilies(),
+	sourceDirs: { win32: runtimeCoreWindowsSandboxDir, linux: runtimeCoreSandboxDir },
+})) {
+	console.warn(formatSandboxStagingWarning(gap));
+}
+
 // =============================================================================
 // 托管运行时 vendor 二进制 (extraResources) —— ADR-0011
 // =============================================================================
 //
-// 把当前构建目标平台的 Node + Python(python-build-standalone)原始归档内置进
-// Resources/vendor/{node,python}/,首启时由 main 进程解压到 ~/.vetta/runtimes/。
-// 这是普通用户「下载下来就有环境」的本体。Node 走 npmmirror、Python 走 GitHub
-// (国内无稳定公共镜像,故必须内置)。构建机有网即可;无法联网的构建可设
-// VETTA_SKIP_VENDOR=1 跳过(产物退化为「面板手动下载」,不推荐发版用)。
+// 默认不再内置：安装后由 RuntimeManager 按 manifest 后台下载到
+// ~/.vetta/runtimes/（离线环境可在设置面板重试）。离分发/免网络场景可设
+// VETTA_BUNDLE_VENDOR=1 恢复旧行为——把目标平台的 Node + Python 原始归档打进
+// Resources/vendor/{node,python}/，首启零网络解压。
+// macOS 内置的是解压目录（归档内的 Mach-O 过不了 Apple 公证），详见
+// docs/desktop/macos-auto-update.md；其余平台内置原始归档。
 //
 // 默认按构建宿主平台;跨平台打包请设 VETTA_VENDOR_PLATFORM,取值与
 // src/main/runtimes/manifest.json 的 platforms 键一致(如 darwin-arm64 /
 // win32-x64 / linux-x64)。
 async function stageVendorRuntimes() {
-	if (process.env.VETTA_SKIP_VENDOR === "1") {
-		console.warn("[prepare-pack] VETTA_SKIP_VENDOR=1 —— 跳过内置运行时,产物将依赖面板手动下载");
+	const bundle = process.env.VETTA_BUNDLE_VENDOR === "1" && process.env.VETTA_SKIP_VENDOR !== "1";
+	if (!bundle) {
+		console.log("[prepare-pack] vendor runtimes not bundled (downloaded post-install)");
 		return;
 	}
 	const platformTag = process.env.VETTA_VENDOR_PLATFORM || `${process.platform}-${process.arch}`;
@@ -643,6 +718,28 @@ async function stageVendorRuntimes() {
 }
 
 await stageVendorRuntimes();
+
+// =============================================================================
+// 内置 MCP servers（extraResources）
+// =============================================================================
+//
+// 能力页「内置」连接器不再依赖 npx 现装：vendor/mcp-servers/<id>/ 下是
+// fetch-mcp-servers.mjs 预装好的完整依赖树（含裁剪与 node:sqlite 垫片），
+// 运行时以 ELECTRON_RUN_AS_NODE=1 + process.execPath 拉起（见
+// src/main/mcp/builtin-mcp-server-runtime.ts）。缺失视为打包失败——静默退回
+// npx 会让产物退化成「联网装依赖」的旧行为。
+const stagedMcpServersDir = join(buildStageDir, "mcp-servers");
+rmSync(stagedMcpServersDir, { recursive: true, force: true });
+await prepareMcpServers();
+for (const entry of readdirSync(MCP_SERVERS_VENDOR_ROOT)) {
+	const src = join(MCP_SERVERS_VENDOR_ROOT, entry);
+	if (!existsSync(join(src, "node_modules"))) continue;
+	cpSync(src, join(stagedMcpServersDir, entry), { recursive: true });
+	console.log(`[prepare-pack] mcp-server staged: ${entry}`);
+}
+if (!existsSync(stagedMcpServersDir) || readdirSync(stagedMcpServersDir).length === 0) {
+	throw new Error("[prepare-pack] mcp-servers staging is empty; run scripts/fetch-mcp-servers.mjs first");
+}
 
 // =============================================================================
 // 系统插件（extraResources）—— ADR-0024
@@ -684,10 +781,13 @@ function resolveExtraResources() {
 			to: "cli-app",
 			filter: ["**/*"],
 		},
+		...(existsSync(join(buildStageDir, "vendor"))
+			? [{ from: "vendor", to: "vendor", filter: ["**/*", "!**/*.pdb"] }]
+			: []),
 		{
-			from: "vendor",
-			to: "vendor",
-			filter: ["**/*", "!**/*.pdb"],
+			from: "mcp-servers",
+			to: "mcp-servers",
+			filter: ["**/*", "!**/*.map", "!**/*.ts"],
 		},
 		{
 			from: "system-plugins",
@@ -727,7 +827,7 @@ function resolveExtraResources() {
 			filter: ["**/*"],
 		});
 	}
-	if (speechInputBuildConfig.enabled) {
+	if (existsSync(join(buildStageDir, "speech-models"))) {
 		extraResources.push({
 			from: "speech-models",
 			to: "speech-models",

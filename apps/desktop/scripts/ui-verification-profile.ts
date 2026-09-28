@@ -52,6 +52,8 @@ export interface SeedDebugProfileResult {
   seeded: boolean;
   modelsCopied: boolean;
   credentialsCopied: number;
+  /** 是否把源实例的 safeStorage 主密钥段（Local State/os_crypt）同步给了目标。 */
+  osCryptSynced: boolean;
   sourceHome: string;
   targetHome: string;
 }
@@ -160,6 +162,32 @@ export function createProfileEnvironment(
   return profileEnvironment;
 }
 
+export interface UiVerificationCanaryTarget {
+  agentDir: string;
+  vettaHome: string;
+}
+
+/**
+ * Runtime Canary 下 Desktop、host 与 runner 必须共享同一份 Action RPC endpoint 合同：
+ * endpoint 文件落在 canary home 里，runner 按它连 Desktop，host 也按它断言退出后已清理。
+ * Profile 自带的 `endpointFile` 是给普通验证实例用的另一条路径，二者混用会让 canary 在第一次
+ * CLI 调用就报 `LOCAL_RPC_SERVER_NOT_FOUND`（BUG-0038）。
+ */
+export function createUiVerificationEnvironment(
+  layout: UiVerificationProfileLayout,
+  canary?: UiVerificationCanaryTarget | null,
+): NodeJS.ProcessEnv {
+  const environment = createProfileEnvironment(layout);
+  if (!canary) return environment;
+  return {
+    ...environment,
+    VETTA_ACTION_RPC_ENDPOINT_FILE: join(canary.vettaHome, "action-server.json"),
+    VETTA_CODING_AGENT_DIR: canary.agentDir,
+    VETTA_DESKTOP_RUNTIME_CANARY: "1",
+    VETTA_HOME: canary.vettaHome,
+  };
+}
+
 export function seedDebugProfile(options: SeedDebugProfileOptions): SeedDebugProfileResult {
   const sourceHome = resolve(options.sourceHome);
   const targetHome = resolve(options.targetHome);
@@ -170,6 +198,7 @@ export function seedDebugProfile(options: SeedDebugProfileOptions): SeedDebugPro
       seeded: false,
       modelsCopied: false,
       credentialsCopied: 0,
+      osCryptSynced: false,
       sourceHome,
       targetHome,
     };
@@ -182,6 +211,13 @@ export function seedDebugProfile(options: SeedDebugProfileOptions): SeedDebugPro
     replaceExistingCredentials: options.sync === true,
   });
 
+  // 复制了凭据密文就必须同步主密钥：Windows 上 safeStorage 的 AES 主密钥按
+  // user-data 目录生成、DPAPI 包装后写在 Local State 的 os_crypt.encrypted_key，
+  // 不同步则 Debug 实例解出来是乱码、Provider 鉴权必 401（BUG-0035）。同机同
+  // Windows 用户下 DPAPI 可正常解包，因此这是纯文件级同步，无需解密再加密。
+  const osCryptSynced =
+    modelsResult.credentialsCopied > 0 ? syncOsCryptKey(sourceHome, targetHome) : false;
+
   if (!options.sync) {
     writeSafeDesktopConfiguration(sourceHome, targetHome, resolve(options.workspacePath));
   }
@@ -192,14 +228,64 @@ export function seedDebugProfile(options: SeedDebugProfileOptions): SeedDebugPro
     seededAt: new Date().toISOString(),
     modelsCopied: modelsResult.modelsCopied,
     credentialsCopied: modelsResult.credentialsCopied,
+    osCryptSynced,
   });
 
   return {
     seeded: true,
     ...modelsResult,
+    osCryptSynced,
     sourceHome,
     targetHome,
   };
+}
+
+/**
+ * 把源实例 `Local State` 的 `os_crypt` 节整体搬进目标 `Local State`，其余字段保留。
+ * 目标已有不同主密钥时先留档再覆盖，避免目标既有密文（凭据、cookies）失去回滚手段。
+ */
+function syncOsCryptKey(sourceHome: string, targetHome: string): boolean {
+  const sourceLocalStatePath = localStatePath(sourceHome);
+  const sourceState = existsSync(sourceLocalStatePath)
+    ? tryReadJson<Record<string, unknown>>(sourceLocalStatePath)
+    : undefined;
+  const sourceOsCrypt = isRecord(sourceState?.os_crypt) ? sourceState.os_crypt : undefined;
+  if (typeof sourceOsCrypt?.encrypted_key !== "string" || sourceOsCrypt.encrypted_key.length === 0) {
+    return false;
+  }
+
+  const targetLocalStatePath = localStatePath(targetHome);
+  const targetState = existsSync(targetLocalStatePath)
+    ? tryReadJson<Record<string, unknown>>(targetLocalStatePath)
+    : undefined;
+  const target: Record<string, unknown> = isRecord(targetState) ? { ...targetState } : {};
+  const existingOsCrypt = isRecord(target.os_crypt) ? target.os_crypt : undefined;
+  if (existingOsCrypt?.encrypted_key === sourceOsCrypt.encrypted_key) {
+    return true;
+  }
+
+  if (typeof existingOsCrypt?.encrypted_key === "string" && existingOsCrypt.encrypted_key.length > 0) {
+    const backupPath = `${targetLocalStatePath}.os-crypt-backup.json`;
+    if (!existsSync(backupPath)) {
+      writeJsonAtomic(backupPath, { os_crypt: existingOsCrypt });
+    }
+  }
+
+  target.os_crypt = sourceOsCrypt;
+  writeJsonAtomic(targetLocalStatePath, target);
+  return true;
+}
+
+function localStatePath(home: string): string {
+  return join(home, "electron-user-data", "Local State");
+}
+
+function tryReadJson<T>(path: string): T | undefined {
+  try {
+    return readJson<T>(path);
+  } catch {
+    return undefined;
+  }
 }
 
 function copyModelConfiguration(options: {

@@ -23,6 +23,10 @@
 			"types": "./dist/coding/index.d.ts",
 			"import": "./dist/coding/index.js"
 		},
+		"./dataset": {
+			"types": "./dist/dataset/index.d.ts",
+			"import": "./dist/dataset/index.js"
+		},
 		"./mcp": {
 			"types": "./dist/mcp/index.d.ts",
 			"import": "./dist/mcp/index.js"
@@ -64,7 +68,8 @@
 		"file-type": "^21.1.1",
 		"minimatch": "^10.1.1",
 		"proper-lockfile": "^4.1.2",
-		"strip-ansi": "^7.1.0"
+		"strip-ansi": "^7.1.0",
+		"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
 	},
 	"devDependencies": {
 		"@types/diff": "^7.0.2",

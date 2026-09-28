@@ -1,5 +1,6 @@
 import { resolvedThemeAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
+import { useTranslation } from "react-i18next";
 import { CodePreview } from "../../activity-panel/components/previews/CodePreview";
 import { HtmlPreview } from "../../activity-panel/components/previews/HtmlPreview";
 import { MarkdownPreview } from "../../activity-panel/components/previews/MarkdownPreview";
@@ -15,6 +16,7 @@ export function TextPreviewRenderer({
 	extension: string;
 }): JSX.Element {
 	const theme = useAtomValue(resolvedThemeAtom);
+	const { t } = useTranslation("chat");
 	if (extension === "html" || extension === "htm" || extension === "xhtml") {
 		return <HtmlPreview content={content} theme={theme} />;
 	}
@@ -35,7 +37,13 @@ export function TextPreviewRenderer({
 	}
 	return (
 		<div className={SCROLL_WRAP}>
-			<CodePreview content={displayContent} extension={extension} theme={theme} />
+			<CodePreview
+				content={displayContent}
+				extension={extension}
+				theme={theme}
+				degradationKind="textFile"
+				degradationNotice={t("preview.degraded.textFile")}
+			/>
 		</div>
 	);
 }

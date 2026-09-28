@@ -43,10 +43,14 @@ export class CompactionPrefireCache {
 		credential?: { resolve(): Promise<string | undefined> | string | undefined },
 	): void {
 		if (this.abortController || this.disposed || !this.options.canAttempt()) return;
+		// Appended history moves the proposed cut point without invalidating the cached prefix.
+		// Keep the original summary and retain the new tail until automatic compaction consumes it.
+		if (this.cache && isPrefireCacheValid(this.cache, entries)) return;
+		this.cache = undefined;
 		const preparation = prepareCompaction([...entries], settings);
 		if (!preparation) return;
 		const fingerprint = fingerprintCompactionPrefix([...entries], preparation.firstKeptEntryId);
-		if (!fingerprint || this.cache?.fingerprint === fingerprint) return;
+		if (!fingerprint) return;
 
 		const controller = new AbortController();
 		this.abortController = controller;

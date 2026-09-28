@@ -12,3 +12,13 @@ endpoint:
 - `debug.*` for development-only debug capabilities.
 
 `startActionRpcServer()` remains as the action-only compatibility wrapper.
+
+
+## Context Boundary
+
+```yaml
+purpose: Typed action-RPC protocol and transport contract used by cli-host and desktop hosts
+provides:  []
+consumes:  []
+internal_dependencies:  []
+```

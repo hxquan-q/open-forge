@@ -21,9 +21,10 @@
  *                 guard reports it without failing unrelated `check` runs. `cli.mjs check`
  *                 escalates warnings to failures once a coordinator asks for a gate.
  *
- * Cross-task scope overlap is deliberately absent from the guard: whether two tasks may run
- * concurrently is a scheduling decision (`conflicts_with` records it), and legitimately
- * overlapping tasks are already part of the tree. `cli.mjs check` reports them on demand.
+ * Cross-task scope overlap is a static contract when both active tasks declare parallel
+ * Worktrees: the quality guard fails on unrecorded overlaps, and `conflicts_with` acknowledges
+ * the scheduling relationship. Whether the declared worktrees exist on this machine remains
+ * separate Git state owned by the coordinator CLI.
  *
  * Everything here is pure: callers inject `knownIds`, `primaryRoot` and the task list, so
  * tests never depend on the ambient repository or on Git being present.
@@ -82,6 +83,7 @@ export function scopePrefix(path) {
 	const segments = toComparable(path).split("/");
 	const staticSegments = [];
 	for (const segment of segments) {
+		if (segment === ".") continue;
 		if (GLOB_CHARS.test(segment)) break;
 		staticSegments.push(segment);
 	}
@@ -107,7 +109,11 @@ export function normalizeContractPath(raw) {
 	if (segments.some((segment) => segment === "")) {
 		return { problem: `path "${value}" contains an empty segment` };
 	}
-	return { path: normalized };
+	const canonicalSegments = segments.filter((segment) => segment !== ".");
+	if (canonicalSegments.length === 0) {
+		return { problem: `path "${value}" resolves to the repository root` };
+	}
+	return { path: canonicalSegments.join("/") };
 }
 
 /**
@@ -257,6 +263,14 @@ export function findTaskProblems(task, { knownIds, strict = false } = {}) {
 	checkEnumeration(push, "integration_status", task.integrationStatus, INTEGRATION_STATUSES);
 	if (task.priority !== "") checkEnumeration(push, "priority", task.priority, PRIORITIES);
 
+	if (ACTIVE_STATUSES.has(task.status) && task.worktreeDeclared && task.execution !== "parallel") {
+		findings.push(
+			error(
+				`active ${task.execution || "(unset)"} task must not declare an independent worktree; only execution: parallel may do so`,
+			),
+		);
+	}
+
 	if (task.hasTaskBranch && !TASK_BRANCH_PATTERN.test(task.branchToken)) {
 		findings.push(error(`branch "${task.branchToken}" must match task/TASK-<4 digits>-<kebab-slug>`));
 	}
@@ -398,16 +412,14 @@ export function partitionFindings(findings) {
 }
 
 /**
- * Live scope claims per task, for the CLI's conflict report.
- *
- * Only tasks that declare a worktree are compared. The question this answers is "may these
- * two worktrees run at the same time?", and a task executed in the integration checkout is
- * serialized by that fact alone — `execution: parallel` marks an opportunity, not a claim.
- * Without this filter the report is dominated by broad scopes (`apps/desktop`) that are
- * never actually held concurrently, which buries the pairs a coordinator must decide on.
+ * Active parallel Worktree claims per task, for the static quality guard and coordinator CLI.
+ * A task executed in the integration checkout or marked serial does not claim concurrent scope.
+ * Keeping this comparison pure lets both gates share identical conservative path matching.
  */
 export function findScopeConflicts(tasks) {
-	const active = tasks.filter((task) => ACTIVE_STATUSES.has(task.status) && task.worktreeDeclared);
+	const active = tasks.filter(
+		(task) => ACTIVE_STATUSES.has(task.status) && task.execution === "parallel" && task.worktreeDeclared,
+	);
 	const conflicts = [];
 
 	for (let left = 0; left < active.length; left += 1) {

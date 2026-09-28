@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { type ComponentType, type JSX, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useRef } from "react";
+import { dispatchOverlayDrag } from "../layout/overlay-drag";
 import type { ActivityPanelFrameProps } from "./ActivityPanelFrame";
 
 export interface FloatingActivityTabViewRect {
@@ -51,6 +53,7 @@ function CornerResizeHandle({
 				overlay.removeEventListener("pointercancel", finishResize);
 				window.removeEventListener("blur", finishResize);
 				overlay.remove();
+				dispatchOverlayDrag(false);
 				document.body.style.userSelect = previousUserSelect;
 				onResizeEnd();
 			};
@@ -60,6 +63,7 @@ function CornerResizeHandle({
 			overlay.addEventListener("pointercancel", finishResize);
 			window.addEventListener("blur", finishResize);
 			document.body.appendChild(overlay);
+			dispatchOverlayDrag(true);
 			document.body.style.userSelect = "none";
 		},
 		[onResize, onResizeEnd],

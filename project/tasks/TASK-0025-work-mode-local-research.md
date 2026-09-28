@@ -1,7 +1,7 @@
 ---
 id: TASK-0025
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,9 +16,9 @@ write_paths: [packages/coding-agent, packages/runtime-knowledge, packages/runtim
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode]
 depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024, TASK-0028]
 conflicts_with: [TASK-0018, TASK-0026]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
-updated: 2026-09-23
+updated: 2026-09-27
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -73,7 +73,7 @@ updated: 2026-09-23
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：runtime-knowledge 新增显式 root 的本地来源扫描域（白名单扩展名、排除依赖目录、深度/大小/数量上限、缺失/变更指纹复查）；coding-agent 新增 `research_scope` 工具（必填绝对路径 root、绝不回落默认 home）与 `vetta-research-sources` 引用清单格式（经 function-extensions 公共出口）；Desktop 组合注入 `researchScope`，Work「来源」面板加「本地研究」入口（选目录+提问走既有会话通道），`research-evidence` 产物预览时逐条复查来源状态（可用/缺失/已变更），IPC/Preload 新增 `verifyArtifactSources`。
+- 实际运行：`local-source-scan` 6 用例、`research-tools` 合同/清单用例、`research-source-verify`、WorkDocumentSections（研究入口/产物复查）与 ipc/task 测试全绿；`check:quick` 绿。
+- 未运行及原因：真实 Desktop 端到端冒烟（选目录→提问→产物→重开会话查引用）待 VERIFY-0012 批次统一实机验收。
+- 剩余风险：模型是否稳定产出引用清单围栏格式依赖 Prompt 遵从；空清单时产物仍可复查但无来源列表；来源复查为只读 stat，不校验内容是否被同路径替换为语义不同文件（指纹含 size+mtime）。

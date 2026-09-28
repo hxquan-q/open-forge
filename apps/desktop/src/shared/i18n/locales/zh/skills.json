@@ -97,6 +97,10 @@
 		"review-canvas": {
 			"name": "变更审查",
 			"description": "用户要跨文件代码评审时，用 artifact 写入完整 Unified Diff，画布按文件分组展示差异与增删行。"
+		},
+		"database-analysis": {
+			"name": "数据库问数与分析",
+			"description": "用自然语言查询已连接的数据库，分析指标、趋势、分组和同比环比；默认只读，结论附数据口径与查询依据。"
 		}
 	}
 }

@@ -785,11 +785,16 @@ async function runVettaDebug(
 	debugId: string,
 	input: unknown,
 ): Promise<unknown> {
-	const result = await runProcess(installedCliPath, ["debug", "run", debugId, JSON.stringify(input)], cwd, {
-		...process.env,
-		[ACTION_RPC_ENDPOINT_FILE_ENV]: endpointFilePath,
-		[VETTA_HOME_ENV]: vettaHome,
-	});
+	const result = await runProcessWithSpawnRetry(
+		installedCliPath,
+		["debug", "run", debugId, JSON.stringify(input)],
+		cwd,
+		{
+			...process.env,
+			[ACTION_RPC_ENDPOINT_FILE_ENV]: endpointFilePath,
+			[VETTA_HOME_ENV]: vettaHome,
+		},
+	);
 	if (result.code !== 0) {
 		throw new Error(
 			`Vetta CLI failed with code ${result.code}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
@@ -798,6 +803,30 @@ async function runVettaDebug(
 	const parsed = JSON.parse(result.stdout) as { ok?: unknown; result?: unknown };
 	if (parsed.ok !== true) throw new Error(`Vetta CLI returned an unsuccessful response: ${result.stdout}`);
 	return parsed.result;
+}
+
+/**
+ * Windows 上 CLI 刚由 Desktop 安装完仍可能被占用，spawn 报 `EBUSY: … uv_spawn`；
+ * 这是瞬时竞态而非真失败，做有界重试再判失败（BUG-0038 剩余项）。
+ */
+const SPAWN_BUSY_MAX_ATTEMPTS = 10;
+const SPAWN_BUSY_RETRY_MS = 300;
+
+async function runProcessWithSpawnRetry(
+	command: string,
+	args: string[],
+	cwd: string,
+	env: NodeJS.ProcessEnv,
+): Promise<{ code: number; stdout: string; stderr: string }> {
+	for (let attempt = 1; ; attempt += 1) {
+		try {
+			return await runProcess(command, args, cwd, env);
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException | undefined)?.code;
+			if ((code !== "EBUSY" && code !== "EPERM") || attempt >= SPAWN_BUSY_MAX_ATTEMPTS) throw error;
+			await new Promise((resolve) => setTimeout(resolve, SPAWN_BUSY_RETRY_MS));
+		}
+	}
 }
 
 async function runProcess(

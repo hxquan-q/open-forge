@@ -130,7 +130,7 @@ CSV / TSV / 行列 JSON 表格类 artifact 在 Canvas Tab 中以原生 React 表
   - **`.json` 不升级为表格**：普通 `application/json` / `.json` 必须继续走代码预览（既有行为），只有显式 `application/vnd.vetta.data-grid+json` 才是行列 JSON 表格；`text/csv; charset=utf-8` 这类带参数 contentType 按规范化后的 MIME 判定。
   - **行列 JSON 合同**：接受 `{ columns, rows }`（cells 允许非字符串，按文本投影）与「数组的数组」（首行表头）；结构不符或解析失败返回空表，由组件渲染空状态。
   - **范围摘要**：新增可选 `range` 字段而不是把范围塞进 `excerpt`；`PluginPromptContext` 的 JSON 守卫会拒绝 `undefined` 值，因此无范围时整体省略该字段。
-  - `write_paths` 增补 `apps/desktop/src/shared/i18n/locales`：本 Task 明确要求新增文案走 i18n，原声明遗漏；TASK-0083 / TASK-0084 曾以独占方式声明同一 chat.json，但二者均为主工作区串行任务且各自改动已落地，本次只在 canvas 段新增 key。
+  - `write_paths` 增补 `apps/desktop/src/shared/i18n/locales`：本 Task 明确要求新增文案走 i18n，原声明遗漏；TASK-0083 / TASK-0102 曾以独占方式声明同一 chat.json，但二者均为主工作区串行任务且各自改动已落地，本次只在 canvas 段新增 key。
 - 实际运行：
   - 定向测试（cwd `apps/desktop`，`bun ../../scripts/quality/run-vitest.mjs --run …`）：`canvas-data-grid.test.ts`(17)、`CanvasDataGridPreview.test.tsx`(8)、`canvas-preview-kind.test.ts`(4)、`canvas-save-filename.test.ts`(3)、`canvas-selection-attachment.test.ts`(3)、`CanvasTabPanel.test.tsx`(5)，共 6 个文件 40 个用例全部通过。
   - 关联测试 `run-vitest.mjs related <4 个源文件> --run`：29 个文件 137 个用例全部通过，确认使用这些模块的既有测试（plugin runtime、activity panel、conversation 等）无回归。

@@ -16,6 +16,7 @@ import { isSshProjectUri } from "@vetta/ssh-transport";
 import { ensureOpenMarketplaceManagedMcpRuntime } from "../abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
 import { getDesktopMcpElicitationBroker } from "../conversations/mcp-elicitation-broker.js";
 import { getAppLogger } from "../logger.js";
+import { resolveBundledMcpServerConfig } from "../mcp/builtin-mcp-server-runtime.js";
 
 export interface DesktopMcpSupervisorOptions {
 	readonly projectRoot: string;
@@ -96,7 +97,7 @@ export function createDesktopMcpSupervisor(options: DesktopMcpSupervisorOptions)
 							...config,
 							resolveUrl: () => ensureOpenMarketplaceManagedMcpRuntime(runtimeId, config.managedRuntimeEnv),
 						}
-					: config;
+					: (resolveBundledMcpServerConfig(config) ?? config);
 			return createMcpClient(name, resolvedConfig, clientOptions);
 		},
 		onDiagnostic: writeDiagnostic,

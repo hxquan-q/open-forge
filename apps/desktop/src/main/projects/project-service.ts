@@ -1,5 +1,7 @@
 import { parseProjectLocation } from "@vetta/ssh-transport";
 import type { DesktopConfig, ProjectEntry } from "../config/desktop-config-store.js";
+import { getSharedRuntime } from "../runtime.js";
+import { emitAutomationHostEvent } from "../scheduler/automation-event-dispatcher.js";
 import { sameProjectPath } from "./project-path.js";
 
 export interface ProjectServiceDependencies {
@@ -134,6 +136,7 @@ export class ProjectService {
 		if (!findProject(projects, path)) projects.push(entry);
 		await this.commit({ ...config, projects, archivedProjects });
 		this.dependencies.allowProjectRoot(path);
+		emitAutomationHostEvent("project.opened", { cwd: path }, getSharedRuntime);
 		return entry;
 	}
 

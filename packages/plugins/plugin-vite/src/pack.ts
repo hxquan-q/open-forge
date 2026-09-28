@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { listPluginManifestResources, parsePluginManifest, type PluginManifest } from "@vetta-org/plugin-sdk/manifest";
 import { parseVettaNpmPluginPackage } from "@vetta-org/plugin-sdk/npm-package";
 import { assertPluginPermissionContract } from "./permission-contract.js";
+import { minifyPackagedJsonResource } from "./pack-resource-minify.js";
 
 export interface VettaPluginPackageFile {
 	fullPath: string;
@@ -125,7 +126,8 @@ async function createZip(files: VettaPluginPackageFile[]): Promise<Buffer> {
 	let offset = 0;
 
 	for (const file of files) {
-		const data = await readFile(file.fullPath);
+		// 包内 JSON 资源在写入归档时去空白（源文件不动），CRC 按最终字节计算。
+		const data = minifyPackagedJsonResource(file.archivePath, await readFile(file.fullPath));
 		const name = Buffer.from(file.archivePath.replace(/\\/g, "/"));
 		const checksum = crc32(data);
 		const localHeader = Buffer.concat([

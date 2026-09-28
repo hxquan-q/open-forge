@@ -155,6 +155,54 @@ describe("能力 Profile 固化（TASK-0078）", () => {
 	});
 });
 
+describe("Profile 默认工具清单随会话下发（BUG-0014）", () => {
+	it("折算 work 默认工具时把同一清单作为软默认证据随会话下发", async () => {
+		const root = await createTemporaryRoot();
+		const resolved = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "work", capabilityProfile: "work" },
+			"conversation",
+			"interactive",
+		);
+		const sessionConfiguration = parseCodingAgentRuntimeSessionConfiguration(
+			resolved.config.agent?.sessionConfiguration,
+		);
+		const tools = sessionConfiguration.agentConfiguration?.overrides.tools;
+		expect(Array.isArray(tools)).toBe(true);
+		expect(sessionConfiguration.profileDefaultToolNames).toEqual(tools);
+	});
+
+	it("显式工具选择优先时不下发软默认清单", async () => {
+		const root = await createTemporaryRoot();
+		const explicit = await resolveDesktopSessionConfig(
+			{
+				cwd: root,
+				capabilityProfile: "work",
+				agentConfiguration: { template: null, overrides: { tools: ["read"] } },
+			},
+			"conversation",
+			"interactive",
+		);
+		expect(
+			parseCodingAgentRuntimeSessionConfiguration(explicit.config.agent?.sessionConfiguration)
+				.profileDefaultToolNames,
+		).toBeUndefined();
+	});
+
+	it("coding 缺省不设工具子集，也不下发软默认清单", async () => {
+		const root = await createTemporaryRoot();
+		const resolved = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		const sessionConfiguration = parseCodingAgentRuntimeSessionConfiguration(
+			resolved.config.agent?.sessionConfiguration,
+		);
+		expect(sessionConfiguration.agentConfiguration?.overrides.tools).toBeUndefined();
+		expect(sessionConfiguration.profileDefaultToolNames).toBeUndefined();
+	});
+});
+
 describe("会话注入工具（TASK-0095）", () => {
 	const markerTool: CodingAgentRuntimeToolRegistration = {
 		tool: {

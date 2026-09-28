@@ -21,3 +21,9 @@ Turn generation 内的渐进披露和模型调用级 Prompt/Tool 物化。
 - 使用 Vitest 和本地 fake Port 验证协议状态机，不连接真实 MCP 服务、OAuth Provider 或用户配置。
 - Tool/Resource/Prompt 发现、增量同步或渐进披露变化时，必须覆盖新增、删除、替换、未变化复用、乱序/重复通知、失败保持、取消、活动 Turn 保持旧 generation 和下一 Turn 可见性。
 - Schema 或公开 Port 变化必须增加协议合同测试；stdio/HTTP、OAuth、文件配置和凭证行为由平台 Runtime 测试覆盖。
+
+## 规则分级
+
+- **Invariant**：`注意事项` 中的边界（`src/` 不导入 `@vetta/coding-agent`、不解析产品配置、不访问文件系统/进程/网络/凭证/宿主全局状态、Port 实现归 `@vetta/runtime-node/mcp`）。
+- **Policy**：`测试要求` 全节、`注意事项` 中的公开 Port 同步检查与独立测试要求。
+- **Guideline**：`职责范围` 描述。

@@ -1,7 +1,10 @@
 {
 	"page": {
 		"title": "Abilities",
-		"subtitle": "Give your agent more to work with: skills, scenes, MCP, plugins and bundles"
+		"subtitle": "Find, add, and manage the skills, connectors, and plugins available to your agent.",
+		"kicker": "OPEN FORGE · LIBRARY",
+		"stampInstalled": "{{count}} installed",
+		"stampTotal": "{{count}} total"
 	},
 	"banner": {
 		"title": "Discover more abilities",
@@ -34,6 +37,13 @@
 		"openSource": "Open source",
 		"sameName": "{{count}} with same name",
 		"builtin": "Built-in"
+	},
+	"attention": {
+		"title": "Needs attention",
+		"open": "Open {{name}}, {{status}}",
+		"updateAndSetup": "Update available · setup needed",
+		"more": "and {{count}} more",
+		"overflow": "{{count}} more items need attention"
 	},
 	"card": {
 		"noDescription": "No description"

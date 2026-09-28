@@ -1,7 +1,5 @@
 // Modified by The Open Forge contributors.
 import { useActiveWorkspaceViewHeader } from "@domains/plugins/components/WorkspaceViewHeaderSlot";
-import { WorkspaceModeSwitcher } from "@domains/workspace-mode/components/WorkspaceModeSwitcher";
-import { isWorkspaceModePath } from "@domains/workspace-mode/services/workspace-mode-paths";
 import {
 	pageHeaderLeftSlotAtom,
 	pageHeaderRightSlotAtom,
@@ -12,7 +10,6 @@ import {
 import { resolveThemePageTitle, useActiveThemePageRoute } from "@shared/theme/pages";
 import { useMatches } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
-import { createElement, Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import type { PageHeaderModel, PageHeaderProps, PageHeaderTitleKey } from "./types";
 
@@ -54,16 +51,12 @@ export function usePageHeaderModel({
 	const triggerVisible = narrow || sidebarCollapsed;
 	const sidebarTriggerTitle = t(narrow ? "appShell.sidebarTrigger.open" : "appShell.sidebarTrigger.expand");
 
-	// work/coding 切换器是壳级入口（IA 定稿 §1）：跟在工作区路由的 leftSlot 之后出现；
-	// 插件接管页头时整条归插件，不追加。
-	const showModeSwitcher = !workspaceViewHeader && isWorkspaceModePath(path);
-	const composedLeftSlot = showModeSwitcher
-		? createElement(Fragment, null, leftSlot, createElement(WorkspaceModeSwitcher))
-		: leftSlot;
-
+	// work/coding 切换器已搬进新会话欢迎卡片的选项行（NewSessionOptionsRow）：
+	// 用户进入对话后没有可切换的上下文，全局页头入口是误导。页头只挂插件视图与 leftSlot，
+	// 不再追加额外控件（「唯一入口 = 欢迎选项行」由 shared/hooks/agent-mode-entry-points.test.ts 守住）。
 	return {
 		fallbackTitleKey,
-		leftSlot: workspaceViewHeader?.left ?? composedLeftSlot,
+		leftSlot: workspaceViewHeader?.left ?? leftSlot,
 		path,
 		rightSlot: workspaceViewHeader?.right ?? rightSlot,
 		sidebarTriggerTitle,

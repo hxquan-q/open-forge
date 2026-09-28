@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SETTINGS_SECTION } from "../registry";
@@ -53,6 +54,13 @@ export function useEnvironmentSettingsModel(): EnvironmentSettingsModel {
 	useEffect(() => {
 		void refresh();
 	}, [refresh]);
+
+	// 后台下载期间每 3s 轮询一次状态，完成后自动落到「已就绪」。
+	useEffect(() => {
+		if (!status?.node.downloading && !status?.python.downloading) return;
+		const timer = setTimeout(() => void refresh(), 3_000);
+		return () => clearTimeout(timer);
+	}, [status, refresh]);
 
 	const reinstall = useCallback(
 		async (kind: EnvironmentRuntimeKind) => {

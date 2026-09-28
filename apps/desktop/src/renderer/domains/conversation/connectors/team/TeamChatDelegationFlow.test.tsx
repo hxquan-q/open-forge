@@ -6,7 +6,7 @@ import type {
 } from "@preload/api-types/team-conversation-display";
 import type { ChatConversationItem } from "@shared/store/atoms";
 import { createAssistantMessage, type AssistantMessage } from "@vetta/ai";
-import { createAgentTeamFixture, type TeamSessionDocument } from "@vetta/agent-team";
+import { createAgentTeamFixture, type TeamSessionActivity, type TeamSessionDocument } from "@vetta/agent-team";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,11 +32,41 @@ vi.mock("react-i18next", () => ({
 				"chat.memberActivity.failed": "处理失败",
 				"chat.memberActivity.cancelled": "已取消",
 				"chat.memberActivity.completed": "已完成",
+				"chat.teamProgress.title": "团队任务进度",
+				"chat.teamProgress.phase.dispatching": "已分派",
+				"chat.teamProgress.phase.running": "执行中",
+				"chat.teamProgress.phase.waiting": "等待中",
+				"chat.teamProgress.phase.attention": "需要处理",
+				"chat.teamProgress.phase.wrapping": "收尾中",
+				"chat.teamProgress.phase.settled": "已结束",
+				"chat.teamProgress.count.queued": "待开始 {{count}}",
+				"chat.teamProgress.count.running": "进行中 {{count}}",
+				"chat.teamProgress.count.waiting": "等待中 {{count}}",
+				"chat.teamProgress.count.attention": "待处理 {{count}}",
+				"chat.teamProgress.count.completed": "已完成 {{count}}",
+				"chat.teamProgress.count.failed": "失败 {{count}}",
+				"chat.teamProgress.count.cancelled": "已取消 {{count}}",
+				"chat.teamProgress.item.queued": "等待开始",
+				"chat.teamProgress.item.running": "执行中",
+				"chat.teamProgress.item.waiting": "等待中",
+				"chat.teamProgress.item.attention": "需要处理",
+				"chat.teamProgress.item.completed": "已完成",
+				"chat.teamProgress.item.failed": "失败",
+				"chat.teamProgress.item.cancelled": "已取消",
+				"chat.teamProgress.item.notStarted": "未开始",
+				"chat.teamProgress.metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
+				"chat.teamProgress.context": "上下文 {{percent}}%",
+				"chat.teamProgress.total": "合计",
 			};
 			if (key === "chat.delegation") return `${values?.from} -> ${values?.to}`;
 			if (key === "chat.memberActivity.openSession") return `打开 ${values?.name} 的成员会话`;
+			if (key === "chat.memberSession") return `查看 ${values?.name} 的独立会话`;
 			if (key === "messageList.streamingPhrases") return [];
-			return labels[key] ?? key;
+			let template = labels[key] ?? key;
+			for (const [name, value] of Object.entries(values ?? {})) {
+				template = template.replace(`{{${name}}}`, String(value));
+			}
+			return template;
 		},
 	}),
 }));
@@ -109,7 +139,12 @@ vi.mock("../../components/blocks/ErrorBlock", () => ({
 }));
 
 vi.mock("../../components/chat-view/DefaultChatView", () => ({
-	DefaultChatView: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+	DefaultChatView: ({ children, subHeader }: { children: ReactNode; subHeader?: ReactNode }) => (
+		<div>
+			{subHeader}
+			{children}
+		</div>
+	),
 	ChatComposer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	ChatError: ({ children }: { children: ReactNode }) => (children ? <div role="alert">{children}</div> : null),
 }));
@@ -215,13 +250,15 @@ function assistantMessage(
 	};
 }
 
+const openMemberSpy = vi.fn();
+
 function TeamFlow(): JSX.Element {
 	const { model, actions } = useTeamChatModel(team.id);
 	return (
 		<TeamChatView
 			model={model}
 			actions={actions}
-			onOpenMember={vi.fn()}
+			onOpenMember={openMemberSpy}
 			onBackToTeam={vi.fn()}
 			onOpenSettings={vi.fn()}
 		/>
@@ -632,5 +669,144 @@ describe("Team delegation message-to-UI flow", () => {
 		render(<TeamFlow />);
 		await waitFor(() => expect(assistantRows()).toHaveLength(1));
 		expect(stableConversationSignature()).toEqual(activeSignature);
+	});
+
+	it("reflects delegated work item states as a header progress strip across the session lifecycle", async () => {
+		render(<TeamFlow />);
+		await waitFor(() => expect(streamListener).toBeTypeOf("function"));
+		const runtimeSession = {
+			...session,
+			memberRuntime: {
+				[architect.id]: {
+					sessionId: "architect-runtime",
+					sessionPath: "C:/workspace/.team/architect-runtime",
+					agentProfileRevision: 1,
+					deliveredEventIds: [],
+				},
+			},
+		};
+		const delegation = {
+			kind: "delegation" as const,
+			id: "delegate-architect",
+			requestId: "architect-turn",
+			sourceMemberId: leader.id,
+			targetMemberId: architect.id,
+			objective: "设计实现方案",
+			timestamp: 1,
+		};
+		const update = (state: TeamSessionActivity["state"], revision: number) =>
+			streamListener?.({
+				type: "session-updated",
+				teamSessionId: session.id,
+				snapshot: {
+					...emptySnapshot,
+					session: { ...runtimeSession, revision },
+					conversationRevision: revision,
+					activities: [{ ...delegation, state }],
+				},
+			});
+
+		act(() => update("queued", 1));
+		const strip = screen.getByLabelText("团队任务进度");
+		expect(strip.textContent).toContain("已分派");
+		expect(strip.textContent).toContain("待开始 1");
+
+		act(() => update("running", 2));
+		expect(strip.textContent).toContain("执行中");
+		expect(strip.textContent).toContain("进行中 1");
+
+		fireEvent.click(within(strip).getByRole("button"));
+		expect(strip.textContent).toContain("Developer");
+		expect(strip.textContent).toContain("设计实现方案");
+		fireEvent.click(screen.getByRole("button", { name: "查看 Developer 的独立会话" }));
+		expect(openMemberSpy).toHaveBeenCalledWith(architect.id);
+
+		act(() => {
+			update("completed", 3);
+			streamListener?.({
+				type: "conversation.agent-message-event",
+				conversationId: session.id,
+				messageId: "leader-wrap-up",
+				turnId: "wrap-up-turn",
+				author: { kind: "agent", id: leader.id },
+				sequence: 1,
+				timestamp: 2,
+				event: {
+					type: "text_delta",
+					contentIndex: 0,
+					delta: "正在汇总",
+					partial: assistantMessage("正在汇总", 2),
+				},
+			});
+		});
+		expect(strip.textContent).toContain("收尾中");
+
+		act(() => {
+			streamListener?.({
+				type: "conversation.agent-message-discard",
+				conversationId: session.id,
+				messageId: "leader-wrap-up",
+				turnId: "wrap-up-turn",
+				author: { kind: "agent", id: leader.id },
+				sequence: 2,
+				reason: "completed",
+				timestamp: 3,
+			});
+			update("completed", 4);
+		});
+		await waitFor(() => expect(strip.textContent).toContain("已结束"));
+		expect(strip.textContent).toContain("已完成 1");
+	});
+
+	it("shows member usage aggregates from runtime history inside the expanded strip", async () => {
+		render(<TeamFlow />);
+		await waitFor(() => expect(streamListener).toBeTypeOf("function"));
+		act(() => {
+			streamListener?.({
+				type: "session-updated",
+				teamSessionId: session.id,
+				snapshot: {
+					...emptySnapshot,
+					activities: [
+						{
+							kind: "delegation",
+							id: "delegate-architect",
+							requestId: "architect-turn",
+							sourceMemberId: leader.id,
+							targetMemberId: architect.id,
+							objective: "设计实现方案",
+							state: "completed",
+							timestamp: 1,
+						},
+					],
+					display: {
+						memberConversations: [
+							{
+								memberId: architect.id,
+								runtimeSessionId: "architect-runtime",
+								history: [
+									{
+										type: "message",
+										entryId: "architect-step",
+										message: assistantMessage("架构方案已完成", 1),
+									},
+									{
+										type: "assistant_turn_timing",
+										timing: { startedAt: 1, endedAt: 2001, durationMs: 2000 },
+										timestamp: "t",
+									},
+								],
+							},
+						],
+					},
+				},
+			});
+		});
+		const strip = screen.getByLabelText("团队任务进度");
+		fireEvent.click(within(strip).getByRole("button"));
+		const devRow = strip.querySelector(`[data-team-progress-member="${architect.id}"]`);
+		expect(devRow?.textContent).toContain("↻1");
+		expect(devRow?.textContent).toContain("2.0s");
+		expect(strip.querySelector('[data-team-progress-total]')?.textContent).toContain("合计");
 	});
 });

@@ -15,3 +15,28 @@ Vetta Runtime 协议的共享 Node.js 实现层。
 `runtime-node` 不拥有 Agent Turn/Session Kernel，也不拥有 Electron IPC、Desktop 生命周期、UI 或产品策略。
 平台无关编排属于 `runtime-core`，Desktop 生命周期和平台装配属于 `runtime-desktop`。当前
 `coding-agent` 的 Node 宿主显式选择本包实现；非 Node 宿主不得依赖本包。
+
+
+## Context Boundary
+
+```yaml
+purpose: Shared Node.js runtime adapters for Vetta agents
+provides:  
+  - "@vetta/runtime-node"
+  - "@vetta/runtime-node/conversation"
+  - "@vetta/runtime-node/conversation/legacy"
+  - "@vetta/runtime-node/coding"
+  - "@vetta/runtime-node/mcp"
+  - "@vetta/runtime-node/host"
+  - "@vetta/runtime-node/sandbox"
+consumes:  []
+internal_dependencies:
+  - "@vetta/action-rpc"
+  - "@vetta/coding-agent"
+  - "@vetta/ai"
+  - "@vetta/runtime-core"
+  - "@vetta/runtime-knowledge"
+  - "@vetta/runtime-mcp"
+  - "@vetta/runtime-storage"
+  - "@vetta/runtime-tools"
+```

@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { installRuntimeArchive, installRuntimeDirectory } from "./runtime-archive-installer";
+import {
+	detectTarFlavor,
+	installRuntimeArchive,
+	installRuntimeDirectory,
+	tarForceLocalArgs,
+	tarPathArgument,
+} from "./runtime-archive-installer";
 
 let testRoot = "";
 
@@ -16,9 +22,33 @@ afterEach(async () => {
 	await rm(testRoot, { recursive: true, force: true });
 });
 
-// GNU tar 会把 `C:\…` 盘符路径误判成远程 host:path、且 -C chdir 不认反斜杠；
-// 与实现侧一致地转成正斜杠并加 --force-local。
-const toTarPath = (value: string) => (process.platform === "win32" ? value.replaceAll("\\", "/") : value);
+// GNU tar 会把 `C:\…` 盘符路径误判成远程 host:path，需要 `--force-local`；Windows 自带的
+// bsdtar 不认识该选项，因此与实现侧共用同一组 helper 决定参数形态。
+const tarLocalArgs = () => tarForceLocalArgs(detectTarFlavor());
+const toTarPath = tarPathArgument;
+
+describe("tar 参数按实现品类选择", () => {
+	it("只有 GNU tar 加 --force-local", () => {
+		expect(tarForceLocalArgs("gnu")).toEqual(["--force-local"]);
+		expect(tarForceLocalArgs("bsd")).toEqual([]);
+		expect(tarForceLocalArgs("unknown")).toEqual([]);
+	});
+
+	it("Windows 路径统一转正斜杠，POSIX 原样", () => {
+		const windowsPath = String.raw`C:\Users\demo\runtime.tar.gz`;
+		expect(tarPathArgument(windowsPath)).toBe(
+			process.platform === "win32" ? "C:/Users/demo/runtime.tar.gz" : windowsPath,
+		);
+		const posixPath = "/opt/vetta/runtime.tar.gz";
+		expect(tarPathArgument(posixPath)).toBe(posixPath);
+	});
+
+	it("探测到的实现与参数形态一致（本机真实 tar）", () => {
+		const flavor = detectTarFlavor();
+		expect(["gnu", "bsd", "unknown"]).toContain(flavor);
+		expect(tarForceLocalArgs(flavor)).toEqual(flavor === "gnu" ? ["--force-local"] : []);
+	});
+});
 
 describe("installRuntimeArchive", () => {
 	it("extracts a complete runtime before replacing the target directory", async () => {
@@ -30,7 +60,7 @@ describe("installRuntimeArchive", () => {
 		const archivePath = join(testRoot, "runtime.tar.gz");
 		const archive = spawnSync(
 			"tar",
-			["-czf", toTarPath(archivePath), "--force-local", "-C", toTarPath(sourceRoot), "runtime"],
+			["-czf", toTarPath(archivePath), ...tarLocalArgs(), "-C", toTarPath(sourceRoot), "runtime"],
 			{ encoding: "utf8" },
 		);
 		expect(archive.status, archive.stderr || archive.stdout).toBe(0);
@@ -60,7 +90,7 @@ describe("installRuntimeArchive", () => {
 		const archivePath = join(testRoot, "node.zip");
 		const archive = spawnSync(
 			"tar",
-			["-a", "-cf", toTarPath(archivePath), "--force-local", "-C", toTarPath(sourceRoot), "node-v22.22.2-win-x64"],
+			["-a", "-cf", toTarPath(archivePath), ...tarLocalArgs(), "-C", toTarPath(sourceRoot), "node-v22.22.2-win-x64"],
 			{ encoding: "utf8" },
 		);
 		expect(archive.status, archive.stderr || archive.stdout).toBe(0);

@@ -46,3 +46,15 @@ bun run pair http://127.0.0.1:8787
 ```
 
 Apply the two printed environment variables to Desktop and paste the printed mobile target into Android. System input remains disabled unless `VETTA_REMOTE_DESKTOP_INPUT_ENABLED=true` is set locally on Desktop.
+
+
+## Context Boundary
+
+```yaml
+purpose: Remote-control relay application
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta/remote-control"
+  - "@vetta/remote-desktop"
+```

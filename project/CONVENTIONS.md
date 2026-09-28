@@ -242,7 +242,7 @@ Verification 必须记录：
 - 不把实现猜测写成事实；使用“假设 / 证据 / 置信度”区分；
 - 不在文档中保存密钥、Token、Cookie、完整 Prompt、私有文件和可重建用户数据；
 - 内容变化、需求变化和 Bug 修复都要更新当前 Open Forge 开发版本 Release Notes；纯内部文档在 `## 其他` 留一句即可。
-- Open Forge 首发版本尚未由 `ISSUE-0007` 决定并切入 Desktop manifest 时，不得把 fork-only 条目写入继承的 Vetta Release Notes；将候选文案留在 Task 交付记录并保持发布阻断，切换后补入 Open Forge 自己的版本说明。
+- Open Forge 发布说明始终写入 `.github/release-notes/v<version>.md`，其中 `<version>` 取自 `apps/desktop/package.json#version`；不得改写上游已发布的 Vetta Release Notes。版本切换后不再沿用“等待首发版本切入”的临时阻断文案。发布、tag 和构建流水线仍须用户明确授权。
 
 ## 8. 维护与审查
 
@@ -256,7 +256,8 @@ Verification 必须记录：
 [ ] 不重复 docs/adr 或 exprot 正文
 [ ] 相对链接有效
 [ ] 没有 secrets / 私有数据 / 未验证结论
-[ ] 相关 Open Forge Release Notes 已更新，或首发版本切换阻断已记录在关联 Task/Issue
+[ ] README 中的 Plan 状态表和 Task 当前焦点表与对应 frontmatter 一致；并行 Task 的 scope 冲突已登记
+[ ] 相关 Open Forge Release Notes 已更新，或已记录本次不适用的依据
 ```
 
 新增模块或长期难以逆转的取舍，应在修改前补 Plan；满足“难以逆转、没有上下文会令人意外、存在真实取舍”三项时才新增 ADR。

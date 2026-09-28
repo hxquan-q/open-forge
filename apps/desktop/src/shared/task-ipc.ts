@@ -5,5 +5,6 @@ export const TASK_CHANNELS = {
 	GET_ARTIFACT_VIEWS: "vetta:task:get-artifact-views",
 	COMMAND: "vetta:task:command",
 	READ_ARTIFACT: "vetta:task:read-artifact",
+	VERIFY_ARTIFACT_SOURCES: "vetta:task:verify-artifact-sources",
 	EXPORT_ARTIFACT: "vetta:task:export-artifact",
 } as const;

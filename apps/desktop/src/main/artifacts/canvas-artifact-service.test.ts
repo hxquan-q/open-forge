@@ -325,6 +325,38 @@ describe("Canvas artifact service", () => {
 		expect(views[0]?.descriptor.version).toBe(2);
 		expect(views[0]?.externalUpdate).toBe(true);
 	});
+
+	it("同基线的两次并发 update 都能完成，不再撞共享临时文件（BUG-0020）", async () => {
+		// 回归：同一会话里两次 Canvas 写入并行起跑（模型并行工具调用、用户与 Agent
+		// 同时保存）时，两次都写到同一个版本文件；旧实现用只带 pid 的临时文件名，
+		// 先 rename 的一方把后写方的临时路径搬走，后者 rename 直接 ENOENT——
+		// Windows 上表现为「文件被占用/正在使用」类错误，连续 Canvas 操作被拒。
+		const harness = await createHarness();
+		const created = await createArtifact(harness);
+		const [first, second] = await Promise.all([
+			harness.service.applyUpdate({
+				workspaceId: harness.workspaceId,
+				artifactId: created.artifactId,
+				baseVersion: 1,
+				content: "parallel-a",
+				signal,
+			}),
+			harness.service.applyUpdate({
+				workspaceId: harness.workspaceId,
+				artifactId: created.artifactId,
+				baseVersion: 1,
+				content: "parallel-b",
+				signal,
+			}),
+		]);
+		expect(first.ok).toBe(true);
+		expect(second.ok).toBe(true);
+		const versions = await harness.store.listVersions(harness.workspaceId, created.artifactId);
+		expect(versions.map((version) => version.version)).toEqual([1, 2]);
+		const latest = versions.at(-1);
+		if (!latest) throw new Error("expected latest version");
+		expect(await harness.store.readContent(latest.path)).toMatch(/^parallel-[ab]$/);
+	});
 });
 
 async function createArtifact(harness: Harness) {

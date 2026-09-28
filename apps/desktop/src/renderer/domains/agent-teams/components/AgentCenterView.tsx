@@ -19,6 +19,8 @@ export interface AgentCenterViewProps {
 	/** 打开某个智能体的档案抽屉。 */
 	readonly onOpenAgent: (agentId: string) => void;
 	readonly onCreateAgent: () => void;
+	/** 草稿有实质改动时点空白触发：由连接层决定是弹确认还是直接丢弃。 */
+	readonly onDiscardAssemblyDraft: () => void;
 }
 
 export function AgentCenterView({
@@ -29,6 +31,7 @@ export function AgentCenterView({
 	onDeleteTeam,
 	onOpenAgent,
 	onCreateAgent,
+	onDiscardAssemblyDraft,
 }: AgentCenterViewProps): JSX.Element {
 	const { t } = useTranslation("agent-teams");
 	const { actions } = model;
@@ -43,6 +46,7 @@ export function AgentCenterView({
 	// 选中态与组队态都长在页面上，点到「操作区」以外的任何地方都该收起来；点另一张卡片由它自己的 onSelect 接管。
 	const selectedTeamId = model.selectedTeam?.id;
 	const assembling = Boolean(model.assembly);
+	const assemblyDirty = model.assemblyDirty;
 	const clearSelection = actions.selectTeam;
 	const { cancelAssembly } = actions;
 	useEffect(() => {
@@ -54,12 +58,17 @@ export function AgentCenterView({
 				// 组队时头部按钮、阵容栏与智能体列表都是操作区，点这些不算「点空白」。
 				if (assembling && target.closest("[data-assembly-region]")) return;
 			}
+			if (assembling && assemblyDirty) {
+				// 非空草稿静默丢弃是数据丢失：交给连接层确认，用户拒绝则现场原样保留。
+				onDiscardAssemblyDraft();
+				return;
+			}
 			if (assembling) cancelAssembly();
 			clearSelection(undefined);
 		}
 		document.addEventListener("pointerdown", onPointerDown);
 		return () => document.removeEventListener("pointerdown", onPointerDown);
-	}, [assembling, cancelAssembly, clearSelection, selectedTeamId]);
+	}, [assembling, assemblyDirty, cancelAssembly, clearSelection, onDiscardAssemblyDraft, selectedTeamId]);
 
 	// 点击团队就是进入该团队的成员编辑：直接复用组队草稿，避免「先选中、再找编辑入口」的隐式两步。
 	const selectTeamCard = useCallback(

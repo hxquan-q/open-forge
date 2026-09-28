@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	type BuiltinMcpPreset,
+	type BuiltinMcpSecretField,
 	isSecretFieldRequired,
+	isSecretFieldVisible,
 	resolveMcpPresetDisplayName,
 	resolveMcpPresetIconUrl,
 } from "../mcp/builtin-mcp-presets";
@@ -10,6 +12,18 @@ import {
 function resolvePrimaryHelpUrl(preset: BuiltinMcpPreset): string | undefined {
 	if (preset.setupHelpUrl) return preset.setupHelpUrl;
 	return preset.secrets?.find((field) => field.helpUrl)?.helpUrl;
+}
+
+/** 字段随引用值隐藏时同步清掉其值，避免陈旧 envKey 被提交进 env。 */
+function pruneHiddenValues(
+	fields: readonly BuiltinMcpSecretField[],
+	values: Record<string, string>,
+): Record<string, string> {
+	const next = { ...values };
+	for (const field of fields) {
+		if (field.envKey in next && !isSecretFieldVisible(field, next)) delete next[field.envKey];
+	}
+	return next;
 }
 
 export interface BuiltinMcpSecretsFieldView {
@@ -82,15 +96,17 @@ export function useBuiltinMcpSecretsDialogModel({
 		for (const field of preset.secrets ?? []) {
 			next[field.envKey] = initialValues?.[field.envKey] ?? "";
 		}
-		setValues(next);
-	}, [initialValues, open, preset]);
+		setValues(pruneHiddenValues(fields, next));
+	}, [fields, initialValues, open, preset]);
+
+	const visibleFields = useMemo(() => fields.filter((field) => isSecretFieldVisible(field, values)), [fields, values]);
 
 	const canSubmit = useMemo(() => {
-		return fields.every((field) => {
+		return visibleFields.every((field) => {
 			if (!isSecretFieldRequired(field, values)) return true;
 			return Boolean(values[field.envKey]?.trim());
 		});
-	}, [fields, values]);
+	}, [visibleFields, values]);
 
 	return useMemo(() => {
 		if (!preset) return null;
@@ -106,7 +122,7 @@ export function useBuiltinMcpSecretsDialogModel({
 			canSubmit,
 			connectorIconUrl: resolveMcpPresetIconUrl(preset),
 			connectorName,
-			fields: fields.map((field) => ({
+			fields: visibleFields.map((field) => ({
 				envKey: field.envKey,
 				helpUrl: field.helpUrl,
 				label: field.label?.trim() || (field.labelKey ? t(field.labelKey) : field.envKey),
@@ -114,26 +130,31 @@ export function useBuiltinMcpSecretsDialogModel({
 				placeholder: field.placeholder,
 				required: isSecretFieldRequired(field, values),
 				secret: Boolean(field.secret),
-				options: field.options?.map((value) => ({ value, label: value })),
+				options: field.options?.map((option) => ({
+					value: option.value,
+					label: option.labelKey ? t(option.labelKey) : option.value,
+				})),
 			})),
 			guideLines,
 			hasFields,
 			labels: {
-				continueCta: t("mcpPresets.continueCta", { name: connectorName }),
+				continueCta: t(preset.dialogCopy?.continueCtaKey ?? "mcpPresets.continueCta", { name: connectorName }),
 				getKey: t("mcpPresets.getKey"),
 				openAuthPage: t("mcpPresets.openAuthPage"),
-				openKeyPage: t("mcpPresets.openKeyPage"),
+				openKeyPage: t(preset.dialogCopy?.helpCtaKey ?? "mcpPresets.openKeyPage"),
 				privacyTooltip: t("mcpPresets.privacyTooltip"),
 				privacyTooltipAria: t("mcpPresets.privacyTooltipAria"),
 				saving: t("saving"),
 				authorizing: t("mcpPresets.authorizing"),
-				setupBody: hasFields ? t("mcpPresets.secretsDialogLead") : t("mcpPresets.browserAuthDialogLead"),
+				setupBody: hasFields
+					? t(preset.dialogCopy?.leadKey ?? "mcpPresets.secretsDialogLead")
+					: t("mcpPresets.browserAuthDialogLead"),
 				setupTitle: t("mcpPresets.setupTitle"),
-				stepPasteKey: t("mcpPresets.stepPasteKey"),
+				stepPasteKey: t(preset.dialogCopy?.fieldsTitleKey ?? "mcpPresets.stepPasteKey"),
 				title: t("mcpPresets.secretsDialogTitle", { name: connectorName }),
 			},
 			onChangeValue: (envKey: string, value: string) => {
-				setValues((current) => ({ ...current, [envKey]: value }));
+				setValues((current) => pruneHiddenValues(fields, { ...current, [envKey]: value }));
 			},
 			onOpenHelp: (url: string) => {
 				void window.vetta.auth.openExternal(url);
@@ -145,5 +166,5 @@ export function useBuiltinMcpSecretsDialogModel({
 			error,
 			values,
 		};
-	}, [authorizing, canSubmit, error, fields, open, preset, saving, t, values]);
+	}, [authorizing, canSubmit, error, fields, open, preset, saving, t, values, visibleFields]);
 }

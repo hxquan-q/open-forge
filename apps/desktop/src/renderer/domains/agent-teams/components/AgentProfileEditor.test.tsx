@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import type { AgentBlueprint, AgentProfile, AgentProfileUpdateImpact } from "@vetta/agent-team";
+import { AGENT_AVATAR_OPTIONS } from "@shared/agent-teams/agent-avatar";
 import { type ReactNode, useState } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -440,7 +442,10 @@ describe("AgentProfileEditor", () => {
 			/>,
 		);
 
-		expect(screen.getAllByRole("button", { name: /profile.avatarOption/ })).toHaveLength(9);
+		// 头像库会扩充（已至 24+）：数量断言跟着注册表走，第 9 项固定是 router。
+		expect(screen.getAllByRole("button", { name: /profile.avatarOption/ })).toHaveLength(
+			AGENT_AVATAR_OPTIONS.length,
+		);
 		await user.click(screen.getByRole("button", { name: "profile.avatarOption9" }));
 		await user.click(screen.getByRole("button", { name: "profile.save" }));
 		await waitFor(() =>

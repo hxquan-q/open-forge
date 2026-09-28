@@ -13,6 +13,7 @@ const steps = [
 	["scripts/quality/check-private-keys.mjs"],
 	["scripts/quality/check-conflict-markers.mjs"],
 	["scripts/quality/check-package-boundaries.mjs"],
+	["scripts/quality/check-context-boundaries.mjs"],
 	["scripts/quality/check-coding-agent-architecture.mjs"],
 	["scripts/quality/check-runtime-coding-agent-independence.mjs"],
 	["scripts/quality/check-runtime-subagents-boundary.mjs"],
@@ -24,6 +25,15 @@ const steps = [
 	["scripts/quality/check-vitest-runner.mjs"],
 	["scripts/quality/check-source-path-maps.mjs"],
 	["scripts/quality/check-task-worktrees.mjs"],
+	["scripts/quality/check-waivers.mjs"],
+	[
+		"scripts/quality/check-modified-file-notices.mjs",
+		"--baseline",
+		"scripts/quality/baselines/modified-file-notices.txt",
+	],
+	["scripts/quality/check-protocol-suites.mjs"],
+	["scripts/quality/check-project-indexes.mjs"],
+	["scripts/release/release-notes.mjs", "--check"],
 	["scripts/quality/check-turbo-config.mjs"],
 ];
 

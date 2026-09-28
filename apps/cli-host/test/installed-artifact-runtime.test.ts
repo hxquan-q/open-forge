@@ -1001,7 +1001,7 @@ async function buildInstalledCliArtifact(): Promise<InstalledCliArtifact> {
 	const root = await mkdtemp(join(tmpdir(), "vetta-installed-cli-artifact-"));
 	const buildDir = join(root, "build");
 	const installDir = join(root, "install");
-	const binaryName = process.platform === "win32" ? "vetta.exe" : "vetta";
+	const binaryName = process.platform === "win32" ? "openforge.exe" : "openforge";
 	const buildBinaryPath = join(buildDir, binaryName);
 	const binaryPath = join(installDir, binaryName);
 	const buildMetafilePath = join(buildDir, "metafile.json");
@@ -1035,7 +1035,7 @@ async function buildInstalledCliArtifact(): Promise<InstalledCliArtifact> {
 }
 
 async function expectStandaloneArtifact(installed: InstalledCliArtifact): Promise<void> {
-	expect(await readdir(installed.installDir)).toEqual([process.platform === "win32" ? "vetta.exe" : "vetta"]);
+	expect(await readdir(installed.installDir)).toEqual([process.platform === "win32" ? "openforge.exe" : "openforge"]);
 	expect((await stat(installed.binaryPath)).size).toBeGreaterThan(0);
 	const metafile = MetafileSchema.parse(JSON.parse(await readFile(installed.buildMetafilePath, "utf8")));
 	const externalImports = Object.values(metafile.outputs)

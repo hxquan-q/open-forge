@@ -38,3 +38,9 @@ Desktop、Plugin、Theme 或 Action 业务。
 - Constraint 变化必须覆盖缺失 evaluator、合法/非法值、多个约束组合和 fail-closed 行为。
 - 生命周期和并发测试使用显式同步点与 `AbortSignal`，不得依赖任意 sleep。
 - 修改公开 Runtime API 时同步运行受影响的上层系统 Adapter 和至少一个真实宿主 Provider 的合同测试。
+
+## 规则分级
+
+- **Invariant**：`边界规则` 全节（宿主无关、默认无 Grant、原子替换、稳定错误语义等）。
+- **Policy**：`必读文档` 查阅要求、`测试要求` 全节。
+- **Guideline**：`职责范围` 描述。

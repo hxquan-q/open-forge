@@ -43,3 +43,9 @@ Grant/Session 合同。具体 Provider、系统权限映射、Session 生命周�
 - Token 或 Schema 变化必须覆盖合法输入输出、未知字段、边界值、错误映射和 Catalog 一致性。
 - Grant 或 Session 合同变化必须覆盖授权、拒绝、撤销和 namespace 隔离；具体系统 Adapter 测试留在其上层。
 - 公共合同变化必须运行受影响 Provider 和系统 facade 的合同测试；仅通过本包类型检查不足以证明兼容。
+
+## 规则分级
+
+- **Invariant**：`边界规则` 全节（合同只含可序列化输入输出、不引入宿主专用分支、无 `internal/*-adapter` 例外、生成 Catalog 禁手改）。
+- **Policy**：`必读文档` 查阅要求、`测试要求` 全节。
+- **Guideline**：`职责范围`、`归属判断`。

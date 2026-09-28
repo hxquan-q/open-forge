@@ -9,3 +9,5 @@
 2. 说明背景、候选、决策、理由、代价和回滚/演进信号；
 3. 在相关 Requirement 或 Plan 中链接 ADR；
 4. 不把“计划中的架构”写成“已实现行为”。
+
+[`waivers/`](waivers/) 存放 Policy 级规则的到期豁免登记（TASK-0111），格式与校验见 `waivers/README.md`；由 `scripts/quality/check-waivers.mjs` 机械校验。

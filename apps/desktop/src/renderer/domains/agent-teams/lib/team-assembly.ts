@@ -97,6 +97,59 @@ export function assemblyLeaderId(draft: TeamAssemblyDraft): string | undefined {
 	return draft.leaderId && draft.memberIds.includes(draft.leaderId) ? draft.leaderId : draft.memberIds[0];
 }
 
+/**
+ * 组队草稿进入时的种子：新建是空草稿，编辑既有团队是按团队重放的快照。
+ * 与当前草稿比对得出「用户是否真的改过」，决定点空白能否静默退出。
+ */
+export function assemblyBaseline(
+	draft: TeamAssemblyDraft,
+	teams: readonly TeamDefinition[],
+): TeamAssemblyDraft | undefined {
+	if (!draft.teamId) return emptyAssemblyDraft();
+	const team = teams.find((candidate) => candidate.id === draft.teamId);
+	return team ? assemblyDraftFromTeam(team) : undefined;
+}
+
+/** 草稿相对种子是否有实质改动；trim 后等价视为未改（名字里敲过空格不算改动）。 */
+export function sameAssemblyDraft(a: TeamAssemblyDraft, b: TeamAssemblyDraft): boolean {
+	return (
+		a.teamId === b.teamId &&
+		a.name.trim() === b.name.trim() &&
+		(a.description?.trim() ?? "") === (b.description?.trim() ?? "") &&
+		a.maxAutomaticRetries === b.maxAutomaticRetries &&
+		a.leaderId === b.leaderId &&
+		sameOrderedIds(a.memberIds, b.memberIds) &&
+		sameRecord(a.bindingKinds, b.bindingKinds, (x, y) => x === y) &&
+		sameRecord(a.handles, b.handles, (x, y) => x.trim() === y.trim()) &&
+		sameRecord(a.assignments, b.assignments, sameAssignment)
+	);
+}
+
+/** memberIds 的顺序本身是语义（顺延队长取首位），按序比对而非集合比对。 */
+function sameOrderedIds(a: readonly string[], b: readonly string[]): boolean {
+	return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+function sameRecord<V>(
+	a: Readonly<Record<string, V>> | undefined,
+	b: Readonly<Record<string, V>> | undefined,
+	equal: (x: V, y: V) => boolean,
+): boolean {
+	const left = a ?? {};
+	const right = b ?? {};
+	const leftKeys = Object.keys(left);
+	const rightKeys = Object.keys(right);
+	if (leftKeys.length !== rightKeys.length) return false;
+	return leftKeys.every((key) => key in right && equal(left[key], right[key]));
+}
+
+function sameAssignment(a: TeamMemberAssignment, b: TeamMemberAssignment): boolean {
+	return (
+		(a.responsibility?.trim() ?? "") === (b.responsibility?.trim() ?? "") &&
+		(a.instructions?.trim() ?? "") === (b.instructions?.trim() ?? "")
+	);
+}
+
 export function canSubmitAssembly(draft: TeamAssemblyDraft): boolean {
 	return (
 		draft.name.trim().length > 0 &&

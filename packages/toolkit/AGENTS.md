@@ -23,5 +23,12 @@
 ## 模块边界
 
 - `versioned-config` 是纯函数模块，可以用于插件和浏览器构建。
+- `disposable` 与 `disposable-leak-tracker` 是纯机制模块（只用 `WeakMap` / `FinalizationRegistry` / `Error`），不依赖 Node 或浏览器运行时，Desktop 主进程与插件构建都可直接使用。
 - `config-store`、`atomic-write` 和 `file-migrations` 依赖 Node.js，不得引入浏览器或 renderer 运行时。
 - Toolkit 只提供通用机制，不依赖 Desktop、Electron 或具体业务包。
+
+## 规则分级
+
+- **Invariant**：`模块边界` 全节、`迁移工具` 中的强制约定（schema/迁移留在消费包、连续 `vN -> vN+1`、注册入口不放转换逻辑）。
+- **Policy**：`迁移工具` 的必读文档要求与新增版本的迁移测试要求。
+- **Guideline**：迁移设计指引。

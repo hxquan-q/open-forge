@@ -68,3 +68,13 @@ codex plugin add expo@openai-curated
 ```
 
 安装后重启 Codex。当任务涉及 EAS Build、TestFlight、Play Store 或托管服务时，先说明要使用的 Expo/EAS 能力及可能的账户或费用影响；普通本地开发不需要 Expo 付费服务。
+
+
+## Context Boundary
+
+```yaml
+purpose: Expo / React Native mobile application
+provides:  []
+consumes:  []
+internal_dependencies:  []
+```

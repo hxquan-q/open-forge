@@ -258,9 +258,25 @@ export function useRootLayoutModel(): RootLayoutModel {
 						: i18n.t("chat:appshot.errorHelperFailed");
 			showToast({ variant: "warning", message });
 		});
+		const unsubInterruptHealth = window.vetta.session.onInterruptHealth((payload) => {
+			if (payload.action === "auto-retried") {
+				showToast({
+					variant: "success",
+					title: i18n.t("chat:sessionInterrupt.autoRetriedTitle"),
+					message: i18n.t("chat:sessionInterrupt.autoRetriedBody"),
+				});
+				return;
+			}
+			showToast({
+				variant: "warning",
+				title: i18n.t("chat:sessionInterrupt.notifyTitle"),
+				message: i18n.t("chat:sessionInterrupt.notifyBody"),
+			});
+		});
 		return () => {
 			unsubCaptured();
 			unsubCaptureError();
+			unsubInterruptHealth();
 		};
 	}, [currentPath, defaultConversationCwd, navigate]);
 

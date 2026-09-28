@@ -235,11 +235,18 @@ async function previewNoop(): Promise<AgentProfileUpdateImpact> {
 	return { agentProfileId: "", teamIds: [], teamNames: [] };
 }
 
+function cloneExtensions(
+	extensions: Readonly<Record<string, readonly string[]>>,
+): Record<string, string[]> {
+	return Object.fromEntries(Object.entries(extensions).map(([id, values]) => [id, [...values]]));
+}
+
 /** 创建模式下的未落盘草稿：确认创建时才写入智能体库。 */
 function buildDraftAgent(blueprints: readonly AgentBlueprint[]): AgentProfile | undefined {
 	const blueprint = blueprints[0];
 	if (!blueprint) return undefined;
 	const now = Date.now();
+	const defaults = blueprint.defaultAbilities;
 	return {
 		id: "",
 		revision: 0,
@@ -247,7 +254,15 @@ function buildDraftAgent(blueprints: readonly AgentBlueprint[]): AgentProfile | 
 		description: "",
 		mentionHandle: "",
 		blueprintId: blueprint.id,
-		abilities: { selectionMode: "custom", skills: [], mcpServers: [], plugins: [] },
+		// 能力以蓝图默认为起点：用户没碰过能力 tab 时保存结果仍是蓝图默认（preset-agent 系为
+		// 继承全部），不会在不知情的情况下落盘成零能力的空 custom。
+		abilities: {
+			selectionMode: defaults.selectionMode,
+			skills: [...defaults.skills],
+			mcpServers: [...defaults.mcpServers],
+			plugins: [...defaults.plugins],
+			...(defaults.extensions ? { extensions: cloneExtensions(defaults.extensions) } : {}),
+		},
 		scope: { kind: "library" },
 		createdAt: now,
 		updatedAt: now,

@@ -4,9 +4,32 @@ const AVATAR_DIRECTORY = "./agent-team-avatars";
 
 /** 新增角色一律追加在末尾：LEGACY_AVATAR_ALIASES 按下标还原老档案里的 avatar-NN 路径。 */
 export const AGENT_AVATAR_OPTIONS = Object.freeze(
-	["master", "researcher", "architect", "executor", "auditor", "optimizer", "synthesizer", "translator", "router"].map(
-		(role) => `${AVATAR_DIRECTORY}/${role}.webp`,
-	),
+	[
+		"master",
+		"researcher",
+		"architect",
+		"executor",
+		"auditor",
+		"optimizer",
+		"synthesizer",
+		"translator",
+		"router",
+		"keeper",
+		"speckeeper",
+		"curator",
+		"archivist",
+		"builder",
+		"planner",
+		"reviewer",
+		"debugger",
+		"tester",
+		"designer",
+		"analyst",
+		"scout",
+		"sentinel",
+		"deployer",
+		"mentor",
+	].map((role) => `${AVATAR_DIRECTORY}/${role}.webp`),
 );
 
 /** 老档案里存的是 avatar-NN 路径，按下标还原成现在的文件名。 */

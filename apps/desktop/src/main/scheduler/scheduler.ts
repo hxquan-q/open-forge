@@ -35,6 +35,10 @@ export async function initScheduler(): Promise<void> {
 export function scheduleTaskInCron(task: TaskData): void {
 	if (!acceptingSchedules) throw new Error("Scheduler is shutting down");
 	unscheduleTaskInCron(task.id);
+	// 事件 / 手动任务不进入 cron 表（TASK-0118）。
+	if (task.trigger !== undefined && task.trigger.type !== "cron") {
+		return;
+	}
 	if (!isValidCronExpression(task.cron)) {
 		throw new Error(`Invalid cron expression: ${task.cron}`);
 	}

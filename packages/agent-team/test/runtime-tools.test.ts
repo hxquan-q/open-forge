@@ -93,6 +93,7 @@ describe("team task runtime tools", () => {
 		expect(createTeamDelegateTaskTool(port).description).toContain("without waiting");
 		expect(createTeamDelegateTaskTool(port).description).toContain("subagents");
 		expect(createTeamWaitTasksTool(port).description).toContain("not subagent wait_agent");
+		expect(createTeamWaitTasksTool(port).description).toContain("end the turn");
 		expect(createTeamGetTaskTool(port).description).toContain("private execution history");
 		expect(createTeamCancelTaskTool(port).description).toContain("Other members' tasks are not cancelled");
 	});
@@ -105,6 +106,58 @@ describe("team task runtime tools", () => {
 		expect(description).toContain("self-contained");
 		expect(description).toContain("completion criteria");
 		expect(description).toContain("cite the entryId from team_read_shared_history");
+	});
+
+	it("answers a timed-out wait with only the task status tuple", async () => {
+		const task = snapshot("running");
+		const result = { reason: "timeout" as const, tasks: [task] };
+		const port = { waitTasks: vi.fn().mockResolvedValue(result) } as unknown as TeamTaskControlPort;
+		const tool = createTeamWaitTasksTool(port);
+
+		const output = await tool.execute({
+			sessionId: "leader-runtime",
+			turnId: "turn",
+			toolCallId: "call",
+			input: { teamTaskIds: [task.teamTaskId], timeoutMs: 30_000 },
+			signal: new AbortController().signal,
+		});
+
+		const text = JSON.parse(output.content[0].text) as {
+			reason: string;
+			tasks: readonly Record<string, unknown>[];
+		};
+		expect(text.reason).toBe("timeout");
+		expect(text.tasks).toEqual([
+			{
+				teamTaskId: task.teamTaskId,
+				state: task.workItem.state,
+				revision: task.workItem.revision,
+				updatedAt: task.workItem.updatedAt,
+			},
+		]);
+		expect(output.details).toBe(result);
+	});
+
+	it("keeps the full snapshot payload when a wait ends on a state change", async () => {
+		const task = snapshot("completed");
+		const result = { reason: "state-changed" as const, tasks: [task] };
+		const port = { waitTasks: vi.fn().mockResolvedValue(result) } as unknown as TeamTaskControlPort;
+		const tool = createTeamWaitTasksTool(port);
+
+		const output = await tool.execute({
+			sessionId: "leader-runtime",
+			turnId: "turn",
+			toolCallId: "call",
+			input: { teamTaskIds: [task.teamTaskId], timeoutMs: 30_000 },
+			signal: new AbortController().signal,
+		});
+
+		const text = JSON.parse(output.content[0].text) as {
+			reason: string;
+			tasks: readonly { workItem?: { objective?: string } }[];
+		};
+		expect(text.reason).toBe("state-changed");
+		expect(text.tasks[0]?.workItem?.objective).toBe("Build");
 	});
 
 	it("publishes public Team communication with the current model identity", async () => {

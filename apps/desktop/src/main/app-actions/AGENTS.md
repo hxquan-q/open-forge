@@ -38,3 +38,9 @@ App Action 是 agent 调用 Vetta Desktop 能力的受控 RPC 边界。主进程
 - 两个插件抢同一 `publicId` 时，后者只打日志，前者仍可 run。
 - 插件热更新 activation 失败时，旧版本仍可 search/describe/run；成功时同一时刻切换整组 Action。
 - 修改 desktop 代码后：`bun run check`。
+
+## 规则分级
+
+- **Invariant**：`运行时边界`（审批/校验/超时由宿主强制、`PLUGIN_ACTION_UNAVAILABLE`/`ACTION_RUNTIME_NOT_READY` 语义、action id 冲突先注册为准、commit 原子替换失败保留旧版本）；业务 Action 必须由插件提供，不在 `app-actions/*` 维护静态领域实现。
+- **Policy**：`验证` 步骤、`注册与冲突` 中的 activation 流程要求。
+- **Guideline**：`新增 / 修改 Action` 的操作路径、`Action 的作用` 描述。

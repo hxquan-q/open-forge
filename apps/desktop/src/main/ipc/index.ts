@@ -9,6 +9,7 @@ import { registerAgentTeamsIpc } from "./agent-teams.js";
 import { registerAppMonitorIpc } from "./app-monitor.js";
 import { registerAppshotIpc } from "./appshot.js";
 import { registerBrowserTabIpc } from "./browser-tab.js";
+import { registerBrowserViewIpc } from "./browser-view.js";
 import { registerCanvasIpc } from "./canvas.js";
 import { registerClipboardIpc } from "./clipboard.js";
 import { registerConversationTagsIpc } from "./conversation-tags.js";
@@ -35,6 +36,7 @@ import { registerReviewChangesIpc } from "./review-changes.js";
 import { registerRuntimeConfigurationIpc } from "./runtime-configuration.js";
 import { registerRuntimesIpc } from "./runtimes.js";
 import { registerSessionIpc } from "./session.js";
+import { registerSessionArchiveIpc } from "./session-archive.js";
 import { registerSettingsIpc } from "./settings.js";
 import { registerSkillsIpc } from "./skills.js";
 import { registerSpeechInputIpc } from "./speech-input.js";
@@ -51,6 +53,7 @@ interface IpcTeardown {
 	teardownActionApproval: () => void;
 	teardownAppMonitor: () => void;
 	teardownSession: () => void;
+	teardownSessionArchive: () => void;
 	teardownSettings: () => void;
 	teardownUpdater: () => void;
 	teardownSkills: () => void;
@@ -83,6 +86,7 @@ interface IpcTeardown {
 	teardownTask: () => void;
 	teardownCanvas: () => void;
 	teardownBrowserTab: () => void;
+	teardownBrowserView: () => void;
 	teardownAppshot: () => void;
 	teardownDiagnostics: () => void;
 	teardownOnboarding: () => void;
@@ -104,6 +108,10 @@ export function registerAllIpc(
 		teardownActionApproval: registerActionApprovalIpc(options.actionApprovalBroker),
 		teardownAppMonitor: registerAppMonitorIpc(),
 		teardownSession: registerSessionIpc(webContents),
+		teardownSessionArchive: (() => {
+			registerSessionArchiveIpc();
+			return () => undefined;
+		})(),
 		teardownSettings: registerSettingsIpc(),
 		teardownUpdater: registerUpdaterIpc(),
 		teardownSkills: registerSkillsIpc(),
@@ -136,6 +144,7 @@ export function registerAllIpc(
 		teardownTask: registerTaskIpc(webContents),
 		teardownCanvas: registerCanvasIpc(),
 		teardownBrowserTab: registerBrowserTabIpc(),
+		teardownBrowserView: registerBrowserViewIpc(),
 		teardownAppshot: registerAppshotIpc(),
 		teardownDiagnostics: registerDiagnosticsIpc(),
 		teardownOnboarding: registerOnboardingIpc(),
@@ -150,6 +159,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownActionApproval();
 	teardown.teardownAppMonitor();
 	teardown.teardownSession();
+	teardown.teardownSessionArchive();
 	teardown.teardownSettings();
 	teardown.teardownUpdater();
 	teardown.teardownSkills();
@@ -182,6 +192,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownTask();
 	teardown.teardownCanvas();
 	teardown.teardownBrowserTab();
+	teardown.teardownBrowserView();
 	teardown.teardownAppshot();
 	teardown.teardownDiagnostics();
 	teardown.teardownOnboarding();

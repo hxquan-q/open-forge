@@ -29,3 +29,9 @@ I/O。它只依赖 `@vetta/ai` 和自身合同，不得依赖 `@vetta/runtime-*`
 - 修改 Agent Loop、消息状态或 Tool 执行时，必须覆盖纯文本完成、tool call/result 循环、多个工具、Provider/Tool 错误、取消、usage/stop 传播，以及不会多发或遗漏终止事件。
 - 修改并发、排队、重试或事件订阅时，使用显式同步点和可控时钟验证事件顺序与最终状态，不使用任意 sleep。
 - `bun run test:live` 只用于用户明确授权的真实 Provider 验证，不能作为默认测试，也不能替代可重复的状态机回归测试。
+
+## 规则分级
+
+- **Invariant**：`职责范围` 边界（不拥有 Session 生命周期/持久化/平台 I/O，只依赖 `@vetta/ai` 与自身合同，Port 实现不得反向拥有合同）；`test:live` 仅限用户明确授权的真实 Provider。
+- **Policy**：`测试要求` 全节、`注意事项` 中的下游影响检查要求。
+- **Guideline**：`关键模块` 索引、`注意事项` 中的修改谨慎性提示。

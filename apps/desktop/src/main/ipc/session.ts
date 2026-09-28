@@ -33,7 +33,7 @@ import {
 	CODING_AGENT_TODO_CLEAR,
 	isCodingAgentPermissionMode,
 } from "@vetta/coding-agent/session-extensions";
-import type { SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
+import type { HistoryEntry, SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
 import { assertProjectSupportsExecutionMode } from "@vetta/runtime-desktop";
 import { isMcpJsonValue, type McpJsonObject } from "@vetta/runtime-mcp";
@@ -43,6 +43,13 @@ import type { DesktopMcpElicitationResponse, DesktopMcpElicitationValue } from "
 import { PLUGIN_CONTRIBUTION_CHANNELS } from "../../shared/plugin-ipc.js";
 import { SESSION_SEARCH_CHANNELS } from "../../shared/session-search.js";
 import { DEFAULT_AGENT_MODE, isAgentMode, MODE_PROMPTS } from "../agent-modes/index.js";
+import { startSessionInterruptMonitor } from "../agent-runtime/session-interrupt-bootstrap.js";
+import { setSessionInterruptDraftNonEmpty } from "../agent-runtime/session-interrupt-draft-registry.js";
+import {
+	clearSessionManualStop,
+	markSessionManualStop,
+	watchSessionForInterruptContinue,
+} from "../agent-runtime/session-interrupt-watch-registry.js";
 import { stopSessionBackgroundWork } from "../agent-runtime/stop-session-work.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service.js";
@@ -61,7 +68,7 @@ import { purgeProjectSessions } from "../conversations/project-session-purge.js"
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
-import { selectSessionHistoryPreview } from "../conversations/session-history-preview.js";
+import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
 import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations/session-paths.js";
 import { listRuntimeSessionProjects, listSessionHistory } from "../conversations/session-query-service.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
@@ -235,6 +242,10 @@ const CHANNELS = {
 	/** 有会话在跑的项目 cwd 列表；会话路径无法反推项目，见处理器上的说明。 */
 	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
+	/** Renderer → Main：草稿非空镜像，供中断续接否决。 */
+	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
+	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
+	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
 	PENDING_QUESTION_CHANGED: "vetta:session:pending-question-changed",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
@@ -993,6 +1004,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.PROMPT, async (_event, sessionId: unknown, request: unknown, rawTraceContext: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		interactiveResidency.touch(sessionId);
+		clearSessionManualStop(sessionId);
 		const traceContext = parseSessionTraceContext(rawTraceContext);
 		const req = parsePromptRequest(request);
 		sessionLog.info(
@@ -1008,15 +1020,23 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 
 	ipcMain.handle(CHANNELS.CONTINUE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
+		clearSessionManualStop(sessionId);
 		await runtime.continue(sessionId);
 	});
 
 	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
+		markSessionManualStop(sessionId);
 		// Stopping is unconditional: the turn comes down together with the work it
 		// spawned. Subagents and background commands outlive the turn by design, so
 		// cancelling the turn alone would leave workflows running behind the button.
 		await Promise.allSettled([runtime.abort(sessionId), stopSessionBackgroundWork(runtime, sessionId)]);
+	});
+
+	ipcMain.handle(CHANNELS.INTERRUPT_DRAFT, (_event, sessionId: unknown, nonEmpty: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		if (typeof nonEmpty !== "boolean") throw new Error("nonEmpty must be boolean");
+		setSessionInterruptDraftNonEmpty(sessionId, nonEmpty);
 	});
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
@@ -1174,9 +1194,11 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return runtime.getMessages(sessionId);
 	});
 
-	ipcMain.handle(CHANNELS.GET_FULL_HISTORY, async (_event, sessionId: unknown) => {
+	ipcMain.handle(CHANNELS.GET_FULL_HISTORY, async (_event, sessionId: unknown, options?: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.getFullHistory(sessionId);
+		if (options === undefined) return runtime.getFullHistory(sessionId);
+		// TASK-0050：传分页 options 即返回有界 HistoryPage；无参调用保持全量语义。
+		return sliceHistoryPage(runtime.getFullHistory(sessionId), parseHistoryPageRequest(options));
 	});
 
 	ipcMain.handle(CHANNELS.NAVIGATE_FOR_EDIT, async (_event, sessionId: unknown, entryId: unknown) => {
@@ -1405,12 +1427,26 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	};
 	const unsubscribeRunning = runtime.onRunningChanged((sessionPath, running, sessionId, reason) => {
 		broadcastRunningChanged({ sessionPath, running, sessionId, reason });
+		if (sessionId) {
+			if (running) {
+				clearSessionManualStop(sessionId);
+				watchSessionForInterruptContinue(sessionId);
+			} else {
+				watchSessionForInterruptContinue(sessionId);
+			}
+		}
 		if (!sessionId || !interactiveResidency.has(sessionId)) return;
 		interactiveResidency.touch(sessionId);
 		if (!running) scheduleIdleInteractiveSessionReconcile();
 	});
 	const unsubscribeTeamRunning = agentTeamSessionService.onRunningChanged((sessionPath, running, sessionId) =>
 		broadcastRunningChanged({ sessionPath, running, sessionId }),
+	);
+	const stopInterruptMonitor = startSessionInterruptMonitor(
+		(channel, payload) => {
+			if (!webContents.isDestroyed()) webContents.send(channel, payload);
+		},
+		(sessionId) => sessionCwdMap.get(sessionId),
 	);
 
 	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
@@ -1724,6 +1760,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	interface ViewerSub {
 		watcher: FSWatcher;
 		path: string;
+		/** 上一轮已下发的历史，用于 append-only 增量差分（TASK-0050）。 */
+		lastEntries?: HistoryEntry[];
 	}
 	const viewerSubs = new Map<string, ViewerSub>();
 	let viewerSeq = 0;
@@ -1732,15 +1770,13 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		assertNonEmptyString(path, "path");
 		const snapshot = runtime.readSessionHistoryFromFile(resolve(path));
 		if (options === undefined) return snapshot;
-		if (!options || typeof options !== "object" || Array.isArray(options)) {
-			throw new TypeError("options must be an object");
+		// TASK-0050：分页 options（含兼容的 tailTurns）返回有界 HistoryPage；
+		// 空对象 {} 等效旧行为返回全量快照，避免 {} 语义悄悄改变。
+		const request = parseHistoryPageRequest(options);
+		if (request.limit === undefined && request.beforeEntry === undefined && request.tailTurns === undefined) {
+			return snapshot;
 		}
-		const tailTurns = (options as { tailTurns?: unknown }).tailTurns;
-		if (tailTurns === undefined) return snapshot;
-		if (!Number.isInteger(tailTurns) || (tailTurns as number) < 1 || (tailTurns as number) > 10) {
-			throw new TypeError("options.tailTurns must be an integer between 1 and 10");
-		}
-		return { history: selectSessionHistoryPreview(snapshot.history, tailTurns as number) };
+		return sliceHistoryPage(snapshot.history, request);
 	});
 
 	ipcMain.handle(CHANNELS.VIEWER_SUBSCRIBE, async (_event, path: unknown) => {
@@ -1754,9 +1790,16 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		const emit = () => {
 			pending = undefined;
 			if (webContents.isDestroyed()) return;
+			const sub = viewerSubs.get(subscriptionId);
+			// 已退订后仍在 debounce 窗口内触发的残留事件不再读取与下发。
+			if (!sub) return;
 			try {
 				const snapshot = runtime.readSessionHistoryFromFile(abs);
-				webContents.send(CHANNELS.VIEWER_EVENT, subscriptionId, snapshot);
+				const update = diffViewerHistory(sub.lastEntries ?? null, snapshot.history);
+				sub.lastEntries = snapshot.history;
+				// 无变化的写事件（编辑器 flush/fs 抖动）不再发送。
+				if (update === null) return;
+				webContents.send(CHANNELS.VIEWER_EVENT, subscriptionId, update);
 			} catch {
 				// File may have been deleted between events; ignore.
 			}
@@ -1783,6 +1826,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	return () => {
+		stopInterruptMonitor();
 		unsubscribeConversationListChanged();
 		webContents.removeListener("did-start-navigation", onDidStartNavigation);
 		webContents.removeListener("render-process-gone", onRenderGone);

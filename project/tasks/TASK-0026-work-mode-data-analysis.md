@@ -1,7 +1,7 @@
 ---
 id: TASK-0026
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,9 +16,9 @@ write_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode]
 depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024, TASK-0028]
 conflicts_with: [TASK-0018, TASK-0025]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
-updated: 2026-09-23
+updated: 2026-09-27
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,6 +74,16 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - `packages/runtime-node/src/dataset/`：数据集剖析实现（合同 `dataset-contracts.ts`、RFC4180 CSV/TSV 解析 `csv-parse.ts`、纯函数表格画像 `tabular.ts`、IO 编排 `dataset-profile.ts`）；支持 .csv/.tsv/.json/.jsonl/.ndjson/.xlsx/.xlsm，按行画像列类型/空值/非法值/参差行/空行，超限截断，`AbortSignal` 取消；只读不写源文件、不联网。xlsx 依赖（SheetJS 0.20.3 CDN tgz）登记进 runtime-node。
+  - `packages/coding-agent/src/features/dataset/`：`CodingAgentDatasetOperations` 宿主注入 Port + `dataset_profile` 工具（绝对路径校验、expectedColumns 缺列上报、指纹 uri/mtime 输出供 `vetta-research-sources` 清单照抄）；housekeeping 登记内置名/READ_ONLY 风险档/model order 1_960/Work Profile 默认工具。
+  - `packages/coding-agent/src/composition/`：`datasetProfile` 可选注入，缺省不注册该工具；经 runtime-tool-surface 条件注册。
+  - `apps/desktop/src/main/agent-runtime/composition.ts`：注入 `profileDatasetFile`。
+  - `WorkDocumentSections.tsx`：抽出共享 `useStartTaskWithSources`（建任务+全局消息通道）；新增 Dataset 节（selectFiles 选数据文件 + 分析目标）；产物来源复查白名单扩为 `research-evidence`/`dataset`/`analysis`（document 不触发）。
+  - i18n：`workspace.work.dataset.*` zh/en 四键。
 - 实际运行：
-- 未运行及原因：
-- 剩余风险：
+  - `runtime-node` dataset 合同测试 12 用例（CSV/JSON/XLSX 解析边界、行级校验、类型推断、问题行、缺列、大小上限、取消信号）全绿；
+  - `coding-agent` dataset_profile 工具测试（绝对路径拒绝、缺省不注册、错误映射、画像输出含指纹、issues 截断）全绿；
+  - Desktop `WorkDocumentSections` 19 用例（数据集选文件→发任务→消息走同通道、dataset/analysis 产物触发来源复查、document 不触发）全绿；
+  - `bun run check:quick`、`bun run check`（lint/types/guards 全量）绿。
+- 未运行及原因：真实 Desktop 端到端（选真实 xlsx → 分析 → 产物复查）需实机冒烟，登记 VERIFY-0012。
+- 剩余风险：xlsx 懒加载在 Electron 打包产物中的解析需实机确认；`dataset`/`analysis` 产物由模型按 prompt 合同写 manifest，manifest 缺失时复查返回 no-manifest（不阻断）；Excel 只取第一工作表。

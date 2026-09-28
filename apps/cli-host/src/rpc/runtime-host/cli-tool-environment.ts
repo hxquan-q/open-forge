@@ -41,7 +41,7 @@ export function createCliCodingAgentToolEnvironmentFactory(
 			editPathPolicy: host.editPathPolicy,
 			writePathPolicy: host.writePathPolicy,
 			configurationSource: context.configurationSource,
-			readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 		});
 	};
 }
@@ -66,7 +66,7 @@ export function createCliCodingAgentSessionExecutionEnvironmentFactory(
 					editPathPolicy: host.editPathPolicy,
 					writePathPolicy: host.writePathPolicy,
 					configurationSource: context.configurationSource,
-					readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+					readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 				}),
 				...command.registrations,
 			],
@@ -82,7 +82,7 @@ export function createCliCodingAgentSessionExecutionEnvironmentFactory(
 						editPathPolicy: host.editPathPolicy,
 						writePathPolicy: host.writePathPolicy,
 						configurationSource: context.configurationSource,
-						readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+						readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 					}),
 			},
 			dispose: () => command.dispose(),

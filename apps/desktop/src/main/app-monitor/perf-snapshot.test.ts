@@ -202,6 +202,36 @@ describe("buildPerfSnapshot", () => {
 		expect(snapshot.runtime.totals).toEqual({ activeSessions: 1, queuedInputs: 1, inFlightEvents: 5 });
 	});
 
+	it("按 role 附带后台进程健康记账，未注册时省略", () => {
+		const snapshot = buildPerfSnapshot({
+			at: 1_000,
+			sampling: "idle",
+			metrics: {
+				processes: [{ pid: 9, type: "utility", cpuPercent: 0, workingSetKb: 10, role: "speech-input-host" }],
+			},
+			sessions: [],
+			aggregates: createPerfAggregates(),
+			background: [
+				{
+					role: "speech-input-host",
+					kind: "utility-process",
+					crashes: 2,
+					restarts: 1,
+					pid: 9,
+					restartBudgetExhausted: false,
+				},
+			],
+		});
+
+		expect(snapshot.processes.utility[0]?.role).toBe("speech-input-host");
+		expect(snapshot.background).toEqual([
+			expect.objectContaining({ role: "speech-input-host", crashes: 2, restarts: 1, pid: 9 }),
+		]);
+
+		const bare = buildPerfSnapshot({ at: 1_000, sampling: "idle", sessions: [], aggregates: createPerfAggregates() });
+		expect(bare.background).toBeUndefined();
+	});
+
 	it("classifyProcessMetricType 映射 Electron 进程类型", () => {
 		expect(classifyProcessMetricType("Browser")).toBe("main");
 		expect(classifyProcessMetricType("Tab")).toBe("renderer");

@@ -169,7 +169,7 @@ export function TeamMemberRoster({
 						data-team-session-back="true"
 						title={t("chat.backToTeam")}
 						aria-label={t("chat.backToTeam")}
-						className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 						onClick={onBackToTeam}
 					>
 						<span className="icon-[solar--users-group-rounded-bold] h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -196,7 +196,7 @@ export function TeamMemberRoster({
 							title={t("chat.memberSession", { name: member.name })}
 							aria-label={t("chat.memberSession", { name: member.name })}
 							className={cn(
-								"relative flex h-7 shrink-0 items-center overflow-hidden rounded-full py-0.5 pl-1 pr-2.5 text-[12px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-45",
+								"relative flex h-7 shrink-0 items-center overflow-hidden rounded-full py-0.5 pl-1 pr-2.5 text-[12px] font-medium transition-colors focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45",
 								active
 									? "bg-primary/15 text-primary"
 									: "bg-muted text-foreground hover:bg-accent",
@@ -260,7 +260,7 @@ export function TeamMemberRoster({
 					data-team-settings="true"
 					title={t("chat.configure")}
 					aria-label={t("chat.configure")}
-					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 					onClick={onOpenSettings}
 				>
 					<span className="icon-[solar--settings-linear] h-3.5 w-3.5" aria-hidden="true" />
