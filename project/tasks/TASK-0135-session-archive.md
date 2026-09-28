@@ -82,3 +82,4 @@ updated: 2026-09-29
   - 设置页：「已归档」页重组为项目/会话双分节，`useArchivedSessionsSettingsModel` 3 例全通过；`ArchivedProjectsSettings.tsx` 旧容器删除、由 `ArchiveSettings.tsx` 统一承载。
   - 验证：归档族 9 个测试文件 43 例全通过；desktop `tsc --noEmit` exit=0；`check:quick` exit=0（含新文件声明头补齐）。
   - 发布说明已并入 `.github/release-notes/v0.1.3.md`（新增×2、改进×1、其他×1）。
+  - 跟进（同日，用户反馈「团队对话不能够归档」）：归档入口此前显式排除 agent-team 会话，且设置页「已归档」的删除对团队会话会走普通会话删除——主进程以「Conversation is managed by Agent Team」拒绝，团队会话一旦归档即成删不掉的死行。已修复（`3b6cf56da`）：团队会话可归档，名字取团队标题（未命名回落团队占位名），归档快照新增可选 `team` 身份，设置页删除改走团队级删除并广播团队列表刷新。回归测试 +7 例（菜单模型 2、侧栏过滤 1、设置页 1、模型 2、仓库 1），归档族 9 文件 50 例全通过；`check:quick`、desktop `tsc` 通过；影响面跑 1 例 preload 导入超时（单跑 1.8s、目录组 12 文件 45 例全通过，判定并发重负载假红）；根 `check` 因并行工作区在途文件（`main/browser-automation/*`）的格式/类型红未过，非本任务文件。
