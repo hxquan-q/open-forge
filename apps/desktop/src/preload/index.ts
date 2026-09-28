@@ -8,6 +8,7 @@ import { createAgentTeamsApi } from "./apis/agent-teams.js";
 import { createAppLifecycleApi } from "./apis/app-lifecycle.js";
 import { createAppMonitorApi } from "./apis/app-monitor.js";
 import { createAppshotApi } from "./apis/appshot.js";
+import { createArchivedSessionsApi } from "./apis/archived-sessions.js";
 import { createBatchTasksApi } from "./apis/batch-tasks.js";
 import { createBrowserTabApi } from "./apis/browser-tab.js";
 import { createBrowserViewApi } from "./apis/browser-view.js";
@@ -66,6 +67,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createThemesApi(ipcRenderer),
 	...createPetApi(ipcRenderer),
 	...createConversationTagsApi(ipcRenderer),
+	...createArchivedSessionsApi(ipcRenderer),
 	...createReviewChangesApi(ipcRenderer),
 	...createProjectApi(ipcRenderer),
 	...createSshApi(ipcRenderer),

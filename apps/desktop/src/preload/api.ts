@@ -5,6 +5,7 @@ import type { DesktopAgentTeamsApi } from "./api-types/agent-teams.js";
 import type { DesktopAppLifecycleApi } from "./api-types/app-lifecycle.js";
 import type { DesktopAppMonitorApi } from "./api-types/app-monitor.js";
 import type { DesktopAppshotApi } from "./api-types/appshot.js";
+import type { DesktopArchivedSessionsApi } from "./api-types/archived-sessions.js";
 import type { DesktopAuthApi } from "./api-types/auth.js";
 import type { DesktopBatchTasksApi } from "./api-types/batch-tasks.js";
 import type { DesktopBrowserTabApi } from "./api-types/browser-tab.js";
@@ -151,6 +152,7 @@ export interface DesktopApi {
 	plugins: DesktopPluginsApi;
 	pet: DesktopPetApi;
 	conversationTags: DesktopConversationTagsApi;
+	archivedSessions: DesktopArchivedSessionsApi;
 	reviewChanges: DesktopReviewChangesApi;
 	task: DesktopTaskApi;
 	quickPanel: DesktopQuickPanelApi;
