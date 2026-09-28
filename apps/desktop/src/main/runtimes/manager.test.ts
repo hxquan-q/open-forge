@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import AdmZip from "adm-zip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RuntimeManager } from "./manager.js";
 import { platformEntry, RUNTIME_MANIFEST } from "./paths.js";
@@ -33,8 +34,9 @@ afterEach(async () => {
 });
 
 /**
- * 造一个含可执行文件骨架的 tar.gz：解压器统一走系统 tar，GNU tar 解不了
- * Node 官方 zip，因此测试归档用两种实现都能读的 tar.gz 形态。
+ * 造一个含可执行文件骨架的假归档，格式按 manifest 的 `entry.archive` 决定：
+ * zip 用 adm-zip 生成（GNU tar 产不出 zip，且 zip 解压已不走外部 tar），
+ * tar.gz 沿用系统 tar。
  */
 async function fakeArchive(type: "node" | "python"): Promise<Buffer> {
 	const entry = platformEntry(type);
@@ -50,6 +52,13 @@ async function fakeArchive(type: "node" | "python"): Promise<Buffer> {
 	const staging = join(testRoot, `pkg-${type}`);
 	await mkdir(join(staging, entry.dir), { recursive: true });
 	await writeFile(join(staging, entry.dir, exe), "fake-runtime");
+	if (entry.archive === "zip") {
+		const out = join(testRoot, `${type}.zip`);
+		const zip = new AdmZip();
+		zip.addLocalFolder(staging);
+		zip.writeZip(out);
+		return readFile(out);
+	}
 	const out = join(testRoot, `${type}.tar.gz`);
 	const result = spawnSync(
 		"tar",
