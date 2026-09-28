@@ -43,7 +43,10 @@ import type { DesktopMcpElicitationResponse, DesktopMcpElicitationValue } from "
 import { PLUGIN_CONTRIBUTION_CHANNELS } from "../../shared/plugin-ipc.js";
 import { SESSION_SEARCH_CHANNELS } from "../../shared/session-search.js";
 import { DEFAULT_AGENT_MODE, isAgentMode, MODE_PROMPTS } from "../agent-modes/index.js";
-import { startSessionInterruptMonitor } from "../agent-runtime/session-interrupt-bootstrap.js";
+import {
+	runSessionInterruptStartupScan,
+	startSessionInterruptMonitor,
+} from "../agent-runtime/session-interrupt-bootstrap.js";
 import { setSessionInterruptDraftNonEmpty } from "../agent-runtime/session-interrupt-draft-registry.js";
 import {
 	clearSessionManualStop,
@@ -167,6 +170,7 @@ const CHANNELS = {
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
+	RETRY: "vetta:session:retry",
 	ABORT: "vetta:session:abort",
 	QUEUE_STATE: "vetta:session:queue-state",
 	QUEUE_CONTEXT_COMPACTION: "vetta:session:queue-context-compaction",
@@ -1024,6 +1028,14 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		await runtime.continue(sessionId);
 	});
 
+	// 失败/中断后的显式续跑入口（footer「继续」条）：kernel retry 重跑最后一轮并
+	// 丢弃失败的助手尝试；忙碌/recovery_required 由 kernel 拒绝并透传给渲染端。
+	ipcMain.handle(CHANNELS.RETRY, async (_event, sessionId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		clearSessionManualStop(sessionId);
+		await runtime.retry(sessionId);
+	});
+
 	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		markSessionManualStop(sessionId);
@@ -1448,6 +1460,10 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		},
 		(sessionId) => sessionCwdMap.get(sessionId),
 	);
+	// 启动一次性扫描「上次退出时未正常完成」的会话：只读、异步、失败只记日志。
+	void runSessionInterruptStartupScan((channel, payload) => {
+		if (!webContents.isDestroyed()) webContents.send(channel, payload);
+	});
 
 	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
 	ipcMain.handle(CHANNELS.MCP_ELICITATION_LIST_PENDING, () => mcpElicitationBroker.listPending());

@@ -930,6 +930,11 @@
 		"compactionIndicator": "正在压缩上下文...",
 		"retryIndicator": "正在重新连接（{{attempt}}/{{maxAttempts}}）",
 		"retryReason": "上次请求失败：{{reason}}",
+		"resumeBar": {
+			"title": "上次回复未完成：{{reason}}",
+			"action": "继续",
+			"failed": "继续失败，请稍后重试"
+		},
 		"streamingPhrases": [
 			"Vetta 正在回复…",
 			"请耐心等待…",
@@ -1449,6 +1454,15 @@
 		"notifyTitle": "会话回复中断",
 		"notifyBody": "回复可能因网络或超时中断，可打开会话后点继续。",
 		"autoRetriedTitle": "已自动续接",
-		"autoRetriedBody": "检测到异常中断，已在同一条回复中自动续跑。"
+		"autoRetriedBody": "检测到异常中断，已在同一条回复中自动续跑。",
+		"reason": {
+			"networkFailure": "会话回复因网络中断停止，可打开会话后点继续。",
+			"truncated": "会话回复超出长度上限被截断，可打开会话后点继续。",
+			"error": "会话回复因上游错误停止，可打开会话后点继续。",
+			"indeterminate": "会话回复可能异常中断，可打开会话后点继续。"
+		},
+		"openSession": "打开会话",
+		"startupTitle": "检测到未完成的会话",
+		"startupBody": "上次退出时有 {{count}} 个会话的回复未正常完成，打开后可继续。"
 	}
 }
