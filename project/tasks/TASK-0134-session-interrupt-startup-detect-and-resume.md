@@ -93,3 +93,4 @@ updated: 2026-09-28
   - 验证：desktop `tsc --noEmit` exit=0；根 `tsgo --noEmit` exit=0；新增/改动测试 6+13+12+6 全通过；中断巡检/证据族回归 10/10；`test:changed` 全量超时（exit 143）后对疑似 src/main/agent-runtime/model-call-frame-contract.test.ts 单跑 11/11 通过，确认为并发重负载假红。`verify:ui:*` 未运行（未获授权）。
   - 遗留：`check:quick` 仅因并行工作区未跟踪文件 `apps/desktop/src/renderer/domains/conversation/hooks/useSessionManager.wedged-stream.test.ts` 的格式问题判负，未触碰。
   - 发布说明已并入 `.github/release-notes/v0.1.2.md`（新增×2、改进×1）。
+  - 跟进（同日）：dev 实例报 `__vettaHostApi.session.onInterruptedStartup is not a function`。根因为 dev 环境产物陈旧——dev 实例 21:40 启动时按哈希复用 15:25 的 main/preload bundle，而 renderer 经 Vite HMR 已更新到新合同（非产品缺陷）；已重建产物。补 preload 通道合同测试（`preload/apis/session.test.ts`）并在 `apps/desktop/AGENTS.md` 补记 dev 重建语义。
