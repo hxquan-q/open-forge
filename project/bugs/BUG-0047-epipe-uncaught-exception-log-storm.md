@@ -1,7 +1,7 @@
 ---
 id: BUG-0047
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: desktop
 requirement:
@@ -58,7 +58,7 @@ electron-log console transport 写已断开的 stdout 抛 EPIPE（异步 error �
 
 ## 修复与验证
 
-- 修复：见 [TASK-0131](../tasks/TASK-0131-epipe-console-transport-circuit-breaker.md)。
-- 测试：
-- 检查：
-- 未运行及原因：
+- 修复：见 [TASK-0131](../tasks/TASK-0131-epipe-console-transport-circuit-breaker.md)（集成提交 `66c7ee464`，merge `ebb973433`）。`diagnostics.ts` 识别 EPIPE/ERR_STREAM_DESTROYED/ERR_STREAM_WRITE_AFTER_END，首条即熔断 console 镜像（`disableConsoleLogMirroring()`），后续同类错误按每 500 条汇总；非流错误路径不变。
+- 测试：`diagnostics.test.ts`（新增 4 例）——首条 EPIPE 熔断且错误仍落文件、后续流错误有界汇总、非流错误不熔断、unhandledRejection 同路径。
+- 检查：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/diagnostics.test.ts`（4 passed）；批次 `test:changed --base origin/dev` 与 `check` 由 Coordinator 统一执行。
+- 未运行及原因：「关闭持有 pipe 的终端」人工冒烟未执行，保持 verifying。

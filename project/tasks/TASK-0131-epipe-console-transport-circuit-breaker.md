@@ -1,7 +1,7 @@
 ---
 id: TASK-0131
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: desktop
 requirement:
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: [BUG-0047]
 execution: parallel
 branch: task/TASK-0131-epipe-console-transport-circuit-breaker
-worktree: ../open-forge-wt/task-0131-epipe-console-transport-circuit-breaker
+worktree: unassigned（已集成，待推送后清理）
 base_commit: cdb15bb905f0eece45e870291a867065d29b0cac
 read_paths: [apps/desktop/src/main/diagnostics.ts, apps/desktop/src/main/logger.ts]
 write_paths: [apps/desktop/src/main/diagnostics.ts, apps/desktop/src/main/logger.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0131-epipe-console-transport-circuit-breaker.md, project/tasks/README.md, project/bugs/BUG-0047-epipe-uncaught-exception-log-storm.md, project/bugs/README.md]
 exclusive_paths: [apps/desktop/src/main/diagnostics.ts]
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0130, TASK-0132]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-28
 updated: 2026-09-28
 ---
@@ -78,8 +78,9 @@ updated: 2026-09-28
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：未拆出 worktree，改动小且写路径与其他在途任务不相交。
-- 剩余风险：
+- 实际修改：`logger.ts` 新增 `disableConsoleLogMirroring()`（幂等关停所有 app logger 的 console transport，仅动 `transports.console.level`）；`diagnostics.ts` 新增写端已毁错误识别（EPIPE/ERR_STREAM_DESTROYED/ERR_STREAM_WRITE_AFTER_END）：首条即熔断 console 镜像、全量记录当前错误并写一条熔断说明；后续同类错误计数并按每 500 条汇总一次 warning，不再逐条全量堆栈；非流错误路径不变。
+- 测试：新增 `diagnostics.test.ts`（4 例）：EPIPE 首条熔断且错误仍落文件、后续流错误被抑制且只输出有界汇总、非流错误不触发熔断、`unhandledRejection` 携带流错误同样熔断。mock 边界为 electron 与 logger 模块。
+- 实际运行：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/diagnostics.test.ts`（4 passed）；集成后重跑通过；pre-commit biome+guards 通过。
+- 未运行及原因：`check`/`test:changed` 由 Coordinator 在批次验收统一跑；「dev 启动后关闭持有 pipe 的终端」人工冒烟未执行（需真实终端生命周期），保持 verifying。
+- Worktree：`task-0131-epipe-console-transport-circuit-breaker`（branch `task/TASK-0131-epipe-console-transport-circuit-breaker`，集成提交 `66c7ee464` + merge `ebb973433`）。
+- 剩余风险：熔断状态为进程级单次开关，pipe 恢复后 console 镜像不会自动恢复（进程内不再镜像到终端）——属本任务的既定取舍；汇总间隔 500 条在极端风暴下仍写入文件但量级有界。

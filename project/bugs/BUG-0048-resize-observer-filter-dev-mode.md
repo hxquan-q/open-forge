@@ -1,7 +1,7 @@
 ---
 id: BUG-0048
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: desktop
 requirement:
@@ -57,7 +57,7 @@ dev 与 packaged 下该诊断都被稳定过滤；真实渲染器 error 不被�
 
 ## 修复与验证
 
-- 修复：见 [TASK-0132](../tasks/TASK-0132-resize-observer-filter-dev-sourceid.md)。
-- 测试：
-- 检查：
-- 未运行及原因：
+- 修复：见 [TASK-0132](../tasks/TASK-0132-resize-observer-filter-dev-sourceid.md)（集成提交 `94d07c6df`，merge `02c13a461`）。判定下沉到 `logger/renderer-console-policy.ts`，条件收窄为「消息精确匹配 + 行号 0」，sourceId 不参与判定。
+- 测试：`renderer-console-policy.test.ts` 新增 3 例——任意 sourceId 形态命中、同消息行号非 0 不误杀、其他消息不误杀。
+- 检查：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/logger/renderer-console-policy.test.ts`（7 passed）；批次 `test:changed --base origin/dev` 与 `check` 由 Coordinator 统一执行。
+- 未运行及原因：dev 下拖分屏看 render 日志的人工冒烟未执行，保持 verifying。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0130
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: desktop
 requirement:
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: [BUG-0046]
 execution: parallel
 branch: task/TASK-0130-runtime-zip-extract-without-tar
-worktree: ../open-forge-wt/task-0130-runtime-zip-extract-without-tar
+worktree: unassigned（已集成，待推送后清理）
 base_commit: cdb15bb905f0eece45e870291a867065d29b0cac
 read_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts, apps/desktop/src/main/archive/safe-zip-extract.ts, apps/desktop/src/main/runtimes/manifest.json]
 write_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts, apps/desktop/src/main/runtimes, .github/release-notes/v0.1.3.md, project/tasks/TASK-0130-runtime-zip-extract-without-tar.md, project/tasks/README.md, project/bugs/BUG-0046-windows-gnu-tar-runtime-zip-extract.md, project/bugs/README.md]
 exclusive_paths: [apps/desktop/src/main/runtimes/runtime-archive-installer.ts]
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0131, TASK-0132]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-28
 updated: 2026-09-28
 ---
@@ -78,8 +78,9 @@ updated: 2026-09-28
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：未拆出 worktree，改动小且写路径与其他在途任务不相交。
-- 剩余风险：
+- 实际修改：`runtime-archive-installer.ts` 中 `archiveType === "zip"` 改走进程内 `extractZipArchiveSafely`（adm-zip，路径穿越/大小上限防护沿用），不再 spawn `tar`；`extractArchive` 转 async；tar.gz 路径的 flavor 探测与 `spawnSync("tar")` 不变；`installRuntimeArchive` await 新签名。
+- 测试：`runtime-archive-installer.test.ts` zip fixture 改用 AdmZip 生成（脱离宿主 tar 实现），新增断言 zip 安装路径下 `spawnSync` 未被调用（不依赖 PATH 中的 tar 实现即可证伪）；tar.gz 用例保持调用 tar 的断言；损坏 zip 报 `zip extract failed` 且保留旧 runtime。
+- 实际运行：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/runtimes/runtime-archive-installer.test.ts`（9 passed / 1 skipped 平台门禁）；集成后同一文件重跑通过；pre-commit biome+guards 通过。
+- 未运行及原因：`check`/`test:changed` 由 Coordinator 在批次验收统一跑（见集成提交）；「删 `~/.openforge-dev/runtimes/node` 后 dev 启动实装 Node runtime」属人工冒烟，未执行——Windows GNU tar 先行环境需真实终端，交付时保持 verifying。
+- Worktree：`task-0130-runtime-zip-extract-without-tar`（branch `task/TASK-0130-runtime-zip-extract-without-tar`，集成提交 `9d6981fac` + merge `32012e373`）。
+- 剩余风险：真实 GNU tar 环境的端到端安装未人工复验；回归测试以「zip 路径完全不经 spawnSync」为证伪锚点，覆盖风险等价。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0132
 type: task
-status: in_progress
+status: verifying
 priority: P3
 owner: desktop
 requirement:
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: [BUG-0048]
 execution: parallel
 branch: task/TASK-0132-resize-observer-filter-dev-sourceid
-worktree: ../open-forge-wt/task-0132-resize-observer-filter-dev-sourceid
+worktree: unassigned（已集成，待推送后清理）
 base_commit: cdb15bb905f0eece45e870291a867065d29b0cac
 read_paths: [apps/desktop/src/main/window-manager.ts]
-write_paths: [apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0132-resize-observer-filter-dev-sourceid.md, project/tasks/README.md, project/bugs/BUG-0048-resize-observer-filter-dev-mode.md, project/bugs/README.md]
-exclusive_paths: [apps/desktop/src/main/window-manager.ts]
+write_paths: [apps/desktop/src/main/window-manager.ts, apps/desktop/src/main/logger/renderer-console-policy.ts, apps/desktop/src/main/logger/renderer-console-policy.test.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0132-resize-observer-filter-dev-sourceid.md, project/tasks/README.md, project/bugs/BUG-0048-resize-observer-filter-dev-mode.md, project/bugs/README.md]
+exclusive_paths: [apps/desktop/src/main/window-manager.ts, apps/desktop/src/main/logger/renderer-console-policy.ts]
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0130, TASK-0131]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-28
 updated: 2026-09-28
 ---
@@ -76,8 +76,9 @@ updated: 2026-09-28
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：未拆出 worktree，改动小且写路径与其他在途任务不相交。
-- 剩余风险：
+- 实际修改：`isChromiumResizeObserverDiagnostic` 下沉到 `logger/renderer-console-policy.ts` 纯策略模块（零依赖、可单测），签名收窄为 `(message, line)`——sourceId 不参与判定，dev URL 与 packaged 空串两种形态结构性覆盖；`window-manager.ts` 改为引用该导出。write_paths 相应修订（判定下沉属本任务必要重构：私有函数挂在 Electron 壳内无法稳定测试）。
+- 测试：`renderer-console-policy.test.ts` 新增 3 例：行号 0 + 消息精确匹配命中（任意 sourceId 形态）、同消息行号非 0 不误杀、行号 0 的其他消息不误杀。
+- 实际运行：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/logger/renderer-console-policy.test.ts`（7 passed）；集成后重跑通过；pre-commit biome+guards 通过。
+- 未运行及原因：`check`/`test:changed` 由 Coordinator 在批次验收统一跑；「dev 下拖动分屏后 render 日志无新增 ResizeObserver 行」人工冒烟未执行，保持 verifying。
+- Worktree：`task-0132-resize-observer-filter-dev-sourceid`（branch `task/TASK-0132-resize-observer-filter-dev-sourceid`，集成提交 `94d07c6df` + merge `02c13a461`）。
+- 剩余风险：判定下沉后源日志行仍含 `[sourceId:line]` 前缀，排查侧仍可定位来源；若未来 Chromium 对真实业务错误也报行号 0，存在误杀窗口（消息文本特异度兜底）。

@@ -1,7 +1,7 @@
 ---
 id: BUG-0046
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: desktop
 requirement:
@@ -58,7 +58,7 @@ zip 归档不依赖外部 tar 实现，解压成功并完成 Node runtime 安装
 
 ## 修复与验证
 
-- 修复：见 [TASK-0130](../tasks/TASK-0130-runtime-zip-extract-without-tar.md)。
-- 测试：
-- 检查：
-- 未运行及原因：
+- 修复：见 [TASK-0130](../tasks/TASK-0130-runtime-zip-extract-without-tar.md)（集成提交 `9d6981fac`，merge `32012e373`）。zip 归档改走进程内 `extractZipArchiveSafely`，不再 spawn `tar`；tar.gz 路径不变。
+- 测试：`runtime-archive-installer.test.ts`——zip 安装断言 `spawnSync` 零调用（GNU tar 环境等效证伪）；tar.gz 仍走 tar；损坏 zip 报错且保留旧 runtime。
+- 检查：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/runtimes/runtime-archive-installer.test.ts`（9 passed / 1 skipped）；批次 `test:changed --base origin/dev` 与 `check` 由 Coordinator 统一执行。
+- 未运行及原因：真实 GNU tar 环境下删 runtime 目录的 dev 端到端复装属人工冒烟，未执行；状态保持 verifying。
