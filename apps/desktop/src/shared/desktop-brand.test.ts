@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInstance } from "i18next";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	DESKTOP_BRAND,
 	DESKTOP_BRAND_REPLACEMENTS,
@@ -154,5 +154,96 @@ describe("Desktop brand layer", () => {
 		]) {
 			expect(readDesktopSource(file), file).not.toMatch(/\bVetta\b/);
 		}
+	});
+});
+
+describe("品牌档案（VETTA_BRAND_PROFILE 构建期开关）", () => {
+	const originalProfile = process.env.VETTA_BRAND_PROFILE;
+
+	afterEach(() => {
+		if (originalProfile === undefined) delete process.env.VETTA_BRAND_PROFILE;
+		else process.env.VETTA_BRAND_PROFILE = originalProfile;
+		vi.resetModules();
+	});
+
+	it("用户不设置开关时拿到自用口径：Open Forge 品牌与既有归一规则", async () => {
+		delete process.env.VETTA_BRAND_PROFILE;
+		vi.resetModules();
+		const brand = await import("./desktop-brand.js");
+
+		expect(brand.DESKTOP_BRAND_PROFILE).toBe("self");
+		expect(brand.DESKTOP_BRAND.displayName).toBe("Open Forge");
+		expect(brand.resolveDesktopBrandName("zh")).toBe("Open Forge");
+		expect(brand.replaceDesktopBrandText("Open Vetta and Vetta's app")).toBe("Open Forge and Open Forge's app");
+		expect(brand.replaceDesktopBrandText("关于 Open Forge", "zh")).toBe("关于 Open Forge");
+	});
+
+	it("外部分发档：英文展示 Allstr ai，中文界面展示 小爱ai，且 Open Forge 字样被归一", async () => {
+		process.env.VETTA_BRAND_PROFILE = "distribution";
+		vi.resetModules();
+		const brand = await import("./desktop-brand.js");
+
+		expect(brand.DESKTOP_BRAND_PROFILE).toBe("distribution");
+		expect(brand.DESKTOP_BRAND.displayName).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName(undefined)).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName("en")).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName("zh-CN")).toBe("小爱ai");
+		expect(brand.replaceDesktopBrandText("About Open Forge", "en")).toBe("About Allstr ai");
+		expect(brand.replaceDesktopBrandText("关于 Open Forge 和 Open Forge 的能力", "zh")).toBe(
+			"关于 小爱ai 和 小爱ai 的能力",
+		);
+		// 分发档同样不得碰兼容名与路径（协议、数据目录、文件扩展名）。
+		const compatibilityText =
+			"APP_RUNTIME_NAME=vetta; ~/.vetta; vetta://oauth/callback; .vettapkg; VETTA_*; @vetta/*; vetta:settings";
+		expect(brand.replaceDesktopBrandText(compatibilityText, "zh")).toBe(compatibilityText);
+	});
+
+	it("外部分发档经 i18n post-processor 按界面语言渲染品牌，无需改动任何 locale 文件", async () => {
+		process.env.VETTA_BRAND_PROFILE = "distribution";
+		vi.resetModules();
+		const { initDesktopI18n } = await import("./desktop-brand.js");
+		const instance = createInstance();
+		await initDesktopI18n(instance, {
+			resources,
+			lng: "zh",
+			fallbackLng: "zh",
+			ns: NAMESPACES,
+			defaultNS: "common",
+			initAsync: false,
+			interpolation: { escapeValue: false },
+			returnNull: false,
+		});
+
+		expect(instance.t("common:appName")).toBe("小爱ai");
+		expect(instance.t("main:menu.app.about")).toBe("关于 小爱ai");
+		await instance.changeLanguage("en");
+		expect(instance.t("common:appName")).toBe("Allstr ai");
+		expect(instance.t("main:menu.app.about")).toBe("About Allstr ai");
+	});
+
+	it("两档共用冻结的兼容标识（可执行名 / bundleId），分发档归一全部遗留名且不与自己冲突", () => {
+		const selfSource = JSON.parse(readFileSync(join(desktopRoot, "src/shared/desktop-brand.json"), "utf8")) as {
+			displayName: string;
+			executableName: string;
+			appshotHelperBundleId: string;
+		};
+		const distributionSource = JSON.parse(
+			readFileSync(join(desktopRoot, "src/shared/desktop-brand.distribution.json"), "utf8"),
+		) as {
+			displayName: string;
+			displayNameLocalized?: Record<string, string>;
+			executableName: string;
+			appshotHelperBundleId: string;
+			legacyProductNames: string[];
+		};
+
+		expect(distributionSource.executableName).toBe(selfSource.executableName);
+		expect(distributionSource.appshotHelperBundleId).toBe(selfSource.appshotHelperBundleId);
+		expect(distributionSource.displayName).not.toBe(selfSource.displayName);
+		expect(distributionSource.legacyProductNames).toEqual(
+			expect.arrayContaining(["Open Vetta", "Vetta", "Open Forge"]),
+		);
+		expect(distributionSource.legacyProductNames).not.toContain(distributionSource.displayName);
+		expect(distributionSource.displayNameLocalized?.zh).toBe("小爱ai");
 	});
 });
