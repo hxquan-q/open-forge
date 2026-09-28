@@ -15,12 +15,12 @@ related_bugs: [BUG-0048]
 execution: parallel
 branch: task/TASK-0132-resize-observer-filter-dev-sourceid
 worktree: ../open-forge-wt/task-0132-resize-observer-filter-dev-sourceid
-base_commit: aaf85f02e238fce2d25e8bfa80b112bdac98b3cd
+base_commit: cdb15bb905f0eece45e870291a867065d29b0cac
 read_paths: [apps/desktop/src/main/window-manager.ts]
 write_paths: [apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0132-resize-observer-filter-dev-sourceid.md, project/tasks/README.md, project/bugs/BUG-0048-resize-observer-filter-dev-mode.md, project/bugs/README.md]
 exclusive_paths: [apps/desktop/src/main/window-manager.ts]
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0122, TASK-0123, TASK-0130, TASK-0131]
 integration_status: pending
 created: 2026-09-28
 updated: 2026-09-28
