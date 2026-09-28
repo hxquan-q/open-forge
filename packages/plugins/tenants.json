@@ -25,6 +25,7 @@
       "common": [
         "vetta-actions",
         "preset-agent",
+        "allstar-coding",
         "vetta-ui-design",
         "image-gen",
         "media-viewer",
