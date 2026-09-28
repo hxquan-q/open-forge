@@ -373,6 +373,12 @@ class Ssh2Session {
 				return await this.tryConnect(resolved, host, partial, sock, verifyKey, round, spec);
 			} catch (error) {
 				lastError = error;
+				if (isAgentError(error)) {
+					// 代理进程未跑或管道/套接字不可达——与 OpenSSH 一致静默换下一方法，
+					// 不能让 agent 缺席把私钥、口令等后续认证一并打死。
+					this.options.logger?.(`ssh2 ${resolved.hostname}: agent unavailable, trying next method`);
+					continue;
+				}
 				if (!isAuthFailure(error)) throw error;
 				this.options.logger?.(`ssh2 ${resolved.hostname}: auth attempt failed, trying next method`);
 			}
@@ -823,6 +829,11 @@ function raceAbort<T>(promise: Promise<T>, signal: AbortSignal | undefined): Pro
 
 function isAuthFailure(error: unknown): boolean {
 	return error instanceof Error && (error as Error & { level?: string }).level === "client-authentication";
+}
+
+/** ssh2 在 agent 连接失败或签名中途失败时给错误标 `level: "agent"`，不是服务端拒绝认证。 */
+function isAgentError(error: unknown): boolean {
+	return error instanceof Error && (error as Error & { level?: string }).level === "agent";
 }
 
 function errorMessage(error: unknown): string {

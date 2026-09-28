@@ -249,6 +249,26 @@ describe("ssh2 传输：连接建立", () => {
 		expect(accepted.connectConfigs[0]?.password).toBe("hunter2");
 	});
 
+	it("ssh-agent 未运行时跳过代理方法，私钥照常认证", async () => {
+		// Windows 上 agent 管道不存在时 ssh2 报 level="agent"——不是服务端拒认证，
+		// 必须像 OpenSSH 一样静默降级，否则私钥认证永远不会被尝试。
+		const agentError = new Error("Invalid cygwin unix socket path") as Error & { level: string };
+		agentError.level = "agent";
+		const agentFail = new FakeClient(agentError);
+		const keyOk = new FakeClient();
+		const { runner } = runnerWith([agentFail, keyOk], {
+			agentPath: "\\\\.\\pipe\\openssh-ssh-agent",
+		});
+		const pending = runner.run({ argv: argv("id") });
+		await vi.waitFor(() => expect(keyOk.lastChannel()).toBeDefined());
+		keyOk.lastChannel()?.respond("uid=1000");
+		await expect(pending).resolves.toMatchObject({ exitCode: 0 });
+		expect(agentFail.connectConfigs[0]?.agent).toBe("\\\\.\\pipe\\openssh-ssh-agent");
+		// FAKE-PEM 不是真 key，解析失败后落到口令——关键是 agent 报错没把链路打死。
+		expect(keyOk.connectConfigs[0]?.password).toBe("hunter2");
+		expect(keyOk.connectConfigs[0]?.agent).toBeUndefined();
+	});
+
 	it("用户取消口令提示：如实报传输失败而不是挂着", async () => {
 		const { runner, secrets } = runnerWith([new FakeClient()], {
 			readFile: async () => {
