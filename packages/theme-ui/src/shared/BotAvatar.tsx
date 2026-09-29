@@ -74,7 +74,8 @@ interface BotAvatarProps {
 	/**
 	 * Screensaver-style pacing: the avatar jumps to random positions within its
 	 * parent container, pausing at each position to play a random gesture.
-	 * DESIGN.md §5.3 exception — decorative continuous bouncing is intentional.
+	 * Exception to the DESIGN.md animation bans — decorative continuous bouncing
+	 * is intentional here.
 	 */
 	pacing?: boolean;
 	size?: "sm" | "md" | "lg";
