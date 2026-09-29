@@ -85,6 +85,9 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	const [canForward, setCanForward] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [failed, setFailed] = useState(false);
+	// 主进程建 view 失败（拒绝或无 IPC 处理器）此前被静默吞掉，面板只剩空白；单独记账以便重试。
+	const [attachFailed, setAttachFailed] = useState(false);
+	const [attachAttempt, setAttachAttempt] = useState(0);
 
 	const hasPage = currentUrl !== "" || targetUrl != null;
 	// 原生 view 盖在 DOM 之上：空态/失败覆盖层要显示时必须同步隐去 view，tab 隐藏同理。
@@ -118,22 +121,33 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		let disposed = false;
 		attachedRef.current = false;
 		const api = window.vetta.browserView;
+		const attachUrl = targetUrlRef.current;
 		void api
 			.attach({
 				workspaceId,
 				bounds: boundsOf(el),
-				url: targetUrl ?? undefined,
+				url: attachUrl ?? undefined,
 				visible: viewVisibleRef.current,
 			})
 			.then((result) => {
 				if (disposed) return;
 				attachedRef.current = result.ok;
-				if (result.ok) {
-					applyState(result.state);
-					// attach 往返期间外部又改了目标地址时补一次导航。
-					const latest = targetUrlRef.current;
-					if (latest && latest !== result.state.url) void api.navigate({ workspaceId, url: latest });
+				setAttachFailed(!result.ok);
+				if (!result.ok) {
+					console.error("[browser-panel] attach rejected", { workspaceId, code: result.code });
+					return;
 				}
+				applyState(result.state);
+				// 只补 attach 往返期间新改的目标：attach 已加载同一地址时再发一次
+				// 会中止首载（ERR_ABORTED）并让 view 短暂进入失败态。
+				const latest = targetUrlRef.current;
+				if (latest && latest !== attachUrl) void api.navigate({ workspaceId, url: latest });
+			})
+			.catch((error: unknown) => {
+				if (disposed) return;
+				attachedRef.current = false;
+				setAttachFailed(true);
+				console.error("[browser-panel] attach failed", { workspaceId, error });
 			});
 		const unsubscribe = api.onEvent((envelope) => {
 			if (envelope.workspaceId === workspaceId) applyState(envelope.state);
@@ -144,7 +158,7 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 			unsubscribe();
 			void api.detach({ workspaceId });
 		};
-	}, [workspaceId, applyState]);
+	}, [workspaceId, applyState, attachAttempt]);
 
 	// bounds 跟随：布局/窗口变化经 ResizeObserver 回报占位矩形。
 	useEffect(() => {
@@ -207,6 +221,12 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	);
 
 	const retry = useCallback(() => {
+		// view 没建起来时 reload 无从作用（control 会被主进程静默丢弃），重走 attach。
+		if (!attachedRef.current) {
+			setAttachFailed(false);
+			setAttachAttempt((attempt) => attempt + 1);
+			return;
+		}
 		setFailed(false);
 		void window.vetta.browserView.control({ workspaceId, action: "reload" });
 	}, [workspaceId]);
@@ -290,7 +310,7 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		canBack,
 		canForward,
 		loading,
-		failed,
+		failed: failed || attachFailed,
 		hasPage,
 		currentUrl,
 		hostRef,

@@ -216,6 +216,71 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		);
 	});
 
+	it("attach 带地址时不重复导航（首载不会被自身补发的 navigate 中止）", async () => {
+		const harness: Harness = { model: { current: null } };
+		store.set(browserUrlByWorkspaceAtom, new Map([["ws-1", "https://a.dev"]]));
+		// attach 提交前 getURL() 仍是 about:blank：旧实现据此判定「地址不一致」又发一次导航。
+		api.attach.mockResolvedValueOnce({ ok: true, state: viewState({ url: "about:blank" }) });
+		renderPanel(harness);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledWith(expect.objectContaining({ url: "https://a.dev" })));
+
+		await waitFor(() => expect(harness.model.current?.failed).toBe(false));
+		expect(api.navigate).not.toHaveBeenCalled();
+	});
+
+	it("attach 往返期间目标地址被改才补一次导航", async () => {
+		const harness: Harness = { model: { current: null } };
+		store.set(browserUrlByWorkspaceAtom, new Map([["ws-1", "https://a.dev"]]));
+		let resolveAttach: ((result: unknown) => void) | undefined;
+		api.attach.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveAttach = resolve;
+				}),
+		);
+		renderPanel(harness);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
+
+		act(() => {
+			store.set(browserUrlByWorkspaceAtom, new Map([["ws-1", "https://b.dev"]]));
+		});
+		expect(api.navigate).not.toHaveBeenCalled();
+
+		act(() => {
+			resolveAttach?.({ ok: true, state: viewState({ url: "about:blank" }) });
+		});
+		await waitFor(() => expect(api.navigate).toHaveBeenCalledTimes(1));
+		expect(api.navigate).toHaveBeenCalledWith({ workspaceId: "ws-1", url: "https://b.dev" });
+	});
+
+	it("attach 被主进程处理器拒绝/抛错时不静默：进入失败态，重试重走 attach 而非 reload", async () => {
+		const harness: Harness = { model: { current: null } };
+		const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		// 历史故障形态：主进程处理器抛「Cannot find module」→ invoke 直接拒绝。
+		api.attach.mockRejectedValueOnce(new Error("Cannot find module '../window-manager.js'"));
+		renderPanel(harness);
+
+		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
+		expect(harness.model.current?.hasPage).toBe(false);
+		expect(errors).toHaveBeenCalledWith("[browser-panel] attach failed", expect.objectContaining({ workspaceId: "ws-1" }));
+
+		act(() => harness.model.current?.onRetry());
+		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(2));
+		expect(api.control).not.toHaveBeenCalled();
+		// 第二次 attach 成功即恢复可用态
+		await waitFor(() => expect(harness.model.current?.failed).toBe(false));
+		errors.mockRestore();
+	});
+
+	it("attach 回 no_window 同样进入失败态", async () => {
+		const harness: Harness = { model: { current: null } };
+		const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		api.attach.mockResolvedValueOnce({ ok: false, code: "no_window" });
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
+		errors.mockRestore();
+	});
+
 	it("卸载时摘下 view（view 本体在主进程保活供 agent 复用）", async () => {
 		const harness: Harness = { model: { current: null } };
 		const panel = renderPanel(harness);
