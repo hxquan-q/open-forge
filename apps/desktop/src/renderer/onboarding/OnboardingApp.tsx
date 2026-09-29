@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { HelperPermissions, OnboardingBridge } from "../../shared/onboarding-ipc";
+import { brandIconUrl } from "@shared/brand-assets";
 import { DragTarget } from "./DragTarget";
 import { subscribeOnboardingLanguage } from "./i18n";
 import { PermissionRow } from "./PermissionRow";
@@ -125,7 +127,7 @@ export function OnboardingApp(): JSX.Element {
 				/>
 			</div>
 
-			<DragTarget iconUrl="./icon.png" hint={t("onboardingDragHint")} onDragStart={handleDragStart} />
+			<DragTarget iconUrl={brandIconUrl} hint={t("onboardingDragHint")} onDragStart={handleDragStart} />
 
 			{dragError && (
 				<p className="mt-2 text-center text-[12px] font-medium text-destructive">{t("onboardingDragError")}</p>

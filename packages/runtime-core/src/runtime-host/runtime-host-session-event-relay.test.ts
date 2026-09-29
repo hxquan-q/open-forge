@@ -209,6 +209,25 @@ describe("RuntimeHostSessionEventRelay", () => {
 		expect(() => createRelay({ inFlightReplayEventLimit: 0 })).toThrow(/positive integer/);
 	});
 
+	it("exposes the latest observed event timestamp per session and clears it on release", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay();
+		relay.attach("session-key", handle, stream);
+
+		// 无事件时不得伪造活动证据：中断巡检依赖 undefined 表示「无可判定证据」。
+		expect(relay.readLastEventAt("session-key")).toBeUndefined();
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 1_000));
+		expect(relay.readLastEventAt("session-key")).toBe(1_000);
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_end", 5_000));
+		expect(relay.readLastEventAt("session-key")).toBe(5_000);
+
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+		expect(relay.readLastEventAt("session-key")).toBeUndefined();
+	});
+
 	it("batches ephemeral bursts into merged deliveries and exposes per-subscriber stats", async () => {
 		const stream = createEventStream();
 		const handle = createRelayHandle(stream);

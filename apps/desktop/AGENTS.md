@@ -382,6 +382,10 @@ bun run prepare:workspace:dev
 
 开发入口使用本地任务缓存；正式 `prepare:workspace` 带 `--force`，不得移除该发布完整性边界。新增依赖只更新对应 `package.json`，不要恢复包清单、layer 或手写哈希缓存。
 
+### dev 实例的 main / preload 重建
+
+`dev:electron` 只在启动时经 `build:dev-processes` 按输入哈希重建 `dist/main` 与 `dist/preload`，运行中不 watch：改动 `src/main/` 或 `src/preload/` 后必须重启 `bun run dev` 才能在运行实例中生效（Vite HMR 只覆盖 `src/renderer/`）。renderer 已热更而 main/preload 仍是旧 bundle 时，新增的 `window.vetta.*` 合同在页面上表现为 `xxx is not a function` 类报错。重建产物后刷新页面会重新执行 preload，但主进程 bundle 只在进程启动时加载，主进程侧的新行为仍需重启 dev。
+
 ## 注意事项
 
 - 与 `admin` 包完全独立，可安全并行开发

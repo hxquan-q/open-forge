@@ -14,13 +14,20 @@ export interface SessionInterruptEvidenceParts {
 	readonly hasPendingAction: boolean;
 	readonly continueAttemptCount: number;
 	readonly maxContinueAttempts: number;
+	/**
+	 * 逐事件活动证据（宿主中继观察到的最近事件时间戳）。streaming 会话必须走
+	 * 该证据：消息时间戳无法区分「健康长回合」与「零事件悬挂」（turn 进行中
+	 * 助手消息尚未落盘，健康长回合的消息 idle 同样会持续增大）。缺省时退回
+	 * 消息时间戳（仅对非 streaming 判定足够）。
+	 */
+	readonly activityAtMs?: number;
 }
 
 export function buildSessionInterruptEvidence(parts: SessionInterruptEvidenceParts): SessionInterruptEvidence {
 	const lastAssistant = findLastAssistant(parts.messages);
 	const stopReason = normalizeStopReason(lastAssistant?.stopReason);
 	const errorMessage = lastAssistant?.errorMessage ?? lastAssistant?.failure?.message ?? null;
-	const lastActivityAt = lastActivityTimestamp(parts.messages);
+	const lastActivityAt = parts.activityAtMs ?? lastActivityTimestamp(parts.messages);
 	const idleMs = Math.max(0, parts.nowMs - lastActivityAt);
 	const hasCompletionMarker =
 		stopReason === "stop" && lastAssistant !== undefined && assistantLooksComplete(lastAssistant);

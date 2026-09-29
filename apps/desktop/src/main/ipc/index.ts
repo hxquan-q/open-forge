@@ -8,6 +8,7 @@ import { registerActionApprovalIpc } from "./action-approval.js";
 import { registerAgentTeamsIpc } from "./agent-teams.js";
 import { registerAppMonitorIpc } from "./app-monitor.js";
 import { registerAppshotIpc } from "./appshot.js";
+import { registerArchivedSessionsIpc } from "./archived-sessions.js";
 import { registerBrowserTabIpc } from "./browser-tab.js";
 import { registerBrowserViewIpc } from "./browser-view.js";
 import { registerCanvasIpc } from "./canvas.js";
@@ -82,6 +83,7 @@ interface IpcTeardown {
 	teardownPet: () => void;
 	teardownTerminal: () => void;
 	teardownConversationTags: () => void;
+	teardownArchivedSessions: () => void;
 	teardownQuickPanel: () => void;
 	teardownTask: () => void;
 	teardownCanvas: () => void;
@@ -140,6 +142,7 @@ export function registerAllIpc(
 		teardownPet: registerPetIpc(),
 		teardownTerminal: registerTerminalIpc(),
 		teardownConversationTags: registerConversationTagsIpc(webContents),
+		teardownArchivedSessions: registerArchivedSessionsIpc(webContents),
 		teardownQuickPanel: registerQuickPanelIpc(),
 		teardownTask: registerTaskIpc(webContents),
 		teardownCanvas: registerCanvasIpc(),
@@ -188,6 +191,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownPet();
 	teardown.teardownTerminal();
 	teardown.teardownConversationTags();
+	teardown.teardownArchivedSessions();
 	teardown.teardownQuickPanel();
 	teardown.teardownTask();
 	teardown.teardownCanvas();

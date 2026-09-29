@@ -76,7 +76,13 @@ const imGatewayTargetByPlatformTag = {
 
 // Resolve electron version from the workspace
 const require = createRequire(import.meta.url);
-const desktopBrand = require("../src/shared/desktop-brand.json");
+// 品牌档案与 vite 同开关（VETTA_BRAND_PROFILE）：分发档安装器身份走 Allstr ai，
+// 兼容标识（executableName / appId / 安装目录）跨档冻结。
+const desktopBrand = require(
+	process.env.VETTA_BRAND_PROFILE === "distribution"
+		? "../src/shared/desktop-brand.distribution.json"
+		: "../src/shared/desktop-brand.json",
+);
 const appRuntimeIdentity = require("../src/shared/app-identity.json");
 const electronPkgPath = require.resolve("electron/package.json");
 const electronVersion = JSON.parse(readFileSync(electronPkgPath, "utf8")).version;
@@ -364,6 +370,17 @@ if (process.platform === "darwin") {
 
 // Copy icons
 cpSync(join(projectRoot, "build"), join(buildStageDir, "build"), { recursive: true });
+
+// 分发档打包图标随品牌档案：exe 图标（win.icon）、安装器图标（extraResources 的
+// build/icon.ico）与运行时窗口/托盘图标（window-manager 读 resources/build/icon.*）
+// 全部取自暂存 build/，在这里一次性覆盖成指定品牌资产；文件名不变，兼容标识不受影响。
+if (process.env.VETTA_BRAND_PROFILE === "distribution") {
+	for (const iconName of ["icon.ico", "icon.png", "icon.icns", "icon-dock.png"]) {
+		cpSync(join(projectRoot, "build", "brand", "distribution", iconName), join(buildStageDir, "build", iconName), {
+			force: true,
+		});
+	}
+}
 
 // macOS DMG: 编译「修复已损坏.app」直接落到 staging build/，由下面 dmg.contents 引用。
 // 仅未签名构建需要；签名+公证后 quarantine 不再拦截，且该 helper 自身未签名会拖累公证。

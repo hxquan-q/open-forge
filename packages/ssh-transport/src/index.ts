@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export {
 	buildAskpassEnvironment,
 	classifySshPrompt,
@@ -28,6 +29,14 @@ export {
 	type SshHelperBinaryResolver,
 	type SshHelperTarget,
 } from "./helper-deployment.js";
+export {
+	formatHostKeyFingerprint,
+	formatKnownHostLine,
+	type KnownHostEntry,
+	type KnownHostsVerdict,
+	matchKnownHosts,
+	parseKnownHostsLine,
+} from "./known-hosts.js";
 export { createNodeSshProcessRunner, type NodeSshProcessRunnerOptions } from "./node-process-runner.js";
 export {
 	SSH_TRANSPORT_FAILURE_EXIT_CODE,
@@ -109,3 +118,18 @@ export {
 	type SshHost,
 	type SshHostInput,
 } from "./ssh-host.js";
+export {
+	parseDirectTarget,
+	parseSshConfigQuery,
+	type ResolvedSshTarget,
+	type RunSshConfigQuery,
+	resolveSshTarget,
+} from "./ssh-target.js";
+export {
+	createSsh2ProcessRunner,
+	parseInvocationArgv,
+	type Ssh2HostKeyInfo,
+	type Ssh2ProcessRunner,
+	type Ssh2ProcessRunnerOptions,
+	type Ssh2SecretRequest,
+} from "./ssh2-runner.js";

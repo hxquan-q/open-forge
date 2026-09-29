@@ -165,6 +165,16 @@ export type ViewerHistoryUpdate =
 	| { kind: "append"; appended: HistoryEntry[] }
 	| { kind: "reset"; page: HistoryPage };
 
+/** 启动扫描报告的「上次退出时未正常完成」会话（与主进程扫描器输出同形）。 */
+export interface DesktopInterruptedStartupSession {
+	sessionId: string;
+	sessionPath: string;
+	cwd: string;
+	name?: string;
+	turnInterrupted: boolean;
+	queuedCount: number;
+}
+
 export interface DesktopSessionApi {
 	create(
 		config: DesktopCodingAgentSessionConfig | undefined,
@@ -198,6 +208,8 @@ export interface DesktopSessionApi {
 		traceContext?: DesktopSessionTraceContext,
 	): Promise<RuntimeTurnPromptOutcome>;
 	continue(sessionId: string): Promise<void>;
+	/** 失败/中断后的显式续跑：kernel 重跑最后一轮并丢弃失败的助手尝试；忙碌时拒绝。 */
+	retry(sessionId: string): Promise<void>;
 	abort(sessionId: string): Promise<void>;
 	/** 同步输入草稿非空态到主进程，供中断续接判定否决。 */
 	setInterruptDraftNonEmpty(sessionId: string, nonEmpty: boolean): Promise<void>;
@@ -206,12 +218,15 @@ export interface DesktopSessionApi {
 		handler: (payload: {
 			sessionId: string;
 			sessionPath?: string;
+			cwd?: string;
 			state: string;
 			trigger: string | null;
 			action: "notify" | "auto-retried";
 			shouldAutoContinue: boolean;
 		}) => void,
 	): () => void;
+	/** 启动一次性扫描结果：上次退出时回复未正常完成的会话（仅在非空时推送一次）。 */
+	onInterruptedStartup(handler: (payload: { sessions: DesktopInterruptedStartupSession[] }) => void): () => void;
 	/** kernel 输入队列快照（ADR-0060）。 */
 	getQueueState(sessionId: string): Promise<RuntimeSessionQueueStateView>;
 	/** 在当前回复自然结束后压缩上下文；空闲时立即从队列执行。 */

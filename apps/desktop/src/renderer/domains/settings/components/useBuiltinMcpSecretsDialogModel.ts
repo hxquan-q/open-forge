@@ -1,3 +1,4 @@
+import { brandIconUrl } from "@shared/brand-assets";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -118,7 +119,7 @@ export function useBuiltinMcpSecretsDialogModel({
 		const hasFields = fields.length > 0;
 		const connectorName = resolveMcpPresetDisplayName(preset, (key) => t(key));
 		return {
-			appIconUrl: "./icon.png",
+			appIconUrl: brandIconUrl,
 			canSubmit,
 			connectorIconUrl: resolveMcpPresetIconUrl(preset),
 			connectorName,

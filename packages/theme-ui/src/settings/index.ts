@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type {
 	AchievementNavigationAssets,
 	AchievementNavigationButtonViewProps,
@@ -25,6 +26,14 @@ export type {
 	ArchivedProjectsSettingsViewProps,
 } from "./ArchivedProjectsSettingsView";
 export { ArchivedProjectsSettingsView } from "./ArchivedProjectsSettingsView";
+export type {
+	ArchivedSessionRowView,
+	ArchivedSessionsSettingsViewLabels,
+	ArchivedSessionsSettingsViewProps,
+} from "./ArchivedSessionsSettingsView";
+export { ArchivedSessionsSettingsView } from "./ArchivedSessionsSettingsView";
+export type { ArchiveSettingsViewProps } from "./ArchiveSettingsView";
+export { ArchiveSettingsView } from "./ArchiveSettingsView";
 export type {
 	AchievementCurtainSideLayout,
 	AchievementCurtainsAssets,

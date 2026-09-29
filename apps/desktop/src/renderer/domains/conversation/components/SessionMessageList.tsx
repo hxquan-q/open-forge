@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, isCompactingAtom, pendingScrollToEntryAtom } from "@shared/store/atoms";
 import { useAtom, useAtomValue } from "jotai";
 import { createContext, useCallback, useContext, useMemo } from "react";
@@ -12,6 +13,7 @@ import type { MessageRendering } from "./message-list/MessageRendering";
 import { SessionUserMessage } from "./message-list/SessionUserMessage";
 import { SuggestionBubbles } from "./SuggestionBubbles";
 import type { MessageListProps } from "./message-list/types";
+import { resolveInterruptedErrorKind } from "../services/interrupted-resume";
 
 const sessionRendering: MessageRendering = {
 	row: SessionMessageRow,
@@ -51,6 +53,14 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 			source: source?.kind === "user" ? source : undefined,
 		};
 	}, [props.messages, session?.parentEntryId, session?.parentSessionPath]);
+	const interruptedErrorKind = useMemo(
+		() =>
+			resolveInterruptedErrorKind(props.messages, {
+				isStreaming: props.isStreaming,
+				isCompacting,
+			}),
+		[props.messages, props.isStreaming, isCompacting],
+	);
 	return (
 		<ForkContext.Provider value={fork}>
 			<MessageRenderingDefaults value={sessionRendering}>
@@ -65,6 +75,7 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 							waiting={props.isStreaming && props.messages.at(-1)?.kind !== "agent"}
 							sessionId={props.sessionId ?? undefined}
 							pendingLabel={props.pendingLabel}
+							interruptedErrorKind={interruptedErrorKind}
 						/>
 						{props.onSend ? <SuggestionBubbles onSend={props.onSend} /> : null}
 						{props.children}

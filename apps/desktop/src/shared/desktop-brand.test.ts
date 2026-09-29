@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInstance } from "i18next";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	DESKTOP_BRAND,
 	DESKTOP_BRAND_REPLACEMENTS,
@@ -82,6 +82,11 @@ describe("Desktop brand layer", () => {
 		expect(preparePack).toContain('schemes: ["openforge"]');
 		expect(preparePack).toMatch(/artifactName:\s*"\$\{productName\}-\$\{version\}-win-\$\{arch\}\.\$\{ext\}"/);
 		expect(preparePack).toContain("publish: [updatePublishConfig]");
+		// 打包身份与 vite 同开关选档：分发档安装器身份（产品名/安装器显示名）随档案，
+		// AppId / 安装目录 / 可执行名保持冻结。
+		expect(preparePack).toContain("desktop-brand.distribution.json");
+		expect(readDesktopSource("build/installer.iss")).toContain("{#AppDisplayName}");
+		expect(readDesktopSource("scripts/build-inno-installer.mjs")).toContain("resolveInnoInstallerIdentity");
 		expect(packagingLayout).toMatch(/\$\{desktopBrand\.displayName\} Plugin Package/);
 		expect(linuxPackaging).toContain("name: desktopBrand.displayName");
 	});
@@ -154,5 +159,114 @@ describe("Desktop brand layer", () => {
 		]) {
 			expect(readDesktopSource(file), file).not.toMatch(/\bVetta\b/);
 		}
+	});
+});
+
+describe("品牌档案（VETTA_BRAND_PROFILE 构建期开关）", () => {
+	const originalProfile = process.env.VETTA_BRAND_PROFILE;
+
+	afterEach(() => {
+		if (originalProfile === undefined) delete process.env.VETTA_BRAND_PROFILE;
+		else process.env.VETTA_BRAND_PROFILE = originalProfile;
+		vi.resetModules();
+	});
+
+	it("用户不设置开关时拿到自用口径：Open Forge 品牌与既有归一规则", async () => {
+		delete process.env.VETTA_BRAND_PROFILE;
+		vi.resetModules();
+		const brand = await import("./desktop-brand.js");
+
+		expect(brand.DESKTOP_BRAND_PROFILE).toBe("self");
+		expect(brand.DESKTOP_BRAND.displayName).toBe("Open Forge");
+		expect(brand.resolveDesktopBrandName("zh")).toBe("Open Forge");
+		expect(brand.replaceDesktopBrandText("Open Vetta and Vetta's app")).toBe("Open Forge and Open Forge's app");
+		expect(brand.replaceDesktopBrandText("关于 Open Forge", "zh")).toBe("关于 Open Forge");
+	});
+
+	it("外部分发档：英文展示 Allstr ai，中文界面展示 小爱ai，且 Open Forge 字样被归一", async () => {
+		process.env.VETTA_BRAND_PROFILE = "distribution";
+		vi.resetModules();
+		const brand = await import("./desktop-brand.js");
+
+		expect(brand.DESKTOP_BRAND_PROFILE).toBe("distribution");
+		expect(brand.DESKTOP_BRAND.displayName).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName(undefined)).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName("en")).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName("zh-CN")).toBe("小爱ai");
+		expect(brand.replaceDesktopBrandText("About Open Forge", "en")).toBe("About Allstr ai");
+		expect(brand.replaceDesktopBrandText("关于 Open Forge 和 Open Forge 的能力", "zh")).toBe(
+			"关于 小爱ai 和 小爱ai 的能力",
+		);
+		// 分发档同样不得碰兼容名与路径（协议、数据目录、文件扩展名）。
+		const compatibilityText =
+			"APP_RUNTIME_NAME=vetta; ~/.vetta; vetta://oauth/callback; .vettapkg; VETTA_*; @vetta/*; vetta:settings";
+		expect(brand.replaceDesktopBrandText(compatibilityText, "zh")).toBe(compatibilityText);
+	});
+
+	it("外部分发档经 i18n post-processor 按界面语言渲染品牌，无需改动任何 locale 文件", async () => {
+		process.env.VETTA_BRAND_PROFILE = "distribution";
+		vi.resetModules();
+		const { initDesktopI18n } = await import("./desktop-brand.js");
+		const instance = createInstance();
+		await initDesktopI18n(instance, {
+			resources,
+			lng: "zh",
+			fallbackLng: "zh",
+			ns: NAMESPACES,
+			defaultNS: "common",
+			initAsync: false,
+			interpolation: { escapeValue: false },
+			returnNull: false,
+		});
+
+		expect(instance.t("common:appName")).toBe("小爱ai");
+		expect(instance.t("main:menu.app.about")).toBe("关于 小爱ai");
+		await instance.changeLanguage("en");
+		expect(instance.t("common:appName")).toBe("Allstr ai");
+		expect(instance.t("main:menu.app.about")).toBe("About Allstr ai");
+	});
+
+	it("外部分发档打包图标随档案覆盖暂存 build/，且品牌资产已入库可复现构建", () => {
+		const preparePack = readDesktopSource("scripts/prepare-pack.js");
+		expect(preparePack).toContain('"brand", "distribution"');
+		// exe 图标 / 安装器图标 / 运行时窗口与托盘图标（window-manager）同源自暂存 build/icon.*，
+		// 暂存期覆盖一处即全链生效；文件名保持不变以维持兼容标识。
+		for (const icon of ["icon.ico", "icon.png", "icon.icns", "icon-dock.png"]) {
+			expect(preparePack, icon).toContain(`"${icon}"`);
+			const asset = readFileSync(join(desktopRoot, "build", "brand", "distribution", icon));
+			expect(asset.length, icon).toBeGreaterThan(1000);
+		}
+		// 容器魔数：ICO（reserved=0, type=1）与 ICNS（"icns"）
+		const ico = readFileSync(join(desktopRoot, "build", "brand", "distribution", "icon.ico"));
+		expect(ico.readUInt16LE(0)).toBe(0);
+		expect(ico.readUInt16LE(2)).toBe(1);
+		const icns = readFileSync(join(desktopRoot, "build", "brand", "distribution", "icon.icns"));
+		expect(icns.toString("ascii", 0, 4)).toBe("icns");
+	});
+
+	it("两档共用冻结的兼容标识（可执行名 / bundleId），分发档归一全部遗留名且不与自己冲突", () => {
+		const selfSource = JSON.parse(readFileSync(join(desktopRoot, "src/shared/desktop-brand.json"), "utf8")) as {
+			displayName: string;
+			executableName: string;
+			appshotHelperBundleId: string;
+		};
+		const distributionSource = JSON.parse(
+			readFileSync(join(desktopRoot, "src/shared/desktop-brand.distribution.json"), "utf8"),
+		) as {
+			displayName: string;
+			displayNameLocalized?: Record<string, string>;
+			executableName: string;
+			appshotHelperBundleId: string;
+			legacyProductNames: string[];
+		};
+
+		expect(distributionSource.executableName).toBe(selfSource.executableName);
+		expect(distributionSource.appshotHelperBundleId).toBe(selfSource.appshotHelperBundleId);
+		expect(distributionSource.displayName).not.toBe(selfSource.displayName);
+		expect(distributionSource.legacyProductNames).toEqual(
+			expect.arrayContaining(["Open Vetta", "Vetta", "Open Forge"]),
+		);
+		expect(distributionSource.legacyProductNames).not.toContain(distributionSource.displayName);
+		expect(distributionSource.displayNameLocalized?.zh).toBe("小爱ai");
 	});
 });

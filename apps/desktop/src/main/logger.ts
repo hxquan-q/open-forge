@@ -104,6 +104,23 @@ export function patchConsoleToAppLogger(): void {
 	console.error = guard((...a) => logger.error(...a));
 }
 
+/**
+ * stdout/stderr 写端已毁（EPIPE/流销毁）时，关停所有已注册 logger 的 console 镜像，
+ * 切断「写日志 → 写已断 stdout → 再抛错 → 再写日志」的自反馈回路（BUG-0047）。
+ * 文件与 ringbuffer transport 不受影响；重复调用幂等，返回是否有 transport 被关停。
+ */
+export function disableConsoleLogMirroring(): boolean {
+	let muted = false;
+	for (const logger of loggers.values()) {
+		const consoleTransport = logger.transports.console;
+		if (consoleTransport.level !== false) {
+			consoleTransport.level = false;
+			muted = true;
+		}
+	}
+	return muted;
+}
+
 function safeConsoleArg(arg: unknown): string {
 	if (typeof arg === "string") return arg;
 	try {

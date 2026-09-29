@@ -5,7 +5,11 @@ import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js
 import { getInAppBrowserViewHost } from "./browser-automation/browser-view-host.js";
 import { shouldAutoOpenDevTools } from "./devtools-policy.js";
 import { sampleJavaScriptCallStack } from "./diagnostics.js";
-import { type RendererConsoleLevel, shouldPersistRendererConsoleMessage } from "./logger/renderer-console-policy.js";
+import {
+	isChromiumResizeObserverDiagnostic,
+	type RendererConsoleLevel,
+	shouldPersistRendererConsoleMessage,
+} from "./logger/renderer-console-policy.js";
 import { getAppLogger } from "./logger.js";
 import { openExternalUrl } from "./open-external.js";
 import { configureMainWindowMediaPermissions } from "./speech-input/media-permissions.js";
@@ -15,11 +19,6 @@ const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
 const resDir = app.isPackaged ? appRoot : join(appRoot, "dist");
 const buildDir = app.isPackaged ? join(process.resourcesPath, "build") : join(appRoot, "build");
 const devServerUrl = process.env.VETTA_DESKTOP_DEV_URL;
-const RESIZE_OBSERVER_DELIVERY_WARNING = "ResizeObserver loop completed with undelivered notifications.";
-
-function isChromiumResizeObserverDiagnostic(message: string, line: number, sourceId: string): boolean {
-	return line === 0 && sourceId === "" && message === RESIZE_OBSERVER_DELIVERY_WARNING;
-}
 
 export const iconPath: Record<string, string> = {
 	darwin: join(buildDir, "icon.icns"),
@@ -129,7 +128,7 @@ export function createWindow(): BrowserWindow {
 	mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
 		// Chromium defers remaining ResizeObserver callbacks to the next frame while a split pane is
 		// continuously resized. It reports that normal delivery behavior as an internal console error.
-		if (isChromiumResizeObserverDiagnostic(message, line, sourceId)) return;
+		if (isChromiumResizeObserverDiagnostic(message, line)) return;
 		const levelLabel: RendererConsoleLevel = (["log", "info", "warn", "error"] as const)[level] ?? "log";
 		if (!shouldPersistRendererConsoleMessage(levelLabel, message)) return;
 		rendererLog[levelLabel](`[${sourceId}:${line}] ${message}`);

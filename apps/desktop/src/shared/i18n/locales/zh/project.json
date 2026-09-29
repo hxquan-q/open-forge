@@ -113,6 +113,10 @@
 		"unpin": "取消置顶",
 		"openArtifactDir": "打开产物目录",
 		"delete": "删除",
+		"archive": "归档会话",
+		"archiveDisabled": "请先停止运行中的会话",
+		"archiveToast": "已归档「{{name}}」",
+		"archiveToastAction": "查看已归档",
 		"tags": {
 			"label": "标签",
 			"new": "新标签…",

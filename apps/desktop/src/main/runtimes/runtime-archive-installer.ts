@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+
+import { extractZipArchiveSafely } from "../archive/safe-zip-extract.js";
 
 export interface RuntimeArchiveInstallOptions {
 	archivePath: string;
@@ -47,11 +49,28 @@ export function tarForceLocalArgs(flavor: TarFlavor): string[] {
 	return flavor === "gnu" ? ["--force-local"] : [];
 }
 
-function extractArchive(archivePath: string, destination: string, archiveType: string): void {
-	// Windows 10+ 的 bsdtar 与 Unix tar 都支持项目使用的 tar.gz；Windows
-	// bsdtar 同时支持 Node 官方发布的 zip。PATH 里也可能是 GNU tar（Git Bash/MSYS2
-	// 环境优先命中），它会把 `C:\…` 误判成 `host:path` 远程语法、且 `-C` 的 chdir 不认
-	// 反斜杠盘符；统一转成正斜杠路径，并只在确认为 GNU tar 时补 `--force-local`。
+async function extractArchive(
+	archivePath: string,
+	destination: string,
+	archiveType: RuntimeArchiveInstallOptions["archiveType"],
+): Promise<void> {
+	// zip 不经过外部 tar：Windows 上 PATH 里 GNU tar（Git Bash/MSYS2）常先于 bsdtar
+	// 被命中，而 GNU tar 不支持 zip，Node runtime 的 zip 包会必失败（BUG-0046）。
+	// 进程内解压沿用 safe-zip-extract 的路径穿越/大小上限防护。
+	if (archiveType === "zip") {
+		const buffer = await readFile(archivePath);
+		try {
+			await extractZipArchiveSafely(buffer, destination);
+		} catch (error) {
+			throw new Error(`zip extract failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+		return;
+	}
+
+	// Windows 10+ 的 bsdtar 与 Unix tar 都支持项目使用的 tar.gz。PATH 里也可能是
+	// GNU tar（Git Bash/MSYS2 环境优先命中），它会把 `C:\…` 误判成 `host:path`
+	// 远程语法、且 `-C` 的 chdir 不认反斜杠盘符；统一转成正斜杠路径，并只在确认
+	// 为 GNU tar 时补 `--force-local`。
 	const flavor = detectTarFlavor();
 	const result = spawnSync(
 		"tar",
@@ -99,7 +118,7 @@ async function installViaStaging(
 
 export async function installRuntimeArchive(options: RuntimeArchiveInstallOptions): Promise<void> {
 	await installViaStaging(options.targetDirectory, "extract", async (stagingDirectory) => {
-		extractArchive(options.archivePath, stagingDirectory, options.archiveType);
+		await extractArchive(options.archivePath, stagingDirectory, options.archiveType);
 		return join(stagingDirectory, options.innerDirectory);
 	});
 }

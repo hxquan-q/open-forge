@@ -4,7 +4,7 @@ import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { resolveNodeConfigurationValue } from "@vetta/runtime-node/host";
 import { isSshProjectUri } from "@vetta/ssh-transport";
-import { BrowserWindow, clipboard, ipcMain } from "electron";
+import { BrowserWindow, clipboard, ipcMain, net } from "electron";
 import type {
 	McpConfigData,
 	McpHttpServerConfigData,
@@ -75,6 +75,7 @@ import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import type { ModelsConfig } from "../models/model-settings-service.js";
 import { probeModelProvider } from "../models/probe.js";
+import { testProviderAvailability } from "../models/test-provider.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
 import { type DesktopProxyConfigSnapshot, mergeProxyConfigPatch, redactProxyConfig } from "../proxy/proxy-settings.js";
 import { getLinuxSandboxCapability, getSandboxCapability, type SandboxCapability } from "../sandbox/capability.js";
@@ -155,6 +156,7 @@ const CHANNELS = {
 	MODELS_COPY_API_KEY: "vetta:models:copy-api-key",
 	MODELS_PROBE: "vetta:models:probe",
 	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
+	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
 	MCP_LOGIN: "vetta:mcp:login",
@@ -521,6 +523,12 @@ export function registerFsIpc(): () => void {
 	ipcMain.handle(CHANNELS.MODELS_FETCH_PROVIDER_MODELS, async (_event, providerName: unknown) => {
 		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
 		return fetchProviderModels(providerName.trim());
+	});
+
+	ipcMain.handle(CHANNELS.MODELS_TEST_PROVIDER, async (_event, providerName: unknown) => {
+		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
+		const provider = (await models.getConfig()).providers[providerName.trim()];
+		return testProviderAvailability(provider, { fetchImpl: net.fetch });
 	});
 
 	ipcMain.handle(CHANNELS.MCP_GET, async (): Promise<McpConfig> => {

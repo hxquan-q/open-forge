@@ -930,6 +930,11 @@
 		"compactionIndicator": "Compacting context...",
 		"retryIndicator": "Reconnecting ({{attempt}}/{{maxAttempts}})",
 		"retryReason": "Last request failed: {{reason}}",
+		"resumeBar": {
+			"title": "Last reply did not finish: {{reason}}",
+			"action": "Continue",
+			"failed": "Could not continue; try again later."
+		},
 		"streamingPhrases": [
 			"Vetta is replying…",
 			"Please hold on…",
@@ -1449,6 +1454,15 @@
 		"notifyTitle": "Session reply interrupted",
 		"notifyBody": "The reply may have stopped due to network or timeout. Open the session and continue.",
 		"autoRetriedTitle": "Auto-continued",
-		"autoRetriedBody": "An interrupt was detected and the reply was automatically continued in the same bubble."
+		"autoRetriedBody": "An interrupt was detected and the reply was automatically continued in the same bubble.",
+		"reason": {
+			"networkFailure": "The reply stopped after a network interruption. Open the session and continue.",
+			"truncated": "The reply hit the length limit and was cut off. Open the session and continue.",
+			"error": "The reply stopped after an upstream error. Open the session and continue.",
+			"indeterminate": "The reply may have been interrupted. Open the session and continue."
+		},
+		"openSession": "Open session",
+		"startupTitle": "Unfinished sessions detected",
+		"startupBody": "{{count}} session(s) had replies that did not finish before the app last exited. Open one to continue."
 	}
 }

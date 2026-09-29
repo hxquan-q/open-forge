@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ProjectsLoadingView, ProjectsPanelView } from "@vetta-org/theme-ui/project";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -5,6 +6,7 @@ import { DefaultConversationSection } from "./DefaultConversationSection";
 import { ProjectGroupsSection } from "./ProjectGroupsSection";
 import { ProjectsPanelEmptyState } from "./ProjectsPanelEmptyState";
 import { ProjectsPanelMenus } from "./ProjectsPanelMenus";
+import { useArchivedSessionsSync } from "../../../../hooks/useArchivedSessionsSync";
 import { useConversationTagsSync } from "../../../../hooks/useConversationTagsSync";
 import { useProjectsPanelModel } from "./useProjectsPanelModel";
 import type { ProjectsPanelProps } from "./types";
@@ -13,6 +15,7 @@ export function ProjectsPanel(props: ProjectsPanelProps): JSX.Element {
 	const { t } = useTranslation("project");
 	const model = useProjectsPanelModel(props);
 	useConversationTagsSync();
+	useArchivedSessionsSync();
 	const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
 
 	// User-added projects (and batch group under current filter). Default "对话" is separate.

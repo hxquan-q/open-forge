@@ -214,6 +214,21 @@ test("运行时文件的裁剪必须落在安全分类里", () => {
 	);
 });
 
+test("ESLint 的 JS 形态配置按 lint-config 分类裁剪，不触发运行时入口守卫", () => {
+	// ssh2 是首个带 .eslintrc.js 的运行时依赖：旧实现把它归入 build-script，
+	// 与 .js 运行时扩展名组合被守卫判违规，打包在 prepare-pack 阶段硬失败。
+	const filePaths = ["package.json", "index.js", "lib/ssh.js", ".eslintrc.js", ".eslintrc.cjs"];
+	const plan = planFor(filePaths);
+
+	assert.deepEqual(findStagedDepStrippingViolations({ filePaths, plan }), []);
+	assert.deepEqual(
+		[...plan.strippedPaths].sort(),
+		[".eslintrc.cjs", ".eslintrc.js"],
+	);
+	assert.equal(isStrippedByPlan(plan, "index.js"), false);
+	assert.equal(isStrippedByPlan(plan, "lib/ssh.js"), false);
+});
+
 test("体积汇总按裁剪计划给出清洗前后字节数", () => {
 	const filePaths = ["index.js", "test/unit.js", "README.md"];
 	const sizesByPath = new Map([

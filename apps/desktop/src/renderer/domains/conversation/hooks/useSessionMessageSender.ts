@@ -607,6 +607,17 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 					setRetryProgress(null);
 					sendResult = { status: "failed", error: { message } };
 				} else {
+					// completed/cancelled 回执先于任何终态事件到达，说明 agent_end 在
+					// 传输中丢失（preload 容错跳过 / IPC 半丢）。此刻本地发送方的回执
+					// 是唯一可知的终态事实：必须收敛本地 streaming，否则界面永远
+					// 「处理中」、停止按钮对着不存在的 turn、续发也被迫走 streaming
+					// 语义。正常路径下 agent_end 先到、此处为幂等 no-op。
+					// 注意：主进程 running 集合广播通道的失步（isStreamingAtom 的另一
+					// 真值源）不在此处修复，由会话切换时的 getState 回填兜底。
+					if (outcome?.status === "completed" || outcome?.status === "cancelled") {
+						setActiveSessionStreaming(false);
+						setRetryProgress(null);
+					}
 					sendResult = { status: "sent" };
 				}
 			} catch (err) {

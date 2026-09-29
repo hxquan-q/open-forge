@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import type { ProjectEntry } from "@preload/api";
 import { pathBasename } from "@shared/lib/utils";
@@ -22,7 +23,6 @@ export interface ArchivedProjectsSettingsModel {
 		deleteProject: string;
 		empty: string;
 		sectionTitle: string;
-		title: string;
 		unarchive: string;
 	};
 	projects: readonly ArchivedProjectItem[];
@@ -83,7 +83,6 @@ export function useArchivedProjectsSettingsModel(): ArchivedProjectsSettingsMode
 			deleteProject: t("deleteProject"),
 			empty: t("noArchivedProjects"),
 			sectionTitle: t(SETTINGS_SECTION["archived-list"].titleKey),
-			title: t("archivedProjects"),
 			unarchive: t("unarchive"),
 		}),
 		[t],
