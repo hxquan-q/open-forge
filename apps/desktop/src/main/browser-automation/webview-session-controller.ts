@@ -357,7 +357,10 @@ export class InAppBrowserSessionController {
 		let raw: unknown;
 		try {
 			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start"));
-		} catch {
+		} catch (error) {
+			// 注入脚本自身抛错（历史上是打包器辅助函数缺失，BUG-0051）此前被静默吞掉，
+			// 面板上只表现为「点选没反应」；这里留下证据再回到 idle。
+			console.error("[browser-picker] guest start failed", { workspaceId: session.workspaceId, error });
 			return "idle";
 		}
 		if (!session.pickerEnabled) return "idle";

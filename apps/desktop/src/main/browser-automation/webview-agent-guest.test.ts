@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
+import { evaluateInjectedGuestScript } from "../../test/injected-guest-script.js";
 import {
 	BROWSER_TAB_SNAPSHOT_LIMIT,
+	buildBrowserTabGuestScript,
 	collectInAppBrowserSnapshotNodes,
 	findInAppBrowserElementByXPath,
 } from "./webview-agent-guest.js";
@@ -40,6 +42,17 @@ describe("应用内 WebView guest 快照", () => {
 			expect(nodes).toHaveLength(BROWSER_TAB_SNAPSHOT_LIMIT);
 			expect(truncated).toBe(true);
 		});
+	});
+
+	it("注入脚本整段求值返回快照（与 executeJavaScript 同一入口）", () => {
+		document.body.innerHTML = `<button id="go">Go</button><input placeholder="邮箱">`;
+		const result = evaluateInjectedGuestScript(
+			buildBrowserTabGuestScript({ kind: "snapshot", interactiveOnly: false }),
+		) as {
+			nodes: { name: string; xpath: string }[];
+		};
+		expect(result.nodes.map((node) => node.name)).toEqual(["Go", "邮箱"]);
+		expect(findInAppBrowserElementByXPath(document, result.nodes[0]!.xpath)?.textContent).toBe("Go");
 	});
 
 	it("interactiveOnly 过滤零尺寸元素", () => {
