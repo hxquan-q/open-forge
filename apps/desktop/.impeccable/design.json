@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T00:00:00Z",
+  "title": "Design System: Open Forge Desktop",
+  "extensions": {
+    "colorMeta": {
+      "workbench-black": {
+        "role": "neutral",
+        "displayName": "Workbench Black",
+        "canonical": "rgb(18, 18, 18)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "toolplate": {
+        "role": "neutral",
+        "displayName": "Toolplate",
+        "canonical": "rgb(29, 29, 29)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "toolplate-raised": {
+        "role": "neutral",
+        "displayName": "Toolplate Raised",
+        "canonical": "rgb(28, 28, 28)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "shade": {
+        "role": "neutral",
+        "displayName": "Shade",
+        "canonical": "rgb(24, 24, 24)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "bone-white": {
+        "role": "primary",
+        "displayName": "Bone White",
+        "canonical": "rgb(228, 228, 228)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "bone-white-ink": {
+        "role": "primary",
+        "displayName": "Bone White Ink",
+        "canonical": "rgb(8, 8, 10)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "bench-ink": {
+        "role": "neutral",
+        "displayName": "Bench Ink",
+        "canonical": "rgb(208, 208, 208)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "rgb(128, 128, 128)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "groove": {
+        "role": "neutral",
+        "displayName": "Groove",
+        "canonical": "rgb(48, 48, 48)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "rgb(42, 42, 42)",
+        "tonalRamp": ["#1c1c1c", "#313131", "#494949", "#636363", "#7f7f7f", "#9d9d9d", "#bcbcbc", "#dddddd"]
+      },
+      "stop-signal": {
+        "role": "error",
+        "displayName": "Stop Signal",
+        "canonical": "rgb(255, 91, 91)",
+        "tonalRamp": ["#4d1412", "#6b1f1c", "#8a2b27", "#a83a34", "#c44d46", "#dc645c", "#f07f78", "#ffa39c"]
+      },
+      "running-green": {
+        "role": "success",
+        "displayName": "Running Green",
+        "canonical": "#10b981",
+        "tonalRamp": ["#00352a", "#005039", "#006c47", "#00895a", "#00a76e", "#23c489", "#5cdfa5", "#94f8c3"]
+      },
+      "waiting-amber": {
+        "role": "warning",
+        "displayName": "Waiting Amber",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["#3d2400", "#5c3a00", "#7c5100", "#9d6900", "#bf8300", "#e29e00", "#ffbb3d", "#ffd98f"]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body",
+        "purpose": "正文与控件文本主力档（14px）。Button 基础类即 text-sm font-medium。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "分组标签、分段控件项、极小角标（10-11px，字重 500）。"
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "仅用于代码、数据、测量值与路径。不要用来给界面加技术感。"
+      }
+    },
+    "shadows": [
+      { "name": "shadow-2xs", "value": "var(--shadow-2xs)", "purpose": "已定义，界面未使用。不要为了让元素突出而挑档位。" },
+      { "name": "shadow-xs", "value": "var(--shadow-xs)", "purpose": "已定义，界面未使用。" },
+      { "name": "shadow-sm", "value": "var(--shadow-sm)", "purpose": "已定义，界面未使用。" },
+      { "name": "shadow (default)", "value": "var(--shadow)", "purpose": "已定义，界面未使用。" },
+      { "name": "shadow-md", "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18)", "purpose": "浮层面唯一常用档：Popover、DropdownMenu、SelectContent、Toast、floating bar。" },
+      { "name": "shadow-lg", "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18)", "purpose": "更高一层浮层，以及拖拽中的元素。" },
+      { "name": "shadow-xl", "value": "var(--shadow-xl)", "purpose": "已定义，界面未使用。" },
+      { "name": "shadow-2xl", "value": "var(--shadow-2xl)", "purpose": "已定义，界面未使用。" }
+    ],
+    "motion": [
+      { "name": "ease-ui-transition", "value": "0.15s ease", "purpose": "全局 button/a 的 color/background-color/border-color 过渡。styles.css 唯一的全局 transition。" },
+      { "name": "duration-card", "value": "0.2s", "purpose": "卡片 hover 的边框与底色过渡（transition-colors duration-200）。" },
+      { "name": "duration-overlay", "value": "0.1s", "purpose": "浮层出入场（fade-in-0 zoom-in-95 duration-100）。" },
+      { "name": "spring-entrance", "value": "spring(stiffness: 280~320, damping: 26)", "purpose": "入场动效的 spring 默认值。配合 opacity 0→1 + y 8→0。" },
+      { "name": "spring-button", "value": "spring(stiffness: 380, damping: 22)", "purpose": "按钮交互 spring。hover scale ≤1.04、tap scale ≥0.94。" },
+      { "name": "spring-segmented", "value": "spring(stiffness: 480, damping: 32, mass: 0.8)", "purpose": "SegmentedControl 指示器滑动；tap scale 0.93。" },
+      { "name": "spring-tab-indicator", "value": "spring(stiffness: 480, damping: 36, mass: 0.8)", "purpose": "TabBar 激活指示器的共享布局动画（layoutId 跨页签形变）。" },
+      { "name": "view-transition", "value": "620ms ease-in-out", "purpose": "主题切换的圆形揭示（clipPath: circle）。不支持 View Transition 时回退 180ms 颜色过渡；两者都尊重 prefers-reduced-motion。" },
+      { "name": "stagger-children", "value": "0.04s ~ 0.06s", "purpose": "列表入场 stagger；delayChildren ≤ 0.15s。" },
+      { "name": "live-steps", "value": "steps(16)", "purpose": "「进行中」常驻指示器的相位步进。宿主经 Web Animations API 挂载，startTime 锁到文档时间线原点，使全部指示器同拍。" }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "主操作。唯一在 mono / sand / default 三套主题下都正确表达「主操作」的 variant；mono 下渲染为骨白底深字，Classic/Coral 下渲染为 indigo/珊瑚底白字。",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; } .ds-btn-primary:hover { background: color-mix(in srgb, var(--primary) 90%, transparent); } .ds-btn-primary:focus-visible { border-color: var(--ring); outline: none; } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "前景反相按钮（bg-foreground / text-background）。主题中立，任何主题下都渲染为「浅底深字」，因此不需要为配色调整。",
+      "html": "<button class=\"ds-btn-default\">Open folder</button>",
+      "css": ".ds-btn-default { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius); background: var(--foreground); color: var(--background); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; } .ds-btn-default:hover { opacity: 0.85; } .ds-btn-default:focus-visible { border-color: var(--ring); outline: none; } .ds-btn-default:active { transform: translateY(1px); } .ds-btn-default:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "次要操作。透明底 + 1px 边框，靠边框而非填充表达可点击性。",
+      "html": "<button class=\"ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; } .ds-btn-outline:hover { background: color-mix(in srgb, var(--accent) 50%, transparent); } .ds-btn-outline:focus-visible { border-color: var(--ring); outline: none; } .ds-btn-outline:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "工具栏与轻量操作。静止态只有灰字，悬浮才出现底色——把视觉重量让给内容。",
+      "html": "<button class=\"ds-btn-ghost\">Refresh</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--muted-foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; } .ds-btn-ghost:hover { background: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--foreground); } .ds-btn-ghost:focus-visible { border-color: var(--ring); outline: none; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "危险操作。当前实现用 bg-red-500/10 text-red-500（见 DESIGN.md 已知存量违规），本片段按语义色表给出应然形态。",
+      "html": "<button class=\"ds-btn-destructive\">Delete project</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius); background: color-mix(in srgb, var(--destructive) 10%, transparent); color: var(--destructive); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; } .ds-btn-destructive:hover { background: color-mix(in srgb, var(--destructive) 20%, transparent); } .ds-btn-destructive:focus-visible { border-color: var(--ring); outline: none; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "单行输入。透明底 + 1px 半透明边框，聚焦只换边框颜色，没有 ring 也没有阴影。",
+      "html": "<input class=\"ds-input\" placeholder=\"Search sessions\" />",
+      "css": ".ds-input { display: block; width: 100%; min-width: 0; height: 2rem; padding: 0.25rem 0.625rem; border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); border-radius: var(--radius); background: transparent; color: var(--foreground); font-family: var(--font-sans); font-size: 0.875rem; box-shadow: none; outline: none; transition: border-color 0.15s ease, background-color 0.15s ease; } .ds-input::placeholder { color: var(--muted-foreground); } .ds-input:hover { border-color: var(--border); } .ds-input:focus-visible { border-color: color-mix(in srgb, var(--ring) 60%, transparent); } .ds-input:disabled { background: color-mix(in srgb, var(--input) 30%, transparent); opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Select Trigger",
+      "kind": "custom",
+      "refersTo": "select-trigger",
+      "description": "下拉选择触发器。12px 字号 + 卡片底色，比输入框更「实体」；展开态与悬浮态共用 accent 底。",
+      "html": "<button class=\"ds-select-trigger\"><span>gpt-5</span><svg class=\"ds-select-caret\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m6 9 6 6 6-6\"/></svg></button>",
+      "css": ".ds-select-trigger { display: inline-flex; width: fit-content; align-items: center; justify-content: space-between; gap: 0.375rem; height: 2rem; padding: 0 0.625rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--foreground); font-family: var(--font-sans); font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; } .ds-select-trigger:hover { background: var(--accent); } .ds-select-trigger:focus-visible { border-color: color-mix(in srgb, var(--primary) 50%, transparent); outline: none; } .ds-select-caret { width: 0.875rem; height: 0.875rem; opacity: 0.5; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "description": "项目没有 Card 组件——卡片是一条类名配方：12px 圆角 + 半透明边框 + 卡片底色（可叠 backdrop-blur）。静止态零阴影，hover 只换边框颜色与底色透明度。",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Session</div><p class=\"ds-card-body\">Refactor the theme registry so token writes go through one path.</p></div>",
+      "css": ".ds-card { border: 1px solid color-mix(in srgb, var(--border) 50%, transparent); border-radius: calc(var(--radius) + 4px); background: color-mix(in srgb, var(--card) 40%, transparent); padding: 0.75rem 0.875rem; backdrop-filter: blur(4px); font-family: var(--font-sans); color: var(--foreground); transition: border-color 0.2s ease, background-color 0.2s ease; } .ds-card:hover { border-color: color-mix(in srgb, var(--primary) 40%, transparent); background: color-mix(in srgb, var(--card) 60%, transparent); } .ds-card-title { font-size: 14px; font-weight: 500; margin-bottom: 0.375rem; } .ds-card-body { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); }"
+    },
+    {
+      "name": "Dialog",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "模态浮层。这是本系统里少数允许出现阴影的地方——浮层靠 backdrop 压暗 + shadow-md 建立层级，圆角比卡片大一档（12px）。",
+      "html": "<div class=\"ds-dialog-overlay\"><div class=\"ds-dialog\"><div class=\"ds-dialog-title\">Delete project</div><p class=\"ds-dialog-desc\">This removes the project from the sidebar. Files on disk are kept.</p><div class=\"ds-dialog-actions\"><button class=\"ds-btn-ghost\">Cancel</button><button class=\"ds-btn-primary\">Delete</button></div></div></div>",
+      "css": ".ds-dialog-overlay { display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgb(0 0 0 / 0.2); backdrop-filter: blur(2px); border-radius: calc(var(--radius) + 4px); } .ds-dialog { width: 100%; max-width: 28rem; border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); background: var(--popover); color: var(--popover-foreground); padding: 1rem; box-shadow: var(--shadow-md); font-family: var(--font-sans); font-size: 0.875rem; } .ds-dialog-title { font-size: 15px; font-weight: 500; line-height: 1.2; } .ds-dialog-desc { margin: 0.375rem 0 0; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); } .ds-dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; } .ds-dialog-actions .ds-btn-primary, .ds-dialog-actions .ds-btn-ghost { display: inline-flex; align-items: center; height: 2rem; padding: 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius); font-size: 0.875rem; font-weight: 500; line-height: 1; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; } .ds-dialog-actions .ds-btn-primary { background: var(--primary); color: var(--primary-foreground); } .ds-dialog-actions .ds-btn-primary:hover { background: color-mix(in srgb, var(--primary) 90%, transparent); } .ds-dialog-actions .ds-btn-ghost { background: transparent; color: var(--muted-foreground); } .ds-dialog-actions .ds-btn-ghost:hover { background: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--foreground); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "description": "分段控件。唯一的「凹槽」形态：容器用半透明黑白叠出内凹感，指示器是一块带 0.5px ring 的浮片，切换用 spring 滑动。这是系统里唯一被允许使用字面色值与任意阴影的组件（见 DESIGN.md 已知存量违规）。",
+      "html": "<div class=\"ds-segmented\"><span class=\"ds-segmented-thumb\"></span><button class=\"ds-segmented-item ds-segmented-item-active\">Coding</button><button class=\"ds-segmented-item\">Work</button></div>",
+      "css": ".ds-segmented { position: relative; display: inline-flex; flex-shrink: 0; border-radius: 8px; background: rgb(0 0 0 / 0.06); padding: 2px; font-family: var(--font-sans); } .ds-segmented-thumb { position: absolute; top: 2px; left: 2px; width: calc(50% - 2px); height: calc(100% - 4px); border-radius: 6px; background: var(--background); box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 0 0 0.5px rgb(0 0 0 / 0.04), inset 0 0 0 0.5px color-mix(in srgb, var(--primary) 30%, transparent); transition: transform 0.15s ease; } .ds-segmented-item { position: relative; z-index: 1; border: 0; background: transparent; border-radius: 6px; padding: 3px 10px; font-family: inherit; font-size: 11px; font-weight: 500; line-height: 16px; color: var(--muted-foreground); cursor: pointer; transition: color 0.15s ease; } .ds-segmented-item-active { color: var(--foreground); } .ds-segmented-item:focus-visible { outline: none; color: var(--foreground); }"
+    },
+    {
+      "name": "Switch",
+      "kind": "custom",
+      "refersTo": "switch",
+      "description": "开关，关 / 开两个状态并排给出。轨道 18.4px 高，滑块 16px；滑块外的不可见点击区把命中范围横向扩到 56px、纵向扩到 34px——18.4px 的开关按真实尺寸点击对鼠标极不友好。",
+      "html": "<span class=\"ds-switch-row\"><button class=\"ds-switch\" role=\"switch\" aria-checked=\"false\" aria-label=\"Off\"><span class=\"ds-switch-thumb\"></span></button><button class=\"ds-switch ds-switch-on\" role=\"switch\" aria-checked=\"true\" aria-label=\"On\"><span class=\"ds-switch-thumb\"></span></button></span>",
+      "css": ".ds-switch-row { display: inline-flex; align-items: center; gap: 1rem; } .ds-switch { position: relative; display: inline-flex; flex-shrink: 0; align-items: center; width: 32px; height: 18.4px; padding: 0; border: 1px solid transparent; border-radius: 9999px; background: var(--input); cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; } .ds-switch::after { content: \"\"; position: absolute; inset: -8px -12px; } .ds-switch-thumb { display: block; width: 16px; height: 16px; border-radius: 9999px; background: var(--foreground); transform: translateX(0); transition: transform 0.15s ease, background-color 0.15s ease; pointer-events: none; } .ds-switch-on { background: var(--primary); } .ds-switch-on .ds-switch-thumb { background: var(--primary-foreground); transform: translateX(14px); } .ds-switch:focus-visible { border-color: var(--ring); outline: none; }"
+    },
+    {
+      "name": "Spin",
+      "kind": "custom",
+      "description": "全局唯一加载指示器：两颗小球黏连 → 分离 → 整体旋转。黏连靠 SVG 高斯模糊 + alpha 对比度拉伸滤镜。颜色取 currentColor 跟随容器文字色；尺寸只有 sm 16 / md 24 / lg 40 三档。prefers-reduced-motion 下停在两球分离的静止态，而不是停止动画（停在起点会只剩一个黏在一起的圆点，看不出是加载中）。",
+      "html": "<div class=\"ds-spin-wrap\"><div class=\"ds-spin\"></div><svg width=\"0\" height=\"0\" aria-hidden=\"true\" style=\"position:absolute\"><defs><filter id=\"ds-spin-ooze\"><feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"3.744\" result=\"blur\"/><feColorMatrix in=\"blur\" mode=\"matrix\" values=\"1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7\" result=\"ooze\"/><feBlend in=\"SourceGraphic\" in2=\"ooze\"/></filter></defs></svg></div>",
+      "css": "@keyframes ds-spin-rotate { 0%, 49.999%, 100% { transform: none; } 50%, 99.999% { transform: rotate(90deg); } } @keyframes ds-spin-shift-left { 0%, 100% { transform: translateX(0); } 50% { transform: scale(0.65) translateX(-75%); } } @keyframes ds-spin-shift-right { 0%, 100% { transform: translateX(0); } 50% { transform: scale(0.65) translateX(75%); } } .ds-spin-wrap { display: inline-flex; align-items: center; justify-content: center; color: var(--muted-foreground); } .ds-spin { position: relative; width: 24px; height: 12px; animation: ds-spin-rotate 1.6s linear infinite; filter: url(#ds-spin-ooze); } .ds-spin::before, .ds-spin::after { content: \"\"; position: absolute; top: 0; left: 25%; width: 50%; height: 100%; background: currentColor; border-radius: 100%; } .ds-spin::before { animation: ds-spin-shift-left 0.8s ease infinite; } .ds-spin::after { animation: ds-spin-shift-right 0.8s ease infinite; } @media (prefers-reduced-motion: reduce) { .ds-spin { animation: none; } .ds-spin::before { animation: none; transform: scale(0.65) translateX(-75%); } .ds-spin::after { animation: none; transform: scale(0.65) translateX(75%); } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Workbench",
+    "overview": "这是一套工具的视觉系统，不是展厅。北极星取 local-first 的字面含义：工具摊开在用户自己的台面上，伸手可及、标识清晰、不加装饰。工作台的美学前提是长期使用——用户会在这里连续待上数小时，所以这套系统把可读性、状态可见性和视觉安静度放在表现欲之前。暗色是出厂默认，近黑的台面降低整屏亮度，让内容本身成为唯一亮点。\n\n视觉上由无彩刻度主导：默认主题把主色压成骨白与纯黑，其余全部是中性灰阶。颜色在这里不是氛围，而是信号——只有「运行中 / 待处理 / 错误」三种语义才配得到色相。这与产品承诺「可审查胜过魔法」一致：界面上任何一处颜色都应当在回答一个问题，而不是在营造一种情绪。\n\n结构上靠 1px 边框 + 背景透明度分层，而不是靠阴影和圆角堆叠。卡片默认完全无阴影，深度是浮层的专属信号。控件刻意做小（按钮高 24-36px，标签字号 11-13px），把像素留给内容。动效只做反馈、不做表演。",
+    "keyCharacteristics": [
+      "无彩主导：默认主题零色相，颜色只承担语义",
+      "平坦分层：1px border + bg 透明度，卡片恒 0 阴影",
+      "token 单一入口：颜色/阴影/圆角只从 @theme inline 取，禁止硬编",
+      "运行时主题化：3 套主题 × 明暗，全部由 CSS 变量驱动",
+      "小尺寸高密度：控件偏小，字号梯度严格限定在 7 档",
+      "动效克制：hover 上限 2px 位移，无装饰性循环动画"
+    ],
+    "rules": [
+      { "name": "The Token-Only Rule", "body": "颜色只有一个合法来源：通过 @theme inline 暴露的 token 工具类及其 /N alpha 变体。任何 hex / rgb() / hsl() 字面量、Tailwind 默认调色盘、自定义 style={{ color }} 都违规。", "section": "colors" },
+      { "name": "The Achromatic Default Rule", "body": "默认主题不带任何色相。想「加点颜色让界面好看点」时，正确答案是调整层级与间距，不是引入色相。", "section": "colors" },
+      { "name": "The One Signal Rule", "body": "语义色每屏最多出现一次作为主信号。同时出现「运行中 + 待处理 + 错误」三个彩色标记时，用户就不再能一眼定位问题所在。", "section": "colors" },
+      { "name": "The Alpha Ladder Rule", "body": "透明度只允许 /5 /10 /15 /20 /25 /30 /40 /50 /60 /70 /80 这些档位。随手写 /37 会让透明度体系失去可预测性。", "section": "colors" },
+      { "name": "The Seven-Step Rule", "body": "字号只允许 10 / 11 / 12 / 13 / 14 / 15 / 20+ 七档。需要「再大一点」时，说明层级设计还没想清楚，而不是需要一个新档位。", "section": "typography" },
+      { "name": "The Monospace-Is-For-Data Rule", "body": "等宽字体只用于代码、数据、测量值和路径。不要用它来给界面「加技术感」——那是戏服。", "section": "typography" },
+      { "name": "The Rhythm Rule", "body": "同一页只用一个间距节奏，且标题上方的空间永远大于下方。", "section": "layout" },
+      { "name": "The No-Fixed-Grid Rule", "body": "卡片网格一律用 auto-fill + minmax 自适应；写死列数会在用户拉窄窗口时立刻破版。", "section": "layout" },
+      { "name": "The Flat-By-Default Rule", "body": "静止态是平的。深度只在两种情况下出现：元素浮在内容之上（浮层），或元素正在被拖拽。", "section": "elevation" },
+      { "name": "The Border-Not-Shadow Rule", "body": "需要在视觉上分隔两个面时，先加 1px 边框或改背景透明度；确认这两条都不够，再考虑这是否真的是一层浮层。", "section": "elevation" },
+      { "name": "The One-Pixel Rule", "body": "全界面只有一种线宽。出现第二种线宽时，用户会下意识认为它有含义——而它没有。描边线（border、divider、outline、SVG stroke）恒为 1px；唯一的例外是「实心领圈」——Slider 滑块与 Switch 轨道那圈用来把自己从底色上切出来的背景色色带（ring-2 / ring-4），它画的是块不是线。", "section": "elevation" },
+      { "name": "The Radius-Follows-Size Rule", "body": "圆角随元素尺寸缩小：大容器 rounded-xl、控件 rounded-lg、小控件 min(radius-md, 10~12px)、药丸形 rounded-full。不要给 24px 高的按钮套 12px 圆角。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 所有颜色走 @theme inline 暴露的 token 工具类及其 /N alpha 变体。",
+      "Do 需要透明混合时用 color-mix(in srgb, var(--primary) X%, transparent)。",
+      "Do 让静止态保持平坦：分隔靠 1px 边框与背景透明度。",
+      "Do 把阴影留给浮层（popover / dialog / dropdown / 拖拽中元素），沿用 styles.css 已有的 8 档 token。",
+      "Do 用 ring 表达选中与 focus：ring-1 ring-inset ring-primary/30、bg-primary/10、border-primary/40。",
+      "Do 描边线只用 1px；要加重分隔就换更深的 token 颜色或叠 bg-*。",
+      "Do 让圆角随尺寸缩小。",
+      "Do 只在七档字号里选（10 / 11 / 12 / 13 / 14 / 15 / 20+）。",
+      "Do 用 auto-fill + minmax 做卡片网格（小卡 240px、行式列表 320px）。",
+      "Do 新图标优先 solar linear（icon-[solar--*-linear]），其次 mdi。",
+      "Do 顶栏留 <div className=\"drag-region h-12 shrink-0\" /> 作可拖拽空白，交互元素套 .no-drag。"
+    ],
+    "donts": [
+      "Don't 用渐变填充文字当强调。强调靠字重与字号——渐变文字会在任何背景与任何主题下产生不可控的对比度。",
+      "Don't 写 hex / rgb() / hsl() 字面量、Tailwind 默认调色盘，或 style={{ color: '#...' }}。",
+      "Don't 给卡片 hover 加阴影，或使用任何 shadow-[...] 自定义任意值，或带主色的发光阴影。",
+      "Don't 卡片 hover 时联动 scale / rotate / 阴影；位移上限 2px。",
+      "Don't 用 border-2/4、outline-2、border-[Npx] 画线——描边线只有 1px。ring-2 / ring-4 只允许用作实心领圈，不允许当作描边。",
+      "Don't 用 rounded-3xl 或任意 rounded-[Npx]。",
+      "Don't 写 transition-all，也不要写长于 0.6s 的进入动画。",
+      "Don't 在业务组件里自写 @keyframes ... infinite 做「进行中」指示。两条合法路径：常驻指示走宿主统一挂载，加载指示用现成的 Spin。Spin 自己那份无限 keyframes 是全局单例基元，属于被允许的例外。",
+      "Don't 在组件里手写 ::-webkit-scrollbar / scrollbar-width，也不要单独覆盖 ::selection。",
+      "Don't 机械地给每个 token 类再写一份 dark:——绝大多数 token 颜色会自适应。例外：当一个部件的两个面在同一模式下对比度不足时（如 Switch 的轨道与滑块），该部件必须按模式调换前后景 token。判断标准是对比度，不是「补一份更保险」。",
+      "Don't 在 drag-region 内放交互元素（必须放时套 .no-drag）。",
+      "Don't 引入 solar / mdi 之外的图标 collection。"
+    ]
+  }
+}
