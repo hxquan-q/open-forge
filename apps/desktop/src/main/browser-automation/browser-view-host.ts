@@ -287,7 +287,7 @@ export interface InAppBrowserViewHostRuntime {
  * 生产装配点（主进程入口注册 IPC 时调用一次）。窗口读取与 `WebContentsView`
  * 构造都必须来自静态 import 的模块：main 进程是单文件 bundle，
  * `createRequire(import.meta.url)("../window-manager.js")` 这类运行时相对路径
- * 会解析到 dist/ 根并抛「Cannot find module」，attach 整条链路随之失效（BUG-0040）。
+ * 会解析到 dist/ 根并抛「Cannot find module」，attach 整条链路随之失效（BUG-0050）。
  */
 export function configureInAppBrowserViewHostDeps(deps: InAppBrowserViewHostRuntime): void {
 	runtimeDeps = deps;

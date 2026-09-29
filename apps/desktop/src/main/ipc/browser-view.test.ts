@@ -5,7 +5,7 @@ import { BROWSER_VIEW_CHANNELS, type DesktopBrowserViewBounds } from "../../shar
 const BOUNDS: DesktopBrowserViewBounds = { x: 8, y: 16, width: 640, height: 480 };
 
 /**
- * 生产装配合同（BUG-0040）：`registerBrowserViewIpc` 是内置浏览器 view 的唯一装配点，
+ * 生产装配合同（BUG-0050）：`registerBrowserViewIpc` 是内置浏览器 view 的唯一装配点，
  * 必须把主窗口读取与 `WebContentsView` 构造静态接进宿主。此前宿主自己用
  * `createRequire(import.meta.url)` 解析相对路径，main bundle 下 attach 整条抛错，
  * 本用例覆盖的正是那条没有任何测试的装配缝。

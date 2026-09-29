@@ -25,7 +25,7 @@ const CHANNELS = BROWSER_VIEW_CHANNELS;
 /**
  * guest view 的构造留在主进程装配点：`WebContentsView` 与 `getMainWindow` 都是
  * 静态 import，随 main bundle 一起打包。宿主内部不得再做运行时相对路径 require
- * （单文件 bundle 下解析必然失败，见 BUG-0040）。
+ * （单文件 bundle 下解析必然失败，见 BUG-0050）。
  */
 function createInAppBrowserView(): BrowserViewHandle {
 	return new WebContentsView({

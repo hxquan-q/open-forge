@@ -265,7 +265,7 @@ describe("InAppBrowserViewHost", () => {
 	it("装配前的 getInAppBrowserViewHost 报明确错误，不自解析运行时相对路径依赖", () => {
 		resetInAppBrowserViewHostForTests();
 		// 回归：宿主此前用 createRequire(import.meta.url)("../window-manager.js") 取窗口，
-		// main 单文件 bundle 下该路径不存在，attach 在 IPC 处理器里整条抛错（BUG-0040）。
+		// main 单文件 bundle 下该路径不存在，attach 在 IPC 处理器里整条抛错（BUG-0050）。
 		expect(() => getInAppBrowserViewHost().attach({ workspaceId: "ws-1", bounds: BOUNDS })).toThrow(/not configured/);
 
 		const win = new FakeWindow();
