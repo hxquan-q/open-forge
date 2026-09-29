@@ -16,6 +16,9 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0050` | 打包版内置浏览器视图建不起来，宿主在运行时按相对路径 require 主进程模块 | verifying | P1 | — |
+| `BUG-0051` | 注入 guest 的脚本引用网页里不存在的打包器辅助函数，浏览器交互命令全部异常终止 | verifying | P1 | — |
+| `BUG-0052` | 注入 guest 的脚本缺少 return，点选与快照结果恒为 undefined | verifying | P1 | — |
 | `BUG-0046` | Windows 上 PATH 含 GNU tar 时托管 Node runtime 解压 zip 必失败 | verifying | P1 | — |
 | `BUG-0047` | 主进程 stdout pipe 断开后 uncaughtException 日志自反馈风暴 | verifying | P1 | — |
 | `BUG-0049` | Windows 上 ControlMaster fd 传递失败，SSH 主机全部不可连接 | done | P1 | — |
