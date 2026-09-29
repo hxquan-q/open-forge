@@ -5,7 +5,10 @@ import {
 	type BrowserViewContents,
 	type BrowserViewHandle,
 	type BrowserViewHostWindow,
+	configureInAppBrowserViewHostDeps,
+	getInAppBrowserViewHost,
 	InAppBrowserViewHost,
+	resetInAppBrowserViewHostForTests,
 } from "./browser-view-host.js";
 import { resetInAppBrowserSessionControllerForTests } from "./webview-session-controller.js";
 
@@ -257,5 +260,63 @@ describe("InAppBrowserViewHost", () => {
 			send: () => undefined,
 		});
 		expect(emptyHost.attach({ workspaceId: "ws", bounds: BOUNDS })).toBeNull();
+	});
+
+	it("装配前的 getInAppBrowserViewHost 报明确错误，不自解析运行时相对路径依赖", () => {
+		resetInAppBrowserViewHostForTests();
+		// 回归：宿主此前用 createRequire(import.meta.url)("../window-manager.js") 取窗口，
+		// main 单文件 bundle 下该路径不存在，attach 在 IPC 处理器里整条抛错（BUG-0040）。
+		expect(() => getInAppBrowserViewHost().attach({ workspaceId: "ws-1", bounds: BOUNDS })).toThrow(/not configured/);
+
+		const win = new FakeWindow();
+		const views: FakeView[] = [];
+		configureInAppBrowserViewHostDeps({
+			getWindow: () => win,
+			createView: () => {
+				const view = new FakeView();
+				views.push(view);
+				return view;
+			},
+		});
+		expect(getInAppBrowserViewHost().attach({ workspaceId: "ws-1", bounds: BOUNDS })?.workspaceId).toBe("ws-1");
+		expect(win.added).toEqual([views[0]]);
+		resetInAppBrowserViewHostForTests();
+	});
+
+	it("attach 的 loadURL 被后继导航中止（ERR_ABORTED）时不报失败，真实失败推给 renderer", async () => {
+		const { host, views, events } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
+		const contents = views[0].webContents;
+
+		contents.loadURL = async (url: string) => {
+			throw new Error(`ERR_ABORTED (-3) loading '${url}'`);
+		};
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, url: "https://a.example" });
+		await Promise.resolve();
+		expect(events.every((envelope) => !envelope.state.failed)).toBe(true);
+
+		contents.loadURL = async (url: string) => {
+			throw new Error(`ERR_NAME_NOT_RESOLVED (-105) loading '${url}'`);
+		};
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, url: "https://nope.example" });
+		await vi.waitFor(() => expect(events.at(-1)?.state.failed).toBe(true));
+	});
+
+	it("navigate 被中止视为让位（ok:true），真实失败才回 load_failed 并推失败态", async () => {
+		const { host, views, events } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
+		const contents = views[0].webContents;
+
+		contents.loadURL = async (url: string) => {
+			throw new Error(`ERR_ABORTED (-3) loading '${url}'`);
+		};
+		expect(await host.navigate("ws-1", "https://b.example")).toEqual({ ok: true });
+		expect(events.filter((envelope) => envelope.state.failed)).toEqual([]);
+
+		contents.loadURL = async (url: string) => {
+			throw new Error(`ERR_CONNECTION_REFUSED (-102) loading '${url}'`);
+		};
+		expect(await host.navigate("ws-1", "https://c.example")).toEqual({ ok: false, code: "load_failed" });
+		expect(events.at(-1)?.state).toMatchObject({ failed: true, loading: false });
 	});
 });

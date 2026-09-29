@@ -9,8 +9,12 @@ import { BrowserRuntimeManager } from "./browser-runtime-manager.js";
 
 export { BrowserAutomationService } from "./browser-automation-service.js";
 export {
+	type BrowserViewHandle,
+	type BrowserViewHostWindow,
+	configureInAppBrowserViewHostDeps,
 	getInAppBrowserViewHost,
 	InAppBrowserViewHost,
+	type InAppBrowserViewHostRuntime,
 	resetInAppBrowserViewHostForTests,
 	setInAppBrowserViewEventSink,
 } from "./browser-view-host.js";

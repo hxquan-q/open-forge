@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { ipcMain } from "electron";
+import { ipcMain, WebContentsView } from "electron";
 import {
 	BROWSER_VIEW_CHANNELS,
 	type DesktopBrowserViewAttachRequest,
@@ -10,10 +10,32 @@ import {
 	type DesktopBrowserViewPassthroughRequest,
 	type DesktopBrowserViewUpdateRequest,
 } from "../../shared/browser-view-ipc.js";
-import { getInAppBrowserViewHost, setInAppBrowserViewEventSink } from "../browser-automation/browser-view-host.js";
+import {
+	type BrowserViewHandle,
+	type BrowserViewHostWindow,
+	configureInAppBrowserViewHostDeps,
+	getInAppBrowserViewHost,
+	setInAppBrowserViewEventSink,
+} from "../browser-automation/browser-view-host.js";
+import { IN_APP_BROWSER_PARTITION } from "../browser-automation/webview-session-controller.js";
 import { getMainWindow } from "../window-manager.js";
 
 const CHANNELS = BROWSER_VIEW_CHANNELS;
+
+/**
+ * guest view 的构造留在主进程装配点：`WebContentsView` 与 `getMainWindow` 都是
+ * 静态 import，随 main bundle 一起打包。宿主内部不得再做运行时相对路径 require
+ * （单文件 bundle 下解析必然失败，见 BUG-0040）。
+ */
+function createInAppBrowserView(): BrowserViewHandle {
+	return new WebContentsView({
+		webPreferences: {
+			partition: IN_APP_BROWSER_PARTITION,
+			contextIsolation: true,
+			nodeIntegration: false,
+		},
+	}) as unknown as BrowserViewHandle;
+}
 
 function readWorkspaceId(value: unknown): string | undefined {
 	if (typeof value !== "object" || value === null) return undefined;
@@ -35,6 +57,10 @@ const CONTROL_ACTIONS = new Set(["back", "forward", "reload", "stop"]);
 
 /** 内置浏览器 WebContentsView 宿主：renderer 上报占位矩形，主进程摆 view。 */
 export function registerBrowserViewIpc(): () => void {
+	configureInAppBrowserViewHostDeps({
+		getWindow: () => getMainWindow() as unknown as BrowserViewHostWindow | null,
+		createView: createInAppBrowserView,
+	});
 	const host = getInAppBrowserViewHost();
 	setInAppBrowserViewEventSink((envelope) => {
 		const win = getMainWindow();

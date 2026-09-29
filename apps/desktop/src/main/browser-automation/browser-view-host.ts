@@ -1,5 +1,4 @@
 // Copyright The Open Forge contributors.
-import { createRequire } from "node:module";
 import { isAllowedBrowserTabUrl } from "@vetta/coding-agent/function-extensions";
 import type {
 	DesktopBrowserViewBounds,
@@ -7,8 +6,16 @@ import type {
 	DesktopBrowserViewEventEnvelope,
 	DesktopBrowserViewState,
 } from "../../shared/browser-view-ipc.js";
-import { IN_APP_BROWSER_PARTITION } from "./webview-session-controller.js";
 import { bindInAppBrowserViewContents } from "./webview-session-host.js";
+
+/**
+ * `loadURL` 在导航被后继导航取代或手动停止时以 `ERR_ABORTED (-3)` 拒绝，
+ * 与 `did-fail-load` 的 -3 同义：那是让位，不是加载失败。
+ */
+function isAbortedNavigation(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+	return /\bERR_ABORTED\b|\(-3\)/.test(message);
+}
 
 /** Electron WebContentsView 的最小面，测试用 fake 注入。 */
 export interface BrowserViewHandle {
@@ -89,7 +96,9 @@ export class InAppBrowserViewHost {
 		record.view.setVisible(record.visible);
 		const url = request.url?.trim();
 		if (url && url !== record.view.webContents.getURL()) {
-			void record.view.webContents.loadURL(url).catch(() => this.markFailed(record));
+			void record.view.webContents
+				.loadURL(url)
+				.catch((error: unknown) => this.onLoadRejected(request.workspaceId, record, error));
 		}
 		return this.stateOf(request.workspaceId, record);
 	}
@@ -124,7 +133,8 @@ export class InAppBrowserViewHost {
 		try {
 			await record.view.webContents.loadURL(url);
 			return { ok: true };
-		} catch {
+		} catch (error) {
+			if (isAbortedNavigation(error)) return { ok: true };
 			record.failed = true;
 			record.loading = false;
 			this.emit(workspaceId, record);
@@ -228,9 +238,16 @@ export class InAppBrowserViewHost {
 		});
 	}
 
-	private markFailed(record: ViewRecord): void {
+	/**
+	 * `loadURL` 的拒绝与 `did-fail-load` 是同一件事的两个出口：后者已在监听里
+	 * 过滤 -3，这里同样把「被后继导航取代/手动停止」当成正常让位。真实失败此前
+	 * 只改内部标记不发事件，renderer 永远收不到失败态，故补 emit。
+	 */
+	private onLoadRejected(workspaceId: string, record: ViewRecord, error: unknown): void {
+		if (isAbortedNavigation(error)) return;
 		record.failed = true;
 		record.loading = false;
+		this.emit(workspaceId, record);
 	}
 
 	private stateOf(workspaceId: string, record: ViewRecord): DesktopBrowserViewState {
@@ -254,33 +271,41 @@ export class InAppBrowserViewHost {
 
 let sharedHost: InAppBrowserViewHost | undefined;
 let viewEventSink: BrowserViewEventSink = () => undefined;
+let runtimeDeps: InAppBrowserViewHostRuntime | undefined;
 
 export function setInAppBrowserViewEventSink(sink: BrowserViewEventSink): void {
 	viewEventSink = sink;
 }
 
-const lazyRequire = createRequire(import.meta.url);
+/** 宿主自身拿不到的两项主进程依赖（窗口读取、view 构造），由装配点注入。 */
+export interface InAppBrowserViewHostRuntime {
+	readonly getWindow: () => BrowserViewHostWindow | null;
+	readonly createView: () => BrowserViewHandle;
+}
 
-function createRealBrowserView(): BrowserViewHandle {
-	// 延迟加载 electron：host 单测不拉起 Electron 运行时。
-	const { WebContentsView } = lazyRequire("electron") as typeof import("electron");
-	return new WebContentsView({
-		webPreferences: {
-			partition: IN_APP_BROWSER_PARTITION,
-			contextIsolation: true,
-			nodeIntegration: false,
-		},
-	}) as unknown as BrowserViewHandle;
+/**
+ * 生产装配点（主进程入口注册 IPC 时调用一次）。窗口读取与 `WebContentsView`
+ * 构造都必须来自静态 import 的模块：main 进程是单文件 bundle，
+ * `createRequire(import.meta.url)("../window-manager.js")` 这类运行时相对路径
+ * 会解析到 dist/ 根并抛「Cannot find module」，attach 整条链路随之失效（BUG-0040）。
+ */
+export function configureInAppBrowserViewHostDeps(deps: InAppBrowserViewHostRuntime): void {
+	runtimeDeps = deps;
+}
+
+function requireRuntimeDeps(): InAppBrowserViewHostRuntime {
+	if (!runtimeDeps) {
+		throw new Error(
+			"in-app browser view host is not configured: call configureInAppBrowserViewHostDeps at main startup",
+		);
+	}
+	return runtimeDeps;
 }
 
 export function getInAppBrowserViewHost(): InAppBrowserViewHost {
 	sharedHost ??= new InAppBrowserViewHost({
-		getWindow: () => {
-			// 延迟 import 同因：保持模块可在 node 测试环境载入。
-			const { getMainWindow } = lazyRequire("../window-manager.js") as typeof import("../window-manager.js");
-			return getMainWindow() as unknown as BrowserViewHostWindow | null;
-		},
-		createView: createRealBrowserView,
+		getWindow: () => requireRuntimeDeps().getWindow(),
+		createView: () => requireRuntimeDeps().createView(),
 		send: (envelope) => viewEventSink(envelope),
 	});
 	return sharedHost;
@@ -289,4 +314,5 @@ export function getInAppBrowserViewHost(): InAppBrowserViewHost {
 export function resetInAppBrowserViewHostForTests(): void {
 	sharedHost = undefined;
 	viewEventSink = () => undefined;
+	runtimeDeps = undefined;
 }
