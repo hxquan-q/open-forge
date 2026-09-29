@@ -1,7 +1,7 @@
 ---
 id: TASK-0068
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/plugins/plugin-sdk
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: []
 conflicts_with: [TASK-0027]
 integration_status: integrated
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 

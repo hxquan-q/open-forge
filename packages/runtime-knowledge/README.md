@@ -18,3 +18,14 @@ Runtime-owned Knowledge capability for Agent hosts.
 Hosts must pass the Knowledge root explicitly. Node application hosts can bind this package through
 `createNodeKnowledgeRuntime(root)` from `@vetta/runtime-node/host`; this package never selects the default
 `~/.vetta/knowledges` location or reads a process-level enablement switch.
+
+
+## Context Boundary
+
+```yaml
+purpose: Knowledge-base runtime: KB storage, tags and page contracts
+provides:  
+  - "@vetta/runtime-knowledge"
+consumes:  []
+internal_dependencies:  []
+```

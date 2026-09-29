@@ -3,6 +3,7 @@ import {
 	createNodeHostSessionCommandEnvironment,
 	createNodeSandboxCodingToolEnvironment,
 } from "@vetta/runtime-node/coding";
+import { clearSessionGrants } from "@vetta/runtime-node/sandbox";
 import type {
 	CodingAgentSessionExecutionEnvironment,
 	CodingAgentSessionExecutionEnvironmentContext,
@@ -52,6 +53,8 @@ export function createCodingAgentNodeSessionExecutionEnvironment(
 					writePathPolicy: createCodingAgentWritePathPolicy(pathPolicy.boundaries),
 					configurationSource: context.configurationSource,
 				}),
+			// ADR-0133 §5(TM-07):mode flip 时清掉本会话 grant 缓存。
+			clearSessionGrants,
 		},
 		dispose: () => command.dispose(),
 	};

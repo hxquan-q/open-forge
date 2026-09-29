@@ -3,7 +3,9 @@ import { FILE_EDITOR_SAVE_EVENT } from "@/shared/shortcuts";
 import { Button } from "@shared/components/ui/button";
 import { SegmentedControl } from "@shared/components/ui/segmented-control";
 import { Textarea } from "@shared/components/ui/textarea";
+import { cn } from "@shared/lib/utils";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type {
 	CanvasEditorView,
 	CanvasSelectedView,
@@ -60,25 +62,27 @@ export function CanvasTabPanelView({ model }: { readonly model: CanvasTabModel }
 					value={model.section}
 					onChange={model.actions.selectSection}
 				/>
-				<div className="ml-auto flex shrink-0 items-center gap-1">
-					<Button
-						size="sm"
-						variant="outline"
-						disabled={model.groups.length === 0}
-						onClick={model.actions.saveAllArtifacts}
-					>
-						{model.labels.saveAllToProject}
-					</Button>
-					<Button
-						size="sm"
-						variant="ghost"
-						className="text-destructive hover:text-destructive"
-						disabled={model.groups.length === 0}
-						onClick={model.actions.discardAllArtifacts}
-					>
-						{model.labels.discardAll}
-					</Button>
-				</div>
+				{model.section === "artifacts" ? (
+					<div className="ml-auto flex shrink-0 items-center gap-1">
+						<Button
+							size="sm"
+							variant="outline"
+							disabled={model.groups.length === 0}
+							onClick={model.actions.saveAllArtifacts}
+						>
+							{model.labels.saveAllToProject}
+						</Button>
+						<Button
+							size="sm"
+							variant="ghost"
+							className="text-destructive hover:text-destructive"
+							disabled={model.groups.length === 0}
+							onClick={model.actions.discardAllArtifacts}
+						>
+							{model.labels.discardAll}
+						</Button>
+					</div>
+				) : null}
 			</div>
 			{model.section === "changes" ? (
 				<CanvasChangesOverview model={model} />
@@ -153,7 +157,10 @@ function CanvasChangesOverview({ model }: { readonly model: CanvasTabModel }): J
 							size="sm"
 							variant="ghost"
 							aria-pressed={model.selectedChange?.path === file.path}
-							className="w-full justify-start gap-2"
+							className={cn(
+								"w-full justify-start gap-2",
+								model.selectedChange?.path === file.path && "bg-primary/10 text-foreground",
+							)}
 							onClick={() => model.actions.selectChange(file.path)}
 						>
 							<span className="truncate text-[12px] text-foreground">{file.path}</span>
@@ -231,7 +238,7 @@ function CanvasPreview({
 }): JSX.Element {
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+			<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
 				<Button size="sm" variant="ghost" onClick={model.actions.back}>
 					{model.labels.back}
 				</Button>
@@ -349,7 +356,7 @@ function CanvasContentEditor({
 				aria-label={model.labels.editorLabel}
 				value={editor.draft}
 				onChange={(event) => model.actions.updateDraft(event.target.value)}
-				className="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent font-mono text-[12px] leading-relaxed focus-visible:border-0 md:text-[12px]"
+				className="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent font-mono text-[12px] leading-relaxed focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/50 md:text-[12px]"
 			/>
 			<div className="flex shrink-0 items-center gap-2 border-t border-border px-3 py-2">
 				<Button size="sm" onClick={model.actions.saveDraft} disabled={editor.saving}>
@@ -421,6 +428,7 @@ function CanvasTextPreview({
 	readonly model: CanvasTabModel;
 	readonly selected: CanvasSelectedView;
 }): JSX.Element {
+	const { t } = useTranslation("chat");
 	return (
 		<div
 			data-testid="canvas-text-preview"
@@ -430,7 +438,12 @@ function CanvasTextPreview({
 			onKeyUp={(event) => model.actions.onPreviewSelectionChange(event.currentTarget)}
 		>
 			{selected.previewKind === "code" ? (
-				<CodePreview content={selected.content} extension={selected.extension.replace(/^\./, "")} theme={model.theme} />
+				<CodePreview
+					content={selected.content}
+					extension={selected.extension.replace(/^\./, "")}
+					theme={model.theme}
+					degradationNotice={t("preview.degraded.artifact")}
+				/>
 			) : (
 				<MarkdownPreview content={selected.content} />
 			)}

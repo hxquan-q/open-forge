@@ -176,6 +176,18 @@ Then：用户可见结果、公开返回值、持久化事实或必要副作用�
 - 同一 Task 不拆给多个 Worker 同时写；拆分后必须声明 `depends_on`、`conflicts_with` 和 `exclusive_paths`；
 - Coordinator 负责最终集成、影响测试、质量门禁和 Push，Worker 不直接 Push 共享分支。
 
+## Open Forge Task 分支与集成发布流程
+
+本仓库 branch/worktree 操作以 [`project/collaboration/development-workflow.md`](../../../project/collaboration/development-workflow.md) 为完整合同；提交/推送遵守根 `AGENTS.md`。简要规则：
+
+- 长期本地集成分支是 `main`；并行代码 Task 各自使用从本地 `main` 创建的 `task/TASK-xxxx-<slug>` Worktree。不要维护长期本地 `dev` / `forge/dev`。
+- Worker 只在 Task Worktree 实现、测试并原子提交到自己的 Task branch，不直接 push 共享 `dev`；失败或验证不充分时保留 Task branch/Worktree，不集成、不推送。
+- Coordinator 按依赖/冲突顺序把 Task branch 合入本地 `main`，运行集成影响测试和 `bun run check`，记录 Task 为 `done/integrated`。确认 `git log origin/dev..main` 仅含已验收工作后，按用户给出的长期授权执行 `git push origin main:dev`；只允许 fast-forward，不 force。
+- `origin/dev` 是集成候选；用户阶段性把 `origin/dev` 合入稳定 `origin/main`。Agent 不直接 push/merge `origin/main`，不向 `upstream` push。
+- 只有已合入并推送至 `origin/dev`、worktree 干净且无锁/未推送提交的 Task 才清理：`bun run worktree:remove --task TASK-xxxx`。默认拒绝删除可能含工作的 Worktree，不以 `--force` 作常规清理。
+
+因此，Task Intake 输出并发计划时要区分 Worker 完成测试、Coordinator 集成测试与 `origin/dev` 发布三个门槛，并明确 `origin/main` 的阶段晋升属于用户。
+
 ## 测试路由
 
 按风险选择最低但充分的层级：

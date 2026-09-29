@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 产品级内置 Tool 激活名称。
  *
@@ -25,6 +26,8 @@ export const CODING_AGENT_BUILT_IN_TOOL_NAMES = [
 	"kb_write_page",
 	"kb_filter_by_tags",
 	"kb_list_available_tags",
+	"research_scope",
+	"dataset_profile",
 ] as const;
 
 export type CodingAgentBuiltInToolName = (typeof CODING_AGENT_BUILT_IN_TOOL_NAMES)[number];

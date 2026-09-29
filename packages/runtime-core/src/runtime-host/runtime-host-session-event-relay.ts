@@ -62,6 +62,8 @@ export class RuntimeHostSessionEventRelay {
 		WeakMap<(event: SessionEvent) => void, string>
 	>();
 	private readonly nextSequences = new Map<string, number>();
+	/** 每个会话最近一次事件的时间戳：宿主侧唯一的逐事件活动证据，供停滞判定使用。 */
+	private readonly lastEventAt = new Map<string, number>();
 	private readonly runningSessionPaths = new Set<string>();
 	private readonly runningChangedHandlers = new Set<
 		(sessionPath: string, running: boolean, sessionId?: string, reason?: RunningChangedReason) => void
@@ -98,6 +100,7 @@ export class RuntimeHostSessionEventRelay {
 		this.inFlightBuffers.set(sessionKey, buffer);
 		const unsubscribe = eventStream.subscribe((unsequencedEvent) => {
 			const event = this.withSequence(sessionKey, unsequencedEvent);
+			this.lastEventAt.set(sessionKey, event.timestamp);
 			if (event.type === "session.context.state") this.contextStateEvents.set(sessionKey, event);
 			this.options.synchronizeSessionIdentity(sessionKey, handle);
 			this.observeSessionError(event);
@@ -216,6 +219,11 @@ export class RuntimeHostSessionEventRelay {
 		return this.currentTurnStartedAt.get(sessionKey);
 	}
 
+	/** 最近一次观察到该会话事件的时间戳（事件自身时钟）；无任何事件前为 undefined。 */
+	readLastEventAt(sessionKey: string): number | undefined {
+		return this.lastEventAt.get(sessionKey);
+	}
+
 	getRunningSessionPaths(): string[] {
 		return Array.from(this.runningSessionPaths);
 	}
@@ -237,6 +245,7 @@ export class RuntimeHostSessionEventRelay {
 		this.externalSubscribers.delete(sessionKey);
 		this.externalSubscriberActiveToolFingerprints.delete(sessionKey);
 		this.currentTurnStartedAt.delete(sessionKey);
+		this.lastEventAt.delete(sessionKey);
 		this.nextSequences.delete(sessionKey);
 		this.contextStateEvents.delete(sessionKey);
 		this.markRunning(sessionPath, false, sessionId);

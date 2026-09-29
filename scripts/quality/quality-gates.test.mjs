@@ -28,6 +28,7 @@ import {
 } from "./lib.mjs";
 import { createChangedTestPlan, parseArgs } from "./test-changed.mjs";
 import { createImpactTestPlan, parseImpactArgs } from "./test-impact.mjs";
+import { createVitestEnv } from "./vitest-env.mjs";
 
 describe("changed file selection", () => {
 	it("combines committed, working tree, and untracked paths", () => {
@@ -171,6 +172,14 @@ describe("vitest runner 守卫", () => {
 				devDependencies: { vitest: ">=4.1.11" },
 			}),
 		).toEqual([]);
+	});
+
+	it("把 NODE_ENV 钉为 test，避免宿主进程的 production 值泄漏进测试", () => {
+		expect(createVitestEnv({ NODE_ENV: "production", PATH: "/usr/bin" })).toEqual({
+			NODE_ENV: "test",
+			PATH: "/usr/bin",
+		});
+		expect(createVitestEnv({}).NODE_ENV).toBe("test");
 	});
 });
 

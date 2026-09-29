@@ -29,3 +29,13 @@ Run the Cloudflare relay locally, generate a pairing with `bun run --cwd ../remo
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+
+
+## Context Boundary
+
+```yaml
+purpose: Kotlin Multiplatform Android client
+provides:  []
+consumes:  []
+internal_dependencies:  []
+```

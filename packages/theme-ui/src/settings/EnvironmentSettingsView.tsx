@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 import { SettingRow, SettingSection, type SettingSectionMeta } from "./SettingChrome";
 
@@ -7,6 +8,8 @@ export interface EnvironmentRuntimeStatusView {
 	readonly managedVersion?: string;
 	readonly ready: boolean;
 	readonly supported: boolean;
+	/** 托管运行时后台下载中（安装后自动补齐路径）。 */
+	readonly downloading?: boolean;
 }
 
 export interface EnvironmentSettingsViewLabels {
@@ -67,11 +70,12 @@ function RuntimeCard({
 	status: EnvironmentRuntimeStatusView;
 }): JSX.Element {
 	const meta = RUNTIME_META[kind];
+	const fetching = busy || Boolean(status.downloading);
 	const stateText = !status.supported
 		? labels.platformNotSupported
 		: status.ready
 			? `${labels.ready} · ${status.managedVersion}`
-			: busy
+			: fetching
 				? labels.fetching
 				: labels.notReady;
 	const stateClass = status.ready
@@ -96,11 +100,11 @@ function RuntimeCard({
 				{status.supported && (
 					<button
 						type="button"
-						disabled={busy}
+						disabled={fetching}
 						onClick={onReinstall}
 						className="flex items-center gap-1.5 rounded-lg border border-input bg-secondary px-3 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent disabled:opacity-50"
 					>
-						{busy ? (
+						{fetching ? (
 							<span className="icon-[mdi--loading] h-3.5 w-3.5 animate-spin" />
 						) : (
 							<span className="icon-[mdi--download-outline] h-3.5 w-3.5 text-muted-foreground" />

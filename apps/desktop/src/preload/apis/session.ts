@@ -1,6 +1,7 @@
 import type { IpcRenderer } from "electron";
 import { decodeSessionEvent } from "../../shared/session-event-codec.js";
 import type { DesktopApi } from "../api.js";
+import type { DesktopSessionApi } from "../api-types/session.js";
 import { onIpcEvent, subscribeById } from "./helper.js";
 import { subscribeSessionSearch } from "./session-search.js";
 
@@ -11,7 +12,11 @@ const CHANNELS = {
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
+	RETRY: "vetta:session:retry",
 	ABORT: "vetta:session:abort",
+	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
+	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
+	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
 	QUEUE_STATE: "vetta:session:queue-state",
 	QUEUE_CONTEXT_COMPACTION: "vetta:session:queue-context-compaction",
 	QUEUE_REMOVE: "vetta:session:queue-remove",
@@ -99,7 +104,11 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			onSessionsChanged: (handler) => onIpcEvent(ipc, CHANNELS.SESSIONS_CHANGED, handler),
 			prompt: (sessionId, request, traceContext) => ipc.invoke(CHANNELS.PROMPT, sessionId, request, traceContext),
 			continue: (sessionId) => ipc.invoke(CHANNELS.CONTINUE, sessionId),
+			retry: (sessionId) => ipc.invoke(CHANNELS.RETRY, sessionId),
 			abort: (sessionId) => ipc.invoke(CHANNELS.ABORT, sessionId),
+			setInterruptDraftNonEmpty: (sessionId, nonEmpty) => ipc.invoke(CHANNELS.INTERRUPT_DRAFT, sessionId, nonEmpty),
+			onInterruptHealth: (handler) => onIpcEvent(ipc, CHANNELS.INTERRUPT_HEALTH, handler),
+			onInterruptedStartup: (handler) => onIpcEvent(ipc, CHANNELS.INTERRUPTED_STARTUP, handler),
 			getQueueState: (sessionId) => ipc.invoke(CHANNELS.QUEUE_STATE, sessionId),
 			queueContextCompaction: (sessionId) => ipc.invoke(CHANNELS.QUEUE_CONTEXT_COMPACTION, sessionId),
 			removeQueuedMessage: (sessionId, itemId) => ipc.invoke(CHANNELS.QUEUE_REMOVE, sessionId, itemId),
@@ -166,7 +175,10 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			setPersonalization: (input) => ipc.invoke(CHANNELS.SET_PERSONALIZATION, input),
 			getState: (sessionId) => ipc.invoke(CHANNELS.GET_STATE, sessionId),
 			getMessages: (sessionId) => ipc.invoke(CHANNELS.GET_MESSAGES, sessionId),
-			getFullHistory: (sessionId) => ipc.invoke(CHANNELS.GET_FULL_HISTORY, sessionId),
+			getFullHistory: ((sessionId: string, options?: unknown) =>
+				options === undefined
+					? ipc.invoke(CHANNELS.GET_FULL_HISTORY, sessionId)
+					: ipc.invoke(CHANNELS.GET_FULL_HISTORY, sessionId, options)) as DesktopSessionApi["getFullHistory"],
 			navigateForEdit: (sessionId, entryId) => ipc.invoke(CHANNELS.NAVIGATE_FOR_EDIT, sessionId, entryId),
 			switchBranch: (sessionId, entryId) => ipc.invoke(CHANNELS.SWITCH_BRANCH, sessionId, entryId),
 			deleteMessage: (sessionId, entryId) => ipc.invoke(CHANNELS.DELETE_MESSAGE, sessionId, entryId),
@@ -186,10 +198,10 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			onRunningChanged: (handler) => onIpcEvent(ipc, CHANNELS.RUNNING_CHANGED, handler),
 			clearDefaultConversation: (scope) => ipc.invoke(CHANNELS.CLEAR_DEFAULT_CONVERSATION, scope),
 			clearDefaultArtifacts: (scope) => ipc.invoke(CHANNELS.CLEAR_DEFAULT_ARTIFACTS, scope),
-			openViewer: (path, options) =>
+			openViewer: ((path: string, options?: unknown) =>
 				options === undefined
 					? ipc.invoke(CHANNELS.VIEWER_OPEN, path)
-					: ipc.invoke(CHANNELS.VIEWER_OPEN, path, options),
+					: ipc.invoke(CHANNELS.VIEWER_OPEN, path, options)) as DesktopSessionApi["openViewer"],
 			subscribeViewer: (path, handler) =>
 				subscribeById(ipc, CHANNELS.VIEWER_SUBSCRIBE, CHANNELS.VIEWER_EVENT, CHANNELS.VIEWER_UNSUBSCRIBE, handler, [
 					path,

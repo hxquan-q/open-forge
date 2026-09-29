@@ -40,3 +40,17 @@ bun run test
 # 或指定文件
 bunx vitest --run test/default-hook-config-layers.test.ts
 ```
+
+
+## Context Boundary
+
+```yaml
+purpose: Compatibility adapters for external agent ecosystems
+provides:  
+  - "@vetta/ecosystem-adapter"
+  - "@vetta/ecosystem-adapter/hooks"
+  - "@vetta/ecosystem-adapter/codex/hooks"
+  - "@vetta/ecosystem-adapter/claude-code/hooks"
+consumes:  []
+internal_dependencies:  []
+```

@@ -29,8 +29,8 @@ export interface BrowserPanelViewProps {
 	failed: boolean;
 	hasPage: boolean;
 	currentUrl: string;
-	partition: string;
-	webviewRef: Ref<HTMLElement>;
+	/** WebContentsView 占位矩形：宿主经它上报 bounds/可见性给主进程。 */
+	hostRef: Ref<HTMLDivElement>;
 	onAddressChange: (value: string) => void;
 	onAddressSubmit: (event: FormEvent) => void;
 	onBack: () => void;
@@ -89,8 +89,7 @@ export function BrowserPanelView({
 	failed,
 	hasPage,
 	currentUrl,
-	partition,
-	webviewRef,
+	hostRef,
 	onAddressChange,
 	onAddressSubmit,
 	onBack,
@@ -137,6 +136,13 @@ export function BrowserPanelView({
 						className="h-7 w-full rounded-md border border-transparent bg-transparent px-2.5 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 focus:bg-background"
 					/>
 				</form>
+				{/* 原生 view 盖在 DOM 之上，加载徽标只能待在工具栏区，不能再悬浮页面上。 */}
+				{loading ? (
+					<span className="flex shrink-0 items-center gap-1 px-1 text-[11px] text-muted-foreground">
+						<span className="icon-[mdi--loading] h-3.5 w-3.5 animate-spin" />
+						{labels.loading}
+					</span>
+				) : null}
 				<ToolbarButton
 					icon="icon-[mdi--cursor-default-click-outline]"
 					title={pickerEnabled ? labels.pickerActive : labels.picker}
@@ -156,29 +162,20 @@ export function BrowserPanelView({
 					{labels.pickerHint}
 				</div>
 			) : null}
+			{liveEdit ? (
+				<div className="shrink-0 border-b border-border/60 px-2 py-2">
+					<BrowserLiveEditCard {...liveEdit} />
+				</div>
+			) : null}
 
 			<div className="relative flex min-h-0 flex-1">
-				{/* src 用静态 about:blank 让 guest 立即挂载（dom-ready 才会触发），
-				    真实地址由 effect 通过 loadURL 加载；src 不绑 targetUrl 以免页内跳转触发重载。 */}
-				<webview
-					key={workspaceId}
-					ref={webviewRef}
-					src="about:blank"
-					partition={partition}
-					allowpopups={true}
-					webpreferences="contextIsolation=yes, nodeIntegration=no"
-					className="h-full w-full"
-				/>
+				{/* TASK-0072：guest 已迁为主进程 WebContentsView；此占位矩形只做
+				    bounds/可见性上报，页面由主进程 view 覆盖绘制在本区域上。 */}
+				<div ref={hostRef} data-browser-view-host="" className="h-full w-full" />
 				{!hasPage && (
 					<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted p-6 text-center">
 						<span className="icon-[mdi--web] h-8 w-8 text-muted-foreground/30" />
 						<span className="text-[12px] text-muted-foreground/60">{labels.empty}</span>
-					</div>
-				)}
-				{loading && (
-					<div className="pointer-events-none absolute right-2 top-2 flex items-center gap-1.5 rounded-md bg-background/80 px-2 py-1 text-[11px] text-muted-foreground shadow-sm">
-						<span className="icon-[mdi--loading] h-3.5 w-3.5 animate-spin" />
-						{labels.loading}
 					</div>
 				)}
 				{failed && (
@@ -194,7 +191,6 @@ export function BrowserPanelView({
 						</button>
 					</div>
 				)}
-				{liveEdit ? <BrowserLiveEditCard {...liveEdit} /> : null}
 			</div>
 		</div>
 	);

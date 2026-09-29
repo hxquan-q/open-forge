@@ -114,6 +114,11 @@ export class CodingAgentSessionExecutionRuntime {
 			isBusy: () =>
 				session.state === "running" || session.state === "cancelling" || session.state === "recovery_required",
 			reconfigure: async (update) => {
+				// ADR-0133 §5(TM-07):先清旧 mode 的 grant 再装配新工具集,
+				// 保证正在执行的旧 tool 不受影响(ALS-5),下一次调用已看不到旧 grant。
+				if (update.mode !== this.mode) {
+					this.options.environment.sandbox.clearSessionGrants?.(this.options.readSessionId());
+				}
 				const registrations = this.buildModeRegistrations(update.mode, this.fullAccessRegistrations, update);
 				const next = this.createModeRegistry(registrations);
 				this.catalog.publish(next);
@@ -241,6 +246,15 @@ export class CodingAgentSessionExecutionRuntime {
 					linuxBubblewrapPath: update.linuxBubblewrapPath,
 					macosSandboxExecPath: update.macosSandboxExecPath,
 					getSessionId: this.options.readSessionId,
+					hostInfo: {
+						platform: process.platform,
+						// ADR-0133 §2 escape hatch: 纯环境变量紧急迁移通道,任何构建(含打包版)一律生效。
+						// 不用 NODE_ENV 做生产判别——打包后的 Electron 主进程通常不设置它。
+						allowFailOpen: process.env.VETTA_SANDBOX_FAIL_OPEN === "1",
+						warn: (message) => {
+							process.stderr.write(`${message}\n`);
+						},
+					},
 				}),
 			).map((registration) =>
 				inheritModelOrder(registration, this.options.resolveToolEntry?.(registration.tool.name)),

@@ -53,7 +53,7 @@
 draft → ready → in_progress → blocked → verifying → done → archived
 ```
 
-状态写在 frontmatter 中，不通过移动文件表达状态，避免路径和链接频繁变化。
+状态写在 frontmatter 中，不通过移动文件表达状态，避免路径和链接频繁变化。README 中的 Plan 状态表和 Task 当前焦点表是导航副本，必须与 frontmatter 同步；`bun run check` 会校验对应状态索引。
 
 ## 标准流水线
 

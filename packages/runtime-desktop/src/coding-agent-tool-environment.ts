@@ -29,6 +29,7 @@ import {
 	resolveNodeShell,
 } from "@vetta/runtime-node/coding";
 import { NodeScopedTextStorage } from "@vetta/runtime-node/host";
+import { clearSessionGrants } from "@vetta/runtime-node/sandbox";
 import { createSshCodingToolEnvironment, createSshPathPolicies } from "@vetta/runtime-ssh";
 import { parseProjectLocation } from "@vetta/ssh-transport";
 import { resolveProjectSettingsPath } from "./project-settings-path.js";
@@ -50,7 +51,7 @@ export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironment
 			remoteCwd: location.remotePath,
 			editPathPolicy: policies.editPathPolicy,
 			writePathPolicy: policies.writePathPolicy,
-			readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 			localReadRoots: resolveLocalReadRoots(context.agentDir),
 			// PDF / OCR / 文档转换依赖本机的引擎：远端文件取回本机处理，产物再传回去。
 			createLocalFileToolRegistrations: (localCwd, { ocrExecutionGate }) =>
@@ -67,7 +68,7 @@ export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironment
 		editPathPolicy: host.editPathPolicy,
 		writePathPolicy: host.writePathPolicy,
 		configurationSource: context.configurationSource,
-		readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+		readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 	});
 };
 
@@ -89,7 +90,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 			remoteCwd: location.remotePath,
 			editPathPolicy: policies.editPathPolicy,
 			writePathPolicy: policies.writePathPolicy,
-			readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 			localReadRoots: resolveLocalReadRoots(context.agentDir),
 		});
 		return {
@@ -123,7 +124,7 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 				editPathPolicy: host.editPathPolicy,
 				writePathPolicy: host.writePathPolicy,
 				configurationSource: context.configurationSource,
-				readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+				readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 				reviewSnapshots,
 			}),
 			...command.registrations,
@@ -140,9 +141,12 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 					editPathPolicy: host.editPathPolicy,
 					writePathPolicy: host.writePathPolicy,
 					configurationSource: context.configurationSource,
-					readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+					readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 					reviewSnapshots,
 				}),
+			// ADR-0133 §5(TM-07):mode flip 时清掉本会话 grant 缓存。
+			// 远程分支不提供本机沙箱,自然也没有可清的 grant。
+			clearSessionGrants,
 		},
 		dispose: () => command.dispose(),
 	};

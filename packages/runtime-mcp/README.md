@@ -32,3 +32,22 @@ Attachment 解析与媒体准入策略，不会把 Agent、Provider 或 Node tra
 runtime-node/runtime-desktop -> runtime-mcp -> runtime-core
 coding-agent composition -> runtime-mcp ports + selected platform implementation
 ```
+
+
+## Context Boundary
+
+```yaml
+purpose: Platform-neutral MCP protocols and runtime state coordination for Vetta agents
+provides:  
+  - "@vetta/runtime-mcp"
+  - "@vetta/runtime-mcp/auth"
+  - "@vetta/runtime-mcp/browser"
+  - "@vetta/runtime-mcp/config"
+  - "@vetta/runtime-mcp/client"
+  - "@vetta/runtime-mcp/protocol"
+  - "@vetta/runtime-mcp/server"
+  - "@vetta/runtime-mcp/tools"
+consumes:  []
+internal_dependencies:
+  - "@vetta/runtime-core"
+```

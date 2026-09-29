@@ -350,6 +350,12 @@ export interface SessionStateSnapshot {
 	isStreaming: boolean;
 	/** Timestamp (ms) for the current agent_start, if this session is streaming. */
 	currentTurnStartedAt?: number;
+	/**
+	 * 宿主事件中继最近一次观察到该会话事件的时间戳（ms，事件自身时钟）；
+	 * 尚无任何事件时为 undefined。流式会话的逐事件活动证据：中断巡检据此区分
+	 * 「健康长回合」（事件持续流动）与「零事件悬挂」（长时间无任何事件）。
+	 */
+	lastEventAt?: number;
 	messageCount: number;
 	/** Context window usage percentage (0-100), or null if unknown */
 	contextPercent: number | null;

@@ -8,7 +8,7 @@ import {
 	type RuntimeResourceContext,
 } from "@vetta/runtime-core";
 import type { CodingAgentRuntimeModelAdapter } from "../../adapters/runtime-core/model-runtime-adapter.js";
-import { allowsAgentResource } from "../../agent-configuration/resource-selection.js";
+import { allowsAgentMcpTool, allowsAgentResource } from "../../agent-configuration/resource-selection.js";
 import { AGENT_SESSION_CONFIGURATION } from "../../agent-configuration/session-configuration-extension.js";
 import { createDefaultCodingAgentContextRuntime } from "../../compaction/runtime/index.js";
 import type { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
@@ -175,11 +175,8 @@ export function createCodingAgentSessionContextAssembly(
 				.readAdmitted();
 			const view = await options.mcpCoordinator.readInheritedToolView(peripherals.pluginMcpRuntime);
 			return {
-				tools: view.tools.filter(
-					({ tool, serverName }) =>
-						allowsAgentResource(configuration.tools, tool.name) &&
-						(configuration.mcpServers === null ||
-							(serverName !== undefined && configuration.mcpServers.includes(serverName))),
+				tools: view.tools.filter(({ tool, serverName }) =>
+					allowsAgentMcpTool(configuration, { name: tool.name, description: tool.description, serverName }),
 				),
 			};
 		},

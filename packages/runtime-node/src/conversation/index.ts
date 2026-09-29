@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export {
 	CONVERSATION_STORAGE_ERROR_CODES,
 	ConversationOwnershipConflictError,
@@ -8,6 +9,10 @@ export {
 	type ConversationStorageErrorCode,
 } from "@vetta/runtime-storage/conversation";
 export { resolveSessionIdFromPath } from "./conversation-file-path.js";
+export {
+	assessConversationInterruption,
+	type ConversationInterruptionAssessment,
+} from "./conversation-interruption-assessment.js";
 export {
 	FileConversationOwnershipManager,
 	type FileConversationOwnershipManagerOptions,

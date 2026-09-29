@@ -5,6 +5,7 @@ import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import { memo, useMemo } from "react";
 import { TeamComposerConnector } from "./TeamComposerConnector";
 import { TeamMemberRoster } from "./TeamMemberRoster";
+import { TeamSessionProgress } from "./TeamSessionProgress";
 import type { TeamChatActions, TeamChatViewModel, TeamComposerViewModel } from "./teamChatModel";
 
 export interface TeamChatViewProps {
@@ -154,12 +155,17 @@ export function TeamChatView({
 			workspace={workspace}
 			activity={activity}
 			subHeader={
-				<TeamRoster
-					model={model}
-					onOpenMember={onOpenMember}
-					onBackToTeam={onBackToTeam}
-					onOpenSettings={onOpenSettings}
-				/>
+				<>
+					<TeamRoster
+						model={model}
+						onOpenMember={onOpenMember}
+						onBackToTeam={onBackToTeam}
+						onOpenSettings={onOpenSettings}
+					/>
+					{model.teamProgress ? (
+						<TeamSessionProgress progress={model.teamProgress} onOpenMember={onOpenMember} />
+					) : null}
+				</>
 		}
 		>
 			<TeamTimelinePane

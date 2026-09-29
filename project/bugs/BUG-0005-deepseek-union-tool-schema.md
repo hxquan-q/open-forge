@@ -1,12 +1,12 @@
 ---
 id: BUG-0005
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: packages/ai
 source: user-report; desktop dev session provider error
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 related_requirement: []
 related_plan: []
 related_tasks: []
@@ -61,12 +61,11 @@ depends_on: []
 - 测试：`bun scripts/quality/run-vitest.mjs --run packages/ai/test/openai-completions-tool-schema.test.ts`（10/10 通过）；`bun run test:impact -- packages/ai/src/providers/openai-completions/tool-schema.ts packages/ai/test/openai-completions-tool-schema.test.ts`（20 个文件 215 用例通过）。
 - 检查：`bun run check:quick` 通过。
 - 未运行及原因：未做 DeepSeek 真实请求验证（需真实 API 凭证与费用，未获授权）；归一化只作用于 `openai-completions` 出口，其余 Provider 边界未动。
+- 提交：`dc8571760`。
 
 ## 剩余风险
 
 - 网关若对 `type: "object"` 之外还有更严格的 properties 约束仍可能拒绝，但属于网关方言差异，需要新证据再处理。
 - `ArtifactToolInputSchema` 本身未改；若未来要求 Anthropic 路径也保留 union 语义，需要另行处理（当前 Anthropic `input_schema` 只取 `properties`/`required`，union 在那一侧本就降级，与本修复无关）。
 
-## 发布说明候选（待 Open Forge 首发版本切入后转入）
-
-- **修复**：使用 DeepSeek 等 OpenAI 兼容服务商时，含「artifact」等联合入参工具的会话不再被 `Invalid schema for function 'artifact'` 整轮 400 中断；发往兼容网关的工具参数 schema 现在始终声明顶层 `type: "object"`。
+发布说明：见 `.github/release-notes/v0.1.1.md`

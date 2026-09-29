@@ -4,12 +4,15 @@ import { fileURLToPath } from "node:url";
 import { app, utilityProcess } from "electron";
 import type { SpeechInputEvent, SpeechInputStatus } from "../../preload/api-types/speech-input.js";
 import { isSpeechInputBuildEnabled } from "../../shared/feature-flags.js";
+import { attributeProcessPid, recordProcessCrash, registerProcessRole } from "../app-monitor/process-health.js";
 import { getAppLogger } from "../logger.js";
+import { vettaRootDir } from "../runtimes/paths.js";
 import { resolveSpeechModelPaths, WINDOWS_ZIPFORMER_MODEL } from "./model-catalog.js";
 import { SpeechModelManager } from "./model-manager.js";
 import { isSpeechHostEvent, type SpeechHostCommand, type SpeechHostEvent } from "./protocol.js";
 
 const log = getAppLogger("speech-input");
+const ROLE = "speech-input-host";
 const HOST_SPAWN_TIMEOUT_MS = 10_000;
 const HOST_INITIALIZE_TIMEOUT_MS = 60_000;
 
@@ -17,6 +20,7 @@ interface SpeechHostChild {
 	on(event: "message", listener: (message: unknown) => void): unknown;
 	on(event: "exit", listener: (code: number) => void): unknown;
 	on(event: "spawn", listener: () => void): unknown;
+	readonly pid?: number;
 	readonly stderr?: NodeJS.ReadableStream | null;
 	readonly stdout?: NodeJS.ReadableStream | null;
 	postMessage(message: SpeechHostCommand): void;
@@ -55,6 +59,7 @@ export interface SpeechModelAccess {
 	readonly supported: boolean;
 	readonly modelDirectory: string;
 	getStatus(): Promise<SpeechInputStatus>;
+	ensureModel(onProgress?: (completedBytes: number, totalBytes: number) => void): Promise<void>;
 }
 
 export class SpeechInputService {
@@ -88,14 +93,20 @@ export class SpeechInputService {
 			options.modelManager ??
 			new SpeechModelManager({
 				enabled: isSpeechInputBuildEnabled(),
-				modelRoot: app.isPackaged
+				bundleRoot: app.isPackaged
 					? join(process.resourcesPath, "speech-models")
 					: join(process.cwd(), "resources", "speech-models"),
+				userRoot: join(vettaRootDir(), "speech-models"),
 			});
+		// 宿主无自动重启（会话级失败显式回报给调用方），记账簿只做崩溃计数与 pid 归因。
+		registerProcessRole({ role: ROLE, kind: "utility-process" });
 	}
 
 	async getStatus(): Promise<SpeechInputStatus> {
-		if (this.transientStatus && ["loading", "listening", "stopping"].includes(this.transientStatus.phase))
+		if (
+			this.transientStatus &&
+			["loading", "listening", "stopping", "downloading"].includes(this.transientStatus.phase)
+		)
 			return this.transientStatus;
 		return this.modelManager.getStatus();
 	}
@@ -127,10 +138,40 @@ export class SpeechInputService {
 		}
 	}
 
+	/**
+	 * 模型未就绪时先按需下载（点击麦克风是触发点），再启动识别宿主。
+	 * 下载进度经 status 事件实时推给渲染层；失败以 model-download-failed 回报。
+	 */
+	private async ensureModelReady(): Promise<void> {
+		const status = await this.modelManager.getStatus();
+		if (status.phase === "ready") return;
+		if (status.phase === "unsupported") throw new Error("Speech recognition is not supported");
+
+		try {
+			await this.modelManager.ensureModel((done, total) => {
+				this.publishStatus({
+					supported: this.modelManager.supported,
+					phase: "downloading",
+					modelId: status.modelId,
+					downloadProgress: total > 0 ? done / total : 0,
+				});
+			});
+		} catch (error) {
+			log.error("speech model download failed", error);
+			this.publishTransient("error", "model-download-failed");
+			throw new Error("Speech model download failed");
+		}
+
+		const next = await this.modelManager.getStatus();
+		if (next.phase !== "ready") {
+			this.publishTransient("error", "model-download-failed");
+			throw new Error("Speech recognition model is not ready");
+		}
+	}
+
 	async start(): Promise<{ sessionId: string }> {
 		if (this.activeSessionId) return { sessionId: this.activeSessionId };
-		const status = await this.modelManager.getStatus();
-		if (status.phase !== "ready") throw new Error("Speech recognition model is not ready");
+		await this.ensureModelReady();
 
 		this.publishTransient("loading");
 		try {
@@ -189,6 +230,7 @@ export class SpeechInputService {
 		this.captureHostOutput(child, "stderr");
 		child.on("spawn", () => {
 			if (this.hostDiagnostic) this.hostDiagnostic.phase = "spawned";
+			attributeProcessPid(ROLE, child.pid);
 		});
 		child.on("message", (message) => this.handleHostMessage(message));
 		child.on("exit", (code) => this.handleHostExit(code));
@@ -275,7 +317,9 @@ export class SpeechInputService {
 	private handleHostExit(code: number): void {
 		this.child = null;
 		this.initialized = false;
+		attributeProcessPid(ROLE, undefined);
 		if (!this.initializeWaiter && !this.activeSessionId) return;
+		recordProcessCrash(ROLE);
 		log.error("speech recognition host exited unexpectedly", {
 			code,
 			phase: this.hostDiagnostic?.phase,

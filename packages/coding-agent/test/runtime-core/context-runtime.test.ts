@@ -38,6 +38,71 @@ import type {
 } from "../../src/runtime-contracts/index.js";
 
 describe("DefaultCodingAgentContextRuntime", () => {
+	it("reuses one completed prefire as a conversation grows and keeps every later message when compacting", async () => {
+		const signal = new AbortController().signal;
+		const model: Model<Api> = { ...MODEL, contextWindow: 1_000 };
+		const settings: CompactionSettings = { ...compactingSettings(), reserveTokens: 200 };
+		const prefireObservations: RuntimeObservationRecord[] = [];
+		const generateCompaction = vi.fn(
+			async (preparation: CompactionPreparation): Promise<CompactionResult> => ({
+				summary: "original prefix summary",
+				firstKeptEntryId: preparation.firstKeptEntryId,
+				tokensBefore: preparation.tokensBefore,
+			}),
+		);
+		const runtime = new CodingAgentContextRuntime({
+			hookRuntime: createHookRuntime(),
+			resolveApiKey: () => "key",
+			resolveSettings: () => settings,
+			generateCompaction,
+			observationPublisher: createRuntimeObservationPublisher({
+				port: {
+					record: (record) => {
+						prefireObservations.push(record);
+					},
+				},
+			}),
+		});
+		const prepare = (history: readonly Message[]) =>
+			runtime.prepare(
+				{
+					...preparationInput(documentFromMessages(history), history, history, []),
+					modelBinding: { model },
+					tokenBudget: model.contextWindow,
+					reason: "model_call",
+				},
+				signal,
+			);
+		try {
+			const initial: Message[] = [
+				userMessage("old request".repeat(40), 1),
+				assistantMessage("old response", 710, 2),
+				userMessage("kept request", 3),
+			];
+			expect((await prepare(initial)).compaction).toBeUndefined();
+			await vi.waitFor(() => expect(prefireObservations).toHaveLength(1));
+
+			const grown = [...initial, assistantMessage("follow-up answer", 730, 4), userMessage("follow-up", 5)];
+			expect((await prepare(grown)).compaction).toBeUndefined();
+			const overBudget = [...grown, assistantMessage("latest answer", 900, 6), userMessage("continue", 7)];
+			const prepared = await prepare(overBudget);
+
+			expect(prepared.compaction).toMatchObject({
+				summary: "original prefix summary",
+				firstKeptEntryId: "event-3",
+				reason: "threshold",
+			});
+			expect(prepared.messages.map(messageText)).toEqual([
+				`${COMPACTION_SUMMARY_PREFIX}original prefix summary${COMPACTION_SUMMARY_SUFFIX}`,
+				...overBudget.slice(2).map(messageText),
+			]);
+			expect(generateCompaction).toHaveBeenCalledOnce();
+			expect(initial.map(messageText)).toEqual(["old request".repeat(40), "old response", "kept request"]);
+		} finally {
+			runtime.dispose();
+		}
+	});
+
 	it("rebuilds the active compaction source from the latest summary, its kept tail, and later growth", () => {
 		let document = documentFromMessages([
 			userMessage("discarded", 1),

@@ -11,17 +11,22 @@
 #ifndef Arch
   #error Arch is required
 #endif
+; 品牌显示名随构建期档案（VETTA_BRAND_PROFILE）由 build-inno-installer.mjs 注入；
+; 缺省回退自用口径。AppId / 安装目录 / 可执行名是跨档冻结的兼容标识，不得跟随品牌切换。
+#ifndef AppDisplayName
+  #define AppDisplayName "Open Forge"
+#endif
 
 [Setup]
 AppId={{1A7D5D2A-E570-49DF-8615-754A66F398D5}
-AppName=Open Forge
-AppVerName=Open Forge {#AppVersion}
+AppName={#AppDisplayName}
+AppVerName={#AppDisplayName} {#AppVersion}
 AppVersion={#AppVersion}
-AppPublisher=Open Forge
+AppPublisher={#AppDisplayName}
 DefaultDirName={localappdata}\Programs\OpenForge
-DefaultGroupName=Open Forge
+DefaultGroupName={#AppDisplayName}
 OutputDir={#OutputDir}
-OutputBaseFilename=Open Forge-{#AppVersion}-win-{#Arch}
+OutputBaseFilename={#AppDisplayName}-{#AppVersion}-win-{#Arch}
 SetupIconFile={#SourceDir}\versions\{#AppVersion}\resources\build\icon.ico
 UninstallDisplayIcon={app}\OpenForge.exe
 Compression=lzma2/max

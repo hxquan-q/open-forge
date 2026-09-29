@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Apple 证书申请与 macOS 签名/公证手册
 
 面向 Vetta 桌面端 macOS 发版：从零申请公司主体的 Apple 开发者账号，拿到 **Developer ID Application** 证书与公证凭据，注入构建，直到用户双击 DMG 不再看到「已损坏」。
@@ -257,7 +258,7 @@ xcrun notarytool log <submissionId> \
   --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER"
 ```
 
-排查时可以先 `VETTA_SKIP_VENDOR=1 bun run dist:mac` 把内置运行时摘掉，确认是不是 vendor 里的二进制导致，再针对性处理。
+排查时可以先 `VETTA_SKIP_VENDOR=1 bun run dist:mac`（或默认不加 `VETTA_BUNDLE_VENDOR`，vendor 默认已不内置）把内置运行时摘掉，确认是不是 vendor 里的二进制导致，再针对性处理。
 
 **公证返回 `Invalid`，日志说 `The executable does not have the hardened runtime enabled`**
 

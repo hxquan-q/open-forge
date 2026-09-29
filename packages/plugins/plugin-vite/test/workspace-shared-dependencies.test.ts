@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,7 +56,9 @@ async function loadPluginProjects(): Promise<PluginProject[]> {
 			const entries = await readdir(directoryPath, { withFileTypes: true });
 			return Promise.all(
 				entries
-					.filter((entry) => entry.isDirectory())
+					// 目录里可能混有构建产物（如 gitignored 的 release/ 清单目录），
+					// 只有含 package.json 的目录才是插件包。
+					.filter((entry) => entry.isDirectory() && existsSync(resolve(directoryPath, entry.name, "package.json")))
 					.map(async (entry) => {
 						const root = resolve(directoryPath, entry.name);
 						const packagePath = `${directory}/${entry.name}/package.json`;

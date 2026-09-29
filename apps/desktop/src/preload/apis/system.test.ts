@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer, WebUtils } from "electron";
 import { describe, expect, it, vi } from "vitest";
 import { PERSIST_IMAGE_FILES_CHANNEL } from "../../shared/image-cache";
@@ -67,6 +68,17 @@ describe("createSystemApi fs preview contract", () => {
 		expect(invoke).toHaveBeenCalledWith("vetta:clipboard:write-user-message", request);
 		await expect(api.clipboard.pasteUserMessage("session-1")).resolves.toEqual(pasteResult);
 		expect(invoke).toHaveBeenCalledWith("vetta:clipboard:paste-user-message", "session-1");
+	});
+});
+
+describe("createSystemApi models provider test contract", () => {
+	it("invokes the provider test channel with the provider name and forwards the structured result", async () => {
+		const result = { ok: true, latencyMs: 120, modelCount: 2 };
+		const invoke = vi.fn(async () => result);
+		const api = createSystemApi({ invoke } as unknown as IpcRenderer, {} as WebUtils);
+
+		await expect(api.models.testProvider("relay")).resolves.toEqual(result);
+		expect(invoke).toHaveBeenCalledWith("vetta:models:test-provider", "relay");
 	});
 });
 

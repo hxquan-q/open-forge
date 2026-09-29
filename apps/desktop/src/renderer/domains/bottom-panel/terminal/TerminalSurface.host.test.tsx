@@ -9,6 +9,9 @@ import type { TerminalEventEnvelope } from "../../../../shared/terminal-ipc";
 import type { TerminalSurfaceHandle } from "./terminal-surface-handle";
 
 const terminals: FakeTerminal[] = [];
+const disposeLog: string[] = [];
+const terminalControl = { disposeThrows: false };
+let rendererChoice: "canvas" | "webgl" = "canvas";
 
 class FakeTerminal {
 	readonly writes: string[] = [];
@@ -29,7 +32,12 @@ class FakeTerminal {
 	writeln(data: string): void {
 		this.write(`${data}\n`);
 	}
-	dispose(): void {}
+	dispose(): void {
+		disposeLog.push("terminal");
+		if (terminalControl.disposeThrows) {
+			throw new TypeError("Cannot read properties of undefined (reading 'onShowLinkUnderline')");
+		}
+	}
 	focus(): void {}
 	onData(): { dispose(): void } {
 		return { dispose() {} };
@@ -52,19 +60,34 @@ vi.mock("@xterm/addon-serialize", () => ({
 }));
 vi.mock("@xterm/addon-web-links", () => ({ WebLinksAddon: class {} }));
 vi.mock("@xterm/addon-unicode11", () => ({ Unicode11Addon: class {} }));
-vi.mock("@xterm/addon-webgl", () => ({ WebglAddon: class {} }));
-vi.mock("@xterm/addon-canvas", () => ({ CanvasAddon: class {} }));
+vi.mock("@xterm/addon-webgl", () => ({
+	WebglAddon: class {
+		onContextLoss(): void {}
+		dispose(): void {
+			disposeLog.push("webgl");
+		}
+	},
+}));
+vi.mock("@xterm/addon-canvas", () => ({
+	CanvasAddon: class {
+		dispose(): void {
+			disposeLog.push("canvas");
+		}
+	},
+}));
 vi.mock("./select-terminal-renderer", () => ({
 	detectWebgl2Support: () => false,
-	selectTerminalRenderer: () => "canvas",
+	selectTerminalRenderer: () => rendererChoice,
 }));
 vi.mock("./terminal-theme", () => ({
 	createDocumentCssVariableReader: () => () => "",
 	buildTerminalTheme: () => ({}),
 }));
-vi.mock("react-i18next", () => ({
-	useTranslation: () => ({ t: (key: string, opts?: { code?: number }) => `${key}:${opts?.code ?? ""}` }),
-}));
+vi.mock("react-i18next", () => {
+	// t 身份必须稳定：真实 i18next 的 t 不变，effect 才不会因依赖抖动反复重建终端。
+	const t = (key: string, opts?: { code?: number }) => `${key}:${opts?.code ?? ""}`;
+	return { useTranslation: () => ({ t }) };
+});
 
 const { TerminalSurface } = await import("./TerminalSurface.js");
 
@@ -175,5 +198,92 @@ describe("TerminalSurface host adapters", () => {
 		await vi.waitFor(() => expect(ipc.close).toHaveBeenCalled());
 		expect(ipc.close).toHaveBeenCalledWith(bottomPty.terminalId);
 		expect(ipc.close).toHaveBeenCalledWith(activityPty.terminalId);
+	});
+
+	it("卸载时先摘除渲染 addon 再销毁终端（canvas 路径）", async () => {
+		const ipc = createTerminalIpc();
+		vi.stubGlobal("window", Object.assign(window, { vetta: { terminal: ipc } }));
+		const view = render(
+			<Provider store={createStore()}>
+				<Surface value={handle({ tabId: "tab-order-canvas", cwd: "/repo" })} />
+			</Provider>,
+		);
+		await vi.waitFor(() => expect(ipc.open).toHaveBeenCalled());
+
+		disposeLog.length = 0;
+		view.unmount();
+
+		// xterm 6 的销毁顺序先清 linkifier 再轮 addon：canvas addon 的收尾回调要用活着的
+		// linkifier 重建 DOM renderer，顺序反过来必抛 TypeError 并击穿路由错误边界（BUG-0041）。
+		expect(disposeLog.indexOf("canvas")).toBeGreaterThanOrEqual(0);
+		expect(disposeLog.indexOf("canvas")).toBeLessThan(disposeLog.indexOf("terminal"));
+	});
+
+	it("卸载时先摘除渲染 addon 再销毁终端（webgl 路径）", async () => {
+		rendererChoice = "webgl";
+		try {
+			const ipc = createTerminalIpc();
+			vi.stubGlobal("window", Object.assign(window, { vetta: { terminal: ipc } }));
+			const view = render(
+				<Provider store={createStore()}>
+					<Surface value={handle({ tabId: "tab-order-webgl", cwd: "/repo" })} />
+				</Provider>,
+			);
+			await vi.waitFor(() => expect(ipc.open).toHaveBeenCalled());
+
+			disposeLog.length = 0;
+			view.unmount();
+
+			expect(disposeLog.indexOf("webgl")).toBeGreaterThanOrEqual(0);
+			expect(disposeLog.indexOf("webgl")).toBeLessThan(disposeLog.indexOf("terminal"));
+		} finally {
+			rendererChoice = "canvas";
+		}
+	});
+
+	it("反复挂载/卸载后每个 WebGL addon 都被释放，context 不累积", async () => {
+		rendererChoice = "webgl";
+		try {
+			const ipc = createTerminalIpc();
+			vi.stubGlobal("window", Object.assign(window, { vetta: { terminal: ipc } }));
+
+			disposeLog.length = 0;
+			for (let cycle = 0; cycle < 3; cycle += 1) {
+				const view = render(
+					<Provider store={createStore()}>
+						<Surface value={handle({ tabId: `tab-cycle-${cycle}`, cwd: "/repo" })} />
+					</Provider>,
+				);
+				await vi.waitFor(() => expect(ipc.open.mock.calls.length).toBeGreaterThanOrEqual(cycle + 1));
+				view.unmount();
+			}
+
+			// BUG-0034：分屏/收起重开每轮都新建 xterm + WebglAddon，卸载必须成对释放，
+			// 否则 Chromium 的 WebGL context 上限被耗尽、最旧终端黑屏。
+			expect(disposeLog.filter((entry) => entry === "webgl")).toHaveLength(3);
+			expect(disposeLog.filter((entry) => entry === "terminal")).toHaveLength(3);
+		} finally {
+			rendererChoice = "canvas";
+		}
+	});
+
+	it("terminal.dispose 抛错时卸载不升级为整页渲染错误", async () => {
+		const ipc = createTerminalIpc();
+		vi.stubGlobal("window", Object.assign(window, { vetta: { terminal: ipc } }));
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const view = render(
+			<Provider store={createStore()}>
+				<Surface value={handle({ tabId: "tab-throw", cwd: "/repo" })} />
+			</Provider>,
+		);
+		await vi.waitFor(() => expect(ipc.open).toHaveBeenCalled());
+
+		terminalControl.disposeThrows = true;
+		try {
+			expect(() => view.unmount()).not.toThrow();
+		} finally {
+			terminalControl.disposeThrows = false;
+			warn.mockRestore();
+		}
 	});
 });

@@ -982,6 +982,8 @@
 		"cloudOnly": "云端",
 		"reasoningHeader": "推理",
 		"modelHeader": "模型",
+		"turnScopeHint": "仅影响后续回合",
+		"disabledDuringTurn": "当前回合进行中，回合结束后可切换模型",
 		"multiplier": "{{value}}×",
 		"free": "免费",
 		"reasoningLevel": {

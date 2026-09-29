@@ -8,3 +8,16 @@ Architecture references:
 
 - [`docs/registry-and-access.md`](docs/registry-and-access.md) explains Registry, Access, Provider, and host composition boundaries.
 - [`docs/capabilities/README.md`](../../docs/capabilities/README.md) describes the cross-repository capability architecture.
+
+
+## Context Boundary
+
+```yaml
+purpose: Capability execution host: registers, authorizes and invokes cap.* capability tokens
+provides:  
+  - "@vetta/capability-runtime"
+  - "@vetta/capability-runtime/access"
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/capability-sdk"
+```

@@ -1,5 +1,6 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
-import { shouldPersistRendererConsoleMessage } from "./renderer-console-policy.js";
+import { isChromiumResizeObserverDiagnostic, shouldPersistRendererConsoleMessage } from "./renderer-console-policy.js";
 
 describe("shouldPersistRendererConsoleMessage", () => {
 	it("filters low-signal development diagnostics at info level", () => {
@@ -27,5 +28,25 @@ describe("shouldPersistRendererConsoleMessage", () => {
 
 	it("allows an explicit verbose override", () => {
 		expect(shouldPersistRendererConsoleMessage("info", "[plugin-agent] load start", true)).toBe(true);
+	});
+});
+
+// BUG-0048：packaged 形态 sourceId 为空串，dev 形态是页面 URL；判定不依赖 sourceId，
+// 只要消息精确匹配且行号为 0 两种形态都命中过滤。
+describe("isChromiumResizeObserverDiagnostic", () => {
+	const WARNING = "ResizeObserver loop completed with undelivered notifications.";
+
+	it("filters the deferred-delivery notice at line 0 in any sourceId shape", () => {
+		expect(isChromiumResizeObserverDiagnostic(WARNING, 0)).toBe(true);
+	});
+
+	it("keeps the same message when a real source line is reported", () => {
+		expect(isChromiumResizeObserverDiagnostic(WARNING, 1)).toBe(false);
+		expect(isChromiumResizeObserverDiagnostic(WARNING, 138)).toBe(false);
+	});
+
+	it("does not swallow other messages at line 0", () => {
+		expect(isChromiumResizeObserverDiagnostic("ResizeObserver loop limit exceeded", 0)).toBe(false);
+		expect(isChromiumResizeObserverDiagnostic("Uncaught TypeError: x is not a function", 0)).toBe(false);
 	});
 });

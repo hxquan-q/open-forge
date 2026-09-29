@@ -1,7 +1,7 @@
 import { Popover, PopoverContent, PopoverTrigger, cn } from "@vetta-org/ui";
 import { Slot } from "radix-ui";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { createContext, forwardRef, useContext, useState } from "react";
+import { createContext, forwardRef, useContext, useId, useState } from "react";
 
 interface PickerContextValue {
 	readonly value: string | null;
@@ -69,7 +69,7 @@ export const NewSessionPickerTrigger = forwardRef<HTMLButtonElement, NewSessionP
 					ref={ref}
 					{...(asChild ? props : { ...props, type: type ?? "button" })}
 					className={cn(
-						"no-drag flex h-7 max-w-[16rem] min-w-0 items-center gap-1.5 rounded-lg bg-card px-2.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground disabled:pointer-events-none disabled:opacity-60",
+						"no-drag flex h-7 max-w-[16rem] min-w-0 items-center gap-1.5 rounded-lg bg-card px-2.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground disabled:pointer-events-none disabled:opacity-60",
 						className,
 					)}
 				>
@@ -155,7 +155,7 @@ export function NewSessionPickerViewport({ children }: { readonly children: Reac
 }
 
 /**
- * 一组候选项。传 `label` 时额外渲染分组标题，并把同一文案挂到 listbox 的 aria-label 上：
+ * 一组候选项。传 `label` 时额外渲染分组标题，listbox 的可访问名通过 aria-labelledby 指向它：
  * 同一个下拉里出现多组时，每个 listbox 都必须有自己的名字，否则读屏只会听到若干个无名列表。
  */
 export function NewSessionPickerGroup({
@@ -165,11 +165,14 @@ export function NewSessionPickerGroup({
 	readonly label?: string;
 	readonly children: ReactNode;
 }): JSX.Element {
+	const labelId = useId();
 	if (!label) return <div role="listbox">{children}</div>;
 	return (
 		<div>
-			<p className="px-2 pb-1 pt-1.5 text-[11px] font-medium text-muted-foreground/70">{label}</p>
-			<div role="listbox" aria-label={label}>
+			<p id={labelId} className="px-2 pb-1 pt-1.5 text-[11px] font-medium text-muted-foreground/70">
+				{label}
+			</p>
+			<div role="listbox" aria-labelledby={labelId}>
 				{children}
 			</div>
 		</div>
@@ -198,6 +201,7 @@ export function NewSessionPickerItem({
 			onClick={() => context.onValueChange(value)}
 			className={cn(
 				"flex w-full items-center gap-2 rounded-md px-2 py-[5px] text-left text-[12px] font-medium transition-colors",
+				"focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
 				selected ? "bg-accent text-foreground" : "text-foreground hover:bg-accent",
 				"disabled:pointer-events-none disabled:opacity-50",
 				className,
@@ -238,7 +242,7 @@ export function NewSessionPickerClear({ children }: { readonly children: ReactNo
 		<button
 			type="button"
 			onClick={() => context.onValueChange(null)}
-			className="flex w-full items-center gap-2 rounded-md px-2 py-[5px] text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+			className="flex w-full items-center gap-2 rounded-md px-2 py-[5px] text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 		>
 			<span className="icon-[solar--close-circle-linear] h-3.5 w-3.5 shrink-0" aria-hidden />
 			<span className="truncate">{children}</span>

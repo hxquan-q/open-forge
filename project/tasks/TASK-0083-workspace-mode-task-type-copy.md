@@ -1,7 +1,7 @@
 ---
 id: TASK-0083
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop renderer/workspace-mode + i18n
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0077]
 conflicts_with: [TASK-0077, TASK-0080]
 integration_status: pending
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 

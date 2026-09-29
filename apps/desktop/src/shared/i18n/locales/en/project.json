@@ -23,6 +23,7 @@
 		},
 		"clawConnected": "Claw connected",
 		"hide": "Hide sidebar",
+		"regionLabel": "Sidebar",
 		"empty": {
 			"title": "No projects yet",
 			"description": "Click + above to create a project"
@@ -30,6 +31,7 @@
 		"projects": {
 			"noSessions": "No sessions",
 			"collapseSessions": "Collapse sessions",
+			"toggleSessions": "Expand or collapse sessions for {{name}}",
 			"expandMore": "Show more ({{count}})",
 			"scrollToTop": "Scroll to top",
 			"scrollToBottom": "Scroll to bottom"
@@ -111,6 +113,10 @@
 		"unpin": "Unpin",
 		"openArtifactDir": "Open artifact folder",
 		"delete": "Delete",
+		"archive": "Archive conversation",
+		"archiveDisabled": "Stop the running session first",
+		"archiveToast": "Archived “{{name}}”",
+		"archiveToastAction": "View archived",
 		"tags": {
 			"label": "Tags",
 			"new": "New tag…",

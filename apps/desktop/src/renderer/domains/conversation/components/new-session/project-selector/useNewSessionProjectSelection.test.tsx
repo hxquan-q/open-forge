@@ -2,7 +2,15 @@
 /**
  * 选择状态的接线：默认值跟随入口、用户选择只覆盖页面本地上下文、换入口后重新推导。
  */
-import { defaultConversationCwdAtom, type Project, projectsAtom } from "@shared/store/atoms";
+import {
+	defaultConversationCwdAtom,
+	type Project,
+	projectsAtom,
+	readWorkspaceModeFor,
+	type WorkspaceMode,
+	workspaceModeByProjectAtom,
+	writeWorkspaceMode,
+} from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import type { JSX, ReactNode } from "react";
@@ -24,10 +32,13 @@ function renderSelection(routeCwd: string) {
 	const wrapper = ({ children }: { children: ReactNode }): JSX.Element => (
 		<Provider store={store}>{children}</Provider>
 	);
-	return renderHook(({ cwd }: { cwd: string }) => useNewSessionProjectSelection(cwd), {
-		initialProps: { cwd: routeCwd },
-		wrapper,
-	});
+	return {
+		store,
+		...renderHook(({ cwd }: { cwd: string }) => useNewSessionProjectSelection(cwd), {
+			initialProps: { cwd: routeCwd },
+			wrapper,
+		}),
+	};
 }
 
 describe("useNewSessionProjectSelection", () => {
@@ -61,6 +72,24 @@ describe("useNewSessionProjectSelection", () => {
 
 		act(() => result.current.applyCreatedProject("/w/created", "新项目"));
 		expect(result.current.contextCwd).toBe("/w/created");
+	});
+
+	it("待创建项目落盘时，用户选好的模式档位随迁到新项目键（BUG-0037）", () => {
+		const { store, result } = renderSelection(DEFAULT_CWD);
+		act(() => result.current.selectPendingProject("新项目"));
+		// 待创建期间目录还不存在，切换器把档位写在路由 cwd 键上。
+		act(() =>
+			store.set(
+				workspaceModeByProjectAtom,
+				writeWorkspaceMode(new Map<string, WorkspaceMode>(), DEFAULT_CWD, "work"),
+			),
+		);
+
+		act(() => result.current.applyCreatedProject("/w/created", "新项目"));
+
+		// 会话派生按新项目 cwd 读：用户「看到并选择」的档位必须跟过去；路由 cwd 上的记录保留。
+		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), "/w/created")).toBe("work");
+		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), DEFAULT_CWD)).toBe("work");
 	});
 
 	it("换一个新会话入口后本地覆盖作废，重新按入口推导", () => {

@@ -84,6 +84,21 @@ describe("createVettaPluginPackage", () => {
 		]);
 	});
 
+	it("packages JSON resources without whitespace while leaving sources untouched", async () => {
+		const rootDir = await createFederationFixture({ id: "json-minify-test", version: "0.1.0" });
+		await mkdir(join(rootDir, "locales"), { recursive: true });
+		const prettyLocale = `{\n  "title": "演示",\n  "nested": { "list": [1, 2, 3] }\n}\n`;
+		await writeFile(join(rootDir, "locales", "zh.json"), prettyLocale);
+
+		const result = await createVettaPluginPackage({ rootDir });
+		const archive = await readFile(result.outputPath);
+		// 归档条目未压缩，因此可以直接在归档字节里断言 JSON 是否被去空白。
+		expect(archive.includes(Buffer.from('{"title":"演示","nested":{"list":[1,2,3]}}'))).toBe(true);
+		expect(archive.includes(Buffer.from('"title": "演示"'))).toBe(false);
+		// 源文件保持原样：去空白只发生在进归档的字节上。
+		expect(await readFile(join(rootDir, "locales", "zh.json"), "utf8")).toBe(prettyLocale);
+	});
+
 	it("writes a stable npm archive after validating package and plugin identity", async () => {
 		const rootDir = await createFederationFixture({ id: "npm-pack-test", version: "0.2.0" });
 		await writeFile(

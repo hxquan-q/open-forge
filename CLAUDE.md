@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 〇、语言与分支约定
 
 - 使用中文回答用户；代码、协议字段、日志和面向模型的提示词保持其既有语言。Commit message 使用中文多行格式（标题 + 空行 + 正文）。
-- Pull Request 目标仓库与分支是 **fork（`hxquan-q/open-forge`）的 `dev`**，不是上游 `openvetta/open-vetta`，也不是 `main`。
+- 日常集成分支为本地 `main`；并行代码 Task 使用独立 Worktree/task branch。Coordinator 完成集成测试后将已验收批次推送到个人远端 `origin/dev`；`origin/main` 是由用户阶段性晋升的稳定分支。完整流程见 [`project/collaboration/development-workflow.md`](project/collaboration/development-workflow.md)。
 - 更深目录中的 `AGENTS.md`（如 `apps/desktop/AGENTS.md`、`packages/ai/AGENTS.md` 等）可补充或收紧规则；冲突时以**离目标文件最近的** `AGENTS.md` 为准。
 
 ---
@@ -77,7 +77,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 - `apps/*` 是可交付应用的叶子节点，**不被任何包 import**；`packages/*` 是可复用模块。
 - 跨包调用只走目标包 `package.json#exports` 声明的公开入口，**不得深度导入其他包的 `src/**`**。
 - 包级职责：`packages/ai`（Provider 抽象）、`packages/agent`（agent loop）、`packages/coding-agent`（产品组合）、`packages/runtime-*`（运行时合同、工具、存储、MCP、宿主适配）、`packages/plugins`（插件 SDK/preset）、`packages/themes` + `theme-sdk`/`theme-ui`（主题）、`packages/toolkit`。
-- 商业服务端在私有仓库 `vetta-serv`，不在本仓库；`docs/adr/` 的编号空洞（0016/0017/0019/0038/0039/0051/0052/0056 等）是刻意的。
+- 商业服务端在私有仓库 `openforge-serv`，不在本仓库；`docs/adr/` 的编号空洞（0016/0017/0019/0038/0039/0051/0052/0056 等）是刻意的。
 - 架构决策记录在 `docs/adr/`，但**当前行为以源码、类型、Schema、测试为事实源**；涉及新依赖、公共 API、协议、持久化格式、包边界、安全模型时先检索 ADR。
 - 源码检出默认产出 **lite** 构建：无账号/订阅/托管 marketplace，密钥留在本地。
 
@@ -92,7 +92,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 ### 三、原子化提交与风险预防
 
 **核心准则**：一次提交仅做一件事（Single Responsibility Principle）。
-**提交授权**：每完成一个任务或一组自洽修改且验证通过后就提交，无需每次另行授权，与 `AGENTS.md`「Git 与并行工作区」保持一致；Push 仍需用户明确授权。
+**提交授权**：每完成一个任务或一组自洽修改且验证通过后就提交，无需每次另行授权，与 `AGENTS.md`「Git 与并行工作区」保持一致；Coordinator 在验收集成批次后有范围受限的长期授权推送 `origin/dev`；不得因此推送 `origin/main` 或其他远端/ref。
 
 **禁止混合多业务提交的风险警告**：
 - **精准回滚失效**：若业务 A 存在缺陷需要回退，与业务 B 混杂的提交将导致无关功能被迫陪葬。
@@ -130,7 +130,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / remote-
 - **严禁 `git commit --amend`**：除非用户在当前对话中明确要求“amend”。修补上一提交必须追加独立的 fix/refactor commit。
 - **严禁 `--no-verify`**：Pre-commit Hook 失败时必须从根本修复问题，严禁使用参数绕过。
 - **严禁强制推送**：绝不允许对 `main` / `master` 或共享分支执行 `git push --force`。
-- **严禁未经授权 Push**：在用户未明确下达 push 指令前，严禁执行 `git push`。本地 commit 零成本，推送带全局副作用。
+- **Push 授权范围**：除标准 Task 完成流程中 Coordinator 将已验收的本地 `main` fast-forward 推送到个人远端 `origin/dev` 外，任何 Push 都须用户另行明确授权；绝不因此推 `origin/main`、上游、Task 临时分支或 force push。推送门禁见 [`project/collaboration/development-workflow.md`](project/collaboration/development-workflow.md)。
 - **严禁触碰上游仓库**：所有 commit / push / PR / merge 只能流向 fork `hxquan-q/open-forge`（remote `origin`）。`upstream`（`openvetta/open-vetta`）仅用于 `git fetch` 与 diff 对照，其 push URL 已被禁用；不得对上游发起 push、创建 PR 或请求合并。
 - **严禁破坏并行工作区**：工作区可能同时包含用户或其他 Agent 的改动，禁止 `git reset --hard`、`git checkout .`、`git clean -fd`、`git stash`、`git add .`、`git add -A`；暂存时逐个列出具体路径。
 

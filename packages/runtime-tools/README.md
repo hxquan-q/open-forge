@@ -52,3 +52,17 @@ Projection 只负责「原 Tool 合同如何呈现给模型」：可调整 `labe
 动态 Projector 使用 `bindForTurn()` 捕获外部状态；同一 Turn 的多次模型调用共享该快照，释放时反向清理。
 工具集合的增删替换仍使用 Catalog/generation，执行配置仍使用 `withCodingToolConfiguration()`，不要用
 Projection 模拟能力注册、权限或执行拦截。
+
+
+## Context Boundary
+
+```yaml
+purpose: Platform-neutral coding tool protocols and catalog logic for Vetta runtimes
+provides:  
+  - "@vetta/runtime-tools"
+  - "@vetta/runtime-tools/coding"
+consumes:  []
+internal_dependencies:
+  - "@vetta/ai"
+  - "@vetta/runtime-core"
+```

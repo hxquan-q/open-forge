@@ -1,7 +1,7 @@
 ---
 id: BUG-0012
 type: bug
-status: in_progress
+status: done
 priority: P0
 owner: workspace
 source: GitHub Dependabot Alerts (hxquan-q/open-forge)
@@ -84,6 +84,21 @@ gh api --paginate /repos/hxquan-q/open-forge/dependabot/alerts
 - **TASK-0089**（已完成）：桌面端 `electron` 升级至 `39.8.10`，消除 Dependabot 所列 Electron 安全通告的最低补丁基线。
 - **TASK-0090**（已完成）：`adm-zip` / `svgo` 依赖更新，并在插件与 Skill 解压路径增加 Zip Slip / 符号链接防御。
 
+## 验证证据
+
+- 环境：Windows；GitHub CLI `2.101.0`，账号 `hxquan-q`；核对提交 `6df2fd757a0a9f387d1f438dbfcecf6a9eedba87`（`main`）。
+- 命令与结果：
+
+```text
+gh api --paginate "/repos/hxquan-q/open-forge/dependabot/alerts?state=open&per_page=100" --jq 'length'      → 0
+gh api --paginate "/repos/hxquan-q/open-forge/dependabot/alerts?state=fixed&per_page=100" --jq 'length'     → 92
+gh api --paginate "/repos/hxquan-q/open-forge/dependabot/alerts?state=dismissed&per_page=100" --jq 'length' → 0
+gh api --paginate "/repos/hxquan-q/open-forge/dependabot/alerts?per_page=100" --jq 'length'                 → 92
+```
+
+- 修复面核对（当前 `main`）：`apps/docs-site/package.json` 为 `next@^16.3.3` / `postcss@^8.5.23`（TASK-0087）；根 `package.json` 为 `vitest@^4.1.11`（TASK-0088）；`apps/desktop/package.json` 为 `electron@39.8.10` / `adm-zip@^0.6.1`（TASK-0089 / TASK-0090）；四个修复 Task 的 `status` 均为 `done`。
+- 结论：原 92 项告警全部转为 `fixed`，无 `open`、无人工 dismiss；关闭本 Bug。
+
 ## 进度
 
-- TASK-0089 / TASK-0090 已在本轮落地；BUG 仍保持 `in_progress`，待 TASK-0087 / TASK-0088 验收后关闭。
+- TASK-0087–TASK-0090 已全部落地并通过定向验证；以 `gh api` 复核 `open` 告警为 0，证据见上。本 Bug 关闭，无剩余跟踪项。

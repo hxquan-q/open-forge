@@ -1,17 +1,17 @@
 ---
 id: ISSUE-0010
 type: issue
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 related_requirement: [REQ-0001]
 related_plan: [PLAN-0001]
-related_tasks: [TASK-0023, TASK-0024, TASK-0017, TASK-0077, TASK-0083, TASK-0084]
+related_tasks: [TASK-0023, TASK-0024, TASK-0017, TASK-0077, TASK-0083, TASK-0102]
 related_issues: [ISSUE-0005]
 related_bugs: []
 source: "user-request; RESEARCH-0006; ISSUE-0005 scheme C implementation"
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-26
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -57,6 +57,8 @@ ISSUE-0005 已裁决三轴分离：`WorkspaceMode` 管布局，`agentMode` 管�
 2026-09-24 产品确认方案 B。实施见 `TASK-0077`。不重开 ISSUE-0005 三轴合同。
 
 2026-09-24 文案修订：页头与徽标改称任务类型「文档与研究 / 代码」，不再用「办公 / 编程」。内部 id 仍是 `work` / `coding`。见 `TASK-0083`。
+
+2026-09-24 编号修订：承接本 Issue 的工作区流程 UI 任务由 `TASK-0084` 改名为 `TASK-0102`（原编号与 MCP 按工具可见性任务撞号，见 `VERIFY-0008`）。决策与实施内容不变。
 
 ## 决策触发条件
 

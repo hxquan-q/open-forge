@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer } from "electron";
 import { describe, expect, it, vi } from "vitest";
 import { createSessionApi } from "./session.js";
@@ -80,6 +81,41 @@ describe("createSessionApi trace propagation", () => {
 			query: "release plan",
 			limit: 20,
 		});
+	});
+
+	it("exposes retry and the interrupted-startup subscription on their own channels", async () => {
+		const invoke = vi.fn(async () => undefined);
+		const listeners = new Map<string, (event: unknown, data: unknown) => void>();
+		const on = vi.fn((channel: string, listener: (event: unknown, data: unknown) => void) => {
+			listeners.set(channel, listener);
+		});
+		const ipc = { invoke, on, removeListener: vi.fn() } as unknown as IpcRenderer;
+		const session = createSessionApi(ipc).session;
+
+		// 「继续」条经专用 channel 触发内核 retry；名字对不上时点击将永远无响应。
+		await session.retry("session-1");
+		expect(invoke).toHaveBeenCalledWith("vetta:session:retry", "session-1");
+
+		// 启动扫描结果以一次性订阅下发：handler 收到原样载荷，退订即摘除监听。
+		const handler = vi.fn();
+		const unsubscribe = session.onInterruptedStartup(handler);
+		const listener = listeners.get("vetta:session:interrupted-startup");
+		expect(listener).toBeTypeOf("function");
+		const payload = {
+			sessions: [
+				{
+					sessionId: "s1",
+					sessionPath: "C:/sessions/s1.jsonl",
+					cwd: "C:/workspace",
+					turnInterrupted: true,
+					queuedCount: 1,
+				},
+			],
+		};
+		listener?.({}, payload);
+		expect(handler).toHaveBeenCalledWith(payload);
+		unsubscribe();
+		expect(ipc.removeListener).toHaveBeenCalledWith("vetta:session:interrupted-startup", listener);
 	});
 
 	it("forwards the tail-first viewer option", async () => {

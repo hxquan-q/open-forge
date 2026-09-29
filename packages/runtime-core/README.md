@@ -254,3 +254,26 @@ Runtime 每次 acquisition 只绑定、释放一次。Session 的自动压缩开
 `SessionContextRecord[]`。Runtime 只绑定该次 Snapshot 的模型/凭证、传播取消并释放资源，不加载 Conversation、
 不选择历史边界、也不提交 compaction entry。这样 Team、索引或其它产品可以复用摘要基础设施，而不会把各自的
 可见性规则下沉到通用 Runtime。
+
+
+## Context Boundary
+
+```yaml
+purpose: Host-agnostic runtime contracts: session/agent kernels, ports, observation, failures
+provides:  
+  - "@vetta/runtime-core"
+  - "@vetta/runtime-core/kernel"
+  - "@vetta/runtime-core/agents"
+  - "@vetta/runtime-core/observation"
+  - "@vetta/runtime-core/conversation"
+  - "@vetta/runtime-core/failures"
+  - "@vetta/runtime-core/configuration"
+  - "@vetta/runtime-core/sandbox"
+  - "@vetta/runtime-core/session-extensions"
+  - "@vetta/runtime-core/task"
+  - "@vetta/runtime-core/testing"
+consumes:  []
+internal_dependencies:
+  - "@vetta/agent-core"
+  - "@vetta/ai"
+```

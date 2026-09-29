@@ -66,3 +66,15 @@ The settings page can also install and enable the generated zip from the plugin 
 - `@vetta-org/plugin-sdk` is provided by the host and remains external.
 - The plugin declares `ui.slot.global`, `agent.systemPrompt.write`, `agent.skills.control`, `agent.tools.control`, `agent.tools.register`, `agent.toolHandler.execute`, `agent.continuation.register`, `fs.read`, and `fs.write`; without these grants, the corresponding UI, agent contribution, tool registration, continuation provider, or file operation is ignored.
 - Tailwind classes reference Vetta CSS variables such as `--primary` and `--popover`, so the plugin follows the active host theme.
+
+
+## Context Boundary
+
+```yaml
+purpose: Demonstrates UI slots plus agent prompt, skill, tool policy, tool registration, and continuation contributions.
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+```

@@ -10,9 +10,10 @@ import {
 import type { ModelCallContributionContext } from "@vetta/runtime-core/kernel";
 import type { CodingAgentRuntimeModelAdapter } from "../../adapters/runtime-core/model-runtime-adapter.js";
 import {
-	allowsAgentResource,
+	allowsAgentMcpTool,
 	selectAgentPlugins,
 	validateAgentResourceSelection,
+	withAgentProfileDefaultToolTolerance,
 } from "../../agent-configuration/resource-selection.js";
 import { AGENT_SESSION_CONFIGURATION } from "../../agent-configuration/session-configuration-extension.js";
 import { CodingAgentExtensionRunBridge } from "../../extensions/runtime/extension-run-bridge.js";
@@ -407,13 +408,16 @@ async function initializeSession<TOwnershipBinding>(
 					await pluginConfigurationRuntime.synchronize("turn-apply");
 					await options.mcpCoordinator.refreshSession(activeSessionId, context?.reason === "turn");
 					await turnCapabilityAssembly.refreshConfigurationResources(context?.signal);
-					mcpController?.setToolFilter(
-						(tool) =>
-							allowsAgentResource(configuration.tools, tool.name) &&
-							(configuration.mcpServers === null ||
-								(tool.serverName !== undefined && configuration.mcpServers.includes(tool.serverName))),
+					mcpController?.setToolFilter((tool) => allowsAgentMcpTool(configuration, tool));
+					// Profile 默认折算的工具名按软默认校验（BUG-0014）：宿主没注册的默认项
+					// 降级而不是让整个会话创建失败；显式选择仍逐名严格核对。
+					validateAgentResourceSelection(
+						configuration,
+						withAgentProfileDefaultToolTolerance(
+							agentConfiguration.readCatalog(),
+							sessionOptions.profileDefaultToolNames,
+						),
 					);
-					validateAgentResourceSelection(configuration, agentConfiguration.readCatalog());
 					appliedPluginSelection = selection;
 				}),
 			async activate(binding) {

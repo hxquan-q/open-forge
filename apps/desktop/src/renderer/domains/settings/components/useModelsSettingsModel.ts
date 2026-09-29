@@ -1,6 +1,8 @@
-import type { ModelsConfigData } from "@preload/api.js";
+// Modified by The Open Forge contributors.
+import type { ModelsConfigData, ProviderTestResult } from "@preload/api.js";
 import { localModelsConfigAtom, modelCatalog } from "@shared/store/model-catalog";
 import { showToast } from "@shared/store/toast-atoms";
+import type { TFunction } from "i18next";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,6 +41,7 @@ export interface EditingModelState {
 export interface FetchedModelsState {
 	provider: string;
 	models: string[];
+	/** 将要添加的 id——只含尚未在 provider 里的项；已添加项在面板上禁用展示。 */
 	selected: string[];
 	error?: string;
 }
@@ -56,6 +59,9 @@ export interface ModelsSettingsModel {
 	saving: boolean;
 	fetchingModelsFor: string | null;
 	fetchedModels: FetchedModelsState | null;
+	testingProvider: string | null;
+	/** 每个 provider 最近一次「测试可用性」的结果，按 provider 名存留。 */
+	providerTestResults: Record<string, ProviderTestResult>;
 	setProviderForm: React.Dispatch<React.SetStateAction<ProviderFormState>>;
 	setModelForm: React.Dispatch<React.SetStateAction<ModelFormState>>;
 	saveConfig: (newConfig: ModelsConfigData) => Promise<void>;
@@ -78,8 +84,10 @@ export interface ModelsSettingsModel {
 	onSetDefaultModel: (providerName: string, modelId: string) => Promise<void>;
 	onFetchProviderModels: (providerName: string) => Promise<void>;
 	onToggleFetchedModel: (modelId: string) => void;
+	onSetAllFetchedSelected: (select: boolean) => void;
 	onCancelFetchedModels: () => void;
 	onApplyFetchedModels: (providerName: string) => Promise<void>;
+	onTestProvider: (providerName: string) => Promise<void>;
 }
 
 export const API_OPTIONS = [
@@ -156,6 +164,8 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 	const [saving, setSaving] = useState(false);
 	const [fetchingModelsFor, setFetchingModelsFor] = useState<string | null>(null);
 	const [fetchedModels, setFetchedModels] = useState<FetchedModelsState | null>(null);
+	const [testingProvider, setTestingProvider] = useState<string | null>(null);
+	const [providerTestResults, setProviderTestResults] = useState<Record<string, ProviderTestResult>>({});
 
 	useEffect(() => {
 		void modelCatalog.revalidate({ sources: ["local"] });
@@ -182,6 +192,14 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 			authHeader: providerForm.authHeader || undefined,
 		};
 	}, [providerForm]);
+
+	const clearProviderTests = useCallback((...names: string[]) => {
+		setProviderTestResults((prev) => {
+			const next = { ...prev };
+			for (const name of names) delete next[name];
+			return next;
+		});
+	}, []);
 
 	const handleAddProvider = useCallback(async () => {
 		if (!config || !providerForm.name.trim()) return;
@@ -222,6 +240,7 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 			};
 
 			await saveConfig({ ...config, providers: newProviders });
+			clearProviderTests(oldName, nextName);
 			setEditingProvider(null);
 			setProviderForm({ ...emptyProvider });
 			if (oldName !== nextName) {
@@ -229,7 +248,7 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 			}
 			recordSettingsUsage({ tab: "models", action: "updated", target: "provider", value: providerForm.api });
 		},
-		[config, providerForm.api, providerForm.name, providerFormToData, saveConfig],
+		[clearProviderTests, config, providerForm.api, providerForm.name, providerFormToData, saveConfig],
 	);
 
 	const handleDeleteProvider = useCallback(
@@ -239,10 +258,11 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 			delete newProviders[name];
 			const defaultModel = config.defaultModel?.startsWith(`${name}/`) ? undefined : config.defaultModel;
 			await saveConfig({ ...config, defaultModel, providers: newProviders });
+			clearProviderTests(name);
 			if (expandedProvider === name) setExpandedProvider(null);
 			recordSettingsUsage({ tab: "models", action: "deleted", target: "provider" });
 		},
-		[config, expandedProvider, saveConfig],
+		[clearProviderTests, config, expandedProvider, saveConfig],
 	);
 
 	const startEditProvider = useCallback(
@@ -386,25 +406,51 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 		[config],
 	);
 
-	const handleFetchProviderModels = useCallback(
-		async (providerName: string) => {
-			setFetchingModelsFor(providerName);
-			try {
-				const result = await window.vetta.models.fetchProviderModels(providerName);
-				const existing = new Set((config?.providers[providerName]?.models || []).map((item) => item.id));
-				setFetchedModels({
-					provider: providerName,
-					models: result.models,
-					// 默认只勾选尚未添加的模型，避免重复项。
-					selected: result.models.filter((id) => !existing.has(id)),
-					error: result.error,
-				});
-			} finally {
-				setFetchingModelsFor(null);
-			}
+	const handleFetchProviderModels = useCallback(async (providerName: string) => {
+		setFetchingModelsFor(providerName);
+		try {
+			const result = await window.vetta.models.fetchProviderModels(providerName);
+			setFetchedModels({
+				provider: providerName,
+				models: result.models,
+				// 默认不勾选：中转网关可能返回上百个模型，全选后逐个点掉成本很高，
+				// 改为由用户挑要加的（面板提供全选/清空批量操作）。
+				selected: [],
+				error: result.error,
+			});
+		} finally {
+			setFetchingModelsFor(null);
+		}
+	}, []);
+
+	const setAllFetchedSelected = useCallback(
+		(select: boolean) => {
+			setFetchedModels((prev) => {
+				if (!prev) return prev;
+				if (!select) return { ...prev, selected: [] };
+				const existing = new Set((config?.providers[prev.provider]?.models || []).map((item) => item.id));
+				// 已添加的模型不可勾选：selected 的语义是「将要写入的 id」。
+				return { ...prev, selected: prev.models.filter((id) => !existing.has(id)) };
+			});
 		},
 		[config],
 	);
+
+	const handleTestProvider = useCallback(async (providerName: string) => {
+		setTestingProvider(providerName);
+		try {
+			const result = await window.vetta.models.testProvider(providerName);
+			setProviderTestResults((prev) => ({ ...prev, [providerName]: result }));
+			recordSettingsUsage({ tab: "models", action: "tested", target: "provider" });
+		} catch (err) {
+			setProviderTestResults((prev) => ({
+				...prev,
+				[providerName]: { ok: false, error: "network", detail: err instanceof Error ? err.message : String(err) },
+			}));
+		} finally {
+			setTestingProvider(null);
+		}
+	}, []);
 
 	const handleApplyFetchedModels = useCallback(
 		async (providerName: string) => {
@@ -449,6 +495,8 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 		saving,
 		fetchingModelsFor,
 		fetchedModels,
+		testingProvider,
+		providerTestResults,
 		setProviderForm,
 		setModelForm,
 		saveConfig,
@@ -501,9 +549,53 @@ export function useModelsSettingsModel(): ModelsSettingsModel {
 						}
 					: prev,
 			),
+		onSetAllFetchedSelected: setAllFetchedSelected,
 		onCancelFetchedModels: () => setFetchedModels(null),
 		onApplyFetchedModels: handleApplyFetchedModels,
+		onTestProvider: handleTestProvider,
 	};
+}
+
+export interface ProviderTestChip {
+	/** 行内短标签：可用时给延迟，失败时给原因。 */
+	label: string;
+	/** 语义色：success=快（≤500ms），warn=慢（≤1000ms），error=很慢/失败（ccswitch 延迟分级）。 */
+	tone: "success" | "warn" | "error";
+	/** 悬停时的补充说明（模型数、HTTP 状态原文或底层错误）。 */
+	title: string;
+}
+
+/** 把结构化测试结果折算成行内徽标文案；title 永远给出用户可读的结论。 */
+export function providerTestChip(result: ProviderTestResult, t: TFunction<"settings">): ProviderTestChip {
+	if (result.ok) {
+		const latencyMs = result.latencyMs ?? 0;
+		return {
+			label: `${latencyMs}ms`,
+			tone: latencyMs <= 500 ? "success" : latencyMs <= 1000 ? "warn" : "error",
+			title:
+				result.modelCount === undefined ? t("providerTestOk") : t("providerTestOkModels", { n: result.modelCount }),
+		};
+	}
+	if (result.status !== undefined) {
+		const label =
+			result.status === 401 || result.status === 403
+				? t("providerTestUnauthorized")
+				: result.status === 404
+					? t("providerTestNotFound")
+					: t("providerTestHttpError", { status: result.status });
+		return { label, tone: "error", title: result.detail ?? label };
+	}
+	const label =
+		result.error === "missing-base-url"
+			? t("fetchModelsNeedsBaseUrl")
+			: result.error === "invalid-base-url"
+				? t("providerTestInvalidBaseUrl")
+				: result.error === "timeout"
+					? t("providerTestTimeout")
+					: result.error === "unknown-provider"
+						? t("providerTestUnknownProvider")
+						: t("providerTestNetwork");
+	return { label, tone: "error", title: result.detail ?? label };
 }
 
 function parseHeadersString(value: string): Record<string, string> | undefined {

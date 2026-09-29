@@ -34,18 +34,18 @@ Open Forge 是一个开源桌面 AI Agent，"for real work — local-first, exte
 - 用户自行配置模型端点；MCP server、插件、webhook、IM 集成、更新源与可选遥测各自构成数据边界。
 - 离开工位：IM 桥接（`apps/im-gateway`，Go）、webhook、通知、quick entry、移动端。
 - 社区与文档：docs.openvetta.com（`apps/docs-site`）、openvetta.com、Discord、GitHub Discussions。
-- 服务端（业务 API、控制台、官网、计费/订阅决策）在私有仓库 `vetta-serv`，不在此仓库。
+- 服务端（业务 API、控制台、官网、计费/订阅决策）在私有仓库 `openforge-serv`，不在此仓库。
 
 ## Capabilities and Constraints
 
 - 能力：检查工作区、运行命令、文件操作、MCP 工具、显式批准的敏感操作；预览/处理代码、PDF、Office、表格、图片、音视频、SVG、生成 UI；批量任务与定时自动化；本地知识库、可安装 skill/scenario。
-- 约束：插件是 curated code 而非任意代码沙箱，能力在 `plugin.json` 声明、宿主授权、运行时复查；local-first ≠ 零网络；lite 构建不静默启用 Vetta Serv 集成（构建期选择）。
+- 约束：插件是 curated code 而非任意代码沙箱，能力在 `plugin.json` 声明、宿主授权、运行时复查；local-first ≠ 零网络；lite 构建不静默启用 Open Forge Serv 集成（构建期选择）。
 - 暂未定的产品事实：移动端相对桌面端的功能边界与优先级（记录为开放问题，不在此处发明）。
 
 ## Brand Commitments
 
 - **面向用户的产品品牌**：Open Forge；许可证 Apache-2.0。
-- **现有外部入口**：openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord 暂作为当前有效链接保留；它们不是内部运行时身份，也不代表品牌迁移已全部完成。
+- **现有外部入口**：openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord、GitHub Discussions 暂作为当前有效链接保留；它们不是内部运行时身份，也不代表品牌迁移已全部完成。2026-09-25 用户确认：社区入口暂时不建设，不创建新 Discord/社区，现有链接继续有效直至后续决策。
 - **内部兼容身份**：`@vetta/*`、`VETTA_*` 等包名和协议/环境变量维持现状，按各自合同渐进处理，不做全局字符串替换。Desktop `APP_RUNTIME_NAME` 当前保持 `vetta`，它参与 Electron `safeStorage` 密钥定位；更改会使已有凭据无法解密，必须先设计并验证迁移方案。
 - **双语承诺**：English + 简体中文（README 双语、桌面端 i18n 以 zh 为 fallback 基准）。
 - **社区背书**：LINUX DO 链接与认可（README "Friends & Links"）。
@@ -56,8 +56,8 @@ Open Forge 是一个开源桌面 AI Agent，"for real work — local-first, exte
 
 - 真实资产：`docs/assets/banner.webp`（品牌横幅）、`docs/assets/screenshot.png`（桌面工作区截图）。
 - 公开文档站内容（docs.openvetta.com）由 `apps/docs-site` 产出，含产品能力指南与截图。
-- `docs/adr/` 架构决策记录（计费/订阅类编号刻意空洞，在 vetta-serv）。
-- **不存在的证据**：本仓库没有客户证言、案例研究、定价、benchmark 数据——未来表面工作不得编造；订阅/权益叙述属于 vetta-serv，不在此断言。
+- `docs/adr/` 架构决策记录（计费/订阅类编号刻意空洞，在 openforge-serv）。
+- **不存在的证据**：本仓库没有客户证言、案例研究、定价、benchmark 数据——未来表面工作不得编造；订阅/权益叙述属于 openforge-serv，不在此断言。
 
 ## Product Principles
 

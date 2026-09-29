@@ -8,8 +8,10 @@ import { createAgentTeamsApi } from "./apis/agent-teams.js";
 import { createAppLifecycleApi } from "./apis/app-lifecycle.js";
 import { createAppMonitorApi } from "./apis/app-monitor.js";
 import { createAppshotApi } from "./apis/appshot.js";
+import { createArchivedSessionsApi } from "./apis/archived-sessions.js";
 import { createBatchTasksApi } from "./apis/batch-tasks.js";
 import { createBrowserTabApi } from "./apis/browser-tab.js";
+import { createBrowserViewApi } from "./apis/browser-view.js";
 import { createCanvasApi } from "./apis/canvas.js";
 import { createConversationTagsApi } from "./apis/conversation-tags.js";
 import { createDownloadsApi } from "./apis/downloads.js";
@@ -25,6 +27,7 @@ import { createReviewChangesApi } from "./apis/review-changes.js";
 import { createRuntimeConfigurationApi } from "./apis/runtime-configuration.js";
 import { createSchedulerApi } from "./apis/scheduler.js";
 import { createSessionApi } from "./apis/session.js";
+import { createSessionArchiveApi } from "./apis/session-archive.js";
 import { createSpeechInputApi } from "./apis/speech-input.js";
 import { createSshApi } from "./apis/ssh.js";
 import { createSystemApi } from "./apis/system.js";
@@ -49,12 +52,14 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createAppLifecycleApi(ipcRenderer),
 	...createAppMonitorApi(ipcRenderer),
 	...createSessionApi(ipcRenderer),
+	...createSessionArchiveApi(ipcRenderer),
 	...createSpeechInputApi(ipcRenderer),
 	...createImApi(ipcRenderer),
 	...createDownloadsApi(ipcRenderer),
 	...createBatchTasksApi(ipcRenderer),
 	...createCanvasApi(ipcRenderer),
 	...createBrowserTabApi(ipcRenderer),
+	...createBrowserViewApi(ipcRenderer),
 	...createSchedulerApi(ipcRenderer),
 	...createWebhookApi(ipcRenderer),
 	...createNotificationApi(ipcRenderer),
@@ -62,6 +67,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createThemesApi(ipcRenderer),
 	...createPetApi(ipcRenderer),
 	...createConversationTagsApi(ipcRenderer),
+	...createArchivedSessionsApi(ipcRenderer),
 	...createReviewChangesApi(ipcRenderer),
 	...createProjectApi(ipcRenderer),
 	...createSshApi(ipcRenderer),

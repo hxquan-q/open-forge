@@ -1,4 +1,5 @@
 import { useSshHost } from "@shared/hooks/useSshHost";
+import { i18n } from "@shared/i18n";
 import {
 	activeSessionAtom,
 	activeSessionCwdAtom,
@@ -8,6 +9,7 @@ import {
 	captureInputActionWorkingState,
 	chatMessagesAtom,
 	closeInlineFilePreviewAtom,
+	confirmDialogAtom,
 	defaultConversationCwdAtom,
 	dispatchBottomPanelAtom,
 	emptySessionInputActionState,
@@ -34,6 +36,8 @@ import { createElement, useCallback, useEffect, useMemo, useRef, useState } from
 import { useTranslation } from "react-i18next";
 import { useOpenTerminal } from "../../bottom-panel/hooks/useOpenTerminal";
 import type { ChatViewModelResult } from "../components/chat-view/types";
+import { exportPortableSessionArchive, importPortableSessionArchive } from "../services/session-archive";
+import { drainActiveTranscriptWindow } from "../services/transcript-window-controller";
 
 /**
  * ChatView 只需要当前会话的 path / cwd。订阅 activeSession 整个对象会让流式期间
@@ -111,6 +115,7 @@ export function useChatViewModel(): ChatViewModelResult {
 
 	const [pinned, setPinned] = useState(false);
 	const [exporting, setExporting] = useState(false);
+	const [archiveExporting, setArchiveExporting] = useState(false);
 	useEffect(() => {
 		void window.vetta.window.isAlwaysOnTop().then(setPinned);
 	}, []);
@@ -120,7 +125,14 @@ export function useChatViewModel(): ChatViewModelResult {
 		setPinned(next);
 	}, []);
 	const finishExport = useCallback(() => setExporting(false), []);
-	const openExport = useCallback(() => setExporting(true), []);
+	// TASK-0050：窗口化会话只加载了尾部若干页——导出前先把整个 transcript
+	// 拉进窗口并物化占位，否则 HTML 只含已加载窗口、旧条目以摘要行出现。
+	const openExport = useCallback(() => {
+		void (async () => {
+			await drainActiveTranscriptWindow();
+			setExporting(true);
+		})();
+	}, []);
 	// 底部面板的展开态是会话级持久化状态，所以读写都走它自己的 atom，
 	// 不在这里再存一份 useState。
 	const bottomPanelState = useAtomValue(bottomPanelStateAtom);
@@ -149,6 +161,57 @@ export function useChatViewModel(): ChatViewModelResult {
 		}
 		return getProjectDisplayName(activeSessionCwd ?? "", defaultCwd);
 	}, [activeSessionPath, activeSessionCwd, defaultCwd, sessionsMap]);
+
+	const setConfirmDialog = useSetAtom(confirmDialogAtom);
+
+	// Electron 不支持 window.prompt；归档口令统一走应用内确认对话框的 input 字段。
+	const exportArchive = useCallback(() => {
+		if (!activeSessionPath || archiveExporting) return;
+		const sessionPath = activeSessionPath;
+		const defaultFileName = sessionTitle ?? undefined;
+		setConfirmDialog({
+			title: i18n.t("chat:chatView.archiveExportButton.title"),
+			message: i18n.t("chat:chatView.archiveExport.passphrasePrompt"),
+			input: { password: true },
+			onConfirm: (_checkboxChecked, passphrase = "") => {
+				setArchiveExporting(true);
+				void (async () => {
+					try {
+						await exportPortableSessionArchive({ sessionPath, passphrase, defaultFileName });
+					} catch (error) {
+						alert(
+							i18n.t("chat:chatView.archiveExport.failed", {
+								message: error instanceof Error ? error.message : String(error),
+							}),
+						);
+					} finally {
+						setArchiveExporting(false);
+					}
+				})();
+			},
+		});
+	}, [activeSessionPath, archiveExporting, sessionTitle, setConfirmDialog]);
+	const importArchive = useCallback(() => {
+		setConfirmDialog({
+			title: i18n.t("chat:chatView.archiveImportButton.title"),
+			message: i18n.t("chat:chatView.archiveImport.passphrasePrompt"),
+			input: { password: true },
+			onConfirm: (_checkboxChecked, passphrase = "") => {
+				void (async () => {
+					try {
+						const result = await importPortableSessionArchive(passphrase);
+						alert(i18n.t(`chat:chatView.archiveImport.${result.messageKey}`));
+					} catch (error) {
+						alert(
+							i18n.t("chat:chatView.archiveImport.failed", {
+								message: error instanceof Error ? error.message : String(error),
+							}),
+						);
+					}
+				})();
+			},
+		});
+	}, [setConfirmDialog]);
 
 	useEffect(() => {
 		setHeaderTitle(sessionTitle);
@@ -191,12 +254,14 @@ export function useChatViewModel(): ChatViewModelResult {
 		() => ({
 			finishExport,
 			openExport,
+			exportArchive,
+			importArchive,
 			togglePanel,
 			toggleBottomPanel,
 			openTerminal,
 			togglePin,
 		}),
-		[finishExport, openExport, togglePanel, toggleBottomPanel, openTerminal, togglePin],
+		[finishExport, openExport, exportArchive, importArchive, togglePanel, toggleBottomPanel, openTerminal, togglePin],
 	);
 
 	const hasMessages = messages.length > 0;
@@ -205,6 +270,10 @@ export function useChatViewModel(): ChatViewModelResult {
 			exportDisabled: !hasMessages || isStreaming || exporting,
 			exporting,
 			exportTitle: t("chatView.exportButton.title"),
+			archiveExportDisabled: !activeSessionPath || isStreaming || archiveExporting,
+			archiveExporting,
+			archiveExportTitle: t("chatView.archiveExportButton.title"),
+			archiveImportTitle: t("chatView.archiveImportButton.title"),
 			panelOpen,
 			panelTitle: panelOpen ? t("chatView.panelButton.open") : t("chatView.panelButton.closed"),
 			bottomPanelOpen,
@@ -222,6 +291,8 @@ export function useChatViewModel(): ChatViewModelResult {
 			pinned,
 		}),
 		[
+			activeSessionPath,
+			archiveExporting,
 			bottomPanelOpen,
 			exporting,
 			hasMessages,

@@ -12,11 +12,25 @@ export interface ExecutionModeOptionView {
 	readonly selected: boolean;
 }
 
+export interface ExecutionModeSandboxNotice {
+	/** 已本地化的不可用原因（宿主按 capability.reason 映射，视图不猜）。 */
+	readonly reason: string;
+	/** 已本地化的「当前实际按哪种模式执行」。 */
+	readonly mode: string;
+	/** 主进程原始诊断文本：只作悬停提示，不进入可见文案（可能是未本地化的宿主原文）。 */
+	readonly details?: string;
+}
+
 export interface ExecutionModeSelectorViewProps {
 	readonly open: boolean;
 	readonly disabled: boolean;
 	readonly selectedOption: ExecutionModeOptionView;
 	readonly options: readonly ExecutionModeOptionView[];
+	/**
+	 * 沙盒受限不可用的原因与当前生效模式，渲染在选项下方。宿主不下发就不渲染：
+	 * 能力探测结果和「现在到底按哪种模式执行」都是宿主语义，视图不猜，也不承诺恢复方式。
+	 */
+	readonly sandboxNotice?: ExecutionModeSandboxNotice;
 	readonly className?: string;
 	readonly classNames?: {
 		readonly root?: string;
@@ -34,6 +48,7 @@ export function ExecutionModeSelectorView({
 	disabled,
 	selectedOption,
 	options,
+	sandboxNotice,
 	className,
 	classNames,
 	onOpenChange,
@@ -69,7 +84,9 @@ export function ExecutionModeSelectorView({
 							align="start"
 							sideOffset={6}
 							className={cn(
-								"w-[148px] gap-0 overflow-visible rounded-lg border border-border p-0",
+								// 有说明行时放宽，否则原因会被挤成逐字换行
+								sandboxNotice ? "w-[248px]" : "w-[148px]",
+								"gap-0 overflow-visible rounded-lg border border-border p-0",
 								classNames?.content,
 							)}
 							style={{ animation: "none" }}
@@ -113,6 +130,12 @@ export function ExecutionModeSelectorView({
 											)}
 										</button>
 									))}
+									{sandboxNotice && (
+										<div className="mt-0.5 border-t border-border/60 px-2 pt-1.5 pb-0.5 text-[10px] leading-snug text-muted-foreground">
+											<p title={sandboxNotice.details}>{sandboxNotice.reason}</p>
+											<p>{sandboxNotice.mode}</p>
+										</div>
+									)}
 								</div>
 							</motion.div>
 						</PopoverContent>

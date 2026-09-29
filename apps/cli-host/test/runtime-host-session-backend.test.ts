@@ -1,9 +1,10 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Api, type AssistantMessage, type AssistantMessageEvent, EventStream, type Model } from "@vetta/ai";
 import { createCodingAgentRuntimeHostSessionConfig } from "@vetta/coding-agent/composition";
 import type { CodingAgentRuntimeModelSource } from "@vetta/coding-agent/host-services";
+import { SandboxUnavailableError } from "@vetta/coding-agent/sandbox/errors";
 import { CODING_AGENT_SESSION_PROFILE_STATE_READ } from "@vetta/coding-agent/session-extensions";
 import { RuntimeHost, type SessionEvent } from "@vetta/runtime-core";
 import { afterEach, describe, expect, it } from "vitest";
@@ -154,7 +155,9 @@ describe("Coding Agent RuntimeHost backend", () => {
 		const { sessionId } = await runtime.createSession(
 			createCodingAgentRuntimeHostSessionConfig(
 				composition.agentRuntime,
-				{ sessionId: "retry-session", cwd },
+				// 无沙箱测试环境 + ADR-0133 fail-closed:显式 full-access,避免默认 sandbox 触发
+				// SandboxUnavailableError 让会话创建失败(本测试只关注模型重试)。
+				{ sessionId: "retry-session", cwd, executionMode: "full-access" },
 				{ sessionDir: conversationDir, scenario: "batch" },
 			),
 		);
@@ -170,6 +173,50 @@ describe("Coding Agent RuntimeHost backend", () => {
 		expect(eventTypes).toContain("retry.end");
 		expect(events.some((event) => event.channel === "assistant" && event.type === "error")).toBe(true);
 		expect(events.filter((event) => event.channel !== "assistant").map((event) => event.type)).not.toContain("error");
+	});
+
+	it("rejects session creation when the default sandbox mode meets a host without a sandbox", async () => {
+		// ADR-0133 P0:RuntimeHost 默认执行模式是 sandbox;宿主声明无沙箱(远程项目分支、
+		// 无沙箱测试装置)时,会话创建必须显式失败——而不是建出核心工具整组消失的死会话。
+		const cwd = await temporaryDirectory("greenfield-host-nosandbox-workspace-");
+		const conversationDir = await temporaryDirectory("greenfield-host-nosandbox-conversations-");
+		const composition = await createCodingAgentRuntimeComposition({
+			conversationDir,
+			cwd,
+			createSessionExecutionEnvironment: createUnsandboxedTestSessionExecutionEnvironment,
+			scenario: "batch",
+			enableSubagents: false,
+			modelRegistry: modelRegistry(),
+			initialModel: MODEL,
+			initialThinkingLevel: "off",
+		});
+		const runtime = new RuntimeHost({ sessionBackend: composition.runtimeHostBackend });
+		disposers.push(async () => {
+			await runtime.disposeAllSessions();
+			await composition.dispose();
+		});
+		// VETTA_SANDBOX_FAIL_OPEN 若被外部环境设置会把 fail-closed 翻成 fail-open,先摘掉保证确定。
+		const previousFailOpen = process.env.VETTA_SANDBOX_FAIL_OPEN;
+		delete process.env.VETTA_SANDBOX_FAIL_OPEN;
+
+		try {
+			// 不传 executionMode:吃 RuntimeHost 的默认 sandbox,复现真实无沙箱宿主的组合
+			await expect(
+				runtime.createSession(
+					createCodingAgentRuntimeHostSessionConfig(
+						composition.agentRuntime,
+						{ sessionId: "nosandbox-session", cwd },
+						{ sessionDir: conversationDir, scenario: "batch" },
+					),
+				),
+			).rejects.toThrow(SandboxUnavailableError);
+		} finally {
+			if (previousFailOpen !== undefined) process.env.VETTA_SANDBOX_FAIL_OPEN = previousFailOpen;
+		}
+
+		// 失败的会话不得留下半装配的会话目录
+		const leftovers = await readdir(conversationDir);
+		expect(leftovers.filter((entry) => entry.includes("nosandbox-session"))).toEqual([]);
 	});
 
 	async function temporaryDirectory(prefix: string): Promise<string> {
@@ -233,7 +280,7 @@ class RecordedAssistantStream extends EventStream<AssistantMessageEvent, Assista
 function assistantMessage(stopReason: "stop" | "error", errorMessage?: string): AssistantMessage {
 	return {
 		role: "assistant",
-		content: [],
+		content: stopReason === "stop" ? [{ type: "text", text: "retry recovered" }] : [],
 		api: "openai-responses",
 		provider: "test",
 		model: MODEL.id,

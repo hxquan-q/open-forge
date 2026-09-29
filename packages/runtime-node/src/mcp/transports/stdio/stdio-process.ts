@@ -20,6 +20,8 @@ export interface StdioMcpProcessOptions {
  * 进程，而不是把半条消息读进内存。
  */
 const DEFAULT_MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
+/** stderr 尾部保留上限：只用于进程早退时向调用方透出死因（如 npx 安装失败文本）。 */
+const STDERR_TAIL_BYTES = 4 * 1024;
 
 type StdioMcpProcessEvents = {
 	message: [message: unknown];
@@ -37,6 +39,7 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	private readonly startupTimeout: number;
 	private messageBuffer = "";
 	private bufferedBytes = 0;
+	private stderrTail = "";
 	private readonly maxMessageBytes: number;
 	private isReady = false;
 	private isClosed = false;
@@ -57,6 +60,7 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 
 	async start(): Promise<void> {
 		if (this.process) throw new Error(`MCP server '${this.name}' is already running`);
+		this.stderrTail = "";
 
 		return new Promise((resolve, reject) => {
 			const timeout = setTimeout(() => {
@@ -195,8 +199,19 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 	}
 
 	private handleStderr(data: Buffer): void {
-		const text = data.toString().trim();
-		if (text) this.log(`[stderr] ${text}`);
+		const text = data.toString();
+		this.stderrTail = (this.stderrTail + text).slice(-STDERR_TAIL_BYTES);
+		const trimmed = text.trim();
+		if (trimmed) this.log(`[stderr] ${trimmed}`);
+	}
+
+	/**
+	 * 进程近期 stderr 的尾部片段。server 启动即死（命令不存在、npx 缓存损坏等）
+	 * 时，真正的死因只出现在 stderr——pending 的 initialize 只能拿到 exit code，
+	 * 带上尾部让上层错误可定位，而不必要求用户开 debug 复现。
+	 */
+	getStderrTail(): string {
+		return this.stderrTail;
 	}
 
 	private cleanup(): void {
@@ -213,6 +228,8 @@ export class StdioMcpProcess extends EventEmitter<StdioMcpProcessEvents> {
 		this.isClosed = true;
 		this.messageBuffer = "";
 		this.bufferedBytes = 0;
+		// stderrTail 不在此清空：exit 先 cleanup 再 emit，消费方（退出错误透出）
+		// 在 emit 之后才读；新一轮 start() 会重置它。
 	}
 
 	private log(message: string): void {

@@ -1,0 +1,7 @@
+{
+	"name": "dotenv",
+	"version": "0.0.0-vetta-shim",
+	"description": "No-op dotenv: the host injects all env vars; a real dotenv either misses (pruned tree resolves to a hoisted v17 that prints a stdout banner and breaks MCP stdio) or reads stray .env files. Upstream only calls config().",
+	"type": "module",
+	"main": "index.mjs"
+}

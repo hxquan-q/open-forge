@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 import { RouterProvider } from "@tanstack/react-router";
 import { ThemeHostProvider } from "@vetta-org/theme-sdk";
 import { StrictMode } from "react";
 import type { Root } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
+import { resolveDesktopBrandName } from "@/shared/desktop-brand";
 import { router } from "./router";
 import { i18n, initI18n } from "./shared/i18n";
 import { initializeHostedRoutes } from "./initialize-hosted-routes";
@@ -15,6 +17,12 @@ import { initializeProductAnalytics } from "./telemetry/product-analytics";
 export function renderApp(root: Root): void {
 	initializeProductAnalytics();
 	initI18n();
+	// 窗口标题随品牌口径与界面语言（index.html 的静态标题只覆盖默认口径）。
+	const applyBrandTitle = () => {
+		document.title = resolveDesktopBrandName(i18n.language);
+	};
+	applyBrandTitle();
+	i18n.on("languageChanged", applyBrandTitle);
 	initializeHostedRoutes();
 
 	root.render(

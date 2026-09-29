@@ -8,6 +8,16 @@ import { BrowserProfileRegistry } from "./browser-profile-registry.js";
 import { BrowserRuntimeManager } from "./browser-runtime-manager.js";
 
 export { BrowserAutomationService } from "./browser-automation-service.js";
+export {
+	type BrowserViewHandle,
+	type BrowserViewHostWindow,
+	configureInAppBrowserViewHostDeps,
+	getInAppBrowserViewHost,
+	InAppBrowserViewHost,
+	type InAppBrowserViewHostRuntime,
+	resetInAppBrowserViewHostForTests,
+	setInAppBrowserViewEventSink,
+} from "./browser-view-host.js";
 export { BrowserAutomationError } from "./contracts.js";
 export {
 	type BrowserTabHostDependencies,
@@ -23,7 +33,7 @@ export {
 	resetInAppBrowserSessionControllerForTests,
 	setInAppBrowserEventSink,
 } from "./webview-session-controller.js";
-export { bindInAppBrowserWebview, isInAppBrowserWebContents } from "./webview-session-host.js";
+export { bindInAppBrowserViewContents } from "./webview-session-host.js";
 
 let sharedService: BrowserAutomationService | undefined;
 

@@ -18,7 +18,7 @@ depends_on: [TASK-0044, TASK-0045]
 conflicts_with: []
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -70,11 +70,12 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- 等待产品/发布负责人确认是否保留当前 Discord/Discussions 目标或提供新目标；确认前维持当前入口，不做外部变更。
+- 用户决策已取得（2026-09-25）：**社区入口暂时不建设**——保留现有外部入口（openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord、GitHub Discussions、LINUX DO 链接），不创建新 Discord/社区，不做任何外部变更。该决策已同步 `PRODUCT.md` Brand Commitments。
+- 按 frontmatter `depends_on: [TASK-0044, TASK-0045]`，本任务待 `TASK-0045`（CLI 命名与旧命令兼容策略）收口后转 done；届时仅需复核记录，无额外实施。
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：决策已同步至 `project/requirements/PRODUCT.md` Brand Commitments（2026-09-25）。
+- 实际运行：无代码与外部操作；本任务为 coordination-only，未创建任何外部账号或发布。
+- 未运行及原因：不适用（无代码改动与外部账号操作）。
+- 剩余风险：现有外部入口仍挂旧品牌域名与仓库名；若后续购域或决定建设新社区，需重新决策并同步 `TASK-0047` / `TASK-0048`。

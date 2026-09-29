@@ -9,7 +9,7 @@ plan: PLAN-0002
 source: TASK-0040 / VERIFICATION-0004
 execution: serial
 branch: forge/dev
-worktree: open-forge-wt/TASK-0053-mcp-lifecycle（提交 85ecb03）
+worktree: unassigned（已集成；该历史工作树归 TASK-0053）
 base_commit: forge/dev
 read_paths: [packages/runtime-mcp/src/server/supervisor.ts, packages/runtime-node/src/mcp]
 write_paths: [packages/runtime-mcp/src, packages/runtime-node/src/mcp, .github/release-notes]

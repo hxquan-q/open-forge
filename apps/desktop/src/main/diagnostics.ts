@@ -6,6 +6,7 @@ import { shouldLogFetchFailure } from "./fetch-diagnostics-policy.js";
 import {
 	type AppLogLevel,
 	configureAppLogging,
+	disableConsoleLogMirroring,
 	getAppLogger,
 	getAppLogPath,
 	patchConsoleToAppLogger,
@@ -14,6 +15,40 @@ import {
 
 let diagnosticsInstalled = false;
 const diagnosticsLog = getAppLogger("diagnostics");
+
+const BROKEN_STDIO_ERROR_CODES = new Set(["EPIPE", "ERR_STREAM_DESTROYED", "ERR_STREAM_WRITE_AFTER_END"]);
+// 熔断后同类流错误只做计数汇报，间隔固定，保证文件日志量有界且留有证据。
+const SUPPRESSED_STDIO_ERROR_REPORT_EVERY = 500;
+let consoleMirrorCircuitBroken = false;
+let suppressedStdioErrorCount = 0;
+
+function isBrokenStdioStreamError(error: unknown): boolean {
+	const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+	return typeof code === "string" && BROKEN_STDIO_ERROR_CODES.has(code);
+}
+
+// stdout/stderr 的 pipe 断开后，console transport 每镜像一条日志就异步抛一次写端错误，
+// 再被 uncaughtException 回灌日志管线形成自反馈风暴（BUG-0047 实测 14 秒 5069 条）。
+// 首个写端已毁类错误即一次性熔断 console 镜像：本条与后续错误只落文件与 ringbuffer；
+// 熔断后的同类错误不再逐条全量写堆栈，按固定间隔汇总计数。
+function reportStdioStreamError(kind: "uncaughtException" | "unhandledRejection", error: unknown): boolean {
+	if (!isBrokenStdioStreamError(error)) return false;
+	if (!consoleMirrorCircuitBroken) {
+		consoleMirrorCircuitBroken = true;
+		// 先熔断再记录本条错误，避免这次写日志又触发新的 EPIPE 回灌。
+		disableConsoleLogMirroring();
+		diagnosticsLog.error(kind, error);
+		diagnosticsLog.warn("stdio stream write failed; console log mirror disabled for this process");
+		return true;
+	}
+	suppressedStdioErrorCount += 1;
+	if (suppressedStdioErrorCount % SUPPRESSED_STDIO_ERROR_REPORT_EVERY === 0) {
+		diagnosticsLog.warn("stdio stream errors suppressed after console mirror cutoff", {
+			count: suppressedStdioErrorCount,
+		});
+	}
+	return true;
+}
 
 export function writeDiagnosticLog(level: AppLogLevel, ...args: unknown[]): void {
 	try {
@@ -190,6 +225,32 @@ function patchFetch(): void {
 	}) as typeof fetch;
 }
 
+/**
+ * unresponsive / render-process-gone 时尝试采一份 JS 调用栈进诊断日志。
+ * 采样是旁路能力：webContents 已销毁、mainFrame 不可用或超时都只记 warn。
+ */
+export function sampleJavaScriptCallStack(
+	webContents: { id: number; mainFrame?: { collectJavaScriptCallStack?: () => Promise<unknown> } },
+	reason: string,
+	log: Pick<typeof diagnosticsLog, "warn"> = diagnosticsLog,
+): void {
+	try {
+		const collect = webContents.mainFrame?.collectJavaScriptCallStack;
+		if (!collect) return;
+		void Promise.resolve(collect.call(webContents.mainFrame)).then(
+			(stack) =>
+				log.warn("renderer js call stack", {
+					reason,
+					id: webContents.id,
+					stack: (typeof stack === "string" ? stack : String(stack)).slice(0, 32_000),
+				}),
+			(error) => log.warn("renderer js call stack sampling failed", { reason, id: webContents.id }, error),
+		);
+	} catch (error) {
+		log.warn("renderer js call stack sampling failed", { reason, id: webContents.id }, error);
+	}
+}
+
 export function installMainDiagnostics(): void {
 	if (diagnosticsInstalled) return;
 	diagnosticsInstalled = true;
@@ -198,10 +259,12 @@ export function installMainDiagnostics(): void {
 	patchConsoleToAppLogger();
 
 	process.on("uncaughtException", (error) => {
+		if (reportStdioStreamError("uncaughtException", error)) return;
 		diagnosticsLog.error("uncaughtException", error);
 	});
 
 	process.on("unhandledRejection", (reason) => {
+		if (reportStdioStreamError("unhandledRejection", reason)) return;
 		diagnosticsLog.error("unhandledRejection", reason);
 	});
 
@@ -215,6 +278,7 @@ export function installMainDiagnostics(): void {
 			url: webContents.getURL(),
 			details,
 		});
+		sampleJavaScriptCallStack(webContents, "render-process-gone");
 	});
 
 	app.on("child-process-gone", (_event, details) => {

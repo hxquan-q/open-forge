@@ -25,6 +25,7 @@ import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
 import { createDesktopScheduledTaskSessionTools } from "../scheduler/agent-task-tools.js";
+import { emitAutomationHostEvent } from "../scheduler/automation-event-dispatcher.js";
 import { emitConversationListChanged } from "./conversation-list-events.js";
 import {
 	type ConversationOwnershipCatalogPort,
@@ -256,6 +257,14 @@ export class DesktopConversationService {
 				scenario: resolvedConfig.scenario,
 				includeAgentSkills: resolvedConfig.includeAgentSkills,
 			});
+			// 旁路：交互式新建会话触发事件型自动化（定时任务会话不二次触发）。
+			if (source === "interactive") {
+				emitAutomationHostEvent(
+					"session.created",
+					{ cwd: resolvedConfig.cwd, sessionId: result.sessionId, sessionPath },
+					() => this.runtime,
+				);
+			}
 			const session = {
 				sessionId: result.sessionId,
 				sessionPath,

@@ -92,3 +92,13 @@ GitHub Actions [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-
 默认 canonical 为 `https://docs.openvetta.com`；其他环境可通过 `DOCS_SITE_URL` 覆盖。
 
 仓库根 [`.vercelignore`](../../.vercelignore) 会作用于整个 Vercel 上传。顶层目录规则必须以 `/` 锚定，尤其不能使用未锚定的 `docs`：它会同时排除 `apps/docs-site/content/docs`，使构建表面成功但 sitemap、LLM 索引和全部文档路由为空。部署合同由 `test/deployment.test.ts` 守护。
+
+
+## Context Boundary
+
+```yaml
+purpose: Public documentation site (Astro/Starlight)
+provides:  []
+consumes:  []
+internal_dependencies:  []
+```

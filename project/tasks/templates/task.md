@@ -6,7 +6,12 @@ priority: P1
 owner:
 requirement:
 plan:
-source_issue:
+source:
+related_requirement: []
+related_plan: []
+related_tasks: []
+related_issues: []
+related_bugs: []
 execution: serial
 branch:
 worktree:

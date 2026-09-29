@@ -85,11 +85,24 @@ export function revertInAppBrowserLiveEditEntry(entry: InAppBrowserLiveEditEntry
 	return true;
 }
 
-/** 逆序回放整份日志（后应用先撤销）。 */
+/** 逆序回放整份日志（后应用先撤销）。函数体同样要能独立注入：不得调用同模块的兄弟导出。 */
 export function revertInAppBrowserLiveEditEntries(entries: readonly InAppBrowserLiveEditEntry[]): number {
+	const kebabCase = (property: string): string => property.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`);
 	let reverted = 0;
-	for (let i = entries.length - 1; i >= 0; i -= 1) {
-		if (revertInAppBrowserLiveEditEntry(entries[i])) reverted += 1;
+	for (let index = entries.length - 1; index >= 0; index -= 1) {
+		const entry = entries[index];
+		const element = entry.element;
+		if (!element || element.isConnected === false) continue;
+		if (entry.kind === "style") {
+			const style = (element as HTMLElement).style;
+			if (!style) continue;
+			const kebab = kebabCase(entry.property ?? "");
+			if (entry.before === "") style.removeProperty(kebab);
+			else style.setProperty(kebab, entry.before);
+		} else {
+			element.textContent = entry.before;
+		}
+		reverted += 1;
 	}
 	return reverted;
 }

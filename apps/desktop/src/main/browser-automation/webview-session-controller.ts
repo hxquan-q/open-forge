@@ -74,27 +74,15 @@ interface WorkspaceSession {
 export class InAppBrowserSessionController {
 	private readonly sessions = new Map<string, WorkspaceSession>();
 	private readonly contentsToWorkspace = new Map<number, string>();
-	private readonly pendingContents = new Map<number, InAppBrowserWebContents>();
 
 	constructor(
 		private readonly sink: InAppBrowserEventSink,
 		private readonly persistScreenshot: PersistBrowserScreenshot = persistBrowserScreenshotDefault,
 	) {}
 
-	attachUnboundWebContents(webContents: InAppBrowserWebContents): void {
-		this.pendingContents.set(webContents.id, webContents);
-		for (const session of this.sessions.values()) {
-			if (!session.webContents || session.webContents.isDestroyed()) {
-				this.attachWebContents(session.workspaceId, webContents);
-				return;
-			}
-		}
-	}
-
 	attachWebContents(workspaceId: string, webContents: InAppBrowserWebContents): DesktopBrowserTabSession {
 		const session = this.ensureSession(workspaceId);
 		if (session.webContents && session.webContents.id !== webContents.id) this.unbindContents(session.webContents);
-		this.pendingContents.delete(webContents.id);
 		session.webContents = webContents;
 		this.contentsToWorkspace.set(webContents.id, workspaceId);
 		this.syncPageIdentity(session, webContents);
@@ -105,7 +93,6 @@ export class InAppBrowserSessionController {
 	}
 
 	detachWebContents(webContents: InAppBrowserWebContents): void {
-		this.pendingContents.delete(webContents.id);
 		const workspaceId = this.contentsToWorkspace.get(webContents.id);
 		if (!workspaceId) return;
 		const session = this.sessions.get(workspaceId);
@@ -120,11 +107,6 @@ export class InAppBrowserSessionController {
 	}
 
 	getSession(workspaceId: string): DesktopBrowserTabSession {
-		const session = this.ensureSession(workspaceId);
-		if (!session.webContents || session.webContents.isDestroyed()) {
-			const pending = this.pendingContents.values().next().value as InAppBrowserWebContents | undefined;
-			if (pending) this.attachWebContents(workspaceId, pending);
-		}
 		return this.toPublic(this.ensureSession(workspaceId));
 	}
 
@@ -375,7 +357,10 @@ export class InAppBrowserSessionController {
 		let raw: unknown;
 		try {
 			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start"));
-		} catch {
+		} catch (error) {
+			// 注入脚本自身抛错（历史上是打包器辅助函数缺失，BUG-0051）此前被静默吞掉，
+			// 面板上只表现为「点选没反应」；这里留下证据再回到 idle。
+			console.error("[browser-picker] guest start failed", { workspaceId: session.workspaceId, error });
 			return "idle";
 		}
 		if (!session.pickerEnabled) return "idle";

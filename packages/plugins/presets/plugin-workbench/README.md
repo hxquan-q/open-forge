@@ -37,3 +37,16 @@ node <workbenchRoot>/agent/cli/vetta-plugin-cli.js docs --json
 
 - ADR-0041 插件贡献硬隔离
 - ADR-0042 install-from-path + 安装时授权
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/ui"
+```

@@ -22,4 +22,3 @@ internal_dependencies:
   - "@vetta-org/plugin-sdk"
   - "@vetta-org/plugin-vite"
 ```
-

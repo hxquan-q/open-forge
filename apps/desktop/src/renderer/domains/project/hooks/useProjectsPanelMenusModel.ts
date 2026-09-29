@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionContextMenuSession } from "@shared/store/atoms";
 import {
 	confirmDialogAtom,
@@ -47,8 +48,9 @@ export function useProjectsPanelMenusModel(model: ProjectsPanelModel) {
 					confirmLabel: t("sidebar.dialogs.deleteConfirm"),
 					variant: "danger",
 					onConfirm: () => {
-						// 会话没了，它留下的标注就是孤儿；与置顶的清理时机保持一致。
+						// 会话没了，它留下的标注与归档标记就是孤儿；与置顶的清理时机保持一致。
 						void window.vetta.conversationTags.forgetConversations([session.path]);
+						void window.vetta.archivedSessions.forget([session.path]);
 						model.actions.deleteSession(session);
 					},
 				});

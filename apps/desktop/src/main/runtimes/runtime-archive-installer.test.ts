@@ -2,9 +2,24 @@ import { spawnSync } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import AdmZip from "adm-zip";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { installRuntimeArchive, installRuntimeDirectory } from "./runtime-archive-installer";
+import {
+	detectTarFlavor,
+	installRuntimeArchive,
+	installRuntimeDirectory,
+	tarForceLocalArgs,
+	tarPathArgument,
+} from "./runtime-archive-installer";
+
+vi.mock("node:child_process", async () => {
+	const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+	return { ...actual, spawnSync: vi.fn(actual.spawnSync) };
+});
+
+const spawnSyncMock = vi.mocked(spawnSync);
+const tarCalls = () => spawnSyncMock.mock.calls.filter(([command]) => command === "tar");
 
 let testRoot = "";
 
@@ -16,9 +31,42 @@ afterEach(async () => {
 	await rm(testRoot, { recursive: true, force: true });
 });
 
-// GNU tar 会把 `C:\…` 盘符路径误判成远程 host:path、且 -C chdir 不认反斜杠；
-// 与实现侧一致地转成正斜杠并加 --force-local。
-const toTarPath = (value: string) => (process.platform === "win32" ? value.replaceAll("\\", "/") : value);
+// GNU tar 会把 `C:\…` 盘符路径误判成远程 host:path，需要 `--force-local`；Windows 自带的
+// bsdtar 不认识该选项，因此与实现侧共用同一组 helper 决定参数形态。
+const tarLocalArgs = () => tarForceLocalArgs(detectTarFlavor());
+const toTarPath = tarPathArgument;
+
+// zip fixture 用 adm-zip 生成：不依赖 PATH 里的 tar 实现（GNU tar 压根产不出 zip），
+// 也不会污染 spawnSync 调用记录。addLocalFolder 把 payloadDirectory 的“内容”放进
+// topDirectory 前缀，zip 内顶层目录名与 innerDirectory 对齐。
+function writeZipArchive(archivePath: string, payloadDirectory: string, topDirectory: string): void {
+	const zip = new AdmZip();
+	zip.addLocalFolder(payloadDirectory, topDirectory);
+	zip.writeZip(archivePath);
+}
+
+describe("tar 参数按实现品类选择", () => {
+	it("只有 GNU tar 加 --force-local", () => {
+		expect(tarForceLocalArgs("gnu")).toEqual(["--force-local"]);
+		expect(tarForceLocalArgs("bsd")).toEqual([]);
+		expect(tarForceLocalArgs("unknown")).toEqual([]);
+	});
+
+	it("Windows 路径统一转正斜杠，POSIX 原样", () => {
+		const windowsPath = String.raw`C:\Users\demo\runtime.tar.gz`;
+		expect(tarPathArgument(windowsPath)).toBe(
+			process.platform === "win32" ? "C:/Users/demo/runtime.tar.gz" : windowsPath,
+		);
+		const posixPath = "/opt/vetta/runtime.tar.gz";
+		expect(tarPathArgument(posixPath)).toBe(posixPath);
+	});
+
+	it("探测到的实现与参数形态一致（本机真实 tar）", () => {
+		const flavor = detectTarFlavor();
+		expect(["gnu", "bsd", "unknown"]).toContain(flavor);
+		expect(tarForceLocalArgs(flavor)).toEqual(flavor === "gnu" ? ["--force-local"] : []);
+	});
+});
 
 describe("installRuntimeArchive", () => {
 	it("extracts a complete runtime before replacing the target directory", async () => {
@@ -30,7 +78,7 @@ describe("installRuntimeArchive", () => {
 		const archivePath = join(testRoot, "runtime.tar.gz");
 		const archive = spawnSync(
 			"tar",
-			["-czf", toTarPath(archivePath), "--force-local", "-C", toTarPath(sourceRoot), "runtime"],
+			["-czf", toTarPath(archivePath), ...tarLocalArgs(), "-C", toTarPath(sourceRoot), "runtime"],
 			{ encoding: "utf8" },
 		);
 		expect(archive.status, archive.stderr || archive.stdout).toBe(0);
@@ -49,23 +97,22 @@ describe("installRuntimeArchive", () => {
 		await expect(readFile(join(targetDirectory, "bin", "tool"), "utf8")).resolves.toBe("new-runtime");
 		await expect(readFile(join(targetDirectory, "stale"), "utf8")).rejects.toThrow();
 		await expect(readdir(join(testRoot, "managed"))).resolves.toEqual(["22.22.2"]);
+
+		// tar.gz 路径仍走外部 tar 解压（BUG-0023 兼容面不回退）。
+		expect(tarCalls().some(([, args]) => Array.isArray(args) && args.includes("-xf"))).toBe(true);
 	});
 
-	it.runIf(process.platform === "win32")("extracts the Node ZIP format used by Windows releases", async () => {
+	it("extracts the Node ZIP format without invoking external tar", async () => {
 		const sourceRoot = join(testRoot, "source");
 		const sourceRuntime = join(sourceRoot, "node-v22.22.2-win-x64");
 		await mkdir(sourceRuntime, { recursive: true });
 		await writeFile(join(sourceRuntime, "node.exe"), "node-runtime", "utf8");
 
 		const archivePath = join(testRoot, "node.zip");
-		const archive = spawnSync(
-			"tar",
-			["-a", "-cf", toTarPath(archivePath), "--force-local", "-C", toTarPath(sourceRoot), "node-v22.22.2-win-x64"],
-			{ encoding: "utf8" },
-		);
-		expect(archive.status, archive.stderr || archive.stdout).toBe(0);
+		writeZipArchive(archivePath, sourceRuntime, "node-v22.22.2-win-x64");
 
 		const targetDirectory = join(testRoot, "managed", "22.22.2");
+		spawnSyncMock.mockClear();
 		await installRuntimeArchive({
 			archivePath,
 			archiveType: "zip",
@@ -74,6 +121,28 @@ describe("installRuntimeArchive", () => {
 		});
 
 		await expect(readFile(join(targetDirectory, "node.exe"), "utf8")).resolves.toBe("node-runtime");
+		// BUG-0046：PATH 先命中 GNU tar 时 zip 必失败，解压一律不得再 spawn 外部 tar。
+		expect(tarCalls()).toEqual([]);
+	});
+
+	it("reports a corrupt ZIP as extract failed and keeps the existing runtime", async () => {
+		const targetDirectory = join(testRoot, "managed", "22.22.2");
+		await mkdir(targetDirectory, { recursive: true });
+		await writeFile(join(targetDirectory, "node.exe"), "existing-runtime", "utf8");
+
+		const archivePath = join(testRoot, "corrupt.zip");
+		await writeFile(archivePath, "not a zip archive", "utf8");
+
+		await expect(
+			installRuntimeArchive({
+				archivePath,
+				archiveType: "zip",
+				innerDirectory: "node-v22.22.2-win-x64",
+				targetDirectory,
+			}),
+		).rejects.toThrow("zip extract failed");
+
+		await expect(readFile(join(targetDirectory, "node.exe"), "utf8")).resolves.toBe("existing-runtime");
 	});
 
 	it("preserves an existing runtime when extraction fails", async () => {

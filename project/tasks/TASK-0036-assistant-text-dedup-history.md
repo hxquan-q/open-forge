@@ -1,7 +1,7 @@
 ---
 id: TASK-0036
 type: task
-status: ready
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -16,9 +16,9 @@ write_paths: [apps/desktop/src/renderer/domains/conversation, .github/release-no
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0029, TASK-0035]
-integration_status: pending
+integration_status: integrated（main 主工作区）
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -67,6 +67,13 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - `services/chat-service.ts`：`historyToChat` 与 `fullHistoryToChatWithSpans` 的助手分支删掉「blocks push 之后再预拼整段 `text`」，助手消息不再以 `text: ""` 创建；错误兜底改为只在 blocks 派生不出正文时（`joinAgentTextBlocks(blocks) === ""`）才把错误消息写进 `text`，避免错误文本顶替派生正文。
+  - 消费方统一按 `@shared/conversation` 的 `resolveConversationAgentText`（即 `joinAgentTextBlocks`）读取正文：`messageNavigationModel`（目录/导航文本）、`message-height-estimates`（无 blocks 时的高度与测量 revision）、`useAssistantMessageModel`（无 blocks 的结论文本，deps 补 `message.phase`）、`useMessageCardsHostModel`（插件卡片 `convMessage.text`）、`useSessionEventController.buildRecentConversation`、`teamChatModel.publicAgentText`。
+  - `types.ts` 早已把 `text` 声明为「可选派生文本」，本次让实现与类型注释一致；streaming 路径的增量 `text` 按设计保留。
+  - 测试：`chat-service-agent-text.test.ts` 恢复「历史回放不物化 text」并新增多 text part 派生一致性、错误兜底两例；`chat-service-error.test.ts` 的折叠断言改按 blocks 派生；`useSessionManager.queue.test.ts`、`teamChatModel.test.ts` 的可见文本比较改走派生入口。
 - 实际运行：
-- 未运行及原因：
-- 剩余风险：
+  - 定向：`chat-service-agent-text`、`chat-service-error`、`message-height-estimates` 全绿；`src/renderer/domains/conversation` + `src/renderer/shared/conversation` 整目录 164 个文件（修正断言后）全绿。
+  - `bun run --cwd apps/desktop typecheck`：本任务文件 0 error。
+  - `bun run check`：lint 与全部 guards 通过；types 的红项全部落在其他 Agent 在途编辑的 activity-panel / theme-ui 文件，与本任务无关。
+- 未运行及原因：没有做「打开长文本会话 → 复制/导出 → 与基线 diff」的人工流程（用户未要求实机验证）；该输出面由消费方单测与既有导出/复制/列表测试覆盖。
+- 剩余风险：历史消息的纯文本读取每次做一次短拼接（text block 数量很小），比读现成字符串多一次分配；`text` 仍可在错误兜底与 streaming 场景出现。

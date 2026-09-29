@@ -42,6 +42,6 @@ export function createCodingAgentNodeToolEnvironment(
 		editPathPolicy: createCodingAgentEditPathPolicy(pathPolicy.boundaries),
 		writePathPolicy: createCodingAgentWritePathPolicy(pathPolicy.boundaries),
 		configurationSource: context.configurationSource,
-		readOptions: CODING_AGENT_READ_TOOL_OPTIONS,
+		readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 	});
 }

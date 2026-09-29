@@ -9,6 +9,7 @@ import {
 import type { InstalledPlugin, PluginLocales, PluginManifest } from "../../preload/api-types/plugins.js";
 import { readPluginLocales, resolvePluginIcon } from "./plugin-package.js";
 import type { SystemPluginPreferenceStore } from "./plugin-registry-store.js";
+import { readSystemPluginsIntegrityManifest, verifySystemPluginIntegrity } from "./system-plugin-integrity.js";
 
 interface SystemPluginCatalogLogger {
 	warn(message: string, error?: unknown): void;
@@ -37,6 +38,7 @@ export class SystemPluginCatalog {
 		this.ids.clear();
 		if (existsSync(baseDir)) {
 			const preferences = this.dependencies.preferences.read();
+			const integrityManifest = readSystemPluginsIntegrityManifest(baseDir);
 			for (const entry of readdirSync(baseDir)) {
 				const dir = join(baseDir, entry);
 				try {
@@ -44,6 +46,17 @@ export class SystemPluginCatalog {
 					const manifestFile = join(dir, "plugin.json");
 					if (!existsSync(manifestFile)) continue;
 					const manifest = parsePluginManifest(JSON.parse(readFileSync(manifestFile, "utf-8")));
+					// 内置完整性指纹：清单登记过的插件，plugin.json 被改过就拒绝加载。
+					const integrityEntry = integrityManifest?.get(manifest.id);
+					if (integrityEntry) {
+						const verdict = verifySystemPluginIntegrity(dir, integrityEntry, manifest.version);
+						if (!verdict.ok) {
+							this.dependencies.logger.warn(
+								`discover: 拒绝 ${manifest.id}：内置完整性校验失败（${verdict.reason}）`,
+							);
+							continue;
+						}
+					}
 					if (!existsSync(join(dir, manifest.entry))) {
 						this.dependencies.logger.warn(`discover: 跳过 ${manifest.id}：staging 缺少入口 (${manifest.entry})`);
 						continue;

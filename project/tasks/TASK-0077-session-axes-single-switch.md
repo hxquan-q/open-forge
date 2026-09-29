@@ -1,7 +1,7 @@
 ---
 id: TASK-0077
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: []
 conflicts_with: [TASK-0070, TASK-0076]
 integration_status: pending
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 

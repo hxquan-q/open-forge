@@ -8,38 +8,58 @@ describe("resolveWorkspaceRightPanel", () => {
 			mode: "work" as const,
 			activityPanelOpen: false,
 			hasExplicitActivity: false,
+			hasWorkContent: true,
 			expected: "work",
+		},
+		{
+			mode: "work" as const,
+			activityPanelOpen: false,
+			hasExplicitActivity: false,
+			hasWorkContent: false,
+			expected: "none",
 		},
 		{
 			mode: "work" as const,
 			activityPanelOpen: true,
 			hasExplicitActivity: false,
+			hasWorkContent: true,
+			expected: "activity",
+		},
+		{
+			mode: "work" as const,
+			activityPanelOpen: true,
+			hasExplicitActivity: false,
+			hasWorkContent: false,
 			expected: "activity",
 		},
 		{
 			mode: "coding" as const,
 			activityPanelOpen: false,
 			hasExplicitActivity: false,
+			hasWorkContent: false,
 			expected: "activity",
 		},
 		{
 			mode: "work" as const,
 			activityPanelOpen: false,
 			hasExplicitActivity: true,
+			hasWorkContent: true,
 			expected: "activity",
 		},
 		{
 			mode: undefined,
 			activityPanelOpen: false,
 			hasExplicitActivity: false,
+			hasWorkContent: false,
 			expected: "activity",
 		},
-	])("$mode / preview=$activityPanelOpen / host=$hasExplicitActivity → $expected", (row) => {
+	])("$mode / preview=$activityPanelOpen / host=$hasExplicitActivity / content=$hasWorkContent → $expected", (row) => {
 		expect(
 			resolveWorkspaceRightPanel({
 				mode: row.mode,
 				activityPanelOpen: row.activityPanelOpen,
 				hasExplicitActivity: row.hasExplicitActivity,
+				hasWorkContent: row.hasWorkContent,
 			}),
 		).toBe(row.expected);
 	});

@@ -1,7 +1,7 @@
 ---
 id: TASK-0043
 type: task
-status: verifying
+status: done
 priority: P0
 owner: apps/desktop
 requirement: REQ-0003
@@ -16,9 +16,9 @@ write_paths: [apps/desktop/src/shared, apps/desktop/src/main/i18n/index.ts, apps
 exclusive_paths: [apps/desktop/src/shared/i18n/config.ts, apps/desktop/src/shared/desktop-brand.json, apps/desktop/src/shared/app-identity.json, apps/desktop/src/main/i18n/index.ts, apps/desktop/src/renderer/shared/i18n/index.ts, apps/desktop/src/renderer/quickpanel/i18n.ts, apps/desktop/src/renderer/onboarding/i18n.ts, apps/desktop/scripts/prepare-pack.js, apps/desktop/scripts/desktop-packaging-layout.mjs, apps/desktop/scripts/linux-packaging-contract.mjs, project/tasks/TASK-0043-brand-externalization-layer.md, project/plans/PLAN-0003-open-forge-rebrand.md, project/tasks/README.md, .github/release-notes]
 depends_on: []
 conflicts_with: [TASK-0044, TASK-0045]
-integration_status: pending
+integration_status: integrated（forge/dev 主工作区；随 e88329cd0 落地）
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,4 +74,10 @@ updated: 2026-09-23
 - 实际修改：新增 Desktop 品牌数据与受控替换处理器，接入 Main、主 Renderer、Quick Panel、Onboarding 四个 i18n 实例及打包显示元数据；将凭据运行名 `vetta` 独立为应用身份数据源并让打包端共用。更新本 Task、PLAN-0003、Task 索引及 v0.5.59 发布说明；未改 locale 文件或品牌兼容 token。
 - 实际运行：Desktop `bun run typecheck` 通过；定向 `test:impact` 通过（2 个文件、7 项测试）；`bun run test:packaging` 通过（74 项）；`bun run verify:desktop:contracts`、`node scripts/release/release-notes.mjs --check` 与三个打包脚本的 `node --check` 通过。`check:quick` 的 Biome 检查通过；其 guards 因并行工作区的 coding-agent projects 导出缺少 root tsconfig 路径映射而失败。全量 `bun run check` 另有同一导出问题、其他 workspace 类型错误和当前 shell 无法识别 `bunx` 的失败。全文件 `test:impact` 运行 Desktop 751 个测试文件，17 个文件/40 项测试失败；定向品牌测试通过，完整套件失败不涉及本任务路径。
 - 未运行及原因：未运行 `verify:ui:*`（用户未要求实机 UI 验收）和完整桌面打包构建（此 Task 不要求产出制品）。
-- 剩余风险：本 Task 的全局 guards/check 与全 Desktop 测试仍受上述既有工作区失败阻塞，故状态保持 `verifying`；未触碰这些并行改动，需协调修复后再解除 TASK-0044 / TASK-0045 阻塞。
+- 2026-09-24 复跑并解除阻塞：
+  - 定向：`desktop-brand.test.ts` 9 项、`app-identity.test.ts` 2 项通过。
+  - `bun run --cwd apps/desktop test:packaging`：77 passed / 0 failed，阶段 B 的打包显示元数据与更新合同未回归。
+  - `bun run test:impact -- <品牌面 9 文件>`：279 个文件，272 passed / 5 skipped / 2 failed；两个失败文件（`src/main/agent-runtime/model-call-frame-contract.test.ts`、`src/main/agent-runtime/runtime-host-capabilities.test.ts`）单独复跑分别为 EXIT=0 与 3/3 通过，属并行负载下的顺序相关抖动，均不在品牌面。
+  - `bun run check`：lint 与全部 guards 通过；types 的剩余红项全部落在其他 Agent 在途编辑的 `activity-panel` / `theme-ui` 文件（`git status` 可核对），本任务文件 0 error。
+  - 结论：原先阻塞本任务的「其他 workspace 类型错误 / shell 无法识别 `bunx`」已修复（见 v0.1.1「修复」小节），品牌面验证闭合，状态转 `done`，解除 `TASK-0044` / `TASK-0045` 阻塞。
+- 剩余风险：品牌文案的实机核对未做（用户未要求 UI 验证）；若在 `TASK-0044` / `TASK-0045` 验收时确需，按 `verify:ui:*` 授权流程单独执行。

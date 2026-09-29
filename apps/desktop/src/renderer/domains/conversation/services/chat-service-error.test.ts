@@ -1,4 +1,4 @@
-import { createConversationUserMessage } from "@shared/conversation";
+import { createConversationUserMessage, resolveConversationAgentText } from "@shared/conversation";
 import type { ChatTimelineItem, ErrorBlock } from "@shared/store/atoms";
 import type { AssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
@@ -85,7 +85,12 @@ describe("历史回放的错误折叠", () => {
 		]);
 
 		expect(errorBlocksOf(messages)).toEqual([]);
-		expect(messages.at(-1)).toMatchObject({ kind: "agent", text: "done" });
+		expect(messages.at(-1)).toMatchObject({ kind: "agent" });
+		const last = messages.at(-1);
+		if (last?.kind !== "agent") return;
+		// 历史回放的助手消息只保留 blocks，正文按 blocks 派生（TASK-0036）。
+		expect(last.text).toBeUndefined();
+		expect(resolveConversationAgentText(last)).toBe("done");
 	});
 
 	it("失败后被用户中断的尝试仍显示错误", () => {

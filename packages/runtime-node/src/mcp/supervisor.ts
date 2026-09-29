@@ -89,7 +89,7 @@ export function createNodeMcpSupervisor(options: NodeMcpSupervisorOptions): Node
 							redirectUri: oauthStore.load(serverName)?.redirectUri ?? PLACEHOLDER_REDIRECT_URI,
 							onRedirect: () => undefined,
 							store: oauthStore,
-							clientName: options.oauthClientName ?? "Vetta",
+							clientName: options.oauthClientName ?? "Open Forge",
 							clientId: httpConfig.oauthClientId,
 						});
 					},
@@ -99,7 +99,7 @@ export function createNodeMcpSupervisor(options: NodeMcpSupervisorOptions): Node
 				options.onDiagnostic,
 			),
 		protocolVersion: MCP_PROTOCOL_VERSION,
-		clientInfo: { name: options.clientName ?? "vetta", version: options.clientVersion },
+		clientInfo: { name: options.clientName ?? "openforge", version: options.clientVersion },
 		enabled: options.enabled,
 		debug: options.debug,
 		onDiagnostic: options.onDiagnostic,

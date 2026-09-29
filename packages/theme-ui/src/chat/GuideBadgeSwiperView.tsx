@@ -48,30 +48,30 @@ export function GuideBadgeSwiperView({
 					transition={{ duration: 0.32, ease: easeOut }}
 					className="flex items-center"
 				>
-					<button
-						type="button"
-						onClick={current.onClick}
+					{/*
+					 * 药丸本身是容器而不是按钮：正文动作与「不再提示」是两个独立控件，
+					 * 把后者套进前者会命中 axe `nested-interactive`（BUG-0039）。
+					 */}
+					<div
 						title={current.text}
 						className="group flex h-7 items-center gap-1.5 rounded-full border border-primary/30 bg-[color-mix(in_srgb,var(--primary)_8%,var(--card))] pl-2.5 pr-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-[color-mix(in_srgb,var(--primary)_14%,var(--card))]"
 					>
-						<span className={`${current.icon} h-3 w-3 shrink-0`} />
-						<span className="whitespace-nowrap">{current.text}</span>
+						<button type="button" onClick={current.onClick} className="flex items-center gap-1.5">
+							<span className={`${current.icon} h-3 w-3 shrink-0`} />
+							<span className="whitespace-nowrap">{current.text}</span>
+						</button>
 						{current.dismissible && (
-							<span
-								role="button"
-								tabIndex={-1}
+							<button
+								type="button"
 								aria-label={labels.dismissTooltip}
 								title={labels.dismissTooltip}
-								onClick={(e) => {
-									e.stopPropagation();
-									onDismiss(current.id);
-								}}
+								onClick={() => onDismiss(current.id)}
 								className="ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-primary/60 transition-colors hover:bg-primary/15 hover:text-primary"
 							>
 								<span className="icon-[mdi--close] h-3 w-3" />
-							</span>
+							</button>
 						)}
-					</button>
+					</div>
 				</motion.div>
 			</AnimatePresence>
 		</motion.div>

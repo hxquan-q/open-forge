@@ -40,8 +40,7 @@ describe("BrowserPanelView picker chrome", () => {
 				failed={false}
 				hasPage={true}
 				currentUrl="https://example.com"
-				partition="persist:vetta-browser"
-				webviewRef={createRef<HTMLElement>()}
+				hostRef={createRef<HTMLDivElement>()}
 				onAddressChange={() => undefined}
 				onAddressSubmit={(event) => event.preventDefault()}
 				onBack={() => undefined}
@@ -72,8 +71,7 @@ describe("BrowserPanelView picker chrome", () => {
 				failed={false}
 				hasPage={false}
 				currentUrl=""
-				partition="persist:vetta-browser"
-				webviewRef={createRef<HTMLElement>()}
+				hostRef={createRef<HTMLDivElement>()}
 				onAddressChange={() => undefined}
 				onAddressSubmit={(event) => event.preventDefault()}
 				onBack={() => undefined}
@@ -138,8 +136,7 @@ describe("BrowserPanelView picker chrome", () => {
 				failed={false}
 				hasPage={true}
 				currentUrl="https://example.com"
-				partition="persist:vetta-browser"
-				webviewRef={createRef<HTMLElement>()}
+				hostRef={createRef<HTMLDivElement>()}
 				onAddressChange={() => undefined}
 				onAddressSubmit={(event) => event.preventDefault()}
 				onBack={() => undefined}
@@ -155,6 +152,14 @@ describe("BrowserPanelView picker chrome", () => {
 			/>,
 		);
 	}
+
+	it("renders a native-view host placeholder instead of a <webview> element", () => {
+		const { container } = renderPanel();
+		// TASK-0072：弹窗许可（http(s) 同 view 打开）与隔离属性（contextIsolation/nodeIntegration）
+		// 已迁至主进程 browser-view-host 的 WebContentsView 创建参数，由 browser-view-host.test.ts 覆盖。
+		expect(container.querySelector("webview")).toBeNull();
+		expect(container.querySelector("[data-browser-view-host]")).not.toBeNull();
+	});
 
 	it("选中后渲染即时预览卡：文本/样式提交、逐条与全部撤销、发送与放弃", async () => {
 		const user = userEvent.setup();

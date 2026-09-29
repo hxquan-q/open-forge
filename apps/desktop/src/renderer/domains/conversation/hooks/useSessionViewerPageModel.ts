@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	activityPanelOpenAtom,
 	type ChatConversationItem,
@@ -7,10 +8,12 @@ import {
 	knowledgeProcessingCwdAtom,
 } from "@shared/store/atoms";
 import { useParams } from "@tanstack/react-router";
+import type { HistoryEntry } from "@vetta/runtime-core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fullHistoryToChat } from "../services/chat-service";
+import { applyViewerHistoryUpdate } from "../services/viewer-history-update";
 
 /**
  * 判断 filePath 是否位于 dir 目录之下，分隔符无关（Windows 上 session path 用反斜杠、
@@ -82,10 +85,14 @@ export function useSessionViewerPageModel(): SessionViewerPageModel {
 			try {
 				const initial = await window.vetta.session.openViewer(path);
 				if (cancelled) return;
-				setMessages(fullHistoryToChat(initial.history));
+				// TASK-0050：viewer 订阅改为增量载荷——本地保留 raw entries 并在
+				// 每轮整体重映射（marker/toolCall 归并是跨条目的，不能只映射增量）。
+				let entries: HistoryEntry[] = initial.history;
+				setMessages(fullHistoryToChat(entries));
 
-				unsubscribe = await window.vetta.session.subscribeViewer(path, (snapshot) => {
-					setMessages(fullHistoryToChat(snapshot.history));
+				unsubscribe = await window.vetta.session.subscribeViewer(path, (update) => {
+					entries = applyViewerHistoryUpdate(entries, update);
+					setMessages(fullHistoryToChat(entries));
 				});
 				if (cancelled) unsubscribe?.();
 			} catch (err) {

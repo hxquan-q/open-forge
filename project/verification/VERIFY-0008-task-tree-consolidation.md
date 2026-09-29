@@ -8,7 +8,7 @@ created: 2026-09-24
 updated: 2026-09-24
 related_requirement: []
 related_plan: [PLAN-0006]
-related_task: [TASK-0028, TASK-0033, TASK-0053, TASK-0060, TASK-0062, TASK-0064, TASK-0076, TASK-0084]
+related_task: [TASK-0028, TASK-0033, TASK-0053, TASK-0060, TASK-0062, TASK-0064, TASK-0076, TASK-0084, TASK-0102]
 related_bug: [BUG-0008]
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -78,7 +78,7 @@ git log --diff-filter=A -- <path>   # 定位落地提交
 | TASK-0064 | `da8de8fc0`（活动面板独立终端页） |
 | TASK-0076 | `5978460b6`（见「异常发现」） |
 | TASK-0084（MCP 按工具可见性） | `523c28005` |
-| TASK-0084（工作区流程 UI） | `f9a79d399`、`c2e5c0849` |
+| TASK-0102（工作区流程 UI；记录时编号为 `TASK-0084`） | `f9a79d399`、`c2e5c0849` |
 
 ### TASK-0028 专项
 
@@ -96,7 +96,7 @@ git log --diff-filter=A -- <path>   # 定位落地提交
 ### 异常发现
 
 1. **混提交（既有，不回写历史）**：TASK-0076 的品牌收尾与新会话开关两项无关改动被合入同一提交 `5978460b6 feat(desktop): 工作区只留一处办公/编程开关`，违反 `CLAUDE.md` §三 原子化提交。历史已进入 `forge/dev`，重写代价高于收益，仅在台账 `integration_status` 标注事实。
-2. **编号冲突**：`TASK-0084` 被 `TASK-0084-mcp-per-tool-visibility` 与 `TASK-0084-workspace-session-flow-ui` 两个任务共用。本记录不自行重排编号（`CONVENTIONS.md` 规定编号不复用、不重排），留待立项人裁决。
+2. **编号冲突**：`TASK-0084` 被 `TASK-0084-mcp-per-tool-visibility` 与 `TASK-0084-workspace-session-flow-ui` 两个任务共用。本记录不自行重排编号（`CONVENTIONS.md` 规定编号不复用、不重排），留待立项人裁决。2026-09-24 裁决完成：工作区流程 UI 任务改名 `TASK-0102`，MCP 任务保留 `TASK-0084`；本记录的交叉引用已同步。
 3. **Release Notes 门禁行为正确**：`task/TASK-0053-mcp-lifecycle` 曾向继承的 Vetta `.github/release-notes/v0.5.59.md` 写入两条 Open Forge 专有条目；主树未采纳该差异，改为在 `TASK-0053` 交付记录保留候选文案。这与 `CLAUDE.md` §七「首发版本切入 manifest 前不写入继承说明」一致——`apps/desktop/package.json` 当前仍为 `0.5.59`。**非遗漏**。
 
 ## 未运行的验证与原因
@@ -121,5 +121,5 @@ bun run test:impact -- apps/desktop/src/renderer/domains/settings/components/ImB
 ## 剩余风险
 
 - macOS appshot 打包与 TCC 链路（BUG-0008 修复面）未实机验证，本机为 Windows。
-- `TASK-0084` 编号冲突未裁决，两个任务共用同一 ID，检索与交叉引用存在歧义。
+- `TASK-0084` 编号冲突已于 2026-09-24 裁决并消除：工作区流程 UI 任务改名 `TASK-0102`，MCP 任务保留原编号；本节其余两项仍开放。
 - 淘汰仅作用于本地；远端 `origin/forge/dev` 落后本地 12 个提交，未推送（推送需用户明确授权）。

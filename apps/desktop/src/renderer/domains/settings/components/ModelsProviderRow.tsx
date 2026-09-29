@@ -1,10 +1,11 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "react-i18next";
 import { ModelsProviderFormView } from "@vetta-org/theme-ui/settings";
 import { Button, cn } from "@vetta-org/ui";
 import { ModelsFetchedModelsPanel } from "./ModelsFetchedModelsPanel";
 import { ModelsModelForm } from "./ModelsModelForm";
 import { ModelsProviderForm } from "./ModelsProviderForm";
-import type { ModelsSettingsModel } from "./useModelsSettingsModel";
+import { type ModelsSettingsModel, providerTestChip } from "./useModelsSettingsModel";
 
 export type ModelsProviderRowThemeViews = {
 	readonly providerForm: typeof ModelsProviderFormView;
@@ -24,6 +25,9 @@ export function ModelsProviderRow({
 	const isExpanded = model.expandedProvider === name;
 	const isEditing = model.editingProvider === name;
 	const models = provider.models || [];
+	const testing = model.testingProvider === name;
+	const testResult = model.providerTestResults[name];
+	const testChip = testResult ? providerTestChip(testResult, t) : null;
 
 	return (
 		<div className="border-b border-border last:border-b-0">
@@ -41,13 +45,52 @@ export function ModelsProviderRow({
 					/>
 					<div className="min-w-0 flex-1">
 						<div className="text-[13px] font-medium text-foreground">{name}</div>
-						<div className="mt-0.5 text-[11px] text-muted-foreground">
-							{provider.api || "openai-completions"} · {models.length} {t("models")}
-							{provider.baseUrl && ` · ${provider.baseUrl}`}
+						<div className="mt-0.5 flex items-center text-[11px] text-muted-foreground">
+							<span className="truncate">
+								{provider.api || "openai-completions"} · {models.length} {t("models")}
+								{provider.baseUrl && ` · ${provider.baseUrl}`}
+							</span>
+							{testChip && (
+								<span
+									className={cn(
+										"ml-2 inline-flex shrink-0 items-center gap-1",
+										testChip.tone === "success" && "text-emerald-400",
+										testChip.tone === "warn" && "text-amber-400",
+										testChip.tone === "error" && "text-destructive",
+									)}
+									title={testChip.title}
+								>
+									<span
+										className={cn(
+											"h-3 w-3",
+											testResult?.ok ? "icon-[solar--check-circle-linear]" : "icon-[solar--close-circle-linear]",
+										)}
+									/>
+									{testChip.label}
+								</span>
+							)}
 						</div>
 					</div>
 				</button>
 				<div className="flex items-center gap-1">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						onClick={(event) => {
+							event.stopPropagation();
+							void model.onTestProvider(name);
+						}}
+						disabled={!provider.baseUrl || testing}
+						title={provider.baseUrl ? t("testProviderAvailability") : t("fetchModelsNeedsBaseUrl")}
+						aria-label={t("testProviderAvailability")}
+					>
+						<span
+							className={cn(
+								"h-3.5 w-3.5",
+								testing ? "icon-[mdi--loading] animate-spin" : "icon-[solar--wi-fi-router-linear]",
+							)}
+						/>
+					</Button>
 					{provider.apiKey && (
 						<Button
 							variant="ghost"

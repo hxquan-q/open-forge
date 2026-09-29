@@ -3,6 +3,7 @@ import {
 	BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS,
 	BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
 } from "@vetta/coding-agent/function-extensions";
+import { assembleGuestScript } from "./guest-script-shim.js";
 import {
 	applyInAppBrowserLiveEdit,
 	type InAppBrowserLiveEditEntry,
@@ -42,7 +43,14 @@ interface InAppBrowserGuestDeps {
 const guestDepsLiteral = `{choosePickTarget:${chooseInAppBrowserPickTarget.toString()},applyLiveEdit:${applyInAppBrowserLiveEdit.toString()},revertLiveEditEntry:${revertInAppBrowserLiveEditEntry.toString()},revertLiveEditEntries:${revertInAppBrowserLiveEditEntries.toString()},styleKeys:${JSON.stringify([...BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS])},maxEdits:${JSON.stringify(BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS)}}`;
 
 export function buildInAppBrowserGuestScript(command: InAppBrowserPickerCommand, arg?: unknown): string {
-	return `void 0;(function(command,arg,deps){(${inAppBrowserGuestRuntime.toString()})(command,arg,deps)})(${JSON.stringify(command)},${JSON.stringify(arg ?? null)},${guestDepsLiteral})`;
+	// runtime 源码与 deps 字面量都要交给垫片扫描：两者都可能被 keepNames 插入辅助函数调用。
+	const runtimeSource = inAppBrowserGuestRuntime.toString();
+	return assembleGuestScript({
+		sources: [runtimeSource, guestDepsLiteral],
+		parameters: "command,arg,deps",
+		expression: `(${runtimeSource})(command,arg,deps)`,
+		arguments: `${JSON.stringify(command)},${JSON.stringify(arg ?? null)},${guestDepsLiteral}`,
+	});
 }
 
 function inAppBrowserGuestRuntime(

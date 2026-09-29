@@ -45,7 +45,9 @@ import {
 	PathFilteredRuntimeSessionCatalog,
 	setDesktopSshConnectionResolver,
 } from "@vetta/runtime-desktop";
+import { scanLocalSources } from "@vetta/runtime-knowledge";
 import { FileConversationRuntimeSessionFileHistoryReader } from "@vetta/runtime-node/conversation";
+import { profileDatasetFile } from "@vetta/runtime-node/dataset";
 import {
 	createLoopbackSessionAffinityStream,
 	createNodeKnowledgeRuntime,
@@ -75,7 +77,10 @@ import { getAvailableLinuxBubblewrapPath, getAvailableMacosSandboxExecPath } fro
 import { resolveWindowsSandboxHostBinary } from "../sandbox/windows-binary-resolver.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
 import { createCodingAgentObservationLogPort } from "./coding-agent-observation-log-port.js";
-import { createDesktopCodingAgentFunctionSource } from "./function-extension-source.js";
+import {
+	createDesktopCodingAgentFunctionSource,
+	setDesktopCodingAgentFunctionSource,
+} from "./function-extension-source.js";
 import { getOrCreateSharedModelRuntime, readDesktopMcpDebug } from "./host-services.js";
 import { createDesktopMcpSupervisor } from "./mcp-supervisor.js";
 import { getDesktopProviderObservationRuntime } from "./provider-observation.js";
@@ -138,6 +143,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 			return getDesktopCanvasArtifactService().invokeTool(request, signal);
 		},
 	});
+	setDesktopCodingAgentFunctionSource(sessionExtensionFunctions);
 	const historicalFormat = createDesktopHistoricalSessionFormat();
 	const defaultResultArtifacts = createDesktopResultArtifactRuntime(getAgentDir());
 	const conversationCatalog = new DesktopRuntimeSessionCatalog({
@@ -173,6 +179,10 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 					process.env.VETTA_KNOWLEDGE_DISABLED === "1"
 						? undefined
 						: createNodeKnowledgeRuntime(getKnowledgeRoot()),
+				// 本地研究来源枚举只认显式传入的目录，不回落默认 knowledge home。
+				researchScope: { scanSources: scanLocalSources },
+				// 数据集剖析只读用户显式选择的文件；不修改源文件、不联网。
+				datasetProfile: { profileDataset: profileDatasetFile },
 				createMemoryRolloverRuntime: (options) => {
 					const memoryFile = options.memoryFile ?? join(options.cwd, "MEMORY.md");
 					return createCodingAgentMemoryRolloverRuntime({

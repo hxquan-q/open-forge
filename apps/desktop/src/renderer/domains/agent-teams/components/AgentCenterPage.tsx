@@ -42,6 +42,20 @@ export function AgentCenterPage(): JSX.Element {
 		[navigate],
 	);
 
+	// 非空组队草稿的点空白退出先过确认框：误点一次不该丢掉整个阵容与已填内容。
+	const requestDiscardAssembly = useCallback(() => {
+		confirm({
+			title: t("center.discardAssemblyTitle"),
+			message: t("center.discardAssemblyMessage"),
+			confirmLabel: t("center.discardAssemblyConfirm"),
+			variant: "danger",
+			onConfirm: () => {
+				model.actions.cancelAssembly();
+				model.actions.selectTeam(undefined);
+			},
+		});
+	}, [confirm, t, model.actions]);
+
 	// 关闭动画期间保留抽屉内容，Vaul 报告退出动画结束后才卸载。
 	const [agentMounted, setAgentMounted] = useState(agentParam !== undefined);
 	const [teamMounted, setTeamMounted] = useState(teamParam !== undefined);
@@ -125,6 +139,7 @@ export function AgentCenterPage(): JSX.Element {
 				onDeleteTeam={(teamId) => requestDeleteTeam(model.findTeam(teamId))}
 				onOpenAgent={openAgent}
 				onCreateAgent={() => void navigate({ to: "/agents", search: { agent: "new" }, replace: true })}
+				onDiscardAssemblyDraft={requestDiscardAssembly}
 			/>
 
 			{(agentMounted || agentParam !== undefined) && (

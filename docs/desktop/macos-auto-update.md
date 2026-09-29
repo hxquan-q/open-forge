@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # macOS 自动更新、R2 发版与排障
 
 本文是 Vetta Desktop macOS 更新链路的维护手册，与 [`windows-auto-update.md`](./windows-auto-update.md) 平行。两端共用同一套更新源配置、发布脚本、状态机和 CI 编排；差异集中在安装机制与产物形态，本文只展开 macOS 侧。
@@ -218,7 +219,7 @@ scripts/release-mac.sh local --version 0.5.63
 - **产物累积不清空**。`~/.vetta/local-updates` 只覆盖 `latest-mac.yml`，旧版本的 zip 与 blockmap 全部保留——差分要读旧版 blockmap（见 5.4）。
 - **分发服务必须支持 Range**。`scripts/serve-local-updates.mjs` 自己实现了 206；不要随手换成 `python3 -m http.server`，它会无视 Range 头返回 200 全量，差分要么退化要么失败，测出来的结论是假的。
 
-想临时压缩签名耗时，可以再叠 `VETTA_SKIP_VENDOR=1`——更新链路不依赖内置 node/python，而它们解压后是几千个待签名的 Mach-O。
+默认构建已不内置 vendor（运行时改为安装后下载）；只有显式 `VETTA_BUNDLE_VENDOR=1` 的离线包才带 node/python——它们解压后是几千个待签名的 Mach-O，会显著拉长公证耗时。更新链路不依赖内置运行时。
 
 ### 7.1 前提：签名凭据
 

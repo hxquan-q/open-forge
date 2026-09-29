@@ -1,6 +1,22 @@
 import { atom } from "jotai";
 import type { ExecutionModeOverride, SelectedSkill, SessionExecutionMode } from "./chat-atoms";
 
+export interface ScheduledTaskPermissionTiers {
+	allowWorkspaceWrite?: boolean;
+	allowCommonCommands?: boolean;
+	allowBatchDelete?: boolean;
+	allowSystemTools?: boolean;
+	autoApprovePrompts?: boolean;
+}
+
+export type ScheduledTaskTrigger =
+	| { type: "cron" }
+	| { type: "manual" }
+	| {
+			type: "event";
+			event: "session.created" | "project.opened" | "automation.panelOpened" | "session.switched";
+	  };
+
 export interface ScheduledTask {
 	id: string;
 	name: string;
@@ -15,6 +31,10 @@ export interface ScheduledTask {
 	executionMode?: ExecutionModeOverride;
 	/** 任务级技能/场景。运行时通过 PromptRequest.promptRef 结构化传递。 */
 	skill?: SelectedSkill;
+	/** 无人值守授权分档；缺省时审批行为与改前一致。 */
+	permissionTiers?: ScheduledTaskPermissionTiers;
+	/** 触发器；缺省等同 cron。 */
+	trigger?: ScheduledTaskTrigger;
 	createdAt: number;
 	updatedAt: number;
 	lastRunAt: number | null;
