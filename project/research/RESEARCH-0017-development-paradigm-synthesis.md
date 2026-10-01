@@ -104,7 +104,7 @@ Skills README 明确强调小型、可编辑、可组合，并反对框架完全
 - [Task Worktree 守卫](../../scripts/quality/check-task-worktrees.mjs)
 - [项目索引守卫](../../scripts/quality/check-project-indexes.mjs)
 - [本地 CI](../../.github/workflows/quality.yml)
-- [任务 intake](../../.agents/skills/vetta-task-intake/SKILL.md)
+- [任务 intake](../../.agents/skills/open-forge-task-intake/SKILL.md)
 
 实际核验通过 GitHub API/raw 获取来源、读取本地文件并检查 Git 状态完成；这不是执行过质量门禁的证明。文档提交前检查本次相对链接、固定来源可访问性和 diff 空白。没有运行应用、Provider、单元测试、构建或完整 TypeScript check，因为没有运行时改动。
 

@@ -193,7 +193,7 @@ describe("fullHistoryToChatWithSpans", () => {
 		const entries: HistoryEntry[] = [
 			{
 				type: "prompt_ref_marker",
-				promptRef: { kind: "skill", name: "vetta-testing" },
+				promptRef: { kind: "skill", name: "open-forge-testing" },
 				timestamp: "2024-01-01T00:00:00Z",
 			},
 			userEntry("u-0", "q0"),

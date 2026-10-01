@@ -17,7 +17,7 @@ branch: main
 worktree: unassigned（主工作区串行）
 base_commit: 2a9e5f21d98623db9cce9f18d17866f82cee44e2
 read_paths: [AGENTS.md, project, .agents/skills, .claude/skills, .devin/skills, scripts/quality, .github/workflows, docs/dev]
-write_paths: [AGENTS.md, project, .agents/skills/vetta-task-intake, .agents/skills/vetta-testing, .claude/skills/vetta-task-intake, .claude/skills/vetta-testing, .devin/skills/vetta-task-intake, scripts/quality, package.json, docs/dev/quality-gates.md, .github/release-notes/v0.1.3.md]
+write_paths: [AGENTS.md, project, .agents/skills/open-forge-task-intake, .agents/skills/open-forge-testing, .claude/skills/open-forge-task-intake, .claude/skills/open-forge-testing, .devin/skills/open-forge-task-intake, scripts/quality, package.json, docs/dev/quality-gates.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [AGENTS.md, package.json, scripts/quality/check-guards.mjs]
 depends_on: []
 conflicts_with: []
@@ -31,7 +31,7 @@ updated: 2026-10-01
 
 ## 目标
 
-归属：Open-Forge-only。以 vetta-task-intake 统一组织开发工作，用户负责目标与功能验收，AI 自主承担工程分析、实现、测试、CI/CD 配置分析、集成与交付；不扩大运行授权。
+归属：Open-Forge-only。以 open-forge-task-intake 统一组织开发工作，用户负责目标与功能验收，AI 自主承担工程分析、实现、测试、CI/CD 配置分析、集成与交付；不扩大运行授权。
 
 ## 范围
 
@@ -49,7 +49,7 @@ updated: 2026-10-01
 
 ## 不变量与方案
 
-保留包边界、安全授权、发布流程、测试覆盖和历史状态。直接增加入口正文会复制现有测试/分支规范，故先把专项方法拆到按需 references，测试正文继续唯一归 vetta-testing。Claude 既有共享符号链接保持不变；Devin 镜像由脚本机械同步，不再手工维护并行正文。
+保留包边界、安全授权、发布流程、测试覆盖和历史状态。直接增加入口正文会复制现有测试/分支规范，故先把专项方法拆到按需 references，测试正文继续唯一归 open-forge-testing。Claude 既有共享符号链接保持不变；Devin 镜像由脚本机械同步，不再手工维护并行正文。
 
 ## 测试与验证
 

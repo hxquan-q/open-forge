@@ -5,8 +5,8 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { isDirectRun, repoRoot } from "./lib.mjs";
 
 const SKILLS = [
-	{ name: "vetta-task-intake", mirrors: [".claude", ".devin"] },
-	{ name: "vetta-testing", mirrors: [".claude"] },
+	{ name: "open-forge-task-intake", retired: "vetta-task-intake", mirrors: [".claude", ".devin"] },
+	{ name: "open-forge-testing", retired: "vetta-testing", mirrors: [".claude"] },
 ];
 function filesUnder(directory, prefix = "") {
 	if (!existsSync(directory)) return [];
@@ -40,6 +40,12 @@ function checkWriteLocations(root) {
 export function checkWorkflowSkills(root = repoRoot) {
 	checkWriteLocations(root);
 	const problems = [];
+	for (const { retired, mirrors } of SKILLS) {
+		for (const directory of [".agents", ...mirrors]) {
+			const path = join(root, directory, "skills", retired);
+			if (existsSync(path)) problems.push(`Retired skill: ${path}; use the Open Forge entry`);
+		}
+	}
 	for (const { name, mirrors } of SKILLS) {
 		const source = sourceRoot(root, name);
 		if (!existsSync(join(source, "SKILL.md"))) {

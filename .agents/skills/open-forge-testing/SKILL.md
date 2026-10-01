@@ -1,11 +1,11 @@
 ---
-name: vetta-testing
-description: Open Forge 的测试与验证方法，由 vetta-task-intake 按需调用，也支持直接测试请求。覆盖 TDD、Bug 回归、重构、用户流程、UI/协议/CI 合同以及 AI 行为和输出评估；区分软件检查、模型质量与人工功能验收，无行为变化不强制新增测试。
+name: open-forge-testing
+description: Open Forge 的测试与验证方法，由 open-forge-task-intake 按需调用，也支持直接测试请求。覆盖 TDD、Bug 回归、重构、用户流程、UI/协议/CI 合同以及 AI 行为和输出评估；区分软件检查、模型质量与人工功能验收，无行为变化不强制新增测试。
 ---
 
 <!-- Modified by The Open Forge contributors. -->
 
-# OpenVetta 测试设计与编写
+# Open Forge 测试设计与编写
 
 ## 目标
 
@@ -32,7 +32,7 @@ description: Open Forge 的测试与验证方法，由 vetta-task-intake 按需�
 
 ## 与统一入口的分工
 
-由 `vetta-task-intake` 选择本方法；用户直接要求测试/TDD 时也可使用，不必再启动一轮需求访谈。测试边界优先从需求、公开接口和现有合同推导，只有行为存在实质歧义才询问用户。自动化软件检查、模型结果评估和人工功能验收分开报告。
+由 `open-forge-task-intake` 选择本方法；用户直接要求测试/TDD 时也可使用，不必再启动一轮需求访谈。测试边界优先从需求、公开接口和现有合同推导，只有行为存在实质歧义才询问用户。自动化软件检查、模型结果评估和人工功能验收分开报告。
 
 ## TDD 与行为保持型重构
 
@@ -118,11 +118,11 @@ expect(await conversationStore.load(sessionId)).toContainEqual(
 
 真实模型调用、费用和用户数据仍须授权；未获授权时可准备脱敏 fixture/评估案例并跑确定性测试，但真实质量列为未验证。授权执行时记录模型/配置、输入集版本、次数、结果与费用范围，覆盖成功、边界和失败场景；不要以一次成功或精挑样例证明稳定性。不对自由文本机械要求逐字相等，不让模型“自评通过”成为唯一证据。
 
-用户反馈在适合自动化时沉淀为回归测试或评估案例，重跑受影响流程；新需求与已有缺陷分开记录。完成与验收合同见 [交付闭环](../vetta-task-intake/references/delivery.md)。
+用户反馈在适合自动化时沉淀为回归测试或评估案例，重跑受影响流程；新需求与已有缺陷分开记录。完成与验收合同见 [交付闭环](../open-forge-task-intake/references/delivery.md)。
 
 ## CI/CD 测试
 
-配置也是可观察行为：触发条件、依赖图、失败阻断、平台、缓存失效、权限和产物消费都可能需要合同测试。使用仓库现有质量脚本测试，不只对 YAML 做整文件快照。优先从配置/脚本公开入口验证正常路径与失败路径；本地通过不等于远端矩阵或签名发布通过。具体执行路线见 [CI/CD](../vetta-task-intake/references/ci-cd.md)。
+配置也是可观察行为：触发条件、依赖图、失败阻断、平台、缓存失效、权限和产物消费都可能需要合同测试。使用仓库现有质量脚本测试，不只对 YAML 做整文件快照。优先从配置/脚本公开入口验证正常路径与失败路径；本地通过不等于远端矩阵或签名发布通过。具体执行路线见 [CI/CD](../open-forge-task-intake/references/ci-cd.md)。
 
 ## 审查测试质量
 
@@ -157,4 +157,4 @@ bun run check
 
 ## Skill 维护
 
-`.agents/skills/vetta-testing/` 是事实源；执行 `node scripts/quality/workflow-skills.mjs --write` 同步既有镜像，并运行不带 `--write` 的检查。Claude 通过 `.claude/skills` 链接读取权威正文，不维护第二份测试规则。
+`.agents/skills/open-forge-testing/` 是事实源；执行 `node scripts/quality/workflow-skills.mjs --write` 同步既有镜像，并运行不带 `--write` 的检查。Claude 通过 `.claude/skills` 链接读取权威正文，不维护第二份测试规则。

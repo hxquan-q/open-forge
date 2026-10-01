@@ -5,7 +5,7 @@ status: verifying
 priority: P1
 requirement: REQ-0004
 owner: project/agent-workflow
-source: .agents/skills/vetta-task-intake/SKILL.md, AGENTS.md, session-history
+source: .agents/skills/open-forge-task-intake/SKILL.md, AGENTS.md, session-history
 created: 2026-09-22
 updated: 2026-10-01
 depends_on: []
@@ -16,7 +16,7 @@ depends_on: []
 
 ## 已完成
 
-- 建立 `vetta-task-intake` 自动需求编译 Skill；
+- 建立 `open-forge-task-intake` 自动需求编译 Skill；
 - 根 `AGENTS.md` 增加需求入口和 `project/` 读取规则；
 - 建立 `project/` 管理目录、模板和现有 Requirement/Plan/Bug；
 - 保留 `exprot/` 为历史研究归档；

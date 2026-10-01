@@ -57,7 +57,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 ## 统一开发入口
 
-用户只提供目标和功能/AI 结果验收反馈；[vetta-task-intake](../.agents/skills/vetta-task-intake/SKILL.md) 自动判断任务路线和所需方法。测试/TDD 由 vetta-testing 承载，CI/CD 与交付按需读取专项参考，不另建管理体系。简单任务复用已有条目，不机械创建整套 REQ/PLAN/TASK。
+用户只提供目标和功能/AI 结果验收反馈；[open-forge-task-intake](../.agents/skills/open-forge-task-intake/SKILL.md) 自动判断任务路线和所需方法。测试/TDD 由 open-forge-testing 承载，CI/CD 与交付按需读取专项参考，不另建管理体系。简单任务复用已有条目，不机械创建整套 REQ/PLAN/TASK。
 
 ## 标准流水线
 

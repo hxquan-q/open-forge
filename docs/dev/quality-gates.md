@@ -4,7 +4,7 @@
 
 ## 统一开发入口与验证职责
 
-[vetta-task-intake](../../.agents/skills/vetta-task-intake/SKILL.md) 根据任务选择下面的既有门禁，不增设平行测试框架。TDD/测试设计见 [vetta-testing](../../.agents/skills/vetta-testing/SKILL.md)，CI/CD 配置改动见 [流水线路线](../../.agents/skills/vetta-task-intake/references/ci-cd.md)。
+[open-forge-task-intake](../../.agents/skills/open-forge-task-intake/SKILL.md) 根据任务选择下面的既有门禁，不增设平行测试框架。TDD/测试设计见 [open-forge-testing](../../.agents/skills/open-forge-testing/SKILL.md)，CI/CD 配置改动见 [流水线路线](../../.agents/skills/open-forge-task-intake/references/ci-cd.md)。
 
 `node scripts/quality/workflow-skills.mjs` 已接入 `check:guards`：校验权威 Skill、Claude 共享入口/镜像、Devin intake 镜像和 Markdown 相对文件引用；不联网验证 URL，不校验标题锚点，也不证明模型路由行为。用 `--write` 同步镜像，保留 Claude 共享链接；额外镜像文件报错而不自动删除。其回归测试通过 `test:quality` 被现有 quality CI 执行，不另建 workflow 或扩大发布权限。
 

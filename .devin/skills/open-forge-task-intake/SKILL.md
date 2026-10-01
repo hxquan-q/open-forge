@@ -1,5 +1,5 @@
 ---
-name: vetta-task-intake
+name: open-forge-task-intake
 description: Open Forge 项目开发的统一入口。将自然语言需求、缺陷、重构、测试/TDD、CI/CD、性能、AI 输出反馈或工程研究路由到最小必要流程，自主完成事实调查、任务合同、实施、验证和功能验收交付；用户负责目标与结果验收，不负责选择工程框架。纯闲聊不触发；仅分析或计划时不擅自实施。
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -10,7 +10,7 @@ description: Open Forge 项目开发的统一入口。将自然语言需求、�
 
 用户给目标、限制和验收反馈；Agent 承担工程决策与执行。不要把技术选型、文件清单、Given/When/Then、测试命令或任务拆分反向要求用户填写。“自主”不扩大发布、生产访问、真实 Provider/付费调用或破坏性操作的授权。
 
-本入口负责编排，不复制专项规范：仓库根/最近一级 AGENTS 定义边界；[Project 规范](../../../project/CONVENTIONS.md)定义记录与状态；[vetta-testing](../../../.agents/skills/vetta-testing/SKILL.md)定义测试方法；[质量门禁](../../../docs/dev/quality-gates.md)定义命令；[协作流程](../../../project/collaboration/development-workflow.md)定义分支与集成。外部 Skills 只提供方法参考，不覆盖这些合同。
+本入口负责编排，不复制专项规范：仓库根/最近一级 AGENTS 定义边界；[Project 规范](../../../project/CONVENTIONS.md)定义记录与状态；[open-forge-testing](../../../.agents/skills/open-forge-testing/SKILL.md)定义测试方法；[质量门禁](../../../docs/dev/quality-gates.md)定义命令；[协作流程](../../../project/collaboration/development-workflow.md)定义分支与集成。外部 Skills 只提供方法参考，不覆盖这些合同。
 
 ## 1. 先确认事实和执行范围
 
@@ -25,13 +25,13 @@ description: Open Forge 项目开发的统一入口。将自然语言需求、�
 
 | 任务信号 | 主路线与下一入口 | 交付证据 |
 |---|---|---|
-| 新功能、行为调整、删除 | 下面的薄切片实施 + vetta-testing | 常见操作流程、关键失败/兼容路径 |
+| 新功能、行为调整、删除 | 下面的薄切片实施 + open-forge-testing | 常见操作流程、关键失败/兼容路径 |
 | 报错、失败、回归、验收不通过 | 先复现→定位→修复；读取本仓库 diagnose | 旧行为失败的复现/测试与修复结果 |
 | 重构、模块难维护 | 明确不变量与公开接口，先基线再调整 | 行为保持与依赖/职责改善 |
-| 写测试、TDD、覆盖不足 | vetta-testing；TDD 是实施方式，不是另一套任务系统 | red/green 与用户流程对应 |
+| 写测试、TDD、覆盖不足 | open-forge-testing；TDD 是实施方式，不是另一套任务系统 | red/green 与用户流程对应 |
 | CI/CD、构建、缓存、打包、发布准备 | [流水线路线](references/ci-cd.md)；失败同时走诊断 | 触发范围、执行图、产物与权限证据 |
 | 慢、资源增长、并发退化 | 先可重复基线、主导瓶颈，再最小改动 | 相同条件下的前后指标 |
-| AI 回答/工具行为/产物质量 | vetta-testing 的模型评估分层，必要时诊断 | 软件合同与模型质量分开报告 |
+| AI 回答/工具行为/产物质量 | open-forge-testing 的模型评估分层，必要时诊断 | 软件合同与模型质量分开报告 |
 | UI、可访问性、交互 | 现有设计规则 + 组件/流程测试 | 渲染与事件接线；不默认启动 verify:ui |
 | 协议、存储迁移、权限 | 生产者/消费者、兼容/回退；测试与安全支线 | 合同测试与授权边界 |
 | 文档、调研、评审、仅计划 | 查第一方证据，按请求范围产出 | 来源、差异、风险；无行为变化不强制 TDD |
@@ -50,7 +50,7 @@ description: Open Forge 项目开发的统一入口。将自然语言需求、�
 
 ## 4. 执行与纠偏
 
-- 新行为/Bug：在 vetta-testing 指定的边界建立失败测试或明确基线，一片一片实现、验证，不先写全部测试再批量实现。
+- 新行为/Bug：在 open-forge-testing 指定的边界建立失败测试或明确基线，一片一片实现、验证，不先写全部测试再批量实现。
 - 纯重构：先跑现有行为基线，调整后复验；测试难写若源于职责耦合，先建立可测试接缝。
 - 性能/复杂系统：工程控制论 Skill 可按需辅助“分类→主导因素→最小工具→测量验证”。未建模、未识别参数时，不用 PID/稳定性术语宣称工程流程有数学保证。
 - 每次反馈先区分自身回归、既有失败与环境阻断。重复失败但没有新证据时停止盲试，收集证据、调整假设或报告阻断；不删测试、不放宽门禁、不无限重跑。
@@ -67,6 +67,6 @@ description: Open Forge 项目开发的统一入口。将自然语言需求、�
 
 ## 维护与验证
 
-`.agents/skills/vetta-task-intake` 和 `vetta-testing` 是权威正文。Claude 通过已有 `.claude/skills` 链接读取同一正文，Devin 的 intake 镜像由 `node scripts/quality/workflow-skills.mjs --write` 同步，`node scripts/quality/workflow-skills.mjs` 检查；不要把 Claude 链接当成独立副本，也不要手改 Devin 生成镜像。
+`.agents/skills/open-forge-task-intake` 和 `open-forge-testing` 是权威正文。Claude 通过已有 `.claude/skills` 链接读取同一正文，Devin 的 intake 镜像由 `node scripts/quality/workflow-skills.mjs --write` 同步，`node scripts/quality/workflow-skills.mjs` 检查；不要把 Claude 链接当成独立副本，也不要手改 Devin 生成镜像。
 
 [路由验收场景](references/scenarios.md)用于人工/已授权模型验证。静态镜像与链接检查只证明文件合同，不证明模型一定会正确分类或完整执行。设计来源与适用边界见 [RESEARCH-0017](../../../project/research/RESEARCH-0017-development-paradigm-synthesis.md)。

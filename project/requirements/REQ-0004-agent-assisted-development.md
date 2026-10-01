@@ -31,7 +31,7 @@ related_plan: [PLAN-0004]
 
 ## 验收
 
-- `vetta-task-intake` 被根 `AGENTS.md` 路由；
+- `open-forge-task-intake` 被根 `AGENTS.md` 路由；
 - `project/CONVENTIONS.md` 规定管理文件的命名、状态和内容；
 - 新二开管理文件进入 `project/`，`exprot/` 只作为历史归档；
 - 一句话需求能够路由到对应包所有者和最小测试层级。

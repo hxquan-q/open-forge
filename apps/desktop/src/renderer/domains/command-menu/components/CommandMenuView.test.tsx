@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -154,8 +155,8 @@ describe("CommandMenuView", () => {
 				items: [
 					item({
 						id: "a1",
-						title: "vetta-testing",
-						subtitle: "为 OpenVetta 的功能变更、Bug 修复、重构、公共合同和 UI 交互设计、编写或审查测试",
+						title: "open-forge-testing",
+						subtitle: "为 Open Forge 的功能变更、Bug 修复、重构、公共合同和 UI 交互设计、编写或审查测试",
 					}),
 				],
 			}),
