@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Guard SKILL.md frontmatter against the mistakes that make a skill vanish.
  *
@@ -24,7 +25,7 @@ import { fail, isDirectRun, ok, readText, rel, repoRoot, stagedFiles } from "./l
 /** Mirrors MAX_DESCRIPTION_LENGTH in packages/coding-agent/src/core/skills.ts. */
 const MAX_DESCRIPTION_LENGTH = 1024;
 
-const SCAN_ROOTS = ["packages", "apps", ".claude"];
+const SCAN_ROOTS = ["packages", "apps", ".agents", ".devin", ".claude"];
 const SKIP_DIRS = new Set([
 	"node_modules",
 	"dist",
@@ -61,6 +62,12 @@ function findSkillFiles(dir, results = []) {
 	return results;
 }
 
+export function collectSkillTargets(root = repoRoot) {
+	const results = [];
+	for (const directory of SCAN_ROOTS) findSkillFiles(join(root, directory), results);
+	return results;
+}
+
 function collectTargets(stagedOnly) {
 	if (stagedOnly) {
 		return stagedFiles()
@@ -68,9 +75,7 @@ function collectTargets(stagedOnly) {
 			.map((file) => join(repoRoot, file))
 			.filter((file) => existsSync(file));
 	}
-	const results = [];
-	for (const root of SCAN_ROOTS) findSkillFiles(join(repoRoot, root), results);
-	return results;
+	return collectSkillTargets();
 }
 
 /** Same extraction as packages/coding-agent/src/resources/shared/frontmatter.ts. */
