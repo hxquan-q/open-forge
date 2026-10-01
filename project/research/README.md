@@ -26,6 +26,7 @@
 | Skill 落盘布局审计（pool/active 必要性裁决，TASK-0113） | [`RESEARCH-0014`](RESEARCH-0014-skill-layout-pool-active-audit.md) |
 | Cordis 元框架机制调研（fiber/effect/inject 与可借鉴点） | [`RESEARCH-0015`](RESEARCH-0015-cordis-meta-framework.md) |
 | Northline 长程 Agent 委派与 OpenVetta Task/Worktree 治理对照 | [`RESEARCH-0016`](RESEARCH-0016-northline-openvetta-reference.md) |
+| 开发范式：OpenVetta、工程控制论与 Matt Pocock 方法对照 | [`RESEARCH-0017`](RESEARCH-0017-development-paradigm-synthesis.md) |
 
 ## Research Note 约束
 
