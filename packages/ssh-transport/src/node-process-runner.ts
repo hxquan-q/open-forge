@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
 import type {
 	SshChannelInvocation,
@@ -44,11 +46,14 @@ function runSshProcess(
 			resolve({ exitCode: null, stdout: new Uint8Array(), stderr: "", aborted: true });
 			return;
 		}
+		const ownsProcessGroup = process.platform !== "win32";
 		const child = spawn(sshBinary, [...invocation.argv], {
 			env: { ...baseEnv, ...invocation.env },
 			stdio: ["pipe", "pipe", "pipe"],
+			detached: ownsProcessGroup,
 		});
 
+		const terminate = createProcessTerminator(child, ownsProcessGroup);
 		const stdoutChunks: Buffer[] = [];
 		const stderrChunks: Buffer[] = [];
 		let aborted = false;
@@ -56,14 +61,10 @@ function runSshProcess(
 		let settled = false;
 
 		const stop = (reason: "signal" | "timeout"): void => {
-			if (settled || child.killed) return;
+			if (settled || aborted) return;
 			aborted = true;
 			timedOut = reason === "timeout";
-			// 先 SIGTERM 让 ssh 有机会清理 master 连接；它不理会时再硬杀。
-			child.kill("SIGTERM");
-			setTimeout(() => {
-				if (!settled) child.kill("SIGKILL");
-			}, 2000).unref?.();
+			terminate();
 		};
 
 		const timer =
@@ -109,6 +110,8 @@ function runSshProcess(
 		});
 		// 用 close 而不是 exit：exit 可能早于 stdout 读完，那样会丢掉尾部输出。
 		child.on("close", (code) => finish(code));
+		// Abort can happen during spawn, before the listener was installed.
+		if (invocation.signal?.aborted) stop("signal");
 
 		if (invocation.stdin !== undefined) {
 			// 远端命令可能在读完 stdin 前就退出（例如路径不存在），此时写入会 EPIPE。
@@ -126,10 +129,13 @@ function openSshChannel(
 	baseEnv: NodeJS.ProcessEnv,
 	invocation: SshChannelInvocation,
 ): SshProcessChannel {
+	const ownsProcessGroup = process.platform !== "win32";
 	const child = spawn(sshBinary, [...invocation.argv], {
 		env: { ...baseEnv, ...invocation.env },
 		stdio: ["pipe", "pipe", "pipe"],
+		detached: ownsProcessGroup,
 	});
+	const terminate = createProcessTerminator(child, ownsProcessGroup);
 	const stderrChunks: Buffer[] = [];
 	child.stdout.on("data", (chunk: Buffer) => invocation.onStdout(chunk));
 	child.stderr.on("data", (chunk: Buffer) => keepTail(stderrChunks, chunk, STREAMED_STDERR_TAIL_BYTES));
@@ -147,11 +153,44 @@ function openSshChannel(
 			if (child.stdin.writable) child.stdin.write(data);
 		},
 		end: () => child.stdin.end(),
-		kill: () => {
-			if (!child.killed) child.kill("SIGTERM");
-		},
+		kill: terminate,
 		exited,
 	};
+}
+
+/** Own only this spawned process group, never the caller's or a remote task's group. */
+function createProcessTerminator(child: ChildProcess, ownsProcessGroup: boolean): () => void {
+	let closed = false;
+	let stopping = false;
+	let escalation: ReturnType<typeof setTimeout> | undefined;
+	const finish = (): void => {
+		closed = true;
+		if (escalation !== undefined) clearTimeout(escalation);
+	};
+	child.once("close", finish);
+	child.once("error", finish);
+	return () => {
+		// exitCode/killed only describe the parent. Descendants may still hold its pipes.
+		if (closed || stopping) return;
+		stopping = true;
+		escalation = setTimeout(() => {
+			if (!closed) signalProcess(child, ownsProcessGroup, "SIGKILL");
+		}, 2000);
+		escalation.unref?.();
+		signalProcess(child, ownsProcessGroup, "SIGTERM");
+	};
+}
+
+function signalProcess(child: ChildProcess, ownsProcessGroup: boolean, signal: NodeJS.Signals): void {
+	if (ownsProcessGroup && child.pid !== undefined) {
+		try {
+			process.kill(-child.pid, signal);
+			return;
+		} catch (error) {
+			if (error instanceof Error && "code" in error && error.code === "ESRCH") return;
+		}
+	}
+	child.kill(signal);
 }
 
 const STREAMED_STDERR_TAIL_BYTES = 16 * 1024;
