@@ -40,7 +40,7 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / ssh-hel
 
 ## 开始任务
 
-项目开发统一从 [open-forge-task-intake](.agents/skills/open-forge-task-intake/SKILL.md) 进入，自动识别实现、修复、重构、测试/TDD、CI/CD、性能和研究路线；用户负责目标与功能/AI 结果验收，Agent 负责工程分析、实现和验证。仅讨论或计划时不擅自实施，任何路由都不扩大发布与安全授权。
+开发任务先加载 [统一入口](.agents/skills/open-forge-task-intake/SKILL.md)。
 
 开始非平凡任务前：
 
@@ -82,7 +82,7 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 | --- | --- |
 | 选择质量门禁与测试范围 | [`docs/dev/quality-gates.md`](docs/dev/quality-gates.md) |
 | 设计、编写或审查测试 | [`.agents/skills/open-forge-testing/SKILL.md`](.agents/skills/open-forge-testing/SKILL.md) |
-| 统一开发入口：需求、Bug、重构、TDD、CI/CD 与验收反馈 | [`.agents/skills/open-forge-task-intake/SKILL.md`](.agents/skills/open-forge-task-intake/SKILL.md) |
+| 统一开发入口 | [`.agents/skills/open-forge-task-intake/SKILL.md`](.agents/skills/open-forge-task-intake/SKILL.md) |
 | Task 派工、Worktree、分支集成与 dev 推送 | [`project/collaboration/development-workflow.md`](project/collaboration/development-workflow.md) |
 | Project 需求、计划、Task、Issue、Bug 管理 | [`project/README.md`](project/README.md) 与 [`project/CONVENTIONS.md`](project/CONVENTIONS.md) |
 | Desktop 启动、调试与 UI 验证（仅在用户明确要求时） | [`docs/dev/README.md`](docs/dev/README.md) |
@@ -90,8 +90,6 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 | Plugin SDK、Preset 或外置插件 | [`packages/plugins/README.md`](packages/plugins/README.md) |
 | Coding Agent 架构修改 | [`docs/agent/coding-agent/README.md`](docs/agent/coding-agent/README.md) |
 | Capability 与权限模型 | [`docs/capabilities/README.md`](docs/capabilities/README.md) |
-
-表中没有覆盖的任务，从最近一级 `AGENTS.md`、包 README、相关测试和 ADR 开始，不在根文件中维护易过时的逐文件清单。
 
 ## 架构与 ADR
 
@@ -292,8 +290,6 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 - 不 force push。Rebase 冲突若落在本次未修改的文件中，立即中止并请求用户处理。
 
 ## 交付要求
-
-交付时先提供功能验收包（入口、必要条件、代表性操作、预期结果、已知限制），再简述工程证据；内部文档/测试任务说明约定验收标准即可。工程验证、集成、用户接受和发布状态分开记录，不默认要求用户审查代码，也不把用户沉默当成验收通过。具体流程见 [交付闭环](.agents/skills/open-forge-task-intake/references/delivery.md)。
 
 交付时简要说明：
 

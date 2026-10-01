@@ -21,7 +21,7 @@ write_paths: [AGENTS.md, project, .agents/skills/open-forge-task-intake, .agents
 exclusive_paths: [AGENTS.md, package.json, scripts/quality/check-guards.mjs]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（main 主工作区串行；98cfb4b00）
 created: 2026-10-01
 updated: 2026-10-01
 ---
@@ -60,7 +60,7 @@ updated: 2026-10-01
 ## 验收分层
 
 - 工程验证：定向 9 例通过；test:impact 选择 test:quality，34 文件 / 449 例通过；完整 bun run check 复验退出码 0。首轮发现本次 testing Skill 缺少声明头，已补齐。
-- 集成：pending；不推送未验收批次。
+- 集成：已集成本地 main，提交 `98cfb4b00`；人工功能验收与推送资格分别记录，不再用 pending 混淆。
 - 人工功能验收：pending；用户确认前保持 verifying。
 
 ## 交付记录
@@ -83,3 +83,9 @@ updated: 2026-10-01
 - 工程交付应给出真实验证与简短功能验收步骤；未获用户接受不声明功能验收通过，不因自动化任务扩大 Provider/发布权限。
 - 若路由或交付不符合预期，描述现象即可；按原 Task 反馈→复现→修复→复验，不把工程排错转交用户。
 - 已知限制：静态脚本验证文件/引用/镜像，不保证任意模型在新会话中的指令遵循。用户实际试用前保持 verifying。
+
+## 后续审核记录
+
+用户提供的审核结论为“有条件通过”，不是无条件功能验收。#1/#7 守卫问题由 TASK-0138（73a365f0c）修复；#2/#3/#4/#5 与文案问题由 TASK-0139 跟进。本 Task 保持 verifying，未推送。
+
+原提交 98cfb4b00 混合了 Skill 重构、机械守卫和验收政策三个可单独回滚的关注点。承认原拆分不理想；未获历史改写授权，不 reset/rebase，后续守卫与文档修正已分开提交。

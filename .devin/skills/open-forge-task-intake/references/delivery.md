@@ -1,6 +1,12 @@
 <!-- Copyright The Open Forge contributors. -->
 # 工程完成、产品接受与反馈回流
 
+## 职责与权限
+
+用户负责目标、限制以及功能行为、体验和 AI 结果的验收；Agent 负责工程分析、方案与拆分、实现、测试、技术评审、集成、记录和反馈修复。技术合同由 Agent 从事实推导，不要求用户填写或默认逐行审查代码。
+
+自主执行不扩大生产访问、真实 Provider/费用、破坏性操作或发布权限。需要独立评审时只使用已获授权的机制；只能自审时如实说明，不把完成总结当成独立评审。用户沉默或“继续实施”不等于接受结果。
+
 ## 证据分层
 
 | 层次 | Agent 要记录的事实 | 不能替代的内容 |
@@ -11,7 +17,7 @@
 | 人工功能验收 | 用户对功能行为、交互、AI 产物的明确反馈 | 不要求用户默认逐行审核代码；沉默不算接受 |
 | 发布 | 明确授权及实际发布状态 | 已提交/已推开发候选不等于稳定发布 |
 
-沿用 [Project 状态](../../../../project/CONVENTIONS.md)，不新增平行状态机。功能任务工程通过后可进入 verifying；用户尚未验收或拒绝时不能自行设 done。integration_status 独立记录 pending/reviewing/integrated/rejected。内部任务人工验收不适用时说明理由及既定完成标准，不伪造“用户已确认”。历史 done 记录不批量重解释。
+沿用 [Project 状态](../../../../project/CONVENTIONS.md)，不新增平行状态机。功能任务工程通过后可进入 verifying；用户尚未验收或拒绝时不能自行设 done。integration_status 独立记录 pending/reviewing/integrated/rejected；已经提交到本地 main 的串行工作也应记录 integrated 并绑定提交，而不是因为等待人工验收仍写 pending。内部任务人工验收不适用时说明理由及既定完成标准，不伪造“用户已确认”。历史 done 记录不批量重解释。
 
 ## 功能验收包
 

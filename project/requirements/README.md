@@ -10,7 +10,7 @@
 | `REQ-0001` | work/coding 本地 Desktop MVP | ready | [`exprot/mvp-scope.md`](../../exprot/mvp-scope.md)、[`ISSUE-0006`](../issues/ISSUE-0006-conversation-task-promotion-policy.md) |
 | `REQ-0002` | Runtime 性能与可靠性基线 | ready | [`exprot/session-memory.md`](../../exprot/session-memory.md)、[`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md) |
 | `REQ-0003` | Open Forge 品牌化发布 | ready | [`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |
-| `REQ-0004` | Agent 辅助二开工作流 | ready | [`project/CONVENTIONS.md`](../CONVENTIONS.md)、`.agents/skills/open-forge-task-intake/SKILL.md` |
+| `REQ-0004` | AI 自主工程交付与人工功能验收 | ready | [`project/CONVENTIONS.md`](../CONVENTIONS.md)、`.agents/skills/open-forge-task-intake/SKILL.md` |
 | `REQ-0005` | Open Forge 独立发布与二开合规 | ready | [`PLAN-0005`](../plans/PLAN-0005-independent-release-and-fork-governance.md)、[`ISSUE-0007`](../issues/ISSUE-0007-independent-desktop-version-baseline.md) |
 | `REQ-0006` | Agent Team 编排协作对齐参照系 | ready | [`RESEARCH-0008`](../research/RESEARCH-0008-multi-agent-orchestration-comparison.md)、[`PLAN-0008`](../plans/PLAN-0008-agent-team-orchestration-alignment.md) |
 | `PRODUCT` | 产品定义基线 | active | [`PRODUCT.md`](PRODUCT.md) |

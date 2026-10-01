@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0139` | `verifying` | PLAN-0004 | 审核修复：交付判据、发布说明、规则去重与集成状态。 |
 | `TASK-0138` | `verifying` | PLAN-0004 | 审核修复：Windows 链接占位、引用与 frontmatter 扫描覆盖。 |
 | `TASK-0137` | `verifying` | PLAN-0004 | 开发 Skills 更名与描述统一为 Open Forge，迁移引用并验证。 |
 | `TASK-0136` | `verifying` | PLAN-0004 | 统一开发入口与双层验收已实现；449 例及完整 check 通过，待新会话功能验收，未推送。 |

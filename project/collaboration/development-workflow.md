@@ -86,7 +86,7 @@ bun run check
 
 ## 工程验收与产品接受
 
-本流程的集成/开发候选验收指 Coordinator 完成工程证据核对、集成测试和门禁，不代替用户对功能与 AI 结果的接受。按 [Project 规范](../CONVENTIONS.md) 分别记录：功能尚待用户确认时，Task 可为 verifying 且 integration_status 为 integrated；内部工作按约定标准关闭。推送资格仍须满足下面的完整批次条件，不因状态说明而扩大授权。用户拒绝后由 Agent 复现、修复和复验，不能让用户承担工程排错。
+本流程的“验收”指开发候选的工程验收；与人工接受的关系统一见 [交付合同](../../.agents/skills/open-forge-task-intake/references/delivery.md)。推送仍须满足下面全部批次条件。
 
 ## 验收后推送到 origin/dev
 

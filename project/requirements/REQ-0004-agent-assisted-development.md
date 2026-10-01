@@ -19,7 +19,7 @@ related_plan: [PLAN-0004]
 
 ## 统一入口与职责
 
-用户负责提出需求、限制以及验收功能/AI 结果；Agent 负责事实调查、方案、拆分、实现、测试/TDD、CI/CD 相关工程、评审、集成、文档与验收反馈修复。统一入口按实际任务选择最小必要方法，不要求用户选择 Skill 或工程框架，不承诺无人监督的稳定发布。
+执行与验收分工按 [交付合同](../../.agents/skills/open-forge-task-intake/references/delivery.md)，本需求定义结果，不复制操作政策。
 
 ## 必须保持
 
