@@ -123,7 +123,9 @@
 		},
 		"./styles.css": "./src/styles.css"
 	},
-	"files": ["src"],
+	"files": [
+		"src"
+	],
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
@@ -131,7 +133,8 @@
 	"scripts": {
 		"check": "tsgo --noEmit -p tsconfig.json",
 		"verify:purity": "bun ./scripts/verify-purity.mjs",
-		"verify:eligible": "bun ./scripts/eligible-inventory.mjs"
+		"verify:eligible": "bun ./scripts/eligible-inventory.mjs",
+		"test": "bun ../../scripts/quality/run-vitest.mjs --run"
 	},
 	"dependencies": {
 		"@codemirror/lang-css": "^6.3.1",
