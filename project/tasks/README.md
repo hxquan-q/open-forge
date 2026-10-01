@@ -15,6 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0143` | `verifying` | PLAN-0004 | Claude 入口去重，保留专属提交约束并设置体积门禁。 |
+| `TASK-0144` | `ready` | PLAN-0004 | 113 个术语按领域分册，保留根索引与旧标题锚点。 |
 | `TASK-0142` | `done` | PLAN-0004 | 根目录保守清理：废弃脚本、重复 banner、空目录与工作区品牌。 |
 | `TASK-0140` | `verifying` | PLAN-0004 | 根规则拆分，硬边界前置与 8 KiB 常驻预算。 |
 | `TASK-0141` | `verifying` | PLAN-0004 | 移除 Devin 镜像及同步路径，保留单一权威入口。 |

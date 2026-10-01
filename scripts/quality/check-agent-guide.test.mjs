@@ -16,6 +16,8 @@ function fixture() {
 	roots.push(root);
 	write(root, "AGENTS.md", RULE_DOCUMENTS.map((path) => `[Rules](${path})`).join("\n"));
 	for (const path of RULE_DOCUMENTS) write(root, path, "# Rules\n");
+	write(root, "CLAUDE.md", "[Root](AGENTS.md) [Claude](docs/dev/agent-rules/claude.md)\n");
+	write(root, "docs/dev/agent-rules/claude.md", "# Claude\n");
 	return root;
 }
 afterEach(() => {
@@ -47,5 +49,18 @@ describe("root agent guide contract", () => {
 		const unused = join(root, "missing");
 		expect(checkAgentGuide(unused)).toEqual(["Missing AGENTS.md"]);
 		expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toContain("Rules");
+	});
+
+	it("rejects an oversized Claude entry", () => {
+		const root = fixture();
+		write(root, "CLAUDE.md", "界".repeat(1400));
+		expect(checkAgentGuide(root)).toEqual(expect.arrayContaining([expect.stringContaining("Claude guide exceeds")]));
+	});
+	it("requires the Claude entry to discover root rules and its own supplement", () => {
+		const root = fixture();
+		write(root, "CLAUDE.md", "# Claude\n");
+		expect(checkAgentGuide(root)).toEqual(
+			expect.arrayContaining([expect.stringContaining("Missing Claude pointer")]),
+		);
 	});
 });
