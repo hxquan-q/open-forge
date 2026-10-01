@@ -133,6 +133,12 @@ draft → ready → in_progress → verifying → done → archived
 
 Bug 可以额外使用 `investigating` 表示尚在收集证据，但确认根因后应进入 `in_progress`；修复完成进入 `verifying`，验证后进入 `done`。
 
+### 工程与人工验收的分工
+
+新建或本次更新的 Task 在正文记录工程验证、技术评审、集成与人工功能验收的独立事实，沿用既有状态与 integration_status，不新增平行状态机。功能任务工程检查通过但用户尚未接受时保持 verifying；用户明确接受且必要验证/记录完成后才 done。内部文档、测试、工具维护任务可按已约定的自动化/文档标准关闭，说明人工验收不适用理由。历史记录不批量回填。
+
+用户验收功能行为、操作体验与 AI 结果，不默认逐行审核代码。Agent 提供功能验收步骤与预期产物，接收反馈后负责归因、复现、修复及回归；验收拒绝或未完成不得伪装为通过。工程验证完成、开发候选推送与稳定发布授权不是同一件事。详细执行方法由 [统一入口的交付闭环](../.agents/skills/vetta-task-intake/references/delivery.md)维护。
+
 ## 5. 各模块内容规范
 
 ### Requirement

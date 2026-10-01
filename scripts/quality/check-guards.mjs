@@ -22,6 +22,7 @@ const steps = [
 	["scripts/quality/check-agent-ai-maintainability.mjs"],
 	["scripts/quality/check-standalone-cli-build.mjs"],
 	["scripts/quality/check-skill-frontmatter.mjs"],
+	["scripts/quality/workflow-skills.mjs"],
 	["scripts/quality/check-vitest-runner.mjs"],
 	["scripts/quality/check-source-path-maps.mjs"],
 	["scripts/quality/check-task-worktrees.mjs"],

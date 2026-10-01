@@ -55,6 +55,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 状态写在 frontmatter 中，不通过移动文件表达状态，避免路径和链接频繁变化。README 中的 Plan 状态表和 Task 当前焦点表是导航副本，必须与 frontmatter 同步；`bun run check` 会校验对应状态索引。
 
+## 统一开发入口
+
+用户只提供目标和功能/AI 结果验收反馈；[vetta-task-intake](../.agents/skills/vetta-task-intake/SKILL.md) 自动判断任务路线和所需方法。测试/TDD 由 vetta-testing 承载，CI/CD 与交付按需读取专项参考，不另建管理体系。简单任务复用已有条目，不机械创建整套 REQ/PLAN/TASK。
+
 ## 标准流水线
 
 ```text
@@ -68,7 +72,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
   → Green：定向测试和用户流程测试
   → Guard：质量门禁
   → Release Notes
-  → 关闭并归档
+  → 功能验收包 / 内部任务约定标准
+  → 人工反馈 → 必要修正与复验
+  → 满足验收后关闭并归档
 ```
 
 ## 三跳读取协议

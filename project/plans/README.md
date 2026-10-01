@@ -10,7 +10,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0001` | work/coding Runtime 产品演进 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md)、[`exprot/runtime-mapping.md`](../../exprot/runtime-mapping.md) |
 | `PLAN-0002` | 性能与可靠性基线 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md) 阶段 0.5 |
 | `PLAN-0003` | Open Forge 品牌化施工 | in_progress | [`exprot/development-paradigm.md`](../../exprot/development-paradigm.md)、[`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |
-| `PLAN-0004` | Agent 辅助二开工作流 | verifying | [`.devin/skills/vetta-task-intake/SKILL.md`](../../.devin/skills/vetta-task-intake/SKILL.md)、`AGENTS.md` |
+| `PLAN-0004` | Agent 辅助二开工作流 | verifying | [`.agents/skills/vetta-task-intake/SKILL.md`](../../.agents/skills/vetta-task-intake/SKILL.md)、`AGENTS.md` |
 | `PLAN-0005` | Open Forge 独立发布与二开治理 | in_progress | [`REQ-0005`](../requirements/REQ-0005-openforge-independent-release-and-compliance.md)、用户确认的独立 SemVer 决策 |
 | `PLAN-0006` | Canvas / Browser / Terminal 右栏集成 | ready | [`RESEARCH-0005`](../research/RESEARCH-0005-canvas-browser-terminal-support.md)、用户确认的决策索引 |
 | `PLAN-0007` | Agent Workspace Phase 2（Browser 调试闭环 + Canvas 富交互） | draft | PLAN-0006 推迟项圈选、用户确认的 Phase 2 决策；v1 演示/首发反馈可重排 |
