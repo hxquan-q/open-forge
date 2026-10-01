@@ -1,0 +1,49 @@
+<!-- Modified by The Open Forge contributors. -->
+# 发布说明与交付规则
+
+本文是[根规则](../../../AGENTS.md)按任务触发加载的全仓规则扩展，约束级别不因拆分而改变；更近一级 AGENTS 可收紧。代码路径、命令与原文中的“根文件”均相对仓库根，不相对本文目录。
+
+## 发布说明与新增包
+
+发布说明写在 `.github/release-notes/v<版本号>.md`，一个版本一个文件，版本号以 `apps/desktop/package.json` 的 `version` 为准。**该文件就是 GitHub Release 的正文**，用户在 Release 页面读到的就是这里写的内容，写法见 [`.github/release-notes/README.md`](../../../.github/release-notes/README.md)。
+
+**当前版本基线**：Open Forge Desktop 已于 commit `ff5989c6d` 切换至独立版本 **0.1.0**，不再继承上游 0.5.x 版本号。所有后续版本号必须基于 0.1.0 递增（0.1.1, 0.1.2... 或 0.2.0 等），Release Notes 统一写入 `.github/release-notes/v<版本>.md`。**是否执行发布（publish）由用户明确授权**，Agent 不得主动执行 tag 推送或触发构建流水线。
+
+### 必须写入发布说明
+
+以下任一情况完成后，都要把对应条目补进**当前开发中版本**的发布说明，文件不存在就新建。这是任务的一部分，不是可选的后续工作：
+
+- 新增功能或能力
+- 修复缺陷
+- 调整或修正既有行为，包括性能、交互和文案的可感知变化
+- 合并 PR
+- 关闭 issue
+
+补写发布说明与代码改动放在同一次任务里完成：流水线由 tag 触发，tag 一推就开始构建，那时再补已经进不了这次发布。
+
+### 怎么写
+
+- 分 `## 新增` / `## 改进` / `## 修复` / `## 其他` 四节，没有内容的小节省略。
+- 面向用户描述影响：说清楚用户会看到什么变化，而不是改了哪个函数；行为有取舍时把代价一并写出来。
+- 关联 PR 或 issue 时统一用 `owner/repo#123` 格式，例如 `openvetta/open-vetta#8`。
+- 没有用户可感知影响的纯内部改动（内部重构、测试、开发文档）仍要在「其他」留一条，但保持一句话，不要挤占正文。
+- 已发布版本的发布说明不得修改；发现写错另起一条修订说明。
+- 发布说明缺失会让 `desktop-release` 流水线在质量阶段直接失败（`node scripts/release/release-notes.mjs --check`），补不上就没有正文可发。
+- `apps/desktop/CHANGELOG.md` 自 0.5.58 起冻结，只保留历史记录，不再追加。
+
+### 新增包
+
+- 新增 workspace 包时先判断归属：应用进 `apps/*`，可复用模块进 `packages/*`。随后遵循 [`docs/monorepo-new-package.md`](../../../docs/monorepo-new-package.md)，同时更新 workspace、TypeScript path maps、构建分层和必要的 Desktop 源码映射。
+- 不执行版本发布、制品上传、registry 发布或部署，除非用户明确要求。
+## 交付要求
+
+交付时简要说明：
+
+- 改变了什么可观察行为或文档合同
+- 修改了哪些主要文件
+- 实际运行了哪些测试和检查及其结果
+- 哪些验证未运行以及原因
+- 本次条目已写入 `.github/release-notes/v<版本号>.md`（改动、修正、新增、合并 PR、关闭 issue 均需写入）
+- 已知风险、兼容性影响或仍需用户决定的事项
+
+不得声称未实际执行的测试、构建或人工验证已经通过。

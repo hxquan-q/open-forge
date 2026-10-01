@@ -12,6 +12,8 @@ Claude 的 `.claude/skills` 是共享入口而非生成镜像：真实目录必�
 
 frontmatter 全量检查显式扫描 `.agents` 和 `.devin`，不依赖遍历 Claude 符号链接或 staged 文件。上述回归由既有 `test:quality`/quality CI 执行，不另建 workflow 或扩大发布权限。
 
+`node scripts/quality/check-agent-guide.mjs` 同样进入 `check:guards`：根 AGENTS 的 UTF-8 体积不得超过 8 KiB，必须指向六份按需规则扩展，并检查根与扩展的 Markdown 文件链接。该预算是本仓维护合同，不是对某个宿主加载上限的假设；检查不证明规则语义未变，迁移需另核对保留映射。
+
 ## 门禁分层
 
 | 层级 | 命令 | 何时跑 | 内容 |

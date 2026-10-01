@@ -9,7 +9,7 @@
 
 | 内容 | 权威位置 |
 |---|---|
-| Agent 开发规则 | `AGENTS.md`、目标目录最近的 `AGENTS.md` |
+| Agent 开发规则 | `AGENTS.md`、其按需规则扩展 `docs/dev/agent-rules/`、目标最近的 `AGENTS.md` |
 | 架构决策 | `docs/adr/` |
 | 产品需求 | `project/requirements/` |
 | 实施路线 | `project/plans/` |

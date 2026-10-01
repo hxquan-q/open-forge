@@ -11,7 +11,7 @@ description: 为 Open Forge 的功能、缺陷、重构、UI/协议/CI 合同及
 
 编写能在真实回归发生时可靠失败、能说明哪项用户行为或稳定合同被破坏、且维护成本与风险相称的测试。不要以覆盖代码行、内部调用次数或大量快照代替行为证据。
 
-开始前完整阅读目标目录适用的最近一级 `AGENTS.md`、相关包 README、现有测试和实现。测试命令与门禁以仓库根 `AGENTS.md` 和 `docs/dev/quality-gates.md` 为准；更近一级规则可以收紧本 Skill。
+开始前完整阅读目标目录适用的最近一级 `AGENTS.md`、相关包 README、现有测试和实现。覆盖要求先读 [测试政策](../../../docs/dev/agent-rules/testing.md)，测试命令与门禁以 `docs/dev/quality-gates.md` 为准；更近一级规则可以收紧本 Skill。
 
 ## 先定义要证明的行为
 
