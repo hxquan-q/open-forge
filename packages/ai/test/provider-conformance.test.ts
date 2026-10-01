@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 import { streamAnthropic } from "../src/providers/anthropic/stream.js";
@@ -132,6 +133,70 @@ const fixtures: ProviderConformanceFixture[] = [
 ];
 
 for (const fixture of fixtures) providerConformanceSuite(fixture);
+
+describe("Anthropic compatible thinking blocks", () => {
+	it.each([true, false])("accepts a missing start signature (later signature: %s)", async (withDelta) => {
+		const records: SseRecord[] = [
+			anthropicMessageStart(),
+			{
+				event: "content_block_start",
+				data: { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+			},
+			{
+				event: "content_block_delta",
+				data: { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "plan" } },
+			},
+		];
+		if (withDelta)
+			records.push({
+				event: "content_block_delta",
+				data: { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "sig" } },
+			});
+		records.push(
+			{ event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+			{
+				event: "content_block_start",
+				data: { type: "content_block_start", index: 1, content_block: { type: "text", text: "hello" } },
+			},
+			{ event: "content_block_stop", data: { type: "content_block_stop", index: 1 } },
+			anthropicMessageDelta("end_turn"),
+			{ event: "message_stop", data: { type: "message_stop" } },
+		);
+		const transport = createProviderTestTransport([anthropicSse(records)]);
+		const { events, result } = await collect(
+			streamAnthropic(anthropicModel, context, { apiKey: "test", fetch: transport.fetch }),
+		);
+		expect(result.stopReason).toBe("stop");
+		expect(textOf(result)).toBe("hello");
+		const thinking = result.content.find((item) => item.type === "thinking");
+		expect(thinking?.thinking).toBe("plan");
+		expect(thinking?.thinkingSignature).toBe(withDelta ? "sig" : undefined);
+		expect(events.at(-1)?.type).toBe("done");
+		expect(result.usage.output).toBeGreaterThan(0);
+	});
+
+	it.each([null, 42])("still rejects an invalid signature value %s", async (signature) => {
+		const transport = createProviderTestTransport([
+			anthropicSse([
+				anthropicMessageStart(),
+				{
+					event: "content_block_start",
+					data: {
+						type: "content_block_start",
+						index: 0,
+						content_block: { type: "thinking", thinking: "plan", signature },
+					},
+				},
+			]),
+		]);
+		const { events, result } = await collect(
+			streamAnthropic(anthropicModel, context, { apiKey: "test", fetch: transport.fetch }),
+		);
+		expect(result.stopReason).toBe("error");
+		expect(result.errorMessage).toContain("response validation failed");
+		expect(events.at(-1)?.type).toBe("error");
+	});
+});
 
 function providerConformanceSuite(fixture: ProviderConformanceFixture): void {
 	describe(`${fixture.name} provider conformance`, () => {
