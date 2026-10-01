@@ -1,7 +1,7 @@
 ---
 id: TASK-0143
 type: task
-status: verifying
+status: done
 priority: P2
 owner: project/agent-workflow
 requirement: REQ-0004
@@ -57,3 +57,4 @@ Open-Forge-only。继续治理根目录大文档，两个关注点串行、分�
 - 新增体积/丢失入口用例在旧守卫上 2 失败 / 6 通过；更新后 8 例通过。
 - test:impact 运行质量套件 35 文件 / 466 例通过。未运行 Claude 真会话、Desktop 或真实模型；不把静态校验当实际规则遵循证明。
 - 完整 `bun run check` 退出码 0；既有基线/CRLF 提示未通过改动无关文件消除，未推送。
+- 按内部文档治理合同验收：结构、保留映射、索引与适用门禁通过；真实模型遵循和旧术语时效不在本轮完成声明内。

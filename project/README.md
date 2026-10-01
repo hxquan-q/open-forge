@@ -19,6 +19,7 @@
 | 调研证据 | `project/research/` 与 `exprot/` |
 | 测试/性能基线 | `project/verification/` |
 | 长期上下文 | `project/context/` |
+| 领域术语 | 根 `CONTEXT.md` 索引与 `docs/glossary/` 分册正文 |
 | 多人/多 Agent 协作 | `project/collaboration/` |
 | Task Worktree 生命周期工具 | `scripts/worktree/cli.mjs`（`bun run worktree:doctor`）、`.worktreeconfig.json` |
 | Project 管理规范 | `project/CONVENTIONS.md` |

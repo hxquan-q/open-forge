@@ -3,6 +3,8 @@ name: grill-with-docs
 description: Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise. Use when user wants to stress-test a plan against their project's language and documented decisions.
 ---
 
+<!-- Modified by The Open Forge contributors. -->
+
 <what-to-do>
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
@@ -20,6 +22,8 @@ If a question can be answered by exploring the codebase, explore the codebase in
 During codebase exploration, also look for existing documentation:
 
 ### File structure
+
+Open Forge overrides the generic examples below: root `CONTEXT.md` is an index into `docs/glossary/`. Read the relevant chapter for definitions. Edit the authoritative chapter when a term is resolved, and update only the heading and chapter link in the root index. These chapters organize one project glossary; do not infer new bounded contexts or create a second glossary.
 
 Most repos have a single context:
 
@@ -71,7 +75,7 @@ When the user states how something works, check whether the code agrees. If you 
 
 ### Update CONTEXT.md inline
 
-When a term is resolved, update `CONTEXT.md` right there. Don't batch these up — capture them as they happen. Use the format in [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md).
+When a term is resolved, update its authoritative glossary file in the existing layout right there (the chapter in Open Forge, not a definition copied into the root index). Don't batch these up — capture them as they happen. Use the format in [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md).
 
 `CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
 

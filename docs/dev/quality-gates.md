@@ -14,6 +14,8 @@ frontmatter 全量检查显式扫描 `.agents` 和 `.devin`，不依赖遍历 Cl
 
 `node scripts/quality/check-agent-guide.mjs` 同样进入 `check:guards`：根 AGENTS 的 UTF-8 体积不得超过 8 KiB，必须指向六份按需规则扩展；CLAUDE 不得超过 4 KiB，必须回指根规则与其专属补充。检查这些入口与扩展的 Markdown 文件链接。该预算是本仓维护合同，不是对某个宿主加载上限的假设；检查不证明规则语义未变，迁移需另核对保留映射。
 
+`node scripts/quality/check-glossary.mjs` 校验根 CONTEXT 的 12 KiB 预算、根索引与 `docs/glossary/` 词条的一一对应、分册唯一性及文件链接。根保留旧 `###` 标题用于定位，正文在分册，不在索引复制定义。该检查不审定历史词条是否仍反映当前实现。
+
 ## 门禁分层
 
 | 层级 | 命令 | 何时跑 | 内容 |
