@@ -6,9 +6,9 @@
 
 [open-forge-task-intake](../../.agents/skills/open-forge-task-intake/SKILL.md) 根据任务选择下面的既有门禁，不增设平行测试框架。TDD/测试设计见 [open-forge-testing](../../.agents/skills/open-forge-testing/SKILL.md)，CI/CD 配置改动见 [流水线路线](../../.agents/skills/open-forge-task-intake/references/ci-cd.md)。
 
-`node scripts/quality/workflow-skills.mjs` 已接入 `check:guards`：校验两个权威 Skill 的出向链接、Devin intake 镜像，以及根 AGENTS、project/ 和 docs/dev/ 中指向这两个 Skill 的入向 Markdown 文件链接。支持内联链接 title，忽略围栏/缩进代码块与行内代码；不是完整 CommonMark、网络 URL 或标题锚点验证器，也不证明模型路由行为。
+`node scripts/quality/workflow-skills.mjs` 已接入 `check:guards`：校验两个权威 Skill 的出向链接、已退役名称/Devin 副本残留，以及根 AGENTS、project/ 和 docs/dev/ 中指向这两个 Skill 的入向 Markdown 文件链接。支持内联链接 title，忽略围栏/缩进代码块与行内代码；不是完整 CommonMark、网络 URL 或标题锚点验证器，也不证明模型路由行为。
 
-Claude 的 `.claude/skills` 是共享入口而非生成镜像：真实目录必须解析到 `.agents/skills`；Windows Git 正确的符号链接占位文件被识别为平台状态，门禁继续验证权威正文并提示 Claude 路径未就绪。开发者需开启 `core.symlinks`/Windows 开发者模式后安全重新检出，工具不会改 Git 配置、替换占位文件或在其中建目录。错误目标仍失败。`--write` 仅同步 Devin 镜像；未确认只读 `.devin` 的宿主已退役前保留兼容，重复发现风险待新会话验证。
+Claude 的 `.claude/skills` 是共享入口而非生成镜像：真实目录必须解析到 `.agents/skills`；Windows Git 正确的符号链接占位文件被识别为平台状态，门禁继续验证权威正文并提示 Claude 路径未就绪。开发者需开启 `core.symlinks`/Windows 开发者模式后安全重新检出，工具不会改 Git 配置、替换占位文件或在其中建目录。错误目标仍失败。用户已授权移除 Devin 镜像；脚本完全只读，旧 `--write` 参数报明确错误，不创建副本或修改配置。重新出现的这两个项目 Skill 的 Devin 副本会报错，但不会被检查脚本自动删除。仅支持 `.devin` 的旧环境需改为读取 `.agents`。
 
 frontmatter 全量检查显式扫描 `.agents` 和 `.devin`，不依赖遍历 Claude 符号链接或 staged 文件。上述回归由既有 `test:quality`/quality CI 执行，不另建 workflow 或扩大发布权限。
 

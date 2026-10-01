@@ -16,7 +16,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
 | `TASK-0140` | `verifying` | PLAN-0004 | 根规则拆分，硬边界前置与 8 KiB 常驻预算。 |
-| `TASK-0141` | `ready` | PLAN-0004 | 移除 Devin 镜像及同步路径，保留单一权威入口。 |
+| `TASK-0141` | `verifying` | PLAN-0004 | 移除 Devin 镜像及同步路径，保留单一权威入口。 |
 | `TASK-0139` | `verifying` | PLAN-0004 | 审核修复：交付判据、发布说明、规则去重与集成状态。 |
 | `TASK-0138` | `verifying` | PLAN-0004 | 审核修复：Windows 链接占位、引用与 frontmatter 扫描覆盖。 |
 | `TASK-0137` | `verifying` | PLAN-0004 | 开发 Skills 更名与描述统一为 Open Forge，迁移引用并验证。 |

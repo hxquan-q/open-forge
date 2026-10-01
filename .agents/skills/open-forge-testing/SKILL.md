@@ -157,4 +157,4 @@ bun run check
 
 ## Skill 维护
 
-`.agents/skills/open-forge-testing/` 是事实源；执行 `node scripts/quality/workflow-skills.mjs --write` 同步既有镜像，并运行不带 `--write` 的检查。Claude 通过 `.claude/skills` 链接读取权威正文，不维护第二份测试规则。
+`.agents/skills/open-forge-testing/` 是唯一事实源；运行 `node scripts/quality/workflow-skills.mjs` 只读验证。Claude 通过共享链接读取；不维护 Devin 镜像或第二份测试规则。

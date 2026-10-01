@@ -69,6 +69,6 @@ description: 将 Open Forge 的需求、缺陷、重构、测试/TDD、CI/CD、�
 
 ## 维护与验证
 
-`.agents/skills/open-forge-task-intake` 和 `open-forge-testing` 是权威正文。Claude 通过已有 `.claude/skills` 链接读取同一正文，Devin 的 intake 镜像由 `node scripts/quality/workflow-skills.mjs --write` 同步，`node scripts/quality/workflow-skills.mjs` 检查；不要把 Claude 链接当成独立副本，也不要手改 Devin 生成镜像。
+`.agents/skills/open-forge-task-intake` 和 `open-forge-testing` 是唯一权威正文；Claude 通过 `.claude/skills` 共享链接读取。Devin 镜像已移除，使用能读取 `.agents` 的环境。运行 `node scripts/quality/workflow-skills.mjs` 只读检查；不再提供 `--write` 或同步 API，也不重新创建副本。
 
-[路由验收场景](references/scenarios.md)用于人工/已授权模型验证。静态镜像与链接检查只证明文件合同，不证明模型一定会正确分类或完整执行。设计来源与适用边界见 [RESEARCH-0017](../../../project/research/RESEARCH-0017-development-paradigm-synthesis.md)。
+[路由验收场景](references/scenarios.md)用于人工/已授权模型验证。静态源文件与链接检查只证明文件合同，不证明模型一定会正确分类或完整执行。设计来源与适用边界见 [RESEARCH-0017](../../../project/research/RESEARCH-0017-development-paradigm-synthesis.md)。

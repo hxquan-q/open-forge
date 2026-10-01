@@ -1,13 +1,13 @@
 // Copyright The Open Forge contributors.
-// Canonical workflow skills live in .agents; other harness copies are generated.
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+// Read-only checks for canonical workflow skills and their shared Claude entry.
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { isDirectRun, repoRoot } from "./lib.mjs";
 import { brokenFileLinks } from "./workflow-skill-links.mjs";
 
 const SKILLS = [
-	{ name: "open-forge-task-intake", retired: "vetta-task-intake", mirrors: [".devin"] },
-	{ name: "open-forge-testing", retired: "vetta-testing", mirrors: [] },
+	{ name: "open-forge-task-intake", retired: "vetta-task-intake" },
+	{ name: "open-forge-testing", retired: "vetta-testing" },
 ];
 export function inspectClaudeAlias(root = repoRoot) {
 	const alias = join(root, ".claude/skills");
@@ -66,92 +66,56 @@ function sourceRoot(root, name) {
 	return join(root, ".agents/skills", name);
 }
 
-function checkWriteLocations(root) {
+function checkSourceLocations(root) {
 	const workspace = realpathSync(root);
-	for (const { name, mirrors } of SKILLS) {
-		for (const location of [sourceRoot(root, name), ...mirrors.map((mirror) => join(root, mirror, "skills", name))]) {
-			let parent = location;
-			while (!existsSync(parent)) parent = dirname(parent);
-			const path = relative(workspace, realpathSync(parent));
-			if (isAbsolute(path) || path === ".." || path.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`)) {
-				throw new Error(`Skill path outside workspace: ${location}`);
-			}
-			filesUnder(location);
+	for (const { name } of SKILLS) {
+		const location = sourceRoot(root, name);
+		let parent = location;
+		while (!existsSync(parent)) parent = dirname(parent);
+		const path = relative(workspace, realpathSync(parent));
+		if (isAbsolute(path) || path === ".." || path.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`)) {
+			throw new Error(`Skill path outside workspace: ${location}`);
 		}
+		filesUnder(location);
 	}
 }
 
 export function checkWorkflowSkills(root = repoRoot) {
-	checkWriteLocations(root);
+	checkSourceLocations(root);
 	const problems = [...inspectClaudeAlias(root).problems, ...inboundProblems(root)];
-	for (const { retired, mirrors } of SKILLS) {
-		for (const directory of [".agents", ...mirrors]) {
+	for (const { name, retired } of SKILLS) {
+		for (const directory of [".agents", ".devin"]) {
 			const path = join(root, directory, "skills", retired);
 			if (existsSync(path)) problems.push(`Retired skill: ${path}; use the Open Forge entry`);
 		}
-	}
-	for (const { name, mirrors } of SKILLS) {
+		const mirror = join(root, ".devin/skills", name);
+		if (existsSync(mirror)) problems.push(`Devin mirror retired: ${mirror}; use .agents/skills`);
 		const source = sourceRoot(root, name);
 		if (!existsSync(join(source, "SKILL.md"))) {
 			problems.push(`Missing source: ${name}/SKILL.md`);
 			continue;
 		}
-		const files = filesUnder(source);
-		for (const file of files) {
-			const content = readFileSync(join(source, file));
-			for (const mirror of mirrors) {
-				const target = join(root, mirror, "skills", name, file);
-				if (!existsSync(target)) problems.push(`Missing mirror: ${mirror}/skills/${name}/${file}`);
-				else if (!content.equals(readFileSync(target)))
-					problems.push(`Mirror drift: ${mirror}/skills/${name}/${file}`);
-			}
-			if (!file.endsWith(".md")) continue;
-			for (const base of [source, ...mirrors.map((mirror) => join(root, mirror, "skills", name))]) {
-				problems.push(...brokenFileLinks(join(base, file), content.toString("utf8")));
-			}
-		}
-		for (const mirror of mirrors) {
-			for (const file of filesUnder(join(root, mirror, "skills", name))) {
-				if (!files.includes(file)) problems.push(`Unexpected mirror: ${mirror}/skills/${name}/${file}`);
-			}
+		for (const file of filesUnder(source).filter((path) => path.endsWith(".md"))) {
+			const target = join(source, file);
+			problems.push(...brokenFileLinks(target, readFileSync(target, "utf8")));
 		}
 	}
 	return problems;
 }
 
-export function syncWorkflowSkills(root = repoRoot) {
-	checkWriteLocations(root);
-	// Check every source before writing any copy; stale copies are reported, never deleted.
-	for (const { name } of SKILLS) {
-		if (!existsSync(join(sourceRoot(root, name), "SKILL.md"))) throw new Error(`Missing source: ${name}/SKILL.md`);
-	}
-	const alias = inspectClaudeAlias(root);
-	if (alias.problems.length) throw new Error(alias.problems.join("; "));
-	for (const { name, mirrors } of SKILLS) {
-		const source = sourceRoot(root, name);
-		for (const file of filesUnder(source)) {
-			for (const mirror of mirrors) {
-				const target = join(root, mirror, "skills", name, file);
-				if (existsSync(target) && realpathSync(target) === realpathSync(join(source, file))) continue;
-				mkdirSync(dirname(target), { recursive: true });
-				writeFileSync(target, readFileSync(join(source, file)));
-			}
-		}
-	}
-}
-
 if (isDirectRun(import.meta.url)) {
 	try {
 		const args = process.argv.slice(2);
-		if (args.some((arg) => arg !== "--write")) throw new Error("Usage: workflow-skills.mjs [--write]");
-		if (args.includes("--write")) syncWorkflowSkills();
+		if (args.length) throw new Error("Usage: workflow-skills.mjs (read-only; --write was removed)");
 		const problems = checkWorkflowSkills();
 		const { notice } = inspectClaudeAlias();
 		if (notice) console.log(`[workflow-skills] ${notice}`);
 		for (const problem of problems) console.error(`[workflow-skills] ${problem}`);
 		if (problems.length) process.exitCode = 1;
 		else
-			console.log("[workflow-skills] source, mirrors and relative file links passed (not model routing evaluation)");
+			console.log(
+				"[workflow-skills] canonical sources, shared entry and relative file links passed (not model routing evaluation)",
+			);
 	} catch (error) {
 		console.error(`[workflow-skills] ${error instanceof Error ? error.message : String(error)}`);
 		process.exitCode = 1;
