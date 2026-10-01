@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { styleForPath } from "./check-modified-file-notices.mjs";
 import { findPackageBoundaryViolations, findPackageManifestBoundaryViolations } from "./check-package-boundaries.mjs";
 import { batchPaths, createQuickCheckPlan, isBiomeGlobalTrigger } from "./check-quick.mjs";
 import { findSkillFrontmatterProblems } from "./check-skill-frontmatter.mjs";
@@ -1521,5 +1523,15 @@ describe("skill frontmatter analysis", () => {
 	it("requires frontmatter and a description", () => {
 		expect(findSkillFrontmatterProblems("# No frontmatter\n")).toHaveLength(1);
 		expect(findSkillFrontmatterProblems(wrap("name: demo"))).toHaveLength(1);
+	});
+});
+
+describe("VS Code workspace modification notices", () => {
+	it("classifies JSONC workspace files as commentable rather than exempting them", () => {
+		const style = styleForPath("open-forge.code-workspace");
+		expect(style).not.toBeNull();
+		expect(style.render("Modified by The Open Forge contributors.")).toBe(
+			"// Modified by The Open Forge contributors.",
+		);
 	});
 });

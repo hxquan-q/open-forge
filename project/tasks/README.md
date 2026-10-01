@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0142` | `done` | PLAN-0004 | 根目录保守清理：废弃脚本、重复 banner、空目录与工作区品牌。 |
 | `TASK-0140` | `verifying` | PLAN-0004 | 根规则拆分，硬边界前置与 8 KiB 常驻预算。 |
 | `TASK-0141` | `verifying` | PLAN-0004 | 移除 Devin 镜像及同步路径，保留单一权威入口。 |
 | `TASK-0139` | `verifying` | PLAN-0004 | 审核修复：交付判据、发布说明、规则去重与集成状态。 |
