@@ -21,6 +21,7 @@ function fixture(mode = "link") {
 		);
 		write(root, `.agents/skills/${name}/references/flow.md`, "# Reference\n");
 	}
+	if (mode === "no-claude") return root;
 	mkdirSync(join(root, ".claude"));
 	if (mode === "placeholder") write(root, ".claude/skills", "../.agents/skills\n");
 	else if (mode === "directory") mkdirSync(join(root, ".claude/skills"));
@@ -147,6 +148,16 @@ describe("workflow skill delivery", () => {
 		expect(result.stdout).toContain("core.symlinks");
 		expect(result.stdout).toContain("Claude path is not ready");
 		expect(readFileSync(join(root, ".claude/skills"), "utf8")).toBe("../.agents/skills\n");
+	});
+	it("rejects a Claude placeholder reached through a parent outside the workspace", () => {
+		const root = fixture("no-claude");
+		const outside = fixture("no-claude");
+		write(outside, "skills", "../.agents/skills");
+		symlinkSync(outside, join(root, ".claude"), "junction");
+		expect(inspectClaudeAlias(root).problems).toEqual(
+			expect.arrayContaining([expect.stringContaining("outside workspace")]),
+		);
+		expect(() => syncWorkflowSkills(root)).toThrow("outside workspace");
 	});
 	it("rejects a malformed placeholder with an actionable error", () => {
 		const root = fixture("placeholder");

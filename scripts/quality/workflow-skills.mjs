@@ -15,6 +15,10 @@ export function inspectClaudeAlias(root = repoRoot) {
 	const help =
 		"Enable core.symlinks and Windows Developer Mode, then safely re-checkout .claude/skills; do not overwrite local work";
 	if (!existsSync(alias)) return { problems: [`Missing Claude shared entry: ${alias}. ${help}`], notice: null };
+	const path = relative(realpathSync(root), realpathSync(alias));
+	if (isAbsolute(path) || path === ".." || path.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`)) {
+		return { problems: [`Claude shared entry outside workspace: ${alias}. ${help}`], notice: null };
+	}
 	if (statSync(alias).isFile()) {
 		if (readFileSync(alias, "utf8").trim() === "../.agents/skills") {
 			return {
