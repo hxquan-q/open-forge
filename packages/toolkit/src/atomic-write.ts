@@ -1,6 +1,8 @@
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, writeSync } from "node:fs";
-import { mkdir, open, rename } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
+import { mkdir, open, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 /**
  * Atomically write a string to disk.
@@ -35,7 +37,7 @@ export function atomicWriteFile(path: string, data: string): void {
 	} finally {
 		closeSync(fd);
 	}
-	renameSync(tmpPath, path);
+	renameWithRetry(tmpPath, path);
 }
 
 /**
@@ -85,9 +87,63 @@ async function performAtomicWrite(path: string, data: string): Promise<void> {
 	} finally {
 		await file.close();
 	}
-	await rename(tmpPath, path);
+	await renameWithRetryAsync(tmpPath, path);
 }
 
 export async function atomicWriteJSONAsync(path: string, value: unknown): Promise<void> {
 	await atomicWriteFileAsync(path, JSON.stringify(value, null, 2));
+}
+
+const RETRYABLE_RENAME_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
+const SYNC_RENAME_ATTEMPTS = 10;
+const ASYNC_RENAME_ATTEMPTS = 30;
+
+function isRetryableRename(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		typeof error.code === "string" &&
+		RETRYABLE_RENAME_CODES.has(error.code)
+	);
+}
+
+function renameBackoff(attempt: number): number {
+	return Math.min(attempt * 10, 100);
+}
+
+/** Retry transient reader/indexer locks without deleting the existing destination. */
+function renameWithRetry(from: string, to: string): void {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			renameSync(from, to);
+			return;
+		} catch (error) {
+			if (!isRetryableRename(error) || attempt >= SYNC_RENAME_ATTEMPTS) {
+				// Cleanup is best-effort: a second I/O failure must not hide the write failure.
+				try {
+					rmSync(from, { force: true });
+				} catch {
+					/* Preserve the original error. */
+				}
+				throw error;
+			}
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, renameBackoff(attempt));
+		}
+	}
+}
+
+async function renameWithRetryAsync(from: string, to: string): Promise<void> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			await rename(from, to);
+			return;
+		} catch (error) {
+			if (!isRetryableRename(error) || attempt >= ASYNC_RENAME_ATTEMPTS) {
+				await rm(from, { force: true }).catch(() => undefined);
+				throw error;
+			}
+			await delay(renameBackoff(attempt));
+		}
+	}
 }
