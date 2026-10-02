@@ -1,7 +1,7 @@
 ---
 id: TASK-0171
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: coordinator
 source: user-request-2026-10-02
@@ -19,7 +19,7 @@ write_paths: [project/tasks, project/bugs, project/requirements, project/plans, 
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0147, TASK-0148, TASK-0149, TASK-0150, TASK-0153, TASK-0162, TASK-0163, TASK-0164, TASK-0165, TASK-0170, TASK-0122, TASK-0123]
-integration_status: reviewing
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -82,3 +82,19 @@ Open-Forge-only。响应本轮用户“全部 task 修改提交推送 dev，然�
 - d418ce82e fix(toolkit): 收口文件占用重试与失败预算回归
 - e1e1ef35c fix(ai): 收口网关初始思考签名兼容
 - 97fc9f680 test(quality): 收口 Windows 验证资源与懒边界合同
+
+## 七个分支集成结果
+
+| Task | 来源提交 | main 集成提交 | 集成后验证 |
+|---|---|---|---|
+| TASK-0148 | 1020b7c59 | cf809f27d | 文档影响面无代码；完整 check 通过 |
+| TASK-0149 | 7a2a5ce50 | b4a6fed81 | Provider 18 项与相关影响面通过；完整 check 通过 |
+| TASK-0150 | 222de8813 | 9ac50a04e | 文档影响面无代码；完整 check 通过 |
+| TASK-0153 | 2e41db644 | 89a99ee2c | SSH 47 passed/1 平台跳过；runtime-desktop、Desktop 全包与 check 通过 |
+| TASK-0170 | 769f31bc3 | bb46088eb | 文档影响面无代码；完整 check 通过 |
+| TASK-0162 | 6cb373dde | d3694c3a7 | 文档影响面无代码；完整 check 通过 |
+| TASK-0163 | 3dda219e9 | 82acca9f8 | 直接 46、相关 373 项与完整 check 通过 |
+
+0149 首次合并遇到一条回归断言冲突，先安全 abort，再按实际单行 diff 保留 Worker 对无签名终态的更强断言，不删除任何覆盖。其余冲突仅 Task/索引/发布说明：保留 Worker 的详细证据、主树提交摘要及双方条目。已提交的主树代码与隔离代码相同之处只合入祖先关系；因此这些合并的 impact 合理选择无代码，不借此跳过前面的组合验证。
+
+51 个本轮变更 Markdown 的相对文件链接检查通过（不验证标题锚点）。七个 Task Worktree 均保留，不在 Owner 使用状态未知时自动清理；所有原始代码/记录有提交可追溯。当前工程集成通过，待最终完整 test:changed/check 与 origin/dev 推送；不推 origin/main，不发布。
