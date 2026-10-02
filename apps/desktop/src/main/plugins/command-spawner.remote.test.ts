@@ -1,7 +1,7 @@
 import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLoopbackSshConnection } from "@vetta/ssh-transport/testing";
+import { createLoopbackSshConnection, toLoopbackRemotePath } from "@vetta/ssh-transport/testing";
 import { describe, expect, it, vi } from "vitest";
 
 const connection = createLoopbackSshConnection("build-01");
@@ -33,36 +33,35 @@ const { getPluginCommandSpawnStatus, spawnPluginCommand, stopPluginCommandSpawn 
 
 function createRemoteProject(): { dir: string; uri: string } {
 	const dir = realpathSync(mkdtempSync(join(tmpdir(), "vetta-remote-spawn-")));
-	return { dir, uri: `ssh://build-01${dir}` };
+	return { dir, uri: `ssh://build-01${toLoopbackRemotePath(dir)}` };
 }
 
 describe("插件的长驻进程与远程项目", () => {
 	// 回环 SSH 顶替脚本是 /bin/sh POSIX shell：win32 下无 shebang 执行与合法远端 POSIX 路径。
-	it.skipIf(process.platform === "win32")(
-		"npm install 这类长跑命令在项目所在的机器上执行——本机跑它看不到任何项目文件",
-		async () => {
-			// 回归：守卫原先拒绝一切带远程 cwd 的 spawn，设计稿的依赖因此装不上。
-			const project = createRemoteProject();
-			writeFileSync(join(project.dir, "package.json"), '{"name":"demo"}');
+	it("npm install 这类长跑命令在项目所在的机器上执行——本机跑它看不到任何项目文件", async () => {
+		// 回归：守卫原先拒绝一切带远程 cwd 的 spawn，设计稿的依赖因此装不上。
+		const project = createRemoteProject();
+		writeFileSync(join(project.dir, "package.json"), '{"name":"demo"}');
 
-			const started = await spawnPluginCommand("demo", "sh", ["-c", "cat package.json; echo done"], {
-				cwd: project.uri,
-			});
+		const started = await spawnPluginCommand("demo", "sh", ["-c", "cat package.json; echo done"], {
+			cwd: project.uri,
+		});
 
-			await vi.waitFor(
-				() => {
-					const status = getPluginCommandSpawnStatus("demo", started.spawnId);
-					expect(status.running).toBe(false);
-					expect(status.exit?.exitCode).toBe(0);
-					// 输出来自远端那份 package.json，证明命令确实在项目所在的机器上跑过。
-					expect(status.recentOutput).toContain('"name":"demo"');
-					expect(status.recentOutput).toContain("done");
-				},
-				{ timeout: 15_000 },
-			);
-		},
-	);
+		await vi.waitFor(
+			() => {
+				const status = getPluginCommandSpawnStatus("demo", started.spawnId);
+				expect(status.running).toBe(false);
+				expect(status.exit?.exitCode).toBe(0);
+				// 输出来自远端那份 package.json，证明命令确实在项目所在的机器上跑过。
+				expect(status.recentOutput).toContain('"name":"demo"');
+				expect(status.recentOutput).toContain("done");
+			},
+			{ timeout: 15_000 },
+		);
+	});
 
+	// 依赖 POSIX 进程组终止与 ControlMaster 转发语义；Windows 回环（无进程组、
+	// 无 master）挂起而非给出确定答案，显式交给 POSIX CI 覆盖（TASK-0168）。
 	it.skipIf(process.platform === "win32")(
 		"要端口的进程：端口在远端分配，再转发回本机——插件拿到的始终是本机可连的那个",
 		async () => {
@@ -102,6 +101,7 @@ describe("插件的长驻进程与远程项目", () => {
 		},
 	);
 
+	// 同上：远端进程组终止在 Windows 回环上无对应语义（TASK-0168）。
 	it.skipIf(process.platform === "win32")("停止远端进程后状态转为已结束", async () => {
 		const project = createRemoteProject();
 		const started = await spawnPluginCommand("demo", "sh", ["-c", "echo up; sleep 60"], { cwd: project.uri });

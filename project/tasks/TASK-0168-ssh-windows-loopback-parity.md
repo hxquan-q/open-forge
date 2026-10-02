@@ -1,7 +1,7 @@
 ---
 id: TASK-0168
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: ssh-transport + desktop
 source: user-request; RESEARCH-0018; RESEARCH-0019
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: []
 execution: serial
 branch: main
-worktree: unassigned
+worktree: unassigned（2026-10-02/03 主检出串行实施完成）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport/src/testing.ts, packages/ssh-transport/src/ssh-connection.loopback.test.ts, apps/desktop/src/main/filesystem, apps/desktop/src/main/plugins, apps/desktop/src/main/agent-runtime]
 write_paths: [packages/ssh-transport/src/remote-command.test.ts, packages/ssh-transport/src/remote-listeners.test.ts, packages/ssh-transport/src/node-process-runner.test.ts, packages/ssh-transport/src/ssh2-runner.loopback.test.ts, packages/ssh-transport/src/testing.ts, packages/ssh-transport/src/ssh-connection.loopback.test.ts, apps/desktop/src/main/filesystem, apps/desktop/src/main/plugins, apps/desktop/src/main/agent-runtime, project/tasks/TASK-0168-ssh-windows-loopback-parity.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0153, TASK-0165]
 conflicts_with: [TASK-0158, TASK-0174, TASK-0177]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -65,3 +65,12 @@ TASK-0165 的 ssh2 交互认证预算/KI 密码回退已有独立参与者在主
 - 本 Task 不添加 package test 入口或新的 CI 矩阵；这些归 TASK-0174，README 与 TASK-0177 串行处理。
 
 本轮仅细化合同；所有实现/平台回归仍未执行，集成 pending。后续仍需用户明确进入实施。
+
+## 交付记录（2026-10-02/03，主检出串行实施）
+
+- 实现：`createLoopbackSshConnection` 跨平台化——POSIX 保留原假 `ssh` 脚本（含 perl setsid 边界）；Windows 用 PATH 里的 Git Bash（缺位显式抛错，不静默跳过）执行同一条远端命令，复用从 `node-process-runner` 抽出的命令级管线 `runSshCommand`/`openSshCommand`（行为保持重构，既有 17 用例证明），并锁 `LANG/LC_ALL=C`、`SHELL=/usr/bin/bash`（Node 环境的 PATH 里没有裸 `bash`，`$SHELL -l -c` 需要绝对路径）。新增导出 `toLoopbackRemotePath`：Windows 路径转 MSYS 根形式（`/c/…`），远端合同的「绝对路径以 / 开头」与 MSYS `cd` 两头成立。
+- 测试适配：`ssh-connection.loopback` Windows 6→7 通过（符号链接单独成组并按权限显式报告；realPath 的 MSYS 挂载表镜头差异按平台分支断言）；`remote-command` 以 `SH`/`shPath`/`LOGIN_SHELL` 适配后 Windows 新增 20+ 用例真实执行（引用、cd 整体性、token、写文件、stat 解析、独占创建、递归列举），进程组 kill、chmod 权限位、符号链接写入三组显式交给 POSIX；`remote-listeners` 本机 ps/信号两组、`helper.e2e`（helper 仅 linux/darwin 目标）显式 POSIX 门控。
+- Desktop 消费者解锁（原先整文件 win32 skip）：`filesystem-service.remote-flow` 5 通过（可执行位一例显式 POSIX）；`file-protocol`、`media-protocol` 全量通过；`remote-command-runner` 全量通过；`command-spawner.remote` 解锁可跑用例（端口转发与进程组停止两例显式 POSIX）；`resource-runtime.remote` 保持门控——桌面提示词运行时装配在 Windows 挂起，根因待诊（本轮未定位，不猜测）。
+- 验证：`bun run --cwd packages/ssh-transport test` 195 通过 25 显式跳过（0 失败）；desktop 上述文件逐个实测；`test:quality` 484 通过。
+- 遗留（记录为后续工作，不在本轮扩大）：`packages/runtime-ssh` 的 5 个回环消费测试未在本 Task write_paths 内，Windows 直跑仍红（无 test 脚本、标准入口不可见）；`resource-runtime.remote` Windows 挂起根因；Windows 缺 bash 环境的 CI 前置（GitHub windows runner 自带 Git Bash）。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。

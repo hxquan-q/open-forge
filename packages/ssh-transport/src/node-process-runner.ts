@@ -45,11 +45,11 @@ export function createNodeSshProcessRunner(options: NodeSshProcessRunnerOptions 
 	return {
 		run(invocation: SshProcessInvocation): Promise<SshProcessResult> {
 			rememberControlPath(invocation.argv);
-			return runSshProcess(sshBinary, options.baseEnv ?? process.env, invocation);
+			return runSshCommand([sshBinary, ...invocation.argv], options.baseEnv ?? process.env, invocation);
 		},
 		open(invocation: SshChannelInvocation): SshProcessChannel {
 			rememberControlPath(invocation.argv);
-			return openSshChannel(sshBinary, options.baseEnv ?? process.env, invocation);
+			return openSshCommand([sshBinary, ...invocation.argv], options.baseEnv ?? process.env, invocation);
 		},
 		invalidate(target: string): void {
 			const controlPath = controlPaths.get(target);
@@ -57,10 +57,11 @@ export function createNodeSshProcessRunner(options: NodeSshProcessRunnerOptions 
 			if (controlPath === undefined) return;
 			// `ssh -O exit` 让这条 ControlMaster 退出；master 可能本来就不在，失败吞掉，
 			// 失败不能拖累调用方——下次连接会按需重建。
-			void runSshProcess(sshBinary, options.baseEnv ?? process.env, {
-				argv: ["-o", `ControlPath=${controlPath}`, "-O", "exit", "--", target],
-				timeoutMs: MASTER_EXIT_TIMEOUT_MS,
-			}).catch(() => undefined);
+			void runSshCommand(
+				[sshBinary, "-o", `ControlPath=${controlPath}`, "-O", "exit", "--", target],
+				options.baseEnv ?? process.env,
+				{ argv: [], timeoutMs: MASTER_EXIT_TIMEOUT_MS },
+			).catch(() => undefined);
 		},
 	};
 }
@@ -81,8 +82,13 @@ function argvControlPath(argv: readonly string[]): string | undefined {
 	return undefined;
 }
 
-function runSshProcess(
-	sshBinary: string,
+/**
+ * 按完整命令表执行一次「远端」操作。与 {@link createNodeSshProcessRunner} 内部路径的
+ * 区别只在命令本体：测试回环可以把自己翻译好的命令（例如 `bash -c <远端命令>`）交给
+ * 同一套 stdout/stderr/stdin/取消/超时管线，而不是复制一份语义略有出入的实现。
+ */
+export function runSshCommand(
+	command: readonly string[],
 	baseEnv: NodeJS.ProcessEnv,
 	invocation: SshProcessInvocation,
 ): Promise<SshProcessResult> {
@@ -92,7 +98,7 @@ function runSshProcess(
 			return;
 		}
 		const ownsProcessGroup = process.platform !== "win32";
-		const child = spawn(sshBinary, [...invocation.argv], {
+		const child = spawn(command[0] as string, command.slice(1), {
 			env: { ...baseEnv, ...invocation.env },
 			stdio: ["pipe", "pipe", "pipe"],
 			detached: ownsProcessGroup,
@@ -169,13 +175,14 @@ function runSshProcess(
 	});
 }
 
-function openSshChannel(
-	sshBinary: string,
+/** 与 {@link runSshCommand} 同理的常驻通道版本：命令本体由调用方给出。 */
+export function openSshCommand(
+	command: readonly string[],
 	baseEnv: NodeJS.ProcessEnv,
 	invocation: SshChannelInvocation,
 ): SshProcessChannel {
 	const ownsProcessGroup = process.platform !== "win32";
-	const child = spawn(sshBinary, [...invocation.argv], {
+	const child = spawn(command[0] as string, command.slice(1), {
 		env: { ...baseEnv, ...invocation.env },
 		stdio: ["pipe", "pipe", "pipe"],
 		detached: ownsProcessGroup,
