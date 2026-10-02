@@ -5,7 +5,7 @@ status: verifying
 priority: P1
 owner: desktop + theme-ui
 source: user-request
-related_requirement: []
+related_requirement: [REQ-0001]
 related_plan: []
 related_tasks: []
 related_issues: []
@@ -19,7 +19,7 @@ write_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/add-p
 exclusive_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/add-project, packages/theme-ui/src/settings/SshHostFormFieldsView.tsx]
 depends_on: []
 conflicts_with: []
-integration_status: pending（main 主工作区串行，等待验证与提交）
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -80,3 +80,7 @@ Operate 模式，扩展既有工作台视觉，不重设设计系统、不引入
 入口：侧栏添加项目 → 从远程主机添加 → 添加主机 → 填写连接目标（其余按需）→ 保存并选择目录 → 添加此目录为项目。正常认证由原有提示处理；失败应留在当前步骤并可重试。
 
 当前交付为工作区中的功能实现：定向行为与完整静态检查通过，但整体验证未通过，不能标记工程完成。保持 verifying 与 integration_status: pending；不暂存、不提交或推送未完成验收的批次。人工接受待用户验收，未发布。
+
+## TASK-0171 主树收口（2026-10-02）
+
+实现已原子提交到 main：1269945cb。本轮完整 check 通过；组合测试 Desktop 4642、theme-ui 169、质量脚本 483 项通过，SSH 认证定向 32 项通过。CLI 首轮两例 RPC 超时保留于 TASK-0171；同一失败文件 13 项以及随后单独完整 CLI 226 项复验均通过，未改代码或阈值。各功能人工验收仍未执行，保留 verifying；待最终分支集成与推送闸门，不宣称已推送或发布。

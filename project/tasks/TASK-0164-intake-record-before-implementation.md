@@ -21,7 +21,7 @@ write_paths: [.agents/skills/open-forge-task-intake/SKILL.md, .agents/skills/ope
 exclusive_paths: [.agents/skills/open-forge-task-intake/SKILL.md, project/CONVENTIONS.md]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -100,3 +100,6 @@ updated: 2026-10-02
 - 人工功能验收：尚未执行真实新会话验收，保持 `verifying`；使用上方验收包检查首次编辑前的记录顺序、最小组合与续接回写。场景自审不是模型已通过的证明。
 - 未运行：产品单元/集成测试、test:impact、完整 TypeScript check、构建、Desktop 与真实 Provider；本次为无产品运行时变化的技能/文档修改，按测试政策采用文档专项验证，不新增运行时测试。
 - 剩余风险：自然语言规则不能机械拦截文件写入；实际路由可靠性仍需后续真实会话确认。历史检查失败及修复过程保留在前轮记录，不视为本轮仍在失败。
+## TASK-0171 主树收口（2026-10-02）
+
+实现已原子提交到 main：a739e62b2。本轮完整 check 通过；组合测试 Desktop 4642、theme-ui 169、质量脚本 483 项通过，SSH 认证定向 32 项通过。CLI 首轮两例 RPC 超时保留于 TASK-0171；同一失败文件 13 项以及随后单独完整 CLI 226 项复验均通过，未改代码或阈值。各功能人工验收仍未执行，保留 verifying；待最终分支集成与推送闸门，不宣称已推送或发布。

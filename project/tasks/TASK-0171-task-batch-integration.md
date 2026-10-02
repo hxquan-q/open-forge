@@ -63,3 +63,22 @@ Open-Forge-only。响应本轮用户“全部 task 修改提交推送 dev，然�
 主树候选与隔离提交逐文件对照：0148 仅缺懒边界冷编译测试修正；0150 源码一致但少两例失败预算回归；0162 主树旧候选将回调必填，采用隔离分支已审查的可选兼容合同及对应测试/README。0170 的三个测试入口文件用于解除已记录 CLI 调度阻断。只复制这些明确拥有的路径，不覆盖共享 Task/索引/发布说明，不移动或删除原 Worktree。完成组合验证后按原 Task 分别提交，再用标准 merge 记录分支祖先关系。
 
 初始完整 bun run check 退出 0；守卫对 upstream/dev 的提示沿用固定基线并通过，不更改基线。
+
+## 第一轮组合验证阻断
+
+2026-10-02：bun run test:changed --base origin/dev 的质量脚本 483 项通过；CLI 标准入口已为 --maxWorkers=1，仍在 installed-artifact-runtime.test.ts 两例出现 RPC frame 的既有 20 秒等待超时（224 passed / 2 failed / 14 skipped）。失败分别是 host_response 等待时关闭与动态 Skill/MCP 变更。未增加超时、未删断言，先保留完整批次日志并等待其他包结束；随后只缩小到失败文件，必要时与 TASK-0170 干净分支比较。该结果阻止批次推送，不将此前隔离树通过写成当前组合通过。
+
+已提交管理记录 fd402d68d 与开发入口文档 a739e62b2；代码仍未提交，原分支均保留。
+
+## 主树候选验证与提交
+
+首轮 test:changed 共 41 包：40 通过，CLI 失败，完整退出 1，日志保留。Desktop 为 880 文件/4642 项通过（6 文件/29 既有跳过）；AI 488、Coding Agent 1534、theme-ui 169、Toolkit 24 通过。当前快照单独运行 installed-artifact-runtime.test.ts 13/13 通过；随后先完整 check、SSH 认证 32/32，再在没有其他本轮测试运行时单独完整 CLI，50 文件/226 项通过（14 既有跳过）。未改变断言、超时或运行时代码，无法由这组证据证明底层时序问题已消失；最终标准整批闸门仍必须再跑。
+
+按 concern 原子提交主树候选：
+- 925868a08 fix(ssh): 保留首次连接交互预算并复用同轮口令
+- 1269945cb feat(desktop): 在远程项目流程内新增主机并保留别名
+- dbeb5bb0c fix(knowledge): 收口宿主提示词来源装配
+- 4801256f4 test(cli): 收口进程测试调度隔离
+- d418ce82e fix(toolkit): 收口文件占用重试与失败预算回归
+- e1e1ef35c fix(ai): 收口网关初始思考签名兼容
+- 97fc9f680 test(quality): 收口 Windows 验证资源与懒边界合同

@@ -19,7 +19,7 @@ write_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/
 exclusive_paths: [packages/ssh-transport/src/ssh2-runner.ts]
 depends_on: []
 conflicts_with: []
-integration_status: pending（主工作区串行未提交；release notes 与 TASK-0147/0153 共享追加）
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -88,3 +88,7 @@ updated: 2026-10-02
   - `ensureClient` 改为 `(spec, signal, budgetMs)` 三参；转发路径传 `undefined` 预算（4 分钟默认）；`raceAbort` 仍只取消调用方视图，不取消共享的 `readyPromise` 建立。
 - 技术评审：自审 diff；集成：pending（未提交）；人工功能验收：待用户（真实 Windows 主机：新增主机→指纹确认+密码记住→复连）；发布：未授权。
 - 剩余风险：ssh2 无独立 TCP-connect 超时，`readyTimeout` 含交互期意味着网络黑洞场景的失败也放宽到同一预算——由调用方 deadline 兜底，属设计内取舍。
+
+## TASK-0171 主树收口（2026-10-02）
+
+实现已原子提交到 main：925868a08。本轮完整 check 通过；组合测试 Desktop 4642、theme-ui 169、质量脚本 483 项通过，SSH 认证定向 32 项通过。CLI 首轮两例 RPC 超时保留于 TASK-0171；同一失败文件 13 项以及随后单独完整 CLI 226 项复验均通过，未改代码或阈值。各功能人工验收仍未执行，保留 verifying；待最终分支集成与推送闸门，不宣称已推送或发布。
