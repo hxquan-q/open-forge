@@ -1,28 +1,28 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-/**
- * DEFAULT_CONVERSATION_CWD 在模块加载时由 VETTA_HOME 派生，因此本文件不做静态导入：
- * 先把 VETTA_HOME 指到临时目录，再动态加载被测模块，让「对话」根落在可控位置。
- */
+/** Set the path environment before module evaluation, without charging cold transforms to a hook. */
+const fixture = await vi.hoisted(async () => {
+	const { mkdtemp } = await import("node:fs/promises");
+	const { tmpdir } = await import("node:os");
+	const { join } = await import("node:path");
+	const home = await mkdtemp(join(tmpdir(), "vetta-conv-visibility-"));
+	const previousVettaHome = process.env.VETTA_HOME;
+	process.env.VETTA_HOME = home;
+	return { home, previousVettaHome };
+});
+
+import { DEFAULT_CONVERSATION_CWD } from "../config/desktop-config-store.js";
+import * as service from "./filesystem-service.js";
+
 describe("「对话」根目录下会话工作区的列举可见性", () => {
 	const uuidDirName = "0c558d85-6603-4e52-81a4-ba686d57a3e4";
-	let vettaHome = "";
-	let conversationRoot = "";
-	let service: typeof import("./filesystem-service.js");
-	let previousVettaHome: string | undefined;
+	const conversationRoot = DEFAULT_CONVERSATION_CWD;
 
 	beforeAll(async () => {
-		vettaHome = await mkdtemp(join(tmpdir(), "vetta-conv-visibility-"));
-		previousVettaHome = process.env.VETTA_HOME;
-		process.env.VETTA_HOME = vettaHome;
-		vi.resetModules();
-		service = await import("./filesystem-service.js");
-		const config = await import("../config/desktop-config-store.js");
-		conversationRoot = config.DEFAULT_CONVERSATION_CWD;
-
 		await mkdir(join(conversationRoot, uuidDirName), { recursive: true });
 		await writeFile(join(conversationRoot, uuidDirName, "inner.md"), "inner", "utf8");
 		await mkdir(join(conversationRoot, "legacy-assets"), { recursive: true });
@@ -32,13 +32,14 @@ describe("「对话」根目录下会话工作区的列举可见性", () => {
 	});
 
 	afterAll(async () => {
-		if (previousVettaHome === undefined) {
+		if (fixture.previousVettaHome === undefined) {
 			delete process.env.VETTA_HOME;
 		} else {
-			process.env.VETTA_HOME = previousVettaHome;
+			process.env.VETTA_HOME = fixture.previousVettaHome;
 		}
 		vi.resetModules();
-		if (vettaHome) await rm(vettaHome, { recursive: true, force: true });
+		expect(fixture.home.startsWith(join(tmpdir(), "vetta-conv-visibility-"))).toBe(true);
+		await rm(fixture.home, { recursive: true, force: true });
 	});
 
 	it("列举「对话」根时隐藏 uuid 工作区目录，老产物保持可见", async () => {
