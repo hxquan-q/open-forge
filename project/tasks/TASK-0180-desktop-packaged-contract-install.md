@@ -46,3 +46,4 @@ BUG-0064：`contract` job 运行解析真实已装依赖的 staged-deps-cleanlis
 - 本地验证：`node --test apps/desktop/scripts/staged-deps-cleanlist.node-test.mjs` 在完整安装环境 `fail 0`（既有对照）。CI 合同 job 复跑证据待推送后产生。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
 - CI 证据（2026-10-03）：desktop-packaged 37059120967 的 `Desktop packaging contract` job 通过；首版缺 Set up Bun 由 5e1d7df61 补齐。E2E job 的遗留红另立 BUG-0066/TASK-0183。
+- CI 终验（2026-10-03）：desktop-packaged 37060686125 整 workflow 成功（合同 job 绿；文档推送未触发 E2E）。E2E 触发时的遗留红见 BUG-0066。

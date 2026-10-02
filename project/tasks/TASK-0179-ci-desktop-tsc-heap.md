@@ -46,3 +46,4 @@ BUG-0063：CI 冷启动全量 desktop tsc 超过 Node 默认堆上限。为 `che
 - 本地验证：`check:types` 五段全绿（desktop 段经新脚本 exit 0）、完整 `bun run check` exit 0。CI 三平台复跑证据待推送后由 quality workflow 产生。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
 - CI 证据（2026-10-03）：quality 37059120973 的 check job 通过（含 Test quality scripts 段）；首次推送曾因未同步 quality-gates 断言而红，已随 efa91bcb4 修复。
+- CI 终验（2026-10-03）：quality 37060686088 的 `check + quality tests` job 成功，堆 OOM 未再出现。

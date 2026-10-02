@@ -32,3 +32,4 @@ updated: 2026-10-03
 - 实现：断言改为两侧 `fs.realpathSync` 后比较（见 BUG-0065 根因），合同语义不变。
 - 验证：本地 `bun run test:quality` 484 通过；CI 三平台复跑随下次推送产生。
 - 状态：`verifying`；`integration_status: integrated`。
+- CI 证据（2026-10-03）：quality 37060686088 全绿——check / macOS / ubuntu / windows 四 job 全部通过（macOS worktree 用例修复确认）。
