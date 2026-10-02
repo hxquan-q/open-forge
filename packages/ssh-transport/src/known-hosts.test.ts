@@ -47,9 +47,60 @@ describe("known_hosts 匹配", () => {
 		expect(matchKnownHosts(lines, "bad.corp", 22, KEY)).toBe("unknown");
 	});
 
-	it("注释、空行与 marker 行不干扰匹配", () => {
-		const lines = ["# comment", "", `@cert-authority ca.example.com ssh-ed25519 ${KEY}`];
-		expect(matchKnownHosts(lines, "ca.example.com", 22, KEY)).toBe("match");
+	it("注释、空行不干扰匹配", () => {
+		const lines = ["# comment", "", `example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("match");
+	});
+
+	it("@revoked 同钥 → revoked，撤销优先于普通匹配", () => {
+		const lines = [`@revoked example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("revoked");
+	});
+
+	it("普通同钥在前、撤销在后 → 仍是 revoked（行序不影响撤销）", () => {
+		const lines = [`example.com ssh-ed25519 ${KEY}`, `@revoked example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("revoked");
+	});
+
+	it("撤销在前、普通同钥在后 → 仍是 revoked", () => {
+		const lines = [`@revoked example.com ssh-ed25519 ${KEY}`, `example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("revoked");
+	});
+
+	it("@revoked 登记的是另一把钥匙 → 不算 revoked 也不算 mismatch，按未知主机处理", () => {
+		const lines = [`@revoked example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, OTHER_KEY)).toBe("unknown");
+	});
+
+	it("@cert-authority 行不直接信任 raw host key", () => {
+		const lines = [`@cert-authority ca.example.com ssh-ed25519 ${KEY}`];
+		// CA 行只对证书校验有意义；对端拿同一把 raw key 来时既不放行、也不据此判变更。
+		expect(matchKnownHosts(lines, "ca.example.com", 22, KEY)).toBe("unknown");
+		expect(matchKnownHosts(lines, "ca.example.com", 22, OTHER_KEY)).toBe("unknown");
+	});
+
+	it("未知 marker 不产生信任也不产生 mismatch", () => {
+		const lines = [`@something-else example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("unknown");
+		expect(matchKnownHosts(lines, "example.com", 22, OTHER_KEY)).toBe("unknown");
+	});
+
+	it("CA 行与普通行并存时普通语义不变", () => {
+		const lines = [`@cert-authority ca.example.com ssh-ed25519 ${KEY}`, `example.com ssh-ed25519 ${KEY}`];
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("match");
+		expect(matchKnownHosts(lines, "example.com", 22, OTHER_KEY)).toBe("mismatch");
+	});
+
+	it("@revoked 支持非默认端口与哈希条目", () => {
+		const salt = Buffer.from("0123456789abcdefghij").toString("base64");
+		const hash = createHmac("sha1", Buffer.from(salt, "base64")).update("hashed.example.com").digest("base64");
+		const lines = [
+			`@revoked [example.com]:2222 ssh-ed25519 ${KEY}`,
+			`@revoked |1|${salt}|${hash} ssh-ed25519 ${KEY}`,
+		];
+		expect(matchKnownHosts(lines, "example.com", 2222, KEY)).toBe("revoked");
+		expect(matchKnownHosts(lines, "example.com", 22, KEY)).toBe("unknown");
+		expect(matchKnownHosts(lines, "hashed.example.com", 22, KEY)).toBe("revoked");
 	});
 
 	it("生成行与解析行互为往返", () => {

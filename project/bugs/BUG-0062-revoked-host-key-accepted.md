@@ -1,7 +1,7 @@
 ---
 id: BUG-0062
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: ssh-transport + desktop SSH security
 source: TASK-0172 synthetic known_hosts verifier experiment
@@ -53,4 +53,6 @@ parseKnownHostsLine 保留 marker，但 matchKnownHosts 只比较主机模式和
 
 归入 [TASK-0178](../tasks/TASK-0178-ssh-known-hosts-revocation.md)。至少覆盖 revoked-only、普通/撤销两种行序、user/app 两种文件序、普通同钥/变更/未知、CA/未知 marker 和既有哈希/通配/非默认端口。
 
-本轮未修复、未改认证逻辑或真实用户数据。未来修复要同时验证公共 verdict 生产者和宿主消费者，不能只改 matcher 让新 verdict 掉进确认提示分支。
+2026-10-02 修复（TASK-0178）：`matchKnownHosts` 新增 `revoked` verdict——扫完全部行再裁决，`@revoked` 同钥优先于普通匹配，CA/未知 marker 整行跳过既不产生信任也不判变更，`@revoked` 异钥不参与裁决；宿主 `createSshHostKeyVerifier` 两份文件查完才放行，任一文件撤销即拒绝（不触发确认、不追加登记），普通 match/mismatch 保持原文件序 fail-closed 语义。旧实现红证据：matcher 新增 7 例断言失败（revoked-only、两种行序、异钥、CA 同/异钥、未知 marker、哈希/非默认端口撤销）；宿主链失败复现即本记录 2026-10-02 合成探针。真实用户 known_hosts 未被读取。
+
+本轮未做真实主机联调与多平台实测（Windows 外平台走系统 OpenSSH，不经此代码路径）；修复后定向 73 例、impact/changed 门禁见 TASK-0178 交付记录。人工功能验收与发布另行处理。

@@ -10,8 +10,9 @@ import { createHash, createHmac } from "node:crypto";
  *
  * 支持的条目形态与 `sshd(8)` 一致：逗号分隔的主机模式（含 `*`/`?`/`!取反`）、
  * `[host]:port` 非默认端口条目、`|1|salt|hash` 哈希主机名（HMAC-SHA1）。
- * `@cert-authority` / `@revoked` 标记行按普通条目参与匹配；标记语义不由我们裁决，
- * 命中后仍走同一条确认/拒绝路径。
+ * 标记行按 `sshd(8)` 的角色参与裁决：`@revoked` 命中同钥时整条连接必须拒绝
+ * （撤销优先于任何普通匹配，与行序无关）；`@cert-authority` 与未知标记不构成对
+ * raw host key 的信任，也不据此判定密钥变更。证书链验证不在本层实现。
  */
 
 export interface KnownHostEntry {
@@ -22,7 +23,7 @@ export interface KnownHostEntry {
 	readonly marker?: string;
 }
 
-export type KnownHostsVerdict = "match" | "mismatch" | "unknown";
+export type KnownHostsVerdict = "match" | "mismatch" | "unknown" | "revoked";
 
 /** 解析一行；注释与空行返回 undefined。 */
 export function parseKnownHostsLine(line: string): KnownHostEntry | undefined {
@@ -45,7 +46,15 @@ export function parseKnownHostsLine(line: string): KnownHostEntry | undefined {
 	};
 }
 
-/** 匹配主机名与端口对应的密钥：命中同钥 → match；条目存在但密钥不同 → mismatch；无条目 → unknown。 */
+/**
+ * 匹配主机名与端口对应的密钥，语义对齐 OpenSSH 的 host key 检查：
+ *
+ * - `@revoked` 条目命中同钥 → `revoked`，且优先于普通匹配——先扫完全部行再裁决，
+ *   撤销不会被先遇到的普通同钥放行盖过；
+ * - 普通条目命中同钥 → `match`；条目存在但密钥不同 → `mismatch`；无条目 → `unknown`；
+ * - `@revoked` 登记的是另一把钥匙时不参与裁决（OpenSSH 对 revoked 行只在同钥时生效）；
+ * - `@cert-authority` 与未知标记行整行跳过，不产生信任也不判定变更。
+ */
 export function matchKnownHosts(
 	lines: readonly string[],
 	host: string,
@@ -53,14 +62,21 @@ export function matchKnownHosts(
 	keyBase64: string,
 ): KnownHostsVerdict {
 	let sawEntry = false;
+	let sawMatch = false;
 	for (const line of lines) {
 		const entry = parseKnownHostsLine(line);
 		if (!entry) continue;
 		if (!matchEntryPatterns(entry.patterns, host, port)) continue;
-		sawEntry = true;
-		if (entry.keyBase64 === keyBase64) return "match";
+		if (entry.marker !== undefined && entry.marker !== "@revoked") continue;
+		if (entry.keyBase64 === keyBase64) {
+			// 撤销优先：同钥 revoked 立即定案；普通同钥先记下，继续扫完防止后面还有撤销行。
+			if (entry.marker === "@revoked") return "revoked";
+			sawMatch = true;
+		} else if (entry.marker === undefined) {
+			sawEntry = true;
+		}
 	}
-	return sawEntry ? "mismatch" : "unknown";
+	return sawMatch ? "match" : sawEntry ? "mismatch" : "unknown";
 }
 
 /**

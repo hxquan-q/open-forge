@@ -1,7 +1,7 @@
 ---
 id: TASK-0178
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: ssh-transport + desktop SSH security
 source: BUG-0062; RESEARCH-0019
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: [BUG-0062]
 execution: serial
 branch: main
-worktree: unassigned（仅规划，认证修改待实施请求）
+worktree: unassigned（2026-10-02 主检出串行实施，无多 Agent 授权）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport/src/known-hosts.ts, packages/ssh-transport/src/known-hosts.test.ts, packages/ssh-transport/src/ssh2-runner.ts, apps/desktop/src/main/ssh/ssh-hostkey-verifier.ts]
 write_paths: [packages/ssh-transport/src/known-hosts.ts, packages/ssh-transport/src/known-hosts.test.ts, apps/desktop/src/main/ssh/ssh-hostkey-verifier.ts, apps/desktop/src/main/ssh/ssh-hostkey-verifier.test.ts, project/tasks/TASK-0178-ssh-known-hosts-revocation.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0169, TASK-0177]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -62,4 +62,13 @@ updated: 2026-10-02
 
 ## 当前状态与不做项
 
-仅规划、未修复，集成 pending，尚无实现测试结果。未授权生产认证实验、真实实例、付费 Provider 或发布；不存在“用户已接受”的事实。实现后记录安全自审/授权范围、公开类型消费者、red/green、未验证平台与实际提交。
+工程完成，其余历史不做项边界（不改原始 known_hosts、不迁移凭据、不提供“仍然连接”绕过、不实现证书链验证）在实施中全部保持。
+
+## 交付记录（2026-10-02，主检出串行实施）
+
+- 实现：`matchKnownHosts` 新增 `revoked` verdict——扫完全部行再裁决，`@revoked` 同钥优先于普通匹配且与行序无关；`@cert-authority` 与未知 marker 整行跳过（不产生 raw host key 信任、不判变更）；`@revoked` 异钥不参与裁决。宿主 `createSshHostKeyVerifier` 改为两份文件全部查完再决定：任一文件 `revoked` 即拒绝（不触发确认、不写回），普通 match/mismatch 维持原文件先后次序的 fail-closed；新增可选 `userKnownHostsPath` 注入（默认仍 `~/.ssh/known_hosts`），测试不触碰真实用户文件。
+- Red/Green：旧实现红——matcher 新增断言 7 项失败（revoked-only、两种行序、`@revoked` 异钥、CA 同/异钥、未知 marker、哈希/非默认端口撤销）；修复后 17/17。宿主链失败复现沿用 BUG-0062 的合成探针证据；新增 9 项宿主用例覆盖跨文件撤销优先（两种文件序）、无提示无写回、异钥走确认、CA 走确认。
+- 实际命令与结果：cwd `packages/ssh-transport` 定向三件套（known-hosts/ssh2-runner/loopback）49/49；cwd `apps/desktop` verifier + host-service 24/24；`test:impact`（公共 verdict 变更自动回退，desktop 4652 + runtime-desktop）通过；`test:changed --base origin/dev`（desktop/presets/content-creation/runtime-desktop/themes/toolkit）通过；`bun run check` exit 0。ssh-transport dist 已重建供 desktop 消费；显式补跑未注册入口的 SSH 自身测试（TASK-0174 落地前标准选择器不含该包）。
+- 公共合同核对：`KnownHostsVerdict` 生产者/消费者全量检索仅 desktop verifier 与测试；新 `revoked` 分支在宿主显式拒绝，不会回落成首次确认。
+- 未验证项/风险：未做真实主机与多平台实测（非 Windows 走系统 OpenSSH，不经此代码路径）；证书链验证按合同未实现；两份 known_hosts 现在总是都被读取（撤销可能登记在后查的文件里），连接建立的额外读取开销可忽略。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）；人工功能验收与发布未执行。
