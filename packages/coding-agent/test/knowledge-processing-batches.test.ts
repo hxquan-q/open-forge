@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,6 +24,7 @@ import {
 	createCodingAgentRuntimeComposition,
 	createTestConversationPersistence,
 } from "./fixtures/conversation-persistence.js";
+import { createTestPromptRuntimeSources } from "./fixtures/prompt-runtime-sources.js";
 
 describe("Knowledge processing batches", () => {
 	const directories: string[] = [];
@@ -51,6 +54,7 @@ describe("Knowledge processing batches", () => {
 		const factory = createKnowledgeProcessingSessionFactory({
 			getModelRegistry: () => modelRegistry(),
 			createConversationPersistence: createTestConversationPersistence,
+			createPromptRuntimeSources: createTestPromptRuntimeSources,
 			createToolEnvironment: createCodingAgentNodeToolEnvironment,
 			createSessionExecutionEnvironment: createCodingAgentNodeSessionExecutionEnvironment,
 			knowledgeRuntime: createTestKnowledgeRuntime(root),
