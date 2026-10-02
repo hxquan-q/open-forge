@@ -15,6 +15,19 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0154` | `in_progress` | PLAN-0014 | MCP 应用/工作区资源作用域（上游 d04645196）；泳道 B 独立 Worktree 串行。 |
+| `TASK-0199` | `in_progress` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 树内串行。 |
+| `TASK-0151` | `in_progress` | PLAN-0014 | 配置读改写串行事务；TASK-0187 专用树内续接。 |
+| `TASK-0198` | verifying | PLAN-0015 | 有界工具并发与独占屏障；TASK-0197 树串行。 |
+| TASK-0197 | in_progress | PLAN-0015 | Harness 能力吸收批次隔离工作树 |
+| `TASK-0195` | blocked | PLAN-0015 | 保留兼容模型请求前缀的摘要生成 |
+| `TASK-0188` | `in_progress` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 工作树串行。 |
+| `TASK-0189` | `ready` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 工作树串行。 |
+| `TASK-0190` | `ready` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 工作树串行。 |
+| `TASK-0191` | `ready` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 工作树串行。 |
+| `TASK-0192` | `ready` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 工作树串行。 |
+| `TASK-0193` | `ready` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 工作树串行。 |
+| `TASK-0187` | `in_progress` | PLAN-0014 | 非手机稳定性首批：用户指定单专用工作树，内部串行，验证后先推 dev 再集成本地 main。 |
 | `TASK-0186` | `in_progress` | — | ISSUE-0020：Office 解析器按需加载与 PDF worker URL 释放；独立 Worktree，不改主树聊天任务。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
 | `TASK-0181` | `in_progress` | — | 本机字体偏好：两项选择、主题持久化和终端跟随；独立 Worktree 实施。 |
@@ -75,6 +88,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task | 状态 | Plan | 当前焦点 |
 |---|---|---|---|
+| `TASK-0187` | `in_progress` | PLAN-0014 | 非手机稳定性首批：用户指定单专用工作树，内部串行，验证后先推 dev 再集成本地 main。 |
 | `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0169` | `verifying` | PLAN-0014 | P1 生命周期：探测代次+失效处置已实施（BUG-0061 修复），定向 94/94 与批次门禁全绿，待人工验收。 |
 | `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
