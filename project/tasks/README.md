@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0186` | `verifying` | — | Office 按格式加载与 PDF URL 生命周期已验证；独立分支待主树干净后集成，未做实机 RAM 对照。 |
 | `TASK-0181` | `in_progress` | — | 本机字体偏好：两项选择、主题持久化和终端跟随；独立 Worktree 实施。 |
 | `TASK-0180` | `verifying` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
 | `TASK-0184` | `ready` | — | docs-site 构建 Turbopack 71 错修复（BUG-0067）；仅建档待诊。 |
