@@ -1,7 +1,7 @@
 ---
 id: TASK-0194
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop
 source: BUG-0073
@@ -39,7 +39,7 @@ write_paths:
 exclusive_paths:
   - apps/desktop/src/renderer/domains/conversation/services/pending-user-anchor.ts
 depends_on: []
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0187, TASK-0196, TASK-0197]
+conflicts_with: [TASK-0122, TASK-0123, TASK-0181]
 integration_status: pending
 created: 2026-10-03
 updated: 2026-10-03
@@ -59,7 +59,7 @@ BUG-0073 四项缺陷修复后：失败队列派发不再误杀最新轮 `agent_
 - 结论：条件支持并行——conversation 域文件独占（`exclusive_paths` 锚定新模块），与其他在途 Task（TASK-0186/0187 批次，均为 plugins/packages 域）无路径交集。
 - 执行方式：独立 Worktree `task/TASK-0194-queue-anchor-review-fixes`，单 Worker 串行实现。
 - 前置依赖：无（基于 main HEAD 48b8e487f，含 c9db5fa27）。
-- 冲突文件：共享 Project 索引（tasks/bugs README）由协调阶段在主树更新，不进本 Task write_paths（TASK-0186 惯例）。Release Notes 随修复提交走推 dev → 合 main 全程，与在途 Task 的目录级/同名声明撞碰全部登记 `conflicts_with`（TASK-0122/0123/0181/0187/0196/0197）——实际改动只有本缺陷的一句话，集成时按行核对、后到者重排。
+- 冲突文件：共享 Project 索引（tasks/bugs README）由协调阶段在主树更新，不进本 Task write_paths（TASK-0186 惯例）。Release Notes 随修复提交走推 dev → 合 main 全程，与已入库 Task 的目录级/同名声明撞碰登记 `conflicts_with`（TASK-0122/0123/0181）。TASK-0187/0196/0197 的记录在并行会话尚未入库，worktree 视图解析不了引用、不登记；它们的目录级声明（project/tasks、apps/desktop 伞）与本 Task 实际文件无交集，集成阶段在主树按实际文件集核对、后到者重排。
 - 集成负责人：当前 Agent（用户已授权：验证通过后推 `origin/dev`，再合回本地 main）。
 - 集成顺序：与其他并行 Task 无依赖，验证通过即可推送/集成。
 
@@ -98,4 +98,24 @@ bun run check
 
 ## 交付记录
 
-- 实施中；完成后回填实际修改、命令与结果、未运行项及剩余风险。
+### 实际修改（重构 120b6af80 + 修复 24579b588）
+
+- 重构（行为保持）：新增 `services/pending-user-anchor.ts` 共享锚定助手；`transcript-window.ts` / `chat-message-snapshot.ts` 改走共享管线；删除退化字段 `canonicalCount`（`transcript-window-controller.ts` 改用 `canonicalItemIndexes.length`）。
+- 修复：`agent_end` 判活「不等」→「净增长」（`useSessionEventController.ts` 两处，`message-queue-atoms.ts` 注释同步）；助手 (b) 分支加孪生槽校验（导出 `sameUserText` 复用同一判等）；`prependedCount` 只计头部连续「非 live 复用」projected 条目；opener 的 missing 气泡合并改走共享助手、回退方向与快照层一致。
+
+### 测试（TDD，先红后绿）
+
+- 新增 5 组回归（旧实现确认红）：`transcript-window.test.ts`（幽灵尾部、prependedCount）、`chat-message-snapshot.test.ts`（幽灵尾部）、`pending-user-anchor.test.ts`（(b) 孪生校验 + 两层一致性等 5 例合同）、`useSessionManager.queue.test.ts`（事件级 unbump 竞态）。
+- 定向 4 文件 64/64 绿；conversation 域 177 文件 965/965 绿；`test:impact`（11 改动文件）52 文件 282/282 绿。
+
+### 检查
+
+- `check:lint`、`check:types`（root tsgo + desktop/cli/docs）、`bun run --cwd apps/mobile lint`：绿。
+- `check:quick`/`check:guards` 按 HEAD 归因出两处非本 Task 的存量红：①修改声明头 ratchet「基线中已修复 8 条」（基线 a4c7374d3 起、主树同红）——按门禁指定动作 `--write-baseline` 收缩已修复条目，独立 chore 提交，收缩后 ratchet 绿；②`project/tasks/README.md:18 unknown TASK-0186`（并行会话已提交索引行但其记录文件未入库；主树视图不红）——保持原样，待其批次入库自愈。
+
+### 未运行与剩余风险
+
+- 完整 `bun run check` 在 worktree 视图因②外部存量红不终绿；集成阶段在主树复跑完整 check 作终验。
+- `test:changed --base origin/dev` 在 worktree 运行 30 分钟无输出，手动终止（已核对 run-vitest/test-changed 脚本无 git 写操作）；其相对既有证据的增量覆盖（origin/dev..HEAD 代码改动全部落在 conversation 域 + docs）已由 conversation 域 965 例与 `test:impact` 282 例覆盖，集成阶段重跑补证。`verify:ui:*` 未获任务授权未运行，真实会话人工回归待用户。
+- 根因深度维持现状：镜像气泡消费点尾追 + 全局序号计数器（评审发现 5/6 的 turn 身份判活重构）登记为后续；(b) 孪生校验按文本判等，displayText 漂移的镜像会退到尾部、经既有对账上限后清理，行为等级与修复前持平。
+- 集成顺序：验证通过后 `git push origin task/TASK-0194-queue-anchor-review-fixes:dev`（用户本轮明确授权），再于主树合入本地 main；合入后同步共享索引（bugs/tasks README）。

@@ -1,7 +1,7 @@
 ---
 id: BUG-0073
 type: bug
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop
 source: code-review(max)@c9db5fa27; source inspection
@@ -72,6 +72,6 @@ updated: 2026-10-03
 
 ## 修复与验证
 
-- 修复：随 TASK-0194 交付回填（判活比较收紧为「仅净增长判过期」；锚点管线抽取共享助手并加孪生校验；`prependedCount` 语义还原；两层回退统一）。
-- 验证：随 TASK-0194 交付回填。
-- 剩余风险：深层根因（镜像气泡消费点尾部追加迫使下游猜测、全局序号计数器本身）维持现状，登记于 TASK-0194 不做项。
+- 修复（TASK-0194，重构 120b6af80 + 修复 24579b588）：先把三层锚定管线收编为共享助手 `pending-user-anchor.mergeWithCausalAnchors`（行为保持）；随后 `agent_end` 判活收紧为只认净增长（缺陷 1）、(b) 分支加孪生槽文本校验（缺陷 2）、`prependedCount` 语义还原（缺陷 3）、opener 合并改走共享助手使两层回退一致（缺陷 4）。
+- 验证：5 组回归用例在旧实现确认红、修复后全绿；定向 4 文件 64/64，conversation 域 177 文件 965/965，`test:impact` 52 文件 282/282；`check:lint` / `check:types` / mobile lint 绿。
+- 剩余风险：深层根因（镜像气泡消费点尾部追加迫使下游猜测、全局序号计数器本身）维持现状，turn 身份判活重构登记为后续；(b) 孪生校验按文本判等，displayText 漂移的镜像退到尾部、经既有对账上限后清理，行为等级与修复前持平。
