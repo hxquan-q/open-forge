@@ -20,7 +20,7 @@
 | `BUG-0060` | 原子写入短写与重命名前失败合同不完整 | verifying | P1 | PLAN-0014 |
 | `BUG-0061` | 失效后的迟到 SSH 探测恢复旧状态 | verifying | P1 | PLAN-0014 |
 | `BUG-0059` | CLI 进程测试并发下 RPC 超时 | investigating | P1 | PLAN-0014 |
-| `BUG-0058` | 文本模型收到超出输入能力的图片 | investigating | P1 | PLAN-0014 |
+| `BUG-0058` | 文本模型收到超出输入能力的图片 | verifying | P1 | PLAN-0014 |
 | `BUG-0057` | Windows 新增 SSH 主机交互认证被 15s 握手预算掐断，KI 回退吞掉已存口令 | verifying | P1 | — |
 | `BUG-0053` | 兼容网关省略思考块初始签名时被拒绝 | verifying | P1 | PLAN-0014 |
 | `BUG-0054` | 短暂文件占用使原子写入直接失败 | verifying | P1 | PLAN-0014 |
