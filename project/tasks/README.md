@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0186` | `in_progress` | — | ISSUE-0020：Office 解析器按需加载与 PDF worker URL 释放；独立 Worktree，不改主树聊天任务。 |
+| `TASK-0196` | `in_progress` | PLAN-0014 | 存量 Draft 批次（15 项：0042/0167/0166/0039/0154/0155/0157/0158/0159/0051/0038/0152/0156/0160 剩余/0161）；单专用工作树内部串行，逐项验证后推 origin/dev，批末合入本地 main；不做视觉校验。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
 | `TASK-0181` | `in_progress` | — | 本机字体偏好：两项选择、主题持久化和终端跟随；独立 Worktree 实施。 |
 | `TASK-0180` | `verifying` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
