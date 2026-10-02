@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	DefaultExecutionModeSettingInput,
 	GeneralExecutionMode,
@@ -6,13 +7,11 @@ import type {
 	SandboxCapabilitySnapshot,
 	WorkspaceSettingInput,
 } from "@vetta-org/capability-sdk";
-import { type DesktopConfig, readDesktopConfig, writeDesktopConfig } from "../config/desktop-config-store.js";
-import { allowProjectRoot } from "../filesystem/filesystem-service.js";
-import { getSandboxCapability } from "../sandbox/capability.js";
+import type { DesktopConfig, DesktopConfigUpdater } from "../config/desktop-config-store.js";
 
 export interface GeneralSettingsServiceOptions {
 	readonly readConfig: () => Promise<DesktopConfig>;
-	readonly writeConfig: (config: DesktopConfig) => Promise<void>;
+	readonly updateConfig: (update: DesktopConfigUpdater) => Promise<DesktopConfig>;
 	readonly allowWorkspaceRoot: (path: string) => void;
 	readonly getSandbox: () => SandboxCapabilitySnapshot;
 }
@@ -54,19 +53,6 @@ export class GeneralSettingsService {
 	}
 
 	private async updateConfig(patch: Partial<DesktopConfig>): Promise<void> {
-		const current = await this.options.readConfig();
-		await this.options.writeConfig({ ...current, ...patch });
+		await this.options.updateConfig((current) => ({ ...current, ...patch }));
 	}
-}
-
-let desktopGeneralSettingsService: GeneralSettingsService | undefined;
-
-export function getDesktopGeneralSettingsService(): GeneralSettingsService {
-	desktopGeneralSettingsService ??= new GeneralSettingsService({
-		readConfig: readDesktopConfig,
-		writeConfig: writeDesktopConfig,
-		allowWorkspaceRoot: allowProjectRoot,
-		getSandbox: getSandboxCapability,
-	});
-	return desktopGeneralSettingsService;
 }

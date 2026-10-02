@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { bindCapability, type CapabilityRegistry } from "@vetta/capability-runtime";
 import {
 	CAPABILITY_ERROR_CODES,
@@ -24,7 +25,7 @@ import type { ArtifactStore } from "../artifacts/artifact-store.js";
 import { getDesktopBatchTaskService } from "../batch-tasks/batch-task-service.js";
 import { listRuntimeSessionProjects, listSessionHistory } from "../conversations/session-query-service.js";
 import { getDesktopDownloadService } from "../downloads/download-service.js";
-import { getDesktopGeneralSettingsService } from "../general-settings/general-settings-service.js";
+import { getDesktopGeneralSettingsService } from "../general-settings/general-settings-service-instance.js";
 import { getImHost } from "../im-host/index.js";
 import type { JobManager } from "../jobs/job-manager.js";
 import { getKnowledgeService } from "../knowledge/knowledge-service.js";

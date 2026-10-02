@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { DesktopConfig } from "../config/desktop-config-store.js";
 import { ShortcutService } from "./shortcut-service.js";
@@ -29,8 +30,9 @@ function createFixture(initial?: Partial<DesktopConfig>) {
 	const reloadQuickPanelTrigger = vi.fn(async () => {});
 	const service = new ShortcutService({
 		readConfig: async () => structuredClone(config),
-		writeConfig: async (next) => {
-			config = structuredClone(next);
+		updateConfig: async (update) => {
+			config = structuredClone(await update(structuredClone(config)));
+			return structuredClone(config);
 		},
 		broadcastBindings,
 		reloadQuickPanelTrigger,

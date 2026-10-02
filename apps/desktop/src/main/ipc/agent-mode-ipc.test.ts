@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 改「新会话默认工作模式」只允许写配置 + 广播显示同步。
  *
@@ -22,8 +23,7 @@ function readGlobalAgentModeHandler(): string {
 it("persists the default mode and broadcasts it for toggle display sync", () => {
 	const handler = readGlobalAgentModeHandler();
 
-	expect(handler).toContain("settings.defaultAgentMode = next");
-	expect(handler).toContain("writeDesktopConfig(settings)");
+	expect(handler).toContain("updateDesktopConfig((settings) => ({ ...settings, defaultAgentMode: next }))");
 	expect(handler).toContain("CHANNELS.AGENT_MODE_CHANGED");
 });
 

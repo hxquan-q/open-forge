@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { DesktopConfig } from "../config/desktop-config-store.js";
 import { AgentSettingsService } from "./agent-settings-service.js";
@@ -18,7 +19,7 @@ describe("AgentSettingsService", () => {
 	it("returns normalized experimental defaults", async () => {
 		const service = new AgentSettingsService({
 			readConfig: async () => ({ ...createConfig(), experimental: undefined }),
-			writeConfig: vi.fn(),
+			updateConfig: vi.fn(),
 		});
 
 		await expect(service.getExperimental()).resolves.toEqual({
@@ -29,10 +30,12 @@ describe("AgentSettingsService", () => {
 	});
 
 	it("atomically merges a partial update without dropping adjacent config", async () => {
-		const writeConfig = vi.fn<(config: DesktopConfig) => Promise<void>>(async () => {});
+		const updateConfig = vi.fn(async (update: (current: DesktopConfig) => DesktopConfig | Promise<DesktopConfig>) =>
+			update(createConfig()),
+		);
 		const service = new AgentSettingsService({
 			readConfig: async () => createConfig(),
-			writeConfig,
+			updateConfig,
 		});
 
 		await expect(service.setExperimental({ promptPrediction: true })).resolves.toEqual({
@@ -40,23 +43,24 @@ describe("AgentSettingsService", () => {
 			promptPrediction: true,
 			agentSkills: true,
 		});
-		expect(writeConfig).toHaveBeenCalledWith({
+		expect(await updateConfig.mock.results[0]?.value).toEqual({
 			...createConfig(),
 			experimental: { vettaCli: false, promptPrediction: true, agentSkills: true },
 		});
 	});
 
 	it("merges and clears image provider preferences without dropping other settings", async () => {
-		const writeConfig = vi.fn<(config: DesktopConfig) => Promise<void>>(async () => {});
+		const written: DesktopConfig[] = [];
 		let current: DesktopConfig = {
 			...createConfig(),
 			imageGeneration: { textToImageProviderId: "remote:images" },
 		};
 		const service = new AgentSettingsService({
 			readConfig: async () => current,
-			writeConfig: async (config) => {
-				current = config;
-				await writeConfig(config);
+			updateConfig: async (update) => {
+				current = await update(current);
+				written.push(current);
+				return current;
 			},
 		});
 
@@ -67,7 +71,7 @@ describe("AgentSettingsService", () => {
 		await expect(service.setImageGeneration({ textToImageProviderId: null })).resolves.toEqual({
 			imageToImageProviderId: "remote:edit",
 		});
-		expect(writeConfig).toHaveBeenLastCalledWith({
+		expect(written.at(-1)).toEqual({
 			...createConfig(),
 			imageGeneration: { imageToImageProviderId: "remote:edit" },
 		});
@@ -83,8 +87,9 @@ describe("AgentSettingsService", () => {
 		};
 		const service = new AgentSettingsService({
 			readConfig: async () => current,
-			writeConfig: async (config) => {
-				current = config;
+			updateConfig: async (update) => {
+				current = await update(current);
+				return current;
 			},
 		});
 
