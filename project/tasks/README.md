@@ -16,7 +16,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
 | `TASK-0187` | `in_progress` | PLAN-0014 | 非手机稳定性首批的单工作树串行集成；不含新能力迁移。 |
-| `TASK-0188` | `in_progress` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 工作树串行。 |
+| `TASK-0188` | `verifying` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 工作树串行。 |
 | `TASK-0189` | `ready` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 工作树串行。 |
 | `TASK-0190` | `ready` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 工作树串行。 |
 | `TASK-0191` | `ready` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 工作树串行。 |

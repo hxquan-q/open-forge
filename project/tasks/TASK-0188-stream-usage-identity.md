@@ -1,7 +1,7 @@
 ---
 id: TASK-0188
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: desktop
 source: user-request; RESEARCH-0022; upstream 00ebe0b88
@@ -9,13 +9,13 @@ related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
 related_tasks: [TASK-0187]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0069]
 execution: serial
 branch:
 worktree:
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths: [apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.tsx, apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.test.tsx, apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.ts, apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.test.ts]
-write_paths: [apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.tsx, apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.test.tsx, apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.ts, apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.test.ts, project/tasks/TASK-0188-stream-usage-identity.md, .github/release-notes/v0.1.3.md]
+write_paths: [project/bugs/BUG-0069-streaming-usage-reference-churn.md, apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.tsx, apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.test.tsx, apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.ts, apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.test.ts, project/tasks/TASK-0188-stream-usage-identity.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0187]
@@ -55,3 +55,7 @@ updated: 2026-10-03
 ## 交付记录
 
 实施前合同已落盘；后续回填红绿测试、实际命令、提交、未运行项和剩余风险。
+
+红测：Node runner + Desktop config，2 个新回归因 usage 数组引用不同失败，15 个已有测试通过；环境缺 workspace dist 的首次失败不作为红测，已由 turbo Desktop 依赖构建解决。
+
+绿测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts message-list-derived.test.ts MessageListView.test.tsx`，2 文件/17 测试通过。仅复用相同有序 usage 元素的数组，placeholder 收集保留；跨包/完整检查由批次终验执行，未跑 UI。
