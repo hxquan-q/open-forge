@@ -9,13 +9,13 @@ related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
 related_tasks: [TASK-0187]
 related_issues: []
-related_bugs: [BUG-0073]
+related_bugs: [BUG-0076]
 execution: serial
 branch:
 worktree:
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths: [apps/desktop/scripts/build-dev-processes.mjs, apps/desktop/scripts/build-dev-processes.test.ts]
-write_paths: [apps/desktop/scripts/packaged-native-dependencies.mjs, apps/desktop/scripts/packaged-native-dependencies.d.mts, project/bugs/BUG-0073-dev-cache-missing-workspaces.md, apps/desktop/scripts/main-bundle-workspace-inputs.mjs, apps/desktop/scripts/main-bundle-workspace-inputs.d.mts, apps/desktop/scripts/build-dev-processes.d.mts, apps/desktop/vite.main.config.ts, apps/desktop/scripts/build-dev-processes.mjs, apps/desktop/scripts/build-dev-processes.test.ts, project/tasks/TASK-0192-dev-bundle-cache-inputs.md, .github/release-notes/v0.1.3.md]
+write_paths: [apps/desktop/scripts/packaged-native-dependencies.mjs, apps/desktop/scripts/packaged-native-dependencies.d.mts, project/bugs/BUG-0076-dev-cache-missing-workspaces.md, apps/desktop/scripts/main-bundle-workspace-inputs.mjs, apps/desktop/scripts/main-bundle-workspace-inputs.d.mts, apps/desktop/scripts/build-dev-processes.d.mts, apps/desktop/vite.main.config.ts, apps/desktop/scripts/build-dev-processes.mjs, apps/desktop/scripts/build-dev-processes.test.ts, project/tasks/TASK-0192-dev-bundle-cache-inputs.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0187]

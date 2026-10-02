@@ -1,5 +1,5 @@
 ---
-id: BUG-0073
+id: BUG-0076
 type: bug
 status: verifying
 priority: P1
@@ -31,3 +31,5 @@ updated: 2026-10-03
 ## 回归与验证
 
 使用实际 hashPaths 验证内容变化失效、external/无关包输出不影响缓存；原有 runtime-desktop/runtime-node 合同改为行为断言并保留。结果见 TASK-0192/TASK-0187。
+
+编号说明：本批首个隔离提交曾使用 BUG-0073，尚未推送；另一执行流同时登记同号的队列缺陷。发布前仅将本批记录更正为 BUG-0076，历史提交保留映射，详见 WAIVER-0003。
