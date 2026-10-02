@@ -211,7 +211,9 @@ components:
 **Display / Body Font:** `-apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif`
 **Mono Font:** `"SF Mono", "Fira Code", monospace`
 
-**Character:** 全部使用系统原生 UI 字体栈，不加载任何 web font。这是一个刻意的一致性选择：桌面应用要与操作系统自身的设置、菜单、对话框并置，任何自定义字体都会在这个并置中显得突兀——而且会引入加载闪烁。字体的个性不来自字形，而来自极度克制的字重与字号阶梯。`--font-serif`（Georgia）虽在 token 契约中声明，但桌面 renderer 的界面几乎不使用衬线体。
+**Character:** 默认使用系统原生 UI 字体栈，不加载任何 web font。这是一个刻意的一致性选择：桌面应用要与操作系统自身的设置、菜单、对话框并置，任何自定义字体都会在这个并置中显得突兀——而且会引入加载闪烁。字体的个性不来自字形，而来自极度克制的字重与字号阶梯。`--font-serif`（Georgia）虽在 token 契约中声明，但桌面 renderer 的界面几乎不使用衬线体。
+
+用户可在外观设置中选择本机已安装的界面/代码字体；这是明确的阅读偏好例外，不改变出厂字体栈或字号阶梯，不下载/分发字体。代码与终端保持等宽候选，缺字继续沿默认栈回退，恢复默认随当前主题生效。
 
 ### Hierarchy
 

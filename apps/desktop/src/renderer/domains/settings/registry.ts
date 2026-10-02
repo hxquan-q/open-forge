@@ -100,6 +100,7 @@ export const SETTINGS_SECTIONS = [
 	{ tab: "remote", id: "remote-pairing", title: "手机配对", titleKey: "section_remote-pairing" },
 	{ tab: "remote", id: "remote-permissions", title: "控制权限", titleKey: "section_remote-permissions" },
 	{ tab: "sshHosts", id: "ssh-hosts-list", title: "主机列表", titleKey: "section_ssh-hosts-list" },
+	{ tab: "appearance", id: "appearance-fonts", title: "字体", titleKey: "fonts.title" },
 	{ tab: "appearance", id: "appearance-mode", title: "外观模式", titleKey: "section_appearance-mode" },
 	{ tab: "appearance", id: "appearance-ui-theme", title: "界面主题", titleKey: "section_appearance-ui-theme" },
 	{ tab: "appearance", id: "appearance-cursor", title: "鼠标指针", titleKey: "section_appearance-cursor" },

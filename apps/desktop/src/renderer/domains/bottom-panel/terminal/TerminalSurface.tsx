@@ -63,11 +63,15 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 		let contextLost = false;
 		const cleanups: Array<() => void> = [];
 
+		const readFontFamily = () =>
+			getComputedStyle(container).getPropertyValue("--font-mono").trim() ||
+			getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim() ||
+			"monospace";
 		const terminal = new Terminal({
 			allowProposedApi: true,
 			cursorBlink: true,
 			fontSize: 12,
-			fontFamily: getComputedStyle(container).getPropertyValue("--font-mono") || "monospace",
+			fontFamily: readFontFamily(),
 			lineHeight: 1.2,
 			macOptionIsMeta: true,
 			scrollback: SCROLLBACK,
@@ -126,12 +130,6 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			fit.fit();
 			return { cols: terminal.cols, rows: terminal.rows };
 		};
-
-		const themeObserver = new MutationObserver(() => {
-			terminal.options.theme = buildTerminalTheme(createDocumentCssVariableReader(document.documentElement));
-		});
-		themeObserver.observe(document.documentElement, { attributeFilter: ["data-mode", "data-theme"] });
-		cleanups.push(() => themeObserver.disconnect());
 
 		let snapshotTimer: number | undefined;
 		const flushSnapshot = (): void => {
@@ -235,6 +233,27 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			if (refitRef.current === applyFit) refitRef.current = null;
 		});
 
+		// Keep the existing xterm/PTY alive when typography changes. CSS alone cannot update xterm.
+		const themeObserver = new MutationObserver(() => {
+			terminal.options.theme = buildTerminalTheme(createDocumentCssVariableReader(document.documentElement));
+			const family = readFontFamily();
+			if (terminal.options.fontFamily === family) return;
+			terminal.options.fontFamily = family;
+			applyFit();
+		});
+		themeObserver.observe(document.documentElement, { attributeFilter: ["data-mode", "data-theme", "style"] });
+		cleanups.push(() => themeObserver.disconnect());
+		// A late font load changes cell metrics even if the CSS family string is unchanged.
+		const fonts = document.fonts;
+		const fontReady = () => {
+			if (!disposed) applyFit();
+		};
+		if (fonts) {
+			fonts.addEventListener("loadingdone", fontReady);
+			void fonts.ready.then(fontReady);
+			cleanups.push(() => fonts.removeEventListener("loadingdone", fontReady));
+		}
+
 		const observer = new ResizeObserver(applyFit);
 		observer.observe(container);
 		cleanups.push(() => observer.disconnect());
@@ -284,9 +303,7 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			    外边距会让面板底色在终端四周露出一圈，看着像终端没铺满。 */}
 			<div ref={containerRef} className="min-h-0 flex-1 px-2 py-1.5" data-terminal-surface={tabId} />
 			{status === "unavailable" ? (
-				<p className="px-3 pb-2 text-[12px] text-destructive">
-					{message ?? t("bottomPanel.terminal.unavailable")}
-				</p>
+				<p className="px-3 pb-2 text-[12px] text-destructive">{message ?? t("bottomPanel.terminal.unavailable")}</p>
 			) : null}
 			{degradedNoResize ? (
 				<p className="px-3 pb-2 text-[11px] text-muted-foreground">{t("bottomPanel.terminal.noResize")}</p>

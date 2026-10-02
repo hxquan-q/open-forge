@@ -10,6 +10,7 @@ import {
 	type LanguagePreference,
 } from "@/shared/i18n/config";
 import { type CursorStyle, getStoredCursorStyle } from "../theme/cursor";
+import { getStoredFontPreferences } from "../theme/fonts";
 import { getStoredNewSessionTextureId, type NewSessionTextureId } from "../theme/new-session-texture";
 import { getStoredOrnamentId, type OrnamentId } from "../theme/ornament";
 import { getStoredSidebarStyle, type SidebarStyle } from "../theme/sidebar-style";
@@ -68,6 +69,8 @@ export type SettingsTab =
 	| "pet"
 	| "remote"
 	| "sshHosts";
+
+export const fontPreferencesAtom = atom(getStoredFontPreferences());
 
 // ─── Theme ───
 

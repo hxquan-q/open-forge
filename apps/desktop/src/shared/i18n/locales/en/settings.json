@@ -2263,5 +2263,24 @@
 		"off": "Off",
 		"notify": "Notify only",
 		"auto": "Auto-continue"
+	},
+	"fonts": {
+		"title": "Fonts",
+		"hint": "Choose fonts installed on this computer. Interface text and code are separate; the terminal follows the code font. Missing characters use the default fallback.",
+		"load": "Load installed fonts",
+		"loading": "Loading installed fonts…",
+		"search": "Search fonts",
+		"ui": "Interface font",
+		"code": "Code and terminal font",
+		"default": "Default",
+		"resetUi": "Reset interface font",
+		"resetCode": "Reset code font",
+		"preview": "Open Forge — 中文阅读 Aa 012345",
+		"codePreview": "Il1 O0  {} [] =>\n  const value = 123;",
+		"missing": "This font was not found in the available list. Default fonts will be used where needed; choose another font or reset.",
+		"empty": "No matching fonts. Try another search.",
+		"unavailable": "Installed font access is not available here. Existing choices and defaults are still usable.",
+		"loadFailed": "Could not read installed fonts. Allow font access if prompted, then try again. Existing choices are unchanged.",
+		"saveFailed": "Could not save the font preference. The previous choice is unchanged; please try again."
 	}
 }
