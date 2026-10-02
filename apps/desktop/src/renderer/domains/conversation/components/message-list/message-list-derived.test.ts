@@ -11,7 +11,9 @@ describe("message-list-derived", () => {
 		const history = createConversationAgentMessage({ id: "history", text: "old", blocks: [], usages: [usage] });
 		const tail = createConversationAgentMessage({ id: "tail", text: "a", blocks: [] });
 		const previous = collectAgentUsages([history, tail]);
-		expect(collectAgentUsages([toTranscriptPlaceholder(history), { ...tail, text: "ab" }], previous)).toBe(previous);
+		const placeholder = toTranscriptPlaceholder(history);
+		if (!placeholder) throw new Error("Expected a completed reply to support placeholder projection");
+		expect(collectAgentUsages([placeholder, { ...tail, text: "ab" }], previous)).toBe(previous);
 		expect(collectAgentUsages([history, { ...tail, text: "abc" }], previous)).toBe(previous);
 		expect(collectAgentUsages([history, { ...tail, usages: [usage] }], previous)).toEqual([usage, usage]);
 		const replaced = { ...usage, output: usage.output + 1 };

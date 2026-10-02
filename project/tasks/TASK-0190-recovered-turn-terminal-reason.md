@@ -59,3 +59,7 @@ updated: 2026-10-03
 红测：Node runner + runtime-core config，running-changed-reason.test.ts 2 失败/9 通过；真实 runtime/assistant 错误后成功 done 均错误残留 error。
 
 绿测：`bun scripts/quality/run-vitest.mjs run --config packages/runtime-core/vitest.config.ts running-changed-reason.test.ts runtime-host-session-event-relay.test.ts session-event-subscriber-queue.test.ts`，3 文件/26 测试通过；保留旧事件兼容、取消和回放/订阅队列上限。
+
+完整检查发现新增真实事件 fixture 缺少 schemaVersion/eventId（TS2322）；不增加类型断言，补齐 SessionEventBase 元数据后复验。此前定向运行通过不等于类型检查通过。
+
+类型补齐后复验：对应定向测试通过；根 `bun x tsgo --noEmit` 与 Desktop `typecheck:incremental` 均通过，未使用 any/断言绕过。最终完整 check 仍由批次重跑。

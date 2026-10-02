@@ -59,3 +59,7 @@ updated: 2026-10-03
 红测：Node runner + Desktop config，2 个新回归因 usage 数组引用不同失败，15 个已有测试通过；环境缺 workspace dist 的首次失败不作为红测，已由 turbo Desktop 依赖构建解决。
 
 绿测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts message-list-derived.test.ts MessageListView.test.tsx`，2 文件/17 测试通过。仅复用相同有序 usage 元素的数组，placeholder 收集保留；跨包/完整检查由批次终验执行，未跑 UI。
+
+完整 Desktop 类型检查发现 toTranscriptPlaceholder 返回值允许 undefined；按实际工厂合同增加运行时前置校验，不用断言绕过类型。
+
+类型补齐后复验：对应定向测试通过；根 `bun x tsgo --noEmit` 与 Desktop `typecheck:incremental` 均通过，未使用 any/断言绕过。最终完整 check 仍由批次重跑。

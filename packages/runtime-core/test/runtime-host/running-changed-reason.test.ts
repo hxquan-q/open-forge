@@ -13,6 +13,7 @@ import {
 	type RuntimeHostSessionBackend,
 	type RuntimeObservationRecord,
 	type SessionEvent,
+	type SessionEventBase,
 } from "../../src/index.js";
 
 /**
@@ -22,6 +23,7 @@ import {
  * agent_end；同时锁住重试恢复成功的回合不得残留早前的 error 标记。
  */
 describe("RuntimeHost running-changed reason", () => {
+	let eventSerial = 0;
 	async function setup(): Promise<{
 		emit(event: SessionEvent): void;
 		reasons: Array<{ running: boolean; reason: RunningChangedReason | undefined }>;
@@ -104,8 +106,14 @@ describe("RuntimeHost running-changed reason", () => {
 		};
 	}
 
-	function base(): { sessionId: string; source: "runtime-core"; timestamp: number } {
-		return { sessionId: "session-1", source: "runtime-core", timestamp: 1 };
+	function base(): SessionEventBase {
+		return {
+			schemaVersion: 1,
+			eventId: `fixture-${++eventSerial}`,
+			sessionId: "session-1",
+			source: "runtime-core",
+			timestamp: 1,
+		};
 	}
 
 	it("turn.failed 路径（error observation + agent_end）报告 reason=error", async () => {
