@@ -21,7 +21,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0162` | `verifying` | PLAN-0014 | 知识库提示词装配，保留自定义组合器，独立验证。 |
 | `TASK-0150` | `verifying` | PLAN-0014 | 原子写重试适配；保留 fork 队列，独立验证。 |
 | `TASK-0149` | `verifying` | PLAN-0014 | Anthropic 网关签名兼容；独立验证，不携带主树 WIP。 |
-| `TASK-0148` | `done` | PLAN-0014 | 验证资源适配与隔离回归；不改写主树其他 UI 工作。 |
+| `TASK-0148` | `done` | PLAN-0014 | 来源 1020b7c59 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0165` | `verifying` | — | 主树实现已提交 925868a08；工程复验通过，人工功能验收待完成，批次推送见 TASK-0171。 |
 | `TASK-0164` | `verifying` | PLAN-0004 | 主树实现已提交 a739e62b2；工程复验通过，人工功能验收待完成，批次推送见 TASK-0171。 |
 | `TASK-0146` | `done` | — | 修复 plugin-vite 首次导入未收敛便关闭的挂起，保留原超时与断言。 |
