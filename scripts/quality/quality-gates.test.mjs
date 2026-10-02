@@ -453,10 +453,14 @@ describe("CI unit test coverage", () => {
 
 	it("runs Desktop typechecking through the current Bun executable", () => {
 		const checkTypes = rootManifest.scripts["check:types"];
-		expect(checkTypes).toContain(
-			"bun x tsc --noEmit -p apps/desktop/tsconfig.json --incremental --tsBuildInfoFile node_modules/.desktop-check.tsbuildinfo",
-		);
+		// desktop 段走包内脚本（concurrently 在 Windows 经 cmd.exe 不识别内联 env 前缀）；
+		// 堆上限在其中显式提升，CI 冷检出的全量检查不再撞 Node 默认堆（BUG-0063）。
+		expect(checkTypes).toContain("bun run --cwd apps/desktop typecheck:incremental");
 		expect(checkTypes).not.toContain("bunx tsc --noEmit -p apps/desktop/tsconfig.json");
+		const desktopManifest = JSON.parse(readFileSync(join(repoRoot, "apps/desktop/package.json"), "utf8"));
+		expect(desktopManifest.scripts["typecheck:incremental"]).toContain(
+			"NODE_OPTIONS=--max-old-space-size=6144 tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile ../../node_modules/.desktop-check.tsbuildinfo",
+		);
 	});
 
 	it("typechecks and exports the Expo app when Mobile changes", () => {
