@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0171` | `verifying` | PLAN-0014 | 主树候选与七个 Task 分支均已原子提交/集成；逐项 impact/check 通过，等待最终全批次闸门与 origin/dev 推送。 |
+| `TASK-0171` | `done` | PLAN-0014 | 主树全部已有改动与七个 Task 分支已提交/集成并推送 origin/dev；最终 41 包、483 质量测试与完整 check 通过，原 Worktree 保留。 |
 | `TASK-0170` | `done` | PLAN-0014 | 来源 769f31bc3 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0163` | `verifying` | PLAN-0014 | 来源 3dda219e9 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0162` | `verifying` | PLAN-0014 | 来源 6cb373dde 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |

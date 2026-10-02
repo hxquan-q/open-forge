@@ -1,7 +1,7 @@
 ---
 id: TASK-0171
 type: task
-status: verifying
+status: done
 priority: P1
 owner: coordinator
 source: user-request-2026-10-02
@@ -98,3 +98,12 @@ Open-Forge-only。响应本轮用户“全部 task 修改提交推送 dev，然�
 0149 首次合并遇到一条回归断言冲突，先安全 abort，再按实际单行 diff 保留 Worker 对无签名终态的更强断言，不删除任何覆盖。其余冲突仅 Task/索引/发布说明：保留 Worker 的详细证据、主树提交摘要及双方条目。已提交的主树代码与隔离代码相同之处只合入祖先关系；因此这些合并的 impact 合理选择无代码，不借此跳过前面的组合验证。
 
 51 个本轮变更 Markdown 的相对文件链接检查通过（不验证标题锚点）。七个 Task Worktree 均保留，不在 Owner 使用状态未知时自动清理；所有原始代码/记录有提交可追溯。当前工程集成通过，待最终完整 test:changed/check 与 origin/dev 推送；不推 origin/main，不发布。
+
+## 最终验证与开发候选推送（2026-10-02）
+
+- 最终固定代码快照：212b2b67f5eec34d779fc0f384571967a384bbf1。审核 origin/dev..main 的 26 个提交及七个 Task 分支祖先关系后，标准 bun run test:changed --base origin/dev 退出 0：质量脚本 36 文件/483 项与全部 41 个可测试包通过；CLI 226、Desktop 4642、AI 509、Coding Agent 1534、theme-ui 169、Toolkit 24 项通过，既有 skip 保留。随后完整 bun run check 退出 0。
+- 与早先失败不同，这是完整标准批次的成功退出，不拼接单跑结果伪装全量成功。CLI 的首轮两例 RPC 超时和底层时序风险仍保留，不声称其根因已修复。
+- git push origin main:dev 已成功，git ls-remote 已确认远端 dev 等于上述验证提交。本完成记录以单独文档提交收口，并再次执行文档范围 test:changed 与完整 check 后按相同标准推送；最终引用以该收口提交为准。
+- 七个原 Task Worktree 均保留，未 reset、stash、force、删除或推送 Task 分支。未修改 origin/main/upstream，未创建 tag/Release、部署或上传制品。draft Task 仍是未实施规划；功能 Task 的人工验收状态未擅自关闭。
+- 本任务为内部提交/集成操作，人工产品验收不适用，完成标准是实际 Git 状态和质量门禁；真实 UI/Provider/SSH 主机及 POSIX 实机未运行，未获授权的 verify:ui 未启动。
+- 日志位于本机临时目录 open-forge-task0171-final-tests.log/.exit、open-forge-task0171-final-check.log/.exit，以及各 merge 的 impact/check 日志；不包含用户真实状态。
