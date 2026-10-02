@@ -35,3 +35,7 @@ TASK-0162 隔离树的默认 CLI 全包回归有 9 项 RPC 超时；同一五文
 TASK-0171 的首轮全包测试在显式单 worker 下仍出现 installed-artifact-runtime 两例 RPC 超时；随后单文件 13/13、完整 CLI 226 项和最终整批均通过。并发相关性不是充分根因，单次成功不能关闭本 Bug。详细事实沿用 TASK-0171，本轮没有重跑 CLI。
 
 新增 TASK-0173 专门建立分阶段、安全有界的诊断及可重复对照；不重复 TASK-0170 已完成的调度补丁。保持 investigating，未确认是首帧、资源、夹具还是生产协议问题。
+
+## 诊断落地与对照（2026-10-03，TASK-0173）
+
+`waitFor`/`request` 超时错误现已携带预期 id/command、子进程退出状态、启动/最近帧间隔与仅含 `type/id/command` 的有界最近帧摘要（帧正文不进入诊断），格式化为纯函数并配独立单测；安装制品套件含真实二进制上的永不匹配探针。同快照 6 组串行对照（安装制品 3 轮 + 源码入口 3 轮，均 `--maxWorkers=1`）全部通过，本轮未复现。根因仍未确认，保持 investigating；下次失败应凭新诊断字段直接归因阶段。证据见 [VERIFY-0015](../verification/VERIFY-0015-cli-rpc-timeout-diagnostics.md)。

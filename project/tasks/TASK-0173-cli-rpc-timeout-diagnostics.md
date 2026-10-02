@@ -1,7 +1,7 @@
 ---
 id: TASK-0173
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: cli-host tests
 source: RESEARCH-0019; TASK-0172
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: [BUG-0059]
 execution: serial
 branch: main
-worktree: unassigned（仅规划，未开始代码实施）
+worktree: unassigned（2026-10-02 主检出串行实施完成）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [apps/cli-host/test, apps/cli-host/src/rpc, apps/cli-host/scripts/compile-standalone.mjs, project/bugs/BUG-0059-cli-rpc-concurrent-test-timeouts.md]
 write_paths: [apps/cli-host/test/support/agent-rpc-test-process.ts, apps/cli-host/test/installed-artifact-runtime.test.ts, project/verification, project/tasks/TASK-0173-cli-rpc-timeout-diagnostics.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0176]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -68,4 +68,12 @@ TASK-0171 首轮标准批次在单 worker 下仍有 2 个 installed-artifact-run
 
 ## 验收分层与当前交付
 
-当前只完成规划，未来行为测试/实现/技术验收均未执行；源码/证据自审不等于产品测试通过。集成 pending，未创建代码分支或 Worktree。实现后回填 red/green、实际命令、提交与未验证边界，功能人工接受与发布分别处理。
+## 交付记录（2026-10-02/03，主检出串行实施）
+
+- 实现：仅测试支撑与诊断夹具，未改 RPC 生产协议。`agent-rpc-test-process.ts` 的 `waitFor` 增加可选 `expectation`（`request()` 自动携带），超时错误由导出纯函数 `formatRpcWaitTimeout` 生成——预期 id/command、`child: pid/exit/signal`、`phase: ageMs/frames/sinceFirstFrame/sinceLastFrame`、`recentFrames(≤12)`（仅 type/id/command）、`stderr(tail)`（2 KiB 有界，收敛原无界 stderr）。`write_paths` 外无新增文件：单测落在既有 `test/agent-rpc-test-process.test.ts`，探针落在既有 `test/installed-artifact-runtime.test.ts`，实验记录在 `project/verification/VERIFY-0015`（新增，属 task 声明的 project/verification 范围）。
+- 合同测试：诊断单测 3 例（快照格式化、启动/退出形态、真实子进程不携带帧正文）；安装制品探针 1 例（真实 standalone 二进制、永不匹配等待 750ms——同一到点机制，避免把 20s 默认期限挂进套件；偏差已在此记录）。
+- 对照实验（VERIFY-0015）：同快照安装制品 3 轮（14/14，~80s/轮）+ 源码入口 `agent-runtime-selection` 3 轮（9/9），`--maxWorkers=1`、固定文件顺序，0 失败——**本轮未复现**，BUG-0059 保持 investigating，未以通过关闭。
+- 保持：既有 JSONL、host_response 结算、退出/stdin/取消/资源释放断言未动（installed 13 例原样通过）；未增加超时、未删断言、未自动重试、默认 maxWorkers=1 不变。
+- 实际命令与结果：诊断单测 5/5；installed 3 轮 14/14；CLI 全包 230 通过 14 跳过（`bun run --cwd apps/cli-host test`，523.8s，exit 0）；`test:impact -- <两文件>` 通过（14/14）；`bun run check` exit 0。
+- 未验证项/风险：偶发根因未定位（本轮证据不支持任何单一假设关闭）；其他平台由 CI 覆盖；未触碰真实 Provider/用户状态。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。

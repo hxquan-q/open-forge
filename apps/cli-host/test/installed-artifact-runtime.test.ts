@@ -995,6 +995,41 @@ describe("installed standalone CLI artifact", () => {
 		expect(activeProcess.frames).toEqual([forwardFailure]);
 		activeProcess = undefined;
 	}, 120_000);
+
+	it("diagnoses a never-matching wait with staged, redacted frame evidence", async () => {
+		// BUG-0059 的分阶段诊断合同：永不匹配的等待到期后，错误必须能定位预期
+		// request id/command 与子进程阶段；帧正文（提示词、工具参数）不得进入诊断。
+		// 探针期限取 750ms——同一到点机制，不把 20s 默认期限挂进本套件。
+		fixture = await createAgentRpcFixture();
+		activeProcess = startInstalledCli(artifact.binaryPath, fixture, createIsolatedArtifactEnv(fixture));
+		await expect(activeProcess.request("installed-diag-ready", "get_state")).resolves.toMatchObject({
+			success: true,
+		});
+		activeProcess.send({
+			id: "installed-diag-probe",
+			type: "diag.probe",
+			message: "INSTALLED_DIAG_BODY_MUST_NOT_LEAK",
+		});
+		const mark = activeProcess.mark();
+		let timedOut: Error | undefined;
+		try {
+			await activeProcess.waitFor((frame) => frame.type === "__never_emitted__", mark, 750, {
+				id: "installed-diag-probe",
+				command: "diag.probe",
+			});
+		} catch (error) {
+			timedOut = error instanceof Error ? error : new Error(String(error));
+		}
+		expect(timedOut).toBeDefined();
+		const message = timedOut?.message ?? "";
+		expect(message).toContain("Timed out after 750ms waiting for RPC frame");
+		expect(message).toContain("expected id=installed-diag-probe command=diag.probe");
+		expect(message).toMatch(/child: pid=\d+ exit=running signal=none/);
+		expect(message).toContain("phase: ageMs=");
+		expect(message).toContain("sinceLastFrame=");
+		expect(message).toContain("type=response id=installed-diag-ready command=get_state");
+		expect(message).not.toContain("INSTALLED_DIAG_BODY_MUST_NOT_LEAK");
+	});
 });
 
 async function buildInstalledCliArtifact(): Promise<InstalledCliArtifact> {
