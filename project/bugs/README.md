@@ -17,6 +17,10 @@
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
 | `BUG-0064` | desktop-packaged 合同 job 缺依赖安装致 cleanlist 必红 | verifying | P1 | PLAN-0014 |
+| `BUG-0067` | docs-site 构建在 CI 上 Turbopack 报 71 错 | investigating | P2 | — |
+| `BUG-0066` | desktop-packaged 的 packaged E2E job 连续红 | investigating | P1 | — |
+| `BUG-0065` | macOS 上 worktree 用例因 /var 符号链接误红 | verifying | P2 | — |
+
 | `BUG-0063` | quality CI 的 desktop tsc 冷启动堆内存耗尽 | verifying | P1 | PLAN-0014 |
 | `BUG-0062` | ssh2 校验接受已撤销的主机公钥 | verifying | P1 | PLAN-0014 |
 | `BUG-0060` | 原子写入短写与重命名前失败合同不完整 | verifying | P1 | PLAN-0014 |
