@@ -142,3 +142,10 @@ bun run test:impact -- $files
 - 发布说明已写入 v0.1.3 的新增节；未发布、未打包、未人工验收。
 
 - 实现提交：1ad7dc7bcf4ff9eebf539bcc138feb667206d789（feat(desktop): 添加本机界面与代码字体偏好）；23 个文件，提交前门禁通过，提交后工作树干净。本行是对已完成代码提交的交付补记。
+
+### 后续推送授权与集成检查（2026-10-03）
+
+- 用户明确要求先提交推送，再合入主树。本次额外授权覆盖 origin 的 Task 分支推送；不等于 origin/main 稳定晋升、发布或替其它 Task 提交未验收内容。
+- 既有实现与交付记录已提交，工作树干净。执行 `git push --set-upstream origin HEAD:refs/heads/task/TASK-0181-desktop-font-preferences` 成功；`git ls-remote` 核实远端 SHA 为 `d54dfc91d4b4be47741350b39684bd21c5f27eb1`，包含功能提交 `1ad7dc7bc`。本补记也随同一 Task 分支推送。
+- 合入前 main 为 `c9db5fa27`，存在其它任务的未提交/已暂存记录：ISSUE-0020、Issue/Research 索引、TASK-0185，以及未跟踪的 RESEARCH-0021、TASK-0186。它们不属于字体实现，不重置、不暂存、不代提交。
+- 尚未执行 main 合并；integration_status 保持 pending。须在主树干净后再执行标准合并、集成测试与完整 check；不以 Task 分支的已验证结果冒充合并后的验证。
