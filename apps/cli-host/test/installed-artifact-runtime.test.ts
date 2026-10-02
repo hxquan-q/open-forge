@@ -1029,7 +1029,9 @@ describe("installed standalone CLI artifact", () => {
 		expect(message).toContain("sinceLastFrame=");
 		expect(message).toContain("type=response id=installed-diag-ready command=get_state");
 		expect(message).not.toContain("INSTALLED_DIAG_BODY_MUST_NOT_LEAK");
-	});
+		// 全批负载下「起制品 + 一次 get_state + 750ms 探针」可超过 Vitest 默认 5s 测试
+		// 超时（本会话全批复现，单文件不触发）：与本文件其它用例同款显式期限。
+	}, 60_000);
 });
 
 async function buildInstalledCliArtifact(): Promise<InstalledCliArtifact> {
