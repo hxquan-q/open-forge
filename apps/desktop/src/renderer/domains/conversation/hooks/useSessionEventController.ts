@@ -294,7 +294,10 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 								sessionPath: windowedSessionPath,
 								shouldCommit: () =>
 									activeSessionRef.current?.runtimeId === sessionId &&
-									getQueuedDispatchSeq(sessionId) === (turnStartDispatchSeqRef.current.get(sessionId) ?? 0),
+									// 判活只认净增长：失败派发的 unbump 落在本轮快照之后时序号
+									// 会回落，此时并未「跨到下一轮」，重拉必须照常落地——
+									// 旧的「不等」判活会把最新轮误判过期（BUG-0073）。
+									getQueuedDispatchSeq(sessionId) > (turnStartDispatchSeqRef.current.get(sessionId) ?? 0),
 								patchCanonical: (items) => {
 									if (elapsed <= 0) return items;
 									const mapped = items.slice();
@@ -321,7 +324,9 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							// 判活：本轮结束时/后若发生过队列派发（立即发送 / 自然出队），这次历史
 							// 回流已「跨到下一轮」——会冲掉下一轮的乐观用户气泡、令 draft 串台，或与
 							// 已抢先落盘的 mapped 重复。跳过，交由下一轮自己的 agent_end 安全重拉。
-							if (getQueuedDispatchSeq(sessionId) !== (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
+							// 只认净增长（>）：失败派发的 unbump 使序号回落到快照值时并未跨轮，
+							// 重拉照常落地——「不等」判活会把膨胀窗口内开启的最新轮误杀（BUG-0073）。
+							if (getQueuedDispatchSeq(sessionId) > (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
 								return;
 							}
 							const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);

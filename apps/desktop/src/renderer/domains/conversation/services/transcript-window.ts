@@ -474,9 +474,13 @@ export function reconcileWindowedProjection(
 	});
 	const merged = anchored.items;
 	const canonicalItemIndexes = anchored.baseIndexes;
+	// 只统计头部连续「非 live 复用」的 projected 条目：首部锚定的 live-only
+	// 项是既有 live 行的重排而非新前插内容，计入会让 loadOlderTranscriptPage
+	// 对 Virtuoso firstItemIndex 多移相应行数，滚动锚点跳行（BUG-0073）。
 	let prependedCount = 0;
-	while (prependedCount < projected.length && !fromLive[prependedCount]) prependedCount += 1;
-	// 首部插入的 live-only 项同样造成首屏锚点位移，计入 prependedCount。
-	prependedCount += canonicalItemIndexes[0];
+	for (let k = 0; k < projected.length && !fromLive[k]; k += 1) {
+		if (canonicalItemIndexes[k] !== prependedCount) break;
+		prependedCount += 1;
+	}
 	return { items: merged, prependedCount, canonicalItemIndexes };
 }

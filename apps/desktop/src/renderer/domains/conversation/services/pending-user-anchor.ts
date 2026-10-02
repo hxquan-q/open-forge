@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import type { ChatTimelineItem } from "@shared/store/atoms";
+import { sameUserText } from "./optimistic-user-message-cache";
 
 /**
  * 未决（live-only）用户气泡的因果锚点归位——BUG-0068 的共享合并管线。
@@ -9,7 +10,9 @@ import type { ChatTimelineItem } from "@shared/store/atoms";
  * (a) order 中该气泡之后存在已落在 base 的项 → 锚到第一个后继的 base 位置
  *     之前（气泡夹在持久化项之间，平铺到尾部会跑到它触发的回复之后）；
  * (b) 否则取 order 中最近已落 base 的前驱，锚到 base 中其后第一个 user 项
- *     之前——该位置最可能是它的规范孪生槽；
+ *     之前——该位置最可能是它的规范孪生槽；槽位 user 文本须与气泡一致
+ *     （sameUserText）才落位，否则维持尾部（孪生永不入模的排队幽灵，
+ *     BUG-0073）；
  * (c) 都不满足（气泡晚于 base 尾部 / 无已落 base 邻居 / 非 user 项）
  *     → 维持尾部追加。
  *
@@ -68,7 +71,17 @@ export function mergeWithCausalAnchors(input: CausalAnchorMergeInput): CausalAnc
 					break;
 				}
 			}
-			if (predecessor >= 0) anchor = nextBaseUserIndex(predecessor);
+			if (predecessor >= 0) {
+				// (b) 的依据是「该槽位最可能是它的规范孪生」：锚定槽的 user 文本
+				// 必须与气泡一致才落位中段。孪生永远不会出现在该槽位的项（如
+				// 取消失败回队留下的未消费排队气泡）插进中段会跑到比它更晚的
+				// 已发送消息之前，必须维持尾部（BUG-0073）。
+				const slot = nextBaseUserIndex(predecessor);
+				const slotItem = slot >= 0 ? base[slot] : undefined;
+				if (slotItem && slotItem.kind === "user" && sameUserText(slotItem.text, item.text)) {
+					anchor = slot;
+				}
+			}
 		}
 		if (anchor >= 0) {
 			const group = insertBefore.get(anchor) ?? [];

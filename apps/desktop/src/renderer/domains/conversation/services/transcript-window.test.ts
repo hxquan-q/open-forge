@@ -604,6 +604,42 @@ describe("reconcileWindowedProjection", () => {
 		expect(result.items.map((item) => item.id)).toEqual(["opt-1", "live-u", "live-a"]);
 	});
 
+	it("(b) 槽位文本不匹配的排队幽灵保持尾部，镜像气泡仍锚到孪生槽前", () => {
+		// (b) 的依据是「该槽位最可能是规范孪生」：锚定槽的 user 文本必须与
+		// 气泡一致才锚定中段；孪生永远不会入模的排队幽灵（如取消失败回队
+		// 留下的镜像）插进中段会跑到比它更晚的已发送消息之前（BUG-0073）。
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const mirror = createConversationUserMessage({ id: "opt-2", text: "followup", deliveryPhase: "pending" });
+		const ghost = createConversationUserMessage({ id: "opt-ghost", text: "还在排队", deliveryPhase: "pending" });
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationUserMessage({ id: "proj-u10", entryId: "u-10", text: "followup" }),
+			createConversationAgentMessage({ id: "proj-a10", entryId: "a-10", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, mirror, ghost], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["live-u", "opt-2", "proj-u10", "proj-a10", "opt-ghost"]);
+	});
+
+	it("首部锚定的 live-only 项不计入 prependedCount", () => {
+		// (a) 锚定到结果头部的 pending 是既有 live 行的重排，不是新前插内容；
+		// loadOlderTranscriptPage 拿 prependedCount 前移 Virtuoso firstItemIndex，
+		// 多计一行滚动锚点就跳一行（BUG-0073）。
+		const pendingHead = createConversationUserMessage({ id: "opt-head", text: "早期气泡", deliveryPhase: "pending" });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([pendingHead, liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["opt-head", "live-u", "live-a"]);
+		expect(result.prependedCount).toBe(0);
+	});
+
 	it("完全无已消费邻居的 live-only 项仍追加尾部", () => {
 		const streaming = createConversationAgentMessage({ id: "live-stream", phase: "streaming", blocks: [] });
 		const canonical: ChatConversationItem[] = [
