@@ -9,6 +9,7 @@
 	"scripts": {
 		"clean": "rm -rf dist",
 		"typecheck": "tsc --noEmit",
+		"typecheck:incremental": "NODE_OPTIONS=--max-old-space-size=6144 tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile ../../node_modules/.desktop-check.tsbuildinfo",
 		"test": "bun ../../scripts/quality/run-vitest.mjs --run",
 		"test:packaging": "node --test scripts/desktop-build-environment.test.mjs scripts/desktop-packaging-layout.test.mjs scripts/gen-brand-icons.node-test.mjs scripts/sandbox-staging-guard.node-test.mjs scripts/staged-deps-cleanlist.node-test.mjs scripts/plugins-integrity-manifest.node-test.mjs scripts/electron-e2e-service-options.node-test.mjs scripts/packaged-e2e-binary.node-test.mjs scripts/packaged-native-dependencies.test.mjs scripts/publish-update-artifacts-r2.node-test.mjs scripts/resolve-update-publish-config.node-test.mjs scripts/run-electron-builder.node-test.mjs scripts/verify-linux-packages.node-test.mjs scripts/verify-linux-update.node-test.mjs scripts/verify-update-feed.test.mjs scripts/verify-windows-packages.node-test.mjs scripts/desktop-upgrade-e2e.test.mjs e2e/update-feed-fixture.test.mjs",
 		"test:coverage": "bun ../../scripts/quality/run-vitest.mjs --run --coverage",
