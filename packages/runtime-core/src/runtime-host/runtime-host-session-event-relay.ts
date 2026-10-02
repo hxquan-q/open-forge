@@ -147,8 +147,9 @@ export class RuntimeHostSessionEventRelay {
 				}
 				buffer.events.push(event);
 				if (event.type === "error") buffer.terminalReason = "error";
-				else if (event.type === "done" && event.message.stopReason === "aborted") {
-					buffer.terminalReason = "aborted";
+				else if (event.type === "done") {
+					// A successful later call recovers the Turn; old message.final is only a compatibility path.
+					buffer.terminalReason = event.message.stopReason === "aborted" ? "aborted" : undefined;
 				}
 			}
 			this.notifyExternalSubscribers(sessionKey, event);

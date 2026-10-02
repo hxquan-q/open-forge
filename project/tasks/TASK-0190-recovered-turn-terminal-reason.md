@@ -1,7 +1,7 @@
 ---
 id: TASK-0190
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: runtime-core
 source: user-request; RESEARCH-0022; upstream 94d7e1381
@@ -9,13 +9,13 @@ related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
 related_tasks: [TASK-0187]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0071]
 execution: serial
 branch:
 worktree:
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths: [packages/runtime-core/src/runtime-host/runtime-host-session-event-relay.ts, packages/runtime-core/test/runtime-host/running-changed-reason.test.ts]
-write_paths: [packages/runtime-core/src/runtime-host/runtime-host-session-event-relay.ts, packages/runtime-core/test/runtime-host/running-changed-reason.test.ts, project/tasks/TASK-0190-recovered-turn-terminal-reason.md, .github/release-notes/v0.1.3.md]
+write_paths: [project/bugs/BUG-0071-recovered-turn-stale-error.md, packages/runtime-core/src/runtime-host/runtime-host-session-event-relay.ts, packages/runtime-core/test/runtime-host/running-changed-reason.test.ts, project/tasks/TASK-0190-recovered-turn-terminal-reason.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0187]
@@ -55,3 +55,7 @@ updated: 2026-10-03
 ## 交付记录
 
 实施前合同已落盘；后续回填红绿测试、实际命令、提交、未运行项和剩余风险。
+
+红测：Node runner + runtime-core config，running-changed-reason.test.ts 2 失败/9 通过；真实 runtime/assistant 错误后成功 done 均错误残留 error。
+
+绿测：`bun scripts/quality/run-vitest.mjs run --config packages/runtime-core/vitest.config.ts running-changed-reason.test.ts runtime-host-session-event-relay.test.ts session-event-subscriber-queue.test.ts`，3 文件/26 测试通过；保留旧事件兼容、取消和回放/订阅队列上限。

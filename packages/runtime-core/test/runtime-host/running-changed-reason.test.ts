@@ -1,4 +1,7 @@
+// Modified by The Open Forge contributors.
+
 import type { Message } from "@vetta/ai";
+import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
 	type ErrorEvent,
@@ -71,6 +74,36 @@ describe("RuntimeHost running-changed reason", () => {
 		} as SessionEvent;
 	}
 
+	function assistantDone(reason: "stop" | "toolUse" = "stop"): SessionEvent {
+		return {
+			...base(),
+			channel: "assistant",
+			source: "agent",
+			modelCallIndex: 1,
+			type: "done",
+			reason,
+			message: createAssistantMessage(
+				{ api: "fixture", provider: "fixture", model: "fixture" },
+				{ timestamp: 2, stopReason: reason },
+			),
+		};
+	}
+
+	function assistantError(): SessionEvent {
+		return {
+			...base(),
+			channel: "assistant",
+			source: "agent",
+			modelCallIndex: 0,
+			type: "error",
+			reason: "error",
+			error: createAssistantMessage(
+				{ api: "fixture", provider: "fixture", model: "fixture" },
+				{ timestamp: 1, stopReason: "error" },
+			),
+		};
+	}
+
 	function base(): { sessionId: string; source: "runtime-core"; timestamp: number } {
 		return { sessionId: "session-1", source: "runtime-core", timestamp: 1 };
 	}
@@ -103,6 +136,26 @@ describe("RuntimeHost running-changed reason", () => {
 		emit(assistantFinal("end_turn"));
 		emit(lifecycle("agent_end"));
 		expect(reasons.at(-1)).toEqual({ running: false, reason: "agent_end" });
+	});
+
+	it.each(["runtime", "assistant"] as const)("真实 %s 错误后恢复的 assistant done 清除旧错误", async (origin) => {
+		const { emit, reasons } = await setup();
+		emit(lifecycle("agent_start"));
+		emit(origin === "runtime" ? errorEvent() : assistantError());
+		emit(assistantDone("toolUse"));
+		emit(assistantDone());
+		emit(lifecycle("agent_end"));
+		expect(reasons.at(-1)).toEqual({ running: false, reason: "agent_end" });
+	});
+
+	it.each(["error", "aborted"] as const)("恢复后最终 %s 仍报告真实终态", async (reason) => {
+		const { emit, reasons } = await setup();
+		emit(lifecycle("agent_start"));
+		emit(assistantError());
+		emit(assistantDone("toolUse"));
+		emit(reason === "error" ? assistantError() : lifecycle("aborted"));
+		emit(lifecycle("agent_end"));
+		expect(reasons.at(-1)).toEqual({ running: false, reason });
 	});
 
 	it("回合外的合成 error（pre-stream 校验失败）不影响下一回合的 reason", async () => {
