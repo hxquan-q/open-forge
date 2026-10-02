@@ -19,7 +19,7 @@ write_paths: [apps/desktop/src/main, .github/release-notes]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0196]
-integration_status: pending
+integration_status: integrated（实现 e21ebaa26，随 ca6c9df9d 推送 origin/dev）
 created: 2026-09-23
 updated: 2026-10-03
 ---
