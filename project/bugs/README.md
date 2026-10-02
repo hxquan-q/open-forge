@@ -16,6 +16,13 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0059` | CLI 进程测试并发下 RPC 超时 | investigating | P1 | PLAN-0014 |
+| `BUG-0058` | 文本模型收到超出输入能力的图片 | investigating | P1 | PLAN-0014 |
+| `BUG-0057` | Windows 新增 SSH 主机交互认证被 15s 握手预算掐断，KI 回退吞掉已存口令 | verifying | P1 | — |
+| `BUG-0053` | 兼容网关省略思考块初始签名时被拒绝 | verifying | P1 | PLAN-0014 |
+| `BUG-0054` | 短暂文件占用使原子写入直接失败 | verifying | P1 | PLAN-0014 |
+| `BUG-0055` | 知识库工厂未转发宿主提示词来源 | verifying | P1 | PLAN-0014 |
+| `BUG-0056` | 懒边界回归误将冷编译计入断言超时 | verifying | P1 | PLAN-0014 |
 | `BUG-0050` | 打包版内置浏览器视图建不起来，宿主在运行时按相对路径 require 主进程模块 | verifying | P1 | — |
 | `BUG-0051` | 注入 guest 的脚本引用网页里不存在的打包器辅助函数，浏览器交互命令全部异常终止 | verifying | P1 | — |
 | `BUG-0052` | 注入 guest 的脚本缺少 return，点选与快照结果恒为 undefined | verifying | P1 | — |

@@ -20,3 +20,5 @@
 - `bun run check` 不替代行为测试。
 - `verify:ui:*` 只有用户明确授权时运行。
 - 真实 Provider 默认不运行。
+
+SSH 专项保护与验证：[VERIFY-0014](VERIFY-0014-ssh-selective-protection.md)。

@@ -15,6 +15,15 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0171` | `in_progress` | PLAN-0014 | 核验已有 Task/WIP，按依赖串行集成 main，通过完整闸门后推送 origin/dev。 |
+| `TASK-0170` | `done` | PLAN-0014 | CLI 进程测试隔离，解除 TASK-0162 验证阻断；不放宽断言/超时。 |
+| `TASK-0163` | `verifying` | PLAN-0014 | 按模型能力投影图片，保留历史和工具关联，独立验证。 |
+| `TASK-0162` | `verifying` | PLAN-0014 | 知识库提示词装配，保留自定义组合器，独立验证。 |
+| `TASK-0150` | `verifying` | PLAN-0014 | 原子写重试适配；保留 fork 队列，独立验证。 |
+| `TASK-0149` | `verifying` | PLAN-0014 | Anthropic 网关签名兼容；独立验证，不携带主树 WIP。 |
+| `TASK-0148` | `done` | PLAN-0014 | 验证资源适配与隔离回归；不改写主树其他 UI 工作。 |
+| `TASK-0165` | `verifying` | — | 修复 BUG-0057：ssh2 新主机交互认证——readyTimeout 改用调用方 deadline，KI 密码提示复用当次口令；定向 32/32、impact 与 check 全绿，待真实主机人工验收。 |
+| `TASK-0164` | `verifying` | PLAN-0004 | 完善开发入口：自动选择最小 Project 文档组合，Task 落盘回读后实施；文档专项检查通过，真实会话路由待验收，未提交。 |
 | `TASK-0146` | `done` | — | 修复 plugin-vite 首次导入未收敛便关闭的挂起，保留原超时与断言。 |
 | `TASK-0145` | `done` | — | 补齐 plugin-vite 的 React 测试依赖，验证当前批次后推 origin/dev。 |
 | `TASK-0143` | `done` | PLAN-0004 | Claude 入口去重，保留专属提交约束并设置体积门禁。 |
@@ -46,6 +55,16 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0125` | `blocked` | `PLAN-0013` | rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
 | `TASK-0126` | `done` | `PLAN-0013` | 团队会话预算可视化（ISSUE-0028 候选 C：成员/会话级 token·回合·时长只读投影）；serial，复用 TASK-0124 投影面。 |
 | `TASK-0127` | `blocked` | — | 修改声明头存量缺失一次性 `--write` sweep（ISSUE-0023 A 阶段收尾）；等无并行代码线的安静窗口，执行后删除 ratchet 基线并关闭 WAIVER-0002。 |
+
+### SSH 专项
+
+| Task | 状态 | Plan | 当前焦点 |
+|---|---|---|---|
+| `TASK-0153` | `verifying` | `PLAN-0014` | SSH 进程组取消已提交 2e41db644；定向/两包影响面与完整 check 通过，独立 Worktree 待集成，保留主树 WIP。 |
+| `TASK-0169` | `draft` | `PLAN-0014` | SSH 配置失效与实时连接状态；待失败基线与隔离实施。 |
+| `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
+| `TASK-0167` | `draft` | `PLAN-0014` | 远端文件名筛选与完整调用链接线；待失败基线与隔离实施。 |
+| `TASK-0168` | `draft` | `PLAN-0014` | Windows SSH 回环夹具与 Desktop 流程适配；待失败基线与隔离实施。 |
 
 ## Task 要求
 

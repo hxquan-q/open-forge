@@ -7,6 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
+| `REQ-0008` | 非手机上游能力选择性适配 | ready | [PLAN-0014](../plans/PLAN-0014-selective-upstream-nonmobile.md) |
 | `REQ-0001` | work/coding 本地 Desktop MVP | ready | [`exprot/mvp-scope.md`](../../exprot/mvp-scope.md)、[`ISSUE-0006`](../issues/ISSUE-0006-conversation-task-promotion-policy.md) |
 | `REQ-0002` | Runtime 性能与可靠性基线 | ready | [`exprot/session-memory.md`](../../exprot/session-memory.md)、[`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md) |
 | `REQ-0003` | Open Forge 品牌化发布 | ready | [`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |
