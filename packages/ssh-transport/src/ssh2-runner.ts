@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:net";
 import type { Client, ClientChannel, ConnectConfig } from "ssh2";
 import ssh2 from "ssh2";
+import { classifySshPrompt } from "./askpass.js";
 import { formatHostKeyFingerprint } from "./known-hosts.js";
 import {
 	SSH_TRANSPORT_FAILURE_EXIT_CODE,
@@ -90,6 +91,15 @@ const MAX_PASSWORD_ATTEMPTS = 3;
 const DEFAULT_CONNECT_TIMEOUT_SECONDS = 15;
 const STDERR_TAIL_BYTES = 16 * 1024;
 
+/**
+ * 没有调用方 deadline 时的建连预算。
+ *
+ * ssh2 的 `readyTimeout` 覆盖整个握手——主机密钥确认、口令、2FA 提示里等用户输入的
+ * 时间都算在内，所以不能沿用 `ConnectTimeout`（它本来只管 TCP 建连）。对齐
+ * `SshConnection` 首命令的 4 分钟宽限：留够用户读完指纹、翻密码管理器的余量。
+ */
+const DEFAULT_ESTABLISH_TIMEOUT_MS = 4 * 60 * 1000;
+
 export function createSsh2ProcessRunner(options: Ssh2ProcessRunnerOptions): Ssh2ProcessRunner {
 	const sessions = new Map<string, Ssh2Session>();
 	const sessionFor = (target: string): Ssh2Session => {
@@ -104,6 +114,7 @@ export function createSsh2ProcessRunner(options: Ssh2ProcessRunnerOptions): Ssh2
 	const ensureClient = (
 		spec: ParsedInvocation,
 		signal: AbortSignal | undefined,
+		budgetMs: number | undefined,
 	): Promise<{ client?: Client; failure?: SshProcessResult }> => {
 		if (signal?.aborted) {
 			return Promise.resolve({
@@ -113,7 +124,7 @@ export function createSsh2ProcessRunner(options: Ssh2ProcessRunnerOptions): Ssh2
 		const session = sessionFor(spec.target);
 		// 注意不把自己的 signal 传进 establish：这次的调用方放弃不等于该停掉共享的建连过程——
 		// 别的并发调用方还在等，而且它完成后同样是可复用的已认证连接。
-		return raceAbort(session.ensureReady(spec), signal).then(
+		return raceAbort(session.ensureReady(spec, budgetMs), signal).then(
 			(client) => ({ client }),
 			(error: unknown) => {
 				if (signal?.aborted) {
@@ -152,7 +163,7 @@ export function createSsh2ProcessRunner(options: Ssh2ProcessRunnerOptions): Ssh2
 						aborted: false,
 					};
 		}
-		const { client, failure } = await ensureClient(spec, signal);
+		const { client, failure } = await ensureClient(spec, signal, undefined);
 		if (client === undefined) return failure as SshProcessResult;
 		try {
 			await session.addForward(client, forward.localPort, forward.remotePort);
@@ -192,7 +203,7 @@ export function createSsh2ProcessRunner(options: Ssh2ProcessRunnerOptions): Ssh2
 			// OpenSSH 进程模型下 timeoutMs 管的是整条命令（含建连），这里保持同一条deadline：
 			// 建连等口令的时间也算在里面，与首命令 4 分钟宽限的设计一致。
 			const deadline = linkDeadline(invocation.signal, invocation.timeoutMs);
-			const { client, failure } = await ensureClient(spec, deadline.signal);
+			const { client, failure } = await ensureClient(spec, deadline.signal, deadline.remainingMs());
 			if (client === undefined) {
 				deadline.dispose();
 				const failed = failure ?? { exitCode: null, stdout: new Uint8Array(), stderr: "", aborted: true };
@@ -245,9 +256,13 @@ class Ssh2Session {
 		private readonly options: Ssh2ProcessRunnerOptions,
 	) {}
 
-	ensureReady(spec: ParsedInvocation): Promise<Client> {
+	/**
+	 * `budgetMs` 是发起建立的调用方给本次建连的剩余预算（含等用户答提示的时间）。
+	 * readyPromise 被并发调用共享，预算以第一个触发建立的调用方为准。
+	 */
+	ensureReady(spec: ParsedInvocation, budgetMs?: number): Promise<Client> {
 		if (this.client !== undefined) return Promise.resolve(this.client);
-		this.readyPromise ??= this.establish(spec).finally(() => {
+		this.readyPromise ??= this.establish(spec, budgetMs).finally(() => {
 			this.readyPromise = undefined;
 		});
 		return this.readyPromise;
@@ -297,7 +312,7 @@ class Ssh2Session {
 		this.client = undefined;
 	}
 
-	private async establish(spec: ParsedInvocation): Promise<Client> {
+	private async establish(spec: ParsedInvocation, budgetMs: number | undefined): Promise<Client> {
 		const host = this.options.resolveHost(this.target) ?? syntheticHost(this.target, spec);
 		const round = ++this.establishRound;
 		const resolved = await resolveSshTarget(host, this.options.runConfigQuery);
@@ -328,11 +343,11 @@ class Ssh2Session {
 					target: hop.hostname,
 					source: "manual",
 				};
-				const jumpClient = await this.connectWithAuth(hop, hopHost, sock, verifyKey, round, spec);
+				const jumpClient = await this.connectWithAuth(hop, hopHost, sock, verifyKey, round, budgetMs);
 				jumpClients.push(jumpClient);
 				sock = await forwardOutThrough(jumpClient, resolved.hostname, resolved.port);
 			}
-			const client = await this.connectWithAuth(resolved, host, sock, verifyKey, round, spec);
+			const client = await this.connectWithAuth(resolved, host, sock, verifyKey, round, budgetMs);
 			this.installClient(client, jumpClients);
 			return client;
 		} catch (error) {
@@ -363,14 +378,14 @@ class Ssh2Session {
 		sock: ClientChannel | undefined,
 		verifyKey: (info: Ssh2HostKeyInfo) => Promise<boolean>,
 		round: number,
-		spec: ParsedInvocation,
+		budgetMs: number | undefined,
 	): Promise<Client> {
 		let lastError: unknown;
 		let attempted = false;
 		for await (const partial of this.authAttemptConfigs(resolved, host, round)) {
 			attempted = true;
 			try {
-				return await this.tryConnect(resolved, host, partial, sock, verifyKey, round, spec);
+				return await this.tryConnect(resolved, host, partial, sock, verifyKey, round, budgetMs);
 			} catch (error) {
 				lastError = error;
 				if (isAgentError(error)) {
@@ -460,7 +475,7 @@ class Ssh2Session {
 		sock: ClientChannel | undefined,
 		verifyKey: (info: Ssh2HostKeyInfo) => Promise<boolean>,
 		round: number,
-		spec: ParsedInvocation,
+		budgetMs: number | undefined,
 	): Promise<Client> {
 		const client = (this.options.makeClient ?? (() => new ssh2.Client()))();
 		const { askSecret } = this.options;
@@ -469,7 +484,10 @@ class Ssh2Session {
 			port: resolved.port,
 			username: resolved.username,
 			tryKeyboard: askSecret !== undefined,
-			readyTimeout: spec.connectTimeoutSeconds * 1000,
+			// readyTimeout 覆盖整个握手，等用户答指纹/口令/2FA 提示的时间都在里面，
+			// 预算取调用方给本次操作的 deadline——ConnectTimeout 只管 TCP 建连，
+			// 用它卡握手会让任何需要交互的新主机在 15 秒内必然失败（BUG-0057）。
+			readyTimeout: budgetMs ?? DEFAULT_ESTABLISH_TIMEOUT_MS,
 			keepaliveInterval: 30_000,
 			keepaliveCountMax: 6,
 			...(sock === undefined ? {} : { sock }),
@@ -494,6 +512,14 @@ class Ssh2Session {
 				void (async () => {
 					const answers: string[] = [];
 					for (const prompt of prompts) {
+						// 密码形态的回退提示用本次尝试已获得的口令回答——OpenSSH 同样把同一个
+						// 密码喂给 password 与 keyboard-interactive 两种方法。再走一遍 askSecret
+						// 会命中宿主「同轮只用一次存档」的守卫，把刚记住的凭据当成错的删掉，
+						// 并让用户在同一次连接里答两遍密码框（BUG-0057）。
+						if (partial.password !== undefined && classifySshPrompt(prompt.prompt) === "password") {
+							answers.push(partial.password);
+							continue;
+						}
 						answers.push(
 							(await askSecret({
 								hostId: host.id,
@@ -779,12 +805,15 @@ function syntheticHost(target: string, spec: ParsedInvocation): SshHost {
 interface Deadline {
 	readonly signal: AbortSignal;
 	readonly isTimeout: () => boolean;
+	/** 距到点的剩余毫秒；调用方没给 timeoutMs 时为 undefined。 */
+	readonly remainingMs: () => number | undefined;
 	readonly dispose: () => void;
 }
 
 /** 把调用方的 signal 与 timeoutMs 折成一个 deadline：任一到点即视为整次操作中止。 */
 function linkDeadline(signal: AbortSignal | undefined, timeoutMs: number | undefined): Deadline {
 	const controller = new AbortController();
+	const startedAt = Date.now();
 	let timedOut = false;
 	const onSignal = (): void => controller.abort();
 	if (signal !== undefined) {
@@ -802,6 +831,8 @@ function linkDeadline(signal: AbortSignal | undefined, timeoutMs: number | undef
 	return {
 		signal: controller.signal,
 		isTimeout: () => timedOut,
+		remainingMs: () =>
+			timeoutMs === undefined || timeoutMs <= 0 ? undefined : Math.max(1, timeoutMs - (Date.now() - startedAt)),
 		dispose: () => {
 			if (timer !== undefined) clearTimeout(timer);
 			signal?.removeEventListener("abort", onSignal);

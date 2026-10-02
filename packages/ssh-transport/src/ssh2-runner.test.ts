@@ -308,6 +308,28 @@ describe("ssh2 传输：连接建立", () => {
 		expect(keys[0]?.hostname).toBe("203.0.113.10");
 	});
 
+	it("握手预算取调用方 deadline：交互提示不被 ConnectTimeout 掐断（BUG-0057）", async () => {
+		const client = new FakeClient();
+		const { runner } = runnerWith([client]);
+		const pending = runner.run({ argv: argv("id"), timeoutMs: 240_000 });
+		await vi.waitFor(() => expect(client.lastChannel()).toBeDefined());
+		// argv 里 ConnectTimeout=15；新主机的指纹确认、KI 提示都在握手内等用户输入，
+		// 预算必须来自调用方 deadline（首命令 4 分钟），不能是 15 秒。
+		expect(client.connectConfigs[0]?.readyTimeout).toBe(240_000);
+		client.lastChannel()?.respond("x");
+		await pending;
+	});
+
+	it("无调用方 deadline 时握手预算仍有足够交互余量", async () => {
+		const client = new FakeClient();
+		const { runner } = runnerWith([client]);
+		const pending = runner.run({ argv: argv("id") });
+		await vi.waitFor(() => expect(client.lastChannel()).toBeDefined());
+		expect(client.connectConfigs[0]?.readyTimeout).toBeGreaterThanOrEqual(60_000);
+		client.lastChannel()?.respond("x");
+		await pending;
+	});
+
 	it("连接被远端掐掉后，下一条命令自动重新认证", async () => {
 		const first = new FakeClient();
 		const second = new FakeClient();
