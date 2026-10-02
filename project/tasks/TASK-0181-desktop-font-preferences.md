@@ -13,10 +13,10 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0181-desktop-font-preferences
-worktree: unassigned（待标准工具创建）
-base_commit: c593afdeeb763e1747717ccff6f7b01963624be2
+worktree: ../open-forge-wt/task-0181-desktop-font-preferences
+base_commit: 1e69c213dbd558f341573a841300bc7932d300d3
 read_paths: [apps/desktop, packages/theme-ui, packages/ui, docs/dev]
-write_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/shared/store, apps/desktop/src/renderer/shared/i18n, apps/desktop/src/renderer/domains/settings, apps/desktop/src/renderer/domains/bottom-panel/terminal, apps/desktop/DESIGN.md, project/requirements/REQ-0009-desktop-font-preferences.md, project/research/RESEARCH-0020-desktop-font-preferences-and-licenses.md, project/tasks/TASK-0181-desktop-font-preferences.md, .github/release-notes/v0.1.3.md]
+write_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/shared/store, apps/desktop/src/shared/i18n, apps/desktop/src/renderer/domains/settings, apps/desktop/src/renderer/domains/bottom-panel/terminal, apps/desktop/DESIGN.md, project/requirements/REQ-0009-desktop-font-preferences.md, project/research/RESEARCH-0020-desktop-font-preferences-and-licenses.md, project/tasks/TASK-0181-desktop-font-preferences.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/domains/settings/components/AppearanceSettingsView.tsx, apps/desktop/src/renderer/domains/settings/components/useAppearanceSettingsModel.ts, apps/desktop/src/renderer/domains/bottom-panel/terminal/TerminalSurface.tsx]
 depends_on: []
 conflicts_with: []
@@ -88,6 +88,6 @@ updated: 2026-10-03
 
 - 前置：上一轮 4 个未提交管理文件属于本 Task 来源，本轮提交后作为工作树基线。
 - 实际修改/命令/结果：实施中回填。
-- Worktree：待创建。
+- Worktree：标准工具创建成功，bun install --frozen-lockfile 成功；工作树实际路径见 frontmatter。
 - 未运行：真实 UI、Provider、发布。
 - 剩余风险：浏览器 API 平台支持、等宽测量与中文回退的实机表现待验收。
