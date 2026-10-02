@@ -6,7 +6,18 @@ import { join } from "node:path";
 import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
 import { sweepActiveStdioMcpProcesses } from "@vetta/runtime-node/mcp";
-import { app, type BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, protocol, session, shell } from "electron";
+import {
+	app,
+	type BrowserWindow,
+	dialog,
+	ipcMain,
+	nativeImage,
+	nativeTheme,
+	powerMonitor,
+	protocol,
+	session,
+	shell,
+} from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
 import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
 import { stopAllOpenMarketplaceMcpRuntimes } from "./abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
@@ -22,6 +33,7 @@ import { registerAppLifecycleIpc } from "./app-lifecycle.js";
 import { installApplicationMenu } from "./app-menu.js";
 import { initializeAppMonitor, shutdownAppMonitor } from "./app-monitor/app-monitor-service.js";
 import { initializePerfMonitor, shutdownPerfMonitor } from "./app-monitor/perf-monitor-service.js";
+import { startPowerTrimService } from "./app-monitor/power-trim-service.js";
 import { shutdownBatchTaskExecutor } from "./batch-tasks/batch-task-executor.js";
 import { initializeDesktopBatchTaskService } from "./batch-tasks/batch-task-service.js";
 import { shutdownBrowserAutomationService } from "./browser-automation/index.js";
@@ -857,6 +869,10 @@ if (!gotSingleLock) {
 				void ensureAppMonitorInitialized().catch((error: unknown) => {
 					mainLog.warn("app monitor background initialization failed", error);
 				});
+
+				// 电源事件收缩：suspend/lock-screen 一次性裁剪自身工作集并记录峰谷差；
+				// resume/unlock 仅观测。纯旁路，任何失败只告警（TASK-0042）。
+				startPowerTrimService(powerMonitor);
 
 				// runtime/CLI 与 sandbox 预热：原先靠固定 500ms 定时器躲开首帧，
 				// 现在由 idle 相位统一调度（同样的 500ms 静默期 + 时间片 + 兜底超时 + 耗时记录）。
