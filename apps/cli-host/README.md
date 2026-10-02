@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/cli-host
 
 CLI and process composition roots around `@vetta/coding-agent`.
@@ -54,3 +55,7 @@ internal_dependencies:
   - "@vetta/runtime-node"
   - "@vetta/runtime-storage"
 ```
+
+## Process test isolation
+
+Run `bun run test` in this package (or `bun run test:pkg cli-host` from the repository root). The standard entry uses the shared Node runner with one worker because these suites start real CLI processes and installed artifacts. This serializes independent test files, not the concurrent processes exercised inside ownership and cancellation tests. All existing assertions, test selection and deadlines remain unchanged. Other packages keep their own worker policy.
