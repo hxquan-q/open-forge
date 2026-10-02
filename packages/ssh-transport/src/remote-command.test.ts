@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
 	chmodSync,
