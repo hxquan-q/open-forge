@@ -15,12 +15,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0178` | `ready` | PLAN-0014 | P1 安全：撤销主机密钥必须拒绝；BUG-0062 合成宿主链已复现，本轮仅规划。 |
-| `TASK-0173` | `ready` | PLAN-0014 | CLI RPC 偶发超时的可复现诊断；仅规划，证据见 RESEARCH-0019。 |
-| `TASK-0174` | `draft` | PLAN-0014 | SSH 标准测试入口与选择器覆盖合同；仅规划，证据见 RESEARCH-0019。 |
-| `TASK-0175` | `ready` | PLAN-0014 | 原子写入的完整字节与失败清理合同；仅规划，证据见 RESEARCH-0019。 |
-| `TASK-0176` | `draft` | — | 回归测试耗时剖析与低风险提速；仅规划，证据见 RESEARCH-0019。 |
-| `TASK-0177` | `ready` | PLAN-0014 | SSH 平台能力与验证文档对齐；仅规划，证据见 RESEARCH-0019。 |
+| `TASK-0178` | `verifying` | PLAN-0014 | P1 安全：撤销主机密钥必须拒绝；已实施提交 8b63e0d02，定向/impact/changed/check 全绿，待人工验收。 |
+| `TASK-0175` | `verifying` | PLAN-0014 | 原子写入完整字节与失败清理合同；已实施提交 521a1eac9，toolkit 35/35 与批次门禁全绿，待人工验收。 |
+| `TASK-0173` | `verifying` | PLAN-0014 | RPC 超时分阶段诊断已落地（VERIFY-0015 六轮对照未复现，BUG-0059 保持 investigating）；待人工验收。 |
+| `TASK-0174` | `verifying` | PLAN-0014 | ssh-transport 标准测试入口 + 选择器防回退断言已落地；入口/quality/impact 实测绿，三平台 CI 证据待推送后产生。 |
+| `TASK-0176` | `verifying` | — | 三组串行基线与瓶颈证据已交付（VERIFY-0016：desktop 装配型、cli 进程型）；全部候选否决、默认策略不变。 |
+| `TASK-0177` | `verifying` | PLAN-0014 | SSH README 平台能力/安全边界按现行实现对齐（含 TASK-0174 落地后的真实测试入口）；纯文档任务。 |
 | `TASK-0172` | `done` | PLAN-0014 | 集成后审查：新建 0173～0178 六项、细化 0168/0169、登记三个隔离复现 Bug；只完成规划。 |
 | `TASK-0171` | `done` | PLAN-0014 | 主树全部已有改动与七个 Task 分支已提交/集成并推送 origin/dev；最终 41 包、483 质量测试与完整 check 通过，原 Worktree 保留。 |
 | `TASK-0170` | `done` | PLAN-0014 | 来源 769f31bc3 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
@@ -68,10 +68,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task | 状态 | Plan | 当前焦点 |
 |---|---|---|---|
 | `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
-| `TASK-0169` | `ready` | PLAN-0014 | P1 生命周期：BUG-0061 已复现旧探测覆盖失效状态；保留认证/局部取消合同，仅规划。 |
+| `TASK-0169` | `verifying` | PLAN-0014 | P1 生命周期：探测代次+失效处置已实施（BUG-0061 修复），定向 94/94 与批次门禁全绿，待人工验收。 |
 | `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
 | `TASK-0167` | `draft` | `PLAN-0014` | 远端文件名筛选与完整调用链接线；待失败基线与隔离实施。 |
-| `TASK-0168` | `ready` | PLAN-0014 | P1：明确跨平台回环与 POSIX 专属覆盖，是 TASK-0174 标准入口前置；尚未实施。 |
+| `TASK-0168` | `verifying` | PLAN-0014 | Windows 回环夹具（Git Bash）+ desktop 消费者解锁已落地；包级 195 通过，POSIX 专属用例显式门控；runtime-ssh 消费者与 resource-runtime 挂起待后续。 |
 
 ## Task 要求
 

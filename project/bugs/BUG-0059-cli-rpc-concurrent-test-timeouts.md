@@ -39,3 +39,7 @@ TASK-0171 的首轮全包测试在显式单 worker 下仍出现 installed-artifa
 ## 诊断落地与对照（2026-10-03，TASK-0173）
 
 `waitFor`/`request` 超时错误现已携带预期 id/command、子进程退出状态、启动/最近帧间隔与仅含 `type/id/command` 的有界最近帧摘要（帧正文不进入诊断），格式化为纯函数并配独立单测；安装制品套件含真实二进制上的永不匹配探针。同快照 6 组串行对照（安装制品 3 轮 + 源码入口 3 轮，均 `--maxWorkers=1`）全部通过，本轮未复现。根因仍未确认，保持 investigating；下次失败应凭新诊断字段直接归因阶段。证据见 [VERIFY-0015](../verification/VERIFY-0015-cli-rpc-timeout-diagnostics.md)。
+
+## 追加证据：全批负载下的首次实测复现（2026-10-03，TASK-0176 全批运行）
+
+41 包有序全批（cli-host 在 desktop 之后执行）中，installed-artifact 的**新诊断探针用例**超过 Vitest 默认 5s 测试期限失败（同会话单文件 4 次通过、单包全量通过；失败的是「起安装制品 + 一次 get_state + 750ms 探针」的整体用时，非 RPC 帧等待本身超时）。这首次在受控条件下实测到「全批负载会显著拖慢单用例墙钟」的现象，与 BUG-0059 的资源争用假设方向一致；已为该用例补显式 60s 期限（a96b6f0ea，断言与探针期限不变）。仍不构成根因结论：既有偶发 RPC 帧超时与本例的超时层级不同，保持 investigating。

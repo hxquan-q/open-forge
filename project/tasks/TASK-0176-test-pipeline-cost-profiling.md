@@ -1,7 +1,7 @@
 ---
 id: TASK-0176
 type: task
-status: draft
+status: verifying
 priority: P2
 owner: quality + desktop + cli-host tests
 source: RESEARCH-0019; TASK-0172
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: []
 execution: serial
 branch: main
-worktree: unassigned（仅规划，未开始代码实施）
+worktree: unassigned（2026-10-03 主检出串行实施完成）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [scripts/quality/test-pkg.mjs, scripts/quality/run-vitest.mjs, scripts/quality/vitest-env.mjs, apps/desktop/vitest.config.ts, apps/cli-host/vitest.config.ts, docs/dev/quality-gates.md]
 write_paths: [scripts/quality/test-pkg.mjs, scripts/quality/run-vitest.mjs, scripts/quality/vitest-env.mjs, scripts/quality/quality-gates.test.mjs, docs/dev/quality-gates.md, project/verification, project/tasks/TASK-0176-test-pipeline-cost-profiling.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0173]
 conflicts_with: [TASK-0173, TASK-0174]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -69,3 +69,11 @@ TASK-0171 最终全包阶段 1539.5 秒：Desktop 692.5、CLI 486.7、Coding Age
 ## 验收分层与当前交付
 
 当前只完成规划，未来行为测试/实现/技术验收均未执行；源码/证据自审不等于产品测试通过。集成 pending，未创建代码分支或 Worktree。实现后回填 red/green、实际命令、提交与未验证边界，功能人工接受与发布分别处理。
+
+## 交付记录（2026-10-03，主检出串行实施）
+
+- 基线：固定快照三组串行 desktop 全量（764.50 / 709.67 / 710.47s，中位 710.47s，抖动 ±7.7%）+ cli-host 参照（513.15s）+ 41 包有序全批参照；环境（i7-12650H/16 线程、31.7 GB、Bun 1.4.2、Node 26.3.1、Windows 2 worker）与 Vitest 阶段分解记录于 [VERIFY-0016](../verification/VERIFY-0016-test-pipeline-cost-baseline.md)。
+- 瓶颈证据：desktop 为装配型（tests 仅占墙钟 ~21%，import/transform 与环境装配主导）；cli-host 为进程型（tests 占 90%）；全批负载放大单用例墙钟（BUG-0059 追加证据，探针超默认期限一例已修：a96b6f0ea）。
+- 裁决：三个候选（提高 worker、持久 transform 缓存、环境细分）全部否决——分别与稳定性合同、低风险边界、未测量收益冲突；**不改默认策略**，只交付基线与否决依据。默认 worker、超时、测试集合与断言无任何变化（无 runner/选择器代码改动）。
+- 附加事实：TASK-0174 使 ssh-transport 进入全批（8.0s），总批时长未因本批次新增覆盖显著变化。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
