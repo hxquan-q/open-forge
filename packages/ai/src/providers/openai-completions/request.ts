@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions.js";
 import { getEnvApiKey } from "../../env-api-keys.js";
@@ -25,7 +26,7 @@ export function createOpenAICompletionsClient(
 			headers,
 			buildCopilotDynamicHeaders({
 				messages: context.messages,
-				hasImages: hasCopilotVisionInput(context.messages),
+				hasImages: model.input.includes("image") && hasCopilotVisionInput(context.messages),
 			}),
 		);
 	}

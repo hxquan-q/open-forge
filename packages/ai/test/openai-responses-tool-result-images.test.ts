@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { convertResponsesMessages } from "../src/providers/openai-responses/messages.js";
 import type { Context, Model } from "../src/types.js";
@@ -16,7 +17,73 @@ const model: Model<"openai-responses"> = {
 };
 
 describe("openai-responses tool-result images", () => {
-	it("forwards user images when image capability metadata is missing", () => {
+	it("forwards user images for an explicitly vision-capable model", () => {
+		const context: Context = {
+			messages: [
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: "inspect" },
+						{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+					],
+					timestamp: 1,
+				},
+			],
+		};
+
+		expect(convertResponsesMessages({ ...model, input: ["text", "image"] }, context, new Set())).toEqual([
+			{
+				role: "user",
+				content: [
+					{ type: "input_text", text: "inspect" },
+					{
+						type: "input_image",
+						detail: "auto",
+						image_url: "data:image/png;base64,ZmFrZQ==",
+					},
+				],
+			},
+		]);
+	});
+
+	it("forwards tool-result images for an explicitly vision-capable model", () => {
+		const context: Context = {
+			messages: [
+				{
+					role: "toolResult",
+					toolCallId: "call-1",
+					toolName: "read",
+					content: [
+						{ type: "text", text: "Read image file [image/png]" },
+						{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+					],
+					isError: false,
+					timestamp: 1,
+				},
+			],
+		};
+
+		expect(convertResponsesMessages({ ...model, input: ["text", "image"] }, context, new Set())).toEqual([
+			{
+				type: "function_call_output",
+				call_id: "call-1",
+				output: "Read image file [image/png]",
+			},
+			{
+				role: "user",
+				content: [
+					{ type: "input_text", text: "Attached image(s) from tool result:" },
+					{
+						type: "input_image",
+						detail: "auto",
+						image_url: "data:image/png;base64,ZmFrZQ==",
+					},
+				],
+			},
+		]);
+	});
+
+	it("omits user images for a text-only model", () => {
 		const context: Context = {
 			messages: [
 				{
@@ -36,16 +103,15 @@ describe("openai-responses tool-result images", () => {
 				content: [
 					{ type: "input_text", text: "inspect" },
 					{
-						type: "input_image",
-						detail: "auto",
-						image_url: "data:image/png;base64,ZmFrZQ==",
+						type: "input_text",
+						text: "Image content omitted because the current model does not support image input.",
 					},
 				],
 			},
 		]);
 	});
 
-	it("forwards tool-result images when image capability metadata is missing", () => {
+	it("omits tool-result images for a text-only model", () => {
 		const context: Context = {
 			messages: [
 				{
@@ -66,18 +132,8 @@ describe("openai-responses tool-result images", () => {
 			{
 				type: "function_call_output",
 				call_id: "call-1",
-				output: "Read image file [image/png]",
-			},
-			{
-				role: "user",
-				content: [
-					{ type: "input_text", text: "Attached image(s) from tool result:" },
-					{
-						type: "input_image",
-						detail: "auto",
-						image_url: "data:image/png;base64,ZmFrZQ==",
-					},
-				],
+				output:
+					"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
 			},
 		]);
 	});

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { convertBedrockMessages } from "../src/providers/amazon-bedrock/messages.js";
 import type { Message, Model } from "../src/types.js";
@@ -16,6 +17,39 @@ const anthropicModel: Model<"bedrock-converse-stream"> = {
 };
 
 describe("Amazon Bedrock message conversion", () => {
+	it("forwards tool-result images for an explicitly vision-capable model", () => {
+		const converted = convertBedrockMessages(
+			{
+				messages: [
+					{
+						role: "toolResult",
+						toolCallId: "call-1",
+						toolName: "read",
+						content: [
+							{ type: "text", text: "Read image file [image/png]" },
+							{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+						],
+						isError: false,
+						timestamp: 1,
+					},
+				],
+			},
+			{ ...anthropicModel, input: ["text", "image"] },
+			"none",
+		);
+
+		expect(converted[0]?.content?.[0]).toEqual({
+			toolResult: {
+				toolUseId: "call-1",
+				content: [
+					{ text: "Read image file [image/png]" },
+					{ image: { format: "png", source: { bytes: new Uint8Array([102, 97, 107, 101]) } } },
+				],
+				status: "success",
+			},
+		});
+	});
+
 	it("groups consecutive tool results into one user message", () => {
 		const messages: Message[] = [
 			{
@@ -57,7 +91,7 @@ describe("Amazon Bedrock message conversion", () => {
 		]);
 	});
 
-	it("forwards tool-result images when image capability metadata is missing", () => {
+	it("omits tool-result images for a text-only model", () => {
 		const converted = convertBedrockMessages(
 			{
 				messages: [
@@ -83,7 +117,7 @@ describe("Amazon Bedrock message conversion", () => {
 				toolUseId: "call-1",
 				content: [
 					{ text: "Read image file [image/png]" },
-					{ image: { format: "png", source: { bytes: new Uint8Array([102, 97, 107, 101]) } } },
+					{ text: "Image content omitted because the current model does not support image input." },
 				],
 				status: "success",
 			},
