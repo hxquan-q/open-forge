@@ -170,7 +170,7 @@ describe("Anthropic compatible thinking blocks", () => {
 		expect(textOf(result)).toBe("hello");
 		const thinking = result.content.find((item) => item.type === "thinking");
 		expect(thinking?.thinking).toBe("plan");
-		if (withDelta) expect(thinking?.thinkingSignature).toBe("sig");
+		expect(thinking?.thinkingSignature).toBe(withDelta ? "sig" : undefined);
 		expect(events.at(-1)?.type).toBe("done");
 		expect(result.usage.output).toBeGreaterThan(0);
 	});

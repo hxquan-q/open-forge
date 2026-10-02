@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: [BUG-0053]
 execution: parallel
 branch: task/TASK-0149-anthropic-gateway-thinking-compat
-worktree: ../open-forge-wt/task-0149-anthropic-gateway-thinking-compat
+worktree: unassigned（已集成，原 Worktree 保留待安全清理）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [packages/ai/src/providers/anthropic/response-schema.ts, packages/ai/test/provider-conformance.test.ts]
 write_paths: [packages/ai/src/providers/anthropic/response-schema.ts, packages/ai/test/provider-conformance.test.ts, project/tasks/TASK-0149-anthropic-gateway-thinking-compat.md]
 exclusive_paths: [packages/ai/src/providers/anthropic/response-schema.ts]
 depends_on: [TASK-0148]
 conflicts_with: [TASK-0122, TASK-0123]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -67,6 +67,23 @@ fixture SSE 正常/缺签名/错误签名类型、工具、usage、终止、取�
 
 Worktree 创建基线为 main@1cbe27c53；在任何本 Task 实现写入前，快进装配已完成的 TASK-0148（1020b7c59）作为验证依赖。此操作只影响本 Task 独立分支，不改 main，不引入主树 WIP。后续提交只包含本 Task 的 AI 文件与记录，依赖提交单独保留，集成顺序为 0148 → 0149。
 
+## 隔离交付证据
+
+- 只改 thinking start 的 signature 为可选，其他字段仍按 TypeBox 校验；错误类型 null/number 仍拒绝，无签名终态不捏造签名。现有 unsigned thinking 回放转换仍由 messages.ts 处理，未覆盖重试预算或消息转换。
+- `bun run --cwd packages/ai test`：62 文件、488 测试通过；默认配置排除 integration/live，不使用真实 Provider。
+- `bun run test:impact -- packages/ai/src/providers/anthropic/response-schema.ts packages/ai/test/provider-conformance.test.ts`：直接 18 测试、相关 17 文件 243 测试通过。
+- `bun run check`：lint、types、guards、mobile-lint 全部通过。随后仅回写记录。
+- 技术评审为源码自审；正常文本、thinking、工具、错误、取消和 usage/stop 由现有 provider conformance/回归覆盖。
+- Coordinator 已将候选文案追加到主检出 0.1.3 的修复节，不覆写既有条目；本 Worker 不提交主检出发布文件。集成时核对该条保留。
+- 工程验证通过，人工网关验收尚未执行；保持 verifying，集成 pending、未推送、未发布。
+
 ## 已提交隔离结果
 
 提交 7a2a5ce509f9f567de2eb73cc7fd39d3344bdb6a，位于 task/TASK-0149-anthropic-gateway-thinking-compat，父依赖为已验证的 1020b7c59。AI 全包 62 文件/488 测试、test:impact 的直接 18/相关 243 测试、完整 check 通过。发布文案已由 Coordinator 追加主检出修复节；未合入 main、未推送。用户网关实测未授权，保持 verifying。
+
+
+## TASK-0171 主树集成（2026-10-02）
+
+来源分支：task/TASK-0149-anthropic-gateway-thinking-compat；来源提交：7a2a5ce509f9f567de2eb73cc7fd39d3344bdb6a。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
+
+集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0149。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。
