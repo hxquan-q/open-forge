@@ -37,7 +37,7 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0181]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-03
 updated: 2026-10-03
 ---
@@ -130,6 +130,7 @@ updated: 2026-10-03
   - `bun run test:impact`：desktop direct 6 文件 96 例 + related 56 文件 397 例全绿。
 - 未运行及原因：verify:ui 未获任务授权；打包验证不适用（纯渲染层逻辑）。
 - Worktree：未拆出 worktree——单线串行小修，主树直接实施。
+- 提交：`c9db5fa27`（主树 main，19 文件原子提交；pre-commit 门禁通过）。
 - 剩余风险：
   - live-only 锚定启发式按「已消费邻居」定位；若 live 序列中邻居本身也是未决项（多层套叠未消费气泡），靠重拉后的下一轮对账收敛，有 `MAX_UNRESOLVED_RECONCILES` 上界兜底。
   - internal/continuation 输入不落盘为 canonical user 条目，其镜像若产生将按未决过期机制消亡；未观察到该形态。
