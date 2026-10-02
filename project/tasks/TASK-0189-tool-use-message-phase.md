@@ -1,7 +1,7 @@
 ---
 id: TASK-0189
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: desktop
 source: user-request; RESEARCH-0022; upstream f4dfc2690
@@ -9,13 +9,13 @@ related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
 related_tasks: [TASK-0187]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0070]
 execution: serial
 branch:
 worktree:
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths: [apps/desktop/src/renderer/shared/conversation/message-stream.ts, apps/desktop/src/renderer/shared/conversation/message-stream.test.ts]
-write_paths: [apps/desktop/src/renderer/shared/conversation/message-stream.ts, apps/desktop/src/renderer/shared/conversation/message-stream.test.ts, project/tasks/TASK-0189-tool-use-message-phase.md, .github/release-notes/v0.1.3.md]
+write_paths: [project/bugs/BUG-0070-tool-use-premature-completion.md, apps/desktop/src/renderer/shared/conversation/message-stream.ts, apps/desktop/src/renderer/shared/conversation/message-stream.test.ts, project/tasks/TASK-0189-tool-use-message-phase.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0187]
@@ -55,3 +55,7 @@ updated: 2026-10-03
 ## 交付记录
 
 实施前合同已落盘；后续回填红绿测试、实际命令、提交、未运行项和剩余风险。
+
+红测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts message-stream.test.ts`，1 新用例因 completed 而非 streaming 失败，5 既有用例通过。
+
+绿测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts message-stream.test.ts conversation-projection.test.ts useSessionManager.queue.test.ts`，5 文件/32 测试通过，覆盖共享投影、会话/Team 与排队入口；完整批次检查待终验。
