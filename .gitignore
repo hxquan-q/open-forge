@@ -132,6 +132,7 @@ terminals
 mcps
 agent-tools
 .playwright-cli
+.playwright-mcp/
 .tmp*
 .ai
 scripts/eval/results/

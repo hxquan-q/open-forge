@@ -16,6 +16,8 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0064` | desktop-packaged 合同 job 缺依赖安装致 cleanlist 必红 | verifying | P1 | PLAN-0014 |
+| `BUG-0063` | quality CI 的 desktop tsc 冷启动堆内存耗尽 | verifying | P1 | PLAN-0014 |
 | `BUG-0062` | ssh2 校验接受已撤销的主机公钥 | verifying | P1 | PLAN-0014 |
 | `BUG-0060` | 原子写入短写与重命名前失败合同不完整 | verifying | P1 | PLAN-0014 |
 | `BUG-0061` | 失效后的迟到 SSH 探测恢复旧状态 | verifying | P1 | PLAN-0014 |
