@@ -15,7 +15,13 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0186` | `in_progress` | — | ISSUE-0020：Office 解析器按需加载与 PDF worker URL 释放；独立 Worktree，不改主树聊天任务。 |
+| `TASK-0187` | `in_progress` | PLAN-0014 | 非手机稳定性首批的单工作树串行集成；不含新能力迁移。 |
+| `TASK-0188` | `in_progress` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 工作树串行。 |
+| `TASK-0189` | `ready` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 工作树串行。 |
+| `TASK-0190` | `ready` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 工作树串行。 |
+| `TASK-0191` | `ready` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 工作树串行。 |
+| `TASK-0192` | `ready` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 工作树串行。 |
+| `TASK-0193` | `ready` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 工作树串行。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
 | `TASK-0181` | `in_progress` | — | 本机字体偏好：两项选择、主题持久化和终端跟随；独立 Worktree 实施。 |
 | `TASK-0180` | `verifying` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |

@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| 非手机上游最新优化与缺口 | [RESEARCH-0022](RESEARCH-0022-upstream-nonmobile-gap-audit.md) |
 | Desktop 字体设置与字体授权 | [RESEARCH-0020](RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
 | 集成后可靠性与验证成本审查 | [RESEARCH-0019](RESEARCH-0019-post-integration-optimization-audit.md) |
 | 架构、Agent Loop、Composition | `exprot/architecture-overview.md`、`agent-loop.md`、`composition.md` |
