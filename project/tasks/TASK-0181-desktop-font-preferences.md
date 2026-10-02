@@ -19,7 +19,8 @@ read_paths: [apps/desktop, packages/theme-ui, packages/ui, docs/dev]
 write_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/shared/store, apps/desktop/src/shared/i18n, apps/desktop/src/renderer/domains/settings, apps/desktop/src/renderer/domains/bottom-panel/terminal, apps/desktop/DESIGN.md, project/requirements/REQ-0009-desktop-font-preferences.md, project/research/RESEARCH-0020-desktop-font-preferences-and-licenses.md, project/tasks/TASK-0181-desktop-font-preferences.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/domains/settings/components/AppearanceSettingsView.tsx, apps/desktop/src/renderer/domains/settings/components/useAppearanceSettingsModel.ts, apps/desktop/src/renderer/domains/bottom-panel/terminal/TerminalSurface.tsx]
 depends_on: []
-conflicts_with: []
+# 发布说明与 0122/0123 的写路径重叠：仅共享 .github/release-notes 归并，按 Coordinator 串行集成登记（另一会话补记）
+conflicts_with: [TASK-0122, TASK-0123]
 integration_status: pending
 created: 2026-10-03
 updated: 2026-10-03
