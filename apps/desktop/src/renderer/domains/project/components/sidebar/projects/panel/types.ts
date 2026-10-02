@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	DefaultConversationFilter,
 	Project,
@@ -32,6 +33,8 @@ export interface ProjectsPanelModel {
 	filteredProjects: Project[];
 	imCwd: string;
 	noOtherProjects: boolean;
+	/** ssh:// 项目所属主机的显示名；本地项目与查不到主机的项目返回 undefined。 */
+	remoteHostLabel: (cwd: string) => string | undefined;
 	projectSessions: (cwd: string) => SidebarConversationInfo[];
 	projectSessionsLoading: (cwd: string) => boolean;
 	projectsLoading: boolean;

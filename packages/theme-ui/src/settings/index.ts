@@ -198,6 +198,8 @@ export type { ShortcutRecorderViewProps } from "./ShortcutRecorderView";
 export { ShortcutRecorderView } from "./ShortcutRecorderView";
 export type { ShortcutActionRowView, ShortcutsSettingsViewProps } from "./ShortcutsSettingsView";
 export { ShortcutsSettingsView } from "./ShortcutsSettingsView";
+export type { SshHostFormFieldsLabels, SshHostFormValues } from "./SshHostFormFieldsView";
+export { SshHostFormFieldsView } from "./SshHostFormFieldsView";
 export { SubscriptionActionsView } from "./SubscriptionActionsView";
 export type {
 	RemoteModel as SubscriptionRemoteModel,

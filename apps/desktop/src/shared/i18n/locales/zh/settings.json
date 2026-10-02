@@ -2228,6 +2228,8 @@
 	"sshRemove": "删除主机",
 	"sshRemoveTitle": "删除这台主机？",
 	"sshRemoveConfirm": "删除后「{{name}}」将从列表中移除。远端机器上的文件不受影响；如果还有项目放在这台主机上，需要先移除那些项目。",
+	"sshTargetPlaceholder": "build-01",
+	"sshIdentityFilePlaceholder": "~/.ssh/id_ed25519",
 	"sshFieldTarget": "连接目标",
 	"sshFieldTargetHint": "填 ~/.ssh/config 里的别名（推荐），或 user@host。只要你在终端里 ssh 它能连上，这里就能连上。",
 	"sshFieldLabel": "显示名称",

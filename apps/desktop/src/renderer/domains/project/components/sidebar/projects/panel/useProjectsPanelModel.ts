@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
+import { useSshHosts } from "@shared/hooks/useSshHost";
 import { pathBasename } from "@shared/lib/utils";
 import type { SessionInfo } from "@shared/store/atoms";
 import {
@@ -16,6 +17,7 @@ import {
 	pendingSessionOpenAtom,
 } from "@shared/store/atoms";
 import { useMatches, useNavigate } from "@tanstack/react-router";
+import { isSshProjectUri, parseProjectLocation } from "@vetta/ssh-transport/project-uri";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { selectAtom } from "jotai/utils";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -520,6 +522,24 @@ export function useProjectsPanelModel({
 
 	const noOtherProjects = filteredProjects.length === 0 && (!showBatchGroup || batchAsProjects.length === 0);
 
+	// 远程项目行的主机标签：整个面板共享一份主机清单，随主进程广播刷新。
+	// 主机被删掉的项目归 OrphanRemoteProjectGuard 接管，这里只负责显示。
+	const hasRemoteProjects = filteredProjects.some((project) => isSshProjectUri(project.cwd));
+	const { hosts: sshHosts } = useSshHosts(hasRemoteProjects);
+	const sshHostLabels = useMemo(() => new Map(sshHosts.map((host) => [host.id, host.label])), [sshHosts]);
+	const remoteHostLabel = useCallback(
+		(cwd: string) => {
+			if (!isSshProjectUri(cwd)) return undefined;
+			try {
+				const location = parseProjectLocation(cwd);
+				return location.kind === "ssh" ? sshHostLabels.get(location.hostId) : undefined;
+			} catch {
+				return undefined;
+			}
+		},
+		[sshHostLabels],
+	);
+
 	useEffect(() => {
 		if (defaultConversationSource === "claw" && imCwd) {
 			void loadSessions(imCwd);
@@ -582,6 +602,7 @@ export function useProjectsPanelModel({
 		filteredProjects,
 		imCwd,
 		noOtherProjects,
+		remoteHostLabel,
 		projectSessions: (cwd) => projectSidebarSessions.get(cwd) ?? [],
 		projectSessionsLoading: (cwd) => (sessionLoadingCwds.has(cwd) && !sessionsMap.has(cwd)) || teamSidebar.loading,
 		projectsLoading: !projectsInitialized,
