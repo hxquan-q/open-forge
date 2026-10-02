@@ -27,6 +27,8 @@
 
 ## 目录
 
+记录类型的自动选择（建什么、何时续接、如何转换）见 [`CONVENTIONS.md`](CONVENTIONS.md) 的「记录路由」一节；这里只做目录导航。
+
 - `requirements/`：稳定的用户目标、边界和验收条件。
 - `plans/`：实现路线、阶段、依赖、取舍和升级信号。
 - `tasks/`：可直接执行的原子工作项。
@@ -62,10 +64,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 ## 标准流水线
 
+以下是进入实施后的主线，不要求每次创建全套记录；已有来源续接，PLAN 按记录路由条件建立，RESEARCH/VERIFY/Context 等支线按需关联。仅分析/规划请求停在对应记录，不自动进入编码。
+
 ```text
 一句话需求
   → REQ / BUG / ISSUE
-  → PLAN
+  → PLAN（按需）
   → TASK
   → Red：失败测试或基线
   → Trace：沿真实调用链确认根因

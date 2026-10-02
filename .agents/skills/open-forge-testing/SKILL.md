@@ -32,7 +32,7 @@ description: 为 Open Forge 的功能、缺陷、重构、UI/协议/CI 合同及
 
 ## 与统一入口的分工
 
-由 `open-forge-task-intake` 按需调用，也支持直接测试请求；验收分工与状态唯一来源是 [交付合同](../open-forge-task-intake/references/delivery.md)。
+由 `open-forge-task-intake` 按需调用，也支持直接测试请求。直接请求涉及新增或修改测试/实现文件时，先读取 [统一入口的记录路由步骤](../open-forge-task-intake/SKILL.md#3-按记录路由建立文档再进入实施)，完成记录与实施条件核对后继续；已有相关 Task 时续接。上面的行为、Given/When/Then、测试层级和命令写入该 Task 或关联 Verification。仅测试设计、评审或运行已有测试按请求范围执行。记录政策见 [Project 规范](../../../project/CONVENTIONS.md#实施前记录)，验收分工与状态唯一来源是 [交付合同](../open-forge-task-intake/references/delivery.md)。
 
 ## TDD 与行为保持型重构
 
@@ -153,7 +153,7 @@ bun run check
 
 选择与改动相称的最小充分范围：先跑定向测试和 `test:impact`，一轮编辑后跑 `check:quick`，涉及多个包或范围不明确时跑 `test:changed`，代码任务完成后跑一次 `check`。`check` 不运行测试，不能替代行为测试。
 
-交付时说明覆盖了哪些用户流程或合同、实际运行了哪些测试与检查、哪些未运行及原因、剩余风险和兼容性影响。不得声称未执行的验证已经通过。
+按统一入口的交付步骤，把覆盖流程/合同、实际命令和结果、未运行项及原因、剩余风险和兼容性影响写回 Task 或关联 Verification，并在交付中摘要说明；状态按交付合同同步。不得声称未执行的验证已经通过。
 
 ## Skill 维护
 
