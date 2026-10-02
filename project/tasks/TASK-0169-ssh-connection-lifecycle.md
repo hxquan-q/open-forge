@@ -1,24 +1,24 @@
 ---
 id: TASK-0169
 type: task
-status: draft
+status: ready
 priority: P1
 owner: ssh-transport + desktop
-source: user-request; RESEARCH-0018
+source: user-request; RESEARCH-0018; RESEARCH-0019; BUG-0061
 related_requirement: [REQ-0002]
 related_plan: [PLAN-0014]
-related_tasks: [TASK-0153, TASK-0158, TASK-0165]
+related_tasks: [TASK-0153, TASK-0158, TASK-0165, TASK-0172, TASK-0178]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0061]
 execution: serial
 branch: main
 worktree: unassigned
-base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
+base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport/src/ssh-connection-manager.ts, packages/ssh-transport/src/ssh-connection.ts, packages/ssh-transport/src/ssh2-runner.ts, apps/desktop/src/main/ssh]
-write_paths: [packages/ssh-transport/src/ssh-connection-manager.ts, packages/ssh-transport/src/ssh-connection.ts, packages/ssh-transport/src/ssh2-runner.ts, apps/desktop/src/main/ssh, project/tasks/TASK-0169-ssh-connection-lifecycle.md, .github/release-notes/v0.1.3.md]
+write_paths: [packages/ssh-transport/src/process-runner.ts, packages/ssh-transport/src/node-process-runner.ts, packages/ssh-transport/src/ssh-connection-manager.test.ts, packages/ssh-transport/src/ssh-connection.test.ts, packages/ssh-transport/src/ssh2-runner.test.ts, packages/ssh-transport/src/ssh2-runner.loopback.test.ts, packages/ssh-transport/src/ssh-connection-manager.ts, packages/ssh-transport/src/ssh-connection.ts, packages/ssh-transport/src/ssh2-runner.ts, apps/desktop/src/main/ssh, project/tasks/TASK-0169-ssh-connection-lifecycle.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0153, TASK-0165]
-conflicts_with: [TASK-0158]
+conflicts_with: [TASK-0158, TASK-0178]
 integration_status: pending
 created: 2026-10-02
 updated: 2026-10-02
@@ -27,7 +27,7 @@ updated: 2026-10-02
 
 # SSH 配置失效与实时连接状态
 
-## 目标与取舍
+## 原规划背景（以下保留历史）
 
 按 hostId/配置代次绑定连接身份，主机更新或删除时清理旧 Client、helper 和转发；处于握手中的旧连接不得在失效后复活。平台缓存和实时连通性分开，迟到 probe/close 不能污染新代次。保留 target 去重、known_hosts、ProxyJump 与两平台后端，不自动重放写入。
 
@@ -51,3 +51,17 @@ updated: 2026-10-02
 ## 新增的兼容前置
 
 TASK-0165 的 ssh2 交互认证预算/KI 密码回退已有独立参与者在主树实施。本任务须在其验证/集成后以实际新基线适配，不复制旧 ssh2-runner 或覆盖该批 WIP；保留其新增回环与认证测试。
+
+## 集成后合同细化（TASK-0172，2026-10-02）
+
+优先级保持 P1，转 ready 仅表示合同可执行，本轮未实施。0153/0165 已由 TASK-0171 集成，不能再把它们当作主树 WIP。新增 [BUG-0061](../bugs/BUG-0061-stale-ssh-probe-status.md)：真实 manager 源码在 deferred probe 成功返回后出现 connecting→disconnected→connected，已建立失败证据。
+
+- 先覆盖 invalidate 后迟到成功/失败和新旧探测交错；然后处理 hostId 配置代次与 target runner session 的失效接缝，避免修 UI 状态而留下旧 Client/helper/转发。
+- 宿主 update/delete 已调用 invalidate，不是缺少调用；不另加平行入口。修改配置/删除/同 target 重建都须验证旧代次不可复活，其他主机不被一起关闭。
+- 保留已建立的局部取消/共享连接合同、认证降级、known_hosts 与错误分类。共享 readyPromise 的首调用方预算是当前合同，本任务不直接重设超时策略；若需改变，先单独说明兼容影响。
+- 实施范围包括 manager/connection/ssh2 runner 与必要的 process-runner 失效端口、对应测试及 Desktop ssh-runtime/host-service 接线；跨包公共接口需核对生产者/消费者，不私自更改认证策略（与 TASK-0178 串行）。
+- 验收：旧 probe/握手在失效后晚到不能广播新状态、安装旧 Client 或残留转发；新代次正常连接，局部请求取消不终止其他合法等待者；一次失败后能恢复。
+- 先在 ssh-connection/ssh2 的测试边界用可控延迟和本地 ssh2.Server 回归；cwd packages/ssh-transport 使用 `bun ../../scripts/quality/run-vitest.mjs run src/ssh-connection.test.ts src/ssh2-runner.test.ts src/ssh2-runner.loopback.test.ts`。manager 专用测试可新增，不复制整套内部实现。
+- Desktop 用 `bun ../../scripts/quality/run-vitest.mjs run src/main/ssh`；之后 test:impact、公共合同 test:changed 与完整 check。真实用户主机、真实会话和 UI 未获授权。
+
+当前只有成功迟到的隔离探针已执行，其他流程未测试/未修复。原状态和历史 WIP 描述以上述新基线为准；集成仍 pending。

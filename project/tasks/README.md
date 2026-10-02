@@ -15,6 +15,13 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0178` | `ready` | PLAN-0014 | P1 安全：撤销主机密钥必须拒绝；BUG-0062 合成宿主链已复现，本轮仅规划。 |
+| `TASK-0173` | `ready` | PLAN-0014 | CLI RPC 偶发超时的可复现诊断；仅规划，证据见 RESEARCH-0019。 |
+| `TASK-0174` | `draft` | PLAN-0014 | SSH 标准测试入口与选择器覆盖合同；仅规划，证据见 RESEARCH-0019。 |
+| `TASK-0175` | `ready` | PLAN-0014 | 原子写入的完整字节与失败清理合同；仅规划，证据见 RESEARCH-0019。 |
+| `TASK-0176` | `draft` | — | 回归测试耗时剖析与低风险提速；仅规划，证据见 RESEARCH-0019。 |
+| `TASK-0177` | `ready` | PLAN-0014 | SSH 平台能力与验证文档对齐；仅规划，证据见 RESEARCH-0019。 |
+| `TASK-0172` | `done` | PLAN-0014 | 集成后审查：新建 0173～0178 六项、细化 0168/0169、登记三个隔离复现 Bug；只完成规划。 |
 | `TASK-0171` | `done` | PLAN-0014 | 主树全部已有改动与七个 Task 分支已提交/集成并推送 origin/dev；最终 41 包、483 质量测试与完整 check 通过，原 Worktree 保留。 |
 | `TASK-0170` | `done` | PLAN-0014 | 来源 769f31bc3 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0163` | `verifying` | PLAN-0014 | 来源 3dda219e9 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
@@ -61,10 +68,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task | 状态 | Plan | 当前焦点 |
 |---|---|---|---|
 | `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
-| `TASK-0169` | `draft` | `PLAN-0014` | SSH 配置失效与实时连接状态；待失败基线与隔离实施。 |
+| `TASK-0169` | `ready` | PLAN-0014 | P1 生命周期：BUG-0061 已复现旧探测覆盖失效状态；保留认证/局部取消合同，仅规划。 |
 | `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
 | `TASK-0167` | `draft` | `PLAN-0014` | 远端文件名筛选与完整调用链接线；待失败基线与隔离实施。 |
-| `TASK-0168` | `draft` | `PLAN-0014` | Windows SSH 回环夹具与 Desktop 流程适配；待失败基线与隔离实施。 |
+| `TASK-0168` | `ready` | PLAN-0014 | P1：明确跨平台回环与 POSIX 专属覆盖，是 TASK-0174 标准入口前置；尚未实施。 |
 
 ## Task 要求
 

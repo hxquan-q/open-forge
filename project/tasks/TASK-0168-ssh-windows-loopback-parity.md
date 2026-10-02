@@ -1,24 +1,24 @@
 ---
 id: TASK-0168
 type: task
-status: draft
-priority: P2
+status: ready
+priority: P1
 owner: ssh-transport + desktop
-source: user-request; RESEARCH-0018
+source: user-request; RESEARCH-0018; RESEARCH-0019
 related_requirement: [REQ-0002]
 related_plan: [PLAN-0014]
-related_tasks: [TASK-0153, TASK-0158, TASK-0165]
+related_tasks: [TASK-0153, TASK-0158, TASK-0165, TASK-0174, TASK-0177]
 related_issues: []
 related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned
-base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
+base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport/src/testing.ts, packages/ssh-transport/src/ssh-connection.loopback.test.ts, apps/desktop/src/main/filesystem, apps/desktop/src/main/plugins, apps/desktop/src/main/agent-runtime]
-write_paths: [packages/ssh-transport/src/testing.ts, packages/ssh-transport/src/ssh-connection.loopback.test.ts, apps/desktop/src/main/filesystem, apps/desktop/src/main/plugins, apps/desktop/src/main/agent-runtime, project/tasks/TASK-0168-ssh-windows-loopback-parity.md, .github/release-notes/v0.1.3.md]
+write_paths: [packages/ssh-transport/src/remote-command.test.ts, packages/ssh-transport/src/remote-listeners.test.ts, packages/ssh-transport/src/node-process-runner.test.ts, packages/ssh-transport/src/ssh2-runner.loopback.test.ts, packages/ssh-transport/src/testing.ts, packages/ssh-transport/src/ssh-connection.loopback.test.ts, apps/desktop/src/main/filesystem, apps/desktop/src/main/plugins, apps/desktop/src/main/agent-runtime, project/tasks/TASK-0168-ssh-windows-loopback-parity.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0153, TASK-0165]
-conflicts_with: [TASK-0158]
+conflicts_with: [TASK-0158, TASK-0174, TASK-0177]
 integration_status: pending
 created: 2026-10-02
 updated: 2026-10-02
@@ -51,3 +51,17 @@ updated: 2026-10-02
 ## 新增的兼容前置
 
 TASK-0165 的 ssh2 交互认证预算/KI 密码回退已有独立参与者在主树实施。本任务须在其验证/集成后以实际新基线适配，不复制旧 ssh2-runner 或覆盖该批 WIP；保留其新增回环与认证测试。
+
+## 集成后优先级与边界（TASK-0172，2026-10-02）
+
+提升 P1，合同转 ready；并非本轮已实施。TASK-0153/0165 已集成，当前基线为 c8dc167f0。此 Task 是 [TASK-0174](TASK-0174-ssh-standard-test-entry.md) 标准测试注册的前置，而不是再创建一份相同的 Windows 适配工作。
+
+当前 testing.ts 仍以 /bin/sh 与 POSIX 会话假设实现回环；先逐项列出 17 个测试文件的核心跨平台行为和真正 POSIX 专属行为。历史曾有 POSIX 依赖失败，本轮没有重跑全包，不能沿用旧失败数当作现状。
+
+- Windows 核心 URI、路径带空格、二进制传输、取消、认证/host key 和错误分类仍须实际执行；复用现有本地 ssh2.Server，不自造一个只会返回期望字符串的假 shell。
+- 仅真正 POSIX 进程组语义可以交给 POSIX job，且必须保留覆盖证据；不得用整文件/整包 Windows skip 隐藏本应支持的核心合同。Go/helper 前置缺失显式报告，保持原有 setsid 安全约束。
+- 先回归 testing.ts 的资源释放与共享夹具，再验证实际使用它的 remote-command/remote-listeners/connection 及必要 Desktop 消费路径；每个新增平台分支都有失败/取消/清理断言。
+- cwd packages/ssh-transport：`bun ../../scripts/quality/run-vitest.mjs run src/remote-command.test.ts src/remote-listeners.test.ts src/node-process-runner.test.ts src/ssh-connection.loopback.test.ts src/ssh2-runner.loopback.test.ts`；与平台无关核心用例分组对照，不改原阈值。随后消费者 test:impact/完整 check；跨平台证据在现有 quality.yml 三平台矩阵收口。
+- 本 Task 不添加 package test 入口或新的 CI 矩阵；这些归 TASK-0174，README 与 TASK-0177 串行处理。
+
+本轮仅细化合同；所有实现/平台回归仍未执行，集成 pending。后续仍需用户明确进入实施。

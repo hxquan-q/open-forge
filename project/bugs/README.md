@@ -16,6 +16,9 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0062` | ssh2 校验接受已撤销的主机公钥 | investigating | P1 | PLAN-0014 |
+| `BUG-0060` | 原子写入短写与重命名前失败合同不完整 | investigating | P1 | PLAN-0014 |
+| `BUG-0061` | 失效后的迟到 SSH 探测恢复旧状态 | investigating | P1 | PLAN-0014 |
 | `BUG-0059` | CLI 进程测试并发下 RPC 超时 | investigating | P1 | PLAN-0014 |
 | `BUG-0058` | 文本模型收到超出输入能力的图片 | investigating | P1 | PLAN-0014 |
 | `BUG-0057` | Windows 新增 SSH 主机交互认证被 15s 握手预算掐断，KI 回退吞掉已存口令 | verifying | P1 | — |

@@ -9,7 +9,7 @@ created: 2026-10-02
 updated: 2026-10-02
 related_requirement: [REQ-0008]
 related_plan: [PLAN-0002, PLAN-0010, PLAN-0012, PLAN-0013]
-related_tasks: [TASK-0169, TASK-0166, TASK-0167, TASK-0168, TASK-0148, TASK-0149, TASK-0150, TASK-0151, TASK-0152, TASK-0153, TASK-0154, TASK-0155, TASK-0156, TASK-0157, TASK-0158, TASK-0159, TASK-0160, TASK-0161, TASK-0162, TASK-0163, TASK-0170]
+related_tasks: [TASK-0169, TASK-0166, TASK-0167, TASK-0168, TASK-0148, TASK-0149, TASK-0150, TASK-0151, TASK-0152, TASK-0153, TASK-0154, TASK-0155, TASK-0156, TASK-0157, TASK-0158, TASK-0159, TASK-0160, TASK-0161, TASK-0162, TASK-0163, TASK-0170, TASK-0171, TASK-0172, TASK-0173, TASK-0174, TASK-0175, TASK-0177, TASK-0178]
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -92,10 +92,18 @@ related_tasks: [TASK-0169, TASK-0166, TASK-0167, TASK-0168, TASK-0148, TASK-0149
 
 [TASK-0170](../tasks/TASK-0170-cli-process-test-isolation.md) / BUG-0059：CLI 进程测试调度隔离，是 TASK-0162 的工程门禁前置；不扩大手机或产品协议范围。
 
-## 当前首批隔离进展
+## 首批隔离阶段历史记录
 
 TASK-0148（1020b7c59）、0149（7a2a5ce50）、0150（222de8813）、0163（3dda219e9）与验证前置 0170（769f31bc3）已产生各自独立提交；不等于已合入主树。TASK-0162 已完成隔离工程验证并提交 6cb373dde。SSH 专项由其他执行流接手，继续以其 Task 状态为准，本执行流不重复写入。主工作区仍有多个所有者的 WIP，禁止整体覆盖或夹带集成。
 
 ### 本阶段结论
 
 共形成 0148、0149、0150、0162、0163、0170 六个隔离提交。功能 Task 保持 verifying 等待集成/用户接受；测试基础设施 Task 的 done 仅表示其内部工程合同完成。主树仍有其他所有者的修改，没有做 merge/push，不宣称整批计划完成。下一批按既有依赖推进配置事务、会话恢复投影、MCP/资源与团队初始化，再进入提示词/目标模式和剩余 UI 能力。
+
+## 集成后的当前状态与后续队列（2026-10-02）
+
+上述“主树 WIP / 尚未 merge”的内容是隔离阶段历史；TASK-0171 已将七个分支与主树候选集成并推送 origin/dev，最新交付 c8dc167f0。不能继续把这些工程依赖当作未集成，功能人工接受仍以各 Task 的 verifying 为准，整份计划仍 in_progress。
+
+本轮用户仅要求继续审查并建立 Task：见 [RESEARCH-0019](../research/RESEARCH-0019-post-integration-optimization-audit.md)。优先 TASK-0178 撤销主机密钥拒绝、TASK-0175 原子写入完整性、已有 TASK-0169 的失效代次；再收口 TASK-0173 的偶发诊断、0168→0174 平台测试注册。TASK-0177 只更新当前平台文档，不改变协议。通用验证成本研究 TASK-0176 不属于上游功能移植。
+
+这些是新规划/旧合同细化，不是新增实施授权；配置事务、会话投影、MCP/资源、提示词/目标模式和其他 UI 草案继续保留，不标记完成，不扩大手机/发布范围。

@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| 集成后可靠性与验证成本审查 | [RESEARCH-0019](RESEARCH-0019-post-integration-optimization-audit.md) |
 | 架构、Agent Loop、Composition | `exprot/architecture-overview.md`、`agent-loop.md`、`composition.md` |
 | Runtime 子系统 | `exprot/runtime-subsystems.md`、`runtime-mapping.md` |
 | Pi/DSH 内核评估 | `exprot/kernel-replacement-feasibility.md` |

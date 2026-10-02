@@ -7,7 +7,7 @@ owner: cli-host tests
 source: TASK-0162 changed-test validation
 related_requirement: [REQ-0002, REQ-0008]
 related_plan: [PLAN-0014]
-related_tasks: [TASK-0170, TASK-0162]
+related_tasks: [TASK-0170, TASK-0162, TASK-0173, TASK-0172]
 related_issues: []
 created: 2026-10-02
 updated: 2026-10-02
@@ -29,3 +29,9 @@ TASK-0162 隔离树的默认 CLI 全包回归有 9 项 RPC 超时；同一五文
 证据表明失败与跨文件并发相关，底层具体资源/fixture 争用未完全定位。TASK-0170 为 CLI 标准测试入口采用单 worker，保留用例内部并发场景、全部断言、既有超时和测试集合，并运行完整 CLI 包与质量检查。若串行仍失败，继续调查，不通过延长超时或删除用例处理。
 
 无真实 Provider、用户状态或 Desktop 访问。详细命令与结果留 Task；未关闭。
+
+## 集成后新增证据（2026-10-02）
+
+TASK-0171 的首轮全包测试在显式单 worker 下仍出现 installed-artifact-runtime 两例 RPC 超时；随后单文件 13/13、完整 CLI 226 项和最终整批均通过。并发相关性不是充分根因，单次成功不能关闭本 Bug。详细事实沿用 TASK-0171，本轮没有重跑 CLI。
+
+新增 TASK-0173 专门建立分阶段、安全有界的诊断及可重复对照；不重复 TASK-0170 已完成的调度补丁。保持 investigating，未确认是首帧、资源、夹具还是生产协议问题。
