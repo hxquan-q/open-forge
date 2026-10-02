@@ -226,3 +226,7 @@ internal_dependencies:
   - "@vetta/runtime-telemetry"
   - "@vetta/runtime-tools"
 ```
+
+## Knowledge processing composition
+
+Hosts using the default composition in `createKnowledgeProcessingSessionFactory` must supply `createPromptRuntimeSources`. Reuse the host-owned source factory for the requested workspace; the product layer forwards it without reading host configuration itself. The option is additive and remains optional for existing custom `createComposition` adapters that already construct their own prompts. Adapters delegating to the default runtime should preserve a supplied source factory. Stored conversations and knowledge data do not need migration.

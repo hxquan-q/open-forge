@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	createKnowledgeProcessingSessionFactory,
 	type KnowledgeProcessingSessionFactory,
@@ -13,6 +14,7 @@ import {
 import { nodeModelInputImageProcessor, nodeWorkspaceFactsFileSource } from "@vetta/runtime-node/coding";
 import { createFileConversationPersistence } from "@vetta/runtime-node/conversation";
 import { createNodeKnowledgeRuntime } from "@vetta/runtime-node/host";
+import { createDesktopPromptRuntimeSources } from "../agent-runtime/resource-runtime.js";
 import { getKnowledgeRoot } from "./knowledge-layout.js";
 
 export interface DesktopKnowledgeProcessingSessionFactoryOptions {
@@ -29,6 +31,7 @@ export function createDesktopKnowledgeProcessingSessionFactory(
 		createConversationPersistence: ({ conversationDir }) => createFileConversationPersistence(conversationDir),
 		createToolEnvironment: createDesktopCodingAgentToolEnvironment,
 		createSessionExecutionEnvironment: createDesktopCodingAgentSessionExecutionEnvironment,
+		createPromptRuntimeSources: createDesktopPromptRuntimeSources,
 		codingToolResultPolicy: resultArtifacts.codingToolResultPolicy,
 		modelInputImageProcessor: nodeModelInputImageProcessor,
 		knowledgeRuntime: createNodeKnowledgeRuntime(getKnowledgeRoot()),

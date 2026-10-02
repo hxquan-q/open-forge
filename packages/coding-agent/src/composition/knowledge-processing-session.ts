@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Api, Model } from "@vetta/ai";
 import { RuntimeHost, type RuntimeHostSession, type SessionEvent } from "@vetta/runtime-core";
 import type { CodingAgentKnowledgeRuntime, CodingAgentKnowledgeWriteOperations } from "../features/knowledge/index.js";
@@ -26,6 +27,10 @@ export interface KnowledgeProcessingSessionFactoryOptions {
 	readonly createConversationPersistence: CodingAgentConversationPersistenceFactory;
 	readonly createToolEnvironment: CodingAgentToolEnvironmentFactory;
 	readonly createSessionExecutionEnvironment: CodingAgentSessionExecutionEnvironmentFactory;
+	/** Default composition needs host sources; custom composition may already provide its own. */
+	readonly createPromptRuntimeSources?: NonNullable<
+		CodingAgentRuntimeCompositionOptions["createPromptRuntimeSources"]
+	>;
 	readonly codingToolResultPolicy?: CodingAgentRuntimeCompositionOptions["codingToolResultPolicy"];
 	readonly modelInputImageProcessor?: CodingAgentRuntimeCompositionOptions["modelInputImageProcessor"];
 	readonly knowledgeRuntime: CodingAgentKnowledgeRuntime;
@@ -59,6 +64,7 @@ export function createKnowledgeProcessingSessionFactory(
 				createConversationPersistence: options.createConversationPersistence,
 				createToolEnvironment: options.createToolEnvironment,
 				createSessionExecutionEnvironment: options.createSessionExecutionEnvironment,
+				createPromptRuntimeSources: options.createPromptRuntimeSources,
 				codingToolResultPolicy: options.codingToolResultPolicy,
 				modelInputImageProcessor: options.modelInputImageProcessor,
 				modelRegistry: modelRuntime,
