@@ -1,7 +1,7 @@
 ---
 id: TASK-0176
 type: task
-status: verifying
+status: done
 priority: P2
 owner: quality + desktop + cli-host tests
 source: RESEARCH-0019; TASK-0172
