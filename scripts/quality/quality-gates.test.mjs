@@ -331,6 +331,14 @@ describe("affected package selection", () => {
 		expect(createChangedTestPlan(["apps/desktop/src/main.ts"]).toTest).toEqual(["desktop"]);
 	});
 
+	it("runs ssh-transport's own tests when its sources change (TASK-0174)", () => {
+		// 该包曾长期没有 test 脚本：变更只能靠消费者（desktop 等）的绿灯间接覆盖，
+		// 自身回归从未被标准入口选过。删除 test 脚本会让本断言失败，防止再次隐形。
+		expect(Object.keys(TESTABLE_PACKAGES)).toEqual(expect.arrayContaining(["ssh-transport"]));
+		const plan = createChangedTestPlan(["packages/ssh-transport/src/ssh2-runner.ts"]);
+		expect(plan.toTest).toEqual(expect.arrayContaining(["ssh-transport"]));
+	});
+
 	it("runs every core test package for global quality inputs", () => {
 		const plan = createChangedTestPlan(["bun.lock", "turbo.json"]);
 		expect(plan.globalTriggers).toEqual(["bun.lock", "turbo.json"]);

@@ -1,7 +1,7 @@
 ---
 id: TASK-0174
 type: task
-status: draft
+status: verifying
 priority: P1
 owner: ssh-transport + quality
 source: RESEARCH-0019; TASK-0172
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: []
 execution: serial
 branch: main
-worktree: unassigned（仅规划，未开始代码实施）
+worktree: unassigned（2026-10-03 主检出串行实施完成）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport, scripts/quality/lib.mjs, scripts/quality/test-changed.mjs, scripts/quality/test-impact.mjs, .github/workflows/quality.yml]
 write_paths: [packages/ssh-transport/package.json, packages/ssh-transport/vitest.config.ts, packages/ssh-transport/README.md, scripts/quality/quality-gates.test.mjs, project/tasks/TASK-0174-ssh-standard-test-entry.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0168]
 conflicts_with: [TASK-0168, TASK-0176, TASK-0177]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -69,3 +69,11 @@ updated: 2026-10-02
 ## 验收分层与当前交付
 
 当前只完成规划，未来行为测试/实现/技术验收均未执行；源码/证据自审不等于产品测试通过。集成 pending，未创建代码分支或 Worktree。实现后回填 red/green、实际命令、提交与未验证边界，功能人工接受与发布分别处理。
+
+## 交付记录（2026-10-03，主检出串行实施，前置 TASK-0168 已落地）
+
+- 实现：`packages/ssh-transport` 新增 `test` 脚本（`bun ../../scripts/quality/run-vitest.mjs --run --config vitest.config.ts`）与显式 `include: src/**/*.test.ts` 的 vitest.config；`TESTABLE_PACKAGES` 由 manifest 自动派生，入口存在即被 `test-pkg`/`test:impact`/`test:changed` 选择。`quality-gates.test.mjs` 新增防回退断言：ssh-transport 必须在 TESTABLE_PACKAGES 中，且 `createChangedTestPlan([ssh2-runner.ts])` 的 toTest 必须包含 `ssh-transport`——删除 test 脚本会使该合同失败。
+- 入口首跑暴露并收口（配合 TASK-0168）：此前从未被标准入口执行的三份文件（remote-command / remote-listeners / helper.e2e）进入集合，Windows 侧按 0168 适配/显式门控后包级 195 通过 25 显式跳过。
+- 验证：`bun run --cwd packages/ssh-transport test` 195/25 绿；`bun run test:quality` 484 通过（含新断言）；`bun run test:impact -- packages/ssh-transport/src/ssh2-runner.ts` 实际选择并运行 ssh-transport 自身测试（36 相关用例）；批次级 `test:changed --base origin/dev` 与完整 `bun run check` 见批次收口记录。
+- 未验证项：三平台 CI 矩阵的实跑证据待 push 后由 quality.yml 产生（本机只代表 Windows）；README 测试章节按依赖顺序归 TASK-0177 更新。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
