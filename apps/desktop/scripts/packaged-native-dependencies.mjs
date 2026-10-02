@@ -58,8 +58,7 @@ function matchesFeature(definition, speechInputEnabled) {
  */
 export function resolvePackagedNativeDependencies(platformFamilies, { speechInputEnabled = true } = {}) {
 	const selected = DEFINITIONS.filter(
-		(definition) =>
-			matchesPlatform(definition, platformFamilies) && matchesFeature(definition, speechInputEnabled),
+		(definition) => matchesPlatform(definition, platformFamilies) && matchesFeature(definition, speechInputEnabled),
 	);
 	return {
 		required: selected.filter((definition) => !definition.optional).map((definition) => definition.name),
@@ -88,3 +87,7 @@ export function resolveMainBundleExternals({ speechInputEnabled = true } = {}) {
 		(definition) => definition.name,
 	);
 }
+
+/** Shared by Vite and dev-cache input discovery; subpaths have the same external boundary. */
+export const DEVELOPMENT_WORKSPACE_EXTERNAL =
+	/^@vetta\/(?:action-rpc|ai|coding-agent|remote-control|runtime-core)(?:\/|$)/;
