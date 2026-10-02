@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: [BUG-0054]
 execution: parallel
 branch: task/TASK-0150-atomic-write-lock-retry
-worktree: ../open-forge-wt/task-0150-atomic-write-lock-retry
+worktree: unassigned（已集成，原 Worktree 保留待安全清理）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [packages/toolkit/src/atomic-write.ts, packages/toolkit/test/atomic-write.test.ts]
 write_paths: [packages/toolkit/src/atomic-write.ts, packages/toolkit/test/atomic-write.test.ts, project/tasks/TASK-0150-atomic-write-lock-retry.md]
 exclusive_paths: [packages/toolkit/src/atomic-write.ts]
 depends_on: [TASK-0148]
 conflicts_with: [TASK-0122, TASK-0123]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -63,6 +63,21 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 
 已有候选通过 7 个定向和 Toolkit 全包 22 测试；隔离复验后才交付。复核永久错误、重试耗尽、失败后队列释放和独立临时路径，不以 Mock 调用替代实际最终文件内容断言。
 
+## 隔离交付证据
+
+- 在 fork 原有 asyncWriteTails 队列与唯一临时名上增加重命名重试，没有换成上游不带队列的整文件实现。同步最多 10 次、异步最多 30 次，仅 EPERM/EACCES/EBUSY 可重试；最终错误保持原实例，临时清理失败不覆盖它。
+- 旧实现新增回归 6 例失败；隔离树扩充同步预算耗尽与异步清理失败后，Toolkit 全包 3 文件 24 测试通过，实际文件内容/临时文件/队列恢复均有断言。
+- `bun run test:impact -- packages/toolkit/src/atomic-write.ts packages/toolkit/test/atomic-write.test.ts`：直接 9 测试、相关 2 文件 11 测试通过。
+- 最新 `bun run check` 全部通过；只做源码自审，没有真实系统索引器或生产目录验收。
+- Coordinator 已追加主检出当前开发版发布说明；Worker 不提交共享发布文件。保留 verifying 等待集成/功能接受，不宣称主树所有改动已验收。
+
 ## 已提交隔离结果
 
 提交 222de8813fe3ce248f3d0c5ecf7911f4263ac8a7，依赖 TASK-0148，未合入主树。Toolkit 全包 3 文件 24 测试、影响面直接 9/相关 11 测试与完整 check 通过。保留 fork 队列、唯一临时文件和原始异常；发布文案由 Coordinator 追加主检出。源码自审完成，尚未进行真实系统索引器/用户数据验收，保持 verifying。
+
+
+## TASK-0171 主树集成（2026-10-02）
+
+来源分支：task/TASK-0150-atomic-write-lock-retry；来源提交：222de8813fe3ce248f3d0c5ecf7911f4263ac8a7。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
+
+集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0150。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。
