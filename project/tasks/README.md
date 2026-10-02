@@ -16,7 +16,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
 | `TASK-0171` | `in_progress` | PLAN-0014 | 核验已有 Task/WIP，按依赖串行集成 main，通过完整闸门后推送 origin/dev。 |
-| `TASK-0170` | `done` | PLAN-0014 | CLI 进程测试隔离，解除 TASK-0162 验证阻断；不放宽断言/超时。 |
+| `TASK-0170` | `done` | PLAN-0014 | 来源 769f31bc3 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0163` | `verifying` | PLAN-0014 | 按模型能力投影图片，保留历史和工具关联，独立验证。 |
 | `TASK-0162` | `verifying` | PLAN-0014 | 知识库提示词装配，保留自定义组合器，独立验证。 |
 | `TASK-0150` | `verifying` | PLAN-0014 | 来源 222de8813 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
