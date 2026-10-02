@@ -14,6 +14,7 @@ import type { ChatConversationItem, ChatTimelineItem, TranscriptPlaceholderItem 
 import type { HistoryEntry } from "@vetta/runtime-core";
 import { historyEntrySignature } from "@/shared/history-entry-signature";
 import { fullHistoryToChatWithSpans, type TranscriptItemSpan } from "./chat-service";
+import { mergeWithCausalAnchors } from "./pending-user-anchor";
 
 export const TRANSCRIPT_SUMMARY_MAX_CHARS = 120;
 
@@ -359,11 +360,9 @@ export interface ReconcileWindowedResult {
 	/**
 	 * projected[i] 在 items 中的落点下标：live-only 项会按 live 锚点穿插进
 	 * canonical 序列之间，items 下标与 projected 下标不再一一对应，span /
-	 * canonical 计数等按此映射定位（BUG-0068）。
+	 * canonical 计数等按此映射定位（BUG-0068）。其长度即 projected 条数。
 	 */
 	readonly canonicalItemIndexes: readonly number[];
-	/** 结果中与 projected 一一对应的条数（= projected.length）。 */
-	readonly canonicalCount: number;
 }
 
 export interface ReconcileWindowedOptions {
@@ -465,69 +464,19 @@ export function reconcileWindowedProjection(
 			items.push(stableRenderKey(canonical));
 		}
 	}
-	// 未消费的 live-only user 项按因果位置归位（BUG-0068）：
-	// (a) live 中有已消费后继 → 锚到该后继的落点之前（它夹在已持久化项
-	//     之间，平铺到尾部会跑到它触发的回复之后）；
-	// (b) 否则取 live 最近已消费前驱，锚到 canonical 中其后第一个 user
-	//     项之前——该位置最可能是它的规范孪生槽；
-	// (c) 都不满足（气泡晚于 canonical 尾部 / 无已消费邻居 / 非 user
-	//     项）→ 维持尾部追加。
-	const insertBefore = new Map<number, ChatTimelineItem[]>();
-	const tailOnly: ChatTimelineItem[] = [];
-	const nextCanonicalUserIndex = (from: number): number => {
-		for (let k = from + 1; k < items.length; k += 1) {
-			if (items[k].kind === "user") return k;
-		}
-		return -1;
-	};
-	for (let i = 0; i < live.length; i += 1) {
-		if (consumed.has(i) || excluded?.has(live[i].id)) continue;
-		const item = live[i];
-		// durable 但被改写的项丢弃（原语义）。
-		if (transcriptItemKey(item) !== undefined) continue;
-		if (item.kind !== "user") {
-			tailOnly.push(item);
-			continue;
-		}
-		let anchor = -1;
-		for (let j = i + 1; j < live.length; j += 1) {
-			const landed = landedIndex.get(j);
-			if (landed !== undefined) {
-				anchor = landed;
-				break;
-			}
-		}
-		if (anchor < 0) {
-			let predecessor = -1;
-			for (let j = i - 1; j >= 0; j -= 1) {
-				const landed = landedIndex.get(j);
-				if (landed !== undefined) {
-					predecessor = landed;
-					break;
-				}
-			}
-			if (predecessor >= 0) anchor = nextCanonicalUserIndex(predecessor);
-		}
-		if (anchor >= 0) {
-			const group = insertBefore.get(anchor) ?? [];
-			group.push(item);
-			insertBefore.set(anchor, group);
-			continue;
-		}
-		tailOnly.push(item);
-	}
-	const merged: ChatTimelineItem[] = [];
-	const canonicalItemIndexes = new Array<number>(items.length);
-	for (let i = 0; i < items.length; i += 1) {
-		const beforeGroup = insertBefore.get(i);
-		if (beforeGroup) merged.push(...beforeGroup);
-		canonicalItemIndexes[i] = merged.length;
-		merged.push(items[i]);
-	}
-	merged.push(...tailOnly);
+	// 未消费的 live-only 项按因果位置归位（BUG-0068），管线收编进共享助手；
+	// 既非 pending 也未 landed 的项（= durable 但被改写）由助手丢弃（原语义）。
+	const anchored = mergeWithCausalAnchors({
+		base: items,
+		order: live,
+		isPendingIndex: (i) => !consumed.has(i) && !excluded?.has(live[i].id) && transcriptItemKey(live[i]) === undefined,
+		landedBaseIndex: (i) => landedIndex.get(i),
+	});
+	const merged = anchored.items;
+	const canonicalItemIndexes = anchored.baseIndexes;
 	let prependedCount = 0;
 	while (prependedCount < projected.length && !fromLive[prependedCount]) prependedCount += 1;
 	// 首部插入的 live-only 项同样造成首屏锚点位移，计入 prependedCount。
-	prependedCount += (insertBefore.get(0) ?? []).length;
-	return { items: merged, prependedCount, canonicalItemIndexes, canonicalCount: items.length };
+	prependedCount += canonicalItemIndexes[0];
+	return { items: merged, prependedCount, canonicalItemIndexes };
 }

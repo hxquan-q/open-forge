@@ -489,7 +489,7 @@ describe("reconcileWindowedProjection", () => {
 		// patch 在字段无差异时原样返回 live 对象。
 		expect(result.items[0]).toBe(liveUser);
 		expect(result.items[1]).toBe(liveAgent);
-		expect(result.canonicalCount).toBe(2);
+		expect(result.canonicalItemIndexes).toHaveLength(2);
 		expect(result.prependedCount).toBe(0);
 	});
 
@@ -571,7 +571,7 @@ describe("reconcileWindowedProjection", () => {
 		expect(result.items).toHaveLength(2);
 		expect(result.items[0]).toBe(liveUser);
 		expect(result.items[1]?.id).toBe("live-stream");
-		expect(result.canonicalCount).toBe(1);
+		expect(result.canonicalItemIndexes).toHaveLength(1);
 	});
 
 	it("夹在已消费项之间的 live-only 项保持因果位置，不平铺到回复末尾", () => {
@@ -638,6 +638,6 @@ describe("reconcileWindowedProjection", () => {
 		// canonicalAgent 配对 liveAgent（kind agent）；canonicalEvent 配对 liveEvent。
 		expect(result.items[0]?.id).toBe("a-live");
 		expect(result.items[1]?.id).toBe("ev-live");
-		expect(result.canonicalCount).toBe(2);
+		expect(result.canonicalItemIndexes).toHaveLength(2);
 	});
 });
