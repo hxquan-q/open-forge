@@ -21,6 +21,11 @@ jobs:
 
       # staged-deps-cleanlist 等用例解析真实已装 node_modules，必须先安装冻结依赖
       #（BUG-0064：缺此步骤时冷检出上必然报 declared dependency is not installed）。
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - name: Install dependencies
         uses: ./.github/actions/install-bun-dependencies
 
