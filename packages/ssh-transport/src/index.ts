@@ -37,7 +37,11 @@ export {
 	matchKnownHosts,
 	parseKnownHostsLine,
 } from "./known-hosts.js";
-export { createNodeSshProcessRunner, type NodeSshProcessRunnerOptions } from "./node-process-runner.js";
+export {
+	createNodeSshProcessRunner,
+	type NodeSshProcessRunner,
+	type NodeSshProcessRunnerOptions,
+} from "./node-process-runner.js";
 export {
 	SSH_TRANSPORT_FAILURE_EXIT_CODE,
 	type SshChannelInvocation,

@@ -1,7 +1,7 @@
 ---
 id: TASK-0169
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: ssh-transport + desktop
 source: user-request; RESEARCH-0018; RESEARCH-0019; BUG-0061
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: [BUG-0061]
 execution: serial
 branch: main
-worktree: unassigned
+worktree: unassigned（2026-10-02 主检出串行实施完成）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport/src/ssh-connection-manager.ts, packages/ssh-transport/src/ssh-connection.ts, packages/ssh-transport/src/ssh2-runner.ts, apps/desktop/src/main/ssh]
 write_paths: [packages/ssh-transport/src/process-runner.ts, packages/ssh-transport/src/node-process-runner.ts, packages/ssh-transport/src/ssh-connection-manager.test.ts, packages/ssh-transport/src/ssh-connection.test.ts, packages/ssh-transport/src/ssh2-runner.test.ts, packages/ssh-transport/src/ssh2-runner.loopback.test.ts, packages/ssh-transport/src/ssh-connection-manager.ts, packages/ssh-transport/src/ssh-connection.ts, packages/ssh-transport/src/ssh2-runner.ts, apps/desktop/src/main/ssh, project/tasks/TASK-0169-ssh-connection-lifecycle.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0153, TASK-0165]
 conflicts_with: [TASK-0158, TASK-0178]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -65,3 +65,13 @@ TASK-0165 的 ssh2 交互认证预算/KI 密码回退已有独立参与者在主
 - Desktop 用 `bun ../../scripts/quality/run-vitest.mjs run src/main/ssh`；之后 test:impact、公共合同 test:changed 与完整 check。真实用户主机、真实会话和 UI 未获授权。
 
 当前只有成功迟到的隔离探针已执行，其他流程未测试/未修复。原状态和历史 WIP 描述以上述新基线为准；集成仍 pending。
+
+## 交付记录（2026-10-02，主检出串行实施）
+
+- 实现：`SshConnectionManager` 每主机代次计数——`invalidate` 与新一轮 `probe` 均推进代次，迟到探测（成功/失败）不再写状态；`invalidate` 处置被丢弃的连接。`SshConnection.dispose()` 关闭就绪/在途 helper（含部署中 promise 的迟到关闭）并调用执行器失效端口，dispose 后不再拉起新 helper。`SshProcessRunner` 新增可选 `invalidate?(target)`；ssh2 runner 实现为销毁对应会话与转发监听，且失效时在途握手完成后拒绝安装旧 Client（销毁并让等待方失败）；node runner 记录 target→ControlPath 并用 `ssh -O exit`（10s 期限、失败吞掉）退出 master。
+- Desktop 接线：host-service 既有 update/delete/orphan → invalidate 调用不变，manager→connection.dispose→runner.invalidate 经 ssh-runtime 既有装配自动生效，desktop 无代码改动。
+- Red/Green：新增 manager 测试 7 例（旧实现 5 例红：迟到成功/迟到失败/被超越旧结果写状态、处置缺失、同 target 重建复用旧对象）；ssh2-runner 会话失效 3 例（含 GatedClient 在途握手迟到不得装回）；node runner `-O exit` 2 例（argv 记录与未知 target no-op）；connection dispose 3 例（就绪 helper 关闭+执行器失效、在途 helper 迟到关闭、dispose 后不重连）；loopback 1 例（真实 ssh2.Server 同 target 失效后重新建连）。
+- 实际命令与结果：ssh-transport 定向 94/94（manager/connection/ssh2-runner/lifecycle/loopback/known-hosts）；`ssh-connection.loopback.test.ts` 在 Windows 仍有 6 例存量红（POSIX 假 ssh 脚本 ENOENT，属 TASK-0168 跨平台夹具范围，非本次改动引入）；desktop `src/main/ssh` 53 通过 7 跳过；`test:impact`（desktop 4652 + runtime-desktop）通过；`bun run check` exit 0；dist 已重建。
+- 保持的合同：共享 readyPromise 首调用方预算、认证降级与 known_hosts、局部取消不终止其他等待者（既有 ssh2-runner 取消/超时用例保持）、TASK-0153/0165 集成基线。
+- 未验证项/风险：真实远端主机失效/断线场景未联测（合同要求不连真实主机）；node runner `-O exit` 在真机 OpenSSH 上的行为未实测（argv 合同已测）；`ssh-connection.loopback` Windows 存量红待 TASK-0168。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）；人工功能验收与发布未执行。

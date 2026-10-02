@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { randomBytes } from "node:crypto";
 import { parseRemoteDirectoryListing, type RemoteDirectoryEntry } from "./directory-listing.js";
 import { SshOperationAbortedError, SshRemoteCommandError, SshTransportError } from "./errors.js";
@@ -129,11 +131,28 @@ export class SshConnection {
 	private helperClient: Promise<SshHelperClient | undefined> | undefined;
 	/** 已经握手成功、可以直接用的 helper。部署过程中为空，那时文件操作走 `ssh exec`。 */
 	private readyHelper: SshHelperClient | undefined;
+	private disposed = false;
 
 	constructor(
 		readonly host: SshHost,
 		private readonly options: SshConnectionOptions,
 	) {}
+
+	/**
+	 * 释放这条连接占用的共享资源：远端 helper 与执行器里同 target 的会话。
+	 *
+	 * 主机配置变更或删除时由 manager 调用。不主动取消在途的单次操作——它们会随
+	 * 会话一起失败、由各自调用方收到错误；这里只保证失效后旧资源不再被复用。
+	 */
+	dispose(): void {
+		this.disposed = true;
+		this.readyHelper?.close();
+		const pending = this.helperClient;
+		this.helperClient = undefined;
+		// 部署到一半的 helper 完成后立即关掉，不让它变成没人认领的常驻通道。
+		pending?.then((client) => client?.close()).catch(() => undefined);
+		this.options.runner.invalidate?.(this.host.target);
+	}
 
 	/** 探测远端平台，结果缓存到连接对象上——同一台机器不会中途换系统。 */
 	async probePlatform(signal?: AbortSignal): Promise<RemotePlatform> {
@@ -423,6 +442,8 @@ export class SshConnection {
 	helper(): Promise<SshHelperClient | undefined> {
 		const options = this.options.helper;
 		if (!options) return Promise.resolve(undefined);
+		// 已失效的连接不再拉起新的 helper 部署；探测在后台预热 helper 的路径会走到这里。
+		if (this.disposed) return Promise.resolve(undefined);
 		if (!this.helperClient) {
 			const attempt = connectSshHelper(this, options).then((client) => {
 				this.readyHelper = client;

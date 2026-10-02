@@ -52,6 +52,33 @@ describe("SSH 进程组生命周期（OS 边界）", () => {
 	});
 });
 
+describe("ControlMaster 失效（-O exit）", () => {
+	it("记录 target 的 ControlPath，invalidate 时对对应 master 发出 -O exit", () => {
+		processFixture();
+		const runner = createNodeSshProcessRunner({ baseEnv: {} });
+		void runner.run({
+			argv: ["-o", "ControlMaster=auto", "-o", "ControlPath=/tmp/ctrl/abc123", "-T", "--", "user@host"],
+		});
+		runner.invalidate("user@host");
+		expect(spawn).toHaveBeenLastCalledWith(
+			"ssh",
+			["-o", "ControlPath=/tmp/ctrl/abc123", "-O", "exit", "--", "user@host"],
+			expect.objectContaining({ detached: true }),
+		);
+	});
+
+	it("没见过的 target 不 spawn，重复 invalidate 也只发一次", () => {
+		processFixture();
+		const runner = createNodeSshProcessRunner({ baseEnv: {} });
+		runner.invalidate("unknown@host");
+		expect(spawn).not.toHaveBeenCalled();
+		void runner.run({ argv: ["-o", "ControlPath=/tmp/ctrl/x", "--", "user@host"] });
+		runner.invalidate("user@host");
+		runner.invalidate("user@host");
+		expect(spawn).toHaveBeenCalledTimes(2); // 一次 run，一次 -O exit
+	});
+});
+
 // Public run/open ports with only the OS spawn/signal boundary replaced.
 it("父进程已 exit 但未 close 时，取消仍清理持有管道的子孙", async () => {
 	const child = processFixture();

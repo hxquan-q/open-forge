@@ -16,6 +16,14 @@ export interface NodeSshProcessRunnerOptions {
 	readonly baseEnv?: NodeJS.ProcessEnv;
 }
 
+/** `ssh -O exit` 自己的期限：master 不在或不可达时不该挂住调用方。 */
+const MASTER_EXIT_TIMEOUT_MS = 10_000;
+
+export interface NodeSshProcessRunner extends SshProcessRunner {
+	/** 让对应 target 的 ControlMaster 退出；主机配置变更/删除时由连接层调用。 */
+	invalidate(target: string): void;
+}
+
 /**
  * 用系统 OpenSSH 二进制执行命令。
  *
@@ -24,16 +32,53 @@ export interface NodeSshProcessRunnerOptions {
  * 用户只要 `ssh host` 能连上，Vetta 就能连上；自己实现这套等于长期追着 OpenSSH 的
  * 行为打补丁。
  */
-export function createNodeSshProcessRunner(options: NodeSshProcessRunnerOptions = {}): SshProcessRunner {
+export function createNodeSshProcessRunner(options: NodeSshProcessRunnerOptions = {}): NodeSshProcessRunner {
 	const sshBinary = options.sshBinary ?? "ssh";
+	// target → 最近一次见到的 ControlPath。执行器本身无状态，master 的生死在 OpenSSH
+	// 那边；失效时按这条记录去关对应的 socket。
+	const controlPaths = new Map<string, string>();
+	const rememberControlPath = (argv: readonly string[]): void => {
+		const target = argvTarget(argv);
+		const controlPath = argvControlPath(argv);
+		if (target !== undefined && controlPath !== undefined) controlPaths.set(target, controlPath);
+	};
 	return {
 		run(invocation: SshProcessInvocation): Promise<SshProcessResult> {
+			rememberControlPath(invocation.argv);
 			return runSshProcess(sshBinary, options.baseEnv ?? process.env, invocation);
 		},
 		open(invocation: SshChannelInvocation): SshProcessChannel {
+			rememberControlPath(invocation.argv);
 			return openSshChannel(sshBinary, options.baseEnv ?? process.env, invocation);
 		},
+		invalidate(target: string): void {
+			const controlPath = controlPaths.get(target);
+			controlPaths.delete(target);
+			if (controlPath === undefined) return;
+			// `ssh -O exit` 让这条 ControlMaster 退出；master 可能本来就不在，失败吞掉，
+			// 失败不能拖累调用方——下次连接会按需重建。
+			void runSshProcess(sshBinary, options.baseEnv ?? process.env, {
+				argv: ["-o", `ControlPath=${controlPath}`, "-O", "exit", "--", target],
+				timeoutMs: MASTER_EXIT_TIMEOUT_MS,
+			}).catch(() => undefined);
+		},
 	};
+}
+
+/** `--` 之后的第一个参数是目标主机；没有 `--` 或后面为空就不记录。 */
+function argvTarget(argv: readonly string[]): string | undefined {
+	const separator = argv.indexOf("--");
+	if (separator < 0 || separator + 1 >= argv.length) return undefined;
+	return argv[separator + 1];
+}
+
+function argvControlPath(argv: readonly string[]): string | undefined {
+	for (let i = 0; i + 1 < argv.length; i += 1) {
+		if (argv[i] === "-o" && argv[i + 1].startsWith("ControlPath=")) {
+			return argv[i + 1].slice("ControlPath=".length);
+		}
+	}
+	return undefined;
 }
 
 function runSshProcess(

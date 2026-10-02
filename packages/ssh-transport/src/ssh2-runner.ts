@@ -83,6 +83,8 @@ interface ParsedInvocation {
 }
 
 export interface Ssh2ProcessRunner extends SshProcessRunner {
+	/** 丢弃指定 target 的会话与转发监听；主机配置变更/删除时由连接层调用。 */
+	invalidate(target: string): void;
 	/** 拆掉全部会话与转发监听；测试与宿主退出时用。 */
 	dispose(): void;
 }
@@ -229,6 +231,13 @@ export function createSsh2ProcessRunner(options: Ssh2ProcessRunnerOptions): Ssh2
 			return channel;
 		},
 
+		invalidate(target: string): void {
+			const session = sessions.get(target);
+			if (session === undefined) return;
+			sessions.delete(target);
+			session.dispose();
+		},
+
 		dispose(): void {
 			for (const session of sessions.values()) session.dispose();
 			sessions.clear();
@@ -250,6 +259,7 @@ class Ssh2Session {
 	private readyPromise: Promise<Client> | undefined;
 	private readonly forwards = new Map<number, Server>();
 	private establishRound = 0;
+	private invalidated = false;
 
 	constructor(
 		private readonly target: string,
@@ -302,6 +312,7 @@ class Ssh2Session {
 	}
 
 	dispose(): void {
+		this.invalidated = true;
 		this.dropClient();
 		for (const server of this.forwards.values()) server.close();
 		this.forwards.clear();
@@ -357,6 +368,12 @@ class Ssh2Session {
 	}
 
 	private installClient(client: Client, jumpClients: Client[]): void {
+		if (this.invalidated) {
+			// 会话已失效：迟到完成的握手不能把旧 Client 装回来，直接拆掉并让等待方失败。
+			client.destroy();
+			for (const jump of jumpClients) jump.destroy();
+			throw new Error(`SSH session for ${this.target} was invalidated during connect.`);
+		}
 		this.client = client;
 		client.on("close", () => {
 			if (this.client === client) {

@@ -1,7 +1,7 @@
 ---
 id: BUG-0061
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: ssh-transport
 source: TASK-0172 deferred probe experiment
@@ -52,4 +52,4 @@ Given：某主机正在连通性探测；When：用户修改或删除主机，�
 
 ## 修复与验证
 
-未修复；只实跑成功迟到的最小状态实验。真实 ssh2 池失效、在途握手与转发释放尚待 Task 回归，不使用用户主机做验证。
+2026-10-02 修复（TASK-0169）：`SshConnectionManager` 为每台主机引入代次计数，`invalidate` 与新一轮 `probe` 都推进代次；探测回来时若已不是当前代次，成功/失败都不再写状态（本记录的 connecting→disconnected→connected 序列不再出现，迟到拒绝分支同修）。`invalidate` 同时处置被丢弃的连接：`SshConnection.dispose()` 关闭就绪/在途 helper 并调用执行器新失效端口；ssh2 runner 的 `invalidate(target)` 销毁会话与转发监听，失效时仍在途的握手完成后不得把旧 Client 装回（直接销毁并让等待方失败）；node runner 用 `ssh -O exit` 退出对应 ControlMaster。红证据：新增 manager 7 例中 5 例在旧实现失败（迟到成功/迟到失败/被超越旧结果/处置与隔离/同 target 重建）。真实回环验证同 target 失效后重新建连。

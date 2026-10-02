@@ -162,6 +162,18 @@ describe("ssh2 传输（真实 Server 回环）", () => {
 		runner.dispose();
 	});
 
+	it("invalidate 丢弃会话后，下一条命令重新建连而不是复用旧连接", async () => {
+		const { runner } = makeRunner(serverPort);
+		const before = connections;
+		await runner.run({ argv: argvFor("pre-invalidate") });
+		expect(connections).toBe(before + 1);
+		runner.invalidate(TARGET);
+		const after = await runner.run({ argv: argvFor("post-invalidate") });
+		expect(after.exitCode).toBe(0);
+		expect(connections).toBe(before + 2);
+		runner.dispose();
+	});
+
 	it("非零退出码与 stderr 如实回来", async () => {
 		const { runner } = makeRunner(serverPort);
 		const result = await runner.run({ argv: argvFor("fail-42") });
