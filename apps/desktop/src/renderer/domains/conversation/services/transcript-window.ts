@@ -357,9 +357,12 @@ export interface ReconcileWindowedResult {
 	/** 结果头部连续「非 live 复用」的条数——向上翻页时 Virtuoso 的锚点位移。 */
 	readonly prependedCount: number;
 	/**
-	 * 结果中与 projected 一一对应的前缀长度（= projected.length）；
-	 * 其后的条目是 live-only 尾部（乐观气泡/流式草稿）。
+	 * projected[i] 在 items 中的落点下标：live-only 项会按 live 锚点穿插进
+	 * canonical 序列之间，items 下标与 projected 下标不再一一对应，span /
+	 * canonical 计数等按此映射定位（BUG-0068）。
 	 */
+	readonly canonicalItemIndexes: readonly number[];
+	/** 结果中与 projected 一一对应的条数（= projected.length）。 */
 	readonly canonicalCount: number;
 }
 
@@ -380,7 +383,9 @@ export interface ReconcileWindowedOptions {
  * 重投影后的窗口 reconcile：projected 是合并窗口（新 entries）投出的完整
  * item 序列，按 durable key 回收 live item 对象，保住占位态与渲染身份；
  * 无 key 的投影项与未消费的 live-only 项按 kind FIFO 配对（仅限终态），
- * 仍对不上的投影项直接用新对象，未消费的 live-only 项追加到尾部。
+ * 仍对不上的投影项直接用新对象。未消费的 live-only 项按 live 中最近的
+ * 已消费前驱/后继锚定回原位——镜像用户气泡必须留在它触发的回复之前；
+ * 完全没有已消费邻居时才追加尾部（BUG-0068）。
  *
  * 已加载窗口内被改写掉的 durable item（key 不在 projected 中）会被丢弃——
  * 这是「replaced」之外的轻量失配兜底；调用方若已知改写发生应直接重置。
@@ -407,6 +412,8 @@ export function reconcileWindowedProjection(
 	}
 	const consumed = new Set<number>();
 	const items: ChatTimelineItem[] = [];
+	// live 下标 → items 下标：已消费 live 项的落点，供 live-only 项锚定回原位。
+	const landedIndex = new Map<number, number>();
 	const fromLive = new Array<boolean>(projected.length).fill(false);
 	// 无 key item 的有序配对队列：只收集终态 durable，live-only 项不进队列。
 	// 查找时按 kind 命中最早未消费项；不匹配的项留在原位供后续配对。
@@ -453,18 +460,74 @@ export function reconcileWindowedProjection(
 			consumed.add(reuseIndex);
 			items.push(adoptLive(reuseIndex, canonical));
 			fromLive[i] = true;
+			landedIndex.set(reuseIndex, items.length - 1);
 		} else {
 			items.push(stableRenderKey(canonical));
 		}
 	}
+	// 未消费的 live-only user 项按因果位置归位（BUG-0068）：
+	// (a) live 中有已消费后继 → 锚到该后继的落点之前（它夹在已持久化项
+	//     之间，平铺到尾部会跑到它触发的回复之后）；
+	// (b) 否则取 live 最近已消费前驱，锚到 canonical 中其后第一个 user
+	//     项之前——该位置最可能是它的规范孪生槽；
+	// (c) 都不满足（气泡晚于 canonical 尾部 / 无已消费邻居 / 非 user
+	//     项）→ 维持尾部追加。
+	const insertBefore = new Map<number, ChatTimelineItem[]>();
+	const tailOnly: ChatTimelineItem[] = [];
+	const nextCanonicalUserIndex = (from: number): number => {
+		for (let k = from + 1; k < items.length; k += 1) {
+			if (items[k].kind === "user") return k;
+		}
+		return -1;
+	};
 	for (let i = 0; i < live.length; i += 1) {
 		if (consumed.has(i) || excluded?.has(live[i].id)) continue;
 		const item = live[i];
-		// durable 但被改写的项丢弃；live-only 项（乐观气泡/流式草稿/未消费
-		// 的无 key 项）追加尾部，交给上游的乐观对账/下一轮刷新归位。
-		if (transcriptItemKey(item) === undefined) items.push(item);
+		// durable 但被改写的项丢弃（原语义）。
+		if (transcriptItemKey(item) !== undefined) continue;
+		if (item.kind !== "user") {
+			tailOnly.push(item);
+			continue;
+		}
+		let anchor = -1;
+		for (let j = i + 1; j < live.length; j += 1) {
+			const landed = landedIndex.get(j);
+			if (landed !== undefined) {
+				anchor = landed;
+				break;
+			}
+		}
+		if (anchor < 0) {
+			let predecessor = -1;
+			for (let j = i - 1; j >= 0; j -= 1) {
+				const landed = landedIndex.get(j);
+				if (landed !== undefined) {
+					predecessor = landed;
+					break;
+				}
+			}
+			if (predecessor >= 0) anchor = nextCanonicalUserIndex(predecessor);
+		}
+		if (anchor >= 0) {
+			const group = insertBefore.get(anchor) ?? [];
+			group.push(item);
+			insertBefore.set(anchor, group);
+			continue;
+		}
+		tailOnly.push(item);
 	}
+	const merged: ChatTimelineItem[] = [];
+	const canonicalItemIndexes = new Array<number>(items.length);
+	for (let i = 0; i < items.length; i += 1) {
+		const beforeGroup = insertBefore.get(i);
+		if (beforeGroup) merged.push(...beforeGroup);
+		canonicalItemIndexes[i] = merged.length;
+		merged.push(items[i]);
+	}
+	merged.push(...tailOnly);
 	let prependedCount = 0;
 	while (prependedCount < projected.length && !fromLive[prependedCount]) prependedCount += 1;
-	return { items, prependedCount, canonicalCount: projected.length };
+	// 首部插入的 live-only 项同样造成首屏锚点位移，计入 prependedCount。
+	prependedCount += (insertBefore.get(0) ?? []).length;
+	return { items: merged, prependedCount, canonicalItemIndexes, canonicalCount: items.length };
 }

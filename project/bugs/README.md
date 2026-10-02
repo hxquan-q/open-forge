@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0068` | 会话结束后用户消息仍显示在回复末尾（队列消费变体） | verifying | P1 | — |
 | `BUG-0064` | desktop-packaged 合同 job 缺依赖安装致 cleanlist 必红 | verifying | P1 | PLAN-0014 |
 | `BUG-0067` | docs-site 构建在 CI 上 Turbopack 报 71 错 | investigating | P2 | — |
 | `BUG-0066` | desktop-packaged 的 packaged E2E job 连续红 | investigating | P1 | — |

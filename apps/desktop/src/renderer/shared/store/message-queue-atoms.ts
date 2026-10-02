@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { atom } from "jotai";
 
 /**
@@ -84,6 +85,18 @@ const queuedDispatchSeqBySession = new Map<string, number>();
 
 export function bumpQueuedDispatchSeq(runtimeId: string): void {
 	queuedDispatchSeqBySession.set(runtimeId, (queuedDispatchSeqBySession.get(runtimeId) ?? 0) + 1);
+}
+
+/**
+ * 撤回一次派发序号：sendQueuedMessageNow 未真正派发新一轮（missing /
+ * promoted / IPC 失败）时调用，使本轮 agent_end 重拉不被误判成「跨轮」
+ * 跳过（BUG-0068）。用减一而非记回前值，避免吃掉并发的其他 bump。
+ */
+export function unbumpQueuedDispatchSeq(runtimeId: string): void {
+	const current = queuedDispatchSeqBySession.get(runtimeId);
+	if (current === undefined) return;
+	if (current <= 1) queuedDispatchSeqBySession.delete(runtimeId);
+	else queuedDispatchSeqBySession.set(runtimeId, current - 1);
 }
 
 export function getQueuedDispatchSeq(runtimeId: string): number {

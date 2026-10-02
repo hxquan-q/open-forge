@@ -50,7 +50,7 @@ import {
 	selectedModelAtom,
 	todoItemsBySessionAtom,
 } from "@shared/store/atoms";
-import { bumpQueuedDispatchSeq } from "@shared/store/message-queue-atoms";
+import { bumpQueuedDispatchSeq, unbumpQueuedDispatchSeq } from "@shared/store/message-queue-atoms";
 import type { PromptAttachmentRef, PromptRequest } from "@vetta/runtime-core";
 import type { PluginPromptContext } from "@vetta-org/plugin-sdk";
 import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
@@ -683,8 +683,14 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 			// 过期而跳过，避免冲掉新一轮的用户气泡（判活机制见 message-queue-atoms）。
 			bumpQueuedDispatchSeq(runtimeId);
 			try {
-				await window.vetta.session.sendQueuedMessageNow(runtimeId, id);
+				const outcome = await window.vetta.session.sendQueuedMessageNow(runtimeId, id);
+				// kernel 未真正派发新 turn（条目已不在队列 / 仅队内提升）时撤回序号——
+				// 否则本轮 agent_end 重拉会被判过期跳过，未对账气泡停在错位位置（BUG-0068）。
+				if (outcome !== "started") unbumpQueuedDispatchSeq(runtimeId);
 			} catch (err) {
+				// kernel 的抛错路径都发生在 startQueuedInput 之前（closed / 状态错误 /
+				// 取消失败回队），未派发新一轮，序号一并撤回。
+				unbumpQueuedDispatchSeq(runtimeId);
 				const message = err instanceof Error ? err.message : String(err);
 				console.error("[useSessionManager.sendQueuedNow] failed:", err);
 				if (getDefaultStore().get(activeSessionAtom)?.runtimeId === runtimeId) {

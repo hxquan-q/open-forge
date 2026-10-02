@@ -18,6 +18,7 @@ import {
 	activeToolNamesAtom,
 	adoptExistingSessionInputDraft,
 	batchProjectsAtom,
+	type ChatTimelineItem,
 	chatMessagesAtom,
 	claimExistingSessionInputDraft,
 	claimNewSessionInputDraft,
@@ -742,10 +743,32 @@ export function useSessionOpener(): SessionOpenerController {
 										current,
 									);
 									const mergedIds = new Set(merged.map((message) => message.id));
-									const missingOptimistic = unresolvedOptimistic.filter(
-										(message) => !mergedIds.has(message.id),
+									const missingIds = new Set(
+										unresolvedOptimistic.filter((message) => !mergedIds.has(message.id)).map((m) => m.id),
 									);
-									return missingOptimistic.length > 0 ? [...merged, ...missingOptimistic] : merged;
+									if (missingIds.size === 0) return merged;
+									// 未决乐观气泡按 reconciled 中最近的 canonical 前驱锚定回原位——
+									// 平铺到末尾会把它挪到它触发的回复之后（BUG-0068）。
+									const missingByAnchor = new Map<string | undefined, ChatTimelineItem[]>();
+									let anchor: string | undefined;
+									for (const item of reconciled) {
+										if (canonicalIds.has(item.id)) {
+											anchor = item.id;
+											continue;
+										}
+										if (!missingIds.has(item.id)) continue;
+										const group = missingByAnchor.get(anchor) ?? [];
+										group.push(item);
+										missingByAnchor.set(anchor, group);
+									}
+									const headGroup = missingByAnchor.get(undefined) ?? [];
+									const result: ChatTimelineItem[] = [...headGroup];
+									for (const item of merged) {
+										result.push(item);
+										const group = missingByAnchor.get(item.id);
+										if (group) result.push(...group);
+									}
+									return result;
 								});
 							});
 						});

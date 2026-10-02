@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
 import type { ChatConversationItem } from "@shared/store/atoms";
 import { describe, expect, it } from "vitest";
@@ -57,5 +58,39 @@ describe("shareChatMessageSnapshot", () => {
 		const result = preserveMessagesAddedAfterSnapshot([], [queued], [queued]);
 
 		expect(result).toEqual([queued]);
+	});
+
+	it("current 中夹在持久化项之间的 live-only 项保持因果位置，不平铺到末尾", () => {
+		// 乐观/镜像用户气泡在 current 里排在它触发的回复之前；回填合并若把
+		// canonical 之外的项一律追加尾部，气泡会跑到回复之后（BUG-0068）。
+		const persistedUser = createConversationUserMessage({ id: "u-1", text: "q1" });
+		const bubble = createConversationUserMessage({ id: "opt-m", text: "followup", deliveryPhase: "pending" });
+		const persistedReply = message("a-1", "reply");
+
+		const result = preserveMessagesAddedAfterSnapshot(
+			[],
+			[persistedUser, persistedReply],
+			[persistedUser, bubble, persistedReply],
+		);
+
+		expect(result.map((item) => item.id)).toEqual(["u-1", "opt-m", "a-1"]);
+	});
+
+	it("live-only 项没有持久化前驱时锚定到最近持久化后继之前", () => {
+		const bubble = createConversationUserMessage({ id: "opt-m", text: "followup", deliveryPhase: "pending" });
+		const persistedUser = createConversationUserMessage({ id: "u-1", text: "q1" });
+
+		const result = preserveMessagesAddedAfterSnapshot([], [persistedUser], [bubble, persistedUser]);
+
+		expect(result.map((item) => item.id)).toEqual(["opt-m", "u-1"]);
+	});
+
+	it("current 不含任何持久化项时 live-only 项仍追加尾部", () => {
+		const draft = message("a-live", "streaming");
+		const persistedUser = createConversationUserMessage({ id: "u-1", text: "q1" });
+
+		const result = preserveMessagesAddedAfterSnapshot([], [persistedUser], [draft]);
+
+		expect(result.map((item) => item.id)).toEqual(["u-1", "a-live"]);
 	});
 });

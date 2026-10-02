@@ -501,6 +501,112 @@ it("立即发送打断插队：上一回合已 streaming 的部分回复保留�
 	]);
 });
 
+it("raw assistant 流下同一 turn 两次消费：消费后的回复新开消息，镜像气泡不落到回复后", async () => {
+	let eventHandler: SessionEventHandler | undefined;
+	const sessionApi = (window as unknown as { vetta: { session: Record<string, unknown> } }).vetta.session;
+	sessionApi.create = vi.fn(async () => ({ cwd, sessionId: runtimeId, sessionPath }));
+	sessionApi.getSessionPath = vi.fn(async () => sessionPath);
+	sessionApi.getState = vi.fn(async () => ({
+		activeToolNames: [],
+		contextPercent: null,
+		contextWindow: 128_000,
+		executionMode: "full-access",
+		isStreaming: true,
+		messageCount: 0,
+		model: null,
+		scenario: "project",
+	}));
+	sessionApi.subscribe = vi.fn(async (_sessionId: string, handler: SessionEventHandler) => {
+		eventHandler = handler;
+		return vi.fn();
+	});
+	const firstHistory = [{ type: "message", entryId: "u-1", message: { role: "user", content: "第一条消息" } }];
+	sessionApi.openViewer = vi.fn(async () => ({ history: firstHistory }));
+	sessionApi.getFullHistory = vi.fn(async () => firstHistory);
+	const store = await mount("", false);
+	const { chatMessagesAtom } = await import("@shared/store/atoms");
+	await act(async () => {
+		await manager?.openSession(cwd, sessionPath);
+	});
+	if (!eventHandler) throw new Error("subscribe handler not captured");
+	const emit = (event: unknown): void => {
+		act(() => eventHandler?.(event));
+	};
+	const base = { schemaVersion: 1, sessionId: runtimeId, eventId: "e", timestamp: Date.now(), source: "runtime-core" };
+	const assistantDelta = (text: string) => ({
+		...base,
+		channel: "assistant",
+		turnId: "turn-1",
+		modelCallIndex: 0,
+		type: "text_delta",
+		contentIndex: 0,
+		delta: text,
+	});
+	const queueChanged = (entries: unknown[]) => ({
+		...base,
+		type: "queue.changed",
+		paused: false,
+		entries,
+		snapshot: {},
+	});
+	const flushTimers = async (): Promise<void> => {
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 150));
+		});
+	};
+
+	emit({ ...base, type: "session.lifecycle", phase: "agent_start" });
+	emit(assistantDelta("回答一"));
+	// 第一次消费：排队一被自然停止点接力。
+	emit(queueChanged([{ id: "q-1", behavior: "followUp", displayText: "排队一" }]));
+	emit(queueChanged([]));
+	emit(assistantDelta("回复甲"));
+	// 第二次消费：排队二被接力。reset 后同 turnId 的确定性 assistant id
+	// 已被「回复甲」消息占用——消费后的回复必须新开一条消息留在镜像
+	// 气泡之后，不能原位替换把内容塞回气泡之前（BUG-0068）。
+	emit(queueChanged([{ id: "q-2", behavior: "followUp", displayText: "排队二" }]));
+	emit(queueChanged([]));
+	emit(assistantDelta("回复乙"));
+	await flushTimers();
+
+	const shape = store.get(chatMessagesAtom).flatMap((message) => visibleMessageShape(message) ?? []);
+	expect(shape).toEqual([
+		["user", "第一条消息"],
+		["assistant", "回答一"],
+		["user", "排队一"],
+		["assistant", "回复甲"],
+		["user", "排队二"],
+		["assistant", "回复乙"],
+	]);
+});
+
+it("立即发送未派发新轮次时撤回派发序号，本轮 agent_end 重拉不被误跳过", async () => {
+	const sessionApi = (window as unknown as { vetta: { session: Record<string, unknown> } }).vetta.session;
+	sessionApi.sendQueuedMessageNow = vi.fn(async () => "missing");
+	const { getQueuedDispatchSeq } = await import("@shared/store/message-queue-atoms");
+	await mount("", false);
+
+	// missing：条目已不在队列，kernel 未开新 turn——序号必须还原，否则本轮
+	// agent_end 的历史重拉会被判成「跨轮」跳过，未对账气泡卡在错位位置（BUG-0068）。
+	await act(async () => {
+		await manager?.sendQueuedNow(runtimeId, "q-gone");
+	});
+	expect(getQueuedDispatchSeq(runtimeId)).toBe(0);
+
+	// started：真派发新 turn，序号照常 +1。
+	sessionApi.sendQueuedMessageNow = vi.fn(async () => "started");
+	await act(async () => {
+		await manager?.sendQueuedNow(runtimeId, "q-1");
+	});
+	expect(getQueuedDispatchSeq(runtimeId)).toBe(1);
+
+	sessionApi.sendQueuedMessageNow = vi.fn(async () => "missing");
+	await act(async () => {
+		await manager?.sendQueuedNow(runtimeId, "q-2");
+	});
+	expect(getQueuedDispatchSeq(runtimeId)).toBe(1);
+});
+
 it("空闲发送：正常上屏乐观气泡并返回 sent", async () => {
 	const store = await mount("普通消息", false);
 	const { chatMessagesAtom } = await import("@shared/store/atoms");

@@ -574,6 +574,47 @@ describe("reconcileWindowedProjection", () => {
 		expect(result.canonicalCount).toBe(1);
 	});
 
+	it("夹在已消费项之间的 live-only 项保持因果位置，不平铺到回复末尾", () => {
+		// 队列镜像气泡在 live 里排在它触发的回复之前；窗口化提交若把未消费
+		// live-only 项一律追加尾部，气泡会跑到回复之后（BUG-0068）。
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const mirror = createConversationUserMessage({ id: "opt-2", text: "followup", deliveryPhase: "pending" });
+		const liveAgent = completedAgent("live-a", "a-2");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-2", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, mirror, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["live-u", "opt-2", "live-a"]);
+	});
+
+	it("live-only 项没有已消费前驱时锚定到最近已消费后继之前", () => {
+		const mirror = createConversationUserMessage({ id: "opt-1", text: "followup", deliveryPhase: "pending" });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([mirror, liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["opt-1", "live-u", "live-a"]);
+	});
+
+	it("完全无已消费邻居的 live-only 项仍追加尾部", () => {
+		const streaming = createConversationAgentMessage({ id: "live-stream", phase: "streaming", blocks: [] });
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+		];
+		const result = reconcileWindowedProjection([streaming], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["proj-u", "live-stream"]);
+	});
+
 	it("无 entryId 的 live 项按 kind 有序配对；kind 不匹配的项不被消费", () => {
 		// live: [无 key 的 event, 无 key 的 completed agent]；
 		// canonical: [无 key agent, 无 key event]——顺序相反也要各自配上。

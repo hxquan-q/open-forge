@@ -1,5 +1,9 @@
 // Modified by The Open Forge contributors.
-import { type ConversationUserMessageViewModel, createConversationUserMessage } from "@shared/conversation";
+import {
+	type ConversationUserMessageViewModel,
+	createConversationAgentMessage,
+	createConversationUserMessage,
+} from "@shared/conversation";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
 	clearOptimisticUserMessages,
@@ -95,7 +99,24 @@ describe("optimistic user message reconciliation", () => {
 		});
 
 		const history = [user("persisted-1", "first"), user("persisted-2", "different")];
-		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([...history, optimistic]);
+		// 未确认也不丢：落在其发送时的因果位置（persisted-1 之后），而非列表末尾。
+		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([history[0], optimistic, history[1]]);
+	});
+
+	it("序号被其他规范消息占用时按发送序号钳制落位，不追加到回复末尾", () => {
+		// 排队消息被 turn 消费后镜像气泡记下的序号，可能已被另一条更早落盘的
+		// 发送占据；旧实现走尾部兜底，把气泡追加到它触发的回复之后（BUG-0068）。
+		const optimistic = user("optimistic-2", "插队消息");
+		rememberOptimisticUserMessage("runtime-a", optimistic, [user("persisted-1", "first")]);
+		const reply = createConversationAgentMessage({ id: "agent-1", phase: "completed", blocks: [] });
+		const history = [user("persisted-1", "first"), user("persisted-2", "other"), reply];
+
+		expect(reconcileOptimisticUserMessages("runtime-a", history).map((message) => message.id)).toEqual([
+			"persisted-1",
+			"optimistic-2",
+			"persisted-2",
+			"agent-1",
+		]);
 	});
 
 	it("永远对不上账的气泡在有限次对账后停止残留", () => {
@@ -105,7 +126,8 @@ describe("optimistic user message reconciliation", () => {
 		rememberOptimisticUserMessage("runtime-a", optimistic, [], { matchTextOnly: true });
 
 		const history = [user("persisted-1", "真实用户消息")];
-		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([...history, optimistic]);
+		// 发送时没有任何 user 序号（precedingUserCount=0），落在列表首位。
+		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([optimistic, ...history]);
 		reconcileOptimisticUserMessages("runtime-a", history);
 		reconcileOptimisticUserMessages("runtime-a", history);
 		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual(history);

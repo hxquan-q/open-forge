@@ -147,7 +147,7 @@ function commitWindowedProjection(input: WindowedCommitInput): { prependedCount:
 	const spans = new Map<string, TranscriptItemSpan>();
 	for (let i = 0; i < reconciled.canonicalCount; i += 1) {
 		const source = projected.messages[i];
-		const target = reconciled.items[i];
+		const target = reconciled.items[reconciled.canonicalItemIndexes[i]];
 		const span = source ? projected.spans.get(source.id) : undefined;
 		if (span && target) spans.set(target.id, span);
 	}
