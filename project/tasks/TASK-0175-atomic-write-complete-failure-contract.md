@@ -1,7 +1,7 @@
 ---
 id: TASK-0175
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: toolkit
 source: RESEARCH-0019; TASK-0172
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: [BUG-0060]
 execution: serial
 branch: main
-worktree: unassigned（仅规划，未开始代码实施）
+worktree: unassigned（2026-10-02 主检出串行实施，无多 Agent 授权）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/toolkit/AGENTS.md, packages/toolkit/src/atomic-write.ts, packages/toolkit/test/atomic-write.test.ts, project/bugs/BUG-0060-atomic-write-pre-rename-failures.md]
 write_paths: [packages/toolkit/src/atomic-write.ts, packages/toolkit/test/atomic-write.test.ts, project/tasks/TASK-0175-atomic-write-complete-failure-contract.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: [TASK-0150]
 conflicts_with: [TASK-0150]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -68,4 +68,12 @@ updated: 2026-10-02
 
 ## 验收分层与当前交付
 
-当前只完成规划，未来行为测试/实现/技术验收均未执行；源码/证据自审不等于产品测试通过。集成 pending，未创建代码分支或 Worktree。实现后回填 red/green、实际命令、提交与未验证边界，功能人工接受与发布分别处理。
+工程完成转 verifying；验收分层含义见交付合同，人工功能接受与发布分别处理。
+
+## 交付记录（2026-10-02，主检出串行实施）
+
+- 实现：`atomicWriteFile` / `performAtomicWrite` 改为完整字节循环（`writeAllSync` / `writeAllAsync`，零进度抛 `EIO` 不无限循环）；失败合同统一为「记录首个失败 → finally 关闭（关闭失败仅在无更早失败时成为首个错误）→ 尽力删除本次 tmp → 上抛首个错误」，成功需写满 + fsync + close 全部通过才进入 rename。异步路径由 `file.writeFile` 改为显式 `file.write` 循环，与同步同语义。TASK-0150 的唯一临时名、同路径异步队列、rename 重试预算与公开 API 全部保持。
+- Red/Green：旧实现红——新增 11 项用例中 9 项失败（同步/异步短写截断提交、连续零进度、fsync 单独失败残留 tmp、fsync+close 双失败上抛 close 错误、仅 close 失败仍提交、失败后同路径恢复与不误删他人 tmp）；修复后 20/20。BUG-0060 五种注入模式全部覆盖，另补多字节内容与空内容边界。
+- 实际命令与结果：cwd `packages/toolkit` 定向 20/20、全包 35/35；`test:impact` 与 `test:changed --base origin/dev`（与同批 TASK-0178 合并执行：desktop 4652、presets/content-creation、runtime-desktop、themes、toolkit）通过；`bun run check` exit 0。
+- 未验证项/风险：真实断电/磁盘故障持久性未实测（合同本就不宣称）；Windows 外平台行为由既有测试与 Node FileHandle 语义覆盖，未做实机矩阵。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）；人工功能验收与发布未执行。

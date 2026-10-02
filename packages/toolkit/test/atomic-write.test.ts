@@ -1,8 +1,8 @@
 // Copyright The Open Forge contributors.
 import type * as NodeFs from "node:fs";
-import { renameSync, rmSync } from "node:fs";
+import { closeSync, fsyncSync, renameSync, rmSync, writeSync } from "node:fs";
 import type * as NodeFsPromises from "node:fs/promises";
-import { mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type * as NodeTimers from "node:timers/promises";
@@ -11,11 +11,18 @@ import { atomicWriteFile, atomicWriteFileAsync } from "../src/atomic-write.js";
 
 vi.mock("node:fs", async (original) => {
 	const actual = await original<typeof NodeFs>();
-	return { ...actual, renameSync: vi.fn(actual.renameSync), rmSync: vi.fn(actual.rmSync) };
+	return {
+		...actual,
+		closeSync: vi.fn(actual.closeSync),
+		fsyncSync: vi.fn(actual.fsyncSync),
+		renameSync: vi.fn(actual.renameSync),
+		rmSync: vi.fn(actual.rmSync),
+		writeSync: vi.fn(actual.writeSync),
+	};
 });
 vi.mock("node:fs/promises", async (original) => {
 	const actual = await original<typeof NodeFsPromises>();
-	return { ...actual, rename: vi.fn(actual.rename), rm: vi.fn(actual.rm) };
+	return { ...actual, open: vi.fn(actual.open), rename: vi.fn(actual.rename), rm: vi.fn(actual.rm) };
 });
 vi.mock("node:timers/promises", async (original) => {
 	const actual = await original<typeof NodeTimers>();
@@ -24,10 +31,14 @@ vi.mock("node:timers/promises", async (original) => {
 
 const roots: string[] = [];
 beforeEach(() => {
+	vi.mocked(closeSync).mockReset();
+	vi.mocked(fsyncSync).mockReset();
+	vi.mocked(open).mockReset();
 	vi.mocked(rename).mockReset();
 	vi.mocked(renameSync).mockReset();
 	vi.mocked(rm).mockReset();
 	vi.mocked(rmSync).mockReset();
+	vi.mocked(writeSync).mockReset();
 	vi.spyOn(Atomics, "wait").mockReturnValue("timed-out");
 });
 
@@ -145,3 +156,204 @@ describe("rename retry failure budgets", () => {
 		expect(await readFile(target, "utf8")).toBe("recovered");
 	});
 });
+
+const MULTIBYTE = "héllo 世界 🚀 config-value";
+
+/** 取被 vi.fn(actual.fn) 包装的真实实现，供一次性故障注入内部继续做真实 I/O。 */
+function baseImplementation<T extends (...args: never[]) => unknown>(mock: T): T {
+	const impl = (mock as unknown as { getMockImplementation?: () => T | undefined }).getMockImplementation?.();
+	if (!impl) throw new Error("mock has no base implementation");
+	return impl;
+}
+
+describe("complete byte and failure contract", () => {
+	it("sync 短写后续写满全部字节才提交（多字节内容）", async () => {
+		const { dir, target } = await createTarget();
+		const realWrite = baseImplementation(vi.mocked(writeSync));
+		vi.mocked(writeSync).mockImplementationOnce((fd, buffer, offset, length) => {
+			// 第一轮只写 1 个字节并如实返回 1，剩余字节靠调用方循环补齐。
+			return realWrite(fd, buffer as Buffer, offset ?? 0, Math.min(1, length ?? (buffer as Buffer).length));
+		});
+		atomicWriteFile(target, MULTIBYTE);
+		expect(await readFile(target, "utf8")).toBe(MULTIBYTE);
+		expect(vi.mocked(writeSync).mock.calls.length).toBeGreaterThanOrEqual(2);
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("sync 连续零进度报 I/O 错误，不把部分内容提交到目标", async () => {
+		const { dir, target } = await createTarget();
+		vi.mocked(writeSync).mockReturnValueOnce(0);
+		vi.mocked(writeSync).mockReturnValueOnce(0);
+		let caught: unknown;
+		try {
+			atomicWriteFile(target, MULTIBYTE);
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(Error);
+		expect((caught as NodeJS.ErrnoException).code).toBe("EIO");
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("sync fsync 失败保留旧目标、上抛首个错误并清理本次 tmp", async () => {
+		const { dir, target } = await createTarget();
+		const failure = new Error("fsync primary");
+		vi.mocked(fsyncSync).mockImplementationOnce(() => {
+			throw failure;
+		});
+		expect(() => atomicWriteFile(target, "new")).toThrow(failure);
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("sync fsync 与 close 同时失败时上抛 fsync 的首个错误", async () => {
+		const { dir, target } = await createTarget();
+		const primary = new Error("fsync primary");
+		const secondary = new Error("close secondary");
+		const realClose = baseImplementation(vi.mocked(closeSync));
+		vi.mocked(fsyncSync).mockImplementationOnce(() => {
+			throw primary;
+		});
+		vi.mocked(closeSync).mockImplementationOnce((fd) => {
+			realClose(fd);
+			throw secondary;
+		});
+		expect(() => atomicWriteFile(target, "new")).toThrow(primary);
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("sync 仅 close 失败也不提交目标", async () => {
+		const { dir, target } = await createTarget();
+		const secondary = new Error("close secondary");
+		const realClose = baseImplementation(vi.mocked(closeSync));
+		vi.mocked(closeSync).mockImplementationOnce((fd) => {
+			realClose(fd);
+			throw secondary;
+		});
+		expect(() => atomicWriteFile(target, "new")).toThrow(secondary);
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("空内容是一次合法的成功写入", async () => {
+		const { dir, target } = await createTarget();
+		atomicWriteFile(target, "");
+		expect(await readFile(target, "utf8")).toBe("");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("sync 同路径失败后继续正常写入可以完成，且只清理自己的 tmp", async () => {
+		const { dir, target } = await createTarget();
+		const unrelated = join(dir, "unrelated.tmp");
+		await writeFile(unrelated, "keep");
+		const failure = new Error("fsync primary");
+		vi.mocked(fsyncSync).mockImplementationOnce(() => {
+			throw failure;
+		});
+		expect(() => atomicWriteFile(target, "new")).toThrow(failure);
+		atomicWriteFile(target, "recovered");
+		expect(await readFile(target, "utf8")).toBe("recovered");
+		expect(await readFile(unrelated, "utf8")).toBe("keep");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual(["unrelated.tmp"]);
+	});
+
+	it("async 短写后续写满全部字节才提交", async () => {
+		const { dir, target } = await createTarget();
+		const realOpen = baseImplementation(vi.mocked(open));
+		vi.mocked(open).mockImplementationOnce(async (pathArg, flags) => {
+			const handle = await realOpen(pathArg, flags);
+			let writeCalls = 0;
+			return wrapFileHandle(handle, {
+				write: ((buffer: Buffer, offset?: number, length?: number) => {
+					writeCalls += 1;
+					if (writeCalls === 1) return handle.write(buffer, offset ?? 0, Math.min(1, length ?? buffer.length));
+					return handle.write(buffer, offset ?? 0, length);
+				}) as NodeFsPromises.FileHandle["write"],
+			});
+		});
+		await atomicWriteFileAsync(target, MULTIBYTE);
+		expect(await readFile(target, "utf8")).toBe(MULTIBYTE);
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("async sync 与 close 同时失败时上抛 sync 的首个错误并清理 tmp", async () => {
+		const { dir, target } = await createTarget();
+		const primary = new Error("async fsync primary");
+		const secondary = new Error("async close secondary");
+		const realOpen = baseImplementation(vi.mocked(open));
+		vi.mocked(open).mockImplementationOnce(async (pathArg, flags) => {
+			const handle = await realOpen(pathArg, flags);
+			return wrapFileHandle(handle, {
+				sync: async () => {
+					throw primary;
+				},
+				close: async () => {
+					await handle.close();
+					throw secondary;
+				},
+			});
+		});
+		await expect(atomicWriteFileAsync(target, "new")).rejects.toBe(primary);
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+		await atomicWriteFileAsync(target, "recovered");
+		expect(await readFile(target, "utf8")).toBe("recovered");
+	});
+
+	it("async 仅 close 失败也不提交目标", async () => {
+		const { dir, target } = await createTarget();
+		const secondary = new Error("async close secondary");
+		const realOpen = baseImplementation(vi.mocked(open));
+		vi.mocked(open).mockImplementationOnce(async (pathArg, flags) => {
+			const handle = await realOpen(pathArg, flags);
+			return wrapFileHandle(handle, {
+				close: async () => {
+					await handle.close();
+					throw secondary;
+				},
+			});
+		});
+		await expect(atomicWriteFileAsync(target, "new")).rejects.toBe(secondary);
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+
+	it("async 零进度报 I/O 错误，不提交部分内容", async () => {
+		const { dir, target } = await createTarget();
+		const realOpen = baseImplementation(vi.mocked(open));
+		vi.mocked(open).mockImplementationOnce(async (pathArg, flags) => {
+			const handle = await realOpen(pathArg, flags);
+			return wrapFileHandle(handle, {
+				write: (async (buffer: Buffer) => ({
+					bytesWritten: 0,
+					buffer,
+				})) as unknown as NodeFsPromises.FileHandle["write"],
+			});
+		});
+		let caught: unknown;
+		try {
+			await atomicWriteFileAsync(target, MULTIBYTE);
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(Error);
+		expect((caught as NodeJS.ErrnoException).code).toBe("EIO");
+		expect(await readFile(target, "utf8")).toBe("original");
+		expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+	});
+});
+
+function wrapFileHandle(
+	handle: NodeFsPromises.FileHandle,
+	overrides: Partial<Record<"write" | "sync" | "close", unknown>>,
+): NodeFsPromises.FileHandle {
+	return new Proxy(handle, {
+		get(target, property) {
+			if (property in overrides) return overrides[property as keyof typeof overrides];
+			const value = Reflect.get(target, property, target);
+			return typeof value === "function" ? value.bind(target) : value;
+		},
+	}) as NodeFsPromises.FileHandle;
+}

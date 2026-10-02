@@ -1,7 +1,7 @@
 ---
 id: BUG-0060
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: toolkit
 source: TASK-0172 isolated I/O fault injection
@@ -54,4 +54,4 @@ Given：调用方保存配置或产物，目标文件已有完整旧内容；Whe
 
 ## 修复与验证
 
-未修复；本轮五种隔离模式均得到上述结果。未新增仓库测试文件、未跑真实磁盘断电或生产目录，不把源码探针当作完整消费者回归。
+2026-10-02 修复（TASK-0175）：同步路径改为 `writeAllSync` 按实际写入字节数循环补齐（零进度抛 `EIO`，不无限循环、不提交部分内容）；同步/异步统一「记录首个失败 → finally 关闭（关闭失败仅在无更早失败时成为首个错误）→ 尽力删除本次 tmp → 上抛首个错误」的失败合同，成功必须写满 + fsync + close 全部通过才进入 rename。旧实现红证据：新增 9 例断言失败（同步/异步短写、连续零进度、fsync 单独失败、fsync+close 双失败的首个错误身份、仅 close 失败不提交、空内容合法成功、失败后同路径恢复且不误删他人 tmp）；修复后 `packages/toolkit` 全包 35/35 通过，既有队列/唯一临时名/rename 预算回归保持。真实磁盘断电持久性仍未验证（合同本就不宣称）；Windows 外平台的 rename 语义由既有测试覆盖。

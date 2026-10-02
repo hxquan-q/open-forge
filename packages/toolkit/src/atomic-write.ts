@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
-import { mkdir, open, rename, rm } from "node:fs/promises";
+import { type FileHandle, mkdir, open, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -31,13 +31,42 @@ export function atomicWriteFile(path: string, data: string): void {
 
 	const tmpPath = nextTempPath(path);
 	const fd = openSync(tmpPath, "w");
+	let failure: { error: unknown } | undefined;
 	try {
-		writeSync(fd, data);
+		writeAllSync(fd, data);
 		fsyncSync(fd);
+	} catch (error) {
+		failure = { error };
 	} finally {
-		closeSync(fd);
+		try {
+			closeSync(fd);
+		} catch (error) {
+			// 只有关闭先成功、写入/同步也没失败时它才是首个错误；否则保留原失败。
+			failure ??= { error };
+		}
+	}
+	if (failure) {
+		// 受控失败不提交目标：尽力清理本次 tmp，清理错误不能盖过首个失败。
+		try {
+			rmSync(tmpPath, { force: true });
+		} catch {
+			/* Preserve the first failure. */
+		}
+		throw failure.error;
 	}
 	renameWithRetry(tmpPath, path);
+}
+
+/** 同步写满全部字节；零进度视为 I/O 故障而不是无限循环。 */
+function writeAllSync(fd: number, data: string): void {
+	const buffer = Buffer.from(data, "utf8");
+	for (let offset = 0; offset < buffer.length; ) {
+		const written = writeSync(fd, buffer, offset, buffer.length - offset);
+		if (written <= 0) {
+			throw Object.assign(new Error(`atomic write stalled at byte ${offset} of ${buffer.length}`), { code: "EIO" });
+		}
+		offset += written;
+	}
 }
 
 /**
@@ -81,13 +110,36 @@ async function performAtomicWrite(path: string, data: string): Promise<void> {
 
 	const tmpPath = nextTempPath(path);
 	const file = await open(tmpPath, "w");
+	let failure: { error: unknown } | undefined;
 	try {
-		await file.writeFile(data);
+		await writeAllAsync(file, data);
 		await file.sync();
+	} catch (error) {
+		failure = { error };
 	} finally {
-		await file.close();
+		try {
+			await file.close();
+		} catch (error) {
+			failure ??= { error };
+		}
+	}
+	if (failure) {
+		await rm(tmpPath, { force: true }).catch(() => undefined);
+		throw failure.error;
 	}
 	await renameWithRetryAsync(tmpPath, path);
+}
+
+/** 异步写满全部字节；零进度视为 I/O 故障而不是无限循环。 */
+async function writeAllAsync(file: FileHandle, data: string): Promise<void> {
+	const buffer = Buffer.from(data, "utf8");
+	for (let offset = 0; offset < buffer.length; ) {
+		const { bytesWritten } = await file.write(buffer, offset, buffer.length - offset);
+		if (bytesWritten <= 0) {
+			throw Object.assign(new Error(`atomic write stalled at byte ${offset} of ${buffer.length}`), { code: "EIO" });
+		}
+		offset += bytesWritten;
+	}
 }
 
 export async function atomicWriteJSONAsync(path: string, value: unknown): Promise<void> {
