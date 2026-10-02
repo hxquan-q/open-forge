@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0153-ssh-selective-transport
-worktree: ../open-forge-wt/task-0153-ssh-selective-transport
+worktree: unassigned（已集成，原 Worktree 保留待安全清理）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [packages/ssh-transport, apps/desktop/src/main/ssh]
 write_paths: [packages/ssh-transport/src/node-process-runner.ts, packages/ssh-transport/src/node-process-runner.test.ts, packages/ssh-transport/src/node-process-runner.lifecycle.test.ts, project/tasks/TASK-0153-ssh-selective-transport.md, project/tasks/README.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/ssh-transport/src/node-process-runner.ts, packages/ssh-transport/src/node-process-runner.test.ts, packages/ssh-transport/src/node-process-runner.lifecycle.test.ts]
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0148, TASK-0165]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -95,3 +95,9 @@ Upstreamable。用户取消/超时结束远端命令后，本地 SSH 的派生�
 ### 功能验收包
 
 可用候选为上述独立分支提交，尚不在 main。集成后在 macOS/Linux 的远端项目执行可取消命令，取消/超时应结束本地等待；同时正常命令、双向通道和 Windows ssh2 不退化。传输中断仍不能断言远端命令已退出，不自动重放。不要为本轮验收使用真实主机/用户实例，除非用户另行明确授权。
+
+## TASK-0171 主树集成（2026-10-02）
+
+来源分支：task/TASK-0153-ssh-selective-transport；来源提交：2e41db644893488117bc58485a03a449a8a114f0。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
+
+集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0153。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。

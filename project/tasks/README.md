@@ -60,7 +60,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task | 状态 | Plan | 当前焦点 |
 |---|---|---|---|
-| `TASK-0153` | `verifying` | `PLAN-0014` | SSH 进程组取消已提交 2e41db644；定向/两包影响面与完整 check 通过，独立 Worktree 待集成，保留主树 WIP。 |
+| `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0169` | `draft` | `PLAN-0014` | SSH 配置失效与实时连接状态；待失败基线与隔离实施。 |
 | `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
 | `TASK-0167` | `draft` | `PLAN-0014` | 远端文件名筛选与完整调用链接线；待失败基线与隔离实施。 |
