@@ -18,7 +18,7 @@ read_paths: [packages/coding-agent/src/composition/turn, packages/coding-agent/s
 write_paths: [packages/coding-agent/src/composition/turn, packages/coding-agent/src/resources/runtime, packages/coding-agent/src/model-context, packages/runtime-mcp, apps/desktop/src/main/agent-runtime, apps/desktop/src/main/agent-teams, project/tasks/TASK-0154-resource-mcp-team-startup.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/coding-agent/src/composition/turn]
 depends_on: [TASK-0148]
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181]
+conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0194, TASK-0196]
 integration_status: pending
 created: 2026-10-02
 updated: 2026-10-03
@@ -55,7 +55,7 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 ## 并发与验收分层
 
 - 由泳道 B 在独立 Task Worktree 串行实施；前置 TASK-0148 已集成。条件支持并发的独立路径与 Worktree 规则见 PLAN-0014。
-- `conflicts_with` 只登记已入库任务（TASK-0122/0123/0181）。与尚未入库、但共享 `.github/release-notes/v0.1.3.md`、`project/tasks/` 或 apps/desktop/packages 写路径的 TASK-0187/0194/0196/0197 按 prose 记录重叠，待其经 dev 合入后再补登。
+- `conflicts_with` 登记已入库的写路径重叠任务（TASK-0122/0123/0181，以及经 dev 合入后的 TASK-0194/0196）。尚未入库的 TASK-0187/0197 按 prose 记录共享 `.github/release-notes/v0.1.3.md`、`project/tasks/` 与 apps/desktop/packages 写路径，待其经 dev 合入后再补登。
 - 保留 VERIFY-0013 的 WIP；与 TASK-0147 冲突处先对照，不覆盖、不夹带提交。共享 release notes 由 Coordinator 集成时归并。
 - 工程验证：见下「交付记录」；技术评审：已完成 diff 与合同自审；集成：待推送后回填；人工功能验收：待用户；发布：未授权。
 
