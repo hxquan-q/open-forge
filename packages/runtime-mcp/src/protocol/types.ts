@@ -47,6 +47,11 @@ export interface McpServerCommonConfig {
 	autoApprove?: string[];
 	startupTimeout?: number;
 	debug?: boolean;
+	/**
+	 * 连接所有权：全局条目默认 `application`（跨工作区复用同一连接），引用 `${PROJECT_ROOT}`
+	 * 时降为 `workspace`；项目配置无论写什么都不改变，始终是 `workspace`。
+	 */
+	resourceScope?: "application" | "workspace";
 	displayName?: string;
 	description?: string;
 	/** Selects the wire protocol strategy; legacy remains the compatibility default. */
