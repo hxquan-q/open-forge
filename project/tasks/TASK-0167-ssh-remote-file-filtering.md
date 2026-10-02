@@ -1,7 +1,7 @@
 ---
 id: TASK-0167
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: ssh-transport + desktop
 source: user-request; RESEARCH-0018
@@ -19,7 +19,7 @@ write_paths: [packages/ssh-transport, apps/ssh-helper, apps/desktop/src/main/fil
 exclusive_paths: []
 depends_on: [TASK-0153]
 conflicts_with: [TASK-0158, TASK-0196]
-integration_status: pending
+integration_status: integrated（实现 cfeec25d1，随本批推送 origin/dev）
 created: 2026-10-02
 updated: 2026-10-03
 ---
