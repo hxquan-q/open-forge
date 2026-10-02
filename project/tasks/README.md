@@ -32,6 +32,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0196` | `in_progress` | PLAN-0014 | 存量 Draft 批次（15 项：0042/0167/0166/0039/0154/0155/0157/0158/0159/0051/0038/0152/0156/0160 剩余/0161）；单专用工作树内部串行，逐项验证后推 origin/dev，批末合入本地 main；不做视觉校验。 |
 | `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿，实机峰谷差待用户验收）；TASK-0196 批次工作树。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
+| `TASK-0194` | `verifying` | — | BUG-0073：c9db5fa27 复审四处回归已修（判活净增长/孪生槽校验/prependedCount 还原/opener 统一回退，共享锚定助手收编三层管线）；回归先红后绿、conversation 域 965 绿，已推 dev 并合入本地 main，待人工验收。 |
 | `TASK-0181` | `in_progress` | — | 本机字体偏好：两项选择、主题持久化和终端跟随；独立 Worktree 实施。 |
 | `TASK-0180` | `verifying` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
 | `TASK-0184` | `ready` | — | docs-site 构建 Turbopack 71 错修复（BUG-0067）；仅建档待诊。 |
@@ -90,7 +91,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task | 状态 | Plan | 当前焦点 |
 |---|---|---|---|
-| `TASK-0187` | `in_progress` | PLAN-0014 | 非手机稳定性首批：用户指定单专用工作树，内部串行，验证后先推 dev 再集成本地 main。 |
 | `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0169` | `verifying` | PLAN-0014 | P1 生命周期：探测代次+失效处置已实施（BUG-0061 修复），定向 94/94 与批次门禁全绿，待人工验收。 |
 | `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
