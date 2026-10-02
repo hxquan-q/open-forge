@@ -1,7 +1,7 @@
 ---
 id: TASK-0177
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: ssh-transport documentation
 source: RESEARCH-0019; TASK-0172
@@ -12,14 +12,14 @@ related_issues: []
 related_bugs: []
 execution: serial
 branch: main
-worktree: unassigned（仅规划，未开始代码实施）
+worktree: unassigned（2026-10-03 主检出串行实施完成）
 base_commit: c8dc167f0590c608d0f5e076e4f0d0991d7c2dfa
 read_paths: [packages/ssh-transport/README.md, packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/node-process-runner.ts, packages/ssh-transport/src/known-hosts.ts, packages/ssh-transport/src/helper-deployment.ts, apps/desktop/src/main/ssh/ssh-hostkey-verifier.ts, apps/desktop/src/main/ssh/ssh-runtime.ts, docs/adr/0124-ssh-remote-projects-and-execution-boundary.md]
 write_paths: [packages/ssh-transport/README.md, project/tasks/TASK-0177-ssh-platform-contract-documentation.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0174, TASK-0169]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-02
 ---
@@ -68,3 +68,10 @@ README 仍无条件宣称传输使用系统 OpenSSH、ProxyCommand/FIDO/GSSAPI �
 ## 验收分层与当前交付
 
 当前只完成规划，未来行为测试/实现/技术验收均未执行；源码/证据自审不等于产品测试通过。集成 pending，未创建代码分支或 Worktree。实现后回填 red/green、实际命令、提交与未验证边界，功能人工接受与发布分别处理。
+
+## 交付记录（2026-10-03，纯文档）
+
+- 修正 README：新增「平台后端」表，按现行实现区分 macOS/Linux（系统 OpenSSH，含 ProxyCommand/FIDO/GSSAPI、ControlMaster 与 `ssh -O exit` 失效）与 win32（进程内 ssh2：ProxyCommand 明确拒绝、ProxyJump 经 forwardOut、known_hosts 自实现含 `@revoked` 拒绝语义）；「不做任何本地文件 I/O」改为如实描述注入端口（`readFile`/`resolveBinary`）与宿主所有的 known_hosts 文件读写；删除与平台表重复的「传输选系统 OpenSSH」绝对化段落。锚点：`ssh-runtime.ts#createPlatformRunner`、`ssh2-runner.ts`（ProxyCommand 拒绝）、`node-process-runner.ts`（`-O exit`）、`known-hosts.ts`、Desktop `ssh-hostkey-verifier.ts`。
+- 测试章节按 TASK-0174 已落地的标准入口如实重写（`bun run --cwd packages/ssh-transport test` 与选择器行为），并写明 POSIX 专属用例的显式 skipIf 边界。
+- 核对：README 内 ADR-0124 相对链接有效；命令在仓库根可解析（本会话实测）；`git diff --check` 无空白问题；无运行时行为变化，未新增产品单测。
+- 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
