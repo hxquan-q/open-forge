@@ -85,6 +85,24 @@ describe("shareChatMessageSnapshot", () => {
 		expect(result.map((item) => item.id)).toEqual(["opt-m", "u-1"]);
 	});
 
+	it("(b) 槽位文本不匹配的排队幽灵保持尾部，镜像气泡仍锚到孪生槽前", () => {
+		// 与 transcript-window 同一规则：锚定槽 user 文本须与气泡一致；
+		// 孪生永不入模的排队幽灵留在尾部（BUG-0073）。
+		const persistedUser = createConversationUserMessage({ id: "u-1", text: "q1" });
+		const mirror = createConversationUserMessage({ id: "opt-m", text: "followup", deliveryPhase: "pending" });
+		const ghost = createConversationUserMessage({ id: "opt-ghost", text: "还在排队", deliveryPhase: "pending" });
+		const twin = createConversationUserMessage({ id: "u-10", text: "followup" });
+		const reply = message("a-10", "reply");
+
+		const result = preserveMessagesAddedAfterSnapshot(
+			[],
+			[persistedUser, twin, reply],
+			[persistedUser, mirror, ghost],
+		);
+
+		expect(result.map((item) => item.id)).toEqual(["u-1", "opt-m", "u-10", "a-10", "opt-ghost"]);
+	});
+
 	it("current 不含任何持久化项时 live-only 项仍追加尾部", () => {
 		const draft = message("a-live", "streaming");
 		const persistedUser = createConversationUserMessage({ id: "u-1", text: "q1" });
