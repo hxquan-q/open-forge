@@ -1,7 +1,7 @@
 ---
 id: TASK-0191
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: desktop
 source: user-request; RESEARCH-0022; upstream 15317178d
@@ -9,13 +9,13 @@ related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
 related_tasks: [TASK-0187]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0072]
 execution: serial
 branch:
 worktree:
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths: [apps/desktop/src/renderer/shared/components/message-feed/useMessageFeedScrollModel.ts, apps/desktop/src/renderer/shared/components/message-feed/useMessageFeedScrollModel.test.tsx]
-write_paths: [apps/desktop/src/renderer/shared/components/message-feed/useMessageFeedScrollModel.ts, apps/desktop/src/renderer/shared/components/message-feed/useMessageFeedScrollModel.test.tsx, project/tasks/TASK-0191-reader-scroll-memory.md, .github/release-notes/v0.1.3.md]
+write_paths: [project/bugs/BUG-0072-mid-follow-scroll-memory.md, apps/desktop/src/renderer/shared/components/message-feed/useMessageFeedScrollModel.ts, apps/desktop/src/renderer/shared/components/message-feed/useMessageFeedScrollModel.test.tsx, project/tasks/TASK-0191-reader-scroll-memory.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0187]
@@ -55,3 +55,7 @@ updated: 2026-10-03
 ## 交付记录
 
 实施前合同已落盘；后续回填红绿测试、实际命令、提交、未运行项和剩余风险。
+
+红测：useMessageFeedScrollModel.test.tsx 两个 active=false/true 新用例恢复半途快照，2 失败/14 通过。保留已有主动位置恢复/批处理断言，补 wheel 以明确用户主动浏览前置。
+
+绿测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts useMessageFeedScrollModel.test.tsx useMessageListScrollModel.test.tsx`，2 文件/19 测试通过；主动阅读记忆、自动跟随和窗口化索引偏移保留。
