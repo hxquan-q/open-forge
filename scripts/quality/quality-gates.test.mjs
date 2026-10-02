@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import desktopVitestConfig from "../../apps/desktop/vitest.config.ts";
 import { styleForPath } from "./check-modified-file-notices.mjs";
 import { findPackageBoundaryViolations, findPackageManifestBoundaryViolations } from "./check-package-boundaries.mjs";
 import { batchPaths, createQuickCheckPlan, isBiomeGlobalTrigger } from "./check-quick.mjs";
@@ -30,7 +31,7 @@ import {
 } from "./lib.mjs";
 import { createChangedTestPlan, parseArgs } from "./test-changed.mjs";
 import { createImpactTestPlan, parseImpactArgs } from "./test-impact.mjs";
-import { createVitestEnv } from "./vitest-env.mjs";
+import { createVitestArgs, createVitestEnv } from "./vitest-env.mjs";
 
 describe("changed file selection", () => {
 	it("combines committed, working tree, and untracked paths", () => {
@@ -1533,5 +1534,40 @@ describe("VS Code workspace modification notices", () => {
 		expect(style.render("Modified by The Open Forge contributors.")).toBe(
 			"// Modified by The Open Forge contributors.",
 		);
+	});
+});
+
+describe("Desktop test resource envelope", () => {
+	it("bounds Windows workers without changing test or hook deadlines", () => {
+		expect(createVitestArgs(["run", "a.test.ts"], "win32")).toEqual(["--maxWorkers=2", "run", "a.test.ts"]);
+		expect(desktopVitestConfig.test.maxWorkers).toBeUndefined();
+		expect(desktopVitestConfig.test.testTimeout).toBeUndefined();
+		expect(desktopVitestConfig.test.hookTimeout).toBeUndefined();
+	});
+});
+
+describe("shared view test ownership", () => {
+	it("runs shared view related tests without delegating them to Desktop", () => {
+		const plan = createImpactTestPlan(["packages/theme-ui/src/chat/UnmappedView.tsx"], () => true);
+		expect(plan.fallbackChanged).toBe(false);
+		expect(plan.targets).toMatchObject([
+			{ key: "theme-ui", relatedSources: ["src/chat/UnmappedView.tsx"], full: false },
+		]);
+	});
+	it("keeps the conservative fallback for a workspace without tests", () => {
+		const workspace = WORKSPACE_PACKAGES.find((pkg) => !pkg.scripts.test);
+		expect(workspace).toBeDefined();
+		const plan = createImpactTestPlan([`${workspace.dir}/src/Unmapped.ts`], () => true);
+		expect(plan.fallbackChanged).toBe(true);
+		expect(plan.fallbackReasons).toContain(`${workspace.key} has no direct test entry point`);
+	});
+});
+
+describe("Vitest worker argument policy", () => {
+	it.each(["linux", "darwin"])("keeps %s defaults", (platform) => {
+		expect(createVitestArgs(["run", "a.test.ts"], platform)).toEqual(["run", "a.test.ts"]);
+	});
+	it.each([["--maxWorkers", "4"], ["--maxWorkers=3"]])("preserves an explicit worker limit %j", (...args) => {
+		expect(createVitestArgs(args, "win32")).toEqual(args);
 	});
 });

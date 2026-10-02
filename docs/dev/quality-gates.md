@@ -328,3 +328,7 @@ bun run deadcode:report
 - [ ] 生成当前 workspace 声明后，`bun run check:types:build-surfaces` 通过
 - [ ] husky `.husky/pre-commit` 调用的是 `check:precommit` 而非整仓慢 `check`  
 - [ ] 未新增 oxlint/oxfmt/pnpm 强制依赖  
+
+### Windows 测试资源与共享 UI 入口
+
+共享 Node runner 在 Windows 默认最多使用 2 个 worker（本地与 CI 一致），其他平台沿用 Vitest 默认值；显式 CLI `--maxWorkers` 保持调用方选择。这里只限制并发资源，不调整 test/hook 超时、断言或测试集合。`@vetta-org/theme-ui` 提供独立的 Node runner `test` 入口；`test:impact` 可以直接选择其相关测试，公共合同与无测试包仍走保守影响面。

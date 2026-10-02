@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Environment for Vitest child processes.
  *
@@ -12,4 +13,10 @@
  */
 export function createVitestEnv(baseEnv) {
 	return { ...baseEnv, NODE_ENV: "test" };
+}
+
+/** Keep memory-heavy Windows workers bounded; an explicit CLI limit remains authoritative. */
+export function createVitestArgs(args, platform = process.platform) {
+	if (platform !== "win32" || args.some((arg) => /^--maxWorkers(?:=|$)/.test(arg))) return args;
+	return ["--maxWorkers=2", ...args];
 }
