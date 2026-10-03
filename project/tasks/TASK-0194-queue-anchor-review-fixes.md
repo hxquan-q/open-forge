@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: [BUG-0073, BUG-0068]
 execution: parallel
 branch: task/TASK-0194-queue-anchor-review-fixes
-worktree: ../open-forge-wt/task-0194-queue-anchor-review-fixes
+worktree: unassigned（已集成并推送 origin/dev，worktree 与分支已清理）
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths:
   - apps/desktop/src/renderer/domains/conversation/**
