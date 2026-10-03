@@ -7,6 +7,11 @@ export interface McpServerCommonConfigData {
 	autoApprove?: string[];
 	startupTimeout?: number;
 	debug?: boolean;
+	/**
+	 * 连接所有权：仅对全局配置生效，`application` 会被跨工作区复用，`workspace` 保持按工作区隔离；
+	 * 项目配置始终按工作区隔离。
+	 */
+	resourceScope?: "application" | "workspace";
 	/** 仅 UI 展示用的可读名（mcp.json 里的 key 仍是真实 name）。 */
 	displayName?: string;
 	/** 仅 UI 展示用的描述。 */

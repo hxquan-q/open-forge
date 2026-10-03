@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { posix } from "node:path";
 import { formatSshProjectUri, normalizeRemotePath, parseProjectLocation } from "@vetta/ssh-transport";
 import {
@@ -238,7 +239,11 @@ export async function createRemoteEntry(
 
 export async function listRemoteFilesRecursive(
 	rootUri: string,
-	options: { readonly ignoredDirectoryNames: readonly string[]; readonly limit: number },
+	options: {
+		readonly ignoredDirectoryNames: readonly string[];
+		readonly limit: number;
+		readonly names?: readonly string[];
+	},
 ): Promise<FsFileRef[]> {
 	assertRemotePathWithinProject(rootUri);
 	const { hostId, remotePath } = split(rootUri);

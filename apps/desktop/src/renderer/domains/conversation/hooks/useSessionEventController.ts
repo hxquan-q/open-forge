@@ -14,6 +14,7 @@ import {
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
 	EMPTY_TASK_STATE,
+	goalStateBySessionAtom,
 	isCanvasTabVisible,
 	isCompactingAtom,
 	isReloadingMcpAtom,
@@ -44,6 +45,7 @@ import { applyTaskFactEvent } from "@shared/task/task-projection.js";
 import {
 	isCodingAgentMcpReloadStarted,
 	readCodingAgentBackgroundTasksObservation,
+	readCodingAgentGoalObservation,
 	readCodingAgentMcpReloadFinished,
 	readCodingAgentPlanModeObservation,
 	readCodingAgentSubagentsObservation,
@@ -91,6 +93,8 @@ export interface SessionEventController {
 	bumpSuggestionToken: (runtimeId: string) => void;
 	createSessionEventHandler: (runtimeId: string) => (event: SessionEvent) => void;
 	resetEventBuffers: () => void;
+	/** 历史回填折叠运行回合草稿时迁移流式目标（TASK-0152）。 */
+	retargetProjectionMessage: (from: string, to: string) => void;
 }
 
 interface SessionEventControllerOptions {
@@ -116,6 +120,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	const setTodoItems = useSetAtom(todoItemsBySessionAtom);
 	const setTaskState = useSetAtom(taskStateBySessionAtom);
 	const setPlanModeStates = useSetAtom(planModeStateBySessionAtom);
+	const setGoalStates = useSetAtom(goalStateBySessionAtom);
 	const setPromptSuggestions = useSetAtom(promptSuggestionsAtom);
 	const setPromptPredicting = useSetAtom(promptPredictingAtom);
 	const suggestionTokenRef = useRef<Map<string, number>>(new Map());
@@ -575,14 +580,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							contextWindow: event.contextWindow,
 						});
 					}
-					if (
-						event.reason === "manual" &&
-						getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0
-					) {
-						// TASK-0050：压缩是历史改写，窗口化会话整窗重置为最新 head 页；
-						// 非窗口化会话回退旧的全量回载。
+					if (getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0) {
+						// TASK-0051：手动与自动压缩成功后都重建投影。压缩对 JSONL 是追加
+						// （firstKeptEntryId，entry id 不变），优先 head 合并刷新——已加载旧页
+						// 与阅读锚点原样保留，compaction 边界作为轻量条目落入尾部；合并签名
+						// 不匹配时由 merge 自行降级为整窗替换（等价旧行为）。非窗口化会话
+						// 维持全量回载。
 						void (async () => {
 							const windowedPath = activeSessionRef.current?.sessionPath;
+							if (windowedPath && (await refreshTranscriptTail({ sessionPath: windowedPath }))) return;
 							if (windowedPath && (await resetTranscriptWindowToTail(windowedPath))) return;
 							await window.vetta.session.getFullHistory(sessionId).then((history) => {
 								if (activeSessionRef.current?.runtimeId !== sessionId) return;
@@ -708,6 +714,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					}
 					return;
 				}
+				const goalState = readCodingAgentGoalObservation(event);
+				if (goalState !== undefined) {
+					const sid = activeSessionRef.current?.runtimeId;
+					if (sid) {
+						setGoalStates((previous) => {
+							const next = { ...previous };
+							if (goalState) next[sid] = goalState;
+							else delete next[sid];
+							return next;
+						});
+					}
+					return;
+				}
 				const items = readCodingAgentTodoObservation(event);
 				if (!items) return;
 				const sid = activeSessionRef.current?.runtimeId;
@@ -740,6 +759,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			setIsReloadingMcp,
 			setLastTurnUsage,
 			setPlanModeStates,
+			setGoalStates,
 			setPromptSuggestions,
 			setRetryProgress,
 			setSubagents,
@@ -749,7 +769,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 		],
 	);
 
-	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers };
+	/**
+	 * 历史回填把运行回合草稿折叠进 canonical entry 身份时同步迁移流式目标，
+	 * 让后续增量继续落在同一条消息（TASK-0152）。
+	 */
+	const retargetProjectionMessage = useCallback((from: string, to: string) => {
+		conversationProjectionRef.current.retargetMessageId(from, to);
+	}, []);
+
+	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage };
 }
 
 function buildRecentConversation(messages: ChatTimelineItem[]): string {

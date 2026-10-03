@@ -18,7 +18,7 @@ read_paths: [project/tasks, project/plans/PLAN-0014-selective-upstream-nonmobile
 write_paths: [project/tasks, .github/release-notes, apps/desktop, packages]
 exclusive_paths: []
 depends_on: []
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0186, TASK-0187]
+conflicts_with: [TASK-0122, TASK-0123, TASK-0181]
 integration_status: pending
 created: 2026-10-03
 updated: 2026-10-03
@@ -52,7 +52,7 @@ updated: 2026-10-03
 
 - 结论：条件支持（单 Agent、单专用工作树，内部全串行，不派实现 Worker）。
 - 执行方式：parallel（隔离 Worktree）/ 内部 serial。
-- 与 TASK-0181/0186/0187 共享 `.github/release-notes/v0.1.3.md`、`project/tasks/README.md` 与 apps/desktop 部分路径：已在本端登记 `conflicts_with`；通过 dev 逐项集成 + 合并解决，不覆盖他方修改。
+- 与 TASK-0181（及记录暂未入库的 0186/0187/0194-0197 线）共享 `.github/release-notes/v0.1.3.md`、`project/tasks/README.md` 与 apps/desktop 部分路径：入库任务已在本端登记 `conflicts_with`（未入库记录待其落地后补登）；通过 dev 逐项集成 + 合并解决，不覆盖他方修改。
 - Branch：`task/TASK-0196-draft-batch`；Worktree：`../open-forge-wt/task-0196-draft-batch`；基线：本地 main `48b8e487f`。
 - 集成顺序：每子 Task 验证通过 → 原子提交（pathspec）→ `git fetch origin` 审核 `origin/dev..HEAD` → 远端前进则先合并 `origin/dev` 并复验受影响面 → fast-forward `git push origin HEAD:dev`；批末完整 `bun run check` 后合入本地 main 并复验。
 
@@ -102,3 +102,28 @@ updated: 2026-10-03
 ## 交付记录
 
 - 实际修改/运行/风险随每子 Task 回填；本文件维护批次进度表、推送 SHA 与阶段结论。
+
+### 批次进度
+
+| 子 Task | 状态 | 实现/推送 |
+|---|---|---|
+| TASK-0042 | verifying（已集成） | e21ebaa26，随 ca6c9df9d/e1605e4d2 推送 origin/dev |
+| TASK-0167 | 实施完成，门禁进行中 | 待批次门禁（test:changed + check）后提交推送 |
+
+### 泳道分配（2026-10-03 用户授权三工作树并行）
+
+执行方式自「单树串行」升级为条件并行：Coordinator（本 Task，树 task-0196-draft-batch）保留会话/内存域链条与最终 main 合并权；三条新泳道各建独立 Worktree，由用户手动指派的会话执行。所有泳道遵守同一逐项推送协议；共享文件（发布说明、tasks/README、dev 分支）靠 ff+合并解决。
+
+| 泳道 | Worktree（待建） | 任务序列 | 边界 |
+|---|---|---|---|
+| A（Coordinator） | task-0196-draft-batch | 0167 收尾 → 0166 → 0051 → 0038 → 0152 → 0156 → 0160 剩余 → 批末合并 main | 会话/消息域独占 |
+| B | task-TBD（0154 记录定名） | 0154 → 0155 → 0161（0151 落地后） | runtime-desktop / coding-agent prompts / desktop 通知 |
+| C | task-TBD（0157 记录定名） | 0157 → 0158（0167 落地后） | theme-ui / canvas sandbox / presets/scripts |
+| D | task-TBD（0039 记录定名） | 0039 → 0159（开工先取用户制品源决策） | webview/activity-panel / 打包脚本 |
+
+泳道 B/C/D 的子任务翻状态时由各自 Worker 更新其 Task 记录与 README 行；本伞任务只跟踪聚合进度。各泳道不得触碰泳道外任务的 write_paths。
+
+### 协调事件
+
+- 2026-10-03：与 open-forge-bb 会话互让任务编号（对方 0194/0195/0197/0198，我方 0196）；BUG 编号对方已用到 0072，本批如需登记从 0073 起先扫描再取。
+- 2026-10-03：HEAD 已提交的 README 焦点表存在悬空 TASK-0186 行（记录未入库），已在 44e0c6887 移除，待其 Owner 提交记录后随合并恢复。

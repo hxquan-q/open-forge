@@ -39,7 +39,7 @@ write_paths:
 exclusive_paths:
   - apps/desktop/src/renderer/domains/conversation/services/pending-user-anchor.ts
 depends_on: []
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0154, TASK-0187, TASK-0196, TASK-0197]
+conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0154]
 integration_status: integrated
 created: 2026-10-03
 updated: 2026-10-03

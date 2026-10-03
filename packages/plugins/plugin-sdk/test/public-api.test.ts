@@ -6,6 +6,8 @@ import type {
 	PluginCodingAgentHookRegistration,
 	PluginCodingAgentHookResult,
 	PluginContext,
+	type PluginBottomPanelContextValue,
+	type PluginBottomPanelTerminalRequest,
 } from "../src/index.js";
 import {
 	PLUGIN_CODING_AGENT_HOOK_EVENT_NAMES,
@@ -49,5 +51,13 @@ describe("plugin-sdk public API", () => {
 			}),
 		} satisfies PluginCodingAgentHookRegistration<"PreToolUse">;
 		expect(registration.eventName).toBe("PreToolUse");
+	});
+
+	it("grants terminal.run permission and terminal-launch surface to bottom panels", () => {
+		expect(PLUGIN_PERMISSIONS).toContain("terminal.run");
+		expectTypeOf<PluginBottomPanelContextValue["openTerminal"]>().toEqualTypeOf<
+			(request: PluginBottomPanelTerminalRequest) => string
+		>();
+		expectTypeOf<PluginBottomPanelContextValue["revealInstance"]>().toEqualTypeOf<(tabId: string) => boolean>();
 	});
 });

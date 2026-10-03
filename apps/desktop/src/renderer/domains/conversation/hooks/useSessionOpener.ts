@@ -48,7 +48,11 @@ import type { HistoryEntry } from "@vetta/runtime-core";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { type MutableRefObject, startTransition, useCallback, useRef } from "react";
-import { preserveMessagesAddedAfterSnapshot, shareChatMessageSnapshot } from "../services/chat-message-snapshot";
+import {
+	preserveMessagesAddedAfterSnapshot,
+	reconcileRunningTurnDraft,
+	shareChatMessageSnapshot,
+} from "../services/chat-message-snapshot";
 import {
 	appendError,
 	bumpOpenSessionToken,
@@ -188,9 +192,10 @@ export function useSessionOpener(): SessionOpenerController {
 	const defaultConversationCwdRef = useRef(defaultConversationCwd);
 	defaultConversationCwdRef.current = defaultConversationCwd;
 	const activeSessionRef = useRef<{ cwd: string; sessionPath: string; runtimeId: string } | null>(null);
-	const { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers } = useSessionEventController({
-		activeSessionRef,
-	});
+	const { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage } =
+		useSessionEventController({
+			activeSessionRef,
+		});
 	const openSessionRef = useRef<
 		| ((
 				cwd: string,
@@ -737,10 +742,16 @@ export function useSessionOpener(): SessionOpenerController {
 							}
 							startTransition(() => {
 								setChatMessages((current) => {
+									// 重开的运行回合：canonical 已含部分落盘内容而 live 草稿仍在流式时，
+									// 先折叠成 canonical 身份（TASK-0152），再走 preserve 归位其余 live 项。
+									const folded = reconcileRunningTurnDraft(sharedSnapshot.messages, current);
+									if (folded.retarget) {
+										retargetProjectionMessage(folded.retarget.from, folded.retarget.to);
+									}
 									const merged = preserveMessagesAddedAfterSnapshot(
 										previewSnapshot,
-										sharedSnapshot.messages,
-										current,
+										folded.items,
+										folded.retarget ? current.filter((item) => item.id !== folded.retarget?.from) : current,
 									);
 									const mergedIds = new Set(merged.map((message) => message.id));
 									const missingIds = new Set(
@@ -842,6 +853,7 @@ export function useSessionOpener(): SessionOpenerController {
 			createSessionEventHandler,
 			setInlineFilePreview,
 			resetEventBuffers,
+			retargetProjectionMessage,
 		],
 	);
 

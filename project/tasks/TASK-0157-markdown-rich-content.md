@@ -1,7 +1,7 @@
 ---
 id: TASK-0157
 type: task
-status: draft
+status: verifying
 priority: P2
 owner: theme-ui + desktop content
 source: user-request; upstream ed8b1af40, a8029e94f, 093ce834b, 089a91a76
@@ -11,17 +11,17 @@ related_tasks: [TASK-0148]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: main
-worktree: unassigned（主工作区串行）
+branch:
+worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [packages/theme-ui/src/markdown, apps/desktop/src/renderer/domains/conversation, apps/desktop/src/main, packages/runtime-node]
 write_paths: [packages/theme-ui/src/markdown, apps/desktop/src/renderer/domains/conversation, apps/desktop/src/main, packages/runtime-node, project/tasks/TASK-0157-markdown-rich-content.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/theme-ui/src/markdown]
 depends_on: [TASK-0148]
-conflicts_with: []
-integration_status: pending
+conflicts_with: [TASK-0196]
+integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -56,3 +56,14 @@ XSS/外链/相对资源、长流式文本、公式未闭合、缓存上限、HTM
 - 保留 VERIFY-0013 的 WIP；与 TASK-0147 冲突处先对照，不覆盖、不夹带提交。共享 release notes 在集成时追加。
 - 工程验证：未执行；技术评审：待源码/合同自审；集成：pending；人工功能验收：待用户；发布：未授权。
 - 完成时填写实际 diff、保留/拒绝项、测试证据、提交及用户验收操作；任务清单不能代替交付。
+
+## 交付记录（2026-10-03，TASK-0196 批次）
+
+- 实际修改（上游 ed8b1af40 → 093ce834b → a8029e94f → 089a91a76 按依赖序全链适配）：
+  - 切片一（ed8，已单独提交 f5b390e25）：公式/SVG/HTML 隔离渲染与计算预算。
+  - 切片二三（093ce+a8029）：主进程 markdown 服务族（html-preview 隔离窗口、mermaid 独立进程渲染、favicon 发现、public-resource 直连校验、image-resource）+ IPC/preload 边界；theme-ui MarkdownImage/MermaidBlock/WebsiteIcon/host/math-syntax；renderer 侧 markdown-images 管线、useMarkdownHost、灯箱、图标、渲染预算与流式节奏（12k/50k 阈值）；AnnotationViews 由上游树提取（093ce 引用但未含于其 diff）。代码高亮语法预算（30k/1000 行/2000 列，超限保纯文本可复制），缓存驱逐自愈测试按新预算改写（条数上限触发）。
+  - 切片四（089a）：批注入口收敛为「选中文字右键 + 已存标记」，移除三点菜单；AnnotationMenus/AnnotationScope.test/SessionUserMessage/SessionMessageList 采用上游终态。
+  - 分歧记录：上游 ADR-0131 编号在本仓被占用，富内容 ADR 保持 0128；docs-site 两语言 workspaces 文档同步上游文案。
+- 实际运行：theme-ui 180；desktop 富内容/批注/共享面合计 443+100；markdown 服务与 IPC 17+37；真实浏览器 markdown-preview.node-test 1/1（隔离/逃逸阻断/公式 worker）。
+- 未运行及原因：markdown-isolation.node-test（Electron 隔离窗口 e2e）——本机 vite lib-build 未把 `mermaid.min.js?raw` 内联为字符串（动态 import 被拆块后按 CJS 加载失败），属构建环境限制；产品路径经 vite.main.config 打包内联，隔离语义另有单测与真实浏览器 node-test 覆盖。视觉校验不做（无视觉能力）。
+- 剩余风险：mermaid/katex 体积随 desktop bundle 增大（懒加载按上游设计）；favicon/public-resource 的网络行为仅单测级验证，真实站点兼容性待用户使用反馈。

@@ -1,9 +1,12 @@
+// Modified by The Open Forge contributors.
+
 import type { ActivityTabKey } from "@shared/lib/project-profile";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import type { ResolvedActivityTab } from "../registry/types";
 import {
 	type ActivityTabResidencyInput,
 	createActivityTabResidencyState,
+	DEFAULT_INACTIVE_PINNED_TAB_LIMIT,
 	DEFAULT_INACTIVE_WARM_TAB_LIMIT,
 	evictWarmActivityTabs,
 	reconcileActivityTabResidency,
@@ -18,6 +21,7 @@ export interface UseActivityTabResidencyInput {
 	activeTab: ActivityTabKey;
 	candidates: readonly ResolvedActivityTab[];
 	floatingKeys: ReadonlySet<ActivityTabKey>;
+	maxInactivePinnedTabs?: number;
 	maxInactiveWarmTabs?: number;
 	scopeKey: string | null;
 	warmEligibleTabs: readonly ResolvedActivityTab[];
@@ -31,6 +35,7 @@ export function useActivityTabResidency({
 	activeTab,
 	candidates,
 	floatingKeys,
+	maxInactivePinnedTabs = DEFAULT_INACTIVE_PINNED_TAB_LIMIT,
 	maxInactiveWarmTabs = DEFAULT_INACTIVE_WARM_TAB_LIMIT,
 	scopeKey,
 	warmEligibleTabs,
@@ -76,5 +81,8 @@ export function useActivityTabResidency({
 		};
 	}, [input, maxInactiveWarmTabs, reconciledState]);
 
-	return useMemo(() => resolveResidentActivityTabs(reconciledState, input), [reconciledState, input]);
+	return useMemo(
+		() => resolveResidentActivityTabs(reconciledState, input, maxInactivePinnedTabs),
+		[reconciledState, input, maxInactivePinnedTabs],
+	);
 }

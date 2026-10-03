@@ -124,7 +124,9 @@ function handle(partial: Partial<TerminalSurfaceHandle> & Pick<TerminalSurfaceHa
 	return {
 		cwd: "/repo",
 		active: true,
+		payload: undefined,
 		setMeta: vi.fn(),
+		setPayload: vi.fn(),
 		setCloseGuard: vi.fn(),
 		...partial,
 	};
