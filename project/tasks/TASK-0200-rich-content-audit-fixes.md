@@ -18,7 +18,7 @@ read_paths: [packages/theme-ui/src/markdown, apps/desktop/src/main/markdown, app
 write_paths: [apps/desktop/src/renderer/domains/conversation/components/SessionMessageList.tsx, apps/desktop/src/renderer/domains/conversation/components/annotations, apps/desktop/scripts/markdown-isolation.test.mjs, apps/desktop/scripts/markdown-isolation.fixture.ts, project/tasks/TASK-0200-rich-content-audit-fixes.md, project/tasks/README.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/conversation/components/annotations, apps/desktop/scripts/markdown-isolation.test.mjs, apps/desktop/scripts/markdown-isolation.fixture.ts]
 depends_on: [TASK-0157, TASK-0158]
-conflicts_with: [TASK-0196, TASK-0181, TASK-0159, TASK-0154, TASK-0123, TASK-0122, TASK-0039]
+conflicts_with: [TASK-0197, TASK-0196, TASK-0181, TASK-0159, TASK-0154, TASK-0123, TASK-0122, TASK-0039]
 integration_status: integrated（实现 af7a9f5a9/501a935da/25467b0d2，随本任务分支 ff 推送 origin/dev）
 created: 2026-10-03
 updated: 2026-10-03
@@ -44,7 +44,7 @@ updated: 2026-10-03
 
 - 结论：条件支持（独立 Worktree，与 0186/0187/0197 并行；无代码路径交叠，共享台账文件靠 dev 逐项 ff+合并解决）。
 - 执行方式：parallel（泳道C，Worktree `../open-forge-wt/task-0200-rich-content-audit-fixes`）。
-- 冲突文件：`.github/release-notes/v0.1.3.md`、`project/tasks/README.md`（与 0187/0197/0196 等批次共享，合并保双方）。与未入库的 TASK-0187/TASK-0197 的协调关系暂以本条 prose 登记（guard 只认已入库 ID），其记录入库后可补入 conflicts_with。
+- 冲突文件：`.github/release-notes/v0.1.3.md`、`project/tasks/README.md`（与 0187/0197/0196 等批次共享，合并保双方）。与仍未入库的 TASK-0187 的协调关系暂以本条 prose 登记（guard 只认已入库 ID），其记录入库后可补入 conflicts_with；TASK-0197 已随远端合入补登记。
 - Branch：`task/TASK-0200-rich-content-audit-fixes`；集成：按泳道协议逐项推送 `origin/dev`。
 
 ### 做切片一：批注作用域会话就绪重挂修复（上游 c362aacc4 回归合同）

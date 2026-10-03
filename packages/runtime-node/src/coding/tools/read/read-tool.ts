@@ -143,6 +143,7 @@ export function createReadTool(cwd: string, options: ReadToolOptions = {}): Runt
 		name: "read",
 		label: "read",
 		description: READ_TOOL_DESCRIPTION,
+		executionMode: "parallel-safe",
 		inputSchema: ReadToolInputSchema,
 		execute(request) {
 			const { path, offset, limit } = request.input;

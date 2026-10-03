@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 import type { AgentRunLimits } from "./types.js";
 
 export function validateAgentRunLimits(limits: AgentRunLimits): void {
 	if (limits.maxModelCalls !== undefined) positiveInteger(limits.maxModelCalls, "maxModelCalls");
 	if (limits.maxToolCalls !== undefined) positiveInteger(limits.maxToolCalls, "maxToolCalls");
+	if (limits.maxParallelToolCalls !== undefined) positiveInteger(limits.maxParallelToolCalls, "maxParallelToolCalls");
 	nonNegativeInteger(limits.maxRecoveryAttempts, "maxRecoveryAttempts");
 	positiveInteger(limits.checkpointTimeoutMs, "checkpointTimeoutMs");
 	if (limits.deadlineMs !== undefined) positiveInteger(limits.deadlineMs, "deadlineMs");

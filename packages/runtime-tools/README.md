@@ -66,3 +66,13 @@ internal_dependencies:
   - "@vetta/ai"
   - "@vetta/runtime-core"
 ```
+
+## 工具执行并发声明
+
+`RuntimeToolDefinition.executionMode` 是显式执行能力声明，Catalog 的冻结与守卫会保留它。
+未声明或 `exclusive` 的工具仍独占执行；只有 `parallel-safe` 可以进入 Agent 的有界并发窗口。
+声明覆盖完整 `execute`（包括结果策略包装），不代替 Tool Policy、撤销、租约或文件锁；
+注册方必须保证其实现及包装可以并发。模型工具 schema 不暴露此元数据。
+
+原生 `read` 与 `grep` 声明为安全候选；写入、命令与其他未声明工具仍形成屏障。
+宿主可通过 `AgentCoreTurnEngineOptions.maxParallelToolCalls: 1` 保持全串行。

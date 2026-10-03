@@ -121,6 +121,8 @@ export interface RuntimeToolDefinition<TInput extends object = Readonly<Record<s
 	readonly name: string;
 	readonly label: string;
 	readonly description: string;
+	/** Explicit body-overlap permission. Unspecified/unknown values remain exclusive. */
+	readonly executionMode?: "parallel-safe" | "exclusive";
 	readonly inputSchema: Readonly<Record<string, unknown>>;
 	/** Optional host validator/decoder for schema dialects or normalized input. */
 	readonly validateInput?: (input: Record<string, unknown>) => TInput;

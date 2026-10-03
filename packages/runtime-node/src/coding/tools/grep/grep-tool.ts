@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { statSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { type Static, Type } from "@sinclair/typebox";
@@ -125,6 +126,7 @@ export function createGrepTool(cwd: string, options: GrepToolOptions = {}): Runt
 		name: "grep",
 		label: "grep",
 		description: GREP_TOOL_DESCRIPTION,
+		executionMode: "parallel-safe",
 		inputSchema: GrepToolInputSchema,
 		async execute(request) {
 			if (request.signal.aborted) {

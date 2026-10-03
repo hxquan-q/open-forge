@@ -15,6 +15,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| TASK-0197 | in_progress | PLAN-0015 | Harness 能力吸收批次隔离工作树 |
+| `TASK-0198` | verifying | PLAN-0015 | 有界工具并发与独占屏障；TASK-0197 树串行。 |
+| `TASK-0195` | blocked | PLAN-0015 | 保留兼容模型请求前缀的摘要生成 |
 | `TASK-0196` | `verifying` | PLAN-0014 | 存量 Draft 批次（15 项）已全部逐项验证并推 origin/dev，批末合入本地 main（adeaa5294）；待人工验收。 |
 | `TASK-0200` | `verifying` | PLAN-0014 | 0157/0158 交付审计完成（网络/沙箱/权限面逐字对照上游全数 retain）；两项收尾已实施（af7a9f5a9 重挂修复、501a935da 隔离 e2e 补跑全链绿）并推 origin/dev，待人工验收。 |
 | `TASK-0039` | `verifying` | PLAN-0002 | webview 剩余口子收口：插件 pinned 页签改为有界 LRU（非活动上限 3、驱逐可逆、不占用 warm 预算）；面板收起卸载核实为已有等价实现（retain + 回归验证）；已推送 `origin/dev`（`2de27ed59`），待人工验收。 |
