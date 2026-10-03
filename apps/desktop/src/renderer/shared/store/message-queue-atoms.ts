@@ -77,9 +77,11 @@ export const clearQueueAtom = atom(null, (get, set, runtimeId: string) => {
  * 当某回合结束的同一时机（或结束后）发生了队列派发，这次回流就「跨到了下一轮」：mapped 可能
  * 已含下一条用户消息（→ 与乐观气泡重复），也可能尚不含（→ 冲掉乐观气泡并令 draft 串台）。
  *
- * 判活办法：每轮在 agent_start 记录当时序号；该轮 agent_end 的重拉落地时若序号已变，说明
- * 发生过队列派发 → 跳过这次过期替换，交由下一轮自己的 agent_end 在无重叠时安全重拉。
- * 纯内存，按 runtimeId 隔离，app 重启清空。
+ * 判活办法：每轮在 agent_start 记录当时序号；该轮 agent_end 的重拉落地时若序号**净增长**越过
+ * 快照（current > snapshot），说明发生过队列派发 → 跳过这次过期替换，交由下一轮自己的
+ * agent_end 在无重叠时安全重拉。只认净增长而非「不等」：失败派发（missing / IPC 抛错）先 bump
+ * 后 unbump，膨胀窗口内开启的回合在回撤后序号低于其快照，并未跨轮，重拉必须照常落地
+ * （BUG-0073）。纯内存，按 runtimeId 隔离，app 重启清空。
  */
 const queuedDispatchSeqBySession = new Map<string, number>();
 

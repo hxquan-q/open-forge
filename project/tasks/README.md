@@ -80,7 +80,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0169` | `verifying` | PLAN-0014 | P1 生命周期：探测代次+失效处置已实施（BUG-0061 修复），定向 94/94 与批次门禁全绿，待人工验收。 |
 | `TASK-0166` | `draft` | `PLAN-0014` | SSH helper 可恢复失败与首次可用测量；待失败基线与隔离实施。 |
-| `TASK-0167` | `draft` | `PLAN-0014` | 远端文件名筛选与完整调用链接线；待失败基线与隔离实施。 |
+| `TASK-0167` | `verifying` | `PLAN-0014` | 远端文件名筛选全链已实施并推送 dev（cfeec25d1）；Go helper 行为回归待 POSIX，实机远端验收待用户。 |
 | `TASK-0168` | `verifying` | PLAN-0014 | Windows 回环夹具（Git Bash）+ desktop 消费者解锁已落地；包级 195 通过，POSIX 专属用例显式门控；runtime-ssh 消费者与 resource-runtime 挂起待后续。 |
 
 ## Task 要求

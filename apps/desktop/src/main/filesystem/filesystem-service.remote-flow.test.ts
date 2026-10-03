@@ -79,6 +79,11 @@ describe("远程项目的文件树：用户在面板里的一串常见操作", (
 		expect(files.find((file) => file.relPath === "src/main.ts")?.path).toBe(`${root}/src/main.ts`);
 	});
 
+	it("按文件名筛选的递归列举只给出命中的远端文件", async () => {
+		const files = await service.listFilesystemFilesRecursive(root, { names: ["LICENSE", "index.js"] });
+		expect(files.map((file) => file.relPath)).toEqual(["LICENSE"]);
+	});
+
 	// 可执行位保持依赖真实的 POSIX 权限位；Windows 回环的 MSYS 挂载（noacl）上
 	// chmod/stat 只是模拟，无法证明该语义——显式交给 POSIX CI 覆盖，不静默跳过整组。
 	it.skipIf(process.platform === "win32")("写文件保留远端文件原有的可执行位", async () => {

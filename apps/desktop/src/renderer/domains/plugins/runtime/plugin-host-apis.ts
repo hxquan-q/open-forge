@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { InstalledPlugin } from "@preload/api";
 import { activeSessionAtom, languageAtom, openUrlInBrowserAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
@@ -100,9 +101,9 @@ export function createFsApi(plugin: InstalledPlugin, capabilitySessionId: string
 			permissions.require("fs.write");
 			return filesystem.createDirectory(capabilitySessionId, dirPath);
 		},
-		listFilesRecursive: (rootPath) => {
+		listFilesRecursive: (rootPath, options) => {
 			permissions.require("fs.read");
-			return filesystem.listFilesRecursive(capabilitySessionId, rootPath);
+			return filesystem.listFilesRecursive(capabilitySessionId, rootPath, options);
 		},
 		saveAs: (defaultFileName, content, encoding, options) => {
 			permissions.require("fs.write");
