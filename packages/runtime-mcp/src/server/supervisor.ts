@@ -346,6 +346,10 @@ export class McpServerSupervisor {
 		options?: { readonly lazyStart?: boolean },
 	): Promise<ManagedMcpServer> {
 		this.log(`Initializing server: ${name}`);
+		const startedAt = Date.now();
+		let handshakeMs = 0;
+		let toolsMs = 0;
+		let resourcesMs = 0;
 		const server = createManagedServer(name, config, "starting");
 		if (publish) this.servers.set(name, server);
 
@@ -369,6 +373,7 @@ export class McpServerSupervisor {
 					server.serverInfo = result.serverInfo;
 					server.pid = facade.getPid();
 					server.startedAt = Date.now();
+					handshakeMs = Date.now() - startedAt;
 					this.noteServerActivity(server);
 				},
 				onConnectFailed: (error) => {
@@ -407,19 +412,25 @@ export class McpServerSupervisor {
 			// onConnected already recorded serverInfo/pid/startedAt.
 
 			if (result.capabilities?.tools) {
+				const toolsStartedAt = Date.now();
 				try {
 					server.tools = (await facade.listTools()).tools;
 					this.log(`Server ${name} provides ${server.tools.length} tools`);
 				} catch (error) {
 					this.log(`Failed to list tools for ${name}: ${getErrorMessage(error)}`);
+				} finally {
+					toolsMs = Date.now() - toolsStartedAt;
 				}
 			}
 			if (result.capabilities?.resources) {
+				const resourcesStartedAt = Date.now();
 				try {
 					server.resources = (await facade.listResources()).resources;
 					this.log(`Server ${name} provides ${server.resources.length} resources`);
 				} catch (error) {
 					this.log(`Failed to list resources for ${name}: ${getErrorMessage(error)}`);
+				} finally {
+					resourcesMs = Date.now() - resourcesStartedAt;
 				}
 			}
 
@@ -435,6 +446,9 @@ export class McpServerSupervisor {
 				toMcpServerCatalogSnapshot(result, server.tools, server.resources),
 			);
 			this.log(`Server ${name} is ready`);
+			this.log(
+				`MCP server startup timing name=${name} handshakeMs=${handshakeMs} toolsMs=${toolsMs} resourcesMs=${resourcesMs} totalMs=${Date.now() - startedAt}`,
+			);
 		} catch (error) {
 			const failedClient = server.client;
 			if (failedClient) {

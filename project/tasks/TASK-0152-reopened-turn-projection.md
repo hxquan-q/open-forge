@@ -1,7 +1,7 @@
 ---
 id: TASK-0152
 type: task
-status: draft
+status: verifying
 priority: P1
 owner: desktop conversation
 source: user-request; upstream 04ac47b67, 89f270e56, 2d744ff4a
@@ -11,17 +11,17 @@ related_tasks: [TASK-0148]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: main
-worktree: unassigned（主工作区串行）
+branch:
+worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.ts, apps/desktop/src/renderer/domains/conversation/services/conversation-projection.ts, apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.reopen-turn.test.tsx, apps/desktop/src/shared/conversation]
 write_paths: [apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.ts, apps/desktop/src/renderer/domains/conversation/services/conversation-projection.ts, apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.reopen-turn.test.tsx, apps/desktop/src/shared/conversation, project/tasks/TASK-0152-reopened-turn-projection.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.ts]
 depends_on: [TASK-0148]
-conflicts_with: []
-integration_status: pending
+conflicts_with: [TASK-0196]
+integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -57,6 +57,33 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 工程验证：未执行；技术评审：待源码/合同自审；集成：pending；人工功能验收：待用户；发布：未授权。
 - 完成时填写实际 diff、保留/拒绝项、测试证据、提交及用户验收操作；任务清单不能代替交付。
 
-## 首次源码对照
+## 交付记录（2026-10-03，TASK-0196 批次）
 
-本仓 ConversationProjection 没有上游补丁所依赖的 turnSegments/messageIdForTurn 接口，而有 targetMessageId、窗口化历史 span 与有界事件缓冲；不能直接贴入上游 adoptTurn。须先使用本仓的恢复/事件入口建立失败复现，再决定是否需要补身份接续或保留已有等价路径。
+### 范围裁决（对照上游三补丁与本仓现状）
+
+- **04ac47b67（重开续流不分裂）＝本任务核心，已适配**：上游用 adoptTurn 接回分段；本仓身份域不同（历史 assistant 以 entryId 为 id、live 投影以 tail 流式草稿为目标），缺陷成因是「canonical 历史含运行回合部分内容 + live 草稿（draft id）在回填合并时被双重保留」。落地为本仓等价语义：折叠合并 + 目标迁移。
+- **89f270e56（立即发送两条回复同时处理中）与 2d744ff4a（prompt 转发丢 messageId）＝本仓已有等价能力，retain**：用户消息身份与落位由 pending-user-anchor 因果锚定解决（BUG-0068 修复 c9db5fa27、BUG-0073 合并锚定已随 dev 落地并有测试）；本仓 runtime-host 无逐字段重建 prompt 的对应路径。未移植，证据为 `pending-user-anchor.test.ts` 与两次 Bug 修复记录。
+- 上游新 feed/attach 大迁移（RESEARCH-0022 §4）按其「被否决的直接同步方案」边界不做整体替换；本任务只吸收身份连续语义，窗口化、TranscriptItemSpan、4096 事件缓冲、乐观消息因果顺序全部保留。
+
+### 实际修改
+
+- `apps/desktop/src/renderer/domains/conversation/services/chat-message-snapshot.ts`：新增 `reconcileRunningTurnDraft(canonical, current)`——canonical 尾 agent + current 尾流式草稿 + 两边最后 user 一致时，草稿内容折入 canonical 的 id/entryId 并给出 retarget；否则原样返回交由 preserve 步。
+- `apps/desktop/src/renderer/domains/conversation/services/conversation-projection.ts`：`retargetMessageId(from, to)` 迁移流式目标。
+- `apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.ts`：控制器返回 `retargetProjectionMessage`。
+- `apps/desktop/src/renderer/domains/conversation/hooks/useSessionOpener.ts`：历史回填提交时先折叠再 preserve，折叠发生即迁移投影目标，后续增量继续落在同一条消息。
+
+### 实际运行
+
+- 红测先行：`reconcileRunningTurnDraft`/`retargetMessageId` 缺失时 6 例红。
+- 单测 15/15（chat-message-snapshot 13 + conversation-projection 2）。
+- `bun run test:impact -- <四文件>`：245 例通过。
+- `bun run check:quick`、完整 `bun run check`：通过。
+
+### 未运行及原因
+
+- 真实 Desktop 切会话实机冒烟：本批不做实机/视觉验证；重开全链（IPC+主进程 history）由 impact 覆盖的 245 例既有回归与纯函数合同共同佐证，实机体验待用户验收。
+
+### 剩余风险
+
+- 折叠按「两边最后 user 一致」判定回合边界；若运行回合的 user 消息尚未持久化而 canonical 尾是上一回合 assistant，不折叠（保守不动作，行为与修复前一致，不引入新错位）。
+- refresh 场景（同会话内历史重载）同样受益于折叠；未单列 refresh 专属测试，按重开合同覆盖。

@@ -1,4 +1,7 @@
 // Modified by The Open Forge contributors.
+
+import type { DesktopMarkdownApi } from "../shared/markdown-ipc.js";
+import type { MessageAnnotationsApi } from "../shared/message-annotations.js";
 import type { DesktopAbilitiesApi } from "./api-types/abilities.js";
 import type { DesktopActionApprovalApi } from "./api-types/action-approval.js";
 import type { DesktopAgentTeamsApi } from "./api-types/agent-teams.js";
@@ -103,6 +106,8 @@ export interface DesktopHostAccessApi {
 }
 
 export interface DesktopApi {
+	markdown: DesktopMarkdownApi;
+	messageAnnotations: MessageAnnotationsApi;
 	hostAccess: DesktopHostAccessApi;
 	abilities: DesktopAbilitiesApi;
 	agentTeams: DesktopAgentTeamsApi;

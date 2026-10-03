@@ -1,7 +1,7 @@
 ---
 id: TASK-0160
 type: task
-status: draft
+status: verifying
 priority: P2
 owner: desktop + plugin-git
 source: user-request; upstream 2dd10fc5b, d9cc3e003, b41710a19, b530b02ae, 2543c5aec, c496fb60d, 8ad2abdcb
@@ -11,17 +11,17 @@ related_tasks: [TASK-0148]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: main
-worktree: unassigned（主工作区串行）
+branch:
+worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [packages/plugins/presets, apps/desktop/src/main, apps/desktop/src/renderer/domains]
 write_paths: [packages/plugins/presets, apps/desktop/src/main, apps/desktop/src/renderer/domains, project/tasks/TASK-0160-desktop-project-productivity.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/plugins/presets]
 depends_on: [TASK-0148]
-conflicts_with: []
-integration_status: pending
+conflicts_with: [TASK-0187, TASK-0196]
+integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -56,3 +56,13 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 保留 VERIFY-0013 的 WIP；与 TASK-0147 冲突处先对照，不覆盖、不夹带提交。共享 release notes 在集成时追加。
 - 工程验证：未执行；技术评审：待源码/合同自审；集成：pending；人工功能验收：待用户；发布：未授权。
 - 完成时填写实际 diff、保留/拒绝项、测试证据、提交及用户验收操作；任务清单不能代替交付。
+
+## 交付记录（2026-10-03，TASK-0196 批次；Git 特殊路径部分归 TASK-0187/0193）
+
+- 范围裁决：Git 特殊路径/重命名（上游 2dd10fc5b）属 TASK-0187 批的 TASK-0193，本任务只交付「未安装 Git 的恢复入口」（上游 d9cc3e003 + b41710a19）；上游 ADR-0134 在本仓已被占用，重编号为 ADR-0145。
+- 实际修改：
+  - git 插件（d9cc3e003 全量）：`isGitAvailable`/`probeGitTab` 三态探测（repo/not-repo/no-git——没装 git 时按目录 `.git` 判定保留标签卡）；NoGitCta 安装引导组件；GitPanel/GitSettingsView 引导接线；中英文案；noGit/tabVisibility 测试。
+  - 宿主（b41710a19 适配）：runtimes 新增 git-detection（系统优先、macOS 不碰 /usr/bin/git 防弹窗）与 git-tool（xcode-clt 调起 / Windows MinGit 托管下载 ~/.vetta/runtimes / Linux 包管理器命令 / 手动引导）；manager 集成（detect/applyEnv/installGit/shouldBlockGitCommand）与 IPC/preload/system 类型；设置 → 环境 Git 行（theme-ui EnvironmentGitRowView + desktop 模型）与中英文案；插件 command-runner 的 git 前置检查。
+- 实际运行：desktop runtimes+settings 181+1skip；git 插件 51/51；完整 check 通过。manager 冲突（本仓 downloads/fetchImpl 构造分歧）按双方保留合并。
+- 未运行及原因：真实 MinGit 下载/xcode 调起实机流程不做实机验证（网络/系统弹窗边界），由 git-tool 单测与设置行组件测试覆盖。
+- 剩余风险：MinGit 下载源为上游固定 URL，未按本仓镜像策略配置（与 Node/Python 运行时同类的既有问题，不新增）。

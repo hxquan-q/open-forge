@@ -2263,5 +2263,25 @@
 		"off": "Off",
 		"notify": "Notify only",
 		"auto": "Auto-continue"
-	}
+	},
+	"environmentGit": {
+		"description": "Required by the Git panel and by git commands the agent runs",
+		"missing": "Not installed",
+		"installing": "Installing…",
+		"managedSuffix": "Vetta only",
+		"installXcode": "Install",
+		"installManaged": "Install for Vetta",
+		"redetect": "Check again",
+		"detecting": "Checking…",
+		"xcodeHint": "Install opens the macOS Command Line Developer Tools installer. Come back and click Check again when it finishes.",
+		"xcodeLaunched": "The system installer is open. Click Check again when it finishes.",
+		"managedHint": "Install for Vetta only works inside Vetta and leaves your system untouched. To use Git in a terminal or other apps,",
+		"download": "download the Git installer",
+		"packageManagerHint": "Run this command in a terminal, then click Check again.",
+		"packageManagerFallback": "Install git with your system package manager, then click Check again. Or",
+		"manualHint": "Install Git, then click Check again.",
+		"copy": "Copy",
+		"copied": "Copied"
+	},
+	"section_environment-tools": "Developer tools"
 }

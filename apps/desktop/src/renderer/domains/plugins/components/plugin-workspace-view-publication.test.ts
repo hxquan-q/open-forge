@@ -9,6 +9,7 @@ function loadedPlugin(): LoadedPlugin {
 		version: "1.0.9",
 		defaultLocale: "zh",
 		locales: {},
+		grantedPermissions: [],
 		slots: [],
 		abilityDetailSlots: [],
 		filePreviews: [],
