@@ -1,7 +1,7 @@
 ---
 id: BUG-0077
 type: bug
-status: in_progress
+status: verifying
 priority: P2
 owner: packages/plugins/presets/git
 requirement:
@@ -47,3 +47,10 @@ bun scripts/quality/run-vitest.mjs --run --config packages/plugins/presets/git/v
 ## 关联
 
 - TASK-0187 集成复验首次在主树触发并完成归因；修复独立立项，不阻塞该批次集成结论。
+
+## 回归与修复
+
+归入 [TASK-0201](../tasks/TASK-0201-git-preset-test-deps.md)：按 `packages/plugins/AGENTS.md` 测试要求，把该插件 React UI 测试栈改为包内显式声明（`@testing-library/react` 16.3.2 + `jsdom` 26.1.0 + `vitest` ^4.1.11，对齐 content-creation / scripts / comfyui-media-provider），不再依赖根提升与 vitest peer 装配。
+
+- 修复证据：标准检出包级 11 文件 / 62 例通过（修复前 1 文件失败、0 收集）；三依赖从测试目录解析成功；`bun install --frozen-lockfile` 与完整 `bun run check` 通过；修复提交 `235b33456`。
+- 同批核查：其余 preset / external 未发现同类不可解析缺口（`vetta-ui-design` 的 jsdom 环境文件经 vitest 依赖条目内的 jsdom 可加载、套件全绿，仅观察，不在本修复范围）。

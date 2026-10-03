@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0201` | `in_progress` | — | 修复 BUG-0077：git preset 显式声明 Vitest+jsdom+RTL 测试栈；主工作区串行，`bun.lock` 独占。 |
+| `TASK-0201` | `verifying` | — | 修复 BUG-0077：git preset 显式声明 Vitest+jsdom+RTL 测试栈；标准检出包级 62 例全绿（提交 235b33456），人工验收不适用（内部修复）。 |
 | `TASK-0199` | `verifying` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0151` | `verifying` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过，待人工验收。 |
 | `TASK-0187` | `verifying` | PLAN-0014 | 稳定性首批（0188–0193/0151/0199）已合入本地 main（03ce0c378）并推 origin/dev（e242e5ddf）；changed 的 CLI 失败经合并前后基线比对归属存量环境问题（BUG-0059 面），待人工验收。 |
