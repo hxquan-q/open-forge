@@ -112,3 +112,5 @@ test:changed 的 agent、coding-agent、runtime-core、agent-team、runtime-tool
 在 origin/dev@15fdc5c81b94c09647d7e22e78243d58f2d477ab 的合并结果上，完整 `bun run check` exit 0；同一 10 个生产文件的 `test:impact` exit 0：Agent 75、Runtime Core 334、Runtime Node 235、Runtime Tools 37，共 681 项。只豁免已记录的跨包失败，未豁免这些检查。
 
 merge commit 的暂存区来自干净工作树上的 Git 合并，两个文档冲突已逐段合并，新增改动对比 dev 仍只包含本 Task 的 27 个路径；使用 Git merge --continue 完成整合，不做部分合并提交或覆盖远端源码。
+
+推送前远端推进到 280e98f76；与已验 dev 基线相比仅 TASK-0196 文档状态变化，无生产代码变化。先合入该状态更新，并按其 frontmatter 把焦点表同步为 verifying；不 force push，不重复声称运行了未执行的测试。生产代码继续对应已通过的完整 check 与 681 项影响面证据，文档单独复核。
