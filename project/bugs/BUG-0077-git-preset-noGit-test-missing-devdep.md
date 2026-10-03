@@ -1,7 +1,7 @@
 ---
 id: BUG-0077
 type: bug
-status: investigating
+status: in_progress
 priority: P2
 owner: packages/plugins/presets/git
 requirement:
@@ -9,7 +9,7 @@ plan:
 source: TASK-0187 集成复验归因
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0187]
+related_tasks: [TASK-0187, TASK-0201]
 related_issues: []
 created: 2026-10-03
 updated: 2026-10-03
