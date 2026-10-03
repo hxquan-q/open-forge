@@ -1,4 +1,8 @@
 // Modified by The Open Forge contributors.
+import { chatUrlTransform } from "../markdown/markdown-link";
+import { MarkdownHostProvider } from "../markdown/host";
+import type { MarkdownHost } from "../markdown/host";
+import { MarkdownImage } from "../markdown/MarkdownImage";
 import { memo, useMemo, type JSX, type MouseEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
@@ -15,11 +19,13 @@ import { useMarkdownDefinition } from "../markdown/definition";
 import { BuiltinCodeBlock, Formula } from "../markdown/builtin-renderers";
 import { richRemarkPlugins } from "../markdown/rich-syntax";
 import { SvgPreview } from "../markdown/SvgPreview";
+import { WebsiteIcon } from "../markdown/WebsiteIcon";
 import { defaultRichContentLabels } from "../markdown/rich-labels";
 import type { MarkdownLabels } from "../markdown/rich-labels";
 import type { HastElement } from "../markdown/nodes";
 
 export interface MarkdownPreviewViewProps {
+	host?: MarkdownHost;
 	content: string;
 	theme: "light" | "dark";
 	/** Host opens http(s)/mailto/tel links (e.g. via shell.openExternal). */
@@ -98,6 +104,7 @@ export const MarkdownPreviewView = memo(function MarkdownPreviewView({
 	theme,
 	onOpenExternal,
 	labels = DEFAULT_LABELS,
+	host,
 }: MarkdownPreviewViewProps): JSX.Element {
 	const definition = useMarkdownDefinition();
 	const parsed = parseFrontmatter(content);
@@ -131,10 +138,11 @@ export const MarkdownPreviewView = memo(function MarkdownPreviewView({
 				</ol>
 			),
 			li: ({ children }) => <li>{children}</li>,
+			img: ({ src, alt, title }) => <MarkdownImage src={src} alt={alt} title={title} labels={labels} />,
 			code: ({ className, children }) => {
 				const raw = String(children);
 				if (className?.includes("math-inline") || className?.includes("math-display")) {
-					return <Formula source={raw.replace(/\n$/, "")} display={className.includes("math-display")} />;
+					return <Formula source={raw.replace(/\n$/, "")} display={className.includes("math-display")} labels={labels} />;
 				}
 				const isBlock = (className?.startsWith("language-") ?? false) || raw.includes("\n");
 				if (isBlock) {
@@ -168,6 +176,11 @@ export const MarkdownPreviewView = memo(function MarkdownPreviewView({
 					rel={isExternalLink(href) ? "noopener noreferrer" : undefined}
 					onClick={(event) => handleLinkClick(event, href)}
 				>
+					{href && /^https?:\/\//i.test(href) && (
+						<>
+							<WebsiteIcon href={href} />{" "}
+						</>
+					)}
 					{children}
 				</a>
 			),
@@ -184,15 +197,16 @@ export const MarkdownPreviewView = memo(function MarkdownPreviewView({
 	}, [theme, onOpenExternal, definition, labels]);
 
 	return (
-		<div className="markdown-body break-words p-4">
+		<MarkdownHostProvider host={host}><div className="markdown-body break-words p-4">
 			{parsed && parsed.entries.length > 0 && <Frontmatter entries={parsed.entries} />}
 			<ReactMarkdown
+				urlTransform={chatUrlTransform}
 				remarkPlugins={[...MARKDOWN_REMARK_PLUGINS, ...(definition.remarkPlugins ?? [])]}
 				rehypePlugins={definition.rehypePlugins}
 				components={components}
 			>
 				{body}
 			</ReactMarkdown>
-		</div>
+		</div></MarkdownHostProvider>
 	);
 });

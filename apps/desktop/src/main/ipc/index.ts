@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { WebContents } from "electron";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
+import { getMessageAnnotationService } from "../message-annotations/host.js";
 import { registerNotificationIpc } from "../notifications/index.js";
 import type { PluginActionService } from "../plugins/plugin-action-service.js";
 import { registerAbilitiesIpc } from "./abilities.js";
@@ -21,7 +22,9 @@ import { registerDownloadsIpc } from "./downloads.js";
 import { registerFileTransferIpc } from "./file-transfer.js";
 import { registerFsIpc } from "./fs.js";
 import { registerImIpc } from "./im.js";
+import { registerMarkdownIpc } from "./markdown.js";
 import { registerMediaIpc } from "./media.js";
+import { registerMessageAnnotationsIpc } from "./message-annotations.js";
 import { registerOnboardingIpc } from "./onboarding.js";
 import { registerPermissionsIpc } from "./permissions.js";
 import { registerPetIpc } from "./pet.js";
@@ -55,6 +58,8 @@ interface IpcTeardown {
 	teardownAppMonitor: () => void;
 	teardownSession: () => void;
 	teardownSessionArchive: () => void;
+	teardownMessageAnnotations: () => void;
+	teardownMarkdown: () => void;
 	teardownSettings: () => void;
 	teardownUpdater: () => void;
 	teardownSkills: () => void;
@@ -110,6 +115,8 @@ export function registerAllIpc(
 		teardownActionApproval: registerActionApprovalIpc(options.actionApprovalBroker),
 		teardownAppMonitor: registerAppMonitorIpc(),
 		teardownSession: registerSessionIpc(webContents),
+		teardownMessageAnnotations: registerMessageAnnotationsIpc(webContents, getMessageAnnotationService()),
+		teardownMarkdown: registerMarkdownIpc(webContents),
 		teardownSessionArchive: (() => {
 			registerSessionArchiveIpc();
 			return () => undefined;
@@ -162,6 +169,8 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownActionApproval();
 	teardown.teardownAppMonitor();
 	teardown.teardownSession();
+	teardown.teardownMessageAnnotations();
+	teardown.teardownMarkdown();
 	teardown.teardownSessionArchive();
 	teardown.teardownSettings();
 	teardown.teardownUpdater();

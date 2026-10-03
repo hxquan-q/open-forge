@@ -16,6 +16,7 @@ import { getFileIcon } from "@vetta-org/theme-ui/file-explorer";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { selectAtom } from "jotai/utils";
 import { useCallback, useMemo } from "react";
+import { useMarkdownHost } from "./useMarkdownHost";
 import { useMarkdownLabels } from "./useMarkdownLabels";
 
 const activeCwdAtom = selectAtom(activeSessionAtom, (session) => session?.cwd ?? null);
@@ -38,6 +39,7 @@ export function useRendererMarkdownModel(
 	const narrow = useNarrowScreen();
 	const cwd = cwdOverride === undefined ? activeCwd : cwdOverride;
 	const workspaceId = workspaceIdOverride ?? cwd;
+	const host = useMarkdownHost(cwd);
 
 	const onOpenFile = useCallback(
 		(path: string) => {
@@ -76,10 +78,11 @@ export function useRendererMarkdownModel(
 		() => ({
 			theme: theme === "dark" ? "dark" : "light",
 			labels,
+			host,
 			getFileIconClass,
 			onOpenFile,
 			onOpenUrl,
 		}),
-		[theme, labels, getFileIconClass, onOpenFile, onOpenUrl],
+		[theme, labels, host, getFileIconClass, onOpenFile, onOpenUrl],
 	);
 }

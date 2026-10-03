@@ -81,6 +81,7 @@ import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
 import { getDesktopMcpTaskCoordinator, getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
+import { forgetMessageAnnotations } from "../message-annotations/host.js";
 import { notify } from "../notifications/index.js";
 import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
 import { mapSessionEventToPetPresentation } from "../pet/session-event-action-policy.js";
@@ -1282,6 +1283,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		// 连带回收子目录里的产物。读 header 先取 cwd，再 delete，最后 rm 子目录。
 		const cwdFromHeader = await readSessionCwdFromHeader(sessionPath);
 		await runtime.deleteSession(sessionPath);
+		await forgetMessageAnnotations(sessionPath);
 		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
 			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
 				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);

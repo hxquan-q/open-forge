@@ -5,15 +5,17 @@ import { CodePreview } from "../../activity-panel/components/previews/CodePrevie
 import { HtmlPreview } from "../../activity-panel/components/previews/HtmlPreview";
 import { MarkdownPreview } from "../../activity-panel/components/previews/MarkdownPreview";
 
-const MARKDOWN_EXTENSIONS = new Set(["md", "mdx"]);
+const MARKDOWN_EXTENSIONS = new Set(["md", "mdx", "markdown"]);
 const SCROLL_WRAP = "text-preview-content min-h-0 flex-1 overflow-y-auto";
 
 export function TextPreviewRenderer({
 	content,
 	extension,
+	sourcePath,
 }: {
 	content: string;
 	extension: string;
+	sourcePath?: string;
 }): JSX.Element {
 	const theme = useAtomValue(resolvedThemeAtom);
 	const { t } = useTranslation("chat");
@@ -23,7 +25,7 @@ export function TextPreviewRenderer({
 	if (MARKDOWN_EXTENSIONS.has(extension)) {
 		return (
 			<div className={SCROLL_WRAP}>
-				<MarkdownPreview content={content} />
+				<MarkdownPreview content={content} sourcePath={sourcePath} />
 			</div>
 		);
 	}
