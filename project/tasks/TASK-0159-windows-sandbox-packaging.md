@@ -18,7 +18,7 @@ read_paths: [apps/desktop/scripts, packages/runtime-core/sandbox, packages/runti
 write_paths: [apps/desktop/scripts, packages/runtime-core/.gitignore, packages/runtime-core/sandbox/windows, packages/runtime-core/sandbox/docs, apps/desktop/package.json, project/tasks/README.md, project/tasks/TASK-0159-windows-sandbox-packaging.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/scripts]
 depends_on: [TASK-0148]
-conflicts_with: [TASK-0196]
+conflicts_with: [TASK-0039, TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0196]
 integration_status: pending
 created: 2026-10-02
 updated: 2026-10-03
@@ -95,13 +95,35 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 
 ## 实际验证
 
-（待回填）
+| 命令 | 结果 |
+|---|---|
+| `node --test scripts/windows-sandbox-artifacts.node-test.mjs` | 绿：14/14，含「旧判定把半个制品当 present、新清单校验报缺件」的对照用例 |
+| `bun run --cwd apps/desktop test:packaging`（合并 `origin/dev` 后复跑） | 绿：122 例通过（含新增 14 例；`sandbox-staging-guard.node-test.mjs` 原用例全部保留通过） |
+| `bun run verify:desktop:contracts` | 绿：`[desktop-packaging-contract] ok`（新增两条接线断言生效） |
+| `bun scripts/quality/run-vitest.mjs --run apps/desktop/scripts/verify-packaging-contract.test.mjs` | 绿：1 文件通过 |
+| `node scripts/quality/check-modified-file-notices.mjs --baseline …` | 绿：`new=0` |
+| `bun run check`（合并后最终一轮） | `check:lint` 0、`check:types`（root·cli·desktop·docs·mobile）0、mobile lint 0、`[project-indexes]` 通过、notices `new=0`；**`check:guards` 红**，仅 5 条既有悬挂引用（见下），不涉及本 Task 文件 |
+
+既有红灯（基线，非本 Task 引入）：`[task-worktrees]` 报 5 条 `conflicts_with references unknown task`——`TASK-0160 → TASK-0187`、`TASK-0194 → TASK-0187/0197`、`TASK-0196 → TASK-0186/0187`。`origin/dev` 同样不含 `TASK-0186/0187/0197` 记录文件（`git ls-tree origin/dev project/tasks` 0 命中），即合并前 dev 已有同一红灯。按「保护其他泳道记录」边界，本次未删除这些引用，留待各 Owner/Coordinator 在其记录落地时修正。
+
+`bun run test:impact -- apps/desktop/scripts/…` 对脚本类 `.mjs` 找不到 vitest 关联文件，回退包测试脚本后以「No test files found」退出 1；这些脚本的注册入口是 `test:packaging`（node runner，已绿），合同测试由 `test:quality` 覆盖，故不以该回退结果作为结论。
 
 ## 交付记录
 
 - 批次备注（承接 `origin/dev` 的 TASK-0196 批次记录）：该批次 2026-10-03 曾把本任务标记为「暂缓跳过（保持缺失只告警）」，等待可信制品源决策；用户当日选定方案 A 后，本 Task 按该决策实施，批次备注中的「暂缓」不再有效。
 - 实际修改：
-- 实际运行：
-- 未运行及原因：
+  - `apps/desktop/scripts/windows-sandbox-artifacts.mjs`（新增）：清单结构 fail-closed、存在/摘要/未受控文件校验、`--write`/`--check` CLI。
+  - `apps/desktop/scripts/windows-sandbox-artifacts.node-test.mjs`（新增）：14 例 node 测试。
+  - `packages/runtime-core/sandbox/windows/sandbox-artifacts.json`（新增，入库）：3 个受控制品名 + SHA-256（当前 `null` = 未钉）+ 来源提交。
+  - `apps/desktop/scripts/prepare-pack.js`：接入 `assessWindowsSandboxArtifacts`（默认阻断、显式变量降级），保留 `sandbox-staging-guard` 既有告警路径。
+  - `apps/desktop/scripts/verify-packaging-contract.mjs`：新增两条接线断言；`apps/desktop/package.json`：`test:packaging` 注册新测试。
+  - `packages/runtime-core/.gitignore`：放行清单、继续忽略二进制；`packages/runtime-core/sandbox/docs/README.md`：补「打包期制品完整性」。
+  - 记录与发布说明：本 Task、焦点表、`.github/release-notes/v0.1.3.md`。
+- 实际运行：见「实际验证」。
+- 未运行及原因：真实 `dist:win` / CI 打包（会按设计因缺少受控制品中断；需先产出制品或由用户决定降级设置）、exe `--capabilities` 探针（需 Windows 与真实制品）、`verify:ui:*`、发布与上传。
 - Worktree：`../open-forge-wt/task-0159-windows-sandbox-packaging`（`task:worktree create --no-write --no-setup` 创建，`bun install` + `prepare:workspace:dev` 初始化；主检出未留改动）。
 - 剩余风险：
+  - **发版影响（需用户确认）**：本仓当前没有 Windows 沙盒 exe、清单摘要为 `null`，因此 Windows 打包（`dist:win`、`pack:win:test` 与 release 流水线）会**按设计失败**，直到 (a) 受控构建产出三个 exe 并 `--write` 钉摘要，或 (b) 在对应流水线显式设置 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1`。本次未擅自修改 workflow。
+  - 未实现上游的归档级摘要与 `--capabilities` 八项探针（本仓无归档制品、打包机非 Windows）。
+  - 来源目录混入未受控文件即中断打包（刻意，避免打包未审计字节）。
+  - 焦点表按 dev 一致版本重建：合并 `origin/dev` 时发现 `main` 侧焦点表引用 `TASK-0186/0187/0188…0199` 等未入库记录（dev 无该引用），故取 dev 版本 + 本 Task 行，避免把既有悬挂引用带进 dev。
