@@ -91,6 +91,8 @@ export interface SessionEventController {
 	bumpSuggestionToken: (runtimeId: string) => void;
 	createSessionEventHandler: (runtimeId: string) => (event: SessionEvent) => void;
 	resetEventBuffers: () => void;
+	/** 历史回填折叠运行回合草稿时迁移流式目标（TASK-0152）。 */
+	retargetProjectionMessage: (from: string, to: string) => void;
 }
 
 interface SessionEventControllerOptions {
@@ -749,7 +751,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 		],
 	);
 
-	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers };
+	/**
+	 * 历史回填把运行回合草稿折叠进 canonical entry 身份时同步迁移流式目标，
+	 * 让后续增量继续落在同一条消息（TASK-0152）。
+	 */
+	const retargetProjectionMessage = useCallback((from: string, to: string) => {
+		conversationProjectionRef.current.retargetMessageId(from, to);
+	}, []);
+
+	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage };
 }
 
 function buildRecentConversation(messages: ChatTimelineItem[]): string {

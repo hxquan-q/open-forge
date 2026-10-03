@@ -74,3 +74,59 @@ export function preserveMessagesAddedAfterSnapshot(
 		landedBaseIndex: (i) => canonicalIndexById.get(current[i].id),
 	}).items;
 }
+
+export interface RunningTurnDraftReconcile {
+	readonly items: ChatTimelineItem[];
+	/** 折叠发生时，live 投影的 targetMessageId 需要从草稿 id 迁移到 canonical id。 */
+	readonly retarget?: { readonly from: string; readonly to: string };
+}
+
+function lastUserId(messages: readonly ChatTimelineItem[]): string | undefined {
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		const message = messages[index];
+		if (message?.kind === "user") return message.id;
+	}
+	return undefined;
+}
+
+/**
+ * 重开运行中会话时，canonical 历史与 live 草稿可能各自持有同一运行回合的
+ * assistant 内容：历史里是已落盘的部分（entry id），live 是 restore 出来的
+ * 流式草稿（draft id，内容不少于历史）。不折叠会在回填提交后出现两条相邻
+ * 回复（TASK-0152 的「切出再切回分裂」）。
+ *
+ * 折叠规则：canonical 尾部是 agent、current 尾部是仍在流式的草稿、且两边
+ * 最后的 user 消息一致（同一回合边界）时，以草稿内容为准、换用 canonical
+ * 的 id/entryId，使既有 span/占位映射与下次重开的身份保持连续；否则原样
+ * 返回，交由 preserveMessagesAddedAfterSnapshot 处理。
+ */
+export function reconcileRunningTurnDraft(
+	canonical: readonly ChatTimelineItem[],
+	current: readonly ChatTimelineItem[],
+): RunningTurnDraftReconcile {
+	const canonicalTail = canonical.at(-1);
+	const currentTail = current.at(-1);
+	if (
+		canonicalTail?.kind !== "agent" ||
+		currentTail?.kind !== "agent" ||
+		currentTail.phase !== "streaming" ||
+		currentTail.endedAt !== undefined ||
+		currentTail.id === canonicalTail.id
+	) {
+		return { items: [...canonical] };
+	}
+	const canonicalLastUser = lastUserId(canonical);
+	const currentLastUser = lastUserId(current);
+	if (canonicalLastUser === undefined || canonicalLastUser !== currentLastUser) {
+		return { items: [...canonical] };
+	}
+	const folded: ChatTimelineItem = {
+		...currentTail,
+		id: canonicalTail.id,
+		entryId: canonicalTail.entryId ?? currentTail.entryId,
+	};
+	return {
+		items: [...canonical.slice(0, -1), folded],
+		retarget: { from: currentTail.id, to: canonicalTail.id },
+	};
+}
