@@ -17,6 +17,14 @@ draft → ready → in_progress → blocked → verifying → done → archived
 |---|---|---|---|
 | `TASK-0202` | `in_progress` | — | 台账修复：恢复 03ce0c378 合并丢失的八行焦点表（0039/0042/0159/0195/0196/0197/0198/0200）；主工作区串行。 |
 | `TASK-0201` | `verifying` | — | 修复 BUG-0077：git preset 显式声明 Vitest+jsdom+RTL 测试栈；标准检出包级 62 例全绿（提交 235b33456），人工验收不适用（内部修复）。 |
+| `TASK-0197` | `in_progress` | PLAN-0015 | Harness 能力吸收批次的隔离工作树：有界工具并发（0198）已推 dev（a163b58b1）并合入本地 main（105dca3f2）；CLI 启动类失败复验与 Desktop 完整范围待做，慢消费者重同步未开工。 |
+| `TASK-0198` | `verifying` | PLAN-0015 | 有界工具并发与独占屏障；实现 e6e05f5a3 已推 dev（a163b58b1）并合入 main（105dca3f2）；跨包 CLI 失败挂 WAIVER-0004（至 2026-10-10），待人工验收。 |
+| `TASK-0195` | `blocked` | PLAN-0015 | 保留兼容模型请求前缀的摘要生成；实跑反证前缀假设与既有防注入摘要边界冲突（非产品 Bug），blocked 待重新设计或用户决策。 |
+| `TASK-0196` | `verifying` | PLAN-0014 | 存量 Draft 批次（15 项）已全部逐项验证并推 origin/dev（0356daf39），批末合入本地 main（adeaa5294）；待人工验收。 |
+| `TASK-0200` | `verifying` | PLAN-0014 | 0157/0158 交付审计完成（网络/沙箱/权限面逐字对照上游全数 retain）；两项收尾已实施（af7a9f5a9 重挂修复、501a935da 隔离 e2e 补跑、25467b0d2）并推 origin/dev，待人工验收。 |
+| `TASK-0039` | `verifying` | PLAN-0002 | webview 剩余口子收口：插件 pinned 页签改为有界 LRU（非活动上限 3、驱逐可逆、不占用 warm 预算）；面板收起卸载核实为已有等价实现（retain + 回归验证）；已推 origin/dev（2de27ed59），待人工验收。 |
+| `TASK-0159` | `verifying` | PLAN-0014 | Windows 沙盒制品完整性：受控清单（3 个 exe + sha256 + 来源提交）钉死、缺失/不一致默认阻断打包（仅显式 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 降级为告警）；不引入外部下载源；已推 origin/dev（1c1a50b9e），待人工验收。 |
+| `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿，实机峰谷差待用户验收）；随 TASK-0196 批次推 dev（ca6c9df9d）合入 main。 |
 | `TASK-0199` | `verifying` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0151` | `verifying` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过，待人工验收。 |
 | `TASK-0187` | `verifying` | PLAN-0014 | 稳定性首批（0188–0193/0151/0199）已合入本地 main（03ce0c378）并推 origin/dev（e242e5ddf）；changed 的 CLI 失败经合并前后基线比对归属存量环境问题（BUG-0059 面），待人工验收。 |
