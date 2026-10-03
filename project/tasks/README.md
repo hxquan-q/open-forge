@@ -17,7 +17,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 |---|---|---|---|
 | `TASK-0199` | `verifying` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0151` | `verifying` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过，待人工验收。 |
-| `TASK-0187` | `verifying` | PLAN-0014 | 稳定性首批（0188–0193/0151/0199）已随本轮合入本地 main；changed 的 CLI 失败经合并前后基线比对归属存量环境问题（BUG-0059 面），待人工验收。 |
+| `TASK-0187` | `verifying` | PLAN-0014 | 稳定性首批（0188–0193/0151/0199）已合入本地 main（03ce0c378）并推 origin/dev（e242e5ddf）；changed 的 CLI 失败经合并前后基线比对归属存量环境问题（BUG-0059 面），待人工验收。 |
 | `TASK-0188` | `verifying` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0189` | `verifying` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0190` | `verifying` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 批次交付，已随本轮合入 main。 |
@@ -25,8 +25,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0192` | `verifying` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0193` | `verifying` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
-| `TASK-0186` | `verifying` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（本轮集成提交）；未做实机 RAM 对照，待人工验收。 |
-| `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（本轮集成提交）；定向 30 项、Desktop 全包 4680 项及完整 check 通过，待人工验收。 |
+| `TASK-0186` | `verifying` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（559a8d79d）；未做实机 RAM 对照，待人工验收。 |
+| `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（75c5ae2df）；定向 30 项、Desktop 全包 4680 项及完整 check 通过，待人工验收。 |
 | `TASK-0180` | `verifying` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
 | `TASK-0184` | `ready` | — | docs-site 构建 Turbopack 71 错修复（BUG-0067）；仅建档待诊。 |
 | `TASK-0183` | `ready` | — | packaged E2E CI 连续红修复（BUG-0066）；合同/堆 OOM 已修后遗留的 E2E 分型。 |
