@@ -30,6 +30,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0187` | `in_progress` | PLAN-0014 | 非手机稳定性首批：用户指定单专用工作树，内部串行，验证后先推 dev 再集成本地 main。 |
 | `TASK-0186` | `in_progress` | — | ISSUE-0020：Office 解析器按需加载与 PDF worker URL 释放；独立 Worktree，不改主树聊天任务。 |
 | `TASK-0196` | `in_progress` | PLAN-0014 | 存量 Draft 批次（15 项：0042/0167/0166/0039/0154/0155/0157/0158/0159/0051/0038/0152/0156/0160 剩余/0161）；单专用工作树内部串行，逐项验证后推 origin/dev，批末合入本地 main；不做视觉校验。 |
+| `TASK-0159` | `in_progress` | PLAN-0014 | Windows 沙盒制品完整性：受控清单（3 个 exe + sha256 + 来源提交）钉死、缺失/不一致默认阻断打包（仅显式 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 降级为告警）；不引入外部下载源；独立 Worktree。 |
 | `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿，实机峰谷差待用户验收）；TASK-0196 批次工作树。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
 | `TASK-0194` | `verifying` | — | BUG-0073：c9db5fa27 复审四处回归已修（判活净增长/孪生槽校验/prependedCount 还原/opener 统一回退，共享锚定助手收编三层管线）；回归先红后绿、conversation 域 965 绿，已推 dev 并合入本地 main，待人工验收。 |

@@ -1,2 +1,8 @@
+# Modified by The Open Forge contributors.
+
 sandbox/*
 !sandbox/docs/
+# 受控清单进库、二进制不进库：只放行 windows/ 下的清单文件本身。
+!sandbox/windows/
+sandbox/windows/*
+!sandbox/windows/sandbox-artifacts.json
