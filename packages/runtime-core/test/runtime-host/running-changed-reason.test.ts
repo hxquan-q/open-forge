@@ -1,6 +1,5 @@
 // Modified by The Open Forge contributors.
 
-import type { Message } from "@vetta/ai";
 import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
@@ -68,14 +67,6 @@ describe("RuntimeHost running-changed reason", () => {
 		} as SessionEvent;
 	}
 
-	function assistantFinal(stopReason: string): SessionEvent {
-		return {
-			...base(),
-			type: "message.final",
-			message: { role: "assistant", stopReason } as unknown as Message,
-		} as SessionEvent;
-	}
-
 	function assistantDone(reason: "stop" | "toolUse" = "stop"): SessionEvent {
 		return {
 			...base(),
@@ -135,15 +126,6 @@ describe("RuntimeHost running-changed reason", () => {
 		emit(lifecycle("aborted"));
 		emit(lifecycle("agent_end"));
 		expect(reasons.at(-1)).toEqual({ running: false, reason: "aborted" });
-	});
-
-	it("重试后成功收尾的回合不残留 error 标记，reason=agent_end", async () => {
-		const { emit, reasons } = await setup();
-		emit(lifecycle("agent_start"));
-		emit(errorEvent());
-		emit(assistantFinal("end_turn"));
-		emit(lifecycle("agent_end"));
-		expect(reasons.at(-1)).toEqual({ running: false, reason: "agent_end" });
 	});
 
 	it.each(["runtime", "assistant"] as const)("真实 %s 错误后恢复的 assistant done 清除旧错误", async (origin) => {

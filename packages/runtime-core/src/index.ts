@@ -9,7 +9,6 @@ export type {
 	HistoryEntry,
 	HistoryMessageBranch,
 	MessageDeltaEvent,
-	MessageFinalEvent,
 	ProjectInfo,
 	PromptAttachmentRef,
 	PromptRequest,

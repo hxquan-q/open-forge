@@ -473,7 +473,10 @@ it("立即发送打断插队：上一回合已 streaming 的部分回复保留�
 	emit({ ...base, type: "queue.changed", paused: false, entries: [], snapshot: {} });
 	emit({
 		...base,
-		type: "message.final",
+		channel: "assistant",
+		modelCallIndex: 0,
+		type: "done",
+		reason: "aborted",
 		message: { role: "assistant", content: [{ type: "text", text: "部分回复" }], stopReason: "aborted" },
 	});
 	emit({ ...base, type: "session.lifecycle", phase: "aborted" });
@@ -483,7 +486,10 @@ it("立即发送打断插队：上一回合已 streaming 的部分回复保留�
 	await flushTimers();
 	emit({
 		...base,
-		type: "message.final",
+		channel: "assistant",
+		modelCallIndex: 1,
+		type: "done",
+		reason: "stop",
 		message: { role: "assistant", content: [{ type: "text", text: "回复二" }], stopReason: "end_turn" },
 	});
 	historyRef.current = canonicalAfterInterrupt;

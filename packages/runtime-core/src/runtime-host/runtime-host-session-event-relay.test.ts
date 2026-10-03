@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
-import type { MessageFinalEvent, SessionEvent } from "../contracts.js";
+import type { SessionEvent } from "../contracts.js";
 import type { RuntimeHostQueueSidecar } from "./runtime-host-queue-sidecar.js";
 import {
 	DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT,
@@ -145,7 +145,7 @@ describe("RuntimeHostSessionEventRelay", () => {
 		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
 	});
 
-	it("clears the bounded replay buffer on message.final and bounds the next streaming message independently", () => {
+	it("clears the bounded replay buffer on usage.update and bounds the next streaming message independently", () => {
 		const stream = createEventStream();
 		const handle = createRelayHandle(stream);
 		const relay = createRelay({ inFlightReplayEventLimit: 2 });
@@ -159,11 +159,9 @@ describe("RuntimeHostSessionEventRelay", () => {
 		emitDelta("a");
 		emitDelta("b");
 		emitDelta("c");
-		// 同一 Turn 内的下一次模型调用：message.final 落盘后缓冲必须清空，
+		// 同一 Turn 内的下一次模型调用：usage.update 落盘后缓冲必须清空，
 		// 上一条消息的超限丢弃不得影响下一条消息的回放。
-		stream.emit({
-			...baseMessageFinal("session-1"),
-		});
+		stream.emit(baseUsageUpdate("session-1"));
 
 		const afterFinal: SessionEvent[] = [];
 		const unsubscribe = relay.subscribe("session-key", handle, (event) => afterFinal.push(event));
@@ -267,14 +265,16 @@ function partialOf(delta: string): AssistantMessage {
 	return { role: "assistant", content: [{ type: "text", text: delta }] } as unknown as AssistantMessage;
 }
 
-function baseMessageFinal(sessionId: string): SessionEvent {
+function baseUsageUpdate(sessionId: string): SessionEvent {
 	return {
 		...baseSessionEvent(sessionId, "runtime-core"),
-		type: "message.final",
-		message: {
-			role: "assistant",
-			content: [{ type: "text", text: "final" }],
-			stopReason: "stop",
-		} as unknown as MessageFinalEvent["message"],
+		type: "usage.update",
+		input: 10,
+		output: 5,
+		cacheRead: 0,
+		cacheWrite: 0,
+		costTotal: 0,
+		contextPercent: 1,
+		contextWindow: 8_000,
 	};
 }

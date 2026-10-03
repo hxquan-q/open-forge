@@ -87,9 +87,9 @@ export interface RuntimeHostSessionRecord {
  * received before reconnection would be lost.
  *
  * Events retain their original order and original AssistantMessageEvent payload.
- * They are cleared when the corresponding assistant message is durably appended
- * (`message.final` in the current compatibility event plane). `isActive` flips
- * on at `agent_start` and off at `agent_end`.
+ * They are cleared when the corresponding assistant message's usage is durably
+ * reported (`usage.update`). `isActive` flips on at `agent_start` and off at
+ * `agent_end`.
  *
  * Retention is bounded: when the stream exceeds the relay's replay event limit,
  * the oldest events are dropped and only the tail is replayed. Recovery truth
@@ -186,7 +186,7 @@ export interface RuntimeHostOptions {
 	/**
 	 * 单条助手消息流期间 in-flight 回放缓冲的事件数上限（正整数）。缺省
 	 * 4096：超限丢弃最旧事件、重放只保证尾部；恢复事实仍在 Conversation
-	 * JSONL 与 `message.final`，不因上限丢失。
+	 * JSONL，不因上限丢失。
 	 */
 	inFlightReplayEventLimit?: number;
 	getDefaultExecutionMode?: () => SessionExecutionMode | Promise<SessionExecutionMode>;

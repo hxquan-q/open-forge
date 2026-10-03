@@ -34,6 +34,7 @@ const steps = [
 		"--baseline",
 		"scripts/quality/baselines/modified-file-notices.txt",
 	],
+	["scripts/quality/check-session-event-tombstones.mjs"],
 	["scripts/quality/check-protocol-suites.mjs"],
 	["scripts/quality/check-project-indexes.mjs"],
 	["scripts/release/release-notes.mjs", "--check"],

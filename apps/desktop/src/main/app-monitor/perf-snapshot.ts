@@ -188,8 +188,8 @@ function isQueueSnapshot(value: unknown): value is PerfQueueSnapshot {
  * 计数。只累计数字，不保留事件本身。
  *
  * inFlightEvents 镜像 RuntimeHostSessionEventRelay 的 InFlightBuffer 规则：
- * agent_start 起收 assistant channel 事件，message.final/usage.update 清空，
- * agent_end 关闭——两侧读的是同一事件流，计数即缓冲水位。
+ * agent_start 起收 assistant channel 事件，usage.update 清空，agent_end
+ * 关闭——两侧读的是同一事件流，计数即缓冲水位。
  */
 export class SessionPerfTracker {
 	readonly sessionId: string;
@@ -255,12 +255,8 @@ export class SessionPerfTracker {
 			return {};
 		}
 
-		if (event.type === "message.final" || event.type === "usage.update") {
+		if (event.type === "usage.update") {
 			turn.inFlightEvents = 0;
-			if (event.type === "message.final" && event.message.role === "assistant") {
-				if (event.message.stopReason === "aborted") turn.endReason = "aborted";
-				else if (event.message.stopReason === "error") turn.endReason = "error";
-			}
 			return {};
 		}
 		if (event.type === "tool.end") {

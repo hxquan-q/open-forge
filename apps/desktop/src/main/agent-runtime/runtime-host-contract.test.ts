@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -636,8 +637,6 @@ function observeEvent(event: SessionEvent, cwd: string): RuntimeEventObservation
 		case "message.delta":
 		case "thinking.delta":
 			return { ...base, detail: event.delta };
-		case "message.final":
-			return { ...base, detail: observeMessages([event.message]) };
 		case "toolcall.start":
 			return { ...base, detail: { toolName: event.toolName } };
 		case "tool.start":

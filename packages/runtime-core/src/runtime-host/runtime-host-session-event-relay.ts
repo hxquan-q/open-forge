@@ -19,8 +19,8 @@ export type RuntimeHostSessionEventRelayFailureComponent =
 
 /**
  * 单条助手消息流期间 in-flight 回放缓冲保留的最大原始事件数。超限后丢弃最旧
- * 事件（重放只保证尾部），恢复事实仍以 Conversation JSONL 与 `message.final`
- * 为准——缓冲只是重连渲染端的尽力回放，不是持久化投影。
+ * 事件（重放只保证尾部），恢复事实仍以 Conversation JSONL 为准——缓冲只是重连
+ * 渲染端的尽力回放，不是持久化投影。
  */
 export const DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT = 4096;
 
@@ -132,14 +132,9 @@ export class RuntimeHostSessionEventRelay {
 					buffer.terminalReason ?? "agent_end",
 				);
 				buffer.terminalReason = undefined;
-			} else if (event.type === "message.final" || event.type === "usage.update") {
+			} else if (event.type === "usage.update") {
 				buffer.events = [];
 				buffer.droppedEventCount = 0;
-				if (event.type === "message.final" && event.message.role === "assistant") {
-					if (event.message.stopReason === "aborted") buffer.terminalReason = "aborted";
-					else if (event.message.stopReason === "error") buffer.terminalReason = "error";
-					else buffer.terminalReason = undefined;
-				}
 			} else if (event.channel === "assistant" && buffer.isActive) {
 				if (buffer.events.length >= this.inFlightReplayEventLimit) {
 					buffer.events.shift();
@@ -148,7 +143,6 @@ export class RuntimeHostSessionEventRelay {
 				buffer.events.push(event);
 				if (event.type === "error") buffer.terminalReason = "error";
 				else if (event.type === "done") {
-					// A successful later call recovers the Turn; old message.final is only a compatibility path.
 					buffer.terminalReason = event.message.stopReason === "aborted" ? "aborted" : undefined;
 				}
 			}

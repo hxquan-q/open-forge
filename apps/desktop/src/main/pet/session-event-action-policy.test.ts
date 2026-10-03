@@ -1,3 +1,6 @@
+// Modified by The Open Forge contributors.
+
+import type { AssistantMessage } from "@vetta/ai";
 import type { SessionEvent } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";
 import { mapSessionEventToPetPresentation } from "./session-event-action-policy.js";
@@ -44,9 +47,16 @@ describe("mapSessionEventToPetPresentation", () => {
 
 	it("uses assistant final text as the terminal bubble body", () => {
 		const event: SessionEvent = {
-			...eventBase,
-			type: "message.final",
-			message: { role: "assistant", content: [{ type: "text", text: "已完成配置迁移" }] } as never,
+			schemaVersion: 1,
+			sessionId: "session-1",
+			eventId: "event-1",
+			timestamp: 1,
+			channel: "assistant",
+			source: "agent",
+			modelCallIndex: 1,
+			type: "done",
+			reason: "stop",
+			message: assistantDoneMessage([{ type: "text", text: "已完成配置迁移" }]),
 		};
 
 		expect(mapSessionEventToPetPresentation(event)?.bubble).toMatchObject({
@@ -57,9 +67,16 @@ describe("mapSessionEventToPetPresentation", () => {
 
 	it("does not mark a tool-call-only assistant message as completed", () => {
 		const event: SessionEvent = {
-			...eventBase,
-			type: "message.final",
-			message: { role: "assistant", content: [] } as never,
+			schemaVersion: 1,
+			sessionId: "session-1",
+			eventId: "event-1",
+			timestamp: 1,
+			channel: "assistant",
+			source: "agent",
+			modelCallIndex: 1,
+			type: "done",
+			reason: "stop",
+			message: assistantDoneMessage([]),
 		};
 
 		expect(mapSessionEventToPetPresentation(event)).toBeNull();
@@ -79,3 +96,23 @@ describe("mapSessionEventToPetPresentation", () => {
 		});
 	});
 });
+
+function assistantDoneMessage(content: AssistantMessage["content"]): AssistantMessage {
+	return {
+		role: "assistant",
+		content,
+		api: "openai-responses",
+		provider: "test-provider",
+		model: "test-model",
+		usage: {
+			input: 1,
+			output: 1,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 2,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: 1,
+	} as unknown as AssistantMessage;
+}

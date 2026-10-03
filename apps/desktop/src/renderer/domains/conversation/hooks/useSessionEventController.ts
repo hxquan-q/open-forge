@@ -58,7 +58,6 @@ import {
 	appendError,
 	appendTextDelta,
 	appendThinkingDelta,
-	finalizeMessage,
 	finishAssistantTurn,
 	getActiveAssistantTurnStartedAt,
 	getChatStreamOwner,
@@ -455,15 +454,6 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				// get appended on the wrong side of the tool block).
 				flushDeltas();
 				setChatMessages((prev) => handleToolStart(prev, event.toolCallId, event.toolName, {}));
-				return;
-			}
-
-			// ── Message final (full assistant message — text, thinking, tool calls) ──
-			if (event.type === "message.final" && event.message.role === "assistant") {
-				if (conversationProjectionRef.current.hasRawAssistantStream()) return;
-				flushDeltas();
-				const { content, usage } = event.message;
-				setChatMessages((prev) => finalizeMessage(prev, content, usage));
 				return;
 			}
 

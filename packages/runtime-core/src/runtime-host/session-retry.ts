@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ErrorEvent, RuntimeTurnPromptOutcome, SessionEvent } from "../contracts.js";
 import { type RuntimeFailure, readRuntimeFailure } from "../failure-contract.js";
 import type { RuntimeObservationPublisher } from "../observation/index.js";
@@ -181,9 +182,6 @@ export class DeferredRuntimeRetryEventStream implements RuntimeSessionEventStrea
 		if (event.type === "session.lifecycle" && event.phase === "agent_end" && this.pendingError) {
 			this.pendingAgentEnd = event;
 			return;
-		}
-		if (event.type === "message.final" && event.message.role === "assistant") {
-			if (event.message.stopReason !== "error") this.clearPendingError();
 		}
 		if (event.channel === "assistant" && event.type === "done") {
 			this.clearPendingError();
