@@ -67,3 +67,4 @@ XSS/外链/相对资源、长流式文本、公式未闭合、缓存上限、HTM
 - 实际运行：theme-ui 180；desktop 富内容/批注/共享面合计 443+100；markdown 服务与 IPC 17+37；真实浏览器 markdown-preview.node-test 1/1（隔离/逃逸阻断/公式 worker）。
 - 未运行及原因：markdown-isolation.node-test（Electron 隔离窗口 e2e）——本机 vite lib-build 未把 `mermaid.min.js?raw` 内联为字符串（动态 import 被拆块后按 CJS 加载失败），属构建环境限制；产品路径经 vite.main.config 打包内联，隔离语义另有单测与真实浏览器 node-test 覆盖。视觉校验不做（无视觉能力）。
 - 剩余风险：mermaid/katex 体积随 desktop bundle 增大（懒加载按上游设计）；favicon/public-resource 的网络行为仅单测级验证，真实站点兼容性待用户使用反馈。
+- 遗留收口（2026-10-03，TASK-0200）：markdown-isolation e2e 已由独立审计任务补跑通过——测试构建加 `inlineDynamicImports` 后 Electron 隔离窗口全链绿（独立 PID、断网断弹窗、Mermaid 渲染/缓存/看门狗）；交付对照审计结论与批注作用域会话就绪重挂修复见 [TASK-0200](TASK-0200-rich-content-audit-fixes.md)。

@@ -15,7 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0196` | `in_progress` | PLAN-0014 | 存量 Draft 批次（15 项：0042/0167/0166/0039/0154/0155/0157/0158/0159/0051/0038/0152/0156/0160 剩余/0161）；单专用工作树内部串行，逐项验证后推 origin/dev，批末合入本地 main；不做视觉校验。 |
+| `TASK-0196` | `verifying` | PLAN-0014 | 存量 Draft 批次（15 项）已全部逐项验证并推 origin/dev，批末合入本地 main（adeaa5294）；待人工验收。 |
+| `TASK-0200` | `verifying` | PLAN-0014 | 0157/0158 交付审计完成（网络/沙箱/权限面逐字对照上游全数 retain）；两项收尾已实施（af7a9f5a9 重挂修复、501a935da 隔离 e2e 补跑全链绿）并推 origin/dev，待人工验收。 |
 | `TASK-0039` | `verifying` | PLAN-0002 | webview 剩余口子收口：插件 pinned 页签改为有界 LRU（非活动上限 3、驱逐可逆、不占用 warm 预算）；面板收起卸载核实为已有等价实现（retain + 回归验证）；已推送 `origin/dev`（`2de27ed59`），待人工验收。 |
 | `TASK-0159` | `verifying` | PLAN-0014 | Windows 沙盒制品完整性：受控清单（3 个 exe + sha256 + 来源提交）钉死、缺失/不一致默认阻断打包（仅显式 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 降级为告警）；不引入外部下载源；已推送 `origin/dev`（`1c1a50b9e`），待人工验收。 |
 
