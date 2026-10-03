@@ -76,7 +76,7 @@ updated: 2026-10-03
 - 技术评审：自审（对照 `75c5ae2df` → `03ce0c378` 的 README diff 逐行核对八行来源；八行状态列由 `check-project-indexes` 与各 Task frontmatter 机器比对通过）。
 - 集成：已提交本地 main（`6c431ca90` 记录、`adea036dc` 补行）；integration_status: integrated。
 - 人工功能验收：不适用（内部台账修复，无用户可见行为；既定完成标准为「焦点表与 frontmatter 一致且检查通过」，对照 TASK-0201 先例）。
-- 发布：未授权（未推送、不发版、不改发布说明）。
+- 发布：已授权推送 origin/dev（`add53c55d..6e2c6537f`，2026-10-03，随收口批次）；不发版、不改发布说明。
 
 ## 功能验收包
 
