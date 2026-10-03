@@ -18,10 +18,15 @@ const checkOnly = process.argv.includes("--check");
 
 function parseMd(raw) {
 	const n = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-	if (!n.startsWith("---")) return { fm: {}, body: n.trim() };
+	if (!n.startsWith("---")) return { fm: {}, body: stripNotice(n).trim() };
 	const end = n.indexOf("\n---", 3);
-	if (end === -1) return { fm: {}, body: n.trim() };
-	return { fm: parse(n.slice(4, end)) ?? {}, body: n.slice(end + 4).trim() };
+	if (end === -1) return { fm: {}, body: stripNotice(n).trim() };
+	return { fm: parse(n.slice(4, end)) ?? {}, body: stripNotice(n.slice(end + 4)).trim() };
+}
+
+/** 开发声明头不进入产品提示词（等价于 TS 文件的注释声明）。 */
+function stripNotice(body) {
+	return body.replace(/^\s*<!-- Modified by The Open Forge contributors\. -->\s*/, "");
 }
 
 const files = readdirSync(modesDir)
@@ -35,7 +40,7 @@ const partialsDir = join(modesDir, "partials");
 const partials = new Map();
 try {
 	for (const file of readdirSync(partialsDir).filter((f) => f.endsWith(".md"))) {
-		partials.set(file.replace(/\.md$/, ""), readFileSync(join(partialsDir, file), "utf-8").trim());
+		partials.set(file.replace(/\.md$/, ""), stripNotice(readFileSync(join(partialsDir, file), "utf-8")).trim());
 	}
 } catch {}
 
@@ -105,7 +110,8 @@ for (const file of files) {
 }
 
 const idUnion = modes.map((mode) => JSON.stringify(mode.id)).join(" | ");
-const content = `// AUTO-GENERATED from modes/*.md by scripts/build-agent-modes.mjs. Do not edit by hand.
+const content = `// Modified by The Open Forge contributors.
+// AUTO-GENERATED from modes/*.md by scripts/build-agent-modes.mjs. Do not edit by hand.
 
 /** 合法工作模式 id 联合类型，由 modes/*.md 派生（ADR-0071）。 */
 export type AgentModeId = ${idUnion};
