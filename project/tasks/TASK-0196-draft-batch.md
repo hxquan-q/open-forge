@@ -19,7 +19,7 @@ write_paths: [project/tasks, .github/release-notes, apps/desktop, packages]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0181]
-integration_status: pending
+integration_status: integrated（批末合并 main adeaa5294，随 0356daf39 推送 origin/dev）
 created: 2026-10-03
 updated: 2026-10-03
 ---
