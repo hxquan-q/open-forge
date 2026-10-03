@@ -121,3 +121,15 @@ merge commit 的暂存区来自干净工作树上的 Git 合并，两个文档�
 - 已执行并成功：git push origin HEAD:dev，远端从 280e98f76 fast-forward 到 a163b58b1；随后 ls-remote 核实 refs/heads/dev 指向该 SHA。未推 origin/main、未 force、未发布。
 - 本地 main 当时为 280e98f76，拓扑可 fast-forward；但主树有其他任务未提交内容。project/research/README.md 的本地修改同时含 RESEARCH-0021 与不属本任务的 RESEARCH-0022，合并目标会写该文件；另有多份未落库记录。未执行主树 merge、未 stash、未移动/删除/夹带这些内容，因此本地集成仍 pending。
 - 独立工作树和 Task 分支保留。WAIVER-0004 仅允许开发候选测试例外（expires 2026-10-10），不是全量验收通过；TASK-0198 保持 verifying，摘要和重同步未实现。主树重叠修改由其 Owner 落库后再继续安全集成。
+
+## CLI 启动失败复验（2026-10-04，主工作区低竞争环境，main 9e3cede94）
+
+按停止点要求「先在依赖完整且低竞争环境下复验 CLI 失败文件并定位启动前 frames=0 超时」执行，未延长超时、未删除断言、未跳过用例：
+
+- 此前失败的五文件逐个串行复跑（仓库 Node runner、`--maxWorkers=1`、原超时）：agent-runtime-terminal-contract 3/3（13.3s）、agent-runtime-selection 9/9（24.5s）、agent-runtime-session-transition-contract 4/4（22.2s）、agent-runtime-command-admission-contract 9/9（9.2s）、installed-artifact-runtime 14/14（83.6s）。合计 39/39 通过、约 153 秒——同一用例集在负载期（test:changed 批次）为 9 failed / 30 passed、约 480 秒（3.1× 放缓），现全部转绿且启动首帧正常。归因成立：负载诱发的启动延迟（frames=0、20s 首次 get_state/prompt 超时），非本次并发实现回归。
+- 同一低竞争环境完整 cli-host 套件（51 文件）：4 failed / 46 passed / 1 skipped；244 项中 4 failed / 226 passed / 14 skipped，380.19s。剩余 4 例与启动超时无关：均为精确工具清单相等断言未随 TASK-0156 目标特性（bc85cfc7b，无条件贡献 get_goal/create_goal/update_goal）更新，属断言漂移而非行为错误；已对照上游同源码确认为既定行为，抽出 TASK-0203 单独修复（断言同步，零遮蔽）。
+- WAIVER-0004 到期前状态：CLI 启动类失败已消除并完成归因；剩余 4 例断言漂移由 TASK-0203 处理；Desktop 完整范围复验待 TASK-0203 收口后执行。TASK-0198 保持 verifying，本批次不标 done。
+
+## Desktop 完整范围复验（2026-10-04，主工作区低竞争环境，main 9e3cede94）
+
+按停止点要求「再复验 Desktop 完整范围」执行，包内 `bun run test`（仓库 Node runner，未改超时/断言/用例）：923 文件中 919 passed / 4 skipped；4921 项中 4906 passed / 15 skipped；848.85s、exit 0。此前隔离树的 Desktop 收集错误确认为 Electron 依赖不完整（非断言失败），主工作区依赖完整后全量通过。停止点两项复验（CLI 失败文件 + Desktop 完整范围）至此全部完成；TASK-0203 的断言同步与完整 cli-host 复验见其记录。WAIVER-0004 的候选保留责任：TASK-0198 保持 verifying 至人工验收，本批次不标 done。
