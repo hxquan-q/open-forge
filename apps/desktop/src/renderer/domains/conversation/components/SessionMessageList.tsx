@@ -93,16 +93,14 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 			</MessageRenderingDefaults>
 		</ForkContext.Provider>
 	);
-	// Feed 身份以持久会话路径为准；runtimeId 只用于宿主调用。
-	return session && session.sessionPath === props.sessionId ? (
+	// Feed 身份以持久会话路径为准；runtimeId 只用于宿主调用。批注作用域常驻包裹：
+	// 会话就绪只点亮按会话重置的面板，绝不重挂下面的消息列表。
+	return (
 		<AnnotationScope
-			key={session.sessionPath}
-			session={session}
+			session={session && session.sessionPath === props.sessionId ? session : null}
 			sourceEntryIds={props.messages.flatMap((message) => (message.entryId ? [message.entryId] : []))}
 		>
 			{feed}
 		</AnnotationScope>
-	) : (
-		feed
 	);
 }
