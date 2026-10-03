@@ -1,27 +1,27 @@
 ---
 id: TASK-0151
 type: task
-status: draft
+status: in_progress
 priority: P1
 owner: desktop config
 source: user-request; upstream 93bfc01ad
 related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
-related_tasks: [TASK-0150]
+related_tasks: [TASK-0150, TASK-0187]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: main
-worktree: unassigned（主工作区串行）
+branch:
+worktree:
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [apps/desktop/src/main/config, apps/desktop/src/main/projects, apps/desktop/src/main/agent-settings, apps/desktop/src/main/general-settings, apps/desktop/src/main/shortcuts]
-write_paths: [apps/desktop/src/main/config, apps/desktop/src/main/projects, apps/desktop/src/main/agent-settings, apps/desktop/src/main/general-settings, apps/desktop/src/main/shortcuts, project/tasks/TASK-0151-desktop-config-transactions.md, .github/release-notes/v0.1.3.md]
+write_paths: [apps/desktop/src/main/ipc, apps/desktop/src/main/batch-tasks/batch-task-storage.ts, apps/desktop/src/main/knowledge/knowledge-service.ts, apps/desktop/src/main/remote-control/desktop-remote-pairing-service.ts, apps/desktop/src/main/config, apps/desktop/src/main/projects, apps/desktop/src/main/agent-settings, apps/desktop/src/main/general-settings, apps/desktop/src/main/shortcuts, project/tasks/TASK-0151-desktop-config-transactions.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/main/config]
 depends_on: [TASK-0150]
-conflicts_with: []
+conflicts_with: [TASK-0187, TASK-0181]
 integration_status: pending
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -66,3 +66,13 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 谨防队列重入：ProjectService 的 isKnownSshHost 目前会 readDesktopConfig；如果验证被放入 queued updater，不能再等待同一队列的 public read。
 - 上游用 next===current 判断 no-op；本仓适配前须明确 updater 可否原地修改，并用测试守住，不能静默漏保存。IPC 原先返回 void 的表面不能因为 updater 返回配置而多暴露数据。
 - 新增事务应基于实际调用链补完整测试与适当 ADR；上述是源码调查，不是已经实现。
+
+## 2026-10-03 单工作树续接合同
+
+用户授权首批实施，本 Task 在 TASK-0187 集成检出内串行，未另建独立工作树；0150 已集成。先在真实临时配置存储 + GeneralSettingsService 入口用双读屏障证明并发丢失，再提供中心 updateDesktopConfig(updater) 队列，并迁移实际调用方。保留 writeDesktopConfig 的旧整快照语义作为兼容入口，但产品读改写全部迁移，不伪称仅给落盘排队即可解决。
+
+不改变字段/Schema/品牌/凭据、SSH 独立文件或手机功能。remote-control 只迁移现有配置写入，保护相邻字段；失败不得毒化后续事务；同进程串行不承诺跨进程 CAS。API 返回同一 current 引用表示无修改；回调内禁止递归调用事务。保留未知顶层字段，完整字节/占用重试复用已验证 toolkit。
+
+IPC 的既有 CONFIG_SET 字段组装迁至 config 领域，桥只做校验、调用和既有通知；batch-task-storage 不再反向导入 IPC 配置转发。Project Service 保留 broadcast、归档/恢复、目录准入和 automation 事件。正常流程与读后持久化、并发写、失败后恢复、无修改、未知字段及 SSH 保护均需测试。
+
+验证：Node runner + Desktop config 的配置/设置/项目/快捷键/IPC/知识库/批任务/配对隔离用例；test:impact 与跨包 test:changed、最终完整 check 由 TASK-0187 执行。最初 draft 的历史说明仅为规划，不表示本轮尚未授权。
