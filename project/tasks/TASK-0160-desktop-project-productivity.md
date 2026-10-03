@@ -18,7 +18,7 @@ read_paths: [packages/plugins/presets, apps/desktop/src/main, apps/desktop/src/r
 write_paths: [packages/plugins/presets, apps/desktop/src/main, apps/desktop/src/renderer/domains, project/tasks/TASK-0160-desktop-project-productivity.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/plugins/presets]
 depends_on: [TASK-0148]
-conflicts_with: [TASK-0187, TASK-0196]
+conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
 updated: 2026-10-03
