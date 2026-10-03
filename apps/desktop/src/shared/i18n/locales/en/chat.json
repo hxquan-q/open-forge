@@ -318,7 +318,6 @@
 			"transcript": "This conversation is very large — only the visible range is loaded."
 		}
 	},
-
 	"fileExplorer": {
 		"display": {
 			"invalidPatterns": "Use up to 100 patterns, each no longer than 1024 characters",
@@ -716,6 +715,9 @@
 		},
 		"planMode": {
 			"label": "Plan mode"
+		},
+		"goalMode": {
+			"label": "Goal mode"
 		}
 	},
 	"inputBar": {
@@ -1144,6 +1146,29 @@
 			"title": "Plan"
 		}
 	},
+	"goalMode": {
+		"dialog": {
+			"cancel": "Cancel",
+			"clear": "Clear goal",
+			"createDescription": "Vetta keeps iterating until the goal is complete, blocked, or paused.",
+			"manageDescription": "Review the current goal, resume it, or clear it.",
+			"objectiveLabel": "Goal",
+			"objectivePlaceholder": "Describe a concrete, verifiable final outcome…",
+			"resume": "Resume goal",
+			"start": "Start working",
+			"statusLabel": "Status",
+			"title": "Goal mode",
+			"usage": "{{used}} tokens used · {{count}} automatic continuations"
+		},
+		"operationFailed": "Goal operation failed",
+		"status": {
+			"active": "Active",
+			"blocked": "Blocked",
+			"complete": "Complete",
+			"paused": "Paused",
+			"usage_limited": "Usage limited"
+		}
+	},
 	"questionPanel": {
 		"keyboardHint": "↑↓ Navigate · Space select · ←→ Switch · Enter next",
 		"multiSelectHint": "Multiple choice",
@@ -1393,7 +1418,7 @@
 		},
 		"work": {
 			"panelTitle": "Docs & research",
-			"panelLead": "This session\u2019s plans, sources, and deliverables live here",
+			"panelLead": "This session’s plans, sources, and deliverables live here",
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
 				"title": "Artifacts",
@@ -1464,5 +1489,19 @@
 		"openSession": "Open session",
 		"startupTitle": "Unfinished sessions detected",
 		"startupBody": "{{count}} session(s) had replies that did not finish before the app last exited. Open one to continue."
+	},
+	"markdown": {
+		"preview": "Preview",
+		"source": "Source",
+		"run": "Run JavaScript",
+		"stop": "Stop",
+		"waiting": "Preview will appear when generation finishes.",
+		"paused": "Preview paused. Run again to restart the page.",
+		"tooLarge": "This content is too large to preview. You can still view and copy its source.",
+		"failed": "Could not render this content. Its source is shown instead.",
+		"staticHtml": "Static preview. Run JavaScript to enable interactions; external resources are blocked.",
+		"running": "Interactive preview. Automatically stops after 30 seconds.",
+		"svg": "SVG preview",
+		"html": "HTML preview"
 	}
 }

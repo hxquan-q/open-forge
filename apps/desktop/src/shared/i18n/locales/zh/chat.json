@@ -318,7 +318,6 @@
 			"transcript": "会话内容过大，已只加载当前可见范围。"
 		}
 	},
-
 	"fileExplorer": {
 		"display": {
 			"invalidPatterns": "最多可填写 100 条规则，每条不超过 1024 个字符",
@@ -716,6 +715,9 @@
 		},
 		"planMode": {
 			"label": "计划模式"
+		},
+		"goalMode": {
+			"label": "目标模式"
 		}
 	},
 	"inputBar": {
@@ -1144,6 +1146,29 @@
 			"title": "计划"
 		}
 	},
+	"goalMode": {
+		"dialog": {
+			"cancel": "取消",
+			"clear": "清除目标",
+			"createDescription": "Vetta 会持续迭代，直到目标完成、受阻或暂停。",
+			"manageDescription": "查看当前目标状态，或恢复和清除目标。",
+			"objectiveLabel": "目标",
+			"objectivePlaceholder": "描述一个具体、可验证的最终结果…",
+			"resume": "继续目标",
+			"start": "开始执行",
+			"statusLabel": "状态",
+			"title": "目标模式",
+			"usage": "已使用 {{used}} Token · 自动续跑 {{count}} 次"
+		},
+		"operationFailed": "目标操作失败",
+		"status": {
+			"active": "执行中",
+			"blocked": "受阻",
+			"complete": "已完成",
+			"paused": "已暂停",
+			"usage_limited": "用量受限"
+		}
+	},
 	"questionPanel": {
 		"keyboardHint": "↑↓ 选择 · 空格选中 · ←→ 切换 · Enter 下一题",
 		"multiSelectHint": "可多选",
@@ -1464,5 +1489,19 @@
 		"openSession": "打开会话",
 		"startupTitle": "检测到未完成的会话",
 		"startupBody": "上次退出时有 {{count}} 个会话的回复未正常完成，打开后可继续。"
+	},
+	"markdown": {
+		"preview": "预览",
+		"source": "源码",
+		"run": "运行 JavaScript",
+		"stop": "停止",
+		"waiting": "生成结束后显示预览。",
+		"paused": "预览已暂停。重新运行可重启页面。",
+		"tooLarge": "内容过大，无法预览；仍可查看和复制源码。",
+		"failed": "内容渲染失败，已改以源码显示。",
+		"staticHtml": "静态预览。运行 JavaScript 后可交互；外部资源已被阻止。",
+		"running": "交互式预览，30 秒后自动停止。",
+		"svg": "SVG 预览",
+		"html": "HTML 预览"
 	}
 }

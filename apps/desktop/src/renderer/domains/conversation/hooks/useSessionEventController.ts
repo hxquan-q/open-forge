@@ -14,6 +14,7 @@ import {
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
 	EMPTY_TASK_STATE,
+	goalStateBySessionAtom,
 	isCanvasTabVisible,
 	isCompactingAtom,
 	isReloadingMcpAtom,
@@ -44,6 +45,7 @@ import { applyTaskFactEvent } from "@shared/task/task-projection.js";
 import {
 	isCodingAgentMcpReloadStarted,
 	readCodingAgentBackgroundTasksObservation,
+	readCodingAgentGoalObservation,
 	readCodingAgentMcpReloadFinished,
 	readCodingAgentPlanModeObservation,
 	readCodingAgentSubagentsObservation,
@@ -118,6 +120,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	const setTodoItems = useSetAtom(todoItemsBySessionAtom);
 	const setTaskState = useSetAtom(taskStateBySessionAtom);
 	const setPlanModeStates = useSetAtom(planModeStateBySessionAtom);
+	const setGoalStates = useSetAtom(goalStateBySessionAtom);
 	const setPromptSuggestions = useSetAtom(promptSuggestionsAtom);
 	const setPromptPredicting = useSetAtom(promptPredictingAtom);
 	const suggestionTokenRef = useRef<Map<string, number>>(new Map());
@@ -711,6 +714,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					}
 					return;
 				}
+				const goalState = readCodingAgentGoalObservation(event);
+				if (goalState !== undefined) {
+					const sid = activeSessionRef.current?.runtimeId;
+					if (sid) {
+						setGoalStates((previous) => {
+							const next = { ...previous };
+							if (goalState) next[sid] = goalState;
+							else delete next[sid];
+							return next;
+						});
+					}
+					return;
+				}
 				const items = readCodingAgentTodoObservation(event);
 				if (!items) return;
 				const sid = activeSessionRef.current?.runtimeId;
@@ -743,6 +759,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			setIsReloadingMcp,
 			setLastTurnUsage,
 			setPlanModeStates,
+			setGoalStates,
 			setPromptSuggestions,
 			setRetryProgress,
 			setSubagents,
