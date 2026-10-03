@@ -25,7 +25,6 @@ apps/cli-host/test/runtime-host-capabilities-contract.test.ts
 apps/cli-host/test/runtime-host-session-backend.test.ts
 apps/cli-host/test/support/agent-rpc-test-process.ts
 apps/desktop/AGENTS.md
-apps/desktop/scripts/build-agent-modes.mjs
 apps/desktop/scripts/build-presets.mjs
 apps/desktop/scripts/run-dev-electron.node-test.mjs
 apps/desktop/scripts/runtime-canary-runner.ts
@@ -36,8 +35,6 @@ apps/desktop/src/main/abilities/open-marketplace/marketplace-source-store.ts
 apps/desktop/src/main/abilities/open-marketplace/open-marketplace-mcp-runtime.ts
 apps/desktop/src/main/abilities/open-marketplace/open-marketplace-service.ts
 apps/desktop/src/main/abilities/presentation/skill-package-presentation.ts
-apps/desktop/src/main/agent-modes/agent-modes.test.ts
-apps/desktop/src/main/agent-modes/modes-data.ts
 apps/desktop/src/main/agent-modes/modes/coding.md
 apps/desktop/src/main/agent-modes/modes/partials/canvas-artifacts.md
 apps/desktop/src/main/agent-modes/modes/work.md
