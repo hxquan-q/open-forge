@@ -1,7 +1,7 @@
 ---
 id: TASK-0196
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: coordinator
 source: user-request; RESEARCH-0022; 存量 draft 台账
@@ -127,3 +127,10 @@ updated: 2026-10-03
 
 - 2026-10-03：与 open-forge-bb 会话互让任务编号（对方 0194/0195/0197/0198，我方 0196）；BUG 编号对方已用到 0072，本批如需登记从 0073 起先扫描再取。
 - 2026-10-03：HEAD 已提交的 README 焦点表存在悬空 TASK-0186 行（记录未入库），已在 44e0c6887 移除，待其 Owner 提交记录后随合并恢复。
+
+### 批次收尾（2026-10-03）
+
+- 14/15 完成（0159 用户决策暂缓），全部逐项推送 origin/dev；批末合并入本地 main（adeaa5294）并推送 dev 同步。
+- 主树过时状态记录处置：泳道 B/C 停止后残留在主树的 TASK-0154/0157/README 未提交副本描述的状态与事实相反（其工作已在 dev 完成），经用户确认恢复为 HEAD 后合并。
+- 主树仍有并行会话（0187/harness 线）的未入库记录与未提交索引修改，其集成由各自会话负责；本批不代提交。
+- 人工功能验收：全部子任务保持 verifying 待用户；视觉验收未做（模型无视觉）。
