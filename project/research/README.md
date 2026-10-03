@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| Pi 与 DeepSeek Harness / Desktop 能力吸收评估 | [RESEARCH-0021](RESEARCH-0021-pi-deepseek-harness-absorption.md) |
 | Desktop 字体设置与字体授权 | [RESEARCH-0020](RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
 | 集成后可靠性与验证成本审查 | [RESEARCH-0019](RESEARCH-0019-post-integration-optimization-audit.md) |
 | 架构、Agent Loop、Composition | `exprot/architecture-overview.md`、`agent-loop.md`、`composition.md` |

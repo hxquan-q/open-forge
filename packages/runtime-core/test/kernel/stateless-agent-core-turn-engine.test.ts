@@ -22,6 +22,53 @@ import {
 import { StatelessAgentCoreTurnEngine } from "../../src/kernel/stateless-agent-core-turn-engine.js";
 
 describe("StatelessAgentCoreTurnEngine", () => {
+	it("carries safe-tool metadata through the production adapter into ordered next-request results", async () => {
+		let releaseFirst = () => {};
+		const secondStarted = new Promise<void>((resolve) => {
+			releaseFirst = resolve;
+		});
+		const starts: string[] = [];
+		const tools: RuntimeToolDefinition[] = ["a", "b"].map((name) => ({
+			name,
+			label: name,
+			description: name,
+			inputSchema: { type: "object" },
+			executionMode: "parallel-safe",
+			async execute() {
+				starts.push(name);
+				if (name === "a") await secondStarted;
+				else releaseFirst();
+				return { content: [{ type: "text", text: name }] };
+			},
+		}));
+		const responses = options([
+			assistant(
+				tools.map(({ name }) => ({ type: "toolCall", id: name, name, arguments: {} })),
+				"toolUse",
+			),
+			assistant([{ type: "text", text: "finished" }]),
+		]);
+		const contexts: Message[][] = [];
+		const events = await run(
+			new StatelessAgentCoreTurnEngine({
+				...responses,
+				maxParallelToolCalls: 2,
+				streamFn: (_model, context) => {
+					contexts.push([...context.messages]);
+					return responses.streamFn();
+				},
+			}),
+			snapshot(tools),
+		);
+		expect(starts).toEqual(["a", "b"]);
+		expect(contexts).toHaveLength(2);
+		expect(
+			contexts[1].filter((message) => message.role === "toolResult").map((message) => message.toolCallId),
+		).toEqual(["a", "b"]);
+		expect(events.filter((event) => event.type === "message" && event.message.role === "toolResult")).toHaveLength(2);
+		expect(events.at(-1)).toMatchObject({ type: "completed", stopReason: "stop" });
+	}, 2000);
+
 	it("keeps the production facade aligned with the stateless text projection", async () => {
 		const response = assistant([{ type: "text", text: "done" }]);
 		const legacy = await run(new AgentCoreTurnEngine(options([response])), snapshot());
