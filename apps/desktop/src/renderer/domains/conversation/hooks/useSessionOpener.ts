@@ -18,7 +18,6 @@ import {
 	activeToolNamesAtom,
 	adoptExistingSessionInputDraft,
 	batchProjectsAtom,
-	type ChatTimelineItem,
 	chatMessagesAtom,
 	claimExistingSessionInputDraft,
 	claimNewSessionInputDraft,
@@ -49,7 +48,11 @@ import type { HistoryEntry } from "@vetta/runtime-core";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { type MutableRefObject, startTransition, useCallback, useRef } from "react";
-import { preserveMessagesAddedAfterSnapshot, shareChatMessageSnapshot } from "../services/chat-message-snapshot";
+import {
+	preserveMessagesAddedAfterSnapshot,
+	reconcileRunningTurnDraft,
+	shareChatMessageSnapshot,
+} from "../services/chat-message-snapshot";
 import {
 	appendError,
 	bumpOpenSessionToken,
@@ -65,6 +68,7 @@ import {
 } from "../services/chat-service";
 import { resolveSessionContextComposition } from "../services/context-composition-cache";
 import { reconcileOptimisticUserMessages } from "../services/optimistic-user-message-cache";
+import { mergeWithCausalAnchors } from "../services/pending-user-anchor";
 import { applySessionHydrationStateAtom } from "../services/session-hydration-state";
 import { commitTranscriptWindow, resetTranscriptWindowState } from "../services/transcript-window-controller";
 import { useSessionEventController } from "./useSessionEventController";
@@ -188,9 +192,10 @@ export function useSessionOpener(): SessionOpenerController {
 	const defaultConversationCwdRef = useRef(defaultConversationCwd);
 	defaultConversationCwdRef.current = defaultConversationCwd;
 	const activeSessionRef = useRef<{ cwd: string; sessionPath: string; runtimeId: string } | null>(null);
-	const { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers } = useSessionEventController({
-		activeSessionRef,
-	});
+	const { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage } =
+		useSessionEventController({
+			activeSessionRef,
+		});
 	const openSessionRef = useRef<
 		| ((
 				cwd: string,
@@ -737,38 +742,34 @@ export function useSessionOpener(): SessionOpenerController {
 							}
 							startTransition(() => {
 								setChatMessages((current) => {
+									// 重开的运行回合：canonical 已含部分落盘内容而 live 草稿仍在流式时，
+									// 先折叠成 canonical 身份（TASK-0152），再走 preserve 归位其余 live 项。
+									const folded = reconcileRunningTurnDraft(sharedSnapshot.messages, current);
+									if (folded.retarget) {
+										retargetProjectionMessage(folded.retarget.from, folded.retarget.to);
+									}
 									const merged = preserveMessagesAddedAfterSnapshot(
 										previewSnapshot,
-										sharedSnapshot.messages,
-										current,
+										folded.items,
+										folded.retarget ? current.filter((item) => item.id !== folded.retarget?.from) : current,
 									);
 									const mergedIds = new Set(merged.map((message) => message.id));
 									const missingIds = new Set(
 										unresolvedOptimistic.filter((message) => !mergedIds.has(message.id)).map((m) => m.id),
 									);
 									if (missingIds.size === 0) return merged;
-									// 未决乐观气泡按 reconciled 中最近的 canonical 前驱锚定回原位——
-									// 平铺到末尾会把它挪到它触发的回复之后（BUG-0068）。
-									const missingByAnchor = new Map<string | undefined, ChatTimelineItem[]>();
-									let anchor: string | undefined;
-									for (const item of reconciled) {
-										if (canonicalIds.has(item.id)) {
-											anchor = item.id;
-											continue;
-										}
-										if (!missingIds.has(item.id)) continue;
-										const group = missingByAnchor.get(anchor) ?? [];
-										group.push(item);
-										missingByAnchor.set(anchor, group);
-									}
-									const headGroup = missingByAnchor.get(undefined) ?? [];
-									const result: ChatTimelineItem[] = [...headGroup];
-									for (const item of merged) {
-										result.push(item);
-										const group = missingByAnchor.get(item.id);
-										if (group) result.push(...group);
-									}
-									return result;
+									// 未决乐观气泡的落位与快照/窗口化两层共用同一锚定规则
+									// （pending-user-anchor）：以 reconciled 为序、merged 为基，
+									// (a) 后继 (b) 孪生槽 (c) 尾部。旧的「无 canonical 前驱 →
+									// 绝对头插」会把气泡挪到因果更早的 preserve 保留行之前，
+									// 与 snapshot 层回退方向相反（BUG-0073）。
+									const baseIndexById = new Map(merged.map((message, index) => [message.id, index]));
+									return mergeWithCausalAnchors({
+										base: merged,
+										order: reconciled,
+										isPendingIndex: (index) => missingIds.has(reconciled[index].id),
+										landedBaseIndex: (index) => baseIndexById.get(reconciled[index].id),
+									}).items;
 								});
 							});
 						});
@@ -852,6 +853,7 @@ export function useSessionOpener(): SessionOpenerController {
 			createSessionEventHandler,
 			setInlineFilePreview,
 			resetEventBuffers,
+			retargetProjectionMessage,
 		],
 	);
 

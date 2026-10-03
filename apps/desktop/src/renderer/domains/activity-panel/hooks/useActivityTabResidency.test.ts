@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 // @vitest-environment jsdom
 
 import type { ActivityTabKey } from "@shared/lib/project-profile";
@@ -7,12 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityTabDefinition, ResolvedActivityTab } from "../registry/types";
 import { useActivityTabResidency } from "./useActivityTabResidency";
 
-function tab(id: string): ResolvedActivityTab {
+function tab(id: string, retention?: ActivityTabDefinition["retention"]): ResolvedActivityTab {
 	const definition: ActivityTabDefinition = {
 		id,
 		source: "builtin",
 		useMeta: () => ({ label: id }),
 		component: () => null,
+		retention,
 	};
 	return { id, label: id, removable: true, source: "builtin", definition };
 }
@@ -62,5 +65,36 @@ describe("useActivityTabResidency", () => {
 
 		act(() => vi.advanceTimersByTime(250));
 		expect(container.textContent).toBe("todo,debug");
+	});
+
+	it("evicts the least recently activated pinned tab and rebuilds it when reopened", () => {
+		const pinned = [
+			tab("plugin:demo:pin-0", "pinned"),
+			tab("plugin:demo:pin-1", "pinned"),
+			tab("plugin:demo:pin-2", "pinned"),
+		];
+		function PinnedHarness(): ReturnType<typeof createElement> {
+			const residentTabs = useActivityTabResidency({
+				activeTab,
+				candidates: pinned,
+				floatingKeys: new Set(),
+				maxInactivePinnedTabs: 2,
+				scopeKey: "C:/repo",
+				warmEligibleTabs: pinned,
+			});
+			return createElement("output", null, residentTabs.map((item) => item.id).join(","));
+		}
+
+		act(() => root.render(createElement(PinnedHarness)));
+		expect(container.textContent).toBe("plugin:demo:pin-1,plugin:demo:pin-2");
+
+		activeTab = "plugin:demo:pin-0";
+		act(() => root.render(createElement(PinnedHarness)));
+		expect(container.textContent).toBe("plugin:demo:pin-0,plugin:demo:pin-1,plugin:demo:pin-2");
+
+		activeTab = "file";
+		act(() => root.render(createElement(PinnedHarness)));
+		// pin-0 keeps its newly used position; pin-1 is the one that gives way.
+		expect(container.textContent).toBe("plugin:demo:pin-0,plugin:demo:pin-2");
 	});
 });

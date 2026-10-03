@@ -31,6 +31,7 @@ import {
 } from "../../features/ask-user-question/index.js";
 import { createCodingAgentBrowserTabSessionExtension } from "../../features/browser-tab/browser-tab-session-extension.js";
 import { createCodingAgentFileOrganizeSessionExtension } from "../../features/file-organize/file-organize-session-extension.js";
+import { CODING_AGENT_GOAL_OBSERVATION, createCodingAgentGoalSessionExtension } from "../../features/goal/index.js";
 import {
 	CODING_AGENT_PLAN_MODE_OBSERVATION,
 	CODING_AGENT_PLAN_MODE_RUNTIME,
@@ -192,6 +193,14 @@ export async function createCodingAgentSessionPeripheralAssembly(
 				configurationState,
 			}),
 			createCodingAgentAskUserQuestionSessionExtension({ scenario: options.scenario }),
+			createCodingAgentGoalSessionExtension({
+				scenario: options.scenario,
+				reportUpdate: (state) =>
+					options.resourceContext.reportObservation({
+						...sessionExtensionObservation(CODING_AGENT_GOAL_OBSERVATION, state),
+						source: "extension",
+					}),
+			}),
 			createCodingAgentPlanModeSessionExtension({
 				scenario: options.scenario,
 				isTodoToolAvailable: () => sessionExtensions.services.require(CODING_AGENT_TODO_RUNTIME).toolEnabled,

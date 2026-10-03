@@ -20,7 +20,7 @@ read_paths: [packages/coding-agent, packages/runtime-core, packages/agent, proje
 write_paths: [project/decisions/waivers/WAIVER-0004-harness-dev-candidate-validation.md, project/requirements/REQ-0002-runtime-performance.md, project/tasks, project/plans/PLAN-0015-harness-absorption.md, project/research/RESEARCH-0021-pi-deepseek-harness-absorption.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
-conflicts_with: [TASK-0181, TASK-0122, TASK-0123]
+conflicts_with: [TASK-0181, TASK-0122, TASK-0123, TASK-0196, TASK-0039, TASK-0154, TASK-0159]
 integration_status: pending
 created: 2026-10-03
 updated: 2026-10-03
@@ -102,3 +102,13 @@ test:changed 的 agent、coding-agent、runtime-core、agent-team、runtime-tool
 用户在已知 CLI 重跑 9 failed / 30 passed 后答复 ok，同意登记 WAIVER-0004（到期 2026-10-10）。允许本次候选提交→fast-forward 推 origin/dev→尝试合入本地 main；不是稳定发布或工程完成。保持本任务 verifying/批次 in_progress，保留所有失败记录，静态 check 与定向合同仍须通过，不覆盖主树其他修改。
 
 归属：有界工具调度与公开可选执行元数据为 Upstreamable；Project 研究/计划/豁免为 Open-Forge-only。本次不向 upstream 提交。
+
+## 候选提交与远端整合
+
+实现提交 e6e05f5a3 已生成。为保证 fast-forward 推送，先在干净的隔离树合入 origin/dev 固定提交 15fdc5c81b94c09647d7e22e78243d58f2d477ab；仅发布说明和 Task 索引存在添加型冲突，保留双方全部条目。原生并发实现无源码冲突。新增远端 TASK-0196 的共享台账/发布说明冲突关系，保持隔离与串行集成。接下来复验完整静态 check 与定向合同；尚未推送。
+
+## 远端整合复验通过（2026-10-03）
+
+在 origin/dev@15fdc5c81b94c09647d7e22e78243d58f2d477ab 的合并结果上，完整 `bun run check` exit 0；同一 10 个生产文件的 `test:impact` exit 0：Agent 75、Runtime Core 334、Runtime Node 235、Runtime Tools 37，共 681 项。只豁免已记录的跨包失败，未豁免这些检查。
+
+merge commit 的暂存区来自干净工作树上的 Git 合并，两个文档冲突已逐段合并，新增改动对比 dev 仍只包含本 Task 的 27 个路径；使用 Git merge --continue 完成整合，不做部分合并提交或覆盖远端源码。

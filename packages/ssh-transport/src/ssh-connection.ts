@@ -62,6 +62,10 @@ import type { SshHost } from "./ssh-host.js";
  */
 const FIRST_COMMAND_TIMEOUT_MS = 4 * 60 * 1000;
 
+/** helper 临时失败的恢复边界（TASK-0166）：连续失败达上限后按连接放弃，退避按次数线性放大。 */
+const HELPER_MAX_FAILURES = 3;
+const HELPER_RETRY_BACKOFF_MS = 30_000;
+
 /** 终止远端进程组的那条命令自己的超时：TERM 后最多等 2 秒再 KILL，留足余量。 */
 const REMOTE_KILL_TIMEOUT_MS = 15_000;
 
@@ -94,6 +98,8 @@ export interface SshConnectionOptions {
 	/** 传给 ssh 子进程的额外环境变量，用于挂 askpass。 */
 	readonly env?: Readonly<Record<string, string>>;
 	readonly connectTimeoutSeconds?: number;
+	/** 测试注入的可控时钟；生产缺省 `Date.now`。仅影响 helper 恢复的退避判定。 */
+	readonly now?: () => number;
 	/**
 	 * 诊断钩子。
 	 *
@@ -127,8 +133,15 @@ export interface SshConnectionOptions {
  */
 export class SshConnection {
 	private platform: RemotePlatform | undefined;
+	private platformProbe: Promise<RemotePlatform> | undefined;
 	private homeDirectory: string | undefined;
-	private helperClient: Promise<SshHelperClient | undefined> | undefined;
+	private helperAttempt: Promise<SshHelperClient | undefined> | undefined;
+	/** 这台主机确定用不了 helper（平台/构建/协议不支持），按连接永久缓存。 */
+	private helperUnsupported = false;
+	/** 临时失败连续达上限后放弃，本连接余下生命周期走 `ssh exec`。 */
+	private helperExhausted = false;
+	private helperFailures = 0;
+	private helperNextRetryAt = 0;
 	/** 已经握手成功、可以直接用的 helper。部署过程中为空，那时文件操作走 `ssh exec`。 */
 	private readyHelper: SshHelperClient | undefined;
 	private disposed = false;
@@ -147,27 +160,43 @@ export class SshConnection {
 	dispose(): void {
 		this.disposed = true;
 		this.readyHelper?.close();
-		const pending = this.helperClient;
-		this.helperClient = undefined;
+		const pending = this.helperAttempt;
+		this.helperAttempt = undefined;
 		// 部署到一半的 helper 完成后立即关掉，不让它变成没人认领的常驻通道。
 		pending?.then((client) => client?.close()).catch(() => undefined);
 		this.options.runner.invalidate?.(this.host.target);
 	}
 
-	/** 探测远端平台，结果缓存到连接对象上——同一台机器不会中途换系统。 */
-	async probePlatform(signal?: AbortSignal): Promise<RemotePlatform> {
-		if (this.platform) return this.platform;
-		const result = await this.runChecked("uname -s && uname -m", { signal, timeoutMs: FIRST_COMMAND_TIMEOUT_MS });
-		const [os = "", arch = ""] = decode(result.stdout).trim().split("\n");
-		this.platform = {
-			os: os.trim(),
-			arch: arch.trim(),
-			// BSD 家族（macOS、FreeBSD）的 stat 用 -f，其余按 GNU 处理。
-			statFlavor: /darwin|bsd/i.test(os) ? "bsd" : "gnu",
-		};
-		// 连接一通就在后台把 helper 备好：就绪之后文件操作不必再为每一次读写新起一个 ssh 进程。
-		if (this.options.helper) void this.helper().catch(() => {});
-		return this.platform;
+	/**
+	 * 探测远端平台，结果缓存到连接对象上——同一台机器不会中途换系统。
+	 *
+	 * 首次探测共享在途 Promise：并发调用只发起一次远端往返。首个调用方的 signal
+	 * 只影响这次共享探测；失败或取消后不缓存结论，下次调用重新发起。
+	 */
+	probePlatform(signal?: AbortSignal): Promise<RemotePlatform> {
+		if (this.platform) return Promise.resolve(this.platform);
+		if (!this.platformProbe) {
+			this.platformProbe = this.runChecked("uname -s && uname -m", {
+				signal,
+				timeoutMs: FIRST_COMMAND_TIMEOUT_MS,
+			})
+				.then((result) => {
+					const [os = "", arch = ""] = decode(result.stdout).trim().split("\n");
+					this.platform = {
+						os: os.trim(),
+						arch: arch.trim(),
+						// BSD 家族（macOS、FreeBSD）的 stat 用 -f，其余按 GNU 处理。
+						statFlavor: /darwin|bsd/i.test(os) ? "bsd" : "gnu",
+					};
+					// 连接一通就在后台把 helper 备好：就绪之后文件操作不必再为每一次读写新起一个 ssh 进程。
+					if (this.options.helper) void this.helper().catch(() => {});
+					return this.platform;
+				})
+				.finally(() => {
+					this.platformProbe = undefined;
+				});
+		}
+		return this.platformProbe;
 	}
 
 	/**
@@ -361,9 +390,11 @@ export class SshConnection {
 				path: remotePath,
 				ignoredDirectories: options.ignoredDirectoryNames,
 				limit: options.limit,
+				names: options.names,
 			}),
 		);
-		if (viaHelper) return viaHelper.value.files;
+		// 旧版 helper 不认识 `names`、会照常全列，所以这里总是再筛一遍。
+		if (viaHelper) return keepNamedFiles(viaHelper.value.files, options.names);
 		const result = await this.runChecked(buildListFilesRecursiveCommand(remotePath, options), { signal });
 		return decode(result.stdout)
 			.split("\n")
@@ -436,26 +467,55 @@ export class SshConnection {
 	/**
 	 * 远端 helper；不可用时为 undefined，调用方必须有 `ssh exec` 的降级路径。
 	 *
-	 * 同一条连接上只建立一次。helper 的通道断了（网络抖动、远端被杀）之后下一次调用会重连，
-	 * 而「这台主机用不了 helper」的结论同样被记住，不会每个操作都重新上传一遍试试。
+	 * 失败分两类（TASK-0166）：
+	 * - 平台/构建/协议不支持 → 结论按连接永久缓存，不忙重试；
+	 * - 临时失败（网络、上传、通道、握手）→ 有界恢复：退避窗口内直接降级返回 undefined，
+	 *   窗口过后且调用方再次需要 helper 时才重试；连续失败达上限后按连接放弃。
+	 * 没有后台自动重试循环，避免认证弹窗风暴。
+	 *
+	 * helper 的通道断了（网络抖动、远端被杀）之后下一次调用会重新部署。
 	 */
 	helper(): Promise<SshHelperClient | undefined> {
 		const options = this.options.helper;
 		if (!options) return Promise.resolve(undefined);
+		if (this.readyHelper) return Promise.resolve(this.readyHelper);
 		// 已失效的连接不再拉起新的 helper 部署；探测在后台预热 helper 的路径会走到这里。
-		if (this.disposed) return Promise.resolve(undefined);
-		if (!this.helperClient) {
-			const attempt = connectSshHelper(this, options).then((client) => {
-				this.readyHelper = client;
-				client?.onClose(() => {
-					if (this.readyHelper === client) this.readyHelper = undefined;
-					if (this.helperClient === attempt) this.helperClient = undefined;
-				});
-				return client;
+		if (this.disposed || this.helperUnsupported || this.helperExhausted) return Promise.resolve(undefined);
+		if (this.helperAttempt) return this.helperAttempt;
+		const now = this.options.now ?? Date.now;
+		if (now() < this.helperNextRetryAt) return Promise.resolve(undefined);
+		const attempt = connectSshHelper(this, options)
+			.then((establishment) => {
+				if (establishment.status === "ready") {
+					const client = establishment.client;
+					this.helperFailures = 0;
+					this.helperNextRetryAt = 0;
+					this.readyHelper = client;
+					client.onClose(() => {
+						if (this.readyHelper === client) this.readyHelper = undefined;
+					});
+					return client;
+				}
+				if (establishment.status === "unsupported") {
+					this.helperUnsupported = true;
+					return undefined;
+				}
+				this.helperFailures += 1;
+				if (this.helperFailures >= HELPER_MAX_FAILURES) {
+					this.helperExhausted = true;
+					options.onDiagnostic?.(
+						`[ssh-helper] ${this.host.label}: giving up on helper recovery after ${HELPER_MAX_FAILURES} failures; using ssh exec for this connection`,
+					);
+				} else {
+					this.helperNextRetryAt = now() + HELPER_RETRY_BACKOFF_MS * this.helperFailures;
+				}
+				return undefined;
+			})
+			.finally(() => {
+				if (this.helperAttempt === attempt) this.helperAttempt = undefined;
 			});
-			this.helperClient = attempt;
-		}
-		return this.helperClient;
+		this.helperAttempt = attempt;
+		return attempt;
 	}
 
 	/**
@@ -870,4 +930,10 @@ function basename(remotePath: string): string {
 	const trimmed = remotePath.replace(/\/+$/, "");
 	const index = trimmed.lastIndexOf("/");
 	return index < 0 ? trimmed : trimmed.slice(index + 1);
+}
+
+function keepNamedFiles(files: readonly string[], names: readonly string[] | undefined): string[] {
+	if (!names?.length) return [...files];
+	const wanted = new Set(names);
+	return files.filter((file) => wanted.has(basename(file)));
 }

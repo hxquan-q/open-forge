@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ThemeSurface } from "../appearance";
 import { cn } from "@vetta-org/ui";
 import { AnimatePresence, motion } from "motion/react";
@@ -36,7 +37,7 @@ export interface FilePreviewDialogViewProps {
 }
 
 function isImage(item: FilePreviewItem): boolean {
-	return IMAGE_EXTENSIONS.has(getExtension(item.name));
+	return item.kind === "image" || IMAGE_EXTENSIONS.has(getExtension(item.name));
 }
 
 /**

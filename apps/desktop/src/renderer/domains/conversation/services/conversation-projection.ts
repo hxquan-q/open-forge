@@ -216,6 +216,14 @@ export class ConversationProjection {
 		this.targetMessageId = undefined;
 		resetStreamState();
 	}
+
+	/**
+	 * 历史回填把运行回合的草稿折叠进 canonical entry 身份时，同步迁移当前
+	 * 流式目标，后续增量继续落在同一条消息（TASK-0152）。
+	 */
+	retargetMessageId(from: string, to: string): void {
+		if (this.targetMessageId === from) this.targetMessageId = to;
+	}
 }
 
 /**

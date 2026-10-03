@@ -607,6 +607,110 @@ it("立即发送未派发新轮次时撤回派发序号，本轮 agent_end 重�
 	expect(getQueuedDispatchSeq(runtimeId)).toBe(1);
 });
 
+it("并发立即发送的 unbump 不误杀最新轮 agent_end 重拉", { timeout: 30_000 }, async () => {
+	// turn-A 流式中点 q-1（开 turn-B）再点 q-2（IPC 返回 missing）；turn-B 的
+	// agent_start 快照落在第二次 bump 之后、unbump 之前时，序号回撤使
+	// 「不等」判活把最新轮重拉误判成跨轮跳过——turn-B 是最后一轮，无补偿
+	// （BUG-0073）。只有净增长越过快照才允许判过期。
+	let eventHandler: SessionEventHandler | undefined;
+	const sessionApi = (window as unknown as { vetta: { session: Record<string, unknown> } }).vetta.session;
+	const ipcFirst = deferred<"started" | "missing">();
+	const ipcSecond = deferred<"started" | "missing">();
+	sessionApi.sendQueuedMessageNow = vi.fn((_rid: string, id: string) =>
+		id === "q-1" ? ipcFirst.promise : ipcSecond.promise,
+	);
+	sessionApi.create = vi.fn(async () => ({ cwd, sessionId: runtimeId, sessionPath }));
+	sessionApi.getSessionPath = vi.fn(async () => sessionPath);
+	sessionApi.getState = vi.fn(async () => ({
+		activeToolNames: [],
+		contextPercent: null,
+		contextWindow: 128_000,
+		executionMode: "full-access",
+		isStreaming: true,
+		messageCount: 0,
+		model: null,
+		scenario: "project",
+	}));
+	sessionApi.subscribe = vi.fn(async (_sessionId: string, handler: SessionEventHandler) => {
+		eventHandler = handler;
+		return vi.fn();
+	});
+	const firstHistory = [{ type: "message", entryId: "e-u1", message: { role: "user", content: "第一条" } }];
+	const historyRef: { current: unknown[] } = { current: firstHistory };
+	sessionApi.openViewer = vi.fn(async () => ({ history: historyRef.current }));
+	sessionApi.getFullHistory = vi.fn(async () => historyRef.current);
+	const store = await mount("", false);
+	const { chatMessagesAtom } = await import("@shared/store/atoms");
+	const { getQueuedDispatchSeq } = await import("@shared/store/message-queue-atoms");
+	await act(async () => {
+		await manager?.openSession(cwd, sessionPath);
+	});
+	if (!eventHandler) throw new Error("subscribe handler not captured");
+	const emit = (event: unknown): void => {
+		act(() => eventHandler?.(event));
+	};
+	const base = { schemaVersion: 1, sessionId: runtimeId, eventId: "e", timestamp: Date.now(), source: "runtime-core" };
+	const flushTimers = async (): Promise<void> => {
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 150));
+		});
+	};
+
+	// turn-A：流式中。
+	emit({ ...base, type: "session.lifecycle", phase: "agent_start" });
+	emit({ ...base, type: "message.delta", delta: "部分回复" });
+	await flushTimers();
+
+	// 连续两次「立即发送」：q-1 真派发（开 turn-B）、q-2 已不在队列（missing）。
+	await act(async () => {
+		void manager?.sendQueuedNow(runtimeId, "q-1");
+	});
+	await act(async () => {
+		void manager?.sendQueuedNow(runtimeId, "q-2");
+	});
+	// turn-B 在第二次 bump 之后、unbump 之前开启：快照 = 2。
+	emit({ ...base, type: "session.lifecycle", phase: "agent_start" });
+	ipcSecond.resolve("missing");
+	await act(async () => {
+		await vi.waitFor(() => expect(getQueuedDispatchSeq(runtimeId)).toBe(1));
+	});
+	ipcFirst.resolve("started");
+
+	// 被打断的 turn-A 收尾（重拉应跳过），turn-B 正常结束（重拉必须落地）。
+	emit({ ...base, type: "session.lifecycle", phase: "aborted" });
+	historyRef.current = [
+		{ type: "message", entryId: "e-u1", message: { role: "user", content: "第一条" } },
+		{
+			type: "message",
+			entryId: "e-a1",
+			message: { role: "assistant", content: [{ type: "text", text: "部分回复" }], stopReason: "aborted" },
+		},
+		{ type: "message", entryId: "e-u2", message: { role: "user", content: "插队消息" } },
+		{
+			type: "message",
+			entryId: "e-a2",
+			message: { role: "assistant", content: [{ type: "text", text: "回复二" }], stopReason: "end_turn" },
+		},
+	];
+	emit({ ...base, type: "session.lifecycle", phase: "agent_end" });
+	await flushTimers();
+
+	await act(async () => {
+		await vi.waitFor(() => {
+			expect(
+				store.get(chatMessagesAtom).some((message) => message.kind === "user" && message.entryId === "e-u2"),
+			).toBe(true);
+		});
+	});
+	const shape = store.get(chatMessagesAtom).flatMap((message) => visibleMessageShape(message) ?? []);
+	expect(shape).toEqual([
+		["user", "第一条"],
+		["assistant", "部分回复"],
+		["user", "插队消息"],
+		["assistant", "回复二"],
+	]);
+});
+
 it("空闲发送：正常上屏乐观气泡并返回 sent", async () => {
 	const store = await mount("普通消息", false);
 	const { chatMessagesAtom } = await import("@shared/store/atoms");

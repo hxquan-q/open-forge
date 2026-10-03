@@ -20,6 +20,10 @@ import {
 	collectMissingSandboxBinaries,
 	formatSandboxStagingWarning,
 } from "./sandbox-staging-guard.mjs";
+import {
+	assessWindowsSandboxArtifacts,
+	WINDOWS_SANDBOX_ARTIFACT_MANIFEST_PATH,
+} from "./windows-sandbox-artifacts.mjs";
 import { prepareSpeechModels, SPEECH_MODEL_RESOURCE_ROOT } from "./fetch-speech-models.mjs";
 import { MCP_SERVERS_VENDOR_ROOT, prepareMcpServers } from "./fetch-mcp-servers.mjs";
 import { prepareVendorRuntimes } from "./fetch-vendor-runtimes.mjs";
@@ -59,6 +63,8 @@ const codingAgentDir = join(projectRoot, "..", "..", "packages", "coding-agent")
 const cliAppDir = join(projectRoot, "..", "cli-host");
 const runtimeCoreWindowsSandboxDir = join(projectRoot, "..", "..", "packages", "runtime-core", "sandbox", "bin");
 const runtimeCoreSandboxDir = join(projectRoot, "..", "..", "packages", "runtime-core", "sandbox", "linux");
+// 受控制品清单（TASK-0159）：钉死 Windows 沙盒制品名与 SHA-256，见 windows-sandbox-artifacts.mjs。
+const windowsSandboxManifestPath = join(projectRoot, "..", "..", WINDOWS_SANDBOX_ARTIFACT_MANIFEST_PATH);
 const cliAppCompileTargets = {
 	"darwin-arm64": { platformTag: "darwin-arm64", bunTarget: "bun-darwin-arm64", binaryName: "openforge" },
 	"darwin-x64": { platformTag: "darwin-x64", bunTarget: "bun-darwin-x64", binaryName: "openforge" },
@@ -675,12 +681,27 @@ if (existsSync(runtimeCoreSandboxDir)) {
 }
 
 // 「声明要打包该平台、却没有 staged 任何该平台沙盒二进制」= 发一个没有沙盒的包。
-// 只告警不失败（见 sandbox-staging-guard.mjs 的取舍说明）。
+// 清单缺失（外部分叉）或非受控清单平台仍走这条告警路径；win32 的受控清单校验在下面。
 for (const gap of collectMissingSandboxBinaries({
 	declaredFamilies: resolvePlatformFamilies(),
 	sourceDirs: { win32: runtimeCoreWindowsSandboxDir, linux: runtimeCoreSandboxDir },
 })) {
 	console.warn(formatSandboxStagingWarning(gap));
+}
+
+// 受控清单校验（TASK-0159 / BUG-0022 的 A 项）：目录非空不再等于「有沙盒」——三个受控 exe
+// 必须存在且 SHA-256 与清单一致，否则默认阻断构建；只有显式
+// VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1 才降级为告警。
+const windowsSandboxArtifacts = assessWindowsSandboxArtifacts({
+	declaredFamilies: resolvePlatformFamilies(),
+	manifestPath: windowsSandboxManifestPath,
+	sourceDir: runtimeCoreWindowsSandboxDir,
+});
+if (windowsSandboxArtifacts.message) {
+	if (windowsSandboxArtifacts.enforcement === "block") {
+		throw new Error(windowsSandboxArtifacts.message);
+	}
+	console.warn(windowsSandboxArtifacts.message);
 }
 
 // =============================================================================

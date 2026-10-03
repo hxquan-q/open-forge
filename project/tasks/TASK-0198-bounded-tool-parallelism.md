@@ -93,3 +93,7 @@ test:changed 的 agent、coding-agent、runtime-core、agent-team、runtime-tool
 ## 候选提交前检查
 
 2026-10-03 用户授权 WAIVER-0004 后重新运行完整 `bun run check`：exit 0；类型、lint、mobile lint 与守卫通过。跨包测试失败仍按豁免记录，不改为通过。仅将本工作树内列明的 Task-0198 实现、测试、接口说明、关联研究/计划/记录与豁免作为一个候选提交，不包含压缩或重同步实现。
+
+## 合并后验证
+
+候选实现 e6e05f5a3；整合 origin/dev@15fdc5c81 后，完整 check exit 0，影响面 681 项通过。Task 仍为 verifying；WAIVER-0004 到期 2026-10-10，CLI/完整 Desktop 验收没有被重记为通过。

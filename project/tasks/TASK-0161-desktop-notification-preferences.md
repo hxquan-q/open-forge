@@ -1,7 +1,7 @@
 ---
 id: TASK-0161
 type: task
-status: draft
+status: verifying
 priority: P2
 owner: desktop notifications
 source: user-request; upstream 1794ef9db, 0afb42331
@@ -11,17 +11,17 @@ related_tasks: [TASK-0151]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: main
-worktree: unassigned（主工作区串行）
+branch:
+worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [apps/desktop/src/main/config, apps/desktop/src/main, apps/desktop/src/renderer/domains/settings, apps/desktop/src/shared/i18n]
 write_paths: [apps/desktop/src/main/config, apps/desktop/src/main, apps/desktop/src/renderer/domains/settings, apps/desktop/src/shared/i18n, project/tasks/TASK-0161-desktop-notification-preferences.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/main/config]
 depends_on: [TASK-0151]
-conflicts_with: []
-integration_status: pending
+conflicts_with: [TASK-0196]
+integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -56,3 +56,11 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 保留 VERIFY-0013 的 WIP；与 TASK-0147 冲突处先对照，不覆盖、不夹带提交。共享 release notes 在集成时追加。
 - 工程验证：未执行；技术评审：待源码/合同自审；集成：pending；人工功能验收：待用户；发布：未授权。
 - 完成时填写实际 diff、保留/拒绝项、测试证据、提交及用户验收操作；任务清单不能代替交付。
+
+## 交付记录（2026-10-03，TASK-0196 批次）
+
+- 范围裁决：按用户决策绕开 TASK-0151 依赖直接实施——通知偏好只是 desktop-config 上的新字段组，读写走既有原子写路径；0187 批落地配置事务后自然兼容。采纳上游 0afb42331 终态（单一提示音开关+时机），不移植 1794ef9db 的逐事件音色中间态。
+- 实际修改：SessionTurnNotificationController（终结状态折叠，failed 映射回本仓 notify 的 error）；notification-policy 按事件/时机判定投放；notification-service 偏好抑制+提示音命令；notification-sound-player（Audio 单例、内置 base64 WAV）；desktop-config schemaVersion 迁移框架（versioned-config future-fields）+notificationPreferences 规范化；preload 类型与 onSound；设置页通知分节与中英文案；root-layout onSound 播放接线。
+- 实际运行：定向 580/580；test:impact 646+7skip；完整 check 通过。
+- 未运行及原因：真实系统横幅/音频实机播放不做实机验证。
+- 剩余风险：内置音色听感未人工评审；配置事务并发窗口为既有通用风险（0151 主题）。

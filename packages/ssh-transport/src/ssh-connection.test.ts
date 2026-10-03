@@ -347,7 +347,7 @@ describe("连接失效清理", () => {
 			helper: { resolveBinary: () => "/helper" },
 		});
 		const helper = fakeHelper();
-		vi.mocked(connectSshHelper).mockResolvedValue(helper);
+		vi.mocked(connectSshHelper).mockResolvedValue({ status: "ready", client: helper });
 		await expect(connection.helper()).resolves.toBe(helper);
 		connection.dispose();
 		expect(helper.close).toHaveBeenCalledTimes(1);
@@ -361,7 +361,7 @@ describe("连接失效清理", () => {
 			controlPath: "/tmp/cp",
 			helper: { resolveBinary: () => "/helper" },
 		});
-		let finishDeploy: (client: SshHelperClient | undefined) => void = () => {};
+		let finishDeploy: (establishment: { status: "ready"; client: SshHelperClient }) => void = () => {};
 		vi.mocked(connectSshHelper).mockImplementation(
 			() =>
 				new Promise((resolve) => {
@@ -371,7 +371,7 @@ describe("连接失效清理", () => {
 		const pending = connection.helper();
 		connection.dispose();
 		const helper = fakeHelper();
-		finishDeploy(helper);
+		finishDeploy({ status: "ready", client: helper });
 		await expect(pending).resolves.toBe(helper);
 		await vi.waitFor(() => expect(helper.close).toHaveBeenCalledTimes(1));
 	});
