@@ -1,7 +1,7 @@
 ---
 id: TASK-0039
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0002
@@ -16,7 +16,7 @@ write_paths: [apps/desktop/src/renderer/domains/activity-panel, docs/plugin/ui-s
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0194, TASK-0196]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
 updated: 2026-10-03
 ---
@@ -93,9 +93,9 @@ updated: 2026-10-03
 
 ## 验收分层
 
-- 工程验证：通过——见下方「实际验证」，绑定本分支提交；完整 `bun run check` 在本次全部代码/文档/记录改动落地后跑绿。
+- 工程验证：通过——见下方「实际验证」，绑定本分支提交；完整 `bun run check` 在本次全部代码/文档/记录改动落地后跑绿，并在合并远端 dev（含 TASK-0154/0166/0167/0194 批次）后复跑再绿。
 - 技术评审：自审（diff + 合同比对 + 门禁）；未做独立评审。
-- 集成：`pending`（推送 `origin/dev` 后回填 SHA 并转 `integrated`）。
+- 集成：`integrated`——已 fast-forward 推送 `origin/dev`（`d5a29042f..2de27ed59`）；本 Task 提交 `48e02a380`（实现/文档/记录）、`033e0baa8`（合并远端 dev）、`f7c91c04d`（补登写路径冲突），后续集成与本地 main 合并归泳道 A Coordinator。
 - 人工功能验收：待用户（真实 Desktop 上验证插件 pinned 页签保活与逐出后的重建观感、进程数）。
 - 发布：未授权。
 
@@ -115,3 +115,7 @@ updated: 2026-10-03
 首轮 `check` 曾红并已修复：`check:lint`（Biome 期望单行 `toEqual`）、`check:guards`（4 个改动文件缺 `// Modified by The Open Forge contributors.` 声明头；TASK-0039 与 TASK-0122/0123/0181 的 `write_paths` 重叠未登记）、`check:types`（新测试使用了非 `ActivityTabKey` 字面量与未导入的类型）。修复后最终一轮全绿。
 
 > 记录说明：`check:guards` 的告警 `fatal: Not a valid object name upstream/dev` 为环境缺 `upstream` remote 的既有噪音（基线回落 `upstream/dev@d217984c72ef`），本 Task 未新增或放宽任何检查。
+
+推送前复验（合并远端 dev 后）：远端两次前进（TASK-0154/0166/0167/0194 等批次）均先 merge 再复验。合并后的内容上，定向 3 文件 / 14 例、`bun install --frozen-lockfile`、完整 `bun run check`（lint·guards·types root/cli/desktop/docs/mobile·mobile lint）全部通过，随后 `git push origin HEAD:dev` fast-forward 成功（`d5a29042f..2de27ed59`）。
+
+过程偏差（如实记录）：为把远端 dev 纳入分支，第二次合并使用了 git 默认英文单行 merge 标题（`2de27ed59`）。`--amend` 被规则禁止、改写已合并历史风险更高，且并行批次已先推入同形的默认 merge 标题（`d5a29042f`、`2b1f4272c`），故保留原样并在交付中披露；后续合并改用 `--no-commit` + 显式中文多行消息。实现与验证结论不受影响。
