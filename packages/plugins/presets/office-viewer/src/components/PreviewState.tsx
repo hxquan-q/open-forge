@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import type { JSX } from "react";
 
@@ -13,12 +14,12 @@ export function LoadingState(): JSX.Element {
 	);
 }
 
-export function ErrorState({ message }: { message: string }): JSX.Element {
+export function ErrorState({ message, hint }: { message: string; hint?: string }): JSX.Element {
 	const { t } = useTranslation();
 	return (
 		<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-[13px] text-[var(--destructive)]">
 			<span>{message}</span>
-			<span className="text-[11px] text-[var(--muted-foreground)]">{t("state.errorHint")}</span>
+			<span className="text-[11px] text-[var(--muted-foreground)]">{hint ?? t("state.errorHint")}</span>
 		</div>
 	);
 }

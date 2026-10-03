@@ -115,3 +115,5 @@ depends_on: []
 ## 实施切片（2026-10-03）
 
 用户要求继续 Renderer 优化。已创建 [TASK-0186](../tasks/TASK-0186-office-preview-on-demand.md)：Office 预览按格式加载与 PDF worker URL 释放；不把全插件激活延迟或 dev 策略变更夹带进来。完成后仍需受控 Renderer 内存对照，Issue 不提前关闭。
+
+TASK-0186 首片工程验证通过：Office MF 同步代码由 3,488,824 降至 72,338 bytes（-97.93%），四种解析器均延迟加载；PDF worker URL 最后一个预览异步关闭后释放。4 条回归、影响测试、构建与完整 check 已过；主树有其他未提交修改，独立分支待集成。未做实机 RAM 对照，不能用该字节降幅推算 Renderer 内存，也未修改全部插件激活/dev-server 策略。

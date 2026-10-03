@@ -25,6 +25,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿，实机峰谷差待用户验收）；TASK-0196 批次工作树。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
+| `TASK-0186` | `verifying` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（本轮集成提交）；未做实机 RAM 对照，待人工验收。 |
 | `TASK-0181` | `in_progress` | — | 本机字体偏好：两项选择、主题持久化和终端跟随；独立 Worktree 实施。 |
 | `TASK-0180` | `verifying` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
 | `TASK-0184` | `ready` | — | docs-site 构建 Turbopack 71 错修复（BUG-0067）；仅建档待诊。 |
