@@ -16,6 +16,14 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | investigating | P2 | — |
+| `BUG-0069` | 流式输出使历史回复用量引用不断变化 | verifying | P1 | PLAN-0014 |
+| `BUG-0070` | 工具调用间隙回复被提前标为完成 | verifying | P1 | PLAN-0014 |
+| `BUG-0071` | 回合恢复成功仍报告旧错误终态 | verifying | P1 | PLAN-0014 |
+| `BUG-0072` | 自动跟随中的半途滚动位置被错误记住 | verifying | P1 | PLAN-0014 |
+| `BUG-0074` | Git 提交详情错误解析特殊路径和重命名 | verifying | P1 | PLAN-0014 |
+| `BUG-0075` | 桌面配置并发读改写丢失更新 | verifying | P1 | PLAN-0014 |
+| `BUG-0076` | 开发主进程缓存遗漏部分 workspace 输出 | verifying | P1 | PLAN-0014 |
 | `BUG-0068` | 会话结束后用户消息仍显示在回复末尾（队列消费变体） | verifying | P1 | — |
 | `BUG-0073` | BUG-0068 修复提交引入的四处锚定/派发序号回归（unbump 误杀最新轮重拉、未消费排队气泡锚进中段、首部重排污染 prependedCount、两层回退方向相反） | verifying | P1 | TASK-0194 |
 | `BUG-0064` | desktop-packaged 合同 job 缺依赖安装致 cleanlist 必红 | verifying | P1 | PLAN-0014 |

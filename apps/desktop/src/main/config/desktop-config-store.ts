@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
 import type { SshHost } from "@vetta/ssh-transport";
-import { atomicWriteJSON } from "@vetta/toolkit/atomic-write";
+import { atomicWriteJSON, atomicWriteJSONAsync } from "@vetta/toolkit/atomic-write";
 import { isLanguagePreference, type LanguagePreference } from "../../shared/i18n/config.js";
 import {
 	DEFAULT_NOTIFICATION_PREFERENCES,
@@ -375,23 +375,47 @@ function normalizeSshHosts(value: unknown): SshHost[] | undefined {
 	return hosts;
 }
 
+/** Updaters return a new snapshot to write, or the same reference for a no-op. Never nest transactions. */
+export type DesktopConfigUpdater = (current: DesktopConfig) => DesktopConfig | Promise<DesktopConfig>;
+
+let desktopConfigOperations: Promise<void> = Promise.resolve();
+
 /**
- * 整文件写回，但保留磁盘上本版本不认识的字段。
- *
- * 新旧版本共用同一份 `~/.openforge`（开发版与已安装的正式版、或升级后又回退）。读路径
- * {@link parseDesktopConfig} 是字段白名单，不认识的字段不进内存；若写回时整份覆盖，
- * 旧版任何一次保存都会把新版的字段抹掉——0.5.58 启动时顺手写回 CLI 路径，就这样清空了
- * sshHosts，远程项目随之全部报「Unknown SSH host」。已知字段仍以传入值为准：显式给
- * `undefined` 的键在序列化时被丢掉，删除语义不变。
+ * Reads, modifies and writes on one process-local queue; failures do not poison later operations.
+ * Unknown disk fields survive older/newer app versions sharing this config. Explicit undefined
+ * still deletes a known field; SSH hosts remain owned by their separate file.
  */
+export function updateDesktopConfig(update: DesktopConfigUpdater): Promise<DesktopConfig> {
+	const result = desktopConfigOperations.then(async () => {
+		const raw = readRawConfigSync();
+		readSshHostsSync(raw.sshHosts);
+		const current = parseDesktopConfig(raw);
+		const next = await update(current);
+		if (next === current) return current;
+		// Preserve unknown fields from the latest disk snapshot; SSH hosts have their own owner.
+		await atomicWriteJSONAsync(CONFIG_PATH, { ...readRawConfigSync(), ...next, sshHosts: undefined });
+		return next;
+	});
+	desktopConfigOperations = result.then(
+		() => undefined,
+		() => undefined,
+	);
+	return result;
+}
+
+/** Compatibility for whole-snapshot writes. Product read-modify-write flows use updateDesktopConfig. */
 export async function writeDesktopConfig(config: DesktopConfig): Promise<void> {
-	const raw = readRawConfigSync();
-	// 迁移没来得及发生时（文件由外部写入、本进程还没读过）先把旧字段迁出，再从这里删掉。
-	readSshHostsSync(raw.sshHosts);
-	// sshHosts 由 writeSshHosts 独占：调用方手里的是读配置那一刻的快照，拿它写回会盖掉
-	// 期间刚增删的主机。
-	const notificationPreferences = preserveFutureNotificationFields(raw, config.notificationPreferences);
-	atomicWriteJSON(CONFIG_PATH, { ...raw, ...config, notificationPreferences, sshHosts: undefined });
+	await updateDesktopConfig(() => {
+		// 迁移没来得及发生时（文件由外部写入、本进程还没读过）先把旧字段迁出；事务读阶段
+		// 也会迁移一次，这里是旧整快照入口的自保。快照写入还须保住新版本 schema 写入的
+		// 未来通知字段，不能被快照里的旧形状整段覆盖；sshHosts 由独立文件持有，事务落盘时剥离。
+		const raw = readRawConfigSync();
+		readSshHostsSync(raw.sshHosts);
+		const notificationPreferences = preserveFutureNotificationFields(raw, config.notificationPreferences);
+		return notificationPreferences === config.notificationPreferences
+			? config
+			: ({ ...config, notificationPreferences } as DesktopConfig);
+	});
 }
 
 function preserveFutureNotificationFields(
@@ -429,9 +453,11 @@ function readRawConfigSync(): Record<string, unknown> {
 }
 
 export async function persistVettaCliPaths(paths: { vettaAppPath: string; vettaCliAppPath: string }): Promise<void> {
-	const config = await readDesktopConfig();
-	if (config.vettaAppPath === paths.vettaAppPath && config.vettaCliAppPath === paths.vettaCliAppPath) return;
-	await writeDesktopConfig({ ...config, ...paths });
+	await updateDesktopConfig((config) =>
+		config.vettaAppPath === paths.vettaAppPath && config.vettaCliAppPath === paths.vettaCliAppPath
+			? config
+			: { ...config, ...paths },
+	);
 }
 
 export function expandTildePath(path: string): string {

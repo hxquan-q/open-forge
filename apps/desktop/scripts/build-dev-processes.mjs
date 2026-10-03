@@ -1,8 +1,11 @@
+// Modified by The Open Forge contributors.
+import { getMainBundledWorkspaceInputs } from "./main-bundle-workspace-inputs.mjs";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, readlink, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const desktopRoot = join(import.meta.dirname, "..");
 const repoRoot = join(desktopRoot, "..", "..");
@@ -73,18 +76,9 @@ const tasks = [
 			join(desktopRoot, "vite.main.config.ts"),
 			join(desktopRoot, "src", "main"),
 			join(desktopRoot, "src", "shared"),
-			join(repoRoot, "packages", "capability-runtime", "package.json"),
-			join(repoRoot, "packages", "capability-runtime", "dist"),
-			join(repoRoot, "packages", "capability-sdk", "package.json"),
-			join(repoRoot, "packages", "capability-sdk", "dist"),
-			join(repoRoot, "packages", "plugins", "plugin-sdk", "package.json"),
-			join(repoRoot, "packages", "plugins", "plugin-sdk", "dist"),
-			join(repoRoot, "packages", "runtime-desktop", "package.json"),
-			join(repoRoot, "packages", "runtime-desktop", "dist"),
-			join(repoRoot, "packages", "runtime-node", "package.json"),
-			join(repoRoot, "packages", "runtime-node", "dist"),
-			join(repoRoot, "packages", "toolkit", "package.json"),
-			join(repoRoot, "packages", "toolkit", "src"),
+			join(desktopRoot, "scripts", "main-bundle-workspace-inputs.mjs"),
+			join(desktopRoot, "scripts", "packaged-native-dependencies.mjs"),
+			...getMainBundledWorkspaceInputs(repoRoot),
 		],
 		outputDir: join(desktopRoot, "dist", "main"),
 	},
@@ -122,7 +116,9 @@ async function updateHashWithPath(hash, path) {
 async function hashPaths(paths, env) {
 	const hash = createHash("sha256");
 	for (const path of paths) await updateHashWithPath(hash, path);
-	for (const [key, value] of Object.entries(env).filter(([key]) => key.startsWith("VETTA_")).sort()) {
+	for (const [key, value] of Object.entries(env)
+		.filter(([key]) => key.startsWith("VETTA_"))
+		.sort()) {
 		hash.update(key);
 		hash.update(value ?? "");
 	}
@@ -222,4 +218,6 @@ async function main() {
 	console.log(`[build-dev-processes] 完成，构建 ${pending.length}/${tasks.length} 个任务`);
 }
 
-await main();
+export { hashPaths, tasks as developmentBuildTasks };
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
@@ -340,6 +341,26 @@ describe("MessageListView virtualization", () => {
 		render(<MessageListView {...props(true)} />);
 		const host = screen.getByRole("button", { name: "message timeline" }).closest(".absolute");
 		expect(host?.className).toContain("@max-[52rem]:hidden");
+	});
+
+	it("流式追加正文时沿用历史回复的用量引用，完成调用后更新用量", () => {
+		const firstUsage = usage({ input: 20, output: 10 });
+		const nextUsage = usage({ input: 30, output: 5 });
+		const initial = props(true, true);
+		const history = createConversationAgentMessage({ id: "history", text: "old", blocks: [], usages: [firstUsage] });
+		const tail = createConversationAgentMessage({ id: "tail", text: "a", blocks: [] });
+		initial.model.messages = [history, tail];
+		const { rerender } = render(<MessageListView {...initial} />);
+		const previous = captured.messageItemProps.at(-2)?.sessionUsages;
+		expect(previous).toEqual([firstUsage]);
+
+		rerender(<MessageListView {...initial} model={{ ...initial.model, messages: [history, { ...tail, text: "ab" }] }} />);
+		expect(captured.messageItemProps.at(-2)?.sessionUsages).toBe(previous);
+		expect(captured.virtualListMounts).toBe(1);
+
+		rerender(<MessageListView {...initial} model={{ ...initial.model, messages: [history, { ...tail, text: "ab", usages: [nextUsage] }] }} />);
+		expect(captured.messageItemProps.at(-2)?.sessionUsages).toEqual([firstUsage, nextUsage]);
+		expect(captured.messageItemProps.at(-2)?.sessionUsages).not.toBe(previous);
 	});
 
 	it("把所有历史助手消息的 usage 汇总后传给 Token 面板", () => {

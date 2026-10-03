@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
@@ -105,7 +106,7 @@ import {
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
 	readConfigSync,
 	readDesktopConfig,
-	writeDesktopConfig,
+	updateDesktopConfig,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
 import { readSettings, updateSettings } from "./settings.js";
@@ -1125,9 +1126,10 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.SET_GLOBAL_EXECUTION_MODE, async (_event, mode: unknown) => {
 		assertExecutionMode(mode);
 		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		const settings = await readDesktopConfig();
-		settings.defaultExecutionMode = mode as SessionExecutionMode;
-		await writeDesktopConfig(settings);
+		await updateDesktopConfig((settings) => ({
+			...settings,
+			defaultExecutionMode: mode as SessionExecutionMode,
+		}));
 	});
 
 	// 只更新「新会话默认工作模式」。工作模式在会话创建时固化、会话内不可变，
@@ -1136,9 +1138,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// 广播仅用于各窗口新会话页 toggle 的显示同步。
 	ipcMain.handle(CHANNELS.SET_GLOBAL_AGENT_MODE, async (_event, mode: unknown) => {
 		const next = isAgentMode(mode) ? mode : DEFAULT_AGENT_MODE;
-		const settings = await readDesktopConfig();
-		settings.defaultAgentMode = next;
-		await writeDesktopConfig(settings);
+		await updateDesktopConfig((settings) => ({ ...settings, defaultAgentMode: next }));
 		for (const win of BrowserWindow.getAllWindows()) {
 			win.webContents.send(CHANNELS.AGENT_MODE_CHANGED, next);
 		}

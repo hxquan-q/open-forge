@@ -15,15 +15,15 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| TASK-0197 | in_progress | PLAN-0015 | Harness 能力吸收批次隔离工作树 |
-| `TASK-0198` | verifying | PLAN-0015 | 有界工具并发与独占屏障；TASK-0197 树串行。 |
-| `TASK-0195` | blocked | PLAN-0015 | 保留兼容模型请求前缀的摘要生成 |
-| `TASK-0196` | `verifying` | PLAN-0014 | 存量 Draft 批次（15 项）已全部逐项验证并推 origin/dev，批末合入本地 main（adeaa5294）；待人工验收。 |
-| `TASK-0200` | `verifying` | PLAN-0014 | 0157/0158 交付审计完成（网络/沙箱/权限面逐字对照上游全数 retain）；两项收尾已实施（af7a9f5a9 重挂修复、501a935da 隔离 e2e 补跑全链绿）并推 origin/dev，待人工验收。 |
-| `TASK-0039` | `verifying` | PLAN-0002 | webview 剩余口子收口：插件 pinned 页签改为有界 LRU（非活动上限 3、驱逐可逆、不占用 warm 预算）；面板收起卸载核实为已有等价实现（retain + 回归验证）；已推送 `origin/dev`（`2de27ed59`），待人工验收。 |
-| `TASK-0159` | `verifying` | PLAN-0014 | Windows 沙盒制品完整性：受控清单（3 个 exe + sha256 + 来源提交）钉死、缺失/不一致默认阻断打包（仅显式 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 降级为告警）；不引入外部下载源；已推送 `origin/dev`（`1c1a50b9e`），待人工验收。 |
-
-| `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿，实机峰谷差待用户验收）；TASK-0196 批次工作树。 |
+| `TASK-0199` | `verifying` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0151` | `verifying` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过，待人工验收。 |
+| `TASK-0187` | `verifying` | PLAN-0014 | 稳定性首批（0188–0193/0151/0199）已随本轮合入本地 main；changed 的 CLI 失败经合并前后基线比对归属存量环境问题（BUG-0059 面），待人工验收。 |
+| `TASK-0188` | `verifying` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0189` | `verifying` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0190` | `verifying` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0191` | `verifying` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0192` | `verifying` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0193` | `verifying` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
 | `TASK-0186` | `verifying` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（本轮集成提交）；未做实机 RAM 对照，待人工验收。 |
 | `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（本轮集成提交）；定向 30 项、Desktop 全包 4680 项及完整 check 通过，待人工验收。 |

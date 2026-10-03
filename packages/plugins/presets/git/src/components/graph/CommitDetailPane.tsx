@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { Button } from "@vetta-org/ui";
 import { useCallback, useEffect, useState } from "react";
@@ -30,13 +31,13 @@ function CommitFileDiff({ root, hash, entry }: { root: string; hash: string; ent
 		let alive = true;
 		setPatch(null);
 		setError(null);
-		commitFileDiff(root, hash, entry.path)
+		commitFileDiff(root, hash, entry.path, entry.origPath)
 			.then((p) => alive && setPatch(p))
 			.catch((err: unknown) => alive && setError(err instanceof Error ? err.message : String(err)));
 		return () => {
 			alive = false;
 		};
-	}, [root, hash, entry.path]);
+	}, [root, hash, entry.path, entry.origPath]);
 
 	return (
 		// Natural height (no cap, no internal scroll): the panel scrolls as a whole.
