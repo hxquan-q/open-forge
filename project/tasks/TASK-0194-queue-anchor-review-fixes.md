@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: [BUG-0073, BUG-0068]
 execution: parallel
 branch: task/TASK-0194-queue-anchor-review-fixes
-worktree: ../open-forge-wt/task-0194-queue-anchor-review-fixes
+worktree: unassigned（已集成并推送 origin/dev，worktree 与分支已清理）
 base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths:
   - apps/desktop/src/renderer/domains/conversation/**
@@ -39,8 +39,8 @@ write_paths:
 exclusive_paths:
   - apps/desktop/src/renderer/domains/conversation/services/pending-user-anchor.ts
 depends_on: []
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0196]
-integration_status: pending
+conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0154, TASK-0187, TASK-0196, TASK-0197]
+integration_status: integrated
 created: 2026-10-03
 updated: 2026-10-03
 ---
