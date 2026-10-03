@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0202` | `in_progress` | — | 台账修复：恢复 03ce0c378 合并丢失的八行焦点表（0039/0042/0159/0195/0196/0197/0198/0200）；主工作区串行。 |
+| `TASK-0202` | `verifying` | — | 台账修复：已按 frontmatter 补回 03ce0c378 丢失的八行；check-project-indexes 与完整 check 通过，人工验收不适用（内部修复），待用户确认收口。 |
 | `TASK-0201` | `verifying` | — | 修复 BUG-0077：git preset 显式声明 Vitest+jsdom+RTL 测试栈；标准检出包级 62 例全绿（提交 235b33456），人工验收不适用（内部修复）。 |
 | `TASK-0197` | `in_progress` | PLAN-0015 | Harness 能力吸收批次的隔离工作树：有界工具并发（0198）已推 dev（a163b58b1）并合入本地 main（105dca3f2）；CLI 启动类失败复验与 Desktop 完整范围待做，慢消费者重同步未开工。 |
 | `TASK-0198` | `verifying` | PLAN-0015 | 有界工具并发与独占屏障；实现 e6e05f5a3 已推 dev（a163b58b1）并合入 main（105dca3f2）；跨包 CLI 失败挂 WAIVER-0004（至 2026-10-10），待人工验收。 |
