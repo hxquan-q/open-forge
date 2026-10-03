@@ -1,7 +1,7 @@
 ---
 id: TASK-0187
 type: task
-status: in_progress
+status: blocked
 priority: P1
 owner: coordinator
 source: user-request; RESEARCH-0022
@@ -26,6 +26,10 @@ updated: 2026-10-03
 <!-- Copyright The Open Forge contributors. -->
 
 # 非手机上游稳定性首批隔离集成
+
+## 当前收口状态（2026-10-03）
+
+首批代码与 TASK-0199 已提交；定向、impact、完整 check 通过。跨包 changed 的 12 包中 11 包通过、CLI 失败，不能宣称工程完成。主树还有其他 Owner 的未提交记录且同期继续前进，暂不执行集成/推送；不采用预置 index、代交他人内容或任务分支推送绕过现行规则。
 
 ## 目标与范围
 
@@ -93,3 +97,30 @@ updated: 2026-10-03
 - 首轮有效 impact：Desktop direct 12 文件/84 测试通过；related 34 文件失败（32 个依赖收集失败与 3 个超时用例）、136 通过、3 既有跳过。环境修正后先对失败面定向复验，再重新执行标准入口，不删除测试或扩大超时。
 - 另一个工作流登记了相同 BUG-0073 编号；本批尚未推送，仅将自己的缓存记录改为 BUG-0076 并保留历史提交映射，另一 Owner 文件摘要不变。Policy 例外见 WAIVER-0003。
 - 已在临时 Git 仓库验证“仅将已验证目标 blob 置入 index，再快进”能保留未暂存的共享文档草稿；尚未对主树执行。实际集成仍须验证主树 HEAD、空暂存区、非本批修改和授权边界，无法证明安全即停止。
+
+补充验证：Electron 固定依赖以 Bun 初始化并验证产物后，数据库技能打包/远端命令/函数扩展/文件系统 4 个原失败面定向文件 29 测试全部通过；没有修改断言或 timeout。正在重跑标准 impact。origin/dev 同期已推进到 e1605e4d2（TASK-0042 与 TASK-0196 记录）；推送前需在本工作树合入这组已发布开发提交并对组合再验证，禁止覆盖远端。
+
+续接（2026-10-03）：本轮继续首批验证收口，不扩展新增产品能力；复用 TASK-0199 处理既有失败。执行单 Agent 串行，保护主树其他任务内容。以现行协作规则要求干净 main 为集成前提，不采用预置 index 绕过脏树保护。
+
+本轮复核：定向文件系统 3 文件/19 测试通过；完整 bun run check 通过（包含类型/guards/lint，不代替行为测试）。日志目录：本机 TEMP/openforge-0187-resume-fe39ea72c9994a92abad460827afbae8。impact 以固定基线 48b8e487f 覆盖本批提交及工作树，直接 13 文件/87 测试已通过，关联部分运行中。
+
+技术自审（非独立评审）：核对 usage 占位统计、toolUse 中间终态、恢复后 done 终态、跟随滚动缓存排除、配置生产写入调用点及失败后队列恢复、Git NUL/literal/rename 消费链，以及缓存与 Vite 共用 external 边界。生产 writeDesktopConfig 调用仅剩兼容定义；配置队列为同进程语义，不宣称跨进程防丢更新。未扩展历史窗口或重放缓冲。
+
+本轮 impact 最终结果：bun run test:impact --base 48b8e487f 退出 0。Desktop direct 13 文件/87 测试；related 170 文件/1091 测试通过、3 文件/7 测试为原有跳过；Git direct 与 related、runtime-core direct 11 测试与 related 121 测试通过。TASK-0199 已提交 39ffc0a60。test:changed --base 48b8e487f 正在验证 12 个受影响包。
+
+集成核查：本轮 git fetch origin 后 origin/dev=018824d7ef8944de9066ec019c265cc702fa209b，已含 TASK-0194 队列修复与 TASK-0196 开发候选；本批与其分叉，尚未合并和验证组合。本地 main 仍有 34 项未提交改动，不能按现行流程开始集成，也不得从任务分支绕过规定推送。保留本批候选与主树内容，不宣称已进入 main/dev。
+
+changed 诊断中间证据：前 10 包通过，CLI 为 7 文件失败、10 测试失败/220 通过/14 原有跳过；主要为 get_state 首帧 20s 超时、5s/30s 用例超时，生命周期用例超时后还有 EBUSY 清理失败。不能将其直接归为本批回归或环境原因。Desktop 包仍运行中。
+
+可证伪假设：①启动/资源耗时导致无首帧超时（固定基线相同用例也可能失败）；②生命周期清理在超时后仍有异步写入导致 EBUSY（定向 lifecycle 在基线/候选比较）；③本批 relay 终态修改造成回归（应只在候选且接收 done 后失败，不能解释尚无首帧的启动超时）。批次结束后先做少量代表性基线/候选对照，不扩大 timeout、不删断言、不循环重跑全量。
+## 本轮最终验证与未完成项
+
+- `bun scripts/quality/run-vitest.mjs --run --config apps/desktop/vitest.config.ts apps/desktop/src/main/filesystem/conversation-workspace-visibility.test.ts apps/desktop/src/main/filesystem/filesystem-service.test.ts apps/desktop/src/main/filesystem/file-explorer-dotfiles.test.ts`：3 文件/19 测试通过。
+- `bun run test:impact --base 48b8e487f`：通过。基线覆盖首批所有提交及测试修正，不以只测当前未提交文件替代批次验证。
+- `bun run check`：退出 0；终态记录更新后再次执行也通过（check-final.log）。日志中的 upstream/dev 缺少 ref 提示来自声明头检查的既有 fallback，检查最终退出 0；未变更基线。
+- `bun run test:changed --base 48b8e487f`：退出 1，12 包中 11 包通过；Desktop 883 文件/4688 测试通过，4 文件/15 测试为既有跳过；CLI 7 文件失败、10 测试失败、220 通过、14 既有跳过。总耗时约 2901 秒。不把其他 11 包通过说成全绿。
+- 对照命令（两边 CLI 包目录）：`bun ../../scripts/quality/run-vitest.mjs --run --maxWorkers=1 test/runtime-host.test.ts test/agent-runtime-selection.test.ts -t 'emits supported session lifecycle|creates a Runtime conversation when continue has no previous session'`。主树 `886173e67` 的 CLI/runtime-core 与原基线 `48b8e487f` 无源码差异；主树与候选 `39ffc0a60` 均复现 continue 用例 5s 超时，生命周期用例均通过。候选额外出现该超时用例的 afterEach 10s 超时。过滤产生的 24 个未选择测试不计为原有 skip，也未修改测试声明。
+- 以上只证明至少一项 CLI 失败非本批新引入，不证明其余失败均属环境问题；其他 get_state 首帧超时、会话切换超时及清理占用仍需逐项定位。没有无限重跑、放宽超时或建立豁免。
+- 日志：本机 `%TEMP%/openforge-0187-resume-fe39ea72c9994a92abad460827afbae8/{targeted,impact,changed,check,baseline-cli,candidate-cli}.log`；全部测试使用独立 VETTA_HOME，不启动用户 Desktop 或真实 Provider。
+- 集成：最后核查 main 已由其他流程推进到 `886173e67`，仍有其他任务未提交文件；本批候选尚未纳入 main/origin/dev，远端队列回归修复尚需组合验证。保留隔离树和所有主树内容。
+- 人工验收/发布：均未发生。当前 blocked 是验证遗留与跨任务集成前提未满足，不代表本批被接受；下一步先定位 CLI 剩余失败，再在 Owner 收口主树后按协作流程组合验证与集成。

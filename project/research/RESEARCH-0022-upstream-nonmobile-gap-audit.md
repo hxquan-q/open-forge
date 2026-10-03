@@ -162,3 +162,7 @@ related_bugs: []
 - `bun run scripts/release/release-notes.mjs --check`：通过，当前版本 0.1.3。
 - 复用仓库 `parseFrontmatter`、`asText`、`brokenFileLinks` 检查本报告元数据、相对链接与 UTF-8/LF：通过。临时检查命令起初误用 helper 参数，按真实函数签名修正后通过；未修改产品或验证脚本。
 - 文档 done 仅代表调查与记录完成，不代表表内待适配能力已实现。没有提交、合并、推送或业务代码变更。
+
+## 后续实施记录
+
+2026-10-03 用户授权实施后，稳定性首批由 [TASK-0187](../tasks/TASK-0187-upstream-stability-batch.md) 统一管理，子 Task 为 TASK-0188–0193 与 TASK-0151。本报告保留最初固定 SHA 的审计事实；最新实现、验证与集成状态以这些 Task 为准，不把报告中的“尚未接入”沿用为后续版本事实。
