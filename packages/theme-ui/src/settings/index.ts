@@ -123,6 +123,12 @@ export { ModelsProvidersSectionView } from "./ModelsProvidersSectionView";
 export type { MotionSelectOption, MotionSelectProps } from "./MotionSelect";
 export { MotionSelect } from "./MotionSelect";
 export type {
+	NotificationScopeView,
+	NotificationSettingsViewLabels,
+	NotificationSettingsViewProps,
+} from "./NotificationSettingsView";
+export { NotificationSettingsView } from "./NotificationSettingsView";
+export type {
 	PermissionItemView,
 	PermissionStatusView,
 	PermissionsSettingsViewLabels,

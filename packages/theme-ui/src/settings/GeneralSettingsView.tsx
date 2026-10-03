@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 import { Button, Switch } from "@vetta-org/ui";
 import { MotionSelect } from "./MotionSelect";
 import { SettingRow, SettingSection, type SettingSectionMeta } from "./SettingChrome";
+import { NotificationSettingsView, type NotificationSettingsViewProps } from "./NotificationSettingsView";
 
 export interface GeneralSettingsViewLabels {
 	readonly title: string;
@@ -14,8 +16,6 @@ export interface GeneralSettingsViewLabels {
 	readonly workspaceDescription: string;
 	readonly sandboxTitle: string;
 	readonly sandboxDescription: string;
-	readonly systemNotifications: string;
-	readonly systemNotificationsDescription: string;
 	readonly debugMode: string;
 	readonly debugModeDescription: string;
 	readonly exportDiagnostics: string;
@@ -36,6 +36,7 @@ export interface GeneralSettingsViewProps {
 	readonly labels: GeneralSettingsViewLabels;
 	readonly sections: {
 		readonly basics: SettingSectionMeta;
+		readonly notifications: SettingSectionMeta;
 		readonly app: SettingSectionMeta;
 		readonly developer: SettingSectionMeta;
 	};
@@ -49,8 +50,7 @@ export interface GeneralSettingsViewProps {
 	readonly executionMode: string;
 	readonly onExecutionModeChange: (mode: string) => void;
 	readonly sandboxUnavailableReason: string | null;
-	readonly notificationsEnabled: boolean;
-	readonly onNotificationsChange: (checked: boolean) => void;
+	readonly notifications: Omit<NotificationSettingsViewProps, "section">;
 	readonly debugMode: boolean;
 	readonly onDebugChange: (checked: boolean) => void;
 	readonly exportingDiagnostics: boolean;
@@ -82,8 +82,7 @@ export function GeneralSettingsView({
 	executionMode,
 	onExecutionModeChange,
 	sandboxUnavailableReason,
-	notificationsEnabled,
-	onNotificationsChange,
+	notifications,
 	debugMode,
 	onDebugChange,
 	exportingDiagnostics,
@@ -133,14 +132,9 @@ export function GeneralSettingsView({
 						]}
 					/>
 				</SettingRow>
-				<SettingRow
-					title={labels.systemNotifications}
-					description={labels.systemNotificationsDescription}
-					border={false}
-				>
-					<Switch checked={notificationsEnabled} onCheckedChange={onNotificationsChange} />
-				</SettingRow>
 			</SettingSection>
+
+			<NotificationSettingsView {...notifications} section={sections.notifications} />
 
 			{networkSection}
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -58,6 +59,84 @@ describe("defaultAgentMode 兼容旧字段名", () => {
 	it("配置文件不存在时回落 work", async () => {
 		const store = await loadStoreWithConfig(undefined);
 		expect((await store.readDesktopConfig()).defaultAgentMode).toBe("work");
+	});
+});
+
+describe("desktop config schema migration", () => {
+	it("migrates an unversioned config to v2 and writes the new preferences back", async () => {
+		const store = await loadStoreWithConfig({ projects: [], fieldFromNewerVersion: { keep: true } });
+		const config = await store.readDesktopConfig();
+		expect(config.schemaVersion).toBe(2);
+		expect(config.notificationPreferences).toEqual({
+			soundEnabled: true,
+			systemScope: "away-from-session",
+			soundScope: "always",
+			soundVolume: 60,
+			events: {
+				completed: { systemEnabled: true, soundId: "soft-chime" },
+				failed: { systemEnabled: true, soundId: "soft-chime" },
+				actionRequired: { systemEnabled: true, soundId: "soft-chime" },
+			},
+		});
+		expect(await store.readDisk()).toMatchObject({
+			schemaVersion: 2,
+			fieldFromNewerVersion: { keep: true },
+		});
+	});
+
+	it("normalizes invalid notification preferences", async () => {
+		const store = await loadStoreWithConfig({
+			schemaVersion: 2,
+			notificationPreferences: {
+				systemScope: "sometimes",
+				soundScope: "always",
+				soundVolume: 150,
+				events: { completed: { systemEnabled: false, soundId: "from-disk" } },
+			},
+		});
+		expect((await store.readDesktopConfig()).notificationPreferences).toEqual({
+			soundEnabled: true,
+			systemScope: "away-from-session",
+			soundScope: "always",
+			soundVolume: 100,
+			events: {
+				completed: { systemEnabled: false, soundId: "soft-chime" },
+				failed: { systemEnabled: true, soundId: "soft-chime" },
+				actionRequired: { systemEnabled: true, soundId: "soft-chime" },
+			},
+		});
+	});
+
+	it("preserves a future schema and unknown fields across read-modify-write", async () => {
+		const store = await loadStoreWithConfig({
+			schemaVersion: 7,
+			future: { keep: true },
+			notificationPreferences: {
+				systemScope: "always",
+				soundScope: "always",
+				soundVolume: 50,
+				futurePreference: "keep",
+				events: {
+					completed: { systemEnabled: true, soundId: null, futureEventPreference: "keep" },
+					futureEvent: { future: true },
+				},
+			},
+		});
+		const config = await store.readDesktopConfig();
+		expect(config.schemaVersion).toBe(7);
+		await store.writeDesktopConfig({ ...config, debugMode: true });
+		expect(await store.readDisk()).toMatchObject({
+			schemaVersion: 7,
+			future: { keep: true },
+			debugMode: true,
+			notificationPreferences: {
+				futurePreference: "keep",
+				events: {
+					completed: { futureEventPreference: "keep" },
+					futureEvent: { future: true },
+				},
+			},
+		});
 	});
 });
 

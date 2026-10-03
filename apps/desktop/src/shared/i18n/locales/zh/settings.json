@@ -122,7 +122,7 @@
 	"title": "设置",
 	"remote": {
 		"title": "远程连接",
-		"description": "让手机安全连接这台电脑。屏幕画面和输入通过点对点 WebRTC 传输，中继只负责配对与信令。",
+		"description": "在手机上查看并继续这台电脑上的会话，全程端到端加密。",
 		"pairingTitle": "手机配对",
 		"pairingDescription": "生成新的二维码会撤销旧配对；二维码仅用于首次绑定。",
 		"relayConfigured": "安全中继已配置",
@@ -139,6 +139,74 @@
 			"ready": "等待手机",
 			"connected": "已连接",
 			"error": "需要检查"
+		},
+		"actionFailed": "操作失败，请重试。",
+		"loadFailed": "暂时无法加载远程连接状态，请稍后重试。",
+		"connectionFailed": "手机连接暂时不可用，请稍后重试。",
+		"approvals": {
+			"title": "等待你放行的手机",
+			"description": "核对手机上的验证码一致后再允许。",
+			"hint": "手机上应显示相同的验证码",
+			"allow": "允许这台手机",
+			"deny": "拒绝"
+		},
+		"devices": {
+			"title": "已配对的手机",
+			"empty": "还没有配对的手机。",
+			"unnamed": "手机",
+			"online": "在线",
+			"onlineVia": "在线 · {{channel}}",
+			"channel": {
+				"p2p": "P2P 直连",
+				"lan": "局域网直连",
+				"relay": "云端中继"
+			},
+			"lastSeen": "上次连接 {{time}}",
+			"neverSeen": "尚未连接过",
+			"revoke": "解除配对",
+			"desktop": "操作桌面"
+		},
+		"pairing": {
+			"create": "生成二维码",
+			"cancel": "刷新",
+			"qrAlt": "Vetta 手机配对二维码",
+			"generating": "正在准备二维码…",
+			"empty": "二维码不可用",
+			"createFailed": "二维码生成失败，请重试。",
+			"vaultUnavailable": "系统安全凭据存储不可用，暂时无法配对。",
+			"manualHint": "在手机上选「手动输入地址」，填入任一地址：",
+			"code": "连接码",
+			"password": "密码",
+			"codeHint": "不方便扫码？在手机上选「用连接码连接」：",
+			"codePreparing": "正在生成连接码…",
+			"codeFailed": "连接码暂不可用，请扫码。",
+			"manualTitle": "同一 Wi-Fi 下手动输入地址"
+		},
+		"cloud": {
+			"title": "允许在外网访问",
+			"description": "关闭后只能在同一 Wi-Fi 下连接。",
+			"unavailable": "暂时无法从外网连接。"
+		},
+		"relay": {
+			"title": "外网访问设置",
+			"note": "手机不在同一 Wi-Fi 时经这个中继连接。更换后，已连上的手机会自动改用新地址，二维码也会刷新。",
+			"label": "中继服务器",
+			"defaultHint": "留空使用默认：{{url}}",
+			"test": "测试连接",
+			"testing": "正在测试…",
+			"restore": "恢复默认",
+			"cancel": "取消",
+			"save": "保存",
+			"result": {
+				"ok": "可以使用",
+				"noInviteCodes": "可以连接，但版本较旧，不支持连接码配对",
+				"incompatible": "不是兼容的 Vetta 中继",
+				"unreachable": "连接不上这个地址",
+				"invalid": "请输入 wss:// 或 https:// 开头的地址"
+			},
+			"change": "更改",
+			"defaultTag": "默认",
+			"unset": "未设置"
 		}
 	},
 	"general": "常规",
@@ -185,7 +253,7 @@
 	"fullAccess": "完全访问",
 	"useSandbox": "使用沙盒",
 	"systemNotifications": "系统通知",
-	"systemNotificationsDescription": "agent 完成一轮回答时发系统通知；你正在前台查看该会话时不打扰",
+	"systemNotificationsDescription": "控制 Agent 事件的系统横幅；手机连接等安全通知仍保持原有行为",
 	"debugMode": "调试模式",
 	"debugModeDescription": "打开调试模式，可以协助开发者定位问题",
 	"exportDiagnostics": "导出诊断包",
@@ -450,7 +518,8 @@
 					"document-tree": "文档树"
 				}
 			}
-		}
+		},
+		"custom": "自定义"
 	},
 	"environmentSettings": {
 		"title": "环境设置",
@@ -483,7 +552,7 @@
 		"models": "个模型",
 		"notAdded": "未添加",
 		"providers": "服务商",
-		"localProviders": "自定义服务器",
+		"localProviders": "本地服务商",
 		"remoteProviders": "远程服务商",
 		"viewMode": "视图",
 		"thinking": "思考",
@@ -794,7 +863,7 @@
 	"models": "个模型",
 	"notAdded": "未添加",
 	"providers": "服务商",
-	"localProviders": "自定义服务器",
+	"localProviders": "本地服务商",
 	"remoteProviders": "远程服务商",
 	"viewMode": "视图",
 	"thinking": "思考",
@@ -1188,7 +1257,7 @@
 	"tabPet": "Vetta Vivi",
 	"tabPermissions": "权限管理",
 	"tabRemote": "远程连接",
-	"section_remote-pairing": "手机配对",
+	"section_remote-pairing": "添加手机",
 	"section_remote-permissions": "控制权限",
 	"section_general-basics": "基础",
 	"section_general-network": "网络代理",
@@ -1256,7 +1325,7 @@
 	"section_shortcuts-quickpanel": "快捷面板",
 	"section_appshot-gesture": "触发快捷键",
 	"section_appshot-permissions": "权限",
-	"section_archived-list": "已归档项目",
+	"section_archived-list": "归档列表",
 	"section_archived-sessions": "已归档会话",
 	"section_agent-personalization": "个性化",
 	"section_agent-images": "图片",
@@ -1383,7 +1452,7 @@
 			"knowledge": "例如：开启知识库加工，间隔 10 分钟…",
 			"knowledgeBase": "例如：新建一个知识库，并把本地文件夹导进去…",
 			"batchTasks": "例如：新建一个批量项目，对多个文件夹分别执行…",
-			"automation": "例如：每天早上 9 点自动跑一段整理工作…",
+			"automation": "例如：工作日早上 9 点在 openvetta 项目里跑一次晨报，失败时发飞书通知…",
 			"im": "例如：开启 Claw 并帮我配置飞书…",
 			"webhook": "例如：新增一个任务完成时推送的渠道…",
 			"appearance": "例如：切到深色模式，并把指针换成白鼬…",
@@ -1413,7 +1482,7 @@
 			"knowledge": "我想配置知识库。请先了解当前加工与相关设置，再引导我完成配置。",
 			"knowledgeBase": "我想管理知识库。请先了解当前有哪些库与加工状态，再引导我完成操作。",
 			"batchTasks": "我想创建或管理批量任务。请先了解当前项目与任务状态，再引导我完成操作。",
-			"automation": "我想创建或管理定时任务。请先了解当前有哪些任务，再引导我完成操作。",
+			"automation": "我想创建或管理自动化。请先查看现有的自动化和可用的项目，再帮我配置运行在哪个项目、每次新建会话还是同一个会话、重复频率和通知。",
 			"im": "我想配置 Claw（即时消息桥接）。请先了解当前状态与渠道，再引导我完成配置。",
 			"webhook": "我想配置消息推送。请先了解当前渠道，再引导我完成配置。",
 			"appearance": "我想调整外观。请先了解当前主题与相关设置，再引导我完成配置。",
@@ -1450,9 +1519,11 @@
 				"status": "看看当前批量任务跑到哪了"
 			},
 			"automation": {
-				"create": "新建一个每天定时执行的任务",
+				"create": "每个工作日 9 点在某个项目里新开会话跑晨报",
 				"enable": "启用或暂停某个定时任务",
-				"list": "看看现在有哪些自动化任务"
+				"list": "看看哪些自动化暂停了、为什么",
+				"interval": "每隔 30 分钟在同一个会话里检查一次构建",
+				"notify": "给某个自动化加上失败时的 webhook 通知"
 			},
 			"im": {
 				"enable": "开启 Claw 消息桥接",
@@ -2283,5 +2354,28 @@
 		"copy": "复制",
 		"copied": "已复制"
 	},
-	"section_environment-tools": "开发工具"
+	"section_environment-tools": "开发工具",
+	"notificationSystemTiming": "系统通知时机",
+	"notificationSound": "提示音",
+	"notificationSoundDescription": "任务完成、失败或等待审批时播放提示音",
+	"notificationSoundTiming": "提示音时机",
+	"notificationSoundVolume": "提示音音量",
+	"notificationEvents": "事件",
+	"notificationEventCompleted": "任务完成",
+	"notificationEventFailed": "任务失败",
+	"notificationEventActionRequired": "等待处理",
+	"notificationSystemBanner": "系统通知",
+	"notificationPreview": "试听提示音",
+	"notificationPreviewAction": "播放",
+	"notificationNoSound": "无提示音",
+	"notificationScopeBackground": "仅应用在后台",
+	"notificationScopeAway": "离开当前会话时",
+	"notificationScopeAlways": "始终",
+	"notificationSoundSoftChime": "柔和和弦",
+	"notificationSoundSingleBell": "单音铃声",
+	"notificationSoundWoodTap": "木质轻敲",
+	"notificationSoundDigitalPulse": "数字脉冲",
+	"section_general-notifications": "通知",
+	"section_remote-devices": "已配对的手机",
+	"section_remote-cloud": "外网访问"
 }
