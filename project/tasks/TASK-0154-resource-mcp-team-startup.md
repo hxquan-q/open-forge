@@ -19,7 +19,7 @@ write_paths: [packages/coding-agent/src/composition/turn, packages/coding-agent/
 exclusive_paths: [packages/coding-agent/src/composition/turn]
 depends_on: [TASK-0148]
 conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0194, TASK-0196]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-03
 ---
@@ -97,3 +97,8 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 全局 server 依赖 roots 但未引用 `${PROJECT_ROOT}` 且未声明 `resourceScope` 时会进入应用层；需显式 `resourceScope: "workspace"`，已在 ADR-0135 记录。
 - 应用级连接复用依赖 `resolveApplicationRevision` 的登录态，真实登录/退出切换未在真机验证。
 - 人工功能验收与视觉验收归属用户；Task 保持 `verifying`。
+
+### 集成
+
+- 已 fast-forward 推送 `origin/dev`：`2b82d59a1`（分支提交 `8fa5dca3c` 实现、`361ab56d1` 记录补登、两次 `merge(origin/dev)` 纳入远端候选；推送前 `bun run check` 全绿）。
+- 集成只合并了共享文件 `.github/release-notes/v0.1.3.md` 的双方追加内容，未夹带其他 Task 的文件。
