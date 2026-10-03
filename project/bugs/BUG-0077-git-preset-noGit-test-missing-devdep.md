@@ -1,7 +1,7 @@
 ---
 id: BUG-0077
 type: bug
-status: verifying
+status: done
 priority: P2
 owner: packages/plugins/presets/git
 requirement:

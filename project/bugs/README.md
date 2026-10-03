@@ -16,7 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | verifying | P2 | — |
+| `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | done | P2 | — |
 | `BUG-0069` | 流式输出使历史回复用量引用不断变化 | verifying | P1 | PLAN-0014 |
 | `BUG-0070` | 工具调用间隙回复被提前标为完成 | verifying | P1 | PLAN-0014 |
 | `BUG-0071` | 回合恢复成功仍报告旧错误终态 | verifying | P1 | PLAN-0014 |

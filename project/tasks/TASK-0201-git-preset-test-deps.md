@@ -1,7 +1,7 @@
 ---
 id: TASK-0201
 type: task
-status: verifying
+status: done
 priority: P2
 owner: packages/plugins/presets/git
 source: BUG-0077（TASK-0187 集成复验归因）

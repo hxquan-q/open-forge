@@ -1,7 +1,7 @@
 ---
 id: TASK-0202
 type: task
-status: verifying
+status: done
 priority: P2
 owner: coordinator
 source: 会话核查（user-request 2026-10-03）；TASK-0187 集成合并 03ce0c378 误删焦点表行
