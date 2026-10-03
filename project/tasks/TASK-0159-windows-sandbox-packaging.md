@@ -1,7 +1,7 @@
 ---
 id: TASK-0159
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: desktop build + runtime-node sandbox
 source: user-request; upstream f174cf914, cca02889c, 34a350058
@@ -19,7 +19,7 @@ write_paths: [apps/desktop/scripts, packages/runtime-core/.gitignore, packages/r
 exclusive_paths: [apps/desktop/scripts]
 depends_on: [TASK-0148]
 conflicts_with: [TASK-0039, TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0196]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-02
 updated: 2026-10-03
 ---
@@ -91,7 +91,7 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 ## 并发与验收分层
 
 - 条件支持：独立 Worktree `task/TASK-0159-windows-sandbox-packaging`，内部串行；前置 TASK-0148 已 `done`；与 TASK-0196 等共享发布说明/焦点表的冲突在 dev 集成时合并解决。
-- 工程验证：见「实际验证」；技术评审：自审；集成：`pending`；人工功能验收：待用户（含「缺受控制品即中断打包」对发版路径的影响判断）；发布：未授权。
+- 工程验证：见「实际验证」；技术评审：自审；集成：`integrated`——已 fast-forward 推送 `origin/dev`（`a156f19e7..1c1a50b9e`；本 Task 提交 `7397ec931` 实现、`75392cde7` 合并 dev、`1c1a50b9e` 证据回填）；人工功能验收：待用户（含「缺受控制品即中断打包」对发版路径的影响判断）；发布：未授权。
 
 ## 实际验证
 
