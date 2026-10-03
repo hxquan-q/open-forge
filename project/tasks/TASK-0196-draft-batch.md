@@ -18,7 +18,7 @@ read_paths: [project/tasks, project/plans/PLAN-0014-selective-upstream-nonmobile
 write_paths: [project/tasks, .github/release-notes, apps/desktop, packages]
 exclusive_paths: []
 depends_on: []
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0186, TASK-0187]
+conflicts_with: [TASK-0122, TASK-0123, TASK-0181]
 integration_status: pending
 created: 2026-10-03
 updated: 2026-10-03
@@ -52,7 +52,7 @@ updated: 2026-10-03
 
 - 结论：条件支持（单 Agent、单专用工作树，内部全串行，不派实现 Worker）。
 - 执行方式：parallel（隔离 Worktree）/ 内部 serial。
-- 与 TASK-0181/0186/0187 共享 `.github/release-notes/v0.1.3.md`、`project/tasks/README.md` 与 apps/desktop 部分路径：已在本端登记 `conflicts_with`；通过 dev 逐项集成 + 合并解决，不覆盖他方修改。
+- 与 TASK-0181（及记录暂未入库的 0186/0187/0194-0197 线）共享 `.github/release-notes/v0.1.3.md`、`project/tasks/README.md` 与 apps/desktop 部分路径：入库任务已在本端登记 `conflicts_with`（未入库记录待其落地后补登）；通过 dev 逐项集成 + 合并解决，不覆盖他方修改。
 - Branch：`task/TASK-0196-draft-batch`；Worktree：`../open-forge-wt/task-0196-draft-batch`；基线：本地 main `48b8e487f`。
 - 集成顺序：每子 Task 验证通过 → 原子提交（pathspec）→ `git fetch origin` 审核 `origin/dev..HEAD` → 远端前进则先合并 `origin/dev` 并复验受影响面 → fast-forward `git push origin HEAD:dev`；批末完整 `bun run check` 后合入本地 main 并复验。
 
