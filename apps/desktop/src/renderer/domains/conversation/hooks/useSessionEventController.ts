@@ -577,14 +577,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							contextWindow: event.contextWindow,
 						});
 					}
-					if (
-						event.reason === "manual" &&
-						getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0
-					) {
-						// TASK-0050：压缩是历史改写，窗口化会话整窗重置为最新 head 页；
-						// 非窗口化会话回退旧的全量回载。
+					if (getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0) {
+						// TASK-0051：手动与自动压缩成功后都重建投影。压缩对 JSONL 是追加
+						// （firstKeptEntryId，entry id 不变），优先 head 合并刷新——已加载旧页
+						// 与阅读锚点原样保留，compaction 边界作为轻量条目落入尾部；合并签名
+						// 不匹配时由 merge 自行降级为整窗替换（等价旧行为）。非窗口化会话
+						// 维持全量回载。
 						void (async () => {
 							const windowedPath = activeSessionRef.current?.sessionPath;
+							if (windowedPath && (await refreshTranscriptTail({ sessionPath: windowedPath }))) return;
 							if (windowedPath && (await resetTranscriptWindowToTail(windowedPath))) return;
 							await window.vetta.session.getFullHistory(sessionId).then((history) => {
 								if (activeSessionRef.current?.runtimeId !== sessionId) return;
