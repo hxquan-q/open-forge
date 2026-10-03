@@ -15,7 +15,7 @@ read_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/
 write_paths: [apps/desktop/src/renderer/domains/activity-panel, docs/plugin/ui-slots.md, packages/plugins/plugin-sdk/CHANGELOG.md, project/tasks/README.md, project/tasks/TASK-0039-webview-pinned-bounds.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
-conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0196]
+conflicts_with: [TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0194, TASK-0196]
 integration_status: pending
 created: 2026-09-23
 updated: 2026-10-03
