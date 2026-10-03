@@ -138,6 +138,7 @@ changed 诊断中间证据：前 10 包通过，CLI 为 7 文件失败、10 测�
 - `bun run test:impact`（29 文件）：desktop 175 文件/1131 用例通过；presets/git 批次用例 3 文件/13 用例通过，`noGit.test.tsx` 导入失败归属存量声明缺口（BUG-0077，a156f19e7 引入、与本批无关）；runtime-core 1 文件/11 用例补跑通过。
 - CLI 归因（apps/cli-host 串行入口）：合并前基线 16 失败/214 通过，合并后 4 失败/226 通过；按用例名比对**零新增失败**，4 个失败均已在基线失败（BUG-0059 环境类超时），合并后反而恢复 12 个用例。上节"CLI 失败待定位"据此闭合为存量环境问题，不阻塞本批。
 - 完整 `bun run check`：三轮收敛后退出 0——补齐 config-set-preserves-fields 夹具的 schemaVersion/notificationPreferences（合并组合暴露）、声明头基线收缩 7 条（660→653，missing 全集一致）、登记 0187 与 0039/0154/0159/0196/0197/0200 的共享发布说明/任务索引串行冲突（conflicts_with，任一侧登记即消）。
-- push 前 `test:changed --base origin/dev` 与远端审核按协作流程另行执行，结果回填本节。
+- push 前 `bun run test:changed --base origin/dev`（2026-10-03）：Desktop 923 文件中 918 通过、4905/4921 用例通过，CLI 226/244 通过（4 失败即上文基线比对中的同名存量用例），runtime-core 2 文件/11 用例、其余包 6 文件/33 用例通过。唯一 Desktop 失败 `useSessionManager.session-switch.test.ts`「只读历史预览失败时回退到 Runtime 历史水合」为并行负载假红：串行单跑两次 9/9 通过；不据此阻断批次，与 BUG-0059 同类的时序敏感面留待该 Bug 定位。
+- 待推批次 `git log origin/dev..main` 共 21 个提交（2 协调记录 + TASK-0186/0181/0187 三个集成合并及其任务提交），origin/dev 未移动，fast-forward 推送。
 
 未消除项：BUG-0059（CLI 环境超时，investigating）、BUG-0077（git preset 测试依赖声明，investigating）均为存量，独立修复；人工验收与发布未发生。
