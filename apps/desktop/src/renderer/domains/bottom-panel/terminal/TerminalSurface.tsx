@@ -8,8 +8,9 @@ import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { pathBasename } from "@shared/lib/utils";
 import { useAtom } from "jotai";
-import { type JSX, useEffect, useRef, useState } from "react";
+import { type JSX, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { claimTerminalLaunch, readTerminalLaunchPayload } from "./terminal-launch";
 import type { TerminalEventEnvelope } from "../../../../shared/terminal-ipc";
 import { bottomPanelFocusRequestAtom } from "../registry/instance-atoms";
 import { detectWebgl2Support, selectTerminalRenderer } from "./select-terminal-renderer";
@@ -43,7 +44,13 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 	const [message, setMessage] = useState<string | null>(null);
 	const [degradedNoResize, setDegradedNoResize] = useState(false);
 
-	const { cwd, tabId, active } = handle;
+	const { tabId, active } = handle;
+	// 插件替用户开的终端带着要敲的命令和子目录；普通终端没有载荷，落在会话 cwd。
+	const launch = useMemo(() => readTerminalLaunchPayload(handle.payload, handle.cwd), [handle.payload, handle.cwd]);
+	const cwd = launch?.cwd ?? handle.cwd;
+	const launchLabel = launch?.label;
+	const launchRef = useRef(launch);
+	launchRef.current = launch;
 	// effect 里要用到最新的 handle 方法，但不希望它们变化就重建终端。
 	const handleRef = useRef(handle);
 	handleRef.current = handle;
@@ -172,6 +179,11 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 					return;
 				}
 				terminalId = result.terminalId;
+				const claimed = claimTerminalLaunch(launchRef.current);
+				if (claimed) {
+					handleRef.current.setPayload(claimed.payload);
+					void window.vetta.terminal.write(result.terminalId, claimed.input);
+				}
 				if (result.replayTruncated) terminal.writeln(t("bottomPanel.terminal.replayTruncated"));
 				if (result.replay) terminal.write(result.replay);
 				if (result.degraded?.noResize) setDegradedNoResize(true);
@@ -255,11 +267,11 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 				console.warn("terminal dispose failed", error);
 			}
 		};
-	}, [cwd, tabId, t]);
+	}, [cwd, launchLabel, tabId, t]);
 
 	// 名字随 cwd 走：同一会话里开多个终端时，按目录区分比都叫「终端」有用。
 	useEffect(() => {
-		const label = cwd ? pathBasename(cwd) : "";
+		const label = launchLabel ?? (cwd ? pathBasename(cwd) : "");
 		handleRef.current.setMeta({ label: label || t("bottomPanel.terminal.title") });
 	}, [cwd, tabId, t]);
 

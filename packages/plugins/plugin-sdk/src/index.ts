@@ -433,6 +433,7 @@ export type {
 	PluginBottomPanelContextValue,
 	PluginBottomPanelMeta,
 	PluginBottomPanelStatus,
+	PluginBottomPanelTerminalRequest,
 } from "./bottom-panel.js";
 export { __BottomPanelContext, useBottomPanel } from "./bottom-panel.js";
 

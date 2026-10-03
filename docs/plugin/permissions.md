@@ -90,6 +90,7 @@ ctx.permissions.require("fs.read");  // 缺则抛 Plugin permission denied: fs.r
 | `ai.ocr.recognize` | `ctx.ocr.recognize()` / `listProviders()` / `onProvidersChanged()` | [下方](#尚无专章的能力) |
 | `ai.ocr.provider.register` | `ctx.ocr.registerProvider()`（注册 OCR Provider） | [下方](#尚无专章的能力) |
 | `shell.openExternal` | `ctx.ui.openExternal()`（交给系统默认浏览器） | [下方](#尚无专章的能力) |
+| `terminal.run` | `useBottomPanel().openTerminal()`（宿主内置终端替用户跑命令） | [下方](#尚无专章的能力) |
 
 > 清单 `agent.agents` / `agent.teams`（插件贡献的智能体与团队）**不需要权限**——那是声明面而非运行时 API，见 [manifest](./manifest.md#贡献智能体与团队)。
 >
@@ -129,6 +130,13 @@ ctx.permissions.require("fs.read");  // 缺则抛 Plugin permission denied: fs.r
 - 消费方提交的是批量图片引用；取消走 `options.signal`。
 - Provider 通过受控的输入 URL / 上传接口适配本地或远程服务，权限、取消、进度、能力协商与结果校验
   统一由宿主处理（ADR-0108）。
+
+
+### useBottomPanel().openTerminal（`terminal.run`）
+
+高风险权限：让宿主在内置终端里替用户执行一条单行命令。命令以用户身份跑在可见、可交互、
+可中止的终端里（落在发起面板所在的格子）；cwd 必须是面板 `cwd` 或其子目录，跨行命令会被
+拒绝。配套的 `revealInstance(instanceId)` 把已开实例切到前台，不需要该权限。
 
 ### ctx.ui.openExternal（`shell.openExternal`）
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0158
 type: task
-status: draft
+status: verifying
 priority: P2
 owner: plugins + capability-sdk + desktop filesystem + ssh-helper
 source: user-request; upstream 8c6872ac8, bb3a23ef8, 7a7af9cea, 1e7071c0e, 7fdc02a06, 7910ce57f
@@ -11,17 +11,17 @@ related_tasks: [TASK-0153, TASK-0148, TASK-0167]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: main
-worktree: unassigned（主工作区串行）
+branch:
+worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
 base_commit: 1cbe27c538ce65ce4e5bf054cb0c555f7c14114d
 read_paths: [packages/ssh-transport, apps/ssh-helper, packages/capability-sdk, packages/plugins, apps/desktop/src/main/filesystem, apps/desktop/src/main/capabilities, apps/desktop/src/preload, apps/desktop/src/renderer/domains/plugins]
 write_paths: [packages/ssh-transport, apps/ssh-helper, packages/capability-sdk, packages/plugins, apps/desktop/src/main/filesystem, apps/desktop/src/main/capabilities, apps/desktop/src/preload, apps/desktop/src/renderer/domains/plugins, project/tasks/TASK-0158-scripts-panel-remote-discovery.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/ssh-transport]
 depends_on: [TASK-0153, TASK-0148, TASK-0167]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -60,3 +60,14 @@ names 在远端截断前过滤，兼容旧 helper；全链路 schema/IPC/SDK 接
 ## SSH 专项拆分
 
 远端 names/ignoredDirectories 底层与公共接线单独归 TASK-0167，本 Task 等待其交付后消费，不重复实现该能力。这里原有宽 write_paths 是 draft 候选，正式开工缩为脚本面板实际消费者。
+
+## 交付记录（2026-10-03，TASK-0196 批次）
+
+- 实际修改（上游 7a7af9cea → 1e7071c0e → 7fdc02a06 → 7910ce57f 按依赖序适配）：
+  - 7a7af9cea：终端初始载荷（parse/claim/toTerminalLaunchPayload）、TerminalSurface 载荷消费与 label、BottomPanelLeaf 传 payload/terminalAvailable、open-tab 携带 payload；本仓底部面板是单例 atom scope（非上游 atomFamily），tab-commands 按本仓模型重写；集成测试 happy-path 因上游测试绑定 atomFamily 模型，改写为布局级等价断言（载荷落格 + reveal 激活），拒绝路径两条保留原样。
+  - 1e7071c0e：plugin-sdk openTerminal/revealInstance 合同 + terminal.run 权限（高风险）；宿主 PluginBottomPanelSlot 桥接（缺权限抛错）；RegisteredBottomPanel.terminalAccess 由 LoadedPlugin.grantedPermissions（新增快照字段）判定；权限中英文案与描述、手册 permissions.md 专章；Plugin API 2.10.0 / plugin-sdk 0.3.12（本仓 2.9.0 已被文件名筛选占用，版本线独立顺延）。
+  - 7fdc02a06：presets/scripts 系统插件全量（发现/过滤/解析/模型 + 面板 + 测试 + vite/vitest 配置），plugin.json 品牌改 Open Forge、pluginApiVersion ^2.10.0；tenants.json 两处登记；vitest 下界按门禁要求 ^4.1.11。
+  - 7910ce57f：瀑布流布局终态（ProjectCard 防拆列 + 骨架），面板断言按终态 UI 调整（描述进 title）。
+- 实际运行：scripts 插件 15/15（test + check）；desktop 受影响域 614/614；plugin-sdk 69/69；完整 check 通过（含 context-boundary、权限清单 i18n、manual-coverage 手册钉子）。
+- 未运行及原因：真实终端实机交互（PTY/远程 SSH 终端）不做实机验证；由 TerminalSurface 既有终端族测试与载荷合同测试覆盖。
+- 剩余风险：terminalAvailable 由「终端定义存在」近似（上游语义相同）；scripts 插件在真实 monorepo 的扫描性能未实测（names 筛选已避免无关文件占满上限）。

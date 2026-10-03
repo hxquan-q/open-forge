@@ -622,7 +622,7 @@
     },
     "packages/plugins/plugin-sdk": {
       "name": "@vetta-org/plugin-sdk",
-      "version": "0.3.11",
+      "version": "0.3.12",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta-org/capability-sdk": "^0.1.0",
@@ -925,6 +925,30 @@
         "@vetta-org/ui": "workspace:*",
         "react": "19.1.1",
         "react-dom": "19.1.1",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.7",
+        "vitest": "^4.1.11",
+      },
+    },
+    "packages/plugins/presets/scripts": {
+      "name": "@vetta/plugin-scripts",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@iconify-json/mdi": "^1.2.3",
+        "@iconify/tailwind4": "^1.2.3",
+        "@tailwindcss/vite": "^4.1.12",
+        "@testing-library/react": "16.3.2",
+        "@testing-library/user-event": "^14.6.1",
+        "@types/node": "^22.10.5",
+        "@types/react": "^19.1.1",
+        "@types/react-dom": "^19.1.1",
+        "@vetta-org/plugin-sdk": "workspace:*",
+        "@vetta-org/plugin-vite": "workspace:*",
+        "@vetta-org/ui": "workspace:*",
+        "jsdom": "26.1.0",
+        "react": "19.1.1",
+        "react-dom": "19.1.1",
+        "tailwindcss": "^4.1.12",
         "typescript": "^5.9.2",
         "vite": "^7.1.7",
         "vitest": "^4.1.11",
@@ -3466,6 +3490,8 @@
     "@vetta/plugin-preset-allstar-coding": ["@vetta/plugin-preset-allstar-coding@workspace:packages/plugins/presets/allstar-coding"],
 
     "@vetta/plugin-remotion-renderer": ["@vetta/plugin-remotion-renderer@workspace:packages/plugins/presets/remotion-renderer"],
+
+    "@vetta/plugin-scripts": ["@vetta/plugin-scripts@workspace:packages/plugins/presets/scripts"],
 
     "@vetta/plugin-security-probe": ["@vetta/plugin-security-probe@workspace:packages/plugins/externals/security-probe"],
 
@@ -7452,6 +7478,8 @@
     "@vetta/plugin-global-slot-demo/@types/react-dom": ["@types/react-dom@19.1.1", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.1.1.tgz", { "peerDependencies": { "@types/react": "^19.0.0" } }, "sha512-jFf/woGTVTjUJsl2O7hcopJ1r0upqoq/vIOoCj0yLh3RIXxWcljlpuZ+vEBRXsymD1jhfeJrlyTy/S1UW+4y1w=="],
 
     "@vetta/plugin-mobile-ui-preview/@types/react-dom": ["@types/react-dom@19.1.1", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.1.1.tgz", { "peerDependencies": { "@types/react": "^19.0.0" } }, "sha512-jFf/woGTVTjUJsl2O7hcopJ1r0upqoq/vIOoCj0yLh3RIXxWcljlpuZ+vEBRXsymD1jhfeJrlyTy/S1UW+4y1w=="],
+
+    "@vetta/plugin-scripts/@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
 
     "@vetta/plugin-security-probe/@types/react-dom": ["@types/react-dom@19.1.1", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.1.1.tgz", { "peerDependencies": { "@types/react": "^19.0.0" } }, "sha512-jFf/woGTVTjUJsl2O7hcopJ1r0upqoq/vIOoCj0yLh3RIXxWcljlpuZ+vEBRXsymD1jhfeJrlyTy/S1UW+4y1w=="],
 
