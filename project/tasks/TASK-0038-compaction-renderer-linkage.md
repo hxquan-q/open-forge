@@ -1,24 +1,24 @@
 ---
 id: TASK-0038
 type: task
-status: draft
+status: verifying
 priority: P1
 owner: packages/coding-agent + apps/desktop
 requirement: REQ-0002
 plan: PLAN-0002
 source: RESEARCH-0004 P1-4 / TASK-0034 contract
 execution: serial
-branch: forge/dev
-worktree: unassigned（forge/dev 主工作区串行执行）
-base_commit: forge/dev
+branch:
+worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
+base_commit: 48b8e487fd47e4009da7edf0d09169426a873529
 read_paths: [packages/coding-agent/src/compaction, apps/desktop/src/renderer/domains/conversation]
 write_paths: [packages/coding-agent/src/compaction, apps/desktop/src/renderer/domains/conversation, docs/adr, .github/release-notes]
 exclusive_paths: []
 depends_on: [TASK-0034, TASK-0051]
-conflicts_with: [TASK-0035, TASK-0050, TASK-0051]
-integration_status: pending
+conflicts_with: [TASK-0035, TASK-0050, TASK-0051, TASK-0196]
+integration_status: integrated（retain+验证收口，随本批推送 origin/dev）
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,9 +74,34 @@ updated: 2026-09-23
 - 性能：固定长会话 compaction 前后对比 Renderer `privateBytes` 峰值/稳态；不得以释放消息行或改写 transcript 冒充窗口化收益。
 - 质量：`bun run test:impact -- <改动文件...>`、`bun run check:quick -- <改动文件...>`；完整实现轮结束后 `bun run check`，补当前版本 Release Notes。
 
-## 交付记录
+## 交付记录（2026-10-03，TASK-0196 批次）
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+### 范围裁决：现有实现已覆盖本任务主体（retain + 验证）
+
+本任务立项于 09-23；此后压缩模块与渲染链持续演进，逐项对照结论：
+
+| 合同项 | 现行实现（retain） | 证据 |
+| --- | --- | --- |
+| 成功压缩触发边界窗口重建 | **本次随 TASK-0051 落地**：任意触发原因的成功压缩 → head 合并刷新（旧页/锚点保留）→ 降级整窗替换 → 全量回载；占位降级由 TASK-0035/0050 视口机制负责 | useSessionEventController.compaction.test.tsx 两例（2d213eb3a） |
+| 连续压缩 thrash 检测 | `CompactionBackpressureGate`：single-flight + 成功/失败双冷却 + 滞回带（真实压力尖峰可提前重试） | packages/coding-agent/test/compaction-backpressure.test.ts |
+| 失败熔断与冷却后可恢复 | `failureCooldownMs` 冷却 + runtime-core 连续失败熔断器（compat 封装）；overflow 恢复路径按 `recoveryAttempt` 限次 | 同上 + automatic-compaction-strategy.ts overflow 分支 |
+| 溢出尺寸种子 | overflow 触发 urgent 压缩（绕过冷却仍受 single-flight）；`recordEstimatedTokens` 记录装配估算；token-policy 对 CJK/宽字符保守估token，防单批工具结果跳过阈值直撞溢出 | automatic-compaction-strategy.ts:91-133、token-policy.ts |
+| 失败/取消不重置投影、终态语义 | 控制器仅 success 重建；非手动失败只对 manual 弹提示 | compaction 测试族 |
+
+### 实际运行
+
+- `run-vitest` 定向压缩族 6 文件：56 通过 / 2 跳过（跳过项为 `ANTHROPIC_OAUTH_TOKEN` 门控的真实 LLM 摘要用例，本批不访问真实 Provider，正确保持跳过）。
+- 渲染联动证据见 TASK-0051 交付（定向 5/5、impact 5+90、完整 check）。
+
+### 实际修改
+
+- 无代码变更（纯 retain+验证收口；渲染联动增量已随 TASK-0051 交付并引用）。
+
+### 未运行及原因
+
+- 真实 LLM 摘要质量用例：需要 Provider 凭据（任务边界），保持环境门控跳过。
+- Renderer privateBytes 实机对比：不做实机验证（批次边界）。
+
+### 剩余风险
+
+- 「溢出尺寸种子」在现行架构中表现为 urgent 通道 + 保守估算 + 装配量记录，无独立的种子数据结构；若后续压缩阈值需自适应学习，另行立项。
