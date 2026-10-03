@@ -17,7 +17,13 @@ try {
 		build: {
 			target: "node22", outDir: directory, emptyOutDir: false,
 			lib: { entry: join(desktop, "scripts/markdown-isolation.fixture.ts"), formats: ["es"], fileName: () => "main.mjs" },
-			rollupOptions: { external: [/^node:/, "electron"] },
+			rollupOptions: {
+				external: [/^node:/, "electron"],
+				// mermaid-service 对 mermaid.min.js?raw 的动态 import 默认被拆成 .js chunk；
+				// 临时目录没有 package.json，Electron 会按 CJS 加载它而在 `export` 上崩掉。
+				// 内联进 main.mjs 与产品主进程打包的单文件形态一致，隔离断言不受影响。
+				output: { inlineDynamicImports: true },
+			},
 		},
 	});
 	const code = await new Promise((resolve, reject) => {
