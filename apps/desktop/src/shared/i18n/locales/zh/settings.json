@@ -2377,5 +2377,24 @@
 	"notificationSoundDigitalPulse": "数字脉冲",
 	"section_general-notifications": "通知",
 	"section_remote-devices": "已配对的手机",
-	"section_remote-cloud": "外网访问"
+	"section_remote-cloud": "外网访问",
+	"fonts": {
+		"title": "字体",
+		"hint": "选择本机已安装的字体。界面文字与代码分别设置，终端跟随代码字体；缺失的字形使用默认字体回退。",
+		"load": "读取本机字体",
+		"loading": "正在读取本机字体…",
+		"search": "搜索字体",
+		"ui": "界面字体",
+		"code": "代码与终端字体",
+		"default": "默认",
+		"resetUi": "恢复默认界面字体",
+		"resetCode": "恢复默认代码字体",
+		"preview": "Open Forge — 中文阅读 Aa 012345",
+		"codePreview": "Il1 O0  {} [] =>\n  const value = 123;",
+		"missing": "可用列表中未找到此字体，将按需使用默认字体回退；可选择其他字体或恢复默认。",
+		"empty": "没有匹配的字体，请尝试其他搜索词。",
+		"unavailable": "当前环境不支持读取本机字体，已有选择与默认字体仍可使用。",
+		"loadFailed": "无法读取本机字体。如出现权限提示，请允许访问后重试；已有选择未改变。",
+		"saveFailed": "无法保存字体设置，已保留原来的选择，请重试。"
+	}
 }

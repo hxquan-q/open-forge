@@ -1,7 +1,7 @@
 ---
 id: TASK-0181
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: frontend-apps
 requirement: REQ-0009
@@ -13,15 +13,15 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0181-desktop-font-preferences
-worktree: ../open-forge-wt/task-0181-desktop-font-preferences
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 1e69c213dbd558f341573a841300bc7932d300d3
 read_paths: [apps/desktop, packages/theme-ui, packages/ui, docs/dev]
-write_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/shared/store, apps/desktop/src/shared/i18n, apps/desktop/src/renderer/domains/settings, apps/desktop/src/renderer/domains/bottom-panel/terminal, apps/desktop/DESIGN.md, project/requirements/REQ-0009-desktop-font-preferences.md, project/research/RESEARCH-0020-desktop-font-preferences-and-licenses.md, project/tasks/TASK-0181-desktop-font-preferences.md, .github/release-notes/v0.1.3.md]
+write_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/shared/store, apps/desktop/src/shared/i18n, apps/desktop/src/renderer/domains/settings, apps/desktop/src/renderer/domains/bottom-panel/terminal, apps/desktop/DESIGN.md, project/requirements/REQ-0009-desktop-font-preferences.md, project/research/RESEARCH-0020-desktop-font-preferences-and-licenses.md, project/tasks/TASK-0181-desktop-font-preferences.md, project/tasks/README.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [apps/desktop/src/renderer/shared/theme, apps/desktop/src/renderer/domains/settings/components/AppearanceSettingsView.tsx, apps/desktop/src/renderer/domains/settings/components/useAppearanceSettingsModel.ts, apps/desktop/src/renderer/domains/bottom-panel/terminal/TerminalSurface.tsx]
 depends_on: []
 # 发布说明与 0122/0123 的写路径重叠：仅共享 .github/release-notes 归并，按 Coordinator 串行集成登记（另一会话补记）
 conflicts_with: [TASK-0122, TASK-0123]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-03
 updated: 2026-10-03
 ---
@@ -75,10 +75,10 @@ updated: 2026-10-03
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：计划自审，不宣称独立评审。
-- 集成：pending。
-- 人工功能验收：待验收，工程通过后保持 verifying。
+- 工程验证：通过。定向 30 项覆盖相关行为；Desktop 全包 impact 为 4680 passed / 15 skipped / 0 failed，完整 bun run check 通过。
+- 技术评审：已自审，未执行独立评审；边界、生命周期、安全和可恢复状态结论见下文。
+- 集成：pending。main 存在其他 Task 的未提交代码、索引及发布说明，未合并；实现保留在本 Task 分支。
+- 人工功能验收：待验收，状态 verifying；用户“继续”是实施授权，不是对功能的人工接受。
 - 发布：未授权；开发集成遵循已有 main:dev 合同。
 
 ## 功能验收包
@@ -88,7 +88,70 @@ updated: 2026-10-03
 ## 交付记录
 
 - 前置：上一轮 4 个未提交管理文件属于本 Task 来源，本轮提交后作为工作树基线。
-- 实际修改/命令/结果：实施中回填。
+- 实际修改：本机字体元数据读取与等宽测量、外观页两项选择/预览/搜索/重置、字体偏好存储与主题覆盖、活动终端字体/尺寸同步、设置定位索引、中英 i18n、设计例外和 v0.1.3 发布说明。
 - Worktree：标准工具创建成功，bun install --frozen-lockfile 成功；工作树实际路径见 frontmatter。
 - 未运行：真实 UI、Provider、发布。
 - 剩余风险：浏览器 API 平台支持、等宽测量与中文回退的实机表现待验收。
+
+### 实施中证据
+
+- 主题/存储测试 4/4 通过；设置交互测试 4/4 通过；字体边界测试 4/4 通过。终端回归先复现旧值 monospace 不随 Test Mono 变化，再修复至 host 测试 6/6 通过。
+- 新工作树直接定向测试先遇到 ssh-transport/toolkit dist 缺失；按 buildableTestDependencies([desktop]) 清单恢复 24 个测试依赖构建产物后通过，不修改解析/测试规则。
+- check:quick 首轮发现三份既有修改文件需补声明头，以及 TASK-0122/0123 的历史发布说明写范围冲突；已补头并登记 conflicts_with。它们的声明工作树不存在，本 Task 仅追加自己的发布条目，集成时串行核对共享说明。
+- 字体授权枚举需保留点击激活，因此先发起权限请求；字体测量在 waitForCommittedPaint 后分批进行。依据 https://developer.chrome.com/docs/capabilities/web-apis/local-fonts ，未读取 blob 字节。
+
+### 自审与验证进展
+
+- 自审：设置 View 只消费 model/actions，字体读取及保存由独立 hook 拥有；复用 Select/Input/Button/SettingHeading，不引入公共组件框架或新依赖。字体名校验后以 CSS 字符串转义，列表仅本地使用，无遥测。字体测量分批让出主线程，卸载取消请求并清理计时器；终端保留容器字体覆盖优先级和现有 PTY 生命周期。
+- 注册 appearance-fonts 定位入口；registry 测试先失败（缺记录）再通过。定向设置/外观/registry/终端合计 22/22 通过，另有字体存储及元数据边界各 4/4。
+- 完整 check 首轮仅测试 i18next 选项 initImmediate 过时，改为当前 initAsync 后通过；最终代码轮次再次完整 check 通过。未改类型规则、检查阈值、超时或断言。
+- 全包 impact 初次因新工作树 Electron path.txt 缺失，electron-log 导入失败；取消该轮。Node 安装脚本未生成二进制，改用 bun 执行同一官方 electron/install.js 成功，原失败的 runtime-host-contract 4/4 通过后重跑全包。
+- 2026-10-03 主工作区出现其他 Task 的对话排序/Office 预览等未提交改动，不能作为干净集成目标；本 Task 先在隔离分支交付，集成时必须重新核对主树状态，不夹带其它任务。
+
+### 可复核命令与环境
+
+Windows / Bun 1.4.2 / Node 26.3.1；测试使用 Node runner，不启动 Desktop 实例。
+
+- 定向：`bun scripts/quality/run-vitest.mjs --config apps/desktop/vitest.config.ts --run <目标测试路径>`。覆盖 fonts.test.ts、installed-fonts.test.ts、FontSettings.test.tsx、AppearanceSettingsView.test.tsx、registry.test.ts、TerminalSurface.host.test.tsx，共 30 个定向用例；最后一轮对恢复 DOM 替身的改动复跑前三者 12/12 通过。
+- 完整质量：`bun run check`，日志 `%TEMP%/openforge-task0181-check-final-lf.log`，退出码 0。版权工具对缺失 upstream/dev 输出诊断后使用既定 pinned baseline，new=0；未修改该基线或检查规则。
+- 影响测试实际文件收集与调用（提交前）：
+
+```powershell
+$files = @(git diff --name-only -- apps/desktop/src)
+$files += @(git ls-files --others --exclude-standard -- apps/desktop/src)
+bun run test:impact -- $files
+```
+
+选择器因共享状态/i18n 影响回退 Desktop 全包，自动准备 24 个 workspace 依赖；全包日志为 `%TEMP%/openforge-task0181-impact-final.log`。不修改 worker 数量/超时/skip，不将首次环境失败计为通过。
+
+### 人工验收步骤与限制
+
+1. 使用本 Task 分支构建的 Desktop，打开设置 → 外观 → 字体；当前运行的 main 安装包不会因工作树代码自动获得新功能。
+2. 点击读取本机字体；若环境提示授权则允许。搜索并选择界面字体，确认预览、正文和输入文字变化，代码不被比例字体覆盖。
+3. 打开代码/Diff 与一个终端，再选择代码字体；确认终端会话、已有输出保留，布局没有错位。
+4. 切换明暗/配色并重启，确认偏好保留；分别恢复默认，确认回到当前默认字体栈。
+5. 枚举不可用/拒绝时应显示说明并可重试，已有偏好和默认仍可用；未发现字体时可重新选择或重置。
+
+未运行 verify:ui、产品构建/打包、真实 Provider 或人工验收（未授权）。字体列表 API 的各系统支持、中文/emoji/终端边框真实观感及完整字形宽度仍需上述验收；等宽候选按样本测量，不宣称完成所有 Unicode 字形认证。不分发任何字体资产，因此本次没有引入 MIT/OFL 字体包许可义务。
+
+### 最终工程结果（2026-10-03）
+
+- 全包影响测试通过：886 个测试文件通过、4 个既有跳过；4680 个用例通过、15 个既有跳过，0 失败。耗时 1334.04s；这不是串行性能基准，不据此推导字体功能的运行时性能。未新增或扩大跳过项。
+- 最终完整 check 的 lint/types/guards/mobile-lint 均以 0 退出；类型、格式、包边界、声明头和任务合同检查均通过。字体测试最后只做 LF/文件尾归一化，随后又完成完整 check；不以旧版本检查代替最终检查。
+- staged diff 已逐路径核对，只含 TASK-0181 的实现、测试、需求/任务与当前版本发布说明；本次以原子功能提交落在 Task 分支，提交 hash 见该分支 git log。
+- main 在收尾时仍有 TASK-0185/0186 等其它工作，按干净集成前置条件保留分支和工作树，不合并、不推送、不清理。导航在本 Task 分支更新为 verifying；main 的导航随未来集成同步，避免夹带其它 Agent 的未提交索引改动。
+- 发布说明已写入 v0.1.3 的新增节；未发布、未打包、未人工验收。
+
+- 实现提交：1ad7dc7bcf4ff9eebf539bcc138feb667206d789（feat(desktop): 添加本机界面与代码字体偏好）；23 个文件，提交前门禁通过，提交后工作树干净。本行是对已完成代码提交的交付补记。
+
+### 后续推送授权与集成检查（2026-10-03）
+
+- 用户明确要求先提交推送，再合入主树。本次额外授权覆盖 origin 的 Task 分支推送；不等于 origin/main 稳定晋升、发布或替其它 Task 提交未验收内容。
+- 既有实现与交付记录已提交，工作树干净。执行 `git push --set-upstream origin HEAD:refs/heads/task/TASK-0181-desktop-font-preferences` 成功；`git ls-remote` 核实远端 SHA 为 `d54dfc91d4b4be47741350b39684bd21c5f27eb1`，包含功能提交 `1ad7dc7bc`。本补记也随同一 Task 分支推送。
+- 合入前 main 为 `c9db5fa27`，存在其它任务的未提交/已暂存记录：ISSUE-0020、Issue/Research 索引、TASK-0185，以及未跟踪的 RESEARCH-0021、TASK-0186。它们不属于字体实现，不重置、不暂存、不代提交。
+- 尚未执行 main 合并；integration_status 保持 pending。须在主树干净后再执行标准合并、集成测试与完整 check；不以 Task 分支的已验证结果冒充合并后的验证。
+
+### 集成记录（2026-10-03）
+
+- 主树待提交记录入库后以 `git merge --no-ff` 合入本地 main；产品代码（TerminalSurface/registry 等）自动合并无冲突，i18n settings.json 与共享索引/发布说明按并集解决。合并结果定向复验：字体相关 30 项定向用例与 registry/终端接线测试通过（证据见下）。
+- 本记录中"集成 pending/须重新核对主树"的前置条件由本轮协调解决；远端 Task 分支推送 SHA（d54dfc91d/863c3efed）保持为历史来源。完整门禁随本轮集成批次统一执行，branch/worktree 待 origin/dev 推送成功后清理。
