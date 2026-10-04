@@ -86,6 +86,13 @@ describe("browser_tab input schema", () => {
 		});
 	});
 
+	it("对外 Schema 允许 elementRef 以 snapshot 编码串传入，畸形串仍不匹配", () => {
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: "v1:3:e1" })).toBe(true);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "fill", elementRef: "v1:3:e1", value: "hi" })).toBe(true);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: "e1" })).toBe(false);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: { id: "e1" } })).toBe(false);
+	});
+
 	it("拒绝 javascript 面、缺 revision 的 ref、非 http(s) 导航和多余字段", () => {
 		expect(readBrowserTabToolInput({ action: "evaluate", script: "1+1" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "click", elementRef: { id: "e1" } })).toBeUndefined();
