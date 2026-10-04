@@ -229,6 +229,7 @@ export const BROWSER_TAB_TOOL_DESCRIPTION = [
 	"Operate the in-app Browser WebView that the user is looking at (same page, same session).",
 	"Read actions: snapshot, inspect, screenshot, wait, scroll. Write actions: click, fill, press, navigate.",
 	"snapshot returns an interactive accessibility tree with elementRef values that embed pageRevision.",
+	"Pass elementRef back exactly as snapshot printed it (the opaque v1:<pageRevision>:<id> token); {id, pageRevision} is accepted too.",
 	"After navigation or DOM change, old refs return stale_reference — take a new snapshot; never guess a new locator.",
 	"navigate accepts only http/https URLs. This tool cannot evaluate JavaScript, read cookies, or export tokens.",
 	"This is not the agent-browser CLI; that Skill uses a separate browser session.",
@@ -275,10 +276,23 @@ export function isAllowedBrowserTabUrl(url: string): boolean {
 	}
 }
 
+/**
+ * 模型从 snapshot 结果文本里拿到的是 `v1:<pageRevision>:<id>` 编码串，原样回传是最自然的用法；
+ * 校验前统一解码成对象 ref，对象形式保持不变。解码失败的字符串原样保留，交给 Schema 判非法。
+ */
+function normalizeBrowserElementRefInput(value: unknown): unknown {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+	const record = value as Record<string, unknown>;
+	if (typeof record.elementRef !== "string") return value;
+	const ref = readBrowserElementRef(record.elementRef);
+	return ref ? { ...record, elementRef: ref } : value;
+}
+
 export function readBrowserTabToolInput(value: unknown): BrowserTabToolInput | undefined {
-	if (!Value.Check(BrowserTabToolInputSchema, value)) return undefined;
-	if (value.action === "navigate" && !isAllowedBrowserTabUrl(value.url)) return undefined;
-	return value;
+	const normalized = normalizeBrowserElementRefInput(value);
+	if (!Value.Check(BrowserTabToolInputSchema, normalized)) return undefined;
+	if (normalized.action === "navigate" && !isAllowedBrowserTabUrl(normalized.url)) return undefined;
+	return normalized;
 }
 
 export function readBrowserTabToolError(value: unknown): BrowserTabToolError | undefined {
