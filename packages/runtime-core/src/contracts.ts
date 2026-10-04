@@ -311,6 +311,21 @@ export interface QueueChangedEvent extends SessionEventBase {
 	snapshot: unknown;
 }
 
+/** {@link SessionFacade.attach} 的回执：同一次同步步骤内取得的订阅与历史快照。 */
+export interface SessionAttachment {
+	readonly unsubscribe: () => void;
+	/**
+	 * attach 时刻的持久化历史拷贝；运行中回合（`runningTurnId`）的消息以重放事件
+	 * 重建，消费端不把两者重复拼接。重放事件先于本回执经 handler 同步送达。
+	 */
+	readonly history: HistoryEntry[];
+	/**
+	 * 运行中回合身份；会话空闲时缺省。回合首个 assistant 事件到达前的窗口内同为
+	 * undefined（身份随首个事件可观察），消费端可结合快照 isStreaming 区分。
+	 */
+	readonly runningTurnId?: string;
+}
+
 export interface SessionStateSnapshot {
 	sessionId: string;
 	contextState?: SessionContextState;
@@ -538,6 +553,11 @@ export interface SessionFacade {
 		signal?: AbortSignal,
 	): Promise<Output>;
 	subscribe(sessionId: string, handler: (event: SessionEvent) => void): () => void;
+	/**
+	 * 订阅与读历史合成一次快照：运行中回合先经 handler 重放，历史在同一同步步骤
+	 * 内读取，二者之间既无空窗也无重叠；回执携带运行中回合身份供消费端去重。
+	 */
+	attach(sessionId: string, handler: (event: SessionEvent) => void): SessionAttachment;
 	updateSettings(sessionId: string, partialSettings: SettingsPatch): Promise<void>;
 	/** Update thinking level for ALL open sessions at once. */
 	updateGlobalThinkingLevel(level: ThinkingLevel): void;

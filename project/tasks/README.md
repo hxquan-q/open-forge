@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0206` | `verifying` | PLAN-0014 | feed/attach 第二片：`SessionFacade.attach` 一次同步步骤内订阅 + 运行中回合重放 + 历史快照（`SessionAttachment`），保留本仓 4096 有界回放，不引入上游无界回合缓冲；红绿/定向 10/10/impact 115 项/完整 check 全绿；无直接 UI，消费端随 IPC/desktop 后续片验收。 |
 | `TASK-0205` | `verifying` | PLAN-0014 | feed/attach 底座第一片：快照暴露运行中回合身份（currentTurnId）+ 重放缓冲收录本轮工具事件（保留 4096 有界）；红绿/impact/完整 check 绿；工具状态切回即时可见待实机验收，currentTurnId 消费随 IPC/desktop 后续片。 |
 | `TASK-0204` | `done` | PLAN-0014 | 会话事件合同清退死类型（message.final/toolcall.args，查证无生产者）+ 生产者登记表（23 类型 satisfies 穷尽）+ 墓碑守卫入 check:guards；定向/impact/完整 check 全绿，行为零变化；内部治理按完成标准收口。 |
 | `TASK-0203` | `done` | — | 同步 cli-host 四个文件的精确工具清单断言到 TASK-0156 目标特性契约（get_goal/create_goal/update_goal 无条件贡献）；定向/完整 cli-host（230 项）/Desktop（4906 项）/impact/完整 check 全绿，零遮蔽；内部修复按完成标准收口（提交 76109c3ed）。 |
