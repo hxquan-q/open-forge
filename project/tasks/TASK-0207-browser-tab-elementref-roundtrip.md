@@ -51,12 +51,14 @@ updated: 2026-10-05
 
 - `readBrowserTabToolInput` 在校验前把字符串形式的 `elementRef` 经 `readBrowserElementRef` 解码为对象；解码失败保持原值，交给 schema 判非法。
 - 复用既有 `readBrowserElementRef`（已同时接受字符串与对象），不新增第二套编码格式。
+- 对外 Schema（发给 Provider 的入参定义）在 `elementRef` 上同时接受编码串与对象，使模型侧不再「描述可回传、schema 只收对象」自相矛盾；运行时规范化的 `BrowserTabToolInput` 仍是对象形态，string 不会漏进宿主。
 - 工具描述补一句：snapshot 打印的 elementRef 可原样回传。
-- 回归测试：编码串回传被规范化；工具 `validateInput`/`execute` 接受编码串并把解码后的对象 ref 交给宿主；畸形串与缺字段仍被拒。
+- 回归测试：编码串回传被规范化；对外 Schema 接受编码串、拒绝畸形串；穿过真实 session-extension 装配时宿主函数收到解码后的对象；宿主 `validateBrowserElementRef` 接受编码串形式；畸形串与缺字段仍被拒。
 
 ### 不做
 
-- 不改 `BrowserElementRefSchema` 的对外 JSON Schema 形状（保持对象，避免跨包类型级联与被解析为 `anyOf` 的嵌套联合）。
+- 不改 `BrowserElementRefSchema` 本身（对象分支与 `{ id, pageRevision }` 语义不变）；编码串只在外层联合中额外接受。
+- 不改 `CodingAgentBrowserTabFunctionRequest.input` 与其宿主消费方（仍是对象形态），避免跨包类型级联。
 - 不改宿主 `dispatchBrowserTabAction`/`validateElementRef`（已兼容两种形式）。
 - 不改写编码格式、`pageRevision` 语义或写类动作的 L3 审批。
 - Release Notes 由 coordinator 统一写。
@@ -81,7 +83,7 @@ updated: 2026-10-05
 
 ## 验收分层
 
-- 工程验证：通过。定向 12/12、impact 31 文件 117 项、`check:quick` / `check`（root tsgo、lint、guards）全绿。
+- 工程验证：通过。定向 14/14（coding-agent 两文件）、impact 119 项、desktop 12/12、`check:quick` / `check`（root tsgo、lint、guards）全绿。
 - 技术评审：自审；剩余风险见交付记录。
 - 集成：与 frontmatter `integration_status` 一致（主工作区串行）。
 - 人工功能验收：待验收（需在 Desktop 会话中实测 snapshot→click 全流程）。
@@ -97,8 +99,9 @@ updated: 2026-10-05
 
 ## 交付记录
 
-- 实际修改：`packages/coding-agent/src/features/browser-tab/browser-tab-tool-contract.ts`（新增 `normalizeBrowserElementRefInput`，`readBrowserTabToolInput` 校验前解码字符串 ref；描述补一句）；`packages/coding-agent/test/features/browser-tab/browser-tab-tool-contract.test.ts`（往返、适配器解码、畸形串拒绝用例）；`project/bugs/BUG-0078-*.md`、本 Task、`project/tasks/README.md`、`project/bugs/README.md`、`.github/release-notes/v0.1.3.md`。
-- 实际运行：`bun -e` 直跑合同模块复现旧行为（编码串 → `undefined`）；定向 12/12；`test:impact`（31 文件 117 用例）；`check:quick`；`check`（types/lint/guards）全绿。
+- 实际修改：`packages/coding-agent/src/features/browser-tab/browser-tab-tool-contract.ts`（新增 `normalizeBrowserElementRefInput`，`readBrowserTabToolInput` 校验前解码字符串 ref；9 个动作分支改为按 elementRef 形态生成的工厂，对外 Schema 用对象/编码串联合、运行时校验用纯对象 Schema；描述补一句）；`packages/coding-agent/test/features/browser-tab/browser-tab-tool-contract.test.ts`（往返、对外 Schema 接受编码串、适配器解码、畸形串拒绝用例）；`packages/coding-agent/test/features/browser-tab/browser-tab-session-extension.test.ts`（真实装配下宿主收到解码后对象）；`apps/desktop/src/main/browser-automation/webview-element-ref.test.ts`（宿主接受编码串）；`project/bugs/BUG-0078-*.md`、本 Task、`project/tasks/README.md`、`project/bugs/README.md`、`.github/release-notes/v0.1.3.md`。
+- 实际运行：`bun -e` 直跑合同模块复现旧行为（编码串 → `undefined`）；定向 14/14（coding-agent 两文件）、desktop 12/12（browser-automation 两文件）；`test:impact`（coding-agent 31 文件 119 用例、desktop 3 用例）；`check`（types/lint/guards）全绿。
 - 未运行及原因：未运行 `verify:ui:*` 与真实 Provider 实机流程（当前任务未授权真实用户环境）；未跑全量测试套件（影响面与定向已覆盖本次改动，`check` 不含测试）。
 - Worktree：未拆出（主工作区串行窄修复）。
-- 剩余风险：真实模型除编码串外是否还会以其他畸形形状回传（例如 `elementRef` 携带未知字段）未实测；`BrowserElementRefSchema` 对外仍是对象形状，模型侧对 ref 形式的认知依赖描述句，真实 Provider 行为待实机确认。
+- 提交：`c3654fcc9`（修复与回归测试、Release Notes）；记录登记 `ffbaa5bad`（BUG-0078/TASK-0207 建卡）。
+- 剩余风险：对外 Schema 在 `elementRef` 上引入嵌套 `anyOf`（对象 + 字符串分支），严格网关是否接受未用真实 API 验证（分支均带结构关键字，不会被 `sanitizeToolParameters` 剔除，但 Gemini 系网关的嵌套联合支持需实机确认）；真实模型是否还会以其他畸形形状回传（例如 `elementRef` 携带未知字段）未实测。

@@ -67,13 +67,16 @@ bun -e 'import { readBrowserTabToolInput } from "./src/features/browser-tab/brow
 `packages/coding-agent/test/features/browser-tab/browser-tab-tool-contract.test.ts` 增加：
 
 - 回传 snapshot 打印的编码串（`v1:3:e1`）时 `readBrowserTabToolInput` 返回规范化后的对象 ref；
+- 对外 `BrowserTabToolInputSchema` 接受编码串、拒绝畸形串与缺 `pageRevision` 的对象；
 - `createBrowserTabTool` 的 `validateInput` 接受编码串，`execute` 把解码后的对象 ref 传给宿主，不再返回 `invalid_input`；
-- 仍拒绝畸形编码串与缺 `pageRevision` 的对象。
+- 穿过真实 session-extension 装配时，宿主函数收到的是解码后的对象 ref；
+- desktop 宿主 `validateBrowserElementRef` 接受编码串（含过期 revision 判 `stale_reference`）；
+- 仍拒绝畸形编码串 `e1`/`v1:-1:e1`/`v1:3:` 与缺 `pageRevision` 的对象。
 
 ## 修复与验证
 
-- 修复：`readBrowserTabToolInput` 在校验前用 `readBrowserElementRef` 规范化字符串形式的 `elementRef`（新增 `normalizeBrowserElementRefInput`），对象形式保持不变、畸形串仍原样交给 Schema 判非法；工具描述补一句 ref 可原样回传。
-- 测试：`bun scripts/quality/run-vitest.mjs --run packages/coding-agent/test/features/browser-tab/browser-tab-tool-contract.test.ts packages/coding-agent/test/features/browser-tab/browser-tab-session-extension.test.ts`（12/12 通过，含新增往返/适配器用例）；`bun run test:impact -- packages/coding-agent/src/features/browser-tab/browser-tab-tool-contract.ts ...`（31 文件 117 用例通过）。
+- 修复：`readBrowserTabToolInput` 在校验前用 `readBrowserElementRef` 规范化字符串形式的 `elementRef`（新增 `normalizeBrowserElementRefInput`），对象形式保持不变、畸形串仍原样交给 Schema 判非法；发射给 Provider 的入参 Schema 在 `elementRef` 上改为「对象或编码串」联合（9 个动作分支改由按 elementRef 形态生成的工厂产出，避免两份动作定义），运行时校验仍用纯对象 Schema，因此交给宿主的 `BrowserTabToolInput` 保持对象形态；工具描述补一句 ref 可原样回传。
+- 测试：`bun scripts/quality/run-vitest.mjs --run packages/coding-agent/test/features/browser-tab/browser-tab-tool-contract.test.ts packages/coding-agent/test/features/browser-tab/browser-tab-session-extension.test.ts`（14/14 通过）；`bun run test:impact -- ...`（coding-agent 31 文件 119 用例、desktop 3 用例）；desktop 包内 `bun run test -- src/main/browser-automation/webview-element-ref.test.ts src/main/browser-automation/in-app-browser-tab-host.test.ts`（12/12）。
 - 检查：`bun run check:quick`、`bun run check`（含 root tsgo、lint、guards）通过。
 - 未运行及原因：未做真实 Provider + Desktop 实机的 browser_tab 全流程验证（需授权并运行真实用户环境）；真实模型是否还会以其他畸形形状回传，需实机观察。
 - 提交：见 TASK-0207 交付记录。
