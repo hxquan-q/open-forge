@@ -322,6 +322,8 @@ export interface SessionStateSnapshot {
 	isStreaming: boolean;
 	/** Timestamp (ms) for the current agent_start, if this session is streaming. */
 	currentTurnStartedAt?: number;
+	/** Identity of the running Turn (learned from assistant events), so a subscriber joining mid-Turn can target its messages. */
+	currentTurnId?: string;
 	/**
 	 * 宿主事件中继最近一次观察到该会话事件的时间戳（ms，事件自身时钟）；
 	 * 尚无任何事件时为 undefined。流式会话的逐事件活动证据：中断巡检据此区分

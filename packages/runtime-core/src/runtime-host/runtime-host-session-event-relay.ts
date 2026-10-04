@@ -54,6 +54,7 @@ export interface RuntimeHostSessionEventRelayOptions {
  */
 export class RuntimeHostSessionEventRelay {
 	private readonly currentTurnStartedAt = new Map<string, number>();
+	private readonly currentTurnIds = new Map<string, string>();
 	private readonly inFlightBuffers = new Map<string, InFlightBuffer>();
 	private readonly inFlightUnsubscribers = new Map<string, () => void>();
 	private readonly externalSubscribers = new Map<string, Set<(event: SessionEvent) => void>>();
@@ -110,6 +111,8 @@ export class RuntimeHostSessionEventRelay {
 			}
 			if (event.type === "session.lifecycle" && event.phase === "agent_start") {
 				this.currentTurnStartedAt.set(sessionKey, event.timestamp);
+				// 新回合身份未知；由随后的 assistant 事件（携带 turnId）学习。
+				this.currentTurnIds.delete(sessionKey);
 				buffer.turnStartedAt = event.timestamp;
 				buffer.events = [];
 				buffer.isActive = true;
@@ -122,6 +125,7 @@ export class RuntimeHostSessionEventRelay {
 				buffer.terminalReason = "error";
 			} else if (event.type === "session.lifecycle" && event.phase === "agent_end") {
 				this.currentTurnStartedAt.delete(sessionKey);
+				this.currentTurnIds.delete(sessionKey);
 				buffer.events = [];
 				buffer.isActive = false;
 				buffer.droppedEventCount = 0;
@@ -136,6 +140,7 @@ export class RuntimeHostSessionEventRelay {
 				buffer.events = [];
 				buffer.droppedEventCount = 0;
 			} else if (event.channel === "assistant" && buffer.isActive) {
+				if (event.turnId) this.currentTurnIds.set(sessionKey, event.turnId);
 				if (buffer.events.length >= this.inFlightReplayEventLimit) {
 					buffer.events.shift();
 					buffer.droppedEventCount += 1;
@@ -145,6 +150,16 @@ export class RuntimeHostSessionEventRelay {
 				else if (event.type === "done") {
 					buffer.terminalReason = event.message.stopReason === "aborted" ? "aborted" : undefined;
 				}
+			} else if (
+				buffer.isActive &&
+				(event.type === "tool.start" || event.type === "tool.phase" || event.type === "tool.end")
+			) {
+				// 工具执行状态是 display-only 事实：中途接入者重放时需要它显示运行中/已完成的工具。
+				if (buffer.events.length >= this.inFlightReplayEventLimit) {
+					buffer.events.shift();
+					buffer.droppedEventCount += 1;
+				}
+				buffer.events.push(event);
 			}
 			this.notifyExternalSubscribers(sessionKey, event);
 		});
@@ -212,6 +227,10 @@ export class RuntimeHostSessionEventRelay {
 
 	readCurrentTurnStartedAt(sessionKey: string): number | undefined {
 		return this.currentTurnStartedAt.get(sessionKey);
+	}
+
+	readCurrentTurnId(sessionKey: string): string | undefined {
+		return this.currentTurnIds.get(sessionKey);
 	}
 
 	/** 最近一次观察到该会话事件的时间戳（事件自身时钟）；无任何事件前为 undefined。 */

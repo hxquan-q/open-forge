@@ -259,6 +259,43 @@ describe("RuntimeHostSessionEventRelay", () => {
 		unsubscribe();
 		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
 	});
+
+	it("exposes the running Turn identity and replays its tool executions to late subscribers", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay();
+		relay.attach("session-key", handle, stream);
+
+		const toolObservation = (type: "tool.start" | "tool.end", overrides: Record<string, unknown>): SessionEvent =>
+			mapRuntimeSessionObservationEvent("session-1", {
+				type,
+				toolCallId: "call-1",
+				toolName: "bash",
+				...(type === "tool.start"
+					? { args: { command: "ls" }, startedAt: 120 }
+					: { result: { content: [] }, isError: false, startedAt: 120, durationMs: 30, phases: [] }),
+				...overrides,
+				source: "tool",
+			} as Parameters<typeof mapRuntimeSessionObservationEvent>[1]);
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 100));
+		stream.emit(assistantEvent({ type: "text_start", contentIndex: 0, partial: partialOf("w") }));
+		stream.emit(toolObservation("tool.start", {}));
+		stream.emit(toolObservation("tool.end", {}));
+		expect(relay.readCurrentTurnId("session-key")).toBe("turn-1");
+
+		const replayed: SessionEvent[] = [];
+		const unsubscribe = relay.subscribe("session-key", handle, (event) => replayed.push(event));
+		expect(replayed.filter((event) => event.type.startsWith("tool.")).map((event) => event.type)).toEqual([
+			"tool.start",
+			"tool.end",
+		]);
+		unsubscribe();
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_end", 200));
+		expect(relay.readCurrentTurnId("session-key")).toBeUndefined();
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+	});
 });
 
 function partialOf(delta: string): AssistantMessage {
