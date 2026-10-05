@@ -172,13 +172,30 @@ function prepareRelease(command) {
 	console.log(`Desktop ${version} is prepared locally. Review ${notesPath} before publishing.`);
 }
 
+/** 占位日期：prepare 写它，publish 把它替换成当天日期。与 release-notes.mjs 共用同一常量。 */
+export const PLACEHOLDER_DATE_LABEL = "发布日期：待定";
+
+function localToday(now = new Date()) {
+	const pad = (value) => String(value).padStart(2, "0");
+	return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** 把占位日期换成真实发布日期；已经是真实日期时拒绝，避免重复发布时静默改写。 */
+export function stampReleaseDate(notes, date = localToday()) {
+	if (!notes.includes(PLACEHOLDER_DATE_LABEL)) {
+		throw new Error("发布说明的发布日期不是占位，不能自动改写：" + PLACEHOLDER_DATE_LABEL);
+	}
+	return notes.replace(PLACEHOLDER_DATE_LABEL, "发布日期：" + date);
+}
 function assertReleaseNotesReady(version) {
 	const notesPath = releaseNotesPath(version);
 	if (!existsSync(notesPath)) throw new Error(`Missing release notes: ${notesPath}`);
 	const notes = readFileSync(notesPath, "utf8");
 	const [title, , date] = notes.split(/\r?\n/);
 	if (title !== `# Open Forge ${version}`) throw new Error(`Release notes must start with "# Open Forge ${version}"`);
-	if (!date || date.includes("待定")) throw new Error("Release notes need a confirmed publication date");
+	if (!date || !date.includes(PLACEHOLDER_DATE_LABEL)) {
+		throw new Error("发布日期只在发布动作里产生，发布前必须停在占位：" + PLACEHOLDER_DATE_LABEL);
+	}
 	if (!/^## (新增|改进|修复|其他)$/m.test(notes) || !/^\s*- .+/m.test(notes)) {
 		throw new Error("Release notes need at least one populated section");
 	}
@@ -209,6 +226,9 @@ function publishRelease(version) {
 	assertTagAvailable(`v${version}`);
 	runReleaseChecks();
 	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+
+	// 发布日期只有走到发布这一步才产生，随后才提交、打 tag。
+	writeFileSync(notesPath, stampReleaseDate(readFileSync(notesPath, "utf8")));
 
 	// Release notes are the GitHub Release body and must be present before the tag triggers CI.
 	const branch = assertBranch();

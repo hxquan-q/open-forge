@@ -47,3 +47,13 @@
 - 已知风险、兼容性影响或仍需用户决定的事项
 
 不得声称未实际执行的测试、构建或人工验证已经通过。
+
+## 版本与发布状态
+
+- **版本事实源**：Desktop 的发布版本只有 `apps/desktop/package.json#version` 一处；`.github/release-notes/v<版本>.md` 的文件名与标题必须与它一致，`bun run check` 会校验。
+- **0.x 语义**：当前 `0.1.x` 属 Preview，公共 API 不作稳定承诺；不引入预发布后缀，Preview 由 GitHub Release 的 pre-release 标记表达。
+- **发布日期只在发布动作里产生**：`release:desktop:prepare` 写占位「待定」，`release:desktop:publish` 在提交与打 tag 之前写入当天日期。没有 `v<版本>` tag 的版本，说明里的日期必须是「待定」；写成具体日期会让 `bun run check` 失败。
+- **上游基线行**只由 `release-desktop.mjs` 按 `git merge-base upstream/dev HEAD` 写入，不手工编辑。
+- **已发布版本只读**：存在 `v<版本>` tag 的说明文件不得再修改，发现写错另起一条修订说明。
+- **上游继承的说明**（`# Vetta …`）保持原文，不改写成 Open Forge 正文。
+- **各应用版本归属**：Desktop 以 `apps/desktop/package.json` 为准；`apps/cli-host`、`apps/mobile`（`package.json` 与 `app.json` 需一致）、`apps/kotlin`（`versionCode`/`versionName`）、`apps/im-gateway`（Makefile `VERSION`）与各插件包各自独立、当前都不发布；根 `package.json`、`apps/docs-site`、`packages/runtime-knowledge` 仍是继承自上游的 `0.55.3`，无发布含义，改动前先评估上游同步成本。

@@ -14,10 +14,10 @@
 
 ## 怎么写
 
-- 标题用 `# Open Forge <版本号>`，下一行写发布日期。
+- 标题用 `# Open Forge <版本号>`，下一行写发布日期：发布前停在占位「待定」，只有 `release:desktop:publish` 会把它写成当天日期；没有 `v<版本>` tag 的版本写成具体日期会被 `bun run check` 判为非法。
 - 分 `## 新增` / `## 改进` / `## 修复` / `## 其他` 四节，没有内容的小节直接省略。
 - 面向用户描述影响：说清楚用户会看到什么变化，而不是改了哪个函数。行为有取舍时把代价一并写出来。
 - 关联 PR 或 issue 时统一用 `owner/repo#123` 格式，例如 `openvetta/open-vetta#8`。
-- 已发布版本的文件不再修改；发现写错另起一条修订说明。
+- 已发布版本（存在 `v<版本>` tag）的发布说明不得再修改；发现写错另起一条修订说明。`release-notes.mjs --check` 会与 tag 处内容逐字比对，`bun run check` 亦校验文件名、标题与 `apps/desktop/package.json#version` 一致。
 
 历史版本（0.5.48 及更早）的记录留在 `apps/desktop/CHANGELOG.md`。

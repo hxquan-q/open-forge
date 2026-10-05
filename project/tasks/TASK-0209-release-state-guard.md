@@ -1,0 +1,64 @@
+---
+id: TASK-0209
+type: task
+status: in_progress
+priority: P1
+owner: release/desktop
+source: user-request；RESEARCH-0023；PLAN-0016 阶段 1 与 2
+related_requirement: [REQ-0005]
+related_plan: [PLAN-0016]
+related_tasks: []
+related_issues: [ISSUE-0007]
+related_bugs: []
+execution: serial
+branch: main
+worktree: unassigned（主工作区串行）
+base_commit: fd52a3e89c
+read_paths: [scripts/release/release-notes.mjs, scripts/release-desktop.mjs, docs/dev/agent-rules/delivery.md, .github/release-notes, .github/workflows/desktop-release.yml]
+write_paths: [scripts/release/release-notes.mjs, scripts/release/release-notes.test.mjs, scripts/release-desktop.mjs, scripts/release-desktop.test.mjs, docs/dev/agent-rules/delivery.md, .github/release-notes/README.md, .github/release-notes/v0.1.3.md, .github/workflows/desktop-release.yml, project/tasks/TASK-0209-release-state-guard.md, project/tasks/README.md]
+exclusive_paths: []
+depends_on: []
+conflicts_with: []
+integration_status: pending
+created: 2026-10-05
+updated: 2026-10-05
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# 发布状态可判定：政策成文加发布状态守卫
+
+## 目标与范围
+
+把「一个版本是否已发布」变成仓库里可机械判定的事实，并把口径写进规范。对应 [PLAN-0016](../plans/PLAN-0016-version-management-release-refactor.md) 的阶段 1 与阶段 2。
+
+做：
+
+- 发布日期只在发布动作里产生：`prepare` 写「待定」，`publish` 由脚本写入当天日期；`publish` 的前置校验从「日期不含待定」翻转为「日期必须是待定」。
+- `scripts/release/release-notes.mjs --check`（已在 `check:guards` 中执行）增加状态校验：当前开发版本的说明文件名、标题与 `apps/desktop/package.json#version` 必须一致；没有 `v<版本>` tag 时日期必须是「待定」；已有 tag 时说明文件必须与 tag 处内容一致（已发布只读）。所有 `v*.md` 的标题必须与其文件名版本一致。
+- 把版本事实源、0.x 语义、「发布日期只在发布时写」、「上游基线行只由脚本写」、「已发布版本文件只读」与各应用版本归属写进 `docs/dev/agent-rules/delivery.md` 与 `.github/release-notes/README.md`。
+- 修正 `v0.1.3.md`：该版本尚未发布，日期回到「待定」。
+
+不做：不改 `desktop-release.yml` 的发布语义与 job 结构（只在必要处补 checkout 深度）；不做 PLAN-0016 的阶段 3、4、5；不执行任何真实发布、tag 或 push。
+
+## Given / When / Then
+
+- Given 当前 `package.json` 版本为 0.1.3 且不存在 `v0.1.3` tag；When 运行 `bun run check`；Then 说明文件必须写「待定」，写成具体日期即失败。
+- Given 用户要发布 0.1.3；When 运行 `publish 0.1.3 --confirm-publish`；Then 脚本先把「待定」替换为当天日期，再提交、打 tag 并原子推送；若文件已是具体日期则拒绝，提示先改回「待定」。
+- Given 某版本已发布（存在 tag）；When 有人修改其说明文件；Then `--check` 报出与 tag 处内容不一致。
+
+## 必须保持
+
+- `apps/desktop/package.json#version` 仍是发布版本唯一事实源；不改 `ISSUE-0007` 冻结的「纯 X.Y.Z、无预发布后缀、GitHub Release 打 pre-release、publish 由用户执行」。
+- 不改已发布版本的 Release Notes 正文；不引入新依赖；不调用真实 GitHub 或 R2。
+- `--check` 在取不到 git 标签信息时只跳过「日期状态」这一条，其余校验照旧。
+
+## 测试与验证
+
+- `scripts/release/release-notes.test.mjs`：补状态校验用例（标题与文件名不符、无 tag 却写了日期、有 tag 却是待定、有 tag 且内容与 tag 不一致、全部通过的正例）。
+- `scripts/release-desktop.test.mjs`：补「prepare 模板为待定」「publish 前置要求待定」「写入当天日期」用例。
+- `bun run test:quality`、`bun run check`（含 `check:guards` 里的 `release-notes.mjs --check`）。
+- 不跑真实发布；真实验证只到「守卫在本地与 CI 静态阶段生效」。
+
+## 交付记录
+
+待实施。
