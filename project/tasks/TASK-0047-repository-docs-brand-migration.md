@@ -1,7 +1,7 @@
 ---
 id: TASK-0047
 type: task
-status: in_progress
+status: blocked
 priority: P0
 owner: release/docs
 requirement: REQ-0003
@@ -82,3 +82,5 @@ updated: 2026-10-06
 - 验证：`grep` 复核两份 README 后，除上述两处坐标外只剩冻结标识与上游署名（「Open Forge is an independently maintained derivative of Open Vetta」）。
 - 未运行及原因：未跑运行时测试（纯文档改动，不改变任何命令与路径）。
 - 剩余风险：本任务覆盖 84 个文件、334 行上界，本条只做了 README 中英对；QUICKSTART、CONTRIBUTING、SECURITY 与 `docs/` 待后续切片。
+
+- 新增阻塞（2026-10-06，TASK-0048 记录同源）：`docs/` 树的清查不能按模式替换——里面同时混着产品称呼、术语名（被双链与根 CONTEXT 索引引用）、插件名（Vetta UI Design）与商业订阅品牌（Vetta Go / Vetta Zen），还有大量上游沿革记录（ADR、greenfield 实施日志、适配研究）。按模式替换当场打破术语索引，已整体撤回。需要先有一份「术语与品牌对照表」并决定沿革记录是否改名，才能继续。README、QUICKSTART、SECURITY 三份已按散文称呼改名并交付。
