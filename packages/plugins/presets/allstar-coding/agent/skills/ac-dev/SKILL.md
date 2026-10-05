@@ -11,7 +11,7 @@ description: AllstarCoding 流水环节 8 的开发执行环节使用。当需�
 ## 1. 开发子会话协议（核心：挂起保活，可打回唤醒）
 
 1. **每任务一个独立 spawn**：任务清单有几个 T 就起几个互不相关的会话——T1 一个会话（`dev_t1`），T2 另一个干净会话（`dev_t2`）。**绝不**让一个开发子会话连续承接多个任务。
-2. spawn 用**契约 schema v2 任务书**（见 §2），记下返回的 task_name 与 durable id → 立即登记 state.md（对应 subStep 的 agentRef，sessionStatus: active，**startedAt 写入**——V2/V3 校验的时间锚）。
+2. spawn 用**契约 schema v2 任务书**（见 §2），记下返回的 task_name 与 durable id → 立即登记 state.md（对应 subStep 的 agentRef + **contract 字段**（taskName/role/agentType/scope/agentId——ac-fence 围栏重启恢复的依据，ac-pipeline §0.8），sessionStatus: active，**startedAt 写入**——V2/V3 校验的时间锚）。**spawn 输入的 task.scope 必填且为单行逗号分隔 glob**——围栏按它判定写域，缺了/超基线 spawn 直接被 block（reason 会说明）。
 3. **派发前规则**：派发任何 T 前必须存在干净 checkpoint（没有则先补空档）——T 内半途爆炸时上一 checkpoint 即安全点（ac-pipeline §0.5）。
 4. 任务完成（settlement 通知到达、评审通过）→ **挂起不关闭**：state.md 该 subStep 置 `sessionStatus: suspended`、`status: done`。会话保留——后续白测/黑测发现该任务的问题时 `followup_task(dev_t1, <问题清单>)` 唤醒**同一会话**修正（它记得当时怎么做的），修完再次挂起。
 5. **全流程无问题** → 收尾环节统一关闭全部挂起会话（ac-finalize）。
@@ -35,6 +35,7 @@ spawn_agent 的任务契约（ac-pipeline §0.2 映射）：
 ## 3. 开发子的工作契约（写进任务书，此处为规范出处）
 
 - **范围**：只做任务卡内的事。发现卡外问题 → 记入报告"风险"节，不动手。
+- **围栏拦截（ac-fence）**：工具调用被 block（结果带 `ac-fence:` 前缀 reason，如越权写/git 写命令）→ **不重试、不绕路**，reason 已含指引——在最终报告"待主控处理"节登记（诉求、理由、被拒信息原文），等主控扩域或代办。围栏判定以任务契约 task.scope 为准，是 prohibitions 的机器强制版。
 - **自测自改**：完成编码后跑与改动相关的既有测试；失败 → 修复 → 重跑，直到通过或证明与改动无关（后者报告里给证据）。
 - **沙箱拒绝**：命令被拒（权限不足/策略拦截）→ **不重试、不绕路**，走 help_protocol 记入报告"待主控处理"节（命令、目的、拒绝信息原文）。主控会交辅助者代办。
 - **禁 git**：不 commit 不 branch 不 push；改动留在工作区。提交历史是流水线的审计日志，打点权在主控侧（T 级存档制，ac-pipeline §0.5）。
@@ -42,7 +43,7 @@ spawn_agent 的任务契约（ac-pipeline §0.2 映射）：
   ```
   - 已完成：<文件清单 + 每处一句说明>
   - 自测结果：<跑了什么命令、结果>
-  - 待主控处理：<沙箱拒绝项/未决问题，无则写"无">
+  - 待主控处理：<围栏拦截项/沙箱拒绝项/未决问题，无则写"无">
   - 风险：<发现的隐患，无则写"无">
   ```
 

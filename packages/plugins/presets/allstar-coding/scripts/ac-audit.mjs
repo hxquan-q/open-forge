@@ -17,10 +17,10 @@
  * 本脚本自身只读（git log/diff/status + 文件扫描），不做任何写操作、不修改任何文件。
  *
  * 用法（node ≥ 20，在目标项目根或任意目录调用，--project 指向目标项目根）：
- *   node tools/ac-audit.mjs gate   --project <项目根> --since "<ISO时间>" [--until "<ISO时间>"] [--roles developer,reviewer]
- *   node tools/ac-audit.mjs snapshot --project <项目根> --scope "<glob>,<glob>"
- *   node tools/ac-audit.mjs checkpoint --project <项目根> [--scope "<glob>,<glob>"]
- *   node tools/ac-audit.mjs matrix  --project <项目根>   （打印权限矩阵写域，供任务书拼装时对照）
+ *   node scripts/ac-audit.mjs gate   --project <项目根> --since "<ISO时间>" [--until "<ISO时间>"] [--roles developer,reviewer]
+ *   node scripts/ac-audit.mjs snapshot --project <项目根> --scope "<glob>,<glob>"
+ *   node scripts/ac-audit.mjs checkpoint --project <项目根> [--scope "<glob>,<glob>"]
+ *   node scripts/ac-audit.mjs matrix  --project <项目根>   （打印权限矩阵写域，供任务书拼装时对照）
  *
  * 退出码：0 = PASS；1 = 发现越权/违规项；2 = 用法/环境错误（无法完成校验，视为不放行）。
  */
@@ -29,6 +29,10 @@ import { spawnSync } from "node:child_process";
 import { closeSync, openSync, readFileSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
+
+// glob 语义的权威实现已提取至 scope-glob.mjs（ac-fence 判定器与本脚本共用同一份——
+// 事中拦截与事后审计必须对同一 path 给出同一判定，否则围栏放行的和审计判越权的会互相打架）。
+import { compileScope, globToRegExp, splitScopeList } from "./scope-glob.mjs";
 
 // ---------------------------------------------------------------------------
 // 通用工具
@@ -98,101 +102,6 @@ function toRel(root, path) {
 	return rel.split(sep).join("/");
 }
 
-/**
- * glob 转 RegExp。支持子集：双星跨目录、单星段内通配、问号单字符、花括号组。
- * 例：docs/ac/prototype/ 下任意层级，或 src 下所有 ts/tsx。写域声明保守，未匹配即越权。
- */
-function globToRegExp(pattern) {
-	let re = "";
-	let i = 0;
-	while (i < pattern.length) {
-		const ch = pattern[i];
-		if (ch === "*") {
-			if (pattern[i + 1] === "*") {
-				// 双星斜杠或裸双星：跨目录任意段（含零段）
-				if (pattern[i + 2] === "/") {
-					re += "(?:[^/]+/)*";
-					i += 3;
-				} else {
-					// 尾部 /**：目录本体与其下全部内容（本体匹配由 matches() 的前缀语义兜底，
-					// 这里保证"目录/xxx"也命中；写成 .* 即可）
-					re += ".*";
-					i += 2;
-				}
-			} else {
-				re += "[^/]*";
-				i += 1;
-			}
-		} else if (ch === "?") {
-			re += "[^/]";
-			i += 1;
-		} else if (ch === "{") {
-			const end = pattern.indexOf("}", i);
-			if (end === -1) {
-				re += "\\{";
-				i += 1;
-			} else {
-				const group = pattern
-					.slice(i + 1, end)
-					.split(",")
-					.map((alt) => {
-						// 递归生成的是完整正则（含 ^$ 锚），剥掉锚只留主体
-						const src = globToRegExp(alt).source;
-						return src.startsWith("^") && src.endsWith("$") ? src.slice(1, -1) : src;
-					})
-					.join("|");
-				re += `(?:${group})`;
-				i = end + 1;
-			}
-		} else {
-			re += ch.replace(/[.+^$()|[\]\\]/g, "\\$&");
-			i += 1;
-		}
-	}
-	return new RegExp(`^${re}$`);
-}
-
-/** 按逗号分割 scope 列表，但跳过花括号组内的逗号（{ts,tsx} 是一个 pattern 的一部分）。 */
-function splitScopeList(raw) {
-	const parts = [];
-	let depth = 0;
-	let current = "";
-	for (const ch of String(raw ?? "")) {
-		if (ch === "{") depth += 1;
-		if (ch === "}") depth = Math.max(0, depth - 1);
-		if (ch === "," && depth === 0) {
-			parts.push(current);
-			current = "";
-		} else {
-			current += ch;
-		}
-	}
-	if (current.trim()) parts.push(current);
-	return parts;
-}
-
-/** glob 列表 → 匹配器（含「精确路径也是合法 scope 条目」语义；目录含其全部后代）。 */
-function compileScope(patterns) {
-	const list = (Array.isArray(patterns) ? patterns : splitScopeList(patterns))
-		.map((p) => String(p).trim())
-		.filter(Boolean);
-	return {
-		patterns: list,
-		/** 命中任一 pattern 即在写域内。 */
-		matches(path) {
-			return list.some((pattern) => {
-				if (pattern.includes("*") || pattern.includes("?") || pattern.includes("{")) {
-					if (globToRegExp(pattern).test(path)) return true;
-					// 目录本体语义：`dir/**` 的本体（dir 自身）也算写域内
-					const base = pattern.replace(/\/\*\*$/, "");
-					return base !== pattern && base === path;
-				}
-				return pattern === path || path.startsWith(`${pattern}/`);
-			});
-		},
-	};
-}
-
 // ---------------------------------------------------------------------------
 // 权限矩阵（设计文档 §9.2 角色权限矩阵 v1 的机器可判子集）
 // ---------------------------------------------------------------------------
@@ -255,6 +164,9 @@ function matrixScopeFor(roles) {
 // 证据链 A：git 轨迹
 // ---------------------------------------------------------------------------
 
+/** 主控/插件预期写入，不作为越权证据（state.md = 主控状态账本；fence-log.jsonl = 围栏拦截记录，ac-fence-spec §5）。 */
+const EXPECTED_WRITER_PATHS = ["docs/ac/state.md", "docs/ac/fence-log.jsonl"];
+
 /**
  * 环节开始后的提交改动集（V2 链 A）。
  * `git log --name-only --pretty=format:... --since` 在 Windows/跨时区下对 author-date 的解析
@@ -277,8 +189,8 @@ function gitChangesSince(root, sinceISO, untilISO) {
 		if (Number.isNaN(commitDate) || commitDate < since || commitDate > until) continue;
 		for (const line of record.slice(separator + 1).split("\n")) {
 			const file = line.trim();
-			if (file && !file.startsWith("docs/ac/state.md")) {
-				// state.md 由主控每步更新，属预期写入，不作为子代理越权证据（V2 的比对对象是子代理写域）
+			if (file && !EXPECTED_WRITER_PATHS.some((p) => file.startsWith(p))) {
+				// state.md/fence-log.jsonl 由主控/插件写入，属预期写入，不作为子代理越权证据（V2 的比对对象是子代理写域）
 				changed.add(file);
 			}
 		}
@@ -296,7 +208,7 @@ function gitWorkingChanges(root) {
 		if (!file) continue;
 		// 重命名记作两侧；删除记作改动（越权删除同样是越权）
 		const paths = file.split(" -> ");
-		for (const p of paths) if (p && !p.startsWith("docs/ac/state.md")) changed.add(p);
+		for (const p of paths) if (p && !EXPECTED_WRITER_PATHS.some((ex) => p.startsWith(ex))) changed.add(p);
 	}
 	return [...changed].sort();
 }
@@ -307,7 +219,7 @@ function gitCheckpointChanges(root) {
 	return out
 		.split("\n")
 		.map((l) => l.trim())
-		.filter((l) => l && !l.startsWith("docs/ac/state.md"))
+		.filter((l) => l && !EXPECTED_WRITER_PATHS.some((ex) => l.startsWith(ex)))
 		.sort();
 }
 
@@ -332,10 +244,9 @@ const MTIME_SCAN_SKIP_DIRS = new Set([
 	"target",
 ]);
 
-/** 递归扫描 mtime > since 的文件（排除 .git/node_modules 等非证据目录）。 */
+/** 递归扫描 mtime > since 的文件（排除 .git/node_modules 等非证据目录与预期写入路径）。 */
 function scanModifiedSince(root, sinceISO) {
 	const since = Date.parse(sinceISO);
-	if (Number.isNaN(since)) throw new Error(`invalid timestamp: ${sinceISO}`);
 	const found = [];
 	const walk = (dir) => {
 		let entries;
@@ -354,7 +265,7 @@ function scanModifiedSince(root, sinceISO) {
 			} else if (entry.isFile()) {
 				try {
 					const mtime = statSync(full).mtimeMs;
-					if (mtime > since && !rel.startsWith("docs/ac/state.md")) found.push(rel);
+					if (mtime > since && !EXPECTED_WRITER_PATHS.some((p) => rel.startsWith(p))) found.push(rel);
 				} catch {
 					/* 文件消失：跳过 */
 				}
@@ -410,7 +321,7 @@ function runGate({ root, since, until, roles, extraScope, allowOutOfScope }) {
 		roles: String(roles),
 		scopePatterns: [...scope.patterns, ...contract.patterns],
 		chainA: { source: "git log since startedAt", files: chainA },
-		chainB: { source: "mtime > startedAt (state.md excluded)", files: chainB },
+		chainB: { source: "mtime > startedAt (expected-writer paths excluded)", files: chainB },
 		union: unionSet,
 		...verdict,
 	};
@@ -503,8 +414,8 @@ function renderMatrix() {
 		lines.push(`| ${ROLE_LABELS[role] ?? role} (${role}) | ${entry.tier} | ${write} |`);
 	}
 	lines.push("");
-	lines.push("规则：主控派发可在契约 scope 里收紧但不可超基线；git 写操作不进任何子代理写域（全收主控侧）；");
-	lines.push("state.md 由主控写入，属预期写入，两条证据链均已排除。");
+	lines.push("规则：主控派发可在契约 scope 里收紧但不可超基线；git 写操作不进普通子代理写域（T 级存档走轻量 git 子代理，契约 allow_git_write: true）；");
+	lines.push("state.md（主控账本）与 fence-log.jsonl（围栏拦截记录）属预期写入，两条证据链均已排除。");
 	return lines.join("\n");
 }
 

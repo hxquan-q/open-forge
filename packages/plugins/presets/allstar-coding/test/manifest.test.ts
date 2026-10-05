@@ -52,8 +52,12 @@ describe("AllstarCoding manifest", () => {
 		const manifest = await readManifest();
 		expect(manifest.id).toBe("allstar-coding");
 		expect(manifest.agent?.agents?.map((agent) => agent.id)).toEqual(["allstar", "helper"]);
-		// 声明面（agents/teams）不需要权限；唯一声明的是技能挂载所需权限。
-		expect(manifest.permissions).toEqual(["agent.skills.control"]);
+		// 声明面（agents/teams）不需要权限；声明的是技能挂载 + ac-fence 事中拦截（hook 注册与执行）。
+		expect(manifest.permissions).toEqual([
+			"agent.skills.control",
+			"agent.hooks.register",
+			"agent.hookHandler.execute",
+		]);
 	});
 
 	it("ships a readable system prompt for every agent", async () => {
@@ -140,10 +144,10 @@ describe("AllstarCoding stage skills", () => {
 		for (const skill of STAGE_SKILLS) {
 			const content = await readPluginFile(`agent/skills/${skill}/SKILL.md`);
 			// 只统计「技能引用」：ac-audit 是工具（scripts/ac-audit.mjs）、
-			// ac-archive 是产物归档目录（docs/ac-archive/），都不是技能
+			// ac-archive 是产物归档目录（docs/ac-archive/）、ac-fence 是围栏代码模块（src/fence），都不是技能
 			const references = [...content.matchAll(/`?(ac-[a-z-]+)`?/g)]
 				.map((match) => match[1])
-				.filter((ref) => ref !== "ac-audit" && ref !== "ac-archive");
+				.filter((ref) => ref !== "ac-audit" && ref !== "ac-archive" && ref !== "ac-fence");
 			for (const reference of new Set(references)) {
 				expect(shipped.has(reference), `${skill} references missing skill ${reference}`).toBe(true);
 			}

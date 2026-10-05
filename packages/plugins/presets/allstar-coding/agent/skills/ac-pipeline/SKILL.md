@@ -1,6 +1,6 @@
 ---
 name: ac-pipeline
-description: AllstarCoding 流水线总纲手册。在流水线会话开始时、每个环节推进前、不确定下一步时、以及会话中断后恢复时使用。定义 13 环节流水、产物落盘规范、确认门协议、state.md JSON 规范、打回与跳回规则、子代理生命周期与主控职责、权限矩阵与任务契约 v2、越权处置 SOP、T 级存档制与硬校验节点。其他 ac-* 技能是各环节的细化，本技能负责把它们串起来。
+description: AllstarCoding 流水线总纲手册。在流水线会话开始时、每个环节推进前、不确定下一步时、以及会话中断后恢复时使用。定义 13 环节流水、产物落盘规范、确认门协议、state.md JSON 规范、打回与跳回规则、子代理生命周期与主控职责、权限矩阵与任务契约 v2、越权处置 SOP、T 级存档制与硬校验节点、ac-fence 事中拦截围栏。其他 ac-* 技能是各环节的细化，本技能负责把它们串起来。
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -25,6 +25,7 @@ description: AllstarCoding 流水线总纲手册。在流水线会话开始时�
 | **任务契约 schema** | v2 八要素升级版——spawn 任何子代理前必须拼装（§0.2） |
 | **越权处置 SOP** | 发现越权按六步执行：发现→冻结→核查→订正→记录→继续（§0.6） |
 | **硬校验节点** | V1-V6 校验节点表 + 双证据链（§0.7）；主控在对应节点跑 `scripts/ac-audit.mjs` 贴报告 |
+| **ac-fence 事中拦截** | 插件 PreToolUse 围栏按契约 scope 事中判定越权（§0.8）；主控 git 操作走轻量 git 子代理（本会话直接跑 git 写命令会被围栏拦截） |
 
 ### 0.1 确认门协议
 
@@ -58,6 +59,8 @@ acceptance:       验收判据（静态判据 vs 命令判据分开列，对齐�
 2. **prohibitions 每份契约必带四条基线**：①不 commit/branch/push（git 写操作全收主控侧）②不写 scope 外文件 ③不安装依赖 ④沙箱被拒不重试不绕路，记「待主控处理」。
 3. help_protocol 统一格式：「遇到 <情景> → 在最终报告『待主控处理』节登记 <命令/诉求/理由>，等待主控裁决」。
 4. 任务书仍需自包含：输入只给产物路径与结论，验收标准逐条复制（评审子的对照依据）。
+5. **spawn_agent 输入用 v1 槽位名**（history/current_state/objective/scope/constraints/relevant_context/deliverables/validation），v2 八要素（stage_context/prohibitions/help_protocol/acceptance）按 §0.2 开头的映射折算进去——内核 schema 只认 v1 字段名；**task.scope 必填且为单行逗号分隔 glob**（如 `src/dto/**,src/service/dto.ts`）——ac-fence 围栏以此字段为写域判定依据，缺了会直接 block spawn。
+6. **task_name 前缀对齐角色**（`req_`/`arch_`/`plan_`/`dev_`/`review_`/`wb_`/`bb_`/`dep_`/`fin_`/`help_`）——ac-fence 按前缀推断角色写域基线。
 
 ### 0.3 角色权限矩阵 v1（基线写域，glob 相对项目根）
 
@@ -102,7 +105,7 @@ T1 开发 → 评审 pass → 主控存档 commit（checkpoint_1）→ T2 开发
                                     ↑ T2 崩了：reset 到 checkpoint_1，重派 T2
 ```
 
-- **权力**：打点权在主控侧（经轻量 git 子代理执行）；开发子零 git 不变。
+- **权力**：打点权在主控侧（经轻量 git 子代理执行：task_name `git_` 前缀 + 契约 `allow_git_write: true`，见 §0.8 第 2 条）；开发子零 git 不变。
 - **派发前规则**：派发任何 T 前必须存在干净 checkpoint（没有则先补空档）——T 内半途爆炸时上一 checkpoint 即安全点。
 - **提交信息**：`<T编号>: <摘要>`（如 `T1: dto 层实现`），自然形成执行史。
 - **V4 校验联动**：每次 checkpoint 提交后跑 `ac-audit.mjs checkpoint`（§0.7），提交带私货即拒绝打点。
@@ -144,6 +147,16 @@ T1 开发 → 评审 pass → 主控存档 commit（checkpoint_1）→ T2 开发
 2. **归因精度极限**：同时间窗内两子代理并发时，mtime 只能归到「二者之一」，需叠加 git 链文件归属补判——矩阵写域互不重叠正是为此。
 3. **校验器自身权限**：ac-audit.mjs 只读（git log/diff/status + 文件扫描），由主控执行；输出 PASS / 越权清单+建议处置。L2 化后同一判定逻辑搬入工具拦截层，语义不变、从事后审计升级为事中阻断。
 
+### 0.8 ac-fence 事中拦截围栏（L2）
+
+插件（本插件 dist 内）注册了 PreToolUse/SubagentStart hook：**主控 spawn 的每个子代理，其工具调用在执行前按任务契约 scope 判定，越权即 block**（工具结果会带 `ac-fence:` 前缀 reason）。主控需要知道的行为约定：
+
+1. **围栏判定即 §0.2/§0.3 的机器强制版**：scope 超基线/为空、agent_type 不在 {general, explorer}、子代理写 scope 外文件、普通子代理跑 git 写命令、未登记子代理的非只读调用——都会被拦。契约拼装纪律（§0.2）不达标时 spawn 直接被 block，reason 会说明缺什么。
+2. **主会话 git 写命令同样被拦**（`git commit/push/...` 在主控会话直接跑会 block）：T 级存档走**轻量 git 子代理**——spawn 时 task_name 用 `git_` 前缀、契约输入带 `allow_git_write: true`（豁免只授给 `git_` 前缀，其他契约偷带会被 spawn 校验拒绝），围栏对该契约的 git 写命令放行。`git status/log/diff` 只读命令不受影响（任何会话）。
+3. **子代理被 block 时**：reason 已带 help_protocol 指引（「在最终报告『待主控处理』节登记」），主控收到登记后裁决：扩域重派（新契约）/ 辅助者代办 / 打回。**不要教子代理绕围栏**——围栏拦截记录会落 `docs/ac/fence-log.jsonl`（每条含 ts/sessionId/agentId/taskName/tool/inputDigest/reason；属预期写入，ac-audit 双链已排除，不会反咬越权）。
+4. **fail-open**：围栏 handler 崩溃/超时=放行（宿主语义），事后仍有 ac-audit（L1.5）双链对账兜底——fence-log 缺记录不代表没发生越权。
+5. **状态同步**：spawn 契约的 `contract` 字段（taskName/role/agentType/scope/agentId）会由主控写入 state.md 对应 subStep（§4.3 落盘形态）——desktop 重启后围栏从 state.md 恢复契约登记。
+
 ## 1. 流水定义（13 环节）
 
 | # | 环节 | 执行者 | 产物 | 用户确认 |
@@ -178,6 +191,7 @@ docs/ac/
 ├── reviews.md         # 评审记录（环节 8 追加制，评审子写域，见 §0.4）
 ├── whitebox.md        # 白盒测试文档与问题清单（环节 9）
 ├── blackbox.md        # 黑盒测试文档（环节 10，交用户执行）
+├── fence-log.jsonl    # ac-fence 围栏拦截记录（§0.8；追加制，收尾时随产物处置一并清理）
 └── test-results/      # 测试执行证据（json 报告与问题清单）
 ```
 
@@ -218,7 +232,8 @@ docs/ac/
   "userConfirmation": "unconfirmed",
   "executions": 1,
   "isSubStep": false,
-  "subSteps": []
+  "subSteps": [],
+  "contract": { "taskName": "req_1", "role": "requirements", "agentType": "general", "scope": ["docs/ac/requires.md", "docs/ac/prototype/**"], "agentId": "<durable id>" }
 }
 ```
 
@@ -235,6 +250,7 @@ docs/ac/
 | `userConfirmation` | `unconfirmed` / `confirmed` / `skipped` / `not_required` |
 | `executions` | 执行次数；打回重跑 +1；>3 → 主控停止打回上报用户 |
 | `isSubStep` / `subSteps` | 子环节结构与父完全相同（递归）；任何环节都可用子环节（如白测分代码风格评审/单元测试/check 命令多个 subSteps，跳回时精确定位） |
+| `contract` | 任务契约登记快照（ac-fence 围栏的判定依据，§0.8）：`{taskName, role, agentType, scope[], agentId}`——spawn 后由主控回填；desktop 重启后围栏靠它恢复登记 |
 
 ### 3.3 状态机与校验规则（供主控自查 + ac-gate 校验共用）
 

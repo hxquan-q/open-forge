@@ -168,6 +168,19 @@ describe("V3 snapshot（评审前快照）", () => {
 		const result = runSnapshot({ root, scope: "src/**" });
 		expect(result.pass).toBe(true);
 	});
+
+	it("fence-log.jsonl 的围栏写入不计入越权证据（P1 回归：围栏拦截即记日志，不得反过来误报越权）", () => {
+		const root = makeRepo("v3-fence-log");
+		writeFile(join(root, "src/calc/dto.ts"), "export interface CalcDto {}\n");
+		// 模拟围栏在本环节内拦截了一笔：docs/ac/fence-log.jsonl 被插件追加
+		writeFile(
+			join(root, "docs/ac/fence-log.jsonl"),
+			'{"ts":"2025-01-01T00:00:00.000Z","tool":"write","inputDigest":"path=docs/ac/design.md","reason":"ac-fence：越权写"}\n',
+		);
+		const result = runSnapshot({ root, scope: "src/calc/**" });
+		expect(result.pass).toBe(true);
+		expect(result.outOfScope).not.toContain("docs/ac/fence-log.jsonl");
+	});
 });
 
 describe("V4 checkpoint（存档点）", () => {
@@ -198,6 +211,16 @@ describe("V4 checkpoint（存档点）", () => {
 		writeFile(join(root, "docs/ac/state.md"), "{}\n");
 		git(root, "add", "src/a.ts", "docs/ac/state.md");
 		git(root, "commit", "-q", "-m", "T1: a");
+		const result = runCheckpoint({ root, scope: "src/**" });
+		expect(result.pass).toBe(true);
+	});
+
+	it("fence-log.jsonl 误入提交不算越权（插件预期写入）", () => {
+		const root = makeRepo("v4-fence-log");
+		writeFile(join(root, "src/a.ts"), "export {}\n");
+		writeFile(join(root, "docs/ac/fence-log.jsonl"), '{"tool":"write"}\n');
+		git(root, "add", "src/a.ts", "docs/ac/fence-log.jsonl");
+		git(root, "commit", "-q", "-m", "T1: a + fence-log");
 		const result = runCheckpoint({ root, scope: "src/**" });
 		expect(result.pass).toBe(true);
 	});
@@ -243,6 +266,28 @@ describe("V2 gate（环节收口双链比对）", () => {
 		// 未提交 → 链 A 抓不到，链 B 抓到（双链互补的证明）
 		expect(result.chainA.files).not.toContain("docs/ac/review-log.md");
 		expect(result.chainB.files).toContain("docs/ac/review-log.md");
+	}, 30000);
+
+	it("围栏拦截记录（fence-log.jsonl）不进链 B 越权证据（P1 回归）", async () => {
+		const root = makeRepo("v2-fence-log");
+		await sleep(1100);
+		const since = new Date().toISOString();
+		await sleep(1100);
+		// 本环节内：开发子写域内实现 + 围栏拦了一笔越权写（fence-log.jsonl mtime 刷新）
+		writeFile(join(root, "src/calc/dto.ts"), "export interface CalcDto {}\n");
+		writeFile(
+			join(root, "docs/ac/fence-log.jsonl"),
+			'{"ts":"2025-01-01T00:00:00.000Z","tool":"write","inputDigest":"path=docs/ac/design.md","reason":"ac-fence：越权写"}\n',
+		);
+		const result = runGate({
+			root,
+			since,
+			roles: "developer",
+			extraScope: "src/calc/**",
+		});
+		expect(result.pass).toBe(true);
+		expect(result.chainB.files).not.toContain("docs/ac/fence-log.jsonl");
+		expect(result.outOfScope).not.toContain("docs/ac/fence-log.jsonl");
 	}, 30000);
 
 	it("全部落在写域并集内 → PASS（链 A ∪ 链 B ⊆ 写域）", async () => {

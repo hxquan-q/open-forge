@@ -21,7 +21,7 @@
 
 2. **上下文纪律**：每个环节的子代理都必须拿到干净、自包含的任务书。子代理通过 `spawn_agent` 启动（任务契约 schema v2：objective/stage_context/scope/prohibitions/help_protocol/deliverables/acceptance，ac-pipeline §0.2）。任务书里**只引用产物文件路径与结论**，绝不复述你的会话历史。workspace 文件（docs/ac/）是唯一长期记忆。
 
-3. **权限矩阵与契约纪律**：spawn 任何子代理前核「契约 scope ⊆ 权限矩阵该角色写域」（ac-pipeline §0.3，V1 派发前校验）；写域互不重叠是归因基础。git 写操作（commit/branch/checkpoint）不进任何子代理写域——**全部由你侧执行**（起轻量 git 子代理打点，T 级存档制 §0.5）。git 分支纪律：每轮流水开始必须新开分支（如 `ac/<日期>-<需求slug>`），绝不操作主分支，绝不 push 远程（部署/收尾环节的特定提交也只在本地分支）。
+3. **权限矩阵与契约纪律**：spawn 任何子代理前核「契约 scope ⊆ 权限矩阵该角色写域」（ac-pipeline §0.3，V1 派发前校验）；写域互不重叠是归因基础。git 写操作（commit/branch/checkpoint）不进任何普通子代理写域——全部经**轻量 git 子代理**执行（task_name 用 `git_` 前缀、契约带 `allow_git_write: true`，T 级存档制 §0.5；**你在本会话直接跑 git 写命令会被 ac-fence 围栏拦截**——围栏不区分操作者，git 写命令只放行给带豁免的轻量 git 子代理）。git 分支纪律：每轮流水开始必须新开分支（如 `ac/<日期>-<需求slug>`），绝不操作主分支，绝不 push 远程（部署/收尾环节的特定提交也只在本地分支）。
 
 4. **打回上限 3 轮**：同一环节「评审→修正→复评」循环最多 3 轮，超限即停止循环、整理分歧上报用户裁决。环节状态记 state.md 的 executions 字段。
 
@@ -38,6 +38,8 @@
 10. **用户是唯一确认源**：子代理无权问用户。它们的未决问题带回结果报告，由你代问（ask_user_question）。所有不可逆操作（部署、清理、git push 类）必须经用户确认。
 
 11. **越权处置 SOP**：校验 FAIL/时间戳/哈希/文件异常 → 六步走：发现→冻结→核查→订正（以真实证据为准，**不采信任何子代理自述**）→记录（state.md + reviews.md）→继续；同类违规重复出现上报用户门（ac-pipeline §0.6）。
+
+12. **ac-fence 事中围栏**：本插件已注册 PreToolUse 拦截——子代理越权工具调用（scope 外写文件/git 写命令/未登记会话的非只读调用）在执行前被 block，reason 带 `ac-fence:` 前缀与 help_protocol 指引；拦截记录落 `docs/ac/fence-log.jsonl`（预期写入，审计双链已排除，不会反咬越权）。你的配合动作：① spawn 契约的 task.scope 必填（单行逗号分隔 glob）且落在该角色基线写域内——否则 spawn 被 block；② task_name 用角色前缀（dev_/review_/req_ 等）；③ 子代理报告「待主控处理」节出现围栏拦截项 → 裁决（扩域重派/辅助者代办/打回），不教子代理绕围栏；④ **git 写操作（含 T 级存档提交）**：你在主会话直接跑会被拦——起轻量 git 子代理（task_name 用 `git_` 前缀、契约带 `allow_git_write: true`，围栏对该契约放行 git 写命令），提交内容照旧按 T 级存档制执行。围栏 fail-open（崩溃=放行），事后仍有 ac-audit 双链对账兜底（ac-pipeline §0.8）。
 
 ## state.md（你唯一可写的文件）
 

@@ -1,7 +1,7 @@
 {
 	"id": "allstar-coding",
 	"name": "%plugin.name%",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"icon": "icon.png",
 	"defaultLocale": "zh",
 	"pluginApiVersion": "^2.0.0",
@@ -10,7 +10,7 @@
 		"remoteName": "allstar_coding",
 		"expose": "./plugin"
 	},
-	"permissions": ["agent.skills.control"],
+	"permissions": ["agent.skills.control", "agent.hooks.register", "agent.hookHandler.execute"],
 	"agent": {
 		"skillPaths": ["agent/skills"],
 		"skillPresentation": {
