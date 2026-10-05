@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-This repository is the Open Vetta client. Security fixes land on the `dev` branch and ship with the next desktop release. We do not maintain long-lived patched release lines.
+This repository is the Open Forge client. Security fixes land on the `dev` branch and ship with the next desktop release. We do not maintain long-lived patched release lines.
 
 ## Reporting a vulnerability
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0048
 type: task
-status: ready
+status: in_progress
 priority: P0
 owner: apps/docs-site
 requirement: REQ-0003
@@ -73,9 +73,10 @@ updated: 2026-10-06
 
 - 阻塞已解除（2026-10-06，TASK-0217 复核）：`TASK-0045` 与 `TASK-0049` 的 frontmatter 均为 done，原阻塞条件（等 0045 收口、随 0049 关闭）已满足。但**本任务尚未实施**——交付记录的四条（实际修改、实际运行、未运行及原因、剩余风险）全为空。状态转 ready，等待实施。原有约束保持不变：冻结技术标识（`.vettapkg`、`@vetta/*`、`VETTA_*`）不改；社区继续使用已冻结的现有入口。
 
-## 交付记录
+## 交付记录（第一片，2026-10-06）
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：`apps/docs-site/lib/site.ts` 的站点元数据——`site.name`、`site.title`、两语言的 title 与 description、以及兜底分区标签前缀（`VETTA /` 改为 `OPEN FORGE /`）里的产品称呼由 Vetta 改为 Open Forge。
+- 刻意未改（待用户定）：`logoPath` 仍指 `/images/vetta-app-icon.webp`——改名需要新增或重命名公开图标资产，属坐标与资产决策；`marketingUrl`/`githubUrl` 已指向 fork，`discordUrl` 与 `docs.openvetta.com` 属 TASK-0049 冻结的现有入口，保持不动。
+- 验证：grep 复核该文件后只剩 `logoPath` 一处旧品牌字样。
+- 未运行及原因：未跑 docs-site 构建（本轮为文案改动，构建按本任务合同在收口时跑）；未部署。
+- 剩余风险：本任务覆盖站点元数据、双语内容与 SEO/LLM 发现入口，本条只做了站点元数据；84 个内容文件与 canonical/sitemap/LLM 索引待后续切片。
