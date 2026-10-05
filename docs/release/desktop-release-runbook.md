@@ -94,7 +94,7 @@ flowchart LR
 
 构建 job、R2 发布 job 和 GitHub 发布 job 必须能拿到与目标 channel 对应的 Environment。当前 workflow 会根据 `channel` 为 test 选择 `desktop-test`，其它情况选择 `desktop-production`。
 
-### 当前实际配置与待配置项（2026-10-05 实测）
+### 当前实际配置（2026-10-06 实测与其后落地）
 
 用命令核对，不要凭记忆：
 
@@ -103,16 +103,16 @@ gh api repos/<owner>/<repo>/environments
 gh api repos/<owner>/<repo>/rulesets
 ```
 
-实测结果（`hxquan-q/open-forge`）：
+现状（`hxquan-q/open-forge`）：
 
-| 项 | 现状 | 应有 |
-| --- | --- | --- |
-| `desktop-production` | 存在，但 `protection_rules` 为空、`can_admins_bypass` 为 true | 加 required reviewers（可开禁止自审），让正式发布在平台层需要人工批准 |
-| `desktop-test` | 尚未创建，而 workflow 在 test 渠道会引用它 | 创建并同样配置审批，使用独立 test prefix 与 URL |
-| `v*` tag | 没有 ruleset 限制 | 加 ruleset 限制 tag 的创建、改写与删除，让「谁能打发布 tag」由规则强制而不是约定 |
-| `main` | 分支保护接口返回 404，未保护 | 视需要保护；本仓日常集成在本地 main，对外推送走 `main:dev` |
+| 项 | 现状 |
+| --- | --- |
+| `desktop-production` | 存在，`protection_rules` 为空。**required reviewers 在当前计划不可用**：API 返回 422「Please ensure the billing plan supports the required reviewers protection rule」。 |
+| `desktop-test` | 已创建（此前不存在，而 workflow 在 test 渠道会引用它）；同样无法配 required reviewers。 |
+| `v*` tag | 已加 ruleset `protect release tags`（id 24519581，target `tag`，规则 `deletion` 与 `update`），仓库管理员角色 bypass，正常打 tag 不受影响。 |
+| `main` | 分支保护接口返回 404，未保护；本仓日常集成在本地 main，对外推送走 `main:dev`。 |
 
-在补齐 required reviewers 之前，`environment:` 声明只是把 job 绑到环境，**不构成审批**；不要把「已声明 environment」当成「已有人工门」。
+因此当前可用的人工门是这两道：仓库设置层的 tag ruleset——任何人都不能删除或改写已发布的 `v*` tag；以及本地 `release:desktop:publish --confirm-publish`——发布动作由责任人亲自执行。`environment:` 声明本身不构成审批；要拿到环境审批需要升级到支持 required reviewers 的计划，届时按上表补配即可。
 
 
 ### Variables

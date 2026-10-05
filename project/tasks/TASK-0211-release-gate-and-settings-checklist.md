@@ -71,3 +71,4 @@ PLAN-0016 的阶段 5 与阶段 6。用户口径是「发版由人发起、开�
 - 未运行及原因：未改任何 workflow、未代改仓库设置（ruleset、Environment、tag 保护）、未执行发布。
 - 剩余风险：文档已写明「声明 environment 不等于有人工门」，但门禁本身仍待用户在仓库设置里补齐；补齐前，发版约束完全依赖「谁推 tag 谁在发版」这条纪律。
 - 集成：实现提交 `ed4c31afb`（本地 `main`），`integration_status: integrated`；未推送、未发布。
+- 后续（TASK-0213，2026-10-06）：用户明确授权代改仓库设置。`v*` tag 的删除与改写 ruleset 已落地（id 24519581，仓库管理员 bypass），`desktop-test` 已创建；两个发布环境的 required reviewers 被 GitHub 以 422 拒绝，当前计划不支持。本 Task 写的「不代改仓库设置」只约束该 Task 当时的范围。

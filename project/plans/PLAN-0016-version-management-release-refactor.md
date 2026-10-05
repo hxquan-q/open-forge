@@ -45,7 +45,7 @@ depends_on: [PLAN-0005]
 3. **说明碎片化**（done，TASK-0212）：引入碎片目录与汇编脚本，把「补写发布说明」从「改 `v<版本>.md`」改成「写一份碎片」；汇编产物仍是唯一 Release 正文；`check` 断言碎片可汇编且结构合法。取舍已定：既有条目不迁移，只对未来版本生效（加法式）；`project/` 内 102 处历史引用不回填。
 4. **清理继承残留**（done，TASK-0210）：删除或收敛根 `version:*`、`release:*`、`publish*` 与 `scripts/release.mjs`、`scripts/release-windows.mjs`、`scripts/sync-versions.js`；把 workspace 发包的 fail-closed 守卫转为 `check` 断言。同时裁决 `0.55.3` 遗留（根、docs-site、runtime-knowledge）是冻结并注明，还是改中性值。
 5. **上线门（已定：保留直发）**：结论：保留本仓的直发模型（各平台构建成功即上线更新清单），补偿控制写进 runbook——发布后 `verify published r2/github feed` 回公网复核，正式发布由责任人本地 `release:desktop:publish -- <版本> --confirm-publish` 发起。代价是发布作业一成功客户端即可见，且缺少上游清单上线时的降级拒绝与 sha512 复核；若要改回两步门，需移植上游 `desktop-promote.yml` 与 `promote-update-metadata-r2.mjs`，并把发布作业改为把清单写入 `pending/<版本>/`。
-6. **平台侧加固**（清单已落 runbook，TASK-0211）：ruleset 限制 `v*` tag 的创建、改写与删除；`desktop-production` 配 required reviewers（含禁止自审）。属仓库设置，Agent 不代改，只出配置清单。
+6. **平台侧加固**（已落地，TASK-0213）：`v*` tag 的删除与改写 ruleset 已加（仓库管理员 bypass），`desktop-test` 已创建；两个 Environment 的 required reviewers 被平台以 422 拒绝（当前计划不支持），因此可用的人工门是 tag ruleset 加本地 `publish --confirm-publish`，升级计划后再补配。
 
 ## 不做什么
 
