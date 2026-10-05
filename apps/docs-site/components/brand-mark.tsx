@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { getDocsMessages, type DocsLanguage } from "@/lib/i18n";
 
 export function BrandMark({ language = "zh" }: { language?: DocsLanguage }) {

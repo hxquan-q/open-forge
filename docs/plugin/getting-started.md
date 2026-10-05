@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 快速开始
 
 从零搭建、构建、安装、调试一个 Vetta 桌面插件。

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 清单参考（plugin.json）
 
 `plugin.json` 是插件的唯一清单，位于 `.vettapkg` 包的 ZIP 容器根目录（或唯一顶层文件夹内）。

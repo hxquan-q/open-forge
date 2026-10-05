@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 面向用户的文案原则
 
 > 本文记录 Vetta **所有面向用户可见文案**的原则：桌面端 UI、官网营销与 FAQ、方案/定价说明等。  

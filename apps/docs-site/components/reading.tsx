@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@/lib/cn";
 import { getDocsMessages, type DocsLanguage } from "@/lib/i18n";
 import { fieldNoteIsAlert, fieldNoteLabel, type FieldNoteTone } from "@/lib/reading";
