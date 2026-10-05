@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Desktop 发布与自动更新流程
 
 本文是 Vetta Desktop 发布流程的维护手册。它记录当前 GitHub Actions、构建配置解析器、R2/GitHub 发布和自动更新验收之间的关系，供下一次排查或修改发布链路时快速恢复上下文。
@@ -92,6 +93,27 @@ flowchart LR
 
 构建 job、R2 发布 job 和 GitHub 发布 job 必须能拿到与目标 channel 对应的 Environment。当前 workflow 会根据 `channel` 为 test 选择 `desktop-test`，其它情况选择 `desktop-production`。
 
+### 当前实际配置与待配置项（2026-10-05 实测）
+
+用命令核对，不要凭记忆：
+
+```bash
+gh api repos/<owner>/<repo>/environments
+gh api repos/<owner>/<repo>/rulesets
+```
+
+实测结果（`hxquan-q/open-forge`）：
+
+| 项 | 现状 | 应有 |
+| --- | --- | --- |
+| `desktop-production` | 存在，但 `protection_rules` 为空、`can_admins_bypass` 为 true | 加 required reviewers（可开禁止自审），让正式发布在平台层需要人工批准 |
+| `desktop-test` | 尚未创建，而 workflow 在 test 渠道会引用它 | 创建并同样配置审批，使用独立 test prefix 与 URL |
+| `v*` tag | 没有 ruleset 限制 | 加 ruleset 限制 tag 的创建、改写与删除，让「谁能打发布 tag」由规则强制而不是约定 |
+| `main` | 分支保护接口返回 404，未保护 | 视需要保护；本仓日常集成在本地 main，对外推送走 `main:dev` |
+
+在补齐 required reviewers 之前，`environment:` 声明只是把 job 绑到环境，**不构成审批**；不要把「已声明 environment」当成「已有人工门」。
+
+
 ### Variables
 
 常用非敏感变量如下。变量名必须与脚本一致，不要在 workflow 表单里粘贴密钥。
@@ -140,6 +162,11 @@ APPLE_TEAM_ID
 所有会发布的构建都要求 macOS 签名和公证。缺少凭据时应让 job 失败；只有不发布的手动构建允许未签名。
 
 ## 正式发布操作
+
+
+**发起权限**：发布由人发起——责任人本地运行 `bun run release:desktop:publish -- <版本> --confirm-publish`，由脚本提交发布说明、打 tag 并原子推送；tag 推送之后 workflow 才自动跑。Agent 不得代跑发布，也不得推送 tag。
+
+当前没有第二道平台审批（见「当前实际配置与待配置项」），所以「谁推 tag 谁就在发版」这层约束目前完全依赖本条纪律与待补的 ruleset。
 
 ### 推荐：推送版本 tag
 
