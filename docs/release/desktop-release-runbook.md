@@ -8,6 +8,7 @@
 涉及行为时先看实现，再更新本文：
 
 - [Desktop 发布 workflow](../../.github/workflows/desktop-release.yml)
+- [发布说明寻址与碎片汇编](../../scripts/release/release-notes.mjs)（版本号到正文路径；碎片汇编与一致性守卫）
 - [发布配置解析器](../../scripts/release/resolve-desktop-release-config.mjs)
 - [配置解析测试](../../scripts/release/resolve-desktop-release-config.test.mjs)
 - [workflow 合同测试](../../scripts/quality/desktop-release-workflow.test.mjs)

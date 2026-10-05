@@ -72,7 +72,7 @@ export function parseDesktopReleaseCommand(args) {
 
 export function releaseNotesTemplate(version, upstreamBaseline = "<merge-base sha>") {
 	if (!SEMVER_PATTERN.test(version)) throw new Error(`Invalid release version: ${version}`);
-	return `# Open Forge ${version}\n\n发布日期：待定\n\nUpstream baseline: upstream/dev@${upstreamBaseline}\n`;
+	return `# Open Forge ${version}\n\n发布日期：待定\n\nUpstream baseline: upstream/dev@${upstreamBaseline}\n\n<!-- 本文件由 fragments/ 汇编生成：请改碎片，不要直接改这里。 -->\n`;
 }
 
 export function upstreamBaselineSha() {

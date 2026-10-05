@@ -9,6 +9,7 @@ import {
 	releaseNotesTemplate,
 	stampReleaseDate,
 } from "./release-desktop.mjs";
+import { ASSEMBLED_MARKER } from "./release/release-notes.mjs";
 
 describe("parsePorcelainPaths", () => {
 	// 回归：曾经对整段输出做 trim，削掉第一行的前导空格后 slice(3) 吃掉路径首字母，
@@ -84,6 +85,9 @@ describe("parseDesktopReleaseCommand", () => {
 });
 
 describe("releaseNotesTemplate", () => {
+	it("marks the draft as fragment-managed so assembly does not treat it as hand-written", () => {
+		expect(releaseNotesTemplate("0.1.3", "abc1234")).toContain(ASSEMBLED_MARKER);
+	});
 	it("creates a fork-branded draft with an explicit date placeholder and upstream baseline", () => {
 		expect(releaseNotesTemplate("0.1.0", "abc1234")).toContain("# Open Forge 0.1.0");
 		expect(releaseNotesTemplate("0.1.0", "abc1234")).toContain("发布日期：待定");

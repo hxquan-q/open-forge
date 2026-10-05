@@ -1,11 +1,16 @@
 // Modified by The Open Forge contributors.
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+	ASSEMBLED_MARKER,
 	desktopVersion,
 	releaseNotesPath,
+	assembleReleaseNotes,
+	assembleReleaseNotesFile,
+	fragmentProblems,
+	listFragmentPaths,
 	releaseNotesStateProblems,
 	releaseNotesVersions,
 	requireReleaseNotes,
@@ -118,4 +123,92 @@ describe("release notes versions", () => {
 		writeFileSync(join(root, ".github/release-notes", "README.md"), "# notes\n");
 		expect(releaseNotesVersions(root)).toEqual(["0.1.2", "0.1.3"]);
 	});
+});
+
+const NOTE_SKELETON = [
+	"# Open Forge 0.2.0",
+	"",
+	"发布日期：待定",
+	"",
+	BASELINE,
+	"",
+	"## 改进",
+	"",
+	"- 旧条目",
+	"",
+].join("\n");
+
+describe("release note fragments", () => {
+	it("rejects an unknown section and an empty section", () => {
+		expect(fragmentProblems({ path: "frag.md", content: "\n## 新特性\n\n- 一条\n" })).toHaveLength(1);
+		expect(fragmentProblems({ path: "frag.md", content: "\n## 改进\n" })).toHaveLength(1);
+		expect(fragmentProblems({ path: "frag.md", content: "没有小节\n" })).toHaveLength(1);
+		expect(fragmentProblems({ path: "frag.md", content: "\n## 改进\n\n- 一条\n" })).toEqual([]);
+	});
+
+	it("groups entries into the canonical section order", () => {
+		const assembled = assembleReleaseNotes({
+			version: "0.2.0",
+			notes: NOTE_SKELETON + ASSEMBLED_MARKER + "\n",
+			fragments: [
+				{ path: "b.md", content: "\n## 其他\n\n- 乙\n" },
+				{ path: "a.md", content: "\n## 改进\n\n- 甲\n" },
+			],
+		});
+		expect(assembled.indexOf("## 改进")).toBeLessThan(assembled.indexOf("## 其他"));
+		expect(assembled).toContain("- 甲");
+		expect(assembled).toContain("- 乙");
+		expect(assembled).toContain("发布日期：待定");
+		expect(assembled).toContain(BASELINE);
+	});
+
+	it("refuses to assemble when hand-written notes and fragments coexist", () => {
+		expect(() =>
+			assembleReleaseNotes({
+				version: "0.2.0",
+				notes: NOTE_SKELETON,
+				fragments: [{ path: "a.md", content: "\n## 改进\n\n- 甲\n" }],
+			}),
+		).toThrow(/手写正文/);
+	});
+
+	it("requires the existing notes to carry an upstream baseline", () => {
+		expect(() =>
+			assembleReleaseNotes({ version: "0.2.0", notes: "# Open Forge 0.2.0\n", fragments: [] }),
+		).toThrow(/上游基线行/);
+	});
+
+	it("lists fragment files in a stable order", () => {
+		const root = fixtureRoot("0.2.0", ["0.2.0"]);
+		mkdirSync(join(root, ".github/release-notes/fragments/v0.2.0"), { recursive: true });
+		writeFileSync(join(root, ".github/release-notes/fragments/v0.2.0/b.md"), "\n## 改进\n\n- 乙\n");
+		writeFileSync(join(root, ".github/release-notes/fragments/v0.2.0/a.md"), "\n## 改进\n\n- 甲\n");
+		expect(listFragmentPaths("0.2.0", root)).toEqual([
+			"fragments/v0.2.0/a.md",
+			"fragments/v0.2.0/b.md",
+		].map((name) => ".github/release-notes/" + name));
+	});
+
+	it("leaves a hand-written body untouched when there are no fragments", () => {
+		const root = fixtureRoot("0.2.0", ["0.2.0"]);
+		const target = join(root, ".github/release-notes/v0.2.0.md");
+		writeFileSync(target, ["# Open Forge 0.2.0", "", "发布日期：待定", "", BASELINE, "", "## 改进", "", "- 手写条目", ""].join("\n"));
+		const before = readFileSync(target, "utf8");
+		expect(assembleReleaseNotesFile("0.2.0", root).changed).toBe(false);
+		expect(readFileSync(target, "utf8")).toBe(before);
+	});
+
+	it("assembles and reports a change once fragments exist", () => {
+		const root = fixtureRoot("0.2.0", ["0.2.0"]);
+		const target = join(root, ".github/release-notes/v0.2.0.md");
+		writeFileSync(target, ["# Open Forge 0.2.0", "", "发布日期：待定", "", BASELINE, "", "## 改进", "", "- 旧条目", "", ASSEMBLED_MARKER, ""].join("\n"));
+		mkdirSync(join(root, ".github/release-notes/fragments/v0.2.0"), { recursive: true });
+		writeFileSync(join(root, ".github/release-notes/fragments/v0.2.0/a.md"), "\n## 新增\n\n- 新条目\n");
+		expect(assembleReleaseNotesFile("0.2.0", root).changed).toBe(true);
+		const after = readFileSync(target, "utf8");
+		expect(after).toContain("- 新条目");
+		expect(after).toContain("## 新增");
+		expect(after).toContain("本文件由 fragments/ 汇编生成");
+	});
+
 });
