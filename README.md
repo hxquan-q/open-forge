@@ -87,7 +87,7 @@ The public documentation has the current task guides and screenshots: [browse al
 
 ## Extension model
 
-Vetta exposes several extension levels so a simple workflow does not need to become a full plugin:
+Open Forge exposes several extension levels so a simple workflow does not need to become a full plugin:
 
 | Extension | Use it for | Guide |
 |---|---|---|
@@ -99,7 +99,7 @@ Vetta exposes several extension levels so a simple workflow does not need to bec
 
 ### Build a plugin from any directory
 
-You do not need this repository, or a Vetta source checkout, to build a plugin. Nor does an agent:
+You do not need this repository, or an Open Forge source checkout, to build a plugin. Nor does an agent:
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
@@ -109,7 +109,7 @@ npm run install:vetta            # build, package, install into the running desk
 npx vetta-plugin-cli watch       # hot reload: the host loads the plugin from this directory
 ```
 
-`init` also writes an `AGENTS.md`, so **any** coding agent — Claude Code, Cursor, or Vetta's own —
+`init` also writes an `AGENTS.md`, so **any** coding agent — Claude Code, Cursor, or Open Forge's own —
 picks the project up without host-side setup. The plugin manual ships inside
 `@vetta-org/plugin-sdk`, so the contract an agent reads is the contract the project compiles
 against; `docs` locates it rather than anyone hard-coding a `node_modules` path.
@@ -130,9 +130,9 @@ Plugins declare capabilities in `plugin.json`; privileged operations are authori
 
 ## Data and build modes
 
-A source checkout produces the **lite** build by default. It has no dependency on a Vetta-operated backend: no account, subscription, remote administration, or hosted marketplace is required. Model requests go to the endpoint you configure, and credentials remain in local credential storage.
+A source checkout produces the **lite** build by default. It has no dependency on an Open Forge-operated backend: no account, subscription, remote administration, or hosted marketplace is required. Model requests go to the endpoint you configure, and credentials remain in local credential storage.
 
-Official installers may enable the optional Vetta Serv integration for accounts, subscriptions, and a hosted marketplace. That integration is selected at build time; it is not silently enabled in a lite build.
+Official installers may enable the optional Open Forge Serv integration for accounts, subscriptions, and a hosted marketplace. That integration is selected at build time; it is not silently enabled in a lite build.
 
 Local-first does not mean zero network traffic. Model providers, MCP servers, plugins, webhooks, IM integrations, update sources, and optional telemetry can each create their own data boundary. Review:
 
