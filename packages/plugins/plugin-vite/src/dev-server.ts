@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer as createNetServer } from "node:net";
@@ -231,6 +232,8 @@ export async function startVettaPluginDevServer(
 		await assertDevEntryAvailable(entryUrl);
 		debugDevServer("probing plugin module graph");
 		await assertDevModuleGraphAvailable(server, rootDir);
+		// Closing during the initial dependency crawl can strand Vite pending transforms.
+		await server.environments.client.waitForRequestsIdle();
 		debugDevServer("plugin entry ready");
 	} catch (error) {
 		if (refreshTimer) clearTimeout(refreshTimer);

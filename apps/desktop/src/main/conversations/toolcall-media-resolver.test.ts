@@ -1,8 +1,10 @@
 // Copyright The Open Forge contributors.
+
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "../../shared/notification-preferences.js";
 import type { DesktopConfig } from "../config/desktop-config-store.js";
 
 const runtimeMock = vi.hoisted(() => ({
@@ -29,6 +31,8 @@ function desktopConfig(projects: DesktopConfig["projects"]): DesktopConfig {
 		archivedProjects: [],
 		workspacePath: "C:/workspace",
 		defaultExecutionMode: "full-access",
+		schemaVersion: 1,
+		notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
 	};
 }
 

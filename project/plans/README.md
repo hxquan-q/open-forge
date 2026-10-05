@@ -7,10 +7,11 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0015` | Harness 高价值机制隔离吸收 | in_progress | [RESEARCH-0021](../research/RESEARCH-0021-pi-deepseek-harness-absorption.md) |
 | `PLAN-0001` | work/coding Runtime 产品演进 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md)、[`exprot/runtime-mapping.md`](../../exprot/runtime-mapping.md) |
 | `PLAN-0002` | 性能与可靠性基线 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md) 阶段 0.5 |
 | `PLAN-0003` | Open Forge 品牌化施工 | in_progress | [`exprot/development-paradigm.md`](../../exprot/development-paradigm.md)、[`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |
-| `PLAN-0004` | Agent 辅助二开工作流 | verifying | [`.devin/skills/vetta-task-intake/SKILL.md`](../../.devin/skills/vetta-task-intake/SKILL.md)、`AGENTS.md` |
+| `PLAN-0004` | Agent 辅助二开工作流 | verifying | [`.agents/skills/open-forge-task-intake/SKILL.md`](../../.agents/skills/open-forge-task-intake/SKILL.md)、`AGENTS.md` |
 | `PLAN-0005` | Open Forge 独立发布与二开治理 | in_progress | [`REQ-0005`](../requirements/REQ-0005-openforge-independent-release-and-compliance.md)、用户确认的独立 SemVer 决策 |
 | `PLAN-0006` | Canvas / Browser / Terminal 右栏集成 | ready | [`RESEARCH-0005`](../research/RESEARCH-0005-canvas-browser-terminal-support.md)、用户确认的决策索引 |
 | `PLAN-0007` | Agent Workspace Phase 2（Browser 调试闭环 + Canvas 富交互） | draft | PLAN-0006 推迟项圈选、用户确认的 Phase 2 决策；v1 演示/首发反馈可重排 |
@@ -20,6 +21,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 | `PLAN-0011` | 仓库架构治理升级（Avernet 借鉴） | done | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
 | `PLAN-0012` | 无人值守会话与自动化产品化（WorkDaddy 借鉴） | in_progress | [`RESEARCH-0012`](../research/RESEARCH-0012-avernet-workdaddy-references.md) |
 | `PLAN-0013` | 团队会话编排效率：消除主控轮询空转与协作摩擦 | draft | [`ISSUE-0025`/`0026`/`0027`](../issues/)、开发团队实测会话量化基线（38 waits / 44.9min / $0.376）、上游 `887017560` 与 Pi/Codex/Claude Code 参照 |
+| `PLAN-0014` | 非手机上游更新选择性适配 | in_progress | [计划与保护合同](PLAN-0014-selective-upstream-nonmobile.md)、首批集成 TASK-0171、后续审查 RESEARCH-0019 |
 
 ## 当前执行焦点
 

@@ -8,8 +8,9 @@ import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { pathBasename } from "@shared/lib/utils";
 import { useAtom } from "jotai";
-import { type JSX, useEffect, useRef, useState } from "react";
+import { type JSX, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { claimTerminalLaunch, readTerminalLaunchPayload } from "./terminal-launch";
 import type { TerminalEventEnvelope } from "../../../../shared/terminal-ipc";
 import { bottomPanelFocusRequestAtom } from "../registry/instance-atoms";
 import { detectWebgl2Support, selectTerminalRenderer } from "./select-terminal-renderer";
@@ -43,7 +44,13 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 	const [message, setMessage] = useState<string | null>(null);
 	const [degradedNoResize, setDegradedNoResize] = useState(false);
 
-	const { cwd, tabId, active } = handle;
+	const { tabId, active } = handle;
+	// 插件替用户开的终端带着要敲的命令和子目录；普通终端没有载荷，落在会话 cwd。
+	const launch = useMemo(() => readTerminalLaunchPayload(handle.payload, handle.cwd), [handle.payload, handle.cwd]);
+	const cwd = launch?.cwd ?? handle.cwd;
+	const launchLabel = launch?.label;
+	const launchRef = useRef(launch);
+	launchRef.current = launch;
 	// effect 里要用到最新的 handle 方法，但不希望它们变化就重建终端。
 	const handleRef = useRef(handle);
 	handleRef.current = handle;
@@ -63,11 +70,15 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 		let contextLost = false;
 		const cleanups: Array<() => void> = [];
 
+		const readFontFamily = () =>
+			getComputedStyle(container).getPropertyValue("--font-mono").trim() ||
+			getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim() ||
+			"monospace";
 		const terminal = new Terminal({
 			allowProposedApi: true,
 			cursorBlink: true,
 			fontSize: 12,
-			fontFamily: getComputedStyle(container).getPropertyValue("--font-mono") || "monospace",
+			fontFamily: readFontFamily(),
 			lineHeight: 1.2,
 			macOptionIsMeta: true,
 			scrollback: SCROLLBACK,
@@ -127,12 +138,6 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			return { cols: terminal.cols, rows: terminal.rows };
 		};
 
-		const themeObserver = new MutationObserver(() => {
-			terminal.options.theme = buildTerminalTheme(createDocumentCssVariableReader(document.documentElement));
-		});
-		themeObserver.observe(document.documentElement, { attributeFilter: ["data-mode", "data-theme"] });
-		cleanups.push(() => themeObserver.disconnect());
-
 		let snapshotTimer: number | undefined;
 		const flushSnapshot = (): void => {
 			if (snapshotTimer !== undefined) {
@@ -172,6 +177,11 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 					return;
 				}
 				terminalId = result.terminalId;
+				const claimed = claimTerminalLaunch(launchRef.current);
+				if (claimed) {
+					handleRef.current.setPayload(claimed.payload);
+					void window.vetta.terminal.write(result.terminalId, claimed.input);
+				}
 				if (result.replayTruncated) terminal.writeln(t("bottomPanel.terminal.replayTruncated"));
 				if (result.replay) terminal.write(result.replay);
 				if (result.degraded?.noResize) setDegradedNoResize(true);
@@ -235,6 +245,27 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			if (refitRef.current === applyFit) refitRef.current = null;
 		});
 
+		// Keep the existing xterm/PTY alive when typography changes. CSS alone cannot update xterm.
+		const themeObserver = new MutationObserver(() => {
+			terminal.options.theme = buildTerminalTheme(createDocumentCssVariableReader(document.documentElement));
+			const family = readFontFamily();
+			if (terminal.options.fontFamily === family) return;
+			terminal.options.fontFamily = family;
+			applyFit();
+		});
+		themeObserver.observe(document.documentElement, { attributeFilter: ["data-mode", "data-theme", "style"] });
+		cleanups.push(() => themeObserver.disconnect());
+		// A late font load changes cell metrics even if the CSS family string is unchanged.
+		const fonts = document.fonts;
+		const fontReady = () => {
+			if (!disposed) applyFit();
+		};
+		if (fonts) {
+			fonts.addEventListener("loadingdone", fontReady);
+			void fonts.ready.then(fontReady);
+			cleanups.push(() => fonts.removeEventListener("loadingdone", fontReady));
+		}
+
 		const observer = new ResizeObserver(applyFit);
 		observer.observe(container);
 		cleanups.push(() => observer.disconnect());
@@ -255,11 +286,11 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 				console.warn("terminal dispose failed", error);
 			}
 		};
-	}, [cwd, tabId, t]);
+	}, [cwd, launchLabel, tabId, t]);
 
 	// 名字随 cwd 走：同一会话里开多个终端时，按目录区分比都叫「终端」有用。
 	useEffect(() => {
-		const label = cwd ? pathBasename(cwd) : "";
+		const label = launchLabel ?? (cwd ? pathBasename(cwd) : "");
 		handleRef.current.setMeta({ label: label || t("bottomPanel.terminal.title") });
 	}, [cwd, tabId, t]);
 
@@ -284,9 +315,7 @@ export function TerminalSurface({ handle }: { handle: TerminalSurfaceHandle }): 
 			    外边距会让面板底色在终端四周露出一圈，看着像终端没铺满。 */}
 			<div ref={containerRef} className="min-h-0 flex-1 px-2 py-1.5" data-terminal-surface={tabId} />
 			{status === "unavailable" ? (
-				<p className="px-3 pb-2 text-[12px] text-destructive">
-					{message ?? t("bottomPanel.terminal.unavailable")}
-				</p>
+				<p className="px-3 pb-2 text-[12px] text-destructive">{message ?? t("bottomPanel.terminal.unavailable")}</p>
 			) : null}
 			{degradedNoResize ? (
 				<p className="px-3 pb-2 text-[11px] text-muted-foreground">{t("bottomPanel.terminal.noResize")}</p>

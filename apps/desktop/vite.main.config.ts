@@ -1,8 +1,9 @@
+// Modified by The Open Forge contributors.
 import { builtinModules } from "node:module";
 import { resolve } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createSentryBuildSetup } from "./sentry-vite";
-import { resolveMainBundleExternals } from "./scripts/packaged-native-dependencies.mjs";
+import { DEVELOPMENT_WORKSPACE_EXTERNAL, resolveMainBundleExternals } from "./scripts/packaged-native-dependencies.mjs";
 import {
 	resolveSpeechInputBuildConfig,
 	SPEECH_INPUT_ENABLED_ENV,
@@ -35,7 +36,7 @@ export default defineConfig(({ mode }) => {
 	const speechInputBuildConfig = resolveSpeechInputBuildConfig({ env });
 	const developmentWorkspacePackages =
 		effectiveMode === "development"
-			? [/^@vetta\/(?:action-rpc|ai|coding-agent|remote-control|runtime-core)(?:\/|$)/]
+			? [DEVELOPMENT_WORKSPACE_EXTERNAL]
 			: [];
 	const sourcemapEnabled = (process.env.VETTA_MAIN_SOURCEMAP ?? env.VETTA_MAIN_SOURCEMAP) === "true";
 	const sentry = createSentryBuildSetup(env, "dist/main");

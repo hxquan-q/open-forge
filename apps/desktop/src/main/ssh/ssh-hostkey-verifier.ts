@@ -18,29 +18,45 @@ const log = getAppLogger("ssh-hostkey");
  *
  * 语义与 StrictHostKeyChecking=ask 对齐：登记过且密钥一致→放行；登记过但密钥不同→拒绝
  * （中间人或重装系统必须由用户手工处置，没有任何提示能「安全地」代做决定）；没见过→
- * 走确认提示，同意后写回。
+ * 走确认提示，同意后写回。`@revoked` 标记同钥时无条件拒绝：两份文件都要查完才能放行，
+ * 撤销登记在哪一份、排在第几行都不影响结果（`project/bugs/BUG-0062`）。
  */
 export function createSshHostKeyVerifier(options: {
 	ask: (request: SshAskpassRequest) => Promise<{ ok: boolean }>;
 	knownHostsPath?: string;
+	/** 测试注入用：默认用户 `~/.ssh/known_hosts`。 */
+	userKnownHostsPath?: string;
 }): (info: Ssh2HostKeyInfo) => Promise<boolean> {
-	const userKnownHosts = join(homedir(), ".ssh", "known_hosts");
+	const userKnownHosts = options.userKnownHostsPath ?? join(homedir(), ".ssh", "known_hosts");
 	const appKnownHosts = options.knownHostsPath ?? join(getVettaHomePath(), "ssh", "known_hosts");
 	return async (info) => {
-		for (const file of [userKnownHosts, appKnownHosts]) {
-			const verdict = matchKnownHosts(readLines(file), info.hostname, info.port, info.keyBase64);
-			if (verdict === "match") return true;
-			if (verdict === "mismatch") {
-				// OpenSSH 在这时直接拒绝并要求用户手动修 known_hosts；提示「换个指纹重连」
-				// 反而鼓励用户在中间人攻击下点确认。
-				log.warn("host key changed, refusing connection", {
-					host: info.hostname,
-					port: info.port,
-					fingerprint: info.fingerprint,
-					knownHostsFile: file,
-				});
-				return false;
-			}
+		const verdicts = [userKnownHosts, appKnownHosts].map((file) => ({
+			file,
+			verdict: matchKnownHosts(readLines(file), info.hostname, info.port, info.keyBase64),
+		}));
+		const revoked = verdicts.find((entry) => entry.verdict === "revoked");
+		if (revoked) {
+			// 已撤销的密钥出现在任何一份文件里都必须拒绝；不能靠确认提示「仍然连接」绕过。
+			log.warn("host key revoked, refusing connection", {
+				host: info.hostname,
+				port: info.port,
+				fingerprint: info.fingerprint,
+				knownHostsFile: revoked.file,
+			});
+			return false;
+		}
+		const decisive = verdicts.find((entry) => entry.verdict === "match" || entry.verdict === "mismatch");
+		if (decisive?.verdict === "match") return true;
+		if (decisive) {
+			// OpenSSH 在这时直接拒绝并要求用户手动修 known_hosts；提示「换个指纹重连」
+			// 反而鼓励用户在中间人攻击下点确认。
+			log.warn("host key changed, refusing connection", {
+				host: info.hostname,
+				port: info.port,
+				fingerprint: info.fingerprint,
+				knownHostsFile: decisive.file,
+			});
+			return false;
 		}
 		const answer = await options.ask({
 			hostId: info.hostId,

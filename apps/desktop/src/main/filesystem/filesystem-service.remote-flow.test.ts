@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLoopbackSshConnection } from "@vetta/ssh-transport/testing";
+import { createLoopbackSshConnection, toLoopbackRemotePath } from "@vetta/ssh-transport/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const connection = createLoopbackSshConnection();
@@ -23,8 +23,7 @@ const PNG_1X1 = Buffer.from(
 	"base64",
 );
 
-// 回环 SSH 顶替脚本是 /bin/sh POSIX shell，win32 下无 shebang 执行与合法远端 POSIX 路径。
-describe.skipIf(process.platform === "win32")("远程项目的文件树：用户在面板里的一串常见操作", () => {
+describe("远程项目的文件树：用户在面板里的一串常见操作", () => {
 	let remoteRoot: string;
 	let root: string;
 
@@ -36,7 +35,8 @@ describe.skipIf(process.platform === "win32")("远程项目的文件树：用户
 		writeFileSync(join(remoteRoot, "node_modules/pkg/index.js"), "");
 		writeFileSync(join(remoteRoot, "logo.png"), PNG_1X1);
 		writeFileSync(join(remoteRoot, "LICENSE"), "MIT\n");
-		root = `ssh://build-01${remoteRoot}`;
+		// Windows 回环：远端路径转 MSYS 根形式（/c/…），天然以 / 开头，URI 与远端 cd 两头成立。
+		root = `ssh://build-01${toLoopbackRemotePath(remoteRoot)}`;
 		service.allowProjectRoot(root);
 	});
 
@@ -79,7 +79,14 @@ describe.skipIf(process.platform === "win32")("远程项目的文件树：用户
 		expect(files.find((file) => file.relPath === "src/main.ts")?.path).toBe(`${root}/src/main.ts`);
 	});
 
-	it("写文件保留远端文件原有的可执行位", async () => {
+	it("按文件名筛选的递归列举只给出命中的远端文件", async () => {
+		const files = await service.listFilesystemFilesRecursive(root, { names: ["LICENSE", "index.js"] });
+		expect(files.map((file) => file.relPath)).toEqual(["LICENSE"]);
+	});
+
+	// 可执行位保持依赖真实的 POSIX 权限位；Windows 回环的 MSYS 挂载（noacl）上
+	// chmod/stat 只是模拟，无法证明该语义——显式交给 POSIX CI 覆盖，不静默跳过整组。
+	it.skipIf(process.platform === "win32")("写文件保留远端文件原有的可执行位", async () => {
 		writeFileSync(join(remoteRoot, "run.sh"), "old");
 		chmodSync(join(remoteRoot, "run.sh"), 0o755);
 		await service.writeFilesystemFile(`${root}/run.sh`, "new");

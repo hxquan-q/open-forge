@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import type { HistoryPage } from "@preload/api-types/session";
-import { createConversationUserMessage } from "@shared/conversation";
+import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
 import {
 	activeSessionAtom,
 	chatMessagesAtom,
@@ -390,5 +390,34 @@ describe("窗口化乐观气泡", () => {
 		const ids = store.get(chatMessagesAtom).map((m) => m.id);
 		expect(ids.filter((id) => id === "opt-1")).toHaveLength(0);
 		expect(entryIds()).toEqual(["u-9", "a-9", "u-10"]);
+	});
+
+	it("尾部 pending 幽灵使镜像气泡对位落空时，气泡仍锚定在它触发的回复之前", async () => {
+		// 镜像气泡之后又有消息入队未消费：pending 数与尾部 user 数错位对齐，
+		// 镜像对位到错误的 canonical user 上保持未决；窗口化提交若把未决
+		// live-only 项平铺到尾部，它会跑到 canonical 回复之后（BUG-0068）。
+		setActiveSession();
+		seedWindow([userEntry("u-9", "q9")], { nextBeforeEntry: "c0", hasMore: true });
+		const mirror = createConversationUserMessage({ id: "opt-m", text: "插队消息", deliveryPhase: "pending" });
+		const ghost = createConversationUserMessage({ id: "opt-x", text: "其后排队", deliveryPhase: "pending" });
+		rememberOptimisticUserMessage(RUNTIME_ID, mirror, store.get(chatMessagesAtom), { matchTextOnly: true });
+		rememberOptimisticUserMessage(RUNTIME_ID, ghost, [...store.get(chatMessagesAtom), mirror], {
+			matchTextOnly: true,
+		});
+		const replyDraft = createConversationAgentMessage({ id: "draft-reply", phase: "streaming", blocks: [] });
+		store.set(chatMessagesAtom, [...store.get(chatMessagesAtom), mirror, replyDraft]);
+
+		// 规范尾部已含被消费消息与它的回复；尾部对齐把镜像错配到 u-9。
+		openViewer.mockResolvedValue(
+			page([userEntry("u-9", "q9"), userEntry("u-10", "插队消息"), agentEntry("a-10", "回复")]),
+		);
+		await refreshTranscriptTail();
+
+		const ids = store.get(chatMessagesAtom).map((m) => m.id);
+		const mirrorIndex = ids.indexOf("opt-m");
+		const replyIndex = store.get(chatMessagesAtom).findIndex((m) => "entryId" in m && m.entryId === "a-10");
+		expect(mirrorIndex).toBeGreaterThanOrEqual(0);
+		expect(replyIndex).toBeGreaterThanOrEqual(0);
+		expect(mirrorIndex).toBeLessThan(replyIndex);
 	});
 });

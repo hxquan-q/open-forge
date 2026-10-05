@@ -74,6 +74,13 @@ export function findDesktopPackagingContractViolations(rootDirectory = repoRoot)
 	if (!preparePack.includes("collectMissingSandboxBinaries(")) {
 		violations.push("prepare-pack.js does not warn about declared platforms without sandbox binaries");
 	}
+	if (!preparePack.includes('from "./windows-sandbox-artifacts.mjs"')) {
+		violations.push("prepare-pack.js does not consume the pinned Windows sandbox artifact manifest");
+	}
+	if (!preparePack.includes("assessWindowsSandboxArtifacts(")) {
+		violations.push("prepare-pack.js does not verify the pinned Windows sandbox artifacts before packaging");
+	}
+
 	if (
 		!preparePack.includes("assertStagedDependencyPlan(") ||
 		!preparePack.includes("findStagedNodeModulesBlacklistHits(")

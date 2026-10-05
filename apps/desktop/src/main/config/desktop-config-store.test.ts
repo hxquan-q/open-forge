@@ -1,8 +1,11 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { VETTA_HOME_ENV } from "@vetta/action-rpc";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { GeneralSettingsService } from "../general-settings/general-settings-service.js";
 
 const temporaryRoots: string[] = [];
 let previousHome: string | undefined;
@@ -61,6 +64,84 @@ describe("defaultAgentMode 兼容旧字段名", () => {
 	});
 });
 
+describe("desktop config schema migration", () => {
+	it("migrates an unversioned config to v2 and writes the new preferences back", async () => {
+		const store = await loadStoreWithConfig({ projects: [], fieldFromNewerVersion: { keep: true } });
+		const config = await store.readDesktopConfig();
+		expect(config.schemaVersion).toBe(2);
+		expect(config.notificationPreferences).toEqual({
+			soundEnabled: true,
+			systemScope: "away-from-session",
+			soundScope: "always",
+			soundVolume: 60,
+			events: {
+				completed: { systemEnabled: true, soundId: "soft-chime" },
+				failed: { systemEnabled: true, soundId: "soft-chime" },
+				actionRequired: { systemEnabled: true, soundId: "soft-chime" },
+			},
+		});
+		expect(await store.readDisk()).toMatchObject({
+			schemaVersion: 2,
+			fieldFromNewerVersion: { keep: true },
+		});
+	});
+
+	it("normalizes invalid notification preferences", async () => {
+		const store = await loadStoreWithConfig({
+			schemaVersion: 2,
+			notificationPreferences: {
+				systemScope: "sometimes",
+				soundScope: "always",
+				soundVolume: 150,
+				events: { completed: { systemEnabled: false, soundId: "from-disk" } },
+			},
+		});
+		expect((await store.readDesktopConfig()).notificationPreferences).toEqual({
+			soundEnabled: true,
+			systemScope: "away-from-session",
+			soundScope: "always",
+			soundVolume: 100,
+			events: {
+				completed: { systemEnabled: false, soundId: "soft-chime" },
+				failed: { systemEnabled: true, soundId: "soft-chime" },
+				actionRequired: { systemEnabled: true, soundId: "soft-chime" },
+			},
+		});
+	});
+
+	it("preserves a future schema and unknown fields across read-modify-write", async () => {
+		const store = await loadStoreWithConfig({
+			schemaVersion: 7,
+			future: { keep: true },
+			notificationPreferences: {
+				systemScope: "always",
+				soundScope: "always",
+				soundVolume: 50,
+				futurePreference: "keep",
+				events: {
+					completed: { systemEnabled: true, soundId: null, futureEventPreference: "keep" },
+					futureEvent: { future: true },
+				},
+			},
+		});
+		const config = await store.readDesktopConfig();
+		expect(config.schemaVersion).toBe(7);
+		await store.writeDesktopConfig({ ...config, debugMode: true });
+		expect(await store.readDisk()).toMatchObject({
+			schemaVersion: 7,
+			future: { keep: true },
+			debugMode: true,
+			notificationPreferences: {
+				futurePreference: "keep",
+				events: {
+					completed: { futureEventPreference: "keep" },
+					futureEvent: { future: true },
+				},
+			},
+		});
+	});
+});
+
 describe("写回配置不丢本版本不认识的字段", () => {
 	// 新旧版本共用同一份 ~/.vetta：旧版读配置时按白名单解析，不认识的字段（如 0.5.58 之于
 	// sshHosts）不进内存，随后任何一次写回都会把它从磁盘上抹掉。
@@ -113,5 +194,104 @@ describe("SSH 主机单独存放，旧版本整份覆盖 desktop-config 也抹�
 		await store.writeSshHosts([moved]);
 		await store.writeDesktopConfig({ ...stale, debugMode: true });
 		expect((await store.readDesktopConfig()).sshHosts).toEqual([moved]);
+	});
+});
+
+describe("desktop config transactions through settings", () => {
+	it("preserves concurrent user changes instead of overwriting a stale snapshot", async () => {
+		const store = await loadStoreWithConfig({
+			projects: [],
+			notificationsEnabled: true,
+			defaultExecutionMode: "sandbox",
+		});
+		let releaseReads: (() => void) | undefined;
+		const bothReads = new Promise<void>((resolve) => {
+			releaseReads = resolve;
+		});
+		let reads = 0;
+		const options = {
+			readConfig: async () => {
+				const current = await store.readDesktopConfig();
+				if (++reads === 2) releaseReads?.();
+				await bothReads;
+				return current;
+			},
+			writeConfig: store.writeDesktopConfig,
+			updateConfig: store.updateDesktopConfig,
+			allowWorkspaceRoot: () => {},
+			getSandbox: () => ({ status: "unknown" as const, backend: null, platform: "win32" }),
+		};
+		const service = new GeneralSettingsService(options);
+		await Promise.all([service.setNotifications(false), service.setDefaultExecutionMode("full-access")]);
+		expect(await store.readDesktopConfig()).toMatchObject({
+			notificationsEnabled: false,
+			defaultExecutionMode: "full-access",
+		});
+	});
+});
+
+describe("desktop config transaction queue", () => {
+	it("serializes async updates and preserves fields written during a pending callback", async () => {
+		const store = await loadStoreWithConfig({
+			projects: [],
+			experimental: { agentSkills: true, promptPrediction: false },
+		});
+		let entered: (() => void) | undefined;
+		let release: (() => void) | undefined;
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const first = store.updateDesktopConfig(async (current) => {
+			entered?.();
+			await gate;
+			return { ...current, experimental: { ...current.experimental, promptPrediction: true } };
+		});
+		await started;
+		const second = store.updateDesktopConfig((current) => ({
+			...current,
+			experimental: { ...current.experimental, agentSkills: false },
+		}));
+		await store.overwriteDisk({ ...(await store.readDisk()), futureField: { enabled: true } });
+		release?.();
+		await Promise.all([first, second]);
+		expect((await store.readDesktopConfig()).experimental).toMatchObject({
+			agentSkills: false,
+			promptPrediction: true,
+		});
+		expect((await store.readDisk()).futureField).toEqual({ enabled: true });
+	});
+
+	it("keeps a no-op unchanged and recovers after a rejected updater", async () => {
+		const original = { projects: [], agentMode: "coding", futureField: "retained" };
+		const store = await loadStoreWithConfig(original);
+		await store.updateDesktopConfig((current) => current);
+		expect(await store.readDisk()).toEqual(original);
+		const failure = new Error("fixture updater failure");
+		const rejected = store.updateDesktopConfig(() => {
+			throw failure;
+		});
+		const next = store.updateDesktopConfig((current) => ({ ...current, language: "zh" }));
+		await expect(rejected).rejects.toBe(failure);
+		await next;
+		expect((await store.readDesktopConfig()).language).toBe("zh");
+	});
+
+	it("propagates a failed atomic write without poisoning the next transaction", async () => {
+		const store = await loadStoreWithConfig({ projects: [] });
+		const atomic = await import("@vetta/toolkit/atomic-write");
+		const failure = new Error("fixture disk failure");
+		const write = vi.spyOn(atomic, "atomicWriteJSONAsync").mockRejectedValueOnce(failure);
+		try {
+			const rejected = store.updateDesktopConfig((current) => ({ ...current, debugMode: true }));
+			const next = store.updateDesktopConfig((current) => ({ ...current, language: "en" }));
+			await expect(rejected).rejects.toBe(failure);
+			await next;
+			expect(await store.readDesktopConfig()).toMatchObject({ language: "en", debugMode: false });
+		} finally {
+			write.mockRestore();
+		}
 	});
 });

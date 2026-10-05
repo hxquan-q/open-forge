@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { isDuplicateProjectName } from "@shared/lib/project-name";
 import { confirmDialogAtom, projectsAtom } from "@shared/store/atoms";
@@ -17,7 +18,7 @@ export function useAddProjectMenuModel(): {
 	confirmNewProject: (name: string) => void;
 	showRemotePicker: boolean;
 	closeRemotePicker: () => void;
-	confirmRemoteProject: (hostId: string, remotePath: string) => void;
+	confirmRemoteProject: (hostId: string, remotePath: string, name?: string) => void;
 	isProjectNameTaken: (name: string) => boolean;
 	toggleOpen: () => void;
 } {
@@ -149,10 +150,10 @@ export function useAddProjectMenuModel(): {
 		},
 		showRemotePicker,
 		closeRemotePicker: () => setShowRemotePicker(false),
-		confirmRemoteProject: (hostId: string, remotePath: string) => {
+		confirmRemoteProject: (hostId: string, remotePath: string, name?: string) => {
 			setShowRemotePicker(false);
 			// 远程项目的标识是 ssh URI；登记走与本地项目同一个服务，校验和广播才一致。
-			void openProjectPath(`ssh://${hostId}${remotePath}`).catch((error: unknown) => {
+			void openProjectPath(`ssh://${hostId}${remotePath}`, name).catch((error: unknown) => {
 				// 主机被删掉、选中的目录其实是文件——这些都要说清楚，否则用户只会看到
 				// 对话框关了但项目没出现。
 				setConfirm({

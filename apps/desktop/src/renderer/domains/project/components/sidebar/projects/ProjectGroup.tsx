@@ -51,6 +51,8 @@ const ProjectSessionRow = memo(function ProjectSessionRow({
 interface ProjectGroupProps {
 	project: Project;
 	scrollParent: HTMLElement | null;
+	/** 远程项目所属主机的显示名，非远程或未登记的主机为 undefined。 */
+	remoteHostLabel?: string;
 	sessions: SidebarConversationInfo[];
 	sessionsLoading: boolean;
 	isExpanded: boolean;

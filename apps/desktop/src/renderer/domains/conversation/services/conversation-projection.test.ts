@@ -1,3 +1,4 @@
+import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import type { AssistantSessionEvent } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";
@@ -165,5 +166,77 @@ describe("ConversationProjection", () => {
 		const stats = projection.readStats();
 		expect(stats.droppedAssistantEvents).toBe(0);
 		expect(stats.pendingAssistantEvents).toBe(4097);
+	});
+
+	it("reset 后确定性 assistant id 已被占用时派生新消息，不原位替换消费前回复", () => {
+		// 队列消费时调用方 flush+reset 并把镜像用户气泡追加到尾部
+		// （useSessionEventController）。此后同 turnId 的事件若沿用
+		// assistant:{sid}:{turnId}，会命中消费前的消息原位替换——回复内容
+		// 落回用户气泡之前，气泡被孤立在列表末尾（BUG-0068）。
+		const projection = new ConversationProjection();
+		const partial = { role: "assistant", content: [{ type: "text", text: "x" }] } as unknown as AssistantMessage;
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "上半", partial }, 1));
+		const first = projection.flush([]);
+		projection.reset();
+		const mirror = createConversationUserMessage({ id: "mirror-u", text: "插队" });
+
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "下半", partial }, 2));
+		const messages = projection.flush([...first, mirror]);
+
+		expect(messages).toHaveLength(3);
+		expect(messages[0]).toMatchObject({ kind: "agent", text: "上半" });
+		expect(messages[1]).toBe(mirror);
+		expect(messages[2]).toMatchObject({ kind: "agent", text: "下半" });
+	});
+
+	it("历史回填折叠换 id 后，流式增量继续落在同一条消息", () => {
+		// TASK-0152：重开的运行回合里，canonical 历史含部分落盘内容（entry id），
+		// live 草稿（draft id）被折叠换名；投影目标迁移后增量不得另起新消息。
+		const projection = new ConversationProjection();
+		const partial = { role: "assistant", content: [{ type: "text", text: "x" }] } as unknown as AssistantMessage;
+		const user = createConversationUserMessage({ id: "u-2", text: "question" });
+		const draft = createConversationAgentMessage({
+			id: "draft-3",
+			text: "",
+			blocks: [],
+			phase: "streaming",
+			startedAt: 1234,
+		});
+
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "hel", partial }, 1));
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "lo", partial }, 2));
+		const streamed = projection.flush([user, draft]);
+		expect(streamed.at(-1)?.id).toBe("draft-3");
+
+		projection.retargetMessageId("draft-3", "entry-9");
+		const relabeled = streamed.map((item) =>
+			item.id === "draft-3" ? { ...item, id: "entry-9", entryId: "entry-9" } : item,
+		);
+
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: " world", partial }, 3));
+		const continued = projection.flush(relabeled);
+
+		const agents = continued.filter((item) => item.kind === "agent");
+		expect(agents).toHaveLength(1);
+		expect(agents[0]?.id).toBe("entry-9");
+		expect(agents[0]).toMatchObject({ kind: "agent", text: "hello world" });
+	});
+
+	it("retarget 只迁移匹配的当前目标，不影响其他草稿身份", () => {
+		const projection = new ConversationProjection();
+		projection.retargetMessageId("draft-3", "entry-9");
+		const partial = { role: "assistant", content: [{ type: "text", text: "x" }] } as unknown as AssistantMessage;
+		const user = createConversationUserMessage({ id: "u-1", text: "q" });
+		const otherDraft = createConversationAgentMessage({
+			id: "other-draft",
+			text: "",
+			blocks: [],
+			phase: "streaming",
+		});
+
+		projection.enqueue(envelope({ type: "text_delta", contentIndex: 0, delta: "x", partial }, 1));
+		const items = projection.flush([user, otherDraft]);
+
+		expect(items.at(-1)?.id).toBe("other-draft");
 	});
 });

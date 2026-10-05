@@ -5,11 +5,17 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
 import type { SshHost } from "@vetta/ssh-transport";
-import { atomicWriteJSON } from "@vetta/toolkit/atomic-write";
+import { atomicWriteJSON, atomicWriteJSONAsync } from "@vetta/toolkit/atomic-write";
 import { isLanguagePreference, type LanguagePreference } from "../../shared/i18n/config.js";
+import {
+	DEFAULT_NOTIFICATION_PREFERENCES,
+	type DesktopNotificationPreferences,
+	normalizeNotificationPreferences,
+} from "../../shared/notification-preferences.js";
 import { normalizeShortcutsConfig, type ShortcutsConfig } from "../../shared/shortcuts.js";
 import { isAgentMode } from "../agent-modes/index.js";
 import { DEFAULT_PROXY_CONFIG, type DesktopProxyConfig, normalizeProxyConfig } from "../proxy/proxy-settings.js";
+import { DESKTOP_CONFIG_SCHEMA_VERSION, migrateDesktopConfig } from "./desktop/migrate-config.js";
 
 export interface ProjectEntry {
 	path: string;
@@ -35,6 +41,7 @@ export interface ImageGenerationConfig {
 }
 
 export interface DesktopConfig {
+	schemaVersion: number;
 	projects: ProjectEntry[];
 	archivedProjects: ProjectEntry[];
 	workspacePath: string;
@@ -43,6 +50,7 @@ export interface DesktopConfig {
 	vettaAppPath?: string;
 	vettaCliAppPath?: string;
 	notificationsEnabled?: boolean;
+	notificationPreferences: DesktopNotificationPreferences;
 	language?: LanguagePreference;
 	/** 新建会话的默认工作模式（合法值来自 main/agent-modes 模式注册表，ADR-0071）。会话创建时固化进会话，改这里只影响之后新建的会话。 */
 	defaultAgentMode?: string;
@@ -112,6 +120,7 @@ const CONFIG_PATH = join(getVettaHomePath(), "desktop-config.json");
  */
 const SSH_HOSTS_PATH = join(getVettaHomePath(), "ssh-hosts.json");
 const DEFAULT_CONFIG: DesktopConfig = {
+	schemaVersion: DESKTOP_CONFIG_SCHEMA_VERSION,
 	projects: [],
 	archivedProjects: [],
 	workspacePath: join(getVettaHomePath(), "workspace"),
@@ -119,6 +128,7 @@ const DEFAULT_CONFIG: DesktopConfig = {
 	defaultAgentMode: "work",
 	debugMode: false,
 	notificationsEnabled: true,
+	notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
 	experimental: { vettaCli: true, agentSkills: true },
 	proxy: { ...DEFAULT_PROXY_CONFIG },
 	imageGeneration: {},
@@ -239,7 +249,7 @@ export function normalizeImageGeneration(value: unknown): ImageGenerationConfig 
 export async function readDesktopConfig(): Promise<DesktopConfig> {
 	try {
 		const raw = await readFile(CONFIG_PATH, "utf8");
-		return parseDesktopConfig(JSON.parse(raw) as Record<string, unknown>);
+		return migrateAndParseDesktopConfig(JSON.parse(raw));
 	} catch {
 		return { ...DEFAULT_CONFIG };
 	}
@@ -248,14 +258,27 @@ export async function readDesktopConfig(): Promise<DesktopConfig> {
 export function readConfigSync(): DesktopConfig {
 	try {
 		const raw = readFileSync(CONFIG_PATH, "utf8");
-		return parseDesktopConfig(JSON.parse(raw) as Record<string, unknown>);
+		return migrateAndParseDesktopConfig(JSON.parse(raw));
 	} catch {
 		return { ...DEFAULT_CONFIG };
 	}
 }
 
+function migrateAndParseDesktopConfig(value: unknown): DesktopConfig {
+	const result = migrateDesktopConfig(value);
+	if (result.migrated) {
+		readSshHostsSync(result.config.sshHosts);
+		atomicWriteJSON(CONFIG_PATH, { ...result.config, sshHosts: undefined });
+	}
+	return parseDesktopConfig(result.config);
+}
+
 function parseDesktopConfig(parsed: Record<string, unknown>): DesktopConfig {
 	return {
+		schemaVersion:
+			typeof parsed.schemaVersion === "number" && Number.isInteger(parsed.schemaVersion)
+				? parsed.schemaVersion
+				: DESKTOP_CONFIG_SCHEMA_VERSION,
 		projects: migrateProjectEntries(parsed.projects),
 		archivedProjects: migrateProjectEntries(parsed.archivedProjects),
 		workspacePath:
@@ -269,6 +292,7 @@ function parseDesktopConfig(parsed: Record<string, unknown>): DesktopConfig {
 		vettaAppPath: typeof parsed.vettaAppPath === "string" ? parsed.vettaAppPath : undefined,
 		vettaCliAppPath: typeof parsed.vettaCliAppPath === "string" ? parsed.vettaCliAppPath : undefined,
 		notificationsEnabled: typeof parsed.notificationsEnabled === "boolean" ? parsed.notificationsEnabled : true,
+		notificationPreferences: normalizeNotificationPreferences(parsed.notificationPreferences),
 		language: isLanguagePreference(parsed.language) ? parsed.language : undefined,
 		experimental: normalizeExperimental(parsed.experimental),
 		proxy: normalizeProxyConfig(parsed.proxy),
@@ -351,22 +375,70 @@ function normalizeSshHosts(value: unknown): SshHost[] | undefined {
 	return hosts;
 }
 
+/** Updaters return a new snapshot to write, or the same reference for a no-op. Never nest transactions. */
+export type DesktopConfigUpdater = (current: DesktopConfig) => DesktopConfig | Promise<DesktopConfig>;
+
+let desktopConfigOperations: Promise<void> = Promise.resolve();
+
 /**
- * 整文件写回，但保留磁盘上本版本不认识的字段。
- *
- * 新旧版本共用同一份 `~/.openforge`（开发版与已安装的正式版、或升级后又回退）。读路径
- * {@link parseDesktopConfig} 是字段白名单，不认识的字段不进内存；若写回时整份覆盖，
- * 旧版任何一次保存都会把新版的字段抹掉——0.5.58 启动时顺手写回 CLI 路径，就这样清空了
- * sshHosts，远程项目随之全部报「Unknown SSH host」。已知字段仍以传入值为准：显式给
- * `undefined` 的键在序列化时被丢掉，删除语义不变。
+ * Reads, modifies and writes on one process-local queue; failures do not poison later operations.
+ * Unknown disk fields survive older/newer app versions sharing this config. Explicit undefined
+ * still deletes a known field; SSH hosts remain owned by their separate file.
  */
+export function updateDesktopConfig(update: DesktopConfigUpdater): Promise<DesktopConfig> {
+	const result = desktopConfigOperations.then(async () => {
+		const raw = readRawConfigSync();
+		readSshHostsSync(raw.sshHosts);
+		const current = parseDesktopConfig(raw);
+		const next = await update(current);
+		if (next === current) return current;
+		// Preserve unknown fields from the latest disk snapshot; SSH hosts have their own owner.
+		await atomicWriteJSONAsync(CONFIG_PATH, { ...readRawConfigSync(), ...next, sshHosts: undefined });
+		return next;
+	});
+	desktopConfigOperations = result.then(
+		() => undefined,
+		() => undefined,
+	);
+	return result;
+}
+
+/** Compatibility for whole-snapshot writes. Product read-modify-write flows use updateDesktopConfig. */
 export async function writeDesktopConfig(config: DesktopConfig): Promise<void> {
-	const raw = readRawConfigSync();
-	// 迁移没来得及发生时（文件由外部写入、本进程还没读过）先把旧字段迁出，再从这里删掉。
-	readSshHostsSync(raw.sshHosts);
-	// sshHosts 由 writeSshHosts 独占：调用方手里的是读配置那一刻的快照，拿它写回会盖掉
-	// 期间刚增删的主机。
-	atomicWriteJSON(CONFIG_PATH, { ...raw, ...config, sshHosts: undefined });
+	await updateDesktopConfig(() => {
+		// 迁移没来得及发生时（文件由外部写入、本进程还没读过）先把旧字段迁出；事务读阶段
+		// 也会迁移一次，这里是旧整快照入口的自保。快照写入还须保住新版本 schema 写入的
+		// 未来通知字段，不能被快照里的旧形状整段覆盖；sshHosts 由独立文件持有，事务落盘时剥离。
+		const raw = readRawConfigSync();
+		readSshHostsSync(raw.sshHosts);
+		const notificationPreferences = preserveFutureNotificationFields(raw, config.notificationPreferences);
+		return notificationPreferences === config.notificationPreferences
+			? config
+			: ({ ...config, notificationPreferences } as DesktopConfig);
+	});
+}
+
+function preserveFutureNotificationFields(
+	raw: Record<string, unknown>,
+	preferences: DesktopNotificationPreferences,
+): DesktopNotificationPreferences | Record<string, unknown> {
+	if (typeof raw.schemaVersion !== "number" || raw.schemaVersion <= DESKTOP_CONFIG_SCHEMA_VERSION) return preferences;
+	if (typeof raw.notificationPreferences !== "object" || raw.notificationPreferences === null) return preferences;
+	const future = raw.notificationPreferences as Record<string, unknown>;
+	const futureEvents =
+		typeof future.events === "object" && future.events !== null ? (future.events as Record<string, unknown>) : {};
+	const events = Object.fromEntries(
+		Object.entries(preferences.events).map(([event, value]) => {
+			const futureEvent = futureEvents[event];
+			return [
+				event,
+				typeof futureEvent === "object" && futureEvent !== null
+					? { ...(futureEvent as Record<string, unknown>), ...value }
+					: value,
+			];
+		}),
+	);
+	return { ...future, ...preferences, events: { ...futureEvents, ...events } };
 }
 
 function readRawConfigSync(): Record<string, unknown> {
@@ -381,9 +453,11 @@ function readRawConfigSync(): Record<string, unknown> {
 }
 
 export async function persistVettaCliPaths(paths: { vettaAppPath: string; vettaCliAppPath: string }): Promise<void> {
-	const config = await readDesktopConfig();
-	if (config.vettaAppPath === paths.vettaAppPath && config.vettaCliAppPath === paths.vettaCliAppPath) return;
-	await writeDesktopConfig({ ...config, ...paths });
+	await updateDesktopConfig((config) =>
+		config.vettaAppPath === paths.vettaAppPath && config.vettaCliAppPath === paths.vettaCliAppPath
+			? config
+			: { ...config, ...paths },
+	);
 }
 
 export function expandTildePath(path: string): string {

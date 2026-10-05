@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import OpenAI from "openai";
 import type { ResponseCreateParamsStreaming } from "openai/resources/responses/responses.js";
 import type { Context, Model, Usage } from "../../types.js";
@@ -22,7 +23,7 @@ export function createOpenAIResponsesClient(
 			headers,
 			buildCopilotDynamicHeaders({
 				messages: context.messages,
-				hasImages: hasCopilotVisionInput(context.messages),
+				hasImages: model.input.includes("image") && hasCopilotVisionInput(context.messages),
 			}),
 		);
 	}

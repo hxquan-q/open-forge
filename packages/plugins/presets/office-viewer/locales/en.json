@@ -1,4 +1,6 @@
 {
+	"error.loadPreview": "Failed to load the document preview",
+	"state.loadErrorHint": "Close and reopen the preview to try again",
 	"plugin.name": "Office Viewer",
 	"plugin.description": "Offline preview for PDF, DOCX, PPTX and spreadsheet files.",
 	"error.unsupportedFormat": "This Office file format is not supported yet",

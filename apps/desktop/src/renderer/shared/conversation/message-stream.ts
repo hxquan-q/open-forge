@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import type { ConversationAgentMessageEvent } from "@vetta/runtime-core/conversation";
 import type { ContentBlock, ToolCallBlock } from "./content-blocks";
@@ -172,6 +173,10 @@ function mergeTerminalMessage(
 	}
 	if (phase === "aborted") {
 		next = settlePendingToolCalls(next, "cancelled");
+	}
+	// A tool-use stop ends this model call, not the reply containing its tools and next call.
+	if (phase === "completed" && terminal.stopReason === "toolUse") {
+		return { ...next, phase: "streaming", usages: [...(next.usages ?? []), terminal.usage] };
 	}
 	const endedAt = terminal.timestamp;
 	return {

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLoopbackSshConnection } from "@vetta/ssh-transport/testing";
+import { createLoopbackSshConnection, toLoopbackRemotePath } from "@vetta/ssh-transport/testing";
 import { describe, expect, it, vi } from "vitest";
 
 const connection = createLoopbackSshConnection();
@@ -20,10 +20,10 @@ function createRemoteRepository(): string {
 const limits = { env: undefined, timeoutMs: 20_000, maxBufferBytes: 1024 * 1024 };
 
 // 回环 SSH 顶替脚本是 /bin/sh POSIX shell，win32 下无 shebang 执行与合法远端 POSIX 路径。
-describe.skipIf(process.platform === "win32")("插件命令在远程项目所在的机器上执行", () => {
+describe("插件命令在远程项目所在的机器上执行", () => {
 	it("Git 面板的探测命令在远端仓库里回答「是仓库」，并看得到那里的改动", async () => {
 		const root = createRemoteRepository();
-		const cwd = `ssh://build-01${root}`;
+		const cwd = `ssh://build-01${toLoopbackRemotePath(root)}`;
 
 		const inside = await runRemotePluginCommand({
 			...limits,
@@ -43,7 +43,7 @@ describe.skipIf(process.platform === "win32")("插件命令在远程项目所在
 			...limits,
 			file: "printf",
 			args: ["%s|", "$HOME", "a b", "x;y", "`id`"],
-			cwd: `ssh://build-01${root}`,
+			cwd: `ssh://build-01${toLoopbackRemotePath(root)}`,
 		});
 		expect(result.stdout).toBe("$HOME|a b|x;y|`id`|");
 	});
@@ -54,7 +54,7 @@ describe.skipIf(process.platform === "win32")("插件命令在远程项目所在
 			...limits,
 			file: "git",
 			args: ["rev-parse", "--is-inside-work-tree"],
-			cwd: `ssh://build-01${root}`,
+			cwd: `ssh://build-01${toLoopbackRemotePath(root)}`,
 		});
 		expect(result.exitCode).not.toBe(0);
 	});
@@ -62,7 +62,12 @@ describe.skipIf(process.platform === "win32")("插件命令在远程项目所在
 	it("远端没有这个命令时，失败方式与本机「可执行文件不存在」一致", async () => {
 		const root = createRemoteRepository();
 		await expect(
-			runRemotePluginCommand({ ...limits, file: "vetta-no-such-command", args: [], cwd: `ssh://build-01${root}` }),
+			runRemotePluginCommand({
+				...limits,
+				file: "vetta-no-such-command",
+				args: [],
+				cwd: `ssh://build-01${toLoopbackRemotePath(root)}`,
+			}),
 		).rejects.toThrow(/Command failed to start: vetta-no-such-command \(ENOENT/);
 	});
 
@@ -73,7 +78,7 @@ describe.skipIf(process.platform === "win32")("插件命令在远程项目所在
 			env: { VETTA_PLUGIN_FLAG: "on" },
 			file: "sh",
 			args: ["-c", 'printf %s "$VETTA_PLUGIN_FLAG"'],
-			cwd: `ssh://build-01${root}`,
+			cwd: `ssh://build-01${toLoopbackRemotePath(root)}`,
 		});
 		expect(result.stdout).toBe("on");
 	});

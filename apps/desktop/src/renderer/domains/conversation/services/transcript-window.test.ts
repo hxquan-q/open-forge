@@ -193,7 +193,7 @@ describe("fullHistoryToChatWithSpans", () => {
 		const entries: HistoryEntry[] = [
 			{
 				type: "prompt_ref_marker",
-				promptRef: { kind: "skill", name: "vetta-testing" },
+				promptRef: { kind: "skill", name: "open-forge-testing" },
 				timestamp: "2024-01-01T00:00:00Z",
 			},
 			userEntry("u-0", "q0"),
@@ -489,7 +489,7 @@ describe("reconcileWindowedProjection", () => {
 		// patch 在字段无差异时原样返回 live 对象。
 		expect(result.items[0]).toBe(liveUser);
 		expect(result.items[1]).toBe(liveAgent);
-		expect(result.canonicalCount).toBe(2);
+		expect(result.canonicalItemIndexes).toHaveLength(2);
 		expect(result.prependedCount).toBe(0);
 	});
 
@@ -571,7 +571,84 @@ describe("reconcileWindowedProjection", () => {
 		expect(result.items).toHaveLength(2);
 		expect(result.items[0]).toBe(liveUser);
 		expect(result.items[1]?.id).toBe("live-stream");
-		expect(result.canonicalCount).toBe(1);
+		expect(result.canonicalItemIndexes).toHaveLength(1);
+	});
+
+	it("夹在已消费项之间的 live-only 项保持因果位置，不平铺到回复末尾", () => {
+		// 队列镜像气泡在 live 里排在它触发的回复之前；窗口化提交若把未消费
+		// live-only 项一律追加尾部，气泡会跑到回复之后（BUG-0068）。
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const mirror = createConversationUserMessage({ id: "opt-2", text: "followup", deliveryPhase: "pending" });
+		const liveAgent = completedAgent("live-a", "a-2");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-2", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, mirror, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["live-u", "opt-2", "live-a"]);
+	});
+
+	it("live-only 项没有已消费前驱时锚定到最近已消费后继之前", () => {
+		const mirror = createConversationUserMessage({ id: "opt-1", text: "followup", deliveryPhase: "pending" });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([mirror, liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["opt-1", "live-u", "live-a"]);
+	});
+
+	it("(b) 槽位文本不匹配的排队幽灵保持尾部，镜像气泡仍锚到孪生槽前", () => {
+		// (b) 的依据是「该槽位最可能是规范孪生」：锚定槽的 user 文本必须与
+		// 气泡一致才锚定中段；孪生永远不会入模的排队幽灵（如取消失败回队
+		// 留下的镜像）插进中段会跑到比它更晚的已发送消息之前（BUG-0073）。
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const mirror = createConversationUserMessage({ id: "opt-2", text: "followup", deliveryPhase: "pending" });
+		const ghost = createConversationUserMessage({ id: "opt-ghost", text: "还在排队", deliveryPhase: "pending" });
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationUserMessage({ id: "proj-u10", entryId: "u-10", text: "followup" }),
+			createConversationAgentMessage({ id: "proj-a10", entryId: "a-10", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, mirror, ghost], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["live-u", "opt-2", "proj-u10", "proj-a10", "opt-ghost"]);
+	});
+
+	it("首部锚定的 live-only 项不计入 prependedCount", () => {
+		// (a) 锚定到结果头部的 pending 是既有 live 行的重排，不是新前插内容；
+		// loadOlderTranscriptPage 拿 prependedCount 前移 Virtuoso firstItemIndex，
+		// 多计一行滚动锚点就跳一行（BUG-0073）。
+		const pendingHead = createConversationUserMessage({ id: "opt-head", text: "早期气泡", deliveryPhase: "pending" });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([pendingHead, liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["opt-head", "live-u", "live-a"]);
+		expect(result.prependedCount).toBe(0);
+	});
+
+	it("完全无已消费邻居的 live-only 项仍追加尾部", () => {
+		const streaming = createConversationAgentMessage({ id: "live-stream", phase: "streaming", blocks: [] });
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+		];
+		const result = reconcileWindowedProjection([streaming], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["proj-u", "live-stream"]);
 	});
 
 	it("无 entryId 的 live 项按 kind 有序配对；kind 不匹配的项不被消费", () => {
@@ -597,6 +674,6 @@ describe("reconcileWindowedProjection", () => {
 		// canonicalAgent 配对 liveAgent（kind agent）；canonicalEvent 配对 liveEvent。
 		expect(result.items[0]?.id).toBe("a-live");
 		expect(result.items[1]?.id).toBe("ev-live");
-		expect(result.canonicalCount).toBe(2);
+		expect(result.canonicalItemIndexes).toHaveLength(2);
 	});
 });

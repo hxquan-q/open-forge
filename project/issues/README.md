@@ -35,7 +35,7 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0018`：对话输入区能力建议面板信息层级待优化（draft；待确认 Skills/MCP/计划/图像/插件入口优先级与运行中交互规则）。
 - `ISSUE-0019`：Work/Coding 模式与模型选择范围需要明确区分（done：已裁决方案 A 并实施——回合进行中锁定模型选择并明示生效边界，merge `4f4e4880e`，用户可见变化已入发布说明）。
 - `ISSUE-0022`：流式停滞换连对用户是否可见（**前提已更正**：桌面 IPC 白名单缺 `"retry"` 致事件被拒并抛异常、团队 hub 静默丢弃——属缺陷面；修复进行中，展示语义待用户拍板）。
-- `ISSUE-0020`：Desktop 内存占用偏高需要建立基线并定位主导进程（draft；先采集进程级内存曲线，再决定是否转 Bug）。
+- `ISSUE-0020`：Desktop 内存占用偏高需要建立基线并定位主导进程（draft；2026-10-03 只读采样定位到 15 个插件开发服务器及高占用 Renderer，待普通 dev / dev:lean 同条件对照，尚未确认泄漏）。
 - `ISSUE-0021`：i18n 懒加载与离线策略（draft；已补首轮源码态 locale 体积 ≈543KB，打包产物占比待一次 renderer 构建审计）。
 - `ISSUE-0023`：修改声明头守卫 ratchet 已落地（done）：`--baseline` 快照豁免存量 671 条、挡住新增，接入 check-guards；剩余 quiet-window 一次性 sweep 待拆 Task。
 - `ISSUE-0024`：官方能力市场源 `hxquan-q/open-forge-marketplace` 未发布，能力页常驻同步失败横幅（done；按方案 A 发布仓库 gh-pages 骨架，实机验证「已同步 · 0.1.0」、横幅消除）。

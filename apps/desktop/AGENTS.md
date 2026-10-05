@@ -165,10 +165,12 @@ src/
 
 ### 5. 主题与样式
 
-- 使用项目 CSS 变量（`var(--text-1)`, `var(--hover)`, `var(--border)`, `var(--accent)` 等）
-- **不要**使用 Tailwind 语义色（`bg-primary`, `text-foreground` 等），这些未在项目中配置
-- shadcn 组件的样式已经对齐到项目 CSS 变量
-- 图标优先使用 solar 图标集（`icon-[solar--*-linear]`，统一 linear 风格），其次 mdi；详见 DESIGN.md §6
+- **颜色、圆角、阴影一律用 token 工具类**：`bg-primary`、`text-foreground`、`border-border`、`rounded-lg`、`shadow-md` 等，由 `styles.css` 的 `@theme inline` 提供。完整白名单与禁用项见 `DESIGN.md`（「Colors」与「Lint checklist」两节），**冲突时以 DESIGN.md 为准**。
+- 需要透明混合时用 `/N` alpha 变体（`bg-primary/10`）或 `color-mix(in srgb, var(--primary) X%, transparent)`；透明度只用 `/5 /10 /15 /20 /25 /30 /40 /50 /60 /70 /80`。
+- `var(--text-1)` / `var(--hover)` **不存在**（全库无声明），不要使用。`var(--border)` / `var(--accent)` 等确实是真实 token，但优先用工具类而非裸 `var()`。
+- 明暗走 `data-mode`（`light` / `dark`），主题名走 `data-theme`（`mono` / `sand` / `default`）；出厂为 `mono` + 暗色。**不要**假设 `:root` 就是暗色。
+- shadcn 组件的样式已经对齐到 token 体系。
+- 图标优先使用 solar 图标集（`icon-[solar--*-linear]`，统一 linear 风格），其次 mdi；详见 `DESIGN.md` 的「图标」节。
 
 ### 6. IPC 通信
 

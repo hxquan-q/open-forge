@@ -74,7 +74,7 @@ export function reconcileOptimisticUserMessages<T extends ChatConversationItem>(
 			continue;
 		}
 		const confirmed = entry.matchTextOnly
-			? sameText(canonical.text, entry.message.text)
+			? sameUserText(canonical.text, entry.message.text)
 			: sameUserMessage(canonical, entry.message);
 		if (confirmed) {
 			if (!entry.matchTextOnly && entry.message.inputSegments) {
@@ -111,10 +111,11 @@ function insertUnresolvedOptimisticMessages<T extends ChatConversationItem>(
 	const tailFallback: ConversationUserMessageViewModel[] = [];
 	for (const { message, precedingUserCount } of unresolved) {
 		if (historyIds.has(message.id)) continue;
-		// A history snapshot with a different user ordinal cannot safely locate this
-		// bubble (it may already contain a later/different canonical send). Preserve
-		// the existing tail fallback until the canonical user confirms or expires it.
-		if (precedingUserCount !== canonicalUserCount) {
+		// 序号还没被规范历史写到（precedingUserCount > canonicalUserCount）的
+		// 气泡，其真实前驱在缺失条目之后，保持尾部兜底；序号被更早落盘的
+		// 发送占用（队列消费场景）的气泡按发送序号落位——追加到尾部会
+		// 把它挪到它触发的回复之后（BUG-0068）。
+		if (precedingUserCount > canonicalUserCount) {
 			tailFallback.push(message);
 			continue;
 		}
@@ -182,7 +183,7 @@ export function reconcileOptimisticUserMessagesTail<T extends ChatConversationIt
 			continue;
 		}
 		const confirmed = entry.matchTextOnly
-			? sameText(canonical.text, entry.message.text)
+			? sameUserText(canonical.text, entry.message.text)
 			: sameUserMessage(canonical, entry.message);
 		if (confirmed) {
 			confirmedIds.add(entry.message.id);
@@ -229,14 +230,19 @@ function sameUserMessage(
 	optimistic: ConversationUserMessageViewModel,
 ): boolean {
 	return (
-		sameText(canonical.text, optimistic.text) &&
+		sameUserText(canonical.text, optimistic.text) &&
 		canonical.settingsAssistTabId === optimistic.settingsAssistTabId &&
 		samePromptRef(canonical.promptRef, optimistic.promptRef) &&
 		sameAttachments(canonical.attachments, optimistic.attachments)
 	);
 }
 
-function sameText(canonical: string, optimistic: string): boolean {
+/**
+ * 规范文本与气泡文本的吸收判等：附件-only 消息落盘为占位句是已知漂移。
+ * 乐观对账与因果锚定（pending-user-anchor 的孪生槽校验）共用同一语义，
+ * 避免两层各写一份判等造成吸收与锚定结论漂移。
+ */
+export function sameUserText(canonical: string, optimistic: string): boolean {
 	return canonical === optimistic || (optimistic === "" && canonical === "(see attached content)");
 }
 

@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 import type { CodingAgentModelRuntime } from "@vetta/coding-agent/host-services";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDesktopKnowledgeProcessingSessionFactory } from "./processing-session-factory.js";
 
 const factoryMocks = vi.hoisted(() => ({
+	createDesktopPromptRuntimeSources: vi.fn(async () => ({})),
 	codingToolResultPolicy: { project: vi.fn() },
 	detectWorkspaceFacts: vi.fn(() => "# Workspace"),
 	probeWorkspaceSignals: vi.fn(() => ({ isGitRepository: true, stacks: [] })),
@@ -15,6 +17,7 @@ const factoryMocks = vi.hoisted(() => ({
 			readonly createConversationPersistence: (context: { readonly conversationDir: string }) => unknown;
 			readonly createToolEnvironment: (...args: never[]) => unknown;
 			readonly createSessionExecutionEnvironment: (...args: never[]) => unknown;
+			readonly createPromptRuntimeSources: (...args: never[]) => unknown;
 			readonly codingToolResultPolicy: unknown;
 			readonly knowledgeRuntime: unknown;
 			readonly resolveWorkspaceFacts: (cwd: string) => string | undefined;
@@ -26,6 +29,10 @@ const factoryMocks = vi.hoisted(() => ({
 }));
 
 factoryMocks.createNodeKnowledgeRuntime.mockReturnValue(factoryMocks.knowledgeRuntime);
+
+vi.mock("../agent-runtime/resource-runtime.js", () => ({
+	createDesktopPromptRuntimeSources: factoryMocks.createDesktopPromptRuntimeSources,
+}));
 
 vi.mock("@vetta/coding-agent/composition", () => ({
 	createKnowledgeProcessingSessionFactory: factoryMocks.create,
@@ -81,6 +88,7 @@ describe("createDesktopKnowledgeProcessingSessionFactory", () => {
 			createConversationPersistence: expect.any(Function),
 			createToolEnvironment: factoryMocks.createDesktopCodingAgentToolEnvironment,
 			createSessionExecutionEnvironment: factoryMocks.createDesktopCodingAgentSessionExecutionEnvironment,
+			createPromptRuntimeSources: factoryMocks.createDesktopPromptRuntimeSources,
 			codingToolResultPolicy: factoryMocks.codingToolResultPolicy,
 			modelInputImageProcessor: factoryMocks.nodeModelInputImageProcessor,
 			knowledgeRuntime: factoryMocks.knowledgeRuntime,

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
@@ -59,6 +60,7 @@ import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service
 import { onConversationListChanged } from "../conversations/conversation-list-events.js";
 import { assertOrdinaryConversationPath } from "../conversations/conversation-ownership-guard.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
+import { DesktopGoalController } from "../conversations/desktop-goal-controller.js";
 import { desktopSessionSearch } from "../conversations/desktop-session-search.js";
 import {
 	collectRunningInteractiveSessionIds,
@@ -80,7 +82,9 @@ import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
 import { getDesktopMcpTaskCoordinator, getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
+import { forgetMessageAnnotations } from "../message-annotations/host.js";
 import { notify } from "../notifications/index.js";
+import { SessionTurnNotificationController } from "../notifications/session-turn-notification-controller.js";
 import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
 import { mapSessionEventToPetPresentation } from "../pet/session-event-action-policy.js";
 import { sendPetCommandToWindow } from "../pet-window.js";
@@ -102,7 +106,7 @@ import {
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
 	readConfigSync,
 	readDesktopConfig,
-	writeDesktopConfig,
+	updateDesktopConfig,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
 import { readSettings, updateSettings } from "./settings.js";
@@ -180,6 +184,11 @@ const CHANNELS = {
 	QUEUE_RESUME: "vetta:session:queue-resume",
 	QUEUE_CLEAR: "vetta:session:queue-clear",
 	CLEAR_TODOS: "vetta:session:clear-todos",
+	GOAL_GET_STATE: "vetta:session:goal-get-state",
+	GOAL_START: "vetta:session:goal-start",
+	GOAL_PAUSE: "vetta:session:goal-pause",
+	GOAL_RESUME: "vetta:session:goal-resume",
+	GOAL_CLEAR: "vetta:session:goal-clear",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
 	UPDATE_SETTINGS: "vetta:session:update-settings",
@@ -402,6 +411,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	};
 
 	const runtime = getSharedRuntime();
+	const goalController = new DesktopGoalController(runtime);
 	const pluginRuntimeSource = getDesktopCodingAgentPluginRuntimeSource();
 	const conversationService = getDesktopConversationService();
 	const questionBroker = getDesktopUserQuestionBroker();
@@ -441,10 +451,9 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		if (notificationSubs.has(sessionId)) return;
 		// 逐轮跟踪终结状态：message.final 带 stopReason，error 事件、aborted
 		// lifecycle 各自独立。agent_end 时按累积状态判定该不该通知。
-		let lastStopReason: string | undefined;
-		let aborted = false;
 		let lastPetActionId: string | undefined;
-		let hasFinalPetBody = false;
+		const hasFinalPetBody = false;
+		const notificationController = new SessionTurnNotificationController();
 		const unsubscribe = runtime.subscribe(sessionId, (ev: SessionEvent) => {
 			const petPresentation = mapSessionEventToPetPresentation(ev);
 			const petActionId = petPresentation?.actionId;
@@ -460,33 +469,17 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 				if (command) sendPetCommandToWindow(command);
 			}
 
-			if (ev.type === "message.final") {
-				if (petBubble?.body) hasFinalPetBody = true;
-				const sr = (ev.message as unknown as { stopReason?: unknown }).stopReason;
-				if (typeof sr === "string") lastStopReason = sr;
-			} else if (ev.channel === "assistant" && (ev.type === "done" || ev.type === "error")) {
-				if (petBubble?.body) hasFinalPetBody = true;
-				lastStopReason = ev.type === "done" ? ev.message.stopReason : "error";
-			} else if (ev.channel !== "assistant" && ev.type === "error") {
-				lastStopReason = "error";
-			} else if (ev.type === "session.lifecycle") {
-				if (ev.phase === "agent_start") {
-					hasFinalPetBody = false;
-				} else if (ev.phase === "aborted") {
-					aborted = true;
-					hasFinalPetBody = false;
-				} else if (ev.phase === "agent_end") {
-					const wasAborted = aborted || lastStopReason === "aborted";
-					const outcome = lastStopReason === "error" ? "error" : "completed";
-					const sessionPath = runtime.getSessionPath(sessionId);
-					lastStopReason = undefined;
-					aborted = false;
-					hasFinalPetBody = false;
-					// 中断不通知；正常完成 / 出错才通知（见 CONTEXT.md「agent 完成通知」）。
-					if (!wasAborted && sessionPath) {
-						void notify({ type: "agent-turn-complete", sessionPath, cwd, outcome });
-					}
-				}
+			const outcome = notificationController.handle(ev);
+			const sessionPath = outcome ? runtime.getSessionPath(sessionId) : undefined;
+			if (outcome && sessionPath) {
+				// 中断不通知；正常完成 / 出错才通知（见 CONTEXT.md「agent 完成通知」）。
+				// controller 用 "failed" 描述终态，notify 合同沿用本仓的 "error"。
+				void notify({
+					type: "agent-turn-complete",
+					sessionPath,
+					cwd,
+					outcome: outcome === "failed" ? "error" : "completed",
+				});
 			}
 		});
 		notificationSubs.set(sessionId, unsubscribe);
@@ -1091,6 +1084,31 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_TODO_CLEAR, undefined);
 	});
 
+	ipcMain.handle(CHANNELS.GOAL_GET_STATE, (_event, sessionId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		return goalController.read(sessionId);
+	});
+	ipcMain.handle(CHANNELS.GOAL_START, (_event, sessionId: unknown, objective: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(objective, "objective");
+		return goalController.start(sessionId, objective);
+	});
+	ipcMain.handle(CHANNELS.GOAL_PAUSE, (_event, sessionId: unknown, goalId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(goalId, "goalId");
+		return goalController.pause(sessionId, goalId);
+	});
+	ipcMain.handle(CHANNELS.GOAL_RESUME, (_event, sessionId: unknown, goalId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(goalId, "goalId");
+		return goalController.resume(sessionId, goalId);
+	});
+	ipcMain.handle(CHANNELS.GOAL_CLEAR, (_event, sessionId: unknown, goalId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(goalId, "goalId");
+		return goalController.clear(sessionId, goalId);
+	});
+
 	ipcMain.handle(CHANNELS.UPDATE_SETTINGS, async (_event, sessionId: unknown, partialSettings: SettingsPatch) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		await runtime.updateSettings(sessionId, partialSettings);
@@ -1108,9 +1126,10 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.SET_GLOBAL_EXECUTION_MODE, async (_event, mode: unknown) => {
 		assertExecutionMode(mode);
 		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		const settings = await readDesktopConfig();
-		settings.defaultExecutionMode = mode as SessionExecutionMode;
-		await writeDesktopConfig(settings);
+		await updateDesktopConfig((settings) => ({
+			...settings,
+			defaultExecutionMode: mode as SessionExecutionMode,
+		}));
 	});
 
 	// 只更新「新会话默认工作模式」。工作模式在会话创建时固化、会话内不可变，
@@ -1119,9 +1138,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// 广播仅用于各窗口新会话页 toggle 的显示同步。
 	ipcMain.handle(CHANNELS.SET_GLOBAL_AGENT_MODE, async (_event, mode: unknown) => {
 		const next = isAgentMode(mode) ? mode : DEFAULT_AGENT_MODE;
-		const settings = await readDesktopConfig();
-		settings.defaultAgentMode = next;
-		await writeDesktopConfig(settings);
+		await updateDesktopConfig((settings) => ({ ...settings, defaultAgentMode: next }));
 		for (const win of BrowserWindow.getAllWindows()) {
 			win.webContents.send(CHANNELS.AGENT_MODE_CHANGED, next);
 		}
@@ -1250,6 +1267,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		// 连带回收子目录里的产物。读 header 先取 cwd，再 delete，最后 rm 子目录。
 		const cwdFromHeader = await readSessionCwdFromHeader(sessionPath);
 		await runtime.deleteSession(sessionPath);
+		await forgetMessageAnnotations(sessionPath);
 		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
 			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
 				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);
@@ -1614,13 +1632,11 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 					turnStartMap.set(sessionId, Date.now());
 				}
 				const assistantMessage =
-					runtimeEvent.type === "message.final"
+					runtimeEvent.channel === "assistant" && runtimeEvent.type === "done"
 						? runtimeEvent.message
-						: runtimeEvent.channel === "assistant" && runtimeEvent.type === "done"
-							? runtimeEvent.message
-							: runtimeEvent.channel === "assistant" && runtimeEvent.type === "error"
-								? runtimeEvent.error
-								: undefined;
+						: runtimeEvent.channel === "assistant" && runtimeEvent.type === "error"
+							? runtimeEvent.error
+							: undefined;
 				if (assistantMessage && readConfigSync().debugMode) {
 					const cwd = sessionCwdMap.get(sessionId);
 					if (cwd) {

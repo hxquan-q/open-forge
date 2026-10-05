@@ -8,7 +8,6 @@
 .gitignore
 SECURITY.md
 apps/cli-host/AGENTS.md
-apps/cli-host/README.md
 apps/cli-host/src/action-command.ts
 apps/cli-host/src/debug-command.ts
 apps/cli-host/src/rpc/node-rpc-client-transport.ts
@@ -26,7 +25,6 @@ apps/cli-host/test/runtime-host-capabilities-contract.test.ts
 apps/cli-host/test/runtime-host-session-backend.test.ts
 apps/cli-host/test/support/agent-rpc-test-process.ts
 apps/desktop/AGENTS.md
-apps/desktop/scripts/build-agent-modes.mjs
 apps/desktop/scripts/build-presets.mjs
 apps/desktop/scripts/run-dev-electron.node-test.mjs
 apps/desktop/scripts/runtime-canary-runner.ts
@@ -37,8 +35,6 @@ apps/desktop/src/main/abilities/open-marketplace/marketplace-source-store.ts
 apps/desktop/src/main/abilities/open-marketplace/open-marketplace-mcp-runtime.ts
 apps/desktop/src/main/abilities/open-marketplace/open-marketplace-service.ts
 apps/desktop/src/main/abilities/presentation/skill-package-presentation.ts
-apps/desktop/src/main/agent-modes/agent-modes.test.ts
-apps/desktop/src/main/agent-modes/modes-data.ts
 apps/desktop/src/main/agent-modes/modes/coding.md
 apps/desktop/src/main/agent-modes/modes/partials/canvas-artifacts.md
 apps/desktop/src/main/agent-modes/modes/work.md
@@ -94,14 +90,11 @@ apps/desktop/src/main/im-host/index.ts
 apps/desktop/src/main/im-host/proxy-env.ts
 apps/desktop/src/main/im-host/sidecar-manager.ts
 apps/desktop/src/main/ipc/AGENTS.md
-apps/desktop/src/main/ipc/fs.ts
 apps/desktop/src/main/ipc/onboarding.ts
 apps/desktop/src/main/ipc/permissions.ts
 apps/desktop/src/main/ipc/plugin-capabilities.ts
-apps/desktop/src/main/ipc/project-export.ts
 apps/desktop/src/main/ipc/scheduler.ts
 apps/desktop/src/main/ipc/session-archive.ts
-apps/desktop/src/main/ipc/session.ts
 apps/desktop/src/main/ipc/settings.ts
 apps/desktop/src/main/ipc/skills.ts
 apps/desktop/src/main/logger.ts
@@ -120,7 +113,6 @@ apps/desktop/src/main/plugins/plugin-protocol.ts
 apps/desktop/src/main/plugins/plugin-system-catalog.test.ts
 apps/desktop/src/main/plugins/plugin-system-catalog.ts
 apps/desktop/src/main/plugins/remote-command-runner.test.ts
-apps/desktop/src/main/projects/project-service.ts
 apps/desktop/src/main/quickpanel-trigger.ts
 apps/desktop/src/main/runtimes/runtime-archive-installer.test.ts
 apps/desktop/src/main/runtimes/runtime-archive-installer.ts
@@ -179,7 +171,6 @@ apps/desktop/src/renderer/domains/activity-panel/components/TaskArtifactPreview.
 apps/desktop/src/renderer/domains/activity-panel/components/TaskTabPanel.test.tsx
 apps/desktop/src/renderer/domains/activity-panel/components/TodoTabPanel.test.tsx
 apps/desktop/src/renderer/domains/activity-panel/hooks/useActivityPanelModel.ts
-apps/desktop/src/renderer/domains/activity-panel/hooks/useBrowserPanelModel.ts
 apps/desktop/src/renderer/domains/activity-panel/hooks/useCanvasTabModel.test.tsx
 apps/desktop/src/renderer/domains/activity-panel/hooks/useTodoTabPanelModel.ts
 apps/desktop/src/renderer/domains/activity-panel/registry/context.ts
@@ -234,12 +225,10 @@ apps/desktop/src/renderer/domains/conversation/components/mcp-app/mcp-app-bridge
 apps/desktop/src/renderer/domains/conversation/components/message-list/AssistantMessage.tsx
 apps/desktop/src/renderer/domains/conversation/components/message-list/ForkOriginBanner.tsx
 apps/desktop/src/renderer/domains/conversation/components/message-list/MessageItem.tsx
-apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.test.tsx
 apps/desktop/src/renderer/domains/conversation/components/message-list/MessageListView.tsx
 apps/desktop/src/renderer/domains/conversation/components/message-list/MessageRendering.tsx
 apps/desktop/src/renderer/domains/conversation/components/message-list/MessageTimeline.tsx
 apps/desktop/src/renderer/domains/conversation/components/message-list/message-height-estimates.ts
-apps/desktop/src/renderer/domains/conversation/components/message-list/message-list-derived.ts
 apps/desktop/src/renderer/domains/conversation/components/message-list/messageNavigationModel.ts
 apps/desktop/src/renderer/domains/conversation/components/message-list/types.ts
 apps/desktop/src/renderer/domains/conversation/components/new-session/NewSessionAgentSelector.test.tsx
@@ -373,7 +362,6 @@ apps/desktop/src/test/electron-stub.ts
 apps/desktop/src/test/setup.ts
 apps/desktop/src/test/vetta-bridge.ts
 apps/desktop/vite.config.ts
-apps/desktop/vite.main.config.ts
 apps/docs-site/AGENTS.md
 apps/docs-site/CLAUDE.md
 apps/docs-site/README.md
@@ -443,7 +431,6 @@ packages/coding-agent/examples/extensions/custom-provider-anthropic/README.md
 packages/coding-agent/examples/extensions/custom-provider-gitlab-duo/README.md
 packages/coding-agent/examples/extensions/custom-provider-qwen-cli/README.md
 packages/coding-agent/examples/extensions/with-deps/README.md
-packages/coding-agent/src/agent-configuration/resource-selection.ts
 packages/coding-agent/src/compaction/microcompact.ts
 packages/coding-agent/src/composition/contracts/runtime-session-options.ts
 packages/coding-agent/src/composition/contracts/session-execution-environment.ts
@@ -607,7 +594,6 @@ packages/theme-ui/src/project/ProjectRowView.tsx
 packages/theme-ui/src/settings/BuiltinMcpSecretsDialogView.tsx
 packages/theme-ui/src/settings/SettingsFormFields.tsx
 packages/theme-ui/src/settings/achievements/AchievementPromotionBadge3DLazy.tsx
-packages/theme-ui/src/settings/achievements/achievement-badge-lazy-boundary.test.ts
 packages/theme-ui/src/settings/achievements/index.ts
 packages/theme-ui/src/shared/BotAvatar.tsx
 packages/theme-ui/src/shared/index.ts
@@ -617,7 +603,6 @@ packages/theme-ui/src/sidebar/SidebarTopBar.tsx
 packages/themes/builtin/xianxia/README.md
 packages/toolkit/AGENTS.md
 packages/toolkit/README.md
-packages/toolkit/src/atomic-write.ts
 packages/toolkit/src/index.ts
 packages/toolkit/test/disposable.test.ts
 packages/ui/README.md
@@ -666,9 +651,6 @@ scripts/quality/context-boundaries.test.mjs
 scripts/quality/context-boundary-lib.mjs
 scripts/quality/desktop-packaging-scope.mjs
 scripts/quality/project-indexes.test.mjs
-scripts/quality/quality-gates.test.mjs
-scripts/quality/run-vitest.mjs
-scripts/quality/vitest-env.mjs
 scripts/worktree/config.test.mjs
 scripts/worktree/contract.test.mjs
 scripts/worktree/git.test.mjs

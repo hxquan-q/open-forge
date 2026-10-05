@@ -50,6 +50,9 @@ export function useActivityTerminalHandle(): TerminalSurfaceHandle {
 			tabId: activityTerminalTabId(workspaceId),
 			cwd,
 			active,
+			// 右栏活动面板的终端不是插件开的，没有初始载荷可读，也不需要写回。
+			payload: undefined,
+			setPayload: () => undefined,
 			setMeta: (meta) => {
 				setMetaByWorkspace((previous) => {
 					if (meta === null) {

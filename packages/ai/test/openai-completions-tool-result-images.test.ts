@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { getModel } from "../src/models.js";
 import { convertMessages } from "../src/providers/openai-completions.js";
@@ -50,7 +51,76 @@ function buildToolResult(toolCallId: string, timestamp: number): ToolResultMessa
 }
 
 describe("openai-completions convertMessages", () => {
-	it("forwards user images when image capability metadata is missing", () => {
+	it("forwards user images for an explicitly vision-capable model", () => {
+		const baseModel = getModel("openai", "gpt-4o-mini");
+		const model: Model<"openai-completions"> = {
+			...baseModel,
+			api: "openai-completions",
+			input: ["text", "image"],
+		};
+		const messages = convertMessages(
+			model,
+			{
+				messages: [
+					{
+						role: "user",
+						content: [
+							{ type: "text", text: "inspect" },
+							{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+						],
+						timestamp: 1,
+					},
+				],
+			},
+			compat,
+		);
+
+		expect(messages[0]).toEqual({
+			role: "user",
+			content: [
+				{ type: "text", text: "inspect" },
+				{ type: "image_url", image_url: { url: "data:image/png;base64,ZmFrZQ==" } },
+			],
+		});
+	});
+
+	it("forwards tool-result images for an explicitly vision-capable model", () => {
+		const baseModel = getModel("openai", "gpt-4o-mini");
+		const model: Model<"openai-completions"> = {
+			...baseModel,
+			api: "openai-completions",
+			input: ["text", "image"],
+		};
+		const now = Date.now();
+		const context: Context = {
+			messages: [
+				{ role: "user", content: "Read the image", timestamp: now - 2 },
+				{
+					role: "assistant",
+					content: [{ type: "toolCall", id: "tool-1", name: "read", arguments: { path: "img.png" } }],
+					api: model.api,
+					provider: model.provider,
+					model: model.id,
+					usage: emptyUsage,
+					stopReason: "toolUse",
+					timestamp: now,
+				},
+				buildToolResult("tool-1", now + 1),
+			],
+		};
+
+		const messages = convertMessages(model, context, compat);
+
+		expect(messages.map((message) => message.role)).toEqual(["user", "assistant", "tool", "user"]);
+		const imageMessage = messages.at(-1);
+		expect(imageMessage?.role).toBe("user");
+		expect(imageMessage?.content).toEqual([
+			{ type: "text", text: "Attached image(s) from tool result:" },
+			{ type: "image_url", image_url: { url: "data:image/png;base64,ZmFrZQ==" } },
+		]);
+	});
+
+	it("omits user images for a text-only model", () => {
 		const baseModel = getModel("openai", "gpt-4o-mini");
 		const model: Model<"openai-completions"> = {
 			...baseModel,
@@ -78,7 +148,7 @@ describe("openai-completions convertMessages", () => {
 			role: "user",
 			content: [
 				{ type: "text", text: "inspect" },
-				{ type: "image_url", image_url: { url: "data:image/png;base64,ZmFrZQ==" } },
+				{ type: "text", text: "Image content omitted because the current model does not support image input." },
 			],
 		});
 	});
@@ -129,7 +199,7 @@ describe("openai-completions convertMessages", () => {
 		expect(imageParts.length).toBe(2);
 	});
 
-	it("forwards tool-result images when image capability metadata is missing", () => {
+	it("omits tool-result images for a text-only model", () => {
 		const baseModel = getModel("openai", "gpt-4o-mini");
 		const model: Model<"openai-completions"> = {
 			...baseModel,
@@ -156,12 +226,12 @@ describe("openai-completions convertMessages", () => {
 
 		const messages = convertMessages(model, context, compat);
 
-		expect(messages.map((message) => message.role)).toEqual(["user", "assistant", "tool", "user"]);
-		const imageMessage = messages.at(-1);
-		expect(imageMessage?.role).toBe("user");
-		expect(imageMessage?.content).toEqual([
-			{ type: "text", text: "Attached image(s) from tool result:" },
-			{ type: "image_url", image_url: { url: "data:image/png;base64,ZmFrZQ==" } },
-		]);
+		expect(messages.map((message) => message.role)).toEqual(["user", "assistant", "tool"]);
+		expect(messages.at(-1)).toEqual({
+			role: "tool",
+			content:
+				"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
+			tool_call_id: "tool-1",
+		});
 	});
 });

@@ -179,8 +179,19 @@ export class ConversationProjection {
 		const first = pending[0];
 		if (!first) return messages;
 		const existing = findTargetAgentMessage(messages, this.targetMessageId);
-		this.targetMessageId ??=
-			existing?.id ?? `assistant:${first.event.sessionId}:${first.event.turnId ?? "unscoped-turn"}`;
+		if (this.targetMessageId === undefined) {
+			const baseId = `assistant:${first.event.sessionId}:${first.event.turnId ?? "unscoped-turn"}`;
+			let candidate = existing?.id ?? baseId;
+			if (!existing) {
+				// 队列消费 reset 后同 turnId 的确定性 id 可能已被消费前的消息占用；
+				// 占用意味着那是另一条消息——原位替换会把消费后的回复塞回镜像
+				// 用户气泡之前，气泡被孤立在列表末尾（BUG-0068）。派生新 id。
+				for (let salt = 2; messages.some((item) => item.id === candidate); salt += 1) {
+					candidate = `${baseId}#${salt}`;
+				}
+			}
+			this.targetMessageId = candidate;
+		}
 		let state: ConversationMessageEventState | undefined = existing
 			? { conversationId: first.event.sessionId, sequence: -1, message: existing }
 			: undefined;
@@ -204,6 +215,14 @@ export class ConversationProjection {
 		this.rawAssistantStream = false;
 		this.targetMessageId = undefined;
 		resetStreamState();
+	}
+
+	/**
+	 * 历史回填把运行回合的草稿折叠进 canonical entry 身份时，同步迁移当前
+	 * 流式目标，后续增量继续落在同一条消息（TASK-0152）。
+	 */
+	retargetMessageId(from: string, to: string): void {
+		if (this.targetMessageId === from) this.targetMessageId = to;
 	}
 }
 

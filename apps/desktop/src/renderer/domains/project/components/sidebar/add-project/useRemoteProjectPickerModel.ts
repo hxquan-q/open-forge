@@ -1,65 +1,79 @@
+// Modified by The Open Forge contributors.
 import type { SshHostSummary } from "@preload/api-types/ssh";
+import { EMPTY_SSH_HOST_FORM, toSshHostFormInput } from "@shared/lib/ssh-host-form";
 import type { RemoteDirectoryEntry } from "@vetta/ssh-transport";
-import { useCallback, useEffect, useState } from "react";
+import type { SshHostFormValues } from "@vetta-org/theme-ui/settings";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export interface RemoteProjectPickerModel {
-	/** 已登记的主机。为空时不弹一个空对话框，而是给出去设置页登记的出口。 */
-	hosts: readonly SshHostSummary[];
-	hostsLoading: boolean;
-	selectedHostId: string | null;
-	/** 当前浏览的远端绝对路径（`~` 已由主进程展开）。 */
-	remotePath: string;
-	entries: readonly RemoteDirectoryEntry[];
-	browsing: boolean;
-	/** 列目录失败的原因。连不上主机时这里是唯一能解释「为什么是空的」的地方。 */
-	error: string | null;
-	canSubmit: boolean;
-	selectHost: (hostId: string) => void;
-	enterDirectory: (name: string) => void;
-	goToParent: () => void;
-	back: () => void;
-}
-
-export function useRemoteProjectPickerModel(): RemoteProjectPickerModel {
+export function useRemoteProjectPickerModel() {
 	const [hosts, setHosts] = useState<readonly SshHostSummary[]>([]);
 	const [hostsLoading, setHostsLoading] = useState(true);
+	const [hostsError, setHostsError] = useState(false);
 	const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
 	const [remotePath, setRemotePath] = useState("");
 	const [entries, setEntries] = useState<readonly RemoteDirectoryEntry[]>([]);
 	const [browsing, setBrowsing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [addingHost, setAddingHost] = useState(false);
+	const [hostForm, setHostFormState] = useState<SshHostFormValues>(EMPTY_SSH_HOST_FORM);
+	const [savingHost, setSavingHost] = useState(false);
+	const [hostFormError, setHostFormError] = useState<string | null>(null);
+	// null 表示「跟随当前目录名」：用户一旦输入就以输入为准，直到换主机或回到列表。
+	const [projectNameInput, setProjectNameInput] = useState<string | null>(null);
+	const mounted = useRef(true);
+	const hostRequest = useRef(0);
+	const browseRequest = useRef(0);
+	const saving = useRef(false);
 
-	useEffect(() => {
-		void window.vetta.ssh
-			.listHosts()
-			.then(setHosts)
-			.finally(() => setHostsLoading(false));
+	const reloadHosts = useCallback(async () => {
+		const request = ++hostRequest.current;
+		setHostsLoading(true);
+		setHostsError(false);
+		try {
+			const next = await window.vetta.ssh.listHosts();
+			if (mounted.current && request === hostRequest.current) setHosts(next);
+		} catch {
+			if (mounted.current && request === hostRequest.current) setHostsError(true);
+		} finally {
+			if (mounted.current && request === hostRequest.current) setHostsLoading(false);
+		}
 	}, []);
 
+	useEffect(() => {
+		mounted.current = true;
+		void reloadHosts();
+		return () => {
+			mounted.current = false;
+			hostRequest.current++;
+			browseRequest.current++;
+		};
+	}, [reloadHosts]);
+
 	const browse = useCallback(async (hostId: string, path: string | undefined) => {
+		const request = ++browseRequest.current;
 		setBrowsing(true);
 		setError(null);
 		try {
 			const listing = await window.vetta.ssh.listRemoteDirectory({ hostId, remotePath: path });
+			// Returning to hosts or choosing another host invalidates the previous listing.
+			if (!mounted.current || request !== browseRequest.current) return;
 			setRemotePath(listing.remotePath);
-			// 这里在选项目根，普通文件不是可选项，列出来只会让用户误点。
-			// 软链接保留：指向目录的软链接很常见（项目盘挂载、家目录里的快捷方式），
-			// stat 报的是链接本身而不是目标，按类型滤掉会让这些目录凭空消失。
-			// 真的不是目录时，进去那一步的 `cd` 会失败并给出错误。
 			setEntries(listing.entries.filter((entry) => entry.kind === "directory" || entry.kind === "symlink"));
 		} catch (caught) {
-			// 保留当前路径不变，让用户能原地退回上一级重试，而不是被踢回起点。
+			if (!mounted.current || request !== browseRequest.current) return;
 			setEntries([]);
 			setError(caught instanceof Error ? caught.message : String(caught));
 		} finally {
-			setBrowsing(false);
+			if (mounted.current && request === browseRequest.current) setBrowsing(false);
 		}
 	}, []);
 
 	const selectHost = useCallback(
 		(hostId: string) => {
 			setSelectedHostId(hostId);
-			// 从远端家目录起步而不是 `/`：项目几乎总在家目录下。
+			setRemotePath("");
+			setEntries([]);
+			setProjectNameInput(null);
 			void browse(hostId, undefined);
 		},
 		[browse],
@@ -67,8 +81,7 @@ export function useRemoteProjectPickerModel(): RemoteProjectPickerModel {
 
 	const enterDirectory = useCallback(
 		(name: string) => {
-			if (selectedHostId === null) return;
-			void browse(selectedHostId, `${remotePath.replace(/\/+$/, "")}/${name}`);
+			if (selectedHostId !== null) void browse(selectedHostId, `${remotePath.replace(/\/+$/, "")}/${name}`);
 		},
 		[browse, remotePath, selectedHostId],
 	);
@@ -79,26 +92,98 @@ export function useRemoteProjectPickerModel(): RemoteProjectPickerModel {
 		void browse(selectedHostId, parent.length === 0 ? "/" : parent);
 	}, [browse, remotePath, selectedHostId]);
 
+	const retryBrowse = useCallback(() => {
+		if (selectedHostId !== null) void browse(selectedHostId, remotePath || undefined);
+	}, [browse, remotePath, selectedHostId]);
+
 	const back = useCallback(() => {
+		browseRequest.current++;
 		setSelectedHostId(null);
 		setEntries([]);
 		setRemotePath("");
 		setError(null);
+		setBrowsing(false);
+		setProjectNameInput(null);
 	}, []);
+
+	const startAddHost = useCallback(() => {
+		setHostFormState(EMPTY_SSH_HOST_FORM);
+		setHostFormError(null);
+		setAddingHost(true);
+	}, []);
+	const cancelAddHost = useCallback(() => {
+		if (!saving.current) setAddingHost(false);
+	}, []);
+	const setHostForm = useCallback((patch: Partial<SshHostFormValues>) => {
+		if (saving.current) return;
+		setHostFormState((previous) => ({ ...previous, ...patch }));
+		setHostFormError(null);
+	}, []);
+	const submitHost = useCallback(async () => {
+		if (saving.current || !hostForm.target.trim()) return;
+		saving.current = true;
+		setSavingHost(true);
+		setHostFormError(null);
+		try {
+			const created = await window.vetta.ssh.createHost(toSshHostFormInput(hostForm));
+			if (!mounted.current) return;
+			hostRequest.current++;
+			setHosts((previous) => [
+				...previous.filter((host) => host.id !== created.id),
+				{ ...created, status: "disconnected" },
+			]);
+			setHostsError(false);
+			setAddingHost(false);
+			// Creation is complete before connecting: a browse failure must never recreate the host.
+			selectHost(created.id);
+		} catch (caught) {
+			if (mounted.current) setHostFormError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			saving.current = false;
+			if (mounted.current) setSavingHost(false);
+		}
+	}, [hostForm, selectHost]);
+
+	const selectedHost = selectedHostId === null ? undefined : hosts.find((host) => host.id === selectedHostId);
+	// 远端根目录没有 basename，退回主机名——它仍然比空串更像一个项目名。
+	const defaultProjectName = remotePath ? remoteBasename(remotePath) || (selectedHost?.label ?? "") : "";
+	const projectName = projectNameInput ?? defaultProjectName;
+	const setProjectName = useCallback((value: string) => setProjectNameInput(value), []);
 
 	return {
 		hosts,
 		hostsLoading,
+		hostsError,
+		reloadHosts,
 		selectedHostId,
+		selectedHost,
 		remotePath,
 		entries,
 		browsing,
 		error,
-		// 路径没拿到之前不能提交：那会登记一个空路径的项目。
-		canSubmit: selectedHostId !== null && remotePath.length > 0 && !browsing,
+		canSubmit: selectedHostId !== null && remotePath.length > 0 && !browsing && error === null,
+		projectName,
+		defaultProjectName,
+		setProjectName,
 		selectHost,
 		enterDirectory,
 		goToParent,
+		retryBrowse,
 		back,
+		addingHost,
+		hostForm,
+		savingHost,
+		hostFormError,
+		startAddHost,
+		cancelAddHost,
+		setHostForm,
+		submitHost,
 	};
 }
+
+/** 远端路径是 POSIX 形态；根目录无 basename 时返回空串，由调用方决定退回什么。 */
+function remoteBasename(path: string): string {
+	return path.split("/").filter(Boolean).pop() ?? "";
+}
+
+export type RemoteProjectPickerModel = ReturnType<typeof useRemoteProjectPickerModel>;

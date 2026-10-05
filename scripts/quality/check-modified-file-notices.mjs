@@ -37,6 +37,7 @@ const LINE_STYLES = {
 };
 
 const STYLE_BY_EXTENSION = {
+	"code-workspace": "slash",
 	ts: "slash",
 	tsx: "slash",
 	mts: "slash",

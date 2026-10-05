@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * 进程执行端口。
  *
@@ -54,6 +56,13 @@ export interface SshProcessRunner {
 	run(invocation: SshProcessInvocation): Promise<SshProcessResult>;
 	/** 可选：只支持一问一答的执行器（测试替身）不必实现，调用方据此降级。 */
 	open?(invocation: SshChannelInvocation): SshProcessChannel;
+	/**
+	 * 可选：丢弃指定 target 的共享连接资源（已认证会话、ControlMaster、转发监听）。
+	 *
+	 * 主机配置变更或删除时由连接层调用；不给出时失效只丢缓存壳，实现可能继续复用
+	 * 同 target 的旧连接——那正是「改了配置仍连着旧机器」的来源。
+	 */
+	invalidate?(target: string): void;
 }
 
 /** `ssh` 自身的退出码。255 是 OpenSSH 用来表示「连接层失败」的保留值。 */

@@ -52,6 +52,8 @@ interface UseProjectGroupModelArgs {
 	onRenameSession: (cwd: string, sessionPath: string, name: string) => void;
 	onSelectSession: (cwd: string, session: SidebarConversationInfo) => void;
 	project: Project;
+	/** 远程项目所属主机的显示名，借 badge 位常驻展示，替代「批量任务」以外的空档。 */
+	remoteHostLabel?: string;
 	sessions: SidebarConversationInfo[];
 }
 
@@ -67,6 +69,7 @@ export function useProjectGroupModel({
 	onRenameSession,
 	onSelectSession,
 	project,
+	remoteHostLabel,
 	sessions,
 }: UseProjectGroupModelArgs) {
 	const { t, i18n } = useTranslation("project");
@@ -132,8 +135,8 @@ export function useProjectGroupModel({
 
 	const displayName = project.name ?? pathBasename(project.cwd);
 	const projectType = project.type;
-	const projectBadge = getProjectBadge(project, projectType, t);
 	const isRemoteProject = isSshProjectUri(project.cwd);
+	const projectBadge = getProjectBadge(project, projectType, t) ?? (isRemoteProject ? remoteHostLabel : undefined);
 
 	// t 在 changeLanguage 后可能保持同一引用；读 i18n.language 强制语言切换时重算未命名团队会话文案。
 	const sessionViews: ProjectGroupSessionView[] = useMemo(() => {

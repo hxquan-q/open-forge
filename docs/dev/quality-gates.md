@@ -2,6 +2,20 @@
 
 本仓库**没有**照搬 OpenClaw 的 oxlint/pnpm/巨型 CI 矩阵。在现有 **Bun + Turborepo + Biome + tsgo + Vitest + husky** 之上，补了分层门禁、按包/按变更测试与轻量架构守卫；Desktop `verify:ui` 是用户明确要求时才运行的按需验收工具，不属于默认门禁。
 
+## 统一开发入口与验证职责
+
+[open-forge-task-intake](../../.agents/skills/open-forge-task-intake/SKILL.md) 根据任务选择下面的既有门禁，不增设平行测试框架。TDD/测试设计见 [open-forge-testing](../../.agents/skills/open-forge-testing/SKILL.md)，CI/CD 配置改动见 [流水线路线](../../.agents/skills/open-forge-task-intake/references/ci-cd.md)。
+
+`node scripts/quality/workflow-skills.mjs` 已接入 `check:guards`：校验两个权威 Skill 的出向链接、已退役名称/Devin 副本残留，以及根 AGENTS、project/ 和 docs/dev/ 中指向这两个 Skill 的入向 Markdown 文件链接。支持内联链接 title，忽略围栏/缩进代码块与行内代码；不是完整 CommonMark、网络 URL 或标题锚点验证器，也不证明模型路由行为。
+
+Claude 的 `.claude/skills` 是共享入口而非生成镜像：真实目录必须解析到 `.agents/skills`；Windows Git 正确的符号链接占位文件被识别为平台状态，门禁继续验证权威正文并提示 Claude 路径未就绪。开发者需开启 `core.symlinks`/Windows 开发者模式后安全重新检出，工具不会改 Git 配置、替换占位文件或在其中建目录。错误目标仍失败。用户已授权移除 Devin 镜像；脚本完全只读，旧 `--write` 参数报明确错误，不创建副本或修改配置。重新出现的这两个项目 Skill 的 Devin 副本会报错，但不会被检查脚本自动删除。仅支持 `.devin` 的旧环境需改为读取 `.agents`。
+
+frontmatter 全量检查显式扫描 `.agents` 和 `.devin`，不依赖遍历 Claude 符号链接或 staged 文件。上述回归由既有 `test:quality`/quality CI 执行，不另建 workflow 或扩大发布权限。
+
+`node scripts/quality/check-agent-guide.mjs` 同样进入 `check:guards`：根 AGENTS 的 UTF-8 体积不得超过 8 KiB，必须指向六份按需规则扩展；CLAUDE 不得超过 4 KiB，必须回指根规则与其专属补充。检查这些入口与扩展的 Markdown 文件链接。该预算是本仓维护合同，不是对某个宿主加载上限的假设；检查不证明规则语义未变，迁移需另核对保留映射。
+
+`node scripts/quality/check-glossary.mjs` 校验根 CONTEXT 的 12 KiB 预算、根索引与 `docs/glossary/` 词条的一一对应、分册唯一性及文件链接。根保留旧 `###` 标题用于定位，正文在分册，不在索引复制定义。该检查不审定历史词条是否仍反映当前实现。
+
 ## 门禁分层
 
 | 层级 | 命令 | 何时跑 | 内容 |
@@ -314,3 +328,7 @@ bun run deadcode:report
 - [ ] 生成当前 workspace 声明后，`bun run check:types:build-surfaces` 通过
 - [ ] husky `.husky/pre-commit` 调用的是 `check:precommit` 而非整仓慢 `check`  
 - [ ] 未新增 oxlint/oxfmt/pnpm 强制依赖  
+
+### Windows 测试资源与共享 UI 入口
+
+共享 Node runner 在 Windows 默认最多使用 2 个 worker（本地与 CI 一致），其他平台沿用 Vitest 默认值；显式 CLI `--maxWorkers` 保持调用方选择。这里只限制并发资源，不调整 test/hook 超时、断言或测试集合。`@vetta-org/theme-ui` 提供独立的 Node runner `test` 入口；`test:impact` 可以直接选择其相关测试，公共合同与无测试包仍走保守影响面。

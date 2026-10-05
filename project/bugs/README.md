@@ -16,6 +16,33 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0078` | browser_tab 拒绝回传 snapshot 打印的 elementRef 编码串 | verifying | P1 | PLAN-0006 |
+| `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | done | P2 | — |
+| `BUG-0069` | 流式输出使历史回复用量引用不断变化 | verifying | P1 | PLAN-0014 |
+| `BUG-0070` | 工具调用间隙回复被提前标为完成 | verifying | P1 | PLAN-0014 |
+| `BUG-0071` | 回合恢复成功仍报告旧错误终态 | verifying | P1 | PLAN-0014 |
+| `BUG-0072` | 自动跟随中的半途滚动位置被错误记住 | verifying | P1 | PLAN-0014 |
+| `BUG-0074` | Git 提交详情错误解析特殊路径和重命名 | verifying | P1 | PLAN-0014 |
+| `BUG-0075` | 桌面配置并发读改写丢失更新 | verifying | P1 | PLAN-0014 |
+| `BUG-0076` | 开发主进程缓存遗漏部分 workspace 输出 | verifying | P1 | PLAN-0014 |
+| `BUG-0068` | 会话结束后用户消息仍显示在回复末尾（队列消费变体） | verifying | P1 | — |
+| `BUG-0073` | BUG-0068 修复提交引入的四处锚定/派发序号回归（unbump 误杀最新轮重拉、未消费排队气泡锚进中段、首部重排污染 prependedCount、两层回退方向相反） | verifying | P1 | TASK-0194 |
+| `BUG-0064` | desktop-packaged 合同 job 缺依赖安装致 cleanlist 必红 | verifying | P1 | PLAN-0014 |
+| `BUG-0067` | docs-site 构建在 CI 上 Turbopack 报 71 错 | investigating | P2 | — |
+| `BUG-0066` | desktop-packaged 的 packaged E2E job 连续红 | investigating | P1 | — |
+| `BUG-0065` | macOS 上 worktree 用例因 /var 符号链接误红 | verifying | P2 | — |
+
+| `BUG-0063` | quality CI 的 desktop tsc 冷启动堆内存耗尽 | verifying | P1 | PLAN-0014 |
+| `BUG-0062` | ssh2 校验接受已撤销的主机公钥 | verifying | P1 | PLAN-0014 |
+| `BUG-0060` | 原子写入短写与重命名前失败合同不完整 | verifying | P1 | PLAN-0014 |
+| `BUG-0061` | 失效后的迟到 SSH 探测恢复旧状态 | verifying | P1 | PLAN-0014 |
+| `BUG-0059` | CLI 进程测试并发下 RPC 超时 | investigating | P1 | PLAN-0014 |
+| `BUG-0058` | 文本模型收到超出输入能力的图片 | verifying | P1 | PLAN-0014 |
+| `BUG-0057` | Windows 新增 SSH 主机交互认证被 15s 握手预算掐断，KI 回退吞掉已存口令 | verifying | P1 | — |
+| `BUG-0053` | 兼容网关省略思考块初始签名时被拒绝 | verifying | P1 | PLAN-0014 |
+| `BUG-0054` | 短暂文件占用使原子写入直接失败 | verifying | P1 | PLAN-0014 |
+| `BUG-0055` | 知识库工厂未转发宿主提示词来源 | verifying | P1 | PLAN-0014 |
+| `BUG-0056` | 懒边界回归误将冷编译计入断言超时 | verifying | P1 | PLAN-0014 |
 | `BUG-0050` | 打包版内置浏览器视图建不起来，宿主在运行时按相对路径 require 主进程模块 | verifying | P1 | — |
 | `BUG-0051` | 注入 guest 的脚本引用网页里不存在的打包器辅助函数，浏览器交互命令全部异常终止 | verifying | P1 | — |
 | `BUG-0052` | 注入 guest 的脚本缺少 return，点选与快照结果恒为 undefined | verifying | P1 | — |

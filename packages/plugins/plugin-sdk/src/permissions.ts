@@ -62,6 +62,7 @@ export const PLUGIN_PERMISSIONS = [
 	"secrets.read",
 	"secrets.write",
 	"shell.openExternal",
+	"terminal.run",
 ] as const;
 
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number];

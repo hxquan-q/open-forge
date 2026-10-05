@@ -162,6 +162,18 @@ describe("ssh2 传输（真实 Server 回环）", () => {
 		runner.dispose();
 	});
 
+	it("invalidate 丢弃会话后，下一条命令重新建连而不是复用旧连接", async () => {
+		const { runner } = makeRunner(serverPort);
+		const before = connections;
+		await runner.run({ argv: argvFor("pre-invalidate") });
+		expect(connections).toBe(before + 1);
+		runner.invalidate(TARGET);
+		const after = await runner.run({ argv: argvFor("post-invalidate") });
+		expect(after.exitCode).toBe(0);
+		expect(connections).toBe(before + 2);
+		runner.dispose();
+	});
+
 	it("非零退出码与 stderr 如实回来", async () => {
 		const { runner } = makeRunner(serverPort);
 		const result = await runner.run({ argv: argvFor("fail-42") });
@@ -204,6 +216,72 @@ describe("ssh2 传输（真实 Server 回环）", () => {
 		const result = await runner.run({ argv: argvFor("x") });
 		expect(result.exitCode).toBe(255);
 		runner.dispose();
+	});
+
+	it("服务器只收 keyboard-interactive：当次已获口令直接回答，不重复询问（BUG-0057）", async () => {
+		const keys = utils.generateKeyPairSync("ed25519");
+		const kiServer = new Server({ hostKeys: [Buffer.from(keys.private)] }, (client: Connection) => {
+			client.on("error", () => {});
+			client.on("authentication", (ctx) => {
+				if (ctx.method !== "keyboard-interactive") {
+					ctx.reject(["keyboard-interactive"]);
+					return;
+				}
+				ctx.prompt([{ prompt: "Password: ", echo: false }], (answers) => {
+					if (answers[0] === PASSWORD) ctx.accept();
+					else ctx.reject(["keyboard-interactive"]);
+				});
+			});
+			client.on("ready", () => {
+				client.on("session", (accept) => serveSession(accept()));
+			});
+		});
+		await new Promise<void>((resolve) => kiServer.listen(0, "127.0.0.1", resolve));
+		const kiPort = (kiServer.address() as AddressInfo).port;
+		let asked = 0;
+		const runner = createSsh2ProcessRunner({
+			resolveHost: () => ({ ...host, port: kiPort }),
+			runConfigQuery: async () => {
+				throw new Error("no ssh binary");
+			},
+			verifyHostKey: async () => true,
+			askSecret: async () => {
+				asked += 1;
+				return PASSWORD;
+			},
+		});
+		try {
+			const result = await runner.run({ argv: argvFor("id") });
+			expect(result.exitCode).toBe(0);
+			// password 尝试拿到的口令要复用于同次连接里的 KI 密码提示；再问一遍会把
+			// 宿主「同轮只用一次存档」的守卫误触发成删档（见 BUG-0057）。
+			expect(asked).toBe(1);
+		} finally {
+			runner.dispose();
+			await new Promise<void>((resolve) => kiServer.close(() => resolve()));
+		}
+	});
+
+	it("慢于 ConnectTimeout 的主机密钥确认仍能完成握手（BUG-0057）", async () => {
+		const runner = createSsh2ProcessRunner({
+			resolveHost: () => ({ ...host, port: serverPort }),
+			runConfigQuery: async () => {
+				throw new Error("no ssh binary");
+			},
+			verifyHostKey: async () => {
+				await new Promise((resolve) => setTimeout(resolve, 1200));
+				return true;
+			},
+			askSecret: async () => PASSWORD,
+		});
+		try {
+			const result = await runner.run({
+				argv: ["-o", "ConnectTimeout=1", "-T", "--", TARGET, "id"],
+			});
+			expect(result.exitCode).toBe(0);
+		} finally {
+			runner.dispose();
+		}
 	});
 
 	it("口令错会回到提示桥再问一轮，用户取消则连不上", async () => {

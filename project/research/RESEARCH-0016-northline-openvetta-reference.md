@@ -63,7 +63,7 @@ depends_on: []
 | Worktree CLI 核验范围 | `worktree:check` 对合同严格性、跨 Task 范围冲突、Git 中真实 Worktree 的注册路径/分支和 frontmatter 漂移设门；集成测试仍在 Coordinator 工作流执行。[CLI check](../../scripts/worktree/cli.mjs#L499-L557) [集成流程](../collaboration/development-workflow.md#L65-L85) | 一个精确缺口候选是“交接时自动重算 changed files / base-result commit 关系 / required test 结果并形成持久化 receipt”。不要误写成当前没有验证：当前已有父侧人工审核与重跑；缺的是统一的机器可核验凭证。**推论** |
 | 长任务中断恢复 | 当前 Task 状态/交付模板会记录实际完成、验证和剩余风险；Task/Worktree 生命周期能保留未完成 branch/worktree。[Task template](../tasks/templates/task.md#L62-L74) [失败时保留 Worktree](../collaboration/development-workflow.md#L60-L63) | Northline 的 commit-bound checkpoint/event timeline 值得只在“跨会话恢复常丢失已完成/dirty 状态”是重复痛点时试用。若没有这类损失，新增 `AgentRunRecord`/checkpoint 存储会增加状态、隐私和维护成本。**推论** |
 | 产品 Agent Team | 本仓协作规范明文区分开发协作并发与产品运行时并发，要求产品 Agent Team 继续复用 Runtime/Session/Turn/Policy/事件合同。[Collaboration README](../collaboration/README.md#L4-L34) `packages/agent-team` 已规定 Leader 在用户汇报前核验结果；`TASK-0069` 已落实“completed 仅表示成员发布结果，不等于 leader 核验”。[当前 Team 工具描述](../../packages/agent-team/src/task-runtime-tools.ts#L62-L66) [共享运行规则](../../packages/agent-team/src/operating-context.ts#L24-L30) [TASK-0069 记录](../tasks/TASK-0069-structured-delegation-handoff.md#L25-L50) | Northline 的 Git commit/worktree receipt 是开发协作控制面，不是面向最终用户 Team 任务的通用 Runtime 协议。可迁移的是“发布状态不等于被负责人验收”的原则；不要把 dev Worktree/commit 语义直接塞入 `packages/agent-team`。**推论** |
-| 技术栈与宿主 | OpenVetta 是 Bun/TypeScript monorepo，含 Desktop/CLI/Mobile/Docs 与 Go/Kotlin 部分；Northline 当前产品包是 Python，面向 Codex Plugin/MCP/CLI。[仓库层次](../../AGENTS.md#L8-L39) [Workspace/package manager](../../package.json#L1-L49) [Northline manifest][N12] [Plugin 文档][O1] | 可借鉴模型/校验思路，不代表应依赖或复制 Python 产品；如果需要工具化，优先把最小门禁落在现有 Bun `scripts/worktree/`，保留现有 Project 合同与 CLI。**推论** |
+| 技术栈与宿主 | OpenVetta 是 Bun/TypeScript monorepo，含 Desktop/CLI/Mobile/Docs 与 Go/Kotlin 部分；Northline 当前产品包是 Python，面向 Codex Plugin/MCP/CLI。[仓库层次](../../docs/dev/agent-rules/repository.md#项目概览) [Workspace/package manager](../../package.json#L1-L49) [Northline manifest][N12] [Plugin 文档][O1] | 可借鉴模型/校验思路，不代表应依赖或复制 Python 产品；如果需要工具化，优先把最小门禁落在现有 Bun `scripts/worktree/`，保留现有 Project 合同与 CLI。**推论** |
 
 ## 借鉴与不借鉴
 
@@ -110,7 +110,7 @@ depends_on: []
 
 ## 代码/测试/指标锚点
 
-- 本仓规则：`AGENTS.md` 区分应用/包依赖层和 Project 管理位置；`project/README.md` 列出唯一事实源；`project/CONVENTIONS.md` 规定 Research 证据结构。[仓库架构](../../AGENTS.md#L8-L39) [Project 导航](../README.md#L8-L25) [Research 要求](../CONVENTIONS.md#L199-L211)
+- 本仓规则：`AGENTS.md` 区分应用/包依赖层和 Project 管理位置；`project/README.md` 列出唯一事实源；`project/CONVENTIONS.md` 规定 Research 证据结构。[仓库架构](../../docs/dev/agent-rules/repository.md#项目概览) [Project 导航](../README.md#L8-L25) [Research 要求](../CONVENTIONS.md#L199-L211)
 - 本仓 Task/Worktree 机械合同：`scripts/worktree/contract.mjs`；结构守卫：`scripts/quality/check-task-worktrees.mjs`；真实 Git Worktree 的 `check`/`status`：`scripts/worktree/cli.mjs`。[合同](../../scripts/worktree/contract.mjs#L189-L235) [静态守卫](../../scripts/quality/check-task-worktrees.mjs#L22-L29) [Coordinator CLI](../../scripts/worktree/cli.mjs#L499-L557)
 - 本仓既有行为测试包括路径越界、glob/范围冲突和已登记冲突关系的检查，位于 `scripts/worktree/contract.test.mjs`、`scripts/quality/check-task-worktrees.test.mjs`；本次没有运行测试。[路径/冲突测试](../../scripts/worktree/contract.test.mjs#L69-L120) [结构守卫测试](../../scripts/quality/check-task-worktrees.test.mjs#L34-L53)
 - Northline 核验路径：`ProtocolEngine.verify_handoff()`、`record_integration()`、`_collect_and_compare_evidence()`；Git/Test 重算在 `GitWorkspace.collect_evidence()`；规则在 `DriftDetector.inspect()`。引用均固定到本次 [HEAD][N16]。[核验/集成][N5] [证据重建][N6] [Git/Test 边界][N7] [漂移检测][N8]

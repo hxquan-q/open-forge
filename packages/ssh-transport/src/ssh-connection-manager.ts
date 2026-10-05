@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { SshTransportError } from "./errors.js";
 import type { SshProcessRunner } from "./process-runner.js";
 import { buildControlPath } from "./ssh-argv.js";
@@ -34,6 +36,12 @@ export interface SshConnectionManagerOptions {
 export class SshConnectionManager {
 	private readonly connections = new Map<string, SshConnection>();
 	private readonly statuses = new Map<string, SshConnectionStatus>();
+	/**
+	 * 每台主机的代次：`invalidate` 与新一轮 `probe` 都会推进。旧代次的探测无论成功
+	 * 还是失败，回来时都不再写状态——失效后把 UI 改回「已连接」的正是这些迟到结果
+	 * （BUG-0061）。
+	 */
+	private readonly epochs = new Map<string, number>();
 
 	constructor(private readonly options: SshConnectionManagerOptions) {}
 
@@ -67,21 +75,42 @@ export class SshConnectionManager {
 
 	/** 连通性探测。成功即把状态置为 connected，失败按 ADR-0124 置为 unverifiable。 */
 	async probe(hostId: string, signal?: AbortSignal): Promise<SshConnectionStatus> {
+		const epoch = this.advanceEpoch(hostId);
 		this.setStatus(hostId, "connecting");
 		try {
 			await this.connection(hostId).probePlatform(signal);
-			this.setStatus(hostId, "connected");
+			this.settleProbe(hostId, epoch, "connected");
 		} catch {
 			// 探测失败只说明「现在问不到」，不代表远端不存在或已关机。
-			this.setStatus(hostId, "unverifiable");
+			this.settleProbe(hostId, epoch, "unverifiable");
 		}
 		return this.getStatus(hostId);
 	}
 
-	/** 主机配置变更或被删除时调用，丢弃缓存的连接与平台信息。 */
+	/**
+	 * 主机配置变更或被删除时调用，丢弃缓存的连接与平台信息。
+	 *
+	 * 丢弃的连接要一并释放它占用的 helper 与执行器会话，否则同 target 的旧 Client
+	 * 会被新配置静默复用，而状态显示的已经是新代次。
+	 */
 	invalidate(hostId: string): void {
+		this.advanceEpoch(hostId);
+		const connection = this.connections.get(hostId);
 		this.connections.delete(hostId);
 		this.setStatus(hostId, "disconnected");
+		connection?.dispose();
+	}
+
+	/** 只有仍是当前代次的探测才能写状态：失效后的迟到结果、被新探测超越的旧结果都丢弃。 */
+	private settleProbe(hostId: string, epoch: number, status: SshConnectionStatus): void {
+		if (this.epochs.get(hostId) !== epoch) return;
+		this.setStatus(hostId, status);
+	}
+
+	private advanceEpoch(hostId: string): number {
+		const next = (this.epochs.get(hostId) ?? 0) + 1;
+		this.epochs.set(hostId, next);
+		return next;
 	}
 
 	private setStatus(hostId: string, status: SshConnectionStatus): void {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useCursorStyle } from "@shared/hooks/useCustomCursor";
 import { useHeroOrnament } from "@shared/hooks/useHeroOrnament";
 import { useLanguage } from "@shared/hooks/useLanguage";
@@ -21,6 +22,8 @@ import defaultThemePreview from "../assets/default.webp";
 import xianxiaThemePreview from "../assets/xianxia.webp";
 import { SETTINGS_SECTION } from "../registry";
 import { recordSettingsUsage } from "./recordSettingsUsage";
+import type { FontSettingsModel } from "./useFontSettingsModel";
+import { useFontSettingsModel } from "./useFontSettingsModel";
 
 interface AppearancePoint {
 	x: number;
@@ -84,6 +87,7 @@ export interface AppearanceSidebarStyleOption {
 }
 
 export interface AppearanceSettingsModel {
+	fonts: FontSettingsModel;
 	actions: {
 		changeLanguage: (language: LanguagePreference) => void;
 		changeMode: (mode: ThemeMode, point: AppearancePoint) => void;
@@ -223,6 +227,7 @@ const COLOR_THEME_LABEL_KEYS = {
 } as const;
 
 export function useAppearanceSettingsModel(): AppearanceSettingsModel {
+	const fonts = useFontSettingsModel();
 	const { mode, themeName, setMode, setThemeName } = useTheme();
 	const { activeThemeId, availableThemes, selectTheme, status: themeRuntimeStatus } = useThemeRuntime();
 	const { languagePreference, setLanguage } = useLanguage();
@@ -405,6 +410,7 @@ export function useAppearanceSettingsModel(): AppearanceSettingsModel {
 	);
 
 	return {
+		fonts,
 		actions,
 		activeUiThemeId: activeThemeId,
 		cursorOptions,

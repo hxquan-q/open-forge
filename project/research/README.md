@@ -7,6 +7,10 @@
 
 | 主题 | 来源 |
 |---|---|
+| 原始 Vetta 最新非手机优化与本仓缺口 | [RESEARCH-0022](RESEARCH-0022-upstream-nonmobile-gap-audit.md) |
+| Pi 与 DeepSeek Harness / Desktop 能力吸收评估 | [RESEARCH-0021](RESEARCH-0021-pi-deepseek-harness-absorption.md) |
+| Desktop 字体设置与字体授权 | [RESEARCH-0020](RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
+| 集成后可靠性与验证成本审查 | [RESEARCH-0019](RESEARCH-0019-post-integration-optimization-audit.md) |
 | 架构、Agent Loop、Composition | `exprot/architecture-overview.md`、`agent-loop.md`、`composition.md` |
 | Runtime 子系统 | `exprot/runtime-subsystems.md`、`runtime-mapping.md` |
 | Pi/DSH 内核评估 | `exprot/kernel-replacement-feasibility.md` |
@@ -26,6 +30,7 @@
 | Skill 落盘布局审计（pool/active 必要性裁决，TASK-0113） | [`RESEARCH-0014`](RESEARCH-0014-skill-layout-pool-active-audit.md) |
 | Cordis 元框架机制调研（fiber/effect/inject 与可借鉴点） | [`RESEARCH-0015`](RESEARCH-0015-cordis-meta-framework.md) |
 | Northline 长程 Agent 委派与 OpenVetta Task/Worktree 治理对照 | [`RESEARCH-0016`](RESEARCH-0016-northline-openvetta-reference.md) |
+| 开发范式：OpenVetta、工程控制论与 Matt Pocock 方法对照 | [`RESEARCH-0017`](RESEARCH-0017-development-paradigm-synthesis.md) |
 
 ## Research Note 约束
 

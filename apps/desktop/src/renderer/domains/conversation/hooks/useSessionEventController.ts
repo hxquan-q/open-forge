@@ -14,6 +14,7 @@ import {
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
 	EMPTY_TASK_STATE,
+	goalStateBySessionAtom,
 	isCanvasTabVisible,
 	isCompactingAtom,
 	isReloadingMcpAtom,
@@ -44,6 +45,7 @@ import { applyTaskFactEvent } from "@shared/task/task-projection.js";
 import {
 	isCodingAgentMcpReloadStarted,
 	readCodingAgentBackgroundTasksObservation,
+	readCodingAgentGoalObservation,
 	readCodingAgentMcpReloadFinished,
 	readCodingAgentPlanModeObservation,
 	readCodingAgentSubagentsObservation,
@@ -56,7 +58,6 @@ import {
 	appendError,
 	appendTextDelta,
 	appendThinkingDelta,
-	finalizeMessage,
 	finishAssistantTurn,
 	getActiveAssistantTurnStartedAt,
 	getChatStreamOwner,
@@ -91,6 +92,8 @@ export interface SessionEventController {
 	bumpSuggestionToken: (runtimeId: string) => void;
 	createSessionEventHandler: (runtimeId: string) => (event: SessionEvent) => void;
 	resetEventBuffers: () => void;
+	/** 历史回填折叠运行回合草稿时迁移流式目标（TASK-0152）。 */
+	retargetProjectionMessage: (from: string, to: string) => void;
 }
 
 interface SessionEventControllerOptions {
@@ -116,6 +119,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	const setTodoItems = useSetAtom(todoItemsBySessionAtom);
 	const setTaskState = useSetAtom(taskStateBySessionAtom);
 	const setPlanModeStates = useSetAtom(planModeStateBySessionAtom);
+	const setGoalStates = useSetAtom(goalStateBySessionAtom);
 	const setPromptSuggestions = useSetAtom(promptSuggestionsAtom);
 	const setPromptPredicting = useSetAtom(promptPredictingAtom);
 	const suggestionTokenRef = useRef<Map<string, number>>(new Map());
@@ -294,7 +298,10 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 								sessionPath: windowedSessionPath,
 								shouldCommit: () =>
 									activeSessionRef.current?.runtimeId === sessionId &&
-									getQueuedDispatchSeq(sessionId) === (turnStartDispatchSeqRef.current.get(sessionId) ?? 0),
+									// 判活只认净增长：失败派发的 unbump 落在本轮快照之后时序号
+									// 会回落，此时并未「跨到下一轮」，重拉必须照常落地——
+									// 旧的「不等」判活会把最新轮误判过期（BUG-0073）。
+									getQueuedDispatchSeq(sessionId) > (turnStartDispatchSeqRef.current.get(sessionId) ?? 0),
 								patchCanonical: (items) => {
 									if (elapsed <= 0) return items;
 									const mapped = items.slice();
@@ -321,7 +328,9 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							// 判活：本轮结束时/后若发生过队列派发（立即发送 / 自然出队），这次历史
 							// 回流已「跨到下一轮」——会冲掉下一轮的乐观用户气泡、令 draft 串台，或与
 							// 已抢先落盘的 mapped 重复。跳过，交由下一轮自己的 agent_end 安全重拉。
-							if (getQueuedDispatchSeq(sessionId) !== (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
+							// 只认净增长（>）：失败派发的 unbump 使序号回落到快照值时并未跨轮，
+							// 重拉照常落地——「不等」判活会把膨胀窗口内开启的最新轮误杀（BUG-0073）。
+							if (getQueuedDispatchSeq(sessionId) > (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
 								return;
 							}
 							const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
@@ -448,15 +457,6 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				return;
 			}
 
-			// ── Message final (full assistant message — text, thinking, tool calls) ──
-			if (event.type === "message.final" && event.message.role === "assistant") {
-				if (conversationProjectionRef.current.hasRawAssistantStream()) return;
-				flushDeltas();
-				const { content, usage } = event.message;
-				setChatMessages((prev) => finalizeMessage(prev, content, usage));
-				return;
-			}
-
 			// ── Tool start ──
 			if (event.type === "tool.start") {
 				flushDeltas();
@@ -570,14 +570,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							contextWindow: event.contextWindow,
 						});
 					}
-					if (
-						event.reason === "manual" &&
-						getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0
-					) {
-						// TASK-0050：压缩是历史改写，窗口化会话整窗重置为最新 head 页；
-						// 非窗口化会话回退旧的全量回载。
+					if (getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0) {
+						// TASK-0051：手动与自动压缩成功后都重建投影。压缩对 JSONL 是追加
+						// （firstKeptEntryId，entry id 不变），优先 head 合并刷新——已加载旧页
+						// 与阅读锚点原样保留，compaction 边界作为轻量条目落入尾部；合并签名
+						// 不匹配时由 merge 自行降级为整窗替换（等价旧行为）。非窗口化会话
+						// 维持全量回载。
 						void (async () => {
 							const windowedPath = activeSessionRef.current?.sessionPath;
+							if (windowedPath && (await refreshTranscriptTail({ sessionPath: windowedPath }))) return;
 							if (windowedPath && (await resetTranscriptWindowToTail(windowedPath))) return;
 							await window.vetta.session.getFullHistory(sessionId).then((history) => {
 								if (activeSessionRef.current?.runtimeId !== sessionId) return;
@@ -703,6 +704,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					}
 					return;
 				}
+				const goalState = readCodingAgentGoalObservation(event);
+				if (goalState !== undefined) {
+					const sid = activeSessionRef.current?.runtimeId;
+					if (sid) {
+						setGoalStates((previous) => {
+							const next = { ...previous };
+							if (goalState) next[sid] = goalState;
+							else delete next[sid];
+							return next;
+						});
+					}
+					return;
+				}
 				const items = readCodingAgentTodoObservation(event);
 				if (!items) return;
 				const sid = activeSessionRef.current?.runtimeId;
@@ -735,6 +749,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			setIsReloadingMcp,
 			setLastTurnUsage,
 			setPlanModeStates,
+			setGoalStates,
 			setPromptSuggestions,
 			setRetryProgress,
 			setSubagents,
@@ -744,7 +759,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 		],
 	);
 
-	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers };
+	/**
+	 * 历史回填把运行回合草稿折叠进 canonical entry 身份时同步迁移流式目标，
+	 * 让后续增量继续落在同一条消息（TASK-0152）。
+	 */
+	const retargetProjectionMessage = useCallback((from: string, to: string) => {
+		conversationProjectionRef.current.retargetMessageId(from, to);
+	}, []);
+
+	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage };
 }
 
 function buildRecentConversation(messages: ChatTimelineItem[]): string {

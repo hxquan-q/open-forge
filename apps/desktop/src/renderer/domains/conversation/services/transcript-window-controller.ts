@@ -131,7 +131,7 @@ interface WindowedCommitInput {
  * key 回收 live item，spans 重映射到结果 id，写 backlog 与 messages。
  * 返回 reconcile 结果（含 prependedCount 供调用方做滚动锚点补偿）。
  */
-function commitWindowedProjection(input: WindowedCommitInput): { prependedCount: number; canonicalCount: number } {
+function commitWindowedProjection(input: WindowedCommitInput): { prependedCount: number } {
 	const store = getDefaultStore();
 	const projected = fullHistoryToChatWithSpans([...input.entries], input.mediaSessionId);
 	// confirm 只回填字段不改序不插入，items[i] 与 projected.messages[i] 一一对应。
@@ -145,9 +145,9 @@ function commitWindowedProjection(input: WindowedCommitInput): { prependedCount:
 		patchLiveItem: patchLiveItemWithCanonical,
 	});
 	const spans = new Map<string, TranscriptItemSpan>();
-	for (let i = 0; i < reconciled.canonicalCount; i += 1) {
+	for (let i = 0; i < reconciled.canonicalItemIndexes.length; i += 1) {
 		const source = projected.messages[i];
-		const target = reconciled.items[i];
+		const target = reconciled.items[reconciled.canonicalItemIndexes[i]];
 		const span = source ? projected.spans.get(source.id) : undefined;
 		if (span && target) spans.set(target.id, span);
 	}
@@ -160,7 +160,7 @@ function commitWindowedProjection(input: WindowedCommitInput): { prependedCount:
 		unbounded: input.unbounded,
 	});
 	store.set(chatMessagesAtom, reconciled.items);
-	return { prependedCount: reconciled.prependedCount, canonicalCount: reconciled.canonicalCount };
+	return { prependedCount: reconciled.prependedCount };
 }
 
 /**

@@ -63,6 +63,13 @@ export type {
 } from "./BuiltinMcpSectionView";
 export { BuiltinMcpSectionView } from "./BuiltinMcpSectionView";
 export type {
+	EnvironmentGitInstallGuideView,
+	EnvironmentGitRowViewProps,
+	EnvironmentGitStatusView,
+	EnvironmentGitViewLabels,
+} from "./EnvironmentGitRowView";
+export { EnvironmentGitRowView } from "./EnvironmentGitRowView";
+export type {
 	EnvironmentRuntimeKindView,
 	EnvironmentRuntimeStatusView,
 	EnvironmentSettingsViewLabels,
@@ -115,6 +122,12 @@ export type {
 export { ModelsProvidersSectionView } from "./ModelsProvidersSectionView";
 export type { MotionSelectOption, MotionSelectProps } from "./MotionSelect";
 export { MotionSelect } from "./MotionSelect";
+export type {
+	NotificationScopeView,
+	NotificationSettingsViewLabels,
+	NotificationSettingsViewProps,
+} from "./NotificationSettingsView";
+export { NotificationSettingsView } from "./NotificationSettingsView";
 export type {
 	PermissionItemView,
 	PermissionStatusView,
@@ -198,6 +211,8 @@ export type { ShortcutRecorderViewProps } from "./ShortcutRecorderView";
 export { ShortcutRecorderView } from "./ShortcutRecorderView";
 export type { ShortcutActionRowView, ShortcutsSettingsViewProps } from "./ShortcutsSettingsView";
 export { ShortcutsSettingsView } from "./ShortcutsSettingsView";
+export type { SshHostFormFieldsLabels, SshHostFormValues } from "./SshHostFormFieldsView";
+export { SshHostFormFieldsView } from "./SshHostFormFieldsView";
 export { SubscriptionActionsView } from "./SubscriptionActionsView";
 export type {
 	RemoteModel as SubscriptionRemoteModel,

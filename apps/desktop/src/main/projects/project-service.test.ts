@@ -1,13 +1,22 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "../../shared/notification-preferences.js";
 import type { DesktopConfig } from "../config/desktop-config-store.js";
+
+// These are external application side effects, not the configuration store under test.
+vi.mock("../runtime.js", () => ({ getSharedRuntime: vi.fn() }));
+vi.mock("../scheduler/automation-event-dispatcher.js", () => ({ emitAutomationHostEvent: vi.fn() }));
+
 import { ProjectService } from "./project-service.js";
 
 function createFixture(initial?: Partial<DesktopConfig>) {
 	let config: DesktopConfig = {
+		schemaVersion: 2,
 		projects: [],
 		archivedProjects: [],
 		workspacePath: "C:\\workspace",
 		defaultExecutionMode: "full-access",
+		notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
 		...initial,
 	};
 	const createDirectory = vi.fn(async () => {});
@@ -20,8 +29,9 @@ function createFixture(initial?: Partial<DesktopConfig>) {
 		createDirectory,
 		isKnownSshHost: async (hostId) => knownSshHosts.has(hostId),
 		readConfig: async () => structuredClone(config),
-		writeConfig: async (next) => {
-			config = structuredClone(next);
+		updateConfig: async (update) => {
+			config = structuredClone(await update(structuredClone(config)));
+			return structuredClone(config);
 		},
 		broadcastChanged,
 		isExistingNonDirectory: async (path) => nonDirectoryPaths.has(path),

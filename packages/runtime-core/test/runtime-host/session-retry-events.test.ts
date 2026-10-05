@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import type { SessionEvent } from "../../src/contracts.js";
 import type { RuntimeSessionEventStream } from "../../src/runtime-host/session-ports.js";
@@ -68,17 +69,11 @@ describe("DeferredRuntimeRetryEventStream", () => {
 			errorMessage: "temporary failure",
 		});
 		source.emit(lifecycle("agent_start", "start-2"));
-		source.emit(assistantFinal());
+		source.emit(assistantDone());
 		source.emit(lifecycle("agent_end", "end-2"));
 		stream.emitRetry({ type: "auto_retry_end", success: true, attempt: 1 });
 
-		expect(observed.map(eventName)).toEqual([
-			"retry.start",
-			"agent_start",
-			"message.final",
-			"agent_end",
-			"retry.end",
-		]);
+		expect(observed.map(eventName)).toEqual(["retry.start", "agent_start", "done", "agent_end", "retry.end"]);
 		expect(stream.flushPendingError()).toBe(false);
 	});
 });
@@ -108,10 +103,14 @@ function lifecycle(
 	return { ...base(eventId), type: "session.lifecycle", phase };
 }
 
-function assistantFinal(): SessionEvent {
+function assistantDone(): SessionEvent {
 	return {
 		...base("final-2"),
-		type: "message.final",
+		channel: "assistant",
+		source: "agent",
+		modelCallIndex: 1,
+		type: "done",
+		reason: "stop",
 		message: {
 			role: "assistant",
 			content: [{ type: "text", text: "recovered" }],
@@ -129,7 +128,7 @@ function assistantFinal(): SessionEvent {
 			stopReason: "stop",
 			timestamp: 1,
 		},
-	};
+	} as unknown as SessionEvent;
 }
 
 function eventName(event: SessionEvent): string {

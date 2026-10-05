@@ -1,4 +1,6 @@
-import type { Message } from "@vetta/ai";
+// Modified by The Open Forge contributors.
+
+import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
 	type ErrorEvent,
@@ -10,6 +12,7 @@ import {
 	type RuntimeHostSessionBackend,
 	type RuntimeObservationRecord,
 	type SessionEvent,
+	type SessionEventBase,
 } from "../../src/index.js";
 
 /**
@@ -19,6 +22,7 @@ import {
  * agent_end；同时锁住重试恢复成功的回合不得残留早前的 error 标记。
  */
 describe("RuntimeHost running-changed reason", () => {
+	let eventSerial = 0;
 	async function setup(): Promise<{
 		emit(event: SessionEvent): void;
 		reasons: Array<{ running: boolean; reason: RunningChangedReason | undefined }>;
@@ -63,16 +67,44 @@ describe("RuntimeHost running-changed reason", () => {
 		} as SessionEvent;
 	}
 
-	function assistantFinal(stopReason: string): SessionEvent {
+	function assistantDone(reason: "stop" | "toolUse" = "stop"): SessionEvent {
 		return {
 			...base(),
-			type: "message.final",
-			message: { role: "assistant", stopReason } as unknown as Message,
-		} as SessionEvent;
+			channel: "assistant",
+			source: "agent",
+			modelCallIndex: 1,
+			type: "done",
+			reason,
+			message: createAssistantMessage(
+				{ api: "fixture", provider: "fixture", model: "fixture" },
+				{ timestamp: 2, stopReason: reason },
+			),
+		};
 	}
 
-	function base(): { sessionId: string; source: "runtime-core"; timestamp: number } {
-		return { sessionId: "session-1", source: "runtime-core", timestamp: 1 };
+	function assistantError(): SessionEvent {
+		return {
+			...base(),
+			channel: "assistant",
+			source: "agent",
+			modelCallIndex: 0,
+			type: "error",
+			reason: "error",
+			error: createAssistantMessage(
+				{ api: "fixture", provider: "fixture", model: "fixture" },
+				{ timestamp: 1, stopReason: "error" },
+			),
+		};
+	}
+
+	function base(): SessionEventBase {
+		return {
+			schemaVersion: 1,
+			eventId: `fixture-${++eventSerial}`,
+			sessionId: "session-1",
+			source: "runtime-core",
+			timestamp: 1,
+		};
 	}
 
 	it("turn.failed 路径（error observation + agent_end）报告 reason=error", async () => {
@@ -96,13 +128,24 @@ describe("RuntimeHost running-changed reason", () => {
 		expect(reasons.at(-1)).toEqual({ running: false, reason: "aborted" });
 	});
 
-	it("重试后成功收尾的回合不残留 error 标记，reason=agent_end", async () => {
+	it.each(["runtime", "assistant"] as const)("真实 %s 错误后恢复的 assistant done 清除旧错误", async (origin) => {
 		const { emit, reasons } = await setup();
 		emit(lifecycle("agent_start"));
-		emit(errorEvent());
-		emit(assistantFinal("end_turn"));
+		emit(origin === "runtime" ? errorEvent() : assistantError());
+		emit(assistantDone("toolUse"));
+		emit(assistantDone());
 		emit(lifecycle("agent_end"));
 		expect(reasons.at(-1)).toEqual({ running: false, reason: "agent_end" });
+	});
+
+	it.each(["error", "aborted"] as const)("恢复后最终 %s 仍报告真实终态", async (reason) => {
+		const { emit, reasons } = await setup();
+		emit(lifecycle("agent_start"));
+		emit(assistantError());
+		emit(assistantDone("toolUse"));
+		emit(reason === "error" ? assistantError() : lifecycle("aborted"));
+		emit(lifecycle("agent_end"));
+		expect(reasons.at(-1)).toEqual({ running: false, reason });
 	});
 
 	it("回合外的合成 error（pre-stream 校验失败）不影响下一回合的 reason", async () => {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { pluginFilePreviewsAtom } from "@shared/store/atoms";
 import type { FilePreviewItem, PreviewBodyViewProps } from "@vetta-org/theme-ui/file-preview";
 import { getExtension } from "@vetta-org/theme-ui/file-preview";
@@ -121,7 +122,7 @@ export function usePreviewBodyModel(
 		};
 	}
 
-	const content = <TextPreviewRenderer content={state.content} extension={state.extension} />;
+	const content = <TextPreviewRenderer content={state.content} extension={state.extension} sourcePath={item.path ?? item.url} />;
 
 	return {
 		state: { status: "content", content },

@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+// Modified by The Open Forge contributors.
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SshOperationAbortedError, SshRemoteCommandError, SshTransportError } from "./errors.js";
+import type { SshHelperClient } from "./helper-client.js";
+import { connectSshHelper } from "./helper-deployment.js";
 import type { SshProcessInvocation, SshProcessResult, SshProcessRunner } from "./process-runner.js";
 import { buildKillCommand, buildRemoteCommand, buildWriteFileCommand } from "./remote-command.js";
 import { SshConnection } from "./ssh-connection.js";
 import type { SshHost } from "./ssh-host.js";
+
+vi.mock("./helper-deployment.js", () => ({ connectSshHelper: vi.fn() }));
 
 const host: SshHost = { id: "build-01", label: "构建机", target: "build", source: "manual" };
 
@@ -311,5 +317,74 @@ describe("远端端口与进程", () => {
 			aborted: false,
 		}));
 		await expect(denied.connection.terminateProcess(800)).rejects.toThrow(/Operation not permitted/);
+	});
+});
+
+function fakeHelper(): SshHelperClient {
+	return {
+		close: vi.fn(),
+		isClosed: false,
+		call: vi.fn(async () => ({})),
+		on: vi.fn(() => () => {}),
+		onClose: vi.fn(() => () => {}),
+	} as unknown as SshHelperClient;
+}
+
+describe("连接失效清理", () => {
+	beforeEach(() => {
+		vi.mocked(connectSshHelper).mockReset();
+	});
+
+	it("dispose 关闭已就绪的 helper，并让执行器丢弃同 target 会话", async () => {
+		const invalidated: string[] = [];
+		const runner: SshProcessRunner = {
+			run: async () => ok(""),
+			invalidate: (target) => invalidated.push(target),
+		};
+		const connection = new SshConnection(host, {
+			runner,
+			controlPath: "/tmp/cp",
+			helper: { resolveBinary: () => "/helper" },
+		});
+		const helper = fakeHelper();
+		vi.mocked(connectSshHelper).mockResolvedValue({ status: "ready", client: helper });
+		await expect(connection.helper()).resolves.toBe(helper);
+		connection.dispose();
+		expect(helper.close).toHaveBeenCalledTimes(1);
+		expect(invalidated).toEqual([host.target]);
+	});
+
+	it("部署到一半的 helper 在 dispose 后完成时立即关闭", async () => {
+		const runner: SshProcessRunner = { run: async () => ok("") };
+		const connection = new SshConnection(host, {
+			runner,
+			controlPath: "/tmp/cp",
+			helper: { resolveBinary: () => "/helper" },
+		});
+		let finishDeploy: (establishment: { status: "ready"; client: SshHelperClient }) => void = () => {};
+		vi.mocked(connectSshHelper).mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					finishDeploy = resolve;
+				}),
+		);
+		const pending = connection.helper();
+		connection.dispose();
+		const helper = fakeHelper();
+		finishDeploy({ status: "ready", client: helper });
+		await expect(pending).resolves.toBe(helper);
+		await vi.waitFor(() => expect(helper.close).toHaveBeenCalledTimes(1));
+	});
+
+	it("dispose 后不再拉起新的 helper 部署", async () => {
+		const runner: SshProcessRunner = { run: async () => ok("") };
+		const connection = new SshConnection(host, {
+			runner,
+			controlPath: "/tmp/cp",
+			helper: { resolveBinary: () => "/helper" },
+		});
+		connection.dispose();
+		await expect(connection.helper()).resolves.toBeUndefined();
+		expect(vi.mocked(connectSshHelper)).not.toHaveBeenCalled();
 	});
 });

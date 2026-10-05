@@ -308,6 +308,28 @@ describe("ssh2 传输：连接建立", () => {
 		expect(keys[0]?.hostname).toBe("203.0.113.10");
 	});
 
+	it("握手预算取调用方 deadline：交互提示不被 ConnectTimeout 掐断（BUG-0057）", async () => {
+		const client = new FakeClient();
+		const { runner } = runnerWith([client]);
+		const pending = runner.run({ argv: argv("id"), timeoutMs: 240_000 });
+		await vi.waitFor(() => expect(client.lastChannel()).toBeDefined());
+		// argv 里 ConnectTimeout=15；新主机的指纹确认、KI 提示都在握手内等用户输入，
+		// 预算必须来自调用方 deadline（首命令 4 分钟），不能是 15 秒。
+		expect(client.connectConfigs[0]?.readyTimeout).toBe(240_000);
+		client.lastChannel()?.respond("x");
+		await pending;
+	});
+
+	it("无调用方 deadline 时握手预算仍有足够交互余量", async () => {
+		const client = new FakeClient();
+		const { runner } = runnerWith([client]);
+		const pending = runner.run({ argv: argv("id") });
+		await vi.waitFor(() => expect(client.lastChannel()).toBeDefined());
+		expect(client.connectConfigs[0]?.readyTimeout).toBeGreaterThanOrEqual(60_000);
+		client.lastChannel()?.respond("x");
+		await pending;
+	});
+
 	it("连接被远端掐掉后，下一条命令自动重新认证", async () => {
 		const first = new FakeClient();
 		const second = new FakeClient();
@@ -426,6 +448,70 @@ describe("ssh2 传输：常驻通道与端口转发", () => {
 		await expect(runner.run({ argv: mkArgv("cancel", 18224) })).resolves.toMatchObject({ exitCode: 0 });
 		await expect(runner.run({ argv: mkArgv("cancel", 18224) })).resolves.toMatchObject({ exitCode: 255 });
 		runner.dispose();
+	});
+});
+
+/** 握手被闸门挡住的 FakeClient：测试控制 ready 的时机，模拟「失效时还在握手中」。 */
+class GatedClient extends FakeClient {
+	private releaseHandshake: (() => void) | undefined;
+	private notifyStarted: (() => void) | undefined;
+	/** connect 已被调用（握手真正在途）后兑现。 */
+	readonly started = new Promise<void>((resolve) => {
+		this.notifyStarted = resolve;
+	});
+
+	connect(config: ConnectConfig): void {
+		this.notifyStarted?.();
+		const gate = new Promise<void>((resolve) => {
+			this.releaseHandshake = resolve;
+		});
+		void gate.then(() => super.connect(config));
+	}
+
+	release(): void {
+		this.releaseHandshake?.();
+	}
+}
+
+describe("ssh2 传输：会话失效", () => {
+	it("invalidate 销毁旧 Client，同 target 下一条命令重新建连", async () => {
+		const first = new FakeClient();
+		const second = new FakeClient();
+		const { runner } = runnerWith([first, second]);
+		const initial = runner.run({ argv: argv("cmd1") });
+		await vi.waitFor(() => expect(first.channels).toHaveLength(1));
+		first.lastChannel()?.respond("ok", 0);
+		await initial;
+		const firstClosed = new Promise<void>((resolve) => first.once("close", resolve));
+		runner.invalidate(HOST.target);
+		await firstClosed;
+		const next = runner.run({ argv: argv("cmd2") });
+		await vi.waitFor(() => expect(second.channels).toHaveLength(1));
+		second.lastChannel()?.respond("ok2", 0);
+		await next;
+	});
+
+	it("失效时在途的握手完成后不得把旧 Client 装回来", async () => {
+		const gated = new GatedClient();
+		const fresh = new FakeClient();
+		const { runner } = runnerWith([gated, fresh]);
+		const pending = runner.run({ argv: argv("cmd1") });
+		await gated.started;
+		runner.invalidate(HOST.target);
+		const gatedClosed = new Promise<void>((resolve) => gated.once("close", resolve));
+		gated.release();
+		const result = await pending;
+		expect(result.exitCode).toBe(255);
+		await gatedClosed;
+		const next = runner.run({ argv: argv("cmd2") });
+		await vi.waitFor(() => expect(fresh.channels).toHaveLength(1));
+		fresh.lastChannel()?.respond("ok", 0);
+		await next;
+	});
+
+	it("未建过会话的 target invalidate 是无害的 no-op", () => {
+		const { runner } = runnerWith([]);
+		expect(() => runner.invalidate("never-seen@host")).not.toThrow();
 	});
 });
 

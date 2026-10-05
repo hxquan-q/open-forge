@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 应用代理配置的规范化、脱敏与补丁合并（纯逻辑，无 I/O）。
  *
@@ -6,7 +7,7 @@
  * 已存的那份，空串才表示清除——否则渲染层每次保存都得把明文口令回传一趟。
  */
 
-import { isProxyProtocol, type ProxyProtocol } from "@vetta/ai";
+import { isProxyProtocol, type ProxyProtocol } from "@vetta/ai/proxy";
 
 export interface DesktopProxyConfig {
 	enabled: boolean;

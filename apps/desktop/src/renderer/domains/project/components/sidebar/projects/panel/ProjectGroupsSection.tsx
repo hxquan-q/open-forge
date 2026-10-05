@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ProjectGroup } from "../ProjectGroup";
 import type { ProjectsPanelModel } from "./types";
 
@@ -17,6 +18,7 @@ export function ProjectGroupsSection({
 					key={project.cwd}
 					project={project}
 					scrollParent={scrollParent}
+					remoteHostLabel={model.remoteHostLabel(project.cwd)}
 					sessions={model.projectSessions(project.cwd)}
 					isExpanded={model.expandedProjects.has(project.cwd)}
 					sessionsLoading={model.projectSessionsLoading(project.cwd)}

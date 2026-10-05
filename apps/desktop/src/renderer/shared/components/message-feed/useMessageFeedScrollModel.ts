@@ -180,6 +180,11 @@ export function useMessageFeedScrollModel<T>({
 		const itemCount = stateItemCountRef.current;
 		const identity = stateItemIdentityRef.current;
 		if (!key || itemCount === 0) return;
+		// Intermediate positions while following are not a reading position chosen by the user.
+		if (shouldFollowBottomRef.current) {
+			feedStateCache.delete(key);
+			return;
+		}
 		const handle = virtuosoRef.current;
 		if (!handle || typeof handle.getState !== "function") return;
 		handle.getState((snapshot) => cacheFeedState(key, itemCount, identity, snapshot));

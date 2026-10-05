@@ -84,6 +84,10 @@ bun run check
 - 若冲突不可安全解决或集成验证失败，且当前仍处于该次 Git merge 中，使用 `git merge --abort` 退出；主工作区开始集成前必须干净，其他未提交工作区不在本次合并里。Task branch / Worktree 保留等待修复，不 force、不 reset。
 - 项目索引和 Task 状态由 Coordinator 维护；Worker 的交付记录应由 Coordinator 集成时核实并落库，避免多个并行 Task 同时改共享索引文件。
 
+## 工程验收与产品接受
+
+本流程的“验收”指开发候选的工程验收；与人工接受的关系统一见 [交付合同](../../.agents/skills/open-forge-task-intake/references/delivery.md)。推送仍须满足下面全部批次条件。
+
 ## 验收后推送到 origin/dev
 
 只有下列条件全部满足，Coordinator 才运行标准推送；该动作属于用户授予的日常工作流授权，不需要每个已完成 Task 再逐次询问：

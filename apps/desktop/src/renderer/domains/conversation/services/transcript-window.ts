@@ -14,6 +14,7 @@ import type { ChatConversationItem, ChatTimelineItem, TranscriptPlaceholderItem 
 import type { HistoryEntry } from "@vetta/runtime-core";
 import { historyEntrySignature } from "@/shared/history-entry-signature";
 import { fullHistoryToChatWithSpans, type TranscriptItemSpan } from "./chat-service";
+import { mergeWithCausalAnchors } from "./pending-user-anchor";
 
 export const TRANSCRIPT_SUMMARY_MAX_CHARS = 120;
 
@@ -357,10 +358,11 @@ export interface ReconcileWindowedResult {
 	/** 结果头部连续「非 live 复用」的条数——向上翻页时 Virtuoso 的锚点位移。 */
 	readonly prependedCount: number;
 	/**
-	 * 结果中与 projected 一一对应的前缀长度（= projected.length）；
-	 * 其后的条目是 live-only 尾部（乐观气泡/流式草稿）。
+	 * projected[i] 在 items 中的落点下标：live-only 项会按 live 锚点穿插进
+	 * canonical 序列之间，items 下标与 projected 下标不再一一对应，span /
+	 * canonical 计数等按此映射定位（BUG-0068）。其长度即 projected 条数。
 	 */
-	readonly canonicalCount: number;
+	readonly canonicalItemIndexes: readonly number[];
 }
 
 export interface ReconcileWindowedOptions {
@@ -380,7 +382,9 @@ export interface ReconcileWindowedOptions {
  * 重投影后的窗口 reconcile：projected 是合并窗口（新 entries）投出的完整
  * item 序列，按 durable key 回收 live item 对象，保住占位态与渲染身份；
  * 无 key 的投影项与未消费的 live-only 项按 kind FIFO 配对（仅限终态），
- * 仍对不上的投影项直接用新对象，未消费的 live-only 项追加到尾部。
+ * 仍对不上的投影项直接用新对象。未消费的 live-only 项按 live 中最近的
+ * 已消费前驱/后继锚定回原位——镜像用户气泡必须留在它触发的回复之前；
+ * 完全没有已消费邻居时才追加尾部（BUG-0068）。
  *
  * 已加载窗口内被改写掉的 durable item（key 不在 projected 中）会被丢弃——
  * 这是「replaced」之外的轻量失配兜底；调用方若已知改写发生应直接重置。
@@ -407,6 +411,8 @@ export function reconcileWindowedProjection(
 	}
 	const consumed = new Set<number>();
 	const items: ChatTimelineItem[] = [];
+	// live 下标 → items 下标：已消费 live 项的落点，供 live-only 项锚定回原位。
+	const landedIndex = new Map<number, number>();
 	const fromLive = new Array<boolean>(projected.length).fill(false);
 	// 无 key item 的有序配对队列：只收集终态 durable，live-only 项不进队列。
 	// 查找时按 kind 命中最早未消费项；不匹配的项留在原位供后续配对。
@@ -453,18 +459,28 @@ export function reconcileWindowedProjection(
 			consumed.add(reuseIndex);
 			items.push(adoptLive(reuseIndex, canonical));
 			fromLive[i] = true;
+			landedIndex.set(reuseIndex, items.length - 1);
 		} else {
 			items.push(stableRenderKey(canonical));
 		}
 	}
-	for (let i = 0; i < live.length; i += 1) {
-		if (consumed.has(i) || excluded?.has(live[i].id)) continue;
-		const item = live[i];
-		// durable 但被改写的项丢弃；live-only 项（乐观气泡/流式草稿/未消费
-		// 的无 key 项）追加尾部，交给上游的乐观对账/下一轮刷新归位。
-		if (transcriptItemKey(item) === undefined) items.push(item);
-	}
+	// 未消费的 live-only 项按因果位置归位（BUG-0068），管线收编进共享助手；
+	// 既非 pending 也未 landed 的项（= durable 但被改写）由助手丢弃（原语义）。
+	const anchored = mergeWithCausalAnchors({
+		base: items,
+		order: live,
+		isPendingIndex: (i) => !consumed.has(i) && !excluded?.has(live[i].id) && transcriptItemKey(live[i]) === undefined,
+		landedBaseIndex: (i) => landedIndex.get(i),
+	});
+	const merged = anchored.items;
+	const canonicalItemIndexes = anchored.baseIndexes;
+	// 只统计头部连续「非 live 复用」的 projected 条目：首部锚定的 live-only
+	// 项是既有 live 行的重排而非新前插内容，计入会让 loadOlderTranscriptPage
+	// 对 Virtuoso firstItemIndex 多移相应行数，滚动锚点跳行（BUG-0073）。
 	let prependedCount = 0;
-	while (prependedCount < projected.length && !fromLive[prependedCount]) prependedCount += 1;
-	return { items, prependedCount, canonicalCount: projected.length };
+	for (let k = 0; k < projected.length && !fromLive[k]; k += 1) {
+		if (canonicalItemIndexes[k] !== prependedCount) break;
+		prependedCount += 1;
+	}
+	return { items: merged, prependedCount, canonicalItemIndexes };
 }

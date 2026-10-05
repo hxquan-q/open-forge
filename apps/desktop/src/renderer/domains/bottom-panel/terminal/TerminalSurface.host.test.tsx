@@ -1,10 +1,12 @@
 // Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import { type JSX } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { applyTheme } from "../../../shared/theme/apply";
+import { saveFontPreferences } from "../../../shared/theme/fonts";
 import type { TerminalEventEnvelope } from "../../../../shared/terminal-ipc";
 import type { TerminalSurfaceHandle } from "./terminal-surface-handle";
 
@@ -17,10 +19,11 @@ class FakeTerminal {
 	readonly writes: string[] = [];
 	cols = 80;
 	rows = 24;
-	options: { theme?: unknown } = {};
+	options: { theme?: unknown; fontFamily?: string } = {};
 	unicode = { activeVersion: "" };
 
-	constructor() {
+	constructor(options: { theme?: unknown; fontFamily?: string }) {
+		this.options = options;
 		terminals.push(this);
 	}
 
@@ -124,7 +127,9 @@ function handle(partial: Partial<TerminalSurfaceHandle> & Pick<TerminalSurfaceHa
 	return {
 		cwd: "/repo",
 		active: true,
+		payload: undefined,
 		setMeta: vi.fn(),
+		setPayload: vi.fn(),
 		setCloseGuard: vi.fn(),
 		...partial,
 	};
@@ -139,6 +144,8 @@ describe("TerminalSurface host adapters", () => {
 
 	beforeEach(() => {
 		terminals.length = 0;
+		localStorage.clear();
+		document.documentElement.removeAttribute("style");
 		HTMLElement.prototype.getBoundingClientRect = () =>
 			({ width: 400, height: 240, top: 0, left: 0, bottom: 240, right: 400, x: 0, y: 0, toJSON() {} }) as DOMRect;
 		vi.stubGlobal(
@@ -155,6 +162,38 @@ describe("TerminalSurface host adapters", () => {
 		cleanup();
 		HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
 		vi.unstubAllGlobals();
+	});
+
+	it("changing the code font refits the existing PTY without losing output", async () => {
+		const ipc = createTerminalIpc();
+		vi.stubGlobal("window", Object.assign(window, { vetta: { terminal: ipc } }));
+		applyTheme("dark", "mono");
+		const view = render(
+			<Provider store={createStore()}>
+				<Surface value={handle({ tabId: "font-terminal" })} />
+			</Provider>,
+		);
+		await waitFor(() => expect(ipc.open).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(terminals[0].writes.join("")).toContain("ready:/repo"));
+		const output = [...terminals[0].writes];
+		const resizes = ipc.resize.mock.calls.length;
+		act(() => {
+			saveFontPreferences({ ui: "", code: "Test Mono" });
+			applyTheme("light", "sand");
+		});
+		await waitFor(() => expect(terminals[0].options.fontFamily).toContain('"Test Mono"'));
+		expect(ipc.resize.mock.calls.length).toBeGreaterThan(resizes);
+		expect(terminals).toHaveLength(1);
+		expect(terminals[0].writes).toEqual(output);
+		expect(ipc.open).toHaveBeenCalledTimes(1);
+		expect(ipc.close).not.toHaveBeenCalled();
+		act(() => {
+			saveFontPreferences({ ui: "", code: "" });
+			applyTheme("dark", "mono");
+		});
+		await waitFor(() => expect(terminals[0].options.fontFamily).not.toContain("Test Mono"));
+		view.unmount();
+		expect(ipc.close).toHaveBeenCalledTimes(1);
 	});
 
 	it("右栏与底部面板各开一个 PTY：快照键和输出互不串台", async () => {
