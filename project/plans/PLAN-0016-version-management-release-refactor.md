@@ -42,7 +42,7 @@ depends_on: [PLAN-0005]
 
 1. **成文政策（前置）**（done，TASK-0209）：把「版本事实源、0.x 语义、发布日期只在发布时写、上游基线行只由脚本写、已发布版本文件只读」写进 `docs/dev/agent-rules/delivery.md` 与 `.github/release-notes/README.md`；同时明确各应用与包的版本归属（desktop、cli-host、mobile、kotlin、im-gateway、插件、docs-site、根）。
 2. **状态可判定加守卫（核心）**（done，TASK-0209）：发布日期改由 publish 阶段写入，不接受 prepare 期手填；`check:guards` 增加断言——说明文件名版本等于 `apps/desktop/package.json#version` 等于标题版本；无对应 tag 时日期必须是「待定」；已有对应 tag 的版本，其说明文件不得被修改。
-3. **说明碎片化**（未开工，需先定取舍）：引入碎片目录与汇编脚本，把「补写发布说明」从「改 `v<版本>.md`」改成「写一份碎片」；汇编产物仍是唯一 Release 正文；`check` 断言碎片可汇编且结构合法。开工前需定两件事：既有条目是否迁移（`project/` 内已有 102 处引用 `release-notes/v`，其中绝大多数是历史 Task 的 write_paths），以及从哪一版起生效。
+3. **说明碎片化**（done，TASK-0212）：引入碎片目录与汇编脚本，把「补写发布说明」从「改 `v<版本>.md`」改成「写一份碎片」；汇编产物仍是唯一 Release 正文；`check` 断言碎片可汇编且结构合法。取舍已定：既有条目不迁移，只对未来版本生效（加法式）；`project/` 内 102 处历史引用不回填。
 4. **清理继承残留**（done，TASK-0210）：删除或收敛根 `version:*`、`release:*`、`publish*` 与 `scripts/release.mjs`、`scripts/release-windows.mjs`、`scripts/sync-versions.js`；把 workspace 发包的 fail-closed 守卫转为 `check` 断言。同时裁决 `0.55.3` 遗留（根、docs-site、runtime-knowledge）是冻结并注明，还是改中性值。
 5. **上线门（已定：保留直发）**：结论：保留本仓的直发模型（各平台构建成功即上线更新清单），补偿控制写进 runbook——发布后 `verify published r2/github feed` 回公网复核，正式发布由责任人本地 `release:desktop:publish -- <版本> --confirm-publish` 发起。代价是发布作业一成功客户端即可见，且缺少上游清单上线时的降级拒绝与 sha512 复核；若要改回两步门，需移植上游 `desktop-promote.yml` 与 `promote-update-metadata-r2.mjs`，并把发布作业改为把清单写入 `pending/<版本>/`。
 6. **平台侧加固**（清单已落 runbook，TASK-0211）：ruleset 限制 `v*` tag 的创建、改写与删除；`desktop-production` 配 required reviewers（含禁止自审）。属仓库设置，Agent 不代改，只出配置清单。
