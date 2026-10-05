@@ -1,7 +1,7 @@
 ---
 id: TASK-0209
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: release/desktop
 source: user-request；RESEARCH-0023；PLAN-0016 阶段 1 与 2
@@ -19,7 +19,7 @@ write_paths: [scripts/release/release-notes.mjs, scripts/release/release-notes.t
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-05
 updated: 2026-10-05
 ---
@@ -59,6 +59,19 @@ updated: 2026-10-05
 - `bun run test:quality`、`bun run check`（含 `check:guards` 里的 `release-notes.mjs --check`）。
 - 不跑真实发布；真实验证只到「守卫在本地与 CI 静态阶段生效」。
 
-## 交付记录
+## 交付记录（2026-10-05）
 
-待实施。
+- 实际修改：
+  - `scripts/release-desktop.mjs`：`publish` 前置校验改为要求日期停在占位；新增 `PLACEHOLDER_DATE_LABEL`、`localToday()`、`stampReleaseDate()`，并在提交与打 tag 之前把占位替换成当天日期。
+  - `scripts/release/release-notes.mjs`：新增 `releaseNotesStateProblems`（纯函数）、`releaseNotesVersions`、`collectReleaseNotesProblems`；`--check` 现在校验文件名、标题、日期状态与基线行，已发布版本还会与 tag 处内容逐字比对；上游继承的 `# Vetta …` 说明跳过。
+  - `docs/dev/agent-rules/delivery.md` 新增「版本与发布状态」一节；`.github/release-notes/README.md` 同步标题与只读两条。
+  - `.github/workflows/desktop-release.yml` 的质量作业补 `fetch-depth: 0`，否则取不到 tag 会把已发布误判为未发布。
+  - `.github/release-notes/v0.1.3.md` 的日期从 `2026-09-29` 回到「待定」。
+  - 两个 `scripts/release/` 源在本次改动后成为 fork 修改文件，按仓库规则补了声明头。
+- 验证命令与结果：
+  - `bun run test:quality`：37 文件 / 497 项通过（新增 10 项）。
+  - `node scripts/release/release-notes.mjs --check`：通过（v0.1.3 停在占位且无 tag，其余 v*.md 标题一致）。
+  - `bun run check`：exit 0（含 `check:guards` 里的同一守卫与声明头 ratchet `new=0`）。
+- 未运行及原因：未执行任何真实 `publish`、tag 或 push；本轮不涉及发布授权。
+- 剩余风险：`workflow_dispatch`（无 tag）走正式发布时，说明里的日期会停在占位；本仓正式发布路径是 `release:desktop:publish`（它会写日期并原子推 tag），该边界已写入交付规则待按需处理。历史文件 `v0.1.1.md` 有日期而无 tag，属既有记录，本轮不追溯。
+- 集成：实现提交 `53f674121`（本地 `main`），`integration_status: integrated`；未推送、未发布。
