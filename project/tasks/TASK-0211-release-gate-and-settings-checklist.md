@@ -1,7 +1,7 @@
 ---
 id: TASK-0211
 type: task
-status: verifying
+status: done
 priority: P2
 owner: release/product
 source: user-request；PLAN-0016 阶段 5 与 6
@@ -72,3 +72,7 @@ PLAN-0016 的阶段 5 与阶段 6。用户口径是「发版由人发起、开�
 - 剩余风险：文档已写明「声明 environment 不等于有人工门」，但门禁本身仍待用户在仓库设置里补齐；补齐前，发版约束完全依赖「谁推 tag 谁在发版」这条纪律。
 - 集成：实现提交 `ed4c31afb`（本地 `main`），`integration_status: integrated`；未推送、未发布。
 - 后续（TASK-0213，2026-10-06）：用户明确授权代改仓库设置。`v*` tag 的删除与改写 ruleset 已落地（id 24519581，仓库管理员 bypass），`desktop-test` 已创建；两个发布环境的 required reviewers 被 GitHub 以 422 拒绝，当前计划不支持。本 Task 写的「不代改仓库设置」只约束该 Task 当时的范围。
+
+## 收口（2026-10-06，TASK-0214）
+
+- 本任务的改动属 CI、工具链、规则、文档或仓库设置，无用户可观察行为变化；既定验收标准（静态门禁与定向测试）已实际执行并通过；人工功能验收不适用。按交付合同以「说明理由加既定完成标准」闭合。

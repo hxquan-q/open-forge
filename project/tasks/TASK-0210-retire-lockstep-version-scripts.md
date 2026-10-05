@@ -1,7 +1,7 @@
 ---
 id: TASK-0210
 type: task
-status: verifying
+status: done
 priority: P2
 owner: release/product
 source: user-request；PLAN-0016 阶段 4
@@ -72,3 +72,7 @@ PLAN-0016 阶段 4 的收敛部分。根 `package.json` 仍带着上游的锁步
 - 未运行及原因：未执行任何真实版本改动、发包或推送。
 - 剩余风险：`release:patch|minor|major` 与 `publish*` 仍留在根 manifest（受 fail-closed 守卫，见 TASK-0056），脚本名仍可能被误用；是否改名以进一步降低误用，留待后续决定。
 - 集成：实现提交 `29e429b21`（本地 `main`），`integration_status: integrated`；未推送、未发布。
+
+## 收口（2026-10-06，TASK-0214）
+
+- 本任务的改动属 CI、工具链、规则、文档或仓库设置，无用户可观察行为变化；既定验收标准（静态门禁与定向测试）已实际执行并通过；人工功能验收不适用。按交付合同以「说明理由加既定完成标准」闭合。

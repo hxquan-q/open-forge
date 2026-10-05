@@ -1,7 +1,7 @@
 ---
 id: TASK-0209
 type: task
-status: verifying
+status: done
 priority: P1
 owner: release/desktop
 source: user-request；RESEARCH-0023；PLAN-0016 阶段 1 与 2
@@ -75,3 +75,7 @@ updated: 2026-10-05
 - 未运行及原因：未执行任何真实 `publish`、tag 或 push；本轮不涉及发布授权。
 - 剩余风险：`workflow_dispatch`（无 tag）走正式发布时，说明里的日期会停在占位；本仓正式发布路径是 `release:desktop:publish`（它会写日期并原子推 tag），该边界已写入交付规则待按需处理。历史文件 `v0.1.1.md` 有日期而无 tag，属既有记录，本轮不追溯。
 - 集成：实现提交 `53f674121`（本地 `main`），`integration_status: integrated`；未推送、未发布。
+
+## 收口（2026-10-06，TASK-0214）
+
+- 本任务的改动属 CI、工具链、规则、文档或仓库设置，无用户可观察行为变化；既定验收标准（静态门禁与定向测试）已实际执行并通过；人工功能验收不适用。按交付合同以「说明理由加既定完成标准」闭合。

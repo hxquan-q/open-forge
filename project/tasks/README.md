@@ -17,11 +17,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 |---|---|---|---|
 | `TASK-0207` | `verifying` | PLAN-0006 | 修复 BUG-0078：`browser_tab` 的 `elementRef` 同时接受 snapshot 打印的编码串与对象，校验前解码为对象 ref，对外 Schema 也公布两种形式；定向 14 项/impact 119 项/desktop 12 项/check 全绿；待实机验收。 |
 | `TASK-0208` | `verifying` | — | 集成 origin/chenxvhua 的 allstar-coding v0.4（ac-fence 事中拦截层）；先建记录再合并，待门禁与推送。 |
-| `TASK-0209` | `verifying` | PLAN-0016 | 发布状态可判定：日期只在 publish 写入（已写入当天日期），`release-notes.mjs --check` 断言文件名/标题/manifest 版本一致、无 tag 时必须为「待定」、已发布与 tag 逐字一致；政策入 delivery 规则与 release-notes README；test:quality 497 项与完整 check 全绿（提交 53f674121）。 |
-| `TASK-0210` | `verifying` | PLAN-0016 | 清理上游锁步发版残留：删除根 `version:patch/minor/major/set` 四条未受守卫脚本，补断言禁止其回归；`scripts/sync-versions.js` 因受守卫的 `release.mjs` 仍调用而保留；test:quality 498 项与完整 check 全绿（提交 29e429b21）。 |
-| `TASK-0211` | `verifying` | PLAN-0016 | 发版人工门与仓库设置清单成文：实测 desktop-production 无 protection rules、desktop-test 未创建、rulesets 为空、main 未保护，已把人工门位置与待配项写进 runbook，阶段结论回填 PLAN-0016；完整 check 全绿（提交 ed4c31afb）。 |
-| `TASK-0212` | `verifying` | PLAN-0016 | 发布说明碎片化已交付：每任务写 `fragments/v<版本>/<slug>.md`，`--assemble` 汇编、`--check` 校验一致性；无碎片为纯 no-op（实现中实测到一次清空，已恢复并加回归测试）；test:quality 506 项与完整 check 全绿（提交 a70bba348）。 |
-| `TASK-0213` | `verifying` | PLAN-0016 | 仓库侧发布门禁：`v*` tag 的删除与改写 ruleset 已落地（id 24519581，管理员 bypass，不影响打 tag）；`desktop-test` 已创建；两个环境的 required reviewers 被平台以 422 拒绝（计划不支持），故可用人工门为 tag ruleset 加本地 publish。完整 check 全绿（提交 5fc62a929）。 |
+| `TASK-0209` | `done` | PLAN-0016 | 发布状态可判定：日期只在 publish 写入（已写入当天日期），`release-notes.mjs --check` 断言文件名/标题/manifest 版本一致、无 tag 时必须为「待定」、已发布与 tag 逐字一致；政策入 delivery 规则与 release-notes README；test:quality 497 项与完整 check 全绿（提交 53f674121）。 |
+| `TASK-0210` | `done` | PLAN-0016 | 清理上游锁步发版残留：删除根 `version:patch/minor/major/set` 四条未受守卫脚本，补断言禁止其回归；`scripts/sync-versions.js` 因受守卫的 `release.mjs` 仍调用而保留；test:quality 498 项与完整 check 全绿（提交 29e429b21）。 |
+| `TASK-0211` | `done` | PLAN-0016 | 发版人工门与仓库设置清单成文：实测 desktop-production 无 protection rules、desktop-test 未创建、rulesets 为空、main 未保护，已把人工门位置与待配项写进 runbook，阶段结论回填 PLAN-0016；完整 check 全绿（提交 ed4c31afb）。 |
+| `TASK-0212` | `done` | PLAN-0016 | 发布说明碎片化已交付：每任务写 `fragments/v<版本>/<slug>.md`，`--assemble` 汇编、`--check` 校验一致性；无碎片为纯 no-op（实现中实测到一次清空，已恢复并加回归测试）；test:quality 506 项与完整 check 全绿（提交 a70bba348）。 |
+| `TASK-0213` | `done` | PLAN-0016 | 仓库侧发布门禁：`v*` tag 的删除与改写 ruleset 已落地（id 24519581，管理员 bypass，不影响打 tag）；`desktop-test` 已创建；两个环境的 required reviewers 被平台以 422 拒绝（计划不支持），故可用人工门为 tag ruleset 加本地 publish。完整 check 全绿（提交 5fc62a929）。 |
+| `TASK-0214` | `in_progress` | — | 台账收口：把 verifying 批次按证据分类，并按既定标准闭合本轮交付的内部任务（0209–0213）；面向用户行为的条目保留 verifying 交用户验收。 |
 | `TASK-0206` | `verifying` | PLAN-0014 | feed/attach 第二片：`SessionFacade.attach` 一次同步步骤内订阅 + 运行中回合重放 + 历史快照（`SessionAttachment`），保留本仓 4096 有界回放，不引入上游无界回合缓冲；红绿/定向 10/10/impact 115 项/完整 check 全绿；无直接 UI，消费端随 IPC/desktop 后续片验收。 |
 | `TASK-0205` | `verifying` | PLAN-0014 | feed/attach 底座第一片：快照暴露运行中回合身份（currentTurnId）+ 重放缓冲收录本轮工具事件（保留 4096 有界）；红绿/impact/完整 check 绿；工具状态切回即时可见待实机验收，currentTurnId 消费随 IPC/desktop 后续片。 |
 | `TASK-0204` | `done` | PLAN-0014 | 会话事件合同清退死类型（message.final/toolcall.args，查证无生产者）+ 生产者登记表（23 类型 satisfies 穷尽）+ 墓碑守卫入 check:guards；定向/impact/完整 check 全绿，行为零变化；内部治理按完成标准收口。 |

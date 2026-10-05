@@ -1,7 +1,7 @@
 ---
 id: TASK-0212
 type: task
-status: verifying
+status: done
 priority: P2
 owner: release/product
 source: user-request；PLAN-0016 阶段 3
@@ -75,3 +75,7 @@ PLAN-0016 阶段 3。一版一个 `v<版本>.md`，所有并行任务往里追�
 - 未运行及原因：未执行发布；未做端到端验证——真实的并行碎片冲突场景要等下一次并行集成才会自然出现。
 - 剩余风险：既有 110 条手写条目未迁移，`v0.1.3.md` 仍是手写正文，发版时照旧作为 Release 正文；历史 Task 记录里 102 处 `release-notes/v` 引用未回填（属历史事实）。
 - 集成：实现提交 `a70bba348`（本地 `main`），`integration_status: integrated`；未推送、未发布。
+
+## 收口（2026-10-06，TASK-0214）
+
+- 本任务的改动属 CI、工具链、规则、文档或仓库设置，无用户可观察行为变化；既定验收标准（静态门禁与定向测试）已实际执行并通过；人工功能验收不适用。按交付合同以「说明理由加既定完成标准」闭合。
