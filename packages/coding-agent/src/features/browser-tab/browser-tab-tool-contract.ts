@@ -225,14 +225,21 @@ export const CODING_AGENT_BROWSER_TAB_FUNCTION = defineSessionExtensionFunction<
 	CodingAgentBrowserTabFunctionResult
 >(CODING_AGENT_BROWSER_TAB_EXTENSION_ID, "invoke");
 
+const BROWSER_TAB_NO_SESSION_GUIDANCE =
+	"Ask the user to open the intended page in the in-app Browser, then retry snapshot. " +
+	"This error concerns that in-app page and does not mean that all browser tools are unavailable. " +
+	"Do not silently switch to a separate browser session or copy login state to work around it.";
+
 export const BROWSER_TAB_TOOL_DESCRIPTION = [
 	"Operate the in-app Browser WebView that the user is looking at (same page, same session).",
+	"Call this tool directly; it does not require a shell, MCP search, or installing a browser CLI.",
 	"Read actions: snapshot, inspect, screenshot, wait, scroll. Write actions: click, fill, press, navigate.",
 	"snapshot returns an interactive accessibility tree with elementRef values that embed pageRevision.",
 	"Pass elementRef back exactly as snapshot printed it (the opaque v1:<pageRevision>:<id> token); {id, pageRevision} is accepted too.",
 	"After navigation or DOM change, old refs return stale_reference — take a new snapshot; never guess a new locator.",
 	"navigate accepts only http/https URLs. This tool cannot evaluate JavaScript, read cookies, or export tokens.",
 	"This is not the agent-browser CLI; that Skill uses a separate browser session.",
+	`If no_browser_session is returned: ${BROWSER_TAB_NO_SESSION_GUIDANCE}`,
 ].join(" ");
 
 export function isBrowserTabToolAction(value: unknown): value is BrowserTabToolAction {
@@ -353,7 +360,7 @@ function formatBrowserTabToolError(error: BrowserTabToolError): string {
 		return `stale_reference: pageRevision is now ${error.pageRevision ?? "?"}; take a new snapshot before acting.`;
 	}
 	if (error.code === "no_browser_session") {
-		return "no_browser_session: the in-app WebView is not available.";
+		return `no_browser_session: the in-app WebView is not available. ${BROWSER_TAB_NO_SESSION_GUIDANCE}`;
 	}
 	if (error.code === "policy_denied") {
 		return `policy_denied: ${error.message}`;
