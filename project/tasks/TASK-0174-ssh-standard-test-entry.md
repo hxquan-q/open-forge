@@ -1,7 +1,7 @@
 ---
 id: TASK-0174
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ssh-transport + quality
 source: RESEARCH-0019; TASK-0172
@@ -77,3 +77,7 @@ updated: 2026-10-02
 - 验证：`bun run --cwd packages/ssh-transport test` 195/25 绿；`bun run test:quality` 484 通过（含新断言）；`bun run test:impact -- packages/ssh-transport/src/ssh2-runner.ts` 实际选择并运行 ssh-transport 自身测试（36 相关用例）；批次级 `test:changed --base origin/dev` 与完整 `bun run check` 见批次收口记录。
 - 未验证项：三平台 CI 矩阵的实跑证据待 push 后由 quality.yml 产生（本机只代表 Windows）；README 测试章节按依赖顺序归 TASK-0177 更新。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

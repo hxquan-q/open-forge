@@ -1,7 +1,7 @@
 ---
 id: TASK-0175
 type: task
-status: verifying
+status: done
 priority: P1
 owner: toolkit
 source: RESEARCH-0019; TASK-0172
@@ -77,3 +77,7 @@ updated: 2026-10-02
 - 实际命令与结果：cwd `packages/toolkit` 定向 20/20、全包 35/35；`test:impact` 与 `test:changed --base origin/dev`（与同批 TASK-0178 合并执行：desktop 4652、presets/content-creation、runtime-desktop、themes、toolkit）通过；`bun run check` exit 0。
 - 未验证项/风险：真实断电/磁盘故障持久性未实测（合同本就不宣称）；Windows 外平台行为由既有测试与 Node FileHandle 语义覆盖，未做实机矩阵。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）；人工功能验收与发布未执行。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

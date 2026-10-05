@@ -1,7 +1,7 @@
 ---
 id: TASK-0206
 type: task
-status: verifying
+status: done
 priority: P1
 owner: runtime-core
 source: user-request（继续优化）；RESEARCH-0022 缺口 #4 第二片
@@ -95,3 +95,7 @@ updated: 2026-10-04
 - 未运行及原因：desktop/cli-host 消费端未接线（后续片），实机接入场景随整链验收；完整 `bun run check` 于提交前运行。
 - Worktree：未拆出（主工作区串行小片）。
 - 剩余风险：`runningTurnId` 在回合首个 assistant 事件到达前为 undefined（真实语义，消费端需结合 isStreaming 处理）；运行中回合的重放为本仓有界尾部（4096、usage.update 清空），整回合超出上限或已过上一模型调用时，持久化部分以 history 为准、活动消息以事件携带的 partial 快照为准——消费端（feed reducer 后续片）不得假设重放覆盖整回合。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

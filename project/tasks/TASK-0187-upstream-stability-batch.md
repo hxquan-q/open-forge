@@ -1,7 +1,7 @@
 ---
 id: TASK-0187
 type: task
-status: verifying
+status: done
 priority: P1
 owner: coordinator
 source: user-request; RESEARCH-0022
@@ -142,3 +142,7 @@ changed 诊断中间证据：前 10 包通过，CLI 为 7 文件失败、10 测�
 - 待推批次 `git log origin/dev..main` 共 21 个提交（2 协调记录 + TASK-0186/0181/0187 三个集成合并及其任务提交），origin/dev 未移动，fast-forward 推送。
 
 未消除项：BUG-0059（CLI 环境超时，investigating）、BUG-0077（git preset 测试依赖声明，investigating）均为存量，独立修复；人工验收与发布未发生。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。
