@@ -7,6 +7,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0016` | 版本管理与发版重构 | draft | [RESEARCH-0023](../research/RESEARCH-0023-version-management-and-release-design.md) |
 | `PLAN-0015` | Harness 高价值机制隔离吸收 | in_progress | [RESEARCH-0021](../research/RESEARCH-0021-pi-deepseek-harness-absorption.md) |
 | `PLAN-0001` | work/coding Runtime 产品演进 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md)、[`exprot/runtime-mapping.md`](../../exprot/runtime-mapping.md) |
 | `PLAN-0002` | 性能与可靠性基线 | in_progress | [`exprot/implementation-plan.md`](../../exprot/implementation-plan.md) 阶段 0.5 |

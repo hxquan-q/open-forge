@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| 版本迭代与发版设计（上游 Vetta、业界做法、本仓缺口） | [RESEARCH-0023](RESEARCH-0023-version-management-and-release-design.md) |
 | 原始 Vetta 最新非手机优化与本仓缺口 | [RESEARCH-0022](RESEARCH-0022-upstream-nonmobile-gap-audit.md) |
 | Pi 与 DeepSeek Harness / Desktop 能力吸收评估 | [RESEARCH-0021](RESEARCH-0021-pi-deepseek-harness-absorption.md) |
 | Desktop 字体设置与字体授权 | [RESEARCH-0020](RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
