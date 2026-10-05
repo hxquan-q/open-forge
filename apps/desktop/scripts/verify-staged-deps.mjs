@@ -9,6 +9,10 @@
  *    `<tmp>/vetta-desktop-build`），断言黑名单模式零命中；
  * 3. `--resources <目录>`：扫描已打包产物的 `resources/`（`app.asar.unpacked`
  *    与 `node_modules`），用于安装包级别的回归。
+ *
+ * 用法 2/3 必须显式带且只带一个 `--platform <darwin|win32|linux>`：产物树只属于一个
+ * 平台族，缺省或并列多平台会让 `planStagedDepStripping` 按并集裁剪，把自己平台真正
+ * 需要的 prebuild 误判为「应被裁剪却仍在」（BUG-0066）。
  */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -242,6 +246,16 @@ export function parseArguments(argv) {
 			continue;
 		}
 		throw new Error(`[verify-staged-deps] unknown argument: ${argument}`);
+	}
+	const scansMaterializedTree = options.staging !== undefined || options.resources !== undefined;
+	if (scansMaterializedTree) {
+		if (options.platforms.length !== 1) {
+			throw new Error(
+				"[verify-staged-deps] --staging/--resources 需要且只接受一个 --platform <darwin|win32|linux>；" +
+					"产物树只属于一个平台族，缺省或并列多平台会按并集裁剪，把自己平台的 prebuild 误判为未裁剪",
+			);
+		}
+		return options;
 	}
 	if (options.platforms.length === 0) options.platforms.push(...TARGET_PLATFORM_FAMILIES);
 	return options;
