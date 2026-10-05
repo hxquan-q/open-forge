@@ -168,5 +168,8 @@
 		"react-dom": "19.2.8",
 		"adm-zip": "^0.6.1",
 		"svgo": "^4.1.0"
+	},
+	"patchedDependencies": {
+		"fumadocs-core@16.14.1": "patches/fumadocs-core@16.14.1.patch"
 	}
 }

@@ -32,6 +32,7 @@ const LINE_STYLES = {
 	hash: { render: (text) => `# ${text}` },
 	block: { render: (text) => `/* ${text} */` },
 	html: { render: (text) => `<!-- ${text} -->` },
+	jsx: { render: (text) => `{/* ${text} */}` },
 	sql: { render: (text) => `-- ${text}` },
 	semicolon: { render: (text) => `; ${text}` },
 };
@@ -80,7 +81,7 @@ const STYLE_BY_EXTENSION = {
 	scss: "block",
 	less: "block",
 	md: "html",
-	mdx: "html",
+	mdx: "jsx",
 	html: "html",
 	xml: "html",
 	plist: "html",
@@ -108,6 +109,7 @@ const STYLE_BY_BASENAME = {
 // 无法/不应携带文件头声明的路径：由本清单兜底，NOTICE 中作整体说明。
 const EXCLUDED_PATH_RULES = [
 	{ pattern: /^exprot\//, reason: "历史研究归档" },
+	{ pattern: /^patches\//, reason: "bun patch 生成的第三方差异，加声明头会破坏补丁可应用性" },
 	{ pattern: /^\.github\/release-notes\//, reason: "Release 正文（含上游已发布原文）" },
 	{ pattern: /^NOTICE$/, reason: "声明载体本身" },
 	{ pattern: /^LICENSE$/, reason: "许可证正文" },
