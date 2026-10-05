@@ -6,10 +6,26 @@ AllstarCoding 全流程软件工程流水线预置插件：主控 `@allstar` + �
 逐任务开发/评审循环 → 白盒体检 → 黑盒 → 部署 → 收尾）驱动目标项目的全生命周期交付；
 `docs/ac/state.md` JSON 状态机支持中断恢复，每环节收口走 ac-gate 产物硬校验。
 
+v0.4（权限与校验体系）：任务契约 schema v2（scope glob / prohibitions / help_protocol）、
+角色权限矩阵 v1（三档分级、写域互不重叠、T3 应急申请制）、reviews.md 追加制评审记录、
+T 级存档制、越权处置 SOP 六步、V1-V6 硬校验节点（双证据链：git 轨迹 + 文件 mtime）。
+随包分发 `scripts/ac-audit.mjs` 只读审计脚本（V2 环节收口 / V3 评审前快照 / V4 存档点），
+主控在关键节点执行并贴报告留档。
+
+v0.2（ac-fence 事中拦截层）：插件 activate 注册 `PreToolUse` + `SubagentStart` hook——
+主控 spawn 的每个子代理，其工具调用（写文件/跑命令/再 spawn）在执行前按任务契约 scope 判定，
+越权即 block（reason 带 help_protocol 指引），拦截记录落目标项目 `docs/ac/fence-log.jsonl`
+（预期写入，ac-audit 双链已排除）。判定器为纯函数（`src/fence/judge.ts`，不 import
+plugin-sdk）；glob 语义与 ac-audit 共用 `scripts/scope-glob.mjs` 权威实现（事中拦截与
+事后审计对同一 path 同一判定）。git 写操作收口：主会话直跑即拦；T 级存档走轻量 git 子代理
+（task_name `git_` 前缀 + 契约 `allow_git_write: true`，豁免只授 `git_` 前缀，偷带即拒）。
+需要权限：`agent.hooks.register` + `agent.hookHandler.execute`（缺失时 registerHook 是
+warn+noop 静默失效——desktop 日志查 `[ac-fence] hooks registered`）。
+
 ## Context Boundary
 
 ```yaml
-purpose: 预置（preset）插件——运行时无代码贡献，仅随 manifest 铺设智能体、团队、技能与本地化声明
+purpose: 预置（preset）插件——随 manifest 铺设智能体、团队、技能与本地化声明；activate 注册 PreToolUse/SubagentStart hook 挂 ac-fence 事中围栏（按任务契约 scope 判定子代理工具调用，渲染进程内纯内存判定，文件 I/O 经 ctx.fs 宿主中转）；附带 scripts/ac-audit.mjs 只读审计脚本（主控侧 node 执行，不进渲染进程）
 provides:  []
 consumes:  []
 internal_dependencies:
