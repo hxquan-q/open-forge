@@ -1,7 +1,7 @@
 ---
 id: WAIVER-0004
 rule: docs/dev/agent-rules/testing.md；collaboration 的提交与集成前全影响包测试通过要求（仅 Policy）
-status: active
+status: resolved
 owner: runtime-core/coordinator
 reason: 用户在获知跨包测试失败后明确同意临时测试豁免，要求先提交推送 dev 再并入本地主树
 risk: CLI 启动首帧超时尚未归因，Desktop 完整跨包验证未闭环，候选可能含未发现回归
@@ -33,3 +33,11 @@ expires: 2026-10-10
 ## 到期处理
 
 2026-10-10 前重新定位 CLI/完成 Desktop 验证；消除失败后 resolved，不能验证或候选不可接受则回退本切片。不自动续期、不以本条为后续其他任务的通用豁免。
+
+## 解决记录（2026-10-05）
+
+- 两个未决项已按「到期处理」闭环（证据见 TASK-0197 的 2026-10-04 复验段）：
+  - CLI 启动类失败已归因负载：同一五文件用例集在低竞争环境串行复跑 39/39 通过（约 153s），对照负载期 9 failed / 30 passed、约 480s（3.1× 放缓），启动首帧正常；剩余 4 例为精确工具清单断言漂移，已由 TASK-0203 修复（done，`76109c3ed`）。
+  - Desktop 完整范围已复验：包内 `bun run test` 923 文件中 919 passed / 4 skipped，4921 项中 4906 passed / 15 skipped，exit 0。
+- 候选交付未越界：只提交本 Task，fast-forward 推 dev（`a163b58b1`），未 force、未推 origin/main/tag、未发布；静态 check 与定向合同均通过。
+- 状态转 `resolved`，不等待 2026-10-10 到期。TASK-0198 保持 `verifying` 至人工验收（属功能接受，不在本条范围内）。
