@@ -12,7 +12,7 @@ related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-09-24
-updated: 2026-09-25
+updated: 2026-10-05
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -102,3 +102,12 @@ updated: 2026-09-25
 - 验证：`test:packaging` 104/104（含新增 6 例，覆盖「目录存在但为空」、darwin/未声明平台不告警等）；真仓路径实测输出告警原文；`node --check` 通过。未跑全量打包（会编译 CLI、拉取 vendor 运行时）。
 
 **仍未做（等 B 决策）**：内置二进制；以及按**架构**而非平台族判定缺口（linux 只 staged x64 时当前不告警）。
+
+## 复核（2026-10-05）
+
+- A（沙盒不可用说明）与 C（打包守卫）已交付且都在 `main` 可达：`4e082866b`（含测试补强 `7f0f2826e`）与 `73811a378`，集成于 `9df33ee39`；`apps/desktop/scripts/sandbox-staging-guard.mjs` 与 `useExecutionModeSelectorModel` 的 `sandboxNotice` 均在树内。**无需重排 A/C**，此前「A/C 待排期实施」的表述已过时。
+- 仍未做、且只有 B 落定后才能推进：
+  - 按 B 方向内置 Windows 沙盒 host，或明确声明 Windows 暂不提供沙盒；
+  - 缺口判定按**架构**而非平台族（linux 只 staged x64 时当前不告警）；
+  - B 落定后再把 C 的告警升级为失败开关（升级前需先有消费方）。
+- 状态保持 `blocked`：等 B 的产品方向（host 的来源、许可、体积、更新节奏，或明确不支持）。
