@@ -1,7 +1,7 @@
 ---
 id: TASK-0217
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: coordinator
 source: user-request（「都可以继续」）；TASK-0047/0048 陈旧阻塞复核
@@ -19,7 +19,7 @@ write_paths: [project/tasks/TASK-0047-repository-docs-brand-migration.md, projec
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-06
 updated: 2026-10-06
 ---
@@ -51,6 +51,12 @@ updated: 2026-10-06
 - `bun run check` 的索引一致性（`check-project-indexes` 与 `check-task-worktrees`）。
 - 量出实际缺口（公开文档与文档站里仍带旧品牌字样的位置数量），作为后续实施切片的输入。
 
-## 交付记录
+## 交付记录（2026-10-06）
 
-待实施。
+- 实际修改：TASK-0047 与 TASK-0048 的 frontmatter 由 blocked 转 ready；两条的「阻塞」小节改写为「阻塞已解除、但尚未实施」并保留原约束；两条与本条一并补进焦点表。
+- 复核证据：两条的交付记录四条（实际修改、实际运行、未运行及原因、剩余风险）全为空，说明工作从未开始，不是「做完未关」；TASK-0045 与 TASK-0049 的 frontmatter 均为 done，说明原阻塞条件已满足。
+- 实测缺口（判据：排除冻结标识后仍提到旧品牌的行）：公开文档与文档站合计 334 行、84 个文件。分布最高的是 docs-site 内容（product/design.mdx 17 行、其 en 版 14 行）与 README.md（11 行）。样本里仍混有必须保留的上游署名（README「Open Forge is an independently maintained derivative of Open Vetta」），实施时要逐行判三类：散文改名、上游署名保留、冻结标识保留。
+- 验证：check-project-indexes 与 check-task-worktrees 通过。
+- 未运行及原因：未实施品牌迁移本身（属 0047/0048 的范围）；未运行 docs-site 构建。
+- 剩余风险：334 行是「需逐行判断」的上界，不等于「需改写」的行数；两条 P0 的真实工作量要按文件切片后才清楚。
+- 集成：提交 `1e6e2ab4c`，本地 `main`；未推送。
