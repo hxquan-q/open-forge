@@ -87,3 +87,9 @@ updated: 2026-10-06
 ### 待人工验收的模型案例
 
 在命令工具开启的现有会话或新会话中，要求执行无害的本机网络诊断；工具可用时应尝试授权范围内的检查而非声称没有终端。MCP 查询无匹配时仍应识别内置命令入口。命令不存在、网络失败、审批拒绝时报告具体原因，不虚构连接成功。SSH 密码通过安全交互提供，验收记录不保存凭据。若仍误判，需该会话脱敏工具请求/响应证据，不能仅凭新 Prompt 声称模型问题已彻底消失。
+
+### 2026-10-06 用户后续推送授权
+
+- 用户明确要求提交推送后继续 Browser 相关修正。已审核 origin/dev..967daaf2e，只有上轮已检查的 Project 台账与本 Task 修正；main 后续其他任务提交不包含在推送中。
+- 执行 git push origin 967daaf2e:refs/heads/dev，fast-forward 从 6cf889258 到 967daaf2e；git ls-remote 确认 dev 为 967daaf2e144bce99e45a5853ff5b14b8aa707ea。未推 origin/main、未 force、未发布，也未提交其他人的 bun.lock/文档站修改。
+- Browser 后续工作见 [TASK-0218](TASK-0218-browser-capability-evidence.md)，其代码尚未集成或推送，不能将本次推送状态套用于后续分支。
