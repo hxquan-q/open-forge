@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /** Coding Agent system prompt policy and model-call prompt assembly. */
 
 import { renderMcpToolsPromptSection } from "@vetta/runtime-mcp";
@@ -270,7 +271,8 @@ function buildGuidelines(tools: string[], scenario?: ConversationScenario): stri
 	// 渲染契约（徽章/产物块/URL 链接）只对有 UI 渲染的场景有意义；cli 场景剔除。
 	// scenario 未传（SDK 直调/测试）时保守保留，行为与旧版一致。
 	const hasUiRendering = scenario !== "cli";
-	const hasSelectedCommandTool = tools.includes("bash") || tools.includes("shell");
+	const selectedCommandTools = ["bash", "shell"].filter((tool) => tools.includes(tool));
+	const hasSelectedCommandTool = selectedCommandTools.length > 0;
 	const hasEdit = tools.includes("edit");
 	const hasWrite = tools.includes("write");
 	const hasDirTree = tools.includes("dir_tree");
@@ -287,6 +289,13 @@ function buildGuidelines(tools: string[], scenario?: ConversationScenario): stri
 	}
 
 	if (hasSelectedCommandTool) {
+		guidelinesList.push(
+			`Command execution is available through ${selectedCommandTools.map((name) => `\`${name}\``).join(" or ")}. ` +
+				"When the user asks you to run a command or diagnose connectivity, use the available command tool within the authorized scope instead of claiming you have no terminal. " +
+				"Programs such as ping and ssh are command-line programs, not separate tools to discover. MCP search results do not determine whether built-in tools are available; a loaded skill is guidance, not an additional execution tool. " +
+				"Command-tool availability does not prove that a program is installed or a host is reachable. Use bounded checks and report the actual output or error; do not claim a connection succeeded without evidence. " +
+				"Keep credentials out of command arguments and logs, and do not bypass approval, sandbox, or network restrictions. If execution is denied or unavailable, explain that specific limitation and the next step.",
+		);
 		guidelinesList.push(
 			"Before bash/shell: if the process may not exit on its own (dev server, watcher, docker compose up without -d, make dev), MUST set run_in_background: true. Foreground blocks the entire agent turn until exit (or auto-promote after the soft wait).",
 		);

@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0215` | `verifying` | — | BUG-0079：按实际工具生成终端能力指引，区分 MCP 检索与内置命令；定向、impact、check 通过，Desktop 全量 4909 通过；CLI 首轮 3 启动超时，整文件复跑 14/14；本地 main，真实模型效果待验收。 |
 | `TASK-0207` | `verifying` | PLAN-0006 | 修复 BUG-0078：`browser_tab` 的 `elementRef` 同时接受 snapshot 打印的编码串与对象，校验前解码为对象 ref，对外 Schema 也公布两种形式；定向 14 项/impact 119 项/desktop 12 项/check 全绿；待实机验收。 |
 | `TASK-0208` | `verifying` | — | 集成 origin/chenxvhua 的 allstar-coding v0.4（ac-fence 事中拦截层）；先建记录再合并，待门禁与推送。 |
 | `TASK-0209` | `done` | PLAN-0016 | 发布状态可判定：日期只在 publish 写入（已写入当天日期），`release-notes.mjs --check` 断言文件名/标题/manifest 版本一致、无 tag 时必须为「待定」、已发布与 tag 逐字一致；政策入 delivery 规则与 release-notes README；test:quality 497 项与完整 check 全绿（提交 53f674121）。 |
