@@ -1,7 +1,7 @@
 ---
 id: TASK-0216
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: coordinator
 source: user-request（「验收方式」决策：分层）
@@ -19,7 +19,7 @@ write_paths: [project/tasks, project/tasks/README.md, project/verification]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-06
 updated: 2026-10-06
 ---
@@ -54,6 +54,15 @@ updated: 2026-10-06
 - `bun run check`（含索引一致性）。
 - `gh api` 无关；本轮不涉及仓库设置。
 
-## 交付记录
+## 交付记录（2026-10-06）
 
-待实施。
+- 分类（判据：是否改变用户可观察的输出、界面、交互、安装或更新流程、AI 行为）：
+  - 合同面 17 个已闭合：0137、0138、0139、0140、0141、0164、0150、0173、0174、0175、0182、0187、0196、0198、0199、0205、0206；每条记录注明「按用户授权闭合，不是用户已确认」。
+  - 行为面 53 个保持 verifying，进入 `VERIFY-0017` 的验收清单（五组，逐条给出看什么与触发方式）。
+  - 2 个（0183、0184）既非合同面也无完整验证：CI 复跑仍受 ISSUE-0029 阻塞，在清单里单独标注。
+- 编号事故与更正：本任务原用 TASK-0215，与另一执行流的 TASK-0215-session-command-tool-visibility 撞号；按「编号已被占用则重新分配、不覆盖现有条目」改为 TASK-0216，并同步了 17 条收口注记与焦点表引用。
+- 操作失误（如实记录）：提交 272808ea0 用 `git add project/tasks/` 暂存，把另一执行流当时未跟踪的 `project/tasks/TASK-0215-session-command-tool-visibility.md` 一并带进了提交（文件内容未被改写）。这违反「暂存时逐个列出具体路径、不夹带他人内容」。补救选项交用户：保留现状，或以追加提交撤回该路径（本仓禁止未经明确要求的 amend）。
+- 验证：`bun run check` 本次未能全绿，失败点不在本任务改动，而在另一执行流的两处在途内容——TASK-0215-session-command-tool-visibility.md 声明 `execution: serial` 却带 `worktree` 字段（task-worktrees 守卫红），以及未跟踪的 `BUG-0079` 缺声明头（声明头 ratchet new=1）。两处都属他人在途内容，未代为修改。
+- 未运行及原因：用户的实际验收未发生，这正是本任务要交给用户的部分；Agent 不能代替。
+- 剩余风险：55 个 verifying 中 53 个等用户验收，2 个等 Actions 预算恢复后 CI 证据；另有两处他人在途的守卫红待其 Owner 处理。
+- 集成：闭合提交 `272808ea0`，本地 `main`；未推送。
