@@ -1,7 +1,7 @@
 ---
 id: BUG-0067
 type: bug
-status: in_progress
+status: verifying
 priority: P2
 owner: docs-site
 source: CI docs-site workflow build (37056667697)
@@ -64,3 +64,12 @@ P2：docs 站 `next build` 无法通过，Vercel 生产部署与 CI 校验同时
 - 候选三：为 fumadocs-mdx 提供自定义 `stringify`，绕过默认包装。
 - 4 处 `<!-- ... -->` 注释改为 `{/* ... */}`；若该注释承载修改声明头语义，迁移后需保持仓库声明头门禁可识别。
 - 验收阻塞同 [ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)：CI 复跑绿暂不可得；本机 `bun run --cwd apps/docs-site build` 绿可作为本地证据。
+
+## 修复与验证（2026-10-05）
+
+- 修复一：以 bun patch 修正 `fumadocs-core@16.14.1` 的 `modHandler`，包装 handler 时保留 `attention`/`peek`（`patches/fumadocs-core@16.14.1.patch`；根 `package.json` 新增 `patchedDependencies`）。
+- 修复二：4 处 `<!-- ... -->` 改为 MDX 注释 `{/* ... */}`；其中 `core/workspaces-and-sessions.mdx`（zh/en）的声明头原先在 frontmatter 之前，现移到闭合 `---` 之后（MDX 要求 frontmatter 打头）。
+- 配套：`check-modified-file-notices.mjs` 为 `.mdx` 增加 `jsx` 注释样式，`--write` 不再插入非法 HTML 注释；并把 `patches/` 加入不携带声明头的路径白名单（补丁加头会破坏可应用性）。
+- 回归：`apps/docs-site/test/mdx-stringifier.test.ts` 直接构造含 `strong`/`emphasis` 的最小 mdast，断言不再抛 `RangeError`。
+- 验证：`bun run --cwd apps/docs-site build` 通过（113 个静态页；`RangeError` 从 85 降到 0，错误块从 91 降到 0）；`bun run --cwd apps/docs-site test` 34/34；`bun run test:quality` 487/487；通知门禁 ratchet 通过（`unclassified=0`）；完整 `bun run check` 通过。
+- 未运行：CI 复跑（`ISSUE-0029`）。Vercel 生产部署随下次构建自然恢复。

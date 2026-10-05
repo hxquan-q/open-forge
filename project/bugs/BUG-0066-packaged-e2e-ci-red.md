@@ -1,7 +1,7 @@
 ---
 id: BUG-0066
 type: bug
-status: in_progress
+status: verifying
 priority: P1
 owner: desktop packaging
 source: CI desktop-packaged workflow E2E jobs (36901450713 / 37056667683 / 37059120967)
@@ -64,3 +64,10 @@ P1：packaged E2E 三个平台全红，smoke / updater 回归自 `22efdca00`（2
 - 方向一：CI 的 E2E 步骤按 `${{ matrix.platform }}` 传 `--platform`，让 `--staging` 只应用本平台规则。
 - 方向二：`assertStagedTreeClean` 语义上要求调用方声明产物平台，禁止无平台的全族并集扫描；并加用例锁住该语义。
 - 验收阻塞：fork 的 GitHub Actions 预算已耗尽（[ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)），当前所有 workflow 秒败于 `an Actions budget is preventing further use`，CI 复跑绿暂不可得。实现与本地/单元级验证可先行。
+
+## 修复与验证（2026-10-05）
+
+- 修复：`--staging`/`--resources` 现要求显式且唯一的 `--platform <darwin|win32|linux>`（`apps/desktop/scripts/verify-staged-deps.mjs` 的 `parseArguments` 抛错）；无树扫描的干跑仍默认三族。CI 的 E2E 步骤按矩阵传 `--platform ${{ matrix.family }}`，矩阵新增 `family` 字段。
+- 回归：`apps/desktop/scripts/staged-deps-cleanlist.node-test.mjs` 新增 3 例——缺平台或多平台必须抛错、无树扫描仍默认三族、单平台扫描不把本平台 prebuild 判为应裁剪。
+- 验证：`bun run --cwd apps/desktop test:packaging` 125/125；`node --test scripts/staged-deps-cleanlist.node-test.mjs` 21/21；`node --check` 通过；完整 `bun run check` 通过。
+- 未运行：CI 复跑（`ISSUE-0029`，Actions 预算未恢复）。因此 packaged E2E 与 smoke/updater 仍未在 CI 上执行过，验收保持 verifying。
