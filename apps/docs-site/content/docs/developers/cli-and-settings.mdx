@@ -9,16 +9,16 @@ CLI 适合从终端执行一次任务、输出 JSON 事件或启动 RPC。桌面
 
 ```bash
 # 默认文本输出
-vetta "总结当前目录的项目结构"
+openforge "总结当前目录的项目结构"
 
 # 结构化 JSON 事件流
-vetta --mode json "检查 package.json 中的脚本"
+openforge --mode json "检查 package.json 中的脚本"
 
 # 选择模型和思考档位
-vetta --model openai/gpt-4o:high "分析这个故障"
+openforge --model openai/gpt-4o:high "分析这个故障"
 
 # 恢复最近会话
-vetta --continue "继续上次任务"
+openforge --continue "继续上次任务"
 ```
 
 | 参数 | 说明 |

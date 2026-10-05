@@ -80,3 +80,13 @@ updated: 2026-10-06
 - 验证：grep 复核该文件后只剩 `logoPath` 一处旧品牌字样。
 - 未运行及原因：未跑 docs-site 构建（本轮为文案改动，构建按本任务合同在收口时跑）；未部署。
 - 剩余风险：本任务覆盖站点元数据、双语内容与 SEO/LLM 发现入口，本条只做了站点元数据；84 个内容文件与 canonical/sitemap/LLM 索引待后续切片。
+
+## 交付记录（第二片：内容与组件，2026-10-06）
+
+- 实际修改：中文内容树 70 个文件里 65 个、合计 249 处把独立出现的产品称呼 Vetta 改为 Open Forge（含正文、frontmatter 的 title 与 description、图片 alt、`<Entry>` 标题与表格文字）；中英两版安装文档里的 `./Vetta-${VERSION}.AppImage` 改为 `./Open Forge-${VERSION}.AppImage`；`components/brand-mark.tsx` 与 `components/reading.tsx` 的用户可见品牌字样同步改名。
+- 保护规则（不是普通替换）：先把上游署名 `Open Vetta` 换成哨兵，再用带前后视的正则只替换独立出现的 Vetta；`@vetta/*`、`VETTA_*`、`.vetta`、`~/.vetta`、`openvetta`、`vetta-plugin-cli`、`install:vetta`、`vetta-app-icon`、`vetta-coral` 等一律不动。
+- AppImage 文件名依据：`apps/desktop/scripts/desktop-upgrade-e2e.mjs:93` 与 `packaged-e2e-binary.mjs:33` 及其合同测试都断言产物名为 `Open Forge-<版本>.AppImage`，文档原写的 Vetta 名属陈旧。
+- 验证：改名后 `bun run --cwd apps/docs-site build` 通过（编译成功、113 个静态页）；内容树复核已无非冻结、非署名的旧品牌行。
+- 刻意未改（待用户定）：`logoPath` 仍指 `/images/vetta-app-icon.webp`，需要一个公开图标资产才算真改；`app/layout.tsx` 与组件里的 `vetta-coral`/`vetta-ink`/`vetta-binding` 是样式 token 名，不进用户可见文案，属本任务范围之外，记录在此以免被当成遗漏。
+- 未运行及原因：未部署（本仓不触发部署）；SEO、sitemap、canonical 与 LLM 索引输出未逐项核对。
+- 剩余风险：样式 token 名与图标资产路径仍是旧名，要统一需一次专门的资产与 token 改名切片。

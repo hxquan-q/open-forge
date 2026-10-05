@@ -9,16 +9,16 @@ The CLI is useful for one-off terminal tasks, JSON event output, and RPC startup
 
 ```bash
 # Default text output
-vetta "Summarize the project structure in the current directory"
+openforge "Summarize the project structure in the current directory"
 
 # Structured JSON event stream
-vetta --mode json "Check the scripts in package.json"
+openforge --mode json "Check the scripts in package.json"
 
 # Choose a model and thinking level
-vetta --model openai/gpt-4o:high "Analyze this failure"
+openforge --model openai/gpt-4o:high "Analyze this failure"
 
 # Resume the most recent session
-vetta --continue "Continue the previous task"
+openforge --continue "Continue the previous task"
 ```
 
 | Option | Description |
