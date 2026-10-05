@@ -1,7 +1,7 @@
 ---
 id: TASK-0047
 type: task
-status: blocked
+status: ready
 priority: P0
 owner: release/docs
 requirement: REQ-0003
@@ -18,7 +18,7 @@ depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-25
+updated: 2026-10-06
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,7 +71,7 @@ updated: 2026-09-25
 
 ## 阻塞
 
-- 仅剩 `TASK-0045`（已 ready：CLI 命令名 `openforge`、旧命令直接切换不保留别名、`vetta-serv` 改 `openforge-serv`，2026-09-25 决策齐）实施收口，及随之关闭的 `TASK-0049`；`TASK-0044` 已完成，社区入口已决策暂不建设（2026-09-25，保留现有外部链接）。本任务不重做当前已进行的局部文档更新。
+- 阻塞已解除（2026-10-06，TASK-0217 复核）：`TASK-0045` 与 `TASK-0049` 的 frontmatter 均为 done，原阻塞条件（等 0045 收口、随 0049 关闭）已满足。但**本任务尚未实施**——交付记录的四条（实际修改、实际运行、未运行及原因、剩余风险）全为空。状态转 ready，等待实施。原有约束保持不变：冻结技术标识（`.vettapkg`、`@vetta/*`、`VETTA_*`）不改；社区继续使用已冻结的现有入口。
 
 ## 交付记录
 
