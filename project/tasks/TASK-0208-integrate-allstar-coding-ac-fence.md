@@ -1,7 +1,7 @@
 ---
 id: TASK-0208
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: coordinator
 source: user-request；origin/chenxvhua 分支
@@ -19,7 +19,7 @@ write_paths: [packages/plugins/presets/allstar-coding, .github/release-notes/v0.
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-05
 updated: 2026-10-05
 ---
@@ -53,6 +53,16 @@ updated: 2026-10-05
 - 插件自身用例（`allstar-coding` 包 test 脚本，含 `test/fence-judge.test.ts`、`test/ac-audit.test.ts`）。
 - 合并后复核 `git log origin/dev..main`，确认推送范围只含本批。
 
-## 交付记录
+## 交付记录（2026-10-05）
 
-待实施（记录先落盘，随后合并）。
+- 实际修改：
+  - 合并 `origin/chenxvhua` 进本地 `main`：30 个文件，2881 插入 / 129 删除，除 `.github/release-notes/v0.1.3.md` 外全部落在 `packages/plugins/presets/allstar-coding`。
+  - 冲突只在发布说明：保留分支对 allstar 段的扩写与 v0.4 收口行，保留本地三条台账/CI 记录行，并把被误改的 `Upstream baseline` 恢复为 `d217984c72ef7b5f66ce0a6fea1ae2375060d425`。
+- 验证命令与结果：
+  - `bun run check`：exit 0（合并后的树）。
+  - `bun run --cwd packages/plugins/presets/allstar-coding test`：4 个文件 / 98 项通过。
+  - 边界扫描：`src/fence*` 只经 `ctx.fs`，无 `node:fs`、`eval`、`child_process`、`fetch`、`process.env`。
+  - 推送前审计：`origin/dev..main` 9 个提交、反向为空，无夹带。
+- 集成与推送：合并提交 `8935058fd`；记录提交 `c058ca693`；`git push origin main:dev` 把 `899f4fce5` fast-forward 到 `8935058fd`，`ls-remote` 复核一致。未推 `origin/main`、未 force、未发布。
+- 未做及原因：ac-fence 未经实机端到端，人工验收待用户；插件权限扩张与 fail-open 的取舍留在 [ISSUE-0030](../issues/ISSUE-0030-allstar-coding-ac-fence-permission-and-records.md)。
+- 剩余风险：该实现由贡献者分支进入、本仓无既有记录，验收级别仅到工程验证；权限集合是否属最小集合未裁决。
