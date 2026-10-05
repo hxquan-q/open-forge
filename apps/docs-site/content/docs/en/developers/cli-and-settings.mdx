@@ -62,11 +62,11 @@ Do not put an API key in `shellCommandPrefix` or in commands that may be logged.
 The CLI can install resources containing extensions, skills, and prompts from npm, Git, or a local source:
 
 ```bash
-vetta install npm:@scope/package@1.2.3
-vetta install git:github.com/example/repo@v1
-vetta list
-vetta update
-vetta remove npm:@scope/package
+openforge install npm:@scope/package@1.2.3
+openforge install git:github.com/example/repo@v1
+openforge list
+openforge update
+openforge remove npm:@scope/package
 ```
 
 Resource packages can execute code. Review their source, version, and permissions before installing them into a long-lived configuration.

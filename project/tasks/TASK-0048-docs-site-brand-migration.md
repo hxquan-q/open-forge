@@ -90,3 +90,12 @@ updated: 2026-10-06
 - 刻意未改（待用户定）：`logoPath` 仍指 `/images/vetta-app-icon.webp`，需要一个公开图标资产才算真改；`app/layout.tsx` 与组件里的 `vetta-coral`/`vetta-ink`/`vetta-binding` 是样式 token 名，不进用户可见文案，属本任务范围之外，记录在此以免被当成遗漏。
 - 未运行及原因：未部署（本仓不触发部署）；SEO、sitemap、canonical 与 LLM 索引输出未逐项核对。
 - 剩余风险：样式 token 名与图标资产路径仍是旧名，要统一需一次专门的资产与 token 改名切片。
+
+## 交付记录（第三片：CLI 示例，2026-10-06）
+
+- 实际修改：`developers/cli-and-settings.mdx` 中英两版共 18 处命令示例由 `vetta` 改为 `openforge`（4 处调用形式 + 10 处资源包命令）。
+- 核实依据（这一步不做无法核实的改名）：调用形式与选项取自 `apps/cli-host/src/run-cli.ts` 的 usage 与 `agent-help.ts`（`--model`、`--mode`、`--continue` 都真实存在）；资源包命令取自 `apps/cli-host/src/package-command.ts`（`install` | `remove` | `update` | `list`）与 `agent-cli-intent.ts` 的 PACKAGE_COMMANDS。
+- 排除的一类误判：`@vetta-org/plugin-cli` 的子命令是 `add / reload / docs / init / watch / uninstall / sync`，与资源包命令不是同一套；没有把文档里的资源包命令改成插件 CLI 的命令。
+- 验证：改名后 `bun run --cwd apps/docs-site build` 通过（编译成功、113 个静态页）；内容树复核已无「以小写 vetta 当命令用」的行。
+- 未运行及原因：未真机执行这些 CLI 命令（需要本机安装与真实 Provider 配置，不在本任务范围）。
+- 剩余风险：文档给出的命令名与选项已核实为真实存在，但命令的完整行为与边界未逐条实跑。
