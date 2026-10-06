@@ -195,3 +195,13 @@ depends_on: []
 | TASK-0193 | **done** | ① 字面路径：提交详情文件列表逐项显示原文，根提交 7 项全对（`普通 文件.txt`、`sub dir/`→`带 空格.md`、`quote'file.txt`、`dollar$file.txt`、`amp&and.txt`、`paren(1).txt`），重命名提交显示 `renamed #2.txt`/`引号'文件.txt`/`new 文件&2.txt`，无转义无丢项（与 `git show -m --first-parent --name-status -z --find-renames` 的 5 项逐项对齐）。② 前后路径：R100（`paren(1).txt` → `paren(1) 重命名.txt`）的逐文件 diff 头部为 `orig → path`、徽标「已重命名」、正文「无差异内容。」；R087（`dollar$file.txt` → `dollar$file-v2.txt`）同带前后路径并渲染追加 hunk。③ 不按模式误匹配：含 `[` 的四组同名邻居中，选中 `br[ack]et.txt` 的 diff 只含 `BRACKET_ONE`、选中 `x[1].txt` 只含 `XBRACKET_ONE`，邻居文件内容未串入（若 `--` 后路径按 pattern 解释则必然串入），`--literal-pathspecs` 生效。未覆盖：工作区未提交变更（`GitChanges`）侧的同名场景（本轮工作区干净）；重命名前后路径在列表行正文里不并排显示、只在行 tooltip 与 diff 头部暴露（交互取舍，已在任务记录中提请用户裁定）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
 
 组一至此 8 条闭合（0120、0132、0189、0185、0188、0152、0200、0193），余 11 条保持 verifying：0190、0191、0192、0194、0151、0181、0186、0039、0042、0131、0207。本轮夹具可复用于 0186（`E:\demo` 内已有 xlsx）与其它需要真实仓库的条目。
+
+### 2026-10-07 · 组一续测四（TASK-0186，Office 按需加载与 PDF worker URL）
+
+方法：不用构建体积推算，改用运行时可观测的**模块 URL**。隔离实例内 `page.reload()` 触发冷启动 → `performance.clearResourceTimings()` 清空 Chromium 资源计时缓冲（默认容量 250 条，不清空会把缓冲当结果误读）→ 在项目会话里打开活动面板「文件」页 → 用 `performance.getEntriesByType('resource')` 抓 `name` 列表并按 `office|excel|xlsx|pdf|docx|pptx|sheet` 过滤。dev 下模块名可分辨到源文件级，因此能直接证明「加载了哪一路解析器」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0186 | **done** | ① 不预览不加载：冷启动 + 开会话 + 打开文件面板（`E:\demo`，面板已列出 `质量日报_生产一部_一车间_260901.xlsx`）后清空计时缓冲，解析器命中 **0 条**。② 按格式加载：点开该 xlsx 后新增 11 条，全在表格路（`components/spreadsheet/{SpreadsheetPreview,parseWorkbook,SheetTabs,VirtualSheet,constants,cellKeys,SheetHeaders,sheetGeometry,VisibleCells}.tsx` + `.vite/deps/xlsx.js`），无 pdf/docx/pptx；预览真实渲染出工作表「报表要求」「抽检返工明细表」。切到自建夹具 `preview-sample.pdf` 后新增模块只有 PDF 一路（`components/PdfPreview.tsx`、`deps/pdfjs-dist.js`、`components/pdf-worker-source.ts`、`build/pdf.worker.min.mjs?raw`），渲染 1 个 canvas，无表格模块。③ PDF worker URL 生命周期：点击预览前替身 `URL.createObjectURL`/`revokeObjectURL` 记账——打开 PDF 时恰好 create **1 次**（Blob `text/javascript`、1,375,838 B），切到 `renamed #2.txt` 后 canvas 1→0 且 revoke 以**逐字符相同**的 URL 调用一次，即随挂载创建、随卸载释放。未执行：真实 Renderer RAM 前后对照（该 Task「不做」已声明不以构建字节数推算或承诺 RAM 节省，故不作为通过条件）；PPTX/DOCX 实机预览（夹具无该格式，路径与 xlsx/pdf 同构）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 9 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186），余 10 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131、0207。
