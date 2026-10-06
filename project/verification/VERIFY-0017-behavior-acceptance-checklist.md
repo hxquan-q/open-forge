@@ -215,3 +215,11 @@ depends_on: []
 | TASK-0207 | **done** | ① 点击前 snapshot：`snapshot pageRevision=3 url=http://127.0.0.1:8791/`，树为 `v1:3:e3 role=textbox` / `v1:3:e4 role=button name="提交"`。② 模型把 `v1:3:e4` 原样回传后工具返回 `click ok pageRevision=3.`——既不是 `invalid browser_tab tool input`（BUG-0078 的未修复表现），也不是 `no_browser_session`，说明输入边界接受编码串、宿主拿到规范化对象 ref 且点击真正落到页面。③ 点击后 snapshot：`pageRevision=4`，树变为 `v1:4:e5 role=textbox` / `v1:4:e6 role=button name="已提交"` / `v1:4:e7 role=button name="继续"`，即页内回调确已执行（文案变更 + 新增节点），非空动作。④ 附加：本次对外 Schema 经**真实厂商网关**（非 mock）接受嵌套 `anyOf`，交付记录中「严格网关是否接受嵌套联合」的 DeepSeek 一路得到实证（Gemini 系仍未测）。未覆盖：`fill`/`press`/`scroll`/局部 `screenshot` 未逐一实跑（同一解码路径，合同层有单测）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
 
 组一至此 10 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207），余 9 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131。本轮新增可复用设施：本地夹具 HTTP 服务（`<debug vettaHome>\fixtures\browser-page\server.ts`，端口 8791）与「页内可见副作用」的取证手法（让回调改文案/加节点，使交互树快照能证明动作真的执行过）。
+
+### 2026-10-07 · 组一续测六（TASK-0194，排队气泡锚定；保持 verifying）
+
+方法：真实会话 + 真实模型，回合 A 在途时发第二条消息，用 `[data-index]` 逐秒采样 Virtuoso 条目序列，观察排队气泡落在尾部还是历史中段、以及消费后有无重影。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0194 | **verifying（补证）** | ① 排队气泡尾部锚定：B 发出后序列 `…27:A 提问 → 28:回合 A（等待→处理）→ 29:QUEUE-PROBE-B`，B 始终紧随正在输出的回合 A，未锚进历史中段（BUG-0073 缺陷 2 的用户可见面不成立）。② 消费后按序派发：终态 `30:回合 A（02:21:02）→ 31:QUEUE-PROBE-B → 32:回合 B（02:21:07）`，原位消费、无重复气泡、无尾部幽灵残留。未闭合：GWT ① 失败派发竞态（同一时刻两次「立即发送」+ q-2 返回 `missing`）与 ② 幽灵态（live 需同时含 pending 镜像与幽灵）两个前置无法从 UI 稳定构造，需注入内核事件/时钟；GWT ③ `prependedCount` 与 ④ 两层回退一致性属内部不变量，只能单测观测（交付记录 4 文件 64/64 已覆盖）。故仅补用户可见面实测，状态交用户裁定。 |

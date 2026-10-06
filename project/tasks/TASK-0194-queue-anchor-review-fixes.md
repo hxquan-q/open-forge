@@ -42,7 +42,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0154]
 integration_status: integrated
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -119,3 +119,11 @@ bun run check
 - `test:changed --base origin/dev` 在 worktree 运行 30 分钟无输出，手动终止（已核对 run-vitest/test-changed 脚本无 git 写操作）；其相对既有证据的增量覆盖（origin/dev..HEAD 代码改动全部落在 conversation 域 + docs）已由 conversation 域 965 例与 `test:impact` 282 例覆盖，集成阶段重跑补证。`verify:ui:*` 未获任务授权未运行，真实会话人工回归待用户。
 - 根因深度维持现状：镜像气泡消费点尾追 + 全局序号计数器（评审发现 5/6 的 turn 身份判活重构）登记为后续；(b) 孪生校验按文本判等，displayText 漂移的镜像会退到尾部、经既有对账上限后清理，行为等级与修复前持平。
 - 集成顺序：验证通过后 `git push origin task/TASK-0194-queue-anchor-review-fixes:dev`（用户本轮明确授权），再于主树合入本地 main；合入后同步共享索引（bugs/tasks README）。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一，保持 verifying）
+
+在隔离实例的真实会话（真实模型 DeepSeek V4.1 Flash）里重跑一遍用户可见面：发一条长输出请求（回合 A）后，在 A 仍在途时再发一条 `QUEUE-PROBE-B`，随后按 `[data-index]` 逐秒采样消息条目顺序。
+
+- 排队气泡落在**尾部**而非历史中段：B 发出后条目序列为 `…27:A 的提问 → 28:回合 A（等待→处理）→ 29:QUEUE-PROBE-B`，B 始终紧跟在正在输出的回合 A 之后，未出现被锚进 A 之前或历史中段的情况。
+- 消费后按序派发、无残留重影：A 结束后终态为 `30:回合 A（02:21:02）→ 31:QUEUE-PROBE-B → 32:回合 B（02:21:07）`，B 被原位消费并作为独立回合派发，没有重复气泡、没有幽灵条目留在尾部之后。
+- 未闭合原因：本项 4 条 GWT 中，①失败派发竞态要求同一时刻两次「立即发送」且 q-2 返回 `missing`、②幽灵气泡要求 live 同时含 pending 镜像与幽灵态，这两个前置状态无法从 UI 稳定构造（需要注入内核事件/时钟）；③`prependedCount` 与 ④两层回退一致性属内部不变量，只有单测可观测（交付记录 4 文件 64/64 已覆盖）。因此本条仅补上「排队气泡尾部锚定 + 按序消费」这一用户可见面的实测，仍按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 保持 `verifying` 交用户裁定。
