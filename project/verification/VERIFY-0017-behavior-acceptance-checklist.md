@@ -205,3 +205,13 @@ depends_on: []
 | TASK-0186 | **done** | ① 不预览不加载：冷启动 + 开会话 + 打开文件面板（`E:\demo`，面板已列出 `质量日报_生产一部_一车间_260901.xlsx`）后清空计时缓冲，解析器命中 **0 条**。② 按格式加载：点开该 xlsx 后新增 11 条，全在表格路（`components/spreadsheet/{SpreadsheetPreview,parseWorkbook,SheetTabs,VirtualSheet,constants,cellKeys,SheetHeaders,sheetGeometry,VisibleCells}.tsx` + `.vite/deps/xlsx.js`），无 pdf/docx/pptx；预览真实渲染出工作表「报表要求」「抽检返工明细表」。切到自建夹具 `preview-sample.pdf` 后新增模块只有 PDF 一路（`components/PdfPreview.tsx`、`deps/pdfjs-dist.js`、`components/pdf-worker-source.ts`、`build/pdf.worker.min.mjs?raw`），渲染 1 个 canvas，无表格模块。③ PDF worker URL 生命周期：点击预览前替身 `URL.createObjectURL`/`revokeObjectURL` 记账——打开 PDF 时恰好 create **1 次**（Blob `text/javascript`、1,375,838 B），切到 `renamed #2.txt` 后 canvas 1→0 且 revoke 以**逐字符相同**的 URL 调用一次，即随挂载创建、随卸载释放。未执行：真实 Renderer RAM 前后对照（该 Task「不做」已声明不以构建字节数推算或承诺 RAM 节省，故不作为通过条件）；PPTX/DOCX 实机预览（夹具无该格式，路径与 xlsx/pdf 同构）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
 
 组一至此 9 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186），余 10 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131、0207。
+
+### 2026-10-07 · 组一续测五（TASK-0207，browser_tab elementRef 往返）
+
+方法：从工程侧硬造「模型按最自然方式用工具」的场景，而不手写 ref。隔离实例内起本地夹具页（`http://127.0.0.1:8791/`，含 textbox + 文案「提交」的 button；点击回调把按钮自身文案改成「已提交」并追加一个「继续」按钮，让副作用在交互树上可见），在会话里打开应用内浏览器标签页载入该页，用真实模型（DeepSeek V4.1 Flash，真实 API）要求「snapshot → 把打印出的 elementRef 原样回传 click → 再 snapshot」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0207 | **done** | ① 点击前 snapshot：`snapshot pageRevision=3 url=http://127.0.0.1:8791/`，树为 `v1:3:e3 role=textbox` / `v1:3:e4 role=button name="提交"`。② 模型把 `v1:3:e4` 原样回传后工具返回 `click ok pageRevision=3.`——既不是 `invalid browser_tab tool input`（BUG-0078 的未修复表现），也不是 `no_browser_session`，说明输入边界接受编码串、宿主拿到规范化对象 ref 且点击真正落到页面。③ 点击后 snapshot：`pageRevision=4`，树变为 `v1:4:e5 role=textbox` / `v1:4:e6 role=button name="已提交"` / `v1:4:e7 role=button name="继续"`，即页内回调确已执行（文案变更 + 新增节点），非空动作。④ 附加：本次对外 Schema 经**真实厂商网关**（非 mock）接受嵌套 `anyOf`，交付记录中「严格网关是否接受嵌套联合」的 DeepSeek 一路得到实证（Gemini 系仍未测）。未覆盖：`fill`/`press`/`scroll`/局部 `screenshot` 未逐一实跑（同一解码路径，合同层有单测）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 10 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207），余 9 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131。本轮新增可复用设施：本地夹具 HTTP 服务（`<debug vettaHome>\fixtures\browser-page\server.ts`，端口 8791）与「页内可见副作用」的取证手法（让回调改文案/加节点，使交互树快照能证明动作真的执行过）。
