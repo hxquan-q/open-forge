@@ -1,7 +1,7 @@
 ---
 id: TASK-0192
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop-build
 source: user-request; RESEARCH-0022; upstream 34a350058
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0187]
 integration_status: pending
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -63,3 +63,17 @@ updated: 2026-10-03
 绿测：`bun scripts/quality/run-vitest.mjs run apps/desktop/scripts/build-dev-processes.test.ts`；实际 Main inputs、临时图/字节 hash、external 共享边界和 toolkit source 合同。`node --test apps/desktop/scripts/packaged-native-dependencies.test.mjs` 7 通过。未运行 build-dev-processes CLI（会准备模型），仅必要 workspace 依赖构建和无副作用脚本导入。
 
 中间门禁发现 Desktop 构建脚本不能相对导入根 quality 模块；未修改边界白名单，改为 Desktop 内构建专用 manifest 读取，external 仍复用既有同模块事实源。默认 Biome 排除这些脚本，因此最初显式格式命令无匹配文件；不据此声称格式检查通过，保留标准 quick/完整检查。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+方法：真实运行开发主进程构建 CLI（`bun run build:dev-processes` / `build-dev-processes.mjs`），按 Given/When/Then 变化输入产物并读缓存判决日志；此前交付记录明记「未运行 build-dev-processes CLI」，本轮补齐这一缺口。
+
+- 输入图先核对：用仓内 `main-bundle-workspace-inputs.mjs` 的 `getMainBundledWorkspaceInputs(root)` 实算，Desktop 可达 workspace 依赖共 **20 个已打包**、**9 个未打包**（其余 `packages/*` 有 dist 但不在出口图内）。
+- **缓存已建立**：`完成，构建 0/4 个任务`（1.36 s；4 个任务 preload/ocr-preload/ocr-runner/main 全部命中，日志逐条 `跳过 <name>（无变更）`）。
+- **修改实际 bundle 的 workspace 产物 → 必须失效重建**：改 `packages/runtime-storage/dist/index.js`（已打包包，md5 `5296d630835938e7fd6230329610e100` → `4530377818b22017e00df5435a83a70c`）后重跑，日志 `构建 main …` + `完成，构建 1/4 个任务`——**恰好只失效 main**，preload/ocr 系仍命中；还原该文件后再跑一次又只重建 main（缓存里存的是被改后的 hash），再跑 `0/4`。
+- **未打包包不无故失效**：改 `packages/runtime-core/dist/contracts.js`（未打包包，md5 `5003647d3deeb4287cdbcf34a4e8eb12` → `53a508cf7ad57477364a69cc58f16ec2`）后重跑，`完成，构建 0/4 个任务`，main 仍 `跳过`；还原后 `0/4`。
+- 负例非空转的依据：缓存输入侧的排除规则与真实打包侧共用同一事实源——`main-bundle-workspace-inputs.mjs` 跳过 `DEVELOPMENT_WORKSPACE_EXTERNAL` 命中的包，`vite.main.config.ts:6,39` 的 `external` 列表导入的正是 `packaged-native-dependencies.mjs:92-93` 定义的同一常量，所以 runtime-core 同时不在缓存输入、也不被 main 打进包，`0/4` 与「它本来就与 main 产物无关」一致。
+- 环境要点：输入 hash 由 `hashPaths(paths, env)` 计算，**把每个 `VETTA_*` 环境变量一并计入**；首次基线在 UI 验收 harness 环境外跑出现 4/4 全量重建，即源于 env 差异，之后全程固定同一环境，结果可复现（这条应在后续任何「缓存莫名失效」排查中优先检查）。
+- 干净性：全程只改 `apps/*/dist`、`packages/*/dist` 下 gitignore 的产物，改前改后 md5 一一比对还原；收尾 `git status --porcelain` 仅剩本轮之前就存在的 ` M bun.lock`。
+
+结论：GWT 四个分句（缓存建立 / 改动已打包产物 / 必须失效重建 / 未打包包不失效）均在真实 CLI 上逐条观察到，闭合为 `done`。

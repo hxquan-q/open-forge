@@ -50,7 +50,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0189` | `done` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 批次交付并合入 main；2026-10-06 真实模型回合 UI 实证（VERIFY-0017 组一）。 |
 | `TASK-0190` | `verifying` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0191` | `verifying` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 实测「路线离开再返回」恢复半途位置成立、「会话切换」落回贴底（VERIFY-0017 组一），待用户按期望行为复核。 |
-| `TASK-0192` | `verifying` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0192` | `done` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 真实跑 build-dev-processes CLI：基线 0/4，改已打包包 `runtime-storage/dist` 后恰好只重建 main（1/4），改未打包包 `runtime-core/dist` 后仍 0/4，产物 md5 还原（VERIFY-0017 组一）。 |
 | `TASK-0193` | `done` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 用特殊字符/glob 同名邻居/三类重命名的真实仓库夹具在 Git 面板实测，字面路径、前后路径、不按模式误匹配均成立（VERIFY-0017 组一）。 |
 | `TASK-0185` | `done` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿；2026-10-07 真实 UI 重开会话后排队用户原文保留在正确因果位（VERIFY-0017 组一）。 |
 | `TASK-0186` | `done` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（559a8d79d）；2026-10-07 隔离实例冷启动实测：未预览时解析器请求 0 条，xlsx 只加载表格路、pdf 只加载 PDF 路，PDF worker Blob URL 随预览挂载 create/随卸载 revoke（VERIFY-0017 组一）。任务「不做」项已声明不以构建字节数推算 RAM 节省，故未做 RAM 对照。 |
