@@ -1,7 +1,7 @@
 ---
 id: TASK-0188
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 source: user-request; RESEARCH-0022; upstream 00ebe0b88
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0187]
 integration_status: pending
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -63,3 +63,9 @@ updated: 2026-10-03
 完整 Desktop 类型检查发现 toTranscriptPlaceholder 返回值允许 undefined；按实际工厂合同增加运行时前置校验，不用断言绕过类型。
 
 类型补齐后复验：对应定向测试通过；根 `bun x tsgo --noEmit` 与 Desktop `typecheck:incremental` 均通过，未使用 any/断言绕过。最终完整 check 仍由批次重跑。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+- 同一历史回复（新会话首答「收到」）的「当前消息」用量在三个时刻逐字符一致：空闲 → **下一回合流式中**（composer「停止生成」按钮可见，UI 项 `1000000–1000003`）→ 回合结束后。数值为 `1 次模型调用 / 缓存命中率 39.5% / 总计 34.7K / 输入 21K / 缓存命中 13.7K / 缓存写入 -- / 输出 2`。历史回复的用量数字不随流式自变。
+- 判据更正：Debug CLI 驱动的回合不进入 UI 会话视图（12 步回合期间 UI 末项与长度 42 秒无变化），本项必须在 UI 内用输入框发起回合；正文正则 `进行中|思考中|生成中` 会命中用户提示词原文，属假阳性，改用 composer 停止按钮判定。
+- 按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。

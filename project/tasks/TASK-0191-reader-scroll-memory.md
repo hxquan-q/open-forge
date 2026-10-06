@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0187]
 integration_status: pending
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -59,3 +59,9 @@ updated: 2026-10-03
 红测：useMessageFeedScrollModel.test.tsx 两个 active=false/true 新用例恢复半途快照，2 失败/14 通过。保留已有主动位置恢复/批处理断言，补 wheel 以明确用户主动浏览前置。
 
 绿测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts useMessageFeedScrollModel.test.tsx useMessageListScrollModel.test.tsx`，2 文件/19 测试通过；主动阅读记忆、自动跟随和窗口化索引偏移保留。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一，保持 verifying）
+
+- 路线离开再返回（feed 真正卸载）→ 半途位置恢复成立：滚轮上翻到 `top=500` 后离开到 `#/settings/appearance`（feed 卸载、0 项），再 `history.back()` 回到同一位置且 1.5 秒内稳定。
+- 会话切换（feed 不卸载、仅 `resetKey` 变化）→ 落回贴底，未恢复半途位置。与 `restoreStateFrom` 是 Virtuoso 初始化输入一致；「缓存身份键在窗口化列表下不匹配」假设未被完全排除。
+- 需用户按「主动翻历史后离开再回来」的期望行为复核；按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 保持 `verifying`。

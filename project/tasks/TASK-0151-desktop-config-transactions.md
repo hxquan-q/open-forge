@@ -21,7 +21,7 @@ depends_on: [TASK-0150]
 conflicts_with: [TASK-0187, TASK-0181]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -93,3 +93,8 @@ IPC 的既有 CONFIG_SET 字段组装迁至 config 领域，桥只做校验、�
 
 - 随 TASK-0187 稳定性批次以 `git merge --no-ff` 合入本地 main。合并冲突两处语义并集：`writeDesktopConfig` 保留事务转发并保住 TASK-0161 引入的未来通知字段保留逻辑；`CONFIG_SET` 采用批次的事务 + `mergeDesktopConfigPatch` 结构，并把 notificationPreferences 补进 patch 白名单（批次基线早于该功能，直接取分支会令通知设置静默失效）。
 - 合并结果定向复验与完整门禁见 TASK-0187 集成记录；人工验收待执行。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一，保持 verifying）
+
+- 从 UI 同一 tick 内并发发出 4 个 `config.set`（系统通知/提示音/代理/默认模式）两轮：第一轮三项全部落到 `desktop-config.json`，第二轮四条精确还原基线（`notificationsEnabled=false`、`soundEnabled=true`、`proxy.enabled=false`），无丢失更新、无跨字段覆盖。
+- 未闭合原因：默认模式在本机无合法目标（Windows 无 sandbox，`changeExecutionMode` 早退），项目/快捷键分属其它设置页未做并发核对；按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 继续交用户。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0185
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 source: BUG-0068
@@ -39,7 +39,7 @@ depends_on: []
 conflicts_with: [TASK-0181]
 integration_status: integrated
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -135,3 +135,8 @@ updated: 2026-10-03
   - live-only 锚定启发式按「已消费邻居」定位；若 live 序列中邻居本身也是未决项（多层套叠未消费气泡），靠重拉后的下一轮对账收敛，有 `MAX_UNRESOLVED_RECONCILES` 上界兜底。
   - internal/continuation 输入不落盘为 canonical user 条目，其镜像若产生将按未决过期机制消亡；未观察到该形态。
   - 人工验收前保持 verifying。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+- 「重开会话」侧实测（真实 UI 隔离实例）：切出再切回后重建顺序为 `1000000` 用户 → `1000001` 助手 → … → `1000006` 用户「补充：完成后用一句话说明你刚才改了哪几项。」→ `1000007` 助手答复，排队用户原文保留在正确因果位；「继续流式」侧沿用会话 JSONL 因果序证据（排队用户原文 → 触发回复的工具流 → 追加消息 → 回复 → `turn.completed`）。
+- 两侧子条件均已在真实 UI / 真实模型上直接观察，按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。

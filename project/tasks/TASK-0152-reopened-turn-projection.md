@@ -1,7 +1,7 @@
 ---
 id: TASK-0152
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop conversation
 source: user-request; upstream 04ac47b67, 89f270e56, 2d744ff4a
@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -78,6 +78,12 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 单测 15/15（chat-message-snapshot 13 + conversation-projection 2）。
 - `bun run test:impact -- <四文件>`：245 例通过。
 - `bun run check:quick`、完整 `bun run check`：通过。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+- 在真实 UI 隔离实例里发起 todo 工具链回合，运行中切出到另一会话再切回，重复两次：回合未分裂——单一「处理中…／正在处理 · 22秒 → 28秒」连续推进，工具进度按序前进（建立三个待办事项 → 查看是否已有待办清单），只有一条流式光标。
+- 回合结束后再次重开：渲染项内容与顺序完全一致（助手答复 / 用户提示 / 助手「收起1个步骤 完成了 8 步操作」），仅窗口绝对索引基数出现 ±1 偏移（窗口化列表偏移，非分段变化）。工具段与用户消息段均保持。
+- 按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。
 
 ### 未运行及原因
 

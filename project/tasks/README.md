@@ -44,17 +44,17 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0159` | `verifying` | PLAN-0014 | Windows 沙盒制品完整性：受控清单（3 个 exe + sha256 + 来源提交）钉死、缺失/不一致默认阻断打包（仅显式 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 降级为告警）；不引入外部下载源；已推 origin/dev（1c1a50b9e），待人工验收。 |
 | `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿，实机峰谷差待用户验收）；随 TASK-0196 批次推 dev（ca6c9df9d）合入 main。 |
 | `TASK-0199` | `done` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 批次交付，已随本轮合入 main。 |
-| `TASK-0151` | `verifying` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过，待人工验收。 |
+| `TASK-0151` | `verifying` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过；2026-10-07 真实 UI 并发 4 写两轮无丢失更新（VERIFY-0017 组一），默认模式/项目/快捷键仍未并发核对，待人工验收。 |
 | `TASK-0187` | `done` | PLAN-0014 | 稳定性首批（0188–0193/0151/0199）已合入本地 main（03ce0c378）并推 origin/dev（e242e5ddf）；changed 的 CLI 失败经合并前后基线比对归属存量环境问题（BUG-0059 面），待人工验收。 |
-| `TASK-0188` | `verifying` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0188` | `done` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 真实 UI 三态（空闲/流式中/结束后）读取历史回复用量逐字符一致（VERIFY-0017 组一）。 |
 | `TASK-0189` | `done` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 批次交付并合入 main；2026-10-06 真实模型回合 UI 实证（VERIFY-0017 组一）。 |
 | `TASK-0190` | `verifying` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 批次交付，已随本轮合入 main。 |
-| `TASK-0191` | `verifying` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 批次交付，已随本轮合入 main。 |
+| `TASK-0191` | `verifying` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 实测「路线离开再返回」恢复半途位置成立、「会话切换」落回贴底（VERIFY-0017 组一），待用户按期望行为复核。 |
 | `TASK-0192` | `verifying` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0193` | `verifying` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 批次交付，已随本轮合入 main。 |
-| `TASK-0185` | `verifying` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿，待人工验收。 |
+| `TASK-0185` | `done` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿；2026-10-07 真实 UI 重开会话后排队用户原文保留在正确因果位（VERIFY-0017 组一）。 |
 | `TASK-0186` | `verifying` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（559a8d79d）；未做实机 RAM 对照，待人工验收。 |
-| `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（75c5ae2df）；定向 30 项、Desktop 全包 4680 项及完整 check 通过，待人工验收。 |
+| `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（75c5ae2df）；定向 30 项、Desktop 全包 4680 项及完整 check 通过；2026-10-07 实测 dev 重启不保留（字体偏好仅在 origin 级 localStorage，dev 端口每次变化），待用户按打包形态复核（VERIFY-0017 组一）。 |
 | `TASK-0180` | `done` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
 | `TASK-0184` | `verifying` | — | docs-site 构建 Turbopack 报错修复（BUG-0067）；已分型：fumadocs stringifier 丢 attention/peek 致 RangeError（内容含 `**`/`*` 即触发）+ 4 处 HTML 注释在 MDX 非法；本机可复现，待实施；CI 复跑受 ISSUE-0029 阻。 |
 | `TASK-0183` | `verifying` | — | packaged E2E CI 连续红修复（BUG-0066）；已分型：`verify:staged-deps --staging` 三平台并集误报本平台 prebuild，E2E 未跑到；待实施；CI 复跑受 ISSUE-0029 阻。 |

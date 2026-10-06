@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123]
 integration_status: integrated
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -155,3 +155,9 @@ bun run test:impact -- $files
 
 - 主树待提交记录入库后以 `git merge --no-ff` 合入本地 main；产品代码（TerminalSurface/registry 等）自动合并无冲突，i18n settings.json 与共享索引/发布说明按并集解决。合并结果定向复验：字体相关 30 项定向用例与 registry/终端接线测试通过（证据见下）。
 - 本记录中"集成 pending/须重新核对主树"的前置条件由本轮协调解决；远端 Task 分支推送 SHA（d54dfc91d/863c3efed）保持为历史来源。完整门禁随本轮集成批次统一执行，branch/worktree 待 origin/dev 推送成功后清理。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一，保持 verifying）
+
+- 生效侧：界面字体选 Cambria 后正文与预览 computed font 实时变更，`localStorage.openforge-font-preferences={"ui":"Cambria","code":"Cascadia Code"}`；代码字体选 Cascadia Code 后 `--font-mono` 为 `"Cascadia Code", "SF Mono", "Fira Code", monospace`，`TerminalSurface` 接线在源码中确认。
+- 「重启保留」在本实例失败并已归因：字体偏好只写入 origin 级 localStorage 键 `openforge-font-preferences`，dev 渲染源为 `http://127.0.0.1:<每次重启变化的端口>`，重启后该键为 `null`、正文字体与 `--font-mono` 回落默认（与设置向导标记 `vetta-setup-wizard-completed` 同时消失同因）。安装态源稳定时预期保留，需用户按打包形态复核。
+- 终端字形仍不可观测（xterm 画在 canvas，无测量元素）。按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 保持 `verifying` 交用户。
