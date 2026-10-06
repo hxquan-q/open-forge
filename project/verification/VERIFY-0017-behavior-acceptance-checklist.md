@@ -183,3 +183,15 @@ depends_on: []
 | TASK-0200 | **done** | 采样方法：`page.addInitScript` 在文档初始化前装帧级采样器（记录消息列表滚动容器身份、项数、scrollTop、scrollHeight 的变化点），`page.reload()` 触发应用冷启动即 activeSession `null → 就绪`。结果：滚动容器在 t≈8.65s 以**空列表**挂载（0 项、scrollHeight 571），t≈9.27s 内容到达时仍是**同一个 DOM 节点**（未卸载重挂，即上游 c362aacc4 修复合同成立），scrollTop 由 0 直接落到底部 1617，无来回抖动。另从设置路由点开会话：同一容器 scrollTop 单调 0 → 2581 → 3535，内容到达后位置未重置。工程侧复跑：`bun run test SessionMessageList.stability.test.tsx + annotations/`＝2 文件 12 例通过（挂载计数 1→2 的回归合同），`markdown-isolation` e2e PASS 见任务交付记录。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
 
 组一至此 7 条闭合（0120、0132、0189、0185、0188、0152、0200），余 12 条保持 verifying：0190、0191、0192、0193、0194、0151、0181、0186、0039、0042、0131、0207。
+
+### 2026-10-07 · 组一续测三（TASK-0193，自建 Git 夹具）
+
+方法：为原先「缺夹具」的条目自建夹具。在隔离实例 home 下建真实 Git 仓库 `fixtures/git-literal-paths`（5 个提交：空格/中文/`'`/`$`/`#`/`&`/`()`/`[]`/子目录空格；R100 纯重命名、R087 重命名加改、含 `[` 的 glob 同名邻居 `br[ack]et.txt`↔`bracket.txt`、`x[1].txt`↔`x1.txt`），把它追加进隔离 profile 的 `desktop-config.json` 后重启实例（`verify:ui:stop/start:debug`，配置保留、`seed.seeded=false`），在 `git-fixture` 项目内开一条会话 → 活动面板 → Git 页签 → 提交图 → 提交详情。
+
+沿途踩到并已解决的两个环境坑（对后续同路线有用）：① 重启后 `session.create` 报 `Desktop Runtime requires at least one available model`，根因是隔离 profile 的 `agent/models.json` 已退化为 `{"providers":{}}`，用 `verify:ui:stop:debug` → `verify:ui:sync:debug`（只能在停机时跑）补回 models+credentials（`credentialsCopied:5`、`osCryptSynced:true`）后恢复；② 插件页签（Git）在窄面板的页签条里被挤出可视区（隐藏的测量层里存在、真实页签条只渲染前 3 个），关掉「画布/浏览器」两个页签腾出空间后 Git 页签才可点。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0193 | **done** | ① 字面路径：提交详情文件列表逐项显示原文，根提交 7 项全对（`普通 文件.txt`、`sub dir/`→`带 空格.md`、`quote'file.txt`、`dollar$file.txt`、`amp&and.txt`、`paren(1).txt`），重命名提交显示 `renamed #2.txt`/`引号'文件.txt`/`new 文件&2.txt`，无转义无丢项（与 `git show -m --first-parent --name-status -z --find-renames` 的 5 项逐项对齐）。② 前后路径：R100（`paren(1).txt` → `paren(1) 重命名.txt`）的逐文件 diff 头部为 `orig → path`、徽标「已重命名」、正文「无差异内容。」；R087（`dollar$file.txt` → `dollar$file-v2.txt`）同带前后路径并渲染追加 hunk。③ 不按模式误匹配：含 `[` 的四组同名邻居中，选中 `br[ack]et.txt` 的 diff 只含 `BRACKET_ONE`、选中 `x[1].txt` 只含 `XBRACKET_ONE`，邻居文件内容未串入（若 `--` 后路径按 pattern 解释则必然串入），`--literal-pathspecs` 生效。未覆盖：工作区未提交变更（`GitChanges`）侧的同名场景（本轮工作区干净）；重命名前后路径在列表行正文里不并排显示、只在行 tooltip 与 diff 头部暴露（交互取舍，已在任务记录中提请用户裁定）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 8 条闭合（0120、0132、0189、0185、0188、0152、0200、0193），余 11 条保持 verifying：0190、0191、0192、0194、0151、0181、0186、0039、0042、0131、0207。本轮夹具可复用于 0186（`E:\demo` 内已有 xlsx）与其它需要真实仓库的条目。
