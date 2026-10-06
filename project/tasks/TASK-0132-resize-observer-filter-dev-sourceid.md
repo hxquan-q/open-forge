@@ -1,7 +1,7 @@
 ---
 id: TASK-0132
 type: task
-status: verifying
+status: done
 priority: P3
 owner: desktop
 requirement:
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0130, TASK-0131]
 integration_status: integrated
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-10-06
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -82,3 +82,5 @@ updated: 2026-09-28
 - 未运行及原因：`check`/`test:changed` 由 Coordinator 在批次验收统一跑；「dev 下拖动分屏后 render 日志无新增 ResizeObserver 行」人工冒烟未执行，保持 verifying。
 - Worktree：`task-0132-resize-observer-filter-dev-sourceid`（branch `task/TASK-0132-resize-observer-filter-dev-sourceid`，集成提交 `94d07c6df` + merge `02c13a461`）。
 - 剩余风险：判定下沉后源日志行仍含 `[sourceId:line]` 前缀，排查侧仍可定位来源；若未来 Chromium 对真实业务错误也报行号 0，存在误杀窗口（消息文本特异度兜底）。
+
+- 2026-10-06 人工 dev 冒烟（隔离 Debug Profile）：拖动分屏分隔条并连续 3 次改动窗口尺寸后，main/render 当日日志中 ResizeObserver 诊断命中 0（EPIPE 命中 0）；配合定向 7 例回归，验收项「dev 下拖动分屏后 render 日志无新增 ResizeObserver 行」已实证，记为 done。

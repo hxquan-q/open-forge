@@ -113,3 +113,45 @@ depends_on: []
 ## 怎么回复
 
 按组回复即可，例如「一组除 0192 外通过；0192 现象是……」。不通过的我按原 Task 进诊断，不会另开条目。
+
+## 执行记录
+
+### 2026-10-06 · 组一开始：用户指示「全程自动」
+
+- 授权依据：用户在本轮会话选择「你全程自动」，明确要求 Agent 自动执行验收并授权操作 `verify:ui` 隔离实例与调用真实模型（产生真实 API 费用）；首批范围为第一组「桌面端日常行为（19 条）」。
+- 执行方式：Agent 驱动隔离 Debug Profile 实例逐项实测，取证包括页面快照、截图、Renderer/Main 日志与会话 usage。凡验收条目能被客观证据满足的，按上述授权依据闭合为 `done` 并注明；不通过、无法真实复现（如需真实系统休眠）或需要主观判断的条目保持 `verifying`，在报告中单独列出交用户过目。
+- 费用记录与逐条结论见下方「组一执行明细」。
+
+### 2026-10-06 · 组一执行明细（19 条）
+
+实测环境：隔离 Debug Profile（`C:\Users\xquan\.openforge-ui-debug\04987e4e`），UI `http://127.0.0.1:63061`、CDP `http://127.0.0.1:63062`，窗口 1180×750；会话 `测试简短回复` 内共 4 个真实 Provider 回合，全部 `stopReason: stop`。
+
+真实模型消耗（取自会话 JSONL 的 `usage.cost`，未另设观测中间件）：12 条 assistant 消息，输入 63,633 / 输出 2,121 token，合计 **$0.011888**（deepseek/deepseek-flash）。
+
+判定规则：仅当该条的**全部**子条件都在真实 UI / 真实模型上被直接观察到，才按授权闭合为 `done`；含未执行的子条件、需要真实系统事件（休眠/锁屏、断 pipe）、需要构造特定仓库或需要主观判断的，一律保持 `verifying` 交用户。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0185 | verifying | 排队消息原文落位：会话 JSONL 因果顺序正确（用户排队消息 → 触发回复的工具流 → 追加消息 → 回复 → `turn.completed`），「继续流式」侧成立；「重开会话」侧本次未实测。 |
+| TASK-0188 | verifying | 需要长流式回合中逐帧比对历史回复用量数字；本轮 4 个回合均短，未构造可观察的漂移窗口。 |
+| TASK-0189 | **done** | 真实模型回合（含 todo 工具多轮调用）中，UI 持续显示「进行中」，直到 `turn.completed` 才转为完成；JSONL 中 toolUse 未提前写终态。 |
+| TASK-0190 | verifying | 需要构造「先报错、随后恢复」的回合；本轮 4 个回合全部一次成功，无错误路径。 |
+| TASK-0191 | verifying | 自动跟随侧成立：贴底时离开再回来仍贴底，未错误恢复半途位置。主动浏览侧**未复现**：滚轮上翻到 `scrollTop=659`（回合已结束、1.5s 内位置稳定＝自动跟随确已关闭），切到新会话再切回同一会话（侧栏标题唯一，会话无歧义）后落到 `1991/2307` 即贴底，未回到 659。两种可能解释未区分：①缓存以 `items.length + 首末 itemKey` 为身份键，窗口化列表在重开时身份不等；②`restoreStateFrom` 是 Virtuoso 的初始化输入，会话切换若未真正卸载 feed 则不生效。需用户实机复核后按 BUG 跟进。 |
+| TASK-0192 | verifying | 需要改动 workspace 产物后重启 dev 主进程比对 bundle；本次未改动打包输入，无法观察旧 bundle 行为。 |
+| TASK-0193 | verifying | 需要含特殊字符文件名/重命名的真实 Git 仓库；隔离实例的工作区未构造该夹具。 |
+| TASK-0194 | verifying | 需要「立即发送」两次且第一次失败的人为故障注入；未执行。 |
+| TASK-0151 | verifying | 并发改设置（通知/默认模式/项目/快捷键）的互相覆盖需并发写入时序，交互式核对未执行。 |
+| TASK-0152 | verifying | 「重开运行中的会话」需在回合进行中切换会话并比对分段身份；本轮未构造该时序。 |
+| TASK-0181 | verifying | 已核实：枚举到 40 个系统字体；界面字体选 Cambria 后正文/预览 computed font 实时变更，`localStorage.openforge-font-preferences={"ui":"Cambria","code":"Cascadia Code"}`；代码字体选 Cascadia Code 后 `--font-mono` 为 `"Cascadia Code", "SF Mono", "Fira Code", monospace`，`TerminalSurface` 接线在源码中确认。未执行：**重启实例**验证保留、终端字形渲染（xterm 画在 canvas 上，CSS 侧不可见）。 |
+| TASK-0186 | verifying | 需要实机 RAM 对照与「只加载该格式解析器」的资源观测；本次未安装/未打开 Office 文档，也未采内存。 |
+| TASK-0039 | verifying | 需要真实 `app.getAppMetrics()` 进程计数与多 pinned 插件页签场景；隔离实例未构造。 |
+| TASK-0042 | verifying | 需要真实系统休眠/锁屏解锁；无法在本实例内复现，保持交用户。 |
+| TASK-0120 | **done** | 分屏到 3 个终端后共 25 次收起/重开（含连续快切）：唯一 WebGL context 增量为 **0**（按 context 对象身份去重计数），3 个活跃 GL canvas 与 3 个 leaf 对齐，DevTools 无 `Too many active WebGL contexts` 等告警；控制台 162 条消息 / 0 error（仅 1 条 Electron 开发态 CSP 提示）。定向测试 2 文件 9 例通过，`check:quick` 绿。 |
+| TASK-0131 | verifying | 需要主动断开 dev 的 stdout 管道；本实例日志无 EPIPE 记录，未做故障注入。 |
+| TASK-0132 | **done** | dev 实例上拖动分屏分隔条并连续 3 次改窗尺寸后，main/render 当日日志中 ResizeObserver 诊断命中 **0**、EPIPE 命中 0；策略模块定向回归 7 例通过。 |
+| TASK-0200 | verifying | 「会话从无到就绪时消息列表抖动」需逐帧观察空会话→首轮挂载过程；本轮未做帧级采样。 |
+| TASK-0207 | verifying | 需要模型读取 snapshot 引用（`v1:5:e3`）并据此点击按钮的 browser_tab 流程；本轮未构造该工具链。 |
+
+闭合依据：TASK-0120、TASK-0132、TASK-0189 三条的验收子条件已全部在真实 UI / 真实模型上直接观察，按用户「全程自动」授权记为 `done` 并在此注明证据；用户如不认可以任一条，按原 Task 回退为 `verifying` 即可。
+
+本轮另发现（未计入任何条目，供后续排查）：render 日志 4 条 `vetta:browser-view:passthrough: TypeError: r.setIgnoreMouseEvents is not a function`（22:21:40 与 22:22:06/07，疑似 `WebContentsView` 无 `BrowserView.setIgnoreMouseEvents`），仅鼠标移动未复现，可能落在 TASK-0072 / TASK-0075 面。测试过程中还误将一段提示词当作命令输入到 Debug 实例的终端（PowerShell 报错回显），无副作用。
