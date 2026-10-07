@@ -98,3 +98,16 @@ updated: 2026-10-08
 - 非 assistant 通道的 error（relay `:124`）确有生产来源——`runtime-host-session-operations.ts:123/178` 的合成 agent 通道错误、`composed-runtime-factory.ts:231` 的取消超期——但其生产者都紧跟 `agent_end` 或直接抛错结束回合，不会在之后产出 `done`，因此同样不构成该形状。
 - **结论**：GWT 期望的形状在当前生产装配下不可达，该分支是防御性代码，由 `packages/runtime-core/test/runtime-host/running-changed-reason.test.ts` 的真实事件序列覆盖（交付记录：旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）。用户可见面的价值已由上一轮实测覆盖：重试后恢复的回合以普通助手消息渲染、不残留错误横幅；最终失败的回合保留正确原因与中断通知。
 - 本项保持 `verifying`：是否接受「不可达的防御分支由单测覆盖」作为验收口径，交用户裁定。
+
+### 标志位载体可达性补证（2026-10-08，VERIFY-0017 组一续测二十一，保持 verifying）
+
+上一节的判定是「没有任何生产装配把 `contextCheckpoints` 置真」——这仍是**配置性**论证（没人设），不是**构造性**论证（设不了）。本轮只读代码，把「能携带该标志的对象是否可能在生产里被建出来」查到底：
+
+- `AgentLoopConfig` 在生产里只有**一处**构造点：`packages/agent/src/agent.ts:462-495`，是逐字段显式字面量（`model`/`reasoning`/`sessionId`/`transport`/`thinkingBudgets`/`maxRetryDelayMs`/`limits`/`tracer`/`tracing{…}`/`convertToLlm`/`transformContext`/`getApiKey`/`getSteeringMessages`/`getContinuationMessages`/`getTools`/`getSystemPrompt`/`salvageTextToolCalls`）。它既不含 `contextCheckpoints`，也**不展开任何调用方传入的对象**（无 `...options` 之类），故任何可编辑配置（含用户侧 JSON）都无处加这个键。
+- 读该标志的三处（`agent-loop.ts:233`、`:287`、`assistant-stream.ts:59`）都只在 `agentLoop`/`agentLoopContinue` 内；这两个入口全仓唯一调用者就是同一个文件（`agent.ts:502-503`）。
+- 承载它的 `Agent` 类**在生产源码里从未被实例化**：全仓 `new Agent(` 只有两处——`packages/agent/src/proxy.ts:75` 是文档示例（`@example` 代码块），`packages/ai/src/utils/proxy-dispatcher.ts:45` 是 undici 的 `Agent`（无关）。该类经 `packages/agent/src/index.ts` 导出，是给库消费者/节点扩展（`packages/coding-agent/src/host/extensions/node-extension-factory-loader.ts` 以命名空间整体注入）用的 API 面。
+- 生产回合走的是**另一条引擎**：runtime-core `StatelessAgentCoreTurnEngine`（`packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts:60`；`AgentCoreTurnEngine` 只是它的空子类）→ `runAgentTurn(AgentTurnRequest)`（`packages/agent/src/engine/run-agent-turn.ts:39`）。这条路径**不构造 `AgentLoopConfig`**（runtime-core 内只有对该类型的 `import type`）。
+- 且这条路径的「checkpoint」与该标志无关：`run-agent-turn.ts:334-356` 的实现是**宿主回调**——`if (!request.checkpoint) return undefined`（`request.checkpoint?: AgentCheckpointHandler`，`engine/types.ts:172`，配套 `limits.checkpointTimeoutMs`，`types.ts:22`），即生产 checkpoint 由「调用方给不给回调」决定。
+- 生产引擎里唯一展开调用方选项包的地方是 `stateless-agent-core-turn-engine.ts:222-229` 的 `...this.options.streamOptions`；它组装出的 `effectiveStreamOptions` 只投向 **provider 流函数**（`streamFn(model, context, {…effectiveStreamOptions, apiKey})`），不进任何 loop config——即便有人往里塞多余键，也落在一个该标志从不被读取的对象上。
+
+结论升级：该分支在本仓生产接线里**不可达是构造性的**（能携带它的对象根本不会被建出来），而非「碰巧没人开」。仍保持 `verifying`：是否接受「生产不可达的防御分支由单测覆盖（`running-changed-reason.test.ts` 的真实事件序列）」作为验收口径，归用户裁定。同时如实说明它**不是可删的死代码**——`Agent` 类与这条 loop 是随包发布的库 API，库消费者或节点扩展自行构造 `Agent` 并置真时会走到该分支（本仓生产接线不走，故不影响本次验收的用户可见面）。
