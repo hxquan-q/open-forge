@@ -1,7 +1,7 @@
 ---
 id: TASK-0131
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement:
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0130, TASK-0132]
 integration_status: integrated
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -84,3 +84,17 @@ updated: 2026-09-28
 - 未运行及原因：`check`/`test:changed` 由 Coordinator 在批次验收统一跑；「dev 启动后关闭持有 pipe 的终端」人工冒烟未执行（需真实终端生命周期），保持 verifying。
 - Worktree：`task-0131-epipe-console-transport-circuit-breaker`（branch `task/TASK-0131-epipe-console-transport-circuit-breaker`，集成提交 `66c7ee464` + merge `ebb973433`）。
 - 剩余风险：熔断状态为进程级单次开关，pipe 恢复后 console 镜像不会自动恢复（进程内不再镜像到终端）——属本任务的既定取舍；汇总间隔 500 条在极端风暴下仍写入文件但量级有界。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+方法：把上面记的「dev 启动后关闭持有 pipe 的终端」这一步真正执行一次——用一次性 VETTA_HOME 起一个 dev 形态实例，把主进程 stdout 接进 `| head -c 1200` 的管道，head 读满即退出、管道的读端随之关闭，等价于「持有 pipe 的终端关掉」。全程用临时目录（不碰隔离 Debug profile，也不碰用户 dev 目录），进程用完后按 PID 清理。
+
+- 前置（Given）：镜像确实开着——管道里读到的前 1200 字节就是 console transport 镜像出来的启动日志（`[info] [diagnostics] startup { version: '39.8.10', … }`）。
+- 触发（When）：head 读满 1200 字节退出，`wc -c` 恰为 1200；1.5 秒后主进程写下第一条写端错误，堆栈正是「日志镜像 → console → socket 写」这条链：
+  `[2026-10-07T14:05:47.220+08:00] [error] [diagnostics] uncaughtException Error: EPIPE: broken pipe, write`，`at console.info → at Writable.write → at Socket._write`。
+- 熔断（Then）：**1 毫秒后**写下 `14:05:47.221 [warn] [diagnostics] stdio stream write failed; console log mirror disabled for this process`。此后主进程照常跑完启动（`14:05:47.289 [info] [window] create`、技能 102 条加载、runtimes applied），**没有退出**。
+- 有界性（对照 BUG-0047 的 14 秒 5069 条）：整份 main 日志 `14:05:45.691 → 14:06:37.199` 共 **392 行**，`uncaughtException` **1** 条、`EPIPE` **1** 条、熔断说明 **1** 条；熔断之后仍有 **180 行正常业务日志**（文件侧继续按原格式落盘），这 180 次镜像本该各触发一次 EPIPE 与一次 uncaughtException，实际一条都没有——这是「镜像确已关停」的直接证据。500 条汇总阈值未触发，故无 `suppressed after console mirror cutoff` 记账行，也说明抑制计数远未到量级。
+- 必须保持：文件日志路径与格式未变（熔断后首行仍是原格式的 `[info] [window] create {`）；未观察到 renderer 侧或 ringbuffer/ipc 受影响（render 日志独立照写）。
+- 证据留存：`<artifactDir>\0131-epipe-main-log-2026-10-07.log`。
+
+结论：GWT 三个分句（镜像开启 / 断管触发 EPIPE / 首条即熔断且日志量有界）均在真实断管下直接观察，闭合为 `done`。未覆盖：pipe 恢复后自动恢复镜像（本任务明确列为既定取舍，不要求恢复）。
