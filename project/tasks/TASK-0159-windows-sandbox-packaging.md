@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0039, TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0196]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -127,3 +127,19 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
   - 未实现上游的归档级摘要与 `--capabilities` 八项探针（本仓无归档制品、打包机非 Windows）。
   - 来源目录混入未受控文件即中断打包（刻意，避免打包未审计字节）。
   - 焦点表按 dev 一致版本重建：合并 `origin/dev` 时发现 `main` 侧焦点表引用 `TASK-0186/0187/0188…0199` 等未入库记录（dev 无该引用），故取 dev 版本 + 本 Task 行，避免把既有悬挂引用带进 dev。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待用户裁定）
+
+方法：在**主检出**（当前 HEAD）独立复跑声明的三条命令，并绕开单测包装、直接调用 `assessWindowsSandboxArtifacts` 读出三个 GWT 分支的返回结构（`status` / `enforcement` / `message`），再以游离 CLI 实测默认与降级两种入口。
+
+| 命令 / 读数 | 结果 |
+|---|---|
+| `node apps/desktop/scripts/windows-sandbox-artifacts.mjs` | **exit=1**，打印四类问题（清单 `sourceCommit` 为 null、三个受控 exe 全缺，各带绝对路径）与可行动修复步骤（`--write --source-dir … --commit …` 重钉摘要），并指明只有显式接受「本次产物不带 Windows 沙盒」才设 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1`。 |
+| 同一 CLI + `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` | **仍 exit=1**（与设计一致：降级只作用于**构建路径** `prepare-pack.js`，游离校验入口恒按清单判定失败）。 |
+| `bun run --cwd apps/desktop test:packaging` | **绿 125/125**（含「目录非空即视为有沙盒」的旧判定对照、未钉摘要不放行、字节被替换拦下、未受控文件混入报出、write→assess 闭环）。 |
+| `bun run verify:desktop:contracts` | **绿** `[desktop-packaging-contract] ok`（`prepare-pack.js` 确实消费清单校验）。 |
+| 直接调 `assessWindowsSandboxArtifacts`（主检出，清单未钉、`bin/` 不存在） | `declaredFamilies=['win32']` → `status=blocked`、`enforcement=block`、`message` 非空 ⇒ 对应 `prepare-pack.js:699-704` 的 `throw new Error(message)`，即**构建中断**；`['darwin']` 与 `['linux']` → `status=not-declared`、`message=null` ⇒ 不读清单、不阻断；win32 且设 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` → `enforcement=warn` ⇒ 走 `console.warn` 继续构建。 |
+
+- 三条 GWT 在可及范围内全部成立：**未钉/缺件 → 默认中断且错误可行动**；**显式变量 → 降级告警**；**非 Windows 声明 → `not-declared` 不受影响**。
+- 未覆盖（不宣称通过）：真实 `dist:win` / CI 打包的中断现场（评估点位于 `prepare-pack.js` 较后段，全量跑一次打包代价与风险都不合适，改以「返回结构 + 抛错分支源码 + 合同断言」三证）；「三个 exe 齐全且摘要一致」的**通过**路径（清单摘要当前为 `null`，无受控制品）；exe `--capabilities` 八项探针（需 Windows 与真实制品）。
+- 待用户裁定项（即交付记录「发版影响」）：Windows 打包在当前仓库状态**按设计失败**。选项：① 由受控构建产出三个 exe 后 `--write` 钉摘要；② 在 Windows 发版流水线显式设 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 并接受产物不带沙盒；③ 暂缓 Windows 发版。Agent 未擅自改 workflow。
