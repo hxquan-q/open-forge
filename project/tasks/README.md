@@ -49,12 +49,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0188` | `done` | PLAN-0014 | 流式回复用量引用稳定性；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 真实 UI 三态（空闲/流式中/结束后）读取历史回复用量逐字符一致（VERIFY-0017 组一）。 |
 | `TASK-0189` | `done` | PLAN-0014 | 工具调用期间回复保持进行中；TASK-0187 批次交付并合入 main；2026-10-06 真实模型回合 UI 实证（VERIFY-0017 组一）。 |
 | `TASK-0190` | `verifying` | PLAN-0014 | 恢复成功的回合清除错误终态；TASK-0187 批次交付，已随本轮合入 main。 |
-| `TASK-0191` | `verifying` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 实测「路线离开再返回」恢复半途位置成立、「会话切换」落回贴底；2026-10-08 由实现与既有单测判定「离开再进入=恢复、切换会话=回尾部」是声明语义（VERIFY-0017 组一），唯一待裁定：「切换会话再回来」是否算 GWT 的「再回来」。 |
+| `TASK-0191` | `done` | PLAN-0014 | 滚动记忆只保存用户停留位置；TASK-0187 批次交付，已随本轮合入 main；2026-10-08 三条子句实测（VERIFY-0017 组一续测十七）：跟随未到底时离开再返回落在尾部并继续跟随（`st=3/max=22` → `st=234/max=234` → `298/298`）、主动浏览 `st=59` 离开再返回恢复 59 且 6 秒稳定；「切换会话再回来」不恢复（`59 → 659`）属读侧既有声明语义（缓存只喂 Virtuoso 初始化输入），不由本切片引入，若期望恢复需另立条目。 |
 | `TASK-0192` | `done` | PLAN-0014 | 开发主进程缓存覆盖实际打包输入；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 真实跑 build-dev-processes CLI：基线 0/4，改已打包包 `runtime-storage/dist` 后恰好只重建 main（1/4），改未打包包 `runtime-core/dist` 后仍 0/4，产物 md5 还原（VERIFY-0017 组一）。 |
 | `TASK-0193` | `done` | PLAN-0014 | Git 历史特殊路径与重命名正确性；TASK-0187 批次交付，已随本轮合入 main；2026-10-07 用特殊字符/glob 同名邻居/三类重命名的真实仓库夹具在 Git 面板实测，字面路径、前后路径、不按模式误匹配均成立（VERIFY-0017 组一）。 |
 | `TASK-0185` | `done` | — | 队列消费用户消息被渲染到回复末尾（BUG-0068/BUG-0021 变体）已修：五处尾部落位改因果锚定；定向 96/全域 956/impact 493/check 全绿；2026-10-07 真实 UI 重开会话后排队用户原文保留在正确因果位（VERIFY-0017 组一）。 |
 | `TASK-0186` | `done` | — | Office 按格式加载与 PDF URL 生命周期已验证并合入本地 main（559a8d79d）；2026-10-07 隔离实例冷启动实测：未预览时解析器请求 0 条，xlsx 只加载表格路、pdf 只加载 PDF 路，PDF worker Blob URL 随预览挂载 create/随卸载 revoke（VERIFY-0017 组一）。任务「不做」项已声明不以构建字节数推算 RAM 节省，故未做 RAM 对照。 |
-| `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（75c5ae2df）；定向 30 项、Desktop 全包 4680 项及完整 check 通过；2026-10-07/08 实测（VERIFY-0017 组一）：固定 origin 后 dev 重启偏好保留并启动即重新应用；切明暗/配色不覆盖用户字体，重置恢复默认栈；终端字形响应以 canvas 几何量实测成立（默认 1044×210 ↔ Courier New 1043×208 ↔ 复位 1044×210）；「实例/PTY/输出保留」UI 不可达（进设置即卸载终端），只有宿主测试覆盖；仍待打包形态复核，故保持 verifying。 |
+| `TASK-0181` | `verifying` | — | 本机字体偏好已实现并合入本地 main（75c5ae2df）；定向 30 项、Desktop 全包 4680 项及完整 check 通过；2026-10-07/08 实测（VERIFY-0017 组一）：固定 origin 后 dev 重启偏好保留并启动即重新应用；切明暗/配色不覆盖用户字体，重置恢复默认栈；终端字形响应以 canvas 几何量实测成立（默认 1044×210 ↔ Courier New 1043×208 ↔ 复位 1044×210）；「实例/PTY/输出保留」UI 不可达（进设置即卸载终端），只有宿主测试覆盖；仍待打包形态复核，故保持 verifying；2026-10-08 补证：dev 重启后 origin 级 localStorage 整体失效，向导与产品引导随之重放（丢失面比字体更宽）。 |
 | `TASK-0180` | `done` | — | desktop-packaged 合同 job 补安装+Bun 装配（BUG-0064）；CI 合同 job 已绿（37059120967）。 |
 | `TASK-0184` | `verifying` | — | docs-site 构建 Turbopack 报错修复（BUG-0067）；已分型：fumadocs stringifier 丢 attention/peek 致 RangeError（内容含 `**`/`*` 即触发）+ 4 处 HTML 注释在 MDX 非法；本机可复现，待实施；CI 复跑受 ISSUE-0029 阻。 |
 | `TASK-0183` | `verifying` | — | packaged E2E CI 连续红修复（BUG-0066）；已分型：`verify:staged-deps --staging` 三平台并集误报本平台 prebuild，E2E 未跑到；待实施；CI 复跑受 ISSUE-0029 阻。 |

@@ -323,3 +323,32 @@ depends_on: []
 | TASK-0151 | **done（闭合）** | ① **渲染端无写者**：`apps/desktop/src/renderer` 下 `config.set(` 全部 17 处调用，补丁键为 `workspacePath`×2、`shortcuts`×2、`quickPanel`、`proxy`、`notificationsEnabled`、`notificationPreferences`、`knowledgeBase`×2、`imageGeneration`、`experimental`×3、`defaultExecutionMode`、`debugMode`×2——**没有一处写 `projects` 或 `archivedProjects`**（渲染端对这两个字段只有读，`useProjects.ts:206`），即该字段在 `config.set` 这条面上没有写者，不存在可构造的并发写。② **真实写者全在同一事务队列**：唯一生产写路径是主进程 IPC `vetta:projects:*` → `ProjectService.commit` → `dependencies.updateConfig(update)`（`project-service.ts:86-92`）与 `batch-task-storage.ts:178-200,218-228` 的 `updateDesktopConfig((current) => …)`，均为**函数式读改写**而非旧快照整段写回。③ **队列自身重读磁盘**：`updateDesktopConfig`（`desktop-config-store.ts:388-404`）把读改写串在同一条进程内 promise 队列上，事务内重新 `readRawConfigSync()` 并以 `{ ...readRawConfigSync(), ...next }` 落盘，未提及字段与未知新字段都存活。④ **整快照入口生产无调用者**：`writeDesktopConfig`（`:407`，注释自陈产品流程走 `updateDesktopConfig`）与测试辅助 `overwriteDisk` 在 `apps/desktop/src` 全仓只出现在 `desktop-config-store.test.ts`。⇒ `projects` 的残留是「该面上没有写者」而非「未验证的并发面」。叠加已完成的 UI 观测（2026-10-07 四字段同 tick 并发两轮；2026-10-08 快捷键页同 tick 双写 2.4 ms、2.8 ms 内 5 连发串行、重置只触自身字段、非参与字段含 `projects`/`archivedProjects` 未被覆盖），本 Task 验收子条件已全部有客观观测，记为 `done`。用户如不认可「以代码级枚举替代 UI 实测」，按原 Task 回退 `verifying`。 |
 
 组一计数更新：**13 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、**0151**），余 **6 条 verifying**（0190、0191、0194、0181、0039、0042）。方法经验：条目标「UI 无法构造」时，先问「这个写者/路径**是否存在**」——若枚举证明写者根本不在被测面上（本例渲染端 17 处 `config.set` 无一是 `projects`），缺口即从「未测」降级为「不适用」，比继续寻找注入手段或改装夹具更省。
+
+### 2026-10-08 · 组一续测十七（TASK-0191，三条子句实测；闭合为 done）
+
+方法：上一轮把「主动翻历史 → 切到别的会话 → 再切回来是否算『再回来』」交用户裁定；在「全程自动」下按 GWT 与 BUG-0072 的措辞（「离开**再打开**会话」＝视图卸载后重挂载）闭合，并把会话切换路径的读数一并留档。为了造出「流式跟随中途」这一瞬态，用上一轮给故障夹具加的长流控制面（`/control/slow`）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0191 | **done（闭合）** | ① **子句 1/2（自动跟随未到底时离开再回来 → 不恢复半途快照、继续定位尾部）**：在「分步慢慢输出」会话发一条走慢流的消息，捕捉到「跟随已开启但尚未到底」的瞬间 `st=3 / max=22`（同时「停止生成」可见 ⇒ 确在跟随输出），随即离开路由到 `#/settings/appearance`（feed 卸载）再 `history.back()` 返回 → `st=234 / max=234`，内容继续增长到 `max=298` 时 `st` 仍为 298：**落在尾部并继续跟随**，半途的 3px 快照未被恢复。② **子句 3（主动浏览旧消息再返回仍恢复位置）**：另一会话用真实滚轮上翻到 `st=59`（跟随关闭），离开路由再返回 → `st=59`，此后 6 秒稳定不变。③ **会话切换路径实测（GWT 未覆盖）**：从同一主动位置 `st=59` 改走「切到别的会话再切回来」（feed 不卸载）→ `st=659 = max`（落回尾部），不恢复；与上一轮的实现判定一致（缓存只喂 Virtuoso 的初始化输入 `restoreStateFrom` / `initialTopMostItemIndex`，不重挂载不生效）。④ 闭合口径：GWT 与 BUG-0072 的场景均为「离开再打开会话」（重挂载），三条子句在该路径上均有实测读数（含流式瞬态与稳定态），据此记为 `done`；会话切换（不卸载）不恢复属读侧既有声明语义、不由本切片引入，若产品期望它也恢复应另立条目。用户如不认可以此口径闭合，按原 Task 回退 `verifying`。本轮为 DOM 读数，无独立截图。 |
+
+组一计数更新：**14 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、0151、**0191**），余 **5 条 verifying**（0190、0194、0181、0039、0042）。
+
+### 2026-10-08 · 本轮另发现（未计入任何条目）：回合不进入终态的两态
+
+排 TASK-0191 时为构造流式态误杀了故障夹具进程，得到一个人工可见的「回合卡死」态；随后按同一条件做了一次确定性复现。二者都落在 BUG-0018（`done`）的合同面上——其 GWT 明确要求「当前 Turn 应在有限时间内进入明确的 interrupted/aborted 终态；后续消息应能正常发送……不应长时间卡在处理中」。**本记录只报告观测与证据，处置（新开缺陷还是并入 BUG-0018 重开）交用户裁定。**
+
+- **态 A（严重；无自救手段）**：会话「分步慢输出」的 `turn-eecb181d` 在会话记录里**只有 `turn.started` + 两条 `message.appended`，没有任何终止事件**（无 `turn.completed`/`turn.cancelled`/`turn.failed`）。UI 上同一屏**同时**呈现「处理中…｜正在处理 · 31分16秒」与错误卡片「网络没连上／检查一下网络或代理，然后重新发送」；composer 的 aria 是「Open Forge 正在思考…」、模型选择器被禁用（「当前回合进行中，回合结束后可切换模型」），且**既没有「停止生成」也没有「发送消息」**——该会话既不能取消回合也不能发新消息。渲染进程重载无效；**重启应用**后该会话恢复为可发送状态（`发送消息` 可用、无「处理中」）。⇒ 该忙态由主进程内存中的在途回合持有，不是从落盘记录重新推导的（落盘记录里那回合根本没有尽头）。截图：`<artifactDir>\stuck-turn-wedged-session.png`。
+- **态 B（确定性复现；有自救手段）**：在新会话里发一条走 `/control/slow` 的消息，流式中**杀掉夹具进程**（连接被粗暴断开）→ 其后 60 秒内：`停止生成` 一直在、`发送消息` 一直不在、无错误卡片、无任何终态事件，计时器持续增长；点「停止生成」后 3 秒内恢复（`发送消息` 可用、模型选择器解除禁用），会话记录写入 `turn.cancelled reason="This operation was aborted"`。⇒ **provider 连接中断后回合不会自动进入终态**，但用户可手动中断。
+- **与既有记录的关系**：态 A 同时违反 BUG-0018 的「有限时间内终态」与「后续消息应能正常发送」两条，且连中断入口都没有；态 B 违反前者（60 秒无终态）、保留后者。触发条件不是「用户点停止」，而是 **provider 连接在回合中途被粗暴切断**（本例由我杀夹具造成；生产等价物是 provider 进程崩溃、网络中断或主进程被杀）。
+- **环境注记**：夹具自身在客户端断开后继续 `enqueue` 抛 `Invalid state: Controller is already closed` 的缺陷本轮已修（`try/catch push` + `cancel()` 清表），因此态 B 的复现方式改为**故意杀掉夹具进程**，不依赖那个缺陷。
+
+### 2026-10-08 · 组一续测十八（TASK-0181，向导与引导随重启重放；补证）
+
+方法：本轮因其它条目需要重启隔离 Debug 实例（`verify:ui:stop:debug` → `start:debug`，渲染源端口由 36915 变为 **52272**），顺手把上一轮归因（偏好只落在 origin 级 localStorage）的**可见症状**补全：不只字体回落，凡是 origin 级 localStorage 里的首启状态都会重放。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0181 | **verifying（补证，不改变计数）** | 重启前该 profile 的 localStorage 有 `openforge-font-preferences`、`vetta-setup-wizard-completed=1`、`vetta.tour.sidebar.completed=1`；重启后（origin `http://127.0.0.1:52272`）localStorage 只剩 **4 个运行时键**（`vetta-ui-theme`、`vetta-session-execution-mode`、`vetta-workspace-path`、`vetta-selected-model`），`vetta-setup-wizard-completed` 与 `vetta.tour.sidebar.completed` 均为 `null`（`openforge-font-preferences` 一并消失，即上一轮的字体回落同因）。可见后果两条实测：① 「语言与外观」整屏向导**重放**（`div.fixed.inset-0.z-[100]`，含「跳过」「下一步」，截图 `0181-setup-wizard-replay-after-restart.png`）；② 跳过向导后**产品引导 tour 重放**（`svg.driver-overlay` + `.driver-popover`，截图 `0181-sidebar-tour-replay-after-restart.png`），走完引导后 `vetta.tour.sidebar.completed` 才写回 `1`。⇒ 该丢失不是字体偏好专有，而是 dev 形态下**整个 origin 级 localStorage 一起失效**；安装态 origin 稳定时不会发生。本段只补症状，归因与「打包形态复核」要求同上一轮，状态不变。 |
+
+组一计数不变：**14 条闭合**，余 **5 条 verifying**（0190、0194、0181、0039、0042）。

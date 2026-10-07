@@ -187,3 +187,11 @@ bun run test:impact -- $files
 - **未观测到的一条**：GWT 第 2 条后半「实例、PTY 和已有输出保留」在真实 UI 走不到——代码字体只能在设置页改，而进设置路由会**卸载**底部面板终端（`document.querySelectorAll('.xterm').length` 由 1 → 0，返回后是**新节点**：实测前打的 `data-of-probe` 标记在返回后为 `null`）。也就是说当前应用形态下不存在「终端挂着的同时改字体」的入口，热更新只能在宿主测试里观察：`TerminalSurface.host.test.tsx:167`「changing the code font refits the existing PTY without losing output」断言 `options.fontFamily` 更新、`ipc.resize` 次数增加、终端数组长度仍为 1（未重建）、`writes` 不变（输出保留）、`ipc.open` 只调用一次且 `ipc.close` 未调用。
 - 因此第 2 条目前是「字形/尺寸响应＝UI 实测通过；实例/PTY/输出保留＝宿主测试通过、UI 不可达」。若用户要求 UI 级证据，需要产品侧提供「终端可见时改字体」的入口（例如设置浮层或主题快捷切换），这属于设计问题而非本 Task 的实现缺陷。
 - 证据留存：`0181-terminal-before-el.png`（默认字体）、`0181-terminal-after-code-font.png`（Courier New）、`0181-terminal-after-reset-code-font.png`（复位后）。实测后该 profile 的字体偏好已复位为 `{"ui":"","code":""}`。
+
+### 首启状态随重启重放（2026-10-08，VERIFY-0017 组一，补证）
+
+上一轮把「重启丢字体偏好」归因为「偏好只落在 origin 级 localStorage 键 `openforge-font-preferences`，而 dev 渲染源端口每次重启变化」。本轮因其它条目重启隔离实例（渲染源端口由 36915 变为 **52272**），顺手取证该归因的可见症状，确认丢失面比字体更宽：
+
+- 重启前该 profile 的 localStorage 含 `openforge-font-preferences`、`vetta-setup-wizard-completed=1`、`vetta.tour.sidebar.completed=1`；重启后只剩 **4 个运行时键**（`vetta-ui-theme`、`vetta-session-execution-mode`、`vetta-workspace-path`、`vetta-selected-model`），上述三个键均为 `null`。
+- 可见后果两条：① 「语言与外观」整屏向导**重放**（`div.fixed.inset-0.z-[100]`，含「跳过」「下一步」）；② 跳过向导后**产品引导 tour 重放**（`svg.driver-overlay` + `.driver-popover`），走完引导才写回 `vetta.tour.sidebar.completed=1`。两者都按 localStorage 判定（`shared/setup-wizard/storage.ts` 的 `isSetupWizardCompleted`、`shared/tour/storage.ts` 的 `isTourCompleted`）。
+- 结论：该丢失不是字体偏好专有，而是 dev 形态下**整个 origin 级 localStorage 一起失效**（安装态 origin 稳定时不会发生）。归因与「需按打包形态复核」的要求不变，本段只补症状证据：`0181-setup-wizard-replay-after-restart.png`、`0181-sidebar-tour-replay-after-restart.png`（artifactDir）。实测后已在实例内走完向导与引导，两个标记均已写回。
