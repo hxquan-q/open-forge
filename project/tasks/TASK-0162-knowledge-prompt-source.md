@@ -21,7 +21,7 @@ depends_on: [TASK-0148, TASK-0170]
 conflicts_with: [TASK-0122, TASK-0123]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -95,3 +95,20 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 来源分支：task/TASK-0162-knowledge-prompt-source；来源提交：6cb373dde0ff25d60c322cbf153362896554471f。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
 
 集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0162。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待裁定）
+
+方法：验证合同写的是「手动整理与后台轮询使用**真实工厂 + 假 Provider**、多批处理、暂停/取消」，全部可在本机以假 Provider 完成，故本轮在主检出把这条链的装配面与用户流程面都跑了一遍，并核对「可选字段」的兼容取舍确实落在最终代码里。
+
+| 子句 | 覆盖用例与本次读数 |
+|---|---|
+| 真实工厂 + 假 Provider | `apps/desktop` 装配测试 `src/main/knowledge/processing-session-factory.test.ts` **1 例通过**：断言 `createKnowledgeProcessingSessionFactory` 被调用时 **`createPromptRuntimeSources` 等于 `createDesktopPromptRuntimeSources`**——旧实现漏传时为 `undefined`，该断言必然红，即这是一条真的 red/green 守卫。 |
+| 手动整理 / 后台轮询 | 本轮追加复跑 `apps/desktop` 的 `knowledge-round-controller.test.ts` + `poller.test.ts` **2 文件 5 例全绿**：「runs real multi-batch knowledge operations and records successful side effects」「uses the shared model service for Knowledge processing」。 |
+| 多批处理 | `packages/coding-agent` 的 `knowledge-processing-batches.test.ts` **通过**（「matches the existing writer baseline while concurrent sessions share one write session」）；另 desktop 轮询控制器的「preserves partial writes but skips final reconciliation after a batch failure」同属该面。 |
+| 暂停 / 取消 | desktop 轮询控制器「**aborts the active session**, skips queued batches, and completes cleanup without failure accounting」与「stops scheduling once, waits for the active round, and unlocks raws idempotently」；coding-agent 会话测试的 disposal 段。 |
+| 会话隔离与缺模型原错误 | `knowledge-processing-session.test.ts` **通过**：「keeps custom-composition hosts **without** a separate source callback and preserves missing-model errors」「preserves model refresh, locked todos, injected writer, usage, and disposal」。 |
+
+- 源码核对（本轮独立复核交付记录的两条关键取舍）：① **兼容路径成立**——`packages/coding-agent/src/composition/knowledge-processing-session.ts:31` 的 `createPromptRuntimeSources?` 是**可选**属性，`:67` 仅做透传，自定义 `createComposition` 宿主不传独立回调的合法用法未被破坏（交付记录称必填候选会以 TS2741 破坏宿主调用，最终改回可选——代码现状与之一致）。② **生产路径确实注入**——`apps/desktop/src/main/knowledge/processing-session-factory.ts:34` 显式传 `createDesktopPromptRuntimeSources: createDesktopPromptRuntimeSources`。即「不靠忽略错误补默认宿主」这一点在代码级可验。
+- 未复跑（不宣称通过）：交付记录里的全量影响面数字（Coding Agent 1534、Runtime Desktop 51、Desktop 4624、CLI 226）不追平，本轮只跑覆盖本合同的 4 个定向文件（4 例）+ 追加的 2 个知识域文件（5 例）；`test:changed` 与完整 `check` 未重跑。
+- 未运行及原因：**真实知识加工模型效果**——合同明令「只 Mock 外部边界，不访问真实用户状态或付费服务」，且需真实 Provider；用户验收面。
+- 关闭建议：合同四条（真实工厂+假Provider、多批处理、暂停/取消、不以全量超时归因）在测试级全部成立，且兼容取舍与注入路径都能在源码里指认 ⇒ **倾向闭合 `done`**，模型效果另属 AI 质量评估层。按 VERIFY-0017 约定等用户裁定。
