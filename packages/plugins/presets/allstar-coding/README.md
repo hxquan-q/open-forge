@@ -6,6 +6,14 @@ AllstarCoding 全流程软件工程流水线预置插件：主控 `@allstar` + �
 逐任务开发/评审循环 → 白盒体检 → 黑盒 → 部署 → 收尾）驱动目标项目的全生命周期交付；
 `docs/ac/state.md` JSON 状态机支持中断恢复，每环节收口走 ac-gate 产物硬校验。
 
+v0.5.1（会话门修复）：修复 ac-fence 在生产装配下主/子会话判定失效的缺陷——宿主 PreToolUse
+事件从不填充 subagent 字段（内核 baseEvent 无赋值点），旧判定 `event.subagent === undefined`
+恒真导致所有子代理被误判为主会话：写域校验/只读纵深成死代码、git 子代理豁免不可达（v0.5
+存档通道被自己的围栏死锁）、且全 app 任何会话的 git 写与 spawn 会被误拦。现改由插件侧
+session-gate（src/fence/session-gate.ts）用 sessionId 双查重建会话身份（SubagentStart 的
+agentId 恒等于子会话 sessionId；spawn 通过 AC 契约校验的会话认养为治理会话；无关会话静默），
+判定流抽为纯模块并按生产事件形态（无 subagent 字段）测试覆盖三类会话、认养流程与存档豁免。
+
 v0.5（环节级存档制）：T 级存档制升级为环节级存档制——state.md 每个（子）环节 done 即打档：
 T 档（`T<n>: <摘要>`，评审 pass 触发）+ stage 档（`stage <seq>/<环节名>: <摘要>`，其余环节收口触发），
 git 历史与 state.md 账本一一映射（V6 终局对账逐档对位），档内含 state.md 最新版本且逐档过 V4 写域校验。
