@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123]
 integration_status: integrated
 created: 2026-10-03
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -161,3 +161,14 @@ bun run test:impact -- $files
 - 生效侧：界面字体选 Cambria 后正文与预览 computed font 实时变更，`localStorage.openforge-font-preferences={"ui":"Cambria","code":"Cascadia Code"}`；代码字体选 Cascadia Code 后 `--font-mono` 为 `"Cascadia Code", "SF Mono", "Fira Code", monospace`，`TerminalSurface` 接线在源码中确认。
 - 「重启保留」在本实例失败并已归因：字体偏好只写入 origin 级 localStorage 键 `openforge-font-preferences`，dev 渲染源为 `http://127.0.0.1:<每次重启变化的端口>`，重启后该键为 `null`、正文字体与 `--font-mono` 回落默认（与设置向导标记 `vetta-setup-wizard-completed` 同时消失同因）。安装态源稳定时预期保留，需用户按打包形态复核。
 - 终端字形仍不可观测（xterm 画在 canvas，无测量元素）。按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 保持 `verifying` 交用户。
+
+### 固定 origin 重启保留 + 主题切换实测（2026-10-07 / 10-08，VERIFY-0017 组一，保持 verifying）
+
+本节结论**覆盖上一节同项**的「重启保留」判定：上一节的重启丢失已归因为 dev 渲染源端口每次重启变化，本次把 origin 固定后重测。
+
+- 方法（10-07）：一次性 `VETTA_HOME`（`%TEMP%\font-home`，不碰隔离 Debug profile 与用户 dev 目录）+ `VETTA_DESKTOP_DEV_PORT` 指向已在运行的 renderer dev server（60957），使 origin 恒为 `http://127.0.0.1:60957`；字体一律经真实设置页 UI 保存（读取本机字体 → 93 项候选 → 选 Cambria）；重启用同一套环境变量。
+  - 实例 A：`--font-sans` 由默认栈变为 `"Cambria", -apple-system, …`，body computed font 为 `Cambria, …`，`--font-mono` 保持 `"SF Mono", "Fira Code", monospace`（未选代码字体）；`localStorage["openforge-font-preferences"]={"ui":"Cambria","code":""}`。
+  - 杀掉进程后同环境重启（实例 B）：origin 仍为 `http://127.0.0.1:60957`，偏好键值、`--font-sans`、body font 与 A 完全一致；说明启动即重新应用（`main.tsx:19 applyInitialTheme → applyStoredTheme → applyTheme`）。→「模拟重启 → 偏好保留」成立，前提是 localStorage 的 origin 不变（打包形态天然稳定）。
+- 主题切换与重置（10-08，隔离 Debug profile `04987e4e`，同一 origin 内，全部经真实 UI）：切配色（默认 → 珊瑚，`data-theme` mono → sand）与切明暗（深色 → 浅色，`colorScheme` dark → light）之后，`--font-sans`、body font、偏好键三者均不变；界面字体下拉选回「默认」后键为 `{"ui":"","code":""}`、`--font-sans` 回到默认栈。→「切明暗/配色 → 偏好保留」与「重置恢复当前主题默认栈」成立。实测后已把该 profile 主题复位为 dark/mono。
+- 仍未观测：GWT 第 2 条「活动终端字形/尺寸响应，实例、PTY 与已有输出保留」——xterm 画在 canvas，无测量元素，harness 下读不到字形变化，`TerminalSurface` 接线目前只有源码级证据；GWT 第 4/5 条（枚举失败/偏好损坏的反馈、连续请求与隐藏后重新 fit）只有工程测试（30 项定向用例）覆盖，无真实 UI 观察。
+- 因此保持 `verifying`：请用户在**打包形态**下复核第 1～3 条观感与终端字形，并确认第 4/5 条的失败反馈与重新 fit 行为。证据留存 `<artifactDir>\0181-pinned-origin-restart.txt`、`0181-theme-switch-and-reset-2026-10-08.txt`、`0181-appearance-fonts-list.png`。
