@@ -43,7 +43,7 @@ export interface FenceContract {
 	/** 该角色允许 spawn 的 agent_type（主控专用，本期未用）。 */
 	spawnWhitelist?: string[];
 	/**
-	 * git 写操作豁免（T 级存档通道）：主控显式授权的轻量 git 子代理契约携带 true。
+	 * git 写操作豁免（环节级存档通道）：主控显式授权的轻量 git 子代理契约携带 true。
 	 * 默认 false——普通子代理 git 写命令仍被拦（提交历史是流水线审计日志，打点权收主控侧）。
 	 */
 	gitWriteAllow?: boolean;
@@ -342,7 +342,7 @@ export function judgeMainSpawn(input: unknown): Verdict {
 	if (booleanField(input, "allow_git_write") === true && !taskName.startsWith("git_")) {
 		return {
 			allow: false,
-			reason: `ac-fence：allow_git_write 豁免只授给轻量 git 子代理（task_name 前缀 git_，主控显式授权的 T 级存档执行者）；本契约 task_name "${taskName}" 不符合。请去掉 allow_git_write 字段，或改用 git_ 前缀重派 → ${HELP_PROTOCOL_HINT}`,
+			reason: `ac-fence：allow_git_write 豁免只授给轻量 git 子代理（task_name 前缀 git_，主控显式授权的存档执行者）；本契约 task_name "${taskName}" 不符合。请去掉 allow_git_write 字段，或改用 git_ 前缀重派 → ${HELP_PROTOCOL_HINT}`,
 		};
 	}
 	return { allow: true };
@@ -365,7 +365,7 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 			if (command !== null && isGitWriteCommand(command)) {
 				return {
 					allow: false,
-					reason: `ac-fence：主控会话不直接跑 git 写操作——T 级存档走轻量 git 子代理（spawn 契约带 allow_git_write: true，围栏对该契约放行 git 写命令；ac-pipeline §0.5/§0.8）。如需 git 操作 → 起轻量 git 子代理，或 ${HELP_PROTOCOL_HINT}`,
+					reason: `ac-fence：主控会话不直接跑 git 写操作——环节级存档（T 档/stage 档）走轻量 git 子代理（spawn 契约带 allow_git_write: true，围栏对该契约放行 git 写命令；ac-pipeline §0.5/§0.8）。如需 git 操作 → 起轻量 git 子代理，或 ${HELP_PROTOCOL_HINT}`,
 				};
 			}
 			return { allow: true };
@@ -423,11 +423,11 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 			};
 		}
 		if (isGitWriteCommand(command)) {
-			// 豁免通道：主控显式授权的轻量 git 子代理（T 级存档执行者，契约 allow_git_write: true）
+			// 豁免通道：主控显式授权的轻量 git 子代理（存档执行者，契约 allow_git_write: true）
 			if (contract.gitWriteAllow === true) return { allow: true };
 			return {
 				allow: false,
-				reason: `ac-fence：git 写操作被围栏拦截：提交历史是流水线审计日志，打点权在主控侧（T 级存档制，ac-pipeline §0.5）。T 级存档由主控起轻量 git 子代理执行（契约 allow_git_write: true）；如确需 git 操作 → ${HELP_PROTOCOL_HINT}`,
+				reason: `ac-fence：git 写操作被围栏拦截：提交历史是流水线审计日志，打点权在主控侧（环节级存档制，ac-pipeline §0.5）。存档（T 档/stage 档）由主控起轻量 git 子代理执行（契约 allow_git_write: true）；如确需 git 操作 → ${HELP_PROTOCOL_HINT}`,
 			};
 		}
 		return { allow: true };

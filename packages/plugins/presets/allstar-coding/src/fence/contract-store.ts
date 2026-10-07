@@ -66,7 +66,7 @@ export function contractFromSpawnInput(input: unknown): FenceContract | null {
 	const task = (typeof record.task === "object" && record.task !== null ? record.task : {}) as Record<string, unknown>;
 	const agentType = typeof record.agent_type === "string" ? record.agent_type : "general";
 	const scope = parseScopeInput(task.scope).filter(isProjectInternalGlob);
-	// git 写豁免（T 级存档通道）：仅轻量 git 子代理契约携带（judgeMainSpawn 已拦截偷带者）
+	// git 写豁免（环节级存档通道）：仅轻量 git 子代理契约携带（judgeMainSpawn 已拦截偷带者）
 	const gitWriteAllow = record.allow_git_write === true;
 	return {
 		role: roleFromTaskName(taskName),
