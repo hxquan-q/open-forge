@@ -21,7 +21,7 @@ depends_on: [TASK-0150]
 conflicts_with: [TASK-0187, TASK-0181]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -98,3 +98,12 @@ IPC 的既有 CONFIG_SET 字段组装迁至 config 领域，桥只做校验、�
 
 - 从 UI 同一 tick 内并发发出 4 个 `config.set`（系统通知/提示音/代理/默认模式）两轮：第一轮三项全部落到 `desktop-config.json`，第二轮四条精确还原基线（`notificationsEnabled=false`、`soundEnabled=true`、`proxy.enabled=false`），无丢失更新、无跨字段覆盖。
 - 未闭合原因：默认模式在本机无合法目标（Windows 无 sandbox，`changeExecutionMode` 早退），项目/快捷键分属其它设置页未做并发核对；按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 继续交用户。
+
+### 快捷键页同 tick 双字段并发实测（2026-10-08，VERIFY-0017 组一续测十三，保持 verifying）
+
+补上一轮列的缺口之一「快捷键分属其它设置页未做并发核对」。桥不可用是硬约束：`page.evaluate` 内调 `window.vetta.config.get()` 抛 `Host API access denied`（`apps/desktop/src/preload/host-access.ts:14`），故并发只能由页面内真实控件在同一 tick 触发。快捷键页同时有两个写者——录制器（写 `shortcuts`）与快捷面板 `MotionSelect`（写 `quickPanel.trigger`）。
+
+- **同 tick 双字段并发**：点录制器使其 armed（其 keydown 监听在 `document` 捕获阶段）、展开快捷面板下拉，然后在同一个 `page.evaluate` tick 内先 `document.dispatchEvent(Ctrl+Shift+J)` 再点弹出层的「双击 Alt」，两写相隔 2.4 ms。结果：`shortcuts.bindings["new-session"]="mod+shift+j"` 与 `quickPanel.trigger="alt"` **同时**落盘，UI 两处同步显示；非参与字段 `notificationsEnabled=false`、`defaultExecutionMode="full-access"`、`projects=['demo','git-fixture']`、`archivedProjects=0`、`quickPanel.postSendBehavior="foreground"` 均未被覆盖，19 个顶层键齐全。
+- **突发串行**：同一录制器 2.8 ms 内连发 5 个 keydown（J/K/L/M/N）→ 最终落盘 `mod+shift+n`（末次生效、无中间态），`quickPanel.trigger` 保持 `alt` 未被跨字段波及，文件仍是合法 JSON。
+- **还原路径**：「重置所有快捷键」只改 `shortcuts`（→`{}`），下拉切回「不启用」只改 `quickPanel.trigger`（→`none`），两者各自回到基线且互不覆盖；实测结束已把 `desktop-config.json` 还原到基线。BUG-0075 的「整快照写回把别的字段改回去」形态在快捷键页未复现。
+- **仍未闭合**：`projects` 没有能在同一 tick 触发的 UI 写入口（`window.vetta.project.*` 同被令牌拦截，添加项目走原生目录对话框），本轮只证明它在上述写入中未被波及；「默认模式」在本机仍无合法目标。证据快照：`0151-desktop-config-before.json`、`0151-desktop-config-after-concurrency.json`（artifactDir）。
