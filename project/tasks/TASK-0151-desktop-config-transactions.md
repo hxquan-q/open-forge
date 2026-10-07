@@ -1,7 +1,7 @@
 ---
 id: TASK-0151
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop config
 source: user-request; upstream 93bfc01ad
@@ -107,3 +107,14 @@ IPC 的既有 CONFIG_SET 字段组装迁至 config 领域，桥只做校验、�
 - **突发串行**：同一录制器 2.8 ms 内连发 5 个 keydown（J/K/L/M/N）→ 最终落盘 `mod+shift+n`（末次生效、无中间态），`quickPanel.trigger` 保持 `alt` 未被跨字段波及，文件仍是合法 JSON。
 - **还原路径**：「重置所有快捷键」只改 `shortcuts`（→`{}`），下拉切回「不启用」只改 `quickPanel.trigger`（→`none`），两者各自回到基线且互不覆盖；实测结束已把 `desktop-config.json` 还原到基线。BUG-0075 的「整快照写回把别的字段改回去」形态在快捷键页未复现。
 - **仍未闭合**：`projects` 没有能在同一 tick 触发的 UI 写入口（`window.vetta.project.*` 同被令牌拦截，添加项目走原生目录对话框），本轮只证明它在上述写入中未被波及；「默认模式」在本机仍无合法目标。证据快照：`0151-desktop-config-before.json`、`0151-desktop-config-after-concurrency.json`（artifactDir）。
+
+### 项目字段写入口枚举判定与验收闭合（2026-10-08，VERIFY-0017 组一续测十六）
+
+上一轮把 `projects` 记为「没有同 tick UI 写入口」。本轮不再找入口，改为枚举该字段**究竟有没有渲染端写者**，据此判定缺口是「未测」还是「不存在」。
+
+- **渲染端写者枚举**：`apps/desktop/src/renderer` 下 `config.set(` 共 17 处调用，传入的补丁键为 `workspacePath`(×2)、`shortcuts`(×2)、`quickPanel`、`proxy`、`notificationsEnabled`、`notificationPreferences`、`knowledgeBase`(×2)、`imageGeneration`、`experimental`(×3)、`defaultExecutionMode`、`debugMode`(×2)——**没有任何一处写 `projects` 或 `archivedProjects`**。渲染端对这两个字段只有读（`useProjects.ts:206`）。即：这两个字段在 `config.set` 这条面上没有写者，不存在可构造的并发写。
+- **真实写者都在事务队列内**：`projects`/`archivedProjects` 的唯一生产写路径是主进程 IPC（`vetta:projects:*`），落在 `ProjectService.commit` → `dependencies.updateConfig(update)`（`project-service.ts:86-92`，`create/open/rename/archive/unarchive/remove` 全部经它），以及 `batch-task-storage.ts:178-200,218-228` 的 `updateDesktopConfig((current) => …)`。两处都是**函数式读改写**，不是拿着旧快照整段写回——即缺陷形态（BUG-0075）在这条路径上无从发生。
+- **事务本身重读磁盘**：`updateDesktopConfig`（`desktop-config-store.ts:388-404`）把读、改、写串在**同一条进程内 promise 队列**上，且在事务内重新 `readRawConfigSync()` 取当前磁盘快照，落盘为 `{ ...readRawConfigSync(), ...next, sshHosts: undefined }`——补丁未提及的字段、以及本版本不认识的新字段都不会被抹掉（这正是 TASK-0151 交付的修复）。
+- **整快照入口在生产无调用者**：`writeDesktopConfig`（`:407`，注释自陈「Compatibility for whole-snapshot writes. Product read-modify-write flows use updateDesktopConfig」）与测试辅助 `overwriteDisk`，在 `apps/desktop/src` 全仓仅出现在 `desktop-config-store.test.ts`；生产代码没有一处绕过队列整文件写。
+- **结论**：`projects` 的残留不是「未验证的并发面」，而是「该面上没有写者」，且它的全部写者都跑在前面 UI 轮次已实测过的同一事务队列上。加上 2026-10-07 的 4 字段同 tick 并发两轮、2026-10-08 的快捷键页同 tick 双写与 2.8 ms 内 5 连发、重置路径只触自身字段、非参与字段（含 `projects` 与 `archivedProjects`）未被覆盖，**本 Task 的验收子条件已全部有客观观测**。按用户「全程自动」授权记为 `done`；用户如不认可以此代码级判定替代 UI 实测，按原 Task 回退 `verifying` 即可。
+- **「默认模式」补充**：其渲染端写者存在且可达（`useGeneralSettingsModel.ts:216-225`，切到 `full-access` 即 `config.set({ defaultExecutionMode })`；Windows 上被挡住的只是 `sandbox` 方向，`sandboxUnavailableReason` 早退），2026-10-07 轮已把它放进同一 tick 的 4 并发写中核对。
