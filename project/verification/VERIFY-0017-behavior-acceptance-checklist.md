@@ -395,3 +395,13 @@ depends_on: []
 | TASK-0042 | 实机峰谷差由**用户自行实测**（不由 Agent 触发真实系统电源事件，避免中断其桌面会话） | 仍 `verifying`。步骤与日志字段清单已写入 Task：锁屏/睡眠一次，回贴 `power working-set trim`（`reason/trimmed/beforeKb/afterKb/deltaKb`）与 `power event observed`（`workingSetKb`），日志落点 `<vettaHome>/desktop-app/logs/`。 |
 
 组一计数更新：**18 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、0151、0191、0039、**0190**、**0194**、**0181**），余 **1 条 verifying**（0042，待用户回贴实机读数）。另有 2 条组外项（TASK-0183、0184）仍受 ISSUE-0029 的 CI 预算阻塞，不计入组一。方法经验：「不可达分支」这类条目**不要由 Agent 单方面闭合**——把「配置性证据 vs 构造性证据」「用户可见面是否已实测」「该分支是否随包发布（能否删）」三件事一并摆给用户，用户才能在三十秒内给出稳定裁定；同样地，「需要真触发系统电源/会话中断」这类有副作用的实测，把它交给用户自行执行比 Agent 代跑更合适（本轮 0042 即如此，同时把可复现步骤与判定阈值写成用户可直接执行的清单，避免「交回去了但没法做」）。
+
+### 2026-10-08 · 组二开始（TASK-0163，模态过滤往返；闭合为 done）
+
+方法：延续组一的隔离 Debug profile `04987e4e`，同一个真实会话里做「含图片 → 切纯文本模型 → 切回图像模型」的完整往返。**Playwright 驱动不了 Electron 原生选图对话框**，故图片经真实投递路径进入：页内 canvas 画一张 64×64 PNG（正红底 + 白色「IMG」）→ `DataTransfer` + 合成 `dragover`/`drop` 派发到输入栏 contenteditable（由 `MessageInput.DropZone` 祖先处理），与用户拖拽同一条链。出站请求体的判读靠**给夹具 provider 补一段请求体摘要**（`<debug vettaHome>\fixtures\fault-mock\server.ts` 的 ndjson 日志新增 `bodySummary`：只记类型与计数，不记正文）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0163 | **done（闭合）** | 图像模型 `glm-5.3-flash`（`input: ['text','image']`）先读图 → 正常描述「鲜艳的正红色」（证明图片确实进入请求）。**0163 决定性取证到手**：切到纯文本 `Fault Mock 1`（`input: ['text']`）后同一会话再发一轮，回合正常完成，该请求体摘要为 `contentTypes = ['input_text','output_text']`、`imageParts = 0`、`imageDataUrls = 0`、`rawHasDataImage = false`、`rawHasInputImage = false` ⇒ **请求合法且完全不含图片**。同请求 `inputTypes` 仍含 `message` × 6 与成对的 `function_call`/`function_call_output` ⇒ 文字与工具关联未丢。同请求 `omissionNotices = 1`，即 `packages/ai/src/providers/transform-messages.ts:4` 的 `UNSUPPORTED_IMAGE_INPUT_NOTICE` 被追加了一条。**切回图像模型后图像仍在**：改回 `glm-5.3-flash` 追问「图里那行白色文字写的是什么？只回那串字符」，答 **IMG**——正是第一轮投递图片里画的那串字符，跨越一次纯文本模型切换。0163 的三条子句全部在真实应用里成立。工具结果图片分支本轮未在 UI 构造（需工具返回图片），由单测覆盖：`packages/ai` 全量 63 文件 / 515 例绿（含 `openai-completions-tool-result-image*`）。截图：`0163-attach-probe.png`、`0163-model-picker.png`、`0163-image-model-turn.png`、`0163-text-model-turn.png`、`0163-switch-back-turn.png`。用户如不认可以「出站请求体摘要 + 判别性回答」作为行为面证据（或要求工具结果图片分支也上 UI），按原 Task 回退 `verifying`。 |
+
+组二计数更新：**1 条闭合**（0163），余 **16 条**（0149、0153、0154、0155、0156、0157、0158、0159、0160、0161、0162、0165、0166、0167、0168、0169）。方法经验：① 判「请求里到底有没有图」，**只读客户端源码不够**——这次靠的是夹具 provider 侧的**出站请求体摘要**，属于外部可观测事实，比「代码里写了 filter」强一档；② 摘要只记类型/计数不记正文，既拿到判别力又不把会话内容落到磁盘；③ 测「切回后图片还在」要设计**只有真看到图才答得出的问题**（本例让模型回读图上的字），否则模型凭上下文猜一句也能「看起来通过」。

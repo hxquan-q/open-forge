@@ -69,7 +69,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0172` | `done` | PLAN-0014 | 集成后审查：新建 0173～0178 六项、细化 0168/0169、登记三个隔离复现 Bug；只完成规划。 |
 | `TASK-0171` | `done` | PLAN-0014 | 主树全部已有改动与七个 Task 分支已提交/集成并推送 origin/dev；最终 41 包、483 质量测试与完整 check 通过，原 Worktree 保留。 |
 | `TASK-0170` | `done` | PLAN-0014 | 来源 769f31bc3 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
-| `TASK-0163` | `verifying` | PLAN-0014 | 来源 3dda219e9 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
+| `TASK-0163` | `done` | PLAN-0014 | 模态过滤往返已在真实应用实测（纯文本模型一轮出站请求零图片 + 一条省略提示，切回图像模型答出图上的字）；工具结果图片分支由 `packages/ai` 单测覆盖。 |
 | `TASK-0162` | `verifying` | PLAN-0014 | 来源 6cb373dde 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0150` | `done` | PLAN-0014 | 来源 222de8813 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0149` | `verifying` | PLAN-0014 | 来源 7a2a5ce50 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
