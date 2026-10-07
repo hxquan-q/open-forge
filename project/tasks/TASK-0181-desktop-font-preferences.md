@@ -172,3 +172,18 @@ bun run test:impact -- $files
 - 主题切换与重置（10-08，隔离 Debug profile `04987e4e`，同一 origin 内，全部经真实 UI）：切配色（默认 → 珊瑚，`data-theme` mono → sand）与切明暗（深色 → 浅色，`colorScheme` dark → light）之后，`--font-sans`、body font、偏好键三者均不变；界面字体下拉选回「默认」后键为 `{"ui":"","code":""}`、`--font-sans` 回到默认栈。→「切明暗/配色 → 偏好保留」与「重置恢复当前主题默认栈」成立。实测后已把该 profile 主题复位为 dark/mono。
 - 仍未观测：GWT 第 2 条「活动终端字形/尺寸响应，实例、PTY 与已有输出保留」——xterm 画在 canvas，无测量元素，harness 下读不到字形变化，`TerminalSurface` 接线目前只有源码级证据；GWT 第 4/5 条（枚举失败/偏好损坏的反馈、连续请求与隐藏后重新 fit）只有工程测试（30 项定向用例）覆盖，无真实 UI 观察。
 - 因此保持 `verifying`：请用户在**打包形态**下复核第 1～3 条观感与终端字形，并确认第 4/5 条的失败反馈与重新 fit 行为。证据留存 `<artifactDir>\0181-pinned-origin-restart.txt`、`0181-theme-switch-and-reset-2026-10-08.txt`、`0181-appearance-fonts-list.png`。
+
+### 终端字形响应实测（2026-10-08，VERIFY-0017 组一，保持 verifying）
+
+上一节把 GWT 第 2 条记为「xterm 画在 canvas，读不到字形」，本节换用**几何量**把它测出来（隔离 Debug profile，底部面板终端）：
+
+- 该 xterm 构建是 canvas 渲染：DOM 里没有 `.xterm-rows`（取不到文本），但 `.xterm-screen` 及其 `canvas` 的像素尺寸 = 列数 × 单元格宽度，会随字体度量变化，可作客观读数。
+- 读数三态（同一终端位置、同一容器宽度）：
+  - 代码字体默认 → `screen 1044×210`、`canvas 1044×210`；
+  - 经设置页把代码字体设为 **Courier New**（`--font-mono` 变为 `"Courier New", "SF Mono", "Fira Code", monospace`）→ `screen 1043×208`、`canvas 1043×208`；
+  - 再选回「默认」→ **回到 1044×210**，与基线逐像素一致。
+  双向可复现，说明差异由字体度量驱动，不是随机抖动；即「修改代码字体 → 终端字形/尺寸响应」成立。
+- 等宽候选确实按实测字宽筛选：代码字体下拉只有 **21 项**（Cascadia Code / Cascadia Mono / Consolas / Courier New / Lucida Console / Maple Mono Normal NF CN …），而界面字体下拉是全部 **93 项**本机字体。
+- **未观测到的一条**：GWT 第 2 条后半「实例、PTY 和已有输出保留」在真实 UI 走不到——代码字体只能在设置页改，而进设置路由会**卸载**底部面板终端（`document.querySelectorAll('.xterm').length` 由 1 → 0，返回后是**新节点**：实测前打的 `data-of-probe` 标记在返回后为 `null`）。也就是说当前应用形态下不存在「终端挂着的同时改字体」的入口，热更新只能在宿主测试里观察：`TerminalSurface.host.test.tsx:167`「changing the code font refits the existing PTY without losing output」断言 `options.fontFamily` 更新、`ipc.resize` 次数增加、终端数组长度仍为 1（未重建）、`writes` 不变（输出保留）、`ipc.open` 只调用一次且 `ipc.close` 未调用。
+- 因此第 2 条目前是「字形/尺寸响应＝UI 实测通过；实例/PTY/输出保留＝宿主测试通过、UI 不可达」。若用户要求 UI 级证据，需要产品侧提供「终端可见时改字体」的入口（例如设置浮层或主题快捷切换），这属于设计问题而非本 Task 的实现缺陷。
+- 证据留存：`0181-terminal-before-el.png`（默认字体）、`0181-terminal-after-code-font.png`（Courier New）、`0181-terminal-after-reset-code-font.png`（复位后）。实测后该 profile 的字体偏好已复位为 `{"ui":"","code":""}`。

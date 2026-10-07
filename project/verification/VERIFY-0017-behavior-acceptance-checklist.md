@@ -273,3 +273,13 @@ depends_on: []
 | TASK-0191 | **verifying（判定补证，不改变计数）** | 解释②成立且被单测钉住，①不再是必要解释：`useMessageFeedScrollModel.ts:117` 的失效条件是 `resetKey !== 当前值`，所以切换会话**确实**重算并调用 `readCachedFeedState`（`:120`，命中要求 `itemCount` 与 `itemIdentity` 全等，`:28-36`、`:60-65`）；但结果只喂给 Virtuoso 的 `restoreStateFrom` / `initialTopMostItemIndex`（`:127`、`:488`），二者是**初始化输入**，不重挂载不生效。同一测试文件两条断言把语义分开钉死：`:415`（`resetKey` 变化后初始索引为 `{index:"LAST",align:"end"}` 且不 `scrollToIndex`）＝切换回尾部；`:466`（标题即 “for a later remount”）＝缓存只在重挂载时采用。本 Task 切片只改**写入**侧：`captureState`（`:178`）在跟随中删除缓存项（`:184-185`）。结论：「离开再进入=恢复用户位置、切换会话=回到尾部」是当前实现的声明语义，不是本 Task 的回归。**未闭合（待裁定）**：`主动翻历史 → 切到别的会话 → 再切回来` 是否算 GWT 的「再回来」——若算则应恢复，属新缺陷跟进；若不算，本 Task 两条子句（自动跟随不记忆中途位置、主动浏览返回仍恢复）均已观察到，可闭合。 |
 
 组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。本轮方法经验：实测留下的「两种解释未区分」多数可以靠**既有单测的断言标题与初始化输入语义**直接判掉，比再造一次 UI 实验便宜得多。
+
+### 2026-10-08 · 组一续测十二（TASK-0181 终端字形，几何量读数）
+
+方法：上一轮把 GWT 第 2 条记为「xterm 画在 canvas，读不到字形」。本轮改测**几何量**——该 xterm 构建是 canvas 渲染（无 `.xterm-rows`），但 `.xterm-screen` 与其中 `canvas` 的像素尺寸等于「列数 × 单元格宽度」，字体度量一变读数就变。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0181 | **verifying（补证，不改变计数）** | 同一终端位置、同一容器宽度下三态读数：默认 → `screen/canvas 1044×210`；经设置页把代码字体设为 Courier New（`--font-mono="Courier New","SF Mono","Fira Code",monospace`）→ `1043×208`；再选回「默认」→ **逐像素回到 1044×210**。双向可复现 ⇒「修改代码字体 → 终端字形/尺寸响应」成立。附带核实等宽筛选：代码字体下拉 **21 项**（全是等宽：Cascadia Code/Mono、Consolas、Courier New、Lucida Console、Maple Mono…），界面字体下拉 93 项（全部本机字体）。**未观测**：同条后半「实例、PTY 和已有输出保留」在真实 UI 不可达——代码字体只能在设置页改，而进设置路由会卸载底部面板终端（`.xterm` 计数 1 → 0，返回后为**新节点**，实测前打的标记属性变回 `null`），即当前应用形态没有「终端挂着时改字体」的入口；该子句由宿主测试覆盖：`TerminalSurface.host.test.tsx:167` 断言字体更新、`ipc.resize` 增加、终端数组长度仍为 1、`writes` 不变、`ipc.open` 一次且 `ipc.close` 未调用。若要 UI 级证据，需产品侧提供终端可见时的改字体入口（设计问题，非本 Task 缺陷）。证据：`0181-terminal-before-el.png`、`0181-terminal-after-code-font.png`、`0181-terminal-after-reset-code-font.png`。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：canvas 渲染的组件（xterm 等）虽然读不到文本，但 `canvas.width/height` 与容器像素尺寸是可靠的**字体/尺寸响应**读数，配合「改了再改回去」的双向对照即可排除随机抖动。
