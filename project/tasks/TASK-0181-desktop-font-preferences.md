@@ -1,7 +1,7 @@
 ---
 id: TASK-0181
 type: task
-status: verifying
+status: done
 priority: P2
 owner: frontend-apps
 requirement: REQ-0009
@@ -231,3 +231,12 @@ bun run test:impact -- $files
 **方法与证据留存**：新 origin 会重放设置向导与产品引导，注入 `vetta-setup-wizard-completed`/`vetta.tour.sidebar.completed`/`vetta.tour.capabilities.completed` 后 reload 可直接进设置；侧边栏折叠按钮的可访问名随状态在 `title`「隐藏侧边栏 / 展开侧边栏」间切换（无 `aria-label`），locator 须按状态取。截图：`0181-fonts-loaded-2026-10-08.png`、`0181-fonts-load-failed.png`、`0181-fonts-missing-notice.png`、`0181-fonts-save-failed.png`、`0181-fonts-unavailable.png`（artifactDir）。实测后该 profile 字体偏好已复位为 `{"ui":"","code":""}`。
 
 **仍待用户判定**：① 打包形态下的字体观感与终端字形（本轮为几何量，非观感）；② 是否接受「PTY 尺寸同步」以宿主测试为准（`contextBridge` 冻结使实时读数不可得）。因此维持 `verifying`。
+
+### 用户裁定（2026-10-08）：接受宿主测试为准，闭合为 `done`
+
+用户在 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 组一收口轮裁定：
+
+- **② PTY 尺寸同步**：**接受**以宿主测试为准。该 IPC 经 `contextBridge` 暴露且对象冻结，活实例内无法观测调用（替换 `window.vetta.terminal.resize` 不生效、`__resizes` 恒空），故以 `apps/desktop/src/renderer/domains/bottom-panel/terminal/TerminalSurface.host.test.tsx:167` 为准；本 Task 在真实 UI 侧已证明其**等价读数**——fit 后的渲染尺寸（`.xterm-screen` 像素尺寸 = 列数 × 单元宽）确实跟随容器宽度变化（`1044×210` ↔ `1266×210`，隐藏期间改输入后展开仍正确跟随）。
+- **① 打包形态观感**：接受本轮证据（真实 UI 逐子句实测 + 枚举/无效/缺失/损坏/写失败五态反馈 + 并发与订阅释放），**打包形态的字体观感与终端字形留作发布前抽检**，不再作为本项的验收阻塞条件。
+- 状态：`verifying` → `done`。`integration_status: integrated` 不变（已合入本地 main，`75c5ae2df`）；发布前抽检若发现观感问题，按新现象另立反馈/Task，不回退本项。
+- 遗留（不阻塞、已记录）：dev 形态每次重启换 origin ⇒ origin 级 localStorage（字体偏好、向导/引导完成位）整体失效并重放首启流程，属 dev 形态特性；打包/安装态 origin 稳定，不受影响。另「挂载时不 apply、只 setPreferences」的状态/CSS 语义差异在当前单写者形态下用户不可达，不作缺陷。

@@ -11,7 +11,7 @@ related_issues: [ISSUE-0029]
 related_bugs: []
 source: user-request（「验收方式」决策：分层）
 created: 2026-10-06
-updated: 2026-10-06
+updated: 2026-10-08
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -382,3 +382,16 @@ depends_on: []
 | TASK-0190 | **verifying（补证，不改变计数）** | 结论由「没人置真」（配置性）升级为「携带它的对象在生产装配里不会被建出来」（构造性）。① 唯一构造点：`AgentLoopConfig`（含可选 `contextCheckpoints`，`packages/agent/src/types.ts:143`）在生产源码里只有 `packages/agent/src/agent.ts:462-495` 一处字面量，逐字段显式列出（`model`/`reasoning`/`sessionId`/`transport`/`thinkingBudgets`/`maxRetryDelayMs`/`limits`/`tracer`/`tracing{…}`/`convertToLlm`/`transformContext`/`getApiKey`/`getSteeringMessages`/`getContinuationMessages`/`getTools`/`getSystemPrompt`/`salvageTextToolCalls`），既无该键也**不展开任何调用方对象**，故用户侧 JSON 等可编辑输入无处注入。② 三个读取点（`agent-loop.ts:233`/`:287`、`loop/assistant-stream.ts:59`）只经 `agentLoop`/`agentLoopContinue`，二者唯一调用者即 `agent.ts:502-503`；承载它们的 `Agent` 类在生产源码中**零实例化**（全仓 `new Agent(` 仅 `packages/agent/src/proxy.ts:75` 的 `@example` 文档块与 `packages/ai/src/utils/proxy-dispatcher.ts:45` 的 undici `Agent`）。③ 生产回合走另一条引擎：runtime-core `StatelessAgentCoreTurnEngine`（`packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts:60`，`AgentCoreTurnEngine` 为其空子类）→ `runAgentTurn(AgentTurnRequest)`（`packages/agent/src/engine/run-agent-turn.ts:39`），该路径不构造 `AgentLoopConfig`；其 checkpoint 是**宿主回调**（`run-agent-turn.ts:342` `if (!request.checkpoint) return undefined`；`engine/types.ts:172` `checkpoint?: AgentCheckpointHandler`、`types.ts:22` `limits.checkpointTimeoutMs`），与标志无关。④ 该引擎唯一展开调用方选项包处 `...this.options.streamOptions`（`stateless-agent-core-turn-engine.ts:223`）只把结果交给 provider 流函数，不进任何 loop config。仍未闭合：**用户裁定项不变**——是否接受「生产不可达的防御分支由单测覆盖（`running-changed-reason.test.ts` 真实事件序列，旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）」作为验收口径。补记事实：该分支**不是可删死代码**，`Agent` 类与 loop 经 `packages/agent/src/index.ts` 导出，是库消费者/节点扩展（`node-extension-factory-loader.ts` 命名空间整体注入）的 API 面，外部置真即会走到；本仓生产接线不走，故不影响本次验收的用户可见面。 |
 
 组一计数不变：**15 条闭合**，余 **4 条 verifying**（0190、0194、0181、0042）。方法经验：判「某分支不可达」时，「全仓无人设这个开关」只是配置性证据；真正的构造性证据是**那个对象在不在生产装配里被建出来**。三轮问法：谁会构造它（唯一构造点是否为显式字面量）→ 构造时展不展开调用方输入（有没有 `...options` 之类注入面）→ 生产实际走的是不是这条链（本例生产走的是另一条引擎且承载类零实例化）。这样结论才从「碰巧没开」升级为「开不了」。
+
+### 2026-10-08 · 组一收口裁定（TASK-0190、0194、0181 闭合为 done；0042 转用户自行实机）
+
+方法：Agent 把四条剩余项各自的可裁定问题连同证据一并提交用户，由用户逐项裁定（验收结论归用户）。
+
+| Task | 用户裁定 | 落地结果 |
+|---|---|---|
+| TASK-0190 | **接受**「生产不可达的防御分支由单测覆盖」作为验收口径 | 闭合 `done`。依据：用户可见面已实测（恢复回合不残留错误横幅、最终失败保留正确原因与中断通知）；分支由 `running-changed-reason.test.ts` 真实事件序列覆盖；不可达有构造性证据。遗留：该分支随包发布、**不得按死代码删除**，若未来出现 `Agent` 类生产装配须重跑事件序列。 |
+| TASK-0194 | 重复用户气泡（乐观 id 未被规范历史吸收、刷新即消失、2/2 复现）**归 BUG-0068 作残余变体**；GWT ① 改写为「两轮派发亦可接受」 | 闭合 `done`；BUG-0068 已追加裁定段并登记 `related_tasks: TASK-0194`，其状态维持 `verifying`（残余变体尚无修复提交，回归夹具为本轮的正常操作路径）。 |
+| TASK-0181 | **接受** PTY 尺寸同步以宿主测试为准（`TerminalSurface.host.test.tsx:167`）；打包形态字体观感与终端字形**留发布前抽检** | 闭合 `done`。等价读数已在真实 UI 成立：fit 后渲染尺寸跟随容器（`1044×210` ↔ `1266×210`，隐藏期改输入后展开仍正确）。 |
+| TASK-0042 | 实机峰谷差由**用户自行实测**（不由 Agent 触发真实系统电源事件，避免中断其桌面会话） | 仍 `verifying`。步骤与日志字段清单已写入 Task：锁屏/睡眠一次，回贴 `power working-set trim`（`reason/trimmed/beforeKb/afterKb/deltaKb`）与 `power event observed`（`workingSetKb`），日志落点 `<vettaHome>/desktop-app/logs/`。 |
+
+组一计数更新：**18 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、0151、0191、0039、**0190**、**0194**、**0181**），余 **1 条 verifying**（0042，待用户回贴实机读数）。另有 2 条组外项（TASK-0183、0184）仍受 ISSUE-0029 的 CI 预算阻塞，不计入组一。方法经验：「不可达分支」这类条目**不要由 Agent 单方面闭合**——把「配置性证据 vs 构造性证据」「用户可见面是否已实测」「该分支是否随包发布（能否删）」三件事一并摆给用户，用户才能在三十秒内给出稳定裁定；同样地，「需要真触发系统电源/会话中断」这类有副作用的实测，把它交给用户自行执行比 Agent 代跑更合适（本轮 0042 即如此，同时把可复现步骤与判定阈值写成用户可直接执行的清单，避免「交回去了但没法做」）。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0190
 type: task
-status: verifying
+status: done
 priority: P1
 owner: runtime-core
 source: user-request; RESEARCH-0022; upstream 94d7e1381
@@ -111,3 +111,11 @@ updated: 2026-10-08
 - 生产引擎里唯一展开调用方选项包的地方是 `stateless-agent-core-turn-engine.ts:222-229` 的 `...this.options.streamOptions`；它组装出的 `effectiveStreamOptions` 只投向 **provider 流函数**（`streamFn(model, context, {…effectiveStreamOptions, apiKey})`），不进任何 loop config——即便有人往里塞多余键，也落在一个该标志从不被读取的对象上。
 
 结论升级：该分支在本仓生产接线里**不可达是构造性的**（能携带它的对象根本不会被建出来），而非「碰巧没人开」。仍保持 `verifying`：是否接受「生产不可达的防御分支由单测覆盖（`running-changed-reason.test.ts` 的真实事件序列）」作为验收口径，归用户裁定。同时如实说明它**不是可删的死代码**——`Agent` 类与这条 loop 是随包发布的库 API，库消费者或节点扩展自行构造 `Agent` 并置真时会走到该分支（本仓生产接线不走，故不影响本次验收的用户可见面）。
+
+### 用户裁定（2026-10-08）：接受该口径，闭合为 `done`
+
+用户在 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 组一收口轮裁定：**接受**「生产不可达的防御分支由单测覆盖」作为本项验收口径。
+
+- 验收依据：① 用户可见面已实测——重试后恢复的回合以普通助手消息渲染、不残留错误横幅，最终失败的回合保留正确原因与中断通知（2026-10-07 故障夹具三组注入）；② 该防御分支由 `packages/runtime-core/test/runtime-host/running-changed-reason.test.ts` 的真实事件序列覆盖（旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）；③ 分支不可达已给出**构造性**证据（`AgentLoopConfig` 唯一构造点 `packages/agent/src/agent.ts:462-495` 为显式字面量、无注入面；承载类 `Agent` 生产源码零实例化；生产引擎走 `runAgentTurn` 且其 checkpoint 为宿主回调）。
+- 遗留说明（不阻塞验收、不另立 Task）：该分支随包发布，库消费者置真时会走到，故**不得按死代码删除**；若未来本仓出现 `Agent` 类的生产装配，须按本 Task 的 GWT 重跑事件序列回归。
+- 状态：`verifying` → `done`。集成 `pending` 不变，稳定发布未授权；工程合同面/CI 层面的复跑仍归 TASK-0187 批次。
