@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0187]
 integration_status: pending
 created: 2026-10-03
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -87,3 +87,14 @@ updated: 2026-10-07
 未闭合原因：GWT 的「同一回合先收到真实 error、随后 assistant done 成功」在本机没能构造出来——runtime 的重试在会话记录里是**另起回合**（观察 2），而 relay 的 `terminalReason` 缓冲在 `agent_start` 处重置（`runtime-host-session-event-relay.ts:113-121`），要命中 `buffer.terminalReason = "error"` → 后续 assistant `done` 清错这一分支，需要在**同一 agent_start…agent_end 跨度内**先出现 error 事件、之后仍产出 assistant done（例如多步工具回合中某步报错而循环继续），这类前置需注入内核事件，UI 侧无法稳定构造。relay 分支本身由 `running-changed-reason.test.ts` 的真实事件序列 fixture 覆盖（交付记录：旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）。故本条保持 `verifying` 交用户裁定。
 
 夹具复用提示：该 provider 与 `failcount`/`partial` 控制面可复用于任何需要「可控 provider 故障」的条目（实例 profile 已注册，重启不丢）。
+
+### 恢复分支可达性判定（2026-10-08，VERIFY-0017 组一续测十五，保持 verifying）
+
+上一轮把「同一回合先收到真实 error、随后 assistant done 成功」记为「需注入内核事件，UI 侧无法稳定构造」。本轮改为从实现判定该形状在生产路径上**是否可达**（只读代码，不改实现）：
+
+- relay 的清错分支只有一处：`runtime-host-session-event-relay.ts:149-152`——assistant 通道的 `error` 事件置 `terminalReason = "error"`，随后的 assistant `done`（`stopReason !== "aborted"`）把它清回 `undefined`；`agent_end` 用 `buffer.terminalReason ?? "agent_end"` 上报（`:132-137`）。所以只有「同一 `agent_start…agent_end` 跨度内先 error 后 done」才需要这条分支。
+- 该形状的唯一生产构造点在 `packages/agent/src/agent-loop.ts:231-247`：assistant `stopReason === "error"` 时先发 `turn_end`，**仅当 `config.contextCheckpoints` 为真且 checkpoint 恢复返回 `retry`** 才 `continue` 续跑，之后才可能产出正常 `done`。
+- `contextCheckpoints` 在整仓（排除 `dist/`）只有四处引用：`packages/agent/src/types.ts` 的类型声明、`agent-loop.ts` 的两处消费、以及 `packages/agent/test/agent-loop-limits.test.ts`/`agent-loop-continue.test.ts` 的测试；**没有任何生产装配把它置真**。默认关闭也在变更记录与设计文档中写明（`packages/agent/CHANGELOG.md:40`、`docs/agent/coding-agent/05-greenfield-rewrite/08-implementation-log/70-model-call-compaction-orchestrator.md:64`）。
+- 非 assistant 通道的 error（relay `:124`）确有生产来源——`runtime-host-session-operations.ts:123/178` 的合成 agent 通道错误、`composed-runtime-factory.ts:231` 的取消超期——但其生产者都紧跟 `agent_end` 或直接抛错结束回合，不会在之后产出 `done`，因此同样不构成该形状。
+- **结论**：GWT 期望的形状在当前生产装配下不可达，该分支是防御性代码，由 `packages/runtime-core/test/runtime-host/running-changed-reason.test.ts` 的真实事件序列覆盖（交付记录：旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）。用户可见面的价值已由上一轮实测覆盖：重试后恢复的回合以普通助手消息渲染、不残留错误横幅；最终失败的回合保留正确原因与中断通知。
+- 本项保持 `verifying`：是否接受「不可达的防御分支由单测覆盖」作为验收口径，交用户裁定。
