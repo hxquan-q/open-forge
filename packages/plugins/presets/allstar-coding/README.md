@@ -6,6 +6,12 @@ AllstarCoding 全流程软件工程流水线预置插件：主控 `@allstar` + �
 逐任务开发/评审循环 → 白盒体检 → 黑盒 → 部署 → 收尾）驱动目标项目的全生命周期交付；
 `docs/ac/state.md` JSON 状态机支持中断恢复，每环节收口走 ac-gate 产物硬校验。
 
+v0.5（环节级存档制）：T 级存档制升级为环节级存档制——state.md 每个（子）环节 done 即打档：
+T 档（`T<n>: <摘要>`，评审 pass 触发）+ stage 档（`stage <seq>/<环节名>: <摘要>`，其余环节收口触发），
+git 历史与 state.md 账本一一映射（V6 终局对账逐档对位），档内含 state.md 最新版本且逐档过 V4 写域校验。
+修复了文档产物（requires/design/tasks 等）不入档导致 V3 评审前快照误报越权的缝隙，
+白盒/黑盒轮修复改动也有了显式归档点。
+
 v0.4（权限与校验体系）：任务契约 schema v2（scope glob / prohibitions / help_protocol）、
 角色权限矩阵 v1（三档分级、写域互不重叠、T3 应急申请制）、reviews.md 追加制评审记录、
 T 级存档制、越权处置 SOP 六步、V1-V6 硬校验节点（双证据链：git 轨迹 + 文件 mtime）。
@@ -17,7 +23,7 @@ v0.2（ac-fence 事中拦截层）：插件 activate 注册 `PreToolUse` + `Suba
 越权即 block（reason 带 help_protocol 指引），拦截记录落目标项目 `docs/ac/fence-log.jsonl`
 （预期写入，ac-audit 双链已排除）。判定器为纯函数（`src/fence/judge.ts`，不 import
 plugin-sdk）；glob 语义与 ac-audit 共用 `scripts/scope-glob.mjs` 权威实现（事中拦截与
-事后审计对同一 path 同一判定）。git 写操作收口：主会话直跑即拦；T 级存档走轻量 git 子代理
+事后审计对同一 path 同一判定）。git 写操作收口：主会话直跑即拦；环节级存档（T 档/stage 档）走轻量 git 子代理
 （task_name `git_` 前缀 + 契约 `allow_git_write: true`，豁免只授 `git_` 前缀，偷带即拒）。
 需要权限：`agent.hooks.register` + `agent.hookHandler.execute`（缺失时 registerHook 是
 warn+noop 静默失效——desktop 日志查 `[ac-fence] hooks registered`）。

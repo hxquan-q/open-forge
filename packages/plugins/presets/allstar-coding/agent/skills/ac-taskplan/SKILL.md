@@ -62,7 +62,8 @@ description: AllstarCoding 流水环节 6-7（任务清单产出与可选确认�
 1. 落盘 `docs/ac/tasks.md`（头部状态标记 + 修订记录）。
 2. 主控把每个 T 建为 todo（T 间依赖在内容注明），进环节 8 逐个推进。
 3. state.md 更新：环节 6/7 done → currentStep 8；开发循环建为父环节、各 T 为 subSteps（每个 T 一个 step 对象，executor: developer，agentRef 留待 spawn 后回填）。
-4. **开工顺序**：按依赖拓扑序起开发子；并行组可一次起齐（各自 durable id 记 state.md）。
+4. 环节 6/7 收口（ac-gate 校验）→ 打 stage 档（`stage 7/任务清单: tasks.md 定稿`，经轻量 git 子代理 + V4，§0.5）。
+5. **开工顺序**：按依赖拓扑序起开发子；并行组可一次起齐（各自 durable id 记 state.md）。
 
 ## 边界提醒
 

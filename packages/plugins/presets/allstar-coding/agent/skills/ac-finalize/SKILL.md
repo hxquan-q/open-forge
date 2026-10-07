@@ -32,7 +32,7 @@ description: AllstarCoding 流水环节 13 使用。当部署完成、需要清�
 
 主控（或收尾子在主控授权下）执行全流水 git 轨迹总对账：
 
-1. `git log --oneline <流水分支起点>..HEAD` 逐提交核对：每个 commit 落在某 T 写域内（或为环节收口/T 级存档提交），**无游离提交**。
+1. `git log --oneline <流水分支起点>..HEAD` 逐提交核对：每个 commit 对位一个 done 的（子）环节——T 档（`T<n>:`）、stage 档（`stage <seq>/<name>:`）或部署/收尾提交，**无游离提交**。
 2. state.md 全部 artifacts 路径存在（ac-gate G1 全量重放）。
 3. 游离提交/缺失产物 → 收尾报告列出，**用户门裁决**（不自动处置）。
 4. 对账结论写进收尾提交信息与交付总结。

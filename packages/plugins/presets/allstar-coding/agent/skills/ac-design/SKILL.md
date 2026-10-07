@@ -95,6 +95,6 @@ description: AllstarCoding 流水环节 4-5（架构评估与开发文档）使�
 
 ## 交接
 
-- design.md 定稿后进环节 6（ac-taskplan）；改动面清单与分阶段建议是任务清单的直接输入。
+- design.md 定稿（门开启时批准 / 跳过时按默认）→ 环节 4/5 收口（ac-gate 校验）→ 打 stage 档（`stage 5/开发文档: design.md 定稿`，经轻量 git 子代理 + V4，§0.5）→ 进环节 6（ac-taskplan）；改动面清单与分阶段建议是任务清单的直接输入。
 - state.md 更新（环节 4/5 完成 → currentStep 6）。
 - **给任务清单的硬约束**：design.md 里每个"必须同步修改"的关联点，任务清单必须显式包含对应任务，不许靠开发子自觉。
