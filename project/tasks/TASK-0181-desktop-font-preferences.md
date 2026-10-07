@@ -195,3 +195,39 @@ bun run test:impact -- $files
 - 重启前该 profile 的 localStorage 含 `openforge-font-preferences`、`vetta-setup-wizard-completed=1`、`vetta.tour.sidebar.completed=1`；重启后只剩 **4 个运行时键**（`vetta-ui-theme`、`vetta-session-execution-mode`、`vetta-workspace-path`、`vetta-selected-model`），上述三个键均为 `null`。
 - 可见后果两条：① 「语言与外观」整屏向导**重放**（`div.fixed.inset-0.z-[100]`，含「跳过」「下一步」）；② 跳过向导后**产品引导 tour 重放**（`svg.driver-overlay` + `.driver-popover`），走完引导才写回 `vetta.tour.sidebar.completed=1`。两者都按 localStorage 判定（`shared/setup-wizard/storage.ts` 的 `isSetupWizardCompleted`、`shared/tour/storage.ts` 的 `isTourCompleted`）。
 - 结论：该丢失不是字体偏好专有，而是 dev 形态下**整个 origin 级 localStorage 一起失效**（安装态 origin 稳定时不会发生）。归因与「需按打包形态复核」的要求不变，本段只补症状证据：`0181-setup-wizard-replay-after-restart.png`、`0181-sidebar-tour-replay-after-restart.png`（artifactDir）。实测后已在实例内走完向导与引导，两个标记均已写回。
+
+### GWT 第 4/5 条实测（2026-10-08，VERIFY-0017 组一续测二十，保持 verifying）
+
+上一节把 GWT 第 4 条（失败反馈）与第 5 条（连续请求、释放订阅、隐藏后重新 fit）记为「只有工程测试覆盖、无真实 UI 观察」。本节在隔离 Debug profile `04987e4e` 上把这些子句逐条在真实 UI 里做掉，闭合该缺口；第 2 条后半（实例/PTY/输出保留）的 UI 不可达结论不变。
+
+**GWT 第 4 条：枚举失败/不支持、字体缺失、偏好损坏或写入失败 → 明确反馈且能重试/恢复，不阻塞外观页**
+
+| 子场景 | 构造 | 实测读数 |
+|---|---|---|
+| 枚举失败（API 拒绝） | `window.queryLocalFonts = () => Promise.reject(new DOMException("denied","NotAllowedError"))` | 点「读取本机字体」→ `[role=alert]`＝「无法读取本机字体。如出现权限提示，请允许访问后重试；已有选择未改变。」；按钮回到可用（可重试）；已加载列表与两个选择器仍在（外观页照常可用）；还原真实 API 后重试 → 提示消失 |
+| 枚举不支持 | `Object.defineProperty(window,"queryLocalFonts",{value:undefined})`（`supportsLocalFonts()` 为假） | 提示＝「当前环境不支持读取本机字体，已有选择与默认字体仍可使用。」；两个选择器 + 两个「恢复默认」按钮均在 → 页面可用 |
+| 字体缺失 | 键写 `{"ui":"NoSuchFontZZZ","code":""}` 后重载 | 下拉显示该名（`loaded` 前即显示）；`--font-sans`＝`"NoSuchFontZZZ", -apple-system, …`（按回退栈渲染）；读取后出现「可用列表中未找到此字体，将按需使用默认字体回退…」；「恢复默认界面字体」可点 → 键回 `{"ui":"","code":""}`、`--font-sans` 回默认栈、提示消失 |
+| 偏好损坏 | 键写 `{oops-not-json` 后重载 | 应用正常启动（未崩、无错误 UI）；`--font-sans`＝默认栈；两选择器均「默认」；随后选 Arial → 键被改写为合法 `{"ui":"Arial","code":""}`、`--font-sans` 变 `"Arial", -apple-system, …`。注：损坏值本身不在启动时改写（`getStoredFontPreferences` 只读不写），恢复发生在下一次保存，与实现一致 |
+| 写入失败 | `Storage.prototype.setItem` 抛错（配额/私密模式形态） | 选择字体 → 提示「无法保存字体设置，已保留原来的选择，请重试。」；存储键、`--font-sans`、选择器显示三者**均未变**（不伪称保存成功）；还原后重试 → 成功写入，`--font-sans` 跟随 |
+
+附属读数：本轮真实枚举为 **93 项界面候选 / 21 项代码候选**（等宽按实测字宽筛选），与上一轮在不同 origin 上的读数一致。
+
+**GWT 第 5 条：卸载或连续请求 → 不应用过期结果，释放订阅；终端隐藏期间变更能在恢复可见后重新 fit**
+
+| 子句 | 构造 | 实测读数 |
+|---|---|---|
+| 连续请求 | 计数桩（2.5s 后兑现）；对**真实按钮**同 tick 连点两次（React 尚未禁用） | `queryLocalFonts` 调用次数＝**1**；加载中 `[role=status]`＝「正在读取本机字体…」、按钮 `disabled=true`；禁用后再点仍为 1；桩载荷正常落地（选项＝默认 + AAA Stub Sans + BBB Stub Mono） |
+| 卸载中放弃请求 / 不应用过期结果 | 可控桩（挂起 promise，保留 resolver）；请求在飞 → 切「通用设置」（外观段卸载，字体按钮数 → 0）→ 回「外观」 | 回页后无 `[role=alert]`、无搜索框（未应用任何列表）、页面无 `ZZSTALE` 文本；随后解决被放弃的请求（`res[0]([{family:"ZZSTALE"}])`）→ 仍无提示、无 `unhandledrejection`/`error`；回页后新请求（`calls=2`）以 `FRESH-OK` 正常落地 |
+| 释放订阅（判别性） | 挂载中 `dispatchEvent(new StorageEvent("storage",{key:"openforge-font-preferences",…}))`；**卸载后**同一事件再发一次 | 挂载中：`--font-sans` 变 `"Courier New", -apple-system, …`、选择器变「Courier New」（订阅有效）；卸载后（`#/settings/general`）：同事件下 `--font-sans` **不变**（无泄漏监听），且存储键确为 `{"ui":"Courier New",…}`、回页后选择器显示「Courier New」→ 不是「事件没生效」而是「监听已摘除」 |
+| 终端隐藏期间变更 → 恢复可见后重新 fit | 底部面板终端（canvas 渲染：`.xterm-screen` 像素尺寸＝列数×单元宽）；收起面板 → 容器链宽高全 0（不可测量，fit 被跳过）→ **隐藏期间**切侧边栏改变宽度 → 展开面板 | 基线 `1044×210`；收起后 `.xterm` **仍为 1**（仍挂载、仅隐藏）且尺寸 0；隐藏期间改宽无读数；展开后 **`1266×210`**（跟随新容器链 1264/1280），复原侧边栏 → 回 `1044×210`，双向可复现 |
+| 未观测（如实记录） | PTY 尺寸同步调用本身（`fitIfMeasurable` → `window.vetta.terminal.resize(id, cols, rows)`） | 该 IPC 经 `contextBridge` 暴露且对象冻结，实测替换 `window.vetta.terminal.resize` 不生效（`__resizes` 恒空），故「resize 被调用、cols 增加」仍只有宿主测试证据（`TerminalSurface.host.test.tsx:167`）；本轮证明的是 fit 后的**渲染尺寸**跟随容器，列数变化为其等价读数 |
+
+**本轮另记（未计入任何条目）：偏好状态与已应用 CSS 的短暂分叉**
+
+- 现象：在「偏好键被外部改写」的场景下进入外观页，`useFontSettingsModel` 的挂载 effect 只 `setPreferences(getStoredFontPreferences())`（选择器会显示新值），**不**调用 `applyStoredTheme()`，故 `--font-sans` 仍是旧值。实测：键＝Courier New、选择器＝「Courier New」、`--font-sans`＝默认栈。
+- 可达性枚举：全仓 `saveFontPreferences` 只有**一个写入者** `useFontSettingsModel.choose()`（同文档内，写入后立即 `applyStoredTheme()`）；`onboarding`/`pet`/`quickpanel` 三个入口的 storage 监听只对 `vetta-theme`/`vetta-color-theme` 生效，不跟随字体键；主窗无全局字体监听。
+- 结论：当前单主窗形态下不存在能造成该分叉的用户可达路径，故**不作为缺陷**，只记录这处状态/CSS 语义差异；若将来新增第二写者（多窗设置、主题包投递字体），需同时补 `applyStoredTheme()`。
+
+**方法与证据留存**：新 origin 会重放设置向导与产品引导，注入 `vetta-setup-wizard-completed`/`vetta.tour.sidebar.completed`/`vetta.tour.capabilities.completed` 后 reload 可直接进设置；侧边栏折叠按钮的可访问名随状态在 `title`「隐藏侧边栏 / 展开侧边栏」间切换（无 `aria-label`），locator 须按状态取。截图：`0181-fonts-loaded-2026-10-08.png`、`0181-fonts-load-failed.png`、`0181-fonts-missing-notice.png`、`0181-fonts-save-failed.png`、`0181-fonts-unavailable.png`（artifactDir）。实测后该 profile 字体偏好已复位为 `{"ui":"","code":""}`。
+
+**仍待用户判定**：① 打包形态下的字体观感与终端字形（本轮为几何量，非观感）；② 是否接受「PTY 尺寸同步」以宿主测试为准（`contextBridge` 冻结使实时读数不可得）。因此维持 `verifying`。
