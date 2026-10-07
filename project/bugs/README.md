@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0081` | 脚本面板 7 个 i18n key 缺条，界面显示原始 key 与 `{{count}}` | investigating | P3 | PLAN-0014 |
 | `BUG-0080` | 提示音开关可用但 Agent 终结事件从不响铃 | investigating | P2 | PLAN-0014 |
 | `BUG-0079` | 终端能力被误判为缺失 | verifying | P1 | — |
 | `BUG-0078` | browser_tab 拒绝回传 snapshot 打印的 elementRef 编码串 | verifying | P1 | PLAN-0006 |

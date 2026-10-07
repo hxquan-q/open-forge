@@ -21,7 +21,7 @@ depends_on: [TASK-0153]
 conflicts_with: [TASK-0158, TASK-0196]
 integration_status: integrated（实现 cfeec25d1，随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -78,3 +78,22 @@ updated: 2026-10-03
 - 剩余风险：
   - 部署中的旧 helper + 超大远端仓库：命中数超 1 万时旧 helper 仍会先截断（客户端兜底只能筛不能恢复），需新版 helper 部署后彻底消除；正常升级按摘要自动更新二进制。
   - `names` 含 shell 特殊字符时由 `quoteShellArgument` 保护（既有引用路径复用），schema 已拒绝路径分隔符与 `.`/`..`。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待裁定）
+
+方法：在主检出逐条复跑声明的套件（**不做真实主机连接**，符合本任务边界），再对 `names` 的「截断前筛选」语义做两条路径的代码级核对（Go helper 与 shell `find`）。判据为 GWT 里的六项行为面。
+
+| 子句 | 覆盖用例与本次读数 |
+|---|---|
+| 匹配清单位于无关文件之后仍可找出 | ① **真 shell 端到端**：`packages/ssh-transport` 18 文件 / **205 例全绿**，其中 `remote-command.test.ts`「按文件名筛选时上限只算命中项，忽略目录里的同名文件不会混进来」在临时目录里**真跑 `find`**（5 个 `a/src/f*.ts` + `a/package.json` + `b/Makefile` + 被忽略的 `node_modules/x/package.json`，limit=2），断言输出恰为 `./a/package.json` / `./b/Makefile`。② 命令构造核对：`remote-command.ts:259-268` 把 `-name` 条件拼在 `-print` **之前**，`head -n ${limit}` 因此只数命中项。 |
+| 旧 helper / fallback | `ssh-connection.ts:396-397`：helper 路径返回值**恒经 `keepNamedFiles` 按 basename 再筛一遍**（注释即写明「旧版 helper 不认识 names、会照常全列」），exec 路径由命令自身筛选。`scripts` 插件 `discover.test.ts`「旧宿主忽略 names、列出全部文件时照样只认清单文件」从消费者侧再证一次。 |
+| 非法名字 | `capability-sdk` 21 文件 / **91 例全绿**；`foundation/filesystem.ts:14` 的 `filesystemBaseNameType` = `pattern: "^(?!\.{1,2}$)[^/\\]+$"` 且 `maxLength: 255`，`names` / `ignoredDirectories` 各 `maxItems: 64` ⇒ 分隔符、`.`、`..`、超长、超量一律在 schema 拒。 |
+| 空 names | `filesystem-service.test.ts:59`「不给过滤条件时仍列出全部文件」；`keepNamedFiles` 与 Go 侧 `if len(p.Names) > 0` 同口径——空数组 = 不过滤，不是「筛掉全部」。 |
+| 本地 / SSH 正常插件入口 | `filesystem-service.remote-flow.test.ts` **23 通过 / 1 平台跳过**（含真实 bash 回环）：`:76`「@ 选文件用的递归列举给出远端文件，跳过依赖目录」、`:82`「按文件名筛选的递归列举只给出命中的远端文件」；插件侧链路由 `plugin-sdk/src/fs.ts:67`（签名带 options）→ 渲染进程 `plugin-host-apis.ts:104`（透传）→ preload `apis/plugins.ts:245` + `api-types/plugins.ts:448`（带 options 的类型）逐跳核对在位。 |
+| 取消与权限拒绝 | `ssh-connection.test.ts:129`「取消同样是 unverifiable：远端可能已经执行完了」、`:141` 超时与取消分得开、`:151` 取消即杀远端进程组；权限面 `remote-flow.test.ts:97`「插件文件能力用的授权检查认得远程路径：项目内放行，项目外拒绝」、`:104`「项目之外、靠 `..` 绕出去、或项目根本身，一律不许动」。 |
+| Go 侧 | **行为回归未复跑**（见下），改以「交叉编译 + 代码核对」两级证据。 |
+
+- Go 行为回归为何仍未复跑（本次独立复核了这条理由，不是照抄）：`internal/server/proc.go:128/135/198/307/312` 用了 `syscall.SysProcAttr.Setsid` 与 `syscall.Kill`，Windows 工具链下 `GOARCH=amd64 go vet ./...` 直接报 `unknown field Setsid` / `undefined: syscall.Kill`；`GOOS=linux GOARCH=amd64 go build ./...` 与 `go vet ./internal/server/` 均 **exit 0**；本机 `wsl.exe --list` 返回「未安装分发版」，**没有可用的 POSIX 执行环境**，交叉编译产物无法运行。故 `go test` 在此机器上不可达。
+- 替代证据：`internal/server/fs.go:397-403` 的 `wanted` 过滤位于 `if len(files) >= limit` **之前**；新用例 `TestListRecursiveNameFilterAppliesBeforeTheLimit`（`server_test.go:272`）以 limit=2 + 4 个无关文件断言结果恰为 `a/package.json,b/Makefile` 且 `truncated=false`——即旧顺序（先限后筛）在该用例下必然红。用例断言的内容与 TS 侧真 shell 用例同构。
+- 未覆盖（不宣称通过）：真实远端主机（任务边界明令不连）；部署中的旧 helper + 超 1 万命中的超大仓库（helper 端仍会先截断，客户端只能筛不能恢复——这是交付记录已披露的剩余风险，非本轮新发现）。
+- 关闭建议：六项行为面均有本轮独立复跑的绿证据（Go 面为「交叉编译 + 断言同构」两级替代），**倾向闭合 `done`**；Go 行为回归的真机复跑可在有 POSIX 环境或用户验收时补做。按 VERIFY-0017 约定等用户裁定。
