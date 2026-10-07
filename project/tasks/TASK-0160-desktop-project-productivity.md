@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -66,3 +66,20 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 实际运行：desktop runtimes+settings 181+1skip；git 插件 51/51；完整 check 通过。manager 冲突（本仓 downloads/fetchImpl 构造分歧）按双方保留合并。
 - 未运行及原因：真实 MinGit 下载/xcode 调起实机流程不做实机验证（网络/系统弹窗边界），由 git-tool 单测与设置行组件测试覆盖。
 - 剩余风险：MinGit 下载源为上游固定 URL，未按本仓镜像策略配置（与 Node/Python 运行时同类的既有问题，不新增）。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待裁定）
+
+方法：隔离 Debug profile `04987e4e` 真实 UI 驱动 + 自建 Git 夹具仓库 `fixtures/git-literal-paths`（5 提交，独立于用户仓库）+ 磁盘 `git show --name-status -M` 与 md5 作对照。判据为验证合同六条子句；原始读数存档 `0160-git-evidence-2026-10-08.txt`。**注意 Git 面板正文渲染在 shadow root 内**：`document.querySelectorAll` / `body.innerText` / `getByText` 都看不到文件行，须自底向上遍历 `shadowRoot` 才能取到（本轮探针假象即由此而来）。
+
+| 子句 | 实测结果 |
+|---|---|
+| 未安装 Git | **仅单测级**。Git 插件 51/51 与 NoGitCta/`tabVisibility` 组件测试覆盖「没装 git 时按目录 `.git` 保留标签卡 + 安装引导」；真实「未安装」形态未在 UI 构造（需以去掉 git 的 PATH 启动实例），未授权不做。 |
+| 特殊文件名/重命名 | **成立**（UI 实测；该项归 TASK-0193 批 / BUG-0074）。449e837 恰好列出 `br[ack]et.txt`、`bracket.txt`、`x[1].txt`、`x1.txt` 四行，点 `br[ack]et.txt` 的详情是它自己的 hunk（`+BRACKET_ONE`），未串到 glob 邻居；b25171db 两行重命名各带 `旧 → 新` 标题与 `R` 标记（`R087`/`R100`），点纯重命名行得到空正文「无差异内容。」。含 `&`、`#`、`'`、空格、方括号的路径在变更视图与提交详情中均按字面显示。截图 `0160-diff-bracket.png`、`0160-diff-paren-rename.png`。 |
+| 动作确认取消 | **成立**。变更视图右键 `amp&and.txt` → 「丢弃更改」→ 破坏性确认框（「丢弃 1 个文件的更改？这些改动会从工作区移除，无法撤销；未跟踪的文件会被直接删除。」+ 路径清单 + 取消/丢弃）；点「取消」后对话框消失、文件仍在更改列表，磁盘 md5 与操作前一致（`44822b9d…`，内容仍含探针行）⇒ 未执行删除。截图 `0160-change-context-menu.png`、`0160-discard-confirm.png`、`0160-discard-cancelled.png`。 |
+| 关闭面板点文件一次打开 | **未适配**。上游 b530b02ae 未落本仓：`useFileTabContentModel.ts:69` 仍是修复前形态 `useEffect(() => () => closePreview(), [closePreview])`，无 `mountedFileTabs` 微任务延后（本仓另有分叉实现 `PREVIEW_MOUNT_DELAY_MS = 240`，与上游 `waitForCommittedPaint` 不同）。用户可见面**未实测**：复现需「聊天消息里的文件引用」，本 profile 无此会话，未为它专门造一轮。 |
+| 设计A切B | **未适配**。上游 8ad2abdcb 未落本仓：`design-runtime.ts` 无 `pendingDesignListeners` / `onPendingDesignPath`，打开请求仍只写 pending。用户可见面**未实测**（需同 cwd 两份设计且画布已挂载，本 profile 未构造）。 |
+| 空标题自动化可创建 | **不成立（已实测）**。自动化页 → 新建任务：名称（placeholder「新建任务」）与提示词皆空时创建按钮 `disabled=true`；**只填提示词**（「每天早上汇总仓库里未提交的改动，写成三条要点」）后创建按钮**仍为 disabled**、名称仍空。上游 2543c5aec 的「标题选填 + 留空取任务内容首行」在本仓不存在（`scheduler/automation-draft.ts` 缺失；`useTaskFormModel.ts` 的 `canSubmitFromData` 要求 `data.name?.trim()`）。截图 `0160-automation-dialog.png`、`0160-automation-prompt-only.png`。 |
+
+- 附带核查：上游 c496fb60d（能力页类型/来源筛选）同样未适配（`abilities/components/AbilityFilterPopover.tsx` 不存在），但未列入本 Task 验证合同。
+- 归属与范围：四个未落 SHA（b530b02ae、2543c5aec、c496fb60d、8ad2abdcb）在 `project/` 下只出现于本 Task 与 PLAN-0014，**无其它 Task 承接**；而交付记录只交付了 d9cc3e003 + b41710a19（未安装 Git 引导），并把 2dd10fc5b 归给 TASK-0187/0193。即验证合同六条里，两条有真实读数、一条单测级、三条（含一条已实测为否）未落地。
+- 关闭建议：不闭合。请用户在两条路里裁定——① 补做四片（文件预览一次打开、画布切设计、自动化空标题、能力筛选）后复验；② 收窄本 Task 验证合同为「未安装 Git + Git 特殊路径/确认取消」并把其余四片另立 Task/Bug 跟踪，之后闭合。
