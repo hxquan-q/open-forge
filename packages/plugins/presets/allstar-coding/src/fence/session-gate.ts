@@ -33,7 +33,7 @@
 import type { FenceLogEntry } from "./audit-log";
 import { inputDigest } from "./audit-log";
 import type { ContractStore } from "./contract-store";
-import { judge, type ToolCallShape } from "./judge";
+import { judge, roleFromTaskName, type ToolCallShape } from "./judge";
 
 /** PreToolUse 事件的最小生产形态（刻意不含 subagent 字段——生产事件就没有它）。 */
 export interface PreToolUseEventShape {
@@ -42,6 +42,26 @@ export interface PreToolUseEventShape {
 	toolUseId: string;
 	tool: { hostName: string; kind: string };
 	toolInput: unknown;
+}
+
+/**
+ * 认养判据：spawn 是否为 AC 流水线派发。
+ *
+ * 仅 judgeMainSpawn 通过**不够**——内核 v1 契约对所有 spawn_agent 调用强制 scope 非空，
+ * 而自然语言 scope（内核定义 scope 为 "modules, files, data, or questions"，叙述性描述
+ * 是正常形态）也能通过非空 + 项目内检查；agent_type "general" 又是默认值。只看契约
+ * 合法性会把几乎所有用了子代理功能的普通会话认养成 AC 主控（其 git 被拦、其子代理
+ * 的自然语言 scope 匹配不到任何真实路径而全被拦）。
+ *
+ * 加一道 AC 侧标记：task_name 必须带角色前缀（ac-pipeline §0.2 规则 6 强制全前缀
+ * 派发：req_/arch_/plan_/dev_/review_/wb_/bb_/dep_/fin_/help_/git_）——这是 AC 自己
+ * 的纪律，普通用户的 api_trace 之类天然不带，两类会话区分度极高。
+ */
+function isAcPipelineSpawn(input: unknown): boolean {
+	if (typeof input !== "object" || input === null) return false;
+	const taskName = (input as Record<string, unknown>).task_name;
+	if (typeof taskName !== "string" || taskName.trim() === "") return false;
+	return roleFromTaskName(taskName.trim()) !== "unknown";
 }
 
 /** SubagentStart 事件的最小生产形态（在父会话的 hook runtime 上触发，sessionId = 父）。 */
@@ -67,10 +87,10 @@ export function handlePreToolUse(store: ContractStore, io: SessionGateIo, event:
 	const isSubagentSession = contract !== null;
 	const isMainSession = !isSubagentSession && store.isGovernedSession(event.sessionId);
 
-	// 无关会话：只做认养观察——合法 AC 契约的 spawn 把本会话收编为治理会话，其余静默放行
+	// 无关会话：只做认养观察——带 AC 前缀且契约合法的 spawn 把本会话收编为治理会话，其余静默放行
 	if (!isMainSession && !isSubagentSession) {
 		if (call.hostName === "spawn_agent" && call.toolKind === "agent") {
-			if (judge(null, call, true).allow) {
+			if (isAcPipelineSpawn(call.input) && judge(null, call, true).allow) {
 				store.markGovernedSession(event.sessionId);
 				store.registerSpawn(event.toolUseId, call.input);
 			}

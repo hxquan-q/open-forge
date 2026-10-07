@@ -11,8 +11,9 @@ v0.5.1（会话门修复）：修复 ac-fence 在生产装配下主/子会话判
 恒真导致所有子代理被误判为主会话：写域校验/只读纵深成死代码、git 子代理豁免不可达（v0.5
 存档通道被自己的围栏死锁）、且全 app 任何会话的 git 写与 spawn 会被误拦。现改由插件侧
 session-gate（src/fence/session-gate.ts）用 sessionId 双查重建会话身份（SubagentStart 的
-agentId 恒等于子会话 sessionId；spawn 通过 AC 契约校验的会话认养为治理会话；无关会话静默），
-判定流抽为纯模块并按生产事件形态（无 subagent 字段）测试覆盖三类会话、认养流程与存档豁免。
+agentId 恒等于子会话 sessionId；spawn 认养要求 task_name 带 AC 角色前缀且契约合法——内核
+v1 契约下自然语言 scope 的普通 spawn 不会误触发；无关会话静默），判定流抽为纯模块并按
+生产事件形态（无 subagent 字段）测试覆盖三类会话、认养判据、存档豁免与零误伤。
 
 v0.5（环节级存档制）：T 级存档制升级为环节级存档制——state.md 每个（子）环节 done 即打档：
 T 档（`T<n>: <摘要>`，评审 pass 触发）+ stage 档（`stage <seq>/<环节名>: <摘要>`，其余环节收口触发），

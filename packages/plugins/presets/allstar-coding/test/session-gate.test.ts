@@ -91,15 +91,45 @@ describe("session classification (production event shapes, no subagent field)", 
 		const h = harness();
 		// git 写命令（旧实现里 isMainSession 恒真会被误拦——全 app 误伤回归）
 		expect(h.pre(STRANGER, SHELL, { command: "git commit -m x" }).action).toBe("continue");
-		// 无 task.scope 的普通 spawn（其他 agent 的正常用法，旧实现会被 AC 契约误杀）
-		expect(h.pre(STRANGER, SPAWN, { task_name: "note", agent_type: "general", task: {} }).action).toBe(
-			"continue",
-		);
+		// 内核 v1 契约的完整 spawn（真实生产形态：scope 非空、自然语言描述、无 AC 前缀）
+		const kernelSpawn = {
+			task_name: "api_trace",
+			agent_type: "general",
+			history: "分析用户鉴权流程",
+			current_state: "会话中",
+			objective: "梳理 auth 调用链",
+			scope: "用户登录与鉴权相关的模块和数据",
+			constraints: "只读分析",
+			relevant_context: "无",
+			deliverables: "调用链报告",
+			validation: "覆盖主要入口",
+			task: { scope: "用户登录与鉴权相关的模块和数据" },
+		};
+		const spawnVerdict = h.pre(STRANGER, SPAWN, kernelSpawn);
+		expect(spawnVerdict.action).toBe("continue");
+		// 认养判据（P1 修复回归）：契约合法但无 AC 角色前缀 → 不认养
+		expect(h.store.isGovernedSession(STRANGER)).toBe(false);
+		// 其子代理同样静默（自然语言 scope 若被认养会匹配不到任何路径而全拦——误伤源）
+		handleSubagentStart(h.store, {
+			sessionId: STRANGER,
+			cwd: "C:/proj",
+			agentId: "stranger-child",
+			agentType: "general",
+		});
+		expect(h.pre("stranger-child", EDIT, { path: "src/auth/user.ts" }).action).toBe("continue");
 		// 任意路径写文件
 		expect(h.pre(STRANGER, EDIT, { path: "docs/ac/state.md" }).action).toBe("continue");
 		expect(h.logs).toHaveLength(0);
-		// 认养未发生：普通 spawn 不带 AC 契约
+	});
+
+	it("adopts a session only when the spawn carries an AC role prefix", () => {
+		const h = harness();
+		// 无前缀 + 合法契约：不认养（上一用例已覆盖完整形态，这里锁最小判据）
+		h.pre(STRANGER, SPAWN, { task_name: "api_trace", agent_type: "general", task: { scope: "src/**" } });
 		expect(h.store.isGovernedSession(STRANGER)).toBe(false);
+		// 有 AC 前缀 + 合法契约：认养
+		h.pre(MAIN, SPAWN, devT1SpawnInput());
+		expect(h.store.isGovernedSession(MAIN)).toBe(true);
 	});
 
 	it("adopts a session as governed on the first contract-valid AC spawn", () => {
