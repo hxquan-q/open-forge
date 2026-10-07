@@ -43,3 +43,5 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0026`：团队成员会话无 in-app WebView，`browser_tab` 报 `no_browser_session` 后靠自建 http server + agent-browser 降级（verifying；A 路径「工具清单剔除不可用项」已由 TASK-0123 落地，B headless 渲染工具仍为未决后续）。
 - `ISSUE-0027`：团队质检深度无分级，「简单页面」任务仍走全量独立审计+修复回路占全程 ~47%（draft；短期做阶段化进度可见，中期委派合同引入质检级别；参照 HydraFusion Single/Cascade/Critique 与 multica 门禁阶梯）。
 - `ISSUE-0028`：团队会话无会话级预算与可路由的阻塞/升级态，收敛全靠主控自觉（in_progress；候选 C 预算只读投影已由 TASK-0126 落地，A/B 熔断按决策触发条件待立）。
+- `ISSUE-0029`：fork 的 GitHub Actions 预算耗尽，全部 workflow 秒败于 `an Actions budget is preventing further use`（draft；阻塞 TASK-0183/0184/0180/0182/0179 等的「CI 复跑绿」验收；待用户决定恢复预算或迁移 CI，本地/单元级证据可先行）。
+- `ISSUE-0030`：allstar-coding 的 ac-fence 事中拦截层经 `origin/chenxvhua` 分支进入，插件权限从 `agent.skills.control` 扩到另加 `agent.hooks.register`/`agent.hookHandler.execute` 且判定 fail-open（draft；需求权限最小集合与验收级别的方向，TASK-0208 先按现状集成）。

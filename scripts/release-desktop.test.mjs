@@ -7,7 +7,9 @@ import {
 	parseDesktopReleaseCommand,
 	parsePorcelainPaths,
 	releaseNotesTemplate,
+	stampReleaseDate,
 } from "./release-desktop.mjs";
+import { ASSEMBLED_MARKER } from "./release/release-notes.mjs";
 
 describe("parsePorcelainPaths", () => {
 	// 回归：曾经对整段输出做 trim，削掉第一行的前导空格后 slice(3) 吃掉路径首字母，
@@ -83,6 +85,9 @@ describe("parseDesktopReleaseCommand", () => {
 });
 
 describe("releaseNotesTemplate", () => {
+	it("marks the draft as fragment-managed so assembly does not treat it as hand-written", () => {
+		expect(releaseNotesTemplate("0.1.3", "abc1234")).toContain(ASSEMBLED_MARKER);
+	});
 	it("creates a fork-branded draft with an explicit date placeholder and upstream baseline", () => {
 		expect(releaseNotesTemplate("0.1.0", "abc1234")).toContain("# Open Forge 0.1.0");
 		expect(releaseNotesTemplate("0.1.0", "abc1234")).toContain("发布日期：待定");
@@ -115,5 +120,23 @@ describe("desktopPublishCommands", () => {
 			["tag", "v0.1.0"],
 			["push", "--atomic", "origin", "forge/dev", "refs/tags/v0.1.0"],
 		]);
+	});
+});
+
+describe("stampReleaseDate", () => {
+	it("replaces the placeholder date with the publish date", () => {
+		const notes = "# Open Forge 0.1.3\n\n发布日期：待定\n";
+		expect(stampReleaseDate(notes, "2026-10-05")).toBe("# Open Forge 0.1.3\n\n发布日期：2026-10-05\n");
+	});
+
+	it("refuses to rewrite a note that already carries a real date", () => {
+		const notes = "# Open Forge 0.1.3\n\n发布日期：2026-09-29\n";
+		expect(() => stampReleaseDate(notes, "2026-10-05")).toThrow(/不是占位/);
+	});
+
+	it("stamps the draft that prepare produces", () => {
+		const stamped = stampReleaseDate(releaseNotesTemplate("0.1.3", "abc1234"), "2026-10-05");
+		expect(stamped).toContain("发布日期：2026-10-05");
+		expect(stamped).not.toContain("待定");
 	});
 });

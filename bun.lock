@@ -1342,6 +1342,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "fumadocs-core@16.14.1": "patches/fumadocs-core@16.14.1.patch",
+  },
   "overrides": {
     "@types/react": "19.2.17",
     "@wdio/native-utils": "2.6.0",

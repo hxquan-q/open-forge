@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -293,6 +294,78 @@ describe("Desktop RuntimeHost model-call frame contract", () => {
 		expect(systemPrompt).not.toContain(getModePrompt("work"));
 	}, 30_000);
 
+	it("advertises and executes the built-in command tool in a Work-mode conversation", async () => {
+		const commandTool = process.platform === "win32" ? "shell" : "bash";
+		const marker = "command-capability-ok";
+		const server = await startOpenAiResponsesTestServer((_request, index) => ({
+			kind: "events",
+			events:
+				index === 0
+					? toolCallResponseEvents(commandTool, {
+							command: process.platform === "win32" ? `Write-Output ${marker}` : `printf ${marker}`,
+						})
+					: textResponseEvents("Command completed"),
+		}));
+		servers.push(server);
+		const model = { ...MODEL, baseUrl: server.baseUrl };
+		const cwd = await temporaryDirectory("desktop-frame-command-workspace-");
+		const agentDir = await temporaryDirectory("desktop-frame-command-agent-");
+		const fixture = createRuntimeFixture("runtime", agentDir, model);
+		fixtures.push(fixture);
+		const created = await fixture.runtime.createSession({
+			cwd,
+			agentDir,
+			sessionDir: await temporaryDirectory("desktop-frame-command-sessions-"),
+			model,
+			thinkingLevel: "off",
+			executionMode: "full-access",
+			agent: createCodingAgentRuntimeSessionSelection({
+				scenario: "conversation",
+				agentMode: "work",
+				includeAgentSkills: false,
+			}),
+		});
+		await fixture.runtime.prompt(created.sessionId, { text: "Print a diagnostic marker with the command tool" });
+		expect(server.requests).toHaveLength(2);
+		for (const { body } of server.requests) {
+			expect(toolNames(body.tools)).toContain(commandTool);
+			expect(collectStringValues(body.input).join("\n")).toContain(
+				`Command execution is available through \`${commandTool}\``,
+			);
+		}
+		const input = server.requests[1]?.body.input;
+		if (!Array.isArray(input)) throw new Error("Expected Provider input items");
+		const outputs = input.filter((item) => isRecord(item) && item.type === "function_call_output");
+		expect(collectStringValues(outputs).join("\n")).toContain(marker);
+	}, 30_000);
+
+	it("does not advertise command access when the session explicitly disables command tools", async () => {
+		const server = await createServer();
+		const model = { ...MODEL, baseUrl: server.baseUrl };
+		const cwd = await temporaryDirectory("desktop-frame-no-command-workspace-");
+		const agentDir = await temporaryDirectory("desktop-frame-no-command-agent-");
+		const fixture = createRuntimeFixture("runtime", agentDir, model);
+		fixtures.push(fixture);
+		const created = await fixture.runtime.createSession({
+			cwd,
+			agentDir,
+			sessionDir: await temporaryDirectory("desktop-frame-no-command-sessions-"),
+			model,
+			thinkingLevel: "off",
+			executionMode: "full-access",
+			agent: createCodingAgentRuntimeSessionSelection({
+				scenario: "conversation",
+				includeAgentSkills: false,
+				agentConfiguration: { template: null, overrides: { tools: ["read"] } },
+			}),
+		});
+		await fixture.runtime.prompt(created.sessionId, { text: "Inspect available capabilities" });
+		const body = observeRequest(server, 0).body;
+		expect(toolNames(body.tools)).not.toContain("shell");
+		expect(toolNames(body.tools)).not.toContain("bash");
+		expect(collectStringValues(body.input).join("\n")).not.toContain("Command execution is available through");
+	}, 30_000);
+
 	async function observeBackends(
 		cwd: string,
 		scenario: ConversationScenario,
@@ -357,6 +430,7 @@ function assertCanonicalModelCallFrame(observation: ModelCallObservation): void 
 	expect(observation.body.model).toBe(MODEL.id);
 	expect(Array.isArray(observation.body.input)).toBe(true);
 	expect(Array.isArray(observation.body.tools)).toBe(true);
+	expect(toolNames(observation.body.tools)).toContain(process.platform === "win32" ? "shell" : "bash");
 }
 
 function sharedProviderBody(body: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {

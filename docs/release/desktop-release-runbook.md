@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Desktop 发布与自动更新流程
 
 本文是 Vetta Desktop 发布流程的维护手册。它记录当前 GitHub Actions、构建配置解析器、R2/GitHub 发布和自动更新验收之间的关系，供下一次排查或修改发布链路时快速恢复上下文。
@@ -7,6 +8,7 @@
 涉及行为时先看实现，再更新本文：
 
 - [Desktop 发布 workflow](../../.github/workflows/desktop-release.yml)
+- [发布说明寻址与碎片汇编](../../scripts/release/release-notes.mjs)（版本号到正文路径；碎片汇编与一致性守卫）
 - [发布配置解析器](../../scripts/release/resolve-desktop-release-config.mjs)
 - [配置解析测试](../../scripts/release/resolve-desktop-release-config.test.mjs)
 - [workflow 合同测试](../../scripts/quality/desktop-release-workflow.test.mjs)
@@ -92,6 +94,27 @@ flowchart LR
 
 构建 job、R2 发布 job 和 GitHub 发布 job 必须能拿到与目标 channel 对应的 Environment。当前 workflow 会根据 `channel` 为 test 选择 `desktop-test`，其它情况选择 `desktop-production`。
 
+### 当前实际配置（2026-10-06 实测与其后落地）
+
+用命令核对，不要凭记忆：
+
+```bash
+gh api repos/<owner>/<repo>/environments
+gh api repos/<owner>/<repo>/rulesets
+```
+
+现状（`hxquan-q/open-forge`）：
+
+| 项 | 现状 |
+| --- | --- |
+| `desktop-production` | 存在，`protection_rules` 为空。**required reviewers 在当前计划不可用**：API 返回 422「Please ensure the billing plan supports the required reviewers protection rule」。 |
+| `desktop-test` | 已创建（此前不存在，而 workflow 在 test 渠道会引用它）；同样无法配 required reviewers。 |
+| `v*` tag | 已加 ruleset `protect release tags`（id 24519581，target `tag`，规则 `deletion` 与 `update`），仓库管理员角色 bypass，正常打 tag 不受影响。 |
+| `main` | 分支保护接口返回 404，未保护；本仓日常集成在本地 main，对外推送走 `main:dev`。 |
+
+因此当前可用的人工门是这两道：仓库设置层的 tag ruleset——任何人都不能删除或改写已发布的 `v*` tag；以及本地 `release:desktop:publish --confirm-publish`——发布动作由责任人亲自执行。`environment:` 声明本身不构成审批；要拿到环境审批需要升级到支持 required reviewers 的计划，届时按上表补配即可。
+
+
 ### Variables
 
 常用非敏感变量如下。变量名必须与脚本一致，不要在 workflow 表单里粘贴密钥。
@@ -140,6 +163,11 @@ APPLE_TEAM_ID
 所有会发布的构建都要求 macOS 签名和公证。缺少凭据时应让 job 失败；只有不发布的手动构建允许未签名。
 
 ## 正式发布操作
+
+
+**发起权限**：发布由人发起——责任人本地运行 `bun run release:desktop:publish -- <版本> --confirm-publish`，由脚本提交发布说明、打 tag 并原子推送；tag 推送之后 workflow 才自动跑。Agent 不得代跑发布，也不得推送 tag。
+
+当前没有第二道平台审批（见「当前实际配置与待配置项」），所以「谁推 tag 谁就在发版」这层约束目前完全依赖本条纪律与待补的 ruleset。
 
 ### 推荐：推送版本 tag
 

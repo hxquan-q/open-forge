@@ -1,7 +1,7 @@
 ---
 id: TASK-0150
 type: task
-status: verifying
+status: done
 priority: P1
 owner: toolkit
 source: user-request; upstream b936056f7, 93bfc01ad（仅 toolkit 增量）
@@ -81,3 +81,7 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 来源分支：task/TASK-0150-atomic-write-lock-retry；来源提交：222de8813fe3ce248f3d0c5ecf7911f4263ac8a7。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
 
 集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0150。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

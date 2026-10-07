@@ -1,7 +1,7 @@
 ---
 id: TASK-0198
 type: task
-status: verifying
+status: done
 priority: P1
 owner: agent/runtime-core/runtime-tools/runtime-node
 requirement: REQ-0002
@@ -104,3 +104,7 @@ test:changed 的 agent、coding-agent、runtime-core、agent-team、runtime-tool
 - 已执行并成功：git push origin HEAD:dev，远端从 280e98f76 fast-forward 到 a163b58b1；随后 ls-remote 核实 refs/heads/dev 指向该 SHA。未推 origin/main、未 force、未发布。
 - 本地 main 当时为 280e98f76，拓扑可 fast-forward；但主树有其他任务未提交内容。project/research/README.md 的本地修改同时含 RESEARCH-0021 与不属本任务的 RESEARCH-0022，合并目标会写该文件；另有多份未落库记录。未执行主树 merge、未 stash、未移动/删除/夹带这些内容，因此本地集成仍 pending。
 - 独立工作树和 Task 分支保留。WAIVER-0004 仅允许开发候选测试例外（expires 2026-10-10），不是全量验收通过；TASK-0198 保持 verifying，摘要和重同步未实现。主树重叠修改由其 Owner 落库后再继续安全集成。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

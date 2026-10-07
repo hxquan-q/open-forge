@@ -1,7 +1,7 @@
 ---
 id: TASK-0180
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop packaging
 source: BUG-0064
@@ -47,3 +47,7 @@ BUG-0064：`contract` job 运行解析真实已装依赖的 staged-deps-cleanlis
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
 - CI 证据（2026-10-03）：desktop-packaged 37059120967 的 `Desktop packaging contract` job 通过；首版缺 Set up Bun 由 5e1d7df61 补齐。E2E job 的遗留红另立 BUG-0066/TASK-0183。
 - CI 终验（2026-10-03）：desktop-packaged 37060686125 整 workflow 成功（合同 job 绿；文档推送未触发 E2E）。E2E 触发时的遗留红见 BUG-0066。
+
+## 收口（2026-10-06，TASK-0214）
+
+- 本任务的改动属 CI 基础设施（workflow 与包内脚本），无用户可观察行为变化；既定验收标准（CI 复跑绿，记录在案：TASK-0179 见 quality 37060686088，TASK-0180 见 desktop-packaged 37060686125）已实际执行并通过；人工功能验收不适用。按交付合同以「说明理由加既定完成标准」闭合。

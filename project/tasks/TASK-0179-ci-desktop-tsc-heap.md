@@ -1,7 +1,7 @@
 ---
 id: TASK-0179
 type: task
-status: verifying
+status: done
 priority: P1
 owner: quality
 source: BUG-0063
@@ -47,3 +47,7 @@ BUG-0063：CI 冷启动全量 desktop tsc 超过 Node 默认堆上限。为 `che
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
 - CI 证据（2026-10-03）：quality 37059120973 的 check job 通过（含 Test quality scripts 段）；首次推送曾因未同步 quality-gates 断言而红，已随 efa91bcb4 修复。
 - CI 终验（2026-10-03）：quality 37060686088 的 `check + quality tests` job 成功，堆 OOM 未再出现。
+
+## 收口（2026-10-06，TASK-0214）
+
+- 本任务的改动属 CI 基础设施（workflow 与包内脚本），无用户可观察行为变化；既定验收标准（CI 复跑绿，记录在案：TASK-0179 见 quality 37060686088，TASK-0180 见 desktop-packaged 37060686125）已实际执行并通过；人工功能验收不适用。按交付合同以「说明理由加既定完成标准」闭合。

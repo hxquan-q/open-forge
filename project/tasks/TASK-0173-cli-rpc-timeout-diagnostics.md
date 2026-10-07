@@ -1,7 +1,7 @@
 ---
 id: TASK-0173
 type: task
-status: verifying
+status: done
 priority: P1
 owner: cli-host tests
 source: RESEARCH-0019; TASK-0172
@@ -77,3 +77,7 @@ TASK-0171 首轮标准批次在单 worker 下仍有 2 个 installed-artifact-run
 - 实际命令与结果：诊断单测 5/5；installed 3 轮 14/14；CLI 全包 230 通过 14 跳过（`bun run --cwd apps/cli-host test`，523.8s，exit 0）；`test:impact -- <两文件>` 通过（14/14）；`bun run check` exit 0。
 - 未验证项/风险：偶发根因未定位（本轮证据不支持任何单一假设关闭）；其他平台由 CI 覆盖；未触碰真实 Provider/用户状态。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

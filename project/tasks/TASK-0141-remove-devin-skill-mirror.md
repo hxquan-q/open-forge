@@ -1,7 +1,7 @@
 ---
 id: TASK-0141
 type: task
-status: verifying
+status: done
 priority: P1
 owner: project/agent-workflow
 requirement: REQ-0004
@@ -57,3 +57,7 @@ Open-Forge-only。按用户明确授权删除 Devin intake 镜像，移除 --wri
 - 根文件体积/规则引用、Skill 出入向链接、两个 Skill 格式与 frontmatter 扫描通过；53 个 SKILL.md 合法。
 - 不再执行 --write；测试验证旧参数明确失败且不创建镜像。未运行真实模型/宿主会话/UI/远端 CI，没有推送。
 - 完整 `bun run check` 退出码 0；随后只修正文档中的旧“镜像检查”用语并重跑只读引用/体积/Task 检查。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

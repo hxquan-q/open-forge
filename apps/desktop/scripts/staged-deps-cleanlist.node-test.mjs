@@ -19,7 +19,7 @@ import {
 	summarizeStagedDepCleaning,
 } from "./staged-deps-cleanlist.mjs";
 import { resolveInstalledPackageRoot } from "./installed-package-root.mjs";
-import { planStagedDependencyCleaning } from "./verify-staged-deps.mjs";
+import { parseArguments, planStagedDependencyCleaning } from "./verify-staged-deps.mjs";
 
 const desktopRoot = join(import.meta.dirname, "..");
 
@@ -442,4 +442,33 @@ test("真实原生依赖保留本平台二进制，裁掉异平台二进制与�
 		assert.equal(isStrippedByPlan(nodePty.plan, "conpty.node"), false);
 		assert.equal(isStrippedByPlan(nodePty.plan, "conpty.pdb"), true);
 	}
+});
+
+test("产物树扫描要求显式且唯一的平台", () => {
+	assert.throws(() => parseArguments(["--staging"]), /只接受一个 --platform/);
+	assert.throws(
+		() => parseArguments(["--staging", "--platform", "linux", "--platform", "darwin"]),
+		/只接受一个 --platform/,
+	);
+	assert.deepEqual(parseArguments(["--staging", "--platform", "linux"]).platforms, ["linux"]);
+	assert.deepEqual(parseArguments(["--resources", "out", "--platform", "win32"]).platforms, ["win32"]);
+});
+
+test("无树扫描时仍默认三个平台族", () => {
+	assert.deepEqual(parseArguments([]).platforms, ["darwin", "win32", "linux"]);
+});
+
+test("单平台扫描不把本平台的 prebuild 判为应裁剪", () => {
+	const files = [
+		"package.json",
+		"index.js",
+		"prebuilds/darwin-x64/uiohook-napi.node",
+		"prebuilds/linux-x64/uiohook-napi.node",
+	];
+	const hits = findBlacklistedStagedPaths({
+		filePaths: files,
+		platforms: ["darwin"],
+		packageJson: { name: "uiohook-napi", main: "index.js" },
+	});
+	assert.deepEqual(hits, ["prebuilds/linux-x64/uiohook-napi.node"]);
 });

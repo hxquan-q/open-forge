@@ -1,7 +1,7 @@
 ---
 id: TASK-0205
 type: task
-status: verifying
+status: done
 priority: P1
 owner: runtime-core
 source: user-request（继续参考上游完善）；RESEARCH-0022 缺口 #4 第一片
@@ -85,3 +85,7 @@ updated: 2026-10-04
 - 实际运行：见验收分层工程验证。
 - 未运行及原因：desktop 消费端未接线（后续片），实机切回场景验收随整链进行。
 - 剩余风险：`currentTurnId` 在回合首个 assistant 事件到达前为 undefined（真实语义：身份随首个事件可观察）；desktop 切片消费时需处理该窗口。feed/attach 后续片：9e18d7f84 attach 接入 → c28c4d4d1 IPC → 1203755a7 desktop 切换 → feed reducer 大切片（renderer 分叉冲突面大，需按本仓窗口化/队列修复适配）。
+
+## 收口（2026-10-06，TASK-0216）
+
+- 本任务的改动不改变用户可观察的输出、界面、交互、安装与更新流程或 AI 行为；验收对象是测试、守卫、契约或台账本身，且既定验收标准已实际执行并通过。按用户在「验收方式」上选择的分层口径闭合：由 Agent 按工程证据闭合，依据是用户授权，不是用户已确认。

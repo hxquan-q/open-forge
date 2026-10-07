@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0079` | 终端能力被误判为缺失 | verifying | P1 | — |
 | `BUG-0078` | browser_tab 拒绝回传 snapshot 打印的 elementRef 编码串 | verifying | P1 | PLAN-0006 |
 | `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | done | P2 | — |
 | `BUG-0069` | 流式输出使历史回复用量引用不断变化 | verifying | P1 | PLAN-0014 |
@@ -28,8 +29,8 @@
 | `BUG-0068` | 会话结束后用户消息仍显示在回复末尾（队列消费变体） | verifying | P1 | — |
 | `BUG-0073` | BUG-0068 修复提交引入的四处锚定/派发序号回归（unbump 误杀最新轮重拉、未消费排队气泡锚进中段、首部重排污染 prependedCount、两层回退方向相反） | verifying | P1 | TASK-0194 |
 | `BUG-0064` | desktop-packaged 合同 job 缺依赖安装致 cleanlist 必红 | verifying | P1 | PLAN-0014 |
-| `BUG-0067` | docs-site 构建在 CI 上 Turbopack 报 71 错 | investigating | P2 | — |
-| `BUG-0066` | desktop-packaged 的 packaged E2E job 连续红 | investigating | P1 | — |
+| `BUG-0067` | docs-site 构建在 CI 上 Turbopack 报错（fumadocs stringifier 递归 + HTML 注释非法） | verifying | P2 | — |
+| `BUG-0066` | desktop-packaged 的 packaged E2E job 连续红（`--staging` 三平台并集误报本平台 prebuild） | verifying | P1 | — |
 | `BUG-0065` | macOS 上 worktree 用例因 /var 符号链接误红 | verifying | P2 | — |
 
 | `BUG-0063` | quality CI 的 desktop tsc 冷启动堆内存耗尽 | verifying | P1 | PLAN-0014 |

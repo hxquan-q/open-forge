@@ -1,0 +1,25 @@
+diff --git a/dist/mdx-plugins/stringifier.js b/dist/mdx-plugins/stringifier.js
+index cf19eea9336acb66414cf3e2e75f2b1aa2bfd138..dc4ec07d6eda270995b29708f973f49411b002a1 100644
+--- a/dist/mdx-plugins/stringifier.js
++++ b/dist/mdx-plugins/stringifier.js
+@@ -17,7 +17,7 @@ function defaultStringifier(config = {}) {
+ 		return true;
+ 	}, stringify, ...customExtension } = config;
+ 	function modHandler(handler, ctx) {
+-		return function(node, parent, state, info) {
++		const wrapped = function(node, parent, state, info) {
+ 			let visibility = filterElement(node);
+ 			if (visibility === false) return "";
+ 			if (stringify) {
+@@ -63,6 +63,11 @@ function defaultStringifier(config = {}) {
+ 				default: return handler(node, parent, state, info);
+ 			}
+ 		};
++		// mdast-util-to-markdown 依赖 handler.attention/peek 决定 attention 序列化，包装时须保留；
++		// 缺失会让 strong/emphasis 回落 state.handle 并无限自递归。
++		if (handler.attention) wrapped.attention = handler.attention;
++		if (handler.peek) wrapped.peek = handler.peek;
++		return wrapped;
+ 	}
+ 	const customToMarkdown = { handlers: { _custom(node, _, state, info) {
+ 		const handlers = state.handlers;

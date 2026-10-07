@@ -67,12 +67,15 @@ jobs:
       matrix:
         include:
           - platform: Windows
+            family: win32
             runner: windows-latest
             build-command: pack:win:test
           - platform: macOS
+            family: darwin
             runner: macos-latest
             build-command: dist:mac:test
           - platform: Linux
+            family: linux
             runner: ubuntu-latest
             build-command: dist:linux:test
 
@@ -120,7 +123,7 @@ jobs:
         working-directory: apps/desktop
         env:
           VETTA_BUILD_ENV: test
-        run: bun run verify:staged-deps --staging
+        run: bun run verify:staged-deps --staging --platform ${{ matrix.family }}
 
       - name: Run packaged Electron smoke and updater E2E
         working-directory: apps/desktop
