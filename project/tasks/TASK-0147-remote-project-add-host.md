@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -84,3 +84,19 @@ Operate 模式，扩展既有工作台视觉，不重设设计系统、不引入
 ## TASK-0171 主树收口（2026-10-02）
 
 实现已原子提交到 main：1269945cb。本轮完整 check 通过；组合测试 Desktop 4642、theme-ui 169、质量脚本 483 项通过，SSH 认证定向 32 项通过。CLI 首轮两例 RPC 超时保留于 TASK-0171；同一失败文件 13 项以及随后单独完整 CLI 226 项复验均通过，未改代码或阈值。各功能人工验收仍未执行，保留 verifying；待最终分支集成与推送闸门，不宣称已推送或发布。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：测试级复跑声明的 4 个套件；用户面在隔离 Debug profile `04987e4e` 真实驱动，用一个**故意不存在的主机名**探针走通失败态，并在验收后**清理了探针**。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| 入口只在侧边栏「新建项目」菜单内 | **真实成立**：`新建项目` → 菜单四项 `新建项目/打开项目/从远程主机添加/导入项目` → `从远程主机添加` 打开「从远程主机添加项目」对话框。对照实测：**新会话页的项目选择器不挂载该菜单**（走本地 `NewProjectDialog`）——与源码一致（`AddProjectMenu` 仅由 `SidebarProjectsSection` 使用） |
+| 可在选择器内直接添加主机 | **真实成立**：对话框内 `添加主机` 表单（连接目标）→ 填 `openforge-nonexistent-host-probe` → `保存并选择目录` |
+| 失败可恢复、不伪装成「没有主机」 | **真实成立**：出现 `role="alert"` 的「读不到这个目录。可能是连接断开，或当前账号没有权限。」+ `重试` + `技术详情`，**不是**空的「无主机」态 |
+| 重试只重读目录、不重复创建主机 | **真实成立**：主机经 `createHost` 落盘到 `ssh-hosts.json`（`source: manual`，id `db2601af-b090-47d8-ba5b-1a9a024cf22d`）；点 `重试` 后主机数**仍为 1、id 不变** |
+| 测试级：`RemoteProjectPickerDialog.test.tsx`、`SshHostsSettings.test.tsx`、`useSshHostsSettingsModel.test.tsx`、`ssh-host-service.test.ts` | **4 文件 / 34 例通过，0 失败** |
+| 清理 | 探针主机已从 `ssh-hosts.json` 移除（`hosts` 回到 `[]`） |
+
+- **未覆盖**：**成功路径**——「添加真实主机 → 列出远端目录 → 选中一个远端项目并加入侧边栏」。本轮用不存在的主机名只能走到失败态；成功态需要一台真实 SSH 主机，属各 SSH 任务的共同边界（不连真实主机）。
+- **关闭建议**：入口唯一性、失败态可恢复性、主机持久化与重试语义在用户面全部成立，测试级全绿；缺的只有成功路径（需真实主机）。倾向 `done`，是否要求补真实主机成功路径，请用户裁定。

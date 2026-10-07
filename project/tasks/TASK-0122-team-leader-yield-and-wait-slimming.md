@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0123]
 integration_status: integrated（主工作区串行实施；未创建独立 worktree，因本轮无并行 Task 同写这些路径）
 created: 2026-09-26
-updated: 2026-09-26
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -100,3 +100,16 @@ updated: 2026-09-26
 - 未运行及原因：真实 ~45 分钟团队会话量化复跑属 TASK-0125（本任务前置项），未在本轮执行；「分派→回合结束→通知唤醒」链路由 `team-session-concurrency.test.ts` 既有用例（durable delegate / interrupted leader continuation）覆盖。
 - Worktree：主工作区（无并行 Task 占用这些路径）。
 - 剩余风险：提示词引导是软约束，模型仍可能轮询（方案 C 运行时强制挂起按 ISSUE-0025 待复测数据再评估）；timeoutMs=0 快照同走 timeout 分支，模型侧也只回四元组，需要全量时用 `team_get_task`。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：复跑包级与桌面侧相关套件。真实团队会话本轮未驱动。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| 主控在提示词引导下结束回合、任务完成通知以 `triggerTurn` 唤醒续跑 | `packages/agent-team` **整包 12 文件 / 85 例通过**（含提示词侧 `runtime-tools.test.ts` 更新的 wait 用例）；桌面 `team-task-waiter.test.ts`、`team-runtime-manager.test.ts`、`team-member-function-source.test.ts`、`TeamWaitTasksView.test.tsx` **4 文件 / 20 例通过** |
+| `team_wait_tasks` 超时载荷瘦身 | 同上（`runtime-tools` 侧断言载荷形态） |
+| 用户流程：分派 → 回合结束 → 通知唤醒 | 交付记录自己写明由 `team-session-concurrency.test.ts`（durable delegate / interrupted leader continuation）既有用例覆盖；本轮未新增该文件读数 |
+
+- **未覆盖**：真实 ~45 分钟团队会话的量化复跑——交付记录明确指出这属 **TASK-0125（本任务前置项）**，不在本任务范围；因此「主控真的少 wait 了」这一**行为量级**结论本轮无数据，只有机制级（通知唤醒链路）证据。
+- **关闭建议**：机制与提示词侧测试级成立，倾向 `done`；行为量级归 TASK-0125。是否要求先等 TASK-0125，请用户裁定。
