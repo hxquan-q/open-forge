@@ -263,3 +263,13 @@ depends_on: []
 | TASK-0181 | **verifying（补证，覆盖上一轮同项的「重启保留」判定）** | ① 重启保留成立（origin 固定时）：实例 A 界面字体选 Cambria 后 `--font-sans` 由默认栈变为 `"Cambria", -apple-system, …`、body computed font 为 Cambria、`--font-mono` 保持 `"SF Mono", "Fira Code", monospace`（代码仍等宽），`localStorage["openforge-font-preferences"]={"ui":"Cambria","code":""}`；杀掉进程、同环境重启得实例 B，origin 仍为 60957，偏好键值/`--font-sans`/body font 与 A 完全一致 → 启动即重新应用（`main.tsx:19 applyInitialTheme → applyStoredTheme → applyTheme`）。② 切明暗/配色保留：同一 origin 内切配色（默认 → 珊瑚，`data-theme` mono → sand）与切明暗（深色 → 浅色，`colorScheme` dark → light），`--font-sans`、body font、偏好键三者均不变。③ 重置恢复默认栈：界面字体下拉选回「默认」后键为 `{"ui":"","code":""}`、`--font-sans` 回到 `-apple-system, "SF Pro Text", …`。实测后已把该 profile 主题复位为 dark/mono。**未闭合**：GWT 第 2 条「活动终端字形/尺寸响应，实例、PTY 与已有输出保留」在 harness 下读不到（xterm 画在 canvas，无测量元素；`TerminalSurface` 接线仅有源码级证据），第 4/5 条（枚举失败/偏好损坏的反馈、连续请求与隐藏后重新 fit）只有 30 项工程定向测试覆盖、无真实 UI 观察；且第 1～3 条观感仍需**打包形态**（origin 天然稳定）复核。证据留存 `<artifactDir>\0181-pinned-origin-restart.txt`、`0181-theme-switch-and-reset-2026-10-08.txt`、`0181-appearance-fonts-list.png`。 |
 
 组一至此仍 **12 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131），余 7 条保持 verifying：0190、0191、0194、0151、0181、0039、0042（本条为补证，不改变计数）。本轮另留一条经验：涉及 localStorage 偏好的条目，若在 dev 下测「重启保留」，必须先把渲染源端口固定（`VETTA_DESKTOP_DEV_PORT` 指向同一 dev server），否则端口变化会伪装成「功能不保留」。
+
+### 2026-10-08 · 组一续测十一（TASK-0191，滚动记忆切换语义；不依赖 UI）
+
+方法：上一轮实测留下「会话切换落回贴底」与两种未区分解释（① 缓存身份键不匹配 / ② 切换不重挂载故 `restoreStateFrom` 不生效）。本轮只读实现与既有单测做判定，不再跑实例。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0191 | **verifying（判定补证，不改变计数）** | 解释②成立且被单测钉住，①不再是必要解释：`useMessageFeedScrollModel.ts:117` 的失效条件是 `resetKey !== 当前值`，所以切换会话**确实**重算并调用 `readCachedFeedState`（`:120`，命中要求 `itemCount` 与 `itemIdentity` 全等，`:28-36`、`:60-65`）；但结果只喂给 Virtuoso 的 `restoreStateFrom` / `initialTopMostItemIndex`（`:127`、`:488`），二者是**初始化输入**，不重挂载不生效。同一测试文件两条断言把语义分开钉死：`:415`（`resetKey` 变化后初始索引为 `{index:"LAST",align:"end"}` 且不 `scrollToIndex`）＝切换回尾部；`:466`（标题即 “for a later remount”）＝缓存只在重挂载时采用。本 Task 切片只改**写入**侧：`captureState`（`:178`）在跟随中删除缓存项（`:184-185`）。结论：「离开再进入=恢复用户位置、切换会话=回到尾部」是当前实现的声明语义，不是本 Task 的回归。**未闭合（待裁定）**：`主动翻历史 → 切到别的会话 → 再切回来` 是否算 GWT 的「再回来」——若算则应恢复，属新缺陷跟进；若不算，本 Task 两条子句（自动跟随不记忆中途位置、主动浏览返回仍恢复）均已观察到，可闭合。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。本轮方法经验：实测留下的「两种解释未区分」多数可以靠**既有单测的断言标题与初始化输入语义**直接判掉，比再造一次 UI 实验便宜得多。
