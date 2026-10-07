@@ -1,7 +1,7 @@
 ---
 id: TASK-0039
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0002
@@ -18,7 +18,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0194, TASK-0196]
 integration_status: integrated
 created: 2026-09-23
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -76,7 +76,7 @@ updated: 2026-10-03
 - 定向测试：`activity-tab-residency.test.ts`（pinned 超限驱逐、被逐出页签重新打开后重建、活动 pinned 不被驱逐、pinned 与 warm 预算互不占用）、`useActivityTabResidency.test.ts`（面板 hook 层的驱逐与重建）、`ActivityPanel.plugin-tabs.test.tsx`（收起卸载既有回归）；
 - 用户流程：开多个插件 pinned 页签 → 切换/收起面板 → 展开 → 被逐出页签按需重建；
 - 质量检查：`test:impact`、`check:quick`、`bun run check`；
-- 未运行：`app.getAppMetrics()` 真实 Electron 进程计数断言（需要真实 Desktop/Electron 边界，本批未授权 E2E）；改为纯策略 + 组件层证据，进程上限由「驻留 pinned 页签数有硬上限」间接证明。
+- 未运行：`app.getAppMetrics()` 真实 Electron 进程计数断言（需要真实 Desktop/Electron 边界）；改为纯策略 + 组件层证据 + **真实实例 UI 实测**（见「真实 Desktop UI 实测」），进程上限由「驻留 pinned 页签数有硬上限」间接证明。
 
 ## 交付记录
 
@@ -96,8 +96,20 @@ updated: 2026-10-03
 - 工程验证：通过——见下方「实际验证」，绑定本分支提交；完整 `bun run check` 在本次全部代码/文档/记录改动落地后跑绿，并在合并远端 dev（含 TASK-0154/0166/0167/0194 批次）后复跑再绿。
 - 技术评审：自审（diff + 合同比对 + 门禁）；未做独立评审。
 - 集成：`integrated`——已 fast-forward 推送 `origin/dev`（`d5a29042f..2de27ed59`）；本 Task 提交 `48e02a380`（实现/文档/记录）、`033e0baa8`（合并远端 dev）、`f7c91c04d`（补登写路径冲突），后续集成与本地 main 合并归泳道 A Coordinator。
-- 人工功能验收：待用户（真实 Desktop 上验证插件 pinned 页签保活与逐出后的重建观感、进程数）。
+- 人工功能验收：**本轮在「全程自动」授权下由 Agent 在隔离 Debug 实例上实测闭合**（见「真实 Desktop UI 实测」）；判据为 DOM 挂载集合与实例 id，非主观观感。仍无真实 Electron 进程计数实测。验收结论仍归用户。
 - 发布：未授权。
+
+## 真实 Desktop UI 实测（2026-10-08，VERIFY-0017 组一续测十九）
+
+GWT 要求「多个插件页签声明 pinned」，随包预设无此声明，故本轮自建夹具插件测：
+
+- **夹具**：`packages/plugins/externals/pinned-probe/`（复制兄弟插件目录 + `node_modules` junction + `bunx vite build` 产 MF `dist/`，**未动 `bun.lock`**），注册 PP-A…PP-D 四个 `retention: "pinned"` 活动页签，各渲染一次性生成的 `data-mount-id`（逐出/重建可直接从 DOM 判读）；以 `VETTA_PLUGIN_DEV`（16 预设 + `pinned-probe`）dev-link 进隔离 Debug 实例。候选池 = 4 夹具页签 + 随包 `plugin:content-creation:workspace` = 5 个 pinned 候选，预算 3；驻留集合用 `[data-activity-tab-content]` 枚举。
+- **重置初态后的读数**（重载渲染进程 + 重开面板，`active=file`）：驻留 = `file` + PP-B/PP-C/PP-D，PP-A 与 `content-creation` 被逐出 ⇒ 非活动 pinned 驻留硬上限 3。
+- **逐出可透明重建、驻留保持实例**：点开已被逐出的 PP-A → 新 id `ew81wu` 重建并驻留（驻留 4 = 3 非活动 + 1 活动，活动不占非活动预算），PP-B/PP-C/PP-D 的 id `u930fi`/`qubfh1`/`br8xbw` 逐个不变。
+- **逐出跟随激活顺序**：随即切到内置 `browser`（非 pinned 活动）→ 被逐出的是 PP-B（此时最久未激活者），刚激活的 PP-A 与 PP-C/PP-D 保留、id 不变。
+- **收起卸载 + 记录保留**：点「关闭活动面板」→ `[data-activity-tab-content]` 归零（docked 表面整体卸载）；重新展开 → 仍是同一批 PP-A/PP-C/PP-D（PP-B 依旧逐出）。判别：若记录随收起丢失并从头登记，`active=browser` 下驻留会回到 {B,C,D} 且 A 被逐出——实测相反。
+- **未覆盖（如实记录）**：夹具页签渲染普通 React（插件 SDK 与 `docs/plugin/ui-slots.md` 无 `webview` 贡献面），故「guest `<webview>` 卸载」无实时读数，证据为同一 `renderDockedPanel = model.isOpen` 闸门 + 既存组件测试 `ActivityPanel.plugin-tabs.test.tsx:95`；`app.getAppMetrics()` 进程计数仍不做。夹具目录已在提交前删除。
+- 截图：`0039-pinned-residency-strip.png`（artifactDir）。
 
 ## 实际验证
 
