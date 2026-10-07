@@ -293,3 +293,23 @@ depends_on: []
 | TASK-0151 | **verifying（补证，不改变计数）** | 两次写入在同一 tick 内相隔 2.4 ms 发出：`Ctrl+Shift+J`（写 `shortcuts`）与「双击 Alt」（写 `quickPanel`）→ 落盘**同时**保留 `shortcuts.bindings["new-session"]="mod+shift+j"` 与 `quickPanel.trigger="alt"`，UI 双处同步显示（录制器 `Ctrl ⇧ J`、下拉 `双击 Alt`）。非参与字段未被覆盖：`notificationsEnabled=false`、`defaultExecutionMode="full-access"`、`projects=['demo','git-fixture']`、`archivedProjects=0`、`quickPanel.postSendBehavior="foreground"`，19 个顶层键齐全。**突发串行**：同一录制器在 2.8 ms 内连发 5 个 keydown（J/K/L/M/N）→ 最终落盘 `mod+shift+n`（末次生效、无中间态残留），`quickPanel.trigger` 仍为 `alt`，文件仍是合法 JSON。**还原**：点「重置所有快捷键」只改 `shortcuts`（→`{}`），下拉切回「不启用」只改 `quickPanel.trigger`（→`none`），二者各自回到基线且互不覆盖——即 BUG-0075 的「整快照写回把别的字段改回去」形态在快捷键页未复现。**仍未闭合**：`projects` 没有能在同一 tick 触发的 UI 写入口（`window.vetta.project.*` 同被令牌拦截，添加项目走原生目录对话框），本轮只证明它在上述写入中未被波及；「默认模式」在本机仍无合法目标（Windows 无 sandbox）。证据快照：`0151-desktop-config-before.json`、`0151-desktop-config-after-concurrency.json`（实测后已把基线还原）。 |
 
 组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：`window.vetta.*` 桥受令牌保护，`page.evaluate` 直接调必被拒；要构造「同一 tick 的并发写」，可让一个**自持 document 监听**的控件先 armed，再把它的 `dispatchEvent` 与另一个**已展开弹层**中选项的 `click()` 放进同一个 evaluate tick。
+
+### 2026-10-08 · 组一续测十四（TASK-0194，「立即发送」竞态与幽灵气泡；复现出新缺陷）
+
+方法：上一轮把 GWT ①「同一时刻两次『立即发送』且 q-2 返回 `missing`」与 ②「live 同时含 pending 镜像与幽灵态」都记为「UI 无法构造，需注入内核事件/时钟」。本轮找到了两者的可达路径，并给可控故障夹具加了长流控制面（`fixtures/fault-mock` 新增 `GET /control/slow?n=&ms=`，让一个回合稳定流式 14 秒以上，便于在流式期间排队）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0194 | **verifying（补证 + 新缺陷，不改变计数）** | ① **可达路径已找到**：队列抽屉入口是文本为「队列 N 条待发」的按钮，抽屉内每条消息一个 `button[title="立即发送"]`；同一 tick 内点两条（相隔 1.7 ms）实测：流式中的 SLOW-B 回合被 `turn.cancelled(reason="send queued message now")` 打断、**被打断回合的部分回复保留**（会话记录里的 `步 1 步 2 步 3` 与 UI 的「·4秒」行同时在），无错误气泡、无 `sendQueuedNow failed` 日志。但会话记录显示 q-1、q-2 **各自成为一个新回合**（`turn-1f4dc64b` / `turn-eecb181d`），**没有**出现「q-2 返回 `missing`」这一次时序 ⇒ GWT ① 的前提在本机不复现（真的发生了两轮派发）。该次观测在回合跑完前被我方夹具崩溃打断（slow 流在客户端断开后仍 `enqueue`，未捕获异常打死夹具进程），补齐「对账后位置」观测前不改判。② **幽灵气泡可稳定构造，且复现出缺陷**：无需注入内核事件，正常操作即可——回合流式中连发两条消息使其排队，等回合结束、队列抽屉已不再显示「N 条待发」之后，实时视图仍比落盘多出**两个重复的用户气泡**并追加在尾部：DOM 8 行 `GHOST-1 / 回复 / GHOST-A / 回复 / GHOST-B / **GHOST-A** / 回复 / **GHOST-B**`，而会话记录只有 6 条（`MDA0YTMzODgt…conversation.jsonl` seq2–7）；重复行的 `data-entry-id` 是**乐观 id**（`user-16-1791391810833`、`user-17-1791391811301`），正牌行是**规范 id**（`event-4`/`event-6`）⇒ 未决乐观气泡未被规范历史吸收。刷新后重开同一会话恢复 6 行 ⇒ 幽灵只存在于渲染端 live 层，未落盘。两个会话复现 **2/2**。此结果与上一轮「无尾部幽灵残留」相反，且与 BUG-0068（同族，`verifying`）描述一致。证据：`0194-ghost-duplicate-tail.png`、`0194-ghost-session-conversation.jsonl`（artifactDir）。**交用户裁定**：本项保持 `verifying`——幽灵属 BUG-0068 残余变体还是新缺陷，以及 ① 是否按「两轮派发也可接受」改写 GWT。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：把「需要注入内核事件/时钟」的判断先换成「能否找到可控外部输入」通常更省——本例只给夹具加一个慢速流控制面，就把「无法构造」变成「稳定复现」；反过来说，凡上一轮以「不可构造」结案的条目，都值得再问一次「有没有可控输入」。
+
+### 2026-10-08 · 组一续测十五（TASK-0190，恢复分支可达性；不依赖 UI）
+
+方法：上一轮把「同一回合先 error 后 done」记为「需注入内核事件，UI 侧无法稳定构造」。本轮只读实现，判定该形状在生产装配下是否可达。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0190 | **verifying（判定补证，不改变计数）** | relay 的清错分支只有一处：`runtime-host-session-event-relay.ts:149-152`（assistant 通道 `error` → `terminalReason="error"`；随后的 assistant `done` 且 `stopReason!=="aborted"` 清回 `undefined`），`agent_end` 以 `terminalReason ?? "agent_end"` 上报（`:132-137`）。故只有「同一 `agent_start…agent_end` 内先 error 后 done」才需要它。该形状唯一的**生产**构造点是 `packages/agent/src/agent-loop.ts:231-247`：assistant `stopReason==="error"` 先发 `turn_end`，**仅当 `config.contextCheckpoints` 为真且 checkpoint 恢复返回 `retry`** 才 `continue` 续跑并可能产出正常 `done`。而 `contextCheckpoints` 在整仓（排除 `dist/`）只有四处引用——`packages/agent/src/types.ts` 的类型声明、`agent-loop.ts` 的两处消费、`packages/agent/test/agent-loop-{limits,continue}.test.ts` 的测试；**没有任何生产装配把它置真**（`packages/agent/CHANGELOG.md:40`、`docs/agent/coding-agent/05-greenfield-rewrite/08-implementation-log/70-model-call-compaction-orchestrator.md:64` 亦记「普通 Agent 调用不启用」）。非 assistant 通道的 error（relay `:124`）虽有生产来源（`runtime-host-session-operations.ts:123/178`、`composed-runtime-factory.ts:231`），但其生产者均紧跟 `agent_end` 或直接抛错，不会在其后产出 `done`。⇒ **GWT 期望的形状在当前生产装配下不可达**，该分支属防御性代码，由 `running-changed-reason.test.ts` 的真实事件序列覆盖（旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）。用户可见面价值已由上一轮实测覆盖（恢复侧普通消息渲染、失败侧错误卡片与中断通知）。**未闭合（待裁定）**：是否接受「不可达的防御分支由单测覆盖」作为验收口径。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：对「机制分支不可观测」的条目，先查该分支的**开关在生产装配里是否被置真**（本例 `contextCheckpoints` 只出现在类型、消费点与测试里），往往能直接把「无法构造」升级为「不可达」，比继续寻找注入手段便宜。
