@@ -21,7 +21,7 @@ depends_on: [TASK-0153, TASK-0165]
 conflicts_with: [TASK-0158, TASK-0174, TASK-0177]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,3 +74,32 @@ TASK-0165 的 ssh2 交互认证预算/KI 密码回退已有独立参与者在主
 - 验证：`bun run --cwd packages/ssh-transport test` 195 通过 25 显式跳过（0 失败）；desktop 上述文件逐个实测；`test:quality` 484 通过。
 - 遗留（记录为后续工作，不在本轮扩大）：`packages/runtime-ssh` 的 5 个回环消费测试未在本 Task write_paths 内，Windows 直跑仍红（无 test 脚本、标准入口不可见）；`resource-runtime.remote` Windows 挂起根因；Windows 缺 bash 环境的 CI 前置（GitHub windows runner 自带 Git Bash）。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待裁定）
+
+方法：在主检出（当前 HEAD）**独立复跑**「集成后优先级与边界」一节声明的五条定向命令，再单独跑 `ssh-connection.loopback.test.ts` 复核 TASK-0169 记录的那条存量红，最后把交付记录里的「遗留：`packages/runtime-ssh` 的 5 个回环消费测试 Windows 直跑仍红」拉到可量化程度。本任务边界不含真实主机，故不含真实 SSH 连接。
+
+| 命令 / 读数 | 结果 |
+|---|---|
+| `bun ../../scripts/quality/run-vitest.mjs run src/ssh-connection.loopback.test.ts src/remote-command.test.ts src/remote-listeners.test.ts src/node-process-runner.test.ts src/ssh2-runner.loopback.test.ts`（cwd `packages/ssh-transport`） | **绿：5 文件通过 / 59 通过 \| 19 显式跳过**（0 失败）。跳过项即交付记录里显式交给 POSIX 的三组（进程组 kill、chmod 权限位、符号链接写入）与本机 ps/信号组——是**显式门控**而非静默 skip。 |
+| 同上，只留 `src/ssh-connection.loopback.test.ts` | **绿：1 文件 / 7 通过 \| 8 跳过**（0 失败），与交付记录写的「Windows 6→7 通过」一致。 |
+| cwd `packages/runtime-ssh`：`bun ../../scripts/quality/run-vitest.mjs --run`（整包直跑） | **红：12 文件中 10 失败 \| 2 跳过；64 例中 22 失败 \| 32 通过 \| 10 跳过**。典型失败是 Windows/POSIX 路径混拼：`src/ssh-tool-environment.test.ts` 在 `src/ssh-file-operations.ts:68` 拿到的路径形如 `ENOENT … access '/srv/app/C:\Users\xquan\AppData\Local\Temp\vetta-local-artifacts-SMyz1a\reference.md'`（MSYS 远端根前缀与本地盘符路径被拼在一起）。 |
+
+**对 TASK-0169 存量红记录的更正（本轮实测推翻，非本任务引入）**
+
+TASK-0169 第 74/76 行记录「`ssh-connection.loopback.test.ts` 在 Windows 仍有 **6 例存量红**（POSIX 假 ssh 脚本 ENOENT，属 TASK-0168 跨平台夹具范围）」「Windows 存量红待 TASK-0168」。本轮在该文件上实测 **7 通过 / 8 跳过 / 0 失败**——那条记录描述的状态**已被 TASK-0168 自己的交付消除**，属**过期记载**，不应再当作待办。该结论只否证「现在还有 6 例红」，不追认当时的读数是否有误。
+
+**对「遗留：`packages/runtime-ssh`」的量化（结论：如实成立，且比记录更宽）**
+
+- 交付记录写「5 个回环消费测试」，实测该包 **12 个测试文件里有 10 个失败、22 例红**；方向一致，规模更大。记录未高估，只是未量化。
+- 关键补充：这 22 例红**不在任何标准入口内**——`packages/runtime-ssh/package.json` 只有 `clean`/`build` **没有 `test` 脚本**；`scripts/quality/lib.mjs:82-84` 的 `TESTABLE_PACKAGES` 定义为「有 `scripts.test` 的工作区包」，故 `bun run test:pkg --list` 在 ssh 系里只列出 `ssh-transport`，`bun run test` / `test:unit`（`test-pkg.mjs --all`）**永不覆盖本包**；`turbo.json` 的 tasks 里根本没有 `test` 任务；`.github/workflows/` 全量搜索 `runtime-ssh` **零命中**。即交付记录写的「无 test 脚本、标准入口不可见」经本轮三处独立核验**成立**，这 22 例红不会被任何常规门禁或 CI 暴露。
+- 该遗留属 TASK-0174（SSH 标准测试注册）的前置范围，本任务明确写着「本 Task 不添加 package test 入口或新的 CI 矩阵；这些归 TASK-0174」，故本轮**不修**，只把读数钉死供其引用。
+
+**未覆盖（不宣称通过）**
+
+- 真实 SSH 主机（含动态端口分配、带空格临时目录的全链）——按任务边界不连真实主机，归 TASK-0165/0169 的实机口径。
+- `resource-runtime.remote` Windows 挂起根因——交付记录自认「未定位，不猜测」，本轮**未复诊**，仍为未知。
+- Windows CI 缺 bash 前置（记录称 GitHub windows runner 自带 Git Bash）——需 CI 环境，本轮未实测。
+- 完整 `bun run check`、`test:changed` 与三平台矩阵收口——未复跑；本轮只做定向复跑与两处遗留的量化。
+
+- 关闭建议：五条声明的定向命令在 Windows 本机全绿（59 通过 / 19 显式跳过 / 0 失败），且交付记录里唯一与「Windows 红」相关的争议点（TASK-0169 的 6 例存量红）经实测已不存在 ⇒ 就「本任务合同的可及范围」而言倾向闭合 `done`；但 `packages/runtime-ssh` 22 例红的**归属**（留在 TASK-0174 还是另立）需用户一并裁定。按 VERIFY-0017 约定等用户裁定。
