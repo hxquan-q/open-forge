@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0035]
 conflicts_with: [TASK-0051, TASK-0038]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-27
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -169,3 +169,20 @@ updated: 2026-09-27
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：复跑本任务声明的七个套件（主进程页合同 + 渲染端窗口/游标/滚动）。真实 UI 需要 500+ 条消息、且正在 streaming 的会话，本轮未驱动。
+
+| 声明套件 | 本次读数 |
+|---|---|
+| `session-history-page.test.ts`（主进程 beforeEntry 游标页合同） | 通过 |
+| `transcript-window.test.ts`、`transcript-window-controller.test.ts`（窗口合并 / reconcile / 翻页） | 通过 |
+| `optimistic-user-message-cache.test.ts`（live/optimistic 不被 backfill 覆盖） | 通过 |
+| `viewer-history-update.test.ts`（read-only viewer live 更新） | 通过 |
+| `useMessageListScrollModel.test.tsx`（插页不跳滚动锚点） | 通过 |
+| `chat-service-artifact.test.ts` | 通过 |
+| **合计** | **7 文件 / 93 例通过，0 失败** |
+
+- **未覆盖**：500+ 条真实会话上的「上滚加载旧页 / MessageTimeline 搜索跳转 / 导出完整 transcript」。这三条合同条款都以「大历史 + 正在 streaming」为 Given，本轮没有构造该会话（构造需真实模型逐轮产生消息，成本与时长都不合本轮口径）。`integration_status: pending` 仍为 pending，本轮未改动。
+- **关闭建议**：七项声明套件全绿、合同条款逐条有对应用例，倾向 `done`；是否要求补一次真实长会话体验，请用户裁定。

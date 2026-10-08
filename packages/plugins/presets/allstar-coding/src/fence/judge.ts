@@ -82,7 +82,7 @@ export const BASELINE_MATRIX: Record<string, { tier: string; write: string[]; re
 		tier: "T2",
 		write: ["docs/ac/whitebox.md", "docs/ac/test-results/**", "test/**", "tests/**"],
 	},
-	// read 字段是黑盒自测迭代（TASK-0217）的最小读域标记：读类工具按前缀放行（§6.2 读域过滤）。
+	// read 字段是黑盒自测迭代（TASK-0219）的最小读域标记：读类工具按前缀放行（§6.2 读域过滤）。
 	// 目前只有 blackbox 声明——其他角色读全域语义不变；未来角色需要窄读域时在此登记。
 	blackbox: {
 		tier: "T1",
@@ -333,7 +333,7 @@ function readCallPath(input: unknown): string | null {
 function isWithinBlackboxReadScope(path: string): boolean {
 	const posix = toPosixPath(path.trim());
 	if (posix.length === 0) return false;
-	// fail-safe（BUG-0080）：绝对路径与任何 .. 段先拒——词法前缀匹配挡不住
+	// fail-safe（BUG-0082）：绝对路径与任何 .. 段先拒——词法前缀匹配挡不住
 	// `docs/ac/../../src/main.ts` 这类穿越（宿主 resolve 后实际读到域外）。
 	// 不做完整规范化：宁可误拦合法的 `docs/ac/a/../b.md`（罕见），不可漏放穿越。
 	if (posix.startsWith("/") || posix.startsWith("~") || /^[A-Za-z]:/.test(posix)) return false;
@@ -343,7 +343,7 @@ function isWithinBlackboxReadScope(path: string): boolean {
 }
 
 /**
- * 引号外的 shell 元字符（BUG-0080）：命令组合（; && || | & 换行）、命令替换（$( `）、
+ * 引号外的 shell 元字符（BUG-0082）：命令组合（; && || | & 换行）、命令替换（$( `）、
  * 重定向（> <）。引号内的元字符是字面量（URL 查询串的 & 是合法形态），不计。
  */
 const BLACKBOX_SHELL_METACHARS = /[;|&<>`]/;
@@ -354,7 +354,7 @@ const BLACKBOX_SHELL_SUBSTITUTION = "$(";
  *
  * 两种引号语义不同（bash 与 PowerShell 一致）：
  * - 单引号内是真字面量——一切字符不计（含 ` 与 $( ）；
- * - 双引号内 ` 与 $( 仍是命令替换（BUG-0080 残余 A）——必须照常拦截，其余字符当字面量；
+ * - 双引号内 ` 与 $( 仍是命令替换（BUG-0082 残余 A）——必须照常拦截，其余字符当字面量；
  * - 引号外 `\` 紧跟引号字符是转义的字面引号——**不开启引号区**（残余 B），否则
  *   `\" && evil \"` 会让整个命令段被误认为引号内而跳过扫描。
  * 未闭合引号返回 "unclosed-quote"（fail-safe——引号状态不明时无法保证后续元字符语义）。
@@ -403,7 +403,7 @@ function isBlackboxShellAllowed(command: string): boolean {
 	const first = command.trim().split(/\s+/)[0];
 	if (!first) return false;
 	if (!BLACKBOX_SHELL_WHITELIST.has(first.toLowerCase())) return false;
-	// BUG-0080：首 token 匹配不够——`agent-browser x && curl ...` 的第二段命令、
+	// BUG-0082：首 token 匹配不够——`agent-browser x && curl ...` 的第二段命令、
 	// `> out` 的重定向写文件都在首 token 语义之外（重定向还绕过写域：shell 重定向
 	// 不是 file-edit 调用）。引号外出现组合/替换/重定向元字符即 fail-safe 拦截。
 	return blackboxShellMetachar(command) === null;

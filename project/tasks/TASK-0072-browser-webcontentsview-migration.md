@@ -23,7 +23,7 @@ related_issues: []
 related_bugs: []
 integration_status: integrated（main：1364d1376 / ebb8fc942 / 文档提交）
 created: 2026-09-28
-updated: 2026-09-27
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -128,3 +128,18 @@ updated: 2026-09-27
   Electron 下可能有未覆盖的边缘（对话框、右键菜单、devtools detach 未
   经 IPC 暴露——与旧 webview 面一致，非回退）；窗口多显示器/DPI 变化
   时 bounds 跟随未实机验证。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：测试级复跑声明的浏览器域套件。**用户面本轮未能驱动**，原因是本轮摸清了观测通道的边界（见下），而非跳过。
+
+| 声明套件 | 本次读数 |
+|---|---|
+| `browser-view-host.test.ts`（attach/bounds/可见性）、`webview-session-controller.test.ts`、`webview-picker-target.test.ts`、`webview-picker-guest.test.ts`、`in-app-browser-tab-host.test.ts`（主进程） | 通过 |
+| `BrowserPanelView.picker.test.tsx`、`useBrowserPanelModel.test.tsx`（渲染端） | 通过 |
+| **合计（与 TASK-0075 共用同一批）** | **7 文件 / 62 例通过，0 失败** |
+
+**为什么用户面不可自动化（本轮实测，非推测）**：迁移后的浏览器 guest 是**原生 `WebContentsView`**，不是 `<webview>` DOM 节点 ⇒ ① 不在 Playwright `ctx.pages()` 里；② CDP 目标列表里能看到的第三个 target 其 `url`/`title` 均为**空**，读不到 guest 页面内容；③ guest 内的文本（含 xterm 场景）不在宿主 DOM。附带一条硬约束：**只要原生浏览器视图在场，`page.screenshot` 会 30s 超时**，所以「面板从隐藏切回可见、截图内容正确」这条合同条款在本环境里**连截图取证都做不到**。
+
+- **未覆盖**：三条 Given/When/Then 全部——「登录态页面 snapshot 返回同一登录态元素树」「面板隐藏切回后截图正确、无残留空白」「resize/侧栏折叠时 guest bounds 跟随、无撕裂」。它们都需要读取或截图原生 guest，而上述通道在当前自动化下不可达。
+- **关闭建议**：测试级（attach/bounds/可见性/picker 注入）全绿，但这些用例是**在测试替身里**断言 bounds 与注入脚本，不等于真实 guest 渲染正确。用户面证据缺失属**环境能力限制**，建议要么由用户自行肉眼走查一次（打开内置浏览器登录一站 → 隐藏再切回 → 拖拽 resize），要么接受测试级口径。请用户裁定走哪一种。

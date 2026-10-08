@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated（main 主工作区串行；98cfb4b00）
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -89,3 +89,18 @@ updated: 2026-10-01
 用户提供的审核结论为“有条件通过”，不是无条件功能验收。#1/#7 守卫问题由 TASK-0138（73a365f0c）修复；#2/#3/#4/#5 与文案问题由 TASK-0139 跟进。本 Task 保持 verifying，未推送。
 
 原提交 98cfb4b00 混合了 Skill 重构、机械守卫和验收政策三个可单独回滚的关注点。承认原拆分不理想；未获历史改写授权，不 reset/rebase，后续守卫与文档修正已分开提交。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组五；保持 verifying 待裁定）
+
+本条的清单条目是「在新会话里丢一句话需求，看 intake 是否按预期路由（**规范类，只有真用过才算验收**）」，因此本轮分三路取证：**真用过**、**镜像现状**、**回归套件**。
+
+| 取证路径 | 本次读数 |
+|---|---|
+| **真用过**：本轮会话本身就是一次 intake 路由 | 本轮由用户以 `/open-forge-task-intake` 进入，随后依 [项目入口 AGENTS.md](../../AGENTS.md) 与 [Claude 专属补充](../../docs/dev/agent-rules/claude.md) 读取规则、按「最小必要流程」直接进入**验收**路线（未换框架、未要求用户填技术合同、未生成业务代码），与合同第 1、2 条 Given 一致 |
+| **真用过**：验收分层约束 | 合同第 4 条 Given「用户尚未验收 → 交付功能验收包，保持 verifying，**不自行宣布用户接受**」在本轮被实际执行：12+12+5 条全部写成「保持 verifying 待裁定」，未代判 |
+| 镜像与引用 | `bun run scripts/quality/workflow-skills.mjs` → 「canonical sources, shared entry and relative file links passed」。现状：`.agents/skills/` 在位、`.claude/skills` 为**符号链接**指向 `../.agents/skills`（未退化成文本文件）。**`.devin/skills` 已不存在**——由后续提交 `5a2d55049 refactor(skills): 移除 Devin 镜像与同步路径` **正式取消**（本任务交付记录里写的「Devin sibling 相对链接断裂」及其镜像已随之作废）⇒ 这是**被后续决定取代**，不是缺口 |
+| 回归套件 | `scripts/quality/workflow-skills.test.mjs` **1 文件 / 17 例通过** |
+
+- **未覆盖**：本任务交付记录里的完整读数（`test:impact` 34 文件 449 例、Project/Task/quality-gates 3 文件 99 例、完整 `bun run check` exit 0）本轮**未复跑**，只跑了 workflow-skills 自身套件 + 检查脚本。
+- **既有用户裁定**：本任务「后续审核记录」一节已记载用户给过「**有条件通过**」（不是无条件功能验收），并列明 #1/#7 守卫问题由 TASK-0138 修复、#2~#5 与文案问题由 TASK-0139 跟进。本轮**未复核** TASK-0138/0139 的闭合状态，故不改变该结论。
+- **关闭建议**：合同第 1/2/4 条 Given 在本轮被**实际使用**且表现符合预期；第 3 条（自动化软件测试通过不冒称模型质量通过）与第 5 条（镜像漂移明确失败）由回归套件与检查脚本覆盖。是否据此把「有条件通过」升级为验收闭合、以及 TASK-0138/0139 是否已清，请用户裁定。

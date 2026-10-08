@@ -9,7 +9,7 @@ related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
 related_tasks: [TASK-0151]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0080]
 execution: serial
 branch:
 worktree: TASK-0196 批次工作树内串行（../open-forge-wt/task-0196-draft-batch）
@@ -21,7 +21,7 @@ depends_on: [TASK-0151]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -64,3 +64,18 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 实际运行：定向 580/580；test:impact 646+7skip；完整 check 通过。
 - 未运行及原因：真实系统横幅/音频实机播放不做实机验证。
 - 剩余风险：内置音色听感未人工评审；配置事务并发窗口为既有通用风险（0151 主题）。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying，另立案 BUG-0080）
+
+方法：隔离 Debug profile `04987e4e` 真实应用 UI 驱动 + `desktop-config.json` 磁盘读数 + 渲染进程 `window.Audio` 记录器（阳性对照＝设置页「试听提示音」）。判据为设置页四条 GWT 子句。
+
+| GWT 子句 | 实测结果 |
+|---|---|
+| 旧配置迁移 | **成立**。把 `desktop-config.json` 降级为「无 `schemaVersion`、无 `notificationPreferences`」并额外写入一个未知未来字段 `notificationPreferencesLegacy`；应用读取该配置后（打开设置页）文件被原子重写为 `schemaVersion: 2` + 完整默认 `notificationPreferences`（`soundEnabled: true`、`systemScope: "away-from-session"`、`soundScope: "always"`、`soundVolume: 60`、`completed/failed/actionRequired` 三项 `systemEnabled: true` + `soft-chime`）；`notificationsEnabled`、`projects`（2 个）、`language` 与未知字段全部保留；UI 四个开关即时反映迁移后的默认值，无需重启。 |
+| 开关保存/重开 | **成立**。把「系统通知」从开切到关 → 磁盘 `notificationsEnabled: false`；离开设置页再进入 → 开关仍为关；**重启整个 Debug 实例**（渲染进程源从 `42672` 变为 `59802`，localStorage 全丢）后重开设置页 → 「系统通知」仍为关、「提示音」为开，与磁盘一致。 |
+| 完成/失败/等待审批只提示一次 | **未能取得用户可见读数**——被 [BUG-0080](../bugs/BUG-0080-notification-sound-never-played.md) 阻断：主进程 `notification-service.ts:130-135` 会向 `vetta:notification:sound` 发命令，但渲染进程无任何 `onSound` 订阅者，提示音在真实应用中从不播放。三轮真实完成回合（夹具请求日志 `21:24:17Z`/`21:25:57Z`/`21:27:10Z` 各一次 `/v1/responses`，会话 JSONL 相应新增回复）在 `window.Audio` 记录器下 **0 条**记录，而同记录器点「试听提示音 → 播放」立得 `new Audio()` + `data:audio/wav;base64,…` + `play()`，且 1.5 s 后 `duration=0.5`、`currentTime=0.5`、`paused=true`（确实播完）。主进程侧「终结状态折叠为单次结果」的语义仍有单测覆盖（`session-turn-notification-controller.test.ts` 3 例）与 `notification-policy.test.ts`。 |
+| 静音不影响业务事件 | **成立（业务事件侧）**。「系统通知」关闭状态下的回合正常完成并渲染回复；`soundEnabled`/`systemScope` 与系统总开关在策略上相互独立（`notification-policy.ts:28-44`，`notification-service.test.ts:56-92`）。提示音侧的独立性因同一缺陷无从取端到端读数。 |
+
+- 未观测：OS 系统横幅本身（主进程 `new Notification` 无日志行，且从渲染进程补挂 `onSound`/`notify` 订阅被 Electron host API 拒绝：`Host API access denied`），故 Agent 完成/等待横幅只有「策略 + 单测」级证据，与 TASK-0181 的 PTY 读数同类处理。
+- 交付记录修订：原「root-layout onSound 播放接线」与实现不符（特性提交 `3a49e5c2a` 的 37 个文件无 root-layout 变更），已在 BUG-0080 记录。
+- 闭合建议：迁移与持久化两条可利用；提示音与「只提示一次」的用户可见面需先修 BUG-0080 再复验。本项保持 `verifying`，等用户裁定（可选项：授权修复 BUG-0080 后复验 / 以单测口径接受并转 BUG 跟踪）。

@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -68,3 +68,20 @@ XSS/外链/相对资源、长流式文本、公式未闭合、缓存上限、HTM
 - 未运行及原因：markdown-isolation.node-test（Electron 隔离窗口 e2e）——本机 vite lib-build 未把 `mermaid.min.js?raw` 内联为字符串（动态 import 被拆块后按 CJS 加载失败），属构建环境限制；产品路径经 vite.main.config 打包内联，隔离语义另有单测与真实浏览器 node-test 覆盖。视觉校验不做（无视觉能力）。
 - 剩余风险：mermaid/katex 体积随 desktop bundle 增大（懒加载按上游设计）；favicon/public-resource 的网络行为仅单测级验证，真实站点兼容性待用户使用反馈。
 - 遗留收口（2026-10-03，TASK-0200）：markdown-isolation e2e 已由独立审计任务补跑通过——测试构建加 `inlineDynamicImports` 后 Electron 隔离窗口全链绿（独立 PID、断网断弹窗、Mermaid 渲染/缓存/看门狗）；交付对照审计结论与批注作用域会话就绪重挂修复见 [TASK-0200](TASK-0200-rich-content-audit-fixes.md)。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待裁定）
+
+方法：本 Task 的验证合同明确「**不授权 UI 实机或付费模型**」，故验收口径本就是测试级。在主检出独立复跑覆盖六条子句的套件，含一条真实浏览器用例与一条 Electron 隔离窗口 e2e（两者都是仓库既有测试，非用户环境）。
+
+| 子句 | 覆盖用例与本次读数 |
+|---|---|
+| XSS/外链/相对资源 | `bun run --cwd packages/theme-ui test` **23 文件 / 180 例全绿**（含 `chat/markdown-link.test.ts` 的外链/相对资源策略）；真实浏览器用例 `node --test apps/desktop/scripts/markdown-preview.node-test.mjs` **1/1 PASS**——「static HTML, blocked escape/network, inert SVG and bundled formula worker」；Electron 隔离 e2e `node apps/desktop/scripts/markdown-isolation.test.mjs` **PASS**——「denied host/network/popups」。 |
+| 长流式文本 | 同 180 内 `markdown/streaming.test.ts`（新近短语高亮跟随节奏、跨块边界）与 `markdown/stable-blocks.test.ts`（稳定块复用）。 |
+| 公式未闭合 | 真实浏览器用例的「bundled formula worker」段（未闭合公式走 worker 渲染不阻塞）；隔离 e2e 的 Mermaid 渲染/恢复段。 |
+| 缓存上限 | 同 180 内 `shared/syntax-highlight-cache.test.ts`（字符预算按插入序淘汰、重复 put 只计最新值、单条超预算仍保留、shiki 失败路径空串同样计费）。 |
+| HTML 死循环隔离 | 隔离 e2e 的 `isolation: loop` 段通过，断言含 **infinite-loop watchdog**；同用例还断言独立 PID、脚本执行、拒绝 host/network/popup、Mermaid 缓存与窗口清理。 |
+| 批注会话切换 | `bun run --cwd apps/desktop test …/annotations/AnnotationScope.test.tsx`（与 markdown 面共 6 文件 / **19 例全绿**），其中「keeps answering after close, **ignores other-session updates** and restores the saved result」正是会话切换子句。 |
+| 主进程 markdown 服务面 | `favicon-cache` / `favicon-service` / `public-resource` 三个文件 **16 例全绿**（外链资源与图标发现的白名单/缓存边界）。 |
+
+- 未复跑：完整 desktop 套件（交付记录记为「富内容/批注/共享面合计 443+100」，本轮只跑覆盖子句的 9 个文件 / 35 例）与 mermaid 独立进程渲染的另一半 IPC 面（17 段中的 mermaid-service 部分），改由隔离 e2e 的 Mermaid 段与 `markdown.test.ts` 覆盖；视觉观感（公式/图表排版）无视觉能力，不做。
+- 关闭建议：六条子句均有本轮独立复跑的绿用例，且 TASK-0200 已把此前受阻的隔离 e2e 补跑通过（本轮在本机复现也是 PASS）⇒ 倾向闭合 `done`；按 VERIFY-0017 约定等用户裁定。

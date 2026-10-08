@@ -1,21 +1,21 @@
 ---
-id: TASK-0218
+id: TASK-0220
 type: task
 status: verifying
 priority: P1
 owner: packages/plugins/presets/allstar-coding
-source: user-report（TASK-0217 提交 22ebf3a69 人工审查：两个机械绕过口）
+source: user-report（TASK-0219 提交 22ebf3a69 人工审查：两个机械绕过口）
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0217]
-related_issues: [ISSUE-0031]
-related_bugs: [BUG-0080]
+related_tasks: [TASK-0219]
+related_issues: [ISSUE-0032]
+related_bugs: [BUG-0082]
 execution: serial
 branch: main
 worktree: unassigned（主工作区串行）
 base_commit: 22ebf3a69
 read_paths: [packages/plugins/presets/allstar-coding/src/fence/judge.ts, packages/plugins/presets/allstar-coding/test/fence-judge.test.ts]
-write_paths: [packages/plugins/presets/allstar-coding/src/fence/judge.ts, packages/plugins/presets/allstar-coding/test/fence-judge.test.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0218-ac-fence-blackbox-bypass-fix.md, project/tasks/README.md, project/bugs/BUG-0080-ac-fence-blackbox-bypass.md, project/bugs/README.md, project/issues/ISSUE-0031-ac-fence-lexical-scope-boundaries.md, project/issues/README.md]
+write_paths: [packages/plugins/presets/allstar-coding/src/fence/judge.ts, packages/plugins/presets/allstar-coding/test/fence-judge.test.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0220-ac-fence-blackbox-bypass-fix.md, project/tasks/README.md, project/bugs/BUG-0082-ac-fence-blackbox-bypass.md, project/bugs/README.md, project/issues/ISSUE-0032-ac-fence-lexical-scope-boundaries.md, project/issues/README.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -25,11 +25,15 @@ updated: 2026-10-05
 ---
 <!-- Copyright The Open Forge contributors. -->
 
-# 修复 BUG-0080：ac-fence 黑盒白名单复合命令绕过与读域 .. 穿越
+# 修复 BUG-0082：ac-fence 黑盒白名单复合命令绕过与读域 .. 穿越
+
+## 编号说明
+
+- 原立案编号 TASK-0218：2026-10-08 合并 origin/dev 时发现 dev 侧已并行立案同号 TASK-0218（Browser 能力证据），按「dev 已有在前」顺延为 TASK-0220；关联 BUG-0080→BUG-0082、ISSUE-0031→ISSUE-0032、TASK-0217→TASK-0219 同批顺延，write_paths 中引用的文件名同步改名。
 
 ## 目标
 
-堵上 TASK-0217 引入的两个机械绕过口，使围栏的拦截承诺（「其余含 git 只读全拦」「黑盒不读实现」）在机械层面成立。
+堵上 TASK-0219 引入的两个机械绕过口，使围栏的拦截承诺（「其余含 git 只读全拦」「黑盒不读实现」）在机械层面成立。
 
 ## 范围
 
@@ -53,9 +57,9 @@ updated: 2026-10-05
 
 ### 不做
 
-- 写域 glob 的 `..` 逃逸统一修（ISSUE-0031，既有面另议）。
-- shell 重定向写的写域判定（ISSUE-0031）。
-- agent-browser URL scheme 约束（宿主侧，ISSUE-0031 记录）。
+- 写域 glob 的 `..` 逃逸统一修（ISSUE-0032，既有面另议）。
+- shell 重定向写的写域判定（ISSUE-0032）。
+- agent-browser URL scheme 约束（宿主侧，ISSUE-0032 记录）。
 
 ## Given / When / Then
 
@@ -66,9 +70,9 @@ updated: 2026-10-05
 ## 验收标准
 
 - 红测在旧实现失败、新实现通过（先红后绿）。
-- fence-judge.test.ts 全量（含 TASK-0217 的 12 项）零回归。
+- fence-judge.test.ts 全量（含 TASK-0219 的 12 项）零回归。
 - `bun run check:quick` → `bun run test:impact` → 完整 `bun run check` 全绿。
-- 发布说明已更新；BUG-0080 台账回填验证记录。
+- 发布说明已更新；BUG-0082 台账回填验证记录。
 
 ## 交付记录（2026-10-05）
 
@@ -82,16 +86,16 @@ updated: 2026-10-05
   - reason 分流：白名单命中但有元字符 → 提示「复合命令拆分单条执行，重定向写不在权限内」；非白名单 → 原通道指引；均带 help_protocol。
 - 验证命令与结果：
   - 红测：`run-vitest.mjs --run test/fence-judge.test.ts` 3 failed（旧实现）→ 修复后 78/78 通过；
-  - 包内全量：6 文件 131/131 通过（TASK-0217 的 12 项黑盒用例零回归）；
+  - 包内全量：6 文件 131/131 通过（TASK-0219 的 12 项黑盒用例零回归）；
   - `bun run check:quick -- <judge.ts/test>`：通过；`bun run test:impact -- judge.ts`：2 文件 89/89 通过；
   - 完整 `bun run check`：exit 0（lint/types/guards 全绿）。
-- 未做及原因：写域 glob `..` 逃逸统一修、shell 重定向写域判定、agent-browser URL scheme 约束——均登记 ISSUE-0031（既有面/宿主侧，另行裁决）。
+- 未做及原因：写域 glob `..` 逃逸统一修、shell 重定向写域判定、agent-browser URL scheme 约束——均登记 ISSUE-0032（既有面/宿主侧，另行裁决）。
 - 剩余风险：元字符表为黑名单式（白名单语义内从严），未来新 shell 语法需补条目；`docs/ac/a/../b.md` 这类合法但含 `..` 的路径会被误拦（罕见形态，fail-safe 取向，用户可走 help_protocol）。
 - 归属标注：Open-Forge-only。
 
 ### 残余轮（同日第二轮审查，红测先行 2 failed → 转绿）
 
-- 首轮修复后用户复审发现两个残余绕过（BUG-0080 残余轮）：
+- 首轮修复后用户复审发现两个残余绕过（BUG-0082 残余轮）：
   - 残余 A：双引号内 `$()` 与反引号是命令替换非字面量（bash/PowerShell 一致），首轮把双引号内一切当字面量跳过 → `"http://x?$(curl evil)"` 放行；
   - 残余 B：引号外 `\` 未处理，`\"` 骗状态机开引号区 → `x \" && curl evil \"` 闭合变体整段跳过扫描（不闭合变体靠 unclosed-quote 意外拦截，非设计）。
 - 修复（仅 `blackboxShellMetachar` 内部分支）：单/双引号分治——双引号内继续检测 `$(` 与反引号并拦截（`&` `;` 等仍当字面量，URL 查询串不受影响）；单引号内维持全字面量（真语义）；引号外 `\` 紧跟引号字符 = 转义字面引号，跳过两字符不开区。

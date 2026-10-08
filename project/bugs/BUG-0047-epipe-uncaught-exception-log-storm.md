@@ -1,7 +1,7 @@
 ---
 id: BUG-0047
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement:
@@ -12,7 +12,7 @@ related_plan: []
 related_tasks: [TASK-0131]
 related_issues: []
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -62,3 +62,12 @@ electron-log console transport 写已断开的 stdout 抛 EPIPE（异步 error �
 - 测试：`diagnostics.test.ts`（新增 4 例）——首条 EPIPE 熔断且错误仍落文件、后续流错误有界汇总、非流错误不熔断、unhandledRejection 同路径。
 - 检查：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/diagnostics.test.ts`（4 passed）；批次 `test:changed --base origin/dev` 与 `check` 由 Coordinator 统一执行。
 - 未运行及原因：「关闭持有 pipe 的终端」人工冒烟未执行，保持 verifying。
+
+### 人工复现与验收（2026-10-07）
+
+按上文「最小复现」实跑一次，但用一次性 VETTA_HOME 起临时 dev 形态实例，把主进程 stdout 接进 `| head -c 1200`（读端读满即关，等价于终端被关掉），避免动隔离 Debug profile 与用户 dev 目录：
+
+- 断管后 1.5 秒写下**首条**（也是全程唯一一条）`[error] [diagnostics] uncaughtException Error: EPIPE: broken pipe, write`，堆栈与修复前一致（`console.value → writeFn → Logger.processMessage → Socket._write`）。
+- **1 毫秒后**写下 `[warn] [diagnostics] stdio stream write failed; console log mirror disabled for this process`，此后主进程继续正常启动（`[window] create`、技能 102 条、runtimes applied），**没有退出**。
+- 量级：整份 main 日志 **392 行**（对照修复前 14 秒 5069 条），`uncaughtException` 1 条、`EPIPE` 1 条；熔断后仍有 180 行业务日志照常落文件，这 180 次镜像未再触发任何 EPIPE 或 uncaughtException——风暴回路确已切断。
+- 复现时的环境提示：harness 的 `verify:ui:start` 会把主进程 stdout 接进日志**文件**（且中间有 `concurrently` 中转），照常启动**永远等不到**本例；必须自己起实例、自己接管道。证据留存 `<artifactDir>\0131-epipe-main-log-2026-10-07.log`。

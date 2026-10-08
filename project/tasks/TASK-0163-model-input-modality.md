@@ -1,7 +1,7 @@
 ---
 id: TASK-0163
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ai
 source: user-request; upstream 8b1ed7b2e
@@ -21,7 +21,7 @@ depends_on: [TASK-0149]
 conflicts_with: [TASK-0122, TASK-0123]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -69,3 +69,20 @@ Upstreamable。上游 8b1ed7b2e 涉及 transform-messages、Anthropic adapter、
 来源分支：task/TASK-0163-model-input-modality；来源提交：3dda219e9d4dc19bdffe0c3d28b59a91c6075dae。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
 
 集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0163。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二，闭合为 done）
+
+方法：隔离 Debug profile `04987e4e` 的真实会话里做「同一会话含图片 → 切纯文本模型 → 切回图像模型」的完整往返。**不再依靠只读代码或单测推断**，两个关键读数都取自客观产物：① 图片用页内 canvas 生成的 64×64 PNG 经**真实投递路径**（`MessageInput.DropZone` 的 drop 事件 + `DataTransfer`）进入输入区，附件落地为 `vetta-file://local/…png`，编辑器插入「图 1」引用；② 出站请求体由夹具 provider `faultmock`（`input: ['text']`，本机 127.0.0.1:8792）落 `requests.ndjson`——本轮给夹具补了**请求体摘要**字段（输入项类型 / 内容部件类型 / 图片部件数 / `data:image` 出现 / 省略提示计数），故「图有没有被带上」是读出来的而不是猜的。
+
+| GWT 子句 | 实测结果 |
+|---|---|
+| 含图片会话切纯文本模型 → 请求合法 | 切到 `Fault Mock 1`（`input: ['text']`）后发送，回合正常完成（`FAULT_MOCK_OK…`），HTTP 200，无错误气泡 |
+| 同一请求**无图片** | 请求体摘要：`contentTypes = ['input_text','output_text']`、`imageParts = 0`、`imageDataUrls = 0`、`rawHasDataImage = false`、`rawHasInputImage = false`——而该会话历史确实挂着第一轮的图片 |
+| 文字 / 工具关联不丢 | 同一请求 `inputTypes` 含 `message` × 6、`function_call`、`function_call_output`（工具调用与结果配对项仍在），非空文本轮正常 |
+| 任何用户图片被省略 → **追加省略提示** | 同一请求 `omissionNotices = 1`（即 `packages/ai/src/providers/transform-messages.ts:4` 的 `UNSUPPORTED_IMAGE_INPUT_NOTICE`）。注：该提示按实现是**注入请求文本**（`input_text` 部件），不是 UI 横幅——本轮先按 UI 横幅找过 `[role=alert]`/提示文案，确认为 0，读实现后改从请求体取证 |
+| 切回图像模型不破坏 canonical 历史 / 图像模型保持原内容 | 切回 `glm-5.3-flash`（`input: ['text','image']`）后问「你还能看到第一轮那张图片吗」→「能看到」；再问「图里那行白色文字写的是什么」→ **`IMG`**（正是第一轮投递图里用 canvas 画的白色字符）。跨越一次纯文本模型切换仍能读出新图细节，证明 canonical 历史里的原图被完整重放、未被文本模型那轮破坏 |
+| 工具结果图片分支 | **本轮未在 UI 构造**（需工具返回一张图）。由单测覆盖：`packages/ai/test/openai-completions-tool-result-images.test.ts`、`openai-responses-tool-result-images.test.ts` 等（本轮复跑 `bun run --cwd packages/ai test` = **63 文件 / 515 例全绿**，账本原记 509 例，套件已增长）。如实记录为宿主测试级证据 |
+
+- 截图：`0163-attach-probe.png`（投递后附件 + 「图 1」）、`0163-model-picker.png`、`0163-image-model-turn.png`（图像模型轮）、`0163-text-model-retest.png`、`0163-switch-back.png`、`0163-switch-back-decisive.png`（artifactDir）。
+- 夹具改动：`<debug vettaHome>/fixtures/fault-mock/server.ts` 增加请求体摘要（只记类型/计数，不记正文），可复用于任何「出站请求内容」类条目。
+- 闭合依据：两条 GWT 的用户可见面已在真实应用上直接观察（含一份只有真看到图才答得出的判别性读数「IMG」），工具结果图片分支维持单测覆盖。按用户「全程自动」授权记为 `done`；如不认可（例如要求工具结果图片也走一次真机），按原 Task 回退 `verifying`。

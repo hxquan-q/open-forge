@@ -18,7 +18,7 @@ depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-25
+updated: 2026-10-06
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,11 +71,16 @@ updated: 2026-09-25
 
 ## 阻塞
 
-- 仅剩 `TASK-0045`（已 ready：CLI 命令名 `openforge`、旧命令直接切换不保留别名、`vetta-serv` 改 `openforge-serv`，2026-09-25 决策齐）实施收口，及随之关闭的 `TASK-0049`；`TASK-0044` 已完成，社区入口已决策暂不建设（2026-09-25，保留现有外部链接）。本任务不重做当前已进行的局部文档更新。
+- 阻塞已解除（2026-10-06，TASK-0217 复核）：`TASK-0045` 与 `TASK-0049` 的 frontmatter 均为 done，原阻塞条件（等 0045 收口、随 0049 关闭）已满足。但**本任务尚未实施**——交付记录的四条（实际修改、实际运行、未运行及原因、剩余风险）全为空。状态转 ready，等待实施。原有约束保持不变：冻结技术标识（`.vettapkg`、`@vetta/*`、`VETTA_*`）不改；社区继续使用已冻结的现有入口。
 
-## 交付记录
+## 交付记录（第一片，2026-10-06）
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：README.md 与 README.zh-CN.md 各把散文里的产品称呼改为 Open Forge（英文 5 处、中文 3 处），`Vetta Serv` 改为 `Open Forge Serv`（依据 PLAN-0003 已定的 `openforge-serv` 代号）。冻结标识一律不动：`@vetta-org/plugin-cli`、`npx vetta-plugin-cli`、`npm run install:vetta` 已逐条核实为真实存在的包名与命令（`packages/plugins/plugin-cli` 的 bin 与 init 模板）。
+- 刻意未改（待用户定，不是遗漏）：
+  - README「Run from source」段的 `git clone https://github.com/openvetta/open-vetta.git` 与 `cd open-vetta`——改成 fork 坐标还是保留上游，取决于这份 README 面向谁；本仓为私有仓库，指向 fork 与指向上游都说得通，属仓库坐标决策。
+  - CodeRabbit 徽章的 `github.com/openvetta/open-vetta` 仓库坐标，同上。
+- 验证：`grep` 复核两份 README 后，除上述两处坐标外只剩冻结标识与上游署名（「Open Forge is an independently maintained derivative of Open Vetta」）。
+- 未运行及原因：未跑运行时测试（纯文档改动，不改变任何命令与路径）。
+- 剩余风险：本任务覆盖 84 个文件、334 行上界，本条只做了 README 中英对；QUICKSTART、CONTRIBUTING、SECURITY 与 `docs/` 待后续切片。
+
+- 新增阻塞（2026-10-06，TASK-0048 记录同源）：`docs/` 树的清查不能按模式替换——里面同时混着产品称呼、术语名（被双链与根 CONTEXT 索引引用）、插件名（Vetta UI Design）与商业订阅品牌（Vetta Go / Vetta Zen），还有大量上游沿革记录（ADR、greenfield 实施日志、适配研究）。按模式替换当场打破术语索引，已整体撤回。需要先有一份「术语与品牌对照表」并决定沿革记录是否改名，才能继续。README、QUICKSTART、SECURITY 三份已按散文称呼改名并交付。

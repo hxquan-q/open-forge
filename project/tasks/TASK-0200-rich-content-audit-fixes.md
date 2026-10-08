@@ -1,7 +1,7 @@
 ---
 id: TASK-0200
 type: task
-status: verifying
+status: done
 priority: P2
 owner: desktop content + theme-ui（泳道C审计线）
 source: user-request; TASK-0157/0158 交付审计; upstream c362aacc4; RESEARCH-0022
@@ -21,7 +21,7 @@ depends_on: [TASK-0157, TASK-0158]
 conflicts_with: [TASK-0197, TASK-0196, TASK-0181, TASK-0159, TASK-0154, TASK-0123, TASK-0122, TASK-0039]
 integration_status: integrated（实现 af7a9f5a9/501a935da/25467b0d2，随本任务分支 ff 推送 origin/dev）
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -111,3 +111,10 @@ updated: 2026-10-03
 - 未运行及原因：verify:ui（无视觉能力且未授权）；真实 Provider/SSH/终端实机（政策不允许）；0158 scripts 插件实机面板（静态审计 + 既有套件覆盖）。
 - Worktree：task-0200-rich-content-audit-fixes（bun install + prepare:workspace:dev + Electron dist 复制完成；worktree:check TASK-0200 无冲突对）。
 - 剩余风险：批注面板 actions 经 layoutEffect 异步发布，极端首帧内选中右键的理论窗口与上游终态一致；README 0196 行修正与主工作区未提交的同文件编辑可能在 dev 合并时叠加，按共享文件合并纪律处理。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+- 采样方法：`page.addInitScript` 在文档初始化前装帧级采样器（滚动容器身份、项数、scrollTop、scrollHeight 的变化点），`page.reload()` 触发应用冷启动，即 activeSession `null → 就绪` 的过渡。
+- 结果：消息列表滚动容器在 t≈8.65s 以**空列表**挂载（0 项、scrollHeight 571），t≈9.27s 内容到达时仍是**同一个 DOM 节点**——列表子树未卸载重挂，上游 c362aacc4 回归合同在本仓成立；scrollTop 由 0 直接落到 1617（底部），无来回抖动。另从设置路由点开会话：同一容器 scrollTop 单调 0 → 2581 → 3535，内容到达后位置未重置。
+- 工程侧复跑：`bun run test SessionMessageList.stability.test.tsx + annotations/`＝2 文件 12 例通过（挂载计数 1→2 的回归合同）；`markdown-isolation` e2e PASS 见上方交付记录。
+- 按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。

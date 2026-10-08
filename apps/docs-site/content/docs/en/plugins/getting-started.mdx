@@ -1,14 +1,15 @@
 ---
 title: Create your first plugin
-description: Create, build, and install a minimal Vetta desktop plugin.
+description: Create, build, and install a minimal Open Forge desktop plugin.
 ---
+{/* Modified by The Open Forge contributors. */}
 
 ## Prerequisites
 
 - Node or Bun.
-- Vetta Desktop, running — installing and hot reload both talk to the live app.
+- Open Forge Desktop, running — installing and hot reload both talk to the live app.
 
-You do **not** need a Vetta source checkout.
+You do **not** need a Open Forge source checkout.
 
 ## Scaffold in one command
 
@@ -115,7 +116,7 @@ Choose the path for development debugging or release installation:
 
 <Tabs items={["Development", "Release installation"]}>
   <Tab value="Development">
-    Run `bunx vetta-plugin dev` to start the plugin development server, then load it through a Vetta development link. This is useful for quickly checking UI and tool registration, but run the production build and `.vettapkg` installation flow before release.
+    Run `bunx vetta-plugin dev` to start the plugin development server, then load it through a Open Forge development link. This is useful for quickly checking UI and tool registration, but run the production build and `.vettapkg` installation flow before release.
   </Tab>
   <Tab value="Release installation">
     <Steps>
@@ -127,7 +128,7 @@ Choose the path for development debugging or release installation:
       <Step>
         ### Archive the package
 
-        Use the `.vettapkg` extension and ZIP container. Its archive root must contain `plugin.json` and `dist/`. Once Vetta is installed, users can double-click the file to install it.
+        Use the `.vettapkg` extension and ZIP container. Its archive root must contain `plugin.json` and `dist/`. Once Open Forge is installed, users can double-click the file to install it.
       </Step>
       <Step>
         ### Install and enable

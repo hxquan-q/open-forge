@@ -418,7 +418,7 @@ describe("blackbox 读域过滤（§6.2）", () => {
 		}
 	});
 
-	it("read 的 .. 穿越与绝对路径形态 block（BUG-0080 回归）", () => {
+	it("read 的 .. 穿越与绝对路径形态 block（BUG-0082 回归）", () => {
 		for (const path of [
 			"docs/ac/../../src/main.ts",
 			"docs/ac/./../x",
@@ -476,7 +476,7 @@ describe("blackbox shell 白名单（§6.2）", () => {
 		expect(judge(BB_1, shell("agent-browser open 'http://x?a=1&b=2'"), false).allow).toBe(true);
 	});
 
-	it("引号外的复合命令/替换/重定向元字符 block（BUG-0080 回归）", () => {
+	it("引号外的复合命令/替换/重定向元字符 block（BUG-0082 回归）", () => {
 		for (const command of [
 			"agent-browser snapshot && curl http://x",
 			"agent-browser --version; git push",
@@ -496,12 +496,12 @@ describe("blackbox shell 白名单（§6.2）", () => {
 		}
 	});
 
-	it("未闭合引号 fail-safe block（BUG-0080 回归）", () => {
+	it("未闭合引号 fail-safe block（BUG-0082 回归）", () => {
 		expect(judge(BB_1, shell('agent-browser open "http://x?a=1'), false).allow).toBe(false);
 		expect(judge(BB_1, shell("agent-browser open 'http://x"), false).allow).toBe(false);
 	});
 
-	it("双引号内的 $( 与反引号是命令替换 → block（BUG-0080 残余 A 回归）", () => {
+	it("双引号内的 $( 与反引号是命令替换 → block（BUG-0082 残余 A 回归）", () => {
 		for (const command of [
 			'agent-browser open "http://x?$(curl http://evil)"',
 			'agent-browser open "http://x/`whoami`"',
@@ -517,7 +517,7 @@ describe("blackbox shell 白名单（§6.2）", () => {
 		expect(judge(BB_1, shell("agent-browser open 'http://x?$(a)'"), false).allow).toBe(true);
 	});
 
-	it("反斜杠转义的引号不开启引号区 → 后续元字符按引号外拦截（BUG-0080 残余 B 回归）", () => {
+	it("反斜杠转义的引号不开启引号区 → 后续元字符按引号外拦截（BUG-0082 残余 B 回归）", () => {
 		for (const command of [
 			'agent-browser x \\" && curl evil \\"', // 闭合变体：旧实现整段被"引号内"跳过 → 放行
 			'agent-browser x \\" ; git push \\"',

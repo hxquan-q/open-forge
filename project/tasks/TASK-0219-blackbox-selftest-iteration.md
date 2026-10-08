@@ -1,5 +1,5 @@
 ---
-id: TASK-0217
+id: TASK-0219
 type: task
 status: verifying
 priority: P1
@@ -15,7 +15,7 @@ branch: main
 worktree: unassigned（主工作区串行）
 base_commit: 899f4fce5492dfd79ae7ad67bfee8bae54abdcc2
 read_paths: [packages/plugins/presets/allstar-coding]
-write_paths: [packages/plugins/presets/allstar-coding, .github/release-notes/v0.1.3.md, project/tasks/TASK-0217-blackbox-selftest-iteration.md, project/tasks/README.md]
+write_paths: [packages/plugins/presets/allstar-coding, .github/release-notes/v0.1.3.md, project/tasks/TASK-0219-blackbox-selftest-iteration.md, project/tasks/README.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -26,6 +26,10 @@ updated: 2026-10-05
 <!-- Copyright The Open Forge contributors. -->
 
 # allstar-coding 黑盒环节升级：能力探测 → 三态分流 → 自测（可选）→ 用户核验
+
+## 编号说明
+
+- 原立案编号 TASK-0217：2026-10-08 合并 origin/dev 时发现 dev 侧已并行立案同号 TASK-0217（陈旧阻塞重分诊），按「dev 已有在前」顺延为 TASK-0219；关联 BUG-0080→BUG-0082、TASK-0218→TASK-0220、ISSUE-0031→ISSUE-0032 同批顺延，write_paths 中的本文件路径同步改名。
 
 ## 目标
 

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 媒体 Provider 协议
 
 `ctx.media` 负责媒体能力发现与提交；通用任务生命周期在 `ctx.jobs`，临时产物生命周期在 `ctx.artifacts`。消费者不依赖具体模型、供应商、网关或本地渲染引擎。

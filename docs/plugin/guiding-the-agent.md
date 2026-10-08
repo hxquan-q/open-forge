@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 引导模型用好你的扩展：重心偏移与优质扩展设计
 
 > 适用对象：往仓库里新增 tools / MCP / skills / 系统插件的内部开发者，以及第三方插件开发者。

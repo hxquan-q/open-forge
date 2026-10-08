@@ -45,4 +45,5 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0028`：团队会话无会话级预算与可路由的阻塞/升级态，收敛全靠主控自觉（in_progress；候选 C 预算只读投影已由 TASK-0126 落地，A/B 熔断按决策触发条件待立）。
 - `ISSUE-0029`：fork 的 GitHub Actions 预算耗尽，全部 workflow 秒败于 `an Actions budget is preventing further use`（draft；阻塞 TASK-0183/0184/0180/0182/0179 等的「CI 复跑绿」验收；待用户决定恢复预算或迁移 CI，本地/单元级证据可先行）。
 - `ISSUE-0030`：allstar-coding 的 ac-fence 事中拦截层经 `origin/chenxvhua` 分支进入，插件权限从 `agent.skills.control` 扩到另加 `agent.hooks.register`/`agent.hookHandler.execute` 且判定 fail-open（draft；需求权限最小集合与验收级别的方向，TASK-0208 先按现状集成）。
-- `ISSUE-0031`：ac-fence 写域 glob 与 agent-browser 通道的词法匹配边界——写域 `..` 逃逸（v0.4 起既有面）、shell 重定向写不受写域判定、通道引擎 URL scheme 越界均待统一裁决（draft；BUG-0080 只修了黑盒新增面，全角色统一修法与宿主侧配合待触发）。
+- `ISSUE-0031`：qwen3.8-27b 端点（`:18081`）实测输出不连贯、任何 prompt 均无法获得可用回复；应用侧链路经 glm 对照证伪，疑点在端点 `/responses` 实现或模型部署（draft；推荐先核查端点，再按需要 wire 档比对）。
+- `ISSUE-0032`：ac-fence 写域 glob 与 agent-browser 通道的词法匹配边界——写域 `..` 逃逸（v0.4 起既有面）、shell 重定向写不受写域判定、通道引擎 URL scheme 越界均待统一裁决（draft；BUG-0082 只修了黑盒新增面，全角色统一修法与宿主侧配合待触发）。

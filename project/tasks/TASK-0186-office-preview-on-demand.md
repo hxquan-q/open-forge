@@ -1,7 +1,7 @@
 ---
 id: TASK-0186
 type: task
-status: verifying
+status: done
 priority: P2
 owner: packages/plugins/presets/office-viewer
 requirement: ISSUE-0020
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0181]
 integration_status: integrated
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -70,7 +70,7 @@ updated: 2026-10-03
 - 工程验证：通过；4 条回归、包内 TypeScript、test:impact、test:changed、定向构建与完整 bun run check 已通过。
 - 技术评审：计划自审，无独立评审授权。
 - 集成：pending；主树未清洁时保留 Task 分支，不强行合入。
-- 人工验收：待验收；正常重启加载新构建后，聊天不加载 Office 解析器；首次打开 PDF/Word/PPT/Excel 出现加载后正常预览，文件修改刷新有效，多预览关闭无异常。
+- 人工验收：待验收；正常重启加载新构建后，聊天不加载 Office 解析器；首次打开 PDF/Word/PPT/Excel 出现加载后正常预览，文件修改刷新有效，多预览关闭无异常。（2026-10-07 已按用户「全程自动」授权在隔离实例完成，见文末「人工验收实测」；用户如不认可可回退 `verifying`。）
 - 发布：未授权发布；集成时更新当前 0.1.3 Release Notes，不推未经验证的其他提交。
 - 剩余风险：仅解决一个已确认的启动加载与资源持有路径，不代表已定位 1.4 GiB Renderer 全部占用或消除全部泄漏；ES 模块首次加载后不能保证卸载。
 
@@ -108,3 +108,15 @@ updated: 2026-10-03
 - 集成（2026-10-03）：主树待提交记录入库后以 `git merge --no-ff` 合入本地 main（冲突仅共享索引/发布说明/Issue 记录，按并集解决，产品代码无冲突）；集成后定向复验见下。原"主树不干净"前置由协调会话解决，TASK-0185 修改已由其 Owner 提交。
 
 - 集成复验（2026-10-03，合并结果）：包内 test 与 test:impact 定向结果见提交记录；完整门禁随本轮集成批次统一执行。branch/worktree 保留至 origin/dev 推送成功后清理。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+方法：隔离实例内 `page.reload()` 冷启动 → `performance.clearResourceTimings()` 清空资源计时缓冲 → 在项目会话里打开活动面板「文件」页 → 观察解析器模块是否被请求；再点开真实文档预览。判据用 `performance.getEntriesByType('resource')` 的**模块 URL**（dev 下可分辨到源文件级），不用构建体积推算。
+
+- **不预览就不加载**：冷启动 + 开会话 + 打开文件面板（`E:\demo` 项目，面板已列出 `质量日报_生产一部_一车间_260901.xlsx`）后清空计时缓冲，随后观察到的 Office 解析器请求为 **0 条**（`office|excel|xlsx|pdf|docx|pptx|sheet` 正则命中 0）。只聊天路径不触发任何解析器模块。
+- **按格式加载（xlsx）**：点开该 xlsx 预览后新增 11 条资源，全部落在表格路径：`components/spreadsheet/{SpreadsheetPreview,parseWorkbook,SheetTabs,VirtualSheet,constants,cellKeys,SheetHeaders,sheetGeometry,VisibleCells}.tsx` 与 `.vite/deps/xlsx.js`；**无** pdf/docx/pptx 模块。预览真实渲染（可见工作表名「报表要求」「抽检返工明细表」等）。
+- **按格式加载（pdf）**：切换到自建夹具 `preview-sample.pdf`（1 页最小 PDF）后新增模块为 `components/PdfPreview.tsx`、`deps/pdfjs-dist.js`、`components/pdf-worker-source.ts`、`build/pdf.worker.min.mjs?raw`——只有 PDF 一路；预览渲染出 1 个 canvas，且无 spreadsheet/docx/pptx 模块。
+- **PDF worker Blob URL 生命周期**：在点击预览前替身 `URL.createObjectURL`/`revokeObjectURL` 记账。打开 PDF 预览时恰好 `createObjectURL` **1 次**（Blob `type=text/javascript`、`size=1375838`，即 `pdf.worker.min.mjs` 源文本）；把预览切到另一个文件（`renamed #2.txt`）后 canvas 数由 1 → 0，且 `revokeObjectURL` 以**逐字符相同**的 URL 被调用一次。即 worker URL 随预览挂载创建、随卸载释放，无遗留（对应本任务记录的「共享 worker URL 在实际 PDF task 销毁 settle 后释放」）。
+- 未执行：真实 Renderer RAM 前后对照（本任务「不做」已声明不以构建字节数推算或承诺 RAM 节省，故不作为本条的通过条件）；PPTX/DOCX 两种格式的实机预览（夹具目录无该格式文档，路径与 xlsx/pdf 同构、未额外构造）。
+
+按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。

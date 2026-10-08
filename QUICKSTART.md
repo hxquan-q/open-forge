@@ -13,7 +13,7 @@ Installers for macOS, Windows, and Linux:
 
 Official installers are published on the website CDN. This repository is the source. After install, the setup wizard walks through model configuration (BYOK) and permissions. Product guides: [docs.openvetta.com](https://docs.openvetta.com).
 
-A source checkout produces the **lite** build: no Vetta login, no subscription, keys stay on your machine. Official installers may be the **full** build. The two shapes are documented in [Build Modes](docs/desktop/build-modes.en.md).
+A source checkout produces the **lite** build: no Open Forge login, no subscription, keys stay on your machine. Official installers may be the **full** build. The two shapes are documented in [Build Modes](docs/desktop/build-modes.en.md).
 
 ## Develop from source
 

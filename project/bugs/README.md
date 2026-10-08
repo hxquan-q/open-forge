@@ -16,7 +16,9 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0080` | ac-fence 黑盒 shell 白名单可被复合命令绕过、读域前缀可被 .. 穿越 | verifying | P1 | — |
+| `BUG-0082` | ac-fence 黑盒 shell 白名单可被复合命令绕过、读域前缀可被 .. 穿越 | verifying | P1 | — |
+| `BUG-0081` | 脚本面板 7 个 i18n key 缺条，界面显示原始 key 与 `{{count}}` | investigating | P3 | PLAN-0014 |
+| `BUG-0080` | 提示音开关可用但 Agent 终结事件从不响铃 | investigating | P2 | PLAN-0014 |
 | `BUG-0079` | 终端能力被误判为缺失 | verifying | P1 | — |
 | `BUG-0078` | browser_tab 拒绝回传 snapshot 打印的 elementRef 编码串 | verifying | P1 | PLAN-0006 |
 | `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | done | P2 | — |
@@ -49,7 +51,7 @@
 | `BUG-0051` | 注入 guest 的脚本引用网页里不存在的打包器辅助函数，浏览器交互命令全部异常终止 | verifying | P1 | — |
 | `BUG-0052` | 注入 guest 的脚本缺少 return，点选与快照结果恒为 undefined | verifying | P1 | — |
 | `BUG-0046` | Windows 上 PATH 含 GNU tar 时托管 Node runtime 解压 zip 必失败 | verifying | P1 | — |
-| `BUG-0047` | 主进程 stdout pipe 断开后 uncaughtException 日志自反馈风暴 | verifying | P1 | — |
+| `BUG-0047` | 主进程 stdout pipe 断开后 uncaughtException 日志自反馈风暴 | done | P1 | — |
 | `BUG-0049` | Windows 上 ControlMaster fd 传递失败，SSH 主机全部不可连接 | done | P1 | — |
 | `BUG-0048` | ResizeObserver 噪音过滤器在 dev 下失效，渲染器错误日志被淹没 | verifying | P3 | — |
 | `BUG-0045` | 有效预压缩摘要随尾部增长重复生成 | done | P2 | — |

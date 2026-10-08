@@ -7,12 +7,12 @@ owner: apps/desktop
 source: user-report; screenshot; source inspection
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0185]
+related_tasks: [TASK-0185, TASK-0194]
 related_issues: []
 related_bugs: [BUG-0021]
 depends_on: []
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -77,3 +77,21 @@ updated: 2026-10-03
 - 测试：定向 6 文件 96 例、hooks 11 例；conversation 域 177 文件 956 例；`test:impact` direct 6/96 + related 56/397 全绿。
 - 检查：`check:quick` 绿；完整 `bun run check`（lint/types×5/guards/mobile-lint）全绿，`ratchet: new=0`。
 - 未运行及原因：verify:ui 未获任务授权；真实会话人工验收待用户回归。
+
+## 人工复现（2026-10-08，VERIFY-0017 组一续测十四）
+
+在隔离 Debug Profile 的真实会话里复现同族症状；操作是正常用户流程（回合流式中连发两条消息使其排队），无需注入内核事件。
+
+- **复现 2/2 个会话**：回合结束、队列抽屉已不再显示「N 条待发」之后，实时视图仍比落盘多出**两个重复用户气泡**并追加在尾部——DOM 8 行 `GHOST-1 / 回复 / GHOST-A / 回复 / GHOST-B / GHOST-A / 回复 / GHOST-B`，而会话记录只有 6 条（`MDA0YTMzODgt…conversation.jsonl` seq2–7）。
+- **命中本记录列的机制**：重复行的 `data-entry-id` 是乐观 id（`user-16-1791391810833`、`user-17-1791391811301`），正牌行是规范 id（`event-4`/`event-6`）⇒ 未决乐观气泡未被规范历史吸收。
+- **只存在于渲染端**：刷新后重开同一会话恢复为 6 行，幽灵未落盘。
+- 与原始症状（会话结束后用户消息显示在回复末尾）同族的**重复**变体：本条 `verifying` 状态与处置（归入本 Bug 还是另立新缺陷）待用户/后续 Task 裁定。
+- 证据：`0194-ghost-duplicate-tail.png`、`0194-ghost-session-conversation.jsonl`（artifactDir）。
+
+## 处置裁定（2026-10-08，VERIFY-0017 组一收口轮）
+
+用户裁定：上述「未决乐观气泡未被规范历史吸收 → 尾部重复气泡」**归入本 Bug 作残余变体**（不另立新缺陷），登记 `related_tasks: TASK-0194`（承接方 [TASK-0194](../tasks/TASK-0194-queue-anchor-review-fixes.md) 已据此闭合 `done`）。
+
+- 归属理由：症状同族且同层（渲染端 live 层、刷新即恢复、乐观 id 未被规范 id 吸收）；TASK-0194 的四处锚定/派发序号修复属**部分收口**，不足以消除该变体。
+- 本 Bug 状态维持 `verifying`：残余变体尚无修复提交，验收未闭合。下一步（未排期）：在 `insertUnresolvedOptimisticMessages` / `useSessionOpener` 的乐观气泡消费路径上定位「已消费但未吸收」的判等缺口，并以本轮可稳定复现的正常操作路径（回合流式中连发两条排队消息）作为回归夹具。
+- 复现与证据同上节（2/2 会话，无需注入内核事件）。

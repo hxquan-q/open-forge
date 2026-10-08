@@ -1,7 +1,7 @@
 ---
 id: TASK-0189
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 source: user-request; RESEARCH-0022; upstream f4dfc2690
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0187]
 integration_status: pending
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-06
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -59,3 +59,5 @@ updated: 2026-10-03
 红测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts message-stream.test.ts`，1 新用例因 completed 而非 streaming 失败，5 既有用例通过。
 
 绿测：`bun scripts/quality/run-vitest.mjs run --config apps/desktop/vitest.config.ts message-stream.test.ts conversation-projection.test.ts useSessionManager.queue.test.ts`，5 文件/32 测试通过，覆盖共享投影、会话/Team 与排队入口；完整批次检查待终验。
+
+- 2026-10-06 人工 UI/模型实测：真实模型回合（含 todo 工具多轮调用）中回复持续显示「进行中」，直到 `turn.completed` 才转为完成；会话 JSONL 中 toolUse 未提前写终态。验收子条件已全部观察到，按 VERIFY-0017「组一执行明细」的授权记为 done。

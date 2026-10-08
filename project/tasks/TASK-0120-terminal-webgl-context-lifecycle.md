@@ -1,7 +1,7 @@
 ---
 id: TASK-0120
 type: task
-status: verifying
+status: done
 priority: P3
 owner: apps/desktop
 requirement:
@@ -27,7 +27,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-10-06
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -108,3 +108,5 @@ updated: 2026-09-25
 - 验证状态：`run-vitest.mjs` 定向测试与 `check:quick` 待本轮跑绿后记绿；
   验收项 1（实机 DevTools 控制台复核 WebGL 告警消失）需要 verify:ui，
   未获授权前保持 verifying。
+
+- 2026-10-06 人工 UI 实测（隔离 Debug Profile）：分屏 3 个终端后共 25 次收起/重开（含连续快切），按 context 对象身份去重计数，唯一 WebGL context 增量为 0，3 个活跃 GL canvas 与 3 个 leaf 对齐，DevTools 无 WebGL 告警（162 条控制台消息 / 0 error，仅 1 条 Electron 开发态 CSP 提示）；定向测试 2 文件 9 例与 `check:quick` 绿。验收项 1 已实证，记为 done。

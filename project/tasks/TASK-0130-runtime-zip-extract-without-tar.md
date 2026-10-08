@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0131, TASK-0132]
 integration_status: integrated
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -84,3 +84,16 @@ updated: 2026-09-28
 - 未运行及原因：`check`/`test:changed` 由 Coordinator 在批次验收统一跑（见集成提交）；「删 `~/.openforge-dev/runtimes/node` 后 dev 启动实装 Node runtime」属人工冒烟，未执行——Windows GNU tar 先行环境需真实终端，交付时保持 verifying。
 - Worktree：`task-0130-runtime-zip-extract-without-tar`（branch `task/TASK-0130-runtime-zip-extract-without-tar`，集成提交 `9d6981fac` + merge `32012e373`）。
 - 剩余风险：真实 GNU tar 环境的端到端安装未人工复验；回归测试以「zip 路径完全不经 spawnSync」为证伪锚点，覆盖风险等价。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：复跑声明的定向套件；另核验本机是否**就是**合同描述的那台机器形态。
+
+| 项 | 本次读数 |
+|---|---|
+| `runtime-archive-installer.test.ts` | **1 文件 / 9 例通过 \| 1 跳过**（跳过项为平台门禁），0 失败。关键断言仍在：zip 安装路径下 `spawnSync` **未被调用**（⇒ 不依赖 PATH 里的 tar 即可证伪），tar.gz 仍调 tar，损坏 zip 报 `zip extract failed` 且保留旧 runtime |
+| 合同前置（本机形态） | **成立且更极端**：`tar --version` 为 **GNU tar 1.35**（`/usr/bin/tar`、`/bin/tar`、`C:/WINDOWS/system32/tar`、`scoop/git/current/bin/tar` 皆 GNU；`which bsdtar` **无命中**）⇒ 本机正是「GNU tar 先于 bsdtar 且无 bsdtar」的故障形态 |
+| 真实安装路径的旁证 | Debug profile `04987e4e` 的 `runtimes/node/22.22.2` 已就位且 `node -v` = **v22.22.2**（与合同点名的 `node-v22.22.2-win-x64.zip` 同版本）；host.log 中 `zip extract failed` **零命中** |
+
+- **未覆盖**：**真实走一遍下载安装**。上面那条「已安装 node 22.22.2」的**安装时刻不可考**（无法判定是 TASK-0130 交付前还是交付后装的），因此**不能**据此断言「新代码路径真跑过」——只能作为「本机形态与合同一致、且当前无解压失败」的旁证。要拿到用户面证据需在隔离 profile 内删除并重新安装一次托管 runtime（走真实下载），本轮未执行。
+- **关闭建议**：`spawnSync` 未被调用这条断言是对「不经过外部 tar」的**直接证伪式**证据，且本机形态恰好命中故障前提条件 ⇒ 倾向 `done`；是否要求补一次真实下载安装，请用户裁定。

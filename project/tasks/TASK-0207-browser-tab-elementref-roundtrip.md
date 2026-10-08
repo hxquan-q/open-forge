@@ -1,7 +1,7 @@
 ---
 id: TASK-0207
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement:
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending（主工作区串行，随 BUG-0078 修复提交）
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -105,3 +105,15 @@ updated: 2026-10-05
 - Worktree：未拆出（主工作区串行窄修复）。
 - 提交：`c3654fcc9`（修复与回归测试、Release Notes）；记录登记 `ffbaa5bad`（BUG-0078/TASK-0207 建卡）。
 - 剩余风险：对外 Schema 在 `elementRef` 上引入嵌套 `anyOf`（对象 + 字符串分支），严格网关是否接受未用真实 API 验证（分支均带结构关键字，不会被 `sanitizeToolParameters` 剔除，但 Gemini 系网关的嵌套联合支持需实机确认）；真实模型是否还会以其他畸形形状回传（例如 `elementRef` 携带未知字段）未实测。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+环境：隔离 Debug Profile 实例（真实模型 DeepSeek V4.1 Flash，真实 API），会话内打开应用内浏览器标签页；被测页面是本地夹具 `http://127.0.0.1:8791/`（`<debug vettaHome>\fixtures\browser-page\server.ts`，含 `textbox#q` 与 `button#submit` 文案「提交」；点击回调把自身文案改为「已提交」并追加一个「继续」按钮，用于在交互树上留下可观测的结构性副作用）。全程不手写 `elementRef`，只要求模型「原样回传 snapshot 打印的编码串」。
+
+- **第一轮（点击前）**：snapshot 原文 `snapshot pageRevision=3 url=http://127.0.0.1:8791/`，交互树 `- v1:3:e3 role=textbox name=""` / `- v1:3:e4 role=button name="提交"`。
+- **两轮 click 均成功**：模型取 `v1:3:e4`（第一轮为 `v1:1:e2`）原样回传，工具返回 `click ok pageRevision=3.`——**不是** `invalid browser_tab tool input`，也不是 `no_browser_session`。即输入边界接受了编码串、宿主拿到了规范化后的对象 ref 并真正落到页面上。
+- **点击确实生效**：点击后再 snapshot，原文变为 `snapshot pageRevision=4 url=http://127.0.0.1:8791/`，交互树 `- v1:4:e5 role=textbox name=""` / `- v1:4:e6 role=button name="已提交"` / `- v1:4:e7 role=button name="继续"`——按钮文案变更与新增按钮都是页内 JS 回调的产物，只有真实 click 才会出现；`pageRevision` 3→4 也与 DOM 变更一致。
+- 附带封闭的一条剩余风险：本次是**真实厂商网关**（非 mock）接受含嵌套 `anyOf` 的对外 Schema，模型能据此产出字符串形式的 `elementRef` 参数，交付记录里「严格网关是否接受嵌套联合」一项在 DeepSeek 一路得到实证（Gemini 系仍未测）。
+- 未覆盖：`fill`/`press`/`scroll`/局部 `screenshot` 等同样受益的动作本轮未逐一实跑（同一解码路径，合同层已有单测）；`stale_reference` 的实机表现只在模型自己的说明里出现（旧 ref `v1:3:e4` 已失效），未单独构造过期 ref 调用。
+
+按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。

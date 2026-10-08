@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0051]
 conflicts_with: [TASK-0035, TASK-0050, TASK-0051, TASK-0196]
 integration_status: integrated（retain+验证收口，随本批推送 origin/dev）
 created: 2026-09-23
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -105,3 +105,16 @@ updated: 2026-10-03
 ### 剩余风险
 
 - 「溢出尺寸种子」在现行架构中表现为 urgent 通道 + 保守估算 + 装配量记录，无独立的种子数据结构；若后续压缩阈值需自适应学习，另行立项。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：在主检出（HEAD `3f6e62262`）复跑本任务声明的压缩侧套件与渲染端联动用例。本任务无独立用户入口，真实 UI 需要一条真正走到压缩条件的长会话，本轮未驱动。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| 成功压缩 → Renderer 按既定边界合同重建有界窗口、保留阅读锚点 | `useSessionEventController.compaction.test.tsx` **1 文件 / 5 例通过**（自动压缩成功后边界条目可见；手动压缩重建保留已加载旧页） |
+| 连续压缩 thrash 检测（`CompactionBackpressureGate`：single-flight + 成功/失败双冷却 + 滞回带） | 压缩族 **8 文件 / 56 通过 \| 2 跳过**：`compaction`、`compaction-backpressure`、`compaction-configuration`、`compaction-prefire`、`compaction-prefire-cache`、`compaction-work-state-recovery`、`compaction-extension-adapter`、`compaction-extensions-example` |
+| 失败/取消不扰动当前历史；失败熔断与溢出尺寸种子 | 同上套件内（`compaction-configuration` 覆盖参数面口径） |
+
+- **未覆盖**：真实的「长会话跑到压缩」端到端。合同写的「使用窗口化 transcript 的长会话达到压缩条件」需要一条真实长上下文会话（真实模型 + 大上下文），本轮未驱动；因此读数的**正确性**当前只有单测级证据，没有用户面证据。
+- **关闭建议**：三条合同条款在测试级均成立、且交付记录与实现一致，倾向 `done`；是否要求补一次真实压缩会话，请用户裁定。

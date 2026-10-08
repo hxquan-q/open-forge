@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024, TASK-0028]
 conflicts_with: [TASK-0018, TASK-0025]
 integration_status: integrated
 created: 2026-09-22
-updated: 2026-09-27
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -87,3 +87,18 @@ updated: 2026-09-27
   - `bun run check:quick`、`bun run check`（lint/types/guards 全量）绿。
 - 未运行及原因：真实 Desktop 端到端（选真实 xlsx → 分析 → 产物复查）需实机冒烟，登记 VERIFY-0012。
 - 剩余风险：xlsx 懒加载在 Electron 打包产物中的解析需实机确认；`dataset`/`analysis` 产物由模型按 prompt 合同写 manifest，manifest 缺失时复查返回 no-manifest（不阻断）；Excel 只取第一工作表。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组四；保持 verifying 待裁定）
+
+方法：复跑本任务交付记录点名的三组套件（主检出 HEAD `18a7bf7b4`）。合同的用户流程（导入 CSV/Excel/JSON → 请求分析 → 看校验/预览 → Review → 重开会话查来源）需要一次真实模型回合，本轮未驱动。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| CSV/TSV/JSON/JSONL/NDJSON/XLSX 解析边界、行级校验、类型推断、问题行、缺列、大小上限、取消信号 | `packages/runtime-node/src/dataset/dataset-profile.test.ts` **1 文件 / 7 例通过**（**交付记录写「12 用例」，本轮该文件实测 7 例**——只否证当下读数，不追认当时是否有别的计数口径） |
+| `dataset_profile` 工具（绝对路径校验、缺省不注册、错误映射、画像输出含指纹、issues 截断） | `packages/coding-agent/test/features/dataset-profile-tool.test.ts` **1 文件 / 5 例通过** |
+| 数据集选文件 → 发任务 → 消息走同通道；`dataset`/`analysis` 产物触发来源复查；`document` 不触发 | `WorkDocumentSections.test.tsx` **1 文件 / 19 例通过**（与交付记录「19 用例」一致） |
+| **合计** | **3 文件 / 31 例通过，0 失败** |
+
+- **未覆盖**：合同里需要模型参与的部分——「请求按明确规则清洗数据、计算一项指标并预览结果」「Review 后产出 dataset/analysis Artifact」「重开会话可检查输入来源与结果版本」。解析/校验/画像/复查这些**确定性**环节已单测级覆盖，但「模型按 prompt 合同写 manifest 并给出指标」这条链本轮未驱动，原因同上（无可用授权模型，ISSUE-0031）。
+- 交付记录自认的两条剩余风险本轮**未复诊**：① xlsx 懒加载在 Electron 打包产物中的解析需实机确认；② `dataset`/`analysis` 产物由模型按 prompt 合同写 manifest，manifest 缺失时复查返回 `no-manifest`。
+- **关闭建议**：确定性软件面测试级成立；模型参与面属**客观阻塞**。建议与 TASK-0025/0074/0155 一并裁定。请用户裁定。

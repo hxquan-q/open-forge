@@ -1,7 +1,7 @@
 ---
 id: TASK-0194
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 source: BUG-0073
@@ -42,7 +42,7 @@ depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0181, TASK-0154]
 integration_status: integrated
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -78,7 +78,7 @@ BUG-0073 四项缺陷修复后：失败队列派发不再误杀最新轮 `agent_
 
 ## Given / When / Then
 
-1. **失败派发不误杀重拉**：Given turn-A 流式中两次「立即发送」点击（q-1 开 turn-B、q-2 返回 `missing`），turn-B 的 `agent_start` 快照落在膨胀窗口内；When q-2 的 unbump 使序号回落、turn-B `agent_end` 到达；Then 重拉照常落地（entryId/时长/镜像吸收完成）。
+1. **失败派发不误杀重拉**：Given turn-A 流式中两次「立即发送」点击（q-1 开 turn-B；q-2 或返回 `missing`、或按实测**各自另起一轮**），turn-B 的 `agent_start` 快照落在膨胀窗口内；When q-2 的 unbump 使序号回落、turn-B `agent_end` 到达；Then 重拉照常落地（entryId/时长/镜像吸收完成）。**用户裁定（2026-10-08）**：「两次派发」为可接受行为，不要求构造 `missing` 时序；`missing` 分支维持单测覆盖。
 2. **幽灵气泡保持尾部**：Given live=[已持久化 u-1, pending 镜像 X, pending 幽灵 Y]，canonical=[u-1, user X, assistant]；When 窗口化/快照对账；Then Y 追加尾部，X 仍锚在孪生槽之前。
 3. **prependedCount 语义**：Given live=[pending, 已消费 u, 已消费 a]，canonical=[u, a]；When (a) 锚定到 0；Then `prependedCount === 0`。
 4. **两层回退一致**：Given missing 气泡在 reconciled 中先于首个 canonical 项、merged 头部有 preserve 保留行；When opener 对账合并；Then 气泡落 canonical 首项之前、保留行之后，与 snapshot 层同形输入一致。
@@ -119,3 +119,30 @@ bun run check
 - `test:changed --base origin/dev` 在 worktree 运行 30 分钟无输出，手动终止（已核对 run-vitest/test-changed 脚本无 git 写操作）；其相对既有证据的增量覆盖（origin/dev..HEAD 代码改动全部落在 conversation 域 + docs）已由 conversation 域 965 例与 `test:impact` 282 例覆盖，集成阶段重跑补证。`verify:ui:*` 未获任务授权未运行，真实会话人工回归待用户。
 - 根因深度维持现状：镜像气泡消费点尾追 + 全局序号计数器（评审发现 5/6 的 turn 身份判活重构）登记为后续；(b) 孪生校验按文本判等，displayText 漂移的镜像会退到尾部、经既有对账上限后清理，行为等级与修复前持平。
 - 集成顺序：验证通过后 `git push origin task/TASK-0194-queue-anchor-review-fixes:dev`（用户本轮明确授权），再于主树合入本地 main；合入后同步共享索引（bugs/tasks README）。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一，保持 verifying）
+
+在隔离实例的真实会话（真实模型 DeepSeek V4.1 Flash）里重跑一遍用户可见面：发一条长输出请求（回合 A）后，在 A 仍在途时再发一条 `QUEUE-PROBE-B`，随后按 `[data-index]` 逐秒采样消息条目顺序。
+
+- 排队气泡落在**尾部**而非历史中段：B 发出后条目序列为 `…27:A 的提问 → 28:回合 A（等待→处理）→ 29:QUEUE-PROBE-B`，B 始终紧跟在正在输出的回合 A 之后，未出现被锚进 A 之前或历史中段的情况。
+- 消费后按序派发、无残留重影：A 结束后终态为 `30:回合 A（02:21:02）→ 31:QUEUE-PROBE-B → 32:回合 B（02:21:07）`，B 被原位消费并作为独立回合派发，没有重复气泡、没有幽灵条目留在尾部之后。
+- 未闭合原因：本项 4 条 GWT 中，①失败派发竞态要求同一时刻两次「立即发送」且 q-2 返回 `missing`、②幽灵气泡要求 live 同时含 pending 镜像与幽灵态，这两个前置状态无法从 UI 稳定构造（需要注入内核事件/时钟）；③`prependedCount` 与 ④两层回退一致性属内部不变量，只有单测可观测（交付记录 4 文件 64/64 已覆盖）。因此本条仅补上「排队气泡尾部锚定 + 按序消费」这一用户可见面的实测，仍按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 保持 `verifying` 交用户裁定。
+
+### 竞态与幽灵气泡实测（2026-10-08，VERIFY-0017 组一续测十四，保持 verifying）
+
+上一轮把 GWT ① 与 ② 记为「UI 无法构造」。本轮先给可控故障夹具加长流控制面（`<debug vettaHome>\fixtures\fault-mock` 新增 `GET /control/slow?n=&ms=`，单回合稳定流式 14 秒以上），再复现两条路径。
+
+- **① 两次「立即发送」的可达路径**：队列抽屉入口是文本「队列 N 条待发」的按钮，展开后每条排队消息一个 `button[title="立即发送"]`。同一 tick 内点两条（相隔 1.7 ms）→ 流式中的回合被 `turn.cancelled(reason="send queued message now")` 打断，**被打断回合的部分回复保留**（会话记录 `步 1 步 2 步 3` 与 UI 的「·4秒」行同时在），无错误气泡、无 `sendQueuedNow failed` 日志。
+- **① 的 GWT 前提未复现**：同一次会话记录显示 q-1、q-2 **各自成为新回合**（`turn-1f4dc64b` / `turn-eecb181d`），没有出现 q-2 返回 `missing` 的时序——即「两次派发」而非「一次派发 + 一次 missing」。该次观测在回合跑完前被我方夹具崩溃打断（slow 流在客户端断开后仍 `enqueue`，未捕获异常打死夹具进程；已修），故「对账后位置」这一次观测仍缺。
+- **② 幽灵气泡可稳定构造且复现出缺陷**（无需注入内核事件，正常操作即可）：回合流式中连发两条消息排队，等回合结束、队列抽屉不再显示「N 条待发」后，实时视图仍比落盘多出**两个重复用户气泡**并追加尾部——DOM 8 行 `GHOST-1 / 回复 / GHOST-A / 回复 / GHOST-B / GHOST-A / 回复 / GHOST-B`，会话记录只有 6 条（seq2–7）。重复行 `data-entry-id` 是**乐观 id**（`user-16-1791391810833`、`user-17-1791391811301`），正牌行是**规范 id**（`event-4`/`event-6`）⇒ 未决乐观气泡未被规范历史吸收；刷新重开同一会话恢复 6 行 ⇒ 幽灵只在渲染端 live 层。两个会话复现 **2/2**。
+- **结论**：与上一轮「无尾部幽灵残留」相反，本条 ② 的用户可见面存在缺陷，与 BUG-0068（同族，`verifying`）症状一致。本 Task 保持 `verifying`；幽灵归 BUG-0068 残余变体还是新缺陷、以及 ① 是否按「两轮派发也可接受」改写 GWT，交用户裁定。证据：`0194-ghost-duplicate-tail.png`、`0194-ghost-session-conversation.jsonl`。
+
+### 用户裁定（2026-10-08）：幽灵并入 BUG-0068，本项闭合为 `done`
+
+用户在 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 组一收口轮裁定两条：
+
+1. **重复气泡归属**：归入 [BUG-0068](../bugs/BUG-0068-queued-consumed-user-message-after-reply.md) 作**残余变体**跟踪（已在该 Bug 记录追加裁定段并登记 `related_tasks: TASK-0194`），不另立新缺陷。理由：症状同族（未决乐观气泡未被规范历史吸收、只在渲染端 live 层、刷新即恢复），本 Task 的修复范围（四处锚定/派发序号回归）视为有效；该残余变体不属于本 Task 的 GWT ①②③④ 任一子句的失败，故不阻塞本项验收。
+2. **GWT ① 口径改写**：接受「两轮派发亦可接受」（同上方 Given/When/Then 内联裁定），不再要求构造 q-2 返回 `missing` 的时序；`missing` 分支维持单测覆盖（`useSessionManager.queue.test.ts` 事件级 unbump 竞态例）。
+
+- 验收依据：① 用户可见面实测——排队气泡尾部锚定（`…29:QUEUE-PROBE-B` 紧跟在途回合）、按序消费无残留重影（`30→31→32`）；② 竞态与取消实测——两次「立即发送」各自成回合、被打断回合的部分回复保留、无错误气泡；③ 内部不变量（`prependedCount`、两层回退一致性）由 4 文件 64/64 单测覆盖；④ conversation 域 965 例、`test:impact` 282 例绿。
+- 状态：`verifying` → `done`。残余变体的修复与验收归 BUG-0068；本 Task 的 `integration_status`（已集成并推送 origin/dev、worktree 与分支已清理）不变。

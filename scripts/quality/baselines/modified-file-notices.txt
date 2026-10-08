@@ -442,7 +442,6 @@ packages/coding-agent/src/extensions/events/tool-event-data.ts
 packages/coding-agent/src/features/plan-mode/plan-mode-tool-policy.ts
 packages/coding-agent/src/host/tool-environment/node/node-session-execution-environment.ts
 packages/coding-agent/src/host/tool-environment/node/node-tool-environment.ts
-packages/coding-agent/src/model-context/system-prompt-policy.ts
 packages/coding-agent/src/public-api/runtime.ts
 packages/coding-agent/src/tool-policy/read-tool-policy.ts
 packages/coding-agent/test/agent-configuration/profile-default-session-create.test.ts

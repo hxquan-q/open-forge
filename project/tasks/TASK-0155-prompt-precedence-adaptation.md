@@ -21,7 +21,7 @@ depends_on: [TASK-0154]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -68,3 +68,30 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
   - test:impact→test:changed（公共提示词入口）除 1 例负载假红（McpAppSurface 单跑通过归因）；完整 bun run check 通过（含声明头 ratchet、人格/模式生成物一致性守卫）。
 - 未运行及原因：真实模型的人设/模式行为效果评估——软件文本合同已由测试锁定，模型效果属 AI 质量评估层，未获真实 Provider 授权。
 - 剩余风险：优先级规则对不同模型遵从度未实测；「交互」人设与 Coding 自主默认的让位语义靠文本合同，长会话漂移需后续评估案例观察。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组二；保持 verifying 待裁定）
+
+方法：本 Task 的验证合同自己写着「**软件文本合同与真实模型效果分开报告**」，故按两层分别处理：文本合同层在主检出逐条复跑并逐条对上用例；真实模型效果层**本轮未执行**，并说明其阻塞原因（见下）。
+
+**第一层：软件文本合同（本轮实跑，全绿）**
+
+| 子句 | 覆盖用例与本次读数 |
+|---|---|
+| 交互人设 + Coding | `apps/desktop` `agent-modes.test.ts` **17 例全绿**，其中「coding 模式的自主执行默认值让位于要求先确认的人设」「写代码底线允许项目指令要求的重构」；`packages/coding-agent` `personalization-prompt.test.ts`「interactive persona states that it replaces the mode's autonomy default」。 |
+| 项目指令隔离 | `personalization-prompt.test.ts`「places persona first and **fences custom instructions under their own heading**」「emits only the custom instructions when the default persona is selected」「emits nothing when neither persona nor custom instructions are set」——人设与项目指令在文本上被分栏围栏，不互相冒充。 |
+| 仅可用工具 | `packages/coding-agent` `system-prompt.test.ts`「**names only the exploration tools that are actually available**」；同文件另有交付物链接形态断言（`[filename.ext](<… with spaces …>)` 必须带尖括号、不得退化成裸路径）与「文件名保真」相关的正反例。 |
+| 用户语言 | `agent-modes.test.ts`「观察小节只在渲染了成品时出现，**且标题跟随用户语言**」。 |
+| 工具事件身份 | `packages/coding-agent` `extension-tool-event-contracts.test.ts`「match the Node built-in tool data exposed through the extension boundary」**通过**。 |
+| @skill 未命中 | `personalization-prompt.test.ts`「tells the model how to handle an `@skill` reference that matches no listed skill」。 |
+
+复跑命令与读数：`bun run --cwd apps/desktop test src/main/agent-modes/agent-modes.test.ts` → **1 文件 / 17 例**；`bun run --cwd packages/coding-agent test test/personalization-prompt.test.ts test/prompt-templates.test.ts test/system-prompt.test.ts test/system-prompt-document.test.ts test/plugin-prompt-context.test.ts test/prompt-template-discovery-port.test.ts test/summary-prompt-boundary.test.ts` → **7 文件 / 129 例**；另 `extension-tool-event-contracts.test.ts` → 1 例。全部通过。交付记录写的「agent-modes 17/17、提示词族 56/56」在本轮被更大的文件集（129 例）覆盖且同样全绿。
+
+**第二层：真实模型效果（本轮未执行）**
+
+- 交付记录原文：模型效果属 AI 质量评估层，未获真实 Provider 授权；剩余风险亦记「优先级规则对不同模型遵从度未实测」。
+- **本轮多了一条阻塞理由**：用户为测试授权的模型 `qwen3.8/qwen3.8-27b`，其端点在 [VERIFY-0018](../../verification/VERIFY-0018-qwen38-real-provider-smoke.md) 实测中被判定为输出不连贯（任何 prompt 都拿不到可用回复），已立案 [ISSUE-0031](../../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md)，且该 Issue 的决策触发条件明写「**qwen3.8 被要求作为可用测试/使用模型时必须先闭合本 Issue；此前该 modelKey 不应用于任何真实流程验证**」。也就是说，即便忽略「未授权」这一层，本任务也**没有可用的授权模型**来做「人设/模式遵从度」这类需要判读模型正文的评估。
+- 同批 VERIFY-0018 里存在一个已证实可用的对照模型 `glm/glm-5.3-flash`，但用户本轮只点名授权了 `qwen3.8`；用未经点名的模型做行为判读不在授权内，故不擅自执行。
+- 结论：这一层留给用户的裁定是——① 先闭合 ISSUE-0031（或换定一个可用且授权的模型）后补做模型效果评估；② 或接受「文本合同层已锁定、模型效果层作为独立 AI 质量议题另行跟踪」，据此闭合本 Task。
+
+- 未复跑（不宣称通过）：交付记录的影响面与完整 `bun run check` 未重跑；人格/模式生成物的再生成一致性守卫（`build-agent-modes.mjs` / `generate-personas.mjs`）随根 `check`，本轮未单独跑。
+- 关闭建议：文本合同六条**测试级全部成立**且可逐条指认用例；模型效果层因授权模型不可用而客观阻塞 ⇒ 倾向按上述 ② 闭合。按 VERIFY-0017 约定等用户裁定。

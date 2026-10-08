@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0035, TASK-0050]
 conflicts_with: [TASK-0038, TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-09-23
-updated: 2026-10-03
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -103,3 +103,16 @@ updated: 2026-10-03
 ### 剩余风险
 
 - 压缩与向上翻页在途并发时，合并按内容签名对齐，不匹配即整窗替换——正确性优先，锚点可能在该罕见交错下回到尾部（与旧行为一致，不劣化）。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：本任务与 TASK-0038 共用渲染端联动用例，本轮复跑同一条；压缩参数面读 coding-agent 压缩族。真实 UI 未驱动。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| 压缩成功后边界条目可辨认、阅读锚点稳定 | `useSessionEventController.compaction.test.tsx` **1 文件 / 5 例通过**（其中两例即本任务交付记录新增：自动压缩成功后边界条目可见、手动压缩重建保留已加载旧页 backlog） |
+| 边界前消息仍在原序列以占位定位、可经 cursor 恢复完整内容 | 占位与 cursor 机制归 TASK-0035/0050，本轮按 TASK-0050 的 7 文件 / 93 例读数一并成立 |
+| 活动窗口外 blocks 释放、JSONL 与完整导出不变 | coding-agent 压缩族 **8 文件 / 56 通过 \| 2 跳过**（`compaction`、`compaction-configuration`、`compaction-prefire` 等） |
+
+- **未覆盖**：真实「浏览长会话历史区域 → 触发压缩 → 继续上/下浏览」的用户面往返；需要真实长会话，本轮未驱动。
+- **关闭建议**：合同三条在测试级成立，倾向 `done`；真实用户面往返是否要求补测，请用户裁定。

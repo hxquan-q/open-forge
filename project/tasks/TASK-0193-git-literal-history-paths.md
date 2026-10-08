@@ -1,7 +1,7 @@
 ---
 id: TASK-0193
 type: task
-status: verifying
+status: done
 priority: P1
 owner: plugin-git
 source: user-request; RESEARCH-0022; upstream 2dd10fc5b
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0187]
 integration_status: pending
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -61,3 +61,14 @@ updated: 2026-10-03
 有效红测：`bun scripts/quality/run-vitest.mjs run packages/plugins/presets/git/test/parseLog.test.ts packages/plugins/presets/git/test/log.test.ts`，7 失败/1 通过；真实 Git 证明 literal 邻居误匹配和 rename 退化。最初测试源码转义错误的收集失败不计入红测。
 
 绿测：插件标准 `bun run --cwd packages/plugins/presets/git test` 与 `check` 通过；首次标准入口缺 plugin-vite dist，按实际 workspace 依赖构建后解决，不是产品失败。真实 Git 回归覆盖特殊路径与重命名前后路径；保留 helper 旧调用形式并补非零退出失败可见性。
+
+### 人工验收实测（2026-10-07，VERIFY-0017 组一）
+
+夹具：`<debug vettaHome>\fixtures\git-literal-paths`，五个提交覆盖 空格/中文/`'`/`$`/`#`/`&`/`()`/`[]`/目录内空格 与三种重命名（纯重命名 R100、重命名加改 R087、重命名加删）。把该目录注册为隔离实例项目后，在项目会话里打开活动面板 → Git 页签 → 提交图 → 提交详情。
+
+- **字面路径**：提交详情文件列表逐项显示原文，无转义与丢字——根提交 `普通 文件.txt`、`sub dir/`→`带 空格.md`、`quote'file.txt`、`dollar$file.txt`、`amp&and.txt`、`paren(1).txt`；重命名提交 `renamed #2.txt`、`引号'文件.txt`、`new 文件&2.txt`。
+- **前后路径**：纯重命名（`paren(1).txt` → `paren(1) 重命名.txt`，R100）的逐文件 diff 头部 tooltip/标题为 `paren(1).txt → paren(1) 重命名.txt`，状态徽标「已重命名」，正文「无差异内容。」（100% 相似度正确呈现）；重命名加改（`dollar$file.txt` → `dollar$file-v2.txt`，R087）同样带前后路径并渲染 `appended after rename` 的追加 hunk。列表行与其他列表视图一致用 `origPath → path` 作为行 tooltip（与 `GitFlatList.tsx:81`、`CommitDetailPane.tsx:47` 源码一致）。
+- **不按模式误匹配**（本项的核心回归面）：新增提交 `449e837` 同时含 `br[ack]et.txt`/`bracket.txt` 与 `x[1].txt`/`x1.txt` 四组 glob 同名邻居。选中 `br[ack]et.txt` 的 diff 只含 `BRACKET_ONE`（**不含** `bracket.txt` 的 `PLAIN_TWO`）；选中 `x[1].txt` 的 diff 只含 `XBRACKET_ONE`（不含 `x1.txt` 的 `XPLAIN_TWO`）。若 `--` 后路径被当作 pattern，这两处必然串入邻居文件，实测未串入，`--literal-pathspecs` 生效。
+- 相对照的真实 Git 输出：`git show 53273d4 -m --first-parent --name-status -z --find-renames` 为 5 项（`D a#b.txt`/`A new 文件&2.txt`/`D quote'file.txt`/`A renamed #2.txt`/`A 引号'文件.txt`），UI 平铺列表逐项对得上，`parseNameStatus` 未因 NUL 合同丢项。
+
+按用户「全程自动」验收授权记为 `done`；用户如不认可按 [VERIFY-0017](../verification/VERIFY-0017-behavior-acceptance-checklist.md) 回退为 `verifying`。未覆盖项：`GitChanges`（工作区未提交变更）列表侧的特殊路径，本轮工作区为干净态未构造未提交变更；重命名的**可见正文**只在逐文件 diff 头部与行 tooltip 暴露（列表行正文仅显示目标路径），如需正文并排显示前后路径属交互设计取舍，请用户按预期裁定。

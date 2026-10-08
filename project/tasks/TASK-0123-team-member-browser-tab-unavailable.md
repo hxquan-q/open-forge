@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122]
 integration_status: pending
 created: 2026-09-26
-updated: 2026-09-27
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -117,3 +117,15 @@ updated: 2026-09-27
     下真实可用，符合「剔除只覆盖成员」边界。
   - 若后续成员会话获得 WebView/headless 后端（ISSUE-0026 方案 B），需在函数源恢复可见性
     并同步移除本收窄。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：复跑本任务交付记录点名的收窄逻辑套件（与 TASK-0122 的桌面批次同批执行）。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| 团队成员会话的工具清单中不再出现必然失败的 `browser_tab`（或描述显式声明不可用并给降级） | `team-member-function-source.test.ts`（browser_tab 不可见、其余透传、invoke 直通）+ `team-runtime-manager.test.ts` 新增 3 例（新建/恢复成员携带收窄源、协调 Runtime 不收窄）——均在 **4 文件 / 20 例通过** 之内 |
+| 合计（本批） | `team-task-waiter`、`team-member-function-source`、`team-runtime-manager`、`TeamWaitTasksView` **4 文件 / 20 例通过，0 失败**；`packages/agent-team` 整包 **12 文件 / 85 例通过** |
+
+- **未覆盖**：真实团队成员会话里由模型**实际查看工具清单**并据此放弃 `browser_tab` 的行为面。合同原文允许「不再出现」**或**「描述显式声明不可用」，本轮只验证了实现选了前者（工具源收窄），未验证模型读到的最终清单在真实会话中的渲染结果。
+- **关闭建议**：收窄逻辑测试级成立（含「协调 Runtime 不收窄」的对照），倾向 `done`；模型行为面是否要求补测，请用户裁定。

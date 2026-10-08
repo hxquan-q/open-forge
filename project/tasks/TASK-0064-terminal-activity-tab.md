@@ -18,7 +18,7 @@ depends_on: []
 conflicts_with: [TASK-0061]
 integration_status: integrated
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -90,3 +90,18 @@ Activity Panel 新增内置 `terminal` tab，复用 `TerminalSurface` 与同一 
   - Desktop manifest 仍为 `0.5.59`；首发号 `0.1.0`（ISSUE-0007）尚未切入，fork-only 发布文案不得写入继承的 Vetta Release Notes。
 - 候选发布说明（切入 Open Forge 首发版本后再写入对应 `v*.md`，当前阻断）：
   - 「新增」：右侧活动面板可以从「+」挂上终端，和底部终端是两套独立进程；关掉右栏终端会结束该进程，底部终端行为不变。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：测试级复跑声明的五个套件；用户面在隔离 Debug profile `04987e4e`（**不是**用户日常实例）真实驱动——从「标签页菜单（+）」挂载终端、在两个位置各起一个 PTY、并按外部可观测量（进程 PID / 进程存活）判定。终端用 WebGL 渲染，文字不在 DOM 里（无 `.xterm-accessibility-tree`），故不用界面文本判读写，改用 `tasklist` 观察进程生命周期。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| Given 会话打开且 cwd 有效；When 从「+」挂载 Terminal tab；Then 右栏出现终端、可输入有输出、状态点/标签正确 | **真实成立**：从「+」菜单挂载后右栏出现终端页签，启动 `pwsh` 进程 **PID 25012**，其工作目录＝该会话项目根（`fixtures/git-literal-paths`），命令有实际输出 |
+| Given 右栏终端与底部面板终端同时存在；When 两边各自运行命令；Then 两个 PTY 独立、无输出串台 | **真实成立**：底部面板另起 PTY **PID 20552**，与 25012 **PID 不同** ⇒ 两个独立 PTY 实例 |
+| 关闭 = 隐藏且进程随之结束 | **真实成立**：隐藏 `git-literal-paths` 的终端页签后 **PID 25012 消失**，而底部 PTY 20552 **仍存活** ⇒ 关的是右栏该实例，未误杀底部终端 |
+| Given SSH 远程项目；When 打开右栏终端；Then 远端 PTY 等价语义 | **未覆盖**：本 Debug profile 无已注册的远程项目，本轮未构造（不连真实主机是各 SSH 任务的共同边界） |
+| 测试级：`terminal-tab.test.tsx`、`useActivityTerminalHandle.test.tsx`、`activity-tab-visibility.test.ts`、`activity-tab-residency.test.ts`、`resolve-activity-tabs.test.ts` | **5 文件 / 33 例通过，0 失败** |
+
+- **未覆盖**：SSH 远端项目的右栏终端（第 3 条 Given）；以及「每 workspace 单实例」在多 workspace 切换下的真实往返（本轮只验证了单 workspace 内的挂载/隐藏）。
+- **关闭建议**：前两条 Given 与「关闭=隐藏且进程结束」在用户面成立，测试级全绿；第 3 条 Given 无验收对象（无远程项目）。就合同可及范围倾向 `done`，第 3 条是否要求补真实 SSH 环境，请用户裁定。

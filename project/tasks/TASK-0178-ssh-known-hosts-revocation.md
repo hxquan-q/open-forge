@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0169, TASK-0177]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -72,3 +72,17 @@ updated: 2026-10-02
 - 公共合同核对：`KnownHostsVerdict` 生产者/消费者全量检索仅 desktop verifier 与测试；新 `revoked` 分支在宿主显式拒绝，不会回落成首次确认。
 - 未验证项/风险：未做真实主机与多平台实测（非 Windows 走系统 OpenSSH，不经此代码路径）；证书链验证按合同未实现；两份 known_hosts 现在总是都被读取（撤销可能登记在后查的文件里），连接建立的额外读取开销可忽略。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）；人工功能验收与发布未执行。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组五；保持 verifying 待裁定）
+
+方法：按本任务「验证与验收」一节声明的两条命令逐条复跑（主检出 HEAD `18a7bf7b4`）。
+
+| 声明命令 | 本次读数 |
+|---|---|
+| cwd `packages/ssh-transport`：`known-hosts.test.ts` + `ssh2-runner.test.ts` + `ssh2-runner.loopback.test.ts` | **3 文件 / 53 例通过，0 失败**（交付记录记 49/49；本轮 53，方向一致） |
+| cwd `apps/desktop`：`ssh-hostkey-verifier.test.ts` + `ssh-host-service.test.ts` | **2 文件 / 24 例通过，0 失败**（与交付记录 24/24 一致） |
+| **合计** | **5 文件 / 77 例通过，0 失败** |
+
+- **合同条款定位**：`known_hosts` 的 `@revoked` 无条件拒绝、宿主侧拒绝合同与「不给『仍然连接』」选项，由上述 `known-hosts.test.ts`（解析与撤销语义）与 `ssh-hostkey-verifier.test.ts`（宿主拒绝合同）分别断言；本任务即 BUG-0062 的修复承接。
+- **未覆盖**：**真实已知主机上的 `@revoked` 实测**——需要一台真实 SSH 主机并把其密钥写入 `known_hosts` 后标 `@revoked`，属各 SSH 任务的共同边界（不连真实主机），本轮未做。交付记录里更宽的读数（`test:impact` 的 desktop 4652 + runtime-desktop、`test:changed --base origin/dev`、完整 `bun run check` exit 0）本轮**未复跑**。
+- **关闭建议**：两条声明的定向命令全绿、撤销语义与宿主拒绝都有直接断言；缺的只是真实主机形态。倾向 `done`，是否要求补真实主机实测，请用户裁定。

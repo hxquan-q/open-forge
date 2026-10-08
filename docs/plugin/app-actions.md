@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 动态 App Action
 
 插件可在 `activate(ctx)` 中调用 `ctx.appActions.register()`，把 Action 动态加入 Desktop 的 Action 目录。宿主会先暂存本次 activation 的全部 Action，待 `activate` 和所有注册都成功后一次发布；任一注册失败则整次 activation 回滚。插件重载、停用、卸载或权限被撤销时，宿主会同步注销 Action 并取消执行中的请求。

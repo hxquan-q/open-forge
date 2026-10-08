@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0105, TASK-0108]
 integration_status: pending
 created: 2026-09-24
-updated: 2026-09-27
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -94,3 +94,17 @@ VS Code 的后台进程（sharedProcess、fileWatcher、ptyHost、extensionHost�
   - speech-input 宿主与 browser-cli 不自动重启是刻意的（前者向调用方报会话级失败，后者短生命周期），与「有界重启或转人工提示」的兜底语义一致，但真实设备上的重启风暴抑制只覆盖了 session-search/uiohook/im-sidecar。
   - `unresponsive` 栈采样依赖 `collectJavaScriptCallStack` 真实可用性（Electron 在 renderer 卡死时仍可能采不出栈），未在真机验证；失败路径仅 warn，不扩大故障面。
   - perf-snapshot `background` 为新增可选字段，旧消费方忽略即可，无兼容性代价。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：复跑本任务交付记录点名的四组定向套件。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| 按 role 契约记账（crash 计数 +1、内存归因进快照） | `process-health.test.ts`、`perf-snapshot.test.ts`（background 字段进出）通过 |
+| 有界重启或转人工提示 | `session-search-worker-client.test.ts`（崩溃 → 重启计数 → 预算耗尽 → 终态 `search-failed`）通过 |
+| unresponsive 场景产出 JS 栈采样到诊断包 | `diagnostics-call-stack.test.ts`（栈采样成功/失败路径）通过 |
+| 合计 | **4 文件 / 21 例通过，0 失败** |
+
+- **未覆盖**：① 交付记录里更宽的读数（im-host + browser-automation + session-search 共 27 文件 190 例、app-monitor 等 7 文件 38 例）本轮**未整体复跑**，只跑了点名的四组；② **真实崩溃/真实挂起注入**——「UI 不被拖垮、主进程不退出」与「unresponsive 栈采样」在真实挂起下成立与否，本轮未构造（需要在真实进程里制造挂起，属重型且会打断并行的 Debug 实例）。
+- **关闭建议**：四组定向套件全绿、三条合同条款逐条对应用例，倾向 `done`；是否要求补一次真实进程崩溃/挂起注入，请用户裁定。
