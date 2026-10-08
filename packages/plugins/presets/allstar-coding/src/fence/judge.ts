@@ -68,7 +68,7 @@ export interface Verdict {
 // 权限矩阵（§3.6——从 ac-audit.mjs 原样搬，它是权限矩阵的机器权威源）
 // ---------------------------------------------------------------------------
 
-export const BASELINE_MATRIX: Record<string, { tier: string; write: string[] }> = {
+export const BASELINE_MATRIX: Record<string, { tier: string; write: string[]; read?: string[] }> = {
 	conductor: { tier: "T1", write: ["docs/ac/state.md"] },
 	requirements: {
 		tier: "T2",
@@ -82,7 +82,13 @@ export const BASELINE_MATRIX: Record<string, { tier: string; write: string[] }> 
 		tier: "T2",
 		write: ["docs/ac/whitebox.md", "docs/ac/test-results/**", "test/**", "tests/**"],
 	},
-	blackbox: { tier: "T1", write: ["docs/ac/blackbox.md"] },
+	// read 字段是黑盒自测迭代（TASK-0217）的最小读域标记：读类工具按前缀放行（§6.2 读域过滤）。
+	// 目前只有 blackbox 声明——其他角色读全域语义不变；未来角色需要窄读域时在此登记。
+	blackbox: {
+		tier: "T1",
+		write: ["docs/ac/blackbox.md"],
+		read: ["docs/ac/"],
+	},
 	deployer: { tier: "T2", write: [] /* 部署分支与产物路径，按项目实际动态下发 */ },
 	finalizer: {
 		tier: "T2",
@@ -132,6 +138,18 @@ const READONLY_HOST_NAMES = new Set([
 	"todo_write",
 	"list_agents",
 ]);
+
+/**
+ * blackbox 角色的读域内放行工具（读域过滤 §6.2）：只有 read——用例路径由任务书点名，
+ * 目录发现类（grep/glob/ls/dir_tree/find）一律拦，堵死模式化探查 src 的路径。
+ */
+const BLACKBOX_READABLE_HOST_NAMES = new Set(["read"]);
+
+/**
+ * blackbox 角色的 shell 白名单（§6.2）：黑测子自测通道之一是外部 CLI agent-browser（headless），
+ * 且它不需要 git（读也不需要——审计在主控侧）。未来新通道需要其他命令时，白名单加条目即可。
+ */
+const BLACKBOX_SHELL_WHITELIST = new Set(["agent-browser"]);
 
 // ---------------------------------------------------------------------------
 // git 写命令黑名单（§3.3）
@@ -296,6 +314,72 @@ function effectiveWriteScope(contract: FenceContract): ScopeMatcher {
 }
 
 // ---------------------------------------------------------------------------
+// blackbox 角色窄读域/白名单（黑盒自测迭代 §6.2——仅该角色生效，其他角色行为不变）
+// ---------------------------------------------------------------------------
+
+/**
+ * 读类宿主工具（toolKind function）的 path 参数提取：宿主 read 以 path 为准，file_path 作兼容回退。
+ * path 缺失或不可解析 → 由调用方 fail-safe block。
+ */
+function readCallPath(input: unknown): string | null {
+	const path = stringField(input, "path");
+	if (path !== null && path.trim() !== "") return path;
+	const filePath = stringField(input, "file_path");
+	if (filePath !== null && filePath.trim() !== "") return filePath;
+	return null;
+}
+
+/** blackbox 读域判定（§6.2）：path（POSIX 化后）落在任一 read 前缀内才放行。 */
+function isWithinBlackboxReadScope(path: string): boolean {
+	const posix = toPosixPath(path.trim());
+	if (posix.length === 0) return false;
+	const prefixes = BASELINE_MATRIX.blackbox?.read ?? [];
+	return prefixes.some((prefix) => posix.startsWith(prefix));
+}
+
+/** blackbox shell 白名单判定（§6.2）：首 token（大小写不敏感）命中白名单。 */
+function isBlackboxShellAllowed(command: string): boolean {
+	const first = command.trim().split(/\s+/)[0];
+	if (!first) return false;
+	return BLACKBOX_SHELL_WHITELIST.has(first.toLowerCase());
+}
+
+/**
+ * blackbox 角色的 function 类窄判定（§6.2 读域过滤）：
+ * - read：path 落在 docs/ac/ 前缀内放行；缺失/越域 fail-safe block；
+ * - grep/glob/ls/dir_tree/find：一律 block（用例路径由任务书点名，无需目录发现）；
+ * - todo/todo_read/todo_write/list_agents 等非文件路径工具不受影响（放行）；
+ * - 返回 null 表示非读类工具，交回通用分支（如 browser_tab 走末尾放行）。
+ */
+function judgeBlackboxReadTools(call: ToolCallShape): Verdict | null {
+	if (call.toolKind !== "function") return null;
+	if (BLACKBOX_READABLE_HOST_NAMES.has(call.hostName)) {
+		const path = readCallPath(call.input);
+		if (path === null) {
+			return {
+				allow: false,
+				reason: `ac-fence：黑测子 read 输入缺少 path 字段，围栏无法判定读域 → fail-safe 拦截。黑盒用例输入路径由任务书点名（docs/ac/**），请按任务书路径重试；确需其他路径 → ${HELP_PROTOCOL_HINT}`,
+			};
+		}
+		if (!isWithinBlackboxReadScope(path)) {
+			return {
+				allow: false,
+				reason: `ac-fence：黑测子读域仅限 docs/ac/（黑盒不读实现——用例输入来自上游产物与接口卡，路径由任务书点名）：${path} 越域。需要流水产物之外的信息 → ${HELP_PROTOCOL_HINT}`,
+			};
+		}
+		return { allow: true };
+	}
+	if (call.hostName === "grep" || call.hostName === "glob" || call.hostName === "ls" || call.hostName === "dir_tree" || call.hostName === "find") {
+		return {
+			allow: false,
+			reason: `ac-fence：黑测子禁用目录发现类工具（${call.hostName}）——黑盒文档小，用例路径由任务书点名直接 read；模式化探查 src 不属于黑盒职责。确有需要 → ${HELP_PROTOCOL_HINT}`,
+		};
+	}
+	// 其余 function 类（todo/list_agents/browser_tab 等）不属读域过滤对象
+	return null;
+}
+
+// ---------------------------------------------------------------------------
 // 主会话 spawn 校验（§3.2 主会话规则）
 // ---------------------------------------------------------------------------
 
@@ -422,6 +506,14 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 				reason: `ac-fence：shell 输入缺少 command 字段，围栏无法判定 → fail-safe 拦截。如为合法操作 → ${HELP_PROTOCOL_HINT}`,
 			};
 		}
+		// blackbox 角色：shell 只放行通道白名单（agent-browser 前缀），其余含 git 只读一律拦——黑测子不需要 git
+		if (contract.role === "blackbox") {
+			if (isBlackboxShellAllowed(command)) return { allow: true };
+			return {
+				allow: false,
+				reason: `ac-fence：黑测子 shell 仅放行自测通道命令（白名单：${[...BLACKBOX_SHELL_WHITELIST].join(", ")} 前缀）：${command.slice(0, 80)} 被拦截。服务起停与环境探测属辅助者（helper）职责；确需其他命令 → ${HELP_PROTOCOL_HINT}`,
+			};
+		}
 		if (isGitWriteCommand(command)) {
 			// 豁免通道：主控显式授权的轻量 git 子代理（存档执行者，契约 allow_git_write: true）
 			if (contract.gitWriteAllow === true) return { allow: true };
@@ -438,6 +530,13 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 			allow: false,
 			reason: `ac-fence：子代理不可再 spawn（内核已禁用 spawn 工具，此处纵深防御）。确有需要 → ${HELP_PROTOCOL_HINT}`,
 		};
+	}
+
+	// blackbox 角色：读类 function 工具做窄读域判定（read 前缀过滤 + 目录发现类全拦）。
+	// 非 读类 function（browser_tab 通道、todo 等）返回 null 落到末尾通用放行。
+	if (contract.role === "blackbox") {
+		const verdict = judgeBlackboxReadTools(call);
+		if (verdict !== null) return verdict;
 	}
 
 	// 其他（function/mcp/custom）→ 放行：读类工具不拦；MCP 工具越权由 L1.5 审计兜底（§3.4 观察期）

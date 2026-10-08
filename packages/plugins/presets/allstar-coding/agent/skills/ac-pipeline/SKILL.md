@@ -73,7 +73,7 @@ acceptance:       验收判据（静态判据 vs 命令判据分开列，对齐�
 | 开发子 | T2 | 契约 scope glob（项目内，动态下发） | 超域走 help_protocol 申请 → 主控/辅助者裁决 → 必要时过用户门 |
 | 评审子 | T2 | `docs/ac/reviews.md`（逐轮追加） | 评审者自留地：整理规划与提交有落点，消除灰色地带 |
 | 白盒子 | T2 | `whitebox.md` + `docs/ac/test-results/**` + 项目 test/ 目录 | 临时物有界 |
-| 黑盒子 | T1 | `docs/ac/blackbox.md` | |
+| 黑盒子 | T1 | `docs/ac/blackbox.md` | 读域限 `docs/ac/**`（任务书点名路径直读，禁目录发现类）；shell 白名单仅 `agent-browser` 前缀（自测通道）；通道工具（browser_tab 等 function 类）放行 |
 | 部署子 | T2 | deploy 分支 + 部署产物路径 | |
 | 收尾子 | T2 | state.md 终态化 + 临时物清理 | 唯一可碰 state.md 的第二人（主控显式授权的一次性交接） |
 | 辅助者 | T2（动态） | 每次委派时由主控在契约中下发 scope | 变更类命令的集中执行者（过安全预审） |
@@ -162,7 +162,7 @@ verdict: pass | fail
 
 插件（本插件 dist 内）注册了 PreToolUse/SubagentStart hook：**主控 spawn 的每个子代理，其工具调用在执行前按任务契约 scope 判定，越权即 block**（工具结果会带 `ac-fence:` 前缀 reason）。主控需要知道的行为约定：
 
-1. **围栏判定即 §0.2/§0.3 的机器强制版**：scope 超基线/为空、agent_type 不在 {general, explorer}、子代理写 scope 外文件、普通子代理跑 git 写命令、未登记子代理的非只读调用——都会被拦。契约拼装纪律（§0.2）不达标时 spawn 直接被 block，reason 会说明缺什么。
+1. **围栏判定即 §0.2/§0.3 的机器强制版**：scope 超基线/为空、agent_type 不在 {general, explorer}、子代理写 scope 外文件、普通子代理跑 git 写命令、未登记子代理的非只读调用——都会被拦。契约拼装纪律（§0.2）不达标时 spawn 直接被 block，reason 会说明缺什么。**黑测子（blackbox 角色）另有窄读域与 shell 白名单**：read 仅放行 `docs/ac/` 前缀、目录发现类（grep/glob/ls/dir_tree/find）一律拦、shell 仅 `agent-browser` 前缀放行（自测通道；其余含 git 只读全拦）——权限跟着工具走，其他角色不受影响。
 2. **主会话 git 写命令同样被拦**（`git commit/push/...` 在主控会话直接跑会 block）：环节级存档（T 档/stage 档）走**轻量 git 子代理**——spawn 时 task_name 用 `git_` 前缀、契约输入带 `allow_git_write: true`（豁免只授给 `git_` 前缀，其他契约偷带会被 spawn 校验拒绝），围栏对该契约的 git 写命令放行。`git status/log/diff` 只读命令不受影响（任何会话）。
 3. **子代理被 block 时**：reason 已带 help_protocol 指引（「在最终报告『待主控处理』节登记」），主控收到登记后裁决：扩域重派（新契约）/ 辅助者代办 / 打回。**不要教子代理绕围栏**——围栏拦截记录会落 `docs/ac/fence-log.jsonl`（每条含 ts/sessionId/agentId/taskName/tool/inputDigest/reason；属预期写入，ac-audit 双链已排除，不会反咬越权）。
 4. **fail-open**：围栏 handler 崩溃/超时=放行（宿主语义），事后仍有 ac-audit（L1.5）双链对账兜底——fence-log 缺记录不代表没发生越权。
@@ -181,12 +181,12 @@ verdict: pass | fail
 | 7 | 任务清单确认门（可选） | 主控（用户，§0.1）| 批准记录 | ⭕ 可选 |
 | 8 | 逐任务开发循环 | **开发子**（每任务一个 spawn 会话，挂起保活）+ **评审子**（每任务一个 explorer 只读）；主控编排 | 各任务代码 + `docs/ac/reviews.md` | — |
 | 9 | 白盒测试 | 白测子（spawn）+ 修复（唤醒对应开发子） | `docs/ac/whitebox.md` + test-results/ | — |
-| 10 | 黑盒测试文档 | 黑测子（spawn 一次性）| `docs/ac/blackbox.md`（带状态）| — |
-| 11 | **用户黑盒测试** | 用户（主控守护）| 用户反馈 | ✅ 必须 |
+| 10 | 黑盒准备（含自测） | 黑测子（按阶段重生：探测/出文档/自测）+ helper（环境探测/服务起停）| `docs/ac/blackbox.md`（v2：结果总表+接口卡+P#）| — |
+| 11 | **用户黑盒核验** | 用户（主控守护）| 用户核验结果 | ✅ 必须 |
 | 12 | 部署 | 部署子（spawn 一次性）| 专用分支提交 + 产物 + 服务更新 | 部署动作过用户确认 |
 | 13 | 收尾 | 收尾子（spawn 一次性）| 清理记录 + 特殊提交 | 完成后简报 |
 
-必经门（3、11）不过不进下一环节；可选门（5、7）由复杂度决定，默认小改动跳过、大改动开启（开启条件见对应技能）。
+必经门（3、11）不过不进下一环节；可选门（5、7）由复杂度决定，默认小改动跳过、大改动开启（开启条件见对应技能）。环节 10-11 的完整协议（通道探测 → 三态分流 → 出文档 → 可选自测 → 用户核验）见 ac-blackbox。
 
 ## 2. 产物落盘规范
 
@@ -200,14 +200,15 @@ docs/ac/
 ├── tasks.md           # 任务清单（环节 6 产出）
 ├── state.md           # 流水状态 JSON（主控唯一可写，见 §3）
 ├── reviews.md         # 评审记录（环节 8 追加制，评审子写域，见 §0.4）
-├── whitebox.md        # 白盒测试文档与问题清单（环节 9）
-├── blackbox.md        # 黑盒测试文档（环节 10，交用户执行）
+├── whitebox.md        # 白盒测试文档（环节 9）
+├── blackbox.md        # 黑盒测试文档 v2（环节 10：结果总表两列 + 接口卡节 + P# 清单）
 ├── fence-log.jsonl    # ac-fence 围栏拦截记录（§0.8；追加制，收尾时随产物处置一并清理）
 └── test-results/      # 测试执行证据（json 报告与问题清单）
 ```
 
 规则：
-- 每个文档头部带状态标记（`状态: 草案|待确认|已批准|已执行`）与最后更新时间。
+- 每个文档头部带状态标记（`状态: 草案|待确认|已批准|待执行|自测中|待核验|已执行`）与最后更新时间。
+- blackbox.md v2 头字段：`状态` / `执行模式: 自测|手测` / `探测记录` / `最后更新`；结果总表两列（自测/核验）覆盖全部用例，取值 ✓/✗/豁/空（✗ 与豁必有对应 P# 条目）。
 - 用户批准后文档加 `已批准（日期 + 用户确认方式）`，此后改动需重新过门。
 - 目标项目已有 `docs/ac/state.md` 时先读它判断是恢复还是新流水（见 §7）。
 
@@ -284,7 +285,7 @@ docs/ac/
 | 开发子 | spawn_agent(general)，task_name=`dev_t1` 形式 | 每任务一个；完成后挂起（不销毁），durable id 记 state.md | 契约 scope glob（任务卡改动面） |
 | 评审子 | spawn_agent(explorer 只读) | 每任务一个，one-shot | reviews.md（评审子写域；explorer 机制只读时由主控代写） |
 | 白测子 | spawn_agent(general) | 一次性（修复循环唤醒开发子而非白测子） | whitebox.md + test-results/** + 项目 test/ |
-| 黑测子 | spawn_agent(general) | 一次性 | 仅 blackbox.md |
+| 黑测子 | spawn_agent(general) | 按阶段重生（探测/出文档/自测/核验回填各一次 spawn，一次性；落盘文档是唯一交接合同） | 仅 blackbox.md |
 | 部署子 | spawn_agent(general) | 一次性 | 部署分支与产物目录 |
 | 收尾子 | spawn_agent(general) | 一次性 | 清理范围 + state.md 终态化（授权交接） |
 
@@ -298,7 +299,7 @@ docs/ac/
 
 1. 评审 verdict=fail → 问题清单（含文件/位置/建议）通过 `followup_task(dev_t1, ...)` 转达同一开发子会话修正；修复后复评（新评审子）。
 2. 同一任务打回轮次 ≥1 即记 reviews.md（§0.4 节格式）与 state.md（executions+1）；上限 3 轮（§0）。
-3. **白盒/黑盒问题跳回**：问题定位到具体任务产物 → followup_task 唤醒该任务开发子修复 → 受影响的后续验证重走（白盒相关用例复跑）。问题在上游文档（需求/架构错误）→ 打回对应文档环节修订（该环节子已结束则新起）→ 修订标 `【修订 <日期>】` → state.md 记回退 → **受影响下游已完成任务作废重走**。
+3. **白盒/黑盒问题跳回**：问题定位到具体任务产物 → followup_task 唤醒该任务开发子修复 → 受影响的后续验证重走（白盒相关用例复跑；黑盒只复测受影响 B#）。问题在上游文档（需求/架构错误）→ 打回对应文档环节修订（该环节子已结束则新起）→ 修订标 `【修订 <日期>】` → state.md 记回退 → **受影响下游已完成任务作废重走**。
 4. followup_task 是排队语义：子在跑则等待，不中断其当轮工作。
 
 ## 6. 主控职责清单

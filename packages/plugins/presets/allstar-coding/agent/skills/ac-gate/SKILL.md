@@ -71,7 +71,7 @@ node -e "const fs=require('fs');for(const p of [<逐个路径>]){try{const s=fs.
 - 架构环节：design.md 含改动面清单（文件路径级）与"必须同步"节
 - 任务环节：tasks.md 含 T# 任务卡，每卡有依赖/任务/验收标准字段
 - 白盒环节：whitebox.md 含测试计划表与结果回填；test-results/ 有问题清单
-- 黑盒环节：blackbox.md 每条用例带状态字段
+- 黑盒环节：blackbox.md 结果总表两列（自测/核验）覆盖全部用例，取值合法（✓/✗/豁/空），✗ 与豁必有对应 P# 条目；头部含执行模式/探测记录字段
 - 评审环节：reviews.md 有本 T 条目（§0.4 节格式：`## T<n> · 第 <轮> 评审` + verdict + 问题清单 + 证据）
 
 ### G4 executions 与评审记录一致
