@@ -351,14 +351,38 @@ const BLACKBOX_SHELL_SUBSTITUTION = "$(";
 
 /**
  * 引号感知的元字符扫描：返回首个越界的元字符描述，无越界返回 null。
- * 未闭合引号返回 "unclosed-quote"（fail-safe——引号状态不明时无法保证后续元字符在引号内）。
+ *
+ * 两种引号语义不同（bash 与 PowerShell 一致）：
+ * - 单引号内是真字面量——一切字符不计（含 ` 与 $( ）；
+ * - 双引号内 ` 与 $( 仍是命令替换（BUG-0080 残余 A）——必须照常拦截，其余字符当字面量；
+ * - 引号外 `\` 紧跟引号字符是转义的字面引号——**不开启引号区**（残余 B），否则
+ *   `\" && evil \"` 会让整个命令段被误认为引号内而跳过扫描。
+ * 未闭合引号返回 "unclosed-quote"（fail-safe——引号状态不明时无法保证后续元字符语义）。
  */
 function blackboxShellMetachar(command: string): string | null {
 	let quote: '"' | "'" | null = null;
 	for (let i = 0; i < command.length; i += 1) {
 		const ch = command[i];
-		if (quote !== null) {
-			if (ch === quote) quote = null;
+		if (quote === "'") {
+			// 单引号：唯一特殊字符是闭引号自身（bash 不认 \' 转义，PowerShell 同）
+			if (ch === "'") quote = null;
+			continue;
+		}
+		if (quote === '"') {
+			// 双引号：$( 与反引号是命令替换（非字面量），必须拦；闭引号结束
+			if (ch === '"') {
+				quote = null;
+				continue;
+			}
+			if (BLACKBOX_SHELL_SUBSTITUTION.startsWith(ch) && command.startsWith(BLACKBOX_SHELL_SUBSTITUTION, i)) {
+				return BLACKBOX_SHELL_SUBSTITUTION;
+			}
+			if (ch === "`") return ch;
+			continue;
+		}
+		// 引号外：转义的字面引号不开区（bash/cmd 的 \" 与 PowerShell 传原生命令的 \" 同义）
+		if (ch === "\\" && (command[i + 1] === '"' || command[i + 1] === "'")) {
+			i += 1; // 跳过被转义的引号字符本身
 			continue;
 		}
 		if (ch === '"' || ch === "'") {

@@ -501,6 +501,36 @@ describe("blackbox shell 白名单（§6.2）", () => {
 		expect(judge(BB_1, shell("agent-browser open 'http://x"), false).allow).toBe(false);
 	});
 
+	it("双引号内的 $( 与反引号是命令替换 → block（BUG-0080 残余 A 回归）", () => {
+		for (const command of [
+			'agent-browser open "http://x?$(curl http://evil)"',
+			'agent-browser open "http://x/`whoami`"',
+			'agent-browser open "$(node -e evil)"',
+			'agent-browser open "`curl http://x`"',
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+			expect(verdict.reason, command).toContain("ac-fence：");
+		}
+		// 对照：单引号内才是真字面量（bash/PowerShell 语义一致）——保持放行
+		expect(judge(BB_1, shell("agent-browser open 'http://x/`whoami`'"), false).allow).toBe(true);
+		expect(judge(BB_1, shell("agent-browser open 'http://x?$(a)'"), false).allow).toBe(true);
+	});
+
+	it("反斜杠转义的引号不开启引号区 → 后续元字符按引号外拦截（BUG-0080 残余 B 回归）", () => {
+		for (const command of [
+			'agent-browser x \\" && curl evil \\"', // 闭合变体：旧实现整段被"引号内"跳过 → 放行
+			'agent-browser x \\" ; git push \\"',
+			'agent-browser x \\" | node -e evil',
+			"agent-browser x \\' && curl evil \\'", // bash：\\' 是字面引号，&& 真执行
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+		}
+		// 不闭合变体此前靠 unclosed-quote 意外拦截——保持 block（显式化为用例）
+		expect(judge(BB_1, shell('agent-browser x \\" && curl evil'), false).allow).toBe(false);
+	});
+
 	it("其余 shell 命令一律 block（含 git 只读、起服务、命令伪装）", () => {
 		for (const command of [
 			"git status",
