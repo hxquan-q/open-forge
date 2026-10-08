@@ -333,15 +333,56 @@ function readCallPath(input: unknown): string | null {
 function isWithinBlackboxReadScope(path: string): boolean {
 	const posix = toPosixPath(path.trim());
 	if (posix.length === 0) return false;
+	// fail-safe（BUG-0080）：绝对路径与任何 .. 段先拒——词法前缀匹配挡不住
+	// `docs/ac/../../src/main.ts` 这类穿越（宿主 resolve 后实际读到域外）。
+	// 不做完整规范化：宁可误拦合法的 `docs/ac/a/../b.md`（罕见），不可漏放穿越。
+	if (posix.startsWith("/") || posix.startsWith("~") || /^[A-Za-z]:/.test(posix)) return false;
+	if (posix.split("/").includes("..")) return false;
 	const prefixes = BASELINE_MATRIX.blackbox?.read ?? [];
 	return prefixes.some((prefix) => posix.startsWith(prefix));
 }
 
-/** blackbox shell 白名单判定（§6.2）：首 token（大小写不敏感）命中白名单。 */
+/**
+ * 引号外的 shell 元字符（BUG-0080）：命令组合（; && || | & 换行）、命令替换（$( `）、
+ * 重定向（> <）。引号内的元字符是字面量（URL 查询串的 & 是合法形态），不计。
+ */
+const BLACKBOX_SHELL_METACHARS = /[;|&<>`]/;
+const BLACKBOX_SHELL_SUBSTITUTION = "$(";
+
+/**
+ * 引号感知的元字符扫描：返回首个越界的元字符描述，无越界返回 null。
+ * 未闭合引号返回 "unclosed-quote"（fail-safe——引号状态不明时无法保证后续元字符在引号内）。
+ */
+function blackboxShellMetachar(command: string): string | null {
+	let quote: '"' | "'" | null = null;
+	for (let i = 0; i < command.length; i += 1) {
+		const ch = command[i];
+		if (quote !== null) {
+			if (ch === quote) quote = null;
+			continue;
+		}
+		if (ch === '"' || ch === "'") {
+			quote = ch;
+			continue;
+		}
+		if (ch === "\n") return "newline";
+		if (BLACKBOX_SHELL_SUBSTITUTION.startsWith(ch) && command.startsWith(BLACKBOX_SHELL_SUBSTITUTION, i)) {
+			return BLACKBOX_SHELL_SUBSTITUTION;
+		}
+		if (BLACKBOX_SHELL_METACHARS.test(ch)) return ch;
+	}
+	return quote !== null ? "unclosed-quote" : null;
+}
+
+/** blackbox shell 白名单判定（§6.2）：首 token 命中白名单且无引号外元字符。 */
 function isBlackboxShellAllowed(command: string): boolean {
 	const first = command.trim().split(/\s+/)[0];
 	if (!first) return false;
-	return BLACKBOX_SHELL_WHITELIST.has(first.toLowerCase());
+	if (!BLACKBOX_SHELL_WHITELIST.has(first.toLowerCase())) return false;
+	// BUG-0080：首 token 匹配不够——`agent-browser x && curl ...` 的第二段命令、
+	// `> out` 的重定向写文件都在首 token 语义之外（重定向还绕过写域：shell 重定向
+	// 不是 file-edit 调用）。引号外出现组合/替换/重定向元字符即 fail-safe 拦截。
+	return blackboxShellMetachar(command) === null;
 }
 
 /**
@@ -509,9 +550,15 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 		// blackbox 角色：shell 只放行通道白名单（agent-browser 前缀），其余含 git 只读一律拦——黑测子不需要 git
 		if (contract.role === "blackbox") {
 			if (isBlackboxShellAllowed(command)) return { allow: true };
+			const metachar = blackboxShellMetachar(command);
+			const first = command.trim().split(/\s+/)[0] ?? "";
+			const whitelisted = BLACKBOX_SHELL_WHITELIST.has(first.toLowerCase());
+			const hint = whitelisted
+				? `命令含引号外元字符（${metachar ?? "?"}）——复合命令请拆分为单条执行（每条独立过围栏），重定向写文件不在黑测子权限内；确需其他命令 → ${HELP_PROTOCOL_HINT}`
+				: `黑测子 shell 仅放行自测通道命令（白名单：${[...BLACKBOX_SHELL_WHITELIST].join(", ")} 前缀）。服务起停与环境探测属辅助者（helper）职责；确需其他命令 → ${HELP_PROTOCOL_HINT}`;
 			return {
 				allow: false,
-				reason: `ac-fence：黑测子 shell 仅放行自测通道命令（白名单：${[...BLACKBOX_SHELL_WHITELIST].join(", ")} 前缀）：${command.slice(0, 80)} 被拦截。服务起停与环境探测属辅助者（helper）职责；确需其他命令 → ${HELP_PROTOCOL_HINT}`,
+				reason: `ac-fence：${hint}（被拦截命令：${command.slice(0, 80)}）`,
 			};
 		}
 		if (isGitWriteCommand(command)) {

@@ -418,6 +418,21 @@ describe("blackbox 读域过滤（§6.2）", () => {
 		}
 	});
 
+	it("read 的 .. 穿越与绝对路径形态 block（BUG-0080 回归）", () => {
+		for (const path of [
+			"docs/ac/../../src/main.ts",
+			"docs/ac/./../x",
+			"docs/ac/../..",
+			"/etc/passwd",
+			"~/secret.txt",
+			"C:/Windows/system32/config",
+			"docs/ac/..\\..\\src\\main.ts", // 反斜杠混合穿越（POSIX 化后命中 .. 段）
+		]) {
+			const verdict = judge(BB_1, readCall(path), false);
+			expect(verdict.allow, path).toBe(false);
+		}
+	});
+
 	it("read 缺 path 字段 fail-safe block（file_path 兼容回退可用）", () => {
 		expect(judge(BB_1, { toolKind: "function", hostName: "read", input: {} }, false).allow).toBe(false);
 		expect(judge(BB_1, { toolKind: "function", hostName: "read", input: { nope: 1 } }, false).allow).toBe(false);
@@ -454,6 +469,36 @@ describe("blackbox shell 白名单（§6.2）", () => {
 		expect(judge(BB_1, shell("agent-browser open http://localhost:5173"), false).allow).toBe(true);
 		expect(judge(BB_1, shell("AGENT-BROWSER --version"), false).allow).toBe(true);
 		expect(judge(BB_1, shell("  agent-browser   snapshot "), false).allow).toBe(true);
+	});
+
+	it("引号内的 URL 元字符不受影响（合法查询串放行）", () => {
+		expect(judge(BB_1, shell('agent-browser open "http://x?a=1&b=2"'), false).allow).toBe(true);
+		expect(judge(BB_1, shell("agent-browser open 'http://x?a=1&b=2'"), false).allow).toBe(true);
+	});
+
+	it("引号外的复合命令/替换/重定向元字符 block（BUG-0080 回归）", () => {
+		for (const command of [
+			"agent-browser snapshot && curl http://x",
+			"agent-browser --version; git push",
+			"agent-browser x > out.txt",
+			"agent-browser x >> docs/ac/blackbox.md",
+			"agent-browser x | node -e evil",
+			"agent-browser x || curl http://x",
+			"agent-browser x & curl http://x",
+			"agent-browser x $(curl http://x)",
+			"agent-browser x `curl http://x`",
+			"agent-browser --version\ngit push",
+			'agent-browser open "http://x" && curl http://x', // 引号外的 && 仍拦
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+			expect(verdict.reason, command).toContain("ac-fence：");
+		}
+	});
+
+	it("未闭合引号 fail-safe block（BUG-0080 回归）", () => {
+		expect(judge(BB_1, shell('agent-browser open "http://x?a=1'), false).allow).toBe(false);
+		expect(judge(BB_1, shell("agent-browser open 'http://x"), false).allow).toBe(false);
 	});
 
 	it("其余 shell 命令一律 block（含 git 只读、起服务、命令伪装）", () => {
