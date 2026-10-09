@@ -115,5 +115,10 @@ describe("eform-craft skill", () => {
 		for (const artifact of ["schema.json", "preview.html", "mock-data.json", "form-spec.md", "__EFORM_MOCK__"]) {
 			expect(content).toContain(artifact);
 		}
+		// 页面定位锚点：preview.html 是一期交付的实际表单页面（mock 只模拟后端取数），
+		// 不是"视觉可糙"的原型——防止定位回退。
+		expect(content).toContain("实际表单页面");
+		expect(content).toContain("不是潦草原型");
+		expect(content).not.toContain("视觉可糙");
 	});
 });

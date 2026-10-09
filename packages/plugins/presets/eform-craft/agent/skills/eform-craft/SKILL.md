@@ -6,17 +6,18 @@ description: "电子表单工坊主手册：把用户上传的图片/PDF/Excel/W
 
 # 电子表单工坊（eform-craft）
 
-目标：把用户上传的表单原件变成「结构 schema + 可交互 HTML 预览 + mock 演示数据 + 字段规格文档」四件套，经用户确认门定稿，支持自然语言修改循环。一期不做真实签名、审计、MES 部署与真实数据接入——这些只在产物里留钩子。
+目标：把用户上传的表单原件变成「结构 schema + 实际表单页面 + mock 演示数据 + 字段规格文档」四件套，经用户确认门定稿，支持自然语言修改循环。preview.html 是一期交付的实际表单页面（mock 只模拟后端取数，页面按正式标准渲染）；一期不做真实签名、审计、MES 部署与真实数据接入——这些只在产物里留钩子。
 
 ## 0. 统一规则（唯一权威源）
 
 | 规则 | 值 |
 |------|-----|
-| **产物路径** | 一律 `<项目>/docs/eform/<slug>/`：schema.json / preview.html / mock-data.json / form-spec.md（slug 为表单名的英文短横线式，同一表单修改循环写同一目录） |
+| **产物路径** | 一律 `<项目>/docs/eform/<slug>/`：schema.json / preview.html / mock-data.json / form-spec.md（slug 为表单名的英文短横线式，同一表单修改循环写同一目录；preview.html 即实际表单页面） |
 | **写域** | 你只写 `docs/eform/**`；不改项目其他任何文件 |
 | **确认门协议** | 见 §4（先落盘 → 对话区输出 form-spec.md 全文 → ask_user_question 极简卡；口头同意不算过关） |
 | **受众铁律** | form-spec.md 与对话输出只用业务语言；schema.json / preview.html 是实现产物不受此限 |
-| **mock 纪律** | 演示数据一律虚构：组织用「示例组织A/B」、人员用「张三/李四」等通用占位名；金额数量用合理量级演示值；敏感字段（证件号等）用打码格式；**绝不使用可能真实的组织名/人名/编号** |
+| **页面标准** | preview.html 即一期交付的**实际表单页面**：按可部署的正式表单标准渲染（统一栅格/字号/间距/控件规格、分区层次分明，观感对齐主流企业表单系统），不是潦草原型；mock 只模拟后端取数，不是页面降级的借口 |
+| **mock 纪律** | 模拟数据（模拟的是后端/档案数据源的返回值）一律虚构：组织用「示例组织A/B」、人员用「张三/李四」等通用占位名；金额数量用合理量级演示值；敏感字段（证件号等）用打码格式；**绝不使用可能真实的组织名/人名/编号** |
 | **修订标记** | 门打回后的修改处标 `【修订 <日期>】`，schema.form.revision +1 |
 | **F# 三体一致** | schema `fields[].id` ↔ preview.html `data-fid` ↔ form-spec.md 字段清单行，同一编号处处同义 |
 
@@ -82,12 +83,13 @@ description: "电子表单工坊主手册：把用户上传的图片/PDF/Excel/W
 - 每 field：id(F#) / section / label / fieldName / fieldType / required / span / position{row,col} / mock{mode,…} / remark。
 - mock.mode：none | fixed | list（options） | formula（expr 引用其他 F#，如 "F3 - F4"） | sequence（格式模板如 "QJyyyyMMdd###"）。
 
-### 3.2 preview.html（可交互还原预览）
+### 3.2 preview.html（一期交付的实际表单页面）
 
 1. **单文件自包含**：内联 CSS/JS，无外部依赖，双击即开。
-2. **参照原件布局还原**：网格用 table（含合并单元格），行式用表单流；结构正确优先于美观。
+2. **按正式表单页面标准渲染**：这是交付给用户使用的实际页面，不是草案原型——统一栅格与字号体系、分区层次分明、控件规格对齐主流企业表单系统（Vue + Element/AntD 风格的观感）；mock 只替代后端取数，页面质量不因数据是模拟的而降级。
+3. **参照原件布局还原**：网格用 table（含合并单元格），行式用表单流；布局结构以原件为准，视觉规格按正式页面标准执行。
 3. 活动字段渲染为 §1 控件；每控件带 `data-fid="F#"` 与紧邻灰字「类型:取值方式」标注（placeholder 或旁注；placeholder 被填充顶掉时写入 title）。
-4. mock 层内嵌文件尾部单一全局变量（与 mock-data.json 完全一致）：
+4. mock 层内嵌文件尾部单一全局变量（与 mock-data.json 完全一致；模拟的是后端/档案数据源的返回值）：
 
    ```html
    <!-- MOCK-DATA-SOURCE: mock-data.json（终期替换为 API/MCP 取数，只动此层） -->
