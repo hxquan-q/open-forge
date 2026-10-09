@@ -109,6 +109,8 @@ function toRel(root, path) {
 /**
  * 注意：这是「基线矩阵」——主控派发时可在任务契约 scope 里收紧（白名单交集语义），
  * 但不可放宽超过本矩阵（V1 派发前校验的对象；L2 化后由工具拦截层强制）。
+ * read 字段（可选）：该角色读类工具的前缀域标记（黑盒自测迭代起 blackbox 限 docs/ac/）；
+ * 审计仍只对写做轨迹比对，read 仅作围栏判定与文档一致性的单一事实源。
  */
 const BASELINE_MATRIX = {
 	conductor: { tier: "T1", write: ["docs/ac/state.md"] },
@@ -124,7 +126,7 @@ const BASELINE_MATRIX = {
 		tier: "T2",
 		write: ["docs/ac/whitebox.md", "docs/ac/test-results/**", "test/**", "tests/**"],
 	},
-	blackbox: { tier: "T1", write: ["docs/ac/blackbox.md"] },
+	blackbox: { tier: "T1", write: ["docs/ac/blackbox.md"], read: ["docs/ac/"] },
 	deployer: { tier: "T2", write: [] /* 部署分支与产物路径，按项目实际动态下发 */ },
 	finalizer: {
 		tier: "T2",
@@ -407,14 +409,16 @@ function render(result) {
 
 function renderMatrix() {
 	const lines = ["# AC 角色权限矩阵 v1（基线写域，glob 相对项目根）", ""];
-	lines.push("| 角色 | 档位 | 基线写域 |");
-	lines.push("|------|------|----------|");
+	lines.push("| 角色 | 档位 | 基线写域 | 基线读域 |");
+	lines.push("|------|------|----------|----------|");
 	for (const [role, entry] of Object.entries(BASELINE_MATRIX)) {
 		const write = entry.write.length ? entry.write.join(", ") : "（契约动态下发）";
-		lines.push(`| ${ROLE_LABELS[role] ?? role} (${role}) | ${entry.tier} | ${write} |`);
+		const read = entry.read?.length ? entry.read.join(", ") : "全域";
+		lines.push(`| ${ROLE_LABELS[role] ?? role} (${role}) | ${entry.tier} | ${write} | ${read} |`);
 	}
 	lines.push("");
 	lines.push("规则：主控派发可在契约 scope 里收紧但不可超基线；git 写操作不进普通子代理写域（T 级存档走轻量 git 子代理，契约 allow_git_write: true）；");
+	lines.push("黑测子（blackbox）读域限 docs/ac/ 且禁目录发现类工具、shell 仅放行 agent-browser 前缀（黑盒自测通道白名单）；");
 	lines.push("state.md（主控账本）与 fence-log.jsonl（围栏拦截记录）属预期写入，两条证据链均已排除。");
 	return lines.join("\n");
 }

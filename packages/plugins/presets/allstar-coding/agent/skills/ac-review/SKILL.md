@@ -55,7 +55,7 @@ verdict: pass | fail
 1. verdict=fail → 完整问题清单通过 `followup_task(dev_t<n>, ...)` 转达同一开发子会话，格式：问题清单 + "逐条修复后回报，不要求解释，要求修复或说明为何不能修"。
 2. 开发子修正 settlement → 新起评审子复评（附上轮问题清单）。
 3. 计数：同一 T 打回轮次 ≥1 记 reviews.md 与 state.md（executions+1）；上限 3 轮（ac-pipeline §0）——达上限仍 fail 停止，把分歧（评审意见 vs 开发者回应）整理上报用户裁决。
-4. verdict=pass → reviews.md 记录该 T 通过（含遗留 [一般]/[轻微] 项），state.md 更新（subStep done、sessionStatus suspended），T 级存档（ac-dev §4.5），进下一 T。
+4. verdict=pass → reviews.md 记录该 T 通过（含遗留 [一般]/[轻微] 项），state.md 更新（subStep done、sessionStatus suspended），T 档存档（ac-dev §4.5），进下一 T。
 
 ## 5. reviews.md 评审记录规范（追加制，ac-pipeline §0.4）
 

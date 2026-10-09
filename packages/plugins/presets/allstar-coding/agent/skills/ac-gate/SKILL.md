@@ -1,6 +1,6 @@
 ---
 name: ac-gate
-description: AllstarCoding 流水产物校验技能。主控在每个环节收口时必须加载本技能，执行 V1-V6 硬校验节点（含 scripts/ac-audit.mjs 机器校验）与 G1-G5 清单核对——文件存在性、state.md 状态机合法迁移、artifacts 与实际文件对应、executions 与评审记录一致、T 级存档在位。不通过不放行下一环节。
+description: AllstarCoding 流水产物校验技能。主控在每个环节收口时必须加载本技能，执行 V1-V6 硬校验节点（含 scripts/ac-audit.mjs 机器校验）与 G1-G5 清单核对——文件存在性、state.md 状态机合法迁移、artifacts 与实际文件对应、executions 与评审记录一致、环节级存档（T 档/stage 档）在位。不通过不放行下一环节。
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,7 +71,7 @@ node -e "const fs=require('fs');for(const p of [<逐个路径>]){try{const s=fs.
 - 架构环节：design.md 含改动面清单（文件路径级）与"必须同步"节
 - 任务环节：tasks.md 含 T# 任务卡，每卡有依赖/任务/验收标准字段
 - 白盒环节：whitebox.md 含测试计划表与结果回填；test-results/ 有问题清单
-- 黑盒环节：blackbox.md 每条用例带状态字段
+- 黑盒环节：blackbox.md 结果总表两列（自测/核验）覆盖全部用例，取值合法（✓/✗/豁/空），✗ 与豁必有对应 P# 条目；头部含执行模式/探测记录字段
 - 评审环节：reviews.md 有本 T 条目（§0.4 节格式：`## T<n> · 第 <轮> 评审` + verdict + 问题清单 + 证据）
 
 ### G4 executions 与评审记录一致
@@ -82,10 +82,11 @@ node -e "const fs=require('fs');for(const p of [<逐个路径>]){try{const s=fs.
 - reviews.md 该 T 的轮次数与 state.md executions-1 一致；**最新节 verdict == 开发子/评审子口头回报的 verdict**（不一致 = 报告与落盘脱节，以落盘为准并按 §0.6 记录）
 - 不一致 → 以事实链（通知记录/reviews.md）为准修正 state.md 后重验
 
-### G5 T 级存档已执行（开发循环环节）
+### G5 存档已执行（每环节收口）
 
-- [ ] 评审 pass 的每个 T 都有对应 checkpoint 提交（`git log --oneline` 核对 `<T编号>: <摘要>` 在案）
-- [ ] 最新 checkpoint 跑过 V4：`ac-audit.mjs checkpoint --scope "<该T写域>"` PASS（提交带私货 → 拒绝打点，回 V2 处置）
+- [ ] 开发循环环节：评审 pass 的每个 T 都有对应 T 档提交（`git log --oneline` 核对 `<T编号>: <摘要>` 在案）
+- [ ] 其余（子）环节 done：有对应 stage 档提交（`stage <seq>/<环节名>: <摘要>` 在案），或按 §0.5 归并规则并入相邻档（门环节无独立改动 / 环节 8 收口与最后 T 档重合时）
+- [ ] 最新 checkpoint 跑过 V4：`ac-audit.mjs checkpoint --scope "<该档写域>"` PASS（提交带私货 → 拒绝打点，回 V2 处置）
 - 无存档 → 补 git 存档子代理任务（打点 + V4 复核）后再放行。
 
 ## 2. 执行规范
@@ -93,7 +94,7 @@ node -e "const fs=require('fs');for(const p of [<逐个路径>]){try{const s=fs.
 1. **证据贴对话**：每项核对贴命令输出（不是"我记得有"）；ac-audit 报告全文贴。
 2. **不通过处置**：定位责任（产物缺失/状态违规/存档遗漏/越权写入）→ 打回对应执行者（followup_task 优先）或走 §0.6 SOP → 修复后重跑本门。
 3. 校验本身三连失败 → 上报用户（可能是系统性问题，不是单点疏漏）。
-4. 全部通过 → state.md 该环节定稿（`endedAt` 写入），进下一环节（invoke_skill 下一环节技能）。
+4. 全部通过 → state.md 该环节定稿（`endedAt` 写入）→ **打档**（§0.5：T 档或 stage 档，经轻量 git 子代理 + V4）→ 进下一环节（invoke_skill 下一环节技能）。
 
 ## 3. V5/V6 节点（非收口时机）
 

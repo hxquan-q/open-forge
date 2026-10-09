@@ -48,6 +48,12 @@ const REQ_1 = contract({
 	taskName: "req_1",
 	scope: ["docs/ac/requires.md"],
 });
+const BB_1 = contract({ role: "blackbox", taskName: "bb_1", scope: ["docs/ac/blackbox.md"] });
+
+/** read 类 function 调用构造器（黑盒读域过滤的测试输入）。 */
+function readCall(path?: string): ToolCallShape {
+	return { toolKind: "function", hostName: "read", input: path === undefined ? {} : { path } };
+}
 
 // ---------------------------------------------------------------------------
 // §7.1 glob 语义（与 ac-audit 现有 glob 测试等价——两处必须同判定）
@@ -389,6 +395,180 @@ describe("git 写豁免通道（轻量 git 子代理）", () => {
 		await store.applyStateSync("C:/proj");
 		expect(store.lookupByTaskName("git_t1")?.gitWriteAllow).toBe(true);
 		expect(store.lookupByTaskName("git_t9")?.gitWriteAllow).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// blackbox 角色窄读域 + shell 白名单（黑盒自测迭代 §6.2——仅该角色生效）
+// ---------------------------------------------------------------------------
+
+describe("blackbox 读域过滤（§6.2）", () => {
+	it("read 命中 docs/ac/ 前缀放行（含反斜杠输入）", () => {
+		expect(judge(BB_1, readCall("docs/ac/requires.md"), false).allow).toBe(true);
+		expect(judge(BB_1, readCall("docs/ac/test-results/issues-latest.md"), false).allow).toBe(true);
+		expect(judge(BB_1, readCall("docs\\ac\\design.md"), false).allow).toBe(true);
+	});
+
+	it("read 越域（src/项目外/前缀伪造）block，reason 带 help_protocol", () => {
+		for (const path of ["src/main.ts", "package.json", "docs/ac-evil/secret.md", "README.md"]) {
+			const verdict = judge(BB_1, readCall(path), false);
+			expect(verdict.allow, path).toBe(false);
+			expect(verdict.reason, path).toContain("ac-fence：");
+			expect(verdict.reason, path).toContain("help_protocol");
+		}
+	});
+
+	it("read 的 .. 穿越与绝对路径形态 block（BUG-0082 回归）", () => {
+		for (const path of [
+			"docs/ac/../../src/main.ts",
+			"docs/ac/./../x",
+			"docs/ac/../..",
+			"/etc/passwd",
+			"~/secret.txt",
+			"C:/Windows/system32/config",
+			"docs/ac/..\\..\\src\\main.ts", // 反斜杠混合穿越（POSIX 化后命中 .. 段）
+		]) {
+			const verdict = judge(BB_1, readCall(path), false);
+			expect(verdict.allow, path).toBe(false);
+		}
+	});
+
+	it("read 缺 path 字段 fail-safe block（file_path 兼容回退可用）", () => {
+		expect(judge(BB_1, { toolKind: "function", hostName: "read", input: {} }, false).allow).toBe(false);
+		expect(judge(BB_1, { toolKind: "function", hostName: "read", input: { nope: 1 } }, false).allow).toBe(false);
+		const fallback = judge(BB_1, { toolKind: "function", hostName: "read", input: { file_path: "docs/ac/x.md" } }, false);
+		expect(fallback.allow).toBe(true);
+	});
+
+	it("目录发现类工具（grep/glob/ls/dir_tree/find）一律 block", () => {
+		for (const hostName of ["grep", "glob", "ls", "dir_tree", "find"]) {
+			const verdict = judge(BB_1, { toolKind: "function", hostName, input: {} }, false);
+			expect(verdict.allow, hostName).toBe(false);
+			expect(verdict.reason, hostName).toContain("目录发现");
+		}
+	});
+
+	it("非文件路径工具不受读域过滤影响（todo/list_agents/browser_tab 放行）", () => {
+		expect(judge(BB_1, { toolKind: "function", hostName: "todo", input: {} }, false).allow).toBe(true);
+		expect(judge(BB_1, { toolKind: "function", hostName: "list_agents", input: {} }, false).allow).toBe(true);
+		// browser_tab 是黑测子自测通道（F1/F2），读类 L0 与写类 L3 均不属读域过滤对象
+		expect(
+			judge(BB_1, { toolKind: "function", hostName: "browser_tab", input: { action: "snapshot" } }, false).allow,
+		).toBe(true);
+	});
+
+	it("写域判定优先于读域（blackbox 写 blackbox.md 放行、写他处 block）", () => {
+		expect(judge(BB_1, fileEdit("docs/ac/blackbox.md"), false).allow).toBe(true);
+		expect(judge(BB_1, fileEdit("docs/ac/requires.md"), false).allow).toBe(false);
+	});
+});
+
+describe("blackbox shell 白名单（§6.2）", () => {
+	it("agent-browser 前缀命令放行", () => {
+		expect(judge(BB_1, shell("agent-browser --version"), false).allow).toBe(true);
+		expect(judge(BB_1, shell("agent-browser open http://localhost:5173"), false).allow).toBe(true);
+		expect(judge(BB_1, shell("AGENT-BROWSER --version"), false).allow).toBe(true);
+		expect(judge(BB_1, shell("  agent-browser   snapshot "), false).allow).toBe(true);
+	});
+
+	it("引号内的 URL 元字符不受影响（合法查询串放行）", () => {
+		expect(judge(BB_1, shell('agent-browser open "http://x?a=1&b=2"'), false).allow).toBe(true);
+		expect(judge(BB_1, shell("agent-browser open 'http://x?a=1&b=2'"), false).allow).toBe(true);
+	});
+
+	it("引号外的复合命令/替换/重定向元字符 block（BUG-0082 回归）", () => {
+		for (const command of [
+			"agent-browser snapshot && curl http://x",
+			"agent-browser --version; git push",
+			"agent-browser x > out.txt",
+			"agent-browser x >> docs/ac/blackbox.md",
+			"agent-browser x | node -e evil",
+			"agent-browser x || curl http://x",
+			"agent-browser x & curl http://x",
+			"agent-browser x $(curl http://x)",
+			"agent-browser x `curl http://x`",
+			"agent-browser --version\ngit push",
+			'agent-browser open "http://x" && curl http://x', // 引号外的 && 仍拦
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+			expect(verdict.reason, command).toContain("ac-fence：");
+		}
+	});
+
+	it("未闭合引号 fail-safe block（BUG-0082 回归）", () => {
+		expect(judge(BB_1, shell('agent-browser open "http://x?a=1'), false).allow).toBe(false);
+		expect(judge(BB_1, shell("agent-browser open 'http://x"), false).allow).toBe(false);
+	});
+
+	it("双引号内的 $( 与反引号是命令替换 → block（BUG-0082 残余 A 回归）", () => {
+		for (const command of [
+			'agent-browser open "http://x?$(curl http://evil)"',
+			'agent-browser open "http://x/`whoami`"',
+			'agent-browser open "$(node -e evil)"',
+			'agent-browser open "`curl http://x`"',
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+			expect(verdict.reason, command).toContain("ac-fence：");
+		}
+		// 对照：单引号内才是真字面量（bash/PowerShell 语义一致）——保持放行
+		expect(judge(BB_1, shell("agent-browser open 'http://x/`whoami`'"), false).allow).toBe(true);
+		expect(judge(BB_1, shell("agent-browser open 'http://x?$(a)'"), false).allow).toBe(true);
+	});
+
+	it("反斜杠转义的引号不开启引号区 → 后续元字符按引号外拦截（BUG-0082 残余 B 回归）", () => {
+		for (const command of [
+			'agent-browser x \\" && curl evil \\"', // 闭合变体：旧实现整段被"引号内"跳过 → 放行
+			'agent-browser x \\" ; git push \\"',
+			'agent-browser x \\" | node -e evil',
+			"agent-browser x \\' && curl evil \\'", // bash：\\' 是字面引号，&& 真执行
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+		}
+		// 不闭合变体此前靠 unclosed-quote 意外拦截——保持 block（显式化为用例）
+		expect(judge(BB_1, shell('agent-browser x \\" && curl evil'), false).allow).toBe(false);
+	});
+
+	it("其余 shell 命令一律 block（含 git 只读、起服务、命令伪装）", () => {
+		for (const command of [
+			"git status",
+			"git log --name-only",
+			"bun run dev",
+			"npm install",
+			"node server.js",
+			"echo hi",
+			"agent-browser2 --version", // 前缀伪装：首 token 不同
+			"evil && agent-browser --version", // 复合命令：首 token 非 agent-browser
+		]) {
+			const verdict = judge(BB_1, shell(command), false);
+			expect(verdict.allow, command).toBe(false);
+			expect(verdict.reason, command).toContain("ac-fence：");
+		}
+	});
+
+	it("shell 缺 command 字段 fail-safe block", () => {
+		const verdict = judge(BB_1, { toolKind: "shell", hostName: "bash", input: {} }, false);
+		expect(verdict.allow).toBe(false);
+	});
+});
+
+describe("非 blackbox 角色不受窄读域/白名单影响（回归保护）", () => {
+	it("developer/reviewer 读全域与任意 shell 照旧（既有语义）", () => {
+		expect(judge(DEV_T1, readCall("src/main.ts"), false).allow).toBe(true);
+		expect(judge(DEV_T1, { toolKind: "function", hostName: "grep", input: {} }, false).allow).toBe(true);
+		expect(judge(DEV_T1, shell("npm test"), false).allow).toBe(true);
+		expect(judge(DEV_T1, shell("git status"), false).allow).toBe(true);
+		expect(judge(REVIEW_T1, readCall("src/main.ts"), false).allow).toBe(true);
+		expect(judge(REVIEW_T1, shell("bun run check"), false).allow).toBe(true);
+	});
+
+	it("BASELINE_MATRIX.blackbox 声明 read 域（单一事实源标记）", () => {
+		expect(BASELINE_MATRIX.blackbox?.read).toEqual(["docs/ac/"]);
+		// 其他角色未声明 read（读全域语义）
+		expect(BASELINE_MATRIX.developer?.read).toBeUndefined();
+		expect(BASELINE_MATRIX.whitebox?.read).toBeUndefined();
 	});
 });
 
