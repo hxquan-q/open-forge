@@ -271,6 +271,18 @@ function booleanField(input: unknown, key: string): boolean | null {
 	return typeof value === "boolean" ? value : null;
 }
 
+/**
+ * allow_git_write 豁免字段读取（P2-2 统一）：规范位置是 spawn 输入**根层**（与 task_name 平级），
+ * 同时兼容历史措辞「契约带」被解读为 task 契约内部的情形——两处取或。
+ * 派发校验（judgeMainSpawn）与契约登记（contractFromSpawnInput）共用本函数，避免对「字段在哪」再次分歧导致
+ * 豁免通道静默失效（git 子代理提交被拦 → 环节级存档落不了地）。
+ */
+export function readGitWriteExemption(input: unknown): boolean {
+	if (booleanField(input, "allow_git_write") === true) return true;
+	if (typeof input !== "object" || input === null) return false;
+	return booleanField((input as Record<string, unknown>).task, "allow_git_write") === true;
+}
+
 /** file-edit 输入的 path 字段（宿主工具以 path 为准，file_path 作兼容回退）。 */
 function editPath(input: unknown): string | null {
 	const path = stringField(input, "path");
@@ -487,8 +499,9 @@ export function judgeMainSpawn(input: unknown): Verdict {
 			};
 		}
 	}
-	// git 写豁免只授给轻量 git 子代理（task_name 前缀 git_），其余 spawn 携带一律拒（防偷带）
-	if (booleanField(input, "allow_git_write") === true && !taskName.startsWith("git_")) {
+	// git 写豁免只授给轻量 git 子代理（task_name 前缀 git_），其余 spawn 携带一律拒（防偷带）。
+	// 字段位置兼容根层与 task 契约内部（P2-2 措辞歧义统一，见 readGitWriteExemption）。
+	if (readGitWriteExemption(input) && !taskName.startsWith("git_")) {
 		return {
 			allow: false,
 			reason: `ac-fence：allow_git_write 豁免只授给轻量 git 子代理（task_name 前缀 git_，主控显式授权的存档执行者）；本契约 task_name "${taskName}" 不符合。请去掉 allow_git_write 字段，或改用 git_ 前缀重派 → ${HELP_PROTOCOL_HINT}`,
