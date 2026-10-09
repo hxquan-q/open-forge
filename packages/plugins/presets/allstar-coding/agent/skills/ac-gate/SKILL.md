@@ -67,7 +67,7 @@ node -e "const fs=require('fs');for(const p of [<逐个路径>]){try{const s=fs.
 
 不只是存在——内容要配得上环节名（防"空壳文件"）：
 
-- 需求环节：requires.md 含需求条目表与验收标准节；originModel.html 含 R# 标注与可交互元素
+- 需求环节：requires.md 含需求条目表、验收标准节与字段清单（F#；有业务数据字段时）；originModel.html 含 R# 标注、可交互元素与字段取值标注（「类型:取值方式」，能标的控件上应有；明细表格看表头）
 - 架构环节：design.md 含改动面清单（文件路径级）与"必须同步"节
 - 任务环节：tasks.md 含 T# 任务卡，每卡有依赖/任务/验收标准字段
 - 白盒环节：whitebox.md 含测试计划表与结果回填；test-results/ 有问题清单
