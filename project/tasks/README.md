@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0221` | `verifying` | — | ac-blackbox 补自测中通道失效降级路径（技能合同，包版本 0.3.2 → 0.3.3）：工具报错≠产品失败（记空不记 ✗、不进 P#）+ 同工具跨条目连续 3 次报错熔断（stale_reference 不计、任一成功清零）+ L3 审批被拒视同失效 + 核验简报首先点名缺口；文档模板/状态机/围栏代码零改动；包内 133 项、check:quick、完整 check 全绿，技能合同面待实机验收；related TASK-0219。 |
 | `TASK-0220` | `verifying` | — | 修复 BUG-0082（含残余轮）：黑盒 shell 白名单加引号感知元字符扫描（引号外组合/替换/重定向拦、双引号内 $() 与反引号同样拦、单引号保持字面量、转义引号不开区、未闭合 fail-safe）、读域拒 `..` 与绝对路径；两轮红测先行（3+2 failed）转绿，fence-judge 80 项/包内 133 项/impact 91 项/完整 check 全绿；写域 `..` 等既有面登记 ISSUE-0032。 |
 | `TASK-0219` | `verifying` | — | allstar-coding 黑盒环节升级（v0.5.2，包版本 0.3.2）：通道探测→三态分流→文档 v2→可选自测→用户核验；围栏为 blackbox 角色加窄读域（docs/ac/ 前缀、禁目录发现类）与 shell 白名单（仅 agent-browser）；fence-judge 74 项、包内 53 项、impact 127 项与完整 check 全绿；技能合同面待实机验收。白名单/读域两个绕过口由 TASK-0220 修复。 |
 | `TASK-0218` | `verifying` | — | Browser 能力/缺页恢复指引 a326a644b，独立 Task Worktree；定向 63、impact 590、Desktop 25、check 通过；main 有其他任务未提交修改，待串行集成与模型验收。 |
