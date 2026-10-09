@@ -1,6 +1,12 @@
 {
-	"plugin.name": "eForm Craft",
-	"plugin.description": "Upload a paper form as image, PDF, Excel or Word and get it rebuilt into an interactive e-form (schema + HTML preview + mock data), verified field by field and revisable via natural language.",
+	"plugin.name": "eForm Studio",
+	"plugin.description": "A three-member team: upload a paper form as image, PDF, Excel or Word and get an interactive form app (list page + form page + record lifecycle), with e-signature and operation-audit components injected on demand, verified field by field and revisable via natural language.",
 	"agent.eform.name": "Form Crafter",
-	"agent.eform.description": "Entry point for paper-form digitalization: reads layout and field markers, rebuilds an interactive form with demo data, and guards the field-level confirmation gate."
+	"agent.eform.description": "Team leader and single entry point: reads layout and field markers, generates the form app (list page + form page + record lifecycle), guards the field-level confirmation gate, and dispatches signature/audit injection by schema capabilities.",
+	"agent.esign.name": "Signature Smith",
+	"agent.esign.description": "E-signature specialist: injects the signature component into form pages — identity verification, handwriting capture, clear-and-resign before effect, locked on approval.",
+	"agent.eaudit.name": "Auditor",
+	"agent.eaudit.description": "Operation-audit specialist: injects the audit component — parameterized enablement, full logging of create/save/approve/print/export, view-only append-only journal.",
+	"team.studio.name": "eForm Studio",
+	"team.studio.description": "A three-board studio: form generation → signature injection → audit injection. The leader dispatches the two specialists by form capability flags; a shared anchor contract keeps injections from breaking page structure."
 }

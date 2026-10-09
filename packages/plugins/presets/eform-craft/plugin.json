@@ -1,7 +1,7 @@
 {
 	"id": "eform-craft",
 	"name": "%plugin.name%",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"icon": "icon.png",
 	"defaultLocale": "zh",
 	"pluginApiVersion": "^2.0.0",
@@ -24,6 +24,44 @@
 				"mentionHandle": "eform",
 				"systemPromptPath": "agent/agents/eform.md",
 				"roles": ["master"]
+			},
+			{
+				"id": "esign",
+				"name": "%agent.esign.name%",
+				"description": "%agent.esign.description%",
+				"mentionHandle": "esign",
+				"systemPromptPath": "agent/agents/esign.md",
+				"roles": ["developer"]
+			},
+			{
+				"id": "eaudit",
+				"name": "%agent.eaudit.name%",
+				"description": "%agent.eaudit.description%",
+				"mentionHandle": "eaudit",
+				"systemPromptPath": "agent/agents/eaudit.md",
+				"roles": ["auditor"]
+			}
+		],
+		"teams": [
+			{
+				"id": "eform-studio",
+				"name": "%team.studio.name%",
+				"description": "%team.studio.description%",
+				"members": [
+					{
+						"agent": "eform",
+						"responsibility": "Team leader and single user entry: recognizes source forms, generates the six-artifact form app (list page + form page + lifecycle), guards the confirmation gate, and dispatches signature/audit injection work by schema capabilities."
+					},
+					{
+						"agent": "esign",
+						"responsibility": "Signature specialist: injects the e-signature component into form pages at the agreed anchor — identity verification, canvas handwriting capture, clear-and-resign before effect, lock-on-approval."
+					},
+					{
+						"agent": "eaudit",
+						"responsibility": "Audit specialist: injects the operation-audit component at the agreed anchor — auditEnabled toggle, create/save/approve/print/export event logging, append-only viewable journal."
+					}
+				],
+				"workflowPath": "agent/workflows/studio.md"
 			}
 		]
 	},

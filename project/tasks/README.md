@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0223` | `verifying` | — | eform-craft 三版块团队化（REQ-0012 二期）：单 agent 扩为 eform/esign/eaudit 三成员团队（team eform-studio，eform 队长），产物四件套扩六件套（+index.html 列表页 +form.html 表单页，数据级增删查改与 draft→saved→approved 生命周期）、电子签组件（演示验证→canvas 手写→清空重签→审核锁定）、审计组件（auditEnabled 默认 false、五类操作日志、仅查看不可删）；锚点+capabilities 共享契约、合同测试 13/13、五步验证链与完整 check 全绿；团队行为面待实机验收（另立任务）。 |
 | `TASK-0222` | `verifying` | — | eform-craft 电子表单还原预置插件（REQ-0011 一期）：纯提示词资产 preset（单 agent + 单技能，权限仅 `agent.skills.control`），识别合同（标记→类型、同义词→固定字段名含空格）+ 四件套产物规范（schema/preview/mock/spec）+ 确认门与修改循环；tenants.json 双 profile 注册、vettapkg 产出并 staging、五步验证链与完整 check 全绿；@eform 行为面待实机验收（另立任务）。 |
 | `TASK-0221` | `verifying` | — | ac-blackbox 补自测中通道失效降级路径（技能合同，包版本 0.3.2 → 0.3.3）：工具报错≠产品失败（记空不记 ✗、不进 P#）+ 同工具跨条目连续 3 次报错熔断（stale_reference 不计、任一成功清零）+ L3 审批被拒视同失效 + 核验简报首先点名缺口；文档模板/状态机/围栏代码零改动；包内 133 项、check:quick、完整 check 全绿，技能合同面待实机验收；related TASK-0219。 |
 | `TASK-0220` | `verifying` | — | 修复 BUG-0082（含残余轮）：黑盒 shell 白名单加引号感知元字符扫描（引号外组合/替换/重定向拦、双引号内 $() 与反引号同样拦、单引号保持字面量、转义引号不开区、未闭合 fail-safe）、读域拒 `..` 与绝对路径；两轮红测先行（3+2 failed）转绿，fence-judge 80 项/包内 133 项/impact 91 项/完整 check 全绿；写域 `..` 等既有面登记 ISSUE-0032。 |
