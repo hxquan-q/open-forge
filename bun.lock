@@ -666,7 +666,7 @@
     },
     "packages/plugins/presets/allstar-coding": {
       "name": "@vetta/plugin-preset-allstar-coding",
-      "version": "0.3.1",
+      "version": "0.3.3",
       "devDependencies": {
         "@types/node": "^22.10.5",
         "@types/react": "^19.1.1",
@@ -783,6 +783,22 @@
         "react": "19.1.1",
         "react-dom": "19.1.1",
         "tailwindcss": "^4.1.12",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.7",
+        "vitest": "^4.1.11",
+      },
+    },
+    "packages/plugins/presets/eform-craft": {
+      "name": "@vetta/plugin-preset-eform-craft",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^22.10.5",
+        "@types/react": "^19.1.1",
+        "@types/react-dom": "^19.1.1",
+        "@vetta-org/plugin-sdk": "workspace:*",
+        "@vetta-org/plugin-vite": "workspace:*",
+        "react": "19.1.1",
+        "react-dom": "19.1.1",
         "typescript": "^5.9.2",
         "vite": "^7.1.7",
         "vitest": "^4.1.11",
@@ -3494,6 +3510,8 @@
     "@vetta/plugin-preset-agent": ["@vetta/plugin-preset-agent@workspace:packages/plugins/presets/preset-agent"],
 
     "@vetta/plugin-preset-allstar-coding": ["@vetta/plugin-preset-allstar-coding@workspace:packages/plugins/presets/allstar-coding"],
+
+    "@vetta/plugin-preset-eform-craft": ["@vetta/plugin-preset-eform-craft@workspace:packages/plugins/presets/eform-craft"],
 
     "@vetta/plugin-remotion-renderer": ["@vetta/plugin-remotion-renderer@workspace:packages/plugins/presets/remotion-renderer"],
 

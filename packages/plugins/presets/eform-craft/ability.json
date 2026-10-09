@@ -1,0 +1,58 @@
+{
+	"schemaVersion": 1,
+	"type": "plugin",
+	"slug": "eform-craft",
+	"version": "0.1.0",
+	"detail": {
+		"blocks": [
+			{
+				"type": "feature-grid",
+				"title": "实体表单电子化（一期：还原 + 演示数据）",
+				"items": [
+					{
+						"title": "原件识别还原",
+						"description": "上传图片 / PDF / Excel / Word 表单，按标记合同识别字段类型与固定命名，还原为同构的可交互网页。",
+						"icon": "solar:document-add-line-duotone"
+					},
+					{
+						"title": "mock 演示数据层",
+						"description": "预览页内嵌可一键填充的演示数据（下拉候选、计算联动、单号序列），数据层独立、终期可整体替换为真实取数。",
+						"icon": "solar:database-line-duotone"
+					},
+					{
+						"title": "字段规格与确认门",
+						"description": "F# 编号三体一致（schema / 预览页 / 规格文档），用户逐字段核对后批准定稿，自然语言指认修改。",
+						"icon": "solar:checklist-minimalistic-line-duotone"
+					}
+				]
+			}
+		],
+		"i18n": {
+			"en": {
+				"blocks": [
+					{
+						"type": "feature-grid",
+						"title": "Paper-form digitalization (phase 1: rebuild + demo data)",
+						"items": [
+							{
+								"title": "Source recognition",
+								"description": "Upload a form as image / PDF / Excel / Word; fields are typed by the marking contract and fixed names applied, then rebuilt as an interactive page.",
+								"icon": "solar:document-add-line-duotone"
+							},
+							{
+								"title": "Mock demo data layer",
+								"description": "One-click demo fill (dropdown candidates, computed fields, sequence numbers); the data layer stays isolated for a future swap to real sources.",
+								"icon": "solar:database-line-duotone"
+							},
+							{
+								"title": "Field spec & confirmation gate",
+								"description": "F# ids align across schema, preview page and spec doc; users verify field by field, then approve; revisions by natural language.",
+								"icon": "solar:checklist-minimalistic-line-duotone"
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+}

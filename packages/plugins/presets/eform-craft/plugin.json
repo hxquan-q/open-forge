@@ -1,0 +1,32 @@
+{
+	"id": "eform-craft",
+	"name": "%plugin.name%",
+	"version": "0.1.0",
+	"icon": "icon.png",
+	"defaultLocale": "zh",
+	"pluginApiVersion": "^2.0.0",
+	"entry": "dist/mf-manifest.json",
+	"moduleFederation": {
+		"remoteName": "eform_craft",
+		"expose": "./plugin"
+	},
+	"permissions": ["agent.skills.control"],
+	"agent": {
+		"skillPaths": ["agent/skills"],
+		"skillPresentation": {
+			"defaultVisibility": "hidden"
+		},
+		"agents": [
+			{
+				"id": "eform",
+				"name": "%agent.eform.name%",
+				"description": "%agent.eform.description%",
+				"mentionHandle": "eform",
+				"systemPromptPath": "agent/agents/eform.md",
+				"roles": ["master"]
+			}
+		]
+	},
+	"description": "%plugin.description%",
+	"author": "Vetta"
+}

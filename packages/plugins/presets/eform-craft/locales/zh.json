@@ -1,0 +1,6 @@
+{
+	"plugin.name": "电子表单工坊",
+	"plugin.description": "上传图片、PDF、Excel、Word 表单原件，还原为可交互电子表单（结构 schema + HTML 预览 + mock 演示数据），逐字段核对确认，支持自然语言修改。",
+	"agent.eform.name": "表单匠",
+	"agent.eform.description": "实体表单电子化入口：识别原件布局与字段标记，还原为带演示数据的可交互表单，守护字段级确认门。"
+}

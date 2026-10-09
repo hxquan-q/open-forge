@@ -1,0 +1,6 @@
+{
+	"plugin.name": "eForm Craft",
+	"plugin.description": "Upload a paper form as image, PDF, Excel or Word and get it rebuilt into an interactive e-form (schema + HTML preview + mock data), verified field by field and revisable via natural language.",
+	"agent.eform.name": "Form Crafter",
+	"agent.eform.description": "Entry point for paper-form digitalization: reads layout and field markers, rebuilds an interactive form with demo data, and guards the field-level confirmation gate."
+}
