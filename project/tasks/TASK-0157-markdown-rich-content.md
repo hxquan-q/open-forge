@@ -1,7 +1,7 @@
 ---
 id: TASK-0157
 type: task
-status: verifying
+status: done
 priority: P2
 owner: theme-ui + desktop content
 source: user-request; upstream ed8b1af40, a8029e94f, 093ce834b, 089a91a76
@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -85,3 +85,11 @@ XSS/外链/相对资源、长流式文本、公式未闭合、缓存上限、HTM
 
 - 未复跑：完整 desktop 套件（交付记录记为「富内容/批注/共享面合计 443+100」，本轮只跑覆盖子句的 9 个文件 / 35 例）与 mermaid 独立进程渲染的另一半 IPC 面（17 段中的 mermaid-service 部分），改由隔离 e2e 的 Mermaid 段与 `markdown.test.ts` 覆盖；视觉观感（公式/图表排版）无视觉能力，不做。
 - 关闭建议：六条子句均有本轮独立复跑的绿用例，且 TASK-0200 已把此前受阻的隔离 e2e 补跑通过（本轮在本机复现也是 PASS）⇒ 倾向闭合 `done`；按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：本 Task 的验收层级**由合同自身限定为测试级**，据此闭合。
+
+- 验证合同原文写明「**不授权 UI 实机或付费模型**」与「**未授权 `verify:ui:*`、真实 SSH/Provider**，不把未执行项宣称通过」⇒ 真实 UI 实机与付费模型不属本任务的验收对象。
+- 可及范围内证据：六条子句全部有本节独立复跑的绿用例，含 `theme-ui` 23 文件 180 例、真实浏览器 `markdown-preview.node-test.mjs` 1/1、Electron 隔离 e2e `markdown-isolation.test.mjs` PASS（本轮本机复现）、批注 19 例、主进程 markdown 服务面 16 例。
+- 如实标注：完整 desktop 全套件（交付记录 443+100）与 mermaid 独立进程 IPC 的另一半未复跑，改由隔离 e2e 的 Mermaid 段覆盖；视觉观感（公式/图表排版）不作验收面。

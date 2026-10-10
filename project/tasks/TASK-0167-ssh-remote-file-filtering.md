@@ -1,7 +1,7 @@
 ---
 id: TASK-0167
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ssh-transport + desktop
 source: user-request; RESEARCH-0018
@@ -21,7 +21,7 @@ depends_on: [TASK-0153]
 conflicts_with: [TASK-0158, TASK-0196]
 integration_status: integrated（实现 cfeec25d1，随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -97,3 +97,12 @@ updated: 2026-10-08
 - 替代证据：`internal/server/fs.go:397-403` 的 `wanted` 过滤位于 `if len(files) >= limit` **之前**；新用例 `TestListRecursiveNameFilterAppliesBeforeTheLimit`（`server_test.go:272`）以 limit=2 + 4 个无关文件断言结果恰为 `a/package.json,b/Makefile` 且 `truncated=false`——即旧顺序（先限后筛）在该用例下必然红。用例断言的内容与 TS 侧真 shell 用例同构。
 - 未覆盖（不宣称通过）：真实远端主机（任务边界明令不连）；部署中的旧 helper + 超 1 万命中的超大仓库（helper 端仍会先截断，客户端只能筛不能恢复——这是交付记录已披露的剩余风险，非本轮新发现）。
 - 关闭建议：六项行为面均有本轮独立复跑的绿证据（Go 面为「交叉编译 + 断言同构」两级替代），**倾向闭合 `done`**；Go 行为回归的真机复跑可在有 POSIX 环境或用户验收时补做。按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项属**任务边界外 / 客观环境限制**，据此闭合。
+
+- 真实远端主机：交付记录明记「真实远端主机验证：**不连接真实主机（任务边界）**」⇒ 无验收对象。
+- Go helper 行为回归：属**客观环境限制**——本机 `go vet` 报 `unknown field Setsid` / `undefined: syscall.Kill`，`wsl.exe --list` 无分发版，`go test` 不可达；已以「交叉编译 `GOOS=linux go build`/`go vet` exit 0 + 同构断言」两级替代（`fs.go:397-403` 筛选位于 `len(files) >= limit` 之前，`server_test.go:272` limit=2 用例在旧顺序下必红）。
+- 可及范围内证据：`ssh-transport` 18 文件 205 例（含真跑 `find`）、`capability-sdk` 21 文件 91 例、desktop `filesystem-service`/`remote-flow` 23 通过 / 1 平台跳过、取消/权限面断言。
+- 残留：部署中旧 helper + 超 1 万命中的超大仓库仍会先截断（交付记录已披露的剩余风险，非本轮新发现）。

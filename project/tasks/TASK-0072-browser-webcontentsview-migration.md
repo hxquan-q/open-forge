@@ -1,7 +1,7 @@
 ---
 id: TASK-0072
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
@@ -23,7 +23,7 @@ related_issues: []
 related_bugs: []
 integration_status: integrated（main：1364d1376 / ebb8fc942 / 文档提交）
 created: 2026-09-28
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -143,3 +143,10 @@ updated: 2026-10-08
 
 - **未覆盖**：三条 Given/When/Then 全部——「登录态页面 snapshot 返回同一登录态元素树」「面板隐藏切回后截图正确、无残留空白」「resize/侧栏折叠时 guest bounds 跟随、无撕裂」。它们都需要读取或截图原生 guest，而上述通道在当前自动化下不可达。
 - **关闭建议**：测试级（attach/bounds/可见性/picker 注入）全绿，但这些用例是**在测试替身里**断言 bounds 与注入脚本，不等于真实 guest 渲染正确。用户面证据缺失属**环境能力限制**，建议要么由用户自行肉眼走查一次（打开内置浏览器登录一站 → 隐藏再切回 → 拖拽 resize），要么接受测试级口径。请用户裁定走哪一种。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **机制面成立**：浏览器域 7 文件 / 62 例通过（2026-10-08 组三续测一）；迁移三阶段（main 宿主+IPC、renderer 占位矩形切换、ADR-0134）与遮挡取舍均已定型交付。
+- **用户面属观测通道客观限制**：实测确认迁移后 guest 是原生 `WebContentsView`——不在 `ctx.pages()`、CDP 第三个 target 的 url/title 为空、guest 文本不在宿主 DOM、且原生视图在场时 `page.screenshot` 必 30s 超时 ⇒ 自动化取证通道不存在，与「没跑」不同类。用户走查步骤已记录于组三续测一（登录态 snapshot / 隐藏切回截图 / resize bounds 跟随三条 Given 的手动判定方法）。

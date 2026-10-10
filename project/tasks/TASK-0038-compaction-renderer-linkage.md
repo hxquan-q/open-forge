@@ -1,7 +1,7 @@
 ---
 id: TASK-0038
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/coding-agent + apps/desktop
 requirement: REQ-0002
@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0051]
 conflicts_with: [TASK-0035, TASK-0050, TASK-0051, TASK-0196]
 integration_status: integrated（retain+验证收口，随本批推送 origin/dev）
 created: 2026-09-23
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -118,3 +118,12 @@ updated: 2026-10-08
 
 - **未覆盖**：真实的「长会话跑到压缩」端到端。合同写的「使用窗口化 transcript 的长会话达到压缩条件」需要一条真实长上下文会话（真实模型 + 大上下文），本轮未驱动；因此读数的**正确性**当前只有单测级证据，没有用户面证据。
 - **关闭建议**：三条合同条款在测试级均成立、且交付记录与实现一致，倾向 `done`；是否要求补一次真实压缩会话，请用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户在验收会话选定的「**按未覆盖成因分档**」口径裁定：本 Task 的未覆盖项落在**任务边界之外**，不构成缺口，据闭合。
+
+- 真实长会话压缩端到端：交付记录已明记「Renderer privateBytes 实机对比：**不做实机验证（批次边界）**」。真实模型/真实长会话不是本任务的验收对象。
+- 真实 LLM 摘要质量：交付记录明记需 Provider 凭据（任务边界），保持环境门控跳过（2 例 skip 即此）。
+- 可及范围内证据：渲染联动 `useSessionEventController.compaction.test.tsx` 5 例 + 压缩族 8 文件 56 通过 | 2 跳过，三条合同条款测试级成立。
+- 未驱动项不作门槛：真实长会话压缩的用户面走查可在发布前抽检时补做。用户如不认可以此口径闭合，按原状态回退 `verifying` 即可。

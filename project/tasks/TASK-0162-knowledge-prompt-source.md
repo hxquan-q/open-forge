@@ -1,7 +1,7 @@
 ---
 id: TASK-0162
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop knowledge + coding-agent
 source: user-request; upstream c419c6ef7
@@ -21,7 +21,7 @@ depends_on: [TASK-0148, TASK-0170]
 conflicts_with: [TASK-0122, TASK-0123]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -112,3 +112,11 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 未复跑（不宣称通过）：交付记录里的全量影响面数字（Coding Agent 1534、Runtime Desktop 51、Desktop 4624、CLI 226）不追平，本轮只跑覆盖本合同的 4 个定向文件（4 例）+ 追加的 2 个知识域文件（5 例）；`test:changed` 与完整 `check` 未重跑。
 - 未运行及原因：**真实知识加工模型效果**——合同明令「只 Mock 外部边界，不访问真实用户状态或付费服务」，且需真实 Provider；用户验收面。
 - 关闭建议：合同四条（真实工厂+假Provider、多批处理、暂停/取消、不以全量超时归因）在测试级全部成立，且兼容取舍与注入路径都能在源码里指认 ⇒ **倾向闭合 `done`**，模型效果另属 AI 质量评估层。按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：本 Task 的验收层级**由合同自身限定**，据此闭合。
+
+- 验证合同原文写明「使用**真实工厂 + 假 Provider**」「只 Mock 外部边界，**不访问真实用户状态或付费服务**」⇒ 真实知识加工的模型效果被合同明确排除，不属本任务的验收对象（另属 AI 质量评估层）。
+- 可及范围内证据：合同四条全部在测试级成立——装配守卫 `processing-session-factory.test.ts:1`（漏传必红）、知识域轮询/批处理/暂停取消 7 例、会话隔离与缺模型原错误；且两条关键取舍在源码指认（可选字段兼容路径 `knowledge-processing-session.ts:31/:67`、生产显式注入 `processing-session-factory.ts:34`）。
+- 如实标注：交付记录的全量影响面数字（1534/51/4624/226）本轮不追平，只跑覆盖本合同的定向面；`test:changed` 与完整 `check` 未重跑。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0123
 type: task
-status: verifying
+status: done
 priority: P3
 owner: apps/desktop + packages/runtime-*
 requirement: []
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0122]
 integration_status: pending
 created: 2026-09-26
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -129,3 +129,10 @@ updated: 2026-10-08
 
 - **未覆盖**：真实团队成员会话里由模型**实际查看工具清单**并据此放弃 `browser_tab` 的行为面。合同原文允许「不再出现」**或**「描述显式声明不可用」，本轮只验证了实现选了前者（工具源收窄），未验证模型读到的最终清单在真实会话中的渲染结果。
 - **关闭建议**：收窄逻辑测试级成立（含「协调 Runtime 不收窄」的对照），倾向 `done`；模型行为面是否要求补测，请用户裁定。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **清单行验收对象是确定性的**：「团队成员会话的工具清单里不再出现必失败的 `browser_tab`」——收窄逻辑由 `team-member-function-source`（不可见/其余透传/invoke 直通）+ `team-runtime-manager`（新建/恢复成员携带收窄源、**协调 Runtime 不收窄**）共 4 文件 / 20 例直接断言成立（2026-10-08 组三续测一）。
+- **余量如实记录**：真实团队会话中模型查看清单后的行为面未取证（需 ~45min 真实团队会话，成本与 TASK-0125 量化复跑同量级）；`browser_tab` 的 headless 渲染替代（B 路径）仍由 [ISSUE-0026](../issues/ISSUE-0026-team-browser-no-webview.md) 独立跟踪，不随本闭合消失。

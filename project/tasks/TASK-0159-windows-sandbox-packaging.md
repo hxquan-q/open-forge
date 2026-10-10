@@ -1,7 +1,7 @@
 ---
 id: TASK-0159
 type: task
-status: verifying
+status: done
 priority: P2
 owner: desktop build + runtime-node sandbox
 source: user-request; upstream f174cf914, cca02889c, 34a350058
@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0039, TASK-0122, TASK-0123, TASK-0154, TASK-0181, TASK-0196]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -143,3 +143,11 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 - 三条 GWT 在可及范围内全部成立：**未钉/缺件 → 默认中断且错误可行动**；**显式变量 → 降级告警**；**非 Windows 声明 → `not-declared` 不受影响**。
 - 未覆盖（不宣称通过）：真实 `dist:win` / CI 打包的中断现场（评估点位于 `prepare-pack.js` 较后段，全量跑一次打包代价与风险都不合适，改以「返回结构 + 抛错分支源码 + 合同断言」三证）；「三个 exe 齐全且摘要一致」的**通过**路径（清单摘要当前为 `null`，无受控制品）；exe `--capabilities` 八项探针（需 Windows 与真实制品）。
 - 待用户裁定项（即交付记录「发版影响」）：Windows 打包在当前仓库状态**按设计失败**。选项：① 由受控构建产出三个 exe 后 `--write` 钉摘要；② 在 Windows 发版流水线显式设 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 并接受产物不带沙盒；③ 暂缓 Windows 发版。Agent 未擅自改 workflow。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **清单行验收对象成立**：「缺受控沙盒制品时打包默认阻断」有三证——判定函数返回结构 `status=blocked/enforcement=block`、`prepare-pack.js` 抛错分支源码、游离 CLI exit=1；`test:packaging` 125/125 与 `verify:desktop:contracts` 绿（2026-10-08 组二续测四）。
+- **通过路径无验收对象**：三个受控 exe 尚未产出（`sourceCommit=null`），「齐全且摘要一致」的通过分支在当前环境无对象，属发版时刻才会出现的形态。
+- **发版政策项显式移交用户**（不随本闭合消失）：受控构建产出 exe 后 `--write` 钉摘要／流水线显式降级并接受无沙盒产物／暂缓 Windows 发版——三选一在发版流程中裁定。

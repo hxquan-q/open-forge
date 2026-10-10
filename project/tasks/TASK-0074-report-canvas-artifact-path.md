@@ -18,7 +18,7 @@ depends_on: [TASK-0060, TASK-0061]
 conflicts_with: []
 integration_status: pending
 created: 2026-09-24
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -85,3 +85,16 @@ updated: 2026-10-08
 
 - **未覆盖**：三条条款的**真实模型行为面**。要判「提示词是否真的让模型调用 `artifact.create`」，需要一次真实模型会话产出报告；本轮唯一被授权的模型 `qwen3.8` 已在 [VERIFY-0018](../verification/VERIFY-0018-qwen38-real-provider-smoke.md) 被判定端点输出不连贯并立案 [ISSUE-0031](../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md)，该 Issue 明确「闭合前该 modelKey 不应用于任何真实流程验证」⇒ 本任务当前**没有可用的授权模型**来判读模型遵从度。
 - **关闭建议**：软件合同（提示词/模式/入口/徽标）测试级成立；模型行为面属客观阻塞（无可用授权模型），与 TASK-0155 同一成因。建议按 TASK-0155 的口径一并裁定（软件合同闭合 / 模型效果层留待授权模型恢复）。
+
+### 模型面实测（2026-10-10，glm-5.3-flash 授权；发现 ISSUE-0033，保持 verifying）
+
+按用户裁定改用授权模型 `glm/glm-5.3-flash` 补做模型面（ISSUE-0031 用户裁定记录）。Debug Profile `04987e4e`、coding 模式、隔离工作区 `vetta-0074-artifact`（todo-cli 示意项目），提示词为中性任务「请帮我生成一份这个 todo-cli 项目的架构报告，说明模块划分和依赖关系」。
+
+| 判别点 | 实测读数 |
+|---|---|
+| 提示词是否让模型走 artifact 路径 | **成立**。模型先 `invoke_skill {"name":"report-canvas"}` 正确命中内置 Skill，再 **13 次尝试调用 `artifact`** 工具——「要报告→artifact.create」的引导目标达成，交付记录里「模型仍可能忽略提示词」的风险未发生 |
+| artifact.create 是否走通 | **失败**。13 次调用 `arguments` 全部为 `{}`，一律被拒 `invalid artifact tool input`（`AGENT_TOOL_INPUT_INVALID`）；模型无法自纠，退化为 `write` 普通文件 `architecture-report.md` 并自述「画布工具持续返回参数错误无法创建 Canvas」。**端到端产物路径在该授权模型上断裂** |
+| 同会话其它工具对照 | `progress`/`dir_tree`/`read`/`write`/`invoke_skill` 全部正常带参 ⇒ 适配器与参数存储无普遍缺陷；唯一区别是 `ArtifactToolInputSchema` 顶层为**裸 `anyOf`**（其余工具顶层均为 `{"type":"object"}`） |
+
+- **立案**：[ISSUE-0033](../issues/ISSUE-0033-artifact-union-schema-gateway.md)（主假设：OpenAI 兼容网关不接受非 object 顶层的 function parameters；推荐修法 C 错误信息带 schema 提示 + B schema 包 object 顶层可移植化；wire 档仅作后备定谳）。会话 JSONL 路径见该 Issue 附注。
+- **对三条合同条款的影响**：条款 1 的「提示词与 Skill 要求 artifact.create」模型面成立，「Canvas 列表可刷新到该条目」因 artifact 从未创建成功而无从发生；条款 2（活页面不建 artifact）与条款 3（徽标）本轮未驱动。**本任务不能闭合**：端到端承诺「要报告时产物进画布」在授权模型上不成立，待 ISSUE-0033 修复后回归。

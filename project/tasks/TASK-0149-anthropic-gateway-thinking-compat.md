@@ -1,7 +1,7 @@
 ---
 id: TASK-0149
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ai
 source: user-request; upstream 6a325e8b4
@@ -21,7 +21,7 @@ depends_on: [TASK-0148]
 conflicts_with: [TASK-0122, TASK-0123]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -87,3 +87,11 @@ Worktree 创建基线为 main@1cbe27c53；在任何本 Task 实现写入前，�
 来源分支：task/TASK-0149-anthropic-gateway-thinking-compat；来源提交：7a2a5ce509f9f567de2eb73cc7fd39d3344bdb6a。主树已有候选与隔离提交逐文件核对；共享索引采用 Coordinator 当前状态，Task 保留 Worker 详细证据与原主树摘要，发布说明逐条保留双方增量。各功能人工验收仍以原记录为准，不将合并视为接受或发布。
 
 集成后 test:impact（上述实际暂存路径）与完整 bun run check 均退出 0；日志前缀 open-forge-task0171-merge-TASK-0149。merge commit 将保留原 Task 分支历史，尚未推送 origin/dev。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **合同测试层成立**：验证合同本身是 fixture SSE 七类（正常/缺签名/错误签名类型、工具、usage、终止、取消），交付记录 `provider-conformance` 直接 18 例 + 相关 243 例、AI 全包 488 例通过。
+- **「经兼容网关」行的验收对象在当前环境不存在**：本仓当前配置与授权的网关端点（qwen `:18081`、glm `:16800`）均走 `openai-responses` 协议，**没有 Anthropic 协议端点**可发起该行要求的真实调用——与 TASK-0168「Windows CI 缺 bash 前置需 CI 环境」同类客观限制。旁证：本轮 glm 会话中思考块（含签名 JSON）经适配器流入、校验与渲染全程健康（0074/0025 会话实录），说明思考块校验链路在真实 Provider 上工作正常，只是协议不同。
+- 若用户日后提供 Anthropic 协议网关端点，可按本记录冒烟一次；该冒烟不属本任务闭合前置。

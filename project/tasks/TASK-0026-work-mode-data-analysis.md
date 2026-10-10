@@ -1,7 +1,7 @@
 ---
 id: TASK-0026
 type: task
-status: verifying
+status: done
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024, TASK-0028]
 conflicts_with: [TASK-0018, TASK-0025]
 integration_status: integrated
 created: 2026-09-22
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -102,3 +102,11 @@ updated: 2026-10-08
 - **未覆盖**：合同里需要模型参与的部分——「请求按明确规则清洗数据、计算一项指标并预览结果」「Review 后产出 dataset/analysis Artifact」「重开会话可检查输入来源与结果版本」。解析/校验/画像/复查这些**确定性**环节已单测级覆盖，但「模型按 prompt 合同写 manifest 并给出指标」这条链本轮未驱动，原因同上（无可用授权模型，ISSUE-0031）。
 - 交付记录自认的两条剩余风险本轮**未复诊**：① xlsx 懒加载在 Electron 打包产物中的解析需实机确认；② `dataset`/`analysis` 产物由模型按 prompt 合同写 manifest，manifest 缺失时复查返回 `no-manifest`。
 - **关闭建议**：确定性软件面测试级成立；模型参与面属**客观阻塞**。建议与 TASK-0025/0074/0155 一并裁定。请用户裁定。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **清单行验收对象成立**：「清洗与指标计算、预览正确」在授权模型 glm-5.3-flash 的真实 Work 回合中成立并经复核算术：数据画像精确（12 行 × 3 列，2 空值 + 1 "N/A"）；清洗恰剔除 3 条脏行；三区合计**逐项复算无误**（华北 4000 = 1200+1300+1500，最高 ✔；华南 3050；华东 2400）；清洗后 9 行预览与盘上 `cleaned_sales.csv` 逐行一致。`dataset_profile` 工具被正确调用。
+- **Artifact 尾条转 ISSUE-0033**：`artifact` 空参 ×8（同 [ISSUE-0033](../issues/ISSUE-0033-artifact-union-schema-gateway.md)），模型改以 `cleaned_sales.csv` + `analysis.md` 双文件交付，内容完整。
+- Work 数据集节与 `dataset`/`analysis` 产物来源复查为确定性 UI 面（本任务 31 例已绿）；会话实录见 `~/.openforge-ui-debug/04987e4e/agent/sessions/--C--Users-xquan-AppData-Local-Temp-vetta-0026-dataset--/`。

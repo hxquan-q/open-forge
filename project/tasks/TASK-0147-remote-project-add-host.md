@@ -1,7 +1,7 @@
 ---
 id: TASK-0147
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop + theme-ui
 source: user-request
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -100,3 +100,10 @@ Operate 模式，扩展既有工作台视觉，不重设设计系统、不引入
 
 - **未覆盖**：**成功路径**——「添加真实主机 → 列出远端目录 → 选中一个远端项目并加入侧边栏」。本轮用不存在的主机名只能走到失败态；成功态需要一台真实 SSH 主机，属各 SSH 任务的共同边界（不连真实主机）。
 - **关闭建议**：入口唯一性、失败态可恢复性、主机持久化与重试语义在用户面全部成立，测试级全绿；缺的只有成功路径（需真实主机）。倾向 `done`，是否要求补真实主机成功路径，请用户裁定。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **用户面成立**（2026-10-08 组三续测一真实 UI 驱动）：入口「新建项目 → 从远程主机添加」在位（且核实新会话页不挂载该菜单与源码一致）；填不存在主机 → `role="alert"` 失败态 + 重试 + 技术详情（非空「无主机」态）；`createHost` 落盘 `ssh-hosts.json`（`source: manual`）；点重试只重读目录、主机不重复创建。测试级 4 文件 / 34 例通过。探针主机已清理。
+- **成功路径无验收对象**：需真实可连的 SSH 主机，本 profile 无远程项目——与 TASK-0167/0168「不连真实主机」同类边界。

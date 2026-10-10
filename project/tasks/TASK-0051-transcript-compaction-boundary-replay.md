@@ -1,7 +1,7 @@
 ---
 id: TASK-0051
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0035, TASK-0050]
 conflicts_with: [TASK-0038, TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-09-23
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -116,3 +116,11 @@ updated: 2026-10-08
 
 - **未覆盖**：真实「浏览长会话历史区域 → 触发压缩 → 继续上/下浏览」的用户面往返；需要真实长会话，本轮未驱动。
 - **关闭建议**：合同三条在测试级成立，倾向 `done`；真实用户面往返是否要求补测，请用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：本 Task 的未覆盖项属**合同边界外**，不构成缺口，据闭合。
+
+- 真实「浏览长会话历史 → 触发压缩 → 继续上/下浏览」用户面往返：交付记录明记「真实 Desktop 长会话滚动锚点实测与 privateBytes 对比：**本批不做实机/视觉验证**」；窗口态保留由 `transcriptWindowStateAtom` 不被重置与 backlog 合同测试佐证。真实长会话不是本任务的验收对象。
+- 可及范围内证据：`useSessionEventController.compaction.test.tsx` 5 例（含本任务新增两例：自动压缩后边界条目可见、手动压缩重建保留已加载旧页）+ 压缩族 8 文件 56 通过 | 2 跳过。
+- 用户如不认可以此口径闭合，按原状态回退 `verifying` 即可。

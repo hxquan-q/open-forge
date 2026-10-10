@@ -1,7 +1,7 @@
 ---
 id: TASK-0158
 type: task
-status: verifying
+status: done
 priority: P2
 owner: plugins + capability-sdk + desktop filesystem + ssh-helper
 source: user-request; upstream 8c6872ac8, bb3a23ef8, 7a7af9cea, 1e7071c0e, 7fdc02a06, 7910ce57f
@@ -21,7 +21,7 @@ depends_on: [TASK-0153, TASK-0148, TASK-0167]
 conflicts_with: []
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -88,3 +88,12 @@ names 在远端截断前过滤，兼容旧 helper；全链路 schema/IPC/SDK 接
 - **实测新发现（已立案）**：脚本面板首屏有 3 处未本地化文本——计数显示字面量 `共 {{count}} 个`、卡片徽标 `card.root`、分组标题 `CARD.SCRIPTS`。根因两种：`locales/{zh,en}.json` 缺 7 个 key（`card.*` 4 个 + `search.clear` + `action.dismiss` + `state.error.title`），且 `summary` 的插值参数名与调用点不一致（组件传 `projects`/`scripts`，文案写 `{{count}}`）。横向比对 16 个预设插件**只有本插件 MISSING 非空**；本插件 15/15 单测全绿是因为测试把 `useTranslation` mock 成回显 key，从不读 locale 文件。详见 [BUG-0081](../../bugs/BUG-0081-scripts-panel-missing-locale-keys.md)。
 - 未覆盖（不宣称通过）：真实 SSH 主机入口（任务边界）；真实「缺 `terminal.run` 权限」交互；底部页签「关→再开」的真实 UI 往返；scripts 插件在真实大型 monorepo 的扫描性能。
 - 关闭建议：功能面（发现、分组、过滤、开终端执行、不重复启动）**在真实 UI 成立**，权限与布局两条由既有 113+15 例兜住 ⇒ 倾向闭合 `done`，并把 BUG-0081 作为独立的文案层欠账另行处理。按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项大部属**合同未授权面 / 任务边界外**，据此闭合。
+
+- 验证合同写明「**未授权 `verify:ui:*`、真实 SSH/Provider**」，且交付记录明记「真实终端实机交互（PTY/远程 SSH 终端）不做实机验证」「**不连接真实主机**（任务边界）」⇒ 真实 SSH 入口与真实实机交互不属验收对象。
+- 功能面已在真实 UI 成立：页签发现 → 分组 → 点 `hello` 真实拉起终端并回显 `hello-from-fixture`、连点不重复启动；底座面走 TASK-0167 证据（`ssh-transport` 205 例、`capability-sdk` 91 例）。
+- 残留（如实记录）：真实「缺 `terminal.run` 权限」交互、底部页签「关→再开」真实往返、大 monorepo 扫描性能均未驱动；权限与布局由 113+15 例测试级兜住。
+- 另案：首屏 3 处未本地化文本已立案 [BUG-0081](../../bugs/BUG-0081-scripts-panel-missing-locale-keys.md)，作为独立文案层欠账处理，不影响本 Task 功能面闭合。
