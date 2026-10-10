@@ -13,15 +13,16 @@ interface DesktopBrandSource {
 	legacyProductNames: string[];
 }
 
-/** 品牌口径档位：self = 自用（Open Forge，默认）；distribution = 外部分发（Allstr ai / 小爱ai）。 */
+/** 品牌口径档位：distribution = 外部分发（Allstr ai / 小爱ai，默认）；self = 自用（Open Forge，显式选档）。 */
 export type DesktopBrandProfile = "self" | "distribution";
 
 /**
  * 构建期常量：由 vite（renderer / main）define 归一化内联，常量折叠后
  * 未选中档案的 JSON 不进产物。运行时环境变量无法切换已发布的口径。
+ * 未设置 VETTA_BRAND_PROFILE 时按外部分发档解析；显式 "self" 回到 Open Forge 口径。
  */
 export const DESKTOP_BRAND_PROFILE: DesktopBrandProfile =
-	process.env.VETTA_BRAND_PROFILE === "distribution" ? "distribution" : "self";
+	process.env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution";
 
 const desktopBrandSource: DesktopBrandSource =
 	DESKTOP_BRAND_PROFILE === "distribution" ? distributionBrandSource : selfBrandSource;

@@ -82,12 +82,12 @@ const imGatewayTargetByPlatformTag = {
 
 // Resolve electron version from the workspace
 const require = createRequire(import.meta.url);
-// 品牌档案与 vite 同开关（VETTA_BRAND_PROFILE）：分发档安装器身份走 Allstr ai，
-// 兼容标识（executableName / appId / 安装目录）跨档冻结。
+// 品牌档案与 vite 同开关（VETTA_BRAND_PROFILE）：默认（未设置）走外部分发档 Allstr ai，
+// 显式 self 回到 Open Forge；兼容标识（executableName / appId / 安装目录）跨档冻结。
 const desktopBrand = require(
-	process.env.VETTA_BRAND_PROFILE === "distribution"
-		? "../src/shared/desktop-brand.distribution.json"
-		: "../src/shared/desktop-brand.json",
+	process.env.VETTA_BRAND_PROFILE === "self"
+		? "../src/shared/desktop-brand.json"
+		: "../src/shared/desktop-brand.distribution.json",
 );
 const appRuntimeIdentity = require("../src/shared/app-identity.json");
 const electronPkgPath = require.resolve("electron/package.json");
@@ -377,10 +377,11 @@ if (process.platform === "darwin") {
 // Copy icons
 cpSync(join(projectRoot, "build"), join(buildStageDir, "build"), { recursive: true });
 
-// 分发档打包图标随品牌档案：exe 图标（win.icon）、安装器图标（extraResources 的
-// build/icon.ico）与运行时窗口/托盘图标（window-manager 读 resources/build/icon.*）
-// 全部取自暂存 build/，在这里一次性覆盖成指定品牌资产；文件名不变，兼容标识不受影响。
-if (process.env.VETTA_BRAND_PROFILE === "distribution") {
+// 打包图标随品牌档案（默认外部分发档，显式 self 跳过）：exe 图标（win.icon）、安装器
+// 图标（extraResources 的 build/icon.ico）与运行时窗口/托盘图标（window-manager 读
+// resources/build/icon.*）全部取自暂存 build/，在这里一次性覆盖成指定品牌资产；
+// 文件名不变，兼容标识不受影响。
+if (process.env.VETTA_BRAND_PROFILE !== "self") {
 	for (const iconName of ["icon.ico", "icon.png", "icon.icns", "icon-dock.png"]) {
 		cpSync(join(projectRoot, "build", "brand", "distribution", iconName), join(buildStageDir, "build", iconName), {
 			force: true,

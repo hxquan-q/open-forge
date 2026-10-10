@@ -62,10 +62,10 @@ export default defineConfig(({ mode }) => {
 	define[`process.env.${SPEECH_INPUT_ENABLED_ENV}`] = JSON.stringify(String(speechInputBuildConfig.enabled));
 	// 未配置时按 false（lite）内联，保证 cloud 判断能被常量折叠掉。
 	define["process.env.VETTA_CLOUD_ENABLED"] = JSON.stringify(cloudEnabled ? "true" : "false");
-	// 品牌口径构建期开关：self（默认，Open Forge）| distribution（外部分发，Allstr ai / 小爱ai）。
+	// 品牌口径构建期开关：distribution（默认，外部分发 Allstr ai / 小爱ai）| self（显式，Open Forge）。
 	// 放在 VETTA_* 通用内联之后做归一化，托盘/关于面板等主进程品牌面随档案折叠。
 	define["process.env.VETTA_BRAND_PROFILE"] = JSON.stringify(
-		env.VETTA_BRAND_PROFILE === "distribution" ? "distribution" : "self",
+		env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution",
 	);
 	// 固化发行配置，防止打包后意外继承启动环境；空仓库由运行时解析为 Vetta 官方源。
 	define["process.env.VETTA_OPEN_MARKETPLACE_REPOSITORY"] = JSON.stringify(

@@ -90,9 +90,9 @@ export default defineConfig(({ mode }) => {
 	const showUiTheme = process.env.VETTA_SHOW_UI_THEME ?? env.VETTA_SHOW_UI_THEME ?? "";
 	const sentry = createSentryBuildSetup(env, "dist/renderer");
 
-	// 品牌口径构建期开关：self（默认，Open Forge 自用）| distribution（外部分发，Allstr ai / 小爱ai）。
+	// 品牌口径构建期开关：distribution（默认，外部分发 Allstr ai / 小爱ai）| self（显式，Open Forge 自用）。
 	// 档案常量折叠后未选中的品牌 JSON 与图标资产不进产物（desktop-brand.ts / brand-assets.ts）。
-	const brandProfile = env.VETTA_BRAND_PROFILE === "distribution" ? "distribution" : "self";
+	const brandProfile = env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution";
 
 	return {
 		define: {
