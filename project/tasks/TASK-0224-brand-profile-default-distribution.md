@@ -31,7 +31,7 @@ updated: 2026-10-10
 
 ## 目标
 
-1. 未设置 `VETTA_BRAND_PROFILE` 时，dev 启动、构建与打包一律按 `distribution` 档案：应用名、界面文案、窗口标题、页面图标、打包产品名/图标/安装器身份 = Allstr ai（英文）/ 小爱ai（中文界面）。
+1. 未设置 `VETTA_BRAND_PROFILE` 时，dev 启动、构建与打包一律按 `distribution` 档案：应用名、界面文案、窗口标题、页面图标、系统图标（任务栏 / 托盘 / Dock / 通知 / 拖拽 fallback）、打包产品名/图标/安装器身份 = Allstr ai（英文）/ 小爱ai（中文界面）。
 2. `VETTA_BRAND_PROFILE=self` 显式选档保留 Open Forge 口径，能力不删除、只翻转默认。
 3. 兼容标识（executableName `OpenForge` / appId / bundleId / 数据目录 / 协议）跨档冻结不变。
 4. 全链一致：4 个决策点（共享品牌层、renderer define、main define、prepare-pack）与 4 个此前固定读 self JSON 的辅助脚本站位对齐到同一开关。
@@ -63,6 +63,11 @@ updated: 2026-10-10
   - `scripts/desktop-packaging-layout.mjs`（`.vettapkg` 文件关联显示名随档）；
   - `scripts/linux-packaging-contract.mjs`（Linux 包 author/vendor/maintainer 随档）。
 - 静态 HTML 标题 6 处改为默认档（Allstr ai 口径），运行时标题机制不变。
+- 验收反馈切片（2026-10-10 用户报告「状态栏和桌面栏的图标没有换」）：dev 态主进程系统图标（窗口/任务栏、托盘、macOS Dock、通知、拖拽 fallback）此前直读仓库 `build/icon.*`（self 三花猫），只有打包才按档覆盖——
+  - 新增 `src/main/brand-icon-directory.ts`：纯函数按「打包态（暂存目录恒定）/ dev 态（按档案取 `build/brand/distribution/` 或 `build/`）」解析图标目录；
+  - `window-manager.ts`（窗口图标 / `macTrayIconPath`，连带托盘、通知、引导、宠物、快捷面板、拖拽 fallback）与 `main.ts`（macOS Dock 图标）接入该解析；
+  - 更新 `brand-assets.ts` 过时注释（主进程图标分档不再是二期）与 `.env.example` / 发布说明措辞；
+  - 新增 `brand-icon-directory.test.ts` 覆盖两档 × 打包/dev 四象限。
 - `.env.example` 品牌段注释改为新默认并说明显式 `self`。
 - 测试：
   - `src/shared/desktop-brand.test.ts`：未设置 = distribution、显式 self = Open Forge、显式 distribution 三态；静态标题合同改为默认档；第一块 self 归一合同在导入前钉住 self 档；
@@ -81,6 +86,7 @@ updated: 2026-10-10
 
 - Given：工作区未设置 `VETTA_BRAND_PROFILE`；When：dev 启动或打包；Then：主窗口标题为「小爱ai」（中文界面）/「Allstr ai」（英文界面），侧栏品牌区图标为 distribution 资产，打包 productName / 安装器身份 / 暂存 `build/icon.*` 为 Allstr ai。
 - Given：显式 `VETTA_BRAND_PROFILE=self`；When：dev 启动或打包；Then：Open Forge 品牌与图标回归（与切换前默认一致）。
+- Given：dev 态（未设置开关）；When：应用创建窗口 / 托盘 / Dock 图标（macOS）与通知图标；Then：图标取自 `build/brand/distribution/`（小爱ai logo），不再出现 `build/icon.*` 三花猫；打包态继续取暂存 `build/`（prepare-pack 已按档覆盖）。
 - Given：`build-appshot-helper.js` / `ui-verification.mjs` / 打包元数据脚本被 dev 或打包链调用；When：未设置开关（= distribution）或显式 self；Then：产出名称与主链 `DESKTOP_BRAND` 解析一致（helper 名、窗口标题、`.vettapkg` 关联名、Linux 元数据）。
 
 ## 必须保持
@@ -100,10 +106,10 @@ updated: 2026-10-10
 
 ## 验收分层
 
-- 工程验证：通过；绑定下方「交付记录」的命令与结果（定向 18 例、打包 node 13/13、main 构建端到端、完整 check exit=0；impact 升级/related 爬取按最低充分终止并如实记录）。
+- 工程验证：通过；绑定下方「交付记录」的命令与结果（切片一：定向 18 例、打包 node 13/13、main 构建端到端、完整 check exit=0；切片二（验收反馈）：系统图标定向 18 例、main 构建 50.40s、完整 check exit=0；impact 升级/related 爬取按最低充分终止并如实记录）。
 - 技术评审：自审；跨脚本一致性风险见剩余风险。
 - 集成：本地 main 工作区串行提交与推 dev 事实随回写补齐。
-- 人工功能验收：待验收（dev 界面/打包产物品牌呈现）。
+- 人工功能验收：待验收（dev 界面/打包产物的品牌与系统图标呈现；用户已就系统图标提交一次反馈并推动切片二，需在重启后的 dev 实例复验）。
 - 发布：未授权。
 
 ## 功能验收包
@@ -126,8 +132,9 @@ updated: 2026-10-10
   - 六个静态 HTML 标题（`index/onboarding/pet/quickpanel/remote-desktop-host/renderer-ocr`）改为默认档 Allstr ai 口径；运行时标题机制不变。
   - `apps/desktop/.env.example`：品牌段注释改为新默认 + 显式 `self` 示例。
   - 测试：`src/shared/desktop-brand.test.ts`（导入前钉住 self 档 + 三态用例 + 四决策点/辅助脚本同归一的源码合同）、`SidebarTopBar.brand.test.tsx`（改用 `resolveDesktopBrandName`，兼容默认档中文名）、`scripts/desktop-packaging-layout.test.mjs`（文件关联随档 + 两个子进程实测 unset/self）。
-  - `.github/release-notes/v0.1.3.md`：「改进」追加一条（用户可见的默认品牌切换）。
+  - `.github/release-notes/v0.1.3.md`：「改进」追加一条（用户可见的默认品牌切换，含系统图标）。
   - 台账：新建 REQ-0011、TASK-0224，更新 requirements / tasks 索引与 REQ-0003 关联行。
+  - 验收反馈切片（dev 系统图标）：新增 `src/main/brand-icon-directory.ts`（纯函数，打包/dev × self/distribution 四象限）与 `brand-icon-directory.test.ts`；`window-manager.ts`（窗口图标 + `macTrayIconPath`，连带托盘、通知、引导、宠物、快捷面板、拖拽 fallback）与 `main.ts`（macOS Dock 图标）接入；`brand-assets.ts` 注释、`.env.example` 与发布说明措辞同步。
 - 实际运行：
   - 定向 vitest：`bun run --cwd apps/desktop test -- src/shared/desktop-brand.test.ts src/renderer/domains/project/components/sidebar/SidebarTopBar.brand.test.tsx` → 2 files / 18 tests 全绿（含新增源码合同与三态用例；格式修复后复跑同结果）。
   - 打包合同 node 测试：`node --test scripts/desktop-packaging-layout.test.mjs scripts/gen-brand-icons.node-test.mjs scripts/run-electron-builder.node-test.mjs scripts/build-inno-installer.node-test.mjs`（apps/desktop 下）→ 13/13 通过（含新增子进程断言：unset → `Allstr ai Plugin Package`，self → `Open Forge Plugin Package`）。
@@ -135,8 +142,11 @@ updated: 2026-10-10
   - 发布说明校验：`node scripts/release/release-notes.mjs --check` → exit=0（v0.1.3 正文与版本/碎片一致）。
   - `bun run check`（完整）：首轮仅 lint 报 1 处 biome 换行格式（本任务新增用例的长行），按提示修复后重跑 exit=0——lint、types（root / cli / desktop / docs / mobile）、guards、mobile-lint 全绿。
   - `bun run test:impact`：直连阶段 `desktop: direct=2, related=1`、2 文件 18 例全绿；related 阶段需爬取品牌模块的整张引用图（`desktop-brand` 经 i18n 被大量测试引用），超过 5 分钟未进入运行即按「最低充分」终止。此前未限定的 impact 因 `vite.config.ts` 与 HTML 命中保守回退升级为 desktop 全包，跑完 212 个文件（约 2000+ 例）零失败后同样因成本终止。两次均如实记录，不宣称全量通过；全包非本任务的最低充分范围（4 决策点为常量选择，行为面由定向用例与构建端到端覆盖）。
+  - 验收反馈切片定向测试：`src/main/brand-icon-directory.test.ts`、`native-drag-icon.test.ts`、`quickpanel-window.test.ts`、`notification-service.test.ts`、`ipc/quickpanel.test.ts` 共 5 文件 18 例全绿；行尾修复后复跑 4 文件 16 例同绿。
+  - 验收反馈切片构建面：`bun run --cwd apps/desktop build:main` → `✓ built in 50.40s`（新模块随主进程打包编译通过）。
+  - 验收反馈切片完整 check：首轮仅 lint 报新文件行尾问题（CRLF→LF，biome 判负），转 LF 后 `check:lint` 4795 文件 0 错、重跑完整 check exit=0。
 - 未运行及原因：renderer 完整构建未单跑（define 机制与 main 相同，已由源码合同用例与 main 构建端到端覆盖；全量渲染器构建成本高）。真实 dev 界面与打包产物的用户可见验收未做——按交付合同留待人工验收。`verify:ui:*` 未运行（本次未获授权）。
 - Worktree：未拆出（serial，理由见并发评估）。
-- 集成：main 工作区串行提交 `f1cb54df2`（台账立案：REQ-0011 / TASK-0224 与索引）与 `f7eca251e`（实现 + 测试 + 发布说明，19 文件 +153/−46，pre-commit 通过）；审计 `git log origin/dev..main` 仅本任务两提交后，按长期授权 fast-forward `git push origin main:dev`，`origin/dev` 现指向 `f7eca251e`；本回写记录提交随后同批推送。未夹带未验收提交。
+- 集成：main 工作区串行提交 `f1cb54df2`（台账立案）、`f7eca251e`（实现 + 测试 + 发布说明，19 文件 +153/−46）、`be8fc3be0`（回写，已推 `origin/dev`）；验收反馈切片提交 `6a249ff3b`（dev 系统图标修复，7 文件 +76/−5，pre-commit 通过）与本回写记录随后同批 fast-forward 推送。每次推送前均审计 `git log origin/dev..main`，未夹带未验收提交；用户既有的未跟踪 BUG-0082 记录未纳入任何提交。
 - 剩余风险：默认档翻转会改变打包产物文件名与更新元数据中的文件名（见 REQ-0011 风险）；docs-site / mobile 品牌面保持三花猫不动，与 Desktop 默认档出现有意不一致；`linux-packaging-contract` 的 author/vendor 随档指向 Allstr ai，若后续要维持 Open Forge 发布口径需显式 `VETTA_BRAND_PROFILE=self`。
 
