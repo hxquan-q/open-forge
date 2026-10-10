@@ -74,4 +74,4 @@ verdict: 任一严重→fail；无严重但一般≥3→fail；否则 pass
 - [ ] [一般] 清零或用户书面接受
 - [ ] 最终问题清单落盘 + whitebox.md 状态 `已执行`
 
-完成后：state.md 更新（环节 9 done），交接 ac-blackbox。
+完成后：state.md 更新（环节 9 done）→ 环节 9 收口（ac-gate 校验）→ 打 stage 档（`stage 9/白盒测试: 全部通过`，含 whitebox.md + test-results/ + 白盒轮修复的代码改动，经轻量 git 子代理 + V4，§0.5）→ 交接 ac-blackbox。

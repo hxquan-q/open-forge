@@ -16,16 +16,11 @@
  */
 
 import type { PluginActivationCleanup, PluginContext } from "@vetta-org/plugin-sdk";
-import { createFenceLogAppender, inputDigest, type FenceLogIo } from "./fence/audit-log";
+import { createFenceLogAppender, type FenceLogIo } from "./fence/audit-log";
 import { ContractStore, type StateFileLike } from "./fence/contract-store";
-import { judge, type ToolCallShape } from "./fence/judge";
+import { handlePreToolUse, handleSubagentStart } from "./fence/session-gate";
 
 const FENCE_LOG_PREFIX = "[ac-fence]";
-
-/** PreToolUse 输入 → judge 的 ToolCallShape（judge 不 import plugin-sdk 类型，§8 备选约束）。 */
-function toToolCallShape(tool: { hostName: string; kind: string }, toolInput: unknown): ToolCallShape {
-	return { toolKind: tool.kind, hostName: tool.hostName, input: toolInput };
-}
 
 /** ctx.fs → FenceLogIo（宿主 fs API 没有 appendFile，追加语义由 audit-log 内部实现）。 */
 function fenceLogIoFromCtx(ctx: PluginContext): FenceLogIo {
@@ -50,6 +45,7 @@ function fenceLogIoFromCtx(ctx: PluginContext): FenceLogIo {
 export function activateFence(ctx: PluginContext): PluginActivationCleanup {
 	const store = new ContractStore();
 	const appendFenceLog = createFenceLogAppender(fenceLogIoFromCtx(ctx));
+	const gate = { appendLog: appendFenceLog };
 
 	// state.md 兜底读取器（ctx.fs；JSON parse 失败/文件缺失 → null，静默跳过）
 	store.bindStateReader(async (cwd) => {
@@ -62,6 +58,8 @@ export function activateFence(ctx: PluginContext): PluginActivationCleanup {
 		}
 	});
 
+	// 判定流在 session-gate.ts（纯模块，按生产事件形态可测）；本文件只是 hook 装配层。
+	// 会话分类不依赖事件体 subagent 字段（宿主从不填充）——sessionId 双查见 session-gate 头注。
 	const preToolUse = ctx.agent.registerHook({
 		id: "ac-fence-pre-tool-use",
 		eventName: "PreToolUse",
@@ -70,41 +68,13 @@ export function activateFence(ctx: PluginContext): PluginActivationCleanup {
 		timeoutMs: 3000,
 		handler({ event }) {
 			if (event.eventName !== "PreToolUse") return { action: "continue" };
-			const isMainSession = event.subagent === undefined;
-			const call = toToolCallShape(event.tool, event.toolInput);
-
-			// 主会话 spawn：登记 + 白名单/契约校验（§3.2 主会话规则）。
-			// 先判后登记：被 block 的 spawn 不入表（§4.1）。
-			if (isMainSession && call.hostName === "spawn_agent" && call.toolKind === "agent") {
-				const verdict = judge(null, call, true);
-				if (!verdict.allow) {
-					appendFenceLog(event.cwd, {
-						sessionId: event.sessionId,
-						tool: event.tool.hostName,
-						inputDigest: inputDigest(call.toolKind, call.hostName, call.input),
-						reason: verdict.reason ?? "(no reason)",
-					});
-					return { action: "block", reason: verdict.reason ?? "ac-fence: spawn rejected" };
-				}
-				store.registerSpawn(event.toolUseId, call.input);
-				return { action: "continue" };
-			}
-
-			// 通用判定：契约按 agentId 查（子会话）；主会话 contract 恒为 null
-			const contract = event.subagent ? store.lookupByAgentId(event.subagent.agentId) : null;
-			const verdict = judge(contract, call, isMainSession);
-			if (verdict.allow) return { action: "continue" };
-
-			// block → fire-and-forget 记 fence-log（handler 体内禁止 await I/O）
-			appendFenceLog(event.cwd, {
+			return handlePreToolUse(store, gate, {
 				sessionId: event.sessionId,
-				agentId: event.subagent?.agentId,
-				taskName: contract?.taskName,
-				tool: event.tool.hostName,
-				inputDigest: inputDigest(call.toolKind, call.hostName, call.input),
-				reason: verdict.reason ?? "(no reason)",
+				cwd: event.cwd,
+				toolUseId: event.toolUseId,
+				tool: { hostName: event.tool.hostName, kind: event.tool.kind },
+				toolInput: event.toolInput,
 			});
-			return { action: "block", reason: verdict.reason ?? "ac-fence: blocked" };
 		},
 	});
 
@@ -115,9 +85,12 @@ export function activateFence(ctx: PluginContext): PluginActivationCleanup {
 		timeoutMs: 3000,
 		handler({ event }) {
 			if (event.eventName !== "SubagentStart") return { action: "continue" };
-			store.bindAgentId(event.agentId, event.agentType);
-			// state.md 兜底同步（fire-and-forget：子代理首个工具调用前通常有秒级窗口）
-			store.scheduleStateSync(event.cwd);
+			handleSubagentStart(store, {
+				sessionId: event.sessionId,
+				cwd: event.cwd,
+				agentId: event.agentId,
+				agentType: event.agentType,
+			});
 			return { action: "continue" };
 		},
 	});

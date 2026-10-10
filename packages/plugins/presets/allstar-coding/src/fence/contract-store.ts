@@ -66,7 +66,7 @@ export function contractFromSpawnInput(input: unknown): FenceContract | null {
 	const task = (typeof record.task === "object" && record.task !== null ? record.task : {}) as Record<string, unknown>;
 	const agentType = typeof record.agent_type === "string" ? record.agent_type : "general";
 	const scope = parseScopeInput(task.scope).filter(isProjectInternalGlob);
-	// git 写豁免（T 级存档通道）：仅轻量 git 子代理契约携带（judgeMainSpawn 已拦截偷带者）
+	// git 写豁免（环节级存档通道）：仅轻量 git 子代理契约携带（judgeMainSpawn 已拦截偷带者）
 	const gitWriteAllow = record.allow_git_write === true;
 	return {
 		role: roleFromTaskName(taskName),
@@ -85,11 +85,31 @@ export class ContractStore {
 	private readonly pending: PendingSpawn[] = [];
 	/** cwd → 是否已安排 state.md 兜底同步（去抖）。 */
 	private readonly syncScheduled = new Set<string>();
+	/**
+	 * AC 治理会话标记（主控会话身份的插件侧事实源）。
+	 *
+	 * 宿主 PreToolUse 事件不填充 subagent 字段（内核 baseEvent 从不赋值），插件无法从事件体
+	 * 区分主/子会话；但 SubagentStart 的 agentId 恒等于子会话 sessionId（runtime-subagents
+	 * attachHandle：snapshot.id = handle.sessionId），因此「登记表按 sessionId 命中 = 子会话」。
+	 * 主会话没有对等事件——本标记在 spawn_agent 通过 AC 契约校验时记录该 sessionId，
+	 * 「命中标记 = AC 主控会话」；两者都不命中 = 与流水线无关的会话，围栏静默。
+	 */
+	private readonly governedSessions = new Set<string>();
 	private stateReader: ((cwd: string) => Promise<StateFileLike | null>) | null = null;
 
 	/** 注入 state.md 读取器（生产 = ctx.fs 装配；测试 = node:fs）。null/异常 = 静默跳过。 */
 	public bindStateReader(reader: (cwd: string) => Promise<StateFileLike | null>): void {
 		this.stateReader = reader;
+	}
+
+	/** 标记 AC 治理会话（spawn_agent 通过契约校验时调用；重复标记幂等）。 */
+	public markGovernedSession(sessionId: string): void {
+		this.governedSessions.add(sessionId);
+	}
+
+	/** 会话分类查询：命中登记表 = AC 子会话；命中标记 = AC 主控会话；否则为无关会话。 */
+	public isGovernedSession(sessionId: string): boolean {
+		return this.governedSessions.has(sessionId);
 	}
 
 	// ── 来源 1：PreToolUse(spawn_agent) ──
@@ -98,6 +118,11 @@ export class ContractStore {
 	public registerSpawn(toolUseId: string, input: unknown): FenceContract | null {
 		const contract = contractFromSpawnInput(input);
 		if (contract === null) return null;
+		// 同名 task_name 重 spawn：旧 pending 条目作废（其契约对象已被 Map 覆盖驱逐，
+		// agentId 回填必须落在 Map 当前持有的对象上，否则 lookupByAgentId 永远落空）
+		for (let i = this.pending.length - 1; i >= 0; i -= 1) {
+			if (this.pending[i]?.contract.taskName === contract.taskName) this.pending.splice(i, 1);
+		}
 		this.pending.push({ toolUseId, contract, at: Date.now() });
 		// 判定在 spawn 时即可用（§4.1）：立即以 taskName 入表，SubagentStart 只做 agentId 回填
 		this.contracts.set(contract.taskName, contract);
