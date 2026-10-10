@@ -1,6 +1,6 @@
+// Modified by The Open Forge contributors.
 import { waitForCommittedPaint } from "@shared/lib/committed-paint";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import type { SidebarSelectionTarget } from "./sidebar-selection-state";
 
 type SidebarSelectionIntent = SidebarSelectionTarget & {
@@ -44,9 +44,12 @@ export function useSidebarSelectionIntent(settledSelection: SidebarSelectionTarg
 				completed: false,
 			};
 			currentIntentRef.current = request;
-			// This is a discrete pointer action. Commit the lightweight sidebar state before
-			// scheduling any navigation/runtime work so concurrent rendering cannot defer it.
-			flushSync(() => setSelectionIntent(request));
+			// A click is a discrete event: React commits this bookkeeping update before the event
+			// returns, and the two-frame paint barrier below keeps it ahead of session content work,
+			// so ReactDOM.flushSync is not needed. flushSync would also be refused (and logged in
+			// DEV, see BUG-0083) while React is rendering or committing, which would silently break
+			// the barrier if this ever ran outside an event handler.
+			setSelectionIntent(request);
 
 			// Unlike general presentation work, session opening must not use the timeout
 			// escape hatch: that would let heavy content work start before the highlight was

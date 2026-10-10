@@ -7,6 +7,7 @@ import { shouldAutoOpenDevTools } from "./devtools-policy.js";
 import { sampleJavaScriptCallStack } from "./diagnostics.js";
 import {
 	isChromiumResizeObserverDiagnostic,
+	isReactFlushSyncLifecycleDiagnostic,
 	type RendererConsoleLevel,
 	shouldPersistRendererConsoleMessage,
 } from "./logger/renderer-console-policy.js";
@@ -129,6 +130,8 @@ export function createWindow(): BrowserWindow {
 		// Chromium defers remaining ResizeObserver callbacks to the next frame while a split pane is
 		// continuously resized. It reports that normal delivery behavior as an internal console error.
 		if (isChromiumResizeObserverDiagnostic(message, line)) return;
+		// React DEV-only call-timing advisory raised by dependency-vendored flushSync calls (BUG-0083).
+		if (isReactFlushSyncLifecycleDiagnostic(message)) return;
 		const levelLabel: RendererConsoleLevel = (["log", "info", "warn", "error"] as const)[level] ?? "log";
 		if (!shouldPersistRendererConsoleMessage(levelLabel, message)) return;
 		rendererLog[levelLabel](`[${sourceId}:${line}] ${message}`);
