@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0085` | provider 连接被切断后回合长时间不进终态：停滞重试级联把 30 分钟预算烧在死连接上 | investigating | P1 | — |
 | `BUG-0084` | team 会话引用文件后输入框反复重建内容：中文输入法组字被打断、光标闪烁无法输入 | verifying | P1 | — |
 | `BUG-0083` | React DEV 告警「flushSync was called from inside a lifecycle method」在 render 日志里成批落盘 | verifying | P3 | — |
 | `BUG-0082` | ac-fence 黑盒 shell 白名单可被复合命令绕过、读域前缀可被 .. 穿越 | verifying | P1 | — |
