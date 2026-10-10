@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
 import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js";
+import { resolveBrandIconDirectory } from "./brand-icon-directory.js";
 import { getInAppBrowserViewHost } from "./browser-automation/browser-view-host.js";
 import { shouldAutoOpenDevTools } from "./devtools-policy.js";
 import { sampleJavaScriptCallStack } from "./diagnostics.js";
@@ -18,7 +19,12 @@ import { configureMainWindowMediaPermissions } from "./speech-input/media-permis
 const isMac = process.platform === "darwin";
 const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
 const resDir = app.isPackaged ? appRoot : join(appRoot, "dist");
-const buildDir = app.isPackaged ? join(process.resourcesPath, "build") : join(appRoot, "build");
+// dev 态按品牌档案取窗口/托盘图标目录；打包态沿用暂存 resources/build（prepare-pack 已按档覆盖）。
+const buildDir = resolveBrandIconDirectory({
+	isPackaged: app.isPackaged,
+	packagedDirectory: join(process.resourcesPath, "build"),
+	appRoot,
+});
 const devServerUrl = process.env.VETTA_DESKTOP_DEV_URL;
 
 export const iconPath: Record<string, string> = {

@@ -36,6 +36,7 @@ import { initializePerfMonitor, shutdownPerfMonitor } from "./app-monitor/perf-m
 import { startPowerTrimService } from "./app-monitor/power-trim-service.js";
 import { shutdownBatchTaskExecutor } from "./batch-tasks/batch-task-executor.js";
 import { initializeDesktopBatchTaskService } from "./batch-tasks/batch-task-service.js";
+import { resolveBrandIconDirectory } from "./brand-icon-directory.js";
 import { shutdownBrowserAutomationService } from "./browser-automation/index.js";
 import { disposeCanvasPreviewServer } from "./canvas-server/canvas-preview-desktop.js";
 import { parseActionCliCommand, runActionCliCommand } from "./cli/action-command.js";
@@ -139,7 +140,12 @@ protocol.registerSchemesAsPrivileged([
 ]);
 const isMac = process.platform === "darwin";
 const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
-const buildDir = join(appRoot, "build");
+// dev 态按品牌档案取 Dock 图标目录；打包态沿用 app 内暂存的 build/（prepare-pack 已按档覆盖）。
+const buildDir = resolveBrandIconDirectory({
+	isPackaged: app.isPackaged,
+	packagedDirectory: join(appRoot, "build"),
+	appRoot,
+});
 const devMainEntryPath = join(appRoot, "dist/main/index.js");
 const packagedCliBinaryName = process.platform === "win32" ? "openforge.exe" : "openforge";
 const packagedCliPlatformTag = `${process.platform}-${process.arch}`;
