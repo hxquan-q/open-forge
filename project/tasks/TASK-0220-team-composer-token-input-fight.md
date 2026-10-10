@@ -57,6 +57,16 @@ updated: 2026-10-10
   3. 外部写入不同内容时仍会同步（比较放宽不等于不同步）。
 - 发布说明：`v0.1.3.md`「修复」追加一条（用户可见：team 输入框恢复可输入）。
 
+### 扩展切片（2026-10-10，用户要求「顺便 test 其他可能出现的情况」）
+
+同一判等合同的覆盖补齐，不改设计：
+
+- 其他 token 类型：目录（`isDirectory: true`）、图片、skill（带 alias/icon）、scene、connector（已覆盖，保留）、member（走 team 形状的 mention 投影）；
+- 其他流程：流式形态的连续重渲染（多轮 bump 不重建）、外部真值移除 token（必须重建且 chip 消失）、mention 元数据变化（投影 label 变化不重建编辑器）；
+- 仍不做：不为 file/image kind 之间放宽；不改投影构造与 wire 格式。
+
+判定证据：每个新用例都断言「投影重建次数不变」或「外部真值变化时重建」，并保留既有 3 例。
+
 ### 不做
 
 - 不改 `TeamComposerConnector` / `useTeamChatModel` 的投影构造（文本 + mentions 的既有合同）。
@@ -108,6 +118,9 @@ updated: 2026-10-10
   - `apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx`（新）：3 例——文件 token 后打字不触发投影重建、带展示名的 connector token 在父组件重渲染后不被重建、外部真值变化仍同步。
   - `.github/release-notes/v0.1.3.md`「修复」一条（迁移前手写版本，按近期实践直接追加）。
 - 实际运行：
+  - 定向 7 文件 68 例全绿（`ControlledValueBridge`（10）、`InputEditor`、`inputEditorHandle`、`InputBarFileReference`、`InputBarMention`、`TeamComposerConnector`、`useTeamChatModel`）；扩展前同一批 62 例。
+  - 扩展切片逐个 token 类型：目录 / 图片 / skill / scene / connector / member（team 形状 mention 投影）打字均不重建；连续 5 轮父渲染不重建；外部真值移除 token 会重建且 chip 消失；投影 mention 元数据变化不重建（编辑器保留自有 label）。
+  - 未处理拒绝清零：为 token 胶囊补齐 `window.vetta.abilities.listOpenMarketplaces` / `window.vetta.skills.list` 与 `react-i18next` 桩（此前 skill 用例在 jsdom 下打 `Unhandled Rejection`）。
   - 定向 7 文件 62 例全绿：`bun --cwd apps/desktop run test -- <ControlledValueBridge/InputEditor/InputBarFileReference/InputBarMention/TeamComposerConnector/useTeamChatModel/TeamChatDelegationFlow>.test.tsx`。
   - 红/绿证据：新回归测试在旧判等语义下（临时恢复 `text` 逐字符比较与 `isDirectory` 比较）报 `expected 2 to be 1`；完整修复后 3 例全绿；探针实测修复前文件 token 每步 +2 次 `$applySegments`（1 次为测试自身调用），纯文本仅自身 1 次。
   - `bun run test:impact -- <两个改动文件>`：direct 1 文件 / 3 例 + related 23 文件 / 107 例全绿。
@@ -115,5 +128,6 @@ updated: 2026-10-10
 - 未运行及原因：真实输入法与实机粘贴文件的人工验收未运行（需用户实机；修复前必现已由用户报告与测试级证据支撑）。
 - Worktree：未拆出；serial + `exclusive_paths` 已声明。
 - 集成：main 工作区串行提交 `c68ece72c`（修复 + 回归测试 + 发布说明）；本条记录随任务记录提交落地，未推共享分支。
+- 集成（覆盖扩展）：提交 `c9c42332d`（10 例回归覆盖 + 「其他」发布说明条目）；定向 7 文件 68 例、impact 10 例、完整 check 与 guards 全绿。
 - 剩余风险：判等放宽后，token 展示元数据的变化（如成员改名后的 chip 文本）不会立刻回写编辑器——这是有意的（编辑器持有元数据，回写会重建内容）；外部文本真值变化仍走同步（测试 3 覆盖）。`file`/`image` kind 不互相放宽，各插入入口均按 `isImagePath` 分流。
 

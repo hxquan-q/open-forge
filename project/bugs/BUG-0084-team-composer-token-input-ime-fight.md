@@ -57,7 +57,7 @@ updated: 2026-10-10
 
 ## 回归测试
 
-`apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx`：受控编辑器 + 文件 token 下打字不触发投影重建；带展示名的 connector token 同样不被重建；外部内容真的变化时仍会同步（防止把比较放宽成「永不同步」）。
+`apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx`（10 例）：文件/目录/图片/技能/场景/连接器/成员（team 形状 mention 投影）token 下打字不触发投影重建；流式形态连续 5 轮父渲染不重建；带展示名 token 在父渲染后不被重建；外部值变化（含移除 token）仍同步（防止把比较放宽成「永不同步」）；投影 mention 元数据变化不重建编辑器（编辑器保留自有 label）。
 
 ## 修复与验证
 
