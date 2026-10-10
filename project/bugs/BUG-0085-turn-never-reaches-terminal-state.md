@@ -71,3 +71,4 @@ updated: 2026-10-10
 - 修复：见 [TASK-0223](../tasks/TASK-0223-turn-terminal-stall-bound.md)：停滞增加专用重试上限 `PROVIDER_STREAM_STALL_MAX_RETRIES = 1`（停滞仍走既有 abort+drain 与 transient 预算，但级联最多 2 个看门狗窗口）。
 - 测试：新增回归用例先红（旧实现 4 次 attempt）后绿；`packages/ai` 全量 516 例、impact 321 例、完整 check 全绿（详见 TASK-0223 交付记录）。
 - 验证边界：态 B 的实机复现与态 A 的 UI 入口属人工验收；编号变更（原 BUG-0082 → BUG-0085）见文首说明。
+- 集成：`6dbfee1e5` 推 `origin/dev`，随后台账批次 `e306d5812` 与 `merge(dev) 9beebe1e0` 收口（`origin/dev == main == 9beebe1e0`）。

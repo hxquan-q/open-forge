@@ -21,7 +21,7 @@ write_paths: [packages/ai/src/provider-kit/provider-retry.ts, packages/ai/test/p
 exclusive_paths: [packages/ai/src/provider-kit/provider-retry.ts]
 depends_on: []
 conflicts_with: [TASK-0122, TASK-0123, TASK-0154, TASK-0159, TASK-0197, TASK-0218]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-10
 updated: 2026-10-10
 ---
@@ -87,7 +87,7 @@ provider 连接被切断（连接被接受但永不发数据）时，回合必�
 
 - 工程验证：通过；`packages/ai/test/provider-retry.test.ts` 新增用例先红（旧实现打开 4 次 attempt）后绿；包内全量 63 文件 / 516 例、impact 33 文件 / 321 例、完整 check（lint/mobile-lint/types 五面/guards）全绿。
 - 技术评审：自审；停滞上限只收紧停滞轨道，transient/rate_limit 预算、退避与事件形状未动，既有两例停滞用例保持通过。
-- 集成：分支 `task/TASK-0223-turn-terminal-stall-bound` 提交就绪，`integration_status: pending`（推送 `origin/dev` 与合并由 coordinator 授权后执行）。
+- 集成：已完成——`d592dd53d`（实现 + 回归用例 + 发布说明）推 `origin/dev`（`734505917..6dbfee1e5`），随后台账批次 `e306d5812` 与 `merge(dev) 9beebe1e0` 收口并回推，`origin/dev == main == 9beebe1e0`。
 - 人工功能验收：待验收（态 B：杀夹具进程后应在约两个看门狗窗口内自动落终态；态 A 的入口问题另议，见 BUG-0085）。
 - 发布：未授权。
 
@@ -112,6 +112,6 @@ provider 连接被切断（连接被接受但永不发数据）时，回合必�
   - `bun run check`：lint / mobile-lint / types（root·cli·desktop·docs·mobile）全绿；guards 首轮红在 `check-task-worktrees`（与 TASK-0122/0123/0154/0159/0197/0218 的 release-notes/索引写域重叠），登记 `conflicts_with` 后 `check:guards` 复跑全绿（`ratchet new=0`、release notes 校验通过）。
 - 未运行及原因：态 B 的实机复现（杀夹具进程观察终态）需 dev 实例与夹具 provider，属人工验收；态 A 的 UI 自救入口未定位（记录在 BUG-0085，需一次实机复现确定驻留状态位）。
 - Worktree：`../open-forge-wt/task-0223-turn-terminal-stall-bound`（`git worktree add ... 734505917`，branch `task/TASK-0223-turn-terminal-stall-bound`，`bun install --frozen-lockfile` 成功）；清理待集成后执行。
-- 集成：分支提交 `d592dd53d`（实现 + 回归用例 + 发布说明）与本记录提交；未推送 `origin/dev`（待 coordinator 授权后推送/合并）。
+- 集成：已完成——分支提交 `d592dd53d` 推 `origin/dev`，台账批次 `e306d5812` 与 `merge(dev) 9beebe1e0` 收口后回推；`origin/dev == main == 9beebe1e0`；Task Worktree 已清理。
 - 剩余风险：最坏等待仍约为 **2 × 180s ≈ 6 分钟**（未改单次看门狗，仅去掉级联乘法）；若用户开启中断自动续接，每轮同样有该上界（受既有 `maxContinueAttempts` 约束）。两次连续停滞即失败，不再等待第三次（更早把决定权交回用户/续接策略）。
 
