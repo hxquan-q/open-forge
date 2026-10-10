@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/shared/desktop-brand.ts, apps/desktop/src/shared/
 exclusive_paths: [apps/desktop/src/shared/desktop-brand.ts, apps/desktop/scripts/prepare-pack.js]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-10
 updated: 2026-10-10
 ---
@@ -137,5 +137,6 @@ updated: 2026-10-10
   - `bun run test:impact`：直连阶段 `desktop: direct=2, related=1`、2 文件 18 例全绿；related 阶段需爬取品牌模块的整张引用图（`desktop-brand` 经 i18n 被大量测试引用），超过 5 分钟未进入运行即按「最低充分」终止。此前未限定的 impact 因 `vite.config.ts` 与 HTML 命中保守回退升级为 desktop 全包，跑完 212 个文件（约 2000+ 例）零失败后同样因成本终止。两次均如实记录，不宣称全量通过；全包非本任务的最低充分范围（4 决策点为常量选择，行为面由定向用例与构建端到端覆盖）。
 - 未运行及原因：renderer 完整构建未单跑（define 机制与 main 相同，已由源码合同用例与 main 构建端到端覆盖；全量渲染器构建成本高）。真实 dev 界面与打包产物的用户可见验收未做——按交付合同留待人工验收。`verify:ui:*` 未运行（本次未获授权）。
 - Worktree：未拆出（serial，理由见并发评估）。
+- 集成：main 工作区串行提交 `f1cb54df2`（台账立案：REQ-0011 / TASK-0224 与索引）与 `f7eca251e`（实现 + 测试 + 发布说明，19 文件 +153/−46，pre-commit 通过）；审计 `git log origin/dev..main` 仅本任务两提交后，按长期授权 fast-forward `git push origin main:dev`，`origin/dev` 现指向 `f7eca251e`；本回写记录提交随后同批推送。未夹带未验收提交。
 - 剩余风险：默认档翻转会改变打包产物文件名与更新元数据中的文件名（见 REQ-0011 风险）；docs-site / mobile 品牌面保持三花猫不动，与 Desktop 默认档出现有意不一致；`linux-packaging-contract` 的 author/vendor 随档指向 Allstr ai，若后续要维持 Open Forge 发布口径需显式 `VETTA_BRAND_PROFILE=self`。
 
