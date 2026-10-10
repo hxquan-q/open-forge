@@ -1,7 +1,7 @@
 ---
 id: TASK-0223
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: packages/ai
 requirement:
@@ -20,7 +20,7 @@ read_paths: [packages/ai/src/provider-kit, packages/ai/test/provider-retry.test.
 write_paths: [packages/ai/src/provider-kit/provider-retry.ts, packages/ai/test/provider-retry.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0085-turn-never-reaches-terminal-state.md, project/bugs/README.md, project/tasks/TASK-0223-turn-terminal-stall-bound.md, project/tasks/README.md]
 exclusive_paths: [packages/ai/src/provider-kit/provider-retry.ts]
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0122, TASK-0123, TASK-0154, TASK-0159, TASK-0197, TASK-0218]
 integration_status: pending
 created: 2026-10-10
 updated: 2026-10-10
@@ -41,7 +41,7 @@ provider 连接被切断（连接被接受但永不发数据）时，回合必�
 - 执行方式：parallel
 - 可并行 Task：与其他 packages/* 任务无写路径重叠
 - 前置依赖：无
-- 冲突文件/独占路径：见 frontmatter `exclusive_paths`（`provider-retry.ts` 为本任务独占）
+- 冲突文件/独占路径：见 frontmatter `exclusive_paths`（`provider-retry.ts` 为本任务独占）；`.github/release-notes/v0.1.3.md`、`project/tasks/README.md` 是**所有活跃任务共写**的当前版本说明与索引，`check-task-worktrees` 报出与 TASK-0122/0123/0154/0159/0197/0218 的写域重叠，已按契约登记 `conflicts_with`（集成时这些文件按序串行合并；代码面互不冲突）。
 - Branch：`task/TASK-0223-turn-terminal-stall-bound`
 - Worktree：`../open-forge-wt/task-0223-turn-terminal-stall-bound`（base `734505917`）
 - 集成负责人：coordinator（推送 `origin/dev` 需其授权）
@@ -85,10 +85,10 @@ provider 连接被切断（连接被接受但永不发数据）时，回合必�
 
 ## 验收分层
 
-- 工程验证：待执行（下方交付记录回填命令与结果）。
-- 技术评审：自审；边界（停滞上限与共享预算的先后、既有两例停滞用例的兼容）由新增/既有用例覆盖。
-- 集成：见交付记录（分支提交；推送需 coordinator 授权）。
-- 人工功能验收：待验收（态 B：杀夹具进程后不再无限「处理中」；态 A 的入口问题另议）。
+- 工程验证：通过；`packages/ai/test/provider-retry.test.ts` 新增用例先红（旧实现打开 4 次 attempt）后绿；包内全量 63 文件 / 516 例、impact 33 文件 / 321 例、完整 check（lint/mobile-lint/types 五面/guards）全绿。
+- 技术评审：自审；停滞上限只收紧停滞轨道，transient/rate_limit 预算、退避与事件形状未动，既有两例停滞用例保持通过。
+- 集成：分支 `task/TASK-0223-turn-terminal-stall-bound` 提交就绪，`integration_status: pending`（推送 `origin/dev` 与合并由 coordinator 授权后执行）。
+- 人工功能验收：待验收（态 B：杀夹具进程后应在约两个看门狗窗口内自动落终态；态 A 的入口问题另议，见 BUG-0085）。
 - 发布：未授权。
 
 ## 功能验收包
@@ -101,8 +101,17 @@ provider 连接被切断（连接被接受但永不发数据）时，回合必�
 
 ## 交付记录
 
-- 实际修改：（实施后回填）
-- 实际运行：（实施后回填）
-- 未运行及原因：（实施后回填）
-- Worktree：`../open-forge-wt/task-0223-turn-terminal-stall-bound`（创建/检查/清理见交付记录）
-- 剩余风险：（实施后回填）
+- 实际修改：
+  - `packages/ai/src/provider-kit/provider-retry.ts`：新增 `PROVIDER_STREAM_STALL_MAX_RETRIES = 1` 与停滞专用计数；停滞超过上限时不再消费 transient 预算，直接以停滞失败结算；`streamWithProviderRetry` 的文档注释同步说明停滞在共享预算之外另有一层更紧的上限。
+  - `packages/ai/test/provider-retry.test.ts`：新增回归用例「provider 每次都停滞 ⇒ 最多 2 次 attempt 后落 `error` 终态（`stream_idle_timeout`、仅 1 次 `retry` 事件、退避 1000ms）」。
+  - `.github/release-notes/v0.1.3.md`「修复」一条（用户可见：死连接不再长时间「处理中」）。
+- 实际运行：
+  - 红：新用例在旧实现下 `expected [4 attempts] to have a length of 2`（旧实现继续在 transient 预算内重试停滞）。
+  - 绿：`packages/ai/test/provider-retry.test.ts` + `provider-stream-regression.test.ts` + `provider-retry-policy.test.ts` ⇒ 3 文件 / 71 例；`packages/ai` 全量 ⇒ 63 文件 / **516 例**。
+  - `bun run test:impact -- packages/ai/src/provider-kit/provider-retry.ts` ⇒ related 33 文件 / **321 例** 全绿。
+  - `bun run check`：lint / mobile-lint / types（root·cli·desktop·docs·mobile）全绿；guards 首轮红在 `check-task-worktrees`（与 TASK-0122/0123/0154/0159/0197/0218 的 release-notes/索引写域重叠），登记 `conflicts_with` 后 `check:guards` 复跑全绿（`ratchet new=0`、release notes 校验通过）。
+- 未运行及原因：态 B 的实机复现（杀夹具进程观察终态）需 dev 实例与夹具 provider，属人工验收；态 A 的 UI 自救入口未定位（记录在 BUG-0085，需一次实机复现确定驻留状态位）。
+- Worktree：`../open-forge-wt/task-0223-turn-terminal-stall-bound`（`git worktree add ... 734505917`，branch `task/TASK-0223-turn-terminal-stall-bound`，`bun install --frozen-lockfile` 成功）；清理待集成后执行。
+- 集成：分支提交 `d592dd53d`（实现 + 回归用例 + 发布说明）与本记录提交；未推送 `origin/dev`（待 coordinator 授权后推送/合并）。
+- 剩余风险：最坏等待仍约为 **2 × 180s ≈ 6 分钟**（未改单次看门狗，仅去掉级联乘法）；若用户开启中断自动续接，每轮同样有该上界（受既有 `maxContinueAttempts` 约束）。两次连续停滞即失败，不再等待第三次（更早把决定权交回用户/续接策略）。
+

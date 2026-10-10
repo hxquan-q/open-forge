@@ -1,7 +1,7 @@
 ---
 id: BUG-0085
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop conversation / packages/ai
 source: VERIFY-0017 组一续测（2026-10-08 排 TASK-0191 时发现并确定性复现）；2026-10-10 用户点名修复
@@ -68,5 +68,6 @@ updated: 2026-10-10
 
 ## 修复与验证
 
-- 修复：见 [TASK-0223](../tasks/TASK-0223-turn-terminal-stall-bound.md)：为停滞增加专用重试上限 `PROVIDER_STREAM_STALL_MAX_RETRIES = 1`，停滞仍走既有 abort+drain 与 transient 预算，但级联被限制为「最多 2 次停滞窗口」。
-- 测试/检查：见 TASK-0223 交付记录。
+- 修复：见 [TASK-0223](../tasks/TASK-0223-turn-terminal-stall-bound.md)：停滞增加专用重试上限 `PROVIDER_STREAM_STALL_MAX_RETRIES = 1`（停滞仍走既有 abort+drain 与 transient 预算，但级联最多 2 个看门狗窗口）。
+- 测试：新增回归用例先红（旧实现 4 次 attempt）后绿；`packages/ai` 全量 516 例、impact 321 例、完整 check 全绿（详见 TASK-0223 交付记录）。
+- 验证边界：态 B 的实机复现与态 A 的 UI 入口属人工验收；编号变更（原 BUG-0082 → BUG-0085）见文首说明。
