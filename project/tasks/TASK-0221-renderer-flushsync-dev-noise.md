@@ -1,5 +1,5 @@
 ---
-id: TASK-0219
+id: TASK-0221
 type: task
 status: verifying
 priority: P3
@@ -17,7 +17,7 @@ branch: main
 worktree: main-workspace
 base_commit: a7f0584bc
 read_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel, apps/desktop/src/main/logger, apps/desktop/src/main/window-manager.ts]
-write_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/useSidebarSelectionIntent.ts, apps/desktop/src/main/logger/renderer-console-policy.ts, apps/desktop/src/main/logger/renderer-console-policy.test.ts, apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0083-flushsync-lifecycle-dev-warning.md, project/bugs/README.md, project/tasks/TASK-0219-renderer-flushsync-dev-noise.md, project/tasks/README.md]
+write_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/useSidebarSelectionIntent.ts, apps/desktop/src/main/logger/renderer-console-policy.ts, apps/desktop/src/main/logger/renderer-console-policy.test.ts, apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0083-flushsync-lifecycle-dev-warning.md, project/bugs/README.md, project/tasks/TASK-0221-renderer-flushsync-dev-noise.md, project/tasks/README.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/useSidebarSelectionIntent.ts, apps/desktop/src/main/logger/renderer-console-policy.ts]
 depends_on: []
 conflicts_with: []

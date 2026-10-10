@@ -1,5 +1,5 @@
 ---
-id: TASK-0220
+id: TASK-0222
 type: task
 status: verifying
 priority: P1
@@ -17,7 +17,7 @@ branch: main
 worktree: main-workspace
 base_commit: 66a59d25e
 read_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor, apps/desktop/src/renderer/domains/conversation/connectors/team, apps/desktop/src/renderer/shared/lib/input-tokens]
-write_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/plugins/ControlledValueBridgePlugin.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx, .github/release-notes/v0.1.3.md, project/bugs/BUG-0084-team-composer-token-input-ime-fight.md, project/bugs/README.md, project/tasks/TASK-0220-team-composer-token-input-fight.md, project/tasks/README.md]
+write_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/plugins/ControlledValueBridgePlugin.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx, .github/release-notes/v0.1.3.md, project/bugs/BUG-0084-team-composer-token-input-ime-fight.md, project/bugs/README.md, project/tasks/TASK-0222-team-composer-token-input-fight.md, project/tasks/README.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/plugins/ControlledValueBridgePlugin.tsx]
 depends_on: []
 conflicts_with: []
