@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0224` | `verifying` | — | 品牌档案默认口径（REQ-0011）：dev 与打包默认切到 distribution（Allstr ai / 小爱ai），显式 `VETTA_BRAND_PROFILE=self` 保留 Open Forge；4 决策点 + 4 辅助脚本对齐；定向 18 例、打包 node 13/13、main 构建端到端（产物内联 Allstr ai）与完整 check 全绿；serial，main 工作区串行，待 dev 界面/打包产物人工验收。 |
 | `TASK-0223` | `verifying` | — | BUG-0085：停滞专用重试上限（最多 2 个看门狗窗口后落终态），消掉死连接的 ~30 分钟假死；红 4→2 次 attempt，ai 包 516 例 / impact 321 例 / check 全绿；已随 `9beebe1e0` 推 `origin/dev`，Worktree 已清理。 |
 | `TASK-0222` | `verifying` | — | BUG-0084：受控投影规范判等修复抢键盘 + 覆盖扩展（目录/图片/skill/scene/connector/member、流式重渲染、外部移除、mention 元数据）；定向 68、impact 10、完整 check 全绿；serial，main 工作区串行集成。 |
 | `TASK-0221` | `verifying` | — | BUG-0083：移除第一方 `flushSync`（侧栏选择意图）并按 BUG-0048 先例精确过滤 React DEV 噪音；定向 53、impact 271、完整 check 全绿；serial，main 工作区串行集成。 |

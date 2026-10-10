@@ -38,5 +38,6 @@ updated: 2026-09-23
 - `APP_RUNTIME_NAME` 保持 `vetta`，除非存量凭据迁移方案另行设计并通过专项验证。
 - 公开包 scope 只有在目标 npm 组织注册确认后迁移；不在本任务内发布 npm 包。
 - 品牌、更新、数据目录、凭据、文档和社区入口按 PLAN-0003 对应 Task 独立验证。
+- 2026-10-10 起，Desktop 默认构建口径切换为外部分发品牌：dev 与打包默认呈现 Allstr ai / 小爱ai（见 [REQ-0011](REQ-0011-brand-profile-default-distribution.md)）；显式 `VETTA_BRAND_PROFILE=self` 仍提供本需求的 Open Forge 品牌面。本需求其余验收标准与冻结标识合同不变。
 
 完整发现清单和 15 项已冻结决策见 [`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) 与 [`ISSUE-0001`](../issues/ISSUE-0001-rebrand-infrastructure-decisions.md)。
