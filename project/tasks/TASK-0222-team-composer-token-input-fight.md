@@ -1,5 +1,5 @@
 ---
-id: TASK-0220
+id: TASK-0222
 type: task
 status: verifying
 priority: P1
@@ -17,7 +17,7 @@ branch: main
 worktree: main-workspace
 base_commit: 66a59d25e
 read_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor, apps/desktop/src/renderer/domains/conversation/connectors/team, apps/desktop/src/renderer/shared/lib/input-tokens]
-write_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/plugins/ControlledValueBridgePlugin.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx, .github/release-notes/v0.1.3.md, project/bugs/BUG-0084-team-composer-token-input-ime-fight.md, project/bugs/README.md, project/tasks/TASK-0220-team-composer-token-input-fight.md, project/tasks/README.md]
+write_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/plugins/ControlledValueBridgePlugin.tsx, apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/ControlledValueBridge.test.tsx, .github/release-notes/v0.1.3.md, project/bugs/BUG-0084-team-composer-token-input-ime-fight.md, project/bugs/README.md, project/tasks/TASK-0222-team-composer-token-input-fight.md, project/tasks/README.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/conversation/components/input-bar/editor/plugins/ControlledValueBridgePlugin.tsx]
 depends_on: []
 conflicts_with: []
@@ -125,9 +125,10 @@ updated: 2026-10-10
   - 红/绿证据：新回归测试在旧判等语义下（临时恢复 `text` 逐字符比较与 `isDirectory` 比较）报 `expected 2 to be 1`；完整修复后 3 例全绿；探针实测修复前文件 token 每步 +2 次 `$applySegments`（1 次为测试自身调用），纯文本仅自身 1 次。
   - `bun run test:impact -- <两个改动文件>`：direct 1 文件 / 3 例 + related 23 文件 / 107 例全绿。
   - `bun run check`：lint、mobile-lint、check:types（root/cli/desktop/docs/mobile）、check:guards 全部 exit 0；首轮红为 `check-modified-file-notices`（修改 upstream 文件与新增测试缺声明头），补声明头后单跑守卫 `new=0` 并重跑完整 check 全绿。
+  - 合并 `origin/dev` 后的集成 worktree 复验：完整 check 全绿（lint/mobile-lint/types 五面/guards）；`test:impact` related 47/49 文件、318 例通过（含本任务的三处定向用例），2 个主进程套件仅因新检出缺 electron 二进制而收集失败，属环境性。
 - 未运行及原因：真实输入法与实机粘贴文件的人工验收未运行（需用户实机；修复前必现已由用户报告与测试级证据支撑）。
 - Worktree：未拆出；serial + `exclusive_paths` 已声明。
-- 集成：main 工作区串行提交 `c68ece72c`（修复 + 回归测试 + 发布说明）；本条记录随任务记录提交落地，未推共享分支。
+- 集成：main 工作区串行提交 `c68ece72c`（修复 + 回归测试 + 发布说明）；随后按 coordinator 授权经集成 worktree 合并 `origin/dev`（merge `f35d09ccb`）并推 `origin/dev`；本记录在合并时因 `TASK-0219/0220` 已被 dev 占用而重编号为 `TASK-0222`（见重编号提交 `c1cc55506`）。
 - 集成（覆盖扩展）：提交 `c9c42332d`（10 例回归覆盖 + 「其他」发布说明条目）；定向 7 文件 68 例、impact 10 例、完整 check 与 guards 全绿。
 - 剩余风险：判等放宽后，token 展示元数据的变化（如成员改名后的 chip 文本）不会立刻回写编辑器——这是有意的（编辑器持有元数据，回写会重建内容）；外部文本真值变化仍走同步（测试 3 覆盖）。`file`/`image` kind 不互相放宽，各插入入口均按 `isImagePath` 分流。
 

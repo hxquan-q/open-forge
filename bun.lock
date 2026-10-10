@@ -666,7 +666,7 @@
     },
     "packages/plugins/presets/allstar-coding": {
       "name": "@vetta/plugin-preset-allstar-coding",
-      "version": "0.2.0",
+      "version": "0.3.1",
       "devDependencies": {
         "@types/node": "^22.10.5",
         "@types/react": "^19.1.1",

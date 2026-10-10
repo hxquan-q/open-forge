@@ -46,4 +46,6 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0029`：fork 的 GitHub Actions 预算耗尽，全部 workflow 秒败于 `an Actions budget is preventing further use`（draft；阻塞 TASK-0183/0184/0180/0182/0179 等的「CI 复跑绿」验收；待用户决定恢复预算或迁移 CI，本地/单元级证据可先行）。
 - `ISSUE-0030`：allstar-coding 的 ac-fence 事中拦截层经 `origin/chenxvhua` 分支进入，插件权限从 `agent.skills.control` 扩到另加 `agent.hooks.register`/`agent.hookHandler.execute` 且判定 fail-open（draft；需求权限最小集合与验收级别的方向，TASK-0208 先按现状集成）。
 - `ISSUE-0031`：qwen3.8-27b 端点（`:18081`）实测输出不连贯、任何 prompt 均无法获得可用回复；应用侧链路经 glm 对照证伪，疑点在端点 `/responses` 实现或模型部署（draft；推荐先核查端点，再按需要 wire 档比对。2026-10-09 用户授权 `glm/glm-5.3-flash` 作为验收模型（隔离 Debug Profile），VERIFY-0017 的模型面验收解阻；qwen3.8 本身在其闭合前仍禁用于真实流程）。
+- `ISSUE-0032`：ac-fence 写域 glob 与 agent-browser 通道的词法匹配边界——写域 `..` 逃逸（v0.4 起既有面）、shell 重定向写不受写域判定、通道引擎 URL scheme 越界均待统一裁决（draft；BUG-0082 只修了黑盒新增面，全角色统一修法与宿主侧配合待触发）。
 - `ISSUE-0033`：`artifact` 工具 union 顶层 schema 在 glm 网关上不可用——模型 13 次调用全部空参被拒，报告退化为普通 write 文件；同会话 object 顶层工具全部正常，主假设是网关不接受非 object 顶层的 function parameters（draft；推荐 C 错误信息带 schema 提示 + B schema 包 object 顶层可移植化，wire 档后备定谳；阻塞 TASK-0074 与 0025/0026 的 Artifact 产出条款）。
+

@@ -9,7 +9,7 @@ requirement:
 plan:
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0219]
+related_tasks: [TASK-0221]
 related_issues: []
 created: 2026-10-10
 updated: 2026-10-10
@@ -79,7 +79,7 @@ dev 依赖图内全部 `flushSync` 调用点（`apps/desktop/node_modules/.vite/
 
 ## 修复与验证
 
-- 修复：见 [TASK-0219](../tasks/TASK-0219-renderer-flushsync-dev-noise.md)（第一方 `flushSync` 移除 + DEV 噪音精确过滤）；代码与发布说明提交 `e8377d854`。
+- 修复：见 [TASK-0221](../tasks/TASK-0221-renderer-flushsync-dev-noise.md)（第一方 `flushSync` 移除 + DEV 噪音精确过滤）；代码与发布说明提交 `e8377d854`。
 - 测试：`renderer-console-policy.test.ts`、`useProjectsPanelModel.selectSession.test.tsx`、`DefaultSessionRowView.test.tsx`（见 TASK-0219 交付记录）。
 - 检查：`bun run check`（见 TASK-0219 交付记录）。
 - 未运行及原因：真实 dev 实例带 stack 的调用方定位（需要可复现的用户操作路径）；本仓已消除第一方调用点，依赖侧调用方若再出现仍按本记录的候选表继续处理。

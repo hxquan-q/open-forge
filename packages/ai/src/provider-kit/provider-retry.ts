@@ -24,6 +24,14 @@ export const PROVIDER_RATE_LIMIT_MAX_RETRIES = 10;
 export const PROVIDER_TRANSIENT_MAX_RETRIES = 10;
 /** Default zero-event watchdog for one provider attempt. */
 export const PROVIDER_STREAM_IDLE_TIMEOUT_DEFAULT_MS = 180_000;
+/**
+ * Stall-specific retry cap. A stalled attempt eats a whole zero-event watchdog window
+ * (180s by default), so letting stalls ride the shared transient budget keeps a
+ * user-visible turn "processing" for ~30 minutes on a connection that is accepted but
+ * never speaks (BUG-0085). Stalls therefore re-open at most this many times before the
+ * failure is surfaced; ordinary transient failures keep the full shared budget.
+ */
+export const PROVIDER_STREAM_STALL_MAX_RETRIES = 1;
 
 const PROVIDER_RATE_LIMIT_BASE_DELAY_MS = 2_000;
 const PROVIDER_RATE_LIMIT_MAX_DELAY_MS = 30_000;
@@ -128,8 +136,11 @@ export interface ProviderRetryStreamConfig {
  * tracks span request setup and stream transport so switching phases never
  * resets or multiplies them. A stalled attempt is aborted and drained before
  * the next attempt opens so the abandoned request cannot wake later and
- * produce a duplicate provider call. Only a complete `done` response ends the
- * loop successfully; exhausted budgets surface the original failure unchanged.
+ * produce a duplicate provider call. Stalls carry their own tighter retry cap
+ * (`PROVIDER_STREAM_STALL_MAX_RETRIES`) on top of the shared budget, because
+ * each one already costs a full watchdog window. Only a complete `done`
+ * response ends the loop successfully; exhausted budgets surface the original
+ * failure unchanged.
  */
 export function streamWithProviderRetry(
 	openAttempt: ProviderRetryOpenAttempt,
@@ -163,6 +174,8 @@ async function driveProviderRetryStream(
 	let outputLimitRepairTried = false;
 	let sharedPartial: AssistantMessage | undefined;
 	let emittedStart = false;
+	/** Stalls counted separately: each one already costs a full watchdog window. */
+	let stallRetries = 0;
 
 	const forwardEvent = (event: AssistantMessageEvent): void => {
 		if (event.type === "start") {
@@ -314,6 +327,7 @@ async function driveProviderRetryStream(
 		let failure: AIErrorDetails;
 		if (stalled) {
 			failure = stalledFailureDetails(model, idleTimeoutMs);
+			stallRetries += 1;
 		} else if (thrown !== undefined) {
 			failure = toFailureDetails(thrown, model);
 		} else if (terminal) {
@@ -324,7 +338,11 @@ async function driveProviderRetryStream(
 		}
 
 		if (tryOutputLimitRepair(failure, !attemptSawStart)) continue;
-		const decision = decideRetry(failure);
+		// Stalls are capped tighter than the shared transient budget: a cascade of full
+		// watchdog windows is what turns a dead connection into a "processing" turn for
+		// ~30 minutes (BUG-0085). The failure still surfaces unchanged for the caller's
+		// retry/continuation policy to act on.
+		const decision = stalled && stallRetries > PROVIDER_STREAM_STALL_MAX_RETRIES ? undefined : decideRetry(failure);
 		if (decision) {
 			pushRetryEvent(outer, decision, failure);
 			if (!(await waitForRetryDelay(sleep, decision.delayMs, signal))) {

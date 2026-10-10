@@ -15,6 +15,11 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0223` | `verifying` | — | BUG-0085：停滞专用重试上限（最多 2 个看门狗窗口后落终态），消掉死连接的 ~30 分钟假死；红 4→2 次 attempt，ai 包 516 例 / impact 321 例 / check 全绿；独立 Task Worktree，待集成。 |
+| `TASK-0222` | `verifying` | — | BUG-0084：受控投影规范判等修复抢键盘 + 覆盖扩展（目录/图片/skill/scene/connector/member、流式重渲染、外部移除、mention 元数据）；定向 68、impact 10、完整 check 全绿；serial，main 工作区串行集成。 |
+| `TASK-0221` | `verifying` | — | BUG-0083：移除第一方 `flushSync`（侧栏选择意图）并按 BUG-0048 先例精确过滤 React DEV 噪音；定向 53、impact 271、完整 check 全绿；serial，main 工作区串行集成。 |
+| `TASK-0220` | `verifying` | — | 修复 BUG-0082（含残余轮）：黑盒 shell 白名单加引号感知元字符扫描（引号外组合/替换/重定向拦、双引号内 $() 与反引号同样拦、单引号保持字面量、转义引号不开区、未闭合 fail-safe）、读域拒 `..` 与绝对路径；两轮红测先行（3+2 failed）转绿，fence-judge 80 项/包内 133 项/impact 91 项/完整 check 全绿；写域 `..` 等既有面登记 ISSUE-0032。 |
+| `TASK-0219` | `verifying` | — | allstar-coding 黑盒环节升级（v0.5.2，包版本 0.3.2）：通道探测→三态分流→文档 v2→可选自测→用户核验；围栏为 blackbox 角色加窄读域（docs/ac/ 前缀、禁目录发现类）与 shell 白名单（仅 agent-browser）；fence-judge 74 项、包内 53 项、impact 127 项与完整 check 全绿；技能合同面待实机验收。白名单/读域两个绕过口由 TASK-0220 修复。 |
 | `TASK-0218` | `verifying` | — | Browser 能力/缺页恢复指引 a326a644b，独立 Task Worktree；定向 63、impact 590、Desktop 25、check 通过；main 有其他任务未提交修改，待串行集成与模型验收。 |
 | `TASK-0215` | `done` | — | BUG-0079：按实际工具生成终端能力指引，区分 MCP 检索与内置命令；定向、impact、check 通过，Desktop 全量 4909 通过；CLI 首轮 3 启动超时，整文件复跑 14/14。2026-10-10 按 VERIFY-0017 分档口径闭合：模型案例在授权模型 glm-5.3-flash 真实回合成立——网络诊断三命令实测执行、无「没有终端」误判、部分失败如实解释；MCP 字面子场景受限于 profile 未配 MCP 服务器（环境余量）。 |
 | `TASK-0207` | `done` | PLAN-0006 | 修复 BUG-0078：`browser_tab` 的 `elementRef` 同时接受 snapshot 打印的编码串与对象，校验前解码为对象 ref，对外 Schema 也公布两种形式；定向 14 项/impact 119 项/desktop 12 项/check 全绿；2026-10-07 隔离实例 + 真实模型实测 snapshot→原样回传编码串 click→返回 `click ok`、页内按钮文案变更与新增节点可见（VERIFY-0017 组一）。 |

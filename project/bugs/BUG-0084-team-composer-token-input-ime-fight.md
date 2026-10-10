@@ -9,7 +9,7 @@ requirement:
 plan:
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0220]
+related_tasks: [TASK-0222]
 related_issues: []
 created: 2026-10-10
 updated: 2026-10-10
@@ -61,5 +61,5 @@ updated: 2026-10-10
 
 ## 修复与验证
 
-- 修复：见 [TASK-0220](../tasks/TASK-0220-team-composer-token-input-fight.md)：受控投影改为「规范序列化文本一致 + 结构（kind 与 wire 身份）一致」判等，token 展示元数据与序列化器合成分隔符不再参与；代码与回归测试提交 `c68ece72c`。
+- 修复：见 [TASK-0222](../tasks/TASK-0222-team-composer-token-input-fight.md)：受控投影改为「规范序列化文本一致 + 结构（kind 与 wire 身份）一致」判等，token 展示元数据与序列化器合成分隔符不再参与；代码与回归测试提交 `c68ece72c`。
 - 测试/检查：见 TASK-0220 交付记录。

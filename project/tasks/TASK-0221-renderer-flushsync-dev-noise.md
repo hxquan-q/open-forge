@@ -1,5 +1,5 @@
 ---
-id: TASK-0219
+id: TASK-0221
 type: task
 status: verifying
 priority: P3
@@ -17,7 +17,7 @@ branch: main
 worktree: main-workspace
 base_commit: a7f0584bc
 read_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel, apps/desktop/src/main/logger, apps/desktop/src/main/window-manager.ts]
-write_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/useSidebarSelectionIntent.ts, apps/desktop/src/main/logger/renderer-console-policy.ts, apps/desktop/src/main/logger/renderer-console-policy.test.ts, apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0083-flushsync-lifecycle-dev-warning.md, project/bugs/README.md, project/tasks/TASK-0219-renderer-flushsync-dev-noise.md, project/tasks/README.md]
+write_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/useSidebarSelectionIntent.ts, apps/desktop/src/main/logger/renderer-console-policy.ts, apps/desktop/src/main/logger/renderer-console-policy.test.ts, apps/desktop/src/main/window-manager.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0083-flushsync-lifecycle-dev-warning.md, project/bugs/README.md, project/tasks/TASK-0221-renderer-flushsync-dev-noise.md, project/tasks/README.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/useSidebarSelectionIntent.ts, apps/desktop/src/main/logger/renderer-console-policy.ts]
 depends_on: []
 conflicts_with: []
@@ -112,8 +112,9 @@ updated: 2026-10-10
   - 定向 4 文件 53 例全绿：`bun --cwd apps/desktop run test -- src/main/logger/renderer-console-policy.test.ts src/renderer/domains/project/components/sidebar/projects/panel/useProjectsPanelModel.selectSession.test.tsx src/renderer/domains/project/components/sidebar/projects/panel/DefaultSessionRowView.test.tsx src/renderer/domains/project/hooks/sidebar-conversation-selection.test.tsx`（4 files / 53 tests passed）。
   - `bun run test:impact -- <本次改动文件>`：direct 10 例 + related 35 文件 / 261 例全绿。
   - `bun run check`：lint、mobile-lint、check:types（root/cli/desktop/docs/mobile）与 check:guards 全部 exit 0；首轮唯一红为 `check-modified-file-notices` 的「缺少声明头」，补头后单跑该守卫 `new=0` 并重跑完整 check 全绿。
+  - 合并 `origin/dev` 后的集成 worktree 复验：完整 check 全绿（lint/mobile-lint/types 五面/guards）；`test:impact` related 47/49 文件、318 例通过，2 个主进程套件（`file-protocol`、`ipc/browser-view`）仅因新检出缺 electron 二进制而收集失败，属环境性、与本次改动无关。
 - 未运行及原因：真实 dev 实例的日志复验未运行——BUG-0083 的交互触发路径未知，无法在此环境确定性复现；jsdom/vitest 受 `act()` 的 executionContext 语义限制无法重放该 DEV 告警（已在 BUG-0083 记录）。
 - Worktree：未拆出；serial + `exclusive_paths` 已声明（理由见并发评估）。main 工作区存在他人未提交的 `project/` 台账修改，本次只追加自己的文件与索引行，未改动其内容。
-- 集成：main 工作区串行提交 `e8377d854`（代码 + 发布说明）；本条记录与索引随本任务记录提交落地，未推共享分支。
+- 集成：main 工作区串行提交 `e8377d854`（代码 + 发布说明）；随后按 coordinator 授权经集成 worktree 合并 `origin/dev`（merge `f35d09ccb`）并推 `origin/dev`；本记录在合并时因 `TASK-0219/0220` 已被 dev 占用而重编号为 `TASK-0221`（见重编号提交 `c1cc55506`）。
 - 剩余风险：依赖侧 `flushSync` 调用方仍未定位（BUG-0083 候选表：Lexical 装饰器监听器 + 第一方桥在 effect 内 `editor.update` 为最可能路径）；若再出现，按 BUG-0083 的带 stack 抓取继续。侧栏替换 `flushSync` 后的绘制顺序保证由既有行为用例覆盖，真实低配机上的高亮延迟未见回归证据，但也未做真机耗时对照（原问题的量化基线本就不存在）。
 
