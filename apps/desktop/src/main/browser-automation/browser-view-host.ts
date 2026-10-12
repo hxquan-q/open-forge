@@ -30,12 +30,15 @@ export interface BrowserViewContents {
 	getURL(): string;
 	getTitle(): string;
 	loadURL(url: string): Promise<void>;
-	goBack(): void;
-	goForward(): void;
+	/** Electron 39 起导航历史挂在 contents.navigationHistory，旧 goBack/canGoBack 直属方法已废弃。 */
+	readonly navigationHistory: {
+		canGoBack(): boolean;
+		canGoForward(): boolean;
+		goBack(): void;
+		goForward(): void;
+	};
 	reload(): void;
 	stop(): void;
-	canGoBack(): boolean;
-	canGoForward(): boolean;
 	setWindowOpenHandler(handler: (details: { url: string }) => { action: "deny" | "allow" }): void;
 	on(event: string, listener: (...args: unknown[]) => void): void;
 	once(event: string, listener: (...args: unknown[]) => void): void;
@@ -161,10 +164,10 @@ export class InAppBrowserViewHost {
 		if (!contents || contents.isDestroyed()) return;
 		switch (action) {
 			case "back":
-				if (contents.canGoBack()) contents.goBack();
+				if (contents.navigationHistory.canGoBack()) contents.navigationHistory.goBack();
 				break;
 			case "forward":
-				if (contents.canGoForward()) contents.goForward();
+				if (contents.navigationHistory.canGoForward()) contents.navigationHistory.goForward();
 				break;
 			case "reload":
 				contents.reload();
@@ -314,8 +317,8 @@ export class InAppBrowserViewHost {
 			workspaceId,
 			url: contents.getURL(),
 			title: contents.getTitle(),
-			canBack: contents.canGoBack(),
-			canForward: contents.canGoForward(),
+			canBack: contents.navigationHistory.canGoBack(),
+			canForward: contents.navigationHistory.canGoForward(),
 			loading: record.loading,
 			failed: record.failed,
 		};

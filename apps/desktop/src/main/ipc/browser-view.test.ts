@@ -33,16 +33,14 @@ const captured = vi.hoisted(() => {
 			this.loads.push(url);
 			this.url = url;
 		}
-		goBack(): void {}
-		goForward(): void {}
+		readonly navigationHistory = {
+			canGoBack: () => false,
+			canGoForward: () => false,
+			goBack: () => {},
+			goForward: () => {},
+		};
 		reload(): void {}
 		stop(): void {}
-		canGoBack(): boolean {
-			return false;
-		}
-		canGoForward(): boolean {
-			return false;
-		}
 		setWindowOpenHandler(): void {}
 		on(event: string, listener: (...args: unknown[]) => void): void {
 			const list = this.listeners.get(event) ?? [];

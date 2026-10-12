@@ -20,13 +20,27 @@ class FakeContents implements BrowserViewContents {
 	url = "about:blank";
 	title = "";
 	destroyed = false;
-	back = false;
-	forward = false;
 	loads: string[] = [];
 	reloads = 0;
 	stops = 0;
-	goBacks = 0;
-	goForwards = 0;
+	readonly navigationHistory = {
+		back: false,
+		forward: false,
+		goBacks: 0,
+		goForwards: 0,
+		canGoBack(): boolean {
+			return this.back;
+		},
+		canGoForward(): boolean {
+			return this.forward;
+		},
+		goBack(): void {
+			this.goBacks += 1;
+		},
+		goForward(): void {
+			this.goForwards += 1;
+		},
+	};
 	openHandler: ((d: { url: string }) => { action: string }) | null = null;
 	private listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 
@@ -43,23 +57,11 @@ class FakeContents implements BrowserViewContents {
 		this.loads.push(url);
 		this.url = url;
 	}
-	goBack(): void {
-		this.goBacks += 1;
-	}
-	goForward(): void {
-		this.goForwards += 1;
-	}
 	reload(): void {
 		this.reloads += 1;
 	}
 	stop(): void {
 		this.stops += 1;
-	}
-	canGoBack(): boolean {
-		return this.back;
-	}
-	canGoForward(): boolean {
-		return this.forward;
 	}
 	setWindowOpenHandler(handler: (details: { url: string }) => { action: "deny" | "allow" }): void {
 		this.openHandler = handler;
@@ -177,7 +179,7 @@ describe("InAppBrowserViewHost", () => {
 		const contents = views[0].webContents;
 		contents.fire("did-start-loading");
 		expect(events.at(-1)?.state).toMatchObject({ workspaceId: "ws-1", loading: true, failed: false });
-		contents.back = true;
+		contents.navigationHistory.back = true;
 		contents.url = "https://x.example";
 		contents.fire("did-navigate", {}, "https://x.example");
 		expect(events.at(-1)?.state).toMatchObject({ url: "https://x.example", canBack: true, loading: false });
@@ -204,17 +206,23 @@ describe("InAppBrowserViewHost", () => {
 		expect(views[0].webContents.loads).toEqual(["https://ok.example"]);
 	});
 
-	it("control 映射 back/forward/reload/stop；不可回退时不 goBack", () => {
+	it("control 映射 back/forward/reload/stop；不可回退/前进时不调用 navigationHistory", () => {
 		const { host, views } = makeHost();
 		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
 		const contents = views[0].webContents;
+		const history = contents.navigationHistory;
 		host.control("ws-1", "back");
-		expect(contents.goBacks).toBe(0);
-		contents.back = true;
+		host.control("ws-1", "forward");
+		expect(history.goBacks).toBe(0);
+		expect(history.goForwards).toBe(0);
+		history.back = true;
+		history.forward = true;
 		host.control("ws-1", "back");
+		host.control("ws-1", "forward");
 		host.control("ws-1", "reload");
 		host.control("ws-1", "stop");
-		expect(contents.goBacks).toBe(1);
+		expect(history.goBacks).toBe(1);
+		expect(history.goForwards).toBe(1);
 		expect(contents.reloads).toBe(1);
 		expect(contents.stops).toBe(1);
 	});
