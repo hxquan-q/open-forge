@@ -78,6 +78,10 @@ class FakeContents implements BrowserViewContents {
 	async capturePage(): Promise<unknown> {
 		return {};
 	}
+	close(): void {
+		this.destroyed = true;
+		this.fire("destroyed");
+	}
 	fire(event: string, ...args: unknown[]): void {
 		for (const listener of this.listeners.get(event) ?? []) listener(...args);
 	}
@@ -256,6 +260,40 @@ describe("InAppBrowserViewHost", () => {
 		host.setInputPassthrough("ws-1", true);
 		host.setInputPassthrough("ws-1", false);
 		expect(views[0].visible).toBe(false);
+	});
+
+	it("detached view 超过上限按最久未用驱逐销毁，attached 永不驱逐（BUG-0094）", async () => {
+		const { host, views } = makeHost();
+		// 4 个工作区各开一次浏览器后切走：detached=4 > 上限 3，最早 detach 的被回收。
+		for (const id of ["ws-1", "ws-2", "ws-3", "ws-4"]) {
+			host.attach({ workspaceId: id, bounds: BOUNDS });
+			host.detach(id);
+		}
+		expect(views[0].webContents.destroyed).toBe(true);
+		expect(host.getState("ws-1")).toBeNull();
+		expect(views[1].webContents.destroyed).toBe(false);
+		expect(views[2].webContents.destroyed).toBe(false);
+		expect(views[3].webContents.destroyed).toBe(false);
+
+		// 被逐工作区重新 attach：新 view 创建并按 attach url 重新加载（可逆恢复）。
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, url: "https://a.example" });
+		expect(views).toHaveLength(5);
+		await vi.waitFor(() => expect(views[4].webContents.loads).toEqual(["https://a.example"]));
+	});
+
+	it("当前 attach 的 view 永不参与驱逐；刚 detach 的最新的也不会被逐", () => {
+		const { host, views } = makeHost();
+		for (const id of ["ws-1", "ws-2", "ws-3", "ws-4"]) {
+			host.attach({ workspaceId: id, bounds: BOUNDS });
+			host.detach(id);
+		}
+		// ws-1 已在上限外被逐；重挂 ws-2 使其成为 attached，再建一个新 detached。
+		host.attach({ workspaceId: "ws-2", bounds: BOUNDS });
+		host.attach({ workspaceId: "ws-5", bounds: BOUNDS });
+		host.detach("ws-5");
+		// detached: ws-3、ws-4、ws-5 正好在上限内；ws-2 attached 不被驱逐。
+		expect(views[1].webContents.destroyed).toBe(false);
+		for (const view of views.slice(2)) expect(view.webContents.destroyed).toBe(false);
 	});
 
 	it("view 销毁后 getState 为 null，重新 attach 重建新 view", () => {

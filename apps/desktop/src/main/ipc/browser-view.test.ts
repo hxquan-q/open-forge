@@ -58,6 +58,10 @@ const captured = vi.hoisted(() => {
 		async capturePage(): Promise<unknown> {
 			return {};
 		}
+		close(): void {
+			this.destroyed = true;
+			this.fire("destroyed");
+		}
 		fire(event: string, ...args: unknown[]): void {
 			for (const listener of this.listeners.get(event) ?? []) listener(...args);
 		}
