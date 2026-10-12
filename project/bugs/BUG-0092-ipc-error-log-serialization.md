@@ -1,7 +1,7 @@
 ---
 id: BUG-0092
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: apps/desktop
 requirement:
@@ -64,7 +64,9 @@ updated: 2026-10-12
 
 ## 修复与验证
 
-- 修复：待定；方向为引入统一的 `errorMessage`/`serializeError` 日志辅助（先检索仓库是否已有同型工具避免重复），覆盖上述三处站点及同类只记 `error.name` 的调用点。
-- 测试：上述序列化断言。
-- 检查：定向 desktop vitest。
-- 未运行及原因：尚未进入修复 Task；立案阶段仅完成站点枚举。
+- 修复：见 [TASK-0236](../tasks/TASK-0236-log-error-serialization.md)。新增 `logger/describe-error.ts` `describeError(unknown)`——Error 输出 `name: message` 并沿 cause 链追加 `; caused by:`（code/errno/address/port 元数据随链）、string 直通、其余值 `util.inspect` 摘要并截断 500 字符；Error 链遍历复用 `format-error-chain.ts` 的 `formatErrorChainJSON`，不重造。
+- 站点：`agent-teams.ts` 四处 `String(error)`、`session-interrupt-monitor.ts` 两处 `errorName`、`browser-runtime-manager.ts` 两处 `errorKind` 全部改走 describeError——字段名保留兼容既有日志消费。
+- 测试：`describe-error.test.ts` 5 例——普通 Error、带 cause+元数据的 Error、非 Error 对象（断言非 `[object Object]`）、string 直通/循环引用不崩、500 字符截断。
+- 全量：impact（desktop 相关套件）53 例过；2 套件 `window-manager.ts:25` `process.resourcesPath` 既有 import 失败（与本改动无关）。
+- 检查：desktop `tsc --noEmit` 绿；`check:lint` 绿。
+- 验证边界：其余 ~9 处雷同私有 `errorMessage` helpers（同样对非 Error 输出 `[object Object]`）未在本 Task 归并，属独立 refactor；renderer 侧 `[agent-team] send attempted [object Object]` 走另一条 console 路径，未覆盖。
