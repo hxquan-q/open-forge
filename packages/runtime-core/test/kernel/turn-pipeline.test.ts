@@ -22,6 +22,7 @@ import {
 	type RuntimeSessionContextBuffer,
 	type RuntimeSnapshot,
 	type RuntimeTurnModelBindingProvider,
+	type SessionContextRecord,
 	StaticRuntimeSnapshotProvider,
 	type StoredConversation,
 	type StoredSessionEvent,
@@ -993,6 +994,47 @@ describe("greenfield runtime kernel", () => {
 		// 同步 guard 无法原地恢复，但必须透传首个失败原因而不是裸模板错误。
 		expect(() => harness.session.queueContext("followUp", [])).toThrowError(/terminal append failed/);
 		expect(() => harness.session.queueNextTurnContext([])).toThrowError(/terminal append failed/);
+	});
+
+	it("recovery_required 期间 requestContinuation 拒绝但记录随恢复后首个 Turn 送达（BUG-0096）", async () => {
+		let execution = 0;
+		const engine: TurnEnginePort = {
+			async *execute() {
+				execution += 1;
+				if (execution === 1) {
+					yield { type: "completed", stopReason: "error" };
+					return;
+				}
+				yield { type: "message", message: assistantMessage("recovered") };
+				yield { type: "completed", stopReason: "stop" };
+			},
+		};
+		const harness = await createHarness({ turnEngine: engine, failTerminalAppend: true });
+		await expect(harness.session.send({ message: userMessage("boom") })).rejects.toMatchObject({
+			code: KERNEL_ERROR_CODES.TURN_PERSISTENCE,
+		});
+		expect(harness.session.state).toBe("recovery_required");
+
+		const record: SessionContextRecord = {
+			type: "subagent-result",
+			content: [{ type: "text", text: "background report" }],
+			modelVisible: true,
+		};
+		await expect(harness.session.requestContinuation([record])).rejects.toMatchObject({
+			code: KERNEL_ERROR_CODES.TURN_PERSISTENCE,
+		});
+
+		// 存储抖动结束：恢复后的首个 Turn 即携带投递记录，不再静默丢弃。
+		harness.repository.failTerminalAppend = false;
+		const result = await harness.session.send({ message: userMessage("after storage healed") });
+		expect(result.status).toBe("completed");
+
+		const conversation = await harness.repository.load("session-1");
+		const appended = conversation.events.filter(
+			(event) => event.type === "context.appended" && event.turnId === "turn-2",
+		);
+		expect(appended).toHaveLength(1);
+		expect(appended[0]).toMatchObject({ record });
 	});
 
 	it("serializes runtime context after tool results and exposes it to the next external turn", async () => {

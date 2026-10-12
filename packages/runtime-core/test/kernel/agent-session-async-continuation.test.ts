@@ -45,7 +45,7 @@ describe("AgentSession asynchronous continuation", () => {
 		expect(fixture.continueTurn.mock.calls[0]?.[3]).toEqual([contextRecord("first"), contextRecord("second")]);
 	});
 
-	it("discards a pending continuation when the active turn is cancelled", async () => {
+	it("rejects continuations on cancel but preserves their context for the next turn", async () => {
 		const fixture = createFixture({ blockRun: true });
 		const session = await createAgentSession({ id: "session-cancelled", pipeline: fixture.pipeline });
 		const activeTurn = session.send({ message: userMessage("working") });
@@ -65,6 +65,10 @@ describe("AgentSession asynchronous continuation", () => {
 
 		await session.send({ message: userMessage("follow up") });
 		expect(fixture.runTurn).toHaveBeenCalledTimes(2);
+		expect(fixture.runTurn.mock.calls[1]?.[1]).toEqual({
+			message: userMessage("follow up"),
+			trailingContext: [contextRecord("completed task"), contextRecord("late completion")],
+		});
 	});
 
 	it("rejects notifications after the session is closed", async () => {

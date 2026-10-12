@@ -280,11 +280,19 @@ export class AgentSession {
 			return Promise.reject(sessionClosedError());
 		}
 		if (this.currentState === "cancelling") {
+			// 拒绝语义只是「取消后不唤起隐形 Turn」；投递记录转入 nextTurnContext
+			// 随下一次发送送达，否则子代理/后台任务的完成通知会静默丢失。
+			this.nextTurnContext.push(...context);
 			return Promise.reject(continuationCancelledError());
 		}
 		// 同步入口：latch 必须在调用时完成（取消要先拒绝已登记 waiter），不能先
 		// await 恢复再登记；恢复由异步 admission 入口承担，成功后自动排空续跑队列。
-		if (this.currentState === "recovery_required") return Promise.reject(this.persistenceRequiredError());
+		if (this.currentState === "recovery_required") {
+			// 同上：拒绝不变，但记录转入 nextTurnContext——下一次 admission 完成
+			// 恢复后的首个 Turn 即携带送达。
+			this.nextTurnContext.push(...context);
+			return Promise.reject(this.persistenceRequiredError());
+		}
 		this.continuationRequested = true;
 		this.continuationContext.push(...context);
 		const completion = new Promise<void>((resolve, reject) => {
@@ -474,7 +482,8 @@ export class AgentSession {
 		// A continuation queued behind the cancelled turn belongs to that turn's
 		// background outcome. Letting it start after an explicit stop creates an
 		// invisible new turn and can make the next user prompt collide with it.
-		this.rejectContinuationWaiters(continuationCancelledError());
+		// The waiters are rejected but their context is preserved for the next turn.
+		this.rejectContinuationWaiters(continuationCancelledError(), { preserveContext: true });
 		this.activeController?.abort(reason);
 		this.armCancelDeadline();
 		const turn = this.activeTurn;
@@ -762,7 +771,8 @@ export class AgentSession {
 		});
 	}
 
-	private rejectContinuationWaiters(error: unknown): void {
+	private rejectContinuationWaiters(error: unknown, options?: { readonly preserveContext?: boolean }): void {
+		if (options?.preserveContext) this.nextTurnContext.push(...this.continuationContext);
 		this.continuationRequested = false;
 		this.continuationContext.length = 0;
 		for (const waiter of this.continuationWaiters.splice(0)) waiter.reject(error);
