@@ -1148,22 +1148,54 @@ export class AgentTeamSessionService {
 		reference: TeamSessionReference | { readonly id: string; readonly coordinationSessionPath?: string } | string,
 	): Promise<void> {
 		const sessionReference = teamSessionReferenceParts(reference);
-		const session = await this.read(sessionReference.id, sessionReference.coordinationSessionPath);
-		await this.abort(session.id);
+		let session: TeamSessionDocument | undefined;
+		let degraded = false;
+		try {
+			session = await this.read(sessionReference.id, sessionReference.coordinationSessionPath);
+		} catch (error) {
+			// coordination 文档损坏/丢失时 read 必败，旧实现到此为止——索引、运行时与
+			// 状态清理全部跳过，用户对着永远打不开的僵尸会话没有任何自助清除手段
+			// （BUG-0087）。降级为尽力清理：文档源退到内存快照与 legacy 索引，能枚举
+			// 多少删多少；索引三件套（repository / sessionState / residency）必达。
+			degraded = true;
+			log.warn("team session could not be loaded during delete; proceeding with degraded cleanup", {
+				teamSessionId: sessionReference.id,
+				error: errorMessage(error),
+			});
+			session =
+				this.sessionState.get(sessionReference.id) ??
+				(await this.repository.read(sessionReference.id).catch(() => undefined));
+		}
+		await this.abort(sessionReference.id);
 		const runtimeIds = [
-			...(session.coordinationRuntime ? [session.coordinationRuntime.sessionId] : []),
-			...Object.values(session.memberRuntime).map((runtime) => runtime.sessionId),
+			...(session?.coordinationRuntime ? [session.coordinationRuntime.sessionId] : []),
+			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionId),
 		];
 		const sessionPaths = [
-			...(session.coordinationRuntime ? [session.coordinationRuntime.sessionPath] : []),
-			...Object.values(session.memberRuntime).map((runtime) => runtime.sessionPath),
+			...(session?.coordinationRuntime ? [session.coordinationRuntime.sessionPath] : []),
+			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionPath),
 		];
-		for (const sessionPath of sessionPaths) await this.getRuntime().deleteSession(sessionPath);
+		for (const sessionPath of sessionPaths) {
+			if (!degraded) {
+				await this.getRuntime().deleteSession(sessionPath);
+				continue;
+			}
+			// 降级路径 per-path best-effort：外部实例持租约或单条路径损坏不阻断其余清理。
+			try {
+				await this.getRuntime().deleteSession(sessionPath);
+			} catch (error) {
+				log.warn("degraded team session delete could not remove a member runtime", {
+					teamSessionId: sessionReference.id,
+					sessionPath,
+					error: errorMessage(error),
+				});
+			}
+		}
 		for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
-		await this.repository.delete?.(session.id);
-		await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
-		this.sessionState.remove(session.id);
-		this.teamResidency.forget(session.id);
+		await this.repository.delete?.(sessionReference.id);
+		if (session) await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
+		this.sessionState.remove(sessionReference.id);
+		this.teamResidency.forget(sessionReference.id);
 	}
 
 	readCollaborationState(sessionId: string): Promise<TeamCollaborationState> {
