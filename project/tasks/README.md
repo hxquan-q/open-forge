@@ -15,6 +15,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0232` | `verifying` | — | BUG-0097：assertCapability 区分「无路由认领」与「能力被拒」两类错误文本，delete/rename 同构；serial，main 串行。 |
+| `TASK-0233` | `verifying` | — | BUG-0098：代理设置文本提交加有效性门——下一个草稿非法则防抖不落盘，disabled 照常、合法中间态不受阻；serial，main 串行。 |
+| `TASK-0234` | `verifying` | — | BUG-0099：内置浏览器导航 API 迁 `navigationHistory`——BrowserViewContents 契约改子对象，四调用点与 fake 同步；serial，main 串行。 |
 | `TASK-0230` | `verifying` | — | BUG-0095：transformMessages 二遍循环后尾刷悬挂 tool_calls——冲刷收敛为统一 helper，离开 transform 的消息流不再出现无结果调用；serial，main 串行。 |
 | `TASK-0231` | `verifying` | — | BUG-0096：requestContinuation 瞬态拒绝（cancel 清 pending / cancelling / recovery_required）把记录转入 nextTurnContext——不唤起隐形 Turn、记录随下一次 send 送达；closed 保持死信；serial，main 串行。 |
 | `TASK-0228` | `verifying` | — | BUG-0093：team 成员 runtime 恢复按成员隔离失败——成功保留、失败留旧条目、自身半成品 dispose，单成员锁竞争不再掀翻整会话加载；serial，main 串行。 |

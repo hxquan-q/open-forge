@@ -16,6 +16,9 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0099` | 内置浏览器仍调用 Electron 已废弃的 `canGoBack`/`canGoForward`，应迁移 `navigationHistory` | verifying | P3 | — |
+| `BUG-0098` | 无效代理配置无有效性门即可保存，运行时静默降级为逐条请求失败 | verifying | P3 | — |
+| `BUG-0097` | `assertCapability` 把「会话不归本运行时管/被拒绝」统一误报为「不支持 delete」，诊断语义失真 | verifying | P3 | — |
 | `BUG-0096` | 异步上下文投递被瞬态拒绝时记录永久丢失，子代理完成通知/报告静默消失 | verifying | P2 | — |
 | `BUG-0095` | `transformMessages` 不冲刷消息列表结尾的孤儿 tool_calls，严格 provider 永久拒绝该会话 | verifying | P1 | — |
 | `BUG-0094` | 内置浏览器 `WebContentsView` 按工作区永久常驻、无回收上限，渲染进程随使用线性累积 | verifying | P2 | — |
