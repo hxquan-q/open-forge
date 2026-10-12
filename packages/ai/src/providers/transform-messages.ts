@@ -124,27 +124,31 @@ export function transformMessages<TApi extends Api>(
 	let pendingToolCallsById = new Map<string, ToolCall>();
 	let existingToolResultIds = new Set<string>();
 
+	const flushPendingToolCalls = () => {
+		for (const tc of pendingToolCalls) {
+			if (!existingToolResultIds.has(tc.id)) {
+				result.push({
+					role: "toolResult",
+					toolCallId: tc.id,
+					toolName: tc.name,
+					content: [{ type: "text", text: "No result provided" }],
+					isError: true,
+					timestamp: Date.now(),
+				} as ToolResultMessage);
+			}
+		}
+		pendingToolCalls = [];
+		pendingToolCallsById = new Map();
+		existingToolResultIds = new Set();
+	};
+
 	for (let i = 0; i < transformed.length; i++) {
 		const msg = transformed[i];
 
 		if (msg.role === "assistant") {
 			// If we have pending orphaned tool calls from a previous assistant, insert synthetic results now
 			if (pendingToolCalls.length > 0) {
-				for (const tc of pendingToolCalls) {
-					if (!existingToolResultIds.has(tc.id)) {
-						result.push({
-							role: "toolResult",
-							toolCallId: tc.id,
-							toolName: tc.name,
-							content: [{ type: "text", text: "No result provided" }],
-							isError: true,
-							timestamp: Date.now(),
-						} as ToolResultMessage);
-					}
-				}
-				pendingToolCalls = [];
-				pendingToolCallsById = new Map();
-				existingToolResultIds = new Set();
+				flushPendingToolCalls();
 			}
 
 			// Skip errored/aborted assistant messages entirely.
@@ -180,27 +184,18 @@ export function transformMessages<TApi extends Api>(
 		} else if (msg.role === "user") {
 			// User message interrupts tool flow - insert synthetic results for orphaned calls
 			if (pendingToolCalls.length > 0) {
-				for (const tc of pendingToolCalls) {
-					if (!existingToolResultIds.has(tc.id)) {
-						result.push({
-							role: "toolResult",
-							toolCallId: tc.id,
-							toolName: tc.name,
-							content: [{ type: "text", text: "No result provided" }],
-							isError: true,
-							timestamp: Date.now(),
-						} as ToolResultMessage);
-					}
-				}
-				pendingToolCalls = [];
-				pendingToolCallsById = new Map();
-				existingToolResultIds = new Set();
+				flushPendingToolCalls();
 			}
 			result.push(msg);
 		} else {
 			result.push(msg);
 		}
 	}
+
+	// History may end on unresolved tool calls (e.g. the turn died after the
+	// assistant message was persisted but before results were written).
+	// Strict providers reject such requests outright; close the same gap here.
+	flushPendingToolCalls();
 
 	return result;
 }
