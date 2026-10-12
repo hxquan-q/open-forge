@@ -18,7 +18,6 @@ const captured = vi.hoisted(() => {
 		title = "";
 		destroyed = false;
 		loads: string[] = [];
-		ignores: boolean[] = [];
 		private readonly listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 
 		isDestroyed(): boolean {
@@ -43,9 +42,6 @@ const captured = vi.hoisted(() => {
 		}
 		canGoForward(): boolean {
 			return false;
-		}
-		setIgnoreMouseEvents(ignore: boolean): void {
-			this.ignores.push(ignore);
 		}
 		setWindowOpenHandler(): void {}
 		on(event: string, listener: (...args: unknown[]) => void): void {

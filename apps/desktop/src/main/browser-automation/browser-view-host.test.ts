@@ -27,7 +27,6 @@ class FakeContents implements BrowserViewContents {
 	stops = 0;
 	goBacks = 0;
 	goForwards = 0;
-	ignores: boolean[] = [];
 	openHandler: ((d: { url: string }) => { action: string }) | null = null;
 	private listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 
@@ -61,9 +60,6 @@ class FakeContents implements BrowserViewContents {
 	}
 	canGoForward(): boolean {
 		return this.forward;
-	}
-	setIgnoreMouseEvents(ignore: boolean): void {
-		this.ignores.push(ignore);
 	}
 	setWindowOpenHandler(handler: (details: { url: string }) => { action: "deny" | "allow" }): void {
 		this.openHandler = handler;
@@ -231,12 +227,35 @@ describe("InAppBrowserViewHost", () => {
 		expect(win.added).toHaveLength(2);
 	});
 
-	it("面板拖拽时 setInputPassthrough 让事件穿透到 DOM 兜底 overlay", () => {
+	it("面板拖拽期 setInputPassthrough 隐藏原生 view 让位给 DOM 兜底 overlay，结束后按请求可见性恢复", () => {
+		// Electron 39 没有 per-view 的 ignore-mouse API（setIgnoreMouseEvents 只在
+		// BaseWindow/BrowserWindow 上，electron#23863 未实现 view 级版本）；穿透只能
+		// 通过暂时隐去原生 view 实现，页面保活不销毁（BUG-0086）。
 		const { host, views } = makeHost();
-		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: true });
+		host.setInputPassthrough("ws-1", true);
+		expect(views[0].visible).toBe(false);
+		expect(views[0].webContents.destroyed).toBe(false);
+		host.setInputPassthrough("ws-1", false);
+		expect(views[0].visible).toBe(true);
+	});
+
+	it("穿透中收到 visible:false 更新时请求态保留，穿透结束不误恢复为可见", () => {
+		const { host, views } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: true });
+		host.setInputPassthrough("ws-1", true);
+		// 穿透期间 tab 切走 / 失败覆盖层升起：请求可见性翻 false，不能丢。
+		host.setVisible("ws-1", false);
+		host.setInputPassthrough("ws-1", false);
+		expect(views[0].visible).toBe(false);
+	});
+
+	it("attach 即不可见的 view 穿透开关不改变其可见性", () => {
+		const { host, views } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: false });
 		host.setInputPassthrough("ws-1", true);
 		host.setInputPassthrough("ws-1", false);
-		expect(views[0].webContents.ignores).toEqual([true, false]);
+		expect(views[0].visible).toBe(false);
 	});
 
 	it("view 销毁后 getState 为 null，重新 attach 重建新 view", () => {

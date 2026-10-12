@@ -36,7 +36,6 @@ export interface BrowserViewContents {
 	stop(): void;
 	canGoBack(): boolean;
 	canGoForward(): boolean;
-	setIgnoreMouseEvents(ignore: boolean): void;
 	setWindowOpenHandler(handler: (details: { url: string }) => { action: "deny" | "allow" }): void;
 	on(event: string, listener: (...args: unknown[]) => void): void;
 	once(event: string, listener: (...args: unknown[]) => void): void;
@@ -64,6 +63,8 @@ interface ViewRecord {
 	readonly view: BrowserViewHandle;
 	attached: boolean;
 	visible: boolean;
+	/** 拖拽期指针穿透：为 true 时原生 view 暂时隐去，事件落到 DOM 兜底 overlay。 */
+	passthrough: boolean;
 	loading: boolean;
 	failed: boolean;
 }
@@ -93,7 +94,8 @@ export class InAppBrowserViewHost {
 		}
 		record.view.setBounds(request.bounds);
 		record.visible = request.visible ?? true;
-		record.view.setVisible(record.visible);
+		record.passthrough = false;
+		this.applyVisible(record);
 		const url = request.url?.trim();
 		if (url && url !== record.view.webContents.getURL()) {
 			void record.view.webContents
@@ -112,8 +114,8 @@ export class InAppBrowserViewHost {
 	setVisible(workspaceId: string, visible: boolean): void {
 		const record = this.views.get(workspaceId);
 		if (!record || record.view.webContents.isDestroyed()) return;
-		record.view.setVisible(visible);
 		record.visible = visible;
+		this.applyVisible(record);
 	}
 
 	detach(workspaceId: string): void {
@@ -162,9 +164,22 @@ export class InAppBrowserViewHost {
 	}
 
 	setInputPassthrough(workspaceId: string, passthrough: boolean): void {
-		const contents = this.views.get(workspaceId)?.view.webContents;
-		if (!contents || contents.isDestroyed()) return;
-		contents.setIgnoreMouseEvents(passthrough);
+		const record = this.views.get(workspaceId);
+		if (!record || record.view.webContents.isDestroyed()) return;
+		record.passthrough = passthrough;
+		this.applyVisible(record);
+	}
+
+	/**
+	 * 实际可见性 = 请求可见且不在穿透期。Electron 没有 per-view 的 ignore-mouse
+	 * API（`setIgnoreMouseEvents` 只在 `BaseWindow`/`BrowserWindow` 上，
+	 * `WebContentsView`/`View`/`WebContents` 均无，electron#23863 未实现）；
+	 * 窗口级 ignore+forward 会把真实点击泄漏给下层应用窗口。拖拽期暂时隐去
+	 * 原生 view 是唯一安全的让位手段：页面保活不销毁，DOM 兜底 overlay 自然
+	 * 收到掠过该区域的事件（BUG-0086）。
+	 */
+	private applyVisible(record: ViewRecord): void {
+		record.view.setVisible(record.visible && !record.passthrough);
 	}
 
 	getState(workspaceId: string): DesktopBrowserViewState | null {
@@ -192,7 +207,14 @@ export class InAppBrowserViewHost {
 			if (/^https?:\/\//i.test(url)) void contents.loadURL(url).catch(() => undefined);
 			return { action: "deny" };
 		});
-		const record: ViewRecord = { view, attached: false, visible: false, loading: false, failed: false };
+		const record: ViewRecord = {
+			view,
+			attached: false,
+			visible: false,
+			passthrough: false,
+			loading: false,
+			failed: false,
+		};
 		this.views.set(workspaceId, record);
 		this.wireContents(workspaceId, contents, record);
 		// 会话控制器接线（revision/picker/DOM sentinel/快捷键），workspace 直连无竞态。
