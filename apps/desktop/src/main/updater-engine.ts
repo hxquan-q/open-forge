@@ -1,7 +1,7 @@
 import { link, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { ProgressInfo, UpdateInfo } from "builder-util-runtime";
-import { CancellationToken, CURRENT_APP_INSTALLER_FILE_NAME } from "builder-util-runtime";
+import { CancellationToken, CURRENT_APP_INSTALLER_FILE_NAME, HttpError } from "builder-util-runtime";
 import type { AppUpdater, ResolvedUpdateFileInfo } from "electron-updater";
 
 import type { InnoWindowsUpdateController } from "./inno-windows-update.js";
@@ -142,8 +142,25 @@ function waitForNativeMacUpdate(events: NativeMacUpdateEvents): { promise: Promi
 	return { promise, dispose };
 }
 
+type ExpectedCheckUnavailable = "feed-config-missing" | "feed-not-published";
+
+// Inno 打包 `publish: false` 不产 resources/app-update.yml，feed 未发布时又得 HttpError 404——
+// 两者都是「更新通道未配置」的确定性状态而非运行时异常：归一为一次性结论，
+// 而不是每次启动（与每次周期检查）刷 check failed + error 事件双通道报错。
+function classifyExpectedCheckUnavailable(error: unknown): ExpectedCheckUnavailable | null {
+	const errno = error as NodeJS.ErrnoException | null;
+	if (errno?.code === "ENOENT" && String(errno.message ?? "").includes("app-update.yml")) {
+		return "feed-config-missing";
+	}
+	const statusCode =
+		error instanceof HttpError ? error.statusCode : (error as { statusCode?: unknown } | null)?.statusCode;
+	if (statusCode === 404) return "feed-not-published";
+	return null;
+}
+
 export class ElectronUpdaterEngine implements UpdateEngine {
 	private useInnoUpdate = false;
+	private readonly expectedCheckUnavailableLogged = new Set<ExpectedCheckUnavailable>();
 
 	constructor(
 		private readonly updater: AppUpdater,
@@ -164,8 +181,24 @@ export class ElectronUpdaterEngine implements UpdateEngine {
 		// electron-updater 会同时通过 Promise 和 error 事件报告失败。
 		// 保留监听器，避免 EventEmitter 将未监听的 error 当作进程级异常。
 		this.updater.on("error", (error) => {
+			const expected = classifyExpectedCheckUnavailable(error);
+			if (expected !== null) {
+				this.logExpectedCheckUnavailableOnce(expected, error);
+				return;
+			}
 			console.error("[updater]", error);
 		});
+	}
+
+	private logExpectedCheckUnavailableOnce(kind: ExpectedCheckUnavailable, error: unknown): void {
+		if (this.expectedCheckUnavailableLogged.has(kind)) return;
+		this.expectedCheckUnavailableLogged.add(kind);
+		console.info(
+			kind === "feed-config-missing"
+				? "[updater] no update feed is configured for this build (app-update.yml absent); update checks report unavailable"
+				: "[updater] update feed answered 404 (release not published); update checks report unavailable",
+			error instanceof Error ? error.message : error,
+		);
 	}
 
 	async onAppReady(): Promise<void> {
@@ -173,7 +206,12 @@ export class ElectronUpdaterEngine implements UpdateEngine {
 	}
 
 	async checkForUpdates(): Promise<UpdateEngineCheckResult | null> {
-		const result = await this.updater.checkForUpdates();
+		const result = await this.updater.checkForUpdates().catch((error: unknown) => {
+			const expected = classifyExpectedCheckUnavailable(error);
+			if (expected === null) throw error;
+			this.logExpectedCheckUnavailableOnce(expected, error);
+			return null;
+		});
 		if (!result) return null;
 		const info = mapUpdateInfo(result.updateInfo);
 		const innoAsset = result.isUpdateAvailable
