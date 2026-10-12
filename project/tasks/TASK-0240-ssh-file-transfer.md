@@ -138,6 +138,10 @@ updated: 2026-10-12
 - Biome（desktop 全部改动文件）：clean；zh/en chat.json `JSON.parse` 通过。
 - `check:quick`：Biome 段通过；`check:guards` 红——修改声明头缺 21 个文件，经 `git log`/`git status` 证实全部是其他批次已入库文件（describe-error→1ea343230、TASK-0235..0239→1de1a5aec 等），不在本次未提交差异内；本任务 5 个缺头文件（preload ssh×2、renderer file-explorer×3）补头后清零。按「红先按 HEAD 归因」记为存量红，未碰他人文件。
 
+### 验证期反馈（2026-10-12）
+
+- 运行中的 dev 窗口报 `__vettaHostApi.ssh.onTransferEvent is not a function`（错误边界「当前页面遇到问题」）。定位：`dist/preload/index.js` 停在 10-10 16:37 构建（早于切片 2），而 Electron 窗口创建时绑定 preload、不随渲染层 HMR 热更；渲染层新 hook 已由 HMR 生效才出现 renderer/preload 版面错位。`bun run build:preload` 构建通过且产物含全部传输通道，属运行环境陈旧而非接线缺陷——接线由 preload/index.ts `rawApi: Omit<DesktopApi, "hostAccess">` 的全量类型静态保证，无需新增运行时 guard（全库无此惯例，renderer 与 preload 同件发布）。处置：重建 preload 后重启 dev Electron 即恢复。
+
 ### 未运行及原因
 
 - 计划中的「UI：上下文菜单接线与拖放分流（组件测试）」未写：渲染层接线以 typecheck + 两包全量现有套件代替，见剩余风险。
