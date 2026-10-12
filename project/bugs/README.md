@@ -16,8 +16,10 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0094` | 内置浏览器 `WebContentsView` 按工作区永久常驻、无回收上限，渲染进程随使用线性累积 | investigating | P2 | — |
-| `BUG-0093` | 单个成员 runtime 恢复失败回滚全部已恢复成员，team 会话整体打不开 | investigating | P2 | — |
+| `BUG-0096` | 异步上下文投递被瞬态拒绝时记录永久丢失，子代理完成通知/报告静默消失 | verifying | P2 | — |
+| `BUG-0095` | `transformMessages` 不冲刷消息列表结尾的孤儿 tool_calls，严格 provider 永久拒绝该会话 | verifying | P1 | — |
+| `BUG-0094` | 内置浏览器 `WebContentsView` 按工作区永久常驻、无回收上限，渲染进程随使用线性累积 | verifying | P2 | — |
+| `BUG-0093` | 单个成员 runtime 恢复失败回滚全部已恢复成员，team 会话整体打不开 | verifying | P2 | — |
 | `BUG-0092` | IPC 与巡检日志把抛值序列化为 `[object Object]`/只记 `errorName`，一线诊断信息全丢 | investigating | P3 | — |
 | `BUG-0091` | Turn 终态持久化失败一次后 session 永久滞留 `recovery_required`，用户无恢复手段 | verifying | P1 | — |
 | `BUG-0090` | Windows Inno 打包版通用 updater 检查确定性失败：`app-update.yml` 缺失与 feed 404 | investigating | P2 | — |
