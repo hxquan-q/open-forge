@@ -8,10 +8,10 @@ related_requirement: []
 related_plan: []
 related_tasks: [TASK-0208]
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0088]
 source: origin/chenxvhua 分支（allstar-coding v0.4 ac-fence）；user-request 合并评审
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-12
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -28,6 +28,8 @@ depends_on: []
 - 设计为 fail-open：判定纯内存、异常按放行处理，附 3s 超时纪律；缺 hooks 权限时 `registerHook` 为 warn+noop，插件打 `[ac-fence]` 前缀日志便于排查。
 - 该工作在本仓 `project/` 中没有任何记录承载（`grep ac-fence`、`chenxvhua` 均无命中）；分支自带的发布说明提交还把 `Upstream baseline` 行改成了不在 `upstream/dev` 的 `5eecd278d`（真值 `d217984c72ef7b5f66ce0a6fea1ae2375060d425`）。
 - AGENTS 的不变量要求「Plugin…权限按最小集合声明，不允许静默扩大宿主能力」。
+- 2026-10-12 他人实机日志（0.1.3 打包版，Windows）：`fence-log append failed for write/shell/spawn_agent: Plugin permission denied: fs.write` 30+ 条——manifest 未声明 fs 写能力，`ctx.fs.writeFile` 追加 `docs/ac/fence-log.jsonl` 在生产恒被拒，审计落盘整体失效（已立案 `BUG-0088`）。
+- 同一日志另见 `Cannot install over a system plugin: allstar-coding`——经 local-server `plugins.manage` 尝试安装 marketplace 的 `allstar-coding-0.2.0.vettapkg` 被拦；拦截符合系统插件保护设计，但也意味着系统预置插件无法经 vettapkg 通道升级，与本插件的迭代分发方式直接相关。
 
 ## 未决问题
 

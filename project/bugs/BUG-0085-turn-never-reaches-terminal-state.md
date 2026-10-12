@@ -34,6 +34,7 @@ updated: 2026-10-10
 
 - **态 A（严重；无自救手段）**：会话「分步慢输出」的 `turn-eecb181d` 在落盘记录里**只有 `turn.started` + 两条 `message.appended`，没有任何终止事件**（无 `turn.completed`/`turn.cancelled`/`turn.failed`）。UI 同屏呈现「处理中…｜正在处理 · 31分16秒」与错误卡片「网络没连上／检查一下网络或代理，然后重新发送」；composer aria 为「正在思考…」、模型选择器被禁用，**「停止生成」与「发送消息」都不在**——既不能取消回合也不能发新消息。渲染进程重载无效；重启应用后恢复可发送。⇒ 忙态由主进程内存在途回合持有，非从落盘记录推导。截图：`<artifactDir>\stuck-turn-wedged-session.png`。
 - **态 B（确定性复现；有自救手段）**：新会话发一条走 `/control/slow` 的消息，流式中杀掉夹具进程 → 60 秒内「停止生成」一直在、无终态事件、计时器持续增长；点「停止生成」后 3 秒内恢复，会话记录写入 `turn.cancelled reason="This operation was aborted"`。
+- **外部佐证（2026-10-12，他人 0.1.3 打包版实机日志）**：`main/2026-10-09.log` 记录一次 team `send-message` elapsedMs 约 20,900,000ms（≈5.8 小时）并以 `Agent checkpoint exceeded 300000ms` 收场——与「回合长时间不进终态」的用户面一致；elapsed 内含队列等待，具体分段未核实，仅作佐证不计入根因。
 
 ## 复现步骤（态 B，确定性）
 
