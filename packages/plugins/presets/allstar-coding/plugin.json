@@ -10,7 +10,13 @@
 		"remoteName": "allstar_coding",
 		"expose": "./plugin"
 	},
-	"permissions": ["agent.skills.control", "agent.hooks.register", "agent.hookHandler.execute"],
+	"permissions": [
+		"agent.skills.control",
+		"agent.hooks.register",
+		"agent.hookHandler.execute",
+		"fs.read",
+		"fs.write"
+	],
 	"agent": {
 		"skillPaths": ["agent/skills"],
 		"skillPresentation": {
