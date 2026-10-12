@@ -394,6 +394,28 @@
 			"prepareFailed": "Unable to read dropped files",
 			"commitFailed": "File transfer failed",
 			"failedCount": "{{count}} item(s) failed to transfer"
+		},
+		"sshTransfer": {
+			"download": "Download to computer…",
+			"uploadFiles": "Upload files…",
+			"uploadFolders": "Upload folders…",
+			"panelTitle": "Remote transfers",
+			"conflictTitle": "Target already exists",
+			"conflictMessage": "{{count}} target(s) with the same name already exist on the remote. “Replace” overwrites them; “Skip” keeps the remote copies and transfers the rest.",
+			"replace": "Replace",
+			"skip": "Skip conflicting items",
+			"skippedCount": "{{count}} item(s) could not be transferred and were skipped",
+			"nothingToTransfer": "Nothing to transfer",
+			"startFailed": "Failed to start transfer",
+			"cancel": "Cancel",
+			"remove": "Remove",
+			"status": {
+				"queued": "Queued",
+				"transferring": "Transferring",
+				"completed": "Completed",
+				"failed": "Failed",
+				"canceled": "Canceled"
+			}
 		}
 	},
 	"fileEditor": {

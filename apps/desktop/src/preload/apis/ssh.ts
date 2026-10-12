@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import { SSH_CHANNELS, type SshHostStatusEvent } from "../../shared/ssh-ipc.js";
 import { SSH_PROMPT_CHANNELS, type SshPromptRequestEvent } from "../../shared/ssh-prompt-ipc.js";
 import type { DesktopApi } from "../api.js";
+import { onIpcEvent } from "./helper.js";
 
 const CHANNELS = {
 	LIST_HOSTS: "vetta:ssh:list-hosts",
@@ -19,6 +21,14 @@ const CHANNELS = {
 	OPEN_FORWARD: "vetta:ssh:open-port-forward",
 	CLOSE_FORWARD: "vetta:ssh:close-port-forward",
 	TERMINATE_PROCESS: "vetta:ssh:terminate-process",
+	TRANSFER_PLAN: "vetta:ssh-transfers:plan",
+	TRANSFER_COMMIT: "vetta:ssh-transfers:commit",
+	TRANSFER_CANCEL: "vetta:ssh-transfers:cancel",
+	TRANSFER_REMOVE: "vetta:ssh-transfers:remove",
+	TRANSFER_LIST: "vetta:ssh-transfers:list",
+	TRANSFER_SELECT_SOURCE: "vetta:ssh-transfers:select-source",
+	TRANSFER_SELECT_DOWNLOAD_DIR: "vetta:ssh-transfers:select-download-dir",
+	TRANSFER_EVENT: "vetta:ssh-transfers:event",
 } as const;
 
 export function createSshApi(ipc: IpcRenderer): Pick<DesktopApi, "ssh"> {
@@ -65,6 +75,14 @@ export function createSshApi(ipc: IpcRenderer): Pick<DesktopApi, "ssh"> {
 				return () => ipc.removeListener(SSH_PROMPT_CHANNELS.CANCEL, handler);
 			},
 			respondToPrompt: (response) => ipc.send(SSH_PROMPT_CHANNELS.RESPOND, response),
+			planTransfer: (input) => ipc.invoke(CHANNELS.TRANSFER_PLAN, input),
+			commitTransfer: (planId, conflictPolicy) => ipc.invoke(CHANNELS.TRANSFER_COMMIT, planId, conflictPolicy),
+			cancelTransfer: (id) => ipc.invoke(CHANNELS.TRANSFER_CANCEL, id),
+			removeTransfer: (id) => ipc.invoke(CHANNELS.TRANSFER_REMOVE, id),
+			listTransfers: () => ipc.invoke(CHANNELS.TRANSFER_LIST),
+			selectTransferSource: (kind) => ipc.invoke(CHANNELS.TRANSFER_SELECT_SOURCE, kind),
+			selectTransferDownloadDir: () => ipc.invoke(CHANNELS.TRANSFER_SELECT_DOWNLOAD_DIR),
+			onTransferEvent: (listener) => onIpcEvent(ipc, CHANNELS.TRANSFER_EVENT, listener),
 		},
 	};
 }

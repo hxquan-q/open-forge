@@ -38,6 +38,14 @@ export interface SshProcessResult {
 /** 一条保持打开的双向通道：远端 helper 这类要来回说很多句话的对端用它。 */
 export interface SshProcessChannel {
 	write(data: Uint8Array): void;
+	/**
+	 * 背压感知写：等本端把这块字节交给底层（管道排空 / SSH 窗口放行）再兑现。
+	 *
+	 * 大文件上传逐块 `write` 会把远端消化不了的部分全部堆在本地内存里；文件传输这类
+	 * 「写入速率受网络限制」的调用方用它 pacing。给不出 drain 信号的实现可以不实现，
+	 * 调用方按 `writeAsync?.()` 检测后退化为 {@link write}。
+	 */
+	writeAsync?(data: Uint8Array): Promise<void>;
 	/** 关闭 stdin。对端据此知道不会再有请求，收尾后退出。 */
 	end(): void;
 	/** 立刻终止本地 ssh 进程。 */

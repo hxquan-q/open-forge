@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode } from "react";
 
@@ -36,6 +37,8 @@ export interface FileContextMenuViewProps {
 	 * there is nothing for the system file manager to show. Defaults to true.
 	 */
 	canOpenInFolder?: boolean;
+	/** Host-supplied transfer actions (upload/download for remote workspaces). Rendered as their own group. */
+	transferActions?: readonly FileContextMenuPluginAction[];
 	pluginActions?: readonly FileContextMenuPluginAction[];
 }
 
@@ -78,6 +81,7 @@ export function FileContextMenuView({
 	showEntryActions,
 	canPaste,
 	canRename,
+	transferActions = [],
 	pluginActions = [],
 }: FileContextMenuViewProps): JSX.Element {
 	const menuRef = useRef<HTMLDivElement>(null);
@@ -96,7 +100,7 @@ export function FileContextMenuView({
 			top: clampToViewport(y, height, window.innerHeight),
 		};
 		setPosition((prev) => (prev.left === next.left && prev.top === next.top ? prev : next));
-	}, [x, y, showEntryActions, canPaste, canRename, canOpenInFolder, pluginActions.length]);
+	}, [x, y, showEntryActions, canPaste, canRename, canOpenInFolder, transferActions.length, pluginActions.length]);
 
 	useEffect(() => {
 		function handleClick(e: MouseEvent) {
@@ -157,6 +161,24 @@ export function FileContextMenuView({
 						<span className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
 						{labels.openInFolder}
 					</button>
+				) : null}
+				{transferActions.length > 0 ? (
+					<>
+						<div className="mx-1.5 my-1 h-px bg-border" />
+						{transferActions.map((action) => (
+							<button
+								key={action.id}
+								type="button"
+								onClick={action.onSelect}
+								className="flex w-full items-center gap-2 rounded-md px-2 py-[5px] text-[12px] font-medium text-foreground transition-colors hover:bg-accent"
+							>
+								<span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+									{action.icon}
+								</span>
+								<span className="truncate">{action.label}</span>
+							</button>
+						))}
+					</>
 				) : null}
 				{showEntryActions ? (
 					<button

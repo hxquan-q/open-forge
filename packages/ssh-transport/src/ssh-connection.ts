@@ -20,6 +20,7 @@ import {
 	buildRealPathCommand,
 	buildRemoteCommand,
 	buildStatCommand,
+	buildUploadFileCommand,
 	buildWriteFileCommand,
 	type ListFilesRecursiveOptions,
 	quoteShellArgument,
@@ -68,6 +69,14 @@ const HELPER_RETRY_BACKOFF_MS = 30_000;
 
 /** 终止远端进程组的那条命令自己的超时：TERM 后最多等 2 秒再 KILL，留足余量。 */
 const REMOTE_KILL_TIMEOUT_MS = 15_000;
+
+/**
+ * 上传每次写入通道的块大小。
+ *
+ * 取 1 MiB：比 SSH 流量控制窗口大不了多少，`writeAsync` 逐块等放行就能把本机内存占用
+ * 压在一两个块；更小的块只是增加往返调度开销，不改变吞吐瓶颈（网络与加密）。
+ */
+const UPLOAD_CHUNK_BYTES = 1024 * 1024;
 
 export interface RemotePlatform {
 	/** `uname -s`，例如 `Linux`、`Darwin`。 */
@@ -337,6 +346,160 @@ export class SshConnection {
 		if (viaHelper) return;
 		const command = buildWriteFileCommand(remotePath, `.vetta-tmp-${Date.now().toString(36)}`);
 		await this.runChecked(command, { signal, stdin: content });
+	}
+
+	/**
+	 * 流式下载远端文件：`cat` 的 stdout 逐块交给 `writeChunk`，字节计数即进度。
+	 *
+	 * 与 {@link SshConnection.readFile} 同一条 8-bit clean 通道语义，但不缓存整份内容——
+	 * 大文件经 `openChannel` 流过管道直接落盘。取消走通道 kill；连接层失败按三分类上报
+	 * （exitCode null → unverifiable，远端非零 → exited）。本机落盘由调用方负责：本包不做
+	 * 本机文件 I/O（见 README「边界」）。
+	 */
+	async downloadFile(
+		remotePath: string,
+		writeChunk: (chunk: Uint8Array) => void,
+		options: { signal?: AbortSignal; onProgress?: (bytes: number) => void } = {},
+	): Promise<{ bytes: number }> {
+		await this.probePlatform(options.signal);
+		let bytes = 0;
+		// 传输定局（完成/失败/取消）后管道里可能还残留已缓冲的块：不再交给调用方。传输已经
+		// 定局，调用方的落盘侧可能已关闭，继续喂只会把一次干净的取消变成 uncaught exception。
+		let delivering = true;
+		const channel = this.openChannel(`cat -- ${quoteShellArgument(remotePath)}`, (chunk) => {
+			if (!delivering || options.signal?.aborted) return;
+			bytes += chunk.byteLength;
+			writeChunk(chunk);
+			options.onProgress?.(bytes);
+		});
+		if (!channel) {
+			throw new SshRemoteCommandError(
+				`This runner cannot open a transfer channel on ${this.host.label}`,
+				this.host.id,
+				-1,
+				"",
+			);
+		}
+		try {
+			await this.settleTransferChannel(channel, options.signal);
+			return { bytes };
+		} finally {
+			delivering = false;
+		}
+	}
+
+	/**
+	 * 流式上传本机文件到远端：内容逐块写入 `buildUploadFileCommand` 的通道，远端 mv 前校验
+	 * 字节数（见 {@link buildUploadFileCommand}），中途取消不会让半截文件替换目标。
+	 *
+	 * 本机读侧由调用方提供（本包不做本机文件 I/O）：`readChunk(offset, length)` 返回不超过
+	 * `length` 的下一块，返回 0 字节视为源提前结束——远端的 wc 校验会拒绝这份传输并把临时
+	 * 文件清理掉，目标文件保持原样。
+	 */
+	async uploadFile(
+		remotePath: string,
+		options: {
+			readonly totalBytes: number;
+			readonly readChunk: (offset: number, length: number) => Promise<Uint8Array>;
+			readonly signal?: AbortSignal;
+			readonly onProgress?: (bytes: number) => void;
+		},
+	): Promise<{ bytes: number }> {
+		if (!Number.isSafeInteger(options.totalBytes) || options.totalBytes < 0) {
+			throw new Error(`Invalid upload size: ${options.totalBytes}`);
+		}
+		await this.probePlatform(options.signal);
+		const channel = this.openChannel(
+			buildUploadFileCommand(remotePath, options.totalBytes, `.vetta-tmp-${Date.now().toString(36)}`),
+			() => {},
+		);
+		if (!channel) {
+			throw new SshRemoteCommandError(
+				`This runner cannot open a transfer channel on ${this.host.label}`,
+				this.host.id,
+				-1,
+				"",
+			);
+		}
+		const { signal } = options;
+		// 中途取消：杀掉本地通道。远端 cat 收到普通 EOF 后走到 wc 校验，字节数对不上，
+		// 脚本自己清理临时文件并退非零——目标文件保持原样。
+		const onAbort = (): void => channel.kill();
+		signal?.addEventListener("abort", onAbort, { once: true });
+		try {
+			let sent = 0;
+			while (sent < options.totalBytes && !signal?.aborted) {
+				const requested = Math.min(UPLOAD_CHUNK_BYTES, options.totalBytes - sent);
+				let chunk: Uint8Array;
+				try {
+					chunk = await options.readChunk(sent, requested);
+				} catch (error) {
+					// 本机下载读侧故障：远端 `cat > tmp` 还在等 stdin，不杀通道它会一直挂着。
+					channel.kill();
+					throw error;
+				}
+				// 源比声明短：把已读到的发过去，让远端 wc 校验拒绝这次传输。
+				if (chunk.byteLength === 0) break;
+				if (chunk.byteLength > requested) chunk = chunk.subarray(0, requested);
+				if (channel.writeAsync !== undefined) await channel.writeAsync(chunk);
+				else channel.write(chunk);
+				sent += chunk.byteLength;
+				options.onProgress?.(sent);
+			}
+			if (!signal?.aborted) channel.end();
+			const { exitCode, stderr } = await channel.exited;
+			if (signal?.aborted) {
+				throw new SshOperationAbortedError(`Remote operation on ${this.host.label} was cancelled.`, this.host.id);
+			}
+			if (exitCode === null || exitCode === SSH_TRANSPORT_FAILURE_EXIT_CODE) {
+				throw new SshTransportError(
+					`Connection to ${this.host.label} closed during transfer: ${stderr.trim()}`,
+					this.host.id,
+					stderr,
+				);
+			}
+			if (exitCode !== 0) {
+				// 最常见的非零就是远端 wc 校验没过：源比声明短，或中途取消。
+				throw new SshRemoteCommandError(
+					`Remote command failed on ${this.host.label} (exit ${exitCode}): ${stderr.trim()}`,
+					this.host.id,
+					exitCode,
+					stderr,
+				);
+			}
+			return { bytes: sent };
+		} finally {
+			signal?.removeEventListener("abort", onAbort);
+		}
+	}
+
+	/** 下载通道的收尾：取消即杀通道；退出状态按 {@link run} 同一套三分类上报。 */
+	private async settleTransferChannel(channel: SshProcessChannel, signal?: AbortSignal): Promise<void> {
+		const onAbort = (): void => channel.kill();
+		signal?.addEventListener("abort", onAbort, { once: true });
+		try {
+			const { exitCode, stderr } = await channel.exited;
+			if (signal?.aborted) {
+				throw new SshOperationAbortedError(`Remote operation on ${this.host.label} was cancelled.`, this.host.id);
+			}
+			if (exitCode === null || exitCode === SSH_TRANSPORT_FAILURE_EXIT_CODE) {
+				throw new SshTransportError(
+					`Connection to ${this.host.label} closed during transfer: ${stderr.trim()}`,
+					this.host.id,
+					stderr,
+				);
+			}
+			if (exitCode !== 0) {
+				throw new SshRemoteCommandError(
+					`Remote command failed on ${this.host.label} (exit ${exitCode}): ${stderr.trim()}`,
+					this.host.id,
+					exitCode,
+					stderr,
+				);
+			}
+		} finally {
+			signal?.removeEventListener("abort", onAbort);
+		}
 	}
 
 	/** 同一文件系统内是原子改名；跨文件系统时 `mv` 自己退化成复制加删除。目标已存在则覆盖。 */

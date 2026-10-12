@@ -1,7 +1,15 @@
+// Modified by The Open Forge contributors.
 import type { RemoteDirectoryEntry, RemoteListenerScan, SshConnectionStatus, SshHost } from "@vetta/ssh-transport";
 import type { PortForward } from "../../main/ssh/port-forward-service.js";
 import type { SshHostStatusEvent } from "../../shared/ssh-ipc.js";
 import type { SshPromptRequestEvent, SshPromptResponse } from "../../shared/ssh-prompt-ipc.js";
+import type {
+	SshTransferConflictPolicy,
+	SshTransferEvent,
+	SshTransferItem,
+	SshTransferPlan,
+	SshTransferPlanInput,
+} from "./ssh-transfers.js";
 
 // 渲染进程按这条契约读转发，不直接 import 主进程模块。
 export type { PortForward, PortForwardStatus } from "../../main/ssh/port-forward-service.js";
@@ -113,4 +121,21 @@ export interface DesktopSshApi {
 	/** 提示已失效（连接取消或超时），关掉界面即可。 */
 	onPromptCancelled(listener: (id: string) => void): () => void;
 	respondToPrompt(response: SshPromptResponse): void;
+	// ─── 远端文件传输（本机 ↔ SSH 项目目录） ───
+	/**
+	 * 展开一次传输：文件夹在本机/远端各自递归，逐文件探测目标冲突。
+	 * 只读不落字节；plan 有 2 分钟有效期，过期须重新 plan。
+	 */
+	planTransfer(input: SshTransferPlanInput): Promise<SshTransferPlan>;
+	/** 按 plan 入队；冲突目标按策略整文件替换或跳过。返回新建的队列条目。 */
+	commitTransfer(planId: string, conflictPolicy: SshTransferConflictPolicy): Promise<SshTransferItem[]>;
+	cancelTransfer(id: string): Promise<void>;
+	/** 清除一条记录；仍在队列或传输中时先取消。 */
+	removeTransfer(id: string): Promise<void>;
+	listTransfers(): Promise<SshTransferItem[]>;
+	/** 选本机上传源：`file` 多选文件，`directory` 多选文件夹。取消返回空数组。 */
+	selectTransferSource(kind: "file" | "directory"): Promise<string[]>;
+	/** 选下载目标目录。取消返回 null。 */
+	selectTransferDownloadDir(): Promise<string | null>;
+	onTransferEvent(listener: (event: SshTransferEvent) => void): () => void;
 }

@@ -394,6 +394,28 @@
 			"prepareFailed": "无法读取拖入的文件",
 			"commitFailed": "文件传输失败",
 			"failedCount": "有 {{count}} 项传输失败"
+		},
+		"sshTransfer": {
+			"download": "下载到本机…",
+			"uploadFiles": "上传文件…",
+			"uploadFolders": "上传文件夹…",
+			"panelTitle": "远端传输",
+			"conflictTitle": "目标已存在",
+			"conflictMessage": "有 {{count}} 个同名目标已存在于远端。选择「替换」将覆盖它们；选择「跳过」则保留远端现有内容，其余文件照常传输。",
+			"replace": "替换",
+			"skip": "跳过冲突项",
+			"skippedCount": "有 {{count}} 项无法传输，已跳过",
+			"nothingToTransfer": "没有可传输的文件",
+			"startFailed": "传输启动失败",
+			"cancel": "取消",
+			"remove": "移除",
+			"status": {
+				"queued": "排队中",
+				"transferring": "传输中",
+				"completed": "已完成",
+				"failed": "失败",
+				"canceled": "已取消"
+			}
 		}
 	},
 	"fileEditor": {

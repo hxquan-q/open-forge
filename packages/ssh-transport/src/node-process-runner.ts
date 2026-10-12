@@ -204,6 +204,26 @@ export function openSshCommand(
 		write: (data) => {
 			if (child.stdin.writable) child.stdin.write(data);
 		},
+		writeAsync: (data) =>
+			new Promise((resolve) => {
+				if (!child.stdin.writable) {
+					resolve();
+					return;
+				}
+				let settled = false;
+				const finish = (): void => {
+					if (!settled) {
+						settled = true;
+						resolve();
+					}
+				};
+				// drain 是回调与「写缓存清空」两者的后到者：false 分支等 drain，true 分支
+				// 回调即到。close/error（进程被杀）也必须放行，否则取消一个上传会挂死。
+				child.stdin.once("close", finish);
+				child.stdin.once("error", finish);
+				if (child.stdin.write(data)) finish();
+				else child.stdin.once("drain", finish);
+			}),
 		end: () => child.stdin.end(),
 		kill: terminate,
 		exited,
