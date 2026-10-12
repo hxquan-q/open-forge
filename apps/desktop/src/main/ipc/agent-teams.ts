@@ -32,6 +32,7 @@ import {
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { resolveTeamSessionWorkspace } from "../agent-teams/team-workspace.js";
 import { listTeamSidebarConversations } from "../conversations/team-sidebar-conversation-projection.js";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 
 const log = getAppLogger("agent-teams-ipc");
@@ -317,7 +318,7 @@ export function registerAgentTeamsIpc(
 			log.error("team get-session failed", {
 				teamSessionId: reference.id,
 				elapsedMs: Date.now() - startedAt,
-				error: error instanceof Error ? error.message : String(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -332,7 +333,7 @@ export function registerAgentTeamsIpc(
 			log.error("team send-message input rejected", {
 				teamSessionId: sessionId,
 				elapsedMs: Date.now() - startedAt,
-				error: error instanceof Error ? error.message : String(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -359,7 +360,7 @@ export function registerAgentTeamsIpc(
 				teamSessionId: sessionId,
 				requestId: parsed.requestId,
 				elapsedMs: Date.now() - startedAt,
-				error: error instanceof Error ? error.message : String(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -385,7 +386,7 @@ export function registerAgentTeamsIpc(
 						teamSessionId: sessionId,
 						subscriptionId,
 						eventType: payload.type,
-						error: error instanceof Error ? error.message : String(error),
+						error: describeError(error),
 					});
 				});
 		});
