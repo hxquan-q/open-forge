@@ -83,6 +83,9 @@ export class AgentSession {
 	private activeQueueOperation: { readonly id: string; readonly operation: SessionQueueOperation } | undefined;
 	private continuationRequested = false;
 	private continuationDrain: Promise<void> | undefined;
+	/** 进入 `recovery_required` 的首个持久化原因；后续拒绝路径透传它，而不是裸模板错误。 */
+	private persistenceError: KernelError | undefined;
+	private recoveryDrain: Promise<void> | undefined;
 	private inputRequestPreparer: RuntimeInputRequestPreparer | undefined;
 	private readonly continuationContext: SessionContextRecord[] = [];
 	private readonly nextTurnContext: SessionContextRecord[] = [];
@@ -161,7 +164,8 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.currentState !== "idle") {
 			if (!options.streamingBehavior) throw sessionBusyError();
 			return this.queueInput(options.streamingBehavior, input);
@@ -179,7 +183,8 @@ export class AgentSession {
 		await this.contextWrite;
 		if (preparer) this.inputRequestPreparer = preparer;
 		if (this.currentState === "closed" || this.currentState === "closing") throw sessionClosedError();
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.currentState !== "idle") {
 			if (!options.streamingBehavior) throw sessionBusyError();
 			const behavior = this.queueBehaviorAfterOperations(options.streamingBehavior);
@@ -207,7 +212,8 @@ export class AgentSession {
 			await this.contextWrite;
 			signal?.throwIfAborted();
 			if (this.currentState === "closed" || this.currentState === "closing") throw sessionClosedError();
-			if (this.currentState === "recovery_required") throw turnPersistenceError();
+			await this.recoverIfRequired();
+			if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 			if (this.currentState === "idle") {
 				return this.startRequest(request, preparer ?? this.inputRequestPreparer, signal);
 			}
@@ -232,7 +238,8 @@ export class AgentSession {
 		await this.contextWrite;
 		if (preparer) this.inputRequestPreparer = preparer;
 		if (this.currentState === "closed" || this.currentState === "closing") throw sessionClosedError();
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.currentState === "idle") return { status: "idle" };
 		const queuedBehavior = this.queueBehaviorAfterOperations(behavior);
 		const { id, pendingCount } = this.inputQueue.enqueueRequestWithId(queuedBehavior, request);
@@ -244,7 +251,8 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.currentState !== "idle") throw sessionBusyError();
 		return this.startTurn();
 	}
@@ -254,7 +262,8 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.currentState !== "idle") throw sessionBusyError();
 		return this.startTurn(undefined, [], true);
 	}
@@ -273,7 +282,9 @@ export class AgentSession {
 		if (this.currentState === "cancelling") {
 			return Promise.reject(continuationCancelledError());
 		}
-		if (this.currentState === "recovery_required") return Promise.reject(turnPersistenceError());
+		// 同步入口：latch 必须在调用时完成（取消要先拒绝已登记 waiter），不能先
+		// await 恢复再登记；恢复由异步 admission 入口承担，成功后自动排空续跑队列。
+		if (this.currentState === "recovery_required") return Promise.reject(this.persistenceRequiredError());
 		this.continuationRequested = true;
 		this.continuationContext.push(...context);
 		const completion = new Promise<void>((resolve, reject) => {
@@ -298,7 +309,7 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		const queuedBehavior = this.queueBehaviorAfterOperations(behavior);
 		return {
 			status: "queued",
@@ -311,7 +322,7 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.activeQueueOperation?.operation.type === operation.type) {
 			return {
 				status: "queued",
@@ -329,7 +340,7 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		this.nextTurnContext.push(...context);
 	}
 
@@ -337,7 +348,7 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			return Promise.reject(sessionClosedError());
 		}
-		if (this.currentState === "recovery_required") return Promise.reject(turnPersistenceError());
+		if (this.currentState === "recovery_required") return Promise.reject(this.persistenceRequiredError());
 		const write = this.contextWrite.then(async () => {
 			if (this.currentState !== "idle") throw sessionBusyError();
 			await this.pipeline.recordContext(this.identity, context);
@@ -351,7 +362,7 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			return Promise.reject(sessionClosedError());
 		}
-		if (this.currentState === "recovery_required") return Promise.reject(turnPersistenceError());
+		if (this.currentState === "recovery_required") return Promise.reject(this.persistenceRequiredError());
 		const write = this.contextWrite.then(async () => {
 			if (this.currentState !== "idle") throw sessionBusyError();
 			await this.pipeline.recordTaskFacts(this.identity, facts);
@@ -400,7 +411,8 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		if (this.activeQueueOperation) return { status: "missing" };
 		// 先取出条目再打断：确保这条消息绝不因中途失败而丢失在「已出队未发送」状态——
 		// takeById 失败即早退，成功后它只存在于本调用栈，随 startTurn 进入持久化。
@@ -430,7 +442,8 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		await this.recoverIfRequired();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		this.inputQueue.resume();
 		if (this.currentState !== "idle") return undefined;
 		await this.contextWrite;
@@ -503,7 +516,7 @@ export class AgentSession {
 		if (this.currentState === "closed" || this.currentState === "closing") {
 			throw sessionClosedError();
 		}
-		if (this.currentState === "recovery_required") throw turnPersistenceError();
+		if (this.currentState === "recovery_required") throw this.persistenceRequiredError();
 		const queuedBehavior = this.queueBehaviorAfterOperations(behavior);
 		const { id, pendingCount } = this.inputQueue.enqueueWithId(queuedBehavior, input);
 		return { status: "queued", behavior: queuedBehavior, pendingCount, id };
@@ -539,6 +552,7 @@ export class AgentSession {
 			return result;
 		} catch (error) {
 			if (error instanceof KernelError && error.code === KERNEL_ERROR_CODES.TURN_PERSISTENCE) {
+				this.persistenceError = error;
 				this.currentState = "recovery_required";
 			}
 			if (this.inputQueue.pendingCount > 0) this.inputQueue.pause();
@@ -578,6 +592,7 @@ export class AgentSession {
 			return result;
 		} catch (error) {
 			if (error instanceof KernelError && error.code === KERNEL_ERROR_CODES.TURN_PERSISTENCE) {
+				this.persistenceError = error;
 				this.currentState = "recovery_required";
 			}
 			if (this.inputQueue.pendingCount > 0) this.inputQueue.pause();
@@ -751,6 +766,39 @@ export class AgentSession {
 		this.continuationRequested = false;
 		this.continuationContext.length = 0;
 		for (const waiter of this.continuationWaiters.splice(0)) waiter.reject(error);
+	}
+
+	/**
+	 * `recovery_required` 的入坞恢复：复用 `pipeline.resumeSession`——与宿主恢复
+	 * 流程同一原语（重跑恢复策略、为未结算回合补 `turn.failed` 中断终态，幂等）。
+	 * 成功后回 `idle`，调用方继续本次 admission；恢复失败保持 `recovery_required`
+	 * 并把恢复失败记为新的首因。并发 admission 共享同一恢复 drain。
+	 *
+	 * 拒绝原地恢复的情形：`activeTurn` 仍悬挂（取消宽限收敛路径）——僵尸回合随时
+	 * 可能回写终态，两条管线并发写同一会话日志会破坏事件序；该情形维持拒绝，
+	 * 仍由宿主重建 Session（BUG-0091）。
+	 */
+	private recoverIfRequired(): Promise<void> {
+		if (this.currentState !== "recovery_required") return Promise.resolve();
+		this.recoveryDrain ??= (async () => {
+			try {
+				if (this.activeTurn) return;
+				await this.pipeline.resumeSession(this.identity.sessionId);
+				this.persistenceError = undefined;
+				this.currentState = "idle";
+				this.scheduleRequestedContinuations();
+			} catch (error) {
+				this.persistenceError = error instanceof KernelError ? error : turnPersistenceError(error);
+			}
+		})().finally(() => {
+			this.recoveryDrain = undefined;
+		});
+		return this.recoveryDrain;
+	}
+
+	/** `recovery_required` 的拒绝路径透传首个持久化原因（含 cause），而不是裸模板错误。 */
+	private persistenceRequiredError(): KernelError {
+		return this.persistenceError ?? turnPersistenceError();
 	}
 }
 
