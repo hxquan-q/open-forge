@@ -7,8 +7,8 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
-| `REQ-0012` | 实体表单电子化二期（eform-craft 三版块团队化） | ready | [`TASK-0223`](../tasks/TASK-0223-eform-team-preset.md) |
-| `REQ-0011` | 实体表单电子化一期（eform-craft 预置插件） | ready | [`TASK-0222`](../tasks/TASK-0222-eform-craft-preset.md) |
+| `REQ-0012` | 实体表单电子化二期（eform-craft 三版块团队化） | ready | [`TASK-0225`](../tasks/TASK-0225-eform-team-preset.md) |
+| `REQ-0011` | 品牌档案默认口径（dev 与打包 = 外部分发） | ready | [TASK-0224](../tasks/TASK-0224-brand-profile-default-distribution.md) |
 | `REQ-0010` | MCP 工具暴露粒度（按 server / 工具选择常驻或按需） | draft | [RESEARCH-0024](../research/RESEARCH-0024-pi-workflow-post-design-review.md)、[PLAN-0017](../plans/PLAN-0017-mcp-tool-exposure-granularity.md) |
 | `REQ-0009` | Desktop 外观字体偏好 | ready | [RESEARCH-0020](../research/RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
 | `REQ-0008` | 非手机上游能力选择性适配 | ready | [PLAN-0014](../plans/PLAN-0014-selective-upstream-nonmobile.md) |

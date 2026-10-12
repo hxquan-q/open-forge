@@ -1,7 +1,7 @@
 ---
 id: TASK-0208
 type: task
-status: verifying
+status: done
 priority: P1
 owner: coordinator
 source: user-request；origin/chenxvhua 分支
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-05
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -80,3 +80,12 @@ updated: 2026-10-08
 
 - **未覆盖**：**真实子代理会话里的拦截**——即「启用 allstar-coding 后，子代理真的发起一次越权工具调用，看到的是上面这段提示」。这需要在 Debug profile 内启用该插件、起一个真实团队会话并诱导越权，本轮未构造（既需真实模型回合，又需插件启用态；且被 ISSUE-0031 的模型禁用所限）。
 - **关闭建议**：判定逻辑与提示文案都在单测级被**直接断言**（含「reason 含 help_protocol」这一可读性锚点），机制出口（PreToolUse hook → block）可静态核对；缺的是真实会话取证。倾向 `done`，是否要求补一次真实越权会话，请用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项属**客观阻塞**，且集成面已实证完成，据此闭合。
+
+- **真实子代理会话拦截属客观阻塞**：「启用 allstar-coding 后子代理真的发起一次越权调用看到提示」需**真实模型回合**，而唯一被授权模型 `qwen3.8` 已由 [ISSUE-0031](../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md) 明令禁止在闭合前用于真实流程验证 ⇒ 无可用授权模型，非「本轮没跑」。
+- **集成面已实证完成**（本轮核实，同时更正 `project/tasks/README.md` 的过期行）：交付记录所记合并提交 `8935058fd`、记录提交 `c058ca693` 均在案，且 `8935058fd` 经 `git branch -r --contains` 确认为 **`origin/dev` 的祖先** ⇒ 门禁与 fast-forward 推送早已完成，README 原写的「先建记录再合并，待门禁与推送」是过期副本。
+- 可及范围内证据：判定器 **4 文件 / 98 例通过**；`src/fence/judge.ts` 每条 block `reason` 均为完整中文句子 + 处置指引（非裸错误码），且 `test/fence-judge.test.ts:175/:220` 以 `toContain("help_protocol")` 钉住「申诉通道可读」；拦截出口（`plugin-sdk registerHook` + `PreToolUse` → `{action:"block", reason}`）可静态核对（`src/fence.ts:87/107`）。
+- 残留：插件在真实会话中的拦截行为未取证，等模型阻塞解除后可补；不因本闭合改变该事实。

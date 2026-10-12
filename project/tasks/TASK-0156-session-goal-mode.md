@@ -1,7 +1,7 @@
 ---
 id: TASK-0156
 type: task
-status: verifying
+status: done
 priority: P2
 owner: coding-agent + runtime-core + desktop
 source: user-request; upstream 4f7cb6199, 685427410, b7b5e0b9f, 42c8a4c82
@@ -21,7 +21,7 @@ depends_on: [TASK-0152, TASK-0155]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -83,3 +83,10 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 
 - 未观测/未覆盖：①「连续无可观察进展」分支未在真实应用单独构造（需回合**成功**但无 assistant 活动；空回合被运行时归为失败），仅单测级证据；②每轮两个请求的成因未定论（观察为同一上下文 891→892 条目，疑似运行时对空回合的重试），本记录只作事实描述，不解释机制。
 - 关闭建议：六条子句均有真实应用读数，倾向闭合为 `done`；按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **清单行验收对象全部有真实读数**（2026-10-08 组二续测二）：目标创建/胶囊/自动续跑（65s/60 次实测）、三轮空回合 → 受阻（3 对请求 + `status: "blocked"` + 其后 12 分钟零 provider 请求）、预算/取消（停止即停 + 已暂停）、恢复不重复轮次（上下文条目数 891/892 不膨胀的硬证据）、重启转已暂停且零请求、清除目标（`data: null` 快照）。
+- **余量两条均不属本行验收对象**：「连续无可观察进展」分支为另一停止条件分支（单测级 `goal-session-extension.test.ts:251` 覆盖，真实触发需专门注入形态）；「每轮两个请求」成因已作为事实记录（疑似空回合重试），非缺陷断言。

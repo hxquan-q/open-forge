@@ -1,7 +1,7 @@
 ---
 id: TASK-0075
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: [TASK-0062]
 conflicts_with: []
 integration_status: pending
 created: 2026-09-24
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -84,3 +84,10 @@ updated: 2026-10-08
 
 - **未覆盖**：三条 Given 的**真实点击判定**，全部。
 - **关闭建议**：修复逻辑（拒绝 html/body 与满屏容器）在单测级被直接断言，夹具也已备好；缺的是用户面点击取证。建议与 TASK-0072 一并裁定：用户自行肉眼走查一次，或接受测试级口径。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **机制面成立**：`webview-picker-target`/`webview-picker-guest` 在同批 7 文件 / 62 例内通过。
+- **用户面属同一观测通道限制**（原生 guest 内点击不可取证，见 TASK-0072 闭合记录）；判别夹具已留存为可复现资产：`fixtures/browser-page/picker-server.ts`（端口 8793，`/plain` 满屏 body+`#go`、`/deco` 满屏装饰 div+`#go`，两路由实测 HTTP 200）——任何能操作真实鼠标与截图的回合可直接复现三条条款。

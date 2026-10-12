@@ -1,7 +1,7 @@
 ---
 id: TASK-0168
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ssh-transport + desktop
 source: user-request; RESEARCH-0018; RESEARCH-0019
@@ -21,7 +21,7 @@ depends_on: [TASK-0153, TASK-0165]
 conflicts_with: [TASK-0158, TASK-0174, TASK-0177]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -103,3 +103,13 @@ TASK-0169 第 74/76 行记录「`ssh-connection.loopback.test.ts` 在 Windows �
 - 完整 `bun run check`、`test:changed` 与三平台矩阵收口——未复跑；本轮只做定向复跑与两处遗留的量化。
 
 - 关闭建议：五条声明的定向命令在 Windows 本机全绿（59 通过 / 19 显式跳过 / 0 失败），且交付记录里唯一与「Windows 红」相关的争议点（TASK-0169 的 6 例存量红）经实测已不存在 ⇒ 就「本任务合同的可及范围」而言倾向闭合 `done`；但 `packages/runtime-ssh` 22 例红的**归属**（留在 TASK-0174 还是另立）需用户一并裁定。按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项属**任务边界外 / 已归属他 Task / 需 CI 环境**，据此闭合。
+
+- 真实 SSH 主机（含动态端口、带空格临时目录全链）：交付记录明记「本任务边界不含真实主机」⇒ 无验收对象，实机口径归 TASK-0165/0169。
+- `packages/runtime-ssh` 22 例红：交付记录已明记「这些归 TASK-0174（本 Task 不添加 package test 入口或新的 CI 矩阵）」，属**已归属他 Task**；本轮只把读数钉死供其引用。
+- Windows CI 缺 bash 前置：需 CI 环境（GitHub windows runner 自带 Git Bash），非本机可测。
+- 可及范围内证据：五条声明命令 **59 通过 / 19 显式跳过 / 0 失败**（跳过项为显式交给 POSIX 的三组）；实测推翻 TASK-0169「6 例存量红」的过期记载。
+- **随本闭合转出的未决项（不得随闭合丢失）**：`resource-runtime.remote` 的 Windows **挂起根因**仍未定位（交付记录自认「未定位，不猜测」，本轮未复诊）——见 VERIFY-0017 本轮记录的待办段。

@@ -75,3 +75,8 @@ TASK-0165 的 ssh2 交互认证预算/KI 密码回退已有独立参与者在主
 - 保持的合同：共享 readyPromise 首调用方预算、认证降级与 known_hosts、局部取消不终止其他等待者（既有 ssh2-runner 取消/超时用例保持）、TASK-0153/0165 集成基线。
 - 未验证项/风险：真实远端主机失效/断线场景未联测（合同要求不连真实主机）；node runner `-O exit` 在真机 OpenSSH 上的行为未实测（argv 合同已测）；`ssh-connection.loopback` Windows 存量红待 TASK-0168。
 - 状态：工程完成转 `verifying`；`integration_status: integrated`（随本提交入 main）；人工功能验收与发布未执行。
+
+
+### 记录更正（2026-10-10，随 VERIFY-0017 分档闭合批次）
+
+TASK-0168 的 2026-10-08 复跑与本任务 2026-10-09 的组二复跑均已实测：`ssh-connection.loopback.test.ts` 在 Windows 上 **7 通过 / 8 显式跳过 / 0 失败**——本任务原第 74/76 行「该文件在 Windows 仍有 6 例存量红」「Windows 存量红待 TASK-0168」的记载**已被 TASK-0168 自身交付消除**，属过期记载，不再作为待办。`packages/runtime-ssh` 的 22 例红（无 `test` 脚本、不在任何标准入口内）归 TASK-0174。本任务仍保持 verifying：实机生命周期验收需真实 SSH 主机（D 类真实资源项，待用户自行实测或另行授权）。

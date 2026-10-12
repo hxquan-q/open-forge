@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { parseInputSegments, serializeInputSegments, segmentsToText, type InputSegment } from "@shared/lib/input-tokens";
 import { useEffect, useRef } from "react";
@@ -5,48 +6,45 @@ import { $applySegments, $readSegments } from "../tokens/segments";
 
 const CONTROLLED_SYNC_TAG = "input-editor-controlled-sync";
 
+/** Same structure and same wire identity: everything the draft text can carry. */
+function sameProjectionSegment(segment: InputSegment, candidate: InputSegment | undefined): boolean {
+	if (!candidate || segment.kind !== candidate.kind) return false;
+	switch (segment.kind) {
+		case "text":
+			// Text content is covered by the canonical serialization check below: the serializer
+			// synthesizes separator spaces between tokens and following text, which the editor's
+			// nodes do not contain, so a character-by-character comparison never matches.
+			return true;
+		case "member":
+			return candidate.kind === "member" && segment.memberId === candidate.memberId && segment.handle === candidate.handle;
+		case "skill":
+		case "scene":
+			return candidate.kind === segment.kind && segment.name === candidate.name;
+		case "connector":
+			return candidate.kind === "connector" && segment.name === candidate.name;
+		case "file":
+			return candidate.kind === "file" && segment.path === candidate.path;
+		case "image":
+			return candidate.kind === "image" && segment.path === candidate.path;
+	}
+}
+
+/**
+ * Projection equality is canonical: the same serialized draft text plus the same structure.
+ *
+ * The team composer projects its draft from text (`parseInputSegments(draft)`), so two things never
+ * round-trip through the editor's nodes: presentation metadata (`isDirectory` / `label` / `iconUrl` /
+ * `alias` / `icon` / `avatar` / `meta` — owned by the editor) and the separator spaces the serializer
+ * synthesizes between tokens and following text. Comparing either of them reports a difference on
+ * every render, and the bridge then rebuilds the document (`$applySegments` clears the root and moves
+ * the caret), cancelling IME composition on every keystroke — the "input fights the keyboard" bug
+ * (BUG-0084). Structural differences the text cannot express (kind switches like text ↔ path token,
+ * other paths/names, counts) still sync.
+ */
 function inputSegmentsEqual(left: readonly InputSegment[], right: readonly InputSegment[]): boolean {
 	if (left.length !== right.length) return false;
-	return left.every((segment, index) => {
-		const candidate = right[index];
-		if (!candidate || segment.kind !== candidate.kind) return false;
-		switch (segment.kind) {
-			case "text":
-				return candidate.kind === "text" && segment.text === candidate.text;
-			case "member":
-				return (
-					candidate.kind === "member" &&
-					segment.memberId === candidate.memberId &&
-					segment.handle === candidate.handle &&
-					segment.label === candidate.label &&
-					segment.avatar === candidate.avatar &&
-					segment.meta === candidate.meta
-				);
-			case "skill":
-			case "scene":
-				return (
-					candidate.kind === segment.kind &&
-					segment.name === candidate.name &&
-					segment.alias === candidate.alias &&
-					segment.icon === candidate.icon
-				);
-			case "connector":
-				return (
-					candidate.kind === "connector" &&
-					segment.name === candidate.name &&
-					segment.label === candidate.label &&
-					segment.iconUrl === candidate.iconUrl
-				);
-			case "file":
-				return (
-					candidate.kind === "file" &&
-					segment.path === candidate.path &&
-					segment.isDirectory === candidate.isDirectory
-				);
-			case "image":
-				return candidate.kind === "image" && segment.path === candidate.path;
-		}
-	});
+	if (segmentsToText(left) !== segmentsToText(right)) return false;
+	return left.every((segment, index) => sameProjectionSegment(segment, right[index]));
 }
 
 /** Token-aware controlled projection used by non-default conversation connectors. */

@@ -11,6 +11,13 @@ import {
 } from "./desktop-brand.js";
 import { NAMESPACES, resources } from "./i18n/resources.js";
 
+// 默认档已切换为外部分发（REQ-0011）；本文件第一块合同围绕 self 档的归一规则，
+// 因此在模块导入前显式钉住 self 档；档案三态（未设置 / 显式 self / 显式 distribution）
+// 在第二块内自行覆盖。
+vi.hoisted(() => {
+	process.env.VETTA_BRAND_PROFILE = "self";
+});
+
 const desktopRoot = join(import.meta.dirname, "..", "..");
 
 function readDesktopSource(relativePath: string): string {
@@ -110,7 +117,10 @@ describe("Desktop brand layer", () => {
 		expect(source).not.toContain("[Vetta Desktop](");
 	});
 
-	it("renders Open Forge window titles in every renderer HTML entry", () => {
+	it("静态 HTML 标题覆盖默认口径（外部分发档案），运行时按档案与语言覆盖", () => {
+		const defaultBrand = JSON.parse(
+			readFileSync(join(desktopRoot, "src/shared/desktop-brand.distribution.json"), "utf8"),
+		) as { displayName: string };
 		for (const entry of [
 			"src/renderer/index.html",
 			"src/renderer/onboarding.html",
@@ -121,8 +131,30 @@ describe("Desktop brand layer", () => {
 		]) {
 			const html = readDesktopSource(entry);
 			const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "";
-			expect(title, entry).toContain(DESKTOP_BRAND.displayName);
+			expect(title, entry).toContain(defaultBrand.displayName);
 			expect(title, entry).not.toMatch(/\bVetta\b/);
+		}
+	});
+
+	it("四个决策点与辅助脚本共享同一默认档归一（未设置 = distribution，显式 self 回 Open Forge）", () => {
+		expect(readDesktopSource("src/shared/desktop-brand.ts")).toContain(
+			'process.env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution"',
+		);
+		for (const file of ["vite.config.ts", "vite.main.config.ts"]) {
+			expect(readDesktopSource(file), file).toContain(
+				'env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution"',
+			);
+		}
+		const preparePack = readDesktopSource("scripts/prepare-pack.js");
+		expect(preparePack).toContain('process.env.VETTA_BRAND_PROFILE === "self"');
+		expect(preparePack).toContain('if (process.env.VETTA_BRAND_PROFILE !== "self")');
+		for (const file of [
+			"scripts/build-appshot-helper.js",
+			"scripts/desktop-packaging-layout.mjs",
+			"scripts/linux-packaging-contract.mjs",
+			"scripts/ui-verification.mjs",
+		]) {
+			expect(readDesktopSource(file), file).toContain('process.env.VETTA_BRAND_PROFILE === "self"');
 		}
 	});
 
@@ -171,8 +203,20 @@ describe("品牌档案（VETTA_BRAND_PROFILE 构建期开关）", () => {
 		vi.resetModules();
 	});
 
-	it("用户不设置开关时拿到自用口径：Open Forge 品牌与既有归一规则", async () => {
+	it("用户不设置开关时拿到外部分发口径：Allstr ai / 小爱ai，且 Open Forge 字样被归一", async () => {
 		delete process.env.VETTA_BRAND_PROFILE;
+		vi.resetModules();
+		const brand = await import("./desktop-brand.js");
+
+		expect(brand.DESKTOP_BRAND_PROFILE).toBe("distribution");
+		expect(brand.DESKTOP_BRAND.displayName).toBe("Allstr ai");
+		expect(brand.resolveDesktopBrandName("zh")).toBe("小爱ai");
+		expect(brand.replaceDesktopBrandText("Open Vetta and Vetta's app")).toBe("Allstr ai and Allstr ai's app");
+		expect(brand.replaceDesktopBrandText("关于 Open Forge", "zh")).toBe("关于 小爱ai");
+	});
+
+	it("显式 self 档回到 Open Forge 品牌与既有归一规则", async () => {
+		process.env.VETTA_BRAND_PROFILE = "self";
 		vi.resetModules();
 		const brand = await import("./desktop-brand.js");
 

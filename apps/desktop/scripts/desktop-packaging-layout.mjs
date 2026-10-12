@@ -9,7 +9,12 @@
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const desktopBrand = require("../src/shared/desktop-brand.json");
+// 品牌档案与主链同开关（VETTA_BRAND_PROFILE）：默认外部分发档，显式 self 回 Open Forge。
+const desktopBrand = require(
+	process.env.VETTA_BRAND_PROFILE === "self"
+		? "../src/shared/desktop-brand.json"
+		: "../src/shared/desktop-brand.distribution.json",
+);
 
 export const DESKTOP_BUILD_OUTPUTS = Object.freeze([
 	{ source: "dist/main", target: "main" },

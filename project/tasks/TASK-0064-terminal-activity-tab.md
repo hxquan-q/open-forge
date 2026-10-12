@@ -1,7 +1,7 @@
 ---
 id: TASK-0064
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0001
@@ -18,7 +18,7 @@ depends_on: []
 conflicts_with: [TASK-0061]
 integration_status: integrated
 created: 2026-09-23
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -105,3 +105,11 @@ Activity Panel 新增内置 `terminal` tab，复用 `TerminalSurface` 与同一 
 
 - **未覆盖**：SSH 远端项目的右栏终端（第 3 条 Given）；以及「每 workspace 单实例」在多 workspace 切换下的真实往返（本轮只验证了单 workspace 内的挂载/隐藏）。
 - **关闭建议**：前两条 Given 与「关闭=隐藏且进程结束」在用户面成立，测试级全绿；第 3 条 Given 无验收对象（无远程项目）。就合同可及范围倾向 `done`，第 3 条是否要求补真实 SSH 环境，请用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项属**无验收对象 / 已知残留**，不构成缺口，据闭合。
+
+- 第 3 条 Given（SSH 远程项目右栏终端）：本 Debug profile 无已注册远程项目，且「不连真实主机」是各 SSH 任务的共同边界 ⇒ **无验收对象**。
+- 前两条 Given 与「关闭=隐藏且进程随之结束」已在真实 UI 成立（右栏 PID 25012 / 底部 PID 20552 独立；隐藏右栏后 25012 消失、20552 存活）。
+- 残留（如实记录，不作门槛）：「每 workspace 单实例」在**多 workspace 切换**下的真实往返本轮仅覆盖单 workspace 挂载/隐藏；其单实例语义由 `activity-tab-residency` / `resolve-activity-tabs` 等 5 文件 33 例定向断言覆盖，真实多 workspace 往返列为发布前抽检项。

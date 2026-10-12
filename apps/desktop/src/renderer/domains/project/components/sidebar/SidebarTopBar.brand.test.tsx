@@ -3,7 +3,7 @@
 import { i18n, initI18n } from "@shared/i18n";
 import { render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it } from "vitest";
-import { DESKTOP_BRAND } from "@/shared/desktop-brand";
+import { resolveDesktopBrandName } from "@/shared/desktop-brand";
 import { SidebarTopBar } from "./SidebarTopBar";
 
 /**
@@ -20,7 +20,8 @@ describe("SidebarTopBar 品牌区", () => {
 		await i18n.changeLanguage("zh");
 		render(<SidebarTopBar floating={false} />);
 
-		expect(screen.getByText(DESKTOP_BRAND.displayName)).toBeTruthy();
+		// 展示名随档案与界面语言（默认外部分发档的中文界面为「小爱ai」）。
+		expect(screen.getByText(resolveDesktopBrandName(i18n.language))).toBeTruthy();
 		expect(screen.queryByText("Vetta")).toBeNull();
 	});
 

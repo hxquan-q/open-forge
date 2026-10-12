@@ -15,15 +15,18 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0223` | `verifying` | — | eform-craft 三版块团队化（REQ-0012 二期）：单 agent 扩为 eform/esign/eaudit 三成员团队（team eform-studio，eform 队长），产物四件套扩六件套（+index.html 列表页 +form.html 表单页，数据级增删查改与 draft→saved→approved 生命周期）、电子签组件（演示验证→canvas 手写→清空重签→审核锁定）、审计组件（auditEnabled 默认 false、五类操作日志、仅查看不可删）；锚点+capabilities 共享契约、合同测试 13/13、五步验证链与完整 check 全绿；团队行为面待实机验收（另立任务）。 |
-| `TASK-0222` | `verifying` | — | eform-craft 电子表单还原预置插件（REQ-0011 一期）：纯提示词资产 preset（单 agent + 单技能，权限仅 `agent.skills.control`），识别合同（标记→类型、同义词→固定字段名含空格）+ 四件套产物规范（schema/preview/mock/spec）+ 确认门与修改循环；tenants.json 双 profile 注册、vettapkg 产出并 staging、五步验证链与完整 check 全绿；@eform 行为面待实机验收（另立任务）。 |
-| `TASK-0221` | `verifying` | — | ac-blackbox 补自测中通道失效降级路径（技能合同，包版本 0.3.2 → 0.3.3）：工具报错≠产品失败（记空不记 ✗、不进 P#）+ 同工具跨条目连续 3 次报错熔断（stale_reference 不计、任一成功清零）+ L3 审批被拒视同失效 + 核验简报首先点名缺口；文档模板/状态机/围栏代码零改动；包内 133 项、check:quick、完整 check 全绿，技能合同面待实机验收；related TASK-0219。 |
+| `TASK-0224` | `verifying` | — | 品牌档案默认口径（REQ-0011）：dev 与打包默认切到 distribution（Allstr ai / 小爱ai），显式 `VETTA_BRAND_PROFILE=self` 保留 Open Forge；4 决策点 + 4 辅助脚本对齐；验收反馈切片补齐 dev 态系统图标（任务栏/托盘/Dock/通知/拖拽，`brand-icon-directory` 按档解析）；定向 18+18 例、打包 node 13/13、main 构建端到端、完整 check 两轮全绿；已推 `origin/dev`（`6a249ff3b` 批次），待重启 dev 后复验系统图标与打包产物人工验收。 |
+| `TASK-0223` | `verifying` | — | BUG-0085：停滞专用重试上限（最多 2 个看门狗窗口后落终态），消掉死连接的 ~30 分钟假死；红 4→2 次 attempt，ai 包 516 例 / impact 321 例 / check 全绿；已随 `9beebe1e0` 推 `origin/dev`，Worktree 已清理。 |
+| `TASK-0222` | `verifying` | — | BUG-0084：受控投影规范判等修复抢键盘 + 覆盖扩展（目录/图片/skill/scene/connector/member、流式重渲染、外部移除、mention 元数据）；定向 68、impact 10、完整 check 全绿；serial，main 工作区串行集成。 |
+| `TASK-0221` | `verifying` | — | BUG-0083：移除第一方 `flushSync`（侧栏选择意图）并按 BUG-0048 先例精确过滤 React DEV 噪音；定向 53、impact 271、完整 check 全绿；serial，main 工作区串行集成。 |
+| `TASK-0225` | `verifying` | — | eform-craft 三版块团队化（REQ-0012 二期）：单 agent 扩为 eform/esign/eaudit 三成员团队（team eform-studio，eform 队长），产物四件套扩六件套（+index.html 列表页 +form.html 表单页，数据级增删查改与 draft→saved→approved 生命周期）、电子签组件（演示验证→canvas 手写→清空重签→审核锁定）、审计组件（auditEnabled 默认 false、五类操作日志、仅查看不可删）；锚点+capabilities 共享契约、合同测试 13/13、五步验证链与完整 check 全绿；团队行为面待实机验收（另立任务）。 |
+| `TASK-0226` | `verifying` | — | eform-craft 电子表单还原预置插件（REQ-0011 一期）：纯提示词资产 preset（单 agent + 单技能，权限仅 `agent.skills.control`），识别合同（标记→类型、同义词→固定字段名含空格）+ 四件套产物规范（schema/preview/mock/spec）+ 确认门与修改循环；tenants.json 双 profile 注册、vettapkg 产出并 staging、五步验证链与完整 check 全绿；@eform 行为面待实机验收（另立任务）。 |
 | `TASK-0220` | `verifying` | — | 修复 BUG-0082（含残余轮）：黑盒 shell 白名单加引号感知元字符扫描（引号外组合/替换/重定向拦、双引号内 $() 与反引号同样拦、单引号保持字面量、转义引号不开区、未闭合 fail-safe）、读域拒 `..` 与绝对路径；两轮红测先行（3+2 failed）转绿，fence-judge 80 项/包内 133 项/impact 91 项/完整 check 全绿；写域 `..` 等既有面登记 ISSUE-0032。 |
 | `TASK-0219` | `verifying` | — | allstar-coding 黑盒环节升级（v0.5.2，包版本 0.3.2）：通道探测→三态分流→文档 v2→可选自测→用户核验；围栏为 blackbox 角色加窄读域（docs/ac/ 前缀、禁目录发现类）与 shell 白名单（仅 agent-browser）；fence-judge 74 项、包内 53 项、impact 127 项与完整 check 全绿；技能合同面待实机验收。白名单/读域两个绕过口由 TASK-0220 修复。 |
 | `TASK-0218` | `verifying` | — | Browser 能力/缺页恢复指引 a326a644b，独立 Task Worktree；定向 63、impact 590、Desktop 25、check 通过；main 有其他任务未提交修改，待串行集成与模型验收。 |
-| `TASK-0215` | `verifying` | — | BUG-0079：按实际工具生成终端能力指引，区分 MCP 检索与内置命令；定向、impact、check 通过，Desktop 全量 4909 通过；CLI 首轮 3 启动超时，整文件复跑 14/14；本地 main，真实模型效果待验收。 |
+| `TASK-0215` | `done` | — | BUG-0079：按实际工具生成终端能力指引，区分 MCP 检索与内置命令；定向、impact、check 通过，Desktop 全量 4909 通过；CLI 首轮 3 启动超时，整文件复跑 14/14。2026-10-10 按 VERIFY-0017 分档口径闭合：模型案例在授权模型 glm-5.3-flash 真实回合成立——网络诊断三命令实测执行、无「没有终端」误判、部分失败如实解释；MCP 字面子场景受限于 profile 未配 MCP 服务器（环境余量）。 |
 | `TASK-0207` | `done` | PLAN-0006 | 修复 BUG-0078：`browser_tab` 的 `elementRef` 同时接受 snapshot 打印的编码串与对象，校验前解码为对象 ref，对外 Schema 也公布两种形式；定向 14 项/impact 119 项/desktop 12 项/check 全绿；2026-10-07 隔离实例 + 真实模型实测 snapshot→原样回传编码串 click→返回 `click ok`、页内按钮文案变更与新增节点可见（VERIFY-0017 组一）。 |
-| `TASK-0208` | `verifying` | — | 集成 origin/chenxvhua 的 allstar-coding v0.4（ac-fence 事中拦截层）；先建记录再合并，待门禁与推送。 |
+| `TASK-0208` | `done` | — | 集成 origin/chenxvhua 的 allstar-coding v0.4（ac-fence 事中拦截层）。2026-10-09 按 VERIFY-0017 分档口径闭合：合并 `8935058fd` + 记录 `c058ca693` 经 `git branch -r --contains` 确认为 `origin/dev` 祖先（门禁与推送早已完成，原「待门禁与推送」是过期副本）；判定器 98 例全绿、block reason 可读性有测试锚点；真实越权会话需真实模型回合，受 ISSUE-0031 客观阻塞。 |
 | `TASK-0209` | `done` | PLAN-0016 | 发布状态可判定：日期只在 publish 写入（已写入当天日期），`release-notes.mjs --check` 断言文件名/标题/manifest 版本一致、无 tag 时必须为「待定」、已发布与 tag 逐字一致；政策入 delivery 规则与 release-notes README；test:quality 497 项与完整 check 全绿（提交 53f674121）。 |
 | `TASK-0210` | `done` | PLAN-0016 | 清理上游锁步发版残留：删除根 `version:patch/minor/major/set` 四条未受守卫脚本，补断言禁止其回归；`scripts/sync-versions.js` 因受守卫的 `release.mjs` 仍调用而保留；test:quality 498 项与完整 check 全绿（提交 29e429b21）。 |
 | `TASK-0211` | `done` | PLAN-0016 | 发版人工门与仓库设置清单成文：实测 desktop-production 无 protection rules、desktop-test 未创建、rulesets 为空、main 未保护，已把人工门位置与待配项写进 runbook，阶段结论回填 PLAN-0016；完整 check 全绿（提交 ed4c31afb）。 |
@@ -46,7 +49,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0196` | `done` | PLAN-0014 | 存量 Draft 批次（15 项）已全部逐项验证并推 origin/dev（0356daf39），批末合入本地 main（adeaa5294）；待人工验收。 |
 | `TASK-0200` | `done` | PLAN-0014 | 0157/0158 交付审计完成（网络/沙箱/权限面逐字对照上游全数 retain）；两项收尾已实施（af7a9f5a9 重挂修复、501a935da 隔离 e2e 补跑、25467b0d2）并推 origin/dev；2026-10-07 冷启动 null→就绪实测列表容器未卸载重挂、无抖动（VERIFY-0017 组一）。 |
 | `TASK-0039` | `done` | PLAN-0002 | webview 剩余口子收口：插件 pinned 页签改为有界 LRU（非活动上限 3、驱逐可逆、不占用 warm 预算）；面板收起卸载核实为已有等价实现（retain + 回归验证）；已推 origin/dev（2de27ed59）。2026-10-08 隔离 Debug 实例上用夹具插件（4 个 pinned 页签 + 随包 content-creation = 5 候选）实测闭合：非活动驻留硬上限 3、被逐出页签以新实例透明重建而驻留者保持实例、逐出跟随激活顺序、收起后面板表面全卸载且 residency 记录保留（重开恢复同一批）。 |
-| `TASK-0159` | `verifying` | PLAN-0014 | Windows 沙盒制品完整性：受控清单（3 个 exe + sha256 + 来源提交）钉死、缺失/不一致默认阻断打包（仅显式 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` 降级为告警）；不引入外部下载源；已推 origin/dev（1c1a50b9e），待人工验收。 |
+| `TASK-0159` | `done` | PLAN-0014 | Windows 沙盒制品完整性：受控清单钉死、缺失/不一致默认阻断打包（仅显式降级变量放行）。2026-10-10 按 VERIFY-0017 分档口径闭合：阻断路径三证成立（判定结构 block + 抛错分支 + CLI exit=1，test:packaging 125/125）；通过路径无对象（受控 exe 尚未产出，发版时刻形态）；三选一发版政策项显式移交用户。已推 origin/dev（1c1a50b9e）。 |
 | `TASK-0042` | `verifying` | PLAN-0002 | suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿）；随 TASK-0196 批次推 dev（ca6c9df9d）合入 main；实机峰谷差待用户验收——2026-10-08 用户选择自行实测（不由 Agent 触发真实电源事件），步骤与日志字段清单（`power working-set trim` 的 `reason/trimmed/beforeKb/afterKb/deltaKb`、`power event observed` 的 `workingSetKb`，落点 `<vettaHome>/desktop-app/logs/`）已写入 Task，待回贴读数。 |
 | `TASK-0199` | `done` | PLAN-0014 | 会话目录回归隔离初始化；保持原超时与所有断言，TASK-0187 批次交付，已随本轮合入 main。 |
 | `TASK-0151` | `done` | PLAN-0014 | 配置读改写统一串行事务并随 TASK-0187 批次合入 main；8 文件/52 定向测试通过；2026-10-07 真实 UI 并发 4 写两轮、2026-10-08 快捷键页同 tick 双字段写（`shortcuts`+`quickPanel`）与 2.8 ms 内 5 连发均无丢失更新与跨字段覆盖；`projects`/`archivedProjects` 经枚举确认渲染端无 `config.set` 写者、其全部写者（ProjectService.commit、batch-task-storage）都走 `updateDesktopConfig` 事务队列，整快照入口生产无调用者 ⇒ 验收子条件全部有客观观测，按「全程自动」授权闭合（VERIFY-0017 组一续测十六）。 |
@@ -65,7 +68,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0183` | `verifying` | — | packaged E2E CI 连续红修复（BUG-0066）；已分型：`verify:staged-deps --staging` 三平台并集误报本平台 prebuild，E2E 未跑到；待实施；CI 复跑受 ISSUE-0029 阻。 |
 | `TASK-0182` | `done` | — | macOS worktree 用例路径比较已修（BUG-0065：/var 符号链接）；CI 复跑待证。 |
 | `TASK-0179` | `done` | — | desktop tsc 堆上限经包内脚本提升（BUG-0063）；CI check job 已复跑绿（37059120973）。 |
-| `TASK-0178` | `verifying` | PLAN-0014 | P1 安全：撤销主机密钥必须拒绝；已实施提交 8b63e0d02，定向/impact/changed/check 全绿，待人工验收。 |
+| `TASK-0178` | `done` | PLAN-0014 | P1 安全：撤销主机密钥必须拒绝；已实施提交 8b63e0d02。2026-10-09 按 VERIFY-0017 分档口径闭合：声明命令 5 文件 77 例全绿（`@revoked` 无条件拒绝与宿主拒绝均有直接断言），真实主机实测属合同第 61 行**明令禁止项**（不得访问真实主机）故无验收对象。 |
 | `TASK-0175` | `done` | PLAN-0014 | 原子写入完整字节与失败清理合同；已实施提交 521a1eac9，toolkit 35/35 与批次门禁全绿，待人工验收。 |
 | `TASK-0173` | `done` | PLAN-0014 | RPC 超时分阶段诊断已落地（VERIFY-0015 六轮对照未复现，BUG-0059 保持 investigating）；待人工验收。 |
 | `TASK-0174` | `done` | PLAN-0014 | ssh-transport 标准测试入口 + 选择器防回退断言已落地；入口/quality/impact 实测绿，三平台 CI 证据待推送后产生。 |
@@ -75,9 +78,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0171` | `done` | PLAN-0014 | 主树全部已有改动与七个 Task 分支已提交/集成并推送 origin/dev；最终 41 包、483 质量测试与完整 check 通过，原 Worktree 保留。 |
 | `TASK-0170` | `done` | PLAN-0014 | 来源 769f31bc3 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0163` | `done` | PLAN-0014 | 模态过滤往返已在真实应用实测（纯文本模型一轮出站请求零图片 + 一条省略提示，切回图像模型答出图上的字）；工具结果图片分支由 `packages/ai` 单测覆盖。 |
-| `TASK-0162` | `verifying` | PLAN-0014 | 来源 6cb373dde 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
+| `TASK-0162` | `done` | PLAN-0014 | 知识加工提示词来源装配（真实工厂+假 Provider）测试级成立：装配守卫漏传必红、兼容可选字段（`knowledge-processing-session.ts:31/:67`）与生产显式注入（`processing-session-factory.ts:34`）均源码可指认；合同明令不访问真实 Provider，模型效果另属评估层。2026-10-09 按 VERIFY-0017 分档口径闭合。 |
 | `TASK-0150` | `done` | PLAN-0014 | 来源 222de8813 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
-| `TASK-0149` | `verifying` | PLAN-0014 | 来源 7a2a5ce50 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
+| `TASK-0149` | `done` | PLAN-0014 | Anthropic 兼容网关思考块校验：fixture SSE 七类合同层绿（provider-conformance 18+243、AI 全包 488）。2026-10-10 按 VERIFY-0017 分档口径闭合：「经兼容网关」行验收对象在环境中不存在（配置端点均 openai-responses，无 Anthropic 协议端点；先例同 0168 需 CI 环境）；旁证 glm 会话思考块签名链路健康。 |
 | `TASK-0148` | `done` | PLAN-0014 | 来源 1020b7c59 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0165` | `verifying` | — | 主树实现已提交 925868a08；工程复验通过，人工功能验收待完成，批次推送见 TASK-0171。 |
 | `TASK-0164` | `done` | PLAN-0004 | 主树实现已提交 a739e62b2；工程复验通过，人工功能验收待完成，批次推送见 TASK-0171。 |
@@ -91,7 +94,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0139` | `done` | PLAN-0004 | 审核修复：交付判据、发布说明、规则去重与集成状态。 |
 | `TASK-0138` | `done` | PLAN-0004 | 审核修复：Windows 链接占位、引用与 frontmatter 扫描覆盖。 |
 | `TASK-0137` | `done` | PLAN-0004 | 开发 Skills 更名与描述统一为 Open Forge，迁移引用并验证。 |
-| `TASK-0136` | `verifying` | PLAN-0004 | 统一开发入口与双层验收已实现；449 例及完整 check 通过，待新会话功能验收，未推送。 |
+| `TASK-0136` | `done` | PLAN-0004 | 统一开发入口与双层验收已实现；449 例及完整 check 通过。2026-10-09 用户把 2026-10-01 的「有条件通过」升级为验收闭合：条件承载方 TASK-0138/0139 均已 `done`（且自述不改变用户可观察行为，属工程面），本清单判据「真用过」已在真实 intake 会话中满足；「静态脚本不保证任意模型指令遵循」按分档口径属合同外已知限制（非待办）。未推送。 |
 | `TASK-0135` | `done` | — | 会话归档（对标 Cursor agent 对话归档）：侧栏右键归档直接对话与项目会话，设置「已归档」页重组为项目/会话双分节，支持取消归档与永久删除；三批提交已落地并通过归档族 43 例与门禁。 |
 | `TASK-0130` | `verifying` | — | 修复 BUG-0046：runtime zip 解压改走内置 safe-zip-extract，不再依赖外部 tar；已集成（`9d6981fac`），定向回归 9/1skip 通过，待人工 dev 冒烟复装 Node runtime。 |
 | `TASK-0131` | `done` | — | 修复 BUG-0047：stdout pipe 断开时 console transport 熔断降级，切断 EPIPE 日志风暴；已集成（`66c7ee464`），定向回归 4 例通过；2026-10-07 真实断管实测：首条 EPIPE 后 1 ms 熔断，全程 392 行日志仅 1 条 uncaughtException，熔断后 180 行业务日志照常落文件（VERIFY-0017 组一）。 |
@@ -100,14 +103,14 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0129` | `done` | — | 数据库问数与分析：内置技能、只读汇总分析脚本与分发/画布合同已落地；临时 SQLite 追问流程、影响包测试及完整门禁通过，未作真实模型评估。 |
 | `TASK-0128` | `done` | — | 对话预算审计 + BUG-0045 预压缩缓存修复：历史只追加时复用已完成摘要（isPrefireCacheValid 唯一前缀规则），定向回归、影响包与全量门禁通过；发布说明归入 v0.1.2。 |
 | `TASK-0027` | `done` | `PLAN-0001` | Plugin Artifact Renderer 注册表；SDK 合同（TASK-0068）与 Desktop 宿主接线已落地并通过合同/集成测试收口。 |
-| `TASK-0025` | `verifying` | `PLAN-0001` | Work 本地研究纵切落地：显式 root 本地来源扫描（runtime-knowledge）+ `research_scope` 工具与引用清单（coding-agent）+ Work 来源面板「本地研究」入口与产物来源复查（Desktop）；缺真实 Desktop 端到端冒烟（VERIFY-0012）。 |
-| `TASK-0026` | `verifying` | `PLAN-0001` | Work 数据分析纵切落地：只读数据集剖析（runtime-node/dataset：CSV/TSV/JSON/Excel 画像+问题行+缺列+取消）+ `dataset_profile` 工具条件注册 + Work 数据集节与 `dataset`/`analysis` 产物来源复查；缺真实 Desktop 冒烟（VERIFY-0012）。 |
+| `TASK-0025` | `done` | `PLAN-0001` | Work 本地研究纵切落地：显式 root 本地来源扫描（runtime-knowledge）+ `research_scope` 工具与引用清单（coding-agent）+ Work 来源面板「本地研究」入口与产物来源复查（Desktop）。2026-10-10 按 VERIFY-0017 分档口径闭合：glm 真实 Work 回合中逐条引用+原文、缺失来源如实标「资料未覆盖」不编造（判别性夹具）；Artifact 尾条受 ISSUE-0033 阻断（修复后按其回归探针复验），降级落盘的清单块指纹逐字合规。 |
+| `TASK-0026` | `done` | `PLAN-0001` | Work 数据分析纵切落地：只读数据集剖析（runtime-node/dataset）+ `dataset_profile` 工具条件注册 + Work 数据集节与 `dataset`/`analysis` 产物来源复查。2026-10-10 按 VERIFY-0017 分档口径闭合：glm 真实 Work 回合中画像精确、清洗剔行正确、三区合计复算无误、盘上 CSV 与预览一致；Artifact 尾条受 ISSUE-0033 阻断（修复后复验）。 |
 | `TASK-0050` | `verifying` | `PLAN-0002` | transcript 窗口化第 2 步（`beforeEntry` 游标分页）三阶段全落地：Main 页合同、viewer 增量订阅、renderer 窗口化（上滚翻页/尾页刷新/整窗重置/导出排空）+ 乐观气泡尾对齐；缺真实 Desktop 大历史冒烟。 |
 | `TASK-0107` | `verifying` | `PLAN-0010` | 后台进程统一健康记账（ProcessRoleContract + crash/restart/pid 归因入 perf 快照与诊断包）+ unresponsive JS 栈采样已落地并过定向测试；缺真实 Desktop 上 kill sidecar/模拟 unresponsive 的冒烟证据。 |
-| `TASK-0072` | `verifying` | `PLAN-0006` | WebContentsView 迁移三阶段落地：main 宿主+IPC、renderer 占位矩形切换、ADR-0134；遮挡取舍（liveEdit 停靠条/加载徽标入工具栏/拖拽指针穿透）已定型；缺真实 Desktop 冒烟。 |
+| `TASK-0072` | `done` | `PLAN-0006` | WebContentsView 迁移三阶段落地：main 宿主+IPC、renderer 占位矩形切换、ADR-0134；遮挡取舍已定型。2026-10-10 按 VERIFY-0017 分档口径闭合：机制面 62 例绿；用户面属观测通道客观限制（guest 为原生 WebContentsView，不在 ctx.pages()/CDP 无读数/截图必超时），用户走查步骤已记录于组三续测一。 |
 | `TASK-0045` | `done` | `PLAN-0003` | CLI/IM/MCP/插件外显身份迁移完成（CLI 命令 `openforge` 直接切换、IM 预填名/Signal 设备名/MCP client 名/插件 author/产品 UA、`openforge-serv` 代号）；解锁 `TASK-0049` 复核关闭 → `TASK-0047`/`TASK-0048`。 |
-| `TASK-0122` | `verifying` | `PLAN-0013` | 团队主控「分派后让出回合」提示词引导 + `team_wait_tasks` timeout 载荷瘦身已落地；量化效果待 TASK-0125 真实会话复跑。 |
-| `TASK-0123` | `verifying` | `PLAN-0013` | 成员会话经会话级函数源收窄隐藏 `browser_tab`（无 WebView 后端不再广告必失败工具）；协调会话不变，真实团队会话复核待定。 |
+| `TASK-0122` | `done` | `PLAN-0013` | 团队主控「分派后让出回合」提示词引导 + `team_wait_tasks` timeout 载荷瘦身；机制级测试全绿（agent-team 85 例 + 桌面 20 例）。行为量级归 TASK-0125（另立承接、blocked）。2026-10-09 按 VERIFY-0017 分档口径闭合。 |
+| `TASK-0123` | `done` | `PLAN-0013` | 成员会话经会话级函数源收窄隐藏 `browser_tab`（无 WebView 后端不再广告必失败工具）；协调会话不变。2026-10-10 按 VERIFY-0017 分档口径闭合：清单行对象为确定性面（收窄/协调不收窄 20 例直接断言）；真实团队会话模型行为面如实记录为余量，ISSUE-0026 B 路径独立跟踪。 |
 | `TASK-0124` | `done` | `PLAN-0013` | 团队会话阶段化进度展示；serial，依赖 TASK-0122 回合语义落地后细化设计。 |
 | `TASK-0125` | `blocked` | `PLAN-0013` | rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
 | `TASK-0126` | `done` | `PLAN-0013` | 团队会话预算可视化（ISSUE-0028 候选 C：成员/会话级 token·回合·时长只读投影）；serial，复用 TASK-0124 投影面。 |
@@ -120,8 +123,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0153` | `verifying` | PLAN-0014 | 来源 2e41db644 已集成 main；保留验证历史与人工验收边界，推送见 TASK-0171。 |
 | `TASK-0169` | `verifying` | PLAN-0014 | P1 生命周期：探测代次+失效处置已实施（BUG-0061 修复），定向 94/94 与批次门禁全绿，待人工验收。 |
 | `TASK-0166` | `verifying` | `PLAN-0014` | SSH helper 三态分类+有界恢复+共享探测+分阶段计时已落地（205 例套件、impact 与完整 check 绿）；实机计时与验收待用户。 |
-| `TASK-0167` | `verifying` | `PLAN-0014` | 远端文件名筛选全链已实施并推送 dev（cfeec25d1）；Go helper 行为回归待 POSIX，实机远端验收待用户。 |
-| `TASK-0168` | `verifying` | PLAN-0014 | Windows 回环夹具（Git Bash）+ desktop 消费者解锁已落地；包级 195 通过，POSIX 专属用例显式门控；runtime-ssh 消费者与 resource-runtime 挂起待后续。 |
+| `TASK-0167` | `done` | `PLAN-0014` | 远端文件名筛选全链（cfeec25d1）；六项行为面测试级成立（`ssh-transport` 205 例 + `capability-sdk` 91 例 + 回环 23 例），Go 行为回归以「交叉编译 + 同构断言」替代（本机无 POSIX 执行环境）；真实主机在任务边界外。2026-10-09 按 VERIFY-0017 分档口径闭合。 |
+| `TASK-0168` | `done` | PLAN-0014 | Windows 回环夹具（Git Bash）+ desktop 消费者解锁；五条声明命令本机全绿（59 通过 / 19 显式跳过 / 0 失败），并实测推翻 0169 的「6 例存量红」过期记载。`runtime-ssh` 22 例红归 TASK-0174；`resource-runtime.remote` 挂起根因未定位（随闭合转出为待办）。2026-10-09 按 VERIFY-0017 分档口径闭合。 |
 
 ## Task 要求
 

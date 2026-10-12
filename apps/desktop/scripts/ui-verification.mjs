@@ -30,9 +30,16 @@ import {
 	formatPlaywrightAttachFailure,
 	validatePlaywrightArguments,
 } from "./ui-verification-diagnostics.ts";
-import desktopBrand from "../src/shared/desktop-brand.json" with { type: "json" };
+import distributionBrand from "../src/shared/desktop-brand.distribution.json" with { type: "json" };
+import selfBrand from "../src/shared/desktop-brand.json" with { type: "json" };
 
-const mainWindowTitle = desktopBrand.displayName;
+// 品牌档案与主链同开关（VETTA_BRAND_PROFILE）：默认外部分发档，显式 self 回 Open Forge。
+// 主窗口标题按界面语言与档案生成（renderApp.tsx），匹配时接受当前档的全部名称。
+const activeBrand = process.env.VETTA_BRAND_PROFILE === "self" ? selfBrand : distributionBrand;
+const mainWindowTitles = new Set([
+	activeBrand.displayName,
+	...Object.values(activeBrand.displayNameLocalized ?? {}),
+]);
 
 const desktopRoot = join(import.meta.dirname, "..");
 const repoRoot = realpathSync(join(desktopRoot, "..", ".."));
@@ -134,7 +141,7 @@ async function inspectCdp(endpoint) {
 			(target) => typeof target.url === "string" && target.url.startsWith("devtools://"),
 		).length;
 		const mainWindow =
-			pages.find((target) => target.title === mainWindowTitle) ??
+			pages.find((target) => mainWindowTitles.has(target.title)) ??
 			pages.find((target) => typeof target.url === "string" && target.url.startsWith("http")) ??
 			null;
 		return {
@@ -303,11 +310,15 @@ function selectMainWindow(layout, uiInfo) {
 	const mainWindowUrl = uiInfo.mainWindow?.url;
 	const matchingLine = tabListResult.stdout
 		.split(/\r?\n/)
-		.find((line) => line.includes(`[${mainWindowTitle}](`) && (!mainWindowUrl || line.includes(mainWindowUrl)));
+		.find(
+			(line) =>
+				[...mainWindowTitles].some((title) => line.includes(`[${title}](`)) &&
+				(!mainWindowUrl || line.includes(mainWindowUrl)),
+		);
 	const index = matchingLine?.match(/^- (\d+):/)?.[1];
-	if (index === undefined) throw new Error(`Unable to find the ${mainWindowTitle} renderer tab`);
+	if (index === undefined) throw new Error(`Unable to find the ${activeBrand.displayName} renderer tab`);
 	const selectResult = runPlaywright(layout, ["tab-select", index]);
-	if (selectResult.status !== 0) throw new Error(`Unable to select the ${mainWindowTitle} renderer tab`);
+	if (selectResult.status !== 0) throw new Error(`Unable to select the ${activeBrand.displayName} renderer tab`);
 }
 
 function prepareProfile(layout, sync = false) {

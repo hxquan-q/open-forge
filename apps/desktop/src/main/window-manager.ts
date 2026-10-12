@@ -2,11 +2,13 @@ import { join } from "node:path";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
 import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js";
+import { resolveBrandIconDirectory } from "./brand-icon-directory.js";
 import { getInAppBrowserViewHost } from "./browser-automation/browser-view-host.js";
 import { shouldAutoOpenDevTools } from "./devtools-policy.js";
 import { sampleJavaScriptCallStack } from "./diagnostics.js";
 import {
 	isChromiumResizeObserverDiagnostic,
+	isReactFlushSyncLifecycleDiagnostic,
 	type RendererConsoleLevel,
 	shouldPersistRendererConsoleMessage,
 } from "./logger/renderer-console-policy.js";
@@ -17,7 +19,12 @@ import { configureMainWindowMediaPermissions } from "./speech-input/media-permis
 const isMac = process.platform === "darwin";
 const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
 const resDir = app.isPackaged ? appRoot : join(appRoot, "dist");
-const buildDir = app.isPackaged ? join(process.resourcesPath, "build") : join(appRoot, "build");
+// dev 态按品牌档案取窗口/托盘图标目录；打包态沿用暂存 resources/build（prepare-pack 已按档覆盖）。
+const buildDir = resolveBrandIconDirectory({
+	isPackaged: app.isPackaged,
+	packagedDirectory: join(process.resourcesPath, "build"),
+	appRoot,
+});
 const devServerUrl = process.env.VETTA_DESKTOP_DEV_URL;
 
 export const iconPath: Record<string, string> = {
@@ -129,6 +136,8 @@ export function createWindow(): BrowserWindow {
 		// Chromium defers remaining ResizeObserver callbacks to the next frame while a split pane is
 		// continuously resized. It reports that normal delivery behavior as an internal console error.
 		if (isChromiumResizeObserverDiagnostic(message, line)) return;
+		// React DEV-only call-timing advisory raised by dependency-vendored flushSync calls (BUG-0083).
+		if (isReactFlushSyncLifecycleDiagnostic(message)) return;
 		const levelLabel: RendererConsoleLevel = (["log", "info", "warn", "error"] as const)[level] ?? "log";
 		if (!shouldPersistRendererConsoleMessage(levelLabel, message)) return;
 		rendererLog[levelLabel](`[${sourceId}:${line}] ${message}`);

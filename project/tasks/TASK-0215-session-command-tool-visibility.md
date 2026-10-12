@@ -1,7 +1,7 @@
 ---
 id: TASK-0215
 type: task
-status: verifying
+status: done
 priority: P1
 owner: coding-agent
 source: user-screenshot-2026-10-06
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-06
-updated: 2026-10-06
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -93,3 +93,11 @@ updated: 2026-10-06
 - 用户明确要求提交推送后继续 Browser 相关修正。已审核 origin/dev..967daaf2e，只有上轮已检查的 Project 台账与本 Task 修正；main 后续其他任务提交不包含在推送中。
 - 执行 git push origin 967daaf2e:refs/heads/dev，fast-forward 从 6cf889258 到 967daaf2e；git ls-remote 确认 dev 为 967daaf2e144bce99e45a5853ff5b14b8aa707ea。未推 origin/main、未 force、未发布，也未提交其他人的 bun.lock/文档站修改。
 - Browser 后续工作见 [TASK-0218](TASK-0218-browser-capability-evidence.md)，其代码尚未集成或推送，不能将本次推送状态套用于后续分支。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **「待人工验收的模型案例」主场景成立**（授权模型 glm-5.3-flash，coding 模式，真实回合）：要求无害本机网络诊断 → 模型**实际执行** `Resolve-DnsName`/`Test-NetConnection`/`Get-NetIPAddress` 三条只读命令并回贴实测输出，**无任何「没有终端能力」误判**（BUG-0079 的缺陷形态未复现）；ICMP 失败等部分失败如实报告并给出正确解释（fake-ip 环境），未虚构连通性。
+- **MCP 无匹配子场景按精神成立**：续问「先查 MCP 有没有查公网 IP 的工具，没有就用内置命令」→ 模型直接识别内置命令入口完成查询（ipify + ipinfo 交叉验证一致）。字面「MCP 查询无匹配」路径受环境限制：Debug profile 未注册 MCP 服务器，无「查询后未命中」的可观测形态；该限制随 ISSUE-0033 一并记入环境余量，不阻塞主场景结论。
+- 软件合同面（提示词/system-prompt/tool-search 38 例 + Desktop model-call-frame 13 例）交付记录已绿。会话实录：`~/.openforge-ui-debug/04987e4e/agent/sessions/--C--Users-xquan-AppData-Local-Temp-vetta-0215-probe--/`。

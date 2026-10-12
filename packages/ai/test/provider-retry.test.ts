@@ -347,6 +347,36 @@ describe("streamWithProviderRetry", () => {
 		}
 	});
 
+	it("caps stall retries so a muted provider reaches a terminal failure instead of burning the transient budget", async () => {
+		// Every attempt stalls with zero events: a connection that is accepted but never speaks.
+		const specs: AttemptSpec[] = [
+			{ hang: true },
+			{ hang: true },
+			{ hang: true },
+			{ events: [startEvent(), doneEvent("unreached")] },
+		];
+		const opened: OpenedAttempt[] = [];
+		const delays: number[] = [];
+		const stream = streamWithProviderRetry(scriptedOpener(specs, opened), {
+			model: MODEL,
+			streamIdleTimeoutMs: 30,
+			sleep: async (ms) => void delays.push(ms),
+		});
+		const { events } = await collect(stream);
+
+		// A stalled attempt costs a whole watchdog window, so the stall cascade must be
+		// bounded far below the shared transient budget: one retry, then a terminal failure.
+		expect(opened).toHaveLength(2);
+		expect(specs[1]?.aborted).toBe(true);
+		expect(retryEvents(events)).toHaveLength(1);
+		expect(delays).toEqual([1_000]);
+		const terminal = events.at(-1);
+		expect(terminal?.type).toBe("error");
+		if (terminal?.type === "error") {
+			expect(terminal.failure?.message).toContain("stream_idle_timeout");
+		}
+	});
+
 	it("stops immediately when the caller aborts during the retry delay", async () => {
 		const controller = new AbortController();
 		const opened: OpenedAttempt[] = [];

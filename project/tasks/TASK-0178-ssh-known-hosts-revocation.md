@@ -1,7 +1,7 @@
 ---
 id: TASK-0178
 type: task
-status: verifying
+status: done
 priority: P1
 owner: ssh-transport + desktop SSH security
 source: BUG-0062; RESEARCH-0019
@@ -21,7 +21,7 @@ depends_on: []
 conflicts_with: [TASK-0169, TASK-0177]
 integration_status: integrated
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -86,3 +86,12 @@ updated: 2026-10-08
 - **合同条款定位**：`known_hosts` 的 `@revoked` 无条件拒绝、宿主侧拒绝合同与「不给『仍然连接』」选项，由上述 `known-hosts.test.ts`（解析与撤销语义）与 `ssh-hostkey-verifier.test.ts`（宿主拒绝合同）分别断言；本任务即 BUG-0062 的修复承接。
 - **未覆盖**：**真实已知主机上的 `@revoked` 实测**——需要一台真实 SSH 主机并把其密钥写入 `known_hosts` 后标 `@revoked`，属各 SSH 任务的共同边界（不连真实主机），本轮未做。交付记录里更宽的读数（`test:impact` 的 desktop 4652 + runtime-desktop、`test:changed --base origin/dev`、完整 `bun run check` exit 0）本轮**未复跑**。
 - **关闭建议**：两条声明的定向命令全绿、撤销语义与宿主拒绝都有直接断言；缺的只是真实主机形态。倾向 `done`，是否要求补真实主机实测，请用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项属**验证合同明令禁止**，据此闭合。
+
+- **真实主机 `@revoked` 实测不属验收对象**：本任务合同第 61 行原文「文件 I/O 只使用自有临时夹具或受控端口；**不得读取用户真实 `~/.ssh/known_hosts`、私钥或访问真实主机**」；交付记录亦记「输入为合成 known_hosts、主机信息和可控文件/提示端口……不含真实密钥」。即真实主机形态是**合同禁止项**，不是「本轮没跑」。
+- 可及范围内证据：两条声明命令 **5 文件 / 77 例通过、0 失败**（`ssh-transport` 的 `known-hosts` + `ssh2-runner` + `ssh2-runner.loopback` 3 文件 53 例；`apps/desktop` 的 `ssh-hostkey-verifier` + `ssh-host-service` 2 文件 24 例）。`@revoked` 无条件拒绝与宿主拒绝合同分别由前两组文件直接断言；本任务即 BUG-0062 的修复承接。
+- 如实标注：交付记录里更宽的读数（`test:impact` desktop 4652 + runtime-desktop、`test:changed --base origin/dev`、完整 `bun run check` exit 0）本轮未复跑。
+- 边界外（同为合同项）：证书链验证「按合同未实现」；非 Windows 走系统 OpenSSH 不经此代码路径，故无多平台实测对象。

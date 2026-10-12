@@ -1,7 +1,7 @@
 ---
 id: TASK-0155
 type: task
-status: verifying
+status: done
 priority: P2
 owner: coding-agent + desktop modes
 source: user-request; upstream fcde2f517
@@ -21,7 +21,7 @@ depends_on: [TASK-0154]
 conflicts_with: [TASK-0196]
 integration_status: integrated（随本批推送 origin/dev）
 created: 2026-10-02
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -95,3 +95,21 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 
 - 未复跑（不宣称通过）：交付记录的影响面与完整 `bun run check` 未重跑；人格/模式生成物的再生成一致性守卫（`build-agent-modes.mjs` / `generate-personas.mjs`）随根 `check`，本轮未单独跑。
 - 关闭建议：文本合同六条**测试级全部成立**且可逐条指认用例；模型效果层因授权模型不可用而客观阻塞 ⇒ 倾向按上述 ② 闭合。按 VERIFY-0017 约定等用户裁定。
+
+### 模型面实测（2026-10-10，glm-5.3-flash 授权；三条探针全部命中，待用户裁定闭合）
+
+按用户裁定（ISSUE-0031 记录）改用授权模型 `glm/glm-5.3-flash` 补做「优先级规则遵从度」评估。Debug Profile `04987e4e`，`personalization` 经 `agent/settings.json` 逐探针切换（默认人设 → interactive → default+customPrompt），隔离工作区，`conversation.create` 真实回合。
+
+| 探针（合同条款） | 设置 | 实测读数 |
+|---|---|---|
+| 探针 A：**交互人设压过 Coding 自主默认**（「模糊任务先提问、带推荐方向、不擅自动手」） | `personaId: "interactive"`，提示词「请帮我改进这个项目的文档。」（工作区仅 README+notes 各几行） | `status: input_required`——模型**未动任何文件**（工作区 mtime 不变），经 `ask_user_question` 提出 **2 个问题 × 各 3 个选项**，每问带「推荐」徽标，全中文；与人设合同「every question must come with 2-3 recommended answers」「deliberately replaces any default to act autonomously」逐句对上 |
+| 探针 A 续：对齐环与交付格式 | 按推荐项回答后 | 模型完成五份文档（`docs/requirements.md`/`design.md`/`roadmap.md` 等），交付物链接严格为 `[filename](<绝对路径>)` 尖括号形式（交付物清单合同），主动请用户审核两处推断、文档标「状态：草案（待确认）」 |
+| 探针 B：**项目指令遵从 + 用户语言**（default 人设 + customPrompt） | customPrompt 两条：回答末行必须 `PROJ-OK`；Python 一律 Tab 缩进不写注释。提示词（中文）要求新建 `math_utils.py` | 回复全中文；代码**盘上实测**：Tab 缩进（无空格缩进）、零注释；回复末行恰好单独一行 `PROJ-OK`；且模型实跑验证 `add(2, 3) = 5` |
+
+- **结论**：三类提示词优先级（人设让位模式默认、项目指令围栏内被遵从、用户语言跟随）在授权模型上**全部按预期**；交付记录剩余风险「优先级规则对不同模型遵从度未实测」在 glm-5.3-flash 上已补测成立。对其它模型的遵从度仍属 AI 质量评估层的持续议题，不阻塞本任务。
+- 会话实录：`~/.openforge-ui-debug/04987e4e/agent/sessions/--C--Users-xquan-AppData-Local-Temp-vetta-0155-persona--/` 与 `…vetta-0155-instr--/` 下两个 JSONL。探针夹具在 `%TEMP%\vetta-0155-probe\`（含 UTF-8 安全直调驱动，验收后可删）。
+- **关闭建议**：文本合同（2026-10-08 六条测试级）+ 模型面（本轮三探针）双层成立 ⇒ **倾向闭合 `done`**。按 VERIFY-0017 约定等用户裁定。
+
+### 用户裁定闭合（2026-10-10）
+
+用户裁定闭合，`status` 转 `done`。依据：文本合同六条测试级成立（2026-10-08 实测可指认用例）+ 模型面三探针在授权模型 `glm/glm-5.3-flash` 上全部命中（interactive 人设压过 Coding 自主默认、对齐环与尖括号交付物链接、项目指令盘上核实遵从、用户语言跟随）——交付记录剩余风险「优先级规则对不同模型遵从度未实测」已在授权模型上补测。其它模型的遵从度属 AI 质量评估层持续议题，不阻塞本任务。

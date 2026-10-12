@@ -1,7 +1,7 @@
 ---
 id: TASK-0122
 type: task
-status: verifying
+status: done
 priority: P2
 owner: packages/agent-team + plugins/preset-agent
 requirement: []
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0123]
 integration_status: integrated（主工作区串行实施；未创建独立 worktree，因本轮无并行 Task 同写这些路径）
 created: 2026-09-26
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -113,3 +113,11 @@ updated: 2026-10-08
 
 - **未覆盖**：真实 ~45 分钟团队会话的量化复跑——交付记录明确指出这属 **TASK-0125（本任务前置项）**，不在本任务范围；因此「主控真的少 wait 了」这一**行为量级**结论本轮无数据，只有机制级（通知唤醒链路）证据。
 - **关闭建议**：机制与提示词侧测试级成立，倾向 `done`；行为量级归 TASK-0125。是否要求先等 TASK-0125，请用户裁定。
+
+### 用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）
+
+按用户「**按未覆盖成因分档**」口径裁定：未覆盖项**在本任务范围内无验收对象**（已另立承接），据闭合。
+
+- 真实 ~45 分钟团队会话的**量化**复跑：交付记录与本 Task 范围均明确指出该行为量级归 **TASK-0125**（`blocked`，理由即需 commit 887017560 + 真实团队会话），属**另立承接**，不构成本任务缺口。
+- 可及范围内证据：`packages/agent-team` 整包 12 文件 85 例 + 桌面 4 文件 20 例全绿（提示词让出引导、`team_wait_tasks` timeout 载荷四元组瘦身、通知唤醒链路），机制级成立。
+- 用户如不认可以此口径闭合（或要求先等 TASK-0125 复跑），按原状态回退 `verifying` 即可。
