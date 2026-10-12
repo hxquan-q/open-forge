@@ -15,6 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0228` | `verifying` | — | BUG-0093：team 成员 runtime 恢复按成员隔离失败——成功保留、失败留旧条目、自身半成品 dispose，单成员锁竞争不再掀翻整会话加载；serial，main 串行。 |
+| `TASK-0229` | `verifying` | — | BUG-0094：内置浏览器 detached view 上限 3 + LRU 驱逐（对齐 TASK-0039 pinned 同型），渲染进程不再随工作区数线性累积；serial，main 串行。 |
 | `TASK-0225` | `verifying` | — | BUG-0086：内置浏览器拖拽穿透改由穿透期 `setVisible(false)` 让位（Electron 39 无 per-view ignore-mouse，窗口级会泄漏点击）；contents 契约删伪 API `setIgnoreMouseEvents`；serial，main 串行。 |
 | `TASK-0226` | `verifying` | — | BUG-0087：team 会话 coordination 文档读不出时 `deleteSession` 降级清理——sessionState/legacy 索引兜底枚举 runtime，per-path best-effort 删除 + 索引三件套必达，僵尸会话可自助清除；serial，main 串行。 |
 | `TASK-0227` | `verifying` | — | BUG-0091：kernel `recovery_required` 存首因 + 异步 admission 经 `pipeline.resumeSession` 原地恢复（悬挂 activeTurn 仍拒，防双管线并发写）；serial，main 串行。 |
