@@ -26,9 +26,9 @@
 | `BUG-0100` | 会话文件锁对跨实例竞争无容忍：1s 重试预算、stale 无心跳、超时不带持有者信息 | verifying | P2 | — |
 | `BUG-0092` | IPC 与巡检日志把抛值序列化为 `[object Object]`/只记 `errorName`，一线诊断信息全丢 | verifying | P3 | — |
 | `BUG-0091` | Turn 终态持久化失败一次后 session 永久滞留 `recovery_required`，用户无恢复手段 | verifying | P1 | — |
-| `BUG-0090` | Windows Inno 打包版通用 updater 检查确定性失败：`app-update.yml` 缺失与 feed 404 | investigating | P2 | — |
-| `BUG-0089` | Windows 打包版每次启动安装 CLI shim 因目标文件被占用报 `EPERM: copyfile` | investigating | P2 | — |
-| `BUG-0088` | allstar-coding ac-fence 审计日志缺 `fs.write` 权限声明，fence-log 追加必被拒 | investigating | P2 | — |
+| `BUG-0090` | Windows Inno 打包版通用 updater 检查确定性失败：`app-update.yml` 缺失与 feed 404 | verifying | P2 | — |
+| `BUG-0089` | Windows 打包版每次启动安装 CLI shim 因目标文件被占用报 `EPERM: copyfile` | verifying | P2 | — |
+| `BUG-0088` | allstar-coding ac-fence 审计日志缺 `fs.write` 权限声明，fence-log 追加必被拒 | verifying | P2 | — |
 | `BUG-0087` | Team 会话 coordination 文档不可读时 delete-session 同样失败，僵尸会话无法清理 | verifying | P1 | — |
 | `BUG-0086` | 内置浏览器指针穿透调用落在 `WebContents` 上，`setIgnoreMouseEvents` 每次必抛 TypeError | verifying | P1 | — |
 | `BUG-0085` | provider 连接被切断后回合长时间不进终态：停滞重试级联把 30 分钟预算烧在死连接上 | verifying | P1 | — |

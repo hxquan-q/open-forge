@@ -1,7 +1,7 @@
 ---
 id: BUG-0090
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement:
@@ -61,7 +61,7 @@ Windows Inno 版本只走 `InnoWindowsUpdateController` 自研检查通道；不
 
 ## 修复与验证
 
-- 修复：待定；需要确认 Windows 更新架构合同——Inno 自研通道与 electron-updater 是否应互斥。
-- 测试：上述断言 + `updater-engine` 单测。
-- 检查：定向 desktop vitest；feed 状态需另行核对发布流水线产物。
-- 未运行及原因：尚未进入修复 Task；feed 404 真实根因待发布侧确认。
+- 修复：`ElectronUpdaterEngine` 新增确定性「通道未配置」分类——`ENOENT` 且含 `app-update.yml`（Inno `publish:false` 不产 feed 配置）与 `HttpError` 404（feed 未发布）命中后 `checkForUpdates` 返回 `null`（service 侧即 `configurationUnavailable` 结论态）并按类一次性 `console.info`；`updater.on("error")` 同分类不再 error。未命中错误照常抛/记 error，Inno 通道仍依赖成功检查结果的 updateInfo，不预跳过（feed 发布即自愈）（TASK-0239）。
+- 测试：`updater-engine.test.ts` 新增 4 例——ENOENT→null 且零 error、404→null、同类重复只记一次 info、意外错误仍抛出 + error 事件仍 error；套件 13 例全绿。
+- 检查：desktop `tsc --noEmit` 绿；`check:lint` 绿。
+- 未运行及原因：feed 404 的发布侧根因（清单是否发布到 R2/URL 正确性）属仓库外事实，本修复只承诺客户端语义；真机验证待打包版复核。

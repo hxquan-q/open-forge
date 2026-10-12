@@ -1,7 +1,7 @@
 ---
 id: BUG-0088
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: packages/plugins
 requirement:
@@ -61,7 +61,7 @@ ac-fence 的审计闭环在真实环境完全不存在——ISSUE-0030 评审「
 
 ## 修复与验证
 
-- 修复：待定；候选为 manifest 补声明最小 fs 写权限（收敛到 audit 路径）或改走既有授权通道，取舍与 ISSUE-0030「权限最小集合」结论联动。
-- 测试：上述合同测试 + 插件自身 fence 单测。
-- 检查：allstar-coding 包 `bun run build` 与其 Vitest 套件。
-- 未运行及原因：尚未进入修复 Task；立案阶段仅完成日志证据与代码定位。
+- 修复：`plugin.json` `permissions` 按最小集合补 `fs.read`（fence-log 去重读/stat、state.md 兜底）与 `fs.write`（fence-log 落盘 writeFile/createDirectory）——preset 权限自动授予，声明即生效；属仓库内 preset 业务变更，非对外合同，未动 PLUGIN_API_VERSION/手册（TASK-0237）。
+- 测试：`test/manifest.test.ts` 权限用例改为断言 fence 装配所需的完整最小集（旧 manifest 红基线已录）；preset 全套件 133 例绿。
+- 检查：preset `bun run build` 产出 `allstar-coding-0.3.2.vettapkg`，解包核对 plugin.json 权限五项齐全；`check:lint` 绿。
+- 未运行及原因：实机打包环境复测未做（无该机访问权）；`ISSUE-0032` 的 `docs/ac/` 词法写域讨论维持开放，本修复只管声明与使用一致。

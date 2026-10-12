@@ -1,7 +1,7 @@
 ---
 id: BUG-0089
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement:
@@ -60,7 +60,7 @@ CLI 安装/升级静默不可靠（目标 exe 可能长期停留在旧版本）�
 
 ## 修复与验证
 
-- 修复：待定；候选为「内容一致跳过 + 临时文件+rename + 有界重试」组合，与 Windows 运行中 exe 覆盖限制相匹配。
-- 测试：上述回归测试 + cli-install 既有用例。
-- 检查：定向 desktop vitest + 启动日志人工复核。
-- 未运行及原因：尚未进入修复 Task；占用者身份待实机确认。
+- 修复：`copyFileIfChanged` 捕获 `EPERM`/`EBUSY`/`EACCES` 后先分块比对源/目标内容——等价直接返回（目标已是新版，仅被锁）；有差异按可注入重试预算（默认 3×250ms）吸收瞬态占用，仍锁则抛类型化 `CliShimTargetLockedError`；`installBinaryCommandShim` 捕获它降 `console.warn`（shim 仍可执行，升级留待下次启动），其余错误照常冒泡到既有 error 日志（TASK-0238）。
+- 测试：新建 `dev-cli-shim.test.ts` 7 例——等价目标占用静默、差异目标重试耗尽抛 typed error→warn、重试预算计数、正常升级、非占用错误冒泡；tmpdir 真 fs + chmod 只读模拟占用，跨平台确定性。
+- 检查：desktop `tsc --noEmit` 绿；`check:lint` 绿。
+- 未运行及原因：锁持有者身份未实机确认（机制修复不依赖归因）；真机验证待打包版复核。

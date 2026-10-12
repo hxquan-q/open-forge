@@ -17,6 +17,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 |---|---|---|---|
 | `TASK-0235` | `verifying` | — | BUG-0100：会话文件锁协议强化——指数退避预算 1s→≈5.7s、持有期心跳防 stale 抢删、超时带持有者 pid；serial，main 串行。 |
 | `TASK-0236` | `verifying` | — | BUG-0092：诊断日志统一 describeError——三处站点（agent-teams IPC/interrupt monitor/browser runtime）不再 [object Object] 或裸 errorName；serial，main 串行。 |
+| `TASK-0237` | `verifying` | — | BUG-0088：allstar-coding 补 fs.read/fs.write 权限声明——fence-log 追加与 state.md 兜底恢复可用；serial，main 串行。 |
+| `TASK-0238` | `verifying` | — | BUG-0089：Windows CLI shim 目标占用降级——内容等价静默跳过、真差异有界重试后 warn 降级；serial，main 串行。 |
+| `TASK-0239` | `verifying` | — | BUG-0090：updater 检查错误分类——app-update.yml 缺失与 feed 404 降为 configurationUnavailable 结论态、一次性 info；serial，main 串行。 |
 | `TASK-0232` | `verifying` | — | BUG-0097：assertCapability 区分「无路由认领」与「能力被拒」两类错误文本，delete/rename 同构；serial，main 串行。 |
 | `TASK-0233` | `verifying` | — | BUG-0098：代理设置文本提交加有效性门——下一个草稿非法则防抖不落盘，disabled 照常、合法中间态不受阻；serial，main 串行。 |
 | `TASK-0234` | `verifying` | — | BUG-0099：内置浏览器导航 API 迁 `navigationHistory`——BrowserViewContents 契约改子对象，四调用点与 fake 同步；serial，main 串行。 |
