@@ -45,6 +45,26 @@ export function desktopVersion(root = repositoryRoot) {
 	return version;
 }
 
+/**
+ * 根清单版本必须跟随 Desktop 商用版本线（TASK-0245）：`release:desktop:*` 在
+ * prepare/publish 同步改写根清单，这里在 --check 里断言二者一致，漂移即判负。
+ * 根清单不存在时（测试夹具）返回 null，不当作问题。
+ */
+export function rootManifestVersionProblem(root = repositoryRoot) {
+	const manifestPath = join(root, "package.json");
+	if (!existsSync(manifestPath)) return null;
+	const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+	const version = manifest.version;
+	if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version)) {
+		return `根 package.json 版本号非法：${String(version)}；必须是与 Desktop 一致的语义化版本`;
+	}
+	const desktop = desktopVersion(root);
+	if (version !== desktop) {
+		return `根 package.json 版本 ${version} 与 Desktop 版本 ${desktop} 不一致；根清单跟随商用版本线，由 release:desktop:* 发版时同步改写`;
+	}
+	return null;
+}
+
 export function releaseNotesPath(version) {
 	if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Invalid release version: ${version}`);
 	return `${RELEASE_NOTES_DIR}/v${version}.md`;
@@ -247,6 +267,9 @@ export function collectReleaseNotesProblems(version, root = repositoryRoot) {
 	const tagOutput = gitOutput(["tag", "--list", `v${version}`]);
 	const hasTag = tagOutput === undefined ? undefined : tagOutput.trim().length > 0;
 	problems.push(...releaseNotesStateProblems({ version, notes, hasTag }));
+
+	const manifestVersionProblem = rootManifestVersionProblem(root);
+	if (manifestVersionProblem) problems.push(manifestVersionProblem);
 
 	if (hasTag === true) {
 		const tagged = gitOutput(["show", `v${version}:${path}`]);

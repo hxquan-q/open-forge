@@ -96,10 +96,10 @@ describe("releaseNotesTemplate", () => {
 });
 
 describe("getUnexpectedReleaseChanges", () => {
-	it("allows only the version, lockfile and target release notes", () => {
+	it("allows only the version manifests, lockfile and target release notes", () => {
 		expect(
 			getUnexpectedReleaseChanges(
-				" M apps/desktop/package.json\n M bun.lock\n?? .github/release-notes/v0.1.0.md\n",
+				" M apps/desktop/package.json\n M package.json\n M bun.lock\n?? .github/release-notes/v0.1.0.md\n",
 				".github/release-notes/v0.1.0.md",
 			),
 		).toEqual([]);
@@ -115,7 +115,7 @@ describe("getUnexpectedReleaseChanges", () => {
 describe("desktopPublishCommands", () => {
 	it("stages only release files and pushes branch plus tag atomically", () => {
 		expect(desktopPublishCommands("0.1.0", "forge/dev")).toEqual([
-			["add", "--", "apps/desktop/package.json", "bun.lock", ".github/release-notes/v0.1.0.md"],
+			["add", "--", "apps/desktop/package.json", "package.json", "bun.lock", ".github/release-notes/v0.1.0.md"],
 			["commit", "-m", "release(desktop): 发布 v0.1.0"],
 			["tag", "v0.1.0"],
 			["push", "--atomic", "origin", "forge/dev", "refs/tags/v0.1.0"],

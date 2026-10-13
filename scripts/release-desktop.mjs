@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 import { releaseNotesPath } from "./release/release-notes.mjs";
 
 const DESKTOP_PACKAGE_PATH = "apps/desktop/package.json";
+/** 根清单版本跟随 Desktop 商用版本线，prepare/publish 与 Desktop 同步改写（TASK-0245）。 */
+const ROOT_PACKAGE_PATH = "package.json";
 const LOCKFILE_PATH = "bun.lock";
 const BUMP_TYPES = new Set(["major", "minor", "patch"]);
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
@@ -97,7 +99,7 @@ export function parsePorcelainPaths(stdout) {
 }
 
 export function getUnexpectedReleaseChanges(stdout, notesPath) {
-	const allowedFiles = new Set([DESKTOP_PACKAGE_PATH, LOCKFILE_PATH, notesPath]);
+	const allowedFiles = new Set([DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH, notesPath]);
 	return parsePorcelainPaths(stdout).filter((file) => !allowedFiles.has(file));
 }
 
@@ -167,8 +169,11 @@ function prepareRelease(command) {
 	if (!notesAlreadyExist) writeFileSync(notesPath, releaseNotesTemplate(version, upstreamBaselineSha()));
 	desktopPackage.version = version;
 	writeFileSync(DESKTOP_PACKAGE_PATH, `${JSON.stringify(desktopPackage, null, "\t")}\n`);
+	const rootPackage = JSON.parse(readFileSync(ROOT_PACKAGE_PATH, "utf8"));
+	rootPackage.version = version;
+	writeFileSync(ROOT_PACKAGE_PATH, `${JSON.stringify(rootPackage, null, "\t")}\n`);
 	run("bun", ["install", "--lockfile-only"]);
-	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH]);
 	console.log(`Desktop ${version} is prepared locally. Review ${notesPath} before publishing.`);
 }
 
@@ -207,7 +212,7 @@ function assertReleaseNotesReady(version) {
 
 export function desktopPublishCommands(version, branch) {
 	return [
-		["add", "--", DESKTOP_PACKAGE_PATH, LOCKFILE_PATH, releaseNotesPath(version)],
+		["add", "--", DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH, releaseNotesPath(version)],
 		["commit", "-m", `release(desktop): 发布 v${version}`],
 		["tag", `v${version}`],
 		["push", "--atomic", "origin", branch, `refs/tags/v${version}`],
@@ -220,12 +225,16 @@ function publishRelease(version) {
 	if (desktopPackage.version !== version) {
 		throw new Error(`Desktop package version ${desktopPackage.version} does not match requested release ${version}`);
 	}
+	const rootPackage = JSON.parse(readFileSync(ROOT_PACKAGE_PATH, "utf8"));
+	if (rootPackage.version !== version) {
+		throw new Error(`Root package version ${rootPackage.version} does not match requested release ${version}`);
+	}
 
 	const notesPath = assertReleaseNotesReady(version);
-	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH]);
 	assertTagAvailable(`v${version}`);
 	runReleaseChecks();
-	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, LOCKFILE_PATH]);
+	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH]);
 
 	// 发布日期只有走到发布这一步才产生，随后才提交、打 tag。
 	writeFileSync(notesPath, stampReleaseDate(readFileSync(notesPath, "utf8")));
