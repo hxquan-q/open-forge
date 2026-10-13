@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // 任意抛值的单行诊断描述——给 log.error/log.warn 的 fields 对象当值用。
 // 此前的两处反模式：非 Error 抛值 `String(error)` → "[object Object]"；只记
 // `error.name` → 有名字没原因。本工具把三类输入都落到可读的一行。

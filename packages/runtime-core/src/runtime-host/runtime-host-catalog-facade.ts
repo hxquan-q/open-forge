@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { HistoryEntry, ProjectInfo, SessionHistoryInfo } from "../contracts.js";
 import { runtimeError } from "../errors.js";
 import type { RuntimeHostSessionLifecycle } from "./runtime-host-session-lifecycle.js";

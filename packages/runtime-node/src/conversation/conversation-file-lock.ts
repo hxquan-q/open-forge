@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
 import { open, readFile, rm, stat, utimes } from "node:fs/promises";

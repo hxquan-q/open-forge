@@ -19,6 +19,7 @@ base_commit: e9e0e31e5
 read_paths: [packages/runtime-node/src/conversation/conversation-file-lock.ts, packages/runtime-node/src/conversation/file-conversation-repository.ts, packages/runtime-storage/src/conversation/errors.ts, project/bugs/BUG-0100-conversation-file-lock-contention.md]
 write_paths: [packages/runtime-node/src/conversation/conversation-file-lock.ts, packages/runtime-node/test/conversation/conversation-file-lock.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0100-conversation-file-lock-contention.md, project/tasks/TASK-0235-conversation-file-lock-hardening.md, project/tasks/README.md]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 会话文件锁协议强化：退避放宽、持有期心跳、超时携带持有者信息
 

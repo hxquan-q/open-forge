@@ -19,6 +19,7 @@ base_commit: 1ea3432
 read_paths: [packages/plugins/presets/allstar-coding/plugin.json, packages/plugins/presets/allstar-coding/src/fence.ts, packages/plugins/presets/allstar-coding/src/fence/audit-log.ts, packages/plugins/plugin-sdk/src/fs.ts, packages/plugins/presets/allstar-coding/test/manifest.test.ts, project/bugs/BUG-0088-ac-fence-log-write-permission-denied.md]
 write_paths: [packages/plugins/presets/allstar-coding/plugin.json, packages/plugins/presets/allstar-coding/test/manifest.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0088-ac-fence-log-write-permission-denied.md, project/tasks/TASK-0237-allstar-fence-fs-permissions.md, project/tasks/README.md]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # allstar-coding 补 fs.read/fs.write 权限声明：fence-log 追加与 state.md 兜底恢复可用
 

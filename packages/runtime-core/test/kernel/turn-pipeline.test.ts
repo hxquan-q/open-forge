@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Api, AssistantMessage, Message, Model, UserMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {

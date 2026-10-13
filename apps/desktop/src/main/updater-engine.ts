@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { link, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { ProgressInfo, UpdateInfo } from "builder-util-runtime";

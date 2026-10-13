@@ -19,6 +19,7 @@ base_commit: e9e0e31e5
 read_paths: [apps/desktop/src/main/ipc/agent-teams.ts, apps/desktop/src/main/agent-runtime/session-interrupt-monitor.ts, apps/desktop/src/main/browser-automation/browser-runtime-manager.ts, apps/desktop/src/main/logger/format-error-chain.ts, apps/desktop/src/main/logger.ts, project/bugs/BUG-0092-ipc-error-log-serialization.md]
 write_paths: [apps/desktop/src/main/logger/describe-error.ts, apps/desktop/src/main/ipc/agent-teams.ts, apps/desktop/src/main/agent-runtime/session-interrupt-monitor.ts, apps/desktop/src/main/browser-automation/browser-runtime-manager.ts, apps/desktop/src/main/logger/describe-error.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0092-ipc-error-log-serialization.md, project/tasks/TASK-0236-log-error-serialization.md, project/tasks/README.md]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 诊断日志统一抛值序列化：新增 describeError 并接入三处丢信息站点
 

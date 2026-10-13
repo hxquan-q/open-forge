@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 import { i18n, initI18n } from "@shared/i18n";
 import { act, renderHook } from "@testing-library/react";
