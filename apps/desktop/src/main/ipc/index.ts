@@ -45,6 +45,7 @@ import { registerSettingsIpc } from "./settings.js";
 import { registerSkillsIpc } from "./skills.js";
 import { registerSpeechInputIpc } from "./speech-input.js";
 import { registerSshIpc } from "./ssh.js";
+import { registerSshTransfersIpc } from "./ssh-transfers.js";
 import { registerTaskIpc } from "./task.js";
 import { registerTerminalIpc } from "./terminal.js";
 import { registerThemesIpc } from "./themes.js";
@@ -76,6 +77,7 @@ interface IpcTeardown {
 	teardownProjectExport: () => void;
 	teardownProjects: () => void;
 	teardownSsh: () => void;
+	teardownSshTransfers: () => void;
 	teardownWebhook: () => void;
 	teardownRuntimes: () => void;
 	teardownRuntimeConfiguration: () => void;
@@ -137,6 +139,7 @@ export function registerAllIpc(
 		teardownProjectExport: registerProjectExportIpc(),
 		teardownProjects: registerProjectsIpc(),
 		teardownSsh: registerSshIpc(),
+		teardownSshTransfers: registerSshTransfersIpc(webContents),
 		teardownWebhook: registerWebhookIpc(),
 		teardownRuntimes: registerRuntimesIpc(),
 		teardownRuntimeConfiguration: registerRuntimeConfigurationIpc(webContents),
@@ -188,6 +191,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownProjectExport();
 	teardown.teardownProjects();
 	teardown.teardownSsh();
+	teardown.teardownSshTransfers();
 	teardown.teardownWebhook();
 	teardown.teardownRuntimes();
 	teardown.teardownRuntimeConfiguration();

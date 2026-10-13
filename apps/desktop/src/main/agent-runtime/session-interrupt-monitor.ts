@@ -5,6 +5,7 @@ import {
 	type SessionInterruptTrigger,
 } from "@vetta/coding-agent/runtime";
 import type { RuntimeHost } from "@vetta/runtime-core";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import { isSessionInterruptDraftNonEmpty } from "./session-interrupt-draft-registry.js";
 import { buildSessionInterruptEvidence } from "./session-interrupt-evidence.js";
@@ -95,7 +96,7 @@ export class SessionInterruptMonitor {
 			}
 		} catch (error) {
 			log.warn("Session interrupt scan failed", {
-				errorName: error instanceof Error ? error.name : "UnknownError",
+				errorName: describeError(error),
 			});
 		} finally {
 			this.running = false;
@@ -159,7 +160,7 @@ export class SessionInterruptMonitor {
 			} catch (error) {
 				log.warn("Session interrupt auto-continue failed", {
 					sessionId,
-					errorName: error instanceof Error ? error.name : "UnknownError",
+					errorName: describeError(error),
 				});
 			}
 			return;

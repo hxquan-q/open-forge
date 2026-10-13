@@ -37,27 +37,28 @@ export async function restoreTeamMemberRuntimes<TRuntimeTool>(input: {
 	readonly logger: TeamRuntimeRestoreLogger;
 }): Promise<TeamSessionDocument> {
 	const restoredRuntime = { ...input.session.memberRuntime };
-	const createdSessionIds: string[] = [];
 	let changed = false;
-	try {
-		const results = await Promise.allSettled(
-			Object.entries(input.session.memberRuntime).map(async ([memberId, runtimeState]) => {
-				const activePath = input.runtime.getSessionPath(runtimeState.sessionId);
-				if (activePath) {
-					if (activePath !== runtimeState.sessionPath) {
-						throw new Error(`Runtime session id is already bound to another path: ${runtimeState.sessionId}`);
-					}
-					return { memberId, runtimeState, changed: false };
+	// 成员级失败隔离（BUG-0093）：任一成员恢复失败（典型为跨实例会话文件锁
+	// 竞争超时）不再整体回滚——成功成员保留，失败成员保留旧 memberRuntime
+	// 条目（与重启未恢复同语义，下次冷加载自动重试），会话照常加载。
+	const results = await Promise.allSettled(
+		Object.entries(input.session.memberRuntime).map(async ([memberId, runtimeState]) => {
+			const activePath = input.runtime.getSessionPath(runtimeState.sessionId);
+			if (activePath) {
+				if (activePath !== runtimeState.sessionPath) {
+					throw new Error(`Runtime session id is already bound to another path: ${runtimeState.sessionId}`);
 				}
+				return { memberId, runtimeState, changed: false };
+			}
 
-				const resolved = await input.resolveConfig({
-					memberId,
-					cwd: input.session.cwd,
-					sessionPath: runtimeState.sessionPath,
-					runtimeTools: input.createRuntimeTools(),
-				});
-				const created = await input.runtime.createSession(resolved.config);
-				createdSessionIds.push(created.sessionId);
+			const resolved = await input.resolveConfig({
+				memberId,
+				cwd: input.session.cwd,
+				sessionPath: runtimeState.sessionPath,
+				runtimeTools: input.createRuntimeTools(),
+			});
+			const created = await input.runtime.createSession(resolved.config);
+			try {
 				const sessionPath = input.runtime.getSessionPath(created.sessionId);
 				if (sessionPath !== runtimeState.sessionPath) {
 					throw new Error(`Restored team member session path changed: ${memberId}`);
@@ -85,23 +86,25 @@ export async function restoreTeamMemberRuntimes<TRuntimeTool>(input: {
 						runtimeState.assignmentFingerprint !== resolved.assignmentFingerprint ||
 						runtimeState.rosterFingerprint !== resolved.rosterFingerprint,
 				};
-			}),
-		);
-		const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
-		if (rejected) throw rejected.reason;
-		for (const result of results) {
-			if (result.status !== "fulfilled") continue;
-			restoredRuntime[result.value.memberId] = result.value.runtimeState;
-			changed ||= result.value.changed;
+			} catch (error) {
+				// 该成员自己创建的半成品 runtime 由本分支回收（替代旧的全局回滚）。
+				await input.runtime.disposeSession(created.sessionId).catch(() => undefined);
+				throw error;
+			}
+		}),
+	);
+	for (const [index, result] of results.entries()) {
+		const memberId = Object.keys(input.session.memberRuntime)[index] ?? "unknown";
+		if (result.status === "rejected") {
+			input.logger.error("team member runtime restore failed", {
+				teamSessionId: input.session.id,
+				memberId,
+				error: errorMessage(result.reason),
+			});
+			continue;
 		}
-	} catch (error) {
-		await Promise.allSettled(createdSessionIds.map((sessionId) => input.runtime.disposeSession(sessionId)));
-		input.logger.error("team session runtime restore rolled back", {
-			teamSessionId: input.session.id,
-			restoredMemberCount: createdSessionIds.length,
-			error: errorMessage(error),
-		});
-		throw error;
+		restoredRuntime[result.value.memberId] = result.value.runtimeState;
+		changed ||= result.value.changed;
 	}
 
 	if (!changed) return input.session;

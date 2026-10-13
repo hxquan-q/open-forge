@@ -16,6 +16,22 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0101` | 团队会话流式事件驱动成员胶囊条测量循环：Maximum update depth exceeded 整页崩为路由错误页 | verifying | P1 | — |
+| `BUG-0099` | 内置浏览器仍调用 Electron 已废弃的 `canGoBack`/`canGoForward`，应迁移 `navigationHistory` | verifying | P3 | — |
+| `BUG-0098` | 无效代理配置无有效性门即可保存，运行时静默降级为逐条请求失败 | verifying | P3 | — |
+| `BUG-0097` | `assertCapability` 把「会话不归本运行时管/被拒绝」统一误报为「不支持 delete」，诊断语义失真 | verifying | P3 | — |
+| `BUG-0096` | 异步上下文投递被瞬态拒绝时记录永久丢失，子代理完成通知/报告静默消失 | verifying | P2 | — |
+| `BUG-0095` | `transformMessages` 不冲刷消息列表结尾的孤儿 tool_calls，严格 provider 永久拒绝该会话 | verifying | P1 | — |
+| `BUG-0094` | 内置浏览器 `WebContentsView` 按工作区永久常驻、无回收上限，渲染进程随使用线性累积 | verifying | P2 | — |
+| `BUG-0093` | 单个成员 runtime 恢复失败回滚全部已恢复成员，team 会话整体打不开 | verifying | P2 | — |
+| `BUG-0100` | 会话文件锁对跨实例竞争无容忍：1s 重试预算、stale 无心跳、超时不带持有者信息 | verifying | P2 | — |
+| `BUG-0092` | IPC 与巡检日志把抛值序列化为 `[object Object]`/只记 `errorName`，一线诊断信息全丢 | verifying | P3 | — |
+| `BUG-0091` | Turn 终态持久化失败一次后 session 永久滞留 `recovery_required`，用户无恢复手段 | verifying | P1 | — |
+| `BUG-0090` | Windows Inno 打包版通用 updater 检查确定性失败：`app-update.yml` 缺失与 feed 404 | verifying | P2 | — |
+| `BUG-0089` | Windows 打包版每次启动安装 CLI shim 因目标文件被占用报 `EPERM: copyfile` | verifying | P2 | — |
+| `BUG-0088` | allstar-coding ac-fence 审计日志缺 `fs.write` 权限声明，fence-log 追加必被拒 | verifying | P2 | — |
+| `BUG-0087` | Team 会话 coordination 文档不可读时 delete-session 同样失败，僵尸会话无法清理 | verifying | P1 | — |
+| `BUG-0086` | 内置浏览器指针穿透调用落在 `WebContents` 上，`setIgnoreMouseEvents` 每次必抛 TypeError | verifying | P1 | — |
 | `BUG-0085` | provider 连接被切断后回合长时间不进终态：停滞重试级联把 30 分钟预算烧在死连接上 | verifying | P1 | — |
 | `BUG-0084` | team 会话引用文件后输入框反复重建内容：中文输入法组字被打断、光标闪烁无法输入 | verifying | P1 | — |
 | `BUG-0083` | React DEV 告警「flushSync was called from inside a lifecycle method」在 render 日志里成批落盘 | verifying | P3 | — |

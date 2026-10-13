@@ -36,6 +36,7 @@ import {
 	buildRemoteCommand,
 	buildRemoteScript,
 	buildStatCommand,
+	buildUploadFileCommand,
 	buildWriteFileCommand,
 	quoteShellArgument,
 	REMOTE_ENTRY_EXISTS_EXIT_CODE,
@@ -269,6 +270,41 @@ describe("buildWriteFileCommand（在真实 /bin/sh 上执行）", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-write-"));
 		expect(() => write(join(dir, "missing", "a.txt"), "x")).toThrow();
 		expect(readdirSync(dir)).toEqual([]);
+	});
+});
+
+describe("buildUploadFileCommand（在真实 /bin/sh 上执行）", () => {
+	// 与 writeFile 同一条原子写骨架，多出的 wc 校验只能靠真跑验证：stdin 比 expectedBytes
+	// 短（等价于上传中途取消后的 EOF）必须以非零退出收场，且目标文件保持原样。
+	function upload(target: string, content: string, expectedBytes: number): number {
+		const result = spawnSync(SH, ["-c", buildUploadFileCommand(shPath(target), expectedBytes, ".vetta-tmp-test")], {
+			input: content,
+		});
+		return result.status ?? -1;
+	}
+
+	it("字节数吻合时整份落盘，不留临时文件", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-upload-"));
+		const target = join(dir, "a b'c.txt");
+		expect(upload(target, "hello", 5)).toBe(0);
+		expect(readFileSync(target, "utf8")).toBe("hello");
+		expect(readdirSync(dir)).toEqual(["a b'c.txt"]);
+	});
+
+	it("空文件按 0 字节校验通过", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-upload-"));
+		const target = join(dir, "empty.txt");
+		expect(upload(target, "", 0)).toBe(0);
+		expect(readFileSync(target, "utf8")).toBe("");
+	});
+
+	it("stdin 比 expectedBytes 短时目标保持原样，临时文件被清理", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-upload-"));
+		const target = join(dir, "keep.txt");
+		writeFileSync(target, "original");
+		expect(upload(target, "half", 10)).not.toBe(0);
+		expect(readFileSync(target, "utf8")).toBe("original");
+		expect(readdirSync(dir)).toEqual(["keep.txt"]);
 	});
 });
 

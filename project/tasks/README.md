@@ -15,6 +15,23 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0241` | `verifying` | — | BUG-0101：TeamMemberRoster 测量循环收敛修复（等价保持引用 + measurementKey 稳定依赖）+3 回归与整树稳定性测试；实机崩溃复现→修复→不复现闭环，待人工验收。 |
+| `TASK-0240` | `verifying` | — | REQ-0012：SSH 远程项目文件传输——`ssh-transport` 流式 exec 通道原语（drain 写 + wc 校验原子上传 + 流式下载）、Desktop 队列服务与 `vetta:ssh-transfers:*` IPC、文件栏菜单/拖拽/进度面板；serial，main 串行。 |
+| `TASK-0235` | `verifying` | — | BUG-0100：会话文件锁协议强化——指数退避预算 1s→≈5.7s、持有期心跳防 stale 抢删、超时带持有者 pid；serial，main 串行。 |
+| `TASK-0236` | `verifying` | — | BUG-0092：诊断日志统一 describeError——三处站点（agent-teams IPC/interrupt monitor/browser runtime）不再 [object Object] 或裸 errorName；serial，main 串行。 |
+| `TASK-0237` | `verifying` | — | BUG-0088：allstar-coding 补 fs.read/fs.write 权限声明——fence-log 追加与 state.md 兜底恢复可用；serial，main 串行。 |
+| `TASK-0238` | `verifying` | — | BUG-0089：Windows CLI shim 目标占用降级——内容等价静默跳过、真差异有界重试后 warn 降级；serial，main 串行。 |
+| `TASK-0239` | `verifying` | — | BUG-0090：updater 检查错误分类——app-update.yml 缺失与 feed 404 降为 configurationUnavailable 结论态、一次性 info；serial，main 串行。 |
+| `TASK-0232` | `verifying` | — | BUG-0097：assertCapability 区分「无路由认领」与「能力被拒」两类错误文本，delete/rename 同构；serial，main 串行。 |
+| `TASK-0233` | `verifying` | — | BUG-0098：代理设置文本提交加有效性门——下一个草稿非法则防抖不落盘，disabled 照常、合法中间态不受阻；serial，main 串行。 |
+| `TASK-0234` | `verifying` | — | BUG-0099：内置浏览器导航 API 迁 `navigationHistory`——BrowserViewContents 契约改子对象，四调用点与 fake 同步；serial，main 串行。 |
+| `TASK-0230` | `verifying` | — | BUG-0095：transformMessages 二遍循环后尾刷悬挂 tool_calls——冲刷收敛为统一 helper，离开 transform 的消息流不再出现无结果调用；serial，main 串行。 |
+| `TASK-0231` | `verifying` | — | BUG-0096：requestContinuation 瞬态拒绝（cancel 清 pending / cancelling / recovery_required）把记录转入 nextTurnContext——不唤起隐形 Turn、记录随下一次 send 送达；closed 保持死信；serial，main 串行。 |
+| `TASK-0228` | `verifying` | — | BUG-0093：team 成员 runtime 恢复按成员隔离失败——成功保留、失败留旧条目、自身半成品 dispose，单成员锁竞争不再掀翻整会话加载；serial，main 串行。 |
+| `TASK-0229` | `verifying` | — | BUG-0094：内置浏览器 detached view 上限 3 + LRU 驱逐（对齐 TASK-0039 pinned 同型），渲染进程不再随工作区数线性累积；serial，main 串行。 |
+| `TASK-0225` | `verifying` | — | BUG-0086：内置浏览器拖拽穿透改由穿透期 `setVisible(false)` 让位（Electron 39 无 per-view ignore-mouse，窗口级会泄漏点击）；contents 契约删伪 API `setIgnoreMouseEvents`；serial，main 串行。 |
+| `TASK-0226` | `verifying` | — | BUG-0087：team 会话 coordination 文档读不出时 `deleteSession` 降级清理——sessionState/legacy 索引兜底枚举 runtime，per-path best-effort 删除 + 索引三件套必达，僵尸会话可自助清除；serial，main 串行。 |
+| `TASK-0227` | `verifying` | — | BUG-0091：kernel `recovery_required` 存首因 + 异步 admission 经 `pipeline.resumeSession` 原地恢复（悬挂 activeTurn 仍拒，防双管线并发写）；serial，main 串行。 |
 | `TASK-0224` | `verifying` | — | 品牌档案默认口径（REQ-0011）：dev 与打包默认切到 distribution（Allstr ai / 小爱ai），显式 `VETTA_BRAND_PROFILE=self` 保留 Open Forge；4 决策点 + 4 辅助脚本对齐；验收反馈切片补齐 dev 态系统图标（任务栏/托盘/Dock/通知/拖拽，`brand-icon-directory` 按档解析）；定向 18+18 例、打包 node 13/13、main 构建端到端、完整 check 两轮全绿；已推 `origin/dev`（`6a249ff3b` 批次），待重启 dev 后复验系统图标与打包产物人工验收。 |
 | `TASK-0223` | `verifying` | — | BUG-0085：停滞专用重试上限（最多 2 个看门狗窗口后落终态），消掉死连接的 ~30 分钟假死；红 4→2 次 attempt，ai 包 516 例 / impact 321 例 / check 全绿；已随 `9beebe1e0` 推 `origin/dev`，Worktree 已清理。 |
 | `TASK-0222` | `verifying` | — | BUG-0084：受控投影规范判等修复抢键盘 + 覆盖扩展（目录/图片/skill/scene/connector/member、流式重渲染、外部移除、mention 元数据）；定向 68、impact 10、完整 check 全绿；serial，main 工作区串行集成。 |

@@ -7,7 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
-| `REQ-0012` | 实体表单电子化二期（eform-craft 三版块团队化） | ready | [`TASK-0225`](../tasks/TASK-0225-eform-team-preset.md) |
+| `REQ-0012` | SSH 远程项目文件传输（上传/下载） | ready | [TASK-0240](../tasks/TASK-0240-ssh-file-transfer.md)（verifying：三切片已落地，待人工验收） |
 | `REQ-0011` | 品牌档案默认口径（dev 与打包 = 外部分发） | ready | [TASK-0224](../tasks/TASK-0224-brand-profile-default-distribution.md) |
 | `REQ-0010` | MCP 工具暴露粒度（按 server / 工具选择常驻或按需） | draft | [RESEARCH-0024](../research/RESEARCH-0024-pi-workflow-post-design-review.md)、[PLAN-0017](../plans/PLAN-0017-mcp-tool-exposure-granularity.md) |
 | `REQ-0009` | Desktop 外观字体偏好 | ready | [RESEARCH-0020](../research/RESEARCH-0020-desktop-font-preferences-and-licenses.md) |

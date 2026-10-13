@@ -20,14 +20,27 @@ class FakeContents implements BrowserViewContents {
 	url = "about:blank";
 	title = "";
 	destroyed = false;
-	back = false;
-	forward = false;
 	loads: string[] = [];
 	reloads = 0;
 	stops = 0;
-	goBacks = 0;
-	goForwards = 0;
-	ignores: boolean[] = [];
+	readonly navigationHistory = {
+		back: false,
+		forward: false,
+		goBacks: 0,
+		goForwards: 0,
+		canGoBack(): boolean {
+			return this.back;
+		},
+		canGoForward(): boolean {
+			return this.forward;
+		},
+		goBack(): void {
+			this.goBacks += 1;
+		},
+		goForward(): void {
+			this.goForwards += 1;
+		},
+	};
 	openHandler: ((d: { url: string }) => { action: string }) | null = null;
 	private listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 
@@ -44,26 +57,11 @@ class FakeContents implements BrowserViewContents {
 		this.loads.push(url);
 		this.url = url;
 	}
-	goBack(): void {
-		this.goBacks += 1;
-	}
-	goForward(): void {
-		this.goForwards += 1;
-	}
 	reload(): void {
 		this.reloads += 1;
 	}
 	stop(): void {
 		this.stops += 1;
-	}
-	canGoBack(): boolean {
-		return this.back;
-	}
-	canGoForward(): boolean {
-		return this.forward;
-	}
-	setIgnoreMouseEvents(ignore: boolean): void {
-		this.ignores.push(ignore);
 	}
 	setWindowOpenHandler(handler: (details: { url: string }) => { action: "deny" | "allow" }): void {
 		this.openHandler = handler;
@@ -81,6 +79,10 @@ class FakeContents implements BrowserViewContents {
 	}
 	async capturePage(): Promise<unknown> {
 		return {};
+	}
+	close(): void {
+		this.destroyed = true;
+		this.fire("destroyed");
 	}
 	fire(event: string, ...args: unknown[]): void {
 		for (const listener of this.listeners.get(event) ?? []) listener(...args);
@@ -177,7 +179,7 @@ describe("InAppBrowserViewHost", () => {
 		const contents = views[0].webContents;
 		contents.fire("did-start-loading");
 		expect(events.at(-1)?.state).toMatchObject({ workspaceId: "ws-1", loading: true, failed: false });
-		contents.back = true;
+		contents.navigationHistory.back = true;
 		contents.url = "https://x.example";
 		contents.fire("did-navigate", {}, "https://x.example");
 		expect(events.at(-1)?.state).toMatchObject({ url: "https://x.example", canBack: true, loading: false });
@@ -204,17 +206,23 @@ describe("InAppBrowserViewHost", () => {
 		expect(views[0].webContents.loads).toEqual(["https://ok.example"]);
 	});
 
-	it("control 映射 back/forward/reload/stop；不可回退时不 goBack", () => {
+	it("control 映射 back/forward/reload/stop；不可回退/前进时不调用 navigationHistory", () => {
 		const { host, views } = makeHost();
 		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
 		const contents = views[0].webContents;
+		const history = contents.navigationHistory;
 		host.control("ws-1", "back");
-		expect(contents.goBacks).toBe(0);
-		contents.back = true;
+		host.control("ws-1", "forward");
+		expect(history.goBacks).toBe(0);
+		expect(history.goForwards).toBe(0);
+		history.back = true;
+		history.forward = true;
 		host.control("ws-1", "back");
+		host.control("ws-1", "forward");
 		host.control("ws-1", "reload");
 		host.control("ws-1", "stop");
-		expect(contents.goBacks).toBe(1);
+		expect(history.goBacks).toBe(1);
+		expect(history.goForwards).toBe(1);
 		expect(contents.reloads).toBe(1);
 		expect(contents.stops).toBe(1);
 	});
@@ -231,12 +239,69 @@ describe("InAppBrowserViewHost", () => {
 		expect(win.added).toHaveLength(2);
 	});
 
-	it("面板拖拽时 setInputPassthrough 让事件穿透到 DOM 兜底 overlay", () => {
+	it("面板拖拽期 setInputPassthrough 隐藏原生 view 让位给 DOM 兜底 overlay，结束后按请求可见性恢复", () => {
+		// Electron 39 没有 per-view 的 ignore-mouse API（setIgnoreMouseEvents 只在
+		// BaseWindow/BrowserWindow 上，electron#23863 未实现 view 级版本）；穿透只能
+		// 通过暂时隐去原生 view 实现，页面保活不销毁（BUG-0086）。
 		const { host, views } = makeHost();
-		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: true });
+		host.setInputPassthrough("ws-1", true);
+		expect(views[0].visible).toBe(false);
+		expect(views[0].webContents.destroyed).toBe(false);
+		host.setInputPassthrough("ws-1", false);
+		expect(views[0].visible).toBe(true);
+	});
+
+	it("穿透中收到 visible:false 更新时请求态保留，穿透结束不误恢复为可见", () => {
+		const { host, views } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: true });
+		host.setInputPassthrough("ws-1", true);
+		// 穿透期间 tab 切走 / 失败覆盖层升起：请求可见性翻 false，不能丢。
+		host.setVisible("ws-1", false);
+		host.setInputPassthrough("ws-1", false);
+		expect(views[0].visible).toBe(false);
+	});
+
+	it("attach 即不可见的 view 穿透开关不改变其可见性", () => {
+		const { host, views } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, visible: false });
 		host.setInputPassthrough("ws-1", true);
 		host.setInputPassthrough("ws-1", false);
-		expect(views[0].webContents.ignores).toEqual([true, false]);
+		expect(views[0].visible).toBe(false);
+	});
+
+	it("detached view 超过上限按最久未用驱逐销毁，attached 永不驱逐（BUG-0094）", async () => {
+		const { host, views } = makeHost();
+		// 4 个工作区各开一次浏览器后切走：detached=4 > 上限 3，最早 detach 的被回收。
+		for (const id of ["ws-1", "ws-2", "ws-3", "ws-4"]) {
+			host.attach({ workspaceId: id, bounds: BOUNDS });
+			host.detach(id);
+		}
+		expect(views[0].webContents.destroyed).toBe(true);
+		expect(host.getState("ws-1")).toBeNull();
+		expect(views[1].webContents.destroyed).toBe(false);
+		expect(views[2].webContents.destroyed).toBe(false);
+		expect(views[3].webContents.destroyed).toBe(false);
+
+		// 被逐工作区重新 attach：新 view 创建并按 attach url 重新加载（可逆恢复）。
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, url: "https://a.example" });
+		expect(views).toHaveLength(5);
+		await vi.waitFor(() => expect(views[4].webContents.loads).toEqual(["https://a.example"]));
+	});
+
+	it("当前 attach 的 view 永不参与驱逐；刚 detach 的最新的也不会被逐", () => {
+		const { host, views } = makeHost();
+		for (const id of ["ws-1", "ws-2", "ws-3", "ws-4"]) {
+			host.attach({ workspaceId: id, bounds: BOUNDS });
+			host.detach(id);
+		}
+		// ws-1 已在上限外被逐；重挂 ws-2 使其成为 attached，再建一个新 detached。
+		host.attach({ workspaceId: "ws-2", bounds: BOUNDS });
+		host.attach({ workspaceId: "ws-5", bounds: BOUNDS });
+		host.detach("ws-5");
+		// detached: ws-3、ws-4、ws-5 正好在上限内；ws-2 attached 不被驱逐。
+		expect(views[1].webContents.destroyed).toBe(false);
+		for (const view of views.slice(2)) expect(view.webContents.destroyed).toBe(false);
 	});
 
 	it("view 销毁后 getState 为 null，重新 attach 重建新 view", () => {

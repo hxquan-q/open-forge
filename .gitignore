@@ -141,3 +141,9 @@ scripts/eval/**/__pycache__/
 # Local live-eval credentials; keep the example tracked.
 scripts/eval/.env
 !scripts/eval/.env.example
+
+# Understand-Anything 分析产物：图谱与配置入库，临时/回收站不入库
+.ua/.trash-*/
+.ua/tmp/
+.ua/intermediate/*
+!.ua/intermediate/scan-result.json

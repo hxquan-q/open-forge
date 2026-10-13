@@ -1,3 +1,5 @@
+<!-- Modified by The Open Forge contributors. -->
+
 # @vetta/ssh-transport
 
 远程项目的 SSH 传输层：主机模型、连接复用、远端命令执行与文件操作。
@@ -72,6 +74,15 @@
 「前面多了一行欢迎语」。读写直接走 `ssh -T` 的 8-bit clean 原始字节流，也因此不需要
 base64（GNU 的 `-d` 与 BSD 的 `-D` 不兼容）。
 
+### 文件传输走流式 exec，不用 SFTP 子系统
+
+大文件经 `uploadFile` / `downloadFile` 在 `openChannel` 上流过管道：下载是 `cat --`
+的 stdout 字节流；上传把本机字节灌进 `buildUploadFileCommand` 生成的脚本，远端先
+`wc -c` 核对收到的字节数，对不上就删临时文件——取消、断线或源提前结束都不会让半截
+文件顶替目标，对上了才 `mv` 就位。进度与取消经 `onProgress` + `AbortSignal` 贯穿，
+本机读写侧由调用方提供（见「边界」）。配套原语：`stat`、`listFilesRecursive`、
+`makeDirectory`。
+
 ## 测试
 
 本包有标准测试入口；源码变更会被仓库选择器（`test:impact` / `test:changed`）自动选中：
@@ -81,8 +92,9 @@ bun run --cwd packages/ssh-transport test
 ```
 
 覆盖分层：命令引用与两层 shell 语义、URI 往返、失败三分类在真实 shell 上执行
-（POSIX 用 `/bin/sh`，Windows 用 Git Bash）；ssh2 后端的连接复用、认证回退、取消与
-失效经本地真实 `ssh2.Server` 回环验证（`*.loopback.test.ts`）。真正 POSIX 专属的
+（POSIX 用 `/bin/sh`，Windows 用 Git Bash）；ssh2 后端的连接复用、认证回退、流式
+文件传输（含上传的 wc 校验与取消清理）、取消与失效经本地真实 `ssh2.Server` 回环验证
+（`*.loopback.test.ts`）。真正 POSIX 专属的
 语义（进程组终止、权限位、`ss`/`netstat`/`ps` 输出形状、linux/darwin helper 目标）
 在对应用例上以 `skipIf` + 理由显式交给 POSIX 平台覆盖，不静默跳过。回环夹具见
 `src/testing.ts`（`createLoopbackSshConnection` / `buildSshHelperForTests`）。

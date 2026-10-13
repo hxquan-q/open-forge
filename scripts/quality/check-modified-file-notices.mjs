@@ -99,6 +99,7 @@ const STYLE_BY_BASENAME = {
 	OWNERS: "hash",
 	".worktreeinclude": "hash",
 	".gitignore": "hash",
+	".understandignore": "hash",
 	".npmrc": "hash",
 	".editorconfig": "hash",
 	".gitattributes": "hash",

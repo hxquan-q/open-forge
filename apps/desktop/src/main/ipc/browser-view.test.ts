@@ -18,7 +18,6 @@ const captured = vi.hoisted(() => {
 		title = "";
 		destroyed = false;
 		loads: string[] = [];
-		ignores: boolean[] = [];
 		private readonly listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 
 		isDestroyed(): boolean {
@@ -34,19 +33,14 @@ const captured = vi.hoisted(() => {
 			this.loads.push(url);
 			this.url = url;
 		}
-		goBack(): void {}
-		goForward(): void {}
+		readonly navigationHistory = {
+			canGoBack: () => false,
+			canGoForward: () => false,
+			goBack: () => {},
+			goForward: () => {},
+		};
 		reload(): void {}
 		stop(): void {}
-		canGoBack(): boolean {
-			return false;
-		}
-		canGoForward(): boolean {
-			return false;
-		}
-		setIgnoreMouseEvents(ignore: boolean): void {
-			this.ignores.push(ignore);
-		}
 		setWindowOpenHandler(): void {}
 		on(event: string, listener: (...args: unknown[]) => void): void {
 			const list = this.listeners.get(event) ?? [];
@@ -61,6 +55,10 @@ const captured = vi.hoisted(() => {
 		}
 		async capturePage(): Promise<unknown> {
 			return {};
+		}
+		close(): void {
+			this.destroyed = true;
+			this.fire("destroyed");
 		}
 		fire(event: string, ...args: unknown[]): void {
 			for (const listener of this.listeners.get(event) ?? []) listener(...args);

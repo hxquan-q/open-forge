@@ -30,18 +30,21 @@ export interface BrowserViewContents {
 	getURL(): string;
 	getTitle(): string;
 	loadURL(url: string): Promise<void>;
-	goBack(): void;
-	goForward(): void;
+	/** Electron 39 起导航历史挂在 contents.navigationHistory，旧 goBack/canGoBack 直属方法已废弃。 */
+	readonly navigationHistory: {
+		canGoBack(): boolean;
+		canGoForward(): boolean;
+		goBack(): void;
+		goForward(): void;
+	};
 	reload(): void;
 	stop(): void;
-	canGoBack(): boolean;
-	canGoForward(): boolean;
-	setIgnoreMouseEvents(ignore: boolean): void;
 	setWindowOpenHandler(handler: (details: { url: string }) => { action: "deny" | "allow" }): void;
 	on(event: string, listener: (...args: unknown[]) => void): void;
 	once(event: string, listener: (...args: unknown[]) => void): void;
 	executeJavaScript(code: string): Promise<unknown>;
 	capturePage(rect?: { x: number; y: number; width: number; height: number }): Promise<unknown>;
+	close(): void;
 }
 
 export interface BrowserViewHostWindow {
@@ -64,17 +67,26 @@ interface ViewRecord {
 	readonly view: BrowserViewHandle;
 	attached: boolean;
 	visible: boolean;
+	/** 拖拽期指针穿透：为 true 时原生 view 暂时隐去，事件落到 DOM 兜底 overlay。 */
+	passthrough: boolean;
 	loading: boolean;
 	failed: boolean;
+	/** 最近使用的单调序号（attach/detach 时刷新），detached 驱逐按它取最老。 */
+	lastUsedAt: number;
 }
+
+/** 非活动 view 上限：对齐 TASK-0039 插件 pinned 页签同型（每个 view 是一个独立渲染进程）。 */
+const MAX_DETACHED_BROWSER_VIEWS = 3;
 
 /**
  * 按 workspace 持有 WebContentsView 的内置浏览器宿主（TASK-0072）。
- * view 常驻存活（切 workspace 只摘不显式销毁），renderer 占位矩形经
- * bounds/visible 上报驱动摆放；导航与事件状态经 IPC 往返。
+ * view 常驻存活但有界：detached 数超过上限时按最近使用驱逐销毁
+ * （BUG-0094），被逐工作区重新 attach 时由 renderer 携带的 URL 自动重建；
+ * renderer 占位矩形经 bounds/visible 上报驱动摆放；导航与事件状态经 IPC 往返。
  */
 export class InAppBrowserViewHost {
 	private readonly views = new Map<string, ViewRecord>();
+	private lastUsedSeq = 0;
 
 	constructor(private readonly deps: BrowserViewHostDeps) {}
 
@@ -93,13 +105,16 @@ export class InAppBrowserViewHost {
 		}
 		record.view.setBounds(request.bounds);
 		record.visible = request.visible ?? true;
-		record.view.setVisible(record.visible);
+		record.passthrough = false;
+		record.lastUsedAt = ++this.lastUsedSeq;
+		this.applyVisible(record);
 		const url = request.url?.trim();
 		if (url && url !== record.view.webContents.getURL()) {
 			void record.view.webContents
 				.loadURL(url)
 				.catch((error: unknown) => this.onLoadRejected(request.workspaceId, record, error));
 		}
+		this.enforceDetachedLimit();
 		return this.stateOf(request.workspaceId, record);
 	}
 
@@ -112,8 +127,8 @@ export class InAppBrowserViewHost {
 	setVisible(workspaceId: string, visible: boolean): void {
 		const record = this.views.get(workspaceId);
 		if (!record || record.view.webContents.isDestroyed()) return;
-		record.view.setVisible(visible);
 		record.visible = visible;
+		this.applyVisible(record);
 	}
 
 	detach(workspaceId: string): void {
@@ -124,6 +139,8 @@ export class InAppBrowserViewHost {
 		record.view.setVisible(false);
 		record.attached = false;
 		record.visible = false;
+		record.lastUsedAt = ++this.lastUsedSeq;
+		this.enforceDetachedLimit();
 	}
 
 	async navigate(workspaceId: string, url: string): Promise<{ ok: true } | { ok: false; code: string }> {
@@ -147,10 +164,10 @@ export class InAppBrowserViewHost {
 		if (!contents || contents.isDestroyed()) return;
 		switch (action) {
 			case "back":
-				if (contents.canGoBack()) contents.goBack();
+				if (contents.navigationHistory.canGoBack()) contents.navigationHistory.goBack();
 				break;
 			case "forward":
-				if (contents.canGoForward()) contents.goForward();
+				if (contents.navigationHistory.canGoForward()) contents.navigationHistory.goForward();
 				break;
 			case "reload":
 				contents.reload();
@@ -162,9 +179,45 @@ export class InAppBrowserViewHost {
 	}
 
 	setInputPassthrough(workspaceId: string, passthrough: boolean): void {
-		const contents = this.views.get(workspaceId)?.view.webContents;
-		if (!contents || contents.isDestroyed()) return;
-		contents.setIgnoreMouseEvents(passthrough);
+		const record = this.views.get(workspaceId);
+		if (!record || record.view.webContents.isDestroyed()) return;
+		record.passthrough = passthrough;
+		this.applyVisible(record);
+	}
+
+	/**
+	 * 实际可见性 = 请求可见且不在穿透期。Electron 没有 per-view 的 ignore-mouse
+	 * API（`setIgnoreMouseEvents` 只在 `BaseWindow`/`BrowserWindow` 上，
+	 * `WebContentsView`/`View`/`WebContents` 均无，electron#23863 未实现）；
+	 * 窗口级 ignore+forward 会把真实点击泄漏给下层应用窗口。拖拽期暂时隐去
+	 * 原生 view 是唯一安全的让位手段：页面保活不销毁，DOM 兜底 overlay 自然
+	 * 收到掠过该区域的事件（BUG-0086）。
+	 */
+	private applyVisible(record: ViewRecord): void {
+		record.view.setVisible(record.visible && !record.passthrough);
+	}
+
+	/**
+	 * detached view 上限执行：attached 永不驱逐；已 destroyed 的条目直接清表；
+	 * 超限按 lastUsedAt 升序销毁最老的。`webContents.close()` 触发 `destroyed`，
+	 * webview-session-host 已接线自动解绑会话控制器，无悬挂引用。
+	 */
+	private enforceDetachedLimit(): void {
+		const detached: [string, ViewRecord][] = [];
+		for (const [workspaceId, record] of this.views) {
+			if (record.attached) continue;
+			if (record.view.webContents.isDestroyed()) {
+				this.views.delete(workspaceId);
+				continue;
+			}
+			detached.push([workspaceId, record]);
+		}
+		detached.sort((a, b) => a[1].lastUsedAt - b[1].lastUsedAt);
+		while (detached.length > MAX_DETACHED_BROWSER_VIEWS) {
+			const [workspaceId, record] = detached.shift() as [string, ViewRecord];
+			this.views.delete(workspaceId);
+			record.view.webContents.close();
+		}
 	}
 
 	getState(workspaceId: string): DesktopBrowserViewState | null {
@@ -192,7 +245,15 @@ export class InAppBrowserViewHost {
 			if (/^https?:\/\//i.test(url)) void contents.loadURL(url).catch(() => undefined);
 			return { action: "deny" };
 		});
-		const record: ViewRecord = { view, attached: false, visible: false, loading: false, failed: false };
+		const record: ViewRecord = {
+			view,
+			attached: false,
+			visible: false,
+			passthrough: false,
+			loading: false,
+			failed: false,
+			lastUsedAt: 0,
+		};
 		this.views.set(workspaceId, record);
 		this.wireContents(workspaceId, contents, record);
 		// 会话控制器接线（revision/picker/DOM sentinel/快捷键），workspace 直连无竞态。
@@ -256,8 +317,8 @@ export class InAppBrowserViewHost {
 			workspaceId,
 			url: contents.getURL(),
 			title: contents.getTitle(),
-			canBack: contents.canGoBack(),
-			canForward: contents.canGoForward(),
+			canBack: contents.navigationHistory.canGoBack(),
+			canForward: contents.navigationHistory.canGoForward(),
 			loading: record.loading,
 			failed: record.failed,
 		};

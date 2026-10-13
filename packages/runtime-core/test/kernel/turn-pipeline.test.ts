@@ -22,6 +22,7 @@ import {
 	type RuntimeSessionContextBuffer,
 	type RuntimeSnapshot,
 	type RuntimeTurnModelBindingProvider,
+	type SessionContextRecord,
 	StaticRuntimeSnapshotProvider,
 	type StoredConversation,
 	type StoredSessionEvent,
@@ -919,6 +920,121 @@ describe("greenfield runtime kernel", () => {
 		await expect(harness.session.send({ message: userMessage("must not start") })).rejects.toMatchObject({
 			code: KERNEL_ERROR_CODES.TURN_PERSISTENCE,
 		});
+	});
+
+	it("持久化恢复后下一次 admission 原地收敛：悬挂回合补写中断终态并放行（BUG-0091）", async () => {
+		let markStarted: (() => void) | undefined;
+		const started = new Promise<void>((resolve) => {
+			markStarted = resolve;
+		});
+		let execution = 0;
+		const engine: TurnEnginePort = {
+			async *execute(request) {
+				execution += 1;
+				if (execution === 1) {
+					markStarted?.();
+					await waitForAbort(request.signal);
+					yield { type: "completed", stopReason: "aborted" };
+					return;
+				}
+				yield { type: "message", message: assistantMessage("recovered turn") };
+				yield { type: "completed", stopReason: "stop" };
+			},
+		};
+		const harness = await createHarness({ turnEngine: engine, failTerminalAppend: true });
+		const turn = harness.session.send({ message: userMessage("current input") });
+		const turnError = turn.catch((error) => error);
+		await started;
+		await expect(
+			harness.session.cancel("terminal persistence failure").catch((error) => error),
+		).resolves.toMatchObject({ code: KERNEL_ERROR_CODES.TURN_PERSISTENCE });
+		await expect(turnError).resolves.toMatchObject({ code: KERNEL_ERROR_CODES.TURN_PERSISTENCE });
+		expect(harness.session.state).toBe("recovery_required");
+
+		// 存储抖动结束：下一次 admission 经 pipeline.resumeSession 原地恢复。
+		harness.repository.failTerminalAppend = false;
+		const result = await harness.session.send({ message: userMessage("after storage healed") });
+
+		expect(result.status).toBe("completed");
+		expect(harness.session.state).toBe("idle");
+		const conversation = await harness.repository.load("session-1");
+		const interrupted = conversation.events.filter(
+			(event) => event.turnId === "turn-1" && event.type === "turn.failed",
+		);
+		expect(interrupted).toHaveLength(1);
+		expect(interrupted[0]).toMatchObject({
+			type: "turn.failed",
+			error: { code: KERNEL_ERROR_CODES.TURN_INTERRUPTED },
+		});
+		// 恢复幂等：turn-1 只有一个终态事件，turn-2 正常完成。
+		expect(
+			conversation.events.filter(
+				(event) =>
+					event.turnId === "turn-1" &&
+					(event.type === "turn.completed" || event.type === "turn.cancelled" || event.type === "turn.failed"),
+			),
+		).toHaveLength(1);
+		expect(conversation.events.some((event) => event.turnId === "turn-2" && event.type === "turn.completed")).toBe(
+			true,
+		);
+	});
+
+	it("recovery_required 的同步入口以首个持久化原因拒绝，病因进错误信息（BUG-0091）", async () => {
+		const engine: TurnEnginePort = {
+			async *execute() {
+				yield { type: "completed", stopReason: "error" };
+			},
+		};
+		const harness = await createHarness({ turnEngine: engine, failTerminalAppend: true });
+		await expect(harness.session.send({ message: userMessage("boom") })).rejects.toMatchObject({
+			code: KERNEL_ERROR_CODES.TURN_PERSISTENCE,
+		});
+		expect(harness.session.state).toBe("recovery_required");
+
+		// 同步 guard 无法原地恢复，但必须透传首个失败原因而不是裸模板错误。
+		expect(() => harness.session.queueContext("followUp", [])).toThrowError(/terminal append failed/);
+		expect(() => harness.session.queueNextTurnContext([])).toThrowError(/terminal append failed/);
+	});
+
+	it("recovery_required 期间 requestContinuation 拒绝但记录随恢复后首个 Turn 送达（BUG-0096）", async () => {
+		let execution = 0;
+		const engine: TurnEnginePort = {
+			async *execute() {
+				execution += 1;
+				if (execution === 1) {
+					yield { type: "completed", stopReason: "error" };
+					return;
+				}
+				yield { type: "message", message: assistantMessage("recovered") };
+				yield { type: "completed", stopReason: "stop" };
+			},
+		};
+		const harness = await createHarness({ turnEngine: engine, failTerminalAppend: true });
+		await expect(harness.session.send({ message: userMessage("boom") })).rejects.toMatchObject({
+			code: KERNEL_ERROR_CODES.TURN_PERSISTENCE,
+		});
+		expect(harness.session.state).toBe("recovery_required");
+
+		const record: SessionContextRecord = {
+			type: "subagent-result",
+			content: [{ type: "text", text: "background report" }],
+			modelVisible: true,
+		};
+		await expect(harness.session.requestContinuation([record])).rejects.toMatchObject({
+			code: KERNEL_ERROR_CODES.TURN_PERSISTENCE,
+		});
+
+		// 存储抖动结束：恢复后的首个 Turn 即携带投递记录，不再静默丢弃。
+		harness.repository.failTerminalAppend = false;
+		const result = await harness.session.send({ message: userMessage("after storage healed") });
+		expect(result.status).toBe("completed");
+
+		const conversation = await harness.repository.load("session-1");
+		const appended = conversation.events.filter(
+			(event) => event.type === "context.appended" && event.turnId === "turn-2",
+		);
+		expect(appended).toHaveLength(1);
+		expect(appended[0]).toMatchObject({ record });
 	});
 
 	it("serializes runtime context after tool results and exposes it to the next external turn", async () => {

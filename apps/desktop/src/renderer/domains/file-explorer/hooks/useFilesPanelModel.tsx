@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import {
 	FILE_EXPLORER_ENTRY_EXISTS_ERROR,
@@ -13,6 +14,7 @@ import type {
 import { useNarrowScreen } from "@shared/hooks/useNarrowScreen";
 import { isWindows } from "@shared/lib/platform";
 import { isSubPath, pathBasename, pathDirname } from "@shared/lib/utils";
+import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
 import {
 	activityPanelPreviewAvailableAtom,
 	confirmDialogAtom,
@@ -57,6 +59,7 @@ import { sortFileExplorerActions } from "../services/plugin-contributions";
 import { cacheAppFileDragIcons } from "../services/rasterize-app-file-icon";
 import { useFileExplorerSelection } from "./useFileExplorerSelection";
 import { useFileTree } from "./useFileTree";
+import { useSshFileTransfers } from "./useSshFileTransfers";
 
 function isEditableEventTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) return false;
@@ -368,12 +371,20 @@ export function useFilesPanelModel(cwd?: string | null): FilesPanelViewProps {
 		[moveEntry, t],
 	);
 
+	// SSH 工作区的远端传输编排：菜单入口、拖放入队与进度浮层。
+	const sshTransfers = useSshFileTransfers({ rootDir, refreshDir, setErrorToast });
+
 	const onExternalDrop = useCallback(
 		(files: readonly File[], destinationDirectory: string) => {
 			if (!rootDir || files.length === 0) return;
 			const paths = files.map((file) => window.vetta.fs.pathForFile(file)).filter(Boolean);
 			if (isProjectInternalDrop(paths, rootDir)) {
 				onFileMove(paths, destinationDirectory);
+				return;
+			}
+			// 拖进 SSH 工作区 = 从本机上传；本地转移计划不适用于远端。
+			if (isSshProjectUri(destinationDirectory)) {
+				sshTransfers.handleSshUploadPaths(paths, destinationDirectory);
 				return;
 			}
 			void window.vetta.fs
@@ -387,7 +398,7 @@ export function useFilesPanelModel(cwd?: string | null): FilesPanelViewProps {
 					setErrorToast(t("fileExplorer.transfer.prepareFailed"));
 				});
 		},
-		[onFileMove, rootDir, t],
+		[onFileMove, rootDir, sshTransfers.handleSshUploadPaths, t],
 	);
 
 	const onNativeDragStart = useCallback((paths: readonly string[]) => {
@@ -610,6 +621,7 @@ export function useFilesPanelModel(cwd?: string | null): FilesPanelViewProps {
 			contextMenu: null,
 			deleteDialog: null,
 			transferDialog: null,
+			sshTransfersPanel: null,
 			errorToast,
 		};
 	}
@@ -743,6 +755,8 @@ export function useFilesPanelModel(cwd?: string | null): FilesPanelViewProps {
 			onCopy={copyEntriesToClipboard}
 			onPaste={() => beginPaste(contextMenu.isRoot ? rootDir : undefined)}
 			onCopyPath={copyPathsToSystemClipboard}
+			onSshDownload={sshTransfers.handleSshDownload}
+			onSshUpload={sshTransfers.handleSshUpload}
 		/>
 	) : null;
 
@@ -779,6 +793,7 @@ export function useFilesPanelModel(cwd?: string | null): FilesPanelViewProps {
 		contextMenu: contextMenuNode,
 		deleteDialog,
 		transferDialog,
+		sshTransfersPanel: sshTransfers.panel,
 		errorToast,
 	};
 }

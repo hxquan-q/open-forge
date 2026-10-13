@@ -87,6 +87,16 @@ export class RuntimeHostCatalogFacade {
 		if (!this.options.accessResolver) return;
 		const access = await this.options.accessResolver.resolve(this.normalizePath(sessionPath));
 		if (access?.[capability]) return;
+		// 「无路由认领」与「路由声明拒绝」是两类不同语义：前者是路径不属于本
+		// 运行时（外来格式/他实例专属/残留路径），后者才是能力被拒。
+		if (access === undefined) {
+			throw runtimeError(
+				"INVALID_REQUEST",
+				`Session is not recognized by this runtime: ${sessionPath}`,
+				false,
+				"runtime",
+			);
+		}
 		throw runtimeError("INVALID_REQUEST", `Session does not support ${capability}: ${sessionPath}`, false, "runtime");
 	}
 }

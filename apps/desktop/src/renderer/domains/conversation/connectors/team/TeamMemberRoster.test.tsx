@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -228,5 +229,138 @@ describe("TeamMemberRoster", () => {
 	it("renders nothing without members", () => {
 		const { container } = render(<TeamMemberRoster members={[]} onOpenMember={vi.fn()} />);
 		expect(container.firstChild).toBeNull();
+	});
+
+	// BUG-0101 回归：测量循环必须收敛，且不被流式事件的 members 身份churn 推着重排。
+	function stubMeasurementClock() {
+		const frames: FrameRequestCallback[] = [];
+		let notifyResize: () => void = () => undefined;
+		let observerCount = 0;
+		vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+			frames.push(callback);
+			return frames.length;
+		});
+		vi.stubGlobal("cancelAnimationFrame", vi.fn());
+		vi.stubGlobal(
+			"ResizeObserver",
+			class {
+				constructor(callback: ResizeObserverCallback) {
+					observerCount += 1;
+					notifyResize = () => callback([], this as unknown as ResizeObserver);
+				}
+				observe() {}
+				disconnect() {}
+				unobserve() {}
+			},
+		);
+		return {
+			frames,
+			flushFrame: () => {
+				const frame = frames.shift();
+				if (frame) act(() => frame(0));
+				return frame !== undefined;
+			},
+			notifyResize: () => notifyResize(),
+			observerCount: () => observerCount,
+		};
+	}
+
+	function stubRosterLayout(labelWidthOf: (memberId: string, applied: number | null) => number) {
+		const naturalOf = (element: HTMLElement): number => (element.textContent === "Research" ? 70 : 50);
+		const clientWidth = vi
+			.spyOn(HTMLElement.prototype, "clientWidth", "get")
+			.mockImplementation(function (this: HTMLElement) {
+				return this.getAttribute("data-team-member-roster-group") === "true" ? 202 : 0;
+			});
+		const scrollWidth = vi
+			.spyOn(HTMLElement.prototype, "scrollWidth", "get")
+			.mockImplementation(function (this: HTMLElement) {
+				return this.getAttribute("data-member-session-label") === "true" ? naturalOf(this) : 0;
+			});
+		const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+			this: HTMLElement,
+		) {
+			if (this.getAttribute("data-member-session-label-minimum") === "true") return { width: 12 } as DOMRect;
+			if (this.getAttribute("data-member-session-label") === "true") {
+				const applied = this.style.width ? Number.parseFloat(this.style.width) : null;
+				return { width: labelWidthOf(this.getAttribute("data-member-session-id") ?? "", applied) } as DOMRect;
+			}
+			const label = this.querySelector('[data-member-session-label="true"]') as HTMLElement | null;
+			const applied = label?.style.width ? Number.parseFloat(label.style.width) : null;
+			const labelWidth =
+				label === null ? 0 : labelWidthOf(this.getAttribute("data-member-session-id") ?? "", applied);
+			return { width: 38 + labelWidth } as DOMRect;
+		});
+		return () => {
+			clientWidth.mockRestore();
+			scrollWidth.mockRestore();
+			rect.mockRestore();
+		};
+	}
+
+	it("converges when measurements oscillate below half a pixel instead of rewriting state every frame", () => {
+		const clock = stubMeasurementClock();
+		// 测量端在两个只差 0.2px 的值之间抖动（真实布局的亚像素反馈形状）。
+		const restore = stubRosterLayout((_memberId, applied) => (applied === null ? 50 : applied > 42.1 ? 42.0 : 42.2));
+		try {
+			render(<TeamMemberRoster members={members} onOpenMember={vi.fn()} />);
+			clock.flushFrame();
+			const label = document.querySelector('[data-member-session-label="true"]') as HTMLElement;
+			const firstWidth = label.style.width;
+			expect(firstWidth).not.toBe("");
+			// 反复触发容器 resize 并驱动帧：宽度必须停在同一个值，不随亚像素抖动翻转。
+			for (let tick = 0; tick < 8; tick += 1) {
+				act(() => clock.notifyResize());
+				clock.flushFrame();
+			}
+			expect(label.style.width).toBe(firstWidth);
+		} finally {
+			restore();
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it("does not reschedule measurement when streaming events churn member identities", () => {
+		const clock = stubMeasurementClock();
+		const restore = stubRosterLayout((_, applied) => (applied === null ? 50 : applied));
+		try {
+			const view = render(<TeamMemberRoster members={members} onOpenMember={vi.fn()} />);
+			clock.flushFrame();
+			expect(clock.observerCount()).toBe(1);
+			const observersAfterMount = clock.observerCount();
+			const framesAfterMount = clock.frames.length;
+
+			// 流式事件形状：每个事件都是新的 members 数组，名字与集合不变、状态翻转。
+			for (let event = 0; event < 60; event += 1) {
+				const churned = members.map((member, index) => ({
+					...member,
+					status: event % 2 === index % 2 ? "working" : "idle",
+				})) as unknown as TeamChatViewModel["members"];
+				view.rerender(<TeamMemberRoster members={churned} onOpenMember={vi.fn()} />);
+			}
+			expect(clock.observerCount()).toBe(observersAfterMount);
+			expect(clock.frames.length).toBe(framesAfterMount);
+		} finally {
+			restore();
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it("remeasures when a member is renamed even without identity churn", () => {
+		const clock = stubMeasurementClock();
+		const restore = stubRosterLayout((_, applied) => (applied === null ? 50 : applied));
+		try {
+			const view = render(<TeamMemberRoster members={members} onOpenMember={vi.fn()} />);
+			clock.flushFrame();
+			const framesBefore = clock.frames.length;
+			view.rerender(
+				<TeamMemberRoster members={members} onOpenMember={vi.fn()} leaderMemberId="member-1" />,
+			);
+			// 队长角标改变胶囊的固定宽度，必须重排一次测量。
+			expect(clock.frames.length).toBeGreaterThan(framesBefore);
+		} finally {
+			restore();
+			vi.unstubAllGlobals();
+		}
 	});
 });

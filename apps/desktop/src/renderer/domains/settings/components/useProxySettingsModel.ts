@@ -1,6 +1,6 @@
 import type { DesktopProxyConfigPatchData, DesktopProxyProtocol } from "@preload/api-types/config";
 import { supportsProviderFetchInjection } from "@vetta/ai/protocol";
-import { shouldBypassProxy } from "@vetta/ai/proxy";
+import { resolveProxyConfig, shouldBypassProxy } from "@vetta/ai/proxy";
 import type { ProxyProviderRowView } from "@vetta-org/theme-ui/settings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -75,13 +75,23 @@ const EMPTY_DRAFT: ProxySettingsDraft = {
 	password: "",
 };
 
-/** 与主进程 `resolveProxyConfig` 同一判据的最小镜像，只用于即时提示。 */
+/**
+ * 与主进程 `resolveProxyConfig` 完全同一判据：直接调共享解析，不再手写镜像——
+ * 旧镜像漏掉了「host 含冒号且非 IPv6」（用户把 host:port 填进一格）这一条，
+ * 而主进程会判 invalid-host。
+ */
 export function isProxyDraftInvalid(draft: ProxySettingsDraft): boolean {
-	if (!draft.enabled) return false;
-	const host = draft.host.trim();
-	if (host === "" || /[\s/\\@#?%]/.test(host)) return true;
 	const port = Number.parseInt(draft.port, 10);
-	return !Number.isInteger(port) || port < 1 || port > 65535;
+	return (
+		resolveProxyConfig({
+			enabled: draft.enabled,
+			protocol: draft.protocol,
+			host: draft.host,
+			port: Number.isNaN(port) ? 0 : port,
+			username: draft.username,
+			password: draft.password,
+		}).mode === "invalid"
+	);
 }
 
 export function useProxySettingsModel(): ProxySettingsModel {
@@ -154,11 +164,16 @@ export function useProxySettingsModel(): ProxySettingsModel {
 		(field: "host" | "port" | "username" | "password", value: string) => {
 			setDraft((current) => {
 				const next = { ...current, [field]: value };
-				commitDebounced(
-					field === "port"
-						? { port: Number.parseInt(value, 10) || 0 }
-						: ({ [field]: value } as DesktopProxyConfigPatchData),
-				);
+				// 无效组合不落盘：草稿照常更新（输入跟手、invalidConfig 提示照常
+				// 显示），但 config.set 只在下一个草稿通过主进程判据时才安排——
+				// 否则无效值会被静默保存，运行期降级为逐条请求失败（BUG-0098）。
+				if (!isProxyDraftInvalid(next)) {
+					commitDebounced(
+						field === "port"
+							? { port: Number.parseInt(value, 10) || 0 }
+							: ({ [field]: value } as DesktopProxyConfigPatchData),
+					);
+				}
 				return next;
 			});
 			if (field === "password") setPasswordStored(value.length > 0);

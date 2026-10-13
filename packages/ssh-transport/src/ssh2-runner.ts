@@ -636,6 +636,30 @@ class Ssh2ProcessChannel implements SshProcessChannel {
 		this.stream.write(data);
 	}
 
+	/**
+	 * 背压感知写：ssh2 的写回调在数据被 SSH 流量控制窗口放行后才兑现，正好是传输需要的
+	 * pacing 信号。通道已死（kill、远端断开）时立即放行，`exited` 兜底防止回调永不触发
+	 * 把上传挂死。
+	 */
+	writeAsync(data: Uint8Array): Promise<void> {
+		if (this.stream === undefined) {
+			if (!this.killed) this.pendingWrites.push(data);
+			return Promise.resolve();
+		}
+		const stream = this.stream;
+		return new Promise((resolve) => {
+			let settled = false;
+			const finish = (): void => {
+				if (!settled) {
+					settled = true;
+					resolve();
+				}
+			};
+			stream.write(data, finish);
+			void this.exited.then(finish);
+		});
+	}
+
 	end(): void {
 		this.endRequested = true;
 		this.stream?.end();

@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SshOperationAbortedError, SshRemoteCommandError, SshTransportError } from "./errors.js";
 import type { SshHelperClient } from "./helper-client.js";
 import { connectSshHelper } from "./helper-deployment.js";
-import type { SshProcessInvocation, SshProcessResult, SshProcessRunner } from "./process-runner.js";
+import type {
+	SshChannelInvocation,
+	SshProcessInvocation,
+	SshProcessResult,
+	SshProcessRunner,
+} from "./process-runner.js";
 import { buildKillCommand, buildRemoteCommand, buildWriteFileCommand } from "./remote-command.js";
 import { SshConnection } from "./ssh-connection.js";
 import type { SshHost } from "./ssh-host.js";
@@ -39,6 +44,49 @@ function createRunner(reply: (remoteCommand: string) => SshProcessResult): {
 function connect(reply: (remoteCommand: string) => SshProcessResult) {
 	const { runner, calls } = createRunner(reply);
 	return { connection: new SshConnection(host, { runner, controlPath: "/tmp/cp" }), calls };
+}
+
+/**
+ * 一问一答 + 一条测试掌控的通道：注入 stdout 块与退出结局，传输失败分类不必起真进程。
+ * `onKill` 模拟「杀进程 → 进程死 → exited 兑现」的真实因果；不给就保持悬挂，
+ * 由用例自己决定要不要收尾。
+ */
+function connectChannel(options: {
+	exited: Promise<{ exitCode: number | null; stderr: string }>;
+	stdout?: Uint8Array[];
+	writeAsync?: (data: Uint8Array) => Promise<void>;
+	onKill?: () => void;
+}) {
+	const calls: SshChannelInvocation[] = [];
+	const writes: Uint8Array[] = [];
+	const state = { ended: false, killed: false };
+	const runner: SshProcessRunner = {
+		run: async () => ok("Linux\nx86_64\n"),
+		open: (invocation) => {
+			calls.push(invocation);
+			for (const chunk of options.stdout ?? []) invocation.onStdout(chunk);
+			const channel = {
+				write: (data: Uint8Array) => {
+					writes.push(data);
+				},
+				end: () => {
+					state.ended = true;
+				},
+				kill: () => {
+					state.killed = true;
+					options.onKill?.();
+				},
+				exited: options.exited,
+			};
+			return options.writeAsync === undefined ? channel : { ...channel, writeAsync: options.writeAsync };
+		},
+	};
+	return {
+		connection: new SshConnection(host, { runner, controlPath: "/tmp/cp" }),
+		calls,
+		writes,
+		state,
+	};
 }
 
 describe("远端平台探测", () => {
@@ -89,6 +137,132 @@ describe("远端文件读写", () => {
 			aborted: false,
 		}));
 		await expect(connection.readFile("/srv/x")).rejects.toBeInstanceOf(SshRemoteCommandError);
+	});
+});
+
+describe("流式文件传输（通道失败分类）", () => {
+	const resolved = (exitCode: number | null, stderr = ""): Promise<{ exitCode: number | null; stderr: string }> =>
+		Promise.resolve({ exitCode, stderr });
+
+	it("下载把 stdout 逐块交给 writeChunk 并累计字节数", async () => {
+		const { connection } = connectChannel({
+			exited: resolved(0),
+			stdout: [encode("hello "), encode("world")],
+		});
+		const chunks: Uint8Array[] = [];
+		await expect(connection.downloadFile("/srv/a.bin", (chunk) => chunks.push(chunk))).resolves.toEqual({
+			bytes: 11,
+		});
+		expect(chunks).toEqual([encode("hello "), encode("world")]);
+	});
+
+	it("下载退出非零：远端答复，报 exited", async () => {
+		const { connection } = connectChannel({ exited: resolved(1, "cat: permission denied") });
+		await expect(connection.downloadFile("/srv/a.bin", () => {})).rejects.toBeInstanceOf(SshRemoteCommandError);
+	});
+
+	it("下载退出码 null：问不到结果，报 unverifiable", async () => {
+		const { connection } = connectChannel({ exited: resolved(null) });
+		await expect(connection.downloadFile("/srv/a.bin", () => {})).rejects.toBeInstanceOf(SshTransportError);
+	});
+
+	it("上传无 writeAsync 的通道退化为同步 write", async () => {
+		const { connection, writes, state } = connectChannel({ exited: resolved(0) });
+		await expect(
+			connection.uploadFile("/srv/a.bin", {
+				totalBytes: 5,
+				readChunk: async () => encode("hello"),
+			}),
+		).resolves.toEqual({ bytes: 5 });
+		expect(writes).toEqual([encode("hello")]);
+		expect(state.ended).toBe(true);
+	});
+
+	it("上传走 writeAsync 时按块等背压", async () => {
+		const asyncWrites: Uint8Array[] = [];
+		const { connection, writes, state } = connectChannel({
+			exited: resolved(0),
+			writeAsync: async (data) => {
+				asyncWrites.push(data);
+			},
+		});
+		await expect(
+			connection.uploadFile("/srv/a.bin", {
+				totalBytes: 10,
+				readChunk: async (offset) => encode(offset === 0 ? "aaaaa" : "bbbbb"),
+			}),
+		).resolves.toEqual({ bytes: 10 });
+		expect(asyncWrites).toEqual([encode("aaaaa"), encode("bbbbb")]);
+		expect(writes).toEqual([]);
+		expect(state.ended).toBe(true);
+	});
+
+	it("上传退出非零：wc 校验拒绝，报 exited", async () => {
+		const { connection } = connectChannel({ exited: resolved(1, "wc mismatch") });
+		await expect(
+			connection.uploadFile("/srv/a.bin", { totalBytes: 4, readChunk: async () => encode("abcd") }),
+		).rejects.toBeInstanceOf(SshRemoteCommandError);
+	});
+
+	it("上传退出码 null：报 unverifiable", async () => {
+		const { connection } = connectChannel({ exited: resolved(null) });
+		await expect(
+			connection.uploadFile("/srv/a.bin", { totalBytes: 4, readChunk: async () => encode("abcd") }),
+		).rejects.toBeInstanceOf(SshTransportError);
+	});
+
+	it("readChunk 抛错：异常上抛且通道被杀", async () => {
+		const boom = new Error("disk on fire");
+		const { connection, state } = connectChannel({
+			exited: new Promise(() => {}),
+			onKill: () => {},
+		});
+		await expect(
+			connection.uploadFile("/srv/a.bin", {
+				totalBytes: 4,
+				readChunk: async () => {
+					throw boom;
+				},
+			}),
+		).rejects.toBe(boom);
+		expect(state.killed).toBe(true);
+	});
+
+	it("上传中途取消：通道被杀并报取消（unverifiable）", async () => {
+		let resolveExited!: (value: { exitCode: number | null; stderr: string }) => void;
+		const { connection, state } = connectChannel({
+			exited: new Promise((resolve) => {
+				resolveExited = resolve;
+			}),
+			// 杀掉通道 = 进程死 = exited 兑现，与真实因果一致。
+			onKill: () => resolveExited({ exitCode: null, stderr: "" }),
+		});
+		const controller = new AbortController();
+		const pending = connection.uploadFile("/srv/a.bin", {
+			totalBytes: 100,
+			signal: controller.signal,
+			readChunk: async (offset) => {
+				if (offset > 0) controller.abort();
+				return encode("chunk");
+			},
+		});
+		await expect(pending).rejects.toBeInstanceOf(SshOperationAbortedError);
+		expect(state.killed).toBe(true);
+	});
+
+	it("只支持一问一答的 runner 打不开传输通道：如实报传输通道不可用", async () => {
+		const { connection } = connect(() => ok("Linux\nx86_64\n"));
+		await expect(connection.downloadFile("/srv/a.bin", () => {})).rejects.toThrow("cannot open a transfer channel");
+		await expect(
+			connection.uploadFile("/srv/a.bin", { totalBytes: 4, readChunk: async () => encode("abcd") }),
+		).rejects.toThrow("cannot open a transfer channel");
+	});
+
+	it("上传字节数声明不合法直接拒绝", async () => {
+		const { connection } = connect(() => ok("Linux\nx86_64\n"));
+		await expect(
+			connection.uploadFile("/srv/a.bin", { totalBytes: -1, readChunk: async () => new Uint8Array() }),
+		).rejects.toThrow("Invalid upload size");
 	});
 });
 

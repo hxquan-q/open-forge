@@ -52,11 +52,15 @@ describe("AllstarCoding manifest", () => {
 		const manifest = await readManifest();
 		expect(manifest.id).toBe("allstar-coding");
 		expect(manifest.agent?.agents?.map((agent) => agent.id)).toEqual(["allstar", "helper"]);
-		// 声明面（agents/teams）不需要权限；声明的是技能挂载 + ac-fence 事中拦截（hook 注册与执行）。
+		// 声明面（agents/teams）不需要权限；声明的是技能挂载 + ac-fence 事中拦截（hook 注册与执行），
+		// 以及 fence.ts 装配实际调用的 ctx.fs 方法：fence-log 去重读/stat 与 state.md 兜底（fs.read）、
+		// fence-log 落盘 writeFile/createDirectory（fs.write）。少一项都会出现 permission denied 或静默失效。
 		expect(manifest.permissions).toEqual([
 			"agent.skills.control",
 			"agent.hooks.register",
 			"agent.hookHandler.execute",
+			"fs.read",
+			"fs.write",
 		]);
 	});
 

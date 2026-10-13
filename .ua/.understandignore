@@ -1,0 +1,125 @@
+# Copyright The Open Forge contributors.
+# .understandignore — patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore (globs, # comments, ! negation, trailing / for dirs)
+# Built-in defaults (always excluded unless negated):
+#   node_modules/, .git/, dist/, build/, obj/, *.lock, *.min.js, etc.
+#
+# 范围决策（2026-10-12 用户确认）：全仓生产代码，排除测试与文档。
+
+# --- 构建产物 / 缓存 ---
+.astro/
+.vercel/
+.turbo/
+.DS_Store
+*.tsbuildinfo
+packages/*/dist-chrome/
+packages/*/dist-firefox/
+apps/*/dist-chrome/
+apps/*/dist-firefox/
+*.bun-build
+routeTree.gen.ts
+apps/desktop/release/
+apps/desktop/.desktop-dev/
+apps/desktop/build/pet/*.compressed.webm
+apps/desktop/resources/ocr-models/
+apps/desktop/resources/speech-models/
+packages/coding-agent/binaries/
+.npm/
+.nyc_output/
+.pi_config/
+compaction-results/
+syntax.jsonl
+out.jsonl
+pi-*.html
+out.html
+todo.md
+settings.local.json
+*.log
+
+# --- 密钥与本地环境 ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+deploy/config.*.yaml
+!deploy/config.*.example.yaml
+deploy/certs/
+deploy/docker-compose.yml
+deploy/data/
+deploy/logs/
+*.pem
+*.key
+
+# --- 测试文件与快照 ---
+*.test.*
+*.spec.*
+*.snap
+
+# --- 文档 / 项目管理 / 构建脚本 ---
+docs/
+project/
+scripts/
+tests/
+exprot/
+
+# --- 编辑器 / Agent 工具配置 ---
+.claude/
+.codex/
+.augment/
+.codebuddy/
+.codewhale/
+.commandcode/
+.continue/
+.cursor/
+.factory/
+.gemini/
+.kilocode/
+.kiro/
+.qoder/
+.roo/
+.stepcode/
+.trae/
+.warp/
+.windsurf/
+.zed/
+.opencode/
+.agents/
+skills-lock.json
+prompt/
+spec/
+requirement/
+terminals
+mcps
+agent-tools
+.github/prompts/
+
+# --- 运行时杂项 ---
+.playwright-cli
+.playwright-mcp/
+.tmp*
+.ai
+*.swp
+*.swo
+*~
+/applog.db
+/hr-app.db
+
+# --- 二进制资产（图片 / 音视频 / 字体 / 模型） ---
+*.webp
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.icns
+*.webm
+*.mp4
+*.mov
+*.mp3
+*.wav
+*.ogg
+*.woff
+*.woff2
+*.ttf
+*.otf
+*.eot
