@@ -15,6 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0242` | `done` | — | 声明头门禁在 main 恒红修复：21 个已入库文件按 A/M 分类补 fork 声明头（16 `Modified` + 5 `Copyright`），基线快照收缩 1 条已修复项；门禁 `new=0`、完整 `bun run check` exit 0；纯内部治理，无用户可见变化。 |
+| `TASK-0243` | `done` | — | 清理失效脚本 `scripts/session-transcripts.ts`（引用已退役的 `core/session-manager`，全库无引用方）与根目录两个 0 字节残留日志；纯内部治理。 |
 | `TASK-0241` | `verifying` | — | BUG-0101：TeamMemberRoster 测量循环收敛修复（等价保持引用 + measurementKey 稳定依赖）+3 回归与整树稳定性测试；实机崩溃复现→修复→不复现闭环，待人工验收。 |
 | `TASK-0240` | `verifying` | — | REQ-0012：SSH 远程项目文件传输——`ssh-transport` 流式 exec 通道原语（drain 写 + wc 校验原子上传 + 流式下载）、Desktop 队列服务与 `vetta:ssh-transfers:*` IPC、文件栏菜单/拖拽/进度面板；serial，main 串行。 |
 | `TASK-0235` | `verifying` | — | BUG-0100：会话文件锁协议强化——指数退避预算 1s→≈5.7s、持有期心跳防 stale 抢删、超时带持有者 pid；serial，main 串行。 |
