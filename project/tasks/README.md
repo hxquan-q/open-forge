@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0246` | `done` | — | 清除上游版本线残留：docs-site/runtime-knowledge 0.55.3→0.0.1，CI/模板示例版本改 0.1.x；新增 version-lines 门禁（0.5.x/0.55.x 判负）挂 check:guards，红路实测 exit 1；定向 30/30、check 与 test:quality 516/516 全绿；纯内部治理。 |
 | `TASK-0245` | `done` | — | 根清单版本归入 0.1.x 商用版本线：0.55.3→0.1.3，release:desktop:* 发版同步改写根清单（白名单/git add/断言三处接线），release-notes --check 新增根↔Desktop 一致性判负；定向 41/41、完整 check 全绿；纯内部治理。 |
 | `TASK-0244` | `done` | — | knip 报告可信化（coding-agent entry 死路径重写为 exports 对应源文件、ai 补 scripts 面、删两条失效豁免、补 mobile 条目）+ 删 17 个全仓零引用依赖（canvas 为误报保留）；unused deps 两节清零、hints 15→2、完整 check 全绿；纯内部治理。 |
 | `TASK-0242` | `done` | — | 声明头门禁在 main 恒红修复：21 个已入库文件按 A/M 分类补 fork 声明头（16 `Modified` + 5 `Copyright`），基线快照收缩 1 条已修复项；门禁 `new=0`、完整 `bun run check` exit 0；纯内部治理，无用户可见变化。 |
