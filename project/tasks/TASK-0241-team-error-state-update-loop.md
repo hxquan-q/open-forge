@@ -24,7 +24,7 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-13
 updated: 2026-10-13
 ---
@@ -109,6 +109,6 @@ updated: 2026-10-13
 
 - 工程验证：通过（定向 155 例、typecheck、biome、实机复现→修复→不复现闭环）。
 - 技术评审：自审。
-- 集成：pending（本提交后按协作规则处理）。
+- 集成：已推 origin/dev（`1c627a0f2..5587b31de` fast-forward，含 TASK-0240 验证反馈 docs 提交，未夹带未提交改动）。
 - 人工功能验收：待验收（用户日常使用团队会话流式场景观察；崩溃属偶发高频事件型，无固定操作步骤）。
 - 发布：未授权。
