@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0244` | `done` | — | knip 报告可信化（coding-agent entry 死路径重写为 exports 对应源文件、ai 补 scripts 面、删两条失效豁免、补 mobile 条目）+ 删 17 个全仓零引用依赖（canvas 为误报保留）；unused deps 两节清零、hints 15→2、完整 check 全绿；纯内部治理。 |
 | `TASK-0242` | `done` | — | 声明头门禁在 main 恒红修复：21 个已入库文件按 A/M 分类补 fork 声明头（16 `Modified` + 5 `Copyright`），基线快照收缩 1 条已修复项；门禁 `new=0`、完整 `bun run check` exit 0；纯内部治理，无用户可见变化。 |
 | `TASK-0243` | `done` | — | 清理失效脚本 `scripts/session-transcripts.ts`（引用已退役的 `core/session-manager`，全库无引用方）与根目录两个 0 字节残留日志；纯内部治理。 |
 | `TASK-0241` | `verifying` | — | BUG-0101：TeamMemberRoster 测量循环收敛修复（等价保持引用 + measurementKey 稳定依赖）+3 回归与整树稳定性测试；实机崩溃复现→修复→不复现闭环，待人工验收。 |
