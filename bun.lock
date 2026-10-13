@@ -220,7 +220,7 @@
     },
     "apps/docs-site": {
       "name": "@vetta/docs-site",
-      "version": "0.55.3",
+      "version": "0.0.1",
       "dependencies": {
         "@vercel/analytics": "^2.0.1",
         "fumadocs-core": "16.14.1",
@@ -1048,7 +1048,7 @@
     },
     "packages/runtime-knowledge": {
       "name": "@vetta/runtime-knowledge",
-      "version": "0.55.3",
+      "version": "0.0.1",
       "dependencies": {
         "yaml": "^2.8.2",
       },
