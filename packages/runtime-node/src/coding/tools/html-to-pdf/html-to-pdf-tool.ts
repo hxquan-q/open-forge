@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
@@ -71,16 +72,16 @@ export function createHtmlToPdfTool(
 			}
 			if (signal.aborted) throw new Error("Operation aborted");
 			const trimmed = result.stdout.trim();
-			if (!trimmed) throw new Error("Vetta Desktop returned empty stdout");
+			if (!trimmed) throw new Error("Desktop PDF renderer returned empty stdout");
 			const response: unknown = JSON.parse(trimmed);
 			if (!Value.Check(DesktopPdfResponseSchema, response)) {
-				throw new Error("Vetta Desktop returned invalid JSON response");
+				throw new Error("Desktop PDF renderer returned invalid JSON response");
 			}
 			if (!response.ok) {
 				const message = response.error?.message ?? (result.stderr.trim() || "Unknown PDF generation error");
-				throw new Error(`Vetta Desktop PDF generation failed: ${message}`);
+				throw new Error(`Desktop PDF generation failed: ${message}`);
 			}
-			if (!response.output) throw new Error("Vetta Desktop did not return an output path");
+			if (!response.output) throw new Error("Desktop PDF renderer did not return an output path");
 			const staleNote = desktop.staleConfiguredPath
 				? `\nNote: configured vettaAppPath was stale and fallback path was used: ${desktop.staleConfiguredPath}`
 				: "";

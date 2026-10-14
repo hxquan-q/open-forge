@@ -1,7 +1,7 @@
 ---
 id: TASK-0250
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: runtime-node / 工具描述
 requirement: REQ-0013
@@ -100,7 +100,18 @@ updated: 2026-10-14
 ## 交付记录
 
 - 实际修改：
+  - `src/coding/host/vetta-desktop-command-port.ts`：定位失败的报错改为「Desktop app executable not found. Set VETTA_DESKTOP_EXE or start the Desktop app once to write vettaAppPath.」（保留 `VETTA_DESKTOP_EXE` 与 `vettaAppPath` 两个可操作线索）。
+  - `src/coding/shared/ocr-document.ts`：两条解析失败文本改为 `Desktop OCR helper returned …`。
+  - 三个工具描述（`html-to-pdf` / `extract-text-from-pdf` / `extract-text-from-image` 的 `description.ts`）：`Vetta Desktop's …` → `the Desktop app's …`，`This tool calls the Vetta Desktop executable … Vetta Desktop must be installed` → `the Desktop app executable … The Desktop app must be installed`；能力语义与字段说明不变。
+  - 三个工具实现的失败文本：`Vetta Desktop PDF generation failed` / `Vetta Desktop OCR failed` / `Vetta Desktop returned …` → `Desktop PDF …` / `Desktop OCR …` / `Desktop PDF renderer …`。
+  - 9 个改动文件补 `Modified by The Open Forge contributors.` 声明头。
+  - 测试：`vetta-desktop-command-port.test.ts` 新增「定位失败报错不含遗留品牌名且保留 `VETTA_DESKTOP_EXE`」；新增 `test/coding-suite/desktop-tool-copy-brand.test.ts`（三个描述不含遗留品牌名 + 保留冻结标识、四个实现文件源码守卫）。
 - 实际运行：
-- 未运行及原因：
+  - `bun scripts/quality/run-vitest.mjs --run test/coding-suite/vetta-desktop-command-port.test.ts test/coding-suite/desktop-tool-copy-brand.test.ts` → 2 文件 / 10 例通过。
+  - `bun run test:pkg runtime-node` → 84 文件 / 529 例通过（52.4s）。
+  - `bun run check:lint` / `bun run check:guards` / `bun run check:types` 的剩余红全部落在并行会话在途文件上（`apps/desktop/src/main/agent-teams/team-turn-coordinator.ts` 格式、`packages/runtime-core/{src,test}/**` 声明头与类型），与本任务路径无交集；本任务改动的 9 个文件 lint 与声明头均通过（guards `missing` 列表不含本任务文件）。
+- 未运行及原因：未在真实 Desktop 上触发一次 PDF/OCR 失败做人工验收（需启动 dev 实例授权）。
 - Worktree：不拆出（main 串行）
 - 剩余风险：
+  - 兜底可执行文件候选路径仍指向旧品牌安装位置（`vetta-desktop-command-port.ts:70-73`），属独立功能缺陷 `BUG-0111`，本任务未改。
+  - `%APPDATA%\Vetta`（沙箱放行根）与 `X-Vetta-*` 头等冻结标识按约定保留不动；Windows 路径大小写不敏感，`APP_RUNTIME_NAME=vetta` 的实际目录仍能命中。
