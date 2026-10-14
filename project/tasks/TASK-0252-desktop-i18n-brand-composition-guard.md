@@ -1,7 +1,7 @@
 ---
 id: TASK-0252
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: Desktop i18n / 品牌层
 requirement: REQ-0013
@@ -101,7 +101,15 @@ updated: 2026-10-14
 ## 交付记录
 
 - 实际修改：
+  - `src/shared/desktop-brand.json` / `desktop-brand.distribution.json`：`legacyProductNames` 增加 `Vetta Desktop`（排在 `Vetta` 之前），使组合词整段归一为品牌名，不再产生「小爱ai Desktop」。
+  - `src/shared/desktop-brand.ts`：边界规则细化——点号默认仍排除在边界外（保护 `Vetta.exe`、域名等形态），但点号后不是单词字符时（句末句号）算边界；修复「…inside Vetta.」这类句子结尾漏归一。
+  - `src/shared/desktop-brand.test.ts`：更新归一清单期望；新增组合词断言；新增递归收集全部 locale 字符串值的守卫用例，对 `self` / `distribution` 两档 × zh / en 两种语言逐条断言渲染结果不含 `\bVetta\b`。
 - 实际运行：
-- 未运行及原因：
+  - `apps/desktop` 包内 `bun ../../scripts/quality/run-vitest.mjs --run src/shared/desktop-brand.test.ts` → 18/18 通过。
+  - 同包品牌层四个测试文件（`desktop-brand.test.ts`、`main/app-about-panel.test.ts`、`renderer/domains/plugins/runtime/plugin-official-models.test.ts`、`renderer/domains/project/components/sidebar/SidebarTopBar.brand.test.tsx`）→ 4 文件 / 26 例通过。
+  - 守卫在旧实现下必然失败：首轮运行即报出句末 `Vetta.` 未被归一（locale 中 10 处），证明该用例能捕获真实缺口。
+- 未运行及原因：未启动 dev 实例做界面人工验收（需授权）。
 - Worktree：不拆出（main 串行）
 - 剩余风险：
+  - 归一仍是按名单逐词替换，未做语义级品牌化；新增「品牌词 + 后缀」组合时需同步补名单（守卫会立刻报出漏项）。
+  - 系统插件（TASK-0251）与 plugin-cli 的文案不在本守卫覆盖范围。

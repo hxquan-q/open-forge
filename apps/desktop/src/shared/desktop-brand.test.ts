@@ -24,13 +24,29 @@ function readDesktopSource(relativePath: string): string {
 	return readFileSync(join(desktopRoot, relativePath), "utf8");
 }
 
+/** 递归收集 locale 资源里的字符串值（跳过 key，key 里的驼峰标识不参与展示）。 */
+function collectLocaleStrings(value: unknown, out: string[] = []): string[] {
+	if (typeof value === "string") {
+		out.push(value);
+	} else if (Array.isArray(value)) {
+		for (const item of value) collectLocaleStrings(item, out);
+	} else if (value !== null && typeof value === "object") {
+		for (const item of Object.values(value)) collectLocaleStrings(item, out);
+	}
+	return out;
+}
+
 describe("Desktop brand layer", () => {
 	it("replaces only explicitly approved product names", () => {
 		expect(DESKTOP_BRAND_REPLACEMENTS).toEqual([
 			{ from: "Open Vetta", to: "Open Forge" },
+			{ from: "Vetta Desktop", to: "Open Forge" },
 			{ from: "Vetta", to: "Open Forge" },
 		]);
 		expect(replaceDesktopBrandText("Open Vetta and Vetta's app")).toBe("Open Forge and Open Forge's app");
+		// 组合词整段归一：不留「Open Forge Desktop」这种半截替换。
+		expect(replaceDesktopBrandText("请通过 Vetta Desktop 的应用能力查询")).toBe("请通过 Open Forge 的应用能力查询");
+		expect(replaceDesktopBrandText("Vetta Desktop App")).toBe("Open Forge App");
 		expect(replaceDesktopBrandText("Vettalabs and lowercase vetta")).toBe("Vettalabs and lowercase vetta");
 	});
 
@@ -287,6 +303,25 @@ describe("品牌档案（VETTA_BRAND_PROFILE 构建期开关）", () => {
 		const icns = readFileSync(join(desktopRoot, "build", "brand", "distribution", "icon.icns"));
 		expect(icns.toString("ascii", 0, 4)).toBe("icns");
 	});
+
+	it.each(["self", "distribution"] as const)(
+		"%s 档：两种界面语言下的全部文案渲染后都不含遗留品牌名",
+		async (profile) => {
+			process.env.VETTA_BRAND_PROFILE = profile;
+			vi.resetModules();
+			const brand = await import("./desktop-brand.js");
+
+			const values = collectLocaleStrings(resources);
+			expect(values.length).toBeGreaterThan(0);
+			for (const language of ["zh", "en"]) {
+				for (const value of values) {
+					expect(brand.replaceDesktopBrandText(value, language), `${profile}/${language}: ${value}`).not.toMatch(
+						/\bVetta\b/,
+					);
+				}
+			}
+		},
+	);
 
 	it("两档共用冻结的兼容标识（可执行名 / bundleId），分发档归一全部遗留名且不与自己冲突", () => {
 		const selfSource = JSON.parse(readFileSync(join(desktopRoot, "src/shared/desktop-brand.json"), "utf8")) as {

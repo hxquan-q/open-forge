@@ -54,7 +54,9 @@ export const DESKTOP_BRAND_REPLACEMENTS = Object.freeze(
 
 function createProductNamePattern(value: string): RegExp {
 	const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	return new RegExp(`(^|[^\\w./@:-])(${escaped})(?=$|[^\\w./@:-])`, "g");
+	// 点号默认排除在边界外（保护 `Vetta.exe`、域名等形态）；句末句号（点号后不是单词字符）
+	// 仍算边界，否则「…inside Vetta.」这类句子结尾会漏归一。
+	return new RegExp(`(^|[^\\w./@:-])(${escaped})(?=$|[^\\w./@:-]|\\.(?![\\w]))`, "g");
 }
 
 const replacementPatterns = DESKTOP_BRAND_REPLACEMENTS.map(({ from }) => ({

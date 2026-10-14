@@ -22,7 +22,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0249` | `in_progress` | — | REQ-0013：agent 身份行与 CLI 指引按品牌档位渲染——`BuildSystemPromptOptions` / `SystemPromptSourceDependencies` 增 `productName`，Desktop 注入 `resolveDesktopBrandName`，指引命令名与实际安装的 `openforge` 对齐；回归断言装配后提示词无 Vetta / Vetta Desktop；serial，main 串行。 |
 | `TASK-0250` | `verifying` | — | REQ-0013：runtime-node 用户可见报错与 PDF/OCR 工具描述去遗留品牌名（保留 `VETTA_DESKTOP_EXE` 等冻结标识）；包内 84 文件 / 529 例通过；serial，main 串行。 |
 | `TASK-0251` | `ready` | — | REQ-0013：系统插件文案与导出产物随宿主品牌（vetta-ui-design 备注面板与 mockup 水印、vetta-actions 用法说明、plugin-workbench、content-creation）；serial，main 串行。 |
-| `TASK-0252` | `ready` | — | REQ-0013：Desktop i18n 组合词归一（「Vetta Desktop」不再拆成「小爱ai Desktop」）+ locale×档位渲染门禁；depends_on TASK-0249，serial，main 串行。 |
+| `TASK-0252` | `verifying` | — | REQ-0013：Desktop i18n 组合词归一（「Vetta Desktop」不再拆成「小爱ai Desktop」、句末 `Vetta.` 也归一）+ locale×档位×语言渲染门禁（首轮即抓出句末漏项）；品牌层 4 文件 / 26 例通过；depends_on TASK-0249，serial，main 串行。 |
 | `TASK-0247` | `done` | — | 产品线版本统一（lockstep 0.1.3）：32 个产品面 manifest 归入 0.1.3、根清单名 `open-vetta`→`open-forge`；版本线门禁新增「统一线须与 Desktop 同版本」判负，`release:desktop:*` 发版同步改写全部统一线 manifest（白名单/必改清单/git add 三处接线），发版不再把门禁跑红；serial，main 串行。 |
 | `TASK-0248` | `verifying` | — | BUG-0102：dev:electron 启动前校验 Electron 二进制（path.txt + dist 可执行文件 + dist/version），缺失时复用包内 install.js 自愈、失败给可操作指引；serial，main 串行。 |
 | `TASK-0246` | `done` | — | 清除上游版本线残留：docs-site/runtime-knowledge 0.55.3→0.0.1，CI/模板示例版本改 0.1.x；新增 version-lines 门禁（0.5.x/0.55.x 判负）挂 check:guards，红路实测 exit 1；定向 30/30、check 与 test:quality 516/516 全绿；纯内部治理。 |
