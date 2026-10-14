@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+
 import type { InstalledPlugin } from "@preload/api";
 import { activeSessionAtom, languageAtom, openUrlInBrowserAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
@@ -22,6 +23,7 @@ import type {
 } from "@vetta-org/plugin-sdk";
 import { resolveCatalogKey, resolvePluginText } from "@vetta-org/plugin-sdk";
 import { getDefaultStore } from "jotai";
+import { replaceDesktopBrandText } from "@/shared/desktop-brand";
 import { router } from "../../../router";
 import { normalizeBrowserOpenUrl } from "./browser-open-policy";
 import { trackActivationDisposable } from "./plugin-activation-disposables";
@@ -467,7 +469,15 @@ export function createI18nApi(plugin: InstalledPlugin): PluginI18nApi {
 		get locale(): string {
 			return store.get(languageAtom);
 		},
-		t: (key, params) => resolveCatalogKey(key, plugin.locales, store.get(languageAtom), plugin.defaultLocale, params),
+		// 插件文案里的遗留品牌名与宿主界面同口径归一：插件不必自己知道品牌档位，
+		// 也不会出现「界面叫小爱ai、插件文案仍写 Vetta」的错位。
+		t: (key, params) => {
+			const locale = store.get(languageAtom);
+			return replaceDesktopBrandText(
+				resolveCatalogKey(key, plugin.locales, locale, plugin.defaultLocale, params),
+				locale,
+			);
+		},
 		onChange: (listener) => {
 			const unsub = store.sub(languageAtom, () => listener(store.get(languageAtom)));
 			return { dispose: unsub };
@@ -481,11 +491,10 @@ export function createI18nApi(plugin: InstalledPlugin): PluginI18nApi {
  * through untouched.
  */
 export function resolvePluginDisplayText(plugin: InstalledPlugin, raw: string): string {
-	return resolvePluginText(
-		raw,
-		plugin.locales ?? {},
-		getDefaultStore().get(languageAtom),
-		plugin.defaultLocale ?? "zh",
+	const locale = getDefaultStore().get(languageAtom);
+	return replaceDesktopBrandText(
+		resolvePluginText(raw, plugin.locales ?? {}, locale, plugin.defaultLocale ?? "zh"),
+		locale,
 	);
 }
 

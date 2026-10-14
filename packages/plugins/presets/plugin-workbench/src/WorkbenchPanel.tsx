@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useActiveConversation, useActivityTab, useTranslation } from "@vetta-org/plugin-sdk";
 import { Button, Switch } from "@vetta-org/ui";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -331,7 +332,7 @@ export function WorkbenchPanel() {
 			const saved = await getWorkbenchDialog().saveCopy(project.packagePath, {
 				defaultFileName,
 				title: t("panel.exportTitle"),
-				filters: [{ name: "Vetta Plugin Package", extensions: ["vettapkg"] }],
+				filters: [{ name: "Plugin Package", extensions: ["vettapkg"] }],
 			});
 			// null = user cancelled the save dialog; no error.
 			if (saved == null) return;

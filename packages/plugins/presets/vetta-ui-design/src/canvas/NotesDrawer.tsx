@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNotesHandoff } from "../notes/handoff";
@@ -278,7 +279,7 @@ function NoteRow({
 					</span>
 					{lastAgent ? (
 						<span className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-							<span className="shrink-0 font-medium">Vetta</span>
+							<span className="shrink-0 font-medium">{t("notes.author.agent")}</span>
 							<span className="min-w-0 flex-1 truncate">{lastAgent.text}</span>
 						</span>
 					) : null}

@@ -1,7 +1,7 @@
 ---
 id: TASK-0251
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: 系统插件 / 设计画布
 requirement: REQ-0013
@@ -65,6 +65,7 @@ updated: 2026-10-14
 - 不改插件 id、skill 名、命令名、权限声明与 `.vettapkg` 相关合同。
 - 不改插件 i18n key 结构与已有翻译组织方式。
 - 不改历史注释里的品牌词。
+- 按用户决策不新增插件 SDK 公开接口：导出产物（mockup 水印与署名）与不经过插件 i18n 的静态标签暂不换，登记为已知遗留（见剩余风险）。
 
 ## Given / When / Then
 
@@ -97,13 +98,27 @@ updated: 2026-10-14
 - 入口与前置条件：dev 启动 Desktop，打开设计画布并添加一条备注。
 - 操作步骤或 AI 任务输入：查看备注面板与「让 Vetta 处理」入口；导出一次 mockup。
 - 预期行为与最终产物：界面与产物使用当前品牌名。
-- 不通过表现与已知限制：仍显示 Vetta。
+- 不通过表现与已知限制：仍显示 Vetta；导出 mockup 的水印与署名仍写旧品牌名（已知遗留）。
 - 验收反馈及回归案例：待回填
 
 ## 交付记录
 
-- 实际修改：
+- 实际修改（按用户决策「只做界面文案」）：
+  - `apps/desktop/src/renderer/domains/plugins/runtime/plugin-host-apis.ts`：`createI18nApi().t()` 与 `resolvePluginDisplayText()` 出口套用 `replaceDesktopBrandText`——插件不必知道品牌档位，凡经插件 i18n 的文案（含 manifest `%key%` 展示名）与宿主界面同口径。
+  - `vetta-ui-design`：备注面板两处硬编码作者名改走插件 i18n key（`NotesLayer.tsx`、`NotesDrawer.tsx` → `notes.author.agent`，`locales/{zh,en}.json` 新增该 key，值仍按既有约定写遗留品牌名由宿主归一）。
+  - `vetta-actions/src/action-usage.ts`：37 处 App Action 用法说明（模型可见）改为中性表述「桌面应用」，并修掉替换后产生的多余空格；`action-usage.test.ts` 断言同步改为「含『桌面应用』且不含遗留品牌名」。
+  - `content-creation` 的媒体 provider 展示名 `Vetta Image` → `Desktop Image`；`plugin-workbench` 的保存对话框过滤器名 `Vetta Plugin Package` → `Plugin Package`（扩展名 `vettapkg` 不动）、工具描述 `reloads the whole Vetta app` → `the whole app`。
+  - 6 个改动文件补 `Modified by The Open Forge contributors.` 声明头。
+  - 新增回归用例 `apps/desktop/src/renderer/domains/plugins/runtime/plugin-host-apis.brand.test.ts`：插件 catalog 值经 `ctx.i18n.t()` 与 manifest `%key%` 渲染后等于当前品牌名（旧实现返回原始 `Vetta`，必然失败）。
 - 实际运行：
-- 未运行及原因：
+  - `bun scripts/quality/run-vitest.mjs --run src/renderer/domains/plugins/runtime/plugin-host-apis.brand.test.ts src/shared/desktop-brand.test.ts` → 2 文件 / 20 例通过。
+  - `bun run test:pkg presets/vetta-actions` → 8/8 通过（含用法说明用例）。
+  - `bun run test:pkg presets/vetta-ui-design` → 106 文件 / 688 例通过。
+  - `bun run test:pkg presets/content-creation` → 通过。
+  - `presets/plugin-workbench` 无 `test` 脚本，未运行包级测试（改动为两处文案字面量）。
+- 未运行及原因：未启动 dev 实例做设计画布人工验收（需授权）；plugin-workbench 无包级测试入口。
 - Worktree：不拆出（main 串行）
-- 剩余风险：
+- 剩余风险（本任务明确遗留，未纳入本次改动）：
+  - 导出 mockup 的水印与署名（`vetta-ui-design/src/mockup/render.ts` 的 `BRAND_NAME` / `BRAND_TAGLINE`、`brand-logo.ts`）仍写旧品牌名——产物内品牌需要宿主品牌值，按用户决策不新增 SDK 接口。
+  - 不经过插件 i18n 的静态标签：分享包保存对话框过滤器名（`export/export-design.ts` 的 `Vetta Design`）、生成 DESIGN.md 的出处行（`gallery/start-from-system.ts`）。
+  - plugin-cli 开发者文案与生成模板（`Vetta plugin manager`、`install:vetta` 等）按范围约定不动。
