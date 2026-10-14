@@ -5,6 +5,7 @@ All notable changes to `@vetta-org/plugin-sdk` are documented in this file.
 
 ## [Unreleased]
 
+- `PluginModelDefinition` 新增可选 `input?: ("text" | "image")[]`：插件注册的模型声明图像输入后，写入与读回（`listOwnedProviders`）不再丢失该能力；`listOwnedProviders` 同时把历史配置里的任意字符串输入归一为可往返的 `text` / `image`（去重、过滤未知值、空则省略）。此前 `replaceOwnedProviders` 的写入合同不接受 `input`，图像能力在注册时即被丢弃。
 - `useBottomPanel()` 新增 `openTerminal` / `revealInstance`：插件可让宿主在内置终端里替用户跑一条命令（真终端、可交互、支持远程项目），新终端落在发起实例所在格子；`revealInstance` 把已开实例切到前台。受新权限 `terminal.run` 门控（高风险：命令以用户身份跑在可见终端里）。使用者应声明 `pluginApiVersion: ^2.10.0`。
 - 活动面板 `retention: "pinned"` 的宿主驻留改为有预算的 LRU：每个面板最多保留 3 个非活动 pinned 页签，超出后按最近激活顺序淘汰，当前活动与浮动页签始终驻留。此前 pinned 只要贡献可用就全部常驻，而每个常驻页签都是一个独立 guest 渲染进程，插件给每个页签声明 pinned 就会随页签数量无限累积进程。被淘汰的页签再次打开会重新挂载、状态从零重建（与 warm 的逐出语义一致）；不需要跨切换保留运行时状态的页签应保持缺省 warm 或声明 active-only。纯宿主运行期行为调整，不涉及清单字段，也不改变 `pluginApiVersion` 要求。
 - `ctx.fs.listFilesRecursive()` 新增可选 `names` / `ignoredDirectories`：宿主在遍历时就按文件名过滤，结果上限（10,000）只按命中数计算——在大型 monorepo 里找 `package.json`、`Makefile` 这类清单文件时，不再被无关源码先把上限占满。`names` 只接受单个文件名（拒绝路径分隔符与 `.` / `..`）。使用者应声明 `pluginApiVersion: ^2.9.0`；旧宿主会忽略这些选项并返回全部文件，需要兼容旧宿主的插件请自行再筛一次。本地与 `ssh://` 远程项目行为一致。

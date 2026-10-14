@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -128,6 +129,19 @@ describe("CodingAgentModelRuntime", () => {
 	function writeRawModelsJson(providers: Record<string, unknown>) {
 		writeFileSync(modelsJsonPath, JSON.stringify({ providers }));
 	}
+
+	test("restores declared image input from a plugin-owned provider", () => {
+		writeRawModelsJson({
+			"cli-proxy-api.responses": {
+				baseUrl: "http://127.0.0.1:12345/v1",
+				apiKey: "test-local-key",
+				api: "openai-responses",
+				models: [{ id: "vision-model", input: ["text", "image"] }],
+			},
+		});
+		const runtime = createCodingAgentModelRuntime(authStorage, { modelsJsonPath });
+		expect(getModelsForProvider(runtime, "cli-proxy-api.responses")[0]?.input).toEqual(["text", "image"]);
+	});
 
 	describe("baseUrl override (no custom models)", () => {
 		test("overriding baseUrl keeps all built-in models", () => {
