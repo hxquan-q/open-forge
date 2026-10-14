@@ -11,7 +11,7 @@ function settings(personaId: string, customPrompt: string) {
 describe("persona prompts", () => {
 	const filePersonas = PERSONAS.filter((persona) => persona.prompt.length > 0);
 
-	// 身份只由核心 `Your name is Vetta` 声明一次；人设改写的是协作风格，不是另一个身份。
+	// 身份只由核心身份行（`Your name is <品牌名>`）声明一次；人设改写的是协作风格，不是另一个身份。
 	it.each(filePersonas.map((persona) => persona.id))("%s does not claim a separate identity", (id) => {
 		const prompt = getPersonaPrompt(id);
 		expect(prompt.startsWith("# Persona:")).toBe(true);

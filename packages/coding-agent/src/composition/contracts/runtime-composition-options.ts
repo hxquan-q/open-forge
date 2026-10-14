@@ -173,6 +173,8 @@ export interface CodingAgentPromptRuntimeSourceContext {
 export interface CodingAgentPromptRuntimeSources {
 	readonly resourceSource: CodingAgentPromptResourceSource;
 	readonly settingsSource: CodingAgentPromptSettingsSource;
+	/** 宿主解析的品牌展示名（品牌档位）；缺省 = `DEFAULT_BRAND_NAME`。 */
+	readonly brandName?: string;
 }
 
 export interface CodingAgentRuntimePluginOptions {

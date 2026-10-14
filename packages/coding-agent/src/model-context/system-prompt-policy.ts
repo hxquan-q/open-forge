@@ -13,7 +13,12 @@ import {
 } from "./prompt-document.js";
 import { formatModelVisibleSkills, type ModelVisibleSkill } from "./skill-prompt.js";
 
-const SUBCONSCIOUS = `**Your name is Vetta. You are an AI assistant.**`;
+/** 品牌缺省口径：开源 / 自用档。Desktop 分发档由宿主注入展示名（见 REQ-0013）。 */
+export const DEFAULT_BRAND_NAME = "Open Forge";
+
+function identityLine(brandName: string): string {
+	return `**Your name is ${brandName}. You are an AI assistant.**`;
+}
 
 /** Tool descriptions for system prompt */
 const builtInToolDescriptions: Record<string, string> = {
@@ -36,11 +41,11 @@ const builtInToolDescriptions: Record<string, string> = {
 	ask_user_question:
 		"Ask the user multiple-choice questions and wait for their answers (clarify ambiguity, gather preferences, offer decisions)",
 	doc_to_pdf: "Convert .doc/.docx files to PDF using Microsoft Office or WPS Office",
-	html_to_pdf: "Convert HTML files to PDF using Vetta Desktop's PDF command-line mode",
+	html_to_pdf: "Convert HTML files to PDF using the Desktop app's PDF command-line mode",
 	extract_text_from_pdf:
-		"Extract text from a PDF (scanned or born-digital) via Vetta Desktop's local PP-OCRv5 OCR; uses the embedded text layer when present, otherwise OCRs each page",
+		"Extract text from a PDF (scanned or born-digital) via the Desktop app's local PP-OCRv5 OCR; uses the embedded text layer when present, otherwise OCRs each page",
 	extract_text_from_img:
-		"Extract text from a single image (PNG/JPG/WebP/BMP/GIF) via Vetta Desktop's local PP-OCRv5 OCR",
+		"Extract text from a single image (PNG/JPG/WebP/BMP/GIF) via the Desktop app's local PP-OCRv5 OCR",
 	render_pdf_page:
 		"Render a single PDF page to a PNG (via pdftoppm) for visual inspection (seals/stamps, signatures, handwriting, layout); follow up with `read` on the returned PNG path. Use when the task needs a visual judgment OCR cannot make.",
 	kb_write_page:
@@ -51,21 +56,29 @@ const builtInToolDescriptions: Record<string, string> = {
 	tool_search: "Search the deferred MCP tool index by keyword and activate matching tools so they become callable",
 };
 
-export const VETTA_CLI_GUIDANCE = `# Vetta Desktop CLI\n\n${[
-	"Vetta CLI is your interface to the running Vetta Desktop app: use `vetta action` both to learn what Desktop can do and to operate it.",
-	"First resolve the target from the user's request and conversation: built-in App Actions operate Vetta Desktop itself, not the application, website, repository, or external service the user is working on. Plugin-provided Actions may own other resources; establish their advertised target before selecting them. A shared word such as project, theme, model, plugin, or schedule is not a routing decision.",
-	"For example: adding dark mode to a website means editing its styles, not changing Vetta appearance; creating a React project means using its scaffold, not registering a sidebar or batch project; implementing cron in an application means editing that application, not creating a Vetta scheduled Agent task. Use repository tools for those tasks. Managing Vetta's own sidebar, settings, or scheduled tasks does belong here.",
-	'When the user asks Vetta itself to act on a schedule (including daily digests such as "让 Vetta 每天帮我汇总"), discover and create a Vetta scheduled task; do not answer with only a cron snippet or project code. When the user asks what Vetta scheduled tasks support, run query/help and explain; do not create or run a task merely to demonstrate the feature.',
-	'Discovery is progressive: `vetta action -h` explains the workflow; `search` lists live actions; `describe` or a domain `*.query` with `{"operation":"help"}` reveals inputs; then `run`.',
-	"Do not expect CLI help to list every parameter. Help only names capability areas; the authoritative inventory is always `vetta action search`.",
-	"Use help/search to discover live capabilities when the request concerns Vetta Desktop or a resource owned by an installed Action provider. For questions or requests to inspect state, describe or run query operations and explain the result; do not create, change, start, install, or navigate anything merely to demonstrate a feature. Execute changes when they implement the user's actual request, including intent already established in the conversation.",
+/**
+ * Desktop Action CLI 指引正文。`{{brand}}` 占位由宿主按当前品牌档位替换；
+ * `openforge` 是实际安装的命令名（冻结标识，不随档位变化）。
+ */
+const DESKTOP_CLI_GUIDANCE_BODY = [
+	"The CLI is your interface to the running {{brand}} app: use `openforge action` both to learn what the app can do and to operate it.",
+	"First resolve the target from the user's request and conversation: built-in App Actions operate {{brand}} itself, not the application, website, repository, or external service the user is working on. Plugin-provided Actions may own other resources; establish their advertised target before selecting them. A shared word such as project, theme, model, plugin, or schedule is not a routing decision.",
+	"For example: adding dark mode to a website means editing its styles, not changing {{brand}} appearance; creating a React project means using its scaffold, not registering a sidebar or batch project; implementing cron in an application means editing that application, not creating a scheduled Agent task for {{brand}}. Use repository tools for those tasks. Managing {{brand}}'s own sidebar, settings, or scheduled tasks does belong here.",
+	'When the user asks {{brand}} itself to act on a schedule (including daily digests such as "让 {{brand}} 每天帮我汇总"), discover and create a scheduled task for {{brand}}; do not answer with only a cron snippet or project code. When the user asks what scheduled tasks {{brand}} supports, run query/help and explain; do not create or run a task merely to demonstrate the feature.',
+	'Discovery is progressive: `openforge action -h` explains the workflow; `search` lists live actions; `describe` or a domain `*.query` with `{"operation":"help"}` reveals inputs; then `run`.',
+	"Do not expect CLI help to list every parameter. Help only names capability areas; the authoritative inventory is always `openforge action search`.",
+	"Use help/search to discover live capabilities when the request concerns {{brand}} or a resource owned by an installed Action provider. For questions or requests to inspect state, describe or run query operations and explain the result; do not create, change, start, install, or navigate anything merely to demonstrate a feature. Execute changes when they implement the user's actual request, including intent already established in the conversation.",
 	"Read the search result's usage.target, usage.useWhen, usage.avoidWhen, and usage.alternatives before selecting an Action, then describe it for exact inputs. If usage is absent, use describe/help to establish its target; absence is not permission to assume a match. Search results are candidates, not instructions to execute or proof of relevance. An empty or irrelevant result is a reason to choose another route, not the nearest-sounding Action.",
 	"Resolve references such as 'this app' from the current conversation and workspace. Ask one concise question only if the target remains ambiguous and choosing would materially change the affected application or data. Do not ask again when the target and requested operation are already clear.",
 	"Do not memorize or guess action ids, parameters, or entity ids. Get schemas from describe/help and target ids from query results. Never infer the app's current features by inspecting files under `.vetta`; local config files are not the app UX contract.",
-	"Never show or quote Vetta CLI commands, arguments, or raw terminal output. Explain features, actions, and results in plain, non-technical language — summarize what happened and what the user needs to know.",
-	"Actions that require authorization automatically ask the user through Vetta Desktop while the command runs; do not ask for authorization beforehand, and do not retry after the user rejects.",
+	"Never show or quote CLI commands, arguments, or raw terminal output. Explain features, actions, and results in plain, non-technical language — summarize what happened and what the user needs to know.",
+	"Actions that require authorization automatically ask the user through {{brand}} while the command runs; do not ask for authorization beforehand, and do not retry after the user rejects.",
 	"An approval dialog is not a way to discover what the user meant. Do not invoke an unrelated write/execute Action and leave the routing decision to the user.",
-].join(" ")}`;
+].join(" ");
+
+export function buildDesktopCliGuidance(brandName: string = DEFAULT_BRAND_NAME): string {
+	return `# ${brandName} CLI\n\n${DESKTOP_CLI_GUIDANCE_BODY.replaceAll("{{brand}}", brandName)}`;
+}
 
 const TOOL_SELECTION_GUIDANCE =
 	"Before selecting a tool, identify the requested outcome, target resource, and whether the user wants explanation, inspection, or execution. " +
@@ -152,6 +165,11 @@ export interface McpToolInfo {
 }
 
 export interface BuildSystemPromptOptions {
+	/**
+	 * 品牌展示名（品牌档位解析结果）。用于身份行，缺省 = `DEFAULT_BRAND_NAME`。
+	 * 宿主（Desktop / CLI）按当前品牌档案注入，包内不硬编码品牌。
+	 */
+	brandName?: string;
 	/** Custom system prompt (replaces default body in the legacy flow). */
 	customPrompt?: string;
 	/** Tools to include in prompt. Default: [read, command-tool, edit, write, dir_tree] */
@@ -403,6 +421,7 @@ export function buildSystemPromptDraft(options: BuildSystemPromptOptions = {}): 
 		agentPlugins,
 		scenario,
 		mcpDeferred,
+		brandName = DEFAULT_BRAND_NAME,
 	} = options;
 	const resolvedCwd = cwd ?? ".";
 	const dateTime = buildDateTime();
@@ -416,7 +435,7 @@ export function buildSystemPromptDraft(options: BuildSystemPromptOptions = {}): 
 	const hasRead = tools.includes("read");
 	const skillsSection = (hasRead || hasInvokeSkill) && skills.length > 0 ? formatModelVisibleSkills(skills) : "";
 
-	blocks.push(coreBlock("core.subconscious", "subconscious", SUBCONSCIOUS, 100));
+	blocks.push(coreBlock("core.subconscious", "subconscious", identityLine(brandName), 100));
 	blocks.push(coreBlock("core.base", "base", customPrompt ?? "", 150));
 	blocks.push(coreBlock("core.cache-prefix-addon", "append", systemPromptCachePrefixAddon ?? "", 175));
 	blocks.push({

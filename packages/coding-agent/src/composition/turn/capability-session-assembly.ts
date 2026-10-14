@@ -112,6 +112,8 @@ export interface CodingAgentTurnCapabilityPromptOptions {
 	readonly runtimeSourceFactory?: (context: { readonly runtimeSkillPaths: readonly string[] }) => Promise<{
 		readonly resourceSource: CodingAgentPromptResourceSource;
 		readonly settingsSource: CodingAgentPromptSettingsSource;
+		/** 宿主解析的品牌展示名（品牌档位）；缺省 = `DEFAULT_BRAND_NAME`。 */
+		readonly brandName?: string;
 	}>;
 	readonly systemPromptOptionsResolver?: CodingAgentSystemPromptOptionsResolver;
 	readonly promptResourceResolver?: CodingAgentPromptResourceResolver;
@@ -604,6 +606,7 @@ async function createPromptRuntime(options: CodingAgentTurnCapabilitySessionAsse
 		scenario: options.session.scenario,
 		readAgentMode: options.activation.readAgentMode,
 		resolveModePrompt: options.prompt.resolveModePrompt,
+		brandName: factorySources?.brandName,
 		readMemory: memoryRuntime ? () => memoryRuntime.readPromptMemory() : undefined,
 		readAgentPlugins: options.activation.readAgentPlugins,
 		workspaceFacts: options.prompt.workspaceFacts,

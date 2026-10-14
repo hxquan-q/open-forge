@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { CodingAgentMemoryPromptState } from "../memory/index.js";
 import type { ConversationScenario } from "../profiles/index.js";
 import type {
@@ -31,6 +32,8 @@ export interface CodingAgentPromptRuntimeOptions {
 	readonly readAgentMode?: () => string | undefined;
 	/** 宿主注入的 mode 提示词解析器；缺省 = 不追加 mode block（ADR-0071 修订）。 */
 	readonly resolveModePrompt?: CodingAgentModePromptResolver;
+	/** 宿主解析的品牌展示名（品牌档位）；缺省 = `DEFAULT_BRAND_NAME`。 */
+	readonly brandName?: string;
 	readonly readMemory?: () => CodingAgentPromptMemoryState | undefined;
 	readonly readAgentPlugins?: () => AgentPluginRuntimeConfig | undefined;
 }
@@ -86,6 +89,7 @@ export class CodingAgentPromptRuntime {
 			memoryCharLimit: memory?.charLimit ?? 0,
 			agentMode: this.options.readAgentMode?.(),
 			resolveModePrompt: this.options.resolveModePrompt,
+			brandName: this.options.brandName,
 			agentPlugins: this.options.readAgentPlugins?.(),
 			scenario: this.options.scenario,
 		});

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type {
@@ -13,7 +14,7 @@ import {
 } from "../src/host/tool-environment/node/index.js";
 import * as root from "../src/index.js";
 import { CODING_AGENT_SDK_HOST_ERROR_CODES, createCodingAgentBootstrap } from "../src/public-api/bootstrap.js";
-import { VETTA_CLI_GUIDANCE } from "../src/public-api/cli-guidance.js";
+import { buildDesktopCliGuidance } from "../src/public-api/cli-guidance.js";
 import { createCodingAgentHtmlExportRuntime } from "../src/public-api/export-html.js";
 import * as extensionApi from "../src/public-api/extensions.js";
 import {
@@ -107,7 +108,7 @@ describe("coding-agent public subpaths", () => {
 		expect(createCodingAgentSessionCapabilityHost).toBeTypeOf("function");
 		expect(createCodingAgentTurnExecutor).toBeTypeOf("function");
 		expect(createCodingAgentSession).toBeTypeOf("function");
-		expect(VETTA_CLI_GUIDANCE).toContain("vetta action search");
+		expect(buildDesktopCliGuidance()).toContain("openforge action search");
 	});
 
 	it("publishes the explicit package export targets", () => {
