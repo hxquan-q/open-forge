@@ -1,7 +1,7 @@
 ---
 id: TASK-0264
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: packages/theme-ui
 requirement: REQ-0008
@@ -21,7 +21,7 @@ write_paths: [packages/theme-ui/src/markdown/streaming.ts, packages/theme-ui/src
 exclusive_paths: [packages/theme-ui/src/markdown/streaming.ts, packages/theme-ui/src/markdown/streaming-reveal.ts]
 depends_on: [TASK-0263]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-15
 updated: 2026-10-15
 ---
@@ -89,8 +89,9 @@ updated: 2026-10-15
 
 ## 交付记录
 
-- 实际修改：待回填
-- 实际运行：待回填
-- 未运行及原因：待回填
-- Worktree：不拆（主树写路径干净）
-- 剩余风险：待回填
+- 实际修改：`packages/theme-ui/src/markdown/streaming-reveal.ts`（新增 `STREAMING_IDLE_SETTLE_MS = 300`）、`packages/theme-ui/src/markdown/streaming.ts`（`settleIdle` 只撤暗色保留 `streamedRef`；布局效果改为有新内容才挂暗色）、`apps/desktop/.../blocks/TextBlockView.streaming.test.tsx`（上游三场景：静默撤暗、回合结束不重暗、新文本重挂暗 + 声明头）。本仓两源文件与上游修复前逐行同形，补丁原样适配。
+- 实际运行：定向红 3（旧行为持续暗到回合结束）→ 绿 12/12；`test:impact` desktop 12 例 + theme-ui 2 文件/36 例通过；`check:quick` 除在途任务未提交文件外全过。提交 `b5fdde595`，已推 `origin/dev`。
+- 未运行及原因：dev 内目验未做（视觉行为，组件测试已断言暗态类；如需可后续实机验收）。
+- 发布说明：同 TASK-0263，`v0.1.3.md` 在途改动落地后补写。
+- Worktree：不拆（主树写路径干净）。
+- 剩余风险：无已知；300ms 阈值取上游口径，与本仓 0.5.59 同源渲染策略一致。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0263
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: packages/ai
 requirement: REQ-0008
@@ -21,7 +21,7 @@ write_paths: [packages/ai/src/providers/openai-responses/events.ts, packages/ai/
 exclusive_paths: [packages/ai/src/providers/openai-responses/events.ts]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-15
 updated: 2026-10-15
 ---
@@ -92,8 +92,9 @@ updated: 2026-10-15
 
 ## 交付记录
 
-- 实际修改：待回填
-- 实际运行：待回填
-- 未运行及原因：待回填
-- Worktree：不拆（主树写路径干净，与在途任务不相交）
-- 剩余风险：待回填
+- 实际修改：`packages/ai/src/providers/openai-responses/events.ts`（`TRANSIENT_FAILED_CODES` + `response.failed` 挂 `retryable: true`）、`packages/ai/test/openai-responses-adapters.test.ts`（7 码 × 3 Provider 变体红绿回归 + 非瞬时反例 + 声明头）、`packages/ai/src/testing/provider-stream-fixtures.ts`（`terminal-response-failed` 夹具期望由不可重试改为可重试，`mid-stream-error-event` 保持不可重试钉住边界）。
+- 实际运行：定向 `run-vitest --run packages/ai/test/openai-responses-adapters.test.ts` 红 21 → 绿 67/67；`test:impact`（events.ts + 测试文件）19 文件/242 例通过；`check:quick` 除在途 TASK-0260~0262 未提交文件缺声明头（非本批）外全过。提交 `51c939ac1`，已推 `origin/dev`。
+- 未运行及原因：真实网关回合未运行（真实 Provider 不授权）；完整 `bun run check` 因主树在途未提交文件门禁红，推送树为 HEAD 不含该红因。
+- 发布说明：`v0.1.3.md` 当前含在途批未提交改动，本任务条目待该文件干净后补写（登记于本记录，不遗漏）。
+- Worktree：不拆（主树写路径干净，与在途任务不相交）。
+- 剩余风险：普通 `error` 事件（非 `response.failed`）的瞬时 code 仍不可重试——与上游修复范围一致，有证据再扩展；Codex 流错误形态不同，未覆盖。

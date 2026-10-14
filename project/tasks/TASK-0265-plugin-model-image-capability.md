@@ -1,7 +1,7 @@
 ---
 id: TASK-0265
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: packages/capability-sdk + packages/plugins
 requirement: REQ-0008
@@ -21,7 +21,7 @@ write_paths: [packages/capability-sdk/src/domain/model.ts, packages/plugins/src/
 exclusive_paths: []
 depends_on: [TASK-0264]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-15
 updated: 2026-10-15
 ---
@@ -80,4 +80,11 @@ updated: 2026-10-15
 
 ## 交付记录
 
-- 实际修改：待回填；实际运行：待回填；未运行及原因：待回填；Worktree：待回填；剩余风险：待回填
+- 证实同病：本仓 `modelProviderUpsertModelType` 缺 `input`（detail 读合同有、写合同无），`REPLACE_OWNED_PROVIDERS` 共用同一写合同；plugin-sdk 类型缺字段；`listOwnedProviders` 读回未归一。
+- 实际修改：`packages/capability-sdk/src/domain/model.ts`（upsert 模型合同加 `input: ("text"|"image")[]`，minItems 1/uniqueItems）、`packages/plugins/plugin-sdk/src/models.ts`（`PluginModelDefinition.input` + Unreleased CHANGELOG）、`apps/desktop/.../plugin-models-api.ts`（读回归一化：滤未知值、去重、空省略）、四个合同测试文件（SDK 写入合同红 5→绿、读回归一化红→绿、model-settings 52 例、model-registry 恢复路径）+ 各文件补 fork 声明头。
+- 实际运行：定向 4 文件全绿（52+12+…例）；capability-sdk 与 plugin-sdk dist 已本地重建（不入库，desktop 经 dist 解析）；`check:quick` 仅在途任务 3 文件声明头红（非本批）。
+- impact 归因：`test:impact` desktop 包 5 文件失败——4 个为 **BUG-0107** 存量（`6a249ff3b` 起 `window-manager` 模块顶层求值 `process.resourcesPath`，与本批及在途改动均无交集，链路 `ipc/fs.ts:79 → shortcut-service → quickpanel-window:9`），1 个为在途 TASK-0261 未跟踪测试；其余 17 包含 presets/externals 全过。本批相关面全绿。
+- 未运行及原因：真实插件安装验收未做（合同面以 fixture 断言）；CI 秒级失败为流程级（含历史提交），无测试归因价值。
+- 发布说明：`v0.1.3.md` 在途改动落地后补写。
+- Worktree：不拆（主树写路径与在途任务不相交）。
+- 剩余风险：SDK 版本按仓例暂不递增（Unreleased 段积累）；`docs/capabilities/catalog.json` 等上游文档面未照搬（本仓以 CHANGELOG 为事实源）。
