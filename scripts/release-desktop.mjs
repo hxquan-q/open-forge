@@ -5,11 +5,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isUnifiedVersionManifestPath, trackedManifests } from "./quality/check-version-lines.mjs";
 import { releaseNotesPath } from "./release/release-notes.mjs";
 
 const DESKTOP_PACKAGE_PATH = "apps/desktop/package.json";
-/** 根清单版本跟随 Desktop 商用版本线，prepare/publish 与 Desktop 同步改写（TASK-0245）。 */
-const ROOT_PACKAGE_PATH = "package.json";
 const LOCKFILE_PATH = "bun.lock";
 const BUMP_TYPES = new Set(["major", "minor", "patch"]);
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
@@ -25,6 +24,33 @@ function run(command, args, options = {}) {
 
 function readDesktopPackage() {
 	return JSON.parse(readFileSync(DESKTOP_PACKAGE_PATH, "utf8"));
+}
+
+/**
+ * 统一线 manifest 路径（含根清单与 Desktop 自身）：发版时版本一并改写，同时充当发布脏文件白名单。
+ * 复用版本线门禁的 `isUnifiedVersionManifestPath`，避免发版脚本与门禁各维护一份豁免集而漂移（TASK-0247）。
+ */
+export function unifiedManifestPaths() {
+	return trackedManifests()
+		.filter((manifest) => isUnifiedVersionManifestPath(manifest.path))
+		.map((manifest) => manifest.path)
+		.sort();
+}
+
+/**
+ * 只改写顶层 version 值，保留文件其余格式。
+ *
+ * 多数统一线 manifest 的数组字段是紧凑单行写法（`["dist"]`），整体 `JSON.stringify` 重排会让发版
+ * 提交混入与版本无关的格式噪音。这里定位首个 `"version"` 键并校验它确为顶层值，宁可报错也不猜。
+ */
+export function writeManifestVersion(path, version) {
+	const source = readFileSync(path, "utf8");
+	const pattern = /("version"\s*:\s*)"([^"]*)"/;
+	const match = pattern.exec(source);
+	if (!match || match[2] !== JSON.parse(source).version) {
+		throw new Error(`Cannot locate the top-level version field in ${path}`);
+	}
+	writeFileSync(path, source.replace(pattern, `$1"${version}"`));
 }
 
 export function bumpVersion(version, bumpType) {
@@ -98,8 +124,8 @@ export function parsePorcelainPaths(stdout) {
 		.map((line) => line.slice(3).replaceAll("\\", "/"));
 }
 
-export function getUnexpectedReleaseChanges(stdout, notesPath) {
-	const allowedFiles = new Set([DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH, notesPath]);
+export function getUnexpectedReleaseChanges(stdout, notesPath, manifestPaths) {
+	const allowedFiles = new Set([...manifestPaths, LOCKFILE_PATH, notesPath]);
 	return parsePorcelainPaths(stdout).filter((file) => !allowedFiles.has(file));
 }
 
@@ -108,10 +134,10 @@ function assertCleanWorktree() {
 	if (status) throw new Error(`Uncommitted changes detected:\n${status}`);
 }
 
-function assertOnlyReleaseFilesChanged(notesPath, requiredFiles) {
+function assertOnlyReleaseFilesChanged(notesPath, manifestPaths, requiredFiles) {
 	const status = run("git", ["status", "--porcelain"], { capture: true });
 	const changedFiles = parsePorcelainPaths(status);
-	const unexpectedFiles = getUnexpectedReleaseChanges(status, notesPath);
+	const unexpectedFiles = getUnexpectedReleaseChanges(status, notesPath, manifestPaths);
 	if (unexpectedFiles.length > 0) {
 		throw new Error(`Desktop release changed unexpected files:\n${unexpectedFiles.join("\n")}`);
 	}
@@ -158,8 +184,8 @@ function prepareRelease(command) {
 	runReleaseChecks();
 	assertCleanWorktree();
 
-	const desktopPackage = readDesktopPackage();
-	const currentVersion = desktopPackage.version;
+	const manifestPaths = unifiedManifestPaths();
+	const currentVersion = readDesktopPackage().version;
 	const version = resolvePreparedVersion(currentVersion, command);
 	if (version === currentVersion) throw new Error(`Desktop release version is already ${version}`);
 	const notesPath = releaseNotesPath(version);
@@ -167,13 +193,9 @@ function prepareRelease(command) {
 	assertLocalTagAvailable(`v${version}`);
 
 	if (!notesAlreadyExist) writeFileSync(notesPath, releaseNotesTemplate(version, upstreamBaselineSha()));
-	desktopPackage.version = version;
-	writeFileSync(DESKTOP_PACKAGE_PATH, `${JSON.stringify(desktopPackage, null, "\t")}\n`);
-	const rootPackage = JSON.parse(readFileSync(ROOT_PACKAGE_PATH, "utf8"));
-	rootPackage.version = version;
-	writeFileSync(ROOT_PACKAGE_PATH, `${JSON.stringify(rootPackage, null, "\t")}\n`);
+	for (const path of manifestPaths) writeManifestVersion(path, version);
 	run("bun", ["install", "--lockfile-only"]);
-	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH]);
+	assertOnlyReleaseFilesChanged(notesPath, manifestPaths, [...manifestPaths, LOCKFILE_PATH]);
 	console.log(`Desktop ${version} is prepared locally. Review ${notesPath} before publishing.`);
 }
 
@@ -210,9 +232,9 @@ function assertReleaseNotesReady(version) {
 	return notesPath;
 }
 
-export function desktopPublishCommands(version, branch) {
+export function desktopPublishCommands(version, branch, manifestPaths) {
 	return [
-		["add", "--", DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH, releaseNotesPath(version)],
+		["add", "--", ...manifestPaths, LOCKFILE_PATH, releaseNotesPath(version)],
 		["commit", "-m", `release(desktop): 发布 v${version}`],
 		["tag", `v${version}`],
 		["push", "--atomic", "origin", branch, `refs/tags/v${version}`],
@@ -221,27 +243,25 @@ export function desktopPublishCommands(version, branch) {
 
 function publishRelease(version) {
 	assertBranch();
-	const desktopPackage = readDesktopPackage();
-	if (desktopPackage.version !== version) {
-		throw new Error(`Desktop package version ${desktopPackage.version} does not match requested release ${version}`);
-	}
-	const rootPackage = JSON.parse(readFileSync(ROOT_PACKAGE_PATH, "utf8"));
-	if (rootPackage.version !== version) {
-		throw new Error(`Root package version ${rootPackage.version} does not match requested release ${version}`);
+	const manifestPaths = unifiedManifestPaths();
+	const drifted = manifestPaths.filter((path) => JSON.parse(readFileSync(path, "utf8")).version !== version);
+	if (drifted.length > 0) {
+		throw new Error(`统一线 manifest 未同步到 ${version}:\n${drifted.join("\n")}`);
 	}
 
 	const notesPath = assertReleaseNotesReady(version);
-	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH]);
+	const requiredFiles = [...manifestPaths, LOCKFILE_PATH];
+	assertOnlyReleaseFilesChanged(notesPath, manifestPaths, requiredFiles);
 	assertTagAvailable(`v${version}`);
 	runReleaseChecks();
-	assertOnlyReleaseFilesChanged(notesPath, [DESKTOP_PACKAGE_PATH, ROOT_PACKAGE_PATH, LOCKFILE_PATH]);
+	assertOnlyReleaseFilesChanged(notesPath, manifestPaths, requiredFiles);
 
 	// 发布日期只有走到发布这一步才产生，随后才提交、打 tag。
 	writeFileSync(notesPath, stampReleaseDate(readFileSync(notesPath, "utf8")));
 
 	// Release notes are the GitHub Release body and must be present before the tag triggers CI.
 	const branch = assertBranch();
-	for (const args of desktopPublishCommands(version, branch)) run("git", args);
+	for (const args of desktopPublishCommands(version, branch, manifestPaths)) run("git", args);
 	console.log(`Desktop v${version} was pushed; waiting for the desktop-release workflow.`);
 }
 
