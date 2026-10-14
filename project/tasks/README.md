@@ -15,6 +15,13 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0263` | `in_progress` | PLAN-0014 | RESEARCH-0025：网关流内 `response.failed` 瞬时 code 挂 `retryable: true` 进入自动重试（同步上游 0.5.62）；serial，main 串行。 |
+| `TASK-0264` | `in_progress` | PLAN-0014 | RESEARCH-0025：流式写完后末尾短语 300ms 静默即恢复全亮（同步上游 22293f956，theme-ui markdown 最小补丁）；depends_on TASK-0263，serial。 |
+| `TASK-0265` | `ready` | PLAN-0014 | RESEARCH-0025：插件模型图像输入能力保留——先证伪/证实本仓写入/读回是否丢能力，证实才适配（上游 c8fa6fbe2）；depends_on TASK-0264。 |
+| `TASK-0266` | `ready` | PLAN-0014 | RESEARCH-0025：Responses/Codex 传输方式设置（SSE/WS/自动 + 安全回退 + 连接复用）；depends_on TASK-0263。 |
+| `TASK-0267` | `ready` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填（models.dev 补空字段、命名空间剥离、参数随勾选写入、档位拖拽）；depends_on TASK-0266。 |
+| `TASK-0268` | `ready` | PLAN-0014 | RESEARCH-0025：自动压缩改为回复内步骤（上游 0.5.64）；defer——`turn-pipeline.ts` 为 TASK-0262 在途改动，depends_on TASK-0262/0264，conflicts 0260–0262。 |
+| `TASK-0269` | `ready` | PLAN-0014 | RESEARCH-0025：重进运行中会话排队消息显示——先对照本仓分叉架构证伪/证实（上游 61072cbb3）；defer——conversation 文件为 TASK-0260/0261 在途改动。 |
 | `TASK-0260` | `in_progress` | — | BUG-0108：团队会话删除改为删除优先——`abort()` 的通知日志写 STOP 降为 best-effort、`deleteSession` 容忍 dispose 失败并仍删产物、`disposeSessionHandle` 失败时也注销目录条目、AggregateError 携带扩展 id 与 cause；serial，main 串行。 |
 | `TASK-0261` | `in_progress` | — | BUG-0109：续跑条拆开 `sessionPath`（门控）与 `runtimeSessionId`（宿主调用），`session.retry` 不再收到持久会话路径；回归测试从 `SessionMessageList` 真实入口喂路径形态值；serial，main 串行。 |
 | `TASK-0262` | `in_progress` | — | BUG-0110：压缩提交前排空在途事件追加并重新 load 刷新版本，消除与事件循环共享 `state.version` 的竞态（对齐 finalization 既有模式）；serial，main 串行。 |
