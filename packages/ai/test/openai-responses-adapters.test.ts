@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Type } from "@sinclair/typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import { azureOpenAIResponsesAdapter, streamAzureOpenAIResponses } from "../src/providers/azure-openai-responses.js";
@@ -193,6 +194,52 @@ for (const fixture of fixtures) {
 				code: "AI_TRANSPORT_FAILED",
 				message: "provider failed",
 				providerCode: "provider_failed",
+			});
+		});
+
+		it.each([
+			["upstream_error"],
+			["server_error"],
+			["internal_error"],
+			["overloaded_error"],
+			["rate_limit_error"],
+			["service_unavailable"],
+			["timeout"],
+		])("marks gateway-wrapped transient stream failures as retryable: %s", async (providerCode) => {
+			const transport = createProviderTestTransport([
+				responsesSse([failedEvent({ code: providerCode, message: "upstream exploded" })]),
+			]);
+			const response = await fixture.stream(transport.fetch);
+			const settled = await settleResponse(response);
+
+			expect(settled.eventError).toMatchObject({
+				code: "AI_TRANSPORT_FAILED",
+				providerCode,
+				retryable: true,
+			});
+			expect(settled.resultError).toMatchObject({
+				code: "AI_TRANSPORT_FAILED",
+				providerCode,
+				retryable: true,
+			});
+		});
+
+		it("keeps non-transient gateway stream failures non-retryable", async () => {
+			const transport = createProviderTestTransport([
+				responsesSse([failedEvent({ code: "invalid_prompt", message: "prompt rejected" })]),
+			]);
+			const response = await fixture.stream(transport.fetch);
+			const settled = await settleResponse(response);
+
+			expect(settled.eventError).toMatchObject({
+				code: "AI_TRANSPORT_FAILED",
+				providerCode: "invalid_prompt",
+				retryable: false,
+			});
+			expect(settled.resultError).toMatchObject({
+				code: "AI_TRANSPORT_FAILED",
+				providerCode: "invalid_prompt",
+				retryable: false,
 			});
 		});
 
@@ -705,7 +752,7 @@ function incompleteEvents(): unknown[] {
 	];
 }
 
-function failedEvent(): unknown {
+function failedEvent(overrides: { code?: string; message?: string } = {}): unknown {
 	return {
 		type: "response.failed",
 		response: {
@@ -713,7 +760,7 @@ function failedEvent(): unknown {
 			object: "response",
 			status: "failed",
 			output: [],
-			error: { code: "provider_failed", message: "provider failed" },
+			error: { code: overrides.code ?? "provider_failed", message: overrides.message ?? "provider failed" },
 		},
 	};
 }

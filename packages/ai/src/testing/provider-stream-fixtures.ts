@@ -335,7 +335,7 @@ export const RESPONSES_STREAM_FAILURE_SCENARIOS: readonly ProviderStreamScenario
 	},
 	{
 		name: "terminal-response-failed",
-		description: "response.failed terminates the turn with a provider failure",
+		description: "response.failed terminates the turn with a transient, retryable provider failure",
 		records: sseFrames([
 			responsesItemAdded(0, responsesMessageItem("msg-1", "in_progress")),
 			{ type: "response.output_text.delta", output_index: 0, item_id: "msg-1", delta: "hel" },
@@ -352,7 +352,7 @@ export const RESPONSES_STREAM_FAILURE_SCENARIOS: readonly ProviderStreamScenario
 		]),
 		failure: {
 			code: AI_ERROR_CODES.TRANSPORT_FAILED,
-			retryable: false,
+			retryable: true,
 			reason: "error",
 			message: "provider exploded",
 			providerCode: "server_error",
