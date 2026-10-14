@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0102` | dev 启动在 Electron 二进制安装不完整时硬失败：无自愈、无可操作指引 | verifying | P2 | — |
 | `BUG-0101` | 团队会话流式事件驱动成员胶囊条测量循环：Maximum update depth exceeded 整页崩为路由错误页 | verifying | P1 | — |
 | `BUG-0099` | 内置浏览器仍调用 Electron 已废弃的 `canGoBack`/`canGoForward`，应迁移 `navigationHistory` | verifying | P3 | — |
 | `BUG-0098` | 无效代理配置无有效性门即可保存，运行时静默降级为逐条请求失败 | verifying | P3 | — |

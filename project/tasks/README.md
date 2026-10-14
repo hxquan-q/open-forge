@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0248` | `verifying` | — | BUG-0102：dev:electron 启动前校验 Electron 二进制（path.txt + dist 可执行文件 + dist/version），缺失时复用包内 install.js 自愈、失败给可操作指引；serial，main 串行。 |
 | `TASK-0246` | `done` | — | 清除上游版本线残留：docs-site/runtime-knowledge 0.55.3→0.0.1，CI/模板示例版本改 0.1.x；新增 version-lines 门禁（0.5.x/0.55.x 判负）挂 check:guards，红路实测 exit 1；定向 30/30、check 与 test:quality 516/516 全绿；纯内部治理。 |
 | `TASK-0245` | `done` | — | 根清单版本归入 0.1.x 商用版本线：0.55.3→0.1.3，release:desktop:* 发版同步改写根清单（白名单/git add/断言三处接线），release-notes --check 新增根↔Desktop 一致性判负；定向 41/41、完整 check 全绿；纯内部治理。 |
 | `TASK-0244` | `done` | — | knip 报告可信化（coding-agent entry 死路径重写为 exports 对应源文件、ai 补 scripts 面、删两条失效豁免、补 mobile 条目）+ 删 17 个全仓零引用依赖（canvas 为误报保留）；unused deps 两节清零、hints 15→2、完整 check 全绿；纯内部治理。 |
