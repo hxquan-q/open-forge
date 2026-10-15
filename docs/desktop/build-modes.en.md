@@ -3,16 +3,16 @@
 
 *[中文](./build-modes.md)*
 
-Open Forge Desktop ships in two editions, selected by the build-time flag `VETTA_CLOUD_ENABLED`. An unconfigured development session remains serv-less, but **packaging requires an explicit `true` or `false`** so release builds never guess their edition.
+This repository supports lite/serv-less and full builds of Open Forge Desktop through `VETTA_CLOUD_ENABLED`. The script labels "open-source" and "commercial" below refer to those client build modes. Full requires a compatible backend maintained in a separate private repository and configuration from the distributor; it does not establish an available account, subscription, or hosted service. Unconfigured development remains serv-less; **packaging requires an explicit `true` or `false`**.
 
-| | **open-source (serv-less)** | **commercial (Open Forge Serv)** |
+| | **lite (serv-less)** | **full (cloud-service client)** |
 | --- | --- | --- |
 | Flag | `VETTA_CLOUD_ENABLED=false` | `VETTA_CLOUD_ENABLED=true` |
-| Account login / OAuth | ❌ not in the bundle | ✅ |
-| Hosted model channel (name follows brand profile) | ❌ | ✅ |
-| Subscription / credits / quota | ❌ | ✅ |
+| Account login / OAuth | ❌ not in the bundle | Client integration; requires a compatible backend |
+| Hosted model channel (name follows brand profile) | ❌ | Client integration; requires server configuration |
+| Subscription / credits / quota | ❌ | Client integration; entitlements are determined by the backend |
 | Ability marketplace source | Built-in GitHub source and user-added sources | Cloud marketplace (Open Forge Serv) and independent GitHub sources |
-| Remote model catalog | ❌ | ✅ |
+| Remote model catalog | ❌ | Client integration; requires server configuration |
 | Built-in skills | those without `requiresCloud` | all |
 
 **Available in both modes**: local sessions, the coding agent, the plugin system, themes, bring-your-own-key models, the IM gateway, and the knowledge base.
@@ -92,7 +92,7 @@ Open-source builds reject `VETTA_SERVER_URL` and `VETTA_SITE_URL`: login, the of
 
 ## Building the commercial edition
 
-You need a running Open Forge Serv server:
+Provide a compatible running backend, website, and update service. The business backend is maintained in a separate private repository; the domains below are configuration examples:
 
 ```bash
 # apps/desktop/.env.production (local file, not committed)
@@ -240,7 +240,7 @@ Both editions read the `VETTA_OPEN_MARKETPLACE_REPOSITORY` Variable, optionally 
 default repository and `gh-pages`; it does not disable the source. Configure a real repository and ref for a
 custom distribution. That setting alone does not establish that marketplace content has been published.
 
-**A fork with no Variables set produces an open-source build.** For an official commercial build, put these on Settings → Environments → `desktop-production` → Environment variables (credentials stay in Environment secrets):
+**This repository defaults to a lite build when no Variables are set.** To distribute a full build, put the actual environment configuration on Settings → Environments → `desktop-production` → Environment variables (credentials stay in Environment secrets):
 
 ```
 VETTA_CLOUD_ENABLED = true

@@ -10,9 +10,9 @@ Use [GitHub Releases](https://github.com/hxquan-q/open-forge/releases) for relea
 
 The repository and documentation use **Open Forge**. Desktop defaults to the `distribution` profile, displayed as **Allstr ai** with a localized Chinese name. Builds explicitly configured with `VETTA_BRAND_PROFILE=self` display Open Forge. Package names may vary by profile; use the exact filenames from the release. Both profiles share the `OpenForge` executable name and the default `~/.openforge` data root, so switching brands does not isolate data. Branding is independent of lite/full cloud-service mode; check the release notes for the selected build.
 
-Windows x64 releases provide three formats. The Inno `.exe` installer is recommended for most users and participates in in-app updates. Use `.msi` for standard Windows Installer deployment, or extract `.zip` and run `OpenForge.exe` without installing. MSI and ZIP are supplemental downloads; in-app updates still use the Inno installer.
+The Windows x64 packaging pipeline supports three formats; check the actual assets in the selected release. The Inno `.exe` installer participates in in-app updates. Use `.msi` for standard Windows Installer deployment, or extract `.zip` and run `OpenForge.exe` without installing. MSI and ZIP are supplemental formats; in-app updates still use the Inno installer.
 
-Linux releases currently target x64 and provide AppImage, DEB, and RPM packages. Use AppImage without installing, DEB on Debian/Ubuntu, or RPM on Fedora/RHEL-family distributions:
+The Linux x64 packaging pipeline supports AppImage, DEB, and RPM; check which assets the selected release provides. Use AppImage without installing, DEB on Debian/Ubuntu, or RPM on Fedora/RHEL-family distributions:
 
 ```bash
 # Run in a download directory containing only the intended packages
@@ -35,7 +35,7 @@ Before upgrading, record the current Open Forge version, operating system, archi
 
 ## Cloud-service mode
 
-The lite build omits accounts, subscriptions, and the hosted model catalog; full builds can include Open Forge Serv integration selected at build time. Both can use GitHub ability sources. This is separate from the brand profile and cannot be switched after installation without a different build.
+The default lite development flow needs no account and omits cloud login, subscriptions, and the hosted model catalog. Full includes cloud client modules and requires a distributor-configured compatible backend; the business backend is maintained in a separate private repository. A build option or example URL does not establish a publicly available service. Both modes can use GitHub ability sources. Cloud mode is separate from branding and cannot be switched after installation without a different build.
 
 See [configuration and data paths](/reference/configuration-paths/) for development roots, environment overrides, and legacy-data migration.
 
@@ -44,7 +44,7 @@ See [configuration and data paths](/reference/configuration-paths/) for developm
 1. Finish or stop active tasks and wait for background work to reach a known state.
 2. Export diagnostics if you are investigating an issue.
 3. Install the new version over the existing application when the installer supports in-place updates.
-4. Reopen Open Forge and verify sign-in, model configuration, one existing project, and one small read-only task.
+4. Reopen Open Forge and verify model configuration, one existing project, and one small read-only task. Verify sign-in only for a full build that uses an account service.
 
 ## Move to a new device
 

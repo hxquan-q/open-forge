@@ -12,6 +12,8 @@ description: 理解 Open Forge 插件的运行方式、能力出口和信任边�
 
 Open Forge 插件用于扩展桌面客户端的界面、文件浏览器、对话和 Agent 能力。插件通过 `@vetta-org/plugin-sdk` 获取宿主提供的策展能力出口。
 
+本页描述本仓目标版本的插件宿主。SDK 与工具需和目标构建配套；`@vetta-org/*` 是兼容包名，上游 npm 同名发布物不自动包含 Open Forge 的二开改动。
+
 <MediaFrame>
   <img src="/images/product/plugin-workbench.webp" alt="Open Forge 插件工作台中的文件、移动预览和电子表格预览" width="1536" height="836" />
   <figcaption>插件可以把领域工具和可交互产物放进 Open Forge 工作区，但必须经过清单声明和宿主授权。</figcaption>
@@ -29,7 +31,7 @@ Open Forge 插件用于扩展桌面客户端的界面、文件浏览器、对话
 
 ## 信任与权限
 
-插件面向官方或合作方策展的扩展，不应被视为可直接运行的任意不可信代码。需要权限的能力必须同时满足：
+插件面向维护者和使用者确认可信的扩展来源，不应被视为可直接运行的任意不可信代码。需要权限的能力必须同时满足：
 
 <Steps>
   <Step>

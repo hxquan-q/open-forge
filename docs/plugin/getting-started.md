@@ -5,7 +5,7 @@
 
 ## 0. 在仓库外开发（推荐给 Agent）
 
-你不需要 Open Forge 的源码仓库，也不需要插件工作台。任意空目录里：
+先按目标 Open Forge 构建确认 SDK 与 CLI 的配套版本。本仓新增能力以检出的源码和公开类型为准；只有已有经过验证的外部分发版本时，才可以不依赖本仓开发。下方命令使用兼容包名从 npm 下载发布物，不应把 registry 默认版本视为当前 fork 源码。确认并固定兼容版本后，可在空目录中使用脚手架：
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
