@@ -17,9 +17,9 @@
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
 | `BUG-0111` | Desktop 可执行文件兜底发现路径仍指向旧品牌安装位置，命中不了真实安装 | investigating | P2 | — |
-| `BUG-0110` | 上下文压缩提交与事件追加并发共享 `state.version`，压缩持久化间歇性版本冲突失败 | investigating | P2 | — |
-| `BUG-0109` | 续跑条「继续」把持久会话路径当 runtime session id 传给宿主，必然 `SESSION_NOT_FOUND` | investigating | P1 | — |
-| `BUG-0108` | 删除团队会话失败：通知日志写入与成员 runtime 释放失败双双掀翻删除 | investigating | P1 | — |
+| `BUG-0110` | 上下文压缩提交与事件追加并发共享 `state.version`，压缩持久化间歇性版本冲突失败 | verifying | P2 | — |
+| `BUG-0109` | 续跑条「继续」把持久会话路径当 runtime session id 传给宿主，必然 `SESSION_NOT_FOUND` | verifying | P1 | — |
+| `BUG-0108` | 删除团队会话失败：通知日志写入与成员 runtime 释放失败双双掀翻删除 | verifying | P1 | — |
 | `BUG-0107` | 四个 desktop 测试文件在 vitest 下收集期崩溃（`process.resourcesPath` 未定义，0 用例执行） | investigating | P2 | — |
 | `BUG-0106` | 品牌档位翻转后 provider 展示名断言未同步，desktop 渲染层测试恒红 | verifying | P2 | — |
 | `BUG-0102` | dev 启动在 Electron 二进制安装不完整时硬失败：无自愈、无可操作指引 | verifying | P2 | — |

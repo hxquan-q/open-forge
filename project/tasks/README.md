@@ -22,9 +22,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0267` | `ready` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填（models.dev 补空字段、命名空间剥离、参数随勾选写入、档位拖拽）；depends_on TASK-0266。 |
 | `TASK-0268` | `ready` | PLAN-0014 | RESEARCH-0025：自动压缩改为回复内步骤（上游 0.5.64）；defer——`turn-pipeline.ts` 为 TASK-0262 在途改动，depends_on TASK-0262/0264，conflicts 0260–0262。 |
 | `TASK-0269` | `ready` | PLAN-0014 | RESEARCH-0025：重进运行中会话排队消息显示——先对照本仓分叉架构证伪/证实（上游 61072cbb3）；defer——conversation 文件为 TASK-0260/0261 在途改动。 |
-| `TASK-0260` | `in_progress` | — | BUG-0108：团队会话删除改为删除优先——`abort()` 的通知日志写 STOP 降为 best-effort、`deleteSession` 容忍 dispose 失败并仍删产物、`disposeSessionHandle` 失败时也注销目录条目、AggregateError 携带扩展 id 与 cause；serial，main 串行。 |
-| `TASK-0261` | `in_progress` | — | BUG-0109：续跑条拆开 `sessionPath`（门控）与 `runtimeSessionId`（宿主调用），`session.retry` 不再收到持久会话路径；回归测试从 `SessionMessageList` 真实入口喂路径形态值；serial，main 串行。 |
-| `TASK-0262` | `in_progress` | — | BUG-0110：压缩提交前排空在途事件追加并重新 load 刷新版本，消除与事件循环共享 `state.version` 的竞态（对齐 finalization 既有模式）；serial，main 串行。 |
+| `TASK-0260` | `verifying` | — | BUG-0108：删除优先收口——STOP 标记 best-effort、`disposeSession` 增 `releaseOnDisposeFailure`（仅删除路径启用，评审修正 #2）、AggregateError 带扩展 id；定向全绿，诊断出口缺口（评审 #6）登记待切片；serial，main 串行。 |
+| `TASK-0261` | `verifying` | — | BUG-0109：续跑条拆开 `sessionPath`（门控）与 `runtimeSessionId`（宿主调用）并补身份守卫（评审修正 #3）；Virtuoso mock 补 Footer 插槽修复夹具；desktop 包内 12 例全绿；拒绝原因透传缺口（评审 #9）登记待切片；serial，main 串行。 |
+| `TASK-0262` | `verifying` | — | BUG-0110：压缩提交/会话续接/终态追加统一入 `serializeAppend` 串行链（评审修正 #1/#4/#5：终态不再绕锁、临界区不再跨观察者通知、续接回写版本），乐观提交+类型化冲突重试一次；runtime-core 7 文件 96 例全绿；serial，main 串行。 |
 | `TASK-0259` | `verifying` | — | BUG-0106：品牌档位相关测试断言改引用品牌事实源（`DESKTOP_BRAND.displayName`），默认档与 self 档各 4/4 通过；serial，main 串行。 |
 | `TASK-0249` | `in_progress` | — | REQ-0013：agent 身份行与 CLI 指引按品牌档位渲染——`BuildSystemPromptOptions` / `SystemPromptSourceDependencies` 增 `productName`，Desktop 注入 `resolveDesktopBrandName`，指引命令名与实际安装的 `openforge` 对齐；回归断言装配后提示词无 Vetta / Vetta Desktop；serial，main 串行。 |
 | `TASK-0250` | `verifying` | — | REQ-0013：runtime-node 用户可见报错与 PDF/OCR 工具描述去遗留品牌名（保留 `VETTA_DESKTOP_EXE` 等冻结标识）；包内 84 文件 / 529 例通过；serial，main 串行。 |
