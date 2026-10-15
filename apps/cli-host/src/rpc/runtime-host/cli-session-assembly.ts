@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import type { CodingAgentBootstrap } from "@vetta/coding-agent/bootstrap";
@@ -146,6 +147,7 @@ export async function createCliSessionAssembly(options: CliSessionAssemblyOption
 			initialModel: options.initialModel,
 			initialThinkingLevel: options.initialThinkingLevel,
 			streamFn: createLoopbackSessionAffinityStream(),
+			runtimeHostModelSettings: bootstrap.settingsManager,
 			ocrMaxConcurrent: resolvePositiveInteger(process.env.VETTA_KB_OCR_CONCURRENCY),
 			cwd: bootstrap.cwd,
 			workspaceFacts: detectWorkspaceFacts(bootstrap.cwd, (cwd) =>
