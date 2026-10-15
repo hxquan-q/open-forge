@@ -8,7 +8,8 @@
 		"build": "next build",
 		"preview": "next start --hostname 0.0.0.0 --port 4321",
 		"check": "next typegen && tsc --noEmit",
-		"test": "bun ../../scripts/quality/run-vitest.mjs --run"
+		"test": "bun ../../scripts/quality/run-vitest.mjs --run",
+		"test:production": "bun ../../scripts/quality/run-vitest.mjs --run --config vitest.production.config.ts"
 	},
 	"dependencies": {
 		"@vercel/analytics": "^2.0.1",

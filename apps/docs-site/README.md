@@ -15,9 +15,12 @@ Open Forge 的公开产品与开发者文档站，使用 Next.js 和 Fumadocs �
 bun run test
 bun run check
 bun run build
+bun run test:production
 ```
 
-Fumadocs 搜索索引由站点内容生成，因此需要通过构建后的站点验证搜索。
+`test:production` 必须在构建后运行：测试启动短生命周期的本地 Next.js 生产服务，检查双语阅读、Markdown 导出、搜索结果跳转与发现入口，并在结束后关闭服务。既有 docs-site CI 在构建后执行同一测试，HTTP 失败会阻断检查。
+
+测试绑定和访问都使用 `localhost`。不要将生产探针绑定为 `127.0.0.1`：当前 Next.js 的 NextURL 会将回环 IP 规范化为 `localhost`，导致内部语言 rewrite 被当作外部请求再次执行，形成 307 自循环；这与页面内容或线上部署可用性无关。
 
 ## 覆盖维护
 
@@ -84,7 +87,7 @@ Fumadocs 搜索索引由站点内容生成，因此需要通过构建后的站�
 
 本目录提供可构建的文档站源码；fork 的部署平台、项目名、域名和生产分支需由维护者实际配置，不能沿用上游部署记录当作已上线事实。
 
-GitHub Actions [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-site.yml) 对受影响路径运行类型检查、测试和构建，不执行 `vercel deploy`。使用 Vercel Git 集成或其他平台时，由部署平台负责发布；本地验证不触发部署。
+GitHub Actions [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-site.yml) 对受影响路径运行类型检查、测试、构建及生产 HTTP 回归，不执行 `vercel deploy`。使用 Vercel Git 集成或其他平台时，由部署平台负责发布；本地验证不触发部署。
 
 `lib/site.ts` 的默认 canonical origin 为 `https://hxquan-q.github.io`；这只是代码回退值，不证明该地址已承载本项目文档。部署时通过 `DOCS_SITE_URL` 设置真实的公开 origin，使 canonical、sitemap、robots 和 LLM 入口一致。`.env.example` 中的域名仅为占位示例。
 

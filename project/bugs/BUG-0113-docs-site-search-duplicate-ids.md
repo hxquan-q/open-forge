@@ -1,7 +1,7 @@
 ---
 id: BUG-0113
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: docs-site
 requirement: REQ-0003
@@ -40,8 +40,8 @@ GET /api/search/?query=configuration&locale=en 返回 500；服务端抛 A docum
 
 ## 根因调查
 
-hideLocale=always 让中英页面共用 URL；现有 createFromSource 默认按 page.url 作为 ID，需用真实 loader fixture 证实索引冲突，并区分 locale 过滤与文档 ID 唯一性。
+hideLocale=always 让中英页面共用 URL；createFromSource 默认按 page.url 作为 ID。Fumadocs 16.14.1 将全部语言放入同一索引后按 locale 过滤，插入第二种语言的首页时 ID `/` 冲突。真实生产 HTTP 回归中，两种 locale 均触发 DOCUMENT_ALREADY_EXISTS，与本地 IP 绑定问题无关。
 
 ## 回归与修复
 
-由 TASK-0270 执行；覆盖正常访问、语言选择、搜索及 Markdown 输出的连续流程。未部署、尚未修复。
+由 TASK-0270 使用公开 buildIndex 扩展，将 ID 设为 locale + URL，同时保留公开 URL、正文结构和 locale 过滤。真实生产回归中英文搜索从 500 转为 200，结果各自只返回对应语言的配置页，并可跟随中立链接读到配置正文；整个生产 HTTP 套件 6/6 通过，既有包内测试加 CI 顺序合同共 35/35 通过，质量合同 102/102、build 与完整根 check 通过。待用户功能接受；未部署，未运行远程 CI。
