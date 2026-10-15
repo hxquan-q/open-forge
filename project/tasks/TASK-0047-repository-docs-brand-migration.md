@@ -16,7 +16,7 @@ write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CO
 exclusive_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github, .github/release-notes]
 depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048, TASK-0154, TASK-0197, TASK-0218, TASK-0223]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
 updated: 2026-10-15
 ---
@@ -186,3 +186,5 @@ updated: 2026-10-15
 - 技术评审：单 Agent 自审；核对实际路径/版本/品牌档/市场源码、中英镜像、声明头、图片与历史事实边界；不是独立评审。没有改动运行时默认值、包名、IPC、项目目录或生产逻辑。
 - 未运行：未启动 Desktop/verify:ui、未访问真实 Provider 或用户数据、未执行打包升级/真实发布/部署；本轮仅做文档与站点本地验证。
 - 验收：文档修改可审阅，status=verifying；用户尚未人工接受。提交/集成事实在集成后补记。公开页面与搜索的成品验收由 TASK-0270 补齐，远程部署与外部市场可用性不在本次验证中。
+
+- 本地集成：第六片提交 11719d84d 已 fast-forward 合入本地 main；无内容冲突。文档站访问问题续接 TASK-0270，原文档任务保持 verifying 待用户审阅；未推送或部署。

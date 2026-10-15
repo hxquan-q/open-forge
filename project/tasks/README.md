@@ -72,7 +72,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0214` | `done` | — | 台账收口：闭合 7 个内部任务（0179/0180/0209–0213，均无用户可观察行为变化且既定标准已实际执行通过），其余 72 个 verifying 保留交用户验收；并记录两处台账缺口（16 个 verifying 不在焦点表、看似内部但缺证据的候选未闭合）。 |
 | `TASK-0216` | `done` | — | 分层验收（用户决策）：合同面 17 个按工程证据闭合并注明授权依据（提交 272808ea0）；行为面 53 个整理成 VERIFY-0017 交用户验收；0183/0184 因 CI 受预算阻塞单独标注。 |
 | `TASK-0217` | `done` | PLAN-0003 | 复核并解除 TASK-0047/0048 的陈旧阻塞：两条实为尚未实施（交付记录全空），已转 ready 并补进焦点表；实测排除冻结标识后仍有 334 行、84 个文件提到旧品牌（提交 1e6e2ab4c）。 |
-| `TASK-0047` | `verifying` | PLAN-0003 | 第六片已补齐双品牌、数据根、市场/版本/安装事实与图片；34 项文档测试、31 项 impact、生产构建与根 check 通过。生产请求另发现页面自重定向及搜索 ID 冲突，交由 TASK-0270 修复；本片待集成和用户审阅。 |
+| `TASK-0270` | `in_progress` | PLAN-0003 | TASK-0047 成品验证续接：BUG-0112 文档页/Markdown 307 自循环、BUG-0113 搜索重复 ID 500；单 Agent 在 main 串行修复，保留无语言前缀 URL。 |
+| `TASK-0047` | `verifying` | PLAN-0003 | 第六片 11719d84d 已集成本地 main：双品牌、路径、市场/版本/安装事实与图片已补齐；34 项测试、31 项 impact、构建与根 check 通过。成品访问两项缺陷由 TASK-0270 续接；待用户审阅。 |
 | `TASK-0048` | `in_progress` | PLAN-0003 | 公开文档站品牌、正文与 SEO/LLM 发现入口迁移；尚未实施，缺口最大（docs-site 内容为主）。 |
 | `TASK-0206` | `done` | PLAN-0014 | feed/attach 第二片：`SessionFacade.attach` 一次同步步骤内订阅 + 运行中回合重放 + 历史快照（`SessionAttachment`），保留本仓 4096 有界回放，不引入上游无界回合缓冲；红绿/定向 10/10/impact 115 项/完整 check 全绿；无直接 UI，消费端随 IPC/desktop 后续片验收。 |
 | `TASK-0205` | `done` | PLAN-0014 | feed/attach 底座第一片：快照暴露运行中回合身份（currentTurnId）+ 重放缓冲收录本轮工具事件（保留 4096 有界）；红绿/impact/完整 check 绿；工具状态切回即时可见待实机验收，currentTurnId 消费随 IPC/desktop 后续片。 |
