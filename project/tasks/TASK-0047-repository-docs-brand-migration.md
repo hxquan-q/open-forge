@@ -7,12 +7,12 @@ owner: release/docs
 requirement: REQ-0003
 plan: PLAN-0003
 source_issue: ISSUE-0001
-execution: serial
-branch: forge/dev
-worktree: 共享工作区串行（README 切片在当前工作区实施）
-base_commit: c3d42690fb5b0abc6a5c080d79111747e352728f
-read_paths: [project/requirements/PRODUCT.md, project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github]
-write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github/ISSUE_TEMPLATE, .github/pull_request_template.md, .github/release-notes]
+execution: parallel
+branch: task/TASK-0047-repository-docs-brand-migration
+worktree: ../open-forge-wt/task-0047-repository-docs-brand-migration
+base_commit: 6d21c4b9dc1575ed64f1c6e4ddcf2b466b47b920
+read_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site, apps/desktop/src/shared, apps/desktop/scripts, packages/action-rpc/src/endpoint-file.ts, project/requirements, project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, .github]
+write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/README.md, apps/docs-site/content/docs, apps/docs-site/lib/i18n.ts, project/requirements/PRODUCT.md, .github/release-notes]
 exclusive_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github, .github/release-notes]
 depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048]
@@ -156,3 +156,15 @@ updated: 2026-10-15
 - 验证：`apps/docs-site/content` grep 复核零 `openvetta`/`open-vetta` 残留；两份 meta.json JSON.parse 通过；docs-site 包内 `bun run test` 34/34 通过（首轮 seo.test.ts 因旧品牌断言转红，属本次元数据改动的预期连锁，已同步修正）；`bun run check:quick` 全绿（ratchet `new=0`）。
 - 未运行及原因：未跑 docs-site 构建（`next build`）与根运行时测试——内容/元数据改动被包内 vitest 与 check:quick 覆盖，构建产物验证留给下次站点部署。
 - 剩余风险：站点代码层 `docs.openvetta.com` 常量（social-image 渲染文本等）待站点部署定位确定后统一处理；DEB/RPM 精确产物文件名待下次 Linux 构建核实后可将 glob 命令细化为精确文件名；沿革目录（agent/adapter/ai/adr/glossary）仍按边界未动。
+
+## 第六片合同（2026-10-15）：审查反馈补齐与当前产品事实对齐
+
+- 来源：用户确认“需要改”“继续”；本次为 Open-Forge-only 文档维护，复用 REQ-0003 / PLAN-0003，并对照 REQ-0011 的已实现双品牌合同。
+- 当前基线：前五片已提交；主工作区最新提交为 6d21c4b9d。此前发现的外链清收已由第五片落地，本片在该已提交基线上补足剩余缺口，不覆盖其它会话修改。
+- 执行：单 Agent，在独立工作树实施；execution: parallel 仅为隔离工作树合同，不派生 Worker，与 TASK-0048 仍串行集成。写域为根入口文档、活跃 docs、公开文档内容/说明及一处无逻辑 i18n 文案；保留沿革目录、协议与项目内 .vetta 兼容标识。
+- 目标：README/QUICKSTART/构建与公开安装指南解释仓库品牌 Open Forge、默认 Desktop 品牌小爱ai / Allstr ai、显式 self 档及其与 lite/full 的独立关系；修正版本示例、可执行文件名、全局数据路径与市场来源说明；清理活跃产品自称遗漏；更新 PRODUCT 的当前入口与品牌事实。
+- 图片：README 不再用上游营销横幅和旧桌面截图冒充当前产品；保留原始资产作为历史资源，入口采用可维护的本项目 SVG 品牌横幅。
+- Given 用户从 README 进入快速开始或配置/插件/主题文档；When 按说明使用当前默认构建、self 构建或定位配置；Then 名称、路径、命令、版本与当前事实源一致，且中英文镜像同步。
+- 不变量：不修改生产逻辑、默认品牌、包名/环境变量/IPC/项目目录与生态协议；不启动 Desktop、不使用真实 Provider、不部署、不猜外部基础设施。私有上报渠道等占位保持明确的未就绪说明。
+- 验证：相对链接与引用路径检查；公开语言页面集合/既有 docs-site tests；bun run --cwd apps/docs-site check 与 build（覆盖搜索、sitemap、LLM 来源）；变更文案 i18n 的定向 test:impact；根 bun run check。无行为变更不新增镜像实现的单元测试。
+- 工程与自审证据落本 Task；提交/集成按真实事实记录，发布未授权。
