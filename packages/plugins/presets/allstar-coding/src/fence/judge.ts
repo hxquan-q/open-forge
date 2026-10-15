@@ -173,7 +173,6 @@ const GIT_WRITE_SUBCOMMANDS = new Set([
 	"switch",
 	"clean",
 	"stash",
-	"branch",
 	"tag",
 	"cherry-pick",
 	"revert",
@@ -181,7 +180,83 @@ const GIT_WRITE_SUBCOMMANDS = new Set([
 	"rm",
 	"gc",
 	"filter-branch",
+	// 注：branch 不在此列——它读写同形，单独判定（见 gitBranchSubcommandIsWrite）。
 ]);
+
+/**
+ * git branch 读写细分（bill 项目 fence-log 2026-10 实录：5 条 `git branch --show-current`
+ * 只读探测被整体黑名单误拦，驱动了"越跑越卡"的重试膨胀）：
+ * - 只读形态：无参 / 伴随 flag（-a/-v/-vv/--list/--show-current/--all/--verbose/-r/--remotes 等）
+ *   且**无位置参数**（`git branch --list 'ac/*'` 的 pattern 是 --list 的取值，不算）；
+ * - 写形态：`git branch <name>`（新建）、`-d/-D`（删）、`-m/-M`（改名）、`-c/-C`（拷贝）、
+ *   `--edit-description`、`--set-upstream-to`/`-u`、`--unset-upstream`、`--contains` 之外的位置参数形态。
+ * 拿不准就从严（判写），reason 语义不变。
+ */
+const GIT_BRANCH_READONLY_FLAGS = new Set([
+	"-a",
+	"--all",
+	"-r",
+	"--remotes",
+	"-v",
+	"-vv",
+	"--verbose",
+	"--list",
+	"--show-current",
+	"--show-current branch",
+	"--show-symref",
+	"--format",
+	"--sort",
+	"--points-at",
+	"--merged",
+	"--no-merged",
+	"--contains",
+	"--no-contains",
+	"-q",
+	"--quiet",
+	"--color",
+	"--no-color",
+]);
+
+/** 取值型 flag：其后的 token 是该 flag 的值（pattern/commit/格式串），不是位置参数。 */
+const GIT_BRANCH_FLAGS_WITH_VALUE = new Set([
+	"--list",
+	"--format",
+	"--sort",
+	"--points-at",
+	"--merged",
+	"--no-merged",
+	"--contains",
+	"--no-contains",
+]);
+
+/** `git branch <args>` 是否为写操作（新建/删除/改名/拷贝/上游设置）。 */
+function gitBranchSubcommandIsWrite(rest: string): boolean {
+	// 复合命令边界（; && || | &）不是 branch 的参数——截断到首个边界，边界后的部分
+	// 由 GIT_WORD_RE 的下一次匹配独立判定（`git branch --show-current; git status` 两段各判各的）。
+	const boundary = rest.search(/[;|&]/);
+	const segment = boundary >= 0 ? rest.slice(0, boundary) : rest;
+	const tokens = segment.split(/\s+/).filter(Boolean);
+	let positional: string | undefined;
+	let i = 0;
+	while (i < tokens.length) {
+		let token = tokens[i];
+		i += 1;
+		token = token.replace(/^["']|["']$/g, "");
+		if (!token) continue;
+		if (token.startsWith("-")) {
+			// 判写 flag：显式优先（无视位置参数直接定性）
+			if (token === "-d" || token === "-D" || token === "--delete") return true;
+			if (token === "-m" || token === "-M" || token === "--move" || token === "--copy") return true;
+			if (token === "-c" || token === "-C") return true;
+			if (token === "--edit-description" || token === "--set-upstream-to" || token === "-u" || token === "--unset-upstream") return true;
+			if (GIT_BRANCH_FLAGS_WITH_VALUE.has(token) && i < tokens.length) i += 1; // 吞掉取值
+			continue;
+		}
+		if (positional === undefined) positional = token;
+	}
+	// 写 = 存在位置参数（`git branch <name>` 新建；删/改形态已被 flag 提前返回）
+	return positional !== undefined;
+}
 
 /** 取值后还需一个参数的全局 flag（`git -C <path> commit` 类场景不能把 path 当子命令）。 */
 const GIT_GLOBAL_FLAGS_WITH_VALUE = new Set(["-c", "-C", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
@@ -224,6 +299,10 @@ export function isGitWriteCommand(command: string): boolean {
 	while ((match = GIT_WORD_RE.exec(command)) !== null) {
 		const found = gitSubcommandAfter(command.slice(match.index + match[0].length));
 		if (!found) continue;
+		if (found.sub === "branch") {
+			if (gitBranchSubcommandIsWrite(found.rest)) return true;
+			continue;
+		}
 		if (GIT_WRITE_SUBCOMMANDS.has(found.sub)) return true;
 		if (found.sub === "reflog") {
 			// reflog expire 是写（gc 的危险近亲）；reflog/reflog show 只读
@@ -240,9 +319,45 @@ export function isGitWriteCommand(command: string): boolean {
 
 const HELP_PROTOCOL_HINT = "走 help_protocol：在最终报告「待主控处理」节登记（诉求、理由、被拒信息原文），等待主控裁决；不自行变通。";
 
-/** POSIX 化 + 去掉 `./` 前缀。绝对路径不转换——相对 scope 模式天然不命中（fail-safe）。 */
+/** POSIX 化 + 去掉 `./` 前缀。 */
 function toPosixPath(path: string): string {
 	return path.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+/**
+ * 绝对路径形态判定：POSIX 根（/）、Windows 盘符（C:/）或用户目录（~/）。
+ */
+function isAbsolutePathForm(posix: string): boolean {
+	return posix.startsWith("/") || posix.startsWith("~") || /^[A-Za-z]:/.test(posix);
+}
+
+/**
+ * file-edit 写域判定用的路径归一化（bill 项目 fence-log 2026-10 实录修复）：
+ *
+ * 宿主 write/edit 传给插件的 path 常是绝对路径（含 Windows 盘符）；契约 scope 是相对项目根的
+ * glob，直接匹配永不命中 → 合法写入被误拦（fence-log 自相矛盾记录：「越权写：<绝对路径> 不在
+ * 契约 scope 内（契约 scope: <同一文件的相对路径>）」）。
+ *
+ * 语义（ac-revision-plan D8）：
+ * - 相对路径 → 原样返回（旧语义不变）；
+ * - 绝对路径且给了 projectRoot → 在根内则剥掉根前缀返回相对形态参与判域；
+ *   在根外返回 null（**维持拦截**——归一化只修形态，不得打开越权通道）；
+ * - 绝对路径但没给 projectRoot → null（fail-safe，等价旧语义「不命中相对 scope」）。
+ *
+ * 实现为纯词法前缀剥离（无 node:path 依赖——插件 bundle 跑 renderer realm，judge 不得 import
+ * node 内建）：大小写不敏感比较（Windows 卷标大小写不稳定），分隔符已统一为 /。
+ */
+export function normalizeEditPath(path: string, projectRoot: string | undefined): string | null {
+	const posix = toPosixPath(path);
+	if (!isAbsolutePathForm(posix)) return posix;
+	if (projectRoot === undefined) return null;
+	const root = toPosixPath(projectRoot).replace(/\/+$/, "");
+	if (root.length === 0) return null;
+	const lowered = posix.toLowerCase();
+	const rootLowered = root.toLowerCase();
+	if (lowered === rootLowered) return null; // 写项目根本体（目录）——无相对形态，维持拦截
+	if (!lowered.startsWith(`${rootLowered}/`)) return null; // 根外 → 维持拦截
+	return posix.slice(root.length + 1);
 }
 
 function isFileEditCall(call: ToolCallShape): boolean {
@@ -489,6 +604,15 @@ export function judgeMainSpawn(input: unknown): Verdict {
 					reason: `ac-fence：契约 scope 条目 "${pattern}" 不是项目内路径（动态角色只允许项目内 glob，相对项目根）。请修正契约 scope → ${HELP_PROTOCOL_HINT}`,
 				};
 			}
+			// helper（help_/git_ 前缀）写权兜底：辅助者的价值是"点状代办"，全域通配 scope
+			// 等于让安全边界退化为主控自觉（ac-revision-plan D8-3）。要全域写权走 T3 应急档审批，
+			// 不走 spawn 契约。git_ 前缀的豁免存档通道不受影响（其 scope 天然点状：state.md + 产物路径）。
+			if ((taskName.startsWith("help_") || taskName.startsWith("git_")) && (pattern === "**" || pattern === "*" || pattern === "**/**")) {
+				return {
+					allow: false,
+					reason: `ac-fence：辅助者（help_/git_ 前缀）契约 scope 不能是全域通配（"${pattern}"）——辅助者按"点状代办"逐次下发 scope；确需全域写权 → T3 应急档（主控上报 → 用户批准 → 限时授予，ac-pipeline §0.3），不走 spawn 契约 → ${HELP_PROTOCOL_HINT}`,
+				};
+			}
 			continue;
 		}
 		// 静态角色：scope ⊆ 基线写域（收紧可以、放宽违规）
@@ -515,11 +639,17 @@ export function judgeMainSpawn(input: unknown): Verdict {
 // ---------------------------------------------------------------------------
 
 /**
- * judge(contract | null, call, isMainSession)
+ * judge(contract | null, call, isMainSession, projectRoot?)
  * isMainSession = event.subagent 为空（主控会话）。
+ * projectRoot = 事件 cwd（session-gate 透传）——file-edit 绝对路径归一化的锚点（见 normalizeEditPath）。
  * 纯内存判定：Map 查询 + glob 匹配，禁止任何 await I/O（fail-open 纪律下 handler 必须快且稳）。
  */
-export function judge(contract: FenceContract | null, call: ToolCallShape, isMainSession: boolean): Verdict {
+export function judge(
+	contract: FenceContract | null,
+	call: ToolCallShape,
+	isMainSession: boolean,
+	projectRoot?: string,
+): Verdict {
 	// ── 主会话（主控）规则 ──
 	if (isMainSession) {
 		if (isShellCall(call)) {
@@ -551,11 +681,13 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 		};
 	}
 
-	// explorer 型评审子机制级只读：file-edit 出现即纵深防御拦截（无论 scope）
+	// explorer 型子代理机制级只读：file-edit 出现即纵深防御拦截（无论 scope）。
+	// 注：评审子 v0.6 起改用 general 型 + scope 收 reviews.md（自行落盘，ac-review §1）；
+	// 本拦截保留作纵深防御——explorer 型语义就是"只读侦察"，任何 file-edit 都与该语义矛盾。
 	if (contract.agentType === "explorer" && isFileEditCall(call)) {
 		return {
 			allow: false,
-			reason: `ac-fence：explorer 型子代理机制只读，file-edit 调用被纵深防御拦截。评审产出的落盘需求 → ${HELP_PROTOCOL_HINT}（verdict 全文带回，主控代写 reviews.md）`,
+			reason: `ac-fence：explorer 型子代理机制只读，file-edit 调用被纵深防御拦截。需要落盘产出 → 用 general 型契约（scope 收对应产物文件）重派 → ${HELP_PROTOCOL_HINT}`,
 		};
 	}
 
@@ -567,7 +699,13 @@ export function judge(contract: FenceContract | null, call: ToolCallShape, isMai
 				reason: `ac-fence：file-edit 输入缺少 path 字段，围栏无法判定写域 → fail-safe 拦截。如为合法操作 → ${HELP_PROTOCOL_HINT}`,
 			};
 		}
-		const rel = toPosixPath(path);
+		const rel = normalizeEditPath(path, projectRoot);
+		if (rel === null) {
+			return {
+				allow: false,
+				reason: `ac-fence：越权写：${toPosixPath(path)} 是项目根外的绝对路径（或无法归一化），不在任务契约 scope 内。请改用项目相对路径重试；确需写项目外文件 → ${HELP_PROTOCOL_HINT}`,
+			};
+		}
 		const domain = effectiveWriteScope(contract);
 		if (domain.matches(rel)) return { allow: true };
 		return {

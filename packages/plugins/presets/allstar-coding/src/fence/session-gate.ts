@@ -90,7 +90,7 @@ export function handlePreToolUse(store: ContractStore, io: SessionGateIo, event:
 	// 无关会话：只做认养观察——带 AC 前缀且契约合法的 spawn 把本会话收编为治理会话，其余静默放行
 	if (!isMainSession && !isSubagentSession) {
 		if (call.hostName === "spawn_agent" && call.toolKind === "agent") {
-			if (isAcPipelineSpawn(call.input) && judge(null, call, true).allow) {
+			if (isAcPipelineSpawn(call.input) && judge(null, call, true, event.cwd).allow) {
 				store.markGovernedSession(event.sessionId);
 				store.registerSpawn(event.toolUseId, call.input);
 			}
@@ -101,7 +101,7 @@ export function handlePreToolUse(store: ContractStore, io: SessionGateIo, event:
 	// 治理会话的 spawn：强校验（此时已确认是 AC 主控，契约不达标即 block）。
 	// 先判后登记：被 block 的 spawn 不入表。
 	if (isMainSession && call.hostName === "spawn_agent" && call.toolKind === "agent") {
-		const verdict = judge(null, call, true);
+		const verdict = judge(null, call, true, event.cwd);
 		if (!verdict.allow) {
 			io.appendLog(event.cwd, {
 				sessionId: event.sessionId,
@@ -115,8 +115,9 @@ export function handlePreToolUse(store: ContractStore, io: SessionGateIo, event:
 		return { action: "continue" };
 	}
 
-	// 通用判定：子会话按契约（sessionId 即 agentId）；治理会话 contract 恒为 null
-	const verdict = judge(isSubagentSession ? contract : null, call, isMainSession);
+	// 通用判定：子会话按契约（sessionId 即 agentId）；治理会话 contract 恒为 null。
+	// event.cwd 作 projectRoot 传入——file-edit 绝对路径按项目根归一化后判域（bill 实录修复）。
+	const verdict = judge(isSubagentSession ? contract : null, call, isMainSession, event.cwd);
 	if (verdict.allow) return { action: "continue" };
 
 	io.appendLog(event.cwd, {

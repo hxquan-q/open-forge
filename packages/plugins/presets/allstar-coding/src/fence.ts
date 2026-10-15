@@ -60,11 +60,30 @@ export function activateFence(ctx: PluginContext): PluginActivationCleanup {
 
 	// 判定流在 session-gate.ts（纯模块，按生产事件形态可测）；本文件只是 hook 装配层。
 	// 会话分类不依赖事件体 subagent 字段（宿主从不填充）——sessionId 双查见 session-gate 头注。
+	//
+	// toolNames 过滤面（IPC 开销治理，ac-slowdown-diagnosis §4/§8-2）：围栏只对写语义与
+	// blackbox 窄读域相关的宿主工具做判定，其余工具（todo/list_agents/browser_tab/读类……）
+	// 旧实现恒放行却仍付一次 main→renderer IPC 往返（含完整 toolInput 序列化）——长流水
+	// 里按调用量线性收税。SDK 的 toolNames 让宿主在 adapter 层就跳过这些事件的分发。
 	const preToolUse = ctx.agent.registerHook({
 		id: "ac-fence-pre-tool-use",
 		eventName: "PreToolUse",
-		// 主控会话与项目会话都拦（fence 要看全部工具调用——不设 toolNames 白名单）
+		// 主控会话与项目会话都拦；只匹配围栏有判定语义的工具（write/edit=bash/shell/spawn_agent
+		// + blackbox 读域过滤的 read/grep/glob/ls/dir_tree/find）
 		scope_use: ["conversation", "project"],
+		toolNames: [
+			"write",
+			"edit",
+			"bash",
+			"shell",
+			"spawn_agent",
+			"read",
+			"grep",
+			"glob",
+			"ls",
+			"dir_tree",
+			"find",
+		],
 		timeoutMs: 3000,
 		handler({ event }) {
 			if (event.eventName !== "PreToolUse") return { action: "continue" };
