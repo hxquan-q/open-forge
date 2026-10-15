@@ -19,8 +19,8 @@ base_commit: b687d6f00
 read_paths: [project/research/RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md, project/bugs/BUG-0110-compaction-commit-version-race.md]
 write_paths: [packages/runtime-core/src/kernel/turn-pipeline.ts, packages/theme-ui/src/chat, apps/desktop/src/renderer/domains/conversation, project/tasks/TASK-0268-compaction-in-reply-step.md]
 exclusive_paths: [packages/runtime-core/src/kernel/turn-pipeline.ts]
-depends_on: [TASK-0262, TASK-0264]
-conflicts_with: [TASK-0260, TASK-0261, TASK-0262]
+depends_on: [TASK-0264]
+conflicts_with: []
 integration_status: pending
 created: 2026-10-15
 updated: 2026-10-15

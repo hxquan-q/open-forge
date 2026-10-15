@@ -1,7 +1,7 @@
 ---
 id: TASK-0266
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: packages/ai + apps/desktop
 requirement: REQ-0008
@@ -12,15 +12,15 @@ related_plan: [PLAN-0014]
 related_tasks: [TASK-0263]
 related_issues: []
 related_bugs: []
-execution: serial
-branch: main
-worktree: 待实施时定
-base_commit: b687d6f00
+execution: parallel
+branch: task/TASK-0266-responses-transport-setting
+worktree: C:/Users/xquan/Desktop/open-forge/.claude/worktrees/agent-a08b5c6d753d1337b（基线 772d3da07，Agent Worktree）
+base_commit: 772d3da07
 read_paths: [project/research/RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md]
 write_paths: [packages/ai/src/providers/openai-responses, packages/ai/src/providers/openai-codex, apps/desktop/src/main/ipc/settings.ts, apps/desktop/src/renderer/domains/settings, apps/desktop/src/shared/i18n/locales, project/tasks/TASK-0266-responses-transport-setting.md]
 exclusive_paths: []
 depends_on: [TASK-0263]
-conflicts_with: []
+conflicts_with: [TASK-0197]
 integration_status: pending
 created: 2026-10-15
 updated: 2026-10-15
@@ -81,4 +81,10 @@ updated: 2026-10-15
 
 ## 交付记录
 
-- 实际修改：待回填；实际运行：待回填；未运行及原因：待回填；Worktree：待回填；剩余风险：待回填
+- 实际修改：ai 侧 `openai-responses/websocket.ts`（新，共享连接管理）+ Codex WS 薄包装收敛 + adapter/request/simple-options 接传输；coding-agent 组合合同（`CodingAgentRuntimeHostModelSettings`）与 `withConfiguredTransport` 注入；runtime-desktop `backend-pool` 与 cli-host 会话装配接线；desktop 设置节（主进程持久化+IPC+preload+渲染层+i18n zh/en+注册锚点）。提交 `8c1342e01`（ai）、`8dde6d60f`（组合）、desktop 与 docs 切片见分支。
+- 实际运行：适配器 72/72（含新增 Responses WS 5 例：URL/头/start 单发、incomplete 终态、坏帧、早关、auto 回退 SSE）；组合面 4/4（新测：transport 每调用动态读取 sse→websocket）；desktop 新测 4/4 + registry 8/8；`test:impact` ai 18 文件/246 例、组合 26 文件/89 例、runtime-desktop 1 文件/19 例全绿；desktop 设置面 impact 100 例通过（2 文件收集期失败为 BUG-0107 存量，与本批无关）；`check:guards` 除基线存量（README 行引用未入库 TASK-0260~0262，见下）外全绿，声明头 new=0。
+- 台账修复：0266 改 `execution: parallel`（独立 Worktree 的合规声明）并登记 `conflicts_with: TASK-0197`（其 `project/tasks` 广域 write_paths，按 0218/0187 先例本侧登记）；0268/0269 的 depends_on/conflicts_with 移除本树不存在的 TASK-0260~0262 引用（worktree 隔离只认文件系统记录，链接保留在 related_tasks 与正文 defer 叙述）。
+- 未运行及原因：真实网关回合未运行（真实 Provider 不授权），以 FakeWebSocket fixture 合同为准；完整 `bun run check` 的 project-indexes 三行红为基线存量（README 行 25-27 引用的任务文件在主树仍未提交，属 TASK-0260~0262 在途批次，非本批），其入库后自愈。
+- 发布说明：`v0.1.3.md`「## 改进」补传输方式条目（随本分支 docs 提交）。
+- Worktree：Agent Worktree `agent-a08b5c6d753d1337b`，分支 `task/TASK-0266-responses-transport-setting`，基线 `772d3da07`；未推送，待 Coordinator 集成。
+- 剩余风险：自定义网关需支持 Responses WebSocket 协议，不支持时强制 WS 档会显式报错（文案已说明）；连接复用 TTL 5 分钟与上游口径一致，未做本机实测。
