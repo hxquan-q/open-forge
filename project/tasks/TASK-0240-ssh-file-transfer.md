@@ -145,8 +145,6 @@ updated: 2026-10-13
 
 ### 未运行及原因
 
-### 未运行及原因
-
 - 计划中的「UI：上下文菜单接线与拖放分流（组件测试）」未写：渲染层接线以 typecheck + 两包全量现有套件代替，见剩余风险。
 - `test:impact` / `test:changed` 未跑：定向套件已覆盖 ssh-transport 与 theme-ui 两个受影响包及 desktop 服务层；完整 `bun run check` 因上述 check:guards 存量红无法出绿（非本任务差异）。
 - 真实 SSH 设备验收未做：任务边界禁止访问真实主机，留给用户。
