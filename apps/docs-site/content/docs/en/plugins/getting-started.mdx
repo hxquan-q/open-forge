@@ -9,9 +9,11 @@ description: Create, build, and install a minimal Open Forge desktop plugin.
 - Node or Bun.
 - Open Forge Desktop, running — installing and hot reload both talk to the live app.
 
-You do **not** need a Open Forge source checkout.
+First identify the SDK and tooling for the target Open Forge build. For additions maintained here, use the [plugin source in this repository](https://github.com/hxquan-q/open-forge/tree/main/packages/plugins) and matching documentation. Developing outside this checkout requires a verified external SDK/CLI distribution.
 
-## Scaffold in one command
+## Scaffold with verified matching tooling
+
+The example below uses compatibility package names and downloads published npm artifacts. Verify and pin versions compatible with the target Open Forge build first; registry defaults do not represent this repository's current source.
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"

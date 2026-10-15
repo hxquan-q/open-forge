@@ -3,16 +3,16 @@
 
 *[English](./build-modes.en.md)*
 
-Open Forge Desktop 有两种发行形态，由构建期开关 `VETTA_CLOUD_ENABLED` 决定。开发启动时未配置仍按 serv-less 运行；**正式打包必须显式选择 `true` 或 `false`**，前置检查不会再猜测版本类型。
+本仓的 Open Forge Desktop 支持 lite/serv-less 与 full 两种构建模式，由 `VETTA_CLOUD_ENABLED` 决定。下文脚本中的「开源版 / 商业版」分别对应这两种模式，描述的是云客户端模块的构建选择。full 依赖独立私有仓库维护的兼容后端及发行方配置，不表示本仓已提供账号、订阅或托管服务。开发启动时未配置仍按 serv-less 运行；**正式打包必须显式选择 `true` 或 `false`**。
 
-| | **开源版（serv-less）** | **商业版（Open Forge Serv）** |
+| | **lite（serv-less）** | **full（云服务客户端）** |
 | --- | --- | --- |
 | 开关 | `VETTA_CLOUD_ENABLED=false` | `VETTA_CLOUD_ENABLED=true` |
-| 账号登录 / OAuth | ❌ 代码不进产物 | ✅ |
-| 托管模型渠道（名称随品牌档案） | ❌ | ✅ |
-| 订阅 / 积分 / 配额 | ❌ | ✅ |
+| 账号登录 / OAuth | ❌ 代码不进产物 | 包含接入模块，需兼容服务端 |
+| 托管模型渠道（名称随品牌档案） | ❌ | 包含接入模块，需服务端配置 |
+| 订阅 / 积分 / 配额 | ❌ | 包含接入模块，实际权益由服务端决定 |
 | 能力广场来源 | 内置 GitHub 源与用户添加的多源 | 云市场（Open Forge Serv）及独立的 GitHub 多源 |
-| 远程模型目录下发 | ❌ | ✅ |
+| 远程模型目录下发 | ❌ | 包含接入模块，需服务端配置 |
 | 内置技能 | 不含 `requiresCloud` 标记的 | 全部 |
 
 **两种模式共有**：本地会话、编码 Agent、插件系统、主题、自带 API Key 的模型、IM 旁路、知识库。
@@ -87,7 +87,7 @@ VETTA_OPEN_MARKETPLACE_REPOSITORY=your-org/your-marketplace
 
 ## 商业版构建
 
-需要一个可用的 Open Forge Serv 服务端：
+需要自行准备兼容且可用的服务端、站点与更新服务。业务服务端在独立私有仓库维护；以下域名仅为配置示例：
 
 ```bash
 # apps/desktop/.env.production（本地文件，不提交）
@@ -234,7 +234,7 @@ GitHub 能力源在两种版本中均读取 `VETTA_OPEN_MARKETPLACE_REPOSITORY` 
 `marketplace_repository` 表单覆盖；均未配置时客户端仍使用本项目默认仓库和 `gh-pages`，不是禁用来源。
 自定义发行源请配置真实仓库及分支；该配置不证明分发仓库已发布。
 
-**fork 不配任何 Variables 就得到开源版构建。** 官方商业版把这些放到 Settings → Environments → `desktop-production` → Environment variables（密钥走 Environment secrets）：
+**本仓未配置 Variables 时默认生成 lite 构建。** 发行方需要 full 构建时，将实际环境配置放到 Settings → Environments → `desktop-production` → Environment variables（密钥走 Environment secrets）：
 
 ```
 VETTA_CLOUD_ENABLED = true

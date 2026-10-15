@@ -10,13 +10,13 @@ source_issue: ISSUE-0001
 execution: parallel
 branch: task/TASK-0047-repository-docs-brand-migration
 worktree: ../open-forge-wt/task-0047-repository-docs-brand-migration
-base_commit: 6d21c4b9dc1575ed64f1c6e4ddcf2b466b47b920
+base_commit: 110b104054837dd53c2d087d672366df61530e27
 read_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site, apps/desktop/src/shared, apps/desktop/scripts, packages/action-rpc/src/endpoint-file.ts, project/requirements, project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, .github]
 write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/README.md, apps/docs-site/content/docs, apps/docs-site/lib/i18n.ts, apps/docs-site/lib/seo/social-image.tsx, apps/docs-site/app/layout.tsx, apps/docs-site/.env.example, project/requirements/PRODUCT.md, .github/release-notes]
 exclusive_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github, .github/release-notes]
 depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048, TASK-0154, TASK-0197, TASK-0218, TASK-0223]
-integration_status: integrated
+integration_status: pending
 created: 2026-09-23
 updated: 2026-10-15
 ---
@@ -190,3 +190,24 @@ updated: 2026-10-15
 - 本地集成：第六片提交 11719d84d 已 fast-forward 合入本地 main；无内容冲突。文档站访问问题续接 TASK-0270，原文档任务保持 verifying 待用户审阅；未推送或部署。
 
 - 成品验证补充（TASK-0270）：初始 307 现象经差分定位为 Next.js 将探针绑定的回环 IP 规范化到 localhost 后重复执行 rewrite，并非已确认的部署故障；统一本地探针主机名即恢复阅读与 Markdown，生产路由无需改动。搜索的跨语言 ID 冲突已独立修复，完整生产 HTTP 6/6、包内 35/35、质量合同 102/102 与完整根 check 通过；文档成品仍待用户人工接受，远程部署未验证。
+
+## 第七片合同（2026-10-15）：按二开项目重写正文叙述
+
+- 用户反馈：允许上游致谢及必要提及，但 README 正文的主观描述仍沿用 Vetta 的产品视角。本片纠正项目定位、交付边界与默认使用流程，不能仅靠替换品牌词完成。
+- 已复核基线：根 README 仍以继承的泛化能力营销为主体，独立维护定位只出现在末尾致谢；插件上手直接指向上游 npm 发布包；安装/云服务叙述混淆代码能力、实际 Release 与已运营服务；公开快速开始把登录作为默认前置，与本仓默认 lite 构建冲突。中英首页另有四处 VETTA 装饰标题漏改。
+- 目标：README 开头明确本仓是独立维护的 Open Forge 客户端工程，围绕已落地的团队/工程工作流、SSH、模型与恢复改动组织介绍；保留基础能力操作入口，区分当前开发版本、可下载制品、非 Desktop 应用源码和独立私有服务端。插件/SDK 指南以本仓版本合同为准，不将同名上游发布物自动视为 fork 的配套版本。
+- 做：重写中英 README 的定位、二开重点、获取/开发/扩展与服务边界；同步 Quickstart、docs 导航、PRODUCT、公开首页/快速开始/使用概览/开发入口/安装与兼容等受影响正文，核对 full 模式说明；上游归属、技术兼容标识和历史资料继续保留真实语境。
+- 不做：不改变运行时、包名、命令、环境变量、品牌档默认值、协议或数据；不新增品牌/商业能力/部署承诺，不改 GitHub 仓库设置，不启动 Desktop 或真实 Provider，不合并/推送 origin/main。
+- Given 用户从本仓 README 进入默认源码构建与公开指南；When 了解本项目定位、首次运行、选择扩展或判断可用服务；Then 读到的是当前 fork 的维护范围与默认 lite 流程，登录/full/发布物均有实际前提，中英文一致。
+- 执行：复用 REQ-0003 / PLAN-0003，单 Agent 在既有 TASK-0047 隔离工作树串行修改，已确认干净并 fast-forward 至 110b10405；与 TASK-0048 及共享发布说明任务串行。直接修改文档即可，不需要重构生产代码。
+- 验证：对照版本/品牌/构建开关、插件源码和既有交付记录；检查本地链接/引用、语言页面集合与源码残留；运行 docs-site 既有测试与构建、test:impact/changed 和规定门禁。不为纯文案新增镜像单元测试；实际命令、未执行项和提交/集成事实在交付时回写。
+
+## 交付记录（第七片，2026-10-15）
+
+- 根因：前片主要检查品牌字符串、入口坐标和路径，保留了上游的通用产品宣传结构与默认账号流程，未充分审核叙述主体、发行/服务主体及 SDK 发布版本归属。用户明确允许致谢与必要提及；本片处理语义与流程前提，不追求 Vetta 字符串归零。
+- 实际修改：中英 README 从本仓维护范围和二开工作展开，介绍工程工作流、团队、SSH、模型与恢复；区分继承基础能力、当前开发线和实际 Release，移除 README 中未经目标构建兼容性确认的上游 npm 快捷上手承诺。Quickstart、PRODUCT、docs 导航与构建模式同步，full 明确为需要兼容后端的客户端构建选择。
+- 公开指南：中英首页清理四处旧品牌标题并重写项目介绍；首次设置改按默认 lite 无需账号的流程，登录、组织和云目录均限定对应 full 服务前提；安装与兼容矩阵区分打包能力和真实发布资产；开发/插件指南补齐本仓 SDK 与上游 registry 版本边界，故障排查同步 lite 入口。保留原有 README 数据章节锚点、上游署名、技术兼容标识和历史资料。
+- 已运行：显式 32 文件的 test:impact 选择 docs-site 全包，7 文件 / 35 项通过；check:quick 全部通过，声明头 ratchet new=0；build:docs 构建成功，113 静态页；30 份修改文档的 304 个本地链接、公开路由、图片与 README 入链锚点检查有效；本 Task 的 worktree:check 通过，git diff --check 无错误。无逻辑变化，按文案政策不新增镜像实现的单元测试。
+- 技术与内容复核：单 Agent 自审；以 Desktop 版本/品牌层和 Vite 云开关、插件源码/包清单及既有交付记录核对事实；中英文对照回读。GitHub API 核实最新已发布版本为 v0.1.2 Preview，当前源码为 0.1.3，因此安装格式与版本不再作无条件发布承诺。
+- 未运行：Desktop/verify:ui、真实 Provider、浏览器人工操作、真实升级/发布/部署；本片没有修改运行时。远程 CI 先前因 Actions 预算阻断，不能以本地通过代替远程通过或用户人工接受。
+- 集成/接受：status=verifying，隔离树验证完成，主工作区集成及规定完整门禁待执行；用户尚未接受这版正文。原 dev→main PR #10 已合并（origin/main@18081000f），本片是之后的新修订，不把旧 PR 的合并状态当作本片已进入默认分支。
