@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { chmod, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

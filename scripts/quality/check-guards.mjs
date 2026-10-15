@@ -38,6 +38,7 @@ const steps = [
 	["scripts/quality/check-protocol-suites.mjs"],
 	["scripts/quality/check-project-indexes.mjs"],
 	["scripts/release/release-notes.mjs", "--check"],
+	["scripts/quality/check-version-lines.mjs"],
 	["scripts/quality/check-turbo-config.mjs"],
 ];
 

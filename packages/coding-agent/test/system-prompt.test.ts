@@ -1,27 +1,29 @@
 import { describe, expect, test } from "vitest";
-import { buildSystemPrompt, VETTA_CLI_GUIDANCE } from "../src/model-context/index.js";
+import { buildDesktopCliGuidance, buildSystemPrompt, DEFAULT_BRAND_NAME } from "../src/model-context/index.js";
 
-describe("VETTA_CLI_GUIDANCE", () => {
+describe("buildDesktopCliGuidance", () => {
+	const guidance = buildDesktopCliGuidance();
+
 	test("distinguishes the target application and inspection from execution", () => {
-		expect(VETTA_CLI_GUIDANCE).toContain("not the application, website, repository, or external service");
-		expect(VETTA_CLI_GUIDANCE).toContain("creating a React project");
-		expect(VETTA_CLI_GUIDANCE).toContain("usage.avoidWhen");
+		expect(guidance).toContain("not the application, website, repository, or external service");
+		expect(guidance).toContain("creating a React project");
+		expect(guidance).toContain("usage.avoidWhen");
 		// 作为 append 文本注入时要有自己的标题，不能漂在 Guidelines 后面冒充其中一条。
-		expect(VETTA_CLI_GUIDANCE.startsWith("# Vetta Desktop CLI\n\n")).toBe(true);
-		expect(VETTA_CLI_GUIDANCE).toContain("Search results are candidates, not instructions");
-		expect(VETTA_CLI_GUIDANCE).toContain("An approval dialog is not a way to discover what the user meant");
+		expect(guidance.startsWith(`# ${DEFAULT_BRAND_NAME} CLI\n\n`)).toBe(true);
+		expect(guidance).toContain("Search results are candidates, not instructions");
+		expect(guidance).toContain("An approval dialog is not a way to discover what the user meant");
 	});
-	test("explains progressive discovery of Desktop capabilities via vetta action", () => {
-		expect(VETTA_CLI_GUIDANCE).toContain("use `vetta action` both to learn what Desktop can do and to operate it");
-		expect(VETTA_CLI_GUIDANCE).toContain("Discovery is progressive");
-		expect(VETTA_CLI_GUIDANCE).toContain("authoritative inventory is always `vetta action search`");
-		expect(VETTA_CLI_GUIDANCE).toContain("Do not expect CLI help to list every parameter");
+	test("explains progressive discovery through the command the host actually installs", () => {
+		expect(guidance).toContain("use `openforge action` both to learn what the app can do and to operate it");
+		expect(guidance).toContain("Discovery is progressive");
+		expect(guidance).toContain("authoritative inventory is always `openforge action search`");
+		expect(guidance).toContain("Do not expect CLI help to list every parameter");
 	});
 	test("encodes the scheduler create vs capability-query pair from tool-routing evaluation", () => {
-		expect(VETTA_CLI_GUIDANCE).toContain("让 Vetta 每天帮我汇总");
-		expect(VETTA_CLI_GUIDANCE).toContain("create a Vetta scheduled task");
-		expect(VETTA_CLI_GUIDANCE).toContain("what Vetta scheduled tasks support");
-		expect(VETTA_CLI_GUIDANCE).toContain("do not create or run a task merely to demonstrate");
+		expect(guidance).toContain(`让 ${DEFAULT_BRAND_NAME} 每天帮我汇总`);
+		expect(guidance).toContain("create a scheduled task for");
+		expect(guidance).toContain("what scheduled tasks");
+		expect(guidance).toContain("do not create or run a task merely to demonstrate");
 	});
 });
 

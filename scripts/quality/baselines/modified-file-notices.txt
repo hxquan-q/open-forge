@@ -575,7 +575,6 @@ packages/skill-presets/architecture-canvas/SKILL.md
 packages/skill-presets/chart-canvas/SKILL.md
 packages/skill-presets/report-canvas/SKILL.md
 packages/skill-presets/review-canvas/SKILL.md
-packages/ssh-transport/README.md
 packages/theme-sdk/README.md
 packages/theme-ui/README.md
 packages/theme-ui/scripts/verify-purity.mjs

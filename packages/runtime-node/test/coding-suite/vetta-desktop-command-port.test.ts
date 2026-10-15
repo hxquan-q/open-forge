@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import nodePath from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { NodeCommandProcessAbortedError } from "../../src/coding/host/command-process.js";
@@ -59,6 +60,21 @@ describe("Node Vetta Desktop command port", () => {
 		});
 
 		await expect(port.locate()).rejects.toThrow("Configured vettaAppPath is stale: /old/Vetta");
+	});
+
+	it("names the app without the legacy brand when no executable can be found", async () => {
+		const port = createNodeVettaDesktopCommandPort({
+			platform: "linux",
+			environment: {},
+			vettaHomePath: "/home/test/.vetta",
+			fileExists: async () => false,
+			readTextFile: async () => "{}",
+		});
+
+		// 用户可见报错只描述「桌面应用」并给出可操作线索，不携带遗留品牌名。
+		await expect(port.locate()).rejects.toThrow(/Desktop app executable not found/);
+		await expect(port.locate()).rejects.toThrow(/VETTA_DESKTOP_EXE/);
+		await expect(port.locate()).rejects.not.toThrow(/\bVetta\b/);
 	});
 
 	it("maps Node process cancellation to the platform-neutral command error", async () => {

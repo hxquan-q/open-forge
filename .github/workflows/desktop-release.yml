@@ -43,7 +43,7 @@ on:
         options: [default, stable, test]
         default: default
       build_version:
-        description: "Test channel only. Semver override for an upgrade candidate, for example 0.5.47."
+        description: "Test channel only. Semver override for an upgrade candidate, for example 0.1.4."
         type: string
         required: false
       update_url:

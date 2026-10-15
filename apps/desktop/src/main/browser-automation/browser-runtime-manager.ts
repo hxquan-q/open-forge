@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { BrowserRuntimeInstallInput, BrowserRuntimeStatus } from "@vetta-org/capability-sdk";
 import { describeError } from "../logger/describe-error.js";
 import type { BrowserProcessRunner } from "./browser-process-runner.js";

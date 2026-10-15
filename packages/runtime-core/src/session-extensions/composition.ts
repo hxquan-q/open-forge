@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRuntimeId } from "../id-generator.js";
 import type {
 	AgentFeatureDefinition,
@@ -207,18 +208,18 @@ export class SessionExtensionComposition implements SessionExtensionEndpointHost
 			this.signals.clear();
 			return;
 		}
-		const errors: unknown[] = [];
+		const failures: ExtensionDisposalFailure[] = [];
 		for (const extension of [...this.prepared].reverse()) {
 			if (!this.pendingDisposals.has(extension)) continue;
 			try {
 				await extension.instance.dispose();
 				this.pendingDisposals.delete(extension);
 			} catch (error) {
-				errors.push(error);
+				failures.push({ extensionId: extension.definition.id, error });
 			}
 		}
 		this.signals.clear();
-		if (errors.length > 0) throw new AggregateError(errors, "Failed to dispose one or more session extensions");
+		if (failures.length > 0) throw disposalFailure(failures);
 	}
 }
 
@@ -389,14 +390,30 @@ async function disposePrepared(
 	prepared: readonly PreparedExtension[],
 	signals: SessionExtensionSignalBus,
 ): Promise<void> {
-	const errors: unknown[] = [];
+	const failures: ExtensionDisposalFailure[] = [];
 	for (const extension of [...prepared].reverse()) {
 		try {
 			await extension.instance.dispose();
 		} catch (error) {
-			errors.push(error);
+			failures.push({ extensionId: extension.definition.id, error });
 		}
 	}
 	signals.clear();
-	if (errors.length > 0) throw new AggregateError(errors, "Failed to dispose one or more session extensions");
+	if (failures.length > 0) throw disposalFailure(failures);
+}
+
+interface ExtensionDisposalFailure {
+	readonly extensionId: string;
+	readonly error: unknown;
+}
+
+/**
+ * 汇总释放失败。message 是唯一能穿过 IPC 边界的诊断信息，因此必须带上失败的扩展 id——
+ * 只写「某个扩展失败」时日志无从定位元凶（BUG-0108）。
+ */
+function disposalFailure(failures: readonly ExtensionDisposalFailure[]): AggregateError {
+	return new AggregateError(
+		failures.map((failure) => failure.error),
+		`Failed to dispose one or more session extensions: ${failures.map((failure) => failure.extensionId).join(", ")}`,
+	);
 }

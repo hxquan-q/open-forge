@@ -1,4 +1,7 @@
 // Modified by The Open Forge contributors.
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	bumpVersion,
@@ -8,8 +11,12 @@ import {
 	parsePorcelainPaths,
 	releaseNotesTemplate,
 	stampReleaseDate,
+	writeManifestVersion,
 } from "./release-desktop.mjs";
 import { ASSEMBLED_MARKER } from "./release/release-notes.mjs";
+
+/** 夹具：统一线 manifest 的代表性子集，含根清单与 Desktop 自身。 */
+const MANIFESTS = ["apps/desktop/package.json", "package.json", "packages/ai/package.json"];
 
 describe("parsePorcelainPaths", () => {
 	// 回归：曾经对整段输出做 trim，削掉第一行的前导空格后 slice(3) 吃掉路径首字母，
@@ -96,29 +103,73 @@ describe("releaseNotesTemplate", () => {
 });
 
 describe("getUnexpectedReleaseChanges", () => {
-	it("allows only the version, lockfile and target release notes", () => {
+	it("allows only the unified manifests, lockfile and target release notes", () => {
 		expect(
 			getUnexpectedReleaseChanges(
-				" M apps/desktop/package.json\n M bun.lock\n?? .github/release-notes/v0.1.0.md\n",
+				" M apps/desktop/package.json\n M package.json\n M packages/ai/package.json\n M bun.lock\n?? .github/release-notes/v0.1.0.md\n",
 				".github/release-notes/v0.1.0.md",
+				MANIFESTS,
 			),
 		).toEqual([]);
 		expect(
 			getUnexpectedReleaseChanges(
 				" M apps/desktop/package.json\n M README.md\n",
 				".github/release-notes/v0.1.0.md",
+				MANIFESTS,
 			),
 		).toEqual(["README.md"]);
+	});
+
+	it("still rejects a manifest outside the unified line", () => {
+		expect(
+			getUnexpectedReleaseChanges(
+				" M packages/plugins/plugin-sdk/package.json\n",
+				".github/release-notes/v0.1.0.md",
+				MANIFESTS,
+			),
+		).toEqual(["packages/plugins/plugin-sdk/package.json"]);
+	});
+});
+
+describe("writeManifestVersion", () => {
+	function writeTempManifest(contents) {
+		const path = join(mkdtempSync(join(tmpdir(), "release-desktop-")), "package.json");
+		writeFileSync(path, contents);
+		return path;
+	}
+
+	// 回归：多数统一线 manifest 的数组是紧凑单行写法，整体 JSON.stringify 重排会让发版提交
+	// 混入与版本无关的格式噪音，所以只做定点文本替换。
+	it("rewrites the top-level version and leaves the rest of the formatting alone", () => {
+		const source = '{\n\t"name": "demo",\n\t"version": "0.1.2",\n\t"files": ["dist"],\n\t"bin": { "demo": "x" }\n}\n';
+		const path = writeTempManifest(source);
+		writeManifestVersion(path, "0.1.3");
+		expect(readFileSync(path, "utf8")).toBe(
+			'{\n\t"name": "demo",\n\t"version": "0.1.3",\n\t"files": ["dist"],\n\t"bin": { "demo": "x" }\n}\n',
+		);
+	});
+
+	it("refuses to guess when the first version key is not the top-level one", () => {
+		const path = writeTempManifest('{\n\t"name": "demo",\n\t"nested": { "version": "9.9.9" },\n\t"version": "0.1.2"\n}\n');
+		expect(() => writeManifestVersion(path, "0.1.3")).toThrow(/top-level version/);
 	});
 });
 
 describe("desktopPublishCommands", () => {
-	it("stages only release files and pushes branch plus tag atomically", () => {
-		expect(desktopPublishCommands("0.1.0", "forge/dev")).toEqual([
-			["add", "--", "apps/desktop/package.json", "bun.lock", ".github/release-notes/v0.1.0.md"],
+	it("stages every unified manifest plus the lockfile and notes, pushing branch and tag atomically", () => {
+		expect(desktopPublishCommands("0.1.0", "main", MANIFESTS)).toEqual([
+			[
+				"add",
+				"--",
+				"apps/desktop/package.json",
+				"package.json",
+				"packages/ai/package.json",
+				"bun.lock",
+				".github/release-notes/v0.1.0.md",
+			],
 			["commit", "-m", "release(desktop): 发布 v0.1.0"],
 			["tag", "v0.1.0"],
-			["push", "--atomic", "origin", "forge/dev", "refs/tags/v0.1.0"],
+			["push", "--atomic", "origin", "main", "refs/tags/v0.1.0"],
 		]);
 	});
 });

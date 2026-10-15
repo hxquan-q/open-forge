@@ -14,6 +14,7 @@ import {
 	releaseNotesStateProblems,
 	releaseNotesVersions,
 	requireReleaseNotes,
+	rootManifestVersionProblem,
 } from "./release-notes.mjs";
 
 const roots = [];
@@ -62,6 +63,34 @@ describe("release notes addressing", () => {
 
 	it("ships release notes for the version this repository is about to release", () => {
 		expect(requireReleaseNotes(desktopVersion())).toMatch(/^\.github\/release-notes\/v\d+\.\d+\.\d+\.md$/);
+	});
+});
+
+describe("root manifest version line", () => {
+	it("accepts a root manifest that matches the desktop version", () => {
+		const root = fixtureRoot("0.1.3");
+		writeFileSync(join(root, "package.json"), JSON.stringify({ version: "0.1.3" }));
+		expect(rootManifestVersionProblem(root)).toBeNull();
+	});
+
+	it("rejects a root manifest left on a foreign version line", () => {
+		const root = fixtureRoot("0.1.3");
+		writeFileSync(join(root, "package.json"), JSON.stringify({ version: "0.55.3" }));
+		expect(rootManifestVersionProblem(root)).toMatch(/0\.55\.3 与 Desktop 版本 0\.1\.3 不一致/);
+	});
+
+	it("rejects a non-semver root manifest version", () => {
+		const root = fixtureRoot("0.1.3");
+		writeFileSync(join(root, "package.json"), JSON.stringify({ version: "latest" }));
+		expect(rootManifestVersionProblem(root)).toMatch(/根 package\.json 版本号非法/);
+	});
+
+	it("skips the assertion when the fixture has no root manifest", () => {
+		expect(rootManifestVersionProblem(fixtureRoot("0.1.3"))).toBeNull();
+	});
+
+	it("keeps the real repository on a single version line", () => {
+		expect(rootManifestVersionProblem()).toBeNull();
 	});
 });
 

@@ -19,6 +19,7 @@ base_commit: 1ea3432
 read_paths: [apps/desktop/src/main/dev-cli-shim.ts, apps/desktop/src/main/main.ts, project/bugs/BUG-0089-packaged-cli-install-eperm.md]
 write_paths: [apps/desktop/src/main/dev-cli-shim.ts, apps/desktop/src/main/dev-cli-shim.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0089-packaged-cli-install-eperm.md, project/tasks/TASK-0238-cli-shim-eperm-degrade.md, project/tasks/README.md]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Windows CLI shim 目标占用降级：内容等价静默跳过、真差异有界重试 + warn 降级
 

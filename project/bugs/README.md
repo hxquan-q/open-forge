@@ -16,7 +16,14 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0102` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | investigating | P2 | — |
+| `BUG-0112` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | investigating | P2 | — |
+| `BUG-0111` | Desktop 可执行文件兜底发现路径仍指向旧品牌安装位置，命中不了真实安装 | investigating | P2 | — |
+| `BUG-0110` | 上下文压缩提交与事件追加并发共享 `state.version`，压缩持久化间歇性版本冲突失败 | verifying | P2 | — |
+| `BUG-0109` | 续跑条「继续」把持久会话路径当 runtime session id 传给宿主，必然 `SESSION_NOT_FOUND` | verifying | P1 | — |
+| `BUG-0108` | 删除团队会话失败：通知日志写入与成员 runtime 释放失败双双掀翻删除 | verifying | P1 | — |
+| `BUG-0107` | 四个 desktop 测试文件在 vitest 下收集期崩溃（`process.resourcesPath` 未定义，0 用例执行） | investigating | P2 | — |
+| `BUG-0106` | 品牌档位翻转后 provider 展示名断言未同步，desktop 渲染层测试恒红 | verifying | P2 | — |
+| `BUG-0102` | dev 启动在 Electron 二进制安装不完整时硬失败：无自愈、无可操作指引 | verifying | P2 | — |
 | `BUG-0101` | 团队会话流式事件驱动成员胶囊条测量循环：Maximum update depth exceeded 整页崩为路由错误页 | verifying | P1 | — |
 | `BUG-0099` | 内置浏览器仍调用 Electron 已废弃的 `canGoBack`/`canGoForward`，应迁移 `navigationHistory` | verifying | P3 | — |
 | `BUG-0098` | 无效代理配置无有效性门即可保存，运行时静默降级为逐条请求失败 | verifying | P3 | — |

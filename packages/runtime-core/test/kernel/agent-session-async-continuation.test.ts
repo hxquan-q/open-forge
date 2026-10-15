@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { UserMessage } from "@vetta/ai";
 import { describe, expect, it, vi } from "vitest";
 import {

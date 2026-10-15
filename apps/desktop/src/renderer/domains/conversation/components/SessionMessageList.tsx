@@ -70,6 +70,10 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 			}),
 		[props.messages, props.isStreaming, isCompacting],
 	);
+	// 宿主调用只认本 feed 自己的会话：active session 换成别的会话时（切换在途的中间态），
+	// 绝不能把别的会话的 runtimeId 交给续跑条——那会重启错会话的回合。与下方 AnnotationScope 同一守卫。
+	const resumeRuntimeSessionId =
+		session && session.sessionPath === props.sessionId ? session.runtimeId : undefined;
 	const feed = (
 		<ForkContext.Provider value={fork}>
 			<MessageRenderingDefaults value={sessionRendering}>
@@ -82,7 +86,8 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 						<MessageListFooter
 							isCompacting={isCompacting}
 							waiting={props.isStreaming && props.messages.at(-1)?.kind !== "agent"}
-							sessionId={props.sessionId ?? undefined}
+							sessionPath={props.sessionId ?? undefined}
+							runtimeSessionId={resumeRuntimeSessionId}
 							pendingLabel={props.pendingLabel}
 							interruptedErrorKind={interruptedErrorKind}
 						/>

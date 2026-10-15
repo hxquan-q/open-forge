@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { constants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import nodePath from "node:path";
@@ -78,7 +79,7 @@ async function findVettaExecutable(
 	}
 	const staleNote = configuredPath ? ` Configured vettaAppPath is stale: ${configuredPath}` : "";
 	throw new Error(
-		`Vetta Desktop executable not found. Set VETTA_DESKTOP_EXE or start Vetta Desktop once to write vettaAppPath.${staleNote}`,
+		`Desktop app executable not found. Set VETTA_DESKTOP_EXE or start the Desktop app once to write vettaAppPath.${staleNote}`,
 	);
 }
 

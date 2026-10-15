@@ -15,6 +15,28 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0263` | `verifying` | PLAN-0014 | RESEARCH-0025：网关流内 `response.failed` 瞬时 code 挂 `retryable: true` 进入自动重试（同步上游 0.5.62）；红 21→绿 67、impact 242 例；提交 `51c939ac1` 已推 dev；fixture 合同面，人工验收不适用。 |
+| `TASK-0264` | `verifying` | PLAN-0014 | RESEARCH-0025：流式写完后末尾短语 300ms 静默即恢复全亮（同步上游 22293f956）；红 3→绿 12、impact theme-ui 36 + desktop 12；提交 `b5fdde595` 已推 dev；视觉行为待实机目验。 |
+| `TASK-0265` | `verifying` | PLAN-0014 | RESEARCH-0025：插件模型图像输入能力保留——证实同病（写合同缺 `input`）并按上游形状修复：SDK 写入合同、plugin-sdk 类型、读回归一化 + 4 合同测试；提交 `944433ca1` 已推 dev；impact 桌面 5 红归因 BUG-0107 存量与在途测试，相关面全绿。 |
+| `TASK-0266` | `verifying` | PLAN-0014 | RESEARCH-0025：Responses/Codex 传输方式设置（SSE/WS/自动 + 安全回退 + 连接复用 + 组合层动态注入 + 桌面设置节）；分支四提交已合并 main（`8c1342e01`/`8dde6d60f`/`f61ca6c52`/`91e1be471`），适配器 72、组合 4、设置面 100+8 例全绿；真实网关回合未授权，以 FakeWebSocket fixture 为准。 |
+| `TASK-0267` | `ready` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填（models.dev 补空字段、命名空间剥离、参数随勾选写入、档位拖拽）；depends_on TASK-0266。 |
+| `TASK-0268` | `ready` | PLAN-0014 | RESEARCH-0025：自动压缩改为回复内步骤（上游 0.5.64）；defer——`turn-pipeline.ts` 为 TASK-0262 在途改动，depends_on TASK-0262/0264，conflicts 0260–0262。 |
+| `TASK-0269` | `ready` | PLAN-0014 | RESEARCH-0025：重进运行中会话排队消息显示——先对照本仓分叉架构证伪/证实（上游 61072cbb3）；defer——conversation 文件为 TASK-0260/0261 在途改动。 |
+| `TASK-0260` | `verifying` | — | BUG-0108：删除优先收口——STOP 标记 best-effort、`disposeSession` 增 `releaseOnDisposeFailure`（仅删除路径启用，评审修正 #2）、AggregateError 带扩展 id；定向全绿，诊断出口缺口（评审 #6）登记待切片；serial，main 串行。 |
+| `TASK-0261` | `verifying` | — | BUG-0109：续跑条拆开 `sessionPath`（门控）与 `runtimeSessionId`（宿主调用）并补身份守卫（评审修正 #3）；Virtuoso mock 补 Footer 插槽修复夹具；desktop 包内 12 例全绿；拒绝原因透传缺口（评审 #9）登记待切片；serial，main 串行。 |
+| `TASK-0262` | `verifying` | — | BUG-0110：压缩提交/会话续接/终态追加统一入 `serializeAppend` 串行链（评审修正 #1/#4/#5：终态不再绕锁、临界区不再跨观察者通知、续接回写版本），乐观提交+类型化冲突重试一次；runtime-core 7 文件 96 例全绿；serial，main 串行。 |
+| `TASK-0259` | `verifying` | — | BUG-0106：品牌档位相关测试断言改引用品牌事实源（`DESKTOP_BRAND.displayName`），默认档与 self 档各 4/4 通过；serial，main 串行。 |
+| `TASK-0249` | `in_progress` | — | REQ-0013：agent 身份行与 CLI 指引按品牌档位渲染——`BuildSystemPromptOptions` / `SystemPromptSourceDependencies` 增 `productName`，Desktop 注入 `resolveDesktopBrandName`，指引命令名与实际安装的 `openforge` 对齐；回归断言装配后提示词无 Vetta / Vetta Desktop；serial，main 串行。 |
+| `TASK-0250` | `verifying` | — | REQ-0013：runtime-node 用户可见报错与 PDF/OCR 工具描述去遗留品牌名（保留 `VETTA_DESKTOP_EXE` 等冻结标识）；包内 84 文件 / 529 例通过；serial，main 串行。 |
+| `TASK-0251` | `verifying` | — | REQ-0013：系统插件文案随宿主品牌（宿主侧 i18n 出口归一 + 备注面板硬编码走 key + vetta-actions 用法说明中性化 + 媒体/provider 与保存对话框标签）；vetta-actions 8/8、vetta-ui-design 106 文件/688 例、content-creation 通过；导出 mockup 水印按决策留作已知遗留；serial，main 串行。 |
+| `TASK-0252` | `verifying` | — | REQ-0013：Desktop i18n 组合词归一（「Vetta Desktop」不再拆成「小爱ai Desktop」、句末 `Vetta.` 也归一）+ locale×档位×语言渲染门禁（首轮即抓出句末漏项）；品牌层 4 文件 / 26 例通过；depends_on TASK-0249，serial，main 串行。 |
+| `TASK-0247` | `done` | — | 产品线版本统一（lockstep 0.1.3）：32 个产品面 manifest 归入 0.1.3、根清单名 `open-vetta`→`open-forge`；版本线门禁新增「统一线须与 Desktop 同版本」判负，`release:desktop:*` 发版同步改写全部统一线 manifest（白名单/必改清单/git add 三处接线），发版不再把门禁跑红；serial，main 串行。 |
+| `TASK-0248` | `verifying` | — | BUG-0102：dev:electron 启动前校验 Electron 二进制（path.txt + dist 可执行文件 + dist/version），缺失时复用包内 install.js 自愈、失败给可操作指引；serial，main 串行。 |
+| `TASK-0246` | `done` | — | 清除上游版本线残留：docs-site/runtime-knowledge 0.55.3→0.0.1，CI/模板示例版本改 0.1.x；新增 version-lines 门禁（0.5.x/0.55.x 判负）挂 check:guards，红路实测 exit 1；定向 30/30、check 与 test:quality 516/516 全绿；纯内部治理。 |
+| `TASK-0245` | `done` | — | 根清单版本归入 0.1.x 商用版本线：0.55.3→0.1.3，release:desktop:* 发版同步改写根清单（白名单/git add/断言三处接线），release-notes --check 新增根↔Desktop 一致性判负；定向 41/41、完整 check 全绿；纯内部治理。 |
+| `TASK-0244` | `done` | — | knip 报告可信化（coding-agent entry 死路径重写为 exports 对应源文件、ai 补 scripts 面、删两条失效豁免、补 mobile 条目）+ 删 17 个全仓零引用依赖（canvas 为误报保留）；unused deps 两节清零、hints 15→2、完整 check 全绿；纯内部治理。 |
+| `TASK-0242` | `done` | — | 声明头门禁在 main 恒红修复：21 个已入库文件按 A/M 分类补 fork 声明头（16 `Modified` + 5 `Copyright`），基线快照收缩 1 条已修复项；门禁 `new=0`、完整 `bun run check` exit 0；纯内部治理，无用户可见变化。 |
+| `TASK-0243` | `done` | — | 清理失效脚本 `scripts/session-transcripts.ts`（引用已退役的 `core/session-manager`，全库无引用方）与根目录两个 0 字节残留日志；纯内部治理。 |
 | `TASK-0241` | `verifying` | — | BUG-0101：TeamMemberRoster 测量循环收敛修复（等价保持引用 + measurementKey 稳定依赖）+3 回归与整树稳定性测试；实机崩溃复现→修复→不复现闭环，待人工验收。 |
 | `TASK-0240` | `verifying` | — | REQ-0012：SSH 远程项目文件传输——`ssh-transport` 流式 exec 通道原语（drain 写 + wc 校验原子上传 + 流式下载）、Desktop 队列服务与 `vetta:ssh-transfers:*` IPC、文件栏菜单/拖拽/进度面板；serial，main 串行。 |
 | `TASK-0235` | `verifying` | — | BUG-0100：会话文件锁协议强化——指数退避预算 1s→≈5.7s、持有期心跳防 stale 抢删、超时带持有者 pid；serial，main 串行。 |

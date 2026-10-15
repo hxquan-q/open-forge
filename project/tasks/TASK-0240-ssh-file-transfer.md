@@ -143,6 +143,17 @@ updated: 2026-10-13
 - 运行中的 dev 窗口报 `__vettaHostApi.ssh.onTransferEvent is not a function`（错误边界「当前页面遇到问题」）。定位：`dist/preload/index.js` 停在 10-10 16:37 构建（早于切片 2），而 Electron 窗口创建时绑定 preload、不随渲染层 HMR 热更；渲染层新 hook 已由 HMR 生效才出现 renderer/preload 版面错位。`bun run build:preload` 构建通过且产物含全部传输通道，属运行环境陈旧而非接线缺陷——接线由 preload/index.ts `rawApi: Omit<DesktopApi, "hostAccess">` 的全量类型静态保证，无需新增运行时 guard（全库无此惯例，renderer 与 preload 同件发布）。处置：重建 preload 后重启 dev Electron 即恢复。
 - 2026-10-13 用户验收反馈（功能面，非缺陷）：① 大文件下载进度条走不到 100% 就消失，实际传输正常。定位：进度百分比 = `receivedBytes / totalBytes`，而 `totalBytes` 来自 `stat` 的 `st_size`；下载是远端 shell 管道的 `cat`，远端 `cat` 把目标经**管道**写出时管道 st_size 恒为 0，`totalBytes` 取到 0 后进度条按「未知总量」语义退化，条与百分比均不再推进，直到条目完成被移出列表——故表现为「没到 100% 就消失」但字节收发不受影响（`wc -c` 校验与落盘均正常）。处置决定：暂不处理（下载进度改为按 `cat` 实际流出字节推进无可靠总量可除，需远端先 `wc -c` 预取大小，改动面超出本任务范围，留待需要时另立）。② 小文件上传/下载一闪而过、进度条看不到——正常语义（完成即移出活动列表），维持现状。
 
+### 验证期反馈（2026-10-12，第二轮）
+
+- 用户反馈「sftp 还是没有实现」。排查结论：传输功能本就明确不走 SFTP 协议（REQ-0012「不做什么」+ README 专节，走流式 exec 通道）；渲染层接线逐点核查无缺陷——菜单模型条件（`isSshProjectUri` + 回调非空）、`useFilesPanelModel` 回调接线、拖放按 `ssh://` 分流、theme-ui 源码直消费（exports 指向 src，无 dist 陈旧问题）、preload 合同有类型静态保证。本机 `dist/preload/index.js` 于 19:19 重建后已含传输通道；17:58 提交至 19:19 重建之间打开的 dev 窗口 preload 陈旧，传输入口不可见或触发错误边界——与上一条 preload 版面错位同因。处置：用户重启 dev Electron 复验；若重启后入口仍不可见或传输失败，按浮层失败原因另立 BUG。
+
+### UI 级验证（2026-10-12，用户授权 verify:ui）
+
+- 环境：Fresh 隔离实例 + 本地回环 ssh2.Server（127.0.0.1 随机端口、密码认证、exec 经 Git Bash 真实执行），未触碰用户日常实例与真实主机。
+- 通过：远程项目全流程真实走通——添加主机表单 → 主机密钥确认弹窗（真实 ed25519 指纹）→ askpass 口令弹窗 → 远端目录浏览 → 登记项目；文件栏真实列举远端文件（subdir/hello.txt/notes.md）；三入口菜单接线全对——文件右键「下载到本机…」（无上传项、无「在文件夹中显示」）、目录右键下载+「上传文件…/上传文件夹…」、树根背景右键仅上传两项（无下载）；console 0 error；宿主 preload API token 门实测拦截页面脚本直调（`planTransfer` 抛 "Host API access denied"，安全边界生效）。
+- 未覆盖：菜单点击 → 原生目录对话框选择 → planTransfer → 浮层完成一跳。原生文件对话框属验证流程文档明示的 CDP 覆盖边界外；本轮尝试 SendKeys/Win32 消息/UIA 三种注入均因当前桌面会话（RDP 在线）输入投递受限未成功，挂起的对话框随实例停止清理。传输执行链路（plan→队列→流式 exec→落盘/取消/wc 校验）由包内回环集成与服务层测试覆盖。
+- 结论：「看不到入口」排除代码与接线缺陷，UI 级入口全部正确呈现；剩余真实设备人工验收（含对话框完整链路）仍待用户。
+
 ### 未运行及原因
 
 - 计划中的「UI：上下文菜单接线与拖放分流（组件测试）」未写：渲染层接线以 typecheck + 两包全量现有套件代替，见剩余风险。

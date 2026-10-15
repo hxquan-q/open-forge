@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopProxyConfigPatchData, DesktopProxyProtocol } from "@preload/api-types/config";
 import { supportsProviderFetchInjection } from "@vetta/ai/protocol";
 import { resolveProxyConfig, shouldBypassProxy } from "@vetta/ai/proxy";
