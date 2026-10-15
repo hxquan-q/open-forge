@@ -19,8 +19,8 @@ base_commit: b687d6f00
 read_paths: [project/research/RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md]
 write_paths: [apps/desktop/src/renderer/domains/conversation, project/tasks/TASK-0269-reentry-queued-messages.md]
 exclusive_paths: []
-depends_on: [TASK-0260, TASK-0261]
-conflicts_with: [TASK-0260, TASK-0261]
+depends_on: []
+conflicts_with: []
 integration_status: pending
 created: 2026-10-15
 updated: 2026-10-15

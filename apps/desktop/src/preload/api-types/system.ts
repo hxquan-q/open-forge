@@ -1,3 +1,4 @@
+import type { Transport } from "@vetta/ai";
 import type { GitToolStatus, RuntimeStatus, RuntimesStatus, RuntimeType } from "../../main/runtimes/types.js";
 import type { UserMessageClipboardPasteResult, UserMessageClipboardWriteRequest } from "../../shared/clipboard.js";
 
@@ -45,6 +46,8 @@ export interface DesktopSettingsApi {
 	setServerToken(token: string | undefined): Promise<void>;
 	getServerRefreshToken(): Promise<string | undefined>;
 	setServerRefreshToken(token: string | undefined): Promise<void>;
+	getModelTransport(): Promise<Transport>;
+	setModelTransport(transport: Transport): Promise<Transport>;
 	getSessionInterruptContinue(): Promise<{ mode: "off" | "notify" | "auto"; maxAttempts: number }>;
 	setSessionInterruptContinue(mode: "off" | "notify" | "auto"): Promise<void>;
 }
