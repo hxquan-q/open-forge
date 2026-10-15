@@ -245,6 +245,8 @@ export function createSystemApi(
 			setServerToken: (token) => ipc.invoke("vetta:settings:set-server-token", token),
 			getServerRefreshToken: () => ipc.invoke("vetta:settings:get-server-refresh-token"),
 			setServerRefreshToken: (token) => ipc.invoke("vetta:settings:set-server-refresh-token", token),
+			getModelTransport: () => ipc.invoke("vetta:settings:get-model-transport"),
+			setModelTransport: (transport) => ipc.invoke("vetta:settings:set-model-transport", transport),
 			getSessionInterruptContinue: () => ipc.invoke("vetta:settings:get-session-interrupt-continue"),
 			setSessionInterruptContinue: (mode) => ipc.invoke("vetta:settings:set-session-interrupt-continue", mode),
 		},

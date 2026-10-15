@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import { getModelTransport, setModelTransport } from "../agent-settings/model-transport-settings.js";
 import { readAgentSettingsDocument, updateAgentSettingsDocument } from "../agent-settings/settings-document-store.js";
 import { DEFAULT_SERVER_URL, DEFAULT_SITE_URL } from "../constants.js";
 import {
@@ -81,6 +82,10 @@ export function registerSettingsIpc(): () => void {
 		return listPresetProviders();
 	});
 
+	ipcMain.handle("vetta:settings:get-model-transport", () => getModelTransport());
+
+	ipcMain.handle("vetta:settings:set-model-transport", (_event, value: unknown) => setModelTransport(value));
+
 	// 手动刷新某预设服务商的模型列表:只拉不写,由渲染层连同 key 一起落盘。
 	ipcMain.handle("vetta:models:refresh-preset-models", async (_event, providerId: unknown, apiKey: unknown) => {
 		if (typeof providerId !== "string" || !providerId.trim()) {
@@ -106,5 +111,7 @@ export function registerSettingsIpc(): () => void {
 		ipcMain.removeHandler("vetta:models:list-presets");
 		ipcMain.removeHandler("vetta:models:refresh-preset-catalog");
 		ipcMain.removeHandler("vetta:models:refresh-preset-models");
+		ipcMain.removeHandler("vetta:settings:get-model-transport");
+		ipcMain.removeHandler("vetta:settings:set-model-transport");
 	};
 }
