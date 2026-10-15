@@ -1,7 +1,7 @@
 ---
 id: TASK-0047
 type: task
-status: blocked
+status: in_progress
 priority: P0
 owner: release/docs
 requirement: REQ-0003
@@ -9,7 +9,7 @@ plan: PLAN-0003
 source_issue: ISSUE-0001
 execution: serial
 branch: forge/dev
-worktree: unassigned（等待 D 阶段和社区目标确认）
+worktree: 共享工作区串行（README 切片在当前工作区实施）
 base_commit: c3d42690fb5b0abc6a5c080d79111747e352728f
 read_paths: [project/requirements/PRODUCT.md, project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github]
 write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github/ISSUE_TEMPLATE, .github/pull_request_template.md, .github/release-notes]
@@ -18,7 +18,7 @@ depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-10-06
+updated: 2026-10-15
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -73,6 +73,21 @@ updated: 2026-10-06
 
 - 阻塞已解除（2026-10-06，TASK-0217 复核）：`TASK-0045` 与 `TASK-0049` 的 frontmatter 均为 done，原阻塞条件（等 0045 收口、随 0049 关闭）已满足。但**本任务尚未实施**——交付记录的四条（实际修改、实际运行、未运行及原因、剩余风险）全为空。状态转 ready，等待实施。原有约束保持不变：冻结技术标识（`.vettapkg`、`@vetta/*`、`VETTA_*`）不改；社区继续使用已冻结的现有入口。
 
+## 第三片范围（2026-10-15）：README 重写与上游入口脱离
+
+用户决策（2026-10-15，AskUserQuestion 确认）：
+
+- 上游坐标处理：**尽量脱离上游**。移除 openvetta.com 产品站/下载页链接与 open-vetta 仓库坐标（克隆段、CodeRabbit 徽章、Discussions/Security Advisories 链接），入口收缩到本仓库（README、QUICKSTART、`docs/`、`apps/docs-site/content/`）与已冻结的社区入口（Discord 邀请 `qGqkk22Vg9`）；上游仅在 Credits 署名出现。
+- 重写幅度：**结构重排 + 事实刷新**，中英两份同步；产品事实刷新到当前状态（仓库地图补 `apps/remote-relay`、`apps/ssh-helper`；origin 默认分支为 `main`，克隆段不再 `git switch dev`；贡献 PR 目标保持 `dev`，与 CONTRIBUTING 一致）。
+
+边界：
+
+- 冻结标识不动：`@vetta-org/plugin-cli`、`npx vetta-plugin-cli`、`npm run install:vetta`、`.vettapkg`、`@vetta/*`、`VETTA_*`。
+- Credits 保留上游署名（「independently maintained derivative of Open Vetta」）与 LINUX DO 友情链接。
+- 不猜测或创建新外部入口；`docs/desktop/build-modes.zh-CN.md` 不存在，中英两份统一链接 `.en.md`。
+- 声明头 `<!-- Modified by The Open Forge contributors. -->` 保留。
+- 本片只动 `README.md` 与 `README.zh-CN.md`；QUICKSTART/SECURITY/CONTRIBUTING 内的上游坐标留后续切片。
+
 ## 交付记录（第一片，2026-10-06）
 
 - 实际修改：README.md 与 README.zh-CN.md 各把散文里的产品称呼改为 Open Forge（英文 5 处、中文 3 处），`Vetta Serv` 改为 `Open Forge Serv`（依据 PLAN-0003 已定的 `openforge-serv` 代号）。冻结标识一律不动：`@vetta-org/plugin-cli`、`npx vetta-plugin-cli`、`npm run install:vetta` 已逐条核实为真实存在的包名与命令（`packages/plugins/plugin-cli` 的 bin 与 init 模板）。
@@ -84,3 +99,12 @@ updated: 2026-10-06
 - 剩余风险：本任务覆盖 84 个文件、334 行上界，本条只做了 README 中英对；QUICKSTART、CONTRIBUTING、SECURITY 与 `docs/` 待后续切片。
 
 - 新增阻塞（2026-10-06，TASK-0048 记录同源）：`docs/` 树的清查不能按模式替换——里面同时混着产品称呼、术语名（被双链与根 CONTEXT 索引引用）、插件名（Vetta UI Design）与商业订阅品牌（Vetta Go / Vetta Zen），还有大量上游沿革记录（ADR、greenfield 实施日志、适配研究）。按模式替换当场打破术语索引，已整体撤回。需要先有一份「术语与品牌对照表」并决定沿革记录是否改名，才能继续。README、QUICKSTART、SECURITY 三份已按散文称呼改名并交付。
+
+## 交付记录（第三片，2026-10-15）
+
+- 实际修改：`README.md` 与 `README.zh-CN.md` 按用户决策（尽量脱离上游 + 结构重排/事实刷新）整体重写。移除的上游入口：openvetta.com 官网/下载徽章与链接、`openvetta/open-vetta` 克隆坐标与 Discussions/Security Advisories 链接、CodeRabbit 徽章、docs.openvetta.com 全部深层链接。新入口：GitHub Releases（`hxquan-q/open-forge/releases`，v0.1.2 资产经 `gh release view` 核实含安装器）、源码运行段改克隆 fork（origin 默认分支 `main`，删去 `git switch dev`）、扩展模型/文档/架构链接全部改指站内已核实存在的路径（`apps/docs-site/content/docs/**`、`docs/theme/`、`docs/plugin/`、`docs/adr/`、`docs/desktop/build-modes.en.md`）。仓库地图补 `apps/remote-relay`（Cloudflare Worker 远控中继）与 `apps/ssh-helper`（SSH 静态 helper）。
+- 边界执行：冻结标识（`@vetta-org/plugin-cli`、`vetta-plugin-cli`、`install:vetta`、`.vetta/marketplace.json`）原样保留；Credits 上游署名与 LINUX DO 友链保留；未创建任何新外部入口。声明头保留（ratchet `new=0`）。
+- 刻意说明：`docs.openvetta.com` 在 TASK-0049 中属冻结既有入口，本片按用户 2026-10-15 决策从 README 移除其链接（站点本体与任务记录不受影响），属用户对「面向谁」决策的更新而非违反冻结。
+- 验证：两份 README 全部相对链接存在性检查通过；`grep` 复核零 `openvetta.com`/`open-vetta`/`coderabbit` 残留；中文全文回读无编码损坏；`bun run check:quick` 全绿。
+- 未运行及原因：未跑运行时测试与 `test:impact`（纯文档改动，不触及任何代码路径）。
+- 剩余风险：QUICKSTART 中英对、SECURITY、CONTRIBUTING 内仍指上游坐标（clone URL、下载页、advisory URL），留后续切片；发布说明条目已补。
