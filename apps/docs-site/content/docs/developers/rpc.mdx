@@ -2,6 +2,7 @@
 title: 接入 RPC 模式
 description: 通过 stdin/stdout NDJSON 驱动独立 Agent 进程，并正确处理响应、事件、取消和 Host Bridge。
 ---
+{/* Modified by The Open Forge contributors. */}
 
 RPC 模式适合语言无关集成、sidecar 和需要进程隔离的宿主。每行是一个完整 JSON 帧；stdout 只用于协议，诊断信息写入 stderr。
 
@@ -10,7 +11,7 @@ RPC 模式适合语言无关集成、sidecar 和需要进程隔离的宿主。�
 ## 启动进程
 
 ```bash
-vetta-agent-rpc --mode rpc \
+openforge-agent-rpc --mode rpc \
   --session-dir /path/to/conversations \
   --provider openai \
   --model openai/gpt-4o

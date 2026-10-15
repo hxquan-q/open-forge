@@ -6,7 +6,7 @@ description: Choose the correct build, preserve local data, and diagnose upgrade
 
 ## Choose the installation source
 
-Use the official [download page](https://openvetta.com/download) for released installers. The open-source repository is the source for development builds; do not mix a development data directory with a production profile unless the build explicitly documents that compatibility.
+Use [GitHub Releases](https://github.com/hxquan-q/open-forge/releases) for released installers. The open-source repository is the source for development builds; do not mix a development data directory with a production profile unless the build explicitly documents that compatibility.
 
 Windows x64 releases provide three formats. The Inno `.exe` installer is recommended for most users and participates in in-app updates. Use `.msi` for standard Windows Installer deployment, or extract `.zip` and run `Open Forge.exe` without installing. MSI and ZIP are supplemental downloads; in-app updates still use the Inno installer.
 
@@ -16,10 +16,10 @@ Linux releases currently target x64 and provide AppImage, DEB, and RPM packages.
 VERSION=x.y.z # Replace with the downloaded version
 
 # Debian / Ubuntu
-sudo apt install "./vetta_${VERSION}_amd64.deb"
+sudo apt install ./*.deb
 
 # Fedora / RHEL family; direct-download RPMs are not GPG-signed yet
-sudo dnf install --nogpgcheck "./vetta-${VERSION}.x86_64.rpm"
+sudo dnf install --nogpgcheck ./*.rpm
 
 # AppImage
 chmod +x "./Open Forge-${VERSION}.AppImage"

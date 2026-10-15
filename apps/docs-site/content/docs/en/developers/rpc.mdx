@@ -2,6 +2,7 @@
 title: Integrate with RPC mode
 description: Drive an isolated Agent process over stdin/stdout NDJSON while preserving responses, events, cancellation, and the Host Bridge.
 ---
+{/* Modified by The Open Forge contributors. */}
 
 RPC mode is intended for language-independent integrations, sidecars, and hosts that need process isolation. Each line is one complete JSON frame; stdout is reserved for the protocol and diagnostics belong on stderr.
 
@@ -10,7 +11,7 @@ For integration inside the same TypeScript process, prefer the [SDK](/developers
 ## Start the process
 
 ```bash
-vetta-agent-rpc --mode rpc \
+openforge-agent-rpc --mode rpc \
   --session-dir /path/to/conversations \
   --provider openai \
   --model openai/gpt-4o

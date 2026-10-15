@@ -146,3 +146,13 @@ updated: 2026-10-15
 - 验证：处理范围内 `git grep` 复核，剩余 Vetta 命中全部落入对照表保留类，无 `openvetta.com` / `open-vetta` 残留；相对链接与锚点存在性检查通过（含 `README.md#验证-profile`、actions → dev/README、user-facing-copy → 本 Task）；`guiding-the-agent.md` 与 `docs/dev/README.md` 标题改名前核实无入链；windows-auto-update 的产物名/路径以代码（`build-inno-installer.mjs`、`resolveInnoUpdateStoreRoot`）与 v0.1.2 Release 资产清单核实；中文混合串回读无编码损坏；`bun run check:quick` 全绿（声明头 ratchet `new=0`）。
 - 未运行及原因：纯文档改动，未跑运行时测试与 `test:impact`（不触及任何代码路径）。
 - 剩余风险：`docs/agent`、`docs/adapter`、`docs/ai`、`docs/adr`、`docs/glossary` 按边界未动（沿革/术语，另切片需用户决策）；`apps/docs-site/content` 仍有 58 个文件含 Vetta、部分含 openvetta 上游坐标，是下一片候选（README 第三片已把站内路径当入口，站内文案与 README 口径暂不一致）；占位入口（PVR、Discord 邀请、市场仓库、Serv 后端）待真实基础设施落地后回填。
+
+## 交付记录（第五片，2026-10-15）
+
+- 范围：用户对第四片剩余风险批示「需要改」，处理 `apps/docs-site/content`（用户可见文档站内容）+ 随之变红的站点 SEO 测试断言。
+- 实际修改：六处 `openvetta.com/download` 下载页链接改 GitHub Releases（中英 index ×4、installation-and-updates ×2，链接文本与后文「下载页没有列出」同步改）；DEB/RPM 安装命令改按 CI 实况的扩展名 glob 形式（`apt install ./*.deb`，desktop-release workflow :549/:555 同款；原 `vetta_${VERSION}_amd64.deb` 文件名为上游时代命名，现行 deb 元数据包名为 `openforge`——`verify-linux-packages.mjs` 实况，精确产物文件名未经本地构建核实故不臆写）；`abilities.mdx` 中英两处内置市场来源坐标改 `hxquan-q/open-forge-marketplace`（`official-marketplace-source.ts` 的 `OFFICIAL_MARKETPLACE_REPOSITORY` 实况）；`troubleshooting.mdx` 中英 Issues 链接改本仓 + 占位注明（本仓 Issues 暂未启用）；`developers/rpc.mdx` 中英 `vetta-agent-rpc` → `openforge-agent-rpc`（v0.1.2 CLI 更名实况）；`examples/batch-project-audit.mdx` 中英示例产物名 `vetta-project-audit.md` → `forge-project-audit.md`（doc 自造示例名，仓库无代码耦合）；`documentation-policy.md` 中英「Vetta 版本」→「Open Forge 版本」；`meta.json` 中英站点标题/描述改 Open Forge（用户可见站点元数据）；`test/seo.test.ts` 三处断言随站点元数据同步（fixture 页题 + 期望 title/siteName）。
+- 声明头：12 个新改 mdx/md 在 frontmatter 闭合后补头（mdx 用 `{/* */}` 形式，与既有 installation-and-updates 一致）；`meta.json` 为 JSON 不携带注释头（gate 的 NON_COMMENTABLE 清单兜底）。
+- 对照表落地实况（保留类）：content 内 `install:vetta`、`.vettapkg`、`@vetta-org/*`、`VETTA_*`、`vetta-ui-design`、`border-t-vetta-coral` 主题 token 类等冻结标识原样保留；`docs.openvetta.com` 残留仅在站点代码层（`lib/seo/social-image.tsx` 社交卡渲染文本、`app/layout.tsx` dummy Request base、`.env.example`/README 的 `DOCS_SITE_URL`）——属站点部署配置而非文档内容，未纳入本片。
+- 验证：`apps/docs-site/content` grep 复核零 `openvetta`/`open-vetta` 残留；两份 meta.json JSON.parse 通过；docs-site 包内 `bun run test` 34/34 通过（首轮 seo.test.ts 因旧品牌断言转红，属本次元数据改动的预期连锁，已同步修正）；`bun run check:quick` 全绿（ratchet `new=0`）。
+- 未运行及原因：未跑 docs-site 构建（`next build`）与根运行时测试——内容/元数据改动被包内 vitest 与 check:quick 覆盖，构建产物验证留给下次站点部署。
+- 剩余风险：站点代码层 `docs.openvetta.com` 常量（social-image 渲染文本等）待站点部署定位确定后统一处理；DEB/RPM 精确产物文件名待下次 Linux 构建核实后可将 glob 命令细化为精确文件名；沿革目录（agent/adapter/ai/adr/glossary）仍按边界未动。
