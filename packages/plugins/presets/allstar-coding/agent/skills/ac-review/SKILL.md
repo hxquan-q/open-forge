@@ -6,19 +6,19 @@ description: AllstarCoding 流水环节 8 的评审环节使用。当需要委�
 
 # AC 任务评审（流水环节 8 · 评审侧）
 
-目标：定义**评审子怎么评、verdict 怎么出、评审记录怎么落盘对账、打回怎么走**。评审子 = `spawn_agent` 的 **explorer 型**（机制级只读：read/grep/glob），每任务一个，不复用、不与开发子共享上下文——独立无偏。
+目标：定义**评审子怎么评、verdict 怎么出、评审记录怎么落盘对账、打回怎么走**。评审子 = `spawn_agent` 的 **general 型**、契约 scope 仅 `docs/ac/reviews.md`，每任务一个，不复用、不与开发子共享上下文——独立无偏由「新起会话 + 写域唯一 + V2/V4 双链审计兜底」保障（不再依赖 explorer 机制只读）。
 
 ## 1. 委派评审（主控）
 
 1. 开发子 settlement 通知到达 → 从其最终报告取"已完成"清单。
-2. spawn_agent（explorer 型，task_name 如 `review_t1`）发起评审，任务书含：
+2. spawn_agent（general 型，task_name 如 `review_t1`，契约 scope：`docs/ac/reviews.md`）发起评审，任务书含：
    - **评审对象**：tasks.md 的 T<n> 节（任务卡全文）+ 开发子报告的改动清单
    - **依据**：design.md 相关节路径 + requires.md 验收标准（A#）
    - **评审维度**：§2 四维
    - **输出格式**：§3 verdict 规范
    - **证据要求**：必须实际打开改动文件核对——报告说改了什么不算数，文件里真改了才算。可执行判据（文件存在/命令退出码）实际执行贴输出；执行受限记"未验证"而非 pass。
-   - **写域**：评审子的整理规划与评审记录落点是 `docs/ac/reviews.md`（追加制，ac-pipeline §0.4）——不是 review-log.md（旧名弃用），更不是其他 docs/ac/ 文件。explorer 机制只读写不了时，把 verdict 全文带回交主控代写。
-3. 复评（打回后）：**新起评审子**，任务书附上轮问题清单，要求逐条对状态（已修/未修/新引入）。
+   - **写域**：评审子的整理规划与评审记录落点是 `docs/ac/reviews.md`（追加制，ac-pipeline §0.4）——不是 review-log.md（旧名弃用），更不是其他 docs/ac/ 文件。verdict 由评审子**自行落盘**，主控只对账（G4：最新节 verdict == 口头回报），不代写。
+3. 复评（打回后）：**新起评审子**，任务书附上轮问题清单，要求逐条对状态（已修/未修/新引入）。首个评审附：tasks.md 对 design.md 改动面/「必须同步」项的覆盖性复核（ac-taskplan §6.4 清单）。
 
 ## 2. 评审维度（四维 + 硬检查，逐项过）
 

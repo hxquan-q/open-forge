@@ -18,6 +18,7 @@
 import {
 	isProjectInternalGlob,
 	parseScopeInput,
+	readGitWriteExemption,
 	roleFromTaskName,
 	type FenceContract,
 	type Role,
@@ -66,8 +67,9 @@ export function contractFromSpawnInput(input: unknown): FenceContract | null {
 	const task = (typeof record.task === "object" && record.task !== null ? record.task : {}) as Record<string, unknown>;
 	const agentType = typeof record.agent_type === "string" ? record.agent_type : "general";
 	const scope = parseScopeInput(task.scope).filter(isProjectInternalGlob);
-	// git 写豁免（环节级存档通道）：仅轻量 git 子代理契约携带（judgeMainSpawn 已拦截偷带者）
-	const gitWriteAllow = record.allow_git_write === true;
+	// git 写豁免（环节级存档通道）：仅轻量 git 子代理契约携带（judgeMainSpawn 已拦截偷带者）。
+	// 读取兼容根层与 task 契约内部（P2-2），与派发校验共用同一函数。
+	const gitWriteAllow = readGitWriteExemption(record);
 	return {
 		role: roleFromTaskName(taskName),
 		taskName,

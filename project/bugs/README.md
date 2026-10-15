@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0114` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | investigating | P2 | — |
 | `BUG-0113` | 文档站搜索索引因跨语言 URL 重复而返回 500 | verifying | P2 | PLAN-0003 |
 | `BUG-0112` | 本地生产探针以回环 IP 绑定时产生 307 自重定向 | done | P3 | PLAN-0003 |
 | `BUG-0111` | Desktop 可执行文件兜底发现路径仍指向旧品牌安装位置，命中不了真实安装 | investigating | P2 | — |

@@ -15,6 +15,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0273` | `verifying` | — | eform-craft 三版块团队化（REQ-0015 二期）：单 agent 扩为 eform/esign/eaudit 三成员团队（team eform-studio，eform 队长），产物四件套扩六件套（+index.html 列表页 +form.html 表单页，数据级增删查改与 draft→saved→approved 生命周期）、电子签组件（演示验证→canvas 手写→清空重签→审核锁定）、审计组件（auditEnabled 默认 false、五类操作日志、仅查看不可删）；锚点+capabilities 共享契约、合同测试 13/13、五步验证链与完整 check 全绿；团队行为面待实机验收（另立任务）。原编号 TASK-0223/0225，因 dev 侧占号顺延。 |
+| `TASK-0272` | `verifying` | — | eform-craft 电子表单还原预置插件（REQ-0014 一期）：纯提示词资产 preset（单 agent + 单技能，权限仅 `agent.skills.control`），识别合同（标记→类型、同义词→固定字段名含空格）+ 四件套产物规范（schema/preview/mock/spec）+ 确认门与修改循环；tenants.json 双 profile 注册、vettapkg 产出并 staging、五步验证链与完整 check 全绿；@eform 行为面待实机验收（另立任务）。原编号 TASK-0222/0226，因 dev 侧占号顺延。 |
+| `TASK-0271` | `verifying` | — | allstar-coding 黑盒自测通道失效降级（v0.5.3，包版本 0.3.3）：工具报错≠产品失败（记空不记 ✗、不进 P#）、同工具连续 3 次报错熔断、L3 审批被拒视同失效、核验简报首先点名未自测区间；包内 133 项零回归、完整 check 全绿；技能合同面待实机验收。原编号 TASK-0221，因 dev 侧占号顺延。 |
 | `TASK-0263` | `verifying` | PLAN-0014 | RESEARCH-0025：网关流内 `response.failed` 瞬时 code 挂 `retryable: true` 进入自动重试（同步上游 0.5.62）；红 21→绿 67、impact 242 例；提交 `51c939ac1` 已推 dev；fixture 合同面，人工验收不适用。 |
 | `TASK-0264` | `verifying` | PLAN-0014 | RESEARCH-0025：流式写完后末尾短语 300ms 静默即恢复全亮（同步上游 22293f956）；红 3→绿 12、impact theme-ui 36 + desktop 12；提交 `b5fdde595` 已推 dev；视觉行为待实机目验。 |
 | `TASK-0265` | `verifying` | PLAN-0014 | RESEARCH-0025：插件模型图像输入能力保留——证实同病（写合同缺 `input`）并按上游形状修复：SDK 写入合同、plugin-sdk 类型、读回归一化 + 4 合同测试；提交 `944433ca1` 已推 dev；impact 桌面 5 红归因 BUG-0107 存量与在途测试，相关面全绿。 |
