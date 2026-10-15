@@ -35,7 +35,7 @@ npx vetta-plugin-cli reload my-plugin   # 提示有 pending 版本时
 ```
 
 `add` 传目录即可（`add .`）：它向上找到最近的 `plugin.json`，再定位该工程打出来的归档，
-交给正在运行的 Desktop 校验、授权、安装，**不直接写** `~/.vetta/plugins`。
+交给正在运行的 Desktop 校验、授权、安装，**不直接写** `~/.openforge/plugins`。
 
 ### 一仓多插件（能力市场 hub）
 
@@ -236,7 +236,7 @@ GitHub 能力市场有两种分发合同：schema v1/v2 从 `source.path` 目录
 安装后用户插件落在：
 
 ```text
-~/.vetta/plugins/<id>/versions/<version>/
+~/.openforge/plugins/<id>/versions/<version>/
 ```
 
 `listPlugins()` 中每条记录含 **`rootPath`**（该版本包的绝对根路径）。
@@ -267,7 +267,7 @@ GitHub 能力市场有两种分发合同：schema v1/v2 从 `source.path` 目录
 
 ## 8. 调试闭环（dev loop）
 
-1. 插件工作台制作的用户插件首次先点「应用到 Vetta」；安装、授权和启用完成后，工作台会等待工程内的 `vetta-plugin dev` 真正就绪，再把热更新标为运行中。
+1. 插件工作台制作的用户插件首次先点「应用到 Vetta」（当前工作台保留的兼容文案）；安装、授权和启用完成后，工作台会等待工程内的 `vetta-plugin dev` 真正就绪，再把热更新标为运行中。
 2. 后续可在插件工作台开关热更新；开发进程由 Desktop 主进程持有，关闭工作台面板不会中止，不需要另开 `vite build --watch`。
 3. 修改 React 组件或 CSS 后由 Vite HMR 直接更新，组件状态在 Fast Refresh 可保留时不会丢失。
 4. 修改插件入口、`plugin.json`、locale 或 agent 资源时，宿主只替换当前插件的 activation，其他插件不重载。

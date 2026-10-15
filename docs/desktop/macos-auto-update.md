@@ -3,6 +3,8 @@
 
 本文是 Open Forge Desktop macOS 更新链路的维护手册，与 [`windows-auto-update.md`](./windows-auto-update.md) 平行。两端共用同一套更新源配置、发布脚本、状态机和 CI 编排；差异集中在安装机制与产物形态，本文只展开 macOS 侧。
 
+本文操作示例按 `VETTA_BRAND_PROFILE=self` 的 Open Forge 应用名书写；默认 distribution 档为 Allstr ai / 小爱ai，请按实际品牌档案替换 `.app` 与安装包名。`OpenForge` 可执行名和 `~/.openforge` 数据根跨档共用。当前构建示例使用本项目 `0.1.x` 版本线；末尾实测案例保留上游历史版本与测量，不表示 fork 已执行同样验证。
+
 ## 1. 当前结论
 
 macOS 当前采用以下组合：
@@ -170,12 +172,12 @@ ZIP 必须有配套 `.blockmap`，否则差分下载退化为全量。`verify-ma
 日常发版用 `scripts/release-mac.sh`，它把 7.1～7.5 的所有步骤串起来，并在开跑前做完全部前置校验（避免构建到第 40 分钟才发现配置错）：
 
 ```bash
-scripts/release-mac.sh local --version 0.5.62     # 本地闭环，跳公证、不碰 R2
-scripts/release-mac.sh test  --version 0.5.60     # QA 通道
+scripts/release-mac.sh local --version 0.1.2     # 本地闭环，跳公证、不碰 R2
+scripts/release-mac.sh test  --version 0.1.3     # QA 通道
 scripts/release-mac.sh stable                     # 正式通道，版本取 package.json
-scripts/release-mac.sh test  --version 0.5.60 --arch both       # 双架构 + 自动合并
-scripts/release-mac.sh test  --version 0.5.60 --check-only      # 只跑前置校验就退出
-scripts/release-mac.sh test  --version 0.5.60 --skip-publish    # 构建与校验，不上传
+scripts/release-mac.sh test  --version 0.1.3 --arch both       # 双架构 + 自动合并
+scripts/release-mac.sh test  --version 0.1.3 --check-only      # 只跑前置校验就退出
+scripts/release-mac.sh test  --version 0.1.3 --skip-publish    # 构建与校验，不上传
 ```
 
 `--check-only` 之外的任何调用都会先 `rm -rf release/` 再构建，别拿真实版本号试探参数。
@@ -198,7 +200,7 @@ scripts/release-mac.sh test  --version 0.5.60 --skip-publish    # 构建与校�
 
 ```bash
 # 1. 基线版本
-scripts/release-mac.sh local --version 0.5.62
+scripts/release-mac.sh local --version 0.1.2
 # 装 release/ 里的 DMG 到 /Applications
 
 # 2. 起分发服务（另开终端，保持运行）
@@ -208,15 +210,15 @@ bun run --cwd apps/desktop serve:updates:local
 cp apps/desktop/release/Open-Forge-0.1.2-arm64-mac.zip ~/Library/Caches/openforge-updater/update.zip
 
 # 4. 改点东西，出下一版
-scripts/release-mac.sh local --version 0.5.63
+scripts/release-mac.sh local --version 0.1.3
 
-# 5. 从终端启动 0.5.62 验证
-/Applications/Open Forge.app/Contents/MacOS/OpenForge
+# 5. 从终端启动 0.1.2 验证
+"/Applications/Open Forge.app/Contents/MacOS/OpenForge"
 ```
 
 两个细节决定这个通道能不能测差分：
 
-- **产物累积不清空**。`~/.vetta/local-updates` 只覆盖 `latest-mac.yml`，旧版本的 zip 与 blockmap 全部保留——差分要读旧版 blockmap（见 5.4）。
+- **产物累积不清空**。`~/.openforge/local-updates` 只覆盖 `latest-mac.yml`，旧版本的 zip 与 blockmap 全部保留——差分要读旧版 blockmap（见 5.4）。
 - **分发服务必须支持 Range**。`scripts/serve-local-updates.mjs` 自己实现了 206；不要随手换成 `python3 -m http.server`，它会无视 Range 头返回 200 全量，差分要么退化要么失败，测出来的结论是假的。
 
 默认构建已不内置 vendor（运行时改为安装后下载）；只有显式 `VETTA_BUNDLE_VENDOR=1` 的离线包才带 node/python——它们解压后是几千个待签名的 Mach-O，会显著拉长公证耗时。更新链路不依赖内置运行时。
@@ -259,7 +261,7 @@ export VETTA_REQUIRE_MAC_SIGNATURE=1
 ```bash
 cd apps/desktop
 rm -rf release                                  # 残留清单会让发布脚本判定版本不唯一
-VETTA_DESKTOP_BUILD_VERSION=0.5.60 bun run dist:mac:arm64
+VETTA_DESKTOP_BUILD_VERSION=0.1.3 bun run dist:mac:arm64
 VETTA_REQUIRE_MAC_SIGNATURE=1 bun run verify:updates:mac
 ```
 
@@ -267,7 +269,7 @@ VETTA_REQUIRE_MAC_SIGNATURE=1 bun run verify:updates:mac
 
 ```bash
 mv release/latest-mac.yml release/latest-mac-arm64.yml
-VETTA_DESKTOP_BUILD_VERSION=0.5.60 bun run dist:mac:x64
+VETTA_DESKTOP_BUILD_VERSION=0.1.3 bun run dist:mac:x64
 VETTA_REQUIRE_MAC_SIGNATURE=1 bun run verify:updates:mac
 mv release/latest-mac.yml release/latest-mac-x64.yml
 bun run merge:updates:mac
@@ -308,7 +310,7 @@ bun run publish:updates:r2
 ### 7.6 客户端验证
 
 1. 安装一个更低版本的 test 构建到 `/Applications`（必须是 `/Applications`，Squirrel 需要能写 app bundle 所在目录）。
-2. 从终端启动以便看日志：`/Applications/Open Forge.app/Contents/MacOS/OpenForge`
+2. 从终端启动以便看日志：`"/Applications/Open Forge.app/Contents/MacOS/OpenForge"`
 3. 上传更高版本后，等待启动检查或手动点检查更新。
 4. 观察三行日志的时间间隔：
 
@@ -514,7 +516,7 @@ Open Forge.app/Contents/Resources/vendor/python/cpython-...tar.gz/cpython-...tar
 ### 11.1 应用日志
 
 ```text
-~/.vetta/desktop-app/logs/main/YYYY-MM-DD.log
+~/.openforge/desktop-app/logs/main/YYYY-MM-DD.log
 ```
 
 重点搜索：
@@ -529,7 +531,7 @@ download failed
 install failed
 ```
 
-打包应用的 stdout 只有从终端启动才看得到：`/Applications/Open Forge.app/Contents/MacOS/OpenForge`。
+打包应用的 stdout 只有从终端启动才看得到：`"/Applications/Open Forge.app/Contents/MacOS/OpenForge"`。
 
 不要记录 R2 Secret、Access Key、Authorization 或 Cookie。
 

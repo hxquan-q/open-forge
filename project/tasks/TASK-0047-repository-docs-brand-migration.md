@@ -1,7 +1,7 @@
 ---
 id: TASK-0047
 type: task
-status: in_progress
+status: verifying
 priority: P0
 owner: release/docs
 requirement: REQ-0003
@@ -12,10 +12,10 @@ branch: task/TASK-0047-repository-docs-brand-migration
 worktree: ../open-forge-wt/task-0047-repository-docs-brand-migration
 base_commit: 6d21c4b9dc1575ed64f1c6e4ddcf2b466b47b920
 read_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site, apps/desktop/src/shared, apps/desktop/scripts, packages/action-rpc/src/endpoint-file.ts, project/requirements, project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, .github]
-write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/README.md, apps/docs-site/content/docs, apps/docs-site/lib/i18n.ts, project/requirements/PRODUCT.md, .github/release-notes]
+write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/README.md, apps/docs-site/content/docs, apps/docs-site/lib/i18n.ts, apps/docs-site/lib/seo/social-image.tsx, apps/docs-site/app/layout.tsx, apps/docs-site/.env.example, project/requirements/PRODUCT.md, .github/release-notes]
 exclusive_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github, .github/release-notes]
 depends_on: [TASK-0044, TASK-0045, TASK-0049]
-conflicts_with: [TASK-0048]
+conflicts_with: [TASK-0048, TASK-0154, TASK-0197, TASK-0218, TASK-0223]
 integration_status: pending
 created: 2026-09-23
 updated: 2026-10-15
@@ -33,11 +33,11 @@ updated: 2026-10-15
 ### 并发评估
 
 - 结论：不支持与 TASK-0048 并发；两项共享文档路线、社区链接审查和 Release Notes。
-- 执行方式：serial，共享工作区串行。
+- 当前执行方式：单 Agent 隔离工作树；与 TASK-0048 及共享当前版本发布说明的 TASK-0154/0197/0218/0223 串行集成，不同时写共享文件。
 - 可并行 Task：无。
 - 前置依赖：Desktop/生态名称合同完成；`TASK-0049` 确认社区去向。现有工作树中已修改的 README、QUICKSTART、CONTRIBUTING 和开发指南必须作为输入保留，不覆盖或回退。
 - 冲突文件/独占路径：根文档、`docs/**`、`.github` 模板与 Release Notes。
-- Branch：`forge/dev`；Worktree：实施前按当前协作状态确认。
+- 当前 Branch / Worktree：见 frontmatter 的 `task/TASK-0047-repository-docs-brand-migration` 与相对工作树路径。
 - 集成负责人：coordinator。
 - 集成顺序：TASK-0044 / TASK-0045 → TASK-0049 → 本任务；与 TASK-0048 串行集成。
 
@@ -161,10 +161,28 @@ updated: 2026-10-15
 
 - 来源：用户确认“需要改”“继续”；本次为 Open-Forge-only 文档维护，复用 REQ-0003 / PLAN-0003，并对照 REQ-0011 的已实现双品牌合同。
 - 当前基线：前五片已提交；主工作区最新提交为 6d21c4b9d。此前发现的外链清收已由第五片落地，本片在该已提交基线上补足剩余缺口，不覆盖其它会话修改。
-- 执行：单 Agent，在独立工作树实施；execution: parallel 仅为隔离工作树合同，不派生 Worker，与 TASK-0048 仍串行集成。写域为根入口文档、活跃 docs、公开文档内容/说明及一处无逻辑 i18n 文案；保留沿革目录、协议与项目内 .vetta 兼容标识。
+- 执行：单 Agent，在独立工作树实施；execution: parallel 仅为隔离工作树合同，不派生 Worker，与 TASK-0048 仍串行集成。写域为根入口文档、活跃 docs、公开文档内容/说明及站点无逻辑字面量文案；保留沿革目录、协议与项目内 .vetta 兼容标识。
 - 目标：README/QUICKSTART/构建与公开安装指南解释仓库品牌 Open Forge、默认 Desktop 品牌小爱ai / Allstr ai、显式 self 档及其与 lite/full 的独立关系；修正版本示例、可执行文件名、全局数据路径与市场来源说明；清理活跃产品自称遗漏；更新 PRODUCT 的当前入口与品牌事实。
 - 图片：README 不再用上游营销横幅和旧桌面截图冒充当前产品；保留原始资产作为历史资源，入口采用可维护的本项目 SVG 品牌横幅。
 - Given 用户从 README 进入快速开始或配置/插件/主题文档；When 按说明使用当前默认构建、self 构建或定位配置；Then 名称、路径、命令、版本与当前事实源一致，且中英文镜像同步。
 - 不变量：不修改生产逻辑、默认品牌、包名/环境变量/IPC/项目目录与生态协议；不启动 Desktop、不使用真实 Provider、不部署、不猜外部基础设施。私有上报渠道等占位保持明确的未就绪说明。
 - 验证：相对链接与引用路径检查；公开语言页面集合/既有 docs-site tests；bun run --cwd apps/docs-site check 与 build（覆盖搜索、sitemap、LLM 来源）；变更文案 i18n 的定向 test:impact；根 bun run check。无行为变更不新增镜像实现的单元测试。
 - 工程与自审证据落本 Task；提交/集成按真实事实记录，发布未授权。
+
+- 第六片范围细化：公开站点社交卡品牌/alt 与 .env.example 的旧部署示例同时修正；RootLayout 的语言检测 dummy URL 改为 example.test，不发网络请求。均为字面量文案/示例，不改变路由与部署。补充 docs/README.md 文档导航，历史 PRD 与性能采样仅标注历史边界。
+
+- 事实核对补充：UI Debug 实际根为 ~/.openforge-ui-debug/<workspace-id>；市场来源内置项不可停用，旧文档 registeredDefaultRepositories 字段已无代码消费，按当前 version: 1 / sources 与协调策略修正文档。第六片的站点字面量清理覆盖 i18n、social-image 和 layout 三处，无生产行为变更。
+
+- 同域清查补充：市场 manifest、插件宿主要求与更新/发布手册仍含上游 0.5.x 的活跃版本示例；当前示例改按 0.1.x，历史引入版本和真实实测数据保留并明确标注上游语境。macOS 应用名示例明确 self 档前提，不将其当默认分发名。
+
+- 首轮完整 check 的 scope 门禁发现本任务与 TASK-0154/0197/0218/0223 共写 v0.1.3 发布说明；本轮已确认主工作区干净、基线未漂移，在本 Task 补齐 conflicts_with 并明确共享文件串行集成，不改写其他任务或放宽门禁。
+
+## 交付记录（第六片，2026-10-15）
+
+- 实际修改：中英 README/QUICKSTART、build-modes、公开安装/配置/插件指南补齐 Open Forge 仓库品牌与默认小爱ai / Allstr ai、self 档及 lite/full 独立关系；43 份活跃文档全局根改为 ~/.openforge，保留项目内 .vetta；修正 OpenForge.exe、Windows 安装路径、市场默认坐标/分支/不可停用语义与 0.1.x 版本示例。README 使用新 SVG 横幅，不再展示继承的旧截图；新增 docs/README.md，历史 PRD/性能/品牌话术保留历史边界。站点说明、社交卡、aria 和 PRODUCT 与事实源同步，当前 v0.1.3 发布说明已补。
+- 实际验证：docs-site test 7 文件 / 34 项通过；test:impact 三处字面量代码关联 5 文件 / 31 项通过；包内 check 通过；生产 build 通过，113 静态页；64 份修改文档的 337 个本地链接/路径引用检查全部有效；git diff --check 通过；声明头 ratchet new=0；根 bun run check 首轮仅本任务漏声明共享发布说明冲突，补齐后第二轮全部通过（lint 4818 文件、root/CLI/Desktop/docs/mobile 类型与全部 guards）。
+- 本地生产请求验证：robots、sitemap（52 个文档 URL）、英文 LLM 索引/全文、直接 Markdown 导出与社交 PNG 可响应；社交卡已视觉回读。普通中英文档页与 .md 别名出现 307 自重定向，搜索出现 DOCUMENT_ALREADY_EXISTS（首页 ID / 重复）。两项发现的生产入口在本片未改，分别登记 BUG-0112/0113，交由独立 TASK-0270 修复，不把构建通过称为完整访问通过。
+- Worktree：由官方 CLI 创建，bun install --frozen-lockfile 成功；本任务定向 worktree:check 通过。全仓 worktree:check --all 的既有 TASK-0235～0239 严格日期字段、TASK-0266 绝对路径及历史工作树登记问题未在本片修改；它们不影响根 check 的当前合同检查。
+- 技术评审：单 Agent 自审；核对实际路径/版本/品牌档/市场源码、中英镜像、声明头、图片与历史事实边界；不是独立评审。没有改动运行时默认值、包名、IPC、项目目录或生产逻辑。
+- 未运行：未启动 Desktop/verify:ui、未访问真实 Provider 或用户数据、未执行打包升级/真实发布/部署；本轮仅做文档与站点本地验证。
+- 验收：文档修改可审阅，status=verifying；用户尚未人工接受。提交/集成事实在集成后补记。公开页面与搜索的成品验收由 TASK-0270 补齐，远程部署与外部市场可用性不在本次验证中。

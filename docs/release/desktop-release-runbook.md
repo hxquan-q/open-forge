@@ -73,7 +73,7 @@ flowchart LR
 - 完整 `check`、质量测试、平台制品校验和 packaged E2E；
 - macOS 签名与公证；
 - 独立的 `desktop-test` Environment、R2 prefix 和更新 URL；
-- 递增的 `build_version`，例如基线 `0.5.46`，候选 `0.5.47`。
+- 递增的 `build_version`，例如基线 `0.1.2`，候选 `0.1.3`。
 
 建议先发布 test 基线，再发布更高版本候选，从基线安装包执行真实升级。测试完成后不要把 test metadata 复制到 stable；stable 需要使用正式 channel 配置重新构建或按明确的制品晋级方案发布。
 
@@ -181,7 +181,7 @@ APPLE_TEAM_ID
    v<apps/desktop/package.json version>
    ```
 
-   例如 package 版本是 `0.5.47`，tag 必须是 `v0.5.47`。
+   例如 package 版本是 `0.1.3`，tag 必须是 `v0.1.3`。
 
 6. 等待 `desktop-release`：先看 `prepare` 的 resolved config，再看 quality、四个平台 build、制品校验、E2E 和最终公网 feed 校验。
 
@@ -206,8 +206,8 @@ GitHub target 的手动发布会以当前 workflow SHA 创建对应版本 Releas
 
 ### 前置发布
 
-1. 使用 `desktop-release` 手动运行发布 test 基线：选择 `release_target=r2`、`channel=test`，填写当前基线版本的 `build_version`，例如 `0.5.46`。
-2. 再运行一次相同 workflow，发布更高版本的 test 候选，例如 `0.5.47`。
+1. 使用 `desktop-release` 手动运行发布 test 基线：选择 `release_target=r2`、`channel=test`，填写当前基线版本的 `build_version`，例如 `0.1.2`。
+2. 再运行一次相同 workflow，发布更高版本的 test 候选，例如 `0.1.3`。
 3. 确认两次运行都通过构建、平台制品校验、packaged updater E2E、R2 上传和公开 feed 校验，并且版本化安装包仍保留在 `VETTA_R2_PREFIX_TEST`。
 4. 确认 `desktop-test` Environment 的 `VETTA_UPDATE_URL_TEST` 与 `VETTA_R2_PREFIX_TEST` 对应同一个公开 feed。通常不需要在升级 workflow 中手动填写 `update_url`。
 
@@ -217,8 +217,8 @@ GitHub target 的手动发布会以当前 workflow SHA 创建对应版本 Releas
 
 | 输入 | 填写内容 |
 | --- | --- |
-| `baseline_version` | 已发布的 test 基线，例如 `0.5.46` |
-| `candidate_version` | 已发布的更高 test 候选，例如 `0.5.47` |
+| `baseline_version` | 已发布的 test 基线，例如 `0.1.2` |
+| `candidate_version` | 已发布的更高 test 候选，例如 `0.1.3` |
 | `update_url` | 可留空，默认读取 `desktop-test` Environment 的 `VETTA_UPDATE_URL_TEST` |
 | `notes` | 可选，仅写入本次运行摘要 |
 

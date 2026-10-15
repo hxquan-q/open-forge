@@ -33,7 +33,7 @@ Open Forge 是一个开源桌面 AI Agent，"for real work — local-first, exte
 - 桌面工作区（Electron）：项目与会话组织任务历史、文件、上下文、产物与执行细节。
 - 用户自行配置模型端点；MCP server、插件、webhook、IM 集成、更新源与可选遥测各自构成数据边界。
 - 离开工位：IM 桥接（`apps/im-gateway`，Go）、webhook、通知、quick entry、移动端。
-- 社区与文档：docs.openvetta.com（`apps/docs-site`）、openvetta.com、Discord、GitHub Discussions。
+- 社区与文档：本仓库 `hxquan-q/open-forge`、GitHub Releases、`docs/` 文档导航与 `apps/docs-site` 公开文档源码；Discord 沿用已确认的社区入口。新官网、文档部署与 Discussions 不当作已建成入口。
 - 服务端（业务 API、控制台、官网、计费/订阅决策）在私有仓库 `openforge-serv`，不在此仓库。
 
 ## Capabilities and Constraints
@@ -44,18 +44,19 @@ Open Forge 是一个开源桌面 AI Agent，"for real work — local-first, exte
 
 ## Brand Commitments
 
-- **面向用户的产品品牌**：Open Forge；许可证 Apache-2.0。
-- **现有外部入口**：openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord、GitHub Discussions 暂作为当前有效链接保留；它们不是内部运行时身份，也不代表品牌迁移已全部完成。2026-09-25 用户确认：社区入口暂时不建设，不创建新 Discord/社区，现有链接继续有效直至后续决策。
+- **仓库与文档品牌**：Open Forge；许可证 Apache-2.0。Desktop 默认 `distribution` 档中文显示小爱ai、英文显示 Allstr ai；显式 `VETTA_BRAND_PROFILE=self` 使用 Open Forge。品牌档与 lite/full 云服务模式独立，两档共用兼容身份及 `~/.openforge`（开发默认 `~/.openforge-dev`）。
+- **当前入口决策（2026-10-15）**：尽量脱离上游，使用本仓库、Releases 与站内文档，不以 openvetta.com、docs.openvetta.com 或上游仓库作为本项目的使用入口；无 fork 等价物的服务明确标注待建。Discord 邀请 `qGqkk22Vg9` 沿用已冻结入口，不创建新社区。上游署名与历史研究继续保留。
 - **内部兼容身份**：`@vetta/*`、`VETTA_*` 等包名和协议/环境变量维持现状，按各自合同渐进处理，不做全局字符串替换。Desktop `APP_RUNTIME_NAME` 当前保持 `vetta`，它参与 Electron `safeStorage` 密钥定位；更改会使已有凭据无法解密，必须先设计并验证迁移方案。
 - **双语承诺**：English + 简体中文（README 双语、桌面端 i18n 以 zh 为 fallback 基准）。
 - **社区背书**：LINUX DO 链接与认可（README "Friends & Links"）。
-- **已有视觉资产**：`docs/assets/banner.webp`、`docs/assets/screenshot.png`。
+- **当前入口视觉资产**：`docs/assets/open-forge-banner.svg` 为可维护的项目文字横幅；`docs/assets/banner.webp` 与 `docs/assets/screenshot.png` 是继承的历史资产，不能作为当前 fork 的营销图或实机证据。
 - **桌面端既有视觉规范**见 `apps/desktop/DESIGN.md`（暗色默认、token 化颜色、克制动效），init 不改动它。
 
 ## Evidence on Hand
 
-- 真实资产：`docs/assets/banner.webp`（品牌横幅）、`docs/assets/screenshot.png`（桌面工作区截图）。
-- 公开文档站内容（docs.openvetta.com）由 `apps/docs-site` 产出，含产品能力指南与截图。
+- 当前文字横幅：`docs/assets/open-forge-banner.svg`；尚未为当前品牌档采集新的 Desktop 实机截图。
+- 公开文档内容由 `apps/docs-site/content/docs` 维护；可本地构建，不据此宣称 fork 已部署公开站点。已有截图用于流程说明，视觉与显示名以实际品牌档及构建为准。
+- 双品牌事实源：`apps/desktop/src/shared/desktop-brand*.json`、Vite/打包配置及 REQ-0011。
 - `docs/adr/` 架构决策记录（计费/订阅类编号刻意空洞，在 openforge-serv）。
 - **不存在的证据**：本仓库没有客户证言、案例研究、定价、benchmark 数据——未来表面工作不得编造；订阅/权益叙述属于 openforge-serv，不在此断言。
 

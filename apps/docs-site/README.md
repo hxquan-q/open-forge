@@ -1,6 +1,7 @@
-# Vetta Docs Site
+<!-- Modified by The Open Forge contributors. -->
+# Open Forge Docs Site
 
-Vetta 的公开产品与开发者文档站，使用 Next.js 和 Fumadocs 构建。
+Open Forge 的公开产品与开发者文档站，使用 Next.js 和 Fumadocs 构建。
 
 ## 内容边界
 
@@ -11,6 +12,7 @@ Vetta 的公开产品与开发者文档站，使用 Next.js 和 Fumadocs 构建�
 ## 本地检查
 
 ```bash
+bun run test
 bun run check
 bun run build
 ```
@@ -54,7 +56,7 @@ Fumadocs 搜索索引由站点内容生成，因此需要通过构建后的站�
 多语言实现分为三层，新增语言时不要在组件中添加 `language === ...` 分支：
 
 - Fumadocs 自带的搜索、目录、分页和侧边栏文案在 `lib/i18n.ts` 通过 `defineI18n().translations().extend(uiTranslations())` 注册。
-- Vetta 自定义 UI 文案集中在同一文件的 `messages` 字典中，并通过 `satisfies Record<DocsLanguage, DocsMessages>` 检查每种语言是否补齐。
+- Open Forge 自定义 UI 文案集中在同一文件的 `messages` 字典中，并通过 `satisfies Record<DocsLanguage, DocsMessages>` 检查每种语言是否补齐。
 - 页面标题、描述和侧边栏名称必须来自对应语言目录的 MDX 与 `meta.json`；不再维护独立的英文标题映射。
 
 新增语言的顺序是：先准备完整的语言目录，再在 `lib/i18n.ts` 注册语言和 locale 元数据，补齐 `messages`、页面 MDX、`meta.json` 和内容检查，最后才将该语言加入公开支持列表。生产环境使用 `fallbackLanguage: null`，缺页直接暴露为不可用，不会混入其他语言内容。
@@ -80,16 +82,11 @@ Fumadocs 搜索索引由站点内容生成，因此需要通过构建后的站�
 
 ## 部署
 
-公开站点由 Vercel Git 集成自动发布，不必再跑 `vercel deploy`。
+本目录提供可构建的文档站源码；fork 的部署平台、项目名、域名和生产分支需由维护者实际配置，不能沿用上游部署记录当作已上线事实。
 
-- 项目：`vetta-docs`，Root Directory 为 `apps/docs-site`
-- 生产分支：`dev` → https://vetta-docs.vercel.app
-- PR 与其他分支：Preview 部署
-- 是否跳过未受影响的提交由 Vercel 项目自身的 monorepo 检测负责；不要添加依赖 Git 历史的 `ignoreCommand`，因为上传阶段会排除 `.git`
+GitHub Actions [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-site.yml) 对受影响路径运行类型检查、测试和构建，不执行 `vercel deploy`。使用 Vercel Git 集成或其他平台时，由部署平台负责发布；本地验证不触发部署。
 
-GitHub Actions [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-site.yml) 在同样的路径变更上跑 typecheck、测试和 `next build`，不重复执行 `vercel deploy`。
-
-默认 canonical 为 `https://docs.openvetta.com`；其他环境可通过 `DOCS_SITE_URL` 覆盖。
+`lib/site.ts` 的默认 canonical origin 为 `https://hxquan-q.github.io`；这只是代码回退值，不证明该地址已承载本项目文档。部署时通过 `DOCS_SITE_URL` 设置真实的公开 origin，使 canonical、sitemap、robots 和 LLM 入口一致。`.env.example` 中的域名仅为占位示例。
 
 仓库根 [`.vercelignore`](../../.vercelignore) 会作用于整个 Vercel 上传。顶层目录规则必须以 `/` 锚定，尤其不能使用未锚定的 `docs`：它会同时排除 `apps/docs-site/content/docs`，使构建表面成功但 sitemap、LLM 索引和全部文档路由为空。部署合同由 `test/deployment.test.ts` 守护。
 
@@ -97,7 +94,7 @@ GitHub Actions [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-
 ## Context Boundary
 
 ```yaml
-purpose: Public documentation site (Astro/Starlight)
+purpose: Public documentation site (Next.js/Fumadocs)
 provides:  []
 consumes:  []
 internal_dependencies:  []

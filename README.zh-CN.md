@@ -1,6 +1,6 @@
 <!-- Modified by The Open Forge contributors. -->
 <p align="center">
-  <img src="docs/assets/banner.webp" alt="Open Forge">
+  <img src="docs/assets/open-forge-banner.svg" alt="Open Forge">
 </p>
 
 <h1 align="center">Open Forge</h1>
@@ -27,9 +27,7 @@ Open Forge 把模型、项目文件、本机工具和可复用能力放进同一
 
 它不只是聊天界面：Open Forge 能理解工作区、在可见的权限边界内调用工具、交付真实文件，并保留可供检查的执行过程。
 
-<p align="center">
-  <img src="docs/assets/screenshot.png" alt="Open Forge 桌面工作区">
-</p>
+仓库与文档统一使用 **Open Forge**。Desktop 默认采用 `distribution` 品牌档案：中文显示 **小爱ai**，英文显示 **Allstr ai**；显式设置 `VETTA_BRAND_PROFILE=self` 才显示 Open Forge。品牌档案与 lite/full 云服务开关相互独立，两档共用兼容身份和数据目录。自用档配置见[构建模式](docs/desktop/build-modes.md)。
 
 ## 为什么选择 Open Forge
 
@@ -71,7 +69,7 @@ bun run dev
 - **复用组织知识。** 建立本地知识库，安装可复用的技能与场景。
 - **离开工位继续工作。** 使用受支持的 IM 桥接、Webhook、通知、快捷入口与原生桌面集成。
 
-[产品指南](apps/docs-site/content/docs/product/overview.mdx)提供全部能力领域的最新任务指南与截图。
+[产品指南](apps/docs-site/content/docs/product/overview.mdx)提供各能力领域的操作说明；其中截图作为流程示意，显示名和视觉以所选品牌档案及实际构建为准。
 
 ## 扩展模型
 
@@ -103,8 +101,10 @@ npx vetta-plugin-cli watch       # 热重载：宿主从这个目录加载插件
 
 ```bash
 npx @vetta-org/plugin-cli init hub --name my-market \
-  --repository https://github.com/me/my-market --min-app-version 0.55.0
+  --repository https://github.com/me/my-market --min-app-version 0.1.3
 ```
+
+`0.1.3` 是当前 Desktop 版本示例；发布时应填写已验证支持的最早 Open Forge 版本，不沿用上游 `0.55.x` 版本线。
 
 它会在仓库里放好索引、`abilities/` 目录布局、仓库级 `AGENTS.md`，以及运行 `vetta-plugin-cli sync --check` 的 CI，让 `.vetta/marketplace.json` 与每个 ability 包保持一致。开发命令始终作用于最近的 ability 目录，因此在 marketplace 内工作与开发独立插件完全相同。
 
@@ -158,6 +158,7 @@ Pull request 打到 **`dev`** 分支。贡献地图、测试期望与评审标�
 
 ## 文档
 
+- [文档导航与历史资料边界](docs/README.md)
 - [产品指南与能力参考](apps/docs-site/content/docs/product/overview.mdx)
 - [第一个任务教程](apps/docs-site/content/docs/getting-started/first-task.mdx)
 - [插件开发](apps/docs-site/content/docs/plugins/overview.mdx) · [`docs/plugin/` 内的插件 SDK 内部文档](docs/plugin/README.md)

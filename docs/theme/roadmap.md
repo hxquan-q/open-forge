@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 主题系统实施路线
 
 主题系统需要按低风险路径推进。先让默认 UI 可复用，再接入配置化装饰，最后再做远程组件替换。
@@ -168,7 +169,7 @@ return <SidebarRenderer model={model} onOpenSession={props.onOpenSession} />;
 已落地点：
 
 - `@vetta-org/theme-sdk/storage`：`useThemeStorage`、`useThemeStorageValue`。
-- desktop host + preload IPC + `~/.vetta/desktop-app/themes/<themeId>/data.json`。
+- desktop host + preload IPC + `~/.openforge/desktop-app/themes/<themeId>/data.json`。
 
 暂不做：
 

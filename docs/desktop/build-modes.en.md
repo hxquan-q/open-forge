@@ -9,37 +9,65 @@ Open Forge Desktop ships in two editions, selected by the build-time flag `VETTA
 | --- | --- | --- |
 | Flag | `VETTA_CLOUD_ENABLED=false` | `VETTA_CLOUD_ENABLED=true` |
 | Account login / OAuth | ❌ not in the bundle | ✅ |
-| Vetta Go model channel | ❌ | ✅ |
+| Hosted model channel (name follows brand profile) | ❌ | ✅ |
 | Subscription / credits / quota | ❌ | ✅ |
-| Ability marketplace source | Multiple GitHub sources (environment-configured or user-added) | Cloud marketplace (Open Forge Serv); optional GitHub sources |
+| Ability marketplace source | Built-in GitHub source and user-added sources | Cloud marketplace (Open Forge Serv) and independent GitHub sources |
 | Remote model catalog | ❌ | ✅ |
 | Built-in skills | those without `requiresCloud` | all |
 
 **Available in both modes**: local sessions, the coding agent, the plugin system, themes, bring-your-own-key models, the IM gateway, and the knowledge base.
 
 Cloud and GitHub sources are independent: `VETTA_CLOUD_ENABLED` controls cloud services only.
-Commercial builds do not include a GitHub repository by default. In either edition, a built-in source is registered
-only when `VETTA_OPEN_MARKETPLACE_REPOSITORY` is explicitly configured. Unset, empty, or whitespace-only means
-no registration; there is no hard-coded repository fallback. Open-source distributions can configure the official
-repository through the same environment variable.
-Under Abilities → Marketplace sources, users can add multiple GitHub repositories and independently enable,
-auto-update, or refresh each source. A failing source does not block others. Same-name abilities retain their
-source identities; physical installation conflicts still require explicit resolution instead of silent overwrites.
+Both editions register a built-in GitHub source. When `VETTA_OPEN_MARKETPLACE_REPOSITORY` is unset,
+empty, or whitespace-only, it defaults to `https://github.com/hxquan-q/open-forge-marketplace`
+on `gh-pages`. A custom repository defaults to `main` when no ref is set. These are code defaults,
+not proof that distribution content has been published or is available; check the source sync result.
 
-`VETTA_OPEN_MARKETPLACE_REPOSITORY` optionally declares the distribution's built-in source.
-Removing it does not delete persisted sources or uninstall abilities; existing sources can be disabled in the UI.
-Adding sources through the UI does not require rebuilding. Normally omit `VETTA_OPEN_MARKETPLACE_ARCHIVE_URL`
-so it follows the repository and ref. Restart development processes after editing environment files;
-subsequent repository content changes only require Refresh. A GitHub commit does not publish to the Open Forge Serv
+Distributors may replace that source through the environment variable. The built-in source cannot be removed,
+disabled, or repointed in the UI; automatic updates and manual refresh remain available. Users can add and
+manage custom GitHub sources under Abilities → Marketplace sources. One failing source does not block others.
+Same-name abilities retain their source identities; installation conflicts require explicit resolution.
+
+Removing the repository setting restores the code default rather than disabling the GitHub marketplace.
+It does not uninstall abilities or remove user-added sources. Normally omit `VETTA_OPEN_MARKETPLACE_ARCHIVE_URL`
+so it follows the repository and ref. Restart development processes or rebuild after editing environment files;
+subsequent content changes only require Refresh. GitHub commits do not publish to the Open Forge Serv cloud
 marketplace. See [GitHub marketplace format](../open-marketplace.md) for source and upgrade semantics.
 
 > `VETTA_CLOUD_ENABLED` is a **build-time** flag, inlined as a constant and folded away: in an open-source build the cloud module and its chunks are never bundled. **It cannot be re-enabled at runtime after shipping** — switching editions requires a rebuild.
 
 ---
 
+## Brand profiles (independent of cloud-service mode)
+
+The repository, documentation, and open-source project use **Open Forge**. Without `VETTA_BRAND_PROFILE`,
+Desktop uses `distribution`: **Allstr ai** with a localized Chinese display name. Set `self` explicitly for
+the **Open Forge** display name and self-profile assets. This is separate from lite/full; packaging still requires
+an explicit `VETTA_CLOUD_ENABLED` value for either brand.
+
+For development, set `VETTA_BRAND_PROFILE=self` in `apps/desktop/.env.development`.
+For packaging, use the relevant `.env.<mode>` such as `.env.opensource` or `.env.production`, then restart
+processes or rebuild. Alternatively, set it in your shell from `apps/desktop`:
+
+```bash
+# Bash / zsh
+VETTA_BRAND_PROFILE=self bun run dev
+```
+
+```powershell
+# PowerShell (also affects subsequent commands in this terminal)
+$env:VETTA_BRAND_PROFILE = "self"
+bun run dev
+```
+
+Both profiles share the `OpenForge` executable name, appId/bundleId, protocols, and data roots:
+`~/.openforge` for installed builds and `~/.openforge-dev` for normal development. Switching brands does not
+isolate data. Package and macOS application names may follow the profile; use the actual downloaded filename.
+Package scopes `@vetta/*`, variables `VETTA_*`, project-local `.vetta/`, and `.vettapkg` remain compatible.
+
 ## Building the open-source edition
 
-Windows, macOS, and Linux use the same entry point. It selects the host platform, disables cloud, and uses updates from the `hxquan-q/open-forge` GitHub Releases page. GitHub ability sources come only from environment configuration, not script defaults.
+Windows, macOS, and Linux use the same entry point. It selects the host platform, disables cloud, and uses updates from the `hxquan-q/open-forge` GitHub Releases page. The built-in GitHub ability source follows the defaults or distributor overrides described above.
 
 ```bash
 cd apps/desktop
@@ -87,7 +115,7 @@ On Windows, `bun run package:win` builds Inno, MSI, and ZIP together. Use `packa
 
 ## Environment files
 
-No `.env.*` file is tracked in git. `apps/desktop/.env.example` is the variable index — copy it to `.env.development` and edit.
+Local `.env` and private `.env.<mode>` files are not tracked; example files are the exception. `apps/desktop/.env.example` is the variable index — copy it to `.env.development` and edit.
 
 When packaging, `VETTA_BUILD_ENV=<mode>` selects which `.env.<mode>` to load:
 
@@ -100,7 +128,7 @@ Precedence: **inline on the command line > process environment > `.env.<mode>` >
 
 ### Reference: a typical `.env.production`
 
-This is what our team uses for official releases. Your production endpoint, update source and tenant are almost certainly different:
+This illustrates the configuration shape, not deployed endpoints, buckets, or commercial services. Replace the examples with your actual environment:
 
 ```bash
 VETTA_CLOUD_ENABLED=true
@@ -108,7 +136,7 @@ VETTA_SERVER_URL=https://api.example.com/api/v1
 VETTA_SITE_URL=https://www.example.com
 VETTA_UPDATE_PROVIDER=generic
 VETTA_UPDATE_URL=https://releases.example.com/desktop/stable
-VETTA_R2_BUCKET=vetta-releases
+VETTA_R2_BUCKET=your-release-bucket
 VETTA_R2_PREFIX=desktop/stable
 VETTA_TENANT=common
 VETTA_SPEECH_INPUT_ENABLED=false
@@ -132,11 +160,12 @@ VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 
 | Variable | Description |
 | --- | --- |
+| `VETTA_BRAND_PROFILE` | Defaults to `distribution` (Allstr ai); explicit `self` selects Open Forge, independently of cloud-service mode |
 | `VETTA_CLOUD_ENABLED` | `false` produces open-source; `true` produces commercial; packaging requires an explicit value |
 | `VETTA_SERVER_URL` | Server API endpoint. Required for commercial and forbidden in open-source builds |
 | `VETTA_SITE_URL` | Site URL used for the OAuth login redirect. Derived from `VETTA_SERVER_URL` when unset |
-| `VETTA_OPEN_MARKETPLACE_REPOSITORY` | Optional built-in GitHub source for either edition; empty means no registration, with no default repository address |
-| `VETTA_OPEN_MARKETPLACE_REF` | Branch or tag, defaults to `main` |
+| `VETTA_OPEN_MARKETPLACE_REPOSITORY` | Overrides the built-in GitHub source; empty uses `hxquan-q/open-forge-marketplace` |
+| `VETTA_OPEN_MARKETPLACE_REF` | Branch or ref; `gh-pages` for the default repository, `main` for a custom repository |
 | `VETTA_OPEN_MARKETPLACE_ARCHIVE_URL` | Explicit archive URL; derived from repository and ref when omitted |
 
 ### Build-time trimming
@@ -207,10 +236,9 @@ The update source is build configuration and is independent of the operating sys
 3. Built-in defaults: `VETTA_RELEASE_TARGET=github` selects open-source; `r2` selects commercial
 
 Both editions read the `VETTA_OPEN_MARKETPLACE_REPOSITORY` Variable, optionally overridden by the
-`marketplace_repository` input on manual runs. If neither is configured, no GitHub source is bundled.
-To include the official source in an open-source distribution, set the Variable to
-your official marketplace repository (placeholder: a fork-operated official marketplace is not published yet).
-An unconfigured commercial build uses only the cloud marketplace.
+`marketplace_repository` input on manual runs. When neither is configured, the client still uses this project's
+default repository and `gh-pages`; it does not disable the source. Configure a real repository and ref for a
+custom distribution. That setting alone does not establish that marketplace content has been published.
 
 **A fork with no Variables set produces an open-source build.** For an official commercial build, put these on Settings → Environments → `desktop-production` → Environment variables (credentials stay in Environment secrets):
 
@@ -220,7 +248,7 @@ VETTA_SERVER_URL    = https://api.example.com/api/v1
 VETTA_SITE_URL      = https://www.example.com
 VETTA_RELEASE_TARGET = r2
 VETTA_UPDATE_URL     = https://releases.example.com/desktop/stable
-VETTA_R2_BUCKET      = vetta-releases
+VETTA_R2_BUCKET      = your-release-bucket
 VETTA_R2_PREFIX      = desktop/stable
 ```
 
@@ -230,4 +258,4 @@ The form can override the edition, server URLs, tenant, speech input, publish ta
 
 The release matrix waits for a dedicated quality job first: the root `bun run check`, quality-script tests, and Desktop packaging contract tests must pass before any platform build starts. Each platform then verifies updater metadata, hashes, blockmaps, and installable contents.
 
-`workflow_dispatch` only builds and keeps an Actions artifact, and prints the resolved config on the job summary; it does not verify a live update feed. Only a release tag matching the `package.json` version publishes to R2 / GitHub Releases. After publishing, the workflow checks `latest.yml`, `latest-mac.yml`, `latest-linux.yml`, and every referenced artifact through the public URL. The form is visible only after this workflow exists on the repository default branch.
+Tags matching the Desktop version and manual `workflow_dispatch` runs resolved to the `stable` or `test` channel enter the publish flow; other manual builds retain Actions artifacts only. After publishing, the workflow checks `latest.yml`, `latest-mac.yml`, `latest-linux.yml`, and every referenced artifact through the public URL. The form is visible only after this workflow exists on the repository default branch.

@@ -1,6 +1,6 @@
 <!-- Modified by The Open Forge contributors. -->
 <p align="center">
-  <img src="docs/assets/banner.webp" alt="Open Forge">
+  <img src="docs/assets/open-forge-banner.svg" alt="Open Forge">
 </p>
 
 <h1 align="center">Open Forge</h1>
@@ -27,9 +27,7 @@ Open Forge brings models, project files, local tools, and reusable capabilities 
 
 It is more than a chat interface: Open Forge can inspect a workspace, use tools with visible permission boundaries, produce real files, and keep the execution trail available for review.
 
-<p align="center">
-  <img src="docs/assets/screenshot.png" alt="Open Forge desktop workspace">
-</p>
+The repository and documentation use **Open Forge**. Desktop defaults to the `distribution` brand profile, displayed as **Allstr ai** with a localized Chinese name. Set `VETTA_BRAND_PROFILE=self` explicitly for the Open Forge display name. Brand profiles are independent of the lite/full cloud-service flag and share compatibility identities and data directories. See [build modes](docs/desktop/build-modes.en.md) for the self profile.
 
 ## Why Open Forge
 
@@ -71,7 +69,7 @@ The development app uses `~/.openforge-dev`, keeping installed-app data in `~/.o
 - **Reuse organizational knowledge.** Build local knowledge bases and install reusable skills or scenarios.
 - **Keep working away from the desk.** Use supported IM bridges, webhooks, notifications, quick entry, and native desktop integrations.
 
-The [product guide](apps/docs-site/content/docs/product/overview.mdx) has the current task guides and screenshots for every capability area.
+The [product guide](apps/docs-site/content/docs/product/overview.mdx) covers the capability areas. Its screenshots illustrate workflows; display names and appearance depend on the selected brand profile and build.
 
 ## Extension model
 
@@ -103,8 +101,10 @@ To publish several abilities from one repository, scaffold a marketplace:
 
 ```bash
 npx @vetta-org/plugin-cli init hub --name my-market \
-  --repository https://github.com/me/my-market --min-app-version 0.55.0
+  --repository https://github.com/me/my-market --min-app-version 0.1.3
 ```
+
+`0.1.3` is the current Desktop version used as an example. Set the oldest Open Forge version you have verified; do not reuse the upstream `0.55.x` version line.
 
 That lays down the index, the `abilities/` layout, a repository-level `AGENTS.md`, and CI running `vetta-plugin-cli sync --check`, which keeps `.vetta/marketplace.json` reconciled with each ability package. Development commands always act on the nearest ability directory, so working inside a marketplace is identical to working on a standalone plugin.
 
@@ -158,6 +158,7 @@ Report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md) for the re
 
 ## Documentation
 
+- [Documentation map and historical scope](docs/README.md)
 - [Product guide and capability reference](apps/docs-site/content/docs/product/overview.mdx)
 - [First-task walkthrough](apps/docs-site/content/docs/getting-started/first-task.mdx)
 - [Plugin development](apps/docs-site/content/docs/plugins/overview.mdx) · [plugin SDK internals in `docs/plugin/`](docs/plugin/README.md)

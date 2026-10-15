@@ -140,7 +140,7 @@ ctx.agent.registerTool({
 
 | slug | 场景 |
 |---|---|
-| `conversation` | 普通对话（`~/.vetta/conversation`） |
+| `conversation` | 普通对话（`~/.openforge/conversation`） |
 | `project` | 普通项目中对话 |
 | `im-claw` | Claw IM 对话（飞书/微信网关） |
 | `batch` | 批量任务 |
@@ -511,7 +511,7 @@ const response = await ctx.network.request<{ data: unknown[] }>({
 
 ## 插件私有存储 API
 
-`ctx.storage` 是按插件 id 隔离的持久化文件命名空间，物理目录位于 `~/.vetta/plugin-data/<plugin-id>/`。
+`ctx.storage` 是按插件 id 隔离的持久化文件命名空间，物理目录位于 `~/.openforge/plugin-data/<plugin-id>/`。
 公开路径都是相对路径；路径穿越和宿主保留的 `.storage` 路径会被拒绝。调用绑定当前插件的 capability
 session，不能伪造其他插件 id。API 以文件和字节为核心，JSON 只是插件选择的序列化格式。
 

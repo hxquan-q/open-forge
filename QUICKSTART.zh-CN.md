@@ -15,6 +15,8 @@ macOS、Windows、Linux 安装包：
 
 从源码检出得到的是 **lite** 构建：无 Open Forge 登录、无订阅，密钥留在本机。已发布的安装包可能是 **full** 构建。两种形态见[构建模式](docs/desktop/build-modes.md)。
 
+仓库名与文档品牌为 **Open Forge**，默认桌面构建使用 `distribution` 档：中文 **小爱ai**、英文 **Allstr ai**。需要 Open Forge 显示名时，在 `apps/desktop/.env.development` 中设置 `VETTA_BRAND_PROFILE=self` 后重启开发进程；打包时放入相应 `.env.<mode>`。此选择不改变 lite/full，也不切换数据目录。
+
 ## 从源码开发
 
 需要 **Bun 1.3+** 和 **Node 20+**。支持 macOS、Windows、Linux。

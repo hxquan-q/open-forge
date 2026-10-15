@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Analytics } from "@vercel/analytics/next";
 import { cn } from "@/lib/cn";
 import { displaySerif } from "@/lib/fonts";
@@ -12,7 +13,7 @@ export const metadata: Metadata = buildRootMetadata();
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
 	const requestHeaders = await headers();
-	const language = getRequestLanguage(new Request("https://docs.openvetta.com/", { headers: requestHeaders }));
+	const language = getRequestLanguage(new Request("https://docs.example.test/", { headers: requestHeaders }));
 
 	return (
 		<html

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { defineI18n } from "fumadocs-core/i18n";
 import type { I18nProviderProps } from "fumadocs-ui/contexts/i18n";
 import { i18nProvider, uiTranslations as fumadocsUiTranslations } from "fumadocs-ui/i18n";
@@ -94,7 +95,7 @@ export const messages = {
 		viewMarkdown: "查看 Markdown",
 		downloadApp: "下载客户端",
 		website: "官网",
-		homeProofAria: "Vetta 核心特征",
+		homeProofAria: "Open Forge 核心特征",
 		optional: "可选入口",
 		websiteDescription: "产品介绍与下载",
 		downloadDescription: "Windows / macOS / Linux 安装包",
@@ -119,7 +120,7 @@ export const messages = {
 		viewMarkdown: "View Markdown",
 		downloadApp: "Download app",
 		website: "Website",
-		homeProofAria: "Vetta core benefits",
+		homeProofAria: "Open Forge core benefits",
 		optional: "Optional",
 		websiteDescription: "Product information and downloads",
 		downloadDescription: "Windows / macOS / Linux installers",

@@ -15,6 +15,8 @@ Tagged builds are published on this repository's Releases page. This repository 
 
 A source checkout produces the **lite** build: no Open Forge login, no subscription, keys stay on your machine. Published installers may be the **full** build. The two shapes are documented in [Build Modes](docs/desktop/build-modes.en.md).
 
+The repository and docs use **Open Forge**. Desktop defaults to the `distribution` profile: **Allstr ai** with a localized Chinese display name. To use the Open Forge display name, set `VETTA_BRAND_PROFILE=self` in `apps/desktop/.env.development` and restart development processes; use the relevant `.env.<mode>` when packaging. This setting does not change lite/full or switch data directories.
+
 ## Develop from source
 
 Requires **Bun 1.3+** and **Node 20+**. macOS, Windows, and Linux are supported.

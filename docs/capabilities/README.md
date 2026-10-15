@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 可扩展能力与系统适配分层架构
 
 ## 1. 背景
@@ -121,7 +122,7 @@ export interface CapabilityHandler<Input, Output, Event = never> {
 
 ### 5.2 基础能力
 
-基础能力提供与 Vetta 具体领域无关的平台原语，例如：
+基础能力提供与 Open Forge 具体领域无关的平台原语，例如：
 
 - 文件读写和元数据。
 - 命名空间 KV 存储。

@@ -3,6 +3,8 @@
 
 本文记录 Open Forge Desktop Windows 自动更新从服务端发版迁移到 R2/GitHub Releases 的最终方案、实现细节、完整验证流程，以及开发期间遇到的问题。它是当前 Windows 更新链路的维护手册。
 
+当前操作示例使用 Open Forge 的 `0.1.x` 版本线；安装包显示名随品牌档案变化，`OpenForge.exe`、安装目录与数据根保持兼容。末尾 `0.5.x` 实测案例属于上游历史环境，保留其原始版本与数据，不作为本项目实测结论。
+
 ## 1. 当前结论
 
 Windows 当前采用以下组合：
@@ -243,7 +245,7 @@ R2 Token 只授予目标 Bucket 的对象读写权限。凭据只供发布脚本
 测试频道必须显式指定版本号：
 
 ```powershell
-bun scripts/release-windows.mjs test --version 0.5.61
+bun scripts/release-windows.mjs test --version 0.1.3
 ```
 
 稳定频道拒绝 `--version`，始终读取 `apps/desktop/package.json`：
@@ -258,7 +260,7 @@ bun scripts/release-windows.mjs stable
 
 ```powershell
 # 只检查配置、Inno 和线上版本，不清理、不构建
-bun scripts/release-windows.mjs test --version 0.5.61 --check-only
+bun scripts/release-windows.mjs test --version 0.1.3 --check-only
 
 # 构建并完整校验，但不上传 R2
 bun scripts/release-windows.mjs stable --skip-publish
@@ -274,7 +276,7 @@ bun scripts/release-windows.mjs stable --yes
 测试版本可以通过环境变量覆盖，不修改 `package.json`，也不创建 Git tag：
 
 ```powershell
-$env:VETTA_DESKTOP_BUILD_VERSION = "0.5.57"
+$env:VETTA_DESKTOP_BUILD_VERSION = "0.1.3"
 bun run --cwd apps/desktop dist:win
 ```
 
@@ -334,8 +336,8 @@ bun run --cwd apps/desktop publish:updates:r2
 PowerShell 检查示例：
 
 ```powershell
-Get-Content "$env:LOCALAPPDATA\Vetta\current.json"
-Get-ChildItem "$env:LOCALAPPDATA\Vetta\versions"
+Get-Content "$env:LOCALAPPDATA\OpenForge\current.json"
+Get-ChildItem "$env:LOCALAPPDATA\OpenForge\versions"
 Get-CimInstance Win32_Process -Filter "Name = 'OpenForge.exe'" |
   Select-Object ProcessId, ExecutablePath
 ```
@@ -611,7 +613,7 @@ VETTA_R2_PREFIX=desktop/test
 ### 12.1 应用日志
 
 ```text
-~/.vetta/desktop-app/logs/main/YYYY-MM-DD.log
+~/.openforge/desktop-app/logs/main/YYYY-MM-DD.log
 ```
 
 重点搜索：

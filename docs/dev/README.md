@@ -21,7 +21,7 @@ Vetta Debug 的会话操作参数见 [Vetta Debug](./vetta-debug.md)；真实模
 | Profile | 用途 | 数据生命周期 |
 | --- | --- | --- |
 | Fresh | 初始化、首次启动、空状态流程；也是无后缀命令的默认值 | 每次启动创建新的临时 home，从不复用上一次数据 |
-| Debug | 反复调试模型和 Agent 流程 | 使用当前工作树专属的 `~/.vetta-ui-debug/<workspace-id>`，重启后保留 |
+| Debug | 反复调试模型和 Agent 流程 | 使用当前工作树专属的 `~/.openforge-ui-debug/<workspace-id>`，重启后保留 |
 | Dev | 调试已经由 Desktop `dev` 命令启动的普通开发应用 | 只附着 `~/.openforge-dev`，验证脚本不会启动、同步或停止它 |
 
 Fresh 标准流程：
