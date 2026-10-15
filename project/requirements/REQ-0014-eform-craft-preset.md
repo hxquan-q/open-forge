@@ -1,5 +1,5 @@
 ---
-id: REQ-0011
+
 type: requirement
 status: ready
 priority: P1
@@ -8,7 +8,7 @@ source: user-request（《电子化表单(1).docx》需求文档 + 用户口头�
 created: 2026-10-09
 updated: 2026-10-09
 related_plan: []
-related_tasks: [TASK-0222]
+
 ---
 <!-- Copyright The Open Forge contributors. -->
 

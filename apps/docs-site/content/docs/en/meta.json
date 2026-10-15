@@ -1,5 +1,5 @@
 {
-	"title": "Vetta Documentation",
-	"description": "Guides and reference for Vetta users, teams, and extension developers.",
+	"title": "Open Forge Documentation",
+	"description": "Guides for the independently maintained Open Forge desktop Agent: project tasks, teams, engineering workflows, SSH, models, recovery, and extensions.",
 	"pages": ["index", "getting-started", "core", "product", "examples", "plugins", "themes", "developers", "reference", "troubleshooting"]
 }

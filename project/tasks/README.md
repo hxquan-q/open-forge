@@ -15,6 +15,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0273` | `verifying` | — | eform-craft 三版块团队化（REQ-0015 二期）：单 agent 扩为 eform/esign/eaudit 三成员团队（team eform-studio，eform 队长），产物四件套扩六件套（+index.html 列表页 +form.html 表单页，数据级增删查改与 draft→saved→approved 生命周期）、电子签组件（演示验证→canvas 手写→清空重签→审核锁定）、审计组件（auditEnabled 默认 false、五类操作日志、仅查看不可删）；锚点+capabilities 共享契约、合同测试 13/13、五步验证链与完整 check 全绿；团队行为面待实机验收（另立任务）。原编号 TASK-0223/0225，因 dev 侧占号顺延。 |
+| `TASK-0272` | `verifying` | — | eform-craft 电子表单还原预置插件（REQ-0014 一期）：纯提示词资产 preset（单 agent + 单技能，权限仅 `agent.skills.control`），识别合同（标记→类型、同义词→固定字段名含空格）+ 四件套产物规范（schema/preview/mock/spec）+ 确认门与修改循环；tenants.json 双 profile 注册、vettapkg 产出并 staging、五步验证链与完整 check 全绿；@eform 行为面待实机验收（另立任务）。原编号 TASK-0222/0226，因 dev 侧占号顺延。 |
+| `TASK-0271` | `verifying` | — | allstar-coding 黑盒自测通道失效降级（v0.5.3，包版本 0.3.3）：工具报错≠产品失败（记空不记 ✗、不进 P#）、同工具连续 3 次报错熔断、L3 审批被拒视同失效、核验简报首先点名未自测区间；包内 133 项零回归、完整 check 全绿；技能合同面待实机验收。原编号 TASK-0221，因 dev 侧占号顺延。 |
 | `TASK-0263` | `verifying` | PLAN-0014 | RESEARCH-0025：网关流内 `response.failed` 瞬时 code 挂 `retryable: true` 进入自动重试（同步上游 0.5.62）；红 21→绿 67、impact 242 例；提交 `51c939ac1` 已推 dev；fixture 合同面，人工验收不适用。 |
 | `TASK-0264` | `verifying` | PLAN-0014 | RESEARCH-0025：流式写完后末尾短语 300ms 静默即恢复全亮（同步上游 22293f956）；红 3→绿 12、impact theme-ui 36 + desktop 12；提交 `b5fdde595` 已推 dev；视觉行为待实机目验。 |
 | `TASK-0265` | `verifying` | PLAN-0014 | RESEARCH-0025：插件模型图像输入能力保留——证实同病（写合同缺 `input`）并按上游形状修复：SDK 写入合同、plugin-sdk 类型、读回归一化 + 4 合同测试；提交 `944433ca1` 已推 dev；impact 桌面 5 红归因 BUG-0107 存量与在途测试，相关面全绿。 |
@@ -58,8 +61,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0223` | `verifying` | — | BUG-0085：停滞专用重试上限（最多 2 个看门狗窗口后落终态），消掉死连接的 ~30 分钟假死；红 4→2 次 attempt，ai 包 516 例 / impact 321 例 / check 全绿；已随 `9beebe1e0` 推 `origin/dev`，Worktree 已清理。 |
 | `TASK-0222` | `verifying` | — | BUG-0084：受控投影规范判等修复抢键盘 + 覆盖扩展（目录/图片/skill/scene/connector/member、流式重渲染、外部移除、mention 元数据）；定向 68、impact 10、完整 check 全绿；serial，main 工作区串行集成。 |
 | `TASK-0221` | `verifying` | — | BUG-0083：移除第一方 `flushSync`（侧栏选择意图）并按 BUG-0048 先例精确过滤 React DEV 噪音；定向 53、impact 271、完整 check 全绿；serial，main 工作区串行集成。 |
-| `TASK-0225` | `verifying` | — | eform-craft 三版块团队化（REQ-0012 二期）：单 agent 扩为 eform/esign/eaudit 三成员团队（team eform-studio，eform 队长），产物四件套扩六件套（+index.html 列表页 +form.html 表单页，数据级增删查改与 draft→saved→approved 生命周期）、电子签组件（演示验证→canvas 手写→清空重签→审核锁定）、审计组件（auditEnabled 默认 false、五类操作日志、仅查看不可删）；锚点+capabilities 共享契约、合同测试 13/13、五步验证链与完整 check 全绿；团队行为面待实机验收（另立任务）。 |
-| `TASK-0226` | `verifying` | — | eform-craft 电子表单还原预置插件（REQ-0011 一期）：纯提示词资产 preset（单 agent + 单技能，权限仅 `agent.skills.control`），识别合同（标记→类型、同义词→固定字段名含空格）+ 四件套产物规范（schema/preview/mock/spec）+ 确认门与修改循环；tenants.json 双 profile 注册、vettapkg 产出并 staging、五步验证链与完整 check 全绿；@eform 行为面待实机验收（另立任务）。 |
 | `TASK-0220` | `verifying` | — | 修复 BUG-0082（含残余轮）：黑盒 shell 白名单加引号感知元字符扫描（引号外组合/替换/重定向拦、双引号内 $() 与反引号同样拦、单引号保持字面量、转义引号不开区、未闭合 fail-safe）、读域拒 `..` 与绝对路径；两轮红测先行（3+2 failed）转绿，fence-judge 80 项/包内 133 项/impact 91 项/完整 check 全绿；写域 `..` 等既有面登记 ISSUE-0032。 |
 | `TASK-0219` | `verifying` | — | allstar-coding 黑盒环节升级（v0.5.2，包版本 0.3.2）：通道探测→三态分流→文档 v2→可选自测→用户核验；围栏为 blackbox 角色加窄读域（docs/ac/ 前缀、禁目录发现类）与 shell 白名单（仅 agent-browser）；fence-judge 74 项、包内 53 项、impact 127 项与完整 check 全绿；技能合同面待实机验收。白名单/读域两个绕过口由 TASK-0220 修复。 |
 | `TASK-0218` | `verifying` | — | Browser 能力/缺页恢复指引 a326a644b，独立 Task Worktree；定向 63、impact 590、Desktop 25、check 通过；main 有其他任务未提交修改，待串行集成与模型验收。 |
@@ -74,7 +75,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0214` | `done` | — | 台账收口：闭合 7 个内部任务（0179/0180/0209–0213，均无用户可观察行为变化且既定标准已实际执行通过），其余 72 个 verifying 保留交用户验收；并记录两处台账缺口（16 个 verifying 不在焦点表、看似内部但缺证据的候选未闭合）。 |
 | `TASK-0216` | `done` | — | 分层验收（用户决策）：合同面 17 个按工程证据闭合并注明授权依据（提交 272808ea0）；行为面 53 个整理成 VERIFY-0017 交用户验收；0183/0184 因 CI 受预算阻塞单独标注。 |
 | `TASK-0217` | `done` | PLAN-0003 | 复核并解除 TASK-0047/0048 的陈旧阻塞：两条实为尚未实施（交付记录全空），已转 ready 并补进焦点表；实测排除冻结标识后仍有 334 行、84 个文件提到旧品牌（提交 1e6e2ab4c）。 |
-| `TASK-0047` | `blocked` | PLAN-0003 | 仓库公开文档品牌清查；阻塞已解除，尚未实施，待排期切片。 |
+| `TASK-0270` | `verifying` | PLAN-0003 | f9a9d7895 已集成本地 main：搜索跨语言 ID 已修复；307 定位为本地 IP 绑定条件并修正探针。HTTP 6/6、包内 35/35、质量合同 102/102、build 与根 check 通过；已接入既有 CI，待用户功能接受。 |
+| `TASK-0047` | `verifying` | PLAN-0003 | 第七片正文及日志根说明已集成本地 main：本仓二开视角、默认 lite、SDK/发布/服务边界对齐；35 项集成测试、完整 check、113 页构建与本地引用检查通过，待用户审阅。 |
 | `TASK-0048` | `in_progress` | PLAN-0003 | 公开文档站品牌、正文与 SEO/LLM 发现入口迁移；尚未实施，缺口最大（docs-site 内容为主）。 |
 | `TASK-0206` | `done` | PLAN-0014 | feed/attach 第二片：`SessionFacade.attach` 一次同步步骤内订阅 + 运行中回合重放 + 历史快照（`SessionAttachment`），保留本仓 4096 有界回放，不引入上游无界回合缓冲；红绿/定向 10/10/impact 115 项/完整 check 全绿；无直接 UI，消费端随 IPC/desktop 后续片验收。 |
 | `TASK-0205` | `done` | PLAN-0014 | feed/attach 底座第一片：快照暴露运行中回合身份（currentTurnId）+ 重放缓冲收录本轮工具事件（保留 4096 有界）；红绿/impact/完整 check 绿；工具状态切回即时可见待实机验收，currentTurnId 消费随 IPC/desktop 后续片。 |

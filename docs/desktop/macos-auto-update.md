@@ -1,7 +1,9 @@
 <!-- Modified by The Open Forge contributors. -->
 # macOS 自动更新、R2 发版与排障
 
-本文是 Vetta Desktop macOS 更新链路的维护手册，与 [`windows-auto-update.md`](./windows-auto-update.md) 平行。两端共用同一套更新源配置、发布脚本、状态机和 CI 编排；差异集中在安装机制与产物形态，本文只展开 macOS 侧。
+本文是 Open Forge Desktop macOS 更新链路的维护手册，与 [`windows-auto-update.md`](./windows-auto-update.md) 平行。两端共用同一套更新源配置、发布脚本、状态机和 CI 编排；差异集中在安装机制与产物形态，本文只展开 macOS 侧。
+
+本文操作示例按 `VETTA_BRAND_PROFILE=self` 的 Open Forge 应用名书写；默认 distribution 档为 Allstr ai / 小爱ai，请按实际品牌档案替换 `.app` 与安装包名。`OpenForge` 可执行名和 `~/.openforge` 数据根跨档共用。当前构建示例使用本项目 `0.1.x` 版本线；末尾实测案例保留上游历史版本与测量，不表示 fork 已执行同样验证。
 
 ## 1. 当前结论
 
@@ -45,12 +47,12 @@ macOS 需要发布两种产物：**ZIP 供自动更新**（Squirrel.Mac 只认 Z
 desktop/
   stable/
     latest-mac.yml
-    Vetta-<version>-mac.zip              # x64 更新包
-    Vetta-<version>-mac.zip.blockmap
-    Vetta-<version>.dmg                  # x64 首装包
-    Vetta-<version>-arm64-mac.zip        # arm64 更新包
-    Vetta-<version>-arm64-mac.zip.blockmap
-    Vetta-<version>-arm64.dmg            # arm64 首装包
+    Open-Forge-<version>-mac.zip              # x64 更新包
+    Open-Forge-<version>-mac.zip.blockmap
+    Open-Forge-<version>.dmg                  # x64 首装包
+    Open-Forge-<version>-arm64-mac.zip        # arm64 更新包
+    Open-Forge-<version>-arm64-mac.zip.blockmap
+    Open-Forge-<version>-arm64.dmg            # arm64 首装包
 ```
 
 `latest.yml`（Windows）与 `latest-mac.yml`（macOS）是同一前缀下两份独立清单，互不影响，两个平台可以独立发版。
@@ -131,10 +133,10 @@ desktop/
 | **旧版** blockmap | 把新版 URL 里的版本号替换成旧版号推出来（`Provider.getBlockMapFiles`），因此**旧版本的 blockmap 不能从 R2 删掉** |
 | 本地基线 `update.zip` | electron-updater 每次下载完成后复制一份 |
 
-缓存目录由 `app-update.yml` 的 `updaterCacheDirName` 决定，当前是 `vetta-updater`，与 Windows 的 `%LOCALAPPDATA%\vetta-updater\` 同名：
+缓存目录由 `app-update.yml` 的 `updaterCacheDirName` 决定，当前是 `openforge-updater`，与 Windows 的 `%LOCALAPPDATA%\openforge-updater\` 同名：
 
 ```text
-~/Library/Caches/vetta-updater/
+~/Library/Caches/openforge-updater/
   update.zip                                  # 差分基线
   pending/                                    # 下载中的新版本
 ~/Library/Caches/com.vetta.desktop.ShipIt/    # Squirrel 暂存区
@@ -145,10 +147,10 @@ desktop/
 测试时可以手工播种，跳过那一轮全量（ZIP 必须正是当前已安装版本的那一份）：
 
 ```bash
-mkdir -p ~/Library/Caches/vetta-updater
-cp release/Vetta-<installed-version>-arm64-mac.zip ~/Library/Caches/vetta-updater/update.zip
+mkdir -p ~/Library/Caches/openforge-updater
+cp release/Open-Forge-<installed-version>-arm64-mac.zip ~/Library/Caches/openforge-updater/update.zip
 # 核对与线上清单一致
-shasum -a 512 -b ~/Library/Caches/vetta-updater/update.zip | awk '{print $1}' | xxd -r -p | base64
+shasum -a 512 -b ~/Library/Caches/openforge-updater/update.zip | awk '{print $1}' | xxd -r -p | base64
 ```
 
 反过来要复现全量下载，删掉 `update.zip` 即可。
@@ -170,12 +172,12 @@ ZIP 必须有配套 `.blockmap`，否则差分下载退化为全量。`verify-ma
 日常发版用 `scripts/release-mac.sh`，它把 7.1～7.5 的所有步骤串起来，并在开跑前做完全部前置校验（避免构建到第 40 分钟才发现配置错）：
 
 ```bash
-scripts/release-mac.sh local --version 0.5.62     # 本地闭环，跳公证、不碰 R2
-scripts/release-mac.sh test  --version 0.5.60     # QA 通道
+scripts/release-mac.sh local --version 0.1.2     # 本地闭环，跳公证、不碰 R2
+scripts/release-mac.sh test  --version 0.1.3     # QA 通道
 scripts/release-mac.sh stable                     # 正式通道，版本取 package.json
-scripts/release-mac.sh test  --version 0.5.60 --arch both       # 双架构 + 自动合并
-scripts/release-mac.sh test  --version 0.5.60 --check-only      # 只跑前置校验就退出
-scripts/release-mac.sh test  --version 0.5.60 --skip-publish    # 构建与校验，不上传
+scripts/release-mac.sh test  --version 0.1.3 --arch both       # 双架构 + 自动合并
+scripts/release-mac.sh test  --version 0.1.3 --check-only      # 只跑前置校验就退出
+scripts/release-mac.sh test  --version 0.1.3 --skip-publish    # 构建与校验，不上传
 ```
 
 `--check-only` 之外的任何调用都会先 `rm -rf release/` 再构建，别拿真实版本号试探参数。
@@ -198,25 +200,25 @@ scripts/release-mac.sh test  --version 0.5.60 --skip-publish    # 构建与校�
 
 ```bash
 # 1. 基线版本
-scripts/release-mac.sh local --version 0.5.62
+scripts/release-mac.sh local --version 0.1.2
 # 装 release/ 里的 DMG 到 /Applications
 
 # 2. 起分发服务（另开终端，保持运行）
 bun run --cwd apps/desktop serve:updates:local
 
 # 3. 播种差分基线（第一次需要，之后 electron-updater 会自动维护）
-cp apps/desktop/release/Vetta-0.5.62-arm64-mac.zip ~/Library/Caches/vetta-updater/update.zip
+cp apps/desktop/release/Open-Forge-0.1.2-arm64-mac.zip ~/Library/Caches/openforge-updater/update.zip
 
 # 4. 改点东西，出下一版
-scripts/release-mac.sh local --version 0.5.63
+scripts/release-mac.sh local --version 0.1.3
 
-# 5. 从终端启动 0.5.62 验证
-/Applications/Vetta.app/Contents/MacOS/Vetta
+# 5. 从终端启动 0.1.2 验证
+"/Applications/Open Forge.app/Contents/MacOS/OpenForge"
 ```
 
 两个细节决定这个通道能不能测差分：
 
-- **产物累积不清空**。`~/.vetta/local-updates` 只覆盖 `latest-mac.yml`，旧版本的 zip 与 blockmap 全部保留——差分要读旧版 blockmap（见 5.4）。
+- **产物累积不清空**。`~/.openforge/local-updates` 只覆盖 `latest-mac.yml`，旧版本的 zip 与 blockmap 全部保留——差分要读旧版 blockmap（见 5.4）。
 - **分发服务必须支持 Range**。`scripts/serve-local-updates.mjs` 自己实现了 206；不要随手换成 `python3 -m http.server`，它会无视 Range 头返回 200 全量，差分要么退化要么失败，测出来的结论是假的。
 
 默认构建已不内置 vendor（运行时改为安装后下载）；只有显式 `VETTA_BUNDLE_VENDOR=1` 的离线包才带 node/python——它们解压后是几千个待签名的 Mach-O，会显著拉长公证耗时。更新链路不依赖内置运行时。
@@ -239,7 +241,7 @@ security find-identity -v -p codesigning        # 期望 1 valid identity
 ```dotenv
 # apps/desktop/.env.development
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 ```
 
 ```bash
@@ -248,7 +250,7 @@ export VETTA_R2_ACCESS_KEY_ID=<access-key-id>
 export VETTA_R2_SECRET_ACCESS_KEY=<secret-access-key>
 export VETTA_R2_BUCKET=vetta-releases
 export VETTA_R2_PREFIX=desktop/test
-export VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+export VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 export VETTA_REQUIRE_MAC_SIGNATURE=1
 ```
 
@@ -259,7 +261,7 @@ export VETTA_REQUIRE_MAC_SIGNATURE=1
 ```bash
 cd apps/desktop
 rm -rf release                                  # 残留清单会让发布脚本判定版本不唯一
-VETTA_DESKTOP_BUILD_VERSION=0.5.60 bun run dist:mac:arm64
+VETTA_DESKTOP_BUILD_VERSION=0.1.3 bun run dist:mac:arm64
 VETTA_REQUIRE_MAC_SIGNATURE=1 bun run verify:updates:mac
 ```
 
@@ -267,7 +269,7 @@ VETTA_REQUIRE_MAC_SIGNATURE=1 bun run verify:updates:mac
 
 ```bash
 mv release/latest-mac.yml release/latest-mac-arm64.yml
-VETTA_DESKTOP_BUILD_VERSION=0.5.60 bun run dist:mac:x64
+VETTA_DESKTOP_BUILD_VERSION=0.1.3 bun run dist:mac:x64
 VETTA_REQUIRE_MAC_SIGNATURE=1 bun run verify:updates:mac
 mv release/latest-mac.yml release/latest-mac-x64.yml
 bun run merge:updates:mac
@@ -308,7 +310,7 @@ bun run publish:updates:r2
 ### 7.6 客户端验证
 
 1. 安装一个更低版本的 test 构建到 `/Applications`（必须是 `/Applications`，Squirrel 需要能写 app bundle 所在目录）。
-2. 从终端启动以便看日志：`/Applications/Vetta.app/Contents/MacOS/Vetta`
+2. 从终端启动以便看日志：`"/Applications/Open Forge.app/Contents/MacOS/OpenForge"`
 3. 上传更高版本后，等待启动检查或手动点检查更新。
 4. 观察三行日志的时间间隔：
 
@@ -431,7 +433,7 @@ launchctl print "gui/$(id -u)/com.vetta.desktop.ShipIt"
 | 报错「Could not find service」 | Squirrel 还没提交作业。应用退得太早（交棒后立刻 `app.exit(0)` 实测只需 41ms）。 |
 | `runs = 0` + `port = 0x0` + `active = 0` | 作业提交了但从没被启动。它是按需 mach service，需要有人连上去或 `launchctl kickstart`。 |
 | `runs = 1` + `last exit code = 0` | ShipIt 跑过了，去看它的日志。 |
-| `state = running` 但版本没变 | ShipIt 在等目标进程退出——检查是不是还有 Vetta 进程活着。 |
+| `state = running` 但版本没变 | ShipIt 在等目标进程退出——检查是不是还有 Open Forge 进程活着。 |
 
 **② ShipIt 自己的日志**——Squirrel 只在作业真正 spawn 后才创建这两个文件，**文件不存在本身就是结论**：
 
@@ -444,9 +446,9 @@ cat ~/Library/Caches/com.vetta.desktop.ShipIt/ShipIt_stderr.log
 ```text
 Detected this as an install request
 Beginning installation
-Moved bundle contents from ... to file:///Applications/Vetta.app/
+Moved bundle contents from ... to file:///Applications/Open Forge.app/
 Installation completed successfully
-Successfully launched application at file:///Applications/Vetta.app/
+Successfully launched application at file:///Applications/Open Forge.app/
 ```
 
 **③ 待安装状态**（安装完成后会被清掉）：
@@ -461,10 +463,10 @@ plutil -p ~/Library/Caches/com.vetta.desktop.ShipIt/ShipItState.plist
 
 ```bash
 launchctl kickstart "gui/$(id -u)/com.vetta.desktop.ShipIt"
-pkill -f "Vetta.app/Contents/MacOS/Vetta"   # ShipIt 必须等目标退出才替换
+pkill -f "Open Forge.app/Contents/MacOS/OpenForge"   # ShipIt 必须等目标退出才替换
 ```
 
-**别用应用窗口判断应用是否还在跑。** 单实例锁会让新启动的实例退出并把老进程的窗口调出来，看着像「重启了但版本没变」，实际是同一个老进程。用 `pgrep -f "Vetta.app/Contents/MacOS/Vetta"` 看 pid，并和 `launchctl print` 里的 `submitted by Vetta[pid]` 对照。
+**别用应用窗口判断应用是否还在跑。** 单实例锁会让新启动的实例退出并把老进程的窗口调出来，看着像「重启了但版本没变」，实际是同一个老进程。用 `pgrep -f "Open Forge.app/Contents/MacOS/OpenForge"` 看 pid，并和 `launchctl print` 里的 `submitted by OpenForge[pid]` 对照。
 
 ### 10.3 提示重启过早出现（暂存尚未完成）
 
@@ -481,7 +483,7 @@ pkill -f "Vetta.app/Contents/MacOS/Vetta"   # ShipIt 必须等目标退出才替
 ### 10.5 用户报「已损坏」
 
 - 先确认下载的是**新版本**——已发布的旧 DMG 不会追溯获得公证票据。
-- 让用户跑 `xattr -l /Applications/Vetta.app`，若只有 `com.apple.quarantine` 而 app 是公证过的，通常是下载过程被网络中间设备改写导致签名失效，换直链或换网络重下。
+- 让用户跑 `xattr -l /Applications/Open Forge.app`，若只有 `com.apple.quarantine` 而 app 是公证过的，通常是下载过程被网络中间设备改写导致签名失效，换直链或换网络重下。
 - 其余排查见 `../deploy/apple-code-signing.md` 第 6 节。
 
 ### 10.6 公证报 vendor 运行时未签名
@@ -489,7 +491,7 @@ pkill -f "Vetta.app/Contents/MacOS/Vetta"   # ShipIt 必须等目标退出才替
 **现象**：`notarytool` 返回 `Invalid`，issues 里全是这种路径：
 
 ```
-Vetta.app/Contents/Resources/vendor/python/cpython-...tar.gz/cpython-...tar/python/bin/python3.13
+Open Forge.app/Contents/Resources/vendor/python/cpython-...tar.gz/cpython-...tar/python/bin/python3.13
   The binary is not signed with a valid Developer ID certificate.
   The signature does not include a secure timestamp.
   The executable does not have the hardened runtime enabled.
@@ -514,7 +516,7 @@ Vetta.app/Contents/Resources/vendor/python/cpython-...tar.gz/cpython-...tar/pyth
 ### 11.1 应用日志
 
 ```text
-~/.vetta/desktop-app/logs/main/YYYY-MM-DD.log
+~/.openforge/desktop-app/logs/main/YYYY-MM-DD.log
 ```
 
 重点搜索：
@@ -529,7 +531,7 @@ download failed
 install failed
 ```
 
-打包应用的 stdout 只有从终端启动才看得到：`/Applications/Vetta.app/Contents/MacOS/Vetta`。
+打包应用的 stdout 只有从终端启动才看得到：`"/Applications/Open Forge.app/Contents/MacOS/OpenForge"`。
 
 不要记录 R2 Secret、Access Key、Authorization 或 Cookie。
 

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 插件内聚 MCP 与三源聚合
 
 插件可通过清单声明 **自带 MCP server**，随插件启用进入 agent 工具面，禁用/卸载即拆除。这是会话 MCP 的**第三配置源**，与用户全局 / 项目 MCP **聚合**后一起暴露给模型。
@@ -10,7 +11,7 @@
 
 | 源 | 配置位置 | 谁拥有 |
 | --- | --- | --- |
-| **全局** | 用户 `~/.vetta/agent/mcp.json` | 用户设置页可编辑 |
+| **全局** | 用户 `~/.openforge/agent/mcp.json` | 用户设置页可编辑 |
 | **项目** | 项目侧 MCP 配置（若有） | 项目 |
 | **插件** | `plugin.json` → `agent.mcpServers` | 插件包；**不写**用户 mcp.json |
 

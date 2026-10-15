@@ -1,13 +1,13 @@
 ---
-id: TASK-0223
+id: TASK-0273
 type: task
 status: verifying
 priority: P1
 owner: packages/plugins/presets/eform-craft
-requirement: REQ-0012
+requirement: REQ-0015
 plan: ""
-source: REQ-0012
-related_requirement: [REQ-0012]
+source: REQ-0015
+related_requirement: [REQ-0015]
 related_plan: []
 related_tasks: []
 related_issues: []
@@ -17,7 +17,7 @@ branch: main
 worktree: unassigned（主工作区串行）
 base_commit: 3bf95be216
 read_paths: [packages/plugins/AGENTS.md, packages/plugins/presets/allstar-coding, packages/plugins/presets/preset-agent, packages/plugins/presets/eform-craft]
-write_paths: [packages/plugins/presets/eform-craft, project/tasks/TASK-0223-eform-team-preset.md, project/tasks/README.md, project/requirements/REQ-0012-eform-team-preset.md, project/requirements/README.md, .github/release-notes/v0.1.3.md]
+write_paths: [packages/plugins/presets/eform-craft, project/tasks/TASK-0273-eform-team-preset.md, project/tasks/README.md, project/requirements/REQ-0015-eform-team-preset.md, project/requirements/README.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: [packages/plugins/presets/eform-craft]
 depends_on: []
 conflicts_with: []
@@ -27,7 +27,9 @@ updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
-# eform-craft 三版块团队化（REQ-0012 实施）
+# eform-craft 三版块团队化（REQ-0015 实施）
+
+> 编号说明：本任务与需求立项时为 TASK-0223 / REQ-0012；2026-10-15 合并 origin/dev 进 chenxvhua 时两号已被 dev 侧占用（TASK-0223 turn-terminal-stall、REQ-0012 ssh-file-transfer），按索引尾部顺延为 TASK-0273 / REQ-0015。正文历史记录中的旧号均指本任务与本文所立需求。
 
 ## 目标
 
@@ -40,7 +42,7 @@ updated: 2026-10-10
 - 结论：不支持（单一插件目录内聚改造 + 台账，无并行面）
 - 执行方式：serial
 - 可并行 Task：无
-- 前置依赖：REQ-0012 已立案
+- 前置依赖：REQ-0015 已立案
 - 冲突文件/独占路径：`packages/plugins/presets/eform-craft/`（本任务独占）
 - Branch：chenxvhua（主工作区，用户授权直接修改）
 - 集成：主工作区即交付物
@@ -54,7 +56,7 @@ updated: 2026-10-10
 - persona：eform.md 改写（队长调度）+ esign.md / eaudit.md 新增。
 - test/manifest.test.ts 扩充：团队结构、三技能 frontmatter、合同锚点（六件套、capabilities、锚点、五事件、仅查看不可删）。
 - README.md / ability.json 同步；package.json 与 plugin.json 版本 0.1.0→0.2.0。
-- `.github/release-notes/v0.1.3.md` 追加；REQ/README 索引与 Task 回填。
+- `.github/release-notes/v0.1.3.md` 追加；REQ/README 索引与 Task 回填（编号已顺延，见文首说明）。
 
 ### 不做
 
@@ -102,10 +104,10 @@ updated: 2026-10-10
   - `test/manifest.test.ts`：扩充团队结构断言 + 三技能 frontmatter/合同锚点断言。
   - `README.md` / `ability.json`：团队与三版块描述同步；`package.json` version 0.2.0。
   - `.github/release-notes/v0.1.3.md`：「新增」节追加二期条目。
-  - `project/requirements/REQ-0012` 立案 + 索引；本 Task 回填；`project/tasks/README.md` 焦点表行。
+  - `project/requirements/REQ-0015` 立案 + 索引；本 Task 回填；`project/tasks/README.md` 焦点表行。
 - 验证命令与结果：
   - 包内定向：`bun ../../../../scripts/quality/run-vitest.mjs --run test/manifest.test.ts`——13/13 通过（三成员+最小权限+角色断言、eform-studio 团队结构+workflow 任务书、三 persona 可读、技能 hidden、双 locale %key% 全解析（含 team 键）、eform-craft 六件套/生命周期/共享契约锚点、esign 全流程要素、eaudit 五事件+仅查看红线）。
-  - `bun run check:quick -- <18 文件>`——通过（首轮 task-worktrees 报 branch "chenxvhua" 不符合同，按守卫 contract.mjs 的 INTEGRATION_BRANCH 集合改为 `branch: main`（与 TASK-0222 先例一致，串行任务主工作区交付）后复跑全绿；skill-frontmatter 56 文件、project-indexes、context-boundary 等守卫一次通过）。
+  - `bun run check:quick -- <18 文件>`——通过（首轮 task-worktrees 报 branch "chenxvhua" 不符合同，按守卫 contract.mjs 的 INTEGRATION_BRANCH 集合改为 `branch: main`（与 TASK-0272 先例一致，串行任务主工作区交付）后复跑全绿；skill-frontmatter 56 文件、project-indexes、context-boundary 等守卫一次通过）。
   - `bun run test:impact -- packages/plugins/presets/eform-craft/plugin.json`——presets/eform-craft 13/13 通过（turbo 3 包缓存命中）。
   - `cd apps/desktop && bun run build:presets`——eform-craft 0.2.0 构建成功，产出 `release/eform-craft-0.2.0.vettapkg`（22 运行时文件）并 staging 到 `.artifacts/system-plugins/eform-craft/`（manifest/zip 校验无报错；staging 实查：3 persona + 3 技能 + workflows/studio.md + locales 完整在包）。
   - 完整 `bun run check`——exit 0（lint、5 端类型、全部守卫绿）。

@@ -9,9 +9,11 @@ description: 创建、构建并安装一个最小 Open Forge 桌面插件。
 - Node 或 Bun。
 - 用于安装和调试插件的 Open Forge 桌面客户端（安装与热更新都要求它正在运行）。
 
-**不需要** Open Forge 的源码仓库。
+先确认目标 Open Forge 构建对应的 SDK 与工具版本。使用本仓新增能力时，以[本仓插件源码](https://github.com/hxquan-q/open-forge/tree/main/packages/plugins)与配套文档为准；已有经过验证的外部 SDK/CLI 分发时，才可以脱离本仓开发。
 
-## 一条命令起工程
+## 已确认配套版本时使用脚手架
+
+下例使用保留的兼容包名，会从 npm 下载发布物。先确认该发布版本与目标 Open Forge 构建兼容并固定版本；不要将 registry 的默认版本视为本仓当前源码。
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
@@ -43,7 +45,7 @@ npx vetta-plugin-cli reload <id>  # 提示有 pending 版本时切换过去
 npx vetta-plugin-cli uninstall  # 卸载
 ```
 
-`install:vetta` 把归档交给正在运行的桌面端校验、授权、安装，**不会**直接写 `~/.vetta/plugins`。
+`install:vetta` 把归档交给正在运行的桌面端校验、授权、安装，**不会**直接写 `~/.openforge/plugins`。
 
 安装一个更新版本只被记录为 pending，应用继续加载当前活动版本，直到 `reload` 才切换。改了代码却看不到变化时，先确认 `plugin.json` 的 `version` 已经提升。
 
@@ -144,8 +146,10 @@ export default definePlugin({
 
 ```bash
 npx @vetta-org/plugin-cli init hub --name my-market \
-  --repository https://github.com/me/my-market --min-app-version 0.55.0
+  --repository https://github.com/me/my-market --min-app-version 0.1.3
 ```
+
+`0.1.3` 仅为当前 Desktop 版本示例；请填写实际验证支持的最早 Open Forge 版本。上游 `0.55.x` 与本项目独立版本线不能直接沿用。
 
 它生成 `.vetta/marketplace.json` 索引、`abilities/` 目录约定、一份仓库级 `AGENTS.md`，以及跑
 `sync --check` 的 CI。之后在 `abilities/plugins/<slug>` 里照常 `init` 即可——**开发命令一律作用于

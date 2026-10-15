@@ -3,26 +3,27 @@
 
 <p align="center"><a href="QUICKSTART.md">English</a> · <b>简体中文</b></p>
 
-两条路：安装现成构建，或从本仓库跑桌面应用。
+本指南用于运行独立维护的 Open Forge 桌面客户端：可以使用已发布构建，或从本仓源码启动。当前开发版本可能领先于最新安装包。
 
 ## 直接使用
 
-macOS、Windows、Linux 安装包：
+可用安装包及其平台范围：
 
-**→ [www.openvetta.com/download](https://www.openvetta.com/download)**
+**→ [GitHub Releases](https://github.com/hxquan-q/open-forge/releases)**
 
-官方安装包发布在官网 CDN。本仓库提供源码。安装后引导会带你配置模型（BYOK）和权限。产品文档：[docs.openvetta.com](https://docs.openvetta.com)。
+选择具体 Release 中适合操作系统和架构的资产；源码具备打包能力不代表每次 Release 都提供全部格式。安装后配置 BYOK 模型和任务需要的权限。产品文档在 [`apps/docs-site/content/docs/`](apps/docs-site/content/docs/)。
 
-从源码检出得到的是 **lite** 构建：无 Open Forge 登录、无订阅，密钥留在本机。官方安装包可能是 **full** 构建。两种形态见[构建模式](docs/desktop/build-modes.md)。
+未配置云服务时，开发环境使用 **lite** 构建，无需 Open Forge 登录或订阅。**full** 构建需要显式配置本仓之外维护的兼容服务端；使用该构建时再按发行方说明完成登录。见[构建模式](docs/desktop/build-modes.md)。
+
+仓库名与文档品牌为 **Open Forge**，默认桌面构建使用 `distribution` 档：中文 **小爱ai**、英文 **Allstr ai**。需要 Open Forge 显示名时，在 `apps/desktop/.env.development` 中设置 `VETTA_BRAND_PROFILE=self` 后重启开发进程；打包时放入相应 `.env.<mode>`。此选择不改变 lite/full，也不切换数据目录。
 
 ## 从源码开发
 
 需要 **Bun 1.3+** 和 **Node 20+**。支持 macOS、Windows、Linux。
 
 ```bash
-git clone https://github.com/openvetta/open-vetta.git
-cd open-vetta
-git checkout dev
+git clone https://github.com/hxquan-q/open-forge.git
+cd open-forge
 bun install
 ```
 

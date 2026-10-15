@@ -1,4 +1,7 @@
+<!-- Modified by The Open Forge contributors. -->
 # PRD: LLM Wiki 知识库
+
+> **上游历史设计草案**：以下状态、分支、路径与流程保留为设计沿革，不表示当前 Open Forge 的实现或待办状态。当前使用方式见[公开知识库指南](../apps/docs-site/content/docs/product/knowledge-base.mdx)，配置路径见[当前路径参考](../apps/docs-site/content/docs/reference/configuration-paths.mdx)，实施状态以 [Project](../project/README.md) 和源码为准。
 
 > 状态：ready-for-agent
 > 范围：数据契约 + 摄入(raws→wiki) + 检索 + 后台加工会话 + desktop 设置

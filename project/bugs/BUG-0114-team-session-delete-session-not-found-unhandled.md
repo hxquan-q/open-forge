@@ -1,5 +1,5 @@
 ---
-id: BUG-0102
+
 type: bug
 status: investigating
 priority: P2

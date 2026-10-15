@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 样式与陷阱
 
 把这页当 checklist：以下几条都踩过坑，足以让插件「加载失败」「元素不可见」「改了不生效」「污染宿主 UI」。
@@ -170,7 +171,7 @@ vettaPluginFederation({
 | 构建 | `hostUi: true` 会把 `@vetta-org/ui` 设为 `shared.singleton + import:false`，并 rollup external |
 | `package.json` | 仅作类型 / 本地 tsc：`devDependencies` 里 `@vetta-org/ui`（仓库内 `workspace:*`，仓库外按发布版本） |
 | 样式 | 组件 class 走宿主全局 token / Tailwind；插件 scoped CSS **管不到** Dialog 等 portal 到 `document.body` 的浮层（浮层依赖宿主已加载的全局样式，这是预期行为） |
-| 宿主版本 | 需要宿主提供 `vetta-host://ui` shim：desktop **>= 0.5.31**，且 `@vetta-org/plugin-vite` **>= 0.0.5**。旧宿主上 import `@vetta-org/ui` 会在加载插件时解析失败（模块找不到，整个插件不激活）——若你的插件要兼容更早的 App，就别用这条通道，自写 JSX + 语义 class |
+| 宿主版本 | 需要宿主提供 `vetta-host://ui` shim：Open Forge 当前 **0.1.3** 已提供（上游引入版本为 **0.5.31**，不能直接作为 fork 的最低版本），且 `@vetta-org/plugin-vite` **>= 0.0.5**。旧宿主上 import `@vetta-org/ui` 会在加载插件时解析失败（模块找不到，整个插件不激活）——若你的插件要兼容更早的 App，就别用这条通道，自写 JSX + 语义 class |
 | 稳定性 | **半稳定、可选**。宿主会尽量不无故破坏，但不对跨 App 大版本做 semver 承诺；props / 导出变更时官方插件随 monorepo 同改 |
 | 不在此列 | `@vetta-org/theme-ui/plugin-ui` 是独立的按需共享合同，见下节；不要从其它 `@vetta-org/theme-ui/*` 入口导入宿主业务 View |
 

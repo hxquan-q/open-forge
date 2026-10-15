@@ -1,6 +1,7 @@
+<!-- Modified by The Open Forge contributors. -->
 # 设计画廊（Design Gallery）功能介绍
 
-> 系统插件 `vetta-ui-design` 的一部分，随 Vetta Desktop 发布。侧边栏「更多」→「设计」进入，也可以 pin 到左上方常驻（入口不再随工作模式隐藏，见 ADR-0046 的 2026-08 修订）。
+> 系统插件 `vetta-ui-design` 的一部分，随 Open Forge Desktop 发布。侧边栏「更多」→「设计」进入，也可以 pin 到左上方常驻（入口不再随工作模式隐藏，见 ADR-0046 的 2026-08 修订）。
 
 ## 它解决什么问题
 

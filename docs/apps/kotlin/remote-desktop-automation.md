@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 自动化验证与可观测性
 
 真机不能由开发 Agent 直接替代验证，因此采用分层测试：快速纯逻辑测试覆盖协议，Worker 合同测试覆盖真实连接顺序，Chromium E2E 覆盖视频像素和输入，Android 构建/设备测试覆盖 Kotlin 集成，最后才用实体手机验证厂商系统和网络差异。
@@ -5,7 +6,7 @@
 ## 1. Remote Desktop 包
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-vetta\packages\remote-desktop"
+Set-Location "C:\develop\yiyun\vetta\open-forge\packages\remote-desktop"
 bun run build
 bun run test
 bun run test:e2e
@@ -23,7 +24,7 @@ bun run test:e2e
 ## 2. Cloudflare Worker
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-vetta\apps\remote-relay"
+Set-Location "C:\develop\yiyun\vetta\open-forge\apps\remote-relay"
 bun run test
 bun run typecheck
 bun run deploy:dry
@@ -42,7 +43,7 @@ Worker 测试必须覆盖：
 ## 3. Android 构建和测试
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-vetta\apps\kotlin"
+Set-Location "C:\develop\yiyun\vetta\open-forge\apps\kotlin"
 .\gradlew.bat :shared:testAndroidHostTest :androidApp:assembleDebug --no-daemon
 ```
 
@@ -57,7 +58,7 @@ Set-Location "C:\develop\yiyun\vetta\open-vetta\apps\kotlin"
 ## 4. 仓库质量门禁
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-vetta"
+Set-Location "C:\develop\yiyun\vetta\open-forge"
 bun run check:quick
 bun run check
 ```

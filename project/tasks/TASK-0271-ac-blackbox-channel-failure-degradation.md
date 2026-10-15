@@ -1,5 +1,5 @@
 ---
-id: TASK-0221
+id: TASK-0271
 type: task
 status: verifying
 priority: P1
@@ -15,7 +15,7 @@ branch: main
 worktree: unassigned（主工作区串行）
 base_commit: 92337f595
 read_paths: [packages/plugins/presets/allstar-coding, .github/release-notes]
-write_paths: [packages/plugins/presets/allstar-coding, .github/release-notes/v0.1.3.md, project/tasks/TASK-0221-ac-blackbox-channel-failure-degradation.md, project/tasks/README.md]
+write_paths: [packages/plugins/presets/allstar-coding, .github/release-notes/v0.1.3.md, project/tasks/TASK-0271-ac-blackbox-channel-failure-degradation.md, project/tasks/README.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -29,7 +29,7 @@ updated: 2026-10-09
 
 ## 编号说明
 
-- 任务书成稿时按索引尾部预计 TASK-0219；2026-10-08 合并 origin/dev 后编号体系顺延（原 TASK-0217/0218 → TASK-0219/0220），实际取 **TASK-0221**。任务书中的 related_tasks `TASK-0217` 同批映射为 `TASK-0219`。
+- 任务书成稿时按索引尾部预计 TASK-0219；2026-10-08 合并 origin/dev 后编号体系顺延（原 TASK-0217/0218 → TASK-0219/0220），实际取 TASK-0221（本次合并再顺延为 **TASK-0271**，原 0221 已被 dev 侧 renderer-flushsync 任务占用）。任务书中的 related_tasks `TASK-0217` 同批映射为 `TASK-0219`。
 
 ## 目标
 

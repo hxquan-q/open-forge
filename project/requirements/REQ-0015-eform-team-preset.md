@@ -1,5 +1,5 @@
 ---
-id: REQ-0012
+
 type: requirement
 status: ready
 priority: P1
@@ -8,7 +8,7 @@ source: user-request（《电子化表单(1).docx》第二/三章 + 用户口头
 created: 2026-10-10
 updated: 2026-10-10
 related_plan: []
-related_tasks: [TASK-0223]
+
 related_issues: []
 related_bugs: []
 depends_on: []

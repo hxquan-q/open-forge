@@ -12,6 +12,8 @@ description: 先判断失败发生在哪一层，再排查登录、模型、文�
 
 遇到问题时，先记录发生时间、当前入口和最后一个成功步骤。反馈问题可使用 **设置 → 通用设置 → 导出诊断包**；不要附完整访问密钥、Cookie、OAuth 凭证或含隐私的项目内容。
 
+默认 lite 构建无需登录，先排查自行配置的模型端点、凭据与本地环境。下方登录排查仅适用于已配置账号服务的 full 分发构建。
+
 ## 五分钟快速定位
 
 <Checklist title="先做这些检查">
@@ -50,7 +52,7 @@ description: 先判断失败发生在哪一层，再排查登录、模型、文�
     **如何验证**：新建空白会话，只发送短消息。短消息成功而原任务失败时，再检查上下文长度、工具或任务专属模型。
 
     <Callout title="不要泄露密钥" type="warn">
-      不要把完整访问密钥写进日志或问题报告。配置文件默认在 `~/.vetta/agent/models.json`。
+      不要把完整访问密钥写进日志或问题报告。配置文件默认在 `~/.openforge/agent/models.json`。
     </Callout>
   </Accordion>
   <Accordion id="file-access" title="无法读取或写入项目文件">
@@ -64,7 +66,7 @@ description: 先判断失败发生在哪一层，再排查登录、模型、文�
     **如何恢复**：对失败项使用 **重试失败文件**。清空 Wiki 只删除整理结果、保留原始文件，但会触发重新加工；操作前确认配额和时间成本。会话回答仍异常时，先问一个只依赖单份已完成资料的问题并核对来源。
   </Accordion>
   <Accordion id="mcp" title="MCP 工具不可用">
-    **先确认**：在 **能力 → 我的** 中 MCP 已添加且启用，凭证或 OAuth 已完成。检查 `~/.vetta/agent/mcp.json` 中 command/url，stdio 命令在 PATH 中可执行，HTTP 地址可从当前网络访问。
+    **先确认**：在 **能力 → 我的** 中 MCP 已添加且启用，凭证或 OAuth 已完成。检查 `~/.openforge/agent/mcp.json` 中 command/url，stdio 命令在 PATH 中可执行，HTTP 地址可从当前网络访问。
 
     **如何验证**：使用 [MCP 最小验证任务](/product/mcp/#自动批准与排错) 先列出工具并调用一个只读工具。连接状态正常但没有工具时，检查服务端暴露项和当前会话是否已刷新能力。
   </Accordion>
@@ -97,7 +99,7 @@ description: 先判断失败发生在哪一层，再排查登录、模型、文�
 
 ## 提交可复现的问题
 
-如果最小场景仍失败，请在 [GitHub Issues](https://github.com/openvetta/open-vetta/issues) 提供：
+如果最小场景仍失败，请在 [GitHub Issues](https://github.com/hxquan-q/open-forge/issues)（占位：本仓 Issues 暂未启用，启用前请先经社区渠道反馈）提供：
 
 - Open Forge 版本、操作系统和安装来源。
 - 最小复现步骤、期望结果和实际结果。

@@ -6,6 +6,8 @@ description: Understand the plugin runtime, capability surface, and trust bounda
 
 Open Forge plugins extend the desktop UI, file browser, conversations, and Agent capabilities through `@vetta-org/plugin-sdk`. They are built with React, TypeScript, and Vite, then loaded as Module Federation artifacts.
 
+This page describes the plugin host in this repository's target version. Match the SDK and tooling to that build. The `@vetta-org/*` compatibility names do not establish that upstream npm releases contain Open Forge's changes.
+
 ## Runtime and trust
 
 - Plugins run in the Desktop renderer's shared JavaScript realm, not an iframe or Worker sandbox.

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 3. 身份、错误和产品事件契约
 
 ## 3.1 独立接口
@@ -26,7 +27,7 @@ export interface AnalyticsClient {
 
 - ErrorReporter 由 Sentry adapter 实现；
 - AnalyticsClient 由 PostHog adapter 实现；
-- correlationId 由 Vetta 生成；
+- correlationId 由 Open Forge 生成；
 - providerEventId 是 adapter 返回的不透明平台事件 ID，只供 ErrorProductBridge 建立关联；
 - capture/track 不得向调用方抛出 SDK 错误；
 - 不提供通用 extra: Record<string, unknown>。
@@ -48,7 +49,7 @@ export interface TelemetryContext {
 
 映射：
 
-| Vetta 字段 | Sentry | PostHog |
+| Open Forge 字段 | Sentry | PostHog |
 |---|---|---|
 | anonymousUserId | user.id | distinct_id |
 | appSessionId | tag: app_session_id | property: app_session_id |

@@ -1,13 +1,13 @@
 ---
-id: TASK-0222
+id: TASK-0272
 type: task
 status: verifying
 priority: P1
 owner: packages/plugins/presets/eform-craft
-requirement: REQ-0011
+requirement: REQ-0014
 plan: ""
-source: REQ-0011
-related_requirement: [REQ-0011]
+source: REQ-0014
+related_requirement: [REQ-0014]
 related_plan: []
 related_tasks: []
 related_issues: []
@@ -17,7 +17,7 @@ branch: main
 worktree: unassigned（主工作区串行）
 base_commit: ff0009011
 read_paths: [packages/plugins/AGENTS.md, packages/plugins/presets/allstar-coding, packages/plugins/presets/preset-agent]
-write_paths: [packages/plugins/presets/eform-craft, packages/plugins/tenants.json, .github/release-notes/v0.1.3.md, project/tasks/TASK-0222-eform-craft-preset.md, project/tasks/README.md, project/requirements/REQ-0011-eform-craft-preset.md, project/requirements/README.md]
+write_paths: [packages/plugins/presets/eform-craft, packages/plugins/tenants.json, .github/release-notes/v0.1.3.md, project/tasks/TASK-0272-eform-craft-preset.md, project/tasks/README.md, project/requirements/REQ-0014-eform-craft-preset.md, project/requirements/README.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -27,7 +27,9 @@ updated: 2026-10-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
-# eform-craft 电子表单还原预置插件（REQ-0011 一期实施）
+# eform-craft 电子表单还原预置插件（REQ-0014 一期实施）
+
+> 编号说明：本任务与需求立项时为 TASK-0222 / REQ-0011；2026-10-15 合并 origin/dev 进 chenxvhua 时两号已被 dev 侧占用（TASK-0222 team-composer、REQ-0011 brand-profile），按索引尾部顺延为 TASK-0272 / REQ-0014。正文历史记录中的旧号均指本任务与本文所立需求。
 
 ## 目标
 
@@ -40,7 +42,7 @@ updated: 2026-10-09
 - 结论：不支持（新增独立插件目录 + 两处注册点 + 台账，单一关注内聚）
 - 执行方式：serial
 - 可并行 Task：无
-- 前置依赖：无（REQ-0011 已立案）
+- 前置依赖：无（REQ-0014 已立案）
 - 冲突文件/独占路径：`packages/plugins/tenants.json`（本任务内独占；无其他活动 Task 写它）
 - Branch：main（主工作区，用户授权直接修改）
 - Worktree：不拆出（串行小任务，主工作区直接实施）
@@ -51,8 +53,8 @@ updated: 2026-10-09
 
 - `packages/plugins/presets/eform-craft/` 全部资产：package.json / plugin.json / tsconfig.json / vite.config.ts / vitest.config.ts / src/index.tsx（空 activate）/ README.md / ability.json / icon.png（128×128 占位）/ locales/{zh,en}.json / agent/agents/eform.md / agent/skills/eform-craft/SKILL.md / test/manifest.test.ts。不建包内 .gitignore（根 `node_modules/`+`dist/` 与 `packages/plugins/.gitignore` 的 `release/` 已全覆盖，已核实）。
 - `packages/plugins/tenants.json`：development 与 production 两 profile 的 common 数组末尾各追加 `"eform-craft"`。
-- `.github/release-notes/v0.1.3.md`：「新增」节追加一条（v0.1.3 为迁移前手写正文、无碎片，按 TASK-0221 先例直接改正文）。
-- `project/requirements/REQ-0011-eform-craft-preset.md` 立案 + `project/requirements/README.md` 索引行。
+- `.github/release-notes/v0.1.3.md`：「新增」节追加一条（v0.1.3 为迁移前手写正文、无碎片，按 TASK-0271 先例直接改正文）。
+- `project/requirements/REQ-0014-eform-craft-preset.md` 立案 + `project/requirements/README.md` 索引行。
 - 本 Task 台账 + `project/tasks/README.md` 焦点表索引行。
 
 ### 不做
@@ -87,7 +89,7 @@ updated: 2026-10-09
 - 工程验证：通过（五步命令全绿：包内定向 6/6、check:quick、test:impact、build:presets 产出 vettapkg 并 staging、完整 check exit 0；见交付记录）。
 - 技术评审：自审（SKILL.md 与 persona 通读，识别合同/确认门/mock 纪律/终期边界四组规则核对无歧义）。
 - 集成：与 frontmatter integration_status 一致（integrated，主工作区直接修改）。
-- 人工功能验收：不适用（插件启用面由 build:presets staging 验证；@eform 行为面属 REQ-0011 后续实机验收，另立任务）。
+- 人工功能验收：不适用（插件启用面由 build:presets staging 验证；@eform 行为面属 REQ-0014 后续实机验收，另立任务）。
 - 发布：未授权（release-notes 已按规范追加正文）。
 
 ## 功能验收包
@@ -103,10 +105,10 @@ updated: 2026-10-09
 - 实际修改（新增插件 15 文件 + 注册/说明/台账 8 处）：
   - `packages/plugins/presets/eform-craft/`：package.json（@vetta/plugin-preset-eform-craft 0.1.0）、plugin.json（权限恰为 `["agent.skills.control"]`、skillPresentation hidden、单 agent eform/master）、tsconfig.json、vite.config.ts（remoteName `eform_craft`）、vitest.config.ts、src/index.tsx（空 activate，纯提示词资产）、README.md（含 Context Boundary 块）、ability.json（中英 feature-grid）、icon.png（Pillow 生成的 128×128 RGBA 占位，表单线条+勾选意象）、locales/{zh,en}.json（4 键全解析）、agent/agents/eform.md（persona，七条铁律）、agent/skills/eform-craft/SKILL.md（识别合同两张表+通道矩阵+四件套规范+确认门+修改循环+终期边界）、test/manifest.test.ts（6 用例）。未建包内 .gitignore（根 `node_modules/`+`dist/` 与 `packages/plugins/.gitignore` 的 `release/` 已全覆盖，`git check-ignore` 实证）。
   - `packages/plugins/tenants.json`：development 与 production 两 profile common 数组末尾各追加 `"eform-craft"`（17/18 与 16/17 个插件，两处均验证 True）。
-  - `.github/release-notes/v0.1.3.md`：「新增」节首条追加 eform-craft 条目（v0.1.3 为迁移前手写正文、无 fragments/ 目录，按 TASK-0221 先例直接改正文）。
+  - `.github/release-notes/v0.1.3.md`：「新增」节首条追加 eform-craft 条目（v0.1.3 为迁移前手写正文、无 fragments/ 目录，按 TASK-0271 先例直接改正文）。
   - `bun.lock`：`bun install` 自动收录新 workspace 包条目（含 allstar-coding 0.3.1→0.3.3 的顺带校正——该包 plugin.json 早已是 0.3.3，属锁文件滞后回填，非本任务改动面）。
   - `docs/architecture/dependents.md`：`--write-dependents` 重生成（plugin-sdk/plugin-vite 依赖者清单插入 `@vetta/plugin-preset-eform-craft`，新增一行空依赖记录）——context-boundaries 门禁对新增插件 README 的机械要求。
-  - `project/requirements/REQ-0011-eform-craft-preset.md` 立案 + `project/requirements/README.md` 索引行 + 本 Task 台账 + `project/tasks/README.md` 焦点表行。
+  - `project/requirements/REQ-0014-eform-craft-preset.md` 立案 + `project/requirements/README.md` 索引行 + 本 Task 台账 + `project/tasks/README.md` 焦点表行。
 - 验证命令与结果：
   - 包内定向：`bun ../../../../scripts/quality/run-vitest.mjs --run test/manifest.test.ts`——6/6 通过（单 agent+最小权限、systemPrompt 可读、技能 hidden、双 locale %key%、frontmatter+正文体量、识别合同锚点 6 fieldName+6 标记+四件套+`__EFORM_MOCK__`）。
   - `bun run check:quick -- <18 文件>`——通过（首轮 context-boundary 报 dependents.md stale，按提示 `--write-dependents` 重生成后复跑全绿；其余守卫含 skill-frontmatter 54 文件、task-worktrees 222 任务、project-indexes 一次通过）。
@@ -115,7 +117,7 @@ updated: 2026-10-09
   - 完整 `bun run check`——exit 0（lint 4793 文件、类型 root/cli/desktop/docs/mobile 5 端、守卫全绿）。
   - V7 行为自查：通读 SKILL.md 与 persona——识别合同（两张表逐字与需求原文一致，`F_Lot Number` 等含空格原样）、确认门（六步协议、口头同意不算过关）、mock 纪律（虚构占位、敏感打码）、终期边界（四项明确「占位/留钩子」）四组规则表述无歧义。
 - 未做及原因：
-  - 真实 Desktop 端到端（@eform 会话实跑一次识别）——需真实模型与 GUI，仓库规范不默认启动长驻 dev；行为面由 manifest/skill 合同测试+frontmatter 守卫覆盖，实机验收按 REQ-0011 另立任务。
+  - 真实 Desktop 端到端（@eform 会话实跑一次识别）——需真实模型与 GUI，仓库规范不默认启动长驻 dev；行为面由 manifest/skill 合同测试+frontmatter 守卫覆盖，实机验收按 REQ-0014 另立任务。
   - 包内 `.gitignore`——根与 packages/plugins 两级已全覆盖构建产物，按「不画蛇添足」省略（实施契约预判一致）。
 - 已知风险：提示词资产无单测可锁行为，agent 实际识别质量依赖模型（合同锚点测试只锁规格面）；Excel/Word 通道依赖会话工具（doc_to_pdf/dataset_profile）实际可用，技能已写降级路径。
 - 归属标注：Open-Forge-only（fork 专属业务插件，不回馈上游）。

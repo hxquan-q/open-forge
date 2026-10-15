@@ -10,7 +10,9 @@ description: 根据宿主边界选择插件、主题、SDK、RPC 或 CLI，避�
   <li>跨包只走公开 exports</li>
 </Takeaways>
 
-Open Forge 提供从内容能力到完整宿主集成的多层扩展面。先根据目标选择最窄、最稳定的入口，再阅读对应合同。
+本页面向本仓 Open Forge 的贡献者和扩展开发者。先根据目标选择最窄的入口，再以目标构建在本仓的公开 exports、类型和文档核对合同。
+
+`@vetta/*`、`@vetta-org/*` 等包名保留兼容身份；上游 registry 中的同名包可能处于不同版本线。开发本仓新增能力时使用配套源码与工具；外部发布包须先针对目标构建验证，不能仅凭包名推断兼容。
 
 <MediaFrame>
   <img src="/images/product/plugin-workbench.webp" alt="Open Forge 插件工作台同时展示移动预览和电子表格预览" width="1536" height="836" />
