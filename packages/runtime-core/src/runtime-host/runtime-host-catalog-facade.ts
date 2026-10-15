@@ -46,7 +46,16 @@ export class RuntimeHostCatalogFacade {
 	async deleteSession(sessionPath: string): Promise<void> {
 		await this.assertCapability(sessionPath, "delete");
 		const existing = this.options.sessionLifecycle.findBySessionPath(sessionPath);
-		if (existing) await this.options.sessionLifecycle.disposeSession(existing.sessionId);
+		if (existing) {
+			try {
+				await this.options.sessionLifecycle.disposeSession(existing.sessionId, {
+					releaseOnDisposeFailure: true,
+				});
+			} catch {
+				// 删除以「会话文件消失」为准。释放失败已由 sessionLifecycle 记为
+				// session.dispose 生命周期观测；再让它把用户卡在删不掉的会话上只会更糟。
+			}
+		}
 		await this.requireCatalog().deleteSessionArtifacts(sessionPath);
 	}
 

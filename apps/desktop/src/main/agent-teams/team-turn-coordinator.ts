@@ -267,13 +267,24 @@ export class TeamTurnCoordinator {
 		for (const controller of this.activeSends.get(sessionId) ?? []) controller.abort();
 		for (const controller of this.memberCancellations.get(sessionId)?.values() ?? []) controller.abort();
 		const session = this.options.sessionState.get(sessionId);
-		await Promise.all([
-			session
-				? this.notificationJournal.stop(session).finally(() => this.taskControl.stopTeam(session))
-				: Promise.resolve(),
-			this.abortRuntimes(session),
-		]);
+		await Promise.all([session ? this.stopSessionNotices(session) : Promise.resolve(), this.abortRuntimes(session)]);
 		log.info("team session stopped", { teamSessionId: sessionId });
+	}
+
+	/**
+	 * Best-effort：协调会话已被删除时 STOP 标记本来就写不进去，而内存 latch 已经保证本进程
+	 * 不再恢复该会话；让持久化失败掀翻 stop/delete 只会把清理问题变成用户可见的失败。
+	 */
+	private async stopSessionNotices(session: TeamSessionDocument): Promise<void> {
+		try {
+			await this.notificationJournal.stop(session);
+		} catch (error) {
+			log.warn("Team session stop marker could not be persisted", {
+				teamSessionId: session.id,
+				errorName: error instanceof Error ? error.name : "UnknownError",
+			});
+		}
+		await this.taskControl.stopTeam(session);
 	}
 
 	/** Best-effort: a runtime that is closed or not loaded must not fail the stop. */

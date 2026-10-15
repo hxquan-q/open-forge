@@ -67,4 +67,31 @@ describe("RuntimeHostCatalogFacade capability errors", () => {
 
 		expect(catalog.deleteSessionArtifacts).toHaveBeenCalledWith("/sessions/known.jsonl");
 	});
+
+	// 回归 BUG-0108 路径 B：成员 runtime 的扩展释放失败不应把用户卡在删不掉的会话上。
+	// 释放失败本身已由 sessionLifecycle 记为 session.dispose 生命周期观测。
+	it("still deletes artifacts when the live session fails to dispose", async () => {
+		const catalog = {
+			deleteSessionArtifacts: vi.fn(async () => {}),
+			renameSession: vi.fn(async () => {}),
+		} as unknown as RuntimeSessionCatalog;
+		const facade = new RuntimeHostCatalogFacade({
+			catalog,
+			accessResolver: { resolve: async () => access() },
+			sessionLifecycle: {
+				findBySessionPath: () => ({ sessionId: "runtime-1" }),
+				disposeSession: async () => {
+					throw new AggregateError(
+						[new Error("Failed to dispose one or more session extensions: subagent")],
+						"dispose failed",
+					);
+				},
+			} as never,
+			sessionOperations: { renameSessionById: async () => {} } as never,
+		});
+
+		await expect(facade.deleteSession("/sessions/known.jsonl")).resolves.toBeUndefined();
+
+		expect(catalog.deleteSessionArtifacts).toHaveBeenCalledWith("/sessions/known.jsonl");
+	});
 });

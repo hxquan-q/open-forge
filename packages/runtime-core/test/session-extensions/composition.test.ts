@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { UserMessage } from "@vetta/ai";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -248,6 +249,30 @@ describe("SessionExtensionComposition", () => {
 		expect(lifecycle).toEqual(["second", "first", "second"]);
 		await expect(composition.dispose()).resolves.toBeUndefined();
 		expect(lifecycle).toEqual(["second", "first", "second"]);
+	});
+
+	// 回归 BUG-0108：AggregateError 的 message 是唯一能穿过 IPC 边界的诊断信息，
+	// 必须点名失败的扩展，否则日志只能看到「某个扩展失败」而无法定位。
+	it("names the extensions that failed to dispose", async () => {
+		const extension = (id: string, failing: boolean): SessionExtensionDefinition => ({
+			id,
+			create: () => ({
+				contributions: [],
+				dispose() {
+					if (failing) throw new Error(`dispose:${id}`);
+				},
+			}),
+		});
+		const composition = await SessionExtensionComposition.create({
+			definitions: [extension("base", false), extension("broken", true)],
+		});
+
+		const error = (await composition.dispose().catch((reason: unknown) => reason)) as AggregateError;
+
+		expect(error).toBeInstanceOf(AggregateError);
+		expect(error.message).toContain("broken");
+		expect(error.message).not.toContain("base");
+		expect(error.errors).toHaveLength(1);
 	});
 });
 
