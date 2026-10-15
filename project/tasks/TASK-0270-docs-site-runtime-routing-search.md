@@ -17,7 +17,7 @@ write_paths: [apps/docs-site, .github/workflows/docs-site.yml, .github/release-n
 exclusive_paths: [apps/docs-site]
 depends_on: [TASK-0047]
 conflicts_with: [TASK-0047, TASK-0048, TASK-0154, TASK-0197, TASK-0218, TASK-0223]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-15
 updated: 2026-10-15
 ---
@@ -60,3 +60,4 @@ updated: 2026-10-15
 - 技术自审：核对 buildIndex 使用公开扩展，框架仍负责 locale 过滤、breadcrumbs 和索引生命周期；结果 URL 不含语言前缀。生产 proxy、Next 配置、语言注册表和内容路径均无改动。测试启动 Node 子进程，仅绑定 localhost，按就绪信号同步，并在结束/失败后清理；CI 保持只读权限和既有触发范围，未添加部署。
 - 未运行：远程 CI/Ubuntu 执行、外部域名部署、真实浏览器点击语言切换、Desktop/verify:ui 和真实 Provider。HTTP 证据验证后端路由/内容/搜索合同，不代替浏览器交互或用户人工接受。
 - 验收入口：在 apps/docs-site 先运行 bun run build，再运行 bun run test:production；手动阅读可在构建后运行 bun run preview，从 localhost:4321 打开安装/配置页并切换语言，搜索 configuration / 配置后打开结果，再选择查看 Markdown。预期品牌、语言与数据目录一致，搜索无 500；测试服务已关闭。
+- 本地集成：修复提交 f9a9d7895 已在本地 main 串行完成，提交后文件清单与工作区核对通过；工程测试针对该提交的内容，pre-commit 无额外改写。integration_status=integrated；未推送 origin/dev、未晋升稳定分支、未部署，人工功能接受仍待用户反馈。
