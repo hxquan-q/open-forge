@@ -96,7 +96,7 @@ describe("MessageListFooter 中断续跑条", () => {
 	it("末尾错误可恢复且会话空闲：显示原因与「继续」，点击调 session.retry", async () => {
 		render(
 			<Provider store={store}>
-				<MessageListFooter isCompacting={false} waiting={false} sessionId="runtime-1" interruptedErrorKind="network" />
+				<MessageListFooter isCompacting={false} waiting={false} runtimeSessionId="runtime-1" interruptedErrorKind="network" />
 			</Provider>,
 		);
 
@@ -124,7 +124,7 @@ describe("MessageListFooter 中断续跑条", () => {
 
 		render(
 			<Provider store={store}>
-				<MessageListFooter isCompacting={false} waiting={false} sessionId="runtime-1" interruptedErrorKind="network" />
+				<MessageListFooter isCompacting={false} waiting={false} runtimeSessionId="runtime-1" interruptedErrorKind="network" />
 			</Provider>,
 		);
 
@@ -139,7 +139,7 @@ describe("MessageListFooter 中断续跑条", () => {
 
 		render(
 			<Provider store={store}>
-				<MessageListFooter isCompacting={false} waiting={false} sessionId="runtime-1" interruptedErrorKind="network" />
+				<MessageListFooter isCompacting={false} waiting={false} runtimeSessionId="runtime-1" interruptedErrorKind="network" />
 			</Provider>,
 		);
 

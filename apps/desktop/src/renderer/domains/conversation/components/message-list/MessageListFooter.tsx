@@ -14,15 +14,18 @@ export const MessageListFooter = memo(function MessageListFooter({
 	isCompacting,
 	pendingLabel,
 	waiting,
-	sessionId,
+	sessionPath,
+	runtimeSessionId,
 	interruptedErrorKind,
 }: {
 	isCompacting: boolean;
 	pendingLabel?: string;
 	/** Runtime state; true while the live reply has not produced visible content. */
 	waiting: boolean;
-	/** Workflows only exist for an established live session. */
-	sessionId?: string;
+	/** 持久会话路径：只用于「会话已建立」门控。 */
+	sessionPath?: string;
+	/** 该会话的 canonical runtime session id；宿主调用必须用它——传持久路径会被判 SESSION_NOT_FOUND。 */
+	runtimeSessionId?: string;
 	/** 末尾助手消息以可恢复错误收尾时的错误类别；显示「上次回复未完成 [继续]」。 */
 	interruptedErrorKind?: ChatErrorKind;
 }) {
@@ -40,14 +43,14 @@ export const MessageListFooter = memo(function MessageListFooter({
 				reason: t(`messageList.errorBlock.kinds.${retryKind}.title`),
 			})
 		: null;
-	const showResumeBar = Boolean(interruptedErrorKind && sessionId && !retryLabel && !pendingLabel);
+	const showResumeBar = Boolean(interruptedErrorKind && runtimeSessionId && !retryLabel && !pendingLabel);
 	const onResume = useCallback(() => {
-		if (!sessionId) return;
-		void window.vetta.session.retry(sessionId).catch((error: unknown) => {
+		if (!runtimeSessionId) return;
+		void window.vetta.session.retry(runtimeSessionId).catch((error: unknown) => {
 			console.warn("[MessageListFooter] resume failed", error);
 			showToast({ variant: "warning", message: t("messageList.resumeBar.failed") });
 		});
-	}, [sessionId, t]);
+	}, [runtimeSessionId, t]);
 	return (
 		<MessageListFooterPrimitive.Root>
 			{showResumeBar && interruptedErrorKind ? (
@@ -93,7 +96,7 @@ export const MessageListFooter = memo(function MessageListFooter({
 					<StreamingIndicator />
 				</MessageListFooterPrimitive.Waiting>
 			) : null}
-			{sessionId ? <WorkflowFooterItems /> : null}
+			{sessionPath ? <WorkflowFooterItems /> : null}
 			<PluginTurnCardHost />
 		</MessageListFooterPrimitive.Root>
 	);
