@@ -30,7 +30,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-12
-updated: 2026-10-12
+updated: 2026-10-13
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -104,7 +104,7 @@ updated: 2026-10-12
 - 工程验证：定向套件绿（见交付记录）；check:guards 有存量红，按 HEAD 归因非本任务
 - 技术评审：自审完成
 - 集成：pending（main 串行）
-- 人工功能验收：待验收（需真实 SSH 设备）
+- 人工功能验收：已验收（2026-10-13 用户实测：大/小文件上传、文件夹下载功能正常；遗留项「大文件下载进度不推进」定性为功能面反馈，见验证期反馈与剩余风险，暂不处理）
 - 发布：未授权
 
 ## 交付记录
@@ -141,6 +141,9 @@ updated: 2026-10-12
 ### 验证期反馈（2026-10-12）
 
 - 运行中的 dev 窗口报 `__vettaHostApi.ssh.onTransferEvent is not a function`（错误边界「当前页面遇到问题」）。定位：`dist/preload/index.js` 停在 10-10 16:37 构建（早于切片 2），而 Electron 窗口创建时绑定 preload、不随渲染层 HMR 热更；渲染层新 hook 已由 HMR 生效才出现 renderer/preload 版面错位。`bun run build:preload` 构建通过且产物含全部传输通道，属运行环境陈旧而非接线缺陷——接线由 preload/index.ts `rawApi: Omit<DesktopApi, "hostAccess">` 的全量类型静态保证，无需新增运行时 guard（全库无此惯例，renderer 与 preload 同件发布）。处置：重建 preload 后重启 dev Electron 即恢复。
+- 2026-10-13 用户验收反馈（功能面，非缺陷）：① 大文件下载进度条走不到 100% 就消失，实际传输正常。定位：进度百分比 = `receivedBytes / totalBytes`，而 `totalBytes` 来自 `stat` 的 `st_size`；下载是远端 shell 管道的 `cat`，远端 `cat` 把目标经**管道**写出时管道 st_size 恒为 0，`totalBytes` 取到 0 后进度条按「未知总量」语义退化，条与百分比均不再推进，直到条目完成被移出列表——故表现为「没到 100% 就消失」但字节收发不受影响（`wc -c` 校验与落盘均正常）。处置决定：暂不处理（下载进度改为按 `cat` 实际流出字节推进无可靠总量可除，需远端先 `wc -c` 预取大小，改动面超出本任务范围，留待需要时另立）。② 小文件上传/下载一闪而过、进度条看不到——正常语义（完成即移出活动列表），维持现状。
+
+### 未运行及原因
 
 ### 未运行及原因
 
@@ -153,5 +156,6 @@ updated: 2026-10-12
 - 上下文菜单/拖放分流的渲染层无自动化用例，回归依赖人工；后续可补 `useSshFileTransfers` 的 renderHook 用例。
 - 传输面板只镜像订阅期间的事件，切走工作区后旧条目滞留，切回后新事件恢复更新。
 - check:guards 存量红（21 个他人批次文件缺声明头）需归属批次补头或收缩 ratchet 基线。
+- 大文件下载进度不可量化（管道 `cat` 无 st_size）：进度条在未知总量时不推进，条目完成即消失；用户已知悉，暂不处理（改进需远端预取字节数）。
 
 - Worktree：未拆出（serial，main 工作区）；提交仅含本任务路径，不夹带 `bun.lock` 与 `project/bugs/BUG-0082-*.md`。
