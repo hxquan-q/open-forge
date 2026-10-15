@@ -1,3 +1,4 @@
+import type { DesktopNotificationPreferences } from "../../shared/notification-preferences.js";
 import type { ProjectEntry } from "./shared.js";
 
 export type DesktopProxyProtocol = "http" | "https";
@@ -26,6 +27,8 @@ export interface DesktopConfigData {
 	projects: ProjectEntry[];
 	archivedProjects: ProjectEntry[];
 	workspacePath: string;
+	/** Agent 事件的系统横幅、内置提示音与显示时机。 */
+	notificationPreferences: DesktopNotificationPreferences;
 	vettaAppPath?: string;
 	defaultExecutionMode?: "sandbox" | "full-access";
 	/** 新会话的默认工作模式（agent_mode 轴）。缺省视为 "work"；已存在会话不受它影响。 */
@@ -148,3 +151,10 @@ export interface DesktopConfigApi {
 	 */
 	onProjectsChanged(handler: () => void): () => void;
 }
+
+export type {
+	BuiltinNotificationSoundId,
+	DesktopNotificationPreferences,
+	NotificationDeliveryScope,
+	NotificationEventType,
+} from "../../shared/notification-preferences.js";

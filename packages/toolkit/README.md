@@ -61,3 +61,18 @@ Detailed conventions and recommended consumer directory structure are documented
 - **No** Electron / desktop / theme dependencies.
 - Prefer small, composable tools; domain config lives with the product.
 - Mark Node-only APIs clearly (fs-backed modules).
+
+
+## Context Boundary
+
+```yaml
+purpose: Shared Node utilities for the Vetta monorepo (config, fs helpers, …).
+provides:  
+  - "@vetta/toolkit"
+  - "@vetta/toolkit/atomic-write"
+  - "@vetta/toolkit/versioned-config"
+  - "@vetta/toolkit/config-store"
+  - "@vetta/toolkit/file-migrations"
+consumes:  []
+internal_dependencies:  []
+```

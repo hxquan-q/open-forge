@@ -23,6 +23,7 @@
 		},
 		"clawConnected": "Claw 已连接",
 		"hide": "隐藏侧边栏",
+		"regionLabel": "侧边栏",
 		"empty": {
 			"title": "还没有项目",
 			"description": "点击上方 + 新建项目"
@@ -30,6 +31,7 @@
 		"projects": {
 			"noSessions": "暂无会话",
 			"collapseSessions": "折叠会话",
+			"toggleSessions": "展开或折叠「{{name}}」的会话",
 			"expandMore": "展开更多（{{count}}）",
 			"scrollToTop": "滚动到顶部",
 			"scrollToBottom": "滚动到底部"
@@ -111,6 +113,10 @@
 		"unpin": "取消置顶",
 		"openArtifactDir": "打开产物目录",
 		"delete": "删除",
+		"archive": "归档会话",
+		"archiveDisabled": "请先停止运行中的会话",
+		"archiveToast": "已归档「{{name}}」",
+		"archiveToastAction": "查看已归档",
 		"tags": {
 			"label": "标签",
 			"new": "新标签…",
@@ -222,10 +228,10 @@
 	},
 	"remotePicker": {
 		"title": "从远程主机添加项目",
-		"pickHost": "选择一台已登记的主机",
+		"pickHost": "选择一台主机，或添加新的 SSH 主机",
 		"loading": "读取中…",
 		"noHosts": "还没有登记任何远程主机",
-		"noHostsHint": "先在「设置 → SSH 主机」里添加一台，或从 ~/.ssh/config 导入已有的别名。",
+		"noHostsHint": "直接添加主机，然后选择远程项目目录。已有的 SSH 别名也可以使用。",
 		"parent": "上一级",
 		"emptyDir": "这个目录下没有子目录。可以直接把当前目录添加为项目。",
 		"browseFailed": "读不到这个目录。可能是连接断开，或当前账号没有权限。",
@@ -233,7 +239,20 @@
 		"backToHosts": "换一台主机",
 		"cancel": "取消",
 		"confirm": "添加此目录为项目",
-		"failedTitle": "无法添加这个项目"
+		"failedTitle": "无法添加这个项目",
+		"addHost": "添加主机",
+		"addHostHint": "保存后选择远程项目目录。连接时如需密码或密钥口令，会另行询问。",
+		"saveHostAndContinue": "保存并选择目录",
+		"savingHost": "正在保存…",
+		"saveHostFailed": "未能保存主机，请检查连接信息后重试。",
+		"backToHostList": "返回主机列表",
+		"loadHostsFailed": "无法读取主机列表，请重试。",
+		"retry": "重试",
+		"connecting": "正在连接主机…",
+		"pathOnHost": "{{host}} 上的 {{path}}",
+		"projectName": "项目名称",
+		"projectNameHint": "侧边栏里显示的名字，远程目录名不变。",
+		"close": "关闭"
 	},
 	"orphanRemote": {
 		"title": "这个项目所在的主机已不在列表里",

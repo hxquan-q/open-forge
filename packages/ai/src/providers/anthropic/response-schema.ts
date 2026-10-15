@@ -1,4 +1,6 @@
-import { type TProperties, Type } from "@sinclair/typebox";
+// Modified by The Open Forge contributors.
+import type { TProperties } from "@sinclair/typebox";
+import { Type } from "@sinclair/typebox";
 
 const objectWithType = (type: string, fields: TProperties = {}) =>
 	Type.Object({ type: Type.Literal(type), ...fields }, { additionalProperties: true });
@@ -15,7 +17,8 @@ const usage = Type.Object(
 );
 const contentBlock = Type.Union([
 	objectWithType("text", { text: Type.String() }),
-	objectWithType("thinking", { thinking: Type.String(), signature: Type.String() }),
+	// Compatible gateways may omit the initial signature and stream it in a later delta.
+	objectWithType("thinking", { thinking: Type.String(), signature: Type.Optional(Type.String()) }),
 	objectWithType("redacted_thinking", { data: Type.String() }),
 	objectWithType("tool_use", { id: Type.String(), name: Type.String(), input: Type.Unknown() }),
 	objectWithType("server_tool_use"),

@@ -7,7 +7,10 @@ owner:
 requirement:
 plan:
 source:
-related_issue:
+related_requirement: []
+related_plan: []
+related_tasks: []
+related_issues: []
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
@@ -24,6 +27,13 @@ updated: YYYY-MM-DD
 ## 实际行为
 
 ## 期望行为
+
+## 环境与失败证据
+
+- 应用版本、提交、操作系统与相关工具版本：
+- 失败测试/CI 用例与命令（若适用）：
+- CI run URL 与脱敏后的关键输出（若适用）：
+- 基线对照或重跑结果：
 
 ## 最小复现
 

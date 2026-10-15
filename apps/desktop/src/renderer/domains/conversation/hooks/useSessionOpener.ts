@@ -2,6 +2,7 @@
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { applyActiveTagFilterToNewConversation } from "@domains/project/services/new-conversation-tagging";
 import { deriveSessionAxesFromWorkspaceMode } from "@domains/workspace-mode/lib/session-axes";
+import type { HistoryPage } from "@preload/api-types/session";
 import { i18n } from "@shared/i18n";
 import { waitForCommittedPaint } from "@shared/lib/committed-paint";
 import { perfSendMark } from "@shared/lib/perf-send";
@@ -43,10 +44,15 @@ import {
 } from "@shared/store/atoms";
 import { setQueueForSessionAtom, setQueuePausedAtom } from "@shared/store/message-queue-atoms";
 import { useNavigate } from "@tanstack/react-router";
+import type { HistoryEntry } from "@vetta/runtime-core";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { type MutableRefObject, startTransition, useCallback, useRef } from "react";
-import { preserveMessagesAddedAfterSnapshot, shareChatMessageSnapshot } from "../services/chat-message-snapshot";
+import {
+	preserveMessagesAddedAfterSnapshot,
+	reconcileRunningTurnDraft,
+	shareChatMessageSnapshot,
+} from "../services/chat-message-snapshot";
 import {
 	appendError,
 	bumpOpenSessionToken,
@@ -62,8 +68,9 @@ import {
 } from "../services/chat-service";
 import { resolveSessionContextComposition } from "../services/context-composition-cache";
 import { reconcileOptimisticUserMessages } from "../services/optimistic-user-message-cache";
+import { mergeWithCausalAnchors } from "../services/pending-user-anchor";
 import { applySessionHydrationStateAtom } from "../services/session-hydration-state";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import { commitTranscriptWindow, resetTranscriptWindowState } from "../services/transcript-window-controller";
 import { useSessionEventController } from "./useSessionEventController";
 
 export interface SessionOpenerController {
@@ -185,9 +192,10 @@ export function useSessionOpener(): SessionOpenerController {
 	const defaultConversationCwdRef = useRef(defaultConversationCwd);
 	defaultConversationCwdRef.current = defaultConversationCwd;
 	const activeSessionRef = useRef<{ cwd: string; sessionPath: string; runtimeId: string } | null>(null);
-	const { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers } = useSessionEventController({
-		activeSessionRef,
-	});
+	const { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage } =
+		useSessionEventController({
+			activeSessionRef,
+		});
 	const openSessionRef = useRef<
 		| ((
 				cwd: string,
@@ -294,6 +302,8 @@ export function useSessionOpener(): SessionOpenerController {
 			// instead of staring at the old session while history loads.
 			if (!options?.preserveMessagesBeforeCreate) setChatMessages([]);
 			getDefaultStore().set(pendingMessageEditAtom, null);
+			// TASK-0050：切会话时清掉上一会话的窗口游标态；新会话在回填阶段重新登记。
+			resetTranscriptWindowState();
 			// 切会话先把激活工具集置未知（null）→ badge 回退显示，等 getState 回填真实集合。
 			setActiveToolNames(null);
 			// 场景同样置未知（null）→ 插件插槽 fail-closed 暂不显示，等 getState 回填后按场景显隐。
@@ -343,7 +353,9 @@ export function useSessionOpener(): SessionOpenerController {
 							markSessionSwitch("session-preview-history-superseded");
 							return;
 						}
-						const previewMessages = fullHistoryToChat(snapshot.history);
+						// tailTurns 首页不可能 stale；防御性收窄，stale 时退为空预览，
+						// 由下方 canonical 历史加载兜底。
+						const previewMessages = fullHistoryToChat("stale" in snapshot ? [] : snapshot.history);
 						previewMessagesSnapshot = previewMessages;
 						markSessionSwitch("session-preview-history-mapped");
 						if (myOpenToken !== getOpenSessionToken()) {
@@ -585,14 +597,18 @@ export function useSessionOpener(): SessionOpenerController {
 			// session is interactive; the tail preview already owns the first screen.
 			perfSendMark("session-state-load-start", interactionId);
 			markSessionSwitch("session-hydration-start");
-			const historyPromise =
+			// TASK-0050：tail 模式返回带游标的有界页（向上翻页由此续）；full 模式保持
+			// 无界全量。tail 页不可能 stale，stale 收窄为空页走防御兜底。
+			const historyPromise: Promise<{ entries: HistoryEntry[]; page?: HistoryPage }> =
 				sessionPath === undefined
-					? Promise.resolve([])
+					? Promise.resolve({ entries: [] })
 					: historyLoadMode === "tail"
 						? window.vetta.session
 								.openViewer(sessionPath, { tailTurns: LARGE_SESSION_TAIL_TURNS })
-								.then((snapshot) => snapshot.history)
-						: window.vetta.session.getFullHistory(sessionId);
+								.then((snapshot) =>
+									"stale" in snapshot ? { entries: [] } : { entries: snapshot.history, page: snapshot },
+								)
+						: window.vetta.session.getFullHistory(sessionId).then((entries) => ({ entries }));
 			const statePromise = window.vetta.session.getState(sessionId);
 			let state: Awaited<typeof statePromise>;
 			try {
@@ -688,7 +704,7 @@ export function useSessionOpener(): SessionOpenerController {
 
 			if (sessionPath !== undefined) {
 				void historyPromise
-					.then((history) => {
+					.then(({ entries: history, page }) => {
 						perfSendMark("session-history-loaded", interactionId);
 						markSessionSwitch("session-history-loaded");
 						if (myOpenToken !== getOpenSessionToken()) return;
@@ -697,11 +713,18 @@ export function useSessionOpener(): SessionOpenerController {
 							const projected = fullHistoryToChatWithSpans(history, sessionId);
 							const canonical = projected.messages;
 							if (cachedKey) {
-								registerActiveTranscriptBacklog(cachedKey, {
-									entries: history,
-									spans: projected.spans,
-									mediaSessionId: sessionId,
-								});
+								commitTranscriptWindow(
+									cachedKey,
+									{
+										entries: history,
+										spans: projected.spans,
+										mediaSessionId: sessionId,
+										nextBeforeEntry: page?.nextBeforeEntry,
+										hasMore: page?.hasMore === true,
+										unbounded: page === undefined,
+									},
+									{ resetFirstIndex: true },
+								);
 							}
 							const reconciled = reconcileOptimisticUserMessages(sessionId, canonical);
 							const canonicalIds = new Set(canonical.map((message) => message.id));
@@ -719,16 +742,34 @@ export function useSessionOpener(): SessionOpenerController {
 							}
 							startTransition(() => {
 								setChatMessages((current) => {
+									// 重开的运行回合：canonical 已含部分落盘内容而 live 草稿仍在流式时，
+									// 先折叠成 canonical 身份（TASK-0152），再走 preserve 归位其余 live 项。
+									const folded = reconcileRunningTurnDraft(sharedSnapshot.messages, current);
+									if (folded.retarget) {
+										retargetProjectionMessage(folded.retarget.from, folded.retarget.to);
+									}
 									const merged = preserveMessagesAddedAfterSnapshot(
 										previewSnapshot,
-										sharedSnapshot.messages,
-										current,
+										folded.items,
+										folded.retarget ? current.filter((item) => item.id !== folded.retarget?.from) : current,
 									);
 									const mergedIds = new Set(merged.map((message) => message.id));
-									const missingOptimistic = unresolvedOptimistic.filter(
-										(message) => !mergedIds.has(message.id),
+									const missingIds = new Set(
+										unresolvedOptimistic.filter((message) => !mergedIds.has(message.id)).map((m) => m.id),
 									);
-									return missingOptimistic.length > 0 ? [...merged, ...missingOptimistic] : merged;
+									if (missingIds.size === 0) return merged;
+									// 未决乐观气泡的落位与快照/窗口化两层共用同一锚定规则
+									// （pending-user-anchor）：以 reconciled 为序、merged 为基，
+									// (a) 后继 (b) 孪生槽 (c) 尾部。旧的「无 canonical 前驱 →
+									// 绝对头插」会把气泡挪到因果更早的 preserve 保留行之前，
+									// 与 snapshot 层回退方向相反（BUG-0073）。
+									const baseIndexById = new Map(merged.map((message, index) => [message.id, index]));
+									return mergeWithCausalAnchors({
+										base: merged,
+										order: reconciled,
+										isPendingIndex: (index) => missingIds.has(reconciled[index].id),
+										landedBaseIndex: (index) => baseIndexById.get(reconciled[index].id),
+									}).items;
 								});
 							});
 						});
@@ -812,6 +853,7 @@ export function useSessionOpener(): SessionOpenerController {
 			createSessionEventHandler,
 			setInlineFilePreview,
 			resetEventBuffers,
+			retargetProjectionMessage,
 		],
 	);
 

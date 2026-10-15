@@ -1,0 +1,10 @@
+{
+	"$comment": "Windows 沙盒制品的受控清单（TASK-0159）。三个 exe 由受控构建产出后放进 packages/runtime-core/sandbox/bin（二进制不入库），本文件记录制品来源提交与每个文件的 SHA-256。摘要为 null 表示尚未钉；打包时缺失或不一致默认阻断构建，只有显式设置 VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1 才降级为告警。升级制品后运行 node apps/desktop/scripts/windows-sandbox-artifacts.mjs --write --source-dir <来源目录> --commit <制品来源提交> 重新钉摘要。",
+	"platform": "win32",
+	"sourceCommit": null,
+	"binaries": [
+		{ "name": "codex-windows-sandbox-host.exe", "sha256": null },
+		{ "name": "codex-windows-sandbox-setup.exe", "sha256": null },
+		{ "name": "codex-command-runner.exe", "sha256": null }
+	]
+}

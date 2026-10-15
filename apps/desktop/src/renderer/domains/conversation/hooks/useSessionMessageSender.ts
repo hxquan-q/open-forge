@@ -50,7 +50,7 @@ import {
 	selectedModelAtom,
 	todoItemsBySessionAtom,
 } from "@shared/store/atoms";
-import { bumpQueuedDispatchSeq } from "@shared/store/message-queue-atoms";
+import { bumpQueuedDispatchSeq, unbumpQueuedDispatchSeq } from "@shared/store/message-queue-atoms";
 import type { PromptAttachmentRef, PromptRequest } from "@vetta/runtime-core";
 import type { PluginPromptContext } from "@vetta-org/plugin-sdk";
 import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
@@ -72,7 +72,7 @@ import {
 	stagePendingSessionSend,
 	takeStagedPendingSessionSend,
 } from "../services/staged-new-session-send";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import { registerActiveTranscriptBacklog, resetTranscriptWindowToTail } from "../services/transcript-window-controller";
 
 interface SessionMessageSenderOptions {
 	bumpSuggestionToken: (runtimeId: string) => void;
@@ -307,16 +307,22 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				}
 				try {
 					await window.vetta.session.replaceLastUserMessage(session.runtimeId, pendingEdit.entryId);
-					const history = await window.vetta.session.getFullHistory(session.runtimeId);
-					const projected = fullHistoryToChatWithSpans(history, session.runtimeId);
-					if (session.sessionPath) {
-						registerActiveTranscriptBacklog(session.sessionPath, {
-							entries: history,
-							spans: projected.spans,
-							mediaSessionId: session.runtimeId,
-						});
+					// TASK-0050：改写末条消息是历史重写——窗口化会话整窗重置为最新 head
+					// 页（live-only 尾部仍保留）；非窗口化回退全量回载。
+					const reset = session.sessionPath && (await resetTranscriptWindowToTail(session.sessionPath));
+					if (!reset) {
+						const history = await window.vetta.session.getFullHistory(session.runtimeId);
+						const projected = fullHistoryToChatWithSpans(history, session.runtimeId);
+						if (session.sessionPath) {
+							registerActiveTranscriptBacklog(session.sessionPath, {
+								entries: history,
+								spans: projected.spans,
+								mediaSessionId: session.runtimeId,
+								unbounded: true,
+							});
+						}
+						setChatMessages(projected.messages);
 					}
-					setChatMessages(projected.messages);
 					store.set(pendingMessageEditAtom, null);
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
@@ -601,6 +607,17 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 					setRetryProgress(null);
 					sendResult = { status: "failed", error: { message } };
 				} else {
+					// completed/cancelled 回执先于任何终态事件到达，说明 agent_end 在
+					// 传输中丢失（preload 容错跳过 / IPC 半丢）。此刻本地发送方的回执
+					// 是唯一可知的终态事实：必须收敛本地 streaming，否则界面永远
+					// 「处理中」、停止按钮对着不存在的 turn、续发也被迫走 streaming
+					// 语义。正常路径下 agent_end 先到、此处为幂等 no-op。
+					// 注意：主进程 running 集合广播通道的失步（isStreamingAtom 的另一
+					// 真值源）不在此处修复，由会话切换时的 getState 回填兜底。
+					if (outcome?.status === "completed" || outcome?.status === "cancelled") {
+						setActiveSessionStreaming(false);
+						setRetryProgress(null);
+					}
 					sendResult = { status: "sent" };
 				}
 			} catch (err) {
@@ -666,8 +683,14 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 			// 过期而跳过，避免冲掉新一轮的用户气泡（判活机制见 message-queue-atoms）。
 			bumpQueuedDispatchSeq(runtimeId);
 			try {
-				await window.vetta.session.sendQueuedMessageNow(runtimeId, id);
+				const outcome = await window.vetta.session.sendQueuedMessageNow(runtimeId, id);
+				// kernel 未真正派发新 turn（条目已不在队列 / 仅队内提升）时撤回序号——
+				// 否则本轮 agent_end 重拉会被判过期跳过，未对账气泡停在错位位置（BUG-0068）。
+				if (outcome !== "started") unbumpQueuedDispatchSeq(runtimeId);
 			} catch (err) {
+				// kernel 的抛错路径都发生在 startQueuedInput 之前（closed / 状态错误 /
+				// 取消失败回队），未派发新一轮，序号一并撤回。
+				unbumpQueuedDispatchSeq(runtimeId);
 				const message = err instanceof Error ? err.message : String(err);
 				console.error("[useSessionManager.sendQueuedNow] failed:", err);
 				if (getDefaultStore().get(activeSessionAtom)?.runtimeId === runtimeId) {

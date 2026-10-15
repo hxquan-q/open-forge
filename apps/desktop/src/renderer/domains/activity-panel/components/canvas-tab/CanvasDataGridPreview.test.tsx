@@ -166,6 +166,11 @@ describe("canvas data grid preview", () => {
 		expect(onSelectionChange).toHaveBeenLastCalledWith({ text: "苹果" });
 	});
 
+	it("截断单元格带 title，悬停可看完整内容", () => {
+		renderGrid();
+		expect(screen.getByText("苹果").closest("td")?.getAttribute("title")).toBe("苹果");
+	});
+
 	it("行列 JSON artifact 也渲染成表格", () => {
 		renderGrid({
 			content: JSON.stringify({ columns: ["名称", "数量"], rows: [["苹果", 3]] }),

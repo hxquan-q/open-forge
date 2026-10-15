@@ -1,9 +1,9 @@
 <!-- Modified by The Open Forge contributors. -->
-# Vetta 桌面插件开发手册
+# Open Forge 桌面插件开发手册
 
-面向第三方开发者的 Vetta 桌面端插件**对接与开发**完整手册。读完本目录你应当能从零写出、打包、安装、调试一个插件，并用上所有可用扩展点。
+面向第三方开发者的 Open Forge 桌面端插件**对接与开发**完整手册。读完本目录你应当能从零写出、打包、安装、调试一个插件，并用上所有可用扩展点。
 
-> 插件运行在 Vetta 桌面 App（Electron）的 renderer 进程内，与宿主共享 JavaScript realm——**没有安全沙箱**。只安装并启用你信任的插件。`@vetta-org/plugin-sdk` 权限用于声明与门控宿主 API，不承诺隔离恶意代码（见 [信任模型](#信任模型)）。
+> 插件运行在 Open Forge 桌面 App（Electron）的 renderer 进程内，与宿主共享 JavaScript realm——**没有安全沙箱**。只安装并启用你信任的插件。`@vetta-org/plugin-sdk` 权限用于声明与门控宿主 API，不承诺隔离恶意代码（见 [信任模型](#信任模型)）。
 
 > **这份手册是随 `@vetta-org/plugin-sdk` 装进 `node_modules` 的快照**，版本与本工程实际编译的 SDK 一致——这正是它的价值：它不会教你写宿主还不支持的东西。代价是工程不升级 SDK，它就永远停在初始化那天。开工前确认一次：
 >

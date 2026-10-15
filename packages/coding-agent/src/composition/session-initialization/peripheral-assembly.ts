@@ -31,6 +31,7 @@ import {
 } from "../../features/ask-user-question/index.js";
 import { createCodingAgentBrowserTabSessionExtension } from "../../features/browser-tab/browser-tab-session-extension.js";
 import { createCodingAgentFileOrganizeSessionExtension } from "../../features/file-organize/file-organize-session-extension.js";
+import { CODING_AGENT_GOAL_OBSERVATION, createCodingAgentGoalSessionExtension } from "../../features/goal/index.js";
 import {
 	CODING_AGENT_PLAN_MODE_OBSERVATION,
 	CODING_AGENT_PLAN_MODE_RUNTIME,
@@ -56,6 +57,7 @@ import type {
 	CodingAgentToolActivation,
 } from "../../runtime-contracts/index.js";
 import { getCodingAgentOcrExecutionGate } from "../../tool-policy/ocr-execution-gate.js";
+import { createAvailableSkillNamesProvider } from "../available-skill-names.js";
 import type { CodingAgentRuntimeSessionOptions } from "../contracts/index.js";
 import type { CodingAgentSessionResourceIndexes } from "../session-lifecycle/resource-lifecycle.js";
 import { createCodingAgentSubagentSessionExtension } from "../subagent/subagent-session-extension.js";
@@ -191,6 +193,14 @@ export async function createCodingAgentSessionPeripheralAssembly(
 				configurationState,
 			}),
 			createCodingAgentAskUserQuestionSessionExtension({ scenario: options.scenario }),
+			createCodingAgentGoalSessionExtension({
+				scenario: options.scenario,
+				reportUpdate: (state) =>
+					options.resourceContext.reportObservation({
+						...sessionExtensionObservation(CODING_AGENT_GOAL_OBSERVATION, state),
+						source: "extension",
+					}),
+			}),
 			createCodingAgentPlanModeSessionExtension({
 				scenario: options.scenario,
 				isTodoToolAvailable: () => sessionExtensions.services.require(CODING_AGENT_TODO_RUNTIME).toolEnabled,
@@ -244,6 +254,9 @@ export async function createCodingAgentSessionPeripheralAssembly(
 		scenario: options.scenario,
 		env: sessionOptions.env,
 		configurationSource: options.configurationSource,
+		// 会话文件工具的二进制读提示同样要判断「能不能点名技能」；来源与 Tool Surface、
+		// `invoke_skill` 共用同一份资源源，缺省时按「没有可用技能」处理（BUG-0026）。
+		availableSkillNames: createAvailableSkillNamesProvider(profile.promptResourceSource),
 	});
 	let executionRuntime: CodingAgentSessionExecutionRuntime;
 	try {

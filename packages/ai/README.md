@@ -1253,3 +1253,19 @@ Add an entry to `packages/ai/CHANGELOG.md` under `## [Unreleased]`:
 ## License
 
 MIT
+
+
+## Context Boundary
+
+```yaml
+purpose: Unified LLM API with automatic model discovery and provider configuration
+provides:  
+  - "@vetta/ai"
+  - "@vetta/ai/reasoning-presets"
+  - "@vetta/ai/protocol"
+  - "@vetta/ai/proxy"
+  - "@vetta/ai/testkit"
+  - "@vetta/ai/testing"
+consumes:  []
+internal_dependencies:  []
+```

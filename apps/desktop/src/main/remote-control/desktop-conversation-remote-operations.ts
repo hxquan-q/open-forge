@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cpus, platform, release, totalmem } from "node:os";
 import type {
 	CodingAgentQuestionFunctionRequest,
@@ -96,10 +97,7 @@ export class DesktopConversationRemoteOperations implements DesktopRemoteOperati
 			}
 			if (mapped?.type === "delta") {
 				observedTextDelta = true;
-				if (
-					event.type === "message.final" ||
-					(event.channel === "assistant" && (event.type === "done" || event.type === "error"))
-				) {
+				if (event.channel === "assistant" && (event.type === "done" || event.type === "error")) {
 					observedText += mapped.text ?? "";
 				}
 			}
@@ -243,34 +241,12 @@ function mapRuntimeEvent(event: SessionEvent, observedText = ""): DesktopRemoteP
 	switch (event.type) {
 		case "message.delta":
 			return { type: "delta", text: event.delta };
-		case "message.final": {
-			if (event.message.role !== "assistant") return undefined;
-			const text = event.message.content
-				.filter((part): part is { type: "text"; text: string } => part.type === "text")
-				.map((part) => part.text)
-				.join("");
-			if (!text) return undefined;
-			// A turn may contain several model calls. Emit only text not already
-			// delivered as deltas, while preserving providers that report per-call text.
-			const missing = observedText && text.startsWith(observedText) ? text.slice(observedText.length) : text;
-			return missing ? { type: "delta", text: missing } : undefined;
-		}
 		case "thinking.delta":
 			return { type: "state", payload: { state: "thinking", text: event.delta } };
 		case "toolcall.start":
 			return {
 				type: "tool",
 				payload: { phase: "generating", toolCallId: event.toolCallId, toolName: event.toolName },
-			};
-		case "toolcall.args":
-			return {
-				type: "tool",
-				payload: {
-					phase: "arguments",
-					toolCallId: event.toolCallId,
-					toolName: event.toolName,
-					args: preview(event.args),
-				},
 			};
 		case "tool.start":
 			return {

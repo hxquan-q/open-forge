@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/runtime-mcp",
-	"version": "0.0.1",
+	"version": "0.1.3",
 	"private": true,
 	"description": "Platform-neutral MCP protocols and runtime state coordination for Vetta agents",
 	"type": "module",

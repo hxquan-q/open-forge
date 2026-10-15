@@ -26,6 +26,19 @@ export function readClipboardImageFiles(clipboardData: Pick<ClipboardDataLike, "
 		.filter((file): file is File => file !== null);
 }
 
+/**
+ * 剪贴板里「不是图片」的文件项：资源管理器里复制的 pdf / md / 代码文件都是这种形态。
+ *
+ * 与 readClipboardImageFiles 互斥：图片有自己的落盘 + 缩略图 token 路径，
+ * 两边各插一次同一份 File 会重复引用，所以这里显式把 image/* 排除掉。
+ */
+export function readClipboardReferenceFiles(clipboardData: Pick<ClipboardDataLike, "items">): File[] {
+	return Array.from(clipboardData.items)
+		.filter((item) => item.kind === "file" && !item.type.startsWith("image/"))
+		.map((item) => item.getAsFile())
+		.filter((file): file is File => file !== null);
+}
+
 export function readClipboardImages(clipboardData: ClipboardDataLike): ClipboardImages {
 	// The native clipboard also exposes the first image as a file. Prefer the marked
 	// HTML entry so a multi-image message does not duplicate that first image.

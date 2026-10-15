@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 远端命令串的构造。
  *
@@ -218,6 +219,34 @@ export function buildWriteFileCommand(remotePath: string, temporarySuffix: strin
 	return `/bin/sh -c ${quoteShellArgument(script)}`;
 }
 
+/**
+ * 流式上传：内容从 stdin 进来，先落到目标同目录的临时文件，mv 前校验字节数。
+ *
+ * 原子写骨架与 {@link buildWriteFileCommand} 相同（同目录临时文件、克隆权限位、穿透符号
+ * 链接）。多出来的一步是**取消安全**：上传中途取消时本地通道关闭，远端 `cat` 收到的是
+ * 普通_EOF——它会正常退出，`&&` 会照常往下走，没有校验的话半截文件会被 `mv` 盖到目标上。
+ * 先比对 `wc -c` 与期望字节数（调用方给的本机文件大小）再 mv，把「取消」变成「目标文件
+ * 保持原样 + 临时文件清理」。SSH 传输层自带 MAC 完整性保证，无需再加校验和。
+ *
+ * 整段交给 `/bin/sh`：与 {@link buildWriteFileCommand} 同理，不假设登录 shell 认 POSIX 语法。
+ */
+export function buildUploadFileCommand(remotePath: string, expectedBytes: number, temporarySuffix: string): string {
+	const script = [
+		`p=${quoteShellArgument(remotePath)}`,
+		// readlink -f 在 GNU 与 macOS 12.3+ 都有；更老的 BSD 上失败就退回原路径。
+		`t=$(readlink -f -- "$p" 2>/dev/null) || t=$p`,
+		`[ -n "$t" ] || t=$p`,
+		`tmp="$t"${quoteShellArgument(temporarySuffix)}`,
+		`if [ -f "$t" ]; then cp -p -- "$t" "$tmp" || exit 1; fi`,
+		`cat > "$tmp"`,
+		`count=$(wc -c < "$tmp")`,
+		`if [ "$count" -eq ${expectedBytes} ] && mv -f -- "$tmp" "$t"; then exit 0; fi`,
+		`rm -f -- "$tmp"`,
+		"exit 1",
+	].join("\n");
+	return `/bin/sh -c ${quoteShellArgument(script)}`;
+}
+
 /** 远端「已存在」的退出码。取 EEXIST 的数值，便于调用方与本机的同名错误对齐。 */
 export const REMOTE_ENTRY_EXISTS_EXIT_CODE = 17;
 
@@ -241,6 +270,11 @@ export interface ListFilesRecursiveOptions {
 	/** 整个子树都跳过的目录名（`node_modules`、`dist` 之类）。点开头的条目总是跳过。 */
 	readonly ignoredDirectoryNames: readonly string[];
 	readonly limit: number;
+	/**
+	 * 只留这些文件名（精确匹配 basename）。上限按命中数算——在大仓库里找清单文件时，
+	 * 先截断再筛会把排在后面的清单漏掉。
+	 */
+	readonly names?: readonly string[];
 }
 
 /**
@@ -252,9 +286,12 @@ export interface ListFilesRecursiveOptions {
 export function buildListFilesRecursiveCommand(remotePath: string, options: ListFilesRecursiveOptions): string {
 	const pruned = [".*", ...options.ignoredDirectoryNames].map((name) => `-name ${quoteShellArgument(name)}`);
 	const limit = Math.max(1, Math.floor(options.limit));
+	const names = options.names?.length
+		? ` \\( ${options.names.map((name) => `-name ${quoteShellArgument(name)}`).join(" -o ")} \\)`
+		: "";
 	const script = [
 		`cd ${quoteShellArgument(remotePath)} || exit 1`,
-		`find . -mindepth 1 \\( ${pruned.join(" -o ")} \\) -prune -o -type f -print | head -n ${limit}`,
+		`find . -mindepth 1 \\( ${pruned.join(" -o ")} \\) -prune -o -type f${names} -print | head -n ${limit}`,
 	].join("\n");
 	return `/bin/sh -c ${quoteShellArgument(script)}`;
 }

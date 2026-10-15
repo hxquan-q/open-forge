@@ -10,5 +10,19 @@ The package deliberately contains no filesystem, process, database, Electron, or
 - `ConversationOwnershipManager` and `ConversationOwnershipLease`
 - stable storage errors and error codes
 - persisted conversation schema versions
+- portable session archive (`@vetta/runtime-storage/session-archive` or via `/conversation`): magic + versioned metadata + `AES-256-GCM(gzip(fixed frames))` with scrypt, canonical fingerprint, and `safePath`
 
 Repository and document types currently preserve their `runtime-core` structural contracts during migration. Their physical ownership will be inverted after all concrete adapters have moved out of the protocol packages.
+
+## Context Boundary
+
+```yaml
+purpose: Platform-neutral conversation storage contracts and schemas for Vetta runtimes
+provides:
+  - "@vetta/runtime-storage"
+  - "@vetta/runtime-storage/conversation"
+  - "@vetta/runtime-storage/session-archive"
+consumes: []
+internal_dependencies:
+  - "@vetta/runtime-core"
+```

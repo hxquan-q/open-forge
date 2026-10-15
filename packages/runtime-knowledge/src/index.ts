@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export { rebuildManifest, rebuildTagsIndex, type WikiPageRef } from "./domain/derived-indexes.js";
 export {
 	type ParsedWikiPage,
@@ -7,6 +8,20 @@ export {
 	WikiFrontmatterError,
 } from "./domain/frontmatter.js";
 export { buildIndexMap } from "./domain/index-map.js";
+export {
+	compareLocalSourceState,
+	isResearchExcludedDir,
+	isResearchSourceFile,
+	LOCAL_SOURCE_MAX_DEPTH,
+	LOCAL_SOURCE_MAX_FILE_BYTES,
+	LOCAL_SOURCE_MAX_FILES,
+	type LocalSourceCheck,
+	type LocalSourceEntry,
+	type LocalSourceFailure,
+	type LocalSourceFingerprint,
+	type LocalSourceStatus,
+	RESEARCH_SOURCE_EXTENSIONS,
+} from "./domain/local-source-scope.js";
 export { resolveUpsert, type UpsertDecision, type UpsertInput, type UpsertLookup } from "./domain/page-upsert.js";
 export {
 	type AttemptedFile,
@@ -73,6 +88,11 @@ export {
 	writeTagsIndex,
 	writeWikiPage,
 } from "./storage/file-knowledge-store.js";
+export {
+	checkLocalSources,
+	type LocalSourceScanResult,
+	scanLocalSources,
+} from "./storage/local-source-store.js";
 export {
 	createKnowledgePageWriter,
 	type KnowledgePageWriter,

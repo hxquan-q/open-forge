@@ -1,3 +1,4 @@
+import { Button } from "@shared/components/ui/button";
 import { ChatHeaderActions } from "@vetta-org/theme-ui/chat";
 import { BackgroundTasksBadge } from "../BackgroundTasksBadge";
 import { SandboxGrantsBadge } from "../SandboxGrantsBadge";
@@ -19,6 +20,24 @@ export function ChatHeaderActionsView({ actions, model }: ChatHeaderActionsViewP
 				exporting={model.exporting}
 				onClick={actions.openExport}
 			/>
+			<Button
+				size="icon-xs"
+				variant="ghost"
+				title={model.archiveExportTitle}
+				disabled={model.archiveExportDisabled}
+				onClick={actions.exportArchive}
+			>
+				<span
+					className={
+						model.archiveExporting
+							? "icon-[mdi--loading] animate-spin text-[14px]"
+							: "icon-[solar--archive-minimalistic-linear] text-[14px]"
+					}
+				/>
+			</Button>
+			<Button size="icon-xs" variant="ghost" title={model.archiveImportTitle} onClick={actions.importArchive}>
+				<span className="icon-[solar--archive-up-linear] text-[14px]" />
+			</Button>
 			<ChatHeaderActions.Pin
 				title={model.pinTitle}
 				pinned={model.pinned}

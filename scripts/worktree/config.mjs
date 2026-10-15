@@ -20,8 +20,8 @@ export const WORKTREE_INCLUDE_FILE = ".worktreeinclude";
 
 export const DEFAULT_CONFIG = {
 	worktreeRoot: "../open-forge-wt",
-	baseRef: "",
-	baseRefFallbacks: ["origin/forge/dev", "origin/dev", "origin/main", "HEAD"],
+	baseRef: "main",
+	baseRefFallbacks: [],
 	setup: {},
 	copyIgnored: false,
 	cleanup: { intervalHours: 6, maxWorktrees: 25 },
@@ -213,7 +213,9 @@ export function selectIncludeFiles({ patterns, ignoredFiles }) {
 
 /**
  * Resolve the baseline: an explicit `--base` wins, then the configured `baseRef`, then the
- * fallbacks, then `HEAD`. `exists` is injected so this stays Git-free.
+ * configured fallback list. There is no implicit `HEAD` fallback: when the project pins a
+ * base branch, a missing ref must fail closed rather than quietly branching from whichever
+ * task worktree happened to invoke the command. `exists` is injected so this stays Git-free.
  */
 export function chooseBaseRef({ requested, config, exists }) {
 	if (requested) return exists(requested) ? requested : null;
@@ -221,5 +223,5 @@ export function chooseBaseRef({ requested, config, exists }) {
 	for (const ref of config.baseRefFallbacks ?? []) {
 		if (exists(ref)) return ref;
 	}
-	return exists("HEAD") ? "HEAD" : null;
+	return null;
 }

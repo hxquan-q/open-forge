@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Metadata } from "next";
 import { localeConfig, type DocsLanguage } from "../i18n";
 import { getLocalizedSite, getSiteOrigin, site, toAbsoluteUrl, toCanonicalPath, toMarkdownPath } from "../site";
@@ -46,7 +47,7 @@ export function buildRootMetadata(origin = getSiteOrigin()): Metadata {
 			},
 		},
 		icons: {
-			icon: "/favicon.svg",
+			icon: "/favicon.png",
 			apple: site.logoPath,
 		},
 		openGraph: {

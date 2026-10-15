@@ -1,8 +1,8 @@
 {
-	"$comment": "Task worktree contract for development collaboration. See project/collaboration/README.md. Read by scripts/worktree/cli.mjs; nothing here affects the shipped product.",
+	"$comment": "Task worktree contract for development collaboration. See project/collaboration/development-workflow.md. Read by scripts/worktree/cli.mjs; nothing here affects the shipped product.",
 	"worktreeRoot": "../open-forge-wt",
-	"baseRef": "origin/forge/dev",
-	"baseRefFallbacks": ["origin/dev", "origin/main", "HEAD"],
+	"baseRef": "main",
+	"baseRefFallbacks": [],
 	"setup": {
 		"windows": ["bun install --frozen-lockfile"],
 		"unix": ["bun install --frozen-lockfile"]

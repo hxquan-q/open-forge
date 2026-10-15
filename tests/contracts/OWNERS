@@ -1,0 +1,11 @@
+# Copyright The Open Forge contributors.
+# Protocol exemption approvals (TASK-0112).
+#
+# One line per exempt protocol:
+#   <protocol-id>\t<owner>\t<evidence / reason>
+#
+# Required whenever a protocol id appears in EXEMPT_PROTOCOLS inside
+# scripts/quality/check-protocol-suites.mjs. Removing an exemption needs no
+# approval — the set is shrinking-only.
+#
+# <owner> should name the package/team directory that owns the surface.

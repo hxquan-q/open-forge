@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+import type { BuiltinNotificationSoundId } from "../../shared/notification-preferences.js";
 // ─── System notifications ───
 /** 点击系统通知后主进程下发的路由意图（按 type 分流，见 CONTEXT.md「通知类型」）。 */
 export type NotificationNavigatePayload = {
@@ -11,4 +13,18 @@ export interface DesktopNotificationApi {
 	setForegroundSession(sessionPath: string | null): Promise<void>;
 	/** 用户点击系统通知时触发，渲染端按 payload.type 路由。返回取消订阅函数。 */
 	onNavigate(handler: (payload: NotificationNavigatePayload) => void): () => void;
+	/** 主进程完成策略判定后发送的内置提示音命令。 */
+	onSound(handler: (payload: NotificationSoundPayload) => void): () => void;
+}
+
+export type {
+	BuiltinNotificationSoundId,
+	DesktopNotificationPreferences,
+	NotificationDeliveryScope,
+	NotificationEventType,
+} from "../../shared/notification-preferences.js";
+
+export interface NotificationSoundPayload {
+	soundId: BuiltinNotificationSoundId;
+	volume: number;
 }

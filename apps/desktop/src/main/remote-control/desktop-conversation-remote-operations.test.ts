@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionEvent } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";
 import { DesktopConversationRemoteOperations } from "./desktop-conversation-remote-operations.js";
@@ -79,7 +80,9 @@ describe("DesktopConversationRemoteOperations", () => {
 					source: "agent",
 				});
 				subscriber?.({
-					type: "message.final",
+					channel: "assistant",
+					modelCallIndex: 1,
+					type: "done",
 					message: { role: "assistant", content: [{ type: "text", text: "part" }] },
 					schemaVersion: 1,
 					sessionId: session.sessionId,
@@ -88,7 +91,9 @@ describe("DesktopConversationRemoteOperations", () => {
 					source: "agent",
 				} as SessionEvent);
 				subscriber?.({
-					type: "message.final",
+					channel: "assistant",
+					modelCallIndex: 2,
+					type: "done",
 					message: { role: "assistant", content: [{ type: "text", text: "next answer" }] },
 					schemaVersion: 1,
 					sessionId: session.sessionId,

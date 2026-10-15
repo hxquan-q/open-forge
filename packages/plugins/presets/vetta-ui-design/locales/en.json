@@ -227,6 +227,7 @@
 	"notes.reopen.submit": "Reopen",
 	"notes.status.pending": "Pending",
 	"notes.status.resolved": "Resolved",
+	"notes.author.agent": "Vetta",
 	"notes.author.user": "Me",
 	"notes.delete": "Delete",
 	"notes.close": "Close",

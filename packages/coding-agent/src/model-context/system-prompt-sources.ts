@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ConversationScenario } from "../profiles/index.js";
 import { getPersonaPrompt } from "../profiles/index.js";
 import type { SessionResourceRuntime } from "../resources/index.js";
@@ -42,6 +43,8 @@ export interface SystemPromptSourceDependencies {
 	agentMode?: string;
 	/** 宿主注入的 mode 提示词解析器；缺省 = 不追加 mode block。 */
 	resolveModePrompt?: CodingAgentModePromptResolver;
+	/** 宿主解析的品牌展示名（品牌档位）；缺省 = `DEFAULT_BRAND_NAME`。 */
+	brandName?: string;
 	agentPlugins?: AgentPluginRuntimeConfig;
 	scenario?: ConversationScenario;
 	mcpDeferred?: boolean;
@@ -52,7 +55,8 @@ export function buildPersonalizationBlock(settings: PersonalizationSettingsSourc
 	const parts: string[] = [];
 	const personaPrompt = getPersonaPrompt(personaId);
 	if (personaPrompt.trim()) parts.push(personaPrompt.trim());
-	if (customPrompt.trim()) parts.push(customPrompt.trim());
+	// 加标题让用户文本有边界，也让指令优先级里的 "custom instructions" 有明确指代。
+	if (customPrompt.trim()) parts.push(`# User custom instructions\n\n${customPrompt.trim()}`);
 	return parts.length > 0 ? parts.join("\n\n") : undefined;
 }
 
@@ -87,6 +91,7 @@ export function resolveSystemPromptOptionsFromSources(
 		memory,
 		personalization: buildPersonalizationBlock(dependencies.settingsManager),
 		modePrompt: dependencies.resolveModePrompt?.(dependencies.agentMode) ?? "",
+		brandName: dependencies.brandName,
 		agentPlugins: dependencies.agentPlugins,
 		scenario: dependencies.scenario,
 		mcpDeferred: dependencies.mcpDeferred,

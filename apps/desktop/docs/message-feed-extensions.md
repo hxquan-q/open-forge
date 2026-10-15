@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 消息列表与内容扩展
 
 ## 选用入口
@@ -52,6 +53,8 @@ const rendering: MessageRendering = {
 `ContentRenderingProvider renderers={{ text: CustomText }}` 在真实 segment 渲染入口生效，包括阶段组中的工具和思考。组件收到 `block`、`isStreamingTail`、`exportMode` 和默认呈现 `children`。返回 children 可装饰默认实现，返回其他 JSX 可替换它；不应直接修改 block。需要声明式语法处理时优先使用 Markdown 层，不要把文本重新解析塞进消息列表。
 
 ## Markdown 定义
+
+默认渲染现已包含公式、SVG 与隔离 HTML 预览，语法、运行限制和性能预算见 [Markdown 富内容](markdown-rich-content.md)。自定义 `codeBlock` 仍优先于默认富代码块；需要保留内置预览时，应自行明确组合，不能假设覆盖后仍会自动运行默认代码块。
 
 ```tsx
 import { CodeBlock, defaultMarkdown, extendMarkdown, MarkdownProvider } from "@vetta-org/theme-ui/markdown";

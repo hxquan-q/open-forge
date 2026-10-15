@@ -49,7 +49,7 @@ export async function startRuntimeCanaryProvider(rootDir: string): Promise<Runti
 	const knowledgeRoot = join(vettaHome, "knowledges");
 	const knowledgeSourceContent = "Runtime Canary Knowledge Source";
 	const knowledgeSourceHash = createHash("sha256").update(knowledgeSourceContent).digest("hex");
-	const installedCliPath = join(agentDir, "bin", process.platform === "win32" ? "vetta.exe" : "vetta");
+	const installedCliPath = join(agentDir, "bin", process.platform === "win32" ? "openforge.exe" : "openforge");
 	await Promise.all([
 		mkdir(agentDir, { recursive: true }),
 		mkdir(workspace, { recursive: true }),

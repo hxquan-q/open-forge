@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { ThemeColorOverrides } from "@vetta-org/theme-sdk/appearance";
+import { fontFamily, getStoredFontPreferences } from "./fonts";
 import { DEFAULT_THEME_ID, getTheme, resolveThemeId } from "./themes";
 import { TOKEN_CSS_VAR, type TokenSet } from "./tokens";
 
@@ -32,7 +34,12 @@ export function applyTheme(mode: ResolvedMode, themeId: string): void {
 	const root = document.documentElement;
 	root.setAttribute("data-mode", mode);
 	root.setAttribute("data-theme", theme.id);
-	writeTokens(tokens);
+	const fonts = getStoredFontPreferences();
+	writeTokens({
+		...tokens,
+		fontSans: fontFamily(fonts.ui, tokens.fontSans),
+		fontMono: fontFamily(fonts.code, tokens.fontMono),
+	});
 }
 
 export function resolveThemeMode(mode: ThemeMode): ResolvedMode {

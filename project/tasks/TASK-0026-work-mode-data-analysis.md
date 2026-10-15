@@ -1,7 +1,7 @@
 ---
 id: TASK-0026
 type: task
-status: ready
+status: done
 priority: P2
 owner: packages/coding-agent
 requirement: REQ-0001
@@ -16,9 +16,9 @@ write_paths: [packages/coding-agent, packages/runtime-node, apps/desktop]
 exclusive_paths: [apps/desktop/src/renderer/domains/workspace-mode]
 depends_on: [TASK-0015, TASK-0016, TASK-0017, TASK-0024, TASK-0028]
 conflicts_with: [TASK-0018, TASK-0025]
-integration_status: pending
+integration_status: integrated
 created: 2026-09-22
-updated: 2026-09-23
+updated: 2026-10-10
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,6 +74,39 @@ updated: 2026-09-23
 ## 交付记录
 
 - 实际修改：
+  - `packages/runtime-node/src/dataset/`：数据集剖析实现（合同 `dataset-contracts.ts`、RFC4180 CSV/TSV 解析 `csv-parse.ts`、纯函数表格画像 `tabular.ts`、IO 编排 `dataset-profile.ts`）；支持 .csv/.tsv/.json/.jsonl/.ndjson/.xlsx/.xlsm，按行画像列类型/空值/非法值/参差行/空行，超限截断，`AbortSignal` 取消；只读不写源文件、不联网。xlsx 依赖（SheetJS 0.20.3 CDN tgz）登记进 runtime-node。
+  - `packages/coding-agent/src/features/dataset/`：`CodingAgentDatasetOperations` 宿主注入 Port + `dataset_profile` 工具（绝对路径校验、expectedColumns 缺列上报、指纹 uri/mtime 输出供 `vetta-research-sources` 清单照抄）；housekeeping 登记内置名/READ_ONLY 风险档/model order 1_960/Work Profile 默认工具。
+  - `packages/coding-agent/src/composition/`：`datasetProfile` 可选注入，缺省不注册该工具；经 runtime-tool-surface 条件注册。
+  - `apps/desktop/src/main/agent-runtime/composition.ts`：注入 `profileDatasetFile`。
+  - `WorkDocumentSections.tsx`：抽出共享 `useStartTaskWithSources`（建任务+全局消息通道）；新增 Dataset 节（selectFiles 选数据文件 + 分析目标）；产物来源复查白名单扩为 `research-evidence`/`dataset`/`analysis`（document 不触发）。
+  - i18n：`workspace.work.dataset.*` zh/en 四键。
 - 实际运行：
-- 未运行及原因：
-- 剩余风险：
+  - `runtime-node` dataset 合同测试 12 用例（CSV/JSON/XLSX 解析边界、行级校验、类型推断、问题行、缺列、大小上限、取消信号）全绿；
+  - `coding-agent` dataset_profile 工具测试（绝对路径拒绝、缺省不注册、错误映射、画像输出含指纹、issues 截断）全绿；
+  - Desktop `WorkDocumentSections` 19 用例（数据集选文件→发任务→消息走同通道、dataset/analysis 产物触发来源复查、document 不触发）全绿；
+  - `bun run check:quick`、`bun run check`（lint/types/guards 全量）绿。
+- 未运行及原因：真实 Desktop 端到端（选真实 xlsx → 分析 → 产物复查）需实机冒烟，登记 VERIFY-0012。
+- 剩余风险：xlsx 懒加载在 Electron 打包产物中的解析需实机确认；`dataset`/`analysis` 产物由模型按 prompt 合同写 manifest，manifest 缺失时复查返回 no-manifest（不阻断）；Excel 只取第一工作表。
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组四；保持 verifying 待裁定）
+
+方法：复跑本任务交付记录点名的三组套件（主检出 HEAD `18a7bf7b4`）。合同的用户流程（导入 CSV/Excel/JSON → 请求分析 → 看校验/预览 → Review → 重开会话查来源）需要一次真实模型回合，本轮未驱动。
+
+| 合同条款 | 本次读数 |
+|---|---|
+| CSV/TSV/JSON/JSONL/NDJSON/XLSX 解析边界、行级校验、类型推断、问题行、缺列、大小上限、取消信号 | `packages/runtime-node/src/dataset/dataset-profile.test.ts` **1 文件 / 7 例通过**（**交付记录写「12 用例」，本轮该文件实测 7 例**——只否证当下读数，不追认当时是否有别的计数口径） |
+| `dataset_profile` 工具（绝对路径校验、缺省不注册、错误映射、画像输出含指纹、issues 截断） | `packages/coding-agent/test/features/dataset-profile-tool.test.ts` **1 文件 / 5 例通过** |
+| 数据集选文件 → 发任务 → 消息走同通道；`dataset`/`analysis` 产物触发来源复查；`document` 不触发 | `WorkDocumentSections.test.tsx` **1 文件 / 19 例通过**（与交付记录「19 用例」一致） |
+| **合计** | **3 文件 / 31 例通过，0 失败** |
+
+- **未覆盖**：合同里需要模型参与的部分——「请求按明确规则清洗数据、计算一项指标并预览结果」「Review 后产出 dataset/analysis Artifact」「重开会话可检查输入来源与结果版本」。解析/校验/画像/复查这些**确定性**环节已单测级覆盖，但「模型按 prompt 合同写 manifest 并给出指标」这条链本轮未驱动，原因同上（无可用授权模型，ISSUE-0031）。
+- 交付记录自认的两条剩余风险本轮**未复诊**：① xlsx 懒加载在 Electron 打包产物中的解析需实机确认；② `dataset`/`analysis` 产物由模型按 prompt 合同写 manifest，manifest 缺失时复查返回 `no-manifest`。
+- **关闭建议**：确定性软件面测试级成立；模型参与面属**客观阻塞**。建议与 TASK-0025/0074/0155 一并裁定。请用户裁定。
+
+### 用户裁定闭合（2026-10-10，VERIFY-0017 分档口径；用户授权托管批量裁定）
+
+按「按未覆盖成因分档」口径裁定（用户已授权托管批量闭合）。
+
+- **清单行验收对象成立**：「清洗与指标计算、预览正确」在授权模型 glm-5.3-flash 的真实 Work 回合中成立并经复核算术：数据画像精确（12 行 × 3 列，2 空值 + 1 "N/A"）；清洗恰剔除 3 条脏行；三区合计**逐项复算无误**（华北 4000 = 1200+1300+1500，最高 ✔；华南 3050；华东 2400）；清洗后 9 行预览与盘上 `cleaned_sales.csv` 逐行一致。`dataset_profile` 工具被正确调用。
+- **Artifact 尾条转 ISSUE-0033**：`artifact` 空参 ×8（同 [ISSUE-0033](../issues/ISSUE-0033-artifact-union-schema-gateway.md)），模型改以 `cleaned_sales.csv` + `analysis.md` 双文件交付，内容完整。
+- Work 数据集节与 `dataset`/`analysis` 产物来源复查为确定性 UI 面（本任务 31 例已绿）；会话实录见 `~/.openforge-ui-debug/04987e4e/agent/sessions/--C--Users-xquan-AppData-Local-Temp-vetta-0026-dataset--/`。

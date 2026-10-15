@@ -31,7 +31,7 @@ export interface NodeHostCodingToolEnvironmentOptions {
 	readonly resolveExecutable?: ResolveCodingToolExecutable;
 	readonly normalizeBackgroundOutput?: (value: string) => string;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
-	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 

@@ -23,6 +23,7 @@
 		},
 		"clawConnected": "Claw connected",
 		"hide": "Hide sidebar",
+		"regionLabel": "Sidebar",
 		"empty": {
 			"title": "No projects yet",
 			"description": "Click + above to create a project"
@@ -30,6 +31,7 @@
 		"projects": {
 			"noSessions": "No sessions",
 			"collapseSessions": "Collapse sessions",
+			"toggleSessions": "Expand or collapse sessions for {{name}}",
 			"expandMore": "Show more ({{count}})",
 			"scrollToTop": "Scroll to top",
 			"scrollToBottom": "Scroll to bottom"
@@ -111,6 +113,10 @@
 		"unpin": "Unpin",
 		"openArtifactDir": "Open artifact folder",
 		"delete": "Delete",
+		"archive": "Archive conversation",
+		"archiveDisabled": "Stop the running session first",
+		"archiveToast": "Archived “{{name}}”",
+		"archiveToastAction": "View archived",
 		"tags": {
 			"label": "Tags",
 			"new": "New tag…",
@@ -222,10 +228,10 @@
 	},
 	"remotePicker": {
 		"title": "Add a project from a remote host",
-		"pickHost": "Pick a registered host",
+		"pickHost": "Choose a host or add a new SSH host",
 		"loading": "Loading…",
 		"noHosts": "No remote hosts registered yet",
-		"noHostsHint": "Add one under Settings → SSH hosts, or import the aliases you already have in ~/.ssh/config.",
+		"noHostsHint": "Add a host here, then choose a remote project folder. Existing SSH aliases work too.",
 		"parent": "Parent folder",
 		"emptyDir": "No sub-folders here. You can add this folder as the project.",
 		"browseFailed": "Could not read this folder. The connection may be down, or this account may lack permission.",
@@ -233,7 +239,20 @@
 		"backToHosts": "Pick another host",
 		"cancel": "Cancel",
 		"confirm": "Add this folder as a project",
-		"failedTitle": "Could not add this project"
+		"failedTitle": "Could not add this project",
+		"addHost": "Add host",
+		"addHostHint": "Save this host, then choose a project folder. If needed, you will be asked for a password or key passphrase when connecting.",
+		"saveHostAndContinue": "Save and choose folder",
+		"savingHost": "Saving…",
+		"saveHostFailed": "Could not save the host. Check the connection details and try again.",
+		"backToHostList": "Back to hosts",
+		"loadHostsFailed": "Could not load hosts. Try again.",
+		"retry": "Retry",
+		"connecting": "Connecting to host…",
+		"pathOnHost": "{{path}} on {{host}}",
+		"projectName": "Project name",
+		"projectNameHint": "The name shown in the sidebar; the remote folder keeps its name.",
+		"close": "Close"
 	},
 	"orphanRemote": {
 		"title": "This project's host is no longer in your host list",

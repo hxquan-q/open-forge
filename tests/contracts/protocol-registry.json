@@ -1,0 +1,182 @@
+{
+	"description": "Cross-boundary protocol inventory (TASK-0112). Every entry must either list conformance suite test files or appear in EXEMPT_PROTOCOLS in scripts/quality/check-protocol-suites.mjs with an OWNERS approver. Suites must drive the protocol through consumer public APIs against a real implementation — pure self-mocks do not count.",
+	"protocols": [
+		{
+			"id": "ai-provider-stream",
+			"surface": "packages/ai",
+			"title": "AI Provider 流协议（chunk/事件/错误/取消/usage/stop）",
+			"suites": ["packages/ai/test/protocol-contract.test.ts", "packages/ai/test/provider-conformance.test.ts"]
+		},
+		{
+			"id": "runtime-core-session",
+			"surface": "packages/runtime-core",
+			"title": "Runtime Session/Turn/Port/事件路由合同",
+			"suites": [
+				"apps/desktop/src/main/agent-runtime/runtime-host-contract.test.ts",
+				"apps/cli-host/test/legacy-runtime-contract.test.ts",
+				"apps/cli-host/test/runtime-composition-contract.test.ts"
+			]
+		},
+		{
+			"id": "runtime-storage-conversation",
+			"surface": "packages/runtime-storage",
+			"title": "Conversation 持久化端口与记录 Schema",
+			"suites": [
+				"packages/runtime-storage/test/conversation/message-command-schema.test.ts",
+				"packages/runtime-storage/test/conversation/task-fact-record-schema.test.ts",
+				"packages/runtime-node/test/conversation/conversation-persistence.test.ts",
+				"packages/runtime-node/test/conversation/conversation-ownership-lease.test.ts"
+			]
+		},
+		{
+			"id": "runtime-tools-coding",
+			"surface": "packages/runtime-tools",
+			"title": "Coding Tools 协议（Schema/目录/激活/结果策略）",
+			"suites": [
+				"packages/runtime-node/test/coding-suite/command/command-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/command/background-command-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/edit/edit-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/find/find-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/glob/glob-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/grep/grep-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/ls/ls-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/read/read-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/tree/tree-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/write/write-runtime-contract.test.ts",
+				"packages/runtime-node/test/coding-suite/specialized-tools-runtime-contract.test.ts"
+			]
+		},
+		{
+			"id": "runtime-mcp-ports",
+			"surface": "packages/runtime-mcp",
+			"title": "MCP 协议 Port（Source/Client/Server Runtime/OAuth Store）",
+			"suites": [
+				"packages/runtime-mcp/test/deferred-tool-contract.test.ts",
+				"packages/runtime-mcp/test/protocol-guards.test.ts",
+				"packages/runtime-node/test/mcp/stdio-mcp-client.test.ts",
+				"packages/runtime-node/test/mcp/http-mcp-client.test.ts",
+				"packages/runtime-node/test/mcp/post-connect-tool-calls.test.ts"
+			]
+		},
+		{
+			"id": "runtime-knowledge-ports",
+			"surface": "packages/runtime-knowledge",
+			"title": "Knowledge 摄取/查询/存储 Port",
+			"suites": [
+				"packages/runtime-knowledge/test/knowledge-ingest.test.ts",
+				"packages/runtime-node/src/host/knowledge-runtime.test.ts"
+			]
+		},
+		{
+			"id": "runtime-subagents-coordination",
+			"surface": "packages/runtime-subagents",
+			"title": "Subagent 协调/分发/恢复合同",
+			"suites": [
+				"packages/runtime-subagents/test/coordinator-lifecycle.test.ts",
+				"packages/runtime-subagents/test/coordinator-recovery.test.ts",
+				"packages/runtime-subagents/test/coordinator-terminal-state.test.ts",
+				"packages/runtime-subagents/test/type-registry.test.ts"
+			]
+		},
+		{
+			"id": "runtime-telemetry-observation",
+			"surface": "packages/runtime-telemetry",
+			"title": "Observation → 日志/Trace 投影 Adapter 合同",
+			"suites": [
+				"packages/runtime-telemetry/src/observation-adapters.test.ts",
+				"packages/runtime-telemetry/src/trace-recorder.test.ts"
+			]
+		},
+		{
+			"id": "runtime-ssh-remote-fs",
+			"surface": "packages/runtime-ssh",
+			"title": "远端文件/命令桥接协议（ssh-helper 客户端侧）",
+			"suites": [
+				"packages/runtime-ssh/src/project-resource-access.test.ts",
+				"packages/runtime-ssh/src/remote-file-tool-bridge.test.ts",
+				"packages/runtime-ssh/src/ssh-search-tools.test.ts"
+			]
+		},
+		{
+			"id": "action-rpc",
+			"surface": "packages/action-rpc",
+			"title": "Action RPC client/server 线与端点发现协议",
+			"suites": ["packages/action-rpc/test/client.test.ts", "packages/action-rpc/test/endpoint-file.test.ts"]
+		},
+		{
+			"id": "plugin-sdk-host",
+			"surface": "packages/plugins/plugin-sdk",
+			"title": "Plugin SDK 宿主合同（manifest/生命周期/权限/工具）",
+			"suites": [
+				"apps/desktop/src/main/plugins/plugin-protocol-contract.test.ts",
+				"apps/cli-host/test/plugin-runtime-contract.test.ts",
+				"apps/cli-host/test/plugin-tool-runtime-contract.test.ts",
+				"packages/plugins/plugin-vite/test/permission-contract.test.ts"
+			]
+		},
+		{
+			"id": "plugin-mcp-bridge",
+			"surface": "packages/plugins/plugin-sdk + packages/runtime-mcp",
+			"title": "插件 ↔ MCP Session 桥接面",
+			"suites": ["apps/cli-host/test/plugin-mcp-session-contract.test.ts"]
+		},
+		{
+			"id": "cli-agent-runtime-rpc",
+			"surface": "apps/cli-host",
+			"title": "vetta-agent-rpc sidecar 会话/事件协议",
+			"suites": [
+				"apps/cli-host/test/agent-runtime-session-transition-contract.test.ts",
+				"apps/cli-host/test/agent-runtime-provider-contract.test.ts",
+				"apps/cli-host/test/subagent-runtime-contract.test.ts",
+				"apps/cli-host/test/runtime-ownership-cleanup-contract.test.ts"
+			]
+		},
+		{
+			"id": "capability-sdk-contracts",
+			"surface": "packages/capability-sdk",
+			"title": "Capability Token/Schema/Catalog/Grant 合同",
+			"suites": ["packages/capability-sdk/test/catalog.test.ts", "packages/capability-sdk/test/foundation.test.ts"]
+		},
+		{
+			"id": "capability-runtime-access",
+			"surface": "packages/capability-runtime",
+			"title": "Registry/Hub/AccessSession/Constraint 执行合同",
+			"suites": ["packages/capability-runtime/test/access.test.ts", "packages/capability-runtime/test/registry.test.ts"]
+		},
+		{
+			"id": "remote-control-wire",
+			"surface": "packages/remote-control",
+			"title": "Remote Control 线协议与连接状态机",
+			"suites": [
+				"packages/remote-control/test/protocol.test.ts",
+				"packages/remote-control/test/schema.test.ts",
+				"packages/remote-control/test/connection.test.ts"
+			]
+		},
+		{
+			"id": "remote-desktop-signaling",
+			"surface": "packages/remote-desktop",
+			"title": "WebRTC 信令与远端输入 DataChannel 合同",
+			"suites": [
+				"packages/remote-desktop/test/protocol.test.ts",
+				"packages/remote-desktop/test/signaling.test.ts",
+				"packages/remote-desktop/test/peer.test.ts"
+			]
+		},
+		{
+			"id": "remote-relay-transport",
+			"surface": "apps/remote-relay",
+			"title": "Cloudflare 中继传输边界（校验不解释）",
+			"suites": ["apps/remote-relay/test/remote-relay.test.ts", "apps/remote-relay/test/room-authorization.test.ts"]
+		},
+		{
+			"id": "plugin-vite-build",
+			"surface": "packages/plugins/plugin-vite",
+			"title": "插件打包权限与构建合同",
+			"suites": [
+				"packages/plugins/plugin-vite/test/permission-contract.test.ts",
+				"packages/plugins/plugin-vite/test/build-permission-contract.test.ts"
+			]
+		}
+	]
+}

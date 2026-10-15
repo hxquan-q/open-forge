@@ -41,6 +41,8 @@ const SAMPLES: ReadonlyArray<{ text: string; kind: ChatErrorKind }> = [
 	{ text: "TypeError: fetch failed", kind: "network" },
 	{ text: "connect ECONNREFUSED 127.0.0.1:8080", kind: "network" },
 	{ text: "terminated", kind: "network" },
+	// stream_idle：provider 流停滞换连（连接还在，只是上游不再吐字）
+	{ text: "Provider stream stalled: no events for 180000ms (stream_idle_timeout)", kind: "stream_idle" },
 	// unknown
 	{ text: "Assistant response ended with error", kind: "unknown" },
 	{ text: "", kind: "unknown" },
@@ -65,5 +67,18 @@ describe("classifyChatError", () => {
 			if (kind !== "rate_limit" && kind !== "server" && kind !== "network") continue;
 			expect(isRetryableByController(text), text).toBe(true);
 		}
+	});
+
+	it("流停滞不因 timeout 子串被误判成断网", () => {
+		// 回归：`stream_idle_timeout` 含 `timeout`，曾被 NETWORK 抢先命中而显示「网络没连上」。
+		const text = "Provider stream stalled: no events for 180000ms (stream_idle_timeout)";
+		expect(classifyChatError(text)).toBe("stream_idle");
+		expect(classifyChatError(text)).not.toBe("network");
+	});
+
+	it("真实断网样本仍归 network", () => {
+		// 反向保护：把停滞从 network 摘出来，不能顺手把网络类一起改窄。
+		expect(classifyChatError("request timed out")).toBe("network");
+		expect(classifyChatError("connect ETIMEDOUT 10.0.0.1:443")).toBe("network");
 	});
 });

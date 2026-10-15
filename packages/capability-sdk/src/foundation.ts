@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createCapabilityCatalog } from "./catalog.js";
 import { FOUNDATION_ARTIFACT_CAPABILITIES } from "./foundation/artifact.js";
 import { FOUNDATION_BROWSER_CAPABILITIES } from "./foundation/browser.js";
@@ -45,6 +46,7 @@ export {
 export {
 	type FilesystemEntry,
 	type FilesystemFileRef,
+	type FilesystemListRecursiveInput,
 	type FilesystemMoveInput,
 	type FilesystemPathInput,
 	type FilesystemReadBinaryFileResult,

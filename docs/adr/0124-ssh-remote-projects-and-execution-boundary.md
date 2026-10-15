@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # SSH 远程项目与执行边界
 
 ## 背景
@@ -38,6 +39,31 @@ Vetta 当前没有终端、没有 Git 面板、没有 LSP、没有端口转发�
 ### 传输层
 
 以系统 OpenSSH 二进制为主路径，每主机一条 `ControlMaster` 复用连接。理由是 `~/.ssh/config`、Include、ProxyJump、ProxyCommand、ssh-agent、FIDO 安全密钥、GSSAPI、known_hosts 全部由 OpenSSH 原生支持——用户只要 `ssh host` 能通，Vetta 就能通。传输层定义为接口，Windows 或无系统 ssh 的环境后续可补 `ssh2` 实现。
+
+**`ssh2` 传输已经落地（原句的「后续可补」是立项时的计划，此处更新）**：Windows 上 OpenSSH 的
+`ControlMaster` 依赖 unix socket 的 fd 传递，MSYS2 与 Win32-OpenSSH 都在 mux 握手处失败
+（BUG-0049），因此 Windows 走进程内 `ssh2` 实现（`Ssh2ProcessRunner`），macOS/Linux 保持
+spawn 系统 OpenSSH 不变。两个实现消费同一份 argv 合同：`SshConnection` 组装什么，ssh2 路
+径解析什么，`SshProcessRunner` 语义（退出码、aborted/timedOut、长驻通道、`-O forward`）
+逐一对齐。差异与取舍：
+
+- 多路复用由 `Client` 本身承担——一条已认证连接上开任意多条 channel，等价于
+  ControlMaster 的角色但没有 unix socket。
+- 目标解析仍先跑 `ssh -G`（Windows 也装着 OpenSSH 客户端，解析二进制可用、只是不能当
+  mux 传输），二进制缺席时退回 `user@host` 直解析。
+- `ProxyJump` 用前一跳的 `forwardOut` 逐级建链，深度上限 4；`ProxyCommand` 不支持——
+  检测到时显式报错，不静默降级（该配置本来就要求执行任意本地命令，进程内实现没有
+  等价物）。
+- 主机密钥校验回调拿到的是线上 blob（wire format），指纹按 OpenSSH 惯例算成
+  `SHA256:<base64-nopad>`，裁决由宿主的 known_hosts + 确认提示完成；没有挂校验回调时
+  fail closed。known_hosts 的 plain/hashed/`[host]:port`/取反模式由 `known-hosts.ts`
+  自己解析。
+- 口令、私钥口令、keyboard-interactive 不再经 askpass 子进程，直接回调宿主的提示桥
+  （同一套全局浮层），返回 `undefined` 即用户取消，换下一个认证方法而不是把整次
+  建立判死——与 OpenSSH 挨个尝试 agent/key/password 的顺序一致。
+- 端口转发不依赖外部进程：`forwardOut` + 本机 `127.0.0.1` 监听。连接断开时本地监听一
+  并收掉，下一次操作走懒重连（`ensureReady` 失败即清缓存 promise），与 ControlMaster
+  重建语义对齐。Windows agent 走命名管道（`\\.\pipe\openssh-ssh-agent`）或 pageant。
 
 交互式提示（口令、私钥密码、2FA、主机指纹确认）通过自制 askpass 程序接回 Vetta UI：
 系统 `ssh` 的这些提示不读 stdin，只执行 `SSH_ASKPASS` 指向的程序。该程序在运行时生成，

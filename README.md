@@ -1,6 +1,6 @@
 <!-- Modified by The Open Forge contributors. -->
 <p align="center">
-  <img src="docs/assets/banner.webp" alt="Open Forge">
+  <img src="docs/assets/open-forge-banner.svg" alt="Open Forge">
 </p>
 
 <h1 align="center">Open Forge</h1>
@@ -10,22 +10,15 @@
 </p>
 
 <p align="center">
-  <a href="https://www.openvetta.com"><img src="https://img.shields.io/badge/website-openvetta.com-0b7285" alt="Website"></a>
-  <a href="https://docs.openvetta.com"><img src="https://img.shields.io/badge/docs-docs.openvetta.com-f06449" alt="Documentation"></a>
-  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-join%20the%20community-5865F2?logo=discord&logoColor=white" alt="Join the Open Forge Discord"></a>
+  <a href="https://github.com/hxquan-q/open-forge/releases"><img src="https://img.shields.io/badge/download-GitHub%20Releases-2da44e" alt="Download from GitHub Releases"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0 license"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows, and Linux">
-  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/openvetta/open-vetta?utm_source=oss&utm_medium=github&utm_campaign=openvetta%2Fopen-vetta&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews"></a>
+  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-join%20the%20community-5865F2?logo=discord&logoColor=white" alt="Join the Open Forge Discord"></a>
 </p>
 
 <p align="center">
   <b>English</b> ·
-  <a href="README.zh-CN.md">简体中文</a> ·
-  <a href="https://www.openvetta.com/download">Download</a> ·
-  <a href="https://docs.openvetta.com/getting-started/">Get started</a> ·
-  <a href="https://github.com/openvetta/open-vetta/discussions">Discussions</a> ·
-  <a href="https://discord.gg/qGqkk22Vg9">Discord</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 ---
@@ -34,9 +27,7 @@ Open Forge brings models, project files, local tools, and reusable capabilities 
 
 It is more than a chat interface: Open Forge can inspect a workspace, use tools with visible permission boundaries, produce real files, and keep the execution trail available for review.
 
-<p align="center">
-  <img src="docs/assets/screenshot.png" alt="Open Forge desktop workspace">
-</p>
+The repository and documentation use **Open Forge**. Desktop defaults to the `distribution` brand profile, displayed as **Allstr ai** with a localized Chinese name. Set `VETTA_BRAND_PROFILE=self` explicitly for the Open Forge display name. Brand profiles are independent of the lite/full cloud-service flag and share compatibility identities and data directories. See [build modes](docs/desktop/build-modes.en.md) for the self profile.
 
 ## Why Open Forge
 
@@ -49,30 +40,25 @@ It is more than a chat interface: Open Forge can inspect a workspace, use tools 
 | **Reusable workflows** | Extend the agent with skills, MCP servers, plugins, themes, knowledge, batch tasks, and automation. |
 | **Open client stack** | The desktop app, CLI, SDK, plugin system, themes, mobile client, and IM gateway are developed in this repository. |
 
-## Start here
+## Get Open Forge
 
-| I want to… | Start with |
-|---|---|
-| Use the desktop app | [Download for macOS, Windows, or Linux](https://www.openvetta.com/download), then follow [installation and first setup](https://docs.openvetta.com/getting-started/). |
-| Complete a real task | Follow the [first-task walkthrough](https://docs.openvetta.com/getting-started/first-task/). |
-| Understand the product | Read the [product guide](https://docs.openvetta.com/product/overview/) and [security and data boundaries](https://docs.openvetta.com/reference/security-and-data/). |
-| Build an extension | Choose between [skills, MCP, plugins, themes, SDK, RPC, and CLI](https://docs.openvetta.com/developers/overview/). |
-| Contribute code | Read [`QUICKSTART.md`](QUICKSTART.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md). |
+Prebuilt builds for tagged releases are published on [GitHub Releases](https://github.com/hxquan-q/open-forge/releases) for macOS, Windows, and Linux.
 
 ### Run from source
 
 Requires **Bun 1.3+** and **Node.js 20+**.
 
 ```bash
-git clone https://github.com/openvetta/open-vetta.git
-cd open-vetta
-git switch dev
+git clone https://github.com/hxquan-q/open-forge.git
+cd open-forge
 bun install
 cd apps/desktop
 bun run dev
 ```
 
-The development app uses `~/.openforge-dev` by default, keeping installed-app data in `~/.openforge` untouched. Root-level `bun run dev` watches core libraries; it does not launch Electron. See [`QUICKSTART.md`](QUICKSTART.md) for the complete setup and validation commands.
+A source checkout produces the **lite** build by default: no account, no subscription, no hosted services. Model requests go to the endpoint you configure, and credentials remain in local credential storage. Build modes and environment variables are documented in [`docs/desktop/build-modes.en.md`](docs/desktop/build-modes.en.md).
+
+The development app uses `~/.openforge-dev`, keeping installed-app data in `~/.openforge` untouched. Root-level `bun run dev` watches core libraries; it does not launch Electron. See [`QUICKSTART.md`](QUICKSTART.md) for the complete setup and validation commands.
 
 ## What you can do
 
@@ -83,23 +69,23 @@ The development app uses `~/.openforge-dev` by default, keeping installed-app da
 - **Reuse organizational knowledge.** Build local knowledge bases and install reusable skills or scenarios.
 - **Keep working away from the desk.** Use supported IM bridges, webhooks, notifications, quick entry, and native desktop integrations.
 
-The public documentation has the current task guides and screenshots: [browse all product capabilities](https://docs.openvetta.com/product/overview/).
+The [product guide](apps/docs-site/content/docs/product/overview.mdx) covers the capability areas. Its screenshots illustrate workflows; display names and appearance depend on the selected brand profile and build.
 
 ## Extension model
 
-Vetta exposes several extension levels so a simple workflow does not need to become a full plugin:
+Open Forge exposes several extension levels so a simple workflow does not need to become a full plugin:
 
 | Extension | Use it for | Guide |
 |---|---|---|
-| **Skill** | Teach the agent a repeatable method or domain workflow. | [Abilities](https://docs.openvetta.com/product/abilities/) |
-| **MCP** | Connect external tools and data over a standard protocol. | [MCP connectors](https://docs.openvetta.com/product/mcp/) |
-| **Plugin** | Extend the desktop UI, files, messages, tools, and host actions. | [Plugin development](https://docs.openvetta.com/plugins/overview/) |
-| **Theme** | Replace the visual system and provide theme-specific pages. | [Theme development](https://docs.openvetta.com/themes/overview/) |
-| **SDK / RPC / CLI** | Embed or drive the agent from another application or process. | [Developer paths](https://docs.openvetta.com/developers/overview/) |
+| **Skill** | Teach the agent a repeatable method or domain workflow. | [Abilities](apps/docs-site/content/docs/product/abilities.mdx) |
+| **MCP** | Connect external tools and data over a standard protocol. | [MCP connectors](apps/docs-site/content/docs/product/mcp.mdx) |
+| **Plugin** | Extend the desktop UI, files, messages, tools, and host actions. | [Plugin development](apps/docs-site/content/docs/plugins/overview.mdx) |
+| **Theme** | Replace the visual system and provide theme-specific pages. | [Theme development](docs/theme/README.md) |
+| **SDK / RPC / CLI** | Embed or drive the agent from another application or process. | [Developer paths](apps/docs-site/content/docs/developers/overview.mdx) |
 
 ### Build a plugin from any directory
 
-You do not need this repository, or a Vetta source checkout, to build a plugin. Nor does an agent:
+You do not need this repository, or an Open Forge source checkout, to build a plugin. Nor does an agent:
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
@@ -109,55 +95,51 @@ npm run install:vetta            # build, package, install into the running desk
 npx vetta-plugin-cli watch       # hot reload: the host loads the plugin from this directory
 ```
 
-`init` also writes an `AGENTS.md`, so **any** coding agent — Claude Code, Cursor, or Vetta's own —
-picks the project up without host-side setup. The plugin manual ships inside
-`@vetta-org/plugin-sdk`, so the contract an agent reads is the contract the project compiles
-against; `docs` locates it rather than anyone hard-coding a `node_modules` path.
+`init` also writes an `AGENTS.md`, so **any** coding agent — Claude Code, Cursor, or Open Forge's own — picks the project up without host-side setup. The plugin manual ships inside `@vetta-org/plugin-sdk`, so the contract an agent reads is the contract the project compiles against; `docs` locates it rather than anyone hard-coding a `node_modules` path.
 
 To publish several abilities from one repository, scaffold a marketplace:
 
 ```bash
 npx @vetta-org/plugin-cli init hub --name my-market \
-  --repository https://github.com/me/my-market --min-app-version 0.55.0
+  --repository https://github.com/me/my-market --min-app-version 0.1.3
 ```
 
-That lays down the index, the `abilities/` layout, a repository-level `AGENTS.md`, and CI running
-`vetta-plugin-cli sync --check`, which keeps `.vetta/marketplace.json` reconciled with each ability
-package. Development commands always act on the nearest ability directory, so working inside a
-marketplace is identical to working on a standalone plugin.
+`0.1.3` is the current Desktop version used as an example. Set the oldest Open Forge version you have verified; do not reuse the upstream `0.55.x` version line.
 
-Plugins declare capabilities in `plugin.json`; privileged operations are authorized by the host and checked again at runtime. Plugins run inside the desktop renderer and should be treated as curated code, not as an arbitrary-code sandbox. Read the [plugin trust and permission model](https://docs.openvetta.com/plugins/manifest-and-permissions/) before distributing one.
+That lays down the index, the `abilities/` layout, a repository-level `AGENTS.md`, and CI running `vetta-plugin-cli sync --check`, which keeps `.vetta/marketplace.json` reconciled with each ability package. Development commands always act on the nearest ability directory, so working inside a marketplace is identical to working on a standalone plugin.
+
+Plugins declare capabilities in `plugin.json`; privileged operations are authorized by the host and checked again at runtime. Plugins run inside the desktop renderer and should be treated as curated code, not as an arbitrary-code sandbox. Read the [plugin trust and permission model](apps/docs-site/content/docs/plugins/manifest-and-permissions.mdx) before distributing one.
 
 ## Data and build modes
 
-A source checkout produces the **lite** build by default. It has no dependency on a Vetta-operated backend: no account, subscription, remote administration, or hosted marketplace is required. Model requests go to the endpoint you configure, and credentials remain in local credential storage.
-
-Official installers may enable the optional Vetta Serv integration for accounts, subscriptions, and a hosted marketplace. That integration is selected at build time; it is not silently enabled in a lite build.
+A source checkout produces the **lite** build by default. It has no dependency on an Open Forge-operated backend: no account, subscription, remote administration, or hosted marketplace is required. Published installers may enable the optional Open Forge Serv integration for accounts, subscriptions, and a hosted marketplace; that integration is selected at build time and never silently enabled in a lite build.
 
 Local-first does not mean zero network traffic. Model providers, MCP servers, plugins, webhooks, IM integrations, update sources, and optional telemetry can each create their own data boundary. Review:
 
-- [Security and data boundaries](https://docs.openvetta.com/reference/security-and-data/)
-- [Configuration paths](https://docs.openvetta.com/reference/configuration-paths/)
+- [Security and data boundaries](apps/docs-site/content/docs/reference/security-and-data.mdx)
+- [Configuration paths](apps/docs-site/content/docs/reference/configuration-paths.mdx)
 - [Build modes and environment variables](docs/desktop/build-modes.en.md)
 - [Security policy](SECURITY.md)
 
 ## Repository map
 
-This is a Bun/TypeScript monorepo with additional Kotlin and Go applications. Dependencies point from applications toward reusable packages; `packages/*` never depend on `apps/*`.
+This is a Bun/TypeScript monorepo with additional Kotlin, Go, and Cloudflare Worker applications. Dependencies point from applications toward reusable packages; `packages/*` never depend on `apps/*`.
 
 | Area | Responsibility |
 |---|---|
 | [`apps/desktop`](apps/desktop) | Electron desktop host and renderer |
 | [`apps/cli-host`](apps/cli-host) | CLI host for the coding agent |
-| [`apps/docs-site`](apps/docs-site) | Next.js documentation site published at `docs.openvetta.com` |
+| [`apps/docs-site`](apps/docs-site) | Next.js documentation site |
 | [`apps/mobile`](apps/mobile) | Expo/React Native mobile client |
 | [`apps/kotlin`](apps/kotlin) | Kotlin Multiplatform Android client |
 | [`apps/im-gateway`](apps/im-gateway) | Go IM sidecar gateway |
+| [`apps/remote-relay`](apps/remote-relay) | Cloudflare Worker relay for the mobile-to-desktop remote-control protocol |
+| [`apps/ssh-helper`](apps/ssh-helper) | Static helper binary uploaded over SSH for remote projects |
 | [`packages/ai`](packages/ai) · [`packages/agent`](packages/agent) | Provider abstraction and the agent loop |
 | [`packages/coding-agent`](packages/coding-agent) · `packages/runtime-*` | Product composition, runtime contracts, tools, storage, MCP, and host adapters |
 | [`packages/plugins`](packages/plugins) · [`packages/themes`](packages/themes) | Extension SDKs, presets, and themes |
 
-Architecture details and public integration contracts live in the [developer documentation](https://docs.openvetta.com/developers/architecture/) and [`docs/adr/`](docs/adr/).
+Architecture details and public integration contracts live in the [developer documentation](apps/docs-site/content/docs/developers/architecture.mdx) and [`docs/adr/`](docs/adr/).
 
 ## Develop and contribute
 
@@ -172,20 +154,20 @@ bun run test:changed             # tests affected by the current diff
 
 Pull requests target the **`dev`** branch. The contribution map, test expectations, and review bar are in [`CONTRIBUTING.md`](CONTRIBUTING.md). Architecture and Agent collaboration rules are in [`AGENTS.md`](AGENTS.md).
 
-Questions and early ideas belong in [GitHub Discussions](https://github.com/openvetta/open-vetta/discussions). Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/openvetta/open-vetta/security/advisories/new).
+Report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md) for the reporting channel, scope, and what to include.
 
 ## Documentation
 
-- [User and product guides](https://docs.openvetta.com/product/overview/)
-- [Plugin development](https://docs.openvetta.com/plugins/overview/)
-- [Theme development](https://docs.openvetta.com/themes/overview/)
-- [SDK, RPC, CLI, and architecture](https://docs.openvetta.com/developers/overview/)
-- [Troubleshooting](https://docs.openvetta.com/troubleshooting/)
-- [`QUICKSTART.md`](QUICKSTART.md) for repository setup
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) for contributions
+- [Documentation map and historical scope](docs/README.md)
+- [Product guide and capability reference](apps/docs-site/content/docs/product/overview.mdx)
+- [First-task walkthrough](apps/docs-site/content/docs/getting-started/first-task.mdx)
+- [Plugin development](apps/docs-site/content/docs/plugins/overview.mdx) · [plugin SDK internals in `docs/plugin/`](docs/plugin/README.md)
+- [Theme development](docs/theme/README.md)
+- [SDK, RPC, CLI, and architecture](apps/docs-site/content/docs/developers/overview.mdx)
+- [`QUICKSTART.md`](QUICKSTART.md) for repository setup · [`CONTRIBUTING.md`](CONTRIBUTING.md) for contributions
 - [`docs/adr/`](docs/adr/) for architecture decisions
 
-The documentation site also publishes [`llms.txt`](https://docs.openvetta.com/llms.txt), [`llms-full.txt`](https://docs.openvetta.com/llms-full.txt), and a Markdown representation of each page for Agent consumption.
+The documentation site lives in [`apps/docs-site`](apps/docs-site); run it locally with `bun run --cwd apps/docs-site dev`.
 
 ## Community
 
@@ -196,8 +178,6 @@ Join the Open Forge Discord to ask questions, share workflows, skills, plugins a
 </p>
 
 **https://discord.gg/qGqkk22Vg9**
-
-Longer, searchable threads still belong in [GitHub Discussions](https://github.com/openvetta/open-vetta/discussions), and vulnerabilities go through [GitHub Security Advisories](https://github.com/openvetta/open-vetta/security/advisories/new) — please do not report them on Discord.
 
 ## Credits and license
 

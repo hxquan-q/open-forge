@@ -73,36 +73,10 @@ export interface ThinkingDeltaEvent extends SessionEventBase {
 	delta: string;
 }
 
-export interface MessageFinalEvent extends SessionEventBase {
-	type: "message.final";
-	message: Message;
-}
-
 export interface ToolCallGeneratingEvent extends SessionEventBase {
 	type: "toolcall.start";
 	toolCallId: string;
 	toolName: string;
-}
-
-/**
- * The model is still generating this tool call, and streaming its arguments has
- * revealed at least one more fully-parsed key. Emitted once per key growth, not
- * per token.
- *
- * Why it exists: for `edit`/`write` the expensive part is generating the
- * arguments (a whole file body), while executing them takes milliseconds. UI
- * keyed off {@link ToolStartEvent} therefore only learns the target once the
- * work is essentially over. The target path is normally the first key in the
- * argument object, so it lands here seconds earlier.
- *
- * Partial by construction: keys may still be missing and values of the
- * in-flight key are not included. {@link ToolStartEvent} stays authoritative.
- */
-export interface ToolCallArgsEvent extends SessionEventBase {
-	type: "toolcall.args";
-	toolCallId: string;
-	toolName: string;
-	args: Readonly<Record<string, unknown>>;
 }
 
 export interface ToolStartEvent extends SessionEventBase {
@@ -282,9 +256,7 @@ export type SessionEvent =
 	| AssistantSessionEvent
 	| MessageDeltaEvent
 	| ThinkingDeltaEvent
-	| MessageFinalEvent
 	| ToolCallGeneratingEvent
-	| ToolCallArgsEvent
 	| ToolStartEvent
 	| ToolUpdateEvent
 	| ToolPhaseEvent
@@ -339,6 +311,21 @@ export interface QueueChangedEvent extends SessionEventBase {
 	snapshot: unknown;
 }
 
+/** {@link SessionFacade.attach} 的回执：同一次同步步骤内取得的订阅与历史快照。 */
+export interface SessionAttachment {
+	readonly unsubscribe: () => void;
+	/**
+	 * attach 时刻的持久化历史拷贝；运行中回合（`runningTurnId`）的消息以重放事件
+	 * 重建，消费端不把两者重复拼接。重放事件先于本回执经 handler 同步送达。
+	 */
+	readonly history: HistoryEntry[];
+	/**
+	 * 运行中回合身份；会话空闲时缺省。回合首个 assistant 事件到达前的窗口内同为
+	 * undefined（身份随首个事件可观察），消费端可结合快照 isStreaming 区分。
+	 */
+	readonly runningTurnId?: string;
+}
+
 export interface SessionStateSnapshot {
 	sessionId: string;
 	contextState?: SessionContextState;
@@ -350,6 +337,14 @@ export interface SessionStateSnapshot {
 	isStreaming: boolean;
 	/** Timestamp (ms) for the current agent_start, if this session is streaming. */
 	currentTurnStartedAt?: number;
+	/** Identity of the running Turn (learned from assistant events), so a subscriber joining mid-Turn can target its messages. */
+	currentTurnId?: string;
+	/**
+	 * 宿主事件中继最近一次观察到该会话事件的时间戳（ms，事件自身时钟）；
+	 * 尚无任何事件时为 undefined。流式会话的逐事件活动证据：中断巡检据此区分
+	 * 「健康长回合」（事件持续流动）与「零事件悬挂」（长时间无任何事件）。
+	 */
+	lastEventAt?: number;
 	messageCount: number;
 	/** Context window usage percentage (0-100), or null if unknown */
 	contextPercent: number | null;
@@ -558,6 +553,11 @@ export interface SessionFacade {
 		signal?: AbortSignal,
 	): Promise<Output>;
 	subscribe(sessionId: string, handler: (event: SessionEvent) => void): () => void;
+	/**
+	 * 订阅与读历史合成一次快照：运行中回合先经 handler 重放，历史在同一同步步骤
+	 * 内读取，二者之间既无空窗也无重叠；回执携带运行中回合身份供消费端去重。
+	 */
+	attach(sessionId: string, handler: (event: SessionEvent) => void): SessionAttachment;
 	updateSettings(sessionId: string, partialSettings: SettingsPatch): Promise<void>;
 	/** Update thinking level for ALL open sessions at once. */
 	updateGlobalThinkingLevel(level: ThinkingLevel): void;

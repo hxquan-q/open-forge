@@ -9,7 +9,7 @@ plan: []
 source: RESEARCH-0010（PI-Desktop `review.rs` 快照库 + hash 守卫回滚机制对照）
 execution: parallel
 branch: forge/dev
-worktree: ..\open-forge-wt\task-0094-review-snapshot
+worktree: unassigned（已集成；原路径 ..\open-forge-wt\task-0094-review-snapshot 已淘汰）
 base_commit: 3b5ec8bad
 read_paths: [packages/runtime-storage/src, packages/runtime-node/src/coding, apps/desktop/src/main, apps/desktop/src/renderer/domains/conversation, project/research/RESEARCH-0010-pi-desktop-borrowing-opportunities.md]
 write_paths: [packages/runtime-storage/src, packages/runtime-node/src/coding, apps/desktop/src/main, apps/desktop/src/renderer/domains/conversation]

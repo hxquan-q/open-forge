@@ -9,7 +9,12 @@ import type {
 	CodingAgentSandboxAuthorizationFunctionRequest,
 } from "@vetta/coding-agent/function-extensions";
 import type { ConversationScenario } from "@vetta/coding-agent/profile";
-import type { CodingAgentPermissionMode, CodingAgentPlanModeState } from "@vetta/coding-agent/session-extensions";
+import type {
+	CodingAgentGoalSnapshot,
+	CodingAgentGoalState,
+	CodingAgentPermissionMode,
+	CodingAgentPlanModeState,
+} from "@vetta/coding-agent/session-extensions";
 import type {
 	HistoryEntry,
 	ProjectInfo,
@@ -125,6 +130,56 @@ export interface DesktopPlanReviewResolvedEvent {
 	sessionId: string;
 }
 
+/**
+ * transcript 窗口化（TASK-0050）分页请求。三个字段都属于分页模式：
+ * 任何一个出现即返回有界 `HistoryPage`；全部省略时保留旧全量语义。
+ */
+export interface HistoryPageRequest {
+	/** 每页条数；默认 100，最大 200。 */
+	limit?: number;
+	/** 上一页 `nextBeforeEntry` 原样回传；请求比该页更旧的一页（排他边界）。 */
+	beforeEntry?: string;
+	/** 仅首页生效：把尾页起点抬到最近 N 个 user turn 开头，仍受 limit 约束。 */
+	tailTurns?: number;
+}
+
+/** 有界历史页。`history` 旧→新；`nextBeforeEntry` 到头时缺省。 */
+export interface HistoryPage {
+	history: HistoryEntry[];
+	nextBeforeEntry?: string;
+	hasMore: boolean;
+	/** 是否为最新一页（无 beforeEntry 的第一页）。 */
+	head: boolean;
+}
+
+/**
+ * 分页结果。`stale` 表示游标失效（分支改写/删除/外部重写后），调用方应
+ * 保留当前可见内容并重新请求最新页，而不是当作空历史。
+ */
+export type HistoryPageResult = HistoryPage | { stale: true };
+
+/**
+ * read-only viewer 订阅的增量载荷（TASK-0050）：
+ * - `snapshot`：订阅后首轮全量（等价旧行为）；
+ * - `append`：JSONL append-only 追加，只含新增条目；
+ * - `reset`：非追加改写（编辑/分支/外部重写），带一个有界最新页，
+ *   调用方应整体替换本地视图。
+ */
+export type ViewerHistoryUpdate =
+	| { kind: "snapshot"; history: HistoryEntry[] }
+	| { kind: "append"; appended: HistoryEntry[] }
+	| { kind: "reset"; page: HistoryPage };
+
+/** 启动扫描报告的「上次退出时未正常完成」会话（与主进程扫描器输出同形）。 */
+export interface DesktopInterruptedStartupSession {
+	sessionId: string;
+	sessionPath: string;
+	cwd: string;
+	name?: string;
+	turnInterrupted: boolean;
+	queuedCount: number;
+}
+
 export interface DesktopSessionApi {
 	create(
 		config: DesktopCodingAgentSessionConfig | undefined,
@@ -158,7 +213,25 @@ export interface DesktopSessionApi {
 		traceContext?: DesktopSessionTraceContext,
 	): Promise<RuntimeTurnPromptOutcome>;
 	continue(sessionId: string): Promise<void>;
+	/** 失败/中断后的显式续跑：kernel 重跑最后一轮并丢弃失败的助手尝试；忙碌时拒绝。 */
+	retry(sessionId: string): Promise<void>;
 	abort(sessionId: string): Promise<void>;
+	/** 同步输入草稿非空态到主进程，供中断续接判定否决。 */
+	setInterruptDraftNonEmpty(sessionId: string, nonEmpty: boolean): Promise<void>;
+	/** 会话中断续接监视器判定结果（notify / auto-retried）。 */
+	onInterruptHealth(
+		handler: (payload: {
+			sessionId: string;
+			sessionPath?: string;
+			cwd?: string;
+			state: string;
+			trigger: string | null;
+			action: "notify" | "auto-retried";
+			shouldAutoContinue: boolean;
+		}) => void,
+	): () => void;
+	/** 启动一次性扫描结果：上次退出时回复未正常完成的会话（仅在非空时推送一次）。 */
+	onInterruptedStartup(handler: (payload: { sessions: DesktopInterruptedStartupSession[] }) => void): () => void;
 	/** kernel 输入队列快照（ADR-0060）。 */
 	getQueueState(sessionId: string): Promise<RuntimeSessionQueueStateView>;
 	/** 在当前回复自然结束后压缩上下文；空闲时立即从队列执行。 */
@@ -185,6 +258,14 @@ export interface DesktopSessionApi {
 	getPlanModeState(sessionId: string): Promise<CodingAgentPlanModeState>;
 	/** Plan 模式：用户手势切换权限模式；收紧从下一轮生效，放宽立即生效。 */
 	setPermissionMode(sessionId: string, permissionMode: CodingAgentPermissionMode): Promise<CodingAgentPlanModeState>;
+	/** 目标模式：读取当前会话目标；没有目标时返回 null。 */
+	getGoalState(sessionId: string): Promise<CodingAgentGoalSnapshot>;
+	/** 创建目标并在会话空闲时立即开始执行。 */
+	startGoal(sessionId: string, objective: string): Promise<CodingAgentGoalState>;
+	/** 先暂停目标状态，再中断当前执行，避免自然停止竞态继续续跑。 */
+	pauseGoal(sessionId: string, goalId: string): Promise<CodingAgentGoalState>;
+	resumeGoal(sessionId: string, goalId: string): Promise<CodingAgentGoalState>;
+	clearGoal(sessionId: string, goalId: string): Promise<null>;
 	/** exit_plan_mode：监听主进程发来的计划审批请求。 */
 	onPlanReviewRequest(handler: (request: CodingAgentPlanReviewRequest) => void): () => void;
 	/** 当前仍等待审批的计划快照，供 Renderer 初始化或重载后恢复真实状态。 */
@@ -236,6 +317,7 @@ export interface DesktopSessionApi {
 	getState(sessionId: string): Promise<DesktopSessionStateSnapshot>;
 	getMessages(sessionId: string): Promise<Message[]>;
 	getFullHistory(sessionId: string): Promise<HistoryEntry[]>;
+	getFullHistory(sessionId: string, options: HistoryPageRequest): Promise<HistoryPageResult>;
 	/** Prepare re-edit: set leaf to parent of user entry; returns text. Call before prompt. */
 	navigateForEdit(sessionId: string, entryId: string): Promise<{ text: string; cancelled: boolean }>;
 	/** Switch leaf to tip of subtree at entryId (sibling branch view). */
@@ -294,11 +376,16 @@ export interface DesktopSessionApi {
 	 * session-file lock, so IM-owned sessions (sidecar may be actively
 	 * writing) can be viewed live without conflict.
 	 */
-	openViewer(path: string, options?: { tailTurns?: number }): Promise<{ history: HistoryEntry[] }>;
+	openViewer(path: string): Promise<{ history: HistoryEntry[] }>;
+	/**
+	 * 分页打开：任一 HistoryPageRequest 字段（含兼容的 tailTurns）出现即
+	 * 返回有界页；`history` 字段含义与旧快照一致，游标失效回 `stale`。
+	 */
+	openViewer(path: string, options: HistoryPageRequest): Promise<HistoryPageResult>;
 	/**
 	 * Subscribe to live updates for a viewer-mode session. Handler fires
 	 * whenever the underlying .jsonl is written. Returns an unsubscribe
 	 * function — caller MUST call it on unmount to release the fs.watch.
 	 */
-	subscribeViewer(path: string, handler: (snapshot: { history: HistoryEntry[] }) => void): Promise<() => void>;
+	subscribeViewer(path: string, handler: (update: ViewerHistoryUpdate) => void): Promise<() => void>;
 }

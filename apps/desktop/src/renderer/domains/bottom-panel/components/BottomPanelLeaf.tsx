@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import type { BottomPanelLeaf as BottomPanelLeafState, BottomPanelSessionState } from "@shared/store/atoms";
 import { BottomPanelTabStripView } from "@vetta-org/theme-ui/bottom-panel";
 import { useAtomValue } from "jotai";
 import type { JSX } from "react";
 import { useTranslation } from "react-i18next";
+import { TERMINAL_PANEL_ID } from "../builtins/terminal-panel";
 import { BottomPanelInstanceHost } from "../registry/BottomPanelInstanceHost";
 import { bottomPanelMetaMapAtom } from "../registry/instance-atoms";
 import { resolveBottomPanelTabs } from "../registry/resolve-bottom-panel-tabs";
@@ -50,6 +52,7 @@ export function BottomPanelLeaf({
 	const { t } = useTranslation("chat");
 	const metaById = useAtomValue(bottomPanelMetaMapAtom);
 	const resolved = resolveBottomPanelTabs({ tabs: leaf.tabs, definitions, metaById });
+	const terminalAvailable = definitions.some((definition) => definition.id === TERMINAL_PANEL_ID);
 
 	return (
 		<div
@@ -118,6 +121,8 @@ export function BottomPanelLeaf({
 								tabId={entry.tabId}
 								cwd={cwd}
 								active={active && !panelCollapsed}
+								payload={leaf.tabs.find((tab) => tab.tabId === entry.tabId)?.payload}
+								terminalAvailable={terminalAvailable}
 							/>
 						</div>
 					);

@@ -1,8 +1,28 @@
+// Modified by The Open Forge contributors.
 import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
+import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
+import { toTranscriptPlaceholder } from "../../services/transcript-window";
 import { collectAgentUsages, collectModelSwitchLabels, userModelSwitchFingerprint } from "./message-list-derived";
 
 describe("message-list-derived", () => {
+	it("reuses usage identity across tail streaming and placeholder hydration", () => {
+		const usage = createAssistantMessage({ api: "fixture", provider: "fixture", model: "fixture" }).usage;
+		const history = createConversationAgentMessage({ id: "history", text: "old", blocks: [], usages: [usage] });
+		const tail = createConversationAgentMessage({ id: "tail", text: "a", blocks: [] });
+		const previous = collectAgentUsages([history, tail]);
+		const placeholder = toTranscriptPlaceholder(history);
+		if (!placeholder) throw new Error("Expected a completed reply to support placeholder projection");
+		expect(collectAgentUsages([placeholder, { ...tail, text: "ab" }], previous)).toBe(previous);
+		expect(collectAgentUsages([history, { ...tail, text: "abc" }], previous)).toBe(previous);
+		expect(collectAgentUsages([history, { ...tail, usages: [usage] }], previous)).toEqual([usage, usage]);
+		const replaced = { ...usage, output: usage.output + 1 };
+		expect(collectAgentUsages([{ ...history, usages: [replaced] }], previous)).toEqual([replaced]);
+		expect(collectAgentUsages([], previous)).toEqual([]);
+		const empty = collectAgentUsages([]);
+		expect(collectAgentUsages([tail], empty)).toBe(empty);
+	});
+
 	it("keeps the model-switch fingerprint stable while only the assistant tail grows", () => {
 		const user = createConversationUserMessage({
 			id: "u1",

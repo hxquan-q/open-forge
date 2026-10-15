@@ -13,6 +13,18 @@ describe("in-app browser element refs", () => {
 		});
 	});
 
+	it("accepts the encoded token form the agent tool prints back", () => {
+		expect(validateBrowserElementRef("v1:3:e1", { pageRevision: 3 })).toEqual({
+			ok: true,
+			ref: { id: "e1", pageRevision: 3 },
+		});
+		expect(validateBrowserElementRef("v1:4:e1", { pageRevision: 3 })).toEqual({
+			ok: false,
+			code: "stale_reference",
+		});
+		expect(validateBrowserElementRef("e1", { pageRevision: 3 })).toEqual({ ok: false, code: "invalid_input" });
+	});
+
 	it("does not relocate a missing session or a malformed ref", () => {
 		expect(validateBrowserElementRef({ id: "e1", pageRevision: 1 }, null)).toEqual({
 			ok: false,

@@ -67,11 +67,17 @@ describe("setup command execution", () => {
 	});
 
 	it("runs the command inside the worktree it was given", () => {
-		const code = runSetupCommand(`node -e "process.exit(process.cwd() === process.env.WORKTREE_ROOT_PATH ? 0 : 1)"`, {
-			cwd: join(tmpdir()),
-			primaryRoot: join(tmpdir()),
-			taskId: "T",
-		});
+		// macOS 的 /var 是指向 /private/var 的符号链接：chdir 后的 process.cwd() 会解析
+		// 链接，而 env 里的路径保持传入形式，裸字符串比较在 macOS 上必然不等。两边都过
+		// realpath 再比，比较的是「同一路径」这一合同本身。
+		const code = runSetupCommand(
+			`node -e "const fs=require('node:fs');process.exit(fs.realpathSync(process.cwd()) === fs.realpathSync(process.env.WORKTREE_ROOT_PATH) ? 0 : 1)"`,
+			{
+				cwd: join(tmpdir()),
+				primaryRoot: join(tmpdir()),
+				taskId: "T",
+			},
+		);
 		expect(code).toBe(0);
 	});
 });

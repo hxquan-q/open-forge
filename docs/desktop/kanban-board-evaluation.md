@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 看板与工作区视图：方案评估
 
 本文记录这一轮改动的取舍依据、风险与遗留项。实现细节见 [ADR-0065](../adr/0065-plugin-workspace-views-and-customizable-sidebar-nav.md)，用户视角见[功能介绍](./kanban-board.md)。
@@ -23,7 +24,7 @@
 | 主题页 `ThemePageDefinition` | ❌ 属于主题体系，插件用不了。但它是**很好的形状参照**：扩展方拥有整页、宿主只提供路由与兜底 |
 | **新增工作区视图** | ✅ 与内置页同级；有独立路由可深链；入口进侧边栏可编排 |
 
-术语上选 **Workspace View（工作区视图）** 而非沿用 VS Code 的 "View Container"：VS Code 的 View Container 是**侧边栏内的容器**，而这里是**整页内容区**，直接借用会误导插件作者。Vetta 已有的插槽命名（Global Slot / Activity Tab / Turn Card）都是「位置 + 形态」，Workspace View 与之同构。
+术语上选 **Workspace View（工作区视图）** 而非沿用 VS Code 的 "View Container"：VS Code 的 View Container 是**侧边栏内的容器**，而这里是**整页内容区**，直接借用会误导插件作者。Open Forge 已有的插槽命名（Global Slot / Activity Tab / Turn Card）都是「位置 + 形态」，Workspace View 与之同构。
 
 ### 2.2 为什么看板不复用 batch-tasks 引擎
 

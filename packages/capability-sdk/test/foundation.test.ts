@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { CAPABILITY_ERROR_CODES, CAPABILITY_PREFIXES } from "../src/contracts.js";
 import {
@@ -183,6 +184,26 @@ describe("network and namespaced storage foundation capabilities", () => {
 				modifiedAt: 2,
 			},
 		]);
+	});
+
+	it("accepts optional name filters for recursive listing and rejects path-like names", () => {
+		const listRecursive = FOUNDATION_FILESYSTEM_CAPABILITIES.LIST_FILES_RECURSIVE;
+		expect(listRecursive.parseInput({ path: "/repo" })).toEqual({ path: "/repo" });
+		expect(
+			listRecursive.parseInput({
+				path: "/repo",
+				names: ["package.json", "Makefile"],
+				ignoredDirectories: ["vendor"],
+			}),
+		).toEqual({ path: "/repo", names: ["package.json", "Makefile"], ignoredDirectories: ["vendor"] });
+		for (const names of [["a/package.json"], ["..\\x"], [".."], [""]]) {
+			expect(() => listRecursive.parseInput({ path: "/repo", names })).toThrowError(
+				expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }),
+			);
+		}
+		expect(() => listRecursive.parseInput({ path: "/repo", ignoredDirectories: ["a/b"] })).toThrowError(
+			expect.objectContaining({ code: CAPABILITY_ERROR_CODES.INVALID_INPUT }),
+		);
 	});
 
 	it("keeps open-object extension fields when additionalProperties is true", () => {

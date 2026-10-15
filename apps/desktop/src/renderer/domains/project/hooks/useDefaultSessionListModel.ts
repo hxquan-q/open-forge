@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import type { DefaultConversationFilter } from "@shared/store/atoms";
 import {
+	archivedSessionPathsAtom,
 	conversationFilterTagId,
 	conversationTagsAtom,
 	pinnedSessionPathsAtom,
@@ -20,7 +22,7 @@ import {
 	sidebarConversationIdentity,
 	sidebarConversationKey,
 } from "../services/sidebar-conversation-projection";
-import { buildSidebarSessionOrdering } from "../services/sidebar-session-order";
+import { buildSidebarSessionOrdering, withoutArchivedSessions } from "../services/sidebar-session-order";
 import { reuseUnchangedSessionViews } from "./stableSessionViews";
 
 const DEFAULT_VISIBLE_DEFAULT_SESSIONS = 5;
@@ -93,14 +95,20 @@ export function useDefaultSessionListModel({
 	}, [scheduledSessionPaths]);
 	const [showAll, setShowAll] = useState(false);
 	const tags = useAtomValue(conversationTagsAtom);
+	const archivedSessionPaths = useAtomValue(archivedSessionPathsAtom);
+	// 归档先于标签档收窄：归档会话在「对话」档与各标签档里都不出现。
+	const unarchivedSessions = useMemo(
+		() => withoutArchivedSessions(sessions, archivedSessionPaths),
+		[archivedSessionPaths, sessions],
+	);
 	const tagFilterId = conversationFilterTagId(filter);
 	// 标签档只收窄可见集合，不改变来源与排序；「对话」档仍包含已打标的会话。
 	const taggedSessions = useMemo(
 		() =>
 			tagFilterId === null
-				? sessions
-				: sessions.filter((session) => conversationTagIds(tags, session.path).includes(tagFilterId)),
-		[sessions, tagFilterId, tags],
+				? unarchivedSessions
+				: unarchivedSessions.filter((session) => conversationTagIds(tags, session.path).includes(tagFilterId)),
+		[unarchivedSessions, tagFilterId, tags],
 	);
 	const tagColorById = useMemo(() => new Map(tags.tags.map((tag) => [tag.id, tag.color])), [tags.tags]);
 	const ordering = useMemo(

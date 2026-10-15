@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { fullHistoryToChatWithSpans, isUserImageFile } from "../services/chat-service";
 import { getSessionRuntimeWhenReady } from "../services/session-runtime-readiness";
 import { cancelStagedPendingSessionSend, restoreStagedPendingSessionSend } from "../services/staged-new-session-send";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import { registerActiveTranscriptBacklog, resetTranscriptWindowToTail } from "../services/transcript-window-controller";
 import { copyUserMessageToClipboard } from "../services/user-message-clipboard";
 
 const DELETE_CONFIRMATION_SUPPRESSION_MS = 60_000;
@@ -106,9 +106,18 @@ async function abortAndWait(runtimeId: string): Promise<void> {
 }
 
 async function reloadChatHistory(runtimeId: string): Promise<void> {
-	const history = await window.vetta.session.getFullHistory(runtimeId);
 	const store = getDefaultStore();
 	const sessionPath = store.get(activeSessionAtom)?.sessionPath;
+	// TASK-0050：分支切换/删消息都是历史改写——窗口化会话整窗重置为最新
+	// head 页（旧页可能已被改写，逐页游标不可信）；非窗口化回退全量回载。
+	if (
+		sessionPath &&
+		store.get(activeSessionAtom)?.runtimeId === runtimeId &&
+		(await resetTranscriptWindowToTail(sessionPath))
+	) {
+		return;
+	}
+	const history = await window.vetta.session.getFullHistory(runtimeId);
 	if (store.get(activeSessionAtom)?.runtimeId === runtimeId) {
 		const projected = fullHistoryToChatWithSpans(history, runtimeId);
 		if (sessionPath) {
@@ -116,6 +125,7 @@ async function reloadChatHistory(runtimeId: string): Promise<void> {
 				entries: history,
 				spans: projected.spans,
 				mediaSessionId: runtimeId,
+				unbounded: true,
 			});
 		}
 		store.set(chatMessagesAtom, projected.messages);
@@ -190,8 +200,10 @@ export function useUserMessageEditAction({
 				}
 				const session = await target;
 				if (!session) return;
-				const history = await window.vetta.session.getFullHistory(session.runtimeId);
+				// TASK-0050：这里只要末条 user 的 entryId，取有界 tail 页而非全量历史。
+				const page = await window.vetta.session.openViewer(session.sessionPath, { tailTurns: 1 });
 				if (getDefaultStore().get(activeSessionAtom)?.runtimeId !== session.runtimeId) return;
+				const history = "stale" in page ? [] : page.history;
 				for (let index = history.length - 1; index >= 0; index--) {
 					const entry = history[index];
 					if (entry.type === "message" && entry.message.role === "user" && entry.entryId) {

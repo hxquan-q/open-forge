@@ -1,5 +1,5 @@
 {
-	"$comment": "运行时来源清单(ADR-0011)。单一推荐版本;每平台 filename/dir 用字面量避免模板拼接漂移。node 走 npmmirror 兜底官方;python(python-build-standalone)仅 GitHub 发布、国内无稳定公共镜像,故首启主路径靠内置 vendor 拷贝,sources 仅用于升级/装非内置版本(将来插入自建 CDN 作首位)。",
+	"$comment": "运行时来源清单(ADR-0011)。单一推荐版本;每平台 filename/dir 用字面量避免模板拼接漂移。安装包默认不再内置 vendor——安装后由 RuntimeManager 按 sources 后台下载(node 走 npmmirror 兜底官方;python(python-build-standalone)仅 GitHub 发布,国内无稳定公共镜像,弱网可经应用代理或设置面板「重新获取」重试)。打包设 VETTA_BUNDLE_VENDOR=1 可恢复内置 vendor 拷贝的离线形态。",
 	"node": {
 		"version": "22.22.2",
 		"sources": [
@@ -26,6 +26,19 @@
 			"linux-x64": { "filename": "cpython-3.13.12+20260203-x86_64-unknown-linux-gnu-install_only.tar.gz", "dir": "python", "archive": "tar.gz" },
 			"linux-arm64": { "filename": "cpython-3.13.12+20260203-aarch64-unknown-linux-gnu-install_only.tar.gz", "dir": "python", "archive": "tar.gz" },
 			"win32-x64": { "filename": "cpython-3.13.12+20260203-x86_64-pc-windows-msvc-install_only.tar.gz", "dir": "python", "archive": "tar.gz" }
+		}
+	},
+	"git": {
+		"$comment": "MinGit 只给 Windows 做可选的托管安装，系统 git 始终优先（ADR-0134）。tag 与 sha256 取自 git-for-windows 官方 release 说明。",
+		"version": "2.55.0.5",
+		"tag": "v2.55.0.windows.5",
+		"sources": [
+			"https://registry.npmmirror.com/-/binary/git-for-windows/{tag}/{filename}",
+			"https://github.com/git-for-windows/git/releases/download/{tag}/{filename}"
+		],
+		"platforms": {
+			"win32-x64": { "filename": "MinGit-2.55.0.5-64-bit.zip", "sha256": "56d7b226b7693196cfc71fef26568f536c4a021ab6c37ff2db4287bed908e96e" },
+			"win32-arm64": { "filename": "MinGit-2.55.0.5-arm64.zip", "sha256": "05843f9d6e60306c3ab886799e2c67200caab921571f10512df3493049179ddb" }
 		}
 	},
 	"mirrors": {

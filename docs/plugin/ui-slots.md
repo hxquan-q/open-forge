@@ -386,7 +386,8 @@ ctx.ui.registerArtifactRenderer({ type: "analysis", schema: analysisSchema, comp
 - **默认注册即上栏**（`initiallyVisible` 缺省 `true`）。声明 `initiallyVisible: false` 表示「出现条件我自己管」：注册只入池，之后用 `setActivityTabVisible` 静默上栏/下栏（如 git 只在仓库目录上栏、工作台跟随输入栏 toggle），或用 `openActivityTab` 上栏并抢焦点打开（如图像生成完成后跳到历史）
 - 显隐记录按 **会话 cwd** 持久化（ADR-0026）：插件表过态就听插件的，没表过态才看 `initiallyVisible`。用户随时可用减号手动隐藏
 - 插件禁用时 tab 隐藏，重新启用可回来
-- **默认按访问驻留**：首次激活后进入宿主的 warm LRU，切换时保留组件状态与 DOM；每个面板最多保留 2 个非活动 warm tab，超出的旧 tab 在浏览器空闲阶段淘汰。`retention: "active-only"` 可关闭驻留，`retention: "pinned"` 表示只要贡献可用就不参与淘汰。当前活动和浮动 tab 始终驻留。
+- **默认按访问驻留**：首次激活后进入宿主的 warm LRU，切换时保留组件状态与 DOM；每个面板最多保留 2 个非活动 warm tab，超出的旧 tab 在浏览器空闲阶段淘汰。`retention: "active-only"` 可关闭驻留；`retention: "pinned"` 表示优先保活且不占用 warm 预算——贡献可用即在预算内常驻，每个面板最多保留 3 个非活动 pinned tab，超出后按最近激活顺序淘汰。淘汰不是失效：被淘汰的页签再次打开会重新挂载、状态从零重建。当前活动和浮动 tab 不计入预算，始终驻留。
+- **pinned 是渲染进程预算，不是免费标签**：每个常驻页签各自持有一个 guest 渲染进程（内嵌浏览器、编辑器、画布等），请不要给每个页签都声明 pinned，只为真正需要跨切换保留运行时状态的页签声明。
 - **布局边界（面板内）**：与 file-preview 相同——UI 留在 Tab 面板矩形内，禁止 viewport 级 `fixed` / 超高 z-index / portal 到 `document.body`。全局浮层用 `registerGlobalSlot`，Toast 用 `notify`。见 [styling-and-pitfalls.md → 面板类 slot 布局边界](./styling-and-pitfalls.md#面板类-slot-布局边界禁止-viewport-级浮层)。
 
 ```ts
@@ -534,6 +535,39 @@ function LogsPanel() {
 ```
 
 `setCloseGuard` 的裁决：`true` 直接关、`false` 取消、返回文案则请宿主弹一次确认。允许 async（真实判断常常要问后端）。**3 秒内给不出裁决按「需要确认」处理**，不会静默关掉——丢东西的方向必须是保守的。`reason` 为 `session-switch` / `app-quit` 时仍会调用守卫（给你收尾的机会），但返回值被忽略：退出流程上挂一个能阻塞的对话框会把用户卡住。
+
+### 替用户开终端跑命令 openTerminal
+
+脚本运行器、任务面板这类插件要让命令跑在真终端里时，不要自己用 `command.spawn` 拼一个输出视图：`useBottomPanel().openTerminal()` 让宿主在**本实例所在的格子**里开一个内置终端，把命令敲进用户的交互式 shell。终端的输入、颜色、进度条重绘、分屏、关闭前确认都由宿主负责，本地项目和 `ssh://` 远程项目都能用。
+
+- 权限：`terminal.run`（缺权限**抛错** `Plugin permission denied: terminal.run`），并且面板本身要有 `ui.slot.bottom-panel`
+- 需要 Plugin API `^2.8.0`
+- 返回新终端的 `instanceId`；`revealInstance(instanceId)` 把它切回前台，终端已被用户关掉时返回 `false`，据此决定复用还是新开
+- 命令只在终端**第一次**启动时敲一次。用户重开会话时宿主会恢复终端的布局和上次输出，但起的是新 shell，**不会**再敲一遍命令
+- 命令跑完 shell 还在，用户可以接着按上箭头重跑或自己继续敲
+
+```ts
+interface PluginBottomPanelTerminalRequest {
+  command: string; // 单行，不能含换行或其他控制字符，最长 4096 字符
+  cwd?: string;    // 面板 cwd 本身或它下面的目录；省略即面板 cwd
+  label?: string;  // 终端 tab 的名字；省略按目录名显示
+}
+```
+
+```tsx
+function ScriptsPanel() {
+  const { cwd, openTerminal, revealInstance } = useBottomPanel();
+  const running = useRef(new Map<string, string>()); // 脚本 → 终端 instanceId
+
+  const run = (script: { key: string; dir: string; command: string }) => {
+    const existing = running.current.get(script.key);
+    if (existing && revealInstance(existing)) return; // 还开着就切过去，不重复启动 dev server
+    running.current.set(script.key, openTerminal({ command: script.command, cwd: script.dir, label: script.key }));
+  };
+}
+```
+
+以下情况 `openTerminal` 抛错：缺 `terminal.run`；`cwd` 越出面板 `cwd`（或本地、远程混用、不是同一台主机）；命令为空、跨行或含控制字符；当前是本地会话而这台机器上没有终端支持。
 
 ## 输入栏动作 registerInputAction
 

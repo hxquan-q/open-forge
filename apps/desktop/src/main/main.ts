@@ -6,7 +6,18 @@ import { join } from "node:path";
 import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
 import { sweepActiveStdioMcpProcesses } from "@vetta/runtime-node/mcp";
-import { app, type BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, protocol, session, shell } from "electron";
+import {
+	app,
+	type BrowserWindow,
+	dialog,
+	ipcMain,
+	nativeImage,
+	nativeTheme,
+	powerMonitor,
+	protocol,
+	session,
+	shell,
+} from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
 import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
 import { stopAllOpenMarketplaceMcpRuntimes } from "./abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
@@ -22,8 +33,10 @@ import { registerAppLifecycleIpc } from "./app-lifecycle.js";
 import { installApplicationMenu } from "./app-menu.js";
 import { initializeAppMonitor, shutdownAppMonitor } from "./app-monitor/app-monitor-service.js";
 import { initializePerfMonitor, shutdownPerfMonitor } from "./app-monitor/perf-monitor-service.js";
+import { startPowerTrimService } from "./app-monitor/power-trim-service.js";
 import { shutdownBatchTaskExecutor } from "./batch-tasks/batch-task-executor.js";
 import { initializeDesktopBatchTaskService } from "./batch-tasks/batch-task-service.js";
+import { resolveBrandIconDirectory } from "./brand-icon-directory.js";
 import { shutdownBrowserAutomationService } from "./browser-automation/index.js";
 import { disposeCanvasPreviewServer } from "./canvas-server/canvas-preview-desktop.js";
 import { parseActionCliCommand, runActionCliCommand } from "./cli/action-command.js";
@@ -32,13 +45,14 @@ import { parseHelpCliCommand, runHelpCliCommand } from "./cli/help-command.js";
 import { parseOcrCliCommand, runOcrCliCommand } from "./cli/ocr-command.js";
 import { parsePdfCliCommand, runPdfCliCommand } from "./cli/pdf-command.js";
 import type { CloudMainHandle } from "./cloud/index.js";
-import { ensureDevCliShim, ensureDevVettaCliShim, ensureVettaCommandShim } from "./dev-cli-shim.js";
+import { ensureDevCliShim, ensureDevOpenForgeCliShim, ensureOpenForgeCommandShim } from "./dev-cli-shim.js";
 import {
 	getDiagnosticsLogPath,
 	installChromiumFetchForMain,
 	installMainDiagnostics,
 	registerLocalNetworkAccess,
 } from "./diagnostics.js";
+import { initializeDisposableTracking, reportDisposableLeaks } from "./disposable-tracking.js";
 import { FILE_PROTOCOL_PRIVILEGE, registerFileProtocolHandler } from "./file-protocol.js";
 import { fixPath } from "./fix-path.js";
 import { initAppLanguage, mainT } from "./i18n/index.js";
@@ -87,6 +101,7 @@ import { getRuntimeManager } from "./runtimes/manager.js";
 import { initializeSandboxCapability } from "./sandbox/capability.js";
 import { initScheduler, scheduleTaskInCron, shutdownScheduler, unscheduleTaskInCron } from "./scheduler/scheduler.js";
 import { initializeDesktopSchedulerService } from "./scheduler/scheduler-service.js";
+import { StartupPhaseScheduler } from "./startup-phases.js";
 import { getDesktopFileOrganizeBroker } from "./task-activity/file-organize-broker.js";
 import { getDesktopToolApprovalBroker } from "./task-activity/tool-approval-broker.js";
 import { initializeMainTelemetry, shutdownMainTelemetry } from "./telemetry/index.js";
@@ -125,9 +140,14 @@ protocol.registerSchemesAsPrivileged([
 ]);
 const isMac = process.platform === "darwin";
 const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
-const buildDir = join(appRoot, "build");
+// dev 态按品牌档案取 Dock 图标目录；打包态沿用 app 内暂存的 build/（prepare-pack 已按档覆盖）。
+const buildDir = resolveBrandIconDirectory({
+	isPackaged: app.isPackaged,
+	packagedDirectory: join(appRoot, "build"),
+	appRoot,
+});
 const devMainEntryPath = join(appRoot, "dist/main/index.js");
-const packagedCliBinaryName = process.platform === "win32" ? "vetta.exe" : "vetta";
+const packagedCliBinaryName = process.platform === "win32" ? "openforge.exe" : "openforge";
 const packagedCliPlatformTag = `${process.platform}-${process.arch}`;
 const packagedCliAppPath = join(process.resourcesPath, "cli-app", "bin", packagedCliPlatformTag, packagedCliBinaryName);
 // Command-specific parsers run before the top-level help parser so commands
@@ -259,6 +279,18 @@ function ensureAppMonitorInitialized(): Promise<void> {
 	appMonitorInitializationPromise ??= initializeAppMonitor();
 	return appMonitorInitializationPromise;
 }
+
+// 启动相位调度器：blocking 是 whenReady 里的直行序列，postFirstPaint 起由窗口内容绘制
+// 完成触发，idle/eventually 走空闲时间片（见 startup-phases.ts）。单件耗时与慢任务告警
+// 都经 mainLog 进诊断日志，启动变慢时先看「startup phases drained」里的 slowest。
+const startupPhases = new StartupPhaseScheduler({
+	idleStartDelayMs: 500,
+	logger: {
+		info: (message, meta) => mainLog.info(message, meta),
+		warn: (message, meta) => mainLog.warn(message, meta),
+		error: (message, meta) => mainLog.error(message, meta),
+	},
+});
 
 function attachMainWindowLifecycle(mainWindow: BrowserWindow): void {
 	const sendWindowMaximizedChanged = () => {
@@ -413,6 +445,7 @@ if (!gotSingleLock) {
 			return;
 		}
 
+		initializeDisposableTracking();
 		mainLog.info("diagnostics log", getDiagnosticsLogPath());
 		mainLog.info("ready", {
 			isPackaged: app.isPackaged,
@@ -505,8 +538,10 @@ if (!gotSingleLock) {
 		// 提前发现系统插件（ADR-0024）：填充 id 集合供协议解析，staging 不完整时早告警。
 		discoverSystemPlugins();
 
-		// 旧 contributes.settings 值搬进插件私有存储（ADR-0105）；只在首次启动做一次。
-		void migrateLegacyPluginSettings(mainLog);
+		// 一次性旧设置迁移：fire-and-forget、首帧路径不读它，从 blocking 移进空闲相位。
+		startupPhases.register("eventually", "plugin-legacy-settings-migration", () =>
+			migrateLegacyPluginSettings(mainLog),
+		);
 
 		const initializeSandbox = async (): Promise<void> => {
 			const sandboxProbeStartedAt = Date.now();
@@ -667,9 +702,10 @@ if (!gotSingleLock) {
 			mainLog.error("failed to ensure im-gateway conversation dir", err);
 		}
 
-		// 托管运行时(ADR-0011):首启从内置 vendor 拷贝 node/python 到 ~/.vetta/runtimes,
-		// 再把它们 + 国内镜像源注入全局 process.env。必须早于 getImHost().bootstrap()——
-		// 快速应用已经存在的托管运行时路径；vendor seed、系统探测和 shim 修复放到
+		// 托管运行时(ADR-0011):安装后由 RuntimeManager 下载 node/python 到
+		// ~/.vetta/runtimes（内置 vendor 仅为可选打包形态），再把它们 + 国内镜像源
+		// 注入全局 process.env。必须早于 getImHost().bootstrap()——
+		// 快速应用已经存在的托管运行时路径；vendor seed、下载和 shim 修复放到
 		// 首帧之后执行，避免这些维护工作阻塞窗口出现。
 		const runtimeManager = getRuntimeManager();
 		runtimeManager.applyEnv();
@@ -711,14 +747,14 @@ if (!gotSingleLock) {
 						electronPath: process.execPath,
 						mainEntryPath: devMainEntryPath,
 					});
-					vettaCliPath = await ensureDevVettaCliShim({
+					vettaCliPath = await ensureDevOpenForgeCliShim({
 						appRoot,
 						cliAppRoot: join(appRoot, "..", "cli-host"),
 					});
 				}
 				process.env.VETTA_DESKTOP_EXE = vettaAppPath;
 				process.env.VETTA_CLI_APP_PATH = vettaCliPath;
-				await ensureVettaCommandShim(vettaCliPath);
+				await ensureOpenForgeCommandShim(vettaCliPath);
 				await persistVettaCliPaths({ vettaAppPath, vettaCliAppPath: vettaCliPath });
 			} catch (err) {
 				mainLog.error("failed to install vetta CLI paths", err);
@@ -840,12 +876,15 @@ if (!gotSingleLock) {
 					mainLog.warn("app monitor background initialization failed", error);
 				});
 
-				const deferredStartupTimer = setTimeout(() => {
-					void Promise.all([initializeManagedRuntimeAndCli(), initializeSandbox()]).catch((error: unknown) => {
-						mainLog.error("deferred startup initialization failed", error);
-					});
-				}, 500);
-				deferredStartupTimer.unref?.();
+				// 电源事件收缩：suspend/lock-screen 一次性裁剪自身工作集并记录峰谷差；
+				// resume/unlock 仅观测。纯旁路，任何失败只告警（TASK-0042）。
+				startPowerTrimService(powerMonitor);
+
+				// runtime/CLI 与 sandbox 预热：原先靠固定 500ms 定时器躲开首帧，
+				// 现在由 idle 相位统一调度（同样的 500ms 静默期 + 时间片 + 兜底超时 + 耗时记录）。
+				startupPhases.register("idle", "runtime-and-cli", initializeManagedRuntimeAndCli);
+				startupPhases.register("idle", "sandbox-warmup", initializeSandbox);
+				void startupPhases.advanceTo("postFirstPaint");
 
 				if (isDesktopPetEnabled()) {
 					initializePetWindow();
@@ -988,6 +1027,7 @@ setQuitCleanup(async () => {
 		mainLog.warn("app monitor shutdown failed", err);
 	}
 	await shutdownMainTelemetry();
+	reportDisposableLeaks();
 	mainLog.info("quit cleanup finished");
 });
 

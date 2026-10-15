@@ -67,6 +67,7 @@ export const PLUGIN_PERMISSION_LABEL_KEYS = {
 	"settings.read": "permission.settingsRead",
 	"settings.write": "permission.settingsWrite",
 	"shell.openExternal": "permission.shellOpenExternal",
+	"terminal.run": "permission.terminalRun",
 } as const satisfies Record<PluginPermission, string>;
 
 export type PluginPermissionGroup = "interface" | "projectData" | "agent" | "execution" | "intelligence";
@@ -441,6 +442,13 @@ export const PLUGIN_PERMISSION_PRESENTATIONS = {
 		group: "execution",
 		risk: "medium",
 		visual: "external",
+	},
+	"terminal.run": {
+		descriptionKey: "permission.description.terminalRun",
+		group: "execution",
+		// 命令敲进用户自己的 shell，能做的事与用户手敲一样多；只是过程摊在可见的终端里。
+		risk: "high",
+		visual: "execution",
 	},
 	"ai.models.list": {
 		descriptionKey: "permission.description.aiModelsList",

@@ -97,7 +97,9 @@ describe("documentation content model", () => {
 	it("keeps English homepage typography free of forced line breaks", () => {
 		const englishHome = readDocsFile("en/index.mdx");
 
-		expect(englishHome).toContain("Let your Agent finish work in <span");
+		expect(englishHome).toContain(
+			"<HomeTitle>Let your Agent finish work in <HomeEmphasis>the real workspace</HomeEmphasis>.</HomeTitle>",
+		);
 		expect(englishHome).not.toContain("Let your Agent <br />");
 	});
 

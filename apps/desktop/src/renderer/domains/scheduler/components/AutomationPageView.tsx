@@ -6,6 +6,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { SettingsAiAssist } from "../../settings/ai-assist";
 import type { SchedulerTaskDraft } from "./SchedulerTaskFields";
+import { AutomationPackageActions } from "./AutomationPackageActions";
 import { HistoryDrawer } from "./HistoryDrawer";
 import { TaskFormDialog } from "./TaskForm";
 import { TaskList } from "./TaskList";
@@ -46,7 +47,12 @@ export function AutomationPageView({
 	return (
 		<ThemeAutomationPageView
 			hasTasks={hasTasks}
-			headerTrailing={<SettingsAiAssist tabId="automation" />}
+			headerTrailing={
+				<>
+					<AutomationPackageActions />
+					<SettingsAiAssist tabId="automation" />
+				</>
+			}
 			onNewTask={onNewTask}
 			recommendations={hasTasks ? undefined : recommendations}
 			onSelectRecommendation={onSelectRecommendation}

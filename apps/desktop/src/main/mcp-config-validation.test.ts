@@ -62,6 +62,19 @@ describe("validateMcpConfig idleTimeout", () => {
 	});
 });
 
+describe("validateMcpConfig resourceScope", () => {
+	it("accepts the two ownership scopes and rejects anything else", () => {
+		for (const resourceScope of ["application", "workspace"] as const) {
+			expect(
+				validateMcpConfig({ mcpServers: { local: { command: "node", resourceScope } } }).mcpServers.local,
+			).toMatchObject({ resourceScope });
+		}
+		expect(() => validateMcpConfig({ mcpServers: { local: { command: "node", resourceScope: "global" } } })).toThrow(
+			/resourceScope/,
+		);
+	});
+});
+
 describe("validateMcpConfig postConnectToolCalls", () => {
 	const calls = [
 		{

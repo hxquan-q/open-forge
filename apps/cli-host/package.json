@@ -1,22 +1,22 @@
 {
 	"name": "@vetta/cli-host",
-	"version": "0.0.1",
+	"version": "0.1.3",
 	"private": true,
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"bin": {
-		"vetta": "dist/cli.js",
-		"vetta-agent": "dist/agent-cli.js",
-		"vetta-cli-app": "dist/cli.js",
-		"vetta-agent-rpc": "dist/agent-rpc-cli.js"
+		"openforge": "dist/cli.js",
+		"openforge-agent": "dist/agent-cli.js",
+		"openforge-cli-app": "dist/cli.js",
+		"openforge-agent-rpc": "dist/agent-rpc-cli.js"
 	},
 	"files": ["dist"],
 	"scripts": {
 		"clean": "rm -rf dist",
 		"build": "tsgo -p tsconfig.build.json",
 		"typecheck": "tsgo --noEmit -p tsconfig.json",
-		"test": "bun ../../scripts/quality/run-vitest.mjs --run",
+		"test": "bun ../../scripts/quality/run-vitest.mjs --run --maxWorkers=1",
 		"verify:artifact:installed": "bun ../../scripts/quality/run-vitest.mjs --run test/installed-artifact-runtime.test.ts",
 		"verify:runtime-contract": "bun ../../scripts/quality/run-vitest.mjs --run --maxWorkers=4 contract.test.ts test/runtime-host.test.ts test/agent-runtime-selection.test.ts test/rpc-session-adapter.test.ts test/session-resource-close.test.ts test/agent-runtime-initialization-failure.test.ts test/agent-print-mode.test.ts"
 	},

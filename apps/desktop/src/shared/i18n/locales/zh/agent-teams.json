@@ -62,7 +62,10 @@
     "saving": "保存中…",
     "providedBy": "来自 {{name}}",
     "providedByHint": "这份资源由扩展提供并维护，不能修改或删除",
-    "providedReadOnly": "由扩展提供并维护：随插件升级整体更新，不能在这里修改"
+    "providedReadOnly": "由扩展提供并维护：随插件升级整体更新，不能在这里修改",
+    "discardAssemblyTitle": "丢弃团队草稿？",
+    "discardAssemblyMessage": "已拉拢的成员与已填写的内容会全部丢失，此操作无法撤销。",
+    "discardAssemblyConfirm": "丢弃草稿"
   },
   "profile": {
     "fixedPrompt": "角色：{{role}}",
@@ -219,6 +222,40 @@
       "failed": "处理失败",
       "cancelled": "已取消",
       "recent": "最近：{{text}}"
+    },
+    "teamProgress": {
+      "title": "团队任务进度",
+      "phase": {
+        "dispatching": "已分派",
+        "running": "执行中",
+        "waiting": "等待中",
+        "attention": "需要处理",
+        "wrapping": "收尾中",
+        "settled": "已结束"
+      },
+      "count": {
+        "queued": "待开始 {{count}}",
+        "running": "进行中 {{count}}",
+        "waiting": "等待中 {{count}}",
+        "attention": "待处理 {{count}}",
+        "completed": "已完成 {{count}}",
+        "failed": "失败 {{count}}",
+        "cancelled": "已取消 {{count}}"
+      },
+      "item": {
+        "queued": "等待开始",
+        "running": "执行中",
+        "waiting": "等待中",
+        "attention": "需要处理",
+        "completed": "已完成",
+        "failed": "失败",
+        "cancelled": "已取消",
+        "notStarted": "未开始"
+      },
+      "metrics": "↻{{rounds}} · 工具 {{tools}} · ↑{{input}} ↓{{output}} · {{duration}}",
+      "context": "上下文 {{percent}}%",
+      "liveStatus": "{{title}}：{{phase}}",
+      "total": "合计"
     },
     "readyTitle": "团队已经就绪",
     "readyDescription": "直接描述目标即可由负责人协调处理，也可以用输入框左下角的 @ 指定成员。"

@@ -258,11 +258,55 @@ export function useRootLayoutModel(): RootLayoutModel {
 						: i18n.t("chat:appshot.errorHelperFailed");
 			showToast({ variant: "warning", message });
 		});
+		const unsubInterruptHealth = window.vetta.session.onInterruptHealth((payload) => {
+			if (payload.action === "auto-retried") {
+				showToast({
+					variant: "success",
+					title: i18n.t("chat:sessionInterrupt.autoRetriedTitle"),
+					message: i18n.t("chat:sessionInterrupt.autoRetriedBody"),
+				});
+				return;
+			}
+			// 失败提醒指明原因（网络中断 / 回复截断 / 上游错误），并能一键跳到该会话。
+			const reasonKey = payload.trigger ?? "indeterminate";
+			const canOpen = Boolean(payload.cwd && payload.sessionPath);
+			showToast({
+				variant: "warning",
+				title: i18n.t("chat:sessionInterrupt.notifyTitle"),
+				message: i18n.t(`chat:sessionInterrupt.reason.${reasonKey}`, {
+					defaultValue: i18n.t("chat:sessionInterrupt.notifyBody"),
+				}),
+				durationMs: 10_000,
+				action: canOpen
+					? {
+							label: i18n.t("chat:sessionInterrupt.openSession"),
+							onClick: () => void openSession(payload.cwd as string, payload.sessionPath),
+						}
+					: undefined,
+			});
+		});
+		// 启动一次性扫描：上次退出时回复未正常完成的会话，提醒并可一键打开。
+		const unsubInterruptedStartup = window.vetta.session.onInterruptedStartup((payload) => {
+			const first = payload.sessions[0];
+			if (!first) return;
+			showToast({
+				variant: "warning",
+				title: i18n.t("chat:sessionInterrupt.startupTitle"),
+				message: i18n.t("chat:sessionInterrupt.startupBody", { count: payload.sessions.length }),
+				durationMs: 12_000,
+				action: {
+					label: i18n.t("chat:sessionInterrupt.openSession"),
+					onClick: () => void openSession(first.cwd, first.sessionPath),
+				},
+			});
+		});
 		return () => {
 			unsubCaptured();
 			unsubCaptureError();
+			unsubInterruptHealth();
+			unsubInterruptedStartup();
 		};
-	}, [currentPath, defaultConversationCwd, navigate]);
+	}, [currentPath, defaultConversationCwd, navigate, openSession]);
 
 	// 主进程持有「等待用户处理」的真相源；三类请求共用同一套订阅 + 快照收敛。
 	const setPendingQuestions = useSetAtom(pendingQuestionsAtom);

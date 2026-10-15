@@ -25,6 +25,18 @@ Fixes #
 - [ ] **Default behavior change** — existing users notice without opting in
 - [ ] **None** — internal refactor, docs, tests, or translation only
 
+## Structural changes
+
+<!-- Required when "Public contract" is checked; otherwise write "n/a".
+     The pr-title workflow also requires the title to match
+     `<type>(<scope>): <description>` with a workspace package or domain scope. -->
+
+- Public contract changed? (yes/no):
+- Affected consumers / implementations:
+- Compatibility impact (additive / breaking / migration needed):
+- Migration plan or follow-up:
+- Waiver / ADR / OWNERS reference (if the change relies on an exception):
+
 ## Validation
 
 <!-- What you actually ran. Default minimum: `bun run check:quick`.

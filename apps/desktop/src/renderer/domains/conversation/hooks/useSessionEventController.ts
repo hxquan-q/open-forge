@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { createConversationUserMessage } from "@shared/conversation";
+import { createConversationUserMessage, resolveConversationAgentText } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {
 	activeSessionStreamingAtom,
@@ -14,6 +14,7 @@ import {
 	contextCompactionEligibilityAtom,
 	contextUsageAtom,
 	EMPTY_TASK_STATE,
+	goalStateBySessionAtom,
 	isCanvasTabVisible,
 	isCompactingAtom,
 	isReloadingMcpAtom,
@@ -44,6 +45,7 @@ import { applyTaskFactEvent } from "@shared/task/task-projection.js";
 import {
 	isCodingAgentMcpReloadStarted,
 	readCodingAgentBackgroundTasksObservation,
+	readCodingAgentGoalObservation,
 	readCodingAgentMcpReloadFinished,
 	readCodingAgentPlanModeObservation,
 	readCodingAgentSubagentsObservation,
@@ -56,7 +58,6 @@ import {
 	appendError,
 	appendTextDelta,
 	appendThinkingDelta,
-	finalizeMessage,
 	finishAssistantTurn,
 	getActiveAssistantTurnStartedAt,
 	getChatStreamOwner,
@@ -76,7 +77,11 @@ import {
 	rememberOptimisticUserMessage,
 } from "../services/optimistic-user-message-cache";
 import { diffConsumedQueueEntries } from "../services/queue-mirror";
-import { registerActiveTranscriptBacklog } from "../services/transcript-window-controller";
+import {
+	refreshTranscriptTail,
+	registerActiveTranscriptBacklog,
+	resetTranscriptWindowToTail,
+} from "../services/transcript-window-controller";
 import type { ActiveSessionHandle } from "./session-manager-types";
 
 const DELTA_FLUSH_INTERVAL_MS = 100;
@@ -87,6 +92,8 @@ export interface SessionEventController {
 	bumpSuggestionToken: (runtimeId: string) => void;
 	createSessionEventHandler: (runtimeId: string) => (event: SessionEvent) => void;
 	resetEventBuffers: () => void;
+	/** 历史回填折叠运行回合草稿时迁移流式目标（TASK-0152）。 */
+	retargetProjectionMessage: (from: string, to: string) => void;
 }
 
 interface SessionEventControllerOptions {
@@ -112,6 +119,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 	const setTodoItems = useSetAtom(todoItemsBySessionAtom);
 	const setTaskState = useSetAtom(taskStateBySessionAtom);
 	const setPlanModeStates = useSetAtom(planModeStateBySessionAtom);
+	const setGoalStates = useSetAtom(goalStateBySessionAtom);
 	const setPromptSuggestions = useSetAtom(promptSuggestionsAtom);
 	const setPromptPredicting = useSetAtom(promptPredictingAtom);
 	const suggestionTokenRef = useRef<Map<string, number>>(new Map());
@@ -280,23 +288,61 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					// Reload history identities so user bubbles get session entryId / branch siblings
 					// (optimistic messages use synthetic ids and cannot be edited until this).
 					// Matching timelines keep live assistant blocks; mismatched shapes still replace.
-					void window.vetta.session
-						.getFullHistory(sessionId)
-						.then((history) => {
+					void (async () => {
+						// TASK-0050：窗口化会话只取最新 head 页推进窗口末端；跨轮对账/计时
+						// 补丁经 shouldCommit/patchCanonical 注入同一提交闸。
+						const windowedSessionPath = activeSessionRef.current?.sessionPath;
+						if (
+							windowedSessionPath &&
+							(await refreshTranscriptTail({
+								sessionPath: windowedSessionPath,
+								shouldCommit: () =>
+									activeSessionRef.current?.runtimeId === sessionId &&
+									// 判活只认净增长：失败派发的 unbump 落在本轮快照之后时序号
+									// 会回落，此时并未「跨到下一轮」，重拉必须照常落地——
+									// 旧的「不等」判活会把最新轮误判过期（BUG-0073）。
+									getQueuedDispatchSeq(sessionId) > (turnStartDispatchSeqRef.current.get(sessionId) ?? 0),
+								patchCanonical: (items) => {
+									if (elapsed <= 0) return items;
+									const mapped = items.slice();
+									for (let i = mapped.length - 1; i >= 0; i--) {
+										const message = mapped[i];
+										if (message?.kind === "agent") {
+											mapped[i] = {
+												...message,
+												startedAt: message.startedAt ?? startedAt,
+												endedAt: message.endedAt ?? endedAt,
+												durationSeconds: message.durationSeconds ?? elapsed,
+											};
+											break;
+										}
+									}
+									return mapped;
+								},
+							}))
+						) {
+							return;
+						}
+						await window.vetta.session.getFullHistory(sessionId).then((history) => {
 							if (activeSessionRef.current?.runtimeId !== sessionId) return;
 							// 判活：本轮结束时/后若发生过队列派发（立即发送 / 自然出队），这次历史
 							// 回流已「跨到下一轮」——会冲掉下一轮的乐观用户气泡、令 draft 串台，或与
 							// 已抢先落盘的 mapped 重复。跳过，交由下一轮自己的 agent_end 安全重拉。
-							if (getQueuedDispatchSeq(sessionId) !== (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
+							// 只认净增长（>）：失败派发的 unbump 使序号回落到快照值时并未跨轮，
+							// 重拉照常落地——「不等」判活会把膨胀窗口内开启的最新轮误杀（BUG-0073）。
+							if (getQueuedDispatchSeq(sessionId) > (turnStartDispatchSeqRef.current.get(sessionId) ?? 0)) {
 								return;
 							}
 							const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
 							const activeSessionPath = activeSessionRef.current?.sessionPath;
 							if (activeSessionPath) {
+								// 全量回落登记的是完整 transcript——标 unbounded，否则下一轮
+								// refreshTranscriptTail 会把它误当窗口化会话收窄成尾页。
 								registerActiveTranscriptBacklog(activeSessionPath, {
 									entries: history,
 									spans: projected.spans,
 									mediaSessionId: sessionId,
+									unbounded: true,
 								});
 							}
 							const mapped = reconcileOptimisticUserMessages(sessionId, projected.messages);
@@ -315,10 +361,10 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 								}
 							}
 							setChatMessages((liveMessages) => applyAgentEndHistoryRefresh(liveMessages, mapped));
-						})
-						.catch((err) => {
-							console.warn("[useSessionManager] getFullHistory after agent_end failed", err);
 						});
+					})().catch((err) => {
+						console.warn("[useSessionManager] history refresh after agent_end failed", err);
+					});
 
 					if (event.phase === "agent_end") {
 						const active = activeSessionRef.current;
@@ -408,15 +454,6 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				// get appended on the wrong side of the tool block).
 				flushDeltas();
 				setChatMessages((prev) => handleToolStart(prev, event.toolCallId, event.toolName, {}));
-				return;
-			}
-
-			// ── Message final (full assistant message — text, thinking, tool calls) ──
-			if (event.type === "message.final" && event.message.role === "assistant") {
-				if (conversationProjectionRef.current.hasRawAssistantStream()) return;
-				flushDeltas();
-				const { content, usage } = event.message;
-				setChatMessages((prev) => finalizeMessage(prev, content, usage));
 				return;
 			}
 
@@ -533,13 +570,17 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 							contextWindow: event.contextWindow,
 						});
 					}
-					if (
-						event.reason === "manual" &&
-						getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0
-					) {
-						void window.vetta.session
-							.getFullHistory(sessionId)
-							.then((history) => {
+					if (getQueueForSession(getDefaultStore().get(messageQueueBySessionAtom), sessionId).length === 0) {
+						// TASK-0051：手动与自动压缩成功后都重建投影。压缩对 JSONL 是追加
+						// （firstKeptEntryId，entry id 不变），优先 head 合并刷新——已加载旧页
+						// 与阅读锚点原样保留，compaction 边界作为轻量条目落入尾部；合并签名
+						// 不匹配时由 merge 自行降级为整窗替换（等价旧行为）。非窗口化会话
+						// 维持全量回载。
+						void (async () => {
+							const windowedPath = activeSessionRef.current?.sessionPath;
+							if (windowedPath && (await refreshTranscriptTail({ sessionPath: windowedPath }))) return;
+							if (windowedPath && (await resetTranscriptWindowToTail(windowedPath))) return;
+							await window.vetta.session.getFullHistory(sessionId).then((history) => {
 								if (activeSessionRef.current?.runtimeId !== sessionId) return;
 								const projected = conversationProjectionRef.current.projectHistoryWithSpans(history, sessionId);
 								const activeSessionPath = activeSessionRef.current?.sessionPath;
@@ -548,13 +589,14 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 										entries: history,
 										spans: projected.spans,
 										mediaSessionId: sessionId,
+										unbounded: true,
 									});
 								}
 								setChatMessages(reconcileOptimisticUserMessages(sessionId, projected.messages));
-							})
-							.catch((error) =>
-								console.warn("[useSessionManager] history refresh after compaction failed", error),
-							);
+							});
+						})().catch((error) =>
+							console.warn("[useSessionManager] history refresh after compaction failed", error),
+						);
 					}
 				} else if (event.reason === "manual") {
 					showToast({
@@ -662,6 +704,19 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					}
 					return;
 				}
+				const goalState = readCodingAgentGoalObservation(event);
+				if (goalState !== undefined) {
+					const sid = activeSessionRef.current?.runtimeId;
+					if (sid) {
+						setGoalStates((previous) => {
+							const next = { ...previous };
+							if (goalState) next[sid] = goalState;
+							else delete next[sid];
+							return next;
+						});
+					}
+					return;
+				}
 				const items = readCodingAgentTodoObservation(event);
 				if (!items) return;
 				const sid = activeSessionRef.current?.runtimeId;
@@ -694,6 +749,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			setIsReloadingMcp,
 			setLastTurnUsage,
 			setPlanModeStates,
+			setGoalStates,
 			setPromptSuggestions,
 			setRetryProgress,
 			setSubagents,
@@ -703,7 +759,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 		],
 	);
 
-	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers };
+	/**
+	 * 历史回填把运行回合草稿折叠进 canonical entry 身份时同步迁移流式目标，
+	 * 让后续增量继续落在同一条消息（TASK-0152）。
+	 */
+	const retargetProjectionMessage = useCallback((from: string, to: string) => {
+		conversationProjectionRef.current.retargetMessageId(from, to);
+	}, []);
+
+	return { bumpSuggestionToken, createSessionEventHandler, resetEventBuffers, retargetProjectionMessage };
 }
 
 function buildRecentConversation(messages: ChatTimelineItem[]): string {
@@ -720,7 +784,13 @@ function buildRecentConversation(messages: ChatTimelineItem[]): string {
 	}
 	const lines: string[] = [];
 	for (const message of relevant.slice(startIndex)) {
-		const text = (message.kind === "placeholder" ? message.summary : (message.text ?? "")).trim();
+		const text = (
+			message.kind === "placeholder"
+				? message.summary
+				: message.kind === "agent"
+					? resolveConversationAgentText(message)
+					: message.text
+		).trim();
 		if (!text) continue;
 		const role = message.kind === "user" || (message.kind === "placeholder" && message.role === "user");
 		lines.push(`${role ? "User" : "Assistant"}: ${text.slice(0, 600)}`);

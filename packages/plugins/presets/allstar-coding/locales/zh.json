@@ -1,0 +1,10 @@
+{
+	"plugin.name": "Allstar 流水线",
+	"plugin.description": "全流程软件工程团队：主控调度 + 常驻辅助者 + 一次性阶段子代理，覆盖需求、原型、架构、任务、开发、评审、白盒、黑盒（可选自测+核验）、部署与收尾。",
+	"agent.allstar.name": "Allstar 主控",
+	"agent.allstar.description": "流水线 conductor：只调度不干活。编排 13 环节流水，守护用户确认门，维护 state.md，驱动打回与跳回循环。",
+	"agent.helper.name": "辅助者",
+	"agent.helper.description": "常驻执行代理：为全体成员代办越权命令，执行前先做安全预审；主控不碰文件纪律的唯一承接者。",
+	"team.pipeline.name": "Allstar 流水线",
+	"team.pipeline.description": "需求 → 原型确认 → 架构 → 任务 → 开发/评审循环 → 白盒 → 黑盒（可选自测+核验）→ 部署 → 收尾的完整软件工程流水线。"
+}

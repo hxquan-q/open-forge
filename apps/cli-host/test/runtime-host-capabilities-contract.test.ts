@@ -115,7 +115,8 @@ describe("Runtime Host capabilities contract", { timeout: INTEGRATION_TEST_TIMEO
 		const created = await runtime.createSession(
 			createCodingAgentRuntimeHostSessionConfig(
 				composition.agentRuntime,
-				{ sessionId: "plugin-runtime-host", cwd },
+				// 无沙箱测试环境 + ADR-0133 fail-closed:显式 full-access(本测试只关注 plugin 能力)。
+				{ sessionId: "plugin-runtime-host", cwd, executionMode: "full-access" },
 				{ sessionDir: conversationDir, scenario: "batch" },
 			),
 		);
@@ -198,7 +199,8 @@ describe("Runtime Host capabilities contract", { timeout: INTEGRATION_TEST_TIMEO
 		const created = await runtime.createSession(
 			createCodingAgentRuntimeHostSessionConfig(
 				composition.agentRuntime,
-				{ sessionId: "question-runtime-host", cwd },
+				// 无沙箱测试环境 + ADR-0133 fail-closed:显式 full-access(本测试只关注 ask_user_question)。
+				{ sessionId: "question-runtime-host", cwd, executionMode: "full-access" },
 				{
 					sessionDir: conversationDir,
 					scenario: "conversation",

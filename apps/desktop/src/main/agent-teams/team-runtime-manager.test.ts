@@ -1,9 +1,10 @@
 import type { AgentTeamDocument, TeamSessionDocument } from "@vetta/agent-team";
 import type { RuntimeHost, SessionConfig, SessionExecutionMode } from "@vetta/runtime-core";
+import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveDesktopSessionConfig } from "../conversations/resolve-session-config.js";
 import type { TeamCollaborationStore } from "./team-collaboration-store.js";
-import { TeamRuntimeManager } from "./team-runtime-manager.js";
+import { TeamRuntimeManager, type TeamRuntimeManagerOptions } from "./team-runtime-manager.js";
 import type { TeamSessionStateRepository } from "./team-session-state-repository.js";
 
 vi.mock("../conversations/resolve-session-config.js", () => ({
@@ -89,7 +90,10 @@ function runtimeStub(): RuntimeHost {
 	} as unknown as RuntimeHost;
 }
 
-function teamRuntimeManager(runtime: RuntimeHost): TeamRuntimeManager {
+function teamRuntimeManager(
+	runtime: RuntimeHost,
+	options?: Pick<TeamRuntimeManagerOptions, "memberSessionExtensionFunctions">,
+): TeamRuntimeManager {
 	// sessionState 只承接 restoreMembers 的持久化；collaborationStore 仅被
 	// bindPinnedModelContext 闭包引用，本测试不触发上下文回填。
 	const sessionState = { persist: vi.fn(async () => undefined) } as unknown as TeamSessionStateRepository;
@@ -98,6 +102,7 @@ function teamRuntimeManager(runtime: RuntimeHost): TeamRuntimeManager {
 		createTeamToolRegistrations: () => [],
 		sessionState,
 		collaborationStore: {} as unknown as TeamCollaborationStore,
+		...options,
 	});
 }
 
@@ -161,5 +166,56 @@ describe("TeamRuntimeManager 能力 Profile 裁决（TASK-0078）", () => {
 			sessionPath: "C:/sessions/member.jsonl",
 			agentProfileId: "agent",
 		});
+	});
+});
+
+describe("成员会话函数源收窄（TASK-0123）", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+	const memberSource: SessionExtensionFunctionSource = {
+		has: () => false,
+		invoke: async () => undefined as never,
+	};
+
+	it("新建成员 Runtime 把收窄后的函数源带进会话配置", async () => {
+		const document = teamDocument();
+		const memberSessionExtensionFunctions = vi.fn(() => memberSource);
+		const manager = teamRuntimeManager(runtimeStub(), { memberSessionExtensionFunctions });
+
+		await manager.createMemberRuntime(
+			"team-session",
+			document.teams[0].members[0],
+			document.teams[0],
+			document,
+			"C:/workspace",
+			executionMode,
+		);
+
+		const [config] = vi.mocked(resolveDesktopSessionConfig).mock.calls[0];
+		expect(config?.sessionExtensionFunctions).toBe(memberSource);
+	});
+
+	it("恢复成员 Runtime 同样携带收窄函数源", async () => {
+		const document = teamDocument();
+		const session = teamSessionDocument("C:/workspace");
+		const memberSessionExtensionFunctions = vi.fn(() => memberSource);
+		const manager = teamRuntimeManager(runtimeStub(), { memberSessionExtensionFunctions });
+
+		await manager.restoreMembers(session, document);
+
+		const [config] = vi.mocked(resolveDesktopSessionConfig).mock.calls[0];
+		expect(config?.sessionExtensionFunctions).toBe(memberSource);
+	});
+
+	it("协调 Runtime 不收窄函数源，沿用 Composition 默认", async () => {
+		const memberSessionExtensionFunctions = vi.fn(() => memberSource);
+		const manager = teamRuntimeManager(runtimeStub(), { memberSessionExtensionFunctions });
+
+		await manager.createCoordinationRuntime("C:/workspace");
+
+		const [config] = vi.mocked(resolveDesktopSessionConfig).mock.calls[0];
+		expect(config?.sessionExtensionFunctions).toBeUndefined();
+		expect(memberSessionExtensionFunctions).not.toHaveBeenCalled();
 	});
 });

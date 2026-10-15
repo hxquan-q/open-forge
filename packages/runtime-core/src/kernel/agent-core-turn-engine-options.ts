@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentLoopConfig, StreamFn } from "@vetta/agent-core";
 import type { Api, Model, SimpleStreamOptions } from "@vetta/ai";
 
@@ -13,6 +14,8 @@ export interface AgentCoreTurnEngineOptions {
 	readonly tracing?: AgentLoopConfig["tracing"];
 	/** Optional model/tool-call caps and the checkpoint budget applied to every turn. */
 	readonly limits?: AgentLoopConfig["limits"];
+	/** Bounded overlap for explicitly safe tools. Set 1 to keep serial execution. */
+	readonly maxParallelToolCalls?: number;
 	/** Resolves credentials for the exact model bound to the current turn. */
 	readonly resolveApiKey?: (model: Model<Api>) => Promise<string | undefined> | string | undefined;
 }

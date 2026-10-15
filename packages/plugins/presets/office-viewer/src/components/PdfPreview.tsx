@@ -1,14 +1,14 @@
-import { type PluginFilePreviewProps, useTranslation } from "@vetta-org/plugin-sdk";
+// Modified by The Open Forge contributors.
+import type { PluginFilePreviewProps } from "@vetta-org/plugin-sdk";
+import { useTranslation } from "@vetta-org/plugin-sdk";
 import * as pdfjsLib from "pdfjs-dist";
-import workerSource from "pdfjs-dist/build/pdf.worker.min.mjs?raw";
-import { useCallback, useEffect, useRef, useState, type JSX } from "react";
+import type { JSX } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { LoadState } from "./PreviewState";
+import { ErrorState, LoadingState } from "./PreviewState";
 import { PreviewToolbar } from "./PreviewToolbar";
-import { ErrorState, LoadingState, type LoadState } from "./PreviewState";
+import { acquirePdfWorkerSource } from "./pdf-worker-source";
 import { ToolbarButton } from "./ToolbarButton";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(
-	new Blob([workerSource], { type: "text/javascript" }),
-);
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
@@ -85,7 +85,16 @@ export function PdfPreview({ file }: PluginFilePreviewProps): JSX.Element {
 		setScale(1);
 		renderedScaleRef.current = 0;
 		autoFitRef.current = true;
-		const task = pdfjsLib.getDocument({ url: file.getUrl() });
+		const workerSource = acquirePdfWorkerSource();
+		pdfjsLib.GlobalWorkerOptions.workerSrc = workerSource.url;
+		let task: pdfjsLib.PDFDocumentLoadingTask;
+		try {
+			task = pdfjsLib.getDocument({ url: file.getUrl() });
+		} catch {
+			workerSource.dispose();
+			setStatus("error");
+			return;
+		}
 		void task.promise
 			.then(async (pdf) => {
 				if (cancelled) {
@@ -110,7 +119,8 @@ export function PdfPreview({ file }: PluginFilePreviewProps): JSX.Element {
 			renderTaskRef.current?.cancel();
 			renderTaskRef.current = null;
 			documentRef.current = null;
-			void task.destroy();
+			// Unmount must release the source even if worker shutdown fails.
+			void task.destroy().then(workerSource.dispose, workerSource.dispose);
 		};
 	}, [file, renderAllPages, computeFitScale]);
 

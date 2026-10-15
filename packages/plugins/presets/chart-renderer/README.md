@@ -21,3 +21,16 @@ bun run build   # 生成 dist/ 与 release/chart-renderer-<version>.zip
 
 Desktop 开发与打包消费该 zip：在 `apps/desktop` 执行
 `bun run build:presets` 校验并解压到开发 staging 目录。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/ui"
+```

@@ -50,7 +50,7 @@ IA §4 五段 → 组件与状态映射：
 | Approval Request | §5 Approval 卡 | approval event |
 | Recovery / Review | ActivityPanel 内恢复态条 + Review 节 | Task projection |
 
-**状态 → token 映射**（DESIGN.md §1.3 白名单内）：
+**状态 → token 映射**（DESIGN.md「Colors · 语义色」白名单内）：
 
 | 状态 | 视觉 |
 |---|---|

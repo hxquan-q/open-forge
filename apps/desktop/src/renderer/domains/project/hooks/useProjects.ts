@@ -276,10 +276,11 @@ export function useProjectActions() {
 	 *
 	 * `path` 既可以是本地绝对路径，也可以是远程项目的 `ssh://<hostId>/<路径>`——
 	 * 两者走同一个服务，校验、授权根登记和变更广播才不会有两套行为。
+	 * `name` 是侧栏显示名（远程选择器里用户起的备注），省略时服务用目录名兜底。
 	 */
 	const openProjectPath = useCallback(
-		async (path: string): Promise<string> => {
-			await window.vetta.project.open({ path });
+		async (path: string, name?: string): Promise<string> => {
+			await window.vetta.project.open({ path, name: name?.trim() || undefined });
 			await refreshProjects();
 			setExpandedProjects((prev) => new Set([...prev, path]));
 			await loadSessions(path);

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeObservationPublisher } from "@vetta/runtime-core";
 import type {
 	CapabilityBinding,
@@ -320,6 +321,7 @@ function freezeToolDefinition(tool: RuntimeToolDefinition): RuntimeToolDefinitio
 		name: tool.name,
 		label: tool.label,
 		description: tool.description,
+		executionMode: tool.executionMode,
 		inputSchema: tool.inputSchema,
 		validateInput: tool.validateInput,
 		contextSource: tool.contextSource,

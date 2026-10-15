@@ -9,20 +9,21 @@ Two ways in: install a build, or run the desktop app from this repository.
 
 Installers for macOS, Windows, and Linux:
 
-**→ [www.openvetta.com/download](https://www.openvetta.com/download)**
+**→ [GitHub Releases](https://github.com/hxquan-q/open-forge/releases)**
 
-Official installers are published on the website CDN. This repository is the source. After install, the setup wizard walks through model configuration (BYOK) and permissions. Product guides: [docs.openvetta.com](https://docs.openvetta.com).
+Tagged builds are published on this repository's Releases page. This repository is the source. After install, the setup wizard walks through model configuration (BYOK) and permissions. Product guides live in [`apps/docs-site/content/docs/`](apps/docs-site/content/docs/).
 
-A source checkout produces the **lite** build: no Vetta login, no subscription, keys stay on your machine. Official installers may be the **full** build. The two shapes are documented in [Build Modes](docs/desktop/build-modes.en.md).
+A source checkout produces the **lite** build: no Open Forge login, no subscription, keys stay on your machine. Published installers may be the **full** build. The two shapes are documented in [Build Modes](docs/desktop/build-modes.en.md).
+
+The repository and docs use **Open Forge**. Desktop defaults to the `distribution` profile: **Allstr ai** with a localized Chinese display name. To use the Open Forge display name, set `VETTA_BRAND_PROFILE=self` in `apps/desktop/.env.development` and restart development processes; use the relevant `.env.<mode>` when packaging. This setting does not change lite/full or switch data directories.
 
 ## Develop from source
 
 Requires **Bun 1.3+** and **Node 20+**. macOS, Windows, and Linux are supported.
 
 ```bash
-git clone https://github.com/openvetta/open-vetta.git
-cd open-vetta
-git checkout dev
+git clone https://github.com/hxquan-q/open-forge.git
+cd open-forge
 bun install
 ```
 

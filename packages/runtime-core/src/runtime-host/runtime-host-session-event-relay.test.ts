@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
-import type { MessageFinalEvent, SessionEvent } from "../contracts.js";
+import type { SessionEvent } from "../contracts.js";
 import type { RuntimeHostQueueSidecar } from "./runtime-host-queue-sidecar.js";
 import {
 	DEFAULT_IN_FLIGHT_REPLAY_EVENT_LIMIT,
@@ -145,7 +145,7 @@ describe("RuntimeHostSessionEventRelay", () => {
 		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
 	});
 
-	it("clears the bounded replay buffer on message.final and bounds the next streaming message independently", () => {
+	it("clears the bounded replay buffer on usage.update and bounds the next streaming message independently", () => {
 		const stream = createEventStream();
 		const handle = createRelayHandle(stream);
 		const relay = createRelay({ inFlightReplayEventLimit: 2 });
@@ -159,11 +159,9 @@ describe("RuntimeHostSessionEventRelay", () => {
 		emitDelta("a");
 		emitDelta("b");
 		emitDelta("c");
-		// 同一 Turn 内的下一次模型调用：message.final 落盘后缓冲必须清空，
+		// 同一 Turn 内的下一次模型调用：usage.update 落盘后缓冲必须清空，
 		// 上一条消息的超限丢弃不得影响下一条消息的回放。
-		stream.emit({
-			...baseMessageFinal("session-1"),
-		});
+		stream.emit(baseUsageUpdate("session-1"));
 
 		const afterFinal: SessionEvent[] = [];
 		const unsubscribe = relay.subscribe("session-key", handle, (event) => afterFinal.push(event));
@@ -209,6 +207,25 @@ describe("RuntimeHostSessionEventRelay", () => {
 		expect(() => createRelay({ inFlightReplayEventLimit: 0 })).toThrow(/positive integer/);
 	});
 
+	it("exposes the latest observed event timestamp per session and clears it on release", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay();
+		relay.attach("session-key", handle, stream);
+
+		// 无事件时不得伪造活动证据：中断巡检依赖 undefined 表示「无可判定证据」。
+		expect(relay.readLastEventAt("session-key")).toBeUndefined();
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 1_000));
+		expect(relay.readLastEventAt("session-key")).toBe(1_000);
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_end", 5_000));
+		expect(relay.readLastEventAt("session-key")).toBe(5_000);
+
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+		expect(relay.readLastEventAt("session-key")).toBeUndefined();
+	});
+
 	it("batches ephemeral bursts into merged deliveries and exposes per-subscriber stats", async () => {
 		const stream = createEventStream();
 		const handle = createRelayHandle(stream);
@@ -242,20 +259,59 @@ describe("RuntimeHostSessionEventRelay", () => {
 		unsubscribe();
 		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
 	});
+
+	it("exposes the running Turn identity and replays its tool executions to late subscribers", () => {
+		const stream = createEventStream();
+		const handle = createRelayHandle(stream);
+		const relay = createRelay();
+		relay.attach("session-key", handle, stream);
+
+		const toolObservation = (type: "tool.start" | "tool.end", overrides: Record<string, unknown>): SessionEvent =>
+			mapRuntimeSessionObservationEvent("session-1", {
+				type,
+				toolCallId: "call-1",
+				toolName: "bash",
+				...(type === "tool.start"
+					? { args: { command: "ls" }, startedAt: 120 }
+					: { result: { content: [] }, isError: false, startedAt: 120, durationMs: 30, phases: [] }),
+				...overrides,
+				source: "tool",
+			} as Parameters<typeof mapRuntimeSessionObservationEvent>[1]);
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_start", 100));
+		stream.emit(assistantEvent({ type: "text_start", contentIndex: 0, partial: partialOf("w") }));
+		stream.emit(toolObservation("tool.start", {}));
+		stream.emit(toolObservation("tool.end", {}));
+		expect(relay.readCurrentTurnId("session-key")).toBe("turn-1");
+
+		const replayed: SessionEvent[] = [];
+		const unsubscribe = relay.subscribe("session-key", handle, (event) => replayed.push(event));
+		expect(replayed.filter((event) => event.type.startsWith("tool.")).map((event) => event.type)).toEqual([
+			"tool.start",
+			"tool.end",
+		]);
+		unsubscribe();
+
+		stream.emit(lifecycleSessionEvent("session-1", "agent_end", 200));
+		expect(relay.readCurrentTurnId("session-key")).toBeUndefined();
+		relay.release("session-key", handle.lifecycle.sessionPath, handle.lifecycle.sessionId);
+	});
 });
 
 function partialOf(delta: string): AssistantMessage {
 	return { role: "assistant", content: [{ type: "text", text: delta }] } as unknown as AssistantMessage;
 }
 
-function baseMessageFinal(sessionId: string): SessionEvent {
+function baseUsageUpdate(sessionId: string): SessionEvent {
 	return {
 		...baseSessionEvent(sessionId, "runtime-core"),
-		type: "message.final",
-		message: {
-			role: "assistant",
-			content: [{ type: "text", text: "final" }],
-			stopReason: "stop",
-		} as unknown as MessageFinalEvent["message"],
+		type: "usage.update",
+		input: 10,
+		output: 5,
+		cacheRead: 0,
+		cacheWrite: 0,
+		costTotal: 0,
+		contextPercent: 1,
+		contextWindow: 8_000,
 	};
 }

@@ -32,3 +32,9 @@
 - 因监控扫描耗时延迟用户操作返回。
 - 为了监控重新读取或重算已经不需要的业务数据，并在主流程中等待结果。
 - 把监控实现成详细日志、审计流水或事件明细存储。
+
+## 规则分级
+
+- **Invariant**：`Core Principle`（旁路、可失败、不影响业务）与 `Implementation Rules`/`Forbidden Patterns` 中的硬条款（不成为业务成功条件、不阻塞主流程、不存可还原隐私数据、可释放、不扩大业务锁）。
+- **Policy**：持久化结构与 `APP_MONITOR_SCHEMA_VERSION` 的迁移判定规则。
+- **Guideline**：`Acceptable Patterns` 示例。

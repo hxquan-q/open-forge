@@ -1,4 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { Api, AssistantMessage, Message, Model, ToolCall, ToolResultMessage } from "../types.js";
+
+const UNSUPPORTED_IMAGE_INPUT_NOTICE = "Image content omitted because the current model does not support image input.";
 
 /**
  * Normalize tool call ID for cross-provider compatibility.
@@ -12,19 +15,43 @@ export function transformMessages<TApi extends Api>(
 ): Message[] {
 	// Build a map of original tool call IDs to normalized IDs
 	const toolCallIdMap = new Map<string, string>();
+	const supportsImageInput = model.input.includes("image");
 
 	// First pass: transform messages (thinking blocks, tool call ID normalization)
 	const transformed = messages.map((msg) => {
-		// User messages pass through unchanged
+		// Project multimodal history to the selected model's declared input types.
+		// Keep the stored conversation untouched so switching back to a vision model
+		// can still replay the original images.
 		if (msg.role === "user") {
+			if (!supportsImageInput && Array.isArray(msg.content)) {
+				const textContent = msg.content.filter((item) => item.type !== "image");
+				if (textContent.length !== msg.content.length) {
+					return {
+						...msg,
+						content: [...textContent, { type: "text" as const, text: UNSUPPORTED_IMAGE_INPUT_NOTICE }],
+					};
+				}
+			}
 			return msg;
 		}
 
-		// Handle toolResult messages - normalize toolCallId if we have a mapping
+		// Handle toolResult messages - normalize toolCallId and omit unsupported images.
 		if (msg.role === "toolResult") {
 			const normalizedId = toolCallIdMap.get(msg.toolCallId);
-			if (normalizedId && normalizedId !== msg.toolCallId) {
-				return { ...msg, toolCallId: normalizedId };
+			const hasUnsupportedImages = !supportsImageInput && msg.content.some((item) => item.type === "image");
+			if ((normalizedId && normalizedId !== msg.toolCallId) || hasUnsupportedImages) {
+				return {
+					...msg,
+					...(normalizedId && normalizedId !== msg.toolCallId ? { toolCallId: normalizedId } : {}),
+					...(hasUnsupportedImages
+						? {
+								content: [
+									...msg.content.filter((item) => item.type !== "image"),
+									{ type: "text" as const, text: UNSUPPORTED_IMAGE_INPUT_NOTICE },
+								],
+							}
+						: {}),
+				};
 			}
 			return msg;
 		}
@@ -97,27 +124,31 @@ export function transformMessages<TApi extends Api>(
 	let pendingToolCallsById = new Map<string, ToolCall>();
 	let existingToolResultIds = new Set<string>();
 
+	const flushPendingToolCalls = () => {
+		for (const tc of pendingToolCalls) {
+			if (!existingToolResultIds.has(tc.id)) {
+				result.push({
+					role: "toolResult",
+					toolCallId: tc.id,
+					toolName: tc.name,
+					content: [{ type: "text", text: "No result provided" }],
+					isError: true,
+					timestamp: Date.now(),
+				} as ToolResultMessage);
+			}
+		}
+		pendingToolCalls = [];
+		pendingToolCallsById = new Map();
+		existingToolResultIds = new Set();
+	};
+
 	for (let i = 0; i < transformed.length; i++) {
 		const msg = transformed[i];
 
 		if (msg.role === "assistant") {
 			// If we have pending orphaned tool calls from a previous assistant, insert synthetic results now
 			if (pendingToolCalls.length > 0) {
-				for (const tc of pendingToolCalls) {
-					if (!existingToolResultIds.has(tc.id)) {
-						result.push({
-							role: "toolResult",
-							toolCallId: tc.id,
-							toolName: tc.name,
-							content: [{ type: "text", text: "No result provided" }],
-							isError: true,
-							timestamp: Date.now(),
-						} as ToolResultMessage);
-					}
-				}
-				pendingToolCalls = [];
-				pendingToolCallsById = new Map();
-				existingToolResultIds = new Set();
+				flushPendingToolCalls();
 			}
 
 			// Skip errored/aborted assistant messages entirely.
@@ -153,27 +184,18 @@ export function transformMessages<TApi extends Api>(
 		} else if (msg.role === "user") {
 			// User message interrupts tool flow - insert synthetic results for orphaned calls
 			if (pendingToolCalls.length > 0) {
-				for (const tc of pendingToolCalls) {
-					if (!existingToolResultIds.has(tc.id)) {
-						result.push({
-							role: "toolResult",
-							toolCallId: tc.id,
-							toolName: tc.name,
-							content: [{ type: "text", text: "No result provided" }],
-							isError: true,
-							timestamp: Date.now(),
-						} as ToolResultMessage);
-					}
-				}
-				pendingToolCalls = [];
-				pendingToolCallsById = new Map();
-				existingToolResultIds = new Set();
+				flushPendingToolCalls();
 			}
 			result.push(msg);
 		} else {
 			result.push(msg);
 		}
 	}
+
+	// History may end on unresolved tool calls (e.g. the turn died after the
+	// assistant message was persisted but before results were written).
+	// Strict providers reject such requests outright; close the same gap here.
+	flushPendingToolCalls();
 
 	return result;
 }

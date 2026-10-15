@@ -1,7 +1,8 @@
+// Modified by The Open Forge contributors.
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CURRENT_APP_INSTALLER_FILE_NAME, type ProgressInfo, type UpdateInfo } from "builder-util-runtime";
+import { CURRENT_APP_INSTALLER_FILE_NAME, HttpError, type ProgressInfo, type UpdateInfo } from "builder-util-runtime";
 import type { AppUpdater, ResolvedUpdateFileInfo } from "electron-updater";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InnoWindowsUpdateController } from "./inno-windows-update";
@@ -11,6 +12,7 @@ const temporaryRoots: string[] = [];
 
 describe("ElectronUpdaterEngine", () => {
 	afterEach(async () => {
+		vi.restoreAllMocks();
 		await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 	});
 
@@ -343,5 +345,71 @@ describe("ElectronUpdaterEngine", () => {
 		await engine.checkForUpdates();
 		await expect(engine.downloadUpdate(vi.fn()).promise).rejects.toThrow("Inno Setup interrupted");
 		expect(prepareDownloadedInstaller).toHaveBeenCalledOnce();
+	});
+
+	// Inno 打包不产 app-update.yml（publish: false）、feed 未发布时又得 404——两者是
+	// 「更新通道未配置」的确定性状态：应映射为 null 结论（service 侧 configurationUnavailable）
+	// 且每类只记一条 info，而不是每次检查刷 check failed / error 事件。
+	it("maps a missing app-update.yml rejection to a quiet null result", async () => {
+		const info = vi.spyOn(console, "info").mockImplementation(() => {});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		const enoent = Object.assign(new Error("ENOENT: no such file, open 'resources\\app-update.yml'"), {
+			code: "ENOENT",
+		});
+		const updater = {
+			on: vi.fn(),
+			checkForUpdates: vi.fn().mockRejectedValue(enoent),
+		} as unknown as AppUpdater;
+		const engine = new ElectronUpdaterEngine(updater);
+
+		expect(await engine.checkForUpdates()).toBeNull();
+		expect(await engine.checkForUpdates()).toBeNull();
+		expect(info).toHaveBeenCalledTimes(1);
+		expect(error).not.toHaveBeenCalled();
+	});
+
+	it("maps a feed 404 rejection to a quiet null result", async () => {
+		const info = vi.spyOn(console, "info").mockImplementation(() => {});
+		const updater = {
+			on: vi.fn(),
+			checkForUpdates: vi.fn().mockRejectedValue(new HttpError(404, "Not Found")),
+		} as unknown as AppUpdater;
+		const engine = new ElectronUpdaterEngine(updater);
+
+		expect(await engine.checkForUpdates()).toBeNull();
+		expect(info).toHaveBeenCalledTimes(1);
+	});
+
+	it("routes expected unavailable errors through the error listener once instead of console.error", async () => {
+		const info = vi.spyOn(console, "info").mockImplementation(() => {});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		let errorListener: ((err: Error) => void) | undefined;
+		const updater = {
+			on: vi.fn((name: string, listener: (err: Error) => void) => {
+				if (name === "error") errorListener = listener;
+			}),
+		} as unknown as AppUpdater;
+		new ElectronUpdaterEngine(updater);
+
+		const enoent = Object.assign(new Error("ENOENT: app-update.yml"), { code: "ENOENT" });
+		errorListener?.(enoent);
+		errorListener?.(new HttpError(404, "Not Found"));
+		errorListener?.(enoent);
+		expect(info).toHaveBeenCalledTimes(2);
+		expect(error).not.toHaveBeenCalled();
+
+		errorListener?.(new Error("socket hang up"));
+		expect(error).toHaveBeenCalledTimes(1);
+	});
+
+	it("still propagates unexpected check failures", async () => {
+		const failure = new Error("DNS resolution failed");
+		const updater = {
+			on: vi.fn(),
+			checkForUpdates: vi.fn().mockRejectedValue(failure),
+		} as unknown as AppUpdater;
+		const engine = new ElectronUpdaterEngine(updater);
+
+		await expect(engine.checkForUpdates()).rejects.toBe(failure);
 	});
 });

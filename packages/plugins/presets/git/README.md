@@ -47,3 +47,16 @@ src/
     StatusBadge.tsx      # 状态码徽标 + 后代圆点
     icons.tsx            # 内联 SVG 图标
 ```
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/ui"
+```

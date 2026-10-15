@@ -14,6 +14,7 @@ export {
 } from "../agent-configuration/configuration-schema.js";
 export {
 	ALL_SCENARIOS,
+	appliesAgentProfileDefaultTools,
 	applyAgentProfileDefaults,
 	type ConversationScenario,
 	DEFAULT_PERSONA_ID,

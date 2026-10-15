@@ -3,6 +3,8 @@ title: Workspaces and sessions
 description: Select the right boundary for files and tools, then use session history to continue work safely.
 ---
 
+{/* Modified by The Open Forge contributors. */}
+
 ## Workspace boundaries
 
 A project workspace identifies the files and directories relevant to a task. Open the narrowest directory that contains the required context. The default conversation workspace is useful for tasks that do not need project files.
@@ -12,6 +14,14 @@ A project workspace identifies the files and directories relevant to a task. Ope
 A session keeps messages, tool calls, permission decisions, background work, and results together. Reuse a session when the goal is one continuous piece of work; start a new session when the context or authorization boundary changes.
 
 Before continuing an old session, check the current project path, model, outstanding todos, and the last verified artifact. History is context, not proof that the current files are unchanged.
+
+## Ask a side question
+
+In an ordinary conversation, select message text and choose **Ask AI** from the context menu, or use the message's more menu to ask about the whole message. A small panel keeps the discussion beside its source. You can ask follow-up questions or stop an answer. Closing the panel lets the answer continue; questions and answers are saved automatically.
+
+Messages with saved notes show a note marker on hover or keyboard focus. Reopen it there, or choose **View Q&A notes** from a message's more menu to search questions and answers in the current conversation.
+
+Notes use a fixed text snapshot up to the source message. Existing compaction summaries replace older history. They use the conversation's current model and incur separate model usage, without reading image contents, executing tools, creating an ordinary session, or adding to the main conversation's context. Deleting the source session also deletes its notes.
 
 ## Safe branching
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import nodePath from "node:path";
 import { type Static, Type } from "@sinclair/typebox";
@@ -81,9 +82,9 @@ export function createExtractTextFromImageTool(
 			const response = parseOcrDesktopResponse(result.stdout);
 			if (!response.ok) {
 				const message = response.error?.message ?? (result.stderr.trim() || "Unknown OCR error");
-				throw new Error(`Vetta Desktop OCR failed: ${message}`);
+				throw new Error(`Desktop OCR failed: ${message}`);
 			}
-			if (!response.output) throw new Error("Vetta Desktop did not return an output path");
+			if (!response.output) throw new Error("Desktop OCR did not return an output path");
 			reportPhase?.("read");
 			const document = parseOcrJsonDocument(await readFile(response.output, "utf8"));
 			const page = document.pages[0];

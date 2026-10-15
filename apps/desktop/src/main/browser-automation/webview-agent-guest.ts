@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+import { assembleGuestScript } from "./guest-script-shim.js";
 
 export const BROWSER_TAB_SNAPSHOT_LIMIT = 80;
 
@@ -132,7 +133,13 @@ export function buildBrowserTabGuestScript(command: {
 	readonly timeoutMs?: number;
 	readonly state?: "visible" | "hidden" | "stable";
 }): string {
-	return `void 0;(${browserTabGuestRuntime.toString()})(${JSON.stringify(command)})`;
+	const runtimeSource = browserTabGuestRuntime.toString();
+	return assembleGuestScript({
+		sources: [runtimeSource],
+		parameters: "command",
+		expression: `(${runtimeSource})(command)`,
+		arguments: JSON.stringify(command),
+	});
 }
 
 function browserTabGuestRuntime(command: {

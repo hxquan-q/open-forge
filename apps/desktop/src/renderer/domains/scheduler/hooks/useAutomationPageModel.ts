@@ -50,6 +50,7 @@ export function useAutomationPageModel(): AutomationPageModel {
 
 	useEffect(() => {
 		refreshTasks();
+		void window.vetta.scheduler.emitAutomationHostEvent("automation.panelOpened");
 	}, [refreshTasks]);
 
 	useEffect(() => {

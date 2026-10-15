@@ -1,7 +1,10 @@
 import type { ChildProcess } from "node:child_process";
 import { setImmediate } from "node:timers";
+import { attributeProcessPid, recordProcessCrash, registerProcessRole } from "../app-monitor/process-health.js";
 import { createPluginCommandEnvironment } from "../plugins/command-environment.js";
 import { spawnCrossPlatformCommand } from "../plugins/command-launcher.js";
+
+const ROLE = "browser-cli";
 
 export interface BrowserProcessResult {
 	exitCode: number;
@@ -35,7 +38,10 @@ function appendBounded(current: string, chunk: string, limit: number): { value: 
 }
 
 export class HostBrowserProcessRunner implements BrowserProcessRunner {
-	constructor(private readonly spawnProcess: typeof spawnCrossPlatformCommand = spawnCrossPlatformCommand) {}
+	constructor(private readonly spawnProcess: typeof spawnCrossPlatformCommand = spawnCrossPlatformCommand) {
+		// 每次调用是短生命周期子进程：无重启语义，只记账 spawn 级崩溃与 pid 归因。
+		registerProcessRole({ role: ROLE, kind: "child-process" });
+	}
 
 	run(file: string, args: readonly string[], options: BrowserProcessRunOptions): Promise<BrowserProcessResult> {
 		const startedAt = Date.now();
@@ -56,6 +62,7 @@ export class HostBrowserProcessRunner implements BrowserProcessRunner {
 				reject(error);
 				return;
 			}
+			attributeProcessPid(ROLE, child.pid);
 			let stdout = "";
 			let stderr = "";
 			let truncated = false;
@@ -66,6 +73,7 @@ export class HostBrowserProcessRunner implements BrowserProcessRunner {
 			const cleanup = (): void => {
 				clearTimeout(timeout);
 				options.signal?.removeEventListener("abort", onAbort);
+				attributeProcessPid(ROLE, undefined);
 				child.stdout?.destroy();
 				child.stderr?.destroy();
 			};
@@ -105,6 +113,7 @@ export class HostBrowserProcessRunner implements BrowserProcessRunner {
 				truncated ||= appended.truncated;
 			});
 			child.once("error", (error) => {
+				recordProcessCrash(ROLE);
 				rejectOnce(error);
 			});
 			child.once("exit", (code) => {

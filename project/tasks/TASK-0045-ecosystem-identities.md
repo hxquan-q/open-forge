@@ -1,24 +1,24 @@
 ---
 id: TASK-0045
 type: task
-status: blocked
+status: done
 priority: P1
 owner: release/brand
 requirement: REQ-0003
 plan: PLAN-0003
 source_issue: ISSUE-0001
-execution: serial
-branch: forge/dev
-worktree: unassigned（等待品牌源和生态命名决策）
-base_commit: c3d42690fb5b0abc6a5c080d79111747e352728f
-read_paths: [apps/cli-host/AGENTS.md, apps/cli-host, apps/im-gateway/README.md, apps/im-gateway/Makefile, packages/runtime-mcp/AGENTS.md, packages/runtime-mcp, packages/plugins/AGENTS.md, packages/plugins, apps/desktop/src/main]
-write_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
-exclusive_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/plugins, apps/desktop/src/main, .github/release-notes]
+execution: parallel
+branch: task/TASK-0045-ecosystem-identities
+worktree: unassigned（已集成，待推送后清理）
+base_commit: 0e2e1ae3f9089b77aa05d88f5ac2f8f3ff38de1a
+read_paths: [apps/cli-host/AGENTS.md, apps/cli-host, apps/im-gateway/README.md, apps/im-gateway/Makefile, packages/runtime-mcp/AGENTS.md, packages/runtime-mcp, packages/runtime-node, packages/plugins/AGENTS.md, packages/plugins, apps/desktop/src/main]
+write_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/runtime-node, packages/plugins, apps/desktop/src/main, scripts/link.sh, .github/release-notes]
+exclusive_paths: [apps/cli-host, apps/im-gateway, packages/runtime-mcp, packages/runtime-node, packages/plugins, apps/desktop/src/main, scripts/link.sh, .github/release-notes]
 depends_on: [TASK-0043]
-conflicts_with: [TASK-0044, TASK-0046]
-integration_status: pending
+conflicts_with: [TASK-0044, TASK-0046, TASK-0122, TASK-0123]
+integration_status: integrated
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -32,12 +32,13 @@ updated: 2026-09-23
 
 ### 并发评估
 
-- 结论：不支持并发；跨 CLI、Go IM Gateway、MCP、Plugin 和 Desktop Host，且需要统一核对外显身份与兼容值。
-- 执行方式：serial，共享工作区串行。
+- 结论：与活跃 Task 无并发冲突（`TASK-0044` 已完成、`TASK-0046` blocked）；跨 CLI、Go IM Gateway、MCP、Plugin 和 Desktop Host，需统一核对外显身份与兼容值，任务内部串行推进。
+- 执行方式：parallel 泳道（2026-09-26 用户指定独立 Worktree 实施），任务内部按宿主顺序串行落地。
 - 可并行 Task：无。
 - 前置依赖：`TASK-0043` 的品牌事实源完成；CLI 命令目标、旧命令别名/迁移策略需先明确。
-- 冲突文件/独占路径：各宿主的命令入口、IM/MCP 展示元数据、插件清单和 Release Notes。
-- Branch：`forge/dev`；Worktree：实施前按当前协作状态确认。
+- 冲突文件/独占路径：各宿主的命令入口、IM/MCP 展示元数据、插件清单和 Release Notes。与活跃的 `TASK-0122`/`TASK-0123` 在 `.github/release-notes`、`apps/desktop/src/main`、`packages/plugins`、`packages/runtime-*` 存在写范围重叠，已登记 `conflicts_with`；集成顺序：本任务先集成，0122/0123 后续集成时按其合同处理残留冲突。
+- 实施更正：MCP client 身份与沙箱 shim 的品牌字面量真实所有权在 `packages/runtime-node`（原合同漏列），CLI bin 软链在 `scripts/link.sh`；两处已并入 write_paths。
+- Branch：`task/TASK-0045-ecosystem-identities`；Worktree：由 `worktree:create` 按当前协作状态分配。
 - 集成负责人：coordinator。
 - 集成顺序：TASK-0043 → TASK-0044 → 本任务；完成后进入文档迁移。
 
@@ -71,11 +72,11 @@ updated: 2026-09-23
 
 ## 阻塞
 
-- 除 `TASK-0043` 外，CLI 可执行名称及旧别名策略尚无最终决策；不得从产品名自行猜测命令合同。
+- 无。命名决策已齐（2026-09-25 用户确认）：CLI 命令名 `openforge`；旧命令（`vetta`、`vetta-agent`、`vetta-cli-app`、`vetta-agent-rpc`）**直接切换、不保留别名**；`vetta-serv` 代号改 `openforge-serv`（按 ISSUE-0001 决策 #12，同步 SECURITY.md、`.coderabbit.yaml` 与 ADR 引用）。本任务 blocked → ready，可排期实施。
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 实际修改：CLI 四个 bin 与 help/RPC 默认命令名、`scripts/link.sh`、cli-host README/AGENTS.md；Desktop dev 命令 shim、打包产物名（`prepare-pack`/`main.ts`/runtime-canary）；runtime-node MCP client 缺省身份（OAuth `client_name` "Open Forge"、clientInfo `openforge`）、托管下载 UA、Windows 沙箱 shim 名；im-gateway 飞书预填名/Signal 设备名/Discord 4004 提示/PATH 回退 `openforge`/init 模板注释；21 个插件 manifest author；`vetta-serv`→`openforge-serv` 文档同步（SECURITY.md、.coderabbit.yaml、ADR/AGENTS/CLAUDE/PRODUCT）；0.1.2 发布说明两条「改进」一条「其他」。
+- 实际运行：cli-host 定向（7）+ `verify:runtime-contract`（136）+ `verify:artifact:installed`（13）+ 全包（225）；desktop typecheck + 全包（4286，1 例超时 flaky 单跑复绿）；runtime-node 影响面（261）；im-gateway `GOARCH=amd64 go test ./...`（改动相关包全绿）；plugin preset/browser、preset-agent、plugin-vite、plugin-cli；集成后全仓 `bun run check` 与 `test:impact` 合并路径复跑。
+- 未运行及原因：`verify:ui:*` 未获授权；本机默认 Go 工具链为 windows/386，feishu/cmd 因 larksuite SDK `math.MaxInt64` 溢出无法编译（主检出同样复现的存量环境问题），以 `GOARCH=amd64` 复验；whatsapp 两例 TempDir 清理失败为主检出同样复现的存量问题（SQLite 句柄未释放）。
+- 剩余风险：bun.lock 中 private 包 bin 元数据 bun install 不刷新（无消费者）；`scripts/release/check-plugin-marketplace-publication.mjs` 的 release-check UA、runtime-telemetry langfuse 缺省 serviceName `vetta-agent`、`.env.example` 的 `OTEL_SERVICE_NAME` 不在批准映射内，留待后续决策；`vetta-plugin-cli` bin 未获命名决策未动；插件显示名与 Desktop「Claw」分区名、SECURITY.md 其余上游链接归 `TASK-0047`/`TASK-0048`。

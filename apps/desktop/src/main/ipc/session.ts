@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
@@ -33,7 +34,7 @@ import {
 	CODING_AGENT_TODO_CLEAR,
 	isCodingAgentPermissionMode,
 } from "@vetta/coding-agent/session-extensions";
-import type { SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
+import type { HistoryEntry, SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
 import { assertProjectSupportsExecutionMode } from "@vetta/runtime-desktop";
 import { isMcpJsonValue, type McpJsonObject } from "@vetta/runtime-mcp";
@@ -43,12 +44,23 @@ import type { DesktopMcpElicitationResponse, DesktopMcpElicitationValue } from "
 import { PLUGIN_CONTRIBUTION_CHANNELS } from "../../shared/plugin-ipc.js";
 import { SESSION_SEARCH_CHANNELS } from "../../shared/session-search.js";
 import { DEFAULT_AGENT_MODE, isAgentMode, MODE_PROMPTS } from "../agent-modes/index.js";
+import {
+	runSessionInterruptStartupScan,
+	startSessionInterruptMonitor,
+} from "../agent-runtime/session-interrupt-bootstrap.js";
+import { setSessionInterruptDraftNonEmpty } from "../agent-runtime/session-interrupt-draft-registry.js";
+import {
+	clearSessionManualStop,
+	markSessionManualStop,
+	watchSessionForInterruptContinue,
+} from "../agent-runtime/session-interrupt-watch-registry.js";
 import { stopSessionBackgroundWork } from "../agent-runtime/stop-session-work.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service.js";
 import { onConversationListChanged } from "../conversations/conversation-list-events.js";
 import { assertOrdinaryConversationPath } from "../conversations/conversation-ownership-guard.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
+import { DesktopGoalController } from "../conversations/desktop-goal-controller.js";
 import { desktopSessionSearch } from "../conversations/desktop-session-search.js";
 import {
 	collectRunningInteractiveSessionIds,
@@ -61,7 +73,7 @@ import { purgeProjectSessions } from "../conversations/project-session-purge.js"
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
-import { selectSessionHistoryPreview } from "../conversations/session-history-preview.js";
+import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
 import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations/session-paths.js";
 import { listRuntimeSessionProjects, listSessionHistory } from "../conversations/session-query-service.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
@@ -70,7 +82,9 @@ import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
 import { getDesktopMcpTaskCoordinator, getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
+import { forgetMessageAnnotations } from "../message-annotations/host.js";
 import { notify } from "../notifications/index.js";
+import { SessionTurnNotificationController } from "../notifications/session-turn-notification-controller.js";
 import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
 import { mapSessionEventToPetPresentation } from "../pet/session-event-action-policy.js";
 import { sendPetCommandToWindow } from "../pet-window.js";
@@ -92,7 +106,7 @@ import {
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
 	readConfigSync,
 	readDesktopConfig,
-	writeDesktopConfig,
+	updateDesktopConfig,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
 import { readSettings, updateSettings } from "./settings.js";
@@ -160,6 +174,7 @@ const CHANNELS = {
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
+	RETRY: "vetta:session:retry",
 	ABORT: "vetta:session:abort",
 	QUEUE_STATE: "vetta:session:queue-state",
 	QUEUE_CONTEXT_COMPACTION: "vetta:session:queue-context-compaction",
@@ -169,6 +184,11 @@ const CHANNELS = {
 	QUEUE_RESUME: "vetta:session:queue-resume",
 	QUEUE_CLEAR: "vetta:session:queue-clear",
 	CLEAR_TODOS: "vetta:session:clear-todos",
+	GOAL_GET_STATE: "vetta:session:goal-get-state",
+	GOAL_START: "vetta:session:goal-start",
+	GOAL_PAUSE: "vetta:session:goal-pause",
+	GOAL_RESUME: "vetta:session:goal-resume",
+	GOAL_CLEAR: "vetta:session:goal-clear",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
 	UPDATE_SETTINGS: "vetta:session:update-settings",
@@ -235,6 +255,10 @@ const CHANNELS = {
 	/** 有会话在跑的项目 cwd 列表；会话路径无法反推项目，见处理器上的说明。 */
 	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
+	/** Renderer → Main：草稿非空镜像，供中断续接否决。 */
+	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
+	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
+	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
 	PENDING_QUESTION_CHANGED: "vetta:session:pending-question-changed",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
@@ -387,6 +411,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	};
 
 	const runtime = getSharedRuntime();
+	const goalController = new DesktopGoalController(runtime);
 	const pluginRuntimeSource = getDesktopCodingAgentPluginRuntimeSource();
 	const conversationService = getDesktopConversationService();
 	const questionBroker = getDesktopUserQuestionBroker();
@@ -426,10 +451,9 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		if (notificationSubs.has(sessionId)) return;
 		// 逐轮跟踪终结状态：message.final 带 stopReason，error 事件、aborted
 		// lifecycle 各自独立。agent_end 时按累积状态判定该不该通知。
-		let lastStopReason: string | undefined;
-		let aborted = false;
 		let lastPetActionId: string | undefined;
-		let hasFinalPetBody = false;
+		const hasFinalPetBody = false;
+		const notificationController = new SessionTurnNotificationController();
 		const unsubscribe = runtime.subscribe(sessionId, (ev: SessionEvent) => {
 			const petPresentation = mapSessionEventToPetPresentation(ev);
 			const petActionId = petPresentation?.actionId;
@@ -445,33 +469,17 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 				if (command) sendPetCommandToWindow(command);
 			}
 
-			if (ev.type === "message.final") {
-				if (petBubble?.body) hasFinalPetBody = true;
-				const sr = (ev.message as unknown as { stopReason?: unknown }).stopReason;
-				if (typeof sr === "string") lastStopReason = sr;
-			} else if (ev.channel === "assistant" && (ev.type === "done" || ev.type === "error")) {
-				if (petBubble?.body) hasFinalPetBody = true;
-				lastStopReason = ev.type === "done" ? ev.message.stopReason : "error";
-			} else if (ev.channel !== "assistant" && ev.type === "error") {
-				lastStopReason = "error";
-			} else if (ev.type === "session.lifecycle") {
-				if (ev.phase === "agent_start") {
-					hasFinalPetBody = false;
-				} else if (ev.phase === "aborted") {
-					aborted = true;
-					hasFinalPetBody = false;
-				} else if (ev.phase === "agent_end") {
-					const wasAborted = aborted || lastStopReason === "aborted";
-					const outcome = lastStopReason === "error" ? "error" : "completed";
-					const sessionPath = runtime.getSessionPath(sessionId);
-					lastStopReason = undefined;
-					aborted = false;
-					hasFinalPetBody = false;
-					// 中断不通知；正常完成 / 出错才通知（见 CONTEXT.md「agent 完成通知」）。
-					if (!wasAborted && sessionPath) {
-						void notify({ type: "agent-turn-complete", sessionPath, cwd, outcome });
-					}
-				}
+			const outcome = notificationController.handle(ev);
+			const sessionPath = outcome ? runtime.getSessionPath(sessionId) : undefined;
+			if (outcome && sessionPath) {
+				// 中断不通知；正常完成 / 出错才通知（见 CONTEXT.md「agent 完成通知」）。
+				// controller 用 "failed" 描述终态，notify 合同沿用本仓的 "error"。
+				void notify({
+					type: "agent-turn-complete",
+					sessionPath,
+					cwd,
+					outcome: outcome === "failed" ? "error" : "completed",
+				});
 			}
 		});
 		notificationSubs.set(sessionId, unsubscribe);
@@ -993,6 +1001,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.PROMPT, async (_event, sessionId: unknown, request: unknown, rawTraceContext: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		interactiveResidency.touch(sessionId);
+		clearSessionManualStop(sessionId);
 		const traceContext = parseSessionTraceContext(rawTraceContext);
 		const req = parsePromptRequest(request);
 		sessionLog.info(
@@ -1008,15 +1017,31 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 
 	ipcMain.handle(CHANNELS.CONTINUE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
+		clearSessionManualStop(sessionId);
 		await runtime.continue(sessionId);
+	});
+
+	// 失败/中断后的显式续跑入口（footer「继续」条）：kernel retry 重跑最后一轮并
+	// 丢弃失败的助手尝试；忙碌/recovery_required 由 kernel 拒绝并透传给渲染端。
+	ipcMain.handle(CHANNELS.RETRY, async (_event, sessionId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		clearSessionManualStop(sessionId);
+		await runtime.retry(sessionId);
 	});
 
 	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
+		markSessionManualStop(sessionId);
 		// Stopping is unconditional: the turn comes down together with the work it
 		// spawned. Subagents and background commands outlive the turn by design, so
 		// cancelling the turn alone would leave workflows running behind the button.
 		await Promise.allSettled([runtime.abort(sessionId), stopSessionBackgroundWork(runtime, sessionId)]);
+	});
+
+	ipcMain.handle(CHANNELS.INTERRUPT_DRAFT, (_event, sessionId: unknown, nonEmpty: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		if (typeof nonEmpty !== "boolean") throw new Error("nonEmpty must be boolean");
+		setSessionInterruptDraftNonEmpty(sessionId, nonEmpty);
 	});
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
@@ -1059,6 +1084,31 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_TODO_CLEAR, undefined);
 	});
 
+	ipcMain.handle(CHANNELS.GOAL_GET_STATE, (_event, sessionId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		return goalController.read(sessionId);
+	});
+	ipcMain.handle(CHANNELS.GOAL_START, (_event, sessionId: unknown, objective: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(objective, "objective");
+		return goalController.start(sessionId, objective);
+	});
+	ipcMain.handle(CHANNELS.GOAL_PAUSE, (_event, sessionId: unknown, goalId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(goalId, "goalId");
+		return goalController.pause(sessionId, goalId);
+	});
+	ipcMain.handle(CHANNELS.GOAL_RESUME, (_event, sessionId: unknown, goalId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(goalId, "goalId");
+		return goalController.resume(sessionId, goalId);
+	});
+	ipcMain.handle(CHANNELS.GOAL_CLEAR, (_event, sessionId: unknown, goalId: unknown) => {
+		assertNonEmptyString(sessionId, "sessionId");
+		assertNonEmptyString(goalId, "goalId");
+		return goalController.clear(sessionId, goalId);
+	});
+
 	ipcMain.handle(CHANNELS.UPDATE_SETTINGS, async (_event, sessionId: unknown, partialSettings: SettingsPatch) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		await runtime.updateSettings(sessionId, partialSettings);
@@ -1076,9 +1126,10 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.SET_GLOBAL_EXECUTION_MODE, async (_event, mode: unknown) => {
 		assertExecutionMode(mode);
 		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		const settings = await readDesktopConfig();
-		settings.defaultExecutionMode = mode as SessionExecutionMode;
-		await writeDesktopConfig(settings);
+		await updateDesktopConfig((settings) => ({
+			...settings,
+			defaultExecutionMode: mode as SessionExecutionMode,
+		}));
 	});
 
 	// 只更新「新会话默认工作模式」。工作模式在会话创建时固化、会话内不可变，
@@ -1087,9 +1138,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// 广播仅用于各窗口新会话页 toggle 的显示同步。
 	ipcMain.handle(CHANNELS.SET_GLOBAL_AGENT_MODE, async (_event, mode: unknown) => {
 		const next = isAgentMode(mode) ? mode : DEFAULT_AGENT_MODE;
-		const settings = await readDesktopConfig();
-		settings.defaultAgentMode = next;
-		await writeDesktopConfig(settings);
+		await updateDesktopConfig((settings) => ({ ...settings, defaultAgentMode: next }));
 		for (const win of BrowserWindow.getAllWindows()) {
 			win.webContents.send(CHANNELS.AGENT_MODE_CHANGED, next);
 		}
@@ -1174,9 +1223,11 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return runtime.getMessages(sessionId);
 	});
 
-	ipcMain.handle(CHANNELS.GET_FULL_HISTORY, async (_event, sessionId: unknown) => {
+	ipcMain.handle(CHANNELS.GET_FULL_HISTORY, async (_event, sessionId: unknown, options?: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.getFullHistory(sessionId);
+		if (options === undefined) return runtime.getFullHistory(sessionId);
+		// TASK-0050：传分页 options 即返回有界 HistoryPage；无参调用保持全量语义。
+		return sliceHistoryPage(runtime.getFullHistory(sessionId), parseHistoryPageRequest(options));
 	});
 
 	ipcMain.handle(CHANNELS.NAVIGATE_FOR_EDIT, async (_event, sessionId: unknown, entryId: unknown) => {
@@ -1216,6 +1267,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		// 连带回收子目录里的产物。读 header 先取 cwd，再 delete，最后 rm 子目录。
 		const cwdFromHeader = await readSessionCwdFromHeader(sessionPath);
 		await runtime.deleteSession(sessionPath);
+		await forgetMessageAnnotations(sessionPath);
 		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
 			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
 				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);
@@ -1405,6 +1457,14 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	};
 	const unsubscribeRunning = runtime.onRunningChanged((sessionPath, running, sessionId, reason) => {
 		broadcastRunningChanged({ sessionPath, running, sessionId, reason });
+		if (sessionId) {
+			if (running) {
+				clearSessionManualStop(sessionId);
+				watchSessionForInterruptContinue(sessionId);
+			} else {
+				watchSessionForInterruptContinue(sessionId);
+			}
+		}
 		if (!sessionId || !interactiveResidency.has(sessionId)) return;
 		interactiveResidency.touch(sessionId);
 		if (!running) scheduleIdleInteractiveSessionReconcile();
@@ -1412,6 +1472,16 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const unsubscribeTeamRunning = agentTeamSessionService.onRunningChanged((sessionPath, running, sessionId) =>
 		broadcastRunningChanged({ sessionPath, running, sessionId }),
 	);
+	const stopInterruptMonitor = startSessionInterruptMonitor(
+		(channel, payload) => {
+			if (!webContents.isDestroyed()) webContents.send(channel, payload);
+		},
+		(sessionId) => sessionCwdMap.get(sessionId),
+	);
+	// 启动一次性扫描「上次退出时未正常完成」的会话：只读、异步、失败只记日志。
+	void runSessionInterruptStartupScan((channel, payload) => {
+		if (!webContents.isDestroyed()) webContents.send(channel, payload);
+	});
 
 	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
 	ipcMain.handle(CHANNELS.MCP_ELICITATION_LIST_PENDING, () => mcpElicitationBroker.listPending());
@@ -1562,13 +1632,11 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 					turnStartMap.set(sessionId, Date.now());
 				}
 				const assistantMessage =
-					runtimeEvent.type === "message.final"
+					runtimeEvent.channel === "assistant" && runtimeEvent.type === "done"
 						? runtimeEvent.message
-						: runtimeEvent.channel === "assistant" && runtimeEvent.type === "done"
-							? runtimeEvent.message
-							: runtimeEvent.channel === "assistant" && runtimeEvent.type === "error"
-								? runtimeEvent.error
-								: undefined;
+						: runtimeEvent.channel === "assistant" && runtimeEvent.type === "error"
+							? runtimeEvent.error
+							: undefined;
 				if (assistantMessage && readConfigSync().debugMode) {
 					const cwd = sessionCwdMap.get(sessionId);
 					if (cwd) {
@@ -1724,6 +1792,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	interface ViewerSub {
 		watcher: FSWatcher;
 		path: string;
+		/** 上一轮已下发的历史，用于 append-only 增量差分（TASK-0050）。 */
+		lastEntries?: HistoryEntry[];
 	}
 	const viewerSubs = new Map<string, ViewerSub>();
 	let viewerSeq = 0;
@@ -1732,15 +1802,13 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		assertNonEmptyString(path, "path");
 		const snapshot = runtime.readSessionHistoryFromFile(resolve(path));
 		if (options === undefined) return snapshot;
-		if (!options || typeof options !== "object" || Array.isArray(options)) {
-			throw new TypeError("options must be an object");
+		// TASK-0050：分页 options（含兼容的 tailTurns）返回有界 HistoryPage；
+		// 空对象 {} 等效旧行为返回全量快照，避免 {} 语义悄悄改变。
+		const request = parseHistoryPageRequest(options);
+		if (request.limit === undefined && request.beforeEntry === undefined && request.tailTurns === undefined) {
+			return snapshot;
 		}
-		const tailTurns = (options as { tailTurns?: unknown }).tailTurns;
-		if (tailTurns === undefined) return snapshot;
-		if (!Number.isInteger(tailTurns) || (tailTurns as number) < 1 || (tailTurns as number) > 10) {
-			throw new TypeError("options.tailTurns must be an integer between 1 and 10");
-		}
-		return { history: selectSessionHistoryPreview(snapshot.history, tailTurns as number) };
+		return sliceHistoryPage(snapshot.history, request);
 	});
 
 	ipcMain.handle(CHANNELS.VIEWER_SUBSCRIBE, async (_event, path: unknown) => {
@@ -1754,9 +1822,16 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		const emit = () => {
 			pending = undefined;
 			if (webContents.isDestroyed()) return;
+			const sub = viewerSubs.get(subscriptionId);
+			// 已退订后仍在 debounce 窗口内触发的残留事件不再读取与下发。
+			if (!sub) return;
 			try {
 				const snapshot = runtime.readSessionHistoryFromFile(abs);
-				webContents.send(CHANNELS.VIEWER_EVENT, subscriptionId, snapshot);
+				const update = diffViewerHistory(sub.lastEntries ?? null, snapshot.history);
+				sub.lastEntries = snapshot.history;
+				// 无变化的写事件（编辑器 flush/fs 抖动）不再发送。
+				if (update === null) return;
+				webContents.send(CHANNELS.VIEWER_EVENT, subscriptionId, update);
 			} catch {
 				// File may have been deleted between events; ignore.
 			}
@@ -1783,6 +1858,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	return () => {
+		stopInterruptMonitor();
 		unsubscribeConversationListChanged();
 		webContents.removeListener("did-start-navigation", onDidStartNavigation);
 		webContents.removeListener("render-process-gone", onRenderGone);

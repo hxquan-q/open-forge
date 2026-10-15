@@ -7,7 +7,7 @@
 
 最有杠杆的贡献通常是一个目录——插件、Skill、主题、市场条目或文档页——而不是框架重写。本文说明每类改动该放哪里，以及 PR 要过的门槛。
 
-提问、半成型想法、「这个项目还维护吗」请走 [GitHub Discussions](https://github.com/openvetta/open-vetta/discussions)，不要开 Issue。
+提问、半成型想法、「这个项目还维护吗」请走社区 [Discord](https://discord.gg/qGqkk22Vg9)，不要开 Issue。（占位：本仓库的 GitHub Discussions 暂未启用。）
 
 ---
 
@@ -15,15 +15,15 @@
 
 | 如果你想… | 实际在交 | 放哪里 | 体量 |
 |---|---|---|---|
-| 给桌面加一个插件 | 插件包 | [`packages/plugins/`](packages/plugins/) · 手册 [`docs/plugin/`](docs/plugin/) · 公开指南 [docs.openvetta.com/plugins](https://docs.openvetta.com/plugins/getting-started/) | 一个包 + `plugin.json` |
+| 给桌面加一个插件 | 插件包 | [`packages/plugins/`](packages/plugins/) · 手册 [`docs/plugin/`](docs/plugin/) · 公开指南见[文档站](apps/docs-site/content/docs/plugins/getting-started.mdx) | 一个包 + `plugin.json` |
 | 沉淀一种可复用的工作方式 | Skill | [`packages/skill-presets/`](packages/skill-presets/) 或 GitHub 市场源，见 [`docs/open-marketplace.md`](docs/open-marketplace.md) | 一个带 `SKILL.md` 的目录 |
-| 换一套外观 | 主题 | [`packages/themes/`](packages/themes/) · [`docs/theme/`](docs/theme/) · [主题指南](https://docs.openvetta.com/themes/getting-started/) | 一个主题包 |
-| 发布可安装能力 | 市场条目 | [`openvetta/vetta-official-marketplace`](https://github.com/openvetta/vetta-official-marketplace)，格式见 [开放市场文档](docs/open-marketplace.md) | 一个目录 + 清单行 |
+| 换一套外观 | 主题 | [`packages/themes/`](packages/themes/) · [`docs/theme/`](docs/theme/) · [主题指南](docs/theme/README.md) | 一个主题包 |
+| 发布可安装能力 | 市场条目 | 官方市场仓库（占位：fork 运营的市场尚未发布），格式见 [开放市场文档](docs/open-marketplace.md) | 一个目录 + 清单行 |
 | 改进产品或开发者文档 | 文档页 | [`apps/docs-site/content/docs/`](apps/docs-site/content/docs/) | 一篇 MDX |
 | 翻译界面文案 | i18n 词条 | 桌面端语言包；用户可见文案不得硬编码 | 一个 PR |
 | 修 bug 或加产品功能 | 代码 | 已经拥有该行为的 `apps/` 或 `packages/` | 正常 PR |
 
-拿不准自己属于哪一行，先开 [Discussion](https://github.com/openvetta/open-vetta/discussions/new?category=ideas)。
+拿不准自己属于哪一行，先到 [Discord](https://discord.gg/qGqkk22Vg9) 问。
 
 ---
 
@@ -32,9 +32,8 @@
 最短路径见 [`QUICKSTART.zh-CN.md`](QUICKSTART.zh-CN.md)。摘要：
 
 ```bash
-git clone https://github.com/openvetta/open-vetta.git
-cd open-vetta
-git checkout dev
+git clone https://github.com/hxquan-q/open-forge.git
+cd open-forge
 bun install                 # 需要 Bun 1.3+
 cd apps/desktop
 bun run dev                 # Vite renderer + Electron，数据在 ~/.openforge-dev
@@ -50,7 +49,7 @@ PR 请发到 **`dev`**，不要发到 `main`。`dev` 是集成分支，`main` �
 
 - **一个 PR 只做一件事。** Skill + 重构 + 升依赖是三个 PR。
 - **填完整 PR 模板。** Why / Validation 留空会退回。
-- **能关联 Issue 就关联**（`Fixes #N`）。非平凡功能应先有 Discussion 或 Issue。
+- **能关联工单就关联**（`Fixes #N`，或 `project/tasks/` 里的 `TASK-xxxx` 台账条目）。非平凡功能应先有任务记录或 Discord 讨论。
 - **用户可见文案必须走 i18n**，包括 label、placeholder、菜单和 aria。
 - **快捷键**必须进入现有 keybinding 对象，不得在业务逻辑里写死。
 - **Commit message 使用中文**，关联工单写 `fixes #N` / `closes #N`。
@@ -77,20 +76,20 @@ PR 请发到 **`dev`**，不要发到 `main`。`dev` 是集成分支，`main` �
 
 请不要提交：
 
-- **默认开启的新遥测或分析目的地。** 遥测只在构建期 opt-in，见[网络行为](README.zh-CN.md#网络行为)。
+- **默认开启的新遥测或分析目的地。** 遥测只在构建期 opt-in，见[数据与构建模式](README.zh-CN.md#数据与构建模式)。
 - **密钥、Token、Cookie、用户会话或生产配置**，日志和测试夹具同样不行。
 - **反向依赖**——`packages/*` 不得 import `apps/*`。走目标包 `package.json#exports` 的公开入口。
-- **未先讨论就重写技术栈**（换包管理器、换渲染框架、换 Agent Loop）。
+- **未先讨论就重写技术栈**（换包管理器、换渲染框架、换 Agent Loop）——先有任务记录或 Discord 讨论。
 - **静默扩大插件权限或宿主能力。** 插件是不可信边界，按最小集合声明。
 - **手改生成文件。** 改生成器或事实源。
 
-拿不准就先开 Discussion，再写代码。
+拿不准就先问（Discord 或任务记录），再写代码。
 
 ---
 
 ## 安全
 
-漏洞请通过 [GitHub Security Advisories](https://github.com/openvetta/open-vetta/security/advisories/new) 私下报告，不要开公开 Issue。详见 [`SECURITY.md`](SECURITY.md)。
+漏洞请私下报告，详见 [`SECURITY.md`](SECURITY.md)。（占位：私有报告渠道在本仓库尚未启用；不要开公开 Issue。）
 
 ---
 

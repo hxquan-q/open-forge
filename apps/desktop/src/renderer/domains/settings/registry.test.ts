@@ -1,6 +1,11 @@
 // Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
-import { filterVisibleSettingsTabs, SETTINGS_TABS, type SettingsTabVisibilityContext } from "./registry";
+import {
+	filterVisibleSettingsTabs,
+	findSettingsSection,
+	SETTINGS_TABS,
+	type SettingsTabVisibilityContext,
+} from "./registry";
 
 const BASE: SettingsTabVisibilityContext = {
 	isPersonal: true,
@@ -52,4 +57,8 @@ describe("更多选项入口", () => {
 		expect(visibleKeys({})).toContain("extensions");
 		expect(visibleKeys({ hasAuthUser: false, isPersonal: false })).toContain("extensions");
 	});
+});
+
+it("registers the font section in Appearance", () => {
+	expect(findSettingsSection("appearance-fonts")).toMatchObject({ tab: "appearance", titleKey: "fonts.title" });
 });

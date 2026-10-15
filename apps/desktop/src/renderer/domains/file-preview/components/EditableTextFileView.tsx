@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { FILE_EDITOR_SAVE_EVENT } from "@/shared/shortcuts";
 import { FS_EDITABLE_TEXT_ERROR } from "@/preload/fs-types";
 import {
@@ -96,7 +97,7 @@ export function EditableTextFileView({
 			extension,
 			lineEnding: document.lineEnding,
 			previewContent: rendered ? (
-				<TextPreviewRenderer content={document.draftContent} extension={extension} />
+				<TextPreviewRenderer content={document.draftContent} extension={extension} sourcePath={item.path} />
 			) : undefined,
 		};
 	}

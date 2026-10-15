@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { createDesktopMcpInteractionHandlers } from "./mcp-supervisor.js";
@@ -19,6 +21,21 @@ describe("createDesktopMcpInteractionHandlers", () => {
 		await expect(handlers.roots?.({}, { serverName: "demo", method: "roots/list", round: 1 })).resolves.toEqual({
 			roots: [],
 		});
+	});
+
+	it("does not advertise a workspace root on an application-scoped connection", () => {
+		// 应用级连接跨工作区复用，通告某个项目根会让 server 把它当成长期工作区。
+		const application = createDesktopMcpInteractionHandlers({
+			projectRoot: process.cwd(),
+			resourceScope: "application",
+		});
+		expect(application.roots).toBeUndefined();
+
+		const workspace = createDesktopMcpInteractionHandlers({
+			projectRoot: process.cwd(),
+			resourceScope: "workspace",
+		});
+		expect(workspace.roots).toBeTypeOf("function");
 	});
 
 	it("does not advertise sampling until an approved host policy is injected", () => {

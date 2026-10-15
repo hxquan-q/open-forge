@@ -79,29 +79,29 @@ function resolveVettaCliAppPath(env: NodeSandboxEnvironment | undefined): string
 	return typeof value === "string" && value.length > 0 && existsSync(value) ? value : undefined;
 }
 
-async function createVettaCliShim(
+async function createOpenForgeCliShim(
 	tempRoot: string,
 	env: NodeSandboxEnvironment | undefined,
 ): Promise<string | undefined> {
-	const vettaCliAppPath = resolveVettaCliAppPath(env);
-	if (!vettaCliAppPath) return undefined;
+	const openForgeCliAppPath = resolveVettaCliAppPath(env);
+	if (!openForgeCliAppPath) return undefined;
 	const shimDir = join(tempRoot, "bin");
 	await mkdir(shimDir, { recursive: true });
-	await copyFile(vettaCliAppPath, join(shimDir, "vetta.exe"));
+	await copyFile(openForgeCliAppPath, join(shimDir, "openforge.exe"));
 	return shimDir;
 }
 
 function buildSandboxEnv(
 	sourceEnv: NodeSandboxEnvironment | undefined,
 	tempRoot: string,
-	vettaShimDir: string | undefined,
+	cliShimDir: string | undefined,
 ): string[] {
 	const baseEnv = sourceEnv ?? process.env;
 	const args: string[] = ["--clear-env"];
 	for (const key of ENV_WHITELIST) {
 		const value =
-			key === "PATH" && vettaShimDir
-				? [vettaShimDir, baseEnv.PATH].filter((item): item is string => Boolean(item)).join(delimiter)
+			key === "PATH" && cliShimDir
+				? [cliShimDir, baseEnv.PATH].filter((item): item is string => Boolean(item)).join(delimiter)
 				: key === "VETTA_CLI_APP_PATH"
 					? resolveVettaCliAppPath(sourceEnv)
 					: baseEnv[key];
@@ -145,7 +145,7 @@ export function createWindowsSandboxCommandOperations(sandboxHostPath?: string):
 				void (async () => {
 					const tempRoot = await mkdtemp(join(tmpdir(), "vetta-windows-sandbox-"));
 					await mkdir(join(tempRoot, "home"), { recursive: true });
-					const vettaShimDir = await createVettaCliShim(tempRoot, env);
+					const openForgeShimDir = await createOpenForgeCliShim(tempRoot, env);
 					const shellCommand = resolveWindowsShellCommand();
 					const policy = buildWindowsSandboxPolicy({
 						cwd,
@@ -167,7 +167,7 @@ export function createWindowsSandboxCommandOperations(sandboxHostPath?: string):
 						policy.tempRoot,
 						"--network",
 						policy.allowNetwork ? "default" : "none",
-						...buildSandboxEnv(env, policy.tempRoot, vettaShimDir),
+						...buildSandboxEnv(env, policy.tempRoot, openForgeShimDir),
 					];
 					for (const root of policy.allowReadRoots) args.push("--read-root", root);
 					for (const root of policy.allowWriteRoots) args.push("--write-root", root);

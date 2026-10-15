@@ -75,6 +75,8 @@ const BUILT_IN: Readonly<Record<string, ToolRiskDescriptor>> = Object.freeze({
 	kb_write_page: LOCAL_WRITE,
 	kb_filter_by_tags: READ_ONLY,
 	kb_list_available_tags: READ_ONLY,
+	research_scope: READ_ONLY,
+	dataset_profile: READ_ONLY,
 	write: LOCAL_WRITE,
 	edit: LOCAL_WRITE,
 	bash: SHELL,

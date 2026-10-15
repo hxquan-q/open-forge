@@ -1,9 +1,17 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import { afterEach, describe, expect, it } from "vitest";
-import { DEFAULT_CONVERSATION_CWD } from "../config/desktop-config-store.js";
-import { isConversationWorkspaceDirEntry, readDesktopSessionHeader } from "./session-paths.js";
+import {
+	DEFAULT_CONVERSATION_CWD,
+	DEFAULT_CONVERSATION_SESSION_DIR,
+	DEFAULT_IM_CONVERSATION_CWD,
+	DEFAULT_IM_CONVERSATION_SESSION_DIR,
+	KB_PROCESSING_CWD,
+	KB_PROCESSING_SESSION_DIR,
+} from "../config/desktop-config-store.js";
+import { isConversationWorkspaceDirEntry, readDesktopSessionHeader, resolveSessionImportDir } from "./session-paths.js";
 
 describe("readDesktopSessionHeader", () => {
 	const directories: string[] = [];
@@ -81,5 +89,25 @@ describe("isConversationWorkspaceDirEntry", () => {
 	it("只作用于「对话」根这一层：其它目录与工作区内部的 uuid 目录都不匹配", () => {
 		expect(isConversationWorkspaceDirEntry("/tmp/some-project", uuidName)).toBe(false);
 		expect(isConversationWorkspaceDirEntry(join(DEFAULT_CONVERSATION_CWD, uuidName), uuidName)).toBe(false);
+	});
+});
+
+describe("resolveSessionImportDir", () => {
+	it("特殊 cwd 仍映射到各自会话目录", () => {
+		expect(resolveSessionImportDir(DEFAULT_CONVERSATION_CWD)).toBe(DEFAULT_CONVERSATION_SESSION_DIR);
+		expect(resolveSessionImportDir(DEFAULT_IM_CONVERSATION_CWD)).toBe(DEFAULT_IM_CONVERSATION_SESSION_DIR);
+		expect(resolveSessionImportDir(KB_PROCESSING_CWD)).toBe(KB_PROCESSING_SESSION_DIR);
+	});
+
+	it("项目 cwd 落到 coding-agent 分片目录而非默认对话目录", () => {
+		const projectCwd = join("E:", "demo");
+		const resolved = resolveSessionImportDir(projectCwd);
+		expect(resolved).toBe(codingAgentSessionShardPath(projectCwd));
+		expect(resolved).not.toBe(DEFAULT_CONVERSATION_SESSION_DIR);
+	});
+
+	it("缺失或空白 cwd 兜底默认对话会话目录", () => {
+		expect(resolveSessionImportDir(undefined)).toBe(DEFAULT_CONVERSATION_SESSION_DIR);
+		expect(resolveSessionImportDir("   ")).toBe(DEFAULT_CONVERSATION_SESSION_DIR);
 	});
 });

@@ -1,8 +1,8 @@
 // Copyright The Open Forge contributors.
 import type { DesktopArtifactView } from "@preload/api-types/task";
-import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
+import { getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
-import { mergeTaskStateSeed } from "@shared/task/task-projection.js";
+import { seedSessionTaskState } from "@shared/task/task-projection.js";
 import type { RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -89,24 +89,7 @@ export function useTaskPanelModel(): TaskPanelModel {
 
 	// 打开/切换会话时用主进程快照补齐投影（重启后历史 Task 由此恢复）。
 	useEffect(() => {
-		let cancelled = false;
-		if (!primaryRuntimeId || !window.vetta?.task) return;
-		void window.vetta.task
-			.getState(primaryRuntimeId)
-			.then((state) => {
-				if (cancelled) return;
-				setTaskState((prev) => {
-					const current = prev.get(primaryRuntimeId) ?? EMPTY_TASK_STATE;
-					const next = mergeTaskStateSeed(current, state);
-					return next === current ? prev : new Map(prev).set(primaryRuntimeId, next);
-				});
-			})
-			.catch(() => {
-				// 快照补齐是尽力而为：事件流折叠仍会继续更新投影。
-			});
-		return () => {
-			cancelled = true;
-		};
+		if (primaryRuntimeId) void seedSessionTaskState(primaryRuntimeId, setTaskState);
 	}, [primaryRuntimeId, setTaskState]);
 
 	// artifact 版本一变就重新拉取视图快照，否则新版本写入后预览仍停留在旧视图。

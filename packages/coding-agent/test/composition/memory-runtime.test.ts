@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,7 @@ import { createCodingAgentRuntimeComposition } from "../fixtures/conversation-pe
 
 const temporaryRoots: string[] = [];
 const compositions: CodingAgentRuntimeComposition[] = [];
+const GOAL_CONTROL_TOOLS = ["get_goal", "create_goal", "update_goal"];
 
 type MemoryRuntimeOverrides = Pick<
 	CodingAgentMemoryRolloverOrchestratorOptions,
@@ -107,8 +109,8 @@ describe("Greenfield CLI memory runtime", () => {
 
 		expect(result.status).toBe("completed");
 		expect(calls).toHaveLength(2);
-		expect(calls[0]?.tools).toEqual(["memory"]);
-		expect(calls[1]?.tools).toEqual(["memory"]);
+		expect(calls[0]?.tools).toEqual([...GOAL_CONTROL_TOOLS, "memory"]);
+		expect(calls[1]?.tools).toEqual([...GOAL_CONTROL_TOOLS, "memory"]);
 		expect(calls[0]?.systemPrompt).toContain("original durable fact");
 		expect(calls[1]?.systemPrompt).toContain("original durable fact");
 		expect(calls[1]?.systemPrompt).not.toContain("The user prefers Neovim.");
@@ -146,7 +148,7 @@ describe("Greenfield CLI memory runtime", () => {
 
 		await session.prompt({ text: "Do not enable memory" });
 
-		expect(calls[0]?.tools).toEqual([]);
+		expect(calls[0]?.tools).toEqual(GOAL_CONTROL_TOOLS);
 		expect(calls[0]?.systemPrompt).not.toContain("# Persistent Memory");
 		await expect(composition.flushMemory(session.sessionId)).resolves.toBe(0);
 		await expect(readFile(join(workspace, "JOURNAL.md"), "utf8")).rejects.toThrow();

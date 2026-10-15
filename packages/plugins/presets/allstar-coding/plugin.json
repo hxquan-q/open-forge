@@ -1,0 +1,66 @@
+{
+	"id": "allstar-coding",
+	"name": "%plugin.name%",
+	"version": "0.3.2",
+	"icon": "icon.png",
+	"defaultLocale": "zh",
+	"pluginApiVersion": "^2.0.0",
+	"entry": "dist/mf-manifest.json",
+	"moduleFederation": {
+		"remoteName": "allstar_coding",
+		"expose": "./plugin"
+	},
+	"permissions": [
+		"agent.skills.control",
+		"agent.hooks.register",
+		"agent.hookHandler.execute",
+		"fs.read",
+		"fs.write"
+	],
+	"agent": {
+		"skillPaths": ["agent/skills"],
+		"skillPresentation": {
+			"defaultVisibility": "hidden"
+		},
+		"agents": [
+			{
+				"id": "allstar",
+				"name": "%agent.allstar.name%",
+				"description": "%agent.allstar.description%",
+				"mentionHandle": "allstar",
+				"avatar": "agent/agents/allstar.webp",
+				"systemPromptPath": "agent/agents/allstar.md",
+				"roles": ["master"]
+			},
+			{
+				"id": "helper",
+				"name": "%agent.helper.name%",
+				"description": "%agent.helper.description%",
+				"mentionHandle": "helper",
+				"avatar": "agent/agents/helper.webp",
+				"systemPromptPath": "agent/agents/helper.md",
+				"roles": ["assistant"]
+			}
+		],
+		"teams": [
+			{
+				"id": "allstar-pipeline",
+				"name": "%team.pipeline.name%",
+				"description": "%team.pipeline.description%",
+				"members": [
+					{
+						"agent": "allstar",
+						"responsibility": "Pipeline conductor: schedules every stage, guards confirmation gates, owns docs/ac/state.md, routes rework loops."
+					},
+					{
+						"agent": "helper",
+						"responsibility": "Resident execution proxy: safety-previews escalated commands, runs approved operations for stage workers."
+					}
+				],
+				"workflowPath": "agent/workflows/pipeline.md"
+			}
+		]
+	},
+	"description": "%plugin.description%",
+	"author": "Vetta"
+}

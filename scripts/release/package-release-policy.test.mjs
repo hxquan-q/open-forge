@@ -74,3 +74,13 @@ describe("workspace publish surface (ISSUE-0009)", () => {
 		expect(exposed).toEqual([]);
 	});
 });
+
+describe("root manifest release surface", () => {
+	it("exposes no unguarded workspace-wide version bump", () => {
+		const root = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+		const offenders = Object.entries(root.scripts ?? {}).filter(([, command]) =>
+			/npm version +-ws/.test(String(command)),
+		);
+		expect(offenders).toEqual([]);
+	});
+});

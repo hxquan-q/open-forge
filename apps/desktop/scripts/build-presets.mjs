@@ -1,11 +1,18 @@
 // 构建全部预置插件（packages/plugins/presets/*），生成统一 zip 制品，再解压到
 // Desktop 开发 staging。运行时不直接读取 preset 源码目录（ADR-0024）。
 import { spawn } from "node:child_process";
+import AdmZip from "adm-zip";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, readlink, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { loadBuildEnv } from "./load-build-env.mjs";
+import {
+	buildSystemPluginsManifest,
+	createPluginIntegrityEntry,
+	resolveSystemPluginsManifestPath,
+	writeSystemPluginsManifest,
+} from "./plugins-integrity-manifest.mjs";
 import {
 	devSystemPluginsDir,
 	isSystemPluginStaged,
@@ -244,6 +251,37 @@ for (const name of entries) {
 		pluginsToStage.add(name);
 	}
 }
+
+// 先写完整性清单（版本 + 归档 sha256 + plugin.json sha256），再交给 staging 校验。
+// staging 会拒绝清单里没有或指纹不符的归档，所以这一步必须在它之前。
+const presetsManifest = buildSystemPluginsManifest(
+	await Promise.all(
+		entries.map(async (name) => {
+			const pluginDir = join(presetsDir, name);
+			const pluginManifest = await readJson(join(pluginDir, "plugin.json"));
+			const archiveRelativePath = join(
+				name,
+				"release",
+				`${pluginManifest.id}-${pluginManifest.version}.vettapkg`,
+			);
+			const archivePath = join(presetsDir, archiveRelativePath);
+			// 指纹锚定归档内的 plugin.json 字节：加载侧校验的是解包后的文件，
+			// 源码文件的排版差异（空白、键序）不影响这里。
+			const archiveManifestEntry = new AdmZip(archivePath).getEntry("plugin.json");
+			if (!archiveManifestEntry) {
+				throw new Error(`插件归档根目录缺少 plugin.json：${archivePath}`);
+			}
+			return createPluginIntegrityEntry({
+				pluginId: pluginManifest.id,
+				version: pluginManifest.version,
+				archivePath,
+				archiveRelativePath,
+				manifestData: archiveManifestEntry.getData(),
+			});
+		}),
+	),
+);
+writeSystemPluginsManifest(resolveSystemPluginsManifestPath(presetsDir), presetsManifest);
 
 stageSystemPluginsFromArchives(devSystemPluginsDir, "build-presets", {
 	pluginIds: pluginsToStage,

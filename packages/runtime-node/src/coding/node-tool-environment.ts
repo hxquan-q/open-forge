@@ -33,7 +33,7 @@ export interface NodeCodingToolEnvironmentOptions {
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
-	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	/** 会话级审查快照；只应注入有会话身份的共享/会话环境。 */
 	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
@@ -43,7 +43,7 @@ export interface NodeFileToolEnvironmentOptions {
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
-	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 

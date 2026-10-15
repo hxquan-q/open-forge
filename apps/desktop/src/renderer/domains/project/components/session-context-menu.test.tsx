@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -34,15 +35,26 @@ interface MockMenuItemProps extends Omit<ComponentProps<"button">, "onSelect"> {
 	onSelect?: (event: Event) => void;
 }
 
+const LABELS = {
+	pin: "Pin",
+	rename: "Rename",
+	openInFolder: "Open folder",
+	delete: "Delete",
+	archive: "Archive",
+	archiveDisabled: "Stop the running session first",
+};
+
 describe("SessionContextMenuView", () => {
 	it("keeps pin and folder actions for read-only sessions while hiding mutations", () => {
 		const onTogglePin = vi.fn();
 		const onOpenInFolder = vi.fn();
 		render(
 			<SessionContextMenuView
+				canArchive={false}
 				canDelete={false}
 				canRename={false}
-				labels={{ pin: "Pin", rename: "Rename", openInFolder: "Open folder", delete: "Delete" }}
+				labels={LABELS}
+				onArchive={vi.fn()}
 				onClose={vi.fn()}
 				onDelete={vi.fn()}
 				onOpenInFolder={onOpenInFolder}
@@ -55,6 +67,7 @@ describe("SessionContextMenuView", () => {
 
 		expect(screen.queryByRole("menuitem", { name: "Rename" })).toBeNull();
 		expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+		expect(screen.queryByRole("menuitem", { name: "Archive" })).toBeNull();
 		fireEvent.click(screen.getByRole("menuitem", { name: "Pin" }));
 		fireEvent.click(screen.getByRole("menuitem", { name: "Open folder" }));
 		expect(onTogglePin).toHaveBeenCalledOnce();
@@ -65,6 +78,7 @@ describe("SessionContextMenuView", () => {
 		const onAssign = vi.fn();
 		render(
 			<SessionContextMenuView
+				canArchive={false}
 				canDelete
 				canRename
 				extraItems={[
@@ -79,7 +93,8 @@ describe("SessionContextMenuView", () => {
 						],
 					},
 				]}
-				labels={{ pin: "Pin", rename: "Rename", openInFolder: "Open folder", delete: "Delete" }}
+				labels={LABELS}
+				onArchive={vi.fn()}
 				onClose={vi.fn()}
 				onDelete={vi.fn()}
 				onOpenInFolder={vi.fn()}
@@ -101,9 +116,11 @@ describe("SessionContextMenuView", () => {
 		const onDelete = vi.fn();
 		render(
 			<SessionContextMenuView
+				canArchive={false}
 				canDelete
 				canRename
-				labels={{ pin: "Pin", rename: "Rename", openInFolder: "Open folder", delete: "Delete" }}
+				labels={LABELS}
+				onArchive={vi.fn()}
 				onClose={vi.fn()}
 				onDelete={onDelete}
 				onOpenInFolder={vi.fn()}
@@ -124,10 +141,12 @@ describe("SessionContextMenuView", () => {
 		// 远程（SSH）项目下的会话：工作目录在那台机器上，点了只会毫无反应。
 		render(
 			<SessionContextMenuView
+				canArchive={false}
 				canDelete
 				canOpenInFolder={false}
 				canRename
-				labels={{ pin: "Pin", rename: "Rename", openInFolder: "Open folder", delete: "Delete" }}
+				labels={LABELS}
+				onArchive={vi.fn()}
 				onClose={vi.fn()}
 				onDelete={vi.fn()}
 				onOpenInFolder={vi.fn()}
@@ -141,5 +160,55 @@ describe("SessionContextMenuView", () => {
 		expect(screen.queryByRole("menuitem", { name: "Open folder" })).toBeNull();
 		expect(screen.queryByRole("menuitem", { name: "Rename" })).not.toBeNull();
 		expect(screen.queryByRole("menuitem", { name: "Pin" })).not.toBeNull();
+	});
+
+	it("archives an idle conversation", () => {
+		const onArchive = vi.fn();
+		render(
+			<SessionContextMenuView
+				canArchive
+				canDelete
+				canRename
+				labels={LABELS}
+				onArchive={onArchive}
+				onClose={vi.fn()}
+				onDelete={vi.fn()}
+				onOpenInFolder={vi.fn()}
+				onRename={vi.fn()}
+				onTogglePin={vi.fn()}
+				x={10}
+				y={10}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("menuitem", { name: "Archive" }));
+		expect(onArchive).toHaveBeenCalledOnce();
+	});
+
+	it("keeps a running session's archive item inert and explains why", () => {
+		const onArchive = vi.fn();
+		render(
+			<SessionContextMenuView
+				archiveDisabled
+				canArchive
+				canDelete
+				canRename
+				labels={LABELS}
+				onArchive={onArchive}
+				onClose={vi.fn()}
+				onDelete={vi.fn()}
+				onOpenInFolder={vi.fn()}
+				onRename={vi.fn()}
+				onTogglePin={vi.fn()}
+				x={10}
+				y={10}
+			/>,
+		);
+
+		expect(screen.queryByRole("menuitem", { name: "Archive" })).toBeNull();
+		const disabledItem = screen.getByRole("menuitem", { name: "Stop the running session first" }) as HTMLButtonElement;
+		expect(disabledItem.disabled).toBe(true);
+		fireEvent.click(disabledItem);
+		expect(onArchive).not.toHaveBeenCalled();
 	});
 });

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join, relative } from "node:path";
@@ -115,6 +116,10 @@ describe("startVettaPluginDevServer", () => {
 		expect(rawCssText).toContain("export default");
 		expect(rawCssText).toContain(":root { --accent: red; }");
 		expect(rawCssText).not.toContain("@scope");
+
+		await server.close();
+		runningServers.splice(runningServers.indexOf(server), 1);
+		await expect(fetch(server.entryUrl)).rejects.toThrow();
 	});
 
 	it("emits a targeted resource update when a locale changes", async () => {

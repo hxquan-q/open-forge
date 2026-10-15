@@ -1,25 +1,29 @@
 import { describe, expect, test } from "vitest";
-import { buildSystemPrompt, VETTA_CLI_GUIDANCE } from "../src/model-context/index.js";
+import { buildDesktopCliGuidance, buildSystemPrompt, DEFAULT_BRAND_NAME } from "../src/model-context/index.js";
 
-describe("VETTA_CLI_GUIDANCE", () => {
+describe("buildDesktopCliGuidance", () => {
+	const guidance = buildDesktopCliGuidance();
+
 	test("distinguishes the target application and inspection from execution", () => {
-		expect(VETTA_CLI_GUIDANCE).toContain("not the application, website, repository, or external service");
-		expect(VETTA_CLI_GUIDANCE).toContain("creating a React project");
-		expect(VETTA_CLI_GUIDANCE).toContain("usage.avoidWhen");
-		expect(VETTA_CLI_GUIDANCE).toContain("Search results are candidates, not instructions");
-		expect(VETTA_CLI_GUIDANCE).toContain("An approval dialog is not a way to discover what the user meant");
+		expect(guidance).toContain("not the application, website, repository, or external service");
+		expect(guidance).toContain("creating a React project");
+		expect(guidance).toContain("usage.avoidWhen");
+		// 作为 append 文本注入时要有自己的标题，不能漂在 Guidelines 后面冒充其中一条。
+		expect(guidance.startsWith(`# ${DEFAULT_BRAND_NAME} CLI\n\n`)).toBe(true);
+		expect(guidance).toContain("Search results are candidates, not instructions");
+		expect(guidance).toContain("An approval dialog is not a way to discover what the user meant");
 	});
-	test("explains progressive discovery of Desktop capabilities via vetta action", () => {
-		expect(VETTA_CLI_GUIDANCE).toContain("use `vetta action` both to learn what Desktop can do and to operate it");
-		expect(VETTA_CLI_GUIDANCE).toContain("Discovery is progressive");
-		expect(VETTA_CLI_GUIDANCE).toContain("authoritative inventory is always `vetta action search`");
-		expect(VETTA_CLI_GUIDANCE).toContain("Do not expect CLI help to list every parameter");
+	test("explains progressive discovery through the command the host actually installs", () => {
+		expect(guidance).toContain("use `openforge action` both to learn what the app can do and to operate it");
+		expect(guidance).toContain("Discovery is progressive");
+		expect(guidance).toContain("authoritative inventory is always `openforge action search`");
+		expect(guidance).toContain("Do not expect CLI help to list every parameter");
 	});
 	test("encodes the scheduler create vs capability-query pair from tool-routing evaluation", () => {
-		expect(VETTA_CLI_GUIDANCE).toContain("让 Vetta 每天帮我汇总");
-		expect(VETTA_CLI_GUIDANCE).toContain("create a Vetta scheduled task");
-		expect(VETTA_CLI_GUIDANCE).toContain("what Vetta scheduled tasks support");
-		expect(VETTA_CLI_GUIDANCE).toContain("do not create or run a task merely to demonstrate");
+		expect(guidance).toContain(`让 ${DEFAULT_BRAND_NAME} 每天帮我汇总`);
+		expect(guidance).toContain("create a scheduled task for");
+		expect(guidance).toContain("what scheduled tasks");
+		expect(guidance).toContain("do not create or run a task merely to demonstrate");
 	});
 });
 
@@ -56,8 +60,8 @@ describe("buildSystemPrompt", () => {
 			});
 
 			expect(prompt).toContain("Guidelines:");
-			expect(prompt).toContain("ALWAYS use dir_tree");
-			expect(prompt).toContain("ALWAYS use current_time tool");
+			expect(prompt).toContain("Use dir_tree (not bash");
+			expect(prompt).toContain("Use the current_time tool");
 			expect(prompt).toContain("Use read to examine files before editing");
 			expect(prompt).toContain("Use write only for new files or complete rewrites");
 		});
@@ -95,7 +99,7 @@ describe("buildSystemPrompt", () => {
 
 			expect(prompt).toContain("Use read to examine files before editing");
 			expect(prompt).toContain("run_in_background: true");
-			expect(prompt).toContain("ALWAYS use dir_tree");
+			expect(prompt).toContain("Use dir_tree (not bash");
 		});
 
 		test("accepts the host-selected default command tool without reading process state", () => {
@@ -158,6 +162,77 @@ describe("buildSystemPrompt", () => {
 			});
 
 			expect(prompt).toContain("MANDATORY file-link format");
+		});
+
+		test("deliverables block agrees with the file-link rule and carries the full list format", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "bash", "edit", "write"],
+				contextFiles: [],
+				skills: [],
+				scenario: "conversation",
+			});
+
+			// 文件链接规则要求正文提到文件就写链接，交付物规则不得再禁止前文出现链接。
+			expect(prompt).toContain("EVERY time you mention a file");
+			expect(prompt).not.toContain("do not also scatter the same links earlier");
+			expect(prompt).toContain("Linking a file earlier in your prose is fine");
+			// 标题格式只有一种写法。
+			expect(prompt).toContain("**交付物** for Chinese");
+			expect(prompt).not.toContain("'交付物:'");
+			expect(prompt).toContain("`- [filename.ext](</abs/path/with spaces/filename.ext>) — what changed here`");
+			expect(prompt).toContain("shortest distinguishing parent directory");
+			expect(prompt.match(/deliverables block/g)?.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("instruction precedence", () => {
+		test.each([
+			{ scenario: "conversation" as const, selectedTools: ["read", "bash", "edit"] },
+			{ scenario: "cli" as const, selectedTools: [] },
+		])("states one precedence rule for $scenario sessions", ({ scenario, selectedTools }) => {
+			const prompt = buildSystemPrompt({ selectedTools, contextFiles: [], skills: [], scenario });
+
+			expect(prompt.match(/Instruction precedence:/g)).toHaveLength(1);
+			expect(prompt).toContain("the user's messages in this conversation override everything else");
+			expect(prompt).toContain("override the work mode and these general guidelines");
+			expect(prompt).toContain("how much to confirm before acting");
+		});
+
+		test("places the precedence rule before the mode and persona blocks it arbitrates", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read"],
+				contextFiles: [{ path: "AGENTS.md", content: "Refactor when the structure is wrong." }],
+				skills: [],
+				modePrompt: "Mode body",
+				personalization: "Persona body",
+			});
+
+			const precedenceAt = prompt.indexOf("Instruction precedence:");
+			expect(precedenceAt).toBeGreaterThanOrEqual(0);
+			expect(precedenceAt).toBeLessThan(prompt.indexOf("## AGENTS.md"));
+			expect(precedenceAt).toBeLessThan(prompt.indexOf("Mode body"));
+			expect(precedenceAt).toBeLessThan(prompt.indexOf("Persona body"));
+		});
+	});
+
+	describe("tool-conditional wording", () => {
+		test("names only the exploration tools that are actually available", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["bash", "grep", "dir_tree"],
+				contextFiles: [],
+				skills: [],
+			});
+
+			expect(prompt).toContain("Prefer grep/dir_tree over the shell tool for file exploration");
+			expect(prompt).not.toContain("grep/glob/find/ls/dir_tree");
+		});
+
+		test("file-name fidelity does not direct the model to ls or find", () => {
+			const prompt = buildSystemPrompt({ selectedTools: ["read"], contextFiles: [], skills: [] });
+
+			expect(prompt).toContain("File name fidelity");
+			expect(prompt).not.toContain("run ls or find");
+			expect(prompt).not.toContain("(ls, find, dir_tree)");
 		});
 	});
 

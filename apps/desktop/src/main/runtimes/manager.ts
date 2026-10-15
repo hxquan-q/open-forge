@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { chmod } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { atomicWriteJSON } from "@vetta/toolkit/atomic-write";
 import { getAppLogger } from "../logger.js";
+import { GitToolManager } from "./git-tool.js";
 import {
 	binDirsFor,
 	executablePathFor,
@@ -23,7 +25,7 @@ import {
 	vendorRuntimeDir,
 } from "./paths.js";
 import { installRuntimeArchive, installRuntimeDirectory } from "./runtime-archive-installer.js";
-import type { RuntimeRegistryData, RuntimeStatus, RuntimesStatus } from "./types.js";
+import type { GitToolStatus, RuntimeRegistryData, RuntimeStatus, RuntimesStatus } from "./types.js";
 
 const log = getAppLogger("runtimes");
 
@@ -45,6 +47,15 @@ function parseVersion(raw: string): string | undefined {
 
 export class RuntimeManager {
 	private data: RuntimeRegistryData = emptyRegistry();
+	/** 按类型去重的后台下载任务;reinstall 与自动安装共享同一条链路。 */
+	private readonly downloads = new Map<RuntimeType, Promise<void>>();
+	private readonly fetchImpl: typeof fetch;
+
+	constructor(options: { fetchImpl?: typeof fetch } = {}) {
+		this.fetchImpl = options.fetchImpl ?? fetch;
+	}
+
+	private readonly git = new GitToolManager();
 
 	private loadRegistry(): void {
 		try {
@@ -171,9 +182,34 @@ export class RuntimeManager {
 	}
 
 	/**
-	 * 下载兜底(升级 / 无内置 vendor 时)。从 sources 列表逐个尝试,解压到安装目录。
-	 * 这是次要路径——首启主路径是 seedFromVendor。无网络时会失败,由调用方容错。
+	 * 按 manifest sources 逐个尝试下载并解压到安装目录。vendor 默认不再进包,
+	 * 这是安装后的主路径;离线时逐源失败后由面板「重新获取」重试。
+	 * 经 `downloads` 去重:并发调用共享同一任务,完成后写 registry 并刷新 env。
 	 */
+	private ensureDownloaded(type: RuntimeType): Promise<void> {
+		const running = this.downloads.get(type);
+		if (running) return running;
+		const task = (async () => {
+			try {
+				if (await this.download(type)) {
+					this.recordManaged(type);
+					await this.ensureNpm(type);
+					await this.ensurePip(type);
+					this.saveRegistry();
+					this.applyEnv();
+				} else {
+					log.warn(`${type} download failed from all sources; panel retry available`);
+				}
+			} catch (err) {
+				log.error(`${type} download failed`, err);
+			} finally {
+				this.downloads.delete(type);
+			}
+		})();
+		this.downloads.set(type, task);
+		return task;
+	}
+
 	private async download(type: RuntimeType): Promise<boolean> {
 		const entry = platformEntry(type);
 		if (!entry) return false;
@@ -204,7 +240,7 @@ export class RuntimeManager {
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), 180_000);
 		try {
-			const res = await fetch(url, { signal: controller.signal, redirect: "follow" });
+			const res = await this.fetchImpl(url, { signal: controller.signal, redirect: "follow" });
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			writeFileSync(dest, Buffer.from(await res.arrayBuffer()));
 		} finally {
@@ -539,10 +575,12 @@ export class RuntimeManager {
 				log.warn(`detect system ${type} failed`, err);
 			}
 			try {
-				// 启动只走零网络的 vendor 归档解压;下载是面板触发的次要路径(见 reinstall),
-				// 不在启动阻塞,避免无内置 vendor 的开发态/异常环境卡在 180s 超时。
+				// 启动先走零网络的 vendor 归档解压(离线打包渠道);vendor 缺位时后台
+				// 下载补齐——不 await,避免离线/弱网环境拖住初始化。面板轮询状态可见
+				// downloading,失败可由「重新获取」重试。
 				if (!this.isReady(type)) {
-					await this.seedFromVendor(type);
+					const seeded = await this.seedFromVendor(type);
+					if (!seeded && !this.isReady(type)) void this.ensureDownloaded(type);
 				}
 				if (this.isReady(type)) {
 					this.recordManaged(type);
@@ -550,13 +588,18 @@ export class RuntimeManager {
 					await this.ensurePip(type);
 				} else {
 					delete this.data.binaries[type];
-					log.warn(`${type} not ready (vendor absent); deferring to panel-driven download`);
+					log.info(`${type} not ready; background download started`);
 				}
 			} catch (err) {
 				log.error(`ensure ${type} failed`, err);
 			}
 		}
 		this.saveRegistry();
+		try {
+			this.git.detect();
+		} catch (err) {
+			log.warn("detect git failed", err);
+		}
 	}
 
 	/**
@@ -608,6 +651,8 @@ export class RuntimeManager {
 			// best-effort
 		}
 
+		this.git.applyEnv();
+
 		log.info("runtime env applied", {
 			node: this.isReady("node"),
 			python: this.isReady("python"),
@@ -628,6 +673,7 @@ export class RuntimeManager {
 			activeSource: "managed",
 			system: system ? { path: system.path, version: system.version } : undefined,
 			supported: Boolean(entry),
+			downloading: this.downloads.has(type),
 		};
 	}
 
@@ -635,6 +681,7 @@ export class RuntimeManager {
 		return {
 			node: this.statusFor("node"),
 			python: this.statusFor("python"),
+			git: this.git.getStatus(),
 			mirrors: {
 				npmRegistry: RUNTIME_MANIFEST.mirrors.npmRegistry,
 				pipIndexUrl: RUNTIME_MANIFEST.mirrors.pipIndexUrl,
@@ -647,7 +694,7 @@ export class RuntimeManager {
 		const target = installDir(type);
 		rmSync(join(target, ".vendor-version"), { force: true });
 		const seeded = await this.seedFromVendor(type);
-		if (!seeded) await this.download(type);
+		if (!seeded && !this.isReady(type)) await this.ensureDownloaded(type);
 		if (this.isReady(type)) {
 			this.recordManaged(type);
 			await this.ensureNpm(type);
@@ -662,7 +709,18 @@ export class RuntimeManager {
 	redetect(): RuntimesStatus {
 		for (const type of RUNTIME_TYPES) this.detectSystem(type);
 		this.saveRegistry();
+		this.git.detect();
 		return this.getStatus();
+	}
+
+	/** 插件调用 git 前的宿主检查，见 GitToolManager.shouldBlockGitCommand。 */
+	shouldBlockGitCommand(): boolean {
+		return this.git.shouldBlockGitCommand();
+	}
+
+	/** 面板「安装 Git」：macOS 调起系统安装窗口，Windows 装托管 MinGit。 */
+	installGit(): Promise<GitToolStatus> {
+		return this.git.install();
 	}
 }
 

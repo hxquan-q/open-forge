@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { BrowserRuntimeInstallInput, BrowserRuntimeStatus } from "@vetta-org/capability-sdk";
+import { describeError } from "../logger/describe-error.js";
 import type { BrowserProcessRunner } from "./browser-process-runner.js";
 import type { BrowserAutomationLogger } from "./contracts.js";
 
@@ -42,7 +44,7 @@ export class BrowserRuntimeManager {
 		} catch (error) {
 			if (signal?.aborted) throw error;
 			this.logger.warn("browser runtime check failed", {
-				errorKind: error instanceof Error ? error.name : "unknown",
+				errorKind: describeError(error),
 			});
 			return { phase: "missing" };
 		}
@@ -109,7 +111,7 @@ export class BrowserRuntimeManager {
 				namespace: input.namespace,
 				step: input.step,
 				durationMs: Date.now() - startedAt,
-				errorKind: error instanceof Error ? error.name : "unknown",
+				errorKind: describeError(error),
 			});
 			return { phase: "error", message: `Browser ${input.step} installation failed` };
 		}

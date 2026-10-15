@@ -15,3 +15,15 @@ bun run test:e2e
 ```
 
 The E2E launches real Electron Chromium, captures an animated canvas, sends it through an actual `RTCPeerConnection`, checks that the viewer receives nonblank changing pixels, and sends a validated pointer event back through the DataChannel.
+
+
+## Context Boundary
+
+```yaml
+purpose: WebRTC screen and remote input contracts for Vetta
+provides:  
+  - "@vetta/remote-desktop"
+  - "@vetta/remote-desktop/protocol"
+consumes:  []
+internal_dependencies:  []
+```

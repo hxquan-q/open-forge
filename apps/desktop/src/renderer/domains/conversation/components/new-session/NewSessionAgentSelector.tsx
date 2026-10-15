@@ -108,9 +108,15 @@ export function NewSessionAgentSelector({
 		[handleOpenChange, onSelect],
 	);
 
-	const triggerLabel = selectedOption
+	const triggerHint = selectedOption
 		? t("newSession.agentSelector.switchTitle")
 		: t("newSession.agentSelector.pickTitle");
+	// accName = 可见文案 + 功能提示（Label-in-Name：读屏名必须包含看得见的文字；
+	// 选中态还要先报当前选中的团队/智能体名，否则用户不知道现在选的是谁）。
+	const triggerLabel = t("newSession.agentSelector.triggerLabel", {
+		label: selectedOption?.title ?? t("newSession.agentSelector.pick"),
+		hint: triggerHint,
+	});
 
 	const renderOption = (option: NewSessionTargetOption): JSX.Element => (
 		<NewSessionPicker.Item key={option.targetKey} value={option.targetKey}>
@@ -140,32 +146,25 @@ export function NewSessionAgentSelector({
 			value={selectedKey}
 			onValueChange={handleSelect}
 		>
-			{/* BotAvatar 自身是 <button>，套在默认 button 触发器里会被 HTML 解析器提前闭合，
-			    因此这里用 asChild + div 手写键盘行为。 */}
+			{/* 触发器就是本控件唯一的交互宿主；头像只作展示（interactive=false 渲染为
+			    非按钮元素），否则按钮套按钮命中 axe `nested-interactive`（BUG-0039）。 */}
 			<NewSessionPicker.Trigger
 				asChild
 				className={className}
 				aria-label={triggerLabel}
-				title={selectedOption?.title ?? triggerLabel}
+				title={selectedOption?.title ?? triggerHint}
 			>
-				<div
-					role="button"
-					tabIndex={0}
-					className="cursor-pointer"
-					onKeyDown={(event) => {
-						if (event.key !== "Enter" && event.key !== " ") return;
-						event.preventDefault();
-						handleOpenChange(true);
-					}}
-				>
+				{/* 原生 button：Enter/Space 由浏览器合成 click，经 PopoverTrigger 的 onClick 开合；
+				    div[role=button] + 手写 keydown 只是少了一半语义的重实现。 */}
+				<button type="button" className="cursor-pointer">
 					{selectedOption?.avatarUrls?.length ? (
 						<AvatarStackView avatarUrls={selectedOption.avatarUrls} />
 					) : (
-						<BotAvatar size="sm" className="pointer-events-none -ml-1" />
+						<BotAvatar interactive={false} size="sm" className="pointer-events-none -ml-1" />
 					)}
 					<span className="min-w-0 truncate">{selectedOption?.title ?? t("newSession.agentSelector.pick")}</span>
 					<span className="icon-[solar--alt-arrow-down-linear] h-3 w-3 shrink-0 opacity-70" aria-hidden />
-				</div>
+				</button>
 			</NewSessionPicker.Trigger>
 			<NewSessionPicker.Content>
 				{searchVisible && (
@@ -184,7 +183,7 @@ export function NewSessionAgentSelector({
 							<NewSessionPicker.Error>{t("newSession.agentSelector.error")}</NewSessionPicker.Error>
 							<button
 								type="button"
-								className="flex w-full items-center rounded-md px-2 py-[5px] text-left text-[12px] text-foreground hover:bg-accent"
+								className="flex w-full items-center rounded-md px-2 py-[5px] text-left text-[12px] text-foreground hover:bg-accent focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 								onClick={() => void load()}
 							>
 								{t("newSession.agentSelector.retry")}

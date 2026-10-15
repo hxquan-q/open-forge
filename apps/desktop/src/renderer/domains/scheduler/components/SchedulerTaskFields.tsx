@@ -1,5 +1,7 @@
 import type {
 	ExecutionModeOverride,
+	ScheduledTaskPermissionTiers,
+	ScheduledTaskTrigger,
 	SelectedSkill,
 } from "@shared/store/atoms";
 import { useSchedulerTaskFieldsModel } from "../hooks/useSchedulerTaskFieldsModel";
@@ -15,6 +17,8 @@ export interface SchedulerTaskDraft {
 	modelKey?: string | null;
 	executionMode?: ExecutionModeOverride;
 	skill?: SelectedSkill | null;
+	permissionTiers?: ScheduledTaskPermissionTiers;
+	trigger?: ScheduledTaskTrigger;
 }
 
 interface SchedulerTaskFieldsProps {

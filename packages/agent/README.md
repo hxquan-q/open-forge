@@ -436,3 +436,30 @@ for await (const event of agentLoopContinue(context, config)) {
 ## License
 
 MIT
+
+
+## Context Boundary
+
+```yaml
+purpose: General-purpose agent with transport abstraction, state management, and attachment support
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta/ai"
+```
+
+## Stateless tool scheduling
+
+`runAgentTurn` accepts `limits.maxParallelToolCalls` (default `4`; set `1` for serial execution).
+A tool must explicitly declare `executionMode: "parallel-safe"` to overlap with other safe tools.
+Unspecified modes and `"exclusive"` form barriers. This declaration covers the complete tool
+execution, including any result-policy wrappers; it does not grant permission or provide resource locking.
+
+Validation and authorization run in source order. A bounded window of safe executions may overlap,
+but final tool events and model-visible results are committed in source order. Steering drains at
+window boundaries: started calls retain their real results; only unstarted calls are skipped.
+Cancellation stops new dispatch and ignores late progress. The existing run deadline remains the
+boundary for tools that ignore cancellation; cancellation cannot undo an external side effect.
+
+Runtime hosts expose the same bound as `AgentCoreTurnEngineOptions.maxParallelToolCalls`.
+Scheduling metadata is not included in the provider's tool schema or persisted conversation format.

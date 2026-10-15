@@ -80,3 +80,13 @@ docs/           # feishu-setup, troubleshooting
 - ❌ Enterprise / multi-tenant mode (interface preserves the extension point)
 - ❌ Windows (macOS + linux first)
 - ❌ Modifying `desktop` / `coding-agent` / `api`
+
+
+## Context Boundary
+
+```yaml
+purpose: IM side-channel gateway (Go): bridges external IM platforms to the agent
+provides:  []
+consumes:  []
+internal_dependencies:  []
+```

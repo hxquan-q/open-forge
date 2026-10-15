@@ -212,6 +212,7 @@ export function createSystemApi(
 			onPresetsUpdated: (handler) => onIpcVoidEvent(ipc, "vetta:models:presets-updated", handler),
 			probe: (ref) => ipc.invoke("vetta:models:probe", ref),
 			fetchProviderModels: (providerName) => ipc.invoke("vetta:models:fetch-provider-models", providerName),
+			testProvider: (providerName) => ipc.invoke("vetta:models:test-provider", providerName),
 			onChanged: (handler) => onIpcEvent(ipc, "vetta:models:changed", handler),
 		},
 		mcp: {
@@ -235,6 +236,7 @@ export function createSystemApi(
 			getStatus: () => ipc.invoke("vetta:runtimes:get-status"),
 			reinstall: (type) => ipc.invoke("vetta:runtimes:reinstall", type),
 			redetect: () => ipc.invoke("vetta:runtimes:redetect"),
+			installGit: () => ipc.invoke("vetta:runtimes:install-git"),
 		},
 		settings: {
 			getServerUrl: () => ipc.invoke("vetta:settings:get-server-url"),
@@ -243,6 +245,10 @@ export function createSystemApi(
 			setServerToken: (token) => ipc.invoke("vetta:settings:set-server-token", token),
 			getServerRefreshToken: () => ipc.invoke("vetta:settings:get-server-refresh-token"),
 			setServerRefreshToken: (token) => ipc.invoke("vetta:settings:set-server-refresh-token", token),
+			getModelTransport: () => ipc.invoke("vetta:settings:get-model-transport"),
+			setModelTransport: (transport) => ipc.invoke("vetta:settings:set-model-transport", transport),
+			getSessionInterruptContinue: () => ipc.invoke("vetta:settings:get-session-interrupt-continue"),
+			setSessionInterruptContinue: (mode) => ipc.invoke("vetta:settings:set-session-interrupt-continue", mode),
 		},
 		subscription: {
 			getStatus: () => ipc.invoke("vetta:subscription:status"),

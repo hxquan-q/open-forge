@@ -6,6 +6,7 @@ import type {
 	PromptRequest,
 	RuntimeQueuePromptIfRunningOutcome,
 	RuntimeTurnPromptOutcome,
+	SessionAttachment,
 	SessionEvent,
 	SessionExecutionMode,
 	SessionStateSnapshot,
@@ -273,6 +274,18 @@ export class RuntimeHostSessionOperations {
 		return this.options.events.subscribe(sessionKey, this.requireSession(sessionId), handler);
 	}
 
+	attach(sessionId: string, handler: (event: SessionEvent) => void): SessionAttachment {
+		const sessionKey = this.options.directory.resolveSessionKey(sessionId);
+		const handle = this.requireSession(sessionId);
+		// 注册、运行中回合重放与历史读取之间不产生让出点：事件不可能落在快照与
+		// 订阅之间。本仓 subscribe 的回放即整回合有界尾部（4096，usage.update 清空），
+		// 等价于上游 replay:"turn" 的有界版，无需第二个回放面。
+		const unsubscribe = this.options.events.subscribe(sessionKey, handle, handler);
+		const history = [...handle.historyReader.readHistory()];
+		const runningTurnId = this.options.events.readCurrentTurnId(sessionKey);
+		return { unsubscribe, history, ...(runningTurnId ? { runningTurnId } : {}) };
+	}
+
 	readSubscriberDeliveryStats(handler: (event: SessionEvent) => void): SessionEventSubscriberQueueStats | undefined {
 		return this.options.events.readSubscriberDeliveryStats(handler);
 	}
@@ -348,6 +361,8 @@ export class RuntimeHostSessionOperations {
 			executionMode: handle.executionMode,
 			isStreaming: state.isStreaming,
 			currentTurnStartedAt: this.options.events.readCurrentTurnStartedAt(sessionKey),
+			currentTurnId: this.options.events.readCurrentTurnId(sessionKey),
+			lastEventAt: this.options.events.readLastEventAt(sessionKey),
 			messageCount: state.messageCount,
 			...(state.contextState ? { contextState: state.contextState } : {}),
 			contextPercent: state.contextPercent,

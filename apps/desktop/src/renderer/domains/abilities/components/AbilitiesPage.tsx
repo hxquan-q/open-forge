@@ -36,6 +36,13 @@ export function AbilitiesPage(): JSX.Element {
 		void navigate({ to: "/abilities", search: {}, replace: true });
 	}, [navigate]);
 
+	const openAbilityDetail = useCallback(
+		(detailId: string) => {
+			void navigate({ to: "/abilities", search: { detail: detailId } });
+		},
+		[navigate],
+	);
+
 	const [detailMounted, setDetailMounted] = useState(detail !== undefined);
 	// 关闭动画期间保留抽屉内容；只有 Vaul 报告退出动画完成后才卸载，
 	// 这样关闭意图发生时可立即释放遮罩，同时不牺牲退出动画。
@@ -46,7 +53,7 @@ export function AbilitiesPage(): JSX.Element {
 
 	return (
 		<>
-			<AbilitiesPageView model={model} />
+			<AbilitiesPageView model={model} onOpenAbilityDetail={openAbilityDetail} />
 			{shouldRenderDetail ? (
 				<AbilityDetailSheet
 					detailId={detail ?? null}

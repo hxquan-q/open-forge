@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 主进程 bundle 之外的运行时依赖，唯一事实源。
  *
@@ -24,6 +25,10 @@ const DEFINITIONS = [
 	// Windows 远程输入注入通过 koffi 调用 user32.dll：原生模块（dlopen），必须 unpack。
 	// 只有 win32 产物会走到这条路径（createRequire 懒加载）。
 	{ name: "koffi", platforms: ["win32"], unpack: true },
+	// win32 的进程内 SSH 传输（ControlMaster 在 Windows 不可用，见 BUG-0049）。
+	// 纯 JS；cpu-features 与 sshcrypto.node 是它的 optionalDependencies，
+	// stageDepTree 不会带入，运行时自动回退纯 JS 实现，不需要 unpack。
+	{ name: "ssh2", platforms: "all", unpack: false },
 	// 底部面板终端的 PTY。`@lydell/node-pty` 本身是纯 JS 壳，真正的 pty.node 在按
 	// 平台+架构拆分的包里，而 prepare-pack 的 stageDepTree 只走 `dependencies`、
 	// 不走 `optionalDependencies`——所以每个平台包都必须在这里显式声明，否则打出来的
@@ -53,12 +58,16 @@ function matchesFeature(definition, speechInputEnabled) {
  */
 export function resolvePackagedNativeDependencies(platformFamilies, { speechInputEnabled = true } = {}) {
 	const selected = DEFINITIONS.filter(
-		(definition) =>
-			matchesPlatform(definition, platformFamilies) && matchesFeature(definition, speechInputEnabled),
+		(definition) => matchesPlatform(definition, platformFamilies) && matchesFeature(definition, speechInputEnabled),
 	);
 	return {
 		required: selected.filter((definition) => !definition.optional).map((definition) => definition.name),
 		optional: selected.filter((definition) => definition.optional).map((definition) => definition.name),
+		// 每个选中包的目标平台族（"all" 或平台数组）。verify-staged-deps 用它判断
+		// 构建主机本机能不能装上这个包：像 sherpa-onnx-win-x64 这种 os/cpu 受限的
+		// 单平台包在其他系统的 runner 上必然缺席，只能算「异平台 required」，
+		// 真正的存在性校验由该目标平台的原生构建承担。
+		platformsByDep: Object.fromEntries(selected.map((definition) => [definition.name, definition.platforms])),
 		asarUnpack: selected
 			.filter((definition) => definition.unpack)
 			.map((definition) => `node_modules/${definition.name}/**/*`),
@@ -78,3 +87,7 @@ export function resolveMainBundleExternals({ speechInputEnabled = true } = {}) {
 		(definition) => definition.name,
 	);
 }
+
+/** Shared by Vite and dev-cache input discovery; subpaths have the same external boundary. */
+export const DEVELOPMENT_WORKSPACE_EXTERNAL =
+	/^@vetta\/(?:action-rpc|ai|coding-agent|remote-control|runtime-core)(?:\/|$)/;

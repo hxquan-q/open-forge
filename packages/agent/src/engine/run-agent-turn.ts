@@ -225,6 +225,7 @@ async function executeRun(
 			const batch = await interruptible(
 				executeRuntimeToolCalls({
 					calls: toolCalls,
+					maxParallelToolCalls: request.limits.maxParallelToolCalls,
 					tools,
 					messages: [...state.messages],
 					modelCallIndex,
@@ -417,7 +418,11 @@ function createRunSignal(
 }
 
 function interruptible<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-	if (signal.aborted) return Promise.reject(abortError(signal.reason));
+	if (signal.aborted) {
+		// The operation may have synchronously triggered cancellation before attachment.
+		void promise.catch(() => undefined);
+		return Promise.reject(abortError(signal.reason));
+	}
 	return new Promise((resolve, reject) => {
 		const onAbort = () => reject(abortError(signal.reason));
 		signal.addEventListener("abort", onAbort, { once: true });

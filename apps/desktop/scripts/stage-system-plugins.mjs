@@ -1,6 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join, normalize, resolve } from "node:path";
 import AdmZip from "adm-zip";
+import {
+	SYSTEM_PLUGINS_MANIFEST_FILENAME,
+	findManifestEntry,
+	readSystemPluginsManifest,
+	resolveSystemPluginsManifestPath,
+	selectManifestEntries,
+	verifyPluginArchiveIntegrity,
+	writeSystemPluginsManifest,
+} from "./plugins-integrity-manifest.mjs";
 
 const desktopAppDir = join(import.meta.dirname, "..");
 export const presetsDir = join(desktopAppDir, "..", "..", "packages", "plugins", "presets");
@@ -155,6 +164,10 @@ export function stageSystemPluginsFromArchives(targetDir, logPrefix = "system-pl
 	}
 
 	let count = 0;
+	// 完整性清单是内置插件集的指纹锚点：归档解包前校验，指纹不符即拒绝，
+	// 避免把被替换或版本漂移的归档装进应用。
+	const integrityManifest = readSystemPluginsManifest(resolveSystemPluginsManifestPath(presetsDir));
+	const stagedManifestPath = join(targetDir, SYSTEM_PLUGINS_MANIFEST_FILENAME);
 	for (const name of presetNames) {
 		if (selectedPluginIds && !selectedPluginIds.has(name)) continue;
 
@@ -171,6 +184,21 @@ export function stageSystemPluginsFromArchives(targetDir, logPrefix = "system-pl
 			throw new Error(`[${logPrefix}] 缺少插件归档：${archivePath}；请先运行 build:presets`);
 		}
 
+		const integrityEntry = findManifestEntry(integrityManifest, sourceManifest.id);
+		if (!integrityEntry) {
+			throw new Error(
+				`[${logPrefix}] 内置插件完整性清单缺少 ${sourceManifest.id}@${sourceManifest.version}：` +
+					`${resolveSystemPluginsManifestPath(presetsDir)}。先运行 \`bun run build:presets\` 重新生成归档与清单。`,
+			);
+		}
+		if (integrityEntry.version !== sourceManifest.version) {
+			throw new Error(
+				`[${logPrefix}] 插件版本与完整性清单不一致：${sourceManifest.id} 源版本 ${sourceManifest.version}、` +
+					`清单版本 ${integrityEntry.version}。先运行 \`bun run build:presets\` 重新生成归档与清单。`,
+			);
+		}
+		verifyPluginArchiveIntegrity({ archivePath, entry: integrityEntry });
+
 		const zip = new AdmZip(archivePath);
 		for (const entry of zip.getEntries()) {
 			validateArchiveEntry(entry.entryName, archivePath);
@@ -185,6 +213,17 @@ export function stageSystemPluginsFromArchives(targetDir, logPrefix = "system-pl
 
 		count += 1;
 		console.log(`[${logPrefix}] staged ${sourceManifest.id}@${sourceManifest.version} <- ${archivePath}`);
+	}
+
+	// 把清单副本写进 staging：运行时据此在加载前校验每个插件的 plugin.json 指纹。
+	if (integrityManifest !== null) {
+		const stagedIds = new Set(
+			readdirSync(targetDir).filter((entry) => {
+				const pluginDir = join(targetDir, entry);
+				return statSync(pluginDir).isDirectory() && existsSync(join(pluginDir, "plugin.json"));
+			}),
+		);
+		writeSystemPluginsManifest(stagedManifestPath, selectManifestEntries(integrityManifest, stagedIds));
 	}
 
 	console.log(`[${logPrefix}] 完成，本次 staging ${count} 个系统插件`);

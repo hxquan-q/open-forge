@@ -7,6 +7,13 @@
 
 | 主题 | 来源 |
 |---|---|
+| 上游 0.5.60–0.5.64 同步审计与候选清单（网关重试/流式短语/传输设置/模型参数回填/压缩步骤等 adopt 判定与排除证据） | [RESEARCH-0025](RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md) |
+| Pi 1.0 工作流帖与官方文档的产品层设计对照（MCP 暴露、会话树状态、授权审计、自治边界、文件回退） | [RESEARCH-0024](RESEARCH-0024-pi-workflow-post-design-review.md) |
+| 版本迭代与发版设计（上游 Vetta、业界做法、本仓缺口） | [RESEARCH-0023](RESEARCH-0023-version-management-and-release-design.md) |
+| 原始 Vetta 最新非手机优化与本仓缺口 | [RESEARCH-0022](RESEARCH-0022-upstream-nonmobile-gap-audit.md) |
+| Pi 与 DeepSeek Harness / Desktop 能力吸收评估 | [RESEARCH-0021](RESEARCH-0021-pi-deepseek-harness-absorption.md) |
+| Desktop 字体设置与字体授权 | [RESEARCH-0020](RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
+| 集成后可靠性与验证成本审查 | [RESEARCH-0019](RESEARCH-0019-post-integration-optimization-audit.md) |
 | 架构、Agent Loop、Composition | `exprot/architecture-overview.md`、`agent-loop.md`、`composition.md` |
 | Runtime 子系统 | `exprot/runtime-subsystems.md`、`runtime-mapping.md` |
 | Pi/DSH 内核评估 | `exprot/kernel-replacement-feasibility.md` |
@@ -21,6 +28,12 @@
 | 多智能体编排协作对照（Cursor/Claude Code/Codex/Pi） | [`RESEARCH-0008`](RESEARCH-0008-multi-agent-orchestration-comparison.md) |
 | DeepEval 开发期旁路 | [`RESEARCH-0006`](RESEARCH-0006-deepeval-agent-quality.md) |
 | DeepEval / Promptfoo / MASEval 三框架旁路 | [`RESEARCH-0009`](RESEARCH-0009-three-framework-agent-eval.md) |
+| Avernet 治理/TaskGuard/Skills 池化与 WorkDaddy 无人值守自动化对照 | [`RESEARCH-0012`](RESEARCH-0012-avernet-workdaddy-references.md) |
+| VS Code 内存足迹与发布体积优化机制源码取证 | [`RESEARCH-0013`](RESEARCH-0013-vscode-footprint-optimization.md) |
+| Skill 落盘布局审计（pool/active 必要性裁决，TASK-0113） | [`RESEARCH-0014`](RESEARCH-0014-skill-layout-pool-active-audit.md) |
+| Cordis 元框架机制调研（fiber/effect/inject 与可借鉴点） | [`RESEARCH-0015`](RESEARCH-0015-cordis-meta-framework.md) |
+| Northline 长程 Agent 委派与 OpenVetta Task/Worktree 治理对照 | [`RESEARCH-0016`](RESEARCH-0016-northline-openvetta-reference.md) |
+| 开发范式：OpenVetta、工程控制论与 Matt Pocock 方法对照 | [`RESEARCH-0017`](RESEARCH-0017-development-paradigm-synthesis.md) |
 
 ## Research Note 约束
 

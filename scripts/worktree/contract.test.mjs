@@ -73,8 +73,10 @@ describe("scope path validation", () => {
 		}
 	});
 
-	it("normalizes Windows separators and trailing slashes", () => {
+	it("normalizes Windows separators, dot segments and trailing slashes", () => {
 		expect(normalizeContractPath("packages\\ai\\src\\")).toEqual({ path: "packages/ai/src" });
+		expect(normalizeContractPath("apps/desktop/./src")).toEqual({ path: "apps/desktop/src" });
+		expect(normalizeContractPath("./.").problem).toContain("repository root");
 	});
 
 	it("rejects paths that leave the repository or name nothing", () => {
@@ -104,6 +106,7 @@ describe("scope overlap", () => {
 		["packages/ai/src", "packages/ai/test", false],
 		["packages/ai", "packages/agent", false],
 		["packages/ai/src", "packages/ai/src-extra", false],
+		["apps/desktop/./src", "apps/desktop/src", true],
 		["packages/**/package.json", "packages/ai/src", true],
 		["**/package.json", "apps/desktop/src/main.ts", true],
 	];
@@ -193,6 +196,33 @@ describe("per-task contract findings", () => {
 	it("accepts a parallel task executed in the integration checkout", () => {
 		const parsed = task({ ...base, branch: "forge/dev", worktree: "unassigned（forge/dev 主工作区）" });
 		expect(findTaskProblems(parsed, { knownIds: new Set(["TASK-0100"]), strict: true })).toEqual([]);
+	});
+
+	it("rejects an active non-parallel task that declares a separate worktree", () => {
+		const parsed = task({
+			...base,
+			execution: "serial",
+			branch: "task/TASK-0100-probe-task",
+			worktree: "../open-forge-wt/task-0100-probe-task",
+			base_commit: "abc1234",
+			write_paths: ["packages/ai/src"],
+		});
+		expect(
+			findTaskProblems(parsed)
+				.map((finding) => finding.message)
+				.join("\\n"),
+		).toContain("active serial task must not declare an independent worktree");
+	});
+
+	it("does not retroactively reject completed serial task worktree history", () => {
+		const parsed = task({
+			...base,
+			status: "done",
+			execution: "serial",
+			branch: "forge/dev",
+			worktree: "../open-forge-wt/task-0100-probe-task",
+		});
+		expect(findTaskProblems(parsed)).toEqual([]);
 	});
 
 	it("errors when id and filename disagree, because depends_on resolves by id", () => {
@@ -324,11 +354,24 @@ describe("concurrent scope conflicts", () => {
 		expect(findScopeConflicts(tasks)).toEqual([]);
 	});
 
+	it("detects overlapping scopes when a declaration contains a dot segment", () => {
+		const tasks = [
+			worktreeTask("TASK-0100", { write_paths: ["apps/desktop/./src"] }),
+			worktreeTask("TASK-0101", { write_paths: ["apps/desktop/src"] }),
+		];
+		expect(findScopeConflicts(tasks)).toHaveLength(1);
+	});
+
 	it("stays silent when conflicts_with already records the relationship", () => {
 		const tasks = [
 			worktreeTask("TASK-0100", { conflicts_with: ["TASK-0101"] }),
 			worktreeTask("TASK-0101", { conflicts_with: ["TASK-0100"] }),
 		];
+		expect(findScopeConflicts(tasks)).toEqual([]);
+	});
+
+	it("ignores serial tasks because they do not claim concurrent worktree scope", () => {
+		const tasks = [worktreeTask("TASK-0100"), worktreeTask("TASK-0101", { execution: "serial" })];
 		expect(findScopeConflicts(tasks)).toEqual([]);
 	});
 

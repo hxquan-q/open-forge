@@ -221,6 +221,29 @@ export type { AppshotAttachment, MentionedFile } from "@shared/conversation";
 
 export const chatMessagesAtom = atom<ChatTimelineItem[]>([]);
 
+// ─── Transcript 游标分页窗口（TASK-0050）───
+
+/** Virtuoso firstItemIndex 基数：向上翻页时前移，留出负向空间。 */
+export const TRANSCRIPT_WINDOW_FIRST_INDEX = 1_000_000;
+
+export interface TranscriptWindowState {
+	/** 该窗口状态归属的 sessionPath；不匹配当前列表即视为无分页。 */
+	readonly sessionPath: string | null;
+	/** Virtuoso firstItemIndex：prepend 后前移，保住视口锚点。 */
+	readonly firstItemIndex: number;
+	/** 已加载窗口旧端之外还有未加载历史页。 */
+	readonly hasMore: boolean;
+	/** 正在加载更早页（抑制重复 startReached 触发）。 */
+	readonly loadingOlder: boolean;
+}
+
+export const transcriptWindowStateAtom = atom<TranscriptWindowState>({
+	sessionPath: null,
+	firstItemIndex: TRANSCRIPT_WINDOW_FIRST_INDEX,
+	hasMore: false,
+	loadingOlder: false,
+});
+
 /** Pending latest-message replacement, deferred until send. */
 export const pendingMessageEditAtom = atom<PendingMessageEdit | null>(null);
 

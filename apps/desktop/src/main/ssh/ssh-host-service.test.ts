@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "../../shared/notification-preferences.js";
 import type { DesktopConfig } from "../config/desktop-config-store.js";
 import {
 	SshHostAlreadyExistsError,
@@ -9,10 +11,12 @@ import {
 
 function createFixture(initial?: Partial<DesktopConfig>) {
 	let config: DesktopConfig = {
+		schemaVersion: 2,
 		projects: [],
 		archivedProjects: [],
 		workspacePath: "/workspace",
 		defaultExecutionMode: "full-access",
+		notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
 		...initial,
 	};
 	const broadcastChanged = vi.fn();

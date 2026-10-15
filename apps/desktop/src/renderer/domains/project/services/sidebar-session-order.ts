@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PinnedSessionPaths, SessionInfo } from "@shared/store/atoms";
 
 export interface SidebarSessionOrdering<T extends SessionInfo = SessionInfo> {
@@ -5,6 +6,20 @@ export interface SidebarSessionOrdering<T extends SessionInfo = SessionInfo> {
 	hasMore: boolean;
 	hiddenCount: number;
 	visible: T[];
+}
+
+/**
+ * 归档只收窄侧边栏可见性：归档中的会话整行消失，折叠计数随之减少，
+ * 磁盘文件与命令面板搜索都不受影响（归档 ≠ 删除）。
+ * 无归档时原样返回，保住上游 useMemo 的引用稳定。
+ */
+export function withoutArchivedSessions<T extends SessionInfo>(
+	sessions: readonly T[],
+	archivedPaths: ReadonlySet<string>,
+): readonly T[] {
+	if (archivedPaths.size === 0) return sessions;
+	const kept = sessions.filter((session) => !archivedPaths.has(session.path));
+	return kept.length === sessions.length ? sessions : kept;
 }
 
 export function orderSidebarSessions<T extends SessionInfo>(

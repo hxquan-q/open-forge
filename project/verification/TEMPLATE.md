@@ -8,8 +8,8 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 related_requirement: []
 related_plan: []
-related_task: []
-related_bug: []
+related_tasks: []
+related_bugs: []
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -21,11 +21,18 @@ related_bug: []
 
 ## 环境与输入
 
-## 实际命令
+- 提交 / 版本：
+- 操作系统 / Runner：
+- Bun / Node 或其他相关工具版本：
+- 输入与前置状态：
+
+## 实际命令与 CI 记录
 
 ```text
 <command>
 ```
+
+- CI run URL / job（若适用）：
 
 ## 结果
 

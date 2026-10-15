@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+import { streamSimple } from "@vetta/ai";
 import {
 	RuntimeAgentSessionAssemblyBackend,
 	RuntimeOwnershipBinding,
@@ -40,6 +41,7 @@ import {
 	type CodingAgentCompositionAgentRuntimeScope,
 	createCodingAgentCompositionAgentRuntimeScope,
 } from "./agent-runtime/composition-agent-runtime.js";
+import { createAvailableSkillNamesProvider } from "./available-skill-names.js";
 import { createCodingAgentChildCompositionFactory } from "./subagent/child-composition-policy.js";
 
 export type { CodingAgentRuntimeToolRegistration } from "../runtime-contracts/index.js";
@@ -139,7 +141,12 @@ async function assembleCodingAgentRuntimeComposition(
 		agentDir: options.agentDir,
 		scenario,
 		activation: options.activation,
+		// 二进制读提示需要知道「当前会话真有哪些技能」；来源与 invoke_skill 共享同一份资源源，
+		// 缺省（无 promptResourceSource）时按「没有可用技能」处理，绝不自造技能名（BUG-0025）。
+		availableSkillNames: createAvailableSkillNamesProvider(sessionInitializationProfile.promptResourceSource),
 		knowledgeRuntime: options.knowledgeRuntime,
+		researchScope: options.researchScope,
+		datasetProfile: options.datasetProfile,
 		inheritedMcpView,
 		mcpSource: options.mcpSource,
 		indexes: resourceRegistry.indexes,
@@ -249,7 +256,7 @@ async function assembleCodingAgentRuntimeComposition(
 			}),
 		},
 		engine: {
-			streamFn: options.streamFn,
+			streamFn: withConfiguredTransport(options.streamFn, options.runtimeHostModelSettings),
 			tracer: options.tracer,
 			tracing: options.tracing,
 		},
@@ -332,6 +339,15 @@ async function assembleCodingAgentRuntimeComposition(
 }
 
 const EMPTY_MCP_TOOL_VIEW: McpRuntimeToolView = Object.freeze({ tools: Object.freeze([]) });
+
+function withConfiguredTransport(
+	streamFn: CodingAgentRuntimeCompositionOptions["streamFn"],
+	settings: CodingAgentRuntimeCompositionOptions["runtimeHostModelSettings"],
+): CodingAgentRuntimeCompositionOptions["streamFn"] {
+	if (!settings) return streamFn;
+	const invoke = streamFn ?? streamSimple;
+	return (model, context, options) => invoke(model, context, { ...options, transport: settings.getTransport() });
+}
 
 function readCodingAgentSessionOptions(request: RuntimeSessionCreateRequest): CodingAgentRuntimeSessionOptions {
 	const options = requireCodingAgentRuntimeSessionOptions(request.agent?.sessionConfiguration);

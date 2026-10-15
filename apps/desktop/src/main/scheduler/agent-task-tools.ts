@@ -30,6 +30,7 @@ export function createSchedulerServiceTaskStore(service: DesktopSchedulerTaskPor
 				...(input.modelKey !== undefined ? { modelKey: input.modelKey } : {}),
 				...(input.executionMode !== undefined ? { executionMode: input.executionMode } : {}),
 				...(input.skill !== undefined ? { skill: input.skill } : {}),
+				...(input.permissionTiers !== undefined ? { permissionTiers: input.permissionTiers } : {}),
 			}),
 		updateTask: async (taskId: string, patch: AgentScheduledTaskPatch) => {
 			try {
@@ -43,6 +44,7 @@ export function createSchedulerServiceTaskStore(service: DesktopSchedulerTaskPor
 					...(patch.modelKey !== undefined ? { modelKey: patch.modelKey } : {}),
 					...(patch.executionMode !== undefined ? { executionMode: patch.executionMode } : {}),
 					...(patch.skill !== undefined ? { skill: patch.skill } : {}),
+					...(patch.permissionTiers !== undefined ? { permissionTiers: patch.permissionTiers } : {}),
 				});
 			} catch (error) {
 				if (isSchedulerTaskNotFound(error)) return undefined;

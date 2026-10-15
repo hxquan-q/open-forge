@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 对话 / Agent / 命令 / 文件 / 网络 / 存储 / 设置 / i18n API
 
 `ctx` 上除 UI 注册外的能力出口，以及配套 React hook。
@@ -139,7 +140,7 @@ ctx.agent.registerTool({
 
 | slug | 场景 |
 |---|---|
-| `conversation` | 普通对话（`~/.vetta/conversation`） |
+| `conversation` | 普通对话（`~/.openforge/conversation`） |
 | `project` | 普通项目中对话 |
 | `im-claw` | Claw IM 对话（飞书/微信网关） |
 | `batch` | 批量任务 |
@@ -471,10 +472,23 @@ interface PluginFsApi {
   delete(targetPath): Promise<void>;                         // fs.write
   move(sourcePath, destDir): Promise<void>;                  // fs.write
   createDirectory(dirPath): Promise<void>;                   // fs.write
-  listFilesRecursive(rootPath): Promise<{ name; path; relPath }[]>; // fs.read
+  listFilesRecursive(rootPath, options?): Promise<{ name; path; relPath }[]>; // fs.read
 }
 // PluginFsEntry: { name, path, isDirectory, size, modifiedAt }
 ```
+
+`listFilesRecursive` 跳过点开头的条目和宿主默认的忽略目录（`node_modules`、`.git`、`dist`、`build`、`out`、`target`、`coverage`、`.next`、`.turbo`、`.cache`），最多返回 10,000 个文件。本地项目和 `ssh://` 远程项目都支持。
+
+大仓库里只找某几种文件（比如 monorepo 里所有的 `package.json`）时，用 `options` 让宿主在遍历时就筛好，不要列出全部文件再自己筛。那样会先撞到 10,000 的上限，排在后面的项目就漏掉了：
+
+```ts
+const manifests = await ctx.fs.listFilesRecursive(cwd, {
+  names: ["package.json", "Makefile"], // 只要这些文件名（精确匹配），上限按命中数算
+  ignoredDirectories: ["vendor"],     // 在默认忽略目录之外再跳过这些
+});
+```
+
+两个字段都只接受单个文件名或目录名（不能带 `/`，也不能是 `.` / `..`），每个最多 64 项。`options` 从 Plugin API `2.9.0` 起可用；更旧的宿主会忽略它并返回全部文件，所以要兼容旧宿主的插件应当自己再按文件名筛一遍。
 
 同一份 `fs` API 也通过工具 handler 的 `host.fs` 暴露给 agent 工具 handler。
 
@@ -497,7 +511,7 @@ const response = await ctx.network.request<{ data: unknown[] }>({
 
 ## 插件私有存储 API
 
-`ctx.storage` 是按插件 id 隔离的持久化文件命名空间，物理目录位于 `~/.vetta/plugin-data/<plugin-id>/`。
+`ctx.storage` 是按插件 id 隔离的持久化文件命名空间，物理目录位于 `~/.openforge/plugin-data/<plugin-id>/`。
 公开路径都是相对路径；路径穿越和宿主保留的 `.storage` 路径会被拒绝。调用绑定当前插件的 capability
 session，不能伪造其他插件 id。API 以文件和字节为核心，JSON 只是插件选择的序列化格式。
 

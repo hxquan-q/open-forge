@@ -1,7 +1,8 @@
+// Modified by The Open Forge contributors.
 import { ImageResponse } from "next/og";
 
 export const socialImageSize = { width: 1200, height: 630 };
-export const socialImageAlt = "Vetta Documentation";
+export const socialImageAlt = "Open Forge Documentation";
 export const socialImageContentType = "image/png";
 
 export function createSocialImage(): ImageResponse {
@@ -45,7 +46,7 @@ export function createSocialImage(): ImageResponse {
 						color: "#dd6b55",
 					}}
 				>
-					VETTA
+					OPEN FORGE
 				</div>
 				<div
 					style={{
@@ -92,7 +93,7 @@ export function createSocialImage(): ImageResponse {
 					letterSpacing: 1,
 				}}
 			>
-				<div style={{ display: "flex" }}>docs.openvetta.com</div>
+				<div style={{ display: "flex" }}>Open Forge Documentation</div>
 				<div style={{ display: "flex", color: "#dd6b55", letterSpacing: 3 }}>LOCAL FIRST</div>
 			</div>
 		</div>,

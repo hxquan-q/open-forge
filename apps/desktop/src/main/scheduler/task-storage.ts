@@ -2,6 +2,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
+import {
+	type AutomationTaskTrigger,
+	normalizeAutomationTaskTrigger,
+	normalizeUnattendedPermissionTiers,
+	type UnattendedPermissionTiers,
+} from "@vetta/coding-agent/runtime";
 import type { SessionExecutionMode } from "@vetta/runtime-core";
 import { type ExecutionModeOverride, normalizeExecutionModeOverride } from "../execution-mode.js";
 
@@ -15,6 +21,9 @@ export interface ScheduledTaskSkillRef {
 	type: "skill" | "scene";
 }
 
+export type ScheduledTaskPermissionTiers = UnattendedPermissionTiers;
+export type ScheduledTaskTrigger = AutomationTaskTrigger;
+
 export interface ScheduledTask {
 	id: string;
 	name: string;
@@ -27,6 +36,10 @@ export interface ScheduledTask {
 	modelKey?: string;
 	executionMode?: ExecutionModeOverride;
 	skill?: ScheduledTaskSkillRef;
+	/** 无人值守授权分档（ADR-0132）；缺省时审批行为与改前一致。 */
+	permissionTiers?: ScheduledTaskPermissionTiers;
+	/** 触发器；缺省等同 cron。 */
+	trigger?: ScheduledTaskTrigger;
 	createdAt: number;
 	updatedAt: number;
 	lastRunAt: number | null;
@@ -56,7 +69,7 @@ async function ensureDirectories(): Promise<void> {
 	await mkdir(RECORDS_DIR, { recursive: true });
 }
 
-/** 回填旧任务缺失字段，归一 executionMode。 */
+/** 回填旧任务缺失字段，归一 executionMode；非法 permissionTiers 丢弃以保持兼容。 */
 function backfillTasks(tasks: ScheduledTask[]): ScheduledTask[] {
 	for (const task of tasks) {
 		if (!("isOnce" in task)) {
@@ -66,6 +79,24 @@ function backfillTasks(tasks: ScheduledTask[]): ScheduledTask[] {
 			(task as ScheduledTask).cwd = join(getVettaHomePath(), "workspace");
 		}
 		task.executionMode = normalizeExecutionModeOverride(task.executionMode, "full-access");
+		if (task.permissionTiers !== undefined) {
+			const normalized = normalizeUnattendedPermissionTiers(task.permissionTiers);
+			if (normalized === undefined) {
+				delete task.permissionTiers;
+			} else {
+				task.permissionTiers = normalized;
+			}
+		}
+		if (task.trigger !== undefined) {
+			const normalizedTrigger = normalizeAutomationTaskTrigger(task.trigger);
+			if (normalizedTrigger === undefined) {
+				delete task.trigger;
+			} else if (normalizedTrigger.type === "cron") {
+				delete task.trigger;
+			} else {
+				task.trigger = normalizedTrigger;
+			}
+		}
 	}
 	return tasks;
 }
@@ -136,10 +167,15 @@ let mutationChain: Promise<void> = Promise.resolve();
 export async function saveTasks(tasks: ScheduledTask[]): Promise<void> {
 	const run = async (): Promise<void> => {
 		await ensureDirectories();
-		const normalized = tasks.map((task) => ({
-			...task,
-			executionMode: normalizeExecutionModeOverride(task.executionMode, "full-access"),
-		}));
+		const normalized = tasks.map((task) => {
+			const { permissionTiers: rawTiers, ...rest } = task;
+			const permissionTiers = normalizeUnattendedPermissionTiers(rawTiers);
+			return {
+				...rest,
+				executionMode: normalizeExecutionModeOverride(rest.executionMode, "full-access"),
+				...(permissionTiers !== undefined ? { permissionTiers } : {}),
+			};
+		});
 		// 写临时文件后 rename：rename 在同一文件系统是原子操作，杜绝半截写入。
 		const tmp = `${TASKS_FILE}.tmp-${process.pid}-${Date.now()}`;
 		await writeFile(tmp, JSON.stringify(normalized, null, 2), "utf-8");

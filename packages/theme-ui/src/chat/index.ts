@@ -30,6 +30,7 @@ export type { ActionButtonBarItem, ActionButtonBarViewProps } from "./ActionButt
 export { ActionButtonBarView } from "./ActionButtonBarView";
 export type { AgentAvatarSize, AgentAvatarViewProps } from "./AgentAvatarView";
 export { AgentAvatarView } from "./AgentAvatarView";
+export { AnnotationComposer, AnnotationHistoryView, AnnotationTurnView } from "./AnnotationViews";
 export type { AppshotCardViewLabels, AppshotCardViewProps } from "./AppshotCardView";
 export { AppshotCardView } from "./AppshotCardView";
 export type {
@@ -115,6 +116,7 @@ export type {
 export { AnchorEditsFallbackView, DiffPreviewView, EditTextFallbackView } from "./EditDiffView";
 export type {
 	ExecutionModeOptionView,
+	ExecutionModeSandboxNotice,
 	ExecutionModeSelectorViewProps,
 } from "./ExecutionModeSelectorView";
 export { ExecutionModeSelectorView } from "./ExecutionModeSelectorView";

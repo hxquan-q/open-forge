@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { type Static, Type } from "@sinclair/typebox";
+import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type { RuntimeToolResult } from "@vetta/runtime-core/kernel";
 import { defineSessionExtensionFunction } from "@vetta/runtime-core/session-extensions";
@@ -58,107 +58,107 @@ export const BrowserElementRefSchema = Type.Object(
 
 export type BrowserElementRef = Static<typeof BrowserElementRefSchema>;
 
-const BrowserTabSnapshotInputSchema = Type.Object(
-	{
-		action: Type.Literal("snapshot"),
-		description: Type.Optional(Type.String()),
-		interactiveOnly: Type.Optional(Type.Boolean()),
-	},
-	{ additionalProperties: false },
-);
+/** snapshot 打印给模型的不透明编码串；模型可原样回传，由 `readBrowserTabToolInput` 解码。 */
+const BrowserEncodedElementRefSchema = Type.String({
+	pattern: "^v1:\\d+:[A-Za-z0-9_-]+$",
+	description: "Opaque elementRef token printed by snapshot; pass it back verbatim",
+});
 
-const BrowserTabInspectInputSchema = Type.Object(
-	{
-		action: Type.Literal("inspect"),
-		description: Type.Optional(Type.String()),
-		elementRef: BrowserElementRefSchema,
-	},
-	{ additionalProperties: false },
-);
+const BrowserElementRefInputSchema = Type.Union([BrowserElementRefSchema, BrowserEncodedElementRefSchema]);
 
-const BrowserTabScreenshotInputSchema = Type.Object(
-	{
-		action: Type.Literal("screenshot"),
-		description: Type.Optional(Type.String()),
-		elementRef: Type.Optional(BrowserElementRefSchema),
-		fullPage: Type.Optional(Type.Boolean()),
-	},
-	{ additionalProperties: false },
-);
+/** 按 elementRef 形态生成 9 个动作分支，避免对象与编码串两种形态各维护一份动作定义。 */
+function buildBrowserTabActionSchemas<TRef extends TSchema>(elementRef: () => TRef) {
+	return [
+		Type.Object(
+			{
+				action: Type.Literal("snapshot"),
+				description: Type.Optional(Type.String()),
+				interactiveOnly: Type.Optional(Type.Boolean()),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("inspect"),
+				description: Type.Optional(Type.String()),
+				elementRef: elementRef(),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("screenshot"),
+				description: Type.Optional(Type.String()),
+				elementRef: Type.Optional(elementRef()),
+				fullPage: Type.Optional(Type.Boolean()),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("wait"),
+				description: Type.Optional(Type.String()),
+				timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 60_000 })),
+				elementRef: Type.Optional(elementRef()),
+				state: Type.Optional(Type.Union([Type.Literal("visible"), Type.Literal("hidden"), Type.Literal("stable")])),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("scroll"),
+				description: Type.Optional(Type.String()),
+				elementRef: Type.Optional(elementRef()),
+				deltaX: Type.Optional(Type.Number()),
+				deltaY: Type.Optional(Type.Number()),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("click"),
+				description: Type.Optional(Type.String()),
+				elementRef: elementRef(),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("fill"),
+				description: Type.Optional(Type.String()),
+				elementRef: elementRef(),
+				value: Type.String({ description: "Text to type; host must not echo secrets in tool content" }),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("press"),
+				description: Type.Optional(Type.String()),
+				key: Type.String({ minLength: 1, maxLength: 32, description: "Key name such as Enter, Tab, or a" }),
+				elementRef: Type.Optional(elementRef()),
+			},
+			{ additionalProperties: false },
+		),
+		Type.Object(
+			{
+				action: Type.Literal("navigate"),
+				description: Type.Optional(Type.String()),
+				url: Type.String({ minLength: 1, description: "http(s) URL only; host allowlist is [*]" }),
+			},
+			{ additionalProperties: false },
+		),
+	];
+}
 
-const BrowserTabWaitInputSchema = Type.Object(
-	{
-		action: Type.Literal("wait"),
-		description: Type.Optional(Type.String()),
-		timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 60_000 })),
-		elementRef: Type.Optional(BrowserElementRefSchema),
-		state: Type.Optional(Type.Union([Type.Literal("visible"), Type.Literal("hidden"), Type.Literal("stable")])),
-	},
-	{ additionalProperties: false },
-);
+/** 发给 Provider 的入参 Schema：elementRef 接受 snapshot 打印的编码串或已解码的对象。 */
+export const BrowserTabToolInputSchema = Type.Union(buildBrowserTabActionSchemas(() => BrowserElementRefInputSchema));
 
-const BrowserTabScrollInputSchema = Type.Object(
-	{
-		action: Type.Literal("scroll"),
-		description: Type.Optional(Type.String()),
-		elementRef: Type.Optional(BrowserElementRefSchema),
-		deltaX: Type.Optional(Type.Number()),
-		deltaY: Type.Optional(Type.Number()),
-	},
-	{ additionalProperties: false },
-);
+/** 运行时校验用的规范化 Schema：elementRef 只接受对象，编码串在校验前已被解码。 */
+const BrowserTabNormalizedInputSchema = Type.Union(buildBrowserTabActionSchemas(() => BrowserElementRefSchema));
 
-const BrowserTabClickInputSchema = Type.Object(
-	{
-		action: Type.Literal("click"),
-		description: Type.Optional(Type.String()),
-		elementRef: BrowserElementRefSchema,
-	},
-	{ additionalProperties: false },
-);
-
-const BrowserTabFillInputSchema = Type.Object(
-	{
-		action: Type.Literal("fill"),
-		description: Type.Optional(Type.String()),
-		elementRef: BrowserElementRefSchema,
-		value: Type.String({ description: "Text to type; host must not echo secrets in tool content" }),
-	},
-	{ additionalProperties: false },
-);
-
-const BrowserTabPressInputSchema = Type.Object(
-	{
-		action: Type.Literal("press"),
-		description: Type.Optional(Type.String()),
-		key: Type.String({ minLength: 1, maxLength: 32, description: "Key name such as Enter, Tab, or a" }),
-		elementRef: Type.Optional(BrowserElementRefSchema),
-	},
-	{ additionalProperties: false },
-);
-
-const BrowserTabNavigateInputSchema = Type.Object(
-	{
-		action: Type.Literal("navigate"),
-		description: Type.Optional(Type.String()),
-		url: Type.String({ minLength: 1, description: "http(s) URL only; host allowlist is [*]" }),
-	},
-	{ additionalProperties: false },
-);
-
-export const BrowserTabToolInputSchema = Type.Union([
-	BrowserTabSnapshotInputSchema,
-	BrowserTabInspectInputSchema,
-	BrowserTabScreenshotInputSchema,
-	BrowserTabWaitInputSchema,
-	BrowserTabScrollInputSchema,
-	BrowserTabClickInputSchema,
-	BrowserTabFillInputSchema,
-	BrowserTabPressInputSchema,
-	BrowserTabNavigateInputSchema,
-]);
-
-export type BrowserTabToolInput = Static<typeof BrowserTabToolInputSchema>;
+/** 交给宿主的规范化入参：elementRef 恒为 `{ id, pageRevision }`。 */
+export type BrowserTabToolInput = Static<typeof BrowserTabNormalizedInputSchema>;
 
 export const BrowserTabToolErrorSchema = Type.Object(
 	{
@@ -229,6 +229,7 @@ export const BROWSER_TAB_TOOL_DESCRIPTION = [
 	"Operate the in-app Browser WebView that the user is looking at (same page, same session).",
 	"Read actions: snapshot, inspect, screenshot, wait, scroll. Write actions: click, fill, press, navigate.",
 	"snapshot returns an interactive accessibility tree with elementRef values that embed pageRevision.",
+	"Pass elementRef back exactly as snapshot printed it (the opaque v1:<pageRevision>:<id> token); {id, pageRevision} is accepted too.",
 	"After navigation or DOM change, old refs return stale_reference — take a new snapshot; never guess a new locator.",
 	"navigate accepts only http/https URLs. This tool cannot evaluate JavaScript, read cookies, or export tokens.",
 	"This is not the agent-browser CLI; that Skill uses a separate browser session.",
@@ -275,10 +276,23 @@ export function isAllowedBrowserTabUrl(url: string): boolean {
 	}
 }
 
+/**
+ * 模型从 snapshot 结果文本里拿到的是 `v1:<pageRevision>:<id>` 编码串，原样回传是最自然的用法；
+ * 校验前统一解码成对象 ref，对象形式保持不变。解码失败的字符串原样保留，交给 Schema 判非法。
+ */
+function normalizeBrowserElementRefInput(value: unknown): unknown {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+	const record = value as Record<string, unknown>;
+	if (typeof record.elementRef !== "string") return value;
+	const ref = readBrowserElementRef(record.elementRef);
+	return ref ? { ...record, elementRef: ref } : value;
+}
+
 export function readBrowserTabToolInput(value: unknown): BrowserTabToolInput | undefined {
-	if (!Value.Check(BrowserTabToolInputSchema, value)) return undefined;
-	if (value.action === "navigate" && !isAllowedBrowserTabUrl(value.url)) return undefined;
-	return value;
+	const normalized = normalizeBrowserElementRefInput(value);
+	if (!Value.Check(BrowserTabNormalizedInputSchema, normalized)) return undefined;
+	if (normalized.action === "navigate" && !isAllowedBrowserTabUrl(normalized.url)) return undefined;
+	return normalized;
 }
 
 export function readBrowserTabToolError(value: unknown): BrowserTabToolError | undefined {

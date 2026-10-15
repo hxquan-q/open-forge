@@ -1,0 +1,10 @@
+{
+	"plugin.name": "Allstar Pipeline",
+	"plugin.description": "A full-lifecycle software engineering team: conductor + resident helper + one-shot stage subagents, covering requirements, prototype, architecture, tasks, development, review, whitebox, blackbox (optional self-test + user review), deployment and finalization.",
+	"agent.allstar.name": "Allstar Conductor",
+	"agent.allstar.description": "Pipeline conductor: schedules only, never authors. Orchestrates the 13-stage pipeline, guards user confirmation gates, maintains state.md, and drives rework loops.",
+	"agent.helper.name": "Helper",
+	"agent.helper.description": "Resident execution proxy: runs escalated commands for all members after a safety pre-review; the sole executor under the conductor's no-file-touch discipline.",
+	"team.pipeline.name": "Allstar Pipeline",
+	"team.pipeline.description": "The full engineering pipeline: requirements → prototype gate → architecture → tasks → dev/review loops → whitebox → blackbox (optional self-test + user review) → deploy → finalize."
+}

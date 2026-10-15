@@ -23,6 +23,7 @@ import { EditDiffView } from "./tool-views/EditDiffView";
 import { KbFilterByTagsView, KbListTagsView, KbWritePageView } from "./tool-views/KnowledgeToolViews";
 import { ReadImageView } from "./tool-views/ReadImageView";
 import { ReviewChangeControls } from "./tool-views/ReviewChangeControls";
+import { TeamWaitTasksView } from "./tool-views/TeamWaitTasksView";
 import { ArtifactCanvasOpenButton } from "./ArtifactCanvasOpenButton";
 import { WriteContentView } from "./tool-views/WriteContentView";
 import { formatDurationPrecise, formatPhases, formatStartedAt } from "./tool-views/shared/format";
@@ -206,6 +207,8 @@ function ToolSpecificContent({
 	if (block.toolName === "kb_filter_by_tags") return <KbFilterByTagsView block={block} />;
 	if (block.toolName === "kb_list_available_tags") return <KbListTagsView block={block} />;
 	if (block.toolName === "kb_write_page") return <KbWritePageView block={block} />;
+	// The serialized wait payload is structured JSON; collapse it to neutral wording.
+	if (block.toolName === "team_wait_tasks") return <TeamWaitTasksView block={block} />;
 	return projection.hasResult ? (
 		<>
 			<pre className="max-h-[300px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-[1.5] text-muted-foreground/60">

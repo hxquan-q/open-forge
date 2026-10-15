@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";
@@ -299,6 +300,7 @@ describe("useMessageFeedScrollModel", () => {
 
 		act(() => result.current.scrollerRef(element));
 		act(() => {
+			element.dispatchEvent(new WheelEvent("wheel", { deltaY: -120 }));
 			element.dispatchEvent(new Event("scroll"));
 			element.dispatchEvent(new Event("scroll"));
 			element.dispatchEvent(new Event("scroll"));
@@ -442,6 +444,25 @@ describe("useMessageFeedScrollModel", () => {
 		expect(scrollToIndex).not.toHaveBeenCalled();
 	});
 
+	it.each([false, true])("does not remember mid-follow positions when active=%s", (active) => {
+		vi.stubGlobal("requestAnimationFrame", vi.fn(() => 1));
+		vi.stubGlobal("cancelAnimationFrame", vi.fn());
+		vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+		const resetKey = `tail-follow-${active}`;
+		const items = [{ id: "message-1" }, { id: "message-2" }];
+		const first = renderHook(() => useMessageFeedScrollModel({ active, items, resetKey }));
+		const handle: VirtuosoHandle = {
+			autoscrollToBottom: vi.fn(), scrollBy: vi.fn(), scrollIntoView: vi.fn(), scrollTo: vi.fn(), scrollToIndex: vi.fn(),
+			getState: (callback) => callback({ scrollTop: 120, ranges: [] }),
+		};
+		first.result.current.virtuosoRef.current = handle;
+		act(() => first.result.current.scrollerRef(document.createElement("div")));
+		first.unmount();
+		const second = renderHook(() => useMessageFeedScrollModel({ active: false, items, resetKey }));
+		expect(second.result.current).toMatchObject({ followOutput: "auto", restoreStateFrom: undefined, initialTopMostItemIndex: { index: "LAST", align: "end" } });
+		second.unmount();
+	});
+
 	it("caches measured item state and exposes it for a later remount", () => {
 		vi.stubGlobal(
 			"ResizeObserver",
@@ -467,6 +488,7 @@ describe("useMessageFeedScrollModel", () => {
 		} as unknown as VirtuosoHandle;
 		const element = document.createElement("div");
 		act(() => first.result.current.scrollerRef(element));
+		act(() => element.dispatchEvent(new WheelEvent("wheel", { deltaY: -120 })));
 		first.unmount();
 
 		const second = renderHook(() =>

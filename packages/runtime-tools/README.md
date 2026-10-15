@@ -52,3 +52,27 @@ Projection 只负责「原 Tool 合同如何呈现给模型」：可调整 `labe
 动态 Projector 使用 `bindForTurn()` 捕获外部状态；同一 Turn 的多次模型调用共享该快照，释放时反向清理。
 工具集合的增删替换仍使用 Catalog/generation，执行配置仍使用 `withCodingToolConfiguration()`，不要用
 Projection 模拟能力注册、权限或执行拦截。
+
+
+## Context Boundary
+
+```yaml
+purpose: Platform-neutral coding tool protocols and catalog logic for Vetta runtimes
+provides:  
+  - "@vetta/runtime-tools"
+  - "@vetta/runtime-tools/coding"
+consumes:  []
+internal_dependencies:
+  - "@vetta/ai"
+  - "@vetta/runtime-core"
+```
+
+## 工具执行并发声明
+
+`RuntimeToolDefinition.executionMode` 是显式执行能力声明，Catalog 的冻结与守卫会保留它。
+未声明或 `exclusive` 的工具仍独占执行；只有 `parallel-safe` 可以进入 Agent 的有界并发窗口。
+声明覆盖完整 `execute`（包括结果策略包装），不代替 Tool Policy、撤销、租约或文件锁；
+注册方必须保证其实现及包装可以并发。模型工具 schema 不暴露此元数据。
+
+原生 `read` 与 `grep` 声明为安全候选；写入、命令与其他未声明工具仍形成屏障。
+宿主可通过 `AgentCoreTurnEngineOptions.maxParallelToolCalls: 1` 保持全串行。

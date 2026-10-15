@@ -2,6 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetTerminalCapabilitiesCacheForTests } from "../../bottom-panel/hooks/useTerminalCapabilities.js";
 
 /**
  * 发送链路级联提交的合同：ChatView 把 actions/header memo 成 header slot 元素写进
@@ -27,6 +28,9 @@ function stubVettaWindow(): void {
 				isAlwaysOnTop: async () => false,
 				toggleAlwaysOnTop: async () => true,
 			},
+			terminal: {
+				capabilities: async () => ({ localPty: false }),
+			},
 		},
 	});
 }
@@ -42,6 +46,7 @@ function makeActiveSession(extra: Record<string, unknown> = {}) {
 
 describe("useChatViewModel 引用稳定性", () => {
 	beforeEach(() => {
+		resetTerminalCapabilitiesCacheForTests();
 		stubVettaWindow();
 		const store = getDefaultStore();
 		store.set(atoms.chatMessagesAtom, [

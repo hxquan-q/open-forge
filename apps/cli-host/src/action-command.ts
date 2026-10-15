@@ -48,17 +48,17 @@ type ActionSubcommandDefinition = {
 	run: (client: ActionRpcClient, command: ActionCommand) => Promise<unknown> | unknown;
 };
 
-const HELP_TEXT = `Vetta action command line interface
+const HELP_TEXT = `Open Forge action command line interface
 
 Usage:
-  vetta action search [query] [--domain <domain>]
-  vetta action describe <action-id>
-  vetta action run <action-id> [json-input]
-  vetta action -h
-  vetta action --help
+  openforge action search [query] [--domain <domain>]
+  openforge action describe <action-id>
+  openforge action run <action-id> [json-input]
+  openforge action -h
+  openforge action --help
 
 Description:
-  Operate the running Vetta Desktop app through its local action RPC.
+  Operate the running Open Forge Desktop app through its local action RPC.
   The GUI must already be running. Do not guess action ids or parameters
   from memory; discover them at runtime.
 
@@ -76,12 +76,12 @@ Capability areas (high-level only; live catalog comes from search):
   batch-tasks, scheduler, knowledge, plugins, im, webhook, downloads, updater
 
 Examples:
-  vetta action search ""
-  vetta action search "model"
-  vetta action search "定时" --domain scheduler
-  vetta action describe models.query
-  vetta action run models.query '{"operation":"help"}'
-  vetta action run models.query '{"operation":"list"}'
+  openforge action search ""
+  openforge action search "model"
+  openforge action search "定时" --domain scheduler
+  openforge action describe models.query
+  openforge action run models.query '{"operation":"help"}'
+  openforge action run models.query '{"operation":"list"}'
 
 JSON input:
   In PowerShell and POSIX shells, wrap the JSON argument in single quotes.

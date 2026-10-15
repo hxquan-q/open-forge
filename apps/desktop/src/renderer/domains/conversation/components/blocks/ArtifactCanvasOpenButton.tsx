@@ -1,5 +1,6 @@
 // Copyright The Open Forge contributors.
 import { useOpenActivityTab } from "@domains/conversation/hooks/useOpenActivityTab";
+import { Button } from "@shared/components/ui/button";
 import { type ArtifactCanvasOpenDetails, activeSessionAtom, pendingCanvasArtifactIdAtom } from "@shared/store/atoms";
 import { useAtomValue, useSetAtom } from "jotai";
 import { createContext, type ReactNode, useContext } from "react";
@@ -44,9 +45,11 @@ export function ArtifactCanvasOpenButton({
 	const setPending = useSetAtom(pendingCanvasArtifactIdAtom);
 	if (!workspaceId) return null;
 	return (
-		<button
+		<Button
 			type="button"
-			className="mt-2 rounded-md border border-border/60 px-2 py-1 text-[11px] text-foreground hover:bg-secondary"
+			variant="outline"
+			size="xs"
+			className="mt-2"
 			onClick={() => {
 				// pending 带归属工作空间：只有归属面板会消费，跨面板不再错配。
 				setPending({ workspaceId, artifactId: artifact.artifactId });
@@ -54,6 +57,6 @@ export function ArtifactCanvasOpenButton({
 			}}
 		>
 			{t("toolCall.openInCanvas")}
-		</button>
+		</Button>
 	);
 }

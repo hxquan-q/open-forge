@@ -1,4 +1,4 @@
-import { conversationItemRenderKey } from "@shared/conversation";
+import { conversationItemRenderKey, resolveConversationAgentText } from "@shared/conversation";
 import type { ContentBlock } from "@shared/store/atoms";
 import type { SizeFunction } from "react-virtuoso";
 import { isApprovedPlanBlock } from "../../services/plan-review";
@@ -128,7 +128,9 @@ function inferMessageItemHeight(item: ChatTimelineItem): number {
 		height = 44 + textHeight + imagesHeight + appshotHeight + fileBadgesHeight + settingsBadgeHeight;
 	} else if (item.kind === "agent") {
 		const blocksHeight =
-			item.blocks.length > 0 ? estimateAgentBlocksHeight(item) : estimateTextHeight(item.text ?? "");
+			item.blocks.length > 0
+				? estimateAgentBlocksHeight(item)
+				: estimateTextHeight(resolveConversationAgentText(item));
 		height = 72 + blocksHeight;
 	} else {
 		const summary = "summary" in item.event && typeof item.event.summary === "string" ? item.event.summary : "";
@@ -198,7 +200,7 @@ function itemRevision(item: ChatTimelineItem): string {
 		revision = [
 			item.phase,
 			item.blocks.map(blockRevision).join("|"),
-			textRevision(item.text),
+			textRevision(resolveConversationAgentText(item)),
 			item.toolCallPresentations?.map((presentation) => presentation.toolCallId).join(",") ?? "",
 		].join(":");
 	} else {

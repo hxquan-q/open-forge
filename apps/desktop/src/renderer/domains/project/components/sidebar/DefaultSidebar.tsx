@@ -23,6 +23,7 @@ export function DefaultSidebar({ classNames, model, onOpenSession }: DefaultSide
 		<ThemeDefaultSidebar
 			classNames={classNames}
 			model={model}
+			panelLabel={t("sidebar.regionLabel")}
 			navCustomizeLabels={{
 				pinnedTitle: t("sidebar.nav.customize"),
 				moreTitle: t("sidebar.nav.more"),

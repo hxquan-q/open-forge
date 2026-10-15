@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -103,10 +104,17 @@ describe("Plugin Runtime composition contract", () => {
 		expect(providerCalls).toEqual(["plugin-session:0"]);
 		expect(modelCalls).toHaveLength(2);
 		expect(modelCalls[0]?.prompt).toContain("Dynamic plugin instruction");
-		expect(modelCalls[0]?.tools).toEqual(["read", "current_time"]);
+		// Goal tools (TASK-0156 / ADR-0144) are session-extension contributions present in every model call.
+		expect(modelCalls[0]?.tools).toEqual(["read", "current_time", "get_goal", "create_goal", "update_goal"]);
 		expect(modelCalls[1]?.messages).toEqual(["inspect", "first response", "plugin continuation"]);
-		expect(modelCalls[1]?.tools).toEqual(["read", "current_time"]);
-		expect(session.readState().activeToolNames).toEqual(["read", "current_time"]);
+		expect(modelCalls[1]?.tools).toEqual(["read", "current_time", "get_goal", "create_goal", "update_goal"]);
+		expect(session.readState().activeToolNames).toEqual([
+			"read",
+			"get_goal",
+			"create_goal",
+			"update_goal",
+			"current_time",
+		]);
 		expect((await session.readMessages()).map(({ role }) => role)).toEqual([
 			"user",
 			"assistant",

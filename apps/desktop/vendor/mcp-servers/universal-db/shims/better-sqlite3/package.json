@@ -1,0 +1,7 @@
+{
+	"name": "better-sqlite3",
+	"version": "0.0.0-vetta-shim",
+	"description": "Subset of the better-sqlite3 API backed by Node's built-in node:sqlite. Electron-as-Node cannot load the real native binding; the universal-db sqlite adapter only needs prepare/run/get/all + pragma + close.",
+	"type": "module",
+	"main": "index.mjs"
+}

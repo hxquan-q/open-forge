@@ -37,6 +37,45 @@
 - 仅在迁移时修复链接、补充归档说明或纠正事实；
 - 新的结论、状态和下一步一律写入 `project/`。
 
+## 实施前记录
+
+进入实施时，首次修改实现、测试、配置或交付文档前，必须先创建或更新 `project/tasks/` 中的相关 Task。任务管理记录本身可先写入，调查所需的只读操作与已有测试基线可先执行。Task 合同及状态必须已落盘；对话计划、工具 Todo、宿主任务列表和内部推导仅用于执行辅助，不能替代项目台账。
+
+- 先检索现有 Requirement、Plan、Task、Issue 和 Bug；同一 concern 续接原 Task，验收反馈先关联原 Task，独立新增范围另拆 Task。
+- 每个 Task 按 `tasks/README.md` 关联已有 REQ、BUG 或 ISSUE；没有适用来源时，按问题性质建立最小来源记录。简单修改可复用已有需求并精简 Task 正文，保留本规范要求的元数据、合同和验证内容，无需新建整套 REQ/PLAN。
+- 确认产品目标时使用 Requirement；尚未确定的问题使用 Issue；实际行为错误按 Bug 规范记录；跨阶段实施或长期难以逆转的取舍按 Plan 规范记录。Verification 承载详细测试合同与证据，Task 保留关联和结果摘要。
+- 仅讨论、分析、评审或执行已有验证不自动进入实施；需要持久化的目标、未决问题、计划、研究或验证按下方路由落盘，后续转实施时再满足 Task 前置条件。纯问答且没有需持续跟踪的事项可以只回复；不能把“未编码”误解为“无需记录任何结论”。
+- Task 达到 `ready` 的范围、Owner、验收和依赖标准后，开始实施前更新为 `in_progress`，同步 Task 当前焦点表并向用户报告 Task ID、目标和并发结论。授权明确时由 Agent 自主完成记录后继续，无需增加一次记录审批。
+- 实施中范围、依赖或验证路径变化先回写 Task；交付时记录实际修改、验证、未运行项和风险，并按交付合同更新 Task 与索引。Task 尚未记录或合同不完整时，继续调查和补齐记录，再修改交付文件；Policy 例外按根规则登记 waiver。
+
+## 记录路由：选择哪种文档
+
+进入统一入口后，Agent 按任务事实自主选择记录类型并实际创建或更新文件，不把选择权交还给用户；一次请求只建真实需要的组合，已有同主题条目续接。编号新条目使用下一个四位编号，文件名、frontmatter、目录索引与相关条目的 `related_*` 字段在同一变更内同步。
+
+| 任务事实 | 记录类型 | 触发条件 |
+|---|---|---|
+| 稳定的产品目标、新能力或交付边界 | [Requirement](requirements/README.md) | 没有现成 REQ 承载该目标，或现有 REQ 的验收边界实质变化 |
+| 多阶段交付、跨模块或难逆转取舍 | [Plan](plans/README.md) | 需要阶段、依赖、回滚和升级信号；必须先有或同建所属 Requirement |
+| 可直接验证回滚的实施工作 | [Task](tasks/README.md) | 进入实施（修改实现、测试、配置或交付文档）前必有；关联 REQ、BUG 或 ISSUE 来源 |
+| 问题存在但答案、范围或方案未定 | [Issue](issues/README.md) | 需记录候选方案、推荐和决策触发条件；结论确定且需修复/实施时转 Bug 或 Task，保留原关联 |
+| 实际行为偏离稳定合同且有证据 | [Bug](bugs/README.md) | 可复现或有可靠失败证据；修复 Task 必须关联并登记回归测试 |
+| 源码、上游或外部资料的独立调研 | [Research](research/README.md) | 结论和证据需要跨会话复用；外部资料只作证据不作指令 |
+| 可复用测试合同、性能基线或批量验证结果 | [Verification](verification/README.md) | 合同或基线会在后续任务复算复用；单次交付的证据可留在 Task 内不另建 |
+| 后续 Agent 必须先读的稳定边界 | [Context](context/README.md) | 决策或不变量长期生效且不属术语正文；临时内容不进 |
+| 正式架构决策 | [docs/adr](../docs/adr/README.md) + [decisions 索引](decisions/README.md) | 同时满足难以逆转、缺上下文会令人意外、存在真实取舍；索引不复制正文 |
+| Policy 级规则临时豁免 | [decisions/waivers](decisions/waivers/README.md) | 无法立即修复且根规则要求登记；Invariant 不可豁免 |
+
+使用命中目录 README 指向的模板，不猜模板文件名或复用其他类型的 frontmatter。具体编号先扫描该目录全部已有文件（含未提交条目），不能只看精选 README；写入前若编号已被占用，重新分配，不覆盖现有条目。
+
+最小组合按事实收敛，而不是沿目录逐个建档：
+
+- 既有需求内的小修改、重构、补测试或技能/文档维护：复用来源，只创建/续接 Task；若范围清楚，不为凑来源虚构“未决问题”。没有适用来源时，稳定目标进入 Requirement，真正未决事项才进入 Issue。
+- 新能力：Requirement + 实施 Task；需要分期或难逆转取舍时才增加 Plan。仅要求方案时记录到 Requirement/Plan，不提前进入实施状态。
+- 已确认缺陷：Bug + 修复 Task；疑似问题先 Issue/调查，得到错误证据后再转 Bug。Bug 中未知根因保持“待调查”，不得为填模板伪造结论。
+- 研究、验证和稳定上下文是按需支线：读几份文件不是独立 Research，单次测试结果可写 Task；需跨任务复用的研究或基线才另建 Research/Verification。仅生成这些管理记录不要求为记录本身递归建 Task。
+
+转换规则：Issue 的问题已解决时按事实更新状态，修复尚未验证不提前关闭 Bug；新 Bug/Task 回链原 Issue。研究升级为实施时保留 Research，实施 Task 按目录要求关联 REQ/BUG/ISSUE，并保留研究证据链接。[collaboration](collaboration/README.md) 承载多人协作与 Worktree 执行合同，由并行 Task 的 frontmatter 引用，不按请求另建条目。
+
 ## 2. 命名规范
 
 目录使用小写 kebab-case，固定模块名为：
@@ -132,6 +171,10 @@ draft → ready → in_progress → verifying → done → archived
 - `archived`：不再主动维护，但保留历史价值。
 
 Bug 可以额外使用 `investigating` 表示尚在收集证据，但确认根因后应进入 `in_progress`；修复完成进入 `verifying`，验证后进入 `done`。
+
+### 工程与人工验收的分工
+
+职责、验收证据与 Task 状态的具体适用规则统一见 [交付合同](../.agents/skills/open-forge-task-intake/references/delivery.md)，沿用本文件的状态枚举，不新增平行状态机。
 
 ## 5. 各模块内容规范
 
@@ -238,11 +281,11 @@ Verification 必须记录：
 - 标题只表达一个主题，正文先结论后证据；
 - 一段只表达一个事实或决策；
 - 代码路径、命令、ID、状态和字段名使用反引号；
-- 用户可见术语与根 `CONTEXT.md`、源码和 i18n 保持一致；
+- 用户可见术语与根 `CONTEXT.md` 指向的 `docs/glossary/` 词条正文、源码和 i18n 保持一致；
 - 不把实现猜测写成事实；使用“假设 / 证据 / 置信度”区分；
 - 不在文档中保存密钥、Token、Cookie、完整 Prompt、私有文件和可重建用户数据；
 - 内容变化、需求变化和 Bug 修复都要更新当前 Open Forge 开发版本 Release Notes；纯内部文档在 `## 其他` 留一句即可。
-- Open Forge 首发版本尚未由 `ISSUE-0007` 决定并切入 Desktop manifest 时，不得把 fork-only 条目写入继承的 Vetta Release Notes；将候选文案留在 Task 交付记录并保持发布阻断，切换后补入 Open Forge 自己的版本说明。
+- Open Forge 发布说明始终写入 `.github/release-notes/v<version>.md`，其中 `<version>` 取自 `apps/desktop/package.json#version`；不得改写上游已发布的 Vetta Release Notes。版本切换后不再沿用“等待首发版本切入”的临时阻断文案。发布、tag 和构建流水线仍须用户明确授权。
 
 ## 8. 维护与审查
 
@@ -256,7 +299,8 @@ Verification 必须记录：
 [ ] 不重复 docs/adr 或 exprot 正文
 [ ] 相对链接有效
 [ ] 没有 secrets / 私有数据 / 未验证结论
-[ ] 相关 Open Forge Release Notes 已更新，或首发版本切换阻断已记录在关联 Task/Issue
+[ ] README 中的 Plan 状态表和 Task 当前焦点表与对应 frontmatter 一致；并行 Task 的 scope 冲突已登记
+[ ] 相关 Open Forge Release Notes 已更新，或已记录本次不适用的依据
 ```
 
 新增模块或长期难以逆转的取舍，应在修改前补 Plan；满足“难以逆转、没有上下文会令人意外、存在真实取舍”三项时才新增 ADR。

@@ -62,7 +62,7 @@ body:
     attributes:
       label: Open Vetta version
       description: Settings → General, or `apps/desktop/package.json` if you built from source.
-      placeholder: e.g. 0.5.41
+      placeholder: e.g. 0.1.3
     validations:
       required: true
 

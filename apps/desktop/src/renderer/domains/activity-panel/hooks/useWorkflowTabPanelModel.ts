@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { subagentErrorPresentation, subagentObjective, subagentUsageLabel } from "@shared/lib/subagent-presentation";
 import { workflowProgressLabel, workflowStatusMeta } from "@shared/lib/workflow-status";
 import {
@@ -10,11 +11,13 @@ import {
 	subagentsBySessionAtom,
 	workflowDisplayName,
 } from "@shared/store/atoms";
+import type { HistoryEntry } from "@vetta/runtime-core";
 import type { WorkflowSwitcherItem } from "@vetta-org/theme-ui/activity";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fullHistoryToChat } from "../../conversation/services/chat-service";
+import { applyViewerHistoryUpdate } from "../../conversation/services/viewer-history-update";
 import { useActivityRuntimeIds } from "../registry/context";
 import { collectRuntimeScoped } from "../services/runtime-scope";
 
@@ -92,9 +95,13 @@ export function useWorkflowTabPanelModel(): WorkflowTabPanelModel {
 			try {
 				const initial = await window.vetta.session.openViewer(sessionFile);
 				if (cancelled) return;
-				setMessages(fullHistoryToChat(initial.history));
-				unsubscribe = await window.vetta.session.subscribeViewer(sessionFile, (snapshot) => {
-					setMessages(fullHistoryToChat(snapshot.history));
+				// TASK-0050：viewer 订阅改为增量载荷——本地保留 raw entries 并在
+				// 每轮整体重映射（marker/toolCall 归并是跨条目的，不能只映射增量）。
+				let entries: HistoryEntry[] = initial.history;
+				setMessages(fullHistoryToChat(entries));
+				unsubscribe = await window.vetta.session.subscribeViewer(sessionFile, (update) => {
+					entries = applyViewerHistoryUpdate(entries, update);
+					setMessages(fullHistoryToChat(entries));
 				});
 				if (cancelled) unsubscribe?.();
 			} catch {

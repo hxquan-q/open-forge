@@ -7,3 +7,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## 规则分级
+
+- **Policy**：上方 Next.js 提示块要求的「编码前先读本版本文档、注意弃用声明」。
+- **Guideline**：—（本文件无其余条目；提示块由 `next dev` 维护，勿改块内内容）

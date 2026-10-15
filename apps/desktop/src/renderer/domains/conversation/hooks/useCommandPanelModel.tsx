@@ -4,6 +4,7 @@ import { activeSessionAtom, contextCompactionEligibilityAtom } from "@shared/sto
 import { getQueueForSession, messageQueueBySessionAtom } from "@shared/store/message-queue-atoms";
 import { showToast } from "@shared/store/toast-atoms";
 import { useAtomValue } from "jotai";
+import { useNavigate } from "@tanstack/react-router";
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -47,6 +48,7 @@ export function useCommandPanelModel({
 	allowCompaction = true,
 }: CommandPanelModelInput): CommandPanelModel {
 	const { t } = useTranslation("chat");
+	const navigate = useNavigate();
 	const normalizedFilter = filter.startsWith("/") ? filter.slice(1) : filter;
 	const activeSession = useAtomValue(activeSessionAtom);
 	const compactionEligibility = useAtomValue(contextCompactionEligibilityAtom);
@@ -217,9 +219,34 @@ export function useCommandPanelModel({
 			emptyNoMatchHint: t("slashPanel.emptyNoMatchHint"),
 			emptyNoSkills: t("slashPanel.emptyNoSkills"),
 			emptyNoSkillsHint: t("slashPanel.emptyNoSkillsHint"),
+			scenesSection: t("slashPanel.scenesSection"),
+			skillsSection: t("slashPanel.skillsSection"),
+			sectionCount: (count: number) => t("slashPanel.sectionCount", { count }),
 		}),
 		[items.length, t],
 	);
+
+	// CommandPanel 是 InputBar 形态，过滤态由触发词驱动；「清除筛选」直接删触发词。
+	const emptyAction = useMemo(() => {
+		if (normalizedFilter.length > 0) {
+			return {
+				kind: "clearFilter" as const,
+				label: t("slashPanel.emptyClearFilterAction"),
+				onAction: () => {
+					removeInputTrigger();
+					focusInputEditor();
+				},
+			};
+		}
+		return {
+			kind: "openMarket" as const,
+			label: t("slashPanel.emptyOpenMarketAction"),
+			onAction: () => {
+				onClose();
+				void navigate({ to: "/abilities" });
+			},
+		};
+	}, [normalizedFilter.length, onClose, navigate, t]);
 
 	const actions = useMemo(
 		() => [
@@ -255,6 +282,8 @@ export function useCommandPanelModel({
 			resolveIcon,
 			panelRef: panelRef as RefObject<HTMLDivElement | null>,
 			className,
+			ariaLabel: t("slashPanel.header"),
+			emptyAction,
 			onHoverItem: setActiveIndex,
 			onSelectItem: selectSkill,
 			onSelectConnector,

@@ -44,7 +44,7 @@ export interface SshCodingToolEnvironmentOptions {
 	readonly remoteCwd: string;
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
-	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly blockUntilSec?: number;
 	/**
 	 * 以一个本机目录为 cwd 创建 PDF / OCR / 文档转换这类依赖本机引擎的工具。给出时它们经

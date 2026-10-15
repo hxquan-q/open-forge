@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ActivityTabKey } from "@shared/lib/project-profile";
 import { atom, type Getter, type Setter } from "jotai";
 
@@ -139,7 +140,8 @@ export const activityPanelWidthAtom = atom(
 	},
 );
 
-const activityPanelTabDraggingAtom = atom(false);
+/** tab dock↔float 拖拽会话中（落点未定时指针可能掠过原生 view 区域）。 */
+export const activityPanelTabDraggingAtom = atom(false);
 const pendingActivityPanelWidthAtom = atom<number | "max" | null>(null);
 
 /** 拖拽中的瞬时宽度：实时更新布局，但不在每一帧同步写 localStorage。 */

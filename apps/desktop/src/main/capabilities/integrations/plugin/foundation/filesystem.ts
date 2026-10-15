@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	type FilesystemEntry,
 	type FilesystemFileRef,
@@ -96,10 +97,15 @@ export const pluginFilesystemMethods = {
 		this: PluginCapabilitySessionAccess,
 		sessionId: string,
 		path: string,
+		options?: { names?: readonly string[]; ignoredDirectories?: readonly string[] },
 	): Promise<FilesystemFileRef[]> {
 		return this.client(sessionId, { permission: PLUGIN_CAPABILITY_PERMISSIONS.FILESYSTEM_READ }).invoke(
 			FOUNDATION_FILESYSTEM_CAPABILITIES.LIST_FILES_RECURSIVE,
-			{ path },
+			{
+				path,
+				names: options?.names ? [...options.names] : undefined,
+				ignoredDirectories: options?.ignoredDirectories ? [...options.ignoredDirectories] : undefined,
+			},
 		);
 	},
 };

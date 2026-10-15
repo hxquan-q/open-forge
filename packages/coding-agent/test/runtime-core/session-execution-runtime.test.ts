@@ -1,14 +1,20 @@
-import type { RuntimeSessionObservationEvent } from "@vetta/runtime-core";
+import type { RuntimeResourceContext, RuntimeSessionObservationEvent } from "@vetta/runtime-core";
 import type { AgentSession, ModelCallContributionContext, SessionContextRecord } from "@vetta/runtime-core/kernel";
 import { createNodeSandboxCodingToolEnvironment, type ForegroundCommandOperations } from "@vetta/runtime-node/coding";
+import { addSessionGrant, clearSessionGrants, findSessionGrant } from "@vetta/runtime-node/sandbox";
 import type { CodingToolCatalogEntry } from "@vetta/runtime-tools";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { CodingAgentSandboxAuthorizationPort } from "../../src/execution/sandbox/authorization-contract.js";
+import { SandboxUnavailableError } from "../../src/execution/sandbox/errors.js";
 import { CodingAgentSessionExecutionRuntime } from "../../src/execution/session/runtime.js";
 import { createCodingAgentNodeSessionExecutionEnvironment } from "../../src/host/tool-environment/node/node-session-execution-environment.js";
 
 describe("CodingAgentSessionExecutionRuntime", () => {
 	const commandToolName = process.platform === "win32" ? "shell" : "bash";
+
+	afterEach(() => {
+		clearSessionGrants("session-flip-grants");
+	});
 
 	it("switches execution mode per session and reports the real busy state", async () => {
 		let state: AgentSession["state"] = "idle";
@@ -46,6 +52,82 @@ describe("CodingAgentSessionExecutionRuntime", () => {
 		);
 		await fixture.runtime.dispose();
 		expect(fixture.environmentDisposeCalls).toBe(1);
+	});
+
+	it("ADR-0133 P0: 沙箱模式下环境给不出沙箱时,构造期必须显式失败而不是产出残缺工具集", () => {
+		// Given:宿主声明无沙箱(如远程项目分支、无沙箱测试装置),会话却请求 sandbox 模式。
+		// VETTA_SANDBOX_FAIL_OPEN 若被外部环境设置会把结果翻成 fail-open,先摘掉保证确定。
+		const previousFailOpen = process.env.VETTA_SANDBOX_FAIL_OPEN;
+		delete process.env.VETTA_SANDBOX_FAIL_OPEN;
+		const environment = createCodingAgentNodeSessionExecutionEnvironment({
+			sessionId: "session-fail-closed",
+			cwd: process.cwd(),
+			scenario: "cli",
+		});
+		try {
+			// When:构造 session execution runtime(buildModeRegistrations 的 sandbox 分支)
+			// Then:立刻抛 SandboxUnavailableError(kind=platform-unsupported)并携带修复指引,
+			// 不允许继续以只剩 task_* 的死工具集把会话建出来。
+			let thrown: unknown;
+			try {
+				new CodingAgentSessionExecutionRuntime({
+					cwd: process.cwd(),
+					sandboxAuthorization: DENY_SANDBOX_AUTHORIZATION,
+					initialMode: "sandbox",
+					environment: { ...environment, sandbox: { createToolSet: () => undefined } },
+					activation: { mode: "explicit", toolNames: [] },
+					readSessionId: () => "session-fail-closed",
+					resourceContext: minimalResourceContext(),
+				});
+			} catch (error) {
+				thrown = error;
+			}
+			expect(thrown).toBeInstanceOf(SandboxUnavailableError);
+			const unavailable = thrown as InstanceType<typeof SandboxUnavailableError>;
+			expect(unavailable.kind).toBe("platform-unsupported");
+			expect(unavailable.message).toContain("Switch to full-access");
+		} finally {
+			if (previousFailOpen !== undefined) process.env.VETTA_SANDBOX_FAIL_OPEN = previousFailOpen;
+			void environment.dispose();
+		}
+	});
+
+	it("clears cached sandbox grants when the execution mode flips, but not on same-mode reconfigure", async () => {
+		// ADR-0133 §5(TM-07):旧 mode 批准过的越界授权不得带入新 mode。
+		const grantRequest = {
+			capability: "file.write" as const,
+			toolName: "write",
+			target: "outside.txt",
+			resolvedTarget: `${process.cwd()}-outside`,
+			grantRoot: `${process.cwd()}-outside`,
+			reason: "test",
+		};
+		const fixture = createRuntimeFixture("session-flip-grants");
+		const controller = fixture.runtime.createExecutionController({ state: "idle" } as unknown as AgentSession);
+
+		try {
+			// Given:会话里已经缓存了一条 sandbox grant
+			addSessionGrant("session-flip-grants", grantRequest);
+			expect(findSessionGrant("session-flip-grants", grantRequest)).toBeDefined();
+
+			// When:同 mode 重复 reconfigure(初始就是 full-access)
+			await controller.reconfigure({ mode: "full-access", sessionId: "session-flip-grants" });
+			// Then:mode 未变化,grant 保留
+			expect(findSessionGrant("session-flip-grants", grantRequest)).toBeDefined();
+
+			// When:切到 sandbox
+			await controller.reconfigure({ mode: "sandbox", sessionId: "session-flip-grants" });
+			// Then:grant 已被清空,下一次越界请求必须重新询问用户
+			expect(findSessionGrant("session-flip-grants", grantRequest)).toBeUndefined();
+
+			// When:再缓存一条并切回 full-access
+			addSessionGrant("session-flip-grants", grantRequest);
+			await controller.reconfigure({ mode: "full-access", sessionId: "session-flip-grants" });
+			// Then:反向 flip 同样清空,不区分方向
+			expect(findSessionGrant("session-flip-grants", grantRequest)).toBeUndefined();
+		} finally {
+			await fixture.runtime.dispose();
+		}
 	});
 
 	it("preserves the product model order when sandbox replaces execution tools", async () => {
@@ -201,6 +283,7 @@ function createRuntimeFixture(
 						editPathPolicy: { getRejectionReason: () => undefined },
 						writePathPolicy: { getRejectionReason: () => undefined },
 					}),
+				clearSessionGrants,
 			},
 			dispose: async () => {
 				environmentDisposeCalls += 1;
@@ -247,6 +330,17 @@ const DENY_SANDBOX_AUTHORIZATION: CodingAgentSandboxAuthorizationPort = {
 	isAvailable: () => false,
 	request: async () => "deny",
 };
+
+/** 构造期测试只把 resourceContext 存进 options,不会触发任何调用;给最小可写实现。 */
+function minimalResourceContext(): RuntimeResourceContext {
+	return {
+		operation: "create",
+		contextAppender: { append: () => {} },
+		async deliverAsyncContext() {},
+		abortCurrentRun() {},
+		async reportObservation() {},
+	};
+}
 
 function createSourceToolEntry(
 	toolName: string,

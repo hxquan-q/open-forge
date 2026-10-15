@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Vetta Debug 真实 Provider 实战
 
 本文记录如何使用 Vetta Debug 驱动真实模型完成多轮工具调用，并验证上下文缓存、工具状态和模型行为。它是
@@ -98,7 +99,7 @@ Todo Store 是状态事实源。模型自然语言只是解释层；UI 进度、
 
 ## 缓存指标口径
 
-Vetta 的归一化 Usage 中，`input`、`cacheRead`、`cacheWrite` 是互斥的 Prompt Token 桶。单次调用的读取命中率为：
+Open Forge 的归一化 Usage 中，`input`、`cacheRead`、`cacheWrite` 是互斥的 Prompt Token 桶。单次调用的读取命中率为：
 
 ```text
 cacheRead / (input + cacheRead + cacheWrite)
@@ -145,11 +146,11 @@ cacheRead / (input + cacheRead + cacheWrite)
 下面的 PowerShell 示例列出最近调用；路径应来自 `conversation.create` 或 `conversation.list`：
 
 ```powershell
-$vettaSessionPath = "C:\path\to\session.jsonl"
-$vettaEvents = Get-Content -LiteralPath $vettaSessionPath |
+$forgeSessionPath = "C:\path\to\session.jsonl"
+$forgeEvents = Get-Content -LiteralPath $forgeSessionPath |
   ForEach-Object { $_ | ConvertFrom-Json -Depth 100 }
 
-$vettaEvents |
+$forgeEvents |
   Where-Object {
     $_.event.type -eq "message.appended" -and
     $_.event.message.role -eq "assistant"

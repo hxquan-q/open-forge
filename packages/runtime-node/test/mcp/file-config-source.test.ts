@@ -72,6 +72,29 @@ describe("FileMcpConfigSource", () => {
 		});
 	});
 
+	it("filters servers by origin before merging when includeServer is provided", async () => {
+		const fixture = await createFixture();
+		await writeJson(fixture.globalConfigPath, {
+			mcpServers: {
+				shared: { command: "global-shared" },
+				"project-dependent": { command: "global", args: [configVariable("PROJECT_ROOT")] },
+			},
+		});
+		await writeJson(fixture.projectConfigPath, {
+			mcpServers: { "project-only": { command: "project" } },
+		});
+		const source = new FileMcpConfigSource({
+			...fixture,
+			projectRoot: fixture.root,
+			includeServer: ({ origin, name }) => origin === "global" && name === "shared",
+		});
+
+		expect(source.loadMerged()).toEqual({
+			mcpServers: { shared: { command: "global-shared", args: undefined, cwd: undefined, env: undefined } },
+		});
+		expect(source.loadProject()).toEqual({ mcpServers: {} });
+	});
+
 	it("validates untrusted JSON through the TypeBox-backed parser", () => {
 		expect(parseMcpConfig({ mcpServers: { valid: { command: "node" } } })).toEqual({
 			mcpServers: { valid: { command: "node" } },

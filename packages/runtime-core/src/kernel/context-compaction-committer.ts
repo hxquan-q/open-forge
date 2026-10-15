@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ConversationDocument, ConversationDocumentReader } from "../conversation/document.js";
 import type {
 	Clock,
@@ -23,6 +24,11 @@ export interface ContextCompactionCommitOutput {
 	readonly document?: ConversationDocument;
 }
 
+export interface ContextCompactionAppendOutput {
+	readonly version: number;
+	readonly event: StoredSessionEvent;
+}
+
 export interface ContextCompactionCommitterOptions {
 	readonly repository: ConversationRepository;
 	readonly eventSink: EventSink;
@@ -44,7 +50,8 @@ export class ContextCompactionCommitter {
 		this.conversationDocumentReader = options.conversationDocumentReader;
 	}
 
-	async commit(input: ContextCompactionCommitInput): Promise<ContextCompactionCommitOutput> {
+	/** 只做持久写入；发布/通知/读文档由 settle 承担，调用方可把两者分置临界区内外。 */
+	async appendEvent(input: ContextCompactionCommitInput): Promise<ContextCompactionAppendOutput> {
 		input.signal.throwIfAborted();
 		const event: StoredSessionEvent = {
 			type: "context.compacted",
@@ -54,12 +61,23 @@ export class ContextCompactionCommitter {
 			timestamp: this.clock.now(),
 		};
 		const result = await this.repository.append(input.sessionId, input.expectedVersion, [event]);
-		await this.publishSafely(event);
-		await this.notifyObserversSafely(input.snapshot, event, input.signal);
+		return { version: result.version, event };
+	}
+
+	async settle(
+		input: ContextCompactionCommitInput,
+		appended: ContextCompactionAppendOutput,
+	): Promise<ContextCompactionCommitOutput> {
+		await this.publishSafely(appended.event);
+		await this.notifyObserversSafely(input.snapshot, appended.event, input.signal);
 		return {
-			version: result.version,
+			version: appended.version,
 			document: await this.conversationDocumentReader?.readDocument(input.sessionId),
 		};
+	}
+
+	async commit(input: ContextCompactionCommitInput): Promise<ContextCompactionCommitOutput> {
+		return this.settle(input, await this.appendEvent(input));
 	}
 
 	private async notifyObserversSafely(

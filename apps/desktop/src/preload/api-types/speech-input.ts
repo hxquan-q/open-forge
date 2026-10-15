@@ -1,9 +1,19 @@
-export type SpeechInputPhase = "unsupported" | "unavailable" | "ready" | "loading" | "listening" | "stopping" | "error";
+// Modified by The Open Forge contributors.
+export type SpeechInputPhase =
+	| "unsupported"
+	| "not-downloaded"
+	| "downloading"
+	| "ready"
+	| "loading"
+	| "listening"
+	| "stopping"
+	| "error";
 
 export type SpeechInputErrorCode =
 	| "unsupported-platform"
-	| "bundled-model-missing"
-	| "bundled-model-invalid"
+	| "model-missing"
+	| "model-invalid"
+	| "model-download-failed"
 	| "recognizer-start-failed"
 	| "recognizer-failed";
 
@@ -11,6 +21,8 @@ export interface SpeechInputStatus {
 	supported: boolean;
 	phase: SpeechInputPhase;
 	modelId: string;
+	/** phase === "downloading" 时的下载进度（0–1）。 */
+	downloadProgress?: number;
 	errorCode?: SpeechInputErrorCode;
 }
 

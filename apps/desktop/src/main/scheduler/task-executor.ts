@@ -9,6 +9,10 @@ import { ensureConversationSubCwd } from "../ipc/session.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
 import type { ScheduledTask, TaskExecutionRecord } from "./task-storage";
 import { createRecord, generateId, updateRecordMetadata, updateTaskLastRun } from "./task-storage";
+import {
+	bindUnattendedPermissionTiers,
+	unbindUnattendedPermissionTiers,
+} from "./unattended-permission-session-registry.js";
 
 interface ExecutingTask {
 	sessionId: string;
@@ -87,6 +91,7 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 		});
 		sessionId = result.sessionId;
 		record.sessionId = sessionId;
+		bindUnattendedPermissionTiers(sessionId, task.permissionTiers);
 		monitorRuntimeSession(runtime, sessionId, "automation");
 		recordAutomationRunStarted();
 
@@ -219,6 +224,7 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 					await updateRecordMetadata(record);
 					await updateTaskLastRun(task.id, event.phase === "aborted" ? "failed" : "success");
 					executingTasks.delete(task.id);
+					unbindUnattendedPermissionTiers(sessionId);
 					// 解除订阅，避免用户后续在同一 session 继续对话时误触发本
 					// 回调覆写历史记录。RuntimeHost 由 session IPC 与本模块
 					// 共享，session 仍然存活，下次打开复用即可。
@@ -255,6 +261,9 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 			...(task.modelKey ? { modelKey: task.modelKey } : {}),
 		});
 	} catch (error) {
+		if (sessionId) {
+			unbindUnattendedPermissionTiers(sessionId);
+		}
 		record.status = "failed";
 		record.completedAt = Date.now();
 		record.error = String(error);
@@ -275,6 +284,7 @@ export async function abortTask(taskId: string): Promise<boolean> {
 	const executing = executingTasks.get(taskId);
 	if (!executing) return false;
 	await executing.runtime.abort(executing.sessionId);
+	unbindUnattendedPermissionTiers(executing.sessionId);
 	executing.unsubscribe();
 	executingTasks.delete(taskId);
 	return true;
@@ -290,6 +300,7 @@ export async function shutdownSchedulerTaskExecutor(): Promise<void> {
 				try {
 					await executing.runtime.abort(executing.sessionId);
 				} finally {
+					unbindUnattendedPermissionTiers(executing.sessionId);
 					executing.unsubscribe();
 					executingTasks.delete(taskId);
 				}

@@ -24,3 +24,14 @@ The language-neutral v1 contract is published in `schemas/remote-frame.schema.js
 bun run build
 bun run test
 ```
+
+
+## Context Boundary
+
+```yaml
+purpose: Platform-neutral remote control protocol and test transport for Vetta
+provides:  
+  - "@vetta/remote-control"
+consumes:  []
+internal_dependencies:  []
+```

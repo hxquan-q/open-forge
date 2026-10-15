@@ -1,10 +1,12 @@
+// Modified by The Open Forge contributors.
+
 import type { FSWatcher } from "node:fs";
 import { watch } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { resolveNodeConfigurationValue } from "@vetta/runtime-node/host";
 import { isSshProjectUri } from "@vetta/ssh-transport";
-import { BrowserWindow, clipboard, ipcMain } from "electron";
+import { BrowserWindow, clipboard, ipcMain, net } from "electron";
 import type {
 	McpConfigData,
 	McpHttpServerConfigData,
@@ -21,6 +23,8 @@ import type {
 	FsTextPreviewResult,
 } from "../../preload/fs-types.js";
 import { FS_READ_TEXT_PREVIEW_CHANNEL } from "../../preload/fs-types.js";
+import type { DesktopConfigPatch } from "../config/desktop-config-patch.js";
+import { mergeDesktopConfigPatch } from "../config/desktop-config-patch.js";
 import {
 	type AppshotConfig,
 	type AppshotGesture,
@@ -34,20 +38,13 @@ import {
 	KB_PROCESSING_CWD,
 	KB_PROCESSING_SESSION_DIR,
 	type KnowledgeBaseConfig,
-	normalizeAgentMode,
-	normalizeAppshot,
-	normalizeExecutionMode,
-	normalizeExperimental,
-	normalizeImageGeneration,
-	normalizeKnowledgeBase,
-	normalizeQuickPanel,
-	normalizeShortcuts,
 	type ProjectEntry,
 	persistVettaCliPaths,
 	type QuickPanelConfig,
 	type QuickPanelTrigger,
 	readConfigSync,
 	readDesktopConfig,
+	updateDesktopConfig,
 	writeDesktopConfig,
 } from "../config/desktop-config-store.js";
 import {
@@ -75,8 +72,9 @@ import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import type { ModelsConfig } from "../models/model-settings-service.js";
 import { probeModelProvider } from "../models/probe.js";
+import { testProviderAvailability } from "../models/test-provider.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
-import { type DesktopProxyConfigSnapshot, mergeProxyConfigPatch, redactProxyConfig } from "../proxy/proxy-settings.js";
+import { type DesktopProxyConfigSnapshot, redactProxyConfig } from "../proxy/proxy-settings.js";
 import { getLinuxSandboxCapability, getSandboxCapability, type SandboxCapability } from "../sandbox/capability.js";
 import { getDesktopShortcutService } from "../shortcuts/shortcut-service.js";
 
@@ -119,6 +117,7 @@ export {
 	type QuickPanelTrigger,
 	readConfigSync,
 	readDesktopConfig,
+	updateDesktopConfig,
 	writeDesktopConfig,
 };
 export { readMcpConfig, writeMcpConfig };
@@ -155,6 +154,7 @@ const CHANNELS = {
 	MODELS_COPY_API_KEY: "vetta:models:copy-api-key",
 	MODELS_PROBE: "vetta:models:probe",
 	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
+	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
 	MCP_LOGIN: "vetta:mcp:login",
@@ -430,60 +430,16 @@ export function registerFsIpc(): () => void {
 
 	ipcMain.handle(CHANNELS.CONFIG_SET, async (_event, config: unknown) => {
 		if (typeof config !== "object" || config === null) throw new Error("Invalid config");
-		const current = await readDesktopConfig();
 		// proxy 走补丁语义（口令可省略），与其余整体覆盖的字段不同，故单独放宽为 unknown。
-		const patch = config as Partial<Omit<DesktopConfig, "proxy">> & { proxy?: unknown };
-		const next: DesktopConfig = {
-			// 先摊开 current 打底。下面是一张字段白名单，而 writeDesktopConfig 是整文件覆盖：
-			// 白名单漏掉哪个字段，哪个字段就会在用户每次保存设置时被从磁盘上抹掉。sshHosts
-			// 和 remoteControl 就是这么丢的——它们晚于这个处理器加入 DesktopConfig，而两者
-			// 都是可选字段，TypeScript 不会提示缺失。打底之后白名单只决定「哪些字段允许被
-			// 补丁改写」，不再决定「哪些字段能活下来」。
-			...current,
-			projects: patch.projects ?? current.projects,
-			archivedProjects: patch.archivedProjects ?? current.archivedProjects,
-			workspacePath: patch.workspacePath ?? current.workspacePath,
-			defaultExecutionMode:
-				patch.defaultExecutionMode !== undefined
-					? normalizeExecutionMode(patch.defaultExecutionMode)
-					: current.defaultExecutionMode,
-			defaultAgentMode:
-				patch.defaultAgentMode !== undefined
-					? normalizeAgentMode(patch.defaultAgentMode)
-					: current.defaultAgentMode,
-			debugMode: patch.debugMode ?? current.debugMode,
-			vettaAppPath: patch.vettaAppPath ?? current.vettaAppPath,
-			vettaCliAppPath: patch.vettaCliAppPath ?? current.vettaCliAppPath,
-			notificationsEnabled: patch.notificationsEnabled ?? current.notificationsEnabled,
-			language: patch.language ?? current.language,
-			experimental:
-				patch.experimental !== undefined
-					? normalizeExperimental({ ...current.experimental, ...patch.experimental })
-					: current.experimental,
-			imageGeneration:
-				patch.imageGeneration !== undefined
-					? normalizeImageGeneration({ ...current.imageGeneration, ...patch.imageGeneration })
-					: current.imageGeneration,
-			knowledgeBase:
-				patch.knowledgeBase !== undefined
-					? normalizeKnowledgeBase({ ...current.knowledgeBase, ...patch.knowledgeBase })
-					: current.knowledgeBase,
-			// bindings 整表替换（支持 reset 删键）；GUI/Action 均传完整 map。
-			shortcuts: patch.shortcuts !== undefined ? normalizeShortcuts(patch.shortcuts) : current.shortcuts,
-			quickPanel:
-				patch.quickPanel !== undefined
-					? normalizeQuickPanel({ ...current.quickPanel, ...patch.quickPanel })
-					: current.quickPanel,
-			appshot:
-				patch.appshot !== undefined ? normalizeAppshot({ ...current.appshot, ...patch.appshot }) : current.appshot,
-			// 补丁省略 password 即沿用已存口令，渲染层不必回传明文。
-			proxy: patch.proxy !== undefined ? mergeProxyConfigPatch(current.proxy, patch.proxy) : current.proxy,
-		};
-		// Allow all known roots for file operations
-		for (const p of next.projects) allowProjectRoot(p.path);
-		for (const p of next.archivedProjects) allowProjectRoot(p.path);
-		if (next.workspacePath) allowProjectRoot(next.workspacePath);
-		await writeDesktopConfig(next);
+		const patch = config as DesktopConfigPatch;
+		const next = await updateDesktopConfig((current) => {
+			const next = mergeDesktopConfigPatch(current, patch);
+			// Preserve the existing authorization-before-write order.
+			for (const project of next.projects) allowProjectRoot(project.path);
+			for (const project of next.archivedProjects) allowProjectRoot(project.path);
+			if (next.workspacePath) allowProjectRoot(next.workspacePath);
+			return next;
+		});
 		if (patch.shortcuts !== undefined) {
 			const bindings = next.shortcuts?.bindings ?? {};
 			shortcuts.notifyBindingsChanged(bindings as Record<string, string>);
@@ -521,6 +477,12 @@ export function registerFsIpc(): () => void {
 	ipcMain.handle(CHANNELS.MODELS_FETCH_PROVIDER_MODELS, async (_event, providerName: unknown) => {
 		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
 		return fetchProviderModels(providerName.trim());
+	});
+
+	ipcMain.handle(CHANNELS.MODELS_TEST_PROVIDER, async (_event, providerName: unknown) => {
+		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
+		const provider = (await models.getConfig()).providers[providerName.trim()];
+		return testProviderAvailability(provider, { fetchImpl: net.fetch });
 	});
 
 	ipcMain.handle(CHANNELS.MCP_GET, async (): Promise<McpConfig> => {

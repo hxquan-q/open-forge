@@ -982,6 +982,8 @@
 		"cloudOnly": "Cloud",
 		"reasoningHeader": "Reasoning",
 		"modelHeader": "Model",
+		"turnScopeHint": "Applies to later turns only",
+		"disabledDuringTurn": "Available once the current turn finishes",
 		"multiplier": "{{value}}×",
 		"free": "Free",
 		"reasoningLevel": {

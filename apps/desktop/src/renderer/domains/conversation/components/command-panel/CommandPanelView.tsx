@@ -42,6 +42,8 @@ export function CommandPanelView({
 	resolveIcon,
 	panelRef,
 	className,
+	ariaLabel,
+	emptyAction,
 	onHoverItem,
 	onSelectItem,
 	onSelectConnector,
@@ -76,6 +78,9 @@ export function CommandPanelView({
 						// 两块面看着是被切开的。命令区自己的底边无描边，压下去正好补平。
 						// 不写描边色：缺省吃 base 层的 `* { border-border }`，聚焦态由 className
 						// 传 `border-primary/20` 覆盖，和输入卡片一起亮，否则接缝上下两截颜色不一样。
+						// rounded-t-[20px] 不是任意值发挥：输入卡片本体是 MessageInput Surface 的
+						// `rounded-[20px]`（theme-ui 上游硬编码），面板顶角与卡片底角必须同半径，
+						// 长高后整块面轮廓才连续；DESIGN 的圆角档位债务记在 Surface 头上。
 						"absolute -inset-x-px bottom-[calc(100%-1px)] z-10 overflow-hidden rounded-t-[20px] border border-b-0 bg-input-bar-bg transition-[border-color] duration-200",
 						className,
 					]
@@ -84,41 +89,62 @@ export function CommandPanelView({
 				>
 					<ThemeSurface slot="chat.slashPanel" />
 					<div className="relative z-10 flex flex-col" style={{ maxHeight: MAX_HEIGHT }}>
-						<FadingScrollArea className="pt-2" suspended={!revealed}>
+						{/* 面板标题行：slash 图标 + 标题，过滤时右侧补结果数。 */}
+						<div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+							<span className="icon-[solar--slash-circle-linear] h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+							<span className="truncate text-[12px] font-medium text-muted-foreground/70">
+								{labels.header}
+							</span>
+							{filtering && (
+								<span className="ml-auto shrink-0 text-[11px] text-muted-foreground/60">
+									{labels.resultCount}
+								</span>
+							)}
+						</div>
+						<FadingScrollArea className="pt-1.5" suspended={!revealed}>
 							{operation ? (
-								<button
-									type="button"
-									data-index="0"
-									disabled={operation.disabled}
-									onMouseEnter={() => onHoverItem(0)}
-									onClick={operation.onSelect}
-									className="relative flex h-8 w-full items-center gap-2 px-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-									style={{
-										background:
-											activeIndex === 0 ? "color-mix(in srgb, var(--primary) 9%, transparent)" : "transparent",
-									}}
-								>
-									{activeIndex === 0 && (
-										<motion.span
-											layoutId="command-panel-active-marker"
-											className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-primary"
-											transition={{ type: "spring", stiffness: 500, damping: 32 }}
-										/>
-									)}
-									<span className="flex h-5 w-5 shrink-0 items-center justify-center">
-										{operation.contextRing ? (
-											<ContextRingView {...operation.contextRing} className="pointer-events-none" />
-										) : (
-											<span className="h-4 w-4 rounded-full border border-border" aria-hidden="true" />
+								// 这一行不参与 listbox：option 语义需要 listbox 祖先，而它不是 skill 选项；
+								// 激活态用 aria-current 挂在可聚焦按钮自身上（与 SkillListItem 的焦点模型一致）。
+								<div className="px-1.5">
+									<button
+										type="button"
+										data-index={0}
+										aria-current={activeIndex === 0}
+										disabled={operation.disabled}
+										onMouseEnter={() => onHoverItem(0)}
+										onClick={operation.onSelect}
+										className="relative flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-foreground/5 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+										style={{
+											background:
+												activeIndex === 0
+													? "color-mix(in srgb, var(--primary) 9%, transparent)"
+													: undefined,
+										}}
+									>
+										{activeIndex === 0 && (
+											<motion.span
+												layoutId="command-panel-active-marker"
+												className="absolute inset-y-1.5 left-0.5 w-0.5 rounded-full bg-primary"
+												transition={{ type: "spring", stiffness: 500, damping: 32 }}
+											/>
 										)}
-									</span>
-									<span className="shrink-0 truncate text-[12.5px] font-medium text-foreground">
-										{operation.label}
-									</span>
-									<span className="min-w-0 flex-1 truncate text-right text-[11px] text-muted-foreground/50">
-										{operation.description}
-									</span>
-								</button>
+										<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-accent/40">
+											{operation.contextRing ? (
+												<ContextRingView {...operation.contextRing} className="pointer-events-none" />
+											) : (
+												<span className="h-3.5 w-3.5 rounded-full border border-border" aria-hidden="true" />
+											)}
+										</span>
+										<span className="flex min-w-0 flex-1 flex-col gap-0.5">
+											<span className="truncate text-[13px] font-medium leading-tight text-foreground">
+												{operation.label}
+											</span>
+											<span className="truncate text-[12px] leading-snug text-muted-foreground/70">
+												{operation.description}
+											</span>
+										</span>
+									</button>
+								</div>
 							) : null}
 							{/* 过滤态隐藏宫格：此时用户在找 skill，键盘导航也只走列表 */}
 							{!filtering && (
@@ -129,17 +155,21 @@ export function CommandPanelView({
 									onSelect={onSelectConnector}
 								/>
 							)}
-							{items.length > 0 || !operation ? <SkillList
-								items={items}
-								activeIndex={operation ? activeIndex - 1 : activeIndex}
-								indexOffset={operation ? 1 : 0}
-								labels={labels}
-								filtering={filtering}
-								limit={revealed ? undefined : PANEL_REVEAL_ROWS}
-								resolveIcon={resolveIcon}
-								onHover={(index) => onHoverItem(index + (operation ? 1 : 0))}
-								onSelect={onSelectItem}
-							/> : null}
+							{items.length > 0 || !operation ? (
+								<SkillList
+									items={items}
+									activeIndex={operation ? activeIndex - 1 : activeIndex}
+									indexOffset={operation ? 1 : 0}
+									labels={labels}
+									filtering={filtering}
+									limit={revealed ? undefined : PANEL_REVEAL_ROWS}
+									resolveIcon={resolveIcon}
+									emptyAction={emptyAction}
+									ariaLabel={ariaLabel}
+									onHover={onHoverItem}
+									onSelect={onSelectItem}
+								/>
+							) : null}
 						</FadingScrollArea>
 
 						{actions.length > 0 && (
@@ -148,10 +178,12 @@ export function CommandPanelView({
 									<button
 										key={action.id}
 										type="button"
+										aria-pressed={action.active}
 										onClick={action.onToggle}
 										title={action.label}
 										className={[
 											"flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-0.5 text-[12px] font-medium transition-colors",
+											"focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
 											action.active
 												? "bg-primary/10 text-primary"
 												: "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",

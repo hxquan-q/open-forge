@@ -67,3 +67,17 @@ revision are joined from recorded observations, never from mutable live state. S
 ## Consumers
 
 - runtime and host packages that want a narrow logging abstraction without committing to a full observability stack
+
+
+## Context Boundary
+
+```yaml
+purpose: Telemetry and observation runtime: event recording and local observation store
+provides:  
+  - "@vetta/runtime-telemetry"
+  - "@vetta/runtime-telemetry/langfuse"
+consumes:  []
+internal_dependencies:
+  - "@vetta/agent-core"
+  - "@vetta/runtime-core"
+```

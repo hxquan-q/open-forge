@@ -1,11 +1,13 @@
 import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";
 import { describe, expect, it } from "vitest";
 import {
+	assemblyBaseline,
 	assemblyDraftFromTeam,
 	buildCreateTeamInput,
 	buildUpdateTeamInput,
 	canSubmitAssembly,
 	emptyAssemblyDraft,
+	sameAssemblyDraft,
 	setAssemblyAssignment,
 	toggleAssemblyMember,
 } from "./team-assembly";
@@ -99,6 +101,40 @@ describe("team assembly draft", () => {
 		});
 
 		expect(draft.assignments).toEqual({ a: { responsibility: "Owns review" } });
+	});
+});
+
+describe("assembly dirty tracking", () => {
+	it("treats a fresh create draft and a replayed edit draft as clean", () => {
+		// 新建草稿的种子就是空草稿；编辑草稿的种子是按团队重放的快照，二者都不该弹丢弃确认。
+		expect(sameAssemblyDraft(emptyAssemblyDraft(), emptyAssemblyDraft())).toBe(true);
+		expect(sameAssemblyDraft(assemblyDraftFromTeam(team), assemblyDraftFromTeam(team))).toBe(true);
+
+		expect(assemblyBaseline(emptyAssemblyDraft(), [team])).toEqual(emptyAssemblyDraft());
+		expect(assemblyBaseline(assemblyDraftFromTeam(team), [team])).toEqual(assemblyDraftFromTeam(team));
+		// 种子找不到对应团队（已被删除）时按脏处理，交给确认而不是静默丢。
+		expect(assemblyBaseline(assemblyDraftFromTeam(team), [])).toBeUndefined();
+	});
+
+	it("marks whitespace-only edits as clean but real edits as dirty", () => {
+		const baseline = emptyAssemblyDraft();
+		expect(sameAssemblyDraft({ name: "   ", memberIds: [] }, baseline)).toBe(true);
+		expect(sameAssemblyDraft({ name: "Squad", memberIds: [] }, baseline)).toBe(false);
+		expect(sameAssemblyDraft(toggleAssemblyMember(baseline, "a"), baseline)).toBe(false);
+	});
+
+	it("detects roster, leader and assignment edits on an existing team draft", () => {
+		const baseline = assemblyDraftFromTeam(team);
+		expect(sameAssemblyDraft({ ...baseline, leaderId: "a" }, baseline)).toBe(false);
+		expect(sameAssemblyDraft({ ...baseline, memberIds: ["a"] }, baseline)).toBe(false);
+		expect(
+			sameAssemblyDraft(
+				setAssemblyAssignment(baseline, "a", { responsibility: "Owns review", instructions: "" }),
+				baseline,
+			),
+		).toBe(false);
+		// 任务书写回与基线一致的内容不算改动。
+		expect(sameAssemblyDraft({ ...baseline, handles: { a: "a", b: "b" } }, baseline)).toBe(true);
 	});
 });
 

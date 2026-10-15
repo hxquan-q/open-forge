@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createAssistantMessage } from "@vetta/ai";
 import type { ConversationAgentMessageEvent } from "@vetta/runtime-core/conversation";
 import { describe, expect, it } from "vitest";
@@ -30,6 +31,47 @@ function textEvent(input: {
 }
 
 describe("reduceConversationMessageEvent", () => {
+	it("keeps tool-use calls running and settles only the final call without duplicate usage", () => {
+		const envelope = (sequence: number, delta = "") =>
+			textEvent({ conversationId: "conversation", messageId: "message", authorId: "a", sequence, delta });
+		const initial = reduceConversationMessageEvent(undefined, envelope(1, "checking"));
+		const message = {
+			...createAssistantMessage(
+				{ api: "fixture", provider: "fixture", model: "fixture" },
+				{ timestamp: 1_001, stopReason: "toolUse" },
+			),
+			content: [{ type: "toolCall" as const, id: "call-1", name: "read", arguments: { path: "a.md" } }],
+		};
+		const toolDone: ConversationAgentMessageEvent = {
+			...envelope(2),
+			event: { type: "done", reason: "toolUse", message },
+		};
+		const running = reduceConversationMessageEvent(initial, toolDone);
+		expect(running.message).toMatchObject({ phase: "streaming", usages: [message.usage] });
+		expect(running.message.endedAt).toBeUndefined();
+		expect(running.message.durationSeconds).toBeUndefined();
+		expect(running.message.blocks).toContainEqual(
+			expect.objectContaining({ type: "tool_call", toolCallId: "call-1", status: "pending" }),
+		);
+		expect(reduceConversationMessageEvent(running, toolDone)).toBe(running);
+
+		const continued = reduceConversationMessageEvent(running, envelope(3, "done"));
+		const final = createAssistantMessage(
+			{ api: "fixture", provider: "fixture", model: "fixture" },
+			{ timestamp: 3_001 },
+		);
+		const completed = reduceConversationMessageEvent(continued, {
+			...envelope(4),
+			event: { type: "done", reason: "stop", message: final },
+		});
+		expect(completed.message).toMatchObject({
+			phase: "completed",
+			endedAt: 3_001,
+			durationSeconds: 3,
+			usages: [message.usage, final.usage],
+		});
+	});
+
 	it("keeps identity, author, role fields, and ordered deltas in one strict Agent message", () => {
 		const first = reduceConversationMessageEvent(
 			undefined,

@@ -196,7 +196,7 @@
 			"statusDeleted": "删除",
 			"changeCount": "改过 {{count}} 次",
 			"saveAllToProject": "全部保存到项目",
-			"discardAll": "放弃全部变更",
+			"discardAll": "放弃全部产物",
 			"discardAllConfirm": "放弃画布列表里的 {{count}} 个产物？本机文件不会自动回收，会话历史与项目文件不受影响。",
 			"batchSaveSummary": "已保存 {{saved}} 个产物，冲突 {{conflicts}} 个，失败 {{failed}} 个。",
 			"batchDiscardSummary": "已放弃 {{count}} 个产物。",
@@ -310,6 +310,14 @@
 			"headline": "当前计划"
 		}
 	},
+	"preview": {
+		"degraded": {
+			"artifact": "内容过大，已改为纯文本预览，不再做语法高亮。",
+			"textFile": "文件过大，已关闭语法高亮与搜索索引。",
+			"codeBlock": "代码块过大，已改为纯文本显示。",
+			"transcript": "会话内容过大，已只加载当前可见范围。"
+		}
+	},
 	"fileExplorer": {
 		"display": {
 			"invalidPatterns": "最多可填写 100 条规则，每条不超过 1024 个字符",
@@ -386,6 +394,28 @@
 			"prepareFailed": "无法读取拖入的文件",
 			"commitFailed": "文件传输失败",
 			"failedCount": "有 {{count}} 项传输失败"
+		},
+		"sshTransfer": {
+			"download": "下载到本机…",
+			"uploadFiles": "上传文件…",
+			"uploadFolders": "上传文件夹…",
+			"panelTitle": "远端传输",
+			"conflictTitle": "目标已存在",
+			"conflictMessage": "有 {{count}} 个同名目标已存在于远端。选择「替换」将覆盖它们；选择「跳过」则保留远端现有内容，其余文件照常传输。",
+			"replace": "替换",
+			"skip": "跳过冲突项",
+			"skippedCount": "有 {{count}} 项无法传输，已跳过",
+			"nothingToTransfer": "没有可传输的文件",
+			"startFailed": "传输启动失败",
+			"cancel": "取消",
+			"remove": "移除",
+			"status": {
+				"queued": "排队中",
+				"transferring": "传输中",
+				"completed": "已完成",
+				"failed": "失败",
+				"canceled": "已取消"
+			}
 		}
 	},
 	"fileEditor": {
@@ -556,6 +586,23 @@
 		"exportButton": {
 			"title": "导出完整会话 HTML"
 		},
+		"archiveExportButton": {
+			"title": "导出可迁移会话归档"
+		},
+		"archiveImportButton": {
+			"title": "导入会话归档"
+		},
+		"archiveExport": {
+			"failed": "导出会话归档失败：{{message}}",
+			"passphrasePrompt": "为归档设置口令（可留空）"
+		},
+		"archiveImport": {
+			"failed": "导入会话归档失败：{{message}}",
+			"passphrasePrompt": "输入归档口令（无口令可留空）",
+			"doneSkip": "已跳过相同会话（指纹幂等）",
+			"doneCopy": "已导入为新会话副本",
+			"canceled": "已取消导入"
+		},
 		"newSessionButton": {
 			"title": "新会话"
 		},
@@ -643,7 +690,20 @@
 			"label": "沙盒受限",
 			"title": "仅允许工作区受限访问"
 		},
-		"sandboxUnavailable": "{{platform}} 沙盒不可用：{{reason}}",
+		"sandboxUnavailable": {
+			"reason": {
+				"notBundled": "当前安装未包含沙盒组件",
+				"notExecutable": "本机的沙盒组件无法执行",
+				"namespacesUnavailable": "当前系统不允许沙盒所需的命名空间操作",
+				"probeFailed": "沙盒自检未通过，隔离未按预期生效",
+				"hostLimited": "沙盒组件能力不足，无法提供完整隔离",
+				"hostTooOld": "沙盒组件版本过旧，不支持所需能力",
+				"unsupportedPlatform": "当前平台不支持沙盒执行模式",
+				"unknown": "未能确定沙盒不可用的原因"
+			},
+			"currentMode": "当前以「完全访问」运行，命令不受沙盒隔离约束",
+			"requestedModeNotEffective": "当前选中的沙盒受限无法生效，请改选「完全访问」"
+		},
 		"sandboxUnavailableRemote": "远程项目没有沙盒：沙盒只能约束这台电脑上的进程，而远程项目的命令在远端主机上执行"
 	},
 	"export": {
@@ -677,6 +737,9 @@
 		},
 		"planMode": {
 			"label": "计划模式"
+		},
+		"goalMode": {
+			"label": "目标模式"
 		}
 	},
 	"inputBar": {
@@ -737,16 +800,19 @@
 		"speech": {
 			"actions": {
 				"start": "开始语音输入",
-				"stop": "停止语音输入"
+				"stop": "停止语音输入",
+				"download": "下载语音模型后开始语音输入"
 			},
 			"states": {
 				"loading": "正在加载离线语音模型…",
+				"downloading": "正在下载语音模型",
 				"stopping": "正在完成语音识别…"
 			},
 			"errors": {
 				"unsupported": "语音输入目前仅支持 Windows x64",
-				"missing": "安装包中缺少语音模型，请重新安装应用",
-				"integrity": "安装包中的语音模型不完整，请重新安装应用",
+				"missing": "语音模型尚未下载，点击麦克风开始下载",
+				"integrity": "语音模型文件不完整，点击麦克风重新下载",
+				"download": "语音模型下载失败，点击重试",
 				"recognizer": "语音识别启动失败，点击重试"
 			}
 		},
@@ -888,6 +954,11 @@
 		"compactionIndicator": "正在压缩上下文...",
 		"retryIndicator": "正在重新连接（{{attempt}}/{{maxAttempts}}）",
 		"retryReason": "上次请求失败：{{reason}}",
+		"resumeBar": {
+			"title": "上次回复未完成：{{reason}}",
+			"action": "继续",
+			"failed": "继续失败，请稍后重试"
+		},
 		"streamingPhrases": [
 			"Vetta 正在回复…",
 			"请耐心等待…",
@@ -926,6 +997,10 @@
 				"network": {
 					"title": "网络没连上",
 					"hint": "检查一下网络或代理，然后重新发送。"
+				},
+				"stream_idle": {
+					"title": "等模型响应超时了",
+					"hint": "连接正常，只是上游迟迟没吐字；已自动换连重试，通常能自愈。"
 				},
 				"auth": {
 					"title": "模型密钥无效或已过期",
@@ -1048,11 +1123,12 @@
 			"groupAgents": "智能体",
 			"pick": "切换智能体",
 			"pickTitle": "指定一个团队或单个智能体来完成这次任务",
-			"switchTitle": "更换本次会话的团队或智能体"
+			"switchTitle": "更换本次会话的团队或智能体",
+			"triggerLabel": "{{label}}，{{hint}}"
 		},
 		"workspace": {
 			"hint": {
-				"work": "这次按「文档与研究」开：右侧是计划与产物，默认不含终端。",
+				"work": "这次按「文档与研究」开：任务开始后，右侧会出计划、来源资料和产物；默认不含终端。",
 				"coding": "这次按「代码」开：可用终端和 Git，右侧是执行轨迹。"
 			}
 		}
@@ -1090,6 +1166,29 @@
 			"dismissed": "尚未决定",
 			"pending": "等待你批准",
 			"title": "计划"
+		}
+	},
+	"goalMode": {
+		"dialog": {
+			"cancel": "取消",
+			"clear": "清除目标",
+			"createDescription": "Vetta 会持续迭代，直到目标完成、受阻或暂停。",
+			"manageDescription": "查看当前目标状态，或恢复和清除目标。",
+			"objectiveLabel": "目标",
+			"objectivePlaceholder": "描述一个具体、可验证的最终结果…",
+			"resume": "继续目标",
+			"start": "开始执行",
+			"statusLabel": "状态",
+			"title": "目标模式",
+			"usage": "已使用 {{used}} Token · 自动续跑 {{count}} 次"
+		},
+		"operationFailed": "目标操作失败",
+		"status": {
+			"active": "执行中",
+			"blocked": "受阻",
+			"complete": "已完成",
+			"paused": "已暂停",
+			"usage_limited": "用量受限"
 		}
 	},
 	"questionPanel": {
@@ -1214,12 +1313,15 @@
 		},
 		"emptyNoMatch": "未找到匹配项",
 		"emptyNoMatchHint": "换个关键词试试，或直接输入你的需求。",
+		"emptyClearFilterAction": "清除筛选",
+		"emptyOpenMarketAction": "去能力市场安装",
 		"emptyNoSkills": "暂无可用的技能或场景",
 		"emptyNoSkillsHint": "去能力广场安装技能或场景后，这里就能直接调用。",
 		"header": "选择场景或技能",
 		"resultCount": "{{count}} 个结果",
 		"scenesSection": "场景",
 		"skillsSection": "技能",
+		"sectionCount": "{{count}} 项",
 		"sourceLabels": {
 			"agentsProject": "通用·项目",
 			"agentsUser": "通用",
@@ -1285,6 +1387,7 @@
 			"spawn_agent": "派生子代理",
 			"task_output": "任务输出",
 			"task_stop": "停止任务",
+			"team_wait_tasks": "等待成员任务",
 			"todo": "待办",
 			"tool_search": "检索工具",
 			"tree": "目录树",
@@ -1295,6 +1398,20 @@
 			"filterByTags": "知识库·标签筛选",
 			"listTags": "知识库·标签列表",
 			"writePage": "知识库·写页"
+		}
+	},
+	"teamWaitTasks": {
+		"waiting": "等待成员任务的结果",
+		"timeout": "仍在等待成员完成（{{count}} 项进行中）",
+		"progress": "成员任务有更新",
+		"state": {
+			"queued": "待开始 {{count}}",
+			"running": "进行中 {{count}}",
+			"waiting": "等待中 {{count}}",
+			"attention-required": "需要处理 {{count}}",
+			"completed": "已完成 {{count}}",
+			"failed": "失败 {{count}}",
+			"cancelled": "已取消 {{count}}"
 		}
 	},
 	"mcpApp": {
@@ -1317,23 +1434,31 @@
 	"workspace": {
 		"mode": {
 			"coding": "代码",
-			"hint": "右侧工作台立刻更换。新会话会跟着走；当前会话不会变。",
+			"hint": "右侧工作台立即换新。新会话按这一档开始；当前会话不会变。",
 			"switch": "切换工作区：文档与研究或代码",
 			"work": "文档与研究"
 		},
 		"work": {
 			"panelTitle": "文档与研究",
-			"panelLead": "计划、资料和产物会出现在这里",
+			"panelLead": "这个会话的计划、来源资料和产物都在这里",
 			"artifacts": {
 				"empty": "生成的文档、表格等产物会出现在这里",
 				"title": "产物",
 				"previewUnavailable": "暂时无法读取该产物内容",
 				"truncated": "内容较长，已截断展示",
-				"sourceMissing": "产物源文件缺失，无法预览"
+				"sourceMissing": "产物源文件缺失，无法预览",
+				"citedSourcesTitle": "引用来源",
+				"citedOk": "来源正常",
+				"citedMissing": "来源缺失",
+				"citedChanged": "来源已变更"
 			},
 			"dataset": {
 				"empty": "接入数据分析后，数据集预览会显示在这里",
-				"title": "数据集"
+				"title": "数据集",
+				"pickFile": "选择数据文件",
+				"goalPlaceholder": "描述分析目标，如「按地区汇总销售额并标出异常行」",
+				"start": "开始分析",
+				"pickFailed": "选择数据文件失败，请重试"
 			},
 			"plan": {
 				"empty": "任务开始后，执行计划与进度会显示在这里",
@@ -1358,9 +1483,81 @@
 				"pickFile": "选择来源文件",
 				"goalPlaceholder": "描述处理目标，如「把这份报告整理成一页纪要」",
 				"start": "开始处理",
+				"remove": "移除 {{file}}",
 				"sendUnavailable": "当前会话不能发送消息，请稍后重试",
-				"pickFailed": "选择来源文件失败，请重试"
+				"pickFailed": "选择来源文件失败，请重试",
+				"modeLabel": "来源类型",
+				"mode": {
+					"document": "文档处理",
+					"research": "本地研究"
+				},
+				"pickFolder": "选择资料集目录",
+				"questionPlaceholder": "提出研究问题，如「这套资料对 X 的结论是什么？」",
+				"startResearch": "开始研究"
 			}
+		}
+	},
+	"sessionInterrupt": {
+		"notifyTitle": "会话回复中断",
+		"notifyBody": "回复可能因网络或超时中断，可打开会话后点继续。",
+		"autoRetriedTitle": "已自动续接",
+		"autoRetriedBody": "检测到异常中断，已在同一条回复中自动续跑。",
+		"reason": {
+			"networkFailure": "会话回复因网络中断停止，可打开会话后点继续。",
+			"truncated": "会话回复超出长度上限被截断，可打开会话后点继续。",
+			"error": "会话回复因上游错误停止，可打开会话后点继续。",
+			"indeterminate": "会话回复可能异常中断，可打开会话后点继续。"
+		},
+		"openSession": "打开会话",
+		"startupTitle": "检测到未完成的会话",
+		"startupBody": "上次退出时有 {{count}} 个会话的回复未正常完成，打开后可继续。"
+	},
+	"markdown": {
+		"preview": "预览",
+		"source": "源码",
+		"run": "在独立窗口运行",
+		"stop": "停止",
+		"waiting": "生成完成后显示预览。",
+		"paused": "预览已停止，重新运行将从头加载页面。",
+		"tooLarge": "内容过大，暂不生成预览。仍可查看和复制源码。",
+		"failed": "无法渲染此内容，已保留源码。",
+		"staticHtml": "静态预览。可在独立窗口运行 JavaScript；外部资源不可用。",
+		"running": "已打开独立交互预览，30 秒后自动关闭。",
+		"svg": "SVG 预览",
+		"html": "HTML 预览",
+		"loading": "正在生成预览…",
+		"retry": "重试",
+		"enlarge": "放大",
+		"save": "另存为",
+		"diagram": "图表",
+		"imageFailed": "图片加载失败。",
+		"actionFailed": "操作失败，请重试。"
+	},
+	"annotations": {
+		"title": "问答批注",
+		"ask": "问问 AI",
+		"history": "查看问答批注",
+		"messageMenu": "消息更多操作",
+		"saved": "查看 {{count}} 条问答批注",
+		"close": "关闭批注",
+		"contextHint": "参考截至此处的文字对话，单独讨论，不影响主对话。问答自动保存。",
+		"source": "回到原消息",
+		"sourceUnavailable": "原消息不在当前分支中，仍可查看已保存的批注。",
+		"question": "你的问题",
+		"send": "提问",
+		"cancel": "停止回答",
+		"answering": "正在回答…关闭面板后仍会继续并保存。",
+		"loading": "正在读取批注…",
+		"search": "搜索批注中的问题和回答",
+		"empty": "没有找到问答批注。可选中消息文字，右键选择「问问 AI」。",
+		"error": "操作未完成，输入仍保留。请重试，或检查模型设置后重新提问。",
+		"reload": "重新读取",
+		"retry": "重新回答这个问题",
+		"length": "回答已达到本次长度上限，可以继续追问。",
+		"status": {
+			"failed": "回答失败，问题和已收到的内容已保存。可检查模型设置后重试。",
+			"cancelled": "回答已停止，已收到的内容已保存。",
+			"interrupted": "上次回答被中断，可以重新回答这个问题。"
 		}
 	}
 }

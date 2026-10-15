@@ -196,7 +196,7 @@
 			"statusDeleted": "Deleted",
 			"changeCount": "changed {{count}}×",
 			"saveAllToProject": "Save all to project",
-			"discardAll": "Discard all changes",
+			"discardAll": "Discard all artifacts",
 			"discardAllConfirm": "Discard all {{count}} artifacts from the canvas list? Local files are not recycled automatically, and session history plus project files are untouched.",
 			"batchSaveSummary": "Saved {{saved}} artifacts, {{conflicts}} conflicts, {{failed}} failed.",
 			"batchDiscardSummary": "Discarded {{count}} artifacts.",
@@ -310,6 +310,14 @@
 			"headline": "Current plan"
 		}
 	},
+	"preview": {
+		"degraded": {
+			"artifact": "This content is too large — showing plain text without syntax highlighting.",
+			"textFile": "This file is too large — syntax highlighting and search indexing are off.",
+			"codeBlock": "This code block is too large — showing plain text.",
+			"transcript": "This conversation is very large — only the visible range is loaded."
+		}
+	},
 	"fileExplorer": {
 		"display": {
 			"invalidPatterns": "Use up to 100 patterns, each no longer than 1024 characters",
@@ -386,6 +394,28 @@
 			"prepareFailed": "Unable to read dropped files",
 			"commitFailed": "File transfer failed",
 			"failedCount": "{{count}} item(s) failed to transfer"
+		},
+		"sshTransfer": {
+			"download": "Download to computer…",
+			"uploadFiles": "Upload files…",
+			"uploadFolders": "Upload folders…",
+			"panelTitle": "Remote transfers",
+			"conflictTitle": "Target already exists",
+			"conflictMessage": "{{count}} target(s) with the same name already exist on the remote. “Replace” overwrites them; “Skip” keeps the remote copies and transfers the rest.",
+			"replace": "Replace",
+			"skip": "Skip conflicting items",
+			"skippedCount": "{{count}} item(s) could not be transferred and were skipped",
+			"nothingToTransfer": "Nothing to transfer",
+			"startFailed": "Failed to start transfer",
+			"cancel": "Cancel",
+			"remove": "Remove",
+			"status": {
+				"queued": "Queued",
+				"transferring": "Transferring",
+				"completed": "Completed",
+				"failed": "Failed",
+				"canceled": "Canceled"
+			}
 		}
 	},
 	"fileEditor": {
@@ -556,6 +586,23 @@
 		"exportButton": {
 			"title": "Export full session as HTML"
 		},
+		"archiveExportButton": {
+			"title": "Export portable session archive"
+		},
+		"archiveImportButton": {
+			"title": "Import session archive"
+		},
+		"archiveExport": {
+			"failed": "Failed to export session archive: {{message}}",
+			"passphrasePrompt": "Set an archive passphrase (leave empty for none)"
+		},
+		"archiveImport": {
+			"failed": "Failed to import session archive: {{message}}",
+			"passphrasePrompt": "Enter archive passphrase (leave empty if none)",
+			"doneSkip": "Skipped identical session (fingerprint idempotent)",
+			"doneCopy": "Imported as a new session copy",
+			"canceled": "Import canceled"
+		},
 		"newSessionButton": {
 			"title": "New session"
 		},
@@ -643,7 +690,20 @@
 			"label": "Sandboxed",
 			"title": "Allow restricted access within the workspace only"
 		},
-		"sandboxUnavailable": "{{platform}} sandbox unavailable: {{reason}}",
+		"sandboxUnavailable": {
+			"reason": {
+				"notBundled": "This installation does not include the sandbox component",
+				"notExecutable": "The sandbox component on this machine cannot be executed",
+				"namespacesUnavailable": "This system does not allow the namespace operations the sandbox requires",
+				"probeFailed": "The sandbox self-check did not pass; isolation is not in effect",
+				"hostLimited": "The sandbox component lacks the capabilities needed for full isolation",
+				"hostTooOld": "The sandbox component is too old to support the required capabilities",
+				"unsupportedPlatform": "Sandboxed mode is not supported on this platform",
+				"unknown": "The reason the sandbox is unavailable could not be determined"
+			},
+			"currentMode": "Commands currently run with full access, without sandbox isolation",
+			"requestedModeNotEffective": "The selected sandboxed mode cannot take effect — choose Full access"
+		},
 		"sandboxUnavailableRemote": "Sandbox is not available for remote projects: it only constrains processes on this computer, and a remote project's commands run on the remote host"
 	},
 	"export": {
@@ -677,6 +737,9 @@
 		},
 		"planMode": {
 			"label": "Plan mode"
+		},
+		"goalMode": {
+			"label": "Goal mode"
 		}
 	},
 	"inputBar": {
@@ -737,16 +800,19 @@
 		"speech": {
 			"actions": {
 				"start": "Start voice input",
-				"stop": "Stop voice input"
+				"stop": "Stop voice input",
+				"download": "Download speech model to start voice input"
 			},
 			"states": {
 				"loading": "Loading offline speech model…",
+				"downloading": "Downloading speech model",
 				"stopping": "Finishing speech recognition…"
 			},
 			"errors": {
 				"unsupported": "Voice input currently requires Windows x64",
-				"missing": "The speech model is missing from this installation. Reinstall the app",
-				"integrity": "The bundled speech model is incomplete. Reinstall the app",
+				"missing": "Speech model is not downloaded yet. Click the microphone to download",
+				"integrity": "Speech model files are incomplete. Click the microphone to re-download",
+				"download": "Speech model download failed. Click to retry",
 				"recognizer": "Speech recognition failed to start. Click to retry"
 			}
 		},
@@ -888,6 +954,11 @@
 		"compactionIndicator": "Compacting context...",
 		"retryIndicator": "Reconnecting ({{attempt}}/{{maxAttempts}})",
 		"retryReason": "Last request failed: {{reason}}",
+		"resumeBar": {
+			"title": "Last reply did not finish: {{reason}}",
+			"action": "Continue",
+			"failed": "Could not continue; try again later."
+		},
 		"streamingPhrases": [
 			"Vetta is replying…",
 			"Please hold on…",
@@ -926,6 +997,10 @@
 				"network": {
 					"title": "No network connection",
 					"hint": "Check your network or proxy, then send again."
+				},
+				"stream_idle": {
+					"title": "Timed out waiting for the model",
+					"hint": "The connection is fine, the upstream just stopped sending; it reconnected automatically and usually recovers."
 				},
 				"auth": {
 					"title": "Model key is invalid or expired",
@@ -1048,11 +1123,12 @@
 			"groupAgents": "Agents",
 			"pick": "Switch agent",
 			"pickTitle": "Pick a team or a single agent for this task",
-			"switchTitle": "Switch the team or agent for this session"
+			"switchTitle": "Switch the team or agent for this session",
+			"triggerLabel": "{{label}}, {{hint}}"
 		},
 		"workspace": {
 			"hint": {
-				"work": "This chat will start as Docs & research: the right side shows plan and deliverables, no terminal by default.",
+				"work": "This chat will start as Docs & research: plans, sources, and deliverables appear on the right once work starts; no terminal by default.",
 				"coding": "This chat will start as Code: terminal and Git are available, the right side shows the execution trail."
 			}
 		}
@@ -1090,6 +1166,29 @@
 			"dismissed": "Not decided yet",
 			"pending": "Waiting for your approval",
 			"title": "Plan"
+		}
+	},
+	"goalMode": {
+		"dialog": {
+			"cancel": "Cancel",
+			"clear": "Clear goal",
+			"createDescription": "Vetta keeps iterating until the goal is complete, blocked, or paused.",
+			"manageDescription": "Review the current goal, resume it, or clear it.",
+			"objectiveLabel": "Goal",
+			"objectivePlaceholder": "Describe a concrete, verifiable final outcome…",
+			"resume": "Resume goal",
+			"start": "Start working",
+			"statusLabel": "Status",
+			"title": "Goal mode",
+			"usage": "{{used}} tokens used · {{count}} automatic continuations"
+		},
+		"operationFailed": "Goal operation failed",
+		"status": {
+			"active": "Active",
+			"blocked": "Blocked",
+			"complete": "Complete",
+			"paused": "Paused",
+			"usage_limited": "Usage limited"
 		}
 	},
 	"questionPanel": {
@@ -1214,12 +1313,15 @@
 		},
 		"emptyNoMatch": "No matches found",
 		"emptyNoMatchHint": "Try another keyword, or just type your request.",
+		"emptyClearFilterAction": "Clear filter",
+		"emptyOpenMarketAction": "Open the ability market",
 		"emptyNoSkills": "No skills or scenes available",
 		"emptyNoSkillsHint": "Install a skill or scene from the ability market to call it here.",
 		"header": "Select a scene or skill",
 		"resultCount": "{{count}} results",
 		"scenesSection": "Scenes",
 		"skillsSection": "Skills",
+		"sectionCount": "{{count}} items",
 		"sourceLabels": {
 			"agentsProject": "Generic · Project",
 			"agentsUser": "Generic",
@@ -1285,6 +1387,7 @@
 			"spawn_agent": "Spawn agent",
 			"task_output": "Task output",
 			"task_stop": "Stop task",
+			"team_wait_tasks": "Waiting for member tasks",
 			"todo": "Todo",
 			"tool_search": "Tool search",
 			"tree": "Directory tree",
@@ -1295,6 +1398,20 @@
 			"filterByTags": "Knowledge · Filter by tags",
 			"listTags": "Knowledge · List tags",
 			"writePage": "Knowledge · Write page"
+		}
+	},
+	"teamWaitTasks": {
+		"waiting": "Waiting for member task results",
+		"timeout": "Still waiting for members to finish ({{count}} in progress)",
+		"progress": "Member task updates",
+		"state": {
+			"queued": "{{count}} queued",
+			"running": "{{count}} running",
+			"waiting": "{{count}} waiting",
+			"attention-required": "{{count}} need attention",
+			"completed": "{{count}} done",
+			"failed": "{{count}} failed",
+			"cancelled": "{{count}} cancelled"
 		}
 	},
 	"mcpApp": {
@@ -1317,23 +1434,31 @@
 	"workspace": {
 		"mode": {
 			"coding": "Code",
-			"hint": "The right-hand workspace changes now. New chats follow this choice; the current chat does not.",
+			"hint": "The right-hand workspace switches right away. New chats start in this mode; the current chat does not change.",
 			"switch": "Switch workspace: docs & research or code",
 			"work": "Docs & research"
 		},
 		"work": {
 			"panelTitle": "Docs & research",
-			"panelLead": "Plans, sources, and deliverables show up here",
+			"panelLead": "This session’s plans, sources, and deliverables live here",
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
 				"title": "Artifacts",
 				"previewUnavailable": "This artifact cannot be previewed right now",
 				"truncated": "Content is truncated",
-				"sourceMissing": "The artifact source file is missing"
+				"sourceMissing": "The artifact source file is missing",
+				"citedSourcesTitle": "Cited sources",
+				"citedOk": "available",
+				"citedMissing": "missing",
+				"citedChanged": "changed"
 			},
 			"dataset": {
 				"empty": "Dataset previews appear here once data analysis is wired up",
-				"title": "Dataset"
+				"title": "Dataset",
+				"pickFile": "Choose a data file",
+				"goalPlaceholder": "Describe the analysis goal, e.g. \"sum sales by region and flag abnormal rows\"",
+				"start": "Analyze",
+				"pickFailed": "Could not choose the data file. Try again."
 			},
 			"plan": {
 				"empty": "Once a task starts, its plan and progress show here",
@@ -1358,9 +1483,81 @@
 				"pickFile": "Choose source files",
 				"goalPlaceholder": "Describe the goal, e.g. \"Turn this report into a one-page summary\"",
 				"start": "Start",
+				"remove": "Remove {{file}}",
 				"sendUnavailable": "This session cannot send a message right now. Try again later.",
-				"pickFailed": "Could not choose source files. Try again."
+				"pickFailed": "Could not choose source files. Try again.",
+				"modeLabel": "Source type",
+				"mode": {
+					"document": "Documents",
+					"research": "Local research"
+				},
+				"pickFolder": "Choose a material folder",
+				"questionPlaceholder": "Ask a research question, e.g. \"What does this material set conclude about X?\"",
+				"startResearch": "Start research"
 			}
+		}
+	},
+	"sessionInterrupt": {
+		"notifyTitle": "Session reply interrupted",
+		"notifyBody": "The reply may have stopped due to network or timeout. Open the session and continue.",
+		"autoRetriedTitle": "Auto-continued",
+		"autoRetriedBody": "An interrupt was detected and the reply was automatically continued in the same bubble.",
+		"reason": {
+			"networkFailure": "The reply stopped after a network interruption. Open the session and continue.",
+			"truncated": "The reply hit the length limit and was cut off. Open the session and continue.",
+			"error": "The reply stopped after an upstream error. Open the session and continue.",
+			"indeterminate": "The reply may have been interrupted. Open the session and continue."
+		},
+		"openSession": "Open session",
+		"startupTitle": "Unfinished sessions detected",
+		"startupBody": "{{count}} session(s) had replies that did not finish before the app last exited. Open one to continue."
+	},
+	"markdown": {
+		"preview": "Preview",
+		"source": "Source",
+		"run": "Run in separate window",
+		"stop": "Stop",
+		"waiting": "Preview will appear when generation finishes.",
+		"paused": "Preview stopped. Run again to restart the page.",
+		"tooLarge": "This content is too large to preview. You can still view and copy its source.",
+		"failed": "Could not render this content. Its source is shown instead.",
+		"staticHtml": "Static preview. Run JavaScript in a separate window; external resources are unavailable.",
+		"running": "Interactive preview opened in a separate window. Closes after 30 seconds.",
+		"svg": "SVG preview",
+		"html": "HTML preview",
+		"loading": "Preparing preview…",
+		"retry": "Retry",
+		"enlarge": "Enlarge",
+		"save": "Save as",
+		"diagram": "Diagram",
+		"imageFailed": "Could not load image.",
+		"actionFailed": "Action failed. Please retry."
+	},
+	"annotations": {
+		"title": "Q&A notes",
+		"ask": "Ask AI",
+		"history": "View Q&A notes",
+		"messageMenu": "More message actions",
+		"saved": "View {{count}} Q&A notes",
+		"close": "Close note",
+		"contextHint": "Uses the text conversation up to this message. This separate discussion does not affect the main conversation. Q&A is saved automatically.",
+		"source": "Back to source message",
+		"sourceUnavailable": "The source message is not in the current branch. Saved notes are still available.",
+		"question": "Your question",
+		"send": "Ask",
+		"cancel": "Stop answering",
+		"answering": "Answering… It will continue and save if you close this panel.",
+		"loading": "Loading notes…",
+		"search": "Search questions and answers",
+		"empty": "No Q&A notes found. Select message text and choose Ask AI from the context menu.",
+		"error": "The action could not finish. Your input is preserved. Try again, or check your model settings before asking again.",
+		"reload": "Reload",
+		"retry": "Answer this question again",
+		"length": "This answer reached its length limit. You can ask a follow-up question.",
+		"status": {
+			"failed": "The answer failed. Your question and any received text were saved. Check your model settings and retry.",
+			"cancelled": "Answering stopped. Any received text was saved.",
+			"interrupted": "The previous answer was interrupted. You can retry this question."
 		}
 	}
 }

@@ -2,7 +2,7 @@
 import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLoopbackSshConnection } from "@vetta/ssh-transport/testing";
+import { createLoopbackSshConnection, toLoopbackRemotePath } from "@vetta/ssh-transport/testing";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ protocol: { handle: () => undefined } }));
@@ -50,37 +50,38 @@ describe("媒体协议", () => {
 		expect([...Buffer.from(await ranged.arrayBuffer())]).toEqual([...bytes.subarray(10, 20)]);
 	});
 
-	it.skipIf(process.platform === "win32")(
-		"远程项目：图片与视频从远端按范围取回，内容与远端文件逐字节一致",
-		async () => {
-			const remoteRoot = realpathSync(mkdtempSync(join(tmpdir(), "vetta-media-remote-")));
-			const bytes = createMedia(remoteRoot, "clip.mp4");
-			const root = `ssh://build-01${remoteRoot}`;
-			allowProjectRoot(root);
-
-			const full = await handleMediaRequest(new Request(mediaUrl(`${root}/clip.mp4`)));
-			expect(full.status).toBe(200);
-			expect(full.headers.get("Content-Length")).toBe(String(bytes.length));
-			expect(Buffer.from(await full.arrayBuffer()).equals(bytes)).toBe(true);
-
-			// 跨过 1 MiB 分块边界的一段。
-			const start = 1024 * 1024 - 5;
-			const ranged = await handleMediaRequest(
-				new Request(mediaUrl(`${root}/clip.mp4`), { headers: { Range: `bytes=${start}-${start + 9}` } }),
-			);
-			expect(ranged.status).toBe(206);
-			expect([...Buffer.from(await ranged.arrayBuffer())]).toEqual([...bytes.subarray(start, start + 10)]);
-		},
-	);
-
-	it.skipIf(process.platform === "win32")("远程项目之外的远端路径被拒绝，不存在的文件是 404", async () => {
+	it("远程项目：图片与视频从远端按范围取回，内容与远端文件逐字节一致", async () => {
 		const remoteRoot = realpathSync(mkdtempSync(join(tmpdir(), "vetta-media-remote-")));
-		allowProjectRoot(`ssh://build-01${remoteRoot}`);
+		const bytes = createMedia(remoteRoot, "clip.mp4");
+		const root = `ssh://build-01${toLoopbackRemotePath(remoteRoot)}`;
+		allowProjectRoot(root);
+
+		const full = await handleMediaRequest(new Request(mediaUrl(`${root}/clip.mp4`)));
+		expect(full.status).toBe(200);
+		expect(full.headers.get("Content-Length")).toBe(String(bytes.length));
+		expect(Buffer.from(await full.arrayBuffer()).equals(bytes)).toBe(true);
+
+		// 跨过 1 MiB 分块边界的一段。
+		const start = 1024 * 1024 - 5;
+		const ranged = await handleMediaRequest(
+			new Request(mediaUrl(`${root}/clip.mp4`), { headers: { Range: `bytes=${start}-${start + 9}` } }),
+		);
+		expect(ranged.status).toBe(206);
+		expect([...Buffer.from(await ranged.arrayBuffer())]).toEqual([...bytes.subarray(start, start + 10)]);
+	});
+
+	it("远程项目之外的远端路径被拒绝，不存在的文件是 404", async () => {
+		const remoteRoot = realpathSync(mkdtempSync(join(tmpdir(), "vetta-media-remote-")));
+		allowProjectRoot(`ssh://build-01${toLoopbackRemotePath(remoteRoot)}`);
 
 		expect((await handleMediaRequest(new Request(mediaUrl("ssh://build-01/etc/passwd")))).status).toBe(403);
-		expect((await handleMediaRequest(new Request(mediaUrl(`ssh://build-01${remoteRoot}/missing.png`)))).status).toBe(
-			404,
-		);
+		expect(
+			(
+				await handleMediaRequest(
+					new Request(mediaUrl(`ssh://build-01${toLoopbackRemotePath(remoteRoot)}/missing.png`)),
+				)
+			).status,
+		).toBe(404);
 	});
 
 	it("toolcall 引用：命中返回字节 + immutable 缓存头，支持 Range，未命中 404", async () => {

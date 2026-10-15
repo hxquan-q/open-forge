@@ -65,13 +65,24 @@ export interface ReadImageProcessor {
 	resize(buffer: Buffer, mimeType: string, options?: ImageResizeOptions): Promise<ImageResizeResult>;
 }
 
+/** 二进制提示的可用性上下文：只承载「当前会话真实可调用的技能名」。 */
+export interface ReadBinaryContentHintContext {
+	readonly availableSkillNames?: ReadonlySet<string>;
+}
+
 export interface ReadToolOptions {
 	readonly autoResizeImages?: boolean;
 	readonly operations?: ReadOperations;
 	readonly imageProcessor?: ReadImageProcessor;
 	readonly imageResizeOptions?: ImageResizeOptions;
 	readonly preserveFullText?: (absolutePath: string) => boolean;
-	readonly binaryContentHint?: (extension: string) => string | undefined;
+	/**
+	 * 二进制文件的处理提示。`context.availableSkillNames` 是当前会话真实可调用的技能名；
+	 * 未提供（或未命中）时实现必须**不得指名任何技能**，否则会把模型引向不存在的技能。
+	 */
+	readonly binaryContentHint?: (extension: string, context?: ReadBinaryContentHintContext) => string | undefined;
+	/** 当前会话可调用的技能名快照；缺省表示宿主无法提供，提示侧按「无可用技能」处理。 */
+	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 	/** 路径在哪台机器上解析；缺省为本机。远端项目必须换掉，见 {@link ToolPathHost}。 */
 	readonly pathHost?: ToolPathHost;
 }
@@ -126,11 +137,13 @@ export function createReadTool(cwd: string, options: ReadToolOptions = {}): Runt
 	const imageResizeOptions = options.imageResizeOptions;
 	const preserveFullText = options.preserveFullText;
 	const binaryContentHint = options.binaryContentHint;
+	const availableSkillNames = options.availableSkillNames;
 
 	return {
 		name: "read",
 		label: "read",
 		description: READ_TOOL_DESCRIPTION,
+		executionMode: "parallel-safe",
 		inputSchema: ReadToolInputSchema,
 		execute(request) {
 			const { path, offset, limit } = request.input;
@@ -179,6 +192,7 @@ export function createReadTool(cwd: string, options: ReadToolOptions = {}): Runt
 								operations,
 								preserveFullText,
 								binaryContentHint,
+								availableSkillNames,
 							);
 						}
 
@@ -274,16 +288,19 @@ async function readText(
 	operations: ReadOperations,
 	preserveFullText: ReadToolOptions["preserveFullText"],
 	binaryContentHint: ReadToolOptions["binaryContentHint"],
+	availableSkillNames: ReadToolOptions["availableSkillNames"],
 ): Promise<RuntimeToolResult> {
 	const buffer = await operations.readFile(absolutePath);
 	const extension = extname(absolutePath).toLowerCase();
 	if (KNOWN_BINARY_EXTENSIONS.has(extension) || isLikelyBinaryContent(buffer)) {
 		const extensionLabel = extension || "(no extension)";
+		// 可用技能名是宿主在调用时刻提供的事实；缺省即视为「没有可用技能」，提示不得指名。
+		const hintContext: ReadBinaryContentHintContext = { availableSkillNames: availableSkillNames?.() };
 		return {
 			content: [
 				{
 					type: "text",
-					text: `Binary file detected (${extensionLabel}, ${formatSize(buffer.length)}). Raw bytes are not shown to avoid context pollution.${formatBinaryContentHint(binaryContentHint?.(extension))}`,
+					text: `Binary file detected (${extensionLabel}, ${formatSize(buffer.length)}). Raw bytes are not shown to avoid context pollution.${formatBinaryContentHint(binaryContentHint?.(extension, hintContext))}`,
 				},
 			],
 			details: undefined,

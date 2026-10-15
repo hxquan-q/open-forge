@@ -1,29 +1,22 @@
 // Copyright The Open Forge contributors.
 import type { Input, WebContents } from "electron";
-import { session as electronSession } from "electron";
 import { getEffectiveShortcut } from "../../shared/shortcuts.js";
 import { readDesktopConfig } from "../config/desktop-config-store.js";
 import { IN_APP_BROWSER_DOM_MUTATION_SENTINEL } from "./webview-picker-guest.js";
-import { getInAppBrowserSessionController, IN_APP_BROWSER_PARTITION } from "./webview-session-controller.js";
+import { getInAppBrowserSessionController } from "./webview-session-controller.js";
 import { matchShortcutCombo } from "./webview-shortcut-match.js";
 
-export function isInAppBrowserWebContents(webContents: WebContents): boolean {
-	try {
-		return webContents.session === electronSession.fromPartition(IN_APP_BROWSER_PARTITION);
-	} catch {
-		return false;
-	}
-}
-
-export function bindInAppBrowserWebview(webContents: WebContents): void {
-	if (!isInAppBrowserWebContents(webContents)) return;
+/**
+ * WebContentsView 路径（TASK-0072）：view 按 workspace 创建时就已知归属，
+ * 直接 attach——历史上 <webview> 的 did-attach-webview/partition 匹配
+ * attachUnbound 竞态已随迁移移除。
+ */
+export function bindInAppBrowserViewContents(webContents: WebContents, workspaceId: string): void {
 	const controller = getInAppBrowserSessionController();
-	controller.attachUnboundWebContents(webContents);
+	controller.attachWebContents(workspaceId, webContents);
 
 	const bump = (url?: string): void => {
-		const id = controller.workspaceIdForContents(webContents.id);
-		if (!id) return;
-		controller.bumpRevision(id, { url, title: webContents.getTitle() });
+		controller.bumpRevision(workspaceId, { url, title: webContents.getTitle() });
 	};
 
 	webContents.on("did-navigate", (_event, url) => {
@@ -35,17 +28,14 @@ export function bindInAppBrowserWebview(webContents: WebContents): void {
 		bump(url);
 	});
 	webContents.on("dom-ready", () => {
-		const id = controller.workspaceIdForContents(webContents.id);
-		if (id) controller.attachWebContents(id, webContents);
-		else controller.attachUnboundWebContents(webContents);
+		controller.attachWebContents(workspaceId, webContents);
 	});
 	webContents.on("console-message", (_event, _level, message) => {
 		if (message !== IN_APP_BROWSER_DOM_MUTATION_SENTINEL) return;
-		const id = controller.workspaceIdForContents(webContents.id);
-		if (id) controller.bumpRevision(id);
+		controller.bumpRevision(workspaceId);
 	});
 	webContents.on("before-input-event", (event, input) => {
-		void handleBrowserGuestInput(webContents, event, input);
+		void handleBrowserGuestInput(workspaceId, event, input);
 	});
 	webContents.once("destroyed", () => {
 		controller.detachWebContents(webContents);
@@ -53,13 +43,11 @@ export function bindInAppBrowserWebview(webContents: WebContents): void {
 }
 
 async function handleBrowserGuestInput(
-	webContents: WebContents,
+	workspaceId: string,
 	event: { preventDefault: () => void },
 	input: Input,
 ): Promise<void> {
 	const controller = getInAppBrowserSessionController();
-	const workspaceId = controller.workspaceIdForContents(webContents.id);
-	if (!workspaceId) return;
 	const config = await readDesktopConfig();
 	const combo = getEffectiveShortcut("browser-element-picker", config.shortcuts?.bindings ?? {});
 	if (matchShortcutCombo(input, combo)) {

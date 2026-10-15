@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AssistantMessageEvent } from "@vetta/ai";
 import type { AssistantSessionEvent, SessionEvent } from "@vetta/runtime-core";
 
@@ -59,8 +60,6 @@ export class RpcSessionEventAdapter {
 						},
 					},
 				];
-			case "message.final":
-				return [{ type: "message_end", message: event.message }];
 			case "tool.start":
 				return [
 					{

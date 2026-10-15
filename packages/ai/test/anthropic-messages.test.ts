@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 import { convertMessages } from "../src/providers/anthropic/messages.js";
@@ -18,7 +19,69 @@ const model: Model<"anthropic-messages"> = {
 };
 
 describe("Anthropic message conversion", () => {
-	it("forwards user images when image capability metadata is missing", () => {
+	it("forwards user images for an explicitly vision-capable model", () => {
+		const converted = convertMessages(
+			[
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: "inspect" },
+						{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+					],
+					timestamp: 1,
+				},
+			],
+			{ ...model, input: ["text", "image"] },
+			false,
+		);
+
+		expect(converted[0]).toMatchObject({
+			role: "user",
+			content: [
+				{ type: "text", text: "inspect" },
+				{ type: "image", source: { type: "base64", media_type: "image/png", data: "ZmFrZQ==" } },
+			],
+		});
+	});
+
+	it("forwards tool-result images for an explicitly vision-capable model", () => {
+		const converted = convertMessages(
+			[
+				{
+					role: "toolResult",
+					toolCallId: "call-1",
+					toolName: "read",
+					content: [
+						{ type: "text", text: "Read image file [image/png]" },
+						{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+					],
+					isError: false,
+					timestamp: 1,
+				},
+			],
+			{ ...model, input: ["text", "image"] },
+			false,
+		);
+
+		expect(converted[0]).toMatchObject({
+			role: "user",
+			content: [
+				{
+					type: "tool_result",
+					tool_use_id: "call-1",
+					content: [
+						{ type: "text", text: "Read image file [image/png]" },
+						{
+							type: "image",
+							source: { type: "base64", media_type: "image/png", data: "ZmFrZQ==" },
+						},
+					],
+				},
+			],
+		});
+	});
+
+	it("omits user images for a text-only model", () => {
 		const converted = convertMessages(
 			[
 				{
@@ -38,7 +101,7 @@ describe("Anthropic message conversion", () => {
 			role: "user",
 			content: [
 				{ type: "text", text: "inspect" },
-				{ type: "image", source: { type: "base64", media_type: "image/png", data: "ZmFrZQ==" } },
+				{ type: "text", text: "Image content omitted because the current model does not support image input." },
 			],
 		});
 	});
@@ -75,7 +138,7 @@ describe("Anthropic message conversion", () => {
 		});
 	});
 
-	it("forwards tool-result images when image capability metadata is missing", () => {
+	it("omits tool-result images for a text-only model", () => {
 		const converted = convertMessages(
 			[
 				{
@@ -100,13 +163,8 @@ describe("Anthropic message conversion", () => {
 				{
 					type: "tool_result",
 					tool_use_id: "call-1",
-					content: [
-						{ type: "text", text: "Read image file [image/png]" },
-						{
-							type: "image",
-							source: { type: "base64", media_type: "image/png", data: "ZmFrZQ==" },
-						},
-					],
+					content:
+						"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
 				},
 			],
 		});

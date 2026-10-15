@@ -1,4 +1,4 @@
 {
-	"plugin.name": "Vetta Actions",
-	"plugin.description": "提供可独立演进的官方 App Action。"
+	"plugin.name": "Open Forge 操作",
+	"plugin.description": "官方操作集：为会话、项目、模型、能力、下载、更新等 17 个功能域提供可被界面与 Agent 调用的标准动作。"
 }

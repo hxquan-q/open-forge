@@ -20,7 +20,9 @@ interface TaskStatus {
 }
 
 /** 真的把 helper 编出来、经回环 SSH 上传并运行：协议两端一起测，不是对着一份假的应答。 */
-describe.skipIf(!hasGo)("远端 helper（真实二进制，经回环 SSH）", () => {
+// helper 只面向 linux/darwin 远端；Windows「远端」是 MINGW，且本机 Go 默认 386，
+// 产出的二进制不构成有效目标——显式交给 POSIX CI（TASK-0168）。
+describe.skipIf(!hasGo || process.platform === "win32")("远端 helper（真实二进制，经回环 SSH）", () => {
 	beforeAll(() => {
 		helperBinary = join(mkdtempSync(join(tmpdir(), "openforge-helper-build-")), "openforge-ssh-helper");
 		execFileSync("go", ["build", "-o", helperBinary, "./cmd/openforge-ssh-helper"], {

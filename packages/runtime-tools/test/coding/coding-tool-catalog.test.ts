@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRuntimeObservationPublisher, type RuntimeObservationRecord } from "@vetta/runtime-core";
 import type { RuntimeSnapshotAcquireContext, RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
 import { describe, expect, it } from "vitest";
@@ -12,6 +13,20 @@ import {
 } from "../../src/coding/index.js";
 
 describe("coding tool registry", () => {
+	it("keeps explicit execution mode in frozen and guarded tool definitions", () => {
+		const safe = registration("safe");
+		const registry = new InMemoryCodingToolRegistry([
+			{ ...safe, tool: { ...safe.tool, executionMode: "parallel-safe" } },
+			registration("default"),
+		]);
+		const snapshot = registry.snapshot();
+		const safeEntry = snapshot.entries.find((entry) => entry.registration.tool.name === "safe");
+		if (!safeEntry) throw new Error("Missing safe tool");
+		expect(safeEntry.registration.tool.executionMode).toBe("parallel-safe");
+		expect(guardCodingToolRegistration(registry, safeEntry).executionMode).toBe("parallel-safe");
+		expect(snapshot.registrations.find(({ tool }) => tool.name === "default")?.tool.executionMode).toBeUndefined();
+	});
+
 	it("publishes safe catalog changes through an arbitrary observation adapter", () => {
 		const records: RuntimeObservationRecord[] = [];
 		const registry = new InMemoryCodingToolRegistry([], {

@@ -1,8 +1,9 @@
+// Modified by The Open Forge contributors.
 import { builtinModules } from "node:module";
 import { resolve } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createSentryBuildSetup } from "./sentry-vite";
-import { resolveMainBundleExternals } from "./scripts/packaged-native-dependencies.mjs";
+import { DEVELOPMENT_WORKSPACE_EXTERNAL, resolveMainBundleExternals } from "./scripts/packaged-native-dependencies.mjs";
 import {
 	resolveSpeechInputBuildConfig,
 	SPEECH_INPUT_ENABLED_ENV,
@@ -35,7 +36,7 @@ export default defineConfig(({ mode }) => {
 	const speechInputBuildConfig = resolveSpeechInputBuildConfig({ env });
 	const developmentWorkspacePackages =
 		effectiveMode === "development"
-			? [/^@vetta\/(?:action-rpc|ai|coding-agent|remote-control|runtime-core)(?:\/|$)/]
+			? [DEVELOPMENT_WORKSPACE_EXTERNAL]
 			: [];
 	const sourcemapEnabled = (process.env.VETTA_MAIN_SOURCEMAP ?? env.VETTA_MAIN_SOURCEMAP) === "true";
 	const sentry = createSentryBuildSetup(env, "dist/main");
@@ -61,6 +62,11 @@ export default defineConfig(({ mode }) => {
 	define[`process.env.${SPEECH_INPUT_ENABLED_ENV}`] = JSON.stringify(String(speechInputBuildConfig.enabled));
 	// 未配置时按 false（lite）内联，保证 cloud 判断能被常量折叠掉。
 	define["process.env.VETTA_CLOUD_ENABLED"] = JSON.stringify(cloudEnabled ? "true" : "false");
+	// 品牌口径构建期开关：distribution（默认，外部分发 Allstr ai / 小爱ai）| self（显式，Open Forge）。
+	// 放在 VETTA_* 通用内联之后做归一化，托盘/关于面板等主进程品牌面随档案折叠。
+	define["process.env.VETTA_BRAND_PROFILE"] = JSON.stringify(
+		env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution",
+	);
 	// 固化发行配置，防止打包后意外继承启动环境；空仓库由运行时解析为 Vetta 官方源。
 	define["process.env.VETTA_OPEN_MARKETPLACE_REPOSITORY"] = JSON.stringify(
 		env.VETTA_OPEN_MARKETPLACE_REPOSITORY?.trim() || "",
@@ -76,6 +82,11 @@ export default defineConfig(({ mode }) => {
 	return {
 		define,
 		plugins: [toolkitSourceAlias(), ...sentry.plugins],
+		// prod 主进程走 esbuild minify：dist/main 20.12MB → 15.17MB（-24.6%）。默认会改写
+		// 函数/类名，用户日志里的主进程栈只剩行列号；keepNames 保留具名函数后为
+		// 15.90MB（-20.9%，比纯 minify 多 0.74MB），在体积与可诊断性之间取后者。
+		// dev 模式本就不做 minify。实测方法与产物字节见 TASK-0104 交付记录。
+		esbuild: { keepNames: true },
 		resolve: {
 			alias: [
 				{
@@ -120,7 +131,7 @@ export default defineConfig(({ mode }) => {
 					...resolveMainBundleExternals({ speechInputEnabled: speechInputBuildConfig.enabled }),
 				],
 			},
-			minify: false,
+			minify: true,
 			sourcemap: sentry.enabled ? "hidden" : sourcemapEnabled,
 		},
 	};

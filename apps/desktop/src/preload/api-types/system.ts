@@ -1,4 +1,5 @@
-import type { RuntimeStatus, RuntimesStatus, RuntimeType } from "../../main/runtimes/types.js";
+import type { Transport } from "@vetta/ai";
+import type { GitToolStatus, RuntimeStatus, RuntimesStatus, RuntimeType } from "../../main/runtimes/types.js";
 import type { UserMessageClipboardPasteResult, UserMessageClipboardWriteRequest } from "../../shared/clipboard.js";
 
 export interface DesktopShellApi {
@@ -45,6 +46,10 @@ export interface DesktopSettingsApi {
 	setServerToken(token: string | undefined): Promise<void>;
 	getServerRefreshToken(): Promise<string | undefined>;
 	setServerRefreshToken(token: string | undefined): Promise<void>;
+	getModelTransport(): Promise<Transport>;
+	setModelTransport(transport: Transport): Promise<Transport>;
+	getSessionInterruptContinue(): Promise<{ mode: "off" | "notify" | "auto"; maxAttempts: number }>;
+	setSessionInterruptContinue(mode: "off" | "notify" | "auto"): Promise<void>;
 }
 
 /** 套餐配额窗口：5 小时 / 周 / 月三档。 */
@@ -102,4 +107,6 @@ export interface DesktopRuntimesApi {
 	reinstall(type: RuntimeType): Promise<RuntimeStatus>;
 	/** 重新探测系统已装运行时。 */
 	redetect(): Promise<RuntimesStatus>;
+	/** macOS 调起系统安装窗口后立即返回；Windows 下载托管 MinGit 后返回。 */
+	installGit(): Promise<GitToolStatus>;
 }

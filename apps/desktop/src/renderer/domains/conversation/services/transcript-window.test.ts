@@ -1,9 +1,11 @@
+import type { HistoryPage } from "@preload/api-types/session";
 import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
-import type { ChatConversationItem, TranscriptPlaceholderItem } from "@shared/store/atoms";
+import type { ChatConversationItem, ChatTimelineItem, TranscriptPlaceholderItem } from "@shared/store/atoms";
 import type { Message } from "@vetta/ai";
 import type { HistoryEntry } from "@vetta/runtime-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { fullHistoryToChatWithSpans } from "./chat-service";
+import { patchLiveItemWithCanonical } from "./live-history-patch";
 import {
 	applyTranscriptWindow,
 	clearTranscriptBacklog,
@@ -11,7 +13,10 @@ import {
 	isTranscriptPlaceholder,
 	materializeTranscriptItem,
 	measureHistoryEntryFootprint,
+	mergeTranscriptHeadPage,
+	prependTranscriptPage,
 	readTranscriptBacklog,
+	reconcileWindowedProjection,
 	registerTranscriptBacklog,
 	TRANSCRIPT_SUMMARY_MAX_CHARS,
 	type TranscriptBacklog,
@@ -188,7 +193,7 @@ describe("fullHistoryToChatWithSpans", () => {
 		const entries: HistoryEntry[] = [
 			{
 				type: "prompt_ref_marker",
-				promptRef: { kind: "skill", name: "vetta-testing" },
+				promptRef: { kind: "skill", name: "open-forge-testing" },
 				timestamp: "2024-01-01T00:00:00Z",
 			},
 			userEntry("u-0", "q0"),
@@ -373,5 +378,302 @@ describe("backlog 字节预算", () => {
 		const restored = materializeTranscriptItem(placeholder, readTranscriptBacklog("s1"));
 		expect(restored?.kind).toBe("user");
 		expect(restored?.id).toBe(messages[0]?.id);
+	});
+});
+
+// ── TASK-0050 游标分页窗口 ──────────────────────────────────────────────
+
+/** HistoryEntry 是联合类型，timing/marker 类条目没有 entryId。 */
+function entryIdOf(entry: HistoryEntry): string | undefined {
+	return "entryId" in entry ? entry.entryId : undefined;
+}
+
+function headPage(entries: HistoryEntry[], overrides?: Partial<HistoryPage>): HistoryPage {
+	return { history: entries, hasMore: false, head: true, ...overrides };
+}
+
+describe("prependTranscriptPage", () => {
+	it("更早页拼到窗口前面，顺序旧→新", () => {
+		const windowEntries = [userEntry("u-4", "q4"), assistantEntry("a-4", "a4")];
+		const older = headPage([userEntry("u-2", "q2"), userEntry("u-3", "q3")], {
+			nextBeforeEntry: "cursor-0",
+			hasMore: true,
+			head: false,
+		});
+		const merged = prependTranscriptPage(windowEntries, older);
+		expect(merged.map(entryIdOf)).toEqual(["u-2", "u-3", "u-4", "a-4"]);
+	});
+});
+
+describe("mergeTranscriptHeadPage", () => {
+	it("append-only：页覆盖窗口末端并带新增尾部 → extend，整页成为窗口", () => {
+		const windowEntries = [userEntry("u-1", "q1"), assistantEntry("a-1", "a1")];
+		const page = headPage([...windowEntries, userEntry("u-2", "q2"), assistantEntry("a-2", "a2")]);
+		const merge = mergeTranscriptHeadPage(windowEntries, page);
+		expect(merge.kind).toBe("extend");
+		expect(merge.kind === "extend" ? merge.entries.map(entryIdOf) : []).toEqual(["u-1", "a-1", "u-2", "a-2"]);
+	});
+
+	it("窗口已翻过多页：页只覆盖窗口后缀，更旧的已加载前缀原样保留", () => {
+		const older = [userEntry("u-0", "q0"), assistantEntry("a-0", "a0")];
+		const tail = [userEntry("u-1", "q1"), assistantEntry("a-1", "a1")];
+		const windowEntries = [...older, ...tail];
+		// 新 head 页覆盖 tail 并追加一条。
+		const page = headPage([...tail, userEntry("u-2", "q2")]);
+		const merge = mergeTranscriptHeadPage(windowEntries, page);
+		expect(merge.kind).toBe("extend");
+		expect(merge.kind === "extend" ? merge.entries.map(entryIdOf) : []).toEqual(["u-0", "a-0", "u-1", "a-1", "u-2"]);
+	});
+
+	it("页与窗口完全一致 → unchanged（不产生新数组给调用方提交）", () => {
+		const windowEntries = [userEntry("u-1", "q1"), assistantEntry("a-1", "a1")];
+		expect(mergeTranscriptHeadPage(windowEntries, headPage([...windowEntries])).kind).toBe("unchanged");
+	});
+
+	it("窗口内条目被改写（编辑/分支/压缩）→ replaced，整窗回到这一页", () => {
+		const windowEntries = [userEntry("u-1", "q1"), userEntry("u-2", "q2"), assistantEntry("a-2", "a2")];
+		// u-2 被编辑改写 → 重叠区签名失配。
+		const page = headPage([userEntry("u-1", "q1"), userEntry("u-2x", "q2 edited"), assistantEntry("a-2", "a2")]);
+		const merge = mergeTranscriptHeadPage(windowEntries, page);
+		expect(merge.kind).toBe("replaced");
+		expect(merge.kind === "replaced" ? merge.entries.map(entryIdOf) : []).toEqual(["u-1", "u-2x", "a-2"]);
+	});
+
+	it("窗口末端条目在页中不存在（尾部被删/重写）→ replaced", () => {
+		const windowEntries = [userEntry("u-1", "q1"), userEntry("u-2", "q2")];
+		const page = headPage([userEntry("u-9", "other")]);
+		expect(mergeTranscriptHeadPage(windowEntries, page).kind).toBe("replaced");
+	});
+
+	it("空窗口 → replaced 为整页（初始窗口建立）", () => {
+		const page = headPage([userEntry("u-1", "q1")]);
+		const merge = mergeTranscriptHeadPage([], page);
+		expect(merge.kind).toBe("replaced");
+		expect(merge.kind === "replaced" ? merge.entries.map(entryIdOf) : []).toEqual(["u-1"]);
+	});
+
+	it("无 entryId 的同形条目签名重复：按最靠后匹配锚定窗口末端", () => {
+		// 无 id 的 marker 条目内容相同 → FNV 签名相同；末端锚应取页中最后一次出现。
+		const marker = (t: string): HistoryEntry => ({
+			type: "prompt_ref_marker",
+			promptRef: { kind: "skill", name: "same" },
+			timestamp: t,
+		});
+		const windowEntries = [marker("t1"), marker("t1")];
+		const page = headPage([marker("t1"), marker("t1"), marker("t1")]);
+		const merge = mergeTranscriptHeadPage(windowEntries, page);
+		expect(merge.kind).toBe("extend");
+		expect(merge.kind === "extend" ? merge.entries.length : 0).toBe(3);
+	});
+});
+
+describe("reconcileWindowedProjection", () => {
+	function completedUser(id: string, entryId: string, text: string): ChatTimelineItem {
+		return createConversationUserMessage({ id, entryId, text, deliveryPhase: "completed" });
+	}
+	function completedAgent(id: string, entryId: string): ChatTimelineItem {
+		return createConversationAgentMessage({ id, entryId, phase: "completed", blocks: [] });
+	}
+
+	it("durable key 回收 live 对象：同 entryId 的占位/消息原对象沿用", () => {
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items).toHaveLength(2);
+		// patch 在字段无差异时原样返回 live 对象。
+		expect(result.items[0]).toBe(liveUser);
+		expect(result.items[1]).toBe(liveAgent);
+		expect(result.canonicalItemIndexes).toHaveLength(2);
+		expect(result.prependedCount).toBe(0);
+	});
+
+	it("占位 item 按 role 归一键命中投影 item 并原样复用（不打补丁）", () => {
+		const placeholder: TranscriptPlaceholderItem = {
+			kind: "placeholder",
+			id: "ph-a",
+			entryId: "a-1",
+			renderKey: "rk",
+			turnId: "t-1",
+			authorId: "agent",
+			role: "assistant",
+			summary: "…",
+			phase: "completed",
+		};
+		const canonical: ChatConversationItem[] = [
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([placeholder], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items[0]).toBe(placeholder);
+	});
+
+	it("向上翻页：头部新投影 item 计入 prependedCount，旧窗 item 复用", () => {
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u0", entryId: "u-0", text: "q0" }),
+			createConversationAgentMessage({ id: "proj-a0", entryId: "a-0", phase: "completed", blocks: [] }),
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items).toHaveLength(4);
+		expect(result.prependedCount).toBe(2);
+		expect(result.items[2]).toBe(liveUser);
+		expect(result.items[3]).toBe(liveAgent);
+	});
+
+	it("patch 回填 canonical 元数据但保留 live 正文/blocks", () => {
+		const liveAgent = createConversationAgentMessage({
+			id: "live-a",
+			phase: "completed",
+			blocks: [{ type: "text", id: "b1", text: "live blocks" }],
+		});
+		const canonical = createConversationAgentMessage({
+			id: "proj-a",
+			entryId: "a-1",
+			phase: "completed",
+			blocks: [{ type: "text", id: "b1", text: "canonical blocks" }],
+			endedAt: 999,
+		});
+		const result = reconcileWindowedProjection([liveAgent], [canonical], {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		const merged = result.items[0];
+		expect(merged?.kind).toBe("agent");
+		if (merged?.kind === "agent") {
+			expect(merged.entryId).toBe("a-1");
+			expect(merged.endedAt).toBe(999);
+			expect(merged.blocks[0]).toMatchObject({ text: "live blocks" });
+		}
+	});
+
+	it("excludeLiveIds 剔除过期乐观气泡；live-only 尾部（流式）保持在末尾", () => {
+		const expired = createConversationUserMessage({ id: "opt-old", text: "ghost", deliveryPhase: "pending" });
+		const streaming = createConversationAgentMessage({ id: "live-stream", phase: "streaming", blocks: [] });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+		];
+		const result = reconcileWindowedProjection([liveUser, expired, streaming], canonical, {
+			excludeLiveIds: new Set(["opt-old"]),
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items).toHaveLength(2);
+		expect(result.items[0]).toBe(liveUser);
+		expect(result.items[1]?.id).toBe("live-stream");
+		expect(result.canonicalItemIndexes).toHaveLength(1);
+	});
+
+	it("夹在已消费项之间的 live-only 项保持因果位置，不平铺到回复末尾", () => {
+		// 队列镜像气泡在 live 里排在它触发的回复之前；窗口化提交若把未消费
+		// live-only 项一律追加尾部，气泡会跑到回复之后（BUG-0068）。
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const mirror = createConversationUserMessage({ id: "opt-2", text: "followup", deliveryPhase: "pending" });
+		const liveAgent = completedAgent("live-a", "a-2");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-2", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, mirror, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["live-u", "opt-2", "live-a"]);
+	});
+
+	it("live-only 项没有已消费前驱时锚定到最近已消费后继之前", () => {
+		const mirror = createConversationUserMessage({ id: "opt-1", text: "followup", deliveryPhase: "pending" });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([mirror, liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["opt-1", "live-u", "live-a"]);
+	});
+
+	it("(b) 槽位文本不匹配的排队幽灵保持尾部，镜像气泡仍锚到孪生槽前", () => {
+		// (b) 的依据是「该槽位最可能是规范孪生」：锚定槽的 user 文本必须与
+		// 气泡一致才锚定中段；孪生永远不会入模的排队幽灵（如取消失败回队
+		// 留下的镜像）插进中段会跑到比它更晚的已发送消息之前（BUG-0073）。
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const mirror = createConversationUserMessage({ id: "opt-2", text: "followup", deliveryPhase: "pending" });
+		const ghost = createConversationUserMessage({ id: "opt-ghost", text: "还在排队", deliveryPhase: "pending" });
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationUserMessage({ id: "proj-u10", entryId: "u-10", text: "followup" }),
+			createConversationAgentMessage({ id: "proj-a10", entryId: "a-10", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([liveUser, mirror, ghost], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["live-u", "opt-2", "proj-u10", "proj-a10", "opt-ghost"]);
+	});
+
+	it("首部锚定的 live-only 项不计入 prependedCount", () => {
+		// (a) 锚定到结果头部的 pending 是既有 live 行的重排，不是新前插内容；
+		// loadOlderTranscriptPage 拿 prependedCount 前移 Virtuoso firstItemIndex，
+		// 多计一行滚动锚点就跳一行（BUG-0073）。
+		const pendingHead = createConversationUserMessage({ id: "opt-head", text: "早期气泡", deliveryPhase: "pending" });
+		const liveUser = completedUser("live-u", "u-1", "q1");
+		const liveAgent = completedAgent("live-a", "a-1");
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+			createConversationAgentMessage({ id: "proj-a", entryId: "a-1", phase: "completed", blocks: [] }),
+		];
+		const result = reconcileWindowedProjection([pendingHead, liveUser, liveAgent], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["opt-head", "live-u", "live-a"]);
+		expect(result.prependedCount).toBe(0);
+	});
+
+	it("完全无已消费邻居的 live-only 项仍追加尾部", () => {
+		const streaming = createConversationAgentMessage({ id: "live-stream", phase: "streaming", blocks: [] });
+		const canonical: ChatConversationItem[] = [
+			createConversationUserMessage({ id: "proj-u", entryId: "u-1", text: "q1" }),
+		];
+		const result = reconcileWindowedProjection([streaming], canonical, {
+			patchLiveItem: patchLiveItemWithCanonical,
+		});
+		expect(result.items.map((item) => item.id)).toEqual(["proj-u", "live-stream"]);
+	});
+
+	it("无 entryId 的 live 项按 kind 有序配对；kind 不匹配的项不被消费", () => {
+		// live: [无 key 的 event, 无 key 的 completed agent]；
+		// canonical: [无 key agent, 无 key event]——顺序相反也要各自配上。
+		const liveEvent: ChatTimelineItem = {
+			kind: "event",
+			id: "ev-live",
+			event: { kind: "notice", text: "n" } as never,
+		};
+		const liveAgent = createConversationAgentMessage({ id: "a-live", phase: "completed", blocks: [] });
+		const canonicalAgent = createConversationAgentMessage({
+			id: "a-proj",
+			phase: "completed",
+			blocks: [{ type: "text", id: "x", text: "c" }],
+		});
+		const canonicalEvent: ChatConversationItem = {
+			kind: "event",
+			id: "ev-proj",
+			event: { kind: "notice", text: "n2" } as never,
+		};
+		const result = reconcileWindowedProjection([liveEvent, liveAgent], [canonicalAgent, canonicalEvent]);
+		// canonicalAgent 配对 liveAgent（kind agent）；canonicalEvent 配对 liveEvent。
+		expect(result.items[0]?.id).toBe("a-live");
+		expect(result.items[1]?.id).toBe("ev-live");
+		expect(result.canonicalItemIndexes).toHaveLength(2);
 	});
 });

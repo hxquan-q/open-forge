@@ -1,8 +1,29 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ModelSelectorView, type ModelSelectorViewProps } from "@vetta-org/theme-ui/chat";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const GROUPS: ModelSelectorViewProps["groups"] = [
+	{
+		provider: "provider",
+		label: "Provider",
+		models: [
+			{
+				key: "provider/alpha",
+				provider: "provider",
+				modelId: "alpha",
+				displayName: "Alpha",
+			},
+			{
+				key: "provider/beta",
+				provider: "provider",
+				modelId: "beta",
+				displayName: "Beta",
+			},
+		],
+	},
+];
 
 class ResizeObserverStub {
 	observe(): void {}
@@ -88,5 +109,68 @@ describe("ModelSelectorView", () => {
 		expect(onModelSelect).toHaveBeenCalledWith("provider/beta");
 		await waitFor(() => expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull());
 		await waitFor(() => expect(document.activeElement).toBe(trigger));
+	});
+
+	it("回合进行中：触发器禁用、给出原因，且点不出菜单", async () => {
+		const user = userEvent.setup();
+		const onModelSelect = vi.fn();
+		render(
+			<ModelSelectorView
+				selectedModel="provider/alpha"
+				selectedOption={{ key: "provider/alpha", provider: "provider", modelId: "alpha", displayName: "Alpha" }}
+				menuLevels={[]}
+				groups={GROUPS}
+				labels={{ ...labels, disabledReason: "Available after the current turn finishes" }}
+				disabled
+				onModelSelect={onModelSelect}
+				onReasoningSelect={vi.fn()}
+			/>,
+		);
+
+		const trigger = screen.getByRole("button", { name: "Alpha" });
+		expect(trigger.hasAttribute("disabled")).toBe(true);
+		expect(trigger.getAttribute("title")).toBe("Available after the current turn finishes");
+
+		await user.click(trigger);
+		fireEvent.click(trigger);
+		expect(screen.queryByRole("menuitem", { name: "Beta" })).toBeNull();
+		expect(onModelSelect).not.toHaveBeenCalled();
+	});
+
+	it("菜单里说明本次选择只影响后续回合", async () => {
+		const user = userEvent.setup();
+		render(
+			<ModelSelectorView
+				selectedModel="provider/alpha"
+				selectedOption={{ key: "provider/alpha", provider: "provider", modelId: "alpha", displayName: "Alpha" }}
+				menuLevels={[]}
+				groups={GROUPS}
+				labels={{ ...labels, turnScopeHint: "Applies to later turns only" }}
+				onModelSelect={vi.fn()}
+				onReasoningSelect={vi.fn()}
+			/>,
+		);
+
+		expect(screen.queryByText("Applies to later turns only")).toBeNull();
+		await user.click(screen.getByRole("button", { name: "Alpha" }));
+		expect(await screen.findByText("Applies to later turns only")).toBeTruthy();
+	});
+
+	it("宿主不提供说明文案时不渲染多余行", async () => {
+		const user = userEvent.setup();
+		render(
+			<ModelSelectorView
+				selectedModel="provider/alpha"
+				selectedOption={{ key: "provider/alpha", provider: "provider", modelId: "alpha", displayName: "Alpha" }}
+				menuLevels={[]}
+				groups={GROUPS}
+				labels={labels}
+				onModelSelect={vi.fn()}
+				onReasoningSelect={vi.fn()}
+			/>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Alpha" }));
+		expect(await screen.findByRole("menuitem", { name: "Beta" })).toBeTruthy();
 	});
 });

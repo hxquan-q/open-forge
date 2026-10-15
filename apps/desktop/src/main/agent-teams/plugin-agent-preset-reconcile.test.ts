@@ -1,4 +1,5 @@
-import type { AgentBlueprint, AgentTeamDocument, TeamDefinition } from "@vetta/agent-team";
+// Modified by The Open Forge contributors.
+import type { AgentBlueprint, AgentProfile, AgentTeamDocument, TeamDefinition } from "@vetta/agent-team";
 import { createAgentTeamFixture, pluginBlueprintId } from "@vetta/agent-team";
 import { describe, expect, it } from "vitest";
 import {
@@ -331,6 +332,76 @@ describe("plugin agent preset reconcile", () => {
 		expect(claimed?.blueprintId).toBe(BLUEPRINT_ID);
 		expect(claimed?.source).toEqual({ kind: "plugin", pluginId: PLUGIN_ID, nameKey: "agent.designer.name" });
 		expect(claimed?.name).toBe("设计师");
+	});
+
+	it("leaves a user-created profile alone even when it shares the preset blueprint", () => {
+		// 用户从蓝图新建的自建档案：blueprintId 与预设相同但没有提供方戳。按 blueprintId 认领会把
+		// 它改写成预设档案——用户的人设与 handle 被吃掉，存量团队还会因 handle 撞库整份读不出来。
+		const document = baseDocument();
+		const clone: AgentProfile = {
+			id: "8f9a1b2c-3d4e-4f50-8a9b-0c1d2e3f4a5b",
+			revision: 1,
+			name: "馆长",
+			description: "用户自建的人设",
+			mentionHandle: "agent-7",
+			blueprintId: BLUEPRINT_ID,
+			abilities: { selectionMode: "all", skills: [], mcpServers: [], plugins: [] },
+			scope: { kind: "library" },
+			createdAt: 1,
+			updatedAt: 1,
+		};
+
+		const result = reconcilePluginAgentPresets({
+			document: { ...document, agents: [clone, ...document.agents] },
+			agents: [agentPreset],
+			teams: [],
+		});
+
+		if (!result) throw new Error("expected the preset to install its own profile");
+		const survived = result.document.agents.find((agent) => agent.id === clone.id);
+		expect(survived?.name).toBe("馆长");
+		expect(survived?.mentionHandle).toBe("agent-7");
+		expect(survived?.source).toBeUndefined();
+		// 预设照常落自己的档案，用的是确定性 id 而不是抢来的那份。
+		expect(
+			result.document.agents.some(
+				(agent) => agent.id === pluginAgentProfileId(PLUGIN_ID, "designer") && agent.source?.kind === "plugin",
+			),
+		).toBe(true);
+	});
+
+	it("keeps the provider-stamped instance and a lookalike clone distinct", () => {
+		// 线上事故形状：被认领过的预设实例与用户克隆同 blueprintId 共存，克隆在目录序里排在前面
+		// 时会被认领并改写成同一个 handle，校验直接判整份配置作废。
+		const installed = reconcilePluginAgentPresets({
+			document: baseDocument(),
+			agents: [agentPreset],
+			teams: [],
+		});
+		if (!installed) throw new Error("expected the preset to install");
+		const clone: AgentProfile = {
+			id: "8f9a1b2c-3d4e-4f50-8a9b-0c1d2e3f4a5b",
+			revision: 1,
+			name: "馆长",
+			description: "用户自建的人设",
+			mentionHandle: "agent-7",
+			blueprintId: BLUEPRINT_ID,
+			abilities: { selectionMode: "all", skills: [], mcpServers: [], plugins: [] },
+			scope: { kind: "library" },
+			createdAt: 1,
+			updatedAt: 1,
+		};
+
+		const input: AgentTeamDocument = {
+			...installed.document,
+			agents: [clone, ...installed.document.agents],
+		};
+		const result = reconcilePluginAgentPresets({ document: input, agents: [agentPreset], teams: [] });
+
+		const agents = result?.document.agents ?? input.agents;
+		const handles = agents.filter((agent) => agent.scope.kind === "library").map((agent) => agent.mentionHandle);
+		expect(new Set(handles).size).toBe(handles.length);
+		expect(agents.find((agent) => agent.id === clone.id)?.mentionHandle).toBe("agent-7");
 	});
 
 	it("skips a team whose member profiles cannot be resolved", () => {

@@ -28,6 +28,17 @@ export interface DesktopCodingAgentFunctionSourceLogger {
 	warn(message: string, context: { readonly functionId: string; readonly errorName?: string }): void;
 }
 
+let desktopFunctionSource: SessionExtensionFunctionSource | undefined;
+
+/** Composition Root 创建后登记共享函数源，供会话级收窄（如团队成员会话）包装使用。 */
+export function setDesktopCodingAgentFunctionSource(source: SessionExtensionFunctionSource): void {
+	desktopFunctionSource = source;
+}
+
+export function getDesktopCodingAgentFunctionSource(): SessionExtensionFunctionSource | undefined {
+	return desktopFunctionSource;
+}
+
 export interface DesktopCodingAgentFunctionSourceOptions {
 	readonly logger?: DesktopCodingAgentFunctionSourceLogger;
 	readonly invokeArtifact?: (

@@ -102,3 +102,15 @@ await window.vetta.plugins.grantPermissions("security-probe", [
 - 不要在生产数据工作区对未知插件授予 `fs.write` / `agent.command.run` / `network.fetch`。
 - 探针会尝试读 `~/.ssh/id_rsa` 等路径以验证边界；**不会**把内容上传，细节只留在本机 UI / 导出 JSON。
 - 写探测目标是「应失败」的路径；若出现「发现」且写成功，请立即检查磁盘并视为真实漏洞。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+```

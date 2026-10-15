@@ -1,3 +1,4 @@
+import { brandIconUrl } from "@shared/brand-assets";
 import { i18n } from "@shared/i18n";
 
 function escapeHtml(value: string): string {
@@ -73,7 +74,8 @@ function sanitizeSerializedTree(root: HTMLElement): void {
 
 async function loadAppIconDataUrl(): Promise<string> {
 	try {
-		const response = await fetch("/icon.png");
+		// 品牌图标随构建期档案（VETTA_BRAND_PROFILE）切换，不再固定取 public/icon.png。
+		const response = await fetch(brandIconUrl);
 		if (!response.ok) return "";
 		return await blobToDataUrl(await response.blob());
 	} catch {

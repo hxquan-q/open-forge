@@ -54,7 +54,38 @@
 		"sandboxUnavailable": "{{platform}} 沙盒不可用：{{reason}}",
 		"every": "每隔",
 		"unitHours": "小时",
-		"unitDays": "天"
+		"unitDays": "天",
+		"permissionTiers": {
+			"title": "无人值守授权",
+			"description": "按能力放行低风险操作；未授权项仍会弹出审批。默认全部关闭，行为与改前一致。",
+			"billingVeto": "涉及配额、付费或积分消耗的操作在任何档位下都需要人工确认。",
+			"enableAll": "全部开启",
+			"enableAllConfirmTitle": "确认全部开启无人值守授权？",
+			"enableAllConfirmMessage": "将允许本任务在无人值守时自动放行工作区写入、常用命令、批量删除、系统级工具与普通审批弹窗。L4 高风险与计费相关操作仍会要求你确认。请确认你了解风险。",
+			"enableAllConfirm": "确认全部开启",
+			"tiers": {
+				"allowWorkspaceWrite": {
+					"label": "允许工作区写入",
+					"hint": "自动放行写文件、编辑等本地写入类审批（不含 L4）。"
+				},
+				"allowCommonCommands": {
+					"label": "允许常用命令",
+					"hint": "自动放行 git status、测试与只读类常用命令。"
+				},
+				"allowBatchDelete": {
+					"label": "允许批量删除",
+					"hint": "自动放行批量删除类命令与删除定时任务等操作。"
+				},
+				"allowSystemTools": {
+					"label": "允许系统级工具",
+					"hint": "自动放行 MCP、包安装等系统级工具审批。"
+				},
+				"autoApprovePrompts": {
+					"label": "自动允许其他审批弹窗",
+					"hint": "自动放行未被上述分档覆盖的普通（非 L4、非计费）审批。"
+				}
+			}
+		}
 	},
 	"scheduleMode": {
 		"once": "单次",
@@ -114,5 +145,39 @@
 		"failed": "失败",
 		"running": "执行中",
 		"aborted": "已中止"
+	},
+	"trigger": {
+		"cron": "按计划",
+		"event": "按事件",
+		"manual": "仅手动",
+		"eventHint": "宿主事件触发，错过不补跑",
+		"manualHint": "仅「立即执行」可跑",
+		"events": {
+			"session.created": "会话创建后",
+			"project.opened": "项目打开后",
+			"automation.panelOpened": "打开自动化页后",
+			"session.switched": "切换会话后"
+		}
+	},
+	"package": {
+		"import": "导入",
+		"export": "导出",
+		"discover": "发现",
+		"importTitle": "从文件导入自动化任务包",
+		"exportTitle": "导出选中或全部任务为任务包",
+		"discoverTitle": "从公开仓发现任务包",
+		"discoverHint": "仅读取 GitHub 公开仓（topic: openforge-automation-package）；导入后默认停用，不会自动执行。",
+		"discoverLoading": "正在搜索公开任务包…",
+		"discoverEmpty": "暂未发现公开任务包",
+		"discoverFailed": "发现任务包失败",
+		"close": "关闭",
+		"importing": "导入中…",
+		"exportEmpty": "没有可导出的任务",
+		"exportSuccess": "任务包已导出",
+		"exportFailed": "导出失败",
+		"needWorkspace": "请先设置工作目录后再导入",
+		"importDisabled": "已导入「{{id}}」（默认停用，需手动启用）",
+		"importRejected": "导入被拒绝：{{reasons}}",
+		"importFailed": "导入失败"
 	}
 }

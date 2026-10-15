@@ -6,6 +6,7 @@
       "common": [
         "vetta-actions",
         "preset-agent",
+        "allstar-coding",
         "vetta-ui-design",
         "image-gen",
         "media-viewer",
@@ -13,6 +14,7 @@
         "svg-viewer",
         "chart-renderer",
         "git",
+        "scripts",
         "plugin-workbench",
         "comfyui-media-provider",
         "content-creation",
@@ -24,6 +26,7 @@
       "common": [
         "vetta-actions",
         "preset-agent",
+        "allstar-coding",
         "vetta-ui-design",
         "image-gen",
         "media-viewer",
@@ -31,6 +34,7 @@
         "svg-viewer",
         "chart-renderer",
         "git",
+        "scripts",
         "plugin-workbench",
         "browser",
         "build-apple-apps"

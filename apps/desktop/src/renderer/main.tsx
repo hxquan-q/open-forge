@@ -1,5 +1,6 @@
 import { AppBootLoadingView } from "@vetta-org/theme-ui/app-boot";
 import { createRoot } from "react-dom/client";
+import { waitForCommittedPaint } from "./shared/lib/committed-paint";
 import { installInactiveWindowAnimationPause } from "./shared/lib/inactive-window-animations";
 import { installLiveAnimations } from "./shared/lib/live-animations";
 import { applyPlatformAttribute } from "./shared/lib/platform";
@@ -37,13 +38,10 @@ const appReadyPromise = window.vetta.appLifecycle.whenReady();
 root.render(<AppBootLoadingView />);
 
 // 两帧后再通知主进程显示窗口，确保主题变量与 theme-ui 启动骨架已经完成绘制。
-const bootPaintedPromise = new Promise<void>((resolve) => {
-	requestAnimationFrame(() => {
-		requestAnimationFrame(() => {
-			window.vetta.appLifecycle.reportRendererBootPainted();
-			resolve();
-		});
-	});
+// 窗口隐藏或被系统判为遮挡时 rAF 不会触发（见 BUG-0016）：此刻没人看得到画面，
+// 不得把渲染进程锁死在骨架屏，直接放行让应用完成挂载。
+const bootPaintedPromise = waitForCommittedPaint({ timeoutMs: null }).then(() => {
+	window.vetta.appLifecycle.reportRendererBootPainted();
 });
 const renderAppPromise = import("./renderApp");
 

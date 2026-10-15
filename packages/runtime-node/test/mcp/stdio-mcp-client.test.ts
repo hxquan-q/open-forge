@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 
 const processState = vi.hoisted(() => ({ instance: undefined as unknown }));
@@ -23,6 +24,10 @@ vi.mock("../../src/mcp/transports/stdio/stdio-process.js", () => {
 
 		async start(): Promise<void> {}
 		async stop(): Promise<void> {}
+
+		getStderrTail(): string {
+			return "";
+		}
 
 		send(message: unknown): void {
 			this.sent.push(message);
@@ -124,6 +129,44 @@ describe("StdioMcpClient protocol-era behavior", () => {
 					(message.params as Record<string, unknown>).requestId === request.id,
 			),
 		).toBeDefined();
+		await client.close();
+	});
+
+	it("initialize handshake honors config.startupTimeout over the request timeout", async () => {
+		// `npx -y <pkg>` 冷安装期间进程已 spawn 但服务未就绪；startupTimeout 才是
+		// 「允许启动完成」的预算，请求级 timeout 套在握手上会误杀还在安装的进程树。
+		const client = new StdioMcpClient({
+			name: "slow-boot",
+			config: { command: "fixture", startupTimeout: 2000 },
+			timeout: 60,
+		});
+		const initializing = client.initialize(initializeParams);
+		const process = currentProcess();
+		const request = await waitForRequest(process, "initialize");
+		setTimeout(() => {
+			process.emit("message", {
+				jsonrpc: "2.0",
+				id: request.id,
+				result: {
+					protocolVersion: "2025-11-25",
+					serverInfo: { name: "slow-boot", version: "1" },
+					capabilities: {},
+				},
+			});
+		}, 300);
+		await expect(initializing).resolves.toMatchObject({ protocolVersion: "2025-11-25" });
+		await client.close();
+	});
+
+	it("initialize handshake still fails fast when startupTimeout itself is exceeded", async () => {
+		const client = new StdioMcpClient({
+			name: "never-ready",
+			config: { command: "fixture", startupTimeout: 80 },
+			timeout: 60_000,
+		});
+		const initializing = client.initialize(initializeParams);
+		await waitForRequest(currentProcess(), "initialize");
+		await expect(initializing).rejects.toThrow(/Request timeout: initialize/);
 		await client.close();
 	});
 

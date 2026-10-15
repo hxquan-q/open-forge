@@ -13,3 +13,9 @@
 - 可以依赖协议包与 `runtime-core`，不得依赖 `desktop`、`cli-host`、`admin`、`site` 或 `runtime-desktop`。
 - 公共入口必须是实际实现所有者，不得只做应用源码的转发层。
 - Node 实现必须由对应协议的合同测试覆盖。
+
+## 规则分级
+
+- **Invariant**：`职责范围` 边界（不拥有应用配置/Electron IPC/UI/产品策略）、`依赖边界`（不得依赖 `desktop`/`cli-host`/`admin`/`site`/`runtime-desktop`、公共入口必须是实现所有者）。
+- **Policy**：Node 实现必须由对应协议合同测试覆盖的要求。
+- **Guideline**：—（本文件无纯建议项）

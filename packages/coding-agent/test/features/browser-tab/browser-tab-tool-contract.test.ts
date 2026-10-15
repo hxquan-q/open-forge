@@ -66,9 +66,39 @@ describe("browser_tab input schema", () => {
 		}
 	});
 
+	it("snapshot 打印的 elementRef 编码串可原样回传（生产-消费往返）", () => {
+		const snapshot = formatBrowserTabToolResult({
+			ok: true,
+			action: "snapshot",
+			pageRevision: 3,
+			nodes: [{ elementRef: ref, role: "button", name: "提交" }],
+		});
+		const printed = String((snapshot.content[0] as { text: string }).text);
+		const token = /- (\S+) role=/.exec(printed)?.[1];
+		expect(token).toBe("v1:3:e1");
+		expect(readBrowserTabToolInput({ action: "click", elementRef: token })).toEqual({
+			action: "click",
+			elementRef: ref,
+		});
+		expect(readBrowserTabToolInput({ action: "inspect", elementRef: "v1:3:e1" })).toEqual({
+			action: "inspect",
+			elementRef: ref,
+		});
+	});
+
+	it("对外 Schema 允许 elementRef 以 snapshot 编码串传入，畸形串仍不匹配", () => {
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: "v1:3:e1" })).toBe(true);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "fill", elementRef: "v1:3:e1", value: "hi" })).toBe(true);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: "e1" })).toBe(false);
+		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: { id: "e1" } })).toBe(false);
+	});
+
 	it("拒绝 javascript 面、缺 revision 的 ref、非 http(s) 导航和多余字段", () => {
 		expect(readBrowserTabToolInput({ action: "evaluate", script: "1+1" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "click", elementRef: { id: "e1" } })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "click", elementRef: "e1" })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "click", elementRef: "v1:-1:e1" })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "click", elementRef: "v1:3:" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "navigate", url: "file:///etc/passwd" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "navigate", url: "javascript:alert(1)" })).toBeUndefined();
 		expect(isAllowedBrowserTabUrl("http://localhost:3000")).toBe(true);
@@ -108,6 +138,27 @@ describe("browser_tab tool adapter", () => {
 	it("validateInput 拒绝非 http(s) navigate", () => {
 		const tool = createBrowserTabTool({ invoke: async () => undefined });
 		expect(() => tool.validateInput?.({ action: "navigate", url: "ftp://example.com" })).toThrow();
+	});
+
+	it("接受编码串 ref 并把解码后的对象交给宿主，畸形串仍拒绝", async () => {
+		const received: unknown[] = [];
+		const tool = createBrowserTabTool({
+			invoke: async (request) => {
+				received.push(request.input);
+				return { ok: true, action: "click", pageRevision: 3 };
+			},
+		});
+		expect(() => tool.validateInput?.({ action: "click", elementRef: "v1:3:e1" })).not.toThrow();
+		expect(() => tool.validateInput?.({ action: "click", elementRef: "e1" })).toThrow();
+		const result = await tool.execute({
+			sessionId: "s1",
+			turnId: "t1",
+			toolCallId: "c1",
+			input: { action: "click", elementRef: "v1:3:e1" } as unknown as BrowserTabToolInput,
+			signal: new AbortController().signal,
+		});
+		expect(result.isError).toBeUndefined();
+		expect(received).toEqual([{ action: "click", elementRef: ref }]);
 	});
 
 	it("stale_reference 进入 details 且 isError，content 只给摘要", () => {

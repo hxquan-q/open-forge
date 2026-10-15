@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 	deleteAgent: vi.fn(),
 	deleteTeam: vi.fn(),
 	selectTeam: vi.fn(),
+	cancelAssembly: vi.fn(),
 	navigate: vi.fn(),
 	search: vi.fn(() => ({ agent: "agent" })),
 }));
@@ -49,10 +50,21 @@ vi.mock("@shared/agent-teams/team-session-events", () => ({
 	notifyAgentTeamConfigurationChanged: vi.fn(),
 }));
 vi.mock("./AgentCenterView", () => ({
-	AgentCenterView: ({ onDeleteTeam }: { onDeleteTeam: () => void }) => (
-		<button type="button" onClick={onDeleteTeam}>
-			delete-team
-		</button>
+	AgentCenterView: ({
+		onDeleteTeam,
+		onDiscardAssemblyDraft,
+	}: {
+		onDeleteTeam: () => void;
+		onDiscardAssemblyDraft: () => void;
+	}) => (
+		<>
+			<button type="button" onClick={onDeleteTeam}>
+				delete-team
+			</button>
+			<button type="button" onClick={onDiscardAssemblyDraft}>
+				discard-draft
+			</button>
+		</>
 	),
 }));
 vi.mock("./AgentProfileSheet", () => ({
@@ -80,6 +92,7 @@ vi.mock("../hooks/useAgentCenterModel", () => ({
 			deleteAgent: mocks.deleteAgent,
 			deleteTeam: mocks.deleteTeam,
 			selectTeam: mocks.selectTeam,
+			cancelAssembly: mocks.cancelAssembly,
 			submitAssembly: vi.fn(),
 			previewAgent: vi.fn(),
 			saveAgent: vi.fn(),
@@ -145,5 +158,21 @@ describe("AgentCenterPage", () => {
 		act(() => confirmation.onConfirm());
 		await waitFor(() => expect(mocks.deleteTeam).toHaveBeenCalledWith(expect.objectContaining({ id: "team-a" })));
 		await waitFor(() => expect(mocks.selectTeam).toHaveBeenCalledWith(undefined));
+	});
+
+	it("confirms before discarding a dirty assembly draft and only exits on approval", async () => {
+		const user = userEvent.setup();
+		render(<AgentCenterPage />);
+
+		await user.click(screen.getByRole("button", { name: "discard-draft" }));
+		const confirmation = mocks.confirm.mock.calls.at(-1)?.[0];
+		expect(confirmation.title).toBe("center.discardAssemblyTitle");
+
+		// 取消确认：组队模式与草稿都不动。
+		expect(mocks.cancelAssembly).not.toHaveBeenCalled();
+
+		act(() => confirmation.onConfirm());
+		expect(mocks.cancelAssembly).toHaveBeenCalled();
+		expect(mocks.selectTeam).toHaveBeenCalledWith(undefined);
 	});
 });

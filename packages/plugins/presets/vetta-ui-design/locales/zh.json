@@ -227,6 +227,7 @@
 	"notes.reopen.submit": "重新打开",
 	"notes.status.pending": "待处理",
 	"notes.status.resolved": "已处理",
+	"notes.author.agent": "Vetta",
 	"notes.author.user": "我",
 	"notes.delete": "删除",
 	"notes.close": "关闭",

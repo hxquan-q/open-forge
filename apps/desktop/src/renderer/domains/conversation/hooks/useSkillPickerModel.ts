@@ -1,5 +1,6 @@
 import type { SkillInfo } from "@preload/api";
 import { type ShortcutBinding, useShortcutScope } from "@shared/shortcuts";
+import { useNavigate } from "@tanstack/react-router";
 import { type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SkillPickerPanelViewProps } from "../components/command-panel/SkillPickerPanel";
@@ -14,6 +15,8 @@ export interface SkillPickerModelInput {
 	placement?: "top" | "bottom";
 	cwd?: string;
 	className?: string;
+	/** 宿主方持有过滤态时的回调；不传则「清除筛选」按钮退化为「关闭面板」。 */
+	onClearFilter?: () => void;
 }
 
 export interface SkillPickerModel {
@@ -29,8 +32,10 @@ export function useSkillPickerModel({
 	placement = "top",
 	cwd,
 	className,
+	onClearFilter,
 }: SkillPickerModelInput): SkillPickerModel {
 	const { t } = useTranslation("chat");
+	const navigate = useNavigate();
 	const normalizedFilter = filter.startsWith("/") ? filter.slice(1) : filter;
 	const { items } = useSkillList({ open, cwd, filter: normalizedFilter, surface: "skillPicker" });
 	const [activeIndex, setActiveIndex] = useState(0);
@@ -102,6 +107,8 @@ export function useSkillPickerModel({
 		};
 	}, [onClose, open]);
 
+	const filtering = normalizedFilter.length > 0;
+
 	const labels = useMemo(
 		() => ({
 			header: t("slashPanel.header"),
@@ -110,6 +117,9 @@ export function useSkillPickerModel({
 			emptyNoMatchHint: t("slashPanel.emptyNoMatchHint"),
 			emptyNoSkills: t("slashPanel.emptyNoSkills"),
 			emptyNoSkillsHint: t("slashPanel.emptyNoSkillsHint"),
+			scenesSection: t("slashPanel.scenesSection"),
+			skillsSection: t("slashPanel.skillsSection"),
+			sectionCount: (count: number) => t("slashPanel.sectionCount", { count }),
 			sourceLabel: (source: string, type: SkillInfo["type"]) => {
 				const key = skillSourceLabelKey(source, type);
 				return key ? t(key) : source;
@@ -117,6 +127,27 @@ export function useSkillPickerModel({
 		}),
 		[items.length, t],
 	);
+
+	const emptyAction = useMemo(() => {
+		if (filtering) {
+			return {
+				kind: "clearFilter" as const,
+				label: t("slashPanel.emptyClearFilterAction"),
+				onAction: () => {
+					if (onClearFilter) onClearFilter();
+					else onClose();
+				},
+			};
+		}
+		return {
+			kind: "openMarket" as const,
+			label: t("slashPanel.emptyOpenMarketAction"),
+			onAction: () => {
+				onClose();
+				void navigate({ to: "/abilities" });
+			},
+		};
+	}, [filtering, onClose, onClearFilter, navigate, t]);
 
 	return {
 		viewProps: {
@@ -126,6 +157,8 @@ export function useSkillPickerModel({
 			items,
 			activeIndex,
 			labels,
+			ariaLabel: t("slashPanel.header"),
+			emptyAction,
 			panelRef: panelRef as RefObject<HTMLDivElement | null>,
 			className,
 			onHoverItem: setActiveIndex,

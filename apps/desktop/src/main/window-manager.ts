@@ -2,9 +2,16 @@ import { join } from "node:path";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
 import { setAppMonitorWindowVisible } from "./app-monitor/app-monitor-service.js";
-import { bindInAppBrowserWebview } from "./browser-automation/webview-session-host.js";
+import { resolveBrandIconDirectory } from "./brand-icon-directory.js";
+import { getInAppBrowserViewHost } from "./browser-automation/browser-view-host.js";
 import { shouldAutoOpenDevTools } from "./devtools-policy.js";
-import { type RendererConsoleLevel, shouldPersistRendererConsoleMessage } from "./logger/renderer-console-policy.js";
+import { sampleJavaScriptCallStack } from "./diagnostics.js";
+import {
+	isChromiumResizeObserverDiagnostic,
+	isReactFlushSyncLifecycleDiagnostic,
+	type RendererConsoleLevel,
+	shouldPersistRendererConsoleMessage,
+} from "./logger/renderer-console-policy.js";
 import { getAppLogger } from "./logger.js";
 import { openExternalUrl } from "./open-external.js";
 import { configureMainWindowMediaPermissions } from "./speech-input/media-permissions.js";
@@ -12,13 +19,13 @@ import { configureMainWindowMediaPermissions } from "./speech-input/media-permis
 const isMac = process.platform === "darwin";
 const appRoot = app.isPackaged ? app.getAppPath() : process.cwd();
 const resDir = app.isPackaged ? appRoot : join(appRoot, "dist");
-const buildDir = app.isPackaged ? join(process.resourcesPath, "build") : join(appRoot, "build");
+// dev 态按品牌档案取窗口/托盘图标目录；打包态沿用暂存 resources/build（prepare-pack 已按档覆盖）。
+const buildDir = resolveBrandIconDirectory({
+	isPackaged: app.isPackaged,
+	packagedDirectory: join(process.resourcesPath, "build"),
+	appRoot,
+});
 const devServerUrl = process.env.VETTA_DESKTOP_DEV_URL;
-const RESIZE_OBSERVER_DELIVERY_WARNING = "ResizeObserver loop completed with undelivered notifications.";
-
-function isChromiumResizeObserverDiagnostic(message: string, line: number, sourceId: string): boolean {
-	return line === 0 && sourceId === "" && message === RESIZE_OBSERVER_DELIVERY_WARNING;
-}
 
 export const iconPath: Record<string, string> = {
 	darwin: join(buildDir, "icon.icns"),
@@ -74,27 +81,21 @@ export function createWindow(): BrowserWindow {
 			contextIsolation: true,
 			nodeIntegration: false,
 			preload: preloadPath,
-			// 会话级内置浏览器用 <webview> 标签渲染预览页面。
+			// Canvas HTML artifact 沙箱仍用 <webview> 标签渲染；内置浏览器已迁 WebContentsView。
 			webviewTag: true,
+			// 遮挡（document.hidden）会暂停 rAF/ResizeObserver，Virtuoso 列表停摆成空列表；
+			// 而 Electron 的遮挡检测存在滞留问题（锁屏/RDP/显示器休眠后可见窗口仍报 hidden），
+			// 叠加会把用户困在「可见但全空」的状态。参考 remote-desktop host 的同款配置。
+			backgroundThrottling: false,
 		},
 	});
 	if (isSpeechInputBuildEnabled()) {
 		configureMainWindowMediaPermissions(mainWindow.webContents.session, mainWindow.webContents);
 	}
 
-	// 内置浏览器（<webview>）单窗预览：页面内的 window.open/target=_blank 不另开窗口，
-	// 重定向到同一 webview 加载，保持单窗体验。
-	mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
-		bindInAppBrowserWebview(webviewContents);
-		webviewContents.setWindowOpenHandler(({ url }) => {
-			if (/^https?:\/\//i.test(url)) {
-				void webviewContents.loadURL(url).catch((error: unknown) => {
-					windowLog.error("webview open in-place failed", { url, error });
-				});
-			}
-			return { action: "deny" };
-		});
-	});
+	// TASK-0072：内置浏览器 guest 已由 WebContentsView 宿主接管（见 browser-view-host.ts）。
+	// window.open/target=_blank 的「同 view 原地加载」处理在宿主创建 view 时完成；
+	// 此处不再经 did-attach-webview 发现 guest（partition 匹配竞态已随之移除）。
 	setAppMonitorWindowVisible(mainWindow.isVisible());
 
 	mainWindow.on("ready-to-show", () => {
@@ -114,6 +115,8 @@ export function createWindow(): BrowserWindow {
 	mainWindow.on("closed", () => {
 		windowLog.info("closed");
 		setAppMonitorWindowVisible(false);
+		// 浏览器 view 随窗口析构；清掉宿主表避免挂到已销毁 contents 上。
+		getInAppBrowserViewHost().disposeAll();
 	});
 	mainWindow.webContents.on("did-finish-load", () => {
 		windowLog.info("did-finish-load", mainWindow?.webContents.getURL());
@@ -132,13 +135,16 @@ export function createWindow(): BrowserWindow {
 	mainWindow.webContents.on("console-message", (_event, level, message, line, sourceId) => {
 		// Chromium defers remaining ResizeObserver callbacks to the next frame while a split pane is
 		// continuously resized. It reports that normal delivery behavior as an internal console error.
-		if (isChromiumResizeObserverDiagnostic(message, line, sourceId)) return;
+		if (isChromiumResizeObserverDiagnostic(message, line)) return;
+		// React DEV-only call-timing advisory raised by dependency-vendored flushSync calls (BUG-0083).
+		if (isReactFlushSyncLifecycleDiagnostic(message)) return;
 		const levelLabel: RendererConsoleLevel = (["log", "info", "warn", "error"] as const)[level] ?? "log";
 		if (!shouldPersistRendererConsoleMessage(levelLabel, message)) return;
 		rendererLog[levelLabel](`[${sourceId}:${line}] ${message}`);
 	});
 	mainWindow.webContents.on("unresponsive", () => {
 		windowLog.error("unresponsive");
+		if (mainWindow) sampleJavaScriptCallStack(mainWindow.webContents, "unresponsive");
 	});
 	mainWindow.webContents.on("responsive", () => {
 		windowLog.info("responsive");

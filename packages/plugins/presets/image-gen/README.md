@@ -40,3 +40,16 @@ desktop 提供受 capability session 约束的 `ctx.media`、`ctx.storage`、
 详见 `docs/adr/0057-host-media-protocol-and-desktop-vetta-provider.md`、
 `docs/adr/0056-image-generation-through-vetta-gateway-metered-by-credits.md`
 与被其部分取代的 `docs/adr/0048-image-generation-owned-by-plugin-generic-network-storage.md`。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/ui"
+```

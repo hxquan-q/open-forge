@@ -10,6 +10,8 @@ export interface SidebarTopBarClassNames {
 }
 
 export interface SidebarTopBarLabels {
+	/** Host-provided product name shown next to brandIcon on non-Mac. */
+	brand: string;
 	clawConnected?: string;
 	hide: string;
 }
@@ -58,7 +60,7 @@ export function SidebarTopBar({
 			) : (
 				<div className={cn("flex min-w-0 shrink items-center gap-2 overflow-hidden", classNames?.brand)}>
 					{brandIcon}
-					<span className="truncate text-[13px] font-semibold text-foreground">Vetta</span>
+					<span className="truncate text-[13px] font-semibold text-foreground">{labels.brand}</span>
 					{brandTrailing}
 				</div>
 			)}

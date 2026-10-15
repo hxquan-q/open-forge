@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classifyPluginNavIcon } from "./plugin-nav-icon";
@@ -22,6 +22,15 @@ const presetsDir = join(repoRoot, "packages/plugins/presets");
 const stylesPath = join(repoRoot, "apps/desktop/src/renderer/styles.css");
 
 const ICON_LITERAL = /icon:\s*"([^"]+)"/g;
+
+/**
+ * `presets/` 里只有插件包才带 `plugin.json`；同目录还可能出现构建产物
+ * （如 gitignored 的 `release/` 清单目录），它们没有 `src/`，按包识别而不是
+ * 拉黑已知目录名，新增产物目录时不会再让守卫崩在 scandir 上。
+ */
+function isPresetPackage(dir: string): boolean {
+	return existsSync(join(dir, "plugin.json"));
+}
 
 function readSourceFiles(dir: string, files: string[] = []): string[] {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -76,7 +85,7 @@ describe("preset sidebar nav icons", () => {
 		const styles = readFileSync(stylesPath, "utf8");
 		const missing: string[] = [];
 		for (const entry of readdirSync(presetsDir, { withFileTypes: true })) {
-			if (!entry.isDirectory()) continue;
+			if (!entry.isDirectory() || !isPresetPackage(join(presetsDir, entry.name))) continue;
 			for (const className of navIconClassesOf(join(presetsDir, entry.name))) {
 				if (!styles.includes(`@source inline("${className}")`)) missing.push(`${entry.name}: ${className}`);
 			}
@@ -87,7 +96,7 @@ describe("preset sidebar nav icons", () => {
 	it("covers at least the presets that contribute a workspace view", () => {
 		// 上面那条断言在「一个都没扫到」时也会通过；这里确保扫描真的看到了东西。
 		const covered = readdirSync(presetsDir, { withFileTypes: true })
-			.filter((entry) => entry.isDirectory())
+			.filter((entry) => entry.isDirectory() && isPresetPackage(join(presetsDir, entry.name)))
 			.flatMap((entry) => navIconClassesOf(join(presetsDir, entry.name)));
 		expect(covered.length).toBeGreaterThan(0);
 	});

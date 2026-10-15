@@ -1,9 +1,78 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { convertMessages, SKIP_THOUGHT_SIGNATURE_VALIDATOR } from "../src/providers/google-shared.js";
 import type { Context, Model } from "../src/types.js";
 
 describe("google-shared convertMessages", () => {
-	it("forwards user images when image capability metadata is missing", () => {
+	it("forwards user images for an explicitly vision-capable model", () => {
+		const model: Model<"google-generative-ai"> = {
+			id: "gemini-3-pro-preview",
+			name: "Gemini 3 Pro Preview",
+			api: "google-generative-ai",
+			provider: "google",
+			baseUrl: "https://generativelanguage.googleapis.com",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 128000,
+			maxTokens: 8192,
+		};
+		const contents = convertMessages(model, {
+			messages: [
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: "inspect" },
+						{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+					],
+					timestamp: 1,
+				},
+			],
+		});
+
+		expect(contents[0]?.parts).toEqual([
+			{ text: "inspect" },
+			{ inlineData: { mimeType: "image/png", data: "ZmFrZQ==" } },
+		]);
+	});
+
+	it("forwards tool-result images for an explicitly vision-capable model", () => {
+		const model: Model<"google-generative-ai"> = {
+			id: "gemini-3-pro-preview",
+			name: "Gemini 3 Pro Preview",
+			api: "google-generative-ai",
+			provider: "google",
+			baseUrl: "https://generativelanguage.googleapis.com",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 128000,
+			maxTokens: 8192,
+		};
+		const contents = convertMessages(model, {
+			messages: [
+				{
+					role: "toolResult",
+					toolCallId: "call-1",
+					toolName: "read",
+					content: [
+						{ type: "text", text: "Read image file [image/png]" },
+						{ type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+					],
+					isError: false,
+					timestamp: 1,
+				},
+			],
+		});
+
+		expect(contents[0]?.parts?.[0]?.functionResponse).toMatchObject({
+			name: "read",
+			response: { output: "Read image file [image/png]" },
+			parts: [{ inlineData: { mimeType: "image/png", data: "ZmFrZQ==" } }],
+		});
+	});
+
+	it("omits user images for a text-only model", () => {
 		const model: Model<"google-generative-ai"> = {
 			id: "gemini-3-pro-preview",
 			name: "Gemini 3 Pro Preview",
@@ -31,11 +100,11 @@ describe("google-shared convertMessages", () => {
 
 		expect(contents[0]?.parts).toEqual([
 			{ text: "inspect" },
-			{ inlineData: { mimeType: "image/png", data: "ZmFrZQ==" } },
+			{ text: "Image content omitted because the current model does not support image input." },
 		]);
 	});
 
-	it("forwards tool-result images when image capability metadata is missing", () => {
+	it("omits tool-result images for a text-only model", () => {
 		const model: Model<"google-generative-ai"> = {
 			id: "gemini-3-pro-preview",
 			name: "Gemini 3 Pro Preview",
@@ -66,9 +135,12 @@ describe("google-shared convertMessages", () => {
 
 		expect(contents[0]?.parts?.[0]?.functionResponse).toMatchObject({
 			name: "read",
-			response: { output: "Read image file [image/png]" },
-			parts: [{ inlineData: { mimeType: "image/png", data: "ZmFrZQ==" } }],
+			response: {
+				output:
+					"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
+			},
 		});
+		expect(contents[0]?.parts?.[0]?.functionResponse).not.toHaveProperty("parts");
 	});
 
 	it("keeps unsigned historical tool calls as functionCall parts with the replay sentinel", () => {

@@ -2,15 +2,16 @@
 import { Button } from "@shared/components/ui/button";
 import { Textarea } from "@shared/components/ui/textarea";
 import { pathTokenText } from "@shared/lib/input-tokens";
-import { EMPTY_TASK_STATE, getTaskStateForSession, taskStateBySessionAtom } from "@shared/store/atoms";
+import { taskStateBySessionAtom } from "@shared/store/atoms";
 import { sendMessageFnRef } from "@shared/store/chat-atoms";
 import { showToast } from "@shared/store/toast-atoms";
-import { mergeTaskStateSeed } from "@shared/task/task-projection.js";
-import type { ArtifactDescriptor, RuntimeSessionTaskState, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
+import type { DesktopArtifactSourceCheck } from "@preload/api-types/task";
+import type { ArtifactDescriptor, RuntimeTaskSnapshot } from "@vetta/runtime-core/task";
 import type { TFunction } from "i18next";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useSetAtom } from "jotai";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useTaskProjection } from "../hooks/useTaskProjection";
 import { WorkPanelSection } from "./WorkWorkspacePanel";
 
 /**
@@ -43,6 +44,27 @@ const STATUS_KEYS = {
 	changes_requested: "activityPanel.task.status.changesRequested",
 } as const;
 
+/**
+ * 计划状态的颜色分级（DESIGN §1.3 语义色白名单）：执行中/规划中用成功/运行色，
+ * 需要用户处理或返工的用警告色，终态失败用错误色，其余停驻态保持弱化灰。
+ * running 额外挂共享呼吸点——「还在跑」的动效统一走 live-animations 登记表。
+ */
+const STATUS_TONES = {
+	draft: "text-muted-foreground/60",
+	planning: "text-emerald-400",
+	awaiting_approval: "text-amber-400",
+	running: "text-emerald-400",
+	paused: "text-muted-foreground/60",
+	awaiting_review: "text-amber-400",
+	completed: "text-muted-foreground/60",
+	failed: "text-destructive",
+	cancelled: "text-muted-foreground/60",
+	rejected: "text-destructive",
+	changes_requested: "text-emerald-400",
+} as const satisfies Record<keyof typeof STATUS_KEYS, string>;
+
+const LIVE_STATUSES = new Set<keyof typeof STATUS_KEYS>(["planning", "running"]);
+
 const REVIEW_ACTION_KEYS = {
 	approved: "activityPanel.task.action.approve",
 	changes_requested: "activityPanel.task.action.requestChanges",
@@ -57,33 +79,10 @@ function commandErrorMessage(t: TFunction<"chat">, code: string): string {
 	return t(key);
 }
 
-/** 打开/切换会话时用主进程快照补齐 Task/Artifact 投影（重启后历史状态由此恢复）。 */
-function useTaskProjection(runtimeId: string | undefined): RuntimeSessionTaskState {
-	const taskMap = useAtomValue(taskStateBySessionAtom);
-	const setTaskState = useSetAtom(taskStateBySessionAtom);
-
-	useEffect(() => {
-		let cancelled = false;
-		if (!runtimeId) return;
-		void (async () => {
-			try {
-				const state = await window.vetta.task.getState(runtimeId);
-				if (cancelled) return;
-				setTaskState((prev) => {
-					const current = prev.get(runtimeId) ?? EMPTY_TASK_STATE;
-					const next = mergeTaskStateSeed(current, state);
-					return next === current ? prev : new Map(prev).set(runtimeId, next);
-				});
-			} catch {
-				// 快照补齐是尽力而为：事件流折叠仍会继续更新投影。
-			}
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [runtimeId, setTaskState]);
-
-	return runtimeId ? getTaskStateForSession(taskMap, runtimeId) : EMPTY_TASK_STATE;
+/** 来源列表只显示文件名降低噪音；完整路径留在 title 供悬停与读屏确认。 */
+function sourceDisplayName(path: string): string {
+	const segments = path.split(/[\\/]/).filter((segment) => segment.length > 0);
+	return segments[segments.length - 1] ?? path;
 }
 
 /** 统一执行 Task 命令：成功时更新投影，失败分支收敛为可读错误 toast。 */
@@ -117,77 +116,147 @@ function PlanSection({ tasks }: { readonly tasks: readonly RuntimeTaskSnapshot[]
 	return (
 		<WorkPanelSection id="plan">
 			<ul className="space-y-1">
-				{tasks.map((task) => (
-					<li key={task.identity.taskId} className="flex min-w-0 items-center gap-2">
-						<span className="min-w-0 flex-1 truncate text-[12px] text-foreground" title={task.title ?? t("activityPanel.task.untitled")}>
-							{task.title ?? t("activityPanel.task.untitled")}
-						</span>
-						<span className="shrink-0 text-[11px] text-muted-foreground">{t(STATUS_KEYS[task.status])}</span>
-					</li>
-				))}
+				{tasks.map((task) => {
+					const isLive = LIVE_STATUSES.has(task.status);
+					return (
+						<li key={task.identity.taskId} className="flex min-w-0 items-center gap-2">
+							<span
+								className="min-w-0 flex-1 truncate text-[12px] text-foreground"
+								title={task.title ?? t("activityPanel.task.untitled")}
+							>
+								{task.title ?? t("activityPanel.task.untitled")}
+							</span>
+							{isLive ? (
+								<span className="vetta-live-dot h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/80" aria-hidden />
+							) : null}
+							<span className={`shrink-0 text-[11px] ${STATUS_TONES[task.status]}`}>
+								{t(STATUS_KEYS[task.status])}
+							</span>
+						</li>
+					);
+				})}
 			</ul>
 		</WorkPanelSection>
 	);
+}
+
+/**
+ * 「选路径 + 目标/问题 → 建任务并发消息」的共享流程（文档/研究/数据三节同源）。
+ * 路径经 pathTokenText 序列化为输入 token，消息走既有全局发送通道，
+ * 成功后清空本节选择。
+ */
+function useStartTaskWithSources(runtimeId: string | undefined) {
+	const { t } = useTranslation("chat");
+	const runCommand = useRunTaskCommand(runtimeId);
+	const [busy, setBusy] = useState(false);
+
+	const start = useCallback(
+		async (sources: readonly string[], goal: string): Promise<boolean> => {
+			const trimmedGoal = goal.trim();
+			if (!trimmedGoal || sources.length === 0 || busy) return false;
+			setBusy(true);
+			try {
+				const created = await runCommand({ type: "create", title: trimmedGoal });
+				if (!created) return false;
+				const sender = sendMessageFnRef.current;
+				if (!sender) {
+					showToast({ message: t("workspace.work.sources.sendUnavailable"), variant: "error" });
+					return false;
+				}
+				const text = [...sources.map(pathTokenText), trimmedGoal].join(" ");
+				const result = await sender(text);
+				if (result?.status === "failed") {
+					showToast({ message: t("workspace.work.sources.sendUnavailable"), variant: "error" });
+					return false;
+				}
+				return true;
+			} catch {
+				showToast({ message: t("workspace.work.sources.sendUnavailable"), variant: "error" });
+				return false;
+			} finally {
+				setBusy(false);
+			}
+		},
+		[busy, runCommand, t],
+	);
+	return { start, busy };
 }
 
 interface SourcesSectionProps {
 	readonly runtimeIds: readonly string[];
 }
 
+/** 来源节的双入口：既有文档处理（选文件）与 TASK-0025 本地研究（选资料集目录）。 */
+type SourcesEntryMode = "document" | "research";
+
 function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 	const { t } = useTranslation("chat");
-	const runCommand = useRunTaskCommand(runtimeIds[0]);
+	const { start, busy } = useStartTaskWithSources(runtimeIds[0]);
+	const [mode, setMode] = useState<SourcesEntryMode>("document");
 	const [sources, setSources] = useState<readonly string[]>([]);
 	const [goal, setGoal] = useState("");
-	const [busy, setBusy] = useState(false);
+
+	const switchMode = useCallback((next: SourcesEntryMode) => {
+		setMode(next);
+		setSources([]);
+	}, []);
 
 	const pickSources = useCallback(async () => {
 		try {
-			const selected = await window.vetta.dialog.selectFiles();
+			const selected =
+				mode === "research" ? await window.vetta.dialog.selectFolders() : await window.vetta.dialog.selectFiles();
 			if (selected.length > 0) setSources(selected);
 		} catch {
 			showToast({ message: t("workspace.work.sources.pickFailed"), variant: "error" });
 		}
-	}, [t]);
+	}, [mode, t]);
 
-	const start = useCallback(async () => {
-		const trimmedGoal = goal.trim();
-		if (!trimmedGoal || sources.length === 0 || busy) return;
-		setBusy(true);
-		try {
-			const created = await runCommand({ type: "create", title: trimmedGoal });
-			if (!created) return;
-			const sender = sendMessageFnRef.current;
-			if (!sender) {
-				showToast({ message: t("workspace.work.sources.sendUnavailable"), variant: "error" });
-				return;
-			}
-			const text = [...sources.map(pathTokenText), trimmedGoal].join(" ");
-			const result = await sender(text);
-			if (result?.status === "failed") {
-				showToast({ message: t("workspace.work.sources.sendUnavailable"), variant: "error" });
-				return;
-			}
+	const removeSource = useCallback((source: string) => {
+		setSources((prev) => prev.filter((item) => item !== source));
+	}, []);
+
+	const submit = useCallback(async () => {
+		if (await start(sources, goal)) {
 			setGoal("");
 			setSources([]);
-		} catch {
-			showToast({ message: t("workspace.work.sources.sendUnavailable"), variant: "error" });
-		} finally {
-			setBusy(false);
 		}
-	}, [busy, goal, runCommand, sources, t]);
+	}, [start, sources, goal]);
 
 	return (
 		<WorkPanelSection id="sources">
 			<div className="space-y-2">
-				<Button variant="outline" size="sm" onClick={() => void pickSources()}>
-					{t("workspace.work.sources.pickFile")}
+				<div className="flex gap-1" role="group" aria-label={t("workspace.work.sources.modeLabel")}>
+					{(["document", "research"] as const).map((entry) => (
+						<Button
+							key={entry}
+							size="sm"
+							variant={mode === entry ? "primary" : "outline"}
+							aria-pressed={mode === entry}
+							onClick={() => switchMode(entry)}
+						>
+							{t(`workspace.work.sources.mode.${entry}`)}
+						</Button>
+					))}
+				</div>
+				<Button variant="primary" size="sm" onClick={() => void pickSources()}>
+					{t(mode === "research" ? "workspace.work.sources.pickFolder" : "workspace.work.sources.pickFile")}
 				</Button>
 				{sources.length > 0 ? (
 					<ul className="space-y-1">
 						{sources.map((source) => (
-							<li key={source} className="truncate text-[12px] text-foreground" title={source}>
-								{source}
+							<li key={source} className="flex min-w-0 items-center gap-1.5">
+								<span className="min-w-0 flex-1 truncate text-[12px] text-foreground" title={source}>
+									{sourceDisplayName(source)}
+								</span>
+								<Button
+									aria-label={t("workspace.work.sources.remove", { file: sourceDisplayName(source) })}
+									className="h-6 w-6 shrink-0 p-0"
+									size="icon-xs"
+									variant="ghost"
+									onClick={() => removeSource(source)}
+								>
+									<span className="icon-[solar--close-circle-linear] h-3.5 w-3.5" aria-hidden />
+								</Button>
 							</li>
 						))}
 					</ul>
@@ -195,15 +264,90 @@ function SourcesSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
 				<Textarea
 					value={goal}
 					rows={2}
-					placeholder={t("workspace.work.sources.goalPlaceholder")}
+					placeholder={t(
+						mode === "research"
+							? "workspace.work.sources.questionPlaceholder"
+							: "workspace.work.sources.goalPlaceholder",
+					)}
 					onChange={(event) => setGoal(event.target.value)}
 				/>
 				<Button
 					size="sm"
 					disabled={runtimeIds.length === 0 || busy || goal.trim().length === 0 || sources.length === 0}
-					onClick={() => void start()}
+					onClick={() => void submit()}
 				>
-					{t("workspace.work.sources.start")}
+					{t(mode === "research" ? "workspace.work.sources.startResearch" : "workspace.work.sources.start")}
+				</Button>
+			</div>
+		</WorkPanelSection>
+	);
+}
+
+/** TASK-0026 数据集节：选 CSV/TSV/JSON/Excel 数据文件 + 分析目标，走同一任务通道。 */
+function DatasetSection({ runtimeIds }: SourcesSectionProps): JSX.Element {
+	const { t } = useTranslation("chat");
+	const { start, busy } = useStartTaskWithSources(runtimeIds[0]);
+	const [files, setFiles] = useState<readonly string[]>([]);
+	const [goal, setGoal] = useState("");
+
+	const pickFiles = useCallback(async () => {
+		try {
+			const selected = await window.vetta.dialog.selectFiles();
+			if (selected.length > 0) setFiles(selected);
+		} catch {
+			showToast({ message: t("workspace.work.dataset.pickFailed"), variant: "error" });
+		}
+	}, [t]);
+
+	const removeFile = useCallback((file: string) => {
+		setFiles((prev) => prev.filter((item) => item !== file));
+	}, []);
+
+	const submit = useCallback(async () => {
+		if (await start(files, goal)) {
+			setGoal("");
+			setFiles([]);
+		}
+	}, [start, files, goal]);
+
+	return (
+		<WorkPanelSection id="dataset">
+			<div className="space-y-2">
+				<Button variant="primary" size="sm" onClick={() => void pickFiles()}>
+					{t("workspace.work.dataset.pickFile")}
+				</Button>
+				{files.length > 0 ? (
+					<ul className="space-y-1">
+						{files.map((file) => (
+							<li key={file} className="flex min-w-0 items-center gap-1.5">
+								<span className="min-w-0 flex-1 truncate text-[12px] text-foreground" title={file}>
+									{sourceDisplayName(file)}
+								</span>
+								<Button
+									aria-label={t("workspace.work.sources.remove", { file: sourceDisplayName(file) })}
+									className="h-6 w-6 shrink-0 p-0"
+									size="icon-xs"
+									variant="ghost"
+									onClick={() => removeFile(file)}
+								>
+									<span className="icon-[solar--close-circle-linear] h-3.5 w-3.5" aria-hidden />
+								</Button>
+							</li>
+						))}
+					</ul>
+				) : null}
+				<Textarea
+					value={goal}
+					rows={2}
+					placeholder={t("workspace.work.dataset.goalPlaceholder")}
+					onChange={(event) => setGoal(event.target.value)}
+				/>
+				<Button
+					size="sm"
+					disabled={runtimeIds.length === 0 || busy || goal.trim().length === 0 || files.length === 0}
+					onClick={() => void submit()}
+				>
+					{t("workspace.work.dataset.start")}
 				</Button>
 			</div>
 		</WorkPanelSection>
@@ -214,19 +358,51 @@ interface ArtifactsSectionProps {
 	readonly artifacts: readonly ArtifactDescriptor[];
 }
 
+/** 引用清单可复查的产物类型：研究与数据产物都以 vetta-research-sources 清单记录输入来源。 */
+const SOURCE_VERIFIABLE_KINDS = new Set(["research-evidence", "dataset", "analysis"]);
+
+const SOURCE_STATUS_KEYS = {
+	ok: "workspace.work.artifacts.citedOk",
+	missing: "workspace.work.artifacts.citedMissing",
+	changed: "workspace.work.artifacts.citedChanged",
+} as const;
+
+const SOURCE_STATUS_TONES = {
+	ok: "text-muted-foreground/60",
+	missing: "text-destructive",
+	changed: "text-amber-400",
+} as const;
+
+interface ArtifactPreviewState {
+	readonly title: string;
+	readonly content: string;
+	readonly truncated: boolean;
+	/** 带来源清单的产物（research-evidence/dataset/analysis）的复查结果；未复查为 undefined。 */
+	readonly citedSources?: readonly DesktopArtifactSourceCheck[];
+}
+
 function ArtifactsSection({ artifacts }: ArtifactsSectionProps): JSX.Element {
 	const { t } = useTranslation("chat");
-	const [preview, setPreview] = useState<{ title: string; content: string; truncated: boolean } | null>(null);
+	const [preview, setPreview] = useState<ArtifactPreviewState | null>(null);
 
 	const openPreview = useCallback(
 		async (artifact: ArtifactDescriptor): Promise<void> => {
 			try {
 				const outcome = await window.vetta.task.readArtifact(artifact.sourceSessionId, artifact.artifactId);
 				if (outcome.status === "ok") {
+					let citedSources: readonly DesktopArtifactSourceCheck[] | undefined;
+					if (SOURCE_VERIFIABLE_KINDS.has(artifact.kind)) {
+						const verified = await window.vetta.task.verifyArtifactSources(
+							artifact.sourceSessionId,
+							artifact.artifactId,
+						);
+						if (verified.status === "ok") citedSources = verified.sources;
+					}
 					setPreview({
 						title: outcome.title ?? artifact.title,
 						content: outcome.content,
 						truncated: outcome.truncated,
+						citedSources,
 					});
 					return;
 				}
@@ -263,17 +439,36 @@ function ArtifactsSection({ artifacts }: ArtifactsSectionProps): JSX.Element {
 				))}
 			</ul>
 			{preview ? (
-				<pre
-					aria-label={preview.title}
-					className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-background/60 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
-				>
-					{preview.content}
-					{preview.truncated ? (
-						<span className="mt-1 block text-[10px] text-muted-foreground/60">
-							{t("workspace.work.artifacts.truncated")}
-						</span>
+				<>
+					<pre
+						aria-label={preview.title}
+						className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-background/60 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
+					>
+						{preview.content}
+						{preview.truncated ? (
+							<span className="mt-1 block text-[10px] text-muted-foreground/60">
+								{t("workspace.work.artifacts.truncated")}
+							</span>
+						) : null}
+					</pre>
+					{preview.citedSources ? (
+						<ul
+							aria-label={t("workspace.work.artifacts.citedSourcesTitle")}
+							className="mt-1 space-y-0.5"
+						>
+							{preview.citedSources.map((source) => (
+								<li key={source.uri} className="flex min-w-0 items-center gap-1.5 text-[11px]">
+									<span className="min-w-0 flex-1 truncate text-muted-foreground" title={source.path}>
+										{source.name}
+									</span>
+									<span className={`shrink-0 ${SOURCE_STATUS_TONES[source.status]}`}>
+										{t(SOURCE_STATUS_KEYS[source.status])}
+									</span>
+								</li>
+							))}
+						</ul>
 					) : null}
-				</pre>
+				</>
 			) : null}
 		</WorkPanelSection>
 	);
@@ -348,7 +543,7 @@ function ReviewSection({ runtimeId, tasks, artifacts }: ReviewSectionProps): JSX
 							<Button
 								key={decision}
 								size="sm"
-								variant={decision === "approved" ? "default" : "outline"}
+								variant={decision === "approved" ? "primary" : "outline"}
 								onClick={() => void review(reviewTask.identity.taskId, decision)}
 							>
 								{t(REVIEW_ACTION_KEYS[decision])}
@@ -385,12 +580,13 @@ export interface WorkDocumentSectionsProps {
 /** work 右栏的文档处理四节内容。 */
 export function WorkDocumentSections({ runtimeIds }: WorkDocumentSectionsProps): JSX.Element {
 	const runtimeId = runtimeIds[0];
-	const { tasks, artifacts } = useTaskProjection(runtimeId);
+	const { tasks, artifacts } = useTaskProjection(runtimeIds);
 
 	return (
 		<>
 			<PlanSection tasks={tasks} />
 			<SourcesSection runtimeIds={runtimeIds} />
+			<DatasetSection runtimeIds={runtimeIds} />
 			<ArtifactsSection artifacts={artifacts} />
 			<ReviewSection runtimeId={runtimeId} tasks={tasks} artifacts={artifacts} />
 		</>

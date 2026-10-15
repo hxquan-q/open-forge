@@ -102,7 +102,7 @@ Cursor 官方做法不是「模型随便写 HTML 再让三个面板各渲染一�
 3. 受控 Mermaid 或 SVG 架构图基线（可并入 1 的验收）。
 4. 依赖 TASK-0063：若用户把报告页 `navigate` 到本机预览，Agent 才能同页操作。
 
-## 测试合同（vetta-testing；确认后写入 Task）
+## 测试合同（open-forge-testing；确认后写入 Task）
 
 用户常见路径（必须能在回归时失败）：
 

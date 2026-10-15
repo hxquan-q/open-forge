@@ -16,6 +16,7 @@ import type {
 	CodingAgentRuntimeToolRegistration,
 } from "@vetta/coding-agent/runtime";
 import type { RuntimeHost, SessionExecutionMode } from "@vetta/runtime-core";
+import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
 import { resolveDesktopSessionConfig } from "../conversations/resolve-session-config.js";
 import { getAppLogger } from "../logger.js";
 import { toAgentConfigurationOverrides } from "./agent-ability-overrides.js";
@@ -49,6 +50,11 @@ export interface TeamRuntimeManagerOptions {
 	readonly createTeamToolRegistrations: (teamSessionId: string) => readonly CodingAgentRuntimeToolRegistration[];
 	readonly sessionState: TeamSessionStateRepository;
 	readonly collaborationStore: TeamCollaborationStore;
+	/**
+	 * 成员会话的 Session Extension 函数源（TASK-0123）：由宿主收窄桌面共享源，
+	 * 隐藏无 WebView 后端的 browser_tab；缺省回落 Composition 默认源。
+	 */
+	readonly memberSessionExtensionFunctions?: () => SessionExtensionFunctionSource | undefined;
 }
 
 /** Owns Team Runtime creation, restoration, configuration, policy, and disposal boundaries. */
@@ -104,6 +110,7 @@ export class TeamRuntimeManager {
 					overrides: toAgentConfigurationOverrides(profile.abilities, pinnedAbilityContext(blueprint)),
 				},
 				sessionRuntimeTools: this.options.createTeamToolRegistrations(teamSessionId),
+				sessionExtensionFunctions: this.options.memberSessionExtensionFunctions?.(),
 			},
 			"other",
 			"interactive",
@@ -300,6 +307,7 @@ export class TeamRuntimeManager {
 						overrides: toAgentConfigurationOverrides(profile.abilities, pinnedAbilityContext(blueprint)),
 					},
 					sessionRuntimeTools: runtimeTools,
+					sessionExtensionFunctions: this.options.memberSessionExtensionFunctions?.(),
 				},
 				"other",
 				"interactive",

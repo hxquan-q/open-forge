@@ -47,7 +47,7 @@
 调度器「每天汇总 / 支持什么」与「对话画图 / 网站实现图表」成对边界已写入：
 
 - `packages/plugins/presets/vetta-actions` 的 `scheduler` usage；
-- `packages/coding-agent` 的 `VETTA_CLI_GUIDANCE` 与通用工具选择指引；
+- `packages/coding-agent` 的 `buildDesktopCliGuidance` 与通用工具选择指引；
 - `packages/plugins/presets/chart-renderer` 的 `render_chart` description / Skill；
 - `scripts/eval/` 隔离 Golden 与夹具合同（`unstable-routing-contract.test.ts`）。
 

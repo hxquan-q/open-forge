@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 媒体 Provider 协议
 
 `ctx.media` 负责媒体能力发现与提交；通用任务生命周期在 `ctx.jobs`，临时产物生命周期在 `ctx.artifacts`。消费者不依赖具体模型、供应商、网关或本地渲染引擎。
@@ -151,7 +152,7 @@ Provider 收到的 `inputs` 只有不透明 ID、媒体类型和 MIME，不包�
 
 需要宿主凭据或其它主进程特权的实现仍应注册为宿主 Provider；普通远端服务、本地模型或 sidecar 可用 Provider 插件适配。两者对消费者暴露同一契约。
 
-## Desktop 内置 Vetta Provider
+## Desktop 内置媒体 Provider（`desktop:vetta`）
 
 desktop 默认注册 `desktop:vetta`，当前支持 `text-to-image` 与 `image-to-image`。它的实现位于主进程：renderer 只提交媒体协议请求，主进程固定选择 `images/generate` 或 `images/edit`，并负责注入 JWT 与刷新凭据。插件拿不到用户 token，也不能通过该接口传入任意网关路径。
 

@@ -16,6 +16,12 @@ const SCHEDULER_CHANNELS = {
 	RUN_NOW: "vetta:scheduler:run-now",
 	ABORT: "vetta:scheduler:abort",
 	EVENT: "vetta:scheduler:event",
+	PACKAGE_EXPORT: "vetta:scheduler:package-export",
+	PACKAGE_IMPORT: "vetta:scheduler:package-import",
+	PACKAGE_IMPORT_URL: "vetta:scheduler:package-import-url",
+	PACKAGE_PREVIEW: "vetta:scheduler:package-preview",
+	PACKAGE_DISCOVER: "vetta:scheduler:package-discover",
+	EMIT_HOST_EVENT: "vetta:scheduler:emit-host-event",
 } as const;
 
 export function createSchedulerApi(ipc: IpcRenderer): Pick<DesktopApi, "scheduler"> {
@@ -34,6 +40,14 @@ export function createSchedulerApi(ipc: IpcRenderer): Pick<DesktopApi, "schedule
 			runTaskNow: (id) => ipc.invoke(SCHEDULER_CHANNELS.RUN_NOW, id),
 			abortTask: (id) => ipc.invoke(SCHEDULER_CHANNELS.ABORT, id),
 			onTaskEvent: (handler) => onIpcEvent(ipc, SCHEDULER_CHANNELS.EVENT, handler),
+			exportAutomationPackages: (taskIds) => ipc.invoke(SCHEDULER_CHANNELS.PACKAGE_EXPORT, taskIds),
+			importAutomationPackage: (defaultCwd) => ipc.invoke(SCHEDULER_CHANNELS.PACKAGE_IMPORT, defaultCwd),
+			importAutomationPackageFromUrl: (url, defaultCwd) =>
+				ipc.invoke(SCHEDULER_CHANNELS.PACKAGE_IMPORT_URL, url, defaultCwd),
+			previewAutomationPackage: (text) => ipc.invoke(SCHEDULER_CHANNELS.PACKAGE_PREVIEW, text),
+			discoverAutomationPackages: () => ipc.invoke(SCHEDULER_CHANNELS.PACKAGE_DISCOVER),
+			emitAutomationHostEvent: (eventName, context) =>
+				ipc.invoke(SCHEDULER_CHANNELS.EMIT_HOST_EVENT, eventName, context),
 		},
 	};
 }

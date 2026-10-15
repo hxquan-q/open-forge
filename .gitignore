@@ -83,6 +83,24 @@ settings.local.json
 !.claude/hooks/check-file-lines.mjs
 !.claude/hooks/check-file-lines.test.mjs
 .codex/
+# 其它 Agent 工具各自生成的技能/配置镜像；技能事实源在 .agents/skills/
+.augment/
+.codebuddy/
+.codewhale/
+.commandcode/
+.continue/
+.cursor/
+.factory/
+.gemini/
+.kilocode/
+.kiro/
+.qoder/
+.roo/
+.stepcode/
+.trae/
+.warp/
+.windsurf/
+.github/prompts/
 prompt/
 spec/
 !docs/agent/extension/spec/
@@ -100,10 +118,21 @@ skills-lock.json
 !.claude/skills/**
 !skills-lock.json
 
+# 第三方（claudekit，MIT）设计与品牌技能包：无上游来源可核实，且引用本仓库
+# 不存在的兄弟技能与 ~/.claude 绝对路径，故不收录。
+.agents/skills/banner-design/
+.agents/skills/brand/
+.agents/skills/design/
+.agents/skills/design-system/
+.agents/skills/slides/
+.agents/skills/ui-styling/
+.agents/skills/ui-ux-pro-max/
+
 terminals
 mcps
 agent-tools
 .playwright-cli
+.playwright-mcp/
 .tmp*
 .ai
 scripts/eval/results/
@@ -112,3 +141,9 @@ scripts/eval/**/__pycache__/
 # Local live-eval credentials; keep the example tracked.
 scripts/eval/.env
 !scripts/eval/.env.example
+
+# Understand-Anything 分析产物：图谱与配置入库，临时/回收站不入库
+.ua/.trash-*/
+.ua/tmp/
+.ua/intermediate/*
+!.ua/intermediate/scan-result.json

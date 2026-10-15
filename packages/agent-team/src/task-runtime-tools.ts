@@ -104,7 +104,7 @@ export function createTeamWaitTasksTool(port: TeamTaskControlPort): RuntimeToolD
 		name: "team_wait_tasks",
 		label: "team_wait_tasks",
 		description:
-			"Wait for any of up to eight durable Team tasks to finish, pause or need attention. Use timeoutMs=0 for a snapshot. Timeout or cancelling this wait never cancels or fails the tasks. Do not wait on work queued for yourself while you are executing; circular member waits are rejected. This is not subagent wait_agent.",
+			"Wait for any of up to eight durable Team tasks to finish, pause or need attention. Use timeoutMs=0 for a snapshot. Timeout or cancelling this wait never cancels or fails the tasks. When everything is dispatched and only completion remains, end the turn instead of polling — completion notifications automatically wake this session. Do not wait on work queued for yourself while you are executing; circular member waits are rejected. This is not subagent wait_agent.",
 		inputSchema: TeamWaitTasksInputSchema,
 		async execute({ sessionId, turnId, toolCallId, input, signal }) {
 			const result = await port.waitTasks({
@@ -115,7 +115,20 @@ export function createTeamWaitTasksTool(port: TeamTaskControlPort): RuntimeToolD
 				teamTaskIds: input.teamTaskIds,
 				timeoutMs: input.timeoutMs ?? 30_000,
 			});
-			return { content: [{ type: "text", text: JSON.stringify(result) }], details: result };
+			// Timeout answers are status pings; the model can fetch full snapshots via team_get_task.
+			const text =
+				result.reason === "timeout"
+					? JSON.stringify({
+							reason: result.reason,
+							tasks: result.tasks.map((task) => ({
+								teamTaskId: task.teamTaskId,
+								state: task.workItem.state,
+								revision: task.workItem.revision,
+								updatedAt: task.workItem.updatedAt,
+							})),
+						})
+					: JSON.stringify(result);
+			return { content: [{ type: "text", text }], details: result };
 		},
 	};
 }

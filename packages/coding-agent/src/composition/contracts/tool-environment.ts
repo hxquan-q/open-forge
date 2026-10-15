@@ -7,6 +7,11 @@ export interface CodingAgentToolEnvironmentContext {
 	readonly agentDir?: string;
 	readonly scenario: ConversationScenario;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
+	/**
+	 * 当前会话真实可调用的技能名。二进制读提示据此决定「能不能点名某个技能」；
+	 * 缺省表示宿主无法确认，提示侧一律按「没有可用技能」处理（绝不自造技能名）。
+	 */
+	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 }
 
 /** 平台提供的文件、命令等基础 Tool；产品 Tool、选择、排序和结果策略由 Coding Agent 决定。 */

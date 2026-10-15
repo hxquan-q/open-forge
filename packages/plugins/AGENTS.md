@@ -315,3 +315,9 @@ bun run check
 - 改动了对外合同（`plugin-sdk` 公开类型 / manifest Schema、`plugin-vite` 构建约定、宿主对清单字段的
   解析、`plugin-cli` 命令）时，已按「改动对外合同时必须同步文档」逐项核对：手册、CHANGELOG、
   SDK 版本、`PLUGIN_API_VERSION`、文档站结论句、合同测试。
+
+## 规则分级
+
+- **Invariant**：对外合同 fail-closed 条款（`PLUGIN_API_VERSION` bump 与同步清单）、权限按最小集合声明且不允许静默扩大、不替用户执行发布、不碰上游仓库。
+- **Policy**：`改动对外合同时必须同步文档` 流程、`环境与租户打包`、`测试要求`、`提交前检查`。
+- **Guideline**：`Preset 与外置插件的区别`、`创建插件` 与 `Vite 配置` 的脚手架建议。

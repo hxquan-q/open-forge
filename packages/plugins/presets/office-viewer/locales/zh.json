@@ -1,4 +1,6 @@
 {
+	"error.loadPreview": "无法加载文档预览",
+	"state.loadErrorHint": "请关闭后重新打开预览以重试",
 	"plugin.name": "Office 查看器",
 	"plugin.description": "离线预览 PDF、DOCX、PPTX 和电子表格文件。",
 	"error.unsupportedFormat": "暂不支持此 Office 文件格式",

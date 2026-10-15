@@ -2,6 +2,7 @@
 title: Configure message notifications
 description: Send task and automation notifications to external endpoints while protecting URLs, payloads, and credentials.
 ---
+{/* Modified by The Open Forge contributors. */}
 
 Webhooks notify an external endpoint when a task, batch project, or automation reaches a configured state. They are a notification channel, not proof that an artifact or business result is correct.
 
@@ -20,7 +21,7 @@ Keep notification scope narrow. A payload may contain task names, status, error 
 
 ## Validate delivery
 
-Use a low-risk task and trigger a notification deliberately. Check both the Vetta execution history and the receiver's raw event. Confirm that retries do not create an unacceptable duplicate effect.
+Use a low-risk task and trigger a notification deliberately. Check both the Open Forge execution history and the receiver's raw event. Confirm that retries do not create an unacceptable duplicate effect.
 
 <Checklist title="Before enabling notifications">
   <li>The endpoint belongs to the intended organization or service.</li>

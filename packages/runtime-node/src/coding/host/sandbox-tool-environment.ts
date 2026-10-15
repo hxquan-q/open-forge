@@ -16,7 +16,7 @@ export interface NodeSandboxCodingToolEnvironmentOptions extends NodeSandboxHost
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
-	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText">;
+	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly reviewSnapshots?: ReviewSnapshotBinding;
 }
 

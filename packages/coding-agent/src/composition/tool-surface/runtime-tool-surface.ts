@@ -8,10 +8,18 @@ import {
 	isCodingAgentSessionExecutionToolName,
 } from "../../execution/session/runtime.js";
 import {
+	type CodingAgentDatasetOperations,
+	createCodingAgentDatasetProfileToolRegistration,
+} from "../../features/dataset/index.js";
+import {
 	type CodingAgentKnowledgeRuntime,
 	createCodingAgentKnowledgeFilterByTagsToolRegistration,
 	createCodingAgentKnowledgeListTagsToolRegistration,
 } from "../../features/knowledge/index.js";
+import {
+	type CodingAgentResearchScopeOperations,
+	createCodingAgentResearchScopeToolRegistration,
+} from "../../features/research/index.js";
 import type { CodingAgentSessionConfigurationState } from "../../host/session-configuration/configuration-state.js";
 import { ALL_SCENARIOS, type ConversationScenario } from "../../profiles/index.js";
 import type { CodingAgentToolActivation } from "../../runtime-contracts/index.js";
@@ -42,6 +50,10 @@ export interface CodingAgentRuntimeToolSurfaceOptions {
 	readonly scenario: ConversationScenario;
 	readonly activation?: CodingAgentToolActivation;
 	readonly knowledgeRuntime?: CodingAgentKnowledgeRuntime;
+	/** 本地研究来源枚举实现由宿主注入；缺省时不注册 research_scope。 */
+	readonly researchScope?: CodingAgentResearchScopeOperations;
+	/** 数据集剖析实现由宿主注入；缺省时不注册 dataset_profile。 */
+	readonly datasetProfile?: CodingAgentDatasetOperations;
 	readonly inheritedMcpView: McpRuntimeToolView;
 	readonly mcpSource?: McpRuntimeToolSource;
 	readonly indexes: CodingAgentRuntimeToolSurfaceIndexes;
@@ -51,6 +63,8 @@ export interface CodingAgentRuntimeToolSurfaceOptions {
 	readonly resultPolicy?: CodingToolResultPolicy;
 	readonly observationPublisher?: RuntimeObservationPublisher;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
+	/** 当前会话可调用的技能名；供二进制读提示判断能否点名技能。缺省=未知。 */
+	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 }
 
 export interface CodingAgentRuntimeToolSurface {
@@ -89,6 +103,7 @@ export async function createCodingAgentRuntimeToolSurface(
 		agentDir: options.agentDir,
 		scenario: options.scenario,
 		configurationSource: options.configurationSource,
+		availableSkillNames: options.availableSkillNames,
 	});
 	const tools = createCodingToolsRuntimeComposition({
 		cwd: options.cwd,
@@ -124,6 +139,22 @@ export async function createCodingAgentRuntimeToolSurface(
 						createCodingAgentKnowledgeFilterByTagsToolRegistration({
 							operations: options.knowledgeRuntime.query,
 							modelOrder: CODING_AGENT_MODEL_TOOL_ORDER.knowledgeFilter,
+						}),
+					]
+				: []),
+			...(options.researchScope
+				? [
+						createCodingAgentResearchScopeToolRegistration({
+							operations: options.researchScope,
+							modelOrder: CODING_AGENT_MODEL_TOOL_ORDER.researchScope,
+						}),
+					]
+				: []),
+			...(options.datasetProfile
+				? [
+						createCodingAgentDatasetProfileToolRegistration({
+							operations: options.datasetProfile,
+							modelOrder: CODING_AGENT_MODEL_TOOL_ORDER.datasetProfile,
 						}),
 					]
 				: []),

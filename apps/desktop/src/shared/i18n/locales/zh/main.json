@@ -106,5 +106,13 @@
 	},
 	"documentExport": {
 		"title": "导出文档"
+	},
+	"sessionArchive": {
+		"exportDialogTitle": "导出会话归档",
+		"importDialogTitle": "导入会话归档",
+		"filterName": "Open Forge 会话归档"
+	},
+	"markdown": {
+		"previewTitle": "HTML 预览 · 30 秒后自动关闭"
 	}
 }

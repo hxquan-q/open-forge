@@ -16,6 +16,7 @@ import {
 	recordPerfReduction,
 	SessionPerfTracker,
 } from "./perf-snapshot.js";
+import { getProcessHealthBook, type ProcessHealthBook } from "./process-health.js";
 
 const IDLE_INTERVAL_MS = 30_000;
 const ACTIVE_INTERVAL_MS = 2_000;
@@ -37,6 +38,8 @@ export interface PerfSessionEventSource {
 
 export interface PerfMonitorOptions {
 	readonly collectProcessMetrics?: () => PerfProcessMetrics;
+	/** 后台进程健康记账簿；缺省用主进程级单例（supervisor 侧经 process-health 模块函数写入）。 */
+	readonly healthBook?: ProcessHealthBook;
 	readonly now?: () => number;
 	readonly idleIntervalMs?: number;
 	readonly activeIntervalMs?: number;
@@ -66,6 +69,7 @@ export class PerfMonitorService {
 	>;
 	private readonly now: () => number;
 	private readonly collectProcessMetrics: (() => PerfProcessMetrics) | undefined;
+	private readonly healthBook: ProcessHealthBook;
 	private timer: ReturnType<typeof setTimeout> | undefined;
 	private activeUntil = 0;
 	private initialized = false;
@@ -80,6 +84,7 @@ export class PerfMonitorService {
 		};
 		this.now = options.now ?? Date.now;
 		this.collectProcessMetrics = options.collectProcessMetrics;
+		this.healthBook = options.healthBook ?? getProcessHealthBook();
 	}
 
 	/** 旁路采样：失败只降级为 warn，绝不向业务路径抛出。 */
@@ -223,9 +228,22 @@ export class PerfMonitorService {
 		const now = this.now();
 		let metrics: PerfProcessMetrics | undefined;
 		try {
-			metrics = this.collectProcessMetrics?.() ?? collectElectronProcessMetrics();
+			const collected = this.collectProcessMetrics?.() ?? collectElectronProcessMetrics();
+			metrics = {
+				...collected,
+				processes: collected.processes.map((sample) => {
+					const role = this.healthBook.roleForPid(sample.pid);
+					return role ? { ...sample, role } : sample;
+				}),
+			};
 		} catch (error) {
 			log.warn("perf process sampling failed", error);
+		}
+		let background: ReturnType<ProcessHealthBook["snapshot"]> | undefined;
+		try {
+			background = this.healthBook.snapshot();
+		} catch (error) {
+			log.warn("perf background health snapshot failed", error);
 		}
 		for (const subscription of this.subscriptions.values()) {
 			this.collectDeliveryDrops(subscription);
@@ -237,6 +255,7 @@ export class PerfMonitorService {
 				metrics,
 				sessions: [...this.trackers.values()].map((tracker) => tracker.activity(now)),
 				aggregates: this.aggregates,
+				background,
 			});
 			this.samples.push(snapshot);
 			if (this.samples.length > this.options.maxSamples) {

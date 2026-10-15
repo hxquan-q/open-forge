@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 6. Sentry Source map 与原生崩溃
 
 ## 6.1 主责
@@ -59,7 +60,7 @@ flowchart LR
 - 本地诊断信息；
 - 更新和安装制品 metadata。
 
-## 6.4 Vetta 当前构建注意事项
+## 6.4 Open Forge 当前构建注意事项
 
 当前 `sentry-vite.ts` 在 Sentry 上传配置完整时，自动为 Main、Preload、Renderer 生成 hidden source map、上传三类产物，并在上传成功后删除本地 `.map`。`VETTA_MAIN_SOURCEMAP=true` 仍可用于不上传 Sentry 的 Main 调试构建，但不是正式 release 的上传开关。
 

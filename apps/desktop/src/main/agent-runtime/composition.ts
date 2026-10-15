@@ -45,12 +45,15 @@ import {
 	PathFilteredRuntimeSessionCatalog,
 	setDesktopSshConnectionResolver,
 } from "@vetta/runtime-desktop";
+import { scanLocalSources } from "@vetta/runtime-knowledge";
 import { FileConversationRuntimeSessionFileHistoryReader } from "@vetta/runtime-node/conversation";
+import { profileDatasetFile } from "@vetta/runtime-node/dataset";
 import {
 	createLoopbackSessionAffinityStream,
 	createNodeKnowledgeRuntime,
 	NodeTextFileStorage,
 } from "@vetta/runtime-node/host";
+import { loadVettaCredentials } from "@vetta/runtime-node/mcp";
 import { getModePrompt } from "../agent-modes/index.js";
 import { createDesktopAgentObservability } from "../agent-observability/composition.js";
 import { recordRuntimeCompaction } from "../app-monitor/app-monitor-service.js";
@@ -75,8 +78,13 @@ import { getAvailableLinuxBubblewrapPath, getAvailableMacosSandboxExecPath } fro
 import { resolveWindowsSandboxHostBinary } from "../sandbox/windows-binary-resolver.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
 import { createCodingAgentObservationLogPort } from "./coding-agent-observation-log-port.js";
-import { createDesktopCodingAgentFunctionSource } from "./function-extension-source.js";
+import {
+	createDesktopCodingAgentFunctionSource,
+	setDesktopCodingAgentFunctionSource,
+} from "./function-extension-source.js";
 import { getOrCreateSharedModelRuntime, readDesktopMcpDebug } from "./host-services.js";
+import { DesktopMcpResourceManager } from "./mcp-resource-manager.js";
+import type { DesktopMcpResourceScope } from "./mcp-resource-scope.js";
 import { createDesktopMcpSupervisor } from "./mcp-supervisor.js";
 import { getDesktopProviderObservationRuntime } from "./provider-observation.js";
 import { createDesktopPromptRuntimeSources } from "./resource-runtime.js";
@@ -138,6 +146,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 			return getDesktopCanvasArtifactService().invokeTool(request, signal);
 		},
 	});
+	setDesktopCodingAgentFunctionSource(sessionExtensionFunctions);
 	const historicalFormat = createDesktopHistoricalSessionFormat();
 	const defaultResultArtifacts = createDesktopResultArtifactRuntime(getAgentDir());
 	const conversationCatalog = new DesktopRuntimeSessionCatalog({
@@ -154,8 +163,33 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 	const createRuntimeBackendPool = (
 		agentRuntime: RuntimeAgentRuntime,
 		observationPublisher: RuntimeObservationPublisher,
-	) =>
-		new DesktopRuntimeBackendPool({
+	) => {
+		const createManagedMcpSource = async (resourceScope: DesktopMcpResourceScope, cwd: string, agentDir: string) => {
+			const resultArtifacts = createDesktopResultArtifactRuntime(agentDir);
+			return await createCodingAgentMcpRuntimeToolSource({
+				supervisor: createDesktopMcpSupervisor({
+					projectRoot: cwd,
+					agentDir,
+					debug: readDesktopMcpDebug(cwd, agentDir),
+					resourceScope,
+					catalogCacheDirectory: getApplicationCacheService().namespace("mcp-tool-catalog").rootDir,
+				}),
+				resultPolicy: resultArtifacts.mcpToolResultPolicy,
+				taskCoordinator: mcpTaskCoordinator,
+				appHost: mcpAppHost,
+			});
+		};
+		// 应用级连接只依赖 agentDir 与登录态，跨工作区复用；工作区连接仍按 cwd 隔离。
+		const mcpResources = new DesktopMcpResourceManager({
+			createApplicationSource: (agentDir) =>
+				createManagedMcpSource("application", DEFAULT_CONVERSATION_CWD, agentDir),
+			createWorkspaceSource: ({ cwd, agentDir }) => createManagedMcpSource("workspace", cwd, agentDir),
+			resolveApplicationRevision: (agentDir) => {
+				const credentials = loadVettaCredentials(agentDir);
+				return credentials ? `authenticated:${credentials.baseUrl}` : "anonymous";
+			},
+		});
+		const runtimeBackendPool = new DesktopRuntimeBackendPool({
 			observationPublisher,
 			compositionDefaults: {
 				tracer: observability.tracer,
@@ -173,6 +207,10 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 					process.env.VETTA_KNOWLEDGE_DISABLED === "1"
 						? undefined
 						: createNodeKnowledgeRuntime(getKnowledgeRoot()),
+				// 本地研究来源枚举只认显式传入的目录，不回落默认 knowledge home。
+				researchScope: { scanSources: scanLocalSources },
+				// 数据集剖析只读用户显式选择的文件；不修改源文件、不联网。
+				datasetProfile: { profileDataset: profileDatasetFile },
 				createMemoryRolloverRuntime: (options) => {
 					const memoryFile = options.memoryFile ?? join(options.cwd, "MEMORY.md");
 					return createCodingAgentMemoryRolloverRuntime({
@@ -214,26 +252,15 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 			],
 			createCodingToolResultPolicy: ({ agentDir }) =>
 				createDesktopResultArtifactRuntime(agentDir ?? getAgentDir()).codingToolResultPolicy,
-			createMcpRuntimeSource: async ({ cwd, agentDir }) => {
-				const resolvedAgentDir = agentDir ?? getAgentDir();
-				const resultArtifacts = createDesktopResultArtifactRuntime(resolvedAgentDir);
-				return await createCodingAgentMcpRuntimeToolSource({
-					supervisor: createDesktopMcpSupervisor({
-						projectRoot: cwd,
-						agentDir: resolvedAgentDir,
-						debug: readDesktopMcpDebug(cwd, resolvedAgentDir),
-						catalogCacheDirectory: getApplicationCacheService().namespace("mcp-tool-catalog").rootDir,
-					}),
-					resultPolicy: resultArtifacts.mcpToolResultPolicy,
-					taskCoordinator: mcpTaskCoordinator,
-					appHost: mcpAppHost,
-				});
-			},
+			createMcpRuntimeSource: ({ cwd, agentDir }) =>
+				mcpResources.acquire({ cwd, agentDir: agentDir ?? getAgentDir() }),
 			resolveMcpRuntimeScope: ({ cwd, agentDir }) => ({
 				cwd: resolveSessionListCwd(cwd),
 				agentDir,
 			}),
 		});
+		return { mcpResources, runtimeBackendPool };
+	};
 	const compactionLogger = createRuntimeSessionCompactionLogger(log);
 	const runtime = new RuntimeHost({
 		...platformServices,
@@ -252,9 +279,9 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 		},
 		createSessionBackend: ({ agents, observationPublisher }) => {
 			publishCodingAgentExecutionRuntimeDefinition(agents);
-			const runtimeBackendPool = createRuntimeBackendPool(agents, observationPublisher);
-			void runtimeBackendPool.prewarmMcp({ cwd: DEFAULT_CONVERSATION_CWD }).catch((error: unknown) => {
-				log.warn("[agent-runtime] default conversation MCP prewarm failed", error);
+			const { mcpResources, runtimeBackendPool } = createRuntimeBackendPool(agents, observationPublisher);
+			void mcpResources.prewarmApplication(getAgentDir()).catch((error: unknown) => {
+				log.warn("[agent-runtime] application MCP prewarm failed", error);
 			});
 			const historicalSessionImportBackend = new DesktopHistoricalSessionImportBackend(runtimeBackendPool);
 			return new CatalogRoutedRuntimeHostSessionBackend({
@@ -269,7 +296,13 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 					{ id: "runtime", catalog: desktopRuntimeCatalog, backend: runtimeBackendPool },
 				],
 				onRoute: logSessionRoute,
-				dispose: () => runtimeBackendPool.dispose(),
+				dispose: async () => {
+					try {
+						await runtimeBackendPool.dispose();
+					} finally {
+						await mcpResources.dispose();
+					}
+				},
 			});
 		},
 		sessionCatalog: new CompositeRuntimeSessionCatalog(

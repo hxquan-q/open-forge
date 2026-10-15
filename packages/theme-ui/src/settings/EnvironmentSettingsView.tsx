@@ -1,4 +1,11 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
+import {
+	type EnvironmentGitRowViewProps,
+	EnvironmentGitRowView,
+	type EnvironmentGitStatusView,
+	type EnvironmentGitViewLabels,
+} from "./EnvironmentGitRowView";
 import { SettingRow, SettingSection, type SettingSectionMeta } from "./SettingChrome";
 
 export type EnvironmentRuntimeKindView = "node" | "python";
@@ -7,6 +14,8 @@ export interface EnvironmentRuntimeStatusView {
 	readonly managedVersion?: string;
 	readonly ready: boolean;
 	readonly supported: boolean;
+	/** 托管运行时后台下载中（安装后自动补齐路径）。 */
+	readonly downloading?: boolean;
 }
 
 export interface EnvironmentSettingsViewLabels {
@@ -14,6 +23,7 @@ export interface EnvironmentSettingsViewLabels {
 	readonly fetch: string;
 	readonly fetchAgain: string;
 	readonly fetching: string;
+	readonly git: EnvironmentGitViewLabels;
 	readonly loading: string;
 	readonly notReady: string;
 	readonly npmRegistry: string;
@@ -26,6 +36,7 @@ export interface EnvironmentSettingsViewLabels {
 	readonly sections: {
 		readonly mirrors: string;
 		readonly runtime: string;
+		readonly tools: string;
 	};
 	readonly title: string;
 }
@@ -33,6 +44,8 @@ export interface EnvironmentSettingsViewLabels {
 export interface EnvironmentSettingsViewProps {
 	readonly busy: EnvironmentRuntimeKindView | null;
 	readonly error: string | null;
+	/** Git 行的交互状态与回调；状态与文案分别来自 status.git 与 labels.git。 */
+	readonly git: Omit<EnvironmentGitRowViewProps, "labels" | "status">;
 	readonly headerAction?: ReactNode;
 	readonly labels: EnvironmentSettingsViewLabels;
 	readonly mirrors?: {
@@ -41,10 +54,12 @@ export interface EnvironmentSettingsViewProps {
 	} | null;
 	readonly onReinstall: (kind: EnvironmentRuntimeKindView) => void;
 	readonly runtimeSection: SettingSectionMeta;
+	readonly toolsSection: SettingSectionMeta;
 	readonly mirrorsSection: SettingSectionMeta;
 	readonly status: {
 		readonly node: EnvironmentRuntimeStatusView;
 		readonly python: EnvironmentRuntimeStatusView;
+		readonly git: EnvironmentGitStatusView;
 	} | null;
 }
 
@@ -67,11 +82,12 @@ function RuntimeCard({
 	status: EnvironmentRuntimeStatusView;
 }): JSX.Element {
 	const meta = RUNTIME_META[kind];
+	const fetching = busy || Boolean(status.downloading);
 	const stateText = !status.supported
 		? labels.platformNotSupported
 		: status.ready
 			? `${labels.ready} · ${status.managedVersion}`
-			: busy
+			: fetching
 				? labels.fetching
 				: labels.notReady;
 	const stateClass = status.ready
@@ -96,11 +112,11 @@ function RuntimeCard({
 				{status.supported && (
 					<button
 						type="button"
-						disabled={busy}
+						disabled={fetching}
 						onClick={onReinstall}
 						className="flex items-center gap-1.5 rounded-lg border border-input bg-secondary px-3 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent disabled:opacity-50"
 					>
-						{busy ? (
+						{fetching ? (
 							<span className="icon-[mdi--loading] h-3.5 w-3.5 animate-spin" />
 						) : (
 							<span className="icon-[mdi--download-outline] h-3.5 w-3.5 text-muted-foreground" />
@@ -116,6 +132,7 @@ function RuntimeCard({
 export function EnvironmentSettingsView({
 	busy,
 	error,
+	git,
 	headerAction,
 	labels,
 	mirrors,
@@ -123,6 +140,7 @@ export function EnvironmentSettingsView({
 	onReinstall,
 	runtimeSection,
 	status,
+	toolsSection,
 }: EnvironmentSettingsViewProps): JSX.Element {
 	return (
 		<div className="mx-auto w-full max-w-[680px] px-8 pt-2 pb-4">
@@ -158,6 +176,14 @@ export function EnvironmentSettingsView({
 							onReinstall={() => onReinstall("python")}
 						/>
 					</>
+				) : (
+					<div className="px-5 py-4 text-[12px] text-muted-foreground">{labels.loading}</div>
+				)}
+			</SettingSection>
+
+			<SettingSection title={labels.sections.tools} section={toolsSection}>
+				{status ? (
+					<EnvironmentGitRowView {...git} labels={labels.git} status={status.git} />
 				) : (
 					<div className="px-5 py-4 text-[12px] text-muted-foreground">{labels.loading}</div>
 				)}

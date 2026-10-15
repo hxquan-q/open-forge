@@ -2,13 +2,27 @@
 
 本仓库**没有**照搬 OpenClaw 的 oxlint/pnpm/巨型 CI 矩阵。在现有 **Bun + Turborepo + Biome + tsgo + Vitest + husky** 之上，补了分层门禁、按包/按变更测试与轻量架构守卫；Desktop `verify:ui` 是用户明确要求时才运行的按需验收工具，不属于默认门禁。
 
+## 统一开发入口与验证职责
+
+[open-forge-task-intake](../../.agents/skills/open-forge-task-intake/SKILL.md) 根据任务选择下面的既有门禁，不增设平行测试框架。TDD/测试设计见 [open-forge-testing](../../.agents/skills/open-forge-testing/SKILL.md)，CI/CD 配置改动见 [流水线路线](../../.agents/skills/open-forge-task-intake/references/ci-cd.md)。
+
+`node scripts/quality/workflow-skills.mjs` 已接入 `check:guards`：校验两个权威 Skill 的出向链接、已退役名称/Devin 副本残留，以及根 AGENTS、project/ 和 docs/dev/ 中指向这两个 Skill 的入向 Markdown 文件链接。支持内联链接 title，忽略围栏/缩进代码块与行内代码；不是完整 CommonMark、网络 URL 或标题锚点验证器，也不证明模型路由行为。
+
+Claude 的 `.claude/skills` 是共享入口而非生成镜像：真实目录必须解析到 `.agents/skills`；Windows Git 正确的符号链接占位文件被识别为平台状态，门禁继续验证权威正文并提示 Claude 路径未就绪。开发者需开启 `core.symlinks`/Windows 开发者模式后安全重新检出，工具不会改 Git 配置、替换占位文件或在其中建目录。错误目标仍失败。用户已授权移除 Devin 镜像；脚本完全只读，旧 `--write` 参数报明确错误，不创建副本或修改配置。重新出现的这两个项目 Skill 的 Devin 副本会报错，但不会被检查脚本自动删除。仅支持 `.devin` 的旧环境需改为读取 `.agents`。
+
+frontmatter 全量检查显式扫描 `.agents` 和 `.devin`，不依赖遍历 Claude 符号链接或 staged 文件。上述回归由既有 `test:quality`/quality CI 执行，不另建 workflow 或扩大发布权限。
+
+`node scripts/quality/check-agent-guide.mjs` 同样进入 `check:guards`：根 AGENTS 的 UTF-8 体积不得超过 8 KiB，必须指向六份按需规则扩展；CLAUDE 不得超过 4 KiB，必须回指根规则与其专属补充。检查这些入口与扩展的 Markdown 文件链接。该预算是本仓维护合同，不是对某个宿主加载上限的假设；检查不证明规则语义未变，迁移需另核对保留映射。
+
+`node scripts/quality/check-glossary.mjs` 校验根 CONTEXT 的 12 KiB 预算、根索引与 `docs/glossary/` 词条的一一对应、分册唯一性及文件链接。根保留旧 `###` 标题用于定位，正文在分册，不在索引复制定义。该检查不审定历史词条是否仍反映当前实现。
+
 ## 门禁分层
 
 | 层级 | 命令 | 何时跑 | 内容 |
 |------|------|--------|------|
 | 提交前（快） | `bun run check:precommit`（husky 自动） | 每次 commit | staged 私钥/冲突标记 + Biome `--staged --write`；格式化后重新暂存整文件 |
 | 开发中（快） | `bun run check:quick` | 一轮编辑后 | 准确合并分支已提交差异、暂存、未暂存和未跟踪文件；对变更文件运行 Biome，并运行架构守卫；不做类型检查 |
-| 完整本地/PR | `bun run check` | 一轮代码任务完成、交付或开 PR 前一次 | 对显式源码根运行 Biome，并行执行根 `tsgo`、CLI 显式 `tsgo`、增量 desktop `tsc`、docs check 与架构守卫 |
+| 完整本地/PR | `bun run check` | 一轮代码任务完成、交付或开 PR 前一次 | 对显式源码根运行 Biome，并行执行根 `tsgo`、CLI 显式 `tsgo`、增量 desktop `tsc`、docs check 与架构守卫；守卫还校验 Task/Plan 索引与活动并行写范围，并确认当前 Desktop 版本的 Release Notes 存在 |
 | 构建声明消费 | `bun run check:types:build-surfaces` | workspace 前置声明生成后 | 按 `cli-host/tsconfig.build.json` 验证真实包声明消费；会拒绝陈旧 `dist/*.d.ts` |
 | 质量脚本测试 | `bun run test:quality` | 修改 `scripts/quality` | 变更选择、依赖传播与包边界规则 |
 | 单元测试 | `bun run test` / `bun run test:unit` | 逻辑变更 | 先由 Turbo 生成测试消费的 workspace 依赖产物，再顺序运行所有声明 `test` 的 TypeScript workspace |
@@ -17,6 +31,7 @@
 | 按变更 | `bun run test:changed` | 提 PR 前可选 | 合并已提交/工作区/未跟踪改动，测试触达包及其下游依赖 |
 | 按需 Desktop UI 验收 | `bun run verify:ui:*` | 仅用户明确要求使用 UI 验证或具体命令时 | 不由 UI、图标、样式或 Renderer/Main 改动自动触发；见 [README](./README.md) |
 | Desktop 生产边界 | `bun run verify:desktop:contracts`；受影响时由 GitHub Actions 在 Windows/macOS/Linux 运行 packaged smoke 与 updater E2E | 修改 Desktop 主进程、preload、打包脚本、原生依赖或远程控制 | 见下文 |
+| Task / Project 合同 | `bun run check` 与 `bun run worktree:check --all` | 日常静态门禁；并行批次派工/集成前显式门禁 | `check` 校验 README 索引状态、Task frontmatter 结构和未登记的活动并行 scope 冲突；Coordinator CLI 额外核对机器上的 Git Worktree、分支和实际漂移 |
 | 死代码（可选） | `bun run deadcode:report` | 清理时 | Knip 报告，**默认不阻断** `check` |
 
 ## 新增脚本
@@ -31,17 +46,23 @@ scripts/quality/
   check-private-keys.mjs       私钥形态检测
   check-conflict-markers.mjs   未解决冲突标记
   check-package-boundaries.mjs 库/插件不得依赖 app 宿主
+  check-context-boundaries.mjs 每模块 Context Boundary 声明与 internal_dependencies 白名单
+  check-waivers.mjs            Policy 级豁免的字段完整性与到期检查
+  check-protocol-suites.mjs    跨边界协议必须有 conformance 套件或受控豁免
   check-coding-agent-architecture.mjs
                                Coding Agent 当前架构依赖与公开面
   run-vitest.mjs               用 Node 启动 Vitest（Windows 上禁止 Bun 拉起 worker）
   check-vitest-runner.mjs      package.json 测试脚本必须走 run-vitest.mjs
   check-turbo-config.mjs       Turbo 输入、环境、入口与 Remote Cache 安全合同
   check-source-path-maps.mjs   根 tsconfig path map 必须显式覆盖 workspace 包的 types 子路径导出
-  check-task-worktrees.mjs     Task ↔ Worktree 合同的结构不变量（ID/文件名、路径形态、依赖引用与环）
+  check-task-worktrees.mjs     Task ↔ Worktree 结构与活动并行范围合同
+  check-project-indexes.mjs    Plan / Task 状态索引与 frontmatter 一致性
   test-pkg.mjs                 按包名跑 vitest
   test-impact.mjs              按任务文件选择直接测试与 Vitest 相关测试
   test-changed.mjs             按 git 变更和依赖图选包
-  quality-gates.test.mjs       质量脚本定向测试
+  quality-gates.test.mjs       质量门禁与配置测试
+  check-task-worktrees.test.mjs Task scope 门禁
+  project-indexes.test.mjs     Project 状态索引门禁
 scripts/worktree/              开发协作 Worktree 生命周期（不属产品运行时）
   cli.mjs                      create / status / check / remove / doctor
   contract.mjs                 Task ↔ Worktree 合同校验（守卫与 CLI 共用的事实源）
@@ -61,7 +82,7 @@ knip.config.ts                 Knip（可选）
 | `check:lint` / `check:lint:fix` | 对显式源码根执行 Biome 只读检查 / 写回，避免扫描无关目录 |
 | `check:types` | 并行执行根 `tsgo`、CLI 显式 `tsgo`、通过当前 Bun（`bun x tsc`）执行带持久增量缓存的 desktop `tsc`、docs check 与 Expo Mobile `tsc` |
 | `check:types:build-surfaces` | 使用 CLI build config 验证上游 workspace `dist/*.d.ts` 的真实消费面；要求先生成当前声明 |
-| `check:guards` | 并行执行私钥、冲突标记、包边界等全量守卫 |
+| `check:guards` | 并行执行私钥、冲突标记、包边界、Task/Project 索引与并行范围合同、当前版本 Release Notes 存在性等全量守卫 |
 | `check:staged` | 仅 staged Biome |
 | `check:precommit` | husky 使用的快路径 |
 | `check:quick` | 变更文件 Biome + 全量 guards；Biome 配置变化时自动回退全量 Biome |
@@ -120,6 +141,25 @@ bun run test:pkg <name>
 
 `coding-agent/examples/**` 已排除。
 
+## 模块边界声明（`check-context-boundaries`）
+
+每个模块在自己的 `README.md`（无 README 时为 `AGENTS.md`）内嵌 `## Context Boundary` yaml 块，声明 `purpose` / `provides` / `consumes` / `internal_dependencies`；声明与模块同处一地，新增包改的是自己的声明而不是中心守卫表（ADR-0131）。
+
+- `internal_dependencies` 是本模块**允许 import 的 workspace 包名白名单**；扫描真实 import specifier，凡未声明的跨模块 import 即失败。
+- 相对路径逃逸出模块根一律违规；`@pkg/src/**` 深链一律违规——白名单不豁免深链。
+- 例外仅限测试文件：`*.test.*` / `*.spec.*` 与 `test/` 树允许相对逃逸进**已声明**依赖的模块（既有测试耦合模式，依赖方向仍受白名单约束）。
+- 非 workspace 交付物（`apps/im-gateway`、`apps/kotlin`、`apps/ssh-helper`）同样带声明块。
+- `docs/architecture/dependents.md` 是机器生成的反向依赖视图，禁止手写；由 `--write-dependents` 重新生成，守卫校验其新鲜度。
+- 新包补齐声明可运行 `--apply` 脚手架生成首版 yaml 块。
+
+`coding-agent/examples/extensions/*` 作为 workspace 模块同样受管。
+
+## 规则豁免与协议套件（`check-waivers` / `check-protocol-suites`）
+
+- `project/decisions/waivers/` 登记 Policy 级规则豁免（规则/理由/风险/补偿/owner/到期日）；`active` 且到期即红，到期不自动撤销也不自动续期。格式见 `waivers/README.md`。
+- `tests/contracts/protocol-registry.json` 是跨边界协议清单（runtime-* Port、plugin SDK、action-rpc、MCP 桥接、remote-* 线协议等）。每个协议必须列出存在的 conformance 套件文件，或进入 `check-protocol-suites.mjs` 内的 `EXEMPT_PROTOCOLS`——该集合只缩不增（不得超出冻结基线），且每项必须在 `tests/contracts/OWNERS` 记录批准人。已有套件后仍留在豁免集合同样报错。
+- 新增跨边界协议面时，先登记注册表并附套件；套件必须经消费者公共 API 驱动真实实现，纯自 mock 不算。
+
 ## Coding Agent 架构规则（`check-coding-agent-architecture`）
 
 该守卫不生成全量 AST 模块图，也不启动 TypeScript TypeChecker。它只用 TypeScript AST 从
@@ -144,9 +184,9 @@ Greenfield/Legacy 名称墓碑、固定文件数量、行数阈值及实施日�
 
 `project/tasks/*.md` 的 frontmatter 是并行开发的合同，写错的后果不可见：`id` 与文件名不一致会让所有指向它的 `depends_on` 失效，`depends_on` 成环意味着不存在合法集成顺序，`write_paths` 里的 `..` 让 scope 声明失去意义。该守卫把这类**结构矛盾**做成机械检查，不依赖 Git，在任何 checkout 上都能跑。
 
-它检查：ID 与文件名一致、`status`/`execution`/`integration_status`/`priority` 落在枚举内、路径字段是仓库相对路径且不越界、`depends_on`/`conflicts_with` 的 ID 形态与 TASK 引用可解析、无自引用、`depends_on` 无环；`worktree` 已声明时必须有 `branch`（`task/TASK-xxxx-<slug>`）、`base_commit` 和非空 `write_paths`。
+该守卫校验 Task frontmatter 的结构矛盾，并对生命周期内的 parallel Worktree Task 检查 `write_paths` / `exclusive_paths` 的未登记重叠；重叠关系必须写入至少一端的 `conflicts_with`，以便协调者安排独立 Worktree 实施与串行集成。活动 serial / coordination-only Task 不得声明独立 Worktree。该检查只读项目文件，不检查某台机器上的 Worktree 是否存在或干净；真实 Git 状态由 `bun run worktree:check` / `doctor` 检查。
 
-**刻意不检查**（见 `check-task-worktrees.mjs` 的说明）：跨 Task 的 scope 重叠与"某台机器上 worktree 是否存在"。前者是调度决策（`conflicts_with` 就是为此存在），存量条目里已有合法重叠；后者是每个 checkout 的本地状态。二者由 `bun run worktree:check` / `doctor` 显式报告，不拦截无关的 `check`。枚举漂移（如 `integration_status: done`）在该守卫中只告警，在 `worktree:check` 中才是失败。
+`check-project-indexes.mjs` 将计划索引和 Task 当前焦点表的状态与对应 frontmatter 对照；README 是导航副本，frontmatter 是状态事实源。`check-guards` 还运行 `bun run scripts/release/release-notes.mjs --check`，保证当前 Desktop manifest 版本对应的 Release Notes 文件存在；发布工作流会再次执行同一校验。
 
 ## Workspace 构建编排（Turborepo）
 
@@ -251,7 +291,8 @@ bun run test:changed
 bun run check:quick
 bun run check
 
-# 并行 Task：创建独立 worktree，集成前检查，完成后清理
+# 并行 Task：先检查协调合同，再创建独立 worktree；集成前复查并完成清理
+bun run worktree:check --all
 bun run task:worktree -- create --task TASK-0096
 bun run worktree:check --task TASK-0096
 bun run worktree:remove --task TASK-0096
@@ -287,3 +328,7 @@ bun run deadcode:report
 - [ ] 生成当前 workspace 声明后，`bun run check:types:build-surfaces` 通过
 - [ ] husky `.husky/pre-commit` 调用的是 `check:precommit` 而非整仓慢 `check`  
 - [ ] 未新增 oxlint/oxfmt/pnpm 强制依赖  
+
+### Windows 测试资源与共享 UI 入口
+
+共享 Node runner 在 Windows 默认最多使用 2 个 worker（本地与 CI 一致），其他平台沿用 Vitest 默认值；显式 CLI `--maxWorkers` 保持调用方选择。这里只限制并发资源，不调整 test/hook 超时、断言或测试集合。`@vetta-org/theme-ui` 提供独立的 Node runner `test` 入口；`test:impact` 可以直接选择其相关测试，公共合同与无测试包仍走保守影响面。

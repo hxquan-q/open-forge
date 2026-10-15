@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 		environments: {
 			client: {
 				transformRequest: vi.fn(async () => ({ code: "", map: null })),
+				waitForRequestsIdle: vi.fn(async () => {}),
 				moduleGraph: {
 					getModuleByUrl: vi.fn(async () => ({ importedModules: new Set() })),
 				},

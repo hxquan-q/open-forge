@@ -1,6 +1,12 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createInterface, type Interface } from "node:readline";
 import {
+	attributeProcessPid,
+	recordProcessCrash,
+	recordProcessRestart,
+	registerProcessRole,
+} from "../app-monitor/process-health.js";
+import {
 	type CodingAgentSpec,
 	type DiscordConfig,
 	decodeEvent,
@@ -68,6 +74,8 @@ import {
 	type WhatsappQREvent,
 	type WhatsappUnboundEvent,
 } from "./host-protocol.js";
+
+const ROLE = "im-sidecar";
 
 /**
  * Manages the lifecycle of one im-gateway sidecar child process.
@@ -229,6 +237,8 @@ export class SidecarManager {
 		this.shutdownGraceMs = opts.shutdownGraceMs ?? DEFAULT_SHUTDOWN_GRACE;
 		this.backoffMs = opts.backoffMs ?? DEFAULT_BACKOFF;
 		this.maxRestartAttempts = opts.maxRestartAttempts ?? DEFAULT_MAX_RESTARTS;
+		// 重启预算由本类的 maxRestartAttempts/backoff 持有，记账簿只做统一计数与 pid 归因。
+		registerProcessRole({ role: ROLE, kind: "sidecar" });
 	}
 
 	/**
@@ -311,6 +321,7 @@ export class SidecarManager {
 		}
 
 		this.hooks.onSpawned?.(child.pid);
+		attributeProcessPid(ROLE, child.pid);
 
 		const readyTimer = setTimeout(() => {
 			if (this.state.kind === "spawning" && this.state.child === child) {
@@ -615,6 +626,7 @@ export class SidecarManager {
 			clearTimeout(this.state.readyTimer);
 		}
 		this.restartAttempts += 1;
+		recordProcessCrash(ROLE);
 
 		if (this.restartAttempts >= this.maxRestartAttempts) {
 			const msg = `sidecar failed to start ${this.restartAttempts} times in a row: ${reason}`;
@@ -626,6 +638,7 @@ export class SidecarManager {
 		const idx = Math.min(this.restartAttempts - 1, this.backoffMs.length - 1);
 		const delay = this.backoffMs[idx] ?? 60_000;
 		const timer = setTimeout(() => {
+			recordProcessRestart(ROLE);
 			this.spawn();
 		}, delay);
 		this.state = { kind: "backoff", timer };

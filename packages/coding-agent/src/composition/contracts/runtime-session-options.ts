@@ -30,6 +30,13 @@ export interface CodingAgentRuntimeSessionOptions {
 	readonly thinkingLevel?: NonNullable<SessionConfig["thinkingLevel"]>;
 	readonly agentMode?: string;
 	readonly agentConfiguration?: AgentConfigurationSelection;
+	/**
+	 * 宿主把能力 Profile 默认工具清单折算进 `agentConfiguration.overrides.tools` 时，
+	 * 同一份清单的证据（BUG-0014）。准入校验对其中宿主未注册的名字按软默认降级，
+	 * 而不是让整个会话创建以 AGENT_CONFIGURATION_RESOURCE_UNAVAILABLE 失败；
+	 * 显式（用户 / Agent Profile）选择不受影响，仍严格校验。
+	 */
+	readonly profileDefaultToolNames?: readonly string[];
 	readonly executionMode?: SessionExecutionMode;
 	readonly env?: Readonly<Record<string, string>>;
 	readonly enableBackgroundTasks?: boolean;
@@ -118,7 +125,13 @@ export function parseCodingAgentRuntimeSessionConfiguration(value: unknown): Cod
 	}
 	assertOptionalBooleanFields(value, ["automaticRetry", "enableBackgroundTasks", "includeAgentSkills", "memoryMode"]);
 	assertOptionalNumberFields(value, ["memoryCharLimit"]);
-	assertOptionalArrayFields(value, ["forkContextMessages", "initialTodos", "sessionTools", "sessionRuntimeTools"]);
+	assertOptionalArrayFields(value, [
+		"profileDefaultToolNames",
+		"forkContextMessages",
+		"initialTodos",
+		"sessionTools",
+		"sessionRuntimeTools",
+	]);
 	assertOptionalFunctionFields(value, [
 		"invokePluginTool",
 		"invokePluginContinuation",

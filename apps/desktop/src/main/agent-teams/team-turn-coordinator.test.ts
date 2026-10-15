@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	AGENT_TEAM_SCHEMA_VERSION,
 	type AgentTeamExtensionRegistry,
@@ -138,6 +139,43 @@ describe("TeamTurnCoordinator", () => {
 
 		await expect(delegation).rejects.toThrow("stopped");
 		expect(enqueueAssignment).not.toHaveBeenCalled();
+	});
+
+	// 回归 BUG-0108 路径 A：协调会话已被删除时 STOP 标记本来就写不进去，旧实现让这个
+	// 持久化失败 reject 整个 abort()，再穿出 deleteSession 变成用户可见的删除失败。
+	it("协调会话写 STOP 标记失败时 abort 仍完成，不让清理失败掀翻 stop/delete", async () => {
+		const append = vi.fn(async () => {
+			throw Object.assign(new Error("Session not found: coordination"), { code: "SESSION_NOT_FOUND" });
+		});
+		const collaborationStore = {
+			append,
+			readDocument: () => ({ entries: [] }),
+			read: () => ({ workItems: [] }),
+			cancelForTeamStop: vi.fn(async () => {}),
+		} as unknown as TeamCollaborationStore;
+		const runtime = {
+			abort: vi.fn(async () => {}),
+			readSessionDocument: () => ({ entries: [] }),
+		} as unknown as RuntimeHost;
+		const coordinator = new TeamTurnCoordinator({
+			runtime: () => runtime,
+			extensions: {} as AgentTeamExtensionRegistry,
+			collaborationStore,
+			sessionState: { get: () => session, values: () => [session] } as unknown as TeamSessionStateRepository,
+			eventHub: {} as TeamSessionEventHub,
+			readSession: async () => session,
+			readDocument: async () => ({
+				schemaVersion: AGENT_TEAM_SCHEMA_VERSION,
+				revision: 0,
+				agents: [],
+				teams: [],
+			}),
+			observations: () => undefined,
+			publishSessionUpdated: () => undefined,
+		});
+
+		await expect(coordinator.abort(session.id)).resolves.toBeUndefined();
+		expect(append).toHaveBeenCalled();
 	});
 });
 

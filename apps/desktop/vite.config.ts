@@ -90,6 +90,10 @@ export default defineConfig(({ mode }) => {
 	const showUiTheme = process.env.VETTA_SHOW_UI_THEME ?? env.VETTA_SHOW_UI_THEME ?? "";
 	const sentry = createSentryBuildSetup(env, "dist/renderer");
 
+	// 品牌口径构建期开关：distribution（默认，外部分发 Allstr ai / 小爱ai）| self（显式，Open Forge 自用）。
+	// 档案常量折叠后未选中的品牌 JSON 与图标资产不进产物（desktop-brand.ts / brand-assets.ts）。
+	const brandProfile = env.VETTA_BRAND_PROFILE === "self" ? "self" : "distribution";
+
 	return {
 		define: {
 			"process.env.VETTA_SHOW_UI_THEME": JSON.stringify(showUiTheme),
@@ -98,6 +102,7 @@ export default defineConfig(({ mode }) => {
 			"process.env.VETTA_CLOUD_ENABLED": JSON.stringify(
 				(process.env.VETTA_CLOUD_ENABLED ?? env.VETTA_CLOUD_ENABLED) === "true" ? "true" : "false",
 			),
+			"process.env.VETTA_BRAND_PROFILE": JSON.stringify(brandProfile),
 			[`process.env.${SPEECH_INPUT_ENABLED_ENV}`]: JSON.stringify(String(speechInputBuildConfig.enabled)),
 			"process.env.VETTA_SENTRY_ENABLED": JSON.stringify(
 				readValue(env, "VETTA_SENTRY_DSN") ? "true" : "false",

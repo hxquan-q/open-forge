@@ -1,16 +1,23 @@
 // Modified by The Open Forge contributors.
 import { resolve } from "node:path";
-import { VETTA_CLI_GUIDANCE } from "@vetta/coding-agent/cli-guidance";
+import { buildDesktopCliGuidance } from "@vetta/coding-agent/cli-guidance";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
-import { applyAgentProfileDefaults, resolveAgentProfile } from "@vetta/coding-agent/profile";
+import {
+	appliesAgentProfileDefaultTools,
+	applyAgentProfileDefaults,
+	resolveAgentProfile,
+} from "@vetta/coding-agent/profile";
 import { loadProjectToolPolicy, resolveToolCatalogPolicy } from "@vetta/coding-agent/projects";
 import type {
 	CodingAgentPinnedModelContextBinder,
 	CodingAgentRuntimeToolRegistration,
 } from "@vetta/coding-agent/runtime";
 import type { SessionConfig } from "@vetta/runtime-core";
+import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
 import { normalizeProjectCwd } from "@vetta/ssh-transport";
+import { resolveDesktopBrandName } from "../../shared/desktop-brand.js";
+import { getAppLanguage } from "../i18n/index.js";
 import { allowProjectRoot, readDesktopConfig } from "../ipc/fs.js";
 import { type DesktopAgentMode, LEGACY_SESSION_AGENT_MODE, readSessionAgentMode } from "./session-agent-mode-store.js";
 import {
@@ -49,6 +56,11 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	readonly automaticRetry?: boolean;
 	readonly agentConfiguration?: AgentConfigurationSelection;
 	readonly sessionRuntimeTools?: readonly CodingAgentRuntimeToolRegistration[];
+	/**
+	 * 会话级 Session Extension 函数源（TASK-0123）：缺省用 Composition 共享源；
+	 * 团队成员会话经收窄源隐藏无 WebView 后端的 browser_tab。
+	 */
+	readonly sessionExtensionFunctions?: SessionExtensionFunctionSource;
 	readonly bindPinnedModelContext?: CodingAgentPinnedModelContextBinder;
 	readonly promptCacheKey?: string;
 }
@@ -172,11 +184,13 @@ export async function resolveDesktopSessionConfig(
 	const desktopConfig = await readDesktopConfig();
 	const enableBackgroundTasks = source === "interactive" && scenario !== "batch";
 	const includeAgentSkills = desktopConfig.experimental?.agentSkills !== false;
+	// 指引正文里的产品名随当前品牌档位（默认小爱ai / Allstr ai，self 档 Open Forge）。
+	const cliGuidance = buildDesktopCliGuidance(resolveDesktopBrandName(getAppLanguage()));
 	const appendSystemPrompt =
 		isConversation && desktopConfig.experimental?.vettaCli === true
 			? config?.appendSystemPrompt
-				? `${config.appendSystemPrompt}\n\n${VETTA_CLI_GUIDANCE}`
-				: VETTA_CLI_GUIDANCE
+				? `${config.appendSystemPrompt}\n\n${cliGuidance}`
+				: cliGuidance
 			: config?.appendSystemPrompt;
 	const { agentMode, frozenAgentMode } = await resolveSessionAgentMode(
 		config?.sessionPath,
@@ -185,10 +199,18 @@ export async function resolveDesktopSessionConfig(
 	);
 	const capabilityProfile = resolveSessionCapabilityProfile(config?.capabilityProfile, frozenAgentMode);
 	// 能力收敛（ADR-0128 + TASK-0021）：Profile 默认折算 → 项目策略只能再收紧。
+	// BUG-0014：默认清单折算成显式 `overrides.tools` 时，agent 侧准入会按可用目录
+	// 逐名核对，Desktop 没注册的默认项（memory / im_send_attachment 等）会让整个
+	// session.create 以 AGENT_CONFIGURATION_RESOURCE_UNAVAILABLE 失败。把同一份
+	// 清单作为软默认证据随会话下发，agent 侧据此降级而不是判创建失败。
+	const agentProfile = resolveAgentProfile(capabilityProfile);
 	const resolvedAgentConfiguration = await applyProjectToolPolicy(
 		effectiveCwd,
-		applyAgentProfileDefaults(resolveAgentProfile(capabilityProfile), config?.agentConfiguration),
+		applyAgentProfileDefaults(agentProfile, config?.agentConfiguration),
 	);
+	const profileDefaultToolNames = appliesAgentProfileDefaultTools(agentProfile, config?.agentConfiguration)
+		? (agentProfile.defaultToolNames ?? undefined)
+		: undefined;
 	// 会话绑定项目的工具注入：作用域在配置解析期按生效 cwd 固化一次。
 	const projectScopeCwd = normalizeProjectCwd(resolveSessionListCwd(effectiveCwd), resolve);
 	const injectedRuntimeTools = [
@@ -211,6 +233,7 @@ export async function resolveDesktopSessionConfig(
 		promptCacheKey: _promptCacheKey,
 		agentConfiguration: _agentConfiguration,
 		sessionRuntimeTools: _sessionRuntimeTools,
+		sessionExtensionFunctions: _sessionExtensionFunctions,
 		...runtimeConfig
 	} = config ?? {};
 	return {
@@ -228,7 +251,9 @@ export async function resolveDesktopSessionConfig(
 					includeAgentSkills,
 					automaticRetry: config?.automaticRetry,
 					agentConfiguration: resolvedAgentConfiguration,
+					...(profileDefaultToolNames ? { profileDefaultToolNames } : {}),
 					sessionRuntimeTools,
+					sessionExtensionFunctions: config?.sessionExtensionFunctions,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,
 				},

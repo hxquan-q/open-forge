@@ -8,9 +8,13 @@
  * - 占位↔完整互换保持 id/entryId/renderKey 与 timeline 位置不变。
  * - 流式/未完成/编辑中的 item 不降级；恢复失败保留可重试占位。
  */
+
+import type { HistoryPage } from "@preload/api-types/session";
 import type { ChatConversationItem, ChatTimelineItem, TranscriptPlaceholderItem } from "@shared/store/atoms";
 import type { HistoryEntry } from "@vetta/runtime-core";
+import { historyEntrySignature } from "@/shared/history-entry-signature";
 import { fullHistoryToChatWithSpans, type TranscriptItemSpan } from "./chat-service";
+import { mergeWithCausalAnchors } from "./pending-user-anchor";
 
 export const TRANSCRIPT_SUMMARY_MAX_CHARS = 120;
 
@@ -19,6 +23,19 @@ export interface TranscriptBacklog {
 	/** item.id → entry 区间（闭区间）。 */
 	readonly spans: ReadonlyMap<string, TranscriptItemSpan>;
 	readonly mediaSessionId?: string;
+	/**
+	 * 已加载窗口旧端的翻页游标（TASK-0050）。`hasMore === true` 时按
+	 * `nextBeforeEntry` 回传给 openViewer 取上一页；undefined/false 表示
+	 * 已加载到历史起点或该 backlog 由无界全量路径注册。
+	 */
+	readonly nextBeforeEntry?: string;
+	readonly hasMore?: boolean;
+	/**
+	 * 用户在「大历史」对话框里显式选择全量加载的会话标记：该窗口即完整
+	 * transcript，agent_end/compaction 等回载仍走全量 getFullHistory，
+	 * 不把视图收窄成尾页。
+	 */
+	readonly unbounded?: boolean;
 }
 
 export interface TranscriptViewportRange {
@@ -241,4 +258,229 @@ export function applyTranscriptWindow(
 	}
 	if (restored === 0 && evicted === 0) return undefined;
 	return { items: next, restored, evicted };
+}
+
+// ── TASK-0050 游标分页窗口 ──────────────────────────────────────────────
+// backlog.entries 是「已加载窗口」：总是历史的一个连续后缀。向上翻页在
+// 头部拼入更早的页，agent_end/外部追加在尾部延展，分支/压缩等改写整窗
+// 重置。窗口合并只操作 HistoryEntry；消息层的 reconcile 负责在重投影后
+// 回收 live item（占位态、renderKey、流式草稿不动）。
+
+/** 把更早一页拼到已加载窗口前面。游标来自该窗口且排他，两页天然紧邻。 */
+export function prependTranscriptPage(windowEntries: readonly HistoryEntry[], page: HistoryPage): HistoryEntry[] {
+	return [...page.history, ...windowEntries];
+}
+
+export type TranscriptHeadMerge =
+	| { readonly kind: "extend"; readonly entries: HistoryEntry[] }
+	| { readonly kind: "replaced"; readonly entries: HistoryEntry[] }
+	| { readonly kind: "unchanged" };
+
+/**
+ * 用最新 head 页推进已加载窗口末端。
+ *
+ * 窗口末条在页中的位置把页切成两段：`[0..k]` 与窗口后缀重叠、
+ * `(k..]` 是新增。重叠区逐条签名比对——任一失配说明窗口内发生过
+ * 改写（编辑/分支/压缩），已加载前缀不再可信，返回 `replaced` 让
+ * 调用方整窗重置为这一页。窗口比页更长时（窗口翻过几页），页只
+ * 覆盖窗口后缀，多出的窗口前缀原样保留。
+ */
+export function mergeTranscriptHeadPage(
+	windowEntries: readonly HistoryEntry[],
+	page: HistoryPage,
+): TranscriptHeadMerge {
+	const pageEntries = page.history;
+	if (windowEntries.length === 0) {
+		return { kind: "replaced", entries: [...pageEntries] };
+	}
+	const endSignature = historyEntrySignature(windowEntries[windowEntries.length - 1]);
+	// 内容签名可能重复（无 id 的同形条目），取最后一次出现：append-only
+	// 语境下最靠后的匹配才是窗口末端当前位置。
+	let overlapEnd = -1;
+	for (let i = pageEntries.length - 1; i >= 0; i -= 1) {
+		if (historyEntrySignature(pageEntries[i]) === endSignature) {
+			overlapEnd = i;
+			break;
+		}
+	}
+	if (overlapEnd < 0) {
+		return { kind: "replaced", entries: [...pageEntries] };
+	}
+	const covered = Math.min(overlapEnd + 1, windowEntries.length);
+	const windowOverlapStart = windowEntries.length - covered;
+	const pageOverlapStart = overlapEnd - covered + 1;
+	for (let j = 0; j < covered; j += 1) {
+		if (
+			historyEntrySignature(windowEntries[windowOverlapStart + j]) !==
+			historyEntrySignature(pageEntries[pageOverlapStart + j])
+		) {
+			return { kind: "replaced", entries: [...pageEntries] };
+		}
+	}
+	// 页整体落在窗口覆盖区内（含窗口翻过旧页、页只盖后缀的情形）→
+	// 合并结果与窗口逐条同签，什么也没变。
+	if (pageEntries.length === covered) return { kind: "unchanged" };
+	const prefix = windowEntries.slice(0, windowOverlapStart);
+	return { kind: "extend", entries: [...prefix, ...pageEntries] };
+}
+
+/** durable item 的对位键：占位用 role 归一到投影侧 kind（assistant ↔ agent）。 */
+function transcriptItemKey(item: ChatTimelineItem): string | undefined {
+	const entryId = "entryId" in item ? item.entryId : undefined;
+	if (!entryId) return undefined;
+	if (item.kind === "placeholder") {
+		return `${item.role === "assistant" ? "agent" : item.role}:${entryId}`;
+	}
+	return `${item.kind}:${entryId}`;
+}
+
+/**
+ * 无 entryId 的 item 只能按序配对；只有处于可降级（已持久化终态）的
+ * live item 才允许被投影 item 吸收——流式/待发送/编辑中的一律跳过，
+ * 它们不属于 canonical，必须原样留在尾部。
+ */
+function isPairableLiveItem(item: ChatTimelineItem): boolean {
+	if (item.kind === "placeholder" || item.kind === "event") return true;
+	if (item.kind === "user") return item.deliveryPhase === "completed";
+	if (item.kind === "agent") {
+		return item.phase === "completed" || item.phase === "failed" || item.phase === "aborted";
+	}
+	return false;
+}
+
+function stableRenderKey<T extends ChatTimelineItem>(item: T): T {
+	if ("renderKey" in item && item.renderKey) return item;
+	return { ...item, renderKey: item.id };
+}
+
+export interface ReconcileWindowedResult {
+	readonly items: ChatTimelineItem[];
+	/** 结果头部连续「非 live 复用」的条数——向上翻页时 Virtuoso 的锚点位移。 */
+	readonly prependedCount: number;
+	/**
+	 * projected[i] 在 items 中的落点下标：live-only 项会按 live 锚点穿插进
+	 * canonical 序列之间，items 下标与 projected 下标不再一一对应，span /
+	 * canonical 计数等按此映射定位（BUG-0068）。其长度即 projected 条数。
+	 */
+	readonly canonicalItemIndexes: readonly number[];
+}
+
+export interface ReconcileWindowedOptions {
+	/** 需要从 live 中剔除的 item id（过期乐观气泡等）。 */
+	readonly excludeLiveIds?: ReadonlySet<string>;
+	/**
+	 * durable 配对成功后的字段回填（entryId/branch/时间/usages）。
+	 * 占位 item 恒按原样复用；patch 返回 null 时落到 canonical 新对象。
+	 */
+	readonly patchLiveItem?: (
+		liveItem: ChatTimelineItem,
+		canonicalItem: ChatConversationItem,
+	) => ChatTimelineItem | null;
+}
+
+/**
+ * 重投影后的窗口 reconcile：projected 是合并窗口（新 entries）投出的完整
+ * item 序列，按 durable key 回收 live item 对象，保住占位态与渲染身份；
+ * 无 key 的投影项与未消费的 live-only 项按 kind FIFO 配对（仅限终态），
+ * 仍对不上的投影项直接用新对象。未消费的 live-only 项按 live 中最近的
+ * 已消费前驱/后继锚定回原位——镜像用户气泡必须留在它触发的回复之前；
+ * 完全没有已消费邻居时才追加尾部（BUG-0068）。
+ *
+ * 已加载窗口内被改写掉的 durable item（key 不在 projected 中）会被丢弃——
+ * 这是「replaced」之外的轻量失配兜底；调用方若已知改写发生应直接重置。
+ */
+export function reconcileWindowedProjection(
+	live: readonly ChatTimelineItem[],
+	projected: readonly ChatConversationItem[],
+	options?: ReconcileWindowedOptions,
+): ReconcileWindowedResult {
+	const excluded = options?.excludeLiveIds;
+	const liveByKey = new Map<string, number[]>();
+	// 对象身份直查：上游乐观对账会把同一个 live item 对象直接插回 canonical，
+	// 身份命中优先于 key/pair 配对，避免重复入列。
+	const liveByIdentity = new Map<ChatTimelineItem, number>();
+	for (let i = 0; i < live.length; i += 1) {
+		const item = live[i];
+		if (excluded?.has(item.id)) continue;
+		liveByIdentity.set(item, i);
+		const key = transcriptItemKey(item);
+		if (!key) continue;
+		const list = liveByKey.get(key);
+		if (list) list.push(i);
+		else liveByKey.set(key, [i]);
+	}
+	const consumed = new Set<number>();
+	const items: ChatTimelineItem[] = [];
+	// live 下标 → items 下标：已消费 live 项的落点，供 live-only 项锚定回原位。
+	const landedIndex = new Map<number, number>();
+	const fromLive = new Array<boolean>(projected.length).fill(false);
+	// 无 key item 的有序配对队列：只收集终态 durable，live-only 项不进队列。
+	// 查找时按 kind 命中最早未消费项；不匹配的项留在原位供后续配对。
+	const pairQueue: number[] = [];
+	for (let i = 0; i < live.length; i += 1) {
+		const item = live[i];
+		if (excluded?.has(item.id)) continue;
+		if (transcriptItemKey(item) === undefined && isPairableLiveItem(item)) pairQueue.push(i);
+	}
+	const pairNext = (kind: ChatConversationItem["kind"]): number | undefined => {
+		for (let q = 0; q < pairQueue.length; q += 1) {
+			const index = pairQueue[q];
+			if (consumed.has(index)) continue;
+			if (live[index].kind !== kind) continue;
+			return index;
+		}
+		return undefined;
+	};
+	const patch = options?.patchLiveItem;
+	const adoptLive = (index: number, canonical: ChatConversationItem): ChatTimelineItem => {
+		const liveItem = live[index];
+		// 占位不持有正文，字段都在 durable 身份上——原样复用保住降级态。
+		// 未打补丁的 live 项也原样复用：补 renderKey 会换对象身份，React 重挂。
+		if (!patch || liveItem.kind === "placeholder") return liveItem;
+		return patch(liveItem, canonical) ?? stableRenderKey(canonical);
+	};
+
+	for (let i = 0; i < projected.length; i += 1) {
+		const canonical = projected[i];
+		const key = transcriptItemKey(canonical);
+		let reuseIndex: number | undefined = liveByIdentity.get(canonical);
+		if (reuseIndex !== undefined && consumed.has(reuseIndex)) reuseIndex = undefined;
+		if (reuseIndex === undefined && key) {
+			const candidates = liveByKey.get(key);
+			reuseIndex = candidates?.find((index) => !consumed.has(index));
+		}
+		// canonical 带 key 但 live 侧没有对应 key 时，仍允许按序吸收无 key 的
+		// 终态 live 项（如尚未回填 entryId 的已完成消息）——pairQueue 只收
+		// 无 key 项，不会错配到别的 durable 条目上。
+		if (reuseIndex === undefined) {
+			reuseIndex = pairNext(canonical.kind);
+		}
+		if (reuseIndex !== undefined) {
+			consumed.add(reuseIndex);
+			items.push(adoptLive(reuseIndex, canonical));
+			fromLive[i] = true;
+			landedIndex.set(reuseIndex, items.length - 1);
+		} else {
+			items.push(stableRenderKey(canonical));
+		}
+	}
+	// 未消费的 live-only 项按因果位置归位（BUG-0068），管线收编进共享助手；
+	// 既非 pending 也未 landed 的项（= durable 但被改写）由助手丢弃（原语义）。
+	const anchored = mergeWithCausalAnchors({
+		base: items,
+		order: live,
+		isPendingIndex: (i) => !consumed.has(i) && !excluded?.has(live[i].id) && transcriptItemKey(live[i]) === undefined,
+		landedBaseIndex: (i) => landedIndex.get(i),
+	});
+	const merged = anchored.items;
+	const canonicalItemIndexes = anchored.baseIndexes;
+	// 只统计头部连续「非 live 复用」的 projected 条目：首部锚定的 live-only
+	// 项是既有 live 行的重排而非新前插内容，计入会让 loadOlderTranscriptPage
+	// 对 Virtuoso firstItemIndex 多移相应行数，滚动锚点跳行（BUG-0073）。
+	let prependedCount = 0;
+	for (let k = 0; k < projected.length && !fromLive[k]; k += 1) {
+		if (canonicalItemIndexes[k] !== prependedCount) break;
+		prependedCount += 1;
+	}
+	return { items: merged, prependedCount, canonicalItemIndexes };
 }

@@ -43,6 +43,8 @@ export interface LoadedPlugin {
 	version: string;
 	defaultLocale: string;
 	locales: PluginLocales;
+	/** 已授权权限快照（发布底部面板 terminalAccess 等运行期门控用）。 */
+	grantedPermissions: readonly string[];
 	slots: PluginGlobalSlotContribution[];
 	abilityDetailSlots: PluginAbilityDetailSlotContribution[];
 	filePreviews: PluginFilePreviewContribution[];
@@ -111,6 +113,7 @@ export class PluginLocalContributions {
 			version: plugin.activeVersion,
 			defaultLocale: plugin.defaultLocale,
 			locales: plugin.locales,
+			grantedPermissions: plugin.grantedPermissions,
 			slots: this.slots,
 			abilityDetailSlots: this.abilityDetailSlots,
 			filePreviews: this.filePreviews,

@@ -1,7 +1,7 @@
 ---
 id: TASK-0050
 type: task
-status: draft
+status: verifying
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -18,7 +18,7 @@ depends_on: [TASK-0034, TASK-0035]
 conflicts_with: [TASK-0051, TASK-0038]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-10-08
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -36,6 +36,7 @@ updated: 2026-09-23
 - 执行方式：共享 `forge/dev` 工作区串行。
 - 可并行 Task：无（transcript 链内）。
 - 前置依赖：TASK-0034 合同、TASK-0035 占位实现、TASK-0031 媒体引用化。
+- 就绪确认（2026-09-24）：`depends_on` 的 TASK-0034 / TASK-0035 与正文列出的 TASK-0031 均为 `done`，状态由 `draft` 提为 `ready`；链内 TASK-0051 / TASK-0038 仍等本 Task 落地。
 - 冲突文件/独占路径：`session.ts`、preload session API/types、`useSessionOpener`、`useSessionEventController`、viewer model、message actions/navigation、export。
 - Branch：`forge/dev`。
 - Worktree：共享工作区串行，不建独立 Worktree。
@@ -83,7 +84,105 @@ updated: 2026-09-23
 
 ## 交付记录
 
-- 实际修改：
+- 阶段 1（2026-09-27，Main 侧有界页合同）：
+  - 新增 `conversations/session-history-page.ts`：`HistoryPageRequest`/`HistoryPage`
+    wire 合同落在 `preload/api-types/session.ts`；`sliceHistoryPage` 从完整
+    projection 裁剪（任务允许的过渡形态），游标 = 排他下标 + 边界条目签名
+    （entryId 或内容哈希），append-only 不失效、改写/删除/截断报 `stale`；
+    `parseHistoryPageRequest` 统一校验 limit（默认 100/上限 200）与
+    tailTurns（1-10）。
+  - IPC：`GET_FULL_HISTORY` 与 `VIEWER_OPEN` 传分页 options 即回有界页；
+    无参调用保留旧全量语义，`openViewer({})` 空对象亦按旧全量快照返回。
+    `openViewer({tailTurns})` 现在返回 `HistoryPage`（`history` 字段兼容，
+    尾部按 limit 截断），旧 `session-history-preview.ts` 已删除（职能并入
+    page 模块）。
+  - preload：`getFullHistory`/`openViewer` 重载签名，`{stale:true}` 进
+    返回联合类型；`useSessionOpener` 两处 tail 消费点做防御性收窄。
+  - 测试：`session-history-page.test.ts` 9 用例（默认尾页/连翻无重漏/排他
+    边界/append 稳定/改写 stale/无 id 条目锚定/非法游标/limit 校验/
+    tailTurns 限界/空历史）；desktop typecheck 与 check:quick 绿。
+  - 未做（后续阶段）：Renderer 聊天面板的尾页+上滚插页迁移、live/optimistic
+    与 canonical 尾页合并、stale 重对账、滚动锚点；viewer 订阅增量/reset
+    模式；MessageTimeline 分页摘要与导出逐页 drain。这些需要独立的
+    renderer 改动轮次。
+- 阶段 2（2026-10-05，viewer 订阅增量推送）：
+  - `subscribeViewer` 推送改为结构化更新：`snapshot`（首发快照）/
+    `append`（仅追加增量）/ `reset`（非追加改写回退有界页）；watch
+    去抖回调不再向 renderer 重发整表，重复文件事件直接抑制。
+  - `diffViewerHistory`（`main/conversations/session-history-page.ts`）：
+    按前缀条目签名判定 append-only；前缀任一条目失配（分支改写、压缩、
+    外部重写）即回退 `reset`，`reset` 携带以当前 limit 截取的有界尾页。
+  - renderer 侧由 `applyViewerUpdate`
+    （`renderer/domains/conversation/services/viewer-history-update.ts`）
+    统一合并增量，`useSessionViewerPageModel`/`useWorkflowTabPanelModel`
+    不再每事件重建整份历史数组；raw `HistoryEntry[]` 仍完整保留以维持
+    `fullHistoryToChat` 跨条目的 marker/tool-call 分组语义。
+  - 测试：`session-history-page.test.ts` 补 diff 用例（追加/改写回退/
+    同首变体不误发/无变化不发送）；新增 `viewer-history-update.test.ts`
+    覆盖三类更新在渲染侧的合并行为。desktop typecheck 与 check:quick 绿。
+- 阶段 3（2026-09-27，Renderer 窗口化迁移）：
+  - `transcript-window.ts`：backlog 扩展为「已加载窗口」（entries +
+    `nextBeforeEntry`/`hasMore`/`unbounded` 标记）；新增
+    `prependTranscriptPage`（老页前置）、`mergeTranscriptHeadPage`
+    （append-only 延展 / 重叠区签名失配 → 整窗 replaced）、
+    `reconcileWindowedProjection`（重投影后按 durable key/身份/同 kind
+    有序配对回收 live item，live-only 尾部原样保留，`excludeLiveIds`
+    剔除已被吸收的乐观气泡）。条目签名单一事实源沉到
+    `shared/history-entry-signature.ts`（main/renderer 共用 FNV-1a
+    规则）。
+  - `transcript-window-controller.ts`：`loadOlderTranscriptPage`
+    （beforeEntry 回传、在途去重、stale → head 页对账、prependedCount →
+    firstItemIndex 前移）、`refreshTranscriptTail`（head 页推进窗口末端，
+    保留已加载旧页）、`resetTranscriptWindowToTail`（改写后整窗重置）、
+    `drainActiveTranscriptWindow`（导出前排空窗口并物化占位）；
+    `commitTranscriptWindow` 统一登记窗口/游标/视图态。
+  - `optimistic-user-message-cache.ts`：新增尾对齐变体
+    `reconcileOptimisticUserMessagesTail`——有界页拿不到全局 user 序号，
+    改为对 canonical 末几条 user 尾对齐确认，返回 `confirmedIds` 让窗口
+    reconcile 剔除已吸收的旧气泡（修掉重复气泡残留），
+    `inputSegments` 照带回填。
+  - Virtuoso 接入：`MessageFeedView` 转发 `startReached`/`firstItemIndex`；
+    `MessageListView` 以 `transcriptWindowStateAtom.firstItemIndex`（基数
+    1M）做绝对↔相对索引换算，`itemContent`/`itemsRendered`/`rangeChanged`
+    全部走相对空间；`useMessageFeedScrollModel` 新增 `indexOffset`，
+    `scrollToIndex`/初始目标跳转命令侧补同一偏移。
+  - 消费迁移：opener tail 模式登记游标、full 模式与全部全量回落登记
+    `unbounded: true`；`agent_end` 走 `refreshTranscriptTail`（队列序守卫
+    + 计时补丁经 `shouldCommit`/`patchCanonical` 注入），手动压缩与
+    编辑/重发/分支回载走 `resetTranscriptWindowToTail`；编辑入口的末条
+    user entryId 查找改用 `tailTurns:1` 有界页；HTML 导出前
+    `drainActiveTranscriptWindow` 保证完整 transcript。
+  - 测试：`transcript-window.test.ts` 增分页合并/reconcile 用例（老页
+    前置序、head 延展、同形条目重复签名锚定、改写 replaced、占位复用、
+    prependedCount、字段 patch 保留 live blocks）；
+    `optimistic-user-message-cache.test.ts` 增尾对齐确认/多未决保序/
+    未决不入 canonical/超次过期/inputSegments 回填；
+    新增 `transcript-window-controller.test.ts`（jsdom）覆盖翻页、
+    stale 回退、firstItemIndex 前移、会话切换丢弃、head 延展/占位
+    不打散、改写重置、unbounded 回落、drain 排空+物化；
+    `useMessageListScrollModel.test.tsx` 更新绝对索引断言并新增偏移
+    随动用例；顺手修正 `AgentProfileEditor` 头像数断言（库已扩至 24）。
+    typecheck、check:quick、test:impact 全绿。
+  - 已知限制：MessageTimeline/会话内搜索只覆盖已加载窗口（翻页后随窗口
+    扩）；opener 回填中 preview 复用对象的 span 键错位是 TASK-0035 存量
+    行为，本轮未扩大处理。
 - 实际运行：
 - 未运行及原因：
 - 剩余风险：
+
+### 人工验收实测（2026-10-08，VERIFY-0017 组三；保持 verifying 待裁定）
+
+方法：复跑本任务声明的七个套件（主进程页合同 + 渲染端窗口/游标/滚动）。真实 UI 需要 500+ 条消息、且正在 streaming 的会话，本轮未驱动。
+
+| 声明套件 | 本次读数 |
+|---|---|
+| `session-history-page.test.ts`（主进程 beforeEntry 游标页合同） | 通过 |
+| `transcript-window.test.ts`、`transcript-window-controller.test.ts`（窗口合并 / reconcile / 翻页） | 通过 |
+| `optimistic-user-message-cache.test.ts`（live/optimistic 不被 backfill 覆盖） | 通过 |
+| `viewer-history-update.test.ts`（read-only viewer live 更新） | 通过 |
+| `useMessageListScrollModel.test.tsx`（插页不跳滚动锚点） | 通过 |
+| `chat-service-artifact.test.ts` | 通过 |
+| **合计** | **7 文件 / 93 例通过，0 失败** |
+
+- **未覆盖**：500+ 条真实会话上的「上滚加载旧页 / MessageTimeline 搜索跳转 / 导出完整 transcript」。这三条合同条款都以「大历史 + 正在 streaming」为 Given，本轮没有构造该会话（构造需真实模型逐轮产生消息，成本与时长都不合本轮口径）。`integration_status: pending` 仍为 pending，本轮未改动。
+- **关闭建议**：七项声明套件全绿、合同条款逐条有对应用例，倾向 `done`；是否要求补一次真实长会话体验，请用户裁定。

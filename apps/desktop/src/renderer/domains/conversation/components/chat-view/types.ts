@@ -11,6 +11,10 @@ export interface ChatViewHeaderModel {
 	exportDisabled: boolean;
 	exporting: boolean;
 	exportTitle: string;
+	archiveExportDisabled: boolean;
+	archiveExporting: boolean;
+	archiveExportTitle: string;
+	archiveImportTitle: string;
 	panelOpen: boolean;
 	panelTitle: string;
 	bottomPanelOpen: boolean;
@@ -36,6 +40,8 @@ export interface ChatViewModel {
 export interface ChatViewActions {
 	finishExport: () => void;
 	openExport: () => void;
+	exportArchive: () => void;
+	importArchive: () => void;
 	togglePanel: () => void;
 	toggleBottomPanel: () => void;
 	openTerminal: () => void;

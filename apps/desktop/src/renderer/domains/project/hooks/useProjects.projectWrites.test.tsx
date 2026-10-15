@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Copyright The Open Forge contributors.
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProjectActions } from "./useProjects";
@@ -76,6 +77,20 @@ describe("侧边栏的项目写入", () => {
 		expect(project.remove).toHaveBeenCalledWith("/picked/repo");
 
 		await waitFor(() => expect(configSet).not.toHaveBeenCalled());
+	});
+
+	it("登记远程项目时把备注名交给 ProjectService，空备注退回目录名兜底", async () => {
+		const { result } = renderHook(() => useProjectActions());
+
+		await act(async () => {
+			await result.current.openProjectPath("ssh://host-1/home/dev", " 构建机项目 ");
+		});
+		expect(project.open).toHaveBeenCalledWith({ path: "ssh://host-1/home/dev", name: "构建机项目" });
+
+		await act(async () => {
+			await result.current.openProjectPath("ssh://host-1/home/dev", "   ");
+		});
+		expect(project.open).toHaveBeenLastCalledWith({ path: "ssh://host-1/home/dev", name: undefined });
 	});
 
 	it("取消选择目录时不登记任何项目", async () => {

@@ -154,6 +154,7 @@ export function CanvasDataGridPreview({
 										key={column}
 										data-row={view.rowNumbers[offset]}
 										data-column={column + 1}
+										title={cell}
 										className="max-w-[320px] truncate px-3 py-1.5 align-top text-foreground/90"
 									>
 										{cell}

@@ -1,11 +1,13 @@
+<!-- Modified by The Open Forge contributors. -->
 # GitHub 开源能力市场格式
 
 Desktop 从 GitHub 下载配置 ref 的归档，并在本地读取 `.vetta/marketplace.json`。GitHub 不承担搜索、筛选或分页；这些操作全部基于客户端已校验的本地快照完成。
 
 ## 推荐发布模式：静态分发分支
 
-市场源码与可安装分发分开：新仓库通常由 main 保存能力源码；已有官方市场为避免影响仍读取
-schema v2 的旧版 Desktop，使用独立的 marketplace-source 保存 `.vetta/marketplace.source.json`，并冻结 main 作为兼容来源；
+市场源码与可安装分发分开：新仓库通常由 main 保存能力源码。上游既有市场曾为兼容读取
+schema v2 的旧版 Desktop，使用独立 marketplace-source 保存 `.vetta/marketplace.source.json`，并冻结 main 作为兼容来源；
+这是 ADR 中的迁移背景，不代表 Open Forge 默认市场已经采用相同源码分支或完成发布。目标市场应明确自己的发布分支与流水线。
 普通源码 PR 审核通过后，CI 构建未发布的插件版本并上传不可变 `.vettapkg`，
 再生成 gh-pages 上的 `.vetta/marketplace.json`、展示资源和非插件安装文件。
 Desktop 的市场来源 ref 配置为 gh-pages，无需另建注册服务或启用 GitHub Pages。
@@ -23,11 +25,13 @@ Desktop 的市场来源 ref 配置为 gh-pages，无需另建注册服务或启�
 
 云市场与 GitHub 来源独立启用：开源版只不包含云服务，仍可配置多个 GitHub 仓库；云版可同时浏览两类来源。
 内置官方 GitHub 来源与云市场独立存在。发行方可以通过 `VETTA_OPEN_MARKETPLACE_REPOSITORY` 替换其仓库；
-未配置时使用 OpenVetta 官方仓库。分支由 `VETTA_OPEN_MARKETPLACE_REF` 指定；官方仓库省略时使用
+未设置、空串或纯空白时使用 `https://github.com/hxquan-q/open-forge-marketplace`。
+分支由 `VETTA_OPEN_MARKETPLACE_REF` 指定；默认仓库省略时使用
 `gh-pages`，自定义仓库省略时保留 `main` 兼容行为。归档 URL 可单独配置，否则从仓库与分支推导。
+这些是客户端代码默认坐标；分发内容是否已发布、可访问，以实际同步结果为准。
 
 在「能力 → 市场来源」可添加多个仓库，分别设置启用、自动更新和分支，并单独刷新。
-内置来源可启停及设置自动更新，但不能在界面修改坐标或删除；自定义来源支持编辑和删除。
+内置来源始终启用，可设置自动更新或手动刷新，但不能在界面停用、修改坐标或删除；自定义来源支持启停、编辑和删除。
 关闭自动更新后浏览只读缓存，手动刷新仍会拉取远程内容。同步失败会标记对应来源，有可用缓存则继续展示。
 关闭或删除来源只影响目录发现，不卸载已经安装的能力。跨来源同名条目不合并身份，物理安装冲突仍需显式处理。
 
@@ -35,21 +39,21 @@ Desktop 的市场来源 ref 配置为 gh-pages，无需另建注册服务或启�
 
 添加私有仓库时，在表单中填写 GitHub fine-grained personal access token（PAT），权限只需要目标仓库的
 `Contents: Read-only`。令牌按来源单独保存到 Desktop 的系统安全存储，不会写入来源配置、市场快照、日志或发送给
-Vetta 服务；界面只显示“已配置”，不会回显令牌。更新或清除来源时可以分别替换或删除令牌。
+Open Forge 服务端；界面只显示“已配置”，不会回显令牌。更新或清除来源时可以分别替换或删除令牌。
 
 配置令牌后，客户端对 GitHub REST Contents/zipball API 使用 `Authorization: Bearer` 请求头。GitHub 返回的临时归档
 重定向只携带普通下载请求头，不会把令牌转发到签名地址；未配置令牌的公开仓库仍沿用原有匿名 raw/archive 下载路径。
 令牌失效、权限不足、仓库不存在和请求限流会在来源行显示对应状态，已有本地快照仍可继续浏览。
 
-本地来源配置保持 `version: 1`，新增可选字段 `registeredDefaultRepositories`（规范化仓库 URL 数组）：
+本地来源配置为 `version: 1`，来源列表保存在 `sources`。每次读取都会协调发行方的内置默认源：
 
-- 旧文件缺少该字段时按空数组读取，仅在环境声明仓库时协调该默认源；原有来源和用户启停/自动更新选择保留。
-- 如果用户已手动添加同一仓库，沿用其 ID、名称、分支及开关，不另建内置重复项，避免改变安装来源身份。
-- 记录已协调的默认仓库，使上述自定义来源被删除后不会在下次刷新时自动复活。
-- 这是兼容旧文件的增量字段，不改变市场 manifest 或安装台账格式；旧客户端可能丢弃该字段，因此不保证降级后仍保留“已删除默认别名”的记忆。
+- 缺少内置项时补回；已有内置项按当前发行坐标更新，历史停用状态复位为启用。
+- 如果用户已手动添加同一仓库，保留其身份、分支和开关，不另建重复的内置项。
+- 发行方默认源的固定 ID `vetta-official` 是缓存、升级与 IPC 的兼容身份，不随展示品牌改名。
+- 旧资料中的 `registeredDefaultRepositories` 不属于当前文件合同，不能依靠该字段阻止内置源注册。
 
 更改构建环境需重启开发进程或重新构建发行包；界面配置和仓库内容更新不需要重新构建。
-移除环境中的仓库配置不会删除已保存来源；这也适用于曾由旧版本自动创建的来源，可在界面停用它们。
+移除环境中的仓库覆盖会恢复默认坐标；不会删除用户添加的来源或卸载已安装能力。
 参见 [构建模式](desktop/build-modes.md) 与 [ADR-0093](adr/0093-independent-cloud-and-github-marketplaces.md)。
 
 ## Manifest
@@ -61,7 +65,7 @@ Vetta 服务；界面只显示“已配置”，不会回显令牌。更新或�
   "displayName": "Example Abilities",
   "marketplaceVersion": "2026.08.1",
   "repository": "https://github.com/example/abilities",
-  "minAppVersion": "0.5.11",
+  "minAppVersion": "0.1.3",
   "abilities": []
 }
 ```
@@ -70,7 +74,7 @@ Vetta 服务；界面只显示“已配置”，不会回显令牌。更新或�
 
 - `schemaVersion`：JSON 结构版本。支持 `1`、`2` 与 `3`；包路径 bundle 成员需要 `2` 或更新版本，远程插件版本目录需要 `3`。
 - `marketplaceVersion`：仓库内容发布版本；同一版本的归档内容不得变化。
-- `minAppVersion`：必填，能够读取该内容的最低 Desktop SemVer 版本。
+- `minAppVersion`：必填，能够读取该内容的最低 Desktop SemVer 版本。本文 `0.1.3` 为当前版本示例，应填写最早已验证支持的 Open Forge 版本，不能套用上游 `0.5.x` 版本线。
 - `abilities[].version`：单个能力的产物版本。
 - `abilities[].configVersion`：仅表示单个能力本地配置的结构版本，不用于选择客户端兼容性。
 
@@ -103,7 +107,7 @@ Plugin 的 `source.path` 指向一个可直接安装的插件目录。目录至�
 ```json
 {
   "schemaVersion": 3,
-  "minAppVersion": "0.5.59",
+  "minAppVersion": "0.1.3",
   "abilities": [{
     "type": "plugin",
     "slug": "demo-plugin",
@@ -113,7 +117,7 @@ Plugin 的 `source.path` 指向一个可直接安装的插件目录。目录至�
     "releases": [
       {
         "version": "1.0.0",
-        "minAppVersion": "0.5.59",
+        "minAppVersion": "0.1.3",
         "pluginApiVersion": "^2.4.0",
         "permissions": [],
         "commands": [],
@@ -124,7 +128,7 @@ Plugin 的 `source.path` 指向一个可直接安装的插件目录。目录至�
       },
       {
         "version": "1.2.0",
-        "minAppVersion": "0.5.60",
+        "minAppVersion": "0.1.3",
         "pluginApiVersion": "^2.5.0",
         "permissions": ["storage.read"],
         "commands": [],
@@ -141,7 +145,7 @@ Plugin 的 `source.path` 指向一个可直接安装的插件目录。目录至�
 上例省略了市场顶层其它必填字段；版本和摘要只展示格式，必须替换成真实发布值。
 `version` 必须等于 `releases[]` 中最高的稳定版本。每个 `minAppVersion` 通常必须是已经
 正式发布且包含相应 Plugin API 的 App 版本。首次联调新协议时，市场发布配置可以把该
-版本显式钉到 OpenVetta 的 40 位不可变 commit；门禁会核对 Desktop 版本、Plugin API
+版本显式钉到目标 Desktop 仓库的 40 位不可变 commit；门禁会核对 Desktop 版本、Plugin API
 与 schema，并在稳定 Release 存在后自动优先检查正式版本。
 客户端按当前 App 版本和 Plugin API 版本选最高兼容版本；没有兼容版本的插件及依赖
 它的 Bundle 暂不展示。下载安装前后都会检查 ZIP 的摘要与身份，下载后还核对
@@ -156,10 +160,10 @@ Release asset API URL；令牌只送到匹配来源的 GitHub API，不跟随资
 发布 ZIP 后，在将其引用加入正式市场 ref 前运行：
 
 ```bash
-node tools/open-vetta/scripts/release/check-plugin-marketplace-publication.mjs .vetta/marketplace.json
+node tools/open-forge/scripts/release/check-plugin-marketplace-publication.mjs .vetta/marketplace.json
 ```
 
-上述示例假定市场 CI 已将一个固定版本的 `open-vetta` 检出到 `tools/open-vetta/`；
+上述示例假定市场 CI 已将一个固定版本的 `open-forge` 检出到 `tools/open-forge/`；
 同时运行与该版本配套的 `vetta-plugin-cli sync --check`。它核实每个最低 App 版本的
 稳定 GitHub Release 或显式固定的首次联调 commit、对应宿主的 Plugin API 和 ZIP 摘要。
 候选配置只在稳定 Release 返回 404 时生效，不能绕过不完整的正式发布。已发布的插件版本不得
@@ -176,7 +180,7 @@ node tools/open-vetta/scripts/release/check-plugin-marketplace-publication.mjs .
 }
 ```
 
-MCP 必须有独立包目录。`marketplace.json` 只通过 `source.path` 指向目录，运行配置与可选的受管运行时声明放在目录内的 `mcp.json`。客户端同步时读取并校验该文件，再在用户安装时准备运行时并把解析后的 `server` 写入 `~/.vetta/agent/mcp.json` 的 `mcpServers[slug]`。索引内联 `config.mcp` 会被拒绝，避免索引与包文件形成两个真相源。
+MCP 必须有独立包目录。`marketplace.json` 只通过 `source.path` 指向目录，运行配置与可选的受管运行时声明放在目录内的 `mcp.json`。客户端同步时读取并校验该文件，再在用户安装时准备运行时并把解析后的 `server` 写入 `~/.openforge/agent/mcp.json` 的 `mcpServers[slug]`。索引内联 `config.mcp` 会被拒绝，避免索引与包文件形成两个真相源。
 
 ```json
 {
@@ -357,7 +361,7 @@ Bundle 没有独立安装产物，只组合本来源的成员。成员支持 `sk
   路径必须一致，仍只保留一个目录身份；图标和详情沿用原有包展示合并规则。无路径的引用仍必须指向顶层条目。
 - 上架/取消独立上架不改变 `sourceId + type + slug`，不迁移安装台账或重置禁用状态、凭据、权限；
   只有展示方式变化时不必改能力的 `version` / `configVersion`，但必须更新 `marketplaceVersion`。
-- 格式 v2 需包含本功能的 Desktop 构建（首个目标版本 `0.5.49`）；已运行的旧构建不会通过刷新自动获得解析能力。
+- 格式 v2 需包含本功能的 Desktop 构建（Open Forge 当前 `0.1.3` 已包含；上游首个目标版本为 `0.5.49`）；已运行的旧构建不会通过刷新自动获得解析能力。
   旧客户端拒绝 v2 整个来源并沿用可用的旧缓存。先更新客户端再切换源格式；需要兼容旧客户端的仓库应继续用 v1。
 
 参见 [ADR-0094](adr/0094-package-referenced-bundle-members.md)。市场 schemaVersion 与包内的 schemaVersion 独立演进。
@@ -496,6 +500,6 @@ bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/abilities/open-ma
 
 客户端始终注册内置 GitHub 来源，发行方可以用环境变量替换其坐标：
 
-- `VETTA_OPEN_MARKETPLACE_REPOSITORY`：GitHub 仓库 URL；未设置时使用 Vetta 官方市场仓库。
+- `VETTA_OPEN_MARKETPLACE_REPOSITORY`：GitHub 仓库 URL；未设置、空串或纯空白时使用 `https://github.com/hxquan-q/open-forge-marketplace`。
 - `VETTA_OPEN_MARKETPLACE_REF`：分支或 ref；官方仓库默认 `gh-pages`，发行方 fork 默认 `main`。
 - `VETTA_OPEN_MARKETPLACE_ARCHIVE_URL`：可选归档地址；未设置时根据仓库与 ref 推导。

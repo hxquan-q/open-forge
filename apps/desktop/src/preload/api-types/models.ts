@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export interface ModelsConfigData {
 	/** Default model identifier: "provider/modelId" */
 	defaultModel?: string;
@@ -94,6 +95,27 @@ export interface PresetModelsResult {
 	error?: PresetError;
 }
 
+/** 自定义服务商可用性测试的结构化错误码；文案由渲染层查 i18n。 */
+export type ProviderTestErrorCode =
+	| "unknown-provider"
+	| "missing-base-url"
+	| "invalid-base-url"
+	| "timeout"
+	| "network";
+
+export interface ProviderTestResult {
+	ok: boolean;
+	/** 端到端耗时（毫秒）；请求真正发出后才给出。 */
+	latencyMs?: number;
+	/** 上游返回的 HTTP 状态码；网络层失败时缺省。 */
+	status?: number;
+	/** /models 解析出的模型数，仅接口正常返回时给出。 */
+	modelCount?: number;
+	error?: ProviderTestErrorCode;
+	/** 未翻译的原始错误信息，仅用于排查。 */
+	detail?: string;
+}
+
 export interface DesktopModelsApi {
 	get(): Promise<ModelsConfigData>;
 	set(config: ModelsConfigData): Promise<void>;
@@ -112,5 +134,7 @@ export interface DesktopModelsApi {
 	probe(ref: { provider: string; model: string }): Promise<{ ok: boolean; message?: string; error?: string }>;
 	/** 拉取本地自定义 provider 的 `GET {baseUrl}/models`,返回上游模型 id 列表,用于快速填写模型配置。 */
 	fetchProviderModels(providerName: string): Promise<{ models: string[]; error?: string }>;
+	/** 对已保存的自定义服务商做轻量可用性测试（`GET {baseUrl}/models`），报告延迟与结构化失败原因。 */
+	testProvider(providerName: string): Promise<ProviderTestResult>;
 	onChanged(handler: (event: { providerIds: string[] }) => void): () => void;
 }

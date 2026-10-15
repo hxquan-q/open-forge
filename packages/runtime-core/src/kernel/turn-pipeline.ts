@@ -8,7 +8,7 @@ import type { RuntimeSessionObservationEvent } from "../session-observation.js";
 import { projectRuntimeSessionTaskState } from "../task/session-projection.js";
 import type { TaskEventBatch } from "../task/turn-binding.js";
 import { planTaskEventsForTurnOutcome, planTaskEventsForTurnStart } from "../task/turn-binding.js";
-import { ContextCompactionCommitter } from "./context-compaction-committer.js";
+import { type ContextCompactionCommitInput, ContextCompactionCommitter } from "./context-compaction-committer.js";
 import type {
 	Clock,
 	ContextCompactionCommitResult,
@@ -111,6 +111,8 @@ export class TurnPipeline {
 	private readonly onConversationContinued:
 		| ((result: ConversationContinuationResult) => Promise<void> | void)
 		| undefined;
+	/** 本 pipeline 持久追加的串行链，见 serializeAppend。 */
+	private appendTail: Promise<void> = Promise.resolve();
 
 	constructor(options: TurnPipelineOptions) {
 		this.repository = options.repository;
@@ -829,15 +831,40 @@ export class TurnPipeline {
 		snapshot: RuntimeSnapshot,
 	): Promise<ConversationDocument | undefined> {
 		try {
-			const result = await this.contextCompactionCommitter.commit({
+			// 压缩与事件循环并发共享 state.version（BUG-0110）：持久写入排进 serializeAppend，
+			// 乐观沿用镜像版本，命中类型化版本冲突再刷新一次重试（对齐 appendTerminalEvent 的模式）。
+			// 发布、观察者通知与文档读取留在临界区之外——观察者回调可能再次入队本会话的追加，
+			// 放进锁里会自锁，也会让后续追加排在多次文件 I/O 之后。
+			const input: ContextCompactionCommitInput = {
 				sessionId: state.sessionId,
 				turnId,
 				expectedVersion: state.version,
 				record,
 				snapshot,
 				signal,
+			};
+			const appended = await this.serializeAppend(async () => {
+				let expectedVersion = state.version;
+				for (let attempt = 0; ; attempt += 1) {
+					try {
+						const attempted = await this.contextCompactionCommitter.appendEvent({
+							...input,
+							expectedVersion,
+						});
+						state.version = attempted.version;
+						return attempted;
+					} catch (error) {
+						if (attempt === 0 && isConversationVersionConflict(error)) {
+							const fresh = await this.repository.load(state.sessionId);
+							expectedVersion = fresh.version;
+							state.version = fresh.version;
+							continue;
+						}
+						throw error;
+					}
+				}
 			});
-			state.version = result.version;
+			const result = await this.contextCompactionCommitter.settle(input, appended);
 			return result.document;
 		} catch (error) {
 			if (record.reason !== "manual") {
@@ -868,15 +895,23 @@ export class TurnPipeline {
 		signal.throwIfAborted();
 
 		const sourceSessionId = state.sessionId;
-		const sourceVersion = state.version;
-		const result = await store.continueConversation({
-			sourceSessionId,
-			expectedVersion: sourceVersion,
-			turnId,
-			snapshotId: snapshot.id,
-			reason: directive.reason,
-			timestamp: this.clock.now(),
+		let sourceVersion = state.version;
+		const result = await this.serializeAppend(async () => {
+			// 与压缩提交同理：排队等本会话在途追加落定后再取版本，避免以陈旧 expectedVersion
+			// 续接而命中 VERSION_CONFLICT（BUG-0110）。
+			sourceVersion = state.version;
+			return await store.continueConversation({
+				sourceSessionId,
+				expectedVersion: sourceVersion,
+				turnId,
+				snapshotId: snapshot.id,
+				reason: directive.reason,
+				timestamp: this.clock.now(),
+			});
 		});
+		// 续接把源会话在磁盘上推进了一版，而 state.sessionId 要到几步之后才切换：这个窗口里
+		// 镜像必须与磁盘一致，否则排在本闭包之后的追加会以陈旧 expectedVersion 失败（BUG-0110 同类）。
+		state.version = result.sourceVersion;
 		if (
 			result.sourceSessionId !== sourceSessionId ||
 			result.sourceVersion !== sourceVersion + 1 ||
@@ -996,12 +1031,31 @@ export class TurnPipeline {
 		signal: AbortSignal,
 		events: readonly StoredSessionEvent[],
 	): Promise<void> {
-		const result = await this.repository.append(state.sessionId, state.version, events);
-		state.version = result.version;
+		await this.serializeAppend(async () => {
+			const result = await this.repository.append(state.sessionId, state.version, events);
+			state.version = result.version;
+		});
 		for (const event of events) {
 			await this.publishSafely(event);
 			await this.notifyObserversSafely(state.snapshot, event, signal);
 		}
+	}
+
+	/**
+	 * 串行化同一 pipeline 的持久追加与版本推进。
+	 *
+	 * agent 链上的 checkpoint 回调（压缩提交）与事件循环体是两个并发写者，却共享同一个
+	 * `state.version` 内存镜像；不串行时压缩可能拿着落后一版的 expectedVersion 提交，
+	 * 命中 VERSION_CONFLICT 而丢失整次压缩（BUG-0110）。发布与观察者通知刻意留在临界区
+	 * 之外——观察者回调可能再次触发本会话的追加，放进锁里会自锁。
+	 */
+	private serializeAppend<T>(operation: () => Promise<T>): Promise<T> {
+		const result = this.appendTail.then(operation);
+		this.appendTail = result.then(
+			() => undefined,
+			() => undefined,
+		);
+		return result;
 	}
 
 	private async appendTerminalSafely(
@@ -1050,54 +1104,70 @@ export class TurnPipeline {
 		event: StoredSessionEvent,
 	): Promise<void> {
 		for (let attempt = 0; attempt < 2; attempt += 1) {
-			const conversation = await this.repository.load(state.sessionId);
-			const existingTerminal = conversation.events.find(
-				(candidate) =>
-					candidate.turnId === event.turnId &&
-					(candidate.type === "turn.completed" ||
-						candidate.type === "turn.cancelled" ||
-						candidate.type === "turn.failed" ||
-						candidate.type === "turn.transferred"),
-			);
-			if (existingTerminal) {
-				state.version = conversation.version;
-				return;
-			}
-			const recovery = this.recoveryPolicy.plan(conversation);
-			if (recovery.status !== "interrupt" || recovery.turnId !== event.turnId) {
-				throw turnProtocolError(
-					`Conversation ${state.sessionId} cannot append terminal event for turn ${event.turnId}`,
+			let appended: StoredSessionEvent[] | undefined;
+			let alreadyTerminal = false;
+			// 终态追加与压缩提交共享 state.version 镜像（BUG-0110）：load+append 必须排进
+			// serializeAppend，否则取消/超时路径的终态可能落在压缩闭包的 load 与 append 之间，
+			// 把 VERSION_CONFLICT 转嫁给压缩提交。发布与通知留在锁外，与 append() 一致。
+			await this.serializeAppend(async () => {
+				const conversation = await this.repository.load(state.sessionId);
+				const existingTerminal = conversation.events.find(
+					(candidate) =>
+						candidate.turnId === event.turnId &&
+						(candidate.type === "turn.completed" ||
+							candidate.type === "turn.cancelled" ||
+							candidate.type === "turn.failed" ||
+							candidate.type === "turn.transferred"),
 				);
-			}
-			const terminalEvents = [
-				event,
-				...this.taskFactEvents(
-					state.sessionId,
-					planTaskEventsForTurnOutcome(projectRuntimeSessionTaskState(conversation.events).tasks, {
-						turnId: event.turnId,
-						outcome:
-							event.type === "turn.completed"
-								? "completed"
-								: event.type === "turn.failed"
-									? "failed"
-									: "cancelled",
-						at: event.timestamp,
-						...(event.type === "turn.cancelled" && event.reason !== undefined ? { reason: event.reason } : {}),
-						...(event.type === "turn.failed" ? { reason: event.error.code } : {}),
-					}),
-				),
-			];
-			try {
-				const result = await this.repository.append(conversation.sessionId, conversation.version, terminalEvents);
-				state.version = result.version;
-				for (const terminalEvent of terminalEvents) {
+				if (existingTerminal) {
+					state.version = conversation.version;
+					alreadyTerminal = true;
+					return;
+				}
+				const recovery = this.recoveryPolicy.plan(conversation);
+				if (recovery.status !== "interrupt" || recovery.turnId !== event.turnId) {
+					throw turnProtocolError(
+						`Conversation ${state.sessionId} cannot append terminal event for turn ${event.turnId}`,
+					);
+				}
+				const terminalEvents = [
+					event,
+					...this.taskFactEvents(
+						state.sessionId,
+						planTaskEventsForTurnOutcome(projectRuntimeSessionTaskState(conversation.events).tasks, {
+							turnId: event.turnId,
+							outcome:
+								event.type === "turn.completed"
+									? "completed"
+									: event.type === "turn.failed"
+										? "failed"
+										: "cancelled",
+							at: event.timestamp,
+							...(event.type === "turn.cancelled" && event.reason !== undefined ? { reason: event.reason } : {}),
+							...(event.type === "turn.failed" ? { reason: event.error.code } : {}),
+						}),
+					),
+				];
+				try {
+					const result = await this.repository.append(
+						conversation.sessionId,
+						conversation.version,
+						terminalEvents,
+					);
+					state.version = result.version;
+					appended = terminalEvents;
+				} catch (error) {
+					if (attempt === 0) return;
+					throw error;
+				}
+			});
+			if (alreadyTerminal) return;
+			if (appended) {
+				for (const terminalEvent of appended) {
 					await this.publishSafely(terminalEvent);
 					await this.notifyObserversSafely(state.snapshot, terminalEvent, signal);
 				}
 				return;
-			} catch (error) {
-				if (attempt === 0) continue;
-				throw error;
 			}
 		}
 	}
@@ -1238,6 +1308,15 @@ function normalizeError(error: unknown): RuntimeFailure {
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * 仓储在 expectedVersion 落后时抛出的类型化冲突码（runtime-storage
+ * `CONVERSATION_STORAGE_ERROR_CODES.VERSION_CONFLICT`）。kernel 不依赖 runtime-storage，
+ * 这里按错误码字符串判别，只用于「刷新一次版本再重试」的定向恢复，不吞其他失败。
+ */
+function isConversationVersionConflict(error: unknown): boolean {
+	return error instanceof Error && (error as { code?: unknown }).code === "conversation_version_conflict";
 }
 
 function extractAssistantText(content: Message["content"]): string {

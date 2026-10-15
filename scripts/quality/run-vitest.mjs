@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Run Vitest with a supported Node.js runtime.
  *
@@ -11,6 +12,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createVitestArgs, createVitestEnv } from "./vitest-env.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(scriptDir, "..", "..");
@@ -66,14 +68,14 @@ if (!existsSync(vitestEntry)) {
 }
 
 const nodeCommand = findNode();
-const env = { ...process.env };
+const env = createVitestEnv(process.env);
 if (
 	supportsNodeOption(nodeCommand, disableWebStorageOption) &&
 	!env.NODE_OPTIONS?.split(/\s+/).includes(disableWebStorageOption)
 ) {
 	env.NODE_OPTIONS = [env.NODE_OPTIONS, disableWebStorageOption].filter(Boolean).join(" ");
 }
-const result = spawnSync(nodeCommand, [vitestEntry, ...process.argv.slice(2)], {
+const result = spawnSync(nodeCommand, [vitestEntry, ...createVitestArgs(process.argv.slice(2))], {
 	cwd: process.cwd(),
 	env,
 	stdio: "inherit",

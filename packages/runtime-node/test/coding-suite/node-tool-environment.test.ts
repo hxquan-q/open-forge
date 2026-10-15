@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeToolResult } from "@vetta/runtime-core/kernel";
 import { describe, expect, it } from "vitest";
 import { type CommandToolExecutor, createNodeCodingToolEnvironment } from "../../src/coding/index.js";
@@ -23,6 +24,11 @@ describe("Node coding tool environment", () => {
 			"dir_tree",
 			"write",
 		]);
+		expect(
+			environment.registrations
+				.filter(({ tool }) => tool.executionMode === "parallel-safe")
+				.map(({ tool }) => tool.name),
+		).toEqual(["read", "grep"]);
 		expect(environment.backgroundService).toBeUndefined();
 		expect(
 			environment

@@ -2,6 +2,18 @@ import type { SkillInfo } from "@preload/api";
 import type { ContextRingViewProps } from "@vetta-org/theme-ui/chat";
 import type { ConnectorGridItem } from "../../hooks/useConnectorGrid";
 
+export interface SkillListSection {
+	/** 分组键（scene / skill），行级 flat 索引沿用全局算法（C2 行为合同）。 */
+	kind: "scene" | "skill";
+	/** 分组标题（已 i18n）。 */
+	title: string;
+	/** 当前分组内的条目数，交由 header 做次级计数。 */
+	count: number;
+	items: readonly SkillInfo[];
+	/** 渲染序中的起始下标：分组内条目的显示位置基线，仅用于 limit 截断。 */
+	startIndex: number;
+}
+
 export interface SkillListLabels {
 	/** source → 展示用的小标签（内置 / 插件 / 场景 …）；不传则不渲染这枚 badge。 */
 	sourceLabel?: (source: string, type: SkillInfo["type"]) => string;
@@ -11,6 +23,17 @@ export interface SkillListLabels {
 	emptyNoSkills: string;
 	/** 空态卡片里的第二行提示（本来就没有可用条目）。 */
 	emptyNoSkillsHint: string;
+	/** 分组标题（场景 / 技能）。 */
+	scenesSection: string;
+	skillsSection: string;
+	/** 分组内计数徽标模板，如「{{count}} 项」。 */
+	sectionCount: (count: number) => string;
+}
+
+export interface SkillListEmptyAction {
+	kind: "clearFilter" | "openMarket";
+	label: string;
+	onAction: () => void;
 }
 
 export interface SkillListProps {
@@ -26,6 +49,10 @@ export interface SkillListProps {
 	limit?: number;
 	/** 市场目录里的图标（`solar:xxx` 或图片 URL）；返回 undefined 时落 type 默认图。 */
 	resolveIcon?: (skill: SkillInfo) => string | undefined;
+	/** 空态主 CTA：filter 时先出现「清除筛选」，无可用项时出现「去能力市场」。必填，由调用方绑定行为。 */
+	emptyAction: SkillListEmptyAction;
+	/** listbox 的可访问名（一般是 slashPanel.header 的 t 值）。 */
+	ariaLabel: string;
 	onHover: (index: number) => void;
 	onSelect: (skill: SkillInfo) => void;
 }
@@ -68,6 +95,10 @@ export interface CommandPanelProps {
 	resolveIcon: (skill: SkillInfo) => string | undefined;
 	panelRef: React.RefObject<HTMLDivElement | null>;
 	className?: string;
+	/** listbox 的可访问名。 */
+	ariaLabel: string;
+	/** 空态主 CTA。 */
+	emptyAction: SkillListEmptyAction;
 	onHoverItem: (index: number) => void;
 	onSelectItem: (skill: SkillInfo) => void;
 	onSelectConnector: (connector: ConnectorGridItem) => void;

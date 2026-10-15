@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import {
   createProfileEnvironment,
+  createUiVerificationEnvironment,
   resolveProfileLayout,
   seedDebugProfile,
 } from "./ui-verification-profile";
@@ -45,6 +46,32 @@ describe("UI verification profiles", () => {
     expect(layout.statePath).toBeNull();
     expect(layout.vettaHome).toBe(join(root, ".openforge-dev"));
     expect(environment.VETTA_UI_VERIFICATION).toBeUndefined();
+  });
+
+  test("canary env keeps Desktop, host and runner on the canary home endpoint file", () => {
+    const root = temporaryDirectory("canary-env");
+    const layout = resolveProfileLayout({
+      profile: "fresh",
+      workspaceId: "12345678",
+      homeDirectory: root,
+      runtimeRoot: join(root, "runtime"),
+      runId: "run",
+    });
+    const canaryHome = join(layout.runtimeDir, "runtime-canary", "fixture", "home");
+    const environment = createUiVerificationEnvironment(layout, {
+      agentDir: join(canaryHome, "agent"),
+      vettaHome: canaryHome,
+    });
+
+    // canary 的 endpoint 必须落在 canary home，否则 runner 与 host 都找不到（BUG-0038）。
+    expect(environment.VETTA_ACTION_RPC_ENDPOINT_FILE).toBe(join(canaryHome, "action-server.json"));
+    expect(environment.VETTA_ACTION_RPC_ENDPOINT_FILE).not.toBe(layout.endpointFile);
+    expect(environment.VETTA_HOME).toBe(canaryHome);
+    expect(environment.VETTA_CODING_AGENT_DIR).toBe(join(canaryHome, "agent"));
+    expect(environment.VETTA_DESKTOP_RUNTIME_CANARY).toBe("1");
+
+    // 非 canary 仍用 Profile 自己的 endpoint 文件。
+    expect(createUiVerificationEnvironment(layout).VETTA_ACTION_RPC_ENDPOINT_FILE).toBe(layout.endpointFile);
   });
 });
 
@@ -149,6 +176,88 @@ describe("debug profile seeding", () => {
       .toThrow();
     expect(readJson(join(targetHome, "desktop-app", "credentials", "v2.credential.json")))
       .toMatchObject({ ciphertext: "cipher-v2" });
+  });
+
+  // BUG-0035：Windows safeStorage 主密钥按 user-data 目录生成，只复制密文不同步
+  // os_crypt.encrypted_key 时，Debug 实例解出乱码、Provider 鉴权必失败。
+  test("seeded credentials carry the source os_crypt master key into target Local State", () => {
+    const root = temporaryDirectory("oscrypt");
+    const sourceHome = join(root, "source");
+    const targetHome = join(root, "target");
+    const credentialDir = join(sourceHome, "desktop-app", "credentials");
+    mkdirSync(join(sourceHome, "agent"), { recursive: true });
+    mkdirSync(credentialDir, { recursive: true });
+    writeJson(join(sourceHome, "agent", "models.json"), {
+      providers: { openai: { credentialRef: "openai-ref" } },
+    });
+    writeCredential(credentialDir, "referenced", "models", "openai-ref", "cipher");
+    mkdirSync(join(sourceHome, "electron-user-data"), { recursive: true });
+    writeJson(join(sourceHome, "electron-user-data", "Local State"), {
+      os_crypt: { encrypted_key: "source-master-key" },
+      other_source_field: "kept",
+    });
+
+    const result = seedDebugProfile({ sourceHome, targetHome, workspacePath: "C:/workspace" });
+
+    expect(result).toMatchObject({ seeded: true, credentialsCopied: 1, osCryptSynced: true });
+    const targetLocalState = readJson(
+      join(targetHome, "electron-user-data", "Local State"),
+    ) as Record<string, unknown>;
+    expect(targetLocalState.os_crypt).toEqual({ encrypted_key: "source-master-key" });
+    expect(readJson(join(targetHome, ".ui-verification-seed.json"))).toMatchObject({
+      osCryptSynced: true,
+    });
+  });
+
+  test("overwriting an existing target os_crypt keeps a backup of the old key", () => {
+    const root = temporaryDirectory("oscrypt-backup");
+    const sourceHome = join(root, "source");
+    const targetHome = join(root, "target");
+    const credentialDir = join(sourceHome, "desktop-app", "credentials");
+    mkdirSync(join(sourceHome, "agent"), { recursive: true });
+    mkdirSync(credentialDir, { recursive: true });
+    writeJson(join(sourceHome, "agent", "models.json"), {
+      providers: { openai: { credentialRef: "openai-ref" } },
+    });
+    writeCredential(credentialDir, "referenced", "models", "openai-ref", "cipher");
+    mkdirSync(join(sourceHome, "electron-user-data"), { recursive: true });
+    writeJson(join(sourceHome, "electron-user-data", "Local State"), {
+      os_crypt: { encrypted_key: "source-master-key" },
+    });
+    const targetLocalStatePath = join(targetHome, "electron-user-data", "Local State");
+    mkdirSync(join(targetHome, "electron-user-data"), { recursive: true });
+    writeJson(targetLocalStatePath, {
+      os_crypt: { encrypted_key: "target-master-key" },
+      target_setting: "preserved",
+    });
+
+    seedDebugProfile({ sourceHome, targetHome, workspacePath: "C:/workspace" });
+
+    const targetLocalState = readJson(targetLocalStatePath) as Record<string, unknown>;
+    expect(targetLocalState.os_crypt).toEqual({ encrypted_key: "source-master-key" });
+    expect(targetLocalState.target_setting).toBe("preserved");
+    expect(readJson(`${targetLocalStatePath}.os-crypt-backup.json`)).toEqual({
+      os_crypt: { encrypted_key: "target-master-key" },
+    });
+  });
+
+  test("does not touch target Local State when no credentials are seeded", () => {
+    const root = temporaryDirectory("oscrypt-skip");
+    const sourceHome = join(root, "source");
+    const targetHome = join(root, "target");
+    mkdirSync(join(sourceHome, "agent"), { recursive: true });
+    writeJson(join(sourceHome, "agent", "models.json"), {
+      providers: { local: { apiKey: "env:LOCAL_MODEL_KEY" } },
+    });
+    mkdirSync(join(sourceHome, "electron-user-data"), { recursive: true });
+    writeJson(join(sourceHome, "electron-user-data", "Local State"), {
+      os_crypt: { encrypted_key: "source-master-key" },
+    });
+
+    const result = seedDebugProfile({ sourceHome, targetHome, workspacePath: "C:/workspace" });
+
+    expect(result).toMatchObject({ seeded: true, credentialsCopied: 0, osCryptSynced: false });
+    expect(() => readFileSync(join(targetHome, "electron-user-data", "Local State"))).toThrow();
   });
 });
 

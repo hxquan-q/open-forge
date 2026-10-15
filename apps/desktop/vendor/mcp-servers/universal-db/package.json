@@ -1,0 +1,9 @@
+{
+	"name": "@vetta-vendor/universal-db",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Vendored universal-db-mcp runtime shipped inside the desktop app (scripts/fetch-mcp-servers.mjs installs + prunes it).",
+	"dependencies": {
+		"universal-db-mcp": "2.14.0"
+	}
+}

@@ -19,12 +19,14 @@ describe("工作区两档用户文案", () => {
 	it("页头后果说明：立刻换右栏，新会话跟着走，当前会话不变", () => {
 		expect(zhChat.workspace.mode.hint).toContain("当前会话不会变");
 		expect(zhChat.workspace.mode.hint).toContain("新会话");
+		expect(zhChat.workspace.mode.hint).toContain("立即换新");
 		expect(enChat.workspace.mode.hint).toMatch(/current chat does not/i);
 	});
 
-	it("新会话页只读确认句按任务类型区分", () => {
+	it("新会话页只读确认句按任务类型区分，词汇与右栏一致", () => {
 		expect(zhChat.newSession.workspace.hint.work).toContain("文档与研究");
 		expect(zhChat.newSession.workspace.hint.work).toContain("不含终端");
+		expect(zhChat.newSession.workspace.hint.work).toContain("来源资料");
 		expect(zhChat.newSession.workspace.hint.coding).toContain("代码");
 		expect(zhChat.newSession.workspace.hint.work).not.toMatch(/办公|编程/);
 	});

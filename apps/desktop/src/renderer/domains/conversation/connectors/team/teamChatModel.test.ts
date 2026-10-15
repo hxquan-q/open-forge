@@ -2,6 +2,7 @@ import type {
 	DesktopTeamSessionSnapshot,
 	DesktopTeamSessionStreamEvent,
 } from "@preload/api-types/team-conversation-display";
+import { resolveConversationAgentText } from "@shared/conversation";
 import type { TeamDefinition, TeamSessionDocument } from "@vetta/agent-team";
 import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
@@ -390,10 +391,9 @@ describe("team chat stream state", () => {
 			"team:agent-turn:leader:request",
 			"team:agent-turn:leader:request:continuation:1",
 		]);
-		expect(leaderTurns[1]).toMatchObject({
-			text: "最终总结",
-			blocks: [{ type: "text", text: "最终总结" }],
-		});
+		const [, continuedTurn] = leaderTurns;
+		expect(continuedTurn).toMatchObject({ blocks: [{ type: "text", text: "最终总结" }] });
+		expect(continuedTurn ? resolveConversationAgentText(continuedTurn) : undefined).toBe("最终总结");
 	});
 
 	it("splits an automatically resumed member turn at its Team context boundary", () => {
@@ -440,11 +440,13 @@ describe("team chat stream state", () => {
 		expect(leaderTurns[0]?.blocks).toEqual(
 			expect.arrayContaining([expect.objectContaining({ type: "tool_call", toolCallId: "delegate-call" })]),
 		);
-		expect(leaderTurns[1]).toMatchObject({
+		const [, finalTurn] = leaderTurns;
+		// 历史回放的助手消息只保留 blocks：正文按 blocks 派生（TASK-0036）。
+		expect(finalTurn).toMatchObject({
 			id: "member-final",
-			text: "最终总结",
 			blocks: [{ type: "text", text: "最终总结" }],
 		});
+		expect(finalTurn ? resolveConversationAgentText(finalTurn) : undefined).toBe("最终总结");
 	});
 
 	it("keeps one member-page turn while native tool history overlaps the live stream and after reopen", () => {
@@ -618,7 +620,9 @@ describe("team chat stream state", () => {
 			memberId: member.id,
 		});
 
-		expect(items.filter((item) => item.kind === "agent").map((item) => item.text)).toEqual(["leader"]);
+		expect(items.filter((item) => item.kind === "agent").map((item) => resolveConversationAgentText(item))).toEqual([
+			"leader",
+		]);
 		expect(items.some((item) => item.kind === "user")).toBe(false);
 		expect(items.some((item) => item.kind === "event")).toBe(false);
 	});

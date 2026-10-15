@@ -1,9 +1,10 @@
+// Modified by The Open Forge contributors.
 import type { FileExplorerEntryKind } from "@preload/fs-types";
 import { isMac } from "@shared/lib/platform";
 import { pathDirname } from "@shared/lib/utils";
 import { type FsEntry, pluginFileExplorerContextMenuActionsAtom, renamingPathAtom } from "@shared/store/atoms";
 import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
-import type { FileContextMenuViewProps } from "@vetta-org/theme-ui/file-explorer";
+import type { FileContextMenuPluginAction, FileContextMenuViewProps } from "@vetta-org/theme-ui/file-explorer";
 import { useAtomValue, useSetAtom } from "jotai";
 import { createElement, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +23,10 @@ export function useFileContextMenuModel(input: {
 	onCopy: (entries: readonly FsEntry[]) => void;
 	onPaste: () => void;
 	onCopyPath: (entries: readonly FsEntry[]) => void;
+	/** 仅 SSH 工作区提供：把选中条目下载到本机选择的目录。 */
+	onSshDownload?: (entries: readonly FsEntry[]) => void;
+	/** 仅 SSH 工作区提供：向该目录（entry.path 即 ssh:// URI）上传本机文件/文件夹。 */
+	onSshUpload?: (destinationUri: string, kind: "file" | "directory") => void;
 }): FileContextMenuViewProps {
 	const { t } = useTranslation("chat");
 	const setRenamingPath = useSetAtom(renamingPathAtom);
@@ -82,6 +87,38 @@ export function useFileContextMenuModel(input: {
 		[entry, input, isRoot, onClose],
 	);
 
+	// SSH 工作区的传输入口：条目菜单给「下载」，目录（含根）菜单再给「上传」。
+	const transferActions = useMemo(() => {
+		if (!isSshProjectUri(entry.path)) return [];
+		const actions: FileContextMenuPluginAction[] = [];
+		if (input.onSshDownload && !isRoot) {
+			actions.push({
+				id: "ssh-transfer-download",
+				label: t("fileExplorer.sshTransfer.download"),
+				icon: createElement("span", { className: "icon-[solar--download-linear] h-3.5 w-3.5" }),
+				onSelect: () => {
+					onClose();
+					input.onSshDownload?.(targetEntries);
+				},
+			});
+		}
+		if (input.onSshUpload && (isRoot || entry.isDirectory)) {
+			const destinationUri = entry.path;
+			const upload = (kind: "file" | "directory", id: string, label: string): FileContextMenuPluginAction => ({
+				id,
+				label,
+				icon: createElement("span", { className: "icon-[solar--export-linear] h-3.5 w-3.5" }),
+				onSelect: () => {
+					onClose();
+					input.onSshUpload?.(destinationUri, kind);
+				},
+			});
+			actions.push(upload("file", "ssh-transfer-upload-files", t("fileExplorer.sshTransfer.uploadFiles")));
+			actions.push(upload("directory", "ssh-transfer-upload-folders", t("fileExplorer.sshTransfer.uploadFolders")));
+		}
+		return actions;
+	}, [entry.isDirectory, entry.path, isRoot, onClose, t, targetEntries, input.onSshDownload, input.onSshUpload]);
+
 	const resolvedPluginActions = useMemo(
 		() =>
 			isRoot
@@ -138,6 +175,7 @@ export function useFileContextMenuModel(input: {
 		canRename,
 		// 远端文件在这台电脑上没有对应的位置，系统文件管理器无从显示。
 		canOpenInFolder: !isSshProjectUri(entry.path),
+		transferActions,
 		pluginActions: resolvedPluginActions,
 	};
 }

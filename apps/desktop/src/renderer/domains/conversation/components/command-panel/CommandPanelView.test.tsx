@@ -47,7 +47,12 @@ describe("CommandPanelView built-in operation", () => {
 					emptyNoMatchHint: "",
 					emptyNoSkills: "无技能",
 					emptyNoSkillsHint: "",
+					scenesSection: "场景",
+					skillsSection: "技能",
+					sectionCount: (count) => `${count} 项`,
 				}}
+				ariaLabel="命令"
+				emptyAction={{ kind: "clearFilter", label: "清除筛选", onAction: vi.fn() }}
 				resolveIcon={() => undefined}
 				panelRef={createRef<HTMLDivElement>()}
 				onHoverItem={vi.fn()}
@@ -60,6 +65,91 @@ describe("CommandPanelView built-in operation", () => {
 		expect(container.querySelector("svg")).not.toBeNull();
 		fireEvent.click(button);
 		expect(onSelect).toHaveBeenCalledOnce();
+	});
+
+	it("激活态写在操作按钮自身上（aria-current），不留孤立的 option 包装", () => {
+		render(
+			<CommandPanelView
+				open
+				filter=""
+				items={[]}
+				activeIndex={0}
+				operation={{
+					id: "compact",
+					label: "压缩上下文",
+					description: "压缩此聊天的上下文",
+					contextRing: null,
+					disabled: false,
+					onSelect: vi.fn(),
+				}}
+				connectors={[]}
+				connectorColumns={4}
+				actions={[]}
+				labels={{
+					header: "命令",
+					resultCount: "0 个结果",
+					connectorsSection: "已接入",
+					emptyNoMatch: "无结果",
+					emptyNoMatchHint: "",
+					emptyNoSkills: "无技能",
+					emptyNoSkillsHint: "",
+					scenesSection: "场景",
+					skillsSection: "技能",
+					sectionCount: (count) => `${count} 项`,
+				}}
+				ariaLabel="命令"
+				emptyAction={{ kind: "clearFilter", label: "清除筛选", onAction: vi.fn() }}
+				resolveIcon={() => undefined}
+				panelRef={createRef<HTMLDivElement>()}
+				onHoverItem={vi.fn()}
+				onSelectItem={vi.fn()}
+				onSelectConnector={vi.fn()}
+			/>,
+		);
+
+		const button = screen.getByRole("button", { name: /压缩上下文/ });
+		// option 语义要求 listbox 祖先；这行不在 listbox 里，激活态用 aria-current 表达。
+		expect(button.getAttribute("aria-current")).toBe("true");
+		expect(button.closest('[role="option"]')).toBeNull();
+	});
+
+	it("底部动作是 toggle：active 态写到 aria-pressed，不只靠颜色", () => {
+		render(
+			<CommandPanelView
+				open
+				filter=""
+				items={[]}
+				activeIndex={0}
+				connectors={[]}
+				connectorColumns={4}
+				actions={[
+					{ id: "plan", label: "计划模式", active: true, onToggle: vi.fn() },
+					{ id: "web", label: "联网检索", active: false, onToggle: vi.fn() },
+				]}
+				labels={{
+					header: "命令",
+					resultCount: "0 个结果",
+					connectorsSection: "已接入",
+					emptyNoMatch: "无结果",
+					emptyNoMatchHint: "",
+					emptyNoSkills: "无技能",
+					emptyNoSkillsHint: "",
+					scenesSection: "场景",
+					skillsSection: "技能",
+					sectionCount: (count) => `${count} 项`,
+				}}
+				ariaLabel="命令"
+				emptyAction={{ kind: "clearFilter", label: "清除筛选", onAction: vi.fn() }}
+				resolveIcon={() => undefined}
+				panelRef={createRef<HTMLDivElement>()}
+				onHoverItem={vi.fn()}
+				onSelectItem={vi.fn()}
+				onSelectConnector={vi.fn()}
+			/>,
+		);
+
+		expect(screen.getByRole("button", { name: "计划模式" }).getAttribute("aria-pressed")).toBe("true");
+		expect(screen.getByRole("button", { name: "联网检索" }).getAttribute("aria-pressed")).toBe("false");
 	});
 
 	it("压缩队列项保留删除与拖动入口，但不提供会中立即发送", () => {

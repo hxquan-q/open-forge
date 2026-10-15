@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import type { Api, Model } from "@vetta/ai";
@@ -250,6 +251,7 @@ export class DesktopRuntimeBackendPool implements RuntimeHostSessionBackend {
 		const initialModel = resolveInitialModel(request, this.options.compositionDefaults);
 		const initialThinkingLevel =
 			request.thinkingLevel ?? this.options.compositionDefaults.initialThinkingLevel ?? "off";
+		const runtimeSettings = createCodingAgentNodeSettingsRuntime(scope.cwd, scope.agentDir);
 		const mcpScope = {
 			cwd: scope.cwd,
 			agentDir: scope.agentDir,
@@ -294,7 +296,13 @@ export class DesktopRuntimeBackendPool implements RuntimeHostSessionBackend {
 			subagentPathPort: { dirname, join },
 			initialModel,
 			initialThinkingLevel,
-			runtimeHostRetrySettings: createCodingAgentNodeSettingsRuntime(scope.cwd, scope.agentDir),
+			runtimeHostRetrySettings: runtimeSettings,
+			runtimeHostModelSettings: {
+				getTransport: () => {
+					runtimeSettings.reload();
+					return runtimeSettings.getTransport();
+				},
+			},
 		});
 		return { composition, mcpKey, liveAssemblies: 0 };
 	}

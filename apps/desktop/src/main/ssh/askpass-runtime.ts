@@ -1,9 +1,15 @@
+// Modified by The Open Forge contributors.
 import { buildAskpassEnvironment } from "@vetta/ssh-transport";
 import { app } from "electron";
 import { getDesktopCredentialVault } from "../credentials/desktop-credential-vault.js";
 import { getAppLogger } from "../logger.js";
 import { ensureAskpassAssets } from "./askpass-assets.js";
-import { createSshAskpassChannel, type SshAskpassChannel } from "./askpass-server.js";
+import {
+	createSshAskpassChannel,
+	type SshAskpassChannel,
+	type SshAskpassRequest,
+	type SshPromptAnswer,
+} from "./askpass-server.js";
 import { askSshPromptInRenderer } from "./ssh-prompt-broker.js";
 import { SshPromptService } from "./ssh-prompt-service.js";
 
@@ -72,6 +78,17 @@ export function resolveAskpassEnvironment(
 		log.warn("failed to prepare ssh askpass", error);
 		return undefined;
 	}
+}
+
+/**
+ * 进程内传输（ssh2）的提示入口：不走 askpass 子进程，直接把同一套提示语义喂给
+ * prompt service——存取凭据、「同轮只用一次存档」的规则与 OpenSSH 路径完全一致。
+ */
+export function resolveSshPrompt(
+	request: SshAskpassRequest,
+	resolveHostLabel: (hostId: string) => string,
+): Promise<SshPromptAnswer> {
+	return getPromptService(resolveHostLabel).resolve(request);
 }
 
 export function disposeAskpassChannel(): void {

@@ -25,7 +25,11 @@ export interface ReadBehaviorSubjectOptions {
 	readonly autoResizeImages?: boolean;
 	readonly operations?: ReadBehaviorOperations;
 	readonly preserveFullText?: (absolutePath: string) => boolean;
-	readonly binaryContentHint?: (extension: string) => string | undefined;
+	readonly binaryContentHint?: (
+		extension: string,
+		context?: { readonly availableSkillNames?: ReadonlySet<string> },
+	) => string | undefined;
+	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 }
 
 export interface ReadBehaviorSubject {
@@ -318,6 +322,38 @@ export function defineReadBehaviorContract(subjectName: string, createSubject: C
 			expect(textOutput(result)).toBe(
 				"Binary file detected ((no extension), 4B). Raw bytes are not shown to avoid context pollution.",
 			);
+		});
+
+		it("hands the session skill availability to the injected hint", async () => {
+			const path = join(testDirectory, "book.xlsx");
+			writeFileSync(path, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]));
+			const observed: (ReadonlySet<string> | undefined)[] = [];
+
+			const result = await createSubject(testDirectory, {
+				binaryContentHint: (extension, context) => {
+					observed.push(context?.availableSkillNames);
+					return `hint:${extension}`;
+				},
+				availableSkillNames: () => new Set(["xlsx"]),
+			}).execute({ path });
+
+			expect(observed).toEqual([new Set(["xlsx"])]);
+			expect(textOutput(result)).toContain("hint:.xlsx");
+		});
+
+		it("leaves the hint without availability when the host cannot provide it", async () => {
+			const path = join(testDirectory, "book.xlsx");
+			writeFileSync(path, Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]));
+			const observed: (ReadonlySet<string> | undefined)[] = [];
+
+			await createSubject(testDirectory, {
+				binaryContentHint: (_extension, context) => {
+					observed.push(context?.availableSkillNames);
+					return undefined;
+				},
+			}).execute({ path });
+
+			expect(observed).toEqual([undefined]);
 		});
 
 		it("honours an injected full-text preservation policy", async () => {

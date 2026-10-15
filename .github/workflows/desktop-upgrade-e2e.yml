@@ -1,14 +1,15 @@
+# Modified by The Open Forge contributors.
 name: desktop-upgrade-e2e
 
 on:
   workflow_dispatch:
     inputs:
       baseline_version:
-        description: "Installed test-channel version to upgrade from, for example 0.5.46."
+        description: "Installed test-channel version to upgrade from, for example 0.1.3."
         type: string
         required: true
       candidate_version:
-        description: "Published test-channel version to upgrade to, for example 0.5.47."
+        description: "Published test-channel version to upgrade to, for example 0.1.4."
         type: string
         required: true
       update_url:

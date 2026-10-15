@@ -16,6 +16,8 @@ export interface AgentRunLimits {
 	readonly maxModelCalls?: number;
 	/** Optional tool-call cap. Omit it to let the run continue until another terminal condition. */
 	readonly maxToolCalls?: number;
+	/** Bounded overlap for explicitly parallel-safe tools; 1 keeps serial execution. */
+	readonly maxParallelToolCalls?: number;
 	readonly maxRecoveryAttempts: number;
 	readonly checkpointTimeoutMs: number;
 	readonly deadlineMs?: number;
@@ -101,6 +103,8 @@ export interface RuntimeToolDefinition<TSchemaDef extends TSchema = TSchema, TDe
 	readonly name: string;
 	readonly description: string;
 	readonly inputSchema: TSchemaDef;
+	/** Unspecified tools are exclusive. This never bypasses authorization. */
+	readonly executionMode?: "parallel-safe" | "exclusive";
 	/** Optional host validator for standard JSON Schema or other schema dialects. */
 	readonly validateInput?: (input: ToolCall["arguments"]) => Static<TSchemaDef>;
 	execute(

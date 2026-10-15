@@ -128,6 +128,8 @@ export interface RegisteredBottomPanel {
 	order?: PluginBottomPanelContribution["order"];
 	/** 同一会话最多几个实例；缺省不限。 */
 	maxInstances?: PluginBottomPanelContribution["maxInstances"];
+	/** 声明了 `terminal.run` 权限才允许 openTerminal；注册时按插件清单判定。 */
+	terminalAccess?: boolean;
 }
 
 /**

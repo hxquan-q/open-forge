@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -86,7 +87,13 @@ describe("Todo Runtime composition contract", () => {
 			throw new Error(`${result.error?.code ?? "TURN_FAILED"}: ${result.error?.message ?? "Turn failed"}`);
 		}
 		expect(result).toMatchObject({ status: "completed" });
-		expect(toolLists).toEqual([["todo"], ["todo"], ["todo"]]);
+		// Goal tools (TASK-0156 / ADR-0144) are contributed unconditionally by the session extension,
+		// so they are present even under an explicit tool activation and ordered by model-tool-order.
+		expect(toolLists).toEqual([
+			["todo", "get_goal", "create_goal", "update_goal"],
+			["todo", "get_goal", "create_goal", "update_goal"],
+			["todo", "get_goal", "create_goal", "update_goal"],
+		]);
 		expect(readTodos(session)).toEqual([{ id: 1, content: "Implement the slice", status: "done" }]);
 		expect((await session.readMessages()).map(({ role }) => role)).toEqual([
 			"user",

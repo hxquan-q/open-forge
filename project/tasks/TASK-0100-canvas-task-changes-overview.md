@@ -15,7 +15,7 @@ read_paths: [apps/desktop/src/renderer/domains/conversation, apps/desktop/src/re
 write_paths: [apps/desktop/src/renderer/domains/activity-panel, apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views]
 exclusive_paths: []
 depends_on: [TASK-0096]
-conflicts_with: [TASK-0098]
+conflicts_with: [TASK-0098, TASK-0099]
 integration_status: pending
 created: 2026-09-24
 updated: 2026-09-24
@@ -44,15 +44,15 @@ related_bugs: []
 
 ### 并发评估
 
-- **并发结论**：**支持并发**
-- **执行方式**：parallel（独立 Worktree）
+- **并发结论**：**条件支持**
+- **执行方式**：parallel（独立 Worktree 可并行实现；与 TASK-0099 共享 Activity Panel 写范围，集成必须串行）
 - **可并行 Task**：TASK-0099
 - **前置依赖**：TASK-0096（Canvas 容器结构稳定）
-- **冲突文件/独占路径**：无独占；`CanvasTabPanel.tsx` 为共享热点，与 TASK-0098 冲突，集成时串行
+- **冲突文件/独占路径**：与 TASK-0099 的 `apps/desktop/src/renderer/domains/activity-panel` 写入范围重叠；`CanvasTabPanel.tsx` 为共享热点。可在各自 Worktree 独立实现，但必须顺序集成；TASK-0098 也共享该容器。
 - **Branch**：`task/TASK-0100-changes-overview`
 - **Worktree**：`..\open-forge-wt\TASK-0100`
 - **集成负责人**：Coordinator
-- **集成顺序**：TASK-0096 之后；与 TASK-0097 / TASK-0098 串行集成（同一容器文件）
+- **集成顺序**：TASK-0096 之后；TASK-0099 可在独立 Worktree 并行实现，但两者顺序集成；与 TASK-0097 / TASK-0098 也因共享容器文件而串行集成
 
 ### 做
 

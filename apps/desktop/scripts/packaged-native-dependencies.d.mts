@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export interface PackagedNativeDependencies {
 	required: string[];
 	optional: string[];
@@ -14,3 +15,5 @@ export function resolvePackagedNativeDependencies(
 ): PackagedNativeDependencies;
 
 export function resolveMainBundleExternals(options?: PackagedNativeDependencyOptions): string[];
+
+export const DEVELOPMENT_WORKSPACE_EXTERNAL: RegExp;

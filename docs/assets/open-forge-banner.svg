@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="280" viewBox="0 0 1280 280" role="img" aria-labelledby="title description">
+  <!-- Copyright The Open Forge contributors. -->
+  <title id="title">Open Forge</title>
+  <desc id="description">Local-first AI workspace. Open client stack, extensible tools, and reviewable work.</desc>
+  <rect width="1280" height="280" rx="16" fill="#17201f"/>
+  <path d="M0 0h1280v6H0z" fill="#dd6b55"/>
+  <path d="M102 94H78v92h24m38-92h24v92h-24" fill="none" stroke="#dd6b55" stroke-width="8"/>
+  <text x="210" y="143" fill="#f3efe4" font-family="ui-sans-serif, system-ui, sans-serif" font-size="66" font-weight="650" letter-spacing="-2">Open Forge</text>
+  <text x="214" y="188" fill="#c8c2b4" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">Local-first AI workspace</text>
+  <path d="M1030 82v116m-58-58h116" stroke="#dd6b55" stroke-width="3" opacity="0.6"/>
+  <circle cx="1030" cy="140" r="48" fill="none" stroke="#dd6b55" stroke-width="2" opacity="0.35"/>
+</svg>

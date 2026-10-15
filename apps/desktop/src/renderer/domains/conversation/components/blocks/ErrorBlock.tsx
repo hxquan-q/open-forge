@@ -10,6 +10,8 @@ const ICON_BY_KIND: Record<ChatErrorKind, string> = {
 	rate_limit: "icon-[mdi--timer-sand]",
 	quota: "icon-[mdi--battery-alert-variant-outline]",
 	network: "icon-[mdi--wifi-off]",
+	// 连接还在，只是上游不再吐字；「正在推进」比「断了」更接近真相。
+	stream_idle: "icon-[mdi--progress-clock]",
 	auth: "icon-[mdi--key-outline]",
 	server: "icon-[mdi--server-network-off]",
 	unknown: "icon-[mdi--alert-circle-outline]",

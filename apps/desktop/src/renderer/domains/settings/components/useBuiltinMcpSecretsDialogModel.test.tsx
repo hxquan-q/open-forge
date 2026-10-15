@@ -27,28 +27,56 @@ describe("universal-db secrets 对话框动态必填", () => {
 		expect(dbType?.required).toBe(true);
 		expect(dbType?.options).toHaveLength(17);
 		expect(dbType?.options?.map((option) => option.value)).toContain("sqlite");
+		// 选项带可读名 label（i18n key，mock 的 t 原样返回）
+		expect(dbType?.options?.find((o) => o.value === "sqlite")?.label).toBe("mcpPresets.dbTypes.sqlite");
 	});
 
-	it("DB_TYPE=sqlite 时仅需 DB_FILE_PATH，host/user/password 不卡提交", () => {
+	it("DB_TYPE=sqlite 时仅需 DB_FILE_PATH，网络字段整组隐藏", () => {
 		const { result } = openDialog();
 		act(() => result.current?.onChangeValue("DB_TYPE", "sqlite"));
 		expect(result.current?.canSubmit).toBe(false);
-		expect(result.current?.fields.find((f) => f.envKey === "DB_HOST")?.required).toBe(false);
+		expect(result.current?.fields.map((f) => f.envKey)).toEqual(["DB_TYPE", "DB_FILE_PATH"]);
 		expect(result.current?.fields.find((f) => f.envKey === "DB_FILE_PATH")?.required).toBe(true);
 
 		act(() => result.current?.onChangeValue("DB_FILE_PATH", "/data/app.db"));
 		expect(result.current?.canSubmit).toBe(true);
 	});
 
-	it("DB_TYPE=mysql 时 DB_HOST 必填，DB_FILE_PATH 退回可选", () => {
+	it("DB_TYPE=mysql 时 DB_HOST 必填、DB_FILE_PATH 隐藏", () => {
 		const { result } = openDialog();
 		act(() => result.current?.onChangeValue("DB_TYPE", "mysql"));
 		expect(result.current?.fields.find((f) => f.envKey === "DB_HOST")?.required).toBe(true);
-		expect(result.current?.fields.find((f) => f.envKey === "DB_FILE_PATH")?.required).toBe(false);
+		expect(result.current?.fields.find((f) => f.envKey === "DB_FILE_PATH")).toBeUndefined();
 		expect(result.current?.canSubmit).toBe(false);
 
 		act(() => result.current?.onChangeValue("DB_HOST", "db.internal"));
 		expect(result.current?.canSubmit).toBe(true);
+	});
+
+	it("切换 DB_TYPE 后隐藏字段的已填值被清除，不会混进提交的 env", () => {
+		const { result } = openDialog();
+		act(() => result.current?.onChangeValue("DB_TYPE", "mysql"));
+		act(() => result.current?.onChangeValue("DB_HOST", "db.internal"));
+		expect(result.current?.values.DB_HOST).toBe("db.internal");
+
+		act(() => result.current?.onChangeValue("DB_TYPE", "sqlite"));
+		expect(result.current?.values.DB_HOST).toBeUndefined();
+		expect(result.current?.values.DB_PASSWORD).toBeUndefined();
+	});
+
+	it("弹窗文案走预设的 dialogCopy 槽位，而非默认「粘贴密钥」语境", () => {
+		const { result } = openDialog();
+		expect(result.current?.labels.setupBody).toBe("mcpPresets.dbDialog.lead");
+		expect(result.current?.labels.stepPasteKey).toBe("mcpPresets.dbDialog.fieldsTitle");
+		expect(result.current?.labels.openKeyPage).toBe("mcpPresets.dbDialog.helpCta");
+		expect(result.current?.labels.continueCta).toBe("mcpPresets.dbDialog.continueCta");
+	});
+
+	it("无 dialogCopy 的预设回落到通用密钥文案", () => {
+		const slack = getBuiltinMcpPresetById("slack");
+		const { result } = renderHook(() => useBuiltinMcpSecretsDialogModel({ open: true, preset: slack ?? null }));
+		expect(result.current?.labels.stepPasteKey).toBe("mcpPresets.stepPasteKey");
+		expect(result.current?.labels.setupBody).toBe("mcpPresets.secretsDialogLead");
 	});
 
 	it("DB_HOST 填空白串仍按未填处理", () => {

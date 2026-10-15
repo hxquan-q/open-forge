@@ -1,5 +1,6 @@
 import { SidebarTopBar as ThemeSidebarTopBar } from "@vetta-org/theme-ui/sidebar";
 import { useTranslation } from "react-i18next";
+import { brandIconUrl } from "@shared/brand-assets";
 import { SidebarCommandMenuTrigger } from "./SidebarCommandMenuTrigger";
 
 interface SidebarTopBarProps {
@@ -15,15 +16,19 @@ interface SidebarTopBarProps {
 
 /** Desktop adapter: 只做 i18n 文案注入。 */
 export function SidebarTopBar({ className, classNames, floating, onCollapse }: SidebarTopBarProps): JSX.Element {
-	const { t } = useTranslation("project");
+	const { t } = useTranslation(["project", "common"]);
 
 	return (
 		<ThemeSidebarTopBar
 			className={className}
 			classNames={classNames}
 			actions={<SidebarCommandMenuTrigger />}
+			brandIcon={
+				<img src={brandIconUrl} alt="" draggable={false} className="h-[18px] w-[18px] shrink-0" />
+			}
 			floating={floating}
 			labels={{
+				brand: t("common:appName"),
 				hide: t("sidebar.hide"),
 			}}
 			onCollapse={onCollapse}

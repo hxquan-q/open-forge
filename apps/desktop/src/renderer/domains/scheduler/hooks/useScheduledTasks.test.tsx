@@ -32,6 +32,12 @@ describe("useScheduledTasks", () => {
 				emitTaskEvent = handler;
 				return unsubscribe as () => void;
 			}),
+			exportAutomationPackages: vi.fn(async () => ({ status: "canceled" as const })),
+			importAutomationPackage: vi.fn(async () => ({ status: "canceled" as const })),
+			importAutomationPackageFromUrl: vi.fn(async () => ({ status: "canceled" as const })),
+			previewAutomationPackage: vi.fn(),
+			discoverAutomationPackages: vi.fn(async () => []),
+			emitAutomationHostEvent: vi.fn(async () => undefined),
 		};
 		Object.defineProperty(window, "vetta", {
 			configurable: true,

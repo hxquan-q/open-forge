@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeEventSource } from "../contracts.js";
 import type { RuntimeFailure } from "../failure-contract.js";
 import type { RuntimeSessionObservationEvent } from "../session-observation.js";
@@ -96,12 +97,8 @@ export function projectRuntimeSessionObservation(
 		case "message.delta":
 		case "thinking.delta":
 			return { ...base, characterCount: event.delta.length };
-		case "message.final":
-			return { ...base, role: event.message.role };
 		case "toolcall.start":
 			return { ...base, toolName: event.toolName };
-		case "toolcall.args":
-			return { ...base, toolName: event.toolName, fieldCount: Object.keys(event.args).length };
 		case "tool.start":
 			return { ...base, toolName: event.toolName, startedAt: event.startedAt };
 		case "tool.update":

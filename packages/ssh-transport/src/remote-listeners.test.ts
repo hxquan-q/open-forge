@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { spawn, spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
@@ -175,7 +177,9 @@ describe("系统端口", () => {
 	});
 });
 
-describe("进程信息", () => {
+// 本机 ps 的输出形状与信号语义是 POSIX 事实；Windows 没有 ps/SIGTERM 行为同构体，
+// 显式交给 POSIX CI（TASK-0168：显式报告，不静默当作已测试）。
+describe.skipIf(process.platform === "win32")("进程信息", () => {
 	it("把 ps 的已运行时长换成启动时间，命令行保留空格", () => {
 		const now = 1_700_000_000_000;
 		const output = [
@@ -204,7 +208,7 @@ describe("进程信息", () => {
 	});
 });
 
-describe("终止进程", () => {
+describe.skipIf(process.platform === "win32")("终止进程", () => {
 	it("拒绝对 0、1 与负数发信号——那是进程组与 init", () => {
 		expect(() => buildTerminateProcessCommand(0, false)).toThrow();
 		expect(() => buildTerminateProcessCommand(1, false)).toThrow();

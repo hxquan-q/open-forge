@@ -97,6 +97,10 @@
 		"review-canvas": {
 			"name": "Change review",
 			"description": "When the user wants a cross-file code review, write the full unified diff with artifact so Canvas groups it by file with line stats."
+		},
+		"database-analysis": {
+			"name": "Database questions & analysis",
+			"description": "Ask questions about connected databases and analyze metrics, trends, breakdowns, and period comparisons. Read-only by default, with definitions and query evidence."
 		}
 	}
 }

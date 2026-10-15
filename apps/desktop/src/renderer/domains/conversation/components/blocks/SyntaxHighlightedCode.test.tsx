@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 // @vitest-environment jsdom
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { codeToHtml } = vi.hoisted(() => ({
@@ -11,6 +11,7 @@ vi.mock("shiki", () => ({
 }));
 
 const { SyntaxHighlightedCode } = await import("@vetta-org/theme-ui/shared");
+const { MarkdownContent } = await import("@vetta-org/theme-ui/markdown");
 
 describe("SyntaxHighlightedCode", () => {
 	beforeEach(() => {
@@ -37,29 +38,55 @@ describe("SyntaxHighlightedCode", () => {
 		await waitFor(() => expect(container.innerHTML).toContain("highlighted"));
 	});
 
-	it("缓存条目被字符预算挤出后，仍挂载的代码块会重新高亮自愈", async () => {
-		// 两个 ~3M 字符的代码块：key 含源码全文，第二条入缓存即超出 5M 字符预算，
-		// 把第一条挤出。仍挂载的第一条在下一次重渲染读到 null 后必须重新高亮，
-		// 而不是永久停留在纯文本（html 进 effect 依赖就是为这条路径）。
-		const bigA = `a${"x".repeat(3_000_000)}`;
-		const bigB = `b${"x".repeat(3_000_000)}`;
+	it("缓存条目被挤出后，仍挂载的代码块会重新高亮自愈", async () => {
+		// 缓存按插入序 FIFO、条数上限淘汰：A 高亮后渲染 301 个不同代码块把 A
+		// 挤出。仍挂载的 A 在下一次重渲染读到 null 后必须重新高亮，而不是永久
+		// 停留在纯文本（html 进 effect 依赖就是为这条路径）。30k 预算闸已禁
+		// 大块高亮，驱逐改由条数上限触发。
+		const codeA = "const a = 1;";
 		const callsFor = (code: string) => codeToHtml.mock.calls.filter(([arg]) => arg === code).length;
 
 		const { container: containerA, rerender } = render(
-			<SyntaxHighlightedCode code={bigA} lang="ts" theme="dark" />,
+			<SyntaxHighlightedCode code={codeA} lang="ts" theme="dark" />,
 		);
 		await waitFor(() => expect(containerA.innerHTML).toContain("highlighted"));
-		expect(callsFor(bigA)).toBe(1);
+		expect(callsFor(codeA)).toBe(1);
 
-		const { container: containerB } = render(
-			<SyntaxHighlightedCode code={bigB} lang="ts" theme="dark" />,
+		for (let index = 0; index < 301; index += 1) {
+			render(<SyntaxHighlightedCode code={`const filler = ${index};`} lang="ts" theme="dark" />);
+		}
+		await waitFor(() =>
+			expect(callsFor("const filler = 300;")).toBeGreaterThanOrEqual(1),
 		);
-		await waitFor(() => expect(containerB.innerHTML).toContain("highlighted"));
-		expect(callsFor(bigB)).toBe(1);
 
 		// 同一挂载实例的父级重渲染（非重挂载）：旧实现无 html 依赖，effect 不重跑。
-		rerender(<SyntaxHighlightedCode code={bigA} lang="ts" theme="dark" />);
-		await waitFor(() => expect(callsFor(bigA)).toBe(2));
+		rerender(<SyntaxHighlightedCode code={codeA} lang="ts" theme="dark" />);
+		await waitFor(() => expect(callsFor(codeA)).toBe(2));
 		await waitFor(() => expect(containerA.innerHTML).toContain("highlighted"));
+	});
+
+	describe.each([
+		["total size", `${"x".repeat(1000)}\n`.repeat(31)],
+		["line count", "x\n".repeat(1001)],
+		["long line", "x".repeat(2001)],
+	])("超预算代码", (_name, code) => {
+		it("保持完整可复制，不触发语法高亮", async () => {
+			const writeText = vi.fn(async () => {});
+			Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+			const view = render(
+				<MarkdownContent
+					theme="dark"
+					labels={{ copy: "Copy", copied: "Copied" }}
+					getFileIconClass={() => ""}
+					onOpenFile={() => {}}
+					onOpenUrl={() => {}}
+					text={`\`\`\`ts\n${code}\n\`\`\``}
+				/>,
+			);
+			expect(view.container.querySelector("code")?.textContent).toContain(code.slice(0, 50));
+			fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+			await waitFor(() => expect(writeText).toHaveBeenCalled());
+			expect(codeToHtml).not.toHaveBeenCalled();
+		});
 	});
 });

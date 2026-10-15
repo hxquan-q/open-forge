@@ -21,7 +21,9 @@ describe("official Action usage", () => {
 		expect(new Set(registrations.map(({ publicId }) => publicId)).size).toBe(37);
 		for (const registration of registrations) {
 			expect(registration.publicId).toBe(registration.id);
-			expect(registration.usage?.target, registration.id).toContain("Vetta Desktop");
+			// 用法说明是模型可见文本：只描述「桌面应用」本身，不携带遗留品牌名。
+			expect(registration.usage?.target, registration.id).toContain("桌面应用");
+			expect(registration.usage?.target, registration.id).not.toMatch(/\bVetta\b/);
 			for (const field of ["useWhen", "avoidWhen", "alternatives"] as const) {
 				expect(registration.usage?.[field].trim().length, `${registration.id}.${field}`).toBeGreaterThan(0);
 			}

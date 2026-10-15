@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SpeechInputErrorCode, SpeechInputStatus } from "@preload/api";
 import { isWindows } from "@shared/lib/platform";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -73,7 +74,7 @@ export function useSpeechInput(enabled: boolean): SpeechInputModel {
 				readyStatus = await window.vetta.speechInput.getStatus();
 				setStatus(readyStatus);
 			}
-			if (readyStatus.phase !== "ready") return;
+			if (readyStatus.phase !== "ready" && readyStatus.phase !== "not-downloaded") return;
 
 			const { sessionId } = await window.vetta.speechInput.start();
 			sessionIdRef.current = sessionId;
@@ -105,10 +106,12 @@ export function useSpeechInput(enabled: boolean): SpeechInputModel {
 	const errorText = useCallback(
 		(code?: SpeechInputErrorCode): string => {
 			switch (code) {
-				case "bundled-model-invalid":
+				case "model-invalid":
 					return t("inputBar.speech.errors.integrity");
-				case "bundled-model-missing":
+				case "model-missing":
 					return t("inputBar.speech.errors.missing");
+				case "model-download-failed":
+					return t("inputBar.speech.errors.download");
 				case "unsupported-platform":
 					return t("inputBar.speech.errors.unsupported");
 				default:
@@ -121,7 +124,8 @@ export function useSpeechInput(enabled: boolean): SpeechInputModel {
 	return useMemo(() => {
 		const titleByPhase: Record<SpeechInputStatus["phase"], string> = {
 			unsupported: t("inputBar.speech.errors.unsupported"),
-			unavailable: errorText(status.errorCode),
+			"not-downloaded": t("inputBar.speech.actions.download"),
+			downloading: t("inputBar.speech.states.downloading"),
 			ready: t("inputBar.speech.actions.start"),
 			loading: t("inputBar.speech.states.loading"),
 			listening: t("inputBar.speech.actions.stop"),
@@ -129,16 +133,18 @@ export function useSpeechInput(enabled: boolean): SpeechInputModel {
 			error: errorText(status.errorCode),
 		};
 		const statusText =
-			status.phase === "loading" || status.phase === "stopping"
-				? titleByPhase[status.phase]
-				: status.phase === "error" || status.phase === "unavailable"
+			status.phase === "downloading"
+				? `${titleByPhase.downloading} ${Math.round((status.downloadProgress ?? 0) * 100)}%`
+				: status.phase === "loading" || status.phase === "stopping"
 					? titleByPhase[status.phase]
-					: null;
+					: status.phase === "error"
+						? titleByPhase[status.phase]
+						: null;
 		return {
 			visible: buildEnabled && isWindows,
 			active: status.phase === "listening",
 			disabled:
-				!enabled || status.phase === "unavailable" || status.phase === "loading" || status.phase === "stopping",
+				!enabled || status.phase === "downloading" || status.phase === "loading" || status.phase === "stopping",
 			title: titleByPhase[status.phase],
 			statusText,
 			onToggle: () => void toggle(),

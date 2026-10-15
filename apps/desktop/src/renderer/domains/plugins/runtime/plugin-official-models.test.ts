@@ -1,5 +1,6 @@
 import { getDefaultStore } from "jotai";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 import { createOfficialModelsApi } from "./plugin-official-models.js";
 
 // atoms 桶文件（连同 auth-atoms）在模块求值期就要 window/localStorage；被测模块只用到
@@ -96,13 +97,14 @@ function stubInternalModels(): { list: ReturnType<typeof vi.fn>; validateModelKe
 }
 
 describe("official.models 合并远程目录", () => {
-	it("列出登录后下发的远程 provider（Open Forge Go），并标记 remote", async () => {
+	it("列出登录后下发的远程 provider（品牌名 Go），并标记 remote", async () => {
 		stubInternalModels();
 		await setRemoteProviders({ "vetta-go": { models: [{ id: "opus-5", name: "Opus 5" }] } });
 
 		const result = await createOfficialModelsApi(() => undefined, "s").list();
 		const go = result.providers.find((provider) => provider.id === "vetta-go");
-		expect(go).toMatchObject({ displayName: "Open Forge Go", remote: true, modelCount: 1 });
+		// 展示名随品牌档案（默认 Allstr ai，self 档 Open Forge），不写死某一档的品牌名。
+		expect(go).toMatchObject({ displayName: `${DESKTOP_BRAND.displayName} Go`, remote: true, modelCount: 1 });
 		expect(go?.models[0]).toMatchObject({ id: "opus-5", name: "Opus 5" });
 		// 本地 provider 原样保留
 		expect(result.providers.find((provider) => provider.id === "openai")?.models).toHaveLength(1);

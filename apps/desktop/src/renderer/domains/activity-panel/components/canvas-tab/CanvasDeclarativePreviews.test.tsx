@@ -14,7 +14,7 @@ vi.mock("react-i18next", () => ({
 	useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const chartLabels = { empty: "chart-empty" };
+const chartLabels = { empty: "chart-empty", chart: "chart-name" };
 const checklistLabels = { empty: "checklist-empty", done: "done", active: "active", todo: "todo" };
 const diffLabels = {
 	empty: "diff-empty",
@@ -63,6 +63,39 @@ describe("canvas declarative previews", () => {
 		);
 		expect(screen.getByRole("img").querySelectorAll("path")).toHaveLength(2);
 		expect(screen.getByText("75%")).toBeTruthy();
+	});
+
+	it("饼图图例按类目着色并给出类目名，SVG 有可访问名", () => {
+		renderChart(
+			parseCanvasChart(
+				JSON.stringify({ type: "pie", labels: ["桌面端", "移动端"], series: [{ values: [3, 1] }] }),
+			),
+		);
+		// 类目名是饼图唯一能把扇区对上号的文字，必须出现在图例里。
+		expect(screen.getByText("桌面端")).toBeTruthy();
+		expect(screen.getByText("移动端")).toBeTruthy();
+		expect(screen.queryByText("#1")).toBeNull();
+		expect(screen.getByRole("img", { name: "chart-name" })).toBeTruthy();
+	});
+
+	it("饼图图例只列出有实际份额的类目", () => {
+		renderChart(
+			parseCanvasChart(
+				JSON.stringify({ type: "pie", labels: ["桌面端", "移动端"], series: [{ values: [3, 0] }] }),
+			),
+		);
+		expect(screen.getByText("桌面端")).toBeTruthy();
+		// 零份额类目没有对应扇区，图例里出现只会误导。
+		expect(screen.queryByText("移动端")).toBeNull();
+	});
+
+	it("spec 带标题时 SVG 可访问名取标题", () => {
+		renderChart(
+			parseCanvasChart(
+				JSON.stringify({ type: "line", title: "月度收入", labels: ["1月"], series: [{ values: [2] }] }),
+			),
+		);
+		expect(screen.getByRole("img", { name: "月度收入" })).toBeTruthy();
 	});
 
 	it("清单按完成态 / 进行态 / 待开始渲染并显示明细", () => {

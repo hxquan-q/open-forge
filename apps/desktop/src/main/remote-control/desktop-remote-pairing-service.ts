@@ -2,7 +2,7 @@
 import { randomBytes } from "node:crypto";
 import { hostname } from "node:os";
 import type { RemoteConnectionState } from "@vetta/remote-control";
-import { type DesktopConfig, readDesktopConfig, writeDesktopConfig } from "../config/desktop-config-store.js";
+import { type DesktopConfig, readDesktopConfig, updateDesktopConfig } from "../config/desktop-config-store.js";
 import { getDesktopCredentialVault } from "../credentials/desktop-credential-vault.js";
 import { getAppLogger } from "../logger.js";
 import { startDesktopRemoteAccess, stopDesktopRemoteAccess } from "./desktop-remote-access-service.js";
@@ -96,8 +96,7 @@ export class DesktopRemotePairingService {
 			desktopSecret,
 			{ kind: "remote-desktop", consumer: "desktop" },
 		);
-		const config = await readDesktopConfig();
-		await this.persistRemoteConfig(config, { relayBaseUrl: relay, pairingId, inputEnabled: false });
+		await this.persistRemoteConfig({ relayBaseUrl: relay, pairingId, inputEnabled: false });
 		await this.startActive(relay, pairingId, desktopSecret, false, bootstrapSecret);
 		this.state = {
 			status: this.connectionState === "online" ? "connected" : "ready",
@@ -117,7 +116,7 @@ export class DesktopRemotePairingService {
 		else this.host?.revokeInput();
 		this.state = { ...this.state, inputEnabled: effective };
 		const config = await readDesktopConfig();
-		if (config.remoteControl) await this.persistRemoteConfig(config, { inputEnabled: effective });
+		if (config.remoteControl) await this.persistRemoteConfig({ inputEnabled: effective });
 		return this.getState();
 	}
 
@@ -128,8 +127,7 @@ export class DesktopRemotePairingService {
 		this.connectionState = "idle";
 		if (clearCredential)
 			this.vault.remove({ namespace: CREDENTIAL_NAMESPACE, ownerId: CREDENTIAL_OWNER, name: CREDENTIAL_NAME });
-		const config = await readDesktopConfig();
-		if (config.remoteControl) await writeDesktopConfig({ ...config, remoteControl: undefined });
+		await updateDesktopConfig((config) => (config.remoteControl ? { ...config, remoteControl: undefined } : config));
 		this.state = { status: "idle", inputEnabled: false, inputSupported: false };
 		log.info("remote pairing revoked");
 	}
@@ -176,11 +174,8 @@ export class DesktopRemotePairingService {
 		return this.vault.get({ namespace: CREDENTIAL_NAMESPACE, ownerId: CREDENTIAL_OWNER, name: CREDENTIAL_NAME });
 	}
 
-	private async persistRemoteConfig(
-		config: DesktopConfig,
-		patch: NonNullable<DesktopConfig["remoteControl"]>,
-	): Promise<void> {
-		await writeDesktopConfig({ ...config, remoteControl: { ...config.remoteControl, ...patch } });
+	private async persistRemoteConfig(patch: NonNullable<DesktopConfig["remoteControl"]>): Promise<void> {
+		await updateDesktopConfig((config) => ({ ...config, remoteControl: { ...config.remoteControl, ...patch } }));
 	}
 }
 

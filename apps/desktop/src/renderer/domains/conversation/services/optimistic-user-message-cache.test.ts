@@ -1,8 +1,14 @@
-import { type ConversationUserMessageViewModel, createConversationUserMessage } from "@shared/conversation";
+// Modified by The Open Forge contributors.
+import {
+	type ConversationUserMessageViewModel,
+	createConversationAgentMessage,
+	createConversationUserMessage,
+} from "@shared/conversation";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
 	clearOptimisticUserMessages,
 	reconcileOptimisticUserMessages,
+	reconcileOptimisticUserMessagesTail,
 	rememberOptimisticUserMessage,
 } from "./optimistic-user-message-cache";
 
@@ -93,7 +99,24 @@ describe("optimistic user message reconciliation", () => {
 		});
 
 		const history = [user("persisted-1", "first"), user("persisted-2", "different")];
-		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([...history, optimistic]);
+		// 未确认也不丢：落在其发送时的因果位置（persisted-1 之后），而非列表末尾。
+		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([history[0], optimistic, history[1]]);
+	});
+
+	it("序号被其他规范消息占用时按发送序号钳制落位，不追加到回复末尾", () => {
+		// 排队消息被 turn 消费后镜像气泡记下的序号，可能已被另一条更早落盘的
+		// 发送占据；旧实现走尾部兜底，把气泡追加到它触发的回复之后（BUG-0068）。
+		const optimistic = user("optimistic-2", "插队消息");
+		rememberOptimisticUserMessage("runtime-a", optimistic, [user("persisted-1", "first")]);
+		const reply = createConversationAgentMessage({ id: "agent-1", phase: "completed", blocks: [] });
+		const history = [user("persisted-1", "first"), user("persisted-2", "other"), reply];
+
+		expect(reconcileOptimisticUserMessages("runtime-a", history).map((message) => message.id)).toEqual([
+			"persisted-1",
+			"optimistic-2",
+			"persisted-2",
+			"agent-1",
+		]);
 	});
 
 	it("永远对不上账的气泡在有限次对账后停止残留", () => {
@@ -103,7 +126,8 @@ describe("optimistic user message reconciliation", () => {
 		rememberOptimisticUserMessage("runtime-a", optimistic, [], { matchTextOnly: true });
 
 		const history = [user("persisted-1", "真实用户消息")];
-		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([...history, optimistic]);
+		// 发送时没有任何 user 序号（precedingUserCount=0），落在列表首位。
+		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual([optimistic, ...history]);
 		reconcileOptimisticUserMessages("runtime-a", history);
 		reconcileOptimisticUserMessages("runtime-a", history);
 		expect(reconcileOptimisticUserMessages("runtime-a", history)).toEqual(history);
@@ -126,5 +150,71 @@ describe("optimistic user message reconciliation", () => {
 
 		expect(reconcileOptimisticUserMessages("runtime-b", [])).toEqual([]);
 		expect(reconcileOptimisticUserMessages("runtime-a", [])).toEqual([optimistic]);
+	});
+});
+
+describe("optimistic user message tail reconciliation（TASK-0050 窗口化）", () => {
+	it("按尾部对齐确认：窗口内最后一条 user 命中即消费乐观气泡", () => {
+		// 窗口化尾页只含历史后缀——precedingUserCount 全局序号不可得。
+		const optimistic = user("optimistic-1", "latest question");
+		// 发送时全量历史已有 3 条 user；窗口页只显示最后两条。
+		rememberOptimisticUserMessage("runtime-a", optimistic, [user("p-1", "a"), user("p-2", "b"), user("p-3", "c")]);
+		const tail = [user("p-3", "c"), user("persisted-new", "latest question")];
+		const result = reconcileOptimisticUserMessagesTail("runtime-a", tail);
+		expect(result.items.map((m) => m.id)).toEqual(["p-3", "persisted-new"]);
+		expect(result.expiredIds.size).toBe(0);
+		// 已确认——下一轮对账不再出现该气泡。
+		expect(reconcileOptimisticUserMessagesTail("runtime-a", tail).items).toHaveLength(2);
+	});
+
+	it("多条待决气泡按发送顺序对位尾部 user 序列", () => {
+		rememberOptimisticUserMessage("runtime-a", user("opt-1", "q4"), [user("p", "older")]);
+		rememberOptimisticUserMessage("runtime-a", user("opt-2", "q5"), [user("p", "older")]);
+		const tail = [user("persisted-4", "q4"), user("persisted-5", "q5")];
+		const result = reconcileOptimisticUserMessagesTail("runtime-a", tail);
+		expect(result.items.map((m) => m.id)).toEqual(["persisted-4", "persisted-5"]);
+	});
+
+	it("对不上的气泡不进 canonical 序列也不消失：由调用方作 live-only 保留", () => {
+		const optimistic = user("optimistic-1", "still pending");
+		rememberOptimisticUserMessage("runtime-a", optimistic, []);
+		const tail = [user("persisted-1", "unrelated")];
+		const result = reconcileOptimisticUserMessagesTail("runtime-a", tail);
+		expect(result.items.map((m) => m.id)).toEqual(["persisted-1"]);
+		expect(result.expiredIds.size).toBe(0);
+	});
+
+	it("未决气泡超过最大对账次数后进入 expiredIds 并移出待决池", () => {
+		const optimistic = user("optimistic-1", "never lands");
+		rememberOptimisticUserMessage("runtime-a", optimistic, []);
+		const tail = [user("persisted-1", "unrelated")];
+		let expiredIds: ReadonlySet<string> = new Set();
+		for (let i = 0; i < 4; i += 1) {
+			expiredIds = reconcileOptimisticUserMessagesTail("runtime-a", tail).expiredIds;
+		}
+		expect([...expiredIds]).toEqual(["optimistic-1"]);
+		// 过期后待决池已清空。
+		expect(reconcileOptimisticUserMessagesTail("runtime-a", tail).items).toHaveLength(1);
+	});
+
+	it("确认的气泡把 inputSegments 快照回填到 canonical item", () => {
+		const inputSegments = [
+			{ kind: "text" as const, text: "see " },
+			{ kind: "file" as const, path: "C:/f.txt" },
+		];
+		const optimistic = createConversationUserMessage({
+			id: "opt-1",
+			text: "see @C:/f.txt",
+			inputSegments,
+			attachments: [{ kind: "file", path: "C:/f.txt" }],
+		});
+		rememberOptimisticUserMessage("runtime-a", optimistic, []);
+		const canonical = createConversationUserMessage({
+			id: "persisted-1",
+			text: optimistic.text,
+			attachments: optimistic.attachments,
+		});
+		const result = reconcileOptimisticUserMessagesTail("runtime-a", [canonical]);
+		expect(result.items[0]).toMatchObject({ id: "persisted-1", inputSegments });
 	});
 });

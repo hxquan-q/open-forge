@@ -9,6 +9,8 @@ import {
 	perfMessageScrollRecordRenderedItems,
 	perfMessageScrollRecordTotalHeight,
 } from "@shared/lib/perf-message-scroll";
+import { useAtomValue } from "jotai";
+import { transcriptWindowStateAtom } from "@shared/store/atoms";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import type { ListItem, ListRange, SizeFunction } from "react-virtuoso";
@@ -24,6 +26,7 @@ import {
 } from "./message-height-estimates";
 import {
 	ensureTranscriptItemRestored,
+	loadOlderTranscriptPage,
 	noteTranscriptViewportRange,
 } from "../../services/transcript-window-controller";
 import type { ChatTimelineItem, MessageListModel, MessageListProps } from "./types";
@@ -98,6 +101,10 @@ export function MessageListView({
 	} = model;
 	const scrollerElement = scroll.scrollerElement;
 	const diagnosticsEnabled = perfMessageScrollEnabled();
+	// TASK-0050：Virtuoso firstItemIndex 偏移基数；prepend 时窗口态前移它保住锚点。
+	// 所有从 Virtuoso 回来的索引（itemContent/rangeChanged/itemsRendered/data-item-index）
+	// 都在绝对空间，进入消息层前先减回偏移。
+	const indexOffset = useAtomValue(transcriptWindowStateAtom).firstItemIndex;
 	const virtualizerKey = useMessageVirtualizerKey(sessionId, messages);
 	const heightEstimates = useMemo(
 		() => buildMessageHeightEstimates(messages, sessionId),
@@ -109,7 +116,8 @@ export function MessageListView({
 		return (element, field) => {
 			const measured = measure(element, field);
 			if (field !== "offsetHeight") return measured;
-			const index = Number.parseInt(element.dataset.itemIndex ?? "", 10);
+			// data-index 是 originalIndex（数组相对）；data-item-index 在 firstItemIndex 开启后是绝对空间。
+			const index = Number.parseInt(element.dataset.index ?? "", 10);
 			const estimated = Number.isInteger(index) ? heightEstimates[index] : undefined;
 			if (estimated !== undefined) perfMessageScrollRecordItemSize(index, estimated, measured);
 			return measured;
@@ -126,19 +134,29 @@ export function MessageListView({
 	}, [diagnosticsEnabled, scrollerElement]);
 	const handleItemsRendered = useCallback(
 		(items: ListItem<ChatTimelineItem>[]) => {
-			activeItem.onItemsRendered(items);
-			if (diagnosticsEnabled) perfMessageScrollRecordRenderedItems(items);
+			// ListItem.index 是绝对索引；originalIndex 才是数组相对下标。
+			const relative = items.map(
+				(item) => ({ ...item, index: item.originalIndex ?? item.index - indexOffset }) as ListItem<ChatTimelineItem>,
+			);
+			activeItem.onItemsRendered(relative);
+			if (diagnosticsEnabled) perfMessageScrollRecordRenderedItems(relative);
 		},
-		[activeItem.onItemsRendered, diagnosticsEnabled],
+		[activeItem.onItemsRendered, diagnosticsEnabled, indexOffset],
 	);
 	const handleRangeChanged = useCallback(
 		(range: ListRange) => {
 			// TASK-0035：活动窗口（已含 increaseViewportBy 缓冲）驱动占位恢复/降级。
-			noteTranscriptViewportRange(range);
+			noteTranscriptViewportRange({
+				startIndex: range.startIndex - indexOffset,
+				endIndex: range.endIndex - indexOffset,
+			});
 			if (diagnosticsEnabled) perfMessageScrollRecordRange(range);
 		},
-		[diagnosticsEnabled],
+		[diagnosticsEnabled, indexOffset],
 	);
+	const handleStartReached = useCallback(() => {
+		void loadOlderTranscriptPage();
+	}, []);
 	const handleTimelineNavigate = useCallback(
 		(index: number) => {
 			const target = messages[index];
@@ -162,12 +180,11 @@ export function MessageListView({
 		}
 		return null;
 	}, [messages]);
-	const sessionUsages = useMemo<readonly Usage[]>(
-		() => collectAgentUsages(deferredContentReady ? messages : messages.slice(-4)),
+	const sessionUsagesRef = useRef<readonly Usage[]>([]);
+	sessionUsagesRef.current = useMemo<readonly Usage[]>(
+		() => collectAgentUsages(deferredContentReady ? messages : messages.slice(-4), sessionUsagesRef.current),
 		[deferredContentReady, messages],
 	);
-	const sessionUsagesRef = useRef(sessionUsages);
-	sessionUsagesRef.current = sessionUsages;
 	const itemContent = useCallback(
 		(index: number, message: ChatTimelineItem) => {
 			return (
@@ -225,13 +242,15 @@ export function MessageListView({
 										atBottomThreshold={80}
 										itemsRendered={handleItemsRendered}
 										rangeChanged={handleRangeChanged}
+										startReached={handleStartReached}
+										firstItemIndex={indexOffset}
 										overscan={0}
 										increaseViewportBy={VIEWPORT_BUFFER}
 										heightEstimates={heightEstimates}
 										itemSize={itemSize}
 										initialTopMostItemIndex={scroll.initialTopMostItemIndex}
 									>
-										{(message, index) => itemContent(index, message)}
+										{(message, index) => itemContent(index - indexOffset, message)}
 									</MessageFeed.VirtualList>
 								</MessageFeedLayout.Virtualizer>
 							</PerfMessageScrollProfiler>

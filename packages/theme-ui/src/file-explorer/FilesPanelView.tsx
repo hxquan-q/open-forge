@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 
 export interface FilesPanelViewLabels {
@@ -24,6 +25,8 @@ export interface FilesPanelViewProps {
 	/** Delete confirm overlay. */
 	deleteDialog: ReactNode;
 	transferDialog: ReactNode;
+	/** Host-rendered remote transfer progress panel (optional; SSH workspaces only). */
+	sshTransfersPanel?: ReactNode;
 	/** Error toast text. */
 	errorToast: string | null;
 }
@@ -42,6 +45,7 @@ export function FilesPanelView({
 	contextMenu,
 	deleteDialog,
 	transferDialog,
+	sshTransfersPanel,
 	errorToast,
 }: FilesPanelViewProps): JSX.Element {
 	if (!rootDir) {
@@ -80,6 +84,7 @@ export function FilesPanelView({
 			{contextMenu}
 			{deleteDialog}
 			{transferDialog}
+			{sshTransfersPanel}
 
 			{errorToast && (
 				<div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-destructive px-3 py-1.5 text-[12px] text-white shadow-lg">

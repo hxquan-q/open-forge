@@ -6,9 +6,7 @@ const SESSION_EVENT_TYPES = new Set([
 	"session.path_changed",
 	"message.delta",
 	"thinking.delta",
-	"message.final",
 	"toolcall.start",
-	"toolcall.args",
 	"tool.start",
 	"tool.update",
 	"tool.phase",
@@ -38,6 +36,7 @@ const ASSISTANT_EVENT_TYPES = new Set([
 	"toolcall_start",
 	"toolcall_delta",
 	"toolcall_end",
+	"retry",
 	"done",
 	"error",
 ]);
@@ -63,6 +62,22 @@ function validateAssistantEvent(value: unknown): void {
 	}
 	if (event.type === "error") {
 		if (!record(event.error) || typeof event.reason !== "string") fail("invalid assistant error event");
+		if (event.failure !== undefined && !record(event.failure)) fail("invalid assistant failure");
+		return;
+	}
+	if (event.type === "retry") {
+		// 重连活动没有 `partial`：它描述的是同一次调用内的等待，不是新的消息行。
+		// `reason` 与 done / error 的 `reason` 同样只校验形态：provider 侧新增一条
+		// 重试轨道时，不该因为这里的枚举白名单把整条会话流拒掉。
+		if (typeof event.reason !== "string") fail("assistant retry reason is invalid");
+		if (!Number.isInteger(event.attempt) || Number(event.attempt) < 1) fail("assistant retry attempt is invalid");
+		if (!Number.isInteger(event.maxAttempts) || Number(event.maxAttempts) < 0) {
+			fail("assistant retry maxAttempts is invalid");
+		}
+		if (typeof event.delayMs !== "number" || !Number.isFinite(event.delayMs) || event.delayMs < 0) {
+			fail("assistant retry delayMs is invalid");
+		}
+		if (typeof event.errorMessage !== "string") fail("assistant retry errorMessage is invalid");
 		if (event.failure !== undefined && !record(event.failure)) fail("invalid assistant failure");
 		return;
 	}

@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import { stat } from "node:fs/promises";
 import { parseProjectLocation } from "@vetta/ssh-transport";
-import { readDesktopConfig, writeDesktopConfig } from "../config/desktop-config-store.js";
+import { readDesktopConfig, updateDesktopConfig } from "../config/desktop-config-store.js";
 import { allowProjectRoot, createFilesystemDirectory } from "../filesystem/filesystem-service.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
 import { broadcastProjectsChanged } from "./project-events.js";
@@ -23,7 +24,7 @@ export function getDesktopProjectService(): ProjectService {
 		allowProjectRoot,
 		createDirectory: createFilesystemDirectory,
 		readConfig: readDesktopConfig,
-		writeConfig: writeDesktopConfig,
+		updateConfig: updateDesktopConfig,
 		broadcastChanged: broadcastProjectsChanged,
 		isKnownSshHost: async (hostId) => {
 			const config = await readDesktopConfig();

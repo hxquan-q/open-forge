@@ -42,7 +42,7 @@ describe("metadata", () => {
 		});
 
 		const home = buildPageMetadata({
-			title: "Vetta 文档",
+			title: "Open Forge 文档",
 			description: site.description,
 			path: "/",
 			isHome: true,
@@ -99,11 +99,11 @@ describe("metadata", () => {
 			canonical: "/product/models/",
 			types: { "text/markdown": "/product/models.md" },
 		});
-		expect(metadata.title).toEqual({ absolute: "Configure models | Vetta Documentation" });
+		expect(metadata.title).toEqual({ absolute: "Configure models | Open Forge Documentation" });
 		expect(metadata.alternates).not.toHaveProperty("languages");
 		expect(metadata.openGraph).toMatchObject({
 			locale: "en_US",
-			siteName: "Vetta Documentation",
+			siteName: "Open Forge Documentation",
 			url: "/product/models/",
 		});
 	});

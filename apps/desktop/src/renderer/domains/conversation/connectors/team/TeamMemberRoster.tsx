@@ -65,6 +65,23 @@ export interface TeamMemberRosterProps {
 	readonly onOpenSettings?: () => void;
 }
 
+/** 亚像素级宽度差不产生可见差异；测量反馈环必须以此为收敛阈值。 */
+const LABEL_WIDTH_EPSILON = 0.5;
+
+/**
+ * 分配结果与现值逐成员等价（键集合一致且每格差 ≤ 半像素）时视为未变化。
+ * 测量→setState→重测的回路若每次都写新对象，流式事件高频时会在真实布局下
+ * 自驱动成渲染循环（BUG-0101 的 Maximum update depth exceeded）。
+ */
+export function sameTeamMemberLabelWidths(
+	current: Readonly<Record<string, number>>,
+	next: Readonly<Record<string, number>>,
+): boolean {
+	const keys = Object.keys(current);
+	if (keys.length !== Object.keys(next).length) return false;
+	return keys.every((key) => Math.abs((current[key] ?? 0) - (next[key] ?? 0)) <= LABEL_WIDTH_EPSILON);
+}
+
 /**
  * 页头标题下方的成员胶囊条：一人一枚胶囊、直接写名字，点开对应成员的独立会话。
  * 头像组挤在标题右侧时既认不出人也抢标题的位置，所以整条挪到标题下方。
@@ -90,6 +107,11 @@ export function TeamMemberRoster({
 	const labelRefs = useRef(new Map<string, HTMLSpanElement>());
 	const labelMinimumRefs = useRef(new Map<string, HTMLSpanElement>());
 	const [labelWidths, setLabelWidths] = useState<Readonly<Record<string, number>>>({});
+	const membersRef = useRef(members);
+	membersRef.current = members;
+	// 测量输入只有成员集合、名字与队长角标；members 身份每次流事件都换，直接依赖
+	// 会让流式期间每个事件都重挂观察器并重排一次测量（BUG-0101 的循环源头）。
+	const measurementKey = `${leaderMemberId ?? ""}|${members.map((member) => `${member.id}:${member.name}`).join("|")}`;
 
 	useEffect(() => {
 		const container = containerRef.current;
@@ -98,9 +120,10 @@ export function TeamMemberRoster({
 		let frameId: number | null = null;
 
 		const updateLabelWidths = () => {
+			const currentMembers = membersRef.current;
 			const gap = Number.parseFloat(getComputedStyle(roster).columnGap) || 0;
-			const itemCount = members.length + (activeMemberId && onBackToTeam ? 1 : 0);
-			const fixedWidth = members.reduce((total, member) => {
+			const itemCount = currentMembers.length + (activeMemberId && onBackToTeam ? 1 : 0);
+			const fixedWidth = currentMembers.reduce((total, member) => {
 				const button = memberButtonRefs.current.get(member.id);
 				const label = labelRefs.current.get(member.id);
 				if (!button || !label) return total;
@@ -111,7 +134,7 @@ export function TeamMemberRoster({
 				0,
 				roster.clientWidth - fixedWidth - backButtonWidth - Math.max(0, itemCount - 1) * gap,
 			);
-			const measurements = members.map((member) => {
+			const measurements = currentMembers.map((member) => {
 				const label = labelRefs.current.get(member.id);
 				const minimum = labelMinimumRefs.current.get(member.id);
 				if (!label || !minimum) return { natural: 0, compact: 0 };
@@ -120,7 +143,10 @@ export function TeamMemberRoster({
 				return { natural, compact: minimum.getBoundingClientRect().width };
 			});
 			const widths = allocateTeamMemberRosterWidths(measurements, availableLabelWidth);
-			setLabelWidths(Object.fromEntries(members.map((member, index) => [member.id, widths[index] ?? 0])));
+			setLabelWidths((current) => {
+				const next = Object.fromEntries(currentMembers.map((member, index) => [member.id, widths[index] ?? 0]));
+				return sameTeamMemberLabelWidths(current, next) ? current : next;
+			});
 		};
 
 		const scheduleLabelWidths = () => {
@@ -143,7 +169,7 @@ export function TeamMemberRoster({
 			observer.disconnect();
 			if (frameId !== null) window.cancelAnimationFrame(frameId);
 		};
-	}, [activeMemberId, leaderMemberId, members, onBackToTeam, onOpenSettings]);
+	}, [activeMemberId, measurementKey, onBackToTeam, onOpenSettings]);
 
 	if (members.length === 0) return null;
 
@@ -169,7 +195,7 @@ export function TeamMemberRoster({
 						data-team-session-back="true"
 						title={t("chat.backToTeam")}
 						aria-label={t("chat.backToTeam")}
-						className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 						onClick={onBackToTeam}
 					>
 						<span className="icon-[solar--users-group-rounded-bold] h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -196,7 +222,7 @@ export function TeamMemberRoster({
 							title={t("chat.memberSession", { name: member.name })}
 							aria-label={t("chat.memberSession", { name: member.name })}
 							className={cn(
-								"relative flex h-7 shrink-0 items-center overflow-hidden rounded-full py-0.5 pl-1 pr-2.5 text-[12px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-45",
+								"relative flex h-7 shrink-0 items-center overflow-hidden rounded-full py-0.5 pl-1 pr-2.5 text-[12px] font-medium transition-colors focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45",
 								active
 									? "bg-primary/15 text-primary"
 									: "bg-muted text-foreground hover:bg-accent",
@@ -260,7 +286,7 @@ export function TeamMemberRoster({
 					data-team-settings="true"
 					title={t("chat.configure")}
 					aria-label={t("chat.configure")}
-					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
 					onClick={onOpenSettings}
 				>
 					<span className="icon-[solar--settings-linear] h-3.5 w-3.5" aria-hidden="true" />

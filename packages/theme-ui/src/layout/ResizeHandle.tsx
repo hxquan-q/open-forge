@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { useCallback, useRef, type JSX, type PointerEvent as ReactPointerEvent } from "react";
+import { dispatchOverlayDrag } from "./overlay-drag";
 
 /**
  * `side` 是「把手贴在被拉伸元素的哪条边上」，不是拖拽方向。
@@ -88,6 +90,7 @@ export function ResizeHandle({ side, onResizeStart, onResize, onResizeEnd }: Res
 			overlay.style.zIndex = "9999";
 			overlay.style.cursor = axis.overlayCursor;
 			document.body.appendChild(overlay);
+			dispatchOverlayDrag(true);
 
 			const onPointerMove = (ev: PointerEvent) => {
 				const position = readPosition(ev);
@@ -100,15 +103,18 @@ export function ResizeHandle({ side, onResizeStart, onResize, onResizeEnd }: Res
 			const onPointerUp = () => {
 				document.removeEventListener("pointermove", onPointerMove);
 				document.removeEventListener("pointerup", onPointerUp);
+				document.removeEventListener("pointercancel", onPointerUp);
 				if (animationFrame !== null) cancelAnimationFrame(animationFrame);
 				flushResize();
 				overlay.remove();
+				dispatchOverlayDrag(false);
 				document.body.style.userSelect = "";
 				onResizeEnd?.();
 			};
 
 			document.addEventListener("pointermove", onPointerMove);
 			document.addEventListener("pointerup", onPointerUp);
+			document.addEventListener("pointercancel", onPointerUp);
 			document.body.style.userSelect = "none";
 		},
 		[axis.overlayCursor, axis.vertical, side, onResizeStart, onResize, onResizeEnd],

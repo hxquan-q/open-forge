@@ -162,7 +162,7 @@ export class StatelessAgentCoreTurnEngine implements TurnEnginePort {
 
 		return {
 			messages,
-			limits: resolveLimits(this.options.limits),
+			limits: { ...resolveLimits(this.options.limits), maxParallelToolCalls: this.options.maxParallelToolCalls },
 			signal: request.signal,
 			observer: () => eventDelivery.recordEmission(),
 			...(request.allowSilentCompletion ? { allowSilentCompletion: true } : {}),
@@ -728,6 +728,7 @@ function toAgentTool(
 		name: tool.name,
 		description: tool.description,
 		inputSchema: modelTool.parameters,
+		executionMode: tool.executionMode,
 		validateInput: validateInput
 			? (input) => validateInput(input)
 			: (input) =>

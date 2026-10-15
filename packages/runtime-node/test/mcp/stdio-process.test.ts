@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
+import { StdioMcpClient } from "../../src/mcp/transports/stdio/stdio-mcp-client.js";
 import { StdioMcpProcess } from "../../src/mcp/transports/stdio/stdio-process.js";
 import {
 	getActiveStdioMcpProcessCount,
@@ -72,6 +73,27 @@ describe("MCP stdio message bounds", () => {
 					maxMessageBytes: 0,
 				}),
 		).toThrow(/positive integer/);
+	});
+});
+
+describe("MCP stdio early-exit diagnostics", () => {
+	it("pending initialize failure surfaces the process stderr tail", async () => {
+		// npx 缓存损坏 / 命令不存在时 server 启动即死，死因只写在 stderr——
+		// 拒绝 pending 请求时必须带上尾部片段，否则上层只看到无信息的 exit code。
+		const client = new StdioMcpClient({
+			name: "dies-on-boot",
+			config: {
+				command: process.execPath,
+				args: ["-e", 'process.stderr.write("npm error ENOENT poisoned npx cache"); process.exit(1)'],
+			},
+		});
+		await expect(
+			client.initialize({
+				protocolVersion: "2025-11-25",
+				clientInfo: { name: "vetta-test", version: "1" },
+			}),
+		).rejects.toThrow(/poisoned npx cache/);
+		await client.close();
 	});
 });
 

@@ -19,7 +19,9 @@ import type { McpRuntimeToolSource } from "@vetta/runtime-mcp";
 import type { ConversationOwnershipManager } from "@vetta/runtime-storage/conversation";
 import type { SubagentTypeRegistryLike } from "@vetta/runtime-subagents";
 import type { CodingToolResultPolicy } from "@vetta/runtime-tools";
+import type { CodingAgentDatasetOperations } from "../../features/dataset/contracts.js";
 import type { CodingAgentKnowledgeRuntime } from "../../features/knowledge/contracts.js";
+import type { CodingAgentResearchScopeOperations } from "../../features/research/contracts.js";
 import type { CodingAgentTodoRuntime } from "../../features/todo/contracts.js";
 import type { CodingAgentMemoryRolloverRuntime } from "../../memory/index.js";
 import type { ModelInputImageProcessor } from "../../model-context/image-normalization.js";
@@ -41,7 +43,7 @@ import type {
 } from "../../runtime-contracts/index.js";
 import type { CodingAgentConversationPersistenceFactory } from "./conversation-persistence.js";
 import type { CodingAgentMemoryRuntimeFactoryOptions } from "./memory-runtime.js";
-import type { CodingAgentRuntimeHostRetrySettings } from "./runtime-host.js";
+import type { CodingAgentRuntimeHostModelSettings, CodingAgentRuntimeHostRetrySettings } from "./runtime-host.js";
 import type { CodingAgentRuntimeSessionOptions } from "./runtime-session-options.js";
 import type { CodingAgentSessionExecutionEnvironmentFactory } from "./session-execution-environment.js";
 import type {
@@ -94,6 +96,10 @@ export interface CodingAgentRuntimeToolOptions {
 	readonly activation?: CodingAgentToolActivation;
 	/** Knowledge 的查询与写入实现由最终宿主选择；缺省时不注册 Knowledge Tool。 */
 	readonly knowledgeRuntime?: CodingAgentKnowledgeRuntime;
+	/** 本地研究来源枚举实现由最终宿主选择；缺省时不注册 research_scope。 */
+	readonly researchScope?: CodingAgentResearchScopeOperations;
+	/** 数据集文件剖析实现由最终宿主选择；缺省时不注册 dataset_profile。 */
+	readonly datasetProfile?: CodingAgentDatasetOperations;
 	/** 仅用于保留宿主既有系统提示词合同；不会把名称对应的工具加入可执行 Tool Frame。 */
 	readonly systemPromptAdvertisedToolNames?: readonly string[];
 	readonly mcpSource?: McpRuntimeToolSource;
@@ -167,6 +173,8 @@ export interface CodingAgentPromptRuntimeSourceContext {
 export interface CodingAgentPromptRuntimeSources {
 	readonly resourceSource: CodingAgentPromptResourceSource;
 	readonly settingsSource: CodingAgentPromptSettingsSource;
+	/** 宿主解析的品牌展示名（品牌档位）；缺省 = `DEFAULT_BRAND_NAME`。 */
+	readonly brandName?: string;
 }
 
 export interface CodingAgentRuntimePluginOptions {
@@ -242,6 +250,8 @@ export interface CodingAgentRuntimeObservabilityOptions {
 export interface CodingAgentRuntimeHostOptions {
 	/** 可选的 Coding Agent 自动重试设置；由通用 Assembly decorator 承载状态机。 */
 	readonly runtimeHostRetrySettings?: CodingAgentRuntimeHostRetrySettings;
+	/** Provider transport 偏好；每次模型调用动态读取。 */
+	readonly runtimeHostModelSettings?: CodingAgentRuntimeHostModelSettings;
 }
 
 export interface CodingAgentObservationRoute {

@@ -32,3 +32,16 @@ bun run build   # writes dist/ and release/svg-viewer-<version>.zip
 Desktop development and packaging consume the generated zip. Run
 `bun run build:presets` from `apps/desktop` to validate and extract it
 to the development system-plugin staging directory.
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/ui"
+```

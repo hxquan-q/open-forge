@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import type { DesktopApi, DesktopSpeechInputApi, SpeechInputEvent, SpeechInputStatus } from "@preload/api";
@@ -42,10 +43,15 @@ const READY_STATUS: SpeechInputStatus = {
 	phase: "ready",
 	modelId: "test-model",
 };
-const UNAVAILABLE_STATUS: SpeechInputStatus = {
+const NOT_DOWNLOADED_STATUS: SpeechInputStatus = {
 	...READY_STATUS,
-	phase: "unavailable",
-	errorCode: "bundled-model-missing",
+	phase: "not-downloaded",
+	errorCode: "model-missing",
+};
+const DOWNLOADING_STATUS: SpeechInputStatus = {
+	...READY_STATUS,
+	phase: "downloading",
+	downloadProgress: 0.4,
 };
 
 describe("useSpeechInput", () => {
@@ -101,12 +107,23 @@ describe("useSpeechInput", () => {
 		expect(mocks.focusInputEditor).toHaveBeenCalledOnce();
 	});
 
-	it("disables voice input when the packaged model is unavailable", async () => {
-		vi.mocked(speechInput.getStatus).mockResolvedValue(UNAVAILABLE_STATUS);
+	it("offers a download action when the model is not downloaded and starts on click", async () => {
+		vi.mocked(speechInput.getStatus).mockResolvedValue(NOT_DOWNLOADED_STATUS);
+		const { result } = renderHook(() => useSpeechInput(true));
+
+		await waitFor(() => expect(result.current.title).toBe("inputBar.speech.actions.download"));
+		expect(result.current.disabled).toBe(false);
+		act(() => result.current.onToggle());
+		await waitFor(() => expect(speechInput.start).toHaveBeenCalledOnce());
+	});
+
+	it("shows download progress and stays disabled while downloading", async () => {
+		vi.mocked(speechInput.getStatus).mockResolvedValue(DOWNLOADING_STATUS);
 		const { result } = renderHook(() => useSpeechInput(true));
 
 		await waitFor(() => expect(result.current.disabled).toBe(true));
-		expect(result.current.statusText).toBe("inputBar.speech.errors.missing");
+		expect(result.current.statusText).toContain("inputBar.speech.states.downloading");
+		expect(result.current.statusText).toContain("40%");
 		act(() => result.current.onToggle());
 		expect(speechInput.start).not.toHaveBeenCalled();
 	});

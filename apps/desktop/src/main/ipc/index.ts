@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { WebContents } from "electron";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
+import { getMessageAnnotationService } from "../message-annotations/host.js";
 import { registerNotificationIpc } from "../notifications/index.js";
 import type { PluginActionService } from "../plugins/plugin-action-service.js";
 import { registerAbilitiesIpc } from "./abilities.js";
@@ -8,7 +9,9 @@ import { registerActionApprovalIpc } from "./action-approval.js";
 import { registerAgentTeamsIpc } from "./agent-teams.js";
 import { registerAppMonitorIpc } from "./app-monitor.js";
 import { registerAppshotIpc } from "./appshot.js";
+import { registerArchivedSessionsIpc } from "./archived-sessions.js";
 import { registerBrowserTabIpc } from "./browser-tab.js";
+import { registerBrowserViewIpc } from "./browser-view.js";
 import { registerCanvasIpc } from "./canvas.js";
 import { registerClipboardIpc } from "./clipboard.js";
 import { registerConversationTagsIpc } from "./conversation-tags.js";
@@ -19,7 +22,9 @@ import { registerDownloadsIpc } from "./downloads.js";
 import { registerFileTransferIpc } from "./file-transfer.js";
 import { registerFsIpc } from "./fs.js";
 import { registerImIpc } from "./im.js";
+import { registerMarkdownIpc } from "./markdown.js";
 import { registerMediaIpc } from "./media.js";
+import { registerMessageAnnotationsIpc } from "./message-annotations.js";
 import { registerOnboardingIpc } from "./onboarding.js";
 import { registerPermissionsIpc } from "./permissions.js";
 import { registerPetIpc } from "./pet.js";
@@ -35,10 +40,12 @@ import { registerReviewChangesIpc } from "./review-changes.js";
 import { registerRuntimeConfigurationIpc } from "./runtime-configuration.js";
 import { registerRuntimesIpc } from "./runtimes.js";
 import { registerSessionIpc } from "./session.js";
+import { registerSessionArchiveIpc } from "./session-archive.js";
 import { registerSettingsIpc } from "./settings.js";
 import { registerSkillsIpc } from "./skills.js";
 import { registerSpeechInputIpc } from "./speech-input.js";
 import { registerSshIpc } from "./ssh.js";
+import { registerSshTransfersIpc } from "./ssh-transfers.js";
 import { registerTaskIpc } from "./task.js";
 import { registerTerminalIpc } from "./terminal.js";
 import { registerThemesIpc } from "./themes.js";
@@ -51,6 +58,9 @@ interface IpcTeardown {
 	teardownActionApproval: () => void;
 	teardownAppMonitor: () => void;
 	teardownSession: () => void;
+	teardownSessionArchive: () => void;
+	teardownMessageAnnotations: () => void;
+	teardownMarkdown: () => void;
 	teardownSettings: () => void;
 	teardownUpdater: () => void;
 	teardownSkills: () => void;
@@ -67,6 +77,7 @@ interface IpcTeardown {
 	teardownProjectExport: () => void;
 	teardownProjects: () => void;
 	teardownSsh: () => void;
+	teardownSshTransfers: () => void;
 	teardownWebhook: () => void;
 	teardownRuntimes: () => void;
 	teardownRuntimeConfiguration: () => void;
@@ -79,10 +90,12 @@ interface IpcTeardown {
 	teardownPet: () => void;
 	teardownTerminal: () => void;
 	teardownConversationTags: () => void;
+	teardownArchivedSessions: () => void;
 	teardownQuickPanel: () => void;
 	teardownTask: () => void;
 	teardownCanvas: () => void;
 	teardownBrowserTab: () => void;
+	teardownBrowserView: () => void;
 	teardownAppshot: () => void;
 	teardownDiagnostics: () => void;
 	teardownOnboarding: () => void;
@@ -104,6 +117,12 @@ export function registerAllIpc(
 		teardownActionApproval: registerActionApprovalIpc(options.actionApprovalBroker),
 		teardownAppMonitor: registerAppMonitorIpc(),
 		teardownSession: registerSessionIpc(webContents),
+		teardownMessageAnnotations: registerMessageAnnotationsIpc(webContents, getMessageAnnotationService()),
+		teardownMarkdown: registerMarkdownIpc(webContents),
+		teardownSessionArchive: (() => {
+			registerSessionArchiveIpc();
+			return () => undefined;
+		})(),
 		teardownSettings: registerSettingsIpc(),
 		teardownUpdater: registerUpdaterIpc(),
 		teardownSkills: registerSkillsIpc(),
@@ -120,6 +139,7 @@ export function registerAllIpc(
 		teardownProjectExport: registerProjectExportIpc(),
 		teardownProjects: registerProjectsIpc(),
 		teardownSsh: registerSshIpc(),
+		teardownSshTransfers: registerSshTransfersIpc(webContents),
 		teardownWebhook: registerWebhookIpc(),
 		teardownRuntimes: registerRuntimesIpc(),
 		teardownRuntimeConfiguration: registerRuntimeConfigurationIpc(webContents),
@@ -132,10 +152,12 @@ export function registerAllIpc(
 		teardownPet: registerPetIpc(),
 		teardownTerminal: registerTerminalIpc(),
 		teardownConversationTags: registerConversationTagsIpc(webContents),
+		teardownArchivedSessions: registerArchivedSessionsIpc(webContents),
 		teardownQuickPanel: registerQuickPanelIpc(),
 		teardownTask: registerTaskIpc(webContents),
 		teardownCanvas: registerCanvasIpc(),
 		teardownBrowserTab: registerBrowserTabIpc(),
+		teardownBrowserView: registerBrowserViewIpc(),
 		teardownAppshot: registerAppshotIpc(),
 		teardownDiagnostics: registerDiagnosticsIpc(),
 		teardownOnboarding: registerOnboardingIpc(),
@@ -150,6 +172,9 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownActionApproval();
 	teardown.teardownAppMonitor();
 	teardown.teardownSession();
+	teardown.teardownMessageAnnotations();
+	teardown.teardownMarkdown();
+	teardown.teardownSessionArchive();
 	teardown.teardownSettings();
 	teardown.teardownUpdater();
 	teardown.teardownSkills();
@@ -166,6 +191,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownProjectExport();
 	teardown.teardownProjects();
 	teardown.teardownSsh();
+	teardown.teardownSshTransfers();
 	teardown.teardownWebhook();
 	teardown.teardownRuntimes();
 	teardown.teardownRuntimeConfiguration();
@@ -178,10 +204,12 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownPet();
 	teardown.teardownTerminal();
 	teardown.teardownConversationTags();
+	teardown.teardownArchivedSessions();
 	teardown.teardownQuickPanel();
 	teardown.teardownTask();
 	teardown.teardownCanvas();
 	teardown.teardownBrowserTab();
+	teardown.teardownBrowserView();
 	teardown.teardownAppshot();
 	teardown.teardownDiagnostics();
 	teardown.teardownOnboarding();

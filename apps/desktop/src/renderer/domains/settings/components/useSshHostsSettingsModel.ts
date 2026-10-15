@@ -1,15 +1,14 @@
-import type { SshHostFormInput, SshHostProbe, SshHostSummary } from "@preload/api-types/ssh";
+// Modified by The Open Forge contributors.
+import type { SshHostProbe, SshHostSummary } from "@preload/api-types/ssh";
+import { useSshHostFormLabels } from "@shared/hooks/useSshHostFormLabels";
+import { EMPTY_SSH_HOST_FORM, toSshHostFormInput } from "@shared/lib/ssh-host-form";
 import { confirmDialogAtom } from "@shared/store/atoms";
+import type { SshHostFormFieldsLabels, SshHostFormValues } from "@vetta-org/theme-ui/settings";
 import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export interface SshHostFormState {
-	label: string;
-	target: string;
-	port: string;
-	identityFile: string;
-}
+export type SshHostFormState = SshHostFormValues;
 
 /** 某一行的探测结果。成功与失败都留在行内，不打断用户去看别处。 */
 export interface SshHostRowMessage {
@@ -19,7 +18,7 @@ export interface SshHostRowMessage {
 	details?: string;
 }
 
-export interface SshHostsSettingsLabels {
+export interface SshHostsSettingsLabels extends SshHostFormFieldsLabels {
 	title: string;
 	description: string;
 	loading: string;
@@ -34,13 +33,6 @@ export interface SshHostsSettingsLabels {
 	importFromConfig: string;
 	importNone: string;
 	importDone: string;
-	fieldLabel: string;
-	fieldLabelHint: string;
-	fieldTarget: string;
-	fieldTargetHint: string;
-	fieldPort: string;
-	fieldIdentityFile: string;
-	fieldIdentityFileHint: string;
 	test: string;
 	testing: string;
 	testDetails: string;
@@ -78,10 +70,11 @@ export interface SshHostsSettingsModel {
 	};
 }
 
-const EMPTY_FORM: SshHostFormState = { label: "", target: "", port: "", identityFile: "" };
+const EMPTY_FORM = EMPTY_SSH_HOST_FORM;
 
 export function useSshHostsSettingsModel(): SshHostsSettingsModel {
 	const { t } = useTranslation("settings");
+	const formLabels = useSshHostFormLabels();
 	const setConfirm = useSetAtom(confirmDialogAtom);
 	const [loading, setLoading] = useState(true);
 	const [hosts, setHosts] = useState<readonly SshHostSummary[]>([]);
@@ -141,13 +134,7 @@ export function useSshHostsSettingsModel(): SshHostsSettingsModel {
 
 	const submit = useCallback(async () => {
 		if (editingId === null) return;
-		const port = form.port.trim();
-		const input: SshHostFormInput = {
-			label: form.label.trim() || form.target.trim(),
-			target: form.target.trim(),
-			...(port ? { port: Number(port) } : {}),
-			...(form.identityFile.trim() ? { identityFile: form.identityFile.trim() } : {}),
-		};
+		const input = toSshHostFormInput(form);
 		setSaving(true);
 		setFormError(null);
 		try {
@@ -249,13 +236,7 @@ export function useSshHostsSettingsModel(): SshHostsSettingsModel {
 			importFromConfig: t("sshImportFromConfig"),
 			importNone: t("sshImportNone"),
 			importDone: t("sshImportDone", { count: 0 }),
-			fieldLabel: t("sshFieldLabel"),
-			fieldLabelHint: t("sshFieldLabelHint"),
-			fieldTarget: t("sshFieldTarget"),
-			fieldTargetHint: t("sshFieldTargetHint"),
-			fieldPort: t("sshFieldPort"),
-			fieldIdentityFile: t("sshFieldIdentityFile"),
-			fieldIdentityFileHint: t("sshFieldIdentityFileHint"),
+			...formLabels,
 			test: t("sshTest"),
 			testing: t("sshTesting"),
 			testDetails: t("sshTestDetails"),
@@ -267,7 +248,7 @@ export function useSshHostsSettingsModel(): SshHostsSettingsModel {
 			statusUnverifiable: t("sshStatusUnverifiable"),
 			statusUnknown: t("sshStatusUnknown"),
 		}),
-		[t],
+		[t, formLabels],
 	);
 
 	return {

@@ -38,3 +38,18 @@ UI 与 Agent 的每次原子领域编辑共用同一个撤销边界；撤销/重
 ## 设计分析
 
 下一阶段的画布、节点、操作面板、模型注册和生成任务设计，以 [docs/README.md](./docs/README.md) 为分析入口。该目录分别记录 Open-AI Canvas、TwitCanva、Nodetool 和 Loomic 的参考结论；时间线暂不在本轮分析范围内。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+  - "@vetta-org/ui"
+  - "@vetta/ai"
+  - "@vetta/toolkit"
+```

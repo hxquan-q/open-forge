@@ -21,6 +21,18 @@ function readOption(name) {
 	return process.argv[index + 1];
 }
 
+/**
+ * 安装器显示身份随品牌档案：productName 来自暂存的 electron-builder 配置
+ * （prepare-pack 已按 VETTA_BRAND_PROFILE 选档），文件名与 AppName 等
+ * iss 显示串都从它派生；AppId / 安装目录 / 可执行名保持跨档冻结。
+ */
+export function resolveInnoInstallerIdentity(productName, version, arch) {
+	if (!productName?.trim()) throw new Error("[build-inno] missing staged productName");
+	const fileName = `${productName}-${version}-win-${arch}.exe`;
+	const displayNameDefine = `/DAppDisplayName=${productName}`;
+	return { fileName, displayNameDefine };
+}
+
 export function resolveInnoCompiler(environment = process.env) {
 	const configured = environment.VETTA_INNO_SETUP_COMPILER?.trim();
 	const candidates = [
@@ -95,7 +107,11 @@ async function main() {
 	if (publishConfig) {
 		console.log(`[build-inno] wrote app-update.yml for ${publishConfig.provider}`);
 	}
-	const fileName = `Open Forge-${version}-win-${arch}.exe`;
+	const { fileName, displayNameDefine } = resolveInnoInstallerIdentity(
+		builderConfig.productName,
+		version,
+		arch,
+	);
 	const verificationManifestPath = join(releaseDir, `${fileName}.files.json`);
 	await writeInnoVerificationManifest(join(sourceDir, "versions", version), verificationManifestPath, version);
 
@@ -112,6 +128,7 @@ async function main() {
 				`/DSourceDir=${shortSourceDir}`,
 				`/DOutputDir=${releaseDir}`,
 				`/DArch=${arch}`,
+				displayNameDefine,
 				installerScript,
 			],
 			{ stdio: "inherit" },

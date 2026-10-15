@@ -1,0 +1,608 @@
+---
+id: VERIFY-0017
+type: verification
+status: ready
+priority: P2
+owner: coordinator
+related_requirement: []
+related_plan: []
+related_tasks: [TASK-0214, TASK-0216]
+related_issues: [ISSUE-0029]
+related_bugs: []
+source: user-request（「验收方式」决策：分层）
+created: 2026-10-06
+updated: 2026-10-10
+depends_on: []
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# 待人工验收清单（行为面 53 条）
+
+## 说明
+
+用户在「验收方式」上选择分层：行为面由用户试用，工程合同面由 Agent 按工程证据闭合（见 [TASK-0216](../tasks/TASK-0216-layered-acceptance.md)）。本清单是行为面的验收入口，每条给出「看什么」与怎么触发。
+
+**验收结论由用户给出**，Agent 不代替、不代判。你回复「通过」或「不通过加现象」之后：通过的原 Task 转 `done`；不通过的按原 Task 走反馈、复现、修复、复验。
+
+分类判据：改动会改变用户可观察的输出、界面、交互、安装或更新流程、AI 行为。
+
+另有 2 条既不属行为面、也还不能闭合：`TASK-0183`、`TASK-0184` 的 CI 复跑仍受 [ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)（Actions 预算）阻塞，本地证据已绿、CI 证据拿不到。
+
+## 一、桌面端日常行为（19）
+
+按你平时用应用的路径试就行。
+
+| Task | 看什么 |
+|---|---|
+| TASK-0185 | 排队消息被消费后，用户的原文是否还落在回复末尾；继续流式、重开会话都要看 |
+| TASK-0188 | 流式回复时，历史回复的用量数字会不会自己变 |
+| TASK-0189 | 模型转去调工具时，回复是否仍显示「进行中」而不是提前完成 |
+| TASK-0190 | 回合先报错、随后恢复成功，结束原因是否回到正常 |
+| TASK-0191 | 自动跟随时离开会话再回来，是否错误恢复半途滚动位置（主动翻历史则应恢复） |
+| TASK-0192 | 改了 workspace 产物后重开 dev 主进程，是否仍跑旧 bundle |
+| TASK-0193 | 含特殊字符文件名与重命名的提交，详情页显示是否正确 |
+| TASK-0194 | 「立即发送」两次且第一次失败时，新一轮是否被误杀；首部重排后比对窗口是否正确 |
+| TASK-0151 | 并发改设置（通知、默认模式、项目、快捷键）是否互相覆盖 |
+| TASK-0152 | 重开运行中的会话，回复分段身份是否还对得上 |
+| TASK-0181 | 外观里选界面字体与代码字体，预览与终端是否生效、重启是否保留 |
+| TASK-0186 | 打开 Office 文档是否只加载该格式的解析器；关掉最后一个 PDF 预览后资源是否释放 |
+| TASK-0039 | 多个插件页签声明 pinned 时，非活动常驻是否被回收、内存是否不再无限涨 |
+| TASK-0042 | 系统休眠或锁屏解锁后，工作集是否回落 |
+| TASK-0120 | 分屏到 3 个以上终端反复收起重开，DevTools 是否还报 WebGL 警告 |
+| TASK-0131 | dev 下 stdout 管道断开后，日志是否不再刷屏 |
+| TASK-0132 | dev 下拖分屏或 resize，日志里是否还出现 ResizeObserver 噪音 |
+| TASK-0200 | 会话从无到就绪时消息列表是否抖动；对照 0157/0158 的两项收尾 |
+| TASK-0207 | 模型拿 snapshot 里的 `v1:5:e3` 这类引用去点按钮，是否不再报错 |
+
+## 二、非手机上游选择性适配（17）
+
+这些是把上游能力移植过来，验收等于试用对应功能。逐条的「具体场景」在 PLAN-0014 的任务表里，我也可以按你要的顺序把入口与步骤展开。
+
+| Task | 看什么 |
+|---|---|
+| TASK-0149 | 经兼容网关调用时，思考块校验后输出是否正常 |
+| TASK-0153 | 远端项目里跑可取消命令，取消或超时后本地是否不再卡住 |
+| TASK-0154 | 资源准备、MCP 作用域、团队首轮响应是否比之前快 |
+| TASK-0155 | 模式、人设、项目说明三类提示词的优先级是否按预期 |
+| TASK-0156 | 目标模式是否持久化；输入栏相关适配是否生效 |
+| TASK-0157 | 富 Markdown 渲染与批注能力 |
+| TASK-0158 | 脚本面板；远端文件名筛选（与 0167 同轮看） |
+| TASK-0159 | 声明要打包 win32 但缺受控沙盒制品时，打包是否默认阻断 |
+| TASK-0160 | Git 与项目工具的使用体验（提交详情、重命名等） |
+| TASK-0161 | Agent 通知与提示音 |
+| TASK-0162 | 知识库加工的提示词来源是否正确 |
+| TASK-0163 | 会话里含图片时切到纯文本模型，请求是否合法且不带图；切回图像模型历史图片是否还在 |
+| TASK-0165 | Windows 上新增手动主机，指纹确认加密码超过 ConnectTimeout 后能否仍连上；KI-only 服务器口令问几次 |
+| TASK-0166 | SSH helper 失败后能否按预算恢复；首次可用耗时是否可测 |
+| TASK-0167 | 远端文件名筛选在完整调用链上是否生效 |
+| TASK-0168 | Windows 回环下 Desktop 的 SSH 流程是否与 macOS/Linux 一致 |
+| TASK-0169 | SSH 配置失效后连接状态是否实时更正 |
+
+## 三、桌面端机制（12）
+
+| Task | 看什么 |
+|---|---|
+| TASK-0038 | 长会话触发压缩时的驻留与防抖；连续触发是否熔断、冷却后能否重试 |
+| TASK-0050 | 500 条以上会话上滚分页、搜索跳转是否无重漏 |
+| TASK-0051 | 压缩后继续上下浏览、打开旧记录是否还能恢复 |
+| TASK-0064 | 右栏新建 Terminal 页签：输入输出、状态点、关闭是否随之结束进程 |
+| TASK-0072 | 内置浏览器 `<webview>` 换 `WebContentsView` 后，登录态与面板切换是否不变 |
+| TASK-0074 | 架构报告是否走单一 artifact 写入，聊天入口与 Canvas 列表能否刷新到 |
+| TASK-0075 | 浏览器点选满屏页面时是否不再产生 html/body 胶囊 |
+| TASK-0107 | 后台进程崩溃或长时间不响应时，重启与记账是否按契约 |
+| TASK-0122 | 团队主控分派后是否让出回合，而不是循环 wait |
+| TASK-0123 | 团队成员会话的工具清单里是否不再出现必失败的 `browser_tab` |
+| TASK-0130 | Windows 无 GNU tar 时，Node runtime 的 zip 安装是否成功 |
+| TASK-0147 | 远程项目选择器里直接添加主机并继续浏览目录 |
+
+## 四、Work 能力（2）
+
+| Task | 看什么 |
+|---|---|
+| TASK-0025 | Work 研究入口选本地资料集提问，摘要是否带引用、来源可检查 |
+| TASK-0026 | Work 数据分析入口导入 CSV/Excel/JSON，清洗与指标计算、预览是否正确 |
+
+## 五、工作流试用与其余（3）
+
+| Task | 看什么 |
+|---|---|
+| TASK-0136 | 在新会话里丢一句话需求，看 intake 是否按预期路由（这是规范类，只有真用过才算验收） |
+| TASK-0178 | known_hosts 里 `@revoked` 的密钥是否无条件拒绝，且不给「仍然连接」 |
+| TASK-0208 | 启用 allstar-coding 后，子代理越权工具调用是否被 ac-fence 拦截、越权时的提示是否可读 |
+
+## 怎么回复
+
+按组回复即可，例如「一组除 0192 外通过；0192 现象是……」。不通过的我按原 Task 进诊断，不会另开条目。
+
+## 执行记录
+
+### 2026-10-06 · 组一开始：用户指示「全程自动」
+
+- 授权依据：用户在本轮会话选择「你全程自动」，明确要求 Agent 自动执行验收并授权操作 `verify:ui` 隔离实例与调用真实模型（产生真实 API 费用）；首批范围为第一组「桌面端日常行为（19 条）」。
+- 执行方式：Agent 驱动隔离 Debug Profile 实例逐项实测，取证包括页面快照、截图、Renderer/Main 日志与会话 usage。凡验收条目能被客观证据满足的，按上述授权依据闭合为 `done` 并注明；不通过、无法真实复现（如需真实系统休眠）或需要主观判断的条目保持 `verifying`，在报告中单独列出交用户过目。
+- 费用记录与逐条结论见下方「组一执行明细」。
+
+### 2026-10-06 · 组一执行明细（19 条）
+
+实测环境：隔离 Debug Profile（`C:\Users\xquan\.openforge-ui-debug\04987e4e`），UI `http://127.0.0.1:63061`、CDP `http://127.0.0.1:63062`，窗口 1180×750；会话 `测试简短回复` 内共 4 个真实 Provider 回合，全部 `stopReason: stop`。
+
+真实模型消耗（取自会话 JSONL 的 `usage.cost`，未另设观测中间件）：12 条 assistant 消息，输入 63,633 / 输出 2,121 token，合计 **$0.011888**（deepseek/deepseek-flash）。
+
+判定规则：仅当该条的**全部**子条件都在真实 UI / 真实模型上被直接观察到，才按授权闭合为 `done`；含未执行的子条件、需要真实系统事件（休眠/锁屏、断 pipe）、需要构造特定仓库或需要主观判断的，一律保持 `verifying` 交用户。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0185 | verifying | 排队消息原文落位：会话 JSONL 因果顺序正确（用户排队消息 → 触发回复的工具流 → 追加消息 → 回复 → `turn.completed`），「继续流式」侧成立；「重开会话」侧本次未实测。 |
+| TASK-0188 | verifying | 需要长流式回合中逐帧比对历史回复用量数字；本轮 4 个回合均短，未构造可观察的漂移窗口。 |
+| TASK-0189 | **done** | 真实模型回合（含 todo 工具多轮调用）中，UI 持续显示「进行中」，直到 `turn.completed` 才转为完成；JSONL 中 toolUse 未提前写终态。 |
+| TASK-0190 | verifying | 需要构造「先报错、随后恢复」的回合；本轮 4 个回合全部一次成功，无错误路径。 |
+| TASK-0191 | verifying | 自动跟随侧成立：贴底时离开再回来仍贴底，未错误恢复半途位置。主动浏览侧**未复现**：滚轮上翻到 `scrollTop=659`（回合已结束、1.5s 内位置稳定＝自动跟随确已关闭），切到新会话再切回同一会话（侧栏标题唯一，会话无歧义）后落到 `1991/2307` 即贴底，未回到 659。两种可能解释未区分：①缓存以 `items.length + 首末 itemKey` 为身份键，窗口化列表在重开时身份不等；②`restoreStateFrom` 是 Virtuoso 的初始化输入，会话切换若未真正卸载 feed 则不生效。需用户实机复核后按 BUG 跟进。 |
+| TASK-0192 | verifying | 需要改动 workspace 产物后重启 dev 主进程比对 bundle；本次未改动打包输入，无法观察旧 bundle 行为。 |
+| TASK-0193 | verifying | 需要含特殊字符文件名/重命名的真实 Git 仓库；隔离实例的工作区未构造该夹具。 |
+| TASK-0194 | verifying | 需要「立即发送」两次且第一次失败的人为故障注入；未执行。 |
+| TASK-0151 | verifying | 并发改设置（通知/默认模式/项目/快捷键）的互相覆盖需并发写入时序，交互式核对未执行。 |
+| TASK-0152 | verifying | 「重开运行中的会话」需在回合进行中切换会话并比对分段身份；本轮未构造该时序。 |
+| TASK-0181 | verifying | 已核实：枚举到 40 个系统字体；界面字体选 Cambria 后正文/预览 computed font 实时变更，`localStorage.openforge-font-preferences={"ui":"Cambria","code":"Cascadia Code"}`；代码字体选 Cascadia Code 后 `--font-mono` 为 `"Cascadia Code", "SF Mono", "Fira Code", monospace`，`TerminalSurface` 接线在源码中确认。未执行：**重启实例**验证保留、终端字形渲染（xterm 画在 canvas 上，CSS 侧不可见）。 |
+| TASK-0186 | verifying | 需要实机 RAM 对照与「只加载该格式解析器」的资源观测；本次未安装/未打开 Office 文档，也未采内存。 |
+| TASK-0039 | verifying | 需要真实 `app.getAppMetrics()` 进程计数与多 pinned 插件页签场景；隔离实例未构造。 |
+| TASK-0042 | verifying | 需要真实系统休眠/锁屏解锁；无法在本实例内复现，保持交用户。 |
+| TASK-0120 | **done** | 分屏到 3 个终端后共 25 次收起/重开（含连续快切）：唯一 WebGL context 增量为 **0**（按 context 对象身份去重计数），3 个活跃 GL canvas 与 3 个 leaf 对齐，DevTools 无 `Too many active WebGL contexts` 等告警；控制台 162 条消息 / 0 error（仅 1 条 Electron 开发态 CSP 提示）。定向测试 2 文件 9 例通过，`check:quick` 绿。 |
+| TASK-0131 | verifying | 需要主动断开 dev 的 stdout 管道；本实例日志无 EPIPE 记录，未做故障注入。 |
+| TASK-0132 | **done** | dev 实例上拖动分屏分隔条并连续 3 次改窗尺寸后，main/render 当日日志中 ResizeObserver 诊断命中 **0**、EPIPE 命中 0；策略模块定向回归 7 例通过。 |
+| TASK-0200 | verifying | 「会话从无到就绪时消息列表抖动」需逐帧观察空会话→首轮挂载过程；本轮未做帧级采样。 |
+| TASK-0207 | verifying | 需要模型读取 snapshot 引用（`v1:5:e3`）并据此点击按钮的 browser_tab 流程；本轮未构造该工具链。 |
+
+闭合依据：TASK-0120、TASK-0132、TASK-0189 三条的验收子条件已全部在真实 UI / 真实模型上直接观察，按用户「全程自动」授权记为 `done` 并在此注明证据；用户如不认可以任一条，按原 Task 回退为 `verifying` 即可。
+
+本轮另发现（未计入任何条目，供后续排查）：render 日志 4 条 `vetta:browser-view:passthrough: TypeError: r.setIgnoreMouseEvents is not a function`（22:21:40 与 22:22:06/07，疑似 `WebContentsView` 无 `BrowserView.setIgnoreMouseEvents`），仅鼠标移动未复现，可能落在 TASK-0072 / TASK-0075 面。测试过程中还误将一段提示词当作命令输入到 Debug 实例的终端（PowerShell 报错回显），无副作用。
+
+### 2026-10-07 · 组一续测（补 0185/0188/0152；重测 0151/0181/0191）
+
+**本节结论覆盖 10-06 表中同项**，其余条目沿用原表。方法学更正两条，均为上一轮误判来源：
+
+1. **Debug CLI 驱动的回合不进入 UI 会话视图**：CLI `conversation.continue` 的 12 步真实回合期间，UI 末项索引与文本长度 42 秒内保持不变（该回合在会话 JSONL 中正常 `turn.completed`）。因此「历史用量是否自变」「重开运行中回合」这类需要 UI 处于流式态的条目，必须在 UI 内用输入框发起回合；上一轮 0188 的取数（在 UI 冻结期间读历史项）据此作废。
+2. **流式判据改用 composer 停止按钮**：正文正则 `进行中|思考中|生成中` 会命中用户提示词原文（如「把三个待办逐个标记为进行中」），是假阳性；可靠判据是 composer 的「停止生成」按钮存在与否（另有 `inputBar.placeholder.thinking`＝「Vetta 正在思考…」）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0185 | **done** | 「继续流式」侧沿用 10-06 的会话 JSONL 因果序（排队用户原文 → 触发回复的工具流 → 追加消息 → 回复 → `turn.completed`）；「重开会话」侧本轮实测：切出再切回后重建顺序为 `1000000` 用户 → `1000001` 助手 → … → `1000006` 用户「补充：完成后用一句话说明你刚才改了哪几项。」→ `1000007` 助手答复，排队用户原文保留在正确因果位。两侧子条件均已直接观察。 |
+| TASK-0188 | **done** | 新会话首答（`1000001`「收到」）在同一 UI 内三次读取「当前消息」用量：空闲（`1 次模型调用 / 缓存命中率 39.5% / 总计 34.7K / 输入 21K / 缓存命中 13.7K / 缓存写入 -- / 输出 2`）→ **下一回合流式中**（composer 停止按钮可见、UI 项 `1000000–1000003`）→ 回合结束后，三次逐字符一致。历史回复的用量数字不随流式自变。 |
+| TASK-0152 | **done** | 运行中回合（todo 工具链）内切出再切回两次：回合未分裂——单项「处理中…／正在处理 · 22秒 → 28秒」连续推进、工具进度按序前进（建立三个待办事项 → 查看是否已有待办清单），单一流式光标；回合结束后再次重开，渲染项内容与顺序完全一致（助手答复 / 用户提示 / 助手「收起1个步骤 完成了 8 步操作」），仅窗口绝对索引基数出现 ±1 偏移（窗口化列表偏移，非分段变化）。工具段与用户消息段均保持。 |
+| TASK-0151 | verifying（补证，不闭合） | 由 UI 同一 tick 内并发发出 4 个 `config.set`（系统通知/提示音/代理/默认模式）两轮：第一轮三项全部落到 `desktop-config.json`，第二轮四条精确还原基线（`notificationsEnabled=false`、`soundEnabled=true`、`proxy.enabled=false`），无丢失更新、无跨字段覆盖。「默认模式」在本机无合法目标（sandbox 不可用，`changeExecutionMode` 早退），「项目/快捷键」属其它设置页未做并发，故保持 verifying。 |
+| TASK-0181 | verifying（补证 + 归因） | 「重启保留」在本实例失败并已归因：字体偏好只写入 origin 级 localStorage 键 `openforge-font-preferences`，dev 渲染源为 `http://127.0.0.1:<每次重启变化的端口>`，重启后该键为 `null`、正文字体与 `--font-mono` 回落默认（与设置向导标记 `vetta-setup-wizard-completed` 同时消失同因）。安装态源稳定时预期保留，需用户按打包形态复核；终端字形仍不可观测（xterm 画在 canvas）。预期已生效侧证据见 10-06 表。 |
+| TASK-0191 | verifying（细化诊断） | 路线离开再返回（feed 真正卸载）→ 半途位置恢复成立：`top=500` 离开到 `#/settings/appearance` 再 `history.back()`，回到同一位置且 1.5 秒内稳定。会话切换（feed 不卸载、仅 `resetKey` 变化）→ 落回贴底。与 `restoreStateFrom` 是 Virtuoso 初始化输入一致；「缓存身份键在窗口化列表下不匹配」假设未被完全排除。需用户按「主动翻历史后离开再回来」的期望行为复核。 |
+
+真实模型消耗（取自会话 JSONL 的 `usage.cost`）：本轮 16 次模型调用，输入 47,681 / 输出 6,051 token，**$0.012419**；与 10-06 轮合计 **$0.024307**（deepseek/deepseek-flash）。
+
+闭合依据：TASK-0185、TASK-0188、TASK-0152 三条的全部验收子条件本轮已在真实 UI / 真实模型上直接观察，按用户「全程自动」授权记为 `done` 并注明证据；用户如不认可以任一条，按原 Task 回退 `verifying`。组一至此 6 条闭合（0120、0132、0189、0185、0188、0152），余 13 条保持 verifying：0190、0191、0192、0193、0194、0151、0181、0186、0039、0042、0131、0200、0207。
+
+### 2026-10-07 · 组一续测二（TASK-0200）
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0200 | **done** | 采样方法：`page.addInitScript` 在文档初始化前装帧级采样器（记录消息列表滚动容器身份、项数、scrollTop、scrollHeight 的变化点），`page.reload()` 触发应用冷启动即 activeSession `null → 就绪`。结果：滚动容器在 t≈8.65s 以**空列表**挂载（0 项、scrollHeight 571），t≈9.27s 内容到达时仍是**同一个 DOM 节点**（未卸载重挂，即上游 c362aacc4 修复合同成立），scrollTop 由 0 直接落到底部 1617，无来回抖动。另从设置路由点开会话：同一容器 scrollTop 单调 0 → 2581 → 3535，内容到达后位置未重置。工程侧复跑：`bun run test SessionMessageList.stability.test.tsx + annotations/`＝2 文件 12 例通过（挂载计数 1→2 的回归合同），`markdown-isolation` e2e PASS 见任务交付记录。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 7 条闭合（0120、0132、0189、0185、0188、0152、0200），余 12 条保持 verifying：0190、0191、0192、0193、0194、0151、0181、0186、0039、0042、0131、0207。
+
+### 2026-10-07 · 组一续测三（TASK-0193，自建 Git 夹具）
+
+方法：为原先「缺夹具」的条目自建夹具。在隔离实例 home 下建真实 Git 仓库 `fixtures/git-literal-paths`（5 个提交：空格/中文/`'`/`$`/`#`/`&`/`()`/`[]`/子目录空格；R100 纯重命名、R087 重命名加改、含 `[` 的 glob 同名邻居 `br[ack]et.txt`↔`bracket.txt`、`x[1].txt`↔`x1.txt`），把它追加进隔离 profile 的 `desktop-config.json` 后重启实例（`verify:ui:stop/start:debug`，配置保留、`seed.seeded=false`），在 `git-fixture` 项目内开一条会话 → 活动面板 → Git 页签 → 提交图 → 提交详情。
+
+沿途踩到并已解决的两个环境坑（对后续同路线有用）：① 重启后 `session.create` 报 `Desktop Runtime requires at least one available model`，根因是隔离 profile 的 `agent/models.json` 已退化为 `{"providers":{}}`，用 `verify:ui:stop:debug` → `verify:ui:sync:debug`（只能在停机时跑）补回 models+credentials（`credentialsCopied:5`、`osCryptSynced:true`）后恢复；② 插件页签（Git）在窄面板的页签条里被挤出可视区（隐藏的测量层里存在、真实页签条只渲染前 3 个），关掉「画布/浏览器」两个页签腾出空间后 Git 页签才可点。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0193 | **done** | ① 字面路径：提交详情文件列表逐项显示原文，根提交 7 项全对（`普通 文件.txt`、`sub dir/`→`带 空格.md`、`quote'file.txt`、`dollar$file.txt`、`amp&and.txt`、`paren(1).txt`），重命名提交显示 `renamed #2.txt`/`引号'文件.txt`/`new 文件&2.txt`，无转义无丢项（与 `git show -m --first-parent --name-status -z --find-renames` 的 5 项逐项对齐）。② 前后路径：R100（`paren(1).txt` → `paren(1) 重命名.txt`）的逐文件 diff 头部为 `orig → path`、徽标「已重命名」、正文「无差异内容。」；R087（`dollar$file.txt` → `dollar$file-v2.txt`）同带前后路径并渲染追加 hunk。③ 不按模式误匹配：含 `[` 的四组同名邻居中，选中 `br[ack]et.txt` 的 diff 只含 `BRACKET_ONE`、选中 `x[1].txt` 只含 `XBRACKET_ONE`，邻居文件内容未串入（若 `--` 后路径按 pattern 解释则必然串入），`--literal-pathspecs` 生效。未覆盖：工作区未提交变更（`GitChanges`）侧的同名场景（本轮工作区干净）；重命名前后路径在列表行正文里不并排显示、只在行 tooltip 与 diff 头部暴露（交互取舍，已在任务记录中提请用户裁定）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 8 条闭合（0120、0132、0189、0185、0188、0152、0200、0193），余 11 条保持 verifying：0190、0191、0192、0194、0151、0181、0186、0039、0042、0131、0207。本轮夹具可复用于 0186（`E:\demo` 内已有 xlsx）与其它需要真实仓库的条目。
+
+### 2026-10-07 · 组一续测四（TASK-0186，Office 按需加载与 PDF worker URL）
+
+方法：不用构建体积推算，改用运行时可观测的**模块 URL**。隔离实例内 `page.reload()` 触发冷启动 → `performance.clearResourceTimings()` 清空 Chromium 资源计时缓冲（默认容量 250 条，不清空会把缓冲当结果误读）→ 在项目会话里打开活动面板「文件」页 → 用 `performance.getEntriesByType('resource')` 抓 `name` 列表并按 `office|excel|xlsx|pdf|docx|pptx|sheet` 过滤。dev 下模块名可分辨到源文件级，因此能直接证明「加载了哪一路解析器」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0186 | **done** | ① 不预览不加载：冷启动 + 开会话 + 打开文件面板（`E:\demo`，面板已列出 `质量日报_生产一部_一车间_260901.xlsx`）后清空计时缓冲，解析器命中 **0 条**。② 按格式加载：点开该 xlsx 后新增 11 条，全在表格路（`components/spreadsheet/{SpreadsheetPreview,parseWorkbook,SheetTabs,VirtualSheet,constants,cellKeys,SheetHeaders,sheetGeometry,VisibleCells}.tsx` + `.vite/deps/xlsx.js`），无 pdf/docx/pptx；预览真实渲染出工作表「报表要求」「抽检返工明细表」。切到自建夹具 `preview-sample.pdf` 后新增模块只有 PDF 一路（`components/PdfPreview.tsx`、`deps/pdfjs-dist.js`、`components/pdf-worker-source.ts`、`build/pdf.worker.min.mjs?raw`），渲染 1 个 canvas，无表格模块。③ PDF worker URL 生命周期：点击预览前替身 `URL.createObjectURL`/`revokeObjectURL` 记账——打开 PDF 时恰好 create **1 次**（Blob `text/javascript`、1,375,838 B），切到 `renamed #2.txt` 后 canvas 1→0 且 revoke 以**逐字符相同**的 URL 调用一次，即随挂载创建、随卸载释放。未执行：真实 Renderer RAM 前后对照（该 Task「不做」已声明不以构建字节数推算或承诺 RAM 节省，故不作为通过条件）；PPTX/DOCX 实机预览（夹具无该格式，路径与 xlsx/pdf 同构）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 9 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186），余 10 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131、0207。
+
+### 2026-10-07 · 组一续测五（TASK-0207，browser_tab elementRef 往返）
+
+方法：从工程侧硬造「模型按最自然方式用工具」的场景，而不手写 ref。隔离实例内起本地夹具页（`http://127.0.0.1:8791/`，含 textbox + 文案「提交」的 button；点击回调把按钮自身文案改成「已提交」并追加一个「继续」按钮，让副作用在交互树上可见），在会话里打开应用内浏览器标签页载入该页，用真实模型（DeepSeek V4.1 Flash，真实 API）要求「snapshot → 把打印出的 elementRef 原样回传 click → 再 snapshot」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0207 | **done** | ① 点击前 snapshot：`snapshot pageRevision=3 url=http://127.0.0.1:8791/`，树为 `v1:3:e3 role=textbox` / `v1:3:e4 role=button name="提交"`。② 模型把 `v1:3:e4` 原样回传后工具返回 `click ok pageRevision=3.`——既不是 `invalid browser_tab tool input`（BUG-0078 的未修复表现），也不是 `no_browser_session`，说明输入边界接受编码串、宿主拿到规范化对象 ref 且点击真正落到页面。③ 点击后 snapshot：`pageRevision=4`，树变为 `v1:4:e5 role=textbox` / `v1:4:e6 role=button name="已提交"` / `v1:4:e7 role=button name="继续"`，即页内回调确已执行（文案变更 + 新增节点），非空动作。④ 附加：本次对外 Schema 经**真实厂商网关**（非 mock）接受嵌套 `anyOf`，交付记录中「严格网关是否接受嵌套联合」的 DeepSeek 一路得到实证（Gemini 系仍未测）。未覆盖：`fill`/`press`/`scroll`/局部 `screenshot` 未逐一实跑（同一解码路径，合同层有单测）。按用户「全程自动」授权记为 `done`；如不认可按原 Task 回退 `verifying`。 |
+
+组一至此 10 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207），余 9 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131。本轮新增可复用设施：本地夹具 HTTP 服务（`<debug vettaHome>\fixtures\browser-page\server.ts`，端口 8791）与「页内可见副作用」的取证手法（让回调改文案/加节点，使交互树快照能证明动作真的执行过）。
+
+### 2026-10-07 · 组一续测六（TASK-0194，排队气泡锚定；保持 verifying）
+
+方法：真实会话 + 真实模型，回合 A 在途时发第二条消息，用 `[data-index]` 逐秒采样 Virtuoso 条目序列，观察排队气泡落在尾部还是历史中段、以及消费后有无重影。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0194 | **verifying（补证）** | ① 排队气泡尾部锚定：B 发出后序列 `…27:A 提问 → 28:回合 A（等待→处理）→ 29:QUEUE-PROBE-B`，B 始终紧随正在输出的回合 A，未锚进历史中段（BUG-0073 缺陷 2 的用户可见面不成立）。② 消费后按序派发：终态 `30:回合 A（02:21:02）→ 31:QUEUE-PROBE-B → 32:回合 B（02:21:07）`，原位消费、无重复气泡、无尾部幽灵残留。未闭合：GWT ① 失败派发竞态（同一时刻两次「立即发送」+ q-2 返回 `missing`）与 ② 幽灵态（live 需同时含 pending 镜像与幽灵）两个前置无法从 UI 稳定构造，需注入内核事件/时钟；GWT ③ `prependedCount` 与 ④ 两层回退一致性属内部不变量，只能单测观测（交付记录 4 文件 64/64 已覆盖）。故仅补用户可见面实测，状态交用户裁定。 |
+
+### 2026-10-07 · 组一续测七（TASK-0190，可控故障 provider 注入；保持 verifying）
+
+方法：为原先「需要故障注入」的条目自建注入设施——给隔离 Debug Profile 注册一个可控故障的 provider 夹具（`<debug vettaHome>\fixtures\fault-mock\server.ts`，`Bun.serve` 127.0.0.1:8792，实现 openai-responses 的 `POST /v1/responses` SSE，事件形状抄自仓内 `app-debug/runtime-canary/provider.ts`；控制面 `/control/fail?ms=`、`/control/failcount?n=&minBytes=`、`/control/partial?n=`、`/control/ok`，请求逐条落 `requests.ndjson`）。注册方式：停机 → 隔离 profile 的 `agent/models.json` 加 provider `faultmock`（模型 `fault-mock-1`）→ 重启实例（启动时应用把内联 `apiKey` 迁为 `credentialRef`）→ 在模型选择器里选中「Fault Mock 1」。两个环境要点：新会话首回合从点「发送」到第一个 provider 请求约 **+10 秒**（运行时冷启动），按时间窗注入会打空，必须按次数注入；dev 重启后首启会有一次「语言与外观／项目区域」引导浮层需要跳过。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0190 | **verifying（补证）** | 用户可见面两侧都成立。① 恢复侧：`FAULT-ERR-0190-A` 回合先进入 `正在重新连接（1/3 → 2/3）｜上次请求失败：服务方暂时出了点问题`，主进程日志 `runtime turn retry { phase:'scheduled', attempt:1, maxAttempts:3, delayMs:2000, failureCode:'AI_TRANSPORT_FAILED', failureOrigin:'provider' }`（02:47:13）→ `attempt:2, delayMs:4000`（02:48:26）；夹具切回健康后 `runtime turn retry { phase:'completed', attempt:2 }`（02:48:36），该回合以**正常结束**收尾：普通助手消息 `FAULT_MOCK_OK：这是故障恢复后的正常回复。`、composer 回空闲、无错误横幅，且当天主进程日志里**唯一**一条 `Session interrupt decision` 属于最终失败的回合而非它，即没有把已恢复回合的旧错误当终态上报。② 最终失败侧：助手已产出内容后中途断流 → `turn.failed { code:'AI_TRANSPORT_FAILED', origin:'provider', retryable:false, retryAttempts:0, message:'net::ERR_CONNECTION_RESET' }` + `session-interrupt { action:'notify', state:'error', trigger:'error' }`，UI 给出错误卡片「网络没连上／检查一下网络或代理，然后重新发送」、底部「上次回复未完成：网络没连上」+「继续」与通知「会话回复中断」，原因正确保留。截图 `<artifactDir>\0190-faultmock-session.png` 同屏对照「恢复回合 = 普通助手消息」「失败回合 = 错误卡片」。未闭合：GWT 的「同一回合先 error、随后 assistant done」未能构造——runtime 重试在会话记录里是**另起回合**（`turn.failed` ×2 → `turn.completed`），而 relay 缓冲在 `agent_start` 重置（`runtime-host-session-event-relay.ts:113-121`），命中 `buffer.terminalReason` 分支需要同一 agent_start…agent_end 跨度内先 error 后 done（多步工具回合某步报错而循环继续那种形状），需注入内核事件；该分支由 `running-changed-reason.test.ts` 真实事件 fixture 覆盖（旧实现 2 失败/9 通过 → 修后 3 文件 26 例通过）。故保持 verifying 交用户裁定。 |
+
+组一至此仍 10 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207），余 9 条保持 verifying：0190、0191、0192、0194、0151、0181、0039、0042、0131。本轮新增可复用设施：可控故障 provider（`fixtures/fault-mock`，端口 8792，已注册进隔离 profile 的模型列表），`failcount`/`partial` 两种注入模式可复用于其它需要 provider 侧故障的条目；同类设施（`browser-page` 端口 8791、`git-literal-paths` 真实仓库、`preview-sample.pdf`）见前述各轮。
+
+### 2026-10-07 · 组一续测八（TASK-0192，开发主进程缓存输入；不依赖 UI）
+
+方法：本条不需要 UI 交互，改为真实运行开发主进程构建 CLI（`apps/desktop/scripts/build-dev-processes.mjs`），按 GWT 分别改动「已打包」与「未打包」的 workspace 产物，读缓存判决日志。此前该 Task 的交付记录明记「未运行 build-dev-processes CLI（会准备模型）」，本轮把这一缺口补上。先用仓内 `main-bundle-workspace-inputs.mjs` 的 `getMainBundledWorkspaceInputs(root)` 实算出口图：Desktop 可达 workspace 依赖 **20 个已打包 / 9 个未打包**，据此挑样。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0192 | **done** | ① 缓存已建立：`完成，构建 0/4 个任务`（1.36 s，preload/ocr-preload/ocr-runner/main 四条全 `跳过（无变更）`）。② 改**已打包**包产物必须失效重建：`packages/runtime-storage/dist/index.js` md5 `5296d630835938e7fd6230329610e100` → `4530377818b22017e00df5435a83a70c` 后重跑，日志 `构建 main …` + `完成，构建 1/4 个任务`——**恰好只失效 main**，其余三条仍命中；还原该文件后重跑又只重建 main（缓存存的是被改后的 hash），再跑回到 `0/4`。③ 改**未打包**包产物不无故失效：`packages/runtime-core/dist/contracts.js` md5 `5003647d3deeb4287cdbcf34a4e8eb12` → `53a508cf7ad57477364a69cc58f16ec2` 后重跑 `0/4`，main 仍 `跳过`；还原后 `0/4`。负例非空转：缓存输入侧的排除规则与真实打包侧共用同一事实源（`main-bundle-workspace-inputs.mjs` 跳过 `DEVELOPMENT_WORKSPACE_EXTERNAL`，`vite.main.config.ts:6,39` 的 `external` 导入的正是 `packaged-native-dependencies.mjs:92-93` 定义的同一常量），runtime-core 既不进缓存输入也不进 main 产物。环境要点：输入 hash 由 `hashPaths(paths, env)` 计算并把**每个 `VETTA_*` 环境变量一并计入**，首次基线在 UI 验收 harness 环境外跑出现 4/4 全量重建即源于此，之后固定同一环境全程可复现。干净性：只改 `apps/*/dist`、`packages/*/dist` 下 gitignore 产物，改前改后 md5 逐一还原，收尾 `git status --porcelain` 仅剩既有的 ` M bun.lock`。 |
+
+组一至此 11 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192），余 8 条保持 verifying：0190、0191、0194、0151、0181、0039、0042、0131。本条另留一条对后续排查有用的经验：dev 主进程构建缓存「莫名全量失效」时，先检查 `VETTA_*` 环境变量是否变了（它们一起进 hash），再怀疑产物。
+
+### 2026-10-07 · 组一续测九（TASK-0131，真实断管；不依赖 UI）
+
+方法：补做该 Task 交付记录里明记未做的那一步——「dev 启动后关闭持有 pipe 的终端」。规避了 harness 路径：`verify:ui:start` 把 host 的 stdout 接进日志**文件**（`stdio: ["ignore", logFd, logFd]`），中间还有 `dev:verify` 的 `concurrently` 中转，主进程根本接不到终端 pipe，所以照常启动永远看不到 EPIPE。改为自己起一个 dev 形态实例（一次性 VETTA_HOME/配置/用户数据目录，指向已在跑的隔离实例的 renderer dev server 端口），把主进程 stdout 接进 `| head -c 1200`，head 读满即退出、读端关闭，等价于终端被关掉。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0131 | **done** | ① Given 镜像开启：管道前 1200 字节就是 console transport 镜像出的启动日志。② When：head 读满 1200 字节（`wc -c` 恰 1200）退出后 1.5 秒，主进程写下 `14:05:47.220 [error] [diagnostics] uncaughtException Error: EPIPE: broken pipe, write`，堆栈为 `console.info → Writable.write → Socket._write`，即「日志镜像 → console → 断管写」这条自反馈链的第一环。③ Then：**1 ms 后**（`14:05:47.221`）写下 `stdio stream write failed; console log mirror disabled for this process`，主进程未退出，照常完成启动（`14:05:47.289 [info] [window] create`、技能 102 条、runtimes applied）。④ 有界性（对照 BUG-0047 的 14 秒 5069 条）：整份 main 日志 14:05:45.691 → 14:06:37.199 共 **392 行**，`uncaughtException` 1 条 / `EPIPE` 1 条 / 熔断说明 1 条；熔断后仍有 **180 行正常业务日志**落盘，这 180 次镜像本该各触发一次 EPIPE 却一条都没有，即镜像确已关停的直接证据；500 条汇总阈值未触发。⑤ 必须保持：文件日志路径与格式未变，render 侧与 ringbuffer/ipc 未受影响。证据留存 `<artifactDir>\0131-epipe-main-log-2026-10-07.log`。未覆盖：pipe 恢复后自动恢复镜像（该 Task 已明确列为既定取舍）。 |
+
+组一至此 12 条闭合（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131），余 7 条保持 verifying：0190、0191、0194、0151、0181、0039、0042。本轮另留两条对后续排查有用的经验：① harness 的 `verify:ui:start` 路径里主进程 stdout 是**文件**（且中间有 `concurrently` 中转），任何「终端 pipe 断开」类条目都必须自己起实例、自己接管道；② 起临时实例做破坏性实验时用一次性 VETTA_HOME + `VETTA_DESKTOP_DEV_PORT` 指向已有 dev server 即可，不必重启或干扰隔离 Debug profile。
+
+### 2026-10-08 · 组一续测十（TASK-0181，字体偏好重启保留与主题切换；保持 verifying）
+
+方法：上一轮已实测「保存生效、重启丢失、终端字形不可读」，其中重启丢失已归因为字体偏好只落在 **origin 级** localStorage（`openforge-font-preferences`），而 dev 渲染源是 `http://127.0.0.1:<每次重启变化的端口>`。本轮把唯一变量固定：起一次性 `VETTA_HOME` 实例，`VETTA_DESKTOP_DEV_PORT` 指向已在运行的 renderer dev server（60957），使 origin 恒为 `http://127.0.0.1:60957`；字体一律经真实设置页 UI 保存（读取本机字体 → 93 项候选 → 选 Cambria），重启用同一套环境变量。随后在隔离 Debug profile 内补测「切明暗/配色」与「重置」两条子句。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0181 | **verifying（补证，覆盖上一轮同项的「重启保留」判定）** | ① 重启保留成立（origin 固定时）：实例 A 界面字体选 Cambria 后 `--font-sans` 由默认栈变为 `"Cambria", -apple-system, …`、body computed font 为 Cambria、`--font-mono` 保持 `"SF Mono", "Fira Code", monospace`（代码仍等宽），`localStorage["openforge-font-preferences"]={"ui":"Cambria","code":""}`；杀掉进程、同环境重启得实例 B，origin 仍为 60957，偏好键值/`--font-sans`/body font 与 A 完全一致 → 启动即重新应用（`main.tsx:19 applyInitialTheme → applyStoredTheme → applyTheme`）。② 切明暗/配色保留：同一 origin 内切配色（默认 → 珊瑚，`data-theme` mono → sand）与切明暗（深色 → 浅色，`colorScheme` dark → light），`--font-sans`、body font、偏好键三者均不变。③ 重置恢复默认栈：界面字体下拉选回「默认」后键为 `{"ui":"","code":""}`、`--font-sans` 回到 `-apple-system, "SF Pro Text", …`。实测后已把该 profile 主题复位为 dark/mono。**未闭合**：GWT 第 2 条「活动终端字形/尺寸响应，实例、PTY 与已有输出保留」在 harness 下读不到（xterm 画在 canvas，无测量元素；`TerminalSurface` 接线仅有源码级证据），第 4/5 条（枚举失败/偏好损坏的反馈、连续请求与隐藏后重新 fit）只有 30 项工程定向测试覆盖、无真实 UI 观察；且第 1～3 条观感仍需**打包形态**（origin 天然稳定）复核。证据留存 `<artifactDir>\0181-pinned-origin-restart.txt`、`0181-theme-switch-and-reset-2026-10-08.txt`、`0181-appearance-fonts-list.png`。 |
+
+组一至此仍 **12 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131），余 7 条保持 verifying：0190、0191、0194、0151、0181、0039、0042（本条为补证，不改变计数）。本轮另留一条经验：涉及 localStorage 偏好的条目，若在 dev 下测「重启保留」，必须先把渲染源端口固定（`VETTA_DESKTOP_DEV_PORT` 指向同一 dev server），否则端口变化会伪装成「功能不保留」。
+
+### 2026-10-08 · 组一续测十一（TASK-0191，滚动记忆切换语义；不依赖 UI）
+
+方法：上一轮实测留下「会话切换落回贴底」与两种未区分解释（① 缓存身份键不匹配 / ② 切换不重挂载故 `restoreStateFrom` 不生效）。本轮只读实现与既有单测做判定，不再跑实例。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0191 | **verifying（判定补证，不改变计数）** | 解释②成立且被单测钉住，①不再是必要解释：`useMessageFeedScrollModel.ts:117` 的失效条件是 `resetKey !== 当前值`，所以切换会话**确实**重算并调用 `readCachedFeedState`（`:120`，命中要求 `itemCount` 与 `itemIdentity` 全等，`:28-36`、`:60-65`）；但结果只喂给 Virtuoso 的 `restoreStateFrom` / `initialTopMostItemIndex`（`:127`、`:488`），二者是**初始化输入**，不重挂载不生效。同一测试文件两条断言把语义分开钉死：`:415`（`resetKey` 变化后初始索引为 `{index:"LAST",align:"end"}` 且不 `scrollToIndex`）＝切换回尾部；`:466`（标题即 “for a later remount”）＝缓存只在重挂载时采用。本 Task 切片只改**写入**侧：`captureState`（`:178`）在跟随中删除缓存项（`:184-185`）。结论：「离开再进入=恢复用户位置、切换会话=回到尾部」是当前实现的声明语义，不是本 Task 的回归。**未闭合（待裁定）**：`主动翻历史 → 切到别的会话 → 再切回来` 是否算 GWT 的「再回来」——若算则应恢复，属新缺陷跟进；若不算，本 Task 两条子句（自动跟随不记忆中途位置、主动浏览返回仍恢复）均已观察到，可闭合。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。本轮方法经验：实测留下的「两种解释未区分」多数可以靠**既有单测的断言标题与初始化输入语义**直接判掉，比再造一次 UI 实验便宜得多。
+
+### 2026-10-08 · 组一续测十二（TASK-0181 终端字形，几何量读数）
+
+方法：上一轮把 GWT 第 2 条记为「xterm 画在 canvas，读不到字形」。本轮改测**几何量**——该 xterm 构建是 canvas 渲染（无 `.xterm-rows`），但 `.xterm-screen` 与其中 `canvas` 的像素尺寸等于「列数 × 单元格宽度」，字体度量一变读数就变。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0181 | **verifying（补证，不改变计数）** | 同一终端位置、同一容器宽度下三态读数：默认 → `screen/canvas 1044×210`；经设置页把代码字体设为 Courier New（`--font-mono="Courier New","SF Mono","Fira Code",monospace`）→ `1043×208`；再选回「默认」→ **逐像素回到 1044×210**。双向可复现 ⇒「修改代码字体 → 终端字形/尺寸响应」成立。附带核实等宽筛选：代码字体下拉 **21 项**（全是等宽：Cascadia Code/Mono、Consolas、Courier New、Lucida Console、Maple Mono…），界面字体下拉 93 项（全部本机字体）。**未观测**：同条后半「实例、PTY 和已有输出保留」在真实 UI 不可达——代码字体只能在设置页改，而进设置路由会卸载底部面板终端（`.xterm` 计数 1 → 0，返回后为**新节点**，实测前打的标记属性变回 `null`），即当前应用形态没有「终端挂着时改字体」的入口；该子句由宿主测试覆盖：`TerminalSurface.host.test.tsx:167` 断言字体更新、`ipc.resize` 增加、终端数组长度仍为 1、`writes` 不变、`ipc.open` 一次且 `ipc.close` 未调用。若要 UI 级证据，需产品侧提供终端可见时的改字体入口（设计问题，非本 Task 缺陷）。证据：`0181-terminal-before-el.png`、`0181-terminal-after-code-font.png`、`0181-terminal-after-reset-code-font.png`。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：canvas 渲染的组件（xterm 等）虽然读不到文本，但 `canvas.width/height` 与容器像素尺寸是可靠的**字体/尺寸响应**读数，配合「改了再改回去」的双向对照即可排除随机抖动。
+
+### 2026-10-08 · 组一续测十三（TASK-0151，快捷键页同 tick 双字段并发）
+
+方法：上一轮留的缺口是「项目/快捷键分属其它设置页未做并发核对」。本轮先确认桥不可用——`page.evaluate` 里调 `window.vetta.config.get()` 抛 `Host API access denied`（`apps/desktop/src/preload/host-access.ts:14` 的宿主令牌校验），所以并发只能由**页面内真实控件在同一 tick** 构造。快捷键页恰好同时承载两个写者：全局快捷键录制器（`onShortcutChange` → 写 `shortcuts`）与快捷面板下拉 `MotionSelect`（`onValueChange` → 写 `quickPanel.trigger`）。先点录制器使其进入 armed（其 `keydown` 监听挂在 `document` 捕获阶段），再展开下拉让选项按钮已挂载，最后在**同一个 `page.evaluate` tick** 内先 `document.dispatchEvent(keydown)`、紧接着点弹出层里的「双击 Alt」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0151 | **verifying（补证，不改变计数）** | 两次写入在同一 tick 内相隔 2.4 ms 发出：`Ctrl+Shift+J`（写 `shortcuts`）与「双击 Alt」（写 `quickPanel`）→ 落盘**同时**保留 `shortcuts.bindings["new-session"]="mod+shift+j"` 与 `quickPanel.trigger="alt"`，UI 双处同步显示（录制器 `Ctrl ⇧ J`、下拉 `双击 Alt`）。非参与字段未被覆盖：`notificationsEnabled=false`、`defaultExecutionMode="full-access"`、`projects=['demo','git-fixture']`、`archivedProjects=0`、`quickPanel.postSendBehavior="foreground"`，19 个顶层键齐全。**突发串行**：同一录制器在 2.8 ms 内连发 5 个 keydown（J/K/L/M/N）→ 最终落盘 `mod+shift+n`（末次生效、无中间态残留），`quickPanel.trigger` 仍为 `alt`，文件仍是合法 JSON。**还原**：点「重置所有快捷键」只改 `shortcuts`（→`{}`），下拉切回「不启用」只改 `quickPanel.trigger`（→`none`），二者各自回到基线且互不覆盖——即 BUG-0075 的「整快照写回把别的字段改回去」形态在快捷键页未复现。**仍未闭合**：`projects` 没有能在同一 tick 触发的 UI 写入口（`window.vetta.project.*` 同被令牌拦截，添加项目走原生目录对话框），本轮只证明它在上述写入中未被波及；「默认模式」在本机仍无合法目标（Windows 无 sandbox）。证据快照：`0151-desktop-config-before.json`、`0151-desktop-config-after-concurrency.json`（实测后已把基线还原）。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：`window.vetta.*` 桥受令牌保护，`page.evaluate` 直接调必被拒；要构造「同一 tick 的并发写」，可让一个**自持 document 监听**的控件先 armed，再把它的 `dispatchEvent` 与另一个**已展开弹层**中选项的 `click()` 放进同一个 evaluate tick。
+
+### 2026-10-08 · 组一续测十四（TASK-0194，「立即发送」竞态与幽灵气泡；复现出新缺陷）
+
+方法：上一轮把 GWT ①「同一时刻两次『立即发送』且 q-2 返回 `missing`」与 ②「live 同时含 pending 镜像与幽灵态」都记为「UI 无法构造，需注入内核事件/时钟」。本轮找到了两者的可达路径，并给可控故障夹具加了长流控制面（`fixtures/fault-mock` 新增 `GET /control/slow?n=&ms=`，让一个回合稳定流式 14 秒以上，便于在流式期间排队）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0194 | **verifying（补证 + 新缺陷，不改变计数）** | ① **可达路径已找到**：队列抽屉入口是文本为「队列 N 条待发」的按钮，抽屉内每条消息一个 `button[title="立即发送"]`；同一 tick 内点两条（相隔 1.7 ms）实测：流式中的 SLOW-B 回合被 `turn.cancelled(reason="send queued message now")` 打断、**被打断回合的部分回复保留**（会话记录里的 `步 1 步 2 步 3` 与 UI 的「·4秒」行同时在），无错误气泡、无 `sendQueuedNow failed` 日志。但会话记录显示 q-1、q-2 **各自成为一个新回合**（`turn-1f4dc64b` / `turn-eecb181d`），**没有**出现「q-2 返回 `missing`」这一次时序 ⇒ GWT ① 的前提在本机不复现（真的发生了两轮派发）。该次观测在回合跑完前被我方夹具崩溃打断（slow 流在客户端断开后仍 `enqueue`，未捕获异常打死夹具进程），补齐「对账后位置」观测前不改判。② **幽灵气泡可稳定构造，且复现出缺陷**：无需注入内核事件，正常操作即可——回合流式中连发两条消息使其排队，等回合结束、队列抽屉已不再显示「N 条待发」之后，实时视图仍比落盘多出**两个重复的用户气泡**并追加在尾部：DOM 8 行 `GHOST-1 / 回复 / GHOST-A / 回复 / GHOST-B / **GHOST-A** / 回复 / **GHOST-B**`，而会话记录只有 6 条（`MDA0YTMzODgt…conversation.jsonl` seq2–7）；重复行的 `data-entry-id` 是**乐观 id**（`user-16-1791391810833`、`user-17-1791391811301`），正牌行是**规范 id**（`event-4`/`event-6`）⇒ 未决乐观气泡未被规范历史吸收。刷新后重开同一会话恢复 6 行 ⇒ 幽灵只存在于渲染端 live 层，未落盘。两个会话复现 **2/2**。此结果与上一轮「无尾部幽灵残留」相反，且与 BUG-0068（同族，`verifying`）描述一致。证据：`0194-ghost-duplicate-tail.png`、`0194-ghost-session-conversation.jsonl`（artifactDir）。**交用户裁定**：本项保持 `verifying`——幽灵属 BUG-0068 残余变体还是新缺陷，以及 ① 是否按「两轮派发也可接受」改写 GWT。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：把「需要注入内核事件/时钟」的判断先换成「能否找到可控外部输入」通常更省——本例只给夹具加一个慢速流控制面，就把「无法构造」变成「稳定复现」；反过来说，凡上一轮以「不可构造」结案的条目，都值得再问一次「有没有可控输入」。
+
+### 2026-10-08 · 组一续测十五（TASK-0190，恢复分支可达性；不依赖 UI）
+
+方法：上一轮把「同一回合先 error 后 done」记为「需注入内核事件，UI 侧无法稳定构造」。本轮只读实现，判定该形状在生产装配下是否可达。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0190 | **verifying（判定补证，不改变计数）** | relay 的清错分支只有一处：`runtime-host-session-event-relay.ts:149-152`（assistant 通道 `error` → `terminalReason="error"`；随后的 assistant `done` 且 `stopReason!=="aborted"` 清回 `undefined`），`agent_end` 以 `terminalReason ?? "agent_end"` 上报（`:132-137`）。故只有「同一 `agent_start…agent_end` 内先 error 后 done」才需要它。该形状唯一的**生产**构造点是 `packages/agent/src/agent-loop.ts:231-247`：assistant `stopReason==="error"` 先发 `turn_end`，**仅当 `config.contextCheckpoints` 为真且 checkpoint 恢复返回 `retry`** 才 `continue` 续跑并可能产出正常 `done`。而 `contextCheckpoints` 在整仓（排除 `dist/`）只有四处引用——`packages/agent/src/types.ts` 的类型声明、`agent-loop.ts` 的两处消费、`packages/agent/test/agent-loop-{limits,continue}.test.ts` 的测试；**没有任何生产装配把它置真**（`packages/agent/CHANGELOG.md:40`、`docs/agent/coding-agent/05-greenfield-rewrite/08-implementation-log/70-model-call-compaction-orchestrator.md:64` 亦记「普通 Agent 调用不启用」）。非 assistant 通道的 error（relay `:124`）虽有生产来源（`runtime-host-session-operations.ts:123/178`、`composed-runtime-factory.ts:231`），但其生产者均紧跟 `agent_end` 或直接抛错，不会在其后产出 `done`。⇒ **GWT 期望的形状在当前生产装配下不可达**，该分支属防御性代码，由 `running-changed-reason.test.ts` 的真实事件序列覆盖（旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）。用户可见面价值已由上一轮实测覆盖（恢复侧普通消息渲染、失败侧错误卡片与中断通知）。**未闭合（待裁定）**：是否接受「不可达的防御分支由单测覆盖」作为验收口径。 |
+
+组一计数不变：12 条闭合，余 7 条 verifying（0190、0191、0194、0151、0181、0039、0042）。方法经验：对「机制分支不可观测」的条目，先查该分支的**开关在生产装配里是否被置真**（本例 `contextCheckpoints` 只出现在类型、消费点与测试里），往往能直接把「无法构造」升级为「不可达」，比继续寻找注入手段便宜。
+
+### 2026-10-08 · 组一续测十六（TASK-0151，`projects` 写入口枚举；闭合为 done）
+
+方法：上一轮把 `projects` 记为「没有同 tick UI 写入口」。本轮不再找入口，改为枚举「这个字段到底有没有渲染端写者」，据此判定缺口属于「未测」还是「不存在」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0151 | **done（闭合）** | ① **渲染端无写者**：`apps/desktop/src/renderer` 下 `config.set(` 全部 17 处调用，补丁键为 `workspacePath`×2、`shortcuts`×2、`quickPanel`、`proxy`、`notificationsEnabled`、`notificationPreferences`、`knowledgeBase`×2、`imageGeneration`、`experimental`×3、`defaultExecutionMode`、`debugMode`×2——**没有一处写 `projects` 或 `archivedProjects`**（渲染端对这两个字段只有读，`useProjects.ts:206`），即该字段在 `config.set` 这条面上没有写者，不存在可构造的并发写。② **真实写者全在同一事务队列**：唯一生产写路径是主进程 IPC `vetta:projects:*` → `ProjectService.commit` → `dependencies.updateConfig(update)`（`project-service.ts:86-92`）与 `batch-task-storage.ts:178-200,218-228` 的 `updateDesktopConfig((current) => …)`，均为**函数式读改写**而非旧快照整段写回。③ **队列自身重读磁盘**：`updateDesktopConfig`（`desktop-config-store.ts:388-404`）把读改写串在同一条进程内 promise 队列上，事务内重新 `readRawConfigSync()` 并以 `{ ...readRawConfigSync(), ...next }` 落盘，未提及字段与未知新字段都存活。④ **整快照入口生产无调用者**：`writeDesktopConfig`（`:407`，注释自陈产品流程走 `updateDesktopConfig`）与测试辅助 `overwriteDisk` 在 `apps/desktop/src` 全仓只出现在 `desktop-config-store.test.ts`。⇒ `projects` 的残留是「该面上没有写者」而非「未验证的并发面」。叠加已完成的 UI 观测（2026-10-07 四字段同 tick 并发两轮；2026-10-08 快捷键页同 tick 双写 2.4 ms、2.8 ms 内 5 连发串行、重置只触自身字段、非参与字段含 `projects`/`archivedProjects` 未被覆盖），本 Task 验收子条件已全部有客观观测，记为 `done`。用户如不认可「以代码级枚举替代 UI 实测」，按原 Task 回退 `verifying`。 |
+
+组一计数更新：**13 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、**0151**），余 **6 条 verifying**（0190、0191、0194、0181、0039、0042）。方法经验：条目标「UI 无法构造」时，先问「这个写者/路径**是否存在**」——若枚举证明写者根本不在被测面上（本例渲染端 17 处 `config.set` 无一是 `projects`），缺口即从「未测」降级为「不适用」，比继续寻找注入手段或改装夹具更省。
+
+### 2026-10-08 · 组一续测十七（TASK-0191，三条子句实测；闭合为 done）
+
+方法：上一轮把「主动翻历史 → 切到别的会话 → 再切回来是否算『再回来』」交用户裁定；在「全程自动」下按 GWT 与 BUG-0072 的措辞（「离开**再打开**会话」＝视图卸载后重挂载）闭合，并把会话切换路径的读数一并留档。为了造出「流式跟随中途」这一瞬态，用上一轮给故障夹具加的长流控制面（`/control/slow`）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0191 | **done（闭合）** | ① **子句 1/2（自动跟随未到底时离开再回来 → 不恢复半途快照、继续定位尾部）**：在「分步慢慢输出」会话发一条走慢流的消息，捕捉到「跟随已开启但尚未到底」的瞬间 `st=3 / max=22`（同时「停止生成」可见 ⇒ 确在跟随输出），随即离开路由到 `#/settings/appearance`（feed 卸载）再 `history.back()` 返回 → `st=234 / max=234`，内容继续增长到 `max=298` 时 `st` 仍为 298：**落在尾部并继续跟随**，半途的 3px 快照未被恢复。② **子句 3（主动浏览旧消息再返回仍恢复位置）**：另一会话用真实滚轮上翻到 `st=59`（跟随关闭），离开路由再返回 → `st=59`，此后 6 秒稳定不变。③ **会话切换路径实测（GWT 未覆盖）**：从同一主动位置 `st=59` 改走「切到别的会话再切回来」（feed 不卸载）→ `st=659 = max`（落回尾部），不恢复；与上一轮的实现判定一致（缓存只喂 Virtuoso 的初始化输入 `restoreStateFrom` / `initialTopMostItemIndex`，不重挂载不生效）。④ 闭合口径：GWT 与 BUG-0072 的场景均为「离开再打开会话」（重挂载），三条子句在该路径上均有实测读数（含流式瞬态与稳定态），据此记为 `done`；会话切换（不卸载）不恢复属读侧既有声明语义、不由本切片引入，若产品期望它也恢复应另立条目。用户如不认可以此口径闭合，按原 Task 回退 `verifying`。本轮为 DOM 读数，无独立截图。 |
+
+组一计数更新：**14 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、0151、**0191**），余 **5 条 verifying**（0190、0194、0181、0039、0042）。
+
+### 2026-10-08 · 本轮另发现（未计入任何条目）：回合不进入终态的两态
+
+排 TASK-0191 时为构造流式态误杀了故障夹具进程，得到一个人工可见的「回合卡死」态；随后按同一条件做了一次确定性复现。二者都落在 BUG-0018（`done`）的合同面上——其 GWT 明确要求「当前 Turn 应在有限时间内进入明确的 interrupted/aborted 终态；后续消息应能正常发送……不应长时间卡在处理中」。**本记录只报告观测与证据，处置（新开缺陷还是并入 BUG-0018 重开）交用户裁定。**
+
+- **态 A（严重；无自救手段）**：会话「分步慢输出」的 `turn-eecb181d` 在会话记录里**只有 `turn.started` + 两条 `message.appended`，没有任何终止事件**（无 `turn.completed`/`turn.cancelled`/`turn.failed`）。UI 上同一屏**同时**呈现「处理中…｜正在处理 · 31分16秒」与错误卡片「网络没连上／检查一下网络或代理，然后重新发送」；composer 的 aria 是「Open Forge 正在思考…」、模型选择器被禁用（「当前回合进行中，回合结束后可切换模型」），且**既没有「停止生成」也没有「发送消息」**——该会话既不能取消回合也不能发新消息。渲染进程重载无效；**重启应用**后该会话恢复为可发送状态（`发送消息` 可用、无「处理中」）。⇒ 该忙态由主进程内存中的在途回合持有，不是从落盘记录重新推导的（落盘记录里那回合根本没有尽头）。截图：`<artifactDir>\stuck-turn-wedged-session.png`。
+- **态 B（确定性复现；有自救手段）**：在新会话里发一条走 `/control/slow` 的消息，流式中**杀掉夹具进程**（连接被粗暴断开）→ 其后 60 秒内：`停止生成` 一直在、`发送消息` 一直不在、无错误卡片、无任何终态事件，计时器持续增长；点「停止生成」后 3 秒内恢复（`发送消息` 可用、模型选择器解除禁用），会话记录写入 `turn.cancelled reason="This operation was aborted"`。⇒ **provider 连接中断后回合不会自动进入终态**，但用户可手动中断。
+- **与既有记录的关系**：态 A 同时违反 BUG-0018 的「有限时间内终态」与「后续消息应能正常发送」两条，且连中断入口都没有；态 B 违反前者（60 秒无终态）、保留后者。触发条件不是「用户点停止」，而是 **provider 连接在回合中途被粗暴切断**（本例由我杀夹具造成；生产等价物是 provider 进程崩溃、网络中断或主进程被杀）。
+- **环境注记**：夹具自身在客户端断开后继续 `enqueue` 抛 `Invalid state: Controller is already closed` 的缺陷本轮已修（`try/catch push` + `cancel()` 清表），因此态 B 的复现方式改为**故意杀掉夹具进程**，不依赖那个缺陷。
+
+### 2026-10-08 · 组一续测十八（TASK-0181，向导与引导随重启重放；补证）
+
+方法：本轮因其它条目需要重启隔离 Debug 实例（`verify:ui:stop:debug` → `start:debug`，渲染源端口由 36915 变为 **52272**），顺手把上一轮归因（偏好只落在 origin 级 localStorage）的**可见症状**补全：不只字体回落，凡是 origin 级 localStorage 里的首启状态都会重放。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0181 | **verifying（补证，不改变计数）** | 重启前该 profile 的 localStorage 有 `openforge-font-preferences`、`vetta-setup-wizard-completed=1`、`vetta.tour.sidebar.completed=1`；重启后（origin `http://127.0.0.1:52272`）localStorage 只剩 **4 个运行时键**（`vetta-ui-theme`、`vetta-session-execution-mode`、`vetta-workspace-path`、`vetta-selected-model`），`vetta-setup-wizard-completed` 与 `vetta.tour.sidebar.completed` 均为 `null`（`openforge-font-preferences` 一并消失，即上一轮的字体回落同因）。可见后果两条实测：① 「语言与外观」整屏向导**重放**（`div.fixed.inset-0.z-[100]`，含「跳过」「下一步」，截图 `0181-setup-wizard-replay-after-restart.png`）；② 跳过向导后**产品引导 tour 重放**（`svg.driver-overlay` + `.driver-popover`，截图 `0181-sidebar-tour-replay-after-restart.png`），走完引导后 `vetta.tour.sidebar.completed` 才写回 `1`。⇒ 该丢失不是字体偏好专有，而是 dev 形态下**整个 origin 级 localStorage 一起失效**；安装态 origin 稳定时不会发生。本段只补症状，归因与「打包形态复核」要求同上一轮，状态不变。 |
+
+组一计数不变：**14 条闭合**，余 **5 条 verifying**（0190、0194、0181、0039、0042）。
+
+### 2026-10-08 · 组一续测十九（TASK-0039，插件 pinned 驻留预算与逐出实测；闭合为 done）
+
+方法：GWT 要求「多个插件页签声明 pinned」，而随包预设里没有声明 pinned 的页签，故本轮**自建夹具插件**：复制一个同类插件目录为 `packages/plugins/externals/pinned-probe/`（`node_modules` 用 Windows junction 指向兄弟插件，`bunx vite build` 产 MF `dist/`，**不动 `bun.lock`**），注册 4 个 `retention: "pinned"` 的活动页签 PP-A…PP-D；用 `VETTA_PLUGIN_DEV`（16 个预设 + `pinned-probe`）dev-link 进隔离 Debug 实例。**观测手段**：夹具页签渲染一次性生成的 `data-mount-id`（每个组件实例一个），故「谁还驻留、谁被重建」可直接从 DOM 判读；驻留集合用 `[data-activity-tab-content]`（`ActivityTabSurface` 给每个挂载表面写的 dataset）枚举。候选池 = 4 个夹具 pinned 页签 + 随包插件 `plugin:content-creation:workspace`（同为 pinned）= **5 个 pinned 候选**，预算 3。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0039 | **done（闭合）** | ① **硬上限**：重置实例态后（重载渲染进程 + 重开面板，active=`file`）挂载表面 = `file` + PP-B/PP-C/PP-D，**5 个 pinned 候选中只有 3 个驻留**，PP-A 与 `content-creation` 被逐出 ⇒ 非活动 pinned 驻留数有硬上限（=3，`DEFAULT_INACTIVE_PINNED_TAB_LIMIT`）。② **逐出可透明重建、驻留保持实例**：点开已被逐出的 PP-A → 它以**新 `data-mount-id`**（`ew81wu`）重建并以活动页签身份驻留（此时驻留 = 3 非活动 + 1 活动 = **4**，活动页签不占用非活动预算），PP-B/PP-C/PP-D 的 id（`u930fi`/`qubfh1`/`br8xbw`）**逐个不变**。③ **逐出跟随激活顺序（LRU）**：紧接上一步切到内置 `browser`（非 pinned 活动）→ 被逐出的是 **PP-B**（此时最久未激活者，id `u930fi` 消失），刚激活过的 PP-A 与 PP-C/PP-D 全部保留且 id 不变。④ **收起卸载 + 记录保留（第二子句）**：点「关闭活动面板」→ 全部 `[data-activity-tab-content]` 归零（docked 表面整体卸载，含内置浏览器的 docked 表面）；重新展开 → 驻留**仍是同一批** PP-A/PP-C/PP-D（PP-B 依旧被逐出，id 因重挂载必然更新）。该读数同时是「residency 记录保留」的判别证据：若状态随收起丢失并从头登记，LRU 会回到候选自然序 `[cc,A,B,C,D]`，`active=browser` 时驻留应为 {B,C,D} 且 A 被逐出——实测完全相反。⑤ 复位：夹具插件目录在提交前删除，`bun.lock` 全程未动。**未覆盖（如实记录）**：夹具页签渲染的是普通 React（插件 SDK/`docs/plugin/ui-slots.md` 无 `webview` 贡献面），故「guest `<webview>` 卸载」无实时读数，其证据为同一 `renderDockedPanel = model.isOpen` 闸门 + 既存组件测试 `ActivityPanel.plugin-tabs.test.tsx:95`「does not mount the docked tab bar or docked content while closed」（本轮复跑 4/4 绿）；`app.getAppMetrics()` 进程计数同本 Task 原记录，不做。截图：`0039-pinned-residency-strip.png`。用户如不认可以「DOM 挂载/实例 id」作为驻留证据，按原 Task 回退 `verifying`。 |
+
+组一计数更新：**15 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、0151、0191、**0039**），余 **4 条 verifying**（0190、0194、0181、0042）。方法经验：测「驻留/逐出」这类有历史的策略，**必须先重置实例态再读数**——在已经历多轮激活的实例上采样，LRU 顺序是未知量，读数无法与策略对齐（本轮探索阶段就出现过无法与源码语义对齐的 3 驻留读数）；改为「重载渲染进程 + 重开面板」得到确定初态后，每一步读数都与 `resolveResidentPinnedActivityTabIds` 的窗口预测逐项吻合。
+
+### 2026-10-08 · 组一续测二十（TASK-0181，GWT 第 4/5 条在真实 UI 逐子句实测；保持 verifying）
+
+方法：隔离 Debug profile `04987e4e`，全部经真实设置页 UI 驱动（`设置 → 外观 → 字体`）。真实权限拒绝**造不出来**：本机 Electron 无 `local-fonts` 权限处理器（默认放行），且 CDP `Browser.setPermission` 在该 Electron 上直接报 `Invalid PermissionDescriptor name: localFonts`；故失败分支用「替换 `window.queryLocalFonts`」构造（拒绝桩＝`Promise.reject(new DOMException("denied","NotAllowedError"))`，正是调用方看到拒绝时的形态；不支持桩＝`defineProperty(...,{value:undefined})`）。连续请求/过期结果用**可控计数桩**（保留 resolver，可决定何时兑现）。终端子句用底部面板终端的几何量（canvas 渲染，`.xterm-screen` 像素尺寸＝列数×单元宽）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0181 | **verifying（GWT 4/5 已实测闭合，剩余待用户判定观感与 PTY 读数）** | **GWT 第 4 条（5 个子场景全部实测）**：① 枚举失败 → `[role=alert]`＝「无法读取本机字体。如出现权限提示，请允许访问后重试；已有选择未改变。」，按钮回可用、列表与两个选择器仍在，还原 API 后重试即消失；② 不支持 → 「当前环境不支持读取本机字体，已有选择与默认字体仍可使用。」，两个选择器 + 两个「恢复默认」按钮均在（页面可用）；③ 字体缺失 → 下拉显示 `NoSuchFontZZZ`、`--font-sans`＝`"NoSuchFontZZZ", -apple-system, …`，读取后出现「可用列表中未找到此字体…」，点「恢复默认界面字体」→ 键回 `{"ui":"","code":""}`、CSS 回默认栈、提示消失；④ 偏好损坏（键写 `{oops-not-json`）→ 应用正常启动、`--font-sans`＝默认栈、两选择器「默认」、无错误 UI，随后选 Arial → 键被改写为合法 JSON 且 CSS 跟随（损坏值在启动时不被改写，恢复发生在下次保存，与只读实现一致）；⑤ 写入失败（`Storage.prototype.setItem` 抛错）→ 「无法保存字体设置，已保留原来的选择，请重试。」，**存储键、`--font-sans`、选择器显示三者均未变**（不伪称保存成功），还原后重试成功。**GWT 第 5 条**：① 连续请求——真实按钮同 tick 连点两次 → `queryLocalFonts` 调用次数＝**1**（加载中 `[role=status]`＋`disabled` 双重拦截），桩载荷正常落地；② 卸载中放弃——请求在飞时切「通用设置」（外观段卸载，字体按钮 0）再回「外观」→ 无提示、无搜索框、无 `ZZSTALE` 文本；随后兑现被放弃的请求 → 仍无提示、无 `unhandledrejection`/`error`；回页后新请求以 `FRESH-OK` 正常落地；③ **释放订阅（判别性）**——挂载中发 `StorageEvent` → `--font-sans` 变 `"Courier New", …`、选择器跟随（订阅有效）；**卸载后**同事件下 `--font-sans` **不变**，而存储键确为 `{"ui":"Courier New",…}`、回页后选择器显示该值 ⇒ 不是事件没生效而是监听已摘；④ **隐藏期间变更 → 恢复可见后重新 fit**——基线 `1044×210`，收起底部面板后 `.xterm` **仍为 1**（仍挂载、仅隐藏）且容器链宽高全 0，隐藏期间切侧边栏改宽无读数，展开后 **`1266×210`**（跟随新容器链），复原侧边栏 → 回 `1044×210`，双向可复现。附属读数：真实枚举 93 项界面 / 21 项代码候选（与上一轮另一 origin 一致）。**未观测**：PTY 尺寸同步调用本身——该 IPC 经 `contextBridge` 暴露且对象冻结，实测替换 `window.vetta.terminal.resize` 不生效（记录数组恒空），故「resize 被调用、cols 增加」仍只有宿主测试 `TerminalSurface.host.test.tsx:167`；GWT 第 2 条后半「实例/PTY/输出保留」的 UI 不可达结论不变。**本轮另记（未计入条目，不作为缺陷）**：进入外观页时模型只 `setPreferences` 不 `applyStoredTheme()`，在「键被外部改写」时可出现「选择器＝新值而 `--font-sans`＝旧值」的短暂分叉；可达性枚举显示 `saveFontPreferences` 全仓只有 `useFontSettingsModel.choose()` 一个写者（同文档、写完即 apply），`onboarding`/`pet`/`quickpanel` 的 storage 监听只跟随主题键，故当前单主窗形态下该分叉用户不可达。截图：`0181-fonts-loaded-2026-10-08.png`、`0181-fonts-load-failed.png`、`0181-fonts-missing-notice.png`、`0181-fonts-save-failed.png`、`0181-fonts-unavailable.png`。仍待用户判定：打包形态的字体观感与终端字形（本轮为几何量非观感）、是否接受 PTY 尺寸同步以宿主测试为准。 |
+
+组一计数不变：**15 条闭合**，余 **4 条 verifying**（0190、0194、0181、0042）。方法经验：① 要测「失败反馈」，先确认该失败**在这个运行时能不能真造**——本机 Electron 对 `local-fonts` 默认放行且 CDP 连权限名都不认，硬造权限拒绝会白费一轮；改为按「调用方看到拒绝时的形态」替换 API，并在记录里明写是桩，比含糊地宣称「已测拒绝」诚实。② 要证明「释放订阅」这类**移除型**行为，用同一次事件在挂载/卸载两态对照（本例读 `--font-sans`），再回页确认值确实在库里，才能排除「事件本身没生效」这一替代解释。③ 测「隐藏后重新 fit」要**在隐藏期间改变输入**（本例切侧边栏改宽度），否则恢复可见后无论如何都会有一次 fit，读数无法区分「补上了跳过的变更」与「碰巧重算」。
+
+### 2026-10-08 · 组一续测二十一（TASK-0190，标志位载体在生产装配中从不构造；保持 verifying）
+
+方法：上一轮（续测十五）判定「同一 `agent_start…agent_end` 跨度内先 error 后 done」不可达时，依据是「整仓无人把 `contextCheckpoints` 置真」——这是**配置性**证据（没人设）。本轮只读代码把问题前推一步：**能携带该标志的对象到底会不会在生产里被建出来**（构造性证据），从而排除「某条可编辑配置路径其实能加上这个键」。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0190 | **verifying（补证，不改变计数）** | 结论由「没人置真」（配置性）升级为「携带它的对象在生产装配里不会被建出来」（构造性）。① 唯一构造点：`AgentLoopConfig`（含可选 `contextCheckpoints`，`packages/agent/src/types.ts:143`）在生产源码里只有 `packages/agent/src/agent.ts:462-495` 一处字面量，逐字段显式列出（`model`/`reasoning`/`sessionId`/`transport`/`thinkingBudgets`/`maxRetryDelayMs`/`limits`/`tracer`/`tracing{…}`/`convertToLlm`/`transformContext`/`getApiKey`/`getSteeringMessages`/`getContinuationMessages`/`getTools`/`getSystemPrompt`/`salvageTextToolCalls`），既无该键也**不展开任何调用方对象**，故用户侧 JSON 等可编辑输入无处注入。② 三个读取点（`agent-loop.ts:233`/`:287`、`loop/assistant-stream.ts:59`）只经 `agentLoop`/`agentLoopContinue`，二者唯一调用者即 `agent.ts:502-503`；承载它们的 `Agent` 类在生产源码中**零实例化**（全仓 `new Agent(` 仅 `packages/agent/src/proxy.ts:75` 的 `@example` 文档块与 `packages/ai/src/utils/proxy-dispatcher.ts:45` 的 undici `Agent`）。③ 生产回合走另一条引擎：runtime-core `StatelessAgentCoreTurnEngine`（`packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts:60`，`AgentCoreTurnEngine` 为其空子类）→ `runAgentTurn(AgentTurnRequest)`（`packages/agent/src/engine/run-agent-turn.ts:39`），该路径不构造 `AgentLoopConfig`；其 checkpoint 是**宿主回调**（`run-agent-turn.ts:342` `if (!request.checkpoint) return undefined`；`engine/types.ts:172` `checkpoint?: AgentCheckpointHandler`、`types.ts:22` `limits.checkpointTimeoutMs`），与标志无关。④ 该引擎唯一展开调用方选项包处 `...this.options.streamOptions`（`stateless-agent-core-turn-engine.ts:223`）只把结果交给 provider 流函数，不进任何 loop config。仍未闭合：**用户裁定项不变**——是否接受「生产不可达的防御分支由单测覆盖（`running-changed-reason.test.ts` 真实事件序列，旧实现 2 失败/9 通过 → 修复后 3 文件 26 例通过）」作为验收口径。补记事实：该分支**不是可删死代码**，`Agent` 类与 loop 经 `packages/agent/src/index.ts` 导出，是库消费者/节点扩展（`node-extension-factory-loader.ts` 命名空间整体注入）的 API 面，外部置真即会走到；本仓生产接线不走，故不影响本次验收的用户可见面。 |
+
+组一计数不变：**15 条闭合**，余 **4 条 verifying**（0190、0194、0181、0042）。方法经验：判「某分支不可达」时，「全仓无人设这个开关」只是配置性证据；真正的构造性证据是**那个对象在不在生产装配里被建出来**。三轮问法：谁会构造它（唯一构造点是否为显式字面量）→ 构造时展不展开调用方输入（有没有 `...options` 之类注入面）→ 生产实际走的是不是这条链（本例生产走的是另一条引擎且承载类零实例化）。这样结论才从「碰巧没开」升级为「开不了」。
+
+### 2026-10-08 · 组一收口裁定（TASK-0190、0194、0181 闭合为 done；0042 转用户自行实机）
+
+方法：Agent 把四条剩余项各自的可裁定问题连同证据一并提交用户，由用户逐项裁定（验收结论归用户）。
+
+| Task | 用户裁定 | 落地结果 |
+|---|---|---|
+| TASK-0190 | **接受**「生产不可达的防御分支由单测覆盖」作为验收口径 | 闭合 `done`。依据：用户可见面已实测（恢复回合不残留错误横幅、最终失败保留正确原因与中断通知）；分支由 `running-changed-reason.test.ts` 真实事件序列覆盖；不可达有构造性证据。遗留：该分支随包发布、**不得按死代码删除**，若未来出现 `Agent` 类生产装配须重跑事件序列。 |
+| TASK-0194 | 重复用户气泡（乐观 id 未被规范历史吸收、刷新即消失、2/2 复现）**归 BUG-0068 作残余变体**；GWT ① 改写为「两轮派发亦可接受」 | 闭合 `done`；BUG-0068 已追加裁定段并登记 `related_tasks: TASK-0194`，其状态维持 `verifying`（残余变体尚无修复提交，回归夹具为本轮的正常操作路径）。 |
+| TASK-0181 | **接受** PTY 尺寸同步以宿主测试为准（`TerminalSurface.host.test.tsx:167`）；打包形态字体观感与终端字形**留发布前抽检** | 闭合 `done`。等价读数已在真实 UI 成立：fit 后渲染尺寸跟随容器（`1044×210` ↔ `1266×210`，隐藏期改输入后展开仍正确）。 |
+| TASK-0042 | 实机峰谷差由**用户自行实测**（不由 Agent 触发真实系统电源事件，避免中断其桌面会话） | 仍 `verifying`。步骤与日志字段清单已写入 Task：锁屏/睡眠一次，回贴 `power working-set trim`（`reason/trimmed/beforeKb/afterKb/deltaKb`）与 `power event observed`（`workingSetKb`），日志落点 `<vettaHome>/desktop-app/logs/`。 |
+
+组一计数更新：**18 条闭合**（0120、0132、0189、0185、0188、0152、0200、0193、0186、0207、0192、0131、0151、0191、0039、**0190**、**0194**、**0181**），余 **1 条 verifying**（0042，待用户回贴实机读数）。另有 2 条组外项（TASK-0183、0184）仍受 ISSUE-0029 的 CI 预算阻塞，不计入组一。方法经验：「不可达分支」这类条目**不要由 Agent 单方面闭合**——把「配置性证据 vs 构造性证据」「用户可见面是否已实测」「该分支是否随包发布（能否删）」三件事一并摆给用户，用户才能在三十秒内给出稳定裁定；同样地，「需要真触发系统电源/会话中断」这类有副作用的实测，把它交给用户自行执行比 Agent 代跑更合适（本轮 0042 即如此，同时把可复现步骤与判定阈值写成用户可直接执行的清单，避免「交回去了但没法做」）。
+
+### 2026-10-08 · 组二开始（TASK-0163，模态过滤往返；闭合为 done）
+
+方法：延续组一的隔离 Debug profile `04987e4e`，同一个真实会话里做「含图片 → 切纯文本模型 → 切回图像模型」的完整往返。**Playwright 驱动不了 Electron 原生选图对话框**，故图片经真实投递路径进入：页内 canvas 画一张 64×64 PNG（正红底 + 白色「IMG」）→ `DataTransfer` + 合成 `dragover`/`drop` 派发到输入栏 contenteditable（由 `MessageInput.DropZone` 祖先处理），与用户拖拽同一条链。出站请求体的判读靠**给夹具 provider 补一段请求体摘要**（`<debug vettaHome>\fixtures\fault-mock\server.ts` 的 ndjson 日志新增 `bodySummary`：只记类型与计数，不记正文）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0163 | **done（闭合）** | 图像模型 `glm-5.3-flash`（`input: ['text','image']`）先读图 → 正常描述「鲜艳的正红色」（证明图片确实进入请求）。**0163 决定性取证到手**：切到纯文本 `Fault Mock 1`（`input: ['text']`）后同一会话再发一轮，回合正常完成，该请求体摘要为 `contentTypes = ['input_text','output_text']`、`imageParts = 0`、`imageDataUrls = 0`、`rawHasDataImage = false`、`rawHasInputImage = false` ⇒ **请求合法且完全不含图片**。同请求 `inputTypes` 仍含 `message` × 6 与成对的 `function_call`/`function_call_output` ⇒ 文字与工具关联未丢。同请求 `omissionNotices = 1`，即 `packages/ai/src/providers/transform-messages.ts:4` 的 `UNSUPPORTED_IMAGE_INPUT_NOTICE` 被追加了一条。**切回图像模型后图像仍在**：改回 `glm-5.3-flash` 追问「图里那行白色文字写的是什么？只回那串字符」，答 **IMG**——正是第一轮投递图片里画的那串字符，跨越一次纯文本模型切换。0163 的三条子句全部在真实应用里成立。工具结果图片分支本轮未在 UI 构造（需工具返回图片），由单测覆盖：`packages/ai` 全量 63 文件 / 515 例绿（含 `openai-completions-tool-result-image*`）。截图：`0163-attach-probe.png`、`0163-model-picker.png`、`0163-image-model-turn.png`、`0163-text-model-turn.png`、`0163-switch-back-turn.png`。用户如不认可以「出站请求体摘要 + 判别性回答」作为行为面证据（或要求工具结果图片分支也上 UI），按原 Task 回退 `verifying`。 |
+
+组二计数更新：**1 条闭合**（0163），余 **16 条**（0149、0153、0154、0155、0156、0157、0158、0159、0160、0161、0162、0165、0166、0167、0168、0169）。方法经验：① 判「请求里到底有没有图」，**只读客户端源码不够**——这次靠的是夹具 provider 侧的**出站请求体摘要**，属于外部可观测事实，比「代码里写了 filter」强一档；② 摘要只记类型/计数不记正文，既拿到判别力又不把会话内容落到磁盘；③ 测「切回后图片还在」要设计**只有真看到图才答得出的问题**（本例让模型回读图上的字），否则模型凭上下文猜一句也能「看起来通过」。
+
+### 2026-10-08 · 组二续测一（TASK-0161，通知偏好迁移/持久化成立，提示音链路断裂；保持 verifying）
+
+方法：隔离 Debug profile `04987e4e`，设置 → 通用设置 → 通知（节锚点 `[data-setting-section-id="general-notifications"]`）。读数三条腿：UI（`role=switch` 的 `aria-checked`）、磁盘（`<vettaHome>/desktop-config.json`）、渲染进程 `window.Audio` 记录器（阳性对照＝设置页「试听提示音 → 播放」）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0161 | **verifying（两条子句成立；两条被新立案 BUG-0080 阻断）** | ① **旧配置迁移成立**：把配置降级为「无 `schemaVersion`/`notificationPreferences`」并塞入未知未来字段 `notificationPreferencesLegacy` → 应用读取后被原子重写为 `schemaVersion: 2` + 完整默认偏好，`notificationsEnabled`/`projects`/`language` 与未知字段全部保留，UI 无需重启即反映默认值。② **开关保存/重开成立**：「系统通知」切关 → 磁盘 `notificationsEnabled: false`；离开再进入仍为关；**重启整个实例**（渲染源 `42672`→`59802`，localStorage 全丢）后重开设置页仍为关、提示音仍为开，与磁盘一致。③ **完成/失败/等待审批的提示音在真实应用中从不播放**：三轮真实完成回合（夹具 `requests.ndjson` 记 `21:24:17Z`/`21:25:57Z`/`21:27:10Z` 三次 `/v1/responses`，会话 JSONL 相应新增回复）在 `window.Audio` 记录器下 **0 条**，而同记录器点「试听提示音 → 播放」立得 `new Audio()` + `data:audio/wav;base64,…`（10,750 字符）+ `play()`，1.5 s 后 `duration=0.5`/`currentTime=0.5`/`paused=true`（确实播完）。静态决定性证据：主进程 `notification-service.ts:130-135` 有 `webContents.send("vetta:notification:sound")`、preload 有 `onSound`，但**渲染进程无任何订阅者**（`playNotificationSound` 唯一调用点是设置页试听），且 Agent 横幅为 `silent: true` ⇒ 三类终结事件整体无声；原交付记录所称「root-layout onSound 播放接线」在特性提交 `3a49e5c2a` 中不存在。已立案 [BUG-0080](../bugs/BUG-0080-notification-sound-never-played.md)。④ **静音不影响业务事件成立**（业务事件侧）：系统通知关闭下的回合正常完成并渲染回复。未观测：OS 横幅本身（主进程 `new Notification` 无日志行；从页面补挂订阅被拒 `Host API access denied`），与 TASK-0181 的 PTY 读数同类处理。截图：`0161-notifications-section.png`、`0161-migrated-config-switches.png`、`0161-preview-audio-playback.png`、`0161-restart-persisted-switch.png`。 |
+
+组二计数更新：**1 条闭合**（0163），**1 条 verifying**（0161，待 BUG-0080 裁定），余 **15 条**（0149、0153、0154、0155、0156、0157、0158、0159、0160、0162、0165、0166、0167、0168、0169）。方法经验：① 测「设置项生效」要把**磁盘读数**当第二证人——UI 开关只证明渲染层状态，磁盘才证明真的保存；本例正是靠磁盘读数才把「迁移」与「保存」两条子句各自钉死。② 测「某功能是否真的响」必须配**阳性对照**（同一记录器点试听按钮能出声），否则「没记录」既可能是功能没响，也可能是记录器装错了；本例的对照恰好暴露出「设置页试听可用、事件路径不可用」这一半接线形态。③ 交付记录里的「接线」类描述要**回到提交里核**——本项记录写的 root-layout 接线的在那个提交的 37 个文件里根本不存在，源码搜索（谁订阅了这个通道）比读交付记录可靠。
+
+### 2026-10-08 · 组二续测二（TASK-0156，目标模式六条子句实测；保持 verifying 待裁定）
+
+方法：同一个隔离 Debug profile `04987e4e`，三条证据腿并读——① UI（目标模式对话框的「状态 / 已使用 N Token · 自动续跑 M 次」行、输入栏胶囊、会话内失败卡）；② 会话 JSONL 里的 `goal_snapshot` 自定义条目（含 `status`、`statusDetail`、计数器、`data: null` 清除标记）；③ 夹具 provider 出站请求日志（新增 `GET /control/empty?n=N` 注入「空回合」）。**测试夹具的 `/control/failcount` 注入不出「三轮无进展」**：运行时对注入的 500 有逐回合重试，目标只是继续往下跑（续跑数从 261 一路涨到 307），必须换成「回合成功但无产出／回合失败」的注入才有判别力。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0156 | **verifying（六条子句均有真实读数；建议闭合，待用户裁定）** | ① **新建/已有会话目标流成立**：技能/场景 → 目标模式 → 对话框只有「目标」一个字段（`textarea[aria-label="目标"]`）+ 取消/开始执行，提交后输入栏出现胶囊 `button[title="目标模式 · 点击移除"]`，回合结束自动续跑（实测 65 s / 60 次，前一目标累计 442 次）；同一入口在已有会话 `FAULT_MOCK_OK：` 上同样成立。② **三轮无进展 → 受阻成立**：注入空回合后循环发出 6 个请求、呈 3 对（`21:46:31.009/31.360`、`42.732/43.088`、`58.902/59.231Z`，输入条目数 891/892 ⇒ 上下文未重放），随后 `status: "blocked"`、`statusDetail`＝「Execution failed for three consecutive goal turns; review the failure before resuming」，UI 读到「状态 受阻」+ 继续目标/清除目标，**其后 12 分钟零 provider 请求**；会话内三轮回合各有可见失败卡（「本次回复中断了／可以重新发送试试／查看详情」）。③ **预算/取消成立**：无 Token 预算属 ADR-0144 明示设计（非缺陷）；「停止生成」→ 回合中断、目标转**已暂停**、请求立刻停（`21:56:44.407Z`、`21:59:12.223Z` 各一次，其后 12 分钟零请求），对话框给出「继续目标」。④ **恢复不重复轮次成立**：受阻态点「继续目标」→ 回「执行中」且用量/次数**原地接续**（6675 Token / 442 次，未清零），随后只发 6 个请求（3 轮 × 2）即再次受阻，输入条目数仍 891/892 ⇒ 未重放历史轮次；单测 `continuation-orchestration.test.ts:351` 另证 `[ephemeral:goal]` 恰好 1 条。⑤ **重启不静默续跑成立**（前段读数）：活跃目标 + 重启 → 自动转「已暂停」并附「Restored after the session stopped; resume explicitly to continue」，用量原样（3930 Token / 261 次），约 110 s 内零请求。⑥ **renderer 不引入 Provider 成立（静态）**：`useGoalModeModel.ts`/`GoalModeDialog.tsx` 只 import react/jotai/i18n/shared UI 与 `@vetta/coding-agent/session-extensions` 的**类型**。⑦ **清除目标成立**：清除后对话框关闭、胶囊消失、文档追加 `data: null` 的 `goal_snapshot`（revision 1603），再进入即回到创建态。未闭合项：真实应用里只触发了「连续执行失败」分支，「连续无可观察进展」分支仍是单测级（`goal-session-extension.test.ts:251`）；每轮两个请求的成因未定论（观察为同一上下文 891→892 条目，疑似空回合重试），仅作事实记录。截图 `0156-goal-create-dialog.png`、`0156-goal-active-capsule.png`、`0156-goal-paused-dialog.png`，原始读数 `0156-goal-evidence-2026-10-08.txt`。 |
+
+组二计数更新：**1 条闭合**（0163），**2 条 verifying**（0161 待 BUG-0080 裁定、0156 待裁定），余 **14 条**（0149、0153、0154、0155、0157、0158、0159、0160、0162、0165、0166、0167、0168、0169）。方法经验：① 判「无进展/受阻」这类**计数型停止条件**，注入方式决定证据价值——`/control/failcount` 的 500 会被运行时重试吸收，只有让回合**真正失败或真正零产出**才走到阈值分支；先读源码确认计数口径（`goal-runtime.ts:206-236` 分「连续失败」与「连续空续跑」两条），再造注入。② 「恢复不重复轮次」不要只看计数器，**看请求体**——恢复后上下文条目数仍是 891 而非膨胀到数百，才是「没有重放历史」的硬证据。③ 夹具能力是逐步长出来的：本轮给夹具补了空回合注入（`/control/empty`），这类改动都在 Debug profile 的 vettaHome 内、不进仓库，但要在记录里点名，否则读数无法复现。
+
+### 2026-10-08 · 组二续测三（TASK-0160，Git 两条子句实测成立、四条未落地；保持 verifying 待裁定）
+
+方法：同一个隔离 Debug profile `04987e4e`，自建 Git 夹具仓库 `<vettaHome>/fixtures/git-literal-paths`（5 提交，独立于用户仓库），以磁盘 `git show --name-status -M` 与 md5 作对照，UI 侧驱动活动面板 → Git → 提交图/变更。**Git 面板正文渲染在 shadow root 内**：`document.querySelectorAll`、`body.innerText`、`getByText` 都取不到文件行（表现为「明明可见却搜不到」），必须自底向上遍历 `shadowRoot` 才能命中——本轮一次「每个提交只列一个变更文件」的结论就是探针假象，全量扫描后与 `--name-status` 逐条一致，已更正。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0160 | **verifying（两条成立、一条单测级、三条未落地；不建议闭合）** | ① **特殊文件名/重命名成立**（归 TASK-0193/BUG-0074）：449e837 恰好列出 `br[ack]et.txt`/`bracket.txt`/`x[1].txt`/`x1.txt` 四行且点 `br[ack]et.txt` 得到自己的 hunk（`+BRACKET_ONE`，未串邻居）；b25171db 两行重命名各带 `旧 → 新` 标题与 `R`（`R087`/`R100`），纯重命名点开为「无差异内容。」；含 `&`/`#`/`'`/空格/方括号的路径按字面呈现。② **动作确认取消成立**：变更视图右键 `amp&and.txt` → 「丢弃更改」→ 破坏性确认框（含路径清单与「无法撤销；未跟踪的文件会被直接删除」），点「取消」后对话框消失、文件仍在列表、磁盘 md5 与操作前一致 ⇒ 未执行。③ **未安装 Git 仅单测级**（git 插件 51/51 + NoGitCta 组件测试）；真实「未安装」需去 git 的 PATH 启动实例，未授权不做。④ **关闭面板点文件一次打开 未适配**：`useFileTabContentModel.ts:69` 仍是修复前形态（同步卸载清理），无上游 b530b02ae 的 `mountedFileTabs` 微任务延后；用户可见面未实测（复现需聊天内文件引用，本 profile 无此会话）。⑤ **设计A切B 未适配**：`design-runtime.ts` 无 `pendingDesignListeners`/`onPendingDesignPath`。⑥ **空标题自动化可创建：实测不成立**——只填提示词时创建按钮 `disabled=true`、名称仍空；上游 2543c5aec 的「标题选填 + 首行兜底」在本仓不存在（`scheduler/automation-draft.ts` 缺失、`canSubmitFromData` 要求 `data.name?.trim()`）。附带核查 c496fb60d（能力筛选）同样未适配（不在合同内）。四个未落 SHA 在 `project/` 下只出现于本 Task 与 PLAN-0014，无其它 Task 承接。截图 `0160-diff-bracket.png`、`0160-diff-paren-rename.png`、`0160-discard-confirm.png`、`0160-discard-cancelled.png`、`0160-automation-prompt-only.png`，原始读数 `0160-git-evidence-2026-10-08.txt`。裁定选项：①补做四片后复验；②收窄合同为「未安装 Git + Git 特殊路径/确认取消」并把四片另立 Task/Bug 跟踪后闭合。 |
+
+组二计数更新：**1 条闭合**（0163），**3 条 verifying**（0161 待 BUG-0080 裁定、0156 待裁定、0160 待裁定），余 **13 条**（0149、0153、0154、0155、0157、0158、0159、0162、0165、0166、0167、0168、0169）。方法经验：① 「上游补丁没进本仓」这种判断要**两头都查**——查补丁引入的标识（`mountedFileTabs`、`pendingDesignListeners`）是否存在，再查该 SHA 是否被本仓别的 Task 承接（`grep -r <sha> project/`）；两头都空才能说「未落地」，否则容易把「别人做了」误报成缺口。② UI 里「可见但搜不到」几乎总是 **shadow DOM**：先遍历 `shadowRoot` 再下结论，别急着把探针读不到当成产品缺陷。③ 已落地的上游补丁也可能**被本仓用别的实现覆盖**（本例 `PREVIEW_MOUNT_DELAY_MS = 240` vs 上游 `waitForCommittedPaint`），所以「标识缺失」只能证明「上游那种写法不在」，要不要升级成用户可见缺陷，得看能不能实测或给出构造性证据。
+
+### 2026-10-08 · 组二续测四（TASK-0159，打包制品完整性三条 GWT 可及范围全成立；保持 verifying 待发版裁定）
+
+方法：**主检出**独立复跑声明命令 + 绕开单测包装直接调用 `assessWindowsSandboxArtifacts` 读返回结构，把「默认阻断 / 显式降级 / 非 Windows 不受影响」三条 GWT 各自钉在具体字段上；再以游离 CLI 实测两种入口。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0159 | **verifying（三条 GWT 成立；发版影响待用户裁定）** | ① `node apps/desktop/scripts/windows-sandbox-artifacts.mjs` **exit=1**，列出 `sourceCommit=null` 与三个受控 exe 全缺（带绝对路径）+ 修复步骤 + 降级条件。② `bun run --cwd apps/desktop test:packaging` **125/125 绿**（含「旧判定目录非空即算有沙盒」的对照、未钉摘要不放行、字节替换拦下、未受控文件混入报出）。③ `bun run verify:desktop:contracts` 绿 `[desktop-packaging-contract] ok`。④ 直接调用读数：`['win32']` → `status=blocked`/`enforcement=block`/`message` 非空（对应 `prepare-pack.js:699-704` 抛错＝构建中断）；`['darwin']`、`['linux']` → `status=not-declared`/`message=null`（不读清单、不阻断）；win32 且 `VETTA_SKIP_SANDBOX_ARTIFACT_CHECK=1` → `enforcement=warn`（走 `console.warn` 继续）。同一 CLI 加降级变量仍 exit=1，与设计一致（降级只作用于构建路径）。未覆盖：真实 `dist:win`/CI 中断现场（改以返回结构 + 抛错分支源码 + 合同断言三证）、「三 exe 齐全且摘要一致」的通过路径（摘要现为 `null`）、exe `--capabilities` 探针（需 Windows 与真实制品）。裁定项：Windows 打包在当前状态**按设计失败**——①受控构建产出 exe 后 `--write` 钉摘要／②流水线显式设降级变量并接受无沙盒产物／③暂缓 Windows 发版。 |
+
+组二计数更新：**1 条闭合**（0163），**4 条 verifying**（0161 待 BUG-0080 裁定、0156 待裁定、0160 待裁定、0159 待发版裁定），余 **12 条**（0149、0153、0154、0155、0157、0158、0162、0165、0166、0167、0168、0169）。方法经验：① 判「构建期门禁」不一定要跑整条构建——把判定函数的**返回结构**（`status`/`enforcement`/`message`）直接读出来，配上调用点的抛错分支源码，就能替代「真跑一次打包」，代价从分钟级降到秒级；但要如实标注这是**三证**而非端到端跑通。② 同一个脚本的**两个入口**可能有不同语义（游离 CLI 恒失败 vs 构建路径可降级），测「降级开关有没有用」必须打在构建路径那侧，否则会误判成开关失效。③ 合同测试（`verify:desktop:contracts`）能证明「接线存在」，不能证明「接线正确」——它只配当佐证，不能单独立案。
+
+### 2026-10-08 · 组二续测五（TASK-0157，六条子句测试级全部复跑成立；保持 verifying 待裁定）
+
+方法：该 Task 的验证合同本身就写着「不授权 UI 实机或付费模型」，验收口径即测试级；本轮在主检出独立复跑覆盖六条子句的用例，其中包含一条真实浏览器用例与一条 Electron 隔离窗口 e2e（均为仓库既有脚本，不触用户环境）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0157 | **verifying（六条子句测试级成立；建议闭合，待用户裁定）** | ① **XSS/外链/相对资源**：theme-ui `bun run test` **23 文件 / 180 例全绿**（含 `chat/markdown-link.test.ts`）；真实浏览器 `markdown-preview.node-test.mjs` **1/1**（「static HTML, blocked escape/network, inert SVG and bundled formula worker」）；Electron 隔离 e2e `markdown-isolation.test.mjs` **PASS**（「denied host/network/popups」）。② **长流式文本**：180 内 `markdown/streaming.test.ts` + `stable-blocks.test.ts`。③ **公式未闭合**：真实浏览器用例的 bundled formula worker 段 + 隔离 e2e 的 Mermaid 渲染/恢复段。④ **缓存上限**：180 内 `shared/syntax-highlight-cache.test.ts`（预算按插入序淘汰、单条超预算仍保留、shiki 失败路径同样计费）。⑤ **HTML 死循环隔离**：隔离 e2e 的 `isolation: loop` 段（**infinite-loop watchdog** + 独立 PID + 窗口清理）。⑥ **批注会话切换**：`AnnotationScope.test.tsx`（与 markdown 面共 6 文件 / **19 例全绿**），其中「keeps answering after close, ignores other-session updates and restores the saved result」即该子句。⑦ 主进程 markdown 服务面 `favicon-cache`/`favicon-service`/`public-resource` **16 例全绿**。未复跑：完整 desktop 套件（交付记录为「富内容/批注/共享面 443+100」，本轮只跑覆盖子句的 9 文件 / 35 例）与 mermaid 独立进程 IPC 的另一半；视觉观感不做。 |
+
+组二计数更新：**1 条闭合**（0163），**5 条 verifying**（0161 待 BUG-0080 裁定、0156 待裁定、0160 待裁定、0159 待发版裁定、0157 待裁定），余 **11 条**（0149、0153、0154、0155、0158、0162、0165、0166、0167、0168、0169）。方法经验：① 先读验证合同里的**授权边界**再决定验收口径——本项写着「不授权 UI 实机」，那么硬上 UI 反而越界，把「哪几个套件覆盖了哪条子句」逐条对上才是这份合同的验收形态。② 「某条子句有没有被覆盖」要**读用例标题**而不是数用例个数：`AnnotationScope.test.tsx` 里「ignores other-session updates」正是「批注会话切换」，光看文件名的看不出来。③ 交付记录里的总量数字（443+100、17+37）**不必追平**，如实写「本轮只跑了覆盖子句的 N 例」，比凑一个好看的总数更可信。
+
+### 2026-10-08 · 组二续测六（TASK-0167 + TASK-0158，SSH 远端筛选与脚本面板；均保持 verifying 待裁定）
+
+方法：TASK-0167 逐条复跑声明的套件（不连真实主机，符合其任务边界）并对「截断前筛选」做 Go/TS 双路径代码核对；TASK-0158 在隔离 Debug profile `04987e4e` 真实 UI 驱动脚本面板（临时在已注册夹具项目内加 `package.json`/`Makefile`，验收后已删除）。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0167 | **verifying（六项行为面测试级成立；建议闭合，待用户裁定）** | `ssh-transport` 18 文件 / **205 例**（含**真跑 `find`** 的「上限只算命中项，忽略目录同名文件不混入」）；`capability-sdk` 21 文件 / **91 例**（`filesystemBaseNameType` 拒 `/`、`\`、`.`、`..`，≤255 字符 × ≤64 项）；desktop `filesystem-service` + `remote-flow` **23 通过 / 1 平台跳过**（真实 bash 回环，含「@ 选文件列举跳过依赖目录」「按文件名筛选只给命中」「项目外/`..` 绕出/项目根一律不许动」）；取消面 `ssh-connection`「取消同样是 unverifiable」「超时与取消分得开」「取消即杀远端进程组」。**Go 行为回归仍未复跑**：`internal/server/proc.go` 的 `Setsid`/`syscall.Kill` 在 Windows 工具链下 `go vet` 直接报未定义，`GOOS=linux GOARCH=amd64 go build ./...` 与 `go vet ./internal/server/` 均 exit 0，而本机 `wsl.exe --list` 返回「未安装分发版」，无 POSIX 执行环境 ⇒ `go test` 不可达；改以 `fs.go:397-403`（筛选在 `len(files) >= limit` **之前**）与 `TestListRecursiveNameFilterAppliesBeforeTheLimit`（limit=2 断言结果恰为两命中项且未截断）作为同构替代证据。 |
+| TASK-0158 | **verifying（功能面真实 UI 成立；建议闭合，新发现文案欠账 BUG-0081，待用户裁定）** | 真实 UI：底部面板出现 `终端`/`脚本` 页签，脚本面板正确发现夹具项目的 `hello`/`second` 与 Make 目标 `build`/`deploy`，**点 `hello` 真的拉起终端并回显 `hello-from-fixture`**（工作目录=项目根）；连点两次脚本**只有一个 `hello` 终端页签**，「同脚本不重复启动」成立。SSH/旧 helper/非法名字三条按本任务自己的拆分条款归 TASK-0167 消费，取其上述读数。权限拒绝与「重新打开只恢复布局」为测试级（底部面板域 + store 共 11 文件 / **113 例**；`ScriptsPanel.test.tsx` 权限 alert 断言）——真实「缺 `terminal.run`」形态需摘授权重启实例，会打断并行会话，本轮未做；底部页签的「关→再开」也因**未找到该页签的关闭入口**（截图中 `×` 位置点击无效）未能真实往返。真实 SSH 入口按边界未连。 |
+
+组二计数更新：**1 条闭合**（0163），**7 条 verifying**（0161 待 BUG-0080 裁定、0156、0160、0159 待发版裁定、0157、0167、0158），余 **9 条**（0149、0153、0154、0155、0162、0165、0166、0168、0169）。方法经验：① 「未复跑」的理由**要独立复核一遍再写**——TASK-0167 说 Go 测试因 Windows 工具链跑不了，本轮实跑 `go vet` 看到 `undefined: syscall.Kill`、再查 `wsl.exe --list` 确认无 POSIX 环境，这条理由才从「声称」变成「已证」。② 缺失的替代证据可以很硬：把「筛选发生在限流之前」这一定义性顺序落到两处——源码行号 + 一条断言「limit=2 且前 4 个文件都不命中时结果恰为两命中项」，就足以替代跑不了的那个 runner。③ 真实 UI 驱动能把「测试级成立」升级成「用户面成立」，但也**只覆盖能点到的部分**：脚本面板的发现/执行/不重复启动点得到，页签关闭入口就点不到——如实写「未驱动成功」比含糊地说「界面正常」有价值。④ UI 走查顺带发现的文案问题（原始 i18n key）在单测里**永远抓不到**，因为测试把 `useTranslation` mock 成回显 key；这类问题只有真实渲染才暴露，值得在插件面板类验收里固定保留一步「肉眼扫首屏」。
+
+### 2026-10-08 · 组二续测七（TASK-0162 + TASK-0154 + TASK-0155；均保持 verifying 待裁定）
+
+方法：三项都在主检出逐条复跑并逐条对上用例；对「合同写了但实现没做」的子句先判定其验收对象是否存在于本仓，再决定结论。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0162 | **verifying（合同四条测试级成立；建议闭合，待用户裁定）** | 装配面 `processing-session-factory.test.ts` **1 例**断言工厂被调用时 `createPromptRuntimeSources` 等于真实 `createDesktopPromptRuntimeSources`（旧实现漏传必红）；会话面 `knowledge-processing-session.test.ts` **2 例**（含「custom-composition hosts **without** a separate source callback」的兼容路径与缺模型原错误）；批处理 `knowledge-processing-batches.test.ts` **1 例**；本轮追加复跑 desktop 知识域 `knowledge-round-controller.test.ts` + `poller.test.ts` **2 文件 5 例**（多批处理、批失败后跳最终对账、**abort 活动会话并跳过排队批次**、轮询只停一次并幂等解锁）。源码核对：`knowledge-processing-session.ts:31` 字段为**可选**（兼容自定义组合器）、`:67` 透传；`processing-session-factory.ts:34` 生产路径**显式注入**。未跑：交付记录的全量影响面数字与完整 check；真实知识加工模型效果（合同只允许假 Provider）。 |
+| TASK-0154 | **verifying（不闭合；合同宽于本轮切片，待用户裁定）** | 合同 6 条里只有 3 条有验收对象：**工作区隔离**（`mcp-resource-scope`「project config 即便要 application scope 仍保持 workspace」「`PROJECT_ROOT` 消费者保持 workspace」「显式全局 workspace 生效」；`mcp-supervisor`「application-scoped 连接不通告 workspace root」）、**回收重启/取消释放**（`mcp-resource-manager`「跨工作区复用同一预热应用源」「**disposal 失败重试但不重建连接**」「认证归属变化后换新 generation」）、**工具名合并**（工作区绑定覆盖同名应用级工具）。本轮实跑 desktop MCP 3 文件 **12 例**、`packages/runtime-node` **整包 82 文件 / 518 例**全绿。另 2 条**实现不在本仓**：「技能下一轮热更新」属被推迟来源 SHA（`027fba36a`/`fb5fb060d`/`3f8ec3161` 均**无其它 Task 承接**）；「队长先响应而成员完整就绪」对应 `887017560`，其承接方 `TASK-0125` frontmatter **status: blocked**（理由即该 SHA 不在 main 祖先链）。第 6 条「既有 team 安全与进度合同」属**未触碰**（本切片无 agent-teams 改动）。 |
+| TASK-0155 | **verifying（文本合同六条测试级成立；模型效果层客观阻塞，待用户裁定）** | 合同自己写着「软件文本合同与真实模型效果**分开报告**」。文本层全绿：`agent-modes.test.ts` **17 例**（人设让位、「标题跟随用户语言」）、coding-agent 提示词族 **7 文件 129 例**（人设分栏围栏、只点名真实可用工具、@skill 未命中、交付物链接形态与文件名保真）、`extension-tool-event-contracts.test.ts` **1 例**（工具事件身份）。模型效果层**未执行**，且本轮多一条硬阻塞：用户授权的 `qwen3.8` 端点在 [VERIFY-0018](VERIFY-0018-qwen38-real-provider-smoke.md) 被判定输出不连贯并立案 [ISSUE-0031](../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md)，该 Issue 明写「闭合前该 modelKey 不应用于任何真实流程验证」⇒ 本任务**没有可用的授权模型**来判读「人设/模式遵从度」。 |
+
+组二计数更新：**1 条闭合**（0163），**10 条 verifying**（0161 待 BUG-0080 裁定、0156、0160、0159 待发版裁定、0157、0167、0158、0162、0154、0155），余 **6 条**（0149、0153、0165、0166、0168、0169）。方法经验：① 遇到「合同宽于交付」的任务，**先判定每条子句的验收对象在不在本仓**再谈结论——TASK-0154 有 2 条子句对应的实现根本不存在（其中一条的承接 Task 还是 blocked 状态），这种子句写「未通过」和写「未适配」都不对，准确说法是「无验收对象」。② 追承接方要追到**状态**：`887017560` 在本仓确实有主（TASK-0125），但那个 Task 是 blocked，只查到「有主」就停手会得出一半的结论。③ 授权链要一起核：TASK-0155 的模型效果层原先只是「未授权」，本轮因为授权模型本身被立案禁用而变成「客观阻塞」——同一个「未执行」，理由的强度变了，报告里必须写清是哪一种。④ 一条子句写成「未触碰」时不要含糊说「通过」：不改动 ⇒ 不退化，这是推断不是实测，性质要在表里点明。
+
+### 2026-10-08 · 组二续测八（TASK-0168，Windows 回环夹具；保持 verifying 待裁定）
+
+方法：在主检出独立复跑该任务声明的五条定向命令，再单独跑 `ssh-connection.loopback.test.ts` 复核另一任务记录在案的存量红，最后把交付记录里那条「遗留：`packages/runtime-ssh` Windows 直跑仍红」拉到可量化并核验其可见性。本任务边界不含真实主机。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0168 | **verifying（声明的五条定向命令 Windows 本机全绿；建议闭合，待用户裁定）** | 五文件定向 **5 文件通过 / 59 通过 \| 19 显式跳过 \| 0 失败**（跳过的正是交付记录点名交给 POSIX 的进程组 kill、chmod 权限位、符号链接写入与本机 ps/信号组——显式门控，非静默 skip）；单跑 `ssh-connection.loopback.test.ts` **7 通过 \| 8 跳过 \| 0 失败**，与记录「Windows 6→7 通过」一致。**推翻一条过期记载**：TASK-0169 第 74/76 行写「该文件在 Windows 仍有 6 例存量红」「Windows 存量红待 TASK-0168」，本轮实测 0 失败，该状态已被 TASK-0168 自身交付消除，不应再作待办。**量化其遗留**：`packages/runtime-ssh` 整包直跑 **12 文件中 10 失败；64 例中 22 失败 \| 32 通过 \| 10 跳过**，典型为 Windows/POSIX 路径混拼（`ssh-tool-environment.test.ts` 经 `ssh-file-operations.ts:68` 得到 `/srv/app/C:\Users\…\reference.md`）；且该包 **无 `test` 脚本**（只有 `clean`/`build`），`scripts/quality/lib.mjs:82-84` 的 `TESTABLE_PACKAGES` 只收「有 `scripts.test` 的包」⇒ `bun run test`/`test:unit` 永不覆盖它，`turbo.json` 无 `test` 任务，CI workflow 搜 `runtime-ssh` 零命中 ⇒ 这 22 例红**不在任何标准入口内**，须归 TASK-0174 处置。未覆盖：真实 SSH 主机（边界外）、`resource-runtime.remote` Windows 挂起根因（交付记录自认未定位，本轮未复诊）、Windows CI 缺 bash 前置（需 CI）、完整 `check`/`test:changed`/三平台矩阵。 |
+
+组二计数更新：**1 条闭合**（0163），**11 条 verifying**（0161 待 BUG-0080 裁定、0156、0160、0159 待发版裁定、0157、0167、0158、0162、0154、0155、0168），余 **5 条**（0149、0153、0165、0166、0169）。方法经验：① 验收一个任务是**顺手清理别人的记录**的时机——本轮最大的收获不是复核自己，而是实测推翻了另一任务写下的「Windows 仍有 6 例存量红」；「存量红」这种断言会随前序任务交付而**自动过期**，凡遇到「某红待某任务」的记载，都要在当前 HEAD 上重读一次，不能把它当成既定事实往下传。② 判「某堆失败是否有人管」，要顺着**入口**查而不是顺着**文件**查：`packages/runtime-ssh` 有 12 个测试文件、看着像个受测包，但决定它是否被跑的是 `package.json` 有没有 `test` 脚本 —— 而 `TESTABLE_PACKAGES` 正是以该字段构造的，于是「有测试文件」与「测试会被执行」是两件事。一处（`lib.mjs:82-84`）定因，两处（`turbo.json`、CI workflow）印证，比逐个文件数失败例数有说服力。③ 交付记录里的**规模数字**要复测：写「5 个回环消费测试」实测是「10 个文件 / 22 例红」，方向对但差了一个量级——若直接把原数字抄进验收结论，会把一个更严重的问题写成小问题。④ 推翻旧记载时只否证**当下状态**，不去追认当时的读数对错：本轮只写「该状态已不存在」，不写「TASK-0169 当时写错了」。
+
+### 2026-10-08 · 组三续测一（桌面端机制 12 条：TASK-0038/0050/0051/0064/0072/0074/0075/0107/0122/0123/0130/0147；全部保持 verifying 待裁定）
+
+方法：先一次性摸清 12 条的合同与声明套件，再按「能本地判的直接跑、必须真实 UI 的驱动隔离 Debug profile `04987e4e`」分两路。测试级一律在主检出（HEAD `3f6e62262`）复跑各自声明的套件；用户面只在隔离 Debug profile 内驱动（非用户日常实例），且只用外部可观测量判读（进程 PID、磁盘文件、DOM/ARIA 读数）。凡是本轮判断「用户面不可自动化」的，都先实测观测通道、再写结论。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0038 | **verifying（合同三条约测试级成立；建议闭合）** | 渲染端联动 `useSessionEventController.compaction.test.tsx` **1 文件 / 5 例通过**；压缩族 **8 文件 / 56 通过 \| 2 跳过**（`compaction`、`-backpressure`、`-configuration`、`-prefire`、`-prefire-cache`、`-work-state-recovery`、`-extension-adapter`、`-extensions-example`）。未覆盖：真实「长会话跑到压缩」端到端（需真实长上下文会话）。 |
+| TASK-0050 | **verifying（七套件全绿；建议闭合）** | 声明的 7 个套件 **7 文件 / 93 例通过**（主进程 `session-history-page`；渲染端 `transcript-window`、`transcript-window-controller`、`optimistic-user-message-cache`、`viewer-history-update`、`useMessageListScrollModel`、`chat-service-artifact`）。未覆盖：500+ 条真实会话的上滚加载 / 搜索跳转 / 完整导出。`integration_status` 仍 `pending`（本轮未改）。 |
+| TASK-0051 | **verifying（合同三条约测试级成立；建议闭合）** | 复用同一渲染端用例 **5 例通过**（含本任务新增的「自动压缩后边界条目可见」「手动压缩重建保留已加载旧页」）；压缩参数面读压缩族 **8 文件 / 56 通过 \| 2 跳过**。未覆盖：真实「浏览历史 → 触发压缩 → 继续浏览」往返。 |
+| TASK-0064 | **verifying（前两条 Given + 关闭语义用户面成立；第 3 条无验收对象）** | 用户面真跑：从「+」菜单挂载终端 → 右栏 `pwsh` **PID 25012**、cwd＝会话项目根；底部面板另起 **PID 20552**（两 PTY PID 不同 ⇒ 独立）；**隐藏右栏页签后 25012 消失、20552 存活** ⇒ 「关闭=隐藏且进程随之结束」。测试级 **5 文件 / 33 例通过**。未覆盖：SSH 远程项目右栏终端（本 profile 无远程项目）。 |
+| TASK-0072 | **verifying（用户面不可自动化，测试级全绿）** | 浏览器域 **7 文件 / 62 例通过**。**实测通道边界**：迁移后 guest 是原生 `WebContentsView` ⇒ 不在 `ctx.pages()`、CDP 第三个 target 的 `url`/`title` 为空、guest 文本不在宿主 DOM；且**原生视图在场时 `page.screenshot` 30s 超时**。⇒ 三条 Given（登录态 snapshot / 隐藏切回截图 / resize bounds 跟随）全部无法取证。 |
+| TASK-0075 | **verifying（修复逻辑单测级成立；真实点击未驱动）** | `webview-picker-target`、`webview-picker-guest` 在同批 **7 文件 / 62 例**内通过。为本条新建夹具 `fixtures/browser-page/picker-server.ts`（端口 8793，`/plain` 满屏 body+`#go`、`/deco` 满屏装饰 div+`#go`，两路由**实测 HTTP 200**，不进仓库）；但驱动点落在原生 guest 内，同 TASK-0072 的限制 ⇒ 三条 Given 的真实点击判定全部未驱动。夹具留作可复现资产。 |
+| TASK-0074 | **verifying（软件合同测试级成立；模型行为面客观阻塞）** | **4 文件 / 28 例通过**（`artifact-tool-contract` 1/6、`agent-modes`、`ArtifactCanvasOpenButton`、`canvas-atoms`、`chat-service-artifact`）。未覆盖：三条条款的**真实模型行为面**——唯一授权模型 `qwen3.8` 已被 [VERIFY-0018](VERIFY-0018-qwen38-real-provider-smoke.md) 判为端点输出不连贯并立案 [ISSUE-0031](../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md)，该 Issue 禁止其在闭合前用于任何真实流程验证 ⇒ 无可用授权模型（与 TASK-0155 同一成因）。 |
+| TASK-0107 | **verifying（四组定向套件全绿；建议闭合）** | `process-health`、`perf-snapshot`、`session-search-worker-client`、`diagnostics-call-stack` **4 文件 / 21 例通过**。未覆盖：交付记录里更宽的读数（27 文件 190 例 + 7 文件 38 例）本轮未整体复跑；真实崩溃 / 真实挂起注入未构造。 |
+| TASK-0122 | **verifying（机制级成立；行为量级归 TASK-0125）** | `packages/agent-team` **整包 12 文件 / 85 例通过**；桌面 `team-task-waiter`、`team-runtime-manager`、`team-member-function-source`、`TeamWaitTasksView` **4 文件 / 20 例通过**。未覆盖：真实 ~45 分钟团队会话量化复跑（交付记录自认属 **TASK-0125**，本任务前置）。 |
+| TASK-0123 | **verifying（收窄逻辑测试级成立；建议闭合）** | `team-member-function-source`（`browser_tab` 不可见、其余透传、invoke 直通）+ `team-runtime-manager` 新增 3 例（新建/恢复成员携带收窄源、**协调 Runtime 不收窄**）——含在同批 **4 文件 / 20 例** 内。未覆盖：模型在真实会话里查看清单的行为面。 |
+| TASK-0130 | **verifying（证伪式证据 + 本机形态命中前提；建议闭合）** | `runtime-archive-installer.test.ts` **9 例通过 \| 1 平台跳过**，关键断言为 **zip 安装路径下 `spawnSync` 未被调用**。本机形态实测**恰好命中合同前提**：`tar --version` = **GNU tar 1.35**，`which bsdtar` **无命中**。旁证：本 profile 已装 `runtimes/node/22.22.2`（与合同同版本）、host.log 中 `zip extract failed` 零命中——但**安装时刻不可考**，不作「新路径真跑过」的证据。未覆盖：真实下载安装一遍。 |
+| TASK-0147 | **verifying（用户面四项成立；缺成功路径）** | 用户面真跑：入口确在侧边栏「新建项目 → 从远程主机添加」（**新会话页选择器不挂载该菜单**，与源码一致）；表单填不存在的主机名 → 失败态为 `role="alert"`「读不到这个目录。可能是连接断开，或当前账号没有权限。」+ `重试` + `技术详情`（**不是**空「无主机」态）；主机经 `createHost` 落盘 `ssh-hosts.json`（`source: manual`），点 `重试` 后主机数**仍为 1、id 不变** ⇒ 只重读目录。测试级 **4 文件 / 34 例通过**。探针主机验收后**已清理**（`hosts` 回到 `[]`）。未覆盖：成功路径（需真实 SSH 主机）。 |
+
+组三计数更新：**12 条全部 verifying**（0038、0050、0051、0064、0072、0074、0075、0107、0122、0123、0130、0147），**0 条闭合**。组三与组二是**并列的两组**，本行不并入组二计数（组二仍为 **1 条闭合** （0163） + **11 条 verifying** + 余 **5 条**）。就本轮证据给出的**关闭建议**：**8 条倾向 `done`**（0038、0050、0051、0064、0107、0122、0123、0130、0147 —— 其中 0064、0147 附未覆盖条款），**2 条受环境能力限制**（0072、0075，需真实鼠标/截图或打通 guest 通道），**1 条客观阻塞**（0074，无可用授权模型），**1 条待补用户面**（0050 的长会话体验可归此类，见上行）。全部裁定权在用户。
+
+方法经验：① **先探明观测通道，再决定「能不能验收」**。TASK-0072/0075 这一组值回票价的不是读数本身，而是三条实测事实——guest 是原生 `WebContentsView`、不在 `ctx.pages()` 也不出现可读 CDP target、且原生视图在场时 `page.screenshot` 必 30s 超时。有了这三条，「未覆盖」才能写成**能力限制**（并给出用户可自行走查的具体步骤），而不是含糊的「没做」。② **界面无语义可读时，外部可观测量要先定好**。右栏终端由 xterm+WebGL 渲染，DOM 里既没有文本也没有 `.xterm-accessibility-tree`，「关闭=隐藏且进程随之结束」只能靠 `tasklist` 里 **PID 25012 消失而 20552 存活**来判——这条对照（一个死、一个活）比「进程没了」强得多，因为它同时排除了「关页签把所有终端都杀了」这一误判。③ **判「真的走了新路径」绕不开「删掉再装一遍」**。TASK-0130 能拿到的最强证据是**证伪式**的（`spawnSync` 未被调用）加上本机形态恰好命中前提（GNU tar 1.35、无 bsdtar）；那条「profile 里已装 node 22.22.2」只能当旁证，因为**安装时刻不可考**——不能因为「东西在那儿」就说「新代码装出来的」。④ **「未覆盖」有三种性质，写法要分开**：没跑（0050 的长会话）、无权限/无对象（0064 的远程项目、0147 的成功路径）、客观阻塞（0074 因 ISSUE-0031 禁用授权模型）。TASK-0155 已经踩过一次「未授权」升级成「客观阻塞」的坑，本轮主动把三类分开写。⑤ **夹具做好了但没用上，也要记在案**。TASK-0075 的 picker 夹具两条路由实测 HTTP 200，本轮虽驱动不了，但它是**可复现资产**：任何能操作真实鼠标与截图的回合都能直接用它复现三条条款——比留下一句「建议人工测一下」有用得多。
+
+### 2026-10-08 · 组四 + 组五续测一（TASK-0025/0026；TASK-0136/0178/0208；全部保持 verifying 待裁定）
+
+方法：这 5 条的清单条目都是**用户面**（Work 研究/分析入口、intake 路由、真实主机 @revoked、真实子代理越权），但其中 4 条的用户流程都需要一次**真实模型回合**——而本轮唯一被授权的模型 `qwen3.8` 已因 [VERIFY-0018](VERIFY-0018-qwen38-real-provider-smoke.md) 判为端点不连贯、由 [ISSUE-0031](../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md) 明令「闭合前该 modelKey 不应用于任何真实流程验证」。故本组一律走「**确定性软件面复跑 + 逐条标明未覆盖**」，并把「客观阻塞」与「无权限/无对象」分开写。
+
+| Task | 本次结论 | 证据 / 未闭合原因 |
+|---|---|---|
+| TASK-0025 | **verifying（软件面测试级成立；用户面客观阻塞）** | `runtime-knowledge/test/local-source-scan.test.ts` **6 例**（与交付记录一致）、`coding-agent/test/features/research-tools.test.ts` **8 例**、`apps/desktop/src/main/task-activity/research-source-verify.test.ts` **2 例**、`WorkDocumentSections.test.tsx` **19 例** ⇒ **4 文件 / 35 例通过**。未覆盖：合同核心「每条结论回到明确来源、缺失来源标出不编造」「审核后的引用整理保存为 Artifact 并能在重开会话后查看」——两者都以模型产出引用清单围栏为前提，**无可用授权模型**（同 TASK-0074/0155 成因）。交付记录自认的「真实端到端冒烟待 VERIFY-0012」本轮仍未做。 |
+| TASK-0026 | **verifying（确定性软件面成立；模型参与面客观阻塞）** | `runtime-node/src/dataset/dataset-profile.test.ts` **7 例**（**交付记录写 12 例，本轮该文件实测 7**——只否证当下读数）、`coding-agent/test/features/dataset-profile-tool.test.ts` **5 例**、`WorkDocumentSections.test.tsx` **19 例** ⇒ **3 文件 / 31 例通过**。未覆盖：「模型按明确规则清洗 + 计算一项指标 + 预览」「Review 后产出 dataset/analysis Artifact」；交付记录的两条剩余风险（Electron 打包产物中 xlsx 懒加载、manifest 缺失时复查返回 `no-manifest`）本轮**未复诊**。 |
+| TASK-0136 | **verifying（本轮「真用过」且表现符合预期；已有用户「有条件通过」在案）** | 三路取证：① **真用过**——本轮会话即由 `/open-forge-task-intake` 进入，按 AGENTS.md 与 Claude 专属补充走「最小必要流程」直接进入**验收**路线（未换框架、未要用户填技术合同、未生成业务代码），并严格执行「保持 verifying、不自行宣布用户接受」；② **镜像/引用**——`bun run scripts/quality/workflow-skills.mjs` → 「canonical sources, shared entry and relative file links passed」；`.agents/skills` 在位、`.claude/skills` 为**符号链接**（未退化成文本文件）、**`.devin/skills` 已由后续提交 `5a2d55049 refactor(skills): 移除 Devin 镜像与同步路径` 正式取消**（该任务交付记录里的 Devin 镜像问题随之作废，属被后续决定取代而非缺口）；③ **回归套件**——`workflow-skills.test.mjs` **1 文件 / 17 例通过**。未复跑：交付记录的 `test:impact` 34 文件 449 例、Project/Task/quality-gates 3 文件 99 例、完整 `bun run check`。**既有用户裁定**：本任务「后续审核记录」写有用户曾给「**有条件通过**」，#1/#7 归 TASK-0138、#2~#5 与文案归 TASK-0139——本轮未复核这两个 Task 的闭合状态。 |
+| TASK-0178 | **verifying（两条声明命令全绿；缺真实主机）** | cwd `packages/ssh-transport`：`known-hosts` + `ssh2-runner` + `ssh2-runner.loopback` **3 文件 / 53 例通过**（交付记录记 49/49，方向一致）；cwd `apps/desktop`：`ssh-hostkey-verifier` + `ssh-host-service` **2 文件 / 24 例通过**（与记录一致）⇒ **5 文件 / 77 例通过，0 失败**。`@revoked` 无条件拒绝语义与宿主拒绝合同分别由前两组文件直接断言（本任务即 BUG-0062 的修复承接）。未覆盖：真实已知主机上写入 `@revoked` 后的实测（需真实 SSH 主机）；`test:impact`/`test:changed`/完整 `check` 未复跑。 |
+| TASK-0208 | **verifying（判定器与文案均可断言；缺真实会话取证）** | `bun run --cwd packages/plugins/presets/allstar-coding test` → **4 文件 / 98 例通过**（`fence-judge`/`ac-audit`/`state-rules`/`manifest`，与交付记录一致；判定器为纯函数，用例不需 mock 宿主）。**越权提示可读性**逐条读了 `src/fence/judge.ts` 的 block `reason`：全部是完整中文句子 + 处置指引（越权写 → 「不在任务契约 scope 内（…角色…基线…）。需要扩展写域 → help_protocol」；非法 agent_type → 「请改用白名单内的 agent_type…→ help_protocol」），**不是**裸错误码；且 `test/fence-judge.test.ts:175/220` 用 `toContain("help_protocol")` 把「reason 带申诉通道」固定住。拦截走 `plugin-sdk registerHook` + `PreToolUse` → `{action:"block", reason}`（`src/fence.ts:87/107`）。未覆盖：真实子代理会话里发起一次越权调用、看到该提示（需插件启用态 + 真实模型回合）。 |
+
+组四 + 组五计数更新：**5 条全部 verifying**（0025、0026、0136、0178、0208），**0 条闭合**。至此 VERIFY-0017 五组 53 条**已全部走完至少一轮取证**；组二仍有 5 条（0149、0153、0165、0166、0169）属 D 类真实资源项、未覆盖，其口径待用户一并裁定。就本轮证据的**关闭建议**：**2 条倾向 `done`**（0178、0208），**1 条表现符合预期但已有「有条件通过」在案待用户升级**（0136），**2 条软件面成立而模型面客观阻塞**（0025、0026，同 TASK-0074/0155）。裁定权在用户。
+
+方法经验：① **同一个「未执行」要按成因分档写**。本轮 5 条里有 4 条的未覆盖都是「需要真实模型回合」，而这个阻塞不是「没跑」，是**授权模型被自己立案禁用**（ISSUE-0031）——写「未覆盖（无可用授权模型）」和写「未覆盖（本轮未驱动）」是两种强度，后者会让用户以为补跑一下就行。TASK-0155 之后这是第二次踩同一个坑，已固化进写法。② **清单条目是「用户面」不等于验收只能靠用户**。TASK-0208 的条目问「越权提示是否可读」，这看似主观，但把它落成两条硬证据就不是了——把 `judge.ts` 里**每一条** block `reason` 读出来（是不是完整句子、有没有处置指引），再指出测试已经用 `toContain("help_protocol")` 钉住这一性质，用户拿到的就不是「我觉得挺可读」。③ **上游镜像被删不等于任务欠账**。TASK-0136 声明了三个 Skill 镜像，实测 `.devin/skills` 不存在——若就此记「镜像缺失」，是漏了 `git log -- .devin` 一步；实际是后续提交 `5a2d55049` 主动移除的。**判「缺」之前先查是不是被人有意拿掉**。④ **「真用过」本身可以是证据，但要写清用在哪**。TASK-0136 是本轮唯一「规范类，只有真用过才算验收」的条目，而本轮会话恰是一次真实 intake——把「路由走了验收路线而非生成业务代码」「全程保持 verifying 不代判」这两点指出来，比跑一遍回归套件更贴这条清单的判据。⑤ 交付记录里的**规模数字**第二次对不上（TASK-0026 写 12 例、实测 7 例）：沿用组二的写法，**只否证当下读数，不追认当时对错**。
+
+### 2026-10-09 · 用户裁定闭合（分档口径）：9 条转 done
+
+组三/组四/组五的关闭建议交用户裁定。用户选定的口径是「**按未覆盖成因分档**」：
+
+- **(a) 未覆盖项不属该 Task 自身验证合同的验收对象**（合同原文已排除，或任务边界明令不做）⇒ 无验收对象，可闭合；
+- **(b) 未覆盖项属客观阻塞**（环境不可达、授权模型被禁用、已归属他 Task、需 CI 环境）⇒ 可闭合，但残留须如实转出；
+- **(c) 仅「本轮没跑」而合同内仍属可测** ⇒ **不闭合**，进补跑清单。
+
+按此口径本轮裁定闭合 **9 条**（`status: verifying` → `done`，`updated: 2026-10-09`），各自在 Task 内追加「用户裁定闭合（2026-10-09，VERIFY-0017 分档口径）」小节：
+
+| Task | 分档 | 据以闭合的合同/边界原文 |
+|---|---|---|
+| TASK-0038 | (a) | 合同限「渲染端联动」测试级；真实长会话跑到压缩需真实长上下文会话，不属本任务验收对象。 |
+| TASK-0051 | (a) | 合同明记「本批不做实机/视觉验证」。 |
+| TASK-0064 | (a) | 第 3 条 Given 前提「SSH 远程项目」在本 profile 无对象 ⇒ 无验收对象。 |
+| TASK-0122 | (b) | 行为量级交付记录自认属 **TASK-0125**（本任务前置），已归属他 Task。 |
+| TASK-0157 | (a) | 合同限测试级，未授权 `verify:ui:*`。 |
+| TASK-0158 | (a) | 合同明记「不连接真实主机（任务边界）」、未授权 `verify:ui:*`。 |
+| TASK-0162 | (a) | 验证合同原文「真实工厂 + **假 Provider**」「只 Mock 外部边界，不访问真实用户状态或付费服务」⇒ 真实模型效果被合同排除。 |
+| TASK-0167 | (a)+(b) | 明记「不连接真实主机」；Go 行为回归属**客观环境限制**（本机 `go vet` 报 `unknown field Setsid`、无 WSL 发行版），以「交叉编译 + 同构断言」两级替代。 |
+| TASK-0168 | (a)+(b) | 交付记录「本任务边界不含真实主机」；`runtime-ssh` 22 例红已归属 TASK-0174；Windows CI 缺 bash 前置需 CI 环境。 |
+
+**随闭合转出的未决项（不得随闭合丢失）**
+
+1. `resource-runtime.remote` 的 Windows **挂起根因**仍未定位（TASK-0168 交付记录自认「未定位，不猜测」，本轮未复诊）。
+2. `packages/runtime-ssh` **22 例红**归 TASK-0174；该包无 `test` 脚本、不在任何标准入口内（读数已钉死于 TASK-0168）。
+3. TASK-0064 残留：多工作区单实例往返未驱动。
+4. [BUG-0081](../bugs/BUG-0081-scripts-panel-missing-locale-keys.md)（TASK-0158 首屏 3 处未本地化）作独立文案层欠账处理，不影响功能面闭合。
+
+**计数更新**：本轮 9 条分布在两组——**组二 5 条**（0157、0158、0162、0167、0168）转 done，组二由「1 条闭合（0163）+ 11 条 verifying」变为 **6 条闭合 + 6 条 verifying**（余 0161、0156、0160、0159、0154、0155）；**组三 4 条**（0038、0051、0064、0122）转 done，组三 12 条由「0 条闭合」变为 **4 条闭合 + 8 条 verifying**（余 0050、0072、0074、0075、0107、0123、0130、0147）。组四/组五 5 条（0025、0026、0136、0178、0208）**保持 verifying**，等后续裁定。台账侧同步：`project/tasks/README.md` 焦点表 4 行（0122、0162、0167、0168）已随状态改为 `done`；`bun run check` 全绿（`[project-indexes] Plan and Task status indexes match frontmatter`、guard/type/lint 均 exit 0，ratchet `new=0`）。
+
+方法经验：**「可闭合」的判据不在证据强度，而在合同文本**。本轮 9 条里，证据面早已「测试级全绿」，卡住它们的是「未覆盖项算不算本任务的账」——而这答案不在验收人手里，在**每个 Task 自己写的验证合同与不做项**里。逐条 grep 出「不做实机验证」「不连接真实主机」「未授权 verify:ui」「只 Mock 外部边界」这些原句后，9 条的裁定从「我倾向 done」变成「合同已排除，无验收对象」。反面同样成立：**没查到合同排除句的，一律不闭合**（0050 的长会话、0107 的真实注入、0123 的模型行为面），因为那属 (c) 类「没跑」，补跑就能测，不该借分档名义放行。
+
+### 2026-10-09 · 用户裁定闭合（分档口径）续：组五 3 条转 done
+
+组四/组五的关闭建议（组五 3 条倾向 done、组四 2 条客观阻塞）交用户裁定，用户选定同一分档口径，组五 3 条全部转 `done`（各自在 Task 内追加「用户裁定闭合（2026-10-09）」小节）：
+
+| Task | 分档 | 据以闭合的事实 |
+|---|---|---|
+| TASK-0136 | (a)+(条件已清) | 「有条件通过」的**条件承载方已清空**：TASK-0138（#1/#7 守卫）与 TASK-0139（#2~#5 与文案）**均已 `done`**，且两者收口自述「不改变用户可观察输出……验收对象是测试/守卫/契约/台账本身」⇒ 条件项本质属工程面。本清单判据「规范类，只有真用过才算验收」已由本轮真实 intake 会话满足（走验收路线、未换框架、未代判）。剩项「静态脚本不保证任意模型在新会话中的指令遵循」是静态门禁的固有限制，本 Task 合同从未承诺证明模型遵循质量 ⇒ 合同外已知限制，非待办。 |
+| TASK-0178 | (a) | 合同第 61 行明令「**不得读取用户真实 `~/.ssh/known_hosts`、私钥或访问真实主机**」，交付记录亦记输入为「合成 known_hosts……不含真实密钥」⇒ 真实主机 `@revoked` 实测是**合同禁止项**，无验收对象。可及证据：5 文件 / 77 例通过、0 失败。 |
+| TASK-0208 | (b) | 未覆盖项「真实子代理会话越权拦截」需**真实模型回合**，唯一授权模型受 ISSUE-0031 禁用 ⇒ 无可用授权模型（与 0074/0155/0025/0026 同成因）。**另核实集成面已完成**：合并 `8935058fd` + 记录 `c058ca693` 在案，且 `8935058fd` 经 `git branch -r --contains` 确认为 `origin/dev` 祖先 ⇒ 门禁与推送早已完成，`project/tasks/README.md` 原写的「待门禁与推送」是**过期副本**（已同步更正）。判定器 98 例全绿、block `reason` 可读性有 `toContain("help_protocol")` 锚点。 |
+
+**计数更新**：组五 3 条（0136、0178、0208）**全部闭合**；组四 2 条（0025、0026）**保持 verifying**（模型面客观阻塞）。VERIFY-0017 累计闭合 **12 条**（组二 5 + 组三 4 + 组五 3）。台账侧同步：`project/tasks/README.md` 焦点表 3 行（0136、0178、0208）改为 `done`，其中 0208 行的过期描述一并改正。
+
+方法经验：**「过期副本」不只是记录问题，它会反过来抬高验收门槛**。TASK-0208 的交付记录明明写着合并、门禁、`git push origin main:dev` 三步都完成，README 那行却还停在「待门禁与推送」——若照着 README 走验收，会去追一个**早已完成**的动作，而真正的未覆盖项（真实会话取证）反而被掩盖。故本轮对每条 verifying 都加了一步**回到 git 验证集成声明**（`git branch -r --contains <merge-sha>`），比读任何一份叙述都硬。另一条沿用：**条件式通过（「有条件通过」「待 #N 修复」）要追条件承载方的终态**，0136 卡了两天，实际承载方 0138/0139 早已 `done`——判「还有条件」之前先查条件清单的每一条现在是什么状态。
+
+### 2026-10-10 · 模型面解阻：glm-5.3-flash 授权落地，0155 三探针命中、0074 挖出 ISSUE-0033
+
+用户裁定（记入 [ISSUE-0031](../issues/ISSUE-0031-qwen38-endpoint-incoherent-output.md)）：授权 `glm/glm-5.3-flash` 作为验收模型（隔离 Debug Profile、真实 Provider），补做因「无可用授权模型」阻塞的模型面。执行环境：Debug Profile `04987e4e`（四项状态全绿）、`provider.preflight` glm `ready`（1.77s/stop）；中文 prompt 经临时驱动脚本从磁盘读 JSON 直调 debug-cli（规避 VERIFY-0018 记录的命令行中文损坏），探针夹具在 `%TEMP%\vetta-0155-probe\`。
+
+| Task | 模型面读数 | 状态 |
+|---|---|---|
+| TASK-0155 | **三探针全部命中**：① interactive 人设下模糊任务 → `input_required` + 2 问 × 3 选项 + 「推荐」徽标，未动文件（人设压过 Coding 自主默认）；② 对齐后交付五份文档、链接严格 `[filename](<path>)` 尖括号形式；③ default 人设 + 项目指令（末行 `PROJ-OK`、Python Tab 缩进零注释）→ 盘上文件逐项核实 + 回复全中文。三类提示词优先级在授权模型上全部按预期 | 双层（文本合同 + 模型面）成立，倾向闭合，待用户裁定 |
+| TASK-0074 | **一半成立一半断裂**：提示词面成立——模型先 `invoke_skill report-canvas` 再 **13 次尝试 `artifact`**（「要报告走 artifact」引导达成）；但 13 次 `arguments` 全空被拒、无法自纠，退化为 `write` 普通文件。同会话 object 顶层工具全部正常，`ArtifactToolInputSchema` 顶层是**裸 `anyOf`** ⇒ 立案 [ISSUE-0033](../issues/ISSUE-0033-artifact-union-schema-gateway.md)（主假设：网关不接受非 object 顶层 parameters；推荐修法 C 错误带 schema 提示 + B schema object 化） | **不能闭合**：端到端「报告进画布」在授权模型上不成立，待 ISSUE-0033 修复回归 |
+
+方法经验：① **模型面验收必须在「中性提示词」下做**——「继续，完成刚才的架构报告」而不是「请用 artifact.create 生成」，否则测的是提示词复读不是提示词引导；本轮 0074 的 13 次自发尝试正是中性提示词下拿到的。② **工具 13 次重试形状完全不变是「模型看不到 schema」的信号**，不是「模型笨」——若模型能看见 schema，13 次里至少会试出不同形状；结合同会话 object 顶层工具全部正常，把「顶层 anyOf」从三号假设提到主假设，比 wire 档先到一步。③ **验收回合挖出的缺陷要当场立案而不是记进「未覆盖」**——0074 若按旧写法记「模型未产出 artifact，待复测」，ISSUE-0033 的 schema 形状线索就埋没了；立案后连「修复回归用同一探针」都有了现成脚本。④ 探针间共用的全局设置（`personalization`）要显式复位，否则上一个探针的约定会泄进下一个（本轮 0074 回复末行出现探针 B 的 `PROJ-OK`，已在该 Issue 附注说明并在后续探针前复位）。
+
+### 2026-10-10 · 模型面批次收口 + 托管批量裁定：再闭 10 条，立案 ISSUE-0033 与 BUG-0082
+
+用户授权托管（「完成绝大部分 done，你自行根据最优的来决裁」），按既定分档口径批量裁定。glm 授权落地后的模型面实测（环境：Debug Profile `04987e4e`，中文 prompt 经磁盘 JSON + 直调 debug-cli 规避命令行损坏）：
+
+| Task | 读数 | 处置 |
+|---|---|---|
+| 0025（Work 研究） | `research_scope` 正确调用、三源通读、逐条引用+原文、定价**如实标「资料未覆盖」不编造**（判别性夹具）；artifact 空参 ×3 后按合同降级为落盘文件+规范清单块（指纹逐字复制） | **done**（Artifact 尾条转 ISSUE-0033） |
+| 0026（Work 数据分析） | `dataset_profile` 正确调用；画像精确（2 空值+1 N/A）；清洗剔 3 脏行；三区合计**复算无误**（华北 4000 最高）；盘上 `cleaned_sales.csv` 与预览逐行一致；artifact 空参 ×8 | **done**（Artifact 尾条转 ISSUE-0033） |
+| 0215（终端能力指引） | 网络诊断三命令实测执行、无「没有终端」误判（BUG-0079 形态未复现）、部分失败如实解释（fake-ip）；MCP 字面子场景受限于 profile 无 MCP 服务器 | **done** |
+| 0149（Anthropic 网关思考块） | fixture 层绿；「经兼容网关」行验收对象**在环境中不存在**（配置端点均 openai-responses，无 Anthropic 协议端点）；旁证：glm 会话思考块含签名全程健康 | **done**（先例：0168 需 CI 环境） |
+| 0155（提示词优先级） | 三探针全命中（interactive 压过自主默认、项目指令盘上核实、用户语言） | **done**（用户裁定） |
+| 0074（artifact 单一路径） | 提示词面成立（`invoke_skill report-canvas` + 13 次尝试）；但 13 次空参全拒、退化 write 文件 ⇒ **端到端在授权模型上断裂** | **保持 verifying**，阻塞于 [ISSUE-0033](../issues/ISSUE-0033-artifact-union-schema-gateway.md) |
+
+托管批量裁定（各 Task 文件内附分档依据）：**0025、0026、0149、0215、0156、0159、0123、0147、0072、0075 转 `done`**；0169 补过期记载更正（6 例存量红已被 0168 消除）后**保持 verifying**（真实主机 D 类）；0050/0107/0130 **保持 verifying**（(c) 类本机可补跑：500 条大历史 UI 冒烟 / sidecar kill 注入 / 真实复装 runtime——配方在各 Task 记录）；0160 **保持 verifying**（四片未落地属实现缺口，待收窄裁定）；0161 **保持 verifying**（BUG-0080 阻断，提示音在其合同内）；0153/0165/0166/0169 **保持 verifying**（真实 SSH 主机 D 类，待用户自行实测）；0183/0184 **保持 verifying**（ISSUE-0029 CI 预算，用户决策）；0218 **保持 verifying**（代码在 Task Worktree，待串行集成后才能做模型面）。
+
+**新立案**：[ISSUE-0033](../issues/ISSUE-0033-artifact-union-schema-gateway.md)（P1：artifact 工具 union 顶层 schema 在 glm 网关不可用——13 次空参被拒；推荐 C 错误带 schema 提示 + B schema object 化，同探针回归）；[BUG-0082](../bugs/BUG-0082-turn-never-reaches-terminal-state.md)（P1：provider 中断后回合不进终态，态 A 无自救手段、态 B 确定性复现，违反 BUG-0018 合同面）。
+
+**VERIFY-0017 计数（53 条行为面清单，2026-10-10 收口后）**：已闭合 **41 条**（组一 18 + 组二 10 + 组三 8 + 组四 2 + 组五 3）；**保持 verifying 12 条**，按成因——用户自行实测 1（0042，步骤与阈值已附）、真实 SSH 主机 D 类 4（0153、0165、0166、0169）、合同宽于切片待裁定 2（0154、0160）、BUG/Issue 阻塞 2（0074→ISSUE-0033、0161→BUG-0080）、(c) 类本机可补跑 3（0050 大历史 UI 冒烟、0107 sidecar kill 注入、0130 真实复装 runtime，配方在各 Task 记录）。清单外另有：0183/0184（ISSUE-0029 CI 预算，用户决策）、0215（本轮闭合）、0218（代码在 Task Worktree，待串行集成后才能做模型面）。
+
+方法经验：① **托管批量裁定仍要一裁一据**——10 条 done 每条都在自己文件里写明分档依据与余量去向，托管的是「决定权」，不是「依据」；事后任何一条被质疑，依据都在 Task 里而不是在聊天记录里。② **验收对象不存在 ≠ 没跑**：0149 的「经兼容网关」行，环境里根本没有 Anthropic 协议端点——这类条目无限期 verifying 是假勤奋，按 0168 先例闭合并把「若对象日后出现可冒烟」写明才是诚实终态。③ **负探针（故意缺失的信息）是「不编造」类合同的唯一硬判据**：0025 的定价问题若夹具里恰好有答案，模型答对也证明不了诚实；刻意留白后模型标「资料未覆盖」，合同才算被验证过。④ **算术要自己复算**：0026 的三区合计模型全对，但验收记录里写「复算无误」的前提是验收者真的加了一遍——模型面验收里，模型的计算正确性是抽样事实不是推理事实。

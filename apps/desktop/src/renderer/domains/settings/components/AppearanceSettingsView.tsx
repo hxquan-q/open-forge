@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+import { FontSettingsView } from "./FontSettingsView";
 import { PixelMarioBlocks } from "@shared/components/mario/PixelMarioBlocks";
 import { cn } from "@shared/lib/utils";
 import type { CursorStyle } from "@shared/theme/cursor";
@@ -555,6 +557,8 @@ export function AppearanceSettingsView({ model }: { model: AppearanceSettingsMod
 					</div>
 				</div>
 			)}
+
+			<FontSettingsView model={model.fonts} />
 
 			{/* 新会话页装饰：装饰件与纹理都只改这一页，连排在一起用户不必逐项猜它们作用在哪。
 			    不套卡片、不加边框——这一页其余分区都是平铺的，单独给它加一层壳反而把它拔高成了别的东西。 */}

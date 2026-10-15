@@ -181,3 +181,52 @@ bun run check
 ## License
 
 MIT
+
+
+## Context Boundary
+
+```yaml
+purpose: Coding Agent features, policies, and stable API semantics
+provides:  
+  - "@vetta/coding-agent"
+  - "@vetta/coding-agent/hooks"
+  - "@vetta/coding-agent/host-services"
+  - "@vetta/coding-agent/historical-sessions"
+  - "@vetta/coding-agent/bootstrap"
+  - "@vetta/coding-agent/config"
+  - "@vetta/coding-agent/extensions"
+  - "@vetta/coding-agent/extensions/pi-compat"
+  - "@vetta/coding-agent/function-extensions"
+  - "@vetta/coding-agent/plugin-runtime"
+  - "@vetta/coding-agent/export-html"
+  - "@vetta/coding-agent/profile"
+  - "@vetta/coding-agent/projects"
+  - "@vetta/coding-agent/cli-guidance"
+  - "@vetta/coding-agent/resources"
+  - "@vetta/coding-agent/rpc"
+  - "@vetta/coding-agent/runtime"
+  - "@vetta/coding-agent/sdk"
+  - "@vetta/coding-agent/session-extensions"
+  - "@vetta/coding-agent/settings"
+  - "@vetta/coding-agent/host"
+  - "@vetta/coding-agent/composition"
+  - "@vetta/coding-agent/model-context"
+consumes:  []
+internal_dependencies:
+  - "@vetta/action-rpc"
+  - "@vetta/agent-core"
+  - "@vetta/ai"
+  - "@vetta/ecosystem-adapter"
+  - "@vetta/runtime-core"
+  - "@vetta/runtime-knowledge"
+  - "@vetta/runtime-mcp"
+  - "@vetta/runtime-node"
+  - "@vetta/runtime-storage"
+  - "@vetta/runtime-subagents"
+  - "@vetta/runtime-telemetry"
+  - "@vetta/runtime-tools"
+```
+
+## Knowledge processing composition
+
+Hosts using the default composition in `createKnowledgeProcessingSessionFactory` must supply `createPromptRuntimeSources`. Reuse the host-owned source factory for the requested workspace; the product layer forwards it without reading host configuration itself. The option is additive and remains optional for existing custom `createComposition` adapters that already construct their own prompts. Adapters delegating to the default runtime should preserve a supplied source factory. Stored conversations and knowledge data do not need migration.

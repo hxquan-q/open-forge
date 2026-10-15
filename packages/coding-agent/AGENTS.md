@@ -167,3 +167,9 @@ bun run check
 - `bun run check:quick`、相关测试和代码变更后的 `bun run check` 是否全部通过。
 
 固定重写目标见 [`REWRITE-CHARTER.md`](../../docs/agent/coding-agent/05-greenfield-rewrite/08-implementation-log/REWRITE-CHARTER.md)，三层所有权以 ADR-0077 为准。架构守卫以 `scripts/quality/check-coding-agent-architecture.mjs` 和包边界守卫为准。
+
+## 规则分级
+
+- **Invariant**：`架构定位` 与 `依赖方向` 的边界、`执行与动态能力约束`、`功能兼容与数据边界`。
+- **Policy**：`编码前必须分析`、`测试要求`、`完成前审查`。
+- **Guideline**：`设计原则`、`设计模式使用准则`、`关键目录` 索引。

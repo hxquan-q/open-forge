@@ -1,9 +1,10 @@
 import { useBottomPanelPills } from "@domains/bottom-panel/hooks/useBottomPanelPills";
+import { GoalModeDialog } from "../GoalModeDialog";
 import { sessionAxesBadgeKind } from "@domains/workspace-mode";
 import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
 import { pathBasename, toVettaFileUrl } from "@shared/lib/utils";
 import type { InputBarContextMenuViewProps } from "@vetta-org/theme-ui/chat";
-import { memo, useMemo } from "react";
+import { Fragment, memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { InputBar } from "../InputBar";
 import type { ActiveActionCapsule } from "./ActiveActionCapsules";
@@ -209,5 +210,10 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 		},
 	};
 
-	return <InputBar model={model} />;
+	return (
+		<Fragment>
+			<InputBar model={model} />
+			<GoalModeDialog />
+		</Fragment>
+	);
 });

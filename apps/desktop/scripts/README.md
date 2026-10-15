@@ -140,6 +140,33 @@ electron-builder 阶段设置，否则编译产物与打包资源可能不一致
 - 源包、构建缓存和下载的 vendor 解压目录不被删除；过滤只发生在 electron-builder 复制 extraResources 时。
 - 如果需要调试符号或 sourcemap，应使用未过滤的本地构建目录或专门调试包，不应把它们默认放进用户安装包。
 
+## staged node_modules 清洗清单
+
+`prepare-pack.js` 把外部化运行时依赖（`packaged-native-dependencies.mjs` 的清单）整包复制到
+`staging/node_modules`，再由 electron-builder 打进 `app.asar`。复制时逐条应用
+`staged-deps-cleanlist.mjs` 的清洗清单——对应 VS Code `build/.moduleignore` /
+`.moduleignore.<platform>` 的两级形状：
+
+- 一律裁剪：`test/`、`docs/`、`examples/`、`.github/`、`*.md`、`*.map`、`*.pdb`、`*.gyp`、
+  `*.lib`/`*.exp`、`tsconfig*.json`、`*.ts`（保留 `*.d.ts`）等；`LICENSE*`/`NOTICE*`/`COPYING*`
+  压过任何规则。
+- 平台变体（按目标产物 OS，不按构建主机）：`prebuilds/<os>-<arch>/`、`build/koffi/<os>_<arch>/`
+  与异平台动态库（`*.dll`/`*.dylib`/`*.so`）。目标平台未知时保留全部变体。
+- native 源码：`src/`、`deps/`、`vendor/` 只在包内确有 `*.node` 且声明入口不落在其中时才裁。
+
+原因：koffi 随包发 18 个平台的预编译二进制与 C++ 源码，`@lydell/node-pty-*` 随包发 PDB 调试符号；
+这些文件在目标产物里永远不会被 `require`。
+
+影响与保障：
+
+- 复制前对每个依赖做计划校验（`assertStagedDependencyPlan`）：一旦计划会裁掉 `package.json`、
+  声明入口、保留清单文件或目标平台二进制，构建直接失败。
+- 复制后对 staging 树再扫一遍黑名单（`findStagedNodeModulesBlacklistHits`），filter 漏接时立刻失败。
+- `bun run verify:staged-deps` 打印三个平台各自的清洗前后字节数，并对已安装的真实依赖复跑同一套
+  规则与安全不变量；`--staging` 扫描真实 staging 树，`--resources <dir>` 扫描已打包的
+  `resources/app.asar.unpacked`。
+- 只裁剪内容，不改外部依赖闭包的选择逻辑，也不动 `app.asar`/`asarUnpack` 分层。
+
 ## 不裁剪的运行时能力
 
 以下文件看起来可以节省体积，但默认发布包不裁剪：

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { ConnectorGridItem } from "../../hooks/useConnectorGrid";
 
 export interface ConnectorGridProps {
@@ -12,20 +13,26 @@ export interface ConnectorGridProps {
  * 列数由 connectorGridColumns 决定，目的是不让最后一行只剩一个孤立 item。
  */
 export function ConnectorGrid({ items, columns, title, onSelect }: ConnectorGridProps): JSX.Element | null {
+	const titleId = useId();
 	if (items.length === 0) return null;
 	return (
 		<div className="px-3 pb-1 pt-2">
-			<div className="px-1 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+			<div id={titleId} className="px-1 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
 				{title}
 			</div>
-			<div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+			<div
+				role="group"
+				aria-labelledby={titleId}
+				className="grid gap-1.5"
+				style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+			>
 				{items.map((connector) => (
 					<button
 						key={connector.name}
 						type="button"
 						onClick={() => onSelect(connector)}
 						title={connector.label}
-						className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/30 px-2 transition-colors hover:border-primary/40 hover:bg-primary/10"
+						className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/30 px-2 transition-colors hover:border-primary/40 hover:bg-primary/10 focus-visible:border-ring"
 					>
 						{connector.iconUrl ? (
 							<img

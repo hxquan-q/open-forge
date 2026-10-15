@@ -1,13 +1,8 @@
-# Docs site: verify on path changes. Vercel Git deploys the site.
+# Modified by The Open Forge contributors.
+# Docs site: verify affected changes, including built HTTP user flows.
 #
-# - PR / push touching apps/docs-site: typecheck, test, and `next build`
-# - Push to `dev` with docs-site changes: Vercel production
-#   (https://vetta-docs.vercel.app). Unrelated monorepo commits are skipped
-#   by apps/docs-site/vercel.json ignoreCommand (turbo query affected).
-# - Other branches and PRs: Vercel preview deployments, same ignore rule.
-#
-# This workflow does not call `vercel deploy`. Keep it that way so Git
-# integration and Actions do not publish the same commit twice.
+# Deployment is configured separately by maintainers. This workflow only
+# checks the site; it does not deploy or establish a public production URL.
 
 name: docs-site
 
@@ -39,7 +34,7 @@ permissions:
 
 jobs:
   check:
-    name: check + test + build
+    name: check + test + build + HTTP
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -62,3 +57,6 @@ jobs:
 
       - name: Build
         run: bun run build:docs
+
+      - name: Test built documentation user flows
+        run: bun run --cwd apps/docs-site test:production

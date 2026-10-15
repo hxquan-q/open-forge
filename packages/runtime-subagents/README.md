@@ -40,3 +40,14 @@
 
 在本包目录运行 `bun run test`。仓库质量门禁还会检查本包的 workspace
 依赖和工具协议残留，防止产品实现反向进入调度内核。
+
+
+## Context Boundary
+
+```yaml
+purpose: Subagent runtime contracts for child agent session orchestration
+provides:  
+  - "@vetta/runtime-subagents"
+consumes:  []
+internal_dependencies:  []
+```

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -53,6 +54,26 @@ afterEach(async () => {
 	await rm(root, { recursive: true, force: true });
 });
 
+function manifestSha256(source: string): string {
+	return createHash("sha256").update(source).digest("hex");
+}
+
+/** 内置插件集的完整性清单（staging 时由 prepare-pack 写入）。 */
+async function writeIntegrityManifest(plugins: { id: string; version: string; manifestSha256: string }[]) {
+	await writeFile(
+		join(pluginsDir, "system-plugins.manifest.json"),
+		JSON.stringify({ version: 1, plugins: plugins.map((entry) => ({ ...entry, sha256: "a".repeat(64) })) }),
+	);
+}
+
+async function writePluginWithIntegrity(pluginManifest: PluginManifest) {
+	const source = JSON.stringify(pluginManifest);
+	await writePlugin(pluginManifest);
+	await writeIntegrityManifest([
+		{ id: pluginManifest.id, version: pluginManifest.version, manifestSha256: manifestSha256(source) },
+	]);
+}
+
 describe("SystemPluginCatalog", () => {
 	it("keeps required plugins enabled despite a disabled preference", async () => {
 		await writePlugin(manifest());
@@ -86,5 +107,39 @@ describe("SystemPluginCatalog", () => {
 
 		expect(catalog.revokeCommands("system-demo", ["demo.run"]).grantedCommandNames).toEqual([]);
 		expect(catalog.grantCommands("system-demo", ["demo.run"]).grantedCommandNames).toEqual(["demo.run"]);
+	});
+
+	it("拒绝加载 plugin.json 与内置完整性清单不一致的插件", async () => {
+		const intactPlugin = manifest({ id: "intact", name: "Intact" });
+		await writePlugin(manifest());
+		await writePlugin(intactPlugin);
+		await writeIntegrityManifest([
+			{ id: "system-demo", version: "1.0.0", manifestSha256: manifestSha256(JSON.stringify(manifest())) },
+			{ id: "intact", version: "1.0.0", manifestSha256: manifestSha256(JSON.stringify(intactPlugin)) },
+		]);
+		const catalog = createCatalog();
+		expect(
+			catalog
+				.list()
+				.map((plugin) => plugin.id)
+				.sort(),
+		).toEqual(["intact", "system-demo"]);
+
+		// 安装后 plugin.json 被改写（例如权限声明被偷偷放宽）：该插件不再被发现，其他插件不受影响。
+		const tampered = manifest({ commands: ["demo.run", "demo.escalate"] });
+		await writeFile(join(pluginsDir, "system-demo", "plugin.json"), JSON.stringify(tampered));
+
+		expect(catalog.list(true).map((plugin) => plugin.id)).toEqual(["intact"]);
+	});
+
+	it("拒绝清单里版本与 staging 不一致的插件，未登记的插件照旧加载", async () => {
+		await writePluginWithIntegrity(manifest({ version: "2.0.0" }));
+		await writeIntegrityManifest([
+			{ id: "system-demo", version: "1.0.0", manifestSha256: manifestSha256(JSON.stringify(manifest())) },
+		]);
+		await writePlugin(manifest({ id: "legacy", name: "Legacy" }));
+		const catalog = createCatalog();
+
+		expect(catalog.list().map((plugin) => plugin.id)).toEqual(["legacy"]);
 	});
 });

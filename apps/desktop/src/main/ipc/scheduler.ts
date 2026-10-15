@@ -1,4 +1,14 @@
+import { isAutomationHostEventName } from "@vetta/coding-agent/runtime";
 import { ipcMain, type WebContents } from "electron";
+import { emitAutomationHostEvent } from "../scheduler/automation-event-dispatcher.js";
+import type { DiscoveredAutomationPackage } from "../scheduler/automation-package-discovery.js";
+import {
+	type AutomationPackageExportResult,
+	type AutomationPackageImportResult,
+	type AutomationPackagePreviewDto,
+	AutomationPackageService,
+} from "../scheduler/automation-package-service.js";
+import { getRuntime } from "../scheduler/scheduler.js";
 import type { SchedulerService } from "../scheduler/scheduler-service.js";
 import { getRunningTaskIds } from "../scheduler/task-executor";
 import type { ScheduledTask } from "../scheduler/task-storage";
@@ -19,6 +29,12 @@ const CHANNELS = {
 	ABORT: "vetta:scheduler:abort",
 	EVENT: "vetta:scheduler:event",
 	STREAM_EVENT: "vetta:scheduler:stream-event",
+	PACKAGE_EXPORT: "vetta:scheduler:package-export",
+	PACKAGE_IMPORT: "vetta:scheduler:package-import",
+	PACKAGE_IMPORT_URL: "vetta:scheduler:package-import-url",
+	PACKAGE_PREVIEW: "vetta:scheduler:package-preview",
+	PACKAGE_DISCOVER: "vetta:scheduler:package-discover",
+	EMIT_HOST_EVENT: "vetta:scheduler:emit-host-event",
 } as const;
 
 type TaskStreamHandler = (event: TaskStreamEvent) => void;
@@ -67,6 +83,7 @@ export function emitTaskEvent(event: TaskEvent): void {
 }
 
 export function registerSchedulerIpc(webContents: WebContents, service: SchedulerService): () => void {
+	const packageService = new AutomationPackageService(service);
 	const streamHandler = (event: TaskStreamEvent) => {
 		webContents.send(CHANNELS.STREAM_EVENT, event);
 	};
@@ -131,6 +148,43 @@ export function registerSchedulerIpc(webContents: WebContents, service: Schedule
 		await service.runNow(taskId);
 	});
 
+	ipcMain.handle(CHANNELS.PACKAGE_EXPORT, async (_, taskIds: string[]): Promise<AutomationPackageExportResult> => {
+		return await packageService.exportTasks(taskIds);
+	});
+
+	ipcMain.handle(CHANNELS.PACKAGE_IMPORT, async (_, defaultCwd: string): Promise<AutomationPackageImportResult> => {
+		return await packageService.importFromDialog(defaultCwd);
+	});
+
+	ipcMain.handle(
+		CHANNELS.PACKAGE_IMPORT_URL,
+		async (_, url: string, defaultCwd: string): Promise<AutomationPackageImportResult> => {
+			return await packageService.importFromUrl(url, defaultCwd);
+		},
+	);
+
+	ipcMain.handle(CHANNELS.PACKAGE_PREVIEW, async (_, text: string): Promise<AutomationPackagePreviewDto> => {
+		return await packageService.previewText(text);
+	});
+
+	ipcMain.handle(CHANNELS.PACKAGE_DISCOVER, async (): Promise<readonly DiscoveredAutomationPackage[]> => {
+		return await packageService.discover();
+	});
+
+	ipcMain.handle(
+		CHANNELS.EMIT_HOST_EVENT,
+		async (
+			_,
+			eventName: string,
+			context?: { cwd?: string; sessionId?: string; sessionPath?: string },
+		): Promise<void> => {
+			if (!isAutomationHostEventName(eventName)) return;
+			// 仅允许渲染层报告的 UI 侧事件；session.created / project.opened 由主进程域发出。
+			if (eventName !== "automation.panelOpened" && eventName !== "session.switched") return;
+			emitAutomationHostEvent(eventName, context ?? {}, getRuntime);
+		},
+	);
+
 	return () => {
 		unsubscribeTasksChanged();
 		streamHandlers.delete(streamHandler);
@@ -147,5 +201,11 @@ export function registerSchedulerIpc(webContents: WebContents, service: Schedule
 		ipcMain.removeHandler(CHANNELS.DELETE_RECORD_BY_SESSION);
 		ipcMain.removeHandler(CHANNELS.ABORT);
 		ipcMain.removeHandler(CHANNELS.RUN_NOW);
+		ipcMain.removeHandler(CHANNELS.PACKAGE_EXPORT);
+		ipcMain.removeHandler(CHANNELS.PACKAGE_IMPORT);
+		ipcMain.removeHandler(CHANNELS.PACKAGE_IMPORT_URL);
+		ipcMain.removeHandler(CHANNELS.PACKAGE_PREVIEW);
+		ipcMain.removeHandler(CHANNELS.PACKAGE_DISCOVER);
+		ipcMain.removeHandler(CHANNELS.EMIT_HOST_EVENT);
 	};
 }

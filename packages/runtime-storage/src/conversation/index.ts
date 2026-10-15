@@ -44,3 +44,4 @@ export {
 } from "./legacy-session-import-analyzer.js";
 export * from "./record-schema.js";
 export * from "./review-snapshot.js";
+export * from "./session-archive/index.js";

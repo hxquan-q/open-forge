@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { SessionInfo } from "@shared/store/atoms";
 import { describe, expect, it } from "vitest";
-import { buildSidebarSessionOrdering, orderSidebarSessions } from "./sidebar-session-order";
+import { buildSidebarSessionOrdering, orderSidebarSessions, withoutArchivedSessions } from "./sidebar-session-order";
 
 function session(path: string, modifiedAt: number): SessionInfo {
 	return { id: path, path, cwd: "C:/workspace", firstMessage: path, modifiedAt };
@@ -32,5 +33,28 @@ describe("sidebar session ordering", () => {
 		const ordering = buildSidebarSessionOrdering(sessions, new Map(), 1, true);
 		expect(ordering.visible.map(({ path }) => path)).toEqual(["two", "one"]);
 		expect(ordering.hiddenCount).toBe(0);
+	});
+});
+
+describe("archived sessions in the sidebar list", () => {
+	it("drops archived sessions and leaves the rest untouched, in order", () => {
+		const sessions = [session("new", 3), session("archived", 2), session("old", 1)];
+		expect(withoutArchivedSessions(sessions, new Set(["archived"])).map(({ path }) => path)).toEqual(["new", "old"]);
+	});
+
+	it("keeps the incoming array when nothing is archived", () => {
+		const sessions = [session("one", 1)];
+		expect(withoutArchivedSessions(sessions, new Set())).toBe(sessions);
+		expect(withoutArchivedSessions(sessions, new Set(["ghost"]))).toBe(sessions);
+	});
+
+	it("counts collapsed rows after the archived ones are gone", () => {
+		const sessions = [session("a", 5), session("b", 4), session("c", 3)];
+		const visible = withoutArchivedSessions(sessions, new Set(["b"]));
+		const ordering = buildSidebarSessionOrdering(visible, new Map(), 1, false);
+
+		expect(ordering.visible.map(({ path }) => path)).toEqual(["a"]);
+		expect(ordering.hiddenCount).toBe(1);
+		expect(ordering.hasMore).toBe(true);
 	});
 });

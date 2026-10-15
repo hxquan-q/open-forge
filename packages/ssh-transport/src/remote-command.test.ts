@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
 	chmodSync,
@@ -15,6 +17,16 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { toLoopbackRemotePath } from "./testing.js";
+
+const IS_WINDOWS = process.platform === "win32";
+/** 真实 POSIX shell：Windows 用 Git Bash（`bash`），POSIX 用 /bin/sh。 */
+const SH = IS_WINDOWS ? "bash" : "/bin/sh";
+/** 命令里的 $SHELL 必须是远端 shell 的绝对路径：Node 环境的 PATH 里未必有裸 `bash`。 */
+const LOGIN_SHELL = IS_WINDOWS ? "/usr/bin/bash" : "/bin/sh";
+/** 交给 shell 的本机路径统一 MSYS 根形式（/c/…），与输出镜头一致。 */
+const shPath = (path: string): string => (IS_WINDOWS ? toLoopbackRemotePath(path) : path);
+
 import { parseRemoteDirectoryListing } from "./directory-listing.js";
 import {
 	buildCreateEntryCommand,
@@ -24,6 +36,7 @@ import {
 	buildRemoteCommand,
 	buildRemoteScript,
 	buildStatCommand,
+	buildUploadFileCommand,
 	buildWriteFileCommand,
 	quoteShellArgument,
 	REMOTE_ENTRY_EXISTS_EXIT_CODE,
@@ -66,7 +79,7 @@ describe("buildRemoteCommand（在真实 /bin/sh 上执行）", () => {
 	// 引用有两层，断言字符串只能证明「长得像」。真正的合同是：交给 shell 之后，用户命令
 	// 在正确的目录里、由登录 shell 执行，退出码原样回来。
 	const run = (remoteCommand: string, env: NodeJS.ProcessEnv = {}) =>
-		spawnSync("/bin/sh", ["-c", remoteCommand], { encoding: "utf8", env: { ...process.env, ...env } });
+		spawnSync(SH, ["-c", remoteCommand], { encoding: "utf8", env: { ...process.env, ...env } });
 
 	it("走账号的登录 shell，让 nvm、pyenv 这类只改 profile 的 PATH 生效", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-shell-"));
@@ -79,16 +92,18 @@ describe("buildRemoteCommand（在真实 /bin/sh 上执行）", () => {
 	it("cd 与用户命令作为一个整体执行，&& 不会落到外层", () => {
 		// 直接把 `cd x && cmd` 摊在 -c 外面，cmd 就跑在了家目录而不是项目里。
 		const dir = realpathSync(mkdtempSync(join(tmpdir(), "vetta it's-")));
-		const result = run(buildRemoteCommand("pwd; exit 3", { cwd: dir }), { SHELL: "/bin/sh" });
-		expect(result.stdout.trim()).toBe(dir);
+		const result = run(buildRemoteCommand("pwd; exit 3", { cwd: shPath(dir) }), { SHELL: LOGIN_SHELL });
+		// Windows 镜头：cd 到 MSYS 根形式后 pwd 输出同形式（/c/…），与转换值直接可比。
+		const expectedPwd = IS_WINDOWS ? shPath(dir) : dir;
+		expect(result.stdout.trim()).toBe(expectedPwd);
 		expect(result.status).toBe(3);
 	});
 
 	it("带 processToken 时退出码照旧，结束后不留记号文件", () => {
 		const tmp = mkdtempSync(join(tmpdir(), "vetta-token-"));
 		const result = run(buildRemoteCommand("exit 7", { processToken: "vetta-exec-t1" }), {
-			SHELL: "/bin/sh",
-			TMPDIR: tmp,
+			SHELL: LOGIN_SHELL,
+			TMPDIR: shPath(tmp),
 		});
 		expect(result.status).toBe(7);
 		expect(readdirSync(tmp)).toEqual([]);
@@ -100,7 +115,9 @@ describe("buildRemoteCommand（在真实 /bin/sh 上执行）", () => {
 	});
 });
 
-describe("buildKillCommand（在真实 /bin/sh 上执行）", () => {
+// 进程组终止（kill -TERM -PGID、setsid 会话语义）是 POSIX 独有；Windows 回环没有
+// 对应语义，显式交给 POSIX CI 覆盖（TASK-0168：不得静默当作已测试）。
+describe.skipIf(IS_WINDOWS)("buildKillCommand（在真实 /bin/sh 上执行）", () => {
 	it("连同派生的子进程一起杀掉——只杀领头进程会把 dev server 留成孤儿", async () => {
 		const tmp = mkdtempSync(join(tmpdir(), "vetta-kill-"));
 		const env = { ...process.env, SHELL: "/bin/sh", TMPDIR: tmp };
@@ -196,11 +213,27 @@ describe("buildListDirectoryCommand", () => {
 	});
 });
 
+// 探测本机是否允许无特权建符号链接；Windows 默认策略下通常不行。
+function canCreateSymlink(): boolean {
+	if (!canCreateSymlink.cached) {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-sym-probe-"));
+		try {
+			writeFileSync(join(dir, "a"), "x");
+			symlinkSync(join(dir, "a"), join(dir, "l"));
+			canCreateSymlink.cached = true;
+		} catch {
+			canCreateSymlink.cached = false;
+		}
+	}
+	return canCreateSymlink.cached;
+}
+canCreateSymlink.cached = false;
+
 describe("buildWriteFileCommand（在真实 /bin/sh 上执行）", () => {
 	// 这段脚本的正确性取决于 shell 的真实语义（截断是否保留 mode、mv 对符号链接做什么），
 	// 断言字符串证明不了任何事，所以直接在本机 sh 上跑。
 	function write(target: string, content: string): void {
-		execFileSync("/bin/sh", ["-c", buildWriteFileCommand(target, ".vetta-tmp-test")], { input: content });
+		execFileSync(SH, ["-c", buildWriteFileCommand(shPath(target), ".vetta-tmp-test")], { input: content });
 	}
 
 	it("新文件直接落盘，不留临时文件", () => {
@@ -210,7 +243,8 @@ describe("buildWriteFileCommand（在真实 /bin/sh 上执行）", () => {
 		expect(readdirSync(dir)).toEqual(["a b'c.txt"]);
 	});
 
-	it("覆盖可执行脚本后仍然可执行", () => {
+	// MSYS 挂载（noacl）上 chmod/stat 只是模拟，无法证明权限位语义——交给 POSIX CI。
+	it.skipIf(IS_WINDOWS)("覆盖可执行脚本后仍然可执行", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-write-"));
 		const script = join(dir, "run.sh");
 		writeFileSync(script, "old");
@@ -220,7 +254,8 @@ describe("buildWriteFileCommand（在真实 /bin/sh 上执行）", () => {
 		expect(statSync(script).mode & 0o777).toBe(0o755);
 	});
 
-	it("写符号链接时改的是它指向的文件，链接本身保持为链接", () => {
+	// 建符号链接在 Windows 默认策略下需要特权；无权限时显式失败而非静默跳过。
+	it.skipIf(IS_WINDOWS && !canCreateSymlink())("写符号链接时改的是它指向的文件，链接本身保持为链接", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-write-"));
 		const real = join(dir, "real.txt");
 		const link = join(dir, "link.txt");
@@ -235,6 +270,41 @@ describe("buildWriteFileCommand（在真实 /bin/sh 上执行）", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-write-"));
 		expect(() => write(join(dir, "missing", "a.txt"), "x")).toThrow();
 		expect(readdirSync(dir)).toEqual([]);
+	});
+});
+
+describe("buildUploadFileCommand（在真实 /bin/sh 上执行）", () => {
+	// 与 writeFile 同一条原子写骨架，多出的 wc 校验只能靠真跑验证：stdin 比 expectedBytes
+	// 短（等价于上传中途取消后的 EOF）必须以非零退出收场，且目标文件保持原样。
+	function upload(target: string, content: string, expectedBytes: number): number {
+		const result = spawnSync(SH, ["-c", buildUploadFileCommand(shPath(target), expectedBytes, ".vetta-tmp-test")], {
+			input: content,
+		});
+		return result.status ?? -1;
+	}
+
+	it("字节数吻合时整份落盘，不留临时文件", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-upload-"));
+		const target = join(dir, "a b'c.txt");
+		expect(upload(target, "hello", 5)).toBe(0);
+		expect(readFileSync(target, "utf8")).toBe("hello");
+		expect(readdirSync(dir)).toEqual(["a b'c.txt"]);
+	});
+
+	it("空文件按 0 字节校验通过", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-upload-"));
+		const target = join(dir, "empty.txt");
+		expect(upload(target, "", 0)).toBe(0);
+		expect(readFileSync(target, "utf8")).toBe("");
+	});
+
+	it("stdin 比 expectedBytes 短时目标保持原样，临时文件被清理", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-upload-"));
+		const target = join(dir, "keep.txt");
+		writeFileSync(target, "original");
+		expect(upload(target, "half", 10)).not.toBe(0);
+		expect(readFileSync(target, "utf8")).toBe("original");
+		expect(readdirSync(dir)).toEqual(["keep.txt"]);
 	});
 });
 
@@ -262,38 +332,42 @@ describe("stat 的格式串对精简系统同样有效", () => {
 describe("stat 与目录列举（在真实 shell 上执行并解析）", () => {
 	// 格式串的转义规则 GNU 与 BSD 不同，只有真的跑一遍才知道输出能不能被解析。
 	const flavor = process.platform === "darwin" ? "bsd" : "gnu";
-	const run = (command: string): string => execFileSync("/bin/sh", ["-c", command], { encoding: "utf8" });
+	const run = (command: string): string => execFileSync(SH, ["-c", command], { encoding: "utf8" });
 
 	it("本机这一家的 stat 输出能被解析成条目", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-stat-"));
 		writeFileSync(join(dir, "a b.txt"), "hello");
 		mkdirSync(join(dir, "src"));
 
-		const entries = parseRemoteDirectoryListing(run(buildListDirectoryCommand(dir, flavor)));
+		const entries = parseRemoteDirectoryListing(run(buildListDirectoryCommand(shPath(dir), flavor)));
 		expect(entries.map((entry) => [entry.name, entry.kind]).sort()).toEqual([
 			["a b.txt", "file"],
 			["src", "directory"],
 		]);
 		expect(entries.find((entry) => entry.name === "a b.txt")?.sizeBytes).toBe(5);
 
-		expect(parseRemoteDirectoryListing(run(buildStatCommand(dir, flavor)))[0]?.kind).toBe("directory");
-		expect(run(buildStatCommand(join(dir, "missing"), flavor))).toBe("");
+		expect(parseRemoteDirectoryListing(run(buildStatCommand(shPath(dir), flavor)))[0]?.kind).toBe("directory");
+		expect(run(buildStatCommand(shPath(join(dir, "missing")), flavor))).toBe("");
 	});
 });
 
 describe("文件树操作（在真实 shell 上执行）", () => {
-	const run = (command: string) => spawnSync("/bin/sh", ["-c", command], { encoding: "utf8" });
+	const run = (command: string) => spawnSync(SH, ["-c", command], { encoding: "utf8" });
 
 	it("独占创建：新建成功，目标已存在时用约定的退出码拒绝且不动原文件", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-create-"));
-		expect(run(buildCreateEntryCommand(join(dir, "it's new.txt"), "file")).status).toBe(0);
+		expect(run(buildCreateEntryCommand(shPath(join(dir, "it's new.txt")), "file")).status).toBe(0);
 		expect(readFileSync(join(dir, "it's new.txt"), "utf8")).toBe("");
-		expect(run(buildCreateEntryCommand(join(dir, "src"), "directory")).status).toBe(0);
+		expect(run(buildCreateEntryCommand(shPath(join(dir, "src")), "directory")).status).toBe(0);
 		expect(statSync(join(dir, "src")).isDirectory()).toBe(true);
 
 		writeFileSync(join(dir, "keep.txt"), "precious");
-		expect(run(buildCreateEntryCommand(join(dir, "keep.txt"), "file")).status).toBe(REMOTE_ENTRY_EXISTS_EXIT_CODE);
-		expect(run(buildCreateEntryCommand(join(dir, "src"), "directory")).status).toBe(REMOTE_ENTRY_EXISTS_EXIT_CODE);
+		expect(run(buildCreateEntryCommand(shPath(join(dir, "keep.txt")), "file")).status).toBe(
+			REMOTE_ENTRY_EXISTS_EXIT_CODE,
+		);
+		expect(run(buildCreateEntryCommand(shPath(join(dir, "src")), "directory")).status).toBe(
+			REMOTE_ENTRY_EXISTS_EXIT_CODE,
+		);
 		expect(readFileSync(join(dir, "keep.txt"), "utf8")).toBe("precious");
 	});
 
@@ -306,14 +380,33 @@ describe("文件树操作（在真实 shell 上执行）", () => {
 		writeFileSync(join(dir, ".git/config"), "");
 		writeFileSync(join(dir, ".env"), "");
 
-		const command = buildListFilesRecursiveCommand(dir, { ignoredDirectoryNames: ["node_modules"], limit: 100 });
+		const command = buildListFilesRecursiveCommand(shPath(dir), {
+			ignoredDirectoryNames: ["node_modules"],
+			limit: 100,
+		});
 		expect(run(command).stdout.trim().split("\n").sort()).toEqual(["./README.md", "./src/deep/a b.ts"]);
 	});
 
 	it("递归列举到达上限就停", () => {
 		const dir = mkdtempSync(join(tmpdir(), "vetta-walk-"));
 		for (let index = 0; index < 5; index++) writeFileSync(join(dir, `f${index}.txt`), "");
-		const command = buildListFilesRecursiveCommand(dir, { ignoredDirectoryNames: [], limit: 2 });
+		const command = buildListFilesRecursiveCommand(shPath(dir), { ignoredDirectoryNames: [], limit: 2 });
 		expect(run(command).stdout.trim().split("\n")).toHaveLength(2);
+	});
+
+	it("按文件名筛选时上限只算命中项，忽略目录里的同名文件不会混进来", () => {
+		const dir = mkdtempSync(join(tmpdir(), "vetta-walk-"));
+		for (const sub of ["a/src", "b", "node_modules/x"]) mkdirSync(join(dir, sub), { recursive: true });
+		for (let index = 0; index < 5; index++) writeFileSync(join(dir, `a/src/f${index}.ts`), "");
+		writeFileSync(join(dir, "a/package.json"), "");
+		writeFileSync(join(dir, "b/Makefile"), "");
+		writeFileSync(join(dir, "node_modules/x/package.json"), "");
+
+		const command = buildListFilesRecursiveCommand(shPath(dir), {
+			ignoredDirectoryNames: ["node_modules"],
+			limit: 2,
+			names: ["package.json", "Makefile"],
+		});
+		expect(run(command).stdout.trim().split("\n").sort()).toEqual(["./a/package.json", "./b/Makefile"]);
 	});
 });

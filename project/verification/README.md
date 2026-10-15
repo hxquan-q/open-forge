@@ -5,7 +5,7 @@
 
 当前完整基线见 [`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md)。
 
-当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)、[`VERIFY-0006-deepeval-tool-routing-sidecar.md`](VERIFY-0006-deepeval-tool-routing-sidecar.md)、[`VERIFY-0007-three-framework-tool-routing.md`](VERIFY-0007-three-framework-tool-routing.md)、[`VERIFY-0008-task-tree-consolidation.md`](VERIFY-0008-task-tree-consolidation.md)。
+当前验证：[`VERIFY-0001-local-vetta-baseline.md`](VERIFY-0001-local-vetta-baseline.md)、[`VERIFY-0002-desktop-gpu-low-power.md`](VERIFY-0002-desktop-gpu-low-power.md)、[`VERIFY-0006-deepeval-tool-routing-sidecar.md`](VERIFY-0006-deepeval-tool-routing-sidecar.md)、[`VERIFY-0007-three-framework-tool-routing.md`](VERIFY-0007-three-framework-tool-routing.md)、[`VERIFY-0008-task-tree-consolidation.md`](VERIFY-0008-task-tree-consolidation.md)、[`VERIFY-0009-0.1.2-work-integration.md`](VERIFY-0009-0.1.2-work-integration.md)、[`VERIFY-0010-0.1.2-desktop-functional-visual-acceptance.md`](VERIFY-0010-0.1.2-desktop-functional-visual-acceptance.md)、[`VERIFY-0011-real-provider-acceptance-and-fix-batch.md`](VERIFY-0011-real-provider-acceptance-and-fix-batch.md)、[`VERIFY-0012-0.1.2-verifying-batch-acceptance.md`](VERIFY-0012-0.1.2-verifying-batch-acceptance.md)。 另有 [`VERIFY-0017-behavior-acceptance-checklist.md`](VERIFY-0017-behavior-acceptance-checklist.md)（行为面待验收清单，53 条）、[`VERIFY-0018-qwen38-real-provider-smoke.md`](VERIFY-0018-qwen38-real-provider-smoke.md)（qwen3.8 真实 Provider 冒烟：链路成立、端点输出不连贯立案 ISSUE-0031）。
 
 ## 默认验证顺序
 
@@ -20,3 +20,5 @@
 - `bun run check` 不替代行为测试。
 - `verify:ui:*` 只有用户明确授权时运行。
 - 真实 Provider 默认不运行。
+
+SSH 专项保护与验证：[VERIFY-0014](VERIFY-0014-ssh-selective-protection.md)。

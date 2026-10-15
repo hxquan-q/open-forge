@@ -1,6 +1,9 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import desktopVitestConfig from "../../apps/desktop/vitest.config.ts";
+import { styleForPath } from "./check-modified-file-notices.mjs";
 import { findPackageBoundaryViolations, findPackageManifestBoundaryViolations } from "./check-package-boundaries.mjs";
 import { batchPaths, createQuickCheckPlan, isBiomeGlobalTrigger } from "./check-quick.mjs";
 import { findSkillFrontmatterProblems } from "./check-skill-frontmatter.mjs";
@@ -28,6 +31,7 @@ import {
 } from "./lib.mjs";
 import { createChangedTestPlan, parseArgs } from "./test-changed.mjs";
 import { createImpactTestPlan, parseImpactArgs } from "./test-impact.mjs";
+import { createVitestArgs, createVitestEnv } from "./vitest-env.mjs";
 
 describe("changed file selection", () => {
 	it("combines committed, working tree, and untracked paths", () => {
@@ -171,6 +175,14 @@ describe("vitest runner 守卫", () => {
 				devDependencies: { vitest: ">=4.1.11" },
 			}),
 		).toEqual([]);
+	});
+
+	it("把 NODE_ENV 钉为 test，避免宿主进程的 production 值泄漏进测试", () => {
+		expect(createVitestEnv({ NODE_ENV: "production", PATH: "/usr/bin" })).toEqual({
+			NODE_ENV: "test",
+			PATH: "/usr/bin",
+		});
+		expect(createVitestEnv({}).NODE_ENV).toBe("test");
 	});
 });
 
@@ -319,6 +331,14 @@ describe("affected package selection", () => {
 		expect(createChangedTestPlan(["apps/desktop/src/main.ts"]).toTest).toEqual(["desktop"]);
 	});
 
+	it("runs ssh-transport's own tests when its sources change (TASK-0174)", () => {
+		// 该包曾长期没有 test 脚本：变更只能靠消费者（desktop 等）的绿灯间接覆盖，
+		// 自身回归从未被标准入口选过。删除 test 脚本会让本断言失败，防止再次隐形。
+		expect(Object.keys(TESTABLE_PACKAGES)).toEqual(expect.arrayContaining(["ssh-transport"]));
+		const plan = createChangedTestPlan(["packages/ssh-transport/src/ssh2-runner.ts"]);
+		expect(plan.toTest).toEqual(expect.arrayContaining(["ssh-transport"]));
+	});
+
 	it("runs every core test package for global quality inputs", () => {
 		const plan = createChangedTestPlan(["bun.lock", "turbo.json"]);
 		expect(plan.globalTriggers).toEqual(["bun.lock", "turbo.json"]);
@@ -433,10 +453,14 @@ describe("CI unit test coverage", () => {
 
 	it("runs Desktop typechecking through the current Bun executable", () => {
 		const checkTypes = rootManifest.scripts["check:types"];
-		expect(checkTypes).toContain(
-			"bun x tsc --noEmit -p apps/desktop/tsconfig.json --incremental --tsBuildInfoFile node_modules/.desktop-check.tsbuildinfo",
-		);
+		// desktop 段走包内脚本（concurrently 在 Windows 经 cmd.exe 不识别内联 env 前缀）；
+		// 堆上限在其中显式提升，CI 冷检出的全量检查不再撞 Node 默认堆（BUG-0063）。
+		expect(checkTypes).toContain("bun run --cwd apps/desktop typecheck:incremental");
 		expect(checkTypes).not.toContain("bunx tsc --noEmit -p apps/desktop/tsconfig.json");
+		const desktopManifest = JSON.parse(readFileSync(join(repoRoot, "apps/desktop/package.json"), "utf8"));
+		expect(desktopManifest.scripts["typecheck:incremental"]).toContain(
+			"NODE_OPTIONS=--max-old-space-size=6144 tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile ../../node_modules/.desktop-check.tsbuildinfo",
+		);
 	});
 
 	it("typechecks and exports the Expo app when Mobile changes", () => {
@@ -1512,5 +1536,50 @@ describe("skill frontmatter analysis", () => {
 	it("requires frontmatter and a description", () => {
 		expect(findSkillFrontmatterProblems("# No frontmatter\n")).toHaveLength(1);
 		expect(findSkillFrontmatterProblems(wrap("name: demo"))).toHaveLength(1);
+	});
+});
+
+describe("VS Code workspace modification notices", () => {
+	it("classifies JSONC workspace files as commentable rather than exempting them", () => {
+		const style = styleForPath("open-forge.code-workspace");
+		expect(style).not.toBeNull();
+		expect(style.render("Modified by The Open Forge contributors.")).toBe(
+			"// Modified by The Open Forge contributors.",
+		);
+	});
+});
+
+describe("Desktop test resource envelope", () => {
+	it("bounds Windows workers without changing test or hook deadlines", () => {
+		expect(createVitestArgs(["run", "a.test.ts"], "win32")).toEqual(["--maxWorkers=2", "run", "a.test.ts"]);
+		expect(desktopVitestConfig.test.maxWorkers).toBeUndefined();
+		expect(desktopVitestConfig.test.testTimeout).toBeUndefined();
+		expect(desktopVitestConfig.test.hookTimeout).toBeUndefined();
+	});
+});
+
+describe("shared view test ownership", () => {
+	it("runs shared view related tests without delegating them to Desktop", () => {
+		const plan = createImpactTestPlan(["packages/theme-ui/src/chat/UnmappedView.tsx"], () => true);
+		expect(plan.fallbackChanged).toBe(false);
+		expect(plan.targets).toMatchObject([
+			{ key: "theme-ui", relatedSources: ["src/chat/UnmappedView.tsx"], full: false },
+		]);
+	});
+	it("keeps the conservative fallback for a workspace without tests", () => {
+		const workspace = WORKSPACE_PACKAGES.find((pkg) => !pkg.scripts.test);
+		expect(workspace).toBeDefined();
+		const plan = createImpactTestPlan([`${workspace.dir}/src/Unmapped.ts`], () => true);
+		expect(plan.fallbackChanged).toBe(true);
+		expect(plan.fallbackReasons).toContain(`${workspace.key} has no direct test entry point`);
+	});
+});
+
+describe("Vitest worker argument policy", () => {
+	it.each(["linux", "darwin"])("keeps %s defaults", (platform) => {
+		expect(createVitestArgs(["run", "a.test.ts"], platform)).toEqual(["run", "a.test.ts"]);
+	});
+	it.each([["--maxWorkers", "4"], ["--maxWorkers=3"]])("preserves an explicit worker limit %j", (...args) => {
+		expect(createVitestArgs(args, "win32")).toEqual(args);
 	});
 });

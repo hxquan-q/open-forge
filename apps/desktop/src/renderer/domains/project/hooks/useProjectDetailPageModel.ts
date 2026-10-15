@@ -15,6 +15,7 @@ import type { ProjectDetailPageViewProps } from "@vetta-org/theme-ui/project";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useProjectActions } from "./useProjects";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -121,6 +122,7 @@ export function useProjectDetailPageModel(): ProjectDetailPageModel {
 	const decodedCwd = decodeURIComponent(cwd);
 
 	const { project, sessionCount, batchProject } = useProjectDetail(decodedCwd);
+	const { loadSessions } = useProjectActions();
 	const createdAt = useCreatedAt(decodedCwd);
 	const { content, setContent, loading, save, saveStatus, isDirty } = useAgentsMd(decodedCwd);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -135,6 +137,12 @@ export function useProjectDetailPageModel(): ProjectDetailPageModel {
 		setHeaderTitleHidden(true);
 		return () => setHeaderTitleHidden(false);
 	}, [setHeaderTitleHidden]);
+
+	// sessionsMap 由侧边栏按「组展开」懒加载；直达或重载落在项目页时
+	// 该组未必展开，计数会停在 0。这里补一次本 cwd 的扫描（幂等去重）。
+	useEffect(() => {
+		if (!batchProject) void loadSessions(decodedCwd);
+	}, [batchProject, decodedCwd, loadSessions]);
 
 	const displayName = project?.name ?? pathBasename(decodedCwd);
 	const isBatch = !!batchProject;

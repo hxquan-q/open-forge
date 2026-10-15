@@ -144,3 +144,16 @@ The published plugin package must include a standard Desktop plugin archive and 
 
 `@vetta-org/plugin-vite` can create both the versioned archive and this stable npm archive with
 `package: { npmArchive: true }`.
+
+
+## Context Boundary
+
+```yaml
+purpose: Install npm-distributed plugins into Vetta Desktop
+provides:  
+  - "@vetta-org/plugin-cli"
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta/action-rpc"
+```

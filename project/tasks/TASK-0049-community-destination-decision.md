@@ -1,7 +1,7 @@
 ---
 id: TASK-0049
 type: task
-status: blocked
+status: done
 priority: P1
 owner: release/product
 requirement: REQ-0003
@@ -16,9 +16,9 @@ write_paths: [project/requirements/PRODUCT.md, project/tasks, .github/release-no
 exclusive_paths: [project/requirements/PRODUCT.md, project/tasks, .github/release-notes]
 depends_on: [TASK-0044, TASK-0045]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-10-05
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -68,13 +68,12 @@ updated: 2026-09-23
 - 用户流程：从 README、文档站和讨论入口逐项核对最终链接；本 Task 不执行外部账号操作。
 - 质量检查：文档链接与相对路径核对；更新当前版本 Release Notes。
 
-## 阻塞
+## 收口记录（2026-10-05）
 
-- 等待产品/发布负责人确认是否保留当前 Discord/Discussions 目标或提供新目标；确认前维持当前入口，不做外部变更。
-
-## 交付记录
-
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- 剩余风险：
+- 决策已取得（2026-09-25）：社区入口暂时不建设——保留现有外部入口（openvetta.com、docs.openvetta.com、github.com/openvetta/open-vetta、Discord、GitHub Discussions、LINUX DO 链接），不创建新 Discord/社区，不做任何外部变更。
+- 决策已同步 `project/requirements/PRODUCT.md`（Brand Commitments，含 2026-09-25 用户确认原文）。
+- 前置依赖已满足：`depends_on: [TASK-0044, TASK-0045]` 两者 frontmatter 均为 `done`（TASK-0044 Desktop 文案迁移、TASK-0045 CLI 与生态身份迁移），因此本任务按原计划转 `done`，仅需复核记录，无额外实施。
+- 实际修改：`PRODUCT.md` Brand Commitments 一条（2026-09-25）；本记录状态与收口（2026-10-05）。
+- 实际运行：无代码与外部操作；coordination-only，未创建任何外部账号或发布。
+- 未运行及原因：不适用（无代码改动与外部账号操作）。
+- 剩余风险：现有外部入口仍挂旧品牌域名与仓库名；若后续购域或决定建设新社区，需重新决策并同步 `TASK-0047` / `TASK-0048`。

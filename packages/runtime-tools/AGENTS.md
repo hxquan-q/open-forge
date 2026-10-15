@@ -23,3 +23,9 @@
 - 使用 Vitest Node 测试，并在 Runtime Port 边界提供窄 fake；不得调用用户 shell、真实工作目录、网络或产品 Host 完成单元测试。
 - 注册、激活选择、可用性、绑定租约或结果策略变化必须覆盖允许、拒绝、不可用、撤销和重复名称等分支。
 - 具体 Tool 的 Schema、描述、输出、错误、取消、路径和副作用合同由对应平台 Runtime 测试覆盖。
+
+## 规则分级
+
+- **Invariant**：`注意事项` 中的边界（禁 `node:*`/平台 Runtime/宿主全局状态、`index.ts` 不加产品兼容导出、不绕过 Runtime Tool Policy、不依赖 `@vetta/coding-agent`）。
+- **Policy**：`测试要求` 全节、`注意事项` 中的注册/激活语义保持要求。
+- **Guideline**：`职责范围` 描述。

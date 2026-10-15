@@ -1,14 +1,13 @@
 // Modified by The Open Forge contributors.
 import { ActivityPanel, CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { BottomPanelHost } from "@domains/bottom-panel/components/BottomPanelHost";
-import { resolveWorkspaceRightPanel, WorkDocumentSections, WorkWorkspacePanel } from "@domains/workspace-mode";
+import { useWorkspaceRightPanel, WorkDocumentSections, WorkWorkspacePanel } from "@domains/workspace-mode";
 import { cn } from "@shared/lib/utils";
 import { PerfSendProfiler } from "@shared/lib/perf-send";
-import { activityPanelOpenAtom, type ChatTimelineItem, type WorkspaceMode } from "@shared/store/atoms";
+import { type ChatTimelineItem, type WorkspaceMode } from "@shared/store/atoms";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import type { ActivityTabId } from "@domains/activity-panel/registry/types";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
-import { useAtomValue } from "jotai";
 import { memo, type ReactNode } from "react";
 import { ChatExportHost } from "../ChatExportHost";
 
@@ -62,21 +61,19 @@ const ActivityColumn = memo(
 		activity,
 		workspaceMode,
 	}: Pick<DefaultChatViewProps, "workspace" | "activity" | "workspaceMode">) {
-		const activityPanelOpen = useAtomValue(activityPanelOpenAtom);
-		// work 模式右栏默认是插槽面板；Team 等显式 activity、以及用户打开的预览，都不走这槽。
-		if (
-			resolveWorkspaceRightPanel({
-				mode: workspaceMode,
-				activityPanelOpen,
-				hasExplicitActivity: Boolean(activity),
-			}) === "work"
-		) {
+		const rightPanel = useWorkspaceRightPanel({
+			mode: workspaceMode,
+			runtimeIds: workspace.runtimeIds,
+			hasExplicitActivity: Boolean(activity),
+		});
+		if (rightPanel === "work") {
 			return (
 				<WorkWorkspacePanel>
 					<WorkDocumentSections runtimeIds={workspace.runtimeIds} />
 				</WorkWorkspacePanel>
 			);
 		}
+		if (rightPanel === "none") return null;
 		return activity ? (
 			<ActivityPanel
 				workspace={workspace}
@@ -127,7 +124,13 @@ export function DefaultChatView({
 						 */}
 						<BottomPanelHost />
 					</div>
-					<ActivityColumn workspace={workspace} activity={activity} workspaceMode={workspaceMode} />
+					{/*
+					 * 右栏单独一个 profiler id：工作区模式切换的耗时要在「右栏换装」与
+					 * 「其余重渲」之间可归因，否则两者挤在 ChatView(total) 里分不开。
+					 */}
+					<PerfSendProfiler id="ChatView:rightColumn">
+						<ActivityColumn workspace={workspace} activity={activity} workspaceMode={workspaceMode} />
+					</PerfSendProfiler>
 				</div>
 			</div>
 		</PerfSendProfiler>

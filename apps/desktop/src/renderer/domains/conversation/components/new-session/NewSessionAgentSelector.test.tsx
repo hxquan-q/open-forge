@@ -10,8 +10,11 @@ import { agentTargetKey, type NewSessionTargetKey, teamTargetKey } from "./targe
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({
-		t: (key: string, values?: Record<string, number>) =>
-			key === "newSession.agentSelector.memberCount" ? `${values?.count ?? 0} members` : key,
+		t: (key: string, values?: Record<string, unknown>) => {
+			if (key === "newSession.agentSelector.memberCount") return `${values?.count ?? 0} members`;
+			if (key === "newSession.agentSelector.triggerLabel") return `${values?.label}，${values?.hint}`;
+			return key;
+		},
 	}),
 }));
 
@@ -50,7 +53,7 @@ describe("NewSessionAgentSelector", () => {
 		const user = userEvent.setup();
 		render(<Harness onSelect={onSelect} />);
 
-		const trigger = screen.getByRole("button", { name: "newSession.agentSelector.pickTitle" });
+		const trigger = screen.getByRole("button", { name: /pickTitle/ });
 		expect(within(trigger).getByText("newSession.agentSelector.pick")).toBeDefined();
 		await user.click(trigger);
 
@@ -63,7 +66,7 @@ describe("NewSessionAgentSelector", () => {
 		await user.click(option);
 		expect(onSelect).toHaveBeenCalledWith(teamTargetKey(team.id));
 
-		const selectedTrigger = screen.getByRole("button", { name: "newSession.agentSelector.switchTitle" });
+		const selectedTrigger = screen.getByRole("button", { name: /switchTitle/ });
 		expect(within(selectedTrigger).getByText(team.name)).toBeDefined();
 		expect(selectedTrigger.querySelectorAll("img")).toHaveLength(3);
 		expect(selectedTrigger.querySelector('[data-avatar-overflow="1"]')).not.toBeNull();
@@ -74,25 +77,64 @@ describe("NewSessionAgentSelector", () => {
 		const user = userEvent.setup();
 		render(<Harness onSelect={onSelect} />);
 
-		await user.click(screen.getByRole("button", { name: "newSession.agentSelector.pickTitle" }));
+		await user.click(screen.getByRole("button", { name: /pickTitle/ }));
 
 		const option = await screen.findByRole("option", { name: new RegExp(agent.name) });
 		await user.click(option);
 		expect(onSelect).toHaveBeenCalledWith(agentTargetKey(agent.id));
 
-		const selectedTrigger = screen.getByRole("button", { name: "newSession.agentSelector.switchTitle" });
+		const selectedTrigger = screen.getByRole("button", { name: /switchTitle/ });
 		expect(within(selectedTrigger).getByText(agent.name)).toBeDefined();
 		expect(selectedTrigger.querySelectorAll("img")).toHaveLength(1);
+	});
+
+	it("trigger 是唯一交互宿主：头像装饰不再嵌套可聚焦控件（BUG-0039）", () => {
+		render(<Harness onSelect={vi.fn()} />);
+
+		const trigger = screen.getByRole("button", { name: /pickTitle/ });
+		expect(within(trigger).queryByRole("button")).toBeNull();
+	});
+
+	it("trigger 是原生 button，Enter/Space 走默认激活而非手工键盘处理", () => {
+		render(<Harness onSelect={vi.fn()} />);
+
+		const trigger = screen.getByRole("button", { name: /pickTitle/ });
+		// role="button" 的 div 拿不到原生激活语义（jsdom 之外键盘事件不再合成 click），
+		// 这里钉住原生元素合同，而不是断言某个实现细节。
+		expect(trigger.tagName).toBe("BUTTON");
+	});
+
+	it("trigger 的可访问名包含当前选中项（Label-in-Name：看见的字必须含在读屏名里）", async () => {
+		const user = userEvent.setup();
+		render(<Harness onSelect={vi.fn()} />);
+
+		// 未选中：可见文案是 pick，描述提示是 pickTitle，两者都要进 accName。
+		const trigger = screen.getByRole("button", { name: /pickTitle/ });
+		expect(trigger.getAttribute("aria-label")).toContain("newSession.agentSelector.pick");
+		expect(trigger.getAttribute("aria-label")).toContain("newSession.agentSelector.pickTitle");
+
+		await user.click(trigger);
+		await user.click(await screen.findByRole("option", { name: new RegExp(team.name) }));
+
+		// 选中后：读屏必须先报出选中项的名字，而不是只有「更换…」动作。
+		const selectedTrigger = screen.getByRole("button", { name: /switchTitle/ });
+		expect(selectedTrigger.getAttribute("aria-label")).toContain(team.name);
 	});
 
 	it("splits teams and agents into their own labelled groups", async () => {
 		const user = userEvent.setup();
 		render(<Harness onSelect={vi.fn()} />);
 
-		await user.click(screen.getByRole("button", { name: "newSession.agentSelector.pickTitle" }));
+		await user.click(screen.getByRole("button", { name: /pickTitle/ }));
 
-		expect(await screen.findByRole("listbox", { name: "newSession.agentSelector.groupTeams" })).toBeDefined();
+		const teamsGroup = await screen.findByRole("listbox", { name: "newSession.agentSelector.groupTeams" });
 		expect(screen.getByRole("listbox", { name: "newSession.agentSelector.groupAgents" })).toBeDefined();
+		// 组名由可见分组标题提供（aria-labelledby），不是复制在 aria-label 里的第二份文案。
+		const labelId = teamsGroup.getAttribute("aria-labelledby");
+		expect(labelId).toBeTruthy();
+		expect(teamsGroup.ownerDocument.getElementById(labelId ?? "")?.textContent).toBe(
+			"newSession.agentSelector.groupTeams",
+		);
 	});
 
 	it("filters both groups with one query and drops a group that matches nothing", async () => {
@@ -102,7 +144,7 @@ describe("NewSessionAgentSelector", () => {
 		mockCatalog({ ...document, agents: [...document.agents, extra] });
 		render(<Harness onSelect={vi.fn()} />);
 
-		await user.click(screen.getByRole("button", { name: "newSession.agentSelector.pickTitle" }));
+		await user.click(screen.getByRole("button", { name: /pickTitle/ }));
 		await screen.findByRole("option", { name: new RegExp(team.name) });
 		await user.type(screen.getByPlaceholderText("newSession.agentSelector.searchPlaceholder"), agent.name);
 
@@ -116,7 +158,7 @@ describe("NewSessionAgentSelector", () => {
 		mockCatalog({ ...document, agents: [...document.agents, copied] });
 		render(<Harness onSelect={vi.fn()} />);
 
-		await user.click(screen.getByRole("button", { name: "newSession.agentSelector.pickTitle" }));
+		await user.click(screen.getByRole("button", { name: /pickTitle/ }));
 		await screen.findByRole("option", { name: new RegExp(team.name) });
 
 		// 团队 `copy` 绑定的副本是团队私有的，摆进选择器就是一堆同名条目。

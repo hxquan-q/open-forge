@@ -4,11 +4,14 @@
 // 不依赖 electron 与 node:worker_threads，宿主创建由调用方注入
 // （quickpanel-trigger.ts 注入 new Worker(...) 的适配器），便于用 fake child 做单元测试。
 
+import { type Disposable, MutableDisposable, toDisposable } from "@vetta/toolkit";
+import { recordProcessCrash, recordProcessRestart, registerProcessRole } from "./app-monitor/process-health.js";
 import { getAppLogger } from "./logger.js";
 import type { UiohookHostRequest } from "./uiohook-protocol.js";
 import { isUiohookHostMessage } from "./uiohook-protocol.js";
 
 const log = getAppLogger("uiohook-supervisor");
+const ROLE = "uiohook";
 
 /** 宿主句柄的最小结构子集（node:worker_threads 的 Worker 经适配后满足）。 */
 export interface UiohookHostChild {
@@ -54,8 +57,10 @@ export class UiohookSupervisor {
 	/** 递增代号：terminate 后在途 worker 的 message/exit 一律按代号失效丢弃。 */
 	private generation = 0;
 	private startAttempts = 0;
-	private watchdog: ReturnType<typeof setTimeout> | null = null;
-	private restartTimer: ReturnType<typeof setTimeout> | null = null;
+	// 看门狗与重试计时器按 Disposable 所有权持有：换新值即释放旧计时器，
+	// 不会再出现「同一时刻挂着两个 watchdog」的悬挂引用（见 apps/desktop/AGENTS.md）。
+	private readonly watchdog = new MutableDisposable<Disposable>();
+	private readonly restartTimer = new MutableDisposable<Disposable>();
 
 	private readonly forkChild: () => UiohookHostChild;
 	private readonly onKeydown: (keycode: number) => void;
@@ -73,6 +78,8 @@ export class UiohookSupervisor {
 		this.maxStartAttempts = options.maxStartAttempts ?? DEFAULT_MAX_START_ATTEMPTS;
 		this.restartDelayMs = options.restartDelayMs ?? DEFAULT_RESTART_DELAY_MS;
 		this.stopTimeoutMs = options.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
+		// 重启决策由本类既有的 maxStartAttempts/restartDelay 持有，记账簿只做统一计数。
+		registerProcessRole({ role: ROLE, kind: "worker" });
 	}
 
 	/** 幂等：已在启动/运行中则不动；stopped/failed 则开启新一轮启动周期。 */
@@ -168,7 +175,7 @@ export class UiohookSupervisor {
 			this.handleExit(code);
 		});
 
-		this.watchdog = setTimeout(() => {
+		const watchdogHandle = setTimeout(() => {
 			if (generation !== this.generation || this.state !== "starting") return;
 			log.warn("uiohook host start timed out (疑似 uiohook-napi 启动死锁)，kill 并重试", {
 				attempt: this.startAttempts,
@@ -179,6 +186,7 @@ export class UiohookSupervisor {
 			this.killChild(child);
 			this.scheduleRetryOrFail();
 		}, this.startTimeoutMs);
+		this.watchdog.value = toDisposable(() => clearTimeout(watchdogHandle));
 	}
 
 	private handleMessage(message: unknown): void {
@@ -207,6 +215,8 @@ export class UiohookSupervisor {
 		this.clearTimers();
 		this.current = null;
 		this.generation += 1;
+		// 走到这里都不是计划内停止（terminate 路径已被 generation 失效挡掉）。
+		recordProcessCrash(ROLE);
 		if (this.state === "running") {
 			// 已成功启动过：重置尝试预算再重拉（restartDelay 兜住 crash loop 频率）。
 			log.warn("uiohook host exited unexpectedly, restarting", { code });
@@ -226,10 +236,12 @@ export class UiohookSupervisor {
 			return;
 		}
 		this.state = "starting";
-		this.restartTimer = setTimeout(() => {
-			this.restartTimer = null;
+		const restartHandle = setTimeout(() => {
+			this.restartTimer.clear();
+			recordProcessRestart(ROLE);
 			this.spawn();
 		}, this.restartDelayMs);
+		this.restartTimer.value = toDisposable(() => clearTimeout(restartHandle));
 	}
 
 	private killChild(child: UiohookHostChild): void {
@@ -241,17 +253,11 @@ export class UiohookSupervisor {
 	}
 
 	private clearWatchdog(): void {
-		if (this.watchdog !== null) {
-			clearTimeout(this.watchdog);
-			this.watchdog = null;
-		}
+		this.watchdog.clear();
 	}
 
 	private clearTimers(): void {
-		this.clearWatchdog();
-		if (this.restartTimer !== null) {
-			clearTimeout(this.restartTimer);
-			this.restartTimer = null;
-		}
+		this.watchdog.clear();
+		this.restartTimer.clear();
 	}
 }

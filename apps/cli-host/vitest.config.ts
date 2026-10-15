@@ -115,6 +115,12 @@ export default defineConfig({
 				replacement: fileURLToPath(new URL("../../packages/coding-agent/src/public-api/runtime.ts", import.meta.url)),
 			},
 			{
+				find: "@vetta/coding-agent/sandbox/errors",
+				replacement: fileURLToPath(
+					new URL("../../packages/coding-agent/src/execution/sandbox/errors.ts", import.meta.url),
+				),
+			},
+			{
 				find: "@vetta/coding-agent/settings",
 				replacement: fileURLToPath(new URL("../../packages/coding-agent/src/public-api/settings.ts", import.meta.url)),
 			},

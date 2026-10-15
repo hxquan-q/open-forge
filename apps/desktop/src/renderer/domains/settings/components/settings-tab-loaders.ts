@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SettingsTab } from "@shared/store/atoms";
 import type { ComponentType } from "react";
 
@@ -9,7 +10,7 @@ export const SETTINGS_TAB_LOADERS = {
 	context: async () => ({ default: (await import("./AgentSettings")).AgentSettings }),
 	appearance: async () => ({ default: (await import("./AppearanceSettings")).AppearanceSettings }),
 	appshot: async () => ({ default: (await import("./AppshotSettings")).AppshotSettings }),
-	archive: async () => ({ default: (await import("./ArchivedProjectsSettings")).ArchivedProjectsSettings }),
+	archive: async () => ({ default: (await import("./ArchiveSettings")).ArchiveSettings }),
 	extensions: async () => ({ default: (await import("./ExtensionsSettings")).ExtensionsSettings }),
 	environment: async () => ({ default: (await import("./EnvironmentSettings")).EnvironmentSettings }),
 	general: async () => ({ default: (await import("./GeneralSettings")).GeneralSettings }),

@@ -19,10 +19,15 @@ const checkOnly = process.argv.includes("--check");
 
 function parseMd(raw) {
 	const n = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-	if (!n.startsWith("---")) return { fm: {}, body: n.trim() };
+	if (!n.startsWith("---")) return { fm: {}, body: stripNotice(n).trim() };
 	const end = n.indexOf("\n---", 3);
-	if (end === -1) return { fm: {}, body: n.trim() };
-	return { fm: parse(n.slice(4, end)) ?? {}, body: n.slice(end + 4).trim() };
+	if (end === -1) return { fm: {}, body: stripNotice(n).trim() };
+	return { fm: parse(n.slice(4, end)) ?? {}, body: stripNotice(n.slice(end + 4)).trim() };
+}
+
+/** 开发声明头不进入产品提示词（等价于 TS 文件的注释声明）。 */
+function stripNotice(body) {
+	return body.replace(/^\s*<!-- Modified by The Open Forge contributors\. -->\s*/, "");
 }
 
 const files = readdirSync(personasDir)
@@ -49,7 +54,8 @@ for (const file of files) {
 	});
 }
 
-const content = `// AUTO-GENERATED from src/profiles/personas/*.md by scripts/generate-personas.mjs. Do not edit by hand.
+const content = `// Modified by The Open Forge contributors.
+// AUTO-GENERATED from src/profiles/personas/*.md by scripts/generate-personas.mjs. Do not edit by hand.
 
 export interface RawPersona {
 	id: string;

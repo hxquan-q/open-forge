@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ChatTimelineItem } from "@shared/store/atoms";
 import type { Usage } from "@vetta/ai/protocol";
 
@@ -42,12 +43,19 @@ export function collectModelSwitchLabels(
 	return switches;
 }
 
-export function collectAgentUsages(messages: readonly ChatTimelineItem[]): readonly Usage[] {
+/** Preserve row memoization when only streamed text or placeholder hydration changed. */
+export function collectAgentUsages(
+	messages: readonly ChatTimelineItem[],
+	previous?: readonly Usage[],
+): readonly Usage[] {
 	const usages: Usage[] = [];
 	for (const message of messages) {
 		if (message.kind === "agent" && message.usages) usages.push(...message.usages);
 		if (message.kind === "placeholder" && message.role === "assistant" && message.usages)
 			usages.push(...message.usages);
+	}
+	if (previous && previous.length === usages.length && previous.every((usage, index) => usage === usages[index])) {
+		return previous;
 	}
 	return usages;
 }

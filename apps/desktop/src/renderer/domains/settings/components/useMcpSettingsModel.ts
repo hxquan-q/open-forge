@@ -57,6 +57,11 @@ export interface McpServerFormState {
 	startupTimeout: string;
 	idleTimeout: string;
 	debug: boolean;
+	/**
+	 * 全局 MCP 的连接所有权覆盖（仅 UI 表单透传）：留空表示按默认规则推断。
+	 * 项目配置始终按工作区隔离，这里的选择只对全局条目生效。
+	 */
+	resourceScope?: "application" | "workspace";
 }
 
 export interface McpSettingsModel {
@@ -130,6 +135,7 @@ export const emptyMcpServer: McpServerFormState = {
 	startupTimeout: "",
 	idleTimeout: "",
 	debug: false,
+	resourceScope: undefined,
 };
 
 export function isHttpMcpServerConfigData(config: McpServerConfigData): config is McpHttpServerConfigData {
@@ -711,6 +717,7 @@ function serverToForm(name: string, server: McpServerConfigData): McpServerFormS
 		startupTimeout: server.startupTimeout != null ? String(server.startupTimeout) : "",
 		idleTimeout: server.type === "http" || server.idleTimeout == null ? "" : String(server.idleTimeout),
 		debug: server.debug ?? false,
+		resourceScope: server.resourceScope,
 	};
 	if (isHttpMcpServerConfigData(server)) {
 		return {
@@ -750,6 +757,7 @@ function formToServer(form: McpServerFormState): McpServerConfigData {
 		if (autoApprove && autoApprove.length > 0) config.autoApprove = autoApprove;
 		if (startupTimeout && !Number.isNaN(startupTimeout)) config.startupTimeout = startupTimeout;
 		if (form.debug) config.debug = true;
+		if (form.resourceScope) config.resourceScope = form.resourceScope;
 		return config;
 	}
 
@@ -773,6 +781,7 @@ function formToServer(form: McpServerFormState): McpServerConfigData {
 	if (startupTimeout && !Number.isNaN(startupTimeout)) config.startupTimeout = startupTimeout;
 	if (idleTimeout !== undefined && !Number.isNaN(idleTimeout)) config.idleTimeout = idleTimeout;
 	if (form.debug) config.debug = true;
+	if (form.resourceScope) config.resourceScope = form.resourceScope;
 	return config;
 }
 
@@ -802,6 +811,7 @@ function mergeMarketServer(existing: McpServerConfigData | undefined, next: McpS
 		...(existing.disabled === undefined ? {} : { disabled: existing.disabled }),
 		...(existing.disabledTools === undefined ? {} : { disabledTools: [...existing.disabledTools] }),
 		...(existing.autoApprove === undefined ? {} : { autoApprove: [...existing.autoApprove] }),
+		...(existing.resourceScope === undefined ? {} : { resourceScope: existing.resourceScope }),
 	};
 	if (isHttpMcpServerConfigData(existing) && isHttpMcpServerConfigData(next)) {
 		const headers = { ...existing.headers, ...next.headers };

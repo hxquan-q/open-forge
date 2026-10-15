@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -7,11 +8,61 @@ import { FS_EDITABLE_TEXT_ERROR } from "../../preload/fs-types";
 import {
 	allowProjectRoot,
 	createFilesystemEntry,
+	listFilesystemFilesRecursive,
 	readEditableTextFile,
 	readFilesystemBinaryFile,
 	readTextPreviewFile,
 	saveEditableTextFile,
 } from "./filesystem-service";
+
+describe("listFilesystemFilesRecursive", () => {
+	let projectRoot = "";
+
+	beforeEach(async () => {
+		projectRoot = await mkdtemp(join(tmpdir(), "vetta-list-recursive-"));
+		allowProjectRoot(projectRoot);
+	});
+
+	afterEach(async () => {
+		if (projectRoot) await rm(projectRoot, { recursive: true, force: true });
+	});
+
+	async function touch(relPath: string): Promise<void> {
+		await mkdir(join(projectRoot, relPath, ".."), { recursive: true });
+		await writeFile(join(projectRoot, relPath), "");
+	}
+
+	it("只保留指定文件名，并跳过默认与额外的忽略目录", async () => {
+		for (const file of [
+			"package.json",
+			"src/index.ts",
+			"apps/web/package.json",
+			"tools/Makefile",
+			"node_modules/pkg/package.json",
+			"vendor/lib/package.json",
+		]) {
+			await touch(file);
+		}
+
+		const files = await listFilesystemFilesRecursive(projectRoot, {
+			names: ["package.json", "Makefile"],
+			ignoredDirectories: ["vendor"],
+		});
+
+		expect(files.map((file) => file.relPath.split("\\").join("/")).sort()).toEqual([
+			"apps/web/package.json",
+			"package.json",
+			"tools/Makefile",
+		]);
+	});
+
+	it("不给过滤条件时仍列出全部文件", async () => {
+		await touch("a.txt");
+		await touch("src/b.ts");
+		const files = await listFilesystemFilesRecursive(projectRoot);
+		expect(files.map((file) => file.name).sort()).toEqual(["a.txt", "b.ts"]);
+	});
+});
 
 describe("createFilesystemEntry", () => {
 	let projectRoot = "";

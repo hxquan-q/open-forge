@@ -2,22 +2,33 @@
 title: 配置与数据路径
 description: 查找模型、设置、MCP、能力、会话和项目级配置，并理解各路径的所有权。
 ---
+{/* Modified by The Open Forge contributors. */}
 
 下表中的 `~` 表示当前系统用户目录。桌面界面是首选配置入口；直接编辑文件适合开发、诊断和受控迁移。
+
+## 数据根与兼容迁移
+
+- 正式安装和 CLI 默认使用 `~/.openforge`；Desktop 的普通 `bun run dev` 默认使用 `~/.openforge-dev`。
+- `VETTA_HOME` 可覆盖完整数据根路径（支持 `~` 展开），优先于目录名设置；`VETTA_CONFIG_DIR` 用于选择用户目录下的数据根名称。宿主与 sidecar 应使用一致的配置。
+- 默认根尚不存在、旧 `~/.vetta` 存在且未选择其他根时，会尝试将旧根改名为 `~/.openforge`；改名失败则继续使用旧根。新旧根同时存在时优先使用新根，不会合并二者。
+- `distribution`（小爱ai / Allstr ai）与 `self`（Open Forge）共用这些路径，切换品牌不会隔离数据。
+- 项目内的 `<cwd>/.vetta/` 仍是兼容合同，与用户全局根不同；不要将它批量改名。
+
+下表按正式安装的默认根列出；开发或自定义根请替换相应前缀。
 
 ## 全局路径
 
 | 路径 | 内容 |
 | --- | --- |
-| `~/.vetta/agent/settings.json` | Coding Agent 全局设置 |
-| `~/.vetta/agent/models.json` | 自定义 Provider 和模型覆盖 |
-| `~/.vetta/agent/auth.json` | 登录、OAuth 或手动凭证记录 |
-| `~/.vetta/agent/mcp.json` | MCP 服务配置 |
-| `~/.vetta/agent/sessions/` | 按安全 cwd 组织的会话文件 |
-| `~/.vetta/abilities.json` | 已安装能力索引 |
-| `~/.vetta/skills/` | 用户级技能 |
-| `~/.vetta/scene/` | 用户级场景 |
-| `~/.vetta/plugins/` | 用户级插件 |
+| `~/.openforge/agent/settings.json` | Coding Agent 全局设置 |
+| `~/.openforge/agent/models.json` | 自定义 Provider 和模型覆盖 |
+| `~/.openforge/agent/auth.json` | 登录、OAuth 或手动凭证记录 |
+| `~/.openforge/agent/mcp.json` | MCP 服务配置 |
+| `~/.openforge/agent/sessions/` | 按安全 cwd 组织的会话文件 |
+| `~/.openforge/abilities.json` | 已安装能力索引 |
+| `~/.openforge/skills/` | 用户级技能 |
+| `~/.openforge/scene/` | 用户级场景 |
+| `~/.openforge/plugins/` | 用户级插件 |
 
 可以使用 `VETTA_CODING_AGENT_DIR` 覆盖 Agent 目录，但宿主、sidecar 和迁移工具必须使用同一值，避免会话和配置分裂。
 
@@ -34,7 +45,7 @@ description: 查找模型、设置、MCP、能力、会话和项目级配置，�
 
 ## 修改和迁移原则
 
-1. 优先通过 Vetta 设置页修改，确保运行时校验和关联状态同步。
+1. 优先通过 Open Forge 设置页修改，确保运行时校验和关联状态同步。
 2. 手工编辑前退出相关活动会话，避免与正在写入的进程冲突。
 3. 不让两个进程同时写同一个会话文件。
 4. 迁移时保留目录结构和文件名，不只复制单个会话正文。

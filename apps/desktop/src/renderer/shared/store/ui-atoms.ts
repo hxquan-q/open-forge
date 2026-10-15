@@ -10,6 +10,7 @@ import {
 	type LanguagePreference,
 } from "@/shared/i18n/config";
 import { type CursorStyle, getStoredCursorStyle } from "../theme/cursor";
+import { getStoredFontPreferences } from "../theme/fonts";
 import { getStoredNewSessionTextureId, type NewSessionTextureId } from "../theme/new-session-texture";
 import { getStoredOrnamentId, type OrnamentId } from "../theme/ornament";
 import { getStoredSidebarStyle, type SidebarStyle } from "../theme/sidebar-style";
@@ -69,6 +70,8 @@ export type SettingsTab =
 	| "remote"
 	| "sshHosts";
 
+export const fontPreferencesAtom = atom(getStoredFontPreferences());
+
 // ─── Theme ───
 
 export type ThemeMode = "light" | "dark" | "auto";
@@ -99,8 +102,15 @@ export interface ConfirmDialogState {
 		label: string;
 		checked: boolean;
 	};
+	/** 可选单行输入（如归档口令）；确认时把当前值传给 onConfirm。 */
+	input?: {
+		label?: string;
+		placeholder?: string;
+		defaultValue?: string;
+		password?: boolean;
+	};
 	variant?: "danger" | "default";
-	onConfirm: (checkboxChecked: boolean) => void;
+	onConfirm: (checkboxChecked: boolean, inputValue?: string) => void;
 	onCancel?: () => void;
 }
 

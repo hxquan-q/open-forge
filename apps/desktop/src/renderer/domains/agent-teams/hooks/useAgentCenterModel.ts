@@ -2,10 +2,12 @@ import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";
 import { useCallback, useMemo, useState } from "react";
 import type { AgentCapabilityOption } from "../lib/capability-options";
 import {
+	assemblyBaseline,
 	assemblyDraftFromTeam,
 	assemblyLeaderId,
 	canSubmitAssembly,
 	emptyAssemblyDraft,
+	sameAssemblyDraft,
 	type TeamAssemblyDraft,
 	toggleAssemblyMember,
 } from "../lib/team-assembly";
@@ -30,6 +32,13 @@ export function useAgentCenterModel(copy: AgentLibraryCopy) {
 		() => roster.teams.find((team) => team.id === selectedTeamId),
 		[roster.teams, selectedTeamId],
 	);
+
+	/** 草稿相对进入组队时的种子有实质改动；点空白退出前需要用户确认。 */
+	const assemblyDirty = useMemo(() => {
+		if (!assembly) return false;
+		const baseline = assemblyBaseline(assembly, roster.teams);
+		return baseline ? !sameAssemblyDraft(assembly, baseline) : true;
+	}, [assembly, roster.teams]);
 	const startCreateTeam = useCallback(() => {
 		setSelectedTeamId(undefined);
 		setAssembly(emptyAssemblyDraft());
@@ -105,6 +114,7 @@ export function useAgentCenterModel(copy: AgentLibraryCopy) {
 		teamsExpanded,
 		selectedTeam,
 		assembly,
+		assemblyDirty,
 		assemblyLeaderId: assembly ? assemblyLeaderId(assembly) : undefined,
 		assemblySubmittable: assembly ? canSubmitAssembly(assembly) : false,
 		findAgent: (agentId: string) => library.libraryAgents.find((agent) => agent.id === agentId),

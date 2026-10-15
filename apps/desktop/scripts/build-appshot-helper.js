@@ -1,10 +1,11 @@
 // Modified by The Open Forge contributors.
-// 把 native/appshot/main.swift 编译打包成 `Open Forge Computer Use.app`（swiftc 单文件
+// 把 native/appshot/main.swift 编译打包成 `<品牌> Computer Use.app`（swiftc 单文件
 // 编译到 Contents/MacOS/、写 Info.plist、拷贝主 app icns、ad-hoc 签名）。
+// helper 名随品牌档案（VETTA_BRAND_PROFILE，默认 Allstr ai，显式 self 为 Open Forge）。
 //
-// 独立 .app bundle（独立 CFBundleIdentifier）使其在 macOS TCC（辅助功能/屏幕
-// 录制）里是与主 Open Forge app 分离的授权主体，系统设置权限列表显示为
-// "Open Forge Computer Use"。
+// 独立 .app bundle（独立 CFBundleIdentifier，跨档冻结）使其在 macOS TCC（辅助功能/屏幕
+// 录制）里是与主 app 分离的授权主体，系统设置权限列表显示为当前档的
+// "<品牌> Computer Use"。
 //
 // darwin-only：非 macOS host 直接跳过（appshot 功能本身仅 macOS 提供）。
 // 幂等：产物已存在且可执行文件 mtime 晚于源码时跳过编译，加速 dev 启动与迭代构建。
@@ -21,7 +22,13 @@ import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
 const projectRoot = join(import.meta.dirname, "..");
-const desktopBrand = require("../src/shared/desktop-brand.json");
+// 品牌档案与主链同开关（VETTA_BRAND_PROFILE）：默认外部分发档，显式 self 回 Open Forge；
+// helper 名随档，bundleId 跨档冻结。
+const desktopBrand = require(
+	process.env.VETTA_BRAND_PROFILE === "self"
+		? "../src/shared/desktop-brand.json"
+		: "../src/shared/desktop-brand.distribution.json",
+);
 const sourcePath = join(projectRoot, "native", "appshot", "main.swift");
 const iconSourcePath = join(projectRoot, "build", "icon.icns");
 

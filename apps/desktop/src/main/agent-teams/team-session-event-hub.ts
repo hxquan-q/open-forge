@@ -390,6 +390,18 @@ function activeMessageEventsForTurn(turn: ActiveTeamMemberTurn): ConversationMes
 
 function projectPublicAssistantEvent(event: AssistantMessageEvent): AssistantMessageEvent | undefined {
 	if (event.type === "start") return { ...event, partial: publicAssistantMessage(event.partial) };
+	if (event.type === "retry") {
+		// 重连进度是公开的活动状态（不含 partial，也就不开新消息行）；provider 诊断
+		// 细节（响应头 / 响应体片段）只留在本机主进程，与 error 事件被整体拦下同一考虑。
+		return {
+			type: "retry",
+			reason: event.reason,
+			attempt: event.attempt,
+			maxAttempts: event.maxAttempts,
+			delayMs: event.delayMs,
+			errorMessage: event.errorMessage,
+		};
+	}
 	if (
 		event.type !== "text_start" &&
 		event.type !== "text_delta" &&

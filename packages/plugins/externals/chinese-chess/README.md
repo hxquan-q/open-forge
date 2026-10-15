@@ -23,3 +23,15 @@ bun run build   # dist/ + release/chinese-chess-<version>.zip（安装制品）
 ```
 
 坐标约定见 `src/game/notation.ts`：列 `a-i` 对应 x 0-8，行数字对应 y 0-9（红方底线 y=9）；中文纵线记法与 zh-chess 的 `moveStr` 语义一致，并由测试锁定。
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+```

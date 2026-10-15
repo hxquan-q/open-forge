@@ -45,6 +45,9 @@
 			"@vetta/coding-agent/resources": ["./packages/coding-agent/src/public-api/resources.ts"],
 			"@vetta/coding-agent/rpc": ["./packages/coding-agent/src/public-api/rpc.ts"],
 			"@vetta/coding-agent/runtime": ["./packages/coding-agent/src/public-api/runtime.ts"],
+			"@vetta/coding-agent/sandbox/errors": [
+				"./packages/coding-agent/src/execution/sandbox/errors.ts"
+			],
 			"@vetta/coding-agent/sdk": ["./packages/coding-agent/src/public-api/sdk.ts"],
 			"@vetta/coding-agent/settings": ["./packages/coding-agent/src/public-api/settings.ts"],
 			"@vetta/coding-agent/session-extensions": [
@@ -133,11 +136,15 @@
 			"@vetta/runtime-mcp/*": ["./packages/runtime-mcp/src/*"],
 			"@vetta/runtime-storage": ["./packages/runtime-storage/src/index.ts"],
 			"@vetta/runtime-storage/conversation": ["./packages/runtime-storage/src/conversation/index.ts"],
+			"@vetta/runtime-storage/session-archive": [
+				"./packages/runtime-storage/src/conversation/session-archive/index.ts"
+			],
 			"@vetta/runtime-storage/*": ["./packages/runtime-storage/src/*"],
 			"@vetta/runtime-node": ["./packages/runtime-node/src/index.ts"],
 			"@vetta/runtime-node/conversation": ["./packages/runtime-node/src/conversation/index.ts"],
 			"@vetta/runtime-node/conversation/legacy": ["./packages/runtime-node/src/conversation/legacy.ts"],
 			"@vetta/runtime-node/coding": ["./packages/runtime-node/src/coding/index.ts"],
+			"@vetta/runtime-node/dataset": ["./packages/runtime-node/src/dataset/index.ts"],
 			"@vetta/runtime-node/mcp": ["./packages/runtime-node/src/mcp/index.ts"],
 			"@vetta/runtime-node/host": ["./packages/runtime-node/src/host/index.ts"],
 			"@vetta/runtime-node/sandbox": ["./packages/runtime-node/src/sandbox/index.ts"],

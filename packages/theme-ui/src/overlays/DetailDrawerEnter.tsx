@@ -1,8 +1,9 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@vetta-org/ui";
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
-/** 与设置页入场一致的曲线（DESIGN.md §5.1）：opacity + y，duration ≤ 0.5s。 */
+/** 与设置页入场一致的曲线（DESIGN.md 动画节 · 总则）：opacity + y，duration ≤ 0.5s。 */
 const ENTER_EASE = [0.16, 1, 0.3, 1] as const;
 const ENTER_DURATION = 0.36;
 const ENTER_STAGGER = 0.05;

@@ -1,4 +1,4 @@
-import type { ExecutionModeOverride, ScheduledTask } from "@shared/store/atoms";
+import type { ExecutionModeOverride, ScheduledTask, ScheduledTaskPermissionTiers } from "@shared/store/atoms";
 import { defaultConversationCwdAtom, projectsAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
@@ -44,6 +44,8 @@ export function useTaskFormModel({ open, task, initialDraft, onClose }: UseTaskF
 				executionMode: task.executionMode ?? "full-access",
 				modelKey: task.modelKey,
 				skill: task.skill ?? null,
+				permissionTiers: task.permissionTiers,
+				trigger: task.trigger ?? { type: "cron" },
 			});
 			return;
 		}
@@ -57,6 +59,8 @@ export function useTaskFormModel({ open, task, initialDraft, onClose }: UseTaskF
 			executionMode: initialDraft?.executionMode ?? "full-access",
 			modelKey: initialDraft?.modelKey,
 			skill: initialDraft?.skill ?? null,
+			permissionTiers: initialDraft?.permissionTiers,
+			trigger: initialDraft?.trigger ?? { type: "cron" },
 		});
 	}, [defaultCwd, initialDraft, open, projects, task]);
 
@@ -68,21 +72,31 @@ export function useTaskFormModel({ open, task, initialDraft, onClose }: UseTaskF
 			data,
 			onChange: setData,
 			onSubmit: (): void => {
-				if (!canSubmit || !data.name || !data.prompt || !data.cwd || !data.cron) return;
+				if (!canSubmit || !data.name || !data.prompt || !data.cwd) return;
+				const trigger = data.trigger ?? { type: "cron" as const };
+				const cron = trigger.type === "cron" ? data.cron : data.cron?.trim() ? data.cron : "0 0 1 1 *";
+				if (trigger.type === "cron" && !cron) return;
+				const permissionTiers = compactPermissionTiers(data.permissionTiers);
 				const taskData = {
 					name: data.name,
 					prompt: data.prompt,
-					cron: data.cron,
+					cron: cron!,
 					isOnce: data.isOnce ?? false,
 					enabled: data.enabled ?? true,
 					cwd: data.cwd,
 					executionMode: (data.executionMode ?? "full-access") as ExecutionModeOverride,
 					modelKey: data.modelKey ?? undefined,
 					skill: data.skill ?? undefined,
+					...(permissionTiers !== undefined ? { permissionTiers } : {}),
+					...(trigger.type === "cron" ? { trigger: { type: "cron" as const } } : { trigger }),
 				};
 
 				if (task) {
-					void updateTask(task.id, taskData).then(onClose);
+					void updateTask(task.id, {
+						...taskData,
+						permissionTiers: permissionTiers ?? {},
+						trigger,
+					}).then(onClose);
 					return;
 				}
 				void createTask(taskData).then(onClose);
@@ -92,5 +106,28 @@ export function useTaskFormModel({ open, task, initialDraft, onClose }: UseTaskF
 }
 
 function canSubmitFromData(data: SchedulerTaskDraft): boolean {
-	return Boolean(data.name?.trim() && data.prompt?.trim() && data.cwd && data.cron);
+	const trigger = data.trigger ?? { type: "cron" };
+	if (trigger.type === "event" && !trigger.event) return false;
+	if (trigger.type === "cron") {
+		return Boolean(data.name?.trim() && data.prompt?.trim() && data.cwd && data.cron);
+	}
+	return Boolean(data.name?.trim() && data.prompt?.trim() && data.cwd);
+}
+
+/** 只保留显式 true，避免把「全关」写成五个 false 污染默认兼容语义。 */
+function compactPermissionTiers(
+	tiers: ScheduledTaskPermissionTiers | undefined,
+): ScheduledTaskPermissionTiers | undefined {
+	if (!tiers) return undefined;
+	const next: ScheduledTaskPermissionTiers = {};
+	let saw = false;
+	for (const [key, enabled] of Object.entries(tiers) as Array<
+		[keyof ScheduledTaskPermissionTiers, boolean | undefined]
+	>) {
+		if (enabled === true) {
+			next[key] = true;
+			saw = true;
+		}
+	}
+	return saw ? next : undefined;
 }

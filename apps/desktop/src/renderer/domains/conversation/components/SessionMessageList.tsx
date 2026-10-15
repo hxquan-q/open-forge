@@ -1,8 +1,11 @@
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, isCompactingAtom, pendingScrollToEntryAtom } from "@shared/store/atoms";
 import { useAtom, useAtomValue } from "jotai";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { SessionSelection } from "./message-list/SessionSelection";
 import type { ConversationUserMessageViewModel } from "@shared/conversation";
+import { AnnotationScope } from "./annotations/AnnotationScope";
+import { AnnotationMessageMarker } from "./annotations/AnnotationMenus";
 import { MessageList } from "./MessageList";
 import { MessageListFooter } from "./message-list/MessageListFooter";
 import { MessageRenderingDefaults, DefaultMessageRow } from "./message-list/MessageRendering";
@@ -12,6 +15,7 @@ import type { MessageRendering } from "./message-list/MessageRendering";
 import { SessionUserMessage } from "./message-list/SessionUserMessage";
 import { SuggestionBubbles } from "./SuggestionBubbles";
 import type { MessageListProps } from "./message-list/types";
+import { resolveInterruptedErrorKind } from "../services/interrupted-resume";
 
 const sessionRendering: MessageRendering = {
 	row: SessionMessageRow,
@@ -27,7 +31,14 @@ function SessionMessageRow(props: MessageRowProps) {
 	const showFork = fork.anchorId === props.message.id;
 	return (
 		<DefaultMessageRow {...props} isLast={props.isLast && !showFork}>
-			{props.children}
+			<div className="group/annotation relative">
+				{props.children}
+				{props.message.kind === "agent" ? (
+					<div className="pointer-events-none absolute right-0 top-0 opacity-0 group-hover/annotation:pointer-events-auto group-hover/annotation:opacity-100 group-focus-within/annotation:pointer-events-auto group-focus-within/annotation:opacity-100">
+						<AnnotationMessageMarker message={props.message} />
+					</div>
+				) : null}
+			</div>
 			{showFork ? <ForkOriginBanner sourceMessage={fork.source} /> : null}
 		</DefaultMessageRow>
 	);
@@ -51,7 +62,19 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 			source: source?.kind === "user" ? source : undefined,
 		};
 	}, [props.messages, session?.parentEntryId, session?.parentSessionPath]);
-	return (
+	const interruptedErrorKind = useMemo(
+		() =>
+			resolveInterruptedErrorKind(props.messages, {
+				isStreaming: props.isStreaming,
+				isCompacting,
+			}),
+		[props.messages, props.isStreaming, isCompacting],
+	);
+	// 宿主调用只认本 feed 自己的会话：active session 换成别的会话时（切换在途的中间态），
+	// 绝不能把别的会话的 runtimeId 交给续跑条——那会重启错会话的回合。与下方 AnnotationScope 同一守卫。
+	const resumeRuntimeSessionId =
+		session && session.sessionPath === props.sessionId ? session.runtimeId : undefined;
+	const feed = (
 		<ForkContext.Provider value={fork}>
 			<MessageRenderingDefaults value={sessionRendering}>
 				<SessionSelection>
@@ -63,8 +86,10 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 						<MessageListFooter
 							isCompacting={isCompacting}
 							waiting={props.isStreaming && props.messages.at(-1)?.kind !== "agent"}
-							sessionId={props.sessionId ?? undefined}
+							sessionPath={props.sessionId ?? undefined}
+							runtimeSessionId={resumeRuntimeSessionId}
 							pendingLabel={props.pendingLabel}
+							interruptedErrorKind={interruptedErrorKind}
 						/>
 						{props.onSend ? <SuggestionBubbles onSend={props.onSend} /> : null}
 						{props.children}
@@ -72,5 +97,15 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 				</SessionSelection>
 			</MessageRenderingDefaults>
 		</ForkContext.Provider>
+	);
+	// Feed 身份以持久会话路径为准；runtimeId 只用于宿主调用。批注作用域常驻包裹：
+	// 会话就绪只点亮按会话重置的面板，绝不重挂下面的消息列表。
+	return (
+		<AnnotationScope
+			session={session && session.sessionPath === props.sessionId ? session : null}
+			sourceEntryIds={props.messages.flatMap((message) => (message.entryId ? [message.entryId] : []))}
+		>
+			{feed}
+		</AnnotationScope>
 	);
 }

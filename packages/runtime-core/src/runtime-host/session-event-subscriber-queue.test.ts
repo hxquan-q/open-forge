@@ -13,6 +13,20 @@ function partialOf(text: string): AssistantMessage {
 	return { role: "assistant", content: [{ type: "text", text }] } as unknown as AssistantMessage;
 }
 
+function baseUsageUpdate(sessionId: string): SessionEvent {
+	return {
+		...baseSessionEvent(sessionId, "runtime-core"),
+		type: "usage.update",
+		input: 10,
+		output: 5,
+		cacheRead: 0,
+		cacheWrite: 0,
+		costTotal: 0,
+		contextPercent: 1,
+		contextWindow: 8_000,
+	};
+}
+
 function textDelta(contentIndex: number, delta: string): SessionEvent {
 	return {
 		...baseSessionEvent("session-1", "agent"),
@@ -86,13 +100,9 @@ describe("SessionEventSubscriberQueue", () => {
 		const queue = new SessionEventSubscriberQueue((event) => delivered.push(event), 1);
 		queue.enqueue(textDelta(0, "a"));
 		queue.enqueue(textDelta(1, "b"));
-		queue.enqueue({
-			...baseSessionEvent("session-1", "runtime-core"),
-			type: "message.final",
-			message: { role: "assistant", content: [{ type: "text", text: "done" }] },
-		} as SessionEvent);
+		queue.enqueue(baseUsageUpdate("session-1"));
 		expect(delivered).toHaveLength(3);
-		expect(delivered.map((event) => event.type)).toEqual(["text_delta", "text_delta", "message.final"]);
+		expect(delivered.map((event) => event.type)).toEqual(["text_delta", "text_delta", "usage.update"]);
 		expect(queue.readStats().droppedEphemeral).toBe(0);
 	});
 
@@ -100,14 +110,10 @@ describe("SessionEventSubscriberQueue", () => {
 		const delivered: SessionEvent[] = [];
 		const queue = new SessionEventSubscriberQueue((event) => delivered.push(event), 1);
 		queue.enqueue(textDelta(0, "a"));
-		queue.enqueue({
-			...baseSessionEvent("session-1", "runtime-core"),
-			type: "message.final",
-			message: { role: "assistant", content: [{ type: "text", text: "done" }] },
-		} as SessionEvent);
+		queue.enqueue(baseUsageUpdate("session-1"));
 		expect(delivered).toHaveLength(2);
 		expect(delivered[0]?.type).toBe("text_delta");
-		expect(delivered[1]?.type).toBe("message.final");
+		expect(delivered[1]?.type).toBe("usage.update");
 		expect(queue.readStats().queued).toBe(0);
 	});
 

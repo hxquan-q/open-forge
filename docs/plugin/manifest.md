@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 清单参考（plugin.json）
 
 `plugin.json` 是插件的唯一清单，位于 `.vettapkg` 包的 ZIP 容器根目录（或唯一顶层文件夹内）。
@@ -90,7 +91,7 @@ Schema 只描述 `plugin.json` 数据本身；Plugin API 版本是否兼容、�
 用户插件按版本存放：
 
 ```text
-~/.vetta/plugins/<id>/versions/<version>/
+~/.openforge/plugins/<id>/versions/<version>/
 ```
 
 - 安装一个**更新版本**只被记录为 **pending**；App 持续加载当前 `activeVersion`。
@@ -98,7 +99,7 @@ Schema 只描述 `plugin.json` 数据本身；Plugin API 版本是否兼容、�
 - 调试时改了代码要 bump `version` + reload 才稳妥生效（见 [styling-and-pitfalls.md](./styling-and-pitfalls.md#缓存刷新)）。
 - `listPlugins()` 会给出 **`rootPath`**：活动版本包在磁盘上的绝对根（用户插件 = 上表版本目录；系统插件 = `system-plugins/<id>`）。脚本、MCP 相对路径均相对此根解析。
 
-系统插件不进 `~/.vetta/plugins`，见 [system-plugins.md](./system-plugins.md)。
+系统插件不进 `~/.openforge/plugins`，见 [system-plugins.md](./system-plugins.md)。
 
 ## commands
 
@@ -359,7 +360,7 @@ revision 读取；不要依次调用多次 `writeFile()` 冒充多文件事务�
 
 | role | agent | 名称 | 擅长什么 |
 | --- | --- | --- | --- |
-| `designer` | `vetta-ui-design/designer` | 设计师 | 在 Vetta 设计画布上产出界面：App 页面、落地页、幻灯片与海报 |
+| `designer` | `vetta-ui-design/designer` | 设计师 | 在 Open Forge 设计画布上产出界面：App 页面、落地页、幻灯片与海报 |
 
 这两个插件是**预置插件**，用户可以禁用但不会卸载。禁用时槽位按 `optional` 规则降级——用 `role` 引用它们的团队会少一名队员，重新启用后原样回来。
 

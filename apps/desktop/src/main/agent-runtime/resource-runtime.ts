@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import type {
 	CodingAgentPromptRuntimeSourceContext,
@@ -27,6 +28,8 @@ import {
 	nodeTextFileWatchPort,
 } from "@vetta/runtime-node/host";
 import { isSshProjectUri, parseProjectLocation } from "@vetta/ssh-transport";
+import { resolveDesktopBrandName } from "../../shared/desktop-brand.js";
+import { getAppLanguage } from "../i18n/index.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
 
 interface DesktopResourceRuntimeScope {
@@ -159,7 +162,7 @@ export async function createDesktopPromptRuntimeSources(
 		noThemes: true,
 	});
 	await resourceSource.reload();
-	return { resourceSource, settingsSource };
+	return { resourceSource, settingsSource, brandName: resolveDesktopBrandName(getAppLanguage()) };
 }
 
 export function createDesktopSkillResourceRuntime(options: {

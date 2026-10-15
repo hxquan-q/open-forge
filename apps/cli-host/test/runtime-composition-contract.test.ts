@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -439,6 +440,9 @@ describe("Runtime composition contract", () => {
 		await session.prompt({ text: "second" });
 
 		expect(createSystemPromptOptionsResolver).toHaveBeenCalledOnce();
+		// Goal tools (TASK-0156 / ADR-0144) are session-extension contributions, so they join the
+		// per-model-call tool surface even under an explicit activation; the initial session-creation
+		// resolution still sees no bound tools.
 		expect(sourceCalls).toEqual([
 			{
 				sessionId: "system-prompt-session",
@@ -448,13 +452,13 @@ describe("Runtime composition contract", () => {
 			},
 			{
 				sessionId: "system-prompt-session",
-				activeToolNames: ["read"],
+				activeToolNames: ["read", "get_goal", "create_goal", "update_goal"],
 				messageRoles: ["user"],
 				modelId: "recorded-model",
 			},
 			{
 				sessionId: "system-prompt-session",
-				activeToolNames: ["read"],
+				activeToolNames: ["read", "get_goal", "create_goal", "update_goal"],
 				messageRoles: ["user", "assistant", "user"],
 				modelId: "recorded-model",
 			},
@@ -475,11 +479,68 @@ describe("Runtime composition contract", () => {
 			boundTools.snapshot.entries.find(({ registration }) => registration.tool.name === "read")?.registration.tool,
 		).toMatchObject({ description: registeredRead?.description });
 		await boundTools.release();
+		// Goal tools (TASK-0156 / ADR-0144) are contributed by the goal session extension. Their host
+		// schemas do not declare the model-only call-description property, so the coding-agent
+		// call-description projector adds it to the model-visible form (instead of adopting a native one).
+		const callDescriptionProperty = {
+			description: "Brief user-facing reason for this tool call (max 100 chars).",
+			maxLength: 100,
+			type: "string",
+		};
 		expect(calls[0]?.tools).toEqual([
 			{
 				name: "read",
 				description: registeredRead?.description,
 				inputSchema: jsonValue(registeredRead?.inputSchema),
+			},
+			{
+				name: "get_goal",
+				description: "Read the current session goal and its status, usage, and progress.",
+				inputSchema: {
+					type: "object",
+					properties: { description: callDescriptionProperty },
+					additionalProperties: false,
+				},
+			},
+			{
+				name: "create_goal",
+				description:
+					"Create an autonomous session goal only when the user explicitly asks to start goal mode or pursue a goal autonomously. Fails while an unfinished goal exists.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						description: callDescriptionProperty,
+						objective: {
+							type: "string",
+							minLength: 1,
+							description: "The concrete objective explicitly requested by the user.",
+						},
+					},
+					required: ["objective"],
+					additionalProperties: false,
+				},
+			},
+			{
+				name: "update_goal",
+				description:
+					"Update the active goal after auditing real progress. Use complete only when the objective is achieved, blocked only after the same blocker persists for three goal continuations, or paused when continued work requires the user.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						description: callDescriptionProperty,
+						goal_id: { type: "string", minLength: 1 },
+						status: {
+							anyOf: [
+								{ type: "string", const: "complete" },
+								{ type: "string", const: "blocked" },
+								{ type: "string", const: "paused" },
+							],
+						},
+						detail: { type: "string" },
+					},
+					required: ["goal_id", "status"],
+					additionalProperties: false,
+				},
 			},
 		]);
 		await session.dispose();

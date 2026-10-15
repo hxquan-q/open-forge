@@ -52,3 +52,15 @@ Do not `process.exit` after loading the server — `connect()` resolves when rea
 ## Attribution
 
 Upstream Cowart by ZHONG XIN. Vetta host adaptation for internal use.
+
+
+## Context Boundary
+
+```yaml
+purpose: %plugin.description%
+provides:  []
+consumes:  []
+internal_dependencies:
+  - "@vetta-org/plugin-sdk"
+  - "@vetta-org/plugin-vite"
+```

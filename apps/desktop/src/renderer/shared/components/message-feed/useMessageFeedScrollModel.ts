@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FollowOutput, IndexLocationWithAlign, StateSnapshot, VirtuosoHandle } from "react-virtuoso";
 
@@ -91,6 +92,11 @@ export interface MessageFeedScrollModelInput<T> {
 	readonly getItemKey?: (item: T) => string | null;
 	readonly onInitialTargetHandled?: () => void;
 	readonly shouldFollowOnAppend?: (item: T) => boolean;
+	/**
+	 * Virtuoso firstItemIndex 基数：列表开了前向偏移后，scrollToIndex 等
+	 * 命令侧的数组相对下标要先加上它才落到 Virtuoso 的绝对索引空间。
+	 */
+	readonly indexOffset?: number;
 }
 
 /** Feed viewport mechanics with no message schema, global store or product policy. */
@@ -103,6 +109,7 @@ export function useMessageFeedScrollModel<T>({
 	getItemKey,
 	onInitialTargetHandled,
 	shouldFollowOnAppend,
+	indexOffset = 0,
 }: MessageFeedScrollModelInput<T>): MessageFeedScrollModel {
 	const virtuosoRef = useRef<VirtuosoHandle>(null);
 	const itemIdentity = getItemIdentity(items, getItemKey);
@@ -142,6 +149,8 @@ export function useMessageFeedScrollModel<T>({
 	const lastUserScrollDirectionRef = useRef<"up" | "down" | null>(null);
 	const activeRef = useRef(active);
 	activeRef.current = active;
+	const indexOffsetRef = useRef(indexOffset);
+	indexOffsetRef.current = indexOffset;
 	const skipNextLerpRef = useRef(false);
 	const scrollSettleTimerRef = useRef<number | null>(null);
 	const interactionResetKeyRef = useRef(resetKey);
@@ -171,6 +180,11 @@ export function useMessageFeedScrollModel<T>({
 		const itemCount = stateItemCountRef.current;
 		const identity = stateItemIdentityRef.current;
 		if (!key || itemCount === 0) return;
+		// Intermediate positions while following are not a reading position chosen by the user.
+		if (shouldFollowBottomRef.current) {
+			feedStateCache.delete(key);
+			return;
+		}
 		const handle = virtuosoRef.current;
 		if (!handle || typeof handle.getState !== "function") return;
 		handle.getState((snapshot) => cacheFeedState(key, itemCount, identity, snapshot));
@@ -232,7 +246,11 @@ export function useMessageFeedScrollModel<T>({
 		(index: number) => {
 			stopFollowingBottom();
 			skipNextLerpRef.current = true;
-			virtuosoRef.current?.scrollToIndex({ index, align: "start", behavior: "smooth" });
+			virtuosoRef.current?.scrollToIndex({
+				index: index + indexOffsetRef.current,
+				align: "start",
+				behavior: "smooth",
+			});
 		},
 		[stopFollowingBottom],
 	);
@@ -330,7 +348,11 @@ export function useMessageFeedScrollModel<T>({
 		setShouldFollowBottom(false);
 		skipNextLerpRef.current = true;
 		requestAnimationFrame(() => {
-			virtuosoRef.current?.scrollToIndex({ index, align: "center", behavior: "smooth" });
+			virtuosoRef.current?.scrollToIndex({
+				index: index + indexOffsetRef.current,
+				align: "center",
+				behavior: "smooth",
+			});
 		});
 	}, [getItemKey, initialTargetKey, items, onInitialTargetHandled, setShouldFollowBottom]);
 

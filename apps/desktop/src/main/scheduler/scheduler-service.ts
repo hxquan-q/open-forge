@@ -1,4 +1,5 @@
 import { stat } from "node:fs/promises";
+import { normalizeAutomationTaskTrigger, normalizeUnattendedPermissionTiers } from "@vetta/coding-agent/runtime";
 import type { RuntimeHost } from "@vetta/runtime-core";
 import { recordAutomationTaskCreated } from "../app-monitor/app-monitor-service.js";
 import { isValidCronExpression } from "./cron.js";
@@ -18,6 +19,14 @@ export type CreateScheduledTaskInput = Omit<
 	ScheduledTask,
 	"id" | "createdAt" | "updatedAt" | "lastRunAt" | "lastRunStatus"
 >;
+
+/** 任务包导入：保留包 id，强制停用。 */
+export type ImportScheduledTaskInput = Omit<
+	ScheduledTask,
+	"createdAt" | "updatedAt" | "lastRunAt" | "lastRunStatus"
+> & {
+	readonly enabled: false;
+};
 
 export type UpdateScheduledTaskInput = Partial<
 	Omit<ScheduledTask, "id" | "createdAt" | "updatedAt" | "lastRunAt" | "lastRunStatus">
@@ -55,6 +64,8 @@ const SCHEDULER_TASK_KEYS = new Set([
 	"modelKey",
 	"executionMode",
 	"skill",
+	"permissionTiers",
+	"trigger",
 ]);
 
 function isNonBlankString(value: unknown): value is string {
@@ -63,6 +74,25 @@ function isNonBlankString(value: unknown): value is string {
 
 function isExecutionMode(value: unknown): boolean {
 	return value === "inherit" || value === "sandbox" || value === "full-access";
+}
+
+function isPermissionTiers(value: unknown): boolean {
+	if (value === undefined) return true;
+	if (value != null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0) {
+		// 空对象表示清除全部无人值守授权。
+		return true;
+	}
+	return normalizeUnattendedPermissionTiers(value) !== undefined;
+}
+
+function isTrigger(value: unknown): boolean {
+	if (value === undefined) return true;
+	return normalizeAutomationTaskTrigger(value) !== undefined;
+}
+
+function resolvedTriggerType(value: unknown): "cron" | "event" | "manual" {
+	const normalized = normalizeAutomationTaskTrigger(value);
+	return normalized?.type ?? "cron";
 }
 
 function isSelectedSkill(value: unknown): boolean {
@@ -81,17 +111,27 @@ function assertCreateTaskInput(value: unknown): asserts value is CreateScheduled
 		throw new SchedulerServiceError("SCHEDULER_TASK_INVALID_INPUT", "Scheduled task input must be an object.");
 	}
 	const input = value as Record<string, unknown>;
+	const triggerType = resolvedTriggerType(input.trigger);
+	const cronOk =
+		triggerType === "cron" ? isNonBlankString(input.cron) : input.cron === undefined || isNonBlankString(input.cron);
 	const valid =
 		Object.keys(input).every((key) => SCHEDULER_TASK_KEYS.has(key)) &&
 		isNonBlankString(input.name) &&
 		isNonBlankString(input.prompt) &&
-		isNonBlankString(input.cron) &&
+		cronOk &&
 		typeof input.isOnce === "boolean" &&
 		typeof input.enabled === "boolean" &&
 		isNonBlankString(input.cwd) &&
 		(input.modelKey === undefined || isNonBlankString(input.modelKey)) &&
 		(input.executionMode === undefined || isExecutionMode(input.executionMode)) &&
-		(input.skill === undefined || isSelectedSkill(input.skill));
+		(input.skill === undefined || isSelectedSkill(input.skill)) &&
+		isPermissionTiers(input.permissionTiers) &&
+		isTrigger(input.trigger) &&
+		(triggerType !== "event" ||
+			(typeof input.trigger === "object" &&
+				input.trigger != null &&
+				!Array.isArray(input.trigger) &&
+				(input.trigger as { event?: unknown }).event !== undefined));
 	if (!valid) {
 		throw new SchedulerServiceError("SCHEDULER_TASK_INVALID_INPUT", "Invalid scheduled task create input.");
 	}
@@ -113,7 +153,9 @@ function assertUpdateTaskInput(value: unknown): asserts value is UpdateScheduled
 		(input.cwd === undefined || isNonBlankString(input.cwd)) &&
 		(input.modelKey === undefined || isNonBlankString(input.modelKey)) &&
 		(input.executionMode === undefined || isExecutionMode(input.executionMode)) &&
-		(input.skill === undefined || isSelectedSkill(input.skill));
+		(input.skill === undefined || isSelectedSkill(input.skill)) &&
+		(input.permissionTiers === undefined || isPermissionTiers(input.permissionTiers)) &&
+		(input.trigger === undefined || isTrigger(input.trigger));
 	if (!valid) {
 		throw new SchedulerServiceError("SCHEDULER_TASK_INVALID_INPUT", "Invalid scheduled task update input.");
 	}
@@ -146,23 +188,94 @@ export class SchedulerService {
 
 	async createTask(data: CreateScheduledTaskInput): Promise<ScheduledTask> {
 		assertCreateTaskInput(data);
-		this.assertCron(data.cron);
+		const trigger = normalizeAutomationTaskTrigger(data.trigger) ?? { type: "cron" };
+		if (trigger.type === "cron") {
+			this.assertCron(data.cron);
+		} else if (data.cron !== undefined && data.cron.trim().length > 0) {
+			this.assertCron(data.cron);
+		}
 		await this.assertDirectory(data.cwd);
 		const now = Date.now();
+		const permissionTiers = normalizeUnattendedPermissionTiers(data.permissionTiers);
 		const task: ScheduledTask = {
 			...data,
+			cron: data.cron?.trim() ? data.cron : trigger.type === "cron" ? data.cron : "0 0 1 1 *",
+			...(permissionTiers !== undefined ? { permissionTiers } : {}),
+			...(trigger.type === "cron" ? {} : { trigger }),
 			id: generateId(),
 			createdAt: now,
 			updatedAt: now,
 			lastRunAt: null,
 			lastRunStatus: null,
 		};
+		if (permissionTiers === undefined) {
+			delete task.permissionTiers;
+		}
+		if (trigger.type === "cron") {
+			delete task.trigger;
+		}
 		await mutateTasks((tasks) => {
 			tasks.push(task);
 		});
 		if (task.enabled) {
 			this.dependencies.scheduleTask(task);
 		}
+		this.emitTasksChanged();
+		recordAutomationTaskCreated();
+		return task;
+	}
+
+	/**
+	 * 从自动化任务包导入：使用包 id 作为任务 id，**强制 enabled=false**，同 id 不覆盖。
+	 */
+	async importTask(data: ImportScheduledTaskInput): Promise<ScheduledTask> {
+		if (data.enabled !== false) {
+			throw new SchedulerServiceError(
+				"SCHEDULER_IMPORT_MUST_DISABLE",
+				"Imported automation packages must be disabled.",
+			);
+		}
+		if (!isNonBlankString(data.id)) {
+			throw new SchedulerServiceError("SCHEDULER_TASK_INVALID_INPUT", "Imported task id is required.");
+		}
+		assertCreateTaskInput({
+			name: data.name,
+			prompt: data.prompt,
+			cron: data.cron,
+			isOnce: data.isOnce,
+			enabled: false,
+			cwd: data.cwd,
+			modelKey: data.modelKey,
+			executionMode: data.executionMode,
+			skill: data.skill,
+			permissionTiers: data.permissionTiers,
+		});
+		this.assertCron(data.cron);
+		await this.assertDirectory(data.cwd);
+		const existing = await loadTasks();
+		if (existing.some((task) => task.id === data.id)) {
+			throw new SchedulerServiceError("SCHEDULER_IMPORT_ID_EXISTS", "A task with this package id already exists.", {
+				taskId: data.id,
+			});
+		}
+		const now = Date.now();
+		const permissionTiers = normalizeUnattendedPermissionTiers(data.permissionTiers);
+		const task: ScheduledTask = {
+			...data,
+			enabled: false,
+			...(permissionTiers !== undefined ? { permissionTiers } : {}),
+			createdAt: now,
+			updatedAt: now,
+			lastRunAt: null,
+			lastRunStatus: null,
+		};
+		if (permissionTiers === undefined) {
+			delete task.permissionTiers;
+		}
+		await mutateTasks((tasks) => {
+			tasks.push(task);
+		});
+		// 导入强制停用：不 schedule。
 		this.emitTasksChanged();
 		recordAutomationTaskCreated();
 		return task;
@@ -181,6 +294,14 @@ export class SchedulerService {
 			if (index < 0) {
 				throw new SchedulerServiceError("SCHEDULER_TASK_NOT_FOUND", "定时任务不存在。", { taskId });
 			}
+			const permissionTiers =
+				patch.permissionTiers !== undefined
+					? normalizeUnattendedPermissionTiers(patch.permissionTiers)
+					: tasks[index].permissionTiers;
+			const nextTrigger =
+				patch.trigger !== undefined
+					? (normalizeAutomationTaskTrigger(patch.trigger) ?? { type: "cron" as const })
+					: tasks[index].trigger;
 			const updated: ScheduledTask = {
 				...tasks[index],
 				...patch,
@@ -189,7 +310,15 @@ export class SchedulerService {
 				lastRunAt: tasks[index].lastRunAt,
 				lastRunStatus: tasks[index].lastRunStatus,
 				updatedAt: Date.now(),
+				...(permissionTiers !== undefined ? { permissionTiers } : {}),
+				...(nextTrigger !== undefined && nextTrigger.type !== "cron" ? { trigger: nextTrigger } : {}),
 			};
+			if (patch.permissionTiers !== undefined && permissionTiers === undefined) {
+				delete updated.permissionTiers;
+			}
+			if (patch.trigger !== undefined && (nextTrigger === undefined || nextTrigger.type === "cron")) {
+				delete updated.trigger;
+			}
 			tasks[index] = updated;
 			return updated;
 		});

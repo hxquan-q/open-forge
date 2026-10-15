@@ -1,12 +1,14 @@
+<!-- Modified by The Open Forge contributors. -->
 # Desktop 发布与自动更新流程
 
-本文是 Vetta Desktop 发布流程的维护手册。它记录当前 GitHub Actions、构建配置解析器、R2/GitHub 发布和自动更新验收之间的关系，供下一次排查或修改发布链路时快速恢复上下文。
+本文是 Open Forge Desktop 发布流程的维护手册。它记录当前 GitHub Actions、构建配置解析器、R2/GitHub 发布和自动更新验收之间的关系，供下一次排查或修改发布链路时快速恢复上下文。
 
 ## 事实源
 
 涉及行为时先看实现，再更新本文：
 
 - [Desktop 发布 workflow](../../.github/workflows/desktop-release.yml)
+- [发布说明寻址与碎片汇编](../../scripts/release/release-notes.mjs)（版本号到正文路径；碎片汇编与一致性守卫）
 - [发布配置解析器](../../scripts/release/resolve-desktop-release-config.mjs)
 - [配置解析测试](../../scripts/release/resolve-desktop-release-config.test.mjs)
 - [workflow 合同测试](../../scripts/quality/desktop-release-workflow.test.mjs)
@@ -71,7 +73,7 @@ flowchart LR
 - 完整 `check`、质量测试、平台制品校验和 packaged E2E；
 - macOS 签名与公证；
 - 独立的 `desktop-test` Environment、R2 prefix 和更新 URL；
-- 递增的 `build_version`，例如基线 `0.5.46`，候选 `0.5.47`。
+- 递增的 `build_version`，例如基线 `0.1.2`，候选 `0.1.3`。
 
 建议先发布 test 基线，再发布更高版本候选，从基线安装包执行真实升级。测试完成后不要把 test metadata 复制到 stable；stable 需要使用正式 channel 配置重新构建或按明确的制品晋级方案发布。
 
@@ -91,6 +93,27 @@ flowchart LR
 | `desktop-test` | test R2 发布和候选升级 | 使用独立 test prefix/URL；不能复用 stable metadata 目录 |
 
 构建 job、R2 发布 job 和 GitHub 发布 job 必须能拿到与目标 channel 对应的 Environment。当前 workflow 会根据 `channel` 为 test 选择 `desktop-test`，其它情况选择 `desktop-production`。
+
+### 当前实际配置（2026-10-06 实测与其后落地）
+
+用命令核对，不要凭记忆：
+
+```bash
+gh api repos/<owner>/<repo>/environments
+gh api repos/<owner>/<repo>/rulesets
+```
+
+现状（`hxquan-q/open-forge`）：
+
+| 项 | 现状 |
+| --- | --- |
+| `desktop-production` | 存在，`protection_rules` 为空。**required reviewers 在当前计划不可用**：API 返回 422「Please ensure the billing plan supports the required reviewers protection rule」。 |
+| `desktop-test` | 已创建（此前不存在，而 workflow 在 test 渠道会引用它）；同样无法配 required reviewers。 |
+| `v*` tag | 已加 ruleset `protect release tags`（id 24519581，target `tag`，规则 `deletion` 与 `update`），仓库管理员角色 bypass，正常打 tag 不受影响。 |
+| `main` | 分支保护接口返回 404，未保护；本仓日常集成在本地 main，对外推送走 `main:dev`。 |
+
+因此当前可用的人工门是这两道：仓库设置层的 tag ruleset——任何人都不能删除或改写已发布的 `v*` tag；以及本地 `release:desktop:publish --confirm-publish`——发布动作由责任人亲自执行。`environment:` 声明本身不构成审批；要拿到环境审批需要升级到支持 required reviewers 的计划，届时按上表补配即可。
+
 
 ### Variables
 
@@ -141,6 +164,11 @@ APPLE_TEAM_ID
 
 ## 正式发布操作
 
+
+**发起权限**：发布由人发起——责任人本地运行 `bun run release:desktop:publish -- <版本> --confirm-publish`，由脚本提交发布说明、打 tag 并原子推送；tag 推送之后 workflow 才自动跑。Agent 不得代跑发布，也不得推送 tag。
+
+当前没有第二道平台审批（见「当前实际配置与待配置项」），所以「谁推 tag 谁就在发版」这层约束目前完全依赖本条纪律与待补的 ruleset。
+
 ### 推荐：推送版本 tag
 
 1. 更新 `apps/desktop/package.json` 版本。
@@ -153,7 +181,7 @@ APPLE_TEAM_ID
    v<apps/desktop/package.json version>
    ```
 
-   例如 package 版本是 `0.5.47`，tag 必须是 `v0.5.47`。
+   例如 package 版本是 `0.1.3`，tag 必须是 `v0.1.3`。
 
 6. 等待 `desktop-release`：先看 `prepare` 的 resolved config，再看 quality、四个平台 build、制品校验、E2E 和最终公网 feed 校验。
 
@@ -178,8 +206,8 @@ GitHub target 的手动发布会以当前 workflow SHA 创建对应版本 Releas
 
 ### 前置发布
 
-1. 使用 `desktop-release` 手动运行发布 test 基线：选择 `release_target=r2`、`channel=test`，填写当前基线版本的 `build_version`，例如 `0.5.46`。
-2. 再运行一次相同 workflow，发布更高版本的 test 候选，例如 `0.5.47`。
+1. 使用 `desktop-release` 手动运行发布 test 基线：选择 `release_target=r2`、`channel=test`，填写当前基线版本的 `build_version`，例如 `0.1.2`。
+2. 再运行一次相同 workflow，发布更高版本的 test 候选，例如 `0.1.3`。
 3. 确认两次运行都通过构建、平台制品校验、packaged updater E2E、R2 上传和公开 feed 校验，并且版本化安装包仍保留在 `VETTA_R2_PREFIX_TEST`。
 4. 确认 `desktop-test` Environment 的 `VETTA_UPDATE_URL_TEST` 与 `VETTA_R2_PREFIX_TEST` 对应同一个公开 feed。通常不需要在升级 workflow 中手动填写 `update_url`。
 
@@ -189,8 +217,8 @@ GitHub target 的手动发布会以当前 workflow SHA 创建对应版本 Releas
 
 | 输入 | 填写内容 |
 | --- | --- |
-| `baseline_version` | 已发布的 test 基线，例如 `0.5.46` |
-| `candidate_version` | 已发布的更高 test 候选，例如 `0.5.47` |
+| `baseline_version` | 已发布的 test 基线，例如 `0.1.2` |
+| `candidate_version` | 已发布的更高 test 候选，例如 `0.1.3` |
 | `update_url` | 可留空，默认读取 `desktop-test` Environment 的 `VETTA_UPDATE_URL_TEST` |
 | `notes` | 可选，仅写入本次运行摘要 |
 

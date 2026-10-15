@@ -1,7 +1,10 @@
 {
 	"page": {
 		"title": "Abilities",
-		"subtitle": "Give your agent more to work with: skills, scenes, MCP, plugins and bundles"
+		"subtitle": "Find, add, and manage the skills, connectors, and plugins available to your agent.",
+		"kicker": "OPEN FORGE · LIBRARY",
+		"stampInstalled": "{{count}} installed",
+		"stampTotal": "{{count}} total"
 	},
 	"banner": {
 		"title": "Discover more abilities",
@@ -34,6 +37,13 @@
 		"openSource": "Open source",
 		"sameName": "{{count}} with same name",
 		"builtin": "Built-in"
+	},
+	"attention": {
+		"title": "Needs attention",
+		"open": "Open {{name}}, {{status}}",
+		"updateAndSetup": "Update available · setup needed",
+		"more": "and {{count}} more",
+		"overflow": "{{count}} more items need attention"
 	},
 	"card": {
 		"noDescription": "No description"
@@ -419,7 +429,8 @@
 			"settingsWrite": "Changes app settings the host exposes to plugins and may alter app behavior.",
 			"shellOpenExternal": "Opens a plugin-selected external link in the system browser or default app.",
 			"uiSlotNewSessionContext": "Lets the plugin show a block beneath the new-session input, only when you pick one of its agents or teams, or mention one of its abilities.",
-			"conversationDraftRead": "Lets the plugin read what you have typed but not yet sent. Provided only while that plugin's context block is on screen."
+			"conversationDraftRead": "Lets the plugin read what you have typed but not yet sent. Provided only while that plugin's context block is on screen.",
+			"terminalRun": null
 		},
 		"uiSlotGlobal": "Global UI slot",
 		"uiSlotAbilityDetail": "Show detail configuration panel",
@@ -482,7 +493,8 @@
 		"settingsWrite": "Modify settings",
 		"shellOpenExternal": "Open links in the system browser",
 		"uiSlotNewSessionContext": "New Session Context Slot",
-		"conversationDraftRead": "Read input draft"
+		"conversationDraftRead": "Read input draft",
+		"terminalRun": null
 	},
 	"meta": {
 		"title": "Other",

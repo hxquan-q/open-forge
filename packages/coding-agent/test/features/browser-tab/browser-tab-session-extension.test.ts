@@ -57,6 +57,36 @@ describe("browser_tab session extension", () => {
 		expect(result?.isError).toBe(true);
 		expect(result?.details).toMatchObject({ code: "stale_reference", pageRevision: 9 });
 	});
+
+	it("模型回传 snapshot 打印的编码串时，宿主函数收到解码后的对象 ref", async () => {
+		const received: unknown[] = [];
+		const functions = new SessionExtensionFunctionRegistry();
+		functions.register(CODING_AGENT_BROWSER_TAB_FUNCTION, async (request) => {
+			received.push(request);
+			return { ok: true as const, action: "click" as const, pageRevision: 3 };
+		});
+		disposals.push(() => functions.close());
+		const composition = await SessionExtensionComposition.create({
+			functions,
+			definitions: [createCodingAgentBrowserTabSessionExtension()],
+		});
+		disposals.push(() => composition.dispose());
+		const prepared = await composition.features[0]!.prepare({ signal });
+		disposals.push(() => prepared.dispose());
+		const tool = await readTool(prepared);
+		const result = await tool?.execute({
+			sessionId: "s1",
+			turnId: "t1",
+			toolCallId: "c1",
+			input: { action: "click", elementRef: "v1:3:e1" },
+			signal,
+		});
+		expect(result?.isError).toBeUndefined();
+		expect(received).toHaveLength(1);
+		expect(received[0]).toMatchObject({
+			input: { action: "click", elementRef: { id: "e1", pageRevision: 3 } },
+		});
+	});
 });
 
 async function readTool(prepared: {

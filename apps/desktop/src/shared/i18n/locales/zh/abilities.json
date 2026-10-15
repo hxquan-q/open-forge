@@ -1,7 +1,10 @@
 {
 	"page": {
 		"title": "能力",
-		"subtitle": "给 agent 加点本事：技能、场景、MCP、插件与能力套装"
+		"subtitle": "查找、添加并管理 agent 可用的技能、连接器和插件",
+		"kicker": "OPEN FORGE · 能力库",
+		"stampInstalled": "已装 {{count}} 项",
+		"stampTotal": "共 {{count}} 项"
 	},
 	"banner": {
 		"title": "发现更多能力",
@@ -34,6 +37,13 @@
 		"openSource": "开源",
 		"sameName": "{{count}} 个同名",
 		"builtin": "内建"
+	},
+	"attention": {
+		"title": "待处理",
+		"open": "打开 {{name}}，{{status}}",
+		"updateAndSetup": "可更新 · 需配置",
+		"more": "等 {{count}} 项",
+		"overflow": "另有 {{count}} 项待处理"
 	},
 	"card": {
 		"noDescription": "暂无能力说明"
@@ -419,7 +429,8 @@
 			"settingsWrite": "修改宿主向插件开放的应用设置，可能改变应用行为。",
 			"shellOpenExternal": "使用系统默认浏览器或应用打开插件指定的外部链接。",
 			"uiSlotNewSessionContext": "允许插件在新会话页输入框下方展示一块内容，仅当用户选中该插件的智能体、团队，或在输入框里提到它的能力时出现。",
-			"conversationDraftRead": "允许插件读取你在输入框里尚未发送的内容。仅在该插件的上下文区处于展示状态时提供。"
+			"conversationDraftRead": "允许插件读取你在输入框里尚未发送的内容。仅在该插件的上下文区处于展示状态时提供。",
+			"terminalRun": "让宿主在内置终端里替用户执行一条命令；命令以用户身份运行，过程可见、可中止，终端保留可继续交互。"
 		},
 		"uiSlotGlobal": "全局 UI Slot",
 		"uiSlotAbilityDetail": "显示详情配置面板",
@@ -482,7 +493,8 @@
 		"settingsWrite": "修改设置",
 		"shellOpenExternal": "用系统浏览器打开链接",
 		"uiSlotNewSessionContext": "新会话上下文区",
-		"conversationDraftRead": "读取输入框草稿"
+		"conversationDraftRead": "读取输入框草稿",
+		"terminalRun": "在内置终端运行命令"
 	},
 	"meta": {
 		"title": "其他",

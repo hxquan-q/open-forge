@@ -1,0 +1,10 @@
+{
+	"displayName": "Allstr ai",
+	"displayNameLocalized": {
+		"zh": "小爱ai"
+	},
+	"executableName": "OpenForge",
+	"appshotHelperName": "Allstr ai Computer Use",
+	"appshotHelperBundleId": "io.github.hxquanq.openforge.computer-use",
+	"legacyProductNames": ["Open Vetta", "Vetta Desktop", "Vetta", "Open Forge"]
+}

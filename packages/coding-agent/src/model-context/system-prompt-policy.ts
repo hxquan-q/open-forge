@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /** Coding Agent system prompt policy and model-call prompt assembly. */
 
 import { renderMcpToolsPromptSection } from "@vetta/runtime-mcp";
@@ -12,7 +13,12 @@ import {
 } from "./prompt-document.js";
 import { formatModelVisibleSkills, type ModelVisibleSkill } from "./skill-prompt.js";
 
-const SUBCONSCIOUS = `**Your name is Vetta. You are an AI assistant.**`;
+/** 品牌缺省口径：开源 / 自用档。Desktop 分发档由宿主注入展示名（见 REQ-0013）。 */
+export const DEFAULT_BRAND_NAME = "Open Forge";
+
+function identityLine(brandName: string): string {
+	return `**Your name is ${brandName}. You are an AI assistant.**`;
+}
 
 /** Tool descriptions for system prompt */
 const builtInToolDescriptions: Record<string, string> = {
@@ -35,11 +41,11 @@ const builtInToolDescriptions: Record<string, string> = {
 	ask_user_question:
 		"Ask the user multiple-choice questions and wait for their answers (clarify ambiguity, gather preferences, offer decisions)",
 	doc_to_pdf: "Convert .doc/.docx files to PDF using Microsoft Office or WPS Office",
-	html_to_pdf: "Convert HTML files to PDF using Vetta Desktop's PDF command-line mode",
+	html_to_pdf: "Convert HTML files to PDF using the Desktop app's PDF command-line mode",
 	extract_text_from_pdf:
-		"Extract text from a PDF (scanned or born-digital) via Vetta Desktop's local PP-OCRv5 OCR; uses the embedded text layer when present, otherwise OCRs each page",
+		"Extract text from a PDF (scanned or born-digital) via the Desktop app's local PP-OCRv5 OCR; uses the embedded text layer when present, otherwise OCRs each page",
 	extract_text_from_img:
-		"Extract text from a single image (PNG/JPG/WebP/BMP/GIF) via Vetta Desktop's local PP-OCRv5 OCR",
+		"Extract text from a single image (PNG/JPG/WebP/BMP/GIF) via the Desktop app's local PP-OCRv5 OCR",
 	render_pdf_page:
 		"Render a single PDF page to a PNG (via pdftoppm) for visual inspection (seals/stamps, signatures, handwriting, layout); follow up with `read` on the returned PNG path. Use when the task needs a visual judgment OCR cannot make.",
 	kb_write_page:
@@ -50,21 +56,29 @@ const builtInToolDescriptions: Record<string, string> = {
 	tool_search: "Search the deferred MCP tool index by keyword and activate matching tools so they become callable",
 };
 
-export const VETTA_CLI_GUIDANCE = [
-	"Vetta CLI is your interface to the running Vetta Desktop app: use `vetta action` both to learn what Desktop can do and to operate it.",
-	"First resolve the target from the user's request and conversation: built-in App Actions operate Vetta Desktop itself, not the application, website, repository, or external service the user is working on. Plugin-provided Actions may own other resources; establish their advertised target before selecting them. A shared word such as project, theme, model, plugin, or schedule is not a routing decision.",
-	"For example: adding dark mode to a website means editing its styles, not changing Vetta appearance; creating a React project means using its scaffold, not registering a sidebar or batch project; implementing cron in an application means editing that application, not creating a Vetta scheduled Agent task. Use repository tools for those tasks. Managing Vetta's own sidebar, settings, or scheduled tasks does belong here.",
-	'When the user asks Vetta itself to act on a schedule (including daily digests such as "让 Vetta 每天帮我汇总"), discover and create a Vetta scheduled task; do not answer with only a cron snippet or project code. When the user asks what Vetta scheduled tasks support, run query/help and explain; do not create or run a task merely to demonstrate the feature.',
-	'Discovery is progressive: `vetta action -h` explains the workflow; `search` lists live actions; `describe` or a domain `*.query` with `{"operation":"help"}` reveals inputs; then `run`.',
-	"Do not expect CLI help to list every parameter. Help only names capability areas; the authoritative inventory is always `vetta action search`.",
-	"Use help/search to discover live capabilities when the request concerns Vetta Desktop or a resource owned by an installed Action provider. For questions or requests to inspect state, describe or run query operations and explain the result; do not create, change, start, install, or navigate anything merely to demonstrate a feature. Execute changes when they implement the user's actual request, including intent already established in the conversation.",
+/**
+ * Desktop Action CLI 指引正文。`{{brand}}` 占位由宿主按当前品牌档位替换；
+ * `openforge` 是实际安装的命令名（冻结标识，不随档位变化）。
+ */
+const DESKTOP_CLI_GUIDANCE_BODY = [
+	"The CLI is your interface to the running {{brand}} app: use `openforge action` both to learn what the app can do and to operate it.",
+	"First resolve the target from the user's request and conversation: built-in App Actions operate {{brand}} itself, not the application, website, repository, or external service the user is working on. Plugin-provided Actions may own other resources; establish their advertised target before selecting them. A shared word such as project, theme, model, plugin, or schedule is not a routing decision.",
+	"For example: adding dark mode to a website means editing its styles, not changing {{brand}} appearance; creating a React project means using its scaffold, not registering a sidebar or batch project; implementing cron in an application means editing that application, not creating a scheduled Agent task for {{brand}}. Use repository tools for those tasks. Managing {{brand}}'s own sidebar, settings, or scheduled tasks does belong here.",
+	'When the user asks {{brand}} itself to act on a schedule (including daily digests such as "让 {{brand}} 每天帮我汇总"), discover and create a scheduled task for {{brand}}; do not answer with only a cron snippet or project code. When the user asks what scheduled tasks {{brand}} supports, run query/help and explain; do not create or run a task merely to demonstrate the feature.',
+	'Discovery is progressive: `openforge action -h` explains the workflow; `search` lists live actions; `describe` or a domain `*.query` with `{"operation":"help"}` reveals inputs; then `run`.',
+	"Do not expect CLI help to list every parameter. Help only names capability areas; the authoritative inventory is always `openforge action search`.",
+	"Use help/search to discover live capabilities when the request concerns {{brand}} or a resource owned by an installed Action provider. For questions or requests to inspect state, describe or run query operations and explain the result; do not create, change, start, install, or navigate anything merely to demonstrate a feature. Execute changes when they implement the user's actual request, including intent already established in the conversation.",
 	"Read the search result's usage.target, usage.useWhen, usage.avoidWhen, and usage.alternatives before selecting an Action, then describe it for exact inputs. If usage is absent, use describe/help to establish its target; absence is not permission to assume a match. Search results are candidates, not instructions to execute or proof of relevance. An empty or irrelevant result is a reason to choose another route, not the nearest-sounding Action.",
 	"Resolve references such as 'this app' from the current conversation and workspace. Ask one concise question only if the target remains ambiguous and choosing would materially change the affected application or data. Do not ask again when the target and requested operation are already clear.",
 	"Do not memorize or guess action ids, parameters, or entity ids. Get schemas from describe/help and target ids from query results. Never infer the app's current features by inspecting files under `.vetta`; local config files are not the app UX contract.",
-	"Never show or quote Vetta CLI commands, arguments, or raw terminal output. Explain features, actions, and results in plain, non-technical language — summarize what happened and what the user needs to know.",
-	"Actions that require authorization automatically ask the user through Vetta Desktop while the command runs; do not ask for authorization beforehand, and do not retry after the user rejects.",
+	"Never show or quote CLI commands, arguments, or raw terminal output. Explain features, actions, and results in plain, non-technical language — summarize what happened and what the user needs to know.",
+	"Actions that require authorization automatically ask the user through {{brand}} while the command runs; do not ask for authorization beforehand, and do not retry after the user rejects.",
 	"An approval dialog is not a way to discover what the user meant. Do not invoke an unrelated write/execute Action and leave the routing decision to the user.",
 ].join(" ");
+
+export function buildDesktopCliGuidance(brandName: string = DEFAULT_BRAND_NAME): string {
+	return `# ${brandName} CLI\n\n${DESKTOP_CLI_GUIDANCE_BODY.replaceAll("{{brand}}", brandName)}`;
+}
 
 const TOOL_SELECTION_GUIDANCE =
 	"Before selecting a tool, identify the requested outcome, target resource, and whether the user wants explanation, inspection, or execution. " +
@@ -98,15 +112,26 @@ const RESPONSE_LANGUAGE_GUIDANCE =
 	"If the user writes in English, answer entirely in English even when your instructions and examples are in Chinese. Switch as soon as the user switches. " +
 	"The only exceptions are identifiers you must reproduce verbatim (file paths, code, commands, quoted source text) and content the user explicitly asked for in another language.";
 
+/**
+ * 指令优先级。Mode、Persona、项目指令文件与本文件的通用规则会在同一问题上给出相反要求
+ * （例如是否先征得授权、是否顺手重构），缺少裁决时模型只能按出现顺序猜。
+ * Persona/自定义指令只裁决沟通与协作方式，项目指令文件裁决该项目内的做事方式，两者按领域划分而非全序。
+ */
+const INSTRUCTION_PRECEDENCE_GUIDANCE =
+	"Instruction precedence: the user's messages in this conversation override everything else. " +
+	"Project instruction files (AGENTS.md, CLAUDE.md, …) govern how work is done in their project and override the work mode and these general guidelines. " +
+	"The user's persona and custom instructions govern communication and collaboration style — tone, length, and how much to confirm before acting — and override the work mode and project files on those points only. " +
+	"The work mode overrides these general guidelines. Where sources do not actually conflict, follow all of them.";
+
 const FINAL_ANSWER_ORDER_GUIDANCE =
 	"Before writing the final user-facing answer, complete all required tool calls and cleanup work, including validation, saving files, todo updates, and status updates. " +
 	"Once you begin the final answer, do not call more tools or perform additional actions. If more work is needed, do it first, then answer.";
 
-/** 文件名保真规则（buildGuidelines 与 custom-prompt 分支共用同一定义）。 */
+/** 文件名保真规则（buildGuidelines 与 custom-prompt 分支共用同一定义）。不点名具体工具：ls/find 并不总是可用。 */
 const FILENAME_FIDELITY_GUIDANCE =
-	"CRITICAL — File name fidelity: file names and paths are opaque byte strings — reproduce them EXACTLY as returned by tools (ls, find, dir_tree) or provided by the user; " +
+	"CRITICAL — File name fidelity: file names and paths are opaque byte strings — reproduce them EXACTLY as returned by tools or provided by the user; " +
 	"NEVER add, remove, or change any characters including spaces, dashes, underscores, or punctuation. " +
-	"When in doubt, run ls or find first to get the exact name, then copy it verbatim.";
+	"When in doubt, list the directory with an available tool first to get the exact name, then copy it verbatim.";
 
 /**
  * 桌面端渲染契约（文件徽章 / 产物块 / URL 链接）。这些是 UI 渲染约定而非模型行为指令，
@@ -119,11 +144,17 @@ const FILE_LINK_GUIDANCE =
 	"Use the exact absolute path returned by tools — never invent one; if you genuinely only have a relative path, leave it as plain text rather than fabricating an absolute one. " +
 	"The only exception is paths inside fenced code blocks or shell command examples — keep those as-is.";
 
+/**
+ * 交付物清单的唯一定义（Mode 不再另写一份）。它与 FILE_LINK_GUIDANCE 兼容：
+ * 正文按文件链接规则提到文件是允许的，交付物块只是结尾的完整清单。
+ */
 const DELIVERABLES_GUIDANCE =
-	"If you created, edited, or wrote ANY file during this turn, the VERY LAST thing in your final message MUST be one aggregated deliverables block — this is mandatory with NO exception, even for a single file or a one-line edit; never end such a turn without it. " +
-	"Format: a short heading in the user's language ('交付物:' for Chinese, 'Deliverables:' for English) followed by an unordered list where each item uses the standard CommonMark absolute file-link form — `- [filename.ext](</abs/path/with spaces/filename.ext>)`. The link label is the bare file name, never the full path. " +
-	"This block is the ONLY place outputs are listed (do not also scatter the same links earlier). List every file you created or changed for the user, plus user-facing outputs; exclude ONLY pure throwaway scaffolding, temp files, and files you merely read without changing. " +
-	"The single case where you omit this block is a turn that changed no files at all.";
+	"Deliverables block: if you created, edited, or wrote any file during this turn, end your final message with one aggregated deliverables block — even for a single file or a one-line edit. " +
+	"Give it a short bold heading in the user's language (**交付物** for Chinese, **Deliverables** for English, the natural equivalent otherwise), followed by an unordered list (`- ` prefix, never numbered) with one entry per file: " +
+	"a CommonMark link whose label is the bare file name (never the full or relative path) and whose destination is the absolute path in angle brackets, followed by a terse note on what changed — `- [filename.ext](</abs/path/with spaces/filename.ext>) — what changed here`. " +
+	"When two listed files share a name, disambiguate the label with the shortest distinguishing parent directory (`[app/index.ts](...)`, `[lib/index.ts](...)`). " +
+	"List every file you created or changed for the user, documents and code alike, plus user-facing outputs; exclude only throwaway scaffolding, temp files, and files you merely read. " +
+	"Linking a file earlier in your prose is fine; this block is still the one complete list. Omit it only when the turn changed no files.";
 
 const URL_LINK_GUIDANCE =
 	"Render web URLs in your prose as markdown links with descriptive text, e.g. [Vite docs](https://vitejs.dev), instead of bare URLs. Keep URLs as-is inside code blocks and shell examples.";
@@ -134,6 +165,11 @@ export interface McpToolInfo {
 }
 
 export interface BuildSystemPromptOptions {
+	/**
+	 * 品牌展示名（品牌档位解析结果）。用于身份行，缺省 = `DEFAULT_BRAND_NAME`。
+	 * 宿主（Desktop / CLI）按当前品牌档案注入，包内不硬编码品牌。
+	 */
+	brandName?: string;
 	/** Custom system prompt (replaces default body in the legacy flow). */
 	customPrompt?: string;
 	/** Tools to include in prompt. Default: [read, command-tool, edit, write, dir_tree] */
@@ -248,30 +284,36 @@ function buildDateTime(): string {
 }
 
 function buildGuidelines(tools: string[], scenario?: ConversationScenario): string {
-	const guidelinesList: string[] = [];
+	const guidelinesList: string[] = [INSTRUCTION_PRECEDENCE_GUIDANCE];
 	if (tools.length > 0) guidelinesList.push(TOOL_SELECTION_GUIDANCE);
 	// 渲染契约（徽章/产物块/URL 链接）只对有 UI 渲染的场景有意义；cli 场景剔除。
 	// scenario 未传（SDK 直调/测试）时保守保留，行为与旧版一致。
 	const hasUiRendering = scenario !== "cli";
-	const hasSelectedCommandTool = tools.includes("bash") || tools.includes("shell");
+	const selectedCommandTools = ["bash", "shell"].filter((tool) => tools.includes(tool));
+	const hasSelectedCommandTool = selectedCommandTools.length > 0;
 	const hasEdit = tools.includes("edit");
 	const hasWrite = tools.includes("write");
-	const hasGrep = tools.includes("grep");
-	const hasGlob = tools.includes("glob");
-	const hasFind = tools.includes("find");
-	const hasLs = tools.includes("ls");
 	const hasDirTree = tools.includes("dir_tree");
 	const hasRead = tools.includes("read");
 
-	if (hasSelectedCommandTool && !hasGrep && !hasGlob && !hasFind && !hasLs && !hasDirTree) {
+	// 只点名本次真实可用的探索工具，避免引导模型去调用不存在的 find/ls。
+	const explorationTools = ["grep", "glob", "find", "ls", "dir_tree"].filter((tool) => tools.includes(tool));
+	if (hasSelectedCommandTool && explorationTools.length === 0) {
 		guidelinesList.push("Use the shell tool for file operations like ls, rg, find");
-	} else if (hasSelectedCommandTool && (hasGrep || hasGlob || hasFind || hasLs || hasDirTree)) {
+	} else if (hasSelectedCommandTool) {
 		guidelinesList.push(
-			"Prefer grep/glob/find/ls/dir_tree tools over the shell tool for file exploration (faster, respects .gitignore)",
+			`Prefer ${explorationTools.join("/")} over the shell tool for file exploration (faster, respects .gitignore)`,
 		);
 	}
 
 	if (hasSelectedCommandTool) {
+		guidelinesList.push(
+			`Command execution is available through ${selectedCommandTools.map((name) => `\`${name}\``).join(" or ")}. ` +
+				"When the user asks you to run a command or diagnose connectivity, use the available command tool within the authorized scope instead of claiming you have no terminal. " +
+				"Programs such as ping and ssh are command-line programs, not separate tools to discover. MCP search results do not determine whether built-in tools are available; a loaded skill is guidance, not an additional execution tool. " +
+				"Command-tool availability does not prove that a program is installed or a host is reachable. Use bounded checks and report the actual output or error; do not claim a connection succeeded without evidence. " +
+				"Keep credentials out of command arguments and logs, and do not bypass approval, sandbox, or network restrictions. If execution is denied or unavailable, explain that specific limitation and the next step.",
+		);
 		guidelinesList.push(
 			"Before bash/shell: if the process may not exit on its own (dev server, watcher, docker compose up without -d, make dev), MUST set run_in_background: true. Foreground blocks the entire agent turn until exit (or auto-promote after the soft wait).",
 		);
@@ -279,7 +321,7 @@ function buildGuidelines(tools: string[], scenario?: ConversationScenario): stri
 
 	if (hasDirTree) {
 		guidelinesList.push(
-			'ALWAYS use dir_tree (not bash "tree", "ls -R", "find", "fd", or "rg --files") whenever you need to view directory structure or explore a codebase. Only fall back to bash if dir_tree cannot fulfill the specific requirement (e.g., custom output formatting)',
+			'Use dir_tree (not bash "tree", "ls -R", "find", "fd", or "rg --files") whenever you need to view directory structure or explore a codebase. Only fall back to bash if dir_tree cannot fulfill the specific requirement (e.g., custom output formatting)',
 		);
 	}
 
@@ -291,7 +333,7 @@ function buildGuidelines(tools: string[], scenario?: ConversationScenario): stri
 
 	if (tools.includes("current_time")) {
 		guidelinesList.push(
-			'ALWAYS use current_time tool (not bash "date", "timedatectl", or other shell commands) when you need to know the current date or time. Only fall back to bash if current_time cannot fulfill the specific requirement (e.g., timezone conversion, date arithmetic)',
+			'Use the current_time tool (not bash "date", "timedatectl", or other shell commands) when you need to know the current date or time. Only fall back to bash if current_time cannot fulfill the specific requirement (e.g., timezone conversion, date arithmetic)',
 		);
 	}
 
@@ -379,6 +421,7 @@ export function buildSystemPromptDraft(options: BuildSystemPromptOptions = {}): 
 		agentPlugins,
 		scenario,
 		mcpDeferred,
+		brandName = DEFAULT_BRAND_NAME,
 	} = options;
 	const resolvedCwd = cwd ?? ".";
 	const dateTime = buildDateTime();
@@ -392,7 +435,7 @@ export function buildSystemPromptDraft(options: BuildSystemPromptOptions = {}): 
 	const hasRead = tools.includes("read");
 	const skillsSection = (hasRead || hasInvokeSkill) && skills.length > 0 ? formatModelVisibleSkills(skills) : "";
 
-	blocks.push(coreBlock("core.subconscious", "subconscious", SUBCONSCIOUS, 100));
+	blocks.push(coreBlock("core.subconscious", "subconscious", identityLine(brandName), 100));
 	blocks.push(coreBlock("core.base", "base", customPrompt ?? "", 150));
 	blocks.push(coreBlock("core.cache-prefix-addon", "append", systemPromptCachePrefixAddon ?? "", 175));
 	blocks.push({

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { HistoryEntry, ProjectInfo, SessionHistoryInfo } from "../contracts.js";
 import { runtimeError } from "../errors.js";
 import type { RuntimeHostSessionLifecycle } from "./runtime-host-session-lifecycle.js";
@@ -45,7 +46,16 @@ export class RuntimeHostCatalogFacade {
 	async deleteSession(sessionPath: string): Promise<void> {
 		await this.assertCapability(sessionPath, "delete");
 		const existing = this.options.sessionLifecycle.findBySessionPath(sessionPath);
-		if (existing) await this.options.sessionLifecycle.disposeSession(existing.sessionId);
+		if (existing) {
+			try {
+				await this.options.sessionLifecycle.disposeSession(existing.sessionId, {
+					releaseOnDisposeFailure: true,
+				});
+			} catch {
+				// 删除以「会话文件消失」为准。释放失败已由 sessionLifecycle 记为
+				// session.dispose 生命周期观测；再让它把用户卡在删不掉的会话上只会更糟。
+			}
+		}
 		await this.requireCatalog().deleteSessionArtifacts(sessionPath);
 	}
 
@@ -87,6 +97,16 @@ export class RuntimeHostCatalogFacade {
 		if (!this.options.accessResolver) return;
 		const access = await this.options.accessResolver.resolve(this.normalizePath(sessionPath));
 		if (access?.[capability]) return;
+		// 「无路由认领」与「路由声明拒绝」是两类不同语义：前者是路径不属于本
+		// 运行时（外来格式/他实例专属/残留路径），后者才是能力被拒。
+		if (access === undefined) {
+			throw runtimeError(
+				"INVALID_REQUEST",
+				`Session is not recognized by this runtime: ${sessionPath}`,
+				false,
+				"runtime",
+			);
+		}
 		throw runtimeError("INVALID_REQUEST", `Session does not support ${capability}: ${sessionPath}`, false, "runtime");
 	}
 }

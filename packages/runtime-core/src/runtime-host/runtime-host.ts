@@ -9,6 +9,7 @@ import type {
 	RuntimeQueuePromptIfRunningOutcome,
 	RuntimeSandboxGrantInfo,
 	RuntimeTurnPromptOutcome,
+	SessionAttachment,
 	SessionConfig,
 	SessionEvent,
 	SessionExecutionMode,
@@ -382,6 +383,10 @@ export class RuntimeHost implements SessionFacade {
 
 	subscribe(sessionId: string, handler: (event: SessionEvent) => void): () => void {
 		return this.sessionOperations.subscribe(sessionId, handler);
+	}
+
+	attach(sessionId: string, handler: (event: SessionEvent) => void): SessionAttachment {
+		return this.sessionOperations.attach(sessionId, handler);
 	}
 
 	/**

@@ -51,6 +51,8 @@ const ProjectSessionRow = memo(function ProjectSessionRow({
 interface ProjectGroupProps {
 	project: Project;
 	scrollParent: HTMLElement | null;
+	/** 远程项目所属主机的显示名，非远程或未登记的主机为 undefined。 */
+	remoteHostLabel?: string;
 	sessions: SidebarConversationInfo[];
 	sessionsLoading: boolean;
 	isExpanded: boolean;
@@ -77,6 +79,7 @@ export const ProjectGroup = memo(function ProjectGroup(props: ProjectGroupProps)
 				hasRunning: model.hasRunning,
 				isActive: model.isActive,
 				newSessionTitle: model.newSessionTitle,
+				toggleTitle: model.toggleTitle,
 				onCollapse: model.actions.collapse,
 				onExpand: model.actions.expand,
 				onNavigateProject: model.actions.navigateProject,

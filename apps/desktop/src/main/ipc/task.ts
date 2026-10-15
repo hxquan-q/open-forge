@@ -3,6 +3,7 @@ import { ARTIFACT_KINDS, type ArtifactKind } from "@vetta/runtime-core/task";
 import { ipcMain, type WebContents } from "electron";
 import { TASK_CHANNELS } from "../../shared/task-ipc.js";
 import { desktopDocumentExportService } from "../task-activity/document-export.js";
+import { verifyArtifactResearchSources } from "../task-activity/research-source-verify.js";
 import { type DesktopTaskCommand, desktopTaskActivityService } from "../task-activity/task-activity-service.js";
 
 const CHANNELS = TASK_CHANNELS;
@@ -110,6 +111,13 @@ export function registerTaskIpc(_webContents: WebContents): () => void {
 			return { status: "not-found" as const, artifactId: "" };
 		}
 		return desktopTaskActivityService.readArtifact(payload.sessionId, payload.artifactId);
+	});
+	ipcMain.handle(CHANNELS.VERIFY_ARTIFACT_SOURCES, (_event, input: unknown) => {
+		const payload = parseArtifactRead(input);
+		if (!payload) {
+			return { status: "not-found" as const };
+		}
+		return verifyArtifactResearchSources(payload.sessionId, payload.artifactId);
 	});
 	ipcMain.handle(CHANNELS.EXPORT_ARTIFACT, (_event, input: unknown) => {
 		const payload = parseArtifactExport(input);

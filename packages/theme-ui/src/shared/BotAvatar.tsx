@@ -74,10 +74,17 @@ interface BotAvatarProps {
 	/**
 	 * Screensaver-style pacing: the avatar jumps to random positions within its
 	 * parent container, pausing at each position to play a random gesture.
-	 * DESIGN.md §5.3 exception — decorative continuous bouncing is intentional.
+	 * Exception to the DESIGN.md animation bans — decorative continuous bouncing
+	 * is intentional here.
 	 */
 	pacing?: boolean;
 	size?: "sm" | "md" | "lg";
+	/**
+	 * 默认渲染为可点击的 <button>（戳一戳做小动作）。`interactive={false}` 时降级为
+	 * 纯展示的 <span aria-hidden>：宿主本身是交互控件时（如新会话智能体 chip），
+	 * 头像只是装饰，不能再交一颗按钮进去（axe `nested-interactive`，BUG-0039）。
+	 */
+	interactive?: boolean;
 	className?: string;
 	/** Optional click override; default: trigger a random gesture. */
 	onClick?: () => void;
@@ -90,6 +97,7 @@ export const BotAvatar = memo(function BotAvatar({
 	pacing = false,
 	size = "sm",
 	className = "",
+	interactive = true,
 	onClick,
 	title = "戳一下",
 }: BotAvatarProps): JSX.Element {
@@ -269,13 +277,8 @@ export const BotAvatar = memo(function BotAvatar({
 	const showThoughtBubble = mood === "think";
 	const showSleepZ = mood === "sleep";
 
-	const button = (
-		<button
-			type="button"
-			onClick={handleClick}
-			title={title}
-			className={`no-drag relative flex shrink-0 items-center justify-center focus:outline-none ${cfg.wrapper} ${className}`}
-		>
+	const avatarBody = (
+		<>
 			{active && (
 				// 光晕是静态的：模糊层一旦跟着无限动画缩放/变透明，流式全程每帧都要重新模糊一遍。
 				<span aria-hidden className={`absolute ${cfg.glowInset} rounded-[20px] bg-primary/30 opacity-50 ${cfg.glowBlur}`} />
@@ -380,10 +383,28 @@ export const BotAvatar = memo(function BotAvatar({
 					</motion.span>
 				)}
 			</AnimatePresence>
-		</button>
+		</>
 	);
 
-	if (!pacing) return button;
+	const avatar = interactive ? (
+		<button
+			type="button"
+			onClick={handleClick}
+			title={title}
+			className={`no-drag relative flex shrink-0 items-center justify-center focus:outline-none ${cfg.wrapper} ${className}`}
+		>
+			{avatarBody}
+		</button>
+	) : (
+		<span
+			aria-hidden
+			className={`no-drag relative flex shrink-0 items-center justify-center ${cfg.wrapper} ${className}`}
+		>
+			{avatarBody}
+		</span>
+	);
+
+	if (!pacing) return avatar;
 
 	return (
 		<motion.div
@@ -391,7 +412,7 @@ export const BotAvatar = memo(function BotAvatar({
 			className="relative flex items-center"
 			animate={bounceControls}
 		>
-			{button}
+			{avatar}
 		</motion.div>
 	);
 });

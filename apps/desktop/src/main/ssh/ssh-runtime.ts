@@ -4,16 +4,20 @@ import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
 import {
 	buildControlPath,
+	classifySshPrompt,
 	createNodeSshProcessRunner,
+	createSsh2ProcessRunner,
 	type SshConnection,
 	SshConnectionManager,
 	type SshConnectionStatus,
+	type SshProcessRunner,
 } from "@vetta/ssh-transport";
 import { readConfigSync } from "../config/desktop-config-store.js";
 import { getAppLogger } from "../logger.js";
-import { resolveAskpassEnvironment } from "./askpass-runtime.js";
+import { resolveAskpassEnvironment, resolveSshPrompt } from "./askpass-runtime.js";
 import { resolveSshHelperBinary } from "./helper-assets.js";
 import { broadcastSshHostStatus } from "./ssh-events.js";
+import { createSshHostKeyVerifier } from "./ssh-hostkey-verifier.js";
 
 const log = getAppLogger("ssh");
 
@@ -42,6 +46,46 @@ function resolveControlDirectory(): string {
 	throw new Error("Unable to create a short-enough SSH control socket directory.");
 }
 
+function resolveHostLabel(hostId: string): string {
+	return readConfigSync().sshHosts?.find((host) => host.id === hostId)?.label ?? hostId;
+}
+
+/**
+ * Windows 上走进程内 ssh2 传输：OpenSSH 的 ControlMaster 多路复用依赖 unix fd 传递，
+ * MSYS2 与 Win32-OpenSSH 都过不去（BUG-0049），每条命令都会在 mux 握手处死掉。
+ * ssh2 的 Client 本身就是多路复用传输，认证、主机密钥确认和凭据提示经同一套
+ * prompt service 接到界面上。
+ *
+ * 其余平台维持系统 OpenSSH：`~/.ssh/config` 的完整解析、ProxyCommand、FIDO 等都由
+ * 它原生承担，没有理由换。
+ */
+function createPlatformRunner(): SshProcessRunner {
+	if (process.platform !== "win32") return createNodeSshProcessRunner();
+	return createSsh2ProcessRunner({
+		// argv 里是 target 不是 hostId：按 target 反查主机。
+		resolveHost: (target) => readConfigSync().sshHosts?.find((host) => host.target === target),
+		verifyHostKey: createSshHostKeyVerifier({
+			ask: (request) => resolveSshPrompt(request, resolveHostLabel),
+		}),
+		askSecret: async (request) => {
+			const answer = await resolveSshPrompt(
+				{
+					hostId: request.hostId,
+					// keyboard-interactive 的提示文本要自己分类——2FA 验证码不该被记住。
+					kind: request.kind === "keyboard-interactive" ? classifySshPrompt(request.prompt) : request.kind,
+					prompt: request.prompt,
+					round: request.round,
+				},
+				resolveHostLabel,
+			);
+			return answer.ok ? (answer.value ?? "") : undefined;
+		},
+		// OpenSSH for Windows 的 agent 走命名管道；MSYS 的 SSH_AUTH_SOCK 优先级更高。
+		agentPath: process.env.SSH_AUTH_SOCK ?? "\\\\.\\pipe\\openssh-ssh-agent",
+		logger: (line) => log.info(line),
+	});
+}
+
 /**
  * 进程内唯一的 SSH 连接管理器。
  *
@@ -51,18 +95,15 @@ function resolveControlDirectory(): string {
  */
 export function getSshConnectionManager(): SshConnectionManager {
 	manager ??= new SshConnectionManager({
-		runner: createNodeSshProcessRunner(),
+		runner: createPlatformRunner(),
 		controlDirectory: resolveControlDirectory(),
 		// 同步读配置：连接可能在任意一次工具调用中途建立，异步读会让这里变成一个
 		// 需要在每个调用点 await 的入口。
 		resolveHost: (hostId) => readConfigSync().sshHosts?.find((host) => host.id === hostId),
 		// 口令、私钥密码、2FA 和首次主机指纹确认都靠它接到界面上；缺了这套环境变量，
-		// 这些连接只会挂到超时。
-		resolveEnv: (hostId) =>
-			resolveAskpassEnvironment(
-				hostId,
-				(id) => readConfigSync().sshHosts?.find((host) => host.id === id)?.label ?? id,
-			),
+		// 这些连接只会挂到超时。ssh2 传输不读 env——提示经 resolveSshPrompt 直进服务。
+		resolveEnv:
+			process.platform === "win32" ? undefined : (hostId) => resolveAskpassEnvironment(hostId, resolveHostLabel),
 		helper: {
 			resolveBinary: resolveSshHelperBinary,
 			// helper 起不来不影响使用，但要能查：否则「后台任务断线就没了」无从解释。

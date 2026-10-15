@@ -5,9 +5,9 @@ status: ready
 priority: P0
 owner: runtime-core/desktop
 source: .vetta logs and exprot/session-memory.md
-related_plan: [PLAN-0002]
+related_plan: [PLAN-0002, PLAN-0015]
 created: 2026-09-22
-updated: 2026-09-23
+updated: 2026-10-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 

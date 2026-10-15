@@ -54,7 +54,38 @@
 		"sandboxUnavailable": "{{platform}} sandbox unavailable: {{reason}}",
 		"every": "Every",
 		"unitHours": "hours",
-		"unitDays": "days"
+		"unitDays": "days",
+		"permissionTiers": {
+			"title": "Unattended permissions",
+			"description": "Allow low-risk capabilities without prompts. Unauthorized actions still ask for approval. All off by default — same as before.",
+			"billingVeto": "Quota, billing, and credit-consuming actions always need human confirmation, at every tier.",
+			"enableAll": "Enable all",
+			"enableAllConfirmTitle": "Enable all unattended permissions?",
+			"enableAllConfirmMessage": "This task may auto-approve workspace writes, common commands, batch deletes, system tools, and other approval prompts while unattended. L4 high-risk and billing actions still require you. Make sure you understand the risk.",
+			"enableAllConfirm": "Enable all",
+			"tiers": {
+				"allowWorkspaceWrite": {
+					"label": "Allow workspace writes",
+					"hint": "Auto-approve local write/edit approvals (not L4)."
+				},
+				"allowCommonCommands": {
+					"label": "Allow common commands",
+					"hint": "Auto-approve common read-oriented commands like git status and tests."
+				},
+				"allowBatchDelete": {
+					"label": "Allow batch deletes",
+					"hint": "Auto-approve batch delete commands and scheduled-task deletes."
+				},
+				"allowSystemTools": {
+					"label": "Allow system tools",
+					"hint": "Auto-approve MCP and package-install style system tools."
+				},
+				"autoApprovePrompts": {
+					"label": "Auto-approve other prompts",
+					"hint": "Auto-approve remaining non-L4, non-billing approval prompts."
+				}
+			}
+		}
 	},
 	"scheduleMode": {
 		"once": "Once",
@@ -114,5 +145,39 @@
 		"failed": "Failed",
 		"running": "Running",
 		"aborted": "Aborted"
+	},
+	"trigger": {
+		"cron": "On schedule",
+		"event": "On event",
+		"manual": "Manual only",
+		"eventHint": "Host event; missed runs are not backfilled",
+		"manualHint": "Only Run now starts it",
+		"events": {
+			"session.created": "After session created",
+			"project.opened": "After project opened",
+			"automation.panelOpened": "After automation page opens",
+			"session.switched": "After session switch"
+		}
+	},
+	"package": {
+		"import": "Import",
+		"export": "Export",
+		"discover": "Discover",
+		"importTitle": "Import an automation package from a file",
+		"exportTitle": "Export selected or all tasks as packages",
+		"discoverTitle": "Discover packages from public repos",
+		"discoverHint": "Reads GitHub public repos tagged openforge-automation-package only. Imports stay disabled and never auto-run.",
+		"discoverLoading": "Searching public packages…",
+		"discoverEmpty": "No public packages found",
+		"discoverFailed": "Failed to discover packages",
+		"close": "Close",
+		"importing": "Importing…",
+		"exportEmpty": "No tasks to export",
+		"exportSuccess": "Package exported",
+		"exportFailed": "Export failed",
+		"needWorkspace": "Set a working directory before importing",
+		"importDisabled": "Imported \"{{id}}\" (disabled by default — enable manually)",
+		"importRejected": "Import rejected: {{reasons}}",
+		"importFailed": "Import failed"
 	}
 }

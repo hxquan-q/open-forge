@@ -4,7 +4,7 @@ import { useThemeComponent } from "@vetta-org/theme-sdk";
 import { AnimatePresence, motion } from "motion/react";
 import { useSkillPickerModel } from "../../hooks/useSkillPickerModel";
 import { SkillList } from "./SkillList";
-import type { SkillListLabels } from "./types";
+import type { SkillListEmptyAction, SkillListLabels } from "./types";
 
 export interface SkillPickerPanelViewProps {
 	open: boolean;
@@ -12,7 +12,14 @@ export interface SkillPickerPanelViewProps {
 	filter: string;
 	items: readonly SkillInfo[];
 	activeIndex: number;
-	labels: SkillListLabels & { header: string; resultCount: string };
+	labels: SkillListLabels & {
+		header: string;
+		resultCount: string;
+	};
+	/** listbox 的可访问名（一般由 slashPanel.header t 值提供）。 */
+	ariaLabel: string;
+	/** 空态主 CTA：filter 时 = 清除筛选；无可用项时 = 去能力市场。 */
+	emptyAction: SkillListEmptyAction;
 	panelRef: React.RefObject<HTMLDivElement | null>;
 	className?: string;
 	onHoverItem: (index: number) => void;
@@ -34,6 +41,8 @@ export function SkillPickerPanelView({
 	items,
 	activeIndex,
 	labels,
+	ariaLabel,
+	emptyAction,
 	panelRef,
 	className,
 	onHoverItem,
@@ -49,7 +58,7 @@ export function SkillPickerPanelView({
 					exit={{ opacity: 0, y: placement === "top" ? 8 : -8, scaleY: 0.96 }}
 					transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
 					className={[
-						"absolute inset-x-0 z-50 overflow-visible rounded-2xl border border-border bg-input-bar-bg",
+						"absolute inset-x-0 z-50 overflow-visible rounded-xl border border-border bg-input-bar-bg shadow-lg",
 						placement === "top" ? "bottom-full mb-1.5 origin-bottom" : "top-full mt-1.5 origin-top",
 						className,
 					]
@@ -62,11 +71,16 @@ export function SkillPickerPanelView({
 						className="relative z-10 flex flex-col overflow-hidden rounded-[inherit]"
 						style={{ maxHeight: MAX_HEIGHT }}
 					>
-						<div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5">
-							<span className="icon-[solar--slash-circle-linear] h-4 w-4 text-muted-foreground/50" />
-							<span className="text-[12px] font-medium text-muted-foreground/50">{labels.header}</span>
+						{/* 面板标题行：slash 图标 + 标题，过滤时右侧补结果数。 */}
+						<div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
+							<span className="icon-[solar--slash-circle-linear] h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+							<span className="truncate text-[12px] font-medium text-muted-foreground/70">
+								{labels.header}
+							</span>
 							{filter.length > 0 && (
-								<span className="ml-auto text-[11px] text-muted-foreground/50">{labels.resultCount}</span>
+								<span className="ml-auto shrink-0 text-[11px] text-muted-foreground/60">
+									{labels.resultCount}
+								</span>
 							)}
 						</div>
 						<div className="min-h-0 flex-1 overflow-y-auto">
@@ -75,6 +89,8 @@ export function SkillPickerPanelView({
 								activeIndex={activeIndex}
 								labels={labels}
 								filtering={filter.length > 0}
+								emptyAction={emptyAction}
+								ariaLabel={ariaLabel}
 								onHover={onHoverItem}
 								onSelect={onSelectItem}
 							/>

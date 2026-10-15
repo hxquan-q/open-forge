@@ -10,3 +10,17 @@ Architecture references:
 
 - [`docs/contracts-and-host-integration.md`](docs/contracts-and-host-integration.md) explains the contract and host integration boundaries.
 - [`docs/capabilities/README.md`](../../docs/capabilities/README.md) describes the cross-repository capability architecture.
+
+
+## Context Boundary
+
+```yaml
+purpose: Capability definition SDK and catalog generation for cap.foundation / cap.domain contracts
+provides:  
+  - "@vetta-org/capability-sdk"
+  - "@vetta-org/capability-sdk/access"
+  - "@vetta-org/capability-sdk/foundation"
+  - "@vetta-org/capability-sdk/domain"
+consumes:  []
+internal_dependencies:  []
+```

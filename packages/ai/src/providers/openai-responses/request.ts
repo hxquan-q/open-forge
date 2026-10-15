@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import OpenAI from "openai";
 import type { ResponseCreateParamsStreaming } from "openai/resources/responses/responses.js";
 import type { Context, Model, Usage } from "../../types.js";
@@ -10,29 +11,36 @@ const OPENAI_TOOL_CALL_PROVIDERS = new Set(["openai", "openai-codex", "opencode"
 
 type ResponsesReasoning = NonNullable<ResponseCreateParamsStreaming["reasoning"]>;
 
-export function createOpenAIResponsesClient(
+export function resolveOpenAIResponsesHeaders(
 	model: Model<"openai-responses">,
 	context: Context,
-	apiKey: string,
 	options?: OpenAIResponsesOptions,
-): OpenAI {
+): Record<string, string> {
 	const headers = { ...model.headers };
 	if (model.provider === "github-copilot") {
 		Object.assign(
 			headers,
 			buildCopilotDynamicHeaders({
 				messages: context.messages,
-				hasImages: hasCopilotVisionInput(context.messages),
+				hasImages: model.input.includes("image") && hasCopilotVisionInput(context.messages),
 			}),
 		);
 	}
 	Object.assign(headers, options?.headers);
+	return headers;
+}
 
+export function createOpenAIResponsesClient(
+	model: Model<"openai-responses">,
+	context: Context,
+	apiKey: string,
+	options?: OpenAIResponsesOptions,
+): OpenAI {
 	return new OpenAI({
 		apiKey,
 		baseURL: model.gatewayUrl || model.baseUrl,
 		dangerouslyAllowBrowser: true,
-		defaultHeaders: headers,
+		defaultHeaders: resolveOpenAIResponsesHeaders(model, context, options),
 		fetch: options?.fetch,
 		maxRetries: resolveProviderMaxRetries(options?.maxRetries),
 	});

@@ -12,6 +12,8 @@ export function createTaskApi(ipc: IpcRenderer): Pick<DesktopApi, "task"> {
 			getArtifactViews: (sessionId) => ipc.invoke(CHANNELS.GET_ARTIFACT_VIEWS, sessionId),
 			runCommand: (sessionId, command) => ipc.invoke(CHANNELS.COMMAND, { sessionId, command }),
 			readArtifact: (sessionId, artifactId) => ipc.invoke(CHANNELS.READ_ARTIFACT, { sessionId, artifactId }),
+			verifyArtifactSources: (sessionId, artifactId) =>
+				ipc.invoke(CHANNELS.VERIFY_ARTIFACT_SOURCES, { sessionId, artifactId }),
 			exportArtifact: (sessionId, artifactId, suggestedFileName) =>
 				ipc.invoke(CHANNELS.EXPORT_ARTIFACT, { sessionId, artifactId, suggestedFileName }),
 		},

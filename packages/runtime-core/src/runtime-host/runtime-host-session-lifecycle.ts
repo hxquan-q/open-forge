@@ -9,6 +9,14 @@ import type { RuntimeSessionCreateRequest } from "./session-backend.js";
 import type { RuntimeSandboxGrantStore, RuntimeSharedModelController } from "./session-services.js";
 import type { RuntimeHostSessionRecord } from "./types.js";
 
+export interface DisposeSessionOptions {
+	/**
+	 * 删除路径使用：扩展释放失败也注销目录条目并继续产物删除，避免「删不掉的僵尸会话」
+	 * （BUG-0108）。缺省 false——释放失败抛出且保留注册，后续 dispose 仍可重试自愈。
+	 */
+	readonly releaseOnDisposeFailure?: boolean;
+}
+
 export interface RuntimeHostSessionLifecycleOptions {
 	readonly directory: RuntimeHostSessionDirectory;
 	/** 与 Session Directory 使用同一规范化规则，确保 Windows 路径大小写/分隔符变体共享创建锁。 */
@@ -92,7 +100,7 @@ export class RuntimeHostSessionLifecycle {
 		return result ? { sessionId: result.sessionId, handle: result.handle } : undefined;
 	}
 
-	async disposeSession(sessionId: string): Promise<void> {
+	async disposeSession(sessionId: string, options: DisposeSessionOptions = {}): Promise<void> {
 		let sessionKey: string;
 		try {
 			sessionKey = this.options.directory.resolveSessionKey(sessionId);
@@ -103,7 +111,7 @@ export class RuntimeHostSessionLifecycle {
 		if (!handle) return;
 		const existingAttempt = this.disposeAttempts.get(sessionKey);
 		if (existingAttempt) return existingAttempt;
-		const operation = this.disposeSessionHandle(sessionKey, handle);
+		const operation = this.disposeSessionHandle(sessionKey, handle, options);
 		const tracked = operation.finally(() => {
 			if (this.disposeAttempts.get(sessionKey) === tracked) this.disposeAttempts.delete(sessionKey);
 		});
@@ -220,21 +228,39 @@ export class RuntimeHostSessionLifecycle {
 		}
 	}
 
-	private async disposeSessionHandle(sessionKey: string, handle: RuntimeHostSessionRecord): Promise<void> {
+	private async disposeSessionHandle(
+		sessionKey: string,
+		handle: RuntimeHostSessionRecord,
+		options: DisposeSessionOptions,
+	): Promise<void> {
+		let failure: unknown;
+		let failed = false;
 		try {
 			await handle.lifecycle.dispose();
-			if (!this.options.directory.isRegisteredOwner(sessionKey, handle)) return;
-			const canonicalSessionId = this.options.directory.readCanonicalSessionIdByKey(
-				sessionKey,
-				handle.lifecycle.sessionId,
-			);
-			this.options.sandboxGrantStore?.clear(canonicalSessionId);
-			this.options.events.release(sessionKey, handle.lifecycle.sessionPath, canonicalSessionId);
-			this.options.directory.remove(sessionKey, handle);
 		} catch (error) {
 			this.options.reportDisposeFailure(error, handle.lifecycle.sessionId);
-			throw error;
+			failure = error;
+			failed = true;
 		}
+		// 删除路径必须「释放失败也注销所有权」：否则该 key 永远留在目录里，后续每次删除都
+		// 重复同一失败，会话成为删不掉的僵尸（BUG-0108）。其余调用方（关闭、空闲逐出、创建
+		// 回滚、停机）保持旧语义——抛出并保留注册，下一次 dispose 仍可自愈重试。
+		if (failed && !options.releaseOnDisposeFailure) throw failure;
+		if (this.options.directory.isRegisteredOwner(sessionKey, handle)) {
+			try {
+				const canonicalSessionId = this.options.directory.readCanonicalSessionIdByKey(
+					sessionKey,
+					handle.lifecycle.sessionId,
+				);
+				this.options.sandboxGrantStore?.clear(canonicalSessionId);
+				this.options.events.release(sessionKey, handle.lifecycle.sessionPath, canonicalSessionId);
+				this.options.directory.remove(sessionKey, handle);
+			} catch (error) {
+				this.options.reportDisposeFailure(error, handle.lifecycle.sessionId);
+				throw error;
+			}
+		}
+		if (failed) throw failure;
 	}
 
 	private beginCreation(): () => void {

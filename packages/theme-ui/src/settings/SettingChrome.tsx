@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 import { cn } from "@vetta-org/ui";
 
@@ -32,6 +33,16 @@ export function SettingRow({
 				)}
 			</div>
 			<div className="max-w-[min(100%,24rem)] shrink-0">{children}</div>
+		</div>
+	);
+}
+
+/** 节内空态：一行与列表行同高的说明，别在节里撑出整页留白。 */
+export function SettingEmptyRow({ icon, label }: { icon: string; label: string }): JSX.Element {
+	return (
+		<div className="flex items-center gap-2.5 px-5 py-4 text-[12px] text-muted-foreground">
+			<span aria-hidden="true" className={cn(icon, "h-4 w-4 shrink-0")} />
+			<span>{label}</span>
 		</div>
 	);
 }

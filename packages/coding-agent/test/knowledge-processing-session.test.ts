@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +15,7 @@ import {
 	createCodingAgentRuntimeComposition,
 	createTestConversationPersistence,
 } from "./fixtures/conversation-persistence.js";
+import { createTestPromptRuntimeSources } from "./fixtures/prompt-runtime-sources.js";
 
 describe("Knowledge processing session", () => {
 	const directories: string[] = [];
@@ -92,6 +95,7 @@ describe("Knowledge processing session", () => {
 		const factory = createKnowledgeProcessingSessionFactory({
 			getModelRegistry: () => registry,
 			createConversationPersistence: createTestConversationPersistence,
+			createPromptRuntimeSources: createTestPromptRuntimeSources,
 			createToolEnvironment: createCodingAgentNodeToolEnvironment,
 			createSessionExecutionEnvironment: createCodingAgentNodeSessionExecutionEnvironment,
 			knowledgeRuntime: createTestKnowledgeRuntime(knowledgeDirectory),
@@ -100,6 +104,7 @@ describe("Knowledge processing session", () => {
 			createComposition: createRecordedComposition({
 				onCompositionOptions(options) {
 					observedWorkspaceFacts = options.workspaceFacts;
+					expect(options.createPromptRuntimeSources).toBe(createTestPromptRuntimeSources);
 				},
 				onFrame(model, context, streamOptions) {
 					observedModels.push(model);
@@ -180,7 +185,7 @@ describe("Knowledge processing session", () => {
 		expect(disposeComposition).toHaveBeenCalledOnce();
 	});
 
-	it("keeps the existing missing-model error and does not call the provider", async () => {
+	it("keeps custom-composition hosts without a separate source callback and preserves missing-model errors", async () => {
 		const cwd = await createTemporaryDirectory("greenfield-kb-missing-cwd-");
 		const conversationDir = await createTemporaryDirectory("greenfield-kb-missing-sessions-");
 		const registry = modelRegistry([]);
