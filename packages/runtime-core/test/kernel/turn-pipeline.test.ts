@@ -102,7 +102,11 @@ class InMemoryConversationRepository implements ConversationRepository {
 			throw new Error("compaction append failed");
 		}
 		if (conversation.version !== expectedVersion) {
-			throw new Error(`Version mismatch: expected ${expectedVersion}, received ${conversation.version}`);
+			// 与真实仓储合同一致：expectedVersion 落后抛类型化版本冲突码，供定向重试判别。
+			throw Object.assign(
+				new Error(`Version mismatch: expected ${expectedVersion}, received ${conversation.version}`),
+				{ code: "conversation_version_conflict" },
+			);
 		}
 		const messages = [...conversation.messages];
 		for (const event of events) {
@@ -234,6 +238,7 @@ function snapshot(contextStrategy: ContextStrategy, overrides?: Partial<RuntimeS
 }
 
 async function createHarness(options?: {
+	readonly repository?: InMemoryConversationRepository;
 	readonly turnEngine?: TurnEnginePort;
 	readonly contextStrategy?: ContextStrategy;
 	readonly runtimeSnapshot?: RuntimeSnapshot;
@@ -244,7 +249,7 @@ async function createHarness(options?: {
 	readonly failTerminalAppend?: boolean;
 	readonly failCompactionAppend?: boolean;
 }) {
-	const repository = new InMemoryConversationRepository();
+	const repository = options?.repository ?? new InMemoryConversationRepository();
 	repository.failTerminalAppend = options?.failTerminalAppend === true;
 	repository.failCompactionAppend = options?.failCompactionAppend === true;
 	const contextStrategy = options?.contextStrategy ?? new RecordingContextStrategy();
@@ -694,6 +699,73 @@ describe("greenfield runtime kernel", () => {
 			"message.appended",
 			"turn.completed",
 		]);
+	});
+
+	// 回归 BUG-0110：agent 链上的 checkpoint 回调与事件循环体共享同一个 state.version
+	// 内存镜像。这里让一次追加在压缩提交前落盘（不经过 pipeline 的版本推进），旧实现会拿
+	// 着落后一版的 expectedVersion 提交、命中版本冲突而丢掉整次压缩。
+	it("commits compaction with the version currently on disk when another append lands first", async () => {
+		const repository = new InMemoryConversationRepository();
+		let racedOnce = false;
+		const contextStrategy: ContextStrategy = {
+			async prepare(input) {
+				if (input.reason !== "model_call") {
+					return { messages: input.messages, estimatedTokens: input.messages.length };
+				}
+				if (!racedOnce) {
+					racedOnce = true;
+					const current = await repository.load("session-1");
+					await repository.append("session-1", current.version, [
+						{
+							type: "message.appended",
+							sessionId: "session-1",
+							turnId: "raced",
+							message: assistantMessage("raced"),
+							timestamp: 2,
+						},
+					]);
+				}
+				return {
+					messages: [userMessage("summary"), ...input.messages.slice(-1)],
+					estimatedTokens: 2,
+					compaction: {
+						summary: "summary",
+						summaryMessage: userMessage("summary"),
+						firstKeptEntryId: "event-1",
+						tokensBefore: 10,
+						reason: "threshold",
+					},
+				};
+			},
+		};
+		const engine: TurnEnginePort = {
+			async *execute(request) {
+				yield { type: "message", message: assistantMessage("partial") };
+				await request.checkpoint?.(
+					{
+						reason: "model_call",
+						messages: [userMessage("hello")],
+						modelCallIndex: 0,
+						recoveryAttempt: 0,
+					},
+					request.signal,
+				);
+				yield { type: "completed", stopReason: "stop" };
+			},
+		};
+		const harness = await createHarness({
+			repository,
+			contextStrategy,
+			turnEngine: engine,
+			modelBindingProvider: { bind: () => ({ model: TEST_MODEL }) },
+		});
+
+		const result = await harness.session.send({ message: userMessage("hello") });
+
+		expect(result).toMatchObject({ status: "completed" });
+		expect((await harness.repository.load("session-1")).events.map(({ type }) => type)).toContain(
+			"context.compacted",
+		);
 	});
 
 	it("uses the admitted document only for the first model call and the latest document afterwards", async () => {
