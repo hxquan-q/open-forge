@@ -1,7 +1,9 @@
 <!-- Copyright The Open Forge contributors. -->
 # Open Forge 文档导航
 
-仓库与文档统一使用 **Open Forge**。默认 Desktop 的 `distribution` 档显示小爱ai / Allstr ai，显式 `VETTA_BRAND_PROFILE=self` 使用 Open Forge；品牌档与 lite/full 云服务模式独立。配置方法见[构建模式](desktop/build-modes.md)。
+这些文档服务于本仓独立维护的 Open Forge 客户端工程，覆盖桌面端、团队与工程工作流、远程项目、模型接入和扩展开发。具体实现与验收状态以本仓源码、测试和 Project 记录为准。
+
+默认 Desktop 的 `distribution` 档显示小爱ai / Allstr ai，显式 `VETTA_BRAND_PROFILE=self` 使用 Open Forge。默认 lite 开发流程无需账号；full 的云功能需要本仓之外的兼容服务端。品牌档与云服务模式独立，配置见[构建模式](desktop/build-modes.md)。开发版本、已发布资产与已部署服务应分别核实。
 
 ## 当前使用与开发入口
 

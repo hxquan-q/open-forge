@@ -6,13 +6,13 @@
 <h1 align="center">Open Forge</h1>
 
 <p align="center">
-  面向真实工作的开源桌面 AI Agent——本地优先、可扩展，由你掌控。
+  独立维护的桌面 Agent 项目，面向可审查的工程工作流。
 </p>
 
 <p align="center">
   <a href="https://github.com/hxquan-q/open-forge/releases"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-GitHub%20Releases-2da44e" alt="从 GitHub Releases 下载"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-Apache--2.0-blue" alt="Apache-2.0 许可"></a>
-  <img src="https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS、Windows 与 Linux">
+  <img src="https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS、Windows 与 Linux 构建目标">
   <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Discord-%E5%8A%A0%E5%85%A5%E7%A4%BE%E5%8C%BA-5865F2?logo=discord&logoColor=white" alt="加入 Open Forge Discord"></a>
 </p>
 
@@ -23,30 +23,33 @@
 
 ---
 
-Open Forge 把模型、项目文件、本机工具和可复用能力放进同一个桌面工作区。它适用于编码、文档、数据、研究、创意生产和可重复工作流，同时让工作继续发生在你选择的环境中。
+**Open Forge 是基于 Open Vetta 客户端栈持续二开、独立维护的项目。** 本仓维护桌面端、Agent 运行时、CLI、扩展工具与配套应用源码，当前开发重点是工程工作流、智能体团队、远程项目、模型接入和任务中断后的恢复。
 
-它不只是聊天界面：Open Forge 能理解工作区、在可见的权限边界内调用工具、交付真实文件，并保留可供检查的执行过程。
+桌面工作区保留项目会话、文件工具、预览、知识库、批量任务和自动化等基础能力，并在本仓持续修改和验证。业务服务端在独立私有仓库中维护。
 
-仓库与文档统一使用 **Open Forge**。Desktop 默认采用 `distribution` 品牌档案：中文显示 **小爱ai**，英文显示 **Allstr ai**；显式设置 `VETTA_BRAND_PROFILE=self` 才显示 Open Forge。品牌档案与 lite/full 云服务开关相互独立，两档共用兼容身份和数据目录。自用档配置见[构建模式](docs/desktop/build-modes.md)。
+## 本项目在做什么
 
-## 为什么选择 Open Forge
+| 方向 | 本仓维护的工作 |
+| --- | --- |
+| **工程工作流** | 预置 [allstar-coding 插件](packages/plugins/presets/allstar-coding/README.md)，将需求、原型、架构、开发、评审与验证组织为分阶段流程，保留工作流状态，并检查工具调用范围。 |
+| **团队与会话** | 围绕团队协作、成员消息、会话交互、中断恢复和执行重放持续开发与修复。使用入口见[智能体团队](apps/docs-site/content/docs/product/agent-teams.mdx)。 |
+| **远程项目** | 通过 SSH 访问项目与文件，支持本机和远端之间上传、下载，并处理进度、取消与同名冲突。见[应用环境](apps/docs-site/content/docs/product/application-environment.mdx)。 |
+| **模型接入** | 维护 BYOK 服务商、自定义端点、Responses/Codex 传输方式选择，以及流式响应、重试和异常中断处理。见[模型配置](apps/docs-site/content/docs/product/models.mdx)。 |
+| **日常桌面使用** | 文件预览、字体、会话整理与原生集成随运行时一起维护，具体操作入口见[使用指南](apps/docs-site/content/docs/product/overview.mdx)。 |
 
-| | 对你意味着什么 |
-|---|---|
-| **本地优先的工作区** | 项目、会话、文件与执行过程留在你选择的环境中。 |
-| **自带模型** | 通过 BYOK 连接受支持的 Provider、OpenAI 兼容端点或本地推理服务。 |
-| **真实工具与产物** | 在同一条任务流中处理代码、文档、表格、媒体、命令和生成文件。 |
-| **过程可检查** | 工具调用、计划、权限、进度、结果和恢复路径都有记录。 |
-| **方法可复用** | 使用技能、MCP、插件、主题、知识库、批量任务和自动化持续积累能力。 |
-| **开放的客户端栈** | 桌面端、CLI、SDK、插件系统、主题、移动端与 IM 网关都在本仓库开发。 |
+这些是当前开发线的维护重点，实现与验收状态记录在 [Project](project/README.md)。[0.1.3 发布说明](.github/release-notes/v0.1.3.md)描述当前开发版本；可下载构建及其平台范围以 [GitHub Releases](https://github.com/hxquan-q/open-forge/releases) 的实际资产为准。
 
-## 获取 Open Forge
+## 名称与构建
 
-带标签的版本会在 [GitHub Releases](https://github.com/hxquan-q/open-forge/releases) 发布 macOS、Windows 与 Linux 的预构建包。
+仓库与文档使用 **Open Forge**。Desktop 默认 `distribution` 档中文显示 **小爱ai**、英文显示 **Allstr ai**；显式设置 `VETTA_BRAND_PROFILE=self` 使用 Open Forge 显示名。两档共用数据与安装兼容身份。
 
-### 从源码运行
+品牌档与 **lite/full** 云服务模式独立。未启用云服务时，开发环境默认运行 lite。具体配置见[构建模式](docs/desktop/build-modes.md)。
 
-需要 **Bun 1.3+** 与 **Node.js 20+**。
+## 获取与运行
+
+需要安装包时，从[本仓 Releases](https://github.com/hxquan-q/open-forge/releases) 选择具体版本的资产。仓库包含 Windows、macOS 和 Linux 打包链；实际可下载的平台、架构和构建模式以该次 Release 为准。源码中的开发版本可能领先于已发布安装包。
+
+从源码运行桌面端需要 **Bun 1.3+** 和 **Node.js 20+**：
 
 ```bash
 git clone https://github.com/hxquan-q/open-forge.git
@@ -56,94 +59,56 @@ cd apps/desktop
 bun run dev
 ```
 
-源码检出默认产出 **lite** 构建：无需账号、无订阅、不依赖托管服务。模型请求发往你配置的端点，凭据保存在本地凭据存储中。构建模式与环境变量见 [`docs/desktop/build-modes.en.md`](docs/desktop/build-modes.en.md)。
+默认 lite 开发流程使用你自行配置的模型端点和凭据，无需 Open Forge 账号或订阅。开发数据写入 `~/.openforge-dev`，已安装构建通常使用 `~/.openforge`。根目录的 `bun run dev` 只监听核心库变化。完整准备与验证步骤见[快速开始](QUICKSTART.zh-CN.md)。
 
-开发实例使用 `~/.openforge-dev`，不影响已安装应用的 `~/.openforge` 数据。仓库根目录的 `bun run dev` 只监听核心库变化，不会启动 Electron。完整安装与验证命令见 [`QUICKSTART.zh-CN.md`](QUICKSTART.zh-CN.md)。
+使用时先从[项目与第一个任务](apps/docs-site/content/docs/getting-started/first-task.mdx)开始，再按需要接入团队、SSH 环境、知识库、批量任务或自动化。操作指南会说明功能前提和预览边界；其中截图用于说明流程，外观和显示名可能与所选构建不同。
 
-## 你可以做什么
+## 开发与扩展 Open Forge
 
-- **在项目与会话中工作。** 任务历史、文件、上下文、产物与执行细节放在一起。
-- **使用本机与外部工具。** 执行命令、检查文件、连接 MCP 服务，敏感操作一律显式批准。
-- **处理专业产物。** 预览并处理源码、PDF、Office 文件、表格、图片、音频、视频、SVG 与生成的 UI。
-- **放大已验证的任务。** 用批量任务把同一工作流跑遍多个目录，或调度为自动化。
-- **复用组织知识。** 建立本地知识库，安装可复用的技能与场景。
-- **离开工位继续工作。** 使用受支持的 IM 桥接、Webhook、通知、快捷入口与原生桌面集成。
+面向 Open Forge 开发时，以目标版本在本仓的源码、导出类型和文档为准。
 
-[产品指南](apps/docs-site/content/docs/product/overview.mdx)提供各能力领域的操作说明；其中截图作为流程示意，显示名和视觉以所选品牌档案及实际构建为准。
+| 入口 | 用途 | 指南 |
+| --- | --- | --- |
+| **Skill（技能）** | 可复用的方法或任务流程 | [能力](apps/docs-site/content/docs/product/abilities.mdx) |
+| **MCP** | 通过 STDIO 或 HTTP 连接外部工具与数据 | [MCP 连接器](apps/docs-site/content/docs/product/mcp.mdx) |
+| **Plugin（插件）** | 扩展桌面 UI、文件、消息、工具与宿主动作 | [插件开发](apps/docs-site/content/docs/plugins/overview.mdx) |
+| **Theme（主题）** | 桌面外观与主题页面 | [主题开发](docs/theme/README.md) |
+| **SDK / RPC / CLI** | 从其他宿主嵌入或驱动 Agent | [开发者入口](apps/docs-site/content/docs/developers/overview.mdx) |
 
-## 扩展模型
+`@vetta/*`、`@vetta-org/*` 包名、`vetta-plugin-cli` 命令、`VETTA_*` 配置及 `.vetta/`、`.vettapkg` 格式仍是兼容标识。SDK 和工具应与本仓检出版本配套，或使用已针对目标构建验证的版本；npm 上的同名发布包本身不能证明包含本项目的二开改动。
 
-Open Forge 提供多个扩展层级，简单的工作流不必升级成完整插件：
-
-| 扩展 | 适用场景 | 指南 |
-|---|---|---|
-| **Skill（技能）** | 教会 Agent 一个可复用的方法或领域工作流。 | [能力](apps/docs-site/content/docs/product/abilities.mdx) |
-| **MCP** | 通过标准协议连接外部工具与数据。 | [MCP 连接器](apps/docs-site/content/docs/product/mcp.mdx) |
-| **Plugin（插件）** | 扩展桌面 UI、文件、消息、工具与宿主动作。 | [插件开发](apps/docs-site/content/docs/plugins/overview.mdx) |
-| **Theme（主题）** | 替换视觉系统并提供主题专属页面。 | [主题开发](docs/theme/README.md) |
-| **SDK / RPC / CLI** | 从另一个应用或进程嵌入或驱动 Agent。 | [开发者入口](apps/docs-site/content/docs/developers/overview.mdx) |
-
-### 在任意目录开发插件
-
-开发插件不需要本仓库，也不需要 Open Forge 源码检出，Agent 同样不需要：
-
-```bash
-npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
-cd my-plugin && npm install
-npx vetta-plugin-cli docs        # 手册在哪里，以及它对应哪个 SDK 版本
-npm run install:vetta            # 构建、打包并安装进正在运行的桌面应用
-npx vetta-plugin-cli watch       # 热重载：宿主从这个目录加载插件
-```
-
-`init` 还会写出一个 `AGENTS.md`，因此**任何**编码 Agent——Claude Code、Cursor 或 Open Forge 自身——都能在无宿主侧配置的情况下接手项目。插件手册随 `@vetta-org/plugin-sdk` 一起分发，Agent 读到的合同就是项目编译所依据的合同；`docs` 负责定位手册，而不是让任何人硬编码 `node_modules` 路径。
-
-要从一个仓库发布多个能力，可以脚手架一个 marketplace：
-
-```bash
-npx @vetta-org/plugin-cli init hub --name my-market \
-  --repository https://github.com/me/my-market --min-app-version 0.1.3
-```
-
-`0.1.3` 是当前 Desktop 版本示例；发布时应填写已验证支持的最早 Open Forge 版本，不沿用上游 `0.55.x` 版本线。
-
-它会在仓库里放好索引、`abilities/` 目录布局、仓库级 `AGENTS.md`，以及运行 `vetta-plugin-cli sync --check` 的 CI，让 `.vetta/marketplace.json` 与每个 ability 包保持一致。开发命令始终作用于最近的 ability 目录，因此在 marketplace 内工作与开发独立插件完全相同。
-
-插件在 `plugin.json` 中声明能力；特权操作由宿主授权并在运行时再次校验。插件运行在桌面渲染进程内，应被视为策展代码而不是任意代码沙箱。分发前请阅读[插件信任与权限模型](apps/docs-site/content/docs/plugins/manifest-and-permissions.mdx)。
+插件在 `plugin.json` 中声明权限，特权操作由宿主授权并在运行时检查。插件作为受策展代码在桌面渲染进程中执行，加载或分发前请阅读[信任与权限模型](apps/docs-site/content/docs/plugins/manifest-and-permissions.mdx)。
 
 ## 数据与构建模式
 
-源码检出默认产出 **lite** 构建。它不依赖 Open Forge 运营的后端：不需要账号、订阅、远程管理或托管 marketplace。已发布的安装包可能启用可选的 Open Forge Serv 集成（账号、订阅与托管 marketplace）；该集成在构建期选择，绝不会在 lite 构建中静默启用。
+默认 lite 构建提供本地会话、BYOK 和受支持的本地扩展，无需账号、订阅或托管市场。模型服务、MCP、插件、IM 桥接等集成仍各有网络与数据边界。
 
-本地优先不等于零网络流量。模型 Provider、MCP 服务、插件、Webhook、IM 集成、更新源与可选遥测各自构成自己的数据边界。请阅读：
+可选 full 构建包含账号等云功能的客户端接入，需要显式配置兼容的服务端与更新服务。业务后端、网站、计费和运营不在本仓中，其可用性应按实际分发环境确认。
 
 - [安全与数据边界](apps/docs-site/content/docs/reference/security-and-data.mdx)
 - [配置路径](apps/docs-site/content/docs/reference/configuration-paths.mdx)
-- [构建模式与环境变量](docs/desktop/build-modes.en.md)
-- [安全政策](SECURITY.md)
+- [构建模式与环境变量](docs/desktop/build-modes.md)
+- [安全策略](SECURITY.md)
 
 ## 仓库地图
 
-这是 Bun/TypeScript monorepo，另含 Kotlin、Go 与 Cloudflare Worker 应用。依赖从应用指向可复用包；`packages/*` 永不依赖 `apps/*`。
+这是 Bun/TypeScript monorepo，另含 Go、Kotlin 与 Cloudflare Worker 应用。上述使用流程以 Desktop 为主；配套应用源码各有平台、构建与发布条件。
 
-| 区域 | 职责 |
-|---|---|
+| 范围 | 职责 |
+| --- | --- |
 | [`apps/desktop`](apps/desktop) | Electron 桌面宿主与渲染层 |
-| [`apps/cli-host`](apps/cli-host) | 编码 Agent 的 CLI 宿主 |
-| [`apps/docs-site`](apps/docs-site) | Next.js 文档站 |
-| [`apps/mobile`](apps/mobile) | Expo/React Native 移动客户端 |
-| [`apps/kotlin`](apps/kotlin) | Kotlin Multiplatform Android 客户端 |
-| [`apps/im-gateway`](apps/im-gateway) | Go IM sidecar 网关 |
-| [`apps/remote-relay`](apps/remote-relay) | 移动端与桌面端远程控制协议的 Cloudflare Worker 中继 |
-| [`apps/ssh-helper`](apps/ssh-helper) | 远程项目经 SSH 上传的静态 helper 二进制 |
-| [`packages/ai`](packages/ai) · [`packages/agent`](packages/agent) | Provider 抽象与 Agent 循环 |
-| [`packages/coding-agent`](packages/coding-agent) · `packages/runtime-*` | 产品组合、运行时合同、工具、存储、MCP 与宿主适配器 |
-| [`packages/plugins`](packages/plugins) · [`packages/themes`](packages/themes) | 扩展 SDK、预设与主题 |
+| [`apps/cli-host`](apps/cli-host) | Coding Agent 的 CLI 宿主 |
+| [`apps/docs-site`](apps/docs-site) | 公开文档源码与 Next.js 文档站 |
+| [`apps/mobile`](apps/mobile) · [`apps/kotlin`](apps/kotlin) | Expo 与 Kotlin 移动端 |
+| [`apps/im-gateway`](apps/im-gateway) | Go IM 旁路网关 |
+| [`apps/remote-relay`](apps/remote-relay) · [`apps/ssh-helper`](apps/ssh-helper) | 远控中继与 SSH helper |
+| [`packages/ai`](packages/ai) · [`packages/agent`](packages/agent) | 模型服务接入与 Agent Loop |
+| [`packages/coding-agent`](packages/coding-agent) · `packages/runtime-*` | 产品组合、运行时、工具、存储与宿主适配 |
+| [`packages/plugins`](packages/plugins) · [`packages/themes`](packages/themes) | 扩展 SDK、预置插件与主题 |
 
-架构细节与公开集成合同见[开发者文档](apps/docs-site/content/docs/developers/architecture.mdx)与 [`docs/adr/`](docs/adr/)。
+应用依赖可复用包，`packages/*` 不反向依赖 `apps/*`；跨包集成只走公开 exports。详见[架构文档](apps/docs-site/content/docs/developers/architecture.mdx)。
 
-## 开发与贡献
-
-使用 Bun 与仓库脚本；不要在本 monorepo 里跑裸 `bun test`。
+## 开发与文档
 
 ```bash
 bun run check:quick              # 变更文件的 lint 与架构守卫
@@ -152,36 +117,22 @@ bun run test:pkg <package-name>  # 定向包测试
 bun run test:changed             # 当前 diff 影响的测试
 ```
 
-Pull request 打到 **`dev`** 分支。贡献地图、测试期望与评审标准见 [`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md)。架构与 Agent 协作规则见 [`AGENTS.md`](AGENTS.md)。
-
-漏洞请私下报告——报告渠道、范围与所需材料见 [`SECURITY.md`](SECURITY.md)。
-
-## 文档
+使用 Bun 与仓库脚本，日常开发 PR 发往 **`dev`**。贡献要求见[贡献指南](CONTRIBUTING.zh-CN.md)与 [AGENTS.md](AGENTS.md)。
 
 - [文档导航与历史资料边界](docs/README.md)
-- [产品指南与能力参考](apps/docs-site/content/docs/product/overview.mdx)
-- [第一个任务教程](apps/docs-site/content/docs/getting-started/first-task.mdx)
-- [插件开发](apps/docs-site/content/docs/plugins/overview.mdx) · [`docs/plugin/` 内的插件 SDK 内部文档](docs/plugin/README.md)
-- [主题开发](docs/theme/README.md)
-- [SDK、RPC、CLI 与架构](apps/docs-site/content/docs/developers/overview.mdx)
-- 仓库安装见 [`QUICKSTART.zh-CN.md`](QUICKSTART.zh-CN.md) · 贡献见 [`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md)
-- 架构决策见 [`docs/adr/`](docs/adr/)
+- [首次配置](apps/docs-site/content/docs/getting-started/index.mdx) · [使用指南](apps/docs-site/content/docs/product/overview.mdx)
+- [插件 SDK 内部文档](docs/plugin/README.md) · [架构决策](docs/adr/)
+- [文档站开发说明](apps/docs-site/README.md)
 
-文档站源码在 [`apps/docs-site`](apps/docs-site)，本地用 `bun run --cwd apps/docs-site dev` 启动。
+公开文档站可以从本仓构建。源码和本地构建成功均不能作为已经部署公开站点的证明。
 
 ## 社区
 
-加入 Open Forge Discord 提问、分享工作流、技能、插件与主题，跟进发布动态，与维护者交流。
-
-<p align="center">
-  <a href="https://discord.gg/qGqkk22Vg9"><img src="https://img.shields.io/badge/Open%20Forge-Discord-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Open Forge Discord"></a>
-</p>
-
-**https://discord.gg/qGqkk22Vg9**
+沿用已确认的 [Discord](https://discord.gg/qGqkk22Vg9) 社区入口。安全漏洞上报见 [SECURITY.md](SECURITY.md)。
 
 ## 鸣谢与许可
 
-Open Forge 是 Open Vetta 的独立维护衍生版。它建立在更广泛的开源生态之上，包括 pi、Codex CLI、MCP、Electron、React、Bun、models.dev 以及 [`NOTICE`](NOTICE) 中列出的项目；完整的第三方清单与原始声明见该文件。
+Open Forge 基于 Open Vetta 及更广泛的开源生态继续开发，包括 pi、Codex CLI、MCP、Electron、React、Bun、models.dev 和 [NOTICE](NOTICE) 中列出的项目；原始署名与第三方声明保留在该文件中。
 
 基于 [Apache-2.0](LICENSE) 许可发布。
 

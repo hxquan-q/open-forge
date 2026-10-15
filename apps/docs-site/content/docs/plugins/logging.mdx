@@ -2,6 +2,7 @@
 title: 日志
 description: 输出自动带插件身份、由桌面宿主持久化的结构化日志。
 ---
+{/* Modified by The Open Forge contributors. */}
 
 插件可以直接从 SDK 导入已经绑定身份的 `logger`，不需要从 `PluginContext` 逐层传递：
 
@@ -16,8 +17,9 @@ syncLogger.warn("Remote catalog is unavailable", { retryInMs: 5_000 });
 
 `@vetta-org/plugin-vite` 会在开发和生产构建中读取经过校验的 `plugin.json`，把这个入口绑定到
 当前插件的 `id` 和 `version`。桌面宿主接收日志后统一添加插件标识、限制字段大小、脱敏常见
-敏感字段，并写入 Renderer 日志文件。Windows 默认位置是
-`%USERPROFILE%\.vetta\desktop-app\logs\render\YYYY-MM-DD.log`。
+敏感字段，并写入 Renderer 日志文件。Windows 安装版通常位于
+`%USERPROFILE%\.openforge\desktop-app\logs\render\YYYY-MM-DD.log`；普通源码开发实例使用
+`.openforge-dev` 根。显式配置或旧目录兼容回退可能改变实际根目录，详见[配置路径](/reference/configuration-paths/)。
 
 支持 `debug`、`info`、`warn` 和 `error` 四个级别。第二个参数应当是便于检索的结构化字段；
 不要记录 Token、Cookie、密码、完整请求头或用户内容。宿主脱敏只是最后一道防线，不能代替插件

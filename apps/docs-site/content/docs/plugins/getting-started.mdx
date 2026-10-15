@@ -9,9 +9,11 @@ description: 创建、构建并安装一个最小 Open Forge 桌面插件。
 - Node 或 Bun。
 - 用于安装和调试插件的 Open Forge 桌面客户端（安装与热更新都要求它正在运行）。
 
-**不需要** Open Forge 的源码仓库。
+先确认目标 Open Forge 构建对应的 SDK 与工具版本。使用本仓新增能力时，以[本仓插件源码](https://github.com/hxquan-q/open-forge/tree/main/packages/plugins)与配套文档为准；已有经过验证的外部 SDK/CLI 分发时，才可以脱离本仓开发。
 
-## 一条命令起工程
+## 已确认配套版本时使用脚手架
+
+下例使用保留的兼容包名，会从 npm 下载发布物。先确认该发布版本与目标 Open Forge 构建兼容并固定版本；不要将 registry 的默认版本视为本仓当前源码。
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
