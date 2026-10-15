@@ -58,8 +58,8 @@ acceptance:       验收判据（静态判据 vs 命令判据分开列，对齐�
 1. **scope 必须落在 §0.3 权限矩阵该角色写域内**（收紧可以、放宽违规）——开发子的 scope 来自 tasks.md 任务卡改动面。
 2. **prohibitions 每份契约必带四条基线**：①不 commit/branch/push（git 写操作全收主控侧）②不写 scope 外文件 ③不安装依赖 ④沙箱被拒不重试不绕路，记「待主控处理」。
 3. help_protocol 统一格式：「遇到 <情景> → 在最终报告『待主控处理』节登记 <命令/诉求/理由>，等待主控裁决」。
-4. 任务书仍需自包含：输入只给产物路径与结论，验收标准逐条复制（评审子的对照依据）。
-5. **spawn_agent 输入用 v1 槽位名**（history/current_state/objective/scope/constraints/relevant_context/deliverables/validation），v2 八要素（stage_context/prohibitions/help_protocol/acceptance）按 §0.2 开头的映射折算进去——内核 schema 只认 v1 字段名；**task.scope 必填且为单行逗号分隔 glob**（如 `src/dto/**,src/service/dto.ts`）——ac-fence 围栏以此字段为写域判定依据，缺了会直接 block spawn。
+4. 任务书仍需自包含：验收标准逐条复制（评审子的对照依据）；**输入只给产物路径指针与元结论**（verdict/完成声明/问题计数），不给勘察结论或内容复述——项目情况由子代理按任务书给出的勘察入口自行获得（README/package.json/AGENTS.md/docs/ 等路径），主控不预消化。
+5. **spawn_agent 输入用 v1 槽位名**（history/current_state/objective/scope/constraints/relevant_context/deliverables/validation），v2 八要素（stage_context/prohibitions/help_protocol/acceptance）按 §0.2 开头的映射折算进去——内核 schema 只认 v1 字段名；**task.scope 必填且为单行逗号分隔 glob**（如 `src/dto/**,src/service/dto.ts`）——ac-fence 围栏以此字段为写域判定依据，缺了会直接 block spawn。`current_state`/`relevant_context` 槽位只放路径指针与一句话定位（如「上游：docs/ac/requires.md（已批准），重点 §3」），不放内容复述。
 6. **task_name 前缀对齐角色**（`req_`/`arch_`/`plan_`/`dev_`/`review_`/`wb_`/`bb_`/`dep_`/`fin_`/`help_`）——ac-fence 按前缀推断角色写域基线。
 
 ### 0.3 角色权限矩阵 v1（基线写域，glob 相对项目根）
@@ -75,10 +75,15 @@ acceptance:       验收判据（静态判据 vs 命令判据分开列，对齐�
 | 白盒子 | T2 | `whitebox.md` + `docs/ac/test-results/**` + 项目 test/ 目录 | 临时物有界 |
 | 黑盒子 | T1 | `docs/ac/blackbox.md` | 读域限 `docs/ac/**`（任务书点名路径直读，禁目录发现类）；shell 白名单仅 `agent-browser` 前缀（自测通道）；通道工具（browser_tab 等 function 类）放行 |
 | 部署子 | T2 | deploy 分支 + 部署产物路径 | |
-| 收尾子 | T2 | state.md 终态化 + 临时物清理 | 唯一可碰 state.md 的第二人（主控显式授权的一次性交接） |
+| 收尾子 | T2 | 临时物清理 | state.md 更新向主控申请；不直接写入 | |
 | 辅助者 | T2（动态） | 每次委派时由主控在契约中下发 scope | 变更类命令的集中执行者（过安全预审） |
 
-三档分级：**T1 文件允许**（只许操作点名文件）/ **T2 范围允许**（glob 域内自由）/ **T3 全部允许**（工作区全域写权）。AI 角色常态最高 T2；**T3 为应急档**——辅助者可临时申请，但它是流水线事件而非固有属性：**主控上报 → 用户批准 → 限时授予 → 任务结束即收回**，每次激活都记 state.md。设计原则：**各角色写域互不重叠**（重叠区 = 归因盲区）；git 写操作（commit/branch/push）不进任何子代理写域——提交历史是流水线的审计日志，全部由主控侧执行（§0.5）。
+三档分级：**T1 文件允许**（只许操作点名文件）/ **T2 范围允许**（glob 域内自由）/ **T3 全部允许**（工作区全域写权）。AI 角色常态最高 T2；**T3 为应急档**——辅助者可临时申请，但它是流水线事件而非固有属性：**主控上报 → 用户批准 → 限时授予 → 任务结束即收回**，每次激活都记 state.md。设计原则有二：
+
+1. **权域只管增删改，不管阅读**：scope 约束的是写类操作（file-edit/shell 写/git 写），读类工具（read/grep/glob 等）不受 scope 限制——任何角色按需读任何文件，项目知识靠"读全域 + 写窄域"流动。唯一例外是 blackbox 的窄读域（防模式化探查实现，产品语义而非通用安全规则）。
+2. **各角色权域尽量不重叠**：重叠区 = 归因盲区（mtime/git 双链审计无法定责），也是职责模糊的来源——一个文件只归一个写者。state.md 只归主控写入；其他角色需要调整时提交申请，由主控审核并决定是否更新。
+
+git 写操作（commit/branch/push）不进任何子代理写域——提交历史是流水线的审计日志，全部由主控侧执行（§0.5）。
 
 `node scripts/ac-audit.mjs matrix` 可打印本矩阵（工具与技能互为对照，冲突时以本表为准并修订工具）。
 
@@ -172,14 +177,14 @@ verdict: pass | fail
 
 | # | 环节 | 执行者 | 产物 | 用户确认 |
 |---|------|--------|------|----------|
-| 1 | 需求评估与勘察 | 主控（勘察）| — | — |
-| 2 | 原型 + 需求文档 | 需求子（spawn 一次性）| `docs/ac/originModel.html` + `docs/ac/requires.md` | — |
+| 1 | 需求受理（模板 state.md + 指针任务书 + spawn 需求子；勘察由需求子自理） | 主控 | — | — |
+| 2 | 原型 + 需求文档 | 需求子（常驻，勘察自理）| `docs/ac/originModel.html` + `docs/ac/requires.md` | — |
 | 3 | **原型+需求确认门** | 主控（用户，§0.1）| 用户批准记录 | ✅ 必须 |
-| 4 | 开发文档 | 架构子（spawn 一次性）| `docs/ac/design.md` | — |
+| 4 | 开发文档 | 架构子（常驻）| `docs/ac/design.md` | — |
 | 5 | 开发文档确认门（可选） | 主控（用户，§0.1）| 批准记录 | ⭕ 可选 |
-| 6 | 任务清单 | 任务子（spawn 一次性）| `docs/ac/tasks.md` | — |
+| 6 | 任务清单 | 任务子（常驻）| `docs/ac/tasks.md` | — |
 | 7 | 任务清单确认门（可选） | 主控（用户，§0.1）| 批准记录 | ⭕ 可选 |
-| 8 | 逐任务开发循环 | **开发子**（每任务一个 spawn 会话，挂起保活）+ **评审子**（每任务一个 explorer 只读）；主控编排 | 各任务代码 + `docs/ac/reviews.md` | — |
+| 8 | 逐任务开发循环 | **开发子**（每任务一个 spawn 会话，挂起保活）+ **评审子**（每任务一个 general 型，scope 收 reviews.md）；主控编排 | 各任务代码 + `docs/ac/reviews.md` | — |
 | 9 | 白盒测试 | 白测子（spawn）+ 修复（唤醒对应开发子） | `docs/ac/whitebox.md` + test-results/ | — |
 | 10 | 黑盒准备（含自测） | 黑测子（按阶段重生：探测/出文档/自测）+ helper（环境探测/服务起停）| `docs/ac/blackbox.md`（v2：结果总表+接口卡+P#）| — |
 | 11 | **用户黑盒核验** | 用户（主控守护）| 用户核验结果 | ✅ 必须 |
@@ -214,7 +219,7 @@ docs/ac/
 
 ## 3. 状态文件 state.md（JSON 规范）
 
-**主控是 state.md 的唯一写者。整文件重写，不做局部编辑。** 真内容是 JSON，扩展名沿用 .md 是约定。
+**主控是 state.md 的唯一写者。** 文件内容为 JSON，扩展名沿用 .md 是约定。
 
 ### 3.1 顶层结构
 
@@ -256,7 +261,7 @@ docs/ac/
 | `seq` | 数组内序号；子环节在父的 `subSteps` 内自 1 起 |
 | `status` | 四态：`not_started` / `in_progress` / `done` / `interrupted` |
 | `executor` | 角色标识：`requirements` / `architect` / `taskplanner` / `developer` / `whitebox` / `blackbox` / `deployer` / `finalizer` / `assistant` |
-| `agentRef` | 子代理会话引用（spawn 的 task_name，如 `dev_t1`）；开发任务完成后保留供唤醒；一次性角色结束后 null |
+| `agentRef` | 子代理会话引用（spawn 的 task_name，如 `dev_t1`）；常驻角色（需求/架构/任务/开发）保留到流程结束供 followup_task 唤醒；收尾环节统一关闭后置 closed |
 | `sessionStatus` | `not_applicable` / `active` / `suspended` / `closed`；与环节 status 独立 |
 | `artifacts` | 产物文件路径数组（相对项目根） |
 | `userConfirmation` | `unconfirmed` / `confirmed` / `skipped` / `not_required` |
@@ -272,25 +277,29 @@ docs/ac/
 4. 环节 `done` 的必要条件：`artifacts` 内全部路径存在
 5. `currentStep` 指向 status 为 `in_progress` 或最近的 `interrupted` 环节
 6. 开发任务 `done` 不代表子会话已关闭：`agentRef` 保留到流程结束，`sessionStatus` 应为 `suspended`；回归问题按 `agentRef` 用 followup_task 唤醒并置 `active`，修复完再置 `suspended`；收尾关闭后置 `closed`
-7. 主控是 state.md 的**唯一写者**；子代理通过产出物+结果报告让主控代更新。收尾环节例外：收尾者在主控显式授权下进行 state.md 终态化（一次性交接，§0.3）
+7. 主控是 state.md 的**唯一写者**；任何子代理需要更新时都可以向主控申请并说明拟改内容。主控审核后决定采纳、调整或拒绝；采纳后由主控写入。不规定请求的固定格式，也不规定主控采用何种文件编辑方式。
 8. 每个 step 记录 `startedAt` / `endedAt`（主控在状态迁移时写入，ISO 8601 带时区）——这是 §0.7 双链比对（git 轨迹 + 文件 mtime）的时间边界锚点
+
+### 3.5 新流水初始结构
+
+新流水初始化 state.md 时，包含全部 13 个环节骨架（status: `not_started`、artifacts: `[]`、contract: `null`、时间锚留空），以及 branch/currentStep 等必要字段。勘察结论**不进 state.md**——它是纯流水账本，零项目知识。完整骨架便于 G2 状态机校验、V2 时间锚核对与中断恢复。
 
 ## 4. 阶段子代理生命周期与职责边界
 
 | 子代理 | 启动方式 | 生命周期 | 可写范围（§0.3 写域） |
 |--------|----------|----------|----------|
-| 需求子 | spawn_agent(general) | 一次性 | originModel.html + requires.md + prototype/** |
-| 架构子 | spawn_agent(general) | 一次性 | 仅 design.md |
-| 任务子 | spawn_agent(general) | 一次性 | 仅 tasks.md |
-| 开发子 | spawn_agent(general)，task_name=`dev_t1` 形式 | 每任务一个；完成后挂起（不销毁），durable id 记 state.md | 契约 scope glob（任务卡改动面） |
-| 评审子 | spawn_agent(explorer 只读) | 每任务一个，one-shot | reviews.md（评审子写域；explorer 机制只读时由主控代写） |
+| 需求子 | spawn_agent(general) | 常驻（完成挂起；修订用 followup_task 唤醒；收尾统一关闭） | originModel.html + requires.md + prototype/** |
+| 架构子 | spawn_agent(general) | 常驻（同上） | 仅 design.md |
+| 任务子 | spawn_agent(general) | 常驻（同上） | 仅 tasks.md |
+| 开发子 | spawn_agent(general)，task_name=`dev_t1` 形式 | 常驻（每任务一个；完成后挂起，durable id 记 state.md） | 契约 scope glob（任务卡改动面） |
+| 评审子 | spawn_agent(general)，scope 收 `docs/ac/reviews.md` | 每任务一个，one-shot（**不常驻**——独立性优先） | reviews.md（评审子自行落盘） |
 | 白测子 | spawn_agent(general) | 一次性（修复循环唤醒开发子而非白测子） | whitebox.md + test-results/** + 项目 test/ |
 | 黑测子 | spawn_agent(general) | 按阶段重生（探测/出文档/自测/核验回填各一次 spawn，一次性；落盘文档是唯一交接合同） | 仅 blackbox.md |
 | 部署子 | spawn_agent(general) | 一次性 | 部署分支与产物目录 |
-| 收尾子 | spawn_agent(general) | 一次性 | 清理范围 + state.md 终态化（授权交接） |
+| 收尾子 | spawn_agent(general) | 一次性 | 临时物清理；state.md 更新向主控申请 |
 
-- **通用子**（general 型）会携带父会话快照，但子代理的纪律是「父历史仅是背景，任务合同才是完成定义」；主控侧的配合纪律是：任务书八要素齐全、自包含，不依赖子代理从父历史里找信息。
-- **评审子用 explorer 型**：机制级只读（read/grep/glob），天然无偏。
+- **通用子**（general 型）会携带父会话快照，但子代理的纪律是「父历史仅是背景，任务合同才是完成定义」；主控侧的配合纪律是：任务书指针式、自包含（验收标准逐条复制 + 勘察入口路径），不依赖子代理从父历史里找信息。
+- **评审子用 general 型 + 写域仅 reviews.md**：无偏由「每任务新起、不与开发子共享上下文、写域唯一」保障，越界写由 V2/V4 双链审计兜底（不再依赖 explorer 机制只读，评审记录由评审子自行落盘）。
 - **跟踪**：`list_agents` 随时查树；settlement 通知到达后登记。
 - **等待姿态（优先级序）**：① 有可做的无关准备（预拼下一份任务书、整理 state.md）→ 先做；② 无事可做 → 结束本轮等 settlement 通知；③ 轮询产物文件是最后手段（仅当怀疑通知丢失），必须低频——它消耗轮次。
 - **越权命令**：任何子代理被沙箱拒绝的操作 → 子代理记入报告「待主控处理」节 → 主控交辅助者（helper）安全预审后代办；不教子代理绕沙箱。
@@ -305,7 +314,7 @@ docs/ac/
 ## 6. 主控职责清单
 
 - **唯一用户接口**：所有 ask_user_question（含 §0.1 门卡）只在主控发生。
-- **编排**：起子、传任务书（契约 v2 §0.2，自包含）、收 settlement、转达打回、更新 state.md（含 startedAt/endedAt 时间锚）、每环节收口 invoke_skill 现读 ac-gate 校验（含 ac-audit 节点）。
+- **编排**：起子、传任务书（契约 v2 §0.2，指针式自包含）、收 settlement、转达打回、维护 state.md（含 startedAt/endedAt 时间锚）、每环节收口 invoke_skill 现读 ac-gate 校验（含 ac-audit 节点；G3 为正常性检查，不判内容正确度——语义正确归评审/测试/用户门）。
 - **T 档存档**：每任务评审 pass 即打 checkpoint（§0.5，轻量 git 子代理执行）；派发下一 T 前确认干净 checkpoint 在位。
 - **环节级存档**：其余（子）环节 done 收口后打 stage 档（§0.5）；同样经轻量 git 子代理执行并过 V4。
 - **辅助代办路由**：子代理越权请求 → 辅助者预审 → 执行或上报。
@@ -326,6 +335,6 @@ docs/ac/
 
 ## 9. 阶段子任务书构造
 
-核心：**自包含**（spawn_agent 的任务契约 v2 §0.2：objective / stage_context / scope / prohibitions / help_protocol / deliverables / acceptance）。子代理不见主控会话历史；任务书里输入只给产物文件路径与结论性摘要，验收标准逐条复制（这是评审子的对照依据）。各环节任务书模板见对应阶段技能。
+核心：**自包含**（spawn_agent 的任务契约 v2 §0.2：objective / stage_context / scope / prohibitions / help_protocol / deliverables / acceptance）。子代理不见主控会话历史；任务书输入只给**产物路径指针与元结论**（verdict/完成声明/问题计数），验收标准逐条复制（这是评审子的对照依据）。项目现状由子代理**自行勘察**——任务书给勘察入口（README/package.json/AGENTS.md/docs/ 等路径），不给勘察结论。各环节任务书模板见对应阶段技能。
 
-**scope 拼装纪律**：契约 scope 必须落在 §0.3 该角色写域内（收紧可以、放宽违规）；开发子 scope 从 tasks.md 任务卡改动面逐条摘出（路径级 glob）；V1 派发前自检（scope ⊆ 矩阵）不过不出任务书。
+**scope 拼装纪律**：契约 scope 必须落在 §0.3 该角色权域内（收紧可以、放宽违规）；开发子 scope 从 tasks.md 任务卡改动面逐条摘出（路径级 glob）；V1 派发前自检（scope ⊆ 矩阵）不过不出任务书。
