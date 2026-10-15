@@ -1,6 +1,8 @@
 <!-- Modified by The Open Forge contributors. -->
 # 面向用户的文案原则
 
+> **Open Forge 口径（2026-10-15）**：本文继承自上游，正文中「Vetta / Vivi」等品牌名词保持上游原始口径，仅作品牌语感参考；本仓活跃文档与 UI 文案中的产品自称一律用 **Open Forge**（见 [TASK-0047](../project/tasks/TASK-0047-repository-docs-brand-migration.md) 术语对照表）。
+>
 > 本文记录 Vetta **所有面向用户可见文案**的原则：桌面端 UI、官网营销与 FAQ、方案/定价说明等。  
 > 读者：写 UI / 官网文案的人、改设置或首页的 agent、做产品交互的人。  
 > **不是** API 文档，也不是 i18n 工程规范（桌面见 [ADR-0031](./adr/0031-desktop-i18n-i18next-semantic-keys-main-owned-language.md) 与 `apps/desktop` 的 AGENTS；官网文案在 `apps/site/messages/`）。

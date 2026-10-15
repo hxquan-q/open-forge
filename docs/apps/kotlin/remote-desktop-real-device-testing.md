@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Android 真机测试操作手册
 
 本文用于验证手机连接 Desktop、远程对话、实时桌面画面和远程输入。它描述的是当前仓库的实际入口，不是一个脱离实现的产品方案。
@@ -56,14 +57,14 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 从仓库根目录进入移动端：
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-vetta\apps\kotlin"
+Set-Location "C:\develop\yiyun\vetta\open-forge\apps\kotlin"
 .\gradlew.bat :androidApp:assembleDebug --no-daemon
 ```
 
 安装当前 Debug APK：
 
 ```powershell
-$repo = "C:\develop\yiyun\vetta\open-vetta"
+$repo = "C:\develop\yiyun\vetta\open-forge"
 $apk = "$repo\apps\kotlin\androidApp\build\outputs\apk\debug\androidApp-debug.apk"
 & $adb install -r $apk
 & $adb shell am force-stop org.vetta.android
@@ -109,7 +110,7 @@ $testApk = "$repo\apps\kotlin\shared\build\outputs\apk\androidTest\shared-androi
 真实 UI 验证使用仓库提供的隔离实例，避免读取或修改日常 Desktop 配置：
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-vetta"
+Set-Location "C:\develop\yiyun\vetta\open-forge"
 bun run verify:ui:start:fresh
 bun run verify:ui:status
 ```

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # GitHub 开源能力市场格式
 
 Desktop 从 GitHub 下载配置 ref 的归档，并在本地读取 `.vetta/marketplace.json`。GitHub 不承担搜索、筛选或分页；这些操作全部基于客户端已校验的本地快照完成。
@@ -35,7 +36,7 @@ Desktop 的市场来源 ref 配置为 gh-pages，无需另建注册服务或启�
 
 添加私有仓库时，在表单中填写 GitHub fine-grained personal access token（PAT），权限只需要目标仓库的
 `Contents: Read-only`。令牌按来源单独保存到 Desktop 的系统安全存储，不会写入来源配置、市场快照、日志或发送给
-Vetta 服务；界面只显示“已配置”，不会回显令牌。更新或清除来源时可以分别替换或删除令牌。
+Open Forge 服务端；界面只显示“已配置”，不会回显令牌。更新或清除来源时可以分别替换或删除令牌。
 
 配置令牌后，客户端对 GitHub REST Contents/zipball API 使用 `Authorization: Bearer` 请求头。GitHub 返回的临时归档
 重定向只携带普通下载请求头，不会把令牌转发到签名地址；未配置令牌的公开仓库仍沿用原有匿名 raw/archive 下载路径。
@@ -156,10 +157,10 @@ Release asset API URL；令牌只送到匹配来源的 GitHub API，不跟随资
 发布 ZIP 后，在将其引用加入正式市场 ref 前运行：
 
 ```bash
-node tools/open-vetta/scripts/release/check-plugin-marketplace-publication.mjs .vetta/marketplace.json
+node tools/open-forge/scripts/release/check-plugin-marketplace-publication.mjs .vetta/marketplace.json
 ```
 
-上述示例假定市场 CI 已将一个固定版本的 `open-vetta` 检出到 `tools/open-vetta/`；
+上述示例假定市场 CI 已将一个固定版本的 `open-forge` 检出到 `tools/open-forge/`；
 同时运行与该版本配套的 `vetta-plugin-cli sync --check`。它核实每个最低 App 版本的
 稳定 GitHub Release 或显式固定的首次联调 commit、对应宿主的 Plugin API 和 ZIP 摘要。
 候选配置只在稳定 Release 返回 404 时生效，不能绕过不完整的正式发布。已发布的插件版本不得

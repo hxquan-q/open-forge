@@ -1,16 +1,17 @@
+<!-- Modified by The Open Forge contributors. -->
 # 构建模式与环境变量
 
 *[English](./build-modes.en.md)*
 
-Vetta Desktop 有两种发行形态，由构建期开关 `VETTA_CLOUD_ENABLED` 决定。开发启动时未配置仍按 serv-less 运行；**正式打包必须显式选择 `true` 或 `false`**，前置检查不会再猜测版本类型。
+Open Forge Desktop 有两种发行形态，由构建期开关 `VETTA_CLOUD_ENABLED` 决定。开发启动时未配置仍按 serv-less 运行；**正式打包必须显式选择 `true` 或 `false`**，前置检查不会再猜测版本类型。
 
-| | **开源版（serv-less）** | **商业版（Vetta Serv）** |
+| | **开源版（serv-less）** | **商业版（Open Forge Serv）** |
 | --- | --- | --- |
 | 开关 | `VETTA_CLOUD_ENABLED=false` | `VETTA_CLOUD_ENABLED=true` |
 | 账号登录 / OAuth | ❌ 代码不进产物 | ✅ |
 | Vetta Go 模型渠道 | ❌ | ✅ |
 | 订阅 / 积分 / 配额 | ❌ | ✅ |
-| 能力广场来源 | GitHub 多源（环境配置或用户添加） | 云市场（Vetta Serv）；可选 GitHub 多源 |
+| 能力广场来源 | GitHub 多源（环境配置或用户添加） | 云市场（Open Forge Serv）；可选 GitHub 多源 |
 | 远程模型目录下发 | ❌ | ✅ |
 | 内置技能 | 不含 `requiresCloud` 标记的 | 全部 |
 
@@ -26,7 +27,7 @@ Vetta Desktop 有两种发行形态，由构建期开关 `VETTA_CLOUD_ENABLED` �
 移除环境配置不会删除已经保存的来源，也不会卸载能力；已有来源可在界面停用。
 默认省略 `VETTA_OPEN_MARKETPLACE_ARCHIVE_URL`，让它从仓库与分支推导。
 修改环境文件后须重启开发进程（仅刷新页面无效）；之后仓库内容更新只需点击刷新。
-GitHub 提交不会自动发布到 Vetta Serv 市场。来源与升级语义见 [GitHub 能力市场](../open-marketplace.md)。
+GitHub 提交不会自动发布到 Open Forge Serv 市场。来源与升级语义见 [GitHub 能力市场](../open-marketplace.md)。
 
 > `VETTA_CLOUD_ENABLED` 是**构建期**开关，经常量折叠写死进产物：开源版里 cloud 模块连同它的 chunk 都不会被打包。**发包之后无法由运行环境重新开启**，切换必须重新构建。
 
@@ -34,7 +35,7 @@ GitHub 提交不会自动发布到 Vetta Serv 市场。来源与升级语义见 
 
 ## 开源版构建
 
-Windows、macOS、Linux 使用同一个入口；脚本按当前宿主选择平台，关闭 cloud，并通过 `openvetta/open-vetta` 的 GitHub Releases 更新。GitHub 能力来源仅取环境配置，不由脚本自动补充。
+Windows、macOS、Linux 使用同一个入口；脚本按当前宿主选择平台，关闭 cloud，并通过 `hxquan-q/open-forge` 的 GitHub Releases 更新。GitHub 能力来源仅取环境配置，不由脚本自动补充。
 
 ```bash
 cd apps/desktop
@@ -59,7 +60,7 @@ VETTA_OPEN_MARKETPLACE_REPOSITORY=your-org/your-marketplace
 
 ## 商业版构建
 
-需要一个可用的 Vetta 服务端：
+需要一个可用的 Open Forge Serv 服务端：
 
 ```bash
 # apps/desktop/.env.production（本地文件，不提交）
@@ -68,7 +69,7 @@ VETTA_SERVER_URL=https://api.example.com/api/v1
 VETTA_SITE_URL=https://www.example.com
 ```
 
-然后在 `apps/desktop` 执行 `bun run dist:desktop`（或对应的 `dist:win` / `dist:mac` / `dist:linux`）。商业版默认使用 `generic` provider 和官方 stable 更新源；自有部署应显式覆盖 `VETTA_UPDATE_URL`。
+然后在 `apps/desktop` 执行 `bun run dist:desktop`（或对应的 `dist:win` / `dist:mac` / `dist:linux`）。商业版默认使用 `generic` provider，`VETTA_UPDATE_URL` 必须显式提供——代码没有内置默认更新地址，未设置时打包直接失败。
 
 Linux 可以用 `bun run package:linux` 一次生成 AppImage、DEB 和 RPM，也可以用 `package:linux:appimage`、`package:linux:deb`、`package:linux:rpm` 或 `package:linux:tar.gz` 只生成一种格式；相同命令追加 `:test` 即读取测试构建环境。
 
@@ -99,10 +100,10 @@ bun run pack:test                           # 等价于 VETTA_BUILD_ENV=test
 
 ```bash
 VETTA_CLOUD_ENABLED=true
-VETTA_SERVER_URL=https://api.openvetta.com/api/v1
-VETTA_SITE_URL=https://www.openvetta.com
+VETTA_SERVER_URL=https://api.example.com/api/v1
+VETTA_SITE_URL=https://www.example.com
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/stable
+VETTA_UPDATE_URL=https://releases.example.com/desktop/stable
 VETTA_R2_BUCKET=vetta-releases
 VETTA_R2_PREFIX=desktop/stable
 VETTA_TENANT=common
@@ -114,9 +115,9 @@ VETTA_SPEECH_INPUT_ENABLED=false
 ```bash
 VETTA_CLOUD_ENABLED=true
 VETTA_SERVER_URL=http://127.0.0.1:8080/api/v1
-# 未配置 provider 时默认使用 stable 更新源；测试专用地址可显式覆盖 VETTA_UPDATE_URL。
+# 未设置 VETTA_UPDATE_URL 时打包直接失败；测试专用地址需显式提供。
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 ```
 
 ---
@@ -203,7 +204,7 @@ VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
 
 GitHub 能力源在两种版本中均读取 `VETTA_OPEN_MARKETPLACE_REPOSITORY` Variable，手动运行时可由
 `marketplace_repository` 表单覆盖；均未配置就不内置 GitHub 源。想随开源包提供官方仓库时，将 Variable
-设为 `https://github.com/openvetta/vetta-official-marketplace`，不用修改代码。商业版未配置时只有云市场。
+设为你的官方市场仓库地址（占位：fork 运营的官方市场尚未发布）。商业版未配置时只有云市场。
 
 **fork 不配任何 Variables 就得到开源版构建。** 官方商业版把这些放到 Settings → Environments → `desktop-production` → Environment variables（密钥走 Environment secrets）：
 

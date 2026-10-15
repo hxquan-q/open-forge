@@ -7,7 +7,7 @@ Thanks for considering a contribution. This repository is the open-source client
 
 The highest-leverage contributions are usually one folder — a plugin, a skill, a theme, a marketplace entry, or a docs page — not a framework rewrite. This guide tells you where each kind of change goes and what a PR has to clear.
 
-Questions, half-formed ideas, and “is this still maintained?” belong in [GitHub Discussions](https://github.com/openvetta/open-vetta/discussions), not Issues.
+Questions, half-formed ideas, and “is this still maintained?” belong in the community [Discord](https://discord.gg/qGqkk22Vg9), not Issues. (Placeholder: GitHub Discussions is not yet enabled on this repository.)
 
 ---
 
@@ -15,15 +15,15 @@ Questions, half-formed ideas, and “is this still maintained?” belong in [Git
 
 | If you want to… | You are adding | Where it lives | Size |
 |---|---|---|---|
-| Add a desktop plugin | a plugin package | [`packages/plugins/`](packages/plugins/) · handbook in [`docs/plugin/`](docs/plugin/) · public guide at [docs.openvetta.com/plugins](https://docs.openvetta.com/plugins/getting-started/) | one package + `plugin.json` |
+| Add a desktop plugin | a plugin package | [`packages/plugins/`](packages/plugins/) · handbook in [`docs/plugin/`](docs/plugin/) · public guide at [the docs site](apps/docs-site/content/docs/plugins/getting-started.mdx) | one package + `plugin.json` |
 | Add a reusable way of working | a skill | [`packages/skill-presets/`](packages/skill-presets/) or a GitHub marketplace source — see [`docs/open-marketplace.md`](docs/open-marketplace.md) | one folder with `SKILL.md` |
-| Change how the app looks | a theme | [`packages/themes/`](packages/themes/) · [`docs/theme/`](docs/theme/) · [theme guide](https://docs.openvetta.com/themes/getting-started/) | one theme package |
-| Publish an installable ability | a marketplace entry | [`openvetta/vetta-official-marketplace`](https://github.com/openvetta/vetta-official-marketplace) using [the marketplace format](docs/open-marketplace.md) | one directory + manifest row |
+| Change how the app looks | a theme | [`packages/themes/`](packages/themes/) · [`docs/theme/`](docs/theme/) · [theme guide](docs/theme/README.md) | one theme package |
+| Publish an installable ability | a marketplace entry | the official marketplace repository (placeholder — a fork-operated marketplace is not published yet), using [the marketplace format](docs/open-marketplace.md) | one directory + manifest row |
 | Improve product or developer docs | a docs page | [`apps/docs-site/content/docs/`](apps/docs-site/content/docs/) | one MDX file |
 | Translate UI copy | i18n strings | desktop locale catalogs; never hardcode user-visible text | one PR |
 | Fix a bug or add a product feature | code | `apps/` or `packages/` that already own the behavior | normal PR |
 
-If you are not sure which row you are in, [open a Discussion](https://github.com/openvetta/open-vetta/discussions/new?category=ideas) first.
+If you are not sure which row you are in, ask in the [Discord](https://discord.gg/qGqkk22Vg9) first.
 
 ---
 
@@ -32,9 +32,8 @@ If you are not sure which row you are in, [open a Discussion](https://github.com
 The short path is in [`QUICKSTART.md`](QUICKSTART.md). TL;DR:
 
 ```bash
-git clone https://github.com/openvetta/open-vetta.git
-cd open-vetta
-git checkout dev
+git clone https://github.com/hxquan-q/open-forge.git
+cd open-forge
 bun install                 # Bun 1.3+
 cd apps/desktop
 bun run dev                 # Vite renderer + Electron, isolated in ~/.openforge-dev
@@ -50,7 +49,7 @@ Open PRs against **`dev`**, not `main`. `dev` is the integration branch; `main` 
 
 - **One concern per PR.** A skill + a refactor + a dependency bump is three PRs.
 - **Fill the PR template.** Empty “Why” / “Validation” sections come back for revision.
-- **Reference an issue** when there is one (`Fixes #N`). Non-trivial features should have a Discussion or Issue first.
+- **Reference the work item** when there is one (`Fixes #N`, or the `TASK-xxxx` ledger entry in `project/tasks/`). Non-trivial features should have a task record or Discord thread first.
 - **User-visible copy goes through i18n**, including labels, placeholders, menus, and aria text.
 - **Shortcuts** belong in the existing keybinding object, not hardcoded in business logic.
 - **Commit messages are written in Chinese.** Reference issues with `fixes #N` / `closes #N`.
@@ -77,20 +76,20 @@ Agent-facing engineering rules (package boundaries, coding-agent layering, Deskt
 
 Please do not open PRs that:
 
-- **Add a new telemetry or analytics destination** that is on by default in a source build. Telemetry is opt-in at build time; see [Network Behavior](README.md#network-behavior).
+- **Add a new telemetry or analytics destination** that is on by default in a source build. Telemetry is opt-in at build time; see [Data and build modes](README.md#data-and-build-modes).
 - **Commit secrets**, tokens, cookies, user sessions, or production config. Same rule for logs and fixtures.
 - **Depend the other way** — `packages/*` must not import `apps/*`. Use each package’s public `package.json#exports`.
-- **Rewrite the stack** (new package manager, new renderer framework, new agent loop) without a prior Discussion.
+- **Rewrite the stack** (new package manager, new renderer framework, new agent loop) without a prior discussion (task record or Discord thread).
 - **Silently widen plugin permissions** or host capabilities. Plugins are an untrusted boundary; declare the minimum set.
 - **Hand-edit generated files.** Change the generator or the source of truth.
 
-If you are unsure, open a Discussion before writing the code.
+If you are unsure, ask before writing the code (Discord or a task record).
 
 ---
 
 ## Security
 
-Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/openvetta/open-vetta/security/advisories/new). Do not file a public issue. Details in [`SECURITY.md`](SECURITY.md).
+Report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md). (Placeholder: the private reporting channel is not yet enabled on this repository; do not file public issues.)
 
 ---
 

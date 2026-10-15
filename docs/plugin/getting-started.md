@@ -1,11 +1,11 @@
 <!-- Modified by The Open Forge contributors. -->
 # 快速开始
 
-从零搭建、构建、安装、调试一个 Vetta 桌面插件。
+从零搭建、构建、安装、调试一个 Open Forge 桌面插件。
 
 ## 0. 在仓库外开发（推荐给 Agent）
 
-你不需要 Vetta 的源码仓库，也不需要插件工作台。任意空目录里：
+你不需要 Open Forge 的源码仓库，也不需要插件工作台。任意空目录里：
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
@@ -27,7 +27,7 @@ SDK 版本。这条命令按 Node 的解析规则找，拿回来的永远是当�
 最新文档做不到这一点——那会教你写出用户宿主还不支持的东西，而 UI 槽位这类缺失不会在构建期
 暴露，装上去只是静默跳过。
 
-装进正在运行的 Vetta：
+装进正在运行的 Open Forge：
 
 ```bash
 npm run install:vetta          # = vite build && vetta-plugin pack && vetta-plugin-cli add .
@@ -48,7 +48,7 @@ npx vetta-plugin-cli reload my-plugin   # 提示有 pending 版本时
 ## 前置条件
 
 - Node / Bun（仓库统一用 [Bun](https://bun.sh)）。
-- 一个 Vetta 桌面 App（用于安装调试）。
+- 一个 Open Forge 桌面 App（用于安装调试）。
 - 插件用 React 19 + TypeScript + Vite，经 **Module Federation** 打成 remote。
 
 ## 1. 项目结构

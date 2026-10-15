@@ -100,6 +100,34 @@ updated: 2026-10-15
 
 - 新增阻塞（2026-10-06，TASK-0048 记录同源）：`docs/` 树的清查不能按模式替换——里面同时混着产品称呼、术语名（被双链与根 CONTEXT 索引引用）、插件名（Vetta UI Design）与商业订阅品牌（Vetta Go / Vetta Zen），还有大量上游沿革记录（ADR、greenfield 实施日志、适配研究）。按模式替换当场打破术语索引，已整体撤回。需要先有一份「术语与品牌对照表」并决定沿革记录是否改名，才能继续。README、QUICKSTART、SECURITY 三份已按散文称呼改名并交付。
 
+## 第四片范围（2026-10-15）：docs/ 树清查解阻 + QUICKSTART/SECURITY/CONTRIBUTING 上游入口处理
+
+用户决策（2026-10-15）：docs/ 树继续修改，QUICKSTART 中英对、SECURITY、CONTRIBUTING 中英对内部上游入口一并处理；**没有 fork 等价物的入口用占位**。
+
+### 术语与品牌对照表（v1，解阻依据）
+
+| 类别 | 示例 | 处理 |
+|---|---|---|
+| 冻结技术标识 | `VETTA_*`、`@vetta/*`、`@vetta-org/*`、`vetta-plugin-cli`、`install:vetta`、`.vetta/`、`.vettapkg`、schema `$id` | 一律不动 |
+| 术语词条 | `docs/glossary/**`（根 CONTEXT.md 索引合同） | 词条正文不改名 |
+| 上游沿革引用 | ADR 内 `openvetta/open-vetta#N`、docs/agent、docs/adapter、docs/ai 的上游对照/分析正文（含上游 commit 与本机路径快照） | 保留原坐标不改名——改名即捏造对照事实或断研究谱系 |
+| 上游商业品牌 | `Vetta Go`、`Vetta Zen`、`Vivi` | 保留（上游 SKU 与品牌形象的事实引用）；fork 自有文案不使用 |
+| 产品自称（Serv 代号） | 散文 `Vetta Serv` | 按第一片先例改 `Open Forge Serv`（PLAN-0003 已批代号） |
+| 活跃工程文档散文自称 | docs/desktop、dev、plugin、theme、deploy、telemetry、actions、apps、release、open-marketplace.md 中指本产品的 Vetta/OpenVetta | 改为 Open Forge（逐处核对语境，不盲替换） |
+| i18n 目录字符串引用 | open-marketplace.md 引「Vetta 内置」（catalog `vettaBuiltin` 实况） | 以 catalog 实况为准不改；运行时品牌串归 TASK-0249/0250 范围 |
+| 入口 URL（有 fork 等价物） | 克隆地址、Releases、站内文档路径 | 改指 `hxquan-q/open-forge` 或站内路径 |
+| 入口 URL（无 fork 等价物） | 官网、官网下载页、Discussions、Security Advisories（PVR 未启用，API 实测 404）、官方市场仓库、Serv 后端 | 占位（`example.com` 风格示例值或显式「占位/待建」标注） |
+| 目录名 | `docs/agent/subagent/vetta/` | 不改（会断相对链接，超出文档清扫范围） |
+| 上游品牌话术文档 | `docs/user-facing-copy.md`（Vetta 与 Vivi 品牌词体系） | 加 fork 口径说明头，正文不重写（内容设计属独立工作） |
+
+### 边界
+
+- `docs/agent/**`、`docs/adapter/**`、`docs/ai/**`、`docs/adr/**`、`docs/glossary/**` 本片不改名（沿革/术语/对照研究），表内有决策依据；后续如需品牌化另切片逐文件处理。
+- 文档中的 URL 示例以当前 `.env.example`（`example.com` 风格）为准绳；`releases.openvetta.com` 等已核实不是现行代码默认值（陈旧上游示例）。
+- Windows 安装器文件名示例按 v0.1.2 实际资产改为 `Open-Forge-<version>-win-x64.exe`。
+- 顺手修复上一片遗留：CONTRIBUTING 中英对引用的 `README.md#network-behavior` / `README.zh-CN.md#网络行为` 锚点在重写后已不存在，改指「数据与构建模式」节。
+- `.github/pull_request_template.md` 如含上游坐标，仅做坐标替换，不重写模板。
+
 ## 交付记录（第三片，2026-10-15）
 
 - 实际修改：`README.md` 与 `README.zh-CN.md` 按用户决策（尽量脱离上游 + 结构重排/事实刷新）整体重写。移除的上游入口：openvetta.com 官网/下载徽章与链接、`openvetta/open-vetta` 克隆坐标与 Discussions/Security Advisories 链接、CodeRabbit 徽章、docs.openvetta.com 全部深层链接。新入口：GitHub Releases（`hxquan-q/open-forge/releases`，v0.1.2 资产经 `gh release view` 核实含安装器）、源码运行段改克隆 fork（origin 默认分支 `main`，删去 `git switch dev`）、扩展模型/文档/架构链接全部改指站内已核实存在的路径（`apps/docs-site/content/docs/**`、`docs/theme/`、`docs/plugin/`、`docs/adr/`、`docs/desktop/build-modes.en.md`）。仓库地图补 `apps/remote-relay`（Cloudflare Worker 远控中继）与 `apps/ssh-helper`（SSH 静态 helper）。
@@ -108,3 +136,13 @@ updated: 2026-10-15
 - 验证：两份 README 全部相对链接存在性检查通过；`grep` 复核零 `openvetta.com`/`open-vetta`/`coderabbit` 残留；中文全文回读无编码损坏；`bun run check:quick` 全绿。
 - 未运行及原因：未跑运行时测试与 `test:impact`（纯文档改动，不触及任何代码路径）。
 - 剩余风险：QUICKSTART 中英对、SECURITY、CONTRIBUTING 内仍指上游坐标（clone URL、下载页、advisory URL），留后续切片；发布说明条目已补。
+
+## 交付记录（第四片，2026-10-15）
+
+- 实际修改（根文档）：`QUICKSTART.md` / `QUICKSTART.zh-CN.md` 下载段改指 GitHub Releases、克隆段改 fork（去 `git checkout dev`）、`docs.openvetta.com` 改指站内 `apps/docs-site/content/docs/`；`SECURITY.md` advisory 入口改 fork URL 并显式占位（私有漏洞上报 API 实测 404 未启用）、文档链接站内化；`CONTRIBUTING.md` / `CONTRIBUTING.zh-CN.md` Discussions 改 Discord + 占位、贡献指南链接站内化、市场行占位（fork 运营市场未发布）、克隆改 fork、work-item 引用改 `Fixes #N` / `TASK-xxxx` 台账、修复死锚点 `#network-behavior` → `#data-and-build-modes`（第三片重写移除了旧节）、安全入口改 SECURITY.md + 占位。
+- 实际修改（docs/ 树活跃文档，按对照表逐处核对）：`docs/actions/README.md`（`vetta action` → `openforge action`，CLI bin 以 `apps/cli-host/package.json` 核实）；`docs/release/desktop-release-runbook.md` 产品自称；`docs/dev/README.md` 标题去 Vetta，「自动选择 Vetta Desktop 主窗口」改为按品牌档案显示名匹配（`ui-verification.mjs` 的 `mainWindowTitles` 实况）；`docs/dev/vetta-debug.md` 产品自称改 Open Forge（能力名 Vetta Debug / Vetta Action / Vetta home 保留）；`docs/dev/vetta-debug-real-provider-runbook.md` Usage 归一句改 Open Forge、示例 PowerShell 变量 `$vetta*` → `$forge*`；`docs/plugin/` 六文件（README、ai、getting-started ×4、guiding-the-agent 含「八荣八耻」标题、manifest designer 行、app-actions ×2，均先核实无入链锚点）；`docs/deploy/apple-code-signing.md`（`Vetta.app` → `Open Forge.app`、DMG 产物名按 v0.1.2 资产 `Open-Forge-*`、挂载卷/命令块重写、签名 env 示例路径 `~/.config/openforge/`）；`docs/telemetry/` 四文件（自有接口 / 身份定义 / correlationId / 字段表头 / 6.4 标题 → Open Forge）；`docs/user-facing-copy.md` 按表加 Open Forge 口径说明头，上游品牌话术正文不重写。
+- 实际修改（声明头）：11 个相对上游已改但缺头的文件补 `<!-- Modified by The Open Forge contributors. -->`（actions/README、kotlin ×3、build-modes ×2、design-gallery、kanban ×2、windows-auto-update、open-marketplace）；本片新改文件中 5 个原本无头（telemetry ×4、vetta-debug-real-provider-runbook）一并补齐。
+- 对照表落地实况（保留类核对）：Vetta Debug / Vetta Action / Vetta home 能力名保留；`manifest.md`「Vetta 内置 Skill」为 i18n catalog 实况保留；`media.md` `desktop:vetta` provider 段跟随代码标识保留；`mcp.md` `cowart-vetta` 真实仓库路径保留；`repository.md` 上游沿革句保留；`delivery.md` `# Vetta …` 上游继承注释规则原文保留；`.github/pull_request_template.md` 核实无上游坐标，未改动。
+- 验证：处理范围内 `git grep` 复核，剩余 Vetta 命中全部落入对照表保留类，无 `openvetta.com` / `open-vetta` 残留；相对链接与锚点存在性检查通过（含 `README.md#验证-profile`、actions → dev/README、user-facing-copy → 本 Task）；`guiding-the-agent.md` 与 `docs/dev/README.md` 标题改名前核实无入链；windows-auto-update 的产物名/路径以代码（`build-inno-installer.mjs`、`resolveInnoUpdateStoreRoot`）与 v0.1.2 Release 资产清单核实；中文混合串回读无编码损坏；`bun run check:quick` 全绿（声明头 ratchet `new=0`）。
+- 未运行及原因：纯文档改动，未跑运行时测试与 `test:impact`（不触及任何代码路径）。
+- 剩余风险：`docs/agent`、`docs/adapter`、`docs/ai`、`docs/adr`、`docs/glossary` 按边界未动（沿革/术语，另切片需用户决策）；`apps/docs-site/content` 仍有 58 个文件含 Vetta、部分含 openvetta 上游坐标，是下一片候选（README 第三片已把站内路径当入口，站内文案与 README 口径暂不一致）；占位入口（PVR、Discord 邀请、市场仓库、Serv 后端）待真实基础设施落地后回填。

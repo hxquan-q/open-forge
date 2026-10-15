@@ -1,6 +1,7 @@
+<!-- Modified by The Open Forge contributors. -->
 # Windows 自动更新、R2 发版与排障
 
-本文记录 Vetta Desktop Windows 自动更新从服务端发版迁移到 R2/GitHub Releases 的最终方案、实现细节、完整验证流程，以及开发期间遇到的问题。它是当前 Windows 更新链路的维护手册。
+本文记录 Open Forge Desktop Windows 自动更新从服务端发版迁移到 R2/GitHub Releases 的最终方案、实现细节、完整验证流程，以及开发期间遇到的问题。它是当前 Windows 更新链路的维护手册。
 
 ## 1. 当前结论
 
@@ -22,7 +23,7 @@ Windows 只需要发布一个 EXE 安装包及其 blockmap，不需要为了自�
 
 ### 2.1 已实现
 
-- 更新目标源不与 Vetta 平台绑定。
+- 更新目标源不与 Open Forge 平台绑定。
 - R2 与 GitHub Releases 使用相同的客户端更新状态机。
 - Windows 安装与后台更新统一使用 Inno Setup EXE。
 - 后台更新不显示安装向导，不修改卸载注册信息，也不强制关闭正在运行的旧版本。
@@ -42,12 +43,12 @@ Windows 只需要发布一个 EXE 安装包及其 blockmap，不需要为了自�
 
 ## 3. 更新源拓扑
 
-| 构建用途 | `VETTA_UPDATE_PROVIDER` | 更新源 | 建议地址 |
+| 构建用途 | `VETTA_UPDATE_PROVIDER` | 更新源 | 建议地址（占位） |
 |---|---|---|---|
-| 官方稳定版 | `generic` | R2 + Cloudflare CDN | `https://releases.openvetta.com/desktop/stable` |
-| 本地闭环测试 | `generic` | R2 独立前缀 | `https://releases.openvetta.com/desktop/test` |
-| 开源版本 | `github` | 公开 GitHub Releases | 仓库 Release |
-| 未配置 provider | (默认) | R2 + Cloudflare CDN | 使用 stable 默认地址 |
+| 官方稳定版 | `generic` | R2 + Cloudflare CDN | `https://releases.example.com/desktop/stable` |
+| 本地闭环测试 | `generic` | R2 独立前缀 | `https://releases.example.com/desktop/test` |
+| 开源版本 | `github` | 公开 GitHub Releases | `hxquan-q/open-forge` 的 Release |
+| 未配置 provider | (默认 `generic`) | 必须显式提供 `VETTA_UPDATE_URL` | 未设置 URL 时打包直接失败（无内置默认地址） |
 
 R2 推荐对象布局：
 
@@ -55,12 +56,12 @@ R2 推荐对象布局：
 desktop/
   stable/
     latest.yml
-    Vetta-<version>-win-x64.exe
-    Vetta-<version>-win-x64.exe.blockmap
+    Open-Forge-<version>-win-x64.exe
+    Open-Forge-<version>-win-x64.exe.blockmap
   test/
     latest.yml
-    Vetta-<version>-win-x64.exe
-    Vetta-<version>-win-x64.exe.blockmap
+    Open-Forge-<version>-win-x64.exe
+    Open-Forge-<version>-win-x64.exe.blockmap
 ```
 
 `stable` 和 `test` 必须同时在客户端 URL、R2 前缀和 Cloudflare 路由上保持一致，不能只改其中一个。
@@ -72,11 +73,11 @@ desktop/
 默认安装目录：
 
 ```text
-%LOCALAPPDATA%\Programs\Vetta\
-  Vetta.exe                         # Go 稳定启动器
+%LOCALAPPDATA%\Programs\OpenForge\
+  OpenForge.exe                     # Go 稳定启动器
   current.json                      # 安装包内置版本指针
   versions\<bundled-version>\       # 随安装包携带的 Electron 应用
-    Vetta.exe
+    OpenForge.exe
     resources\app.asar
 ```
 
@@ -85,7 +86,7 @@ desktop/
 ### 4.2 后台更新目录
 
 ```text
-%LOCALAPPDATA%\Vetta\
+%LOCALAPPDATA%\OpenForge\
   current.json                      # 后台更新的活动版本指针
   versions\<version>\               # 后台准备的新版本
   installer\<version-pid-time>\     # Inno 临时进度与失败日志
@@ -95,8 +96,8 @@ desktop/
 
 ```json
 {
-  "version": "0.5.56",
-  "previousVersion": "0.5.55",
+  "version": "0.1.2",
+  "previousVersion": "0.1.1",
   "pending": false
 }
 ```
@@ -106,7 +107,7 @@ desktop/
 ### 4.3 差分下载缓存
 
 ```text
-%LOCALAPPDATA%\vetta-updater\
+%LOCALAPPDATA%\openforge-updater\
   installer.exe                     # 当前版本安装包基线
   current.blockmap                  # electron-updater 管理的基线 blockmap
 ```
@@ -125,8 +126,8 @@ desktop/
   -> 20 秒后自动下载（也可手动触发）
   -> electron-updater 校验并差分重建完整 EXE
   -> 提升 EXE 为下一次差分基线
-  -> Inno 静默展开到 %LOCALAPPDATA%\Vetta\versions\<new>
-  -> 校验 Vetta.exe、resources/app.asar、.install-complete
+  -> Inno 静默展开到 %LOCALAPPDATA%\OpenForge\versions\<new>
+  -> 校验 OpenForge.exe、resources/app.asar、.install-complete
   -> 状态变为 ready，提示更新并重启
   -> 写 current.json（pending=true）
   -> 直接启动新版本 EXE，退出旧版本
@@ -160,8 +161,8 @@ Windows 自定义流程把进度划分为：
 
 点击“更新并重启”不会再次运行安装程序。此时完整版本目录已经准备好，激活动作只做三件事：
 
-1. 原子写入 `%LOCALAPPDATA%\Vetta\current.json`，记录新旧版本并设 `pending=true`。
-2. 使用 `app.relaunch({ execPath: <new Vetta.exe> })` 启动新版本。
+1. 原子写入 `%LOCALAPPDATA%\OpenForge\current.json`，记录新旧版本并设 `pending=true`。
+2. 使用 `app.relaunch({ execPath: <new OpenForge.exe> })` 启动新版本。
 3. 退出旧版本。
 
 如果新版本在健康确认前退出，用户下次从桌面快捷方式启动时，稳定启动器读取到 pending 并回退上一版本。
@@ -169,7 +170,7 @@ Windows 自定义流程把进度划分为：
 ### 5.4 旧版本清理
 
 - 新版本健康后只保留当前版本和 `previousVersion`。
-- 更早的 `%LOCALAPPDATA%\Vetta\versions\*` 会被物理删除。
+- 更早的 `%LOCALAPPDATA%\OpenForge\versions\*` 会被物理删除。
 - 手动重新安装会删除后台活动指针，优先回到安装包内置版本；遗留的后台版本目录可能要到下一次成功更新后才被清理。
 - 正常卸载会删除后台版本目录、安装临时目录和活动指针。
 - `%LOCALAPPDATA%\vetta-updater` 当前不在 Inno 的卸载清理列表中，卸载后可能残留一个安装包缓存；这是已知清理边界。
@@ -199,10 +200,10 @@ Windows 发布 EXE 的原因：
 
 ```dotenv
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 ```
 
-构建脚本默认 `VETTA_BUILD_ENV=development`，`prepare-pack.js` 显式调用 `loadBuildEnv()` 读取 `.env.development`；Shell 中显式设置的变量优先级更高。未设置 `VETTA_UPDATE_PROVIDER` 时默认使用 `generic`，更新地址默认为 `https://releases.openvetta.com/desktop/stable`，因此会生成 `app-update.yml`。打包不支持无更新源配置；`VETTA_UPDATE_PROVIDER=none` 会在构建期直接失败。
+构建脚本默认 `VETTA_BUILD_ENV=development`，`prepare-pack.js` 显式调用 `loadBuildEnv()` 读取 `.env.development`；Shell 中显式设置的变量优先级更高。未设置 `VETTA_UPDATE_PROVIDER` 时默认使用 `generic`，但没有内置更新地址——`VETTA_UPDATE_URL` 未设置时打包直接失败（代码注释明确：缺省必须失败，而不是静默指向上游设施）。打包不支持无更新源配置；`VETTA_UPDATE_PROVIDER` 取 `generic`/`github` 以外的值会在构建期直接失败。
 
 直接调用底层发布命令时，发布期变量必须写在 Shell 里：
 
@@ -212,7 +213,7 @@ export VETTA_R2_ACCESS_KEY_ID=<access-key-id>
 export VETTA_R2_SECRET_ACCESS_KEY=<secret-access-key>
 export VETTA_R2_BUCKET=vetta-releases
 export VETTA_R2_PREFIX=desktop/test
-export VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+export VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 ```
 
 原因：`publish-update-artifacts-r2.mjs` 直接读 `process.env`，不调用 `loadBuildEnv()`；而 `publish:updates:r2` 是 `bun run` 拉起 `node` 子进程，Bun 的 dotenv 自动加载只作用于 Bun 运行时自身的进程，不会传给它 spawn 的 node。凭据缺失时报 `[publish-updates-r2] missing VETTA_R2_ACCOUNT_ID`。
@@ -232,7 +233,7 @@ VETTA_R2_ACCESS_KEY_ID=<access-key-id>
 VETTA_R2_SECRET_ACCESS_KEY=<secret-access-key>
 VETTA_R2_BUCKET=vetta-releases
 VETTA_R2_PREFIX=desktop/test
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 ```
 
 R2 Token 只授予目标 Bucket 的对象读写权限。凭据只供发布脚本访问 R2 S3 API，不会写入桌面安装包；安装包只包含公开更新 URL。
@@ -287,9 +288,9 @@ Windows 构建产物：
 
 ```text
 apps/desktop/release/
-  Vetta-0.5.57-win-x64.exe
-  Vetta-0.5.57-win-x64.exe.blockmap
-  Vetta-0.5.57-win-x64.exe.files.json
+  Open-Forge-0.1.2-win-x64.exe
+  Open-Forge-0.1.2-win-x64.exe.blockmap
+  Open-Forge-0.1.2-win-x64.exe.files.json
   latest.yml
 ```
 
@@ -305,7 +306,7 @@ bun run --cwd apps/desktop publish:updates:r2
 
 1. 在临时目录以后台模式运行刚构建的 Inno EXE。
 2. 对照 `.files.json` 验证文件数量和每个文件大小。
-3. 验证 `Vetta.exe`、`resources/app.asar` 和 `.install-complete`。
+3. 验证 `OpenForge.exe`、`resources/app.asar` 和 `.install-complete`。
 4. 解析 `latest*.yml`，只选择清单实际引用的产物。
 5. 对大文件使用 16 MiB multipart、4 路并发上传。
 6. 通过公开更新域名 HEAD 验证安装包和 blockmap。
@@ -323,7 +324,7 @@ bun run --cwd apps/desktop publish:updates:r2
 ### 7.5 客户端验证
 
 1. 安装并启动一个更低版本的 test 构建。
-2. 确认进程实际路径是该版本的 `Vetta.exe`。
+2. 确认进程实际路径是该版本的 `OpenForge.exe`。
 3. 上传更高版本后，在旧客户端点击检查更新，或等待启动检查。
 4. 观察网络阶段、Inno 本地准备阶段以及 ready 弹窗。
 5. 点击更新并重启。
@@ -335,14 +336,14 @@ PowerShell 检查示例：
 ```powershell
 Get-Content "$env:LOCALAPPDATA\Vetta\current.json"
 Get-ChildItem "$env:LOCALAPPDATA\Vetta\versions"
-Get-CimInstance Win32_Process -Filter "Name = 'Vetta.exe'" |
+Get-CimInstance Win32_Process -Filter "Name = 'OpenForge.exe'" |
   Select-Object ProcessId, ExecutablePath
 ```
 
 成功标准：
 
 - `current.json.version` 是新版本且 `pending=false`。
-- 运行进程来自 `%LOCALAPPDATA%\Vetta\versions\<new>\Vetta.exe`。
+- 运行进程来自 `%LOCALAPPDATA%\OpenForge\versions\<new>\OpenForge.exe`。
 - 版本目录只保留新版本和上一版本。
 - 主进程日志出现 `differential cache baseline promoted` 和 `downloaded Windows version is ready`。
 - 下一次小版本更新的实际下载量显著小于完整 EXE。
@@ -367,8 +368,8 @@ CDN 命中可减少 R2 Class B 读取；回源未命中仍会产生 R2 操作。
 差分下载要求自定义域名对 EXE 支持标准字节范围请求。应返回 `206 Partial Content` 和正确的 `Content-Range`。
 
 ```powershell
-curl.exe -I "https://releases.openvetta.com/desktop/test/Vetta-<version>-win-x64.exe"
-curl.exe -r 0-1023 -o NUL -D - "https://releases.openvetta.com/desktop/test/Vetta-<version>-win-x64.exe"
+curl.exe -I "https://releases.example.com/desktop/test/Open-Forge-<version>-win-x64.exe"
+curl.exe -r 0-1023 -o NUL -D - "https://releases.example.com/desktop/test/Open-Forge-<version>-win-x64.exe"
 ```
 
 第二条响应应为 206。当前 `generic` provider 设置了 `useMultipleRangeRequest=true`：electron-updater 先把相邻变化块合并为下载区间，再把最多 1000 个差分任务中的远程区间放进一个 multipart Range 请求，避免跨地域链路逐个串行请求。
@@ -376,7 +377,7 @@ curl.exe -r 0-1023 -o NUL -D - "https://releases.openvetta.com/desktop/test/Vett
 还必须验证多区间响应：
 
 ```powershell
-curl.exe -H "Range: bytes=0-9,100-109" -o NUL -D - "https://releases.openvetta.com/desktop/test/Vetta-<version>-win-x64.exe"
+curl.exe -H "Range: bytes=0-9,100-109" -o NUL -D - "https://releases.example.com/desktop/test/Open-Forge-<version>-win-x64.exe"
 ```
 
 响应必须是 `206 Partial Content`，且 `Content-Type` 包含 `multipart/byteranges; boundary=...`。只支持单区间 206 不足以启用 multipart Range。
@@ -400,7 +401,7 @@ curl.exe -H "Range: bytes=0-9,100-109" -o NUL -D - "https://releases.openvetta.c
 
 ```text
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/stable
+VETTA_UPDATE_URL=https://releases.example.com/desktop/stable
 VETTA_R2_PREFIX=desktop/stable
 ```
 
@@ -472,9 +473,9 @@ const { autoUpdater } = electronUpdater;
 
 **原因**：这是旧的“覆盖/卸载当前安装目录”模型与正在运行的文件、旧 NSIS/Inno 安装状态冲突的典型表现，不是 R2 下载问题。
 
-**修复**：后台更新不再卸载或覆盖当前安装目录，而是写入 `%LOCALAPPDATA%\Vetta\versions\<new>`；后台 Inno 设置 `Uninstallable=no`、不创建卸载注册项。
+**修复**：后台更新不再卸载或覆盖当前安装目录，而是写入 `%LOCALAPPDATA%\OpenForge\versions\<new>`；后台 Inno 设置 `Uninstallable=no`、不创建卸载注册项。
 
-如果手动执行修复安装仍遇到该提示，应完全退出 Vetta（包括托盘和子进程）后重试。不要把手动修复安装当作正常自动更新步骤。
+如果手动执行修复安装仍遇到该提示，应完全退出 Open Forge（包括托盘和子进程）后重试。不要把手动修复安装当作正常自动更新步骤。
 
 ### 10.5 下载停在 90% 或 95%
 
@@ -492,7 +493,7 @@ const { autoUpdater } = electronUpdater;
 
 ready 弹窗只会在以下三项同时存在后出现：
 
-- `<version>\Vetta.exe`
+- `<version>\OpenForge.exe`
 - `<version>\resources\app.asar`
 - `<version>\.install-complete`
 
@@ -511,8 +512,8 @@ ready 弹窗只会在以下三项同时存在后出现：
 
 先区分三个阶段：
 
-1. `%LOCALAPPDATA%\Vetta\current.json` 没有写成新版本：激活动作没有完成，检查主进程的 `install failed`。
-2. 指针已更新但没有新版本进程：检查新版本 `Vetta.exe` 是否存在、启动日志和缺失模块错误。
+1. `%LOCALAPPDATA%\OpenForge\current.json` 没有写成新版本：激活动作没有完成，检查主进程的 `install failed`。
+2. 指针已更新但没有新版本进程：检查新版本 `OpenForge.exe` 是否存在、启动日志和缺失模块错误。
 3. 新版本进程存在但没有窗口：按下一节检查启动器的隐藏窗口问题。
 
 如果用户在后台准备期间主动关闭应用，这是允许的边界情况。detached Inno 可能继续完成版本目录，但本次进程不会再弹 ready 对话框或写活动指针；重新启动旧版本并再次检查/下载时，客户端会复用已经完整的目标版本目录。
@@ -632,7 +633,7 @@ install failed
 ### 12.2 Inno 失败日志
 
 ```text
-%LOCALAPPDATA%\Vetta\installer\<version-pid-time>\install.log
+%LOCALAPPDATA%\OpenForge\installer\<version-pid-time>\install.log
 ```
 
 成功时工作目录会异步删除；失败时刻意保留。重点检查：
@@ -646,7 +647,7 @@ install failed
 
 1. 记录客户端版本、`latest.yml` 版本和更新源 URL。
 2. 记录 `current.json`，不要先手工修改。
-3. 检查正在运行的 `Vetta.exe`/安装器路径。
+3. 检查正在运行的 `OpenForge.exe`/安装器路径。
 4. 检查版本目录是否完整。
 5. 查看主进程日志中最后一个 updater 阶段。
 6. 如果 Inno 失败，保存对应 `install.log`。

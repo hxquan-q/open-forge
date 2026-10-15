@@ -1,16 +1,17 @@
+<!-- Modified by The Open Forge contributors. -->
 # Build Modes and Environment Variables
 
 *[中文](./build-modes.md)*
 
-Vetta Desktop ships in two editions, selected by the build-time flag `VETTA_CLOUD_ENABLED`. An unconfigured development session remains serv-less, but **packaging requires an explicit `true` or `false`** so release builds never guess their edition.
+Open Forge Desktop ships in two editions, selected by the build-time flag `VETTA_CLOUD_ENABLED`. An unconfigured development session remains serv-less, but **packaging requires an explicit `true` or `false`** so release builds never guess their edition.
 
-| | **open-source (serv-less)** | **commercial (Vetta Serv)** |
+| | **open-source (serv-less)** | **commercial (Open Forge Serv)** |
 | --- | --- | --- |
 | Flag | `VETTA_CLOUD_ENABLED=false` | `VETTA_CLOUD_ENABLED=true` |
 | Account login / OAuth | ❌ not in the bundle | ✅ |
 | Vetta Go model channel | ❌ | ✅ |
 | Subscription / credits / quota | ❌ | ✅ |
-| Ability marketplace source | Multiple GitHub sources (environment-configured or user-added) | Cloud marketplace (Vetta Serv); optional GitHub sources |
+| Ability marketplace source | Multiple GitHub sources (environment-configured or user-added) | Cloud marketplace (Open Forge Serv); optional GitHub sources |
 | Remote model catalog | ❌ | ✅ |
 | Built-in skills | those without `requiresCloud` | all |
 
@@ -29,7 +30,7 @@ source identities; physical installation conflicts still require explicit resolu
 Removing it does not delete persisted sources or uninstall abilities; existing sources can be disabled in the UI.
 Adding sources through the UI does not require rebuilding. Normally omit `VETTA_OPEN_MARKETPLACE_ARCHIVE_URL`
 so it follows the repository and ref. Restart development processes after editing environment files;
-subsequent repository content changes only require Refresh. A GitHub commit does not publish to the Vetta Serv
+subsequent repository content changes only require Refresh. A GitHub commit does not publish to the Open Forge Serv
 marketplace. See [GitHub marketplace format](../open-marketplace.md) for source and upgrade semantics.
 
 > `VETTA_CLOUD_ENABLED` is a **build-time** flag, inlined as a constant and folded away: in an open-source build the cloud module and its chunks are never bundled. **It cannot be re-enabled at runtime after shipping** — switching editions requires a rebuild.
@@ -38,7 +39,7 @@ marketplace. See [GitHub marketplace format](../open-marketplace.md) for source 
 
 ## Building the open-source edition
 
-Windows, macOS, and Linux use the same entry point. It selects the host platform, disables cloud, and uses updates from the `openvetta/open-vetta` GitHub Releases page. GitHub ability sources come only from environment configuration, not script defaults.
+Windows, macOS, and Linux use the same entry point. It selects the host platform, disables cloud, and uses updates from the `hxquan-q/open-forge` GitHub Releases page. GitHub ability sources come only from environment configuration, not script defaults.
 
 ```bash
 cd apps/desktop
@@ -63,7 +64,7 @@ Open-source builds reject `VETTA_SERVER_URL` and `VETTA_SITE_URL`: login, the of
 
 ## Building the commercial edition
 
-You need a running Vetta server:
+You need a running Open Forge Serv server:
 
 ```bash
 # apps/desktop/.env.production (local file, not committed)
@@ -72,7 +73,7 @@ VETTA_SERVER_URL=https://api.example.com/api/v1
 VETTA_SITE_URL=https://www.example.com
 ```
 
-Then run `bun run dist:desktop` (or `dist:win`, `dist:mac`, or `dist:linux`) from `apps/desktop`. Commercial builds default to the `generic` provider and the official stable update feed; self-hosted deployments should explicitly override `VETTA_UPDATE_URL`.
+Then run `bun run dist:desktop` (or `dist:win`, `dist:mac`, or `dist:linux`) from `apps/desktop`. Commercial builds default to the `generic` provider, and `VETTA_UPDATE_URL` must be provided explicitly — there is no built-in default feed URL, and packaging fails without it.
 
 On Linux, `bun run package:linux` builds AppImage, DEB, and RPM together. Use `package:linux:appimage`, `package:linux:deb`, `package:linux:rpm`, or `package:linux:tar.gz` to build one format; append `:test` to the same command to use the test build environment.
 
@@ -103,10 +104,10 @@ This is what our team uses for official releases. Your production endpoint, upda
 
 ```bash
 VETTA_CLOUD_ENABLED=true
-VETTA_SERVER_URL=https://api.openvetta.com/api/v1
-VETTA_SITE_URL=https://www.openvetta.com
+VETTA_SERVER_URL=https://api.example.com/api/v1
+VETTA_SITE_URL=https://www.example.com
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/stable
+VETTA_UPDATE_URL=https://releases.example.com/desktop/stable
 VETTA_R2_BUCKET=vetta-releases
 VETTA_R2_PREFIX=desktop/stable
 VETTA_TENANT=common
@@ -118,9 +119,9 @@ VETTA_SPEECH_INPUT_ENABLED=false
 ```bash
 VETTA_CLOUD_ENABLED=true
 VETTA_SERVER_URL=http://127.0.0.1:8080/api/v1
-# The default provider is stable; override VETTA_UPDATE_URL for a dedicated test feed.
+# Packaging fails when VETTA_UPDATE_URL is unset; provide a dedicated test feed explicitly.
 VETTA_UPDATE_PROVIDER=generic
-VETTA_UPDATE_URL=https://releases.openvetta.com/desktop/test
+VETTA_UPDATE_URL=https://releases.example.com/desktop/test
 ```
 
 ---
@@ -208,7 +209,7 @@ The update source is build configuration and is independent of the operating sys
 Both editions read the `VETTA_OPEN_MARKETPLACE_REPOSITORY` Variable, optionally overridden by the
 `marketplace_repository` input on manual runs. If neither is configured, no GitHub source is bundled.
 To include the official source in an open-source distribution, set the Variable to
-`https://github.com/openvetta/vetta-official-marketplace`; no code changes are needed.
+your official marketplace repository (placeholder: a fork-operated official marketplace is not published yet).
 An unconfigured commercial build uses only the cloud marketplace.
 
 **A fork with no Variables set produces an open-source build.** For an official commercial build, put these on Settings → Environments → `desktop-production` → Environment variables (credentials stay in Environment secrets):

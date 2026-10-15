@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 设备详情遥测调试实录
 
 本文记录一次 Android 设备详情页中“连接时长、延迟一直显示暂无，系统信息却显示连接 URL”的完整排查、修复和真机验收过程。目标是让后续开发者能够快速找到数据责任边界，并复用已经验证过的命令和判断方法。
@@ -154,7 +155,7 @@ Set-Location apps/kotlin
 
 ```powershell
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
-$apk = "C:\develop\yiyun\vetta\open-vetta\apps\kotlin\androidApp\build\outputs\apk\debug\androidApp-debug.apk"
+$apk = "C:\develop\yiyun\vetta\open-forge\apps\kotlin\androidApp\build\outputs\apk\debug\androidApp-debug.apk"
 
 & $adb devices
 & $adb install -r $apk
@@ -221,7 +222,7 @@ rg -n "osLabel|totalmem|cpus" apps/desktop/dist/main -g '*.js'
 
 ```powershell
 Get-CimInstance Win32_Process |
-  Where-Object { $_.Name -eq 'electron.exe' -and $_.CommandLine -match 'open-vetta' } |
+  Where-Object { $_.Name -eq 'electron.exe' -and $_.CommandLine -match 'open-forge' } |
   Select-Object ProcessId, ParentProcessId, CommandLine
 ```
 

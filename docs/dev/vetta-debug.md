@@ -1,7 +1,7 @@
 <!-- Modified by The Open Forge contributors. -->
 # Vetta Debug
 
-Vetta Debug 是开发环境专用的会话能力，用于从外层 Agent 驱动真实 Vetta Agent，完成创建会话、继续会话、处理 Ask User、等待结果和中止操作。
+Vetta Debug 是开发环境专用的会话能力，用于从外层 Agent 驱动真实 Open Forge Agent，完成创建会话、继续会话、处理 Ask User、等待结果和中止操作。
 
 它与 Vetta Action 共用本地 RPC 服务，但能力目录相互独立。打包环境不注册 Debug runtime，调用时会返回 `DEBUG_NOT_AVAILABLE`。
 
