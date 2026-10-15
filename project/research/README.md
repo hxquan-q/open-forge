@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| Desktop 首页/会话链路 Web Vitals 调研（CLS 0.58 归因与证伪、会话切换 400ms INP、大会话恢复 587ms 长任务与 LCP 21.9s、修复优先级 P1–P5） | [RESEARCH-0026](RESEARCH-0026-desktop-web-vitals-audit.md) |
 | 上游 0.5.60–0.5.64 同步审计与候选清单（网关重试/流式短语/传输设置/模型参数回填/压缩步骤等 adopt 判定与排除证据） | [RESEARCH-0025](RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md) |
 | Pi 1.0 工作流帖与官方文档的产品层设计对照（MCP 暴露、会话树状态、授权审计、自治边界、文件回退） | [RESEARCH-0024](RESEARCH-0024-pi-workflow-post-design-review.md) |
 | 版本迭代与发版设计（上游 Vetta、业界做法、本仓缺口） | [RESEARCH-0023](RESEARCH-0023-version-management-and-release-design.md) |
