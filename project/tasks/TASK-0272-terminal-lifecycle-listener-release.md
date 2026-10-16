@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/t
 exclusive_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197, TASK-0154, TASK-0218, TASK-0223]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-16
 updated: 2026-10-16
 ---

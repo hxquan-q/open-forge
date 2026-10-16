@@ -21,7 +21,7 @@ write_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/
 exclusive_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-16
 updated: 2026-10-16
 ---

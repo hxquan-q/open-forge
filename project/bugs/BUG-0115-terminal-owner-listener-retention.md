@@ -1,7 +1,7 @@
 ---
 id: BUG-0115
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement:

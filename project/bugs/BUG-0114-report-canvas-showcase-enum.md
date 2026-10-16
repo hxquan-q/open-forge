@@ -1,7 +1,7 @@
 ---
 id: BUG-0114
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: skill-presets
 requirement:

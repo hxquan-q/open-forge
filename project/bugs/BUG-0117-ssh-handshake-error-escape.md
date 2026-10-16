@@ -1,7 +1,7 @@
 ---
 id: BUG-0117
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: ssh-transport
 requirement:

@@ -21,7 +21,7 @@ write_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/sr
 exclusive_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-16
 updated: 2026-10-16
 ---

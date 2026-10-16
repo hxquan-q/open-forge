@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desk
 exclusive_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, apps/desktop/src/main/skills/skill-presentation-read.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197, TASK-0154]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-16
 updated: 2026-10-16
 ---
