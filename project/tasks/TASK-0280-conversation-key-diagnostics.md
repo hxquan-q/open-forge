@@ -109,6 +109,7 @@ updated: 2026-10-16
   - 包内 `bun ../../scripts/quality/run-vitest.mjs --run <两个测试文件>`：2 文件 / 22 例全绿。
   - `bun run --cwd apps/desktop typecheck:incremental`：通过。
   - `bun run test:impact -- <两个改动文件>`：desktop 侧 30 文件 / 137 例全绿。
+  - 四项 concern 全部落地后的最终 `bun run check`：退出码 0，lint 全绿、声明头 ratchet `new=0`（TASK-0281 改的三个插件文件已单独补声明头，见 ef810f970）。
 - 未运行及原因：`verify:ui:*` 未获授权；真实长会话翻页复现重复 key 交人工验收。
 - Worktree：未拆出（串行小改，main 直接实施）。
 - 剩余风险：

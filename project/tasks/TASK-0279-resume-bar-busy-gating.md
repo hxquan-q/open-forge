@@ -124,6 +124,7 @@ updated: 2026-10-16
   - `bun run test:impact -- <四个改动文件>`：desktop 侧 17 文件 / 101 例全绿。
   - `bun run check:quick`：全绿（含 `project-indexes` 校验本 Task 索引一致）。
   - `bun run check`：首轮 desktop typecheck 报 `t()` 键类型错误（分类函数返回 `string`），已改为字面量联合 `ResumeBarMessageKey`；`bun run --cwd apps/desktop typecheck:incremental` 复跑通过。
+  - 四项 concern 全部落地后的最终 `bun run check`：退出码 0，lint 全绿、声明头 ratchet `new=0`。
 - 未运行及原因：`verify:ui:*` 未运行——本 Task 未获 UI 自动化授权，按 [Desktop 验证流程](../../docs/dev/README.md) 交人工验收。
 - Worktree：未拆出（串行小改，main 直接实施）。
 - 剩余风险：

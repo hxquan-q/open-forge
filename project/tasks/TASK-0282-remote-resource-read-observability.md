@@ -114,6 +114,7 @@ updated: 2026-10-17
   - `bun run --cwd apps/desktop typecheck:incremental`：通过。
   - `bun run test:impact -- <两个改动文件>`：desktop 侧 941 文件 / 5006 例通过；5 个失败文件中 4 个为 BUG-0107 存量收集期红，第 5 个（`useSessionManager.session-switch.test.ts` 的 `perfSessionSwitchComplete` 断言）在单独复跑时 12/12 全绿 ⇒ 判定为并行重型跑的偶发假红（先单跑再复跑已复核）。
   - 覆盖 resource-runtime 的 7 个测试文件单独复跑：26 通过 / 1 跳过（win32 跳过远端用例）。
+  - 四项 concern 全部落地后的最终 `bun run check`：退出码 0，lint 全绿、声明头 ratchet `new=0`（TASK-0281 改的三个插件文件已单独补声明头，见 ef810f970）。
 - 未运行及原因：真实远端主机量测按规则交用户执行（不主动连真实主机）；`verify:ui:*` 未获授权。
 - Worktree：未拆出（串行小改，main 直接实施）。
 - 剩余风险：
