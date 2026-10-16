@@ -243,3 +243,69 @@ describe("eaudit-craft skill (board 3: operation audit)", () => {
 		expect(content).toContain("audit-log.jsonl");
 	});
 });
+
+describe("eform-fields-catalog skill (board 1 support: field types)", () => {
+	it("ships the manual with valid frontmatter and substantive body", async () => {
+		const content = await readPluginFile("agent/skills/eform-fields-catalog/SKILL.md");
+		expect(content.startsWith("---")).toBe(true);
+		const frontmatterEnd = content.indexOf("---", 3);
+		expect(frontmatterEnd).toBeGreaterThan(0);
+		expect(content.slice(3, frontmatterEnd)).toContain("name: eform-fields-catalog");
+		const body = content.slice(frontmatterEnd + 3);
+		expect(body.trim().length).toBeGreaterThan(500);
+	});
+
+	it("keeps the three-column catalog using the JSON type vocabulary", async () => {
+		const content = await readPluginFile("agent/skills/eform-fields-catalog/SKILL.md");
+		// 速查总表固定三列（业务叫法 / fieldType / 值结构），且 type 词与 billformSchema 统一。
+		expect(content).toContain("| 业务叫法 | fieldType | 值结构 |");
+		// 用户点名与新增的类型全部在场，且用词为 JSON type 词。
+		for (const type of ["string", "int", "double", "date", "datetime", "time", "boolean", "object", "select", "entry", "subEntry"]) {
+			expect(content).toContain(type);
+		}
+		// 单据体 / 子单据体的值结构与自嵌套约束在场。
+		expect(content).toContain("Array<Row>");
+		expect(content).toContain("可自嵌套");
+	});
+
+	it("keeps the replacement framing and cross-references", async () => {
+		const content = await readPluginFile("agent/skills/eform-fields-catalog/SKILL.md");
+		// 本手册是字段类型唯一权威，取代 §1 的字段语义（非补充）。
+		expect(content).toContain("唯一权威");
+		// 层级归属交给结构模板 skill。
+		expect(content).toContain("eform-structure-templates");
+		// 电子签不在本主 agent 目录内，归 esign 专员子agent。
+		expect(content).toContain("esign-craft");
+	});
+});
+
+describe("eform-structure-templates skill (board 1 support: structure template)", () => {
+	it("ships the manual with the inline sample JSON and substantive body", async () => {
+		const content = await readPluginFile("agent/skills/eform-structure-templates/SKILL.md");
+		// 本手册无 frontmatter（仅 H1 标题）；只校验正文体量。
+		expect(content.trim().length).toBeGreaterThan(500);
+		// 原样内联 billformSchema.json，层级以它为锚，不得二次抽象丢层级。
+		expect(content).toContain("billformSchema.json");
+		// 原样 JSON 锚点：工具栏 / 单据体 / 子单据体三层角色。
+		expect(content).toContain(`"name": "工具栏"`);
+		expect(content).toContain(`"type": "entry"`);
+		expect(content).toContain(`"type": "subEntry"`);
+	});
+
+	it("keeps the layered-logic framing (template, not a fixed skeleton)", async () => {
+		const content = await readPluginFile("agent/skills/eform-structure-templates/SKILL.md");
+		// 价值在层级区分的逻辑，而非具体内容。
+		expect(content).toContain("层级区分的逻辑");
+		// 子单据体允许自嵌套，结构不封顶。
+		expect(content).toContain("允许自嵌套");
+		// 灵活形态：多单据体 / 多子单据体 / 仅单据头均合法（非绝对三/两层）。
+		expect(content).toContain("0~N 张单据体");
+		// 示例非绝对：尽信书不如无书。
+		expect(content).toContain("尽信书不如无书");
+		// 反向流转按钮保留提示（撤销提交 / 反审核）。
+		expect(content).toContain("撤销提交");
+		expect(content).toContain("反审核");
+		// 值类型去查字段目录 skill。
+		expect(content).toContain("eform-fields-catalog");
+	});
+});
