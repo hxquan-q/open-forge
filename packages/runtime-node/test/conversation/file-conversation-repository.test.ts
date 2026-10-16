@@ -10,14 +10,24 @@ import type {
 	TurnCompletedEvent,
 	TurnStartedEvent,
 } from "@vetta/runtime-core/kernel";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONVERSATION_STORAGE_ERROR_CODES, FileConversationRepository } from "../../src/conversation/index.js";
 
 const temporaryRoots: string[] = [];
 
 afterEach(async () => {
+	vi.restoreAllMocks();
 	await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
 });
+
+/** 统计全量 JSONL 读取次数的探针：readConversationFile 是所有全量读取的唯一入口。 */
+function spyFullReads(): { readonly count: () => number } {
+	const prototype = FileConversationRepository.prototype as unknown as {
+		readConversationFile: (sessionId: string) => Promise<unknown>;
+	};
+	const spy = vi.spyOn(prototype, "readConversationFile");
+	return { count: () => spy.mock.calls.length };
+}
 
 async function createRepository(): Promise<{
 	readonly repository: FileConversationRepository;
@@ -693,6 +703,90 @@ describe("FileConversationRepository", () => {
 		const conversation = await repository.load("session-1");
 		expect(conversation.version).toBe(3);
 		expect(conversation.messages.map(messageText)).toEqual(["external"]);
+	});
+
+	it("serves readDocument from the write cache without re-reading the JSONL", async () => {
+		const { repository } = await createRepository();
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+		await repository.append("session-1", 0, [started("session-1", "turn-1")]);
+		const fullReads = spyFullReads();
+
+		await repository.execute("session-1", null, { type: "session.name.set", name: "named" });
+		const document = await repository.readDocument("session-1");
+		const again = await repository.readDocument("session-1");
+
+		expect(document).toMatchObject({ journalVersion: 1, revision: 1, name: "named" });
+		expect(again).toEqual(document);
+		// 缓存命中：追加后的命令执行与两次文档读取都不得再全量读 JSONL。
+		expect(fullReads.count()).toBe(0);
+	});
+
+	it("invalidates the read path on external writes and refreshes the cache", async () => {
+		const { repository, rootDir } = await createRepository();
+		const external = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+		await repository.append("session-1", 0, [started("session-1", "turn-1")]);
+		const fullReads = spyFullReads();
+
+		// 另一实例在锁下追加：本实例缓存的字节数失效，读取必须回退全量读取。
+		await external.append("session-1", 1, [message("session-1", "turn-1", "external")]);
+		const document = await repository.readDocument("session-1");
+		expect(document).toMatchObject({
+			journalVersion: 2,
+			revision: 1,
+			activeLeafId: "event-2",
+			entries: [{ id: "event-2", type: "message" }],
+		});
+		expect(fullReads.count()).toBe(2); // external 追加一次 + 失效后的全量读取一次
+		await repository.readDocument("session-1");
+		expect(fullReads.count()).toBe(2); // 刷新后的缓存再次命中
+		await external.close();
+	});
+
+	it("rejects a corrupted file through the read path even when the cache is warm", async () => {
+		const { repository } = await createRepository();
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+		await repository.append("session-1", 0, [started("session-1", "turn-1")]);
+
+		await appendFile(repository.resolveConversationPath("session-1"), '{"recordType":"conversation.event"', "utf8");
+
+		await expect(repository.readDocument("session-1")).rejects.toMatchObject({
+			code: CONVERSATION_STORAGE_ERROR_CODES.CORRUPT,
+		});
+	});
+
+	it("keeps legacy v1 sessions on full reads without caching", async () => {
+		const { repository } = await createRepository();
+		const sessionId = "legacy-read-path";
+		await repository.create({ sessionId, createdAt: 100 });
+		await writeFile(
+			repository.resolveConversationPath(sessionId),
+			`${JSON.stringify({
+				recordType: "conversation.header",
+				schemaVersion: 1,
+				sessionId,
+				createdAt: 100,
+			})}\n${JSON.stringify({
+				recordType: "conversation.event",
+				schemaVersion: 1,
+				sequence: 1,
+				event: message(sessionId, "turn-1", "v1 message"),
+			})}\n`,
+			"utf8",
+		);
+		const fullReads = spyFullReads();
+
+		const first = await repository.readDocument(sessionId);
+		const second = await repository.readDocument(sessionId);
+
+		expect(first).toMatchObject({
+			revision: 1,
+			activeLeafId: "event-1",
+			entries: [{ id: "event-1", message: { content: "v1 message" } }],
+		});
+		expect(second).toEqual(first);
+		// 旧 schema 会话不缓存：每次读取都必须走全量 JSONL。
+		expect(fullReads.count()).toBe(2);
 	});
 
 	it("evicts cached sessions beyond the LRU limit without losing writes", async () => {
