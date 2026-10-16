@@ -1,7 +1,7 @@
 ---
 id: TASK-0287
 type: task
-status: ready
+status: verifying
 priority: P3
 owner: packages/coding-agent + apps/desktop agent-runtime
 requirement:
@@ -90,8 +90,8 @@ updated: 2026-10-17
 
 ## 交付记录
 
-- 实际修改：（实施后回填）
-- 实际运行：（实施后回填）
-- 未运行及原因：（实施后回填）
-- Worktree：未拆出（串行小改，main 直接实施）
-- 剩余风险：（实施后回填）
+- 实际修改：`packages/coding-agent/src/execution/session-interrupt-health.ts` 判据矩阵增加可选 `waitingOnSubagent` 证据——非流式路径在 manualStop/pendingAction 硬否决之后、completionMarker 之前判 running（合法安静）；desktop 侧 `session-interrupt-evidence.ts` 透传、`session-interrupt-monitor.ts` 新增必填端口 `hasPendingSubagentWork`、`session-interrupt-bootstrap.ts` 接 `agentTeamSessionService.hasActiveTeamWorkForRuntimeSession`（该 runtime 会话所属团队存在 pending/未结算工作即命中），`team-session-service.ts` 增加该薄查询方法。
+- 实际运行：coding-agent health 17/17（新增「等子代理长空闲 → running（旧实现红）」与「硬否决仍优先」两例）、monitor 8/8（新增端口 false→notify / true→安静 的对照用例）、evidence 3/3、agent-runtime 目录 17 文件 90 例全绿、coding-agent execution 29 例全绿、desktop typecheck 通过；coding-agent dist 重建后 desktop 测试方见新字段（两包构建惯例）。
+- 未运行及原因：`hasActiveTeamWorkForRuntimeSession` 未单测（需装载完整团队会话，由 monitor 端口对照用例与健康层用例共同覆盖合同；实机长任务观察误报归零待桌面构建）。
+- Worktree：未拆出（main 串行）。
+- 剩余风险：成员会话在两次委派之间的空闲若团队确无未结算工作，仍会按旧判据 suspected——该形态属真实无主会话，保留告警是对的。

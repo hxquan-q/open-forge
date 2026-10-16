@@ -1,7 +1,7 @@
 ---
 id: TASK-0286
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop agent-teams + renderer
 requirement:
@@ -92,8 +92,8 @@ updated: 2026-10-17
 
 ## 交付记录
 
-- 实际修改：（实施后回填）
-- 实际运行：（实施后回填）
-- 未运行及原因：（实施后回填）
-- Worktree：未拆出（串行小改，main 直接实施）
-- 剩余风险：（实施后回填）
+- 实际修改：七个 agent-teams 模块各自的 `errorMessage`（`String(plainObj)` 反模式）统一替换为 `logger/describe-error.ts` 的 `describeError`（Error 走 name+cause 链，普通对象走 inspect），删除六份重复本地助手；`team-member-attempt-runner.ts:387` 的用户可见 discard 载荷保留原 message 语义不动（`6bac5db4a`）。
+- 实际运行：`team-turn-coordinator.test.ts` 新增「裸对象拒绝 → 日志字段含 code/message、不含 [object Object]」回归，4/4 绿；agent-teams 34 文件 250 例全绿；desktop typecheck 通过。
+- 未运行及原因：渲染端消费路径核实为 `console.info(..., attempt)`（对象打印，不产 [object Object]），无需新增渲染端翻译；实机触发一次 team 错误观察日志归 BUG-0117 验收包。
+- Worktree：未拆出（串行小改，main 直接实施）。
+- 剩余风险：Error 输出从 `message` 变为 `Name: message`（含 cause 链），日志字段格式略变——属诊断信息增强，无消费方解析该自由文本。

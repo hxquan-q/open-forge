@@ -1,7 +1,7 @@
 ---
 id: TASK-0285
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: apps/desktop agent-teams
 requirement:
@@ -93,8 +93,8 @@ updated: 2026-10-17
 
 ## 交付记录
 
-- 实际修改：（实施后回填）
-- 实际运行：（实施后回填）
-- 未运行及原因：（实施后回填）
-- Worktree：未拆出（串行小改，main 直接实施）
-- 剩余风险：（实施后回填）
+- 实际修改：调查结论——BUG-0116 观察到的 send 恒败环不是独立缺陷，而是 BUG-0115 收尾竞态的连锁：目录残留失效绑定 → 每次成员 attempt 的 `ensureMemberConfiguration` 走到 dispose 即撞 `SESSION_NOT_FOUND` → 重建路径被毒化 → send 必败。`0de675eb1` 幂等化 dispose 后，ensure 在下一次 send 即重建成员 runtime（`reconfigureTeamMemberRuntime` 对未加载会话本就重建，测试 3 已证），自愈入口已存在且被解锁。
+- 实际运行：`team-runtime-manager.test.ts` 新增「失效绑定 → ensure 直接自愈」组合回归（`add121c68`），8/8 绿；agent-teams 34 文件 250 例全绿；desktop typecheck 通过。
+- 未运行及原因：实机损坏会话 send 验证待 BUG-0127/0283 落地后的桌面构建一并观察（避免在并行在途改动上反复起 dev）。
+- Worktree：未拆出（main 串行）。
+- 剩余风险：coordination 文档不可读类损坏（BUG-0087/0100 域）不走本自愈路径，属既有降级语义；残余 `SESSION_NOT_FOUND` 经 `6bac5db4a` 的 describeError 已可读，暂不加恢复指引文案，避免投机性 UI 文案，待实机证据再议。

@@ -1,7 +1,7 @@
 ---
 id: BUG-0126
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: apps/desktop agent-runtime
 requirement:
@@ -73,5 +73,5 @@ updated: 2026-10-17
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：判据增加"主控等待子代理"识别（复用现有 pending-action/sub-agent 信号），或拉长/豁免该态的 idle 判据。
-- 验证：上述回归测试 + monitor 套件；实机长任务观察误报归零。
+- 修复：TASK-0287 已实施（`b9b0498a6`）——判据增加可选 `waitingOnSubagent`，desktop 巡检经 `hasPendingSubagentWork` 端口从团队会话服务查询在途工作，命中即判 running 不再 suspected；硬否决优先级不变。
+- 验证：health 17/17（含旧实现红回归）+ monitor 8/8（端口对照用例）+ agent-runtime 90 例全绿；实机长任务观察误报归零待桌面构建后验收。

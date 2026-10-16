@@ -1,7 +1,7 @@
 ---
 id: BUG-0115
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop agent-teams
 requirement:
@@ -79,5 +79,5 @@ updated: 2026-10-17
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：收尾重配在 `SESSION_NOT_FOUND` 时按 no-op / 先确保加载；结算与重配加隔离与重试边界。
-- 验证：上述回归测试 + team 目录套件；实机按最小复现走一遍。
+- 修复：TASK-0284 已实施（`0de675eb1`）——重配 dispose 分支对 `SESSION_NOT_FOUND` 幂等 no-op（`isSessionError` 判码 + 结构化 info 日志），其余 dispose 失败仍掀翻；`Team member runtime not found` 与 `SESSION_NOT_FOUND` 保持可区分。结算与重配的隔离未单独处理：dispose 幂等化后主失败源已消，结算侧失败仍走既有错误路径，留待实机证据再议。
+- 验证：`team-member-runtime-reconfiguration.test.ts` 收尾竞态回归（dispose SESSION_NOT_FOUND → 幂等继续重建，旧实现红）+ agent-teams 34 文件 250 例全绿；实机按最小复现走一遍归验收包。

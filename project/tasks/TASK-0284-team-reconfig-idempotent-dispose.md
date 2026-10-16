@@ -1,7 +1,7 @@
 ---
 id: TASK-0284
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: apps/desktop agent-teams
 requirement:
@@ -92,8 +92,8 @@ updated: 2026-10-17
 
 ## 交付记录
 
-- 实际修改：（实施后回填）
-- 实际运行：（实施后回填）
-- 未运行及原因：（实施后回填）
-- Worktree：未拆出（串行小改，main 直接实施）
-- 剩余风险：（实施后回填）
+- 实际修改：`team-member-runtime-reconfiguration.ts` dispose 分支包 `isSessionError` 判码——`SESSION_NOT_FOUND` 记「跳过卸载已失效会话」结构化 info 后继续重开，其余 dispose 失败仍掀翻重配；与 `Team member runtime not found` 保持错误区分（`0de675eb1`）。
+- 实际运行：`team-member-runtime-reconfiguration.test.ts` 新增收尾竞态回归（dispose SESSION_NOT_FOUND → 幂等继续重建），6/6 绿；agent-teams 34 文件 250 例全绿；desktop typecheck 通过。
+- 未运行及原因：真实收尾竞态未实机构造（需真实多成员长任务窗口），以确定性测试替代；实机观察归 BUG-0115 验收包。
+- Worktree：未拆出（串行小改，main 直接实施）。
+- 剩余风险：结算（settle）与重配的相互隔离未单独处理——0115 实证里两者叠加，dispose 幂等化后主失败源已消，结算侧失败仍按既有错误路径传播，留待实机证据再议。

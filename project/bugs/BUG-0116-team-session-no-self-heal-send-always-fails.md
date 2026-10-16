@@ -1,7 +1,7 @@
 ---
 id: BUG-0116
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop agent-teams
 requirement:
@@ -75,5 +75,5 @@ updated: 2026-10-17
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：send 路径对 `SESSION_NOT_FOUND` 尝试重载 runtime session 或归一为可读错误+恢复指引。
-- 验证：上述回归测试 + team 目录套件；实机按最小复现走一遍。
+- 修复：TASK-0285 调查结论——本条的 send 恒败环是 BUG-0115 收尾竞态的连锁（目录失效绑定毒化 `ensureMemberConfiguration` 的重建路径）。`0de675eb1` 幂等化 dispose 后自愈入口解锁：send → 成员 attempt → ensure → dispose no-op → 重建 runtime → 投递成功；重建能力由 `reconfigureTeamMemberRuntime` 既有实现承载。残余错误经 `6bac5db4a` describeError 可读（code/message 不再 `[object Object]`）。
+- 验证：`team-runtime-manager.test.ts` 组合回归「失效绑定 → ensure 直接自愈」（`add121c68`，8/8 绿）+ agent-teams 250 例全绿；实机按最小复现走一遍待桌面构建后观察。

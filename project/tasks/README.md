@@ -15,6 +15,11 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0283` | `verifying` | PLAN-0002 | BUG-0127（P0）修复路线 1：`readDocument()` 接入 `ConversationWriteCache`（字节大小失效，命中免全量 JSONL 重读），覆盖 trace ≈50% 采样热点并让每命令协调器读自动降本；回归覆盖命中免读、外部写失效、缓存热损坏仍报 CORRUPT、v1 不缓存；serial，main 串行。 |
+| `TASK-0284` | `verifying` | — | BUG-0115（P1）：团队收尾重配对 runtime 未加载的成员会话幂等化——dispose 分支对 SESSION_NOT_FOUND 按「无可清理」继续并落结构化日志，保留与 `Team member runtime not found` 的错误区分；旧实现红回归 + team 套件零回归；serial，main 串行。 |
+| `TASK-0285` | `verifying` | — | BUG-0116（P1）：团队会话 send 路径对 runtime 损坏态自愈（按 coordination 文档重载成员 runtime 后重试一次）或归一含恢复指引的可读错误；结构化日志记录 attempted/recovered/failed；serial，main 串行。 |
+| `TASK-0286` | `verifying` | — | BUG-0117（P2）：team 链 IPC 错误接入 `describeError` 翻译层——主进程 logger 落盘点改结构化 code/message，渲染端 team 连接器消费 rejection 同层翻译，全链消灭 `[object Object]`；serial，main 串行。 |
+| `TASK-0287` | `verifying` | — | BUG-0126（P3）：session-interrupt 健康判据识别「主控等子代理」——判据增加活动子代理信号，该态 idle 超阈不再判 suspected；真中断判定不变；serial，main 串行。 |
 | `TASK-0282` | `verifying` | — | BUG-0125：远端资源读取观测（零行为变更，只加测点）——资源访问端口统计远端操作数与累计耗时（暴露只读 `readRemoteStats()`），`reload()` 边界落结构化记录；新增 2 例通过、两包构建与 desktop typecheck 通过、impact 5006 例通过（4 个 BUG-0107 存量红 + 1 例并行假红，单独复跑全绿）、完整 check 全绿；`initial-system-prompt` 落点待后续切片；serial，main 串行。 |
 | `TASK-0281` | `verifying` | — | BUG-0124：插件 Hook 派发双侧取证（零行为变更，只加测点）——主进程 `hook dispatch`（身份 + lease 诊断 + 渲染端可用性，新增只读 `readState()` / `readHookLeaseDiagnostics()`）、渲染端 `hook handler miss`（表规模 + 已知键），回复载荷不变；包内 2 文件 4 例、impact 459 例、typecheck 与完整 check 全绿；自愈与重载复位待证据后再切片；serial，main 串行。 |
 | `TASK-0280` | `verifying` | — | BUG-0123：重复渲染 key 的结构化诊断（零行为变更，只加测点）——`findDuplicateConversationKeys` 纯函数 + 列表接缝输出键/次数/身份/下标；包内 2 文件 22 例、impact 137 例、typecheck 与完整 check 全绿；去重逻辑待现场诊断后再切片；serial，main 串行。 |
