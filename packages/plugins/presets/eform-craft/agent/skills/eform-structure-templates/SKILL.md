@@ -2,6 +2,7 @@
 name: eform-structure-templates
 description: "电子表单工坊·常见表单结构模板（层级范本）：内联一份真实业务单据的完整结构 JSON（billformSchema.json）作为通用骨架范本，供 eform 在识别与生成阶段预确定字段的层级归属（单据头/单据体/子单据体）与块角色；字段类型映射参见 eform-fields-catalog 技能。"
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 常见表单结构模板（层级范本）
 

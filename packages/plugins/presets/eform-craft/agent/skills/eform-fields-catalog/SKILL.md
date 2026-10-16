@@ -2,6 +2,7 @@
 name: eform-fields-catalog
 description: "电子表单工坊·常见字段类型参考：常见表单字段类型的查表目录，供 eform 在识别与生成阶段确认 fieldType、值结构、存储形状、渲染控件与识别要点。覆盖文本/长文本/整数/小数/日期/长时间/短时间/布尔/基础资料/下拉列表/单据体/子单据体。在进行任何表单开发时，请先通过本手册预确定各字段的类型（通常情况下是常见字段类型都包含，遇见不包含的字段类型时必须向用户确认）。"
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 电子表单工坊·常见表单字段（eform-fields-catalog）
 
