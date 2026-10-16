@@ -9,11 +9,11 @@ plan:
 source: 用户 dev 运行日志（C:\Users\Chenxuhua\.openforge-dev\desktop-app\logs，2026-10-13）+ 源码静态追踪
 related_requirement: [REQ-0001]
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0285]
 related_issues: []
 related_bugs: [BUG-0091, BUG-0115]
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # 团队会话 runtime 损坏后无自愈：此后每次 send 必败 SESSION_NOT_FOUND，仅重启可恢复
@@ -32,7 +32,16 @@ updated: 2026-10-16
 - 无任何自愈/重试/恢复入口：会话不自动重载 runtime，send 不尝试重建会话，错误不引导用户恢复。
 - 用户侧表现为"团队会话死了，只能重启"——与 BUG-0091（Turn 终态持久化失败一次后 `recovery_required` 无恢复手段）同构，但错误类型不同（0091 为 `recovery_required` KernelError，本条为 `SESSION_NOT_FOUND`）。
 
-日志 excerpt（逐字，待粘贴）：【待粘贴：~/.openforge-dev/desktop-app/logs，2026-10-13 损坏会话后每次 send 的 `SESSION_NOT_FOUND` 行】
+日志 excerpt（逐字，2026-10-17 回填自 dev 运行日志 2026-10-16.log）：
+
+```
+[2026-10-16T14:01:23.423+08:00] [error] [agent-teams-ipc] team send-message failed { teamSessionId: '148230bf-f867-40b2-9408-ee4e51f66464', requestId: 'f45fa0b3-7b58-47f8-ad0e-ba6381cd4f1a', elapsedMs: 15605738, error: '…{ code: SESSION_NOT_FOUND, message: Session not found: 44826738-aeb8-4bb1-b551-110629032c3b, retryable: false, origin: runtime }…' }
+[2026-10-16T14:21:25.473+08:00] [error] [agent-teams-ipc] team send-message failed { teamSessionId: '148230bf-f867-40b2-9408-ee4e51f66464', requestId: '5fe4f7fa-584c-4342-a786-ec96b967c041', elapsedMs: 6146, error: '…SESSION_NOT_FOUND 44826738-…' }
+[2026-10-16T14:21:42.493+08:00] [error] [agent-teams-ipc] team send-message failed { teamSessionId: '148230bf-f867-40b2-9408-ee4e51f66464', requestId: '6e5812f8-a53a-4ef6-a833-cd4e91043559', elapsedMs: 3235, error: '…{ code: SESSION_NOT_FOUND, message: Session not found: 44826738-aeb8-4bb1-b551-110629032c3b, retryable: false, origin: runtime }…' }
+[2026-10-16T14:21:42.493+08:00] [error] [console] Error occurred in handler for 'vetta:agent-teams:send-message': { code: 'SESSION_NOT_FOUND', message: 'Session not found: 44826738-aeb8-4bb1-b551-110629032c3b', retryable: false, origin: 'runtime', details: undefined }
+```
+
+同一 teamSessionId 三个不同 requestId 相隔 20 分钟连续必败，错误 id 恒为成员 runtime session 44826738-…；期间无任何自动重载/恢复动作，只有应用重启可恢复，与「无自愈、send 恒败」的立案描述一致。
 
 ## 期望行为
 

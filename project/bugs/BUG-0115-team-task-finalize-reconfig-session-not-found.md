@@ -9,11 +9,11 @@ plan:
 source: 用户 dev 运行日志（C:\Users\Chenxuhua\.openforge-dev\desktop-app\logs，2026-10-13）+ 源码静态追踪
 related_requirement: [REQ-0001]
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0284]
 related_issues: []
 related_bugs: [BUG-0108, BUG-0114, BUG-0116]
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # 团队长任务收尾连环失败：结算失败 → 成员 runtime 重配竞态 → SESSION_NOT_FOUND
@@ -32,7 +32,15 @@ updated: 2026-10-16
 - 注意 `reconfiguration.ts:35` 还会抛 `Team member runtime not found`（成员根本不在 coordination 文档里）——这是第三种错误，不是 `SESSION_NOT_FOUND`，取证时以日志 code 区分，不要混为同一根因。
 - 结算失败与重配竞态并发时，收尾事务无补偿/重试，会话被标记为损坏，直接喂给 BUG-0116（此后每次 send 必败）。
 
-日志 excerpt（逐字，待粘贴）：【待粘贴：~/.openforge-dev/desktop-app/logs，2026-10-13 收尾时段，含 `team member runtime reconfiguration failed` 与 `SESSION_NOT_FOUND` 行】
+日志 excerpt（逐字，2026-10-17 回填自 dev 运行日志 2026-10-16.log）：
+
+```
+[2026-10-16T14:01:23.402+08:00] [warn] [runtime] runtime host agent backend failure { operation: 'route.acquire', phase: 'failed', routeSource: 'default', failureCategory: 'error', errorName: 'UnknownError', errorCode: 'SESSION_NOT_FOUND' }
+[2026-10-16T14:01:23.403+08:00] [error] [agent-team-runtime-manager] team member runtime reconfiguration failed { teamSessionId: '148230bf-f867-40b2-9408-ee4e51f66464', memberId: '02a59a80-ffeb-7989-67b0-499935397a21', agentProfileId: 'bdc8af76-8d9d-e078-eb9b-ee830275b786', agentProfileRevision: 1, error: '[object Object]' }
+[2026-10-16T14:01:23.423+08:00] [error] [agent-teams-ipc] team send-message failed { teamSessionId: '148230bf-f867-40b2-9408-ee4e51f66464', requestId: 'f45fa0b3-7b58-47f8-ad0e-ba6381cd4f1a', elapsedMs: 15605738, error: '…SESSION_NOT_FOUND…' }
+```
+
+同一模式在 14:21:25 与 14:21:42 各重复一轮（route.acquire SESSION_NOT_FOUND → reconfiguration failed → send 必败）；send 侧完整错误为 `Session not found: 44826738-aeb8-4bb1-b551-110629032c3b`（成员 runtime session id，与 agent configuration failure 的 sessionId 同一 id）。14:01 的 send elapsedMs=15,605,738ms（约 4.3 小时前挂起的请求在收尾竞态后失败），印证「收尾窗口内叠加挂起请求被掀翻」。
 
 ## 期望行为
 

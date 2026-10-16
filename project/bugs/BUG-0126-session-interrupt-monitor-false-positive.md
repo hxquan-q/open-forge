@@ -9,11 +9,11 @@ plan:
 source: 用户 dev 运行日志（C:\Users\Chenxuhua\.openforge-dev\desktop-app\logs，2026-10-13）+ 源码静态追踪
 related_requirement: [REQ-0001]
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0287]
 related_issues: []
 related_bugs: []
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # session-interrupt monitor 长任务全程误报 suspected（判据不认识"主控等子代理"）
@@ -31,7 +31,16 @@ updated: 2026-10-16
 - 一个不流式、idle > 8s、又没 completion/pending 标记的主控会话 → 落到 `:158` `suspected` → monitor 发通知。长任务里主控等子代理恰恰就是这个状态 → 全程误报。
 - 误报频率：约 20 次/4h（用户日志统计，待补逐字）。
 
-日志 excerpt（逐字，待粘贴）：【待粘贴：~/.openforge-dev/desktop-app/logs，2026-10-13 `suspected` 通知行（约 20 次/4h）】
+日志 excerpt（逐字，2026-10-17 回填自 dev 运行日志 2026-10-16.log）：
+
+```
+[2026-10-16T09:28:13.455+08:00] [info] [session-interrupt] Session interrupt decision { sessionId: '44826738-aeb8-4bb1-b551-110629032c3b', action: 'notify', state: 'suspected', trigger: null }
+[2026-10-16T09:46:05.268+08:00] [info] [session-interrupt] Session interrupt decision { sessionId: '44826738-aeb8-4bb1-b551-110629032c3b', action: 'notify', state: 'suspected', trigger: null }
+…（中略）…
+[2026-10-16T12:57:06.xxx+08:00] [info] [session-interrupt] Session interrupt decision { sessionId: '44826738-aeb8-4bb1-b551-110629032c3b', action: 'notify', state: 'suspected', trigger: null }
+```
+
+单日 09:28:13–12:57:06 共 20 次 `state: 'suspected'` 决策（trigger 为 null），同一会话 id 即 BUG-0115/0116 证据里的团队主控/成员会话，与「主控等子代理被全程误报」的立案描述一致。
 
 ## 期望行为
 

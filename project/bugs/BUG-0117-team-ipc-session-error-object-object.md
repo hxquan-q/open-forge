@@ -9,11 +9,11 @@ plan:
 source: 用户 dev 运行日志（C:\Users\Chenxuhua\.openforge-dev\desktop-app\logs，2026-10-13）+ 源码静态追踪
 related_requirement: [REQ-0001]
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0286]
 related_issues: []
 related_bugs: [BUG-0092]
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # SessionError 裸对象跨 IPC：team 链渲染端只见 [object Object]（单聊链有翻译层，team 链缺）
@@ -31,7 +31,16 @@ updated: 2026-10-16
 - 渲染端：team 链的 IPC 消费路径**缺少翻译层**，直接把 `[object Object]` 记进日志/console；对比单聊链已有 `describeError(error)` 翻译层（见 BUG-0092 的 TASK-0236 修复已进 `session-interrupt-monitor.ts:98-100`），team 链未接同一翻译。
 - 这与 BUG-0092 是姊妹条：0092 的验证边界明文「renderer 侧 `[agent-team] send attempted [object Object]` 走另一条 console 路径，未覆盖」——0092 修的是序列化/翻译层，但 team 链 IPC rejection 的渲染端呈现仍是 `[object Object]`，0092 未触碰。
 
-日志 excerpt（逐字，待粘贴）：【待粘贴：~/.openforge-dev/desktop-app/logs，2026-10-13 team 链 `[object Object]` 行】
+日志 excerpt（逐字，2026-10-17 回填自 dev 运行日志 2026-10-16.log 与 2026-10-14(2).log）：
+
+```
+[2026-10-16T14:01:23.403+08:00] [error] [agent-team-runtime-manager] team member runtime reconfiguration failed { teamSessionId: '148230bf-…', memberId: '02a59a80-…', …, error: '[object Object]' }
+[2026-10-16T14:21:42.492+08:00] [error] [agent-team-turns] team message failed { teamSessionId: '148230bf-…', requestId: '6e5812f8-…', elapsedMs: 3230, error: '[object Object]' }
+[2026-10-14T15:03:22.331+08:00] [warn] [agent-team-sessions] team session could not be loaded during delete; proceeding with degraded cleanup { teamSessionId: 'a3709dba-…', error: '[object Object]' }
+[2026-10-16T14:21:42.493+08:00] [error] [console] Error occurred in handler for 'vetta:agent-teams:send-message': { code: 'SESSION_NOT_FOUND', … }
+```
+
+10-16 日志中 reconfiguration failed 3 处、team message failed 2 处的 error 字段均为 `[object Object]`；10-14(2) delete 降级清理 2 处同样；而同一失败的 console handler 行因 Electron 顶层打印完整对象反而可读——主进程日志的 error 字段全部丢失 code/message，一线诊断信息被吞。
 
 ## 期望行为
 
