@@ -56,6 +56,16 @@ describe("MessageBubble · AC-25 思考/回答分区", () => {
 		expect(screen.getByTestId("weknora-markdown").textContent).toBe("直答内容");
 	});
 
+	it("按 role 渲染身份标签：user「我」/ assistant「智能客服」（AC-14 消息序列）", () => {
+		const { rerender } = render(
+			<MessageBubble message={{ id: "u1", role: "user", text: "提问", thinking: "", status: "complete" }} />,
+		);
+		expect(screen.getByText("我")).toBeTruthy();
+
+		rerender(<MessageBubble message={assistant({ text: "回答" })} />);
+		expect(screen.getByText("智能客服")).toBeTruthy();
+	});
+
 	it("文案走 i18n：思考区标题取自 catalog（zh）", () => {
 		render(<MessageBubble message={assistant({ status: "complete", thinking: "思考", text: "回答" })} />);
 		expect(screen.getByText(i18n.t("weknora:message.thinking"))).toBeTruthy();

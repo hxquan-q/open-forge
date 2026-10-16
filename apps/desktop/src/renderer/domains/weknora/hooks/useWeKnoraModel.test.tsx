@@ -98,6 +98,22 @@ describe("useWeKnoraModel", () => {
 		expect(api.ask).not.toHaveBeenCalled();
 	});
 
+	it("智能体列表拉取失败时不可提问且不发请求（AC-19 失败路径）", async () => {
+		const { api } = installApi({
+			listAgents: vi.fn(async () => {
+				throw new Error("network");
+			}),
+		});
+		const { result } = renderModel();
+		await waitFor(() => expect(result.current.agentsStatus).toBe("error"));
+
+		expect(result.current.canAsk).toBe(false);
+		await act(async () => {
+			await result.current.actions.send("你好");
+		});
+		expect(api.ask).not.toHaveBeenCalled();
+	});
+
 	it("提问调 ask，逐 chunk 增量追加，turn.completed 后收敛（AC-4/6）", async () => {
 		const { api, emit } = installApi();
 		const { result } = await renderReady();

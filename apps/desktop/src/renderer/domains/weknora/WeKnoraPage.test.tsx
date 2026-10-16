@@ -136,6 +136,21 @@ describe("WeKnoraPage", () => {
 		expect(api.ask).not.toHaveBeenCalled();
 	});
 
+	it("智能体列表拉取失败时给出中文提示且提问不可用（AC-19 失败路径）", async () => {
+		const { api } = installApi({
+			listAgents: vi.fn(async () => {
+				throw new Error("boom");
+			}),
+		});
+		renderPage();
+
+		await waitFor(() => expect(screen.getByText(/获取智能体列表失败/)).toBeTruthy());
+		const send = screen.getByRole("button", { name: "发送" }) as HTMLButtonElement;
+		expect(send.disabled).toBe(true);
+		await userEvent.click(send);
+		expect(api.ask).not.toHaveBeenCalled();
+	});
+
 	it("提问调 ask；进行中显示 loading 且发送按钮禁用（AC-4/7）", async () => {
 		const { api } = installApi();
 		renderPage();

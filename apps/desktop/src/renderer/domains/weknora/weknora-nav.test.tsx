@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
 
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,6 +68,16 @@ describe("侧边栏「智能客服」入口", () => {
 		const { result } = render();
 		expect(result.current.navItems.some((entry) => entry.key === "/weknora")).toBe(true);
 		expect(result.current.moreNavItems.some((entry) => entry.key === "/weknora")).toBe(false);
+	});
+
+	it("点击导航项跳转到 /weknora（AC-1 进入独立整页）", () => {
+		const { result } = render();
+		const item = result.current.navItems.find((entry) => entry.key === "/weknora");
+		expect(item).toBeDefined();
+
+		act(() => result.current.actions.openNavItem(item!));
+
+		expect(navigate).toHaveBeenCalledWith({ to: "/weknora" });
 	});
 
 	it("既有导航项仍在（不回归）", () => {
