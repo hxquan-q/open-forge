@@ -1203,6 +1203,22 @@ export class AgentTeamSessionService {
 		return this.turnCoordinator.readCollaborationState(sessionId);
 	}
 
+	/**
+	 * 该 runtime 会话是否属于某个仍有在途工作的团队（BUG-0126）：主控等成员、
+	 * 成员等下一次委派都是合法安静，中断巡检不得把这种空闲判成 suspected。
+	 */
+	hasActiveTeamWorkForRuntimeSession(runtimeSessionId: string): boolean {
+		for (const session of this.sessionState.values()) {
+			const participating =
+				session.coordinationRuntime?.sessionId === runtimeSessionId ||
+				Object.values(session.memberRuntime).some((member) => member.sessionId === runtimeSessionId);
+			if (!participating) continue;
+			if (this.turnCoordinator.hasPending(session.id)) return true;
+			if (this.turnCoordinator.hasDurableUnsettledWork(session)) return true;
+		}
+		return false;
+	}
+
 	notifyExternalConditionChanged(change: TeamExternalConditionChange): Promise<number> {
 		return this.turnCoordinator.notifyExternalConditionChanged(change);
 	}

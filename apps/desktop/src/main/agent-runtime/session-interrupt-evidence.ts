@@ -12,6 +12,8 @@ export interface SessionInterruptEvidenceParts {
 	readonly manualStop: boolean;
 	readonly draftNonEmpty: boolean;
 	readonly hasPendingAction: boolean;
+	/** 该会话所属团队仍有在途工作（等成员/子代理返回是合法安静，BUG-0126）。 */
+	readonly waitingOnSubagent: boolean;
 	readonly continueAttemptCount: number;
 	readonly maxContinueAttempts: number;
 	/**
@@ -40,6 +42,7 @@ export function buildSessionInterruptEvidence(parts: SessionInterruptEvidencePar
 		manualStop: parts.manualStop,
 		draftNonEmpty: parts.draftNonEmpty,
 		hasPendingAction: parts.hasPendingAction,
+		waitingOnSubagent: parts.waitingOnSubagent,
 		hasCompletionMarker,
 		continueAttemptCount: parts.continueAttemptCount,
 		maxContinueAttempts: parts.maxContinueAttempts,

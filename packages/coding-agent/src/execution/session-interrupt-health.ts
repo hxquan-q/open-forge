@@ -45,6 +45,11 @@ export interface SessionInterruptEvidence {
 	readonly hasPendingAction: boolean;
 	/** 末轮助手已正常 stop 且带完成证据（可见正文或工具结果已收齐）。 */
 	readonly hasCompletionMarker: boolean;
+	/**
+	 * 会话正在等待子代理/团队成员返回（BUG-0126）：团队长任务里主控不流式、
+	 * idle 超阈且无完成标记的组合是合法安静，不是中断。缺省视为 false。
+	 */
+	readonly waitingOnSubagent?: boolean;
 	readonly continueAttemptCount: number;
 	readonly maxContinueAttempts: number;
 }
@@ -139,6 +144,16 @@ export function classifySessionInterruptHealth(evidence: SessionInterruptEvidenc
 	if (vetoes.includes("pendingAction")) {
 		return buildResult({
 			state: "blocked",
+			confidence: "high",
+			trigger: null,
+			vetoes,
+		});
+	}
+	if (evidence.waitingOnSubagent) {
+		// 团队长任务里主控/成员会话在等待子代理返回（BUG-0126）：不流式 +
+		// idle 超阈 + 无完成标记的组合在这个形态下是合法安静，不是中断。
+		return buildResult({
+			state: "running",
 			confidence: "high",
 			trigger: null,
 			vetoes,

@@ -27,6 +27,8 @@ export interface SessionInterruptMonitorPorts {
 	readonly getRuntime: () => RuntimeHost;
 	readonly listCandidateSessionIds: () => readonly string[];
 	readonly hasPendingAction: (sessionId: string) => boolean;
+	/** 该会话所属团队是否仍有在途工作（等成员返回的安静不判 suspected，BUG-0126）。 */
+	readonly hasPendingSubagentWork: (sessionId: string) => boolean;
 	readonly wasManualStopped: (sessionId: string) => boolean;
 	readonly readMode: () => SessionInterruptContinueMode;
 	readonly readMaxAttempts: () => number;
@@ -132,6 +134,7 @@ export class SessionInterruptMonitor {
 				isSessionInterruptDraftNonEmpty(sessionId) ||
 				isSessionInterruptDraftNonEmpty(runtime.getSessionPath(sessionId) ?? ""),
 			hasPendingAction: this.ports.hasPendingAction(sessionId),
+			waitingOnSubagent: this.ports.hasPendingSubagentWork(sessionId),
 			continueAttemptCount,
 			maxContinueAttempts: maxAttempts,
 			...(activityAtMs !== undefined ? { activityAtMs } : {}),
