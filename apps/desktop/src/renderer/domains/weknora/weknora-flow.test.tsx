@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
 
+import { randomUUID } from "node:crypto";
 import type { DesktopApi, WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "@preload/api";
 import { i18n, initI18n } from "@shared/i18n";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
@@ -43,6 +44,9 @@ vi.mock("@shared/components/ui/select", () => ({
 import { WeKnoraPage } from "./components/WeKnoraPage";
 
 type WeKnoraApi = DesktopApi["weknora"];
+
+/** 红线 C2：测试夹具不出现任何 Key 字面量，一律运行时生成（与 main 侧做法一致）。 */
+const FAKE_API_KEY = `test-key-${randomUUID()}`;
 
 function agent(id: string): WeKnoraAgent {
 	return { id, name: `Agent ${id}` };
@@ -187,7 +191,7 @@ describe("智能客服 · 用户流程（跨组件）", () => {
 
 		// ② 填 baseUrl + API Key 并保存 → 断言：配置就绪后【会话列表被拉取】（缺陷 1 回归）。
 		await user.type(screen.getByPlaceholderText("http://host:port"), "http://host:8083");
-		await user.type(screen.getByPlaceholderText("输入租户 API Key"), "flow-secret-key");
+		await user.type(screen.getByPlaceholderText("输入租户 API Key"), FAKE_API_KEY);
 		await user.click(screen.getByRole("button", { name: "保存" }));
 
 		await waitFor(() => expect(harness.counters.listSessions).toBeGreaterThanOrEqual(1));
@@ -273,7 +277,7 @@ describe("智能客服 · 用户流程（跨组件）", () => {
 
 		await waitFor(() => expect(screen.getByText("尚未配置智能客服")).toBeTruthy());
 		await user.type(screen.getByPlaceholderText("http://host:port"), "http://host:8083");
-		await user.type(screen.getByPlaceholderText("输入租户 API Key"), "flow-secret-key");
+		await user.type(screen.getByPlaceholderText("输入租户 API Key"), FAKE_API_KEY);
 		await user.click(screen.getByRole("button", { name: "保存" }));
 
 		const nav = await screen.findByRole("navigation", { name: "历史会话" });

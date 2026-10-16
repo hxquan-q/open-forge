@@ -60,6 +60,13 @@ export const weKnoraActiveRequestIdAtom = atom<string | null>(null);
 /** 历史会话列表（从 WeKnora 读，本地不持久化，红线 C8）。 */
 export const weKnoraSessionsAtom = atom<WeKnoraSession[]>([]);
 export const weKnoraSessionsStatusAtom = atom<WeKnoraHistoryStatus>("idle");
+/**
+ * 保存配置失败的归一化错误码（④）；`null` = 无错误。`saveSetup` 写入、连接层读取并展示。
+ *
+ * 刻意**不进 view model**：② 要求 `useWeKnoraModel()` 的返回结构与 `WeKnoraViewModel` 保持原样，
+ * 故失败反馈走独立 atom 由连接层（`WeKnoraPage`）读取，而不是给 view model 加字段。
+ */
+export const weKnoraSaveErrorAtom = atom<WeKnoraErrorCode | null>(null);
 
 /** 流事件的终态（收到即结束本轮，AC-22 的收敛依据）。 */
 export function isTerminalStreamEvent(event: WeKnoraStreamEvent): boolean {
@@ -116,7 +123,8 @@ export function applyStreamEvent(
 			});
 		}
 		case "references":
-			// 引用角标渲染是 T04；此处不丢事件也不渲染。
+			// T04/AC-9 未落地前，references 数据在此**直接丢弃**（`WeKnoraChatMessage` 暂无承载字段）。
+			// 实现 AC-9 时需先给该类型加 `references` 字段，并在此落库。
 			return messages;
 		case "turn.completed":
 			return replaceAt(messages, index, { ...current, status: "complete" });

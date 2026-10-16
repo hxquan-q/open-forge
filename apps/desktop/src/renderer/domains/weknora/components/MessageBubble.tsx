@@ -15,8 +15,6 @@ const ERROR_KEYS = {
 	timeout: "error.timeout",
 	stream_error: "error.stream_error",
 	stream_interrupted: "error.stream_interrupted",
-	agent_list_empty: "error.agent_list_empty",
-	agent_mode_inactive: "error.agent_mode_inactive",
 	unknown: "error.unknown",
 } as const satisfies Record<WeKnoraErrorCode, string>;
 

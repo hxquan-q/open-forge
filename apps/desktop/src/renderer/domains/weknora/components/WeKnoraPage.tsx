@@ -1,11 +1,15 @@
 // Copyright The Open Forge contributors.
 
+import { useAtom } from "jotai";
+import { weKnoraSaveErrorAtom } from "../atoms";
 import { useWeKnoraModel } from "../hooks/useWeKnoraModel";
 import { WeKnoraPageView } from "./WeKnoraPageView";
 
 /** 「智能客服」页面容器：把视图模型接到纯展示视图上。 */
 export function WeKnoraPage(): JSX.Element {
 	const model = useWeKnoraModel();
+	// ④：保存失败反馈走独立 atom 读取 —— 刻意不进 view model，以保持 ② 的对外 API 形状不变。
+	const [saveError] = useAtom(weKnoraSaveErrorAtom);
 
 	return (
 		<WeKnoraPageView
@@ -18,6 +22,7 @@ export function WeKnoraPage(): JSX.Element {
 			isStreaming={model.isStreaming}
 			loadingSessionId={model.loadingSessionId}
 			messages={model.messages}
+			saveError={saveError}
 			saving={model.saving}
 			selectedAgentId={model.selectedAgentId}
 			sessions={model.sessions}

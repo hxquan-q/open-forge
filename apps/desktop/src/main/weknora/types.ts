@@ -74,8 +74,6 @@ export type WeKnoraErrorCode =
 	| "timeout"
 	| "stream_error"
 	| "stream_interrupted"
-	| "agent_list_empty"
-	| "agent_mode_inactive"
 	| "unknown";
 
 /**

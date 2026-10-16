@@ -19,12 +19,12 @@
 		"apiKeyConfigured": "Configured",
 		"apiKeyMissing": "Not configured",
 		"save": "Save",
-		"saving": "Saving…"
+		"saving": "Saving…",
+		"saveFailed": "Failed to save. Check the service URL and API Key, then retry."
 	},
 	"agent": {
 		"label": "Agent",
-		"placeholder": "Select an agent",
-		"empty": "No agents"
+		"placeholder": "Select an agent"
 	},
 	"composer": {
 		"placeholder": "Ask a question…",
@@ -53,7 +53,6 @@
 		"assistant": "Customer Service",
 		"cancelled": "Cancelled",
 		"interrupted": "Incomplete",
-		"failed": "Failed",
 		"thinking": "Thinking",
 		"thinkingShow": "Show thinking",
 		"thinkingHide": "Hide thinking"
@@ -67,8 +66,6 @@
 		"timeout": "The request timed out. Try again later.",
 		"stream_error": "The service returned an error: {{detail}}",
 		"stream_interrupted": "The reply was not completed because the connection dropped.",
-		"agent_list_empty": "No agents are available.",
-		"agent_mode_inactive": "This agent does not have smart reasoning enabled. Pick another agent.",
 		"unknown": "An unknown error occurred."
 	}
 }

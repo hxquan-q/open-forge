@@ -5,7 +5,7 @@ import { Input } from "@shared/components/ui/input";
 import { Button } from "@vetta-org/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraHistoryStatus } from "../atoms";
+import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
 import { AgentSelector } from "./AgentSelector";
 import { ConversationList } from "./ConversationList";
 import { MessageList } from "./MessageList";
@@ -25,6 +25,8 @@ export interface WeKnoraPageViewProps {
 	readonly sessionsStatus: WeKnoraHistoryStatus;
 	readonly loadingSessionId: string | null;
 	readonly saving: boolean;
+	/** 最近一次保存配置失败的归一化错误码；`null` = 无错误（④）。 */
+	readonly saveError: WeKnoraErrorCode | null;
 	readonly onSelectAgent: (agentId: string) => void;
 	readonly onSend: (text: string) => void;
 	readonly onCancel: () => void;
@@ -50,6 +52,7 @@ export function WeKnoraPageView({
 	sessionsStatus,
 	loadingSessionId,
 	saving,
+	saveError,
 	onSelectAgent,
 	onSend,
 	onCancel,
@@ -117,7 +120,13 @@ export function WeKnoraPageView({
 					)}
 
 					{configured && !settingsOpen ? null : (
-						<SetupPanel baseUrl={baseUrl} hasApiKey={hasApiKey} saving={saving} onSave={onSaveSetup} />
+						<SetupPanel
+							baseUrl={baseUrl}
+							hasApiKey={hasApiKey}
+							saveError={saveError}
+							saving={saving}
+							onSave={onSaveSetup}
+						/>
 					)}
 
 					{configured ? (
@@ -163,11 +172,13 @@ interface SetupPanelProps {
 	readonly baseUrl: string;
 	readonly hasApiKey: boolean;
 	readonly saving: boolean;
+	/** 最近一次保存失败的错误码；非 `null` 时展示失败反馈（④）。 */
+	readonly saveError: WeKnoraErrorCode | null;
 	readonly onSave: (input: { baseUrl: string; apiKey?: string }) => void;
 }
 
 /** 配置面板：`baseUrl` + API Key。Key 只写不读（红线 C2），UI 只显示「已配置 / 未配置」。 */
-function SetupPanel({ baseUrl, hasApiKey, saving, onSave }: SetupPanelProps): JSX.Element {
+function SetupPanel({ baseUrl, hasApiKey, saving, saveError, onSave }: SetupPanelProps): JSX.Element {
 	const { t } = useTranslation("weknora");
 	const [url, setUrl] = useState(baseUrl);
 	const [apiKey, setApiKey] = useState("");
@@ -207,6 +218,11 @@ function SetupPanel({ baseUrl, hasApiKey, saving, onSave }: SetupPanelProps): JS
 					value={apiKey}
 				/>
 			</label>
+			{saveError === null ? null : (
+				<p className="text-[12px] text-destructive" role="alert">
+					{t("setup.saveFailed")}
+				</p>
+			)}
 			<div className="flex justify-end">
 				<Button disabled={saving} type="submit" variant="primary">
 					{saving ? t("setup.saving") : t("setup.save")}

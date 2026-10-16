@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
 
+import { randomUUID } from "node:crypto";
 import type { DesktopApi, WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "@preload/api";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
@@ -343,7 +344,8 @@ describe("useWeKnoraModel · 历史会话（AC-11/12/13/14/15）", () => {
 		// 模拟用户实际路径：先开应用（未配置）→ 再填配置保存。
 		getConfig.mockImplementation(async () => CONFIGURED);
 		await act(async () => {
-			await result.current.actions.saveSetup({ baseUrl: "http://host:8083", apiKey: "secret" });
+			// 红线 C2：Key 夹具运行时生成，不写死字面量。
+			await result.current.actions.saveSetup({ baseUrl: "http://host:8083", apiKey: randomUUID() });
 		});
 
 		expect(api.listAgents).toHaveBeenCalled();
