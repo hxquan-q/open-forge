@@ -957,7 +957,9 @@
 		"resumeBar": {
 			"title": "上次回复未完成：{{reason}}",
 			"action": "继续",
-			"failed": "继续失败，请稍后重试"
+			"failed": "继续失败，请稍后重试",
+			"busy": "会话正在运行，请等当前回复结束后再试",
+			"recoveryRequired": "会话需要先恢复才能续跑，请先处理恢复提示"
 		},
 		"streamingPhrases": [
 			"Vetta 正在回复…",

@@ -957,7 +957,9 @@
 		"resumeBar": {
 			"title": "Last reply did not finish: {{reason}}",
 			"action": "Continue",
-			"failed": "Could not continue; try again later."
+			"failed": "Could not continue; try again later.",
+			"busy": "The session is running; wait for the current reply to finish.",
+			"recoveryRequired": "This session must be recovered before it can continue."
 		},
 		"streamingPhrases": [
 			"Vetta is replying…",

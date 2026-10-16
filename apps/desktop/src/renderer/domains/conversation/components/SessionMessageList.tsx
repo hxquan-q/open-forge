@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import { activeSessionAtom, isCompactingAtom, pendingScrollToEntryAtom } from "@shared/store/atoms";
+import { getQueueForSession, messageQueueBySessionAtom } from "@shared/store/message-queue-atoms";
 import { useAtom, useAtomValue } from "jotai";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { SessionSelection } from "./message-list/SessionSelection";
@@ -62,18 +63,23 @@ export function SessionMessageList(props: MessageListProps & { onSend?: (overrid
 			source: source?.kind === "user" ? source : undefined,
 		};
 	}, [props.messages, session?.parentEntryId, session?.parentSessionPath]);
+	// 宿主调用只认本 feed 自己的会话：active session 换成别的会话时（切换在途的中间态），
+	// 绝不能把别的会话的 runtimeId 交给续跑条——那会重启错会话的回合。与下方 AnnotationScope 同一守卫。
+	const resumeRuntimeSessionId =
+		session && session.sessionPath === props.sessionId ? session.runtimeId : undefined;
+	// 排队输入待派发期间渲染端的 streaming 信念会短暂为假，但内核仍会拒绝续跑
+	// （BUG-0122）；队列镜像即主进程真值，据此在排队期间不提供续跑入口。
+	const queueBySession = useAtomValue(messageQueueBySessionAtom);
+	const hasPendingQueue = getQueueForSession(queueBySession, resumeRuntimeSessionId).length > 0;
 	const interruptedErrorKind = useMemo(
 		() =>
 			resolveInterruptedErrorKind(props.messages, {
 				isStreaming: props.isStreaming,
 				isCompacting,
+				hasPendingQueue,
 			}),
-		[props.messages, props.isStreaming, isCompacting],
+		[props.messages, props.isStreaming, isCompacting, hasPendingQueue],
 	);
-	// 宿主调用只认本 feed 自己的会话：active session 换成别的会话时（切换在途的中间态），
-	// 绝不能把别的会话的 runtimeId 交给续跑条——那会重启错会话的回合。与下方 AnnotationScope 同一守卫。
-	const resumeRuntimeSessionId =
-		session && session.sessionPath === props.sessionId ? session.runtimeId : undefined;
 	const feed = (
 		<ForkContext.Provider value={fork}>
 			<MessageRenderingDefaults value={sessionRendering}>
