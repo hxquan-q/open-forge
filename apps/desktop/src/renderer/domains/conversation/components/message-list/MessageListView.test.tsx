@@ -143,6 +143,7 @@ describe("MessageListView virtualization", () => {
 		captured.messageItemProps = [];
 		captured.virtualListMounts = 0;
 		captured.virtualListUnmounts = 0;
+		vi.restoreAllMocks();
 	});
 
 	it("非关键内容就绪不会在滚动期间改写虚拟列表布局参数", () => {
@@ -377,6 +378,34 @@ describe("MessageListView virtualization", () => {
 		expect(captured.messageItemProps).toHaveLength(2);
 		expect(captured.messageItemProps[0].sessionUsages).toEqual([firstUsage, secondUsage]);
 		expect(captured.messageItemProps[1].sessionUsages).toEqual([firstUsage, secondUsage]);
+	});
+
+	// BUG-0123：React 的通用重复 key 告警只有一句文案，定位不了来源。列表接缝必须换成
+	// 带身份与下标的结构化诊断，且只在真的重复时输出。
+	it("列表出现重复渲染键时发出结构化诊断", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const viewProps = props(true);
+		viewProps.model.messages = [
+			createConversationAgentMessage({ id: "m-1", entryId: "event-1215", text: "a", blocks: [] }),
+			createConversationAgentMessage({ id: "m-2", entryId: "event-1215", text: "b", blocks: [] }),
+		];
+
+		render(<MessageListView {...viewProps} />);
+
+		expect(warn).toHaveBeenCalledWith(
+			"[conversation-keys] duplicate render keys",
+			expect.objectContaining({
+				sessionId: "/sessions/a.jsonl",
+				total: 2,
+				duplicates: [expect.objectContaining({ key: "event-1215", count: 2 })],
+			}),
+		);
+	});
+
+	it("列表键唯一时不发出重复键诊断", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		render(<MessageListView {...props(true)} />);
+		expect(warn).not.toHaveBeenCalled();
 	});
 });
 
