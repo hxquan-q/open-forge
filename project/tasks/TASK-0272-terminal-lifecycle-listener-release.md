@@ -15,7 +15,7 @@ related_bugs: [BUG-0115]
 execution: parallel
 branch: task/TASK-0272-terminal-lifecycle-listener-release
 worktree: ../open-forge-wt/task-0272-terminal-lifecycle-listener-release
-base_commit: 3c0662f32
+base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts, apps/desktop/src/main/terminal]
 write_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts, project/tasks/TASK-0272-terminal-lifecycle-listener-release.md]
 exclusive_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts]

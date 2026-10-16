@@ -15,7 +15,7 @@ related_bugs: [BUG-0117]
 execution: parallel
 branch: task/TASK-0274-ssh-handshake-error-guard
 worktree: ../open-forge-wt/task-0274-ssh-handshake-error-guard
-base_commit: 3c0662f32
+base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, packages/ssh-transport/src/errors.ts]
 write_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, project/tasks/TASK-0274-ssh-handshake-error-guard.md]
 exclusive_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts]

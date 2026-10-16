@@ -15,7 +15,7 @@ related_bugs: [BUG-0114]
 execution: parallel
 branch: task/TASK-0271-report-canvas-canvas-enum
 worktree: ../open-forge-wt/task-0271-report-canvas-canvas-enum
-base_commit: 3c0662f32
+base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [packages/skill-presets, apps/desktop/src/main/abilities/open-marketplace]
 write_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts, project/tasks/TASK-0271-report-canvas-canvas-enum.md]
 exclusive_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts]

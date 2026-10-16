@@ -15,7 +15,7 @@ related_bugs: [BUG-0116]
 execution: parallel
 branch: task/TASK-0273-remote-skill-presentation-read
 worktree: ../open-forge-wt/task-0273-remote-skill-presentation-read
-base_commit: 3c0662f32
+base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/abilities/presentation, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, packages/ssh-transport/src/project-uri.ts]
 write_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, apps/desktop/src/main/skills/skill-presentation-read.test.ts, project/tasks/TASK-0273-remote-skill-presentation-read.md]
 exclusive_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, apps/desktop/src/main/skills/skill-presentation-read.test.ts]
