@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import type { AgentBlueprint } from "@vetta/agent-team";

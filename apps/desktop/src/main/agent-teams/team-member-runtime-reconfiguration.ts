@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
 import { isSessionError, type SessionConfig } from "@vetta/runtime-core";
 import { describeError } from "../logger/describe-error.js";

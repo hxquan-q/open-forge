@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
 import type { SessionConfig } from "@vetta/runtime-core";
 import { describe, expect, it, vi } from "vitest";
