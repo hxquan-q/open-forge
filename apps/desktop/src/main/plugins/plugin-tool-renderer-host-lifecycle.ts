@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export const PLUGIN_TOOL_RENDERER_LOADING_MESSAGE = "Plugin host renderer is loading; retry the tool after it is ready";
 
 export type PluginToolRendererHostState = "loading" | "ready" | "unavailable" | "disposed";

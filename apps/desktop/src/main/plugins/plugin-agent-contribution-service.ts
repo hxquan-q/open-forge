@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentPluginRuntimeConfig } from "@vetta/coding-agent/plugin-runtime";
 import { validatePluginId } from "@vetta-org/plugin-sdk/manifest";
 import type { InstalledPlugin, PluginPermission } from "../../preload/api-types/plugins.js";
