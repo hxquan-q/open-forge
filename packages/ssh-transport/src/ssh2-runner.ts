@@ -324,6 +324,11 @@ class Ssh2Session {
 		this.client = undefined;
 	}
 
+	/** 会话内 Client 的 `error` 一律记成这一行；常驻监听与销毁前的终止性监听共用同一形状。 */
+	private logClientError(error: Error): void {
+		this.options.logger?.(`ssh2 ${this.target}: ${error.message}`);
+	}
+
 	/**
 	 * 销毁一个没装进会话（因此拿不到常驻 `error` 监听）的 Client：失败的握手尝试、跳机
 	 * 链路、以及失效会话里迟到完成的握手。
@@ -333,12 +338,11 @@ class Ssh2Session {
 	 * 在 `tryConnect` 成功或失败的那一刻就已经被摘掉。此时直接销毁就是一次无人监听的
 	 * `error`：它从 socket 事件里抛出，冒成进程级 `uncaughtException`，把真正的失败原因
 	 * 挤掉。先在销毁前挂终止性监听，把迟到事件收敛成一行日志——`ready`/`error` 的一次性
-	 * 监听、换方法顺序与上抛语义都不动。
+	 * 监听、换方法顺序与上抛语义都不动。监听必须永久（不能用 `once`）：空窗之后可能不止
+	 * 一个迟到 `error`，吸收掉第一个就摘监听会把下一个重新放出去。
 	 */
 	private destroyQuietly(client: Client): void {
-		client.on("error", (error: Error) => {
-			this.options.logger?.(`ssh2 ${this.target}: ${error.message}`);
-		});
+		client.on("error", (error: Error) => this.logClientError(error));
 		client.destroy();
 	}
 
@@ -403,9 +407,7 @@ class Ssh2Session {
 				this.forwards.clear();
 			}
 		});
-		client.on("error", (error: Error) => {
-			this.options.logger?.(`ssh2 ${this.target}: ${error.message}`);
-		});
+		client.on("error", (error: Error) => this.logClientError(error));
 	}
 
 	private async connectWithAuth(
