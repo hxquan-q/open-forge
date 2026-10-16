@@ -1,6 +1,12 @@
 // Copyright The Open Forge contributors.
 
-import type { WeKnoraAgent, WeKnoraPublicConfig, WeKnoraStreamEvent } from "@preload/api";
+import type {
+	WeKnoraAgent,
+	WeKnoraMessage,
+	WeKnoraPublicConfig,
+	WeKnoraSession,
+	WeKnoraStreamEvent,
+} from "@preload/api";
 import { atom } from "jotai";
 
 /**
@@ -17,6 +23,9 @@ export type WeKnoraMessageStatus = "streaming" | "complete" | "cancelled" | "int
 
 /** 智能体列表的加载状态；`empty` / `error` 对应 AC-19（不可提问）。 */
 export type WeKnoraAgentsStatus = "idle" | "loading" | "ready" | "empty" | "error";
+
+/** 历史会话列表的加载状态（AC-13）；空列表是合法结果，不单列 `empty`。 */
+export type WeKnoraHistoryStatus = "idle" | "loading" | "ready" | "error";
 
 /** 从流事件里取错误码联合，避免渲染层深链主进程模块（红线 C3）。 */
 type WeKnoraFailedStreamEvent = Extract<WeKnoraStreamEvent, { type: "turn.failed" }>;
@@ -48,6 +57,9 @@ export const weKnoraMessagesAtom = atom<WeKnoraChatMessage[]>([]);
 export const weKnoraSessionIdAtom = atom<string | null>(null);
 export const weKnoraStreamingAtom = atom<boolean>(false);
 export const weKnoraActiveRequestIdAtom = atom<string | null>(null);
+/** 历史会话列表（从 WeKnora 读，本地不持久化，红线 C8）。 */
+export const weKnoraSessionsAtom = atom<WeKnoraSession[]>([]);
+export const weKnoraSessionsStatusAtom = atom<WeKnoraHistoryStatus>("idle");
 
 /** 流事件的终态（收到即结束本轮，AC-22 的收敛依据）。 */
 export function isTerminalStreamEvent(event: WeKnoraStreamEvent): boolean {
@@ -122,4 +134,70 @@ export function applyStreamEvent(
 		default:
 			return messages;
 	}
+}
+
+/**
+ * 会话绑定的 agent id（AC-20）。
+ *
+ * `last_request_state` 整个缺失、或其中的 `agent_id` 缺失 / 非字符串，都返回 `null` —— **绝不抛**，
+ * 由展示层显示「未知」。
+ */
+export function agentIdOfSession(session: WeKnoraSession): string | null {
+	const id = session.last_request_state?.agent_id;
+	return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+/**
+ * 会话绑定的 agent 名（AC-20）：由 `last_request_state.agent_id` 在 `agents` 里映射。
+ * 映射不到返回 `null`（展示层显示「未知」），**不崩溃**。
+ */
+export function agentNameOfSession(agents: readonly WeKnoraAgent[], session: WeKnoraSession): string | null {
+	const id = agentIdOfSession(session);
+	if (id === null) return null;
+	return agents.find((agent) => agent.id === id)?.name ?? null;
+}
+
+/** 会话的排序时间戳；`updated_at` 缺失时回落 `created_at`，都无效则为 0（保持相对顺序）。 */
+function sessionTimestamp(session: WeKnoraSession): number {
+	const value = session.updated_at ?? session.created_at;
+	if (!value) return 0;
+	const time = Date.parse(value);
+	return Number.isNaN(time) ? 0 : time;
+}
+
+/** 按更新时间**倒序**（AC-13）；时间缺失时保持原相对顺序（`Array.prototype.sort` 稳定）。 */
+export function sortSessionsByRecency(sessions: readonly WeKnoraSession[]): WeKnoraSession[] {
+	return [...sessions].sort((a, b) => sessionTimestamp(b) - sessionTimestamp(a));
+}
+
+/**
+ * 会话时间展示：本地时区，固定 `YYYY-MM-DD HH:mm`（不依赖 ICU 的本地化格式，测试可断言）。
+ * 输入缺失 / 非法一律返回空串。
+ */
+export function formatSessionTime(value: string | undefined): string {
+	if (!value) return "";
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return "";
+	const pad = (part: number): string => String(part).padStart(2, "0");
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/**
+ * 把 WeKnora 载入的消息序列转成页面消息（AC-14）。
+ *
+ * 只保留 `user` / `assistant`（`system` 不参与对话渲染）；顺序沿用服务端返回的时间正序。
+ */
+export function toChatMessages(messages: readonly WeKnoraMessage[]): WeKnoraChatMessage[] {
+	const result: WeKnoraChatMessage[] = [];
+	for (const message of messages) {
+		if (message.role !== "user" && message.role !== "assistant") continue;
+		result.push({
+			id: message.id,
+			role: message.role,
+			text: message.content,
+			thinking: "",
+			status: "complete",
+		});
+	}
+	return result;
 }

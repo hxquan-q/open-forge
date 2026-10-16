@@ -1,14 +1,23 @@
 // Copyright The Open Forge contributors.
 
-import type { WeKnoraAgent, WeKnoraConfigPatch, WeKnoraPublicConfig, WeKnoraStreamEvent } from "@preload/api";
+import type {
+	WeKnoraAgent,
+	WeKnoraConfigPatch,
+	WeKnoraPublicConfig,
+	WeKnoraSession,
+	WeKnoraStreamEvent,
+} from "@preload/api";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	applyStreamEvent,
 	isTerminalStreamEvent,
+	sortSessionsByRecency,
+	toChatMessages,
 	type WeKnoraAgentsStatus,
 	type WeKnoraChatMessage,
 	type WeKnoraErrorCode,
+	type WeKnoraHistoryStatus,
 	weKnoraActiveRequestIdAtom,
 	weKnoraAgentsAtom,
 	weKnoraAgentsStatusAtom,
@@ -16,8 +25,13 @@ import {
 	weKnoraMessagesAtom,
 	weKnoraSelectedAgentIdAtom,
 	weKnoraSessionIdAtom,
+	weKnoraSessionsAtom,
+	weKnoraSessionsStatusAtom,
 	weKnoraStreamingAtom,
 } from "../atoms";
+
+/** 历史会话列表 / 载入消息的分页大小（用户 2026-10-16 裁定 1c：20；不做向上翻页，1e）。 */
+const HISTORY_PAGE_SIZE = 20;
 
 export interface WeKnoraSetupInput {
 	readonly baseUrl: string;
@@ -32,6 +46,12 @@ export interface WeKnoraModelActions {
 	/** 保存服务地址与 API Key；Key 只写不读（红线 C2）。 */
 	readonly saveSetup: (input: WeKnoraSetupInput) => Promise<void>;
 	readonly reloadAgents: () => void;
+	/** 新建对话：清空当前会话与消息，**不立即建会话**（AC-12）。 */
+	readonly newConversation: () => void;
+	/** 重新拉取历史会话列表（AC-13）。 */
+	readonly reloadSessions: () => void;
+	/** 载入历史会话的消息并恢复为当前对话，之后追问接上（AC-14）。 */
+	readonly openSession: (sessionId: string) => Promise<void>;
 }
 
 export interface WeKnoraViewModel {
@@ -42,6 +62,12 @@ export interface WeKnoraViewModel {
 	readonly selectedAgentId: string | null;
 	readonly messages: readonly WeKnoraChatMessage[];
 	readonly isStreaming: boolean;
+	/** 当前对话绑定的 WeKnora 会话 id；`null` 表示「新对话，尚未建会话」（AC-11/12）。 */
+	readonly currentSessionId: string | null;
+	readonly sessions: readonly WeKnoraSession[];
+	readonly sessionsStatus: WeKnoraHistoryStatus;
+	/** 正在载入的历史会话 id（用于列表行 loading 态）。 */
+	readonly loadingSessionId: string | null;
 	/** 允许提问：已配置 + 有可用智能体 + 无进行中的回答（AC-7 / AC-19）。 */
 	readonly canAsk: boolean;
 	readonly saving: boolean;
@@ -87,6 +113,9 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 	const [sessionId, setSessionId] = useAtom(weKnoraSessionIdAtom);
 	const [isStreaming, setIsStreaming] = useAtom(weKnoraStreamingAtom);
 	const [, setActiveRequestId] = useAtom(weKnoraActiveRequestIdAtom);
+	const [sessions, setSessions] = useAtom(weKnoraSessionsAtom);
+	const [sessionsStatus, setSessionsStatus] = useAtom(weKnoraSessionsStatusAtom);
+	const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	const activeRequestIdRef = useRef<string | null>(null);
@@ -121,7 +150,20 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		[setAgents, setAgentsStatus, setSelectedAgentId],
 	);
 
-	// 初始化：读配置；已配置才拉智能体列表（未配置绝不发请求，AC-2）。
+	/** 拉取历史会话列表（AC-13）：**不带 `agent_id` 过滤**（v4），固定分页 20（1c），按更新时间倒序。 */
+	const loadSessions = useCallback(async () => {
+		setSessionsStatus("loading");
+		try {
+			const list = await window.vetta.weknora.listSessions({ page: 1, pageSize: HISTORY_PAGE_SIZE });
+			setSessions(sortSessionsByRecency(list));
+			setSessionsStatus("ready");
+		} catch {
+			setSessions([]);
+			setSessionsStatus("error");
+		}
+	}, [setSessions, setSessionsStatus]);
+
+	// 初始化：读配置；已配置才拉智能体列表 + 历史会话（未配置绝不发请求，AC-2）。
 	useEffect(() => {
 		let cancelled = false;
 		void (async () => {
@@ -131,6 +173,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 				setConfig(cfg);
 				if (isConfigured(cfg)) {
 					await loadAgents(cfg);
+					await loadSessions();
 				} else {
 					setAgentsStatus("idle");
 				}
@@ -141,7 +184,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		return () => {
 			cancelled = true;
 		};
-	}, [loadAgents, setConfig, setAgentsStatus]);
+	}, [loadAgents, loadSessions, setConfig, setAgentsStatus]);
 
 	const handleEvent = useCallback(
 		(event: WeKnoraStreamEvent) => {
@@ -265,6 +308,48 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		void window.vetta.weknora.cancel(requestId);
 	}, [setActiveRequestId, setIsStreaming, setMessages]);
 
+	/** 收敛进行中的流：清 requestId 后，旧流的事件会被 `requestId` 过滤丢弃（AC-15）。 */
+	const resetActiveRequest = useCallback(() => {
+		activeRequestIdRef.current = null;
+		isAskingRef.current = false;
+		pendingEventsRef.current = [];
+		setActiveRequestId(null);
+		setIsStreaming(false);
+	}, [setActiveRequestId, setIsStreaming]);
+
+	/** 新建对话（AC-12）：清空当前会话与消息，**不立即调建会话接口** —— 等首次提问时才建。 */
+	const newConversation = useCallback(() => {
+		resetActiveRequest();
+		setSessionId(null);
+		setMessages([]);
+	}, [resetActiveRequest, setMessages, setSessionId]);
+
+	/** 载入历史会话（AC-14）：拉消息 → 恢复为当前对话（后续追问接上该 `session_id`）。 */
+	const openSession = useCallback(
+		async (targetSessionId: string) => {
+			setLoadingSessionId(targetSessionId);
+			try {
+				const loaded = await window.vetta.weknora.loadMessages({
+					sessionId: targetSessionId,
+					limit: HISTORY_PAGE_SIZE,
+				});
+				// 先收敛进行中的流，再整体替换消息，避免旧流串到新对话（AC-15）。
+				resetActiveRequest();
+				setSessionId(targetSessionId);
+				setMessages(toChatMessages(loaded));
+			} catch {
+				// 失败收口（错误文案 / 终态）是 T06 的范围；此处不切换、不崩溃。
+			} finally {
+				setLoadingSessionId(null);
+			}
+		},
+		[resetActiveRequest, setMessages, setSessionId],
+	);
+
+	const reloadSessions = useCallback(() => {
+		if (config) void loadSessions();
+	}, [config, loadSessions]);
+
 	const saveSetup = useCallback(
 		async (input: WeKnoraSetupInput) => {
 			setSaving(true);
@@ -295,8 +380,12 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		selectedAgentId,
 		messages,
 		isStreaming,
+		currentSessionId: sessionId,
+		sessions,
+		sessionsStatus,
+		loadingSessionId,
 		canAsk: isConfigured(config) && agentsStatus === "ready" && agents.length > 0 && !isStreaming,
 		saving,
-		actions: { selectAgent, send, cancel, saveSetup, reloadAgents },
+		actions: { selectAgent, send, cancel, saveSetup, reloadAgents, newConversation, reloadSessions, openSession },
 	};
 }

@@ -1,12 +1,13 @@
 // Copyright The Open Forge contributors.
 
-import type { WeKnoraAgent } from "@preload/api";
+import type { WeKnoraAgent, WeKnoraSession } from "@preload/api";
 import { Input } from "@shared/components/ui/input";
 import { Button } from "@vetta-org/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { WeKnoraAgentsStatus, WeKnoraChatMessage } from "../atoms";
+import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraHistoryStatus } from "../atoms";
 import { AgentSelector } from "./AgentSelector";
+import { ConversationList } from "./ConversationList";
 import { MessageList } from "./MessageList";
 import { WeKnoraComposer } from "./WeKnoraComposer";
 
@@ -19,10 +20,17 @@ export interface WeKnoraPageViewProps {
 	readonly selectedAgentId: string | null;
 	readonly messages: readonly WeKnoraChatMessage[];
 	readonly isStreaming: boolean;
+	readonly currentSessionId: string | null;
+	readonly sessions: readonly WeKnoraSession[];
+	readonly sessionsStatus: WeKnoraHistoryStatus;
+	readonly loadingSessionId: string | null;
 	readonly saving: boolean;
 	readonly onSelectAgent: (agentId: string) => void;
 	readonly onSend: (text: string) => void;
 	readonly onCancel: () => void;
+	readonly onNewConversation: () => void;
+	readonly onOpenSession: (sessionId: string) => void;
+	readonly onReloadSessions: () => void;
 	readonly onSaveSetup: (input: { baseUrl: string; apiKey?: string }) => void;
 	readonly onReloadAgents: () => void;
 }
@@ -37,10 +45,17 @@ export function WeKnoraPageView({
 	selectedAgentId,
 	messages,
 	isStreaming,
+	currentSessionId,
+	sessions,
+	sessionsStatus,
+	loadingSessionId,
 	saving,
 	onSelectAgent,
 	onSend,
 	onCancel,
+	onNewConversation,
+	onOpenSession,
+	onReloadSessions,
 	onSaveSetup,
 	onReloadAgents,
 }: WeKnoraPageViewProps): JSX.Element {
@@ -82,27 +97,42 @@ export function WeKnoraPageView({
 				</div>
 			</header>
 
-			<div className="flex flex-1 flex-col gap-4 overflow-hidden px-8 pb-8">
-				{configured ? null : (
-					<Notice detail={t("page.notConfiguredBody")} message={t("page.notConfiguredTitle")} />
-				)}
-
-				{configured && !settingsOpen ? null : (
-					<SetupPanel baseUrl={baseUrl} hasApiKey={hasApiKey} saving={saving} onSave={onSaveSetup} />
-				)}
-
+			<div className="flex flex-1 gap-4 overflow-hidden px-8 pb-8">
 				{configured ? (
-					<>
-						{statusNotice}
-						<MessageList messages={messages} />
-						<WeKnoraComposer
-							disabled={!agentsReady}
-							isStreaming={isStreaming}
-							onCancel={onCancel}
-							onSend={onSend}
-						/>
-					</>
+					<ConversationList
+						agents={agents}
+						currentSessionId={currentSessionId}
+						loadingSessionId={loadingSessionId}
+						onNewConversation={onNewConversation}
+						onOpenSession={onOpenSession}
+						onReload={onReloadSessions}
+						sessions={sessions}
+						status={sessionsStatus}
+					/>
 				) : null}
+
+				<div className="flex flex-1 flex-col gap-4 overflow-hidden">
+					{configured ? null : (
+						<Notice detail={t("page.notConfiguredBody")} message={t("page.notConfiguredTitle")} />
+					)}
+
+					{configured && !settingsOpen ? null : (
+						<SetupPanel baseUrl={baseUrl} hasApiKey={hasApiKey} saving={saving} onSave={onSaveSetup} />
+					)}
+
+					{configured ? (
+						<>
+							{statusNotice}
+							<MessageList messages={messages} />
+							<WeKnoraComposer
+								disabled={!agentsReady}
+								isStreaming={isStreaming}
+								onCancel={onCancel}
+								onSend={onSend}
+							/>
+						</>
+					) : null}
+				</div>
 			</div>
 		</div>
 	);

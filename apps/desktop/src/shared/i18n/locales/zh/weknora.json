@@ -33,6 +33,20 @@
 		"sending": "正在生成回答…",
 		"unavailable": "没有可用智能体,暂时无法提问"
 	},
+	"conversation": {
+		"new": "新建对话",
+		"historyTitle": "历史会话",
+		"loading": "正在加载历史会话…",
+		"empty": "暂无历史会话",
+		"error": "加载历史会话失败,请重试。",
+		"retry": "重试",
+		"unknownAgent": "未知",
+		"untitled": "未命名会话",
+		"confirmTitle": "打开历史会话",
+		"confirmBody": "当前对话将被替换为该历史会话,未保存的内容不会保留。",
+		"confirmCancel": "取消",
+		"confirmOk": "替换当前对话"
+	},
 	"message": {
 		"you": "我",
 		"assistant": "智能客服",

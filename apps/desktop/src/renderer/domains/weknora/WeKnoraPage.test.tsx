@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
 
-import type { DesktopApi, WeKnoraAgent, WeKnoraStreamEvent } from "@preload/api";
+import type { DesktopApi, WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "@preload/api";
 import { i18n, initI18n } from "@shared/i18n";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
@@ -36,6 +36,14 @@ const CONFIGURED = { baseUrl: "http://host:8083", defaultAgentId: "A", pageSize:
 
 function agent(id: string): WeKnoraAgent {
 	return { id, name: `Agent ${id}` };
+}
+
+function session(id: string, overrides: Partial<WeKnoraSession> = {}): WeKnoraSession {
+	return { id, ...overrides };
+}
+
+function message(id: string, role: "user" | "assistant", content: string): WeKnoraMessage {
+	return { id, role, content };
 }
 
 interface Harness {
@@ -188,5 +196,109 @@ describe("WeKnoraPage", () => {
 
 		act(() => emit({ type: "answer.delta", requestId: "other", text: "串台内容" }));
 		expect(screen.queryByText("串台内容")).toBeNull();
+	});
+});
+
+describe("WeKnoraPage · 历史会话（AC-12/13/14/20）", () => {
+	it("历史每行显示绑定的 agent 名（AC-20）", async () => {
+		installApi({
+			listSessions: vi.fn(async () => [
+				session("s1", { title: "会话一", last_request_state: { agent_id: "B" } }),
+			]),
+		});
+		renderPage();
+
+		const nav = await screen.findByRole("navigation", { name: "历史会话" });
+		await waitFor(() => expect(within(nav).getByText("会话一")).toBeTruthy());
+		expect(within(nav).getByText("Agent B")).toBeTruthy();
+	});
+
+	it("agent 名映射不到时显示「未知」且不崩溃（AC-20 / R6）", async () => {
+		installApi({
+			listSessions: vi.fn(async () => [session("s1", { last_request_state: { agent_id: "ghost" } })]),
+		});
+		renderPage();
+
+		const nav = await screen.findByRole("navigation", { name: "历史会话" });
+		await waitFor(() => expect(within(nav).getByText("未知")).toBeTruthy());
+	});
+
+	it("last_request_state 整个缺失时显示「未知」且不崩溃（AC-20 / R6）", async () => {
+		installApi({ listSessions: vi.fn(async () => [session("s1")]) });
+		renderPage();
+
+		const nav = await screen.findByRole("navigation", { name: "历史会话" });
+		await waitFor(() => expect(within(nav).getByText("未知")).toBeTruthy());
+	});
+
+	it("历史列表渲染标题与时间，按更新时间倒序（AC-13）", async () => {
+		installApi({
+			listSessions: vi.fn(async () => [
+				session("old", { title: "旧会话", updated_at: "2026-01-01T00:00:00" }),
+				session("new", { title: "新会话", updated_at: "2026-02-01T09:30:00" }),
+			]),
+		});
+		renderPage();
+
+		const nav = await screen.findByRole("navigation", { name: "历史会话" });
+		await waitFor(() => expect(within(nav).getByText("新会话")).toBeTruthy());
+
+		const items = within(nav).getAllByRole("listitem");
+		expect(items[0]?.textContent).toContain("新会话");
+		expect(items[0]?.textContent).toContain("2026-02-01 09:30");
+		expect(items[1]?.textContent).toContain("旧会话");
+	});
+
+	it("点历史会话先弹确认；取消则什么都不做（1d）", async () => {
+		const { api } = installApi({ listSessions: vi.fn(async () => [session("s1", { title: "会话一" })]) });
+		renderPage();
+		await waitReady();
+		await sendMessage(api, "当前问题");
+		expect(screen.getByText("当前问题")).toBeTruthy();
+
+		const nav = screen.getByRole("navigation", { name: "历史会话" });
+		await userEvent.click(within(nav).getByRole("button", { name: /会话一/ }));
+
+		const dialog = await screen.findByRole("dialog");
+		expect(within(dialog).getByText(/当前对话将被替换/)).toBeTruthy();
+
+		await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+
+		expect(api.loadMessages).not.toHaveBeenCalled();
+		expect(screen.getByText("当前问题")).toBeTruthy();
+	});
+
+	it("确认后调 load-messages 并切换为当前对话（AC-14 / 1d）", async () => {
+		const { api } = installApi({
+			listSessions: vi.fn(async () => [session("s9", { title: "旧会话" })]),
+			loadMessages: vi.fn(async () => [
+				message("m1", "user", "历史提问"),
+				message("m2", "assistant", "历史回答"),
+			]),
+		});
+		renderPage();
+		await waitReady();
+
+		const nav = screen.getByRole("navigation", { name: "历史会话" });
+		await userEvent.click(within(nav).getByRole("button", { name: /旧会话/ }));
+
+		const dialog = await screen.findByRole("dialog");
+		await userEvent.click(within(dialog).getByRole("button", { name: "替换当前对话" }));
+
+		await waitFor(() => expect(api.loadMessages).toHaveBeenCalledWith({ sessionId: "s9", limit: 20 }));
+		await waitFor(() => expect(screen.getByText("历史提问")).toBeTruthy());
+		expect(screen.getByText("历史回答")).toBeTruthy();
+	});
+
+	it("新建对话按钮清空当前消息（AC-12）", async () => {
+		const { api } = installApi();
+		renderPage();
+		await waitReady();
+		await sendMessage(api, "问题");
+		expect(screen.getByText("问题")).toBeTruthy();
+
+		await userEvent.click(screen.getByRole("button", { name: "新建对话" }));
+
+		expect(screen.queryByText("问题")).toBeNull();
 	});
 });
