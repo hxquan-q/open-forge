@@ -45,6 +45,7 @@ import {
 	selectIdleSessionsToEvict,
 } from "../conversations/idle-session-residency.js";
 import { readDesktopConfig } from "../ipc/fs.js";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
@@ -365,7 +366,7 @@ export class AgentTeamSessionService {
 				if (result.status !== "rejected") continue;
 				log.warn("Agent Team idle session dispose failed", {
 					teamSessionId: sessionId,
-					error: errorMessage(result.reason),
+					error: describeError(result.reason),
 				});
 			}
 			for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
@@ -384,7 +385,7 @@ export class AgentTeamSessionService {
 		const timer = setTimeout(() => {
 			this.idleResidencyReconcileScheduled = false;
 			void this.reconcileIdleTeamSessions().catch((error: unknown) => {
-				log.warn("Agent Team idle residency reconcile failed", { error: errorMessage(error) });
+				log.warn("Agent Team idle residency reconcile failed", { error: describeError(error) });
 			});
 		}, 0);
 		timer.unref?.();
@@ -403,7 +404,7 @@ export class AgentTeamSessionService {
 			} catch (error) {
 				log.warn("Agent Team idle session release failed", {
 					teamSessionId: sessionId,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
@@ -430,7 +431,7 @@ export class AgentTeamSessionService {
 	private startSessionWarming(id: string, coordinationSessionPath: string): void {
 		if (this.sessionState.get(id) !== undefined || this.warmingSessions.has(id)) return;
 		const warming = this.read(id, coordinationSessionPath).catch((error: unknown) => {
-			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: errorMessage(error) });
+			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: describeError(error) });
 			throw error;
 		});
 		this.warmingSessions.set(id, warming);
@@ -535,7 +536,7 @@ export class AgentTeamSessionService {
 				teamId: team.id,
 				teamSessionId: id,
 				createdMemberCount: Object.keys(memberRuntime).length,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -641,7 +642,7 @@ export class AgentTeamSessionService {
 			await this.persist(session);
 			this.sessionState.set(session);
 			void this.warmup(id, team, document).catch((error: unknown) => {
-				log.warn("team runtime warmup failed", { teamId: team.id, teamSessionId: id, error: errorMessage(error) });
+				log.warn("team runtime warmup failed", { teamId: team.id, teamSessionId: id, error: describeError(error) });
 			});
 			log.info("team session record created", { teamId: team.id, teamSessionId: id });
 			return session;
@@ -892,7 +893,7 @@ export class AgentTeamSessionService {
 			await this.recoverRestoredSession(reconciled);
 			return this.sessionState.get(id) ?? reconciled;
 		} catch (error) {
-			log.error("failed to load team session", { teamSessionId: id, error: errorMessage(error) });
+			log.error("failed to load team session", { teamSessionId: id, error: describeError(error) });
 			throw new Error(`Team session could not be loaded: ${id}`, { cause: error });
 		}
 	}
@@ -1000,7 +1001,7 @@ export class AgentTeamSessionService {
 						log.warn("failed to dispose removed team member runtime", {
 							teamSessionId: session.id,
 							memberId,
-							error: errorMessage(error),
+							error: describeError(error),
 						});
 					});
 			}
@@ -1055,7 +1056,7 @@ export class AgentTeamSessionService {
 				} catch (error) {
 					log.warn("Agent Team auto-title model selection failed", {
 						teamSessionId: session.id,
-						error: errorMessage(error),
+						error: describeError(error),
 					});
 				}
 			}
@@ -1079,7 +1080,7 @@ export class AgentTeamSessionService {
 				});
 			})
 			.catch((error: unknown) => {
-				log.warn("Agent Team auto-title failed", { teamSessionId: session.id, error: errorMessage(error) });
+				log.warn("Agent Team auto-title failed", { teamSessionId: session.id, error: describeError(error) });
 			})
 			.finally(() => this.autoTitleScheduledSessions.delete(session.id));
 	}
@@ -1109,7 +1110,7 @@ export class AgentTeamSessionService {
 				log.warn("team runtime warmup failed", {
 					teamId: team.id,
 					teamSessionId: session.id,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			});
 		}
@@ -1160,7 +1161,7 @@ export class AgentTeamSessionService {
 			degraded = true;
 			log.warn("team session could not be loaded during delete; proceeding with degraded cleanup", {
 				teamSessionId: sessionReference.id,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			session =
 				this.sessionState.get(sessionReference.id) ??
@@ -1187,7 +1188,7 @@ export class AgentTeamSessionService {
 				log.warn("degraded team session delete could not remove a member runtime", {
 					teamSessionId: sessionReference.id,
 					sessionPath,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
@@ -1279,10 +1280,6 @@ export const agentTeamSessionService = new AgentTeamSessionService({
 	ownershipCatalog: conversationOwnershipCatalog,
 	externalConditionChanges: agentTeamExternalConditionChanges,
 });
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
 
 function sameMemberIds(left: readonly string[], right: readonly string[]): boolean {
 	if (left.length !== right.length) return false;

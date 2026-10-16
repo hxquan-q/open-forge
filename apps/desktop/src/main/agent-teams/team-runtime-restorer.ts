@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
 import type { SessionConfig } from "@vetta/runtime-core";
+import { describeError } from "../logger/describe-error.js";
 
 export interface TeamRuntimeResumeHost {
 	getSessionPath(sessionId: string): string | undefined;
@@ -100,7 +101,7 @@ export async function restoreTeamMemberRuntimes<TRuntimeTool>(input: {
 			input.logger.error("team member runtime restore failed", {
 				teamSessionId: input.session.id,
 				memberId,
-				error: errorMessage(result.reason),
+				error: describeError(result.reason),
 			});
 			continue;
 		}
@@ -117,8 +118,4 @@ export async function restoreTeamMemberRuntimes<TRuntimeTool>(input: {
 	};
 	await input.persist(restored);
 	return restored;
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }

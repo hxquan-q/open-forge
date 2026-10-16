@@ -19,6 +19,7 @@ import {
 	readRuntimeFailure,
 	runtimeFailureFromError,
 } from "@vetta/runtime-core";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import type { TeamCollaborationStore } from "./team-collaboration-store.js";
 import { findTeamAttemptFailure, findTeamAttemptResult, isTeamAttemptFinalResult } from "./team-member-result.js";
@@ -407,7 +408,7 @@ export class TeamMemberAttemptRunner {
 				terminalState: terminal.state,
 				failureCode: failure?.code,
 				elapsedMs: Date.now() - runtimeCallStartedAt,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			if (recoverable && !promptFailure)
 				return this.options.sessionState.get(configuredSession.id) ?? configuredSession;
@@ -601,7 +602,7 @@ export class TeamMemberAttemptRunner {
 				memberId: collaboration.workItem.assignedToParticipantId,
 				workItemId: collaboration.workItem.id,
 				attemptId: collaboration.attempt.id,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			return undefined;
 		}
@@ -642,7 +643,7 @@ export class TeamMemberAttemptRunner {
 				memberId: input.item.assignedToParticipantId,
 				workItemId: input.item.id,
 				attemptId: input.attempt.id,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 		}
 	}

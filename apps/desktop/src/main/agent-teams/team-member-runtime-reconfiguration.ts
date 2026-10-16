@@ -1,5 +1,6 @@
 import type { TeamSessionDocument } from "@vetta/agent-team";
 import type { SessionConfig } from "@vetta/runtime-core";
+import { describeError } from "../logger/describe-error.js";
 
 export interface TeamMemberRuntimeReconfigurationHost {
 	getSessionPath(sessionId: string): string | undefined;
@@ -90,12 +91,8 @@ export async function reconfigureTeamMemberRuntime(input: {
 			memberId: input.memberId,
 			agentProfileId: input.agentProfileId,
 			agentProfileRevision: input.agentProfileRevision,
-			error: errorMessage(error),
+			error: describeError(error),
 		});
 		throw error;
 	}
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }

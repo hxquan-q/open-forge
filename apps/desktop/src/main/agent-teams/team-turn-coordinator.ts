@@ -21,6 +21,7 @@ import {
 } from "@vetta/agent-team";
 import type { PromptAttachmentRef, RuntimeHost } from "@vetta/runtime-core";
 import { stopSessionBackgroundWork } from "../agent-runtime/stop-session-work.js";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import { resolveTeamMemberModel } from "./resolve-team-member-model.js";
 import type { TeamCollaborationState, TeamCollaborationStore } from "./team-collaboration-store.js";
@@ -242,7 +243,7 @@ export class TeamTurnCoordinator {
 				teamSessionId: sessionId,
 				requestId: input.requestId,
 				elapsedMs: Date.now() - startedAt,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			throw error;
 		} finally {
@@ -912,10 +913,6 @@ function sameMemberMentions(
 			);
 		})
 	);
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }
 
 function continuationKey(sessionId: string, memberId: string): string {

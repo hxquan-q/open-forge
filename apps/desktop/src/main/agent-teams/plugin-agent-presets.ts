@@ -3,6 +3,7 @@ import { extname, resolve } from "node:path";
 import type { AgentBlueprint } from "@vetta/agent-team";
 import { EMPTY_AGENT_ABILITIES, pluginBlueprintId } from "@vetta/agent-team";
 import type { InstalledPlugin } from "../../preload/api-types/plugins.js";
+import { describeError } from "../logger/describe-error.js";
 
 /**
  * 解析 manifest 里的 `%key%` 占位，语义对齐 SDK 的 resolvePluginText。
@@ -150,7 +151,7 @@ export function buildPluginAgentPresets(input: BuildPluginAgentPresetsInput): Pl
 				input.logger.warn("skipping a plugin agent contribution", {
 					pluginId: plugin.id,
 					agentId: declared.id,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
@@ -167,7 +168,7 @@ export function buildPluginAgentPresets(input: BuildPluginAgentPresetsInput): Pl
 				input.logger.warn("skipping a plugin team contribution", {
 					pluginId: plugin.id,
 					teamId: declared.id,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
@@ -391,8 +392,4 @@ function safeResolve(plugin: InstalledPlugin, relativePath: string): string | un
 	const target = resolve(root, relativePath);
 	if (target !== root && !target.startsWith(`${root}/`) && !target.startsWith(`${root}\\`)) return undefined;
 	return target;
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }
