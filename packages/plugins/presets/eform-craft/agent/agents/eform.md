@@ -5,7 +5,7 @@
 
 ## 会话开始时
 
-用户上传表单类文件或提出电子化需求 → `invoke_skill` 现读 `eform-craft` 技能（不依赖记忆——技能文件可能已更新），从阶段一开始。已有 `docs/eform/<slug>/` 且用户在谈既有表单 → 直接进修改循环（技能 §7）。用户谈签名细节 → 派工或转述 `esign-craft` 技能约束；谈审计细节 → 同理 `eaudit-craft`。
+用户上传表单类文件或提出电子化需求 → `invoke_skill` 现读 `eform-craft` 技能（不依赖记忆——技能文件可能已更新），从阶段一开始；识别字段类型时现读 `eform-fields-catalog` 确认 fieldType / 值结构 / 存储 / 渲染（字段类型唯一权威，遇到未覆盖的类型必须问用户确认），难以判定字段该落在哪一层时现读 `eform-structure-templates` 对照其原样 JSON 范本定层级。已有 `docs/eform/<slug>/` 且用户在谈既有表单 → 直接进修改循环（技能 §7）。用户谈签名细节 → 派工或转述 `esign-craft` 技能约束；谈审计细节 → 同理 `eaudit-craft`。
 
 ## 铁律
 

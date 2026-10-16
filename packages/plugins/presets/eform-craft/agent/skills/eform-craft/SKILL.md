@@ -24,25 +24,27 @@ description: "电子表单工坊主手册（板块1·表单生成）：把用户
 | **F# 三体一致** | schema `fields[].id` ↔ form.html `data-fid` ↔ form-spec.md 字段清单行，同一编号处处同义 |
 | **数据隔离** | 页面运行数据按 slug 隔离存 localStorage（键见 §6.3），互不串扰；页面页脚明示「演示数据存储于本机浏览器」 |
 
-## 1. 类型系统与固定命名（识别合同）
+## 1. 识别合同与固定命名（从原件定型；字段语义见 `eform-fields-catalog` 技能）
 
-**类型标记 → 字段类型**（活动文本按原件标记识别；无标记的活动区域默认 text）：
+字段类型的**完整定义**（值结构 / 存储形状 / 渲染控件 / 识别要点）以 `eform-fields-catalog` 技能为**唯一权威**，本节只定义**从原件识别类型**的标记，以及固定命名映射。活动文本按原件标记识别；无标记的活动区域默认 `string`。
 
-| 标记 | fieldType | 控件 |
+**识别标记 → fieldType**：
+
+| 标记 | fieldType | 说明 |
 |------|-----------|------|
-| `▇是 □否` | boolean-radio | 是/否两个单选框 |
-| `[文本]` | text | 文本输入（容量不少于 256） |
+| `▇是 □否` | boolean | 是非二值 |
+| `[文本]` | string | 自由文本 |
+| `[长文本]` | string（多行） | 多行大段文本（备注/说明）；建议加此标记（终期登记进本表） |
+| `[整数]` | int | 整数值 |
+| `[小数,2]` | double（小数位类推 double/3…） | 带固定小数位的数值 |
 | `[日期]` | date | 日期（yyyy-mm-dd） |
 | `[长日期]` | datetime | 日期时间（yyyy-mm-dd 时分秒） |
-| `[整数]` | integer | 整数输入 |
-| `[小数,2]` | decimal-2（小数位类推 decimal-3…） | 小数输入（对应位数） |
-| `[组织]` | org-select | 下拉（组织） |
-| `[部门]` | dept-select | 下拉（部门） |
-| `[品名]` | product-select | 下拉（品名） |
-| `[工序]` | process-select | 下拉（工序） |
-| `[人员]` | person-select | 下拉（人员） |
-| `[电子签]` | signature | 签名框（点击触发验证→手写流程，由 @esign 版块实现，见 §6） |
+| `[时点]` | time | 仅时刻（HH:mm）；建议加此标记（终期登记进本表） |
+| `[组织]`/`[部门]`/`[品名]`/`[工序]`/`[人员]` | object | 基础资料（主数据引用，编码+名称）；原 org/dept/product/process/person-select 统一归此类 |
+| `[电子签]` | signature | 签名框（由 @esign 版块实现，见 §6） |
 | （有文本、无标记） | static-label | 固定标题文本（不可编辑） |
+
+> 单据体（`entry`）/ 子单据体（`subEntry`）/ 下拉列表（`select`，固定短枚举）无文本标记，靠**结构识别**——判定规则见 `eform-fields-catalog` 技能 §2.2 / §3。
 
 **固定命名映射**（label 命中左列任一同义词 → fieldName 严格取右列，空格原样保留）：
 
@@ -72,6 +74,8 @@ description: "电子表单工坊主手册（板块1·表单生成）：把用户
 | csv/tsv | read | dataset_profile（大文件） | — |
 
 ### 2.2 识别作业要点
+
+难以判定字段该落在哪一层（单据头 / 单据体 / 子单据体，还是单表流水）时，先现读 `eform-structure-templates`，对照其原样 JSON 范本确定结构原型与每个字段的层级归属（取分层思维，不照搬内容），并把结构判定写入 `form.layoutHint`；不要自创层级。
 
 1. **先整体后局部**：先看清整页布局（表格网格 / 行式 / 分区流式），再逐格提取字段。
 2. 表格类逐单元格过一遍；合并单元格（跨行/跨列）在 position 如实记录。
@@ -124,7 +128,7 @@ description: "电子表单工坊主手册（板块1·表单生成）：把用户
 1. **单文件自包含**：内联 CSS/JS，无外部依赖，双击即开。
 2. **按正式表单页面标准渲染**：统一栅格与字号体系、分区层次分明、控件规格对齐主流企业表单系统（Vue + Element/AntD 风格的观感）；mock 只替代后端取数，页面质量不因数据是模拟的而降级。
 3. **参照原件布局还原**：网格用 table（含合并单元格），行式用表单流；布局结构以原件为准，视觉规格按正式页面标准执行。
-4. 活动字段渲染为 §1 控件；每控件带 `data-fid="F#"` 与紧邻灰字「类型:取值方式」标注（placeholder 或旁注；placeholder 被填充顶掉时写入 title）。
+4. 活动字段按 `eform-fields-catalog` 技能规定的控件范式渲染；每控件带 `data-fid="F#"` 与紧邻灰字「类型:取值方式」标注（placeholder 或旁注；placeholder 被填充顶掉时写入 title）。
 5. mock 层内嵌文件尾部单一全局变量（与 mock-data.json 完全一致；模拟的是后端/档案数据源的返回值）：
 
    ```html
@@ -239,7 +243,7 @@ capabilities.audit=true 时目录内存在 `audit-log.jsonl`：初始内容为�
 
 ## 9. 演进注记（终期映射，本期只留钩子不实现）
 
-- fieldType 枚举即 Vue 控件选型单；schema.json 是将来 Vue 代码生成器的输入。
+- fieldType 枚举（含 `entry`/`subEntry`/`object`/`time` 等，权威定义见 `eform-fields-catalog` 技能）即 Vue 控件选型单；schema.json 是将来 Vue 代码生成器的输入；`eform-structure-templates` 的结构范本 JSON 即生成器的结构输入。
 - fieldName（F_Process 等）是 Java 后端字段名。
 - `window.__EFORM_MOCK__` 层终期整体替换为 API/MCP 取数；localStorage 层终期替换为后端存储；签名验证终期替换为 MES 鉴权——三处都只动数据层，结构层不动。
 - docs/eform/<slug>/ 一表单一目录，即一份可独立打包的静态资源单元。
