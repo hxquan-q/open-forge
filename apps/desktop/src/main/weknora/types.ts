@@ -25,7 +25,8 @@ export interface WeKnoraSession {
 	id: string;
 	title?: string;
 	description?: string;
-	tenant_id?: string;
+	/** 工作区(租户)ID。WeKnora 侧是 `uint64` → JSON **数字**(实测 `10001`),不是字符串。 */
+	tenant_id?: number;
 	user_id?: string;
 	is_pinned?: boolean;
 	created_at?: string;

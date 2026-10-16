@@ -9,6 +9,7 @@ import type {
 	WeKnoraMessage,
 	WeKnoraMessageRole,
 	WeKnoraSession,
+	WeKnoraSessionLastRequestState,
 	WeKnoraStreamEvent,
 } from "./types.js";
 
@@ -256,6 +257,13 @@ function parseJson(text: string): unknown {
 	}
 }
 
+/**
+ * 归一化会话;缺 `id` 时**整条丢弃**（返回 `undefined`,由调用方 `filter` 掉）。
+ *
+ * `id` 是会话的**寻址键** —— 载入消息（`/messages/{id}/load`）与继续提问
+ * （`/agent-chat/{id}`）都要用它拼 URL;没有 id 的会话后续再也访问不到,留下只会
+ * 在渲染层变成点不动的死行。故与 `toMessage` 的「容忍缺 id」相反（见其注释）。
+ */
 function toSession(raw: unknown): WeKnoraSession | undefined {
 	const record = asRecord(raw);
 	const id = record ? asString(record.id) : undefined;
@@ -264,15 +272,25 @@ function toSession(raw: unknown): WeKnoraSession | undefined {
 		id,
 		title: asString(record.title),
 		description: asString(record.description),
-		tenant_id: asString(record.tenant_id),
+		// WeKnora 侧 `Session.TenantID` 是 `uint64`,JSON 序列化为数字(实测 10001),
+		// 故按 `is_pinned` 同款 `typeof` 收窄 —— 用 `asString` 会让它恒为 undefined。
+		tenant_id: typeof record.tenant_id === "number" ? record.tenant_id : undefined,
 		user_id: asString(record.user_id),
 		is_pinned: typeof record.is_pinned === "boolean" ? record.is_pinned : undefined,
 		created_at: asString(record.created_at),
 		updated_at: asString(record.updated_at),
-		last_request_state: asRecord(record.last_request_state) as WeKnoraSession["last_request_state"],
+		last_request_state: toLastRequestState(record.last_request_state),
 	};
 }
 
+/**
+ * 归一化消息;与 `toSession` / `toAgent` **相反**：缺 `id` 不丢弃,只回落空串。
+ *
+ * 因为消息 id 不参与任何后续寻址（没有以消息 id 发起的请求),它在本 feature 里只当
+ * 渲染列表的 key;真正承载价值的是 `content`。所以只有「id 与 content 都没有」的空记录
+ * 才丢弃 —— 宁可让一条缺 id 的消息照常显示,也不要因为拿不到 key 就吞掉用户看到的内容。
+ * 注:WeKnora 持久化的消息必带 uuid（`Message.BeforeCreate` 生成主键),此分支纯属防御。
+ */
 function toMessage(raw: unknown): WeKnoraMessage | undefined {
 	const record = asRecord(raw);
 	if (!record) return undefined;
@@ -289,11 +307,38 @@ function toMessage(raw: unknown): WeKnoraMessage | undefined {
 	};
 }
 
+/**
+ * 归一化智能体;缺 `id` 时**整条丢弃**（返回 `undefined`）。
+ *
+ * `id` 既是请求体 `agent_id` 的取值,也是历史列表把会话映射到 agent 名的键（AC-20）——
+ * 没有 id 的 agent 既选不中、也匹配不上,和 `toSession` 同理,故一并丢弃。
+ */
 function toAgent(raw: unknown): WeKnoraAgent | undefined {
 	const record = asRecord(raw);
 	const id = record ? asString(record.id) : undefined;
 	if (!record || !id) return undefined;
 	return { id, name: asString(record.name) ?? "", description: asString(record.description) };
+}
+
+/**
+ * 归一化 `last_request_state`（AC-20 从它的 `agent_id` 映射 agent 名）。
+ *
+ * 该字段在 WeKnora 侧是**可空指针**（`SessionLastRequestState` 带 `omitempty`;会话从未发过
+ * 请求时整个缺失,见 t00-run 的建会话响应),故缺失 / 非对象一律回落 `undefined` —— 会话本身
+ * 照常保留,不得因这个可选字段而丢掉一条可用的会话。
+ *
+ * 存在时只对类型声明过的 `agent_id` / `agent_enabled` 做运行时收窄,其余键原样保留（类型带索引
+ * 签名）。原先这里用 `as` 直接放行整个对象,服务端形状一变就会静默传到渲染层才崩;现改成本文件
+ * 其它字段一致的 `asRecord` / `asString` / `typeof` 校验。
+ */
+function toLastRequestState(raw: unknown): WeKnoraSessionLastRequestState | undefined {
+	const record = asRecord(raw);
+	if (!record) return undefined;
+	return {
+		...record,
+		agent_id: asString(record.agent_id),
+		agent_enabled: typeof record.agent_enabled === "boolean" ? record.agent_enabled : undefined,
+	};
 }
 
 function toReferences(raw: unknown): WeKnoraKnowledgeReference[] | undefined {

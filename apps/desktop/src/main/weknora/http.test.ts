@@ -124,6 +124,57 @@ describe("WeKnoraHttpClient · REST", () => {
 		expect(calls[0]?.url).not.toContain("agent_id");
 	});
 
+	// T09 ②：last_request_state 是可空字段，缺失时不得连带丢弃会话本身（AC-20 的容错前提）。
+	it("listSessions:last_request_state 缺失 → 会话保留，字段为 undefined（T09）", async () => {
+		const { fetchImpl } = jsonFetch(200, {
+			success: true,
+			data: [{ id: "s1", title: "t", last_request_state: undefined }],
+		});
+		const sessions = await clientWith(fetchImpl).listSessions();
+		expect(sessions).toEqual([{ id: "s1", title: "t", last_request_state: undefined }]);
+	});
+
+	it("listSessions:last_request_state.agent_id 非字符串 → 收窄为 undefined，其余键保留（T09）", async () => {
+		const { fetchImpl } = jsonFetch(200, {
+			success: true,
+			data: [
+				{
+					id: "s1",
+					last_request_state: { agent_id: 123, agent_enabled: true, model_id: "m1" },
+				},
+			],
+		});
+		const sessions = await clientWith(fetchImpl).listSessions();
+		expect(sessions).toEqual([
+			{ id: "s1", last_request_state: { agent_id: undefined, agent_enabled: true, model_id: "m1" } },
+		]);
+	});
+
+	it("listSessions:last_request_state.agent_id 为字符串 → 原样保留（T09 / AC-20）", async () => {
+		const { fetchImpl } = jsonFetch(200, {
+			success: true,
+			data: [{ id: "s1", last_request_state: { agent_id: "a1" } }],
+		});
+		const sessions = await clientWith(fetchImpl).listSessions();
+		expect(sessions).toEqual([{ id: "s1", last_request_state: { agent_id: "a1" } }]);
+	});
+
+	// T09 round 2：服务端 tenant_id 是 uint64 → JSON 数字，旧的 asString 会把它吞成 undefined。
+	it("listSessions:tenant_id 为数字 → 原样保留（服务端 uint64，T09）", async () => {
+		const { fetchImpl } = jsonFetch(200, {
+			success: true,
+			data: [{ id: "s1", tenant_id: 10001 }],
+		});
+		const sessions = await clientWith(fetchImpl).listSessions();
+		expect(sessions).toEqual([{ id: "s1", tenant_id: 10001 }]);
+	});
+
+	it("createSession:tenant_id 为数字 → 被收下（T09）", async () => {
+		const { fetchImpl } = jsonFetch(201, { success: true, data: { id: "sess-1", tenant_id: 10001 } });
+		const session = await clientWith(fetchImpl).createSession();
+		expect(session.tenant_id).toBe(10001);
+	});
+
 	it("loadMessages:解析消息序列", async () => {
 		const { fetchImpl, calls } = jsonFetch(200, {
 			success: true,
