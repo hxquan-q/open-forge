@@ -75,6 +75,48 @@ describe("reconfigureTeamMemberRuntime", () => {
 		expect(persist).toHaveBeenCalledWith(next);
 	});
 
+	it("treats a SESSION_NOT_FOUND dispose in the finalize race as an idempotent no-op (BUG-0115)", async () => {
+		const paths = new Map([["old-runtime", "C:/sessions/leader.jsonl"]]);
+		const runtime: TeamMemberRuntimeReconfigurationHost = {
+			getSessionPath: (sessionId) => paths.get(sessionId),
+			disposeSession: vi.fn(async () => {
+				// 收尾窗口内 runtime 已被卸载：目录仍报告绑定，dispose 却找不到会话。
+				throw {
+					code: "SESSION_NOT_FOUND",
+					message: "Session not found: old-runtime",
+					retryable: false,
+					origin: "runtime",
+				};
+			}),
+			createSession: vi.fn(async (config) => {
+				paths.set("new-runtime", String(config.sessionPath));
+				return { sessionId: "new-runtime" };
+			}),
+		};
+		const persist = vi.fn(async () => undefined);
+
+		const next = await reconfigureTeamMemberRuntime({
+			session: sessionDocument(),
+			memberId: "leader",
+			agentProfileId: "agent",
+			agentProfileRevision: 3,
+			runtime,
+			resolveConfig: async (sessionPath) => ({ cwd: "C:/workspace", sessionPath }) satisfies SessionConfig,
+			persist,
+			now: () => 20,
+			logger,
+		});
+
+		expect(runtime.createSession).toHaveBeenCalledTimes(1);
+		expect(next.memberRuntime.leader).toMatchObject({ sessionId: "new-runtime", agentProfileRevision: 3 });
+		expect(persist).toHaveBeenCalledWith(next);
+		expect(logger.info).toHaveBeenCalledWith(
+			"team member runtime reconfiguration skipped dispose of unloaded session",
+			expect.objectContaining({ memberId: "leader", runtimeSessionId: "old-runtime" }),
+		);
+		expect(logger.error).not.toHaveBeenCalled();
+	});
+
 	it("does nothing when the live runtime already uses the current profile revision", async () => {
 		const session = sessionDocument();
 		const runtime: TeamMemberRuntimeReconfigurationHost = {
