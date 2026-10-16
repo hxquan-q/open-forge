@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -20,21 +21,50 @@ interface FakeSender {
 	readonly id: number;
 	readonly sent: TerminalEventEnvelope[];
 	isDestroyed(): boolean;
+	on(event: string, listener: () => void): void;
 	once(event: string, listener: () => void): void;
+	removeListener(event: string, listener: () => void): void;
+	listenerCount(event: string): number;
 	send(channel: string, envelope: TerminalEventEnvelope): void;
 	destroy(): void;
 	emit(event: string): void;
 }
 
+/**
+ * 受控 WebContents 替身，监听表按 EventEmitter 语义维护：`once` 触发即摘除、
+ * `removeListener` 按身份过滤、`listenerCount` 可读。少了这三样，「导航后重开留下
+ * 几个监听」就量不出来，BUG-0115 的复现也就无从断言。
+ */
 function fakeSender(id = 1): FakeSender {
-	const listeners = new Map<string, Array<() => void>>();
+	interface Entry {
+		readonly listener: () => void;
+		readonly once: boolean;
+	}
+	const listeners = new Map<string, Entry[]>();
 	let destroyed = false;
+
+	const register = (event: string, listener: () => void, once: boolean): void => {
+		listeners.set(event, [...(listeners.get(event) ?? []), { listener, once }]);
+	};
+
 	return {
 		id,
 		sent: [],
 		isDestroyed: () => destroyed,
+		on(event, listener) {
+			register(event, listener, false);
+		},
 		once(event, listener) {
-			listeners.set(event, [...(listeners.get(event) ?? []), listener]);
+			register(event, listener, true);
+		},
+		removeListener(event, listener) {
+			listeners.set(
+				event,
+				(listeners.get(event) ?? []).filter((entry) => entry.listener !== listener),
+			);
+		},
+		listenerCount(event) {
+			return (listeners.get(event) ?? []).length;
 		},
 		send(_channel, envelope) {
 			this.sent.push(envelope);
@@ -43,8 +73,13 @@ function fakeSender(id = 1): FakeSender {
 			destroyed = true;
 			this.emit("destroyed");
 		},
-		emit(event: string) {
-			for (const listener of listeners.get(event) ?? []) listener();
+		emit(event) {
+			// 真实 EventEmitter 先摘 once 再调用：反过来的话，监听器内部的
+			// removeListener 与自动摘除会互相干扰，替身就不再可信。
+			for (const entry of [...(listeners.get(event) ?? [])]) {
+				if (entry.once) this.removeListener(event, entry.listener);
+				entry.listener();
+			}
 		},
 	};
 }
@@ -103,6 +138,13 @@ function invoke(channel: string, sender: FakeSender, ...args: unknown[]): unknow
 	const handler = mocks.handlers.get(channel);
 	if (!handler) throw new Error(`no handler for ${channel}`);
 	return handler({ sender }, ...args);
+}
+
+const OPEN_REQUEST = { cwd: "/repo", cols: 80, rows: 24 };
+
+/** 从公开的 OPEN handler 打开一个终端，和渲染进程走的是同一条路。 */
+function openTerminal(sender: FakeSender): Promise<unknown> {
+	return Promise.resolve(invoke(TERMINAL_CHANNELS.OPEN, sender, OPEN_REQUEST));
 }
 
 let session: ReturnType<typeof fakeSession>;
@@ -182,6 +224,79 @@ describe("terminal ipc 合同", () => {
 		sender.emit("render-process-gone");
 
 		expect(service.disposedOwners).toContain(9);
+	});
+
+	it("导航后重开终端不累积生命周期监听：数量有界且不随轮次增长", async () => {
+		const sender = fakeSender(11);
+
+		await openTerminal(sender);
+		expect(sender.listenerCount("destroyed")).toBe(1);
+
+		for (let round = 0; round < 12; round += 1) {
+			sender.emit("did-navigate");
+			await openTerminal(sender);
+		}
+
+		// 旧实现里 release 只清 Set，导航后重开又注册一次，destroyed 会涨到 13。
+		expect(sender.listenerCount("destroyed")).toBe(1);
+		expect(sender.listenerCount("did-navigate")).toBe(1);
+		expect(sender.listenerCount("render-process-gone")).toBe(1);
+	});
+
+	it("反复打开关闭终端同样不累积监听，关闭后旧订阅不再转发", async () => {
+		const sender = fakeSender(5);
+
+		for (let round = 0; round < 12; round += 1) {
+			await openTerminal(sender);
+			invoke(TERMINAL_CHANNELS.CLOSE, sender, "t1");
+		}
+
+		// 旧实现里 CLOSE 只 dispose 会话，open 时登记的监听一直留着。
+		expect(sender.listenerCount("destroyed")).toBe(1);
+		expect(sender.listenerCount("did-navigate")).toBe(1);
+		// 替身的 dispose 只记录调用，不像真实 TerminalSession 那样清监听表；这样量的是
+		// IPC 层有没有撤销自己登记的那份订阅。
+		expect(session.subscribers.size).toBe(0);
+
+		session.emit({ kind: "data", data: "after close" });
+		expect(sender.sent).toEqual([]);
+		expect(service.disposed).toContain("t1");
+	});
+
+	it("重开同一个终端只留一路转发，同一份输出不会送两遍", async () => {
+		const sender = fakeSender(41);
+
+		await openTerminal(sender);
+		await openTerminal(sender);
+		session.emit({ kind: "data", data: "once\n" });
+
+		expect(sender.sent).toHaveLength(1);
+	});
+
+	it("导航释放后再打开，新一轮 owner 仍能被整批回收", async () => {
+		const sender = fakeSender(21);
+
+		await openTerminal(sender);
+		sender.emit("did-navigate");
+		await openTerminal(sender);
+		sender.emit("render-process-gone");
+
+		expect(service.disposedOwners).toEqual([21, 21]);
+	});
+
+	it("teardown 摘掉生命周期监听，残留监听不再回头改状态", async () => {
+		const sender = fakeSender(3);
+		await openTerminal(sender);
+
+		teardown();
+
+		expect(sender.listenerCount("destroyed")).toBe(0);
+		expect(sender.listenerCount("did-navigate")).toBe(0);
+		expect(sender.listenerCount("render-process-gone")).toBe(0);
+		expect(session.subscribers.size).toBe(0);
+
+		sender.emit("did-navigate");
+		expect(service.disposedOwners).toEqual([]);
 	});
 
 	it("退出清理不经过 teardown 也能杀光终端", async () => {
