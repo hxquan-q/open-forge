@@ -15,12 +15,12 @@ related_bugs: [BUG-0117]
 execution: parallel
 branch: task/TASK-0274-ssh-handshake-error-guard
 worktree: ../open-forge-wt/task-0274-ssh-handshake-error-guard
-base_commit:
+base_commit: 3c0662f32
 read_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, packages/ssh-transport/src/errors.ts]
 write_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, project/tasks/TASK-0274-ssh-handshake-error-guard.md]
 exclusive_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts]
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0197]
 integration_status: pending
 created: 2026-10-16
 updated: 2026-10-16
@@ -41,7 +41,7 @@ updated: 2026-10-16
 - 执行方式：parallel
 - 可并行 Task：TASK-0271 / TASK-0272 / TASK-0273
 - 前置依赖：无
-- 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集
+- 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集；与 TASK-0197 的 `project/tasks` 目录级声明重叠，按合同登记 `conflicts_with`
 - Branch：`task/TASK-0274-ssh-handshake-error-guard`
 - Worktree：`../open-forge-wt/task-0274-ssh-handshake-error-guard`
 - 集成负责人：Coordinator

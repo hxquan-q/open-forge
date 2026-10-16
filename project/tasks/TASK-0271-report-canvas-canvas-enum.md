@@ -15,12 +15,12 @@ related_bugs: [BUG-0114]
 execution: parallel
 branch: task/TASK-0271-report-canvas-canvas-enum
 worktree: ../open-forge-wt/task-0271-report-canvas-canvas-enum
-base_commit:
+base_commit: 3c0662f32
 read_paths: [packages/skill-presets, apps/desktop/src/main/abilities/open-marketplace]
 write_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts, project/tasks/TASK-0271-report-canvas-canvas-enum.md]
 exclusive_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts]
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0197]
 integration_status: pending
 created: 2026-10-16
 updated: 2026-10-16
@@ -41,7 +41,7 @@ updated: 2026-10-16
 - 执行方式：parallel
 - 可并行 Task：TASK-0272 / TASK-0273 / TASK-0274
 - 前置依赖：无
-- 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集
+- 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集；与 TASK-0197 的 `project/tasks` 目录级声明重叠，按合同登记 `conflicts_with`
 - Branch：`task/TASK-0271-report-canvas-canvas-enum`
 - Worktree：`../open-forge-wt/task-0271-report-canvas-canvas-enum`
 - 集成负责人：Coordinator
