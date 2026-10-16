@@ -99,7 +99,7 @@ export function createDesktopSessionResourceRuntime(
 			manifestPath: host.resourceAccess.paths.join(getVettaHomePath(), "skills-manifest.json"),
 		},
 	});
-	return isSshProjectUri(options.cwd) ? presentRemotePathsAsSeenByTools(runtime) : runtime;
+	return runtime;
 }
 
 /**
@@ -108,7 +108,10 @@ export function createDesktopSessionResourceRuntime(
  * 而这两个工具就跑在那台机器上。原样给 URI 的话，`bash "$SKILL_DIR/scripts/run.sh"` 会
  * 去执行一个名叫 `ssh:` 的目录下的脚本。
  *
- * 只改对外读出的视图，运行时内部仍用 URI 作为资源身份。
+ * 只改对外读出的视图，运行时内部仍用 URI 作为资源身份。因此包装只在模型面向的装配处套一层
+ * （`createDesktopPromptRuntimeSources`），不做进通用构造：宿主自己的消费者要的恰恰是没被
+ * 改写的 URI——技能列表拿 `filePath` 去本机读展示图标，而远端绝对路径在宿主上根本不存在，
+ * 只有 URI 才让「这条路径属于远程」可判定。
  */
 function presentRemotePathsAsSeenByTools(runtime: SessionResourceRuntime): SessionResourceRuntime {
 	return new Proxy(runtime, {
@@ -151,16 +154,20 @@ export async function createDesktopPromptRuntimeSources(
 ): Promise<CodingAgentPromptRuntimeSources> {
 	const agentDir = context.agentDir ?? getAgentDir();
 	const settingsSource = createDesktopSettingsRuntime(context.cwd, agentDir);
-	const resourceSource = createDesktopSessionResourceRuntime({
-		cwd: context.cwd,
-		agentDir,
-		settings: settingsSource,
-		includeAgentSkills: context.sessionOptions.includeAgentSkills,
-		runtimeSkillPaths: [...context.runtimeSkillPaths],
-		noExtensions: true,
-		noPromptTemplates: true,
-		noThemes: true,
-	});
+	// 模型会把这里的 `baseDir`/`filePath` 直接交给远端的 read 与 bash，所以只有这一层装配
+	// 换成远端绝对路径视图；技能列表等宿主消费者走 `createDesktopSessionResourceRuntime`。
+	const resourceSource = presentRemotePathsAsSeenByTools(
+		createDesktopSessionResourceRuntime({
+			cwd: context.cwd,
+			agentDir,
+			settings: settingsSource,
+			includeAgentSkills: context.sessionOptions.includeAgentSkills,
+			runtimeSkillPaths: [...context.runtimeSkillPaths],
+			noExtensions: true,
+			noPromptTemplates: true,
+			noThemes: true,
+		}),
+	);
 	await resourceSource.reload();
 	return { resourceSource, settingsSource, brandName: resolveDesktopBrandName(getAppLanguage()) };
 }
