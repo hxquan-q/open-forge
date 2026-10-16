@@ -1,23 +1,23 @@
 ---
-id: TASK-0272
+id: TASK-0276
 type: task
 status: verifying
 priority: P1
 owner: apps/desktop
 requirement:
 plan:
-source: BUG-0115
+source: BUG-0119
 related_requirement: []
 related_plan: []
 related_tasks: []
 related_issues: []
-related_bugs: [BUG-0115]
+related_bugs: [BUG-0119]
 execution: parallel
-branch: task/TASK-0272-terminal-lifecycle-listener-release
-worktree: ../open-forge-wt/task-0272-terminal-lifecycle-listener-release
+branch: unassigned（原分支 task/TASK-0272-terminal-lifecycle-listener-release 已合并淘汰，保留在 origin/task/TASK-0272-terminal-lifecycle-listener-release）
+worktree: unassigned（原 worktree 已集成淘汰，落地提交见交付记录）
 base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts, apps/desktop/src/main/terminal]
-write_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0272-terminal-lifecycle-listener-release.md]
+write_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts, .github/release-notes/v0.1.3.md, project/tasks/TASK-0276-terminal-lifecycle-listener-release.md]
 exclusive_paths: [apps/desktop/src/main/ipc/terminal.ts, apps/desktop/src/main/ipc/terminal.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197, TASK-0154, TASK-0218, TASK-0223]
@@ -39,11 +39,11 @@ updated: 2026-10-16
 
 - 结论：支持
 - 执行方式：parallel
-- 可并行 Task：TASK-0271 / TASK-0273 / TASK-0274
+- 可并行 Task：TASK-0275 / TASK-0277 / TASK-0278
 - 前置依赖：无
 - 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集；`.github/release-notes/v0.1.3.md`（Bug 修复按交付规则补写发布说明）与 TASK-0197、TASK-0154、TASK-0218、TASK-0223、`project/tasks` 目录级声明重叠，均按合同登记 `conflicts_with`，集成时按行合并
-- Branch：`task/TASK-0272-terminal-lifecycle-listener-release`
-- Worktree：`../open-forge-wt/task-0272-terminal-lifecycle-listener-release`
+- Branch：`task/TASK-0276-terminal-lifecycle-listener-release`
+- Worktree：`../open-forge-wt/task-0276-terminal-lifecycle-listener-release`
 - 集成负责人：Coordinator
 - 集成顺序：任意（文件不相交）
 
@@ -55,7 +55,7 @@ updated: 2026-10-16
 
 ### 不做
 
-- 不提高 `MaxListeners` 上限或加 `setMaxListeners` 掩盖（BUG-0115 明确约束）。
+- 不提高 `MaxListeners` 上限或加 `setMaxListeners` 掩盖（BUG-0119 明确约束）。
 - 不改 `main/terminal/**` 的会话表、缓冲与忙闲语义。
 - 不顺手改渲染端终端组件（本 Bug 的现场证据都在主进程侧）。
 
@@ -98,7 +98,7 @@ updated: 2026-10-16
 - 实际修改：
   - `apps/desktop/src/main/ipc/terminal.ts`：owner 登记从 `Set<WebContents>` 改为 `Map<WebContents, OwnerEntry>`，登记三个生命周期监听与该 owner 的订阅表。`trackOwner` 改用 `on` 注册；`release` 先成组 `removeListener` 并撤销该 sender 的全部订阅，再删登记并 `disposeOwnedBy`（幂等）；`attachSubscription` 注册前先撤销同 terminalId 的旧订阅；`CLOSE` 在 dispose 之外撤销该 terminalId 的订阅；teardown 遍历登记成组解绑后再 `disposeAll`。全程未使用 `setMaxListeners`。
   - `apps/desktop/src/main/ipc/terminal.test.ts`：WebContents 替身补齐 `on`/`removeListener`/`listenerCount` 与「once 先摘后调」语义；新增 5 例回归（导航重开监听有界、反复开关监听有界且关闭后不再转发、重开同一终端只留一路转发、导航释放后新一轮 owner 仍被回收、teardown 摘净监听）。
-  - `.github/release-notes/v0.1.3.md`：`## 修复` 追加一条（BUG-0115 / TASK-0272）。
+  - `.github/release-notes/v0.1.3.md`：`## 修复` 追加一条（BUG-0119 / TASK-0276）。
   - 两个改动文件按修改声明头门禁补 `// Modified by The Open Forge contributors.`——本次首次改动使它们从基线豁免转为必须带声明头。
 - 实际运行：
   - 红（旧实现，包内 runner）：`apps/desktop` 下 `bun run test src/main/ipc/terminal.test.ts` = 5 failed | 9 passed（14）；失败点为 destroyed 监听 2≠1、12 轮开关 13≠1、重复转发 2 条 envelope、导航后重复回收 `[21,21,21]`、teardown 残留 2 条。
@@ -109,8 +109,8 @@ updated: 2026-10-16
   - 记录面：`check-task-worktrees`、`check-project-indexes`、`release-notes.mjs --check` 均通过。
   - 环境准备（非交付改动）：worktree 缺 Electron 二进制（`path.txt` 缺失，BUG-0102 同型），按包内自愈脚本 `bun scripts/ensure-electron-binary.mjs` 补齐；workspace 依赖无 `dist`，用 `bun x turbo run build --filter='@vetta/desktop^...'` 构建。
 - 未运行及原因：真实 Desktop 实例的终端重开与崩溃恢复人工验收未运行——需启动 dev 实例且本任务未获 UI 验证授权；`verify:ui:*` 同理未运行。
-- Worktree：沿用调度方预建的 `../open-forge-wt/task-0272-terminal-lifecycle-listener-release`，未创建也未清理；`git status` 仅本 Task 声明的四个路径。
+- Worktree：沿用调度方预建的 `../open-forge-wt/task-0276-terminal-lifecycle-listener-release`，未创建也未清理；`git status` 仅本 Task 声明的四个路径。
 - 剩余风险：
   - 真实 Electron 的 `WebContents` 事件序（尤其 `did-navigate` 与渲染进程重建的先后）由替身模拟，未在真实进程里复核；实机告警是否消失仍待人工验收。
   - `.github/release-notes/v0.1.3.md` 与 TASK-0197/0154/0218/0223 共享，集成时按行合并。
-  - 未量化监听闭包的实际内存占用（BUG-0115 亦未量化）；本次只保证数量有界且旧订阅不再转发。
+  - 未量化监听闭包的实际内存占用（BUG-0119 亦未量化）；本次只保证数量有界且旧订阅不再转发。

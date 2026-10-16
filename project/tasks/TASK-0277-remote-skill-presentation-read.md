@@ -1,23 +1,23 @@
 ---
-id: TASK-0273
+id: TASK-0277
 type: task
 status: verifying
 priority: P1
 owner: apps/desktop
 requirement:
 plan:
-source: BUG-0116
+source: BUG-0120
 related_requirement: []
 related_plan: []
 related_tasks: []
 related_issues: []
-related_bugs: [BUG-0116]
+related_bugs: [BUG-0120]
 execution: parallel
-branch: task/TASK-0273-remote-skill-presentation-read
-worktree: ../open-forge-wt/task-0273-remote-skill-presentation-read
+branch: unassigned（原分支 task/TASK-0273-remote-skill-presentation-read 已合并淘汰，保留在 origin/task/TASK-0273-remote-skill-presentation-read）
+worktree: unassigned（原 worktree 已集成淘汰，落地提交见交付记录）
 base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/abilities/presentation, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, packages/ssh-transport/src/project-uri.ts]
-write_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, apps/desktop/src/main/skills/skill-presentation-read.test.ts, project/tasks/TASK-0273-remote-skill-presentation-read.md]
+write_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, apps/desktop/src/main/skills/skill-presentation-read.test.ts, project/tasks/TASK-0277-remote-skill-presentation-read.md]
 exclusive_paths: [apps/desktop/src/main/agent-runtime/resource-runtime.ts, apps/desktop/src/main/skills/skill-service.ts, apps/desktop/src/main/agent-runtime/resource-runtime.remote.test.ts, apps/desktop/src/main/skills/skill-presentation-read.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197, TASK-0154]
@@ -39,11 +39,11 @@ updated: 2026-10-16
 
 - 结论：支持
 - 执行方式：parallel
-- 可并行 Task：TASK-0271 / TASK-0272 / TASK-0274
+- 可并行 Task：TASK-0275 / TASK-0276 / TASK-0278
 - 前置依赖：无
 - 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集；与 TASK-0197（`project/tasks` 目录级声明）及 TASK-0154（`apps/desktop/src/main/agent-runtime` 目录级声明，已集成处于验证态）重叠，按合同登记 `conflicts_with`
-- Branch：`task/TASK-0273-remote-skill-presentation-read`
-- Worktree：`../open-forge-wt/task-0273-remote-skill-presentation-read`
+- Branch：`task/TASK-0277-remote-skill-presentation-read`
+- Worktree：`../open-forge-wt/task-0277-remote-skill-presentation-read`
 - 集成负责人：Coordinator
 - 集成顺序：任意（文件不相交）
 
@@ -102,7 +102,7 @@ updated: 2026-10-16
 
 ### 接缝决定（开工调查）
 
-复核链路与 BUG-0116 一致：`createDesktopSessionResourceRuntime` 对 `ssh://` cwd 统一套
+复核链路与 BUG-0120 一致：`createDesktopSessionResourceRuntime` 对 `ssh://` cwd 统一套
 `presentRemotePathsAsSeenByTools`（`:102`），`getSkills()` 因此把 `filePath`/`baseDir` 从
 URI 改写成远端绝对路径（`:118-128`）；`SkillService.list`（`skill-service.ts:193`）把这两个
 字段直接交给 `loadSkillPackagePresentationIcon`，后者在 `skill-package-presentation.ts:34`
@@ -129,7 +129,7 @@ URI 改写成远端绝对路径（`:118-128`）；`SkillService.list`（`skill-s
   真实资源访问。用例一断言技能列表运行时的 `filePath`/`baseDir` 仍是 URI；用例二走
   `SkillService.list(ssh://…)` 用户流程，断言远端技能被列出但不产出图标、无 `presentation ignored`
   告警，同一次列表里本机用户技能图标照常解析；用例三断言本地项目下同一技能包照旧解析图标。
-- `project/tasks/TASK-0273-remote-skill-presentation-read.md`：本记录。
+- `project/tasks/TASK-0277-remote-skill-presentation-read.md`：本记录。
 
 ### 实际运行
 

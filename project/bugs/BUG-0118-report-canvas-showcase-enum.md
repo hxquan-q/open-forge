@@ -1,5 +1,5 @@
 ---
-id: BUG-0114
+id: BUG-0118
 type: bug
 status: verifying
 priority: P2
@@ -9,7 +9,7 @@ plan:
 source: RESEARCH-0027; 全量保留日志巡检与现有 Schema 只读校验
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0271]
+related_tasks: [TASK-0275]
 related_issues: []
 created: 2026-10-16
 updated: 2026-10-16

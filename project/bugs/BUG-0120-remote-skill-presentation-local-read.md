@@ -1,5 +1,5 @@
 ---
-id: BUG-0116
+id: BUG-0120
 type: bug
 status: verifying
 priority: P2
@@ -9,7 +9,7 @@ plan:
 source: RESEARCH-0027; 全量保留日志 195 条 ENOENT 与源码接线核对
 related_requirement: []
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0277]
 related_issues: []
 created: 2026-10-16
 updated: 2026-10-16
@@ -55,6 +55,6 @@ P2：技能展示图标缺失、每次列表产生大量告警噪音；不影响
 
 ## 修复与验证
 
-- 修复：待实施（见 TASK-0273）。
+- 修复：待实施（见 TASK-0277）。
 - 验证：待回写。
 - 未运行及原因：待回写。

@@ -1,23 +1,23 @@
 ---
-id: TASK-0274
+id: TASK-0278
 type: task
 status: verifying
 priority: P1
 owner: ssh-transport
 requirement:
 plan:
-source: BUG-0117
+source: BUG-0121
 related_requirement: []
 related_plan: []
 related_tasks: []
 related_issues: []
-related_bugs: [BUG-0117]
+related_bugs: [BUG-0121]
 execution: parallel
-branch: task/TASK-0274-ssh-handshake-error-guard
-worktree: ../open-forge-wt/task-0274-ssh-handshake-error-guard
+branch: unassigned（原分支 task/TASK-0274-ssh-handshake-error-guard 已合并淘汰，保留在 origin/task/TASK-0274-ssh-handshake-error-guard）
+worktree: unassigned（原 worktree 已集成淘汰，落地提交见交付记录）
 base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, packages/ssh-transport/src/errors.ts]
-write_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, project/tasks/TASK-0274-ssh-handshake-error-guard.md]
+write_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts, project/tasks/TASK-0278-ssh-handshake-error-guard.md]
 exclusive_paths: [packages/ssh-transport/src/ssh2-runner.ts, packages/ssh-transport/src/ssh2-runner.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197]
@@ -39,11 +39,11 @@ updated: 2026-10-16
 
 - 结论：支持
 - 执行方式：parallel
-- 可并行 Task：TASK-0271 / TASK-0272 / TASK-0273
+- 可并行 Task：TASK-0275 / TASK-0276 / TASK-0277
 - 前置依赖：无
 - 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集；与 TASK-0197 的 `project/tasks` 目录级声明重叠，按合同登记 `conflicts_with`
-- Branch：`task/TASK-0274-ssh-handshake-error-guard`
-- Worktree：`../open-forge-wt/task-0274-ssh-handshake-error-guard`
+- Branch：`task/TASK-0278-ssh-handshake-error-guard`
+- Worktree：`../open-forge-wt/task-0278-ssh-handshake-error-guard`
 - 集成负责人：Coordinator
 - 集成顺序：任意（文件不相交）
 
@@ -107,7 +107,7 @@ updated: 2026-10-16
   - `packages/ssh-transport/src/ssh2-runner.ts`：新增 `Ssh2Session.destroyQuietly(client)`——销毁前先挂终止性 `error` 监听（复用常驻监听的日志形状 `ssh2 <target>: <message>`）再 `destroy()`。四个销毁点改走它：`tryConnect` 的 `catch`（握手失败的 Client，`:588` 附近）、`establish` 的 `catch`（跳机 Client）、`installClient` 的失效路径（目标 Client + 跳机 Client）、`installClient` 的 `close` 监听（跳机 Client）。`dropClient()` 保持原样并补了原因注释——已装进会话的 Client 由 `installClient` 挂的常驻监听兜底，不需要第二个监听。
   - `packages/ssh-transport/src/ssh2-runner.ts` 未改：`ready`/`error` 一次性监听与 `cleanup()`、认证方法顺序与 `authAttemptConfigs`、`readyTimeout` 预算取值、指纹/口令/2FA 提示语义、`installClient` 的常驻监听。
   - `packages/ssh-transport/src/ssh2-runner.test.ts`：`FakeClient` 忠实化——`emitError` 去掉「无监听自动补 no-op」，`destroy()` 按真实 ssh2 同序在「连上了但没握手完成」时异步补发一次 `error`（模拟 socket close 语义，故不会被调用方 promise 收走）；新增 `uncaughtProbe()` 全局未捕获异常探针；新增两条回归用例（`describe("ssh2 传输：握手失败的销毁不留监听空窗")`）：受控替身（agent 不可用 → 换方法 → 销毁 → 迟到 error）、真实 `ssh2.Client` + 回环 TCP（读到客户端 banner 后 `resetAndDestroy()` 制造握手前 RST）。
-- 实际运行（均在 `task-0274-ssh-handshake-error-guard` Worktree）：
+- 实际运行（均在 `task-0278-ssh-handshake-error-guard` Worktree）：
   - 失败基线（只改测试、未改实现）：`bun scripts/quality/run-vitest.mjs --run packages/ssh-transport/src/ssh2-runner.test.ts` → `Tests 2 failed | 25 passed`，另 3 条 `Uncaught Exception: Connection lost before handshake`；两条新用例分别以 `probe.errors` 非空与 `outcome === "escaped"` 失败。既有的「公钥方法失败后退回口令提示」「ssh-agent 未运行时跳过代理方法」「主机密钥被拒绝」同时因空窗逃逸被判负，说明忠实替身确实打开了这一类缺陷。
   - 修复后同一命令：`27 passed`，无 unhandled error；连跑 8 次均 `27 passed`（回环 RST 用例无抖动）。
   - `bun run test:pkg ssh-transport`：19 file passed | 1 skipped、227 passed | 25 skipped（skipped 为包内既有的平台条件跳过：Go helper 与 Windows 下的 `/bin/sh`、进程类）。
@@ -118,9 +118,9 @@ updated: 2026-10-16
   - 真实主机连接：任务明令不连真实主机；隔离复现只走回环 TCP 与替身，真实主机现象由用户在功能验收包里自测。
   - `verify:ui:*` 与 Desktop 实机：本任务未获授权，改动落在传输层包内，无 UI 面。
   - 下游消费方包（`apps/desktop` ssh 面、`packages/runtime-ssh`）的定向测试：`test:impact` 判定的受影响面只有本包 direct/related；消费方只把 `logger` 接到应用日志，未断言这些行（已检索 `ssh2-runner` 引用方确认）。
-  - `project/tasks/README.md` 当前焦点表与 `BUG-0117` 记录：本任务约束禁止改动，Bug 的「修复/验证」回写留给协调者。
+  - `project/tasks/README.md` 当前焦点表与 `BUG-0121` 记录：本任务约束禁止改动，Bug 的「修复/验证」回写留给协调者。
   - 声明头 ratchet 提示「基线中已修复 3 条，可运行 `--write-baseline` 收缩快照」：`check` 已 exit 0，快照是共享文件且非本任务范围，未改。
-- Worktree：`../open-forge-wt/task-0274-ssh-handshake-error-guard`；本任务全程在此提交，未触碰主检出；未创建、未删除 Worktree。
+- Worktree：`../open-forge-wt/task-0278-ssh-handshake-error-guard`；本任务全程在此提交，未触碰主检出；未创建、未删除 Worktree。
 - 剩余风险：
   - 修复依赖「socket 的 `close` 晚于握手期 error、且晚于调用方 promise 续体」这一既有顺序：真实 Client 回环用例已固定该顺序，但若将来 ssh2 改成同步补发，需要用例复核。
   - 跳机 Client 与失效路径的迟到 error 记在会话 target 名下，日志不区分跳机身份——与 `installClient` 常驻监听同一口径；要区分跳机身份属独立切片。

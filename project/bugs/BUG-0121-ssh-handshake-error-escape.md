@@ -1,5 +1,5 @@
 ---
-id: BUG-0117
+id: BUG-0121
 type: bug
 status: verifying
 priority: P1
@@ -9,7 +9,7 @@ plan:
 source: RESEARCH-0027; 全局 uncaughtException 与 ssh2 源码路径核对
 related_requirement: []
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0278]
 related_issues: []
 created: 2026-10-16
 updated: 2026-10-16
@@ -56,6 +56,6 @@ P1：`uncaughtException` 属于全局逃逸，可能触发宿主异常策略并�
 
 ## 修复与验证
 
-- 修复：待实施（见 TASK-0274）。
+- 修复：待实施（见 TASK-0278）。
 - 验证：待回写。
 - 未运行及原因：待回写。

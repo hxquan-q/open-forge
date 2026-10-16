@@ -102,8 +102,8 @@ BUG-0109 / TASK-0261 对应 `c35d10034`（2026-10-15），已包含于 main。�
 
 ### 当前源码仍有证据的新增缺口
 
-1. **[BUG-0114](../bugs/BUG-0114-report-canvas-showcase-enum.md)，P2：report-canvas 展示元数据失效。** 共 25 次 ZodError，最近 dev/main/2026-10-15.log:3154。`packages/skill-presets/report-canvas/ability.json` 默认/英文 showcase.canvas 为 markdown，Schema 只接受 design/code/docs/generic/browser/terminal/board。不是缺少 detail.format，union 的第一分支会产生伴随诊断，真正匹配 inline 分支的字段错误是 showcase.canvas。已用 Bun 导入真实 marketplaceDetailBlockSchema，对实际 JSON 的首个 block 执行 safeParse：report-canvas=false，architecture-canvas=true。引入相关提交 `0d7605a87`，未找到后续修复。影响展示，不等于技能执行失败。
-2. **[BUG-0115](../bugs/BUG-0115-terminal-owner-listener-retention.md)，P2：终端监听器残留。** dev/main/2026-10-12.log:1333–1343 明确 11 个 destroyed listener，栈指向 trackOwner。当前 terminal.ts 中导航 release 清掉 owner Set，却没有移除另外两个 once；重开会重新注册。attachSubscription 也未配对解除生命周期监听。`0710cd6a1` 加强 PTY 崩溃回收但未补成组解绑，未发现后续修复。已核对源码，尚未跑隔离生命周期回归，不夸大为已测得内存泄漏。
+1. **[BUG-0118](../bugs/BUG-0118-report-canvas-showcase-enum.md)，P2：report-canvas 展示元数据失效。** 共 25 次 ZodError，最近 dev/main/2026-10-15.log:3154。`packages/skill-presets/report-canvas/ability.json` 默认/英文 showcase.canvas 为 markdown，Schema 只接受 design/code/docs/generic/browser/terminal/board。不是缺少 detail.format，union 的第一分支会产生伴随诊断，真正匹配 inline 分支的字段错误是 showcase.canvas。已用 Bun 导入真实 marketplaceDetailBlockSchema，对实际 JSON 的首个 block 执行 safeParse：report-canvas=false，architecture-canvas=true。引入相关提交 `0d7605a87`，未找到后续修复。影响展示，不等于技能执行失败。
+2. **[BUG-0119](../bugs/BUG-0119-terminal-owner-listener-retention.md)，P2：终端监听器残留。** dev/main/2026-10-12.log:1333–1343 明确 11 个 destroyed listener，栈指向 trackOwner。当前 terminal.ts 中导航 release 清掉 owner Set，却没有移除另外两个 once；重开会重新注册。attachSubscription 也未配对解除生命周期监听。`0710cd6a1` 加强 PTY 崩溃回收但未补成组解绑，未发现后续修复。已核对源码，尚未跑隔离生命周期回归，不夸大为已测得内存泄漏。
 3. **远端 Skill 展示读取仍错位。** 全量共 195 条（此前单日 39），10-08 至 10-16 持续出现；原因与 Git 链路见前节，未找到展示消费者修复。
 4. **忙碌会话仍可点击续跑。** 全量 main 4 条、renderer 对应 4 条（同一批失败的两侧记录），最近 10-16；BUG-0109 修的是 ID，不覆盖活动轮次竞争，TASK-0261 也保留忙碌错误提示缺口。
 
@@ -148,7 +148,7 @@ BUG-0109 / TASK-0261 对应 `c35d10034`（2026-10-15），已包含于 main。�
 
 ### 本轮交付与验证
 
-新立 BUG-0114、BUG-0115，未建修复 Task、未修改生产或测试实现。保留原六类 concern，补充全量签名附表与已修复/环境/待定位分类。实际验证为日志分类、Git 历史对照、源码核对、Bun 实际描述 Schema 校验及 git diff --check；没有运行完整测试/check、UI 自动化或真实 Provider。新记录与索引尚未提交，未推送。
+新立 BUG-0118、BUG-0119，未建修复 Task、未修改生产或测试实现。保留原六类 concern，补充全量签名附表与已修复/环境/待定位分类。实际验证为日志分类、Git 历史对照、源码核对、Bun 实际描述 Schema 校验及 git diff --check；没有运行完整测试/check、UI 自动化或真实 Provider。新记录与索引尚未提交，未推送。
 
 ## chenxvhua 分支来源复核
 
@@ -157,7 +157,7 @@ BUG-0109 / TASK-0261 对应 `c35d10034`（2026-10-15），已包含于 main。�
 - **可明确关联的历史缺陷**：`b64f463f9`（Chenxvhua，10-05）引入 ac-fence 审计写入而 plugin.json 只声明 agent.skills.control/agent.hooks.register/agent.hookHandler.execute，没有 fs.read/fs.write；经 `8935058fd` 合入 main。对应日志 BUG-0088 的 fs.write 拒绝，已由 `7494ffa44` 修复并包含于当前 HEAD。该次 merge 相对第一父提交仅涉及 allstar-coding 与发布说明，没有修改终端、SSH 资源包装或 report-canvas。
 - **另一明确关联的历史缺陷**：`22ebf3a69`（Chenxvhua，10-08）新增黑盒 shell/读域判定，BUG-0082 记录复合命令与路径穿越的失败回归；修复 `62f3bd0b2`、`c3a55e53c` 已在当前 HEAD。ISSUE-0032 登记的更广写域/重定向/URL 边界仍需单独判断，不等于原 BUG-0082 没修。
 - **不能据插件归属定责的现存异常**：allstar-coding PreToolUse handler not found 与插件相关，但 vetta-ui-design Stop 也发生同类错误；缺失由宿主 plugin-host-bridge activationId 注册表判定，尚未隔离证明是该分支插件代码、宿主生命周期或开发热更新所致。不能直接归为 Chenxvhua 引入。
-- **本轮新增缺口不来自该次分支合并**：BUG-0114 相关 `0d7605a87`（xinquanhuang，09-24）；BUG-0115 相关 `1f2a7a524` / `0710cd6a1`（09-21）；远端 Skill 包装 `3e0d7008f`（09-20）。它们早于上述 ac-fence 合并，且不在该 merge 的变更路径内；没有证据把这些具体缺口归因于 chenxvhua 的 allstar 改动。
+- **本轮新增缺口不来自该次分支合并**：BUG-0118 相关 `0d7605a87`（xinquanhuang，09-24）；BUG-0119 相关 `1f2a7a524` / `0710cd6a1`（09-21）；远端 Skill 包装 `3e0d7008f`（09-20）。它们早于上述 ac-fence 合并，且不在该 merge 的变更路径内；没有证据把这些具体缺口归因于 chenxvhua 的 allstar 改动。
 - 缓存的 chenxvhua 另有较新 `350e878e1`（流水线职责收束）与 `9550b16d3`（围栏路径归一化）不在当前 HEAD；它们不能解释当前 main 已运行日志，也不能当作当前 main 已取得对应修复。分支合入 origin/dev 的 merge 不能反过来证明 dev 上所有旧问题都由该分支引入。
 
 会话创建、重复 key、Renderer 崩溃、Markdown Hooks 等仍没有足够的引入提交/隔离复现证据；本轮不按分支猜测归因。

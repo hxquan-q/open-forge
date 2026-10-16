@@ -1,23 +1,23 @@
 ---
-id: TASK-0271
+id: TASK-0275
 type: task
 status: verifying
 priority: P1
 owner: skill-presets
 requirement:
 plan:
-source: BUG-0114
+source: BUG-0118
 related_requirement: []
 related_plan: []
 related_tasks: []
 related_issues: []
-related_bugs: [BUG-0114]
+related_bugs: [BUG-0118]
 execution: parallel
-branch: task/TASK-0271-report-canvas-canvas-enum
-worktree: ../open-forge-wt/task-0271-report-canvas-canvas-enum
+branch: unassigned（原分支 task/TASK-0271-report-canvas-canvas-enum 已合并淘汰，保留在 origin/task/TASK-0271-report-canvas-canvas-enum）
+worktree: unassigned（原 worktree 已集成淘汰，落地提交见交付记录）
 base_commit: 96fbe05c1f18a3b662ab659db5162f533562fd9d
 read_paths: [packages/skill-presets, apps/desktop/src/main/abilities/open-marketplace]
-write_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts, project/tasks/TASK-0271-report-canvas-canvas-enum.md]
+write_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts, project/tasks/TASK-0275-report-canvas-canvas-enum.md]
 exclusive_paths: [packages/skill-presets/report-canvas/ability.json, apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts]
 depends_on: []
 conflicts_with: [TASK-0197]
@@ -39,11 +39,11 @@ updated: 2026-10-16
 
 - 结论：支持
 - 执行方式：parallel
-- 可并行 Task：TASK-0272 / TASK-0273 / TASK-0274
+- 可并行 Task：TASK-0276 / TASK-0277 / TASK-0278
 - 前置依赖：无
 - 冲突文件/独占路径：见 frontmatter `exclusive_paths`；与其它三个 Task 无文件交集；与 TASK-0197 的 `project/tasks` 目录级声明重叠，按合同登记 `conflicts_with`
-- Branch：`task/TASK-0271-report-canvas-canvas-enum`
-- Worktree：`../open-forge-wt/task-0271-report-canvas-canvas-enum`
+- Branch：`task/TASK-0275-report-canvas-canvas-enum`
+- Worktree：`../open-forge-wt/task-0275-report-canvas-canvas-enum`
 - 集成负责人：Coordinator
 - 集成顺序：任意（文件不相交），建议最先并入
 
