@@ -51,6 +51,7 @@ import { registerTerminalIpc } from "./terminal.js";
 import { registerThemesIpc } from "./themes.js";
 import { registerUpdaterIpc } from "./updater.js";
 import { registerWebhookIpc } from "./webhook.js";
+import { registerWeKnoraIpc } from "./weknora.js";
 
 interface IpcTeardown {
 	teardownAbilities: () => void;
@@ -101,6 +102,7 @@ interface IpcTeardown {
 	teardownOnboarding: () => void;
 	teardownRemotePairing: () => void;
 	teardownReviewChanges: () => void;
+	teardownWeKnora: () => void;
 }
 
 export function registerAllIpc(
@@ -163,6 +165,7 @@ export function registerAllIpc(
 		teardownOnboarding: registerOnboardingIpc(),
 		teardownRemotePairing: registerRemotePairingIpc(options.remotePairingService),
 		teardownReviewChanges: registerReviewChangesIpc(),
+		teardownWeKnora: registerWeKnoraIpc(webContents),
 	};
 }
 
@@ -215,6 +218,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownOnboarding();
 	teardown.teardownRemotePairing();
 	teardown.teardownReviewChanges();
+	teardown.teardownWeKnora();
 }
 
 export { registerBatchTasksIpc } from "./batch-tasks.js";
