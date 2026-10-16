@@ -321,6 +321,19 @@ function startHookRequestListener(): void {
 	window.vetta.plugins.onAgentHookRequest((request) => {
 		const entry = agentHookHandlers.get(handlerKey(request.pluginId, request.handlerId, request.activationId));
 		if (!entry) {
+			// 双侧取证（BUG-0124）：主进程侧该 generation 仍被 lease 持有并持续派发，而渲染端
+			// 表里没有它——最符合的解释是渲染端被重置（整页 reload / HMR 重建模块级 Map）。
+			// 记下本地表规模与同一插件下的已知键，才能与主进程的 hook dispatch 记录直接对照。
+			const knownForPlugin = [...agentHookHandlers.keys()].filter((key) => key.startsWith(`${request.pluginId}:`));
+			console.warn("[plugin-host-bridge] hook handler miss", {
+				pluginId: request.pluginId,
+				hookId: request.hookId,
+				handlerId: request.handlerId,
+				activationId: request.activationId ?? null,
+				handlerCount: agentHookHandlers.size,
+				knownForPlugin: knownForPlugin.length,
+				knownKeyPrefixes: knownForPlugin.slice(0, 8).map((key) => key.slice(0, key.lastIndexOf(":"))),
+			});
 			void window.vetta.plugins.respondAgentHook(request.requestId, {
 				error: `Plugin hook handler not found: ${request.pluginId}/${request.handlerId}`,
 			});

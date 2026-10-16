@@ -1,6 +1,6 @@
 export const PLUGIN_TOOL_RENDERER_LOADING_MESSAGE = "Plugin host renderer is loading; retry the tool after it is ready";
 
-type PluginToolRendererHostState = "loading" | "ready" | "unavailable" | "disposed";
+export type PluginToolRendererHostState = "loading" | "ready" | "unavailable" | "disposed";
 
 export type PluginToolRendererInvocationLease =
 	| { readonly ok: true; release(): void }
@@ -30,6 +30,14 @@ export class PluginToolRendererHostLifecycle {
 
 	dispose(): void {
 		this.transitionTo("disposed", "Plugin host renderer was disposed");
+	}
+
+	/**
+	 * 只读渲染端可用性状态。派发前的结构化取证用（BUG-0124）：hook 调用点不像 tool
+	 * 调用点那样消费可用性 lease，把该状态记进日志即可判定「渲染端已重载但主进程仍在派发」。
+	 */
+	readState(): PluginToolRendererHostState {
+		return this.state;
 	}
 
 	acquire(onUnavailable: (error: Error) => void): PluginToolRendererInvocationLease {

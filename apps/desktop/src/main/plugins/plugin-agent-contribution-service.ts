@@ -94,6 +94,11 @@ export class PluginAgentContributionService {
 		return this.dependencies.hooks.readInvocationRejection(pluginId, handlerId, activationId);
 	}
 
+	/** 只读 hook generation/lease 聚合诊断，供派发侧结构化日志（BUG-0124）。 */
+	readHookLeaseDiagnostics(): { readonly retiredGenerations: number; readonly activeLeases: number } {
+		return this.dependencies.hooks.readLeaseDiagnostics();
+	}
+
 	readHandlerInvocationRejection(
 		kind: DesktopPluginAgentHandlerKind,
 		pluginId: string,
