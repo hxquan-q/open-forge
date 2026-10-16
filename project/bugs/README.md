@@ -16,6 +16,8 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0117` | SSH 握手失败后的清理窗口让 error 逃逸为全局未捕获异常 | investigating | P1 | — |
+| `BUG-0116` | 远程项目的 Skill 展示读取把远端绝对路径当本机路径 | investigating | P2 | — |
 | `BUG-0115` | 终端 owner 与订阅的生命周期监听器未成组解绑 | investigating | P2 | — |
 | `BUG-0114` | report-canvas 展示元数据使用不支持的 canvas 枚举 | investigating | P2 | — |
 | `BUG-0113` | 文档站搜索索引因跨语言 URL 重复而返回 500 | verifying | P2 | PLAN-0003 |

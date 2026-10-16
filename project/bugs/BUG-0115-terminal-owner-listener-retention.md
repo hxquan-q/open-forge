@@ -9,7 +9,7 @@ plan:
 source: RESEARCH-0027; WebContents MaxListenersExceededWarning 与 trackOwner 源码核对
 related_requirement: []
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0272]
 related_issues: []
 created: 2026-10-16
 updated: 2026-10-16
