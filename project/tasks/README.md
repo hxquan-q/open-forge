@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0282` | `verifying` | — | BUG-0125：远端资源读取观测（零行为变更，只加测点）——资源访问端口统计远端操作数与累计耗时（暴露只读 `readRemoteStats()`），`reload()` 边界落结构化记录；新增 2 例通过、两包构建与 desktop typecheck 通过、impact 5006 例通过（4 个 BUG-0107 存量红 + 1 例并行假红，单独复跑全绿）；`initial-system-prompt` 落点待后续切片；serial，main 串行。 |
 | `TASK-0281` | `verifying` | — | BUG-0124：插件 Hook 派发双侧取证（零行为变更，只加测点）——主进程 `hook dispatch`（身份 + lease 诊断 + 渲染端可用性，新增只读 `readState()` / `readHookLeaseDiagnostics()`）、渲染端 `hook handler miss`（表规模 + 已知键），回复载荷不变；包内 2 文件 4 例、impact 459 例、typecheck 全绿；自愈与重载复位待证据后再切片；serial，main 串行。 |
 | `TASK-0280` | `verifying` | — | BUG-0123：重复渲染 key 的结构化诊断（零行为变更，只加测点）——`findDuplicateConversationKeys` 纯函数 + 列表接缝输出键/次数/身份/下标；包内 2 文件 22 例、impact 137 例、typecheck 全绿；去重逻辑待现场诊断后再切片；serial，main 串行。 |
 | `TASK-0279` | `verifying` | — | BUG-0122：续跑条忙碌期间不可点——在途点击锁（ref 同步守卫 + 按钮 disabled）、`resume-failure` 分类到忙碌/需恢复专属文案、`resolveInterruptedErrorKind` 增 `hasPendingQueue` 依据队列镜像门控；包内 4 文件 35 例、impact 101 例、完整 check 全绿；serial，main 串行。 |
