@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
+import { isSshProjectUri } from "@vetta/ssh-transport";
 import { resolvePluginText } from "@vetta-org/plugin-sdk";
 import type { AppMonitorResourceOperation } from "../../preload/api-types/app-monitor.js";
 import type { SkillPresentation, SkillProvenance } from "../../preload/api-types/skills.js";
@@ -189,16 +191,21 @@ export class SkillService {
 							})
 						: undefined;
 				let declaredIcon: string | undefined;
-				try {
-					declaredIcon = loadSkillPackagePresentationIcon({
-						filePath: skill.filePath,
-						baseDir: skill.baseDir,
-						...(sourcePlugin
-							? { assetUrlResolver: (absolutePath) => installedPluginAssetUrl(sourcePlugin, absolutePath) }
-							: {}),
-					});
-				} catch (error) {
-					skillsLog.warn(`skill ${skill.name} presentation ignored`, error);
+				// 远端技能在这个消费面上仍是 `ssh://<hostId>/…`：图标解析走本机 readFileSync，
+				// 拿它当本机路径只会 ENOENT 并刷告警。本 Task 不新增远端取图能力，显式跳过，
+				// 让下面的 resolveProvidedSkillPresentationIcon 照常回落到 provider 图标。
+				if (!isSshProjectUri(skill.filePath)) {
+					try {
+						declaredIcon = loadSkillPackagePresentationIcon({
+							filePath: skill.filePath,
+							baseDir: skill.baseDir,
+							...(sourcePlugin
+								? { assetUrlResolver: (absolutePath) => installedPluginAssetUrl(sourcePlugin, absolutePath) }
+								: {}),
+						});
+					} catch (error) {
+						skillsLog.warn(`skill ${skill.name} presentation ignored`, error);
+					}
 				}
 				const icon = resolveProvidedSkillPresentationIcon({
 					skillIcon: declaredIcon,
