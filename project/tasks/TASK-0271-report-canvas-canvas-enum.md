@@ -1,7 +1,7 @@
 ---
 id: TASK-0271
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: skill-presets
 requirement:
@@ -81,7 +81,7 @@ updated: 2026-10-16
 
 ## 验收分层
 
-- 工程验证：待执行
+- 工程验证：通过（失败基线 → 修复转绿；定向合同测试、test:impact 与完整 `bun run check` 均绿）
 - 技术评审：待执行
 - 集成：pending
 - 人工功能验收：待验收（能力页 report-canvas 详情展示）
@@ -93,12 +93,26 @@ updated: 2026-10-16
 - 操作步骤或 AI 任务输入：打开能力页 → 进入 report-canvas 详情。
 - 预期行为与最终产物：详情页展示头图/展示区块正常渲染，`dev/main/*.log` 无 `showcase.canvas` 的 ZodError。
 - 不通过表现与已知限制：详情空白或展示降级、日志继续出现枚举错误。
-- 验收反馈及回归案例：待填写。
+- 验收反馈及回归案例：待填写；回归案例已沉淀为 `marketplace-preset-descriptors.test.ts`，旧 `markdown` 取值必然失败。
 
 ## 交付记录
 
 - 实际修改：
+  - `packages/skill-presets/report-canvas/ability.json`：默认档与 `i18n.en` 档的 `canvas` 由 `markdown` 改为 `docs`；`schemaVersion`、`slug`、`version` 与结构未动。
+  - `apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts`（新增）：经真实入口 `listLocalAbilityPresentations` 装载全部内置预设，断言降级缺失为 0、report-canvas 默认档与英文档母题为 `docs`；另按 `marketplaceDetailBlockSchema` 遍历每个预设 `detail.blocks`（默认档 + 各语言档），失败时输出文件与 Zod 问题 path。
 - 实际运行：
+  - 失败基线（改 `ability.json` 前）：`bun scripts/quality/run-vitest.mjs --run apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts` → 2 failed；缺失集合为 `[report-canvas]`，问题为 `showcase.canvas: Invalid option: expected one of "design"|"code"|"docs"|...`。
+  - 修复后同命令：2 passed。
+  - 邻接套件（`local-ability-presentations` / `open-marketplace-presentation` / `database-analysis-skill`）：4 files / 14 tests passed。
+  - 回归灵敏度复验：临时把 `docs` 改回 `markdown` 复跑为 2 failed，随后还原，`git diff` 只剩预期两行。
+  - `bun run check`：lint / types / guards / mobile-lint 全绿（按本轮协调指令提前执行，Task 原计划留到集成后）。
+  - `bun run test:impact -- packages/skill-presets/report-canvas/ability.json apps/desktop/src/main/abilities/open-marketplace/marketplace-preset-descriptors.test.ts`：desktop 直接用例 2 passed，skill-presets 包 5 files / 131 tests passed。
 - 未运行及原因：
-- Worktree：创建/初始化/检查/清理结果
+  - 未跑 `verify:ui:*`、未启动真实 Desktop：本 Task 未获 UI 自动化授权，用户流程由合同测试覆盖，人工目验步骤见功能验收包。
+  - 未跑完整仓库测试矩阵：超出本 Task 范围，按测试政策由 `check` 与定向/impact 覆盖。
+  - 未调用模型或真实 Provider：本改动不涉及。
+- Worktree：创建/初始化/检查/清理结果——工作树就绪但缺工作区 dist，跑测试前先执行一次 `bun run build` 构建（未入库）；无创建或清理动作。
 - 剩余风险：
+  - 合同测试把 `docs` 作为决策值锁定，后续若产品改选其它合法母题需同步更新测试与 Task 决策。
+  - 遍历用 `marketplaceDetailBlockSchema`，不覆盖 `ability.json` 允许的 `{type:"markdown", path}` 引用式区块（当前无预设使用）；这类区块由入口用例覆盖「能被装载器解析」。
+  - 展示降级路径（捕获后忽略、不阻断能力列表）保持不变，本次未改接入代码。
