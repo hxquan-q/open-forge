@@ -87,7 +87,7 @@ updated: 2026-10-16
 ## 验收分层
 
 - 工程验证：已完成（本 Worktree 独立运行，见「实际运行」；自审，无独立评审）
-- 技术评审：自审——复核了四处销毁点与 `dropClient` 的区别，结论见「实际修改」；无独立评审机制可用
+- 技术评审：自审（按 `code-review-and-quality` 五轴逐件过实现、测试、记录；本轮无独立评审机制可用）。要求并已修复：销毁前的终止性监听与 `installClient` 常驻监听各自写了一遍同一行日志形状（重复事实源），已收敛到私有 `logClientError`，并把「监听必须永久、不能用 `once`」的原因写进注释。其余判定：四个销毁点覆盖完整（全仓 `new ssh2.Client()` 只有 `:516` 一处生产者，其余 `.destroy()` 均为转发用 TCP socket 或已装进会话的 Client）；`dropClient` 由常驻监听兜底、无需重复；`error.message` 可能含对端 `DISCONNECT` 描述文本，但沿用既有输出形状，未新增风险面；断言强度（全局逃逸探针而非「调用方没抛」）与非空洞锚点的取舍见「实际修改」。
 - 集成：pending（尚未进本地 `main`）
 - 人工功能验收：待验收（真实新主机首次连接）
 - 发布：未授权
@@ -113,6 +113,7 @@ updated: 2026-10-16
   - `bun run test:pkg ssh-transport`：19 file passed | 1 skipped、227 passed | 25 skipped（skipped 为包内既有的平台条件跳过：Go helper 与 Windows 下的 `/bin/sh`、进程类）。
   - `bun run test:impact -- packages/ssh-transport/src/ssh2-runner.ts packages/ssh-transport/src/ssh2-runner.test.ts`：direct 27 passed、related 38 passed。
   - `bun run check`：exit 0（lint / types / guards / mobile-lint 四线全绿，含 `task-worktrees`、`project-indexes`、`package-boundaries` 与声明头 ratchet `new=0`）。
+  - 技术评审修复后复跑：定向 27 passed、`bun run test:pkg ssh-transport` 227 passed | 25 skipped、`bun run check` exit 0（一致结论，见「验收分层 · 技术评审」）。
 - 未运行及原因：
   - 真实主机连接：任务明令不连真实主机；隔离复现只走回环 TCP 与替身，真实主机现象由用户在功能验收包里自测。
   - `verify:ui:*` 与 Desktop 实机：本任务未获授权，改动落在传输层包内，无 UI 面。
@@ -124,4 +125,5 @@ updated: 2026-10-16
   - 修复依赖「socket 的 `close` 晚于握手期 error、且晚于调用方 promise 续体」这一既有顺序：真实 Client 回环用例已固定该顺序，但若将来 ssh2 改成同步补发，需要用例复核。
   - 跳机 Client 与失效路径的迟到 error 记在会话 target 名下，日志不区分跳机身份——与 `installClient` 常驻监听同一口径；要区分跳机身份属独立切片。
   - 未覆盖：ProxyJump 链在真实远端下的销毁时序（无真实主机授权）、`budgetMs` 到期路径（`readyTimeout` 触发的 `sock.destroy()`）的迟到 error——它与本次同源，但触发要等真实预算，不在隔离用例内。
-  - 两条新用例的非空洞断言锚在「被吸收的迟到 error 会记一行 `ssh2 <target>: …`」：将来若 ssh2 不再补发该 error，用例会连同锚点一起失败，属预期的提醒而非缺陷。
+  - 两条新用例的非空洞断言锚在「被吸收的迟到 error 会记一行 `ssh2 <target>: …`」：将来若 ssh2 不再补发该 error，用例会连同锚点一起失败，属预期的提醒而非缺陷。改锚点没有更好的替代——受控 Client 上自己挂 `on('error')` 计数会替生产代码吸收迟到 error，把红灯洗绿。
+  - 受控替身的 `destroy()` 先发 `close` 再补发 error，真实 ssh2 是在 `close` 回调里先 error、抛出后连 `close` 都发不出来：该顺序由真实 Client 用例负责，替身不复现这两个细节（评审接受的取舍）。
