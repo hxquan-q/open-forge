@@ -1,0 +1,59 @@
+{
+	"page": {
+		"title": "Customer Service",
+		"subtitle": "Answered by WeKnora agents",
+		"openSettings": "Settings",
+		"closeSettings": "Hide settings",
+		"notConfiguredTitle": "Customer Service is not configured yet",
+		"notConfiguredBody": "Enter the WeKnora service URL and a tenant API Key to start asking questions.",
+		"loadingAgents": "Loading agents…",
+		"agentsEmpty": "No agents are available for this API Key. Make sure the key is granted the \"read agents\" capability.",
+		"agentsError": "Failed to load the agent list. Check the configuration and network, then retry.",
+		"retry": "Retry"
+	},
+	"setup": {
+		"baseUrl": "Service URL",
+		"baseUrlPlaceholder": "http://host:port",
+		"apiKey": "API Key",
+		"apiKeyPlaceholder": "Enter a tenant API Key",
+		"apiKeyConfigured": "Configured",
+		"apiKeyMissing": "Not configured",
+		"save": "Save",
+		"saving": "Saving…"
+	},
+	"agent": {
+		"label": "Agent",
+		"placeholder": "Select an agent",
+		"empty": "No agents"
+	},
+	"composer": {
+		"placeholder": "Ask a question…",
+		"send": "Send",
+		"cancel": "Cancel",
+		"sending": "Generating a reply…",
+		"unavailable": "No agent is available, so you cannot ask yet"
+	},
+	"message": {
+		"you": "You",
+		"assistant": "Customer Service",
+		"cancelled": "Cancelled",
+		"interrupted": "Incomplete",
+		"failed": "Failed",
+		"thinking": "Thinking",
+		"thinkingShow": "Show thinking",
+		"thinkingHide": "Hide thinking"
+	},
+	"error": {
+		"not_configured": "The WeKnora service URL or API Key is not configured yet.",
+		"network": "The network is unreachable. Check your connection and retry.",
+		"unauthorized": "The API Key is invalid or lacks permission. Check the credential.",
+		"capability_missing": "The API Key is missing a required capability. Enable \"chat\" and \"read agents\".",
+		"tenant_required": "This is a platform API Key. Use a tenant API Key instead.",
+		"timeout": "The request timed out. Try again later.",
+		"stream_error": "The service returned an error: {{detail}}",
+		"stream_interrupted": "The reply was not completed because the connection dropped.",
+		"agent_list_empty": "No agents are available.",
+		"agent_mode_inactive": "This agent does not have smart reasoning enabled. Pick another agent.",
+		"unknown": "An unknown error occurred."
+	}
+}

@@ -1,0 +1,125 @@
+// Copyright The Open Forge contributors.
+
+import type { WeKnoraAgent, WeKnoraPublicConfig, WeKnoraStreamEvent } from "@preload/api";
+import { atom } from "jotai";
+
+/**
+ * 「智能客服」页面的状态原子。
+ *
+ * 类型合同全部来自 preload（`@preload/api` 再导出主进程领域类型，红线 C8：不另建第二套事实源）。
+ * 这里只放**页面内**的渲染状态；跨页面共享的状态才需要进 `shared/store`（本 feature 不需要）。
+ */
+
+export type WeKnoraChatRole = "user" | "assistant";
+
+/** 单条消息的生命周期终态（AC-6 / AC-8 / AC-21⑦）。 */
+export type WeKnoraMessageStatus = "streaming" | "complete" | "cancelled" | "interrupted" | "failed";
+
+/** 智能体列表的加载状态；`empty` / `error` 对应 AC-19（不可提问）。 */
+export type WeKnoraAgentsStatus = "idle" | "loading" | "ready" | "empty" | "error";
+
+/** 从流事件里取错误码联合，避免渲染层深链主进程模块（红线 C3）。 */
+type WeKnoraFailedStreamEvent = Extract<WeKnoraStreamEvent, { type: "turn.failed" }>;
+export type WeKnoraErrorCode = WeKnoraFailedStreamEvent["error"]["code"];
+
+export interface WeKnoraChatMessage {
+	readonly id: string;
+	readonly role: WeKnoraChatRole;
+	/**
+	 * 正式回答正文（用户消息即提问）。流式期间先累积全文，终态由展示层做一次 Markdown 渲染（02-plan §4.4）。
+	 */
+	readonly text: string;
+	/**
+	 * 思考过程（AC-25）。流式期间为空：此时全文都还是「暂存」状态，由展示层按流式归入思考区；
+	 * `answer.promoted` 到达后，`text` 的前缀被切到这里，`text` 只留正式回答。
+	 */
+	readonly thinking: string;
+	readonly status: WeKnoraMessageStatus;
+	readonly errorCode?: WeKnoraErrorCode;
+	/** 仅用于排查的错误原文，不含凭据（红线 C2）。 */
+	readonly errorDetail?: string;
+}
+
+export const weKnoraConfigAtom = atom<WeKnoraPublicConfig | null>(null);
+export const weKnoraAgentsAtom = atom<WeKnoraAgent[]>([]);
+export const weKnoraAgentsStatusAtom = atom<WeKnoraAgentsStatus>("idle");
+export const weKnoraSelectedAgentIdAtom = atom<string | null>(null);
+export const weKnoraMessagesAtom = atom<WeKnoraChatMessage[]>([]);
+export const weKnoraSessionIdAtom = atom<string | null>(null);
+export const weKnoraStreamingAtom = atom<boolean>(false);
+export const weKnoraActiveRequestIdAtom = atom<string | null>(null);
+
+/** 流事件的终态（收到即结束本轮，AC-22 的收敛依据）。 */
+export function isTerminalStreamEvent(event: WeKnoraStreamEvent): boolean {
+	return event.type === "turn.completed" || event.type === "turn.cancelled" || event.type === "turn.failed";
+}
+
+function findStreamingAssistantIndex(messages: readonly WeKnoraChatMessage[]): number {
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		const message = messages[index];
+		if (message && message.role === "assistant" && message.status === "streaming") return index;
+	}
+	return -1;
+}
+
+function replaceAt(messages: WeKnoraChatMessage[], index: number, next: WeKnoraChatMessage): WeKnoraChatMessage[] {
+	return messages.map((message, current) => (current === index ? next : message));
+}
+
+/**
+ * 把一条流事件落到消息列表上（纯函数，便于单测）。
+ *
+ * - `requestId` 不匹配即**原样返回同一个引用**：既保证多路复用不串台（AC-15），也让无变化的
+ *   事件不触发重渲染。
+ * - `answer.delta` 追加纯文本（不解析 Markdown，避免 R5 抖动）；`turn.completed` 才切终态，
+ *   由展示层据此做一次完整 Markdown 渲染。
+ * - `answer.promoted` 是 AC-25 的切分落点：把 `text` 的尾部 `promotedLength` 个字符留作正式回答，
+ *   其余前缀切到 `thinking`（切分逻辑在解析层，此处只落库）。
+ * - `turn.failed` 且错误码为 `stream_interrupted` 时标为 `interrupted`（AC-21⑦ 保留部分 + 未完成）。
+ * - 重复的终态事件找不到仍在 streaming 的消息，天然幂等（AC-22）。
+ */
+export function applyStreamEvent(
+	messages: WeKnoraChatMessage[],
+	event: WeKnoraStreamEvent,
+	activeRequestId: string | null,
+): WeKnoraChatMessage[] {
+	if (activeRequestId === null || event.requestId !== activeRequestId) return messages;
+	const index = findStreamingAssistantIndex(messages);
+	if (index < 0) return messages;
+	const current = messages[index];
+	if (!current) return messages;
+	switch (event.type) {
+		case "turn.started":
+			return messages;
+		case "answer.delta":
+			return replaceAt(messages, index, { ...current, text: current.text + event.text });
+		case "answer.promoted": {
+			// 切分点由解析层给出：尾部 = 正式回答，前缀 = 思考（AC-25）。
+			const answerLength = Math.min(event.promotedLength, current.text.length);
+			const splitAt = current.text.length - answerLength;
+			return replaceAt(messages, index, {
+				...current,
+				thinking: current.text.slice(0, splitAt),
+				text: current.text.slice(splitAt),
+			});
+		}
+		case "references":
+			// 引用角标渲染是 T04；此处不丢事件也不渲染。
+			return messages;
+		case "turn.completed":
+			return replaceAt(messages, index, { ...current, status: "complete" });
+		case "turn.cancelled":
+			return replaceAt(messages, index, { ...current, status: "cancelled" });
+		case "turn.failed": {
+			const status: WeKnoraMessageStatus = event.error.code === "stream_interrupted" ? "interrupted" : "failed";
+			return replaceAt(messages, index, {
+				...current,
+				status,
+				errorCode: event.error.code,
+				...(event.error.detail === undefined ? {} : { errorDetail: event.error.detail }),
+			});
+		}
+		default:
+			return messages;
+	}
+}
