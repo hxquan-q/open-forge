@@ -79,7 +79,13 @@ export function ConversationList({
 				) : null}
 
 				{status === "ready" && sessions.length === 0 ? (
-					<p className="px-1 text-[12px] text-muted-foreground/60">{t("conversation.empty")}</p>
+					<div className="flex flex-col items-start gap-2 px-1">
+						<p className="text-[12px] text-muted-foreground/60">{t("conversation.empty")}</p>
+						{/* 缺陷 3（实机反馈）：空状态也提供刷新入口 —— 否则只能刷新整页，而刷新页面会丢掉当前对话。 */}
+						<Button onClick={onReload} size="sm" type="button" variant="outline">
+							{t("conversation.refresh")}
+						</Button>
+					</div>
 				) : null}
 
 				<ul className="flex flex-col gap-1">

@@ -301,4 +301,17 @@ describe("WeKnoraPage · 历史会话（AC-12/13/14/20）", () => {
 
 		expect(screen.queryByText("问题")).toBeNull();
 	});
+
+	it("历史为空时提供刷新入口，点击后重新拉取（缺陷 3）", async () => {
+		const { api } = installApi({ listSessions: vi.fn(async () => []) });
+		renderPage();
+
+		const nav = await screen.findByRole("navigation", { name: "历史会话" });
+		await waitFor(() => expect(within(nav).getByText("暂无历史会话")).toBeTruthy());
+		expect(api.listSessions).toHaveBeenCalledTimes(1);
+
+		await userEvent.click(within(nav).getByRole("button", { name: "刷新" }));
+
+		await waitFor(() => expect(api.listSessions).toHaveBeenCalledTimes(2));
+	});
 });

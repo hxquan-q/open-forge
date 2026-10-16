@@ -247,6 +247,8 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			setMessages((prev) => [...prev, userMessage, assistantMessage]);
 			setIsStreaming(true);
 			isAskingRef.current = true;
+			// 本次是否新建 WeKnora 会话（缺陷 2：新建成功后才刷新历史，追问复用会话不重复拉）。
+			const isNewSession = sessionId === null;
 			try {
 				const result = await window.vetta.weknora.ask({
 					...(sessionId === null ? {} : { sessionId }),
@@ -257,6 +259,8 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 				activeRequestIdRef.current = result.requestId;
 				setActiveRequestId(result.requestId);
 				setSessionId(result.sessionId);
+				// 缺陷 2（实机反馈）：新会话刚落库，左栏应立刻出现，无需手动刷新页面。
+				if (isNewSession) void loadSessions();
 				isAskingRef.current = false;
 				const buffered = pendingEventsRef.current;
 				pendingEventsRef.current = [];
@@ -284,6 +288,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			config,
 			handleEvent,
 			isStreaming,
+			loadSessions,
 			sessionId,
 			selectedAgentId,
 			setActiveRequestId,
@@ -360,12 +365,17 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 				if (apiKey) await window.vetta.weknora.setApiKey(apiKey);
 				const cfg = await window.vetta.weknora.getConfig();
 				setConfig(cfg);
-				if (isConfigured(cfg)) await loadAgents(cfg);
+				if (isConfigured(cfg)) {
+					await loadAgents(cfg);
+					// 缺陷 1（实机反馈）：初始化 effect 的依赖不含 `config`（加了会与 `setConfig` 自激循环），
+					// 因此配置从「未就绪」变为「就绪」时不会自动重拉历史 —— 保存配置后必须在这里显式拉一次。
+					await loadSessions();
+				}
 			} finally {
 				setSaving(false);
 			}
 		},
-		[loadAgents, setConfig],
+		[loadAgents, loadSessions, setConfig],
 	);
 
 	const reloadAgents = useCallback(() => {

@@ -313,4 +313,54 @@ describe("useWeKnoraModel · 历史会话（AC-11/12/13/14/15）", () => {
 		expect(result.current.messages.map((item) => item.text)).toEqual(["B 的回答"]);
 		expect(api.loadMessages).toHaveBeenCalledTimes(2);
 	});
+
+	// ── 实机缺陷回派（round 1）：该自动刷新时没刷新 ──
+
+	it("保存配置后同时拉取智能体与历史会话（缺陷 1）", async () => {
+		const getConfig = vi.fn(async () => ({ ...CONFIGURED, hasApiKey: false }));
+		const { api } = installApi({ getConfig });
+		const { result } = renderModel();
+		await waitFor(() => expect(result.current.config).not.toBeNull());
+		// 未配置时一个请求都不发（AC-2）。
+		expect(api.listSessions).not.toHaveBeenCalled();
+
+		// 模拟用户实际路径：先开应用（未配置）→ 再填配置保存。
+		getConfig.mockImplementation(async () => CONFIGURED);
+		await act(async () => {
+			await result.current.actions.saveSetup({ baseUrl: "http://host:8083", apiKey: "secret" });
+		});
+
+		expect(api.listAgents).toHaveBeenCalled();
+		expect(api.listSessions).toHaveBeenCalledWith({ page: 1, pageSize: 20 });
+	});
+
+	it("新建会话提问成功后刷新历史列表（缺陷 2）", async () => {
+		const { api } = installApi();
+		const { result } = await renderReady();
+		await waitFor(() => expect(result.current.sessionsStatus).toBe("ready"));
+		expect(api.listSessions).toHaveBeenCalledTimes(1); // 初始化一次
+
+		await act(async () => {
+			await result.current.actions.send("第一问");
+		});
+
+		await waitFor(() => expect(api.listSessions).toHaveBeenCalledTimes(2));
+	});
+
+	it("追问复用会话时不额外刷新历史列表（缺陷 2 的取舍：仅新建时拉）", async () => {
+		const { api, emit } = installApi();
+		const { result } = await renderReady();
+		await waitFor(() => expect(result.current.sessionsStatus).toBe("ready"));
+
+		await act(async () => {
+			await result.current.actions.send("第一问");
+		});
+		act(() => emit({ type: "turn.completed", requestId: "r1" }));
+		await waitFor(() => expect(api.listSessions).toHaveBeenCalledTimes(2));
+
+		await act(async () => {
+			await result.current.actions.send("第二问");
+		});
+		expect(api.listSessions).toHaveBeenCalledTimes(2);
+	});
 });
