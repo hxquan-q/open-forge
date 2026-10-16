@@ -63,16 +63,35 @@ node -e "const fs=require('fs');for(const p of [<逐个路径>]){try{const s=fs.
 - [ ] 子环节（subSteps）的 seq 在父内连续、结构与父同构
 - [ ] `startedAt`/`endedAt` 时间锚在位（V2 双链比对的边界，缺失即违规）
 
-### G3 artifacts 与实际内容对应（抽查）
+### G3 产物正常性（机械核验——不判内容正确度）
 
-不只是存在——内容要配得上环节名（防"空壳文件"）：
+主控不读产物语义。内容正确度归评审子（对照 acceptance）、白盒/黑盒与用户门；G3 只回答「这是不是一份**正常的文件**」——某行写着 1+1=3 属内容问题，G3 照常通过；乱码、空壳、结构缺失、状态残留不通过。
 
-- 需求环节：requires.md 含需求条目表与验收标准节；originModel.html 含 R# 标注与可交互元素
-- 架构环节：design.md 含改动面清单（文件路径级）与"必须同步"节
-- 任务环节：tasks.md 含 T# 任务卡，每卡有依赖/任务/验收标准字段
-- 白盒环节：whitebox.md 含测试计划表与结果回填；test-results/ 有问题清单
-- 黑盒环节：blackbox.md 结果总表两列（自测/核验）覆盖全部用例，取值合法（✓/✗/豁/空），✗ 与豁必有对应 P# 条目；头部含执行模式/探测记录字段
-- 评审环节：reviews.md 有本 T 条目（§0.4 节格式：`## T<n> · 第 <轮> 评审` + verdict + 问题清单 + 证据）
+逐项脚本判定（node -e 贴输出，与 G1 同为机械动作）：
+
+- [ ] UTF-8 完整解码，无 U+FFFD（�）替换符
+- [ ] 无异常重复（同一非空整行出现 >5 次；误报时人工复核该行一次）
+- [ ] 必备结构节在位（按下表）
+- [ ] 头部状态标记合法（「状态:」取值在枚举内；收口环节不应残留「草案」）
+
+各产物必备节对照：
+
+| 产物 | 必备节/标记 |
+|---|---|
+| requires.md | 「需求条目」「验收标准」节 |
+| design.md | 「架构决策」「改动面清单」节 |
+| tasks.md | T# 任务卡（依赖/任务/验收标准字段） |
+| reviews.md | `verdict:` 行 |
+| whitebox.md | 测试计划表 |
+| blackbox.md | 结果总表两列 + 头部执行模式字段 |
+
+检查脚本（第一个参数为文件，其后为该产物的必备节关键词）：
+
+```
+node -e "const fs=require('fs');const[file,...need]=process.argv.slice(1);const s=fs.readFileSync(file,'utf8');const c=new Map();for(const l of s.split(/\r?\n/)){const t=l.trim();if(t)c.set(t,(c.get(t)||0)+1);}console.log(JSON.stringify({file,bytes:Buffer.byteLength(s),badFFFD:s.includes('\uFFFD'),dupMax:Math.max(0,...c.values()),missing:need.filter(k=>!s.includes(k))}))" docs/ac/requires.md 需求条目 验收标准
+```
+
+判定：bytes>0、badFFFD=false、dupMax≤5、missing=[] → 通过；否则打回对应执行者。
 
 ### G4 executions 与评审记录一致
 

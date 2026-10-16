@@ -19,7 +19,8 @@
         "comfyui-media-provider",
         "content-creation",
         "browser",
-        "build-apple-apps"
+        "build-apple-apps",
+        "eform-craft"
       ]
     },
     "production": {
@@ -37,7 +38,8 @@
         "scripts",
         "plugin-workbench",
         "browser",
-        "build-apple-apps"
+        "build-apple-apps",
+        "eform-craft"
       ]
     }
   }

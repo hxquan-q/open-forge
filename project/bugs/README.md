@@ -16,10 +16,11 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0117` | SSH 握手失败后的清理窗口让 error 逃逸为全局未捕获异常 | verifying | P1 | — |
-| `BUG-0116` | 远程项目的 Skill 展示读取把远端绝对路径当本机路径 | verifying | P2 | — |
-| `BUG-0115` | 终端 owner 与订阅的生命周期监听器未成组解绑 | verifying | P2 | — |
-| `BUG-0114` | report-canvas 展示元数据使用不支持的 canvas 枚举 | verifying | P2 | — |
+| `BUG-0121` | SSH 握手失败后的清理窗口让 error 逃逸为全局未捕获异常 | verifying | P1 | — |
+| `BUG-0120` | 远程项目的 Skill 展示读取把远端绝对路径当本机路径 | verifying | P2 | — |
+| `BUG-0119` | 终端 owner 与订阅的生命周期监听器未成组解绑 | verifying | P2 | — |
+| `BUG-0118` | report-canvas 展示元数据使用不支持的 canvas 枚举 | verifying | P2 | — |
+| `BUG-0114` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | investigating | P2 | — |
 | `BUG-0113` | 文档站搜索索引因跨语言 URL 重复而返回 500 | verifying | P2 | PLAN-0003 |
 | `BUG-0112` | 本地生产探针以回环 IP 绑定时产生 307 自重定向 | done | P3 | PLAN-0003 |
 | `BUG-0111` | Desktop 可执行文件兜底发现路径仍指向旧品牌安装位置，命中不了真实安装 | investigating | P2 | — |
