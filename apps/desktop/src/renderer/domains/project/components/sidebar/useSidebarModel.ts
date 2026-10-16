@@ -77,6 +77,12 @@ const BUILTIN_NAV_ITEMS = [
 	},
 	{
 		type: "route",
+		path: "/weknora" as const,
+		labelKey: "sidebar.nav.weknora",
+		icon: "icon-[solar--chat-round-dots-linear]",
+	},
+	{
+		type: "route",
 		path: "/batch-tasks" as const,
 		labelKey: "sidebar.nav.batchTasks",
 		icon: "icon-[solar--clipboard-check-outline]",
@@ -114,10 +120,18 @@ const BUILTIN_NAV_ITEMS = [
 ] as const;
 
 /**
- * 首次使用时的置顶区默认成员：留「能力」「智能体」和设计画廊，其余入口默认收纳。
- * 顺序由 navCatalog 决定（内置在前、插件视图在后），即「新会话 / 能力 / 智能体 / 设计」。
+ * 首次使用时的置顶区默认成员：留「能力」「智能体」「智能客服」和设计画廊，其余入口默认收纳。
+ * 顺序由 navCatalog 决定（内置在前、插件视图在后），即「新会话 / 能力 / 智能体 / 智能客服 / 设计」。
+ *
+ * 新增的 key 只要从未落过盘，就会按此默认分区进入置顶区（见 sidebar-nav-layout.ts 的
+ * resolveSidebarNavLayout）——「智能客服」是全新入口，老用户同样会默认置顶。
  */
-const DEFAULT_PINNED_NAV_KEYS = ["/abilities", "/agents", workspaceViewNavKey("vetta-ui-design", "gallery")];
+const DEFAULT_PINNED_NAV_KEYS = [
+	"/abilities",
+	"/agents",
+	"/weknora",
+	workspaceViewNavKey("vetta-ui-design", "gallery"),
+];
 
 function loadStoredNavLayout(): SidebarNavLayout {
 	try {

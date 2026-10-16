@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 静态打包的 catalog 聚合（见 ADR-0031）。main 与 renderer 都顶层 import 本文件，
 // 由各自 Vite bundle 把 JSON 内联——零运行时 fs、零 async、不闪。新增语言/ns =
 // 在此加一条 import + 在 resources 里加一项。
@@ -14,6 +15,7 @@ import enPet from "./locales/en/pet.json";
 import enProject from "./locales/en/project.json";
 import enSettings from "./locales/en/settings.json";
 import enSkills from "./locales/en/skills.json";
+import enWeknora from "./locales/en/weknora.json";
 import zhAbilities from "./locales/zh/abilities.json";
 import zhAgentTeams from "./locales/zh/agent-teams.json";
 import zhAutomation from "./locales/zh/automation.json";
@@ -26,6 +28,7 @@ import zhPet from "./locales/zh/pet.json";
 import zhProject from "./locales/zh/project.json";
 import zhSettings from "./locales/zh/settings.json";
 import zhSkills from "./locales/zh/skills.json";
+import zhWeknora from "./locales/zh/weknora.json";
 
 export const resources = {
 	zh: {
@@ -41,6 +44,7 @@ export const resources = {
 		"batch-tasks": zhBatchTasks,
 		automation: zhAutomation,
 		"agent-teams": zhAgentTeams,
+		weknora: zhWeknora,
 	},
 	en: {
 		common: enCommon,
@@ -55,6 +59,7 @@ export const resources = {
 		"batch-tasks": enBatchTasks,
 		automation: enAutomation,
 		"agent-teams": enAgentTeams,
+		weknora: enWeknora,
 	},
 } as const;
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RefCallback } from "react";
 
 export type SidebarFilter = "all" | "normal" | "batch";
@@ -30,6 +31,7 @@ export type SidebarLabelKey =
 	| "sidebar.nav.knowledge"
 	| "sidebar.nav.skills"
 	| "sidebar.nav.agents"
+	| "sidebar.nav.weknora"
 	| "sidebar.nav.scenes"
 	| "sidebar.nav.plugins"
 	| "sidebar.nav.modelSettings"
@@ -95,7 +97,8 @@ export interface SidebarNavItem {
 		| "/skills"
 		| "/scenes"
 		| "/plugins"
-		| "/agents";
+		| "/agents"
+		| "/weknora";
 	/** 直达设置页某个 tab（`/settings/$tab`）；与 `path` 互斥。 */
 	readonly settingsTab?: string;
 	readonly title?: string;

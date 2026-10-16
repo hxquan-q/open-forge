@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // i18n 共享常量 / 类型 / locale 归一化。被 main 进程、renderer、preload 三处共用，
 // 故放 src/shared（main 用相对 ../shared 引、renderer 用 @/shared 引）。
 
@@ -39,6 +40,7 @@ export const NAMESPACES = [
 	"batch-tasks",
 	"automation",
 	"agent-teams",
+	"weknora",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
