@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0301` | `verifying` | — | dev 启动器 GPU 沙箱 FATAL 自动回退：识别 code 3 + `GPU process isn't usable` 后追加 `--disable-gpu-sandbox` 重试一次（保留硬件加速），显式 `VETTA_DESKTOP_DISABLE_GPU=1` 不重试；定向 7/7 绿，`bun run dev` 全链路实测回退成功，待人工窗口验收。 |
 | `TASK-0300` | `done` | — | 本机 GPU 逃生开关（VETTA_DESKTOP_DISABLE_GPU=1 → --disable-gpu --no-sandbox）；用户终端验证通过（dev 实例成功启动并完成全部 BUG-0127 实测）。 |
 | `TASK-0299` | `done` | PLAN-0002 | BUG-0127 路线 5 回归防线（随 BUG-0127 闭合）；2 例 + 行为 52 例 + 完整 check 全绿。 |
 | `TASK-0298` | `done` | PLAN-0002 | BUG-0127 验收配套 eventLoop 指标（随 BUG-0127 闭合，实测数据已采集）；33 例 + 完整 check 全绿。 |

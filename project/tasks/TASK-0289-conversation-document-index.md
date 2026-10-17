@@ -1,7 +1,7 @@
 ---
 id: TASK-0289
 type: task
-status: verifying
+status: done
 priority: P1
 owner: runtime-core
 requirement:

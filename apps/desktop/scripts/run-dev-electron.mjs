@@ -21,7 +21,8 @@ function resolveRendererPort() {
 function waitForExit(child) {
 	return new Promise((resolve, reject) => {
 		child.once("error", reject);
-		child.once("exit", (code, signal) => resolve({ code, signal }));
+		// 用 close 而非 exit：stderr 的 FATAL 行可能在 exit 之后才派发完。
+		child.once("close", (code, signal) => resolve({ code, signal }));
 	});
 }
 
@@ -95,6 +96,42 @@ export function resolveGpuLaunchFlags(environment = process.env) {
 	return environment.VETTA_DESKTOP_DISABLE_GPU === "1" ? ["--disable-gpu", "--no-sandbox"] : [];
 }
 
+const GPU_PROCESS_FAILURE_MARKERS = ["GPU process isn't usable", "GPU process launch failed"];
+
+export function isGpuProcessFailureOutput(output) {
+	return GPU_PROCESS_FAILURE_MARKERS.some((marker) => output.includes(marker));
+}
+
+/**
+ * 仅当 Electron 因 GPU 进程起不来而 FATAL 退出（code 3）时回退一次：
+ * `--disable-gpu-sandbox` 只关 GPU 沙箱并保留硬件加速，比软件合成侵入更小。
+ * 已显式设 VETTA_DESKTOP_DISABLE_GPU=1 时不再重试。
+ */
+export function shouldRetryElectronWithGpuSandboxFallback(
+	{ code, signal, sawGpuFailure },
+	environment = process.env,
+) {
+	if (signal || code !== 3 || !sawGpuFailure) return false;
+	return environment.VETTA_DESKTOP_DISABLE_GPU !== "1";
+}
+
+function launchElectron(electronArgs, environment) {
+	let stderrTail = "";
+	let sawGpuFailure = false;
+	const child = spawn(electronPath, electronArgs, {
+		cwd: projectRoot,
+		env: environment,
+		// stderr 需同时透传和识别 GPU FATAL；stdout 保持直通。
+		stdio: ["inherit", "inherit", "pipe"],
+	});
+	child.stderr.on("data", (chunk) => {
+		process.stderr.write(chunk);
+		stderrTail = (stderrTail + chunk.toString("utf8")).slice(-512);
+		if (!sawGpuFailure && isGpuProcessFailureOutput(stderrTail)) sawGpuFailure = true;
+	});
+	return { child, sawGpuFailure: () => sawGpuFailure };
+}
+
 async function main() {
 	const rendererPort = resolveRendererPort();
 	const rendererUrl = `http://127.0.0.1:${rendererPort}`;
@@ -102,36 +139,46 @@ async function main() {
 
 	const { configDir, userDataDir } = resolveDevLaunchEnvironment();
 	const pluginIds = resolveDevPluginIds();
-	const electronArgs = [];
+	const electronSwitches = [];
 	if (process.env.VETTA_UI_VERIFICATION === "1") {
 		if (process.env.VETTA_DESKTOP_RUNTIME_CANARY === "1") {
-			electronArgs.push("--disable-gpu");
-			electronArgs.push("--no-sandbox");
+			electronSwitches.push("--disable-gpu");
+			electronSwitches.push("--no-sandbox");
 		}
 	}
-	electronArgs.push(...resolveGpuLaunchFlags());
-	electronArgs.push(`--user-data-dir=${userDataDir}`);
-	electronArgs.push(join(projectRoot, "dist", "main", "index.js"));
+	electronSwitches.push(...resolveGpuLaunchFlags());
+	electronSwitches.push(`--user-data-dir=${userDataDir}`);
+	const appEntry = join(projectRoot, "dist", "main", "index.js");
+	const electronEnvironment = {
+		...resolveDevProcessEnvironment(),
+		VETTA_CONFIG_DIR: configDir,
+		VETTA_DESKTOP_DEV_URL: rendererUrl,
+		VETTA_PLUGIN_DEV: pluginIds,
+	};
 
-	const electronProcess = spawn(electronPath, electronArgs, {
-		cwd: projectRoot,
-		env: {
-			...resolveDevProcessEnvironment(),
-			VETTA_CONFIG_DIR: configDir,
-			VETTA_DESKTOP_DEV_URL: rendererUrl,
-			VETTA_PLUGIN_DEV: pluginIds,
-		},
-		stdio: "inherit",
-	});
-	for (const signal of ["SIGINT", "SIGTERM"]) {
-		process.once(signal, () => electronProcess.kill(signal));
+	let activeChild;
+	const forwardSignal = (signal) => activeChild?.kill(signal);
+	for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, forwardSignal);
+
+	const launch = async (extraSwitches = []) => {
+		const { child, sawGpuFailure } = launchElectron(
+			[...electronSwitches, ...extraSwitches, appEntry],
+			electronEnvironment,
+		);
+		activeChild = child;
+		return { ...(await waitForExit(child)), sawGpuFailure: sawGpuFailure() };
+	};
+
+	try {
+		let electronResult = await launch();
+		if (shouldRetryElectronWithGpuSandboxFallback(electronResult)) {
+			console.warn("[dev] GPU 进程无法启动，改用 --disable-gpu-sandbox 重试一次（保留硬件加速）");
+			electronResult = await launch(["--disable-gpu-sandbox"]);
+		}
+		process.exitCode = electronResult.signal ? 1 : (electronResult.code ?? 1);
+	} finally {
+		for (const signal of ["SIGINT", "SIGTERM"]) process.off(signal, forwardSignal);
 	}
-	const electronResult = await waitForExit(electronProcess);
-	if (electronResult.signal) {
-		process.exitCode = 1;
-		return;
-	}
-	process.exitCode = electronResult.code ?? 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
