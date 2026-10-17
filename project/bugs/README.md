@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0119` | 团队长任务累积性卡顿：会话读路径全量物化 + team persist 双重全量序列化 | verifying | P2 | — |
 | `BUG-0118` | session-interrupt monitor 长任务全程误报 suspected（判据不认识"主控等子代理"） | verifying | P3 | — |
 | `BUG-0117` | SessionError 裸对象跨 IPC：team 链渲染端只见 [object Object]（单聊链有翻译层，team 链缺） | verifying | P2 | — |
 | `BUG-0116` | 团队会话 runtime 损坏后无自愈：此后每次 send 必败 SESSION_NOT_FOUND，仅重启可恢复 | verifying | P1 | — |

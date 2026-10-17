@@ -695,6 +695,44 @@ describe("FileConversationRepository", () => {
 		expect(conversation.messages.map(messageText)).toEqual(["external"]);
 	});
 
+	it("serves repeated readDocument calls from the warm cache without reparsing (BUG-0119)", async () => {
+		const { repository } = await createRepository();
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+		await repository.append("session-1", 0, [
+			started("session-1", "turn-1"),
+			message("session-1", "turn-1", "hello"),
+		]);
+
+		// 长任务里 readDocument 每命令/每轮被调：文件未变时必须命中同一份已物化
+		// document，而不是每次重新解析整个 JSONL。
+		const first = await repository.readDocument("session-1");
+		const second = await repository.readDocument("session-1");
+		expect(second).toBe(first);
+		expect(second.entries).toHaveLength(1);
+	});
+
+	it("keeps the readDocument cache fresh after commands and external writes (BUG-0119)", async () => {
+		const { repository, rootDir } = await createRepository();
+		const external = new FileConversationRepository({ rootDir });
+		await repository.create({ sessionId: "session-1", createdAt: 100 });
+		await repository.append("session-1", 0, [message("session-1", "turn-1", "hello")]);
+
+		await repository.readDocument("session-1");
+
+		// 本实例的命令写入必须同步刷新读缓存：读到命令结果的同一份文档。
+		const renamed = await repository.execute("session-1", 1, { type: "session.name.set", name: "Renamed" });
+		const afterCommand = await repository.readDocument("session-1");
+		expect(afterCommand).toBe(renamed.document);
+		expect(afterCommand.name).toBe("Renamed");
+
+		// 另一实例在锁下追加：本实例缓存按字节数失效，读必须回源全量读。
+		await external.append("session-1", 1, [assistant("session-1", "turn-1", "external answer")]);
+		const afterExternal = await repository.readDocument("session-1");
+		expect(afterExternal).not.toBe(afterCommand);
+		expect(afterExternal.journalVersion).toBe(2);
+		expect(afterExternal.activeLeafId).toBe("event-2");
+	});
+
 	it("evicts cached sessions beyond the LRU limit without losing writes", async () => {
 		const { rootDir } = await createRepository();
 		const bounded = new FileConversationRepository({ rootDir, documentCacheLimit: 1 });

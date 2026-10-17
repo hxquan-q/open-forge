@@ -67,6 +67,9 @@ export class TeamSessionStateRepository {
 		if (
 			latest?.type !== "custom" ||
 			!isTeamSessionStateRecord(latest.data) ||
+			// revision 是被序列化的字段：不等 ⇒ 全文必不等，直接追加，
+			// 常态变更后 persist 不再触发两次全量 JSON.stringify（BUG-0119）。
+			latest.data.session.revision !== session.revision ||
 			JSON.stringify(latest.data.session) !== JSON.stringify(session)
 		) {
 			await this.options.runtime().appendSessionMetadataEntry(coordination.sessionId, record.customType, record);
