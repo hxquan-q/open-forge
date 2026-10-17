@@ -15,7 +15,7 @@ related_bugs: []
 execution: parallel
 branch: task/TASK-0315-source-locator-v2
 worktree: ../open-forge-wt/task-0315-source-locator-v2
-base_commit: ee0c00f54
+base_commit: 511c36e4fc8066e258c1aac6bf115c62b531a6d0
 read_paths:
   - project/plans/PLAN-0018-design-plugin-roadmap-v2.md
   - packages/plugins/presets/vetta-ui-design/engine/vite.config.mjs
