@@ -78,7 +78,9 @@ updated: 2026-10-17
 
 ### 用户复测清单（验收闭环步骤）
 
-1. **带上全部修复运行**：修复全部落在 main 进程与渲染端源码——dev 实例需**重启 `bun run dev`**（`dev:electron` 只在启动时重建 main/preload bundle，热更不覆盖）；打包版需包含 2026-10-17 之后的构建。
+> **2026-10-17 Agent 代跑尝试记录（已定位环境边界，复测需用户亲自执行）**：用户授权后 Agent 尝试代启动 dev 实例并驱动 qwen3.8 测试，逐层排障——①harness 环境自带 `ELECTRON_RUN_AS_NODE=1` 会使 electron 退化为纯 Node（已识别并清除）；②Electron 39.8.10 在本机 harness 上下文下 GPU 初始化触发 `0x80000003 STATUS_BREAKPOINT` 静默崩溃，`--disable-gpu --no-sandbox` 可绕过（探测进程存活验证）；③最终硬边界：**electron.exe 在 harness 派生的进程上下文中被全路径拒绝文件写入**（`~` 与仓库内 mkdir 均 EPERM，node.exe/pwsh 同路径可写；表现为 electron-log 建目录失败 + Chromium `process_singleton` 锁 Error 5 后退出）——非仓库缺陷，属宿主沙箱对特定二进制的策略；刻意转义该边界不合规。附带产出：**当前工作树（含全部九片修复）的 main/preload/renderer 已完整构建进 dist/**，用户直接 `bun run dev` 即跑修复后代码；`qwen3.8-27b` 已确认配置于 `~/.openforge-dev/agent/models.json`（今晨 03:06 用户曾以该模型实测）。
+
+1. **带上全部修复运行**：在**你自己的终端**（非经 Agent/沙箱派生）运行 `bun run --cwd apps/desktop dev`——main/preload 改动需重启生效（`dev:electron` 只在启动时重建 bundle）；构建已就绪，启动会很快。
 2. **复现场景对齐报告**：团队会话中运行同型多阶段长任务（如 allstar-coding 流水线）≥5–10 分钟，期间持续做输入交互，主观对照「是否仍随时间变卡」。
 3. **主证据——DevTools Performance**：主窗口录制 30–60s，对照修复前基线「主进程 8 个 >1s、最长 3049ms」；另记本地指标 LCP（修复前 33s→97s 量级，预期回秒级）。注意报告 §3.2 的 chunk 命名陷阱，归因以采样火焰图对照源码为准。
 4. **辅证据——诊断包**：设置 → 通用 → **导出诊断包**（含 `perf-snapshot.json`：各进程 CPU%/工作集随时间的聚合、回合时长与 model call 统计、**主进程事件循环阻塞窗口计数 `aggregates.eventLoop`（overruns/maxOverrunMs，>500ms 窗口，TASK-0298 新增）**；及最近日志）——修复前基线「8 个 >1s、最长 3049ms」可直接对照 overruns 是否归零/量级回落。
