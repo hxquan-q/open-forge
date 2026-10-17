@@ -1,7 +1,7 @@
 ---
 id: BUG-0117
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop agent-teams + runtime-core
 requirement:
@@ -13,7 +13,7 @@ related_tasks: []
 related_issues: []
 related_bugs: [BUG-0092]
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # SessionError 裸对象跨 IPC：team 链渲染端只见 [object Object]（单聊链有翻译层，team 链缺）
@@ -66,5 +66,11 @@ updated: 2026-10-16
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：team 链 IPC 消费路径接入 `describeError`（复用 BUG-0092 的 TASK-0236 翻译层）。
-- 验证：上述回归测试 + 0092 套件延伸；实机触发一次 team 错误确认渲染端可读。
+- 修复：2026-10-17（localtest 分支）。取证修正：渲染端无法恢复已被 `String()` 毁掉的信息，翻译层必须在**主进程 IPC 边界**（抛出侧）做，而非渲染端消费侧——记录原判「渲染端接 describeError」方向错误。实现：
+  - `apps/desktop/src/main/ipc/agent-teams.ts` 新增 `handleReadable(channel, handler)` 统一包装，registerAgentTeamsIpc 内全部 26 个 `ipcMain.handle` 注册改经它：handler 抛出的 **Error 原样透传**（保留身份——既有契约测试 `propagates an unavailable Team model...` 用 `.rejects.toBe(failure)` 钉住），**非 Error 抛值**（runtimeError 普通对象形态）经 `describeError`（`util.inspect`，含 code/message/retryable 字段）包成可读 `Error` 再跨 IPC。
+  - 同步抛出语义保持：同步 throw 的 handler（如 create-agent 的输入校验）仍同步 throw，既有 `expect(() => createAgent(...)).toThrow(...)` 契约不变。
+  - send-message/get-session 的主进程日志早已 `describeError`（0092 遗产），本条补的是跨线到渲染端的那一半。
+- 验证：
+  - 红→绿：`agent-teams.test.ts` 新增「wraps plain-object rejections into readable Errors instead of [object Object] (BUG-0117)」——`sessions.send` reject 普通对象 `{code: "SESSION_NOT_FOUND", ...}`，断言渲染侧收到 `Error` 实例、message 含 `SESSION_NOT_FOUND`、不含 `[object Object]`。旧实现红（reject 值即裸普通对象），stash 验证过。
+  - 全文件 16/16 绿；desktop `typecheck:incremental` 零错。
+  - 待实机：dev 实例触发一次 team 链运行时错误（如 BUG-0116 场景），确认渲染端 console 为可读错误。
