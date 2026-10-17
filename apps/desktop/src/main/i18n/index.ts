@@ -15,10 +15,9 @@ import {
 	isLanguagePreference,
 	type LanguagePreference,
 	type LanguageState,
-	NAMESPACES,
 	resolveAppLanguage,
-	resources,
-} from "../../shared/i18n/resources.js";
+} from "../../shared/i18n/config.js";
+import { MAIN_NAMESPACES, mainResources } from "../../shared/i18n/main-resources.js";
 import { readConfigSync } from "../config/desktop-config-store.js";
 
 const mainI18n = i18next.createInstance();
@@ -56,11 +55,13 @@ export function initAppLanguage(): void {
 	// initAsync:false 强制同步初始化（i18next 默认把资源装载推到 setTimeout，
 	// 那样 init 返回后 isInitialized 仍为 false、t() 暂吐 key）。资源已静态内联，
 	// 同步装载无 IO 成本，保证 init 返回即可用——后续 mainT() 立刻拿到译文。
+	// 资源用 main 专用子集（见 shared/i18n/main-resources.ts）：main bundle 不再
+	// 打包 renderer 专属 ns，约省 206 kB；新增 ns 前缀调用须同步该文件。
 	void initDesktopI18n(mainI18n, {
-		resources,
+		resources: mainResources,
 		lng: currentLanguage,
 		fallbackLng: FALLBACK_LANGUAGE,
-		ns: NAMESPACES,
+		ns: [...MAIN_NAMESPACES],
 		defaultNS: "main",
 		initAsync: false,
 		interpolation: { escapeValue: false },

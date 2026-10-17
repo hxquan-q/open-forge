@@ -23,6 +23,8 @@ desktop 原本全量中文硬编码（renderer ~237 文件、main ~73 文件含�
 
 **静态打包 catalog 换掉懒加载。** 懒加载省 bundle、可不重构加语言，但要解决打包后路径问题（[[人设]] 已踩过 `__dirname` 失效）并带首帧 async 闪。2-3 语言下全量打进 bundle 的体积可忽略，换来同步 init、零 fs、不闪——与 [[人设]] codegen 内联同一思路（凡打包后场景一律避免运行时读盘）。
 
+> **2026-10-17 补记（ISSUE-0021 审计后修订）**：上文「体积可忽略」的前提已被产物审计证伪——minified locale 合计 505.4 kB（zh 254.3 + en 263.2），嵌入 `brand-assets` chunk 且被 `renderApp` 静态引用，占启动路径 JS ≈11.5%。据此按本 ADR「后续若改变主意」条款启动渐进收窄：**主进程已改为专用子集**（`shared/i18n/main-resources.ts`，ns 面 {main, common, settings, skills, pet}，main bundle 省 ≈206 kB；同步 init 语义不变，单测锁定 ns 面）；renderer 侧的按 ns 懒加载（B-1，含首帧闪烁回归与 `settings` ns 的 key 迁移评估）作为独立切片推进，落地前维持全量静态打包与「不闪」保证。
+
 **语义 key 换掉「中文原文即 key」。** 后者包 `t()` 即走、零命名摩擦，对 310 文件诱惑很大；但改中文文案就断 key、key 冗长。选语义 key 以保可维护性，承担逐条取名的人工成本，这也正是「纯自动 codemod 不可行、必须框架先行 + 人工增量抽」的根因。
 
 ## 后续若改变主意
