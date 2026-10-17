@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type {
 	AssistantTurnTiming,
@@ -13,6 +14,7 @@ import type {
 	ConversationDocumentCustomMessageEntry,
 	ConversationDocumentEntry,
 } from "./document.js";
+import { conversationDocumentEntriesIndex } from "./document-index.js";
 
 const ASSISTANT_TURN_TIMING_TYPE = "vetta.assistant_turn_timing";
 const PROMPT_RESOURCE_REFERENCE_TYPE = "prompt_resource_reference";
@@ -22,7 +24,7 @@ const PROMPT_REJECTED_TYPE = "prompt_rejected";
 const TURN_FAILED_TYPE = "turn_failed";
 
 export function selectConversationDocumentBranch(document: ConversationDocument): ConversationDocumentEntry[] {
-	const byId = new Map(document.entries.map((entry) => [entry.id, entry]));
+	const byId = conversationDocumentEntriesIndex(document.entries).byId;
 	const branch: ConversationDocumentEntry[] = [];
 	let current = document.activeLeafId ? byId.get(document.activeLeafId) : undefined;
 	while (current) {
@@ -34,7 +36,7 @@ export function selectConversationDocumentBranch(document: ConversationDocument)
 
 export function projectConversationDocumentHistory(document: ConversationDocument): HistoryEntry[] {
 	const branch = selectConversationDocumentBranch(document);
-	const byId = new Map(document.entries.map((entry) => [entry.id, entry]));
+	const byId = conversationDocumentEntriesIndex(document.entries).byId;
 	const allUserEntries = document.entries.filter(isVisibleUserMessageEntry);
 	const history: HistoryEntry[] = [];
 
