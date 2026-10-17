@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0291` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第一片：团队时间线投影 O(n²) 扫描索引化——活动回复/委派判定/流文本兜底建索引、聚合视图跳过未使用的成员稳定化；纯函数等价重构；渲染端 11 文件 155 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0290` | `verifying` | PLAN-0002 | BUG-0127 修复路线 6 第一片：`session-updated` 全量快照发布短窗合并（32ms 取末帧）+ 无订阅者跳过构建与发布 + 删除/逐出 drop；零 IPC 合同变更；调度器单元 5/5、agent-teams 35 文件 240 例、完整 check 全绿；serial，main 串行。 |
 | `TASK-0289` | `verifying` | PLAN-0002 | BUG-0127 修复路线 3：会话文档命令 O(n) 扫描索引化——entries 数组身份记忆化的 byId/childrenByParent 索引，守卫/查找/分支选择/子遍历摊销 O(1)，纯重构语义不变；行为基线 73 文件 388 例 + desktop 235 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0288` | `verifying` | PLAN-0002 | BUG-0127 修复路线 4：团队 `persist()` 指纹缓存——记住最后追加状态条目的协调文档 revision + 序列化串，热路径单次序列化比较并跳过 O(entries) 扫描，revision 变化回退精确双序列化；`remove`/`removeCached` 丢指纹；定向 5/5（红基线先行）、agent-teams 目录 235 例 + cwd 复跑 21 例、完整 check 全绿；serial，main 串行。 |
