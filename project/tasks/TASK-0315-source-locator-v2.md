@@ -28,9 +28,12 @@ write_paths:
   - packages/plugins/presets/vetta-ui-design/engine/vite.config.mjs
   - packages/plugins/presets/vetta-ui-design/engine/src/source-payload.ts
   - packages/plugins/presets/vetta-ui-design/engine/src/bridge.ts
+  - packages/plugins/presets/vetta-ui-design/src/engine/engine-files.ts
   - packages/plugins/presets/vetta-ui-design/src/shared/source-locator.ts
   - packages/plugins/presets/vetta-ui-design/src/canvas/bridge-client.ts
   - packages/plugins/presets/vetta-ui-design/src/tools.ts
+  - packages/plugins/presets/vetta-ui-design/src/vetd/design-session.ts
+  - packages/plugins/presets/vetta-ui-design/test/source-locator.test.ts
   - packages/plugins/presets/vetta-ui-design/test/source-locator.test.ts
   - packages/plugins/presets/vetta-ui-design/test/source-tagger.test.ts
   - packages/plugins/presets/vetta-ui-design/test/source-payload.test.ts
@@ -97,4 +100,13 @@ updated: 2026-10-18
 
 ## 交付记录
 
-- 待回填。
+- 实际修改：
+  - `engine/plugins/source-tagger.mjs`（新，抽取自 vite.config 内联实现）：注入值升级 `file:line:column`（列 1-based），保留 dev-only/相对路径/重复注入保护；`engine/vite.config.mjs` 改为引用；
+  - `engine/src/source-payload.ts`（新）：`outerHtmlSnippet`（2KB 截断）+ `styleSummaryFor`（10 键白名单，getComputedStyle 注入）；`engine/src/bridge.ts` 的 `payloadFor` 挂接，`SelectedElementPayload` 增可选 `outerHTML`/`styleSummary`（两侧接口同步）；
+  - `src/shared/source-locator.ts`（新）：`parseSourceLocator` 跨代解析（v1 仅行、v2 行列、文件段禁冒号、畸形 null）；
+  - `src/tools.ts`：vetd_notes 元素视图在保鲜循环里经新鲜 payload 带出 `locator`/`outerHTML`/`styleSummary`（不持久化进锚点，向后兼容）；工具描述同步 file:line:column；
+  - `src/engine/engine-files.ts`：登记两个新模板文件（内容 hash 自动触发重物化，无需升 ENGINE_VERSION）；
+  - 附带存量修复：`src/vetd/design-session.ts` 备注元数据恢复改类型谓词——包内 `tsc --noEmit` 长期红的 `Record<string, unknown>` → `FrameMeta`（根 `check:types` 不覆盖 plugins，CI 不可见；0309/0315 两工作树复现同一错误，独立提交归属）。
+- 实际运行：定向 32/32（source-locator/tagger/payload/engine-config/layout-probe）；包内 `tsc --noEmit` 修复后 0 错；包内全量与 impact 待 desktop 套件让路后串行复跑（首轮全量 548/548 断言全过、29 文件收集失败系与后台 desktop 套件并发资源枯竭，单跑复现已转绿）。
+- 未运行及原因：引擎真实 dev serve 的端到端（tagger babel 链路、上下文包在画布上的呈现）待用户实机；real-model 回合不适用（纯确定性合同）。
+- 剩余风险：babel 访问器本体仅经工厂签名与值构造测试锁定，端到端依赖实机 dev serve；旧引擎实例（未重物化）回传的 payload 无上下文包字段——消费方按可选字段处理，已测。
