@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createAgentTeamFixture, createEmptyAgentTeamDocument } from "@vetta/agent-team";
 import { providerModelNotFoundError } from "@vetta/ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	AGENT_TEAM_MEMBER_TOOL_EXECUTION,
 	AGENT_TEAM_PUBLICATION_LIFECYCLE,
