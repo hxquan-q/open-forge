@@ -21,5 +21,13 @@
 - **引擎目录监听必须排除 node_modules**：`vetdWatchDesign` 原本递归遍历整个设计目录来做文件集快照。实测装两个库后目录从 4 个文件涨到 7350 个，每次源码保存都要多走一趟 15ms 的遍历，且各平台 `fs.watch` 对 node_modules 写入的事件量差异极大（macOS FSEvents 合并，Linux inotify 逐文件）。遍历与监听均跳过 `node_modules`。
 - **Tailwind 不受影响**：`@source "<designRoot>"` 的自动内容检测本身就跳过 node_modules，实测样式表仍是 7.5KB、不含任何库内类名，不需要 `@source not`。
 - **`uninstalled-import` 检查从静态名单改为动态**：判据变成「引擎内置 ∪ 设计 package.json 的 dependencies」。这条必须与安装同时落地——装完包却仍被报「引擎没有这个包」，agent 的反应是去删掉本来正确的代码，比不检查更糟。
-- **安装不加限制**：`npm install` 不带 `--ignore-scripts`，与用户在本地开发时的行为一致。代价是被诱导安装的恶意包可以在 postinstall 执行任意代码；这与「用户让 agent 在自己项目里装依赖」是同一个信任层级，不在插件边界上单独收窄。
+- **安装不加限制**：`npm install` 不带 `--ignore-scripts`，与用户在本地开发时的行为一致。代价是被诱导安装的恶意包可以在 postinstall 执行任意代码；这与「用户让 agent 在自己项目里装依赖」是同一个信任层级，不在插件边界上单独收窄。（本条已修订，见文末「2026-10-18 修订」。）
 - **一键部署的前置条件就此具备**：`x.vetd/` 成为一个能被外部 `npm install` 的工程，剩下的只是把引擎的 `vite.config.mjs` / `index.html` / `src/main.tsx` eject 进去，可作为后续「导出为项目」的一步实现。
+
+## 修订（2026-10-18，TASK-0309）：设计级安装一律 `--ignore-scripts`
+
+「安装不加限制」一条不再成立。原判断把「设计的依赖清单」等价于「用户自己项目里的清单」，但 `.vetdz` 导入的 `package.json` 是**不可信输入**：接收方只是打开了一份分享包，postinstall 就是任意代码执行，信任层级完全不同。
+
+- `installDesignDependencies`（vetd_install）与 `ensureDesignDependencies`（导入后首次打开补装）一律带 `--ignore-scripts`；导入分享包声明依赖时，先经用户确认再当场安装。
+- 引擎自身的 `npm ci` 不变：lockfile 由插件随模板下发，属受信内容，脚本无需禁用。
+- 代价：依赖 postinstall 落二进制的包（esbuild、sharp 一类）装完不可用，由确认文案与构建报错提示，需要时用户可手动 `npm rebuild`。这是把「被诱导执行任意代码」换成「个别包多一步手动操作」的取舍。

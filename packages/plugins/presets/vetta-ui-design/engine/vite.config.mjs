@@ -207,12 +207,16 @@ export default defineConfig(({ command }) => ({
 	server: {
 		host: "127.0.0.1",
 		strictPort: true,
-		cors: true,
+		// CORS 关闭（TASK-0309）：设计源码只该给本应用里的 iframe（同源导航，不经
+		// CORS）与本机探测（no-cors，见 engine-manager 的 waitForHttpReady）读。
+		// 之前 `cors: true` 会带 ACAO:* 应答任意来源，本机任意网页都能跨源读源码。
+		cors: false,
 		// vite 自带的错误 overlay 会把整个 frame 糊成一张红色报错页——每个 frame 都是
 		// 一个 iframe，画布上看到的就是设计稿整片消失。错误改由 src/bridge.ts 上报给
 		// 画布：那边继续显示上一张位图，只在标题栏挂一个「构建失败」徽标。
 		hmr: { overlay: false },
-		fs: { allow: [process.cwd(), designRoot] },
+		// 显式 strict：allow 名单之外的路径一律拒（vite 5+ 默认即 true，写明防回退）。
+		fs: { strict: true, allow: [process.cwd(), designRoot] },
 	},
 	build: {
 		// Single chunk so the export snapshot can inline everything into one HTML.

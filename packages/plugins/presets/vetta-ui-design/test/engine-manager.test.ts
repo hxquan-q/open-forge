@@ -11,7 +11,13 @@ import type {
 } from "@vetta-org/plugin-sdk";
 import { afterEach, describe, expect, it } from "vitest";
 import { engineFilesHash } from "../src/engine/engine-files";
-import { engineReady, migrateLegacyEngine, waitForSpawnExit } from "../src/engine/engine-manager";
+import {
+	ensureDesignDependencies,
+	engineReady,
+	installDesignDependencies,
+	migrateLegacyEngine,
+	waitForSpawnExit,
+} from "../src/engine/engine-manager";
 
 const temporaryDirectories: string[] = [];
 
@@ -118,5 +124,47 @@ describe("design engine process exit signal", () => {
 
 		await expect(waitForSpawnExit(handle)).resolves.toEqual(exit);
 		expect(disposed).toBe(true);
+	});
+});
+
+describe("design dependency install flags (TASK-0309)", () => {
+	function recordingContext(spawnCalls: string[][]): PluginContext {
+		return {
+			command: {
+				spawn: async (file: string, args: readonly string[]) => {
+					spawnCalls.push([file, ...args].join(" "));
+					const exit = { exitCode: 0, signal: null };
+					const handle = {
+						status: async () => ({ running: false, pid: 1, exit, recentOutput: "done" }),
+						onExit: (listener: (next: PluginCommandSpawnExit) => void): Disposable => {
+							listener(exit);
+							return { dispose: () => undefined };
+						},
+						stop: async () => undefined,
+					};
+					return (handle as unknown) as PluginCommandSpawnHandle;
+				},
+			},
+			fs: {
+				stat: async () => null,
+				writeFile: async () => undefined,
+				readFile: async () => ({ content: '{"dependencies":{"recharts":"^3.0.0"}}', encoding: "utf8" }),
+			},
+		} as unknown as PluginContext;
+	}
+
+	it("vetd_install（installDesignDependencies）固定带 --ignore-scripts", async () => {
+		const spawnCalls: string[][] = [];
+		await installDesignDependencies(recordingContext(spawnCalls), "/d", ["recharts"], () => {});
+		expect(spawnCalls.length).toBe(1);
+		expect(spawnCalls[0]).toContain("npm");
+		expect(spawnCalls[0]).toContain("--ignore-scripts");
+	});
+
+	it("导入后的自动补装（ensureDesignDependencies）同样带 --ignore-scripts", async () => {
+		const spawnCalls: string[][] = [];
+		await ensureDesignDependencies(recordingContext(spawnCalls), "/d", () => {});
+		expect(spawnCalls.length).toBe(1);
+		expect(spawnCalls[0]).toContain("--ignore-scripts");
 	});
 });
