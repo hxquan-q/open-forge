@@ -32,7 +32,7 @@ depends_on: []
 
 ### 落盘核对（2026-10-18，入库时修正与核实）
 
-- **基线修正**：方案原文写的基线 `main（6c02ce2）` 在本仓 git 历史不可解析（可能来自调研会话的 worktree 提交）；落盘时基线为 `main` HEAD `2aab4c002`，上游 merge-base `b590c7e`（openvetta/open-vetta）核实有效。
+- **基线修正**：方案原文写的基线 `main（6c02ce2）` 在本仓 git 历史不可解析（可能来自调研会话的 worktree 提交）；落盘时基线为 `main` HEAD `2aab4c002`，上游 merge-base `b590c7e`（openvetta/open-vetta）核实有效。（2026-10-18 补正：`6c02ce2d0` 实为 origin/main 的 dev→main 晋升合并提交，落盘时本地尚未 fetch origin/main 才不可解析；本仓开发基线仍以本地 main 为准。）
 - **代码锚点**：插件侧 20 个锚点全部核实存在——`engine/vite.config.mjs`、`src/vetd/layout-probe.ts`、`test/layout-probe.test.ts`、`src/history/{turn-history,history-client,restore}.ts`、`src/history/HistoryDrawer.tsx`、`history-runner/src/runner-entry.ts`、`src/canvas/{selection-ask,frame-raster,FrameContextMenu,theme-tokens,ThemePalette}`、`src/preview-mode/{PreviewDialog.tsx,preview-client.ts}`、`src/export/export-design.ts`、`src/notes/{annotate,handoff,notes-store}.ts`、`test/entry-lazy-surfaces.test.ts`，以及 `src/design-systems/{apply,catalog-sync,remote-catalog}.ts` 与 `apps/desktop/src/shared/desktop-brand.ts`。
 - 许可证结论来自 GitHub 仓库元数据（license 字段）和 LICENSE 原文，核对时间 2026-10-18 台北时间；产品功能描述来自官方文档或博客的检索结果。标「未核实」的条目在采用前需要复核。非法律意见。
 
