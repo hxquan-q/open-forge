@@ -80,5 +80,5 @@ updated: 2026-10-17
 1. **带上全部修复运行**：修复全部落在 main 进程与渲染端源码——dev 实例需**重启 `bun run dev`**（`dev:electron` 只在启动时重建 main/preload bundle，热更不覆盖）；打包版需包含 2026-10-17 之后的构建。
 2. **复现场景对齐报告**：团队会话中运行同型多阶段长任务（如 allstar-coding 流水线）≥5–10 分钟，期间持续做输入交互，主观对照「是否仍随时间变卡」。
 3. **主证据——DevTools Performance**：主窗口录制 30–60s，对照修复前基线「主进程 8 个 >1s、最长 3049ms」；另记本地指标 LCP（修复前 33s→97s 量级，预期回秒级）。注意报告 §3.2 的 chunk 命名陷阱，归因以采样火焰图对照源码为准。
-4. **辅证据——诊断包**：设置 → 通用 → **导出诊断包**（含 `perf-snapshot.json`：各进程 CPU%/工作集随时间的聚合、回合时长与 model call 统计；及最近日志）。
+4. **辅证据——诊断包**：设置 → 通用 → **导出诊断包**（含 `perf-snapshot.json`：各进程 CPU%/工作集随时间的聚合、回合时长与 model call 统计、**主进程事件循环阻塞窗口计数 `aggregates.eventLoop`（overruns/maxOverrunMs，>500ms 窗口，TASK-0298 新增）**；及最近日志）——修复前基线「8 个 >1s、最长 3049ms」可直接对照 overruns 是否归零/量级回落。
 5. **回贴**：把 trace 文件与诊断包放到 `temp/log/` 或直接回贴关键读数；若仍有 >1s 主进程长任务，采样新 trace 供下一轮定位（剩余候选：`session-updated` 增量载荷协议）。

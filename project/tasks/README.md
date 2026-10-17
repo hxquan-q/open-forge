@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0298` | `verifying` | PLAN-0002 | BUG-0127 验收配套：perf 快照补主进程事件循环阻塞指标（链式 250ms 窗口/500ms 阈值/60s 休眠滤波，旁路合规）——复测导出诊断包即得主进程阻塞计数与量级；app-monitor 6 文件 33 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0297` | `verifying` | PLAN-0010 | ISSUE-0021 审计附带卫生项：renderer 构建 `emptyOutDir` 改 true——打包整目录拷贝 dist/renderer，旧哈希死产物不再随安装器分发（标记法验证清除 125 个旧文件，renderApp/brand-assets 各剩 1 份）；同仓其余 vite 配置本就各自清理；serial，main 串行。 |
 | `TASK-0296` | `verifying` | PLAN-0010 | ISSUE-0021 B 第二片：主窗口 renderer 语言级拆分——zh 静态同步（默认用户零变化），en 改按需单 lazy chunk（启动路径实测 −262.8 kB；en 初值挂载前 await、切换原子装载）；渲染端全域 464 文件 2397 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0295` | `verifying` | PLAN-0010 | ISSUE-0021 B 第一片：主进程 i18n catalog 收窄——main 改用专用子集（ns 面 {main,common,settings,skills,pet}，正则枚举+单测锁定），bundle 省 ≈206 kB；renderer 静态打包与不闪保证不变；ADR-0031 补修订记；serial，main 串行。 |
