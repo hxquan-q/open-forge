@@ -88,9 +88,11 @@ export function resolveDevProcessEnvironment(environment = process.env) {
  * GPU 禁用逃生开关（与本仓 canary 的捆绑旗标无关，不改变 configDir）：
  * 机器 GPU 栈异常（GPU process launch failed / 0x80000003）时，设
  * VETTA_DESKTOP_DISABLE_GPU=1 走软件合成即可日常开发；驱动恢复后移除。
+ * --disable-gpu 不阻止 GPU 进程启动（Chromium 合成仍需要），须同时
+ * --no-sandbox 才能在 GPU 进程反复启动失败时让 Chromium 回退软件路径。
  */
 export function resolveGpuLaunchFlags(environment = process.env) {
-	return environment.VETTA_DESKTOP_DISABLE_GPU === "1" ? ["--disable-gpu"] : [];
+	return environment.VETTA_DESKTOP_DISABLE_GPU === "1" ? ["--disable-gpu", "--no-sandbox"] : [];
 }
 
 async function main() {
