@@ -155,6 +155,14 @@ export function createWindow(): BrowserWindow {
 		});
 		return { action: "deny" };
 	});
+	// 主窗口只承载应用自身内容（TASK-0309）：页面内发起的导航（被诱导的链接、脚本改
+	// location）一律拦下，外部内容走上面的系统浏览器出口。程序化加载（loadURL/
+	// loadFile）与 reload 不触发本事件，开发服务器的 HMR 不受影响；与 markdown
+	// isolated-window 的既有做法保持一致。
+	mainWindow.webContents.on("will-navigate", (event, url) => {
+		event.preventDefault();
+		windowLog.warn("blocked main-window navigation", { url });
+	});
 
 	return mainWindow;
 }
