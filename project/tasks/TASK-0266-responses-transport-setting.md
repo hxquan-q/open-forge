@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0266-responses-transport-setting
-worktree: C:/Users/xquan/Desktop/open-forge/.claude/worktrees/agent-a08b5c6d753d1337b（基线 772d3da07，Agent Worktree）
+worktree: unassigned（Agent Worktree 已淘汰；四提交已并入 main：8c1342e01/8dde6d60f/f61ca6c52/91e1be471）
 base_commit: 772d3da07
 read_paths: [project/research/RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md]
 write_paths: [packages/ai/src/providers/openai-responses, packages/ai/src/providers/openai-codex, apps/desktop/src/main/ipc/settings.ts, apps/desktop/src/renderer/domains/settings, apps/desktop/src/shared/i18n/locales, project/tasks/TASK-0266-responses-transport-setting.md]
