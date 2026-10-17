@@ -444,7 +444,6 @@ export function projectTeamConversationTimeline({
 		projectMemberConversation(conversation.memberId, conversation.history, conversation.runtimeSessionId),
 	);
 	const latestProjectedMemberItem = projectedMemberItems.at(-1);
-	const liveMemberTurns = Object.values(streams).filter((turn) => isVisibleTeamStreamPhase(turn.message.phase));
 	const consumedLiveMessageIds = new Set<string>();
 	// User input is persisted in the coordination conversation before member
 	// turns are scheduled. Keep it as the canonical timeline item even when
@@ -473,42 +472,50 @@ export function projectTeamConversationTimeline({
 		(left, right) => itemTimestamp(left) - itemTimestamp(right),
 	);
 	const consumedPublicRenderKeys = new Set<string>();
-	const stabilizedMemberItems = projectedMemberItems.map((item) => {
-		if (item.kind !== "agent") return item;
-		const publicMatch = coordinationAgentItems.find(
-			(candidate) =>
-				sameMemberTurnEvidence(item, candidate) &&
-				!consumedPublicRenderKeys.has(candidate.renderKey ?? candidate.entryId ?? candidate.id),
-		);
-		if (publicMatch) {
-			const publicRenderKey = publicMatch.renderKey ?? publicMatch.entryId ?? publicMatch.id;
-			consumedPublicRenderKeys.add(publicRenderKey);
-			return { ...item, renderKey: publicRenderKey };
-		}
-		if (memberId !== undefined && item === latestProjectedMemberItem) {
-			const liveMatch = liveMemberTurns.find(
-				(turn) => !consumedLiveMessageIds.has(turn.message.id) && sameMemberTurnEvidence(item, turn.message),
-			);
-			if (liveMatch) {
-				consumedLiveMessageIds.add(liveMatch.message.id);
-				return {
-					...liveMatch.message,
-					id: item.id,
-					entryId: item.entryId,
-					renderKey: item.renderKey,
-				};
-			}
-		}
-		return item;
-	});
+	// 成员稳定化只服务成员视图（聚合视图不消费 stabilizedMemberItems，其副作用
+	// consumedPublicRenderKeys/consumedLiveMessageIds 均不出本闭包——live 分支
+	// 本就要求 memberId 已定义）。聚合视图直接跳过整个 O(M×C) 循环。
+	const stabilizedMemberItems =
+		memberId === undefined
+			? []
+			: projectedMemberItems.map((item) => {
+					if (item.kind !== "agent") return item;
+					const publicMatch = coordinationAgentItems.find(
+						(candidate) =>
+							sameMemberTurnEvidence(item, candidate) &&
+							!consumedPublicRenderKeys.has(candidate.renderKey ?? candidate.entryId ?? candidate.id),
+					);
+					if (publicMatch) {
+						const publicRenderKey = publicMatch.renderKey ?? publicMatch.entryId ?? publicMatch.id;
+						consumedPublicRenderKeys.add(publicRenderKey);
+						return { ...item, renderKey: publicRenderKey };
+					}
+					if (item === latestProjectedMemberItem) {
+						const liveMatch = Object.values(streams)
+							.filter((turn) => isVisibleTeamStreamPhase(turn.message.phase))
+							.find(
+								(turn) =>
+									!consumedLiveMessageIds.has(turn.message.id) && sameMemberTurnEvidence(item, turn.message),
+							);
+						if (liveMatch) {
+							consumedLiveMessageIds.add(liveMatch.message.id);
+							return {
+								...liveMatch.message,
+								id: item.id,
+								entryId: item.entryId,
+								renderKey: item.renderKey,
+							};
+						}
+					}
+					return item;
+				});
 	const leaderMemberId = session?.leaderMemberId;
 	const activities = memberId ? [] : (snapshot?.activities ?? []);
 	const leaderDelegations = activities.filter(
 		(activity) => activity.sourceMemberId === leaderMemberId && activity.targetMemberId !== leaderMemberId,
 	);
-	const aggregateCoordinationAgentItems = coordinationAgentItems.filter(
-		(item) => !leaderDelegations.some((activity) => matchesActivityReply(activity, item)),
-	);
+	const delegationMatchesReply = buildDelegationReplyCheck(leaderDelegations);
+	const aggregateCoordinationAgentItems = coordinationAgentItems.filter((item) => !delegationMatchesReply(item));
 	const projectedItems =
 		// The coordination Conversation is the only durable public Team timeline.
 		// Member Runtime histories contain private prompts, intermediate responses,
@@ -553,6 +560,9 @@ export function projectTeamConversationTimeline({
 		),
 	]);
 	const teamMemberSummaries = new Map<string, ChatConversationItem>();
+	// 活动循环的回复查找走索引：持久项与流消息各建一次，替代逐活动的线性 find。
+	const coordinationReplyIndex = buildActivityReplyIndex(coordinationAgentItems);
+	const streamReplyIndex = buildActivityReplyIndex(Object.values(streams).map((turn) => turn.message));
 	for (const activity of activities) {
 		const source =
 			memberMap.get(activity.sourceMemberId)?.name ??
@@ -566,13 +576,8 @@ export function projectTeamConversationTimeline({
 		if (activity.sourceMemberId === leaderMemberId && targetMember && targetMember.id !== leaderMemberId) {
 			const linkedToVisibleLeaderTool =
 				activity.originToolCallId !== undefined && visibleLeaderToolCallIds.has(activity.originToolCallId);
-			const targetMessage = coordinationAgentItems.find(
-				(item): item is ConversationAgentMessageViewModel =>
-					item.kind === "agent" && matchesActivityReply(activity, item),
-			);
-			const streamMessage = Object.values(streams)
-				.map((turn) => turn.message)
-				.find((item) => matchesActivityReply(activity, item));
+			const targetMessage = findActivityReplyIndex(coordinationReplyIndex, activity);
+			const streamMessage = findActivityReplyIndex(streamReplyIndex, activity);
 			const sourceMessage = streamMessage ?? targetMessage;
 			const summary = buildTeamMemberReplySummary({
 				member: targetMember,
@@ -653,18 +658,27 @@ export function projectTeamConversationTimeline({
 
 	const persistedAgentItems = items.filter((item) => item.kind === "agent");
 	const persistedResults = new Set(persistedAgentItems.map((item) => item.id));
+	// 文本兜底比较的索引：每个持久项的公开文本只计算一次（原实现逐流回合重复计算）。
+	// 无可见流回合时保持未构建，零额外成本。
+	let persistedAgentTextsByAuthor: Map<string, Set<string>> | undefined;
+	const persistedAgentHasText = (authorId: string, text: string): boolean => {
+		if (!persistedAgentTextsByAuthor) {
+			persistedAgentTextsByAuthor = new Map();
+			for (const item of persistedAgentItems) {
+				const texts = persistedAgentTextsByAuthor.get(item.authorId) ?? new Set<string>();
+				texts.add(publicAgentText(item));
+				persistedAgentTextsByAuthor.set(item.authorId, texts);
+			}
+		}
+		return persistedAgentTextsByAuthor.get(authorId)?.has(text) ?? false;
+	};
 	for (const turn of Object.values(streams).sort(
 		(left, right) => (left.message.startedAt ?? 0) - (right.message.startedAt ?? 0),
 	)) {
 		if (!isVisibleTeamStreamPhase(turn.message.phase)) continue;
 		if (consumedLiveMessageIds.has(turn.message.id)) continue;
 		if (memberId && turn.message.authorId !== memberId) continue;
-		if (
-			!memberId &&
-			turn.message.authorId !== leaderMemberId &&
-			leaderDelegations.some((activity) => matchesActivityReply(activity, turn.message))
-		)
-			continue;
+		if (!memberId && turn.message.authorId !== leaderMemberId && delegationMatchesReply(turn.message)) continue;
 		// Runtime history, coordination history, and the live event can assign different
 		// message ids to the same member turn. The stable render key is therefore the
 		// primary identity while their snapshots overlap; exact text remains a fallback
@@ -688,10 +702,7 @@ export function projectTeamConversationTimeline({
 		}
 		if (
 			persistedResults.has(turn.message.id) ||
-			(streamText.length > 0 &&
-				persistedAgentItems.some(
-					(item) => item.authorId === turn.message.authorId && publicAgentText(item) === streamText,
-				))
+			(streamText.length > 0 && persistedAgentHasText(turn.message.authorId, streamText))
 		)
 			continue;
 		items.push(
@@ -793,17 +804,88 @@ export function placeTeamErrorInTimeline(
 	];
 }
 
-function matchesActivityReply(
+/**
+ * 「活动回复」判等的索引化形态（原 matchesActivityReply 线性扫描已删除）：
+ * item.authorId === activity.targetMemberId 且
+ * （item.turnId === requestId ∨ sourceTurnId 有值且 item.turnId === sourceTurnId
+ *   ∨ item.id === requestId ∨ item.parentId === requestId）。
+ * 四个判等子句各自记录首现位置；任一子句命中的最早位置即数组序首个匹配项。
+ */
+interface ActivityReplyIndex {
+	readonly messages: readonly ConversationAgentMessageViewModel[];
+	readonly byTurnId: ReadonlyMap<string, number>;
+	readonly byId: ReadonlyMap<string, number>;
+	readonly byParentId: ReadonlyMap<string, number>;
+}
+
+function buildActivityReplyIndex(messages: readonly ConversationAgentMessageViewModel[]): ActivityReplyIndex {
+	const byTurnId = new Map<string, number>();
+	const byId = new Map<string, number>();
+	const byParentId = new Map<string, number>();
+	messages.forEach((message, index) => {
+		if (message.turnId !== undefined) {
+			const key = `${message.authorId}:${message.turnId}`;
+			if (!byTurnId.has(key)) byTurnId.set(key, index);
+		}
+		const idKey = `${message.authorId}:${message.id}`;
+		if (!byId.has(idKey)) byId.set(idKey, index);
+		if (message.parentId !== undefined && message.parentId !== null) {
+			const parentKey = `${message.authorId}:${message.parentId}`;
+			if (!byParentId.has(parentKey)) byParentId.set(parentKey, index);
+		}
+	});
+	return { messages, byTurnId, byId, byParentId };
+}
+
+/** 等价于按 ActivityReplyIndex 文档中的判等子句取数组序首个匹配项。 */
+function findActivityReplyIndex(
+	index: ActivityReplyIndex,
 	activity: DesktopTeamSessionSnapshot["activities"][number],
-	item: ConversationAgentMessageViewModel,
-): boolean {
-	return (
-		item.authorId === activity.targetMemberId &&
-		(item.turnId === activity.requestId ||
-			(activity.sourceTurnId !== undefined && item.turnId === activity.sourceTurnId) ||
-			item.id === activity.requestId ||
-			item.parentId === activity.requestId)
-	);
+): ConversationAgentMessageViewModel | undefined {
+	let best: number | undefined;
+	const consider = (position: number | undefined) => {
+		if (position !== undefined && (best === undefined || position < best)) best = position;
+	};
+	consider(index.byTurnId.get(`${activity.targetMemberId}:${activity.requestId}`));
+	if (activity.sourceTurnId !== undefined) {
+		consider(index.byTurnId.get(`${activity.targetMemberId}:${activity.sourceTurnId}`));
+	}
+	consider(index.byId.get(`${activity.targetMemberId}:${activity.requestId}`));
+	consider(index.byParentId.get(`${activity.targetMemberId}:${activity.requestId}`));
+	return best === undefined ? undefined : index.messages[best];
+}
+
+/** activities.some((activity) => matchesActivityReply(activity, item)) 的索引形态。 */
+function buildDelegationReplyCheck(
+	activities: readonly DesktopTeamSessionSnapshot["activities"][number][],
+): (item: ConversationAgentMessageViewModel) => boolean {
+	const requestIdsByTarget = new Map<string, Set<string>>();
+	const sourceTurnIdsByTarget = new Map<string, Set<string>>();
+	for (const activity of activities) {
+		let requestIds = requestIdsByTarget.get(activity.targetMemberId);
+		if (!requestIds) {
+			requestIds = new Set();
+			requestIdsByTarget.set(activity.targetMemberId, requestIds);
+		}
+		requestIds.add(activity.requestId);
+		if (activity.sourceTurnId === undefined) continue;
+		let sourceTurnIds = sourceTurnIdsByTarget.get(activity.targetMemberId);
+		if (!sourceTurnIds) {
+			sourceTurnIds = new Set();
+			sourceTurnIdsByTarget.set(activity.targetMemberId, sourceTurnIds);
+		}
+		sourceTurnIds.add(activity.sourceTurnId);
+	}
+	return (item) => {
+		const requestIds = requestIdsByTarget.get(item.authorId);
+		if (!requestIds) return false;
+		if (item.turnId !== undefined) {
+			if (requestIds.has(item.turnId)) return true;
+			if (sourceTurnIdsByTarget.get(item.authorId)?.has(item.turnId)) return true;
+		}
+		if (requestIds.has(item.id)) return true;
+		return item.parentId !== undefined && item.parentId !== null && requestIds.has(item.parentId);
+	};
 }
 
 function dedupeTeamUserItems(items: readonly ChatConversationItem[]): ChatConversationItem[] {
