@@ -480,6 +480,52 @@ describe("AgentTeamSessionService streaming contract", () => {
 		).rejects.toThrow(/Restart the app to recover this session/);
 	});
 
+	it("isAwaitingSubAgents 只对「有在途工作的协调会话」为真（BUG-0118）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const loaded = new Set<string>();
+		const runtime = {
+			createSession: vi.fn(async (config?: SessionConfig) => {
+				const sessionId = config?.sessionId ?? `member-runtime-${loaded.size + 1}`;
+				loaded.add(sessionId);
+				return { sessionId };
+			}),
+			getSessionPath: (sessionId: string) => (loaded.has(sessionId) ? `C:/runtime/${sessionId}.jsonl` : undefined),
+			readSessionDocument: (sessionId: string) => {
+				if (!loaded.has(sessionId)) {
+					throw { code: "SESSION_NOT_FOUND", message: `Session not found: ${sessionId}`, retryable: false };
+				}
+				return { entries: [], activeLeafId: null, revision: 0 };
+			},
+			appendSessionMetadataEntry: vi.fn(async () => undefined),
+			setExecutionMode: vi.fn(async () => undefined),
+			disposeSession: vi.fn(async () => undefined),
+			subscribe: () => () => undefined,
+		} as unknown as RuntimeHost;
+		const service = new AgentTeamSessionService({ runtime, readDocument: async () => document });
+		const record = await service.createRecord(team, document, {
+			kind: "project",
+			id: "project:workspace",
+			cwd: "C:/workspace",
+		});
+		const coordinationId = record.coordinationRuntime?.sessionId;
+		if (!coordinationId) throw new Error("coordination runtime is missing from the created record");
+
+		// 成员 runtime 的 session / 未知名不在协调缓存键上，天然不是「主控等子代理」。
+		expect(service.isAwaitingSubAgents("not-a-team-session")).toBe(false);
+
+		const coordinator = (
+			service as unknown as {
+				readonly turnCoordinator: { hasPending: (sessionId: string) => boolean };
+			}
+		).turnCoordinator;
+		const hasPending = vi.spyOn(coordinator, "hasPending").mockReturnValue(false);
+		expect(service.isAwaitingSubAgents(coordinationId)).toBe(false);
+		hasPending.mockReturnValue(true);
+		expect(service.isAwaitingSubAgents(coordinationId)).toBe(true);
+	});
+
 	it("names a new Team session with its selected model and retries using the first task", async () => {
 		const document = createAgentTeamFixture();
 		const team = document.teams[0];

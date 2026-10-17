@@ -291,6 +291,18 @@ export class AgentTeamSessionService {
 		});
 	}
 
+	/**
+	 * BUG-0118：session-interrupt 巡检装配证据用——该会话是否为「主控等子代理」
+	 * 的团队协调会话。协调 runtime 的 sessionId 即团队会话 id（创建即同 id、恢复
+	 * 校验 identity），成员 runtime 的 session 不在缓存键上，天然返回 false。
+	 * 只认内存态在途工作（成员 attempt / 自动重试 / 调度等待），不读 I/O。
+	 */
+	isAwaitingSubAgents(sessionId: string): boolean {
+		const session = this.sessionState.get(sessionId);
+		if (!session?.coordinationRuntime || session.coordinationRuntime.sessionId !== sessionId) return false;
+		return this.turnCoordinator.hasPending(sessionId);
+	}
+
 	onRunningChanged(listener: TeamRunningChangedListener): () => void {
 		this.runningChangedListeners.add(listener);
 		return () => this.runningChangedListeners.delete(listener);

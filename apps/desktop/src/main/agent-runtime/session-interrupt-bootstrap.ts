@@ -2,6 +2,7 @@
 import { assessConversationInterruption } from "@vetta/runtime-node/conversation";
 import { nodeRuntimeQueueSidecarStore } from "@vetta/runtime-node/host";
 import { readAgentSettingsDocument } from "../agent-settings/settings-document-store.js";
+import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { DEFAULT_CONVERSATION_CWD, readConfigSync } from "../config/desktop-config-store.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
 import { getDesktopMcpElicitationBroker } from "../conversations/mcp-elicitation-broker.js";
@@ -48,6 +49,15 @@ function hasPendingAction(sessionId: string): boolean {
 	return false;
 }
 
+// BUG-0118：团队主控等子代理是合法空闲而非会话中断；读取失败按 false（fail-soft）。
+function isAwaitingSubAgents(sessionId: string): boolean {
+	try {
+		return agentTeamSessionService.isAwaitingSubAgents(sessionId);
+	} catch {
+		return false;
+	}
+}
+
 /** 启动会话级中断续接监视器（默认 notify；settings.sessionInterruptContinue 可调）。 */
 export function startSessionInterruptMonitor(
 	sendToRenderer: (channel: string, payload: unknown) => void,
@@ -59,6 +69,7 @@ export function startSessionInterruptMonitor(
 		listCandidateSessionIds: listInterruptContinueCandidates,
 		hasPendingAction,
 		wasManualStopped: wasSessionManualStopped,
+		isAwaitingSubAgents,
 		readMode: readSessionInterruptContinueMode,
 		readMaxAttempts: readSessionInterruptMaxAttempts,
 		onDecision: (payload) => {

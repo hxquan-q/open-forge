@@ -28,6 +28,8 @@ export interface SessionInterruptMonitorPorts {
 	readonly listCandidateSessionIds: () => readonly string[];
 	readonly hasPendingAction: (sessionId: string) => boolean;
 	readonly wasManualStopped: (sessionId: string) => boolean;
+	/** 团队主控等子代理（合法空闲）；缺省视为非该态（BUG-0118）。 */
+	readonly isAwaitingSubAgents?: (sessionId: string) => boolean;
 	readonly readMode: () => SessionInterruptContinueMode;
 	readonly readMaxAttempts: () => number;
 	readonly onDecision: (payload: SessionInterruptNotifyPayload) => void;
@@ -132,6 +134,7 @@ export class SessionInterruptMonitor {
 				isSessionInterruptDraftNonEmpty(sessionId) ||
 				isSessionInterruptDraftNonEmpty(runtime.getSessionPath(sessionId) ?? ""),
 			hasPendingAction: this.ports.hasPendingAction(sessionId),
+			awaitingSubAgents: this.ports.isAwaitingSubAgents?.(sessionId) ?? false,
 			continueAttemptCount,
 			maxContinueAttempts: maxAttempts,
 			...(activityAtMs !== undefined ? { activityAtMs } : {}),

@@ -1,7 +1,7 @@
 ---
 id: BUG-0118
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: apps/desktop agent-runtime
 requirement:
@@ -13,7 +13,7 @@ related_tasks: []
 related_issues: []
 related_bugs: []
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # session-interrupt monitor 长任务全程误报 suspected（判据不认识"主控等子代理"）
@@ -64,5 +64,14 @@ updated: 2026-10-16
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：判据增加"主控等待子代理"识别（复用现有 pending-action/sub-agent 信号），或拉长/豁免该态的 idle 判据。
-- 验证：上述回归测试 + monitor 套件；实机长任务观察误报归零。
+- 修复：2026-10-17（localtest 分支）。判据补「主控等子代理」维度，四层接线：
+  1. 判定层：`SessionInterruptEvidence` 新增必填 `awaitingSubAgents`（`packages/coding-agent/src/execution/session-interrupt-health.ts`）；`classifySessionInterruptHealth` 在**无触发路径**上命中该信号时返回 `running`（high，不 notify、不绑定）——真实 error/networkFailure/truncated 触发不掩盖，manualStop/pendingAction/completionMarker 等硬否决分支仍在它之前优先生效。
+  2. 证据装配：`buildSessionInterruptEvidence` 增可选 part `awaitingSubAgents`（缺省 false）。
+  3. 监视器：`SessionInterruptMonitorPorts` 增可选端口 `isAwaitingSubAgents`，装配进证据。
+  4. 宿主接线：`AgentTeamSessionService.isAwaitingSubAgents(sessionId)`——协调 runtime 的 sessionId 即团队会话 id（创建即同 id、恢复校验 identity），成员 runtime session 不在缓存键上天然 false；只认内存态在途工作（`turnCoordinator.hasPending`：activeSends / 成员 attempt / 自动重试 / 调度等待），不读 I/O。bootstrap 接线 fail-soft（读取失败按 false）。
+  - 已知窄窗（接受）：成员悬挂但内存机已无在途条目时主控空闲不被豁免——此时本就该浮出提示；成员级停滞由 provider 看门狗/重试链路（BUG-0085）负责。
+- 验证：
+  - 红→绿（stash 源码验证旧实现红）：分类器「awaitingSubAgents 长空闲不判 suspected」旧实现 `suspected`（红）；监视器「主控等子代理悬挂形态零决策」旧实现 onDecision 被调（红）；服务 `isAwaitingSubAgents` 旧实现无此方法（红）。
+  - 分类器 17/17、desktop 三文件 28/28 绿；desktop `typecheck:incremental` 零错。
+  - 另钉两例护栏：awaitingSubAgents 不掩盖真实错误触发；isAwaitingSubAgents 只对「有在途工作的协调会话」为真。
+  - 待实机：dev 实例跑一个团队长任务（>30min），观察 `Session interrupt decision` 日志不再出现主控会话的 suspected 行。
