@@ -25,6 +25,17 @@ function fakeCtx(files: Record<string, string>) {
 		writeFile: vi.fn(async (path: string, content: string): Promise<void> => {
 			written[path] = content;
 		}),
+		// 与真实 fs 语义一致（TASK-0309 的原子写依赖它们）：rename 覆盖目标并搬走源，
+		// delete 抹掉记录——written 追踪的是「此刻每个路径上的内容」。
+		rename: vi.fn(async (oldPath: string, newPath: string): Promise<void> => {
+			const content = written[oldPath] ?? files[oldPath];
+			if (content !== undefined) written[newPath] = content;
+			delete written[oldPath];
+		}),
+		delete: vi.fn(async (path: string): Promise<void> => {
+			delete written[path];
+			delete files[path];
+		}),
 		readDir: vi.fn(async (dir: string) => {
 			const prefix = `${dir}/`;
 			const names = new Set<string>();

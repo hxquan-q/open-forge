@@ -45,6 +45,8 @@ describe("vetd_create activity-tab target", () => {
 			stat: vi.fn(async () => null),
 			createDirectory: vi.fn(async () => {}),
 			writeFile: vi.fn(async () => {}),
+			rename: vi.fn(async () => {}),
+			delete: vi.fn(async () => {}),
 		} as unknown as PluginFsApi;
 
 		await createHandler({

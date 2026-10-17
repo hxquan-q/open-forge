@@ -1,4 +1,5 @@
 import type { PluginFsApi } from "@vetta-org/plugin-sdk";
+import { atomicWriteFile, withDesignWrite } from "../shared/design-fs";
 import { designPackageJson, PACKAGE_FILE } from "./design-package";
 import { emptyManifest, type FrameSize, manifestPathOf, type VetdManifest } from "./manifest-types";
 
@@ -53,13 +54,17 @@ export async function scaffoldDesign(
 	await fs.createDirectory(`${vetdPath}/frames`);
 	await fs.createDirectory(`${vetdPath}/components`);
 	await fs.createDirectory(`${vetdPath}/assets`);
-	await fs.writeFile(`${vetdPath}/theme.css`, DEFAULT_THEME_CSS);
-	await fs.writeFile(`${vetdPath}/${PACKAGE_FILE}`, designPackageJson(name));
-	const manifest: VetdManifest = {
-		...emptyManifest(),
-		...(defaultFrameSize ? { defaultFrameSize } : {}),
-	};
-	await fs.writeFile(manifestPathOf(vetdPath), `${JSON.stringify(manifest, null, "\t")}\n`);
+	// 三个文件作为一个队列任务原子落盘（TASK-0309）：scaffold 之后马上就可能被
+	// agent 工具/画布写，不留半开的目录结构。
+	await withDesignWrite(vetdPath, async () => {
+		await atomicWriteFile(fs, `${vetdPath}/theme.css`, DEFAULT_THEME_CSS);
+		await atomicWriteFile(fs, `${vetdPath}/${PACKAGE_FILE}`, designPackageJson(name));
+		const manifest: VetdManifest = {
+			...emptyManifest(),
+			...(defaultFrameSize ? { defaultFrameSize } : {}),
+		};
+		await atomicWriteFile(fs, manifestPathOf(vetdPath), `${JSON.stringify(manifest, null, "\t")}\n`);
+	});
 	return { vetdPath, dirPath: vetdPath };
 }
 

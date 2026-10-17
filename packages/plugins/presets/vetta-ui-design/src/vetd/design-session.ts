@@ -1,6 +1,7 @@
 import type { Disposable, PluginContext } from "@vetta-org/plugin-sdk";
 import { isFrameFile } from "../../engine/src/routes";
 import { bootstrapHistory } from "../history/history-bootstrap";
+import { queuedAtomicWrite } from "../shared/design-fs";
 import { type ParsedFrameMeta, parseFrameMeta, sameMeta, sanitizeFrameTitle, withFrameTitle } from "./frame-meta";
 import { FALLBACK_FRAME_SIZE, resolveFrameSizes } from "./frame-size";
 import {
@@ -335,7 +336,12 @@ export class DesignSession {
 			id = `frame-${index}`;
 		}
 		this.pendingPlacements.set(id, { x, y });
-		await this.ctx.fs.writeFile(`${this.dirPath}/frames/${id}.tsx`, blankFrameSource(title, width, height));
+		await queuedAtomicWrite(
+			this.ctx.fs,
+			this.dirPath,
+			`${this.dirPath}/frames/${id}.tsx`,
+			blankFrameSource(title, width, height),
+		);
 		await this.reconcile();
 		return id;
 	}
@@ -360,7 +366,7 @@ export class DesignSession {
 			),
 		};
 		this.emit("frames");
-		await this.ctx.fs.writeFile(path, next);
+		await queuedAtomicWrite(this.ctx.fs, this.dirPath, path, next);
 		await this.persist();
 	}
 
@@ -384,10 +390,11 @@ export class DesignSession {
 	}
 
 	private persist(): Promise<void> {
-		// Serialize writes so rapid drag updates cannot interleave.
+		// Session 内先串行去抖（快速拖拽不排队一堆任务），落盘走共享的设计写队列 +
+		// 原子替换（TASK-0309），与 agent 工具/导入的写互不交错。
 		const snapshot = `${JSON.stringify(this.manifest, null, "\t")}\n`;
 		this.writing = this.writing
-			.then(() => this.ctx.fs.writeFile(this.manifestPath, snapshot))
+			.then(() => queuedAtomicWrite(this.ctx.fs, this.dirPath, this.manifestPath, snapshot))
 			.catch((error: unknown) => {
 				console.error("vetd manifest write failed", error);
 			});
