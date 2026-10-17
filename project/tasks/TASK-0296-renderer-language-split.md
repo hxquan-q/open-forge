@@ -1,7 +1,7 @@
 ---
 id: TASK-0296
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement:
