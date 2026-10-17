@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { resolveGpuLaunchFlags } from "./run-dev-electron.mjs";
 
 describe("resolveGpuLaunchFlags", () => {
-	it("VETTA_DESKTOP_DISABLE_GPU=1 时返回 --disable-gpu", () => {
-		expect(resolveGpuLaunchFlags({ VETTA_DESKTOP_DISABLE_GPU: "1" })).toEqual(["--disable-gpu"]);
+	it("VETTA_DESKTOP_DISABLE_GPU=1 时返回 --disable-gpu --no-sandbox", () => {
+		expect(resolveGpuLaunchFlags({ VETTA_DESKTOP_DISABLE_GPU: "1" })).toEqual(["--disable-gpu", "--no-sandbox"]);
 	});
 
 	it("未设置、空或非 1 值时不加任何旗标（缺省路径零变化）", () => {
