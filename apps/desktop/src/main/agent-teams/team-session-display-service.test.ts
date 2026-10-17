@@ -1,7 +1,13 @@
+// Modified by The Open Forge contributors.
 import { createAssistantMessage } from "@vetta/ai";
-import type { ConversationDocument } from "@vetta/runtime-core";
+import type { ConversationDocument, HistoryEntry, RuntimeHost } from "@vetta/runtime-core";
 import { describe, expect, it } from "vitest";
-import { projectTeamPublicMessages, projectTeamUserMessageAnnotations } from "./team-session-display-service.js";
+import type { TeamCollaborationStore } from "./team-collaboration-store.js";
+import {
+	projectTeamPublicMessages,
+	projectTeamUserMessageAnnotations,
+	TeamSessionDisplayService,
+} from "./team-session-display-service.js";
 
 describe("projectTeamPublicMessages", () => {
 	it("hides member-routed Agent messages while keeping the user request and public answer", () => {
@@ -113,5 +119,97 @@ describe("projectTeamUserMessageAnnotations", () => {
 		} as unknown as ConversationDocument;
 
 		expect(projectTeamUserMessageAnnotations(document)).toEqual([]);
+	});
+});
+
+describe("TeamSessionDisplayService displayProjection member history cache", () => {
+	function memberHistory(): HistoryEntry[] {
+		return [
+			{
+				type: "message",
+				entryId: "member-entry-1",
+				message: { role: "user", content: "Do the work", timestamp: 1 },
+			},
+		] as unknown as HistoryEntry[];
+	}
+
+	function createHarness() {
+		let journalVersion = 5;
+		let revision = 3;
+		const history = memberHistory();
+		let fullHistoryReads = 0;
+		const runtime = {
+			getSessionPath: (sessionId: string) => `C:/runtime/${sessionId}.jsonl`,
+			readSessionDocument: () => ({ journalVersion, revision, entries: [] }) as unknown as ConversationDocument,
+			getState: () => ({ contextPercent: 10, contextWindow: 1000 }),
+			getFullHistory: () => {
+				fullHistoryReads += 1;
+				return history;
+			},
+		} as unknown as RuntimeHost;
+		const collaborationStore = {
+			read: () => ({ publications: [], workItems: [], attempts: [] }),
+			readFromDocument: () => ({ publications: [], workItems: [], attempts: [] }),
+		} as unknown as TeamCollaborationStore;
+		const session = {
+			id: "team-session",
+			teamId: "team",
+			revision: 1,
+			name: "Team",
+			cwd: "C:/workspace",
+			leaderMemberId: "leader",
+			memberHandles: { leader: "vetta" },
+			createdAt: 1,
+			updatedAt: 1,
+			events: [],
+			memberRuntime: {
+				leader: { sessionId: "leader-runtime", sessionPath: "C:/runtime/leader-runtime.jsonl" },
+			},
+			coordinationRuntime: {
+				sessionId: "coordination-runtime",
+				sessionPath: "C:/runtime/coordination-runtime.jsonl",
+			},
+		} as unknown as Parameters<TeamSessionDisplayService["displayProjection"]>[0];
+		const service = new TeamSessionDisplayService(() => runtime, collaborationStore);
+		return {
+			service,
+			session,
+			get fullHistoryReads() {
+				return fullHistoryReads;
+			},
+			advanceJournal: () => {
+				journalVersion += 1;
+			},
+			advanceRevision: () => {
+				revision += 1;
+			},
+		};
+	}
+
+	it("reuses the member history across projections while both versions hold", async () => {
+		const harness = createHarness();
+		const first = await harness.service.displayProjection(harness.session);
+		const second = await harness.service.displayProjection(harness.session);
+
+		expect(harness.fullHistoryReads).toBe(1); // 版本未变：跨帧复用
+		expect(second.memberConversations[0]?.history).toBe(first.memberConversations[0]?.history);
+	});
+
+	it("re-reads after the journal version advances (event append)", async () => {
+		const harness = createHarness();
+		await harness.service.displayProjection(harness.session);
+		harness.advanceJournal();
+		await harness.service.displayProjection(harness.session);
+
+		expect(harness.fullHistoryReads).toBe(2);
+	});
+
+	it("re-reads after the document revision advances (branch/delete command)", async () => {
+		const harness = createHarness();
+		await harness.service.displayProjection(harness.session);
+		harness.advanceRevision();
+		await harness.service.displayProjection(harness.session);
+
+		expect(harness.fullHistoryReads).toBe(2);
 	});
 });

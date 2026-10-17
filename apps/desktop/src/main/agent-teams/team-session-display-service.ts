@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	TeamMemberTurnAttempt,
 	TeamMessageRoutingRecord,
@@ -5,7 +6,7 @@ import type {
 	TeamSessionSnapshot,
 	TeamWorkItem,
 } from "@vetta/agent-team";
-import type { ConversationDocument, RuntimeHost } from "@vetta/runtime-core";
+import type { ConversationDocument, HistoryEntry, RuntimeHost } from "@vetta/runtime-core";
 import type { DesktopTeamConversationDisplay } from "../../preload/api-types/team-conversation-display.js";
 import type { TeamCollaborationStore } from "./team-collaboration-store.js";
 import { projectTeamConversationDisplay } from "./team-conversation-display.js";
@@ -20,6 +21,16 @@ import { readTeamConversationDocument, readTeamConversationHistory } from "./tea
  * not have to merge two different visibility domains themselves.
  */
 export class TeamSessionDisplayService {
+	/** 记忆化的成员历史：版本未变的空闲成员跨帧复用，免每帧全量重投影。 */
+	private readonly memberHistoryCache = new Map<
+		string,
+		{
+			readonly journalVersion: number;
+			readonly revision: number;
+			readonly history: readonly HistoryEntry[];
+		}
+	>();
+
 	constructor(
 		private readonly runtime: () => RuntimeHost,
 		private readonly collaborationStore: TeamCollaborationStore,
@@ -87,9 +98,7 @@ export class TeamSessionDisplayService {
 			publications: collaboration?.publications,
 			workItems: collaboration?.workItems,
 			readHistory: async (runtimeSessionId, sessionPath) =>
-				runtime.getSessionPath(runtimeSessionId) === sessionPath
-					? runtime.getFullHistory(runtimeSessionId)
-					: readTeamConversationHistory(runtimeSessionId, sessionPath),
+				this.readMemberHistory(runtime, runtimeSessionId, sessionPath),
 			...(orderedMemberStates.length > 0
 				? {
 						runtimeStates: orderedMemberStates.map(({ memberId, runtimeSessionId, state }) => ({
@@ -104,6 +113,43 @@ export class TeamSessionDisplayService {
 					}
 				: {}),
 		});
+	}
+
+	/**
+	 * 成员历史按 (journalVersion, revision) 记忆化：事件追加推 journalVersion、
+	 * 文档命令（分支切换/删除/替换）推 revision，两类变更任一推进即失效重读；
+	 * 未变成员跨帧复用同一数组引用（下游只读，渲染端收到的是 structured clone）。
+	 * LRU 上限防止被逐出会话的历史引用无限滞留；文件回退路径（runtime 未加载）不缓存。
+	 */
+	private async readMemberHistory(
+		runtime: RuntimeHost,
+		runtimeSessionId: string,
+		sessionPath: string,
+	): Promise<readonly HistoryEntry[]> {
+		if (runtime.getSessionPath(runtimeSessionId) !== sessionPath) {
+			return readTeamConversationHistory(runtimeSessionId, sessionPath);
+		}
+		const document = runtime.readSessionDocument(runtimeSessionId);
+		const cached = this.memberHistoryCache.get(runtimeSessionId);
+		if (cached && cached.journalVersion === document.journalVersion && cached.revision === document.revision) {
+			// 重新插入维持 LRU 顺序。
+			this.memberHistoryCache.delete(runtimeSessionId);
+			this.memberHistoryCache.set(runtimeSessionId, cached);
+			return cached.history;
+		}
+		const history = runtime.getFullHistory(runtimeSessionId);
+		this.memberHistoryCache.delete(runtimeSessionId);
+		this.memberHistoryCache.set(runtimeSessionId, {
+			journalVersion: document.journalVersion,
+			revision: document.revision,
+			history,
+		});
+		while (this.memberHistoryCache.size > 32) {
+			const oldest = this.memberHistoryCache.keys().next().value;
+			if (oldest === undefined) break;
+			this.memberHistoryCache.delete(oldest);
+		}
+		return history;
 	}
 }
 
