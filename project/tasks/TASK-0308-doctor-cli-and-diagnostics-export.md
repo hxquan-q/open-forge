@@ -33,7 +33,7 @@ exclusive_paths:
   - apps/desktop/src/main/diagnostics-bundle.ts
 depends_on: [TASK-0307]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-18
 updated: 2026-10-18
 ---

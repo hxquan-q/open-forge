@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0307-managed-tool-inspect-and-version-marker
-worktree: ../open-forge-wt/task-0307-managed-tool-inspect-and-version-marker
+worktree: 已淘汰（merged；实现落地 main：ef864b76c/705fe6857/4b2c81e32，台账 c381659ef..713848294）
 base_commit: 964e25a64f96885800e043aea12f66b4ae891853
 read_paths:
   - project/research/RESEARCH-0030-managed-coding-tool-doctor-inspection.md
@@ -30,7 +30,7 @@ exclusive_paths:
   - packages/runtime-node/src/coding/host/managed-executables/
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-18
 updated: 2026-10-18
 ---
