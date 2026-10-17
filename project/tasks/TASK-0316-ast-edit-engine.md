@@ -99,4 +99,11 @@ updated: 2026-10-18
 
 ## 交付记录
 
-- 待回填。
+- Task branch `task/TASK-0316-ast-edit-engine`（基线 `ee0c00f54`）三个提交：
+  - `c458c7698` 立项记录；
+  - `b2887f71b` AST 写回引擎骨架：`src/inspector/ast-edit/{parse,guards,locate,style,text,index}.ts` + 3 个测试文件 + 插件依赖（@babel/parser、magic-string、tailwind-merge）+ bun.lock + NOTICE Onlook 条目；
+  - `f7246dbbf` design-session frame meta 存量类型红修复（基线即红、非本任务引入，挡全包 tsc）。
+- 实际运行：定向 22/22（locate 5、style 9、text 8）+ design-session 存量用例；包内全量 `bun run test` 733/733（112 文件）；包内 `tsc --noEmit` 全绿（修复后）；`check:quick` 红仅剩已知存量声明头 ratchet（missing 清单 0 次出现本任务文件）。
+- 未运行及原因：根 `test:impact` / `check` 留给集成期（Coordinator 门禁）；无 UI 面，无实机项。
+- 剩余风险：① tailwind-merge 的规范序会重排 token（diff 噪声，语义等价已按集合判幂等）；② 多行文本编辑会压平子区间内部缩进（区间内无缩进可保，已注记）；③ locator 列约定 1-based，需与 TASK-0315 tagger 的注入值对齐核对（已在其消息中约定）。
+- 集成注意：main 上 `project/tasks/README.md` 与 `bun.lock` 与 TASK-0315 及 GHSA 批次共享，集成顺序以 Coordinator 安排；本任务不改主树任何文件。
