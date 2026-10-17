@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "../canvas/ConfirmDialog";

@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * manifest 是外部可写文件的回归测试。
  *

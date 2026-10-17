@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * 画框外壳：标题栏限宽、选中时的尺寸标签、还没画出来时的启动占位。
  *
