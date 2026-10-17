@@ -237,4 +237,50 @@ describe("AgentTeamSessionService.deleteSession（BUG-0087 降级清理）", () 
 			"Conversation is already owned by another runtime",
 		);
 	});
+
+	it("read 成功但 runtime 报 SESSION_NOT_FOUND（会话未加载）时按幂等成功处理，索引仍清理（BUG-0114）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		// 与上一用例同构：缓存命中让 read 成功，删除面收敛到单条 coordination 路径。
+		const persisted = {
+			...sessionDocument(team.id),
+			teamRevision: team.revision,
+			leaderMemberId: team.leaderMemberId,
+			activeMemberIds: team.members.map((member) => member.id),
+			memberHandles: Object.fromEntries(team.members.map((member) => [member.id, member.handle])),
+			memberRuntime: {},
+		};
+		const activePaths = new Map<string, string>([["team-1-coordination", COORDINATION_PATH]]);
+
+		// 事故日志同款抛值：runtime 对未加载会话抛普通对象 SESSION_NOT_FOUND（非 Error 实例）。
+		const runtime = {
+			createSession: vi.fn(async () => {
+				throw new Error("unreachable: cached document short-circuits restore");
+			}),
+			getSessionPath: (sessionId: string) => activePaths.get(sessionId),
+			deleteSession: vi.fn(async () => {
+				throw { code: "SESSION_NOT_FOUND", message: "Session not found: team-1-coordination", retryable: false };
+			}),
+			appendSessionMetadataEntry: vi.fn(async () => undefined),
+			readSessionDocument: () => ({ entries: [], activeLeafId: null, revision: 0 }),
+			subscribe: () => () => undefined,
+		} as unknown as RuntimeHost;
+		const repositoryDelete = vi.fn(async () => undefined);
+		const repository: LegacyTeamSessionRepository = {
+			read: async () => persisted,
+			delete: repositoryDelete,
+			list: async () => [persisted],
+		};
+		const service = new AgentTeamSessionService({
+			runtime,
+			repository,
+			ownershipCatalog: ownershipCatalog(),
+			readDocument: async () => document,
+		});
+		(service as unknown as { sessionState: TeamSessionStateRepository }).sessionState.set(persisted);
+
+		await expect(service.deleteSession(persisted.id)).resolves.toBeUndefined();
+		expect(repositoryDelete).toHaveBeenCalledWith(persisted.id);
+	});
 });

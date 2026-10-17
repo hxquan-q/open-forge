@@ -1176,17 +1176,17 @@ export class AgentTeamSessionService {
 			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionPath),
 		];
 		for (const sessionPath of sessionPaths) {
-			if (!degraded) {
-				await this.getRuntime().deleteSession(sessionPath);
-				continue;
-			}
-			// 降级路径 per-path best-effort：外部实例持租约或单条路径损坏不阻断其余清理。
 			try {
 				await this.getRuntime().deleteSession(sessionPath);
 			} catch (error) {
-				log.warn("degraded team session delete could not remove a member runtime", {
+				// 会话不在 runtime 内存目录（崩溃重启后未再打开、或已被并发清理）对删除
+				// 语义是幂等成功（BUG-0114）；其余失败仅在降级路径吞掉——非降级时仍须
+				// 严格传播（BUG-0087 契约：外部实例持租约等要让用户看见）。
+				if (!degraded && !isSessionNotFoundFailure(error)) throw error;
+				log.warn("team session delete could not remove a runtime session; continuing", {
 					teamSessionId: sessionReference.id,
 					sessionPath,
+					degraded,
 					error: errorMessage(error),
 				});
 			}
@@ -1282,6 +1282,11 @@ export const agentTeamSessionService = new AgentTeamSessionService({
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+/** runtime 对「会话不在内存目录」的统一判别：普通对象或挂了 code 的 Error 都算（BUG-0114）。 */
+function isSessionNotFoundFailure(error: unknown): boolean {
+	return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "SESSION_NOT_FOUND";
 }
 
 function sameMemberIds(left: readonly string[], right: readonly string[]): boolean {
