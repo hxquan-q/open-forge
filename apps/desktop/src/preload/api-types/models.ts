@@ -156,5 +156,7 @@ export interface DesktopModelsApi {
 	fetchProviderModels(providerName: string): Promise<{ models: FetchedProviderModel[]; error?: string }>;
 	/** 对已保存的自定义服务商做轻量可用性测试（`GET {baseUrl}/models`），报告延迟与结构化失败原因。 */
 	testProvider(providerName: string): Promise<ProviderTestResult>;
+	/** 当前运行时的模型配置文件绝对路径（只读展示用；随数据根 env 覆盖/迁移变化）。 */
+	configPath(): Promise<string>;
 	onChanged(handler: (event: { providerIds: string[] }) => void): () => void;
 }

@@ -213,6 +213,7 @@ export function createSystemApi(
 			probe: (ref) => ipc.invoke("vetta:models:probe", ref),
 			fetchProviderModels: (providerName) => ipc.invoke("vetta:models:fetch-provider-models", providerName),
 			testProvider: (providerName) => ipc.invoke("vetta:models:test-provider", providerName),
+			configPath: () => ipc.invoke("vetta:models:config-path"),
 			onChanged: (handler) => onIpcEvent(ipc, "vetta:models:changed", handler),
 		},
 		mcp: {

@@ -70,7 +70,7 @@ import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.j
 import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
 import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
-import type { ModelsConfig } from "../models/model-settings-service.js";
+import { MODELS_CONFIG_PATH, type ModelsConfig } from "../models/model-settings-service.js";
 import { probeModelProvider } from "../models/probe.js";
 import { testProviderAvailability } from "../models/test-provider.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
@@ -155,6 +155,7 @@ const CHANNELS = {
 	MODELS_PROBE: "vetta:models:probe",
 	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
 	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
+	MODELS_CONFIG_PATH: "vetta:models:config-path",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
 	MCP_LOGIN: "vetta:mcp:login",
@@ -485,6 +486,11 @@ export function registerFsIpc(): () => void {
 		return testProviderAvailability(provider, { fetchImpl: net.fetch });
 	});
 
+	// 只读：设置页脚展示当前运行时的模型配置真实路径（数据根可被 env 覆盖/迁移）。
+	ipcMain.handle(CHANNELS.MODELS_CONFIG_PATH, () => {
+		return MODELS_CONFIG_PATH;
+	});
+
 	ipcMain.handle(CHANNELS.MCP_GET, async (): Promise<McpConfig> => {
 		return mcp.getConfig();
 	});
@@ -627,6 +633,7 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.MODELS_COPY_API_KEY);
 		ipcMain.removeHandler(CHANNELS.MODELS_PROBE);
 		ipcMain.removeHandler(CHANNELS.MODELS_FETCH_PROVIDER_MODELS);
+		ipcMain.removeHandler(CHANNELS.MODELS_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_GET);
 		ipcMain.removeHandler(CHANNELS.MCP_SET);
 		ipcMain.removeHandler(CHANNELS.MCP_LOGIN);
