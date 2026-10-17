@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Vetta UI Design：第三方依赖归设计所有，`x.vetd/` 是一个真实 npm 工程
 
 设计文档可以声明并安装自己的 npm 依赖：`x.vetd/package.json` 是事实源，`x.vetd/node_modules/` 是生成物，agent 通过 `vetd_install` 装包。共享引擎从「提供全部依赖」降级为「编译宿主 + 核心运行时单例」——它继续锁 react / react-dom / react-router 与 Tailwind/Iconify，但不再决定一份设计能用什么库。

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Shared design-engine lifecycle (ADR-0053/0054):
  *

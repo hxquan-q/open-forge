@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 画廊里会改动磁盘/宿主状态的几个动作：建、导入、导出、归档。
  *

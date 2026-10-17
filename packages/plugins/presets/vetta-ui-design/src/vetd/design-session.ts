@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Disposable, PluginContext } from "@vetta-org/plugin-sdk";
 import { isFrameFile } from "../../engine/src/routes";
 import { bootstrapHistory } from "../history/history-bootstrap";
