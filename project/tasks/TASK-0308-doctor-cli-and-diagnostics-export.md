@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: serial
 branch: task/TASK-0307-managed-tool-inspect-and-version-marker（与 0307 同树叠作）
-worktree: ../open-forge-wt/task-0307-managed-tool-inspect-and-version-marker
+worktree: unassigned（与 TASK-0307 同树叠作，实际路径见 0307 frontmatter）
 base_commit: fb1448727
 read_paths:
   - project/research/RESEARCH-0030-managed-coding-tool-doctor-inspection.md
