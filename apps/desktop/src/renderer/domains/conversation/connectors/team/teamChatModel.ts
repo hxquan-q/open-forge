@@ -446,12 +446,16 @@ export function computeTeamTimelineBase(
 	memberId: string | undefined,
 ): TeamTimelineBase {
 	const memberConversations = snapshot?.display?.memberConversations ?? [];
-	const visibleMemberConversations = memberId
-		? memberConversations.filter((conversation) => conversation.memberId === memberId)
-		: memberConversations;
-	const projectedMemberItems = visibleMemberConversations.flatMap((conversation) =>
-		projectMemberConversation(conversation.memberId, conversation.history, conversation.runtimeSessionId),
-	);
+	// 成员历史投影只服务成员视图的稳定化（聚合视图不消费 projectedMemberItems）；
+	// 聚合视图跳过 O(M×history) 投影，session-updated 每帧重建基座时不白付。
+	const projectedMemberItems =
+		memberId === undefined
+			? []
+			: memberConversations
+					.filter((conversation) => conversation.memberId === memberId)
+					.flatMap((conversation) =>
+						projectMemberConversation(conversation.memberId, conversation.history, conversation.runtimeSessionId),
+					);
 	const latestProjectedMemberItem = projectedMemberItems.at(-1);
 	// User input is persisted in the coordination conversation before member
 	// turns are scheduled. Keep it as the canonical timeline item even when
