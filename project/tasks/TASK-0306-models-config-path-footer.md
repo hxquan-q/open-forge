@@ -23,10 +23,19 @@ read_paths:
 write_paths:
   - apps/desktop/src/renderer/domains/settings/components/ModelsSettingsView.tsx
   - apps/desktop/src/renderer/domains/settings/components/ModelsSettingsView.test.tsx
+  - apps/desktop/src/renderer/domains/settings/components/McpJsonEditor.tsx
+  - apps/desktop/src/renderer/domains/settings/components/useGeneralSettingsModel.ts
+  - apps/desktop/src/renderer/domains/conversation/hooks/useAppInit.ts
+  - apps/desktop/src/renderer/shared/store/project-atoms.ts
   - apps/desktop/src/main/models/model-settings-service.ts
+  - apps/desktop/src/main/mcp/mcp-settings-service.ts
+  - apps/desktop/src/main/utils/workspace.ts
   - apps/desktop/src/main/ipc/fs.ts
   - apps/desktop/src/preload/api-types/models.ts
+  - apps/desktop/src/preload/api-types/config.ts
+  - apps/desktop/src/preload/api-types/mcp.ts
   - apps/desktop/src/preload/apis/system.ts
+  - apps/desktop/scripts/update-models-dev-snapshot.ts
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -83,8 +92,12 @@ updated: 2026-10-18
 
 ## 交付记录
 
-- 实际修改：`model-settings-service.ts` 导出 `MODELS_CONFIG_PATH`（原私有常量）；`main/ipc/fs.ts` 新增只读通道 `vetta:models:config-path`（含注销清理）；`preload/api-types/models.ts` + `apis/system.ts` 暴露 `models.configPath()`；`ModelsSettingsView` 页脚改为渲染 IPC 返回的运行时路径（取不到不渲染，不回退硬编码，长路径 break-all）；`update-models-dev-snapshot.ts` 注释里旧 `~/.vetta` 缓存路径改中性表述。
-- 实际运行：新增 `ModelsSettingsView.test.tsx` 2 例（渲染 IPC 值且无旧路径残留；未就绪不渲染页脚）全绿；`bun --cwd apps/desktop typecheck` 0 错误；完整 `bun run check` exit 0（含声明头 new=0、lint）。
-- 未运行及原因：实机设置页目验（交用户；预期显示形如 `C:\Users\<user>\.openforge\agent\models.json` 或 env 覆盖值）。
+- 实际修改（含续轮扩展——同族旧品牌路径残留的用户可见/行为面清扫）：
+  - 模型页脚：`model-settings-service.ts` 导出 `MODELS_CONFIG_PATH`；`fs.ts` 只读通道 `vetta:models:config-path`；`models.configPath()`；`ModelsSettingsView` 页脚动态渲染（取不到不渲染）。
+  - MCP 提示：`mcp-settings-service.ts` 导出 `MCP_CONFIG_PATH`；通道 `vetta:mcp:config-path`；`mcp.configPath()`；`McpJsonEditor` 提示动态化。
+  - 默认工作区（行为级）：`workspace.ts` 导出 `DEFAULT_WORKSPACE_PATH`；`DesktopConfigSnapshot`/`DesktopConfig` 增 `defaultWorkspaceCwd`（CONFIG_GET 富化）；`useAppInit` 未设置时回落主进程默认（不写 localStorage，保留「未设置」语义）；`resetWorkspace` 改写主进程返回的真实路径（旧行为把字面量 `~/.vetta/workspace` 写进配置，经 `expandTilde` 落到已迁移走的旧根并重建 `.vetta` 目录）；`project-atoms` 占位字面量改 `~/.openforge/workspace`。
+  - `update-models-dev-snapshot.ts` 注释中性化；`api-types/config.ts` 与 `fs.ts` 快照类型注释同步中性化。
+- 实际运行：`ModelsSettingsView.test.tsx` 2 例 + conversation hooks 9 例全绿；typecheck 0 错误；完整 `bun run check` exit 0。
+- 未运行及原因：实机设置页/通用设置页目验（交用户）；`resetWorkspace`/MCP 提示为薄接线无既有测试文件，未新增独立套件（行为由快照类型与 enrichment 约束）。
 - Worktree：主工作区串行，未拆出。
-- 剩余风险：主进程代码注释层尚有约十处历史 `~/.vetta` 字样（非用户可见，未在本任务范围，待登记清理）。
+- 剩余风险：注释层 `~/.vetta` 字样实测 60+ 处（apps/desktop、packages/* 源码与 examples；dist 为生成物不计数），非用户可见，登记在 BUG-0130 待后续批量清理（涉及上游同步 diff 成本，需单独窗口）。

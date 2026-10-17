@@ -57,7 +57,8 @@ updated: 2026-10-18
 
 ## 修复与验证
 
-- 修复：TASK-0306——导出 `MODELS_CONFIG_PATH`、新增只读 IPC `vetta:models:config-path`、页脚动态显示运行时路径（取不到不渲染）。
-- 测试：`ModelsSettingsView.test.tsx` 2 例（含旧实现必红的路径断言）。
+- 修复（TASK-0306，含同族扩展）：模型页脚、MCP JSON 编辑器提示改为主进程运行时路径（新只读 IPC ×2）；「恢复默认工作区」与未设置时的初始化改用 `defaultWorkspaceCwd`（旧行为会把字面量 `~/.vetta/workspace` 写进配置并落到已迁移旧根——行为级缺陷，一并修复）。
+- 测试：`ModelsSettingsView.test.tsx` 2 例（含旧实现必红断言）+ conversation hooks 9 例。
 - 检查：typecheck 0 错误、完整 `bun run check` exit 0。
 - 未运行及原因：实机目验交用户；保持 verifying 至用户确认。
+- 剩余：代码注释层 `~/.vetta` 字样 60+ 处（源码与 examples，非用户可见）批量清理另找安静窗口执行。
