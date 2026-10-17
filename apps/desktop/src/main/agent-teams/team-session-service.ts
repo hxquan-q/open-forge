@@ -69,6 +69,7 @@ import { TeamSessionEventHub } from "./team-session-event-hub.js";
 import { readTeamConversationDocument, resolveTeamConversationSessionId } from "./team-session-file-reader.js";
 import { type LegacyTeamSessionRepository, legacyTeamSessionRepository } from "./team-session-repository.js";
 import { TeamSessionStateRepository } from "./team-session-state-repository.js";
+import { TeamSessionUpdatePublisher } from "./team-session-update-publisher.js";
 import { TeamSharedContextService } from "./team-shared-context-service.js";
 import { TeamTurnCoordinator } from "./team-turn-coordinator.js";
 import type { TeamSessionWorkspace } from "./team-workspace.js";
@@ -141,6 +142,7 @@ export class AgentTeamSessionService {
 	private readonly sharedContextService: TeamSharedContextService;
 	private readonly publicationWorkflow: TeamPublicationWorkflow;
 	private readonly memberAttemptRunner: TeamMemberAttemptRunner;
+	private readonly updatePublisher: TeamSessionUpdatePublisher;
 
 	constructor(options: AgentTeamSessionServiceOptions = {}) {
 		this.runtime = options.runtime;
@@ -173,6 +175,12 @@ export class AgentTeamSessionService {
 			observe: (session) => this.observations(session),
 			onRunningChanged: (sessionId, running) => this.publishRunningChanged(sessionId, running),
 		});
+		// session-updated 携带全量快照：短窗合并爆发式状态迁移、无订阅者跳过构建。
+		this.updatePublisher = new TeamSessionUpdatePublisher({
+			getSession: (sessionId) => this.sessionState.get(sessionId),
+			hasSubscribers: (sessionId) => this.eventHub.hasSubscribers(sessionId),
+			publish: (session) => this.publishSessionUpdated(session),
+		});
 		this.turnCoordinator = new TeamTurnCoordinator({
 			runtime: () => this.getRuntime(),
 			extensions: this.extensions,
@@ -183,7 +191,7 @@ export class AgentTeamSessionService {
 			readDocument: () => this.readDocument(),
 			readMemberModelPreference: options.readMemberModelPreference,
 			observations: (session) => this.observations(session),
-			publishSessionUpdated: (session) => this.publishSessionUpdated(session),
+			publishSessionUpdated: (session) => this.requestSessionUpdate(session),
 		});
 		this.runtimeManager = new TeamRuntimeManager({
 			runtime: () => this.getRuntime(),
@@ -224,7 +232,7 @@ export class AgentTeamSessionService {
 			settleAttempt: (session, workItem, attempt, terminal, resultMessageId) =>
 				this.turnCoordinator.settleMemberAttempt(session, workItem, attempt, terminal, resultMessageId),
 			observations: (session) => this.observations(session),
-			publishSessionUpdated: (session) => this.publishSessionUpdated(session),
+			publishSessionUpdated: (session) => this.requestSessionUpdate(session),
 		});
 		this.turnCoordinator.setAttemptRunner(this.memberAttemptRunner);
 		options.externalConditionChanges?.subscribe((change) => {
@@ -370,6 +378,8 @@ export class AgentTeamSessionService {
 				});
 			}
 			for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
+			// 挂起中的 session-updated 不再发布（会话即将离开内存）。
+			this.updatePublisher.drop(sessionId);
 			// 个别 dispose 失败也移除缓存条目：保留条目会让缓存路径继续引用已释放的
 			// runtime；残留句柄无害，下次 read 走完整恢复重建。
 			this.sessionState.removeCached(sessionId);
@@ -497,6 +507,14 @@ export class AgentTeamSessionService {
 			teamSessionId: session.id,
 			snapshot: this.snapshot(session),
 		});
+	}
+
+	/**
+	 * 请求一次 `session-updated` 发布。事件携带全量快照且渲染端按 revision 拒收
+	 * 旧帧，状态迁移爆发只发末帧即可；无订阅者时连快照构建一并跳过。
+	 */
+	private requestSessionUpdate(session: TeamSessionDocument): void {
+		this.updatePublisher.request(session);
 	}
 
 	async create(
@@ -678,7 +696,7 @@ export class AgentTeamSessionService {
 					runtimeStatus: "failed",
 				};
 				await this.persist(next);
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 			});
 			throw error;
 		} finally {
@@ -712,7 +730,7 @@ export class AgentTeamSessionService {
 				runtimeStatus: failed ? "failed" : "ready",
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 		});
 	}
 
@@ -775,7 +793,7 @@ export class AgentTeamSessionService {
 				await ensureTeamConversationBinding(next, this.legacyMigrationPort());
 				await this.persist(next);
 				adopted = true;
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 			});
 		} finally {
 			if (!adopted) await this.getRuntime().disposeSession(runtimeState.sessionId);
@@ -810,7 +828,7 @@ export class AgentTeamSessionService {
 				updatedAt: Date.now(),
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		});
 	}
@@ -831,7 +849,7 @@ export class AgentTeamSessionService {
 				updatedAt: Date.now(),
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		});
 	}
@@ -1006,7 +1024,7 @@ export class AgentTeamSessionService {
 					});
 			}
 			this.eventHub.attach(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		} catch (error) {
 			await Promise.allSettled(createdRuntimeIds.map((runtimeId) => this.getRuntime().disposeSession(runtimeId)));
@@ -1076,7 +1094,7 @@ export class AgentTeamSessionService {
 						updatedAt: Date.now(),
 					};
 					await this.persist(next);
-					this.publishSessionUpdated(next);
+					this.requestSessionUpdate(next);
 				});
 			})
 			.catch((error: unknown) => {
@@ -1138,7 +1156,7 @@ export class AgentTeamSessionService {
 					updatedAt: Date.now(),
 				};
 				await this.persist(next);
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 				return next;
 			},
 			sessionReference.coordinationSessionPath,
@@ -1195,6 +1213,7 @@ export class AgentTeamSessionService {
 		for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
 		await this.repository.delete?.(sessionReference.id);
 		if (session) await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
+		this.updatePublisher.drop(sessionReference.id);
 		this.sessionState.remove(sessionReference.id);
 		this.teamResidency.forget(sessionReference.id);
 	}
