@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0315` | `in_progress` | PLAN-0018 | F1/F2 数据层：插桩升级 `file:line:column`（抽取 engine/plugins/source-tagger.mjs）+ 兼容解析 source-locator + 元素上下文包（outerHTML 片段/样式摘要进 SelectedElementPayload 与 vetd_notes）；与 TASK-0316（ast-edit 骨架）文件级不相交，Worktree task-0315-source-locator-v2。 |
 | `TASK-0310` | `in_progress` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效），消除路径可预测本地提权面；`ensureDirectory` 端口加可选 mode；SSH 远端同代码自动受益；serial，main 串行。 |
 | `TASK-0311` | `in_progress` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（保留 chmod 兜底）、MCP OAuth state 文件补 `0o600`/目录 `0o700`，消除创建窗口泄露；桌面自有 credential-store 已亲核无此缺陷；serial，main 串行。 |
 | `TASK-0312` | `in_progress` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 template.js 增加 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义（DOM 实现改字符串管道），对齐上游 `6cb23f9b`+`b3ed5459`；serial，main 串行。 |
