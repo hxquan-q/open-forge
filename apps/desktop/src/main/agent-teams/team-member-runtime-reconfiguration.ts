@@ -1,5 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
-import type { SessionConfig } from "@vetta/runtime-core";
+import { isSessionError, type SessionConfig } from "@vetta/runtime-core";
+import { describeError } from "../logger/describe-error.js";
 
 export interface TeamMemberRuntimeReconfigurationHost {
 	getSessionPath(sessionId: string): string | undefined;
@@ -50,7 +52,23 @@ export async function reconfigureTeamMemberRuntime(input: {
 	const config = await input.resolveConfig(current.sessionPath);
 	let createdSessionId: string | undefined;
 	try {
-		if (activePath) await input.runtime.disposeSession(current.sessionId);
+		if (activePath) {
+			try {
+				await input.runtime.disposeSession(current.sessionId);
+			} catch (disposeError) {
+				// 收尾重配的竞态窗口（BUG-0115）：getSessionPath 判定仍绑定后、dispose 前
+				// runtime 可能已被卸载；「会话不存在」说明本就没有需要清理的活 runtime，
+				// 按幂等 no-op 继续重开；其余 dispose 失败仍按错误掀翻重配。
+				if (!(isSessionError(disposeError) && disposeError.code === "SESSION_NOT_FOUND")) {
+					throw disposeError;
+				}
+				input.logger.info("team member runtime reconfiguration skipped dispose of unloaded session", {
+					teamSessionId: input.session.id,
+					memberId: input.memberId,
+					runtimeSessionId: current.sessionId,
+				});
+			}
+		}
 		const created = await input.runtime.createSession(config);
 		createdSessionId = created.sessionId;
 		const sessionPath = input.runtime.getSessionPath(created.sessionId);
@@ -90,12 +108,8 @@ export async function reconfigureTeamMemberRuntime(input: {
 			memberId: input.memberId,
 			agentProfileId: input.agentProfileId,
 			agentProfileRevision: input.agentProfileRevision,
-			error: errorMessage(error),
+			error: describeError(error),
 		});
 		throw error;
 	}
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
 }

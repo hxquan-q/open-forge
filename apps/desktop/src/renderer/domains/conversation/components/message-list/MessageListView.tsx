@@ -29,6 +29,7 @@ import {
 	loadOlderTranscriptPage,
 	noteTranscriptViewportRange,
 } from "../../services/transcript-window-controller";
+import { reportDuplicateConversationKeys } from "../../services/conversation-key-diagnostics";
 import type { ChatTimelineItem, MessageListModel, MessageListProps } from "./types";
 
 export { ExportMessageList };
@@ -106,6 +107,11 @@ export function MessageListView({
 	// 都在绝对空间，进入消息层前先减回偏移。
 	const indexOffset = useAtomValue(transcriptWindowStateAtom).firstItemIndex;
 	const virtualizerKey = useMessageVirtualizerKey(sessionId, messages);
+	// 重复渲染键诊断（BUG-0123）：把 React 的通用重复 key 告警换成可定位来源的结构化记录。
+	// 只读，仅在有重复时输出。
+	useEffect(() => {
+		reportDuplicateConversationKeys(sessionId ?? null, messages);
+	}, [sessionId, messages]);
 	const heightEstimates = useMemo(
 		() => buildMessageHeightEstimates(messages, sessionId),
 		[messages, sessionId],

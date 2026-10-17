@@ -6,6 +6,7 @@ import type { ComponentType, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { activeSessionAtom } from "@shared/store/atoms";
 import type { ChatConversationItem } from "@shared/store/atoms";
+import { messageQueueBySessionAtom } from "@shared/store/message-queue-atoms";
 import { SessionMessageList } from "./SessionMessageList";
 
 vi.mock("react-i18next", () => ({
@@ -154,5 +155,44 @@ describe("SessionMessageList 续跑条把 runtime id 交给宿主", () => {
 
 		expect(screen.queryByRole("button", { name: "继续" })).toBeNull();
 		expect(retryMock).not.toHaveBeenCalled();
+	});
+
+	// 回归（BUG-0122）：排队输入派发发生在 agent_end 与下一轮 agent_start 之间，该窗口
+	// 不在主进程运行集内，渲染端的 streaming 信念会短暂为假。此时内核仍会拒绝续跑，
+	// 因此据队列镜像（主进程真值）在排队期间不提供续跑入口；清空后必须恢复。
+	it("会话仍有待派发排队输入时不显示继续条，清空后恢复", async () => {
+		const store = createStore();
+		render(
+			<Provider store={store}>
+				<SessionMessageList
+					messages={[interruptedReply]}
+					isStreaming={false}
+					sessionId={session.sessionPath}
+					workspace={{ id: session.cwd, cwd: session.cwd, runtimeIds: [session.runtimeId] }}
+				/>
+			</Provider>,
+		);
+		await act(async () => {
+			store.set(activeSessionAtom, session);
+		});
+		expect(screen.getByRole("button", { name: "继续" })).toBeTruthy();
+
+		await act(async () => {
+			store.set(
+				messageQueueBySessionAtom,
+				new Map([
+					[
+						session.runtimeId,
+						[{ id: "q-1", displayText: "排队消息", behavior: "followUp" as const, kind: "message" as const }],
+					],
+				]),
+			);
+		});
+		expect(screen.queryByRole("button", { name: "继续" })).toBeNull();
+
+		await act(async () => {
+			store.set(messageQueueBySessionAtom, new Map());
+		});
+		expect(screen.getByRole("button", { name: "继续" })).toBeTruthy();
 	});
 });

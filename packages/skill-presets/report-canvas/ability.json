@@ -9,7 +9,7 @@
 				"type": "showcase",
 				"showcase": {
 					"template": "chat-over-canvas",
-					"canvas": "markdown",
+					"canvas": "docs",
 					"user_prompt": "根据当前仓库写一份架构报告，要有模块图。",
 					"assistant_reply": "我会先核对目录分层，再写成画布上的报告，而不是只在聊天里贴一段 Markdown。"
 				}
@@ -22,7 +22,7 @@
 						"type": "showcase",
 						"showcase": {
 							"template": "chat-over-canvas",
-							"canvas": "markdown",
+							"canvas": "docs",
 							"user_prompt": "Write an architecture report of this repo with a module diagram.",
 							"assistant_reply": "I’ll verify the package layers, then create a Canvas artifact instead of a chat-only write-up."
 						}

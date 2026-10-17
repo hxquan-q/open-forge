@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { ContractStore } from "../src/fence/contract-store";
+import { ContractStore, contractFromSpawnInput } from "../src/fence/contract-store";
 import {
 	BASELINE_MATRIX,
 	judge,
@@ -350,6 +350,33 @@ describe("git 写豁免通道（轻量 git 子代理）", () => {
 			task: { scope: "src/**,docs/ac/state.md" },
 		});
 		expect(verdict.allow).toBe(true);
+	});
+
+	it("豁免字段放在 task 契约内部（历史「契约带」措辞）同样生效——P2-2 回归", () => {
+		// 主控若按「契约带 allow_git_write」把字段放进 task，围栏必须仍能读到
+		const verdict = judgeMainSpawn({
+			task_name: "git_t2",
+			agent_type: "general",
+			task: { scope: "src/**,docs/ac/state.md", allow_git_write: true },
+		});
+		expect(verdict.allow).toBe(true);
+
+		const parsed = contractFromSpawnInput({
+			task_name: "git_t2",
+			agent_type: "general",
+			task: { scope: "src/**", allow_git_write: true },
+		});
+		expect(parsed?.gitWriteAllow).toBe(true);
+	});
+
+	it("task 内部偷带豁免但非 git_ 前缀 → 仍拦截（防偷带对两种位置一视同仁）", () => {
+		const verdict = judgeMainSpawn({
+			task_name: "dev_t7",
+			agent_type: "general",
+			task: { scope: "src/**", allow_git_write: true },
+		});
+		expect(verdict.allow).toBe(false);
+		expect(verdict.reason).toContain("git_");
 	});
 
 	it("主会话 git 写命令拦截的 reason 指向轻量 git 子代理通道", () => {

@@ -168,6 +168,34 @@ describe("classifySessionInterruptHealth", () => {
 		expect(result.vetoes).toContain("insufficientConfidence");
 	});
 
+	it("等待子代理的长空闲是合法安静，不判 suspected（BUG-0126）", () => {
+		// 旧实现红：同样证据（不流式 + idle 超阈 + 无完成标记）落 suspected 并通知。
+		const result = classifySessionInterruptHealth(
+			evidence({
+				idleMs: SESSION_INTERRUPT_SUSPECT_IDLE_MS + 1,
+				stopReason: "stop",
+				hasCompletionMarker: false,
+				waitingOnSubagent: true,
+			}),
+		);
+		expect(result.state).toBe("running");
+		expect(result.shouldNotify).toBe(false);
+		expect(result.shouldAutoContinue).toBe(false);
+		expect(result.eligibleForBinding).toBe(false);
+	});
+
+	it("等待子代理但命中硬否决时仍按否决裁决", () => {
+		const result = classifySessionInterruptHealth(
+			evidence({
+				idleMs: SESSION_INTERRUPT_SUSPECT_IDLE_MS + 1,
+				waitingOnSubagent: true,
+				manualStop: true,
+			}),
+		);
+		expect(result.state).toBe("stopped");
+		expect(result.eligibleForBinding).toBe(false);
+	});
+
 	it("绑定闸门与续跑判定共用同一 classification", () => {
 		const ok = classifySessionInterruptHealth(evidence({ stopReason: "length" }));
 		expect(ok.shouldAutoContinue).toBe(true);

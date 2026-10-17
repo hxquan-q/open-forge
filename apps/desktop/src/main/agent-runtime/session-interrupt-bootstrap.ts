@@ -2,6 +2,7 @@
 import { assessConversationInterruption } from "@vetta/runtime-node/conversation";
 import { nodeRuntimeQueueSidecarStore } from "@vetta/runtime-node/host";
 import { readAgentSettingsDocument } from "../agent-settings/settings-document-store.js";
+import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { DEFAULT_CONVERSATION_CWD, readConfigSync } from "../config/desktop-config-store.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
 import { getDesktopMcpElicitationBroker } from "../conversations/mcp-elicitation-broker.js";
@@ -58,6 +59,7 @@ export function startSessionInterruptMonitor(
 		getRuntime: getSharedRuntime,
 		listCandidateSessionIds: listInterruptContinueCandidates,
 		hasPendingAction,
+		hasPendingSubagentWork: (sessionId) => agentTeamSessionService.hasActiveTeamWorkForRuntimeSession(sessionId),
 		wasManualStopped: wasSessionManualStopped,
 		readMode: readSessionInterruptContinueMode,
 		readMaxAttempts: readSessionInterruptMaxAttempts,

@@ -14,7 +14,7 @@ function userMessage(): ChatTimelineItem {
 const errorBlock = (kind: string) => ({ type: "error", id: "e1", kind, text: "boom" });
 const textBlock = { type: "text", id: "t1", text: "完成" };
 
-const idle = { isStreaming: false, isCompacting: false };
+const idle = { isStreaming: false, isCompacting: false, hasPendingQueue: false };
 
 describe("resolveInterruptedErrorKind", () => {
 	it.each([
@@ -47,8 +47,9 @@ describe("resolveInterruptedErrorKind", () => {
 	});
 
 	it.each([
-		["streaming", { isStreaming: true, isCompacting: false }],
-		["compacting", { isStreaming: false, isCompacting: true }],
+		["streaming", { isStreaming: true, isCompacting: false, hasPendingQueue: false }],
+		["compacting", { isStreaming: false, isCompacting: true, hasPendingQueue: false }],
+		["待派发排队输入", { isStreaming: false, isCompacting: false, hasPendingQueue: true }],
 	])("会话忙碌（%s）→ 不显示", (_name, context) => {
 		expect(resolveInterruptedErrorKind([agentWithBlocks([errorBlock("network")])], context)).toBeUndefined();
 	});

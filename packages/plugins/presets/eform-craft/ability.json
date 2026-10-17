@@ -1,0 +1,68 @@
+{
+	"schemaVersion": 1,
+	"type": "plugin",
+	"slug": "eform-craft",
+	"version": "0.2.0",
+	"detail": {
+		"blocks": [
+			{
+				"type": "feature-grid",
+				"title": "实体表单电子化（二期：三版块团队）",
+				"items": [
+					{
+						"title": "表单生成（表单匠）",
+						"description": "上传图片 / PDF / Excel / Word 表单，按标记合同识别字段类型与固定命名，还原为可运行的表单应用：列表页管数据记录（新增/修改/删除/筛选），表单页带保存/提交审核/打印/导出的数据生命周期。",
+						"icon": "solar:document-add-line-duotone"
+					},
+					{
+						"title": "电子签名（电子签师）",
+						"description": "按表单能力参数注入签名组件：点击签名框弹窗身份验证（演示账号）、canvas 手写录入、笔迹缩放回填、未生效可清空重签、审核通过后锁定不可改。",
+						"icon": "solar:pen-new-square-line-duotone"
+					},
+					{
+						"title": "操作审计（审计员）",
+						"description": "审计开关参数化启用（默认关闭）；开启后创建/保存/审核/打印/导出全量记录操作日志（含关键字段快照与签名摘要），仅可查看不可删除，可导出审计日志文件。",
+						"icon": "solar:clipboard-list-line-duotone"
+					},
+					{
+						"title": "字段规格与确认门",
+						"description": "F# 编号三体一致（schema / 页面 / 规格文档），用户逐字段核对后批准定稿；自然语言指认修改，页面重生成后组件按能力参数重新注入。",
+						"icon": "solar:checklist-minimalistic-line-duotone"
+					}
+				]
+			}
+		],
+		"i18n": {
+			"en": {
+				"blocks": [
+					{
+						"type": "feature-grid",
+						"title": "Paper-form digitalization (phase 2: three-board team)",
+						"items": [
+							{
+								"title": "Form generation (Form Crafter)",
+								"description": "Upload a form as image / PDF / Excel / Word; fields are typed by the marking contract and rebuilt into a runnable form app: a list page managing records (create/edit/delete/filter) and a form page with a save/approve/print/export record lifecycle.",
+								"icon": "solar:document-add-line-duotone"
+							},
+							{
+								"title": "E-signature (Signature Smith)",
+								"description": "Injected per form capability: click a signature box for an identity-verification dialog (demo account), handwrite on canvas, scaled stroke filled back, clear-and-resign before effect, locked on approval.",
+								"icon": "solar:pen-new-square-line-duotone"
+							},
+							{
+								"title": "Operation audit (Auditor)",
+								"description": "Parameterized audit toggle (off by default); once on, create/save/approve/print/export are fully logged (key-field snapshots and signature digests), view-only with no delete entry, exportable as a journal file.",
+								"icon": "solar:clipboard-list-line-duotone"
+							},
+							{
+								"title": "Field spec & confirmation gate",
+								"description": "F# ids align across schema, pages and spec doc; users verify field by field, then approve; pages regenerate on natural-language edits and components re-inject by capability flags.",
+								"icon": "solar:checklist-minimalistic-line-duotone"
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+}

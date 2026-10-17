@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentPluginRuntimeConfig } from "@vetta/coding-agent/plugin-runtime";
 import { validatePluginId } from "@vetta-org/plugin-sdk/manifest";
 import type { InstalledPlugin, PluginPermission } from "../../preload/api-types/plugins.js";
@@ -92,6 +93,11 @@ export class PluginAgentContributionService {
 
 	readHookInvocationRejection(pluginId: string, handlerId: string, activationId?: string): string | undefined {
 		return this.dependencies.hooks.readInvocationRejection(pluginId, handlerId, activationId);
+	}
+
+	/** 只读 hook generation/lease 聚合诊断，供派发侧结构化日志（BUG-0124）。 */
+	readHookLeaseDiagnostics(): { readonly retiredGenerations: number; readonly activeLeases: number } {
+		return this.dependencies.hooks.readLeaseDiagnostics();
 	}
 
 	readHandlerInvocationRejection(

@@ -24,7 +24,7 @@
 		"test:e2e": "bun run build && electron scripts/webrtc-e2e-main.cjs"
 	},
 	"devDependencies": {
-		"electron": "39.8.10",
+		"electron": "41.10.7",
 		"typescript": "^5.9.2"
 	}
 }

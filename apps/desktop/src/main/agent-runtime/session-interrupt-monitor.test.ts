@@ -52,6 +52,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "auto",
 			readMaxAttempts: () => 1,
@@ -79,6 +80,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "auto",
 			readMaxAttempts: () => 1,
@@ -103,6 +105,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "notify",
 			readMaxAttempts: () => 1,
@@ -133,6 +136,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "notify",
 			readMaxAttempts: () => 1,
@@ -160,6 +164,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "notify",
 			readMaxAttempts: () => 1,
@@ -196,6 +201,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "auto",
 			readMaxAttempts: () => 1,
@@ -221,6 +227,7 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			readMode: () => "auto",
 			readMaxAttempts: () => 1,
@@ -231,5 +238,48 @@ describe("SessionInterruptMonitor", () => {
 		expect(onDecision).not.toHaveBeenCalled();
 		expect(retry).not.toHaveBeenCalled();
 		monitor.stop();
+	});
+
+	it("团队在途工作（等成员返回）的长空闲不判 suspected（BUG-0126）", async () => {
+		// 同一证据（不流式 + idle 超阈 + 无完成标记）：端口 false 走旧路径 notify，
+		// 端口 true（所属团队有未结算工作）判 running，安静跳过。
+		const staleIncompleteAssistant = {
+			...assistantError("ignored"),
+			stopReason: "stop",
+			errorMessage: undefined,
+		} as Message;
+		const buildMonitor = (hasPendingSubagentWork: () => boolean) => {
+			const retry = vi.fn(async () => {});
+			const onDecision = vi.fn();
+			const monitor = new SessionInterruptMonitor({
+				getRuntime: () =>
+					({
+						getState: () => ({ isStreaming: false }),
+						getMessages: () => [staleIncompleteAssistant],
+						getSessionPath: () => "/sessions/a.jsonl",
+						retry,
+					}) as never,
+				listCandidateSessionIds: () => ["s1"],
+				hasPendingAction: () => false,
+				hasPendingSubagentWork,
+				wasManualStopped: () => false,
+				readMode: () => "notify",
+				readMaxAttempts: () => 1,
+				onDecision,
+				nowMs: () => Date.now(),
+			});
+			return { monitor, retry, onDecision };
+		};
+
+		const withoutTeamWork = buildMonitor(() => false);
+		await withoutTeamWork.monitor.reconcileNow();
+		expect(withoutTeamWork.onDecision).toHaveBeenCalledWith(expect.objectContaining({ action: "notify" }));
+
+		const withTeamWork = buildMonitor(() => true);
+		await withTeamWork.monitor.reconcileNow();
+		expect(withTeamWork.onDecision).not.toHaveBeenCalled();
+		expect(withTeamWork.retry).not.toHaveBeenCalled();
+		withoutTeamWork.monitor.stop();
+		withTeamWork.monitor.stop();
 	});
 });

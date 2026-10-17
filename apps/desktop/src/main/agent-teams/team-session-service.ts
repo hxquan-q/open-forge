@@ -45,6 +45,7 @@ import {
 	selectIdleSessionsToEvict,
 } from "../conversations/idle-session-residency.js";
 import { readDesktopConfig } from "../ipc/fs.js";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
@@ -68,6 +69,7 @@ import { TeamSessionEventHub } from "./team-session-event-hub.js";
 import { readTeamConversationDocument, resolveTeamConversationSessionId } from "./team-session-file-reader.js";
 import { type LegacyTeamSessionRepository, legacyTeamSessionRepository } from "./team-session-repository.js";
 import { TeamSessionStateRepository } from "./team-session-state-repository.js";
+import { TeamSessionUpdatePublisher } from "./team-session-update-publisher.js";
 import { TeamSharedContextService } from "./team-shared-context-service.js";
 import { TeamTurnCoordinator } from "./team-turn-coordinator.js";
 import type { TeamSessionWorkspace } from "./team-workspace.js";
@@ -140,6 +142,7 @@ export class AgentTeamSessionService {
 	private readonly sharedContextService: TeamSharedContextService;
 	private readonly publicationWorkflow: TeamPublicationWorkflow;
 	private readonly memberAttemptRunner: TeamMemberAttemptRunner;
+	private readonly updatePublisher: TeamSessionUpdatePublisher;
 
 	constructor(options: AgentTeamSessionServiceOptions = {}) {
 		this.runtime = options.runtime;
@@ -172,6 +175,12 @@ export class AgentTeamSessionService {
 			observe: (session) => this.observations(session),
 			onRunningChanged: (sessionId, running) => this.publishRunningChanged(sessionId, running),
 		});
+		// session-updated 携带全量快照：短窗合并爆发式状态迁移、无订阅者跳过构建。
+		this.updatePublisher = new TeamSessionUpdatePublisher({
+			getSession: (sessionId) => this.sessionState.get(sessionId),
+			hasSubscribers: (sessionId) => this.eventHub.hasSubscribers(sessionId),
+			publish: (session) => this.publishSessionUpdated(session),
+		});
 		this.turnCoordinator = new TeamTurnCoordinator({
 			runtime: () => this.getRuntime(),
 			extensions: this.extensions,
@@ -182,7 +191,7 @@ export class AgentTeamSessionService {
 			readDocument: () => this.readDocument(),
 			readMemberModelPreference: options.readMemberModelPreference,
 			observations: (session) => this.observations(session),
-			publishSessionUpdated: (session) => this.publishSessionUpdated(session),
+			publishSessionUpdated: (session) => this.requestSessionUpdate(session),
 		});
 		this.runtimeManager = new TeamRuntimeManager({
 			runtime: () => this.getRuntime(),
@@ -223,7 +232,7 @@ export class AgentTeamSessionService {
 			settleAttempt: (session, workItem, attempt, terminal, resultMessageId) =>
 				this.turnCoordinator.settleMemberAttempt(session, workItem, attempt, terminal, resultMessageId),
 			observations: (session) => this.observations(session),
-			publishSessionUpdated: (session) => this.publishSessionUpdated(session),
+			publishSessionUpdated: (session) => this.requestSessionUpdate(session),
 		});
 		this.turnCoordinator.setAttemptRunner(this.memberAttemptRunner);
 		options.externalConditionChanges?.subscribe((change) => {
@@ -365,10 +374,12 @@ export class AgentTeamSessionService {
 				if (result.status !== "rejected") continue;
 				log.warn("Agent Team idle session dispose failed", {
 					teamSessionId: sessionId,
-					error: errorMessage(result.reason),
+					error: describeError(result.reason),
 				});
 			}
 			for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
+			// 挂起中的 session-updated 不再发布（会话即将离开内存）。
+			this.updatePublisher.drop(sessionId);
 			// 个别 dispose 失败也移除缓存条目：保留条目会让缓存路径继续引用已释放的
 			// runtime；残留句柄无害，下次 read 走完整恢复重建。
 			this.sessionState.removeCached(sessionId);
@@ -384,7 +395,7 @@ export class AgentTeamSessionService {
 		const timer = setTimeout(() => {
 			this.idleResidencyReconcileScheduled = false;
 			void this.reconcileIdleTeamSessions().catch((error: unknown) => {
-				log.warn("Agent Team idle residency reconcile failed", { error: errorMessage(error) });
+				log.warn("Agent Team idle residency reconcile failed", { error: describeError(error) });
 			});
 		}, 0);
 		timer.unref?.();
@@ -403,7 +414,7 @@ export class AgentTeamSessionService {
 			} catch (error) {
 				log.warn("Agent Team idle session release failed", {
 					teamSessionId: sessionId,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
@@ -430,7 +441,7 @@ export class AgentTeamSessionService {
 	private startSessionWarming(id: string, coordinationSessionPath: string): void {
 		if (this.sessionState.get(id) !== undefined || this.warmingSessions.has(id)) return;
 		const warming = this.read(id, coordinationSessionPath).catch((error: unknown) => {
-			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: errorMessage(error) });
+			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: describeError(error) });
 			throw error;
 		});
 		this.warmingSessions.set(id, warming);
@@ -498,6 +509,14 @@ export class AgentTeamSessionService {
 		});
 	}
 
+	/**
+	 * 请求一次 `session-updated` 发布。事件携带全量快照且渲染端按 revision 拒收
+	 * 旧帧，状态迁移爆发只发末帧即可；无订阅者时连快照构建一并跳过。
+	 */
+	private requestSessionUpdate(session: TeamSessionDocument): void {
+		this.updatePublisher.request(session);
+	}
+
 	async create(
 		team: AgentTeamDocument["teams"][number],
 		document: AgentTeamDocument,
@@ -535,7 +554,7 @@ export class AgentTeamSessionService {
 				teamId: team.id,
 				teamSessionId: id,
 				createdMemberCount: Object.keys(memberRuntime).length,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -641,7 +660,7 @@ export class AgentTeamSessionService {
 			await this.persist(session);
 			this.sessionState.set(session);
 			void this.warmup(id, team, document).catch((error: unknown) => {
-				log.warn("team runtime warmup failed", { teamId: team.id, teamSessionId: id, error: errorMessage(error) });
+				log.warn("team runtime warmup failed", { teamId: team.id, teamSessionId: id, error: describeError(error) });
 			});
 			log.info("team session record created", { teamId: team.id, teamSessionId: id });
 			return session;
@@ -677,7 +696,7 @@ export class AgentTeamSessionService {
 					runtimeStatus: "failed",
 				};
 				await this.persist(next);
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 			});
 			throw error;
 		} finally {
@@ -711,7 +730,7 @@ export class AgentTeamSessionService {
 				runtimeStatus: failed ? "failed" : "ready",
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 		});
 	}
 
@@ -774,7 +793,7 @@ export class AgentTeamSessionService {
 				await ensureTeamConversationBinding(next, this.legacyMigrationPort());
 				await this.persist(next);
 				adopted = true;
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 			});
 		} finally {
 			if (!adopted) await this.getRuntime().disposeSession(runtimeState.sessionId);
@@ -809,7 +828,7 @@ export class AgentTeamSessionService {
 				updatedAt: Date.now(),
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		});
 	}
@@ -830,7 +849,7 @@ export class AgentTeamSessionService {
 				updatedAt: Date.now(),
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		});
 	}
@@ -892,7 +911,7 @@ export class AgentTeamSessionService {
 			await this.recoverRestoredSession(reconciled);
 			return this.sessionState.get(id) ?? reconciled;
 		} catch (error) {
-			log.error("failed to load team session", { teamSessionId: id, error: errorMessage(error) });
+			log.error("failed to load team session", { teamSessionId: id, error: describeError(error) });
 			throw new Error(`Team session could not be loaded: ${id}`, { cause: error });
 		}
 	}
@@ -1000,12 +1019,12 @@ export class AgentTeamSessionService {
 						log.warn("failed to dispose removed team member runtime", {
 							teamSessionId: session.id,
 							memberId,
-							error: errorMessage(error),
+							error: describeError(error),
 						});
 					});
 			}
 			this.eventHub.attach(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		} catch (error) {
 			await Promise.allSettled(createdRuntimeIds.map((runtimeId) => this.getRuntime().disposeSession(runtimeId)));
@@ -1055,7 +1074,7 @@ export class AgentTeamSessionService {
 				} catch (error) {
 					log.warn("Agent Team auto-title model selection failed", {
 						teamSessionId: session.id,
-						error: errorMessage(error),
+						error: describeError(error),
 					});
 				}
 			}
@@ -1075,11 +1094,11 @@ export class AgentTeamSessionService {
 						updatedAt: Date.now(),
 					};
 					await this.persist(next);
-					this.publishSessionUpdated(next);
+					this.requestSessionUpdate(next);
 				});
 			})
 			.catch((error: unknown) => {
-				log.warn("Agent Team auto-title failed", { teamSessionId: session.id, error: errorMessage(error) });
+				log.warn("Agent Team auto-title failed", { teamSessionId: session.id, error: describeError(error) });
 			})
 			.finally(() => this.autoTitleScheduledSessions.delete(session.id));
 	}
@@ -1109,7 +1128,7 @@ export class AgentTeamSessionService {
 				log.warn("team runtime warmup failed", {
 					teamId: team.id,
 					teamSessionId: session.id,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			});
 		}
@@ -1137,7 +1156,7 @@ export class AgentTeamSessionService {
 					updatedAt: Date.now(),
 				};
 				await this.persist(next);
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 				return next;
 			},
 			sessionReference.coordinationSessionPath,
@@ -1160,7 +1179,7 @@ export class AgentTeamSessionService {
 			degraded = true;
 			log.warn("team session could not be loaded during delete; proceeding with degraded cleanup", {
 				teamSessionId: sessionReference.id,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			session =
 				this.sessionState.get(sessionReference.id) ??
@@ -1187,19 +1206,36 @@ export class AgentTeamSessionService {
 				log.warn("degraded team session delete could not remove a member runtime", {
 					teamSessionId: sessionReference.id,
 					sessionPath,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
 		for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
 		await this.repository.delete?.(sessionReference.id);
 		if (session) await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
+		this.updatePublisher.drop(sessionReference.id);
 		this.sessionState.remove(sessionReference.id);
 		this.teamResidency.forget(sessionReference.id);
 	}
 
 	readCollaborationState(sessionId: string): Promise<TeamCollaborationState> {
 		return this.turnCoordinator.readCollaborationState(sessionId);
+	}
+
+	/**
+	 * 该 runtime 会话是否属于某个仍有在途工作的团队（BUG-0126）：主控等成员、
+	 * 成员等下一次委派都是合法安静，中断巡检不得把这种空闲判成 suspected。
+	 */
+	hasActiveTeamWorkForRuntimeSession(runtimeSessionId: string): boolean {
+		for (const session of this.sessionState.values()) {
+			const participating =
+				session.coordinationRuntime?.sessionId === runtimeSessionId ||
+				Object.values(session.memberRuntime).some((member) => member.sessionId === runtimeSessionId);
+			if (!participating) continue;
+			if (this.turnCoordinator.hasPending(session.id)) return true;
+			if (this.turnCoordinator.hasDurableUnsettledWork(session)) return true;
+		}
+		return false;
 	}
 
 	notifyExternalConditionChanged(change: TeamExternalConditionChange): Promise<number> {
@@ -1279,10 +1315,6 @@ export const agentTeamSessionService = new AgentTeamSessionService({
 	ownershipCatalog: conversationOwnershipCatalog,
 	externalConditionChanges: agentTeamExternalConditionChanges,
 });
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
 
 function sameMemberIds(left: readonly string[], right: readonly string[]): boolean {
 	if (left.length !== right.length) return false;

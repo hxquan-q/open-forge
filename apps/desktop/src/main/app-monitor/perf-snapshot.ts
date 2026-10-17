@@ -92,6 +92,12 @@ export interface PerfAggregates {
 	readonly errors: { runtime: number; provider: number; tool: number; extension: number };
 	/** 订阅者投递队列丢弃的可丢中间态事件累计（终态与 delta 事件不丢）。 */
 	readonly eventDelivery: { droppedEphemeral: number };
+	/** 主进程事件循环阻塞窗口（旁路监测器周期折算；次数/毫秒，无用户内容）。 */
+	readonly eventLoop: {
+		overruns: number;
+		maxOverrunMs: number;
+		lastOverrunMs?: number;
+	};
 }
 
 export interface DesktopPerfSnapshot {
@@ -405,6 +411,7 @@ export function createPerfAggregates(): PerfAggregates {
 		eventLag: { maxMs: 0 },
 		errors: { runtime: 0, provider: 0, tool: 0, extension: 0 },
 		eventDelivery: { droppedEphemeral: 0 },
+		eventLoop: { overruns: 0, maxOverrunMs: 0 },
 	};
 }
 

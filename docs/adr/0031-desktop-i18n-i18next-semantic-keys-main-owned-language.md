@@ -2,6 +2,8 @@
 status: accepted
 ---
 
+<!-- Modified by The Open Forge contributors. -->
+
 # desktop i18n：i18next + 语义 key + main 持有语言 SoT
 
 desktop 原本全量中文硬编码（renderer ~237 文件、main ~73 文件含中文）。本次目标**只搭框架 + 抽离**：接入 i18n 框架、把用户可见中文抽成 key、做到「中文走 key、可切换」，en 译文后续再填（验收标准不是「英文完整」）。框架一旦定型，库选型与 key 形态都极难回退（换库 / 重新 key 化 310 文件成本以人月计），故记此 ADR。
@@ -22,6 +24,8 @@ desktop 原本全量中文硬编码（renderer ~237 文件、main ~73 文件含�
 **语言 SoT 走 main-owned desktop-config.json，刻意不照搬主题的 renderer-localStorage-owned。** 这是本 ADR 最易让后来者困惑的一处不对称：主题只需把 dark/light **布尔**推给 main 做原生 vibrancy，纯 UI 偏好放 renderer localStorage 即可；而语言在 **app ready、尚无任何渲染窗口时**就要用于构建原生托盘菜单，localStorage 那时读不到。故语言必须是 main 能在启动同步读到的值——`desktop-config.json` 已有 `readConfigSync` 同步读、且本就装 `notificationsEnabled` 这类 desktop UI 偏好，是单一真相源、首屏菜单不闪。renderer 防闪靠 preload 的 `sendSync`（本仓首次引入同步 IPC，仅此一处、仅取初值），与 `applyInitialTheme` 同步读 localStorage 同构。
 
 **静态打包 catalog 换掉懒加载。** 懒加载省 bundle、可不重构加语言，但要解决打包后路径问题（[[人设]] 已踩过 `__dirname` 失效）并带首帧 async 闪。2-3 语言下全量打进 bundle 的体积可忽略，换来同步 init、零 fs、不闪——与 [[人设]] codegen 内联同一思路（凡打包后场景一律避免运行时读盘）。
+
+> **2026-10-17 补记（ISSUE-0021 审计后修订）**：上文「体积可忽略」的前提已被产物审计证伪——minified locale 合计 505.4 kB（zh 254.3 + en 263.2），嵌入 `brand-assets` chunk 且被 `renderApp` 静态引用，占启动路径 JS ≈11.5%。据此按本 ADR「后续若改变主意」条款启动渐进收窄：**主进程已改为专用子集**（`shared/i18n/main-resources.ts`，ns 面 {main, common, settings, skills, pet}，main bundle 省 ≈206 kB；同步 init 语义不变，单测锁定 ns 面）；**主窗口已做语言级拆分**（`zh-resources.ts` 静态同步保持不闪；`en-resources.ts` 仅动态 import，en 初值挂载前 await、切换原子装载，启动路径实测 −262.8 kB）。按 ns 的完整懒加载与 `settings` ns 的 key 迁移评估作为后续切片，落地前 zh 静态与「不闪」保证不变。
 
 **语义 key 换掉「中文原文即 key」。** 后者包 `t()` 即走、零命名摩擦，对 310 文件诱惑很大；但改中文文案就断 key、key 冗长。选语义 key 以保可维护性，承担逐条取名的人工成本，这也正是「纯自动 codemod 不可行、必须框架先行 + 人工增量抽」的根因。
 

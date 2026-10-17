@@ -1,8 +1,10 @@
 // Copyright The Open Forge contributors.
 import { EventEmitter } from "node:events";
-import { connect as netConnect } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
+import { createServer as createTcpServer, connect as netConnect } from "node:net";
 import { Duplex, PassThrough } from "node:stream";
 import type { Client, ClientChannel, ConnectConfig, HostVerifier } from "ssh2";
+import ssh2 from "ssh2";
 import { describe, expect, it, vi } from "vitest";
 import type { SshHost } from "./ssh-host.js";
 import {
@@ -57,6 +59,9 @@ class FakeClient extends EventEmitter {
 	readonly connectConfigs: ConnectConfig[] = [];
 	readonly channels: FakeChannel[] = [];
 	private forwardHandler?: (dstPort: number) => FakeChannel;
+	/** `connect()` 已发起且握手还没完成：socket 关闭时 ssh2 会据此补发一次 error。 */
+	private handshakePending = false;
+	private lateErrorEmitted = false;
 
 	constructor(private readonly connectError?: Error & { level?: string }) {
 		super();
@@ -64,6 +69,7 @@ class FakeClient extends EventEmitter {
 
 	connect(config: ConnectConfig): void {
 		this.connectConfigs.push(config);
+		this.handshakePending = true;
 		// 与真实握手同序：先问 hostVerifier，再放行或拒绝。
 		queueMicrotask(() => {
 			const keyBlob = Buffer.from("\0\0\0\x0bssh-ed25519fake-key", "latin1");
@@ -73,14 +79,22 @@ class FakeClient extends EventEmitter {
 					this.emitError(new Error("Host denied (verification failed)"));
 					return;
 				}
-				if (this.connectError !== undefined) this.emitError(this.connectError);
-				else this.emit("ready");
+				if (this.connectError !== undefined) {
+					this.emitError(this.connectError);
+					return;
+				}
+				this.handshakePending = false;
+				this.emit("ready");
 			});
 		});
 	}
 
+	/**
+	 * 忠实模拟真实 Client：没有 `error` 监听时事件照样抛出（Node EventEmitter 语义）。
+	 * 旧替身在这里自动补 no-op，把「握手期监听被摘掉、迟到 error 无人接」这一整类
+	 * 缺陷盖住了——BUG-0117 的进程级未捕获异常正是从这个空窗冒出去的。
+	 */
 	private emitError(error: Error): void {
-		if (this.listenerCount("error") === 0) this.on("error", () => {});
 		this.emit("error", error);
 	}
 
@@ -122,7 +136,39 @@ class FakeClient extends EventEmitter {
 
 	destroy(): void {
 		this.emit("close");
+		// 与真实 ssh2 同序：socket 关闭时若「连上了但没握手完成」，补发一次 error。
+		// 真实 Client 的这个 error 从 socket 的 close 事件里冒出来，不在调用方的调用栈上；
+		// 监听已被摘掉时它直接成为进程级未捕获异常——所以这里也异步发出，别被 promise 收走。
+		if (!this.handshakePending || this.lateErrorEmitted) return;
+		this.lateErrorEmitted = true;
+		queueMicrotask(() => this.emit("error", new Error("Connection lost before handshake")));
 	}
+}
+
+/**
+ * 全局未捕获异常探针。
+ *
+ * 销毁空窗的后果不落在调用方的调用栈上：它从 socket 的 close 事件里抛出，成为进程级
+ * `uncaughtException`。因此「runner 没抛」证明不了任何事，必须直接观察全局逃逸（BUG-0117）。
+ */
+function uncaughtProbe(): { errors: string[]; escaped: Promise<void>; stop: () => void } {
+	const errors: string[] = [];
+	let notify: (() => void) | undefined;
+	const escaped = new Promise<void>((resolve) => {
+		notify = resolve;
+	});
+	const probe = (error: unknown): void => {
+		errors.push(error instanceof Error ? error.message : String(error));
+		notify?.();
+	};
+	process.on("uncaughtException", probe);
+	return {
+		errors,
+		escaped,
+		stop: () => {
+			process.off("uncaughtException", probe);
+		},
+	};
 }
 
 const HOST: SshHost = {
@@ -512,6 +558,93 @@ describe("ssh2 传输：会话失效", () => {
 	it("未建过会话的 target invalidate 是无害的 no-op", () => {
 		const { runner } = runnerWith([]);
 		expect(() => runner.invalidate("never-seen@host")).not.toThrow();
+	});
+});
+
+describe("ssh2 传输：握手失败的销毁不留监听空窗", () => {
+	it("受控替身：销毁未完成握手的 Client 后，迟到的 error 不逃逸到全局", async () => {
+		// 与 BUG-0117 同序：agent 不可用 → 换下一个认证方法 → 销毁这次未完成握手的 Client；
+		// 销毁触发的 socket close 语义补发一次 error，此刻握手期的一次性监听已经被摘掉。
+		const agentError = new Error("Invalid cygwin unix socket path") as Error & { level: string };
+		agentError.level = "agent";
+		const agentFail = new FakeClient(agentError);
+		const keyOk = new FakeClient();
+		const logs: string[] = [];
+		const { runner } = runnerWith([agentFail, keyOk], {
+			agentPath: "\\\\.\\pipe\\openssh-ssh-agent",
+			logger: (line) => logs.push(line),
+		});
+		const probe = uncaughtProbe();
+		try {
+			const pending = runner.run({ argv: argv("id") });
+			await vi.waitFor(() => expect(keyOk.lastChannel()).toBeDefined());
+			keyOk.lastChannel()?.respond("uid=1000");
+			// 换方法语义不变：agent 缺席不打断链路，接着走下一个认证方法。
+			await expect(pending).resolves.toMatchObject({ exitCode: 0 });
+			expect(probe.errors).toEqual([]);
+			// 非空洞：这一轮确实产生了销毁之后的迟到 error，它被记下而不是逃逸。
+			expect(logs.some((line) => line.startsWith(`ssh2 ${HOST.target}: `))).toBe(true);
+		} finally {
+			probe.stop();
+		}
+	});
+
+	it("真实 Client + 回环 TCP：握手完成前被 RST，销毁后的迟到 error 不逃逸到全局", async () => {
+		// BUG-0117 的最小复现：TCP 已经连上、客户端 banner 已经发出，但对端在握手完成前 RST。
+		const sockets = new Set<Socket>();
+		const server = createTcpServer((socket) => {
+			sockets.add(socket);
+			socket.on("error", () => {});
+			socket.on("close", () => sockets.delete(socket));
+			// 读到客户端的 SSH banner 再 RST：此刻连接确定已建立、握手已经开始，且对端有未读
+			// 数据——真实 ssh2 正是在随后的 socket close 里补发「握手前连接断了」的迟到 error。
+			socket.once("data", () => socket.resetAndDestroy());
+		});
+		await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+		const port = (server.address() as AddressInfo).port;
+
+		const target = "ubuntu@127.0.0.1";
+		const client = new ssh2.Client();
+		const clientClosed = new Promise<void>((resolve) => client.once("close", resolve));
+		const logs: string[] = [];
+		const runner = createSsh2ProcessRunner({
+			resolveHost: () => ({ id: "rst", label: "rst", target, port, source: "manual" }),
+			runConfigQuery: async () => {
+				throw new Error("no ssh binary");
+			},
+			verifyHostKey: async () => true,
+			readFile: async () => {
+				throw new Error("ENOENT");
+			},
+			askSecret: async () => "hunter2",
+			makeClient: () => client,
+			logger: (line) => logs.push(line),
+		});
+		const probe = uncaughtProbe();
+		let guard: ReturnType<typeof setTimeout> | undefined;
+		try {
+			const result = await runner.run({ argv: ["-o", "ConnectTimeout=10", "-T", "--", target, "id"] });
+			expect(result.exitCode).toBe(255);
+			// 逃逸就发生在 socket close 里：ssh2 在那里补发 error，抛出后同一个回调里的
+			// Client 'close' 永远发不出来。两个信号互斥，谁先到就是这次的判决。
+			const outcome = await Promise.race([
+				clientClosed.then(() => "closed" as const),
+				probe.escaped.then(() => "escaped" as const),
+				new Promise<"timeout">((resolve) => {
+					guard = setTimeout(() => resolve("timeout"), 2000);
+				}),
+			]);
+			expect(outcome).toBe("closed");
+			expect(probe.errors).toEqual([]);
+			// 非空洞：这一轮确实产生了销毁之后的迟到 error，它被记下而不是逃逸。
+			expect(logs.some((line) => line.startsWith(`ssh2 ${target}: `))).toBe(true);
+		} finally {
+			if (guard !== undefined) clearTimeout(guard);
+			probe.stop();
+			runner.dispose();
+			server.close();
+			for (const socket of sockets) socket.destroy();
+		}
 	});
 });
 
