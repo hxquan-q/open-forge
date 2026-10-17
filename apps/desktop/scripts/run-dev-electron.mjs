@@ -84,6 +84,15 @@ export function resolveDevProcessEnvironment(environment = process.env) {
 	};
 }
 
+/**
+ * GPU 禁用逃生开关（与本仓 canary 的捆绑旗标无关，不改变 configDir）：
+ * 机器 GPU 栈异常（GPU process launch failed / 0x80000003）时，设
+ * VETTA_DESKTOP_DISABLE_GPU=1 走软件合成即可日常开发；驱动恢复后移除。
+ */
+export function resolveGpuLaunchFlags(environment = process.env) {
+	return environment.VETTA_DESKTOP_DISABLE_GPU === "1" ? ["--disable-gpu"] : [];
+}
+
 async function main() {
 	const rendererPort = resolveRendererPort();
 	const rendererUrl = `http://127.0.0.1:${rendererPort}`;
@@ -98,6 +107,7 @@ async function main() {
 			electronArgs.push("--no-sandbox");
 		}
 	}
+	electronArgs.push(...resolveGpuLaunchFlags());
 	electronArgs.push(`--user-data-dir=${userDataDir}`);
 	electronArgs.push(join(projectRoot, "dist", "main", "index.js"));
 
