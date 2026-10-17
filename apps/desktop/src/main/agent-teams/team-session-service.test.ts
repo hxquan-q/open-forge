@@ -442,12 +442,13 @@ describe("AgentTeamSessionService streaming contract", () => {
 		const team = document.teams[0];
 		if (!team) throw new Error("built-in Agent Team fixture is missing");
 		const loaded = new Set<string>();
+		const createSession = vi.fn(async (config?: SessionConfig) => {
+			const sessionId = config?.sessionId ?? `member-${config?.sessionPath ?? "runtime"}`;
+			loaded.add(sessionId);
+			return { sessionId };
+		});
 		const runtime = {
-			createSession: vi.fn(async (config?: SessionConfig) => {
-				const sessionId = config?.sessionId ?? `member-${config?.sessionPath ?? "runtime"}`;
-				loaded.add(sessionId);
-				return { sessionId };
-			}),
+			createSession,
 			getSessionPath: (sessionId: string) => (loaded.has(sessionId) ? `C:/runtime/${sessionId}.jsonl` : undefined),
 			readSessionDocument: (sessionId: string) => {
 				if (!loaded.has(sessionId)) {
@@ -470,7 +471,7 @@ describe("AgentTeamSessionService streaming contract", () => {
 
 		// 协调会话已卸载，且按持久路径重开必败（如协调文档损坏/丢失）。
 		loaded.clear();
-		runtime.createSession.mockImplementation(async () => {
+		createSession.mockImplementation(async () => {
 			throw new Error("Conversation not found");
 		});
 
