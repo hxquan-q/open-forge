@@ -1,7 +1,7 @@
 ---
 id: TASK-0307
 type: task
-status: ready
+status: in_progress
 priority: P2
 owner: packages/runtime-node
 requirement: REQ-0016
@@ -13,9 +13,9 @@ related_tasks: [TASK-0308]
 related_issues: []
 related_bugs: []
 execution: parallel
-branch: unassigned
-worktree: unassigned（ready 待派工，创建 worktree 时由 task:worktree 回填）
-base_commit: 7b2b9bd15
+branch: task/TASK-0307-managed-tool-inspect
+worktree: unassigned（创建中，由 task:worktree 回填）
+base_commit: bb722cd71
 read_paths:
   - project/research/RESEARCH-0030-managed-coding-tool-doctor-inspection.md
   - packages/runtime-tools/src/coding/host/

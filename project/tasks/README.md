@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0307` | `ready` | — | REQ-0016 A1 / RESEARCH-0030：runtime-node 受管 fd/rg 工具加 additive `inspect()` 解析记录与 `<tool>.version` 标记（resolve 合同不动，纯静态检查）；parallel，无前置，可独立 worktree；集成先于 TASK-0308。 |
+| `TASK-0307` | `in_progress` | — | REQ-0016 A1 / RESEARCH-0030：runtime-node 受管 fd/rg 工具加 additive `inspect()` 解析记录与 `<tool>.version` 标记（resolve 合同不动，纯静态检查）；parallel，独立 worktree（与 TASK-0308 同树串行续作，集成先于 0308）。 |
 | `TASK-0308` | `ready` | — | REQ-0016 A2 / RESEARCH-0030：`openforge doctor` 子命令（run-cli 分发，不走 debug RPC 通道）+ 诊断包 `managed-tools.json` collector（diagnostics-bundle，无新 IPC/UI）；serial，depends_on TASK-0307，CLI 与 Desktop 两片分别原子提交。 |
 | `TASK-0306` | `verifying` | — | BUG-0130：模型设置页脚改显运行时真实配置路径（新只读 IPC）；回归 2 例、typecheck 与完整 check 全绿；待用户设置页目验。 |
 | `TASK-0267` | `verifying` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填已实施——抽屉化选择 + 参数随勾选写入 + models.dev 目录回填（命名空间剥离）+ 档位拖拽 + 清空模型；数据面与上游 06b834d06 一致、UI 面适配本仓测试连通流；定向 124 例、impact 5073 例、typecheck 与完整 check 全绿；待用户实机验收（设置 → 模型配置 → 从接口拉取）。 |
