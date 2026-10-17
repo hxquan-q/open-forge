@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0295` | `verifying` | PLAN-0010 | ISSUE-0021 B 第一片：主进程 i18n catalog 收窄——main 改用专用子集（ns 面 {main,common,settings,skills,pet}，正则枚举+单测锁定），bundle 省 ≈206 kB；renderer 静态打包与不闪保证不变；ADR-0031 补修订记；serial，main 串行。 |
 | `TASK-0294` | `verifying` | PLAN-0002 | BUG-0127 路线 6 帧成本第一片：display 投影成员历史按 (journalVersion, revision) 记忆化（LRU 32）——空闲成员跨帧复用，每帧成本从 O(全部成员历史) 降 O(变更成员)；3 例新单测 + agent-teams 243 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0293` | `verifying` | PLAN-0002 | BUG-0127 路线 5 收尾守卫：聚合视图跳过成员历史投影（唯一消费者是成员视图稳定化，消费链已核）；渲染端 157 例 + 完整 check 单轮全绿；serial，main 串行。 |
 | `TASK-0292` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第二片：团队时间线投影持久基座分离——只依赖 snapshot 的 O(C) 重分配投影走独立 memo，流式 delta 期间跨重算复用；公共函数签名不变、2 例等价性测试锁定；渲染端 11 文件 157 例 + 完整 check 全绿；serial，main 串行。 |
