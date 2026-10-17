@@ -40,12 +40,14 @@ function recoverFrameEntry(value: unknown): RecoveredFrameEntry | null {
 	if (!finiteNumber(value.width) || !finiteNumber(value.height)) return null;
 
 	const title = typeof value.title === "string" ? value.title : value.id;
-	const rawMeta = value.meta;
-	const hasMeta =
-		isRecord(rawMeta) &&
-		finiteNumber(rawMeta.width) &&
-		finiteNumber(rawMeta.height) &&
-		typeof rawMeta.title === "string";
+	// 存量类型红修复：布尔变量不携带收窄，meta 在读取处一并构造（解构后的局部量才能
+	// 被 typeof/有限数守卫可靠收窄，直接内联到三元的条件里不行）。
+	const meta = (() => {
+		if (!isRecord(value.meta)) return null;
+		const { width, height, title: metaTitle } = value.meta;
+		if (!finiteNumber(width) || !finiteNumber(height) || typeof metaTitle !== "string") return null;
+		return { width, height, title: metaTitle };
+	})();
 	return {
 		frame: {
 			id: value.id,
@@ -56,9 +58,9 @@ function recoverFrameEntry(value: unknown): RecoveredFrameEntry | null {
 			height: value.height,
 			title,
 			// An invalid snapshot must differ from every resolved frame declaration so reconcile repairs it.
-			meta: hasMeta ? rawMeta : { width: -1, height: -1, title: "" },
+			meta: meta ?? { width: -1, height: -1, title: "" },
 		},
-		repaired: !hasMeta || title !== value.title,
+		repaired: meta === null || title !== value.title,
 	};
 }
 
