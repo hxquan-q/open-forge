@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+
 /**
  * 设计历史的 node 侧执行体（ADR-0069）。
  *

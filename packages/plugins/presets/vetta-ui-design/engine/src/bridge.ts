@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * Design bridge — runs INSIDE each frame iframe and talks to the canvas
  * (plugin UI) via postMessage. The canvas and the iframe are cross-origin
@@ -14,6 +16,7 @@
  */
 import { toJpeg, toPng } from "html-to-image";
 import { pathOfFrame } from "./routes";
+import { outerHtmlSnippet, styleSummaryFor, type StyleSummary } from "./source-payload";
 import { watchLocalStorage } from "./storage-sync";
 
 type InspectMode = "off" | "inspect";
@@ -28,8 +31,15 @@ export interface SelectedElementPayload {
 	classes: string;
 	text: string;
 	rect: { x: number; y: number; width: number; height: number };
-	/** `frames/login.tsx:42` from compile-time instrumentation; null in prod builds. */
+	/** `frames/login.tsx:42:9` from compile-time instrumentation; null in prod builds. */
 	source: string | null;
+	/**
+	 * Context pack (F2 data layer, TASK-0315): truncated markup and whitelisted
+	 * styles of the selected element. Optional so engines materialized before
+	 * this version (or prod builds without instrumentation) stay compatible.
+	 */
+	outerHTML?: string;
+	styleSummary?: StyleSummary;
 }
 
 function post(message: Record<string, unknown>): void {
@@ -76,6 +86,8 @@ function payloadFor(element: Element): SelectedElementPayload {
 		text: (element.textContent ?? "").trim().slice(0, 120),
 		rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
 		source: nearestSource(element),
+		outerHTML: outerHtmlSnippet(element),
+		styleSummary: styleSummaryFor(element, (el) => window.getComputedStyle(el)),
 	};
 }
 

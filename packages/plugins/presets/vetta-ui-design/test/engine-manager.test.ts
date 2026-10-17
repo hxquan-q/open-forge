@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+
 import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

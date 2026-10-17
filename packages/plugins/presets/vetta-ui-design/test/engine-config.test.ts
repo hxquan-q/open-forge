@@ -22,4 +22,10 @@ describe("engine vite config security baseline", () => {
 	it("server.fs 显式 strict：allow 名单之外的路径一律拒", () => {
 		expect(config).toMatch(/fs:\s*\{\s*strict:\s*true/);
 	});
+
+	it("源码定位走抽出的 source-tagger 模块，且只在 dev serve 注入（TASK-0315）", () => {
+		expect(config).toContain("./plugins/source-tagger.mjs");
+		expect(config).toContain("createSourceTagger(designRootPosix)");
+		expect(config).toMatch(/react\(command === "serve"/);
+	});
 });

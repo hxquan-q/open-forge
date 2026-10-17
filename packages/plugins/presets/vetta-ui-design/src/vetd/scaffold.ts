@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+
 import type { PluginFsApi } from "@vetta-org/plugin-sdk";
 import { atomicWriteFile, withDesignWrite } from "../shared/design-fs";
 import { designPackageJson, PACKAGE_FILE } from "./design-package";

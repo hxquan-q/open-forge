@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { memo, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { frameUrl } from "../vetd/frame-url";
