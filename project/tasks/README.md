@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0293` | `verifying` | PLAN-0002 | BUG-0127 路线 5 收尾守卫：聚合视图跳过成员历史投影（唯一消费者是成员视图稳定化，消费链已核）；渲染端 157 例 + 完整 check 单轮全绿；serial，main 串行。 |
 | `TASK-0292` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第二片：团队时间线投影持久基座分离——只依赖 snapshot 的 O(C) 重分配投影走独立 memo，流式 delta 期间跨重算复用；公共函数签名不变、2 例等价性测试锁定；渲染端 11 文件 157 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0291` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第一片：团队时间线投影 O(n²) 扫描索引化——活动回复/委派判定/流文本兜底建索引、聚合视图跳过未使用的成员稳定化；纯函数等价重构；渲染端 11 文件 155 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0290` | `verifying` | PLAN-0002 | BUG-0127 修复路线 6 第一片：`session-updated` 全量快照发布短窗合并（32ms 取末帧）+ 无订阅者跳过构建与发布 + 删除/逐出 drop；零 IPC 合同变更；调度器单元 5/5、agent-teams 35 文件 240 例、完整 check 全绿；serial，main 串行。 |
