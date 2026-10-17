@@ -70,7 +70,7 @@ updated: 2026-10-17
 
 ## 修复与验证
 
-- 修复：路线 1 已实施（`ee7c8bd93`，TASK-0283）——`readDocument` 复用 `loadAppendState` 字节缓存；路线 2 随路线 1 自动降本，再评估；路线 4 已实施（TASK-0288）——团队 `persist()` 指纹缓存，热路径单次序列化并跳过 O(entries) 扫描，revision 推进回退与旧实现逐语义等价的精确比较；路线 3 已实施（TASK-0289）——文档命令/选择路径 O(n) 扫描索引化（entries 数组身份记忆化 byId/childrenByParent，含 history-projection 两处）；路线 6 IPC 增量序列化留待后续切片；【低】路线 5 渲染侧投影 O(n²) 为独立技术债。
+- 修复：路线 1 已实施（`ee7c8bd93`，TASK-0283）——`readDocument` 复用 `loadAppendState` 字节缓存；路线 2 随路线 1 自动降本，再评估；路线 4 已实施（TASK-0288）——团队 `persist()` 指纹缓存，热路径单次序列化并跳过 O(entries) 扫描，revision 推进回退与旧实现逐语义等价的精确比较；路线 3 已实施（TASK-0289）——文档命令/选择路径 O(n) 扫描索引化（entries 数组身份记忆化 byId/childrenByParent，含 history-projection 两处）；路线 6 第一片已实施（TASK-0290）——`session-updated` 全量快照发布短窗合并 + 无订阅者跳过（零 IPC 合同变更，只减帧不减帧大小；增量载荷协议留待独立评估）；路线 5 渲染侧投影 O(n²) 为独立技术债。
 - 测试：runtime-node 会话套件 22 文件 111 例全绿，含四条新回归（命中免读、外部写失效刷新、热缓存损坏报 CORRUPT、v1 不缓存）；路线 4 定向 5/5、agent-teams 目录 235 例 + `plugin-agent-presets` 包目录复跑 21/21（收集期红为该测试 cwd 依赖，非本缺陷改动）；路线 3 行为基线 73 文件 388 例 + desktop agent-teams 235 例全绿。
 - 检查：路线 1、路线 4、路线 3 落地后各跑一次完整 `bun run check`，均 exit 0。
 - 未运行及原因：真实 Desktop 长任务前后对照（LCP/主进程长任务计数）待用户侧复测。
