@@ -87,7 +87,7 @@ updated: 2026-10-17
 
 ## 验收分层
 
-- 工程验证：待执行；绑定定向测试、impact、完整 check。
+- 工程验证：通过；定向 27/27（含新增 4 例，红基线已先行验证：旧实现下缓存命中断言失败「expected 2 to be 0」）；跨包定向 conversation+runtime-host+coding-agent sessions 52 文件 243 例全绿；`test:impact` 判定无额外受影响面；完整 `bun run check` exit 0（lint 4825 文件、root/cli/desktop/docs/mobile 五路 typecheck、全部 guards 含 project-indexes 与发布说明 v0.1.3 校验）。
 - 技术评审：自审；共享引用安全性与失效路径复核。
 - 集成：pending；本地 main 原子提交。
 - 人工功能验收：待验收（用户侧长任务复测）。
@@ -104,7 +104,7 @@ updated: 2026-10-17
 ## 交付记录
 
 - 实际修改：`FileConversationRepository.readDocument()` 改走 `loadAppendState()` 共享缓存路径（stat 字节 → 命中返回缓存 document，未命中全量读并回填，v1 不缓存）；`documentCacheLimit` 注释更新为读写共用。实现来自并行会话的在途改动；实现会话停滞 37 分钟后，托管会话按授权审查收编（`ee7c8bd93`）。
-- 实际运行：新增四条回归全绿——缓存命中不重读 JSONL（原型 spy 计数）、外部实例追加后字节失效回退全量并刷新、热缓存下追加损坏记录仍报 CORRUPT、v1 旧 schema 每次全量读不缓存；runtime-node 会话套件 22 文件 111 例全绿，全包 466/473。
+- 实际运行：新增四条回归全绿——缓存命中不重读 JSONL（原型 spy 计数）、外部实例追加后字节失效回退全量并刷新、热缓存下追加损坏记录仍报 CORRUPT、v1 旧 schema 每次全量读不缓存；runtime-node 会话套件 22 文件 111 例全绿，全包 466/473。2026-10-17 下午补充：旧实现红基线复跑确认（缓存命中断言 expected 0 received 2）、跨包 52 文件 243 例全绿（含 mutation-coordinator 与 kernel backend 套件）、完整 `bun run check` exit 0。
 - 未运行及原因：全包 7 例 glob/grep 契约红为本机无 ripgrep（`spawn rg ENOENT`）的环境性失败，与本改动无关；真实 Desktop 长任务 trace 前后对照待用户侧复测（人工验收）。
 - Worktree：未拆出（serial 小切片，无并行写者）。
 - 剩余风险：缓存返回共享 document 引用，依赖既有深度只读约定；字节数不变的原地损坏不会被读路径发现（既有失效合同的已知边界，与写路径一致）。

@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0288` | `verifying` | PLAN-0002 | BUG-0127 修复路线 4：团队 `persist()` 指纹缓存——记住最后追加状态条目的协调文档 revision + 序列化串，热路径单次序列化比较并跳过 O(entries) 扫描，revision 变化回退精确双序列化；`remove`/`removeCached` 丢指纹；定向 5/5（红基线先行）、agent-teams 目录 235 例 + cwd 复跑 21 例、完整 check 全绿；serial，main 串行。 |
 | `TASK-0283` | `verifying` | PLAN-0002 | BUG-0127（P0）修复路线 1：`readDocument()` 接入 `ConversationWriteCache`（字节大小失效，命中免全量 JSONL 重读），覆盖 trace ≈50% 采样热点并让每命令协调器读自动降本；回归覆盖命中免读、外部写失效、缓存热损坏仍报 CORRUPT、v1 不缓存；serial，main 串行。 |
 | `TASK-0284` | `verifying` | — | BUG-0115（P1）：团队收尾重配对 runtime 未加载的成员会话幂等化——dispose 分支对 SESSION_NOT_FOUND 按「无可清理」继续并落结构化日志，保留与 `Team member runtime not found` 的错误区分；旧实现红回归 + team 套件零回归；serial，main 串行。 |
 | `TASK-0285` | `verifying` | — | BUG-0116（P1）：团队会话 send 路径对 runtime 损坏态自愈（按 coordination 文档重载成员 runtime 后重试一次）或归一含恢复指引的可读错误；结构化日志记录 attempted/recovered/failed；serial，main 串行。 |
