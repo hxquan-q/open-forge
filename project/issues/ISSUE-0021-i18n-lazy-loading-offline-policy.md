@@ -8,7 +8,7 @@ related_requirement: []
 related_plan: [PLAN-0010]
 source: RESEARCH-0013 S3（VS Code NLS 外置对照本仓 locale 全量静态打包）
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -60,3 +60,13 @@ updated: 2026-09-24
 - **首轮体积测量（补上「触发条件不可测」的缺口）**：`apps/desktop/src/shared/i18n/locales/{zh,en}` 各 12 个 JSON，源码体积 zh ≈ 267 KB / en ≈ 276 KB，合计 ≈ 543 KB；单文件最大为 `settings.json`（zh 104 KB / en 108 KB）与 `chat.json`（≈ 48/52 KB）。
 - 说明：以上是源码态 JSON 体积，不是打包后体积；bundle 占比需要 `bun run --cwd apps/desktop build:renderer` 后的产物审计（未运行：构建非本任务所需，且 renderer 构建耗时不菲）。因此「占比 >5%」这一触发条件**仍未被证伪或证实**，下一步若推进 B 方案，应以一次 renderer 构建产物审计为准。
 - 结论：Issue 维持 draft；B 的技术前提（i18next backend + 类型链路）与风险（文案闪烁）已在文档中列明，缺的只是产物占比这一条量化输入。
+
+## 第二轮测量：renderer 构建产物审计（2026-10-17，触发条件已裁决）
+
+- 命令：`bun run --cwd apps/desktop build:renderer`（vite 7，22.5s，7258 modules）。
+- **落点**：locale 值未进 `renderApp` 主 chunk，而是整体嵌入 `assets/brand-assets-*.js`（512.7 kB raw / 180.0 kB gzip，与品牌资产同 chunk——chunk 命名陷阱再现）；`renderApp`（3,869.9 kB）**静态引用**该 chunk，属启动必经路径（`t()` 调用点的 key 在 renderApp，资源值在 brand-assets）。
+- **嵌入体积**：minified locale 合计 **505.4 kB**（zh 254.3 + en 263.2；以 `JSON.stringify(JSON.parse(file))` 逐文件计），即 brand-assets chunk 的 ≈98% 是 locale 数据。
+- **占比**（两种口径）：启动路径（renderApp + brand-assets = 4,382.5 kB）中 **≈11.5%**；全部当前构建 JS 资产（≈12.2 MB，剔除 dist 残留旧哈希后估算）中 ≈4%。
+- **裁决**：Issue 的触发条件「renderer bundle 体积审计显示 locale JSON 占比显著（>5%）」按启动路径口径 **成立**（11.5% ≫ 5%）。B 方案（按 ns 懒加载、两语言仍随包）的量化前提补齐；推荐维持「先 B 后 C」。
+- 附带发现：`dist/renderer/assets` 残留上一构建的旧哈希文件（如两个 `brand-assets-*.js`、两个 `renderApp-*.js`），总量虚高 ~2×，与占比裁决无关但提示构建清理可另立卫生项。
+- 下一步：B 立项（`apps/desktop/src/shared/i18n/` ns 懒加载 + `i18next.d.ts` 类型链路保留 + 主进程 `mainT` 分面 + 文案闪烁回归），属 renderer 重构切片，建议独立 Task 实施。
