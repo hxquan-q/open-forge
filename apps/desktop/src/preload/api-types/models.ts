@@ -116,6 +116,26 @@ export interface ProviderTestResult {
 	detail?: string;
 }
 
+/**
+ * `GET {baseUrl}/models` 返回的单个模型。接口只保证 id；上下文窗口、能力等字段
+ * 各家网关的键名与丰富程度不同，拿不到时留空。
+ */
+export interface FetchedProviderModel {
+	id: string;
+	/** 上游给的显示名；与 id 相同时省略。 */
+	name?: string;
+	/** 上下文窗口（tokens）。 */
+	contextWindow?: number;
+	/** 最大输出（tokens）。 */
+	maxTokens?: number;
+	vision?: boolean;
+	reasoning?: boolean;
+	/** 思考档位（如 low/medium/high）；网关与目录都没说时缺省。 */
+	reasoningLevels?: string[];
+	/** 上游归属方（`owned_by`），仅展示用。 */
+	ownedBy?: string;
+}
+
 export interface DesktopModelsApi {
 	get(): Promise<ModelsConfigData>;
 	set(config: ModelsConfigData): Promise<void>;
@@ -132,8 +152,8 @@ export interface DesktopModelsApi {
 	onPresetsUpdated(handler: () => void): () => void;
 	/** 探测某 (provider, model) 的 baseUrl 是否可达(本地 models.json 优先,回退云端目录)。仅判可达性,任何 HTTP 响应都算通。 */
 	probe(ref: { provider: string; model: string }): Promise<{ ok: boolean; message?: string; error?: string }>;
-	/** 拉取本地自定义 provider 的 `GET {baseUrl}/models`,返回上游模型 id 列表,用于快速填写模型配置。 */
-	fetchProviderModels(providerName: string): Promise<{ models: string[]; error?: string }>;
+	/** 拉取本地自定义 provider 的 `GET {baseUrl}/models`，返回模型列表及其参数（网关没报的由 models.dev 目录补齐）。 */
+	fetchProviderModels(providerName: string): Promise<{ models: FetchedProviderModel[]; error?: string }>;
 	/** 对已保存的自定义服务商做轻量可用性测试（`GET {baseUrl}/models`），报告延迟与结构化失败原因。 */
 	testProvider(providerName: string): Promise<ProviderTestResult>;
 	onChanged(handler: (event: { providerIds: string[] }) => void): () => void;

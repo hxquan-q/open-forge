@@ -47,7 +47,8 @@ const counts = Object.entries(catalog.providers)
 
 writeFileSync(
 	OUTPUT,
-	`// AUTO-GENERATED models.dev 目录快照。不要手改——跑 \`bun run snapshot:models-dev\` 重新生成。
+	`// Modified by The Open Forge contributors.
+// AUTO-GENERATED models.dev 目录快照。不要手改——跑 \`bun run snapshot:models-dev\` 重新生成。
 // 网络不可达且无本地缓存时的兜底(见 ADR-0050);运行时拉到线上数据就覆盖它。
 import type { ModelsDevCatalog } from "./models-dev.js";
 
