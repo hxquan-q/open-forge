@@ -13,7 +13,7 @@ related_tasks: [TASK-0307]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: task/TASK-0307-managed-tool-inspect（与 0307 同树叠作）
+branch: task/TASK-0307-managed-tool-inspect-and-version-marker（与 0307 同树叠作）
 worktree: ../open-forge-wt/task-0307-managed-tool-inspect-and-version-marker
 base_commit: fb1448727
 read_paths:
@@ -104,7 +104,7 @@ updated: 2026-10-18
 ## 交付记录
 
 - 实际修改：CLI 片 `de97b1c2e`——新增 `apps/cli-host/src/doctor-command.ts`（parse/run + `renderDoctorReport` 纯渲染，tools 目录缺省 `join(getAgentDir(), "bin")` 与 CLI runtime 一致），`run-cli.ts` 分发与 HELP_TEXT 增 doctor 行，测试 `doctor-command.test.ts`（解析/渲染/注入执行 + `bun src/cli.ts doctor` 进程级冒烟：fixture 缓存+标记命中免 spawn 分支）。Desktop 片 `0e653fd94`——`runtime-desktop` 导出 `resolveDesktopCodingToolsDirectory`（工厂与诊断共用单一事实源），`diagnostics-bundle.ts` 新增 `addManagedTools` → `managed-tools.json`（采集失败降级不阻断导出），测试 `diagnostics-bundle.test.ts`（electron/logger/ring/perf 全 mock，注入 inspector 断言 zip 内容与失败降级）。发布说明 v0.1.3 新增节一条。
-- 实际运行：cli-host 定向（doctor + debug 入口 + entrypoints + compile-standalone）11 例绿；desktop 包内 runner 定向 2 例绿；`bun run check` exit 0；test:impact 覆盖 resolver 接口消费面（结果见下）。
+- 实际运行：cli-host 定向（doctor + debug 入口 + entrypoints + compile-standalone）11 例绿；desktop 包内 runner 定向 2 例绿；`bun run check` exit 0；test:impact（四改动文件）243 例：236 绿 + 7 红——`grep/glob-runtime-contract.test.ts` 各 3/4 例 `spawn rg ENOENT`，已在主树基线（`341f1d3b4`，无本分支改动）复跑同样 7 红定案为环境性存量红（本机 PATH 无 rg，合同测试裸 `rg` 回退），非本次回归。
 - 未运行及原因：`verify:artifact:installed` 未跑——bin/exports 未变化（按 cli-host AGENTS 的 Policy 触发条件不适用）；`verify:runtime-contract` 未跑——runtime selection 未变（同上）。compile-standalone-entry 测试已跑绿。
 - Worktree：与 TASK-0307 同树叠作（base `fb1448727`），CLI 与 Desktop 两片分别原子提交。
 - 剩余风险：自定义 agentDir 会话与导出时默认目录可能不同（静态检查反映默认目录，Task 已声明为已知限制）；doctor 的 PATH 探针依赖宿主环境 PATH（设计内）。

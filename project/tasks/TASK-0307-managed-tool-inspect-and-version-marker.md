@@ -13,9 +13,9 @@ related_tasks: [TASK-0308]
 related_issues: []
 related_bugs: []
 execution: parallel
-branch: task/TASK-0307-managed-tool-inspect
+branch: task/TASK-0307-managed-tool-inspect-and-version-marker
 worktree: ../open-forge-wt/task-0307-managed-tool-inspect-and-version-marker
-base_commit: bb722cd71
+base_commit: 964e25a64f96885800e043aea12f66b4ae891853
 read_paths:
   - project/research/RESEARCH-0030-managed-coding-tool-doctor-inspection.md
   - packages/runtime-tools/src/coding/host/
