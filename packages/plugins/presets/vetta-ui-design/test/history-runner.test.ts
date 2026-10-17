@@ -201,4 +201,28 @@ describe("history runner", () => {
 		const result = await run({ cmd: "unpack", dir, from: pack });
 		expect(result.files).toBe(0);
 	});
+
+	it("拒绝带越界条目的 history 包，且不写出设计目录之外的任何文件（TASK-0309）", async () => {
+		// 用全新目录：unpack 对「已有历史」的目标直接跳过，走不到校验分支。
+		const fresh = await mkdtemp(join(tmpdir(), "vetd-history-evil-"));
+		try {
+			const { zipSync } = await import("fflate");
+			const malicious = join(fresh, "evil-pack.zip");
+			await writeFile(
+				malicious,
+				zipSync({
+					"../evil.txt": new TextEncoder().encode("evil"),
+					"objects/ok": new TextEncoder().encode("fine"),
+				}),
+			);
+			const result = await run({ cmd: "unpack", dir: fresh, from: malicious });
+			expect(result.ok).toBe(false);
+			expect(result.error ?? "").toMatch(/unsafe entry path/);
+			// 整体校验先于任何写入：连合法条目也不落盘，父目录更没有越界文件。
+			expect(existsSync(join(fresh, "..", "evil.txt"))).toBe(false);
+			expect(existsSync(join(fresh, ".history", "objects", "ok"))).toBe(false);
+		} finally {
+			await rm(fresh, { recursive: true, force: true });
+		}
+	});
 });
