@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0309` | `in_progress` | PLAN-0018 | P0 安全热修七项：分享包/历史 zip 路径穿越、设计级 npm install `--ignore-scripts`＋导入确认、引擎 vite cors 收紧与 fs.strict、frame iframe sandbox、主窗口 will-navigate 拦截、每设计写队列+原子写；Worktree `task-0309-design-plugin-p0-security` 串行实施，集成 pending。 |
 | `TASK-0307` | `verifying` | — | REQ-0016 A1 / RESEARCH-0030：受管工具 `inspect()` 解析记录 + `.version` 标记已实施（已并入 main `ef864b76c`）——resolve 合同不动，纯静态检查，缓存标记免 spawn、存量回退一次探针；定向 24 例、完整 check 全绿；impact 7 红经基线复跑归因存量（PATH 无 rg）。 |
 | `TASK-0308` | `verifying` | — | REQ-0016 A2 / RESEARCH-0030：`openforge doctor` 子命令（已并入 main `705fe6857`）+ 诊断包 `managed-tools.json`（`4b2c81e32`，`resolveDesktopCodingToolsDirectory` 单一事实源）已实施；cli-host 11 例、desktop 2 例、完整 check 全绿、integration_status: integrated；待用户实机 doctor/诊断包验收。 |
 | `TASK-0306` | `verifying` | — | BUG-0130：模型设置页脚改显运行时真实配置路径（新只读 IPC）；回归 2 例、typecheck 与完整 check 全绿；待用户设置页目验。 |
