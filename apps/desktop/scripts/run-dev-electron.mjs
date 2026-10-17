@@ -1,8 +1,9 @@
 // Modified by The Open Forge contributors.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { Socket } from "node:net";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import electronPath from "electron";
 import { resolveSystemPluginSelection } from "./stage-system-plugins.mjs";
@@ -118,6 +119,97 @@ export function shouldRetryElectronWithGpuSandboxFallback(
 	return environment.VETTA_DESKTOP_DISABLE_GPU !== "1";
 }
 
+const LOW_INTEGRITY_LABEL_PATTERN = /\(ML;[^)]*;LW\)/;
+
+export function hasLowIntegrityLabel(savedAclText) {
+	return typeof savedAclText === "string" && LOW_INTEGRITY_LABEL_PATTERN.test(savedAclText);
+}
+
+export function shouldRepairElectronIntegrityLabel({ platform, savedAclText }) {
+	return platform === "win32" && hasLowIntegrityLabel(savedAclText);
+}
+
+export const INTEGRITY_LABEL_REPAIR_ARGS = ["/setintegritylevel", "Medium", "/T", "/C", "/Q"];
+
+/**
+ * Windows 上 Chromium 沙箱子进程不加载带 Low 强制完整性标签的映像；
+ * 整个 Electron dist 被 agent 沙箱标 Low 时会以 error 18 起不来。
+ * 启动前只读探测，仅在发现 Low 时把 dist 恢复为 Medium，保留沙箱。
+ * 探针/修复失败只记日志，不阻断启动；现有 GPU 回退仍作兜底。
+ */
+export function repairElectronIntegrityLabelIfNeeded(
+	executablePath,
+	{
+		platform = process.platform,
+		runCommand = runCommandSync,
+		makeTempDir = createIntegrityLabelTempDir,
+		removeTempDir = removeIntegrityLabelTempDir,
+		readTextFile = readSavedAclText,
+		log = console,
+	} = {},
+) {
+	if (platform !== "win32") return { status: "skipped" };
+	const distDir = dirname(executablePath);
+	let tempDir;
+	let savedAclText;
+	try {
+		tempDir = makeTempDir();
+		const savePath = join(tempDir, "electron-dist-acl.txt");
+		const probe = runCommand("icacls.exe", [distDir, "/save", savePath, "/T", "/C", "/Q"]);
+		if (probe?.error || probe?.status !== 0) {
+			const error = probe?.error ?? new Error(`icacls /save exited with ${probe?.status}`);
+			log.warn(`[dev] 无法检查 Electron 完整性标签（继续启动）：${describeError(error)}`);
+			return { status: "probe-failed", error };
+		}
+		savedAclText = readTextFile(savePath);
+	} catch (error) {
+		log.warn(`[dev] 无法检查 Electron 完整性标签（继续启动）：${describeError(error)}`);
+		return { status: "probe-failed", error };
+	} finally {
+		if (tempDir) {
+			try {
+				removeTempDir(tempDir);
+			} catch {}
+		}
+	}
+	if (!shouldRepairElectronIntegrityLabel({ platform, savedAclText })) {
+		return { status: "not-needed" };
+	}
+	const repair = runCommand("icacls.exe", [distDir, ...INTEGRITY_LABEL_REPAIR_ARGS]);
+	if (repair?.error || repair?.status !== 0) {
+		const error = repair?.error ?? new Error(`icacls /setintegritylevel exited with ${repair?.status}`);
+		log.warn(`[dev] Electron 完整性标签自愈失败，继续按原参数启动：${describeError(error)}`);
+		return { status: "repair-failed", error };
+	}
+	log.warn("[dev] Electron dist 带 Low 完整性标签，已恢复为 Medium（保留 Chromium 沙箱）");
+	return { status: "repaired" };
+}
+
+function runCommandSync(command, args) {
+	return spawnSync(command, args, { encoding: "utf8", windowsHide: true });
+}
+
+function createIntegrityLabelTempDir() {
+	return mkdtempSync(join(tmpdir(), "openforge-electron-label-"));
+}
+
+function removeIntegrityLabelTempDir(directory) {
+	rmSync(directory, { recursive: true, force: true });
+}
+
+function readSavedAclText(filePath) {
+	const buffer = readFileSync(filePath);
+	return buffer.includes(0) ? buffer.toString("utf16le") : buffer.toString("utf8");
+}
+
+function describeError(error) {
+	if (error instanceof Error) return error.message;
+	if (error && typeof error === "object" && "stderr" in error && error.stderr) {
+		return String(error.stderr).trim();
+	}
+	return String(error);
+}
+
 function launchElectron(electronArgs, environment) {
 	let stderrTail = "";
 	let sawGpuFailure = false;
@@ -158,6 +250,10 @@ async function main() {
 		VETTA_DESKTOP_DEV_URL: rendererUrl,
 		VETTA_PLUGIN_DEV: pluginIds,
 	};
+
+	// 先恢复被 agent 沙箱标 Low 的 Electron dist，以保留 Chromium 沙箱；
+	// 现有 GPU 回退继续作为真实故障的兜底。
+	repairElectronIntegrityLabelIfNeeded(electronPath);
 
 	let activeChild;
 	const forwardSignal = (signal) => activeChild?.kill(signal);
