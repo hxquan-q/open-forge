@@ -15,6 +15,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0307` | `ready` | — | REQ-0016 A1 / RESEARCH-0030：runtime-node 受管 fd/rg 工具加 additive `inspect()` 解析记录与 `<tool>.version` 标记（resolve 合同不动，纯静态检查）；parallel，无前置，可独立 worktree；集成先于 TASK-0308。 |
+| `TASK-0308` | `ready` | — | REQ-0016 A2 / RESEARCH-0030：`openforge doctor` 子命令（run-cli 分发，不走 debug RPC 通道）+ 诊断包 `managed-tools.json` collector（diagnostics-bundle，无新 IPC/UI）；serial，depends_on TASK-0307，CLI 与 Desktop 两片分别原子提交。 |
+| `TASK-0306` | `in_progress` | — | BUG-0130：模型设置页脚改显运行时真实配置路径（新只读 IPC `vetta:models:config-path`）；serial，main 串行。 |
 | `TASK-0267` | `verifying` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填已实施——抽屉化选择 + 参数随勾选写入 + models.dev 目录回填（命名空间剥离）+ 档位拖拽 + 清空模型；数据面与上游 06b834d06 一致、UI 面适配本仓测试连通流；定向 124 例、impact 5073 例、typecheck 与完整 check 全绿；待用户实机验收（设置 → 模型配置 → 从接口拉取）。 |
 | `TASK-0304` | `done` | — | BUG-0129：desktop/remote-desktop `electron` 39.8.10→41.10.7（闭合 8 条 high），零源码适配；typecheck 0 错、remote-desktop 7/7、impact desktop 5035 全过（exit 1 归因 BUG-0107 存量红）、check:quick 与完整 check 全绿；经晋升 PR #14 抵达 origin/main 后 Dependabot 重扫转 fixed。用户 dev 冒烟建议保留（Chromium 142→146 未做 UI 走查）。 |
 | `TASK-0305` | `done` | — | BUG-0129：vetta-ui-design engine `source-map-js` 1.2.1→1.2.2（lockfile 3 行最小 diff，registry 哈希核对）；check 全绿；#97 经晋升 PR #14 后转 fixed。 |

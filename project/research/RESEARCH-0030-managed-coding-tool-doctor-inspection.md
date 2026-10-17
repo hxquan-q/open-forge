@@ -68,4 +68,4 @@ related_issue: []
 
 ## 下一步触发信号
 
-- 用户确认修正点（source 枚举收敛、marker 落点选型、存量 marker 缺失回退策略）后，按两件拆 TASK：A1 runtime-node（inspect + version marker + managed-executables.test.ts 用例）；A2 出口（cli-host doctor 子命令 + desktop diagnostics-bundle collector + 各自测试）。两件无相互阻塞，可并行 worktree。
+已确认（2026-10-18）：按 REQ-0016 拆 TASK-0307（A1：inspect + version marker + 用例，缺 marker 回退一次 spawn）与 TASK-0308（A2：doctor 子命令 + 诊断包 collector）。写路径零重叠可并行实现，但 A2 消费 A1 的 inspect 导出，集成顺序 A1 → A2（0308 `depends_on` 0307）。
