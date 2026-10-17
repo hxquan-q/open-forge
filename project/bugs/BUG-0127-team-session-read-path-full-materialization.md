@@ -66,10 +66,11 @@ updated: 2026-10-17
 
 - TASK-0283：`readDocument` 缓存命中不重读 JSONL（旧实现每次全量读，计数断言红→绿）、外部写入经读路径字节失效、缓存命中后文件损坏仍报 CORRUPT、旧 schema 会话不缓存。
 - TASK-0288：`persist()` 热路径单次序列化（旧实现红基线「expected 1, got 2 times」）、内容变化追加并刷新指纹、revision 被外部 custom.append 推进后回退精确比较（同内容不追加/异内容追加）、`removeCached` 后重走冷路径核对、协调 runtime 缺失抛错不变。
+- TASK-0289：索引记忆化身份语义（同数组同索引、不同数组独立）、byId 与暴力查找对照、childrenByParent 分组含 null 根、条目增长后新数组重建正确；纯重构由全量行为基线（73 文件 388 例）证明语义不变。
 
 ## 修复与验证
 
-- 修复：路线 1 已实施（`ee7c8bd93`，TASK-0283）——`readDocument` 复用 `loadAppendState` 字节缓存；路线 2 随路线 1 自动降本，再评估；路线 4 已实施（TASK-0288）——团队 `persist()` 指纹缓存，热路径单次序列化并跳过 O(entries) 扫描，revision 推进回退与旧实现逐语义等价的精确比较；【中】路线 3 命令 O(n) 扫描索引化、路线 6 IPC 增量序列化留待后续切片；【低】路线 5 渲染侧投影 O(n²) 为独立技术债。
-- 测试：runtime-node 会话套件 22 文件 111 例全绿，含四条新回归（命中免读、外部写失效刷新、热缓存损坏报 CORRUPT、v1 不缓存）；路线 4 定向 5/5、agent-teams 目录 235 例 + `plugin-agent-presets` 包目录复跑 21/21（收集期红为该测试 cwd 依赖，非本缺陷改动）。
-- 检查：路线 1 后完整 `bun run check` exit 0；路线 4 后完整 `bun run check` 于本轮收口时执行并回填。
+- 修复：路线 1 已实施（`ee7c8bd93`，TASK-0283）——`readDocument` 复用 `loadAppendState` 字节缓存；路线 2 随路线 1 自动降本，再评估；路线 4 已实施（TASK-0288）——团队 `persist()` 指纹缓存，热路径单次序列化并跳过 O(entries) 扫描，revision 推进回退与旧实现逐语义等价的精确比较；路线 3 已实施（TASK-0289）——文档命令/选择路径 O(n) 扫描索引化（entries 数组身份记忆化 byId/childrenByParent，含 history-projection 两处）；路线 6 IPC 增量序列化留待后续切片；【低】路线 5 渲染侧投影 O(n²) 为独立技术债。
+- 测试：runtime-node 会话套件 22 文件 111 例全绿，含四条新回归（命中免读、外部写失效刷新、热缓存损坏报 CORRUPT、v1 不缓存）；路线 4 定向 5/5、agent-teams 目录 235 例 + `plugin-agent-presets` 包目录复跑 21/21（收集期红为该测试 cwd 依赖，非本缺陷改动）；路线 3 行为基线 73 文件 388 例 + desktop agent-teams 235 例全绿。
+- 检查：路线 1、路线 4、路线 3 落地后各跑一次完整 `bun run check`，均 exit 0。
 - 未运行及原因：真实 Desktop 长任务前后对照（LCP/主进程长任务计数）待用户侧复测。
