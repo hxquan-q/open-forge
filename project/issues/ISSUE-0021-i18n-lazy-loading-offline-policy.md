@@ -70,3 +70,9 @@ updated: 2026-10-17
 - **裁决**：Issue 的触发条件「renderer bundle 体积审计显示 locale JSON 占比显著（>5%）」按启动路径口径 **成立**（11.5% ≫ 5%）。B 方案（按 ns 懒加载、两语言仍随包）的量化前提补齐；推荐维持「先 B 后 C」。
 - 附带发现：`dist/renderer/assets` 残留上一构建的旧哈希文件（如两个 `brand-assets-*.js`、两个 `renderApp-*.js`），总量虚高 ~2×，与占比裁决无关但提示构建清理可另立卫生项。
 - 下一步：B 立项（`apps/desktop/src/shared/i18n/` ns 懒加载 + `i18next.d.ts` 类型链路保留 + 主进程 `mainT` 分面 + 文案闪烁回归），属 renderer 重构切片，建议独立 Task 实施。
+
+## 第三轮进展：B 第一/二片已落地（2026-10-17）
+
+- **B-0 主进程收窄（TASK-0295）**：main 改用 `main-resources.ts` 子集（ns 面 {main, common, settings, skills, pet}，正则枚举 + 单测锁定），主进程 bundle 省 ≈206 kB；renderer 未动。
+- **B-1 主窗口语言级拆分（TASK-0296）**：zh（fallback/默认）静态同步不变；en（263 kB）改按需 lazy chunk——启动路径实测 **−262.8 kB**（4,382.5 → 4,119.7 kB），en 初值挂载前 await 装载、切换原子生效；`import.meta.env.TEST` 静态分支保 14 个同步测试文件零改动（产物审计证实生产摇树生效）。
+- 剩余（B 完整形态，收益递减待评估）：按 ns 进一步拆分（如 zh/settings 104 kB 随设置路由懒加载）、en/settings 与 onboarding 共享 chunk 的装载收敛、onboarding 窗口自身只带用到的 key。触发条件不变：新语言加入或启动基线显示 i18n 占比再显眼时推进。
