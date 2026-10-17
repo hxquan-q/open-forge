@@ -9,10 +9,10 @@ plan:
 source: user-report
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0301, TASK-0302]
+related_tasks: [TASK-0301, TASK-0302, TASK-0303]
 related_issues: []
 created: 2026-10-17
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -52,9 +52,10 @@ updated: 2026-10-17
   - 把整个 dist 改为 Medium：`loadURL ok`、exit 0。
   - 由 **Medium 完整性进程**（计划任务 `RunLevel Limited`，whoami 显示 `S-1-16-8192`）执行 `icacls <dist> /setintegritylevel Medium /T /C /Q`：78 个文件成功，随后同一 Medium 进程启动 Electron 探针（无 `--no-sandbox`）→ `ready`/`loadURL ok`/exit 0。
   - 同一 Medium 进程执行 `icacls <dist> /save <file> /T /C /Q`：保存文件（UTF-16LE）中包含 75 条 `(ML;;NW;;;LW)`，可作为低权限下精确识别 Low 标签的探针。
-- 归属排查：
-  - ACL 签名（`CodexSandboxUsers`、`CodexSandboxOffline`/`CodexSandboxOnline` 用户、Low 标签）与 Codex Windows 沙箱的工作区供给形态一致；应用自身的 runtime sandbox host 缺失提示与此无关（那是 agent 执行沙箱，不是 Chromium 进程沙箱）。
-  - 精确触发进程未捕获：03:18 无应用日志、Codex sandbox 日志止于 01:17、无计划任务、Prefetch 关闭，且 USN 日志最早保留点在 16:21 之后，无法回溯 03:18 的操作。
+- 归属排查（2026-10-18 修订定案，完整证据见 [RESEARCH-0028](../research/RESEARCH-0028-windows-agent-mic-low-label-attribution.md)）：
+  - 打标者定案为 DeepSeek Harness（DSH）workspace-write 沙箱的物化，工具级高置信：仓库根 ACL 呈现其 README 描述的三件套——能力 SID 允许 ACE（`S-1-4-243177478-769424498:(OI)(CI)(W,D,DC)`）、上层删除权拒绝（`Everyone:(CI)(DENY)(DC)`）、继承式 Low 标签；`~/.dsh` 取证显示 open-forge 自 2026-10-01 注册为 DSH 工作区，`session-7f930410` transcript 最后写入 `03:19:55.229`，与标签窗口结束（03:19:54）秒级吻合，另一会话 `0267d2ae` 存活 03:01–04:10 全程覆盖；其「每工作区每机一次」物化与现场一次性打标一致。同症状报告见 DSH Discussions #8048（`error_code=18` / `0x80000003` / `(OI)(CI)(NW)` Low）。
+  - Codex 排除（撤销本节早前推断）：`openai/codex` 源码 0 处 `setintegritylevel`、本机 codex.exe 0.163.0 无相关字符串、`cap_sid` 为合成 SID 方案、官方博客明确 MIC 方案设计期被否决；根 ACL 上 `CodexSandboxUsers:(I)(M,DC)` 为继承授权，与标签无关。gemini-cli 亦排除（根 DACL 无 Low SID 授权、`~/.gemini/tmp` 无标签、无 `.geminiignore`，且事发当天 `~/.gemini` 零文件活动；其每命令重打模式与现场一次性打标不符）。应用自身 runtime sandbox 不打完整性标签且事发时未运行。
+  - 会话级触发点未钉死：具体哪个 DSH 会话、何种模式触发物化在 zstd transcript 内未解压；不影响工具级定案与修复。
   - 与 git 无关：02:53:51 的合并 `1ebf8ea6e` 只改 allstar-coding locales 与 eform-craft skills；无 post-merge hook；03:18 无提交；ACL 是文件系统元数据，不进入 git。
 
 ## 最小复现
@@ -67,6 +68,7 @@ updated: 2026-10-17
 
 - 本机所有默认 `bun run dev` 启动被阻断；只能用 `--no-sandbox`（削弱沙箱）或 `VETTA_DESKTOP_DISABLE_GPU=1`（软件合成）绕行。
 - 影响范围是开发工作区：打包安装的应用不在仓库树内，不受该标签影响；任何被 agent 沙箱以 Low 标签供给工作区的 Windows 检出都会复现。
+- 全树 Low 并非只影响 Chromium：按微软 MIC 取低值规则，树内任何 Low 标签 exe（如 node_modules 内的 esbuild.exe）启动即为 Low 进程，向 `%APPDATA%`/`%LOCALAPPDATA%`/Temp 等树外 Medium 目标写入被拒。因此 2026-10-18 由 TASK-0303 执行仓库根整体重置（root-only `(OI)(CI)Medium`，NTFS 继承自动翻转全树）。
 - 不是 Open Forge 业务代码缺陷，但启动器可以在自己可控的范围内自愈；不修复则每次开发都要人工改 ACL 或关沙箱。
 
 ## 根因证据
@@ -88,6 +90,7 @@ updated: 2026-10-17
 ## 修复与验证
 
 - 修复：TASK-0302（`d8e1b7e45`）——dev 启动器在 spawn 前用 `icacls /save /T` 探针检查 Electron dist 是否含 Low 标签；仅当存在 Low 时执行 `icacls <dist> /setintegritylevel Medium /T /C /Q`，保留 Chromium 沙箱。TASK-0301 的 `--no-sandbox` 自动回退保留为真实 GPU 故障的兜底。
+- 归因修订与环境根治：TASK-0303——依据 RESEARCH-0028 把归因定案为 DSH（撤销 Codex 推断），并一次性把仓库根标签恢复为 Medium（全树继承翻转），消除树内 exe 以 Low 进程运行的次生风险；dev 启动器自愈继续作为复发时的边界。
 - 测试：定向 `run-dev-electron.test.mjs` 18/18 通过；仓库 Electron 78 个文件 Low→Medium 后，沙箱探针（无 `--no-sandbox`）`loadURL ok` / exit 0；重新标 Low 后 `bun run dev` 出现自愈日志、`ready-to-show` / `did-finish-load` 正常且日志无 `error_code=18`。
 - 检查：`bun run check:quick` 与 `bun run check`（lint、types、guards、mobile-lint）均 exit 0；`node scripts/release/release-notes.mjs --check` 通过。
 - 未运行及原因：用户人工验收待做；`test:impact` 因 `.mjs` 不在桌面 vitest include，整包回退 suite 含 BUG-0107 存量红且未跑完，已停止并用定向文件替代；`verify:ui:*` 未获授权且非必需。

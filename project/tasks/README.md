@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0303` | `verifying` | — | BUG-0128 归因定案为 DSH（撤销 Codex 推断，证据 `RESEARCH-0028`）并完成仓库根完整性标签全树重置：root-only `(OI)(CI)Medium` 重标 exit 0，根/深层文件实测 Medium、electron dist 显式 Medium 不变；check:quick 与完整 check 通过，无代码改动。 |
 | `TASK-0302` | `verifying` | — | BUG-0128 根修：dev 启动前用 `icacls /save /T` 探针识别 Electron dist 的 Low 完整性标签，仅命中 Low 时恢复为 Medium（保留 Chromium 沙箱）；探针/修复失败不阻断，TASK-0301 的 `--no-sandbox` 回退保留兜底；定向 18/18 与真实 `bun run dev` 自愈实测通过，实现 `d8e1b7e45`，待人工验收。 |
 | `TASK-0301` | `verifying` | — | dev 启动器 Chromium 沙箱 FATAL 自动回退：识别 code 3 + `GPU process isn't usable` 后追加 `--no-sandbox` 重试一次（保留硬件加速；renderer 同样受 error 18 影响），显式 `VETTA_DESKTOP_DISABLE_GPU=1` 不重试；定向 8/8 绿，`bun run dev` 全链路实测 GPU+renderer 存活且页面 DOM 正常，待人工验收。 |
 | `TASK-0300` | `done` | — | 本机 GPU 逃生开关（VETTA_DESKTOP_DISABLE_GPU=1 → --disable-gpu --no-sandbox）；用户终端验证通过（dev 实例成功启动并完成全部 BUG-0127 实测）。 |
