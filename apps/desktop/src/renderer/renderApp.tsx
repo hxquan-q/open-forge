@@ -16,26 +16,34 @@ import { initializeProductAnalytics } from "./telemetry/product-analytics";
 
 export function renderApp(root: Root): void {
 	initializeProductAnalytics();
-	initI18n();
-	// 窗口标题随品牌口径与界面语言（index.html 的静态标题只覆盖默认口径）。
-	const applyBrandTitle = () => {
-		document.title = resolveDesktopBrandName(i18n.language);
-	};
-	applyBrandTitle();
-	i18n.on("languageChanged", applyBrandTitle);
-	initializeHostedRoutes();
+	// zh（默认）同步就绪；en 初值时先按需装载 en catalog 再挂载，保证首帧即正确语言。
+	const i18nReady = initI18n();
+	const mount = () => {
+		// 窗口标题随品牌口径与界面语言（index.html 的静态标题只覆盖默认口径）。
+		const applyBrandTitle = () => {
+			document.title = resolveDesktopBrandName(i18n.language);
+		};
+		applyBrandTitle();
+		i18n.on("languageChanged", applyBrandTitle);
+		initializeHostedRoutes();
 
-	root.render(
-		<StrictMode>
-			<I18nextProvider i18n={i18n}>
-				<ThemeHostProvider host={desktopThemeHost}>
-					<ThemeRuntimeProvider>
-						<ThemeController />
-						<ThemeColorOverrideBridge />
-						<RouterProvider router={router} />
-					</ThemeRuntimeProvider>
-				</ThemeHostProvider>
-			</I18nextProvider>
-		</StrictMode>,
-	);
+		root.render(
+			<StrictMode>
+				<I18nextProvider i18n={i18n}>
+					<ThemeHostProvider host={desktopThemeHost}>
+						<ThemeRuntimeProvider>
+							<ThemeController />
+							<ThemeColorOverrideBridge />
+							<RouterProvider router={router} />
+						</ThemeRuntimeProvider>
+					</ThemeHostProvider>
+				</I18nextProvider>
+			</StrictMode>,
+		);
+	};
+	if (i18nReady) {
+		void i18nReady.then(mount);
+		return;
+	}
+	mount();
 }

@@ -8,7 +8,11 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import { initDesktopI18n } from "@/shared/desktop-brand";
-import { type AppLanguage, resolveAppLanguageFromLocale, resources } from "@/shared/i18n/resources";
+import { type AppLanguage, resolveAppLanguageFromLocale } from "@/shared/i18n/config";
+// 直连 settings.json（不走 resources.ts）：引导窗是独立入口，直接依赖可让
+// resources.ts 彻底退出主窗口共享 chunk（ISSUE-0021 B 第二片）。
+import enSettings from "@/shared/i18n/locales/en/settings.json";
+import zhSettings from "@/shared/i18n/locales/zh/settings.json";
 
 function detectLanguage(): AppLanguage {
 	// 真相源：main 已按 config 或系统 locale 解析；缺失时用 navigator 兜底（与 main 同一套规则）。
@@ -24,8 +28,8 @@ export function initOnboardingI18n(): void {
 	const lng = detectLanguage();
 	void initDesktopI18n(i18n.use(initReactI18next), {
 		resources: {
-			zh: { settings: resources.zh.settings },
-			en: { settings: resources.en.settings },
+			zh: { settings: zhSettings },
+			en: { settings: enSettings },
 		},
 		lng,
 		fallbackLng: "zh",
