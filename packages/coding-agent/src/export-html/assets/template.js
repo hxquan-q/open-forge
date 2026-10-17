@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
     (function() {
       'use strict';
 
@@ -589,9 +590,14 @@
       }
 
       function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        // String pipeline, not DOM innerHTML: the DOM path leaves quotes
+        // unescaped, so attribute interpolation could break out (pi@b3ed5459).
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
       }
 
       /**
@@ -1450,6 +1456,16 @@
         return text.replace(/<(?=[a-zA-Z\/])/g, '&lt;');
       }
 
+      // Allow-list URL schemes for markdown links/images. Strip C0/DEL control
+      // characters first because browsers ignore them when parsing URLs, so
+      // "java\x01script:" must be treated as "javascript:" (pi@6cb23f9b).
+      function sanitizeMarkdownUrl(value) {
+        const raw = String(value ?? '').trim().replace(/[\x00-\x1f\x7f]/g, '');
+        const scheme = raw.match(/^([A-Za-z][A-Za-z0-9+.-]*):/);
+        if (scheme && !/^(https?|mailto|tel|ftp)$/i.test(scheme[1])) return null;
+        return raw;
+      }
+
       // Configure marked with syntax highlighting and HTML escaping for text
       marked.use({
         breaks: true,
@@ -1483,6 +1499,20 @@
           // Inline code: escape HTML
           codespan(token) {
             return `<code>${escapeHtml(token.text)}</code>`;
+          },
+          // Links/images: render only allow-listed schemes, otherwise degrade
+          // to the inline text / alt text instead of the anchor or img tag.
+          link(token) {
+            const href = sanitizeMarkdownUrl(token.href);
+            if (href === null) return this.parser.parseInline(token.tokens);
+            const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
+            return `<a href="${escapeHtml(href)}"${title}>${this.parser.parseInline(token.tokens)}</a>`;
+          },
+          image(token) {
+            const src = sanitizeMarkdownUrl(token.href);
+            if (src === null) return escapeHtml(token.text || '');
+            const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
+            return `<img src="${escapeHtml(src)}" alt="${escapeHtml(token.text || '')}"${title}>`;
           }
         }
       });
