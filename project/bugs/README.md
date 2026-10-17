@@ -16,7 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0127` | 团队长任务主进程累积性卡顿：会话读路径无缓存全量物化被每命令/每 turn/每次 persist 高频触发（trace 45.7% 采样） | verifying | P0 | PLAN-0002 |
+| `BUG-0127` | 团队长任务主进程累积性卡顿：会话读路径无缓存全量物化被每命令/每 turn/每次 persist 高频触发（trace 45.7% 采样） | done | P0 | PLAN-0002 |
 | `BUG-0126` | session-interrupt monitor 长任务全程误报 suspected（判据不认识"主控等子代理"） | verifying | P3 | — |
 | `BUG-0125` | 远程项目会话创建挂起约 30 分钟后失败，耗时阶段无远端读取观测 | verifying | P1 | — |
 | `BUG-0124` | 插件 Hook 处理器被反复派发但渲染端已无该处理器，双方都没有定位信息 | verifying | P2 | — |
