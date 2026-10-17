@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Tests for git-based extension updates, specifically handling force-push scenarios.
  *
@@ -7,15 +8,36 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createNodeResourceAccess, nodeResourcePackageDigest } from "@vetta/runtime-node/host";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CONFIG_DIR_NAME } from "../src/config.js";
 import type { ResourcePackageCommandPort, ResourcePackageRuntime } from "../src/resources/index.js";
+import { ResourcePackageLocations } from "../src/resources/packages/resource-package-locations.js";
+import { parseResourceSource } from "../src/resources/packages/source-spec.js";
 import { SettingsRuntime } from "../src/settings/index.js";
 import { createTestResourcePackageRuntime as createCodingAgentResourcePackageRuntime } from "./fixtures/node-resource-runtime.js";
+
+// Temporary cache paths come from the production location policy; do not
+// hardcode them here (they moved out of os.tmpdir in TASK-0310 / GHSA-jfgx).
+function temporaryGitCacheDir(agentDirectory: string, source: string): string {
+	const parsed = parseResourceSource(source);
+	if (parsed.type !== "git") throw new Error(`Expected git source: ${source}`);
+	const locations = new ResourcePackageLocations({
+		cwd: agentDirectory,
+		agentDir: agentDirectory,
+		paths: createNodeResourceAccess().paths,
+		locationFacts: {
+			homeDirectory: agentDirectory,
+			temporaryDirectory: agentDirectory,
+			getGlobalNpmRoot: () => agentDirectory,
+		},
+		digest: nodeResourcePackageDigest,
+	});
+	return locations.gitInstallPath(parsed, "temporary");
+}
 
 // Helper to run git commands in a directory
 function git(args: string[], cwd: string): string {
@@ -254,10 +276,7 @@ describe("ResourcePackageRuntime git update", () => {
 
 	describe("temporary git sources", () => {
 		it("should refresh cached temporary git sources when resolving", async () => {
-			const gitHost = "github.com";
-			const gitPath = "test/extension";
-			const hash = createHash("sha256").update(`git-${gitHost}-${gitPath}`).digest("hex").slice(0, 8);
-			const cachedDir = join(tmpdir(), "pi-extensions", `git-${gitHost}`, hash, gitPath);
+			const cachedDir = temporaryGitCacheDir(agentDir, gitSource);
 			const extensionFile = join(cachedDir, "pi-extensions", "session-breakdown.ts");
 
 			rmSync(cachedDir, { recursive: true, force: true });
@@ -291,10 +310,7 @@ describe("ResourcePackageRuntime git update", () => {
 		});
 
 		it("should not refresh pinned temporary git sources", async () => {
-			const gitHost = "github.com";
-			const gitPath = "test/extension";
-			const hash = createHash("sha256").update(`git-${gitHost}-${gitPath}`).digest("hex").slice(0, 8);
-			const cachedDir = join(tmpdir(), "pi-extensions", `git-${gitHost}`, hash, gitPath);
+			const cachedDir = temporaryGitCacheDir(agentDir, `${gitSource}@main`);
 			const extensionFile = join(cachedDir, "pi-extensions", "session-breakdown.ts");
 
 			rmSync(cachedDir, { recursive: true, force: true });

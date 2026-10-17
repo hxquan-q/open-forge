@@ -1,4 +1,5 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+// Modified by The Open Forge contributors.
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import {
@@ -1321,6 +1322,34 @@ export default function(api) { api.registerTool({ name: "test", description: "te
 
 			const [, options] = fetchMock.mock.calls[0] as [string, RequestInit | undefined];
 			expect(options?.signal).toBeDefined();
+		});
+	});
+
+	describe("temporary install cache (GHSA-jfgx)", () => {
+		it("should create the agent-private cache root with owner-only permissions before running install commands", async () => {
+			const commands: ResourcePackageCommandPort = {
+				run: vi.fn().mockRejectedValue(new Error("install blocked")),
+			};
+			const lifecycle = new ResourcePackageLifecycle(
+				locations,
+				commands,
+				{ getLatestVersion: async () => "1.0.0" },
+				{ isOffline: () => false },
+				createNodeResourceAccess(),
+				new NodeResourcePackageFiles(),
+			);
+			const parsed = parseResourceSource("git:github.com/example/repo");
+			if (parsed.type !== "git") throw new Error("Expected git source");
+
+			// 外部命令被阻断：目录建立必须先于任何 git/npm 命令
+			await expect(lifecycle.install(parsed, "temporary")).rejects.toThrow("install blocked");
+
+			const root = locations.temporaryRoot();
+			expect(existsSync(root)).toBe(true);
+			expect(root.startsWith(agentDir)).toBe(true);
+			if (process.platform !== "win32") {
+				expect(statSync(root).mode & 0o777).toBe(0o700);
+			}
 		});
 	});
 });

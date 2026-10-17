@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type ResourceScope = "user" | "project" | "temporary";
 
 export type ResourceKind = "extensions" | "skills" | "prompts" | "themes";
@@ -61,7 +62,7 @@ export interface ResourcePackageCommandPort {
 export interface ResourcePackageFilePort {
 	stat(path: string): Promise<{ kind: "file" | "directory" | "other" } | undefined>;
 	readText(path: string): Promise<string>;
-	ensureDirectory(path: string): Promise<void>;
+	ensureDirectory(path: string, options?: { readonly mode?: number }): Promise<void>;
 	ensureTextFile(path: string, content: string): Promise<void>;
 	removeTree(path: string): Promise<void>;
 	readDirectory(path: string): Promise<readonly string[]>;

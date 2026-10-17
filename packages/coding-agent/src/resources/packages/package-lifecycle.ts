@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ResourceAccessPort } from "../contracts/resource-access.js";
 import type {
 	ResourcePackageCommandPort,
@@ -97,12 +98,14 @@ export class ResourcePackageLifecycle {
 			await this.commands.run("npm", ["install", "-g", source.spec]);
 			return;
 		}
+		if (temporary) await this.ensureTemporaryRoot();
 		const installRoot = this.locations.npmInstallRoot(scope, temporary);
 		await this.ensureNpmProject(installRoot);
 		await this.commands.run("npm", ["install", source.spec, "--prefix", installRoot]);
 	}
 
 	private async installGit(source: GitSource, scope: ResourceScope): Promise<void> {
+		if (scope === "temporary") await this.ensureTemporaryRoot();
 		const targetDir = this.locations.gitInstallPath(source, scope);
 		if (await this.exists(targetDir)) return;
 		const gitRoot = this.locations.gitInstallRoot(scope);
@@ -155,6 +158,16 @@ export class ResourcePackageLifecycle {
 			}
 			current = this.resourceAccess.paths.dirname(current);
 		}
+	}
+
+	/**
+	 * Temporary installs execute package code, so their cache root must be a
+	 * fresh, owner-only directory inside the agent dir before any package
+	 * content lands (GHSA-jfgx, pi@ea3465a8). chmod re-tightens a root that
+	 * may already exist with looser permissions from an older release.
+	 */
+	private async ensureTemporaryRoot(): Promise<void> {
+		await this.files.ensureDirectory(this.locations.temporaryRoot(), { mode: 0o700 });
 	}
 
 	private async ensureNpmProject(installRoot: string): Promise<void> {

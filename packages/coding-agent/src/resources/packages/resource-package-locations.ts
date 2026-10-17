@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CONFIG_DIR_NAME } from "../../identity.js";
 import type { ResourcePathPort } from "../contracts/resource-access.js";
 import type {
@@ -73,9 +74,20 @@ export class ResourcePackageLocations {
 		return this.paths.join(this.agentDir, "git");
 	}
 
+	/**
+	 * Private root for temporary package installs, inside the agent-owned
+	 * directory. The previous shared `os.tmpdir()/pi-extensions` root was
+	 * predictable and world-writable on multi-user hosts, letting another
+	 * local user pre-create or tamper with cached package code (GHSA-jfgx,
+	 * pi@ea3465a8). Callers must create it with mode 0o700 before installing.
+	 */
+	temporaryRoot(): string {
+		return this.paths.join(this.agentDir, "tmp", "extensions");
+	}
+
 	temporaryDir(prefix: string, suffix?: string): string {
 		const hash = this.digest.sha256Hex(`${prefix}-${suffix ?? ""}`).slice(0, 8);
-		return this.paths.join(this.locationFacts.temporaryDirectory, "pi-extensions", prefix, hash, suffix ?? "");
+		return this.paths.join(this.temporaryRoot(), prefix, hash, suffix ?? "");
 	}
 
 	identity(source: string, scope?: ResourceScope): string {

@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { createNodeResourceAccess, type NodeResourceAccess } from "./resource-access.js";
@@ -31,7 +32,7 @@ export class NodeResourcePackageCommands implements NodeResourcePackageCommandRu
 export interface NodeResourcePackageFilePort {
 	stat(path: string): Promise<{ kind: "file" | "directory" | "other" } | undefined>;
 	readText(path: string): Promise<string>;
-	ensureDirectory(path: string): Promise<void>;
+	ensureDirectory(path: string, options?: { readonly mode?: number }): Promise<void>;
 	ensureTextFile(path: string, content: string): Promise<void>;
 	removeTree(path: string): Promise<void>;
 	readDirectory(path: string): Promise<readonly string[]>;
@@ -52,8 +53,11 @@ export class NodeResourcePackageFiles implements NodeResourcePackageFilePort {
 		return readFile(resourcePath, "utf8");
 	}
 
-	ensureDirectory(resourcePath: string): Promise<void> {
-		return mkdir(resourcePath, { recursive: true }).then(() => undefined);
+	async ensureDirectory(resourcePath: string, options?: { readonly mode?: number }): Promise<void> {
+		await mkdir(resourcePath, { recursive: true, mode: options?.mode });
+		// mkdir's mode is ignored for directories that already exist; tighten
+		// explicitly so roots created by older releases converge too.
+		if (options?.mode !== undefined) await chmod(resourcePath, options.mode);
 	}
 
 	async ensureTextFile(resourcePath: string, content: string): Promise<void> {
