@@ -67,6 +67,8 @@ export interface McpConfigData {
 export interface DesktopMcpApi {
 	get(): Promise<McpConfigData>;
 	set(config: McpConfigData): Promise<void>;
+	/** 当前运行时的 mcp.json 绝对路径（只读展示用；随数据根 env 覆盖/迁移变化）。 */
+	configPath(): Promise<string>;
 	/**
 	 * 对 type:http 的远程 MCP 发起浏览器 OAuth 授权（通用机制，不限 Notion）。
 	 * 成功后 token 写入 ~/.vetta/agent/mcp-auth/<name>.json。

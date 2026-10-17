@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer, IpcRendererEvent, WebUtils } from "electron";
 import { PERSIST_IMAGE_FILES_CHANNEL } from "../../shared/image-cache.js";
 import { PROJECTS_CHANNELS } from "../../shared/projects-ipc.js";
@@ -219,6 +220,7 @@ export function createSystemApi(
 		mcp: {
 			get: () => ipc.invoke("vetta:mcp:get"),
 			set: (config) => ipc.invoke("vetta:mcp:set", config),
+			configPath: () => ipc.invoke("vetta:mcp:config-path"),
 			login: (serverName, options) => ipc.invoke("vetta:mcp:login", serverName, options),
 			logout: (serverName) => ipc.invoke("vetta:mcp:logout", serverName),
 			hasAuth: (serverName) => ipc.invoke("vetta:mcp:has-auth", serverName),

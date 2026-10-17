@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
@@ -22,7 +23,8 @@ export interface McpSettingsServiceOptions {
 	readonly recordEvent?: (event: Extract<AppMonitorEvent, { type: "resource.lifecycle" }>) => void;
 }
 
-const MCP_CONFIG_PATH = join(getVettaHomePath(), "agent", "mcp.json");
+/** MCP 配置落盘路径；设置页提示经 IPC 读取，避免硬编码品牌数据根。 */
+export const MCP_CONFIG_PATH = join(getVettaHomePath(), "agent", "mcp.json");
 const DEFAULT_MCP_CONFIG: McpConfigData = { mcpServers: {} };
 
 export async function readMcpConfig(): Promise<McpConfigData> {
