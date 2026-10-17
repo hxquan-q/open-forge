@@ -27,6 +27,19 @@ This product includes, derives from, or distributes the following third-party
 software. Each component remains under its own license.
 
 --------------------------------------------------------------------------------
+Onlook (packages/parser)
+--------------------------------------------------------------------------------
+Source:  https://github.com/onlook-dev/onlook
+License: Apache-2.0
+
+The Tailwind class and text edit semantics in
+`packages/plugins/presets/vetta-ui-design/src/inspector/ast-edit/` are adapted
+from Onlook's `packages/parser/src/code-edit/{style,text}.ts`: conflict-merging
+class add, whole-string class replace, and JSXText content replacement with
+`<br/>` splitting for multi-line text. The implementation is rewritten as
+magic-string span edits that preserve the original source formatting.
+
+--------------------------------------------------------------------------------
 pi (pi-mono)
 --------------------------------------------------------------------------------
 Copyright (c) Mario Zechner
