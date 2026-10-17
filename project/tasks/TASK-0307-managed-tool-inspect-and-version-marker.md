@@ -1,7 +1,7 @@
 ---
 id: TASK-0307
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: packages/runtime-node
 requirement: REQ-0016
@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0307-managed-tool-inspect
-worktree: unassigned（创建中，由 task:worktree 回填）
+worktree: ../open-forge-wt/task-0307-managed-tool-inspect-and-version-marker
 base_commit: bb722cd71
 read_paths:
   - project/research/RESEARCH-0030-managed-coding-tool-doctor-inspection.md
@@ -101,8 +101,10 @@ updated: 2026-10-18
 
 ## 交付记录
 
-- 实际修改：
-- 实际运行：
-- 未运行及原因：
-- Worktree：未拆出（ready 待派工）。
-- 剩余风险：
+- 实际修改：`runtime-tools` 接口加可选 `inspect` 与 `CodingToolInspection`（含 `download-failed` 语义文档化）；`CodingToolDownloadPlan` 增 `version`；`CodingToolArchiveOperations` 增 `writeVersionMarker`（安装成功写 `<tool>.version`，失败 best-effort 吞掉）；managed resolver 新增 `inspectManagedCodingToolExecutable`（缓存标记→存量回退一次探针→PATH 探针→missing+offline）、`parseCodingToolVersionOutput`、`applyDownloadFailureRecord` 纯函数与 `recordFailure` 旁路；工厂暴露 `inspect` 并支持 `inspectionDependencies` 注入。实现提交 `fb1448727`。
+- 与计划的偏差：local resolver（`createLocalCodingToolExecutableResolver`）的探针未升级——其 `commandExists` 是公开 DI 选项类型，改签名属公共合同变更且 local 侧无 inspect 消费面，收益为零；PROBE 升级只落在 managed resolver 的内部探针（原计划括号里的「两处都改」按此收窄，行为无差异）。
+- 实际运行：managed-executables + executable-resolver 定向 24 例绿；`bun run check`（worktree 内，lint/types/guards/mobile-lint）exit 0；test:impact 见 TASK-0308 交付记录（同批执行）。
+- 未运行及原因：无独立用户入口，人工验收不适用（由 TASK-0308 的 doctor/诊断包覆盖）。
+- 发布说明：随 TASK-0308 同批写入 v0.1.3 新增节。
+- Worktree：`../open-forge-wt/task-0307-managed-tool-inspect-and-version-marker`（task:worktree 创建，setup 完成，根 `bun run build` 产出 dist 后测试可跑；TASK-0308 同树叠作）。
+- 剩余风险：存量缓存首次 doctor 报告会触发一次 `--version` 探针（标记缺失回退，属设计内）；`lastError` 仅同实例有效，跨进程恒缺省（接口文档已注明）。
