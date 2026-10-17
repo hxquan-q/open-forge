@@ -1,7 +1,7 @@
 ---
 id: TASK-0283
 type: task
-status: verifying
+status: done
 priority: P0
 owner: runtime-node
 requirement:

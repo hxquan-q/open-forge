@@ -23,12 +23,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0295` | `done` | PLAN-0010 | ISSUE-0021 B-0 主进程 catalog 收窄（随 BUG-0127 实测闭环）；bundle −206 kB；完整 check 全绿。 |
 | `TASK-0294` | `done` | PLAN-0002 | BUG-0127 路线 6 帧缓存（随 BUG-0127 闭合）；243 例 + 完整 check 全绿。 |
 | `TASK-0293` | `done` | PLAN-0002 | BUG-0127 路线 5 聚合守卫（随 BUG-0127 闭合）；157 例 + 完整 check 全绿。 |
-| `TASK-0292` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第二片：团队时间线投影持久基座分离——只依赖 snapshot 的 O(C) 重分配投影走独立 memo，流式 delta 期间跨重算复用；公共函数签名不变、2 例等价性测试锁定；渲染端 11 文件 157 例 + 完整 check 全绿；serial，main 串行。 |
-| `TASK-0291` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第一片：团队时间线投影 O(n²) 扫描索引化——活动回复/委派判定/流文本兜底建索引、聚合视图跳过未使用的成员稳定化；纯函数等价重构；渲染端 11 文件 155 例 + 完整 check 全绿；serial，main 串行。 |
-| `TASK-0290` | `verifying` | PLAN-0002 | BUG-0127 修复路线 6 第一片：`session-updated` 全量快照发布短窗合并（32ms 取末帧）+ 无订阅者跳过构建与发布 + 删除/逐出 drop；零 IPC 合同变更；调度器单元 5/5、agent-teams 35 文件 240 例、完整 check 全绿；serial，main 串行。 |
-| `TASK-0289` | `verifying` | PLAN-0002 | BUG-0127 修复路线 3：会话文档命令 O(n) 扫描索引化——entries 数组身份记忆化的 byId/childrenByParent 索引，守卫/查找/分支选择/子遍历摊销 O(1)，纯重构语义不变；行为基线 73 文件 388 例 + desktop 235 例 + 完整 check 全绿；serial，main 串行。 |
-| `TASK-0288` | `verifying` | PLAN-0002 | BUG-0127 修复路线 4：团队 `persist()` 指纹缓存——记住最后追加状态条目的协调文档 revision + 序列化串，热路径单次序列化比较并跳过 O(entries) 扫描，revision 变化回退精确双序列化；`remove`/`removeCached` 丢指纹；定向 5/5（红基线先行）、agent-teams 目录 235 例 + cwd 复跑 21 例、完整 check 全绿；serial，main 串行。 |
-| `TASK-0283` | `verifying` | PLAN-0002 | BUG-0127（P0）修复路线 1：`readDocument()` 接入 `ConversationWriteCache`（字节大小失效，命中免全量 JSONL 重读），覆盖 trace ≈50% 采样热点并让每命令协调器读自动降本；回归覆盖命中免读、外部写失效、缓存热损坏仍报 CORRUPT、v1 不缓存；serial，main 串行。 |
+| `TASK-0292` | `done` | PLAN-0002 | BUG-0127 路线 5 持久基座（随 BUG-0127 闭合）。 |
+| `TASK-0291` | `done` | PLAN-0002 | BUG-0127 路线 5 投影索引化（随 BUG-0127 闭合）。 |
+| `TASK-0290` | `done` | PLAN-0002 | BUG-0127 路线 6 发布合并（随 BUG-0127 闭合）。 |
+| `TASK-0289` | `done` | PLAN-0002 | BUG-0127 路线 3 命令索引化（随 BUG-0127 闭合）。 |
+| `TASK-0288` | `done` | PLAN-0002 | BUG-0127 修复路线 4：团队 `persist()` 指纹缓存——记住最后追加状态条目的协调文档 revision + 序列化串，热路径单次序列化比较并跳过 O(entries) 扫描，revision 变化回退精确双序列化；`remove`/`removeCached` 丢指纹；定向 5/5（红基线先行）、agent-teams 目录 235 例 + cwd 复跑 21 例、完整 check 全绿；serial，main 串行。 |
+| `TASK-0283` | `done` | PLAN-0002 | BUG-0127（P0）修复路线 1：`readDocument()` 接入 `ConversationWriteCache`（字节大小失效，命中免全量 JSONL 重读），覆盖 trace ≈50% 采样热点并让每命令协调器读自动降本；回归覆盖命中免读、外部写失效、缓存热损坏仍报 CORRUPT、v1 不缓存；serial，main 串行。 |
 | `TASK-0284` | `verifying` | — | BUG-0115（P1）：团队收尾重配对 runtime 未加载的成员会话幂等化——dispose 分支对 SESSION_NOT_FOUND 按「无可清理」继续并落结构化日志，保留与 `Team member runtime not found` 的错误区分；旧实现红回归 + team 套件零回归；serial，main 串行。 |
 | `TASK-0285` | `verifying` | — | BUG-0116（P1）：团队会话 send 路径对 runtime 损坏态自愈（按 coordination 文档重载成员 runtime 后重试一次）或归一含恢复指引的可读错误；结构化日志记录 attempted/recovered/failed；serial，main 串行。 |
 | `TASK-0286` | `verifying` | — | BUG-0117（P2）：team 链 IPC 错误接入 `describeError` 翻译层——主进程 logger 落盘点改结构化 code/message，渲染端 team 连接器消费 rejection 同层翻译，全链消灭 `[object Object]`；serial，main 串行。 |
