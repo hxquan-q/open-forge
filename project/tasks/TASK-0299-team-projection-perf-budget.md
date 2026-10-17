@@ -1,7 +1,7 @@
 ---
 id: TASK-0299
 type: task
-status: verifying
+status: done
 priority: P3
 owner: desktop
 requirement:

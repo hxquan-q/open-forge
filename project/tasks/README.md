@@ -15,12 +15,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0300` | `verifying` | — | 本机 GPU 进程启动失败（error_code=18→FATAL）：dev 启动器加 `VETTA_DESKTOP_DISABLE_GPU=1` 逃生开关（独立于 canary 捆绑旗标，不动 configDir）；纯函数 + 2 例单测 + 完整 check 全绿；用户终端一条命令冒烟待执行；serial，main 串行。 |
-| `TASK-0299` | `verifying` | PLAN-0002 | BUG-0127 路线 5 回归防线：投影性能预算测试——5000 消息×1000 活动预算断言（实测 ~24ms/预算 150ms，守数量级）+ 基座引用共享确定性断言（重建即红）；2 例 + 行为 52 例 + 完整 check 全绿；serial，main 串行。 |
-| `TASK-0298` | `verifying` | PLAN-0002 | BUG-0127 验收配套：perf 快照补主进程事件循环阻塞指标（链式 250ms 窗口/500ms 阈值/60s 休眠滤波，旁路合规）——复测导出诊断包即得主进程阻塞计数与量级；app-monitor 6 文件 33 例 + 完整 check 全绿；serial，main 串行。 |
+| `TASK-0300` | `done` | — | 本机 GPU 逃生开关（VETTA_DESKTOP_DISABLE_GPU=1 → --disable-gpu --no-sandbox）；用户终端验证通过（dev 实例成功启动并完成全部 BUG-0127 实测）。 |
+| `TASK-0299` | `done` | PLAN-0002 | BUG-0127 路线 5 回归防线（随 BUG-0127 闭合）；2 例 + 行为 52 例 + 完整 check 全绿。 |
+| `TASK-0298` | `done` | PLAN-0002 | BUG-0127 验收配套 eventLoop 指标（随 BUG-0127 闭合，实测数据已采集）；33 例 + 完整 check 全绿。 |
 | `TASK-0297` | `verifying` | PLAN-0010 | ISSUE-0021 审计附带卫生项：renderer 构建 `emptyOutDir` 改 true——打包整目录拷贝 dist/renderer，旧哈希死产物不再随安装器分发（标记法验证清除 125 个旧文件，renderApp/brand-assets 各剩 1 份）；同仓其余 vite 配置本就各自清理；serial，main 串行。 |
 | `TASK-0296` | `verifying` | PLAN-0010 | ISSUE-0021 B 第二片：主窗口 renderer 语言级拆分——zh 静态同步（默认用户零变化），en 改按需单 lazy chunk（启动路径实测 −262.8 kB；en 初值挂载前 await、切换原子装载）；渲染端全域 464 文件 2397 例 + 完整 check 全绿；serial，main 串行。 |
-| `TASK-0295` | `verifying` | PLAN-0010 | ISSUE-0021 B 第一片：主进程 i18n catalog 收窄——main 改用专用子集（ns 面 {main,common,settings,skills,pet}，正则枚举+单测锁定），bundle 省 ≈206 kB；renderer 静态打包与不闪保证不变；ADR-0031 补修订记；serial，main 串行。 |
+| `TASK-0295` | `done` | PLAN-0010 | ISSUE-0021 B-0 主进程 catalog 收窄（随 BUG-0127 实测闭环）；bundle −206 kB；完整 check 全绿。 |
 | `TASK-0294` | `verifying` | PLAN-0002 | BUG-0127 路线 6 帧成本第一片：display 投影成员历史按 (journalVersion, revision) 记忆化（LRU 32）——空闲成员跨帧复用，每帧成本从 O(全部成员历史) 降 O(变更成员)；3 例新单测 + agent-teams 243 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0293` | `verifying` | PLAN-0002 | BUG-0127 路线 5 收尾守卫：聚合视图跳过成员历史投影（唯一消费者是成员视图稳定化，消费链已核）；渲染端 157 例 + 完整 check 单轮全绿；serial，main 串行。 |
 | `TASK-0292` | `verifying` | PLAN-0002 | BUG-0127 修复路线 5 第二片：团队时间线投影持久基座分离——只依赖 snapshot 的 O(C) 重分配投影走独立 memo，流式 delta 期间跨重算复用；公共函数签名不变、2 例等价性测试锁定；渲染端 11 文件 157 例 + 完整 check 全绿；serial，main 串行。 |
