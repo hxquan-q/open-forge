@@ -50,7 +50,16 @@ export async function reconfigureTeamMemberRuntime(input: {
 	const config = await input.resolveConfig(current.sessionPath);
 	let createdSessionId: string | undefined;
 	try {
-		if (activePath) await input.runtime.disposeSession(current.sessionId);
+		if (activePath) {
+			try {
+				await input.runtime.disposeSession(current.sessionId);
+			} catch (error) {
+				// getSessionPath 判定与 dispose 之间存在空闲逐出/并发清理窗口：
+				// SESSION_NOT_FOUND 表示会话已不在内存目录，对重配语义等同「本来
+				// 未加载」（幂等 no-op），继续按持久路径重开，不掀翻收尾（BUG-0115）。
+				if (!isSessionNotFoundFailure(error)) throw error;
+			}
+		}
 		const created = await input.runtime.createSession(config);
 		createdSessionId = created.sessionId;
 		const sessionPath = input.runtime.getSessionPath(created.sessionId);
@@ -98,4 +107,9 @@ export async function reconfigureTeamMemberRuntime(input: {
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+/** runtime 对「会话不在内存目录」的统一判别：普通对象或挂了 code 的 Error 都算（BUG-0115）。 */
+function isSessionNotFoundFailure(error: unknown): boolean {
+	return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "SESSION_NOT_FOUND";
 }

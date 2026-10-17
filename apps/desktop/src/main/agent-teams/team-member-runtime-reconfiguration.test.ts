@@ -192,4 +192,64 @@ describe("reconfigureTeamMemberRuntime", () => {
 		expect(runtime.createSession).toHaveBeenCalledTimes(1);
 		expect(next.memberRuntime.leader).toMatchObject({ rosterFingerprint: "team-v1-roster-after" });
 	});
+
+	it("判加载与 dispose 之间被并发逐出（SESSION_NOT_FOUND）时按幂等继续重开，不掀翻收尾（BUG-0115）", async () => {
+		const paths = new Map([["old-runtime", "C:/sessions/leader.jsonl"]]);
+		const runtime: TeamMemberRuntimeReconfigurationHost = {
+			getSessionPath: (sessionId) => paths.get(sessionId),
+			disposeSession: vi.fn(async (sessionId) => {
+				paths.delete(sessionId);
+				// 事故同款形态：判定时还在内存目录，释放瞬间已被空闲逐出/并发清理掉。
+				throw { code: "SESSION_NOT_FOUND", message: `Session not found: ${sessionId}`, retryable: false };
+			}),
+			createSession: vi.fn(async (config) => {
+				paths.set("new-runtime", String(config.sessionPath));
+				return { sessionId: "new-runtime" };
+			}),
+		};
+		const persist = vi.fn(async () => undefined);
+
+		const next = await reconfigureTeamMemberRuntime({
+			session: sessionDocument(),
+			memberId: "leader",
+			agentProfileId: "agent",
+			agentProfileRevision: 3,
+			runtime,
+			resolveConfig: async (sessionPath) => ({ cwd: "C:/workspace", sessionPath }) satisfies SessionConfig,
+			persist,
+			now: () => 20,
+			logger,
+		});
+
+		expect(runtime.createSession).toHaveBeenCalledWith(
+			expect.objectContaining({ sessionPath: "C:/sessions/leader.jsonl" }),
+		);
+		expect(next.memberRuntime.leader).toMatchObject({ sessionId: "new-runtime", agentProfileRevision: 3 });
+		expect(persist).toHaveBeenCalledWith(next);
+	});
+
+	it("dispose 抛非 SESSION_NOT_FOUND 错误时仍然向上传播（BUG-0115 严格语义）", async () => {
+		const paths = new Map([["old-runtime", "C:/sessions/leader.jsonl"]]);
+		const runtime: TeamMemberRuntimeReconfigurationHost = {
+			getSessionPath: (sessionId) => paths.get(sessionId),
+			disposeSession: vi.fn(async () => {
+				throw new Error("Conversation is already owned by another runtime");
+			}),
+			createSession: vi.fn(),
+		};
+
+		await expect(
+			reconfigureTeamMemberRuntime({
+				session: sessionDocument(),
+				memberId: "leader",
+				agentProfileId: "agent",
+				agentProfileRevision: 3,
+				runtime,
+				resolveConfig: async (sessionPath) => ({ cwd: "C:/workspace", sessionPath }) satisfies SessionConfig,
+				persist: vi.fn(async () => undefined),
+				logger,
+			}),
+		).rejects.toThrow("Conversation is already owned by another runtime");
+		expect(runtime.createSession).not.toHaveBeenCalled();
+	});
 });

@@ -1,7 +1,7 @@
 ---
 id: BUG-0115
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop agent-teams
 requirement:
@@ -13,7 +13,7 @@ related_tasks: []
 related_issues: []
 related_bugs: [BUG-0108, BUG-0114, BUG-0116]
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # 团队长任务收尾连环失败：结算失败 → 成员 runtime 重配竞态 → SESSION_NOT_FOUND
@@ -71,5 +71,11 @@ updated: 2026-10-16
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：收尾重配在 `SESSION_NOT_FOUND` 时按 no-op / 先确保加载；结算与重配加隔离与重试边界。
-- 验证：上述回归测试 + team 目录套件；实机按最小复现走一遍。
+- 修复：2026-10-17（localtest 分支）。取证修正：本条主链在当前代码已大部分收口——
+  - runtime 层：`disposeSession` 对未加载会话已按 no-op 吞掉（BUG-0108 / commit 64ccf25c1），`reconfiguration.ts:53` 对「从未加载」的成员不再调 dispose，而是直接按持久路径重开（既有测试 "restores a missing runtime even when its persisted configuration is unchanged" 已钉住）。
+  - 剩余缺口是竞态窗口：`getSessionPath` 判定已加载后、`disposeSession` 执行前会话被空闲逐出/并发清理，dispose 仍会抛 `SESSION_NOT_FOUND` 并掀翻重配与收尾。本次把 dispose 的 `SESSION_NOT_FOUND` 归一为幂等继续（跳过释放、按持久路径重开），其余失败（如外部实例持租约）保持严格传播。
+  - 协调 runtime 侧的未加载自愈由 BUG-0116 修复（readInternal 缓存分支先重开再绑定校验）。
+  - 「结算失败与重配竞态各自隔离」：重配失败只令该次成员 attempt 失败并走既有重试/结算机器（`maxAutomaticRetries`），不再连带把会话推入损坏态——事故中的「结算失败」系当时 SESSION_NOT_FOUND 传播的下游表现，两层收口后该链路已断。
+- 验证：
+  - 红→绿：`team-member-runtime-reconfiguration.test.ts` 新增两例——「判加载与 dispose 之间被并发逐出时按幂等继续重开」（旧实现红）与「dispose 抛非 SESSION_NOT_FOUND 仍严格传播」（钉住既有语义）。
+  - 待实机：按最小复现走一遍（长任务收尾窗口内重启/逐出成员 runtime）。
