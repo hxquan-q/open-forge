@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0300` | `verifying` | — | 本机 GPU 进程启动失败（error_code=18→FATAL）：dev 启动器加 `VETTA_DESKTOP_DISABLE_GPU=1` 逃生开关（独立于 canary 捆绑旗标，不动 configDir）；纯函数 + 2 例单测 + 完整 check 全绿；用户终端一条命令冒烟待执行；serial，main 串行。 |
 | `TASK-0299` | `verifying` | PLAN-0002 | BUG-0127 路线 5 回归防线：投影性能预算测试——5000 消息×1000 活动预算断言（实测 ~24ms/预算 150ms，守数量级）+ 基座引用共享确定性断言（重建即红）；2 例 + 行为 52 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0298` | `verifying` | PLAN-0002 | BUG-0127 验收配套：perf 快照补主进程事件循环阻塞指标（链式 250ms 窗口/500ms 阈值/60s 休眠滤波，旁路合规）——复测导出诊断包即得主进程阻塞计数与量级；app-monitor 6 文件 33 例 + 完整 check 全绿；serial，main 串行。 |
 | `TASK-0297` | `verifying` | PLAN-0010 | ISSUE-0021 审计附带卫生项：renderer 构建 `emptyOutDir` 改 true——打包整目录拷贝 dist/renderer，旧哈希死产物不再随安装器分发（标记法验证清除 125 个旧文件，renderApp/brand-assets 各剩 1 份）；同仓其余 vite 配置本就各自清理；serial，main 串行。 |
