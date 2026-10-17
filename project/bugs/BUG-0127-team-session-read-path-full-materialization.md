@@ -70,7 +70,7 @@ updated: 2026-10-17
 
 ## 修复与验证
 
-- 修复：路线 1 已实施（`ee7c8bd93`，TASK-0283）——`readDocument` 复用 `loadAppendState` 字节缓存；路线 2 随路线 1 自动降本，再评估；路线 4 已实施（TASK-0288）——团队 `persist()` 指纹缓存，热路径单次序列化并跳过 O(entries) 扫描，revision 推进回退与旧实现逐语义等价的精确比较；路线 3 已实施（TASK-0289）——文档命令/选择路径 O(n) 扫描索引化（entries 数组身份记忆化 byId/childrenByParent，含 history-projection 两处）；路线 6 第一片已实施（TASK-0290）——`session-updated` 全量快照发布短窗合并 + 无订阅者跳过（零 IPC 合同变更，只减帧不减帧大小；增量载荷协议留待独立评估）；路线 5 第一片已实施（TASK-0291）——渲染端时间线投影 O(n²) 扫描索引化（活动回复/委派判定/流文本兜底 + 聚合视图跳过成员稳定化）；路线 5 第二片候选（`useTeamChatModel` memo 依赖 `streams` 导致每流事件全量重算）与增量载荷协议留待后续评估。
+- 修复：路线 1 已实施（`ee7c8bd93`，TASK-0283）——`readDocument` 复用 `loadAppendState` 字节缓存；路线 2 随路线 1 自动降本，再评估；路线 4 已实施（TASK-0288）——团队 `persist()` 指纹缓存，热路径单次序列化并跳过 O(entries) 扫描，revision 推进回退与旧实现逐语义等价的精确比较；路线 3 已实施（TASK-0289）——文档命令/选择路径 O(n) 扫描索引化（entries 数组身份记忆化 byId/childrenByParent，含 history-projection 两处）；路线 6 第一片已实施（TASK-0290）——`session-updated` 全量快照发布短窗合并 + 无订阅者跳过（零 IPC 合同变更，只减帧不减帧大小；增量载荷协议留待独立评估）；路线 5 第一片已实施（TASK-0291）——渲染端时间线投影 O(n²) 扫描索引化（活动回复/委派判定/流文本兜底 + 聚合视图跳过成员稳定化）；路线 5 第二片已实施（TASK-0292）——投影持久基座分离，流式 delta 不再重复支付 O(会话规模) 的持久项视图模型重建；剩余候选为增量载荷协议（跨 preload/渲染端合同，留待独立评估）。
 - 测试：runtime-node 会话套件 22 文件 111 例全绿，含四条新回归（命中免读、外部写失效刷新、热缓存损坏报 CORRUPT、v1 不缓存）；路线 4 定向 5/5、agent-teams 目录 235 例 + `plugin-agent-presets` 包目录复跑 21/21（收集期红为该测试 cwd 依赖，非本缺陷改动）；路线 3 行为基线 73 文件 388 例 + desktop agent-teams 235 例全绿。
 - 检查：路线 1、路线 4、路线 3 落地后各跑一次完整 `bun run check`，均 exit 0。
 - 未运行及原因：真实 Desktop 长任务前后对照（LCP/主进程长任务计数）待用户侧复测。
