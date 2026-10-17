@@ -417,25 +417,34 @@ export function resolveTeamMembers(
 	});
 }
 
-export function projectTeamConversationTimeline({
-	snapshot,
-	pending,
-	streams,
-	members,
-	labels,
-	memberId,
-}: {
-	readonly snapshot: DesktopTeamSessionSnapshot | undefined;
-	readonly pending: TeamPendingRequest | undefined;
-	readonly streams: TeamStreamState;
-	readonly members: readonly TeamMemberViewModel[];
-	readonly labels: TeamTimelineLabels;
-	/** When set, render only this member's native conversation inside the Team shell. */
-	readonly memberId?: string;
-}): ChatConversationItem[] {
-	if (!snapshot && !pending) return [];
-	const session = snapshot?.session;
-	const memberMap = new Map(members.map((member) => [member.id, member]));
+/** 团队时间线的持久侧投影基座：只依赖 snapshot 与成员视图，流式 delta 期间跨重算复用。 */
+export interface TeamTimelineBase {
+	readonly projectedMemberItems: readonly ChatConversationItem[];
+	readonly latestProjectedMemberItem: ChatConversationItem | undefined;
+	readonly annotatedCoordinationUserItems: readonly ChatConversationItem[];
+	readonly visibleCoordinationUserItems: readonly ChatConversationItem[];
+	readonly coordinationAgentItems: readonly ConversationAgentMessageViewModel[];
+	readonly coordinationDisplayItems: readonly ChatConversationItem[];
+	readonly coordinationReplyIndex: ActivityReplyIndex;
+	/** 聚合视图的活动全集（成员视图为空数组）。 */
+	readonly activities: readonly DesktopTeamSessionSnapshot["activities"][number][];
+	readonly leaderDelegations: readonly DesktopTeamSessionSnapshot["activities"][number][];
+	readonly delegationMatchesReply: (item: ConversationAgentMessageViewModel) => boolean;
+	readonly aggregateCoordinationAgentItems: readonly ConversationAgentMessageViewModel[];
+	readonly leaderMemberId: string | undefined;
+	/** display 投影是否携带成员会话（未按成员视图过滤的全集）。 */
+	readonly hasMemberConversations: boolean;
+}
+
+/**
+ * 预计算时间线的持久侧投影（coordination 消息/注解/成员会话投影/排序/委派索引）。
+ * 不读 streams、pending 或 members；snapshot 未变化的流式重算应通过 memo 复用本结果，
+ * 避免每个流式 delta 重复支付 O(会话规模) 的视图模型重建。
+ */
+export function computeTeamTimelineBase(
+	snapshot: DesktopTeamSessionSnapshot | undefined,
+	memberId: string | undefined,
+): TeamTimelineBase {
 	const memberConversations = snapshot?.display?.memberConversations ?? [];
 	const visibleMemberConversations = memberId
 		? memberConversations.filter((conversation) => conversation.memberId === memberId)
@@ -444,7 +453,6 @@ export function projectTeamConversationTimeline({
 		projectMemberConversation(conversation.memberId, conversation.history, conversation.runtimeSessionId),
 	);
 	const latestProjectedMemberItem = projectedMemberItems.at(-1);
-	const consumedLiveMessageIds = new Set<string>();
 	// User input is persisted in the coordination conversation before member
 	// turns are scheduled. Keep it as the canonical timeline item even when
 	// member histories are available. Member Runtime histories contain their own
@@ -471,6 +479,67 @@ export function projectTeamConversationTimeline({
 	const coordinationDisplayItems = [...visibleCoordinationUserItems, ...coordinationAgentItems].sort(
 		(left, right) => itemTimestamp(left) - itemTimestamp(right),
 	);
+	const leaderMemberId = snapshot?.session.leaderMemberId;
+	const activities = memberId ? [] : (snapshot?.activities ?? []);
+	const leaderDelegations = activities.filter(
+		(activity) => activity.sourceMemberId === leaderMemberId && activity.targetMemberId !== leaderMemberId,
+	);
+	const delegationMatchesReply = buildDelegationReplyCheck(leaderDelegations);
+	const aggregateCoordinationAgentItems = coordinationAgentItems.filter((item) => !delegationMatchesReply(item));
+	return {
+		projectedMemberItems,
+		latestProjectedMemberItem,
+		annotatedCoordinationUserItems,
+		visibleCoordinationUserItems,
+		coordinationAgentItems,
+		coordinationDisplayItems,
+		coordinationReplyIndex: buildActivityReplyIndex(coordinationAgentItems),
+		activities,
+		leaderDelegations,
+		delegationMatchesReply,
+		aggregateCoordinationAgentItems,
+		leaderMemberId,
+		hasMemberConversations: memberConversations.length > 0,
+	};
+}
+
+export function projectTeamConversationTimeline({
+	snapshot,
+	pending,
+	streams,
+	members,
+	labels,
+	memberId,
+	base,
+}: {
+	readonly snapshot: DesktopTeamSessionSnapshot | undefined;
+	readonly pending: TeamPendingRequest | undefined;
+	readonly streams: TeamStreamState;
+	readonly members: readonly TeamMemberViewModel[];
+	readonly labels: TeamTimelineLabels;
+	/** When set, render only this member's native conversation inside the Team shell. */
+	readonly memberId?: string;
+	/** 预计算的持久侧投影；缺省时内部计算，行为与传入等价。 */
+	readonly base?: TeamTimelineBase;
+}): ChatConversationItem[] {
+	if (!snapshot && !pending) return [];
+	const session = snapshot?.session;
+	const {
+		projectedMemberItems,
+		latestProjectedMemberItem,
+		annotatedCoordinationUserItems,
+		visibleCoordinationUserItems,
+		coordinationAgentItems,
+		coordinationDisplayItems,
+		coordinationReplyIndex,
+		activities,
+		delegationMatchesReply,
+		aggregateCoordinationAgentItems,
+		leaderMemberId,
+		hasMemberConversations,
+	} = base ?? computeTeamTimelineBase(snapshot, memberId);
+	const memberMap = new Map(members.map((member) => [member.id, member]));
+	const consumedLiveMessageIds = new Set<string>();
 	const consumedPublicRenderKeys = new Set<string>();
 	// 成员稳定化只服务成员视图（聚合视图不消费 stabilizedMemberItems，其副作用
 	// consumedPublicRenderKeys/consumedLiveMessageIds 均不出本闭包——live 分支
@@ -509,13 +578,6 @@ export function projectTeamConversationTimeline({
 					}
 					return item;
 				});
-	const leaderMemberId = session?.leaderMemberId;
-	const activities = memberId ? [] : (snapshot?.activities ?? []);
-	const leaderDelegations = activities.filter(
-		(activity) => activity.sourceMemberId === leaderMemberId && activity.targetMemberId !== leaderMemberId,
-	);
-	const delegationMatchesReply = buildDelegationReplyCheck(leaderDelegations);
-	const aggregateCoordinationAgentItems = coordinationAgentItems.filter((item) => !delegationMatchesReply(item));
 	const projectedItems =
 		// The coordination Conversation is the only durable public Team timeline.
 		// Member Runtime histories contain private prompts, intermediate responses,
@@ -555,13 +617,11 @@ export function projectTeamConversationTimeline({
 		...projectedItems,
 		...coordinationDisplayItems.filter(
 			(item) =>
-				!projectedIds.has(item.id) &&
-				(item.kind === "user" || (memberId !== undefined && memberConversations.length === 0)),
+				!projectedIds.has(item.id) && (item.kind === "user" || (memberId !== undefined && !hasMemberConversations)),
 		),
 	]);
 	const teamMemberSummaries = new Map<string, ChatConversationItem>();
-	// 活动循环的回复查找走索引：持久项与流消息各建一次，替代逐活动的线性 find。
-	const coordinationReplyIndex = buildActivityReplyIndex(coordinationAgentItems);
+	// 活动循环的回复查找走索引：持久项索引随基座复用，流消息索引按本次流状态构建。
 	const streamReplyIndex = buildActivityReplyIndex(Object.values(streams).map((turn) => turn.message));
 	for (const activity of activities) {
 		const source =

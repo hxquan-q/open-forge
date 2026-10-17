@@ -44,6 +44,7 @@ import {
 } from "./team-session-handoff";
 import { projectMemberUsage, projectTeamSessionProgress, type TeamMemberUsage } from "./team-session-progress";
 import {
+	computeTeamTimelineBase,
 	placeTeamErrorInTimeline,
 	projectTeamConversationTimeline,
 	reduceTeamStreamState,
@@ -542,6 +543,9 @@ export function useTeamChatModel(
 		visiblePending && !pendingHasVisibleStream
 			? t(pendingTargetsReady ? "chat.waitingModel" : "chat.teamLoading")
 			: undefined;
+	// 持久侧投影基座只依赖 snapshot 与成员视图：流式 delta 期间 streams 变化不再
+	// 触发 O(会话规模) 的持久项视图模型重建（coordination 投影/成员会话投影/排序）。
+	const timelineBase = useMemo(() => computeTeamTimelineBase(snapshot, memberViewId), [snapshot, memberViewId]);
 	const feedItems = useMemo(
 		() =>
 			placeTeamErrorInTimeline(
@@ -555,6 +559,7 @@ export function useTeamChatModel(
 						unknownMember: t("chat.member"),
 					},
 					memberId: memberViewId,
+					base: timelineBase,
 				}),
 				error,
 				session?.leaderMemberId ?? team?.leaderMemberId ?? "leader",
@@ -568,6 +573,7 @@ export function useTeamChatModel(
 			streams,
 			t,
 			team?.leaderMemberId,
+			timelineBase,
 			visiblePending,
 		],
 	);
