@@ -1,7 +1,7 @@
 ---
 id: TASK-0304
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement:
@@ -87,11 +87,11 @@ updated: 2026-10-18
 
 ## 验收分层
 
-- 工程验证：待执行；绑定上述命令与结果。
-- 技术评审：自审；重点核对升级 diff 只含版本与必要适配。
-- 集成：与 frontmatter `integration_status` 一致（pending）。
+- 工程验证：通过——typecheck 0 错误、remote-desktop 7/7、impact desktop 5035 全过、check:quick 与完整 check 全绿（命令与结果见交付记录）。
+- 技术评审：自审；升级 diff 仅两 manifest 版本行与 bun.lock 的 electron 生态重解析，无源码改动。
+- 集成：`a4083d07a` 已推 `origin/dev`；经晋升 PR #14（merge commit `6c02ce2d0`）抵达 `origin/main`，8 条 electron 告警由 Dependabot 重扫转 fixed（open=0）。
 - 人工功能验收：不适用（依赖声明升级；Electron 运行时行为差异超出自动验证面，用户 dev 冒烟另计）。
-- 发布：未授权。
+- 发布：未授权（未触发发版；分支晋升不属发布）。
 
 ## 功能验收包
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0305
 type: task
-status: verifying
+status: done
 priority: P2
 owner: packages/plugins
 requirement:
@@ -80,11 +80,11 @@ updated: 2026-10-18
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：自审；核对 diff 仅目标条目三行。
-- 集成：与 frontmatter `integration_status` 一致（pending）。
+- 工程验证：通过——lockfile 解析校验 + registry 哈希核对 + check:quick 与完整 check 全绿。
+- 技术评审：自审；diff 仅目标条目三行。
+- 集成：`74a5eec0e` 已推 `origin/dev`；经晋升 PR #14（merge commit `6c02ce2d0`）抵达 `origin/main`，#97 告警由 Dependabot 重扫转 fixed（open=0）。
 - 人工功能验收：不适用（构建期传递依赖，用户不可见）。
-- 发布：未授权。
+- 发布：未授权（未触发发版；分支晋升不属发布）。
 
 ## 功能验收包
 

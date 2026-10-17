@@ -1,7 +1,7 @@
 ---
 id: BUG-0129
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: workspace
 requirement:
@@ -76,4 +76,4 @@ gh api 'repos/hxquan-q/open-forge/dependabot/alerts?state=open' --paginate --jq 
 - 测试：desktop typecheck 0 错误；remote-desktop 7/7；`test:impact` desktop 5035 例全过 / 0 失败（包级 exit 1 归因 BUG-0107 四个存量收集期崩溃文件，单文件复现同签名、机理与 electron 版本无关）。
 - 检查：`bun run check:quick` 与完整 `bun run check` 均通过（ratchet new=0）。
 - 未运行及原因：真实 Desktop dev 冒烟（UI 验证需授权，交用户）；Dependabot 重扫需变更抵达默认分支。
-- 结论：本地修复与验证完成；默认分支为 `origin/main`，Agent 仅按长期授权推 `origin/dev`，告警批量转 fixed 以用户晋升 origin/main 后的重扫为准，在此之前保持 verifying。
+- 结论：**已闭合并验证**。用户授权后经 dev→main 晋升 PR [#14](https://github.com/hxquan-q/open-forge/pull/14)（merge commit `6c02ce2d0`，2026-10-18 合并，沿用 #10/#12 的 PR 晋升形态）把修复送达默认分支；Dependabot 重扫后 `state=open` 归零（重扫过程曾瞬时出现 1 条过渡态告警，随后稳定为 0），本轮 9 条 high 告警全部转 `fixed`。关闭本 Bug。
