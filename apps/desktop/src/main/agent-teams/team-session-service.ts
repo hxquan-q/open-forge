@@ -851,7 +851,12 @@ export class AgentTeamSessionService {
 		const cached = this.sessionState.get(id);
 		if (cached) {
 			this.teamResidency.touch(id);
-			const reconciled = await this.reconcileTeamRoster(cached, await this.readDocument());
+			// BUG-0116：缓存命中不代表 coordination runtime 还在内存（空闲逐出或收尾
+			// 竞态后可能已卸载），而后续绑定校验第一步就按 id 读协调文档。先确认已加载，
+			// 缺了按持久路径原 id 重开；重开失败归一为带恢复指引的可读错误，不让用户
+			// 陷入「每次 send 必败、只能重启应用」。
+			const session = await this.ensureCoordinationRuntimeLoaded(cached);
+			const reconciled = await this.reconcileTeamRoster(session, await this.readDocument());
 			return this.migrateLoadedSession(reconciled);
 		}
 
@@ -1017,10 +1022,38 @@ export class AgentTeamSessionService {
 		// A newly created Team exposes its coordination Conversation before member
 		// Runtimes finish warming. Admission must wait for that preparation instead
 		// of enqueueing against an incomplete roster and then losing the request.
+		// read 在缓存命中时会先自愈已卸载的 coordination runtime（BUG-0116）。
 		const session = await this.read(sessionId);
-		await this.waitForMemberRuntimeWarmup(session, input.targetMemberIds ?? []);
+		await this.waitForMemberRuntimeWarmup(this.sessionState.get(sessionId) ?? session, input.targetMemberIds ?? []);
 		this.scheduleAutoTitle(this.sessionState.get(sessionId) ?? session, input);
 		return this.turnCoordinator.send(sessionId, input);
+	}
+
+	/**
+	 * 协调 runtime 已卸载时按持久路径原 id 重开（幂等：已加载直接返回）。
+	 * 重开失败抛带重启指引的可读错误并保留原始 cause，供 send/展示层统一呈现。
+	 */
+	private async ensureCoordinationRuntimeLoaded(session: TeamSessionDocument): Promise<TeamSessionDocument> {
+		const current = session.coordinationRuntime;
+		if (!current) return session;
+		if (this.getRuntime().getSessionPath(current.sessionId)) return session;
+		log.warn("team session coordination runtime is unloaded; reloading", { teamSessionId: session.id });
+		try {
+			const healed = await this.runtimeManager.ensureCoordinationRuntime(session);
+			if (healed.coordinationRuntime && healed.executionMode) {
+				await this.getRuntime().setExecutionMode(healed.coordinationRuntime.sessionId, healed.executionMode);
+			}
+			return healed;
+		} catch (error) {
+			log.error("team session coordination runtime could not be reloaded", {
+				teamSessionId: session.id,
+				error: errorMessage(error),
+			});
+			throw new Error(
+				`Team session runtime is unavailable and could not be reloaded: ${errorMessage(error)}. Restart the app to recover this session.`,
+				{ cause: error },
+			);
+		}
 	}
 
 	private scheduleAutoTitle(session: TeamSessionDocument, input: SendTeamMessageInput): void {

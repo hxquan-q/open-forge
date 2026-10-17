@@ -1,7 +1,7 @@
 ---
 id: BUG-0116
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: apps/desktop agent-teams
 requirement:
@@ -13,7 +13,7 @@ related_tasks: []
 related_issues: []
 related_bugs: [BUG-0091, BUG-0115]
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # 团队会话 runtime 损坏后无自愈：此后每次 send 必败 SESSION_NOT_FOUND，仅重启可恢复
@@ -66,5 +66,8 @@ updated: 2026-10-16
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。建议修法：send 路径对 `SESSION_NOT_FOUND` 尝试重载 runtime session 或归一为可读错误+恢复指引。
-- 验证：上述回归测试 + team 目录套件；实机按最小复现走一遍。
+- 修复：2026-10-17（localtest 分支）。取证修正：当前代码里 send 的首个炸点不在 `runtime-host-session-directory.ts:69`（该路径已被 BUG-0108 收口），而在 `team-session-service.readInternal` 的**缓存命中分支**——缓存里的会话其 coordination runtime 已卸载时，绑定校验（`ensureTeamConversationBinding`）按 id `readSessionDocument` 即抛裸 `SESSION_NOT_FOUND`，该分支无任何恢复/兜底。
+- 修法：`readInternal` 缓存命中后先走 `ensureCoordinationRuntimeLoaded`——协调 runtime 已加载则幂等返回；已卸载则按持久路径原 id 重开（复用 `TeamRuntimeManager.ensureCoordinationRuntime`，含身份/路径校验与状态再持久化），并补 `setExecutionMode`；重开失败归一为可读错误（含原始 cause 与「重启应用可恢复」指引）。send/readSnapshot 等所有走 `read()` 的入口统一受益。成员 runtime 的重开既有链路（`reconfigureTeamMemberRuntime` 幂等重开 + `waitForMemberRuntimeWarmup`）不变。
+- 验证：
+  - 红→绿：`team-session-service.test.ts` 新增两例——「协调 runtime 已卸载时按持久路径原 id 重开再派发」（断言 createSession 收到原 id+原路径）与「重开失败返回带重启指引的可读错误」；stash 回退旧实现两例均红。
+  - 待实机：按最小复现走一遍（触发损坏后不重启直接 send）。
