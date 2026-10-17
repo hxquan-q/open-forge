@@ -103,10 +103,13 @@ export function isGpuProcessFailureOutput(output) {
 }
 
 /**
- * 仅当 Electron 因 GPU 进程起不来而 FATAL 退出（code 3）时回退一次：
- * `--disable-gpu-sandbox` 只关 GPU 沙箱并保留硬件加速，比软件合成侵入更小。
+ * 仅当 Electron 因 Chromium 沙箱起不来而 GPU FATAL（code 3）时回退一次：
+ * 本机 error_code=18 会同时打掉 GPU 与 renderer 进程，故回退关整个进程沙箱，
+ * 但保留硬件加速；比 VETTA_DESKTOP_DISABLE_GPU=1 的软件合成侵入更小。
  * 已显式设 VETTA_DESKTOP_DISABLE_GPU=1 时不再重试。
  */
+export const GPU_PROCESS_FALLBACK_SWITCHES = ["--no-sandbox"];
+
 export function shouldRetryElectronWithGpuSandboxFallback(
 	{ code, signal, sawGpuFailure },
 	environment = process.env,
@@ -172,8 +175,8 @@ async function main() {
 	try {
 		let electronResult = await launch();
 		if (shouldRetryElectronWithGpuSandboxFallback(electronResult)) {
-			console.warn("[dev] GPU 进程无法启动，改用 --disable-gpu-sandbox 重试一次（保留硬件加速）");
-			electronResult = await launch(["--disable-gpu-sandbox"]);
+			console.warn("[dev] Chromium 进程沙箱无法启动，改用 --no-sandbox 重试一次（保留硬件加速）");
+			electronResult = await launch(GPU_PROCESS_FALLBACK_SWITCHES);
 		}
 		process.exitCode = electronResult.signal ? 1 : (electronResult.code ?? 1);
 	} finally {

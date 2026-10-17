@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import {
+	GPU_PROCESS_FALLBACK_SWITCHES,
 	isGpuProcessFailureOutput,
 	resolveGpuLaunchFlags,
 	shouldRetryElectronWithGpuSandboxFallback,
@@ -45,5 +46,9 @@ describe("shouldRetryElectronWithGpuSandboxFallback", () => {
 
 	it("已显式禁用 GPU 时不再重试", () => {
 		expect(shouldRetryElectronWithGpuSandboxFallback(failed, { VETTA_DESKTOP_DISABLE_GPU: "1" })).toBe(false);
+	});
+
+	it("回退关闭整个进程沙箱（renderer 同样会因 error 18 启动失败）", () => {
+		expect(GPU_PROCESS_FALLBACK_SWITCHES).toEqual(["--no-sandbox"]);
 	});
 });
