@@ -1,7 +1,7 @@
 ---
 id: TASK-0309
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: packages/plugins
 requirement: REQ-0005
@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0309-design-plugin-p0-security
-worktree: ../open-forge-wt/task-0309-design-plugin-p0-security
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 7d26d1df6360fbe63e2a34493c973d49ee57d5d6
 read_paths:
   - project/plans/PLAN-0018-design-plugin-roadmap-v2.md
@@ -39,7 +39,7 @@ exclusive_paths:
   - apps/desktop/src/main/window-manager.ts
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-18
 updated: 2026-10-18
 ---
@@ -107,10 +107,18 @@ updated: 2026-10-18
 
 ## 验收分层
 
-- 工程验证：定向测试 + impact + check 全绿。技术评审：自审 + ADR 修订。集成：pending。
-- 人工验收：待用户实机（导入恶意样本报错、正常设计打开安装、画布交互、主窗口正常）。
+- 工程验证：定向 58 例、插件包全量 711/711 绿；impact 167 过、4 文件收集期崩（BUG-0107 存量，文件清单与根因完全吻合）；声明头 ratchet 本任务新增文件 0 缺失。技术评审：自审 + ADR-0068 修订。集成：integrated（merge --no-ff，五切片提交见下）。
+- 人工验收：待用户实机——导入恶意样本报错、正常分享包导入弹确认并安装、画布交互（元素选择/HMR/截图）、主窗口正常加载与外链仍走系统浏览器、引擎 no-cors 探测不卡就绪。
 - 发布：未授权；仅推 origin/dev。
 
 ## 交付记录
 
-- 待回填。
+- 实际修改（Task branch `task/TASK-0309-design-plugin-p0-security` 五个原子提交）：
+  - `197afdae4` 设计落盘目录级写队列 + 单文件原子写（design-fs + scaffold/design-session 接入 + 2 个 fake fs 补齐合同）；
+  - `b619fb754` 分享包与历史 zip 越界条目整包拒绝（entry-path 共享过滤 + runner 先整体校验再写）；
+  - `8b0a72221` 设计级安装 `--ignore-scripts` + 导入依赖确认 + 引擎 vite `cors:false`/`fs.strict` + 就绪探测 no-cors + ADR-0068 修订；
+  - `a20f79750` frame iframe sandbox 白名单（不放行顶层导航/弹窗）；
+  - `88f8b9680` 主窗口 will-navigate 拦截。
+- 实际运行：包内 `bun run test` 711/711；定向新用例覆盖全部 G/W/T；根 `test:impact` 167 过 + BUG-0107 四文件存量收集崩（归因：文件清单与 BUG-0107 记载一致、均不在本 diff）；`check:quick` 在补齐 5 个新文件声明头后本任务部分通过（工作树残余 new=15 为并行会话在途修复的存量，见下）。
+- 未运行及原因：真实 Electron 实机验证未做（须用户授权启动 dev，见人工验收清单）；desktop window-manager 无单测（BUG-0107 使该链路在 vitest 无覆盖，按 isolated-window 先例处理，靠完整 check + 实机）。
+- 剩余风险：① `--ignore-scripts` 使依赖 postinstall 二进制安装的包装而不可用（ADR-0068 修订已记，构建报错提示，可手动 `npm rebuild`）；② 首开自动补装不二次弹确认（脚本执行面已由 flag 消解，确认门只在导入流，Task「不做」已声明）；③ no-cors 就绪探测在真实 Electron file:// 源下的行为需实机确认；④ 推送时点须待并行会话把主树 15 个存量声明头修复提交入库，否则 origin/dev 的 CI ratchet 会红（与本任务无关的耦合）。

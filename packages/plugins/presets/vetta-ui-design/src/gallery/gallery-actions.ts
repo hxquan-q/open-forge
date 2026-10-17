@@ -4,10 +4,12 @@
  * 都是薄封装：真正的活儿在既有模块里（scaffoldDesign / importPackagedVetd /
  * exportDesign / official.projects），这里只负责把「项目」这一层拼上去。
  */
+import { installDesignDependencies } from "../engine/engine-manager";
 import { exportDesign } from "../export/export-design";
 import { importPackagedVetd, parsePackagedVetd } from "../export/import-design";
 import { SHARE_PREVIEW_EXTENSIONS } from "../export/share-format";
 import { getPluginCtx } from "../plugin-context";
+import { needsDependencyInstall } from "../vetd/design-package";
 import { DesignSession } from "../vetd/design-session";
 import { sanitizeDesignName } from "../vetd/scaffold";
 
@@ -48,16 +50,43 @@ export function projectNameFromShareFile(fileName: string): string {
 	return toProjectName(fileName.replace(/\.(?:vetdz|vetd)$/i, "").replace(/-share$/i, ""));
 }
 
+export interface ImportDesignOptions {
+	/**
+	 * 分享包声明了第三方依赖时征求用户同意（TASK-0309）。返回 false 则跳过当场
+	 * 安装；首次打开画布时仍会以 `--ignore-scripts` 自动补装。缺省视为同意。
+	 */
+	confirmDependencyInstall?: (designName: string) => Promise<boolean>;
+}
+
 /**
  * 导入一个分享包：建一个同名项目，把包解到里面。
  *
  * 先解包再建项目：包坏掉时不该在磁盘上留下一个空项目。
+ *
+ * 包声明依赖时经用户确认后当场 `npm install --ignore-scripts`：清单来自外部文件，
+ * 安装（即使不带脚本）也该让用户知情；安装失败不影响导入结果——首次打开会按同一
+ * 参数自动重试。
  */
-export async function importDesignPackage(fileName: string, bytes: Uint8Array): Promise<CreatedDesign> {
+export async function importDesignPackage(
+	fileName: string,
+	bytes: Uint8Array,
+	options: ImportDesignOptions = {},
+): Promise<CreatedDesign> {
 	const ctx = getPluginCtx();
 	const packaged = parsePackagedVetd(bytes);
 	const entry = await ctx.official.projects.create(projectNameFromShareFile(fileName));
 	const vetdPath = await importPackagedVetd(ctx, packaged, entry.path, fileName);
+	if (await needsDependencyInstall(ctx.fs, vetdPath)) {
+		const confirm = options.confirmDependencyInstall ?? (async () => true);
+		const designName = vetdPath.replaceAll("\\", "/").split("/").pop() ?? fileName;
+		if (await confirm(designName)) {
+			try {
+				await installDesignDependencies(ctx, vetdPath, [], () => {});
+			} catch (error) {
+				console.error("vetd dependency install after import failed", error);
+			}
+		}
+	}
 	return { cwd: entry.path, vetdPath };
 }
 

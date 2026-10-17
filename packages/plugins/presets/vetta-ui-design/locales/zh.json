@@ -286,6 +286,7 @@
 	"gallery.import.title": "选择设计分享包",
 	"gallery.import.filter": "设计分享包",
 	"gallery.import.done": "已导入设计稿",
+	"gallery.import.confirmDeps": "分享包「{{name}}」声明了第三方依赖，现在安装吗？（将执行 npm install --ignore-scripts）",
 	"gallery.import.failed": "导入失败",
 	"gallery.import.wrongType": "只能导入 .{{ext}} 分享包",
 	"gallery.import.dropHint": "松手导入 .{{ext}} 分享包",

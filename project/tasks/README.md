@@ -15,7 +15,12 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0309` | `in_progress` | PLAN-0018 | P0 安全热修七项：分享包/历史 zip 路径穿越、设计级 npm install `--ignore-scripts`＋导入确认、引擎 vite cors 收紧与 fs.strict、frame iframe sandbox、主窗口 will-navigate 拦截、每设计写队列+原子写；Worktree `task-0309-design-plugin-p0-security` 串行实施，集成 pending。 |
+| `TASK-0310` | `in_progress` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效），消除路径可预测本地提权面；`ensureDirectory` 端口加可选 mode；SSH 远端同代码自动受益；serial，main 串行。 |
+| `TASK-0311` | `in_progress` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（保留 chmod 兜底）、MCP OAuth state 文件补 `0o600`/目录 `0o700`，消除创建窗口泄露；桌面自有 credential-store 已亲核无此缺陷；serial，main 串行。 |
+| `TASK-0312` | `in_progress` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 template.js 增加 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义（DOM 实现改字符串管道），对齐上游 `6cb23f9b`+`b3ed5459`；serial，main 串行。 |
+| `TASK-0313` | `in_progress` | — | RESEARCH-0032 / pi agent 0.75.4+0.84.4：bash spawn 加 `windowsHide`、taskkill 改 System32 绝对路径并挂 `error` 监听（修未处理 ENOENT 崩溃）；serial，main 串行。 |
+| `TASK-0314` | `draft` | — | RESEARCH-0032 / GHSA-mqxh（medium）：工作区信任门禁——项目级 `.vetta` 扩展/skills 确认后加载、非交互默认拒绝；待 UX 决策（信任载体/覆盖面/对话框/记住粒度）后转 ready。 |
+| `TASK-0309` | `verifying` | PLAN-0018 | P0 安全热修七项已实施并入 main（五原子提交，插件包 711/711 绿，impact 存量红归因 BUG-0107）：zip 越界整包拒绝、安装 `--ignore-scripts`＋导入确认、vite cors:false/fs.strict＋no-cors 探测、iframe sandbox、主窗口 will-navigate、设计写队列+原子写；待用户实机验收（导入确认/画布交互/主窗口/引擎就绪）。 |
 | `TASK-0307` | `verifying` | — | REQ-0016 A1 / RESEARCH-0030：受管工具 `inspect()` 解析记录 + `.version` 标记已实施（已并入 main `ef864b76c`）——resolve 合同不动，纯静态检查，缓存标记免 spawn、存量回退一次探针；定向 24 例、完整 check 全绿；impact 7 红经基线复跑归因存量（PATH 无 rg）。 |
 | `TASK-0308` | `verifying` | — | REQ-0016 A2 / RESEARCH-0030：`openforge doctor` 子命令（已并入 main `705fe6857`）+ 诊断包 `managed-tools.json`（`4b2c81e32`，`resolveDesktopCodingToolsDirectory` 单一事实源）已实施；cli-host 11 例、desktop 2 例、完整 check 全绿、integration_status: integrated；待用户实机 doctor/诊断包验收。 |
 | `TASK-0306` | `verifying` | — | BUG-0130：模型设置页脚改显运行时真实配置路径（新只读 IPC）；回归 2 例、typecheck 与完整 check 全绿；待用户设置页目验。 |

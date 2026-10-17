@@ -408,6 +408,13 @@ export const FrameView = memo(function FrameView({
 						ref={iframeRef}
 						title={frame.title || frame.id}
 						src={frameUrl(port, frame.id, reloadNonce)}
+						// sandbox（TASK-0309）：frame 里跑的是 agent 生成/导入的设计代码，
+						// 只放行运行所需能力。allow-same-origin 必须给——否则内容被强制进
+						// opaque origin，向自身源（127.0.0.1 引擎）拉模块会变跨源、整帧挂掉；
+						// 与 allow-scripts 同开在这里不构成逃逸（frame 源 ≠ 宿主源）。
+						// 刻意不给 allow-top-navigation / allow-popups：设计内容不能劫持顶层
+						// 窗口或弹窗，外链该走宿主的系统浏览器出口。
+						sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
 						className="h-full w-full border-0"
 						style={{
 							pointerEvents: entered ? "auto" : "none",

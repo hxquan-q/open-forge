@@ -286,6 +286,7 @@
 	"gallery.import.title": "Choose a design share file",
 	"gallery.import.filter": "Design share file",
 	"gallery.import.done": "Design imported",
+	"gallery.import.confirmDeps": "The share package \"{{name}}\" declares third-party dependencies. Install them now? (runs npm install --ignore-scripts)",
 	"gallery.import.failed": "Import failed",
 	"gallery.import.wrongType": "Only .{{ext}} share files can be imported",
 	"gallery.import.dropHint": "Drop to import a .{{ext}} share file",

@@ -148,7 +148,11 @@ export function GalleryView() {
 		async (fileName: string, bytes: Uint8Array) => {
 			setBusy(true);
 			try {
-				const created = await importDesignPackage(fileName, bytes);
+				const created = await importDesignPackage(fileName, bytes, {
+					// 清单来自外部文件，装依赖前先问一声（TASK-0309）；安装本身固定 --ignore-scripts。
+					confirmDependencyInstall: async (designName) =>
+						window.confirm(t("gallery.import.confirmDeps", { name: designName })),
+				});
 				notify({ message: t("gallery.import.done"), variant: "success", durationMs: 3000 });
 				await enterCreated(created);
 			} catch (error) {
