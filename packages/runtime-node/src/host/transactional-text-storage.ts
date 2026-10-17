@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import lockfile from "proper-lockfile";
@@ -84,7 +85,11 @@ export class NodeTransactionalTextStorage {
 	}
 
 	private write(content: string): void {
-		writeFileSync(this.path, content, "utf-8");
+		// Pass the mode in the write call so new files are owner-only from
+		// creation; write-then-chmod leaves a 0666&umask window (pi@135fb545).
+		writeFileSync(this.path, content, { encoding: "utf-8", mode: this.fileMode });
+		// The mode option is ignored when overwriting an existing file, so
+		// tighten it explicitly as a safety net.
 		chmodSync(this.path, this.fileMode);
 	}
 }

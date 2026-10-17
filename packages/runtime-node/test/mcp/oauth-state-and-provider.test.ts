@@ -1,13 +1,28 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	FileMcpOAuthStateStore,
 	McpOAuthProvider,
 	type McpOAuthStateStore,
 	type McpOAuthStoredState,
 } from "../../src/mcp/index.js";
+
+// 捕获真实 writeFileSync 调用合同：mode 位断言在 Windows 上不可用，调用合同跨平台成立。
+const capturedWrites = vi.hoisted(() => [] as Array<{ options: unknown }>);
+
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	return {
+		...actual,
+		writeFileSync: vi.fn((path: Parameters<typeof actual.writeFileSync>[0], ...rest: unknown[]) => {
+			capturedWrites.push({ options: rest[1] });
+			return (actual.writeFileSync as (...args: unknown[]) => void)(path, ...rest);
+		}),
+	};
+});
 
 describe("FileMcpOAuthStateStore", () => {
 	const temporaryDirectories: string[] = [];
@@ -50,6 +65,23 @@ describe("FileMcpOAuthStateStore", () => {
 		expect(store.load("remote")).toBeUndefined();
 		await writeFile(path, "{broken", "utf8");
 		expect(store.load("remote")).toBeUndefined();
+	});
+
+	it("stores OAuth state with owner-only permissions", async () => {
+		const authDirectory = await createAuthDirectory();
+		const store = new FileMcpOAuthStateStore({ authDirectory });
+		capturedWrites.length = 0;
+
+		store.save("secure", {
+			serverUrl: "https://example.test/mcp",
+			tokens: { access_token: "access", token_type: "Bearer" },
+		});
+
+		expect(capturedWrites.at(-1)?.options).toMatchObject({ mode: 0o600 });
+		if (process.platform !== "win32") {
+			expect((await stat(store.getPath("secure"))).mode & 0o777).toBe(0o600);
+			expect((await stat(authDirectory)).mode & 0o777).toBe(0o700);
+		}
 	});
 
 	async function createAuthDirectory(): Promise<string> {

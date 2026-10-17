@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+// Modified by The Open Forge contributors.
+import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type McpOAuthStateStore, type McpOAuthStoredState, parseMcpOAuthStoredState } from "@vetta/runtime-mcp/auth";
 
@@ -26,12 +27,16 @@ export class FileMcpOAuthStateStore implements McpOAuthStateStore {
 	}
 
 	save(serverName: string, state: McpOAuthStoredState): void {
-		mkdirSync(this.options.authDirectory, { recursive: true });
+		mkdirSync(this.options.authDirectory, { recursive: true, mode: 0o700 });
 		const payload: McpOAuthStoredState = {
 			...state,
 			updatedAt: new Date().toISOString(),
 		};
-		writeFileSync(this.getPath(serverName), `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+		const path = this.getPath(serverName);
+		// Tokens land on disk here: create with owner-only mode from the start
+		// and re-tighten on overwrite, where the mode option is ignored.
+		writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, { encoding: "utf-8", mode: 0o600 });
+		chmodSync(path, 0o600);
 	}
 
 	clear(serverName: string): void {

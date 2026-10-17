@@ -1,10 +1,26 @@
+// Modified by The Open Forge contributors.
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NodeScopedTextStorage } from "./scoped-text-storage.js";
 import { NodeTextFileStorage } from "./text-file-storage.js";
 import { NodeTransactionalTextStorage } from "./transactional-text-storage.js";
+
+// 捕获真实 writeFileSync 的调用合同：终态 mode 断言抓不到「先写后 chmod」的
+// 创建窗口，必须在写入调用本身上断言 mode（pi@135fb545）。
+const capturedWrites = vi.hoisted(() => [] as Array<{ path: unknown; options: unknown }>);
+
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	return {
+		...actual,
+		writeFileSync: vi.fn((path: Parameters<typeof writeFileSync>[0], ...rest: unknown[]) => {
+			capturedWrites.push({ path, options: rest[1] });
+			return (actual.writeFileSync as (...args: unknown[]) => void)(path, ...rest);
+		}),
+	};
+});
 
 const temporaryDirectories: string[] = [];
 
@@ -58,6 +74,18 @@ describe("Node transactional text storage", () => {
 		expect(result).toBe("{}");
 		expect(readFileSync(path, "utf8")).toBe('{"key":"value"}');
 		if (process.platform !== "win32") expect(statSync(path).mode & 0o777).toBe(0o600);
+	});
+
+	it("passes the owner-only mode in the write call itself, not only as a follow-up chmod", () => {
+		capturedWrites.length = 0;
+		const directory = createTemporaryDirectory();
+		const path = join(directory, "credentials", "auth.json");
+		const storage = new NodeTransactionalTextStorage(path);
+
+		storage.withLock(() => ({ result: "ok", next: '{"key":"value"}' }));
+
+		const creationWrite = capturedWrites.find((entry) => entry.path === path);
+		expect(creationWrite?.options).toMatchObject({ mode: 0o600 });
 	});
 
 	it("serializes asynchronous transactions against the latest committed value", async () => {
