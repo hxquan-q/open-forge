@@ -142,7 +142,9 @@ export default defineConfig(({ mode }) => {
 		},
 		build: {
 			outDir: resolve(process.cwd(), "dist/renderer"),
-			emptyOutDir: false,
+			// 打包布局整目录拷贝 dist/renderer：不清理会把历代旧哈希产物带进安装包
+			// （本仓其余 vite 配置同样各自清理 outDir；Sentry 只读该目录不注入文件）。
+			emptyOutDir: true,
 			sourcemap: sentry.enabled ? "hidden" : false,
 			rollupOptions: {
 				input: {
