@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0267` | `verifying` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填已实施——抽屉化选择 + 参数随勾选写入 + models.dev 目录回填（命名空间剥离）+ 档位拖拽 + 清空模型；数据面与上游 06b834d06 一致、UI 面适配本仓测试连通流；定向 124 例、impact 5073 例、typecheck 与完整 check 全绿；待用户实机验收（设置 → 模型配置 → 从接口拉取）。 |
 | `TASK-0304` | `done` | — | BUG-0129：desktop/remote-desktop `electron` 39.8.10→41.10.7（闭合 8 条 high），零源码适配；typecheck 0 错、remote-desktop 7/7、impact desktop 5035 全过（exit 1 归因 BUG-0107 存量红）、check:quick 与完整 check 全绿；经晋升 PR #14 抵达 origin/main 后 Dependabot 重扫转 fixed。用户 dev 冒烟建议保留（Chromium 142→146 未做 UI 走查）。 |
 | `TASK-0305` | `done` | — | BUG-0129：vetta-ui-design engine `source-map-js` 1.2.1→1.2.2（lockfile 3 行最小 diff，registry 哈希核对）；check 全绿；#97 经晋升 PR #14 后转 fixed。 |
 | `TASK-0303` | `verifying` | — | BUG-0128 归因定案为 DSH（撤销 Codex 推断，证据 `RESEARCH-0028`）并完成仓库根完整性标签全树重置：root-only `(OI)(CI)Medium` 重标 exit 0，根/深层文件实测 Medium、electron dist 显式 Medium 不变；check:quick 与完整 check 通过，无代码改动。 |
@@ -49,7 +50,6 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0264` | `verifying` | PLAN-0014 | RESEARCH-0025：流式写完后末尾短语 300ms 静默即恢复全亮（同步上游 22293f956）；红 3→绿 12、impact theme-ui 36 + desktop 12；提交 `b5fdde595` 已推 dev；视觉行为待实机目验。 |
 | `TASK-0265` | `verifying` | PLAN-0014 | RESEARCH-0025：插件模型图像输入能力保留——证实同病（写合同缺 `input`）并按上游形状修复：SDK 写入合同、plugin-sdk 类型、读回归一化 + 4 合同测试；提交 `944433ca1` 已推 dev；impact 桌面 5 红归因 BUG-0107 存量与在途测试，相关面全绿。 |
 | `TASK-0266` | `verifying` | PLAN-0014 | RESEARCH-0025：Responses/Codex 传输方式设置（SSE/WS/自动 + 安全回退 + 连接复用 + 组合层动态注入 + 桌面设置节）；分支四提交已合并 main（`8c1342e01`/`8dde6d60f`/`f61ca6c52`/`91e1be471`），适配器 72、组合 4、设置面 100+8 例全绿；真实网关回合未授权，以 FakeWebSocket fixture 为准。 |
-| `TASK-0267` | `ready` | PLAN-0014 | RESEARCH-0025：模型拉取参数回填（models.dev 补空字段、命名空间剥离、参数随勾选写入、档位拖拽）；depends_on TASK-0266。 |
 | `TASK-0268` | `ready` | PLAN-0014 | RESEARCH-0025：自动压缩改为回复内步骤（上游 0.5.64）；defer——`turn-pipeline.ts` 为 TASK-0262 在途改动，depends_on TASK-0262/0264，conflicts 0260–0262。 |
 | `TASK-0269` | `ready` | PLAN-0014 | RESEARCH-0025：重进运行中会话排队消息显示——先对照本仓分叉架构证伪/证实（上游 61072cbb3）；defer——conversation 文件为 TASK-0260/0261 在途改动。 |
 | `TASK-0260` | `verifying` | — | BUG-0108：删除优先收口——STOP 标记 best-effort、`disposeSession` 增 `releaseOnDisposeFailure`（仅删除路径启用，评审修正 #2）、AggregateError 带扩展 id；定向全绿，诊断出口缺口（评审 #6）登记待切片；serial，main 串行。 |

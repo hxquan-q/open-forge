@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| 上游消息列表重构（ADR-0146/0147）同步评估：不建议整体同步（79 个双改文件、本仓已持治理/attach 等价物、P7 上游亦未完成），按价值拆小件吸收并保留回馈机会 | [RESEARCH-0029](RESEARCH-0029-upstream-message-list-refactor-assessment.md) |
 | Windows agent 沙箱 MIC Low 标签手法与 BUG-0128 归因定案（DSH 指纹与 `~/.dsh` 会话取证、MIC 取低值规则、root-only 重置实验、上游 #8048 报告素材） | [RESEARCH-0028](RESEARCH-0028-windows-agent-mic-low-label-attribution.md) |
 | Desktop 全部保留日志与 Git 对照巡检（45 文件，新增 BUG-0114/0115，未修复与待定位问题、历史修复及脱敏签名附表） | [RESEARCH-0027](RESEARCH-0027-dev-log-audit.md) |
 | Desktop 首页/会话链路 Web Vitals 调研（CLS 0.58 归因与证伪、会话切换 400ms INP、大会话恢复 587ms 长任务与 LCP 21.9s、修复优先级 P1–P5） | [RESEARCH-0026](RESEARCH-0026-desktop-web-vitals-audit.md) |

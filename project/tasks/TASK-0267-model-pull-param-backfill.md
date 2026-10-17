@@ -1,7 +1,7 @@
 ---
 id: TASK-0267
 type: task
-status: ready
+status: verifying
 priority: P3
 owner: apps/desktop
 requirement: REQ-0008
@@ -14,16 +14,16 @@ related_issues: []
 related_bugs: []
 execution: serial
 branch: main
-worktree: 待实施时定
-base_commit: b687d6f00
+worktree: 主工作区（串行，不拆出）
+base_commit: 3cfcf8b17
 read_paths: [project/research/RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md]
-write_paths: [apps/desktop/src/main/models, apps/desktop/src/renderer/domains/settings/components, apps/desktop/src/shared/i18n/locales, project/tasks/TASK-0267-model-pull-param-backfill.md]
+write_paths: [apps/desktop/src/main/models, apps/desktop/src/renderer/domains/settings/components, packages/theme-ui/src/settings, apps/desktop/src/shared/i18n/locales, project/tasks/TASK-0267-model-pull-param-backfill.md]
 exclusive_paths: []
 depends_on: [TASK-0266]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-15
-updated: 2026-10-15
+updated: 2026-10-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -67,8 +67,11 @@ updated: 2026-10-15
 
 ## 验收分层
 
-- 工程验证：待执行。技术评审：自审。集成：pending。
-- 人工功能验收：待验收。发布：未授权；交付时补发布说明。
+- 工程验证：通过——定向 124 例全绿（组件 29 + 主进程/表单 42 + preset 53）；`bun --cwd apps/desktop typecheck` 0 错误；`test:impact`（953 文件）5073 用例全过 / 0 失败（4 个收集期失败文件为 BUG-0107 存量红，栈签名与上轮单文件复现一致）；`check:lint` / `check:guards`（声明头 new=0）/ 完整 `bun run check` 全绿。
+- 技术评审：自审；数据面与上游 06b834d06 逐字一致（快照仅多一行声明头），UI 面差异集中在适配本仓 provider-request/服务商级测试。
+- 集成：与 frontmatter `integration_status` 一致（integrated）。
+- 人工功能验收：待验收（设置 → 模型配置 → 从接口拉取，预期面板化选择 + 参数自动补齐 + 档位拖拽 + 清空模型）。
+- 发布：未授权；发布说明已按 v0.1.3 补写。
 
 ## 功能验收包
 
@@ -78,4 +81,11 @@ updated: 2026-10-15
 
 ## 交付记录
 
-- 实际修改：待回填；实际运行：待回填；未运行及原因：待回填；Worktree：待回填；剩余风险：待回填
+- 实际修改：
+  - 数据面（与上游 06b834d06 逐字平移）：新增 `parse-provider-models.ts`（/models 参数解析）与 `enrich-fetched-models.ts`（目录回填，只填接口没给的字段）；`models-dev.ts` 增目录查找投影（`lookup` + `resolveCatalogLookup` 命名空间逐层剥离 + openrouter 尾缀匹配，CATALOG_VERSION 7→8）与只读缓存出口；`fetch-models.ts` 返回 `FetchedProviderModel[]`（保留本仓 `resolveProviderModelsRequest` 共用出口）；快照取上游 10-13 版（仅前置一行声明头，生成器同步带头）。
+  - UI 面（适配本仓）：拉取面板替换为右侧抽屉（`ModelsFetchedModelsDrawer` + theme-ui `ModelsFetchedModelsDrawerView`，搜索/全选只作用可见项/逐模型测试走本仓既有 `models.probe` IPC）；hook 的拉取态升级（loading/ready/error + search/tests，UI-first 等绘制再拉取）；勾选写入参数（`fetchedModelToDefinition`，input 按 vision 推导、默认档位不写）；推理档位 HTML5 拖拽排序（`reasoning-levels.ts` + 表单 DropLine/落点半区）；服务商行「清空模型」（confirmDialogAtom 二次确认，默认模型属该服务商时一并取消）；删除旧 `ModelsFetchedModelsPanel`；i18n zh/en 补 10 键（清掉无消费方的 `selectAllModels` 旧键）；本仓服务商级「测试可用性」全链保留。
+  - 有意不搬：上游 `test-impact.mjs` 的 EXPLICIT_SOURCE_TESTS 映射（本仓脚本无该表）；服务商/模型编辑弹窗化重设（3cfafb896，任务「不做」项）。
+- 实际运行：见验收分层；含抽屉断言按本仓 radix 版本行为适配（关闭即卸载 vs data-state=closed）与 jsdom 假 DataTransfer 拖拽测试。
+- 未运行及原因：真实网关拉取回合（规则：真实 Provider 默认不可用，以单测 + 组件测试为准）；UI 实机走查待用户验收。
+- Worktree：主工作区串行，未拆出（无并行写需求）。
+- 剩余风险：models.dev 目录不可达时回填退化为纯网关自报（符合任务「不强依赖」约定）；上游后续若改抽屉视图，本仓 theme-ui 副本需对照更新。
