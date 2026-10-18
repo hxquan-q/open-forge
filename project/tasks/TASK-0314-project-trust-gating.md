@@ -69,6 +69,14 @@ updated: 2026-10-18
 - 不改 user scope 资源加载。
 - 不引入目录内容指纹级 diff 提示（v1 按路径记忆）。
 
+### 技术设计（2026-10-18 侦察收敛，待 4 项 UX 决策定稿）
+
+- 域层端口：`coding-agent` 资源合同新增 `ProjectResourceTrustPort`（按 `cwd` 返回 trusted/denied + 结构化原因）；接入点两处——`package-source-runtime.ts` 的 `resolve()`/`resolveAdditionalSources({local})` project 分支与 `skills/discovery.ts` 的 `<cwd>/.vetta/skills` 目录；未信任时跳过加载并产出可观测诊断（不静默），`skill-resource-state.ts` 指纹相应不含被拒资源。
+- 信任记录：复用 `PermissionGrant`（runtime-core `task/contracts`：scope=project + projectRoot + capabilities），新增 capability `resources.project.load`；存储沿用 `NodeProjectTrustStore`（`.vetta-local/trust.json`，fail-closed/撤销即时，已有 `project-trust-store.test.ts`）。桌面先例：`tool-approval-broker.ts` 的 `trustStoreFor()`（会话 → sessionPath → header cwd → projectRoot → 缓存 store）。
+- 桌面端实现：组合根注入交互 adapter（检测 `<cwd>/.vetta` 项目资源存在 → 未信任时按决策 3 弹窗 → 授权写 store）；非交互（CLI/headless/agent-rpc/SSH）adapter 默认拒绝 + 按决策 4 的显式开关。
+- 兼容不变量：user/temporary scope 与已信任项目的加载行为不变；store 未知版本/损坏整体忽略（fail closed）；共享 `.vetta/` 内不写任何信任数据。
+- 测试分层：域层合同（未信任不加载 + 诊断、信任后加载、user scope 不受影响、恶意仓库 fixture）；runtime-node store capability 扩展；desktop 对话框接线与 i18n（文案走 catalog，遵循 desktop AGENTS §7）。影响面：`package-source-runtime.ts`、`skills/discovery.ts`、`skill-resource-state.ts`、desktop 工作区打开流/agent-runtime 组合根。
+
 ## Given / When / Then
 
 - Given：用户打开一个包含项目级扩展/skills 的未信任仓库；
