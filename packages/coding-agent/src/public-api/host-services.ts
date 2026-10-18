@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Coding Agent 的宿主侧状态服务适配器。
  *
@@ -16,6 +17,7 @@ import { createHostBashExecutor } from "../host/command-execution/index.js";
 import { createCodingAgentNodeExtensionFactoryLoader } from "../host/extensions/node-extension-factory-loader.js";
 import { createCodingAgentNodeSettingsRuntime } from "../host/node-state-services.js";
 import { createCodingAgentSessionFromPublicOptions } from "../host/sdk-session/index.js";
+import { createNonInteractiveProjectResourceTrustPort } from "../host/sdk-session/resource-runtime.js";
 import { createCodingAgentNodeSessionExecutionEnvironment } from "../host/tool-environment/node/node-session-execution-environment.js";
 import { createCodingAgentNodeToolEnvironment } from "../host/tool-environment/node/node-tool-environment.js";
 import {
@@ -45,6 +47,7 @@ export {
 	createCodingAgentModelRuntime,
 	createCodingAgentNodeExtensionFactoryLoader,
 	createCodingAgentNodeSettingsRuntime,
+	createNonInteractiveProjectResourceTrustPort,
 	createCodingAgentNodeToolEnvironment,
 	createCodingAgentNodeSessionExecutionEnvironment,
 	createCodingAgentPluginMcpRuntime,

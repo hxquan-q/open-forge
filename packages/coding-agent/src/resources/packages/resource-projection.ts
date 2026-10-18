@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ResourceAccessPort } from "../contracts/resource-access.js";
 import type {
 	ResolvedResourcePath,
@@ -118,15 +119,19 @@ export class ResourceProjector {
 		projectSettings: ResourceSettingsSnapshot,
 		globalBaseDir: string,
 		projectBaseDir: string,
+		options?: { readonly projectScope?: boolean },
 	): Promise<void> {
+		const projectScope = options?.projectScope !== false;
 		for (const kind of RESOURCE_KINDS) {
-			await this.resolveLocalEntries(
-				projectSettings[kind] ?? [],
-				kind,
-				accumulator[kind],
-				{ source: "local", scope: "project", origin: "top-level" },
-				projectBaseDir,
-			);
+			if (projectScope) {
+				await this.resolveLocalEntries(
+					projectSettings[kind] ?? [],
+					kind,
+					accumulator[kind],
+					{ source: "local", scope: "project", origin: "top-level" },
+					projectBaseDir,
+				);
+			}
 			await this.resolveLocalEntries(
 				globalSettings[kind] ?? [],
 				kind,
@@ -141,6 +146,7 @@ export class ResourceProjector {
 			projectSettings,
 			globalBaseDir,
 			projectBaseDir,
+			{ projectScope },
 		);
 	}
 
@@ -238,7 +244,9 @@ export class ResourceProjector {
 		projectSettings: ResourceSettingsSnapshot,
 		globalBaseDir: string,
 		projectBaseDir: string,
+		options?: { readonly projectScope?: boolean },
 	): Promise<void> {
+		const projectScope = options?.projectScope !== false;
 		const projectMetadata: ResourcePathMetadata = {
 			source: "auto",
 			scope: "project",
@@ -270,37 +278,41 @@ export class ResourceProjector {
 			}
 		};
 		const discoveryOptions = { resourceAccess: this.resourceAccess } satisfies ResourceDiscoveryOptions;
-		await add(
-			"extensions",
-			collectAutoExtensionEntries(discoveryOptions, projectDirs.extensions),
-			projectMetadata,
-			projectSettings.extensions ?? [],
-			projectBaseDir,
-		);
-		await add(
-			"skills",
-			Promise.all([
-				collectAutoSkillEntries(discoveryOptions, projectDirs.skills),
-				collectAncestorAgentSkillEntries(discoveryOptions, this.locations.cwd),
-			]).then(([skills, ancestors]) => [...skills, ...ancestors]),
-			projectMetadata,
-			projectSettings.skills ?? [],
-			projectBaseDir,
-		);
-		await add(
-			"prompts",
-			collectAutoPromptEntries(discoveryOptions, projectDirs.prompts),
-			projectMetadata,
-			projectSettings.prompts ?? [],
-			projectBaseDir,
-		);
-		await add(
-			"themes",
-			collectAutoThemeEntries(discoveryOptions, projectDirs.themes),
-			projectMetadata,
-			projectSettings.themes ?? [],
-			projectBaseDir,
-		);
+		// 工作区信任未通过时完全跳过项目侧自动发现（含祖先 .agents/skills），
+		// 用户侧（agentDir/managedSkillsDir）不受影响（GHSA-mqxh）。
+		if (projectScope) {
+			await add(
+				"extensions",
+				collectAutoExtensionEntries(discoveryOptions, projectDirs.extensions),
+				projectMetadata,
+				projectSettings.extensions ?? [],
+				projectBaseDir,
+			);
+			await add(
+				"skills",
+				Promise.all([
+					collectAutoSkillEntries(discoveryOptions, projectDirs.skills),
+					collectAncestorAgentSkillEntries(discoveryOptions, this.locations.cwd),
+				]).then(([skills, ancestors]) => [...skills, ...ancestors]),
+				projectMetadata,
+				projectSettings.skills ?? [],
+				projectBaseDir,
+			);
+			await add(
+				"prompts",
+				collectAutoPromptEntries(discoveryOptions, projectDirs.prompts),
+				projectMetadata,
+				projectSettings.prompts ?? [],
+				projectBaseDir,
+			);
+			await add(
+				"themes",
+				collectAutoThemeEntries(discoveryOptions, projectDirs.themes),
+				projectMetadata,
+				projectSettings.themes ?? [],
+				projectBaseDir,
+			);
+		}
 		await add(
 			"extensions",
 			collectAutoExtensionEntries(discoveryOptions, userDirs.extensions),
