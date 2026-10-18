@@ -1,9 +1,9 @@
 ---
 id: TASK-0314
 type: task
-status: draft
+status: in_progress
 priority: P1
-owner: unassigned
+owner: packages/coding-agent
 requirement:
 plan:
 source: RESEARCH-0032 / GHSA-mqxh-6gq7-558m（上游修复 89a92207 及 718215bd、ff3e9df5、38f18be4）
@@ -12,16 +12,28 @@ related_plan: []
 related_tasks: []
 related_issues: []
 related_bugs: []
-execution: serial
-branch:
-worktree:
-base_commit:
+execution: parallel
+branch: task/TASK-0314-project-trust-gating
+worktree: ../open-forge-wt/task-0314-project-trust-gating
+base_commit: 179170814e8f6c55ba30a2b4de65af7a328a3fc1
 read_paths:
   - packages/coding-agent/src/resources/packages/package-source-runtime.ts
-  - packages/coding-agent/src/resources/skills/discovery.ts
+  - packages/coding-agent/src/resources/packages/resource-package-projector.ts
+  - packages/coding-agent/src/resources/runtime/session-resource-runtime.ts
   - packages/coding-agent/src/resources/runtime/skill-resource-state.ts
+  - packages/coding-agent/src/host/sdk-session/resource-runtime.ts
+  - packages/runtime-node/src/host/project-trust-store.ts
   - apps/desktop/src/main/task-activity/tool-approval-broker.ts
-write_paths: []
+  - apps/desktop/src/main/agent-runtime/resource-runtime.ts
+  - apps/cli-host/src/coding-agent-resource-runtime.ts
+write_paths:
+  - packages/coding-agent/src/resources/
+  - packages/coding-agent/src/host/sdk-session/resource-runtime.ts
+  - packages/coding-agent/test/
+  - apps/desktop/src/main/agent-runtime/
+  - apps/cli-host/src/coding-agent-resource-runtime.ts
+  - apps/desktop/test/
+  - apps/cli-host/test/
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -41,22 +53,22 @@ updated: 2026-10-18
 
 ### 并发评估
 
-- 结论：不支持（未设计完成）
-- 执行方式：serial
-- 可并行 Task：—
-- 前置依赖：UX 决策（见下）
-- 冲突文件/独占路径：资源加载链 + desktop 工作区打开流
-- Branch：待定
-- Worktree：待定
-- 集成负责人：待定
-- 集成顺序：待定
+- 结论：支持（本会话独立 Worktree 单 Worker 执行，占用独立并行 scope）
+- 执行方式：parallel
+- 可并行 Task：无在途
+- 前置依赖：已解除（4 项 UX 决策已收敛，见下）
+- 冲突文件/独占路径：`packages/coding-agent/src/resources/`、`apps/desktop/src/main/agent-runtime/`、`apps/cli-host/src/coding-agent-resource-runtime.ts`
+- Branch：task/TASK-0314-project-trust-gating
+- Worktree：../open-forge-wt/task-0314-project-trust-gating
+- 集成负责人：本会话（Coordinator 集成后推送 origin/dev）
+- 集成顺序：单 Task，独立合并
 
-### 待决策（进入 ready 前必须收敛）
+### 已决策（2026-10-18 用户答复「按照推荐」）
 
-1. 信任载体：扩展 `NodeProjectTrustStore`（`.vetta-local/trust.json`，现用于 L3 工具审批）承载工作区信任，还是独立存储？已信任列表如何迁移/首启不弹窗？
-2. 门禁范围：仅项目级 packages/skills，还是同时覆盖项目 `AGENTS.md` 类指令文件（上游 89a92207 覆盖面）？
-3. 桌面端 UI：工作区信任对话框的入口（打开工作区时/首次会话启动时）与记住选择粒度（按路径/按指纹）。
-4. 非交互默认：headless 与 SSH 远端的默认拒绝语义与显式信任开关（CLI flag/环境变量）。
+1. 信任载体：扩展 `NodeProjectTrustStore`（`.vetta-local/trust.json`），新增 capability `resources:project-load`（对齐既有 `tool:<name>` 命名空间字符串先例）；单一事实源，无迁移。
+2. 门禁范围：仅项目级资源加载（`<cwd>/.vetta` 的 packages/extensions/skills/prompts/themes）；`AGENTS.md` 类指令文件按既有 AI 数据边界处置，不进本门禁。
+3. 桌面端 UI：打开工作区后首个会话解析项目资源时弹一次对话框（信任并记住 / 仅本次 / 拒绝），按路径记忆（`projectRoot` 粒度）；已信任或已拒绝不再打扰。
+4. 非交互默认：headless/CLI/agent-rpc 默认拒绝并记录结构化原因；`OPENFORGE_TRUST_PROJECT=1` 显式信任（同时读取同一 trust.json，桌面已信任的项目免开关注入）。
 
 ### 做（草案）
 
