@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0317` | `in_progress` | — | RESEARCH-0032 积压 #16：CLI 子进程 userData 迁出共享 `os.tmpdir()` 到 `<vettaHome>/tmp/<openforge-…-cli[-pid]>`（0700 创建即生效），消除路径可预测预置/篡改面（与 GHSA-jfgx 同类）；ocr/pdf 固定名与 pid 后缀命名语义不变；serial，Worktree task-0317-cli-userdata-private-dir。 |
+| `TASK-0317` | `verifying` | — | RESEARCH-0032 积压 #16 已实施并入 main（`fb6ed3cd4`，Worker 提交 `a15ee5f82`）：CLI 子进程 userData 迁入 `<vettaHome>/tmp/<openforge-…-cli[-pid]>`（0700 创建即生效 + chmod 收紧），不再落共享 `os.tmpdir()` 可预测路径；新增 cli-user-data 模块 5 例（Windows 跳 2 个位断言）；定向、check:quick、完整 check、impact 全绿；人工验收不适用，待发布。 |
 | `TASK-0315` | `verifying` | PLAN-0018 | F1/F2 数据层已实施并入 main（`aec55c508`）：插桩升级 `file:line:column`（source-tagger 抽取+登记 ENGINE_FILES）、parseSourceLocator 跨代解析、元素上下文包（outerHTML/样式摘要进 SelectedElementPayload 与 vetd_notes）；附带 design-session 类型谓词修复与 0309/0315 触碰文件声明头补齐（ratchet new=0）；包内 732/732、合并后 754/754 绿、tsc 0 错；待用户实机（画布选元素看列级 locator/上下文包）。 |
 | `TASK-0316` | `verifying` | PLAN-0018 | F3 前置 AST 写回骨架已实施并入 main（`5fa25533f`，fork 会话执行）：src/inspector/ast-edit 六模块 + 22 例（parse/guards/locate/style/text，magic-string 保格式、动态 className 只读拒绝），新增 @babel/parser、magic-string、tailwind-merge；design-session 类型红双修按约定保留谓词版；合并后 754/754 绿；待用户实机。 |
 | `TASK-0310` | `verifying` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效）已实施；`ensureDirectory` 端口加可选 mode，git-update 测试改用生产路径助手消除真实 tmpdir 污染；定向 103 例 + 完整 check 全绿，impact 红归因存量（见 TASK-0313 汇总）；人工验收不适用，待发布。 |

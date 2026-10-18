@@ -1,7 +1,7 @@
 ---
 id: TASK-0317
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop
 requirement:
@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0317-cli-userdata-private-dir
-worktree: ../open-forge-wt/task-0317-cli-userdata-private-dir
+worktree: unassigned（已集成，待推送后清理）
 base_commit: a47121bfa1b188ae79232b11383a13dd481fa9f1
 read_paths:
   - apps/desktop/src/main/main.ts
@@ -27,7 +27,7 @@ exclusive_paths:
   - apps/desktop/src/main/cli/
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-18
 updated: 2026-10-18
 ---
@@ -113,4 +113,9 @@ per-pid/per-command 隔离语义不变。
 
 ## 交付记录
 
-- 待实施。
+- 实际修改：新增 `src/main/cli/cli-user-data.ts`（`createCliUserDataDirectory`：`<vettaHome>/tmp/<目录名>` 计算 + `mkdir 0700` + chmod 收紧，失败仅告警不阻断）与 `cli-user-data.test.ts`（5 例：私有路径、命名隔离、非 Windows 0700 新建/收紧、创建失败告警不阻断）；`main.ts` CLI 分支改用该函数并移除 `tmpdir` 导入。
+- 实际运行：定向 5 例（worktree 与合并后各一轮）全绿（Windows 跳过 2 个 mode 断言，符合合同）；`check:quick`（worktree）与完整 `bun run check`（合并后）exit 0；`test:impact`（cli-user-data.ts + main.ts）相关面全绿；desktop 全量取本日基线（5077 过 / 0 失败用例，4 收集崩溃文件为 BUG-0107 存量 investigating）。
+- 未运行及原因：Windows 实机 CLI 目验不适用（无 UI 面，路径与权限由测试断言）；artifact-store/ssh-runtime 同族共享 tmp 路径未纳入本 Task（登记后续分诊）。
+- Worktree：task-0317-cli-userdata-private-dir（branch task/TASK-0317-cli-userdata-private-dir，Worker 提交 `a15ee5f82`）。
+- 集成：`fb6ed3cd4`（--no-ff 合并）；待推送 origin/dev 后清理 Worktree。
+- 剩余风险：历史 `os.tmpdir()/openforge-*-cli*` 残留不主动清理（无害残留）；Electron 在极少数创建失败场景仍会按私有路径自行建目录（告警留痕）。
