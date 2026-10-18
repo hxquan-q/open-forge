@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
-import { isSessionError, type SessionConfig } from "@vetta/runtime-core";
+import type { SessionConfig } from "@vetta/runtime-core";
 import { describeError } from "../logger/describe-error.js";
 
 export interface TeamMemberRuntimeReconfigurationHost {
@@ -57,9 +57,10 @@ export async function reconfigureTeamMemberRuntime(input: {
 				await input.runtime.disposeSession(current.sessionId);
 			} catch (disposeError) {
 				// 收尾重配的竞态窗口（BUG-0115）：getSessionPath 判定仍绑定后、dispose 前
-				// runtime 可能已被卸载；「会话不存在」说明本就没有需要清理的活 runtime，
-				// 按幂等 no-op 继续重开；其余 dispose 失败仍按错误掀翻重配。
-				if (!(isSessionError(disposeError) && disposeError.code === "SESSION_NOT_FOUND")) {
+				// runtime 可能已被卸载（空闲逐出/并发清理）；「会话不存在」说明本就
+				// 没有需要清理的活 runtime，按幂等 no-op 继续重开；其余 dispose 失败
+				// 仍按错误掀翻重配。普通对象或挂了 code 的 Error 都按同判别收敛。
+				if (!isSessionNotFoundFailure(disposeError)) {
 					throw disposeError;
 				}
 				input.logger.info("team member runtime reconfiguration skipped dispose of unloaded session", {
@@ -112,4 +113,9 @@ export async function reconfigureTeamMemberRuntime(input: {
 		});
 		throw error;
 	}
+}
+
+/** runtime 对「会话不在内存目录」的统一判别：普通对象或挂了 code 的 Error 都算（BUG-0115）。 */
+function isSessionNotFoundFailure(error: unknown): boolean {
+	return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "SESSION_NOT_FOUND";
 }

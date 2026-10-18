@@ -1,7 +1,7 @@
 ---
 
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: apps/desktop agent-teams + runtime-core
 requirement:
@@ -13,7 +13,7 @@ related_tasks: []
 related_issues: []
 related_bugs: [BUG-0087, BUG-0092, BUG-0100]
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 # 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection
@@ -81,9 +81,11 @@ updated: 2026-10-14
 
 ## 修复与验证
 
-- 修复：待实施（立项后建 Task）。
-- 建议修法：
-  - A：`team-session-service.deleteSession`（或 runtime host `deleteSession` 入口）在 `SESSION_NOT_FOUND` 时按 no-op 处理；runtime host 侧改需评估对其它调用方（单会话路径）的语义影响。
-  - B：两处渲染删除入口补 `.catch`（统一走现有 toast/logger 通道，措辞沿用会话删除失败文案）。
-  - C：`stopTeam` catch 块补记 `errorMessage: err instanceof Error ? err.message : String(err)`。
-- 验证：上述回归测试 + team 目录套件；实机按最小复现走一遍。
+- 修复：2026-10-17（localtest 分支）。
+  - A：`team-session-service.deleteSession` 的 per-path runtime 删除统一 try/catch——`SESSION_NOT_FOUND` 形态（普通对象或挂 code 的 Error）记 warn 后继续，视为幂等成功；其余失败仅降级路径吞掉，非降级路径保持严格传播（BUG-0087 严格语义测试保持绿）。
+  - B：`useProjectsPanelModel.deletePanelSession`（团队分支）与 `useArchivedSessionsSettingsModel.deleteSession` 的 promise 链补 `.catch`——console.error + `showToast`（error），新增 i18n key `project:sidebar.dialogs.deleteSessionFailedToast` / `settings:deleteArchivedSessionFailedToast`（zh+en）。
+  - C：`team-task-control-service.stopTeam` catch 日志补 `errorMessage` 字段。
+- 验证：
+  - 主进程红→绿：`team-session-delete.test.ts` 新增「read 成功但 runtime 报 SESSION_NOT_FOUND 时按幂等成功处理」（旧实现红）。
+  - 渲染端红→绿：`useArchivedSessionsSettingsModel.test.tsx` 新增删除失败用例（错误日志 + toast + 行保留）；新增 `useProjectsPanelModel.deleteSession.test.tsx` 覆盖成功通知与失败 catch。两文件在 stash 掉修复的旧实现下 2 例红。
+  - 待实机：按最小复现走一遍（重启后不重开团队会话直接停止+删除）。

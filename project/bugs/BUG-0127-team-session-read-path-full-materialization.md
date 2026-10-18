@@ -12,7 +12,7 @@ related_plan: [PLAN-0002]
 related_tasks: [TASK-0283]
 related_issues: []
 created: 2026-10-17
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -120,3 +120,8 @@ dev 实例（含全部修复）+ qwen3.8-27b 连续 2 轮长文生成（~6 分�
 3. **主证据——DevTools Performance**：主窗口录制 30–60s，对照修复前基线「主进程 8 个 >1s、最长 3049ms」；另记本地指标 LCP（修复前 33s→97s 量级，预期回秒级）。注意报告 §3.2 的 chunk 命名陷阱，归因以采样火焰图对照源码为准。
 4. **辅证据——诊断包**：设置 → 通用 → **导出诊断包**（含 `perf-snapshot.json`：各进程 CPU%/工作集随时间的聚合、回合时长与 model call 统计、**主进程事件循环阻塞窗口计数 `aggregates.eventLoop`（overruns/maxOverrunMs，>500ms 窗口，TASK-0298 新增）**；及最近日志）——修复前基线「8 个 >1s、最长 3049ms」可直接对照 overruns 是否归零/量级回落。
 5. **回贴**：把 trace 文件与诊断包放到 `temp/log/` 或直接回贴关键读数；若仍有 >1s 主进程长任务，采样新 trace 供下一轮定位（剩余候选：`session-updated` 增量载荷协议）。
+
+## localtest 平行修复与合并记录（2026-10-18）
+
+- 平行修复线：localtest 分支曾以 **BUG-0119** 立案同题（团队长任务累积性卡顿：读路径全量物化 + team persist 双重全量序列化，commit `25dc0f20b`），实现了本条路线 1 的等价方案（`readDocument` 锁内走 `loadAppendState` 复用文档、外部写按字节数失效）与路线 4 的先行版（persist revision 快路径：revision 不等直接追加）。合并到 chenxvhua 时统一采用 dev 编号 BUG-0127；实现取舍：路线 1 两线等价取 dev 版；路线 4 取 dev 指纹缓存方案（单次序列化 + O(1) 信任路径 + 不确定回退精确比较，覆盖 revision 快路径意图）；runtime-node 回归测试两侧并留（dev 的全量读计数矩阵 + localtest 的对象同一性断言）。
+- 用户实测（2026-10-18）：用户在 **localtest 构建**（仅含路线 1 等价实现 + revision 快路径，无 dev 九条路线）上复跑团队长任务，确认「表现出来的效果好了很多」——单是读路径缓存合流已消除主观可感的越跑越卡；合并后 chenxvhua 含全部九条路线，预期不劣于该实测。
