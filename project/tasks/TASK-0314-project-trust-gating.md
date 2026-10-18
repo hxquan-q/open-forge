@@ -27,20 +27,27 @@ read_paths:
   - apps/desktop/src/main/agent-runtime/resource-runtime.ts
   - apps/cli-host/src/coding-agent-resource-runtime.ts
 write_paths:
-  - packages/coding-agent/src/resources/packages/
-  - packages/coding-agent/src/resources/skills/
-  - packages/coding-agent/src/resources/runtime/resource-state.ts
+  - packages/coding-agent/src/resources/contracts/project-resource-trust.ts
+  - packages/coding-agent/src/resources/contracts/resource-source.ts
+  - packages/coding-agent/src/resources/contracts/resource-runtime.ts
+  - packages/coding-agent/src/resources/index.ts
+  - packages/coding-agent/src/resources/packages/package-source-runtime.ts
+  - packages/coding-agent/src/resources/packages/resource-projection.ts
   - packages/coding-agent/src/resources/runtime/session-resource-runtime.ts
   - packages/coding-agent/src/resources/runtime/skill-resource-state.ts
   - packages/coding-agent/src/host/sdk-session/resource-runtime.ts
-  - packages/coding-agent/test/project-trust-gating.test.ts
+  - packages/coding-agent/src/public-api/host-services.ts
+  - packages/coding-agent/test/project-resource-trust.test.ts
+  - apps/desktop/src/main/agent-runtime/project-resource-trust.ts
+  - apps/desktop/src/main/agent-runtime/project-resource-trust.test.ts
   - apps/desktop/src/main/agent-runtime/resource-runtime.ts
+  - apps/desktop/src/shared/i18n/locales/
   - apps/cli-host/src/coding-agent-resource-runtime.ts
-  - apps/desktop/test/
-  - apps/cli-host/test/
-exclusive_paths: []
+exclusive_paths:
+  - packages/coding-agent/src/resources/contracts/project-resource-trust.ts
+  - apps/desktop/src/main/agent-runtime/project-resource-trust.ts
 depends_on: []
-conflicts_with: [TASK-0154]
+conflicts_with: [TASK-0154, TASK-0218]
 integration_status: pending
 created: 2026-10-18
 updated: 2026-10-18
