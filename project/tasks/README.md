@@ -16,10 +16,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
 | `TASK-0315` | `in_progress` | PLAN-0018 | F1/F2 数据层：插桩升级 `file:line:column`（抽取 engine/plugins/source-tagger.mjs）+ 兼容解析 source-locator + 元素上下文包（outerHTML 片段/样式摘要进 SelectedElementPayload 与 vetd_notes）；与 TASK-0316（ast-edit 骨架）文件级不相交，Worktree task-0315-source-locator-v2。 |
-| `TASK-0310` | `in_progress` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效），消除路径可预测本地提权面；`ensureDirectory` 端口加可选 mode；SSH 远端同代码自动受益；serial，main 串行。 |
-| `TASK-0311` | `in_progress` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（保留 chmod 兜底）、MCP OAuth state 文件补 `0o600`/目录 `0o700`，消除创建窗口泄露；桌面自有 credential-store 已亲核无此缺陷；serial，main 串行。 |
-| `TASK-0312` | `in_progress` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 template.js 增加 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义（DOM 实现改字符串管道），对齐上游 `6cb23f9b`+`b3ed5459`；serial，main 串行。 |
-| `TASK-0313` | `in_progress` | — | RESEARCH-0032 / pi agent 0.75.4+0.84.4：bash spawn 加 `windowsHide`、taskkill 改 System32 绝对路径并挂 `error` 监听（修未处理 ENOENT 崩溃）；serial，main 串行。 |
+| `TASK-0310` | `verifying` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效）已实施；`ensureDirectory` 端口加可选 mode，git-update 测试改用生产路径助手消除真实 tmpdir 污染；定向 103 例 + 完整 check 全绿，impact 红归因存量（见 TASK-0313 汇总）；人工验收不适用，待发布。 |
+| `TASK-0311` | `verifying` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（chmod 兜底保留）、MCP OAuth state 补 `0o600`/目录 `0o700` 已实施；fs 调用合同断言抓创建窗口（终态断言抓不到），POSIX 位断言平台跳过；定向 18 例 + 完整 check 全绿；人工验收不适用，待发布。 |
+| `TASK-0312` | `verifying` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义已实施；测试从资产提取求值纯函数做行为断言；定向 8 例 + 完整 check 全绿；人工验收不适用，待发布。 |
+| `TASK-0313` | `verifying` | — | RESEARCH-0032 / pi agent 0.75.4+0.84.4：bash spawn `windowsHide`、taskkill System32 绝对路径 + `error` 监听（修未处理 ENOENT 崩溃）已实施；定向 10 例 + 完整 check 全绿；待 Windows 实机人工验收（无黑框闪烁、中止稳定）。 |
 | `TASK-0314` | `draft` | — | RESEARCH-0032 / GHSA-mqxh（medium）：工作区信任门禁——项目级 `.vetta` 扩展/skills 确认后加载、非交互默认拒绝；待 UX 决策（信任载体/覆盖面/对话框/记住粒度）后转 ready。 |
 | `TASK-0309` | `verifying` | PLAN-0018 | P0 安全热修七项已实施并入 main（五原子提交，插件包 711/711 绿，impact 存量红归因 BUG-0107）：zip 越界整包拒绝、安装 `--ignore-scripts`＋导入确认、vite cors:false/fs.strict＋no-cors 探测、iframe sandbox、主窗口 will-navigate、设计写队列+原子写；待用户实机验收（导入确认/画布交互/主窗口/引擎就绪）。 |
 | `TASK-0307` | `verifying` | — | REQ-0016 A1 / RESEARCH-0030：受管工具 `inspect()` 解析记录 + `.version` 标记已实施（已并入 main `ef864b76c`）——resolve 合同不动，纯静态检查，缓存标记免 spawn、存量回退一次探针；定向 24 例、完整 check 全绿；impact 7 红经基线复跑归因存量（PATH 无 rg）。 |
