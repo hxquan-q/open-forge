@@ -12,10 +12,10 @@ related_plan: []
 related_tasks: [TASK-0310]
 related_issues: []
 related_bugs: []
-execution: serial
+execution: parallel
 branch: task/TASK-0317-cli-userdata-private-dir
 worktree: ../open-forge-wt/task-0317-cli-userdata-private-dir
-base_commit:
+base_commit: a47121bfa1b188ae79232b11383a13dd481fa9f1
 read_paths:
   - apps/desktop/src/main/main.ts
   - project/research/RESEARCH-0032-pi-security-advisory-backport-audit.md
@@ -51,8 +51,8 @@ per-pid/per-command 隔离语义不变。
 
 ### 并发评估
 
-- 结论：支持（本会话串行执行）
-- 执行方式：serial
+- 结论：支持（本会话独立 Worktree 单 Worker 执行，占用独立并行 scope）
+- 执行方式：parallel
 - 可并行 Task：无在途（TASK-0315/0316 已集成）
 - 前置依赖：无
 - 冲突文件/独占路径：`apps/desktop/src/main/main.ts` CLI 分支、`src/main/cli/` 新模块
