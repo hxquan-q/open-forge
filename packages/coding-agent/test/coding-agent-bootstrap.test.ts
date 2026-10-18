@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Model } from "@vetta/ai";
 import { describe, expect, it, vi } from "vitest";
 import { AuthStorage } from "../src/auth/index.js";
