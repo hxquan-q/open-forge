@@ -137,6 +137,8 @@ export class FileConversationRepository
 	 */
 	async readDocument(sessionId: string): Promise<ConversationDocument> {
 		this.assertOpen();
+		// 读路径与追加路径共用缓存：文件未变时直接返回已物化的 document，
+		// 不再为每条命令/每轮 turn 重新解析整个 JSONL（BUG-0127）。
 		return this.exclusive(sessionId, () =>
 			this.withFileLock(sessionId, async () => {
 				const state = await this.loadAppendState(sessionId);

@@ -1164,6 +1164,7 @@
 	"deleteArchivedSession": "Delete conversation",
 	"deleteArchivedSessionConfirm": "Delete conversation permanently",
 	"deleteArchivedSessionMessage": "Permanently delete “{{name}}”? The conversation file is removed from disk and cannot be recovered.",
+	"deleteArchivedSessionFailedToast": "Failed to delete the session. Please try again later.",
 	"appearanceTitle": "Appearance",
 	"generalTitle": "General",
 	"modelTitle": "Model",

@@ -73,5 +73,20 @@ updated: 2026-10-17
 
 ## 修复与验证
 
-- 修复：TASK-0287 已实施（`b9b0498a6`）——判据增加可选 `waitingOnSubagent`，desktop 巡检经 `hasPendingSubagentWork` 端口从团队会话服务查询在途工作，命中即判 running 不再 suspected；硬否决优先级不变。
-- 验证：health 17/17（含旧实现红回归）+ monitor 8/8（端口对照用例）+ agent-runtime 90 例全绿；实机长任务观察误报归零待桌面构建后验收。
+两条平行修复线（dev `b9b0498a6` / TASK-0287 与 localtest 2026-10-17）在 chenxvhua 合并时合流，两个互补信号维度同时保留：
+
+- 修复（dev，TASK-0287，`b9b0498a6`）：判据增加可选 `waitingOnSubagent`，desktop 巡检经 `hasPendingSubagentWork` 端口从团队会话服务查询在途工作（`hasActiveTeamWorkForRuntimeSession`：主控或成员身份 + `turnCoordinator.hasPending`/`hasDurableUnsettledWork`），命中即判 running 不再 suspected；硬否决优先级不变。
+- 修复（localtest，2026-10-17）：判据补「主控等子代理」维度 `awaitingSubAgents`，四层接线：
+  1. 判定层：`SessionInterruptEvidence` 增可选 `awaitingSubAgents`（`packages/coding-agent/src/execution/session-interrupt-health.ts`）；`classifySessionInterruptHealth` 在**无触发路径**上命中该信号时返回 `running`（high，不 notify、不绑定）——真实 error/networkFailure/truncated 触发不掩盖，manualStop/pendingAction/completionMarker 等硬否决分支仍在它之前优先生效。
+  2. 证据装配：`buildSessionInterruptEvidence` 增可选 part `awaitingSubAgents`（缺省 false）。
+  3. 监视器：`SessionInterruptMonitorPorts` 增可选端口 `isAwaitingSubAgents`，装配进证据。
+  4. 宿主接线：`AgentTeamSessionService.isAwaitingSubAgents(sessionId)`——协调 runtime 的 sessionId 即团队会话 id（创建即同 id、恢复校验 identity），成员 runtime session 不在缓存键上天然 false；只认内存态在途工作（`turnCoordinator.hasPending`：activeSends / 成员 attempt / 自动重试 / 调度等待），不读 I/O。bootstrap 接线 fail-soft（读取失败按 false）。
+  - 已知窄窗（接受）：成员悬挂但内存机已无在途条目时主控空闲不被豁免——此时本就该浮出提示；成员级停滞由 provider 看门狗/重试链路（BUG-0085）负责。
+- 合并调和（2026-10-18，chenxvhua）：证据与端口同时携带两个维度，判定器两条豁免分支并存（硬否决 → `waitingOnSubagent` 早豁免 → completionMarker → 触发路径 → `awaitingSubAgents` 无触发豁免 → suspected）；两侧回归测试全部保留。
+- 验证（dev 线）：health 17/17（含旧实现红回归）+ monitor 8/8（端口对照用例）+ agent-runtime 90 例全绿；实机长任务观察误报归零待桌面构建后验收。
+- 验证（localtest 线）：
+  - 红→绿（stash 源码验证旧实现红）：分类器「awaitingSubAgents 长空闲不判 suspected」旧实现 `suspected`（红）；监视器「主控等子代理悬挂形态零决策」旧实现 onDecision 被调（红）；服务 `isAwaitingSubAgents` 旧实现无此方法（红）。
+  - 分类器 17/17、desktop 三文件 28/28 绿；desktop `typecheck:incremental` 零错。
+  - 另钉两例护栏：awaitingSubAgents 不掩盖真实错误触发；isAwaitingSubAgents 只对「有在途工作的协调会话」为真。
+- 实机验证（2026-10-18）：dev 实例团队长任务复跑，主控会话 suspected 误报未再出现（用户确认整体表现显著好转）。
+- 编号注记：本 bug 在 localtest 分支曾以 BUG-0118 立案修复；合并时统一采用 dev 台账编号 BUG-0126（dev 的 BUG-0118 已分配给 report-canvas 枚举问题）。

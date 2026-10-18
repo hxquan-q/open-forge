@@ -1164,6 +1164,7 @@
 	"deleteArchivedSession": "删除会话",
 	"deleteArchivedSessionConfirm": "永久删除会话",
 	"deleteArchivedSessionMessage": "确定要永久删除「{{name}}」吗？该会话文件会从磁盘移除，无法恢复。",
+	"deleteArchivedSessionFailedToast": "会话删除失败，请稍后重试。",
 	"appearanceTitle": "外观",
 	"modelTitle": "模型",
 	"mcpTitle": "MCP 管理",

@@ -300,6 +300,18 @@ export class AgentTeamSessionService {
 		});
 	}
 
+	/**
+	 * BUG-0126：session-interrupt 巡检装配证据用——该会话是否为「主控等子代理」
+	 * 的团队协调会话。协调 runtime 的 sessionId 即团队会话 id（创建即同 id、恢复
+	 * 校验 identity），成员 runtime 的 session 不在缓存键上，天然返回 false。
+	 * 只认内存态在途工作（成员 attempt / 自动重试 / 调度等待），不读 I/O。
+	 */
+	isAwaitingSubAgents(sessionId: string): boolean {
+		const session = this.sessionState.get(sessionId);
+		if (!session?.coordinationRuntime || session.coordinationRuntime.sessionId !== sessionId) return false;
+		return this.turnCoordinator.hasPending(sessionId);
+	}
+
 	onRunningChanged(listener: TeamRunningChangedListener): () => void {
 		this.runningChangedListeners.add(listener);
 		return () => this.runningChangedListeners.delete(listener);
@@ -870,7 +882,12 @@ export class AgentTeamSessionService {
 		const cached = this.sessionState.get(id);
 		if (cached) {
 			this.teamResidency.touch(id);
-			const reconciled = await this.reconcileTeamRoster(cached, await this.readDocument());
+			// BUG-0116：缓存命中不代表 coordination runtime 还在内存（空闲逐出或收尾
+			// 竞态后可能已卸载），而后续绑定校验第一步就按 id 读协调文档。先确认已加载，
+			// 缺了按持久路径原 id 重开；重开失败归一为带恢复指引的可读错误，不让用户
+			// 陷入「每次 send 必败、只能重启应用」。
+			const session = await this.ensureCoordinationRuntimeLoaded(cached);
+			const reconciled = await this.reconcileTeamRoster(session, await this.readDocument());
 			return this.migrateLoadedSession(reconciled);
 		}
 
@@ -1036,10 +1053,38 @@ export class AgentTeamSessionService {
 		// A newly created Team exposes its coordination Conversation before member
 		// Runtimes finish warming. Admission must wait for that preparation instead
 		// of enqueueing against an incomplete roster and then losing the request.
+		// read 在缓存命中时会先自愈已卸载的 coordination runtime（BUG-0116）。
 		const session = await this.read(sessionId);
-		await this.waitForMemberRuntimeWarmup(session, input.targetMemberIds ?? []);
+		await this.waitForMemberRuntimeWarmup(this.sessionState.get(sessionId) ?? session, input.targetMemberIds ?? []);
 		this.scheduleAutoTitle(this.sessionState.get(sessionId) ?? session, input);
 		return this.turnCoordinator.send(sessionId, input);
+	}
+
+	/**
+	 * 协调 runtime 已卸载时按持久路径原 id 重开（幂等：已加载直接返回）。
+	 * 重开失败抛带重启指引的可读错误并保留原始 cause，供 send/展示层统一呈现。
+	 */
+	private async ensureCoordinationRuntimeLoaded(session: TeamSessionDocument): Promise<TeamSessionDocument> {
+		const current = session.coordinationRuntime;
+		if (!current) return session;
+		if (this.getRuntime().getSessionPath(current.sessionId)) return session;
+		log.warn("team session coordination runtime is unloaded; reloading", { teamSessionId: session.id });
+		try {
+			const healed = await this.runtimeManager.ensureCoordinationRuntime(session);
+			if (healed.coordinationRuntime && healed.executionMode) {
+				await this.getRuntime().setExecutionMode(healed.coordinationRuntime.sessionId, healed.executionMode);
+			}
+			return healed;
+		} catch (error) {
+			log.error("team session coordination runtime could not be reloaded", {
+				teamSessionId: session.id,
+				error: errorMessage(error),
+			});
+			throw new Error(
+				`Team session runtime is unavailable and could not be reloaded: ${errorMessage(error)}. Restart the app to recover this session.`,
+				{ cause: error },
+			);
+		}
 	}
 
 	private scheduleAutoTitle(session: TeamSessionDocument, input: SendTeamMessageInput): void {
@@ -1195,17 +1240,17 @@ export class AgentTeamSessionService {
 			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionPath),
 		];
 		for (const sessionPath of sessionPaths) {
-			if (!degraded) {
-				await this.getRuntime().deleteSession(sessionPath);
-				continue;
-			}
-			// 降级路径 per-path best-effort：外部实例持租约或单条路径损坏不阻断其余清理。
 			try {
 				await this.getRuntime().deleteSession(sessionPath);
 			} catch (error) {
-				log.warn("degraded team session delete could not remove a member runtime", {
+				// 会话不在 runtime 内存目录（崩溃重启后未再打开、或已被并发清理）对删除
+				// 语义是幂等成功（BUG-0114）；其余失败仅在降级路径吞掉——非降级时仍须
+				// 严格传播（BUG-0087 契约：外部实例持租约等要让用户看见）。
+				if (!degraded && !isSessionNotFoundFailure(error)) throw error;
+				log.warn("team session delete could not remove a runtime session; continuing", {
 					teamSessionId: sessionReference.id,
 					sessionPath,
+					degraded,
 					error: describeError(error),
 				});
 			}
@@ -1315,6 +1360,15 @@ export const agentTeamSessionService = new AgentTeamSessionService({
 	ownershipCatalog: conversationOwnershipCatalog,
 	externalConditionChanges: agentTeamExternalConditionChanges,
 });
+
+function errorMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+/** runtime 对「会话不在内存目录」的统一判别：普通对象或挂了 code 的 Error 都算（BUG-0114）。 */
+function isSessionNotFoundFailure(error: unknown): boolean {
+	return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "SESSION_NOT_FOUND";
+}
 
 function sameMemberIds(left: readonly string[], right: readonly string[]): boolean {
 	if (left.length !== right.length) return false;
