@@ -1,6 +1,7 @@
-# Vetta Remote Relay
+<!-- Modified by The Open Forge contributors. -->
+# Open Forge Remote Relay
 
-Cloudflare Worker and Durable Object implementation for relaying the Vetta remote-control protocol between one mobile client and one desktop client.
+Cloudflare Worker and Durable Object implementation for relaying the Open Forge remote-control protocol between one mobile client and one desktop client.
 
 ## Security model
 
@@ -8,7 +9,7 @@ The desktop creates a random pairing identifier and a high-entropy pairing secre
 
 The first connection for a room must be the desktop. A room expires after 24 hours without active WebSockets. Re-pairing requires a new desktop connection and secret.
 
-The production deployment uses `relay.flowerwine.dpdns.org`. The custom domain is configured in `wrangler.jsonc`; credentials and pairing identifiers are still generated locally by the desktop.
+Deployment routes are configured in `wrangler.jsonc`. A checked-in route does not establish that a relay is deployed or available for this distribution. Configure and verify your own relay before enabling remote access; credentials and pairing identifiers are generated locally by the desktop.
 
 ## Routes
 

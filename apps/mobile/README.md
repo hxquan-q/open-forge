@@ -1,6 +1,7 @@
-# Vetta Mobile
+<!-- Modified by The Open Forge contributors. -->
+# Open Forge Mobile
 
-Vetta 的 Expo/React Native 移动客户端，当前基于 Expo SDK 57、React Native 0.86 和 Expo Router。原 Kotlin Multiplatform Android 客户端位于 [`../kotlin`](../kotlin)，两者独立构建。
+Open Forge 的 Expo/React Native 移动客户端源码，当前基于 Expo SDK 57、React Native 0.86 和 Expo Router。Kotlin Multiplatform Android 客户端位于 [`../kotlin`](../kotlin)，两者独立构建；发布与平台支持以各自实际制品为准。
 
 ## 开发
 

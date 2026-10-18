@@ -119,7 +119,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0276` | `verifying` | — | RESEARCH-0027：终端 owner 监听与订阅按 owner 成组解绑（BUG-0119）；红 5→绿 14、包内 4977、check 全绿；`91b5faadf` 已并入 main 并补发布说明；实机重开/崩溃恢复待用户。原编号 TASK-0272，因 dev 侧占号顺延。 |
 | `TASK-0277` | `verifying` | — | RESEARCH-0027：技能列表消费方不再拿远端绝对路径做本机读取（BUG-0120）——工具视图包装只套模型面向装配 + `isSshProjectUri` 跳过；红 2→绿 3（回环 SSH）；`9e2084c31` 已并入 main；远程项目列表目验待用户。原编号 TASK-0273，因 dev 侧占号顺延。 |
 | `TASK-0278` | `verifying` | — | RESEARCH-0027：握手失败销毁 Client 前补终止性 error 监听（BUG-0121），FakeClient 忠实化；基线红 2+3 逃逸→绿 27、连跑 8 次、包内 227、check exit 0；`ae3cda04d` 已并入 main；真实新主机连接待用户自测。原编号 TASK-0274，因 dev 侧占号顺延。 |
-| `TASK-0047` | `verifying` | PLAN-0003 | 第七片正文及日志根说明已集成本地 main：本仓二开视角、默认 lite、SDK/发布/服务边界对齐；35 项集成测试、完整 check、113 页构建与本地引用检查通过，待用户审阅。 |
+| `TASK-0047` | `verifying` | PLAN-0003 | 第八片：中英根入口与文档导航重写，继承宣传/社区入口清理，旧草案与 15 份素材独立归档；35 项站点测试、10 项 impact、113 页构建、6 项 HTTP、299 个引用和完整 check 通过；main 串行本地提交，待用户审阅。 |
 | `TASK-0048` | `in_progress` | PLAN-0003 | 公开文档站品牌、正文与 SEO/LLM 发现入口迁移；尚未实施，缺口最大（docs-site 内容为主）。 |
 | `TASK-0206` | `done` | PLAN-0014 | feed/attach 第二片：`SessionFacade.attach` 一次同步步骤内订阅 + 运行中回合重放 + 历史快照（`SessionAttachment`），保留本仓 4096 有界回放，不引入上游无界回合缓冲；红绿/定向 10/10/impact 115 项/完整 check 全绿；无直接 UI，消费端随 IPC/desktop 后续片验收。 |
 | `TASK-0205` | `done` | PLAN-0014 | feed/attach 底座第一片：快照暴露运行中回合身份（currentTurnId）+ 重放缓冲收录本轮工具事件（保留 4096 有界）；红绿/impact/完整 check 绿；工具状态切回即时可见待实机验收，currentTurnId 消费随 IPC/desktop 后续片。 |
