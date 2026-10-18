@@ -27,16 +27,20 @@ read_paths:
   - apps/desktop/src/main/agent-runtime/resource-runtime.ts
   - apps/cli-host/src/coding-agent-resource-runtime.ts
 write_paths:
-  - packages/coding-agent/src/resources/
+  - packages/coding-agent/src/resources/packages/
+  - packages/coding-agent/src/resources/skills/
+  - packages/coding-agent/src/resources/runtime/resource-state.ts
+  - packages/coding-agent/src/resources/runtime/session-resource-runtime.ts
+  - packages/coding-agent/src/resources/runtime/skill-resource-state.ts
   - packages/coding-agent/src/host/sdk-session/resource-runtime.ts
-  - packages/coding-agent/test/
-  - apps/desktop/src/main/agent-runtime/
+  - packages/coding-agent/test/project-trust-gating.test.ts
+  - apps/desktop/src/main/agent-runtime/resource-runtime.ts
   - apps/cli-host/src/coding-agent-resource-runtime.ts
   - apps/desktop/test/
   - apps/cli-host/test/
 exclusive_paths: []
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0154]
 integration_status: pending
 created: 2026-10-18
 updated: 2026-10-18
@@ -55,9 +59,9 @@ updated: 2026-10-18
 
 - 结论：支持（本会话独立 Worktree 单 Worker 执行，占用独立并行 scope）
 - 执行方式：parallel
-- 可并行 Task：无在途
+- 可并行 Task：除 TASK-0154（见 conflicts_with）外无在途冲突
 - 前置依赖：已解除（4 项 UX 决策已收敛，见下）
-- 冲突文件/独占路径：`packages/coding-agent/src/resources/`、`apps/desktop/src/main/agent-runtime/`、`apps/cli-host/src/coding-agent-resource-runtime.ts`
+- 冲突文件/独占路径：`packages/coding-agent/src/resources/runtime/` 内三个具体文件与 `apps/desktop/src/main/agent-runtime/resource-runtime.ts` 落在 TASK-0154 登记的写范围内（其 Worktree 仍在登记表），已声明 `conflicts_with: [TASK-0154]`；`test/`、`resources/` 等已收窄到具体文件/子目录，避免与 TASK-0218 等目录级登记误撞（收窄先例 f0a0cbb71）
 - Branch：task/TASK-0314-project-trust-gating
 - Worktree：../open-forge-wt/task-0314-project-trust-gating
 - 集成负责人：本会话（Coordinator 集成后推送 origin/dev）
