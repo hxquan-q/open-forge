@@ -1,7 +1,6 @@
 // Modified by The Open Forge contributors.
 import "./telemetry/bootstrap.js";
 import { mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { URL } from "node:url";
 import { getVettaHomePath, VETTA_HOME_ENV } from "@vetta/action-rpc";
@@ -41,6 +40,7 @@ import { shutdownBrowserAutomationService } from "./browser-automation/index.js"
 import { disposeCanvasPreviewServer } from "./canvas-server/canvas-preview-desktop.js";
 import { parseActionCliCommand, runActionCliCommand } from "./cli/action-command.js";
 import { parseAgentRpcCommand, runAgentRpcCommand } from "./cli/agent-rpc-command.js";
+import { createCliUserDataDirectory } from "./cli/cli-user-data.js";
 import { parseHelpCliCommand, runHelpCliCommand } from "./cli/help-command.js";
 import { parseOcrCliCommand, runOcrCliCommand } from "./cli/ocr-command.js";
 import { parsePdfCliCommand, runPdfCliCommand } from "./cli/pdf-command.js";
@@ -238,7 +238,9 @@ if (isCliMode) {
 					: helpCliCommand !== null
 						? `openforge-help-cli-${process.pid}`
 						: `openforge-agent-rpc-${process.pid}`;
-	app.setPath("userData", join(tmpdir(), cliUserDataDir));
+	// userData 迁入用户主目录下的私有目录（0700），不再落在可预测的共享
+	// os.tmpdir() 路径上（RESEARCH-0032 积压 #16，与 GHSA-jfgx 同类）。
+	app.setPath("userData", createCliUserDataDirectory(cliUserDataDir, getVettaHomePath(), mainLog.warn.bind(mainLog)));
 	app.commandLine.appendSwitch("disable-gpu");
 	app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
 	app.commandLine.appendSwitch("disk-cache-size", "0");
