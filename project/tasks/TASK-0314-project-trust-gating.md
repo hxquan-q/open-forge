@@ -15,7 +15,7 @@ related_bugs: []
 execution: parallel
 branch: task/TASK-0314-project-trust-gating
 worktree: ../open-forge-wt/task-0314-project-trust-gating
-base_commit: 179170814e8f6c55ba30a2b4de65af7a328a3fc1
+base_commit: ede70346e3446de681463ef7a6768b773c8ac245
 read_paths:
   - packages/coding-agent/src/resources/packages/package-source-runtime.ts
   - packages/coding-agent/src/resources/packages/resource-package-projector.ts
