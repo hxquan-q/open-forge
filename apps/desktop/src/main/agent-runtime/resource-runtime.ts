@@ -36,6 +36,7 @@ import { resolveDesktopBrandName } from "../../shared/desktop-brand.js";
 import { getAppLanguage } from "../i18n/index.js";
 import { getAppLogger } from "../logger.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
+import { createDesktopProjectResourceTrustPort } from "./project-resource-trust.js";
 
 const log = getAppLogger("session-resources");
 
@@ -101,6 +102,9 @@ export function createDesktopSessionResourceRuntime(
 	});
 	const runtime = createSessionResourceRuntime({
 		...sessionRuntimeOptions,
+		// 桌面端交互信任策略（GHSA-mqxh 决策③）：本机项目首次解析项目资源时
+		// 弹一次对话框，按路径记住；远端/未决默认拒绝。
+		projectResourceTrust: sessionRuntimeOptions.projectResourceTrust ?? createDesktopProjectResourceTrustPort(),
 		packages,
 		resourceAccess: host.resourceAccess,
 		themeParser: loadThemeFromContent,

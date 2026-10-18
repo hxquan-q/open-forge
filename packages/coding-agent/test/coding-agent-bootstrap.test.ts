@@ -82,6 +82,7 @@ function emptyResourceRuntime(): SessionResourceRuntime {
 		getSystemPrompt: () => undefined,
 		getAppendSystemPrompt: () => [],
 		getPathMetadata: () => new Map(),
+		getProjectResourceTrust: () => ({ trusted: true, reason: "no-port" }),
 		extendResources: async () => undefined,
 		setAdditionalSkillPaths: async () => undefined,
 		setRuntimeSkillPaths: async () => undefined,
