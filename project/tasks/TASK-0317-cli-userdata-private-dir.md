@@ -23,9 +23,6 @@ read_paths:
 write_paths:
   - apps/desktop/src/main/cli/
   - apps/desktop/src/main/main.ts
-  - project/tasks/TASK-0317-cli-userdata-private-dir.md
-  - project/tasks/README.md
-  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - apps/desktop/src/main/cli/
 depends_on: []
