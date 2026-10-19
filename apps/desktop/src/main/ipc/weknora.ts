@@ -5,6 +5,7 @@ import type { WeKnoraConfigPatch } from "../weknora/config.js";
 import {
 	getWeKnoraService,
 	type WeKnoraAskInput,
+	type WeKnoraDeleteSessionInput,
 	type WeKnoraListParams,
 	type WeKnoraLoadMessagesInput,
 	type WeKnoraService,
@@ -18,6 +19,7 @@ export const WEKNORA_CHANNELS = {
 	LIST_AGENTS: "vetta:weknora:list-agents",
 	LIST_SESSIONS: "vetta:weknora:list-sessions",
 	LOAD_MESSAGES: "vetta:weknora:load-messages",
+	DELETE_SESSION: "vetta:weknora:delete-session",
 	ASK: "vetta:weknora:ask",
 	CANCEL: "vetta:weknora:cancel",
 	STREAM_EVENT: "vetta:weknora:stream-event",
@@ -31,6 +33,7 @@ export const WEKNORA_INVOKE_CHANNELS = [
 	WEKNORA_CHANNELS.LIST_AGENTS,
 	WEKNORA_CHANNELS.LIST_SESSIONS,
 	WEKNORA_CHANNELS.LOAD_MESSAGES,
+	WEKNORA_CHANNELS.DELETE_SESSION,
 	WEKNORA_CHANNELS.ASK,
 	WEKNORA_CHANNELS.CANCEL,
 ] as const;
@@ -71,6 +74,11 @@ export function registerWeKnoraIpc(
 
 	ipcMain.handle(WEKNORA_CHANNELS.LOAD_MESSAGES, async (_event, input: unknown) =>
 		service.loadMessages(parseLoadMessagesInput(input)),
+	);
+
+	// AC-8：删除会话。薄层转调（删除的确认/禁删判定/失败反馈都在渲染层，这里零业务逻辑）。
+	ipcMain.handle(WEKNORA_CHANNELS.DELETE_SESSION, async (_event, input: unknown) =>
+		service.deleteSession(parseDeleteSessionInput(input)),
 	);
 
 	ipcMain.handle(WEKNORA_CHANNELS.ASK, async (_event, input: unknown) => service.ask(parseAskInput(input)));
@@ -137,6 +145,11 @@ function parseLoadMessagesInput(value: unknown): WeKnoraLoadMessagesInput {
 	const sessionId = requireNonEmptyString(input.sessionId, "sessionId");
 	if (input.limit === undefined) return { sessionId };
 	return { sessionId, limit: requirePositiveInteger(input.limit, "limit") };
+}
+
+function parseDeleteSessionInput(value: unknown): WeKnoraDeleteSessionInput {
+	const input = requireObject(value, "delete-session");
+	return { sessionId: requireNonEmptyString(input.sessionId, "sessionId") };
 }
 
 function parseAskInput(value: unknown): WeKnoraAskInput {

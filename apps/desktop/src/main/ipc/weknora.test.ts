@@ -34,6 +34,8 @@ interface Harness {
 	webContents: WebContents;
 	/** webContents.send 收到的 (channel, payload)。 */
 	sent: Array<{ channel: string; payload: unknown }>;
+	/** 假客户端收到的删除请求（按序）。 */
+	deleted: string[];
 }
 
 const DEFAULT_CONFIG = { baseUrl: "http://weknora.test:8083", defaultAgentId: "agent-default", pageSize: 50 };
@@ -44,8 +46,12 @@ function createHarness(): Harness {
 	const sent: Array<{ channel: string; payload: unknown }> = [];
 
 	// 假客户端：建会话返回固定 id；流式同步吐出 4 个事件（含 2 个 answer.delta）。
+	const deleted: string[] = [];
 	const fakeClient = {
 		createSession: async () => ({ id: "session-created" }),
+		deleteSession: async (sessionId: string) => {
+			deleted.push(sessionId);
+		},
 		streamAgentChat: async (input: {
 			requestId: string;
 			sessionId: string;
@@ -79,7 +85,7 @@ function createHarness(): Harness {
 		},
 	} as unknown as WebContents;
 
-	return { service, webContents, sent };
+	return { service, webContents, sent, deleted };
 }
 
 /**
@@ -209,6 +215,17 @@ describe("registerWeKnoraIpc", () => {
 		});
 	});
 
+	it("delete-session 薄层转调:合法入参原样下传 service,不夹带业务", async () => {
+		const { service, webContents, deleted } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		// deleteSession 走 restClient,需已配置凭据(AC-2);用运行时值写入,不引入 Key 字面量(红线 C2)。
+		await mocks.handlers.get(WEKNORA_CHANNELS.SET_API_KEY)?.({}, randomUUID());
+
+		await mocks.handlers.get(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, { sessionId: "sess-1" });
+
+		expect(deleted).toEqual(["sess-1"]);
+	});
+
 	it("触发一次流:webContents.send 收到 stream-event,载荷形状符合 WeKnoraStreamEvent", async () => {
 		const { service, webContents, sent } = createHarness();
 		registerWeKnoraIpc(webContents, service);
@@ -251,6 +268,15 @@ describe("registerWeKnoraIpc", () => {
 			"page must be a positive integer",
 		);
 		await expect(handler(WEKNORA_CHANNELS.LOAD_MESSAGES)?.({}, { limit: 5 })).rejects.toThrow(
+			"sessionId must be a non-empty string",
+		);
+		await expect(handler(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, "nope")).rejects.toThrow(
+			"delete-session requires an object argument",
+		);
+		await expect(handler(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, {})).rejects.toThrow(
+			"sessionId must be a non-empty string",
+		);
+		await expect(handler(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, { sessionId: "  " })).rejects.toThrow(
 			"sessionId must be a non-empty string",
 		);
 		await expect(handler(WEKNORA_CHANNELS.ASK)?.({}, { query: "   " })).rejects.toThrow(

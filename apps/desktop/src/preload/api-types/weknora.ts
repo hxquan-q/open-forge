@@ -4,6 +4,7 @@ import type { WeKnoraConfigPatch } from "../../main/weknora/config.js";
 import type {
 	WeKnoraAskInput,
 	WeKnoraAskResult,
+	WeKnoraDeleteSessionInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraPublicConfig,
@@ -16,6 +17,7 @@ export type {
 	WeKnoraAskInput,
 	WeKnoraAskResult,
 	WeKnoraConfigPatch,
+	WeKnoraDeleteSessionInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraMessage,
@@ -36,6 +38,11 @@ export interface DesktopWeKnoraApi {
 	listAgents(params?: WeKnoraListParams): Promise<WeKnoraAgent[]>;
 	listSessions(params?: WeKnoraListParams): Promise<WeKnoraSessionSummary[]>;
 	loadMessages(input: WeKnoraLoadMessagesInput): Promise<WeKnoraMessage[]>;
+	/**
+	 * 删除会话（AC-8）：WeKnora 侧软删、无恢复入口（调用方负责确认与禁删判定）。
+	 * 失败以归一化错误码的 `Error` 拒绝。
+	 */
+	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
 	/** 提问；`input.agentId` 为当前选中的智能体（AC-18 v5），缺省时回落到配置默认值。 */
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): Promise<void>;
