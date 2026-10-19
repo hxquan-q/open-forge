@@ -50,6 +50,8 @@ Open Forge 是基于上游 OpenVetta 的客户端侧 AI Agent 产品栈；业务
 | 提交、Worktree、集成、上游同步 | [协作规则](docs/dev/agent-rules/collaboration.md)；操作见 [开发流程](project/collaboration/development-workflow.md) |
 | 交付、发布说明、版本或新增包 | [交付规则](docs/dev/agent-rules/delivery.md) |
 | 修改规则、分类或 Policy 豁免 | [规则治理](docs/dev/agent-rules/governance.md) |
+| 自主调度、评审取证、租约或发布控制 | [自主运行协议](docs/dev/agent-rules/autonomy.md) |
+| 复盘与教训晋升 | [LESSONS](LESSONS.md) |
 | 需求/计划/Task/Issue/Bug 等管理 | [Project 入口](project/README.md) 与 [管理规范](project/CONVENTIONS.md) |
 
 ## 测试与验证

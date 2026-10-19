@@ -1,8 +1,9 @@
+// Modified by The Open Forge contributors.
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_SERVER_URL } from "@vetta/coding-agent/config";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCliCodingAgentBootstrap } from "../src/coding-agent-bootstrap.js";
 
 const temporaryDirectories: string[] = [];
@@ -10,6 +11,7 @@ const originalOffline = process.env.PI_OFFLINE;
 const originalSkipVersionCheck = process.env.PI_SKIP_VERSION_CHECK;
 
 afterEach(async () => {
+	vi.unstubAllEnvs();
 	await Promise.all(
 		temporaryDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true })),
 	);
@@ -19,6 +21,7 @@ afterEach(async () => {
 
 describe("CLI Coding Agent bootstrap", () => {
 	it("owns Node paths, offline environment and state storage", async () => {
+		vi.stubEnv("OPENFORGE_TRUST_PROJECT", "");
 		const root = await mkdtemp(join(tmpdir(), "cli-coding-agent-bootstrap-"));
 		temporaryDirectories.push(root);
 		const cwd = join(root, "workspace");
@@ -66,7 +69,16 @@ describe("CLI Coding Agent bootstrap", () => {
 		expect(process.env.PI_OFFLINE).toBe("1");
 		expect(process.env.PI_SKIP_VERSION_CHECK).toBe("1");
 		expect(bootstrap.settingsManager.getServerUrl()).toBe(DEFAULT_SERVER_URL);
-		expect(bootstrap.resourceLoader.getSkills()).toEqual({ skills: [], diagnostics: [] });
+		expect(bootstrap.resourceLoader.getSkills()).toEqual({
+			skills: [],
+			diagnostics: [
+				{
+					type: "warning",
+					path: join(cwd, ".vetta"),
+					message: "project resources skipped: workspace trust denied (non-interactive-untrusted)",
+				},
+			],
+		});
 		const persistedSettings: unknown = JSON.parse(await readFile(join(agentDir, "settings.json"), "utf8"));
 		expect(persistedSettings).toMatchObject({ serverUrl: DEFAULT_SERVER_URL });
 	});

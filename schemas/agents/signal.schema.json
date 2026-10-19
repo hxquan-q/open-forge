@@ -1,0 +1,29 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"version",
+		"source",
+		"repository",
+		"externalId",
+		"eventId",
+		"kind",
+		"url",
+		"title",
+		"body",
+		"observedAt"
+	],
+	"properties": {
+		"version": { "const": 1 },
+		"source": { "type": "string", "enum": ["github", "discord", "social", "local"] },
+		"repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "maxLength": 160 },
+		"externalId": { "type": "string", "minLength": 1, "maxLength": 200 },
+		"eventId": { "type": "string", "minLength": 1, "maxLength": 200 },
+		"kind": { "type": "string", "enum": ["bug", "feature", "discussion", "ci-failure"] },
+		"url": { "type": "string", "maxLength": 2000 },
+		"title": { "type": "string", "minLength": 1, "maxLength": 1000 },
+		"body": { "type": "string", "maxLength": 32000 },
+		"observedAt": { "type": "integer", "minimum": 0 }
+	}
+}

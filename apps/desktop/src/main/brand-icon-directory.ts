@@ -11,11 +11,14 @@ import { DESKTOP_BRAND_PROFILE, type DesktopBrandProfile } from "../shared/deskt
  */
 export function resolveBrandIconDirectory(options: {
 	isPackaged: boolean;
-	packagedDirectory: string;
+	packagedDirectory?: string;
 	appRoot: string;
 	profile?: DesktopBrandProfile;
 }): string {
 	const { isPackaged, packagedDirectory, appRoot, profile = DESKTOP_BRAND_PROFILE } = options;
-	if (isPackaged) return packagedDirectory;
+	if (isPackaged) {
+		if (!packagedDirectory) throw new Error("Packaged brand icons require their staged directory");
+		return packagedDirectory;
+	}
 	return profile === "distribution" ? join(appRoot, "build", "brand", "distribution") : join(appRoot, "build");
 }

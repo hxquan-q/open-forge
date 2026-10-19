@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export function createStandaloneEntry(entry) {
 	const runtimeImport =
 		entry === "agent"
@@ -21,7 +22,7 @@ export function createStandaloneEntry(entry) {
 		'import highlightJs from "../../../packages/coding-agent/src/export-html/assets/vendor/highlight.min.js" with { type: "text" };',
 		'import darkTheme from "../../../packages/coding-agent/src/modes/interactive/theme/dark.json";',
 		'import lightTheme from "../../../packages/coding-agent/src/modes/interactive/theme/light.json";',
-		'import photonWasmPath from "../../../packages/coding-agent/node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm" with { type: "file" };',
+		'import photonWasmPath from "../../../packages/runtime-node/node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm" with { type: "file" };',
 		"",
 		"const htmlExporter = createCodingAgentHtmlExportRuntime({",
 		"	assets: { template, css, js, markedJs, highlightJs },",
@@ -33,7 +34,7 @@ export function createStandaloneEntry(entry) {
 		"});",
 		"installBuiltinThemeDocuments({ dark: darkTheme, light: lightTheme });",
 		"installPhotonWasmPath(photonWasmPath);",
-		'installPhotonModuleLoader(() => import("../../../packages/coding-agent/node_modules/@silvia-odwyer/photon-node/photon_rs.js"));',
+		'installPhotonModuleLoader(() => import("../../../packages/runtime-node/node_modules/@silvia-odwyer/photon-node/photon_rs.js"));',
 		runtimeCall,
 		"",
 	].join("\n");

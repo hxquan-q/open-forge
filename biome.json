@@ -25,6 +25,10 @@
 	},
 	"files": {
 		"includes": [
+			"project/agents.json",
+			"project/autonomy-policy.json",
+			"schemas/agents/**/*.json",
+			"scripts/agents/**/*.mjs",
 			"package.json",
 			"knip.config.ts",
 			".claude/hooks/**/*.mjs",

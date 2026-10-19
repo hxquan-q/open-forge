@@ -1,0 +1,138 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["version", "runId", "task", "binding", "authors", "checks", "review", "gates", "notRun"],
+	"properties": {
+		"version": { "const": 1 },
+		"runId": { "type": "string", "minLength": 1 },
+		"task": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+		"binding": { "$ref": "#/$defs/binding" },
+		"authors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/identity" } },
+		"checks": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/check" } },
+		"review": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["verdict", "findings", "reviewer", "binding"],
+			"properties": {
+				"verdict": { "enum": ["approve", "changes-requested", "unknown"] },
+				"reviewer": { "$ref": "#/$defs/identity" },
+				"binding": { "$ref": "#/$defs/binding" },
+				"findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } }
+			}
+		},
+		"gates": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["gates", "unknown", "reasons"],
+			"properties": {
+				"gates": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": {
+						"enum": [
+							"security",
+							"data",
+							"license-brand",
+							"billing",
+							"release-signing-update",
+							"tests-and-guards",
+							"major-version"
+						]
+					}
+				},
+				"unknown": { "type": "array", "items": { "type": "string" } },
+				"reasons": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["gate", "path", "reason"],
+						"properties": {
+							"gate": { "type": "string" },
+							"path": { "type": "string" },
+							"reason": { "type": "string" }
+						}
+					}
+				}
+			}
+		},
+		"notRun": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+	},
+	"$defs": {
+		"binding": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["head", "tree", "policy", "contract"],
+			"properties": {
+				"head": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+				"tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+				"policy": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+				"contract": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+			}
+		},
+		"identity": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["actorId", "adapterId", "provider", "family", "model"],
+			"properties": {
+				"actorId": { "type": "string", "minLength": 1 },
+				"adapterId": { "type": "string", "minLength": 1 },
+				"provider": { "type": "string", "minLength": 1 },
+				"family": { "type": "string", "minLength": 1 },
+				"model": { "type": "string", "minLength": 1 }
+			}
+		},
+		"finding": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["severity", "file", "reason"],
+			"properties": {
+				"severity": { "enum": ["blocker", "high", "medium", "low"] },
+				"file": { "type": "string" },
+				"reason": { "type": "string", "minLength": 1 }
+			}
+		},
+		"testResult": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["passed", "failed", "skipped", "total", "reportDigest", "files"],
+			"properties": {
+				"passed": { "type": "integer", "minimum": 1 },
+				"failed": { "type": "integer", "minimum": 0 },
+				"skipped": { "type": "integer", "minimum": 0 },
+				"total": { "type": "integer", "minimum": 1 },
+				"reportDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+				"files": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+			}
+		},
+		"check": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"id",
+				"command",
+				"binding",
+				"status",
+				"exitCode",
+				"outputDigest",
+				"stderrDigest",
+				"tests",
+				"startedAt",
+				"finishedAt"
+			],
+			"properties": {
+				"id": { "type": "string", "minLength": 1 },
+				"command": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+				"binding": { "$ref": "#/$defs/binding" },
+				"status": { "enum": ["passed", "failed", "not-run", "not-applicable"] },
+				"exitCode": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+				"outputDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+				"stderrDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+				"tests": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/testResult" }] },
+				"startedAt": { "type": "integer", "minimum": 0 },
+				"finishedAt": { "type": "integer", "minimum": 0 }
+			}
+		}
+	}
+}

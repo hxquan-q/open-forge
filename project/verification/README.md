@@ -9,6 +9,8 @@
 
 ## 默认验证顺序
 
+自主研发完整软件与实际环境审计：[VERIFY-0019](VERIFY-0019-autonomous-development-audit.md)（持续验证中，真实 L4 尚未验收）。
+
 ```text
 相关测试文件
   → bun run test:impact -- <files>

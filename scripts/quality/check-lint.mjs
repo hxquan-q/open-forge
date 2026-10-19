@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Run full Biome checks against explicit source roots.
  * Passing the repository root makes Biome's scanner crawl unrelated trees.
@@ -12,6 +13,10 @@ const ROOT_TARGETS = [
 	"package.json",
 	"knip.config.ts",
 	"scripts/quality",
+	"scripts/agents",
+	"schemas/agents",
+	"project/autonomy-policy.json",
+	"project/agents.json",
 	"scripts/eval",
 	"packages/coding-agent/examples",
 	"packages/runtime-core/examples",

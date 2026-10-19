@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import { app, BrowserWindow, nativeTheme } from "electron";
 import { isSpeechInputBuildEnabled } from "../shared/feature-flags.js";
@@ -22,7 +23,7 @@ const resDir = app.isPackaged ? appRoot : join(appRoot, "dist");
 // dev 态按品牌档案取窗口/托盘图标目录；打包态沿用暂存 resources/build（prepare-pack 已按档覆盖）。
 const buildDir = resolveBrandIconDirectory({
 	isPackaged: app.isPackaged,
-	packagedDirectory: join(process.resourcesPath, "build"),
+	packagedDirectory: app.isPackaged ? join(process.resourcesPath, "build") : undefined,
 	appRoot,
 });
 const devServerUrl = process.env.VETTA_DESKTOP_DEV_URL;

@@ -1,0 +1,23 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["payload", "signature"],
+	"properties": {
+		"signature": { "type": "string", "minLength": 80, "maxLength": 100 },
+		"payload": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["version", "kind", "keyId", "issuedAt", "expiresAt", "subject", "data"],
+			"properties": {
+				"version": { "const": 1 },
+				"kind": { "type": "string", "enum": ["ci", "artifact", "publication", "telemetry", "cleanup"] },
+				"keyId": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,80}$" },
+				"issuedAt": { "type": "integer", "minimum": 0 },
+				"expiresAt": { "type": "integer", "minimum": 1 },
+				"subject": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+				"data": { "type": "object" }
+			}
+		}
+	}
+}

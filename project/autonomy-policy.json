@@ -1,0 +1,29 @@
+{
+	"version": 1,
+	"targetLevel": 4,
+	"level": 0,
+	"paused": false,
+	"capabilities": [],
+	"allowedProviders": [],
+	"differentReviewerFamily": true,
+	"limits": {
+		"implementers": 2,
+		"reviewers": 2,
+		"implRounds": 3,
+		"reviewRounds": 3,
+		"leaseMs": 900000,
+		"heartbeatMs": 15000,
+		"wallTimeMs": 1800000,
+		"stallMs": 300000,
+		"outputBytes": 1048576
+	},
+	"requiredChecks": ["tests", "check", "impact"],
+	"rollout": {
+		"steps": [1, 10, 50, 100],
+		"holdMs": 172800000,
+		"minSessions": 500,
+		"maxCrashRate": 0.01,
+		"maxCrashRatio": 1.2,
+		"maxTelemetryAgeMs": 900000
+	}
+}

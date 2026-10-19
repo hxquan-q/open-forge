@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { NodeProjectTrustStore } from "@vetta/runtime-node/host";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -650,6 +652,9 @@ describe("installed standalone CLI artifact", () => {
 			events: textResponseEvents(`Installed dynamic capability turn ${index}.`),
 		}));
 		fixture = await createAgentRpcFixture({ baseUrl: providerServer.baseUrl });
+		const projectTrust = new NodeProjectTrustStore({ projectRoot: fixture.workspace });
+		expect(await projectTrust.allows("resources:project-load")).toBe(false);
+		await projectTrust.grant({ capabilities: ["resources:project-load"] });
 		const isolatedEnv = createIsolatedArtifactEnv(fixture);
 		activeProcess = startInstalledCli(artifact.binaryPath, fixture, isolatedEnv);
 		const initialState = await activeProcess.request("installed-dynamic-state-before", "get_state");

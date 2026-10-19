@@ -16,6 +16,8 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0133` | 发布回执用发起时刻验签，正常稍后签发被误拒绝；真实时钟回归先红后绿，已集成本地 main，组合 46/46 包通过 | verifying | P1 | PLAN-0019 |
+| `BUG-0132` | 独立 CLI Photon 生成路径修复，独立制品 14/14 通过，已集成本地 main，组合 46/46 包通过 | verifying | P1 | PLAN-0019 |
 | `BUG-0131` | 被拦截的主窗口导航把插件工具宿主永久留在 loading，设计插件工具全部被拒 | done | P1 | — |
 | `BUG-0130` | 设置页脚仍显示旧品牌数据根的模型配置路径 `~/.vetta/agent/models.json`（本仓实际默认 `~/.openforge`，支持 env 覆盖与旧根迁移） | verifying | P3 | — |
 | `BUG-0129` | Dependabot 第二轮 9 项 high 告警：electron 39.8.10 落入 4 项新通告区间（需 41.10.4/41.10.6+）、engine source-map-js 1.2.1（需 1.2.2+） | done | P1 | — |
@@ -40,7 +42,7 @@
 | `BUG-0110` | 上下文压缩提交与事件追加并发共享 `state.version`，压缩持久化间歇性版本冲突失败 | verifying | P2 | — |
 | `BUG-0109` | 续跑条「继续」把持久会话路径当 runtime session id 传给宿主，必然 `SESSION_NOT_FOUND` | verifying | P1 | — |
 | `BUG-0108` | 删除团队会话失败：通知日志写入与成员 runtime 释放失败双双掀翻删除 | verifying | P1 | — |
-| `BUG-0107` | 四个 desktop 测试文件在 vitest 下收集期崩溃（`process.resourcesPath` 未定义，0 用例执行） | investigating | P2 | — |
+| `BUG-0107` | 四个 desktop 测试文件在 vitest 下收集期崩溃；TASK-0325 延迟计算打包路径，6 文件 / 29 例通过，待最终集成验证 | verifying | P2 | — |
 | `BUG-0106` | 品牌档位翻转后 provider 展示名断言未同步，desktop 渲染层测试恒红 | verifying | P2 | — |
 | `BUG-0102` | dev 启动在 Electron 二进制安装不完整时硬失败：无自愈、无可操作指引 | verifying | P2 | — |
 | `BUG-0101` | 团队会话流式事件驱动成员胶囊条测量循环：Maximum update depth exceeded 整页崩为路由错误页 | verifying | P1 | — |
