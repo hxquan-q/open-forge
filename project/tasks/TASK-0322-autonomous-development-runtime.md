@@ -83,7 +83,7 @@ TASK-0197 的历史宽范围包含 project/tasks；登记串行集成冲突，�
 
 ## 2026-10-20 组合验证与集成
 
-- 来源链：cf79dd504 → 47b1e8e86 → c22ccc1c5 → 33992b0be → 8e14b3bcd → ff408a28e → 8846e7f30。按 WAIVER-0005 在本地 main 合并，保留每项原子修复；未推送或发布。
+- 来源链：cf79dd504 → 47b1e8e86 → c22ccc1c5 → 33992b0be → 8e14b3bcd → ff408a28e → 8846e7f30。按 WAIVER-0005 在本地 main 合并为 `80ad98655`，保留每项原子修复；代码/测试树与冻结候选树相同，仅管理记录订正；未推送或发布。
 - 冻结候选树 3e067fa1a2d62e6ac9b9599c8481cd0837c8efc9 经完整 test:changed --base origin/dev：46 包全部通过，2077.1 秒；CLI 238 通过 / 14 跳过，Desktop 5278 通过 / 17 跳过，未新增 skip 或改变断言/超时。日志为系统临时目录 open-forge-autonomy-integrated-test-changed-20261019.log。
 - 七个他人 temp 文件仍原位未跟踪；来源和候选校验未发生其他代码变化。仅更新本次集成管理记录，最终完整 check 仍须在合并提交前通过。
 - 本 Task 保持 verifying，真实执行/评审、UI 与外部服务接入仍未验收；完整目标和恢复条件见 VERIFY-0019，不能把本地软件验证当成真实 L4。

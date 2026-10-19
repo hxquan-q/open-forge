@@ -38,4 +38,4 @@ expires: 2026-10-20
 
 ## 结果
 
-冻结候选树 `3e067fa1a2d62e6ac9b9599c8481cd0837c8efc9` 的最终组合 test:changed 为 46/46 包通过，2077.1 秒；七个他人 temp 文件保留原位。合并前完整 check 于 2026-10-20 exit 0（39.8 秒，`open-forge-autonomy-integrated-final-check-20261020.log`）。2026-10-20 登记 resolved，仅证明本地组合证据，不包含 dev push、origin/main、tag、发布、真实模型或真实 UI/监控验收。main:dev 推送仍必须满足原有干净工作区条件。
+冻结候选树 `3e067fa1a2d62e6ac9b9599c8481cd0837c8efc9` 的最终组合 test:changed 为 46/46 包通过，2077.1 秒；七个他人 temp 文件保留原位。合并前完整 check 于 2026-10-20 exit 0（39.8 秒，`open-forge-autonomy-integrated-final-check-20261020.log`）。已合并本地 main `80ad98655`；2026-10-20 登记 resolved，仅证明本地组合证据，不包含 dev push、origin/main、tag、发布、真实模型或真实 UI/监控验收。main:dev 推送仍必须满足原有干净工作区条件。

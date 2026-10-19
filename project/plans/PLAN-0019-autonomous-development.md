@@ -23,7 +23,7 @@ depends_on: []
 - scripts/worktree、三平台质量门禁、Desktop packaged/upgrade、发布说明碎片已存在。
 - TASK-0321 的触发精简已在实施基线，未覆盖或回退。主工作区另有他人 temp/ 未跟踪文件，保持原位，不夹带提交。
 - ISSUE-0029 的最近已核实作业因 Actions 预算未启动（run 39235716508 / job 118004157996）；没有新的远端绿灯，不调整账户预算。
-- PLAN-0019 的来源链 `cf79dd504` → `47b1e8e86` → `c22ccc1c5` → `33992b0be` → `8e14b3bcd` → `ff408a28e` → `8846e7f30` 已按 WAIVER-0005 合并到本地 main 的未提交候选，组合 test:changed 46/46 包通过。Task 保持 verifying，最终完整 check 作为合并前闸门。
+- PLAN-0019 的来源链 `cf79dd504` → `47b1e8e86` → `c22ccc1c5` → `33992b0be` → `8e14b3bcd` → `ff408a28e` → `8846e7f30` 已按 WAIVER-0005 合并到本地 main 的合并提交 `80ad98655`，组合 test:changed 46/46 包通过，合并前完整 check exit 0。Task 保持 verifying，真实环境验收另列。
 - 用户已明确没有隔离 VM/runner、模型与独立评审配置、签名/监控环境。实际配置 level=0、模型与发布器 disabled；目标 L4 仍未达到。
 
 ## 候选方案与取舍
@@ -53,7 +53,7 @@ depends_on: []
 | 复盘、三日期晋升候选、每日摘要 | feedback/usage；真实提交/失败日期、空成本和三日期测试 | 软件通过；nightly 是材料，真实模型复盘未执行 |
 | 候选/稳定发布、灰度、监控缺失暂停 | release/services；真实受控 Node 发布器、丢响应/幂等/清理回执 | 软件协议通过，实际 CI/签名/发布/遥测未部署 |
 | 规则入口、文档、Release Notes、质量接线 | AGENTS/CLAUDE/GEMINI/Cursor、LESSONS、质量脚本 | 597 例与分项 check 通过，组合 46/46 包通过；合并前完整 check exit 0 |
-| 集成与真实自主运行 | 七提交来源链；任务与组合记录 | 已集成本地 main 的未提交候选，未 push/dev 发布；实际自主运行未执行 |
+| 集成与真实自主运行 | 七提交来源链；任务与组合记录 | 已合并本地 main `80ad98655`，未 push/dev 发布；实际自主运行未执行 |
 | 真实稳定发布与 L4 验收 | 明确授权、签名、平台、监控、发布证据 | 未执行，不以本地测试替代 |
 
 ## 不做什么

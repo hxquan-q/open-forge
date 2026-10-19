@@ -15,10 +15,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0325` | `verifying` | PLAN-0019 | 基线与发布时钟修复：制品 14、合同 137、Desktop 29 例通过；已集成本地 main，组合 test:changed 46/46 包通过，合并前完整 check exit 0；实际环境与适配差距见 VERIFY-0019。 |
-| `TASK-0324` | `verifying` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；已集成本地 main，组合 test:changed 46/46 包通过，真实环境仍关闭。 |
-| `TASK-0323` | `verifying` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；已集成本地 main，组合 test:changed 46/46 包通过，真实 UI/部署未验收。 |
-| `TASK-0322` | `verifying` | PLAN-0019 | 自主研发运行合同、租约、进程、评审与可信验证核心；已集成本地 main，全量受影响测试历史超时经组合 46/46 包验证；完整范围见 PLAN-0019。 |
+| `TASK-0325` | `verifying` | PLAN-0019 | 基线与发布时钟修复：制品 14、合同 137、Desktop 29 例通过；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，合并前完整 check exit 0；实际环境与适配差距见 VERIFY-0019。 |
+| `TASK-0324` | `verifying` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实环境仍关闭。 |
+| `TASK-0323` | `verifying` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实 UI/部署未验收。 |
+| `TASK-0322` | `verifying` | PLAN-0019 | 自主研发运行合同、租约、进程、评审与可信验证核心；已集成 main `80ad98655`，全量受影响测试历史超时经组合 46/46 包验证；完整范围见 PLAN-0019。 |
 | `TASK-0321` | `verifying` | — | ISSUE-0029：dev push 只跑轻量质量检查，三平台单测与 desktop-packaged 改为 PR/手动触发；名下其他私有仓库 Actions 已停用；serial，main 主工作区串行。 |
 | `TASK-0320` | `done` | — | BUG-0131：把插件宿主失效点从 `did-start-navigation` 改为已提交的 `did-navigate`，抽出可测试导航接线；真实拦截导航后工具不再永久 loading；serial，main 主工作区串行。 |
 | `TASK-0319` | `verifying` | — | REQ-0018：侧边栏「能力」→「技能与连接器」、「设计」→「原型设计」，同步页面跳转目标名/新手引导入口标题/设置助手路径提示与中英文 catalog；新增入口命名一致性合同测试 2 例，定向 22 文件/132 例、`check:quick` 与完整 `check` 全绿；serial，main 主工作区串行，待人工目验。 |

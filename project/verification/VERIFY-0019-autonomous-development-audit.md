@@ -21,7 +21,7 @@ related_bugs: [BUG-0107, BUG-0132, BUG-0133]
 
 ## 环境与证据
 
-- 实施基线 main `399fdf1ff`；来源链 `cf79dd504` → `47b1e8e86` → `c22ccc1c5` → `33992b0be` → `8e14b3bcd` → `ff408a28e` → `8846e7f30`。本地 main 按 WAIVER-0005 合并为待提交候选；冻结候选树 `3e067fa1a2d62e6ac9b9599c8481cd0837c8efc9`。
+- 实施基线 main `399fdf1ff`；来源链 `cf79dd504` → `47b1e8e86` → `c22ccc1c5` → `33992b0be` → `8e14b3bcd` → `ff408a28e` → `8846e7f30`。本地 main 按 WAIVER-0005 合并为 `80ad98655`；冻结候选树 `3e067fa1a2d62e6ac9b9599c8481cd0837c8efc9`，合并后代码/测试树未改变，仅集成管理记录订正。
 - 组合验证日志 `open-forge-autonomy-integrated-test-changed-20261019.log`，位于系统临时目录；七个他人 `temp/` 文件仍原位未跟踪，未读取内容、暂存或提交。
 - Windows 本机、Bun 1.4.2 / Node v26.3.1 / 仓库 Node Vitest runner；临时真实 Git、Worktree、文件、子进程与测试专用签名密钥。
 - 未使用真实用户 Desktop/Agent 状态、Provider、签名私钥或生产服务；真实模型、发布器默认 disabled，doctor 实测 level=0、readyForModelExecution=false、publisherConfigured=false。
@@ -51,7 +51,7 @@ related_bugs: [BUG-0107, BUG-0132, BUG-0133]
 - 同一失败文件单 worker 9/9 通过后，公开合同入口复用现有 test 的单 worker 策略；最终 27 文件 / 137 例全通过，465.74 秒（`open-forge-task-0325-runtime-contract-v2-20261019.log`），原超时/断言/范围不变。
 - TASK-0325 控制器补丁经 impact 实际重跑质量 54 文件 / 597 例，通过；完整 check exit 0（`open-forge-task-0325-check-20261019.log`），实际 UI、模型与发布仍未执行。
 - 最终组合 test:changed 已通过：46/46 包，2077.1 秒。CLI 51 文件通过 / 1 跳过，238 例通过 / 14 跳过；Desktop 973 文件通过 / 4 跳过，5278 例通过 / 17 例跳过；未新增 skip，未修改断言或超时。
-- 管理记录订正后的合并前完整 `bun run check` exit 0，39.8 秒，日志 `open-forge-autonomy-integrated-final-check-20261020.log`；lint、类型、守卫、移动端 lint 与自主入口检查通过，未放宽基线。
+- 管理记录订正后的合并前完整 `bun run check` exit 0，39.8 秒，日志 `open-forge-autonomy-integrated-final-check-20261020.log`；`80ad98655` 的合并后记录完整 check 再次 exit 0，日志 `open-forge-autonomy-post-merge-check-20261020.log`；lint、类型、守卫、移动端 lint 与自主入口检查通过，未放宽基线。
 
 ## 未运行与恢复条件
 

@@ -65,5 +65,5 @@ TypeError: The "path" argument must be of type string. Received undefined
 
 - 修复：TASK-0325 在非打包分支延迟计算 resourcesPath；相邻图标解析合同允许 dev 不提供暂存路径，打包态缺少路径明确拒绝。未修改 Electron 桩来掩盖实际接线。
 - 测试：新实际 window-manager 导入回归在旧实现精确复现 undefined 路径错误；修复后含原四个失败文件共 6 文件 / 29 例通过，品牌与打包路径断言保留。日志：系统临时目录 `open-forge-task-0325-desktop-baseline-20261019.log`。
-- 检查：TASK-0325 已集成本地 main；组合 test:changed 的 Desktop 973 文件通过 / 4 跳过、5278 例通过 / 17 跳过，原四个收集期失败文件均实际执行。最终合并前完整 check exit 0；未运行真实 Desktop/UI。
+- 检查：TASK-0325 已集成 main `80ad98655`；组合 test:changed 的 Desktop 973 文件通过 / 4 跳过、5278 例通过 / 17 跳过，原四个收集期失败文件均实际执行。最终合并前完整 check exit 0；未运行真实 Desktop/UI。
 - 未运行及原因：真实用户 Desktop 与 UI 验证未获本任务授权；该问题属于非打包模块求值，Node 实际入口回归可验证。
