@@ -5,7 +5,7 @@
 
 ## 执行顺序
 
-1. 读当前 Task 和既有任务入口。运行策略以 `project/autonomy-policy.json` 为准；有效配置不等于已授权调用模型或发布。
+1. 读当前 Task、既有任务入口和 [LESSONS](../../../LESSONS.md) 中相关候选；候选供规避已知错误，强制规则仍以权威正文为准。运行策略以 `project/autonomy-policy.json` 为准；有效配置不等于已授权调用模型或发布。
 2. 用 `agent:queue` 查看已有 ready Task；依赖须完成且已集成。`agent:claim` 领取同一租约，`agent:prepare` 通过标准 Worktree 入口建立并提交 in_progress 基线。
 3. `agent:cycle` 对一个明确 Task 执行有界的实现→独立评审→验证；`--through integrate` 另要求 integrate-dev 能力。代码、策略、执行器或合同变化会使证据失效。运行失败保留源代码和状态，先诊断再恢复。
 4. 合并候选在已租用 Worktree 中生成；其评审和检查全部重做。只有最终提交和目标基线仍匹配才前进本地 main；用户接受与发布保持既有独立状态。所有外部推送继续受协作与交付规则约束。
