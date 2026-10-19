@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ModelsConfigData, PresetError, PresetProviderInfo } from "@preload/api.js";
 import { showToast } from "@shared/store/toast-atoms";
 import type { TFunction } from "i18next";
@@ -48,6 +49,8 @@ export interface PresetProvidersSectionLabels {
 	collapse: string;
 	cancel: string;
 	changeKey: string;
+	/** 未启用时钥匙按钮的提示文案；与 enable（编辑器内主按钮文案）分开，避免复用共享键。 */
+	configureApiKey: string;
 	remove: string;
 	enable: string;
 	apiKeyDirect: (provider: string) => string;
@@ -358,6 +361,7 @@ export function usePresetProvidersSectionModel({
 			collapse: t("collapse"),
 			cancel: t("cancel"),
 			changeKey: t("changeKey"),
+			configureApiKey: t("configureApiKey"),
 			remove: t("remove"),
 			enable: t("enable"),
 			apiKeyDirect: (provider: string) => t("apiKeyDirect", { provider }),
