@@ -1,0 +1,27 @@
+{
+	"version": 1,
+	"adapters": [
+		{
+			"id": "codex",
+			"enabled": false,
+			"provider": "openai",
+			"family": "openai",
+			"model": "unconfigured",
+			"roles": ["planner", "implementer", "reviewer", "lessons"],
+			"command": ["codex", "exec", "--model", "{model}", "--json", "-"],
+			"doctorCommand": ["codex", "--version"],
+			"isolation": "none"
+		},
+		{
+			"id": "claude",
+			"enabled": false,
+			"provider": "anthropic",
+			"family": "anthropic",
+			"model": "unconfigured",
+			"roles": ["planner", "implementer", "reviewer", "lessons"],
+			"command": ["claude", "-p", "--model", "{model}", "--output-format", "json"],
+			"doctorCommand": ["claude", "--version"],
+			"isolation": "none"
+		}
+	]
+}

@@ -1,0 +1,39 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"version",
+		"task",
+		"baseCommit",
+		"taskDigest",
+		"policyDigest",
+		"adaptersDigest",
+		"worktree",
+		"testFiles",
+		"minimumTests",
+		"checks"
+	],
+	"properties": {
+		"version": { "const": 1 },
+		"task": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+		"baseCommit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+		"taskDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+		"policyDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+		"adaptersDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+		"worktree": { "type": "string", "minLength": 1 },
+		"testFiles": {
+			"type": "array",
+			"minItems": 1,
+			"uniqueItems": true,
+			"items": { "type": "string", "minLength": 1 }
+		},
+		"minimumTests": { "type": "integer", "minimum": 1 },
+		"checks": {
+			"type": "array",
+			"minItems": 2,
+			"uniqueItems": true,
+			"items": { "type": "string", "enum": ["tests", "check", "impact", "ui", "packaged"] }
+		}
+	}
+}

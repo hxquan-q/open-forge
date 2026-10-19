@@ -1,0 +1,12 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["task", "holder", "runId", "generation"],
+	"properties": {
+		"task": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+		"holder": { "type": "string", "minLength": 1 },
+		"runId": { "type": "string", "minLength": 1 },
+		"generation": { "type": "integer", "minimum": 1 }
+	}
+}
