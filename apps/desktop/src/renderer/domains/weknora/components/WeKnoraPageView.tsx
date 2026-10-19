@@ -6,6 +6,10 @@ import { Button } from "@vetta-org/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
+import {
+	persistWeKnoraSidebarCollapsed,
+	readPersistedWeKnoraSidebarCollapsed,
+} from "../weknora-sidebar-state";
 import { AgentSelector } from "./AgentSelector";
 import { ConversationList } from "./ConversationList";
 import { MessageList } from "./MessageList";
@@ -76,7 +80,16 @@ export function WeKnoraPageView({
 }: WeKnoraPageViewProps): JSX.Element {
 	const { t } = useTranslation("weknora");
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	// 侧栏收起是单页面 UI 铬件状态（02-plan §2.5）：本地 state 而非 atom，
+	// 惰性初始化只读一次落盘（AC-3 重启保持），切换时写回。
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(readPersistedWeKnoraSidebarCollapsed);
 	const agentsReady = agentsStatus === "ready" && agents.length > 0;
+
+	const toggleSidebar = (): void => {
+		const next = !sidebarCollapsed;
+		setSidebarCollapsed(next);
+		persistWeKnoraSidebarCollapsed(next);
+	};
 
 	let statusNotice: JSX.Element | null = null;
 	if (configured && agentsStatus === "loading") {
@@ -93,9 +106,33 @@ export function WeKnoraPageView({
 
 			<header className="shrink-0 px-8 pb-4">
 				<div className="flex items-end justify-between gap-4">
-					<div>
-						<h1 className="text-[15px] font-semibold text-foreground">{t("page.title")}</h1>
-						<p className="mt-1 text-[12px] text-muted-foreground/60">{t("page.subtitle")}</p>
+					<div className="flex items-center gap-2">
+						{/* AC-1/AC-4：侧栏显隐开关只对已配置用户出现；状态由 aria-expanded 暴露，
+						    图标指向收拢方向（展开时朝左收、收起后朝右放）。 */}
+						{configured ? (
+							<Button
+								aria-expanded={!sidebarCollapsed}
+								aria-label={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+								onClick={toggleSidebar}
+								size="icon-xs"
+								title={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+								type="button"
+								variant="ghost"
+							>
+								<span
+									aria-hidden="true"
+									className={`h-3.5 w-3.5 ${
+										sidebarCollapsed
+											? "icon-[solar--alt-arrow-right-linear]"
+											: "icon-[solar--alt-arrow-left-linear]"
+									}`}
+								/>
+							</Button>
+						) : null}
+						<div>
+							<h1 className="text-[15px] font-semibold text-foreground">{t("page.title")}</h1>
+							<p className="mt-1 text-[12px] text-muted-foreground/60">{t("page.subtitle")}</p>
+						</div>
 					</div>
 					<div className="flex items-center gap-2">
 						{configured && agentsReady ? (
@@ -113,7 +150,8 @@ export function WeKnoraPageView({
 			</header>
 
 			<div className="flex flex-1 gap-4 overflow-hidden px-8 pb-8">
-				{configured ? (
+				{/* AC-2：收起 = 整栏不渲染（非视觉隐藏）；主列本就是 flex-1，侧栏缺席即横向占满。 */}
+				{configured && !sidebarCollapsed ? (
 					<ConversationList
 						agents={agents}
 						currentSessionId={currentSessionId}

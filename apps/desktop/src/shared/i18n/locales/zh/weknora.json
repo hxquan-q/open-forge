@@ -11,6 +11,10 @@
 		"agentsError": "获取智能体列表失败,请检查配置与网络后重试。",
 		"retry": "重试"
 	},
+	"sidebar": {
+		"collapse": "收起历史会话",
+		"expand": "展开历史会话"
+	},
 	"setup": {
 		"baseUrl": "服务地址",
 		"baseUrlPlaceholder": "http://host:port",

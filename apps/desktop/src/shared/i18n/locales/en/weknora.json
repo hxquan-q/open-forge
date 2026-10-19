@@ -11,6 +11,10 @@
 		"agentsError": "Failed to load the agent list. Check the configuration and network, then retry.",
 		"retry": "Retry"
 	},
+	"sidebar": {
+		"collapse": "Hide history",
+		"expand": "Show history"
+	},
 	"setup": {
 		"baseUrl": "Service URL",
 		"baseUrlPlaceholder": "http://host:port",
