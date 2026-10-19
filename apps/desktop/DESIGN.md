@@ -280,6 +280,8 @@ grid 自适应：`grid-cols-[repeat(auto-fill,minmax(240px,1fr))]`（小卡）/ 
 
 **The No-Fixed-Grid Rule.** 卡片网格一律用 `auto-fill` + `minmax` 自适应。写死列数会在用户拉窄窗口时立刻破版。
 
+**已知特例（智能客服页 `/weknora`）**：该页**不**用页面外层 `px-8` + `pb-8`，而用 `px-3` + `pb-2`(页头) / `pb-3`(内容行)。原因：用户 2026-10-19 明确要求收掉顶部那一大块留白、让历史会话栏贴近页头。顶部 `drag-region h-12` 是窗口拖拽硬约束，未动。其它页面仍按 `px-8` + `pb-8`。
+
 ---
 
 ## Elevation & Depth
@@ -480,6 +482,7 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 - **Don't** 用 `rounded-3xl` 或任意 `rounded-[Npx]`。
 - **Don't** 写 `transition-all`（优先 `transition-colors` 或具体属性），也不要写长于 0.6s 的进入动画。
 - **Don't** 在业务组件里自写 `@keyframes … infinite` 做「进行中」指示。两条合法路径：常驻指示走宿主统一挂载（见下节），加载指示用现成的 `<Spin>`。`Spin` 自己那份无限 keyframes 是全局单例基元，属于被允许的例外——**不要**在 `src/renderer/**` 里再写第二份。
+  - **已知特例（智能客服页 `/weknora`）**：该页的「思考中」三点走宿主统一挂载（在 `live-animations.ts` 登记 `.weknora-thinking-dot-{1,2,3}`，相位错开 150ms），符合本规则而非例外。另：该页**流式文本做逐字淡入**，与 `styles.css` 中 `.markdown-streaming-tail`「流式文本不做淡入」的取舍不同——理由见该处注释，实现用**尾部窗口（64 字符）**把同时挂动画的字符数封顶，避免流式全程连续出帧。
 - **Don't** 在组件里手写 `::-webkit-scrollbar` / `scrollbar-width`，也不要单独覆盖 `::selection`。
 - **Don't** 机械地给每个 token 类再写一份 `dark:`——绝大多数 token 颜色会自适应，只有装饰性效果（外发光、网格纹理）需要明暗变体。**例外**：当一个部件的两个面在同一模式下对比度不足时（如 Switch 的轨道与滑块），该部件必须按模式调换前后景 token。判断标准是对比度，不是"补一份更保险"。
 - **Don't** 在 `drag-region` 内放交互元素（必须放时套 `.no-drag`），也不要给它加 `cursor-*` 或 `onClick`。
