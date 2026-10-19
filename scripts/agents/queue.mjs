@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { loadTasks } from "../worktree/contract.mjs";
+import { loadTasks as loadRepositoryTasks } from "../worktree/contract.mjs";
 import { claim } from "./leases.mjs";
 
 export function completedTasks(tasks) {
@@ -24,7 +24,8 @@ export function taskQueue(tasks, state, now = Date.now()) {
 		}));
 }
 
-export function claimNext(root, store, options) {
+/** The ledger remains the source of ready work; this only leases one non-conflicting candidate. */
+export function claimNext(root, store, options, loadTasks = loadRepositoryTasks) {
 	const { tasks, problems } = loadTasks(root);
 	if (problems.length) throw new Error(problems.join("; "));
 	const queue = taskQueue(tasks, store.read(), options.now);
@@ -33,7 +34,12 @@ export function claimNext(root, store, options) {
 		if (entry.leased || entry.waitingFor.length) continue;
 		const task = tasks.find((candidate) => candidate.id === entry.task);
 		try {
-			return { task, token: claim(store, task, { ...options, completed: completedTasks(tasks) }) };
+			return {
+				task,
+				token: claim(store, task, { ...options, completed: completedTasks(tasks) }),
+				queue,
+				conflicts,
+			};
 		} catch (error) {
 			if (!/task scope conflict|task already leased/u.test(error.message)) throw error;
 			conflicts.push({ task: entry.task, reason: error.message });
