@@ -3,7 +3,8 @@
 import type { WeKnoraAgent, WeKnoraSession } from "@preload/api";
 import { Input } from "@shared/components/ui/input";
 import { Button } from "@vetta-org/ui";
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
 import {
@@ -14,6 +15,32 @@ import { AgentSelector } from "./AgentSelector";
 import { ConversationList } from "./ConversationList";
 import { MessageList } from "./MessageList";
 import { WeKnoraComposer } from "./WeKnoraComposer";
+
+/**
+ * 侧栏收起/展开动画（D 组 AC-10~12）。
+ *
+ * - 展开宽度 = `ConversationList` 的 `nav` 宽度（`w-64` = 16rem）+ 原内容行 `flex gap-4` 的间隙（1rem）。
+ *   间隙并入动画宽度一起归零：若把它留在内容行的 `gap-4` 上，收起终态会残留 16px 空隙
+ *   （票面「flex 间隙」提醒的正是这个坑）。
+ * - 时长约 200ms；缓动与 abilities 域入场先例一致。
+ * - **终态必须卸载**（AC-11）：动画只是过渡，不得留下不可见占位节点，故用 `sidebarPresent` 控制挂载。
+ */
+const SIDEBAR_SLOT_WIDTH = "17rem";
+const SIDEBAR_ANIMATION_MS = 200;
+const SIDEBAR_EASE = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * 渲染期读取系统「减少动态效果」偏好（AC-12）：为真时收起/展开瞬时切换。
+ *
+ * 直接读 `matchMedia`，不用 motion 的 `useReducedMotion`——后者在进程内首次调用时一次性
+ * 缓存结果，既不随偏好变化更新，也无法在单个测试文件内分别验证两种分支
+ * （仓库 live-animations / theme/apply 同样是直接读法）。
+ */
+function prefersReducedMotion(): boolean {
+	return typeof window !== "undefined" && typeof window.matchMedia === "function"
+		? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+		: false;
+}
 
 export interface WeKnoraPageViewProps {
 	readonly configured: boolean;
@@ -79,11 +106,34 @@ export function WeKnoraPageView({
 	onReloadAgents,
 }: WeKnoraPageViewProps): JSX.Element {
 	const { t } = useTranslation("weknora");
+	const reduceMotion = prefersReducedMotion();
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	// 侧栏收起是单页面 UI 铬件状态（02-plan §2.5）：本地 state 而非 atom，
 	// 惰性初始化只读一次落盘（AC-3 重启保持），切换时写回。
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(readPersistedWeKnoraSidebarCollapsed);
+	// 侧栏是否留在 DOM（AC-11）：展开时恒为 true；收起时先播退出动画、动画结束再卸载。
+	const [sidebarPresent, setSidebarPresent] = useState(!sidebarCollapsed);
+	// 仅首次挂载不播入场动画（`initial={false}`），之后每次展开都从 0 宽度滑入。
+	const sidebarMountedOnce = useRef(false);
 	const agentsReady = agentsStatus === "ready" && agents.length > 0;
+
+	useEffect(() => {
+		sidebarMountedOnce.current = true;
+	}, []);
+
+	// 收起：reduced-motion 立即卸载；否则等动画播完再卸载（AC-11 终态不渲染、不占宽）。
+	useEffect(() => {
+		if (!sidebarCollapsed) {
+			setSidebarPresent(true);
+			return;
+		}
+		if (reduceMotion) {
+			setSidebarPresent(false);
+			return;
+		}
+		const timer = window.setTimeout(() => setSidebarPresent(false), SIDEBAR_ANIMATION_MS);
+		return () => window.clearTimeout(timer);
+	}, [sidebarCollapsed, reduceMotion]);
 
 	const toggleSidebar = (): void => {
 		const next = !sidebarCollapsed;
@@ -152,24 +202,35 @@ export function WeKnoraPageView({
 			</header>
 
 			{/* AC-2/AC-1b：内容行左右与页头对齐（px-3），下边距 32→12px（pb-8→pb-3），
-			    使历史会话栏（含「新建对话」）整体上移贴近页头。 */}
-			<div className="flex flex-1 gap-4 overflow-hidden px-3 pb-3">
-				{/* AC-2：收起 = 整栏不渲染（非视觉隐藏）；主列本就是 flex-1，侧栏缺席即横向占满。 */}
-				{configured && !sidebarCollapsed ? (
-					<ConversationList
-						agents={agents}
-						currentSessionId={currentSessionId}
-						deleteError={deleteError}
-						deletingSessionId={deletingSessionId}
-						loadingSessionId={loadingSessionId}
-						onDeleteSession={onDeleteSession}
-						onNewConversation={onNewConversation}
-						onOpenSession={onOpenSession}
-						onReload={onReloadSessions}
-						sessions={sessions}
-						status={sessionsStatus}
-						streamingSessionIds={streamingSessionIds}
-					/>
+			    使历史会话栏（含「新建对话」）整体上移贴近页头。
+			    注意：这里刻意不再用 `gap-4`——间隙并入侧栏动画宽度（见 SIDEBAR_SLOT_WIDTH），
+			    否则收起终态会残留 16px 空隙。 */}
+			<div className="flex flex-1 overflow-hidden px-3 pb-3">
+				{/* AC-10/AC-11：收起/展开为宽度滑动 + 内容淡出/淡入（约 200ms）；动画结束后整栏卸载，
+				    不占宽（终态与 AC-2 一致）。动画期间 `aria-hidden` 让辅助技术按「已收起」看待它。 */}
+				{configured && sidebarPresent ? (
+					<motion.div
+						animate={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? "0rem" : SIDEBAR_SLOT_WIDTH }}
+						aria-hidden={sidebarCollapsed || undefined}
+						className="shrink-0 overflow-hidden"
+						initial={sidebarMountedOnce.current ? { opacity: 0, width: "0rem" } : false}
+						transition={reduceMotion ? { duration: 0 } : { duration: SIDEBAR_ANIMATION_MS / 1000, ease: SIDEBAR_EASE }}
+					>
+						<ConversationList
+							agents={agents}
+							currentSessionId={currentSessionId}
+							deleteError={deleteError}
+							deletingSessionId={deletingSessionId}
+							loadingSessionId={loadingSessionId}
+							onDeleteSession={onDeleteSession}
+							onNewConversation={onNewConversation}
+							onOpenSession={onOpenSession}
+							onReload={onReloadSessions}
+							sessions={sessions}
+							status={sessionsStatus}
+							streamingSessionIds={streamingSessionIds}
+						/>
+					</motion.div>
 				) : null}
 
 				<div className="flex flex-1 flex-col gap-4 overflow-hidden">
