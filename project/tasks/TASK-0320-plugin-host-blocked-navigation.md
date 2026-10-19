@@ -1,7 +1,7 @@
 ---
 id: TASK-0320
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement:
@@ -21,7 +21,7 @@ write_paths: [apps/desktop/src/main/ipc/session.ts, apps/desktop/src/main/plugin
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-19
 updated: 2026-10-19
 ---
@@ -90,8 +90,8 @@ updated: 2026-10-19
 
 - 工程验证：已执行。新回归用例旧实现下 3 例全红，改为 `did-navigate` 后与既有生命周期用例共 6 例全绿；impact 直接用例 3 例、关联用例 26 例通过（2 个套件为 BUG-0107 存量收集失败）；完整 `check` 全绿。
 - 技术评审：自审；重点核对 Electron 事件语义、teardown 与监听数量。
-- 集成：`integration_status: pending`，本地 `main` 串行。
-- 人工功能验收：UI 自动化验证已执行（用户授权 `verify:ui`，隔离 Fresh 实例 + 本地模型替身）：被拦截导航后插件工具成功派发、回合正常结束；真实 reload 后 `host loading` → `host ready` 恢复。待用户最终确认。
+- 集成：`integration_status: integrated`，本地 `main` 串行。
+- 人工功能验收：UI 自动化验证已执行（用户授权 `verify:ui`，隔离 Fresh 实例 + 本地模型替身）：被拦截导航后插件工具成功派发、回合正常结束；真实 reload 后 `host loading` → `host ready` 恢复。用户已于 2026-10-19 确认修复生效。
 - 发布：未授权。
 
 ## 功能验收包
@@ -100,7 +100,7 @@ updated: 2026-10-19
 - 操作步骤：调用一次 `vetd_status` 确认可用 → 在主窗口触发一次被 `will-navigate` 拦截的页面内导航（例如 `location.href = "http://127.0.0.1:3020/#/"`）→ 不重载页面，再次调用 `vetd_status` → 最后执行一次真实 `Ctrl+R`，再次调用；
 - 预期行为与最终产物：拦截后工具仍成功；真实重载后短暂 loading 随即恢复；不再出现只能重启才能恢复的永久 `loading`；
 - 不通过表现与已知限制：若再次出现 `Plugin host renderer is loading` 且重试不恢复，即本 Bug 未修复；`verify:ui` 通道已在隔离 Fresh 实例取证，未使用真实模型、真实凭据或用户日常实例；
-- 验收反馈及回归案例：待用户反馈。
+- 验收反馈及回归案例：用户于 2026-10-19 确认通过；截图中残留的 loading 消息为重启前旧状态，画布空白系视口平移，不计入本 Bug。
 
 ## 交付记录
 
@@ -111,6 +111,6 @@ updated: 2026-10-19
   - 拦截后不重载，在同一文档提交 prompt，由隔离配置中的本地 OpenAI 兼容替身（`127.0.0.1:18080`）返回一次 `content_creation_search` 工具调用；该调用经共享插件工具宿主成功执行并返回真实结果（`isError: false`），回合以 `stop` 正常结束，主日志该时段无 `Plugin host renderer is loading` / warn / error。证明拦截后宿主仍为 `ready`。
   - 真实 `page.reload()` 对照：渲染端日志 `[plugin-agent] host loading` 后出现 `[plugin-agent] host ready`，证明提交型导航的失效与恢复路径未变。
   - 验证后执行 `bun run verify:ui:stop` 停止实例，并清理临时探针与本地替身文件；未改真实模型配置。
-- 未运行及原因：用户日常 dev 实例中的人工复现未执行（需用户自行操作其日常环境）；真实模型质量与真实 Provider 调用未授权、未执行。
+- 未运行及原因：用户日常 dev 实例中的人工复现已由用户于 2026-10-19 完成并确认问题解决；真实模型质量与真实 Provider 调用未授权、未执行。
 - Worktree：未拆 worktree（`worktree: .`），改动在主工作区串行完成。
 - 剩余风险：`did-navigate` 在导航提交后发射，理论上存在提交到事件处理之间的极短派发窗口；该窗口内旧文档已被替换、新文档尚未上报 ready，派发可能收到渲染端错误。与永久卡死相比属可接受的窄窗口，需在评审中确认。

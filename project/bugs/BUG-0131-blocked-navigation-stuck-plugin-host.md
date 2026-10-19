@@ -1,7 +1,7 @@
 ---
 id: BUG-0131
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement:
@@ -87,3 +87,4 @@ updated: 2026-10-19
   - 拦截后在同一文档提交一条 prompt。为避开真实 Provider，使用隔离配置里的本地 OpenAI 兼容替身（`127.0.0.1:18080`，仅回放固定响应）驱动一次 `content_creation_search` 插件工具调用。工具经共享的插件工具宿主成功派发并返回真实结果（`isError: false`，内容为 content-creation 操作索引），回合正常结束；主日志该时段无 `Plugin host renderer is loading`、无 warn/error。这直接证明被拦截导航后主进程宿主仍为 `ready`、租约仍可获取。
   - 另执行一次真实 `page.reload()`：渲染端日志出现 `[plugin-agent] host loading`，随后 `[plugin-agent] host ready`，确认「真正提交的导航 → loading → 上报就绪恢复」路径未被破坏。
   - 验证后已停止 Fresh 实例并清理本地替身与临时探针文件；未改用户日常实例或真实模型配置。
+- 用户确认（2026-10-19）：重启 dev 实例后确认问题不再出现。此前截图中的 `Plugin host renderer is loading` 为重启前旧状态；画布空白系视口被滚轮平移到 frames 下方，与插件宿主无关。

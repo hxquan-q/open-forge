@@ -16,7 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0131` | 被拦截的主窗口导航把插件工具宿主永久留在 loading，设计插件工具全部被拒 | verifying | P1 | — |
+| `BUG-0131` | 被拦截的主窗口导航把插件工具宿主永久留在 loading，设计插件工具全部被拒 | done | P1 | — |
 | `BUG-0130` | 设置页脚仍显示旧品牌数据根的模型配置路径 `~/.vetta/agent/models.json`（本仓实际默认 `~/.openforge`，支持 env 覆盖与旧根迁移） | verifying | P3 | — |
 | `BUG-0129` | Dependabot 第二轮 9 项 high 告警：electron 39.8.10 落入 4 项新通告区间（需 41.10.4/41.10.6+）、engine source-map-js 1.2.1（需 1.2.2+） | done | P1 | — |
 | `BUG-0128` | 工作区被标为 Low 完整性级别后，仓库内 Electron 的 Chromium 子进程创建失败（GPU/renderer error 18） | verifying | P1 | — |

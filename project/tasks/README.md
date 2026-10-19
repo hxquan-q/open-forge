@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0320` | `verifying` | — | BUG-0131：把插件宿主失效点从 `did-start-navigation` 改为已提交的 `did-navigate`，抽出可测试导航接线；真实拦截导航后工具不再永久 loading；serial，main 主工作区串行。 |
+| `TASK-0320` | `done` | — | BUG-0131：把插件宿主失效点从 `did-start-navigation` 改为已提交的 `did-navigate`，抽出可测试导航接线；真实拦截导航后工具不再永久 loading；serial，main 主工作区串行。 |
 | `TASK-0319` | `verifying` | — | REQ-0018：侧边栏「能力」→「技能与连接器」、「设计」→「原型设计」，同步页面跳转目标名/新手引导入口标题/设置助手路径提示与中英文 catalog；新增入口命名一致性合同测试 2 例，定向 22 文件/132 例、`check:quick` 与完整 `check` 全绿；serial，main 主工作区串行，待人工目验。 |
 | `TASK-0318` | `verifying` | — | REQ-0017：桌面端「智能客服」直连 WeKnora（连接层 + 通道层 + 界面层 + 文案）；13 个原子提交在本地 main，feature 测试 16 文件 / 149 例全绿、三个受影响域回归 243 文件 / 1329 例通过；`integration_status: pending`，未推送；serial，main 主工作区串行。 |
 | `TASK-0317` | `verifying` | — | RESEARCH-0032 积压 #16 已实施并入 main（`fb6ed3cd4`，Worker 提交 `a15ee5f82`）：CLI 子进程 userData 迁入 `<vettaHome>/tmp/<openforge-…-cli[-pid]>`（0700 创建即生效 + chmod 收紧），不再落共享 `os.tmpdir()` 可预测路径；新增 cli-user-data 模块 5 例（Windows 跳 2 个位断言）；定向、check:quick、完整 check、impact 全绿；人工验收不适用，待发布。 |
