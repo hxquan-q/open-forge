@@ -73,6 +73,37 @@ describe("public autonomy command line", () => {
 		await main(["release", ...common, "--run-id", "run-one"]);
 		expect((await main(["status", ...common])).leases[0].status).toBe("released");
 	});
+	it("runs a bounded loop with an automatically generated run prefix", async () => {
+		const root = fixture();
+		const policyPath = join(root, "project/autonomy-policy.json");
+		const boundedPolicy = JSON.parse(readFileSync(policyPath, "utf8"));
+		boundedPolicy.level = 1;
+		boundedPolicy.capabilities = ["plan", "triage", "lessons", "implement", "review", "verify"];
+		boundedPolicy.allowedProviders = ["fixture"];
+		writeFileSync(policyPath, JSON.stringify(boundedPolicy));
+		const result = await main([
+			"loop",
+			"--repo",
+			root,
+			"--state-dir",
+			join(root, "controller"),
+			"--holder",
+			"controller",
+			"--limit",
+			"1",
+		]);
+		expect(result).toMatchObject({
+			stopReason: "limit",
+			started: [{ task: "TASK-0001", status: "needs-action" }],
+		});
+		expect(result.lastRunId).toMatch(/^loop-/u);
+	});
+	it("rejects a missing option value and malformed loop budgets", async () => {
+		await expect(main(["doctor", "--repo"])).rejects.toThrow(/missing value/u);
+		const root = fixture();
+		const common = ["loop", "--repo", root, "--state-dir", join(root, "controller"), "--holder", "controller"];
+		await expect(main([...common, "--limit", "1", "--max-stalls", "11"])).rejects.toThrow(/1\.\.10/u);
+	});
 	it("does not reinterpret unknown options or duplicate flags as data", async () => {
 		await expect(main(["doctor", "--shell", "true"])).rejects.toThrow(/invalid option/);
 		await expect(main(["doctor", "--repo", "one", "--repo", "two"])).rejects.toThrow(/duplicate/);

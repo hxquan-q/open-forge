@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { decodeOutput, executionPrompt, selectAdapter } from "./adapters.mjs";
+import { decodeOutput, executionPrompt, outputKind, ROLES, selectAdapter } from "./adapters.mjs";
 import { contract, digest, requireCapability } from "./contracts.mjs";
 import { assertIndependentReview } from "./evidence.mjs";
 import { assertSeparateRoots, assertWriteScope, snapshot } from "./git.mjs";
@@ -25,9 +25,10 @@ export async function executeAdapter({
 	token,
 	request,
 	signal,
+	analysis = false,
 }) {
+	if (!Object.hasOwn(ROLES, role)) throw new Error(`unsupported execution role: ${role}`);
 	contract("run-contract", runContract);
-	if (!["implementer", "reviewer"].includes(role)) throw new Error("unsupported execution role");
 	if (task.status !== "in_progress") throw new Error("Task must be in_progress before implementation or review");
 	if (
 		runContract.policyDigest !== digest(policy) ||
@@ -36,6 +37,8 @@ export async function executeAdapter({
 		runContract.taskDigest !== digest(task)
 	)
 		throw new Error("stale or mismatched run contract");
+	if (analysis && !["planner", "triage", "lessons", "ui-reviewer"].includes(role))
+		throw new Error("only non-authoring roles are available as analysis steps");
 	const adapter = selectAdapter(settings, policy, adapterId, role);
 	const worktree = assertSeparateRoots(runContract.worktree, store.root);
 	const before = snapshot(worktree);
@@ -61,10 +64,12 @@ export async function executeAdapter({
 			status: "claimed",
 			attempts: [],
 			authors: [],
+			analyses: [],
 			checks: [],
 			review: null,
 			contract: runContract,
 		};
+		run.analyses ??= [];
 		if (ACTIVE_RUN_STATUSES.has(run.status)) throw new Error("run already has a live attempt");
 		const concurrent = Object.values(state.runs).filter(
 			(entry) => entry.status === "running" && entry.attempts.at(-1)?.role === role,
@@ -86,11 +91,12 @@ export async function executeAdapter({
 			);
 			if (run.binding?.head !== before.head || run.binding?.tree !== before.tree)
 				throw new Error("code changed before review");
-		} else {
+		} else if (role === "implementer") {
 			run.checks = [];
 			run.review = null;
 			run.authors.push(identity);
 		}
+		run.analysisBaseStatus = run.status;
 		run.status = "running";
 		run.pid = null;
 		run.attempts.push({ id: attemptId, role, identity, startedAt: Date.now(), status: "running" });
@@ -136,12 +142,15 @@ export async function executeAdapter({
 		if (result.reason !== "success") throw new Error(`adapter ended with ${result.reason}`);
 		body = decodeOutput(result.stdout, role);
 		after = snapshot(worktree);
-		if (role === "reviewer" && (after.head !== before.head || after.tree !== before.tree))
-			throw new Error("reviewer modified the candidate");
-		const coordinatorPaths = store.read().runs[token.runId].integration?.coordinatorPaths ?? [];
-		if (coordinatorPaths.some((path) => ![task.file, "project/tasks/README.md"].includes(path)))
-			throw new Error("invalid integration metadata scope");
-		assertWriteScope(worktree, runContract.baseCommit, [...task.writePaths, ...coordinatorPaths]);
+		if (role !== "implementer" && (after.head !== before.head || after.tree !== before.tree))
+			throw new Error(`${role} modified the candidate`);
+		if (role === "implementer") {
+			const coordinatorPaths = store.read().runs[token.runId].integration?.coordinatorPaths ?? [];
+			if (coordinatorPaths.some((path) => ![task.file, "project/tasks/README.md"].includes(path)))
+				throw new Error("invalid integration metadata scope");
+			assertWriteScope(worktree, runContract.baseCommit, [...task.writePaths, ...coordinatorPaths]);
+			if (after.head === before.head) throw new Error("implementer must commit its candidate before review");
+		}
 	} catch (error) {
 		failure = error;
 	} finally {
@@ -152,6 +161,8 @@ export async function executeAdapter({
 		assertLease(state, token, Date.now(), { allowExpired: true });
 		const run = state.runs[token.runId];
 		const attempt = run.attempts.find((entry) => entry.id === attemptId);
+		const baseStatus = run.analysisBaseStatus;
+		delete run.analysisBaseStatus;
 		attempt.finishedAt = Date.now();
 		attempt.status = failure ? "failed" : "completed";
 		attempt.process = result
@@ -170,27 +181,31 @@ export async function executeAdapter({
 		run.cleanupUnknown = result?.cleanupUnknown ?? false;
 		if (run.cleanupUnknown) state.control.paused = true;
 		run.pid = run.cleanupUnknown ? result.pid : null;
-		run.status = run.cleanupUnknown
-			? "cleanup-required"
-			: failure
-				? "failed"
-				: body.status === "blocked"
-					? "blocked"
-					: "implemented";
-		if (!failure) {
+		if (failure) run.status = run.cleanupUnknown ? "cleanup-required" : "failed";
+		else if (role === "implementer") {
 			run.binding = codeBinding(runContract, after);
-			if (role === "implementer") {
-				run.summary = body.summary;
-			} else {
-				run.review = { ...body, reviewer: identity, binding: run.binding };
-				run.status = body.verdict === "approve" ? "reviewed" : "changes-requested";
-			}
+			run.summary = body.summary;
+			run.status = body.status === "blocked" ? "blocked" : "implemented";
+		} else if (role === "reviewer") {
+			run.review = { ...body, reviewer: identity, binding: run.binding };
+			run.status = body.verdict === "approve" ? "reviewed" : "changes-requested";
+		} else {
+			run.analyses.push({
+				role,
+				attemptId,
+				identity,
+				binding: { head: before.head, tree: before.tree },
+				output: { kind: outputKind(role), body },
+			});
+			run.status =
+				body.status === "blocked" || body.verdict === "insufficient-evidence" ? "blocked-advice" : baseStatus;
 		}
 		state.audit.push({
 			event: "attempt-finished",
 			task: task.id,
 			runId: token.runId,
 			attemptId,
+			role,
 			status: run.status,
 			at: Date.now(),
 		});
@@ -200,5 +215,6 @@ export async function executeAdapter({
 }
 
 export function assertRunnable(policy, role) {
-	requireCapability(policy, role === "implementer" ? "implement" : "review");
+	if (!Object.hasOwn(ROLES, role)) throw new Error(`unsupported execution role: ${role}`);
+	requireCapability(policy, ROLES[role].capability);
 }

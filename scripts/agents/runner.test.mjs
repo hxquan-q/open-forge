@@ -42,7 +42,7 @@ function fixture() {
 		readFileSync(fileURLToPath(new URL("../../project/autonomy-policy.json", import.meta.url)), "utf8"),
 	);
 	policy.level = 2;
-	policy.capabilities = ["implement", "review", "verify", "integrate-dev"];
+	policy.capabilities = ["plan", "triage", "lessons", "implement", "review", "verify", "integrate-dev"];
 	policy.allowedProviders = ["fixture"];
 	policy.requiredChecks = ["tests", "check"];
 	policy.limits.heartbeatMs = 100;
@@ -164,6 +164,38 @@ describe("implementation and independent review through real processes and Git",
 		git(context.repo, ["commit", "--quiet", "-m", "changed after review", "--", "feature.txt"]);
 		await expect(verifyRun(context)).rejects.toThrow(/stale/);
 		expect(context.store.read().runs[context.token.runId].checks).toEqual([]);
+	});
+	it("stores controller-owned triage advice without creating authorship or changing the Task status", async () => {
+		const context = fixture();
+		const triageOutput = {
+			status: "investigate",
+			kind: "bug",
+			relevance: "relevant",
+			summary: "The repair needs a real reproduction",
+			reproduction: ["Run the fixture test"],
+			risks: ["security"],
+		};
+		context.settings.adapters[1].family = "family-c";
+		context.settings.adapters[1].roles = ["triage"];
+		context.settings.adapters[1].command = [
+			process.execPath,
+			"-e",
+			`console.log(${JSON.stringify(JSON.stringify(triageOutput))})`,
+		];
+		context.runContract.adaptersDigest = digest(context.settings);
+		const result = await executeAdapter({
+			...context,
+			adapterId: "reviewer",
+			role: "triage",
+			request: "investigate",
+		});
+		expect(result.status).toBe("claimed");
+		expect(result.authors).toEqual([]);
+		expect(result.analyses[0]).toMatchObject({
+			output: { kind: "triage", body: triageOutput },
+			identity: { adapterId: "reviewer" },
+		});
+		expect(result.attempts[0].role).toBe("triage");
 	});
 	it("requires approval before executing verification for a security-sensitive candidate", async () => {
 		const context = fixture();

@@ -11,7 +11,7 @@ import { snapshot } from "./git.mjs";
 import { applyIntegration, prepareIntegration } from "./integrate.mjs";
 import { claim, release } from "./leases.mjs";
 import { OPERATION_OPTIONS, OPERATIONS, operation } from "./operations.mjs";
-import { cycle } from "./orchestrate.mjs";
+import { cycle, loop, loopRunPrefix } from "./orchestrate.mjs";
 import { prepareTask } from "./prepare.mjs";
 import { completedTasks, taskQueue } from "./queue.mjs";
 import { codeBinding, executeAdapter } from "./runner.mjs";
@@ -35,6 +35,7 @@ const COMMANDS = new Set([
 	"queue",
 	"prepare",
 	"cycle",
+	"loop",
 	"approval",
 	"integration-preview",
 	"integrate",
@@ -53,6 +54,9 @@ const OPTIONS = new Set([
 	"--test",
 	"--approval",
 	"--through",
+	"--limit",
+	"--max-stalls",
+	"--run-prefix",
 ]);
 
 function argumentsOf(args) {
@@ -60,9 +64,11 @@ function argumentsOf(args) {
 	if (!COMMANDS.has(command)) throw new Error(`expected command: ${[...COMMANDS].join(" | ")}`);
 	const options = {};
 	for (let index = 0; index < rest.length; index += 2) {
+		if (index + 1 >= rest.length) throw new Error(`missing value: ${rest[index]}`);
 		const key = rest[index];
 		const value = rest[index + 1];
-		if (!OPTIONS.has(key) || !value || value.startsWith("--")) throw new Error(`invalid option: ${key}`);
+		if (!OPTIONS.has(key)) throw new Error(`invalid option: ${key}`);
+		if (!value || value.startsWith("--")) throw new Error(`missing value: ${key}`);
 		if (["--test", "--proof"].includes(key)) {
 			const collection = key === "--test" ? "tests" : "proofs";
 			options[collection] ??= [];
@@ -133,6 +139,18 @@ export async function main(args) {
 		return { initialized: false, runs: [], paused: config.policy.paused };
 	const store = createStore(directory);
 	if (OPERATIONS.includes(command)) return operation({ command, options, root, store, ...config });
+	if (command === "loop")
+		return loop({
+			root,
+			store,
+			...config,
+			holder: required(options, "--holder"),
+			runPrefix: options["--run-prefix"]?.trim() || loopRunPrefix(store),
+			limit: Number(required(options, "--limit")),
+			maxStalls: Number(options["--max-stalls"] ?? 2),
+			tests: options.tests ?? [],
+			through: options["--through"] ?? "verify",
+		});
 	if (command === "cycle")
 		return cycle({
 			root,
@@ -227,6 +245,7 @@ export async function main(args) {
 		status: result.status,
 		binding: result.binding,
 		attempts: result.attempts.length,
+		analyses: result.analyses ?? [],
 	};
 }
 

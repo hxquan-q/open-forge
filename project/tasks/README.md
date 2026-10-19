@@ -15,6 +15,11 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0326` | `in_progress` | PLAN-0019 | 完整角色路由：为 planner/triage/lessons/ui-reviewer 建立有界结构化输出、确定性守卫与跨工具执行合同；serial，scripts/agents 串行。 |
+| `TASK-0327` | `in_progress` | PLAN-0019 | 持续编排：多 ready Task 领取、并发上限、停滞与熔断、周期报告；serial，与 0322–0326 共享控制器路径。 |
+| `TASK-0328` | `in_progress` | PLAN-0019 | UI 运行验证适配：将既有 fresh/Playwright 验收入口接入 verify，保留显式授权与真实证据；serial，scripts/agents 与 apps/desktop/scripts 串行。 |
+| `TASK-0329` | `in_progress` | PLAN-0019 | 只读信号采集：GitHub Issues/PR/CI 转结构化调查信号，去重且不成为指令；serial，控制器路径串行。 |
+| `TASK-0330` | `in_progress` | PLAN-0019 | 外部环境 readiness：模型、独立评审、隔离 runner、CI/签名/监控逐项核验，缺失时拒绝启动；serial，文档与配置入口串行。 |
 | `TASK-0325` | `verifying` | PLAN-0019 | 基线与发布时钟修复：制品 14、合同 137、Desktop 29 例通过；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，合并前完整 check exit 0；实际环境与适配差距见 VERIFY-0019。 |
 | `TASK-0324` | `verifying` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实环境仍关闭。 |
 | `TASK-0323` | `verifying` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实 UI/部署未验收。 |

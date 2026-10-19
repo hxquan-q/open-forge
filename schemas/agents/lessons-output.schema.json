@@ -1,0 +1,32 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["status", "lessons"],
+	"properties": {
+		"status": { "enum": ["proposed", "blocked"] },
+		"lessons": {
+			"type": "array",
+			"maxItems": 32,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["category", "rule", "reason", "evidence"],
+				"properties": {
+					"category": { "enum": ["rework", "unwanted-merge", "verification"] },
+					"rule": { "type": "string", "minLength": 1, "maxLength": 2000 },
+					"reason": { "type": "string", "minLength": 1, "maxLength": 4000 },
+					"evidence": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "id"],
+						"properties": {
+							"kind": { "enum": ["commit", "run"] },
+							"id": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,160}$" }
+						}
+					}
+				}
+			}
+		}
+	}
+}

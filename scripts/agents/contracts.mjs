@@ -46,6 +46,9 @@ export function requireCapability(policy, capability) {
 	if (policy.paused || policy.level === 0) throw new Error("autonomy is paused");
 	if (!policy.capabilities.includes(capability)) throw new Error(`capability is not authorized: ${capability}`);
 	const minimum = {
+		plan: 1,
+		triage: 1,
+		lessons: 1,
 		implement: 1,
 		review: 1,
 		verify: 1,

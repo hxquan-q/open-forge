@@ -32,6 +32,7 @@ const quoted = (value) =>
 		.join("\n");
 
 export async function operation({ command, options, root, store, policy, settings }) {
+	if (!OPERATIONS.includes(command)) throw new Error("unsupported operation");
 	if (command === "signal") return ingestSignal(store, json(required(options, "--input")));
 	if (command === "nightly") return nightlyPacket({ repo: root, store, date: required(options, "--date") });
 	if (command === "lesson") return recordLesson({ repo: root, store, lesson: json(required(options, "--input")) });

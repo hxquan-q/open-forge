@@ -1,0 +1,54 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Open Forge bounded non-authoring role output",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["version", "role", "analyses", "notRun"],
+	"properties": {
+		"version": { "const": 1 },
+		"role": { "enum": ["planner", "triage", "lessons", "ui-reviewer"] },
+		"analyses": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["role", "attemptId", "identity", "binding", "output"],
+				"properties": {
+					"role": { "enum": ["planner", "triage", "lessons", "ui-reviewer"] },
+					"attemptId": { "type": "string", "minLength": 1 },
+					"identity": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["actorId", "adapterId", "provider", "family", "model"],
+						"properties": {
+							"actorId": { "type": "string", "minLength": 1 },
+							"adapterId": { "type": "string", "minLength": 1 },
+							"provider": { "type": "string", "minLength": 1 },
+							"family": { "type": "string", "minLength": 1 },
+							"model": { "type": "string", "minLength": 1 }
+						}
+					},
+					"binding": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["head", "tree"],
+						"properties": {
+							"head": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+							"tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" }
+						}
+					},
+					"output": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "body"],
+						"properties": {
+							"kind": { "enum": ["planner", "triage", "lessons", "ui-reviewer"] },
+							"body": { "type": "object" }
+						}
+					}
+				}
+			}
+		},
+		"notRun": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+	}
+}

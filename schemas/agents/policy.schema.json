@@ -26,6 +26,9 @@
 			"items": {
 				"type": "string",
 				"enum": [
+					"plan",
+					"triage",
+					"lessons",
 					"implement",
 					"review",
 					"verify",

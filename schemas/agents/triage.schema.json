@@ -1,0 +1,22 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["status", "kind", "relevance", "summary", "reproduction", "risks"],
+	"properties": {
+		"status": { "enum": ["investigate", "duplicate", "not-relevant", "blocked"] },
+		"kind": { "enum": ["bug", "feature", "discussion", "ci-failure"] },
+		"relevance": { "enum": ["relevant", "duplicate", "out-of-scope", "unknown"] },
+		"summary": { "type": "string", "minLength": 1, "maxLength": 8000 },
+		"reproduction": {
+			"type": "array",
+			"maxItems": 32,
+			"items": { "type": "string", "minLength": 1, "maxLength": 4000 }
+		},
+		"risks": {
+			"type": "array",
+			"uniqueItems": true,
+			"items": { "enum": ["security", "data", "billing", "license-brand", "release", "unknown"] }
+		}
+	}
+}
