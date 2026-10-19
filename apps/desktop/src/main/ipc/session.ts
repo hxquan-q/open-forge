@@ -93,6 +93,7 @@ import { listPlugins, pluginAgentContributionService } from "../plugins/plugin-c
 import { summarizeAgentPluginRuntimeConfig } from "../plugins/plugin-runtime-config-builder.js";
 import { getDesktopCodingAgentPluginRuntimeSource } from "../plugins/plugin-runtime-service.js";
 import { PluginToolRendererHostLifecycle } from "../plugins/plugin-tool-renderer-host-lifecycle.js";
+import { attachPluginToolRendererHostNavigation } from "../plugins/plugin-tool-renderer-host-navigation.js";
 import {
 	filterSystemPromptInvocationForPlugin,
 	tryNormalizeDynamicSystemPromptOperations,
@@ -1764,16 +1765,12 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		}
 	});
 
+	const detachPluginHostNavigation = attachPluginToolRendererHostNavigation(webContents, pluginToolRendererHost);
+
 	// 渲染进程崩溃 / 重新加载时，旧 subscription 永远不会等到 UNSUBSCRIBE IPC
 	// 调用——它们的回调还挂在 runtime 上、继续接收 agent 事件、继续往 dead
 	// frame 上 send（哪怕有 isDestroyed 守卫，事件流仍在 runtime 端继续）。
 	// 这里集中清理一次：渲染端恢复后会重新 SUBSCRIBE，生成新的 subscriptionId。
-	const onDidStartNavigation = (details: { isMainFrame: boolean; isSameDocument: boolean }): void => {
-		if (!details.isMainFrame || details.isSameDocument) return;
-		pluginToolRendererHost.markLoading();
-	};
-	webContents.on("did-start-navigation", onDidStartNavigation);
-
 	const onRenderGone = (): void => {
 		sessionLog.warn(`render-process-gone; clearing ${subscriptionMap.size} subscription(s)`);
 		pluginToolRendererHost.markUnavailable();
@@ -1886,7 +1883,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	return () => {
 		stopInterruptMonitor();
 		unsubscribeConversationListChanged();
-		webContents.removeListener("did-start-navigation", onDidStartNavigation);
+		detachPluginHostNavigation();
 		webContents.removeListener("render-process-gone", onRenderGone);
 		pluginToolRendererHost.dispose();
 		for (const sub of viewerSubs.values()) {
