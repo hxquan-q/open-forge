@@ -19,7 +19,7 @@ write_paths: [.github/workflows/quality.yml, .github/workflows/desktop-packaged.
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-19
 updated: 2026-10-19
 ---
@@ -86,7 +86,7 @@ updated: 2026-10-19
 
 - 工程验证：通过。定向合同测试 2 文件 / 128 例通过；`bun run test:quality` 526 例通过；`bun run check` 退出码 0。
 - 技术评审：自审；核对 YAML 触发面、手动运行基线与既有矩阵断言均未被削弱。
-- 集成：`integration_status: pending`，待提交与推送。
+- 集成：`integration_status: integrated`，已推送 `origin/dev`（`84c8af6a5`）；推送触发的 quality run `39235576583` 中三平台矩阵 job 为 `skipped`，仅轻量 job 尝试启动。
 - 人工功能验收：待用户确认触发面符合预期。
 - 发布：未授权。
 
@@ -95,5 +95,6 @@ updated: 2026-10-19
 - 实际修改：`quality.yml` 增加 `workflow_dispatch`、`unit-tests` 仅在 PR/手动运行、手动运行回退 `origin/dev` 基线；`desktop-packaged.yml` 移除 `dev` push 触发并保留 PR/手动；`quality-gates.test.mjs` 新增 1 例触发面合同；同步 ISSUE-0029、本 Task 与 Task 索引。
 - 账户操作：`dyp`、`ShunX`、`xiaoai`、`weallstar` 的 Actions 已停用（`enabled=false` 已复核）；脚本 `gh api -X PUT repos/hxquan-q/<repo>/actions/permissions -F enabled=false`。
 - 实际运行：`bun scripts/quality/run-vitest.mjs --run scripts/quality/quality-gates.test.mjs scripts/quality/desktop-release-workflow.test.mjs`（128/128）；`bun run test:quality`（526/526）；`bun run check`（退出码 0）。
+- 远端证据：推送 `84c8af6a5` 触发 quality run `39235576583`，`affected unit tests` 为 `skipped`，check job 仍在启动前被预算拒绝（annotation 原文不变）；本次推送未触发 desktop-packaged。
 - 未运行及原因：远端 CI 无法取得绿——Actions 预算仍在拒启所有 job（ISSUE-0029），本地改动推送后也不会启动；预算恢复后需补 PR/手动触发的实际运行证据。
 - 剩余风险：手动运行 `quality` 以 `origin/dev` 为基线；手动运行 `desktop-packaged` 的 smoke 判定仍以 `${GITHUB_SHA}^` 为基线，若打包敏感改动不在最后一个提交内可能跳过 smoke。
