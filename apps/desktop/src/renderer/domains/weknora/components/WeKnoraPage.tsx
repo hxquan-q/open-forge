@@ -27,6 +27,7 @@ export function WeKnoraPage(): JSX.Element {
 			selectedAgentId={model.selectedAgentId}
 			sessions={model.sessions}
 			sessionsStatus={model.sessionsStatus}
+			streamingSessionIds={model.streamingSessionIds}
 			onCancel={model.actions.cancel}
 			onNewConversation={model.actions.newConversation}
 			onOpenSession={model.actions.openSession}

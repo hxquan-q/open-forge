@@ -358,4 +358,41 @@ describe("智能客服 · 后台思考（D 组用户流程）", () => {
 		});
 		await waitFor(() => expect(screen.getByText("首片")).toBeTruthy());
 	});
+
+	it("历史行对思考中的会话（含后台）显示「思考中」，流到终态后消失，不误标其他行（AC-19）", async () => {
+		const harness = installFake();
+		renderFlow();
+		await configureAndWaitReady();
+
+		await askViaUi("一问");
+		act(() => harness.emit({ type: "answer.delta", requestId: "r1", text: "甲" }));
+		const nav = await screen.findByRole("navigation", { name: "历史会话" });
+		await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s1/ })).toBeTruthy());
+
+		// 当前会话流式中：行有指示。
+		const row1 = within(nav).getByRole("button", { name: /会话 s1/ });
+		expect(within(row1).getByText("思考中")).toBeTruthy();
+
+		// 切到新对话再问一路：s1 转后台仍亮，s2 起流即亮。
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "新建对话" }));
+		await askViaUi("二问");
+		act(() => harness.emit({ type: "answer.delta", requestId: "r2", text: "乙" }));
+		const row2 = await within(nav).findByRole("button", { name: /会话 s2/ });
+		expect(within(row2).getByText("思考中")).toBeTruthy();
+		expect(within(within(nav).getByRole("button", { name: /会话 s1/ })).getByText("思考中")).toBeTruthy();
+
+		// s1 在后台到达终态：其行指示消失（无假活），s2 不受影响。
+		act(() => harness.emit({ type: "turn.completed", requestId: "r1" }));
+		await waitFor(() => {
+			const settledRow1 = within(nav).getByRole("button", { name: /会话 s1/ });
+			expect(within(settledRow1).queryByText("思考中")).toBeNull();
+		});
+		expect(within(within(nav).getByRole("button", { name: /会话 s2/ })).getByText("思考中")).toBeTruthy();
+
+		// 取消当前会话（s2）的流：指示立即消失（无假活）。
+		await user.click(screen.getByRole("button", { name: "取消" }));
+		const settledRow2 = within(nav).getByRole("button", { name: /会话 s2/ });
+		expect(within(settledRow2).queryByText("思考中")).toBeNull();
+	});
 });

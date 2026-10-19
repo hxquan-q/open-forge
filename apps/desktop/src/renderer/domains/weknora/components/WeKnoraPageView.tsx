@@ -24,6 +24,8 @@ export interface WeKnoraPageViewProps {
 	readonly sessions: readonly WeKnoraSession[];
 	readonly sessionsStatus: WeKnoraHistoryStatus;
 	readonly loadingSessionId: string | null;
+	/** 有活跃流（含后台思考）的会话 id 集合（AC-19 行级指示的状态源）。 */
+	readonly streamingSessionIds: ReadonlySet<string>;
 	readonly saving: boolean;
 	/** 最近一次保存配置失败的归一化错误码；`null` = 无错误（④）。 */
 	readonly saveError: WeKnoraErrorCode | null;
@@ -51,6 +53,7 @@ export function WeKnoraPageView({
 	sessions,
 	sessionsStatus,
 	loadingSessionId,
+	streamingSessionIds,
 	saving,
 	saveError,
 	onSelectAgent,
@@ -111,6 +114,7 @@ export function WeKnoraPageView({
 						onReload={onReloadSessions}
 						sessions={sessions}
 						status={sessionsStatus}
+						streamingSessionIds={streamingSessionIds}
 					/>
 				) : null}
 

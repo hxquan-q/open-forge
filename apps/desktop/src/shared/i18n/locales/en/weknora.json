@@ -43,6 +43,7 @@
 		"refresh": "Refresh",
 		"unknownAgent": "Unknown",
 		"untitled": "Untitled conversation",
+		"thinking": "Thinking",
 		"confirmTitle": "Open conversation",
 		"confirmBody": "The current conversation will be replaced by this one; unsaved content will be lost.",
 		"confirmCancel": "Cancel",

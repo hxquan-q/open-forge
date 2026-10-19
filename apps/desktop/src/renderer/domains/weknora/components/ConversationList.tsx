@@ -21,6 +21,8 @@ export interface ConversationListProps {
 	readonly status: WeKnoraHistoryStatus;
 	readonly currentSessionId: string | null;
 	readonly loadingSessionId: string | null;
+	/** 有活跃流（含后台思考）的会话 id 集合：行级「思考中」指示的状态源（AC-19）。 */
+	readonly streamingSessionIds: ReadonlySet<string>;
 	readonly onNewConversation: () => void;
 	readonly onOpenSession: (sessionId: string) => void;
 	readonly onReload: () => void;
@@ -40,6 +42,7 @@ export function ConversationList({
 	status,
 	currentSessionId,
 	loadingSessionId,
+	streamingSessionIds,
 	onNewConversation,
 	onOpenSession,
 	onReload,
@@ -93,6 +96,9 @@ export function ConversationList({
 						const agentName = agentNameOfSession(agents, session);
 						const time = formatSessionTime(session.updated_at ?? session.created_at);
 						const isCurrent = session.id === currentSessionId;
+						// AC-19：行级「思考中」指示。状态源是流缓冲派生集合 —— 缓冲种下即亮、
+						// 终态/取消释放即灭，与实际流状态一致（无假活/假死）；文案不只靠颜色传达。
+						const isThinking = streamingSessionIds.has(session.id);
 						return (
 							<li key={session.id}>
 								<button
@@ -109,6 +115,13 @@ export function ConversationList({
 									</span>
 									<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
 										<span className="truncate">{agentName ?? t("conversation.unknownAgent")}</span>
+										{isThinking ? (
+											<span className="flex shrink-0 items-center gap-1 text-emerald-400">
+												{/* 呼吸点走宿主统一挂载的登记类名（DESIGN.md「进行中」指示规范），不自写关键帧。 */}
+												<span aria-hidden="true" className="vetta-live-dot h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+												{t("conversation.thinking")}
+											</span>
+										) : null}
 										{time ? <span className="ml-auto shrink-0">{time}</span> : null}
 									</span>
 								</button>
