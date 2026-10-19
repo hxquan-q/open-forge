@@ -18,6 +18,8 @@ worktree:
 base_commit: 1ea3432
 read_paths: [apps/desktop/src/main/dev-cli-shim.ts, apps/desktop/src/main/main.ts, project/bugs/BUG-0089-packaged-cli-install-eperm.md]
 write_paths: [apps/desktop/src/main/dev-cli-shim.ts, apps/desktop/src/main/dev-cli-shim.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0089-packaged-cli-install-eperm.md, project/tasks/TASK-0238-cli-shim-eperm-degrade.md, project/tasks/README.md]
+created: 2026-10-12
+updated: 2026-10-14
 ---
 <!-- Copyright The Open Forge contributors. -->
 

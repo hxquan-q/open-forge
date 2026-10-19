@@ -16,6 +16,8 @@ vi.mock("react-i18next", () => ({
 			if (key === "messageList.resumeBar.title") return `上次回复未完成：${values?.reason}`;
 			if (key === "messageList.resumeBar.action") return "继续";
 			if (key === "messageList.resumeBar.failed") return "继续失败，请稍后重试";
+			if (key === "messageList.resumeBar.busy") return "会话正在运行，请等当前回复结束后再试";
+			if (key === "messageList.resumeBar.recoveryRequired") return "会话需要先恢复才能续跑，请先处理恢复提示";
 			return key;
 		},
 	}),
@@ -131,8 +133,8 @@ describe("MessageListFooter 中断续跑条", () => {
 		expect(screen.queryByRole("button", { name: "继续" })).toBeNull();
 	});
 
-	it("retry IPC 被拒绝（会话已忙碌等）时提示失败，不静默吞掉", async () => {
-		retryMock.mockRejectedValue(new Error("session_busy"));
+	it("retry IPC 被拒绝且原因未归类时提示通用失败，不静默吞掉", async () => {
+		retryMock.mockRejectedValue(new Error("boom"));
 		// showToast 走 jotai 全局默认 store（与真实运行时一致），断言同一来源。
 		const toastsStore = getDefaultStore();
 		toastsStore.set(toastsAtom, []);
@@ -148,5 +150,51 @@ describe("MessageListFooter 中断续跑条", () => {
 			const toasts = toastsStore.get(toastsAtom);
 			expect(toasts.some((toast) => toast.message === "继续失败，请稍后重试")).toBe(true);
 		});
+	});
+
+	it("内核以 SESSION_BUSY 拒绝时展示忙碌专属文案", async () => {
+		retryMock.mockRejectedValue(new Error("Error: Session already has an active turn"));
+		const toastsStore = getDefaultStore();
+		toastsStore.set(toastsAtom, []);
+
+		render(
+			<Provider store={store}>
+				<MessageListFooter isCompacting={false} waiting={false} runtimeSessionId="runtime-1" interruptedErrorKind="network" />
+			</Provider>,
+		);
+
+		screen.getByRole("button", { name: "继续" }).click();
+		await vi.waitFor(() => {
+			const toasts = toastsStore.get(toastsAtom);
+			expect(toasts.some((toast) => toast.message === "会话正在运行，请等当前回复结束后再试")).toBe(true);
+			expect(toasts.some((toast) => toast.message === "继续失败，请稍后重试")).toBe(false);
+		});
+	});
+
+	it("在途点击锁：未 settle 前按钮 disabled，重复点击不再发出第二次调用", async () => {
+		let release: (() => void) | undefined;
+		retryMock.mockImplementation(
+			() =>
+				new Promise<void>((resolve) => {
+					release = () => resolve();
+				}),
+		);
+
+		render(
+			<Provider store={store}>
+				<MessageListFooter isCompacting={false} waiting={false} runtimeSessionId="runtime-1" interruptedErrorKind="network" />
+			</Provider>,
+		);
+
+		const button = screen.getByRole("button", { name: "继续" }) as HTMLButtonElement;
+		button.click();
+		expect(retryMock).toHaveBeenCalledTimes(1);
+		await vi.waitFor(() => expect(button.disabled).toBe(true));
+
+		button.click();
+		expect(retryMock).toHaveBeenCalledTimes(1);
+
+		release?.();
+		await vi.waitFor(() => expect(button.disabled).toBe(false));
 	});
 });

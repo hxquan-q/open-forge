@@ -45,6 +45,16 @@ export interface SessionInterruptEvidence {
 	readonly hasPendingAction: boolean;
 	/** 末轮助手已正常 stop 且带完成证据（可见正文或工具结果已收齐）。 */
 	readonly hasCompletionMarker: boolean;
+	/**
+	 * 会话正在等待子代理/团队成员返回（BUG-0126）：团队长任务里主控不流式、
+	 * idle 超阈且无完成标记的组合是合法安静，不是中断。缺省视为 false。
+	 */
+	readonly waitingOnSubagent?: boolean;
+	/**
+	 * 主控会话正在等待子代理（团队任务机仍在跑：成员 attempt / 自动重试 / 调度
+	 * 等待）。这是合法空闲而非中断——协调会话等待期间本就不流式（BUG-0126）。
+	 */
+	readonly awaitingSubAgents?: boolean;
 	readonly continueAttemptCount: number;
 	readonly maxContinueAttempts: number;
 }
@@ -144,6 +154,16 @@ export function classifySessionInterruptHealth(evidence: SessionInterruptEvidenc
 			vetoes,
 		});
 	}
+	if (evidence.waitingOnSubagent) {
+		// 团队长任务里主控/成员会话在等待子代理返回（BUG-0126）：不流式 +
+		// idle 超阈 + 无完成标记的组合在这个形态下是合法安静，不是中断。
+		return buildResult({
+			state: "running",
+			confidence: "high",
+			trigger: null,
+			vetoes,
+		});
+	}
 	if (vetoes.includes("completionMarker")) {
 		return buildResult({
 			state: "completed",
@@ -155,6 +175,17 @@ export function classifySessionInterruptHealth(evidence: SessionInterruptEvidenc
 
 	const trigger = resolveTrigger(evidence);
 	if (!trigger) {
+		// 主控等子代理：团队任务机还在跑，协调会话不流式是正常形态，按 idle +
+		// 无完成标记判 suspected 会让长任务全程误报（约 20 次/4h，BUG-0126）。
+		// 只豁免无触发路径——真实 error/networkFailure/truncated 仍照常浮出。
+		if (evidence.awaitingSubAgents) {
+			return buildResult({
+				state: "running",
+				confidence: "high",
+				trigger: null,
+				vetoes,
+			});
+		}
 		if (evidence.idleMs >= SESSION_INTERRUPT_SUSPECT_IDLE_MS && !evidence.hasCompletionMarker) {
 			if (!vetoes.includes("insufficientConfidence")) vetoes.push("insufficientConfidence");
 			return buildResult({

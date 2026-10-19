@@ -12,6 +12,8 @@ export interface SessionInterruptEvidenceParts {
 	readonly manualStop: boolean;
 	readonly draftNonEmpty: boolean;
 	readonly hasPendingAction: boolean;
+	/** 该会话所属团队仍有在途工作（等成员/子代理返回是合法安静，BUG-0126）。 */
+	readonly waitingOnSubagent: boolean;
 	readonly continueAttemptCount: number;
 	readonly maxContinueAttempts: number;
 	/**
@@ -21,6 +23,8 @@ export interface SessionInterruptEvidenceParts {
 	 * 消息时间戳（仅对非 streaming 判定足够）。
 	 */
 	readonly activityAtMs?: number;
+	/** 主控会话正在等子代理（团队任务在途）；宿主未提供时为 false（BUG-0126）。 */
+	readonly awaitingSubAgents?: boolean;
 }
 
 export function buildSessionInterruptEvidence(parts: SessionInterruptEvidenceParts): SessionInterruptEvidence {
@@ -40,7 +44,9 @@ export function buildSessionInterruptEvidence(parts: SessionInterruptEvidencePar
 		manualStop: parts.manualStop,
 		draftNonEmpty: parts.draftNonEmpty,
 		hasPendingAction: parts.hasPendingAction,
+		waitingOnSubagent: parts.waitingOnSubagent,
 		hasCompletionMarker,
+		awaitingSubAgents: parts.awaitingSubAgents ?? false,
 		continueAttemptCount: parts.continueAttemptCount,
 		maxContinueAttempts: parts.maxContinueAttempts,
 	};

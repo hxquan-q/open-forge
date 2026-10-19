@@ -16,6 +16,7 @@ import {
 	inlineFilePreviewAtom,
 	pendingSessionOpenAtom,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { useMatches, useNavigate } from "@tanstack/react-router";
 import { isSshProjectUri, parseProjectLocation } from "@vetta/ssh-transport/project-uri";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
@@ -271,6 +272,11 @@ export function useProjectsPanelModel({
 					.then(() => {
 						notifyTeamSessionsChanged(session.teamId);
 						if (wasActive) void navigate({ to: "/" });
+					})
+					.catch((error: unknown) => {
+						// IPC rejection 无出口会升级成 unhandled rejection，用户侧零反馈（BUG-0114）。
+						console.error("[projects-panel] delete team session failed", error);
+						showToast({ variant: "error", message: t("sidebar.dialogs.deleteSessionFailedToast") });
 					});
 				return;
 			}
@@ -305,6 +311,7 @@ export function useProjectsPanelModel({
 			setActiveSession,
 			currentPath,
 			navigate,
+			t,
 		],
 	);
 

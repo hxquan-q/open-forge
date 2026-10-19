@@ -1,5 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { Message, UserMessage } from "@vetta/ai";
 import type { ConversationDocument, ConversationDocumentEntry } from "./document.js";
+import { conversationDocumentEntriesIndex } from "./document-index.js";
 import type { ConversationMessageRecord } from "./message-contract.js";
 
 export type ConversationDocumentCommand =
@@ -142,7 +144,7 @@ function sameAttributedMessage(left: ConversationDocumentEntry, right: Conversat
 }
 
 export function conversationDocumentEntry(document: ConversationDocument, entryId: string): ConversationDocumentEntry {
-	const entry = document.entries.find((candidate) => candidate.id === entryId);
+	const entry = conversationDocumentEntriesIndex(document.entries).byId.get(entryId);
 	if (!entry) throw new Error(`Entry ${entryId} not found`);
 	return entry;
 }
@@ -221,7 +223,7 @@ function setActiveLeaf(
 	entryId: string | null,
 	revision: number,
 ): ConversationDocumentCommandResult {
-	if (entryId && !document.entries.some((entry) => entry.id === entryId)) {
+	if (entryId && !conversationDocumentEntriesIndex(document.entries).byId.has(entryId)) {
 		throw new Error(`Entry ${entryId} not found`);
 	}
 	if (document.activeLeafId === entryId) return unchanged(document);
@@ -294,7 +296,7 @@ function appendCustomEntry(
 	command: Extract<ConversationDocumentCommand, { readonly type: "custom.append" }>,
 	revision: number,
 ): ConversationDocumentCommandResult {
-	if (document.entries.some((entry) => entry.id === command.entryId)) {
+	if (conversationDocumentEntriesIndex(document.entries).byId.has(command.entryId)) {
 		throw new Error(`Conversation document entry already exists: ${command.entryId}`);
 	}
 	return changed({
@@ -320,10 +322,11 @@ function appendBranchSummaryEntry(
 	command: Extract<ConversationDocumentCommand, { readonly type: "branch_summary.append" }>,
 	revision: number,
 ): ConversationDocumentCommandResult {
-	if (document.entries.some((entry) => entry.id === command.entryId)) {
+	const { byId } = conversationDocumentEntriesIndex(document.entries);
+	if (byId.has(command.entryId)) {
 		throw new Error(`Conversation document entry already exists: ${command.entryId}`);
 	}
-	if (command.parentId && !document.entries.some((entry) => entry.id === command.parentId)) {
+	if (command.parentId && !byId.has(command.parentId)) {
 		throw new Error(`Entry ${command.parentId} not found`);
 	}
 	return changed({
@@ -351,10 +354,11 @@ function appendLabelEntry(
 	command: Extract<ConversationDocumentCommand, { readonly type: "entry.label.set" }>,
 	revision: number,
 ): ConversationDocumentCommandResult {
-	if (document.entries.some((entry) => entry.id === command.entryId)) {
+	const { byId } = conversationDocumentEntriesIndex(document.entries);
+	if (byId.has(command.entryId)) {
 		throw new Error(`Conversation document entry already exists: ${command.entryId}`);
 	}
-	if (!document.entries.some((entry) => entry.id === command.targetId)) {
+	if (!byId.has(command.targetId)) {
 		throw new Error(`Entry ${command.targetId} not found`);
 	}
 	return changed({
@@ -380,7 +384,7 @@ function rewriteAfterRemoval(
 	removedIds: ReadonlySet<string>,
 	revision: number,
 ): ConversationDocument {
-	const byId = new Map(document.entries.map((entry) => [entry.id, entry]));
+	const byId = conversationDocumentEntriesIndex(document.entries).byId;
 	const resolveParent = (parentId: string | null): string | null => {
 		let current = parentId;
 		while (current && removedIds.has(current)) current = byId.get(current)?.parentId ?? null;
@@ -416,7 +420,7 @@ function rewriteAfterRemoval(
 }
 
 function resolveSubtreeTip(entries: readonly ConversationDocumentEntry[], entryId: string): string {
-	if (!entries.some((entry) => entry.id === entryId)) throw new Error(`Entry ${entryId} not found`);
+	if (!conversationDocumentEntriesIndex(entries).byId.has(entryId)) throw new Error(`Entry ${entryId} not found`);
 	let tipId = entryId;
 	for (;;) {
 		const children = childrenOf(entries, tipId)
@@ -431,7 +435,7 @@ function selectBranch(
 	entries: readonly ConversationDocumentEntry[],
 	leafId: string | null,
 ): ConversationDocumentEntry[] {
-	const byId = new Map(entries.map((entry) => [entry.id, entry]));
+	const byId = conversationDocumentEntriesIndex(entries).byId;
 	const branch: ConversationDocumentEntry[] = [];
 	let current = leafId ? byId.get(leafId) : undefined;
 	while (current) {
@@ -441,8 +445,17 @@ function selectBranch(
 	return branch;
 }
 
-function childrenOf(entries: readonly ConversationDocumentEntry[], parentId: string): ConversationDocumentEntry[] {
-	return entries.filter((entry) => entry.parentId === parentId);
+/**
+ * 返回指定父节点的直接子条目（按条目出现顺序）。
+ *
+ * 结果来自按 entries 数组记忆化的索引，调用方不得原地变更返回数组；
+ * 现有调用均先 `.filter()` 拷贝再排序。
+ */
+function childrenOf(
+	entries: readonly ConversationDocumentEntry[],
+	parentId: string,
+): readonly ConversationDocumentEntry[] {
+	return conversationDocumentEntriesIndex(entries).childrenByParent.get(parentId) ?? [];
 }
 
 function byTimestamp(left: ConversationDocumentEntry, right: ConversationDocumentEntry): number {

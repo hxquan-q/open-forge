@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CONFIG_DIR_NAME } from "../../identity.js";
 import type { ResourceAccessPort } from "../contracts/resource-access.js";
 import type {
@@ -102,12 +103,21 @@ class DefaultResourcePackageRuntime implements ResourcePackageRuntime {
 		return this.lifecycle.getInstalledPath(parseResourceSource(source), scope);
 	}
 
-	async resolve(onMissing?: (source: string) => Promise<MissingResourceSourceAction>): Promise<ResolvedResourcePaths> {
+	async resolve(
+		onMissing?: (source: string) => Promise<MissingResourceSourceAction>,
+		options?: { readonly projectScope?: boolean },
+	): Promise<ResolvedResourcePaths> {
+		const projectScope = options?.projectScope !== false;
 		const accumulator = this.projector.createAccumulator();
 		const globalSettings = this.settings.getGlobalSettings();
-		const projectSettings = this.settings.getProjectSettings();
+		const projectSettings = projectScope
+			? this.settings.getProjectSettings()
+			: ({} as ReturnType<ResourceSettingsPort["getProjectSettings"]>);
 		const sources = this.dedupeSources([
-			...(projectSettings.packages ?? []).map((source) => ({ source, scope: "project" as const })),
+			...(projectScope ? (projectSettings.packages ?? []) : []).map((source) => ({
+				source,
+				scope: "project" as const,
+			})),
 			...(globalSettings.packages ?? []).map((source) => ({ source, scope: "user" as const })),
 		]);
 		await this.resolveSources(sources, accumulator, onMissing);
@@ -119,6 +129,7 @@ class DefaultResourcePackageRuntime implements ResourcePackageRuntime {
 			projectSettings,
 			globalBaseDir,
 			projectBaseDir,
+			{ projectScope },
 		);
 		return this.projector.toResolvedPaths(accumulator);
 	}

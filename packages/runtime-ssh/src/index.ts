@@ -1,3 +1,10 @@
+// Modified by The Open Forge contributors.
+
+export type {
+	ProjectResourceAccess,
+	RemoteResourceAccessStats,
+	RemoteResourceOperation,
+} from "./project-resource-access.js";
 export { createProjectResourceAccess } from "./project-resource-access.js";
 export { createRemoteFileToolRegistrations, type RemoteFileToolBridgeOptions } from "./remote-file-tool-bridge.js";
 export { createSshForegroundCommandOperations } from "./ssh-command-operations.js";

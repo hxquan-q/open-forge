@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * Shared design-engine lifecycle (ADR-0053/0054):
  *
@@ -249,12 +251,14 @@ async function installDependencies(
 }
 
 /**
- * 把第三方包装进这一份设计（ADR-0068）。
+ * 把第三方包装进这一份设计（ADR-0068，安装策略经 TASK-0309 修订）。
  *
  * cwd 是设计包目录本身，所以 npm 会就地改写 `x.vetd/package.json` 的 dependencies
  * 并写出 lock——两者都是设计源码，跟着设计走。装进去的 node_modules 是生成物。
  *
- * 不带 `--ignore-scripts`：与用户在自己项目里装依赖同一个信任层级，见 ADR-0068。
+ * 一律带 `--ignore-scripts`：设计的依赖清单可能来自导入的分享包，postinstall 就是
+ * 任意代码执行；引擎自身的 `npm ci`（插件下发的受信 lockfile）不受此限。依赖
+ * postinstall 落二进制的包会装而不可用，由确认文案与构建报错兜底（见 ADR-0068 修订）。
  */
 export async function installDesignDependencies(
 	ctx: PluginContext,
@@ -263,9 +267,14 @@ export async function installDesignDependencies(
 	onProgress: (progress: EngineProgress) => void,
 ): Promise<string> {
 	await ensureDesignPackageFile(ctx, designDir);
-	return runNpm(ctx, designDir, ["install", ...packages, "--no-audit", "--no-fund"], (outputTail) => {
-		onProgress({ phase: "installing-design", outputTail });
-	});
+	return runNpm(
+		ctx,
+		designDir,
+		["install", ...packages, "--ignore-scripts", "--no-audit", "--no-fund"],
+		(outputTail) => {
+			onProgress({ phase: "installing-design", outputTail });
+		},
+	);
 }
 
 /**
@@ -281,7 +290,8 @@ export async function ensureDesignDependencies(
 ): Promise<void> {
 	if (!(await needsDependencyInstall(ctx.fs, designDir))) return;
 	onProgress({ phase: "installing-design", outputTail: "" });
-	await runNpm(ctx, designDir, ["install", "--no-audit", "--no-fund"], (outputTail) => {
+	// 同上：导入来的清单不可信，自动补装也不给 install 脚本执行机会（TASK-0309）。
+	await runNpm(ctx, designDir, ["install", "--ignore-scripts", "--no-audit", "--no-fund"], (outputTail) => {
 		onProgress({ phase: "installing-design", outputTail });
 	});
 }
@@ -380,9 +390,10 @@ async function waitForHttpReady(port: number, timeoutMs: number): Promise<void> 
 	let lastError: unknown = null;
 	while (Date.now() < deadline) {
 		try {
-			const response = await fetch(`http://127.0.0.1:${port}/`, { cache: "no-store" });
-			if (response.ok) return;
-			lastError = new Error(`HTTP ${response.status}`);
+			// no-cors（TASK-0309）：引擎 vite 已关 CORS，就绪探测只看「有没有应答」，
+			// 不读响应体——opaque 响应足够，也不给跨源读面留口子。
+			await fetch(`http://127.0.0.1:${port}/`, { cache: "no-store", mode: "no-cors" });
+			return;
 		} catch (error) {
 			lastError = error;
 		}

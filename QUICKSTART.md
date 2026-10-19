@@ -1,64 +1,59 @@
 <!-- Modified by The Open Forge contributors. -->
-# Quickstart
+# Open Forge Quickstart
 
-<p align="center"><b>English</b> · <a href="QUICKSTART.zh-CN.md">简体中文</a></p>
+[English](QUICKSTART.md) · [简体中文](QUICKSTART.zh-CN.md)
 
-This guide runs the independently maintained Open Forge desktop client. Use a released build or this repository's source; the current development version may be newer than the latest installer.
+## Use an installer
 
-## Use the app
+Choose an asset for your operating system and architecture from [GitHub Releases](https://github.com/hxquan-q/open-forge/releases). The source version may be newer than the latest downloadable release.
 
-Available installers and their supported platforms:
+After installation, configure a model provider, open a project directory, and create a conversation. Follow [your first task](apps/docs-site/content/docs/en/getting-started/first-task.mdx) to inspect execution and verify the result.
 
-**→ [GitHub Releases](https://github.com/hxquan-q/open-forge/releases)**
+## Run the desktop app from source
 
-Choose a release and an asset for your OS and architecture. Packaging support in the source does not guarantee an asset exists in every release. After installation, configure a BYOK model and the permissions needed for your task. Product guides live in [`apps/docs-site/content/docs/`](apps/docs-site/content/docs/).
-
-Without cloud configuration, development uses the **lite** build: no Open Forge login or subscription is needed. A **full** build requires an explicitly configured compatible backend maintained outside this repository; follow its distributor's setup only when using that build. See [Build Modes](docs/desktop/build-modes.en.md).
-
-The repository and docs use **Open Forge**. Desktop defaults to the `distribution` profile: **Allstr ai** with a localized Chinese display name. To use the Open Forge display name, set `VETTA_BRAND_PROFILE=self` in `apps/desktop/.env.development` and restart development processes; use the relevant `.env.<mode>` when packaging. This setting does not change lite/full or switch data directories.
-
-## Develop from source
-
-Requires **Bun 1.3+** and **Node 20+**. macOS, Windows, and Linux are supported.
+Install **Bun 1.3.14**, **Node.js 20+**, and Git. Run:
 
 ```bash
 git clone https://github.com/hxquan-q/open-forge.git
 cd open-forge
 bun install
+bun run --cwd apps/desktop dev
 ```
 
-### Desktop app
+The desktop command starts the renderer, theme development server, and Electron. Keep its terminal open while using the app. The repository root's `bun run dev` only watches core libraries.
 
-```bash
-cd apps/desktop
-bun run dev
-```
+Default development uses lite mode. Configure your own model endpoint and credentials; no Open Forge account is required. Full mode needs a compatible backend configured separately.
 
-That starts the Vite renderer, the theme dev server, and Electron together. The process uses `~/.openforge-dev`, so your installed-app data in `~/.openforge` is left alone.
+The default brand profile displays **Allstr ai / 小爱ai**. For the Open Forge display name, set `VETTA_BRAND_PROFILE=self` in `apps/desktop/.env.development`, then restart development. Packaging uses the corresponding `.env.<mode>`. Brand selection does not change lite/full or the data directory. See [build configuration](docs/desktop/build-modes.en.md).
 
-| Command | Data root | When to use it |
-|---|---|---|
-| `bun run dev` | `~/.openforge-dev` | Default sandbox |
-| `bun run dev:home` | `~/.openforge` | You want the dev build to read and write real user data |
+## Data directories
 
-`bun run dev` **at the repository root** only watches core libraries. It does not launch the app.
+| Instance | Default data root |
+| --- | --- |
+| Installed desktop app | `~/.openforge` |
+| Ordinary desktop development | `~/.openforge-dev` |
 
-### Documentation site
+See [configuration paths](apps/docs-site/content/docs/en/reference/configuration-paths.mdx) for overrides and migration. `dev:home` explicitly uses installed-app data; use ordinary `dev` for development isolation.
+
+## Work on documentation
+
+From the repository root:
 
 ```bash
 bun run --cwd apps/docs-site dev
 ```
 
-Opens on `http://127.0.0.1:4321`. Public docs live in `apps/docs-site/content/docs/`.
+The site uses port 4321 by default. Public content lives in `apps/docs-site/content/docs/`, with English pages under `en/`. The [site README](apps/docs-site/README.md) describes content structure and checks.
 
-### Checks you will actually run
+## Validate a change
 
 ```bash
-bun run check:quick        # Biome + architecture guards on changed files
-bun run check              # lint + types + guards, before a PR
-bun run test:pkg ai        # one package; `bun run test:pkg --list` shows names
+bun run check:quick
+bun run test:pkg ai
+bun run test:impact -- <file...>
+bun run check
 ```
 
-Do not run bare `bun test`. On Windows it is the wrong runner; use `bun scripts/quality/run-vitest.mjs --run <file>` or `bun run test:pkg`.
+Choose tests for the affected behavior; `ai` is an example package. List supported packages with `bun run test:pkg --list`. Use repository runners instead of invoking `bun test` directly. Full `check` covers lint, types, and guards; it does not run tests.
 
-Packaging, environment variables, and the lite/full flag: [Build Modes](docs/desktop/build-modes.en.md). Contribution map and PR bar: [CONTRIBUTING.md](CONTRIBUTING.md).
+Continue with [Contributing](CONTRIBUTING.md), the [documentation map](docs/README.md), or [troubleshooting](apps/docs-site/content/docs/en/troubleshooting.mdx).

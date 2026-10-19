@@ -7,6 +7,7 @@ import type { TeamDefinition, TeamSessionDocument } from "@vetta/agent-team";
 import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
+	computeTeamTimelineBase,
 	placeTeamErrorInTimeline,
 	projectTeamConversationTimeline,
 	reduceTeamStreamState,
@@ -1928,5 +1929,87 @@ describe("team chat stream state", () => {
 				result: "done",
 			}),
 		]);
+	});
+});
+
+describe("team timeline persisted base", () => {
+	const labels = { delegation: (from: string, to: string) => `${from} -> ${to}`, unknownMember: "Unknown" };
+	const members = [
+		member,
+		{ ...member, id: "reviewer", name: "Reviewer", handle: "reviewer", blueprintId: "reviewer" },
+	];
+	const baseSnapshot = () =>
+		snapshot({
+			session: { ...session, memberHandles: { leader: "vetta", reviewer: "reviewer" } },
+			messages: [
+				userMessage("user-event", "request-1", "Review the launch plan", 1),
+				agentMessage("member-event", "request-1", "reviewer", "Launch risks found", 3),
+			],
+			activities: [
+				{
+					kind: "delegation",
+					id: "delegation-event",
+					requestId: "request-1",
+					sourceMemberId: "leader",
+					targetMemberId: "reviewer",
+					objective: "Review risks",
+					state: "completed",
+					timestamp: 2,
+				},
+			],
+		});
+
+	it("produces identical output with and without a precomputed base", () => {
+		const current = baseSnapshot();
+		const streams = reduceTeamStreamState({}, streamEvent("live-turn", 1, "Working on it", "reviewer", "request-2"));
+
+		const inline = projectTeamConversationTimeline({
+			snapshot: current,
+			pending: undefined,
+			streams,
+			members,
+			labels,
+		});
+		const withBase = projectTeamConversationTimeline({
+			snapshot: current,
+			pending: undefined,
+			streams,
+			members,
+			labels,
+			base: computeTeamTimelineBase(current, undefined),
+		});
+
+		expect(withBase).toEqual(inline);
+	});
+
+	it("reuses one base across stream changes without capturing stream state", () => {
+		const current = baseSnapshot();
+		const base = computeTeamTimelineBase(current, undefined);
+		const streaming = reduceTeamStreamState({}, streamEvent("live-turn", 1, "Partial", "reviewer", "request-2"));
+		const completed = reduceTeamStreamState(
+			{},
+			streamEvent("live-turn", 2, "Partial answer, now complete", "reviewer", "request-2"),
+		);
+
+		const streamingItems = projectTeamConversationTimeline({
+			snapshot: current,
+			pending: undefined,
+			streams: streaming,
+			members,
+			labels,
+			base,
+		});
+		const completedItems = projectTeamConversationTimeline({
+			snapshot: current,
+			pending: undefined,
+			streams: completed,
+			members,
+			labels,
+			base,
+		});
+
+		expect(streamingItems).not.toEqual(completedItems); // 流差异必须呈现
+		expect(streamingItems.find((item) => item.id === "live-turn")).toBeDefined();
+		expect(completedItems.find((item) => item.id === "live-turn")).toBeDefined();
 	});
 });

@@ -13,8 +13,10 @@ import type { TeamSessionEventHub } from "./team-session-event-hub.js";
 import type { TeamSessionStateRepository } from "./team-session-state-repository.js";
 import { TeamTurnCoordinator } from "./team-turn-coordinator.js";
 
+const { logError } = vi.hoisted(() => ({ logError: vi.fn() }));
+
 vi.mock("../logger.js", () => ({
-	getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+	getAppLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: logError }),
 }));
 
 describe("TeamTurnCoordinator", () => {
@@ -72,6 +74,42 @@ describe("TeamTurnCoordinator", () => {
 		);
 
 		expect(deliverSessionContext).not.toHaveBeenCalled();
+	});
+
+	it("logs a readable diagnosis when a send fails with a bare error object (BUG-0117)", async () => {
+		const coordinator = new TeamTurnCoordinator({
+			runtime: () => ({}) as RuntimeHost,
+			extensions: {} as AgentTeamExtensionRegistry,
+			collaborationStore: {} as TeamCollaborationStore,
+			sessionState: {
+				get: () => undefined,
+				values: () => [],
+			} as unknown as TeamSessionStateRepository,
+			eventHub: {} as TeamSessionEventHub,
+			readSession: async () => {
+				throw { code: "SESSION_NOT_FOUND", message: "Session not found: member-1", retryable: false };
+			},
+			readDocument: async () => ({
+				schemaVersion: AGENT_TEAM_SCHEMA_VERSION,
+				revision: 0,
+				agents: [],
+				teams: [],
+			}),
+			observations: () => undefined,
+			publishSessionUpdated: () => undefined,
+		});
+		const input = { requestId: "req-bug117", text: "hello" } as unknown as Parameters<TeamTurnCoordinator["send"]>[1];
+
+		await expect(coordinator.send("team-bug117", input)).rejects.toMatchObject({
+			code: "SESSION_NOT_FOUND",
+		});
+
+		const failureCall = logError.mock.calls.find(([message]) => message === "team message failed");
+		expect(failureCall).toBeDefined();
+		const fields = failureCall?.[1] as { error: string };
+		expect(fields.error).not.toContain("[object Object]");
+		expect(fields.error).toContain("SESSION_NOT_FOUND");
+		expect(fields.error).toContain("Session not found: member-1");
 	});
 
 	it("rejects a delegation whose session lookup finishes after the user stopped the team", async () => {

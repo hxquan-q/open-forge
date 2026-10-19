@@ -1,4 +1,10 @@
-export type { CodingToolExecutable, CodingToolExecutableResolver } from "@vetta/runtime-tools/coding";
+// Modified by The Open Forge contributors.
+export type {
+	CodingToolExecutable,
+	CodingToolExecutableResolver,
+	CodingToolInspection,
+	CodingToolInspectionSource,
+} from "@vetta/runtime-tools/coding";
 export {
 	createNodeHostBashExecutor,
 	type NodeHostBashExecutionOptions,

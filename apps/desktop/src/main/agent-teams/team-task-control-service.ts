@@ -119,9 +119,11 @@ export class TeamTaskControlService {
 		try {
 			await this.store.cancelForTeamStop(session);
 		} catch (error) {
+			// 仅记 errorName 会把普通对象抛值压成 UnknownError，stop 失败原因不可诊断（BUG-0114C）。
 			log.warn("Team work items could not be cancelled on stop", {
 				teamSessionId,
 				errorName: error instanceof Error ? error.name : "UnknownError",
+				errorMessage: error instanceof Error ? error.message : String(error),
 			});
 		}
 	}

@@ -1,28 +1,50 @@
 <!-- Copyright The Open Forge contributors. -->
 # Open Forge 文档导航
 
-这些文档服务于本仓独立维护的 Open Forge 客户端工程，覆盖桌面端、团队与工程工作流、远程项目、模型接入和扩展开发。具体实现与验收状态以本仓源码、测试和 Project 记录为准。
+当前文档按读者要完成的工作组织：使用说明进入公开文档站，工程合同进入对应手册，需求和实施状态进入 Project。各目录维护自己的正文，本页提供导航。
 
-默认 Desktop 的 `distribution` 档显示小爱ai / Allstr ai，显式 `VETTA_BRAND_PROFILE=self` 使用 Open Forge。默认 lite 开发流程无需账号；full 的云功能需要本仓之外的兼容服务端。品牌档与云服务模式独立，配置见[构建模式](desktop/build-modes.md)。开发版本、已发布资产与已部署服务应分别核实。
+## 使用 Open Forge
 
-## 当前使用与开发入口
-
-| 目的 | 入口 |
+| 目标 | 入口 |
 | --- | --- |
-| 安装、运行与贡献 | [中文 README](../README.zh-CN.md) · [快速开始](../QUICKSTART.zh-CN.md) · [贡献指南](../CONTRIBUTING.zh-CN.md) |
-| 产品操作与公开扩展合同 | [产品指南](../apps/docs-site/content/docs/product/overview.mdx) · [公开文档源码](../apps/docs-site/content/docs/) · [站点开发说明](../apps/docs-site/README.md) |
-| 配置与数据迁移 | [配置路径](../apps/docs-site/content/docs/reference/configuration-paths.mdx) · [构建模式](desktop/build-modes.md) |
-| 插件、主题与能力分发 | [插件手册](plugin/README.md) · [主题手册](theme/README.md) · [GitHub 能力市场](open-marketplace.md) |
-| 工程验证与仓库结构 | [开发指南](dev/README.md) · [质量门禁](dev/quality-gates.md) · [仓库地图](dev/agent-rules/repository.md) |
-| 需求、任务与实施状态 | [Project](../project/README.md) |
+| 了解项目与运行方式 | [项目首页](../README.zh-CN.md) · [快速开始](../QUICKSTART.zh-CN.md) |
+| 完成第一次任务 | [首次配置](../apps/docs-site/content/docs/getting-started/index.mdx) · [第一个任务](../apps/docs-site/content/docs/getting-started/first-task.mdx) |
+| 查找功能和设置 | [使用指南](../apps/docs-site/content/docs/product/overview.mdx) · [模型配置](../apps/docs-site/content/docs/product/models.mdx) |
+| 确认数据与权限 | [配置路径](../apps/docs-site/content/docs/reference/configuration-paths.mdx) · [安全与数据](../apps/docs-site/content/docs/reference/security-and-data.mdx) |
+| 查看当前改动 | [发布说明](../.github/release-notes/v0.1.3.md) |
 
-默认用户数据根为 `~/.openforge`，普通开发实例为 `~/.openforge-dev`。项目目录 `<cwd>/.vetta/`、`@vetta/*` / `@vetta-org/*`、`VETTA_*`、`.vettapkg`、`desktop:vetta` 等仍是兼容标识，不能按品牌批量替换。少量界面引用遵循当前 i18n 实况，不据此改写协议或按钮名。
+## 开发与扩展
 
-## 历史资料与事实边界
+| 领域 | 权威入口 |
+| --- | --- |
+| 本地开发与调试 | [开发指南](dev/README.md) · [质量门禁](dev/quality-gates.md) |
+| Desktop 与构建 | [桌面工程](desktop/README.md) · [构建模式](desktop/build-modes.md) |
+| Agent 与模型 | [Coding Agent](agent/coding-agent/README.md) · [AI](ai/README.md) · [能力架构](capabilities/README.md) |
+| 插件与主题 | [插件手册](plugin/README.md) · [主题手册](theme/README.md) · [能力市场](open-marketplace.md) |
+| UI 文案 | [本项目文案约定](user-facing-copy.md) |
+| 开发贡献 | [贡献指南](../CONTRIBUTING.zh-CN.md) · [仓库地图与包边界](dev/agent-rules/repository.md) |
 
-- [ADR](adr/) 记录决策原因和当时的约束；当前行为以源码、Schema、测试和可执行脚本为准。
-- `agent/`、`ai/`、`adapter/` 包含上游对照、研究及实施沿革；`glossary/` 是被上下文索引引用的术语库。原品牌、仓库坐标、commit 和目录名保留其历史语境。
-- [性能记录](desktop/preformance/README.md) 是按日期保存的测量快照；[知识库 PRD](prd-knowledge-base-llm-wiki.md) 是上游历史草案；[品牌话术](user-facing-copy.md) 保留上游内容设计。它们不表示当前功能状态、默认路径或新的品牌承诺。
-- `assets/banner.webp` 与 `assets/screenshot.png` 为继承的历史素材。当前 README 使用 [Open Forge 文字横幅](assets/open-forge-banner.svg)；公开指南中的旧截图仅用于说明流程。
+Desktop 默认分发名为小爱ai / Allstr ai，显式 self 档显示 Open Forge。品牌与 lite/full 模式独立，以构建模式手册为准。
 
-文档站只加载 `apps/docs-site/content/docs/`，不会自动发布整个 `docs/`。默认源坐标、示例域名或一次本地构建均不代表外部服务已部署；部署和发布状态须单独核实。
+## 仓库目录
+
+| 位置 | 放什么 | 进一步阅读 |
+| --- | --- | --- |
+| `apps/` | 可运行的应用与服务 | [Desktop](../apps/desktop/) · [CLI](../apps/cli-host/) · [文档站](../apps/docs-site/README.md) · [Expo](../apps/mobile/README.md) · [Kotlin](../apps/kotlin/) · [IM Gateway](../apps/im-gateway/) · [Relay](../apps/remote-relay/README.md) · [SSH Helper](../apps/ssh-helper/) |
+| `packages/` | 可复用库、运行时与扩展生态 | [AI](../packages/ai/README.md) · [Agent](../packages/agent/README.md) · [Coding Agent](../packages/coding-agent/README.md) · [插件](../packages/plugins/README.md) |
+| `apps/docs-site/content/docs/` | 当前公开使用说明与扩展指南 | [站点维护](../apps/docs-site/README.md) |
+| `docs/` | 工程合同、手册与决策入口 | 本导航及各领域 README |
+| `project/` | 本项目需求、计划、任务、缺陷和证据 | [Project](../project/README.md) · [管理规范](../project/CONVENTIONS.md) |
+| `scripts/`、`tests/`、`patches/` | 工具脚本、仓库级验证支持、依赖补丁 | [质量门禁](dev/quality-gates.md) |
+
+根 README 介绍项目；QUICKSTART 负责首次运行；CONTRIBUTING 负责贡献流程；AGENTS 负责工程规则。完整字段和操作步骤留在对应手册，避免在这些入口间复制正文。
+
+## 兼容标识
+
+`@vetta/*`、`@vetta-org/*`、`VETTA_*`、`.vetta/`、`.vettapkg` 及部分工具/插件 id 是现行代码使用的技术标识。文档示例按实际命令和 Schema 书写，不能只为改品牌替换。全局数据根和项目内目录的区别见配置路径手册。
+
+## 历史与决策
+
+历史研究、原始设计和旧素材统一从[归档索引](archive/README.md)查阅。部分决策仍服务于现行实现；保留的日期、坐标与测量结果只陈述当时事实。当前行为以源码、Schema、测试和可执行脚本为准。
+
+公开站点只加载 `apps/docs-site/content/docs/`；工程资料、Project 与归档不会随此导航自动发布。

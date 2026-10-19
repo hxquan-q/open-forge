@@ -3,12 +3,30 @@ import { retryProgressAtom } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
 import { MessageListFooter as MessageListFooterPrimitive } from "@vetta-org/theme-ui/chat";
 import { useAtomValue } from "jotai";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PluginTurnCardHost } from "../../../plugins/components/PluginTurnCardHost";
 import { classifyChatError, type ChatErrorKind } from "../../services/classifyChatError";
+import { classifyResumeFailure } from "../../services/resume-failure";
 import { StreamingIndicator } from "./AssistantMessage";
 import { WorkflowFooterItems } from "./WorkflowFooterItems";
+
+/** 内核拒绝续跑时的专属文案 key；未归类失败的通用文案走 `failed`。 */
+function resumeFailureMessageKey(error: unknown): ResumeBarMessageKey {
+	switch (classifyResumeFailure(error)) {
+		case "busy":
+			return "messageList.resumeBar.busy";
+		case "recovery_required":
+			return "messageList.resumeBar.recoveryRequired";
+		default:
+			return "messageList.resumeBar.failed";
+	}
+}
+
+type ResumeBarMessageKey =
+	| "messageList.resumeBar.busy"
+	| "messageList.resumeBar.recoveryRequired"
+	| "messageList.resumeBar.failed";
 
 export const MessageListFooter = memo(function MessageListFooter({
 	isCompacting,
@@ -44,12 +62,25 @@ export const MessageListFooter = memo(function MessageListFooter({
 			})
 		: null;
 	const showResumeBar = Boolean(interruptedErrorKind && runtimeSessionId && !retryLabel && !pendingLabel);
+	// 在途点击锁：宿主调用未 settle 前禁用按钮，重复点击不再发出第二次 retry
+	// （内核忙碌时每次点击都会被 SESSION_BUSY 拒绝，见 BUG-0122）。用 ref 做同步守卫，
+	// 不依赖 state 重渲染落地——同一帧内的连点也必须被挡住。
+	const [resuming, setResuming] = useState(false);
+	const resumingRef = useRef(false);
 	const onResume = useCallback(() => {
-		if (!runtimeSessionId) return;
-		void window.vetta.session.retry(runtimeSessionId).catch((error: unknown) => {
-			console.warn("[MessageListFooter] resume failed", error);
-			showToast({ variant: "warning", message: t("messageList.resumeBar.failed") });
-		});
+		if (!runtimeSessionId || resumingRef.current) return;
+		resumingRef.current = true;
+		setResuming(true);
+		void window.vetta.session
+			.retry(runtimeSessionId)
+			.catch((error: unknown) => {
+				console.warn("[MessageListFooter] resume failed", error);
+				showToast({ variant: "warning", message: t(resumeFailureMessageKey(error)) });
+			})
+			.finally(() => {
+				resumingRef.current = false;
+				setResuming(false);
+			});
 	}, [runtimeSessionId, t]);
 	return (
 		<MessageListFooterPrimitive.Root>
@@ -67,7 +98,9 @@ export const MessageListFooter = memo(function MessageListFooter({
 					<button
 						type="button"
 						onClick={onResume}
-						className="inline-flex h-6 shrink-0 items-center rounded px-1.5 text-[12px] font-medium text-foreground/75 transition-colors hover:bg-muted/70 hover:text-foreground"
+						disabled={resuming}
+						aria-busy={resuming}
+						className="inline-flex h-6 shrink-0 items-center rounded px-1.5 text-[12px] font-medium text-foreground/75 transition-colors hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
 					>
 						{t("messageList.resumeBar.action")}
 					</button>

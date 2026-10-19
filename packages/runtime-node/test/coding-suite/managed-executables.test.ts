@@ -1,16 +1,23 @@
+// Modified by The Open Forge contributors.
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+	applyDownloadFailureRecord,
 	type CodingToolArchiveOperations,
+	type CodingToolCommandProbe,
 	type CodingToolHttpResponse,
+	type CodingToolInspection,
 	createCodingToolDownloadPlan,
 	createManagedCodingToolExecutableResolver,
 	downloadCodingToolArchiveWithRetry,
 	fetchLatestCodingToolVersion,
+	inspectManagedCodingToolExecutable,
 	installCodingToolArchive,
 	type ManagedCodingToolExecutableDependencies,
+	type ManagedCodingToolInspectionDependencies,
+	parseCodingToolVersionOutput,
 	parseLatestReleaseVersion,
 	resolveManagedCodingToolExecutable,
 } from "../../src/coding/index.js";
@@ -64,13 +71,18 @@ describe("managed coding-tool executables", () => {
 		await expect(
 			resolveManagedCodingToolExecutable("fd", true, createDependencies({ download: async () => "/downloaded/fd" })),
 		).resolves.toBe("/downloaded/fd");
+		const failures: Array<[string, string]> = [];
 		await expect(
 			resolveManagedCodingToolExecutable(
 				"rg",
 				true,
-				createDependencies({ download: async () => Promise.reject(new Error("offline")) }),
+				createDependencies({
+					download: async () => Promise.reject(new Error("offline")),
+					recordFailure: (tool, message) => failures.push([tool, message]),
+				}),
 			),
 		).resolves.toBeUndefined();
+		expect(failures).toEqual([["rg", "offline"]]);
 	});
 
 	it.each([
@@ -88,6 +100,7 @@ describe("managed coding-tool executables", () => {
 		});
 		expect(plan?.assetName).toBe(asset);
 		expect(plan?.binaryFileName).toBe(binary);
+		expect(plan?.version).toBe(version);
 		expect(plan?.downloadUrl).toContain(`/releases/download/${tool === "fd" ? "v" : ""}${version}/`);
 	});
 
@@ -129,6 +142,7 @@ describe("managed coding-tool executables", () => {
 			makeExecutable: () => calls.push("chmod"),
 			removeFile: () => calls.push("remove-file"),
 			removeDirectory: () => calls.push("remove-directory"),
+			writeVersionMarker: (markerPath, version) => calls.push(`version:${markerPath}:${version}`),
 		};
 		await expect(installCodingToolArchive({ plan, extractDirectory, platform, operations })).resolves.toBe(
 			plan.binaryPath,
@@ -137,9 +151,39 @@ describe("managed coding-tool executables", () => {
 			platform === "win32" ? "zip" : "tar",
 			"move",
 			...(chmod ? ["chmod"] : []),
+			`version:${join("C:/vetta/bin", `${plan.binaryFileName.replace(/\.exe$/, "")}.version`)}:${plan.version}`,
 			"remove-file",
 			"remove-directory",
 		]);
+	});
+
+	it("keeps the install successful when the version marker write fails", async () => {
+		const plan = createCodingToolDownloadPlan({
+			tool: "rg",
+			version: "14.1.0",
+			platform: "linux",
+			architecture: "x64",
+			toolsDirectory: "C:/vetta/bin",
+		});
+		if (!plan) throw new Error("expected plan");
+		const cleanup: string[] = [];
+		const operations: CodingToolArchiveOperations = {
+			extractTarGz: () => {},
+			extractZip: async () => {},
+			fileExists: () => true,
+			findBinary: () => null,
+			moveFile: () => {},
+			makeExecutable: () => {},
+			removeFile: () => cleanup.push("file"),
+			removeDirectory: () => cleanup.push("directory"),
+			writeVersionMarker: () => {
+				throw new Error("disk full");
+			},
+		};
+		await expect(
+			installCodingToolArchive({ plan, extractDirectory: "C:/extract", platform: "linux", operations }),
+		).resolves.toBe(plan.binaryPath);
+		expect(cleanup).toEqual(["file", "directory"]);
 	});
 
 	it("cleans staging files when an archive has no binary", async () => {
@@ -161,11 +205,125 @@ describe("managed coding-tool executables", () => {
 			makeExecutable: () => {},
 			removeFile: () => cleanup.push("file"),
 			removeDirectory: () => cleanup.push("directory"),
+			writeVersionMarker: () => cleanup.push("version"),
 		};
 		await expect(
 			installCodingToolArchive({ plan, extractDirectory: "C:/extract", platform: "linux", operations }),
 		).rejects.toThrow("Binary not found in archive");
 		expect(cleanup).toEqual(["file", "directory"]);
+	});
+
+	describe("managed coding-tool inspection", () => {
+		function createInspectionDependencies(overrides: Partial<ManagedCodingToolInspectionDependencies> = {}): {
+			dependencies: ManagedCodingToolInspectionDependencies;
+			probedCommands: string[];
+		} {
+			const probedCommands: string[] = [];
+			const overrideProbe = overrides.probeCommand;
+			return {
+				probedCommands,
+				dependencies: {
+					getCachedPath: () => null,
+					readVersionMarker: () => null,
+					isOffline: () => false,
+					...overrides,
+					probeCommand: (command: string): CodingToolCommandProbe => {
+						probedCommands.push(command);
+						return overrideProbe ? overrideProbe(command) : { exists: false };
+					},
+				},
+			};
+		}
+
+		it("reports cache hits from the version marker without probing the binary", () => {
+			const { dependencies, probedCommands } = createInspectionDependencies({
+				getCachedPath: () => "/managed/rg",
+				readVersionMarker: () => "14.1.0",
+			});
+			expect(inspectManagedCodingToolExecutable("rg", dependencies)).toEqual({
+				tool: "rg",
+				source: "cache",
+				path: "/managed/rg",
+				version: "14.1.0",
+				offline: false,
+			});
+			expect(probedCommands).toEqual([]);
+		});
+
+		it("falls back to one probe for legacy caches without a marker", () => {
+			const { dependencies, probedCommands } = createInspectionDependencies({
+				getCachedPath: () => "/managed/fd",
+				readVersionMarker: () => null,
+				probeCommand: () => ({ exists: true, version: "9.0.0" }),
+			});
+			expect(inspectManagedCodingToolExecutable("fd", dependencies)).toEqual({
+				tool: "fd",
+				source: "cache",
+				path: "/managed/fd",
+				version: "9.0.0",
+				offline: false,
+			});
+			expect(probedCommands).toEqual(["/managed/fd"]);
+		});
+
+		it("reports PATH tools with their probed version", () => {
+			const { dependencies, probedCommands } = createInspectionDependencies({
+				probeCommand: (command) => (command === "rg" ? { exists: true, version: "14.1.0" } : { exists: false }),
+			});
+			expect(inspectManagedCodingToolExecutable("rg", dependencies)).toEqual({
+				tool: "rg",
+				source: "path",
+				path: "rg",
+				version: "14.1.0",
+				offline: false,
+			});
+			expect(probedCommands).toEqual(["rg"]);
+		});
+
+		it("reports missing tools with the offline flag", () => {
+			const { dependencies } = createInspectionDependencies({ isOffline: () => true });
+			expect(inspectManagedCodingToolExecutable("fd", dependencies)).toEqual({
+				tool: "fd",
+				source: "missing",
+				offline: true,
+			});
+		});
+
+		it("exposes inspection through the resolver and upgrades recorded download failures", async () => {
+			const { dependencies } = createInspectionDependencies();
+			const resolver = createManagedCodingToolExecutableResolver({
+				toolsDirectory: "C:/vetta/bin",
+				resolveExecutable: async () => undefined,
+				inspectionDependencies: dependencies,
+			});
+			await expect(resolver.inspect?.("rg")).resolves.toEqual({ tool: "rg", source: "missing", offline: false });
+		});
+
+		it("merges failure history without overriding resolvable sources", () => {
+			const cache: CodingToolInspection = {
+				tool: "rg",
+				source: "cache",
+				path: "/managed/rg",
+				version: "1.0.0",
+				offline: false,
+			};
+			expect(applyDownloadFailureRecord(cache, undefined)).toBe(cache);
+			expect(applyDownloadFailureRecord(cache, "boom")).toEqual({ ...cache, lastError: "boom" });
+			const missing: CodingToolInspection = { tool: "rg", source: "missing", offline: false };
+			expect(applyDownloadFailureRecord(missing, "boom")).toEqual({
+				...missing,
+				source: "download-failed",
+				lastError: "boom",
+			});
+		});
+
+		it("parses versions from --version outputs", () => {
+			expect(parseCodingToolVersionOutput("ripgrep 14.1.0\nfeatures: +pcre2\n")).toBe("14.1.0");
+			expect(parseCodingToolVersionOutput("fd 9.0.0\n")).toBe("9.0.0");
+			expect(parseCodingToolVersionOutput("v1.2.3-rc1\n")).toBe("1.2.3-rc1");
+			expect(parseCodingToolVersionOutput("fd v10.2.0\n")).toBe("10.2.0");
+			expect(parseCodingToolVersionOutput("")).toBeUndefined();
+		});
 	});
 
 	it("parses latest releases and retries transient downloads", async () => {

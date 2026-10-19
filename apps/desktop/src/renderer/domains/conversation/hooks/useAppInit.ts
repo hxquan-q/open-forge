@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { cloudEnabled } from "@shared/components/cloud-slots";
@@ -40,6 +41,10 @@ export function useAppInit(): void {
 			if (config.workspacePath) {
 				setWorkspacePath(config.workspacePath);
 				localStorage.setItem("vetta-workspace-path", config.workspacePath);
+			} else if (config.defaultWorkspaceCwd) {
+				// 未显式设置过工作区时落到主进程算出的默认值（数据根/workspace，随迁移与 env 变化），
+				// 不写 localStorage——「未设置」语义保留，默认值变化时仍能跟随。
+				setWorkspacePath(config.defaultWorkspaceCwd);
 			}
 			if (config.defaultConversationCwd) {
 				setDefaultConversationCwd(config.defaultConversationCwd);

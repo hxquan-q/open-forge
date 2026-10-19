@@ -2,6 +2,9 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
+import { resolveDesktopCodingToolsDirectory } from "@vetta/runtime-desktop";
+import type { CodingToolExecutable, CodingToolInspection } from "@vetta/runtime-node/coding";
+import { createManagedCodingToolExecutableResolver } from "@vetta/runtime-node/coding";
 import AdmZip from "adm-zip";
 import { app } from "electron";
 import { getPerfMonitorReport } from "./app-monitor/perf-monitor-service.js";
@@ -15,20 +18,31 @@ const MAX_LOG_BYTES = 20 * 1024 * 1024;
 // 每个 type 目录最多纳入的文件数（按 mtime 取最新）。
 const MAX_FILES_PER_TYPE = 6;
 
+const MANAGED_CODING_TOOLS: readonly CodingToolExecutable[] = ["fd", "rg"];
+
 export interface DiagnosticsBundleResult {
 	zipPath: string;
 	sizeBytes: number;
 }
 
+export type ManagedCodingToolsInspector = (tool: CodingToolExecutable) => Promise<CodingToolInspection>;
+
+export interface DiagnosticsBundleOptions {
+	/** 受管工具解析记录注入点；缺省用 toolsDirectory 的本机静态检查。 */
+	readonly managedToolsInspector?: ManagedCodingToolsInspector;
+}
+
 // 打包诊断 zip：最近日志文件（各 type 取最新若干，受总字节预算约束）+ 内存 ring
-// buffer 序列化的 NDJSON + 系统信息。落到 temp 目录，由调用方决定如何呈现给用户。
-// 用异步 deflate + 异步写盘（writeZipPromise），避免同步压缩 ~20MB 阻塞主进程事件循环。
-export async function buildDiagnosticsBundle(): Promise<DiagnosticsBundleResult> {
+// buffer 序列化的 NDJSON + 系统信息 + 受管编码工具解析记录。落到 temp 目录，由调用方
+// 决定如何呈现给用户。用异步 deflate + 异步写盘（writeZipPromise），避免同步压缩
+// ~20MB 阻塞主进程事件循环。
+export async function buildDiagnosticsBundle(options: DiagnosticsBundleOptions = {}): Promise<DiagnosticsBundleResult> {
 	const zip = new AdmZip();
 	addRecentLogs(zip);
 	addRingBuffer(zip);
 	addSystemInfo(zip);
 	addPerfSnapshot(zip);
+	await addManagedTools(zip, options.managedToolsInspector);
 
 	const zipPath = join(app.getPath("temp"), `vetta-diagnostics-${nowStamp()}.zip`);
 	await zip.writeZipPromise(zipPath);
@@ -94,6 +108,35 @@ function addPerfSnapshot(zip: AdmZip): void {
 	} catch (error) {
 		diagnosticsLog.warn("perf snapshot collection failed", error);
 	}
+}
+
+/**
+ * 受管编码工具（fd/rg）解析记录：来源/路径/版本/离线态与 `openforge doctor` 同源，
+ * 纯静态检查（不下载、不联网）。采集失败只降级为缺该文件，不让诊断包导出整体失败。
+ */
+async function addManagedTools(zip: AdmZip, inspector?: ManagedCodingToolsInspector): Promise<void> {
+	try {
+		const toolsDirectory = resolveDesktopCodingToolsDirectory();
+		const resolve = inspector ?? createManagedCodingToolsInspector(toolsDirectory);
+		const tools = await Promise.all(MANAGED_CODING_TOOLS.map((tool) => resolve(tool)));
+		zip.addFile(
+			"managed-tools.json",
+			Buffer.from(
+				JSON.stringify({ toolsDirectory, generatedAt: new Date().toISOString(), tools }, null, 2),
+				"utf-8",
+			),
+		);
+	} catch (error) {
+		diagnosticsLog.warn("managed tools collection failed", error);
+	}
+}
+
+function createManagedCodingToolsInspector(toolsDirectory: string): ManagedCodingToolsInspector {
+	const resolver = createManagedCodingToolExecutableResolver({ toolsDirectory });
+	return (tool) =>
+		resolver.inspect
+			? resolver.inspect(tool)
+			: Promise.resolve({ tool, source: "missing", offline: false } satisfies CodingToolInspection);
 }
 
 function nowStamp(): string {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -152,10 +153,17 @@ export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSes
 	};
 };
 
+/**
+ * Desktop 侧受管编码工具（fd/rg）缓存目录的唯一事实源：会话工厂与诊断导出共用。
+ */
+export function resolveDesktopCodingToolsDirectory(configuredAgentDir?: string): string {
+	return join(configuredAgentDir ?? getAgentDir(), "bin");
+}
+
 function createDesktopNodeToolHost(cwd: string, configuredAgentDir?: string) {
 	const agentDir = configuredAgentDir ?? getAgentDir();
 	const settingsPath = join(agentDir, "settings.json");
-	const toolsDirectory = join(agentDir, "bin");
+	const toolsDirectory = resolveDesktopCodingToolsDirectory(agentDir);
 	const settings = SettingsRuntime.fromStorage(
 		new NodeScopedTextStorage({
 			global: settingsPath,

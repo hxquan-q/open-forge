@@ -1,10 +1,12 @@
+// Modified by The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
 
 const CONFIG_PATH = join(getVettaHomePath(), "desktop-config.json");
-const DEFAULT_WORKSPACE_PATH = join(getVettaHomePath(), "workspace");
+/** 默认工作区根（数据根/workspace）；设置页「恢复默认」与渲染端初始化经 IPC 取此值，不硬编码品牌路径。 */
+export const DEFAULT_WORKSPACE_PATH = join(getVettaHomePath(), "workspace");
 
 function expandTilde(p: string): string {
 	if (p.startsWith("~/") || p === "~") {

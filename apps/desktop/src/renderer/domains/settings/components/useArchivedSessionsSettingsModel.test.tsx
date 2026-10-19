@@ -2,8 +2,9 @@
 // Copyright The Open Forge contributors.
 import { TEAM_SESSIONS_CHANGED_EVENT } from "@shared/agent-teams/team-session-events";
 import { confirmDialogAtom } from "@shared/store/atoms";
+import { toastsAtom } from "@shared/store/toast-atoms";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createStore, Provider } from "jotai";
+import { createStore, getDefaultStore, Provider } from "jotai";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -129,5 +130,30 @@ describe("useArchivedSessionsSettingsModel", () => {
 		expect(teamSessionsChanged).toHaveBeenCalledOnce();
 		expect(forget).toHaveBeenCalledWith([TEAM.path]);
 		window.removeEventListener(TEAM_SESSIONS_CHANGED_EVENT, teamSessionsChanged);
+	});
+
+	it("删除失败不再变 unhandled rejection：记错误日志、弹失败 toast、行保留（BUG-0114）", async () => {
+		list.mockResolvedValue({ sessions: [TEAM] });
+		const { result, store } = renderModel();
+		await waitFor(() => expect(result.current.sessions).toHaveLength(1));
+
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		// 事故同款形态：IPC 层把主进程 rejection 包成 Error 抛回渲染端。
+		deleteTeamSession.mockRejectedValueOnce(
+			new Error("Error invoking remote method 'vetta:agent-teams:delete-session': [object Object]"),
+		);
+		act(() => result.current.actions.delete(TEAM.path));
+		act(() => store.get(confirmDialogAtom)?.onConfirm(false));
+
+		await waitFor(() => expect(errorSpy).toHaveBeenCalledOnce());
+		expect(errorSpy.mock.calls[0]?.[0]).toContain("delete session failed");
+		const toasts = getDefaultStore().get(toastsAtom);
+		expect(toasts.some((toast) => toast.variant === "error" && toast.message.includes("deleteArchivedSessionFailedToast"))).toBe(
+			true,
+		);
+		// 失败时既不动归档标记，也不把行从列表里抹掉。
+		expect(forget).not.toHaveBeenCalled();
+		await waitFor(() => expect(result.current.sessions).toHaveLength(1));
+		errorSpy.mockRestore();
 	});
 });

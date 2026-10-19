@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { posix } from "node:path";
 import type { NodeResourceAccess } from "@vetta/runtime-node/host";
 import {
@@ -20,15 +21,54 @@ import {
  * `<本机进程 cwd>/ssh:/h/srv/app`，随后的向上遍历穿过**本机**的祖先目录，把本机的
  * AGENTS.md 和技能当成远端项目的规则注入会话。
  */
+export type RemoteResourceOperation = "stat" | "readText" | "readDirectory" | "realPath";
+
+/**
+ * 远端访问的只读统计（BUG-0125 取证）。远程项目会话初始化可达 30 分钟，此前没有任何
+ * 远端 I/O 观测，无法判定慢是「逐次远端读」还是「等待某共享事件」。这里只计数与计时，
+ * 不改变任何读取行为。
+ */
+export interface RemoteResourceAccessStats {
+	/** 真正落到远端的操作数；本机读写不计入。 */
+	readonly operations: number;
+	/** 远端操作累计耗时（毫秒，含等待与进程开销）。 */
+	readonly totalMs: number;
+	readonly byOperation: Readonly<Record<RemoteResourceOperation, number>>;
+}
+
+export interface ProjectResourceAccess extends NodeResourceAccess {
+	/** 只读远端访问统计；只统计远端分支。 */
+	readRemoteStats(): RemoteResourceAccessStats;
+}
+
 export function createProjectResourceAccess(
 	local: NodeResourceAccess,
 	resolveConnection: (hostId: string) => SshConnection,
-): NodeResourceAccess {
+): ProjectResourceAccess {
 	const remote = (path: string): { connection: SshConnection; location: SshProjectLocation } | undefined => {
 		if (!isSshProjectUri(path)) return undefined;
 		const location = parseProjectLocation(path);
 		if (location.kind !== "ssh") return undefined;
 		return { connection: resolveConnection(location.hostId), location };
+	};
+
+	const byOperation: Record<RemoteResourceOperation, number> = {
+		stat: 0,
+		readText: 0,
+		readDirectory: 0,
+		realPath: 0,
+	};
+	let operations = 0;
+	let totalMs = 0;
+	const recordRemote = async <T>(operation: RemoteResourceOperation, run: () => Promise<T>): Promise<T> => {
+		const startedAt = performance.now();
+		try {
+			return await run();
+		} finally {
+			operations += 1;
+			byOperation[operation] += 1;
+			totalMs += performance.now() - startedAt;
+		}
 	};
 
 	return {
@@ -37,37 +77,45 @@ export function createProjectResourceAccess(
 				const target = remote(path);
 				if (!target) return local.files.stat(path, options);
 				// 跟随符号链接：发现逻辑问的是「这里有没有一个能读的文件 / 目录」。
-				const entry = await target.connection.stat(target.location.remotePath, options?.signal, {
-					followSymlinks: true,
+				return recordRemote("stat", async () => {
+					const entry = await target.connection.stat(target.location.remotePath, options?.signal, {
+						followSymlinks: true,
+					});
+					if (!entry) return undefined;
+					return {
+						kind: entry.kind === "file" || entry.kind === "directory" ? entry.kind : "other",
+						modifiedAtMs: entry.modifiedAtSeconds * 1000,
+						size: entry.sizeBytes,
+					};
 				});
-				if (!entry) return undefined;
-				return {
-					kind: entry.kind === "file" || entry.kind === "directory" ? entry.kind : "other",
-					modifiedAtMs: entry.modifiedAtSeconds * 1000,
-					size: entry.sizeBytes,
-				};
 			},
 			async readText(path, options) {
 				const target = remote(path);
 				if (!target) return local.files.readText(path, options);
-				const bytes = await target.connection.readFile(target.location.remotePath, options?.signal);
-				return new TextDecoder().decode(bytes);
+				return recordRemote("readText", async () => {
+					const bytes = await target.connection.readFile(target.location.remotePath, options?.signal);
+					return new TextDecoder().decode(bytes);
+				});
 			},
 			async readDirectory(path, options) {
 				const target = remote(path);
 				if (!target) return local.files.readDirectory(path, options);
-				const entries = await target.connection.listDirectory(target.location.remotePath, options?.signal);
-				return entries.map((entry) => ({
-					name: entry.name,
-					kind: entry.kind === "file" || entry.kind === "directory" ? entry.kind : "other",
-					symbolicLink: entry.kind === "symlink",
-				}));
+				return recordRemote("readDirectory", async () => {
+					const entries = await target.connection.listDirectory(target.location.remotePath, options?.signal);
+					return entries.map((entry) => ({
+						name: entry.name,
+						kind: entry.kind === "file" || entry.kind === "directory" ? entry.kind : "other",
+						symbolicLink: entry.kind === "symlink",
+					}));
+				});
 			},
 			async realPath(path, options) {
 				const target = remote(path);
 				if (!target) return local.files.realPath(path, options);
-				const resolved = await target.connection.realPath(target.location.remotePath, options?.signal);
-				return formatSshProjectUri(target.location.hostId, resolved);
+				return recordRemote("realPath", async () => {
+					const resolved = await target.connection.realPath(target.location.remotePath, options?.signal);
+					return formatSshProjectUri(target.location.hostId, resolved);
+				});
 			},
 		},
 		paths: {
@@ -102,6 +150,9 @@ export function createProjectResourceAccess(
 				}
 				return local.paths.resolve(...parts);
 			},
+		},
+		readRemoteStats() {
+			return { operations, totalMs, byOperation: { ...byOperation } };
 		},
 	};
 }

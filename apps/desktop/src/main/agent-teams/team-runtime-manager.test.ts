@@ -219,3 +219,38 @@ describe("成员会话函数源收窄（TASK-0123）", () => {
 		expect(memberSessionExtensionFunctions).not.toHaveBeenCalled();
 	});
 });
+
+describe("成员 runtime 失效绑定自愈（BUG-0115/0116 失败环回归）", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("收尾竞态残留的失效绑定不再掀翻成员重建，ensure 直接自愈", async () => {
+		const document = teamDocument();
+		const session = teamSessionDocument("C:/workspace");
+		// 目录仍绑定 stale-member（getSessionPath 有值），但后端会话已卸载——
+		// dispose 撞 SESSION_NOT_FOUND（2026-10-16 dev 日志 route.acquire 实证形态）。
+		const runtime = {
+			...runtimeStub(),
+			disposeSession: vi.fn(async () => {
+				throw {
+					code: "SESSION_NOT_FOUND",
+					message: "Session not found: stale-member",
+					retryable: false,
+					origin: "runtime",
+				};
+			}),
+		} as unknown as RuntimeHost;
+		const manager = teamRuntimeManager(runtime);
+
+		// 旧实现：reconfiguration failed → 此后每次 send 必败（BUG-0116 失败环）。
+		// 新实现：dispose 幂等 no-op → 重建成员 runtime，send 下一跳即恢复。
+		const next = await manager.ensureMemberConfiguration(session, document, "member");
+
+		expect(next.memberRuntime.member).toMatchObject({
+			sessionPath: "C:/sessions/member.jsonl",
+			agentProfileId: "agent",
+		});
+		expect(next.memberRuntime.member?.sessionId).not.toBe("stale-member");
+	});
+});

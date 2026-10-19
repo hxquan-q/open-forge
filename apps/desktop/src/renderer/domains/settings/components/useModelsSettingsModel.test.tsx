@@ -31,7 +31,22 @@ function installVettaApi(overrides: Record<string, unknown> = {}) {
 		get: vi.fn(async () => mocks.config),
 		set: vi.fn(async () => undefined),
 		copyApiKey: vi.fn(async () => false),
-		fetchProviderModels: vi.fn(async () => ({ models: ["m1", "m2", "m3"] })),
+		fetchProviderModels: vi.fn(async () => ({
+			models: [
+				{ id: "m1" },
+				{
+					id: "m2",
+					name: "Model 2",
+					contextWindow: 131072,
+					maxTokens: 8192,
+					vision: true,
+					reasoning: true,
+					reasoningLevels: ["low", "high"],
+				},
+				{ id: "m3" },
+			],
+		})),
+		probe: vi.fn(async () => ({ ok: true, message: "reachable" })),
 		testProvider: vi.fn(async () => ({ ok: true, latencyMs: 120, modelCount: 2 })),
 		...overrides,
 	};
@@ -46,39 +61,74 @@ function renderModel() {
 	return renderHook(() => useModelsSettingsModel());
 }
 
+async function openFetchedDrawer() {
+	const models = installVettaApi();
+	const { result } = renderModel();
+	act(() => result.current.onStartFetchProviderModels("relay"));
+	await waitFor(() => expect(result.current.fetchedModels?.status).toBe("ready"));
+	return { models, result };
+}
+
 describe("useModelsSettingsModel - 从接口拉取模型", () => {
-	it("拉到模型后默认不勾选，由用户挑要添加的（中转网关可能返回上百个模型）", async () => {
+	it("点击后抽屉先以 loading 打开，拉到后填充候选且默认不勾选（中转网关可能返回上百个模型）", async () => {
 		installVettaApi();
 		const { result } = renderModel();
-		await act(async () => {
-			await result.current.onFetchProviderModels("relay");
-		});
+		act(() => result.current.onStartFetchProviderModels("relay"));
+		expect(result.current.fetchedModels?.status).toBe("loading");
+		expect(result.current.fetchingModelsFor).toBe("relay");
 
-		expect(result.current.fetchedModels?.models).toEqual(["m1", "m2", "m3"]);
+		await waitFor(() => expect(result.current.fetchedModels?.status).toBe("ready"));
+		expect(result.current.fetchedModels?.models.map((item) => item.id)).toEqual(["m1", "m2", "m3"]);
 		expect(result.current.fetchedModels?.selected).toEqual([]);
 	});
 
-	it("全选只勾选尚未添加的模型，取消全选清空勾选", async () => {
-		installVettaApi();
-		const { result } = renderModel();
-		await act(async () => {
-			await result.current.onFetchProviderModels("relay");
+	it("拉取失败给出错误态，重试后恢复候选", async () => {
+		const models = installVettaApi({
+			fetchProviderModels: vi
+				.fn()
+				.mockResolvedValueOnce({ models: [], error: "接口返回 500" })
+				.mockResolvedValueOnce({ models: [{ id: "m9" }] }),
 		});
+		const { result } = renderModel();
+		act(() => result.current.onStartFetchProviderModels("relay"));
+		await waitFor(() => expect(result.current.fetchedModels?.status).toBe("error"));
+		expect(result.current.fetchedModels?.error).toBe("接口返回 500");
 
-		act(() => result.current.onSetAllFetchedSelected(true));
+		act(() => result.current.onRetryFetchProviderModels());
+		await waitFor(() => expect(result.current.fetchedModels?.status).toBe("ready"));
+		expect(models.fetchProviderModels).toHaveBeenCalledTimes(2);
+		expect(result.current.fetchedModels?.models.map((item) => item.id)).toEqual(["m9"]);
+	});
+
+	it("全选只勾选尚未添加的模型，取消全选清空勾选；搜索时只作用于可见项", async () => {
+		const { result } = await openFetchedDrawer();
+
+		act(() => result.current.onSelectAllFetchedModels());
 		// m1 已在配置里，「全选」不能把已添加项算作待添加。
 		expect(result.current.fetchedModels?.selected).toEqual(["m2", "m3"]);
 
-		act(() => result.current.onSetAllFetchedSelected(false));
+		act(() => result.current.onFetchedModelsSearchChange("m3"));
+		act(() => result.current.onDeselectAllFetchedModels());
+		// 被搜索筛掉的 m2 勾选保留，只有可见的 m3 被取消。
+		expect(result.current.fetchedModels?.selected).toEqual(["m2"]);
+
+		act(() => result.current.onFetchedModelsSearchChange(""));
+		act(() => result.current.onDeselectAllFetchedModels());
 		expect(result.current.fetchedModels?.selected).toEqual([]);
 	});
 
-	it("一个都没勾选时点添加只关闭面板、不写入配置", async () => {
-		const models = installVettaApi();
-		const { result } = renderModel();
+	it("逐个候选测试连通并记录行内结果", async () => {
+		const { models, result } = await openFetchedDrawer();
 		await act(async () => {
-			await result.current.onFetchProviderModels("relay");
+			await result.current.onTestFetchedModel("m2");
 		});
+
+		expect(models.probe).toHaveBeenCalledWith({ provider: "relay", model: "m2" });
+		expect(result.current.fetchedModels?.tests.m2).toEqual({ status: "ok", message: "reachable" });
+	});
+
+	it("一个都没勾选时点添加只关闭抽屉、不写入配置", async () => {
+		const { models, result } = await openFetchedDrawer();
 		await act(async () => {
 			await result.current.onApplyFetchedModels("relay");
 		});
@@ -87,13 +137,10 @@ describe("useModelsSettingsModel - 从接口拉取模型", () => {
 		expect(result.current.fetchedModels).toBeNull();
 	});
 
-	it("勾选后添加：仅把勾选项追加到 provider 的 models 并落盘", async () => {
-		const models = installVettaApi();
-		const { result } = renderModel();
-		await act(async () => {
-			await result.current.onFetchProviderModels("relay");
-		});
+	it("勾选后添加：接口返回的参数随勾选项写入 provider 的 models 并落盘", async () => {
+		const { models, result } = await openFetchedDrawer();
 		act(() => result.current.onToggleFetchedModel("m2"));
+		act(() => result.current.onToggleFetchedModel("m3"));
 		await act(async () => {
 			await result.current.onApplyFetchedModels("relay");
 		});
@@ -102,7 +149,19 @@ describe("useModelsSettingsModel - 从接口拉取模型", () => {
 			providers: {
 				relay: {
 					baseUrl: "http://relay.local/v1",
-					models: [{ id: "m1" }, { id: "m2" }],
+					models: [
+						{ id: "m1" },
+						{
+							id: "m2",
+							input: ["text", "image"],
+							name: "Model 2",
+							reasoning: true,
+							reasoningLevels: ["low", "high"],
+							contextWindow: 131072,
+							maxTokens: 8192,
+						},
+						{ id: "m3", input: ["text"] },
+					],
 				},
 			},
 		});

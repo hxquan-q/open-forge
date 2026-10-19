@@ -17,6 +17,7 @@ import {
 	parseUpdateTeamSessionModelSettingsInput,
 } from "@vetta/agent-team";
 import type { SessionExecutionMode } from "@vetta/runtime-core";
+import type { IpcMainInvokeEvent } from "electron";
 import { dialog, ipcMain, webContents } from "electron";
 import type {
 	DesktopTeamConversationDisplay,
@@ -69,6 +70,34 @@ const CHANNELS = {
 
 /** 主进程推给渲染进程的「配置已变」：插件装卸与热重载会在用户没动手的情况下改动配置。 */
 const CHANGED_EVENT = "vetta:agent-teams:changed";
+
+type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
+
+/**
+ * ipcMain.handle 跨 IPC 序列化抛值时只认 Error（保 message）；域层抛出的普通对象
+ * （runtimeError 形态）会被 String() 成 "[object Object]"，渲染端一线诊断信息全丢
+ * （BUG-0117）。单聊链已有翻译层，team 链在此边界统一补上：Error 原样透传（保留
+ * 身份），其余抛值经 describeError 包成可读 Error 再过线。同步抛出语义保持不变。
+ */
+function handleReadable(channel: string, handler: IpcHandler): void {
+	ipcMain.handle(channel, (event, ...args) => {
+		try {
+			const result = handler(event, ...args);
+			return result instanceof Promise
+				? result.catch((error: unknown) => {
+						throw readableIpcError(error);
+					})
+				: result;
+		} catch (error) {
+			throw readableIpcError(error);
+		}
+	});
+}
+
+function readableIpcError(error: unknown): unknown {
+	if (error instanceof Error) return error;
+	return new Error(describeError(error));
+}
 
 function requiredString(value: unknown, field: string): string {
 	if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${field} must be a non-empty string`);
@@ -182,9 +211,9 @@ export function registerAgentTeamsIpc(
 			}
 		}
 	});
-	ipcMain.handle(CHANNELS.LIST, () => store.read());
+	handleReadable(CHANNELS.LIST, () => store.read());
 	// 让用户挑一张本地图片当头像：主进程复制进头像目录，只把渲染进程能加载的 URL 交回去。
-	ipcMain.handle(CHANNELS.UPLOAD_AVATAR, async () => {
+	handleReadable(CHANNELS.UPLOAD_AVATAR, async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ["openFile"],
 			filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }],
@@ -194,42 +223,42 @@ export function registerAgentTeamsIpc(
 		const stored = await storeAgentAvatarFile(source);
 		return stored.url;
 	});
-	ipcMain.handle(CHANNELS.BLUEPRINTS, () => store.listBlueprints());
-	ipcMain.handle(CHANNELS.CREATE_AGENT, (_event, input: unknown) =>
+	handleReadable(CHANNELS.BLUEPRINTS, () => store.listBlueprints());
+	handleReadable(CHANNELS.CREATE_AGENT, (_event, input: unknown) =>
 		store.createAgent(parseCreateAgentProfileInput(input)),
 	);
-	ipcMain.handle(CHANNELS.UPDATE_AGENT, (_event, agentProfileId: unknown, input: unknown) =>
+	handleReadable(CHANNELS.UPDATE_AGENT, (_event, agentProfileId: unknown, input: unknown) =>
 		store.updateAgent(requiredString(agentProfileId, "agentProfileId"), parseUpdateAgentProfileInput(input)),
 	);
-	ipcMain.handle(CHANNELS.DELETE_AGENT, (_event, agentProfileId: unknown, input: unknown) =>
+	handleReadable(CHANNELS.DELETE_AGENT, (_event, agentProfileId: unknown, input: unknown) =>
 		store.deleteAgent(requiredString(agentProfileId, "agentProfileId"), parseDeleteAgentProfileInput(input)),
 	);
-	ipcMain.handle(CHANNELS.PREVIEW_AGENT, (_event, agentProfileId: unknown) =>
+	handleReadable(CHANNELS.PREVIEW_AGENT, (_event, agentProfileId: unknown) =>
 		store.previewAgentUpdate(requiredString(agentProfileId, "agentProfileId")),
 	);
-	ipcMain.handle(CHANNELS.PREVIEW_AGENT_DELETE, (_event, agentProfileId: unknown) =>
+	handleReadable(CHANNELS.PREVIEW_AGENT_DELETE, (_event, agentProfileId: unknown) =>
 		store.previewAgentDelete(requiredString(agentProfileId, "agentProfileId")),
 	);
-	ipcMain.handle(CHANNELS.CREATE_TEAM, (_event, input: unknown) => store.createTeam(parseCreateTeamInput(input)));
-	ipcMain.handle(CHANNELS.UPDATE_TEAM, (_event, teamId: unknown, input: unknown) =>
+	handleReadable(CHANNELS.CREATE_TEAM, (_event, input: unknown) => store.createTeam(parseCreateTeamInput(input)));
+	handleReadable(CHANNELS.UPDATE_TEAM, (_event, teamId: unknown, input: unknown) =>
 		store.updateTeam(requiredString(teamId, "teamId"), parseUpdateTeamInput(input)),
 	);
-	ipcMain.handle(CHANNELS.DELETE_TEAM, (_event, teamId: unknown, input: unknown) =>
+	handleReadable(CHANNELS.DELETE_TEAM, (_event, teamId: unknown, input: unknown) =>
 		store.deleteTeam(requiredString(teamId, "teamId"), parseDeleteTeamInput(input)),
 	);
-	ipcMain.handle(CHANNELS.LIST_MEMBER_MODELS, async (_event, teamId: unknown) => {
+	handleReadable(CHANNELS.LIST_MEMBER_MODELS, async (_event, teamId: unknown) => {
 		const id = requiredString(teamId, "teamId");
 		const team = (await store.read()).teams.find((candidate) => candidate.id === id);
 		if (!team) throw new Error("Team not found");
 		return memberModels.list(team);
 	});
-	ipcMain.handle(CHANNELS.SET_MEMBER_MODEL, async (_event, teamId: unknown, memberId: unknown, value: unknown) => {
+	handleReadable(CHANNELS.SET_MEMBER_MODEL, async (_event, teamId: unknown, memberId: unknown, value: unknown) => {
 		const id = requiredString(teamId, "teamId");
 		const team = (await store.read()).teams.find((candidate) => candidate.id === id);
 		if (!team) throw new Error("Team not found");
 		return memberModels.set(team, requiredString(memberId, "memberId"), parseTeamMemberModelSelection(value));
 	});
-	ipcMain.handle(CHANNELS.CREATE_SESSION, async (_event, teamId: unknown) => {
+	handleReadable(CHANNELS.CREATE_SESSION, async (_event, teamId: unknown) => {
 		const document = await store.read();
 		const parsedTeamId = requiredString(teamId, "teamId");
 		const team = document.teams.find((candidate) => candidate.id === parsedTeamId);
@@ -241,7 +270,7 @@ export function registerAgentTeamsIpc(
 			displayProjection,
 		);
 	});
-	ipcMain.handle(CHANNELS.CREATE_SESSION_RECORD, async (_event, teamId: unknown, options: unknown) => {
+	handleReadable(CHANNELS.CREATE_SESSION_RECORD, async (_event, teamId: unknown, options: unknown) => {
 		const document = await store.read();
 		const parsedTeamId = requiredString(teamId, "teamId");
 		const team = document.teams.find((candidate) => candidate.id === parsedTeamId);
@@ -262,23 +291,23 @@ export function registerAgentTeamsIpc(
 			displayProjection,
 		);
 	});
-	ipcMain.handle(CHANNELS.LIST_SESSIONS, (_event, teamId: unknown) =>
+	handleReadable(CHANNELS.LIST_SESSIONS, (_event, teamId: unknown) =>
 		sessions.listSessions(requiredString(teamId, "teamId")),
 	);
-	ipcMain.handle(CHANNELS.LIST_SIDEBAR_CONVERSATIONS, () =>
+	handleReadable(CHANNELS.LIST_SIDEBAR_CONVERSATIONS, () =>
 		(dependencies.listSidebarConversations ?? listTeamSidebarConversations)(),
 	);
-	ipcMain.handle(CHANNELS.RENAME_SESSION, async (_event, reference: unknown, name: unknown) => {
+	handleReadable(CHANNELS.RENAME_SESSION, async (_event, reference: unknown, name: unknown) => {
 		if (typeof name !== "string" || name.trim().length === 0) throw new Error("name must be a non-empty string");
 		return await withDisplayProjection(
 			sessions.snapshot(await sessions.renameSession(teamSessionMutationReference(reference), name)),
 			displayProjection,
 		);
 	});
-	ipcMain.handle(CHANNELS.DELETE_SESSION, async (_event, reference: unknown) => {
+	handleReadable(CHANNELS.DELETE_SESSION, async (_event, reference: unknown) => {
 		return await sessions.deleteSession(teamSessionMutationReference(reference));
 	});
-	ipcMain.handle(
+	handleReadable(
 		CHANNELS.UPDATE_MODEL_SETTINGS,
 		async (_event, id: unknown, input: unknown) =>
 			await withDisplayProjection(
@@ -291,7 +320,7 @@ export function registerAgentTeamsIpc(
 				displayProjection,
 			),
 	);
-	ipcMain.handle(CHANNELS.SET_EXECUTION_MODE, async (_event, id: unknown, mode: unknown) => {
+	handleReadable(CHANNELS.SET_EXECUTION_MODE, async (_event, id: unknown, mode: unknown) => {
 		if (mode !== "sandbox" && mode !== "full-access") throw new Error("Invalid executionMode");
 		return await withDisplayProjection(
 			sessions.snapshot(
@@ -300,7 +329,7 @@ export function registerAgentTeamsIpc(
 			displayProjection,
 		);
 	});
-	ipcMain.handle(CHANNELS.GET_SESSION, async (_event, value: unknown) => {
+	handleReadable(CHANNELS.GET_SESSION, async (_event, value: unknown) => {
 		const reference = teamSessionReference(value);
 		const startedAt = Date.now();
 		log.info("team get-session started", {
@@ -324,7 +353,7 @@ export function registerAgentTeamsIpc(
 			throw error;
 		}
 	});
-	ipcMain.handle(CHANNELS.SEND_MESSAGE, async (_event, id: unknown, input: unknown) => {
+	handleReadable(CHANNELS.SEND_MESSAGE, async (_event, id: unknown, input: unknown) => {
 		const sessionId = requiredString(id, "sessionId");
 		const startedAt = Date.now();
 		let parsed: ReturnType<typeof parseSendTeamMessageInput>;
@@ -366,8 +395,8 @@ export function registerAgentTeamsIpc(
 			throw error;
 		}
 	});
-	ipcMain.handle(CHANNELS.ABORT, (_event, id: unknown) => sessions.abort(requiredString(id, "sessionId")));
-	ipcMain.handle(CHANNELS.SUBSCRIBE, async (event, id: unknown) => {
+	handleReadable(CHANNELS.ABORT, (_event, id: unknown) => sessions.abort(requiredString(id, "sessionId")));
+	handleReadable(CHANNELS.SUBSCRIBE, async (event, id: unknown) => {
 		const sessionId = requiredString(id, "sessionId");
 		const subscriptionId = `${sessionId}:${randomUUID()}`;
 		log.info("team stream subscription started", { teamSessionId: sessionId, subscriptionId });
@@ -410,7 +439,7 @@ export function registerAgentTeamsIpc(
 		});
 		return response;
 	});
-	ipcMain.handle(CHANNELS.UNSUBSCRIBE, (_event, subscriptionId: unknown) => {
+	handleReadable(CHANNELS.UNSUBSCRIBE, (_event, subscriptionId: unknown) => {
 		const key = requiredString(subscriptionId, "subscriptionId");
 		subscriptions.get(key)?.();
 	});

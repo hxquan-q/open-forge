@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DocsKicker } from "@/components/kicker";
 import { cn } from "@/lib/cn";
 import { getDocsMessages, type DocsLanguage } from "@/lib/i18n";
@@ -116,7 +117,7 @@ export function HomeMascot() {
 	return (
 		<img
 			className="absolute bottom-[3.4rem] left-[0.85rem] z-[1] size-[4.1rem] rounded-full border-[3px] border-fd-background bg-vetta-binding object-cover shadow-[0_10px_28px_color-mix(in_srgb,var(--color-vetta-ink)_16%,transparent)] md:bottom-[3.15rem] md:size-[4.6rem] lg:size-[5.75rem]"
-			src="/images/vetta-app-icon.webp"
+			src="/images/open-forge-icon.png"
 			alt=""
 			width="120"
 			height="120"
@@ -225,7 +226,7 @@ export function HomeFooter({ kicker, children }: { kicker: string; children: Rea
 		>
 			<img
 				className="absolute right-5 bottom-[1.4rem] size-[3.4rem] rounded-full border-2 border-vetta-binding-fg/18 object-cover md:top-[3.2rem] md:right-8 md:bottom-auto md:size-[4.5rem] lg:right-14"
-				src="/images/vetta-app-icon.webp"
+				src="/images/open-forge-icon.png"
 				alt=""
 				width="72"
 				height="72"

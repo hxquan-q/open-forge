@@ -743,6 +743,21 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			request.handlerId,
 			request.activationId,
 		);
+		// 双侧取证（BUG-0124）：hook 调用点不像 tool 调用点那样消费渲染端可用性 lease，
+		// 派发时把身份、lease 诊断与渲染端可用性一并落盘，才能区分「渲染端已重载」与
+		// 「generation 抖动」。仅记录，不参与判定。
+		const leaseDiagnostics = pluginAgentContributionService.readHookLeaseDiagnostics();
+		pluginLog.debug("hook dispatch", {
+			pluginId: request.pluginId,
+			hookId: request.hookId,
+			handlerId: request.handlerId,
+			activationId: request.activationId,
+			sessionId: request.session.id,
+			rejection: rejection ?? null,
+			rendererHostState: pluginToolRendererHost.readState(),
+			retiredGenerations: leaseDiagnostics.retiredGenerations,
+			activeLeases: leaseDiagnostics.activeLeases,
+		});
 		if (rejection) return Promise.reject(new Error(rejection));
 		return new Promise<unknown>((resolve, reject) => {
 			const requestId = randomUUID();
@@ -750,7 +765,18 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 				pluginHookMap.delete(requestId);
 				if (signal) signal.removeEventListener("abort", onAbort);
 				if (typeof result === "object" && result !== null && "error" in result) {
-					reject(new Error(String((result as { error?: unknown }).error ?? "Plugin hook failed")));
+					const message = String((result as { error?: unknown }).error ?? "Plugin hook failed");
+					// 渲染端回传的失败此前被压成一条 message，handlerId/activationId 随之丢失；
+					// 这里补回身份，才能把同一陈旧 id 的连续失败归因到具体 generation。
+					pluginLog.warn("hook handler reported failure", {
+						pluginId: request.pluginId,
+						hookId: request.hookId,
+						handlerId: request.handlerId,
+						activationId: request.activationId,
+						sessionId: request.session.id,
+						message,
+					});
+					reject(new Error(message));
 					return;
 				}
 				const currentRejection = pluginAgentContributionService.readHookInvocationRejection(

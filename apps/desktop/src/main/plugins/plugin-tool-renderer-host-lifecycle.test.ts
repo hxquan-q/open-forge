@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import {
 	PLUGIN_TOOL_RENDERER_LOADING_MESSAGE,
@@ -5,6 +6,17 @@ import {
 } from "./plugin-tool-renderer-host-lifecycle.js";
 
 describe("PluginToolRendererHostLifecycle", () => {
+	it("readState 如实反映可用性状态（派发侧结构化取证用）", () => {
+		const lifecycle = new PluginToolRendererHostLifecycle();
+		expect(lifecycle.readState()).toBe("loading");
+		lifecycle.markReady();
+		expect(lifecycle.readState()).toBe("ready");
+		lifecycle.markUnavailable();
+		expect(lifecycle.readState()).toBe("unavailable");
+		lifecycle.dispose();
+		expect(lifecycle.readState()).toBe("disposed");
+	});
+
 	it("invalidates in-flight delivery and rejects new tools while the renderer document reloads", () => {
 		const lifecycle = new PluginToolRendererHostLifecycle();
 		const failInFlight = vi.fn();

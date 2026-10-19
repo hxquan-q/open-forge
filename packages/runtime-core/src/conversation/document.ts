@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 import type { ToolPhase } from "@vetta/agent-core";
 import type { AssistantMessage, UserMessage } from "@vetta/ai";
 import type { PromptAttachmentRef } from "../contracts.js";
 import type { ContextCompactionRecord, StoredSessionEvent } from "../kernel/contracts.js";
 import type { RuntimeMessageOrigin } from "../runtime-execution-observation.js";
+import { conversationDocumentEntriesIndex } from "./document-index.js";
 import type { ConversationAgentAuthorReference, ConversationUserAuthorReference } from "./message-contract.js";
 
 export interface ConversationDocumentIdentity {
@@ -372,7 +374,7 @@ function isPersistentCompactionEvent(event: StoredSessionEvent): event is Persis
 }
 
 function selectBranchIds(document: ConversationDocument): readonly string[] {
-	const byId = new Map(document.entries.map((entry) => [entry.id, entry]));
+	const byId = conversationDocumentEntriesIndex(document.entries).byId;
 	const ids: string[] = [];
 	let current = document.activeLeafId ? byId.get(document.activeLeafId) : undefined;
 	while (current) {

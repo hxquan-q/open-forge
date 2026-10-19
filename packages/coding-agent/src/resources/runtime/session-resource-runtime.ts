@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	createExtensionEventBus,
 	createExtensionRuntime,
@@ -7,6 +8,7 @@ import {
 import { CONFIG_DIR_NAME } from "../../identity.js";
 import type { Theme } from "../../theme/index.js";
 import type { ResourceDiagnostic } from "../contracts/diagnostics.js";
+import type { ProjectResourceTrustDecision } from "../contracts/project-resource-trust.js";
 import type {
 	ResourceExtensionPaths,
 	SessionResourceRuntime,
@@ -50,6 +52,7 @@ class DefaultSessionResourceRuntime implements SessionResourceRuntime {
 	private lastThemePaths: string[] = [];
 	private skillsFingerprint = "";
 	private contextResourcesFingerprint = "";
+	private projectResourceTrust: ProjectResourceTrustDecision = { trusted: false, reason: "pending" };
 	private skillOperation: Promise<void> = Promise.resolve();
 	private promptOperation: Promise<void> = Promise.resolve();
 	private themeOperation: Promise<void> = Promise.resolve();
@@ -94,6 +97,10 @@ class DefaultSessionResourceRuntime implements SessionResourceRuntime {
 
 	getPathMetadata(): Map<string, ResourcePathMetadata> {
 		return this.metadata.get();
+	}
+
+	getProjectResourceTrust(): ProjectResourceTrustDecision {
+		return this.projectResourceTrust;
 	}
 
 	setAdditionalSkillPaths(paths: string[], signal?: AbortSignal): Promise<void> {
@@ -191,7 +198,8 @@ class DefaultSessionResourceRuntime implements SessionResourceRuntime {
 	}
 
 	async reload(): Promise<void> {
-		const resolved = await this.options.packages.resolve();
+		const trust = await this.refreshProjectResourceTrust();
+		const resolved = await this.options.packages.resolve(undefined, { projectScope: trust.trusted });
 		const additional = await this.options.packages.resolveAdditionalSources(this.additionalExtensionPaths, {
 			temporary: true,
 		});
@@ -299,15 +307,13 @@ class DefaultSessionResourceRuntime implements SessionResourceRuntime {
 		signal?: AbortSignal,
 	): Promise<void> {
 		const pathPort = this.options.resourceAccess.paths;
+		// 工作区信任未通过时不并入 <cwd>/.vetta/skills（GHSA-mqxh）。
+		const projectSkillsRoots = this.projectResourceTrust.trusted
+			? [pathPort.resolve(this.options.cwd, CONFIG_DIR_NAME, "skills")]
+			: [];
 		const resolvedPaths = this.options.noSkills
 			? resourcePaths
-			: this.merge(
-					[
-						pathPort.resolve(this.options.cwd, CONFIG_DIR_NAME, "skills"),
-						pathPort.join(this.options.agentDir, "skills"),
-					],
-					resourcePaths,
-				);
+			: this.merge([...projectSkillsRoots, pathPort.join(this.options.agentDir, "skills")], resourcePaths);
 		const result = await loadSkillResources({
 			resourceAccess: this.options.resourceAccess,
 			cwd: this.options.cwd,
@@ -325,6 +331,16 @@ class DefaultSessionResourceRuntime implements SessionResourceRuntime {
 			Object.freeze({ ...skill, sceneTasks: Object.freeze([...skill.sceneTasks]) }),
 		);
 		this.skillDiagnostics = result.diagnostics;
+		if (!this.projectResourceTrust.trusted) {
+			this.skillDiagnostics = [
+				...this.skillDiagnostics,
+				{
+					type: "warning",
+					message: `project resources skipped: workspace trust denied (${this.projectResourceTrust.reason})`,
+					path: pathPort.resolve(this.options.cwd, CONFIG_DIR_NAME),
+				},
+			];
+		}
 		this.metadata.apply(
 			extensionPaths,
 			this.skills.map((skill) => skill.filePath),
@@ -449,11 +465,30 @@ class DefaultSessionResourceRuntime implements SessionResourceRuntime {
 		return mergeResourcePaths(this.options.resourceAccess.paths, this.options.cwd, primary, additional);
 	}
 
+	/** 刷新工作区信任判定；无端口时放行（域层中性），端口异常按拒绝处理（fail closed）。 */
+	private async refreshProjectResourceTrust(): Promise<ProjectResourceTrustDecision> {
+		const port = this.options.projectResourceTrust;
+		if (!port) {
+			this.projectResourceTrust = { trusted: true, reason: "no-port" };
+			return this.projectResourceTrust;
+		}
+		try {
+			this.projectResourceTrust = await port.decideProjectResourceTrust(this.options.cwd);
+		} catch (error) {
+			this.projectResourceTrust = {
+				trusted: false,
+				reason: `port-error:${error instanceof Error ? error.message : String(error)}`,
+			};
+		}
+		return this.projectResourceTrust;
+	}
+
 	private computeFingerprint(signal?: AbortSignal): Promise<string> {
 		return computeSkillsFingerprint(this.options.resourceAccess, this.lastSkillPaths, {
 			cwd: this.options.cwd,
 			agentDir: this.options.agentDir,
 			includeDefaults: !(this.options.noSkills ?? false),
+			includeProjectSkills: this.projectResourceTrust.trusted,
 			includeAgentSkills: this.options.includeAgentSkills ?? true,
 			manifestPath: this.options.skillLocations.manifestPath,
 			signal,

@@ -2,6 +2,7 @@
 import type { SessionEvent } from "@vetta/runtime-core";
 import { app } from "electron";
 import { getAppLogger } from "../logger.js";
+import { MainEventLoopMonitor } from "./main-event-loop-monitor.js";
 import {
 	accumulateTurn,
 	buildPerfSnapshot,
@@ -70,6 +71,7 @@ export class PerfMonitorService {
 	private readonly now: () => number;
 	private readonly collectProcessMetrics: (() => PerfProcessMetrics) | undefined;
 	private readonly healthBook: ProcessHealthBook;
+	private readonly eventLoopMonitor = new MainEventLoopMonitor();
 	private timer: ReturnType<typeof setTimeout> | undefined;
 	private activeUntil = 0;
 	private initialized = false;
@@ -91,6 +93,11 @@ export class PerfMonitorService {
 	initialize(): void {
 		if (this.initialized) return;
 		this.initialized = true;
+		try {
+			this.eventLoopMonitor.start();
+		} catch (error) {
+			log.warn("perf event loop monitor start failed", error);
+		}
 		this.scheduleNext();
 	}
 
@@ -147,6 +154,11 @@ export class PerfMonitorService {
 		if (this.timer) {
 			clearTimeout(this.timer);
 			this.timer = undefined;
+		}
+		try {
+			this.eventLoopMonitor.stop();
+		} catch (error) {
+			log.warn("perf event loop monitor stop failed", error);
 		}
 		for (const sessionId of [...this.subscriptions.keys()]) {
 			this.unobserveSession(sessionId);
@@ -247,6 +259,14 @@ export class PerfMonitorService {
 		}
 		for (const subscription of this.subscriptions.values()) {
 			this.collectDeliveryDrops(subscription);
+		}
+		try {
+			const health = this.eventLoopMonitor.read();
+			this.aggregates.eventLoop.overruns = health.overruns;
+			this.aggregates.eventLoop.maxOverrunMs = health.maxOverrunMs;
+			this.aggregates.eventLoop.lastOverrunMs = health.lastOverrunMs;
+		} catch (error) {
+			log.warn("perf event loop health read failed", error);
 		}
 		try {
 			const snapshot = buildPerfSnapshot({

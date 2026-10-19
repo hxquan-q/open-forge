@@ -34,6 +34,7 @@ describe("buildSessionInterruptEvidence", () => {
 			manualStop: false,
 			draftNonEmpty: false,
 			hasPendingAction: false,
+			waitingOnSubagent: false,
 			continueAttemptCount: 0,
 			maxContinueAttempts: 1,
 		});
@@ -50,6 +51,7 @@ describe("buildSessionInterruptEvidence", () => {
 			manualStop: false,
 			draftNonEmpty: false,
 			hasPendingAction: false,
+			waitingOnSubagent: false,
 			continueAttemptCount: 0,
 			maxContinueAttempts: 1,
 		});
@@ -66,6 +68,7 @@ describe("buildSessionInterruptEvidence", () => {
 			manualStop: false,
 			draftNonEmpty: false,
 			hasPendingAction: false,
+			waitingOnSubagent: false,
 			continueAttemptCount: 0,
 			maxContinueAttempts: 1,
 			activityAtMs: 99_000,

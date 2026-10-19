@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	AGENT_TEAM_MEMBER_TOOL_EXECUTION,
 	AGENT_TEAM_PUBLICATION_LIFECYCLE,
@@ -378,6 +379,152 @@ describe("AgentTeamSessionService streaming contract", () => {
 		);
 		releaseSibling?.();
 		await send;
+	});
+
+	it("send 自愈：协调 runtime 已卸载时按持久路径原 id 重开再派发，不再恒败 SESSION_NOT_FOUND（BUG-0116）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const loaded = new Set<string>();
+		let memberSequence = 0;
+		const runtime = {
+			createSession: vi.fn(async (config?: SessionConfig) => {
+				const sessionId = config?.sessionId ?? `member-runtime-${++memberSequence}`;
+				loaded.add(sessionId);
+				return { sessionId };
+			}),
+			getSessionPath: (sessionId: string) => (loaded.has(sessionId) ? `C:/runtime/${sessionId}.jsonl` : undefined),
+			readSessionDocument: (sessionId: string) => {
+				if (!loaded.has(sessionId)) {
+					throw { code: "SESSION_NOT_FOUND", message: `Session not found: ${sessionId}`, retryable: false };
+				}
+				return { entries: [], activeLeafId: null, revision: 0 };
+			},
+			appendSessionMetadataEntry: vi.fn(async () => undefined),
+			setExecutionMode: vi.fn(async () => undefined),
+			disposeSession: vi.fn(async () => undefined),
+			subscribe: () => () => undefined,
+		} as unknown as RuntimeHost;
+		const service = new AgentTeamSessionService({ runtime, readDocument: async () => document });
+		const record = await service.createRecord(team, document, {
+			kind: "project",
+			id: "project:workspace",
+			cwd: "C:/workspace",
+		});
+		const coordinationId = record.coordinationRuntime?.sessionId;
+		if (!coordinationId) throw new Error("coordination runtime is missing from the created record");
+
+		// 模拟损坏/逐出后的现场：协调会话从 runtime 内存目录消失，read 仍走缓存命中。
+		loaded.clear();
+
+		const coordinator = (
+			service as unknown as {
+				readonly turnCoordinator: { send: (sessionId: string, input: unknown) => Promise<TeamSessionDocument> };
+			}
+		).turnCoordinator;
+		// 准入第一步就是按 id 读协调文档——真实实现里未加载时正是这里抛 SESSION_NOT_FOUND。
+		const admitted = vi.spyOn(coordinator, "send").mockImplementation(async () => {
+			runtime.readSessionDocument(coordinationId);
+			return record;
+		});
+
+		await expect(
+			service.send(record.id, { requestId: "heal-send", text: "继续", targetMemberIds: [] }),
+		).resolves.toBe(record);
+		expect(admitted).toHaveBeenCalledOnce();
+		// 重开必须按原协调会话身份（同 id、同持久路径），不能另起炉灶。
+		expect(runtime.createSession).toHaveBeenCalledWith(
+			expect.objectContaining({ sessionId: coordinationId, sessionPath: `C:/runtime/${coordinationId}.jsonl` }),
+		);
+	});
+
+	it("send 自愈失败时返回带重启指引的可读错误，而不是透传裸 SESSION_NOT_FOUND（BUG-0116）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const loaded = new Set<string>();
+		const createSession = vi.fn(async (config?: SessionConfig) => {
+			const sessionId = config?.sessionId ?? `member-${config?.sessionPath ?? "runtime"}`;
+			loaded.add(sessionId);
+			return { sessionId };
+		});
+		const runtime = {
+			createSession,
+			getSessionPath: (sessionId: string) => (loaded.has(sessionId) ? `C:/runtime/${sessionId}.jsonl` : undefined),
+			readSessionDocument: (sessionId: string) => {
+				if (!loaded.has(sessionId)) {
+					throw { code: "SESSION_NOT_FOUND", message: `Session not found: ${sessionId}`, retryable: false };
+				}
+				return { entries: [], activeLeafId: null, revision: 0 };
+			},
+			appendSessionMetadataEntry: vi.fn(async () => undefined),
+			disposeSession: vi.fn(async () => undefined),
+			subscribe: () => () => undefined,
+		} as unknown as RuntimeHost;
+		const service = new AgentTeamSessionService({ runtime, readDocument: async () => document });
+		const record = await service.createRecord(team, document, {
+			kind: "project",
+			id: "project:workspace",
+			cwd: "C:/workspace",
+		});
+		const coordinationId = record.coordinationRuntime?.sessionId;
+		if (!coordinationId) throw new Error("coordination runtime is missing from the created record");
+
+		// 协调会话已卸载，且按持久路径重开必败（如协调文档损坏/丢失）。
+		loaded.clear();
+		createSession.mockImplementation(async () => {
+			throw new Error("Conversation not found");
+		});
+
+		await expect(
+			service.send(record.id, { requestId: "heal-fail", text: "继续", targetMemberIds: [] }),
+		).rejects.toThrow(/Restart the app to recover this session/);
+	});
+
+	it("isAwaitingSubAgents 只对「有在途工作的协调会话」为真（BUG-0126）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const loaded = new Set<string>();
+		const runtime = {
+			createSession: vi.fn(async (config?: SessionConfig) => {
+				const sessionId = config?.sessionId ?? `member-runtime-${loaded.size + 1}`;
+				loaded.add(sessionId);
+				return { sessionId };
+			}),
+			getSessionPath: (sessionId: string) => (loaded.has(sessionId) ? `C:/runtime/${sessionId}.jsonl` : undefined),
+			readSessionDocument: (sessionId: string) => {
+				if (!loaded.has(sessionId)) {
+					throw { code: "SESSION_NOT_FOUND", message: `Session not found: ${sessionId}`, retryable: false };
+				}
+				return { entries: [], activeLeafId: null, revision: 0 };
+			},
+			appendSessionMetadataEntry: vi.fn(async () => undefined),
+			setExecutionMode: vi.fn(async () => undefined),
+			disposeSession: vi.fn(async () => undefined),
+			subscribe: () => () => undefined,
+		} as unknown as RuntimeHost;
+		const service = new AgentTeamSessionService({ runtime, readDocument: async () => document });
+		const record = await service.createRecord(team, document, {
+			kind: "project",
+			id: "project:workspace",
+			cwd: "C:/workspace",
+		});
+		const coordinationId = record.coordinationRuntime?.sessionId;
+		if (!coordinationId) throw new Error("coordination runtime is missing from the created record");
+
+		// 成员 runtime 的 session / 未知名不在协调缓存键上，天然不是「主控等子代理」。
+		expect(service.isAwaitingSubAgents("not-a-team-session")).toBe(false);
+
+		const coordinator = (
+			service as unknown as {
+				readonly turnCoordinator: { hasPending: (sessionId: string) => boolean };
+			}
+		).turnCoordinator;
+		const hasPending = vi.spyOn(coordinator, "hasPending").mockReturnValue(false);
+		expect(service.isAwaitingSubAgents(coordinationId)).toBe(false);
+		hasPending.mockReturnValue(true);
+		expect(service.isAwaitingSubAgents(coordinationId)).toBe(true);
 	});
 
 	it("names a new Team session with its selected model and retries using the first task", async () => {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Model } from "@vetta/ai";
 import { describe, expect, it, vi } from "vitest";
 import { AuthStorage } from "../src/auth/index.js";
@@ -82,6 +83,7 @@ function emptyResourceRuntime(): SessionResourceRuntime {
 		getSystemPrompt: () => undefined,
 		getAppendSystemPrompt: () => [],
 		getPathMetadata: () => new Map(),
+		getProjectResourceTrust: () => ({ trusted: true, reason: "no-port" }),
 		extendResources: async () => undefined,
 		setAdditionalSkillPaths: async () => undefined,
 		setRuntimeSkillPaths: async () => undefined,

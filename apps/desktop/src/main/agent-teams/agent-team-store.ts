@@ -19,6 +19,7 @@ import {
 	type UpdateAgentProfileInput,
 	type UpdateTeamInput,
 } from "@vetta/agent-team";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import { agentBlueprintRegistry, resolveAgentBlueprint } from "./agent-blueprint-registry.js";
 import { type AgentTeamConfigRepository, createAgentTeamConfigRepository } from "./agent-team-config-repository.js";
@@ -69,7 +70,7 @@ export class AgentTeamStore {
 				return document;
 			})
 			.catch((error: unknown) => {
-				log.error("failed to read agent team configuration", { error: errorMessage(error) });
+				log.error("failed to read agent team configuration", { error: describeError(error) });
 				throw new Error("Agent Team configuration could not be loaded", { cause: error });
 			})
 			.finally(() => {
@@ -123,7 +124,7 @@ export class AgentTeamStore {
 					listener(document);
 				} catch (error) {
 					// 一个订阅者出错不该拦住其余订阅者。
-					log.warn("agent team preset listener failed", { error: errorMessage(error) });
+					log.warn("agent team preset listener failed", { error: describeError(error) });
 				}
 			}
 			return true;
@@ -498,7 +499,7 @@ export class AgentTeamStore {
 			log.error("failed to persist agent team configuration", {
 				operation: operationName,
 				revision: normalized.revision,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -508,10 +509,6 @@ export class AgentTeamStore {
 }
 
 export const agentTeamStore = new AgentTeamStore({ extensions: agentTeamExtensionHost });
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * 任务书留空即取消覆盖：空白字段一律折算成缺省，不落成空串。

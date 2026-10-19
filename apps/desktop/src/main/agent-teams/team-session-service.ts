@@ -45,6 +45,7 @@ import {
 	selectIdleSessionsToEvict,
 } from "../conversations/idle-session-residency.js";
 import { readDesktopConfig } from "../ipc/fs.js";
+import { describeError } from "../logger/describe-error.js";
 import { getAppLogger } from "../logger.js";
 import { getSharedRuntime } from "../runtime.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
@@ -68,6 +69,7 @@ import { TeamSessionEventHub } from "./team-session-event-hub.js";
 import { readTeamConversationDocument, resolveTeamConversationSessionId } from "./team-session-file-reader.js";
 import { type LegacyTeamSessionRepository, legacyTeamSessionRepository } from "./team-session-repository.js";
 import { TeamSessionStateRepository } from "./team-session-state-repository.js";
+import { TeamSessionUpdatePublisher } from "./team-session-update-publisher.js";
 import { TeamSharedContextService } from "./team-shared-context-service.js";
 import { TeamTurnCoordinator } from "./team-turn-coordinator.js";
 import type { TeamSessionWorkspace } from "./team-workspace.js";
@@ -140,6 +142,7 @@ export class AgentTeamSessionService {
 	private readonly sharedContextService: TeamSharedContextService;
 	private readonly publicationWorkflow: TeamPublicationWorkflow;
 	private readonly memberAttemptRunner: TeamMemberAttemptRunner;
+	private readonly updatePublisher: TeamSessionUpdatePublisher;
 
 	constructor(options: AgentTeamSessionServiceOptions = {}) {
 		this.runtime = options.runtime;
@@ -172,6 +175,12 @@ export class AgentTeamSessionService {
 			observe: (session) => this.observations(session),
 			onRunningChanged: (sessionId, running) => this.publishRunningChanged(sessionId, running),
 		});
+		// session-updated 携带全量快照：短窗合并爆发式状态迁移、无订阅者跳过构建。
+		this.updatePublisher = new TeamSessionUpdatePublisher({
+			getSession: (sessionId) => this.sessionState.get(sessionId),
+			hasSubscribers: (sessionId) => this.eventHub.hasSubscribers(sessionId),
+			publish: (session) => this.publishSessionUpdated(session),
+		});
 		this.turnCoordinator = new TeamTurnCoordinator({
 			runtime: () => this.getRuntime(),
 			extensions: this.extensions,
@@ -182,7 +191,7 @@ export class AgentTeamSessionService {
 			readDocument: () => this.readDocument(),
 			readMemberModelPreference: options.readMemberModelPreference,
 			observations: (session) => this.observations(session),
-			publishSessionUpdated: (session) => this.publishSessionUpdated(session),
+			publishSessionUpdated: (session) => this.requestSessionUpdate(session),
 		});
 		this.runtimeManager = new TeamRuntimeManager({
 			runtime: () => this.getRuntime(),
@@ -223,7 +232,7 @@ export class AgentTeamSessionService {
 			settleAttempt: (session, workItem, attempt, terminal, resultMessageId) =>
 				this.turnCoordinator.settleMemberAttempt(session, workItem, attempt, terminal, resultMessageId),
 			observations: (session) => this.observations(session),
-			publishSessionUpdated: (session) => this.publishSessionUpdated(session),
+			publishSessionUpdated: (session) => this.requestSessionUpdate(session),
 		});
 		this.turnCoordinator.setAttemptRunner(this.memberAttemptRunner);
 		options.externalConditionChanges?.subscribe((change) => {
@@ -289,6 +298,18 @@ export class AgentTeamSessionService {
 			const path = this.coordinationSessionPath(sessionId);
 			return path ? [path] : [];
 		});
+	}
+
+	/**
+	 * BUG-0126：session-interrupt 巡检装配证据用——该会话是否为「主控等子代理」
+	 * 的团队协调会话。协调 runtime 的 sessionId 即团队会话 id（创建即同 id、恢复
+	 * 校验 identity），成员 runtime 的 session 不在缓存键上，天然返回 false。
+	 * 只认内存态在途工作（成员 attempt / 自动重试 / 调度等待），不读 I/O。
+	 */
+	isAwaitingSubAgents(sessionId: string): boolean {
+		const session = this.sessionState.get(sessionId);
+		if (!session?.coordinationRuntime || session.coordinationRuntime.sessionId !== sessionId) return false;
+		return this.turnCoordinator.hasPending(sessionId);
 	}
 
 	onRunningChanged(listener: TeamRunningChangedListener): () => void {
@@ -365,10 +386,12 @@ export class AgentTeamSessionService {
 				if (result.status !== "rejected") continue;
 				log.warn("Agent Team idle session dispose failed", {
 					teamSessionId: sessionId,
-					error: errorMessage(result.reason),
+					error: describeError(result.reason),
 				});
 			}
 			for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
+			// 挂起中的 session-updated 不再发布（会话即将离开内存）。
+			this.updatePublisher.drop(sessionId);
 			// 个别 dispose 失败也移除缓存条目：保留条目会让缓存路径继续引用已释放的
 			// runtime；残留句柄无害，下次 read 走完整恢复重建。
 			this.sessionState.removeCached(sessionId);
@@ -384,7 +407,7 @@ export class AgentTeamSessionService {
 		const timer = setTimeout(() => {
 			this.idleResidencyReconcileScheduled = false;
 			void this.reconcileIdleTeamSessions().catch((error: unknown) => {
-				log.warn("Agent Team idle residency reconcile failed", { error: errorMessage(error) });
+				log.warn("Agent Team idle residency reconcile failed", { error: describeError(error) });
 			});
 		}, 0);
 		timer.unref?.();
@@ -403,7 +426,7 @@ export class AgentTeamSessionService {
 			} catch (error) {
 				log.warn("Agent Team idle session release failed", {
 					teamSessionId: sessionId,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			}
 		}
@@ -430,7 +453,7 @@ export class AgentTeamSessionService {
 	private startSessionWarming(id: string, coordinationSessionPath: string): void {
 		if (this.sessionState.get(id) !== undefined || this.warmingSessions.has(id)) return;
 		const warming = this.read(id, coordinationSessionPath).catch((error: unknown) => {
-			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: errorMessage(error) });
+			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: describeError(error) });
 			throw error;
 		});
 		this.warmingSessions.set(id, warming);
@@ -498,6 +521,14 @@ export class AgentTeamSessionService {
 		});
 	}
 
+	/**
+	 * 请求一次 `session-updated` 发布。事件携带全量快照且渲染端按 revision 拒收
+	 * 旧帧，状态迁移爆发只发末帧即可；无订阅者时连快照构建一并跳过。
+	 */
+	private requestSessionUpdate(session: TeamSessionDocument): void {
+		this.updatePublisher.request(session);
+	}
+
 	async create(
 		team: AgentTeamDocument["teams"][number],
 		document: AgentTeamDocument,
@@ -535,7 +566,7 @@ export class AgentTeamSessionService {
 				teamId: team.id,
 				teamSessionId: id,
 				createdMemberCount: Object.keys(memberRuntime).length,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			throw error;
 		}
@@ -641,7 +672,7 @@ export class AgentTeamSessionService {
 			await this.persist(session);
 			this.sessionState.set(session);
 			void this.warmup(id, team, document).catch((error: unknown) => {
-				log.warn("team runtime warmup failed", { teamId: team.id, teamSessionId: id, error: errorMessage(error) });
+				log.warn("team runtime warmup failed", { teamId: team.id, teamSessionId: id, error: describeError(error) });
 			});
 			log.info("team session record created", { teamId: team.id, teamSessionId: id });
 			return session;
@@ -677,7 +708,7 @@ export class AgentTeamSessionService {
 					runtimeStatus: "failed",
 				};
 				await this.persist(next);
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 			});
 			throw error;
 		} finally {
@@ -711,7 +742,7 @@ export class AgentTeamSessionService {
 				runtimeStatus: failed ? "failed" : "ready",
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 		});
 	}
 
@@ -774,7 +805,7 @@ export class AgentTeamSessionService {
 				await ensureTeamConversationBinding(next, this.legacyMigrationPort());
 				await this.persist(next);
 				adopted = true;
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 			});
 		} finally {
 			if (!adopted) await this.getRuntime().disposeSession(runtimeState.sessionId);
@@ -809,7 +840,7 @@ export class AgentTeamSessionService {
 				updatedAt: Date.now(),
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		});
 	}
@@ -830,7 +861,7 @@ export class AgentTeamSessionService {
 				updatedAt: Date.now(),
 			};
 			await this.persist(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		});
 	}
@@ -851,7 +882,12 @@ export class AgentTeamSessionService {
 		const cached = this.sessionState.get(id);
 		if (cached) {
 			this.teamResidency.touch(id);
-			const reconciled = await this.reconcileTeamRoster(cached, await this.readDocument());
+			// BUG-0116：缓存命中不代表 coordination runtime 还在内存（空闲逐出或收尾
+			// 竞态后可能已卸载），而后续绑定校验第一步就按 id 读协调文档。先确认已加载，
+			// 缺了按持久路径原 id 重开；重开失败归一为带恢复指引的可读错误，不让用户
+			// 陷入「每次 send 必败、只能重启应用」。
+			const session = await this.ensureCoordinationRuntimeLoaded(cached);
+			const reconciled = await this.reconcileTeamRoster(session, await this.readDocument());
 			return this.migrateLoadedSession(reconciled);
 		}
 
@@ -892,7 +928,7 @@ export class AgentTeamSessionService {
 			await this.recoverRestoredSession(reconciled);
 			return this.sessionState.get(id) ?? reconciled;
 		} catch (error) {
-			log.error("failed to load team session", { teamSessionId: id, error: errorMessage(error) });
+			log.error("failed to load team session", { teamSessionId: id, error: describeError(error) });
 			throw new Error(`Team session could not be loaded: ${id}`, { cause: error });
 		}
 	}
@@ -1000,12 +1036,12 @@ export class AgentTeamSessionService {
 						log.warn("failed to dispose removed team member runtime", {
 							teamSessionId: session.id,
 							memberId,
-							error: errorMessage(error),
+							error: describeError(error),
 						});
 					});
 			}
 			this.eventHub.attach(next);
-			this.publishSessionUpdated(next);
+			this.requestSessionUpdate(next);
 			return next;
 		} catch (error) {
 			await Promise.allSettled(createdRuntimeIds.map((runtimeId) => this.getRuntime().disposeSession(runtimeId)));
@@ -1017,10 +1053,38 @@ export class AgentTeamSessionService {
 		// A newly created Team exposes its coordination Conversation before member
 		// Runtimes finish warming. Admission must wait for that preparation instead
 		// of enqueueing against an incomplete roster and then losing the request.
+		// read 在缓存命中时会先自愈已卸载的 coordination runtime（BUG-0116）。
 		const session = await this.read(sessionId);
-		await this.waitForMemberRuntimeWarmup(session, input.targetMemberIds ?? []);
+		await this.waitForMemberRuntimeWarmup(this.sessionState.get(sessionId) ?? session, input.targetMemberIds ?? []);
 		this.scheduleAutoTitle(this.sessionState.get(sessionId) ?? session, input);
 		return this.turnCoordinator.send(sessionId, input);
+	}
+
+	/**
+	 * 协调 runtime 已卸载时按持久路径原 id 重开（幂等：已加载直接返回）。
+	 * 重开失败抛带重启指引的可读错误并保留原始 cause，供 send/展示层统一呈现。
+	 */
+	private async ensureCoordinationRuntimeLoaded(session: TeamSessionDocument): Promise<TeamSessionDocument> {
+		const current = session.coordinationRuntime;
+		if (!current) return session;
+		if (this.getRuntime().getSessionPath(current.sessionId)) return session;
+		log.warn("team session coordination runtime is unloaded; reloading", { teamSessionId: session.id });
+		try {
+			const healed = await this.runtimeManager.ensureCoordinationRuntime(session);
+			if (healed.coordinationRuntime && healed.executionMode) {
+				await this.getRuntime().setExecutionMode(healed.coordinationRuntime.sessionId, healed.executionMode);
+			}
+			return healed;
+		} catch (error) {
+			log.error("team session coordination runtime could not be reloaded", {
+				teamSessionId: session.id,
+				error: errorMessage(error),
+			});
+			throw new Error(
+				`Team session runtime is unavailable and could not be reloaded: ${errorMessage(error)}. Restart the app to recover this session.`,
+				{ cause: error },
+			);
+		}
 	}
 
 	private scheduleAutoTitle(session: TeamSessionDocument, input: SendTeamMessageInput): void {
@@ -1055,7 +1119,7 @@ export class AgentTeamSessionService {
 				} catch (error) {
 					log.warn("Agent Team auto-title model selection failed", {
 						teamSessionId: session.id,
-						error: errorMessage(error),
+						error: describeError(error),
 					});
 				}
 			}
@@ -1075,11 +1139,11 @@ export class AgentTeamSessionService {
 						updatedAt: Date.now(),
 					};
 					await this.persist(next);
-					this.publishSessionUpdated(next);
+					this.requestSessionUpdate(next);
 				});
 			})
 			.catch((error: unknown) => {
-				log.warn("Agent Team auto-title failed", { teamSessionId: session.id, error: errorMessage(error) });
+				log.warn("Agent Team auto-title failed", { teamSessionId: session.id, error: describeError(error) });
 			})
 			.finally(() => this.autoTitleScheduledSessions.delete(session.id));
 	}
@@ -1109,7 +1173,7 @@ export class AgentTeamSessionService {
 				log.warn("team runtime warmup failed", {
 					teamId: team.id,
 					teamSessionId: session.id,
-					error: errorMessage(error),
+					error: describeError(error),
 				});
 			});
 		}
@@ -1137,7 +1201,7 @@ export class AgentTeamSessionService {
 					updatedAt: Date.now(),
 				};
 				await this.persist(next);
-				this.publishSessionUpdated(next);
+				this.requestSessionUpdate(next);
 				return next;
 			},
 			sessionReference.coordinationSessionPath,
@@ -1160,7 +1224,7 @@ export class AgentTeamSessionService {
 			degraded = true;
 			log.warn("team session could not be loaded during delete; proceeding with degraded cleanup", {
 				teamSessionId: sessionReference.id,
-				error: errorMessage(error),
+				error: describeError(error),
 			});
 			session =
 				this.sessionState.get(sessionReference.id) ??
@@ -1176,30 +1240,47 @@ export class AgentTeamSessionService {
 			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionPath),
 		];
 		for (const sessionPath of sessionPaths) {
-			if (!degraded) {
-				await this.getRuntime().deleteSession(sessionPath);
-				continue;
-			}
-			// 降级路径 per-path best-effort：外部实例持租约或单条路径损坏不阻断其余清理。
 			try {
 				await this.getRuntime().deleteSession(sessionPath);
 			} catch (error) {
-				log.warn("degraded team session delete could not remove a member runtime", {
+				// 会话不在 runtime 内存目录（崩溃重启后未再打开、或已被并发清理）对删除
+				// 语义是幂等成功（BUG-0114）；其余失败仅在降级路径吞掉——非降级时仍须
+				// 严格传播（BUG-0087 契约：外部实例持租约等要让用户看见）。
+				if (!degraded && !isSessionNotFoundFailure(error)) throw error;
+				log.warn("team session delete could not remove a runtime session; continuing", {
 					teamSessionId: sessionReference.id,
 					sessionPath,
-					error: errorMessage(error),
+					degraded,
+					error: describeError(error),
 				});
 			}
 		}
 		for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
 		await this.repository.delete?.(sessionReference.id);
 		if (session) await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
+		this.updatePublisher.drop(sessionReference.id);
 		this.sessionState.remove(sessionReference.id);
 		this.teamResidency.forget(sessionReference.id);
 	}
 
 	readCollaborationState(sessionId: string): Promise<TeamCollaborationState> {
 		return this.turnCoordinator.readCollaborationState(sessionId);
+	}
+
+	/**
+	 * 该 runtime 会话是否属于某个仍有在途工作的团队（BUG-0126）：主控等成员、
+	 * 成员等下一次委派都是合法安静，中断巡检不得把这种空闲判成 suspected。
+	 */
+	hasActiveTeamWorkForRuntimeSession(runtimeSessionId: string): boolean {
+		for (const session of this.sessionState.values()) {
+			const participating =
+				session.coordinationRuntime?.sessionId === runtimeSessionId ||
+				Object.values(session.memberRuntime).some((member) => member.sessionId === runtimeSessionId);
+			if (!participating) continue;
+			if (this.turnCoordinator.hasPending(session.id)) return true;
+			if (this.turnCoordinator.hasDurableUnsettledWork(session)) return true;
+		}
+		return false;
 	}
 
 	notifyExternalConditionChanged(change: TeamExternalConditionChange): Promise<number> {
@@ -1282,6 +1363,11 @@ export const agentTeamSessionService = new AgentTeamSessionService({
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+/** runtime 对「会话不在内存目录」的统一判别：普通对象或挂了 code 的 Error 都算（BUG-0114）。 */
+function isSessionNotFoundFailure(error: unknown): boolean {
+	return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "SESSION_NOT_FOUND";
 }
 
 function sameMemberIds(left: readonly string[], right: readonly string[]): boolean {

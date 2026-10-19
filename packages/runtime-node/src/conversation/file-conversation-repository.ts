@@ -63,8 +63,9 @@ import { nodeErrorCode } from "./node-error-code.js";
 export interface FileConversationRepositoryOptions {
 	readonly rootDir: string;
 	/**
-	 * 追加写入缓存的会话数上限（LRU）。每个活跃会话保留一份已解析 document，
-	 * 使长会话的每次事件追加不必全量重读 JSONL；缺省 16，必须是正整数。
+	 * 追加写入与文档读取共用的会话数缓存上限（LRU）。每个活跃会话保留一份已解析
+	 * document，使长会话的每次事件追加与文档读取不必全量重读 JSONL；缺省 16，
+	 * 必须是正整数。
 	 */
 	readonly documentCacheLimit?: number;
 }
@@ -130,12 +131,19 @@ export class FileConversationRepository
 		return this.exclusive(sessionId, () => this.withFileLock(sessionId, () => this.readConversation(sessionId)));
 	}
 
+	/**
+	 * 锁内读取文档：命中写入缓存时复用已解析 document（长会话的每命令/每 turn
+	 * 读取不再全量重读 JSONL），未命中全量读取并刷新缓存供后续读写复用。
+	 */
 	async readDocument(sessionId: string): Promise<ConversationDocument> {
 		this.assertOpen();
+		// 读路径与追加路径共用缓存：文件未变时直接返回已物化的 document，
+		// 不再为每条命令/每轮 turn 重新解析整个 JSONL（BUG-0127）。
 		return this.exclusive(sessionId, () =>
-			this.withFileLock(sessionId, async () =>
-				documentFromFile(sessionId, await this.readConversationFile(sessionId)),
-			),
+			this.withFileLock(sessionId, async () => {
+				const state = await this.loadAppendState(sessionId);
+				return state.document;
+			}),
 		);
 	}
 
@@ -486,10 +494,10 @@ export class FileConversationRepository
 	}
 
 	/**
-	 * 锁内获取追加所需的写入状态。文件字节数与缓存一致时复用已解析 document，
-	 * 长会话的每次事件追加不再全量重读 JSONL；会话文件经本仓库只增不减，任何
-	 * 外部写入都会改变字节数，命中失败自动回退全量读取并刷新缓存。旧 schema
-	 * 会话不缓存，始终走全量读取以保持原有读取语义。
+	 * 锁内获取缓存物化状态，供追加写入与文档读取共用。文件字节数与缓存一致时复用
+	 * 已解析 document，长会话的每次事件追加或文档读取不再全量重读 JSONL；会话文件
+	 * 经本仓库只增不减，任何外部写入都会改变字节数，命中失败自动回退全量读取并刷新
+	 * 缓存。旧 schema 会话不缓存，始终走全量读取以保持原有读取语义。
 	 */
 	private async loadAppendState(sessionId: string): Promise<ConversationAppendState> {
 		const byteSize = await this.statConversationSize(sessionId);

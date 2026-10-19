@@ -18,6 +18,7 @@ function evidence(partial: Partial<SessionInterruptEvidence>): SessionInterruptE
 		draftNonEmpty: false,
 		hasPendingAction: false,
 		hasCompletionMarker: false,
+		awaitingSubAgents: false,
 		continueAttemptCount: 0,
 		maxContinueAttempts: 1,
 		...partial,
@@ -166,6 +167,60 @@ describe("classifySessionInterruptHealth", () => {
 		expect(result.shouldNotify).toBe(true);
 		expect(result.eligibleForBinding).toBe(true);
 		expect(result.vetoes).toContain("insufficientConfidence");
+	});
+
+	it("等待子代理的长空闲是合法安静，不判 suspected（BUG-0126）", () => {
+		// 旧实现红：同样证据（不流式 + idle 超阈 + 无完成标记）落 suspected 并通知。
+		const result = classifySessionInterruptHealth(
+			evidence({
+				idleMs: SESSION_INTERRUPT_SUSPECT_IDLE_MS + 1,
+				stopReason: "stop",
+				hasCompletionMarker: false,
+				waitingOnSubagent: true,
+			}),
+		);
+		expect(result.state).toBe("running");
+		expect(result.shouldNotify).toBe(false);
+		expect(result.shouldAutoContinue).toBe(false);
+		expect(result.eligibleForBinding).toBe(false);
+	});
+
+	it("主控等子代理（awaitingSubAgents）长空闲不判 suspected，全程静默（BUG-0126）", () => {
+		// 团队长任务里协调会话等成员返回恰恰是「不流式、idle 超 8s、无完成标记」
+		// 的形态——旧判据把它当 suspected，每 15s 扫描一轮就误报一次。
+		const result = classifySessionInterruptHealth(
+			evidence({
+				idleMs: SESSION_INTERRUPT_SUSPECT_IDLE_MS + 60_000,
+				stopReason: "toolUse",
+				awaitingSubAgents: true,
+			}),
+		);
+		expect(result.state).toBe("running");
+		expect(result.shouldNotify).toBe(false);
+		expect(result.shouldAutoContinue).toBe(false);
+		expect(result.eligibleForBinding).toBe(false);
+		expect(result.vetoes).not.toContain("insufficientConfidence");
+	});
+
+	it("等待子代理但命中硬否决时仍按否决裁决", () => {
+		const result = classifySessionInterruptHealth(
+			evidence({
+				idleMs: SESSION_INTERRUPT_SUSPECT_IDLE_MS + 1,
+				waitingOnSubagent: true,
+				manualStop: true,
+			}),
+		);
+		expect(result.state).toBe("stopped");
+		expect(result.eligibleForBinding).toBe(false);
+	});
+
+	it("awaitingSubAgents 不掩盖真实错误触发（BUG-0126）", () => {
+		// 豁免只作用于无触发路径：主控自己真挂了（error/网络/截断）仍要浮出水面。
+		const result = classifySessionInterruptHealth(
+			evidence({ stopReason: "error", errorMessage: "Model returned 500", awaitingSubAgents: true }),
+		);
+		expect(result.trigger).toBe("error");
+		expect(result.shouldAutoContinue).toBe(true);
 	});
 
 	it("绑定闸门与续跑判定共用同一 classification", () => {

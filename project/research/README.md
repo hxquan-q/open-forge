@@ -7,6 +7,11 @@
 
 | 主题 | 来源 |
 |---|---|
+| 设计插件参考项目与许可证审计（「对话出界面」产品/开源项目/源码定位工具三类分流、可直接复用模块与禁复制清单，2026-10-18 核对） | [RESEARCH-0031](RESEARCH-0031-design-reference-projects-license-audit.md) |
+| 受管 fd/rg 工具 inspect() 解析记录与 CLI/Desktop 双 doctor 出口可行性核对（草案四处修正：source 枚举跨进程收敛、version 标记落点、CLI 注册点实名、Desktop 桥接需导出 helper；CometixCode /doctor 先例） | [RESEARCH-0030](RESEARCH-0030-managed-coding-tool-doctor-inspection.md) |
+| 上游消息列表重构（ADR-0146/0147）同步评估：不建议整体同步（79 个双改文件、本仓已持治理/attach 等价物、P7 上游亦未完成），按价值拆小件吸收并保留回馈机会 | [RESEARCH-0029](RESEARCH-0029-upstream-message-list-refactor-assessment.md) |
+| Windows agent 沙箱 MIC Low 标签手法与 BUG-0128 归因定案（DSH 指纹与 `~/.dsh` 会话取证、MIC 取低值规则、root-only 重置实验、上游 #8048 报告素材） | [RESEARCH-0028](RESEARCH-0028-windows-agent-mic-low-label-attribution.md) |
+| Desktop 全部保留日志与 Git 对照巡检（45 文件，新增 BUG-0114/0115，未修复与待定位问题、历史修复及脱敏签名附表） | [RESEARCH-0027](RESEARCH-0027-dev-log-audit.md) |
 | Desktop 首页/会话链路 Web Vitals 调研（CLS 0.58 归因与证伪、会话切换 400ms INP、大会话恢复 587ms 长任务与 LCP 21.9s、修复优先级 P1–P5） | [RESEARCH-0026](RESEARCH-0026-desktop-web-vitals-audit.md) |
 | 上游 0.5.60–0.5.64 同步审计与候选清单（网关重试/流式短语/传输设置/模型参数回填/压缩步骤等 adopt 判定与排除证据） | [RESEARCH-0025](RESEARCH-0025-upstream-0.5.60-0.5.64-sync-audit.md) |
 | Pi 1.0 工作流帖与官方文档的产品层设计对照（MCP 暴露、会话树状态、授权审计、自治边界、文件回退） | [RESEARCH-0024](RESEARCH-0024-pi-workflow-post-design-review.md) |
@@ -35,6 +40,7 @@
 | Cordis 元框架机制调研（fiber/effect/inject 与可借鉴点） | [`RESEARCH-0015`](RESEARCH-0015-cordis-meta-framework.md) |
 | Northline 长程 Agent 委派与 OpenVetta Task/Worktree 治理对照 | [`RESEARCH-0016`](RESEARCH-0016-northline-openvetta-reference.md) |
 | 开发范式：OpenVetta、工程控制论与 Matt Pocock 方法对照 | [`RESEARCH-0017`](RESEARCH-0017-development-paradigm-synthesis.md) |
+| pi 上游安全通告审计与回移分诊（GHSA × 4 + 积压清单，雷达文档 docs/upstream/pi.md） | [`RESEARCH-0032`](RESEARCH-0032-pi-security-advisory-backport-audit.md) |
 
 ## Research Note 约束
 

@@ -9,6 +9,12 @@ Open Forge 的公开产品与开发者文档站，使用 Next.js 和 Fumadocs �
 - 仓库根目录的 `docs/`、ADR、部署和内部验证记录不会被自动加载。
 - 公开内容以本站目录为唯一来源，避免与内部文档长期维护两份副本。
 
+## 当前标识与历史素材
+
+站点使用 Open Forge 名称，公开图标来自 Desktop 的 `src/shared/brand-assets/self/brand-icon.png`，文字横幅来自根 `docs/assets/open-forge-banner.svg`。公开目录保存站点部署所需的副本；更新时同步其事实源。
+
+继承的产品截图和旧图标已移至 [`docs/archive/upstream/`](../../docs/archive/upstream/)，不再从 `public/` 分发，也不作为当前版本的实机证据。页面保留操作说明，待有当前版本截图时再补充。历史资料入口见[归档索引](../../docs/archive/README.md)。
+
 ## 本地检查
 
 ```bash

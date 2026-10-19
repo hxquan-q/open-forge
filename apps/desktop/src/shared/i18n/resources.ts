@@ -1,7 +1,8 @@
 // Modified by The Open Forge contributors.
-// 静态打包的 catalog 聚合（见 ADR-0031）。main 与 renderer 都顶层 import 本文件，
-// 由各自 Vite bundle 把 JSON 内联——零运行时 fs、零 async、不闪。新增语言/ns =
-// 在此加一条 import + 在 resources 里加一项。
+// 静态打包的 catalog 全量聚合（见 ADR-0031）。生产主窗口已改为 zh-resources.ts
+// 静态 + en-resources.ts 按需（ISSUE-0021 B 第二片）；本文件仍是 catalog 注册的
+// 事实源与测试消费面（desktop-brand.test 等）。新增语言/ns = 在此加一条 import +
+// 在 resources 里加一项，并同步 zh-resources.ts / en-resources.ts 与 main-resources.ts。
 
 import enAbilities from "./locales/en/abilities.json";
 import enAgentTeams from "./locales/en/agent-teams.json";

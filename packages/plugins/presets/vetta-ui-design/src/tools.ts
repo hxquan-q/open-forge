@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 import type { PluginContext } from "@vetta-org/plugin-sdk";
 import type { ElementQuery, SelectedElementPayload } from "./canvas/bridge-client";
 import {
@@ -12,6 +14,8 @@ import { pruneSnapshots, snapshotPath } from "./cards/snapshots";
 import { registerHistoryTools } from "./history/history-tools";
 import { registerExportTool } from "./materials/export-tool";
 import { setDesignPresence } from "./vetd/design-presence";
+import { parseSourceLocator, type SourceLocator } from "./shared/source-locator";
+import type { StyleSummary } from "../engine/src/source-payload";
 import { ensureDesignIgnored } from "./vetd/design-ignore";
 import { ENGINE_PROVIDED_PACKAGES } from "./engine/engine-files";
 import { engineDiagnostics, installDesignDependencies } from "./engine/engine-manager";
@@ -595,7 +599,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 
 	/** 拿到一批待办时的干活方式。列表读取与 resolve 后的续办共用。 */
 	const NOTES_WORK_THROUGH_HINT =
-		"Read every screenshot path — the numbered pins mark each note's position (numbers match `number`). `element.source` (file:line) was re-resolved just now and is the authoritative edit target unless `anchorStale`. Work through them ONE AT A TIME: edit for a note, verify it with vetd_screenshot, then immediately call vetd_notes with `resolve` for that single note before starting the next one. Do not batch the replies until the end — the user watches each note flip to resolved on the canvas as you go, and a turn that dies halfway must leave the finished ones already marked.";
+		"Read every screenshot path — the numbered pins mark each note's position (numbers match `number`). `element.source` (file:line:column) was re-resolved just now and is the authoritative edit target unless `anchorStale`; `element.outerHTML`/`element.styleSummary` describe what the element currently renders. Work through them ONE AT A TIME: edit for a note, verify it with vetd_screenshot, then immediately call vetd_notes with `resolve` for that single note before starting the next one. Do not batch the replies until the end — the user watches each note flip to resolved on the canvas as you go, and a turn that dies halfway must leave the finished ones already marked.";
 
 	/**
 	 * resolve 之后还有待办。这条提示得把「还没完」说死：这些备注多半是用户在你干活
@@ -616,8 +620,20 @@ export function registerDesignTools(ctx: PluginContext): void {
 		location:
 			| { kind: "frame"; frame: string; frameFile: string; x: number; y: number }
 			| { kind: "canvas"; x: number; y: number; detachedFromDeletedFrame?: string };
-		/** 元素锚（刚刚现场重解析过）；`source` 即 `frames/x.tsx:行号`。 */
-		element?: { source: string | null; domPath: string; tag: string; text: string };
+		/**
+		 * 元素锚（刚刚现场重解析过）；`source` 原文即 `frames/x.tsx:行:列`（旧值可能
+		 * 只有行号），`locator` 是解析结果。上下文包（outerHTML 片段/样式摘要）只在
+		 * 本轮重解析拿到 payload 时出现——旧引擎实例上可能缺省。
+		 */
+		element?: {
+			source: string | null;
+			locator?: SourceLocator | null;
+			outerHTML?: string;
+			styleSummary?: StyleSummary;
+			domPath: string;
+			tag: string;
+			text: string;
+		};
 		/** true = 原锚定元素在当前 DOM 里已找不到，element 是放置时的旧快照，行号不可信。 */
 		anchorStale?: boolean;
 	}
@@ -627,7 +643,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 		name: "vetd_notes",
 		label: "%tool.vetd_notes%",
 		description:
-			"User notes pinned on the design canvas (Figma-style comments addressed to you). No args: list PENDING notes — each with its thread, a freshly re-resolved source anchor (`element.source` = file:line, authoritative unless `anchorStale`), and per-frame screenshots where numbered pins mark note positions (numbers match `number`). `ids`: read specific notes instead. `resolve`: after fixing, reply per note to mark it resolved — this is the ONLY way to write notes; never edit .notes.json directly.\nDo NOT use for what the user wrote to you in this conversation, for code review comments or for issue trackers — act on those directly instead; and never as an end-of-turn habit on a turn that touched no .vetd design, e.g. after editing pages in the user's own codebase.\nOnly for notes pinned on the design canvas of an open .vetd design.",
+			"User notes pinned on the design canvas (Figma-style comments addressed to you). No args: list PENDING notes — each with its thread, a freshly re-resolved source anchor (`element.source` = file:line:column, authoritative unless `anchorStale`), and per-frame screenshots where numbered pins mark note positions (numbers match `number`). `ids`: read specific notes instead. `resolve`: after fixing, reply per note to mark it resolved — this is the ONLY way to write notes; never edit .notes.json directly.\nDo NOT use for what the user wrote to you in this conversation, for code review comments or for issue trackers — act on those directly instead; and never as an end-of-turn habit on a turn that touched no .vetd design, e.g. after editing pages in the user's own codebase.\nOnly for notes pinned on the design canvas of an open .vetd design.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -792,6 +808,8 @@ export function registerDesignTools(ctx: PluginContext): void {
 		}
 
 		const staleIds = new Set<string>();
+		/** 本轮重解析拿到的新鲜元素 payload——上下文包从这里带出（不持久化进锚点）。 */
+		const freshPayloads = new Map<string, SelectedElementPayload>();
 		const screenshots: { frame: string; path: string }[] = [];
 		{
 			for (const [frameId, group] of byFrame) {
@@ -813,6 +831,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 				group.forEach((note, index) => {
 					const payload = payloads[index];
 					if (payload) {
+						freshPayloads.set(note.id, payload);
 						controller.notes.upgradeAnchor(note.id, {
 							domPath: payload.domPath,
 							tag: payload.tag,
@@ -850,7 +869,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 		// 保鲜写回后从 store 取最新锚点。
 		const notes = targets.map((note) => {
 			const fresh = controller.notes.noteById(note.id) ?? note;
-			const view = toNoteView(fresh, numberOf.get(note.id) ?? 0, dirPath);
+			const view = toNoteView(fresh, numberOf.get(note.id) ?? 0, dirPath, freshPayloads.get(note.id));
 			if (staleIds.has(note.id)) view.anchorStale = true;
 			return view;
 		});
@@ -858,7 +877,12 @@ export function registerDesignTools(ctx: PluginContext): void {
 	}
 
 	/** DesignNote → 模型视图（与画布/抽屉共享同一份状态推导）。 */
-	function toNoteView(note: DesignNote, number: number, dirPath: string): NoteView {
+	function toNoteView(
+		note: DesignNote,
+		number: number,
+		dirPath: string,
+		freshPayload?: SelectedElementPayload,
+	): NoteView {
 		const base = {
 			number,
 			id: note.id,
@@ -888,7 +912,12 @@ export function registerDesignTools(ctx: PluginContext): void {
 			...(note.anchor.kind === "element"
 				? {
 						element: {
-							source: note.anchor.element.source,
+							source: freshPayload?.source ?? note.anchor.element.source,
+							locator: parseSourceLocator(freshPayload?.source ?? note.anchor.element.source),
+							...(freshPayload?.outerHTML !== undefined ? { outerHTML: freshPayload.outerHTML } : {}),
+							...(freshPayload?.styleSummary !== undefined
+								? { styleSummary: freshPayload.styleSummary }
+								: {}),
 							domPath: note.anchor.element.domPath,
 							tag: note.anchor.element.tag,
 							text: note.anchor.element.text,

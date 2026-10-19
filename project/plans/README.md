@@ -7,6 +7,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0018` | 设计插件统一路线图 v2（去品牌 × 安全 × 设计能力 × 可借鉴代码） | draft | [REQ-0005](../requirements/REQ-0005-openforge-independent-release-and-compliance.md)、[RESEARCH-0031](../research/RESEARCH-0031-design-reference-projects-license-audit.md) |
 | `PLAN-0017` | MCP 工具暴露粒度（direct / deferred）最小设计 | draft | [REQ-0010](../requirements/REQ-0010-mcp-tool-exposure-granularity.md)、[RESEARCH-0024](../research/RESEARCH-0024-pi-workflow-post-design-review.md) |
 | `PLAN-0016` | 版本管理与发版重构 | in_progress | [RESEARCH-0023](../research/RESEARCH-0023-version-management-and-release-design.md) |
 | `PLAN-0015` | Harness 高价值机制隔离吸收 | in_progress | [RESEARCH-0021](../research/RESEARCH-0021-pi-deepseek-harness-absorption.md) |

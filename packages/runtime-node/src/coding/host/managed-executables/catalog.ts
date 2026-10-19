@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import type { CodingToolExecutable } from "@vetta/runtime-tools";
 
@@ -56,6 +57,8 @@ export interface CodingToolDownloadPlan {
 	readonly binaryFileName: string;
 	readonly binaryPath: string;
 	readonly downloadUrl: string;
+	/** 本次下载的版本，安装成功后落 `.version` 标记供诊断免 spawn 读取。 */
+	readonly version: string;
 }
 
 export function getCodingToolReleaseConfig(tool: CodingToolExecutable): CodingToolReleaseConfig {
@@ -75,5 +78,6 @@ export function createCodingToolDownloadPlan(
 		binaryFileName,
 		binaryPath: join(options.toolsDirectory, binaryFileName),
 		downloadUrl: `https://github.com/${config.repository}/releases/download/${config.tagPrefix}${options.version}/${assetName}`,
+		version: options.version,
 	};
 }
