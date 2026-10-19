@@ -9,6 +9,7 @@ export function git(root, args, { trim = true } = {}) {
 		windowsHide: true,
 		shell: false,
 		maxBuffer: 16777216,
+		timeout: 30000,
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	return trim ? output.trimEnd() : output;

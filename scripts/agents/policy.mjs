@@ -32,6 +32,17 @@ const PATH_GATES = {
 		"project/decisions/waivers/**",
 		".github/workflows/**",
 		"AGENTS.md",
+		"CLAUDE.md",
+		"GEMINI.md",
+		".cursor/rules/**",
+		".husky/**",
+		".worktreeconfig.json",
+		".worktreeinclude",
+		"scripts/worktree/**",
+		"project/collaboration/**",
+		"project/CONVENTIONS.md",
+		"project/tasks/templates/**",
+		"docs/dev/quality-gates.md",
 		"**/AGENTS.md",
 		".agents/**",
 		"docs/dev/agent-rules/**",
@@ -47,7 +58,7 @@ const DATA =
 	/(?:\b(?:rmSync|unlinkSync|rimraf)\s*\(|fs\.(?:rm|unlink)|\b(?:DROP|DELETE\s+FROM)\b|schemaVersion|tombstone)/u;
 const TEST_DISABLE = /(?:\.(?:skip|only|todo|fails)\s*\(|\bskip\s*:\s*true|\btestTimeout\b|\bhookTimeout\b)/u;
 const KNOWN =
-	/(?:\.(?:[cm]?[jt]sx?|json|md|css|html|ya?ml|toml|lock|txt|svg|sh|ps1|go|kt)|(?:^|\/)(?:LICENSE|NOTICE))$/iu;
+	/(?:\.(?:[cm]?[jt]sx?|json|md|mdc|css|html|ya?ml|toml|lock|txt|svg|sh|ps1|go|kt)|(?:^|\/)(?:LICENSE|NOTICE))$/iu;
 
 function modifiedLines(before, after) {
 	const old = new Set(before.split("\n"));
@@ -64,6 +75,12 @@ export function classifyChanges(changes) {
 	const reasons = [];
 	for (const change of changes) {
 		const { path, before, after } = change;
+		for (const [gate, patterns] of Object.entries(PATH_GATES)) {
+			if (patterns.some((pattern) => matchesPath(path, pattern))) {
+				gates.add(gate);
+				reasons.push({ gate, path, reason: "protected path" });
+			}
+		}
 		if (
 			(change.oldMode && change.newMode && change.oldMode !== change.newMode) ||
 			["100755", "120000"].includes(change.newMode)
@@ -80,15 +97,9 @@ export function classifyChanges(changes) {
 			unknown.push(path);
 			continue;
 		}
-		for (const [gate, patterns] of Object.entries(PATH_GATES)) {
-			if (patterns.some((pattern) => matchesPath(path, pattern))) {
-				gates.add(gate);
-				reasons.push({ gate, path, reason: "protected path" });
-			}
-		}
 		const additions = modifiedLines(before, after);
-		if (SECURITY.test(additions)) gates.add("security");
-		if (DATA.test(additions)) gates.add("data");
+		if (SECURITY.test(before) || SECURITY.test(after)) gates.add("security");
+		if (DATA.test(before) || DATA.test(after)) gates.add("data");
 		if (/(?:\.test\.|\.spec\.|\/tests?\/)/u.test(path)) {
 			const assertions = before.split("\n").filter((line) => /\b(?:expect|assert)\s*\(/u.test(line));
 			if (

@@ -2,7 +2,14 @@
 import { normalizeContractPath, pathsOverlap, TASK_ID_PATTERN } from "../worktree/contract.mjs";
 import { contract } from "./contracts.mjs";
 
-export const ACTIVE_RUN_STATUSES = new Set(["running", "verifying", "integrating", "publishing"]);
+export const ACTIVE_RUN_STATUSES = new Set([
+	"preparing",
+	"running",
+	"verifying",
+	"integrating",
+	"publishing",
+	"cleanup-required",
+]);
 
 function checkedTask(task) {
 	if (!TASK_ID_PATTERN.test(task.id) || task.status !== "ready") throw new Error("only a ready Task may be claimed");
@@ -27,16 +34,6 @@ function conflicts(task, lease) {
 		overlaps(task.exclusivePaths, [...lease.writePaths, ...lease.readPaths, ...lease.exclusivePaths]) ||
 		overlaps(lease.exclusivePaths, [...task.writePaths, ...task.readPaths])
 	);
-}
-
-function alive(pid) {
-	if (!Number.isSafeInteger(pid) || pid <= 0) return true;
-	try {
-		process.kill(pid, 0);
-		return true;
-	} catch (error) {
-		return error.code !== "ESRCH";
-	}
 }
 
 function validateClock(now, ttl) {
@@ -83,15 +80,8 @@ export function claim(store, rawTask, { holder, runId, now = Date.now(), ttl = 9
 			if (lease.status !== "active") continue;
 			if (lease.expiresAt <= now) {
 				const run = state.runs[lease.runId];
-				if (
-					run &&
-					ACTIVE_RUN_STATUSES.has(run.status) &&
-					alive(run.pid) &&
-					(lease.task === task.id || conflicts(task, lease))
-				) {
-					throw new Error(
-						"expired lease still has a process alive or of unknown status; cancel it before recycling",
-					);
+				if (run && ACTIVE_RUN_STATUSES.has(run.status) && (lease.task === task.id || conflicts(task, lease))) {
+					throw new Error("expired lease has a process alive or cleanup unconfirmed; recover it before recycling");
 				}
 				continue;
 			}

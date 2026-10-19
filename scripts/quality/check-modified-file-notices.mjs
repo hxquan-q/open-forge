@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified by The Open Forge contributors.
 /**
  * Apache-2.0 §4(b) 修改声明审计（ISSUE-0008）。
  *
@@ -81,6 +82,7 @@ const STYLE_BY_EXTENSION = {
 	scss: "block",
 	less: "block",
 	md: "html",
+	mdc: "html",
 	mdx: "jsx",
 	html: "html",
 	xml: "html",

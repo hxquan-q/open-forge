@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireCapability, validateAdapters, validatePolicy } from "../agents/contracts.mjs";
+import { autonomyProblems } from "./check-autonomy.mjs";
 import { collectBiomeTargets } from "./check-lint.mjs";
 
 describe("autonomy tools participate in existing repository checks", () => {
@@ -20,6 +21,12 @@ describe("autonomy tools participate in existing repository checks", () => {
 		expect(manifest.scripts["test:agents"]).toContain("scripts/quality/run-vitest.mjs");
 		for (const command of [
 			"doctor",
+			"queue",
+			"prepare",
+			"cycle",
+			"approval",
+			"integration-preview",
+			"integrate",
 			"plan",
 			"claim",
 			"run",
@@ -31,6 +38,12 @@ describe("autonomy tools participate in existing repository checks", () => {
 			"release",
 		])
 			expect(manifest.scripts[`agent:${command}`]).toBe(`node scripts/agents/cli.mjs ${command}`);
+	});
+	it("runs the contract and incremental DESIGN gate in the always-on checks", () => {
+		expect(autonomyProblems(process.cwd())).toEqual([]);
+		expect(readFileSync("scripts/quality/check-guards.mjs", "utf8")).toContain(
+			'["scripts/quality/check-autonomy.mjs"]',
+		);
 	});
 	it("does not infer execution or publication capabilities from a valid configuration", () => {
 		const policy = validatePolicy(JSON.parse(readFileSync("project/autonomy-policy.json", "utf8")));

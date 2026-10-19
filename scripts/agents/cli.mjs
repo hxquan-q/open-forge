@@ -3,10 +3,17 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadTasks } from "../worktree/contract.mjs";
+import { importApproval } from "./approval.mjs";
 import { contract } from "./contracts.mjs";
 import { exportEvidence } from "./evidence.mjs";
+import { snapshot } from "./git.mjs";
+import { applyIntegration, prepareIntegration } from "./integrate.mjs";
 import { claim, release } from "./leases.mjs";
-import { executeAdapter } from "./runner.mjs";
+import { cycle } from "./orchestrate.mjs";
+import { prepareTask } from "./prepare.mjs";
+import { completedTasks, taskQueue } from "./queue.mjs";
+import { codeBinding, executeAdapter } from "./runner.mjs";
 import { createStore } from "./store.mjs";
 import { configuration, makeRunContract, taskById } from "./tasks.mjs";
 import { verifyRun } from "./verify.mjs";
@@ -23,6 +30,12 @@ const COMMANDS = new Set([
 	"pause",
 	"resume",
 	"evidence",
+	"queue",
+	"prepare",
+	"cycle",
+	"approval",
+	"integration-preview",
+	"integrate",
 ]);
 const OPTIONS = new Set([
 	"--repo",
@@ -35,6 +48,8 @@ const OPTIONS = new Set([
 	"--adapter",
 	"--role",
 	"--test",
+	"--approval",
+	"--through",
 ]);
 
 function argumentsOf(args) {
@@ -100,10 +115,29 @@ export async function main(args) {
 		const task = taskById(root, required(options, "--task"));
 		return makeRunContract(task, config, resolve(required(options, "--worktree")), options.tests ?? []);
 	}
+	if (command === "queue") {
+		const loaded = loadTasks(root);
+		if (loaded.problems.length) throw new Error(loaded.problems.join("; "));
+		const statePath = options["--state-dir"];
+		const state =
+			statePath && existsSync(resolve(statePath)) ? createStore(resolve(statePath)).read() : { leases: {} };
+		return { queue: taskQueue(loaded.tasks, state) };
+	}
 	const directory = resolve(required(options, "--state-dir"));
 	if (command === "status" && !existsSync(directory))
 		return { initialized: false, runs: [], paused: config.policy.paused };
 	const store = createStore(directory);
+	if (command === "cycle")
+		return cycle({
+			root,
+			store,
+			...config,
+			taskId: required(options, "--task"),
+			runId: required(options, "--run-id"),
+			holder: required(options, "--holder"),
+			tests: options.tests ?? [],
+			through: options["--through"] ?? "verify",
+		});
 	if (command === "status") {
 		const state = store.read();
 		return {
@@ -128,6 +162,8 @@ export async function main(args) {
 	}
 	if (["pause", "resume"].includes(command)) {
 		store.transaction((state) => {
+			if (command === "resume" && Object.values(state.runs).some((run) => run.cleanupUnknown))
+				throw new Error("unconfirmed cleanup requires recovery before resume");
 			state.control.paused = command === "pause";
 			state.audit.push({ event: command, at: Date.now() });
 		});
@@ -141,9 +177,24 @@ export async function main(args) {
 			holder: required(options, "--holder"),
 			runId: required(options, "--run-id"),
 			ttl: config.policy.limits.leaseMs,
+			completed: completedTasks(loadTasks(root).tasks),
 		});
 	}
 	const token = runToken(store, required(options, "--run-id"));
+	if (command === "integration-preview") return prepareIntegration({ root, store, ...config, token });
+	if (command === "integrate") return applyIntegration({ root, store, ...config, token });
+	if (command === "prepare") return prepareTask({ root, store, ...config, token, tests: options.tests ?? [] });
+	if (command === "approval") {
+		const run = store.read().runs[token.runId];
+		if (!run?.contract) throw new Error("run has no candidate contract");
+		const binding = codeBinding(run.contract, snapshot(run.contract.worktree));
+		return importApproval(
+			store,
+			token.runId,
+			JSON.parse(readFileSync(required(options, "--approval"), "utf8")),
+			binding,
+		);
+	}
 	if (command === "release") {
 		release(store, token);
 		return { released: token.runId };

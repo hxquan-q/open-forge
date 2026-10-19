@@ -6,7 +6,7 @@ import { decodeOutput, executionPrompt, selectAdapter } from "./adapters.mjs";
 import { contract, digest, requireCapability } from "./contracts.mjs";
 import { assertIndependentReview } from "./evidence.mjs";
 import { assertSeparateRoots, assertWriteScope, snapshot } from "./git.mjs";
-import { assertLease, renew } from "./leases.mjs";
+import { ACTIVE_RUN_STATUSES, assertLease, renew } from "./leases.mjs";
 import { isolatedEnvironment, runProcess } from "./process.mjs";
 
 export function codeBinding(runContract, code) {
@@ -64,7 +64,12 @@ export async function executeAdapter({
 			review: null,
 			contract: runContract,
 		};
-		if (run.status === "running") throw new Error("run already has a live attempt");
+		if (ACTIVE_RUN_STATUSES.has(run.status)) throw new Error("run already has a live attempt");
+		const concurrent = Object.values(state.runs).filter(
+			(entry) => entry.status === "running" && entry.attempts.at(-1)?.role === role,
+		).length;
+		if (concurrent >= (role === "implementer" ? policy.limits.implementers : policy.limits.reviewers))
+			throw new Error("run circuit breaker: concurrency limit reached");
 		if (["integrated", "published", "cancelled"].includes(run.status)) throw new Error("run is terminal");
 		if (digest(run.contract) !== digest(runContract))
 			throw new Error("run contract cannot change during an attempt sequence");
@@ -83,6 +88,7 @@ export async function executeAdapter({
 		} else {
 			run.checks = [];
 			run.review = null;
+			run.authors.push(identity);
 		}
 		run.status = "running";
 		run.pid = null;
@@ -131,7 +137,10 @@ export async function executeAdapter({
 		after = snapshot(worktree);
 		if (role === "reviewer" && (after.head !== before.head || after.tree !== before.tree))
 			throw new Error("reviewer modified the candidate");
-		assertWriteScope(worktree, runContract.baseCommit, task.writePaths);
+		const coordinatorPaths = store.read().runs[token.runId].integration?.coordinatorPaths ?? [];
+		if (coordinatorPaths.some((path) => ![task.file, "project/tasks/README.md"].includes(path)))
+			throw new Error("invalid integration metadata scope");
+		assertWriteScope(worktree, runContract.baseCommit, [...task.writePaths, ...coordinatorPaths]);
 	} catch (error) {
 		failure = error;
 	} finally {
@@ -152,16 +161,24 @@ export async function executeAdapter({
 					stderrDigest: digest(result.stderr),
 					startedAt: result.startedAt,
 					finishedAt: result.finishedAt,
+					cleanupUnknown: result.cleanupUnknown,
 				}
 			: null;
 		attempt.usage = null;
 		attempt.failure = failure?.message ?? null;
-		run.pid = null;
-		run.status = failure ? "failed" : body.status === "blocked" ? "blocked" : "implemented";
+		run.cleanupUnknown = result?.cleanupUnknown ?? false;
+		if (run.cleanupUnknown) state.control.paused = true;
+		run.pid = run.cleanupUnknown ? result.pid : null;
+		run.status = run.cleanupUnknown
+			? "cleanup-required"
+			: failure
+				? "failed"
+				: body.status === "blocked"
+					? "blocked"
+					: "implemented";
 		if (!failure) {
 			run.binding = codeBinding(runContract, after);
 			if (role === "implementer") {
-				run.authors.push(identity);
 				run.summary = body.summary;
 			} else {
 				run.review = { ...body, reviewer: identity, binding: run.binding };

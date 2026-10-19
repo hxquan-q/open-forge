@@ -40,4 +40,19 @@ describe("human gates apply to the actual cumulative change", () => {
 			"apps/desktop/package.json",
 		);
 	});
+	it("covers removed security checks and every tool-specific rule entry", () => {
+		expect(
+			classifyChanges([
+				{ path: "client.ts", before: "if (!allowed) throw new Error('deny');\nfetch(url);", after: "fetch(url);" },
+			]).gates,
+		).toContain("security");
+		for (const path of [
+			"CLAUDE.md",
+			"GEMINI.md",
+			".cursor/rules/00-agents.mdc",
+			".husky/pre-commit",
+			".worktreeconfig.json",
+		])
+			expect(classifyChanges([{ path, before: "old", after: "changed" }]).gates).toContain("tests-and-guards");
+	});
 });

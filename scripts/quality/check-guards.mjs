@@ -1,6 +1,7 @@
 /**
  * Run all independent always-on quality guards in parallel (used by `bun run check`).
  */
+// Modified by The Open Forge contributors.
 
 import { spawn } from "node:child_process";
 import { repoRoot } from "./lib.mjs";
@@ -24,6 +25,7 @@ const steps = [
 	["scripts/quality/check-skill-frontmatter.mjs"],
 	["scripts/quality/workflow-skills.mjs"],
 	["scripts/quality/check-agent-guide.mjs"],
+	["scripts/quality/check-autonomy.mjs"],
 	["scripts/quality/check-glossary.mjs"],
 	["scripts/quality/check-vitest-runner.mjs"],
 	["scripts/quality/check-source-path-maps.mjs"],

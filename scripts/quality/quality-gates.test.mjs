@@ -1551,6 +1551,12 @@ describe("skill frontmatter analysis", () => {
 });
 
 describe("VS Code workspace modification notices", () => {
+	it("requires Markdown notices for Cursor rules instead of exempting them", () => {
+		const style = styleForPath(".cursor/rules/00-agents.mdc");
+		expect(style?.render("Copyright The Open Forge contributors.")).toBe(
+			"<!-- Copyright The Open Forge contributors. -->",
+		);
+	});
 	it("classifies JSONC workspace files as commentable rather than exempting them", () => {
 		const style = styleForPath("open-forge.code-workspace");
 		expect(style).not.toBeNull();

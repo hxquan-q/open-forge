@@ -165,4 +165,20 @@ describe("implementation and independent review through real processes and Git",
 		await expect(verifyRun(context)).rejects.toThrow(/stale/);
 		expect(context.store.read().runs[context.token.runId].checks).toEqual([]);
 	});
+	it("requires approval before executing verification for a security-sensitive candidate", async () => {
+		const context = fixture();
+		const command = context.settings.adapters[0].command;
+		command[command.length - 1] = command.at(-1).replace("fixed", "fetch(");
+		context.runContract.adaptersDigest = digest(context.settings);
+		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
+		await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
+		await expect(
+			verifyRun({
+				...context,
+				resolveCommand: () => {
+					throw new Error("verification started before gate review");
+				},
+			}),
+		).rejects.toThrow(/bound human approval/);
+	});
 });

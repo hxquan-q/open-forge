@@ -64,4 +64,13 @@ describe("task ownership through the full lease lifetime", () => {
 		const next = claim(state, one, { holder: "two", runId: "two", now: 1200, ttl: 1000 });
 		expect(next.generation).toBe(2);
 	});
+	it("keeps unconfirmed descendant cleanup fenced even after the parent is known dead", () => {
+		const state = store();
+		const one = task("TASK-0001");
+		claim(state, one, { holder: "one", runId: "one", now: 100, ttl: 1000 });
+		state.transaction((data) => {
+			data.runs.one = { status: "cleanup-required", pid: 2147483647, cleanupUnknown: true };
+		});
+		expect(() => claim(state, one, { holder: "two", runId: "two", now: 1200, ttl: 1000 })).toThrow(/cleanup|alive/);
+	});
 });

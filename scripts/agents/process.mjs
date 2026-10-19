@@ -40,7 +40,7 @@ export function isolatedEnvironment(root, source = process.env) {
 }
 
 function stopTree(child) {
-	if (!child.pid) return;
+	if (!child.pid) return true;
 	if (process.platform === "win32") {
 		const executable = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "taskkill.exe");
 		const result = spawnSync(executable, ["/PID", String(child.pid), "/T", "/F"], {
@@ -48,13 +48,21 @@ function stopTree(child) {
 			stdio: "ignore",
 			timeout: 10000,
 		});
-		if (result.error) child.kill("SIGKILL");
+		if (result.error || result.status !== 0) {
+			child.kill("SIGKILL");
+			return false;
+		}
+		return true;
 	} else {
 		try {
 			process.kill(-child.pid, "SIGKILL");
 		} catch (error) {
-			if (error.code !== "ESRCH") child.kill("SIGKILL");
+			if (error.code !== "ESRCH") {
+				child.kill("SIGKILL");
+				return false;
+			}
 		}
+		return true;
 	}
 }
 
@@ -70,6 +78,9 @@ export function runProcess({
 	signal,
 	onSpawn,
 	onActivity,
+	onClose,
+	terminate = stopTree,
+	terminationGraceMs = 10000,
 }) {
 	if (
 		!Array.isArray(command) ||
@@ -77,12 +88,17 @@ export function runProcess({
 		command.some((arg) => typeof arg !== "string" || arg.includes("\0"))
 	)
 		throw new Error("invalid command arguments");
-	if (![timeoutMs, stallMs, maxOutputBytes].every((value) => Number.isSafeInteger(value) && value > 0))
+	if (
+		![timeoutMs, stallMs, maxOutputBytes, terminationGraceMs].every(
+			(value) => Number.isSafeInteger(value) && value > 0,
+		)
+	)
 		throw new Error("invalid process limits");
 	const startedAt = Date.now();
 	if (signal?.aborted)
 		return Promise.resolve({
 			reason: "cancelled",
+			cleanupUnknown: false,
 			exitCode: null,
 			stdout: "",
 			stderr: "",
@@ -92,6 +108,8 @@ export function runProcess({
 		});
 	return new Promise((resolve) => {
 		let reason;
+		let cleanupUnknown = false;
+		let terminationTimer;
 		let total = 0;
 		let settled = false;
 		let lastActivity = Date.now();
@@ -108,7 +126,19 @@ export function runProcess({
 		const stop = (why) => {
 			if (!reason && !settled) {
 				reason = why;
-				stopTree(child);
+				try {
+					cleanupUnknown = terminate(child) !== true;
+				} catch {
+					cleanupUnknown = true;
+				}
+				terminationTimer = setTimeout(() => {
+					cleanupUnknown = true;
+					child.stdin.destroy();
+					child.stdout.destroy();
+					child.stderr.destroy();
+					child.unref();
+					finish(null, new Error("process termination could not be confirmed"));
+				}, terminationGraceMs);
 			}
 		};
 		const abort = () => stop("cancelled");
@@ -123,10 +153,14 @@ export function runProcess({
 			if (settled) return;
 			settled = true;
 			clearTimeout(timeout);
+			clearTimeout(terminationTimer);
 			clearInterval(stall);
 			signal?.removeEventListener("abort", abort);
 			resolve({
-				reason: reason ?? (error ? "spawn-error" : exitCode === 0 ? "success" : "failed"),
+				reason: cleanupUnknown
+					? "termination-unknown"
+					: (reason ?? (error ? "spawn-error" : exitCode === 0 ? "success" : "failed")),
+				cleanupUnknown,
 				exitCode,
 				stdout: Buffer.concat(stdout).toString("utf8"),
 				stderr: Buffer.concat(stderr).toString("utf8"),
@@ -151,7 +185,14 @@ export function runProcess({
 		child.stdout.on("data", (data) => consume(stdout, data));
 		child.stderr.on("data", (data) => consume(stderr, data));
 		child.once("error", (error) => finish(null, error));
-		child.once("close", (code) => finish(code));
+		child.once("close", (code) => {
+			try {
+				onClose?.(code);
+			} catch {
+				reason ??= "observer-error";
+			}
+			finish(code);
+		});
 		child.stdin.on("error", () => {});
 		child.once("spawn", () => {
 			try {

@@ -1,11 +1,14 @@
 // Copyright The Open Forge contributors.
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { assertApproved, trustedHumans } from "./approval.mjs";
 import { digest, requireCapability } from "./contracts.mjs";
+import { auditDesign } from "./design.mjs";
 import { assertCheckResults, assertIndependentReview, testReport } from "./evidence.mjs";
-import { changedFiles, snapshot } from "./git.mjs";
+import { changedFiles, readChanges, snapshot } from "./git.mjs";
 import { assertLease, renew } from "./leases.mjs";
+import { classifyChanges } from "./policy.mjs";
 import { isolatedEnvironment, runProcess } from "./process.mjs";
 import { codeBinding } from "./runner.mjs";
 
@@ -34,6 +37,21 @@ export async function verifyRun({ store, policy, token, signal, resolveCommand =
 	if (run.contract.policyDigest !== digest(policy)) throw new Error("verification policy changed");
 	const binding = codeBinding(run.contract, snapshot(run.contract.worktree));
 	assertIndependentReview(run.review, run.authors, binding, policy.differentReviewerFamily);
+	const approvals = run.approvals ?? [];
+	const changes = readChanges(run.contract.worktree, run.contract.baseCommit);
+	const design = auditDesign(changes);
+	if (design.findings.length)
+		throw new Error(
+			`DESIGN source violations: ${design.findings.map((finding) => `${finding.rule} ${finding.file}:${finding.line}`).join(", ")}`,
+		);
+	if (design.affected.length && !run.contract.checks.includes("ui"))
+		throw new Error("UI changes require runtime and visual verification; source lint is insufficient");
+	assertApproved(
+		classifyChanges(changes),
+		binding,
+		approvals,
+		approvals.length ? trustedHumans(store.root) : new Map(),
+	);
 	if (policy.requiredChecks.some((id) => !run.contract.checks.includes(id)))
 		throw new Error("run contract omits a required check");
 	for (const id of run.contract.checks) {
@@ -52,6 +70,8 @@ export async function verifyRun({ store, policy, token, signal, resolveCommand =
 		assertLease(state, token, Date.now());
 		state.runs[token.runId].status = "verifying";
 		state.runs[token.runId].checks = [];
+		state.runs[token.runId].verificationArtifacts ??= [];
+		state.runs[token.runId].verificationArtifacts.push(checkDirectory);
 	});
 	const heartbeat = setInterval(() => {
 		try {
@@ -81,7 +101,16 @@ export async function verifyRun({ store, policy, token, signal, resolveCommand =
 						state.runs[token.runId].pid = pid;
 					}),
 			});
+			if (result.cleanupUnknown)
+				store.transaction((state) => {
+					assertLease(state, token, Date.now(), { allowExpired: true });
+					state.runs[token.runId].cleanupUnknown = true;
+					state.runs[token.runId].pid = result.pid;
+					state.control.paused = true;
+				});
 			if (heartbeatError) throw heartbeatError;
+			writeFileSync(join(checkDirectory, `${id}.stdout.log`), result.stdout, { mode: 0o600 });
+			writeFileSync(join(checkDirectory, `${id}.stderr.log`), result.stderr, { mode: 0o600 });
 			assertLease(store.read(), token, Date.now());
 			const check = {
 				id,
@@ -106,7 +135,8 @@ export async function verifyRun({ store, policy, token, signal, resolveCommand =
 			store.transaction((state) => {
 				assertLease(state, token, Date.now());
 				state.runs[token.runId].checks.push(check);
-				state.runs[token.runId].pid = null;
+				state.runs[token.runId].cleanupUnknown = result.cleanupUnknown;
+				state.runs[token.runId].pid = result.cleanupUnknown ? result.pid : null;
 			});
 			if (check.status !== "passed") throw new Error(`verification failed: ${id} (${result.reason})`);
 		}
@@ -120,8 +150,8 @@ export async function verifyRun({ store, policy, token, signal, resolveCommand =
 	store.transaction((state) => {
 		assertLease(state, token, Date.now(), { allowExpired: true });
 		const current = state.runs[token.runId];
-		current.pid = null;
-		current.status = failure ? "verification-failed" : "verified";
+		if (!current.cleanupUnknown) current.pid = null;
+		current.status = current.cleanupUnknown ? "cleanup-required" : failure ? "verification-failed" : "verified";
 		current.verificationFailure = failure?.message ?? null;
 		state.audit.push({
 			event: "verification-finished",

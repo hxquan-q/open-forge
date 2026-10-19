@@ -586,17 +586,17 @@ solar 常用对照：菜单 `menu-dots`、关闭 `close-circle`、删除 `trash-
 
 ## Lint checklist（agent 提交前自查）
 
-- [ ] 没有 hex / `rgb(` / 默认 Tailwind 调色盘（slate/zinc/sky/violet/pink/orange/red/blue/green，除语义色白名单的 emerald/amber）
-- [ ] 没有 `shadow-[...]` 自定义任意值；卡片 hover 无 shadow；按钮无发光阴影
-- [ ] 按钮一律用 `<Button>` + variant，没有手写 `<button>` / `<motion.button>` 自拼按钮样式
-- [ ] 描边线只有 1px：没有 `border-2/4`、`outline-2`、`border-[Npx]`；用了 `ring-2/4` 的话它必须是实心领圈而不是描边
-- [ ] 没有 `rounded-3xl` / `rounded-[Npx]`
-- [ ] 没有 `transition-all`
-- [ ] 字号只落在 `10 / 11 / 12 / 13 / 14 / 15 / 20+` 七档（`text-base md:text-sm` 的输入基元惯用法除外，见「Typography · 已知例外」）
-- [ ] hover `whileHover` 不超过总则表格
-- [ ] 没有自写 `@keyframes … infinite`；进行中指示走宿主挂载，加载态用 `<Spin>`
-- [ ] 顶栏拖拽区域单独 `<div className="drag-region h-12 shrink-0" />`
-- [ ] 没有手写 scrollbar 样式
+- [ ] **D01** 没有 hex / `rgb(` / 默认 Tailwind 调色盘（slate/zinc/sky/violet/pink/orange/red/blue/green，除语义色白名单的 emerald/amber）
+- [ ] **D02** 没有 `shadow-[...]` 自定义任意值；卡片 hover 无 shadow；按钮无发光阴影
+- [ ] **D03** 按钮一律用 `<Button>` + variant，没有手写 `<button>` / `<motion.button>` 自拼按钮样式
+- [ ] **D04** 描边线只有 1px：没有 `border-2/4`、`outline-2`、`border-[Npx]`；用了 `ring-2/4` 的话它必须是实心领圈而不是描边
+- [ ] **D05** 没有 `rounded-3xl` / `rounded-[Npx]`
+- [ ] **D06** 没有 `transition-all`
+- [ ] **D07** 字号只落在 `10 / 11 / 12 / 13 / 14 / 15 / 20+` 七档（`text-base md:text-sm` 的输入基元惯用法除外，见「Typography · 已知例外」）
+- [ ] **D08** hover `whileHover` 不超过总则表格
+- [ ] **D09** 没有自写 `@keyframes … infinite`；进行中指示走宿主挂载，加载态用 `<Spin>`
+- [ ] **D10** 顶栏拖拽区域单独 `<div className="drag-region h-12 shrink-0" />`
+- [ ] **D11** 没有手写 scrollbar 样式
 
 ---
 
@@ -609,5 +609,5 @@ solar 常用对照：菜单 `menu-dots`、关闭 `close-circle`、删除 `trash-
 - `packages/theme-ui/src/shared/SegmentedControl.tsx` 使用 `bg-black/[0.06]`、`dark:bg-white/[0.08]`、`shadow-[0_1px_2px_rgba(...)]` 等字面色值与任意阴影。
 - `packages/ui/src/dialog.tsx` 的 `DialogOverlay` 用 `bg-black/20`；`DialogTitle` 用 `text-base`（16px，落在七档之外）。
 - `apps/desktop/src/renderer/domains/agent-teams/components/AgentProfileEditor.tsx` 两处区块标题用 `text-base font-bold`；`packages/theme-ui/src/action-approval/BatchTasksExecutionApprovalView.tsx` 的计数数字用 `text-base font-semibold`——都落在七档之外，且不属于「输入基元移动端惯用法」那条例外。
-- `apps/desktop/AGENTS.md` §5「主题与样式」仍在指示 `var(--text-1)` / `var(--hover)`（这些变量在全库无声明），并称 `bg-primary` / `text-foreground` "未在项目中配置"——与现行 `@theme inline` 体系相反，**以本文件为准**。
+- `apps/desktop/AGENTS.md` §5 已与现行 `@theme inline` token 体系对齐；旧的 `--text-1` / `--hover` 指引已撤销。
 - 历史项：`SkillsPage.tsx` 的 `violet-*` 自定义标签已迁移为 `bg-primary/10 text-primary`。

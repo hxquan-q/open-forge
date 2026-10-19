@@ -18,6 +18,39 @@ afterEach(() => {
 });
 
 describe("isolated external process lifecycle", () => {
+	it("reports unconfirmed termination instead of silently returning a clean cancellation", async () => {
+		const root = folder();
+		const cancellation = new AbortController();
+		let pid;
+		let markClosed;
+		const closed = new Promise((resolve) => {
+			markClosed = resolve;
+		});
+		try {
+			const result = await runProcess({
+				command: [process.execPath, "-e", "console.log('ready');setInterval(()=>{},1000)"],
+				cwd: root,
+				env: isolatedEnvironment(root),
+				signal: cancellation.signal,
+				onSpawn: (value) => {
+					pid = value;
+				},
+				onActivity: () => cancellation.abort(),
+				onClose: () => markClosed(),
+				terminate: () => false,
+				terminationGraceMs: 25,
+			});
+			expect(result.reason).toBe("termination-unknown");
+			expect(result.cleanupUnknown).toBe(true);
+		} finally {
+			if (pid) {
+				try {
+					process.kill(pid, "SIGKILL");
+				} catch {}
+				await closed;
+			}
+		}
+	});
 	it("cancels a spawned descendant as well as its parent", async () => {
 		const root = folder();
 		const cancellation = new AbortController();

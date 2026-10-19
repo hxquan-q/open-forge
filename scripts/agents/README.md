@@ -15,15 +15,20 @@
 ```powershell
 # 只读检查配置，不调用模型，不验证真实沙箱或发布环境
 node scripts/agents/cli.mjs doctor
+node scripts/agents/cli.mjs queue
 
 # 操作者指定独立、仅控制器可访问的状态目录；不要选真实用户状态目录
 node scripts/agents/cli.mjs claim --task TASK-xxxx --holder <controller-id> --run-id <unique-id> --state-dir <controller-state>
+node scripts/agents/cli.mjs prepare --run-id <unique-id> --test <test-file> --state-dir <controller-state>
 # Coordinator 按既有入口把 Task / 索引推进到 in_progress 并准备已提交基线后，生成合同
 node scripts/agents/cli.mjs plan --task TASK-xxxx --worktree <task-worktree> --test <test-file>
 node scripts/agents/cli.mjs run --run-id <unique-id> --adapter <configured-adapter> --role implementer --contract <contract.json> --state-dir <controller-state>
 node scripts/agents/cli.mjs run --run-id <unique-id> --adapter <independent-adapter> --role reviewer --contract <contract.json> --state-dir <controller-state>
 node scripts/agents/cli.mjs verify --run-id <unique-id> --state-dir <controller-state>
 node scripts/agents/cli.mjs evidence --run-id <unique-id> --state-dir <controller-state>
+node scripts/agents/cli.mjs integration-preview --run-id <unique-id> --state-dir <controller-state>
+# 对新的合并候选再次 review / verify 后，才能应用
+node scripts/agents/cli.mjs integrate --run-id <unique-id> --state-dir <controller-state>
 node scripts/agents/cli.mjs status --state-dir <controller-state>
 node scripts/agents/cli.mjs pause --state-dir <controller-state>
 node scripts/agents/cli.mjs resume --state-dir <controller-state>
@@ -31,6 +36,10 @@ node scripts/agents/cli.mjs release --run-id <unique-id> --state-dir <controller
 ```
 
 `plan` 将 JSON 输出到 stdout，不默认写文件。claim 可用于人工协作，模型执行另受 level、能力、Provider 白名单与执行器配置约束。`release` 是释放租约，不是发布软件。`recover` 仅在 writer.lock 对应进程已确认不存在时回收锁；不修复或清空损坏状态。
+
+`cycle --task <ID> --holder <ID> --run-id <ID> --test <file> --state-dir <dir>` 自动续接同一 Task 的准备、实现、独立评审和验证；`--through integrate` 还需 integrate-dev 能力并对最终合并提交重验。它不推送或发布。控制器在准备时绑定仓库，准备失败保留所有源文件与中间 Git 状态，不能当空队列重跑。
+
+`approval --run-id <ID> --approval <signed.json> --state-dir <dir>` 导入 Schema 定义的 Ed25519 外部批准。操作者把公钥写入独立状态目录的 `trusted-humans.json`（`{"version":1,"keys":[{"id":"operator","publicKey":"<PEM>"}]}`）；私钥不进入仓库或控制器 Worker。签名原文是 payload 的 `canonical()` UTF-8 字节，最多 24 小时；代码/合同变化后重签。工具不提供 human 自签按钮。
 
 ## 信任与恢复
 
@@ -41,6 +50,8 @@ node scripts/agents/cli.mjs release --run-id <unique-id> --state-dir <controller
 运行器记录配置固定的身份和实际子进程结果，模型文本只能输出有限结果 Schema，不能声明自己是 human。身份元数据不等于厂商独立性或模型质量的数学证明；用量拿不到时记录 null，不能写成 0。
 
 验证使用仓库 Node runner、完整 check 和 impact 入口。必需检查缺失、无实际通过断言、候选代码/策略/执行器配置变化时拒绝沿用旧证据。UI 和 packaged 检查需要明确能力；UI 验证适配器尚未接入时拒绝，不以普通单测代替。
+
+DESIGN 源审计随完整 check 执行，只拦截新增可检测违规；模板表达式、输入基元例外、布局、交互及六套主题组合仍列作覆盖空白。测试日志有上限并保存到控制器 artifacts；对外证据使用摘要，排查时仅读取当前任务所需日志。
 
 ## 验证
 
