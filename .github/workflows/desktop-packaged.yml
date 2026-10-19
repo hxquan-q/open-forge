@@ -1,11 +1,10 @@
 # Modified by The Open Forge contributors.
 name: desktop-packaged
 
+# ISSUE-0029：预算受限期间不在 dev push 上运行打包链路；改为 PR 与手动触发。
 on:
-  push:
-    branches:
-      - dev
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

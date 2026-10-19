@@ -427,6 +427,17 @@ describe("CI unit test coverage", () => {
 		expect(workflow).toContain("bun run test:changed --base");
 	});
 
+	it("keeps dev pushes light and reserves the cross-platform matrix for pull requests and manual runs", () => {
+		const packaged = readFileSync(join(repoRoot, ".github/workflows/desktop-packaged.yml"), "utf8");
+		expect(workflow).toContain("workflow_dispatch:");
+		expect(workflow).toMatch(
+			/unit-tests:[\s\S]*?if: github\.event_name == 'pull_request' \|\| github\.event_name == 'workflow_dispatch'/u,
+		);
+		expect(workflow).toContain("|| 'origin/dev'");
+		expect(packaged).toContain("workflow_dispatch:");
+		expect(packaged).not.toMatch(/^on:\r?\n {2}push:/mu);
+	});
+
 	it("cancels stale runs, fails the platform matrix fast, and reuses only the exact-lockfile Bun cache", () => {
 		expect(workflow).toContain("cancel-in-progress: true");
 		expect(workflow).toContain("fail-fast: true");

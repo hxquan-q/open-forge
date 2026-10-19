@@ -1,17 +1,17 @@
 ---
 id: ISSUE-0029
 type: issue
-status: draft
+status: blocked
 priority: P1
 owner: release/product
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0183, TASK-0184, TASK-0180, TASK-0182, TASK-0179]
+related_tasks: [TASK-0183, TASK-0184, TASK-0180, TASK-0182, TASK-0179, TASK-0321]
 related_issues: []
 related_bugs: [BUG-0066, BUG-0067]
 source: CI run annotations (hxquan-q/open-forge, 2026-10-03 起)
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-19
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -49,6 +49,17 @@ X The job was not started because an Actions budget is preventing further use.
 ## 推荐方案
 
 先由用户决定是否恢复预算。在此之前，允许 TASK-0183/0184 等以本地/单元级验证推进实现，并把「CI 复跑绿」明确记为待办验收项，不谎称已通过。
+
+## 决策（2026-10-19）
+
+用户决定保留 open-forge 的有效反馈，同时压缩额度消耗：
+
+- `dev` push 只运行 `check + quality tests`（ubuntu）；三平台单测矩阵改为 PR / 手动触发；
+- desktop-packaged 移除 `dev` push 触发，改为 PR / 手动触发；
+- 名下其他私有仓库的 Actions 已停用：`dyp`、`ShunX`、`xiaoai`、`weallstar`；public 仓库的 Actions 不消耗私有仓库分钟数，未停用；
+- 预算本身仍由用户在账户侧提高 spending limit 或等待账期重置，Agent 不能代办。
+
+执行记录见 [TASK-0321](../tasks/TASK-0321-ci-budget-trigger-slimming.md)。
 
 ## 决策触发条件
 

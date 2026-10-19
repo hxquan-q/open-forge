@@ -1,3 +1,4 @@
+# Modified by The Open Forge contributors.
 name: quality
 
 on:
@@ -5,6 +6,7 @@ on:
     branches:
       - dev
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -41,8 +43,10 @@ jobs:
       - name: Verify installed runtime artifact
         run: bun run verify:artifact:installed
 
+  # ISSUE-0029：预算受限期间 dev push 只跑轻量检查；三平台矩阵留给 PR 与手动触发。
   unit-tests:
     name: affected unit tests (${{ matrix.os }})
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -76,7 +80,7 @@ jobs:
         uses: ./.github/actions/install-bun-dependencies
 
       - name: Test affected workspaces
-        run: bun run test:changed --base "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+        run: bun run test:changed --base "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || 'origin/dev' }}"
 
       - name: Upload Turbo run summaries
         if: always()
