@@ -114,7 +114,8 @@ updated: 2026-10-19
 - 实际运行：
   - `cd apps/desktop && bun run test -- src/renderer/domains/project/components/sidebar src/renderer/shared/i18n`：22 文件 / 132 例全绿（含新增 2 例）；
   - `bun run check:quick`：通过（含修改声明审计 `ratchet new=0`）；
-  - `bun run check`：lint、五路 typecheck、guards、mobile lint 全绿。
-- 未运行及原因：`verify:ui:*` 需用户明确授权，未运行；未跑 `test:impact` / `test:changed`——本次只改 catalog 文案值与注释，已用侧边栏与 i18n 定向套件覆盖渲染路径，完整 check 覆盖类型与守卫；真实侧边栏观感留待人工验收。
+  - `bun run check`：lint、五路 typecheck、guards、mobile lint 全绿；
+  - `bun run test:impact -- <本次 11 个源文件>`：JSON catalog 被广泛 import，影响面回退为 desktop 全包——975 文件 / 5267 例中 967 文件 / 5250 例通过、17 例跳过，4 个套件加载失败（`process.resourcesPath` 为 undefined，报错位于 `main/window-manager.ts:25`）。该 4 个文件与本次改动无交集；单独复跑 `src/main/file-protocol.test.ts` 同样在 `process.resourcesPath` 处失败，确认为本机环境存量失败，非本次回归。
+- 未运行及原因：`verify:ui:*` 需用户明确授权，未运行；真实侧边栏观感留待人工验收。
 - Worktree：未拆 worktree（`worktree: .`），改动在主工作区串行完成。
 - 剩余风险：设计画廊插件标签由插件宿主加载，运行中的 dev 实例需重启 `bun dev` 才可见；能力页标题仍是「能力」（有意，见 REQ「不做什么」）。
