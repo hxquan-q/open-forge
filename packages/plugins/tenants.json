@@ -20,7 +20,8 @@
         "content-creation",
         "browser",
         "build-apple-apps",
-        "eform-craft"
+        "eform-craft",
+        "mes-kit-analysis"
       ]
     },
     "production": {
@@ -39,7 +40,8 @@
         "plugin-workbench",
         "browser",
         "build-apple-apps",
-        "eform-craft"
+        "eform-craft",
+        "mes-kit-analysis"
       ]
     }
   }

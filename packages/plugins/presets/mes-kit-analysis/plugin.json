@@ -1,0 +1,32 @@
+{
+	"id": "mes-kit-analysis",
+	"name": "%plugin.name%",
+	"version": "0.1.0",
+	"icon": "icon.png",
+	"defaultLocale": "zh",
+	"pluginApiVersion": "^2.0.0",
+	"entry": "dist/mf-manifest.json",
+	"moduleFederation": {
+		"remoteName": "mes_kit_analysis",
+		"expose": "./plugin"
+	},
+	"permissions": ["agent.skills.control"],
+	"agent": {
+		"skillPaths": ["agent/skills"],
+		"skillPresentation": {
+			"defaultVisibility": "hidden"
+		},
+		"agents": [
+			{
+				"id": "kit-analyst",
+				"name": "%agent.kitAnalyst.name%",
+				"description": "%agent.kitAnalyst.description%",
+				"mentionHandle": "kitcheck",
+				"systemPromptPath": "agent/agents/kit-analyst.md",
+				"roles": ["master"]
+			}
+		]
+	},
+	"description": "%plugin.description%",
+	"author": "Vetta"
+}

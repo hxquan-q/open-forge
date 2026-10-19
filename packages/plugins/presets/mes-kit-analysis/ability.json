@@ -1,0 +1,68 @@
+{
+	"schemaVersion": 1,
+	"type": "plugin",
+	"slug": "mes-kit-analysis",
+	"version": "0.1.0",
+	"detail": {
+		"blocks": [
+			{
+				"type": "feature-grid",
+				"title": "生产工单齐套性分析",
+				"items": [
+					{
+						"title": "只读取数与快照装配",
+						"description": "经用户配置的数据库 MCP 工具按 R1-R7 口径只读提取（需求=未领数量、供给=库存+采购在途+生产在途、竞争需求全量入池），装配可回溯快照 JSON，绝不写库。",
+						"icon": "solar:database-line-duotone"
+					},
+					{
+						"title": "fail-closed 分析引擎",
+						"description": "本地 Python 引擎（纯标准库）做契约校验与净池分配：缺失≠零需求、不隐式单位换算、不推断历史库存；数据不足即阻断、全部结论判 unknown。",
+						"icon": "solar:shield-check-line-duotone"
+					},
+					{
+						"title": "分级结论与离线看板",
+						"description": "工单级五态结论（按期齐套/晚到可补/短缺/无需求/未知），缺口到物料粒度并给出齐套时点；单文件离线看板（CSP 禁外联）可直接分发。",
+						"icon": "solar:chart-square-line-duotone"
+					},
+					{
+						"title": "缺口治理清单",
+						"description": "live 阻断时输出数据缺口清单（coverage 未确认项、用料清单缺失工单）与治理建议，把 fail-closed 变成数据治理的抓手。",
+						"icon": "solar:clipboard-list-line-duotone"
+					}
+				]
+			}
+		],
+		"i18n": {
+			"en": {
+				"blocks": [
+					{
+						"type": "feature-grid",
+						"title": "Production kit-readiness analysis",
+						"items": [
+							{
+								"title": "Read-only extraction & snapshot",
+								"description": "Extracts read-only via the user's database MCP tool under the R1-R7 rules (demand = unissued qty; supply = stock + purchase in-transit + production in-transit; competing demands pooled), assembling a traceable snapshot JSON. Never writes to the database.",
+								"icon": "solar:database-line-duotone"
+							},
+							{
+								"title": "Fail-closed analysis engine",
+								"description": "A local Python engine (stdlib only) validates the contract and allocates the shared net pool: missing ≠ zero demand, no implicit unit conversion, no inferred stock history; insufficient data blocks with all verdicts unknown.",
+								"icon": "solar:shield-check-line-duotone"
+							},
+							{
+								"title": "Graded verdicts & offline dashboard",
+								"description": "Per-order five-state verdicts (on-time / late / shortage / no-demand / unknown) with material-level gaps and ready-at times; a single-file offline dashboard (CSP-restricted) ready to share.",
+								"icon": "solar:chart-square-line-duotone"
+							},
+							{
+								"title": "Gap governance list",
+								"description": "On a live block, emits a data-gap list (unconfirmed coverage keys, orders missing BOMs) with governance advice — turning fail-closed into a data-governance lever.",
+								"icon": "solar:clipboard-list-line-duotone"
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+}
