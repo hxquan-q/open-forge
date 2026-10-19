@@ -81,7 +81,7 @@ function fixture({ loseResponse = false } = {}) {
 	const canonicalPath = fileURLToPath(new URL("./schema.mjs", import.meta.url));
 	writeFileSync(
 		publisherPath,
-		`import {readFileSync,writeFileSync,existsSync} from 'node:fs';import {sign} from 'node:crypto';import {pathToFileURL} from 'node:url';const {canonical}=await import(pathToFileURL(${JSON.stringify(canonicalPath)}));let input='';for await(const c of process.stdin)input+=c;const request=JSON.parse(input);const file=${JSON.stringify(remotePath)};let remote=existsSync(file)?JSON.parse(readFileSync(file,'utf8')):null;if(request.operation!=='query'){remote={calls:(remote?.calls??0)+1,status:request.operation==='pause'?'paused':'published',rolloutPercent:request.percent};writeFileSync(file,JSON.stringify(remote));}const payload={version:1,kind:'publication',keyId:'fixture',issuedAt:request.requestedAt-100,expiresAt:request.requestedAt+60000,subject:request.subject,data:{idempotencyKey:request.idempotencyKey,operation:request.operation,status:remote?.status??'not-found',rolloutPercent:remote?.rolloutPercent??0,remoteId:'fixture-release'}};if(${loseResponse}&&request.operation==='publish'){console.log('response lost');}else{console.log(JSON.stringify({payload,signature:sign(null,Buffer.from(canonical(payload)),readFileSync(${JSON.stringify(keyPath)})).toString('base64')}));}`,
+		`import {readFileSync,writeFileSync,existsSync} from 'node:fs';import {sign} from 'node:crypto';import {pathToFileURL} from 'node:url';const {canonical}=await import(pathToFileURL(${JSON.stringify(canonicalPath)}));let input='';for await(const c of process.stdin)input+=c;const request=JSON.parse(input);const file=${JSON.stringify(remotePath)};let remote=existsSync(file)?JSON.parse(readFileSync(file,'utf8')):null;if(request.operation!=='query'){remote={calls:(remote?.calls??0)+1,status:request.operation==='pause'?'paused':'published',rolloutPercent:request.percent};writeFileSync(file,JSON.stringify(remote));}const payload={version:1,kind:'publication',keyId:'fixture',issuedAt:Math.max(Date.now(),request.requestedAt),expiresAt:Math.max(Date.now(),request.requestedAt)+60000,subject:request.subject,data:{idempotencyKey:request.idempotencyKey,operation:request.operation,status:remote?.status??'not-found',rolloutPercent:remote?.rolloutPercent??0,remoteId:'fixture-release'}};if(${loseResponse}&&request.operation==='publish'){console.log('response lost');}else{console.log(JSON.stringify({payload,signature:sign(null,Buffer.from(canonical(payload)),readFileSync(${JSON.stringify(keyPath)})).toString('base64')}));}`,
 	);
 	const settings = {
 		version: 1,
@@ -233,6 +233,25 @@ it("rejects unsigned, wrong-subject, missing-platform and stale authorization be
 	altered.payload.data.passed = false;
 	await expect(publishRelease({ ...context, proofs: [altered, ...context.proofs.slice(1)] })).rejects.toThrow();
 	const proof = context.proofs[0];
+	const future = context.proof("ci", context.subject, proof.payload.data, Date.now() + 60000);
+	const expired = context.proof("ci", context.subject, proof.payload.data, Date.now() - 120000);
+	for (const invalidTime of [future, expired])
+		expect(() =>
+			verifyServiceProof(invalidTime, {
+				kind: "ci",
+				subject: context.subject,
+				trust: trustedServices(context.store.root),
+			}),
+		).toThrow(/clock interval/);
+	const tampered = structuredClone(proof);
+	tampered.payload.data.checks = ["tests"];
+	expect(() =>
+		verifyServiceProof(tampered, {
+			kind: "ci",
+			subject: context.subject,
+			trust: trustedServices(context.store.root),
+		}),
+	).toThrow(/signature/);
 	expect(() =>
 		verifyServiceProof(proof, { kind: "ci", subject: "a".repeat(64), trust: trustedServices(context.store.root) }),
 	).toThrow(/subject/);

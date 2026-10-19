@@ -236,7 +236,16 @@ async function dispatch({ root, store, policy, settings, id, action, percent, no
 				}),
 		});
 		if (processResult.reason !== "success") throw new Error(`publisher ended with ${processResult.reason}`);
-		return acceptReceipt(store, id, JSON.parse(processResult.stdout), settings, now, item.operation, item.generation);
+		const receivedAt = Math.max(now, Date.now());
+		return acceptReceipt(
+			store,
+			id,
+			JSON.parse(processResult.stdout),
+			settings,
+			receivedAt,
+			item.operation,
+			item.generation,
+		);
 	} catch (error) {
 		return store.transaction((state) => {
 			const release = state.releases[id];

@@ -9,4 +9,11 @@
 
 ## 已审候选
 
-当前为空。尚未执行真实每日自主复盘，不预填计数或模拟历史。
+以下为本会话技术自审形成的候选；尚未执行每日自主模型复盘或独立模型评审。
+
+### d224e60f2f33 — Seen 1×
+
+- 规则候选：Validate asynchronous service receipts at reception time.
+- 原因：真实服务在请求发出后签发回执；使用发起时刻校验会把正常响应误判为未来数据。此前固定时钟夹具掩盖了这个错误。
+- 证据：来源提交 `c22ccc1c53053426d302fc2d7d159631dbf869dc`，[BUG-0133](project/bugs/BUG-0133-publication-receipt-clock.md)；真实子进程时钟回归先有 4/8 失败，修后 8/8 通过，未来/过期/篡改继续拒绝。
+- 日期：2026-10-19；promotion=collecting，enforced=false。通过公开 lesson 命令重放同一证据仍为 Seen 1×，未晋升为硬规则。
