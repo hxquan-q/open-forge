@@ -8,6 +8,7 @@ import type {
 	WeKnoraStreamEvent,
 } from "@preload/api";
 import { atom } from "jotai";
+import type { WeKnoraSessionBuffers, WeKnoraStreamRoutes } from "./weKnoraStreamStore";
 
 /**
  * 「智能客服」页面的状态原子。
@@ -57,6 +58,27 @@ export const weKnoraMessagesAtom = atom<WeKnoraChatMessage[]>([]);
 export const weKnoraSessionIdAtom = atom<string | null>(null);
 export const weKnoraStreamingAtom = atom<boolean>(false);
 export const weKnoraActiveRequestIdAtom = atom<string | null>(null);
+/**
+ * 流归属表（后台思考，02-plan §2.6）：requestId → 所属会话 id。
+ *
+ * 模块级跨挂载存活：切走页面 / 切换会话都不清（后台流照跑，AC-16）；
+ * 终态 / 取消 / 失败即注销（见 weKnoraStreamStore）。
+ */
+export const weKnoraStreamRoutesAtom = atom<WeKnoraStreamRoutes>({});
+/**
+ * 每会话消息缓冲（后台思考）：键 = 会话 id 或草稿键 `draft:<视图代次>`。
+ *
+ * **条目存在即「该会话有活跃流」**——AC-19 行级指示、AC-10 禁删都从它派生；
+ * 仅活跃流留条目，终态释放（R6 内存有界），回看走 openSession。
+ */
+export const weKnoraSessionBuffersAtom = atom<WeKnoraSessionBuffers>({});
+/**
+ * 视图代次：每次切换当前对话（新建 / 打开历史）自增。
+ *
+ * 用途：草稿期发起的 ask 还没有 sessionId，靠代次标记「属于哪个视图回合」——
+ * ask 返回时若代次已变（用户切走了），该流按后台处理，不劫持新视图（防串台）。
+ */
+export const weKnoraViewSeqAtom = atom<number>(0);
 /** 历史会话列表（从 WeKnora 读，本地不持久化，红线 C8）。 */
 export const weKnoraSessionsAtom = atom<WeKnoraSession[]>([]);
 export const weKnoraSessionsStatusAtom = atom<WeKnoraHistoryStatus>("idle");

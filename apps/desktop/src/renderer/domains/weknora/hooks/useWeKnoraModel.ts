@@ -40,7 +40,10 @@ export interface WeKnoraViewModel {
 	readonly agentsStatus: WeKnoraAgentsStatus;
 	readonly selectedAgentId: string | null;
 	readonly messages: readonly WeKnoraChatMessage[];
+	/** **当前会话**是否在流式中（per-session 语义，AC-18）：驱动输入区与取消入口。 */
 	readonly isStreaming: boolean;
+	/** 有活跃流（含后台思考）的会话 id 集合：历史列表行级指示（AC-19）与禁删判定（AC-10）的事实源。 */
+	readonly streamingSessionIds: ReadonlySet<string>;
 	/** 当前对话绑定的 WeKnora 会话 id；`null` 表示「新对话，尚未建会话」（AC-11/12）。 */
 	readonly currentSessionId: string | null;
 	readonly sessions: readonly WeKnoraSession[];
@@ -117,6 +120,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		selectedAgentId: agents.selectedAgentId,
 		messages: chat.messages,
 		isStreaming: chat.isStreaming,
+		streamingSessionIds: chat.streamingSessionIds,
 		currentSessionId: chat.sessionId,
 		sessions: history.sessions,
 		sessionsStatus: history.sessionsStatus,
