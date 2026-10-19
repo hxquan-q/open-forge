@@ -1,19 +1,19 @@
 ---
-id: TASK-0271
+id: TASK-0318
 type: task
 status: verifying
 priority: P1
 owner: desktop
-requirement: REQ-0014
+requirement: REQ-0017
 plan: null
-source: REQ-0014
+source: REQ-0017
 related_bugs: []
 execution: serial
-branch: task/TASK-0271-weknora-customer-service
+branch: task/TASK-0318-weknora-customer-service
 worktree: .
 base_commit: 9c16ef6f9
 read_paths: [apps/desktop, packages/theme-sdk, packages/ui, docs/devflow]
-write_paths: [apps/desktop/src/main/weknora, apps/desktop/src/main/ipc, apps/desktop/src/preload, apps/desktop/src/renderer/domains/weknora, apps/desktop/src/renderer/domains/project/components/sidebar, apps/desktop/src/renderer/router.tsx, apps/desktop/src/renderer/shared/i18n, apps/desktop/src/shared/i18n, packages/theme-sdk/src/sidebar/types.ts, .github/release-notes/v0.1.3.md, docs/weknora-connector.md, docs/weknora-connector-delivery.md, project/requirements/REQ-0014-weknora-customer-service.md, project/requirements/README.md, project/tasks/TASK-0271-weknora-customer-service.md, project/tasks/README.md]
+write_paths: [apps/desktop/src/main/weknora, apps/desktop/src/main/ipc, apps/desktop/src/preload, apps/desktop/src/renderer/domains/weknora, apps/desktop/src/renderer/domains/project/components/sidebar, apps/desktop/src/renderer/router.tsx, apps/desktop/src/renderer/shared/i18n, apps/desktop/src/shared/i18n, packages/theme-sdk/src/sidebar/types.ts, .github/release-notes/v0.1.3.md, docs/weknora-connector.md, docs/weknora-connector-delivery.md, project/requirements/REQ-0017-weknora-customer-service.md, project/requirements/README.md, project/tasks/TASK-0318-weknora-customer-service.md, project/tasks/README.md]
 exclusive_paths: [apps/desktop/src/main/weknora, apps/desktop/src/renderer/domains/weknora]
 depends_on: []
 conflicts_with: []
@@ -27,7 +27,7 @@ updated: 2026-10-19
 
 ## 目标与来源
 
-需求见 [REQ-0014](../requirements/REQ-0014-weknora-customer-service.md)：在桌面端新增「智能客服」入口，直连公司 WeKnora 知识平台向知识库智能体提问并流式显示回答。
+需求见 [REQ-0017](../requirements/REQ-0017-weknora-customer-service.md)：在桌面端新增「智能客服」入口，直连公司 WeKnora 知识平台向知识库智能体提问并流式显示回答。
 
 本任务承接该需求的**全部实现**：连接层、通道层、界面层与文案。
 

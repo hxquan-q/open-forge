@@ -1,5 +1,5 @@
 ---
-id: REQ-0014
+id: REQ-0017
 type: requirement
 status: ready
 priority: P1
@@ -7,7 +7,7 @@ owner: desktop
 source: user-request（2026-10-16：在桌面端新增「智能客服」入口，直连公司 WeKnora 知识平台向知识库智能体提问）
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0271]
+related_tasks: [TASK-0318]
 related_issues: []
 related_bugs: []
 created: 2026-10-16
@@ -37,7 +37,7 @@ updated: 2026-10-19
 - **不改 WeKnora 侧任何配置**，只做只读调用。
 - **不建第二套事实源**：历史从 WeKnora 读取，本地不持久化会话；凭据复用既有加密存储，不自建。
 - **不新增执行内核**：流事件沿用既有的「主进程自产事件 → 渲染进程增量消费」通道，不经过 TurnPipeline。
-- 首版不含：引用来源角标（上游平台在智能体路径下不产生引用，见 TASK-0271 交付记录）、更完整的冷门错误提示。
+- 首版不含：引用来源角标（上游平台在智能体路径下不产生引用，见 TASK-0318 交付记录）、更完整的冷门错误提示。
 
 ## Given / When / Then
 

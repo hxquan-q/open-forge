@@ -7,7 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
-| `REQ-0014` | 桌面端「智能客服」直连 WeKnora | ready | [TASK-0271](../tasks/TASK-0271-weknora-customer-service.md)（verifying：实现与测试完成，待人工验收） |
+| `REQ-0017` | 桌面端「智能客服」直连 WeKnora | ready | [TASK-0318](../tasks/TASK-0318-weknora-customer-service.md)（verifying：实现与测试完成，待人工验收） |
 | `REQ-0013` | 品牌层贯通模型可见与终端用户可见文案 | ready | [TASK-0249](../tasks/TASK-0249-agent-identity-and-cli-guidance-brand.md)（in_progress）、[TASK-0250](../tasks/TASK-0250-runtime-user-visible-brand-strings.md)、[TASK-0251](../tasks/TASK-0251-system-plugin-brand-copy.md)、[TASK-0252](../tasks/TASK-0252-desktop-i18n-brand-composition-guard.md) |
 | `REQ-0012` | SSH 远程项目文件传输（上传/下载） | ready | [TASK-0240](../tasks/TASK-0240-ssh-file-transfer.md)（verifying：三切片已落地，待人工验收） |
 | `REQ-0011` | 品牌档案默认口径（dev 与打包 = 外部分发） | ready | [TASK-0224](../tasks/TASK-0224-brand-profile-default-distribution.md) |
