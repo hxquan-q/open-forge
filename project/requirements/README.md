@@ -7,6 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
+| `REQ-0018` | 桌面侧边栏入口命名与页面内容一致 | ready | [TASK-0319](../tasks/TASK-0319-sidebar-nav-labels.md)（verifying：catalog 改名与相邻文案已落地，定向 132 例与完整 check 全绿，待人工验收） |
 | `REQ-0017` | 桌面端「智能客服」直连 WeKnora | ready | [TASK-0318](../tasks/TASK-0318-weknora-customer-service.md)（verifying：实现与测试完成，待人工验收） |
 | `REQ-0016` | 受管编码工具环境自诊断（doctor） | ready | [TASK-0307](../tasks/TASK-0307-managed-tool-inspect-and-version-marker.md)（ready）、[TASK-0308](../tasks/TASK-0308-doctor-cli-and-diagnostics-export.md)（ready）、[RESEARCH-0030](../research/RESEARCH-0030-managed-coding-tool-doctor-inspection.md) |
 | `REQ-0015` | 实体表单电子化二期（eform-craft 三版块团队化） | ready | [TASK-0273](../tasks/TASK-0273-eform-team-preset.md)（verifying：五步验证链全绿，团队行为面待实机验收） |

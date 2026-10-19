@@ -5,7 +5,7 @@
 			"automation": "自动化",
 			"batchTasks": "批量任务",
 			"knowledge": "知识库",
-			"skills": "能力",
+			"skills": "技能与连接器",
 			"agents": "智能体",
 			"weknora": "智能客服",
 			"scenes": "场景",
@@ -218,7 +218,7 @@
 				"description": "默认对话列表在这里。最近的会话会按时间排列，点击即可继续上次的对话。"
 			},
 			"skills": {
-				"title": "能力入口",
+				"title": "技能与连接器入口",
 				"description": "点这里打开能力页，安装技能与连接器，让 Vetta 具备更多专业能力。"
 			}
 		}

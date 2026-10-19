@@ -5,7 +5,7 @@
 			"automation": "Automation",
 			"batchTasks": "Batch Tasks",
 			"knowledge": "Knowledge",
-			"skills": "Capabilities",
+			"skills": "Skills & Connectors",
 			"agents": "Agents",
 			"weknora": "Customer Service",
 			"scenes": "Scenes",
@@ -218,7 +218,7 @@
 				"description": "Your default conversation list lives here. Recent sessions are ordered by time — click one to continue."
 			},
 			"skills": {
-				"title": "Capabilities",
+				"title": "Skills & Connectors",
 				"description": "Open the Capabilities page to install skills and connectors that give Vetta more expertise."
 			}
 		}
