@@ -299,6 +299,9 @@ describe("SessionInterruptMonitor", () => {
 				}) as never,
 			listCandidateSessionIds: () => ["s1"],
 			hasPendingAction: () => false,
+			// dev 侧 TASK-0287 将该端口定为必填；本用例只验证 awaitingSubAgents 维度，
+			// 团队在途工作维度按 false 钉住，两个豁免维度互不掩盖。
+			hasPendingSubagentWork: () => false,
 			wasManualStopped: () => false,
 			isAwaitingSubAgents: (sessionId) => sessionId === "s1",
 			readMode: () => "notify",

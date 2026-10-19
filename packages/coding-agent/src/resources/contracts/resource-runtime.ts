@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	EventBus,
 	ExtensionCommandExecutor,
@@ -9,6 +10,7 @@ import type { Theme } from "../../theme/index.js";
 import type { PromptTemplate } from "../prompts/index.js";
 import type { Skill } from "../skills/index.js";
 import type { ResourceDiagnostic } from "./diagnostics.js";
+import type { ProjectResourceTrustDecision, ProjectResourceTrustPort } from "./project-resource-trust.js";
 import type { ResourceAccessPort } from "./resource-access.js";
 import type { ResourcePackageRuntime, ResourcePathMetadata, ResourceSettingsPort } from "./resource-source.js";
 
@@ -35,6 +37,8 @@ export interface SessionResourceRuntime {
 	getSystemPrompt(): string | undefined;
 	getAppendSystemPrompt(): string[];
 	getPathMetadata(): Map<string, ResourcePathMetadata>;
+	/** 最近一次 reload 的项目资源信任判定（诊断/观测用）。 */
+	getProjectResourceTrust(): ProjectResourceTrustDecision;
 	extendResources(paths: ResourceExtensionPaths, signal?: AbortSignal): Promise<void>;
 	setAdditionalSkillPaths(paths: string[], signal?: AbortSignal): Promise<void>;
 	setRuntimeSkillPaths(paths: string[], signal?: AbortSignal): Promise<void>;
@@ -55,6 +59,11 @@ export interface SessionResourceRuntimeOptions {
 	skillLocations: SkillResourceLocations;
 	packages: ResourcePackageRuntime;
 	settings?: ResourceSettingsPort;
+	/**
+	 * 工作区信任端口（GHSA-mqxh）：缺省时放行（域层中性），各组合根
+	 * （sdk/cli/desktop）注入各自策略；判定为拒绝时项目级资源不安装不加载。
+	 */
+	projectResourceTrust?: ProjectResourceTrustPort;
 	eventBus?: EventBus;
 	additionalExtensionPaths?: string[];
 	additionalSkillPaths?: string[];

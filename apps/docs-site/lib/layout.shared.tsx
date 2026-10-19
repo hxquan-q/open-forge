@@ -1,5 +1,5 @@
+// Modified by The Open Forge contributors.
 import { BrandMark } from "@/components/brand-mark";
-import { DiscordGlyph } from "@/components/discord";
 import { getDocsMessages, type DocsLanguage } from "@/lib/i18n";
 import { site } from "@/lib/site";
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
@@ -15,14 +15,6 @@ export function baseOptions(language: DocsLanguage): BaseLayoutProps {
 		},
 		githubUrl: site.githubUrl,
 		links: [
-			{
-				type: "icon",
-				url: site.discordUrl,
-				text: "Discord",
-				label: "Discord",
-				icon: <DiscordGlyph />,
-				external: true,
-			},
 			{
 				text: text.downloadApp,
 				url: site.downloadUrl,

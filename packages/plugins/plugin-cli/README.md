@@ -1,13 +1,28 @@
-# @vetta-org/plugin-cli
+<!-- Modified by The Open Forge contributors. -->
+# Open Forge Plugin CLI
 
-Create, document and install Vetta Desktop plugins from any directory.
+Create, document, and install plugins for Open Forge. The package name `@vetta-org/plugin-cli` and binary `vetta-plugin-cli` are compatibility identifiers.
+
+## Match the target build
+
+Use the CLI and SDK from this checkout or a release verified against your target Open Forge build. A registry package with the same name does not establish compatibility with this repository.
+
+From the repository root, build the local tooling and inspect its help:
+
+```bash
+bun run --cwd packages/plugins/plugin-cli build
+node packages/plugins/plugin-cli/dist/cli.js --help
+```
+
+The `npx` examples below assume you have verified the published version. For local tooling, replace `npx @vetta-org/plugin-cli` with `node <checkout>/packages/plugins/plugin-cli/dist/cli.js`.
 
 ## Start a plugin
 
 ```bash
 npx @vetta-org/plugin-cli init --id my-plugin --name "My Plugin"
-cd my-plugin && npm install
-npm run install:vetta      # build → pack → install into the running Desktop
+cd my-plugin
+bun install
+bun run install:vetta      # build → pack → install into the running Desktop
 ```
 
 The scaffold includes an `AGENTS.md` brief so a coding agent can pick the project up without any
@@ -17,7 +32,7 @@ plugin is also listed in that manifest.
 ## Update an existing project
 
 ```bash
-npm i -D @vetta-org/plugin-sdk@latest    # refresh the bundled manual
+bun add -D @vetta-org/plugin-sdk@<verified-version>  # select a compatible SDK
 npx @vetta-org/plugin-cli init --refresh-guide   # refresh AGENTS.md
 npx @vetta-org/plugin-cli docs --check-latest    # confirm
 ```
@@ -51,7 +66,7 @@ npx @vetta-org/plugin-cli uninstall some-id    # by id, from anywhere
 npx @vetta-org/plugin-cli init hub \
   --name my-market \
   --repository https://github.com/me/my-market \
-  --min-app-version 0.55.0
+  --min-app-version 0.1.3
 ```
 
 Creates the index skeleton, the `abilities/` layout, a repository-level `AGENTS.md`, and a CI
@@ -73,7 +88,7 @@ For marketplace schema v3, a plugin may instead list immutable `releases[]` with
 and SHA-256 digests. Its `source.path` then contains presentation files only. `sync --check`
 checks release metadata and reconciles the catalog version with the highest release; the
 Desktop installation verifies the downloaded package. Before advancing a stable marketplace ref,
-run the publication check from a fixed `open-vetta` checkout as described in
+run the publication check from a fixed Open Forge checkout as described in
 [`docs/open-marketplace.md`](../../../docs/open-marketplace.md).
 
 ## Find the manual
@@ -90,12 +105,11 @@ one this project compiles against, so it never describes contracts the user's ho
 That pinning is also why the manual goes stale: a project created months ago still carries the manual
 from that day, and so does its `AGENTS.md`. Every run therefore prints how to refresh it, and
 `--check-latest` compares the installed SDK against the registry and says so outright when it is
-behind. Since `npx` resolves this CLI to the latest published version, its output is the one link in
-the chain that cannot be out of date — when it disagrees with a checked-in brief, it wins.
+behind. Registry freshness and host compatibility are separate questions: compare the SDK's public contract with the target build before upgrading. Use the installed SDK manual for the version your plugin compiles against.
 
 ## Install a plugin
 
-Install an npm-distributed plugin into the running Vetta Desktop app:
+Install an npm-distributed plugin into the running Open Forge desktop app:
 
 ```bash
 npx @vetta-org/plugin-cli add @example/vetta-plugin-demo
@@ -103,7 +117,7 @@ npx @vetta-org/plugin-cli add @example/vetta-plugin-demo
 
 The npm package is fetched with lifecycle scripts disabled. The CLI extracts only the archive declared by
 `package.json#vetta`, then asks the running Desktop host to validate, approve, and install it. It never writes
-`~/.vetta/plugins` directly.
+the user plugin directory directly. See the [configuration paths](../../../apps/docs-site/content/docs/en/reference/configuration-paths.mdx) for installed and development instances.
 
 Local archives and HTTP(S) archives use the same command:
 
@@ -149,7 +163,7 @@ The published plugin package must include a standard Desktop plugin archive and 
 ## Context Boundary
 
 ```yaml
-purpose: Install npm-distributed plugins into Vetta Desktop
+purpose: Install npm-distributed plugins into Open Forge Desktop
 provides:  
   - "@vetta-org/plugin-cli"
 consumes:  []

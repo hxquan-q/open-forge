@@ -11,7 +11,7 @@ export function BrandMark({ language = "zh" }: { language?: DocsLanguage }) {
 				aria-hidden="true"
 			>
 				<img
-					src="/images/vetta-app-icon.webp"
+					src="/images/open-forge-icon.png"
 					alt=""
 					width="32"
 					height="32"

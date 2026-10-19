@@ -7,18 +7,18 @@ owner: release/docs
 requirement: REQ-0003
 plan: PLAN-0003
 source_issue: ISSUE-0001
-execution: parallel
-branch: task/TASK-0047-repository-docs-brand-migration
-worktree: unassigned（已集成，待推送后清理）
-base_commit: 110b104054837dd53c2d087d672366df61530e27
+execution: serial
+branch: main
+worktree: unassigned（本地 main 主工作区串行）
+base_commit: 018358bb27b6f7854e932c972ae722fcc2ca79a6
 read_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site, apps/desktop/src/shared, apps/desktop/scripts, packages/action-rpc/src/endpoint-file.ts, project/requirements, project/issues/ISSUE-0001-rebrand-infrastructure-decisions.md, .github]
-write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/README.md, apps/docs-site/content/docs, apps/docs-site/lib/i18n.ts, apps/docs-site/lib/seo/social-image.tsx, apps/docs-site/app/layout.tsx, apps/docs-site/.env.example, project/requirements/PRODUCT.md, .github/release-notes]
-exclusive_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, .github, .github/release-notes]
+write_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/README.md, apps/docs-site/content/docs, apps/mobile/README.md, apps/remote-relay/README.md, packages/plugins/README.md, packages/plugins/plugin-cli/README.md, project/tasks/TASK-0047-repository-docs-brand-migration.md, project/tasks/README.md, .github/release-notes, apps/docs-site/lib/site.ts, apps/docs-site/lib/layout.shared.tsx, apps/docs-site/components/brand-mark.tsx, apps/docs-site/components/home.tsx, apps/docs-site/components/studio-banner.tsx, apps/docs-site/public/images, project/requirements/PRODUCT.md]
+exclusive_paths: [README.md, README.zh-CN.md, QUICKSTART.md, QUICKSTART.zh-CN.md, CONTRIBUTING.md, CONTRIBUTING.zh-CN.md, SECURITY.md, docs, apps/docs-site/content/docs, apps/mobile/README.md, apps/remote-relay/README.md, packages/plugins/README.md, packages/plugins/plugin-cli/README.md, .github/release-notes, apps/docs-site/lib/site.ts, apps/docs-site/lib/layout.shared.tsx, apps/docs-site/components/brand-mark.tsx, apps/docs-site/components/home.tsx, apps/docs-site/components/studio-banner.tsx, apps/docs-site/public/images, project/requirements/PRODUCT.md]
 depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0048, TASK-0154, TASK-0197, TASK-0218, TASK-0223]
 integration_status: integrated
 created: 2026-09-23
-updated: 2026-10-15
+updated: 2026-10-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -33,11 +33,11 @@ updated: 2026-10-15
 ### 并发评估
 
 - 结论：不支持与 TASK-0048 并发；两项共享文档路线、社区链接审查和 Release Notes。
-- 当前执行方式：单 Agent 隔离工作树；与 TASK-0048 及共享当前版本发布说明的 TASK-0154/0197/0218/0223 串行集成，不同时写共享文件。
+- 当前执行方式：第八片由单 Agent 在本地 main 主工作区串行完成，不新建独立工作树；与 TASK-0048 及共享发布说明任务不同时写共享文件。前七片的隔离工作树事实保留在历史交付记录。
 - 可并行 Task：无。
 - 前置依赖：Desktop/生态名称合同完成；`TASK-0049` 确认社区去向。现有工作树中已修改的 README、QUICKSTART、CONTRIBUTING 和开发指南必须作为输入保留，不覆盖或回退。
 - 冲突文件/独占路径：根文档、`docs/**`、`.github` 模板与 Release Notes。
-- 当前 Branch / Worktree：来源分支为 `task/TASK-0047-repository-docs-brand-migration`；第七片已集成本地 main，隔离树在推送后按合同清理。
+- 当前 Branch / Worktree：main / 主工作区；前七片来源分支为 `task/TASK-0047-repository-docs-brand-migration`，其集成与清理状态以历史记录为准。
 - 集成负责人：coordinator。
 - 集成顺序：TASK-0044 / TASK-0045 → TASK-0049 → 本任务；与 TASK-0048 串行集成。
 
@@ -215,3 +215,35 @@ updated: 2026-10-15
 - 补充复核：中英插件日志页的全局根由旧 `.vetta` 改为 `.openforge` / `.openforge-dev` 并链接配置路径说明；来源为 Desktop logger 与 action-rpc 数据根解析，保留显式配置和旧根回退前提。两条新增引用的中英目标文件均存在；四个补充路径的 check:quick 通过，补充后 build:docs 再次成功生成 113 页。主工作区首轮集成测试 35/35 与完整 check 通过后，为纳入上述真实遗漏已退出尚未提交的合并；最终组合仍需重新集成验证。
 - 最终集成验证：源码提交 `2e11771af` 与补充提交 `1a7582bad` 已无冲突合入本地 main；实际集成点为包含本记录的合并提交（父提交 `75d07b1ac` / `1a7582bad`）。重新执行 `bun run test:changed --base origin/dev`，选择 36 个差异文件中的 docs-site，7 文件 / 35 项全部通过；随后完整 `bun run check` 的 lint、全部类型、mobile lint 与 guards 通过。声明头 ratchet new=0，无新增单元测试或运行时改动。
 - 待推批次复核：main 上原有 `75d07b1ac` 为已单独提交、status=done 的 RESEARCH-0026 及其索引，未改写其内容；已核对属于纯调研文档、符合记录路由，组合的 Project/索引/链接与完整门禁通过。本轮不将该研究中的实机测量宣称为本任务复测结果。批次仅为文档与管理记录；后续按已有授权推 dev、建立新的 dev→main PR，稳定分支合并与部署仍由用户决定。
+
+## 第八片合同（2026-10-18）：清理继承文案与重组阅读入口
+
+- 来源：用户要求整理二开项目 README、其他文件内容和结构，不再沿用原项目内容；复用 REQ-0003 / PLAN-0003，不新建重复来源。改动归属 Open-Forge-only。
+- 当前事实：根入口仍有继承的 Discord 宣传、社区背书与上游产品定位；品牌话术正文仍为旧产品设计；Mobile、Relay、插件入口仍自称旧品牌。文档导航混有当前操作与历史证据。
+- 目标与输出：重写中英 README、快速开始与贡献指南；整理 docs 与应用/插件 README 的职责和入口；以本仓现行实现重写文案规范；同步公开文档中的社区入口及残余品牌称呼。文档按使用、开发、管理和历史证据组织，不移动源码包。
+- 并发结论：必须串行，单 Agent 在本地 main 执行；不启动 Worker，不新建 Worktree。当前仅有他人未跟踪的 temp/，不读写或提交。TASK-0048 与本任务共享公开内容，不并发实施；其余历史冲突任务不写入。
+- 当前 Branch / Worktree：main / C:/Users/xquan/Desktop/open-forge；输入基线 018358bb27b6f7854e932c972ae722fcc2ca79a6。历史切片的分支和集成事实保留在原交付记录，本片集成状态单独回写。
+- 输入与依赖：根 package.json 脚本、Desktop 品牌/构建事实源、目标包 README 和公开文档；所需品牌与兼容决策已经落地，不新增外部基础设施。
+- Given 读者从仓库首页了解、运行或参与 Open Forge；When 按中英文导航查找产品指南、工程手册、目录职责和历史记录；Then 入口以本项目为主体、命令与链接可核实，不将原项目社区、品牌愿景或生产部署当成本项目事实。
+- 不变量与不做项：保留 LICENSE、NOTICE、必须的版权声明及兼容命令/包名/协议/数据路径；不改 Agent/桌面运行时、默认品牌、构建配置或依赖；不触碰用户数据、真实 Provider、Desktop 实例或部署。用户已明确选择「历史资料独立归档，当前入口只介绍本项目」。
+- 取舍：直接整理内容和导航即可，无需生产代码重构；物理移动须先核实入链，不批量替换技术标识或研究坐标。
+- 验证：核对中英内容、相对链接/锚点、目录及命令事实；公开内容运行既有 docs-site 测试、构建及生产 HTTP 验证，Project 索引与声明头检查；文案/静态资源不新增镜像单元测试。由于同步清理站点静态导航和图片引用，完成后执行完整 bun run check。本片不默认推送。
+- 失败/恢复：无运行时状态转换；链接或构建失败修正文档后复验，保留未完成结果，不弱化检查。最终文档可直接审阅，用户接受尚待反馈。
+
+- 归档范围细化：新增 docs/archive/ 统一索引；旧文案、知识库草案、旧横幅/截图及公开站点历史产品截图移入 upstream/。ADR 与研究链仍被工程资料引用，按原位历史索引保留路径。旧 PRD 原址留迁移入口，保护源码注释引用；同步 PRODUCT 的旧素材路径与最新入口决策。
+- 站点连带范围：移除继承的 Discord 导航与首页链接，站点标识使用现有 self 档项目图标；页面图文改为文字说明，保留有用图注内容。仅调整静态链接和资源路径，不改变路由、语言识别、SEO 生成或 Agent 行为。新增写域/独占域为 apps/docs-site/lib/site.ts、apps/docs-site/lib/layout.shared.tsx、apps/docs-site/components/{brand-mark,home,studio-banner}.tsx、apps/docs-site/public/images 与 project/requirements/PRODUCT.md；按本条在 frontmatter 中同步。
+
+## 交付记录（第八片，2026-10-18）
+
+- 实际修改：重写中英 README、QUICKSTART、CONTRIBUTING 和安全说明，正文围绕本项目的功能、运行、目录和贡献展开；移除继承的 Discord 宣传及 LINUX DO 背书。docs/README 统一使用、开发、目录与历史导航，当前文案约定独立重写；Mobile、Relay、插件与 CLI README 修正项目称呼、数据根、版本示例和 SDK 配套前提。
+- 历史归档：用户明确选择独立归档。旧文案与知识库草案进入 docs/archive/upstream/；15 份旧横幅、图标和产品截图按原字节移动并核对 SHA-256。旧 PRD 路径保留迁移入口，避免源码注释失效。ADR/研究/性能证据保持原路径，由归档索引集中发现，不伪造或重写历史结论。
+- 公开文档：旧截图从 public/ 移出，保留操作文字与有用图注；中英文首页使用项目横幅，站点图标使用 Desktop self 档现有事实源；移除继承社区链接，桌宠指南改按功能描述，不虚构界面标签。PRODUCT 和站点 README 同步内容边界、资产来源及当前入口决策。
+- 实际验证：docs-site 包内测试 7 文件 / 35 项通过；5 个静态站点文件的 test:impact 命中 1 文件 / 10 项通过；生产 build 编译成功并生成 113 页；test:production 1 文件 / 6 项 HTTP 流程通过；完整 bun run check 的 lint、全部类型、Mobile lint 与 guards 通过；44 份变更/归档文档共 299 个本地链接、路径及公开路由检查通过；git diff --check 通过；release-notes --check、Project 索引与本 Task worktree:check 通过。
+- 检查纠偏：首轮 worktree:check 指出串行 Task 不应把主检出绝对路径登记为独立工作树，已改为 unassigned（主工作区串行）并复验通过；首轮链接检查找到 QUICKSTART 中英两条错误的 troubleshooting 路径，已修正并复验。暂存检查发现归档原文的 Markdown 双空格硬换行被 Git 视为行尾空白，已换成等价的反斜杠换行语法并重新检查。未放宽守卫或测试断言。
+- 发布说明：当前 0.1.3 为既有手写正文，按兼容政策在「其他」追加一句；没有新增碎片或改写已发布版本。
+- 技术评审：单 Agent 自审，核对当前脚本/包名、品牌事实源、路径、双语和归档引用；没有独立评审。LICENSE、NOTICE、协议、凭据与运行时兼容标识保持原样。
+- 集成：本片在 main 串行实施，随包含本交付记录的 docs(project) 原子提交集成本地 main，父提交为 018358bb27b6f7854e932c972ae722fcc2ca79a6；实际提交号由本次 Git 提交记录及对话交付提供。未推送、未创建 PR、未发布或部署。
+- 未运行及原因：未启动 Desktop/verify:ui、未调用真实 Provider、未进行真实账号/更新/远程服务测试；这些行为未改动。没有新增单元测试，文案、静态导航和资源由既有站点测试、构建、HTTP 流程与链接检查覆盖。没有采集当前 Desktop 实机截图，公开页以文字说明代替历史画面。
+- 验收分层：工程验证通过；integration_status=integrated（本地 main）；用户尚未审阅本版，status=verifying，不视为已经人工接受。发布未授权。
+- 验收入口：README.zh-CN.md → QUICKSTART.zh-CN.md → docs/README.md；历史资料通过 docs/archive/README.md 单独查阅。应看到本项目介绍与有效入口，旧素材不在公开页分发；如发现旧宣传正文、失效链接或把历史资料作为当前功能证明，应关联本 Task 修正。
+- 工作区：单 Agent 串行，无新增 Worktree；用户既有 temp/ 保留，不读取、不暂存或提交。

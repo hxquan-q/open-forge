@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ResourceDiagnostic } from "../contracts/diagnostics.js";
 import type { ResourceAccessPort } from "../contracts/resource-access.js";
 import { loadSkills, type Skill } from "../skills/index.js";
@@ -11,6 +12,8 @@ export async function computeSkillsFingerprint(
 		cwd: string;
 		agentDir: string;
 		includeDefaults: boolean;
+		/** 工作区信任未通过时置 false：指纹不收录 <cwd>/.vetta/skills（GHSA-mqxh）。 */
+		includeProjectSkills?: boolean;
 		includeAgentSkills: boolean;
 		manifestPath: string;
 		signal?: AbortSignal;
@@ -54,7 +57,9 @@ export async function computeSkillsFingerprint(
 	for (const path of paths) await walk(path);
 	if (options.includeDefaults) {
 		await walk(access.paths.join(options.agentDir, "skills"));
-		await walk(access.paths.join(options.cwd, PROJECT_CONFIG_DIRECTORY, "skills"));
+		if (options.includeProjectSkills !== false) {
+			await walk(access.paths.join(options.cwd, PROJECT_CONFIG_DIRECTORY, "skills"));
+		}
 	}
 	if (options.includeAgentSkills) {
 		await walk(access.paths.join(access.paths.homeDirectory(), ".agents", "skills"));

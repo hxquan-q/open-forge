@@ -22,7 +22,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0311` | `verifying` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（chmod 兜底保留）、MCP OAuth state 补 `0o600`/目录 `0o700` 已实施；fs 调用合同断言抓创建窗口（终态断言抓不到），POSIX 位断言平台跳过；定向 18 例 + 完整 check 全绿；人工验收不适用，待发布。 |
 | `TASK-0312` | `verifying` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义已实施；测试从资产提取求值纯函数做行为断言；定向 8 例 + 完整 check 全绿；人工验收不适用，待发布。 |
 | `TASK-0313` | `verifying` | — | RESEARCH-0032 / pi agent 0.75.4+0.84.4：bash spawn `windowsHide`、taskkill System32 绝对路径 + `error` 监听（修未处理 ENOENT 崩溃）已实施；定向 10 例 + 完整 check 全绿；待 Windows 实机人工验收（无黑框闪烁、中止稳定）。 |
-| `TASK-0314` | `draft` | — | RESEARCH-0032 / GHSA-mqxh（medium）：工作区信任门禁——项目级 `.vetta` 扩展/skills 确认后加载、非交互默认拒绝；待 UX 决策（信任载体/覆盖面/对话框/记住粒度）后转 ready。 |
+| `TASK-0314` | `verifying` | — | RESEARCH-0032 / GHSA-mqxh（medium）已实施并入 main（`89827bfb1`，Worker 提交 `a3566d09c`）：域层 `ProjectResourceTrustPort` 三处拦截（resolve/updateSkills/指纹）+ sdk/cli 非交互默认拒绝（trust.json + `OPENFORGE_TRUST_PROJECT=1`）+ desktop 本机首解析弹窗（信任并记住/仅本次/拒绝，按路径记忆；ssh:// 拒绝）；新增 15 例全绿、受影响套件 107 例零回归、完整 check 全绿；待实机对话框目验。 |
 | `TASK-0309` | `verifying` | PLAN-0018 | P0 安全热修七项已实施并入 main（五原子提交，插件包 711/711 绿，impact 存量红归因 BUG-0107）：zip 越界整包拒绝、安装 `--ignore-scripts`＋导入确认、vite cors:false/fs.strict＋no-cors 探测、iframe sandbox、主窗口 will-navigate、设计写队列+原子写；待用户实机验收（导入确认/画布交互/主窗口/引擎就绪）。 |
 | `TASK-0307` | `verifying` | — | REQ-0016 A1 / RESEARCH-0030：受管工具 `inspect()` 解析记录 + `.version` 标记已实施（已并入 main `ef864b76c`）——resolve 合同不动，纯静态检查，缓存标记免 spawn、存量回退一次探针；定向 24 例、完整 check 全绿；impact 7 红经基线复跑归因存量（PATH 无 rg）。 |
 | `TASK-0308` | `verifying` | — | REQ-0016 A2 / RESEARCH-0030：`openforge doctor` 子命令（已并入 main `705fe6857`）+ 诊断包 `managed-tools.json`（`4b2c81e32`，`resolveDesktopCodingToolsDirectory` 单一事实源）已实施；cli-host 11 例、desktop 2 例、完整 check 全绿、integration_status: integrated；待用户实机 doctor/诊断包验收。 |
@@ -119,7 +119,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0276` | `verifying` | — | RESEARCH-0027：终端 owner 监听与订阅按 owner 成组解绑（BUG-0119）；红 5→绿 14、包内 4977、check 全绿；`91b5faadf` 已并入 main 并补发布说明；实机重开/崩溃恢复待用户。原编号 TASK-0272，因 dev 侧占号顺延。 |
 | `TASK-0277` | `verifying` | — | RESEARCH-0027：技能列表消费方不再拿远端绝对路径做本机读取（BUG-0120）——工具视图包装只套模型面向装配 + `isSshProjectUri` 跳过；红 2→绿 3（回环 SSH）；`9e2084c31` 已并入 main；远程项目列表目验待用户。原编号 TASK-0273，因 dev 侧占号顺延。 |
 | `TASK-0278` | `verifying` | — | RESEARCH-0027：握手失败销毁 Client 前补终止性 error 监听（BUG-0121），FakeClient 忠实化；基线红 2+3 逃逸→绿 27、连跑 8 次、包内 227、check exit 0；`ae3cda04d` 已并入 main；真实新主机连接待用户自测。原编号 TASK-0274，因 dev 侧占号顺延。 |
-| `TASK-0047` | `verifying` | PLAN-0003 | 第七片正文及日志根说明已集成本地 main：本仓二开视角、默认 lite、SDK/发布/服务边界对齐；35 项集成测试、完整 check、113 页构建与本地引用检查通过，待用户审阅。 |
+| `TASK-0047` | `verifying` | PLAN-0003 | 第八片：中英根入口与文档导航重写，继承宣传/社区入口清理，旧草案与 15 份素材独立归档；35 项站点测试、10 项 impact、113 页构建、6 项 HTTP、299 个引用和完整 check 通过；main 串行本地提交，待用户审阅。 |
 | `TASK-0048` | `in_progress` | PLAN-0003 | 公开文档站品牌、正文与 SEO/LLM 发现入口迁移；尚未实施，缺口最大（docs-site 内容为主）。 |
 | `TASK-0206` | `done` | PLAN-0014 | feed/attach 第二片：`SessionFacade.attach` 一次同步步骤内订阅 + 运行中回合重放 + 历史快照（`SessionAttachment`），保留本仓 4096 有界回放，不引入上游无界回合缓冲；红绿/定向 10/10/impact 115 项/完整 check 全绿；无直接 UI，消费端随 IPC/desktop 后续片验收。 |
 | `TASK-0205` | `done` | PLAN-0014 | feed/attach 底座第一片：快照暴露运行中回合身份（currentTurnId）+ 重放缓冲收录本轮工具事件（保留 4096 有界）；红绿/impact/完整 check 绿；工具状态切回即时可见待实机验收，currentTurnId 消费随 IPC/desktop 后续片。 |

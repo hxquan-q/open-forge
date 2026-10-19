@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import type {
 	CodingAgentPromptRuntimeSourceContext,
@@ -16,7 +17,10 @@ import {
 	detectTerminalBackground,
 	loadThemeFromContent,
 } from "@vetta/coding-agent/extensions";
-import { createCodingAgentNodeExtensionFactoryLoader } from "@vetta/coding-agent/host-services";
+import {
+	createCodingAgentNodeExtensionFactoryLoader,
+	createNonInteractiveProjectResourceTrustPort,
+} from "@vetta/coding-agent/host-services";
 import {
 	createResourcePackageRuntime,
 	createSessionResourceRuntime,
@@ -96,6 +100,9 @@ export function createCliSessionResourceRuntime(
 	});
 	return createSessionResourceRuntime({
 		...options,
+		// CLI 为非交互宿主：默认拒绝项目级资源，OPENFORGE_TRUST_PROJECT=1 或
+		// 桌面端已记住的 .vetta-local/trust.json 授权可放行（GHSA-mqxh 决策④）。
+		projectResourceTrust: options.projectResourceTrust ?? createNonInteractiveProjectResourceTrustPort(),
 		packages,
 		resourceAccess: host.resourceAccess,
 		themeParser: loadThemeFromContent,

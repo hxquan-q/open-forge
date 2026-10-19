@@ -2,6 +2,14 @@
 	"taskApproval": {
 		"title": "Allow {{tool}} to run?"
 	},
+	"projectTrust": {
+		"title": "Trust this workspace's project resources?",
+		"message": "This workspace contains project-level resources (skills / extensions / command packages); loading them runs their code on this machine.",
+		"detail": "Workspace: {{path}}\n\n\"Trust & remember\" is remembered per path and never asks again; \"Just once\" loads only for this session.",
+		"remember": "Trust & remember",
+		"once": "Just once",
+		"deny": "Deny"
+	},
 	"fileOrganize": {
 		"title": "Organize these files?",
 		"summary": "{{count}} move/rename operations; they run only after you confirm"
