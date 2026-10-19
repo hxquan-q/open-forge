@@ -8,6 +8,8 @@ import userEvent from "@testing-library/user-event";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { WeKnoraChatMessage } from "./atoms";
+import { MessageBubble } from "./components/MessageBubble";
 import { WeKnoraPage } from "./components/WeKnoraPage";
 
 /**
@@ -243,5 +245,25 @@ describe("智能客服 · 视觉打磨用户流程（AC-4/5/6/7/8/10/11）", () 
 		expect(container.querySelectorAll(DOTS_SELECTOR)).toHaveLength(0);
 		expect(container.querySelectorAll(".weknora-stream-char")).toHaveLength(0);
 		expect(screen.getByText("已取消")).toBeTruthy();
+	});
+});
+
+describe("AC-5 · 尾部窗口的代理对边界（组件级补强）", () => {
+	it("窗口起点落在 emoji 低代理项时不切坏字符，可见文本仍逐字节一致", () => {
+		// 构造：尾部窗口起点（length - 64）恰好落在 emoji 的低代理项上，触发实现里的边界回退。
+		// 若回退失效，首个逐字 span 会是一个孤立低代理项（渲染成方块 / 断字）。
+		const text = `${"a".repeat(5)}😀${"b".repeat(63)}`;
+		const message: WeKnoraChatMessage = { id: "a1", role: "assistant", text, thinking: "", status: "streaming" };
+		const { container } = render(<MessageBubble message={message} />);
+
+		// 首个逐字 span 必须是完整的 emoji（一个码点），不是被切开的半个代理项。
+		expect(container.querySelector(".weknora-stream-char")?.textContent).toBe("😀");
+		// 可见层文本与源文本逐字节一致。
+		expect(container.querySelector("p > span[aria-hidden='true']")?.textContent).toBe(text);
+		// 不含孤立代理项（单个 UTF-16 代理码元）。
+		const lone = /^[\uD800-\uDFFF]$/;
+		for (const span of container.querySelectorAll(".weknora-stream-char")) {
+			expect(lone.test(span.textContent ?? ""), `孤立代理项: ${span.textContent}`).toBe(false);
+		}
 	});
 });
