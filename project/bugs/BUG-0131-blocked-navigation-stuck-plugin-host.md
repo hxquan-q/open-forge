@@ -82,4 +82,8 @@ updated: 2026-10-19
 - 修复：新增 `apps/desktop/src/main/plugins/plugin-tool-renderer-host-navigation.ts`，把宿主失效点改为已提交的主 frame `did-navigate`；`apps/desktop/src/main/ipc/session.ts` 改由该适配器接线并复用其解绑函数，删除内联的 `did-start-navigation` 监听。`will-navigate` 拦截策略、`render-process-gone`、`PLUGIN_HOST_READY` 与工具租约语义均未改变。
 - 测试：新增 `plugin-tool-renderer-host-navigation.test.ts` 3 例——被拦截的 `did-start-navigation` 不使宿主失效；`did-navigate` 后进入 `loading`、在途调用失败、`markReady()` 后恢复；解绑后不再响应且无残留监听。旧实现下 3 例全红（含 `expected 'loading' to be 'ready'`），改为 `did-navigate` 后与既有生命周期用例共 6 例全绿。
 - 检查：`bun run test:impact -- apps/desktop/src/main/ipc/session.ts apps/desktop/src/main/plugins/plugin-tool-renderer-host-navigation.ts apps/desktop/src/main/plugins/plugin-tool-renderer-host-navigation.test.ts` 直接用例 3 例通过、关联用例 26 例通过；2 个套件因 BUG-0107 的 `process.resourcesPath` 存量收集失败（与本改动无关）。`bun run check` 全绿（lint / types / guards / mobile-lint，修改声明头 new=0）。
-- 未运行及原因：`verify:ui:*` 未获授权；真实 dev 实例的导航复现由人工验收覆盖（步骤见 TASK-0320）。
+- UI 验证（用户授权 `verify:ui`，隔离 Fresh 实例，未连接真实 Provider、未读取真实凭据、未操作用户日常实例）：
+  - 在真实 Electron 渲染端执行 `location.href = "https://example.com/openforge-blocked-navigation-probe"`，URL 与文档均未变化、探针标记仍存活；主进程日志同时记录 `[warn] [window] blocked main-window navigation`，确认导航确实被 `will-navigate` 拦截。
+  - 拦截后在同一文档提交一条 prompt。为避开真实 Provider，使用隔离配置里的本地 OpenAI 兼容替身（`127.0.0.1:18080`，仅回放固定响应）驱动一次 `content_creation_search` 插件工具调用。工具经共享的插件工具宿主成功派发并返回真实结果（`isError: false`，内容为 content-creation 操作索引），回合正常结束；主日志该时段无 `Plugin host renderer is loading`、无 warn/error。这直接证明被拦截导航后主进程宿主仍为 `ready`、租约仍可获取。
+  - 另执行一次真实 `page.reload()`：渲染端日志出现 `[plugin-agent] host loading`，随后 `[plugin-agent] host ready`，确认「真正提交的导航 → loading → 上报就绪恢复」路径未被破坏。
+  - 验证后已停止 Fresh 实例并清理本地替身与临时探针文件；未改用户日常实例或真实模型配置。
