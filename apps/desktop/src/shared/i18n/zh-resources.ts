@@ -15,6 +15,7 @@ import zhPet from "./locales/zh/pet.json";
 import zhProject from "./locales/zh/project.json";
 import zhSettings from "./locales/zh/settings.json";
 import zhSkills from "./locales/zh/skills.json";
+import zhWeknora from "./locales/zh/weknora.json";
 
 export const zhResources = {
 	common: zhCommon,
@@ -29,4 +30,5 @@ export const zhResources = {
 	"batch-tasks": zhBatchTasks,
 	automation: zhAutomation,
 	"agent-teams": zhAgentTeams,
+	weknora: zhWeknora,
 } as const;

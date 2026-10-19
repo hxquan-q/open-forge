@@ -38,6 +38,7 @@ import { createTelemetryApi } from "./apis/telemetry.js";
 import { createTerminalApi } from "./apis/terminal.js";
 import { createThemesApi } from "./apis/themes.js";
 import { createWebhookApi } from "./apis/webhook.js";
+import { createWeKnoraApi } from "./apis/weknora.js";
 import { createHostAccessGate } from "./host-access.js";
 import { createUserActivityReporter, USER_ACTIVITY_CHANNEL } from "./user-activity.js";
 
@@ -64,6 +65,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createBrowserViewApi(ipcRenderer),
 	...createSchedulerApi(ipcRenderer),
 	...createWebhookApi(ipcRenderer),
+	...createWeKnoraApi(ipcRenderer),
 	...createMessageAnnotationsApi(ipcRenderer),
 	...createMarkdownApi(ipcRenderer),
 	...createNotificationApi(ipcRenderer),

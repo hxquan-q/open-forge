@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // react-i18next 类型增强：基于 zh 资源给 t() / useTranslation 提供 key 自动补全与校验。
 import "i18next";
 import type abilities from "@/shared/i18n/locales/zh/abilities.json";
@@ -12,6 +13,7 @@ import type pet from "@/shared/i18n/locales/zh/pet.json";
 import type project from "@/shared/i18n/locales/zh/project.json";
 import type settings from "@/shared/i18n/locales/zh/settings.json";
 import type skills from "@/shared/i18n/locales/zh/skills.json";
+import type weknora from "@/shared/i18n/locales/zh/weknora.json";
 
 declare module "i18next" {
 	interface CustomTypeOptions {
@@ -29,6 +31,7 @@ declare module "i18next" {
 			"batch-tasks": typeof batchTasks;
 			automation: typeof automation;
 			"agent-teams": typeof agentTeams;
+			weknora: typeof weknora;
 		};
 	}
 }

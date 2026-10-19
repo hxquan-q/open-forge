@@ -57,6 +57,7 @@ import type { DesktopThemeApi } from "./api-types/theme.js";
 import type { DesktopThemesApi } from "./api-types/themes.js";
 import type { DesktopUpdaterApi } from "./api-types/updater.js";
 import type { DesktopWebhookApi } from "./api-types/webhook.js";
+import type { DesktopWeKnoraApi } from "./api-types/weknora.js";
 import type { DesktopFsApi } from "./fs-types.js";
 
 export type * from "./api-types/abilities.js";
@@ -99,6 +100,7 @@ export type * from "./api-types/theme.js";
 export type * from "./api-types/themes.js";
 export type * from "./api-types/updater.js";
 export type * from "./api-types/webhook.js";
+export type * from "./api-types/weknora.js";
 
 export interface DesktopHostAccessApi {
 	/** 仅供 renderer 启动模块领取一次；插件运行前令牌已经被宿主持有。 */
@@ -151,6 +153,7 @@ export interface DesktopApi {
 	ssh: DesktopSshApi;
 	terminal: DesktopTerminalApi;
 	webhook: DesktopWebhookApi;
+	weknora: DesktopWeKnoraApi;
 	runtimes: DesktopRuntimesApi;
 	permissions: DesktopPermissionsApi;
 	notification: DesktopNotificationApi;

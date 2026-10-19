@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRootRoute, createRoute, createRouter, createHashHistory, redirect } from "@tanstack/react-router";
 import { lazy } from "react";
 import { RouteContentLoadingView } from "@vetta-org/theme-ui/app";
@@ -39,6 +40,9 @@ const ProjectDetailPage = lazy(async () => ({
 	default: (await import("./domains/project/components/ProjectDetailPage")).ProjectDetailPage,
 }));
 const KnowledgeBasePage = lazy(loadKnowledgeBasePage);
+const WeKnoraPage = lazy(async () => ({
+	default: (await import("./domains/weknora/components/WeKnoraPage")).WeKnoraPage,
+}));
 const KnowledgeBaseListPage = lazy(async () => ({
 	default: (await import("./domains/knowledge-base/components/KnowledgeBaseListPage")).KnowledgeBaseListPage,
 }));
@@ -201,6 +205,14 @@ const knowledgeListRoute = createRoute({
 	component: KnowledgeBaseListPage,
 });
 
+/** 「智能客服」独立整页（侧边栏导航项 → 本路由）。 */
+const weknoraRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/weknora",
+	component: WeKnoraPage,
+	pendingComponent: NoPendingComponent,
+});
+
 const settingsTabRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/settings/$tab",
@@ -281,6 +293,7 @@ const routeTree = rootRoute.addChildren([
 	teamSettingsRedirectRoute,
 	knowledgeRoute,
 	knowledgeListRoute,
+	weknoraRoute,
 	abilitiesRoute,
 	abilityDetailRedirectRoute,
 	skillsRedirectRoute,

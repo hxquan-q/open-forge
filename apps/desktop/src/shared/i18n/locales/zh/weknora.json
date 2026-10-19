@@ -1,0 +1,71 @@
+{
+	"page": {
+		"title": "智能客服",
+		"subtitle": "由 WeKnora 智能体回答",
+		"openSettings": "设置",
+		"closeSettings": "收起设置",
+		"notConfiguredTitle": "尚未配置智能客服",
+		"notConfiguredBody": "填写 WeKnora 服务地址与租户 API Key 后即可开始提问。",
+		"loadingAgents": "正在获取智能体列表…",
+		"agentsEmpty": "当前 API Key 下没有可用智能体。请确认已为该 Key 勾选「读取智能体」能力。",
+		"agentsError": "获取智能体列表失败,请检查配置与网络后重试。",
+		"retry": "重试"
+	},
+	"setup": {
+		"baseUrl": "服务地址",
+		"baseUrlPlaceholder": "http://host:port",
+		"apiKey": "API Key",
+		"apiKeyPlaceholder": "输入租户 API Key",
+		"apiKeyConfigured": "已配置",
+		"apiKeyMissing": "未配置",
+		"save": "保存",
+		"saving": "保存中…",
+		"saveFailed": "保存失败,请检查服务地址与 API Key 后重试。"
+	},
+	"agent": {
+		"label": "智能体",
+		"placeholder": "选择智能体"
+	},
+	"composer": {
+		"placeholder": "输入你的问题…",
+		"send": "发送",
+		"cancel": "取消",
+		"sending": "正在生成回答…",
+		"unavailable": "没有可用智能体,暂时无法提问"
+	},
+	"conversation": {
+		"new": "新建对话",
+		"historyTitle": "历史会话",
+		"loading": "正在加载历史会话…",
+		"empty": "暂无历史会话",
+		"error": "加载历史会话失败,请重试。",
+		"retry": "重试",
+		"refresh": "刷新",
+		"unknownAgent": "未知",
+		"untitled": "未命名会话",
+		"confirmTitle": "打开历史会话",
+		"confirmBody": "当前对话将被替换为该历史会话,未保存的内容不会保留。",
+		"confirmCancel": "取消",
+		"confirmOk": "替换当前对话"
+	},
+	"message": {
+		"you": "我",
+		"assistant": "智能客服",
+		"cancelled": "已取消",
+		"interrupted": "未完成",
+		"thinking": "思考过程",
+		"thinkingShow": "展开思考过程",
+		"thinkingHide": "收起思考过程"
+	},
+	"error": {
+		"not_configured": "尚未配置 WeKnora 服务地址或 API Key。",
+		"network": "网络不可达,请检查网络连接后重试。",
+		"unauthorized": "API Key 无效或权限不足,请检查凭据。",
+		"capability_missing": "API Key 缺少所需能力,请补勾「对话能力」与「读取智能体」。",
+		"tenant_required": "当前使用的是平台 API Key,请改用租户 API Key。",
+		"timeout": "请求超时,请稍后重试。",
+		"stream_error": "服务返回错误:{{detail}}",
+		"stream_interrupted": "回答未完成,连接中断。",
+		"unknown": "发生未知错误。"
+	}
+}

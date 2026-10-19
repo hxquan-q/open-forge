@@ -17,6 +17,7 @@ import enPet from "./locales/en/pet.json";
 import enProject from "./locales/en/project.json";
 import enSettings from "./locales/en/settings.json";
 import enSkills from "./locales/en/skills.json";
+import enWeknora from "./locales/en/weknora.json";
 
 export const enResources = {
 	common: enCommon,
@@ -31,4 +32,5 @@ export const enResources = {
 	"batch-tasks": enBatchTasks,
 	automation: enAutomation,
 	"agent-teams": enAgentTeams,
+	weknora: enWeknora,
 } as const;
