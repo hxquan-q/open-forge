@@ -1,0 +1,28 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["version", "runId", "productVersion", "channel", "artifacts"],
+	"properties": {
+		"version": { "const": 1 },
+		"runId": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,160}$" },
+		"productVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+		"channel": { "type": "string", "enum": ["test", "stable"] },
+		"artifacts": {
+			"type": "array",
+			"minItems": 3,
+			"maxItems": 3,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["platform", "path", "sha256", "size"],
+				"properties": {
+					"platform": { "type": "string", "enum": ["windows", "macos", "linux"] },
+					"path": { "type": "string", "minLength": 1, "maxLength": 2000 },
+					"sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+					"size": { "type": "integer", "minimum": 1 }
+				}
+			}
+		}
+	}
+}

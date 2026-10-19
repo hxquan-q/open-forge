@@ -77,4 +77,31 @@ describe("public autonomy command line", () => {
 		await expect(main(["doctor", "--shell", "true"])).rejects.toThrow(/invalid option/);
 		await expect(main(["doctor", "--repo", "one", "--repo", "two"])).rejects.toThrow(/duplicate/);
 	});
+	it("routes a repeated feedback signal to one proposal and reports unknown accounting through the CLI", async () => {
+		const root = fixture();
+		const common = ["--repo", root, "--state-dir", join(root, "controller")];
+		const input = join(root, "signal.json");
+		writeFileSync(
+			input,
+			JSON.stringify({
+				version: 1,
+				source: "local",
+				repository: "hxquan-q/open-forge",
+				externalId: "report-1",
+				eventId: "event-1",
+				kind: "bug",
+				url: "",
+				title: "A reproducible report",
+				body: "Investigate before implementation",
+				observedAt: Date.now(),
+			}),
+		);
+		const first = await main(["signal", ...common, "--input", input]);
+		expect(await main(["signal", ...common, "--input", input])).toEqual(first);
+		const digest = await main(["digest", ...common]);
+		expect(digest.signals).toHaveLength(1);
+		expect(digest.signals[0].task).toBeNull();
+		expect(digest.usage.totalCostUsd).toBeNull();
+		expect(await main(["lessons-report", ...common])).toEqual({ markdown: "" });
+	});
 });

@@ -8,6 +8,7 @@ import { assertIndependentReview } from "./evidence.mjs";
 import { assertSeparateRoots, assertWriteScope, snapshot } from "./git.mjs";
 import { ACTIVE_RUN_STATUSES, assertLease, renew } from "./leases.mjs";
 import { isolatedEnvironment, runProcess } from "./process.mjs";
+import { reportedUsage } from "./usage.mjs";
 
 export function codeBinding(runContract, code) {
 	return { head: code.head, tree: code.tree, policy: runContract.policyDigest, contract: digest(runContract) };
@@ -164,7 +165,7 @@ export async function executeAdapter({
 					cleanupUnknown: result.cleanupUnknown,
 				}
 			: null;
-		attempt.usage = null;
+		attempt.usage = result ? reportedUsage(result.stdout) : null;
 		attempt.failure = failure?.message ?? null;
 		run.cleanupUnknown = result?.cleanupUnknown ?? false;
 		if (run.cleanupUnknown) state.control.paused = true;

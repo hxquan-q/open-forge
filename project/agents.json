@@ -1,5 +1,13 @@
 {
 	"version": 1,
+	"publisher": {
+		"enabled": false,
+		"repository": "hxquan-q/open-forge",
+		"command": ["unconfigured"],
+		"queryCommand": ["unconfigured"],
+		"keyId": "unconfigured",
+		"artifactRoot": "unconfigured"
+	},
 	"adapters": [
 		{
 			"id": "codex",

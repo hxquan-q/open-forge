@@ -10,6 +10,7 @@ import { exportEvidence } from "./evidence.mjs";
 import { snapshot } from "./git.mjs";
 import { applyIntegration, prepareIntegration } from "./integrate.mjs";
 import { claim, release } from "./leases.mjs";
+import { OPERATION_OPTIONS, OPERATIONS, operation } from "./operations.mjs";
 import { cycle } from "./orchestrate.mjs";
 import { prepareTask } from "./prepare.mjs";
 import { completedTasks, taskQueue } from "./queue.mjs";
@@ -19,6 +20,7 @@ import { configuration, makeRunContract, taskById } from "./tasks.mjs";
 import { verifyRun } from "./verify.mjs";
 
 const COMMANDS = new Set([
+	...OPERATIONS,
 	"doctor",
 	"plan",
 	"claim",
@@ -38,6 +40,7 @@ const COMMANDS = new Set([
 	"integrate",
 ]);
 const OPTIONS = new Set([
+	...OPERATION_OPTIONS,
 	"--repo",
 	"--state-dir",
 	"--task",
@@ -60,9 +63,10 @@ function argumentsOf(args) {
 		const key = rest[index];
 		const value = rest[index + 1];
 		if (!OPTIONS.has(key) || !value || value.startsWith("--")) throw new Error(`invalid option: ${key}`);
-		if (key === "--test") {
-			options.tests ??= [];
-			options.tests.push(value);
+		if (["--test", "--proof"].includes(key)) {
+			const collection = key === "--test" ? "tests" : "proofs";
+			options[collection] ??= [];
+			options[collection].push(value);
 		} else if (Object.hasOwn(options, key)) throw new Error(`duplicate option: ${key}`);
 		else options[key] = value;
 	}
@@ -89,6 +93,7 @@ export async function main(args) {
 			contractValid: true,
 			targetLevel: config.policy.targetLevel,
 			level: config.policy.level,
+			publisherConfigured: config.settings.publisher?.enabled ?? false,
 			paused: config.policy.paused,
 			readyForModelExecution:
 				config.policy.level > 0 &&
@@ -127,6 +132,7 @@ export async function main(args) {
 	if (command === "status" && !existsSync(directory))
 		return { initialized: false, runs: [], paused: config.policy.paused };
 	const store = createStore(directory);
+	if (OPERATIONS.includes(command)) return operation({ command, options, root, store, ...config });
 	if (command === "cycle")
 		return cycle({
 			root,
@@ -162,7 +168,10 @@ export async function main(args) {
 	}
 	if (["pause", "resume"].includes(command)) {
 		store.transaction((state) => {
-			if (command === "resume" && Object.values(state.runs).some((run) => run.cleanupUnknown))
+			if (
+				command === "resume" &&
+				[...Object.values(state.runs), ...Object.values(state.releases)].some((run) => run.cleanupUnknown)
+			)
 				throw new Error("unconfirmed cleanup requires recovery before resume");
 			state.control.paused = command === "pause";
 			state.audit.push({ event: command, at: Date.now() });

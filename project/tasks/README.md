@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0324` | `verifying` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；质量 597 例及完整 check 通过，真实环境仍关闭。 |
 | `TASK-0323` | `verifying` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；质量 584 例及完整 check 通过，真实 UI/部署未验收。 |
 | `TASK-0322` | `verifying` | PLAN-0019 | 自主研发运行合同、租约、进程、评审与可信验证核心；定向与完整 check 通过，全量受影响测试超时待复验；完整范围见 PLAN-0019。 |
 | `TASK-0321` | `verifying` | — | ISSUE-0029：dev push 只跑轻量质量检查，三平台单测与 desktop-packaged 改为 PR/手动触发；名下其他私有仓库 Actions 已停用；serial，main 主工作区串行。 |

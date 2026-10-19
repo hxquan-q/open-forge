@@ -53,6 +53,39 @@ node scripts/agents/cli.mjs release --run-id <unique-id> --state-dir <controller
 
 DESIGN 源审计随完整 check 执行，只拦截新增可检测违规；模板表达式、输入基元例外、布局、交互及六套主题组合仍列作覆盖空白。测试日志有上限并保存到控制器 artifacts；对外证据使用摘要，排查时仅读取当前任务所需日志。
 
+## 反馈、复盘与摘要
+
+```powershell
+node scripts/agents/cli.mjs signal --input <signal.json> --state-dir <dir>
+node scripts/agents/cli.mjs nightly --date 2026-10-19 --state-dir <dir>
+node scripts/agents/cli.mjs lesson --input <lesson.json> --state-dir <dir>
+node scripts/agents/cli.mjs lessons-report --state-dir <dir>
+node scripts/agents/cli.mjs digest --state-dir <dir>
+```
+
+信号和经验输入见对应 Schema。signal 仅产生去重后的调查建议；nightly 生成实际 Git/运行记录组成的材料，未调用模型评审。lesson 依据可达 commit 的提交时间或真实失败运行计数，至少三日期才形成候选。lessons-report 导出的 Markdown 经调查后通过普通 Task 维护到 LESSONS.md；没有直接修改权威规则的后门。
+
+digest 聚合实际状态；CLI 用量只作为 reported 记录。未报告费用或部分尝试缺少用量时 totalCostUsd 为 null，不能拿部分 token 数推算完整账单。错误轮次、停滞、总时间和输出上限仍生效，不增加金额硬上限。
+
+## 发布器与服务回执
+
+默认 `publisher.enabled=false`。启用要由操作者配置绝对 command/queryCommand、制品根目录和发布公钥；受信命令从 stdin 读取固定 JSON，返回 service-proof Schema 的签名 JSON。它在可信控制面实现实际发布与幂等查询，接入现有 release/更新入口；本仓不会仅凭配置字符串建立真实发布服务。命令环境不继承宿主凭据，需要可信服务自行通过受限凭据代理完成操作。
+
+操作者在独立状态目录提供 `trusted-services.json`：`{"version":1,"keys":[{"id":"service","publicKey":"<Ed25519 PEM>","roles":["ci","artifact","publication","telemetry","cleanup"]}]}`。实际部署应按最小角色分离密钥。签名原文是 payload 的 canonical UTF-8；subject 绑定发布仓库、最终代码/策略/合同、版本、渠道和全部制品。每种 data 的闭合结构由 services.mjs 校验。私钥不进入仓库、Worker 或控制器接口。
+
+```powershell
+node scripts/agents/cli.mjs publish --input <release-request.json> --proof <ci.json> --proof <windows.json> --proof <macos.json> --proof <linux.json> --state-dir <dir>
+node scripts/agents/cli.mjs reconcile --release-id <id> --state-dir <dir>
+node scripts/agents/cli.mjs rollout --release-id <id> --proof <windows-telemetry.json> --proof <macos-telemetry.json> --proof <linux-telemetry.json> --state-dir <dir>
+node scripts/agents/cli.mjs resume-rollout --release-id <id> --proof <windows-telemetry.json> --proof <macos-telemetry.json> --proof <linux-telemetry.json> --state-dir <dir>
+```
+
+制品先核对实际 SHA-256/大小，CI 必须覆盖所需检查、tests/windows、tests/macos、tests/linux 和 desktop-packaged。签名回执证明受信服务报告的事实；不能替代密钥托管、代码签名有效性与远端执行的部署审计。publish 的重复请求返回既有意图；响应不确定时只允许 reconcile，不自动重发。查询确认尚未发布也保留现场，由操作者排查，不自动重试。未配置/未授权时这些命令拒绝执行。
+
+每个灰度阶段独立计算观察期和样本；监控丢失要求暂停，只有发布器确认才显示 paused。resume-rollout 是明确的操作者动作，需完整健康观察证据，恢复后重新开始观察。暂停不能撤回已安装制品；Windows 更新回退继续采用现有更新器合同。真实三平台 CI、签名、发布器、遥测和稳定分支晋升仍需部署环境验证。
+
+中断或失联后，先 `cleanup-subject --resource run|release --resource-id <id>` 取得资源摘要。资源所有者确认整个 job/VM 已撤销后提供 cleanup 回执，`cleanup-proof --input <proof.json>` 才清除阻断并增加 generation，拒绝旧执行结果。全局仍暂停；核对实际 Git、资源及未知发布对账后再显式 resume。损坏控制器状态继续拒绝初始化，不能用恢复命令清空。
+
 ## 验证
 
 ```powershell

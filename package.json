@@ -140,6 +140,17 @@
 		"agent:recover": "node scripts/agents/cli.mjs recover",
 		"agent:pause": "node scripts/agents/cli.mjs pause",
 		"agent:resume": "node scripts/agents/cli.mjs resume",
+		"agent:signal": "node scripts/agents/cli.mjs signal",
+		"agent:nightly": "node scripts/agents/cli.mjs nightly",
+		"agent:lesson": "node scripts/agents/cli.mjs lesson",
+		"agent:lessons-report": "node scripts/agents/cli.mjs lessons-report",
+		"agent:digest": "node scripts/agents/cli.mjs digest",
+		"agent:publish": "node scripts/agents/cli.mjs publish",
+		"agent:reconcile": "node scripts/agents/cli.mjs reconcile",
+		"agent:rollout": "node scripts/agents/cli.mjs rollout",
+		"agent:resume-rollout": "node scripts/agents/cli.mjs resume-rollout",
+		"agent:cleanup-subject": "node scripts/agents/cli.mjs cleanup-subject",
+		"agent:cleanup-proof": "node scripts/agents/cli.mjs cleanup-proof",
 		"test:agents": "bun scripts/quality/run-vitest.mjs --run scripts/agents"
 	},
 	"devDependencies": {

@@ -5,6 +5,19 @@
 	"required": ["version", "adapters"],
 	"properties": {
 		"version": { "const": 1 },
+		"publisher": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["enabled", "repository", "command", "queryCommand", "keyId", "artifactRoot"],
+			"properties": {
+				"enabled": { "type": "boolean" },
+				"repository": { "const": "hxquan-q/open-forge" },
+				"command": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+				"queryCommand": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+				"keyId": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,80}$" },
+				"artifactRoot": { "type": "string", "minLength": 1 }
+			}
+		},
 		"adapters": {
 			"type": "array",
 			"minItems": 1,
