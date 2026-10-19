@@ -19,7 +19,7 @@
 | 渲染层页面 | `apps/desktop/src/renderer/domains/weknora/` |
 | 文案 | `apps/desktop/src/shared/i18n/locales/{zh,en}/weknora.json` |
 
-改动**以新增为主**;对既有文件的改动只有 11 处、合计 +55/−4 行,全部是"加一个导航项绕不开的连带改动"(路由表、IPC 注册点、i18n 注册点、`theme-sdk` 的两个封闭联合类型)。**只增不删。**
+改动**以新增为主**。首期(REQ-0017)新增 weknora 域并接入导航;二期打磨(REQ-0018)在其上叠加三能力,31 个文件 +2394/−91(9 个新文件),对既有文件只加不改结构。
 
 ---
 
@@ -32,7 +32,10 @@
 - 提问 → **流式逐字回答**
 - **思考旁白与正式回答分区显示**:旁白收进可折叠的「思考过程」区,回答结束自动收起
 - **新建对话与历史会话**:侧栏列出此前的对话(标题、所用智能体、时间),可新建对话并在多个对话间切换;点历史对话会**先弹确认**(因为会替换当前对话),取消则不做任何改动
-- 取消(保留已收到的部分内容)
+- **后台思考**(REQ-0018):回答生成中切到别的对话,原对话在后台继续生成;侧栏行亮「思考中」呼吸点;切回立即续显;多对话可并行提问;后台完成仅静默刷新列表,无弹窗
+- **右键删除历史对话**(REQ-0018):右键 →「删除会话」→ 确认(明示不可恢复)→ 从 WeKnora 删除并刷新列表;删的是当前打开的对话则聊天区回到空白新对话;生成中的对话删除项置灰;失败内联报错可重试
+- **侧栏收起**(REQ-0018):页头开关一键收起/展开左侧历史栏,状态跨重启记住,首次默认展开
+- 取消(保留已收到的部分内容;仅作用于当前打开的对话,后台对话生成到自然结束)
 - 未配置时的中文引导页
 - 中英双语
 
@@ -41,7 +44,8 @@
 | 缺什么 | 影响 |
 |---|---|
 | 引用来源角标 | 回答里没有来源角标 —— 见 §4 |
-| 错误提示的完整度 | 冷门错误(403 缺能力 / 409 用错 Key 类型)不点名原因 |
+| 错误提示的完整度 | 冷门错误(403 缺能力 / 409 用错 Key 类型)不点名原因;删除失败为通用文案不按错误码细分 |
+| 后台流的取消入口 | 后台生成中的对话只能等它跑完;取消按钮只对当前打开的对话生效(用户裁定的取舍) |
 
 ---
 
@@ -69,17 +73,18 @@ WeKnora 设置 → 发布集成 → API 集成 → 创建 API Key
 
 API Key 存入 Electron `safeStorage` 加密凭据库,不进配置文件、不进日志、不进 Git。界面只显示「已配置 / 未配置」,不回显密钥。
 
-### 调用的接口(全部只读)
+### 调用的接口(纯数据面调用)
 
 ```
-POST /api/v1/sessions                建会话
-POST /api/v1/agent-chat/{session_id} 提问(SSE 流式)
-GET  /api/v1/agents                  智能体列表
-GET  /api/v1/sessions                会话列表(尚未接)
-GET  /api/v1/messages/{id}/load      载入消息(尚未接)
+POST   /api/v1/sessions                建会话
+POST   /api/v1/agent-chat/{session_id} 提问(SSE 流式,多路并发已实测互不串台)
+GET    /api/v1/agents                  智能体列表
+GET    /api/v1/sessions                会话列表
+GET    /api/v1/messages/{id}/load      载入消息
+DELETE /api/v1/sessions/{id}           删除会话(2026-10-19 实测:200 成功 / 404 不存在)
 ```
 
-**不改 WeKnora 侧的任何配置。**
+**不改 WeKnora 侧的任何配置。**删除与建会话同为数据面操作,调用方 Key 需具备对话能力(chat)。
 
 ---
 
@@ -150,6 +155,8 @@ bun scripts/quality/run-vitest.mjs --run --config apps/desktop/vitest.config.ts 
 # 启动开发版
 cd apps/desktop && bun run dev
 ```
+
+**⚠️ 改过 main/preload 之后做实机验证,必须完整退出再 `bun run dev`,刷新页面无效** —— main/preload 只在启动时构建,旧实例上会出现 `deleteSession is not a function` 之类的**假故障**(新 IPC 合同不在旧 bundle 里)。
 
 **已知基线失败**(与本次改动无关):`src/main/ipc/browser-view.test.ts`
 原因:`src/main/window-manager.ts` 在模块加载时读 `process.resourcesPath`,而测试用的 electron stub 未提供该属性。
