@@ -857,6 +857,22 @@
         "vite": "^7.1.7",
       },
     },
+    "packages/plugins/presets/mes-kit-analysis": {
+      "name": "@vetta/plugin-preset-mes-kit-analysis",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^22.10.5",
+        "@types/react": "^19.1.1",
+        "@types/react-dom": "^19.1.1",
+        "@vetta-org/plugin-sdk": "workspace:*",
+        "@vetta-org/plugin-vite": "workspace:*",
+        "react": "19.1.1",
+        "react-dom": "19.1.1",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.7",
+        "vitest": "^4.1.11",
+      },
+    },
     "packages/plugins/presets/office-viewer": {
       "name": "@vetta/plugin-office-viewer",
       "version": "0.1.0",
@@ -3496,6 +3512,8 @@
     "@vetta/plugin-preset-allstar-coding": ["@vetta/plugin-preset-allstar-coding@workspace:packages/plugins/presets/allstar-coding"],
 
     "@vetta/plugin-preset-eform-craft": ["@vetta/plugin-preset-eform-craft@workspace:packages/plugins/presets/eform-craft"],
+
+    "@vetta/plugin-preset-mes-kit-analysis": ["@vetta/plugin-preset-mes-kit-analysis@workspace:packages/plugins/presets/mes-kit-analysis"],
 
     "@vetta/plugin-remotion-renderer": ["@vetta/plugin-remotion-renderer@workspace:packages/plugins/presets/remotion-renderer"],
 

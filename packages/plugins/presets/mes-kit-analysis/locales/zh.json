@@ -1,0 +1,6 @@
+{
+	"plugin.name": "齐套分析师",
+	"plugin.description": "生产工单齐套性分析：从 MES 数据库按 R1-R7 口径只读提取供需数据，装配快照后交给本地分析引擎做 fail-closed 校验与净池分配，产出工单级齐套结论（按期/晚到/短缺/无需求/未知）与单文件离线看板；数据不足时阻断并给出缺口清单，绝不把缺失当零需求。",
+	"agent.kitAnalyst.name": "齐套分析师",
+	"agent.kitAnalyst.description": "@kitcheck。生产工单齐套性分析师：只读取数 → 装配快照 → 引擎分析 → 分级结论与离线看板；fail-closed，数据不足时诚实阻断。"
+}

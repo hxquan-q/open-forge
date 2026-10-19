@@ -1,0 +1,6 @@
+{
+	"plugin.name": "Kit Analyst",
+	"plugin.description": "Production order kit-readiness analysis: extract supply/demand data read-only from the MES database under the R1-R7 rules, assemble a snapshot, and hand it to the local analysis engine for fail-closed validation and net-pool allocation. Delivers per-order readiness verdicts (on-time / late / shortage / no-demand / unknown) and a single-file offline dashboard; blocks honestly with a gap list when data is insufficient — never treats missing data as zero demand.",
+	"agent.kitAnalyst.name": "Kit Analyst",
+	"agent.kitAnalyst.description": "@kitcheck. Production kit-readiness analyst: read-only extraction → snapshot assembly → engine analysis → graded verdicts and an offline dashboard; fail-closed, blocking honestly on data gaps."
+}
