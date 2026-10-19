@@ -1,3 +1,4 @@
+/* Modified by The Open Forge contributors. */
 @layer vetta-plugins, theme, base, components, utilities;
 
 @import "tailwindcss";
@@ -691,6 +692,36 @@ textarea:focus {
 	.markdown-streaming-tail .streaming-chunk-recent,
 	.markdown-streaming-tail .streaming-chunk-latest {
 		opacity: 1;
+	}
+}
+
+/* ─── 智能客服流式逐字入场（weknora AC-4）───
+   流式期间新到达的字符逐个淡入并轻微上浮，与主应用 AssistantMessageView 的 stream-char 同款：
+   字符级 span + 纯 CSS 一次性动画，只动 opacity / transform，主线程零参与。
+   注意与上方 .streaming-chunk 的取舍不同——那边刻意不做淡入（每个短语各跑一段动画意味着流式全程
+   连续出帧）；这里字符 span 数由 ThinkingBlock 的尾部窗口封顶（见 STREAM_CHAR_WINDOW），
+   同时挂动画的字符有界，不会随回答长度线性增长。
+   命名带 weknora 前缀：主应用的 .stream-char 是组件内注入的，这里放在全局样式表里避免混淆。 */
+@keyframes weknora-stream-char-in {
+	from {
+		opacity: 0;
+		transform: translateY(3px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.weknora-stream-char {
+	display: inline-block;
+	white-space: pre;
+	animation: weknora-stream-char-in 420ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.weknora-stream-char {
+		animation: none;
 	}
 }
 

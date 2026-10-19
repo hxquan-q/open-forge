@@ -60,7 +60,10 @@ export function MessageBubble({ message }: MessageBubbleProps): JSX.Element {
 					isUser ? "bg-primary/10" : "bg-card/40"
 				}`}
 			>
-				{thinkingText.trim().length > 0 ? <ThinkingBlock defaultOpen={isStreaming} text={thinkingText} /> : null}
+				{/* AC-4/AC-6：只有本次生成中的助手消息挂逐字动画；用户消息与历史载入恒不挂。 */}
+				{thinkingText.trim().length > 0 ? (
+					<ThinkingBlock defaultOpen={isStreaming} streaming={isStreaming && !isUser} text={thinkingText} />
+				) : null}
 				{answerText.length === 0 ? null : isUser || isStreaming ? (
 					<p className="whitespace-pre-wrap break-words">{answerText}</p>
 				) : (
