@@ -31,6 +31,11 @@ export interface WeKnoraLoadMessagesInput {
 	limit?: number;
 }
 
+export interface WeKnoraDeleteSessionInput {
+	/** 要删除的 WeKnora 会话 id（服务端按租户强制归属校验，删别人的删不到）。 */
+	sessionId: string;
+}
+
 export interface WeKnoraAskInput {
 	/** 为空则先建会话（AC-12）。 */
 	sessionId?: string;
@@ -63,6 +68,8 @@ export interface WeKnoraService {
 	/** 返回 T01 的 `WeKnoraSession`（含 `last_request_state.agent_id`，供 AC-20 映射 agent 名）。 */
 	listSessions(params?: WeKnoraListParams): Promise<WeKnoraSession[]>;
 	loadMessages(input: WeKnoraLoadMessagesInput): Promise<WeKnoraMessage[]>;
+	/** 删除会话（AC-8）：转调 HTTP 客户端；失败经 `WeKnoraRequestError` 归一化上抛。 */
+	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): void;
 	onStreamEvent(handler: (event: WeKnoraStreamEvent) => void): () => void;
@@ -136,6 +143,10 @@ export function createWeKnoraService(dependencies: WeKnoraServiceDependencies = 
 
 		async loadMessages({ sessionId, limit }) {
 			return (await restClient()).loadMessages(sessionId, limit === undefined ? {} : { limit });
+		},
+
+		async deleteSession({ sessionId }) {
+			await (await restClient()).deleteSession(sessionId);
 		},
 
 		async ask({ sessionId, query, agentId }) {

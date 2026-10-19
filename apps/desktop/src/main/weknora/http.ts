@@ -98,6 +98,16 @@ export class WeKnoraHttpClient {
 		return toArray(raw).map(toMessage).filter(isDefined);
 	}
 
+	/**
+	 * 删除会话（AC-8）：`DELETE /api/v1/sessions/{id}`（WeKnora 软删，服务端无恢复入口）。
+	 *
+	 * 成功返回（`{success:true}` 响应体无需归一化数据）；失败以 `WeKnoraRequestError` 抛出，
+	 * 错误码复用既有归一化（404 → `unknown` + 服务端 detail，如 `session not found`，见 t00-run 实测夹具）。
+	 */
+	async deleteSession(sessionId: string, signal?: AbortSignal): Promise<void> {
+		await this.requestJson(`/api/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }, signal, "chat");
+	}
+
 	/** 列出该 Key 可见的全部智能体；**空列表是合法结果**（AC-16 / AC-19）。 */
 	async listAgents(params: ListParams = {}, signal?: AbortSignal): Promise<WeKnoraAgent[]> {
 		const url = withQuery("/api/v1/agents", {
