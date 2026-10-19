@@ -4,6 +4,7 @@ import { RendererMarkdownContent } from "@shared/components/RendererMarkdownCont
 import { useTranslation } from "react-i18next";
 import type { WeKnoraChatMessage, WeKnoraErrorCode } from "../atoms";
 import { ThinkingBlock } from "./ThinkingBlock";
+import { ThinkingDots } from "./ThinkingDots";
 
 /** 错误码 → i18n key（主进程只产 code，中文在渲染层查表，AC-21 / 红线 C4）。 */
 const ERROR_KEYS = {
@@ -38,6 +39,9 @@ export function MessageBubble({ message }: MessageBubbleProps): JSX.Element {
 	// 流式期间：全文暂存为思考，回答区为空；终态：用已切分的 thinking / text（AC-25）。
 	const thinkingText = isStreaming ? message.text : message.thinking;
 	const answerText = isStreaming ? "" : message.text;
+	// AC-7/AC-8：助手流式且尚无任何字符（等待首字）时显示三点 + 文案。与 ThinkingBlock 恰好互补
+	// （旁白非空走思考块，为空才轮到三点），终态 / 无请求 / 用户消息恒不显示。
+	const showThinkingDots = !isUser && isStreaming && thinkingText.trim().length === 0;
 
 	let statusLabel: string | null = null;
 	if (message.status === "cancelled") {
@@ -64,6 +68,7 @@ export function MessageBubble({ message }: MessageBubbleProps): JSX.Element {
 				{thinkingText.trim().length > 0 ? (
 					<ThinkingBlock defaultOpen={isStreaming} streaming={isStreaming && !isUser} text={thinkingText} />
 				) : null}
+				{showThinkingDots ? <ThinkingDots /> : null}
 				{answerText.length === 0 ? null : isUser || isStreaming ? (
 					<p className="whitespace-pre-wrap break-words">{answerText}</p>
 				) : (

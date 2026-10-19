@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 「进行中」指示器的共享步进动画：呼吸文字、状态点、波纹、转弧。
  *
@@ -16,6 +17,13 @@
 const PERIOD_MS = 1600;
 const STEPS = 16;
 
+/** 「思考中」单个点的相位：亮着静止 → 上浮并变暗 → 回到静止。相位 0 就是正常外观（AC-9）。 */
+const THINKING_DOT_PHASE: Keyframe[] = [
+	{ opacity: 1, transform: "translateY(0)" },
+	{ opacity: 0.35, transform: "translateY(-2px)" },
+	{ opacity: 1, transform: "translateY(0)" },
+];
+
 interface LiveAnimationSpec {
 	readonly keyframes: Keyframe[];
 	/** 相位偏移（周期的比例），第二圈波纹错开半周用。 */
@@ -30,6 +38,10 @@ const REGISTRY: ReadonlyArray<readonly [selector: string, spec: LiveAnimationSpe
 	[".tool-call-shimmer-text", { keyframes: [{ opacity: 1 }, { opacity: 0.55 }, { opacity: 1 }] }],
 	// 运行中的小圆点：1 ↔ 0.4 呼吸。
 	[".vetta-live-dot", { keyframes: [{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }] }],
+	// 智能客服「思考中」三点（weknora AC-7）：同相跳动、相位依次错开约 150ms，读起来是三点在依次跳动。
+	[".weknora-thinking-dot-1", { keyframes: THINKING_DOT_PHASE }],
+	[".weknora-thinking-dot-2", { keyframes: THINKING_DOT_PHASE, offset: 150 / PERIOD_MS }],
+	[".weknora-thinking-dot-3", { keyframes: THINKING_DOT_PHASE, offset: 300 / PERIOD_MS }],
 	// 进行中待办标签：1 ↔ 0.6 呼吸。
 	[".todo-label-sheen", { keyframes: [{ opacity: 1 }, { opacity: 0.6 }, { opacity: 1 }] }],
 	// 进行中待办的转弧：16 步一圈。

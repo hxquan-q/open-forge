@@ -60,7 +60,8 @@
 		"interrupted": "Incomplete",
 		"thinking": "Thinking",
 		"thinkingShow": "Show thinking",
-		"thinkingHide": "Hide thinking"
+		"thinkingHide": "Hide thinking",
+		"thinkingPending": "Thinking"
 	},
 	"menu": {
 		"delete": "Delete conversation"
