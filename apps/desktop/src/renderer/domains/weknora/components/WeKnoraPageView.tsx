@@ -104,7 +104,9 @@ export function WeKnoraPageView({
 		<div className="relative flex h-full w-full flex-1 flex-col overflow-hidden">
 			<div className="drag-region h-12 shrink-0" />
 
-			<header className="shrink-0 px-8 pb-4">
+			{/* AC-1/AC-1c：左右内边距 32→12px（px-8→px-3）、页头下边距 16→8px（pb-4→pb-2），
+			    收掉顶部那一大块留白；上方 drag-region h-12（48px）是窗口拖拽硬约束，高度不动。 */}
+			<header className="shrink-0 px-3 pb-2">
 				<div className="flex items-end justify-between gap-4">
 					<div className="flex items-center gap-2">
 						{/* AC-1/AC-4：侧栏显隐开关只对已配置用户出现；状态由 aria-expanded 暴露，
@@ -149,7 +151,9 @@ export function WeKnoraPageView({
 				</div>
 			</header>
 
-			<div className="flex flex-1 gap-4 overflow-hidden px-8 pb-8">
+			{/* AC-2/AC-1b：内容行左右与页头对齐（px-3），下边距 32→12px（pb-8→pb-3），
+			    使历史会话栏（含「新建对话」）整体上移贴近页头。 */}
+			<div className="flex flex-1 gap-4 overflow-hidden px-3 pb-3">
 				{/* AC-2：收起 = 整栏不渲染（非视觉隐藏）；主列本就是 flex-1，侧栏缺席即横向占满。 */}
 				{configured && !sidebarCollapsed ? (
 					<ConversationList
