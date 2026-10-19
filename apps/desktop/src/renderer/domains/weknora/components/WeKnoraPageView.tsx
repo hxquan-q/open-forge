@@ -24,8 +24,12 @@ export interface WeKnoraPageViewProps {
 	readonly sessions: readonly WeKnoraSession[];
 	readonly sessionsStatus: WeKnoraHistoryStatus;
 	readonly loadingSessionId: string | null;
-	/** 有活跃流（含后台思考）的会话 id 集合（AC-19 行级指示的状态源）。 */
+	/** 有活跃流（含后台思考）的会话 id 集合（AC-19 行级指示 / AC-10 禁删判定的状态源）。 */
 	readonly streamingSessionIds: ReadonlySet<string>;
+	/** 正在删除的会话 id（AC-12 防重复标记）；`null` = 无进行中的删除请求。 */
+	readonly deletingSessionId: string | null;
+	/** 删除失败的归一化错误码（AC-11）；非 `null` 时侧栏出内联错误块。 */
+	readonly deleteError: WeKnoraErrorCode | null;
 	readonly saving: boolean;
 	/** 最近一次保存配置失败的归一化错误码；`null` = 无错误（④）。 */
 	readonly saveError: WeKnoraErrorCode | null;
@@ -34,6 +38,8 @@ export interface WeKnoraPageViewProps {
 	readonly onCancel: () => void;
 	readonly onNewConversation: () => void;
 	readonly onOpenSession: (sessionId: string) => void;
+	/** 删除历史会话（AC-8）；返回是否成功（失败时确认弹窗不关）。 */
+	readonly onDeleteSession: (sessionId: string) => Promise<boolean>;
 	readonly onReloadSessions: () => void;
 	readonly onSaveSetup: (input: { baseUrl: string; apiKey?: string }) => void;
 	readonly onReloadAgents: () => void;
@@ -54,6 +60,8 @@ export function WeKnoraPageView({
 	sessionsStatus,
 	loadingSessionId,
 	streamingSessionIds,
+	deletingSessionId,
+	deleteError,
 	saving,
 	saveError,
 	onSelectAgent,
@@ -61,6 +69,7 @@ export function WeKnoraPageView({
 	onCancel,
 	onNewConversation,
 	onOpenSession,
+	onDeleteSession,
 	onReloadSessions,
 	onSaveSetup,
 	onReloadAgents,
@@ -108,7 +117,10 @@ export function WeKnoraPageView({
 					<ConversationList
 						agents={agents}
 						currentSessionId={currentSessionId}
+						deleteError={deleteError}
+						deletingSessionId={deletingSessionId}
 						loadingSessionId={loadingSessionId}
+						onDeleteSession={onDeleteSession}
 						onNewConversation={onNewConversation}
 						onOpenSession={onOpenSession}
 						onReload={onReloadSessions}

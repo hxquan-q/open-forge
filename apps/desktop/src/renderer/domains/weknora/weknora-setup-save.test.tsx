@@ -42,6 +42,7 @@ function installApi(overrides: Partial<WeKnoraApi> = {}): WeKnoraApi {
 		listAgents: vi.fn(async () => [agent("A")]),
 		listSessions: vi.fn(async () => []),
 		loadMessages: vi.fn(async () => []),
+		deleteSession: vi.fn(async () => undefined),
 		ask: vi.fn(async () => ({ requestId: "r1", sessionId: "s1" })),
 		cancel: vi.fn(async () => undefined),
 		onStreamEvent: vi.fn(() => () => undefined),

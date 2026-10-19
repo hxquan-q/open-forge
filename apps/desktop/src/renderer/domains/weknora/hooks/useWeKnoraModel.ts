@@ -6,6 +6,7 @@ import { useCallback, useEffect } from "react";
 import {
 	type WeKnoraAgentsStatus,
 	type WeKnoraChatMessage,
+	type WeKnoraErrorCode,
 	type WeKnoraHistoryStatus,
 	weKnoraAgentsStatusAtom,
 } from "../atoms";
@@ -31,6 +32,11 @@ export interface WeKnoraModelActions {
 	readonly reloadSessions: () => void;
 	/** 载入历史会话的消息并恢复为当前对话，之后追问接上（AC-14）。 */
 	readonly openSession: (sessionId: string) => Promise<void>;
+	/**
+	 * 删除历史会话（AC-8/9）：真删 WeKnora 侧；成功且是当前会话则重置为「新对话」空态，
+	 * 随后重拉列表。返回是否成功（失败码在 `deleteError`，由侧栏内联错误块展示）。
+	 */
+	readonly deleteSession: (sessionId: string) => Promise<boolean>;
 }
 
 export interface WeKnoraViewModel {
@@ -50,6 +56,10 @@ export interface WeKnoraViewModel {
 	readonly sessionsStatus: WeKnoraHistoryStatus;
 	/** 正在载入的历史会话 id（用于列表行 loading 态）。 */
 	readonly loadingSessionId: string | null;
+	/** 正在删除的会话 id（AC-12 请求进行中标记，确认按钮防重复的驱动源）；`null` = 无。 */
+	readonly deletingSessionId: string | null;
+	/** 删除失败的归一化错误码（AC-11，侧栏内联错误块的数据源）；`null` = 无。 */
+	readonly deleteError: WeKnoraErrorCode | null;
 	/** 允许提问：已配置 + 有可用智能体 + 无进行中的回答（AC-7 / AC-19）。 */
 	readonly canAsk: boolean;
 	readonly saving: boolean;
@@ -112,6 +122,24 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		[setup.writeSetup, agents.loadAgents, history.loadSessions],
 	);
 
+	/**
+	 * 删除会话的**编排**（AC-8/9）：跨 history（删 + 重拉）与 chat（当前会话回空态）两个
+	 * actor，天然归本组装层（02-plan §2.4）。失败时不动聊天区、不重拉 —— 失败码已由
+	 * `removeSession` 落进 `deleteError`，侧栏出内联错误，列表保持原样（不假装删掉）。
+	 */
+	const deleteSession = useCallback(
+		async (sessionId: string): Promise<boolean> => {
+			const deleted = await history.removeSession(sessionId);
+			if (!deleted) return false;
+			// AC-9：删的是当前打开的会话 → 复用「新建对话」语义回空态（消息清空、指针置空）。
+			// 禁删判定（AC-10）已保证被删会话无活跃流，不会误伤后台思考。
+			if (chat.sessionId === sessionId) chat.newConversation();
+			await history.loadSessions();
+			return true;
+		},
+		[chat.newConversation, chat.sessionId, history.loadSessions, history.removeSession],
+	);
+
 	return {
 		configured: isConfigured(setup.config),
 		config: setup.config,
@@ -125,6 +153,8 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		sessions: history.sessions,
 		sessionsStatus: history.sessionsStatus,
 		loadingSessionId: history.loadingSessionId,
+		deletingSessionId: history.deletingSessionId,
+		deleteError: history.deleteError,
 		canAsk: chat.canAsk,
 		saving: setup.saving,
 		actions: {
@@ -136,6 +166,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			newConversation: chat.newConversation,
 			reloadSessions: history.reloadSessions,
 			openSession: chat.openSession,
+			deleteSession,
 		},
 	};
 }

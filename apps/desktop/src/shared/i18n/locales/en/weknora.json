@@ -58,6 +58,19 @@
 		"thinkingShow": "Show thinking",
 		"thinkingHide": "Hide thinking"
 	},
+	"menu": {
+		"delete": "Delete conversation"
+	},
+	"delete": {
+		"disabledStreaming": "A reply is still generating, so it cannot be deleted yet",
+		"confirmTitle": "Delete conversation",
+		"confirmBody": "This cannot be undone. The conversation and all of its messages will be permanently removed from the server.",
+		"cancel": "Cancel",
+		"confirm": "Delete",
+		"deleting": "Deleting…",
+		"error": "Failed to delete. The conversation was not removed.",
+		"retry": "Retry"
+	},
 	"error": {
 		"not_configured": "The WeKnora service URL or API Key is not configured yet.",
 		"network": "The network is unreachable. Check your connection and retry.",

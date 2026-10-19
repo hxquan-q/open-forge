@@ -115,6 +115,7 @@ function installFake(): FakeHarness {
 			counters.loadMessages.push(sessionId);
 			return state.messagesBySession[sessionId] ?? [];
 		}),
+		deleteSession: vi.fn(async () => undefined),
 		ask: vi.fn(async (input) => {
 			counters.ask.push(input);
 			let sessionId = input.sessionId;

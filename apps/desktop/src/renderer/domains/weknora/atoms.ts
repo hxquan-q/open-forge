@@ -89,6 +89,18 @@ export const weKnoraSessionsStatusAtom = atom<WeKnoraHistoryStatus>("idle");
  * 故失败反馈走独立 atom 由连接层（`WeKnoraPage`）读取，而不是给 view model 加字段。
  */
 export const weKnoraSaveErrorAtom = atom<WeKnoraErrorCode | null>(null);
+/**
+ * 正在删除的会话 id（AC-12 防重复标记）；`null` = 无进行中的删除请求。
+ *
+ * 确认按钮的 loading/禁用与内联错误块的重试按钮都由它驱动；由历史 actor
+ * （`useWeKnoraHistory.removeSession`）写入，编排见 `useWeKnoraModel.deleteSession`。
+ */
+export const weKnoraDeletingSessionIdAtom = atom<string | null>(null);
+/**
+ * 删除会话失败的归一化错误码（AC-11）；`null` = 无错误。新删除开始 / 成功时清。
+ * 侧栏内联错误块读它；**列表本身绝不因失败而移除会话**（不假装删掉）。
+ */
+export const weKnoraDeleteErrorAtom = atom<WeKnoraErrorCode | null>(null);
 
 /** 流事件的终态（收到即结束本轮，AC-22 的收敛依据）。 */
 export function isTerminalStreamEvent(event: WeKnoraStreamEvent): boolean {
