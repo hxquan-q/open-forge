@@ -8,6 +8,14 @@ const appRoot = join("C:", "repo", "apps", "desktop");
 const packagedDirectory = join("C:", "app", "resources", "build");
 
 describe("主进程品牌图标目录解析", () => {
+	it("非打包态无需打包目录，打包态缺少暂存路径时拒绝", () => {
+		expect(resolveBrandIconDirectory({ isPackaged: false, appRoot, profile: "distribution" })).toBe(
+			join(appRoot, "build", "brand", "distribution"),
+		);
+		expect(() => resolveBrandIconDirectory({ isPackaged: true, appRoot })).toThrow(
+			"Packaged brand icons require their staged directory",
+		);
+	});
 	it("dev 态默认（外部分发档）取 build/brand/distribution/，不再落到 self 的 build/", () => {
 		expect(
 			resolveBrandIconDirectory({ isPackaged: false, packagedDirectory, appRoot, profile: "distribution" }),
