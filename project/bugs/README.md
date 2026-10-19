@@ -16,7 +16,8 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
-| `BUG-0129` | Dependabot 第二轮 9 项 high 告警：electron 39.8.10 落入 4 项新通告区间（需 41.10.4/41.10.6+）、engine source-map-js 1.2.1（需 1.2.2+） | verifying | P1 | — |
+| `BUG-0130` | 设置页脚仍显示旧品牌数据根的模型配置路径 `~/.vetta/agent/models.json`（本仓实际默认 `~/.openforge`，支持 env 覆盖与旧根迁移） | verifying | P3 | — |
+| `BUG-0129` | Dependabot 第二轮 9 项 high 告警：electron 39.8.10 落入 4 项新通告区间（需 41.10.4/41.10.6+）、engine source-map-js 1.2.1（需 1.2.2+） | done | P1 | — |
 | `BUG-0128` | 工作区被标为 Low 完整性级别后，仓库内 Electron 的 Chromium 子进程创建失败（GPU/renderer error 18） | verifying | P1 | — |
 | `BUG-0127` | 团队长任务主进程累积性卡顿：会话读路径无缓存全量物化被每命令/每 turn/每次 persist 高频触发（trace 45.7% 采样） | done | P0 | PLAN-0002 |
 | `BUG-0126` | session-interrupt monitor 长任务全程误报 suspected（判据不认识"主控等子代理"） | verifying | P3 | — |
@@ -31,7 +32,7 @@
 | `BUG-0117` | SessionError 裸对象跨 IPC：team 链渲染端只见 [object Object]（单聊链有翻译层，team 链缺） | verifying | P2 | — |
 | `BUG-0116` | 团队会话 runtime 损坏后无自愈：此后每次 send 必败 SESSION_NOT_FOUND，仅重启可恢复 | verifying | P1 | — |
 | `BUG-0115` | 团队长任务收尾连环失败：结算失败 → 成员 runtime 重配竞态 → SESSION_NOT_FOUND | verifying | P1 | — |
-| `BUG-0114` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | investigating | P2 | — |
+| `BUG-0114` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | verifying | P2 | — |
 | `BUG-0113` | 文档站搜索索引因跨语言 URL 重复而返回 500 | verifying | P2 | PLAN-0003 |
 | `BUG-0112` | 本地生产探针以回环 IP 绑定时产生 307 自重定向 | done | P3 | PLAN-0003 |
 | `BUG-0111` | Desktop 可执行文件兜底发现路径仍指向旧品牌安装位置，命中不了真实安装 | investigating | P2 | — |

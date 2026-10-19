@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createWriteStream, type WriteStream } from "node:fs";
@@ -87,6 +88,7 @@ function executeLocal(
 			detached: process.platform !== "win32",
 			env: environment,
 			stdio: ["ignore", "pipe", "pipe"],
+			windowsHide: true,
 		});
 		const output = new NodeBashOutputCollector(executionOptions, options.temporaryDirectory);
 		let settled = false;

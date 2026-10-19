@@ -18,6 +18,8 @@ worktree:
 base_commit: 1ea3432
 read_paths: [apps/desktop/src/main/updater-engine.ts, apps/desktop/src/main/updater-service.ts, apps/desktop/src/main/updater.ts, apps/desktop/src/main/inno-windows-update.ts, apps/desktop/src/main/updater-engine.test.ts, project/bugs/BUG-0090-inno-packaged-updater-check-fails.md]
 write_paths: [apps/desktop/src/main/updater-engine.ts, apps/desktop/src/main/updater-engine.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0090-inno-packaged-updater-check-fails.md, project/tasks/TASK-0239-updater-expected-check-errors.md, project/tasks/README.md]
+created: 2026-10-12
+updated: 2026-10-14
 ---
 <!-- Copyright The Open Forge contributors. -->
 

@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * 设计历史的 node 侧执行体（ADR-0069）。
  *
@@ -288,11 +290,31 @@ function packHistory(dir: string, out: string): number {
 	return zipped.byteLength;
 }
 
+/**
+ * zip 条目名是否只会在 gitdir 内部展开（TASK-0309）。history.zip 来自分享包，
+ * 是不可信输入；runner 是裸 node fs，没有宿主的路径断言兜底，穿越条目能写出
+ * 设计目录之外的任意位置。判定与插件侧 `src/shared/entry-path.ts` 保持一致。
+ */
+function isSafeEntryPath(entry: string): boolean {
+	const trimmed = entry.endsWith("/") ? entry.slice(0, -1) : entry;
+	if (trimmed.length === 0 || trimmed === "." || trimmed === "..") return false;
+	if (trimmed.includes("\\")) return false;
+	if (trimmed.startsWith("/") || /^[A-Za-z]:/.test(trimmed)) return false;
+	if (trimmed.includes("\0")) return false;
+	return trimmed.split("/").every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+}
+
 /** 从 zip 还原 `.history/`。已经有历史就不覆盖——导入产生的是一份新设计。 */
 function unpackHistory(dir: string, from: string): number {
 	const gitdir = gitdirOf(dir);
 	if (fs.existsSync(join(gitdir, "HEAD"))) return 0;
 	const entries = unzipSync(new Uint8Array(fs.readFileSync(from)));
+	// 先整体校验再写任何一个文件：恶意包不能留下「写了一半」的状态。
+	for (const rel of Object.keys(entries)) {
+		if (!isSafeEntryPath(rel)) {
+			throw new Error(`history pack contains an unsafe entry path: ${JSON.stringify(rel)}`);
+		}
+	}
 	let written = 0;
 	for (const [rel, bytes] of Object.entries(entries)) {
 		if (rel.endsWith("/")) continue;

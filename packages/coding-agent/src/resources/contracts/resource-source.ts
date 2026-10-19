@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type ResourceScope = "user" | "project" | "temporary";
 
 export type ResourceKind = "extensions" | "skills" | "prompts" | "themes";
@@ -61,7 +62,7 @@ export interface ResourcePackageCommandPort {
 export interface ResourcePackageFilePort {
 	stat(path: string): Promise<{ kind: "file" | "directory" | "other" } | undefined>;
 	readText(path: string): Promise<string>;
-	ensureDirectory(path: string): Promise<void>;
+	ensureDirectory(path: string, options?: { readonly mode?: number }): Promise<void>;
 	ensureTextFile(path: string, content: string): Promise<void>;
 	removeTree(path: string): Promise<void>;
 	readDirectory(path: string): Promise<readonly string[]>;
@@ -88,7 +89,14 @@ export interface ResourcePackageEnvironmentPort {
 }
 
 export interface ResourcePackageRuntime {
-	resolve(onMissing?: (source: string) => Promise<MissingResourceSourceAction>): Promise<ResolvedResourcePaths>;
+	/**
+	 * `projectScope: false` 时跳过项目级来源：不安装 project 包、不投影
+	 * `<cwd>/.vetta` 的配置与自动发现资源（工作区信任未通过时使用，GHSA-mqxh）。
+	 */
+	resolve(
+		onMissing?: (source: string) => Promise<MissingResourceSourceAction>,
+		options?: { readonly projectScope?: boolean },
+	): Promise<ResolvedResourcePaths>;
 	resolveAdditionalSources(
 		sources: string[],
 		options?: { local?: boolean; temporary?: boolean },

@@ -49,6 +49,15 @@ function hasPendingAction(sessionId: string): boolean {
 	return false;
 }
 
+// BUG-0126：团队主控等子代理是合法空闲而非会话中断；读取失败按 false（fail-soft）。
+function isAwaitingSubAgents(sessionId: string): boolean {
+	try {
+		return agentTeamSessionService.isAwaitingSubAgents(sessionId);
+	} catch {
+		return false;
+	}
+}
+
 /** 启动会话级中断续接监视器（默认 notify；settings.sessionInterruptContinue 可调）。 */
 export function startSessionInterruptMonitor(
 	sendToRenderer: (channel: string, payload: unknown) => void,
@@ -61,6 +70,7 @@ export function startSessionInterruptMonitor(
 		hasPendingAction,
 		hasPendingSubagentWork: (sessionId) => agentTeamSessionService.hasActiveTeamWorkForRuntimeSession(sessionId),
 		wasManualStopped: wasSessionManualStopped,
+		isAwaitingSubAgents,
 		readMode: readSessionInterruptContinueMode,
 		readMaxAttempts: readSessionInterruptMaxAttempts,
 		onDecision: (payload) => {

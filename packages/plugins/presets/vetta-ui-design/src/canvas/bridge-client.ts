@@ -1,9 +1,12 @@
+// Modified by The Open Forge contributors.
+
 /**
  * Canvas-side of the design bridge. The engine iframe is cross-origin, so all
  * DOM inspection happens inside it (engine/src/bridge.ts) and this hub routes
  * postMessage traffic per frame iframe.
  */
 import { parseStorageEntries, type StorageEntries } from "../../engine/src/storage-sync";
+import type { StyleSummary } from "../../engine/src/source-payload";
 
 export interface SelectedElementPayload {
 	tag: string;
@@ -12,6 +15,12 @@ export interface SelectedElementPayload {
 	text: string;
 	rect: { x: number; y: number; width: number; height: number };
 	source: string | null;
+	/**
+	 * 上下文包（F2 数据层，TASK-0315）：选中元素的截断 outerHTML 与白名单样式摘要。
+	 * 可选——旧引擎实例/无插桩构建回传的 payload 没有这两项。
+	 */
+	outerHTML?: string;
+	styleSummary?: StyleSummary;
 }
 
 /** 等 iframe 装好 bridge 的上限，超过就照发（真正的原因交给截图超时去报）。 */

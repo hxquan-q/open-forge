@@ -1,8 +1,9 @@
 // Modified by The Open Forge contributors.
+import { confirmDialogAtom } from "@shared/store/atoms";
 import { useTranslation } from "react-i18next";
 import { ModelsProviderFormView } from "@vetta-org/theme-ui/settings";
 import { Button, cn } from "@vetta-org/ui";
-import { ModelsFetchedModelsPanel } from "./ModelsFetchedModelsPanel";
+import { useSetAtom } from "jotai";
 import { ModelsModelForm } from "./ModelsModelForm";
 import { ModelsProviderForm } from "./ModelsProviderForm";
 import { type ModelsSettingsModel, providerTestChip } from "./useModelsSettingsModel";
@@ -19,6 +20,7 @@ export function ModelsProviderRow({
 	model: ModelsSettingsModel;
 }): JSX.Element | null {
 	const { t } = useTranslation("settings");
+	const setConfirm = useSetAtom(confirmDialogAtom);
 	const provider = model.config?.providers[name];
 	if (!provider) return null;
 
@@ -233,8 +235,6 @@ export function ModelsProviderRow({
 						);
 					})}
 
-					<ModelsFetchedModelsPanel name={name} model={model} />
-
 					{model.addingModelFor === name ? (
 						<div className="border-t border-border/50 px-5 py-3">
 							<ModelsModelForm
@@ -255,7 +255,7 @@ export function ModelsProviderRow({
 							<Button
 								variant="ghost"
 								size="sm"
-								onClick={() => void model.onFetchProviderModels(name)}
+								onClick={() => model.onStartFetchProviderModels(name)}
 								disabled={!provider.baseUrl || model.fetchingModelsFor === name}
 								title={provider.baseUrl ? undefined : t("fetchModelsNeedsBaseUrl")}
 							>
@@ -268,6 +268,25 @@ export function ModelsProviderRow({
 									)}
 								/>
 								{t("fetchModels")}
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => {
+									// 二次确认在这里组装：弹层是全局根组件，确认后才真正清空。
+									setConfirm({
+										title: t("clearModels"),
+										message: t("clearModelsConfirmMessage", { name, n: models.length }),
+										variant: "danger",
+										onConfirm: () => model.onClearProviderModels(name),
+									});
+								}}
+								disabled={models.length === 0}
+								title={t("clearModels")}
+								className="text-muted-foreground hover:text-destructive"
+							>
+								<span className="icon-[mdi--delete-sweep-outline] h-3.5 w-3.5" />
+								{t("clearModels")}
 							</Button>
 						</div>
 					)}

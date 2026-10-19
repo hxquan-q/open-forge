@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * 画框外壳：标题栏限宽、选中时的尺寸标签、还没画出来时的启动占位。
  *
@@ -117,4 +119,48 @@ it("covers a frame that has nothing painted yet with the loading overlay", () =>
 	const painted = renderFrame(false, false, "data:image/png;base64,AAAA");
 	expect(painted.host.querySelector(".vetd-loading-dots")).toBeNull();
 	painted.cleanup();
+});
+
+it("挂载的 frame iframe 带 sandbox 白名单：不放行顶层导航与弹窗（TASK-0309）", () => {
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	act(() => {
+		root.render(
+			<FrameView
+				frame={{ id: "home", title: "Home", x: 0, y: 0, width: 390, height: 844 }}
+				port={1234}
+				getZoom={() => 1}
+				bridge={bridge}
+				selected={false}
+				entered={false}
+				interactive
+				resizable={false}
+				mounted
+				live
+				raster={null}
+				reloadNonce={0}
+				paintTick={0}
+				moveDelta={null}
+				resizeRect={null}
+				placement={null}
+				activity={undefined}
+				buildError={null}
+				renaming={false}
+				onSelect={() => {}}
+				onContextMenu={() => {}}
+				onRenameStart={() => {}}
+				onRenameCommit={() => {}}
+				onRenameCancel={() => {}}
+				onDragStart={() => {}}
+				onDragDelta={() => {}}
+				onDragEnd={() => {}}
+			/>,
+		);
+	});
+	const iframe = host.querySelector("iframe");
+	expect(iframe).not.toBeNull();
+	expect(iframe?.getAttribute("sandbox")).toBe("allow-scripts allow-same-origin allow-forms allow-modals");
+	act(() => root.unmount());
+	host.remove();
 });

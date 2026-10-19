@@ -279,7 +279,7 @@ export const defaultConversationFilterAtom = atom(
 // Always start expanded on app launch — collapse state is per-session only.
 export const sidebarCollapsedAtom = atom<boolean>(false);
 
-const DEFAULT_WORKSPACE = "~/.vetta/workspace";
+const DEFAULT_WORKSPACE = "~/.openforge/workspace";
 export const workspacePathAtom = atom<string>(localStorage.getItem("vetta-workspace-path") || DEFAULT_WORKSPACE);
 
 export const sessionContextMenuAtom = atom<{

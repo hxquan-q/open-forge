@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopNotificationPreferences } from "../../shared/notification-preferences.js";
 import type { ProjectEntry } from "./shared.js";
 
@@ -79,10 +80,12 @@ export interface DesktopConfigData {
 		imageToImageProviderId?: string | null;
 		imageToImageModelId?: string | null;
 	};
-	/** 默认「对话」项目的绝对路径（~/.vetta/conversation），主进程已确保目录存在。 */
+	/** 默认「对话」项目的绝对路径（数据根/conversation），主进程已确保目录存在。 */
 	defaultConversationCwd?: string;
-	/** im-gateway 自己的 cwd（~/.vetta/im-gateway/conversation），与桌面「对话」物理分家（ADR-0005）。 */
+	/** im-gateway 自己的 cwd（数据根/im-gateway/conversation），与桌面「对话」物理分家（ADR-0005）。 */
 	defaultImConversationCwd?: string;
+	/** 默认工作区根的绝对路径（数据根/workspace）；设置页「恢复默认」与初始化以此为准，不硬编码品牌路径。 */
+	defaultWorkspaceCwd?: string;
 	/** 知识库加工设置。 */
 	knowledgeBase?: {
 		/** 知识库总开关。缺省开。关闭后禁用知识库工具、隐藏「知识检索」、停后台加工。 */
@@ -98,7 +101,7 @@ export interface DesktopConfigData {
 		/** 并发本地 OCR 子进程数（CPU 限流）。缺省 1。 */
 		ocrConcurrency?: number;
 	};
-	/** 知识库加工特殊项目的绝对路径（~/.vetta/knowledges/processing_records）。 */
+	/** 知识库加工特殊项目的绝对路径（数据根/knowledges/processing_records）。 */
 	knowledgeProcessingCwd?: string;
 	/** Appshot（全局手势捕获前台应用窗口为附件）设置。缺省不启用。 */
 	appshot?: {

@@ -8,8 +8,8 @@
  *   bun run scripts/update-models-dev-snapshot.ts              # 联网从 models.dev 拉
  *   bun run scripts/update-models-dev-snapshot.ts --from x.json # 从本地文件生成
  *
- * --from 接受两种文件:models.dev 原始 api.json,或本地缓存
- * ~/.vetta/agent/models-dev-cache.json(已裁剪过的目录)。网络拉不通时用后者。
+ * --from 接受两种文件:models.dev 原始 api.json,或数据根下的本地缓存
+ * agent/models-dev-cache.json(已裁剪过的目录)。网络拉不通时用后者。
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -47,7 +47,8 @@ const counts = Object.entries(catalog.providers)
 
 writeFileSync(
 	OUTPUT,
-	`// AUTO-GENERATED models.dev 目录快照。不要手改——跑 \`bun run snapshot:models-dev\` 重新生成。
+	`// Modified by The Open Forge contributors.
+// AUTO-GENERATED models.dev 目录快照。不要手改——跑 \`bun run snapshot:models-dev\` 重新生成。
 // 网络不可达且无本地缓存时的兜底(见 ADR-0050);运行时拉到线上数据就覆盖它。
 import type { ModelsDevCatalog } from "./models-dev.js";
 

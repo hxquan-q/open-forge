@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export {
 	type CodingToolArchiveOperations,
 	defaultCodingToolArchiveOperations,
@@ -20,11 +21,16 @@ export {
 	parseLatestReleaseVersion,
 } from "./network.js";
 export {
+	applyDownloadFailureRecord,
+	type CodingToolCommandProbe,
 	createManagedCodingToolExecutableResolver,
 	type EnsureManagedCodingToolExecutableOptions,
 	ensureManagedCodingToolExecutable,
+	inspectManagedCodingToolExecutable,
 	type ManagedCodingToolExecutableDependencies,
 	type ManagedCodingToolExecutableResolverOptions,
+	type ManagedCodingToolInspectionDependencies,
+	parseCodingToolVersionOutput,
 	type ResolveCodingToolExecutable,
 	resolveManagedCodingToolExecutable,
 } from "./resolver.js";

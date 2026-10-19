@@ -10,8 +10,11 @@
 		"test": "bun run build:runner && bun ../../../../scripts/quality/run-vitest.mjs --run"
 	},
 	"dependencies": {
+		"@babel/parser": "^7.29.9",
 		"fflate": "^0.8.2",
-		"isomorphic-git": "^1.41.3"
+		"isomorphic-git": "^1.41.3",
+		"magic-string": "^0.30.21",
+		"tailwind-merge": "^3.7.0"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.1.12",

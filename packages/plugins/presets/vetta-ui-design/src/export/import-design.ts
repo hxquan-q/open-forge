@@ -1,6 +1,10 @@
+// Modified by The Open Forge contributors.
+
 import type { PluginContext } from "@vetta-org/plugin-sdk";
 import { strFromU8, unzipSync } from "fflate";
 import { HISTORY_ENTRY, unpackHistoryFromShare } from "../history/history-transfer";
+import { assertSafeEntryPath } from "../shared/entry-path";
+import { atomicWriteFile, withDesignWrite } from "../shared/design-fs";
 import { manifestPathOf } from "../vetd/manifest-types";
 import { sanitizeDesignName } from "../vetd/scaffold";
 import { repairPackagedSnapshot } from "./snapshot-repair";
@@ -21,7 +25,10 @@ export function parsePackagedVetd(bytes: Uint8Array): PackagedVetd {
 	const designFiles = new Map<string, Uint8Array>();
 	for (const [name, content] of Object.entries(entries)) {
 		if (name.startsWith("design/") && !name.endsWith("/")) {
-			designFiles.set(name.slice("design/".length), content);
+			const rel = name.slice("design/".length);
+			// 条目名来自外部文件：`../`、绝对路径等越界形态整包拒绝（TASK-0309）。
+			assertSafeEntryPath(rel, "share package");
+			designFiles.set(rel, content);
 		}
 	}
 	return {
@@ -59,10 +66,13 @@ export async function importPackagedVetd(
 		vetdPath = `${targetDir}/${baseName}-${suffix}.vetd`;
 		suffix += 1;
 	}
-	for (const [rel, bytes] of packaged.designFiles) {
-		await ctx.fs.writeFile(`${vetdPath}/${rel}`, base64FromBytes(bytes), "base64");
-	}
-	await ctx.fs.writeFile(manifestPathOf(vetdPath), packaged.manifestJson);
+	// 整段写进同一队列任务：文件逐个原子落盘，且与之后任何画布/工具写互不交错（TASK-0309）。
+	await withDesignWrite(vetdPath, async () => {
+		for (const [rel, bytes] of packaged.designFiles) {
+			await atomicWriteFile(ctx.fs, `${vetdPath}/${rel}`, base64FromBytes(bytes), "base64");
+		}
+		await atomicWriteFile(ctx.fs, manifestPathOf(vetdPath), packaged.manifestJson);
+	});
 	// 历史在源码之后还原：`.history/` 里存的就是这些文件的旧版本，先落地内容再接上历史，
 	// 之后第一次打开这份设计时不会因为「工作区与 HEAD 不一致」而多出一个空版本。
 	if (packaged.historyZip) {

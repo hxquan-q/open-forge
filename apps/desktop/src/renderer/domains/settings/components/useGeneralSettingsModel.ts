@@ -131,7 +131,9 @@ export function useGeneralSettingsModel(): GeneralSettingsModel {
 	}, [setWorkspacePath]);
 
 	const resetWorkspace = useCallback(async () => {
-		const defaultPath = "~/.vetta/workspace";
+		// 默认工作区路径是主进程算出的运行时值（数据根/workspace），不硬编码品牌数据根。
+		const defaultPath = (await window.vetta.config.get()).defaultWorkspaceCwd;
+		if (!defaultPath) return;
 		setWorkspacePath(defaultPath);
 		localStorage.setItem("vetta-workspace-path", defaultPath);
 		await window.vetta.config.set({ workspacePath: defaultPath });

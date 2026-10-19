@@ -2,6 +2,14 @@
 	"taskApproval": {
 		"title": "允许 {{tool}} 执行？"
 	},
+	"projectTrust": {
+		"title": "信任此工作区的项目资源？",
+		"message": "此工作区包含项目级资源（技能 / 扩展 / 命令包），加载后其中的代码将在本机执行。",
+		"detail": "工作区：{{path}}\n\n「信任并记住」按路径记住、之后不再询问；「仅本次」只在本次会话加载。",
+		"remember": "信任并记住",
+		"once": "仅本次",
+		"deny": "拒绝"
+	},
 	"fileOrganize": {
 		"title": "整理这些文件？",
 		"summary": "共 {{count}} 个移动/重命名操作，确认后执行"

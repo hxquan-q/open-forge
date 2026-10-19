@@ -1,37 +1,29 @@
+<!-- Modified by The Open Forge contributors. -->
 # Security Policy
 
 ## Supported versions
 
-This repository is the Open Forge client. Security fixes land on the `dev` branch and ship with the next desktop release. We do not maintain long-lived patched release lines.
+Security fixes for the Open Forge client land in the development line and ship with a subsequent desktop release. This repository does not maintain separate long-lived patched release lines.
 
 ## Reporting a vulnerability
 
-**Do not open a public GitHub issue** for a security report.
+Do not disclose vulnerability details in public issues, pull requests, or discussions.
 
-Use [GitHub Private Vulnerability Reporting](https://github.com/hxquan-q/open-forge/security/advisories/new) so only maintainers see the details. (Placeholder, 2026-10-15: private vulnerability reporting is **not yet enabled** on this repository, so the link above does not work yet — please hold non-urgent reports until this section is updated, and do not use public channels in the meantime.)
+Check the [repository Security page](https://github.com/hxquan-q/open-forge/security) for an enabled private reporting channel. This checkout does not document a confirmed private contact address. If no private channel is available, request one from the maintainers without including the vulnerability details. Do not send reports to another project's community or advisory tracker.
 
-Please include:
+A private report should contain:
 
-- A description of the issue and its impact
-- Steps to reproduce, or a proof of concept that does **not** include real user data
-- Affected version (Settings → General, or `apps/desktop/package.json` for a source build)
-- Whether the issue is in the lite (source) build, an official installer, a plugin, or the IM gateway
+- The affected version and platform.
+- The feature, component, and build mode involved.
+- Reproduction steps using synthetic data.
+- Expected and actual behavior, impact, and a minimal proof of concept when available.
 
-Do **not** attach API keys, tokens, cookies, session files, or production configuration.
-
-We will acknowledge a valid report and follow up on the advisory. Please give us a reasonable window to ship a fix before any public disclosure.
+Never attach API keys, tokens, cookies, user sessions, or production configuration.
 
 ## Scope
 
-In scope for this repository:
+This repository covers the desktop app, CLI, mobile source, transport services, Agent runtime, extension loading, and documentation site. Client permission enforcement, credential storage, and network behavior are part of that scope.
 
-- The desktop app, CLI host, IM gateway, and docs site in this monorepo
-- Plugin / theme / skill loading and permission checks in this client
-- Credential storage and the network behavior documented in the README
+The business backend is maintained separately. Model providers, MCP servers, and independently installed plugins have their own maintainers; report a client defect here when Open Forge fails to enforce its contract or distributes the affected code.
 
-Out of scope here (do not send to this advisory):
-
-- Open Forge Serv (accounts, billing, hosted marketplace) — that is a separate private repository
-- Vulnerabilities that exist only in a third-party model provider, MCP server, or user-installed plugin, unless this client fails to enforce a declared permission or ships the vulnerable code
-
-Product privacy and outbound network behavior are summarized in the README [Data and build modes](README.md#data-and-build-modes) section and detailed in [the docs-site security reference](apps/docs-site/content/docs/reference/security-and-data.mdx).
+Read [data and build modes](README.md#data-and-build-modes) and the [security and data reference](apps/docs-site/content/docs/en/reference/security-and-data.mdx) for the current client boundaries.

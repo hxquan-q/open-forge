@@ -1,4 +1,5 @@
-import { mkdtemp } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { mkdir, mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -21,6 +22,22 @@ describe("Node resource package host", () => {
 		expect(host.environment).toBeInstanceOf(NodeResourcePackageEnvironment);
 		expect(host.resourceAccess.paths.separator).toBe(path.sep);
 		expect(host.digest).toBe(nodeResourcePackageDigest);
+	});
+
+	it("creates and tightens directories to the requested owner-only mode", async () => {
+		if (process.platform === "win32") return; // POSIX 权限位断言，Windows ACL 语义不同
+		const files = new NodeResourcePackageFiles();
+		const root = await mkdtemp(path.join(tmpdir(), "resource-package-mode-"));
+
+		const created = path.join(root, "a", "private");
+		await files.ensureDirectory(created, { mode: 0o700 });
+		expect((await stat(created)).mode & 0o777).toBe(0o700);
+
+		// 已存在的宽松目录也要被显式收紧（mkdir 的 mode 不会作用于已存在目录）
+		const loose = path.join(root, "loose");
+		await mkdir(loose, { recursive: true });
+		await files.ensureDirectory(loose, { mode: 0o700 });
+		expect((await stat(loose)).mode & 0o777).toBe(0o700);
 	});
 
 	it("provides stable SHA-256 digests for compatible cache paths", () => {

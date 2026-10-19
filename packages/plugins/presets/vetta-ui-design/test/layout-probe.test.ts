@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+
 /**
  * 渲染态机检。
  *
@@ -88,9 +90,9 @@ it("the browser probe honors nowrap and measures text nodes rather than element 
 
 it("runs against a real DOM without throwing and returns findings", () => {
 	document.body.innerHTML = `
-		<div data-vetd-source="frames/login.tsx:3">
-			<span class="icon-[lucide--search] size-4" data-vetd-source="frames/login.tsx:7"></span>
-			<button data-vetd-source="frames/login.tsx:9">保存草稿</button>
+		<div data-vetd-source="frames/login.tsx:3:1">
+			<span class="icon-[lucide--search] size-4" data-vetd-source="frames/login.tsx:7:3"></span>
+			<button data-vetd-source="frames/login.tsx:9:4">保存草稿</button>
 		</div>`;
 	const result: unknown = eval(LAYOUT_PROBE_SCRIPT);
 	expect(Array.isArray(result)).toBe(true);

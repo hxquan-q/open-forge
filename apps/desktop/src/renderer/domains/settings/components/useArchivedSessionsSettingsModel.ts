@@ -2,6 +2,7 @@
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { pathBasename } from "@shared/lib/utils";
 import { confirmDialogAtom } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -69,12 +70,18 @@ export function useArchivedSessionsSettingsModel(): ArchivedSessionsSettingsMode
 								.deleteSession({ id: team.teamSessionId, coordinationSessionPath: path })
 								.then(() => notifyTeamSessionsChanged(team.teamId))
 						: window.vetta.session.delete(path);
-					void removal.then(() => {
-						// 会话没了，归档标记就是孤儿；与侧边栏删除会话的清理时机保持一致。
-						void window.vetta.archivedSessions.forget([path]);
-						setArchivedSessions((prev) => prev.filter((item) => item.path !== path));
-						recordSettingsUsage({ tab: "archived", action: "deleted", target: "session" });
-					});
+					void removal
+						.then(() => {
+							// 会话没了，归档标记就是孤儿；与侧边栏删除会话的清理时机保持一致。
+							void window.vetta.archivedSessions.forget([path]);
+							setArchivedSessions((prev) => prev.filter((item) => item.path !== path));
+							recordSettingsUsage({ tab: "archived", action: "deleted", target: "session" });
+						})
+						.catch((error: unknown) => {
+							// 删除失败（如 runtime 报错）不能既不提示也不留 unhandled rejection（BUG-0114）。
+							console.error("[archived-sessions] delete session failed", error);
+							showToast({ variant: "error", message: t("deleteArchivedSessionFailedToast") });
+						});
 				},
 			});
 		},

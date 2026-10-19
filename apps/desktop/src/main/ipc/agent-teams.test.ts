@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createAgentTeamFixture, createEmptyAgentTeamDocument } from "@vetta/agent-team";
 import { providerModelNotFoundError } from "@vetta/ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -155,6 +156,33 @@ describe("Agent Team IPC contract", () => {
 				targetMemberIds: [],
 			}),
 		).rejects.toBe(failure);
+	});
+
+	it("wraps plain-object rejections into readable Errors instead of [object Object] (BUG-0117)", async () => {
+		const deps = dependencies();
+		// runtime 层的 runtimeError 是普通对象：跨 ipcMain.handle 后渲染端只会看到
+		// String() 出来的 "[object Object]"，一线诊断信息全丢。
+		const failure = { code: "SESSION_NOT_FOUND", message: "Session not found: session", retryable: false };
+		vi.mocked(deps.sessions.send).mockRejectedValueOnce(failure);
+		registerAgentTeamsIpc(deps);
+		const sendMessage = ipc.handlers.get("vetta:agent-teams:send-message");
+		if (!sendMessage) throw new Error("send-message handler was not registered");
+
+		const rejection = await (
+			sendMessage({}, "session", {
+				requestId: "plain-object",
+				text: "Continue the Team conversation",
+				targetMemberIds: [],
+			}) as Promise<unknown>
+		).then(
+			() => {
+				throw new Error("expected the send to reject");
+			},
+			(error: unknown) => error,
+		);
+		expect(rejection).toBeInstanceOf(Error);
+		expect((rejection as Error).message).toContain("SESSION_NOT_FOUND");
+		expect((rejection as Error).message).not.toContain("[object Object]");
 	});
 
 	it("passes an ordinary Conversation bookmark when reopening a Team session", async () => {

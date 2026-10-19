@@ -1,5 +1,21 @@
+// Modified by The Open Forge contributors.
+import type { SpawnOptions } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { createNodeHostBashExecutor } from "./bash-executor.js";
+
+// 捕获真实 spawn 的选项：windowsHide 属于进程创建边界合同，包一层真实现即可断言。
+const capturedSpawnOptions = vi.hoisted(() => [] as Array<SpawnOptions | undefined>);
+
+vi.mock("node:child_process", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:child_process")>();
+	return {
+		...actual,
+		spawn: vi.fn((command: string, args: readonly string[], options?: SpawnOptions) => {
+			capturedSpawnOptions.push(options);
+			return options === undefined ? actual.spawn(command, args) : actual.spawn(command, args, options);
+		}),
+	};
+});
 
 describe("Node Bash host", () => {
 	it("preserves sanitized output, streaming and exit status", async () => {
@@ -43,6 +59,17 @@ describe("Node Bash host", () => {
 			cancelled: true,
 			truncated: false,
 		});
+	});
+
+	it("spawns the shell with windowsHide so no console window flashes on Windows", async () => {
+		capturedSpawnOptions.length = 0;
+		const executor = createNodeHostBashExecutor({
+			resolveShell: () => ({ executable: process.execPath, args: ["-e"] }),
+		});
+
+		await executor.execute("process.stdout.write('ok')");
+
+		expect(capturedSpawnOptions.at(-1)?.windowsHide).toBe(true);
 	});
 
 	it("uses the operation boundary without spawning a second process", async () => {

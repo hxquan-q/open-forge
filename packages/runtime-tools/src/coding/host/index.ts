@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type {
 	BackgroundCommandEvent,
 	BackgroundCommandService,
@@ -16,5 +17,10 @@ export {
 	type DesktopCommandPort,
 	type DesktopCommandResult,
 } from "./desktop-command.js";
-export type { CodingToolExecutable, CodingToolExecutableResolver } from "./executable-resolver.js";
+export type {
+	CodingToolExecutable,
+	CodingToolExecutableResolver,
+	CodingToolInspection,
+	CodingToolInspectionSource,
+} from "./executable-resolver.js";
 export type { ForegroundCommandOperations } from "./foreground-command-operations.js";

@@ -282,4 +282,37 @@ describe("SessionInterruptMonitor", () => {
 		withoutTeamWork.monitor.stop();
 		withTeamWork.monitor.stop();
 	});
+
+	it("团队主控等子代理的悬挂形态不产生任何决策（BUG-0126）", async () => {
+		// 团队长任务里协调会话等成员返回：不流式、消息 idle 远超 suspected 阈值、
+		// 无完成标记——旧判据全程误报「疑似中断」。宿主旁路信号（成员 attempt/
+		// 重试/调度在途）必须让巡检对它全程静默。
+		const retry = vi.fn(async () => {});
+		const onDecision = vi.fn();
+		const monitor = new SessionInterruptMonitor({
+			getRuntime: () =>
+				({
+					getState: () => ({ isStreaming: false }),
+					getMessages: () => [userMessageAt(Date.now() - 10 * 60_000)],
+					getSessionPath: () => "/sessions/a.jsonl",
+					retry,
+				}) as never,
+			listCandidateSessionIds: () => ["s1"],
+			hasPendingAction: () => false,
+			// dev 侧 TASK-0287 将该端口定为必填；本用例只验证 awaitingSubAgents 维度，
+			// 团队在途工作维度按 false 钉住，两个豁免维度互不掩盖。
+			hasPendingSubagentWork: () => false,
+			wasManualStopped: () => false,
+			isAwaitingSubAgents: (sessionId) => sessionId === "s1",
+			readMode: () => "notify",
+			readMaxAttempts: () => 1,
+			onDecision,
+			nowMs: () => Date.now(),
+		});
+		await monitor.reconcileNow();
+		await monitor.reconcileNow();
+		expect(onDecision).not.toHaveBeenCalled();
+		expect(retry).not.toHaveBeenCalled();
+		monitor.stop();
+	});
 });

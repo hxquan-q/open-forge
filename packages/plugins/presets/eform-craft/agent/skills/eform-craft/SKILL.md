@@ -89,7 +89,7 @@ description: "电子表单工坊主手册（板块1·表单生成）：把用户
 - 顶层 `form` + `fields[]`。
 - `form`：slug / title / source{fileName,importedAt,channel} / revision / layoutHint / notes / **capabilities{signature,audit}** / **statusFlow**。
 - `form.capabilities`（v2 新增，队长派工依据）：
-  - `signature`：布尔，原件含 `[电子签]` 字段 → true（隐含）；用户明确要求加签 → true。
+  - `signature`：布尔，原件含 `[电子签]` 字段 → true（隐含）；用户明确要求加签 → true。加签 = 在对应人员字段（操作人 / 复核人 / 检验人员等）**之后追加**一个独立 signature 字段（自己的 F# 与 label，如「操作人签名」）再派工 @esign 实现——不替换、不改型任何既有字段；原件识别遇 `[电子签]` 标记时同样按此追加，不吞并人员字段。
   - `audit`：布尔，默认 **false**；用户明确要求启用审计跟踪 → true。
 - `form.statusFlow`：固定 `["draft","saved","approved"]`（数据记录生命周期，见 §3.2）。
 - 每 field：id(F#) / section / label / fieldName / fieldType / required / span / position{row,col} / mock{mode,…} / remark。

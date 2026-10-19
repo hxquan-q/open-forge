@@ -65,18 +65,24 @@ import {
 } from "../filesystem/filesystem-service.js";
 import { watchRemoteDirectory } from "../filesystem/remote-directory-watch.js";
 import { getDesktopMcpOAuthService } from "../mcp/mcp-oauth-service.js";
-import { getDesktopMcpSettingsService, readMcpConfig, writeMcpConfig } from "../mcp/mcp-settings-service.js";
+import {
+	getDesktopMcpSettingsService,
+	MCP_CONFIG_PATH,
+	readMcpConfig,
+	writeMcpConfig,
+} from "../mcp/mcp-settings-service.js";
 import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.js";
 import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
 import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
-import type { ModelsConfig } from "../models/model-settings-service.js";
+import { MODELS_CONFIG_PATH, type ModelsConfig } from "../models/model-settings-service.js";
 import { probeModelProvider } from "../models/probe.js";
 import { testProviderAvailability } from "../models/test-provider.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
 import { type DesktopProxyConfigSnapshot, redactProxyConfig } from "../proxy/proxy-settings.js";
 import { getLinuxSandboxCapability, getSandboxCapability, type SandboxCapability } from "../sandbox/capability.js";
 import { getDesktopShortcutService } from "../shortcuts/shortcut-service.js";
+import { DEFAULT_WORKSPACE_PATH } from "../utils/workspace.js";
 
 export interface LinuxSandboxConfigState {
 	status: "unknown" | "available" | "unavailable";
@@ -91,12 +97,14 @@ export interface DesktopConfigSnapshot extends Omit<DesktopConfig, "proxy"> {
 	proxy: DesktopProxyConfigSnapshot;
 	sandbox: SandboxCapability;
 	linuxSandbox: LinuxSandboxConfigState;
-	/** 默认「对话」项目的绝对路径（~/.vetta/conversation），主进程已确保目录存在。 */
+	/** 默认「对话」项目的绝对路径（数据根/conversation），主进程已确保目录存在。 */
 	defaultConversationCwd: string;
-	/** im-gateway 自己的 cwd（~/.vetta/im-gateway/conversation）。Claw tab 据此判定一条 session 是否来自 IM。 */
+	/** im-gateway 自己的 cwd（数据根/im-gateway/conversation）。Claw tab 据此判定一条 session 是否来自 IM。 */
 	defaultImConversationCwd: string;
-	/** 知识库加工特殊项目的绝对路径（~/.vetta/knowledges/processing_records）。 */
+	/** 知识库加工特殊项目的绝对路径（数据根/knowledges/processing_records）。 */
 	knowledgeProcessingCwd: string;
+	/** 默认工作区根的绝对路径（数据根/workspace）；设置页「恢复默认」与渲染端初始化以此为准。 */
+	defaultWorkspaceCwd: string;
 }
 
 export {
@@ -155,6 +163,8 @@ const CHANNELS = {
 	MODELS_PROBE: "vetta:models:probe",
 	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
 	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
+	MODELS_CONFIG_PATH: "vetta:models:config-path",
+	MCP_CONFIG_PATH: "vetta:mcp:config-path",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
 	MCP_LOGIN: "vetta:mcp:login",
@@ -425,6 +435,7 @@ export function registerFsIpc(): () => void {
 			defaultConversationCwd: DEFAULT_CONVERSATION_CWD,
 			defaultImConversationCwd: DEFAULT_IM_CONVERSATION_CWD,
 			knowledgeProcessingCwd: KB_PROCESSING_CWD,
+			defaultWorkspaceCwd: DEFAULT_WORKSPACE_PATH,
 		};
 	});
 
@@ -483,6 +494,16 @@ export function registerFsIpc(): () => void {
 		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
 		const provider = (await models.getConfig()).providers[providerName.trim()];
 		return testProviderAvailability(provider, { fetchImpl: net.fetch });
+	});
+
+	// 只读：设置页脚展示当前运行时的模型配置真实路径（数据根可被 env 覆盖/迁移）。
+	ipcMain.handle(CHANNELS.MODELS_CONFIG_PATH, () => {
+		return MODELS_CONFIG_PATH;
+	});
+
+	// 只读：MCP JSON 编辑器的路径提示，同模型配置路径一样不硬编码品牌数据根。
+	ipcMain.handle(CHANNELS.MCP_CONFIG_PATH, () => {
+		return MCP_CONFIG_PATH;
 	});
 
 	ipcMain.handle(CHANNELS.MCP_GET, async (): Promise<McpConfig> => {
@@ -627,6 +648,8 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.MODELS_COPY_API_KEY);
 		ipcMain.removeHandler(CHANNELS.MODELS_PROBE);
 		ipcMain.removeHandler(CHANNELS.MODELS_FETCH_PROVIDER_MODELS);
+		ipcMain.removeHandler(CHANNELS.MODELS_CONFIG_PATH);
+		ipcMain.removeHandler(CHANNELS.MCP_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_GET);
 		ipcMain.removeHandler(CHANNELS.MCP_SET);
 		ipcMain.removeHandler(CHANNELS.MCP_LOGIN);

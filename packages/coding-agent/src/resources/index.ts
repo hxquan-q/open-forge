@@ -1,4 +1,10 @@
+// Modified by The Open Forge contributors.
 export type { ResourceCollision, ResourceDiagnostic } from "./contracts/diagnostics.js";
+export {
+	PROJECT_RESOURCE_TRUST_CAPABILITY,
+	type ProjectResourceTrustDecision,
+	type ProjectResourceTrustPort,
+} from "./contracts/project-resource-trust.js";
 export type {
 	ResourceAccessOptions,
 	ResourceAccessPort,

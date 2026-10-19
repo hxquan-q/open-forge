@@ -1,0 +1,757 @@
+<!-- Copyright The Open Forge contributors. -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a181e">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>生产工单齐套分析</title>
+  <style>
+    :root { color-scheme:dark;
+      --ink:#dce9ec; --muted:#8ea6ae; --faint:#5d7681;
+      --bg:#071116; --surface:#0b171d; --surface-2:#102430; --soft:#0d1e26;
+      --line:#1b3641; --line-soft:#132a33;
+      --teal:#2dd4bf; --teal-strong:#14b8a6; --teal-glow:rgba(45,212,191,.30); --teal-soft:rgba(45,212,191,.12);
+      --green:#34d399; --green-deep:#0e7a58; --green-soft:rgba(52,211,153,.13);
+      --amber:#fbbf24; --amber-strong:#a96f06; --amber-soft:rgba(251,191,36,.13);
+      --red:#f87171; --red-deep:#b62e3f; --red-soft:rgba(248,113,113,.14);
+      --gray:#8a97a8; --gray-soft:rgba(138,151,168,.14);
+      --cyan:#22d3ee; --cyan-deep:#2b7d91; --cyan-soft:rgba(34,211,238,.13);
+      --radius:14px; --shadow:0 1px 2px rgba(0,0,0,.45),0 12px 28px -14px rgba(0,0,0,.65);
+      --shadow-hover:0 2px 4px rgba(0,0,0,.5),0 18px 38px -14px rgba(0,0,0,.75); }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); font:13.5px/1.6 "MiSans","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+      background-color:var(--bg);
+      background-image:
+        linear-gradient(rgba(45,212,191,.032) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(45,212,191,.032) 1px,transparent 1px),
+        radial-gradient(1100px 520px at 50% -180px,rgba(18,110,110,.22),transparent 65%);
+      background-size:36px 36px,36px 36px,100% 100%; }
+    ::selection { background:rgba(45,212,191,.32); }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.45; }
+    button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible { outline:3px solid rgba(45,212,191,.6); outline-offset:2px; }
+    h1,h2,h3,h4,p { margin:0; }
+    h1 { font-size:26px; line-height:1.3; letter-spacing:.5px; font-weight:700; }
+    h2 { font-size:16px; } h3 { font-size:14px; } h4 { font-size:13px; }
+    [hidden] { display:none !important; }
+    .shell { max-width:1920px; margin:auto; padding:0 28px; }
+    .masthead { background:linear-gradient(180deg,#0e2229 0%,#0a181e 100%); color:#eaf6f7; border-bottom:1px solid rgba(45,212,191,.34); box-shadow:0 1px 0 rgba(45,212,191,.10),0 10px 30px -12px rgba(0,0,0,.85); }
+    .masthead::before { content:""; display:block; height:3px; background:linear-gradient(90deg,rgba(45,212,191,0) 0%,#2dd4bf 50%,rgba(45,212,191,0) 100%); opacity:.9; }
+    .head-row { display:flex; justify-content:space-between; align-items:center; gap:20px; padding-top:24px; padding-bottom:22px; }
+    .brand { display:flex; align-items:center; gap:15px; min-width:0; }
+    .brand-mark { width:46px; height:46px; border-radius:13px; background:rgba(45,212,191,.10); border:1px solid rgba(45,212,191,.38); display:flex; justify-content:center; align-items:flex-end; gap:4px; padding:12px 9px; flex-shrink:0; box-shadow:inset 0 0 16px rgba(45,212,191,.14),0 0 18px -6px var(--teal-glow); }
+    .brand-mark i { width:5px; background:#2dd4bf; border-radius:2px; height:14px; box-shadow:0 0 8px rgba(45,212,191,.7); }
+    .brand-mark i:nth-child(2) { height:22px; background:#8ef0dd; } .brand-mark i:nth-child(3) { height:18px; background:#14b8a6; }
+    .eyebrow { color:#5fd4c3; font-size:10.5px; letter-spacing:2.4px; font-weight:700; margin-bottom:5px; }
+    .masthead h1 { color:#f2fbfb; text-shadow:0 0 26px rgba(45,212,191,.25); }
+    .subtitle { color:#8fb2ba; margin-top:5px; font-size:12px; letter-spacing:.2px; }
+    .head-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btn { padding:8px 14px; min-height:36px; border:1px solid #24444f; background:#122430; color:var(--ink); border-radius:9px; white-space:nowrap; transition:background .15s,border-color .15s,box-shadow .15s,transform .15s; }
+    .btn:hover { background:#18323e; border-color:#2d5665; }
+    .btn:active { transform:translateY(1px); }
+    .btn.primary { background:var(--teal); border-color:var(--teal); color:#04231e; font-weight:700; box-shadow:0 0 18px -2px var(--teal-glow); }
+    .btn.primary:hover { background:#4ce0cc; border-color:#4ce0cc; }
+    .head-actions .btn { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.2); color:#eaf6f7; }
+    .head-actions .btn:hover { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.35); }
+    .head-actions .btn.primary { background:var(--teal); border-color:transparent; color:#04231e; }
+    .head-actions .btn.primary:hover { background:#4ce0cc; }
+    .mode { font-size:11px; font-weight:700; letter-spacing:.4px; border:1px solid #2a4a57; border-radius:999px; padding:6px 13px; background:rgba(138,151,168,.10); color:#b8ccd4; }
+    .mode::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; margin-right:7px; vertical-align:1px; }
+    .mode.demo { background:var(--amber-soft); border-color:rgba(251,191,36,.5); color:var(--amber); }
+    .mode.live { background:var(--teal-soft); border-color:rgba(45,212,191,.55); color:var(--teal); }
+    .mode.live::before { animation:ledpulse 2.4s ease-in-out infinite; }
+    @keyframes ledpulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    main.shell { padding-top:22px; padding-bottom:22px; }
+    .notice { display:flex; align-items:flex-start; gap:12px; padding:13px 16px; border:1px solid rgba(45,212,191,.30); border-radius:11px; background:linear-gradient(180deg,rgba(45,212,191,.10),rgba(45,212,191,.035)); margin-bottom:14px; overflow-wrap:anywhere; }
+    .notice strong { font-size:13px; color:#c9eae4; } .notice p { color:#93b3b8; margin-top:3px; font-size:12px; }
+    .notice.warning { background:linear-gradient(180deg,rgba(251,191,36,.11),rgba(251,191,36,.04)); border-color:rgba(251,191,36,.38); } .notice.warning strong { color:#f5d78e; } .notice.warning p { color:#bda879; }
+    .notice.danger { background:linear-gradient(180deg,rgba(248,113,113,.12),rgba(248,113,113,.045)); border-color:rgba(248,113,113,.42); } .notice.danger strong { color:#f6bcbc; } .notice.danger p { color:#c79a9f; }
+    .notice-index { font:700 12px/22px Consolas,monospace; width:24px; height:24px; text-align:center; border-radius:50%; background:rgba(7,17,22,.55); border:1px solid currentColor; color:var(--teal); flex-shrink:0; }
+    .notice.warning .notice-index { color:var(--amber); }
+    .notice.danger .notice-index { color:var(--red); }
+    .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:16px; }
+    .kpi { border:1px solid var(--line-soft); background:var(--surface); padding:18px 20px 15px 24px; border-radius:var(--radius); position:relative; overflow:hidden; box-shadow:var(--shadow); transition:box-shadow .18s,transform .18s,border-color .18s; }
+    .kpi:hover { box-shadow:var(--shadow-hover); transform:translateY(-2px); border-color:var(--line); }
+    .kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--tone,#9fc0cb); box-shadow:0 0 14px -1px var(--tone,#9fc0cb); }
+    .kpi-head { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:12px; font-weight:600; }
+    .kpi-head > span:first-child::before { content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--tone,#9fc0cb); box-shadow:0 0 9px var(--tone,#9fc0cb); margin-right:8px; vertical-align:1px; }
+    .kpi-code { font:600 10px Consolas,monospace; letter-spacing:1px; color:var(--faint); }
+    .kpi-number { margin:8px 0 3px; font:700 35px/1.1 system-ui,sans-serif; letter-spacing:-.8px; color:var(--tone,#dce9ec); font-variant-numeric:tabular-nums; text-shadow:0 0 18px currentColor; }
+    .kpi-number small { font:12px "MiSans","Microsoft YaHei",sans-serif; margin-left:7px; color:var(--faint); font-weight:400; letter-spacing:0; text-shadow:none; }
+    .kpi-foot { color:var(--muted); font-size:11px; }
+    .overview { display:grid; grid-template-columns:minmax(350px,1.15fr) minmax(350px,1fr); border:1px solid var(--line-soft); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; background:var(--surface); box-shadow:var(--shadow); }
+    .overview-chart { padding:22px 24px; background:linear-gradient(135deg,rgba(45,212,191,.09) 0%,rgba(11,23,29,0) 62%),var(--surface); }
+    .section-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+    .overline { font-size:10px; color:var(--faint); letter-spacing:1.6px; font-weight:600; }
+    .chart-total { display:flex; gap:12px; align-items:baseline; margin-bottom:14px; }
+    .chart-total strong { color:var(--green); font:700 38px/1.1 system-ui,sans-serif; letter-spacing:-1.2px; text-shadow:0 0 22px currentColor; }
+    .hint,.muted { color:var(--muted); font-size:11px; }
+    .stack { display:flex; gap:2px; height:14px; border-radius:999px; overflow:hidden; background:#12262e; box-shadow:inset 0 1px 3px rgba(0,0,0,.5); }
+    .stack span { min-width:0; border-radius:2px; }
+    .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .legend-item { color:var(--muted); font-size:11px; display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.035); border:1px solid var(--line-soft); border-radius:999px; padding:3px 11px; }
+    .dot { display:inline-block; width:8px; height:8px; border-radius:50%; flex-shrink:0; box-shadow:0 0 7px currentColor; }
+    .overview-meta { padding:22px 24px; border-left:1px solid var(--line-soft); }
+    .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; }
+    .label { display:block; color:var(--faint); font-size:11px; font-weight:600; letter-spacing:.3px; margin-bottom:4px; }
+    .meta-value { font-size:12.5px; font-weight:600; overflow-wrap:anywhere; color:#c9dde2; }
+    .policy { margin-top:16px; padding:11px 13px; background:var(--soft); border:1px solid var(--line-soft); border-radius:9px; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+    .workspace { border:1px solid var(--line-soft); border-radius:var(--radius); overflow:hidden; background:var(--surface); box-shadow:var(--shadow); }
+    .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); padding:0 20px; background:#0a161c; }
+    .tab { border:0; background:transparent; color:var(--muted); padding:15px 15px 12px; border-bottom:3px solid transparent; font-weight:600; white-space:nowrap; transition:color .15s; }
+    .tab:hover { color:var(--ink); }
+    .tab[aria-selected="true"] { color:var(--teal); border-bottom-color:var(--teal); text-shadow:0 0 14px rgba(45,212,191,.45); }
+    .tab-count { display:inline-block; margin-left:7px; padding:1px 7px; border-radius:6px; background:#152a33; font:600 10.5px/17px Consolas,monospace; color:#7f99a3; }
+    .tab[aria-selected="true"] .tab-count { color:var(--teal); background:var(--teal-soft); }
+    .filters { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:15px 20px; border-bottom:1px solid var(--line-soft); }
+    .filter { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.3px; flex:1 1 220px; max-width:360px; }
+    .filter.compact { flex:0 1 170px; }
+    input,select { color:var(--ink); border:1px solid #1e3a45; border-radius:8px; background:#0a161c; padding:9px 12px; min-height:38px; width:100%; transition:border-color .15s,box-shadow .15s; }
+    input:hover,select:hover { border-color:#2d5665; }
+    input:focus,select:focus { border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-glow); outline:none; }
+    input::placeholder { color:#53707b; font-weight:400; }
+    .filter-note { flex:1 1 160px; align-self:center; color:var(--faint); font-size:11px; text-align:right; font-weight:400; }
+    .toolbar { padding:12px 20px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--line-soft); background:#0c1a21; }
+    .result { font-size:12px; font-weight:700; color:#c9dde2; }
+    .panel { min-height:310px; }
+    .master-detail { display:grid; grid-template-columns:310px minmax(0,1fr); }
+    .master { border-right:1px solid var(--line-soft); background:#09141a; min-width:0; }
+    .master-heading { padding:14px 16px; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; align-items:center; }
+    .order-list { max-height:720px; overflow:auto; padding:10px; }
+    .order-list::-webkit-scrollbar,.table-wrap::-webkit-scrollbar { width:10px; height:10px; }
+    .order-list::-webkit-scrollbar-thumb,.table-wrap::-webkit-scrollbar-thumb { background:#274653; border-radius:999px; border:2px solid #0b171d; }
+    .order-list::-webkit-scrollbar-thumb { border-color:#09141a; }
+    .order-list::-webkit-scrollbar-track,.table-wrap::-webkit-scrollbar-track { background:transparent; }
+    .order-card { display:block; width:100%; text-align:left; border:1px solid transparent; background:transparent; border-radius:10px; padding:12px 13px; margin-bottom:6px; color:var(--ink); transition:background .15s,border-color .15s,box-shadow .15s; }
+    .order-card:hover { background:#0f2028; }
+    .order-card[aria-pressed="true"] { border-color:rgba(45,212,191,.45); background:rgba(45,212,191,.10); box-shadow:inset 3px 0 0 var(--teal),0 0 20px -8px var(--teal-glow); }
+    .order-card-top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:5px; }
+    .order-no { font:600 12px Consolas,"MiSans","Microsoft YaHei",monospace; overflow-wrap:anywhere; min-width:0; color:#dcf0f2; }
+    .order-product { font-size:12px; overflow-wrap:anywhere; margin-bottom:6px; color:#9db6be; }
+    .order-card-foot { display:flex; justify-content:space-between; gap:8px; color:var(--faint); font-size:10px; }
+    .mini-stack { margin-top:10px; height:5px; gap:1px; }
+    .detail { padding:19px 20px 22px; min-width:0; }
+    .detail-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:14px; }
+    .detail-title { font-size:19px; overflow-wrap:anywhere; letter-spacing:.2px; color:#eef8f8; }
+    .detail-subtitle { margin-top:5px; color:var(--muted); font-size:11.5px; overflow-wrap:anywhere; }
+    .detail-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:14px 0; border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); margin-bottom:14px; }
+    .detail-metric { padding-right:10px; min-width:0; }
+    .detail-metric + .detail-metric { border-left:1px solid var(--line-soft); padding-left:14px; }
+    .metric-value { font-size:12.5px; font-weight:700; overflow-wrap:anywhere; color:#d5e7ea; }
+    .reason { background:var(--soft); border:1px solid var(--line-soft); border-radius:9px; padding:11px 13px; margin-bottom:12px; font-size:11.5px; color:#9fb8c1; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .reason.unknown { background:#0c1d27; border-color:#183341; color:#93aec2; }
+    .badge { display:inline-flex; align-items:center; gap:6px; padding:3px 11px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; border:1px solid transparent; }
+    .badge.on_time { background:var(--green-soft); color:var(--green); border-color:rgba(52,211,153,.32); }
+    .badge.no_demand { background:var(--cyan-soft); color:var(--cyan); border-color:rgba(34,211,238,.32); }
+    .badge.late { background:var(--amber-soft); color:var(--amber); border-color:rgba(251,191,36,.34); }
+    .badge.shortage { background:var(--red-soft); color:var(--red); border-color:rgba(248,113,113,.38); box-shadow:0 0 14px -4px rgba(248,113,113,.55); }
+    .badge.unknown { background:var(--gray-soft); color:#9fb0c0; border-color:rgba(138,151,168,.3); }
+    .badge-dot { width:6px; height:6px; background:currentColor; border-radius:50%; box-shadow:0 0 6px currentColor; }
+    .table-caption { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; margin:14px 0 10px; }
+    .table-caption h3 { color:#d5e7ea; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:10px; max-height:650px; isolation:isolate; background:var(--surface); }
+    table { width:100%; border-collapse:separate; border-spacing:0; font-size:11.5px; text-align:left; }
+    th { background:var(--surface-2); color:#9db8c0; font-weight:600; font-size:11px; letter-spacing:.3px; position:sticky; top:0; z-index:3; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td { padding:11px 12px; border-bottom:1px solid #12303a; vertical-align:top; background:var(--surface); max-width:330px; overflow-wrap:anywhere; }
+    tbody > tr:last-child > td { border-bottom:0; }
+    tbody > tr:hover > td { background:#0f2530; }
+    .numeric { text-align:right; font-family:Consolas,"SFMono-Regular",monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .date { white-space:nowrap; font-size:10.5px; font-variant-numeric:tabular-nums; color:#93aeb7; }
+    .material-table { min-width:2600px; table-layout:fixed; }
+    .material-table col { width:123px; }
+    .material-table col:nth-child(1) { width:155px; }
+    .material-table col:nth-child(2) { width:195px; }
+    .material-table col:nth-child(3) { width:170px; }
+    .material-table col:nth-child(4) { width:65px; }
+    .material-table col:nth-child(19) { width:155px; }
+    .sticky-two > thead > tr > th:nth-child(1),.sticky-two td:nth-child(1):not([colspan]) { position:sticky; left:0; z-index:2; width:155px; min-width:155px; max-width:155px; }
+    .sticky-two th:nth-child(2),.sticky-two td:nth-child(2) { position:sticky; left:155px; z-index:2; width:195px; min-width:195px; max-width:195px; box-shadow:2px 0 0 #16303a; }
+    .sticky-two thead th:nth-child(1),.sticky-two thead th:nth-child(2) { z-index:5; }
+    .wide-table { min-width:1150px; }
+    .cell-button { display:block; border:0; padding:0; background:transparent; color:var(--teal); font:inherit; text-align:left; overflow-wrap:anywhere; width:100%; }
+    .cell-button:hover { text-decoration:underline; text-underline-offset:3px; color:#5ee8d6; }
+    .cell-button .chevron { display:inline-block; font:14px Consolas,monospace; margin-right:6px; }
+    .rate-value { font:11px Consolas,monospace; font-weight:600; }
+    .rate-track { height:5px; margin-top:6px; background:#16303a; border-radius:999px; overflow:hidden; }
+    .rate-fill { height:100%; border-radius:999px; box-shadow:0 0 8px rgba(255,255,255,.12); }
+    .qty-risk { color:var(--red); font-weight:700; } .qty-late { color:var(--amber); font-weight:700; }
+    .trace-row > td { background:#0a1b22 !important; padding:16px; }
+    .trace-box { width:min(1080px,calc(100vw - 430px)); max-width:100%; min-width:280px; }
+    .trace-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .trace-box .table-wrap { max-height:350px; margin-top:10px; background:var(--surface); }
+    .trace-box table { min-width:860px; }
+    .trace-box details { margin-top:14px; }
+    summary { cursor:pointer; color:var(--teal); font-size:12px; font-weight:600; overflow-wrap:anywhere; }
+    summary:hover { color:#5ee8d6; }
+    .context-label { border:1px solid #234451; background:rgba(255,255,255,.03); border-radius:999px; padding:3px 10px; color:var(--muted); font-size:10px; }
+    .padded { padding:18px 20px 22px; }
+    .empty { text-align:center; padding:48px 20px; color:#77909a; font-size:12px; }
+    .empty strong { display:block; color:#b9cdd4; font-size:15px; margin-bottom:8px; }
+    .empty p { max-width:600px; margin:auto; }
+    .audit-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+    .audit-card { border:1px solid var(--line-soft); background:var(--surface); padding:17px 18px; border-radius:12px; min-width:0; box-shadow:var(--shadow); }
+    .audit-card.danger { border-top:3px solid var(--red); }
+    .audit-card.warning { border-top:3px solid var(--amber); }
+    .audit-card h3 { margin-bottom:10px; color:#d5e7ea; }
+    .audit-card ul { margin:0; padding-left:18px; }
+    .audit-card li { white-space:pre-wrap; overflow-wrap:anywhere; margin-bottom:6px; font-size:12px; color:#a9c0c8; }
+    .coverage-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:12px 0 18px; }
+    .coverage-item { border:1px solid var(--line-soft); border-radius:10px; padding:12px; min-width:0; background:var(--surface); }
+    .coverage-key { margin-bottom:6px; font:10px Consolas,monospace; color:var(--faint); overflow-wrap:anywhere; }
+    .audit-log details { border:1px solid var(--line-soft); border-radius:9px; padding:10px 13px; margin-top:8px; }
+    pre { margin:10px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; color:#9fc0cb; font:11px/1.7 Consolas,"MiSans","Microsoft YaHei",monospace; }
+    .footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:14px; color:var(--faint); font-size:10.5px; }
+    .export-feedback { color:var(--teal); font-size:11px; margin-top:10px; overflow-wrap:anywhere; }
+    .print-context { display:none; }
+    @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+    @media (max-width:1200px) { .shell { padding-left:18px; padding-right:18px; } .master-detail { grid-template-columns:270px minmax(0,1fr); } .trace-box { width:calc(100vw - 360px); } .overview { grid-template-columns:1fr 1fr; } .filter-note { display:none; } .coverage-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width:850px) { .head-row { align-items:flex-start; flex-direction:column; gap:14px; } .overview { grid-template-columns:1fr; } .overview-meta { border-left:0; border-top:1px solid var(--line-soft); } .kpis { gap:10px; } .kpi { padding:14px 14px 12px 18px; } .kpi-number { font-size:28px; } .kpi-code { display:none; } .tabs { gap:0; padding:0 10px; overflow:auto; } .tab { padding:13px 10px 10px; } .master-detail { grid-template-columns:1fr; } .master { border-right:0; border-bottom:1px solid var(--line-soft); } .order-list { display:flex; max-height:230px; gap:8px; padding:10px; } .order-card { flex:0 0 250px; margin:0; background:#0f2028; border-color:var(--line-soft); } .trace-box { width:calc(100vw - 90px); } .detail-metrics { grid-template-columns:1fr 1fr; row-gap:12px; } .detail-metric:nth-child(3) { padding-left:0; border-left:0; } .audit-grid { grid-template-columns:1fr; } .coverage-grid { grid-template-columns:1fr 1fr; } }
+    @media (max-width:520px) { .shell { padding-left:12px; padding-right:12px; } h1 { font-size:21px; } .brand-mark { width:40px; height:40px; } .kpis { grid-template-columns:1fr 1fr; } .kpi-number { font-size:26px; } .tabs .tab-count { display:none; } .tab { font-size:11px; padding-left:8px; padding-right:8px; } .filters,.toolbar { padding:12px 14px; } .filter { max-width:none; flex-basis:100%; } .filter.compact { flex:1 1 160px; } .detail,.padded { padding:14px 12px; } .meta-grid { gap:12px; } .trace-box { width:calc(100vw - 70px); } }
+    @media print {
+      @page { size:A3 landscape; margin:10mm; }
+      :root { color-scheme:light; }
+      body { background:#fff !important; color:#14212a; font-size:10px; }
+      .shell { max-width:none; padding:0; } main.shell { padding:12px 0 0; }
+      .masthead { background:#fff !important; color:#14212a; border-bottom:2px solid #14212a; box-shadow:none; }
+      .masthead::before { display:none; }
+      .masthead h1 { color:#14212a; text-shadow:none; } .eyebrow { color:#0b7d6e; } .subtitle { color:#5b7180; }
+      .brand-mark { background:#0b7d6e; border:0; box-shadow:none; } .brand-mark i { background:#fff !important; box-shadow:none; }
+      .mode { border-color:#c9d8de; color:#14212a; background:#fff; } .mode::before { box-shadow:none; animation:none; }
+      .head-row { padding:0 0 12px; } h1 { font-size:22px; }
+      .head-actions,.brand-mark,.filters,.tabs,.master,.export-feedback,.filter-note,.cell-button .chevron { display:none !important; }
+      .kpis { grid-template-columns:repeat(4,1fr); gap:8px; } .kpi { padding:8px 12px 8px 16px; box-shadow:none; background:#fff; border-color:#d5dee2; } .kpi:hover { transform:none; } .kpi-number { font-size:24px; text-shadow:none; color:#14212a; } .kpi-head > span:first-child::before,.kpi::before { box-shadow:none; }
+      .overview { grid-template-columns:1fr 1fr; margin-bottom:12px; box-shadow:none; background:#fff; border-color:#d5dee2; }
+      .overview-chart { background:#f4f8f9; } .overview-chart,.overview-meta { padding:12px; }
+      .chart-total strong { text-shadow:none; color:#0e7a58; }
+      .qty-risk { color:#b62e3f; } .qty-late { color:#a96f06; }
+      .meta-value,.result,.detail-title,.metric-value,.table-caption h3 { color:#14212a; }
+      .workspace,.panel { border:0; overflow:visible; min-height:0; box-shadow:none; background:#fff; }
+      .master-detail { display:block; }
+      .detail,.padded { padding:8px 0; } .toolbar { padding:8px 0; background:#fff; border-color:#d5dee2; }
+      .reason,.policy { background:#f4f8f9; border-color:#d5dee2; color:#42555e; }
+      .reason.unknown { background:#eef2f7; color:#52647a; }
+      .table-wrap { max-height:none; overflow:visible; border:0; background:#fff; }
+      table { font-size:8px; width:100%; min-width:0 !important; table-layout:auto; }
+      .material-table { table-layout:fixed; } .material-table col { width:auto !important; }
+      th,td { padding:5px 3px; white-space:normal !important; max-width:none; word-break:break-word; }
+      th { background:#eef3f5 !important; color:#42555e !important; }
+      td { background:#fff !important; color:#14212a !important; border-color:#dde6ea !important; }
+      th,.sticky-two > thead > tr > th:nth-child(1),.sticky-two th:nth-child(2),.sticky-two td:nth-child(1):not([colspan]),.sticky-two td:nth-child(2) { position:static; min-width:0; max-width:none; width:auto; box-shadow:none; }
+      thead { display:table-header-group; } .date,.numeric,.rate-value { font-size:8px; white-space:normal; } .date { color:#42555e; }
+      .trace-row > td { background:#f7faf9 !important; padding:10px 0; } .trace-box { width:100%; min-width:0; } .trace-box table { min-width:0; } .trace-box .table-wrap { max-height:none; }
+      .notice,.kpi,.audit-card,.coverage-item,.detail-metrics { break-inside:avoid; }
+      .notice { background:#f4f8f9 !important; border-color:#d5dee2 !important; } .notice strong { color:#14212a; } .notice p { color:#42555e; } .notice-index { background:#fff; }
+      .audit-card,.coverage-item { background:#fff; box-shadow:none; border-color:#d5dee2; } .audit-card li { color:#42555e; } .coverage-key { color:#5b7180; }
+      pre { color:#42555e; }
+      .badge { font-size:8px; box-shadow:none; } .badge.on_time { background:#e2f4ec; color:#0e7a58; border-color:#b9e2d0; } .badge.late { background:#fbf0d7; color:#a96f06; border-color:#ecd49c; } .badge.shortage { background:#fcecef; color:#b62e3f; border-color:#efc0c7; } .badge.unknown { background:#edf1f6; color:#6b7c8c; border-color:#d8e0e8; } .badge.no_demand { background:#e4f2f6; color:#2b7d91; border-color:#c2e2ea; } .badge-dot { box-shadow:none; }
+      .badge,.notice,.stack,.rate-track,.rate-fill,.kpi::before { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      .stack { background:#e6edf1; box-shadow:none; } .rate-track { background:#e6edf1; } .dot { box-shadow:none; }
+      .audit-grid { grid-template-columns:1fr 1fr; } .coverage-grid { grid-template-columns:repeat(4,1fr); }
+      .print-context { display:block; font-size:10px; color:#5b7180; margin-bottom:8px; }
+      .cell-button { color:#14212a; text-decoration:none; } .footer { margin-top:10px; color:#5b7180; } .empty { padding:22px; } .empty strong { color:#14212a; } .empty { color:#5b7180; }
+    }
+    </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="shell head-row">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div><p class="eyebrow">MES / MATERIAL READINESS</p><h1>生产工单齐套分析</h1><p class="subtitle">计划快照 · 共享净供给 · 按期优先 · 需求级追溯</p></div>
+      </div>
+      <div class="head-actions"><span id="mode" class="mode">未载入报告</span><button id="print" class="btn" type="button">打印当前视图</button><button id="export" class="btn primary" type="button" disabled>导出 CSV</button></div>
+    </div>
+  </header>
+  <main class="shell" id="main">
+    <noscript><div class="notice danger">请启用 JavaScript 读取内嵌报告。此页面离线运行，不连接数据库或网络。</div></noscript>
+    <div id="load-error" class="notice danger" role="alert" hidden></div>
+    <div id="mode-warning" class="notice warning" role="alert" hidden><span class="notice-index" aria-hidden="true">!</span><div><strong>DEMO 演示快照 · 不是实时数据库</strong><p>未连接或验证真实 MES 数据，不能用于真实生产决策。页面只展示传入报告，不查询数据库、不重新分配供给。</p></div></div>
+    <div id="validity" class="notice" role="status"><span class="notice-index" aria-hidden="true">i</span><div><strong id="validity-title">等待内嵌分析报告</strong><p id="validity-text">请由同包分析脚本将报告注入本模板。模板不包含演示数据。</p></div></div>
+    <section class="kpis" aria-label="全报告工单计数，不随筛选重算">
+      <article class="kpi"><div class="kpi-head"><span>工单数</span><span class="kpi-code">ORDERS</span></div><div class="kpi-number"><span id="kpi-total">—</span><small>张</small></div><p class="kpi-foot">全报告目标工单</p></article>
+      <article class="kpi" style="--tone:var(--green)"><div class="kpi-head"><span>按期齐套</span><span class="kpi-code">ON TIME</span></div><div class="kpi-number"><span id="kpi-on-time">—</span><small>张</small></div><p class="kpi-foot">快照内物料按期可用</p></article>
+      <article class="kpi" style="--tone:var(--red)"><div class="kpi-head"><span>延期缺料</span><span class="kpi-code">AT RISK</span></div><div class="kpi-number"><span id="kpi-risk">—</span><small>张</small></div><p class="kpi-foot" id="risk-breakdown">延期与全窗口缺料分别计数</p></article>
+      <article class="kpi" style="--tone:var(--gray)"><div class="kpi-head"><span>数据不足</span><span class="kpi-code">UNKNOWN</span></div><div class="kpi-number"><span id="kpi-unknown">—</span><small>张</small></div><p class="kpi-foot">已知量不能作确定性结论</p></article>
+    </section>
+    <section class="overview" aria-label="快照总览">
+      <div class="overview-chart">
+        <div class="section-top"><h2>齐套态势总览</h2><span class="overline">SNAPSHOT OVERVIEW</span></div>
+        <div class="chart-total"><strong id="on-time-share">—</strong><span class="hint">按期齐套工单占比 · 仅计算张数</span></div>
+        <div id="status-stack" class="stack" aria-hidden="true"></div><div id="status-legend" class="legend"></div>
+        <p class="hint" style="margin-top:12px">已确认无需求单列，不计入“按期齐套”；所有 KPI 与状态分布均为全报告口径。</p>
+      </div>
+      <div class="overview-meta">
+        <div class="meta-grid">
+          <div><span class="label">快照时间 · 上海时区</span><div id="snapshot-at" class="meta-value">—</div></div>
+          <div><span class="label">分析窗口截止 · 上海时区</span><div id="horizon-end" class="meta-value">—</div></div>
+          <div><span class="label">组织范围</span><div id="organizations" class="meta-value">—</div></div>
+          <div><span class="label">仓库范围</span><div id="warehouses" class="meta-value">—</div></div>
+        </div>
+        <p class="policy" id="policy">分配策略：读取分析报告；筛选仅展示，不改变供需分配。</p>
+      </div>
+    </section>
+    <section class="workspace" aria-label="齐套分析工作区">
+      <div class="tabs" role="tablist" aria-label="分析视图">
+        <button id="tab-orders" class="tab" type="button" role="tab" data-view="orders" aria-selected="true" aria-controls="panel" tabindex="0">工单分析<span id="count-orders" class="tab-count">—</span></button>
+        <button id="tab-materials" class="tab" type="button" role="tab" data-view="materials" aria-selected="false" aria-controls="panel" tabindex="-1">物料汇总<span id="count-materials" class="tab-count">—</span></button>
+        <button id="tab-ledger" class="tab" type="button" role="tab" data-view="ledger" aria-selected="false" aria-controls="panel" tabindex="-1">供需分配台账<span id="count-ledger" class="tab-count">—</span></button>
+        <button id="tab-audit" class="tab" type="button" role="tab" data-view="audit" aria-selected="false" aria-controls="panel" tabindex="-1">数据审计<span id="count-audit" class="tab-count">—</span></button>
+      </div>
+      <div class="filters" id="filters">
+        <label class="filter">工单筛选<input id="order-filter" type="search" autocomplete="off" placeholder="工单号 / 工单 ID / 产品名称"></label>
+        <label class="filter">物料筛选<input id="material-filter" type="search" autocomplete="off" placeholder="物料编码 / 名称 / 规格型号"></label>
+        <label class="filter compact">工单 / 台账状态<select id="status-filter"><option value="all">全部状态</option><option value="on_time">按期齐套</option><option value="late">延期齐套</option><option value="shortage">全窗口缺料</option><option value="unknown">数据不足</option><option value="no_demand">已确认无需求</option></select></label>
+        <button id="reset" class="btn" type="button">重置筛选</button><p class="filter-note">仅筛选展示，不重新分配<br>不跨单位累计数量</p>
+      </div>
+      <div class="toolbar"><p id="result-count" class="result" aria-live="polite">尚未载入报告</p><p id="view-note" class="hint">数量、比率与分配均来自源报告</p></div>
+      <p id="print-context" class="print-context"></p>
+      <div id="panel" class="panel" role="tabpanel" aria-labelledby="tab-orders" tabindex="0"><div class="empty"><strong>等待报告注入</strong><p>本文件为离线模板；未载入报告不代表零需求或已齐套。</p></div></div>
+    </section>
+    <p id="export-feedback" class="export-feedback" role="status" aria-live="polite"></p>
+    <footer class="footer"><span>供给 / 库存 / 在途为共享池上下文，不能跨工单相加；实际占用以需求级 ledger 为准。</span><span>仅判断计划完工时物料可用，不验证开工、产能或保证生产按期完工。</span></footer>
+  </main>
+  <script>
+  (() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const list = value => Array.isArray(value) ? value : [];
+    const rows = value => list(value).filter(record);
+    const text = value => value === null || value === undefined || value === '' ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+    const node = (tag, className = '', value) => {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (value !== undefined) element.textContent = text(value);
+      return element;
+    };
+    const button = (label, action, className = 'cell-button') => {
+      const element = node('button', className, label);
+      element.type = 'button'; element.addEventListener('click', action); return element;
+    };
+    const states = { on_time:'按期齐套', late:'延期齐套', shortage:'全窗口缺料', unknown:'数据不足', no_demand:'已确认无需求' };
+    const tones = { on_time:'#34d399', late:'#fbbf24', shortage:'#f87171', unknown:'#8095a8', no_demand:'#22d3ee' };
+    const viewNames = { orders:'工单分析', materials:'物料汇总', ledger:'供需分配台账', audit:'数据审计' };
+    const sourceNames = { stock:'库存', purchase:'采购', production:'自制', subcontract:'委外', srm:'SRM', inspection:'待检' };
+    const coverageNames = { inventory:'库存完整', production_demands:'生产需求完整', subcontract_demands:'委外需求完整', sales_demands:'销售需求完整', purchase_supply:'采购供给完整', production_supply:'自制供给完整', subcontract_supply:'委外供给完整', reservations:'预留完整', units:'单位一致', supply_dedup:'供给去重', scope:'范围明确', snapshot:'快照一致' };
+    const quantityPattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+    const quantity = value => value === null || value === undefined ? '—' : typeof value === 'string' && quantityPattern.test(value) ? value : '未知（格式异常）';
+    const ratePattern = /^\d+(?:\.\d+)?$/;
+    const percent = value => typeof value === 'string' && ratePattern.test(value) ? value + '%' : '—';
+    const isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/;
+    const shanghai = new Intl.DateTimeFormat('zh-CN', { timeZone:'Asia/Shanghai', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' });
+    const dateText = value => {
+      if (value === null || value === undefined || value === '') return '—';
+      if (typeof value !== 'string' || !isoPattern.test(value)) return text(value) + '（时间未识别）';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? text(value) + '（时间未识别）' : shanghai.format(date);
+    };
+    const boolText = value => value === true ? '是' : value === false ? '否' : '未提供';
+    const sourceText = row => Object.hasOwn(sourceNames, row.source_type) ? sourceNames[row.source_type] : text(row.source_type);
+    const conditionalText = row => row.conditional === true || ['production','subcontract'].includes(row.source_type) ? '是 · 上游未验证' : boolText(row.conditional);
+    const qcol = (key, label) => ({ key, label, kind:'quantity' });
+    const rawValue = (row, col) => col.get ? col.get(row) : row[col.key];
+    const empty = (title, message) => {
+      const box = node('div', 'empty'); box.append(node('strong', '', title), node('p', '', message)); return box;
+    };
+    const csvCell = (value, protectNumber = false) => {
+      let result = value === null || value === undefined ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+      if (result && (protectNumber || /^[=+\-@\t\r\n]/.test(result) || /^\s+[=+\-@]/u.test(result))) result = "'" + result;
+      return '"' + result.replace(/"/g, '""') + '"';
+    };
+    try {
+      const REPORT = __REPORT_JSON__;
+      if (!record(REPORT)) throw new Error('报告根节点不是对象。');
+      const formatBlockers = [];
+      ['meta','audit'].forEach(key => { if (!record(REPORT[key])) formatBlockers.push(key + ' 缺失或不是对象。'); });
+      ['orders','materials','ledger','supplies'].forEach(key => {
+        if (!Array.isArray(REPORT[key]) || list(REPORT[key]).some(row => !record(row))) formatBlockers.push(key + ' 缺失或包含异常行。');
+      });
+      const meta = record(REPORT.meta) ? REPORT.meta : {};
+      const audit = record(REPORT.audit) ? REPORT.audit : {};
+      const coverage = record(meta.coverage) ? meta.coverage : {};
+      const scope = record(meta.scope) ? meta.scope : {};
+      const orders = rows(REPORT.orders), materials = rows(REPORT.materials), ledger = rows(REPORT.ledger), supplies = rows(REPORT.supplies);
+      ['warnings','blockers','query_log'].forEach(key => { if (!Array.isArray(audit[key])) formatBlockers.push('audit.' + key + ' 缺失或不是列表。'); });
+      if (!['demo','live'].includes(meta.mode)) formatBlockers.push('meta.mode 未确认，不能用于生产结论。');
+      if (meta.allocation_policy !== 'due_fifo_on_time_first') formatBlockers.push('分配策略缺失或不受分析接口支持。');
+      Object.keys(coverageNames).forEach(key => {
+        if (coverage[key] !== true && (meta.mode === 'live' || ['scope','snapshot'].includes(key))) formatBlockers.push('coverage.' + key + ' 未明确为 true。');
+      });
+      ['organizations','warehouses'].forEach(key => {
+        if (!list(scope[key]).length || list(scope[key]).some(value => typeof value !== 'string' || !value.trim())) formatBlockers.push('scope.' + key + ' 未明确；空列表不代表全范围。');
+      });
+      orders.forEach(order => {
+        if (!Object.hasOwn(states, order.status)) formatBlockers.push('工单含未识别状态。');
+        if (!Array.isArray(order.materials) || list(order.materials).some(m => !record(m))) formatBlockers.push('工单用料明细缺失或异常。');
+        rows(order.materials).forEach(m => {
+          if (!Object.hasOwn(states, m.status)) formatBlockers.push('物料行含未识别状态。');
+          if (!Array.isArray(m.allocations) || list(m.allocations).some(a => !record(a))) formatBlockers.push('物料分配明细缺失或异常。');
+        });
+      });
+      ledger.forEach(demand => { if (!Array.isArray(demand.allocations) || list(demand.allocations).some(a => !record(a))) formatBlockers.push('台账分配明细缺失或异常。'); });
+      const blockers = [...list(audit.blockers), ...new Set(formatBlockers)];
+      const blocked = blockers.length > 0;
+      const statusOf = row => blocked || !Object.hasOwn(states, row.status) ? 'unknown' : row.status;
+      const ledgerStatus = row => {
+        if (Object.hasOwn(states, row.status)) return statusOf(row);
+        const parent = row.target === true ? orders.find(order => order.id === row.order_id) : null;
+        return parent ? statusOf(parent) : 'unknown';
+      };
+      const readyValue = row => statusOf(row) === 'unknown' ? null : row.ready_at;
+      const badge = status => {
+        const item = node('span', 'badge ' + status); item.append(node('span', 'badge-dot'), document.createTextNode(states[status])); return item;
+      };
+      const reasonText = row => statusOf(row) === 'unknown' ? '数据不足：所有数量与比率只是已知量，不可确定齐套或缺料；不展示确定齐套时间。\n源报告依据：' + text(row.reason) : text(row.reason);
+      const counts = Object.fromEntries(Object.keys(states).map(key => [key, 0]));
+      orders.forEach(order => { counts[statusOf(order)] += 1; });
+      const hasUnknown = blocked || counts.unknown > 0;
+      const state = { view:'orders', orderQuery:'', materialQuery:'', status:'all', selectedOrder:null, expandedMaterial:null, expandedSummary:null };
+      let exportRows = [], exportColumns = [];
+      const matches = (values, query) => {
+        const haystack = values.map(value => value === null || value === undefined ? '' : text(value)).join(' ').toLocaleLowerCase('zh-CN');
+        return query.trim().toLocaleLowerCase('zh-CN').split(/\s+/).filter(Boolean).every(word => haystack.includes(word));
+      };
+      const materialMatches = row => matches([row.material_id,row.material_code,row.name,row.spec], state.materialQuery);
+      const orderMatches = row => matches([row.id,row.no,row.product_name], state.orderQuery);
+      const visibleOrders = () => orders.filter(order => orderMatches(order) && (state.status === 'all' || statusOf(order) === state.status) && (!state.materialQuery.trim() || rows(order.materials).some(materialMatches)));
+      const materialContext = code => typeof code === 'string' && code.trim() ? ledger.filter(row => row.material_code === code) : [];
+      const supplyContext = code => typeof code === 'string' && code.trim() ? supplies.filter(row => row.material_code === code) : [];
+      const unknownHint = '数据不足时，包括需求、缺料、分配与比率在内的数值都只是已知量，不可据此作确定齐套或缺料判断。';
+      const poolHint = '供给数量、在途、待检、库存与可用库存是共享池上下文，不能跨工单相加，也不是每个工单的保证供给；实际分配以 ledger 为准。';
+      const makeTable = (data, columns, options = {}) => {
+        const wrap = node('div', 'table-wrap'); const table = node('table', options.className || 'wide-table');
+        if (options.material) {
+          const cols = node('colgroup'); columns.forEach(() => cols.append(node('col'))); table.append(cols);
+        }
+        const head = node('thead'); const heading = node('tr');
+        columns.forEach(col => {
+          const th = node('th', ['quantity','rate'].includes(col.kind) ? 'numeric' : '', col.label); th.scope = 'col'; heading.append(th);
+        });
+        head.append(heading); const body = node('tbody');
+        data.forEach((row, index) => {
+          const tr = node('tr');
+          columns.forEach(col => {
+            const td = node('td', ['quantity','rate'].includes(col.kind) ? 'numeric' : col.kind === 'date' ? 'date' : '');
+            const value = rawValue(row, col);
+            if (!options.cell || !options.cell(td, row, col, index)) {
+              td.textContent = col.kind === 'quantity' ? quantity(value) : col.kind === 'rate' ? percent(value) : col.kind === 'date' ? dateText(value) : text(value);
+              if (col.kind === 'date' && value !== null && value !== undefined) td.title = text(value) + ' · 显示为 Asia/Shanghai';
+            }
+            tr.append(td);
+          });
+          body.append(tr); if (options.after) options.after(body, row, index);
+        });
+        if (!data.length) {
+          const tr = node('tr'), td = node('td'); td.colSpan = columns.length;
+          td.append(empty('没有可展示的记录', options.emptyText || '请调整筛选。空列表不等于已确认无需求，也不代表供给充足。')); tr.append(td); body.append(tr);
+        }
+        table.append(head,body); wrap.append(table); return wrap;
+      };
+      const rateCell = (td, row, key) => {
+        const value = row[key], status = statusOf(row);
+        td.append(node('div', 'rate-value', percent(value)));
+        if (typeof value === 'string' && ratePattern.test(value)) {
+          // 仅将报告百分比转换为 CSS 宽度；业务数量始终原样展示。
+          const width = Number(value);
+          if (Number.isFinite(width)) {
+            const track = node('div', 'rate-track'), fill = node('div', 'rate-fill');
+            track.setAttribute('aria-hidden', 'true'); fill.style.width = Math.max(0, Math.min(100, width)) + '%'; fill.style.backgroundColor = tones[status]; track.append(fill); td.append(track);
+          }
+        }
+        if (status === 'unknown') td.append(node('span', 'muted', '仅已知比率'));
+      };
+      const materialColumns = [
+        { key:'material_code', label:'物料编码' }, { key:'name', label:'物料名称' }, { key:'spec', label:'规格型号' }, { key:'unit', label:'单位' },
+        qcol('demand_qty','需求数量'), qcol('supply_qty','供给数量'), qcol('transit_qty','在途数量'), qcol('pending_qty','待检数量'),
+        qcol('stock_qty','库存数量'), qcol('reserved_qty','预留占用数量'), qcol('available_stock_qty','可用库存数量'), qcol('shortage_qty','汇总缺料数量'),
+        { key:'inventory_rate', label:'库存齐套率', kind:'rate' }, { key:'available_inventory_rate', label:'可用库存齐套率', kind:'rate' }, { key:'total_rate', label:'汇总齐套率', kind:'rate' },
+        qcol('on_time_qty','按期分配'), qcol('late_qty','晚到量'), qcol('uncovered_qty','全窗口仍缺'),
+        { key:'ready_at', label:'齐套时间', kind:'date', get:readyValue }, { key:'status', label:'结论', get:row => states[statusOf(row)] }
+      ];
+      const allocationColumns = [
+        { key:'supply_id', label:'供给资源 ID' },
+        { key:'resource_key', label:'资源去重键', get:row => { const found = supplies.filter(s => s.id === row.supply_id); return found.length === 1 ? found[0].resource_key : null; } },
+        { key:'source_type', label:'资源类型', get:sourceText }, { key:'source_doc', label:'源单' }, qcol('qty','本笔分配数量'),
+        { key:'unit', label:'单位' }, { key:'available_at', label:'可用时间 · 上海', kind:'date' },
+        { key:'reserved', label:'定向预留', get:row => boolText(row.reserved) }, { key:'conditional', label:'conditional', get:conditionalText }
+      ];
+      const allocationTable = (allocations, unit) => makeTable(rows(allocations).map(row => ({ ...row, unit })), allocationColumns, { emptyText:'源报告未提供分配记录；不会推断资源占用或剩余数量。' });
+      const ledgerColumns = [
+        { key:'demand_id', label:'需求 ID' }, { key:'order_no', label:'所属单号', get:row => row.order_no || row.order_id },
+        { key:'target', label:'需求范围', get:row => row.target === true ? '目标工单' : row.target === false ? '其他竞争需求' : '范围未知' },
+        { key:'material_code', label:'物料编码' }, { key:'unit', label:'单位' }, { key:'need_at', label:'需求截止 · 上海', kind:'date' },
+        qcol('demand_qty','需求数量'), qcol('on_time_qty','按期分配'), qcol('late_qty','晚到量'), qcol('uncovered_qty','全窗口仍缺'),
+        { key:'status', label:'报告结论', get:row => states[ledgerStatus(row)] }, { key:'allocations', label:'资源分配追溯' }
+      ];
+      const ledgerTable = (data, currentDemand) => makeTable(data, ledgerColumns, { cell:(td,row,col) => {
+        if (col.key === 'status') { td.append(badge(ledgerStatus(row))); return true; }
+        if (col.key === 'demand_id' && row.demand_id === currentDemand) { td.append(node('strong','',row.demand_id), node('div','muted','本需求')); return true; }
+        if (col.key === 'allocations') {
+          const detail = node('details'); detail.append(node('summary','', rows(row.allocations).length + ' 笔 · 查看资源与源单'));
+          if (row.reason !== undefined) detail.append(node('p','reason',row.reason));
+          detail.append(allocationTable(row.allocations,row.unit)); td.append(detail); return true;
+        }
+        return false;
+      } });
+      const supplyColumns = [
+        { key:'id', label:'供给资源 ID' }, { key:'resource_key', label:'资源去重键' }, { key:'material_id', label:'物料 ID' },
+        { key:'source_type', label:'资源类型', get:sourceText }, { key:'source_doc', label:'源单' }, qcol('qty','原始供给数量'), { key:'unit', label:'单位' },
+        { key:'available_at', label:'可用时间 · 上海', kind:'date' }, { key:'reserved_to_demand', label:'定向预留需求 ID' },
+        { key:'conditional', label:'conditional', get:conditionalText }, { key:'excluded_reason', label:'原始排除原因' }
+      ];
+      const traceBox = (material, isSummary = false) => {
+        const box = node('div','trace-box'), heading = node('div','trace-heading');
+        heading.append(node('h3','',text(material.material_code) + ' · ' + text(material.name)), node('span','context-label','只读追溯 / 不重分配')); box.append(heading);
+        box.append(node('p','reason', isSummary ? '本区直接读取物料汇总与完整台账，不重算筛选后的需求或供给。' : reasonText(material)));
+        if (!isSummary) {
+          box.append(node('h4','','本需求实际供给分配 · ' + text(material.demand_id)), allocationTable(material.allocations,material.unit));
+        }
+        const competition = node('details'); competition.open = true;
+        competition.append(node('summary','','同料竞争 ledger · ' + materialContext(material.material_code).length + ' 条需求'));
+        competition.append(node('p','hint','上下文同料：仅凭 material_code 严格相等匹配完整 ledger，包含目标工单与其他生产 / 委外 / 销售竞争需求，不受页面筛选影响。相同编码不保证物料 ID、单位或供给兼容；每行保留自身单位，不累计、不重分配。'));
+        competition.append(ledgerTable(materialContext(material.material_code), isSummary ? undefined : material.demand_id)); box.append(competition);
+        const supplyDetail = node('details');
+        supplyDetail.append(node('summary','','同编码原始供给资源 · ' + supplyContext(material.material_code).length + ' 条'));
+        supplyDetail.append(node('p','hint','包含原始已排除或无效资源。排除原因空白不代表可分配，原始数量不是剩余量，也不能与已分配量相加；定向预留不自动释放。'));
+        supplyDetail.append(makeTable(supplyContext(material.material_code),supplyColumns)); box.append(supplyDetail);
+        box.append(node('p','hint',poolHint + ' conditional 表示条件性计划可得，上游未验证；数据不足时所有量只供审计。'));
+        return box;
+      };
+      const expandedRow = (body, content, columnCount, identifier) => {
+        const tr = node('tr','trace-row'); tr.id = identifier;
+        const td = node('td'); td.colSpan = columnCount; td.append(content); tr.append(td); body.append(tr);
+      };
+      const materialTable = (data, order) => makeTable(data,materialColumns, {
+        material:true, className:'material-table sticky-two',
+        cell:(td,row,col,index) => {
+          if (col.key === 'material_code' || col.key === 'name') {
+            const expanded = state.expandedMaterial === index;
+            const toggle = button('', () => {
+              state.expandedMaterial = expanded ? null : index; render();
+              const focus = $('material-toggle-' + index); if (focus) focus.focus({ preventScroll:true });
+            });
+            if (col.key === 'material_code') { toggle.id = 'material-toggle-' + index; toggle.append(node('span','chevron',expanded ? '−' : '+')); }
+            toggle.append(document.createTextNode(text(row[col.key]))); toggle.setAttribute('aria-expanded',String(expanded));
+            if (expanded) toggle.setAttribute('aria-controls','material-trace-' + index);
+            toggle.title = '展开供给分配、同料竞争与原始资源'; td.append(toggle); return true;
+          }
+          if (col.kind === 'rate') { rateCell(td,row,col.key); return true; }
+          if (col.key === 'status') { td.append(badge(statusOf(row))); return true; }
+          if (col.key === 'shortage_qty' || col.key === 'uncovered_qty' || col.key === 'late_qty') {
+            td.textContent = quantity(row[col.key]);
+            if (statusOf(row) !== 'unknown') td.classList.add(col.key === 'late_qty' ? 'qty-late' : 'qty-risk');
+            return true;
+          }
+          return false;
+        },
+        after:(body,row,index) => { if (state.expandedMaterial === index) expandedRow(body,traceBox(row),materialColumns.length,'material-trace-' + index); },
+        emptyText:statusOf(order) === 'no_demand' ? '源报告已明确确认该工单无需求，不进行物料分配。' : '无匹配用料明细；请调整物料筛选。用料缺失不能当作已确认无需求。'
+      });
+      const appendMiniStack = (parent, order) => {
+        const lines = rows(order.materials); if (!lines.length) return;
+        const stack = node('div','stack mini-stack'); stack.setAttribute('aria-hidden','true');
+        Object.keys(states).forEach(status => {
+          const count = lines.filter(row => statusOf(row) === status).length;
+          if (count) { const segment = node('span'); segment.style.width = count / lines.length * 100 + '%'; segment.style.backgroundColor = tones[status]; stack.append(segment); }
+        }); parent.append(stack);
+      };
+      const renderOrders = () => {
+        const data = visibleOrders();
+        if (!data.includes(state.selectedOrder)) { state.selectedOrder = data[0] || null; state.expandedMaterial = null; }
+        exportColumns = [
+          { key:'order_id', label:'工单 ID', get:entry => entry.order.id }, { key:'order_no', label:'工单号', get:entry => entry.order.no },
+          { key:'product_name', label:'产品名称', get:entry => entry.order.product_name }, { key:'planned_qty', label:'计划数量（原报告未提供产品单位）', kind:'quantity', get:entry => entry.order.planned_qty },
+          { key:'due_at', label:'计划完工 ISO', kind:'date', get:entry => entry.order.due_at }, { key:'order_status', label:'工单结论', get:entry => states[statusOf(entry.order)] },
+          { key:'demand_id', label:'物料需求 ID', get:entry => entry.material ? entry.material.demand_id : null },
+          ...materialColumns.map(col => ({ ...col, get:entry => entry.material ? rawValue(entry.material,col) : null })),
+          { key:'reason', label:'工单依据', get:entry => reasonText(entry.order) }, { key:'material_reason', label:'物料依据', get:entry => entry.material ? reasonText(entry.material) : null }
+        ];
+        exportRows = data.flatMap(order => {
+          const lines = rows(order.materials).filter(materialMatches);
+          return lines.length ? lines.map(material => ({ order,material })) : [{ order,material:null }];
+        });
+        const layout = node('div','master-detail'), master = node('aside','master'); master.setAttribute('aria-label','筛选后工单列表');
+        const heading = node('div','master-heading'); heading.append(node('h3','','工单列表'),node('span','hint',data.length + ' / ' + orders.length + ' 张')); master.append(heading);
+        const orderList = node('div','order-list');
+        data.forEach(order => {
+          const item = button('', () => { state.selectedOrder = order; state.expandedMaterial = null; render(); },'order-card');
+          item.setAttribute('aria-pressed',String(state.selectedOrder === order));
+          const top = node('div','order-card-top'); top.append(node('strong','order-no',order.no || order.id),badge(statusOf(order)));
+          const foot = node('div','order-card-foot'); foot.append(node('span','','完工 ' + dateText(order.due_at)),node('span','',rows(order.materials).length + ' 行用料'));
+          item.append(top,node('div','order-product',order.product_name),foot); appendMiniStack(item,order); orderList.append(item);
+        });
+        if (!data.length) orderList.append(empty('无匹配工单','调整工单、物料或状态筛选。')); master.append(orderList); layout.append(master);
+        const detail = node('article','detail'), order = state.selectedOrder;
+        if (!order) detail.append(empty(orders.length ? '没有匹配结果' : '报告没有目标工单','空列表不是已齐套，也不等于已确认无需求。请检查源报告与数据审计。'));
+        else {
+          const top = node('div','detail-top'), title = node('div');
+          title.append(node('h2','detail-title',order.no || order.id),node('p','detail-subtitle',text(order.product_name) + ' · 工单 ID ' + text(order.id)));
+          top.append(title,badge(statusOf(order))); detail.append(top);
+          const metrics = node('div','detail-metrics');
+          [['计划数量',quantity(order.planned_qty) + '（单位未提供）'],['计划完工 · 上海',dateText(order.due_at)],['物料齐套时间 · 上海',dateText(readyValue(order))],['用料行数',rows(order.materials).length + ' 行']].forEach(([label,value]) => {
+            const metric = node('div','detail-metric'); metric.append(node('span','label',label),node('div','metric-value',value)); metrics.append(metric);
+          }); detail.append(metrics,node('p','reason' + (statusOf(order) === 'unknown' ? ' unknown' : ''),reasonText(order)));
+          const lines = rows(order.materials).filter(materialMatches), caption = node('div','table-caption');
+          caption.append(node('h3','','材料明细 · ' + lines.length + ' / ' + rows(order.materials).length + ' 行'),node('span','hint','横向滚动 · 前两列固定 · 点击物料展开追溯')); detail.append(caption,materialTable(lines,order));
+          detail.append(node('p','hint',poolHint));
+          const definitions = node('details'); definitions.append(node('summary','','指标口径与齐套率说明'));
+          definitions.append(node('p','reason','汇总缺料数量 = 报告 shortage_qty，表示按期缺口（含晚到可补齐部分）；全窗口仍缺 = uncovered_qty。库存齐套率取 inventory_rate；可用库存齐套率取 available_inventory_rate（本需求按期分得库存 / 需求）；汇总齐套率取 total_rate（本需求按期分配 / 需求，不含晚到）。所有值直接读取报告，未在前端计算。确认零需求的 100% 由分析引擎输出。' + unknownHint)); detail.append(definitions);
+        }
+        layout.append(detail); $('panel').append(layout);
+        return data.length + ' / ' + orders.length + ' 张工单 · CSV 导出所有筛选工单的用料行，不仅是选中工单';
+      };
+      const summaryColumns = [
+        { key:'material_code', label:'物料编码' }, { key:'name', label:'物料名称' }, { key:'spec', label:'规格型号' }, { key:'unit', label:'单位' },
+        qcol('demand_qty','需求数量'), qcol('on_time_qty','按期分配'), qcol('late_qty','晚到量'), qcol('uncovered_qty','全窗口仍缺'), { key:'order_count', label:'关联工单数' }
+      ];
+      const renderMaterials = () => {
+        const activeOrders = visibleOrders();
+        const hasOrderFilter = Boolean(state.orderQuery.trim()) || state.status !== 'all';
+        const related = activeOrders.flatMap(order => rows(order.materials));
+        const data = materials.filter(material => materialMatches(material) && (!hasOrderFilter || related.some(line =>
+          typeof material.material_id === 'string' && material.material_id ? line.material_id === material.material_id : typeof material.material_code === 'string' && material.material_code ? line.material_code === material.material_code : false)));
+        if (state.expandedSummary !== null && state.expandedSummary >= data.length) state.expandedSummary = null;
+        exportRows = data; exportColumns = summaryColumns;
+        const section = node('div','padded');
+        section.append(node('p','reason','直接展示 REPORT.materials 的全报告目标工单汇总，不含其他竞争需求。工单 / 状态筛选仅限制可见物料，数量与关联工单数仍是原报告全量值，不按筛选子集重算。共享供给 / 库存不从逐工单数据相加；完整 15 项指标请见“工单分析”的材料明细。' + (hasUnknown ? unknownHint : '')));
+        section.append(makeTable(data,summaryColumns,{
+          className:'wide-table sticky-two',
+          cell:(td,row,col,index) => {
+            if (col.key !== 'material_code' && col.key !== 'name') return false;
+            const expanded = state.expandedSummary === index;
+            const toggle = button((col.key === 'material_code' ? expanded ? '− ' : '+ ' : '') + text(row[col.key]), () => { state.expandedSummary = expanded ? null : index; render(); });
+            toggle.setAttribute('aria-expanded',String(expanded)); if (expanded) toggle.setAttribute('aria-controls','summary-trace-' + index); td.append(toggle); return true;
+          }, after:(body,row,index) => { if (state.expandedSummary === index) expandedRow(body,traceBox(row,true),summaryColumns.length,'summary-trace-' + index); }
+        })); $('panel').append(section); return data.length + ' / ' + materials.length + ' 种物料 · 数量保持全报告口径';
+      };
+      const renderLedger = () => {
+        const data = ledger.filter(row => {
+          const parent = orders.find(order => order.id === row.order_id);
+          const context = materials.find(material => material.material_code === row.material_code) || {};
+          return matches([row.order_id,row.order_no,parent && parent.product_name],state.orderQuery) && matches([row.material_code,context.name,context.spec],state.materialQuery) && (state.status === 'all' || ledgerStatus(row) === state.status);
+        });
+        exportRows = data.flatMap(demand => rows(demand.allocations).length ? rows(demand.allocations).map(allocation => ({ demand,allocation })) : [{ demand,allocation:null }]);
+        exportColumns = [
+          ...ledgerColumns.filter(col => col.key !== 'allocations').map(col => ({ ...col, get:entry => rawValue(entry.demand,col) })),
+          { key:'order_id', label:'需求所属 ID', get:entry => entry.demand.order_id },
+          ...allocationColumns.map(col => ({ ...col, label:col.key === 'unit' ? '分配单位' : col.label, get:entry => entry.allocation ? rawValue({ ...entry.allocation,unit:entry.demand.unit },col) : null })),
+          { key:'reason', label:'源报告依据', get:entry => entry.demand.reason },
+          { key:'quantity_note', label:'数量口径', get:() => '需求数量在每笔分配行重复展示，不可沿 CSV 行求和；分配数量为每笔值，不跨单位累计。' }
+        ];
+        const section = node('div','padded');
+        section.append(node('p','reason','全部 ledger 包含目标工单及其他竞争需求，筛选不重新分配、不释放隐藏需求的占用。展开查看资源、源单、数量、时间、定向预留与 conditional。若台账未提供状态，仅使用关联目标工单的报告状态；无关联结论时标为数据不足，不由数量推算。' + (hasUnknown ? unknownHint : '')));
+        section.append(ledgerTable(data)); $('panel').append(section); return data.length + ' / ' + ledger.length + ' 条需求 · CSV 按分配资源展开，需求数量可能重复';
+      };
+      const auditEntries = () => [
+        ...blockers.map(value => ({ type:'阻断',key:'blockers',value:text(value) })),
+        ...list(audit.warnings).map(value => ({ type:'审计警告',key:'audit.warnings',value:text(value) })),
+        ...list(meta.warnings).map(value => ({ type:'元数据警告',key:'meta.warnings',value:text(value) })),
+        ...[...new Set([...Object.keys(coverageNames),...Object.keys(coverage)])].map(key => ({ type:'覆盖声明',key,value:Object.hasOwn(coverage,key) ? text(coverage[key]) : '未提供' })),
+        ...list(audit.query_log).map((value,index) => ({ type:'查询日志',key:String(index + 1),value:text(value) })),
+        { type:'元数据',key:'meta',value:JSON.stringify(meta) }
+      ];
+      const renderAudit = () => {
+        exportRows = auditEntries(); exportColumns = [{ key:'type',label:'类别' },{ key:'key',label:'字段' },{ key:'value',label:'安全文本 / 原始值' }];
+        const section = node('div','padded'), grid = node('div','audit-grid');
+        const addMessages = (title,values,className,emptyText) => {
+          const card = node('section','audit-card ' + className); card.append(node('h3','',title + ' · ' + values.length));
+          if (values.length) { const ul = node('ul'); values.forEach(value => ul.append(node('li','',value))); card.append(ul); } else card.append(node('p','hint',emptyText)); return card;
+        };
+        grid.append(addMessages('阻断项',blockers,'danger','源报告未提供阻断；不代表页面核验了实时数据库。'),addMessages('审计 warnings',list(audit.warnings),'warning','源报告未提供审计警告。'));
+        section.append(grid,addMessages('meta.warnings',list(meta.warnings),'warning','元数据未提供额外警告。'));
+        const caption = node('div','table-caption'); caption.append(node('h3','','数据覆盖 coverage'),node('span','hint','仅展示快照声明，true 不是页面实测结果')); section.append(caption);
+        const coverageGrid = node('div','coverage-grid');
+        [...new Set([...Object.keys(coverageNames),...Object.keys(coverage)])].forEach(key => {
+          const card = node('div','coverage-item'); card.append(node('div','coverage-key',key),node('span','label',Object.hasOwn(coverageNames,key) ? coverageNames[key] : '额外覆盖声明'));
+          const value = Object.hasOwn(coverage,key) ? coverage[key] : undefined;
+          card.append(badge(value === true ? 'on_time' : 'unknown'));
+          card.lastChild.lastChild.textContent = value === true ? '已声明 true' : value === false ? '未覆盖 false' : '未明确声明';
+          if (value !== true && value !== false && value !== undefined) card.append(node('pre','',value)); coverageGrid.append(card);
+        }); section.append(coverageGrid);
+        const log = node('section','audit-log'); log.append(node('h3','','query_log · ' + list(audit.query_log).length + ' 条'));
+        list(audit.query_log).forEach((value,index) => {
+          const detail = node('details'); detail.append(node('summary','','查询日志 ' + (index + 1)),node('pre','',typeof value === 'object' ? JSON.stringify(value,null,2) : text(value))); log.append(detail);
+        });
+        if (!list(audit.query_log).length) log.append(node('p','reason','未提供查询日志。本页面未执行数据库查询，没有日志不代表已连接数据库。'));
+        const raw = node('details'); raw.append(node('summary','','完整元数据 / 范围 / 分配策略'),node('pre','',JSON.stringify(meta,null,2))); log.append(raw); section.append(log);
+        section.append(node('p','hint','所有源字段按安全文本呈现；日志、告警、单号和原因均不会作为 HTML 或脚本执行。' + unknownHint)); $('panel').append(section);
+        return '完整数据审计 · ' + blockers.length + ' 条阻断 · 不受展示筛选影响';
+      };
+      const render = () => {
+        $('panel').replaceChildren(); $('panel').setAttribute('aria-labelledby','tab-' + state.view);
+        $('filters').hidden = state.view === 'audit'; state.expandedSummary = state.view === 'materials' ? state.expandedSummary : null;
+        const result = state.view === 'orders' ? renderOrders() : state.view === 'materials' ? renderMaterials() : state.view === 'ledger' ? renderLedger() : renderAudit();
+        $('result-count').textContent = result;
+        const notes = { orders:'工单状态筛选 · 数量字符串原样展示 · 前两列固定', materials:'只筛选可见物料 · 汇总数字不重算', ledger:'完整共享分配结果 · 同料竞争追溯不受筛选影响', audit:'覆盖 / 阻断 / 告警 / 查询日志均为安全文本' };
+        $('view-note').textContent = notes[state.view]; $('export').disabled = exportRows.length === 0;
+        $('print-context').textContent = viewNames[state.view] + (state.view === 'audit' ? ' · 完整审计，不受筛选影响' : ' · 工单：' + (state.orderQuery || '全部') + ' · 物料：' + (state.materialQuery || '全部') + ' · 状态：' + (state.status === 'all' ? '全部' : states[state.status])) + (state.view === 'orders' && state.selectedOrder ? ' · 选中工单：' + text(state.selectedOrder.no || state.selectedOrder.id) : '') + ' · 时间显示为 Asia/Shanghai · ' + (meta.mode === 'demo' ? 'DEMO，不是实时数据库' : 'LIVE 输入快照，不是实时查询') + (hasUnknown ? ' · 数据不足数量仅作审计' : '');
+      };
+      const setView = view => {
+        if (!Object.hasOwn(viewNames,view)) return;
+        state.view = view;
+        document.querySelectorAll('[data-view]').forEach(tab => { const selected = tab.dataset.view === view; tab.setAttribute('aria-selected',String(selected)); tab.tabIndex = selected ? 0 : -1; }); render();
+      };
+      $('mode').textContent = meta.mode === 'demo' ? 'DEMO / 演示快照' : meta.mode === 'live' ? 'LIVE / 输入快照' : '模式未确认';
+      $('mode').className = 'mode ' + (meta.mode === 'demo' ? 'demo' : meta.mode === 'live' ? 'live' : '');
+      $('mode-warning').hidden = meta.mode !== 'demo';
+      $('validity').className = 'notice ' + (blocked ? 'danger' : hasUnknown ? 'warning' : '');
+      $('validity-title').textContent = blocked ? '分析阻断 · 数据不足，禁止确定性齐套结论' : hasUnknown ? '报告包含数据不足工单 · 数量只表示已知量' : '离线计划快照 · 不代表实时数据库状态';
+      $('validity-text').textContent = (blocked ? blockers.length + ' 条阻断，详见“数据审计”。' : '') + (hasUnknown ? unknownHint : '只判断物料截至计划完工是否可用，不验证计划开工、产能或保证按期生产。') + ' conditional 为条件性供给，上游未验证。';
+      $('snapshot-at').textContent = dateText(meta.snapshot_at); $('snapshot-at').title = text(meta.snapshot_at);
+      $('horizon-end').textContent = dateText(meta.horizon_end); $('horizon-end').title = text(meta.horizon_end);
+      $('organizations').textContent = list(scope.organizations).length ? list(scope.organizations).map(text).join('、') : '范围未确认';
+      $('warehouses').textContent = list(scope.warehouses).length ? list(scope.warehouses).map(text).join('、') : '范围未确认';
+      $('policy').textContent = '分配策略：' + text(meta.allocation_policy) + (meta.allocation_policy === 'due_fifo_on_time_first' ? ' · 按期优先，再补逾期缺口；need_at / priority / id 稳定排序，同刻供给先于需求。' : '') + ' 筛选仅展示，不重新分配。';
+      $('kpi-total').textContent = orders.length; $('kpi-on-time').textContent = counts.on_time; $('kpi-risk').textContent = counts.late + counts.shortage; $('kpi-unknown').textContent = counts.unknown;
+      $('risk-breakdown').textContent = '延期 ' + counts.late + ' 张 / 全窗口缺料 ' + counts.shortage + ' 张';
+      $('on-time-share').textContent = orders.length ? (counts.on_time / orders.length * 100).toFixed(1) + '%' : '—';
+      Object.keys(states).forEach(status => {
+        const segment = node('span'); segment.style.width = (orders.length ? counts[status] / orders.length * 100 : 0) + '%'; segment.style.backgroundColor = tones[status]; $('status-stack').append(segment);
+        const item = node('span','legend-item'), dot = node('i','dot'); dot.style.backgroundColor = tones[status]; item.append(dot,document.createTextNode(states[status] + ' ' + counts[status] + ' 张')); $('status-legend').append(item);
+      });
+      [['orders',orders.length],['materials',materials.length],['ledger',ledger.length],['audit',blockers.length + list(audit.warnings).length + list(meta.warnings).length]].forEach(([view,count]) => { $('count-' + view).textContent = count; });
+      const tabs = [...document.querySelectorAll('[data-view]')];
+      tabs.forEach((tab,index) => {
+        tab.addEventListener('click',() => setView(tab.dataset.view));
+        tab.addEventListener('keydown',event => {
+          let target;
+          if (event.key === 'ArrowRight') target = tabs[(index + 1) % tabs.length];
+          else if (event.key === 'ArrowLeft') target = tabs[(index + tabs.length - 1) % tabs.length];
+          else if (event.key === 'Home') target = tabs[0]; else if (event.key === 'End') target = tabs[tabs.length - 1];
+          if (target) { event.preventDefault(); setView(target.dataset.view); target.focus(); }
+        });
+      });
+      [['order-filter','orderQuery'],['material-filter','materialQuery'],['status-filter','status']].forEach(([id,key]) => {
+        $(id).addEventListener(id === 'status-filter' ? 'change' : 'input',() => { state[key] = $(id).value; state.expandedMaterial = null; state.expandedSummary = null; render(); });
+      });
+      $('reset').addEventListener('click',() => { Object.assign(state,{ orderQuery:'',materialQuery:'',status:'all',expandedMaterial:null,expandedSummary:null }); $('order-filter').value = ''; $('material-filter').value = ''; $('status-filter').value = 'all'; render(); });
+      $('export').addEventListener('click',() => {
+        if (!exportRows.length) return;
+        const lines = [exportColumns.map(col => csvCell(col.label)).join(',')];
+        exportRows.forEach(row => lines.push(exportColumns.map(col => csvCell(rawValue(row,col),['quantity','rate'].includes(col.kind))).join(',')));
+        const blob = new Blob(['\ufeff' + lines.join('\r\n') + '\r\n'],{ type:'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob), anchor = node('a'); anchor.href = url; anchor.download = 'MES-' + state.view + '-' + (hasUnknown ? 'unknown' : meta.mode) + '.csv';
+        document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
+        $('export-feedback').textContent = '已导出 ' + exportRows.length + ' 行 · ' + viewNames[state.view] + '。数量 / 比率按文本保护，无浮点换算；公式型文本已加单引号。' + (state.view === 'ledger' ? ' 需求量可能在多笔资源行重复，不得沿 CSV 行累计。' : '') + (state.view === 'materials' ? ' 汇总仍为全报告口径。' : '') + (hasUnknown ? ' 已知数量不可确定齐套或缺料。' : '');
+      });
+      const printDetails = [];
+      window.addEventListener('beforeprint',() => { printDetails.length = 0; $('panel').querySelectorAll('details').forEach(detail => { if (!detail.open) { printDetails.push(detail); detail.open = true; } }); });
+      window.addEventListener('afterprint',() => { printDetails.forEach(detail => { detail.open = false; }); printDetails.length = 0; });
+      $('print').addEventListener('click',() => window.print());
+      render();
+    } catch (error) {
+      $('load-error').hidden = false;
+      $('load-error').replaceChildren(node('strong','','报告尚未注入或无法读取'),node('p','','请通过同包 scripts/analyze.py 生成填充后的 HTML。原模板不含 mock 数据，不连接数据库，也不能据此判断零需求或齐套。诊断：' + text(error.message)));
+      $('validity').hidden = true;
+      ['export','print','reset','order-filter','material-filter','status-filter'].forEach(id => { $(id).disabled = true; });
+      document.querySelectorAll('[data-view]').forEach(tab => { tab.disabled = true; });
+      $('result-count').textContent = '未载入报告 · 不作齐套结论';
+      $('panel').replaceChildren(empty('未载入报告','请使用分析脚本注入唯一报告数据。本模板不包含任何示例数量或演示工单。'));
+    }
+  })();
+  </script>
+</body>
+</html>

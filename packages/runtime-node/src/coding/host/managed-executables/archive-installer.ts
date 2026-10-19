@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, readdirSync, renameSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { chmodSync, existsSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import extractZip from "extract-zip";
 import type { CodingToolDownloadPlan } from "./catalog.js";
 
@@ -13,6 +14,8 @@ export interface CodingToolArchiveOperations {
 	readonly makeExecutable: (path: string) => void;
 	readonly removeFile: (path: string) => void;
 	readonly removeDirectory: (path: string) => void;
+	/** 安装成功后写 `<tool>.version` 标记；调用方降级处理失败，不影响安装结果。 */
+	readonly writeVersionMarker: (markerPath: string, version: string) => void;
 }
 
 export interface InstallCodingToolArchiveOptions {
@@ -44,6 +47,7 @@ export async function installCodingToolArchive(options: InstallCodingToolArchive
 		}
 		operations.moveFile(extractedBinary, plan.binaryPath);
 		if (options.platform !== "win32") operations.makeExecutable(plan.binaryPath);
+		writePlanVersionMarker(plan, operations);
 	} finally {
 		operations.removeFile(plan.archivePath);
 		operations.removeDirectory(extractDirectory);
@@ -66,7 +70,21 @@ export const defaultCodingToolArchiveOperations: CodingToolArchiveOperations = {
 	makeExecutable: (path) => chmodSync(path, 0o755),
 	removeFile: (path) => rmSync(path, { force: true }),
 	removeDirectory: (path) => rmSync(path, { recursive: true, force: true }),
+	writeVersionMarker: (markerPath, version) => writeFileSync(markerPath, version, "utf8"),
 };
+
+/** 标记与二进制同目录、同名去平台后缀：`rg.exe`/`rg` → `rg.version`。 */
+function codingToolVersionMarkerPath(plan: CodingToolDownloadPlan): string {
+	return join(dirname(plan.binaryPath), `${plan.binaryFileName.replace(/\.exe$/, "")}.version`);
+}
+
+function writePlanVersionMarker(plan: CodingToolDownloadPlan, operations: CodingToolArchiveOperations): void {
+	try {
+		operations.writeVersionMarker(codingToolVersionMarkerPath(plan), plan.version);
+	} catch {
+		// 标记只是诊断元数据，写失败不能让已成功的安装报错。
+	}
+}
 
 function findBinaryRecursively(rootDirectory: string, binaryFileName: string): string | null {
 	const pending = [rootDirectory];

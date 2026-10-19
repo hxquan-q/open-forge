@@ -18,6 +18,8 @@ worktree:
 base_commit: e9e0e31e5
 read_paths: [packages/runtime-node/src/conversation/conversation-file-lock.ts, packages/runtime-node/src/conversation/file-conversation-repository.ts, packages/runtime-storage/src/conversation/errors.ts, project/bugs/BUG-0100-conversation-file-lock-contention.md]
 write_paths: [packages/runtime-node/src/conversation/conversation-file-lock.ts, packages/runtime-node/test/conversation/conversation-file-lock.test.ts, .github/release-notes/v0.1.3.md, project/bugs/BUG-0100-conversation-file-lock-contention.md, project/tasks/TASK-0235-conversation-file-lock-hardening.md, project/tasks/README.md]
+created: 2026-10-12
+updated: 2026-10-14
 ---
 <!-- Copyright The Open Forge contributors. -->
 

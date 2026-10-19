@@ -1,11 +1,14 @@
+// Modified by The Open Forge contributors.
 import { parseActionCommand, runActionCommand } from "./action-command.js";
 import { parseDebugCommand, runDebugCommand } from "./debug-command.js";
+import { parseDoctorCommand, runDoctorCommand } from "./doctor-command.js";
 import { type RunAgentCliOptions, runAgentCli } from "./run-agent-cli.js";
 
 const HELP_TEXT = `Usage:
   openforge [options] [@files...] [messages...]
   openforge action <subcommand> [options]
   openforge debug <subcommand> [options]
+  openforge doctor
   openforge agent [options] [@files...] [messages...]
 
 Options:
@@ -19,11 +22,13 @@ Commands:
   debug search          Search development-only Debug capabilities.
   debug describe        Describe a Debug capability.
   debug run             Run a Debug capability.
+  doctor                Report managed coding tool (fd/rg) resolution.
   agent                 Run the coding agent explicitly.
 
 Run "openforge agent --help" for coding-agent options.
 Run "openforge action --help" for GUI action options.
 Run "openforge debug --help" for development Debug options.
+Run "openforge doctor --help" for the doctor options.
 `;
 
 function isTopLevelHelp(argv: string[]): boolean {
@@ -45,6 +50,12 @@ export async function runCli(argv: string[], options: RunAgentCliOptions = {}): 
 	const debugCommand = parseDebugCommand(argv);
 	if (debugCommand) {
 		process.exitCode = await runDebugCommand(debugCommand);
+		return;
+	}
+
+	const doctorCommand = parseDoctorCommand(argv);
+	if (doctorCommand) {
+		process.exitCode = await runDoctorCommand(doctorCommand);
 		return;
 	}
 

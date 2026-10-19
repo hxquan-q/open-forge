@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { getDocsMessages, type DocsLanguage } from "@/lib/i18n";
 
 export function StudioBanner({ language = "zh" }: { language?: DocsLanguage }) {
@@ -9,7 +10,7 @@ export function StudioBanner({ language = "zh" }: { language?: DocsLanguage }) {
 			href="/getting-started/"
 		>
 			<img
-				src="/images/vetta-app-icon.webp"
+				src="/images/open-forge-icon.png"
 				alt=""
 				width="40"
 				height="40"

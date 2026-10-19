@@ -1,98 +1,49 @@
 <!-- Modified by The Open Forge contributors. -->
 # 参与 Open Forge
 
-<p align="center"><a href="CONTRIBUTING.md">English</a> · <b>简体中文</b></p>
+[English](CONTRIBUTING.md) · [简体中文](CONTRIBUTING.zh-CN.md)
 
-感谢你考虑贡献。本仓库是开源客户端：桌面应用、CLI、文档站、插件 SDK、主题和 Agent 内核。商业服务端不在这里。
+本仓接受客户端工程的贡献：桌面及配套应用、Agent 运行时、模型、扩展和文档。业务服务端变更独立维护。
 
-最有杠杆的贡献通常是一个目录——插件、Skill、主题、市场条目或文档页——而不是框架重写。本文说明每类改动该放哪里，以及 PR 要过的门槛。
+## 找到内容归属
 
-提问、半成型想法、「这个项目还维护吗」请走社区 [Discord](https://discord.gg/qGqkk22Vg9)，不要开 Issue。（占位：本仓库的 GitHub Discussions 暂未启用。）
+| 改动 | 位置 |
+| --- | --- |
+| 桌面界面或宿主行为 | `apps/desktop/` |
+| CLI、移动端或传输应用 | `apps/` 中拥有该行为的目录 |
+| 可复用 Agent、模型、运行时或能力 | `packages/` 中拥有该行为的包 |
+| 插件或主题 | `packages/plugins/` 或 `packages/themes/` |
+| 用户使用说明 | `apps/docs-site/content/docs/` 及其 `en/` 镜像 |
+| 工程手册 | `docs/` 对应章节 |
+| 需求、任务、缺陷与验证 | `project/` |
 
----
+可通过[文档导航](docs/README.md)确定所有者。应用依赖包，包不反向引用应用内部代码；跨包导入使用公开的 `package.json#exports`。
 
-## 一个下午，一个 PR
+## 开始修改
 
-| 如果你想… | 实际在交 | 放哪里 | 体量 |
-|---|---|---|---|
-| 给桌面加一个插件 | 插件包 | [`packages/plugins/`](packages/plugins/) · 手册 [`docs/plugin/`](docs/plugin/) · 公开指南见[文档站](apps/docs-site/content/docs/plugins/getting-started.mdx) | 一个包 + `plugin.json` |
-| 沉淀一种可复用的工作方式 | Skill | [`packages/skill-presets/`](packages/skill-presets/) 或 GitHub 市场源，见 [`docs/open-marketplace.md`](docs/open-marketplace.md) | 一个带 `SKILL.md` 的目录 |
-| 换一套外观 | 主题 | [`packages/themes/`](packages/themes/) · [`docs/theme/`](docs/theme/) · [主题指南](docs/theme/README.md) | 一个主题包 |
-| 发布可安装能力 | 市场条目 | 官方市场仓库（占位：fork 运营的市场尚未发布），格式见 [开放市场文档](docs/open-marketplace.md) | 一个目录 + 清单行 |
-| 改进产品或开发者文档 | 文档页 | [`apps/docs-site/content/docs/`](apps/docs-site/content/docs/) | 一篇 MDX |
-| 翻译界面文案 | i18n 词条 | 桌面端语言包；用户可见文案不得硬编码 | 一个 PR |
-| 修 bug 或加产品功能 | 代码 | 已经拥有该行为的 `apps/` 或 `packages/` | 正常 PR |
+1. 阅读 [AGENTS.md](AGENTS.md) 及目标目录最近的规则和 README。
+2. 按[快速开始](QUICKSTART.zh-CN.md)使用 Bun 安装依赖。
+3. 查找或建立对应的 [Project Task](project/tasks/README.md)，在实施前记录范围、预期行为与验证方式。
+4. 一次变更只处理一个 concern。缺陷或行为变化补充回归测试；纯文档核对事实、命令与链接。
 
-拿不准自己属于哪一行，先到 [Discord](https://discord.gg/qGqkk22Vg9) 问。
+Desktop 用户可见文案（包括可访问性文本）走 i18n，快捷键进入可配置 keybinding。生成文件修改生成器或事实源。
 
----
+## 验证与提交
 
-## 本地环境
+按[质量门禁](docs/dev/quality-gates.md)和[测试政策](docs/dev/agent-rules/testing.md)选择受影响测试。完成代码任务后执行规定的完整 `bun run check`，该命令不运行测试。Desktop UI 验证仅在当前任务明确要求时运行。
 
-最短路径见 [`QUICKSTART.zh-CN.md`](QUICKSTART.zh-CN.md)。摘要：
+更新当前开发版本的[发布说明](.github/release-notes/README.md)。公开文档同步中英文，检查新增或改动的链接。
 
-```bash
-git clone https://github.com/hxquan-q/open-forge.git
-cd open-forge
-bun install                 # 需要 Bun 1.3+
-cd apps/desktop
-bun run dev                 # Vite renderer + Electron，数据在 ~/.openforge-dev
-```
+开发 PR 发往 **`dev`**，按仓库模板说明问题、修改后的行为与实际验证，关联 Task 或 Issue。提交使用中文多行说明，保留其他贡献者的修改。分支和集成流程见[开发流程](project/collaboration/development-workflow.md)。
 
-**不要**在仓库根目录跑 `bun run dev` 或 `bun run build`——那是编译核心库，不会启动应用。**不要**直接跑 `bun test`；用 `bun run test:pkg <name>` 或 `bun scripts/quality/run-vitest.mjs --run <file>`。
+不要提交密钥、用户会话、生产配置、默认开启的新遥测目的地或未经同意的依赖迁移。插件权限必须显式声明，限制在本次能力需要的范围。
 
----
+## 反馈与安全
 
-## Pull Request
+协作入口以[本仓 GitHub 页面](https://github.com/hxquan-q/open-forge)实际启用的渠道为准。反馈可复现问题时提供版本、平台、步骤、期望结果与实际结果；脱敏后的证据也可记录在对应 Project Task。
 
-PR 请发到 **`dev`**，不要发到 `main`。`dev` 是集成分支，`main` 是较慢的快照。
-
-- **一个 PR 只做一件事。** Skill + 重构 + 升依赖是三个 PR。
-- **填完整 PR 模板。** Why / Validation 留空会退回。
-- **能关联工单就关联**（`Fixes #N`，或 `project/tasks/` 里的 `TASK-xxxx` 台账条目）。非平凡功能应先有任务记录或 Discord 讨论。
-- **用户可见文案必须走 i18n**，包括 label、placeholder、菜单和 aria。
-- **快捷键**必须进入现有 keybinding 对象，不得在业务逻辑里写死。
-- **Commit message 使用中文**，关联工单写 `fixes #N` / `closes #N`。
-- Review 期间推 fixup，不要对共享分支 force-push，除非评审明确要求。
-
-不要求 CLA。贡献按本仓库的 [Apache-2.0](LICENSE) 授权。
-
-### 验证门槛
-
-| 改动类型 | 开 PR 前的最低要求 |
-|---|---|
-| 文档、文案、模板、注释 | 核对你改过的链接、命令和路径 |
-| Bug 修复或行为变化 | 一条在旧代码上会失败的测试，外加 `bun run check:quick` 和对应的 `bun run test:pkg <name>` |
-| 公共合同（IPC、Schema、导出、持久化） | 检查生产者与消费者，并补合同测试 |
-| UI 交互 | 在受影响层补组件/交互测试；`verify:ui:*` 不是默认 PR 要求，仅在 Issue 或评审明确要求时使用 |
-
-不要声称跑过未执行的检查。`bun run check` 是 lint + 类型 + 架构守卫，不能替代测试。
-
-面向 Agent 和内部工程的规则（包边界、coding-agent 分层、Desktop i18n、质量门禁）在 [`AGENTS.md`](AGENTS.md) 和 [`docs/dev/quality-gates.md`](docs/dev/quality-gates.md)。改代码时遵守那些文件；本文件是对外贡献地图。
-
----
-
-## 我们不接受的 PR
-
-请不要提交：
-
-- **默认开启的新遥测或分析目的地。** 遥测只在构建期 opt-in，见[数据与构建模式](README.zh-CN.md#数据与构建模式)。
-- **密钥、Token、Cookie、用户会话或生产配置**，日志和测试夹具同样不行。
-- **反向依赖**——`packages/*` 不得 import `apps/*`。走目标包 `package.json#exports` 的公开入口。
-- **未先讨论就重写技术栈**（换包管理器、换渲染框架、换 Agent Loop）——先有任务记录或 Discord 讨论。
-- **静默扩大插件权限或宿主能力。** 插件是不可信边界，按最小集合声明。
-- **手改生成文件。** 改生成器或事实源。
-
-拿不准就先问（Discord 或任务记录），再写代码。
-
----
-
-## 安全
-
-漏洞请私下报告，详见 [`SECURITY.md`](SECURITY.md)。（占位：私有报告渠道在本仓库尚未启用；不要开公开 Issue。）
-
----
+安全漏洞按[安全策略](SECURITY.md)处理，不在公开 Issue 或 PR 中披露敏感细节。
 
 ## 许可
 
-提交即表示你同意贡献按本仓库的 [Apache-2.0 License](LICENSE) 授权。
+贡献采用 [Apache-2.0](LICENSE) 许可。保留既有版权及第三方声明，详见 [NOTICE](NOTICE)。
