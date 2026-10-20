@@ -15,10 +15,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0333` | `in_progress` | PLAN-0019 | 用户要求提交推送；保留原工作区 temp，在独立干净副本复验累计批次后 fast-forward origin/dev；serial。 |
+| `TASK-0333` | `verifying` | PLAN-0019 | 干净副本累计批次 46/46 包、quality 635 例通过，最终 check 与 origin/dev fast-forward 推送待执行；原 temp 保留；serial。 |
 | `TASK-0332` | `verifying` | PLAN-0019 | 图谱调查与当前会话协作已接入 intake；29 例、quick/guards 通过，原生新上下文只读审查已实际派发回收；Claude 端与完整开发流程待使用验收；serial。 |
-| `TASK-0326` | `in_progress` | PLAN-0019 | 完整角色路由：为 planner/triage/lessons/ui-reviewer 建立有界结构化输出、确定性守卫与跨工具执行合同；serial，scripts/agents 串行。 |
-| `TASK-0327` | `in_progress` | PLAN-0019 | 持续编排：多 ready Task 领取、并发上限、停滞与熔断、周期报告；serial，与 0322–0326 共享控制器路径。 |
+| `TASK-0326` | `verifying` | PLAN-0019 | 角色合同已随 ecfe01f17 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实模型仍待验收；serial。 |
+| `TASK-0327` | `verifying` | PLAN-0019 | 有界队列编排已随 94560c460 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实外部循环仍待验收；serial。 |
 | `TASK-0328` | `verifying` | PLAN-0019 | UI 接线与合同测试已实现：显式授权、六主题运行证据、独立视觉评审、清理与绑定；真实 UI 验收延期；serial。 |
 | `TASK-0329` | `blocked` | PLAN-0019 | 用户暂无问题来源，外部采集先搁置；不阻塞明确 Task 的开发闭环。 |
 | `TASK-0331` | `verifying` | PLAN-0019 | 单任务失败修复续接与合并重验已接通；WSL2 受控 Git/进程验证，真实模型与 CI/UI 验收延期；serial。 |

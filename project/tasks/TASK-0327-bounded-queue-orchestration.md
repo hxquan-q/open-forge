@@ -1,7 +1,7 @@
 ---
 id: TASK-0327
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -21,7 +21,7 @@ write_paths: [scripts/agents/orchestrate.mjs, scripts/agents/queue.mjs, scripts/
 exclusive_paths: [scripts/agents/orchestrate.mjs, scripts/agents/queue.mjs, schemas/agents/orchestration.schema.json]
 depends_on: [TASK-0326]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0328, TASK-0329]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -80,9 +80,9 @@ updated: 2026-10-20
 
 ## 验收分层
 
-- 工程验证：待实施。
+- 工程验证：原有定向/quick 及本轮 46/46 包组合验证通过，完整 check 见 TASK-0333 的最终推送记录；真实外部循环未验收。
 - 技术评审：当前 Agent 自审，独立模型未配置。
-- 集成：本地 main，待提交/最终组合验证。
+- 集成：`94560c460` 已提交本地 main，TASK-0333 推送审计核对为 main 祖先；集成元数据本轮回填。
 - 人工功能验收：待验收。
 - 发布：未授权。
 

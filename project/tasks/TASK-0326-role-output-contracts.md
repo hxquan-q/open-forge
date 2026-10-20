@@ -1,7 +1,7 @@
 ---
 id: TASK-0326
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -21,7 +21,7 @@ write_paths: [scripts/agents/adapters.mjs, scripts/agents/adapters.test.mjs, scr
 exclusive_paths: [scripts/agents/runner.mjs, scripts/agents/adapters.mjs, schemas/agents/role-output.schema.json]
 depends_on: [TASK-0325]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0327, TASK-0328, TASK-0329]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -79,9 +79,9 @@ updated: 2026-10-20
 
 ## 验收分层
 
-- 工程验证：实施后回写定向测试、quick 与完整 check 结果。
+- 工程验证：原有定向/quick 及本轮 46/46 包组合验证通过，完整 check 见 TASK-0333 的最终推送记录；真实模型行为未验收。
 - 技术评审：当前 Agent 自审；真实独立模型评审未配置。
-- 集成：本地 main 原子提交，待最终组合验证。
+- 集成：`ecfe01f17` 已提交本地 main，TASK-0333 推送审计核对为 main 祖先；集成元数据本轮回填。
 - 人工功能验收：待验收。
 - 发布：未授权。
 

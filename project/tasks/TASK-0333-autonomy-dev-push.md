@@ -1,7 +1,7 @@
 ---
 id: TASK-0333
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: project/agent-workflow/coordinator
 requirement: REQ-0019
@@ -17,11 +17,11 @@ branch: main
 worktree: unassigned（临时独立干净副本验证，不并行开发）
 base_commit: 36bf63f44
 read_paths: [project, scripts/quality, scripts/agents, schemas/agents, apps, packages, .agents, .github]
-write_paths: [project/tasks/TASK-0333-autonomy-dev-push.md, project/tasks/README.md]
+write_paths: [project/tasks/TASK-0333-autonomy-dev-push.md, project/tasks/README.md, project/tasks/TASK-0326-role-output-contracts.md, project/tasks/TASK-0327-bounded-queue-orchestration.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0332]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -47,9 +47,14 @@ updated: 2026-10-20
 ## 验证与交付
 
 - 远端 fetch、完整 git log origin/dev..main、冻结依赖安装、test:changed --base origin/dev、bun run check、Git clean/fast-forward 与远端提交确认。
-- 工程验证：待执行；技术评审：核对既有任务证据与整批变更归属；集成：pending；人工功能验收：本 Git 操作不适用，不代表用户接受产品行为；发布：未授权。
+- 工程验证：累计候选 test:changed 通过，最终 check 待执行；技术评审：已核对既有任务证据与整批变更归属；集成：本 Task 记录已在 main，状态为 integrated；人工功能验收：本 Git 操作不适用，不代表用户接受产品行为；发布：未授权。
 - 本任务内部完成标准为授权的开发分支确实前进且完整验证证据留存；其他 verifying 功能 Task 不自动改 done。
 
 ## 交付记录
 
 - 待补：临时副本路径、候选/远端 commit、实际安装/测试/检查结果、失败归属、推送回执和未执行项。
+- 临时副本已创建于 `C:/Users/xquan/AppData/Local/Temp/open-forge-dev-push-20261020`，独立 .git/node_modules，main 候选为 `705867e0c`；fetch 个人 origin 并从主仓只读复制 upstream/dev 参考 ref，未向稳定/上游推送。副本 Git 状态为空，原七个 temp 文件保持原位。
+- 初始现有 Bun 1.4.2 安装 3044 包 / 113.86 秒；随后按根 packageManager 下载并校验官方 Bun 1.3.14（仅任务工具目录），冻结复验 45 包 / 7.01 秒，锁文件及清单不变。测试实际使用 Bun 1.3.14、Windows Node 26.3.1 与 Git Bash；日志在系统临时目录 open-forge-dev-push-*.log。
+- 批次审计发现 TASK-0326/0327 的集成元数据滞后于已有 `ecfe01f17` / `94560c460` 提交；待本轮组合检查通过后仅回填工程集成证据，不提前将人工验收标为 done，也不夹带新实现。
+- 全批次测试进度：quality 58 文件 / 635 例通过；截至首次 CLI 收口，43/46 包通过且无失败，CLI 用时 311.0 秒，Desktop 单测仍在运行。测试会话持续运行，详细原始结果在 open-forge-dev-push-tests-20261020.log；当前未推送，不能将本条进度视为最终通过。
+- 最终 test:changed exit 0：46/46 包全部通过，test:pkg 总计 2033.1 秒；CLI 238 通过 / 14 既有跳过，Desktop 5281 通过 / 17 既有跳过，Desktop 用时 1124.8 秒。没有新增 skip、改变断言或超时。测试候选为 `705867e0c`，随后仅补写本任务和 0326/0327/Task 索引的管理元数据；产品/控制器代码保持相同，最终完整 check 针对管理记录提交后的候选执行。
