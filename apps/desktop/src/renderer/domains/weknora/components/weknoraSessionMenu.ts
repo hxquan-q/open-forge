@@ -14,16 +14,21 @@ export interface WeKnoraSessionMenuLabels {
 	readonly delete: string;
 	/** 「多选」项文案。 */
 	readonly multiSelect: string;
+	/** 「导出会话」项文案。 */
+	readonly export: string;
 }
 
 export interface WeKnoraSessionMenuInput {
 	readonly labels: WeKnoraSessionMenuLabels;
 	/** 目标会话是否禁删（streaming 中，AC-10）。 */
 	readonly deleteDisabled: boolean;
+	/** 「导出会话」是否禁用（导出进行中，防重复点击，T05）。 */
+	readonly exportDisabled: boolean;
 	/** 当前是否已在多选模式（已在则不再给「多选」项，避免重复进入清空选择）。 */
 	readonly multiSelectActive: boolean;
 	readonly onDelete: () => void;
 	readonly onEnterMultiSelect: () => void;
+	readonly onExport: () => void;
 }
 
 export function buildSessionMenuItems(input: WeKnoraSessionMenuInput): readonly WeKnoraSessionMenuItem[] {
@@ -36,6 +41,13 @@ export function buildSessionMenuItems(input: WeKnoraSessionMenuInput): readonly 
 			onSelect: input.onEnterMultiSelect,
 		});
 	}
+	items.push({
+		id: "export",
+		label: input.labels.export,
+		iconClassName: "icon-[solar--download-minimalistic-linear]",
+		disabled: input.exportDisabled,
+		onSelect: input.onExport,
+	});
 	items.push({
 		id: "delete",
 		label: input.labels.delete,

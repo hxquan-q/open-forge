@@ -14,10 +14,12 @@ import { Button } from "@vetta-org/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { agentNameOfSession, formatSessionTime, type WeKnoraErrorCode, type WeKnoraHistoryStatus } from "../atoms";
-import type { WeKnoraBatchDeleteResult } from "../hooks/useWeKnoraBatchActions";
+import type { WeKnoraBatchDeleteResult, WeKnoraBatchExportResult } from "../hooks/useWeKnoraBatchActions";
 import { useWeKnoraSelection } from "../hooks/useWeKnoraSelection";
 import { WEKNORA_ERROR_KEYS } from "../services/weknoraErrorKeys";
+import type { WeKnoraExportFormat } from "../services/weknoraExport";
 import { buildSessionMenuItems } from "./weknoraSessionMenu";
+import { WeKnoraExportFormatDialog } from "./WeKnoraExportFormatDialog";
 import { WeKnoraSessionContextMenu, type WeKnoraSessionMenuItem } from "./WeKnoraSessionContextMenu";
 
 export interface ConversationListProps {
@@ -33,6 +35,8 @@ export interface ConversationListProps {
 	readonly deletingSessionId: string | null;
 	/** 批量删除进行中（T04：批量确认按钮防重复）。 */
 	readonly batchDeleting: boolean;
+	/** 导出进行中（T05：单会话或批量任一在跑；入口按钮 / 菜单项防重复的驱动源）。 */
+	readonly exporting: boolean;
 	/** 删除失败的归一化错误码（AC-11）；非 `null` 时在列表顶部出内联错误块。 */
 	readonly deleteError: WeKnoraErrorCode | null;
 	readonly onNewConversation: () => void;
@@ -42,6 +46,13 @@ export interface ConversationListProps {
 	readonly onDeleteSession: (sessionId: string) => Promise<boolean>;
 	/** 批量删除（AC-10）：真删 + 聚合结果；失败项不静默（结果弹窗展示明细）。 */
 	readonly onDeleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
+	/** 单会话导出（AC-3）：拉全量 → 序列化 → 保存对话框；成功 / 失败反馈由连接层落实。 */
+	readonly onExportSession: (sessionId: string, format: WeKnoraExportFormat) => Promise<void>;
+	/** 批量导出（AC-9）：选目录 → 逐会话一文件；取消目录选择返回 `null`（零写入）。 */
+	readonly onExportSessions: (
+		sessionIds: readonly string[],
+		format: WeKnoraExportFormat,
+	) => Promise<WeKnoraBatchExportResult | null>;
 }
 
 /**
@@ -53,13 +64,16 @@ export interface ConversationListProps {
  *   loading 期间该行禁用（`loadingSessionId`），其余行为与去确认前一致。
  * - **右键行弹上下文菜单**（AC-6）：「多选」进入多选模式（AC-8）或「删除会话」→ 确认弹窗（AC-7）→ 真删（AC-8）。
  *   失败出内联错误块可重试（AC-11），会话行**原样保留**（不假装删掉）；请求进行中确认按钮防重复（AC-12）。
- * - **多选模式**（AC-8/AC-10）：行可勾选（streaming 中禁选）、顶部操作条显示已选数 + 全选 / 批量删除 / 取消；
+ * - **多选模式**（AC-8/AC-10）：行可勾选（streaming 中禁选）、顶部操作条显示已选数 + 全选 / 批量导出 / 批量删除 / 取消；
  *   Esc 或「取消」退出。批量删除走确认弹窗（数量 + 不可恢复），完成后聚合「成功 N / 失败 M」。
+ * - **导出**（AC-3/AC-9）：右键「导出会话」→ 格式（txt/md/docx）→ 单会话落盘；多选操作条「批量导出」→ 格式 →
+ *   目录选择 → 逐会话一文件 → 结果「成功 N / 失败 M（明细）」。导出编排在 hook 层，本组件只做入口与弹窗。
  *
  * 单文件说明（C7）：本文件只对「历史会话侧栏」**一个 actor** 负责——行渲染、右键菜单接线、
- * 单删 / 批量删除的确认与结果弹窗都是同一份侧栏状态的直接产物，拆开只会制造跨文件的 prop 搬运。
- * 已外提的独立职责：选择状态机（`useWeKnoraSelection`）、批量编排（`useWeKnoraBatchActions`）、
- * 菜单项生成（`weknoraSessionMenu`）、错误文案表（`weknoraErrorKeys`）。
+ * 单删 / 批量删除 / 导出的确认与结果弹窗都是同一份侧栏状态的直接产物，拆开只会制造跨文件的 prop 搬运。
+ * 已外提的独立职责：选择状态机（`useWeKnoraSelection`）、批量动作编排（`useWeKnoraBatchActions`）、
+ * 单会话导出（`useWeKnoraExport`）、菜单项生成（`weknoraSessionMenu`）、格式弹窗
+ * （`WeKnoraExportFormatDialog`）、错误文案表（`weknoraErrorKeys`）。
  */
 export function ConversationList({
 	sessions,
@@ -70,12 +84,15 @@ export function ConversationList({
 	streamingSessionIds,
 	deletingSessionId,
 	batchDeleting,
+	exporting,
 	deleteError,
 	onNewConversation,
 	onOpenSession,
 	onReload,
 	onDeleteSession,
 	onDeleteSessions,
+	onExportSession,
+	onExportSessions,
 }: ConversationListProps): JSX.Element {
 	const { t } = useTranslation("weknora");
 	/** 右键落点 + 目标会话；非空即渲染菜单（portal 到 body）。 */
@@ -88,6 +105,12 @@ export function ConversationList({
 	const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 	/** 批量删除的聚合结果；非空即弹结果弹窗（成功 N / 失败 M 明细）。 */
 	const [batchResult, setBatchResult] = useState<WeKnoraBatchDeleteResult | null>(null);
+	/** 待选格式的导出请求（T05 / AC-3）；非空即弹格式选择弹窗（单会话 / 批量共用）。 */
+	const [exportRequest, setExportRequest] = useState<
+		{ readonly kind: "single"; readonly session: WeKnoraSession } | { readonly kind: "batch" } | null
+	>(null);
+	/** 批量导出的聚合结果（T05 / AC-9）；非空即弹结果弹窗（成功 N / 失败 M 明细）。 */
+	const [batchExportResult, setBatchExportResult] = useState<WeKnoraBatchExportResult | null>(null);
 	const selection = useWeKnoraSelection();
 
 	// 可选集合 = 在列表中且无活跃流（streaming 中禁选，AC-10）。删除 / 开始流式后选择自动收敛。
@@ -107,7 +130,13 @@ export function ConversationList({
 	useShortcutScope({
 		id: "surface:weknora-multi-select",
 		kind: "surface",
-		active: selection.active && !batchConfirmOpen && batchResult === null && pendingDelete === null,
+		active:
+			selection.active &&
+			!batchConfirmOpen &&
+			batchResult === null &&
+			pendingDelete === null &&
+			exportRequest === null &&
+			batchExportResult === null,
 		bindings: [{ key: "escape", run: () => selection.exit() }],
 	});
 
@@ -120,11 +149,14 @@ export function ConversationList({
 			labels: {
 				delete: deleteDisabled ? t("delete.disabledStreaming") : t("menu.delete"),
 				multiSelect: t("menu.multiSelect"),
+				export: t("menu.export"),
 			},
 			deleteDisabled,
+			exportDisabled: exporting,
 			multiSelectActive: selection.active,
 			onDelete: () => setPendingDelete(menu.session),
 			onEnterMultiSelect: () => selection.enter(),
+			onExport: () => setExportRequest({ kind: "single", session: menu.session }),
 		});
 	};
 
@@ -158,6 +190,20 @@ export function ConversationList({
 		selection.exit();
 	};
 
+	// 导出（T05）：格式选定后分派到单会话 / 批量。先关格式弹窗（导出中的禁用态由 `exporting` 承担）。
+	// 批量取消目录选择时返回 `null` —— 零写入、不出结果弹窗。
+	const confirmExport = async (format: WeKnoraExportFormat): Promise<void> => {
+		const request = exportRequest;
+		if (request === null) return;
+		setExportRequest(null);
+		if (request.kind === "single") {
+			await onExportSession(request.session.id, format);
+			return;
+		}
+		const result = await onExportSessions([...selection.selectedIds], format);
+		if (result !== null) setBatchExportResult(result);
+	};
+
 	const titleOf = (sessionId: string): string =>
 		sessions.find((session) => session.id === sessionId)?.title?.trim() || t("conversation.untitled");
 
@@ -186,6 +232,15 @@ export function ConversationList({
 							variant="outline"
 						>
 							{t("selection.selectAll")}
+						</Button>
+						<Button
+							disabled={selection.count === 0 || exporting}
+							onClick={() => setExportRequest({ kind: "batch" })}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							{exporting ? t("batchExport.exporting") : t("selection.export")}
 						</Button>
 						<Button
 							disabled={selection.count === 0}
@@ -404,6 +459,53 @@ export function ConversationList({
 					<DialogFooter>
 						<Button onClick={() => setBatchResult(null)} type="button" variant="outline">
 							{t("batchDelete.close")}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* AC-3：导出格式选择弹窗（单会话 / 批量共用）；关闭即中止、零写入。 */}
+			<WeKnoraExportFormatDialog
+				onCancel={() => setExportRequest(null)}
+				onSelect={(format) => void confirmExport(format)}
+				open={exportRequest !== null}
+				title={exportRequest?.kind === "single" ? t("export.formatTitleSingle") : t("export.formatTitleBatch")}
+			/>
+
+			{/* AC-9 / D5：批量导出结果（成功 N / 失败 M 明细，失败绝不静默）。 */}
+			<Dialog
+				open={batchExportResult !== null}
+				onOpenChange={(open) => {
+					if (!open) setBatchExportResult(null);
+				}}
+			>
+				<DialogContent className="max-w-[380px]">
+					<DialogHeader>
+						<DialogTitle>{t("batchExport.resultTitle")}</DialogTitle>
+						<DialogDescription>
+							{t("batchExport.resultSucceeded", { count: batchExportResult?.succeeded.length ?? 0 })}
+						</DialogDescription>
+					</DialogHeader>
+					{batchExportResult && batchExportResult.failed.length > 0 ? (
+						<div className="flex flex-col gap-1">
+							<p className="text-[12px] text-foreground">
+								{t("batchExport.resultFailed", { count: batchExportResult.failed.length })}
+							</p>
+							<ul className="flex flex-col gap-1">
+								{batchExportResult.failed.map((failure) => (
+									<li key={failure.sessionId} className="text-[12px] text-destructive">
+										{titleOf(failure.sessionId)}：
+										{failure.kind === "write"
+											? t("batchExport.writeFailed")
+											: t(WEKNORA_ERROR_KEYS[failure.errorCode ?? "unknown"])}
+									</li>
+								))}
+							</ul>
+						</div>
+					) : null}
+					<DialogFooter>
+						<Button onClick={() => setBatchExportResult(null)} type="button" variant="outline">
+							{t("batchExport.close")}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

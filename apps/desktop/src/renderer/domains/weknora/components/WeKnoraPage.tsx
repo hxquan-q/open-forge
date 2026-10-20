@@ -21,6 +21,7 @@ export function WeKnoraPage(): JSX.Element {
 			currentSessionId={model.currentSessionId}
 			deleteError={model.deleteError}
 			deletingSessionId={model.deletingSessionId}
+			exporting={model.exporting}
 			hasApiKey={model.config?.hasApiKey ?? false}
 			isStreaming={model.isStreaming}
 			loadingSessionId={model.loadingSessionId}
@@ -34,6 +35,8 @@ export function WeKnoraPage(): JSX.Element {
 			onCancel={model.actions.cancel}
 			onDeleteSession={model.actions.deleteSession}
 			onDeleteSessions={model.actions.deleteSessions}
+			onExportSession={model.actions.exportSession}
+			onExportSessions={model.actions.exportSessions}
 			onNewConversation={model.actions.newConversation}
 			onOpenSession={model.actions.openSession}
 			onReloadAgents={model.actions.reloadAgents}

@@ -29,8 +29,9 @@ export interface WeKnoraExportTurn {
 /**
  * 归一化消息的**导出视图**：在 `WeKnoraMessage` 之上读可选的 `created_at`（分页游标与顺序校正用）。
  *
- * 主进程归一化目前未透出 `created_at`（见 `04-impl/T02-notes.md` 的 open question），故这里按
- * **可选字段**读取：有则用于翻页与顺序校正，无则退化为单页 —— 不臆造时间戳。
+ * `created_at` 已由 T03 在主进程归一化中补齐（`main/weknora/http.ts` 的 `toMessage`），故正常路径下
+ * 该字段存在、分页可真正翻页。这里仍按**可选字段**读取：旧数据 / 缺字段时有则用于翻页与顺序校正，
+ * 无则退化为单页 —— 不臆造时间戳。
  */
 export interface WeKnoraExportMessage extends WeKnoraMessage {
 	readonly created_at?: string;
@@ -162,6 +163,43 @@ export function uniqueFileNames(names: readonly string[]): string[] {
 	return result;
 }
 
+/** 导出格式（AC-3）：三选一，供格式选择弹窗与序列化分发共用。 */
+export type WeKnoraExportFormat = "txt" | "md" | "docx";
+
+/** 格式 → 文件扩展名；同批文件共用同一扩展名，故重名去重只对基名做（见 {@link exportFileNames}）。 */
+const EXPORT_EXTENSIONS: Record<WeKnoraExportFormat, string> = { txt: "txt", md: "md", docx: "docx" };
+
+/** 会话标题 + 格式 → 完整文件名（基名经 {@link safeFileName} 净化后追加扩展名，AC-7）。 */
+export function exportFileName(title: string, format: WeKnoraExportFormat): string {
+	return `${safeFileName(title)}.${EXPORT_EXTENSIONS[format]}`;
+}
+
+/** 批量文件名（AC-7）：先对基名去重（{@link uniqueFileNames}），再统一追加扩展名。 */
+export function exportFileNames(titles: readonly string[], format: WeKnoraExportFormat): string[] {
+	return uniqueFileNames(titles.map((title) => safeFileName(title))).map(
+		(base) => `${base}.${EXPORT_EXTENSIONS[format]}`,
+	);
+}
+
+/** 序列化后的导出载荷：内容 + 编码（docx 走 base64，txt/md 走 utf8）。 */
+export interface WeKnoraExportPayload {
+	readonly content: string;
+	readonly encoding: "utf8" | "base64";
+}
+
+/**
+ * 消息数组 → 指定格式的载荷（AC-5）：txt/md 直出 utf8 文本，docx 经动态 `import("docx")` 出 base64。
+ *
+ * 格式 → 序列化器的分发只此一处（单会话导出与批量导出共用），避免两个接线点各判一次格式。
+ */
+export async function serializeExport(
+	messages: readonly WeKnoraMessage[],
+	format: WeKnoraExportFormat,
+): Promise<WeKnoraExportPayload> {
+	if (format === "docx") return { content: await toDocxBuffer(messages), encoding: "base64" };
+	return { content: format === "md" ? toMarkdown(messages) : toTxt(messages), encoding: "utf8" };
+}
+
 /** 单页拉取的入参（含向更早翻页的 `beforeTime` 游标）。 */
 export interface LoadMessagesPageInput {
 	readonly sessionId: string;
@@ -185,7 +223,7 @@ export interface LoadAllMessagesOptions {
 	readonly loadPage?: LoadMessagesPage;
 }
 
-/** 缺省拉页：走既有 IPC 合同。`beforeTime` 需主进程合同透出才能生效（见 T02-notes 的 open question）。 */
+/** 缺省拉页：走既有 IPC 合同（`beforeTime` 已由 T03 在 service/IPC 侧透出，翻页游标可用）。 */
 const defaultLoadPage: LoadMessagesPage = (input) => window.vetta.weknora.loadMessages(input);
 
 /** 页内最早一条的时间戳原始串（按 `Date.parse` 比较；无可用时间戳则 `undefined`）。 */

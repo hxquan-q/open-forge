@@ -61,11 +61,13 @@
 	},
 	"menu": {
 		"delete": "删除会话",
-		"multiSelect": "多选"
+		"multiSelect": "多选",
+		"export": "导出会话"
 	},
 	"selection": {
 		"selected": "已选 {{count}}",
 		"selectAll": "全选",
+		"export": "批量导出",
 		"delete": "批量删除",
 		"exit": "取消"
 	},
@@ -81,7 +83,25 @@
 		"close": "关闭"
 	},
 	"export": {
-		"citationSource": "来源"
+		"citationSource": "来源",
+		"formatTitleSingle": "导出会话",
+		"formatTitleBatch": "批量导出",
+		"formatDescription": "导出内容为问答正文,不含思考过程。",
+		"formatTxt": "文本(.txt)",
+		"formatMd": "Markdown(.md)",
+		"formatDocx": "Word(.docx)",
+		"cancel": "取消",
+		"saveTitle": "保存会话导出",
+		"singleSuccess": "会话已导出。",
+		"singleFailed": "导出失败,请重试。"
+	},
+	"batchExport": {
+		"exporting": "导出中…",
+		"resultTitle": "导出结果",
+		"resultSucceeded": "成功导出 {{count}} 个会话。",
+		"resultFailed": "以下 {{count}} 个会话导出失败:",
+		"writeFailed": "写入文件失败",
+		"close": "关闭"
 	},
 	"citation": {
 		"badgeLabel": "引用资料:{{doc}}",

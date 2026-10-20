@@ -7,7 +7,8 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
-import type { WeKnoraBatchDeleteResult } from "../hooks/useWeKnoraBatchActions";
+import type { WeKnoraBatchDeleteResult, WeKnoraBatchExportResult } from "../hooks/useWeKnoraBatchActions";
+import type { WeKnoraExportFormat } from "../services/weknoraExport";
 import {
 	persistWeKnoraSidebarCollapsed,
 	readPersistedWeKnoraSidebarCollapsed,
@@ -62,6 +63,8 @@ export interface WeKnoraPageViewProps {
 	readonly deletingSessionId: string | null;
 	/** 批量删除进行中（T04：批量确认按钮防重复的驱动源）。 */
 	readonly batchDeleting: boolean;
+	/** 导出进行中（T05：单会话 / 批量任一在跑；入口防重复的驱动源）。 */
+	readonly exporting: boolean;
 	/** 删除失败的归一化错误码（AC-11）；非 `null` 时侧栏出内联错误块。 */
 	readonly deleteError: WeKnoraErrorCode | null;
 	readonly saving: boolean;
@@ -76,6 +79,13 @@ export interface WeKnoraPageViewProps {
 	readonly onDeleteSession: (sessionId: string) => Promise<boolean>;
 	/** 批量删除历史会话（AC-10）；返回聚合结果（成功 / 失败明细）。 */
 	readonly onDeleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
+	/** 单会话导出（AC-3）：拉全量 → 序列化 → 保存对话框（默认桌面）。 */
+	readonly onExportSession: (sessionId: string, format: WeKnoraExportFormat) => Promise<void>;
+	/** 批量导出（AC-9）：选目录 → 逐会话一文件；取消目录选择返回 `null`。 */
+	readonly onExportSessions: (
+		sessionIds: readonly string[],
+		format: WeKnoraExportFormat,
+	) => Promise<WeKnoraBatchExportResult | null>;
 	readonly onReloadSessions: () => void;
 	readonly onSaveSetup: (input: { baseUrl: string; apiKey?: string }) => void;
 	readonly onReloadAgents: () => void;
@@ -98,6 +108,7 @@ export function WeKnoraPageView({
 	streamingSessionIds,
 	deletingSessionId,
 	batchDeleting,
+	exporting,
 	deleteError,
 	saving,
 	saveError,
@@ -108,6 +119,8 @@ export function WeKnoraPageView({
 	onOpenSession,
 	onDeleteSession,
 	onDeleteSessions,
+	onExportSession,
+	onExportSessions,
 	onReloadSessions,
 	onSaveSetup,
 	onReloadAgents,
@@ -229,9 +242,12 @@ export function WeKnoraPageView({
 							currentSessionId={currentSessionId}
 							deleteError={deleteError}
 							deletingSessionId={deletingSessionId}
+							exporting={exporting}
 							loadingSessionId={loadingSessionId}
 							onDeleteSession={onDeleteSession}
 							onDeleteSessions={onDeleteSessions}
+							onExportSession={onExportSession}
+							onExportSessions={onExportSessions}
 							onNewConversation={onNewConversation}
 							onOpenSession={onOpenSession}
 							onReload={onReloadSessions}

@@ -10,9 +10,15 @@ import {
 	type WeKnoraHistoryStatus,
 	weKnoraAgentsStatusAtom,
 } from "../atoms";
+import type { WeKnoraExportFormat } from "../services/weknoraExport";
 import { useWeKnoraAgents } from "./useWeKnoraAgents";
-import { useWeKnoraBatchActions, type WeKnoraBatchDeleteResult } from "./useWeKnoraBatchActions";
+import {
+	useWeKnoraBatchActions,
+	type WeKnoraBatchDeleteResult,
+	type WeKnoraBatchExportResult,
+} from "./useWeKnoraBatchActions";
 import { useWeKnoraChat } from "./useWeKnoraChat";
+import { useWeKnoraExport } from "./useWeKnoraExport";
 import { useWeKnoraHistory } from "./useWeKnoraHistory";
 import { useWeKnoraSetup, type WeKnoraSetupInput } from "./useWeKnoraSetup";
 import { isConfigured } from "./weKnoraModelSupport";
@@ -43,6 +49,13 @@ export interface WeKnoraModelActions {
 	 * 删到当前会话则回空态，完成后重拉列表（失败项原样保留，列表如实刷新）。
 	 */
 	readonly deleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
+	/** 单会话导出（AC-3）：拉全量 → 序列化 → 保存对话框（默认桌面）；取消零写入。 */
+	readonly exportSession: (sessionId: string, format: WeKnoraExportFormat) => Promise<void>;
+	/** 批量导出（AC-9）：选目录 → 逐会话一文件写盘；取消目录选择返回 `null`（零写入）。 */
+	readonly exportSessions: (
+		sessionIds: readonly string[],
+		format: WeKnoraExportFormat,
+	) => Promise<WeKnoraBatchExportResult | null>;
 }
 
 export interface WeKnoraViewModel {
@@ -66,6 +79,8 @@ export interface WeKnoraViewModel {
 	readonly deletingSessionId: string | null;
 	/** 批量删除进行中（T04：确认按钮防重复的驱动源）；`false` = 无。 */
 	readonly batchDeleting: boolean;
+	/** 导出进行中（T05：单会话或批量任一在跑即 `true`；入口按钮/菜单项防重复的驱动源）。 */
+	readonly exporting: boolean;
 	/** 删除失败的归一化错误码（AC-11，侧栏内联错误块的数据源）；`null` = 无。 */
 	readonly deleteError: WeKnoraErrorCode | null;
 	/** 允许提问：已配置 + 有可用智能体 + 无进行中的回答（AC-7 / AC-19）。 */
@@ -89,7 +104,13 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 	const setup = useWeKnoraSetup();
 	const agents = useWeKnoraAgents({ config: setup.config });
 	const history = useWeKnoraHistory({ config: setup.config });
-	const batch = useWeKnoraBatchActions({ removeSession: history.removeSession });
+	// 会话 id → 标题：导出文件名基名用；空标题交给 `safeFileName` 回退「未命名会话」（不在模型层拼文案）。
+	const titleOf = useCallback(
+		(sessionId: string): string => history.sessions.find((session) => session.id === sessionId)?.title?.trim() ?? "",
+		[history.sessions],
+	);
+	const batch = useWeKnoraBatchActions({ removeSession: history.removeSession, titleOf });
+	const exportActions = useWeKnoraExport({ titleOf });
 	const chat = useWeKnoraChat({
 		config: setup.config,
 		agents: agents.agents,
@@ -179,6 +200,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		loadingSessionId: history.loadingSessionId,
 		deletingSessionId: history.deletingSessionId,
 		batchDeleting: batch.running,
+		exporting: exportActions.exporting || batch.exportRunning,
 		deleteError: history.deleteError,
 		canAsk: chat.canAsk,
 		saving: setup.saving,
@@ -193,6 +215,8 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			openSession: chat.openSession,
 			deleteSession,
 			deleteSessions,
+			exportSession: exportActions.exportSession,
+			exportSessions: batch.exportSessions,
 		},
 	};
 }

@@ -61,11 +61,13 @@
 	},
 	"menu": {
 		"delete": "Delete conversation",
-		"multiSelect": "Select"
+		"multiSelect": "Select",
+		"export": "Export conversation"
 	},
 	"selection": {
 		"selected": "{{count}} selected",
 		"selectAll": "Select all",
+		"export": "Export selected",
 		"delete": "Delete selected",
 		"exit": "Cancel"
 	},
@@ -81,7 +83,25 @@
 		"close": "Close"
 	},
 	"export": {
-		"citationSource": "Source"
+		"citationSource": "Source",
+		"formatTitleSingle": "Export conversation",
+		"formatTitleBatch": "Export selected",
+		"formatDescription": "Exports the question-and-answer text only, without the thinking process.",
+		"formatTxt": "Text (.txt)",
+		"formatMd": "Markdown (.md)",
+		"formatDocx": "Word (.docx)",
+		"cancel": "Cancel",
+		"saveTitle": "Save conversation export",
+		"singleSuccess": "Conversation exported.",
+		"singleFailed": "Export failed. Try again."
+	},
+	"batchExport": {
+		"exporting": "Exporting…",
+		"resultTitle": "Export result",
+		"resultSucceeded": "Exported {{count}} conversations.",
+		"resultFailed": "{{count}} conversations could not be exported:",
+		"writeFailed": "Failed to write the file",
+		"close": "Close"
 	},
 	"citation": {
 		"badgeLabel": "Cited source: {{doc}}",
