@@ -73,6 +73,7 @@ import {
 } from "../mcp/mcp-settings-service.js";
 import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.js";
 import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
+import { getProviderBalance } from "../models/balance/index.js";
 import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import { MODELS_CONFIG_PATH, type ModelsConfig } from "../models/model-settings-service.js";
@@ -163,6 +164,7 @@ const CHANNELS = {
 	MODELS_PROBE: "vetta:models:probe",
 	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
 	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
+	MODELS_GET_BALANCE: "vetta:models:get-balance",
 	MODELS_CONFIG_PATH: "vetta:models:config-path",
 	MCP_CONFIG_PATH: "vetta:mcp:config-path",
 	MCP_GET: "vetta:mcp:get",
@@ -496,6 +498,12 @@ export function registerFsIpc(): () => void {
 		return testProviderAvailability(provider, { fetchImpl: net.fetch });
 	});
 
+	ipcMain.handle(CHANNELS.MODELS_GET_BALANCE, async (_event, providerName: unknown) => {
+		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
+		const provider = (await models.getConfig()).providers[providerName.trim()];
+		return getProviderBalance(providerName.trim(), provider, { fetchImpl: net.fetch });
+	});
+
 	// 只读：设置页脚展示当前运行时的模型配置真实路径（数据根可被 env 覆盖/迁移）。
 	ipcMain.handle(CHANNELS.MODELS_CONFIG_PATH, () => {
 		return MODELS_CONFIG_PATH;
@@ -648,6 +656,7 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.MODELS_COPY_API_KEY);
 		ipcMain.removeHandler(CHANNELS.MODELS_PROBE);
 		ipcMain.removeHandler(CHANNELS.MODELS_FETCH_PROVIDER_MODELS);
+		ipcMain.removeHandler(CHANNELS.MODELS_GET_BALANCE);
 		ipcMain.removeHandler(CHANNELS.MODELS_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_GET);

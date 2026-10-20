@@ -82,6 +82,17 @@ describe("createSystemApi models provider test contract", () => {
 	});
 });
 
+describe("createSystemApi models balance contract", () => {
+	it("invokes the get-balance channel with the provider id and forwards the normalized result", async () => {
+		const result = { provider: "deepseek", supported: true, currency: "CNY", available: 110, isAvailable: true };
+		const invoke = vi.fn(async () => result);
+		const api = createSystemApi({ invoke } as unknown as IpcRenderer, {} as WebUtils);
+
+		await expect(api.models.getBalance("deepseek")).resolves.toEqual(result);
+		expect(invoke).toHaveBeenCalledWith("vetta:models:get-balance", "deepseek");
+	});
+});
+
 describe("createSystemApi MCP setup login contract", () => {
 	it("forwards the QR request id through start and cancel", async () => {
 		const invoke = vi.fn(async () => undefined);
