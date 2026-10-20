@@ -470,7 +470,7 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 - **Do** 只在七档字号里选（`10 / 11 / 12 / 13 / 14 / 15 / 20+`）。
 - **Do** 用 `auto-fill` + `minmax` 做卡片网格（小卡 `240px`、行式列表 `320px`）。
 - **Do** 新图标优先 solar linear（`icon-[solar--*-linear]`），其次 mdi。
-- **Do** 页面若**没有外壳页头覆盖**（沉浸式整页、独立窗口），顶栏留 `<div className="drag-region h-12 shrink-0" />` 作可拖拽空白，交互元素套 `.no-drag`。**外壳 `PageHeaderFrame` 之下的常规内容路由不要再加**——外壳页头本身即拖拽区，再加一条会白占 48px（智能客服页 2026-10-20 已据此删除）。
+- **Do** 页面若**没有外壳页头覆盖**（即 `pageLayout === "app"` 的路由；注意：沉浸式 `headerOverlay` 路由**仍**渲染外壳页头），顶栏留 `<div className="drag-region h-12 shrink-0" />` 作可拖拽空白，交互元素套 `.no-drag`。**外壳 `PageHeaderFrame` 之下的常规内容路由不要再加**——外壳页头本身即拖拽区，再加一条会白占 48px（智能客服页 2026-10-20 已据此删除）。既有 theme-ui 全幅视图（插件工作区、批处理/自动化页）里的小拖拽带属历史实现，暂保留不动。
 
 ### Don't:
 
@@ -502,7 +502,7 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 
 ### 标题栏
 
-**仅当页面不在外壳页头之下时**，新页面顶部才留 `<div className="drag-region h-12 shrink-0" />` 作为可拖拽空白，再写页面 header；不要把 header 自身设为 drag-region。
+**仅当页面没有外壳页头时**（`pageLayout === "app"`；沉浸式 `headerOverlay` 路由仍会渲染外壳页头，不算此列），新页面顶部才留 `<div className="drag-region h-12 shrink-0" />` 作为可拖拽空白，再写页面 header；不要把 header 自身设为 drag-region。
 
 常规内容路由（`MainContentFrame` 会渲染 `PageHeaderFrame`，它自身就是 `drag-region`）**不要**再加这条：重复的拖拽带只会白占 48px 顶部空间。智能客服页 2026-10-20 据此删除了自己的 h-12 空白带。
 
