@@ -1,0 +1,192 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://open-forge.invalid/schemas/agents/requirement-run.schema.json",
+	"title": "Requirement Run coverage and report",
+	"anyOf": [{ "$ref": "#/$defs/coverage" }, { "$ref": "#/$defs/report" }],
+	"$defs": {
+		"coverage": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["version", "requirement", "plan", "clauses"],
+			"properties": {
+				"version": { "const": 1 },
+				"requirement": { "type": "string", "pattern": "^REQ-[0-9]{4}$" },
+				"plan": { "type": "string", "pattern": "^PLAN-[0-9]{4}$" },
+				"clauses": {
+					"type": "array",
+					"minItems": 1,
+					"items": { "$ref": "#/$defs/clause" }
+				}
+			}
+		},
+		"clause": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id", "text", "tasks"],
+			"properties": {
+				"id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,31}$" },
+				"text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+				"tasks": {
+					"type": "array",
+					"minItems": 1,
+					"items": { "$ref": "#/$defs/taskRef" }
+				}
+			}
+		},
+		"taskRef": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id", "evidence"],
+			"properties": {
+				"id": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+				"evidence": {
+					"type": "array",
+					"minItems": 1,
+					"items": { "type": "string", "minLength": 1, "maxLength": 500 }
+				}
+			}
+		},
+		"report": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"version",
+				"runId",
+				"requirement",
+				"plan",
+				"generatedAt",
+				"startedAt",
+				"finishedAt",
+				"stopReason",
+				"reason",
+				"clauses",
+				"tasks",
+				"unmappedTasks",
+				"humanAcceptance",
+				"release",
+				"evidenceCheck",
+				"semanticReview",
+				"attempted",
+				"notRun"
+			],
+			"properties": {
+				"version": { "const": 1 },
+				"runId": { "type": "string", "minLength": 1, "maxLength": 200 },
+				"requirement": { "type": "string", "pattern": "^REQ-[0-9]{4}$" },
+				"plan": { "type": "string", "pattern": "^PLAN-[0-9]{4}$" },
+				"generatedAt": { "type": "integer", "minimum": 0 },
+				"startedAt": { "type": "integer", "minimum": 0 },
+				"finishedAt": { "type": "integer", "minimum": 0 },
+				"stopReason": {
+					"type": "string",
+					"enum": [
+						"engineering-complete",
+						"coverage-gap",
+						"blocked",
+						"stalled",
+						"needs-human",
+						"failed",
+						"limit",
+						"paused",
+						"cancelled"
+					]
+				},
+				"reason": {
+					"anyOf": [{ "type": "string", "minLength": 1, "maxLength": 4000 }, { "type": "null" }]
+				},
+				"clauses": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/reportClause" }
+				},
+				"tasks": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/reportTask" }
+				},
+				"unmappedTasks": {
+					"type": "array",
+					"items": { "type": "string", "pattern": "^TASK-[0-9]{4}$" }
+				},
+				"humanAcceptance": {
+					"type": "string",
+					"enum": ["accepted", "pending", "not-applicable"]
+				},
+				"release": { "const": "not-authorized" },
+				"evidenceCheck": { "const": "presence-only" },
+				"semanticReview": { "const": "not-performed" },
+				"attempted": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/attempt" }
+				},
+				"notRun": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/notRun" }
+				},
+				"reportPath": { "type": "string", "minLength": 1, "maxLength": 1000 }
+			}
+		},
+		"reportClause": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id", "text", "status", "acceptance", "tasks", "missingEvidence"],
+			"properties": {
+				"id": { "type": "string", "minLength": 1, "maxLength": 32 },
+				"text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+				"status": { "type": "string", "enum": ["covered", "partial", "missing"] },
+				"acceptance": {
+					"type": "string",
+					"enum": ["accepted", "pending", "not-applicable"]
+				},
+				"tasks": {
+					"type": "array",
+					"items": { "type": "string", "pattern": "^TASK-[0-9]{4}$" }
+				},
+				"missingEvidence": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1, "maxLength": 500 }
+				}
+			}
+		},
+		"reportTask": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id", "status", "integrationStatus", "engineering", "acceptance", "clauses"],
+			"properties": {
+				"id": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+				"status": { "type": "string", "maxLength": 32 },
+				"integrationStatus": { "type": "string", "maxLength": 32 },
+				"engineering": { "type": "boolean" },
+				"acceptance": { "type": "boolean" },
+				"clauses": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1, "maxLength": 32 }
+				}
+			}
+		},
+		"attempt": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["task", "runId", "status", "reason", "stage", "cleanupUnknown"],
+			"properties": {
+				"task": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+				"runId": { "type": "string", "minLength": 1, "maxLength": 200 },
+				"status": { "type": "string", "minLength": 1, "maxLength": 32 },
+				"reason": {
+					"anyOf": [{ "type": "string", "maxLength": 4000 }, { "type": "null" }]
+				},
+				"stage": {
+					"anyOf": [{ "type": "string", "maxLength": 64 }, { "type": "null" }]
+				},
+				"cleanupUnknown": { "type": "boolean" }
+			}
+		},
+		"notRun": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["task", "reason"],
+			"properties": {
+				"task": { "type": "string", "pattern": "^TASK-[0-9]{4}$" },
+				"reason": { "type": "string", "minLength": 1, "maxLength": 1000 }
+			}
+		}
+	}
+}

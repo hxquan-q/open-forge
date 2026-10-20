@@ -24,13 +24,35 @@ function fixture() {
 	writeFileSync(join(root, "project/autonomy-policy.json"), JSON.stringify(fixturePolicy));
 	writeFileSync(
 		join(root, "project/tasks/TASK-0001-feature.md"),
-		`---\nid: TASK-0001\ntype: task\nstatus: ready\npriority: P1\nowner: fixture\nsource: user-request\nexecution: serial\nbranch: unassigned\nworktree: unassigned\nbase_commit: ${"a".repeat(40)}\nread_paths: [feature.txt]\nwrite_paths: [feature.txt]\nexclusive_paths: []\ndepends_on: []\nconflicts_with: []\nintegration_status: pending\ncreated: 2026-10-19\nupdated: 2026-10-19\n---\n# Fix feature\n`,
+		`---\nid: TASK-0001\ntype: task\nstatus: ready\npriority: P1\nowner: fixture\nrequirement: REQ-0019\nplan: PLAN-0019\nsource: user-request\nrelated_requirement: [REQ-0019]\nrelated_plan: [PLAN-0019]\nexecution: serial\nbranch: unassigned\nworktree: unassigned\nbase_commit: ${"a".repeat(40)}\nread_paths: [feature.txt]\nwrite_paths: [feature.txt]\nexclusive_paths: []\ndepends_on: []\nconflicts_with: []\nintegration_status: pending\ncreated: 2026-10-19\nupdated: 2026-10-19\n---\n# Fix feature\n`,
 	);
 	return root;
 }
 afterEach(() => {
 	for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
+
+function requirementFixture(root) {
+	mkdirSync(join(root, "evidence"), { recursive: true });
+	writeFileSync(join(root, "evidence/task.md"), "# evidence\n");
+	const coverage = join(root, "coverage.json");
+	writeFileSync(
+		coverage,
+		JSON.stringify({
+			version: 1,
+			requirement: "REQ-0019",
+			plan: "PLAN-0019",
+			clauses: [
+				{
+					id: "R1",
+					text: "the fixture feature is delivered",
+					tasks: [{ id: "TASK-0001", evidence: ["evidence/task.md"] }],
+				},
+			],
+		}),
+	);
+	return coverage;
+}
 
 describe("public autonomy command line", () => {
 	it("requires explicit UI authorization and binds the plan without starting a UI host", async () => {
@@ -166,5 +188,56 @@ describe("public autonomy command line", () => {
 		expect(digest.signals[0].task).toBeNull();
 		expect(digest.usage.totalCostUsd).toBeNull();
 		expect(await main(["lessons-report", ...common])).toEqual({ markdown: "" });
+	});
+	it("checks requirement coverage without requiring controller state", async () => {
+		const root = fixture();
+		const coverage = requirementFixture(root);
+		const before = readdirSync(root);
+		const result = await main([
+			"requirement-check",
+			"--repo",
+			root,
+			"--requirement",
+			"REQ-0019",
+			"--plan",
+			"PLAN-0019",
+			"--coverage",
+			coverage,
+		]);
+		expect(result).toMatchObject({
+			runnable: true,
+			complete: false,
+			stopReason: "coverage-gap",
+			release: "not-authorized",
+		});
+		expect(result.clauses[0]).toMatchObject({ id: "R1", tasks: ["TASK-0001"] });
+		expect(readdirSync(root)).toEqual(before);
+	});
+	it("rejects requirement-run integrate before creating a lease below level 2", async () => {
+		const root = fixture();
+		const coverage = requirementFixture(root);
+		const state = join(root, "controller");
+		const result = await main([
+			"requirement-run",
+			"--repo",
+			root,
+			"--state-dir",
+			state,
+			"--holder",
+			"controller",
+			"--requirement",
+			"REQ-0019",
+			"--plan",
+			"PLAN-0019",
+			"--coverage",
+			coverage,
+			"--through",
+			"integrate",
+		]);
+		expect(result.stopReason).toBe("needs-human");
+		expect(result.reason).toMatch(/integrate-dev|autonomy is paused/u);
+		const status = await main(["status", "--repo", root, "--state-dir", state]);
+		expect(status.runs).toEqual([]);
+		expect(status.leases).toEqual([]);
 	});
 });

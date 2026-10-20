@@ -15,6 +15,7 @@ import { OPERATION_OPTIONS, OPERATIONS, operation } from "./operations.mjs";
 import { cycle, loop, loopRunPrefix } from "./orchestrate.mjs";
 import { prepareTask } from "./prepare.mjs";
 import { completedTasks, taskQueue } from "./queue.mjs";
+import { checkRequirement, requirementRun, requirementRunPrefix } from "./requirement-run.mjs";
 import { codeBinding, executeAdapter } from "./runner.mjs";
 import { createStore } from "./store.mjs";
 import { configuration, makeRunContract, taskById } from "./tasks.mjs";
@@ -37,6 +38,8 @@ const COMMANDS = new Set([
 	"prepare",
 	"cycle",
 	"loop",
+	"requirement-check",
+	"requirement-run",
 	"approval",
 	"integration-preview",
 	"integrate",
@@ -58,6 +61,10 @@ const OPTIONS = new Set([
 	"--limit",
 	"--max-stalls",
 	"--run-prefix",
+	"--requirement",
+	"--plan",
+	"--coverage",
+	"--report",
 	"--ui-plan",
 	"--authorize-ui",
 ]);
@@ -96,6 +103,18 @@ function runToken(store, runId) {
 export async function main(args) {
 	const { command, options } = argumentsOf(args);
 	const root = resolve(options["--repo"] ?? process.cwd());
+	if (command === "requirement-check") {
+		const coverage = JSON.parse(readFileSync(resolve(required(options, "--coverage")), "utf8"));
+		const loaded = loadTasks(root);
+		if (loaded.problems.length) throw new Error(loaded.problems.join("; "));
+		return checkRequirement({
+			root,
+			requirement: required(options, "--requirement"),
+			plan: required(options, "--plan"),
+			coverage,
+			tasks: loaded.tasks,
+		});
+	}
 	const config = configuration(root);
 	if (command === "doctor") {
 		return doctor({
@@ -129,6 +148,24 @@ export async function main(args) {
 	if (command === "status" && !existsSync(directory))
 		return { initialized: false, runs: [], paused: config.policy.paused };
 	const store = createStore(directory);
+	if (command === "requirement-run") {
+		const coverage = JSON.parse(readFileSync(resolve(required(options, "--coverage")), "utf8"));
+		return requirementRun({
+			root,
+			store,
+			...config,
+			requirement: required(options, "--requirement"),
+			plan: required(options, "--plan"),
+			coverage,
+			holder: required(options, "--holder"),
+			runPrefix: options["--run-prefix"]?.trim() || requirementRunPrefix(store),
+			reportPath: options["--report"] ? resolve(options["--report"]) : undefined,
+			limit: Number(options["--limit"] ?? 10),
+			maxStalls: Number(options["--max-stalls"] ?? 2),
+			tests: options.tests ?? [],
+			through: options["--through"] ?? "verify",
+		});
+	}
 	if (OPERATIONS.includes(command)) return operation({ command, options, root, store, ...config });
 	if (command === "loop")
 		return loop({

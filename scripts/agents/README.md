@@ -43,6 +43,21 @@ node scripts/agents/cli.mjs release --run-id <unique-id> --state-dir <controller
 
 `cycle --task <ID> --holder <ID> --run-id <ID> --test <file> --state-dir <dir>` 自动续接同一 Task 的准备、实现、独立评审和验证；`--through integrate` 还需 integrate-dev 能力并对最终合并提交重验。它不推送或发布。控制器在准备时绑定仓库，准备失败保留所有源文件与中间 Git 状态，不能当空队列重跑。
 
+## 需求级覆盖与 Requirement Run
+
+```powershell
+# 只读：不创建状态目录，不领取 Task
+node scripts/agents/cli.mjs requirement-check --repo <repo> --requirement REQ-xxxx --plan PLAN-xxxx --coverage <coverage.json>
+# 串行执行 manifest 内的 Task；默认 --through verify
+node scripts/agents/cli.mjs requirement-run --repo <repo> --state-dir <controller-state> --holder <id> --requirement REQ-xxxx --plan PLAN-xxxx --coverage <coverage.json> [--through verify|integrate] [--limit N] [--max-stalls N] [--test <file>] [--report <file>]
+```
+
+coverage manifest 由协调者/Agent 拆解产生，结构见 `schemas/agents/requirement-run.schema.json`：每个条款 R1..Rn 至少绑定一个本 REQ/PLAN 内的 Task，每个 Task 至少一条仓库相对证据文件。`requirement-check` 只做结构、归属与证据路径存在性检查（`evidenceCheck: presence-only`、`semanticReview: not-performed`），输出覆盖矩阵；不证明证据语义正确。
+
+`requirement-run` 是现有 `cycle` 之上的选择与报告层，不是新的状态机：每轮只从 manifest 内选择 `ready`、依赖已完成、无租约或路径冲突的 Task，串行调用 `cycle`；不领取 manifest 外 Task，不绕过 `depends_on`，不把 `verifying` 当依赖完成。停止原因包括 `engineering-complete`、`coverage-gap`、`blocked`、`stalled`、`needs-human`、`failed`、`limit`、`paused`、`cancelled`。`--through integrate` 需要 L2 `integrate-dev`，L0/L1 在 claim 前返回 `needs-human`。
+
+`engineering-complete` 只表示 manifest 内所有条款绑定的 Task 都已 `integration_status: integrated` 且状态为 `verifying`/`done`，并且证据路径存在；它不是用户接受，也不授权发布。报告中的 `humanAcceptance` 仅在全部绑定 Task 为 `done` 时为 `accepted`，否则为 `pending`；`release` 恒为 `not-authorized`。默认 `--through verify` 会在验证后停下，需要集成时显式使用 `--through integrate`（或在既有 run 上继续 `cycle`）。`--limit` 默认 10，`--max-stalls` 默认 2。
+
 `approval --run-id <ID> --approval <signed.json> --state-dir <dir>` 导入 Schema 定义的 Ed25519 外部批准。操作者把公钥写入独立状态目录的 `trusted-humans.json`（`{"version":1,"keys":[{"id":"operator","publicKey":"<PEM>"}]}`）；私钥不进入仓库或控制器 Worker。签名原文是 payload 的 `canonical()` UTF-8 字节，最多 24 小时；代码/合同变化后重签。工具不提供 human 自签按钮。
 
 ## 信任与恢复
