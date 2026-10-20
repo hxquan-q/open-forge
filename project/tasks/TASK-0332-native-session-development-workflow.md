@@ -21,7 +21,7 @@ write_paths: [.agents/skills/open-forge-task-intake/SKILL.md, .agents/skills/ope
 exclusive_paths: [.agents/skills/open-forge-task-intake]
 depends_on: []
 conflicts_with: [TASK-0326, TASK-0327, TASK-0328, TASK-0330, TASK-0331]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -55,7 +55,7 @@ updated: 2026-10-20
 
 - 文档/技能维护，无产品运行时变化，不新增镜像字符串测试。执行 workflow-skills、check-agent-guide、project-indexes、check-task-worktrees、release-notes 和 diff 检查。
 - 运行既有 workflow-skills/check-agent-guide/project-indexes 相关测试；独立只读原生子 Agent 审核当前变更并检查入口可达、图谱使用、派工回收、权限与交付语义。该实测仅证明本次宿主可执行轨迹，不代表未来所有 Claude/Codex 模型都通过。
-- 工程验证：文档合同/链接/索引与相关回归通过；技术评审：原生新上下文只读审查通过，非异家族评审；集成：pending，待本轮原子提交。人工功能验收：待用户新任务使用后反馈；发布：未授权。
+- 工程验证：文档合同/链接/索引与相关回归通过；技术评审：原生新上下文只读审查通过，非异家族评审；集成：`e2734e423` 已原子提交至本地 main，未 push。人工功能验收：待用户新任务使用后反馈；发布：未授权。
 - 验收输入：普通开发请求、只读研究请求、图谱过期、共享路径、缺少原生工具、审查拒绝和任务中断。预期产物为已有 Project 记录、真实工具派发/结果和验证证据；失败表现为只交计划、重配模型成为先决条件、假独立评审或把静态检查写作模型评测。
 
 ## 交付记录
@@ -64,5 +64,5 @@ updated: 2026-10-20
 - 机械验证：workflow-skills、check-agent-guide、Project 索引、325 Task 合同（0 warning）、release-notes、git diff --check 均通过。现有三份回归文件共 29 例通过，1.46 秒；13 路径 check:quick（含全仓 guards）exit 0，日志位于系统临时目录 open-forge-native-session-quick-20261020.log。纯文档/技能维护未运行全仓类型检查和产品测试，不把静态检查写成模型行为评测。
 - 原生轨迹：按新入口实际派发新上下文只读评审 `/root/native_workflow_review`，使用原生等待工具后回收最终结果：未发现阻塞问题。评审检查 9 个跟踪文件变更及 4 个新文件、图谱元数据/八层/十三站与相关一跳关系并回读源码；角色只读、不参与实现。四个文档场景推演为普通开发、纯分析、无原生工具、审查拒绝，结果符合预期。该推演不是完整开发功能 E2E，此轨迹不等于异厂商评审或 Claude 端实跑。
 - 本轮调查复盘：前期把后台控制器的未配置状态误当作现有 Claude/Codex 会话的必需准入；通过图谱分层、模块源码和用户澄清纠正。该原因记录于 RESEARCH-0033，不用一次认知纠正虚增 LESSONS Seen 或晋升硬规则。
-- 提交/集成、审查处置：验收后回填。
+- 提交/集成：`e2734e423`，13 路径原子提交到本地 main；提交钩子通过且未重写文件，本轮后续仅回填集成元数据。审查无阻塞发现，无需修改候选规则。七个原有 temp 文件未读取、未改动或提交，未 push。
 - 现有未跟踪 temp 文件原位保留；WSL 副本不自动覆盖，产品构建与 CI/UI 延期保持。
