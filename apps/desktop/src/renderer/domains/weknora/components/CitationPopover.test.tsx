@@ -88,8 +88,12 @@ describe("CitationPopover · 结构与只读(AC-14/15)", () => {
 		// createPortal 落点是 document.body(浮层范式先例)。
 		expect(dialog.parentElement).toBe(document.body);
 		expect(screen.getByText(i18n.t("weknora:citation.loading"))).toBeTruthy();
-		// 只读红线:无 input/textarea/select/button/contenteditable(AC-15)。
-		expect(dialog.querySelectorAll("input,textarea,select,button,[contenteditable]")).toHaveLength(0);
+		// 只读红线:无编辑入口与表单控件(AC-15)。F2 授权契约演进:关闭按钮不是编辑入口,
+		// 故从「禁止」名单移出,并单独钉「唯一 button 是关闭按钮」。
+		expect(dialog.querySelectorAll("input,textarea,select,[contenteditable]")).toHaveLength(0);
+		const buttons = dialog.querySelectorAll("button");
+		expect(buttons).toHaveLength(1);
+		expect(buttons[0]?.getAttribute("aria-label")).toBe(i18n.t("weknora:citation.close"));
 	});
 });
 
@@ -108,8 +112,12 @@ describe("CitationPopover · 三态(AC-14)", () => {
 		// 文档名同时出现在角标与弹层标题,用 within 限定在弹层内断言。
 		expect(within(screen.getByRole("dialog")).getByText("文档乙.md")).toBeTruthy();
 		expect(screen.queryByText(i18n.t("weknora:citation.loading"))).toBeNull();
-		// 成功态同样零编辑入口(AC-15)。
-		expect(screen.getByRole("dialog").querySelectorAll("input,textarea,select,button,[contenteditable]")).toHaveLength(0);
+		// 成功态同样零编辑入口(AC-15);唯一 button 是关闭按钮(F2 授权契约演进)。
+		const successDialog = screen.getByRole("dialog");
+		expect(successDialog.querySelectorAll("input,textarea,select,[contenteditable]")).toHaveLength(0);
+		const successButtons = successDialog.querySelectorAll("button");
+		expect(successButtons).toHaveLength(1);
+		expect(successButtons[0]?.getAttribute("aria-label")).toBe(i18n.t("weknora:citation.close"));
 	});
 
 	it("失败态:i18n 降级文案,不透出 raw 错误(含错误码与原始信息)", async () => {

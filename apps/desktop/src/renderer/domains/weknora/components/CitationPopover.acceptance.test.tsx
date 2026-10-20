@@ -79,6 +79,16 @@ function kbTag(doc: string, chunkId: string): string {
 	return `<kb doc="${doc}" chunk_id="${chunkId}" kb_id="b" />`;
 }
 
+/**
+ * F2 授权契约演进:弹层内唯一的 button 必须是显式关闭按钮(无其他操作/编辑按钮)。
+ * 断言数量恰为 1 并返回其 aria-label 供逐字比对——把 AC-15「无编辑入口」的意图钉得更准。
+ */
+function singleButtonLabel(dialog: HTMLElement): string | null {
+	const buttons = dialog.querySelectorAll("button");
+	expect(buttons).toHaveLength(1);
+	return buttons[0]?.getAttribute("aria-label") ?? null;
+}
+
 const LONG_DOC = "超值产品资料包等你领 _ 金蝶云社区“邀客户共学习”有奖活动上线！.md";
 
 describe("CitationPopover 验收 · 打开/聚焦/取数(AC-14)", () => {
@@ -237,17 +247,20 @@ describe("CitationPopover 验收 · 只读(AC-15)", () => {
 		const { pending } = installGetChunk();
 		renderCitation(`参见${kbTag("文档庚.md", "apop-8")}`);
 
-		// 加载态。
+		// 加载态。F2 授权契约演进:关闭按钮不是编辑入口,从「禁止」名单移出;
+		// 单独钉「弹层内唯一 button 是关闭按钮」(把 AC-15 意图钉得更准)。
 		fireEvent.click(screen.getByRole("button"));
 		let dialog = screen.getByRole("dialog");
-		expect(dialog.querySelectorAll("input,textarea,select,button,form,[contenteditable]")).toHaveLength(0);
+		expect(dialog.querySelectorAll("input,textarea,select,form,[contenteditable]")).toHaveLength(0);
+		expect(singleButtonLabel(dialog)).toBe(i18n.t("weknora:citation.close"));
 
 		// 成功态。
 		await act(async () => {
 			pending[0]?.resolve({ content: "原文", knowledgeId: "k", kbId: "b" });
 		});
 		dialog = screen.getByRole("dialog");
-		expect(dialog.querySelectorAll("input,textarea,select,button,form,[contenteditable]")).toHaveLength(0);
+		expect(dialog.querySelectorAll("input,textarea,select,form,[contenteditable]")).toHaveLength(0);
+		expect(singleButtonLabel(dialog)).toBe(i18n.t("weknora:citation.close"));
 	});
 
 	it("失败态:同样零编辑入口", async () => {
@@ -258,7 +271,8 @@ describe("CitationPopover 验收 · 只读(AC-15)", () => {
 			pending[0]?.reject(new Error("x"));
 		});
 		const dialog = await screen.findByRole("dialog");
-		expect(dialog.querySelectorAll("input,textarea,select,button,form,[contenteditable]")).toHaveLength(0);
+		expect(dialog.querySelectorAll("input,textarea,select,form,[contenteditable]")).toHaveLength(0);
+		expect(singleButtonLabel(dialog)).toBe(i18n.t("weknora:citation.close"));
 	});
 });
 

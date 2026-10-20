@@ -32,9 +32,12 @@ describe("weknora i18n 验收 · citation 子树(AC-10)", () => {
 		const zhCitation = flatten((zhWeKnora as Record<string, unknown>).citation, "citation").sort();
 		const enCitation = flatten((enWeKnora as Record<string, unknown>).citation, "citation").sort();
 		expect(enCitation).toEqual(zhCitation);
-		// 本 feature 的 4 个键齐全。
+		// 本 feature 的键齐全(F2/F3 授权契约演进:4 → 7,新增 close/imagePlaceholder/imageFailed)。
 		expect(zhCitation).toEqual([
 			"citation.badgeLabel",
+			"citation.close",
+			"citation.imageFailed",
+			"citation.imagePlaceholder",
 			"citation.loadFailed",
 			"citation.loading",
 			"citation.popoverTitle",
