@@ -195,7 +195,7 @@ beforeAll(async () => {
 });
 
 describe("智能客服 · 右键删除历史会话（B 组用户流程）", () => {
-	it("右键弹菜单（仅「删除会话」一项）；Escape 与点击菜单外任意处关闭（AC-6）", async () => {
+	it("右键弹菜单（「多选」+「删除会话」两项）；Escape 与点击菜单外任意处关闭（AC-6）", async () => {
 		const harness = installFake();
 		harness.addSession({ id: "s1", title: "会话 s1", updated_at: "2026-10-19T09:00:00" });
 		renderFlow();
@@ -205,8 +205,10 @@ describe("智能客服 · 右键删除历史会话（B 组用户流程）", () =
 
 		await rightClickSession(nav, /会话 s1/);
 		const menu = screen.getByRole("menu");
-		expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
+		// T04 授权契约演进（1 处，保意）：菜单新增「多选」项（进入多选模式），恰为预期集合两项。
+		expect(within(menu).getAllByRole("menuitem")).toHaveLength(2);
 		expect(within(menu).getByRole("menuitem", { name: "删除会话" })).toBeTruthy();
+		expect(within(menu).getByRole("menuitem", { name: "多选" })).toBeTruthy();
 
 		// Escape 关闭。
 		fireEvent.keyDown(document.body, { key: "Escape" });
