@@ -1,5 +1,5 @@
 ---
-id: REQ-0018
+id: REQ-0019
 type: requirement
 status: ready
 priority: P1
@@ -7,11 +7,11 @@ owner: desktop
 source: user-request（2026-10-19：智能客服页面三条打磨——侧栏可收起、右键删除历史会话、回答支持后台思考）
 related_requirement: [REQ-0017]
 related_plan: []
-related_tasks: [TASK-0319]
+related_tasks: [TASK-0322]
 related_issues: []
 related_bugs: []
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-10-20
 ---
 <!-- Copyright The Open Forge contributors. -->
 
