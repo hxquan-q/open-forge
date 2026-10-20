@@ -21,7 +21,7 @@ write_paths: [scripts/agents/doctor.mjs, scripts/agents/cli.mjs, scripts/agents/
 exclusive_paths: [scripts/agents/doctor.mjs]
 depends_on: [TASK-0325, TASK-0326, TASK-0327, TASK-0328]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0327, TASK-0328, TASK-0329]
-integration_status: reviewing
+integration_status: integrated
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -96,7 +96,7 @@ readiness 只读、凭据最小暴露、配置校验不冒充真实证明、人�
 
 - 工程验证：分项检查、可信证明拒绝/有效期/绑定与调用接线已验证；WSL2 控制器 107 例、Windows 质量 635 例及完整 check 通过。实际 OS 隔离部署与模型质量尚未验收。
 - 技术评审：当前 Agent 自审；独立模型未配置。
-- 集成：本地 main，待提交/组合验证。
+- 集成：已随 `a2e846e70` 原子提交到本地 main；未 push，实际部署条件仍未验收。
 - 人工功能验收：待验收。
 - 发布：未授权。
 

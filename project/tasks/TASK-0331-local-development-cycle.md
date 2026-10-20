@@ -19,7 +19,7 @@ write_paths: [scripts/agents/orchestrate.mjs, scripts/agents/orchestrate.test.mj
 exclusive_paths: [scripts/agents/orchestrate.mjs]
 depends_on: [TASK-0326, TASK-0327]
 conflicts_with: [TASK-0326, TASK-0327, TASK-0328, TASK-0329, TASK-0330]
-integration_status: reviewing
+integration_status: integrated
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -44,6 +44,8 @@ updated: 2026-10-20
 先建立失败回归，再修复；运行 `bun scripts/quality/run-vitest.mjs --run scripts/agents/integrate.test.mjs scripts/agents/orchestrate.test.mjs scripts/agents/runner.test.mjs`、impact 与完整 `bun run check`。WSL2 内使用独立任务测试副本和 Linux 工具链，实际模型缺配置时只跑受控进程，不把它算模型质量验收。CI/真实 UI/签名发布延期，真实模型保持 disabled。该任务的工程证据与人工接受分开记录。
 
 ## 交付记录
+
+已随 `a2e846e70` 提交到本地 main，三个共享控制器的 Task 作为一套自洽合同串行实施并提交。工程验证与集成分开记录；保持 verifying 等待用户接受。七个他人 temp 文件仍未跟踪，按干净工作区要求未推送 dev，也未发布。
 
 已修正 verification-failed 的有界续接，只有实际执行且清理确认的验证失败才重试；审批、租约、配置或清理未知仍停止。扩展真实 Git 回归先复现 needs-action，再证明第二轮实现/独立评审/验证成功，随后保持合并重验和 main 前进拒绝。该新扩展用例包含两轮实际进程，单例验证时限为 15 秒；产品限时和原有其他用例时限未改。最终命令/结果和提交事实见 VERIFY-0019。
 

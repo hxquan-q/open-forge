@@ -68,6 +68,8 @@ depends_on: []
 
 本次用户已明确要求实施；当前范围收敛为 TASK-0328 UI 接口、TASK-0330 环境检查和 TASK-0331 明确任务的本地闭环。暂无问题来源，TASK-0329 先搁置，不再阻塞 readiness；planner/triage/lessons 自动建任务不属于本次闭环。后续 WSL2 预检已确认 Ubuntu-26.04 Running / Version 2，下面历史“未安装”结果不再代表当前状态。实际 Linux 验证使用专用临时副本，Bun 1.4.2 / Node 22.14.0，不复用 Windows node_modules，也不代表产品全仓 Linux 构建或真实模型运行已验收。
 
+本轮代码已随 `a2e846e70` 集成本地 main：WSL2 最终 20 文件 / 107 例通过，Windows 质量集合 58 文件 / 635 例通过，Desktop direct/related 各 3 例通过，最终代码完整 check exit 0。代码提交后只订正集成记录，不修改运行逻辑。Task 保持 verifying，完整 L4 仍 partial；实际模型/隔离部署、CI/UI 与发布监控证据仍缺失。
+
 ### A. 立即完成仓库软件，不等待远端额度
 
 1. TASK-0328：完成现有 UI 草稿，修正语法/缺模块，接通显式授权、fresh Profile、真实断言报告、候选绑定和超时清理；只运行适配器合同与故障测试，真实 UI 运行延期。

@@ -98,7 +98,7 @@ related_bugs: [BUG-0107, BUG-0132, BUG-0133]
 | WSL2 定向 Node runner | 7 文件 / 45 例通过 | 专用 Linux 副本，真实临时 Git 与受控进程；不调用真实模型 |
 | WSL2 `bun scripts/quality/run-vitest.mjs --run scripts/agents apps/desktop/scripts/ui-verification-acceptance.test.ts --maxWorkers=2` | 20 文件 / 107 例通过，4.45 秒 | Linux Bun 1.4.2 / Node 22.14.0；日志 `/tmp/open-forge-wsl-validation-pxj9vq31/all-agents.log` |
 | Windows `test:impact` 首轮 | 58 文件中 56 通过；632 例中 630 通过 | 原发布进程用例 5 秒超时，且安装 WSL 后 `bash` 优先命中系统 WSL shim；未把失败算通过 |
-| Windows 质量集合最终复验 | 明确 Git Bash PATH、`bun run test:quality -- --maxWorkers=1`：58 文件 / 635 例通过，87.82 秒 | 包含新增空报告不可自动修复回归；不修改既有断言或发布用例时限。日志 `open-forge-local-autonomy-quality-final-20261020.log` |
+| Windows 质量集合复验 | 明确 Git Bash PATH、`bun run test:quality -- --maxWorkers=1`：58 文件 / 635 例通过，87.82 秒 | 包含新增空报告不可自动修复回归；后续损坏 UI 清理报告的暂停断言由 WSL2 全套复验覆盖。不修改既有断言或发布用例时限。日志 `open-forge-local-autonomy-quality-final-20261020.log` |
 | Desktop 直接测试及同一影响计划的 related 检查 | 各 1 文件 / 3 例通过 | 固定 UI 程序与输入/结果边界测试，没有打开 Electron/浏览器 |
 | 完整 `bun run check` | 最终代码复验 exit 0 | 首轮发现 Desktop 不可 import 根控制器及缺类型声明，已改为 Desktop 独立消费校验；最终日志 `open-forge-local-autonomy-check-final-20261020.log` |
 | 实际 Windows doctor | softwareReady=true，level=0、readyForModelExecution=false、publisherConfigured=false | 不创建控制器状态、不调用模型 |
@@ -107,4 +107,4 @@ Linux 工具和最小验证依赖仅置于 `/tmp/open-forge-wsl-validation-pxj9v
 
 ### 未运行与验收状态
 
-真实 CI、UI 交互/六主题视觉、真实 Provider、OS 隔离部署证明、签名发布和遥测均未运行。UI 的测试图片和模型/发布替身只验证软件合同。当前三个 Task 保持 verifying；本地提交/集成事实收尾时单独记录。七个他人 temp 文件未读取内容、未改动或提交；没有 push、发布、创建定时任务或改变自治等级。全目标仍为 partial。
+真实 CI、UI 交互/六主题视觉、真实 Provider、OS 隔离部署证明、签名发布和遥测均未运行。UI 的测试图片和模型/发布替身只验证软件合同。当前三个 Task 保持 verifying；已随 `a2e846e70` 提交到本地 main，integration_status=integrated；后续仅订正集成记录。七个他人 temp 文件未读取内容、未改动或提交；没有 push、发布、创建定时任务或改变自治等级。全目标仍为 partial。
