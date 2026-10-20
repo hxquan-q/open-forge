@@ -82,10 +82,11 @@ POST   /api/v1/agent-chat/{session_id} 提问(SSE 流式,多路并发已实测�
 GET    /api/v1/agents                  智能体列表
 GET    /api/v1/sessions                会话列表
 GET    /api/v1/messages/{id}/load      载入消息
+GET    /api/v1/chunks/by-id/{chunk_id} 引用原文(2026-10-20 实测:200;引用角标点开弹层用,只读)
 DELETE /api/v1/sessions/{id}           删除会话(2026-10-19 实测:200 成功 / 404 不存在)
 ```
 
-**不改 WeKnora 侧的任何配置。**删除与建会话同为数据面操作,调用方 Key 需具备对话能力(chat)。
+**不改 WeKnora 侧的任何配置。**删除与建会话同为数据面操作,调用方 Key 需具备对话能力(chat);引用原文接口需 `retrieve` 能力(2026-10-20 实测现有租户 Key 具备;若未来换成无该能力的 Key,弹层降级为"暂不可用",角标与正文不受影响)。
 
 ---
 
@@ -115,28 +116,17 @@ DELETE /api/v1/sessions/{id}           删除会话(2026-10-19 实测:200 成功
 
 **建议**:演示前修好前者绑定的模型凭据,或改用后者。
 
-### 坑 2:WeKnora 在 agent 路径下不产生引用角标
+### 坑 2:引用角标的出现是**非确定的**,结构化引用数据在 agent 路径缺失(2026-10-20 修订)
 
-**实测**:一次完整的流式问答(447 个事件)中,`tool_result` 里**有 21 个真实文档 URL**,但:
+> 2026-10-16 初版结论"agent 路径不产生引用角标"已被 2026-10-20 三轮实测**部分推翻**,现口径如下:
 
-```
-SSE 里的 references 事件         : 0 个
-回答里的 <ref/> 角标             : 0 个
-持久化消息的 knowledge_references : 空
-回答正文里的 URL                 : 0 个
-```
+**现行事实**(Tencent/WeKnora v0.8.2 源码 + 公司实例三轮实测):
 
-**根因**(WeKnora 源码 `internal/modelcontext/registry.go:318`):
+1. 回答正文里的 `<kb doc chunk_id kb_id/>` / `<web url title/>` 内联标签**会出现,但非确定**——是否引用由模型自行决定(系统提示词让模型写私有句柄 `<ref id="cN"/>`,服务端展开成标签)。实测:同一 agent 同样两连问,2026-10-19 真实会话出过 8 个标签,2026-10-20 三轮复现 0 个。**历史已存消息里的标签是永久的**。
+2. SSE `references` 事件与消息持久化的 `knowledge_references`:**agent-chat 路径上始终缺失**(447 事件实测 + 三轮复现一致;v0.8.2 源码里该事件只挂在 knowledge-chat 管道)。引用数据只能取自标签自身属性。
+3. chunk 原文反查 `GET /api/v1/chunks/by-id/{chunk_id}` 可用(需 `retrieve` 能力,现有租户 Key 具备)。
 
-```go
-if result.Success && (toolName == "call_mcp_tool" || strings.HasPrefix(toolName, "mcp_")) {
-    modelOutput += r.mcpSourceCandidates(result.Output)
-}
-```
-
-引用扫描**只对 MCP 工具生效**;内置的 `search_knowledge` 不产生引用。而 `Allstar智能助手` 的配置是 `mcp_selection_mode: "none"`(未挂任何 MCP)。
-
-**影响**:若演示预期看到"引用来源",现在看不到。属 WeKnora 内部行为。
+**桌面端已按此口径适配**(2026-10-20,REQ-0021):标签渲染为可点击角标(悬停看文档名,点击经 chunks/by-id 弹只读原文卡片,失败降级);思考区/流式期间剥除标签;解析不了的标签按纯过滤剥除(fail-open)。WeKnora 侧零改动。
 
 ---
 
