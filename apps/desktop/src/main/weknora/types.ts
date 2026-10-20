@@ -10,8 +10,8 @@
 /** 会话消息角色。 */
 export type WeKnoraMessageRole = "user" | "assistant" | "system";
 
-/** 能力授权项（对应 API Key 的「能力授权」勾选项，见 01-spec §3.1）。 */
-export type WeKnoraCapability = "read_agents" | "chat";
+/** 能力授权项（对应 API Key 的「能力授权」勾选项，见 01-spec §3.1）；`retrieve` 供 chunk 反查（AC-14）。 */
+export type WeKnoraCapability = "read_agents" | "chat" | "retrieve";
 
 /** 会话最后一次请求的状态；`agent_id` 供历史列表映射 agent 名（AC-20）。 */
 export interface WeKnoraSessionLastRequestState {
@@ -58,6 +58,20 @@ export interface WeKnoraAgent {
 	id: string;
 	name: string;
 	description?: string;
+}
+
+/**
+ * chunk 原文（引用弹层的数据面，AC-14；GET `/api/v1/chunks/by-id/:id` 的归一化结果）。
+ *
+ * `content` 是弹层唯一刚需，缺失即归一化失败（http 层抛错，不猜）；`knowledgeId`/`kbId`
+ * 为窄化可选字段，仅作展示/调试缝，UI 不依赖。
+ */
+export interface WeKnoraChunk {
+	content: string;
+	/** 所属知识条目 id（wire 字段 `knowledge_id`）。 */
+	knowledgeId?: string;
+	/** 所属知识库 id（wire 字段 `knowledge_base_id`）。 */
+	kbId?: string;
 }
 
 /**

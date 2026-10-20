@@ -5,6 +5,7 @@ import { createWeKnoraStreamParser } from "./sse.js";
 import type {
 	WeKnoraAgent,
 	WeKnoraCapability,
+	WeKnoraChunk,
 	WeKnoraKnowledgeReference,
 	WeKnoraMessage,
 	WeKnoraMessageRole,
@@ -12,6 +13,12 @@ import type {
 	WeKnoraSessionLastRequestState,
 	WeKnoraStreamEvent,
 } from "./types.js";
+
+/*
+ * C7 说明（>400 行仍单文件）：本文件只有一个 actor —— WeKnora REST 门面。全部端点的鉴权头、
+ * 超时守卫、错误归一化与响应收窄（asRecord/asString 家族）总是一起改，按判据拆开只会制造
+ * shotgun surgery（CONSTRAINTS C7 / weknora-kb-citation 02-plan D6）。
+ */
 
 /** 单次请求的默认超时（01-spec §3.6）。 */
 export const DEFAULT_TIMEOUT_MS = 120_000;
@@ -106,6 +113,25 @@ export class WeKnoraHttpClient {
 	 */
 	async deleteSession(sessionId: string, signal?: AbortSignal): Promise<void> {
 		await this.requestJson(`/api/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }, signal, "chat");
+	}
+
+	/**
+	 * 取 chunk 原文（AC-14，**只读**数据面）：`GET /api/v1/chunks/by-id/{id}`。
+	 *
+	 * capability 标注 `retrieve`：Key 缺该能力时 403 归一化为 `capability_missing`
+	 * （missingCapability=retrieve），渲染层据此出降级文案。缺 `data.content` 视为坏响应，
+	 * 抛归一化错误，不猜（02-plan D7）。
+	 */
+	async getChunkById(chunkId: string, signal?: AbortSignal): Promise<WeKnoraChunk> {
+		const body = await this.requestJson(
+			`/api/v1/chunks/by-id/${encodeURIComponent(chunkId)}`,
+			{ method: "GET" },
+			signal,
+			"retrieve",
+		);
+		const chunk = toChunk(asRecord(body)?.data);
+		if (!chunk) throw new WeKnoraRequestError({ code: "unknown", detail: "getChunkById: missing data.content" });
+		return chunk;
 	}
 
 	/** 列出该 Key 可见的全部智能体；**空列表是合法结果**（AC-16 / AC-19）。 */
@@ -328,6 +354,23 @@ function toAgent(raw: unknown): WeKnoraAgent | undefined {
 	const id = record ? asString(record.id) : undefined;
 	if (!record || !id) return undefined;
 	return { id, name: asString(record.name) ?? "", description: asString(record.description) };
+}
+
+/**
+ * 归一化 chunk 原文；`content` 缺失 / 非字符串一律返回 `undefined`（由调用方抛归一化错误）。
+ *
+ * 与 `toMessage` 的「容忍缺字段」相反：引用弹层的全部价值就在 `content`，静默弹一张空卡片
+ * 比明确报错更迷惑，故不猜、不兜底空串。
+ */
+function toChunk(raw: unknown): WeKnoraChunk | undefined {
+	const record = asRecord(raw);
+	const content = record ? asString(record.content) : undefined;
+	if (!record || content === undefined) return undefined;
+	return {
+		content,
+		knowledgeId: asString(record.knowledge_id),
+		kbId: asString(record.knowledge_base_id),
+	};
 }
 
 /**

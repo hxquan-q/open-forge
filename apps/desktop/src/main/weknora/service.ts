@@ -5,7 +5,7 @@ import { readWeKnoraConfig, updateWeKnoraConfig, type WeKnoraConfig, type WeKnor
 import { hasWeKnoraApiKey, readWeKnoraApiKey, writeWeKnoraApiKey } from "./credentials.js";
 import { WeKnoraRequestError } from "./errors.js";
 import { WeKnoraHttpClient, type WeKnoraHttpClientOptions } from "./http.js";
-import type { WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "./types.js";
+import type { WeKnoraAgent, WeKnoraChunk, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "./types.js";
 
 /** 单次问答超时（01-spec §3.6）：T00·F5 实测一次完整问答可达 420s，10 分钟留足余量。 */
 const ASK_TIMEOUT_MS = 600_000;
@@ -34,6 +34,11 @@ export interface WeKnoraLoadMessagesInput {
 export interface WeKnoraDeleteSessionInput {
 	/** 要删除的 WeKnora 会话 id（服务端按租户强制归属校验，删别人的删不到）。 */
 	sessionId: string;
+}
+
+export interface WeKnoraGetChunkInput {
+	/** 要取原文的 chunk id（引用标签 `chunk_id` 属性的原样值）。 */
+	chunkId: string;
 }
 
 export interface WeKnoraAskInput {
@@ -70,6 +75,8 @@ export interface WeKnoraService {
 	loadMessages(input: WeKnoraLoadMessagesInput): Promise<WeKnoraMessage[]>;
 	/** 删除会话（AC-8）：转调 HTTP 客户端；失败经 `WeKnoraRequestError` 归一化上抛。 */
 	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
+	/** 取 chunk 原文（AC-14，只读数据面）：转调 HTTP 客户端；失败经 `WeKnoraRequestError` 归一化上抛。 */
+	getChunkById(input: WeKnoraGetChunkInput): Promise<WeKnoraChunk>;
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): void;
 	onStreamEvent(handler: (event: WeKnoraStreamEvent) => void): () => void;
@@ -147,6 +154,10 @@ export function createWeKnoraService(dependencies: WeKnoraServiceDependencies = 
 
 		async deleteSession({ sessionId }) {
 			await (await restClient()).deleteSession(sessionId);
+		},
+
+		async getChunkById({ chunkId }) {
+			return (await restClient()).getChunkById(chunkId);
 		},
 
 		async ask({ sessionId, query, agentId }) {
