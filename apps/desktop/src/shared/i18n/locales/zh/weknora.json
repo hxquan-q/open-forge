@@ -70,7 +70,10 @@
 		"badgeLabel": "引用资料:{{doc}}",
 		"popoverTitle": "引用原文",
 		"loading": "正在加载引用原文…",
-		"loadFailed": "引用原文暂时无法加载,请稍后重试。"
+		"loadFailed": "引用原文暂时无法加载,请稍后重试。",
+		"close": "关闭引用原文",
+		"imagePlaceholder": "[图片]",
+		"imageFailed": "图片加载失败"
 	},
 	"delete": {
 		"disabledStreaming": "回答生成中,暂不能删除",

@@ -70,7 +70,10 @@
 		"badgeLabel": "Cited source: {{doc}}",
 		"popoverTitle": "Cited source",
 		"loading": "Loading the cited source…",
-		"loadFailed": "The cited source could not be loaded. Try again later."
+		"loadFailed": "The cited source could not be loaded. Try again later.",
+		"close": "Close cited source",
+		"imagePlaceholder": "[Image]",
+		"imageFailed": "Image failed to load"
 	},
 	"delete": {
 		"disabledStreaming": "A reply is still generating, so it cannot be deleted yet",
