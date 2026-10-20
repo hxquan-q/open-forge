@@ -27,6 +27,7 @@ depends_on: []
 - 用户已明确没有隔离 VM/runner、模型与独立评审配置、签名/监控环境。实际配置 level=0、模型与发布器 disabled；目标 L4 仍未达到。
 - 后续角色合同与有界队列编排已提交 `ecfe01f17`、`94560c460`；本轮前的定向复验为 5 文件 / 34 例通过。它们不等于真实模型或完整工作流验收；分析角色目前只输出建议。
 - 先前 UI 草稿缺模块并有语法错误，本轮 TASK-0328 已修正并接线，实际 UI/视觉验收仍延期。旧版本的 46/46 包结果不覆盖本轮修改，本轮结果按独立记录回填。
+- 需求级闭环的 Phase 1 已落地：`queue`/`loop` 只执行 ready Task，不判断 REQ 条款是否全部覆盖；TASK-0334 已补覆盖矩阵、串行运行与完成/停止报告，定向 19 例、agents 116 例、记录检查 31 例与完整 check 通过。该 Task 保持 verifying，等待独立评审与人工验收。
 
 ## 2026-10-20 最新决策与执行边界
 
@@ -53,6 +54,20 @@ TASK-0332 已随 `e2734e423` 集成本地 main：三份相关回归共 29 例、
 
 微软的 [WSL 安全模型](https://github.com/microsoft/WSL/blob/master/doc/docs/technical-documentation/security.md) 说明发行版不是与宿主之间的安全边界。保留 WSL2 方案，但必须单独证明 Worker 无法访问控制器、真实账号和发布密钥；可调查宿主不同 OS 身份及访问控制等方案，不预先宣称其满足合同。当前不要求购买新机器，隔离未证明时也不启用自动模型执行。
 
+## Requirement Run（Phase 1，TASK-0334）
+
+用户要求的能力是“给出一个大需求，Agent 拆解后持续推进，直到该需求的全部流程完成”，而不是只把现有 `loop` 队列跑空。现有 `queue`/`loop` 是有界 Task 队列执行器：每次领取一个 ready Task，`done + integrated` 才解锁依赖，空队列、依赖等待、路径冲突或连续停滞即停止；它不知道 REQ 条款是否全部被覆盖，也没有需求级完成报告。planner/triage/lessons 目前是建议入口，不会生成已授权 Task。
+
+Phase 1 只补“需求级覆盖与工程完成判定”，不改 Task/租约/依赖语义：
+
+- 输入为 REQ 条款 R1..Rn、PLAN 与 Task DAG，以及 Agent 拆解时生成的机器可读 coverage manifest；每个条款必须绑定至少一个本 REQ/PLAN 内的 Task 和可核对的 repo-relative 证据路径。
+- 串行复用现有 `cycle` 执行本 manifest 内的 eligible Task，仍走实现→异家族评审→验证→（显式 L2 时）集成；不领取 manifest 外的 Task，不并行写入，不自动创建 ready Task。
+- 完成判定分三层：`engineering-complete` 只表示所有条款的 Task 均已集成且证据路径存在；`humanAcceptance` 仍为 pending，除非对应 Task 已是 done 且用户接受；发布始终为 `not-authorized`。
+- 停止原因至少覆盖 `engineering-complete`、`coverage-gap`、`blocked`、`stalled`、`needs-human`、`failed`、`limit`、`paused`、`cancelled`，并保留未覆盖条款、未执行 Task 和下一步。
+- 不在 Phase 1 把 `verifying` 改成可解锁依赖；依赖 `verifying` 前驱的任务按 `needs-human` 停下。若以后要引入“工程完成即可依赖”，另建治理 Task 与迁移合同。
+
+TASK-0334 是本阶段的实现合同，已按上述边界实施：`scripts/agents/requirement-run.mjs`、coverage/report schema、`requirement-check`/`requirement-run` CLI 与测试；定向 19 例、agents 116 例、记录检查 31 例与完整 check 通过。Task 保持 verifying，独立评审、真实需求运行与人工验收仍待执行。Phase 2 的自主发现/分诊、Phase 3 的有界并行实现、Phase 4 的发布/遥测分别另立 Task，均不以本阶段记录视为已授权。
+
 ## 候选方案与取舍
 
 采用仓库协议、确定性执行与可替换模型进程；不把多厂商 CLI、Git notes 或提示词当作安全边界。运行记录采用单写者、原子持久化和租约 fencing，Task 继续是语义合同。跨机器共享存储以后只能在明确的存储合同上扩展，不能把普通本地锁称为分布式锁。
@@ -69,6 +84,7 @@ TASK-0332 已随 `e2734e423` 集成本地 main：三份相关回归共 29 例、
 8. TASK-0329：GitHub/CI 只读信号采集。
 9. TASK-0330：外部环境 readiness 与真实 L4 验收条件。
 10. TASK-0331：按本次明确执行请求完成本地任务闭环与 WSL2 受控验证。
+11. TASK-0334：需求级覆盖矩阵、串行 Requirement Run 与工程完成/停止报告（Phase 1）。
 
 共享合同及同一 scripts/agents 目录串行；TASK-0321 已在实施基线，保留其触发边界。只在用户或适用规则明确授权时使用多 Agent；本计划当前由单 Agent 执行。本地组合候选的有限流程例外登记 WAIVER-0005，完整影响验证不豁免。
 
@@ -130,11 +146,12 @@ TASK-0332 已随 `e2734e423` 集成本地 main：三份相关回归共 29 例、
 | 候选/稳定发布、灰度、监控缺失暂停 | release/services；真实受控 Node 发布器、丢响应/幂等/清理回执 | 软件协议通过，实际 CI/签名/发布/遥测未部署 |
 | 规则入口、文档、Release Notes、质量接线 | AGENTS/CLAUDE/GEMINI/Cursor、LESSONS、质量脚本 | 597 例与分项 check 通过，组合 46/46 包通过；合并前完整 check exit 0 |
 | 集成与真实自主运行 | 七提交来源链；任务与组合记录 | 已合并本地 main `80ad98655`，未 push/dev 发布；实际自主运行未执行 |
+| 需求级覆盖、工程完成与停止报告 | coverage/report schema、runner、CLI 与 19 例定向/116 例 agents 回归 | Phase 1 已实现并本地验证；待独立评审与人工验收 |
 | 真实稳定发布与 L4 验收 | 明确授权、签名、平台、监控、发布证据 | 未执行，不以本地测试替代 |
 
 ## 不做什么
 
-不把内部试点当最终完成，不修改真实用户配置，不绕过七类闸门，不调高检查基线或 CI 预算，不把模拟模型成功报告为真实模型质量。
+不把内部试点当最终完成，不修改真实用户配置，不绕过七类闸门，不调高检查基线或 CI 预算，不把模拟模型成功报告为真实模型质量。Phase 1 不并行写入、不自动发现/建 Task、不启用真实模型或发布。
 
 ## 验证与回滚
 
