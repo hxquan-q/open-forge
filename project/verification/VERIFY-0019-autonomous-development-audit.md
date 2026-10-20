@@ -8,7 +8,7 @@ created: 2026-10-19
 updated: 2026-10-20
 related_requirement: [REQ-0019]
 related_plan: [PLAN-0019]
-related_tasks: [TASK-0322, TASK-0323, TASK-0324, TASK-0325]
+related_tasks: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0327, TASK-0328, TASK-0329, TASK-0330]
 related_bugs: [BUG-0107, BUG-0132, BUG-0133]
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -68,8 +68,14 @@ related_bugs: [BUG-0107, BUG-0132, BUG-0133]
 
 ## 当前接入范围与依赖语义
 
-执行器实际执行路径支持 implementer/reviewer；配置 Schema 列出的 planner/triage/lessons/ui-reviewer 尚未形成相应执行路径。nightly 是可核实材料，UI 是源审计与缺失验证拒绝；这些后续接入工程必须结合明确的模型与真实环境完成，不是填写一个模型 ID 即达到全流程。
+`ecfe01f17` 已补齐 planner/triage/lessons/ui-reviewer 的闭合角色执行路径，`94560c460` 增加有界多 Task 编排；本轮之前的 5 文件 / 34 例定向复验通过。分析角色目前只产生建议，尚不能据此宣称分诊→调查→Task 或 nightly→真实模型复盘已完整接通。nightly 仍是可核实材料；UI 草稿未完成，真实 UI 证据未取得。后续接入工程和实际模型质量仍需分别验收，不是填写一个模型 ID 即达到全流程。
 
 调度前置条件沿用当前合同：只有 done 且 integrated 的 Task 才算完成依赖；verifying 不会被静默视为人工接受。未来提升自治等级时，须明确工程依赖就绪与产品接受的关系并通过治理，当前没有改写该合同。
 
 本地组合集成已按 WAIVER-0005 完成，不清理七个他人 temp 文件。这次例外不豁免 main:dev 推送前干净工作区、推送授权或任何发布条件；因此本地集成不等于 dev 推送或真实部署。最终状态为 **partial**：软件闭环和组合验证已取得证据，缺失外部环境与真实运行验收，不能宣称达到 L4。
+
+## 2026-10-20 环境选择与延期验收
+
+用户选择只使用 WSL2，不新增机器/Windows VM；真实 CI 等账号额度恢复，真实 UI 验收也延期。执行路线已回写 [PLAN-0019](../plans/PLAN-0019-autonomous-development.md)：先完成仓库软件和本地测试，再核验实际 WSL2/模型/隔离条件，最后补跨平台、UI、签名发布与遥测证据。该决定不授予安装、真实 Provider 调用、调高自治等级或生产发布权限。
+
+本轮只读执行 `wsl.exe --list --verbose` 与 `wsl.exe --status` 均 exit 1，返回未安装 WSL。未进入任何 Linux 发行版，未运行 Linux 测试；这是当前会话机器的结果，不推断其他机器状态。未运行 CI、UI、真实模型或发布，既有测试结果的候选范围保持原记录。最终 L4 状态仍为 partial，不因验收延期而改成通过。
