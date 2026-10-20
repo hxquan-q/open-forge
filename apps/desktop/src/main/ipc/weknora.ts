@@ -158,9 +158,13 @@ function parseListParams(value: unknown): WeKnoraListParams {
 
 function parseLoadMessagesInput(value: unknown): WeKnoraLoadMessagesInput {
 	const input = requireObject(value, "load-messages");
-	const sessionId = requireNonEmptyString(input.sessionId, "sessionId");
-	if (input.limit === undefined) return { sessionId };
-	return { sessionId, limit: requirePositiveInteger(input.limit, "limit") };
+	const parsed: WeKnoraLoadMessagesInput = { sessionId: requireNonEmptyString(input.sessionId, "sessionId") };
+	if (input.limit !== undefined) parsed.limit = requirePositiveInteger(input.limit, "limit");
+	// AC-6：翻页游标可选透出；一旦传入必须是合法非空字符串（畸形入参明确报错，不静默）。
+	if (input.beforeTime !== undefined) {
+		parsed.beforeTime = requireNonEmptyString(input.beforeTime, "beforeTime");
+	}
+	return parsed;
 }
 
 function parseDeleteSessionInput(value: unknown): WeKnoraDeleteSessionInput {

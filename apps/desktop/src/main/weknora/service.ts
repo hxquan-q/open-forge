@@ -36,6 +36,12 @@ export interface WeKnoraListParams {
 export interface WeKnoraLoadMessagesInput {
 	sessionId: string;
 	limit?: number;
+	/**
+	 * 向更早翻页的游标（= 已取最早一条的 `created_at`）；首页不传（AC-6 分页拉全）。
+	 *
+	 * 透传到 HTTP 层的 `before_time` 查询参数；缺省时该参数不出现（既有单页调用零回归）。
+	 */
+	beforeTime?: string;
 }
 
 export interface WeKnoraDeleteSessionInput {
@@ -162,8 +168,11 @@ export function createWeKnoraService(dependencies: WeKnoraServiceDependencies = 
 			return (await restClient()).listSessions(params ?? {});
 		},
 
-		async loadMessages({ sessionId, limit }) {
-			return (await restClient()).loadMessages(sessionId, limit === undefined ? {} : { limit });
+		async loadMessages({ sessionId, limit, beforeTime }) {
+			const params: { limit?: number; beforeTime?: string } = {};
+			if (limit !== undefined) params.limit = limit;
+			if (beforeTime !== undefined) params.beforeTime = beforeTime;
+			return (await restClient()).loadMessages(sessionId, params);
 		},
 
 		async deleteSession({ sessionId }) {

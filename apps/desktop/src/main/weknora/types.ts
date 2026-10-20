@@ -50,6 +50,11 @@ export interface WeKnoraMessage {
 	request_id?: string;
 	role: WeKnoraMessageRole;
 	content: string;
+	/**
+	 * 消息创建时间（服务端 `created_at` 原串）。分页拉全的翻页游标（`before_time`）取自它，
+	 * 导出侧也用它做顺序校正（AC-6）；服务端未给时缺省（不臆造）。
+	 */
+	created_at?: string;
 	knowledge_references?: WeKnoraKnowledgeReference[];
 }
 

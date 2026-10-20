@@ -379,6 +379,8 @@ function toMessage(raw: unknown): WeKnoraMessage | undefined {
 		request_id: asString(record.request_id),
 		role: toRole(record.role),
 		content: content ?? "",
+		// AC-6：透出 created_at 供渲染层翻页（before_time 游标）与顺序校正；缺省不臆造。
+		created_at: asString(record.created_at),
 		knowledge_references: toReferences(record.knowledge_references),
 	};
 }
