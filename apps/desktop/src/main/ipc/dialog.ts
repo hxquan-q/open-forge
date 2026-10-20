@@ -1,6 +1,14 @@
+// Modified by The Open Forge contributors.
+/*
+ * C7 说明（>400 行仍单文件）：本文件只有一个 actor —— 原生对话框 IPC 桥。所有 handler 都是
+ * 「收 renderer 参数 → 弹系统对话框 / 落盘 → 回结果」的同一件事，总是一起改；按对话框类型拆开
+ * 只会制造 shotgun surgery（CONSTRAINTS C7，同 http.ts 的处理）。
+ */
+
 import { copyFile, readFile, stat, writeFile } from "node:fs/promises";
-import { basename, extname } from "node:path";
-import { dialog, ipcMain } from "electron";
+import { basename, dirname, extname, join, resolve } from "node:path";
+import { app, dialog, ipcMain } from "electron";
+import type { DialogWriteFilesResult } from "../../preload/api-types/dialog.js";
 import {
 	PERSIST_IMAGE_FILES_CHANNEL,
 	type PersistImageFileInput,
@@ -12,6 +20,21 @@ import { allowProjectRoot, assertPathReadableForPreview } from "./fs.js";
 import { selectFoldersWithLinuxPortal } from "./linux-portal-dialog.js";
 
 const log = getAppLogger("dialog");
+
+/**
+ * 用户**显式选过**的导出目录白名单（经 `select-directory` 登记）。
+ *
+ * 批量写盘只允许落进这里登记过的目录 —— 对应 T03 的路径安全要求「只写用户显式选择的目录」。
+ * 与 `select-folder` / `select-folders` 不同，导出目标**不**调用 `allowProjectRoot`：那个授权会
+ * 让整个目录树对插件 fs 长期可读，而导出只需要「往这一层写文件」这一次性许可。
+ */
+const userSelectedExportDirectories = new Set<string>();
+
+/** 登记用户选定的导出目录（按 `resolve` 归一化，避免同一目录多种写法绕过白名单），返回原路径。 */
+function approveExportDirectory(directory: string): string {
+	userSelectedExportDirectories.add(resolve(directory));
+	return directory;
+}
 
 const IMAGE_MIME: Record<string, string> = {
 	".png": "image/png",
@@ -153,6 +176,8 @@ export function registerDialogIpc(): () => void {
 			options?: {
 				title?: string;
 				filters?: Array<{ name: string; extensions: string[] }>;
+				/** 保存对话框的初始目录；缺省为系统桌面（见 resolveDefaultDirectory）。 */
+				defaultDirectory?: string;
 			},
 		): Promise<string | null> => {
 			if (typeof defaultFileName !== "string" || !defaultFileName.trim()) {
@@ -177,10 +202,12 @@ export function registerDialogIpc(): () => void {
 					: ext
 						? [{ name: ext.toUpperCase(), extensions: [ext] }]
 						: undefined;
+			// 默认目录只影响对话框起始位置，不改变写盘语义（既有调用方零回归）。
+			const directory = resolveDefaultDirectory(options?.defaultDirectory);
 
 			const result = await dialog.showSaveDialog({
 				title: typeof options?.title === "string" && options.title.trim() ? options.title.trim() : "Save File",
-				defaultPath: name,
+				defaultPath: directory ? join(directory, name) : name,
 				filters,
 			});
 			if (result.canceled || !result.filePath) return null;
@@ -277,6 +304,51 @@ export function registerDialogIpc(): () => void {
 		return result.filePaths;
 	});
 
+	/**
+	 * 选单个目录作为导出落地位置（批量导出用）。取消返回 null。
+	 *
+	 * 与 `select-folder` 的区别：这里**不** `allowProjectRoot` —— 导出目标只需要「往这一层
+	 * 写文件」的许可，不该顺带把整棵目录树加进插件可读根（见 userSelectedExportDirectories 注释）。
+	 */
+	ipcMain.handle("vetta:dialog:select-directory", async (): Promise<string | null> => {
+		const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
+		if (result.canceled || result.filePaths.length === 0) return null;
+		return approveExportDirectory(result.filePaths[0]);
+	});
+
+	/**
+	 * 批量写盘：把多个内存文件写进**用户已选**目录（{@link userSelectedExportDirectories}）。
+	 *
+	 * 路径安全（T03）：目标目录必须在白名单内；每个文件名再经 {@link resolveFileTarget} 净化，
+	 * 含分隔符 / 逃逸 / 空名的条目一律拒绝、不落盘。**部分失败如实上报**：单个条目失败不中断整批。
+	 */
+	ipcMain.handle(
+		"vetta:dialog:write-files-to-directory",
+		async (_event, input: unknown): Promise<DialogWriteFilesResult> => {
+			const { directory, files } = parseWriteFilesInput(input);
+			const root = resolve(directory);
+			if (!userSelectedExportDirectories.has(root)) {
+				throw new Error("Target directory was not selected by the user");
+			}
+			const written: string[] = [];
+			const failed: Array<{ name: string; error: string }> = [];
+			for (const file of files) {
+				const target = resolveFileTarget(root, file.name);
+				if (target === undefined) {
+					failed.push({ name: file.name, error: "invalid file name" });
+					continue;
+				}
+				try {
+					await writeFile(target, file.content, file.encoding);
+					written.push(target);
+				} catch (error) {
+					failed.push({ name: file.name, error: error instanceof Error ? error.message : String(error) });
+				}
+			}
+			return { written, failed };
+		},
+	);
+
 	return () => {
 		ipcMain.removeHandler("vetta:dialog:persist-images");
 		ipcMain.removeHandler(PERSIST_IMAGE_FILES_CHANNEL);
@@ -288,5 +360,78 @@ export function registerDialogIpc(): () => void {
 		ipcMain.removeHandler("vetta:dialog:save-data");
 		ipcMain.removeHandler("vetta:dialog:save-copy");
 		ipcMain.removeHandler("vetta:dialog:select-folders");
+		ipcMain.removeHandler("vetta:dialog:select-directory");
+		ipcMain.removeHandler("vetta:dialog:write-files-to-directory");
 	};
+}
+
+/**
+ * 保存对话框的初始目录：显式传入优先，缺省回落系统桌面（T03 AC「默认目录=桌面」）。
+ *
+ * 桌面路径不可得时（非 Electron 环境 / 取路径失败）返回 undefined，调用方退化为只给文件名 ——
+ * 保证既有 save-data 调用方在异常环境下不崩（零回归）。
+ */
+function resolveDefaultDirectory(requested: unknown): string | undefined {
+	if (typeof requested === "string" && requested.trim()) return requested.trim();
+	try {
+		const desktop = app.getPath("desktop");
+		return desktop.trim() ? desktop : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/** 归一化后的写盘条目：内容 + 编码，写盘循环只认这一种形状。 */
+interface NormalizedWriteFileEntry {
+	name: string;
+	content: string;
+	encoding: "utf8" | "base64";
+}
+
+/**
+ * 校验批量写盘入参（不信任 renderer）。**顶层形状错误直接抛**；条目内的不安全**名字**不在此处拦，
+ * 留给 {@link resolveFileTarget} 作为「按条目失败」处理（一个坏名字不该拖垮整批）。
+ */
+function parseWriteFilesInput(value: unknown): { directory: string; files: NormalizedWriteFileEntry[] } {
+	const input = requirePlainObject(value, "write-files-to-directory");
+	const directory = requireNonEmptyString(input.directory, "directory");
+	if (!Array.isArray(input.files)) throw new Error("write-files-to-directory requires a files array");
+	const files: NormalizedWriteFileEntry[] = [];
+	for (const raw of input.files) files.push(parseWriteFileEntry(raw));
+	return { directory, files };
+}
+
+/** 单个写盘条目：`{name, utf8}` 或 `{name, base64}`，二者恰好其一。 */
+function parseWriteFileEntry(raw: unknown): NormalizedWriteFileEntry {
+	const entry = requirePlainObject(raw, "write-files-to-directory file entry");
+	const name = requireNonEmptyString(entry.name, "file name");
+	const { utf8, base64 } = entry;
+	if (typeof utf8 === "string" && base64 === undefined) return { name, content: utf8, encoding: "utf8" };
+	if (typeof base64 === "string" && utf8 === undefined) return { name, content: base64, encoding: "base64" };
+	throw new Error("file entry requires exactly one of utf8 or base64 content");
+}
+
+function requirePlainObject(value: unknown, channel: string): Record<string, unknown> {
+	if (value === null || typeof value !== "object" || Array.isArray(value)) {
+		throw new Error(`${channel} requires an object argument`);
+	}
+	return value as Record<string, unknown>;
+}
+
+function requireNonEmptyString(value: unknown, field: string): string {
+	if (typeof value !== "string" || !value.trim()) throw new Error(`${field} must be a non-empty string`);
+	return value;
+}
+
+/**
+ * 把条目名解析成目标目录内的绝对路径；任何逃逸都返回 undefined（不落盘）。
+ *
+ * 三道闸：空名 / `.` / `..` 直接拒；含路径分隔符直接拒（批量文件名一律是扁平名）；最后用
+ * `dirname(resolve(root, name)) === root` 兜底，拦住盘符相对路径等平台特定写法。
+ */
+function resolveFileTarget(root: string, name: string): string | undefined {
+	if (!name || name === "." || name === "..") return undefined;
+	if (name.includes("/") || name.includes("\\") || name.includes("\0")) return undefined;
+	const target = resolve(root, name);
+	return dirname(target) === root ? target : undefined;
 }
