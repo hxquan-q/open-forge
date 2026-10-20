@@ -16,13 +16,14 @@
  * 变换规则:
  * - web 标签 → **标准 `<a>` link 节点**(children = 域名文本)。后续渲染、URL 打开
  *   通道与安全策略全部复用 theme-ui 既有 `a` 组件与 urlTransform,不自制外链组件;
- * - kb 标签 → 本票维持现状:按原文区间回放为文本,逐字符与现状一致(角标化在 T04,
- *   与本插件共用同一套段序列地基);
+ * - kb 标签 → 自定义元素 `weknora-citation`(属性 doc/chunkId/kbId),由 Provider
+ *   `elements` 注册的 CitationBadge 渲染为可点击角标(T04);doc 与 chunk_id 全缺的
+ *   退化标签剥除(既无名字可显示也无原文可取,fail-open);
  * - 尾部残缺段与无 url 的 web 标签 → 剥除(fail-open,永不显示 raw,AC-7);
  * - code/pre/a 内文本不处理(与 rehypeInlineTokens 同仓先例同一口径)。
  */
 
-import type { CitationSpan } from "./citationTag";
+import type { CitationSpan, KbCitationTag } from "./citationTag";
 import { parseCitationSpans } from "./citationTag";
 
 /**
@@ -70,8 +71,22 @@ function webLinkNode(url: string, title: string | undefined): CitationHastElemen
 	};
 }
 
-/** 把一个段投影为 hast 子节点;返回 null 表示该段不产生可见内容(残缺/造不出链接的 web)。 */
-function citationSpanNode(source: string, span: CitationSpan): CitationHastChild | null {
+/** kb 标签 → 角标自定义元素(属性供 CitationBadge 消费;kbId 仅作升级缝携带,AC-13)。 */
+function kbCitationNode(tag: KbCitationTag): CitationHastElement {
+	return {
+		type: "element",
+		tagName: "weknora-citation",
+		properties: {
+			doc: tag.doc ?? "",
+			chunkId: tag.chunkId ?? "",
+			kbId: tag.kbId ?? "",
+		},
+		children: [],
+	};
+}
+
+/** 把一个段投影为 hast 子节点;返回 null 表示该段不产生可见内容(残缺/退化标签/造不出链接的 web)。 */
+function citationSpanNode(span: CitationSpan): CitationHastChild | null {
 	if (span.segment.type === "text") {
 		return { type: "text", value: span.segment.text };
 	}
@@ -80,8 +95,7 @@ function citationSpanNode(source: string, span: CitationSpan): CitationHastChild
 	}
 	const tag = span.segment.tag;
 	if (tag.kind === "kb") {
-		// 本票维持现状:按原文区间回放(逐字符一致),不做任何加工;T04 在同一点换成角标。
-		return { type: "text", value: source.slice(span.start, span.end) };
+		return tag.doc === undefined && tag.chunkId === undefined ? null : kbCitationNode(tag);
 	}
 	if (tag.url === undefined) {
 		return null;
@@ -97,7 +111,7 @@ function isPlainTextNode(spans: readonly CitationSpan[]): boolean {
 	return spans.every((span) => span.segment.type === "text");
 }
 
-/** rehype 插件:web 标签转标准 link、kb 标签维持现状文本、残缺尾部剥除。 */
+/** rehype 插件:web 标签转标准 link、kb 标签转角标自定义元素、残缺尾部剥除。 */
 export function rehypeCitationTags() {
 	return (tree: CitationHastRoot): void => {
 		function visit(node: CitationHastParent, inLiteral: boolean): void {
@@ -110,7 +124,7 @@ export function rehypeCitationTags() {
 						continue;
 					}
 					for (const span of spans) {
-						const piece = citationSpanNode(child.value, span);
+						const piece = citationSpanNode(span);
 						if (piece !== null) newChildren.push(piece);
 					}
 					continue;

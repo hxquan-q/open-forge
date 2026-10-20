@@ -55,11 +55,13 @@ describe("MessageList · T03 引用管道接线", () => {
 		expect(thinking.textContent).not.toContain("<web");
 		expect(thinking.textContent).not.toContain('doc="截断');
 
-		// 正文:web → 既有链接(显示域名);kb → 维持现状明文;残缺尾部不显示。
+		// 正文:web → 既有链接(显示域名);kb → 角标(截断显示,title 全名);残缺尾部不显示。
 		const link = screen.getByRole("link", { name: "developer.kingdee.com" });
 		expect(link.getAttribute("href")).toBe("https://developer.kingdee.com/article/1");
-		expect(container.textContent).toContain("三分钟了解金蝶客户认证服务.md");
+		const badge = screen.getByRole("button", { name: "引用资料:三分钟了解金蝶客户认证服务.md" });
+		expect(badge.getAttribute("title")).toBe("三分钟了解金蝶客户认证服务.md");
 		expect(container.textContent).toContain("正文引用");
+		expect(container.textContent).not.toContain("<kb");
 		expect(container.textContent).not.toContain('doc="截断');
 	});
 

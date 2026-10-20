@@ -101,6 +101,13 @@ export const weKnoraDeletingSessionIdAtom = atom<string | null>(null);
  * 侧栏内联错误块读它；**列表本身绝不因失败而移除会话**（不假装删掉）。
  */
 export const weKnoraDeleteErrorAtom = atom<WeKnoraErrorCode | null>(null);
+/**
+ * 当前打开的引用弹层锚点(T04;02-plan D4 弹层互斥):值 = 打开弹层的角标按钮元素,
+ * `null` = 全关。记锚点元素而非裸 chunkId——同一 chunk 的两个角标不会同时开两朵
+ * 弹层,弹层定位也直接复用锚点矩形;后开者覆写锚点,先开者的弹层随比较失效卸载
+ * (后开先关)。弹层自身无状态可丢,不参与任何持久化(store 数据零改动,D1)。
+ */
+export const weKnoraCitationAnchorAtom = atom<HTMLElement | null>(null);
 
 /** 流事件的终态（收到即结束本轮，AC-22 的收敛依据）。 */
 export function isTerminalStreamEvent(event: WeKnoraStreamEvent): boolean {

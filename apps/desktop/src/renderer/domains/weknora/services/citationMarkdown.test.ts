@@ -80,18 +80,30 @@ describe("rehypeCitationTags · web 标签 → 标准 link 节点", () => {
 	});
 });
 
-describe("rehypeCitationTags · kb 标签本票维持现状文本", () => {
-	it("raw 宿主:按原文区间逐字符回放为文本节点(不做任何加工)", () => {
-		expect(run([raw(KB_TAG)])).toEqual([{ type: "text", value: KB_TAG }]);
+describe("rehypeCitationTags · kb 标签 → weknora-citation 角标元素(T04)", () => {
+	it("raw 宿主:替换为 weknora-citation 元素,携带反转义后的 doc/chunkId/kbId 属性", () => {
+		const [node] = run([raw(KB_TAG)]);
+		expect(node).toEqual({
+			type: "element",
+			tagName: "weknora-citation",
+			properties: {
+				doc: "三分钟了解金蝶客户认证服务.md",
+				chunkId: "594adadd-7ceb-44f7-b285-c806e627c73d",
+				kbId: "78c47382-49f4-41bb-a11a-bc9c6f06f3a9",
+			},
+			children: [],
+		});
 	});
 
-	it("text 宿主(官方正则命中但非合法 HTML 的写法):同样原文回放,前后正文不动", () => {
-		const children = run([text(`前文<kb doc=x/>后文`)]);
-		expect(children).toEqual([
+	it("text 宿主(官方正则命中但属性无引号解析不出):doc 与 chunkId 全缺,整段剥除(fail-open,不显示 raw)", () => {
+		expect(run([text("前文<kb doc=x/>后文")])).toEqual([
 			{ type: "text", value: "前文" },
-			{ type: "text", value: "<kb doc=x/>" },
 			{ type: "text", value: "后文" },
 		]);
+	});
+
+	it("raw 宿主的空 kb 标签(无任何可解析属性):同样剥除", () => {
+		expect(run([raw("<kb />")])).toEqual([]);
 	});
 });
 
@@ -145,12 +157,12 @@ describe("rehypeCitationTags · 零改动路径(AC-4)与跳过规则", () => {
 		expect(paragraph.children[4]).toEqual({ type: "text", value: " 收尾" });
 	});
 
-	it("混排:同段内 kb 原文回放 + web 转 link,空格与标点不被吞(AC-8)", () => {
+	it("混排:同段内 kb 转角标元素 + web 转 link,空格与标点不被吞(AC-8)", () => {
 		const source = `参照 ${KB_TAG} 与 ${WEB_TAG} 以及句尾。`;
 		const children = run([raw(source)]);
 		expect(children.map((child) => (child.type === "element" ? `[[${child.tagName}]]` : child.value))).toEqual([
 			"参照 ",
-			KB_TAG,
+			"[[weknora-citation]]",
 			" 与 ",
 			"[[a]]",
 			" 以及句尾。",

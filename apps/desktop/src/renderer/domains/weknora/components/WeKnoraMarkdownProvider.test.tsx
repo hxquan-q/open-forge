@@ -100,10 +100,12 @@ describe("WeKnoraMarkdownProvider · 无标签文本逐字符一致(AC-4)", () =
 	});
 });
 
-describe("WeKnoraMarkdownProvider · kb 标签本票维持现状文本", () => {
-	it("kb 标签在正文路径行为=现状:套 Provider 与不套的输出逐字符一致(不劣化)", () => {
-		const withKb = `金蝶拥有**六大核心产品线**,覆盖不同规模企业的数字化需求${REAL_KB_TAG}:`;
-		expect(renderWithProvider(withKb).innerHTML).toBe(renderPlain(withKb).innerHTML);
+describe("WeKnoraMarkdownProvider · kb 标签渲染为角标(T04)", () => {
+	it("kb 标签不再明文输出:正文无 raw 标签文本(角标语义细测在 CitationBadge.test)", () => {
+		const view = renderWithProvider(`金蝶拥有**六大核心产品线**,覆盖不同规模企业的数字化需求${REAL_KB_TAG}:`);
+		expect(view.textContent).not.toContain("<kb");
+		expect(view.textContent).not.toContain("chunk_id");
+		expect(screen.getByRole("button")).toBeTruthy();
 	});
 });
 
