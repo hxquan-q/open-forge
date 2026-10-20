@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0334` | `verifying` | PLAN-0019 | Requirement Run Phase 1 已实施并本地验证：coverage schema/runner/CLI、19 例定向、116 例 agents、31 例记录检查与完整 check 通过；实现提交 `54e080673` 已在本地 main，推送回执待回填；待独立评审与人工验收；serial。 |
+| `TASK-0334` | `verifying` | PLAN-0019 | Requirement Run Phase 1 已实施并本地验证：coverage schema/runner/CLI、19 例定向、116 例 agents、31 例记录检查与完整 check 通过；实现 `54e080673`、记录 `c1b45985d` 已推送 origin/dev 并核对远端；待独立评审与人工验收；serial。 |
 | `TASK-0333` | `done` | PLAN-0019 | 干净副本累计批次 46/46 包、quality 635 例及完整 check 通过；8dcd7a3d2 已 fast-forward 推送 origin/dev 并核对远端；原 temp 保留；serial。 |
 | `TASK-0332` | `verifying` | PLAN-0019 | 图谱调查与当前会话协作已接入 intake；29 例、quick/guards 通过，原生新上下文只读审查已实际派发回收；Claude 端与完整开发流程待使用验收；serial。 |
 | `TASK-0326` | `verifying` | PLAN-0019 | 角色合同已随 ecfe01f17 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实模型仍待验收；serial。 |

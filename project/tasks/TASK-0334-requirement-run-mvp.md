@@ -142,7 +142,7 @@ updated: 2026-10-20
 
 - 工程验证：本轮通过；定向 2 文件 / 19 例、agents 20 文件 / 116 例、记录检查 3 文件 / 31 例、`check:quick` 与完整 `check` 均 exit 0；报告 schema 由 `validateRequirementReport` 与 runner 测试覆盖。未调用真实模型，不能用本结果证明模型质量。
 - 技术评审：待执行；需新上下文只读审查 `requirement-run.mjs`、schema、CLI 接线和测试，并如实标注是否同家族评审。
-- 集成：`integration_status: integrated`；实现提交 `54e080673` 已在本地 main；本轮只推送个人 origin/dev，不推稳定或上游；推送回执待回填。未发布。
+- 集成：`integration_status: integrated`；实现提交 `54e080673` 与记录提交 `c1b45985d` 已 fast-forward 推送个人 origin/dev（`d1ddd68ee..c1b45985d`），`git ls-remote` 确认远端为 `c1b45985d4faa3ac42146f274e9e815b936921b0`；未推 origin/main、upstream、tag 或发布。
 - 人工功能验收：待验收；用户需用真实 REQ/PLAN 跑一次 `requirement-check`/`requirement-run` 并检查报告是否符合预期；Agent 不自评接受。
 - 发布：未授权；本 Task 不产生发布候选。
 
@@ -172,7 +172,8 @@ updated: 2026-10-20
   - `bun run check:quick` → exit 0（Biome、guards、project-indexes 等通过）。
   - `bun run check` → exit 0（lint/types/guards/mobile-lint 全部通过）。
   - `bun scripts/quality/run-vitest.mjs --run scripts/quality/project-indexes.test.mjs scripts/quality/check-task-worktrees.test.mjs scripts/release/release-notes.test.mjs` → 3 文件 / 31 例通过。
-  - `git commit` → `54e080673`（feat(agents): 实现需求级覆盖与串行 Requirement Run）；记录与推送回执随后单独提交。
+  - `git commit` → `54e080673`（feat(agents): 实现需求级覆盖与串行 Requirement Run）、`c1b45985d`（docs(project): 记录 TASK-0334 需求级运行实现与验证）。
+  - `git push origin main:dev` → `d1ddd68ee..c1b45985d`；`git ls-remote origin refs/heads/dev` 确认远端为 `c1b45985d4faa3ac42146f274e9e815b936921b0`。
 - 未运行及原因：真实 Provider、真实模型、真实 UI、CI、发布、遥测均不在本 Task 授权内；`requirement-run` 的默认 `verify` 路径只用注入 `execute` 测过，未调用真实 `cycle`/adapter。
 - Worktree：未拆出；serial 共享 `scripts/agents`，单 Agent 串行修改。
 - 剩余风险：覆盖 manifest 由 Agent/协调者编写，路径存在性不能证明证据语义正确；`verifying` 依赖仍需人工接受，需求级闭环会在该点停下；Phase 2–4 未实现；真实模型回合未验收。
