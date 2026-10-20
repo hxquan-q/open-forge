@@ -38,6 +38,8 @@ interface Harness {
 	deleted: string[];
 	/** 假客户端收到的 chunk 取数请求（按序）。 */
 	fetchedChunks: string[];
+	/** 假客户端收到的文件（图片）取数请求（按序，F3 v2）。 */
+	fetchedFiles: string[];
 }
 
 const DEFAULT_CONFIG = { baseUrl: "http://weknora.test:8083", defaultAgentId: "agent-default", pageSize: 50 };
@@ -50,6 +52,7 @@ function createHarness(): Harness {
 	// 假客户端：建会话返回固定 id；流式同步吐出 4 个事件（含 2 个 answer.delta）。
 	const deleted: string[] = [];
 	const fetchedChunks: string[] = [];
+	const fetchedFiles: string[] = [];
 	const fakeClient = {
 		createSession: async () => ({ id: "session-created" }),
 		deleteSession: async (sessionId: string) => {
@@ -58,6 +61,10 @@ function createHarness(): Harness {
 		getChunkById: async (chunkId: string) => {
 			fetchedChunks.push(chunkId);
 			return { content: "chunk 原文", knowledgeId: "k-1", kbId: "kb-1" };
+		},
+		getFileData: async (fileRef: string) => {
+			fetchedFiles.push(fileRef);
+			return { dataUrl: "data:image/png;base64,AAAA", contentType: "image/png" };
 		},
 		streamAgentChat: async (input: {
 			requestId: string;
@@ -92,7 +99,7 @@ function createHarness(): Harness {
 		},
 	} as unknown as WebContents;
 
-	return { service, webContents, sent, deleted, fetchedChunks };
+	return { service, webContents, sent, deleted, fetchedChunks, fetchedFiles };
 }
 
 /**
@@ -364,5 +371,30 @@ describe("registerWeKnoraIpc · get-chunk(AC-14 只读数据面)", () => {
 		await expect(getChunk?.({}, {})).rejects.toThrow("chunkId must be a non-empty string");
 		await expect(getChunk?.({}, { chunkId: "  " })).rejects.toThrow("chunkId must be a non-empty string");
 		await expect(getChunk?.({}, { chunkId: 42 })).rejects.toThrow("chunkId must be a non-empty string");
+	});
+});
+
+describe("registerWeKnoraIpc · get-file(F3 v2 只读数据面)", () => {
+	it("薄层转调:合法入参原样下传 service,data URL 结果直返渲染层", async () => {
+		const { service, webContents, fetchedFiles } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		// getFileData 走 restClient,需已配置凭据(AC-2);运行时值写入,不引入 Key 字面量(红线 C2)。
+		await mocks.handlers.get(WEKNORA_CHANNELS.SET_API_KEY)?.({}, randomUUID());
+
+		const file = await mocks.handlers.get(WEKNORA_CHANNELS.GET_FILE)?.({}, { fileRef: "minio://images/1/a.png" });
+
+		expect(fetchedFiles).toEqual(["minio://images/1/a.png"]);
+		expect(file).toEqual({ dataUrl: "data:image/png;base64,AAAA", contentType: "image/png" });
+	});
+
+	it("入参校验:非对象 / 缺 fileRef / 空串 / 非字符串明确报错,不静默", async () => {
+		const { service, webContents } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		const getFile = mocks.handlers.get(WEKNORA_CHANNELS.GET_FILE);
+
+		await expect(getFile?.({}, "nope")).rejects.toThrow("get-file requires an object argument");
+		await expect(getFile?.({}, {})).rejects.toThrow("fileRef must be a non-empty string");
+		await expect(getFile?.({}, { fileRef: "  " })).rejects.toThrow("fileRef must be a non-empty string");
+		await expect(getFile?.({}, { fileRef: 42 })).rejects.toThrow("fileRef must be a non-empty string");
 	});
 });

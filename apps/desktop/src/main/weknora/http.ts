@@ -6,6 +6,7 @@ import type {
 	WeKnoraAgent,
 	WeKnoraCapability,
 	WeKnoraChunk,
+	WeKnoraFileData,
 	WeKnoraKnowledgeReference,
 	WeKnoraMessage,
 	WeKnoraMessageRole,
@@ -132,6 +133,45 @@ export class WeKnoraHttpClient {
 		const chunk = toChunk(asRecord(body)?.data);
 		if (!chunk) throw new WeKnoraRequestError({ code: "unknown", detail: "getChunkById: missing data.content" });
 		return chunk;
+	}
+
+	/**
+	 * 取回 WeKnora 文件（内嵌图片）并以 data URL 形态返回（实机验收 F3 v2，**只读**数据面）。
+	 *
+	 * `GET /files?file_path=<minio://…>`：鉴权走 `X-API-Key`（只在主进程，渲染层永不接触，C2）。
+	 * 实测该代理是取回 `minio://` 内嵌图片的唯一通路（`?resource_urls=public` 在本实例不改写）。
+	 *
+	 * 只接受 `image/*` 响应：非图片（误传 PDF/JSON 等）按坏响应抛归一化错误，渲染层据此回退占位。
+	 * 回传 **data URL**（票面二选一取「最简」）：渲染层 `<img src>` 直接可用、无需自定义协议；
+	 * 代价是 base64 体积约 1.34×，由渲染层 `fileClient` 的模块级缓存限制重复传输。
+	 */
+	async getFileData(fileRef: string, signal?: AbortSignal): Promise<WeKnoraFileData> {
+		const guard = createTimeoutGuard(signal, this.timeoutMs);
+		try {
+			const response = await this.fetchImpl(this.absolute(withQuery("/files", { file_path: fileRef })), {
+				method: "GET",
+				headers: { "X-API-Key": this.apiKey },
+				signal: guard.signal,
+			});
+			if (!response.ok) {
+				const text = await response.text();
+				throw new WeKnoraRequestError(
+					normalizeHttpError(response.status, parseJson(text) ?? text, { capability: "retrieve" }),
+				);
+			}
+			// content-type 可能带 `;charset=…`，只取媒体类型段。
+			const contentType = (response.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+			if (!contentType.startsWith("image/")) {
+				throw new WeKnoraRequestError({ code: "unknown", detail: "getFileData: response is not an image" });
+			}
+			const buffer = Buffer.from(await response.arrayBuffer());
+			return { dataUrl: `data:${contentType};base64,${buffer.toString("base64")}`, contentType };
+		} catch (error) {
+			if (error instanceof WeKnoraRequestError) throw error;
+			throw new WeKnoraRequestError(normalizeThrownError(error, { timedOut: guard.timedOut() }));
+		} finally {
+			guard.dispose();
+		}
 	}
 
 	/** 列出该 Key 可见的全部智能体；**空列表是合法结果**（AC-16 / AC-19）。 */

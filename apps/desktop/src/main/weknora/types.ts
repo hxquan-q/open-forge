@@ -75,6 +75,19 @@ export interface WeKnoraChunk {
 }
 
 /**
+ * WeKnora 文件（图片）取回结果（引用弹层真图渲染的数据面，实机验收 F3 v2）。
+ *
+ * 走 `GET /files?file_path=<minio://…>` 鉴权代理（实测唯一通路）；回传形态取 **data URL**
+ * （票面二选一取「最简」）：渲染层 `<img src>` 直接可用，无需注册自定义协议。
+ */
+export interface WeKnoraFileData {
+	/** `data:<mime>;base64,<…>`；渲染层直接喂 `<img src>`。 */
+	dataUrl: string;
+	/** 响应 content-type（实测 `image/png`）。 */
+	contentType: string;
+}
+
+/**
  * 错误码（01-spec §4.2）。
  *
  * 主进程只产出 code，不拼中文文案 —— 文案在渲染层按 code 查 i18n（AC-21 / 红线 C4）。

@@ -103,6 +103,7 @@ function installFake(): FakeHarness {
 			state.sessions = state.sessions.filter((session) => session.id !== sessionId);
 		}),
 		getChunk: vi.fn(async () => ({ content: "chunk" })),
+		getFile: vi.fn(async () => ({ dataUrl: "data:image/png;base64,", contentType: "image/png" })),
 		ask: vi.fn(async (input) => {
 			counters.ask.push(input);
 			let sessionId = input.sessionId;

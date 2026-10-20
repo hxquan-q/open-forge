@@ -6,6 +6,7 @@ import type {
 	WeKnoraAskResult,
 	WeKnoraDeleteSessionInput,
 	WeKnoraGetChunkInput,
+	WeKnoraGetFileInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraPublicConfig,
@@ -13,6 +14,7 @@ import type {
 import type {
 	WeKnoraAgent,
 	WeKnoraChunk,
+	WeKnoraFileData,
 	WeKnoraMessage,
 	WeKnoraSession,
 	WeKnoraStreamEvent,
@@ -26,7 +28,9 @@ export type {
 	WeKnoraChunk,
 	WeKnoraConfigPatch,
 	WeKnoraDeleteSessionInput,
+	WeKnoraFileData,
 	WeKnoraGetChunkInput,
+	WeKnoraGetFileInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraMessage,
@@ -57,6 +61,11 @@ export interface DesktopWeKnoraApi {
 	 * 失败以归一化错误码的 `Error` 拒绝；缓存与重试策略在渲染层 chunkClient。
 	 */
 	getChunk(input: WeKnoraGetChunkInput): Promise<WeKnoraChunk>;
+	/**
+	 * 取回内嵌图片（F3 v2，只读）：`GET /files?file_path=<minio://…>` 的 data URL 形态。
+	 * 鉴权头只在主进程（C2）；失败以归一化错误码的 `Error` 拒绝，缓存与回退在渲染层 fileClient / 弹层。
+	 */
+	getFile(input: WeKnoraGetFileInput): Promise<WeKnoraFileData>;
 	/** 提问；`input.agentId` 为当前选中的智能体（AC-18 v5），缺省时回落到配置默认值。 */
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): Promise<void>;

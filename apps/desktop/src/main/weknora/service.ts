@@ -5,7 +5,14 @@ import { readWeKnoraConfig, updateWeKnoraConfig, type WeKnoraConfig, type WeKnor
 import { hasWeKnoraApiKey, readWeKnoraApiKey, writeWeKnoraApiKey } from "./credentials.js";
 import { WeKnoraRequestError } from "./errors.js";
 import { WeKnoraHttpClient, type WeKnoraHttpClientOptions } from "./http.js";
-import type { WeKnoraAgent, WeKnoraChunk, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "./types.js";
+import type {
+	WeKnoraAgent,
+	WeKnoraChunk,
+	WeKnoraFileData,
+	WeKnoraMessage,
+	WeKnoraSession,
+	WeKnoraStreamEvent,
+} from "./types.js";
 
 /** 单次问答超时（01-spec §3.6）：T00·F5 实测一次完整问答可达 420s，10 分钟留足余量。 */
 const ASK_TIMEOUT_MS = 600_000;
@@ -39,6 +46,11 @@ export interface WeKnoraDeleteSessionInput {
 export interface WeKnoraGetChunkInput {
 	/** 要取原文的 chunk id（引用标签 `chunk_id` 属性的原样值）。 */
 	chunkId: string;
+}
+
+export interface WeKnoraGetFileInput {
+	/** 文件引用（正文里 `minio://…` 的原串；wire 参数名 `file_path`）。 */
+	fileRef: string;
 }
 
 export interface WeKnoraAskInput {
@@ -77,6 +89,8 @@ export interface WeKnoraService {
 	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
 	/** 取 chunk 原文（AC-14，只读数据面）：转调 HTTP 客户端；失败经 `WeKnoraRequestError` 归一化上抛。 */
 	getChunkById(input: WeKnoraGetChunkInput): Promise<WeKnoraChunk>;
+	/** 取回内嵌图片（F3 v2，只读数据面，data URL）：转调 HTTP 客户端；失败归一化上抛。 */
+	getFileData(input: WeKnoraGetFileInput): Promise<WeKnoraFileData>;
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): void;
 	onStreamEvent(handler: (event: WeKnoraStreamEvent) => void): () => void;
@@ -158,6 +172,10 @@ export function createWeKnoraService(dependencies: WeKnoraServiceDependencies = 
 
 		async getChunkById({ chunkId }) {
 			return (await restClient()).getChunkById(chunkId);
+		},
+
+		async getFileData({ fileRef }) {
+			return (await restClient()).getFileData(fileRef);
 		},
 
 		async ask({ sessionId, query, agentId }) {

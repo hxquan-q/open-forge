@@ -33,6 +33,7 @@ function installApi(): { api: WeKnoraApi; emit: (event: WeKnoraStreamEvent) => v
 		loadMessages: vi.fn(async () => []),
 		deleteSession: vi.fn(async () => undefined),
 		getChunk: vi.fn(async () => ({ content: "chunk" })),
+		getFile: vi.fn(async () => ({ dataUrl: "data:image/png;base64,", contentType: "image/png" })),
 		ask: vi.fn(async () => ({ requestId: "r1", sessionId: "s1" })),
 		cancel: vi.fn(async () => undefined),
 		onStreamEvent: vi.fn((next: (event: WeKnoraStreamEvent) => void) => {

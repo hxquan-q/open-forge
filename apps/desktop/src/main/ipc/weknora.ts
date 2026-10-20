@@ -7,6 +7,7 @@ import {
 	type WeKnoraAskInput,
 	type WeKnoraDeleteSessionInput,
 	type WeKnoraGetChunkInput,
+	type WeKnoraGetFileInput,
 	type WeKnoraListParams,
 	type WeKnoraLoadMessagesInput,
 	type WeKnoraService,
@@ -22,6 +23,7 @@ export const WEKNORA_CHANNELS = {
 	LOAD_MESSAGES: "vetta:weknora:load-messages",
 	DELETE_SESSION: "vetta:weknora:delete-session",
 	GET_CHUNK: "vetta:weknora:get-chunk",
+	GET_FILE: "vetta:weknora:get-file",
 	ASK: "vetta:weknora:ask",
 	CANCEL: "vetta:weknora:cancel",
 	STREAM_EVENT: "vetta:weknora:stream-event",
@@ -37,6 +39,7 @@ export const WEKNORA_INVOKE_CHANNELS = [
 	WEKNORA_CHANNELS.LOAD_MESSAGES,
 	WEKNORA_CHANNELS.DELETE_SESSION,
 	WEKNORA_CHANNELS.GET_CHUNK,
+	WEKNORA_CHANNELS.GET_FILE,
 	WEKNORA_CHANNELS.ASK,
 	WEKNORA_CHANNELS.CANCEL,
 ] as const;
@@ -87,6 +90,11 @@ export function registerWeKnoraIpc(
 	// AC-14：取 chunk 原文（只读数据面）。薄层转调（缓存与失败反馈在渲染层 chunkClient，这里零业务逻辑）。
 	ipcMain.handle(WEKNORA_CHANNELS.GET_CHUNK, async (_event, input: unknown) =>
 		service.getChunkById(parseGetChunkInput(input)),
+	);
+
+	// F3 v2：取内嵌图片（只读数据面，data URL）。薄层转调（缓存与失败回退在渲染层 fileClient / 弹层）。
+	ipcMain.handle(WEKNORA_CHANNELS.GET_FILE, async (_event, input: unknown) =>
+		service.getFileData(parseGetFileInput(input)),
 	);
 
 	ipcMain.handle(WEKNORA_CHANNELS.ASK, async (_event, input: unknown) => service.ask(parseAskInput(input)));
@@ -163,6 +171,11 @@ function parseDeleteSessionInput(value: unknown): WeKnoraDeleteSessionInput {
 function parseGetChunkInput(value: unknown): WeKnoraGetChunkInput {
 	const input = requireObject(value, "get-chunk");
 	return { chunkId: requireNonEmptyString(input.chunkId, "chunkId") };
+}
+
+function parseGetFileInput(value: unknown): WeKnoraGetFileInput {
+	const input = requireObject(value, "get-file");
+	return { fileRef: requireNonEmptyString(input.fileRef, "fileRef") };
 }
 
 function parseAskInput(value: unknown): WeKnoraAskInput {
