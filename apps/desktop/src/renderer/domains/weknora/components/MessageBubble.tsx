@@ -3,23 +3,11 @@
 import { RendererMarkdownContent } from "@shared/components/RendererMarkdownContent";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { WeKnoraChatMessage, WeKnoraErrorCode } from "../atoms";
+import type { WeKnoraChatMessage } from "../atoms";
 import { stripCitationTags } from "../services/citationTag";
+import { WEKNORA_ERROR_KEYS } from "../services/weknoraErrorKeys";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ThinkingDots } from "./ThinkingDots";
-
-/** 错误码 → i18n key（主进程只产 code，中文在渲染层查表，AC-21 / 红线 C4）。 */
-const ERROR_KEYS = {
-	not_configured: "error.not_configured",
-	network: "error.network",
-	unauthorized: "error.unauthorized",
-	capability_missing: "error.capability_missing",
-	tenant_required: "error.tenant_required",
-	timeout: "error.timeout",
-	stream_error: "error.stream_error",
-	stream_interrupted: "error.stream_interrupted",
-	unknown: "error.unknown",
-} as const satisfies Record<WeKnoraErrorCode, string>;
 
 export interface MessageBubbleProps {
 	readonly message: WeKnoraChatMessage;
@@ -58,7 +46,7 @@ export function MessageBubble({ message }: MessageBubbleProps): JSX.Element {
 	} else if (message.status === "interrupted") {
 		statusLabel = t("message.interrupted");
 	} else if (message.status === "failed") {
-		statusLabel = t(message.errorCode ? ERROR_KEYS[message.errorCode] : "error.unknown", {
+		statusLabel = t(message.errorCode ? WEKNORA_ERROR_KEYS[message.errorCode] : "error.unknown", {
 			detail: message.errorDetail ?? "",
 		});
 	}
