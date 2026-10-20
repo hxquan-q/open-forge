@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@vetta-org/ui";
 import { useTranslation } from "react-i18next";
 import { McpServerForm } from "./McpServerForm";
@@ -16,14 +17,20 @@ export function McpEditDialog({ model }: { model: McpSettingsModel }): JSX.Eleme
 				if (!next) model.onCancelEditServer();
 			}}
 		>
-			<DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-[520px]">
-				<DialogHeader>
-					<DialogTitle>{t("editingServer")}</DialogTitle>
-					<DialogDescription className="truncate">
+			<DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-[500px] rounded-2xl p-6 gap-5 border border-border/60 bg-popover shadow-2xl">
+				<DialogHeader className="gap-1 pr-0 text-left">
+					<DialogTitle className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+						<span
+							className="icon-[solar--server-2-linear] h-4.5 w-4.5 text-primary shrink-0"
+							aria-hidden="true"
+						/>
+						<span>{t("editingServer")}</span>
+					</DialogTitle>
+					<DialogDescription className="text-xs text-muted-foreground leading-normal truncate">
 						{name ? t("mcpStore.editServerHint", { name }) : t("mcpStore.editServerFallback")}
 					</DialogDescription>
 				</DialogHeader>
-				<div className="mt-2">
+				<div className="min-w-0">
 					{name ? (
 						<McpServerForm
 							form={model.serverForm}

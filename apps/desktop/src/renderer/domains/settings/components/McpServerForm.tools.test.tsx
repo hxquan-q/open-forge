@@ -11,7 +11,7 @@ import { emptyMcpServer, type McpServerFormState } from "./useMcpSettingsModel";
 
 // theme-ui 的 SegmentedControl 在测试解析下命中 react/react-dom 版本错配（useId 空 dispatcher）；
 // 传输类型切换不在本测试范围，替换为静态桩。
-vi.mock("@shared/components/ui/segmented-control", () => ({
+vi.mock("@vetta-org/theme-ui/shared", () => ({
 	SegmentedControl: () => null,
 }));
 

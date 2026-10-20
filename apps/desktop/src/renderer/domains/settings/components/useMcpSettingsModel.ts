@@ -82,10 +82,14 @@ export interface McpSettingsModel {
 	clearJsonError: () => void;
 	saveConfig: (newConfig: McpConfigData) => Promise<void>;
 	onModeSwitch: (mode: McpEditMode) => void;
+	/** 弹窗内的表单/JSON 切换：只改模式，不关闭添加/编辑弹窗。 */
+	onDialogModeSwitch: (mode: McpEditMode) => void;
 	busyPresetName: string | null;
 	onStartAddServer: () => void;
 	onCancelAddServer: () => void;
 	onAddServer: () => Promise<void>;
+	/** 从弹窗 JSON 模式合并新增 server；成功后关闭添加弹窗。 */
+	onAddServersFromJson: () => Promise<boolean>;
 	onToggleEditServer: (name: string) => void;
 	onCancelEditServer: () => void;
 	onUpdateServer: (oldName: string) => Promise<void>;
@@ -574,40 +578,75 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 		[closeEditor, config, editingServer],
 	);
 
+	const parseJsonConfig = useCallback(
+		(text: string): McpConfigData | null => {
+			try {
+				const parsed = JSON.parse(text) as McpConfigData;
+				if (!parsed.mcpServers || typeof parsed.mcpServers !== "object") {
+					setJsonError(t("jsonMustHaveMcpServers"));
+					return null;
+				}
+				for (const [name, server] of Object.entries(parsed.mcpServers)) {
+					const type = (server as { type?: string }).type ?? "stdio";
+					if (type !== "stdio" && type !== "http") {
+						setJsonError(t("jsonTypeMustBeStdioOrHttp", { name }));
+						return null;
+					}
+					if (type === "http") {
+						const httpServer = server as { url?: unknown };
+						if (!httpServer.url || typeof httpServer.url !== "string") {
+							setJsonError(t("jsonMissingUrl", { name }));
+							return null;
+						}
+					} else {
+						const stdioServer = server as { command?: unknown };
+						if (!stdioServer.command || typeof stdioServer.command !== "string") {
+							setJsonError(t("jsonMissingCommand", { name }));
+							return null;
+						}
+					}
+				}
+				return parsed;
+			} catch (e) {
+				setJsonError(t("jsonParseError", { msg: (e as Error).message }));
+				return null;
+			}
+		},
+		[t],
+	);
+
 	const handleJsonSave = useCallback(async () => {
-		try {
-			const parsed = JSON.parse(jsonText) as McpConfigData;
-			if (!parsed.mcpServers || typeof parsed.mcpServers !== "object") {
-				setJsonError(t("jsonMustHaveMcpServers"));
-				return;
-			}
-			for (const [name, server] of Object.entries(parsed.mcpServers)) {
-				const type = (server as { type?: string }).type ?? "stdio";
-				if (type !== "stdio" && type !== "http") {
-					setJsonError(t("jsonTypeMustBeStdioOrHttp", { name }));
-					return;
-				}
-				if (type === "http") {
-					const httpServer = server as { url?: unknown };
-					if (!httpServer.url || typeof httpServer.url !== "string") {
-						setJsonError(t("jsonMissingUrl", { name }));
-						return;
-					}
-				} else {
-					const stdioServer = server as { command?: unknown };
-					if (!stdioServer.command || typeof stdioServer.command !== "string") {
-						setJsonError(t("jsonMissingCommand", { name }));
-						return;
-					}
-				}
-			}
-			setJsonError(null);
-			await saveConfig(parsed);
-			recordSettingsUsage({ tab: "mcp", action: "saved", target: "json-config" });
-		} catch (e) {
-			setJsonError(t("jsonParseError", { msg: (e as Error).message }));
+		const parsed = parseJsonConfig(jsonText);
+		if (!parsed) return;
+		setJsonError(null);
+		await saveConfig(parsed);
+		recordSettingsUsage({ tab: "mcp", action: "saved", target: "json-config" });
+	}, [jsonText, parseJsonConfig, saveConfig]);
+
+	const handleAddServersFromJson = useCallback(async (): Promise<boolean> => {
+		if (!config) return false;
+		const parsed = parseJsonConfig(jsonText);
+		if (!parsed) return false;
+		const names = Object.keys(parsed.mcpServers);
+		if (names.length === 0) {
+			setJsonError(t("jsonMustIncludeServer"));
+			return false;
 		}
-	}, [jsonText, saveConfig, t]);
+		try {
+			await saveConfig({
+				...config,
+				mcpServers: { ...config.mcpServers, ...parsed.mcpServers },
+			});
+			setJsonError(null);
+			setAddingServer(false);
+			setMode("visual");
+			recordSettingsUsage({ tab: "mcp", action: "added", target: "json-config", value: String(names.length) });
+			return true;
+		} catch (error) {
+			setJsonError(t("jsonSaveError", { msg: error instanceof Error ? error.message : String(error) }));
+			return false;
+		}
+	}, [config, jsonText, parseJsonConfig, saveConfig, t]);
 
 	const handleModeSwitch = useCallback(
 		(newMode: McpEditMode) => {
@@ -619,6 +658,18 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 			setAddingServer(false);
 			setEditingServer(null);
 			setServerForm({ ...emptyMcpServer });
+			recordSettingsUsage({ tab: "mcp", action: "changed", target: "edit-mode", value: newMode });
+		},
+		[config],
+	);
+
+	const handleDialogModeSwitch = useCallback(
+		(newMode: McpEditMode) => {
+			if (newMode === "json" && config) {
+				setJsonText(JSON.stringify(config, null, 2));
+			}
+			setJsonError(null);
+			setMode(newMode);
 			recordSettingsUsage({ tab: "mcp", action: "changed", target: "edit-mode", value: newMode });
 		},
 		[config],
@@ -649,6 +700,7 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 		clearJsonError: () => setJsonError(null),
 		saveConfig,
 		onModeSwitch: handleModeSwitch,
+		onDialogModeSwitch: handleDialogModeSwitch,
 		onStartAddServer: () => {
 			setAddingServer(true);
 			closeEditor();
@@ -659,6 +711,7 @@ export function useMcpSettingsModel(options?: McpSettingsModelOptions): McpSetti
 			setServerForm({ ...emptyMcpServer });
 		},
 		onAddServer: handleAddServer,
+		onAddServersFromJson: handleAddServersFromJson,
 		onToggleEditServer: toggleEditServer,
 		onCancelEditServer: closeEditor,
 		onUpdateServer: handleUpdateServer,
