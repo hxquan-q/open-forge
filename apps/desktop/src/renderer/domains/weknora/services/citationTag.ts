@@ -96,26 +96,53 @@ function incompleteCitationPrefixStart(text: string): number {
 	return isCitationPrefix ? start : -1;
 }
 
+/** 段 + 它在原文中的区间(半开区间 [start, end))。 */
+export interface CitationSpan {
+	readonly start: number;
+	readonly end: number;
+	readonly segment: CitationSegment;
+}
+
+/**
+ * 带原文区间的切段实现(T03 渲染管道的地基):段的先后顺序与 {@link parseCitationTags}
+ * 完全一致,另给出每段的原文下标——渲染层需要按原文回放某一段(如 kb 标签维持现状文本)
+ * 时,直接 `text.slice(span.start, span.end)` 即可,不必从解析后的属性反序列化。
+ */
+export function parseCitationSpans(text: string): readonly CitationSpan[] {
+	if (text === "") return [];
+	const incompleteStart = incompleteCitationPrefixStart(text);
+	const body = incompleteStart < 0 ? text : text.slice(0, incompleteStart);
+	const spans: CitationSpan[] = [];
+	let cursor = 0;
+	for (const match of body.matchAll(KB_WEB_TAG_RE)) {
+		// matchAll 的类型标注把 index 标成可选;按规范每次迭代必带,兜底 0 不改变行为。
+		const start = match.index ?? 0;
+		if (start > cursor) {
+			spans.push({ start: cursor, end: start, segment: { type: "text", text: body.slice(cursor, start) } });
+		}
+		const end = start + match[0].length;
+		spans.push({ start, end, segment: { type: "tag", tag: parseTag(match[0]) } });
+		cursor = end;
+	}
+	if (cursor < body.length) {
+		spans.push({ start: cursor, end: body.length, segment: { type: "text", text: body.slice(cursor) } });
+	}
+	if (incompleteStart >= 0) {
+		spans.push({
+			start: incompleteStart,
+			end: text.length,
+			segment: { type: "incomplete", raw: text.slice(incompleteStart) },
+		});
+	}
+	return spans;
+}
+
 /**
  * 把文本切成 text/tag/incomplete 段序列。完整标签(含缺属性的)都是 tag 段,由 UI 决定
  * 降级形态;解析永不抛错、永不丢正文。
  */
 export function parseCitationTags(text: string): readonly CitationSegment[] {
-	if (text === "") return [];
-	const incompleteStart = incompleteCitationPrefixStart(text);
-	const body = incompleteStart < 0 ? text : text.slice(0, incompleteStart);
-	const segments: CitationSegment[] = [];
-	let cursor = 0;
-	for (const match of body.matchAll(KB_WEB_TAG_RE)) {
-		// matchAll 的类型标注把 index 标成可选;按规范每次迭代必带,兜底 0 不改变行为。
-		const start = match.index ?? 0;
-		if (start > cursor) segments.push({ type: "text", text: body.slice(cursor, start) });
-		segments.push({ type: "tag", tag: parseTag(match[0]) });
-		cursor = start + match[0].length;
-	}
-	if (cursor < body.length) segments.push({ type: "text", text: body.slice(cursor) });
-	if (incompleteStart >= 0) segments.push({ type: "incomplete", raw: text.slice(incompleteStart) });
-	return segments;
+	return parseCitationSpans(text).map((span) => span.segment);
 }
 
 /** 剥除全部标签段与尾部残缺段,只保留普通文本(思考区/流式期间共用,AC-5/AC-7)。 */
