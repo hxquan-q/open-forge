@@ -152,10 +152,10 @@ export function WeKnoraPageView({
 
 	return (
 		<div className="relative flex h-full w-full flex-1 flex-col overflow-hidden">
-			<div className="drag-region h-12 shrink-0" />
-
 			{/* AC-1/AC-1c：左右内边距 32→12px（px-8→px-3）、页头下边距 16→8px（pb-4→pb-2），
-			    收掉顶部那一大块留白；上方 drag-region h-12（48px）是窗口拖拽硬约束，高度不动。 */}
+			    收掉顶部那一大块留白。原先这里有一条 `drag-region h-12`（48px 纯空白带），本 feature 删除它：
+			    窗口拖拽由外壳页头承担——`PageHeaderFrame` 自身即 `drag-region`，且 `/weknora` 走 content 路由
+			    ⇒ `MainContentFrame` 必然渲染它（证据见 00-requirement.md），故本页不再需要自己的拖拽带。 */}
 			<header className="shrink-0 px-3 pb-2">
 				<div className="flex items-end justify-between gap-4">
 					<div className="flex items-center gap-2">

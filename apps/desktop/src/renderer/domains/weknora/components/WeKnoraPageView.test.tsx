@@ -61,18 +61,17 @@ beforeEach(async () => {
 });
 
 describe("WeKnoraPageView · 页头贴边与留白收紧（AC-1/1b/1c/2）", () => {
-	it("页头左右 12px、下边距 8px；内容行同宽、下边距 12px；拖拽区 h-12 保留", () => {
+	it("页头左右 12px、下边距 8px；内容行同宽、下边距 12px；页面不再自带拖拽带", () => {
 		const root = renderView().firstElementChild as HTMLElement;
-		const dragRegion = root.querySelector(".drag-region") as HTMLElement;
 		const header = root.querySelector("header") as HTMLElement;
-		// 根节点下除拖拽区与页头外的那个直接子元素即内容行（不靠下标，避免顺序脆弱）。
-		const contentRow = Array.from(root.children).find(
-			(child) => child !== dragRegion && child !== header,
-		) as HTMLElement;
+		// 根节点下除页头外的那个直接子元素即内容行（不靠下标，避免顺序脆弱）。
+		const contentRow = Array.from(root.children).find((child) => child !== header) as HTMLElement;
 
-		// 窗口拖拽硬约束：拖拽区仍在且高度不变。
-		expect(dragRegion).toBeTruthy();
-		expect(dragRegion.classList.contains("h-12")).toBe(true);
+		// 契约变更（weknora-top-whitespace-fix AC-1）：本页原先自带 `drag-region h-12`（48px 纯空白带），
+		// 现已删除——窗口拖拽由外壳页头承担（`PageHeaderFrame` 自身即 `drag-region`，全站 content 路由都会
+		// 渲染它），故本页不应再出现任何 `.drag-region` 节点。旧用例断言「拖拽区 h-12 保留」钉的是上一轮的
+		// 错误假设（把这条纯空白带当成拖拽硬约束），经队长授权按新语义调整。
+		expect(root.querySelector(".drag-region")).toBeNull();
 
 		// 页头贴边：左右 32→12px、下边距 16→8px。
 		expect(header.classList.contains("px-3")).toBe(true);
