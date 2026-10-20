@@ -132,14 +132,49 @@ export async function toDocxBuffer(messages: readonly WeKnoraMessage[]): Promise
 const ILLEGAL_FILE_NAME_RE = /[<>:"/\\|?*\u0000-\u001f]/g;
 
 /**
+ * 基名的 **UTF-8 字节**上限：200。
+ *
+ * 多数文件系统单段名上限为 255 字节，这里给扩展名（`.docx` = 5B）与去重后缀（` (100)` = 6B）
+ * 留足余量 —— 200 + 5 + 6 = 211 < 255。取 200 而非贴近 255，是给「基名 + 扩展名 + 序号」的
+ * 组合留安全边界（红线 C7 无关；这是数据面约束，非文件体积）。
+ */
+export const MAX_FILE_NAME_BYTES = 200;
+
+/** 单例 UTF-8 编码器（`TextEncoder` 在渲染进程 / jsdom / node 均可用）。 */
+const utf8Encoder = new TextEncoder();
+
+/**
+ * 按 **UTF-8 字节**截断，且不切坏多字节字符：从尾部整字符丢弃，直到不超 `maxBytes`。
+ *
+ * 逐**码点**（`for…of`）遍历，故代理对（emoji 等）不会被切成半个 —— 只有整码点的字节数
+ * 放不下时才停。恰好等于上限时原样返回（不误截）。
+ */
+function truncateToUtf8Bytes(value: string, maxBytes: number): string {
+	let bytes = 0;
+	let end = 0;
+	for (const char of value) {
+		const size = utf8Encoder.encode(char).length;
+		if (bytes + size > maxBytes) break;
+		bytes += size;
+		end += char.length;
+	}
+	return end >= value.length ? value : value.slice(0, end);
+}
+
+/**
  * 会话标题 → 安全文件名基名（**不含扩展名**）：非法字符换 `_`、去首尾空白、空则回退（AC-7）。
+ *
+ * **超长按 UTF-8 字节截断**（{@link MAX_FILE_NAME_BYTES}）：会话标题可达数百字（≈900B），
+ * 不截断会超单段名上限导致 `ENAMETOOLONG`（writeFile 抛错 / 批量落 failed）。截断只丢尾部，
+ * 前缀内容保留；截断后同名前缀的会话仍由 {@link uniqueFileNames} 追加 ` (2)` / ` (3)` 去重。
  *
  * 扩展名（`.txt` / `.md` / `.docx`）由调用方按格式追加 —— 同批文件共用同一扩展名，
  * 故重名去重只需对基名做（见 {@link uniqueFileNames}）。
  */
 export function safeFileName(title: string): string {
 	const normalized = title.trim().replace(ILLEGAL_FILE_NAME_RE, "_");
-	return normalized || i18n.t("weknora:conversation.untitled");
+	const base = normalized || i18n.t("weknora:conversation.untitled");
+	return truncateToUtf8Bytes(base, MAX_FILE_NAME_BYTES);
 }
 
 /**

@@ -12,6 +12,7 @@ import {
 	exportFileNames,
 	type LoadMessagesPage,
 	loadAllMessages,
+	MAX_FILE_NAME_BYTES,
 	safeFileName,
 	serializeExport,
 	toDocxBuffer,
@@ -346,11 +347,31 @@ describe("AC-7 · 文件名净化与批量重名", () => {
 		expect(safeFileName("会话·2026 ✅【重要】")).toBe("会话·2026 ✅【重要】");
 	});
 
-	it("超长标题不崩溃且内容保留（AC 未要求截断；>255 字节为已知风险，见 notes）", () => {
-		const long = "长".repeat(300);
-		const name = safeFileName(long);
-		expect(name).toBe(long);
-		expect(exportFileName(long, "txt")).toBe(`${long}.txt`);
+	// CP3 授权更新（原用例反向锁死「不截断」）：超长标题改按 UTF-8 字节截断（≤200B）+ 截断后去重尾序号。
+	// 保意：原「超长不崩溃、内容尽量保留」的两条期望仍在（截断后前缀逐字保留、exportFileName 追加扩展名），
+	// 只是从「原样返回」演化为「按字节截断」——动机见 06-review-fixes.md ① 与 04-impl/CP3-notes.md。
+	it("超长标题按 UTF-8 字节截断（≤上限、不切坏多字节字符、前缀保留；截断后重名加尾序号）", () => {
+		// 中文长名：300 个「长」= 900B → 截到 66 个字符（198B；第 67 个到 201B 会超限）。
+		const longZh = "长".repeat(300);
+		const zhName = safeFileName(longZh);
+		expect(zhName).toBe("长".repeat(66));
+		expect(new TextEncoder().encode(zhName).length).toBeLessThanOrEqual(MAX_FILE_NAME_BYTES);
+		expect(longZh.startsWith(zhName)).toBe(true); // 只丢尾部，前缀内容逐字保留
+		expect(exportFileName(longZh, "txt")).toBe(`${zhName}.txt`);
+
+		// ASCII 长名：300 个 'a' = 300B → 截到上限字节数。
+		const longAscii = "a".repeat(300);
+		expect(safeFileName(longAscii)).toBe("a".repeat(MAX_FILE_NAME_BYTES));
+
+		// 恰好边界：整好等于上限不截；多 1 字节才截（ASCII 与多字节各一）。
+		const exactlyLimit = "a".repeat(MAX_FILE_NAME_BYTES);
+		expect(safeFileName(exactlyLimit)).toBe(exactlyLimit);
+		expect(safeFileName(`${exactlyLimit}b`)).toBe(exactlyLimit);
+		expect(safeFileName("长".repeat(66))).toBe("长".repeat(66)); // 198B，未超
+		expect(safeFileName("长".repeat(67))).toBe("长".repeat(66)); // 201B，截回 66 字
+
+		// 截断后重名：两个超长同名会话仍按出现顺序加「尾序号」，不覆盖。
+		expect(exportFileNames([longZh, longZh], "txt")).toEqual([`${zhName}.txt`, `${zhName} (2).txt`]);
 	});
 
 	it("重名加序号且大小写不敏感（避免 Windows/macOS 互相覆盖）", () => {
