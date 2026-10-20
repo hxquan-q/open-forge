@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0332` | `verifying` | PLAN-0019 | 图谱调查与当前会话协作已接入 intake；29 例、quick/guards 通过，原生新上下文只读审查已实际派发回收；Claude 端与完整开发流程待使用验收；serial。 |
 | `TASK-0326` | `in_progress` | PLAN-0019 | 完整角色路由：为 planner/triage/lessons/ui-reviewer 建立有界结构化输出、确定性守卫与跨工具执行合同；serial，scripts/agents 串行。 |
 | `TASK-0327` | `in_progress` | PLAN-0019 | 持续编排：多 ready Task 领取、并发上限、停滞与熔断、周期报告；serial，与 0322–0326 共享控制器路径。 |
 | `TASK-0328` | `verifying` | PLAN-0019 | UI 接线与合同测试已实现：显式授权、六主题运行证据、独立视觉评审、清理与绑定；真实 UI 验收延期；serial。 |

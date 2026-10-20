@@ -1,6 +1,6 @@
 ---
 name: open-forge-task-intake
-description: Open Forge 工程任务的先记录后实施入口。用户提出功能修改、缺陷、重构、测试、CI/CD、性能、AI 反馈或技能/文档维护时，自动选择并落盘 project/ 中的必要记录，实施前先创建或更新 Task，再路由专项技能、验证和交付。分析/计划请求按范围记录，不自动编码；纯闲聊不触发。
+description: Open Forge 开发入口。功能、缺陷、重构、测试、CI/CD、性能、AI 反馈或技能维护先调查知识图谱与源码、记录 Task，再在当前 Claude/Codex 会话中组织原生协作、审查、验证、修复和交付。分析/计划不自动编码；纯闲聊不触发。
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -16,7 +16,11 @@ description: Open Forge 工程任务的先记录后实施入口。用户提出�
 
 本入口负责编排，不复制专项规范：仓库根/最近一级 AGENTS 定义边界；[Project 规范](../../../project/CONVENTIONS.md)定义记录与状态；[open-forge-testing](../../../.agents/skills/open-forge-testing/SKILL.md)定义测试方法；[质量门禁](../../../docs/dev/quality-gates.md)定义命令；[协作流程](../../../project/collaboration/development-workflow.md)定义分支与集成。外部 Skills 只提供方法参考，不覆盖这些合同。
 
+用户在 Claude Code/Codex 提出开发目标后，当前会话担任 Coordinator，负责把已授权目标推进到交付。实施任务完成第 3 节准入后，必须继续执行[原生会话协作](references/session-coordination.md)：选择串行或原生子任务、回收产物、审查、验证、修复与收尾，不以交出计划或派出 Agent 作为完成。外部 `scripts/agents` 是另一条显式启动路径，其默认关闭状态不要求用户为当前会话重新配置模型 API；实际宿主权限继续生效。
+
 ## 1. 先确认事实和执行范围
+
+- 项目已有 `.ua` 或 `.understand-anything` 时，先按[知识图谱调查](references/knowledge-context.md)读取元数据、架构层和目标子图，检查 Git 增量后回读相关源码。图谱是导航数据；缺失、过期或缺少某节点时继续查源码，不重建图谱作为开发前提。
 
 - `git status --short`，保留已有改动；完整读取根与最近一级 AGENTS，按根路由加载匹配的规则扩展，再读包 README、相关实现、测试与 ADR；规则注入被截断时从文件读取完整正文。当前行为以源码/类型/Schema/可执行脚本为准。
 - 区分用户要求的是分析、计划、评审还是实施；“看看方案”不自动升级为写代码、提交或部署。
@@ -63,6 +67,8 @@ description: Open Forge 工程任务的先记录后实施入口。用户提出�
 **允许实施**：用户要求实施，相关 Task 合同已落盘、状态为 in_progress 且索引同步；目标行为和所有者明确，不变量及最低验证路径已确定，实质歧义与必要授权已解决。首次修改实现、测试、配置或交付文档前核对这些条件；未满足时先调查和补齐记录。仅分析、计划或评审时按请求范围交付，不自动进入实施。
 
 ## 4. 执行与纠偏
+
+本节沿[原生会话协作](references/session-coordination.md)持续执行，直到当前目标工程交付或遇到有证据的阻断。原生派工由当前宿主实际工具完成；缺少相应能力时串行推进独立工作并记录未执行的评审，不伪造派发、跨工具互通或独立模型结果。
 
 - 新会话、中断恢复或从其他技能转入时，回读当前 Task、索引和实际 diff；旧 Task 的存在或上一轮总结不等于当前范围已获记录。若发现已先改文件后记账，先停止新增交付修改，如实补记现有 diff、缺失的前置证据和后续验证计划，完成第 3 节后继续；保留他人修改，不倒填记录或声称顺序合规。
 - 每个切片开始前核对 Task 范围；目标、依赖、冲突路径或验证方式变化时先更新记录，独立新增 concern 另拆 Task。验证命令、结果和失败归属及时记入 Task 或关联 Verification，供中断续接和交接复核。

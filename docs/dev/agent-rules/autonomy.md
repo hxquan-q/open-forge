@@ -1,7 +1,9 @@
 <!-- Copyright The Open Forge contributors. -->
 # 自主研发协议
 
-本扩展在调度 Task、运行外部开发 Agent、导入评审/批准、集成或控制发布时必读。它服务开发协作；产品 Runtime 仍遵循原有合同。
+本扩展在调度 Task、运行外部开发 Agent、导入评审/批准、集成或控制发布时必读。用户在现有 Claude Code/Codex 中开发时，经[统一入口](../../../.agents/skills/open-forge-task-intake/SKILL.md)执行[原生会话协作](../../../.agents/skills/open-forge-task-intake/references/session-coordination.md)，由当前宿主实际工具组织工作，无需为了此路径重配模型 API 或启用外部控制器。
+
+下文的 policy/lease、可信签名、执行证明和服务回执约束 `scripts/agents` 外部控制器，不把它的 level=0 当成当前宿主不能开发或派原生子任务的证据，也不通过原生会话放宽其规则。产品 Runtime 继续遵循各自合同。宿主自身的权限、用户闸门、Git/测试/交付规则对两条开发路径均有效。
 
 ## 执行顺序
 

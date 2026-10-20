@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| .ua 图谱全局结构/增量与现有开发入口核对：区分原生会话协作、产品 Agent Team/AllstarCoding 和后台 scripts/agents，复用统一入口落实自动开发 | [RESEARCH-0033](RESEARCH-0033-graph-and-native-development-workflow.md) |
 | 设计插件参考项目与许可证审计（「对话出界面」产品/开源项目/源码定位工具三类分流、可直接复用模块与禁复制清单，2026-10-18 核对） | [RESEARCH-0031](RESEARCH-0031-design-reference-projects-license-audit.md) |
 | 受管 fd/rg 工具 inspect() 解析记录与 CLI/Desktop 双 doctor 出口可行性核对（草案四处修正：source 枚举跨进程收敛、version 标记落点、CLI 注册点实名、Desktop 桥接需导出 helper；CometixCode /doctor 先例） | [RESEARCH-0030](RESEARCH-0030-managed-coding-tool-doctor-inspection.md) |
 | 上游消息列表重构（ADR-0146/0147）同步评估：不建议整体同步（79 个双改文件、本仓已持治理/attach 等价物、P7 上游亦未完成），按价值拆小件吸收并保留回馈机会 | [RESEARCH-0029](RESEARCH-0029-upstream-message-list-refactor-assessment.md) |

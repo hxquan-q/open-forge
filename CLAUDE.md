@@ -5,7 +5,7 @@
 
 ## 按需读取
 
-- 开发任务进入 [open-forge-task-intake](.agents/skills/open-forge-task-intake/SKILL.md)。
+- 开发任务进入 [open-forge-task-intake](.agents/skills/open-forge-task-intake/SKILL.md)，按其图谱调查与原生会话协作流程推进当前目标；共享正文由 `.claude/skills` 指向 `.agents/skills`。
 - 拆分提交、执行提交或生成提交报告之前，必须读取 [Claude 专属补充](docs/dev/agent-rules/claude.md)。其中保留原有的拆分要求、提交前动作顺序和七位 Hash 报告格式。
 - 术语从 [CONTEXT.md](CONTEXT.md) 检索，项目执行状态从 [Project Context](project/context/CONTEXT.md) 读取，二者不是同一个文档职责。
 - 启动或验证 Desktop 必须先获得当前任务授权并读 [开发验证流程](docs/dev/README.md)，不从本入口提供默认启动真实用户环境的命令。

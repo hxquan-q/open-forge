@@ -58,6 +58,8 @@ Desktop 主进程部分目录还有更细规则；修改对应目录时必须继
 没有包级 `AGENTS.md` 的目录遵循本文件，并以该包 README、测试和现有代码模式为补充。
 ## 常见任务入口
 
+项目已有知识图谱时，先按[知识图谱调查](../../../.agents/skills/open-forge-task-intake/references/knowledge-context.md)检查 `.ua`（兼容 `.understand-anything`）的版本、目标子图和 Git 增量，再回读源码。图谱是历史导航，不覆盖本文件的领域边界；普通开发不以重建图谱为前提。
+
 | 任务 | 首先阅读 |
 | --- | --- |
 | 选择质量门禁与测试范围 | [`docs/dev/quality-gates.md`](../../../docs/dev/quality-gates.md) |
