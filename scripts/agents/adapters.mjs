@@ -84,7 +84,7 @@ export function executionPrompt(role, task, runContract, request) {
 		lessons:
 			'{"status":"proposed|blocked","lessons":[{"category":"rework|unwanted-merge|verification","rule":"...","reason":"...","evidence":{"kind":"commit|run","id":"..."}}]}',
 		"ui-reviewer":
-			'{"verdict":"approve|changes-requested|insufficient-evidence","proven":[],"gaps":[],"findings":[{"severity":"blocker|high|medium|low","file":"path","reason":"evidence"}]}',
+			'{"verdict":"approve|changes-requested|insufficient-evidence","artifactDigest":"sha256 of the exact runtime report checks","coverage":["mono/light","mono/dark","sand/light","sand/dark","default/light","default/dark"],"proven":[],"gaps":[],"findings":[{"severity":"blocker|high|medium|low","file":"path","reason":"DESIGN rule and evidence"}]}',
 	};
 	const instruction = writes
 		? "Use only the declared write paths. Finish with a clean, committed worktree. Do not push."

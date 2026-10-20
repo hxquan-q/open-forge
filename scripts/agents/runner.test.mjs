@@ -7,13 +7,18 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { digest } from "./contracts.mjs";
 import { exportEvidence } from "./evidence.mjs";
+import { testExecutionProof } from "./execution-proof-fixture.mjs";
 import { git, snapshot } from "./git.mjs";
 import { claim } from "./leases.mjs";
-import { executeAdapter } from "./runner.mjs";
+import { codeBinding, executeAdapter as executeAdapterUnderTest } from "./runner.mjs";
 import { createStore } from "./store.mjs";
-import { verifyRun } from "./verify.mjs";
+import { verifyRun, visualReviewRequest } from "./verify.mjs";
 
 const roots = [];
+function executeAdapter(context) {
+	testExecutionProof({ ...context, root: context.runContract.worktree });
+	return executeAdapterUnderTest(context);
+}
 function fixture() {
 	const root = mkdtempSync(join(tmpdir(), "forge-autonomy-runner-"));
 	roots.push(root);
@@ -94,6 +99,105 @@ afterEach(() => {
 });
 
 describe("implementation and independent review through real processes and Git", () => {
+	it("does not mark an exit-zero but empty verification report as automatically repairable", async () => {
+		const context = fixture();
+		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
+		await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
+		await expect(
+			verifyRun({
+				...context,
+				resolveCommand: (_id, _contract, path) => [
+					process.execPath,
+					"--input-type=module",
+					"-e",
+					`import{writeFileSync}from'node:fs';writeFileSync(${JSON.stringify(path)},JSON.stringify({success:true,numTotalTests:0,numPassedTests:0,numFailedTests:0,testResults:[]}));`,
+				],
+			}),
+		).rejects.toThrow();
+		expect(context.store.read().runs[context.token.runId]).toMatchObject({
+			status: "verification-failed",
+			verificationRetryable: false,
+		});
+	});
+	it("retains UI runtime artifacts pending independent visual review, then verifies the exact cached result", async () => {
+		const context = fixture();
+		const plan = { version: 1, steps: [{ action: "click", selector: "button" }] };
+		writeFileSync(join(context.repo, "ui-plan.json"), JSON.stringify(plan));
+		git(context.repo, ["add", "--", "ui-plan.json"]);
+		git(context.repo, ["commit", "--quiet", "-m", "UI plan", "--", "ui-plan.json"]);
+		context.policy.capabilities.push("verify-ui");
+		context.runContract.policyDigest = digest(context.policy);
+		context.runContract.baseCommit = snapshot(context.repo).head;
+		context.runContract.uiAcceptance = { authorized: true, plan: "ui-plan.json", planDigest: digest(plan) };
+		context.runContract.checks.push("ui");
+		context.settings.adapters.push({
+			...context.settings.adapters[1],
+			id: "visual",
+			family: "family-visual",
+			roles: ["ui-reviewer"],
+			command: [
+				process.execPath,
+				"--input-type=module",
+				"-e",
+				"let input='';for await(const chunk of process.stdin)input+=chunk;const request=JSON.parse(input.trim().split('\\n').at(-1)).requestData;console.log(request);",
+			],
+		});
+		context.runContract.adaptersDigest = digest(context.settings);
+		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
+		await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
+		let uiExecutions = 0;
+		const resolveCommand = (id, _contract, reportPath) => {
+			if (id === "tests") return [process.execPath, "feature.test.mjs", reportPath];
+			if (id !== "ui") return [process.execPath, "--check", "feature.test.mjs"];
+			uiExecutions++;
+			if (uiExecutions > 1)
+				return [process.execPath, "-e", "throw Error('cached UI runtime must not execute twice')"];
+			const binding = digest(codeBinding(context.runContract, snapshot(context.repo)));
+			return [
+				process.execPath,
+				"--input-type=module",
+				"-e",
+				`import {writeFileSync} from 'node:fs';import{dirname,join}from'node:path';import{createHash}from'node:crypto';const path=${JSON.stringify(reportPath)};const bytes=Buffer.from([137,80,78,71,13,10,26,10]);const checks=['mono','sand','default'].flatMap(theme=>['light','dark'].map(mode=>{const image=join(dirname(path),theme+'-'+mode+'.png');writeFileSync(image,bytes);return{theme,mode,assertions:3,screenshot:{path:image,sha256:createHash('sha256').update(bytes).digest('hex')}}}));writeFileSync(path,JSON.stringify({version:1,profile:'fresh',binding:${JSON.stringify(binding)},planDigest:${JSON.stringify(digest(plan))},passed:true,cleanupKnown:true,checks,errors:[]}));`,
+			];
+		};
+		await expect(verifyRun({ ...context, resolveCommand })).rejects.toThrow(/awaiting independent visual/);
+		const waiting = context.store.read().runs[context.token.runId];
+		expect(waiting.status).toBe("awaiting-ui-review");
+		const report = JSON.parse(readFileSync(waiting.uiAcceptance.path, "utf8"));
+		expect(visualReviewRequest(waiting, context.runContract).artifactDigest).toBe(digest(report.checks));
+		await executeAdapter({
+			...context,
+			adapterId: "visual",
+			role: "ui-reviewer",
+			request: JSON.stringify({
+				verdict: "approve",
+				proven: ["fixture artifacts only"],
+				gaps: [],
+				findings: [],
+				artifactDigest: digest(report.checks),
+				coverage: report.checks.map((c) => `${c.theme}/${c.mode}`),
+			}),
+		});
+		expect((await verifyRun({ ...context, resolveCommand })).status).toBe("verified");
+		expect(uiExecutions).toBe(2); // The second resolved command fails if the verifier mistakenly spawns it.
+		expect(
+			exportEvidence(context.store, context.token.runId, context.policy).checks.find((entry) => entry.id === "ui").ui
+				.reviewer.family,
+		).toBe("family-visual");
+		expect(context.store.read().runs[context.token.runId].analyses[0].identity.family).toBe("family-visual");
+		writeFileSync(waiting.uiAcceptance.path, "corrupt cleanup report");
+		await expect(verifyRun({ ...context, resolveCommand })).rejects.toThrow(/cleanup unknown/);
+		expect(context.store.read().control.paused).toBe(true);
+		expect(context.store.read().runs[context.token.runId].status).toBe("cleanup-required");
+	}, 15000);
+	it("refuses real execution without a trusted boundary attestation before spawning", async () => {
+		const context = fixture();
+		await expect(
+			executeAdapterUnderTest({ ...context, adapterId: "author", role: "implementer", request: "fix" }),
+		).rejects.toThrow(/boundary is unproven/);
+		expect(readFileSync(join(context.repo, "feature.txt"), "utf8")).toBe("broken\n");
+		expect(context.store.read().runs).toEqual({});
+	});
 	it("records runner-owned authorship and independently reviews the committed candidate", async () => {
 		const context = fixture();
 		const implemented = await executeAdapter({

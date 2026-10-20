@@ -1,7 +1,7 @@
 ---
 id: TASK-0330
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: scripts/agents; project/agent-workflow
 requirement: REQ-0019
@@ -17,11 +17,11 @@ branch: main
 worktree: unassigned（readiness 文档与配置入口串行）
 base_commit: 6c5e94d09
 read_paths: [scripts/agents, schemas/agents, project, docs/dev/agent-rules, AGENTS.md]
-write_paths: [scripts/agents/doctor.mjs, scripts/agents/cli.mjs, scripts/agents/doctor.test.mjs, scripts/agents/cli.test.mjs, project/tasks/TASK-0328-ui-runtime-verification.md, project/tasks/TASK-0329-readonly-signal-collection.md, project/tasks/TASK-0330-external-environment-readiness.md, project/tasks/README.md, project/plans/PLAN-0019-autonomous-development.md, project/verification/VERIFY-0019-autonomous-development-audit.md, scripts/agents/README.md, docs/dev/agent-rules/autonomy.md, .github/release-notes/v0.1.3.md]
+write_paths: [scripts/agents/doctor.mjs, scripts/agents/cli.mjs, scripts/agents/doctor.test.mjs, scripts/agents/cli.test.mjs, project/tasks/TASK-0328-ui-runtime-verification.md, project/tasks/TASK-0329-readonly-signal-collection.md, project/tasks/TASK-0330-external-environment-readiness.md, project/tasks/README.md, project/plans/PLAN-0019-autonomous-development.md, project/verification/VERIFY-0019-autonomous-development-audit.md, scripts/agents/README.md, docs/dev/agent-rules/autonomy.md, .github/release-notes/v0.1.3.md, scripts/agents/execution-proof-fixture.mjs, scripts/agents/runner.mjs, scripts/agents/runner.test.mjs, scripts/agents/verify.mjs, docs/adr/0146-repository-autonomy-controller.md]
 exclusive_paths: [scripts/agents/doctor.mjs]
-depends_on: [TASK-0325, TASK-0326, TASK-0327, TASK-0328, TASK-0329]
+depends_on: [TASK-0325, TASK-0326, TASK-0327, TASK-0328]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0327, TASK-0328, TASK-0329]
-integration_status: pending
+integration_status: reviewing
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -39,6 +39,10 @@ updated: 2026-10-20
 - 测试与验收：本轮核对文档路径、Task/Plan 索引、工作区差异和发布说明；不启动 CI/UI，不安装 WSL，不调用真实模型，不改 `project/autonomy-policy.json`。原有“工程待实施”结论保留。
 
 ## 目标
+
+### 本次实施合同（2026-10-20）
+
+用户已要求实施环境检查；外部问题采集先搁置，因此移除 TASK-0329 的执行依赖。WSL2 后续预检已确认 Ubuntu-26.04 Running / Version 2，可进入 Linux，初始工具仅 Git，Bun/Node 待准备。实现 doctor 的固定、只读工具探测和分项 readiness，分别报告本地软件、模型与完整发布条件；不得把 isolation 声明或配置文件当作 OS 证明。CLI 保持默认只读，不调用 adapter.doctorCommand（配置命令可能有副作用）；状态目录尚未初始化时不得创建它。现有真实模型入口必须拒绝缺失的可信隔离证明。测试覆盖正常工具、缺失工具、同家族评审、未授权和延期项目，使用临时状态与进程，付费 API、CI/UI/发布不运行。
 
 把“配置存在”与“真实可执行”分开。实现只读 readiness 检查，逐项证明实现模型、异家族独立评审、隔离 runner/VM、UI 浏览器、CI、签名/发布、遥测与清理服务是否真正就绪；任何缺项都明确阻止真实自主执行和 L4 宣称。配置字符串、doctor 成功或模拟回执不能替代外部事实。
 
@@ -61,6 +65,7 @@ updated: 2026-10-20
 - 设计只读 readiness 输出：每项状态 `proven|failed|not-run|unavailable`、原因、证据摘要和恢复动作；不返回凭据值。
 - 检查已启用 adapter 的可执行文件、角色、模型、隔离声明与独立家族；检查 runner 的实际隔离证明文件和 UI 引擎/浏览器状态。
 - 合并现有 doctor 与配置校验，提供 `doctor --readiness` 或等价公开入口；默认只读、不启动模型、不发布。
+- 实现时选择已有 `doctor` 默认输出分项 readiness，不新增重复布尔参数；执行边界由独立状态目录的可信 Ed25519 外部证明校验，合成测试签名仅用于测试。关联的 runner/verify 入口和测试夹具随合同接线，共享路径串行修改。
 - 让控制器在真实执行前检查 readiness；仅 software contract 测试可以绕过，并在 evidence `notRun` 中保留。
 - 测试各项缺失、过期证据、伪造“已证明”、策略等级与真实外部状态分离。
 
@@ -89,7 +94,7 @@ readiness 只读、凭据最小暴露、配置校验不冒充真实证明、人�
 
 ## 验收分层
 
-- 工程验证：待实施。
+- 工程验证：分项检查、可信证明拒绝/有效期/绑定与调用接线已验证；WSL2 控制器 107 例、Windows 质量 635 例及完整 check 通过。实际 OS 隔离部署与模型质量尚未验收。
 - 技术评审：当前 Agent 自审；独立模型未配置。
 - 集成：本地 main，待提交/组合验证。
 - 人工功能验收：待验收。
@@ -105,8 +110,8 @@ readiness 只读、凭据最小暴露、配置校验不冒充真实证明、人�
 
 ## 交付记录
 
-- 实际修改：readiness 实现待实施；本轮仅更新 WSL2、CI/UI 延期的计划、既有 Task 合同、索引与审计记录。
-- 实际运行：本轮文档检查中 Project 索引、323 个 Task 的 Worktree 合同（0 warning）、发布说明、自主入口及修改声明头门禁通过；5 篇相关文档的本地 Markdown 链接已核对。WSL 预检失败如上记录；readiness 与真实运行验收待执行。纯规划未新增行为测试或运行整仓检查。
+- 实际修改：doctor 增加固定工具只读探测、software/execution/release 分项及模型质量未运行项；真实 adapter 执行和验证前核验受信外部签名、仓库/策略/执行器绑定及最长 15 分钟有效期。不提供生产签发接口，测试夹具只在临时目录生成合成签名。当前实现落在 doctor/cli/runner/verify 及相应测试，不改变 policy.level 或启用 adapter。
+- 实际运行：先前仅规划的检查保留为历史记录；本次已在 WSL2 的专用验证副本运行控制器、真实临时 Git 与进程合同测试，详细最终数字与完整检查见 VERIFY-0019。Ubuntu-26.04 已可用，Linux Bun/Node 位于任务临时目录；未调用真实模型。
 - 未运行及原因：用户已明确没有隔离 VM/runner、实现与独立评审模型、签名/监控环境；未读取任何凭据值。
 - Worktree：main 串行。
 - 剩余风险：readiness 只能反映实际可核验事实，不会替你创建外部基础设施。

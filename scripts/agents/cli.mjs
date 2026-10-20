@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Copyright The Open Forge contributors.
 import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadTasks } from "../worktree/contract.mjs";
 import { importApproval } from "./approval.mjs";
-import { contract } from "./contracts.mjs";
+import { contract, digest } from "./contracts.mjs";
+import { doctor } from "./doctor.mjs";
 import { exportEvidence } from "./evidence.mjs";
 import { snapshot } from "./git.mjs";
 import { applyIntegration, prepareIntegration } from "./integrate.mjs";
@@ -17,7 +18,7 @@ import { completedTasks, taskQueue } from "./queue.mjs";
 import { codeBinding, executeAdapter } from "./runner.mjs";
 import { createStore } from "./store.mjs";
 import { configuration, makeRunContract, taskById } from "./tasks.mjs";
-import { verifyRun } from "./verify.mjs";
+import { acceptancePlan, readUiPlan, verifyRun, visualReviewRequest } from "./verify.mjs";
 
 const COMMANDS = new Set([
 	...OPERATIONS,
@@ -57,6 +58,8 @@ const OPTIONS = new Set([
 	"--limit",
 	"--max-stalls",
 	"--run-prefix",
+	"--ui-plan",
+	"--authorize-ui",
 ]);
 
 function argumentsOf(args) {
@@ -95,36 +98,24 @@ export async function main(args) {
 	const root = resolve(options["--repo"] ?? process.cwd());
 	const config = configuration(root);
 	if (command === "doctor") {
-		return {
-			contractValid: true,
-			targetLevel: config.policy.targetLevel,
-			level: config.policy.level,
-			publisherConfigured: config.settings.publisher?.enabled ?? false,
-			paused: config.policy.paused,
-			readyForModelExecution:
-				config.policy.level > 0 &&
-				!config.policy.paused &&
-				config.settings.adapters.some(
-					(adapter) =>
-						adapter.enabled &&
-						adapter.isolation !== "none" &&
-						config.policy.allowedProviders.includes(adapter.provider) &&
-						isAbsolute(adapter.command[0]) &&
-						existsSync(adapter.command[0]),
-				),
-			adapters: config.settings.adapters.map((adapter) => ({
-				id: adapter.id,
-				enabled: adapter.enabled,
-				family: adapter.family,
-				model: adapter.model,
-				isolation: adapter.isolation,
-			})),
-			note: "Configuration validation does not prove sandbox isolation, real model quality, CI, or release readiness.",
-		};
+		return doctor({
+			root,
+			...config,
+			stateDirectory: options["--state-dir"] ? resolve(options["--state-dir"]) : undefined,
+		});
 	}
 	if (command === "plan") {
 		const task = taskById(root, required(options, "--task"));
-		return makeRunContract(task, config, resolve(required(options, "--worktree")), options.tests ?? []);
+		const result = makeRunContract(task, config, resolve(required(options, "--worktree")), options.tests ?? []);
+		if (options["--ui-plan"] || options["--authorize-ui"]) {
+			if (options["--authorize-ui"] !== "true") throw new Error("UI execution needs --authorize-ui true");
+			const plan = required(options, "--ui-plan");
+			const { plan: parsed } = readUiPlan(result.worktree, plan);
+			result.uiAcceptance = { authorized: true, plan, planDigest: digest(parsed) };
+			acceptancePlan(result);
+			result.checks = [...new Set([...result.checks, "ui"])];
+		}
+		return contract("run-contract", result);
 	}
 	if (command === "queue") {
 		const loaded = loadTasks(root);
@@ -226,9 +217,11 @@ export async function main(args) {
 		release(store, token);
 		return { released: token.runId };
 	}
-	if (command === "verify") return verifyRun({ store, policy: config.policy, token });
+	if (command === "verify") return verifyRun({ store, ...config, token });
 	const runContract = contract("run-contract", JSON.parse(readFileSync(required(options, "--contract"), "utf8")));
 	const task = taskById(root, token.task);
+	const role = required(options, "--role");
+	const taskData = readFileSync(join(root, task.file), "utf8");
 	const result = await executeAdapter({
 		store,
 		...config,
@@ -236,8 +229,11 @@ export async function main(args) {
 		task,
 		runContract,
 		adapterId: required(options, "--adapter"),
-		role: required(options, "--role"),
-		request: readFileSync(join(root, task.file), "utf8"),
+		role,
+		request:
+			role === "ui-reviewer"
+				? JSON.stringify({ taskData, uiEvidence: visualReviewRequest(store.read().runs[token.runId], runContract) })
+				: taskData,
 	});
 	return {
 		runId: token.runId,

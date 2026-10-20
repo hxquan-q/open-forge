@@ -79,3 +79,32 @@ related_bugs: [BUG-0107, BUG-0132, BUG-0133]
 用户选择只使用 WSL2，不新增机器/Windows VM；真实 CI 等账号额度恢复，真实 UI 验收也延期。执行路线已回写 [PLAN-0019](../plans/PLAN-0019-autonomous-development.md)：先完成仓库软件和本地测试，再核验实际 WSL2/模型/隔离条件，最后补跨平台、UI、签名发布与遥测证据。该决定不授予安装、真实 Provider 调用、调高自治等级或生产发布权限。
 
 本轮只读执行 `wsl.exe --list --verbose` 与 `wsl.exe --status` 均 exit 1，返回未安装 WSL。未进入任何 Linux 发行版，未运行 Linux 测试；这是当前会话机器的结果，不推断其他机器状态。未运行 CI、UI、真实模型或发布，既有测试结果的候选范围保持原记录。最终 L4 状态仍为 partial，不因验收延期而改成通过。
+
+## 2026-10-20 TASK-0328/0330/0331 实施验证
+
+以上未安装 WSL 是先前规划时的历史结果。用户安装后，实际预检确认 Ubuntu-26.04 Running / Version 2；当前执行请求收敛为 UI 接口、分项环境检查和明确任务的本地闭环，TASK-0329 外部采集搁置。
+
+### 软件修改与连续流程
+
+- 修正 UI 草稿语法/缺模块，增加显式授权的闭合操作计划和 fresh 实例驱动；固定回调执行六主题的交互、可见性/文本/输入、布局断言及截图。运行失败尝试清理，不确认清理则暂停。
+- 控制器校验计划、候选和实际截图字节；runtime 通过后仍停在 awaiting-ui-review，直到不同家族的视觉结果绑定同一候选、截图摘要和六主题覆盖。公开 run 的 ui-reviewer 请求包含确切材料清单并要求只读图片通道；图片不可访问必须返回证据不足，不能凭元数据通过。当前未部署真实图片/模型通道。
+- doctor 分开报告本地软件、执行与发布条件；只调用固定工具版本检查，既有未初始化状态保持只读。runner/verify 核验外部可信执行证明、配置/仓库绑定和有效期；配置标签不是 OS 隔离证明，测试签名不是部署证据。
+- cycle 只对实际非零检查失败且已确认清理的结果执行有界修复。空报告、超时、证据变化、权限或清理问题停止。真实 Git 回归先复现旧版本 needs-action，再证明实现→评审→断言失败→再实现/评审/验证→合并候选重验；目标 main 前进仍拒绝旧证据。扩展的双轮进程用例给出单例 15 秒时限，产品上限与既有其他用例未改。
+
+### 实际命令与结果
+
+| 环境/检查 | 结果 | 证据与边界 |
+|---|---|---|
+| WSL2 定向 Node runner | 7 文件 / 45 例通过 | 专用 Linux 副本，真实临时 Git 与受控进程；不调用真实模型 |
+| WSL2 `bun scripts/quality/run-vitest.mjs --run scripts/agents apps/desktop/scripts/ui-verification-acceptance.test.ts --maxWorkers=2` | 20 文件 / 107 例通过，4.45 秒 | Linux Bun 1.4.2 / Node 22.14.0；日志 `/tmp/open-forge-wsl-validation-pxj9vq31/all-agents.log` |
+| Windows `test:impact` 首轮 | 58 文件中 56 通过；632 例中 630 通过 | 原发布进程用例 5 秒超时，且安装 WSL 后 `bash` 优先命中系统 WSL shim；未把失败算通过 |
+| Windows 质量集合最终复验 | 明确 Git Bash PATH、`bun run test:quality -- --maxWorkers=1`：58 文件 / 635 例通过，87.82 秒 | 包含新增空报告不可自动修复回归；不修改既有断言或发布用例时限。日志 `open-forge-local-autonomy-quality-final-20261020.log` |
+| Desktop 直接测试及同一影响计划的 related 检查 | 各 1 文件 / 3 例通过 | 固定 UI 程序与输入/结果边界测试，没有打开 Electron/浏览器 |
+| 完整 `bun run check` | 最终代码复验 exit 0 | 首轮发现 Desktop 不可 import 根控制器及缺类型声明，已改为 Desktop 独立消费校验；最终日志 `open-forge-local-autonomy-check-final-20261020.log` |
+| 实际 Windows doctor | softwareReady=true，level=0、readyForModelExecution=false、publisherConfigured=false | 不创建控制器状态、不调用模型 |
+
+Linux 工具和最小验证依赖仅置于 `/tmp/open-forge-wsl-validation-pxj9vq31`；没有复用 Windows node_modules、修改全局 PATH、运行完整产品 Linux 构建或部署常驻服务。Windows 质量日志在系统临时目录 `open-forge-local-autonomy-quality-20261020.log`，首轮影响测试日志为 `open-forge-local-autonomy-impact-20261020.log`。影响计划后续的 Desktop direct/related 已单独执行，不能把原 impact 失败日志改写成 exit 0。
+
+### 未运行与验收状态
+
+真实 CI、UI 交互/六主题视觉、真实 Provider、OS 隔离部署证明、签名发布和遥测均未运行。UI 的测试图片和模型/发布替身只验证软件合同。当前三个 Task 保持 verifying；本地提交/集成事实收尾时单独记录。七个他人 temp 文件未读取内容、未改动或提交；没有 push、发布、创建定时任务或改变自治等级。全目标仍为 partial。

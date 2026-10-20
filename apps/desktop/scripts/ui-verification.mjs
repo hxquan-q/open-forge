@@ -25,6 +25,7 @@ import {
 	resolveProfileLayout,
 	seedDebugProfile,
 } from "./ui-verification-profile.ts";
+import { verifyUiAcceptance } from "./ui-verification-acceptance.ts";
 import { readHttpJson } from "./ui-verification-http.ts";
 import {
 	formatPlaywrightAttachFailure,
@@ -51,7 +52,8 @@ const runtimeCanaryProviderPath = join(desktopRoot, "scripts", "runtime-canary-p
 const runtimeCanaryRunnerPath = join(desktopRoot, "scripts", "runtime-canary-runner.ts");
 const childTimeoutMs = 120_000;
 
-function printJson(value) {
+export const cliArguments = process.argv.slice(2);
+export function printJson(value) {
 	process.stdout.write(`${JSON.stringify(value)}\n`);
 }
 
@@ -109,7 +111,7 @@ function writeState(layout, value) {
 	renameSync(temporaryPath, layout.statePath);
 }
 
-function updateState(layout, patch) {
+export function updateState(layout, patch) {
 	const state = readState(layout);
 	if (!state) return;
 	writeState(layout, { ...state, ...patch });
@@ -244,12 +246,13 @@ function createStatusResult(layout, state, uiInfo) {
 					installedCliPath: state.runtimeCanary.installedCliPath,
 				}
 			: null,
+		runId: state?.layout?.runId ?? null,
 		ui: uiInfo.ok === true ? uiInfo.result : null,
 		error: uiInfo.ok === true ? null : uiInfo.error,
 	};
 }
 
-function runPlaywright(layout, args, capture = false, timeout = childTimeoutMs) {
+export function runPlaywright(layout, args, capture = false, timeout = childTimeoutMs) {
 	return spawnSync("bunx", ["playwright-cli", `-s=${layout.sessionName}`, ...args], {
 		cwd: repoRoot,
 		encoding: capture ? "utf8" : undefined,
@@ -480,7 +483,7 @@ async function stopRuntimeCanaryProvider(child) {
 	return false;
 }
 
-async function serveHost(layout, runtimeCanaryEnabled) {
+export async function serveHost(layout, runtimeCanaryEnabled) {
 	const existingState = readState(layout);
 	if (existingState?.hostPid && existingState.hostPid !== process.pid && isProcessAlive(existingState.hostPid)) {
 		throw new Error(
@@ -672,7 +675,7 @@ async function stopHost(layout, printResult = true) {
 	}
 }
 
-async function requireUiInfo(profile) {
+export async function requireUiInfo(profile) {
 	const status = await statusResult(profile);
 	if (!status.running || !status.ui?.targetFound || !status.ui.endpoint) {
 		printJson(status);
@@ -682,7 +685,7 @@ async function requireUiInfo(profile) {
 	return { layout: resolveStateLayout(profile, readState(resolveLayout(profile, "status"))), ui: status.ui };
 }
 
-function parseArguments(argv) {
+export function parseArguments(argv) {
 	const [command, ...rawArgs] = argv;
 	let profileValue;
 	let runId;
@@ -720,74 +723,92 @@ function delay(milliseconds) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-const parsed = parseArguments(process.argv.slice(2));
-const layout = resolveLayout(parsed.profile, parsed.runId);
 
-if (parsed.command === "start") {
-	if (parsed.profile === "dev") throw new Error("The dev profile is attach-only and cannot be started here");
-	await startDetached(layout, parsed.runtimeCanaryEnabled);
-} else if (parsed.command === "serve") {
-	if (parsed.profile === "dev") throw new Error("The dev profile is attach-only and cannot be served here");
-	await serveHost(layout, parsed.runtimeCanaryEnabled);
-} else if (parsed.command === "status") {
-	const status = await statusResult(parsed.profile);
-	printJson(status);
-	if (!status.running) process.exitCode = 1;
-} else if (parsed.command === "stop") {
-	if (parsed.profile === "dev") throw new Error("The dev profile is not owned by UI verification; stop it from its development terminal");
-	await stopHost(layout);
-} else if (parsed.command === "sync") {
-	if (parsed.profile !== "debug") throw new Error("Only the debug profile supports data synchronization");
-	const state = readState(layout);
-	if (state?.hostPid && isProcessAlive(state.hostPid)) {
-		throw new Error("Stop the debug profile before synchronizing model configuration");
-	}
-	printJson({ ok: true, profile: parsed.profile, ...prepareProfile(layout, true) });
-} else if (parsed.command === "attach") {
-	const target = await requireUiInfo(parsed.profile);
-	if (target) {
+if (import.meta.main) {
+	const parsed = parseArguments(cliArguments);
+	const layout = resolveLayout(parsed.profile, parsed.runId);
+
+	if (parsed.command === "start") {
+		if (parsed.profile === "dev") throw new Error("The dev profile is attach-only and cannot be started here");
+		await startDetached(layout, parsed.runtimeCanaryEnabled);
+	} else if (parsed.command === "serve") {
+		if (parsed.profile === "dev") throw new Error("The dev profile is attach-only and cannot be served here");
+		await serveHost(layout, parsed.runtimeCanaryEnabled);
+	} else if (parsed.command === "status") {
+		const status = await statusResult(parsed.profile);
+		printJson(status);
+		if (!status.running) process.exitCode = 1;
+	} else if (parsed.command === "stop") {
+		if (parsed.profile === "dev") throw new Error("The dev profile is not owned by UI verification; stop it from its development terminal");
+		await stopHost(layout);
+	} else if (parsed.command === "sync") {
+		if (parsed.profile !== "debug") throw new Error("Only the debug profile supports data synchronization");
+		const state = readState(layout);
+		if (state?.hostPid && isProcessAlive(state.hostPid)) {
+			throw new Error("Stop the debug profile before synchronizing model configuration");
+		}
+		printJson({ ok: true, profile: parsed.profile, ...prepareProfile(layout, true) });
+	} else if (parsed.command === "attach") {
+		const target = await requireUiInfo(parsed.profile);
+		if (target) {
+			ensureAttached(target.layout, target.ui);
+			selectMainWindow(target.layout, target.ui);
+			const result = runPlaywright(target.layout, ["tab-list"]);
+			process.exitCode = result.status ?? 1;
+		}
+	} else if (parsed.command === "pw") {
+		if (parsed.args.length === 0) throw new Error("Missing Playwright CLI command");
+		const invalidPlaywrightArguments = validatePlaywrightArguments(parsed.args);
+		if (invalidPlaywrightArguments) throw new Error(invalidPlaywrightArguments);
+		const target = await requireUiInfo(parsed.profile);
+		if (target) {
+			if (ensureAttached(target.layout, target.ui)) selectMainWindow(target.layout, target.ui);
+			const result = runPlaywright(target.layout, parsed.args);
+			process.exitCode = result.status ?? 1;
+		}
+	} else if (parsed.command === "accept") {
+		if (parsed.profile !== "fresh") throw new Error("UI acceptance requires a fresh profile");
+		const [planFile, reportFile] = parsed.args;
+		if (!planFile || !reportFile || parsed.args.length !== 3) throw new Error("UI acceptance requires plan, report and binding");
+		const target = await requireUiInfo(parsed.profile);
+		if (!target || target.layout.runId !== parsed.runId) throw new Error("UI acceptance must own the fresh run");
 		ensureAttached(target.layout, target.ui);
 		selectMainWindow(target.layout, target.ui);
-		const result = runPlaywright(target.layout, ["tab-list"]);
+		const result = await verifyUiAcceptance({
+			plan: JSON.parse(readFileSync(planFile, "utf8")),
+			layout: target.layout,
+			reportFile,
+			runPlaywright,
+		});
+		printJson(result);
+	} else if (parsed.command === "detach") {
+		const result = runPlaywright(layout, ["detach"]);
 		process.exitCode = result.status ?? 1;
-	}
-} else if (parsed.command === "pw") {
-	if (parsed.args.length === 0) throw new Error("Missing Playwright CLI command");
-	const invalidPlaywrightArguments = validatePlaywrightArguments(parsed.args);
-	if (invalidPlaywrightArguments) throw new Error(invalidPlaywrightArguments);
-	const target = await requireUiInfo(parsed.profile);
-	if (target) {
-		if (ensureAttached(target.layout, target.ui)) selectMainWindow(target.layout, target.ui);
-		const result = runPlaywright(target.layout, parsed.args);
-		process.exitCode = result.status ?? 1;
-	}
-} else if (parsed.command === "detach") {
-	const result = runPlaywright(layout, ["detach"]);
-	process.exitCode = result.status ?? 1;
-} else if (parsed.command === "debug") {
-	const state = readState(layout);
-	const runtimeCanaryRequested = parsed.args.length === 1 && parsed.args[0] === "runtime-canary";
-	if (runtimeCanaryRequested && !state?.runtimeCanary) {
-		throw new Error("The UI verification host was not started in Runtime Canary mode");
-	}
-	const stateLayout = resolveStateLayout(parsed.profile, state);
-	const result = runtimeCanaryRequested
-		? spawnSync("bun", [runtimeCanaryRunnerPath, "--state-file", stateLayout.statePath], {
-				cwd: repoRoot,
-				env: resolveVerificationEnv(stateLayout, state),
-				stdio: "inherit",
-				timeout: childTimeoutMs,
-			})
-		: (() => {
-				const cli = resolveDebugCli(state);
-				return spawnSync(cli.command, [...cli.prefixArgs, "debug", ...parsed.args], {
+	} else if (parsed.command === "debug") {
+		const state = readState(layout);
+		const runtimeCanaryRequested = parsed.args.length === 1 && parsed.args[0] === "runtime-canary";
+		if (runtimeCanaryRequested && !state?.runtimeCanary) {
+			throw new Error("The UI verification host was not started in Runtime Canary mode");
+		}
+		const stateLayout = resolveStateLayout(parsed.profile, state);
+		const result = runtimeCanaryRequested
+			? spawnSync("bun", [runtimeCanaryRunnerPath, "--state-file", stateLayout.statePath], {
 					cwd: repoRoot,
 					env: resolveVerificationEnv(stateLayout, state),
 					stdio: "inherit",
 					timeout: childTimeoutMs,
-				});
-			})();
-	process.exitCode = result.status ?? 1;
-} else {
-	throw new Error(`Unknown command: ${parsed.command ?? "<missing>"}`);
+				})
+			: (() => {
+					const cli = resolveDebugCli(state);
+					return spawnSync(cli.command, [...cli.prefixArgs, "debug", ...parsed.args], {
+						cwd: repoRoot,
+						env: resolveVerificationEnv(stateLayout, state),
+						stdio: "inherit",
+						timeout: childTimeoutMs,
+					});
+				})();
+		process.exitCode = result.status ?? 1;
+	} else {
+		throw new Error(`Unknown command: ${parsed.command ?? "<missing>"}`);
+	}
 }

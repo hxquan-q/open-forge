@@ -116,7 +116,14 @@ export async function cycle({
 					request,
 				});
 			} else if (run.status === "reviewed") {
-				await verifyRun({ store, policy, token, signal });
+				try {
+					await verifyRun({ store, policy, settings, token, signal });
+				} catch (error) {
+					// Only an executed, safely cleaned verification failure enters repair.
+					// Approval, lease and preflight failures keep their original stopping semantics.
+					const stopped = store.read().runs[runId];
+					if (stopped?.status !== "verification-failed" || stopped.verificationRetryable !== true) throw error;
+				}
 			} else {
 				return { runId, status: "needs-action", reason: `run status: ${run.status}` };
 			}

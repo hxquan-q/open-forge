@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { testExecutionProof } from "./execution-proof-fixture.mjs";
 import { git, snapshot } from "./git.mjs";
 import { applyIntegration, prepareIntegration } from "./integrate.mjs";
 import { claim } from "./leases.mjs";
@@ -77,6 +78,8 @@ describe.sequential("Task preparation through a verified final Git integration",
 			readFileSync(fileURLToPath(new URL("../../project/autonomy-policy.json", import.meta.url)), "utf8"),
 		);
 		policy.level = 2;
+		// Two worker reviews plus the original candidate and moving-main re-reviews.
+		policy.limits.reviewRounds = 4;
 		policy.capabilities = ["implement", "review", "verify", "integrate-dev"];
 		policy.allowedProviders = ["fixture"];
 		policy.requiredChecks = ["tests", "check"];
@@ -97,7 +100,7 @@ describe.sequential("Task preparation through a verified final Git integration",
 				adapter(
 					"author",
 					"author-family",
-					"import {writeFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';writeFileSync('feature.txt','fixed\\n');execFileSync('git',['add','--','feature.txt']);execFileSync('git',['commit','--quiet','-m','fix','--','feature.txt']);console.log(JSON.stringify({status:'completed',summary:'fixed feature'}));",
+					"import {readFileSync,writeFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';const previous=readFileSync('feature.txt','utf8');writeFileSync('feature.txt',previous==='broken\\n'?'still broken\\n':'fixed\\n');execFileSync('git',['add','--','feature.txt']);execFileSync('git',['commit','--quiet','-m','fix','--','feature.txt']);console.log(JSON.stringify({status:'completed',summary:'fixed feature'}));",
 				),
 				adapter("reviewer", "review-family", "console.log(JSON.stringify({verdict:'approve',findings:[]}))"),
 			],
@@ -109,12 +112,13 @@ describe.sequential("Task preparation through a verified final Git integration",
 		const token = claim(store, taskById(root, "TASK-0001"), { holder: "controller", runId: "integration-run" });
 		const prepared = await prepareTask({ root, store, policy, settings, token, tests: ["feature.test.mjs"] });
 		context = { root, store, policy, settings, token, ...prepared };
+		testExecutionProof(context);
 	});
 	afterAll(() => {
 		if (directory) rmSync(directory, { recursive: true, force: true });
 	});
 
-	it("prepares a committed in_progress Task and verifies real behavior on its separate branch", async () => {
+	it("repairs a real assertion failure, independently reviews again, and verifies its separate branch", async () => {
 		expect(context.task.status).toBe("in_progress");
 		expect(snapshot(context.root).clean).toBe(true);
 		expect(context.runContract.worktree).not.toBe(context.root);
@@ -126,8 +130,13 @@ describe.sequential("Task preparation through a verified final Git integration",
 			through: "verify",
 		});
 		expect(result.status).toBe("verified");
+		const run = context.store.read().runs[context.token.runId];
+		expect(run.attempts.filter((attempt) => attempt.role === "implementer")).toHaveLength(2);
+		expect(run.attempts.filter((attempt) => attempt.role === "reviewer")).toHaveLength(2);
+		expect(context.store.read().audit.some((entry) => entry.status === "verification-failed")).toBe(true);
+		expect(run.verificationRetryable).toBe(false);
 		expect(readFileSync(join(context.root, "feature.txt"), "utf8")).toBe("broken\n");
-	});
+	}, 15000); // Two complete implementation/review/test rounds with real Git and subprocesses.
 	it("invalidates worker evidence when a final integration candidate is created", () => {
 		const source = context.store.read().runs[context.token.runId].binding.head;
 		const preview = prepareIntegration(context);

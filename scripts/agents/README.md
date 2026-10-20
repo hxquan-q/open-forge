@@ -13,7 +13,7 @@
 ## 当前公开命令
 
 ```powershell
-# 只读检查配置，不调用模型，不验证真实沙箱或发布环境
+# 只读检查本地工具、配置和外部执行证明，不调用模型或启动 UI
 node scripts/agents/cli.mjs doctor
 node scripts/agents/cli.mjs queue
 
@@ -35,6 +35,10 @@ node scripts/agents/cli.mjs resume --state-dir <controller-state>
 node scripts/agents/cli.mjs release --run-id <unique-id> --state-dir <controller-state>
 ```
 
+`doctor --state-dir <controller-state>` 分别返回 software、execution、release readiness；未提供状态目录时保持只读、不创建目录。只探测固定 `bun/node/git --version`，不会运行配置提供的任意 doctorCommand。配置启用不等于可启动：真实实现/评审和验证检查另需可信资源所有者签发的执行边界证明，模型语义质量仍单列 not-run。
+
+执行证明位于仅控制器可访问的状态目录：`trusted-execution.json` 为 `{"version":1,"keys":[{"id":"owner","publicKey":"<Ed25519 PEM>"}]}`；`execution-proof.json` 为 `{keyId,payload,signature}`。payload 的闭合字段见 `doctor.mjs`：version=1、repository 为 Git common-dir 的规范绝对路径、policy/adapters 为配置 digest、issuedAt/expiresAt 毫秒时间（最长 15 分钟），以及 controllerProtected、credentialsProtected、gitProtected、processTreeCleanup=true 和 workerIdentity。签名为 payload canonical UTF-8 字节；签发者必须实际验证这些部署事实，私钥不能进入 Worker。控制器不提供签发命令；`execution-proof-fixture.mjs` 仅供合成测试，不是部署隔离证明。修改策略/执行器或证明过期即拒绝真实执行，WSL2 本身不构成隔离证明。
+
 `plan` 将 JSON 输出到 stdout，不默认写文件。claim 可用于人工协作，模型执行另受 level、能力、Provider 白名单与执行器配置约束。`release` 是释放租约，不是发布软件。`recover` 仅在 writer.lock 对应进程已确认不存在时回收锁；不修复或清空损坏状态。
 
 `cycle --task <ID> --holder <ID> --run-id <ID> --test <file> --state-dir <dir>` 自动续接同一 Task 的准备、实现、独立评审和验证；`--through integrate` 还需 integrate-dev 能力并对最终合并提交重验。它不推送或发布。控制器在准备时绑定仓库，准备失败保留所有源文件与中间 Git 状态，不能当空队列重跑。
@@ -49,7 +53,15 @@ node scripts/agents/cli.mjs release --run-id <unique-id> --state-dir <controller
 
 运行器记录配置固定的身份和实际子进程结果，模型文本只能输出有限结果 Schema，不能声明自己是 human。身份元数据不等于厂商独立性或模型质量的数学证明；用量拿不到时记录 null，不能写成 0。
 
-验证使用仓库 Node runner、完整 check 和 impact 入口。必需检查缺失、无实际通过断言、候选代码/策略/执行器配置变化时拒绝沿用旧证据。UI 和 packaged 检查需要明确能力；UI 验证适配器尚未接入时拒绝，不以普通单测代替。
+验证使用仓库 Node runner、完整 check 和 impact 入口。必需检查缺失、无实际通过断言、候选代码/策略/执行器配置变化时拒绝沿用旧证据。UI 和 packaged 检查需要明确能力；UI 使用下述显式授权接口，不以普通单测代替。cycle 仅在实际检查非零退出、进入 verification-failed 且清理确认后，沿既有实现/评审轮数限制尝试修复；空报告、超时、证据变化、审批、隔离、清理或租约前置失败直接停止。
+
+## 延期 UI 验收的接线
+
+本次只完成接口与合同测试，按用户决定不运行真实 UI。未来明确授权后，可在 `plan` 原参数中加入 `--ui-plan <repo-relative.json> --authorize-ui true`，生成带计划摘要与 `ui` 检查的合同；命令本身不启动 UI。计划遵循 `schemas/agents/ui-plan.schema.json`，只允许 visible/click/fill/text，至少包含一次交互，禁止传入模型生成的 JS。控制器在核对 verify-ui 能力及候选绑定后，使用固定 `scripts/agents/ui-verification.mjs` 启动专属 fresh 实例、执行六主题操作/布局断言并记录实际截图摘要。截图不是视觉验收通过。
+
+真实运行成功且资源清理确认后，缺少独立视觉评审会进入 `awaiting-ui-review`，不能集成。对该 run 使用 `ui-reviewer` 角色，结合 controller artifacts 中实际六主题截图与 DESIGN.md 进行独立评审；输出需要 artifactDigest=digest(report.checks)、六主题 coverage 和 approve 且无 gaps/中高风险 findings。再执行 verify 会重新检查其他必要项、复核原截图字节及评审身份，复用同一候选的运行证据。候选变更使缓存失效，无法确认清理会全局暂停。未配置或未运行视觉模型仍记为未验收。
+
+当前明确 Task 的 cycle/loop 不依赖外部采集；TASK-0329 暂停。真实 CI 和 UI 验收延期不会把缺失结果改为通过，也不改变稳定发布授权。
 
 DESIGN 源审计随完整 check 执行，只拦截新增可检测违规；模板表达式、输入基元例外、布局、交互及六套主题组合仍列作覆盖空白。测试日志有上限并保存到控制器 artifacts；对外证据使用摘要，排查时仅读取当前任务所需日志。
 

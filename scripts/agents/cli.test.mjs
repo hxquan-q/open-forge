@@ -33,6 +33,38 @@ afterEach(() => {
 });
 
 describe("public autonomy command line", () => {
+	it("requires explicit UI authorization and binds the plan without starting a UI host", async () => {
+		const root = fixture();
+		const git = (args) => execFileSync("git", ["-C", root, ...args], { windowsHide: true, stdio: "pipe" });
+		git(["init", "--quiet", "--initial-branch=main"]);
+		git(["config", "user.name", "Fixture"]);
+		git(["config", "user.email", "fixture@example.invalid"]);
+		git(["config", "commit.gpgsign", "false"]);
+		writeFileSync(
+			join(root, "ui-plan.json"),
+			JSON.stringify({ version: 1, steps: [{ action: "click", selector: "button" }] }),
+		);
+		git(["add", "--", "project", "ui-plan.json"]);
+		git(["commit", "--quiet", "-m", "baseline", "--", "project", "ui-plan.json"]);
+		const args = [
+			"plan",
+			"--repo",
+			root,
+			"--worktree",
+			root,
+			"--task",
+			"TASK-0001",
+			"--test",
+			"ui.test.mjs",
+			"--ui-plan",
+			"ui-plan.json",
+		];
+		await expect(main(args)).rejects.toThrow(/authorize-ui true/);
+		const planned = await main([...args, "--authorize-ui", "true"]);
+		expect(planned.uiAcceptance).toMatchObject({ authorized: true, plan: "ui-plan.json" });
+		expect(planned.checks).toContain("ui");
+		expect(git(["status", "--porcelain"]).toString()).toBe("");
+	});
 	it("doctor and uninitialized status remain read-only and report disabled execution honestly", async () => {
 		const root = fixture();
 		const state = join(root, "state");

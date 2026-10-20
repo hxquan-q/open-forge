@@ -122,6 +122,24 @@
 				"finishedAt"
 			],
 			"properties": {
+				"ui": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["artifactDigest", "coverage", "reviewer"],
+					"properties": {
+						"artifactDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+						"coverage": {
+							"type": "array",
+							"minItems": 6,
+							"maxItems": 6,
+							"uniqueItems": true,
+							"items": {
+								"enum": ["mono/light", "mono/dark", "sand/light", "sand/dark", "default/light", "default/dark"]
+							}
+						},
+						"reviewer": { "$ref": "#/$defs/identity" }
+					}
+				},
 				"id": { "type": "string", "minLength": 1 },
 				"command": { "type": "array", "minItems": 1, "items": { "type": "string" } },
 				"binding": { "$ref": "#/$defs/binding" },

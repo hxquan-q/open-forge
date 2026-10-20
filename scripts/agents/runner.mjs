@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { decodeOutput, executionPrompt, outputKind, ROLES, selectAdapter } from "./adapters.mjs";
 import { contract, digest, requireCapability } from "./contracts.mjs";
+import { assertExecutionBoundary } from "./doctor.mjs";
 import { assertIndependentReview } from "./evidence.mjs";
 import { assertSeparateRoots, assertWriteScope, snapshot } from "./git.mjs";
 import { ACTIVE_RUN_STATUSES, assertLease, renew } from "./leases.mjs";
@@ -40,6 +41,7 @@ export async function executeAdapter({
 	if (analysis && !["planner", "triage", "lessons", "ui-reviewer"].includes(role))
 		throw new Error("only non-authoring roles are available as analysis steps");
 	const adapter = selectAdapter(settings, policy, adapterId, role);
+	assertExecutionBoundary({ root: runContract.worktree, stateDirectory: store.root, policy, settings });
 	const worktree = assertSeparateRoots(runContract.worktree, store.root);
 	const before = snapshot(worktree);
 	const lease = assertLease(store.read(), token, Date.now());

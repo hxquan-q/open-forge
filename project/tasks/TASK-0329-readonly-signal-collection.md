@@ -1,7 +1,7 @@
 ---
 id: TASK-0329
 type: task
-status: in_progress
+status: blocked
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -28,6 +28,8 @@ updated: 2026-10-20
 <!-- Copyright The Open Forge contributors. -->
 
 # GitHub 与 CI 只读信号采集
+
+用户本轮决定暂无问题来源，先搁置外部采集；不影响明确 Task 的本地开发闭环。解除条件是用户需要接入实际反馈来源并明确采集范围。
 
 ## 2026-10-20 实施与验收顺序
 

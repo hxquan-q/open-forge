@@ -1,7 +1,7 @@
 ---
 id: TASK-0328
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: scripts/agents; apps/desktop/scripts
 requirement: REQ-0019
@@ -17,11 +17,11 @@ branch: main
 worktree: unassigned（UI 验证与控制器共享路径，单 Agent 串行）
 base_commit: 6c5e94d09
 read_paths: [scripts/agents, apps/desktop/scripts, apps/desktop/DESIGN.md, docs/dev, schemas/agents, project/tasks]
-write_paths: [scripts/agents/ui-verification.mjs, scripts/agents/ui-verification.test.mjs, scripts/agents/verify.mjs, scripts/agents/runner.test.mjs, scripts/agents/cli.mjs, apps/desktop/scripts/ui-verification.mjs, apps/desktop/scripts/ui-verification-acceptance.ts, apps/desktop/scripts/ui-verification-acceptance.test.ts, apps/desktop/scripts/runtime-canary-acceptance.ts, apps/desktop/package.json, schemas/agents/evidence.schema.json, schemas/agents/run-contract.schema.json, project/tasks/TASK-0328-ui-runtime-verification.md, project/tasks/README.md, project/plans/PLAN-0019-autonomous-development.md, project/verification/VERIFY-0019-autonomous-development-audit.md, scripts/agents/README.md, docs/dev/README.md, docs/dev/agent-rules/autonomy.md, .github/release-notes/v0.1.3.md]
+write_paths: [scripts/agents/ui-verification.mjs, scripts/agents/ui-verification.test.mjs, scripts/agents/verify.mjs, scripts/agents/adapters.mjs, scripts/agents/runner.test.mjs, scripts/agents/cli.mjs, scripts/agents/cli.test.mjs, apps/desktop/scripts/ui-verification.mjs, apps/desktop/scripts/ui-verification-acceptance.ts, apps/desktop/scripts/ui-verification-acceptance.test.ts, schemas/agents/ui-plan.schema.json, schemas/agents/ui-review.schema.json, schemas/agents/run-contract.schema.json, project/tasks/TASK-0328-ui-runtime-verification.md, project/tasks/README.md, project/plans/PLAN-0019-autonomous-development.md, project/verification/VERIFY-0019-autonomous-development-audit.md, scripts/agents/README.md, docs/dev/README.md, docs/dev/agent-rules/autonomy.md, .github/release-notes/v0.1.3.md, schemas/agents/evidence.schema.json]
 exclusive_paths: [scripts/agents/ui-verification.mjs, apps/desktop/scripts/ui-verification-acceptance.ts]
 depends_on: [TASK-0326]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0327, TASK-0329]
-integration_status: pending
+integration_status: reviewing
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -34,6 +34,10 @@ updated: 2026-10-20
 用户选定 WSL2 作为当前开发执行环境，真实 CI 与真实 UI 验收延后。本 Task 先完成适配代码、候选绑定、断言报告校验及生命周期/故障合同测试；本轮仅记录计划，不修复现有实现草稿，不启动 UI。真实交互、六主题组合和视觉评审仍是后续必需证据，缺失时控制器必须停在待验收，不能跳过 `ui` 或用源码检查代替。完整顺序见 [PLAN-0019](../plans/PLAN-0019-autonomous-development.md)。
 
 ## 目标
+
+### 本次实施合同（2026-10-20）
+
+用户已明确要求执行：本次修复原有草稿并实现可调用的 fresh UI 验证接口、固定操作清单、实际断言/截图报告、控制器证据绑定及清理拒绝路径；不启动真实 UI，视觉评审未取得时明确保留未验收。使用 open-forge-testing 的受控进程/报告合同测试，包含旧草稿语法错误基线与无断言报告拒绝。单 Agent 串行 main；原草稿属于本任务，其他 temp 文件保持原位。UI 运行授权必须由调用时显式传入，不从本次编码授权推导。
 
 将已存在的 Desktop fresh Profile、Playwright 验收入口接到控制器 `ui` check，使 UI 改动能够在隔离运行实例中操作代表性用户流程、检查布局断言并保存可核验证据。运行时错误、截图无断言、缺少浏览器或测试未实际执行均不能算通过。`verify:ui:*` 仍须当前任务明确授权，不能因 UI 文件变化自动执行。
 
@@ -84,7 +88,7 @@ D01–D11 源审计边界、现有 fresh Profile 生命周期与 `verify:ui:*` �
 
 ## 验收分层
 
-- 工程验证：待实施。
+- 工程验证：软件接口与合同验证完成，WSL2 控制器 107 例、Desktop 直接/关联各 3 例及完整 check 通过；真实 UI/视觉验收延期。
 - 技术评审：自审；未配置独立 ui-reviewer。
 - 集成：本地 main，待提交/组合验证。
 - 人工功能验收：待真实用户流程。
@@ -100,8 +104,8 @@ D01–D11 源审计边界、现有 fresh Profile 生命周期与 `verify:ui:*` �
 
 ## 交付记录
 
-- 实际修改：待实施。
-- 实际运行：待执行。
+- 实际修改：修复原脚本语法及缺失模块；增加闭合操作清单、六主题断言/布局/截图采集、候选和计划绑定、专属 fresh 运行与清理、独立视觉评审接线。无独立视觉证据停在 awaiting-ui-review；同候选可复核原截图后续接，不重跑并错配截图。Desktop 消费端自校验输入，避免从应用模块 import 仓库控制器。CLI plan 支持显式 --ui-plan/--authorize-ui true；生成合同不启动 UI。
+- 实际运行：UI 报告/程序合同、控制器的 runtime→等待视觉→独立评审→缓存复核，以及语法修复基线已验证；最终测试/检查结果汇总见 VERIFY-0019。
 - 未运行及原因：本机未见完整 Playwright Chromium 缓存，未获当前任务 UI 启动授权，未启用真实 Provider。
 - Worktree：main 串行。
 - 剩余风险：浏览器缺失、Electron 驱动兼容性和六主题人工视觉仍属后续验收。

@@ -4,6 +4,13 @@
 	"additionalProperties": false,
 	"required": ["verdict", "proven", "gaps", "findings"],
 	"properties": {
+		"artifactDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+		"coverage": {
+			"type": "array",
+			"maxItems": 6,
+			"uniqueItems": true,
+			"items": { "enum": ["mono/light", "mono/dark", "sand/light", "sand/dark", "default/light", "default/dark"] }
+		},
 		"verdict": { "enum": ["approve", "changes-requested", "insufficient-evidence"] },
 		"proven": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 4000 } },
 		"gaps": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } },
