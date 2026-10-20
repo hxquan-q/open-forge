@@ -62,6 +62,9 @@
 	"menu": {
 		"delete": "Delete conversation"
 	},
+	"export": {
+		"citationSource": "Source"
+	},
 	"citation": {
 		"badgeLabel": "Cited source: {{doc}}",
 		"popoverTitle": "Cited source",

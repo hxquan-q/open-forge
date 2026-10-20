@@ -62,6 +62,9 @@
 	"menu": {
 		"delete": "删除会话"
 	},
+	"export": {
+		"citationSource": "来源"
+	},
 	"citation": {
 		"badgeLabel": "引用资料:{{doc}}",
 		"popoverTitle": "引用原文",
