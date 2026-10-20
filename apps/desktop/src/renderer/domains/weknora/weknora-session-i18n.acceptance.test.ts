@@ -24,6 +24,11 @@ function valueAt(catalog: unknown, path: string): unknown {
 	return path.split(".").reduce<unknown>((acc, part) => (acc as Record<string, unknown>)?.[part], catalog);
 }
 
+/** 最小 mustache 插值（仅用于断言模板的最终串，不引入 i18n 运行时 —— 本文件跑在 node 环境）。 */
+function interpolate(template: string, vars: Record<string, string>): string {
+	return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? "");
+}
+
 /** 本 feature 新增、且必须 zh/en 成对存在的文案键（AC-11）。 */
 const REQUIRED_KEYS = [
 	"menu.multiSelect",
@@ -48,6 +53,7 @@ const REQUIRED_KEYS = [
 	"batchExport.resultTitle",
 	"batchExport.resultSucceeded",
 	"batchExport.resultFailed",
+	"batchExport.resultFailedItem",
 	"batchExport.writeFailed",
 	"batchExport.close",
 	"batchDelete.confirmTitle",
@@ -55,6 +61,7 @@ const REQUIRED_KEYS = [
 	"batchDelete.resultTitle",
 	"batchDelete.resultSucceeded",
 	"batchDelete.resultFailed",
+	"batchDelete.resultFailedItem",
 ] as const;
 
 /** 已移除的替换确认 key：任一 catalog 残留即 AC-2 失败。 */
@@ -92,6 +99,19 @@ describe("AC-11 · 导出 / 多选 / 批量文案 zh-en 镜像", () => {
 	it("引用来源前缀：zh=来源 / en=Source（导出文件里用户可见，走 i18n 非硬编码）", () => {
 		expect(valueAt(zhWeKnora, "export.citationSource")).toBe("来源");
 		expect(valueAt(enWeKnora, "export.citationSource")).toBe("Source");
+	});
+
+	// CP3②：结果明细原为 JSX 硬编码全角冒号 `{name}：{reason}`（en 下渲染成「Title：reason」）。
+	// 整串下沉 i18n 后，此处钉住 zh 全角 / en 半角 + 名称与原因插值，防再退化成硬编码分隔符。
+	it("批量结果明细整串走 i18n：zh 全角冒号 / en 半角冒号 + 名称与原因插值（防硬编码回归）", () => {
+		for (const key of ["batchDelete.resultFailedItem", "batchExport.resultFailedItem"] as const) {
+			expect(interpolate(String(valueAt(zhWeKnora, key)), { name: "会话 A", reason: "网络不可达" })).toBe(
+				"会话 A：网络不可达",
+			);
+			expect(interpolate(String(valueAt(enWeKnora, key)), { name: "Chat A", reason: "Network unreachable" })).toBe(
+				"Chat A: Network unreachable",
+			);
+		}
 	});
 
 	it("en 侧不含任何中日韩字符（漏译检测）", () => {

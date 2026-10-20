@@ -450,7 +450,10 @@ export function ConversationList({
 							<ul className="flex flex-col gap-1">
 								{batchResult.failed.map((failure) => (
 									<li key={failure.sessionId} className="text-[12px] text-destructive">
-										{titleOf(failure.sessionId)}：{t(WEKNORA_ERROR_KEYS[failure.errorCode])}
+										{t("batchDelete.resultFailedItem", {
+											name: titleOf(failure.sessionId),
+											reason: t(WEKNORA_ERROR_KEYS[failure.errorCode]),
+										})}
 									</li>
 								))}
 							</ul>
@@ -494,10 +497,13 @@ export function ConversationList({
 							<ul className="flex flex-col gap-1">
 								{batchExportResult.failed.map((failure) => (
 									<li key={failure.sessionId} className="text-[12px] text-destructive">
-										{titleOf(failure.sessionId)}：
-										{failure.kind === "write"
-											? t("batchExport.writeFailed")
-											: t(WEKNORA_ERROR_KEYS[failure.errorCode ?? "unknown"])}
+										{t("batchExport.resultFailedItem", {
+											name: titleOf(failure.sessionId),
+											reason:
+												failure.kind === "write"
+													? t("batchExport.writeFailed")
+													: t(WEKNORA_ERROR_KEYS[failure.errorCode ?? "unknown"]),
+										})}
 									</li>
 								))}
 							</ul>

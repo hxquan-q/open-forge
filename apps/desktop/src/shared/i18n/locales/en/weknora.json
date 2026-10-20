@@ -80,6 +80,7 @@
 		"resultTitle": "Delete result",
 		"resultSucceeded": "Deleted {{count}} conversations.",
 		"resultFailed": "{{count}} conversations could not be deleted:",
+		"resultFailedItem": "{{name}}: {{reason}}",
 		"close": "Close"
 	},
 	"export": {
@@ -100,6 +101,7 @@
 		"resultTitle": "Export result",
 		"resultSucceeded": "Exported {{count}} conversations.",
 		"resultFailed": "{{count}} conversations could not be exported:",
+		"resultFailedItem": "{{name}}: {{reason}}",
 		"writeFailed": "Failed to write the file",
 		"close": "Close"
 	},

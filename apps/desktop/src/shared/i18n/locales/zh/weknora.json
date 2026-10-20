@@ -80,6 +80,7 @@
 		"resultTitle": "删除结果",
 		"resultSucceeded": "成功删除 {{count}} 个会话。",
 		"resultFailed": "以下 {{count}} 个会话删除失败:",
+		"resultFailedItem": "{{name}}：{{reason}}",
 		"close": "关闭"
 	},
 	"export": {
@@ -100,6 +101,7 @@
 		"resultTitle": "导出结果",
 		"resultSucceeded": "成功导出 {{count}} 个会话。",
 		"resultFailed": "以下 {{count}} 个会话导出失败:",
+		"resultFailedItem": "{{name}}：{{reason}}",
 		"writeFailed": "写入文件失败",
 		"close": "关闭"
 	},
