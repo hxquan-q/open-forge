@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Copyright The Open Forge contributors.
 import { projectsAtom } from "@shared/store/atoms";
 import { createStore, Provider } from "jotai";
 import type { PropsWithChildren } from "react";
@@ -48,7 +49,7 @@ describe("useProjectDetailPageModel", () => {
 		store.set(projectsAtom, [{ cwd: "E:\\demo", name: "demo", sessionCount: 0, type: "normal" }]);
 		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
 
-		const { result } = renderHook(() => useProjectDetailPageModel(), { wrapper });
+		const { result } = renderHook(() => useProjectDetailPageModel(vi.fn()), { wrapper });
 
 		await waitFor(() => expect(listSessions).toHaveBeenCalledWith("E:\\demo"));
 		await waitFor(() => expect(result.current.sessionCountLabel).toBe("detail.sessionCount:2"));

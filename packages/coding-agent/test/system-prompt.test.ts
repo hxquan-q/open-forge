@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, test } from "vitest";
 import { buildDesktopCliGuidance, buildSystemPrompt, DEFAULT_BRAND_NAME } from "../src/model-context/index.js";
 
@@ -246,6 +247,7 @@ describe("buildSystemPrompt", () => {
 
 			expect(prompt).toContain("Scoping rules:");
 			expect(prompt).toContain("more deeply nested files take precedence");
+			expect(prompt).toContain("within the same directory AGENTS.md takes precedence over CLAUDE.md");
 			expect(prompt).toContain("## AGENTS.md");
 		});
 

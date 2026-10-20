@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { ProjectDetailPageView } from "@vetta-org/theme-ui/project";
 import { motion } from "motion/react";
@@ -6,6 +7,7 @@ import { useProjectDetailPageModel } from "../hooks/useProjectDetailPageModel";
 import { useActiveSessionRuntimeIds } from "@shared/workspace/active-session-runtime";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
 import { useParams } from "@tanstack/react-router";
+import { useOpenProjectSession } from "@shared/app-shell/session-open-context";
 import { OrphanRemoteProjectGuard } from "./orphan-remote/OrphanRemoteProjectGuard";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
@@ -20,7 +22,8 @@ export function ProjectDetailPage(): JSX.Element {
 }
 
 function ProjectDetailPageContent(): JSX.Element {
-	const model = useProjectDetailPageModel();
+	const onOpenSession = useOpenProjectSession();
+	const model = useProjectDetailPageModel(onOpenSession);
 	const activeRuntimeIds = useActiveSessionRuntimeIds();
 
 	const batchSection =
@@ -58,12 +61,22 @@ function ProjectDetailPageContent(): JSX.Element {
 			onEditorFocus={model.onEditorFocus}
 			onExport={model.onExport}
 			onNewSession={model.onNewSession}
+			onOpenExternal={(href) => void window.vetta.shell.openExternal(href)}
 			onSave={model.onSave}
 			onShowInFolder={model.onShowInFolder}
 			onToggleActivity={model.onToggleActivity}
 			projectTypeLabel={model.projectTypeLabel}
 			saveStatus={model.saveStatus}
 			sessionCountLabel={model.sessionCountLabel}
+			recentSessions={model.recentSessions}
+			runningSessionCount={model.runningSessionCount}
+			runningTaskCount={model.runningTaskCount}
+			activeDocument={model.activeDocument}
+			mode={model.mode}
+			onModeChange={model.onModeChange}
+			theme={model.theme}
+			onDocumentChange={model.onDocumentChange}
+			onOpenRecentSession={model.onOpenRecentSession}
 			taskCountLabel={model.taskCountLabel}
 			textareaRef={model.textareaRef}
 		/>
