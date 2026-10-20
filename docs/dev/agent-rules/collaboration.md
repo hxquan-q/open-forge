@@ -16,6 +16,8 @@
 - 工作区可能同时包含用户或其他 Agent 的改动。不要覆盖、回退、移动或删除不是本次任务产生的变更。
 - 禁止使用 `git reset --hard`、`git checkout .`、`git clean -fd`、`git stash`、`git add .`、`git add -A` 和 `git commit --no-verify`。
 - 每完成一个 Task 或一组自洽修改且验证通过后就提交，无需每次另行征求提交授权；仍按原子化原则拆分，一次提交只做一件事。暂存时逐个列出本次修改的具体路径，并在提交前用 `git status` / `git diff --cached` 核对 staged 内容。
+- 串行直接落在 main 的 Task 按“一个 Task 的交付”分组：实现、配套测试、该 Task 的交付记录与 frontmatter 状态、Project 索引/Plan 状态、同一版本的 Release Notes 属于同一提交；承载记录的提交即完成绑定，不为写本次 Hash 追加记录提交。并行 Worktree 仍按 Worker 提交实现/测试、Coordinator 在集成提交更新记录的分工。只有可独立回滚的生产 concern（如重构/功能、Bug 修复/杂项、无关路径）才拆分。
+- 推送回执不单独成提交：推送后用 `git ls-remote` / `git log origin/dev..main` 核对并在会话中报告；跨会话交接确需绑定已存在的提交时，最多追加一个记录提交，不再为回执追加第三个提交。
 - Worker 只在自己的 Task Worktree 提交 Task 原子提交，不直接推 `origin/dev`。Coordinator 完成本地 `main` 集成并跑完规定测试和完整 `check` 后，用户已预先授权其将**已验收批次** fast-forward 推到 `origin/dev`；推送前必须审核 `git log origin/dev..main`，不得夹带未验收提交。
 - `origin/main` 的稳定版晋升由用户阶段性完成；Agent 默认不得 push/merge `origin/main`。任何不属于上述 `main:dev` 验收流程的 Push、PR、tag、Release 或部署都必须另行取得用户明确授权。
 - Commit message 必须使用中文多行格式，至少包含标题、空行和正文，不得只写单行标题。

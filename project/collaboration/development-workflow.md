@@ -45,7 +45,7 @@ origin/main（稳定 / 发布分支）
 在自己的 Worktree 内完成：
 
 1. 先跑最小行为回归与常见用户流程测试，再跑 `bun run test:impact -- <Task 文件路径...>`、`bun run check:quick -- <Task 文件路径...>`。
-2. 测试通过后，逐个暂存本 Task 文件，核对后按原子变更提交；功能代码与配套测试同一提交，独立 concern 分开提交。**提交必须带 pathspec**（共享索引无锁，其他会话可能已把他们的文件暂存进来，不带 pathspec 的 commit 会整索引提交）：
+2. 测试通过后，逐个暂存本 Task 文件，核对后按原子变更提交；功能代码与配套测试同一提交，独立 concern 分开提交；Task 交付记录、索引/Plan 状态与同版本 Release Notes 由 Coordinator 在集成提交更新，推送回执不单独成提交。**提交必须带 pathspec**（共享索引无锁，其他会话可能已把他们的文件暂存进来，不带 pathspec 的 commit 会整索引提交）：
 
    ```bash
    git status --short

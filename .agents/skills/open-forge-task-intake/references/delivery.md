@@ -17,7 +17,7 @@
 | 人工功能验收 | 用户对功能行为、交互、AI 产物的明确反馈 | 不要求用户默认逐行审核代码；沉默不算接受 |
 | 发布 | 明确授权及实际发布状态 | 已提交/已推开发候选不等于稳定发布 |
 
-沿用 [Project 状态](../../../../project/CONVENTIONS.md)，不新增平行状态机。功能任务工程通过后可进入 verifying；用户尚未验收或拒绝时不能自行设 done。integration_status 独立记录 pending/reviewing/integrated/rejected；已经提交到本地 main 的串行工作也应记录 integrated 并绑定提交，而不是因为等待人工验收仍写 pending。内部任务人工验收不适用时说明理由及既定完成标准，不伪造“用户已确认”。历史 done 记录不批量重解释。
+沿用 [Project 状态](../../../../project/CONVENTIONS.md)，不新增平行状态机。功能任务工程通过后可进入 verifying；用户尚未验收或拒绝时不能自行设 done。integration_status 独立记录 pending/reviewing/integrated/rejected；已经提交到本地 main 的串行工作也应记录 integrated 并绑定提交（由承载该记录的提交完成绑定，不为写入 Hash 或推送回执追加提交），而不是因为等待人工验收仍写 pending。内部任务人工验收不适用时说明理由及既定完成标准，不伪造“用户已确认”。历史 done 记录不批量重解释。
 
 ## 功能验收包
 
