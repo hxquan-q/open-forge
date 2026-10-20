@@ -108,3 +108,15 @@ Linux 工具和最小验证依赖仅置于 `/tmp/open-forge-wsl-validation-pxj9v
 ### 未运行与验收状态
 
 真实 CI、UI 交互/六主题视觉、真实 Provider、OS 隔离部署证明、签名发布和遥测均未运行。UI 的测试图片和模型/发布替身只验证软件合同。当前三个 Task 保持 verifying；已随 `a2e846e70` 提交到本地 main，integration_status=integrated；后续仅订正集成记录。七个他人 temp 文件未读取内容、未改动或提交；没有 push、发布、创建定时任务或改变自治等级。全目标仍为 partial。
+
+## 2026-10-20 WSL2 完整开发目录准备
+
+TASK-0330 按用户明确请求续接。在 `/home/xquan/projects/open-forge` 创建独立 Git 副本，基于 Windows 已提交 main `20a88b57d`；使用 Git bundle，未复制 Windows 的 Git 配置/认证、应用数据、node_modules 或未跟踪文件。作者 name/email 单独写入副本 local 配置，origin 指向仓库公开地址，不执行远端操作。
+
+- 官方 Linux x64 Bun 1.3.14 / Node 22.23.3 校验 SHA-256 后安装到用户工具目录；新登录及交互 shell 的 PATH 实测正确。Ubuntu 官方源安装编译/检索基础包 exit 0，未启动 GUI 或变更 WSL 配置。
+- 完整 monorepo `bun install --frozen-lockfile` exit 0，6192 packages / 97.51 秒；锁文件/根清单无变化、Git 工作树干净。
+- 在该完整副本运行 `bun scripts/quality/run-vitest.mjs --run scripts/agents apps/desktop/scripts/ui-verification-acceptance.test.ts --maxWorkers=2`：20 文件 / 107 例通过，4.33 秒。此处替代了先前只用最小临时验证副本的环境证据，仍不替代真实模型或 GUI 验收。
+- `bun run agent:doctor` exit 0：software.ready=true、level=0、readyForModelExecution=false；所有真实模型、发布能力保持关闭，未生成实际执行证明。
+- 持久日志和校验摘要：`/home/xquan/.cache/open-forge/setup-20261020/{manifest.json,install.log,agents-tests.log,doctor.log}`；使用说明与 shell 入口：`/home/xquan/.config/open-forge/{WSL-DEVELOPMENT.md,development.env}`；apt 日志在 `/tmp/open-forge-apt-*-20261020.log`。
+
+未运行完整产品构建、全仓产品测试、真实 CI/UI、模型、发布或 OS 隔离验收；不将软件准备成功写作 L4 达标。Windows 侧本轮仅管理记录；索引与 324 Task 合同检查通过，七个原有 temp 文件保留。后续通过 Git 协调两个独立副本的代码变更，不能混用 node_modules。

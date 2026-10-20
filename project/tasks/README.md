@@ -20,7 +20,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0328` | `verifying` | PLAN-0019 | UI 接线与合同测试已实现：显式授权、六主题运行证据、独立视觉评审、清理与绑定；真实 UI 验收延期；serial。 |
 | `TASK-0329` | `blocked` | PLAN-0019 | 用户暂无问题来源，外部采集先搁置；不阻塞明确 Task 的开发闭环。 |
 | `TASK-0331` | `verifying` | PLAN-0019 | 单任务失败修复续接与合并重验已接通；WSL2 受控 Git/进程验证，真实模型与 CI/UI 验收延期；serial。 |
-| `TASK-0330` | `verifying` | PLAN-0019 | doctor 分项就绪检查和可信执行边界证明已接到运行/验证入口；模型与发布默认关闭，真实隔离未验；serial。 |
+| `TASK-0330` | `verifying` | PLAN-0019 | WSL2 完整独立副本、Bun 1.3.14 / Node 22.23.3 与 Linux 依赖已准备；107 例通过、software ready，模型/发布关闭，真实隔离未验；serial。 |
 | `TASK-0325` | `verifying` | PLAN-0019 | 基线与发布时钟修复：制品 14、合同 137、Desktop 29 例通过；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，合并前完整 check exit 0；实际环境与适配差距见 VERIFY-0019。 |
 | `TASK-0324` | `verifying` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实环境仍关闭。 |
 | `TASK-0323` | `verifying` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实 UI/部署未验收。 |

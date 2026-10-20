@@ -29,6 +29,26 @@ updated: 2026-10-20
 
 # 外部环境 Readiness 与真实 L4 闸门
 
+## WSL 工作目录与基础环境准备（2026-10-20 续接）
+
+- 用户明确要求在已安装的 WSL2 中准备正式开发目录和环境。本轮串行续接本 Task（Open-Forge-only），不改控制器行为、权限策略或适配器；既有软件已集成事实保留，新增环境交付单独取证。
+- 输入：Windows 本地 main 已提交代码、根 packageManager/engines 与锁文件。输出：`/home/xquan/projects/open-forge` 独立 Git 副本、用户级 Linux Bun 1.3.14 与 Node 22、Linux 工作区依赖和可复用启动说明/验证日志。工作目录不存在才创建，不覆盖已有文件；不复制 Windows node_modules、未跟踪文件、Git 凭据、登录态或应用数据。
+- 读写范围：读取 Windows 仓库已提交历史及依赖声明；写入 WSL 用户目录下本次新建的 projects/open-forge、.local 工具目录、缓存与环境说明，以及本 Task、任务索引和 VERIFY-0019。修改 shell 环境时仅追加可识别的用户工具入口；保留原配置。不启用 Worker、模型、发布器或定时任务。
+- Given 干净的 Linux 目标路径，When 从已提交 main 建独立副本并按锁文件安装，Then Git HEAD 可对照、Linux Bun/Node 可执行、锁文件不变且自主控制器定向测试与只读 doctor 能运行。Given 目标已存在，Then 先核对归属而不重置覆盖；安装失败保留日志与现场，报告未完成项。
+- 验证：Git HEAD/status、工具版本/真实路径、冻结锁文件安装、仓库 Node runner 的控制器测试与 doctor；不构建或启动 Desktop，不运行真实 CI/UI/API，不将目录准备描述为 OS 沙箱验收。本轮仅环境与管理记录，无新增产品行为，不补镜像实现测试。
+- 并发：serial，无子 Agent、无并行代码 Worktree；Windows main 只记账，WSL 副本独立 Git，未集成新代码前不承接产品开发。
+- 回滚：保留现有 Windows 环境；仅本轮新建路径可在明确核实后单独移除，不自动执行删除。真实隔离和模型配置继续待验，CI/UI 继续延期。
+- Linux 基础包：通过 Ubuntu 官方软件源补齐 build-essential、pkg-config、ripgrep、unzip、jq、ca-certificates、xz-utils，供原生依赖编译与日常检索；不运行系统升级、不安装 GUI 或改变 WSL 网络/挂载配置。与用户级工具安装串行执行，记录包安装结果。
+
+### 本轮环境交付结果
+
+- 已创建 `/home/xquan/projects/open-forge`，从 Windows 已提交 `main` 的 Git bundle 建立独立 Git 数据库，源代码基线 `20a88b57d09aa3147b030c754e9c70324f5b5b22`；未复制原工作区七个 temp 文件、Windows node_modules、Git 认证或应用数据。origin 使用仓库公开地址，未联网拉取或推送；仅从既有 Git 配置复制作者 name/email 到该副本 local 配置。
+- 用户级工具：Bun 1.3.14、Node 22.23.3 官方 Linux x64 二进制，分别校验 GitHub release asset digest 与 Node 官方 SHASUMS256。位于 `~/.local/share/open-forge/toolchains`，经 `~/.config/open-forge/development.env` 加入 PATH；.profile/.bashrc 追加唯一入口，原文件备份保留在 setup 缓存。登录 shell 与交互 shell 均已实测解析到 Linux 二进制。
+- 官方 Ubuntu 源基础包安装 exit 0；Git 2.53.0、rg/gcc/make/pkg-config/jq/unzip 均解析到 `/usr/bin`。`bun install --frozen-lockfile` exit 0：6192 packages / 97.51 秒，bun.lock/package.json 无变化，副本 Git status 为空。
+- 在完整副本执行仓库 Node runner：20 文件 / 107 例通过，4.33 秒；未启动 UI。公开 `bun run agent:doctor` exit 0、readiness.software.ready=true、level=0、readyForModelExecution=false、publisherConfigured=false。Windows Task/Plan 索引和 324 Task 合同检查通过，无警告。
+- 使用说明：`/home/xquan/.config/open-forge/WSL-DEVELOPMENT.md`；日志、下载摘要和 shell 备份：`/home/xquan/.cache/open-forge/setup-20261020`；apt 日志：`/tmp/open-forge-apt-{update,install}-20261020.log`。Windows 主工作区仅新增本轮管理记录，现有源码不变。
+- 未运行：完整产品构建/全仓测试、真实 CI/UI/API、模型/Worker、签名/发布与 OS 隔离验收；Go/Kotlin/Android 与 GUI 工具链本轮未安装。原有 WSL localhost 代理提示保留，实际官方下载与官方源安装已成功，不擅改网络配置。实际模型与完整 L4 仍待后续部署验收。
+
 ## 2026-10-20 用户决策与本轮范围
 
 - 用户选定现有 WSL2 作为当前执行环境，不要求新增机器或 Windows VM；真实 CI 等账号额度恢复后运行，真实 UI 验收也延后。本轮仅更新现有计划与环境合同，不实施 readiness、不启用模型或发布器。
