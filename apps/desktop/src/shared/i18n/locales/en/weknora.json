@@ -66,6 +66,12 @@
 	"menu": {
 		"delete": "Delete conversation"
 	},
+	"citation": {
+		"badgeLabel": "Cited source: {{doc}}",
+		"popoverTitle": "Cited source",
+		"loading": "Loading the cited source…",
+		"loadFailed": "The cited source could not be loaded. Try again later."
+	},
 	"delete": {
 		"disabledStreaming": "A reply is still generating, so it cannot be deleted yet",
 		"confirmTitle": "Delete conversation",
