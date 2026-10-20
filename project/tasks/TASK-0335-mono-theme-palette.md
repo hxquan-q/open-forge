@@ -93,7 +93,7 @@ updated: 2026-10-21
 
 - 工程验证：已完成；`mono.test.ts` 2 个用例覆盖关键色值与 `TOKEN_CSS_VAR` 全键；`bun run check:quick` 通过。
 - 技术评审：自审；配色值逐项对照上游 `313be5324`，未整文件覆盖。
-- 集成：实现提交 `b0c2148f0` 已集成 main；记录随本轮推送 `origin/dev`。
+- 集成：实现提交 `b0c2148f0` 已集成 main；记录 `2fcc7d9e7` 已推送 `origin/dev`，`git ls-remote` 核对远端为 `2fcc7d9e7583e24de3c3c961f42357556fb0c57f`。
 - 人工功能验收：待验收；用户可在 Desktop 切换 mono 深浅色查看。
 - 发布：未授权。
 

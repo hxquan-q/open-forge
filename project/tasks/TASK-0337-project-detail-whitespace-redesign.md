@@ -125,7 +125,7 @@ updated: 2026-10-21
 
 - 工程验证：已完成；theme-ui `ProjectDetailPageView.test.tsx` 3 例、桌面项目 Hook 2 个文件 3 例、coding-agent 2 个文件 35 例通过；桌面与 coding-agent 类型检查通过；`check:quick` 通过（DESIGN 审计与声明头 ratchet `new=0`）。theme-ui 包级 `tsgo` 仍有与本 Task 无关的存量错误（`NewSessionPicker.tsx`、`BashTerminalCard.tsx` 等），本 Task 触及文件无新增报错。
 - 技术评审：自审；逐项对照上游 `3db9773b4`，保留本仓 BUG-0033 会话扫描、`ScheduledTask.cwd`、DESIGN 门禁与 host 注入边界。
-- 集成：实现提交 `39d28557c` 已集成 main；记录随本轮推送 `origin/dev`。
+- 集成：实现提交 `39d28557c` 已集成 main；记录 `2fcc7d9e7` 已推送 `origin/dev`，`git ls-remote` 核对远端为 `2fcc7d9e7583e24de3c3c961f42357556fb0c57f`。
 - 人工功能验收：待验收；用户可在真实项目页检查视觉、双文件编辑与最近会话跳转。
 - 发布：未授权。
 

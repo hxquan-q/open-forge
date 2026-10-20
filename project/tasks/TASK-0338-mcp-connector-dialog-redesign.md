@@ -120,7 +120,7 @@ updated: 2026-10-21
 
 - 工程验证：已完成定向测试 3 个文件 14 个用例（`McpServerForm.tools.test.tsx` 7、`McpServerForm.test.tsx` 4、`useMcpSettingsModel.test.tsx` 3）；Desktop `bun run typecheck` 通过；`bun run check:quick` 通过（声明头 ratchet `new=0`）。
 - 技术评审：自审；对照上游最终布局并逐项核对本地保留功能；发现并修复弹窗内模式切换会关闭添加弹窗的问题（新增 `onDialogModeSwitch` 并补测试）。
-- 集成：实现提交 `b53a6fd98` 已集成 main；记录随本轮推送 `origin/dev`。
+- 集成：实现提交 `b53a6fd98` 已集成 main；记录 `2fcc7d9e7` 已推送 `origin/dev`，`git ls-remote` 核对远端为 `2fcc7d9e7583e24de3c3c961f42357556fb0c57f`。
 - 人工功能验收：待验收；用户可在设置 → 连接器打开添加/编辑弹窗检查视觉与交互。
 - 发布：未授权。
 

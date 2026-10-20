@@ -15,10 +15,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0335` | `verifying` | PLAN-0014 | mono 主题配色对齐上游 `313be5324` 并补 token 覆盖测试；实现 `b0c2148f0` 已集成 main，定向 2 例、impact 与完整 check 通过；记录随本轮推送 origin/dev；serial。 |
-| `TASK-0336` | `verifying` | PLAN-0014 | 已完成消息默认折叠、虚线「已完成」头与展开时间线；实现 `47b51ac8c` 已集成 main，定向 16 例、impact 与完整 check 通过；记录随本轮推送 origin/dev；serial。 |
-| `TASK-0337` | `verifying` | PLAN-0014 | 项目详情页去线留白、指令预览/编辑与 CLAUDE.md+AGENTS.md 双读；实现 `39d28557c` 已集成 main，定向 41 例、impact 与完整 check 通过；记录随本轮推送 origin/dev；serial。 |
-| `TASK-0338` | `verifying` | PLAN-0014 | 自定义 MCP 连接器弹窗去线留白重构，保留工具清单与 idleTimeout；实现 `b53a6fd98` 已集成 main，定向 14 例、impact 与完整 check 通过；记录随本轮推送 origin/dev；serial。 |
+| `TASK-0335` | `verifying` | PLAN-0014 | mono 主题配色对齐上游 `313be5324` 并补 token 覆盖测试；实现 `b0c2148f0` 已集成 main，定向 2 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
+| `TASK-0336` | `verifying` | PLAN-0014 | 已完成消息默认折叠、虚线「已完成」头与展开时间线；实现 `47b51ac8c` 已集成 main，定向 16 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
+| `TASK-0337` | `verifying` | PLAN-0014 | 项目详情页去线留白、指令预览/编辑与 CLAUDE.md+AGENTS.md 双读；实现 `39d28557c` 已集成 main，定向 41 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
+| `TASK-0338` | `verifying` | PLAN-0014 | 自定义 MCP 连接器弹窗去线留白重构，保留工具清单与 idleTimeout；实现 `b53a6fd98` 已集成 main，定向 14 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
 | `TASK-0334` | `verifying` | PLAN-0019 | Requirement Run Phase 1 已实施并本地验证：coverage schema/runner/CLI、19 例定向、116 例 agents、31 例记录检查与完整 check 通过；实现 `54e080673`、记录 `c1b45985d` 已推送 origin/dev 并核对远端；待独立评审与人工验收；serial。 |
 | `TASK-0333` | `done` | PLAN-0019 | 干净副本累计批次 46/46 包、quality 635 例及完整 check 通过；8dcd7a3d2 已 fast-forward 推送 origin/dev 并核对远端；原 temp 保留；serial。 |
 | `TASK-0332` | `verifying` | PLAN-0019 | 图谱调查与当前会话协作已接入 intake；29 例、quick/guards 通过，原生新上下文只读审查已实际派发回收；Claude 端与完整开发流程待使用验收；serial。 |
