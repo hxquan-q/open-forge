@@ -1,7 +1,7 @@
 ---
 id: TASK-0335
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -32,7 +32,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/shared/theme/themes/mono.test.ts
 depends_on: []
 conflicts_with: [TASK-0336, TASK-0337, TASK-0338]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -91,9 +91,9 @@ updated: 2026-10-21
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：自审；配色值逐项对照上游提交。
-- 集成：待提交并推送 `origin/dev`。
+- 工程验证：已完成；`mono.test.ts` 2 个用例覆盖关键色值与 `TOKEN_CSS_VAR` 全键；`bun run check:quick` 通过。
+- 技术评审：自审；配色值逐项对照上游 `313be5324`，未整文件覆盖。
+- 集成：实现提交 `b0c2148f0` 已集成 main；记录随本轮推送 `origin/dev`。
 - 人工功能验收：待验收；用户可在 Desktop 切换 mono 深浅色查看。
 - 发布：未授权。
 
@@ -107,8 +107,12 @@ updated: 2026-10-21
 
 ## 交付记录
 
-- 实际修改：待回填。
-- 实际运行：待回填。
-- 未运行及原因：待回填。
+- 实际修改：
+  - `mono.ts`：深色 `background` 改为 `#0f0f0f`、`secondary` 补 `#171717`；浅色 `background` 改为 `#faf9f9`、`secondary` 改为 `#f1f0f0`、`border`/`input` 改为 `rgb(228, 228, 228)`。
+  - `mono.test.ts`（新增）：锁定上述关键色值，并遍历 `TOKEN_CSS_VAR` 断言 dark/light 全键有定义。
+  - 更新本 Task 记录、Tasks 索引与 0.1.3 发布说明。
+- 实际运行：`cd apps/desktop && bun run test src/renderer/shared/theme/themes/mono.test.ts` → 1 file / 2 tests passed；`bun run check:quick` 通过；`bun run test:impact` 通过——Desktop 977 files / 5293 tests、theme-ui 定向 3 + 5 tests。
+- 未运行及原因：Desktop 实机主题切换未运行（本 Task 未授权启动真实用户环境）。
+- 质量检查：完整 `bun run check` 通过（exit 0；含 lint 4962 files、根 `tsgo`、Desktop `typecheck:incremental`、guards，ratchet `new=0`）。
 - Worktree：未拆出；单文件族串行修改。
-- 剩余风险：待回填。
+- 剩余风险：对比度与观感需人工切换 mono 深浅色确认；测试只锁色值与 token 覆盖，不覆盖浏览器计算样式。

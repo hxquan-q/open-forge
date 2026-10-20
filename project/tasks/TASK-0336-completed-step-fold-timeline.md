@@ -1,7 +1,7 @@
 ---
 id: TASK-0336
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -30,6 +30,7 @@ write_paths:
   - apps/desktop/src/renderer/domains/conversation/components/message-list/AssistantMessageView.test.tsx
   - apps/desktop/src/renderer/domains/conversation/components/message-list/AssistantMessage.waiting.test.tsx
   - apps/desktop/src/renderer/domains/conversation/components/message-list/RenderingScopes.test.tsx
+  - apps/desktop/src/renderer/domains/conversation/connectors/team/TeamChatDelegationFlow.test.tsx
   - apps/desktop/src/renderer/domains/conversation/hooks/useAssistantMessageModel.ts
   - apps/desktop/src/shared/i18n/locales/zh/chat.json
   - apps/desktop/src/shared/i18n/locales/en/chat.json
@@ -41,7 +42,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/domains/conversation/components/message-list/AssistantMessage.tsx
 depends_on: []
 conflicts_with: [TASK-0335, TASK-0337, TASK-0338]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -109,9 +110,9 @@ updated: 2026-10-21
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：自审；对照上游视图差异与本仓模型字段。
-- 集成：待提交并推送 `origin/dev`。
+- 工程验证：已完成；消息列表 4 个测试文件 16 例通过（含默认折叠、展开时间线、等待态、渲染作用域与团队委派流程），`check:quick` 通过（DESIGN 审计与声明头 ratchet `new=0`）。
+- 技术评审：自审；完成态折叠头与时间线对照上游 `30843391b`，过程/回答分段保留导出模式、流式态、pin approved plan 与独立工具调用语义。
+- 集成：实现提交 `47b51ac8c` 已集成 main；记录随本轮推送 `origin/dev`。
 - 人工功能验收：待验收；用户可在会话中查看已完成回合的折叠与展开。
 - 发布：未授权。
 
@@ -125,8 +126,17 @@ updated: 2026-10-21
 
 ## 交付记录
 
-- 实际修改：待回填。
-- 实际运行：待回填。
-- 未运行及原因：待回填。
+- 实际修改：
+  - `packages/theme-ui/src/chat/AssistantMessageView.tsx`：完成态折叠头改为加粗「已完成」+ 虚线底纹 + chevron；移除分隔线；新增 `AssistantMessageProcessContainer`（左侧竖线、内容缩进、底部「完成」节点）；`chat/index.ts` 导出。
+  - 桌面 `AssistantMessage.tsx`、`types.ts`、`useAssistantMessageModel.ts`：完成态默认收起（`useExpansion(fold:..., false)`）；新增 `processSegments` / `answerSegments`，过程段进入时间线容器，最终回答留在容器外；导出、流式、置顶计划与独立工具调用语义保持。
+  - i18n zh/en `chat.json`：`assistantFoldTip.work.*` 改为「已完成/Completed」，新增 `done`（完成/Done）。
+  - 测试：更新 `AssistantMessageView.test.tsx`、`AssistantMessage.waiting.test.tsx`、`RenderingScopes.test.tsx`；`TeamChatDelegationFlow.test.tsx` 按默认折叠调整，展开后核对委派卡片与成员回复。
+  - 更新本 Task 记录、Tasks 索引与 0.1.3 发布说明。
+- 实际运行：
+  - `cd apps/desktop && bun run test` 上述 4 个测试文件：4 files / 16 tests 通过。
+  - `bun run check:quick`：通过（DESIGN 审计、声明头 ratchet `new=0`）。
+  - `bun run test:impact`：已执行并通过——Desktop 977 files / 5293 tests、theme-ui 定向 3 + 5 tests；首次暴露的团队委派用例已修复。
+- 未运行及原因：Desktop 实机 UI 验收与 `verify:ui:*` 未运行；本 Task 未获启动真实用户环境的授权，交互由组件测试覆盖。
+- 质量检查：完整 `bun run check` 通过（exit 0；含 lint 4962 files、根 `tsgo`、Desktop `typecheck:incremental`、guards，ratchet `new=0`）。
 - Worktree：未拆出；主题视图与桌面接线串行修改。
-- 剩余风险：待回填。
+- 剩余风险：视觉细节（虚线底纹、竖线位置、完成节点间距）需人工在真实会话中确认；折叠态改变使依赖全部内容可见的旧测试需要显式展开，已在团队委派用例中处理。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0337
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -52,7 +52,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/shared/app-shell/session-open-context.tsx
 depends_on: []
 conflicts_with: [TASK-0335, TASK-0336, TASK-0338]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -82,7 +82,7 @@ updated: 2026-10-21
 
 1. `ProjectDetailPageView.tsx`：移除 motion 头部/卡片/分隔线外壳；新增最近会话列表（最多 5 条，空时隐藏或显示引导）；项目指令标签页（AGENTS.md / CLAUDE.md）；预览/编辑模式切换；编辑区使用 `min-h-[24rem] h-[32rem] resize-y bg-accent/15 rounded-lg p-4 font-mono text-[12.5px]`；空文件与开始编辑引导。
 2. `MarkdownPreviewView.tsx`：增加可选 `className` 并合并现有内边距，供详情页对齐标题边界。
-3. `useProjectDetailPageModel.ts`：新增 `useProjectInstruction(cwd, filename, enabled)`（加载/保存请求计数、`loadedPath`、无定时器）；`activeDocument` 与 `mode` 状态；最近会话、运行中会话/任务计数；`onDocumentChange` 与 `onOpenRecentSession`（经 `resolveSessionOpenTarget`，viewer 走 `/viewer/$path`，其余走 `onOpenSession`）；移除侧栏 `loadSessions` 副作用。
+3. `useProjectDetailPageModel.ts`：新增 `useProjectInstruction(cwd, filename, enabled)`（加载/保存请求计数、`loadedPath`、无定时器）；`activeDocument` 与 `mode` 状态；最近会话、运行中会话/任务计数；`onDocumentChange` 与 `onOpenRecentSession`（经 `resolveSessionOpenTarget`，viewer 走 `/viewer/$path`，其余走 `onOpenSession`）；保留本仓 BUG-0033 的幂等 `loadSessions` 补偿扫描（直达/重载时侧栏组未展开也要拿到会话计数），任务计数按本仓 `ScheduledTask.cwd` 适配。
 4. `ProjectDetailPage.tsx` 与 `RootLayoutView.tsx`：新增 `SessionOpenProvider` / `useOpenProjectSession`，在路由内容两侧注入 `onOpenSession`；新文件 `session-open-context.tsx`。
 5. `context-resources.ts`：`loadContextFileFromDir` → `loadContextFilesFromDir`，同目录按 CLAUDE.md、AGENTS.md 顺序读取两者，祖先目录拍平；`system-prompt-policy.ts` 增加同目录 AGENTS.md 优先声明。
 6. 适配/新增测试：`ProjectDetailPageView.test.tsx`、`useProjectInstruction.test.tsx`，更新 `useProjectDetailPageModel.test.tsx`、`context-resources-port.test.ts`、`system-prompt.test.ts`。
@@ -123,9 +123,9 @@ updated: 2026-10-21
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：自审；逐项对照上游提交与本仓依赖。
-- 集成：待提交并推送 `origin/dev`。
+- 工程验证：已完成；theme-ui `ProjectDetailPageView.test.tsx` 3 例、桌面项目 Hook 2 个文件 3 例、coding-agent 2 个文件 35 例通过；桌面与 coding-agent 类型检查通过；`check:quick` 通过（DESIGN 审计与声明头 ratchet `new=0`）。theme-ui 包级 `tsgo` 仍有与本 Task 无关的存量错误（`NewSessionPicker.tsx`、`BashTerminalCard.tsx` 等），本 Task 触及文件无新增报错。
+- 技术评审：自审；逐项对照上游 `3db9773b4`，保留本仓 BUG-0033 会话扫描、`ScheduledTask.cwd`、DESIGN 门禁与 host 注入边界。
+- 集成：实现提交 `39d28557c` 已集成 main；记录随本轮推送 `origin/dev`。
 - 人工功能验收：待验收；用户可在真实项目页检查视觉、双文件编辑与最近会话跳转。
 - 发布：未授权。
 
@@ -139,8 +139,24 @@ updated: 2026-10-21
 
 ## 交付记录
 
-- 实际修改：待回填。
-- 实际运行：待回填。
-- 未运行及原因：待回填。
+- 实际修改：
+  - `packages/theme-ui/src/project/ProjectDetailPageView.tsx`：按上游 `3db9773b4` 终态重写为去线留白布局——标题/指标/最近会话（最多 5 条、置顶与运行态）/AGENTS.md 与 CLAUDE.md 页签/预览编辑切换/空文件引导；4 处原生 `<button>` 改用 `@vetta-org/ui` 的 `Button` 以满足 D03，`transition-all` 改为 `transition` 以满足 D06；新增 `onOpenExternal` 宿主注入 prop。
+  - `packages/theme-ui/src/activity/MarkdownPreviewView.tsx`：新增可选 `className` 并与默认内边距合并，供详情页对齐标题边界。
+  - `packages/theme-ui/src/project/ProjectDetailPageView.test.tsx`（新增）：上游用例 + jsdom/声明头，3 例通过。
+  - `apps/desktop/src/renderer/shared/app-shell/session-open-context.tsx`（新增）：`SessionOpenProvider` / `useOpenProjectSession`；`RootLayoutView.tsx` 在路由内容外注入 `onOpenSession`。
+  - `ProjectDetailPage.tsx`：接入会话打开上下文，补齐最近会话、运行计数、文档/模式与外部链接 props。
+  - `useProjectDetailPageModel.ts`：按上游模型重写 `useProjectInstruction`、`activeDocument`/`mode`、最近会话与运行计数、`onOpenRecentSession`；保留 BUG-0033 的幂等 `loadSessions` 补偿，任务计数改用本仓 `task.cwd`；`useProjectDetailPageModel.test.tsx` 与新增 `useProjectInstruction.test.tsx` 适配。
+  - `packages/coding-agent/src/resources/runtime/context-resources.ts`：同目录同时读取 CLAUDE.md 与 AGENTS.md（CLAUDE.md 在前），祖先目录拍平；`context-resources-port.test.ts` 覆盖双读与不可读文件继续。
+  - `packages/coding-agent/src/model-context/system-prompt-policy.ts`：声明嵌套更深优先、同目录 AGENTS.md 优先、对话指令最高；`system-prompt.test.ts` 增加同目录优先断言。
+  - i18n zh/en `project.json`：补 `editorPlaceholderFile`、`claudeMdHint`、`context.title`、`recentSessions.*`、`runtime.*`、预览/编辑与空态文案；品牌中立表述。
+  - 更新本 Task 记录、Tasks 索引与 0.1.3 发布说明。
+- 实际运行：
+  - `cd packages/theme-ui && bun run test src/project/ProjectDetailPageView.test.tsx`：3 例通过。
+  - `cd apps/desktop && bun run test src/renderer/domains/project/hooks/useProjectInstruction.test.tsx src/renderer/domains/project/hooks/useProjectDetailPageModel.test.tsx`：2 files / 3 tests 通过。
+  - `cd packages/coding-agent && bun run test test/context-resources-port.test.ts test/system-prompt.test.ts`：2 files / 35 tests 通过。
+  - 桌面类型检查与 coding-agent `tsgo` 构建配置检查通过；`bun run check:quick` 通过。
+  - `bun run test:impact` 通过：Desktop 977 files / 5293 tests、theme-ui 定向 3 + 5 tests。
+- 未运行及原因：Desktop 实机 UI 验收与 `verify:ui:*` 未运行；本 Task 未获启动真实用户环境的授权。
+- 质量检查：完整 `bun run check` 通过（exit 0；含 lint 4962 files、根 `tsgo`、Desktop `typecheck:incremental`、guards，ratchet `new=0`）。
 - Worktree：未拆出；跨 theme-ui / desktop / coding-agent 串行接线。
-- 剩余风险：待回填。
+- 剩余风险：最近会话区在无会话时整块隐藏；视觉留白与标签切换手感需人工在真实项目页确认。上下文双读默认让 CLAUDE.md 与 AGENTS.md 同时进入提示词，若项目两份文件内容大量重复会增 token，由同目录 AGENTS.md 优先声明约束冲突。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0338
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -31,6 +31,10 @@ write_paths:
   - apps/desktop/src/renderer/domains/settings/components/McpEditDialog.tsx
   - apps/desktop/src/renderer/domains/settings/components/McpServerForm.tools.test.tsx
   - apps/desktop/src/renderer/domains/settings/components/McpServerForm.test.tsx
+  - apps/desktop/src/renderer/domains/settings/components/useMcpSettingsModel.ts
+  - apps/desktop/src/renderer/domains/settings/components/useMcpSettingsModel.test.tsx
+  - packages/theme-ui/src/settings/JsonConfigInputView.tsx
+  - packages/theme-ui/src/settings/index.ts
   - apps/desktop/src/shared/i18n/locales/zh/settings.json
   - apps/desktop/src/shared/i18n/locales/en/settings.json
   - project/tasks/TASK-0338-mcp-connector-dialog-redesign.md
@@ -41,7 +45,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/domains/settings/components/mcp-authorization-header.ts
 depends_on: []
 conflicts_with: [TASK-0335, TASK-0336, TASK-0337]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -60,7 +64,7 @@ updated: 2026-10-21
 - 结论：不支持并行；与 TASK-0335/0336/0337 共享 Tasks 索引与 Release Notes。
 - 执行方式：serial。
 - 可并行 Task：无。
-- 前置依赖：无；`JsonConfigInputView`、`SegmentedControl`、`useMcpSettingsModel` 的 JSON 模式与保存动作均已存在。
+- 前置依赖：无；`SegmentedControl` 与 `useMcpSettingsModel` 的 JSON 保存动作已存在，`JsonConfigInputView` 与 JSON 合并入口在本 Task 内最小补齐。
 - 冲突文件/独占路径：`McpServerForm.tsx`、`mcp-authorization-header.ts` 为本 Task 独占；i18n、索引与发布说明共享。
 - Branch：`main`。
 - Worktree：不拆出；三个弹窗/表单组件紧耦合，串行修改避免半成品。
@@ -75,13 +79,13 @@ updated: 2026-10-21
 4. `ManualMcpDialog.tsx`：500px 去线留白弹窗；标题/描述 + 模式切换；视觉模式用 `McpServerFields`，JSON 模式用 `JsonConfigInputView` 与错误提示；底部右对齐取消/添加；保留 section id 与高亮属性。
 5. `McpEditDialog.tsx`：同款弹窗形态与头部图标/字号；复用 `McpServerForm` 并继续传递 `editingServerTools`。
 6. i18n：补齐 `mcpStore.*` 占位符、授权字段、JSON 模式与表单模式文案（zh/en）。
-7. 测试：更新 `McpServerForm.tools.test.tsx` 适配新结构；新增 `McpServerForm.test.tsx` 覆盖协议常驻、授权 key 与原始请求头双向同步、保存值。
+7. 测试：更新 `McpServerForm.tools.test.tsx` 适配新结构；新增 `McpServerForm.test.tsx` 覆盖协议常驻、授权 key 与原始请求头双向同步、保存值；补充 `useMcpSettingsModel.test.tsx` 验证 JSON 合并与弹窗内模式切换不关闭弹窗。
 8. 更新 Tasks 索引、本 Task 交付记录与发布说明。
 
 ### 不做
 
 - 不删除或弱化工具清单、`disabledTools`、`idleTimeout`、section 锚点等本仓功能。
-- 不改 `useMcpSettingsModel` 的保存/校验/JSON 合并逻辑；若接口不足只做最小扩展并补测试。
+- 不改 `useMcpSettingsModel` 既有保存/校验语义；仅新增 `onAddServersFromJson` 与弹窗内 `onDialogModeSwitch` 两个最小扩展并补测试。
 - 不引入上游其他设置页重构或 `@vetta-org/theme-ui/shared` 之外的重复 SegmentedControl。
 - 不启动 Desktop、不运行 `verify:ui:*`、不连接真实 MCP server。
 
@@ -114,9 +118,9 @@ updated: 2026-10-21
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：自审；对照上游最终布局并逐项核对本地保留功能。
-- 集成：待提交并推送 `origin/dev`。
+- 工程验证：已完成定向测试 3 个文件 14 个用例（`McpServerForm.tools.test.tsx` 7、`McpServerForm.test.tsx` 4、`useMcpSettingsModel.test.tsx` 3）；Desktop `bun run typecheck` 通过；`bun run check:quick` 通过（声明头 ratchet `new=0`）。
+- 技术评审：自审；对照上游最终布局并逐项核对本地保留功能；发现并修复弹窗内模式切换会关闭添加弹窗的问题（新增 `onDialogModeSwitch` 并补测试）。
+- 集成：实现提交 `b53a6fd98` 已集成 main；记录随本轮推送 `origin/dev`。
 - 人工功能验收：待验收；用户可在设置 → 连接器打开添加/编辑弹窗检查视觉与交互。
 - 发布：未授权。
 
@@ -130,8 +134,18 @@ updated: 2026-10-21
 
 ## 交付记录
 
-- 实际修改：待回填。
-- 实际运行：待回填。
-- 未运行及原因：待回填。
+- 实际修改：
+  - `McpServerForm.tsx`：拆出导出的 `McpServerFields`，协议选择常驻、基础字段全宽、高级选项折叠与 1:1 网格；stdio 保留 `idleTimeout`，工具清单区块原样保留；HTTP 增加 Authorization key 字段并与原始请求头双向同步。
+  - `mcp-authorization-header.ts`：新增大小写不敏感的 `getMcpAuthorization` / `setMcpAuthorization`。
+  - `ManualMcpDialog.tsx`：500px 去线留白弹窗、标题图标、表单/JSON 分段切换、`JsonConfigInputView` 错误提示、底部右对齐操作区；保留 `SETTINGS_SECTION["mcp-server-list"]` 锚点。
+  - `McpEditDialog.tsx`：同款 500px 弹窗头部，复用 `McpServerForm` 并传递 `editingServerTools`。
+  - `useMcpSettingsModel.ts`：抽出 `parseJsonConfig`；新增 `onAddServersFromJson`（合并 JSON 服务器并关闭弹窗）与 `onDialogModeSwitch`（弹窗内切换模式不关闭弹窗）。
+  - `packages/theme-ui/src/settings/JsonConfigInputView.tsx` + `index.ts`：新增 CodeMirror JSON 编辑器并导出。
+  - zh/en `settings.json`：补齐 `mcpStore.*` 文案；`jsonMustIncludeServer`、`jsonSaveError` 按上游放在顶层命名空间。
+  - 测试：`McpServerForm.tools.test.tsx` 改 mock 路径；新增 `McpServerForm.test.tsx`；`useMcpSettingsModel.test.tsx` 新增 JSON 合并与弹窗内模式切换用例。
+- 实际运行：`cd apps/desktop && bun run test <3 个 MCP 测试文件>` → 3 files / 14 tests passed；`bun run typecheck` → 通过；`bun run check:quick` → 通过（`ratchet: waived=626 new=0`）。
+- 未运行及原因：未启动 Desktop、未运行 `verify:ui:*`（本 Task 未授权真实 UI 启动）。
+- 影响面：`bun run test:impact` 通过——Desktop 977 files / 5293 tests、theme-ui 定向 3 + 5 tests。
+- 质量检查：完整 `bun run check` 通过（exit 0；含 lint 4962 files、根 `tsgo`、Desktop `typecheck:incremental`、guards，ratchet `new=0`）。
 - Worktree：未拆出；表单与两个弹窗串行修改。
-- 剩余风险：待回填。
+- 剩余风险：弹窗视觉与真实交互仍需人工验收；主题 UI 包既有 `check` 报错与本 Task 改动无关。
