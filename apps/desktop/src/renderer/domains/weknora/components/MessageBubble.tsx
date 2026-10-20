@@ -1,6 +1,7 @@
 // Copyright The Open Forge contributors.
 
 import { RendererMarkdownContent } from "@shared/components/RendererMarkdownContent";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { WeKnoraChatMessage, WeKnoraErrorCode } from "../atoms";
 import { stripCitationTags } from "../services/citationTag";
@@ -42,7 +43,10 @@ export function MessageBubble({ message }: MessageBubbleProps): JSX.Element {
 	// T03/AC-5：思考区展示前剥掉 kb/web 标签（完整与残缺；流式暂存与终态思考在此同点覆盖）。
 	// 只影响展示，store 原文一字不动（D1）；思考只剩标签时视为空（不渲染空壳思考块）。
 	// 用户消息分支显式不处理（不做项：用户自己粘贴的文本尊重原文）。
-	const displayThinking = isUser ? thinkingText : stripCitationTags(thinkingText);
+	const displayThinking = useMemo(
+		() => (isUser ? thinkingText : stripCitationTags(thinkingText)),
+		[isUser, thinkingText],
+	);
 	const answerText = isStreaming ? "" : message.text;
 	// AC-7/AC-8：助手流式且尚无任何字符（等待首字）时显示三点 + 文案。与 ThinkingBlock 恰好互补
 	// （旁白非空走思考块，为空才轮到三点），终态 / 无请求 / 用户消息恒不显示。
