@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import "../registry";
 import type { ComponentType } from "react";
 import type { InputBarBackground } from "./InputBarBackground";
@@ -45,6 +46,7 @@ export {
 	AssistantMessage,
 	AssistantMessageFold,
 	AssistantMessagePredictingStatus,
+	AssistantMessageProcessContainer,
 	AssistantMessageStreamingStatus,
 	StreamingIndicator,
 } from "./AssistantMessageView";

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 
 import type {
 	DesktopTeamSessionSnapshot,
@@ -570,9 +571,12 @@ describe("Team delegation message-to-UI flow", () => {
 
 		await waitFor(() => expect(screen.getByText(finalText)).toBeTruthy());
 		expect(assistantRows()).toHaveLength(1);
+		// 完成态默认收起过程步骤；委派卡片属于过程段，展开后可继续核对。
+		fireEvent.click(screen.getByRole("button", { name: /assistantFoldTip\.work\./ }));
 		expect(screen.getAllByText("委派架构设计")).toHaveLength(1);
 		expect(screen.getAllByTestId("team-member-reply-card")).toHaveLength(1);
 		expect(within(screen.getByTestId("team-member-reply-card")).getByText("已完成")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: /assistantFoldTip\.work\./ }));
 
 		const completedSignature = visibleConversationSignature();
 		const reopenedSnapshot: DesktopTeamSessionSnapshot = {
@@ -615,6 +619,8 @@ describe("Team delegation message-to-UI flow", () => {
 
 		expect(visibleConversationSignature()).toEqual(completedSignature);
 		expect(screen.queryByText("正在探索实现路径")).toBeNull();
+		// 重开仍默认收起；成员回复卡片在过程段内，展开后再核对。
+		fireEvent.click(screen.getByRole("button", { name: /assistantFoldTip\.work\./ }));
 		expect(screen.getAllByTestId("team-member-reply-card")).toHaveLength(1);
 	});
 

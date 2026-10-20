@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { createConversationAgentMessage } from "@shared/conversation";
 import { RendererMarkdownScope } from "@shared/components/RendererMarkdownScope";
@@ -137,5 +138,7 @@ describe("feed rendering boundaries", () => {
 		expect(model.result.current.foldData?.processBlocks).toEqual([inspectBlock, delegateBlock]);
 		expect(model.result.current.foldData?.answerBlocks).toEqual([summaryBlock]);
 		expect(model.result.current.segments).toEqual([{ type: "single", block: summaryBlock }]);
+		expect(model.result.current.processSegments).toHaveLength(2);
+		expect(model.result.current.answerSegments).toEqual([{ type: "single", block: summaryBlock }]);
 	});
 });

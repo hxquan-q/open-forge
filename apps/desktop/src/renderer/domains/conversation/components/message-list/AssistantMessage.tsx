@@ -58,10 +58,8 @@ export const AssistantMessage = memo(function AssistantMessage({
 	const { t } = useTranslation("chat");
 	const surface = useThemeSurface("chat.assistantMessage");
 	// 展开态外置：Virtuoso 会卸载滚出视窗的高条目，组件内 state 会被清掉。
-	// Tool calls are part of the transcript's observable data. Keep process
-	// blocks visible by default; users can still collapse them with the shared
-	// fold control without changing the underlying message projection.
-	const [expanded, toggleExpanded] = useExpansion(`fold:${message.id}`, true);
+	// 已完成的消息中间步骤默认合上，用户可点击“已完成”随时展开查看。
+	const [expanded, toggleExpanded] = useExpansion(`fold:${message.id}`, false);
 	const generatedId = useId();
 	const exportFoldPanelId = exportMode ? `export-assistant-fold-${generatedId}` : undefined;
 	const model = useAssistantMessageModel({
@@ -80,6 +78,8 @@ export const AssistantMessage = memo(function AssistantMessage({
 		isPredicting,
 		liveThinkingId,
 		segments,
+		processSegments,
+		answerSegments,
 		durationAvailable,
 		streamingTailIndex,
 		workFoldCount,
@@ -108,6 +108,7 @@ export const AssistantMessage = memo(function AssistantMessage({
 				count === 0
 					? t("messageList.assistantFoldTip.work.collapseZero")
 					: t("messageList.assistantFoldTip.work.collapse", { count }),
+			doneFold: t("messageList.assistantFoldTip.done", { defaultValue: "完成" }),
 			streamingPhrases: Array.isArray(phrases) ? (phrases as string[]) : [],
 		};
 	}, [t]);
@@ -140,6 +141,8 @@ export const AssistantMessage = memo(function AssistantMessage({
 
 	const showTokenUsage = !exportMode && Boolean(message.usages?.length);
 	const hasActions = conclusionText.length > 0 || showTokenUsage;
+	const hasFoldedProcess =
+		!exportMode && !isCurrentlyStreaming && Boolean(foldData) && (processSegments?.length ?? 0) > 0;
 
 	return (
 		<Message.Root>
@@ -222,19 +225,56 @@ export const AssistantMessage = memo(function AssistantMessage({
 								))}
 							</div>
 						)}
-						{segments.map((segment, index) => (
-							<WorkSegmentRenderer
-								key={workSegmentKey(segment)}
-								segment={segment}
-								isStreamingTail={index === streamingTailIndex}
-								isLiveActivity={isCurrentlyStreaming && index === segments.length - 1}
-								liveThinkingId={liveThinkingId}
-								presentation={presentationFor(segment as BlockSegment)}
-								onTeamMemberOpen={onTeamMemberOpen}
-								animateIn={isCurrentlyStreaming && index === segments.length - 1}
-								exportMode={exportMode}
-							/>
-						))}
+						{hasFoldedProcess ? (
+							<>
+								{expanded && (
+									<AssistantMessagePrimitive.ProcessContainer completedLabel={labels.doneFold}>
+										{processSegments?.map((segment) => (
+											<WorkSegmentRenderer
+												key={workSegmentKey(segment)}
+												segment={segment}
+												isStreamingTail={false}
+												isLiveActivity={false}
+												liveThinkingId={null}
+												presentation={presentationFor(segment as BlockSegment)}
+												onTeamMemberOpen={onTeamMemberOpen}
+												animateIn={false}
+												exportMode={exportMode}
+											/>
+										))}
+									</AssistantMessagePrimitive.ProcessContainer>
+								)}
+								{(answerSegments ?? segments).map((segment, index) => (
+									<WorkSegmentRenderer
+										key={workSegmentKey(segment)}
+										segment={segment}
+										isStreamingTail={index === streamingTailIndex}
+										isLiveActivity={
+											isCurrentlyStreaming && index === (answerSegments ?? segments).length - 1
+										}
+										liveThinkingId={liveThinkingId}
+										presentation={presentationFor(segment as BlockSegment)}
+										onTeamMemberOpen={onTeamMemberOpen}
+										animateIn={isCurrentlyStreaming && index === (answerSegments ?? segments).length - 1}
+										exportMode={exportMode}
+									/>
+								))}
+							</>
+						) : (
+							segments.map((segment, index) => (
+								<WorkSegmentRenderer
+									key={workSegmentKey(segment)}
+									segment={segment}
+									isStreamingTail={index === streamingTailIndex}
+									isLiveActivity={isCurrentlyStreaming && index === segments.length - 1}
+									liveThinkingId={liveThinkingId}
+									presentation={presentationFor(segment as BlockSegment)}
+									onTeamMemberOpen={onTeamMemberOpen}
+									animateIn={isCurrentlyStreaming && index === segments.length - 1}
+									exportMode={exportMode}
+								/>
+							))
+						)}
 							</div>
 						) : !isAwaitingFirstActivity ? (
 							<div
