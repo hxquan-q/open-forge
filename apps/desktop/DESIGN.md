@@ -280,7 +280,7 @@ grid 自适应：`grid-cols-[repeat(auto-fill,minmax(240px,1fr))]`（小卡）/ 
 
 **The No-Fixed-Grid Rule.** 卡片网格一律用 `auto-fill` + `minmax` 自适应。写死列数会在用户拉窄窗口时立刻破版。
 
-**已知特例（智能客服页 `/weknora`）**：该页**不**用页面外层 `px-8` + `pb-8`，而用 `px-3` + `pb-2`(页头) / `pb-3`(内容行)。原因：用户 2026-10-19 明确要求收掉顶部那一大块留白、让历史会话栏贴近页头。顶部 `drag-region h-12` 是窗口拖拽硬约束，未动。其它页面仍按 `px-8` + `pb-8`。
+**已知特例（智能客服页 `/weknora`）**：该页**不**用页面外层 `px-8` + `pb-8`，而用 `px-3` + `pb-2`(页头) / `pb-3`(内容行)。原因：用户 2026-10-19 明确要求收掉顶部那一大块留白、让历史会话栏贴近页头。该页原有的 `drag-region h-12`（48px 空白带）已于 2026-10-20 删除——窗口拖拽由外壳页头承担，页面再加一条是重复的空白。其它页面仍按 `px-8` + `pb-8`。
 
 ---
 
@@ -470,7 +470,7 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 - **Do** 只在七档字号里选（`10 / 11 / 12 / 13 / 14 / 15 / 20+`）。
 - **Do** 用 `auto-fill` + `minmax` 做卡片网格（小卡 `240px`、行式列表 `320px`）。
 - **Do** 新图标优先 solar linear（`icon-[solar--*-linear]`），其次 mdi。
-- **Do** 顶栏留 `<div className="drag-region h-12 shrink-0" />` 作可拖拽空白，交互元素套 `.no-drag`。
+- **Do** 页面若**没有外壳页头覆盖**（沉浸式整页、独立窗口），顶栏留 `<div className="drag-region h-12 shrink-0" />` 作可拖拽空白，交互元素套 `.no-drag`。**外壳 `PageHeaderFrame` 之下的常规内容路由不要再加**——外壳页头本身即拖拽区，再加一条会白占 48px（智能客服页 2026-10-20 已据此删除）。
 
 ### Don't:
 
@@ -502,7 +502,9 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 
 ### 标题栏
 
-新页面顶部留 `<div className="drag-region h-12 shrink-0" />` 作为可拖拽空白，再写页面 header；不要把 header 自身设为 drag-region。
+**仅当页面不在外壳页头之下时**，新页面顶部才留 `<div className="drag-region h-12 shrink-0" />` 作为可拖拽空白，再写页面 header；不要把 header 自身设为 drag-region。
+
+常规内容路由（`MainContentFrame` 会渲染 `PageHeaderFrame`，它自身就是 `drag-region`）**不要**再加这条：重复的拖拽带只会白占 48px 顶部空间。智能客服页 2026-10-20 据此删除了自己的 h-12 空白带。
 
 ### 滚动条
 
@@ -599,7 +601,7 @@ solar 常用对照：菜单 `menu-dots`、关闭 `close-circle`、删除 `trash-
 - [ ] 字号只落在 `10 / 11 / 12 / 13 / 14 / 15 / 20+` 七档（`text-base md:text-sm` 的输入基元惯用法除外，见「Typography · 已知例外」）
 - [ ] hover `whileHover` 不超过总则表格
 - [ ] 没有自写 `@keyframes … infinite`；进行中指示走宿主挂载，加载态用 `<Spin>`
-- [ ] 顶栏拖拽区域单独 `<div className="drag-region h-12 shrink-0" />`
+- [ ] 顶栏拖拽区域单独 `<div className="drag-region h-12 shrink-0" />`（**仅限无外壳页头的页面**；外壳页头之下的内容路由不加）
 - [ ] 没有手写 scrollbar 样式
 
 ---
