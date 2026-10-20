@@ -7,6 +7,7 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
+import type { WeKnoraBatchDeleteResult } from "../hooks/useWeKnoraBatchActions";
 import {
 	persistWeKnoraSidebarCollapsed,
 	readPersistedWeKnoraSidebarCollapsed,
@@ -59,6 +60,8 @@ export interface WeKnoraPageViewProps {
 	readonly streamingSessionIds: ReadonlySet<string>;
 	/** 正在删除的会话 id（AC-12 防重复标记）；`null` = 无进行中的删除请求。 */
 	readonly deletingSessionId: string | null;
+	/** 批量删除进行中（T04：批量确认按钮防重复的驱动源）。 */
+	readonly batchDeleting: boolean;
 	/** 删除失败的归一化错误码（AC-11）；非 `null` 时侧栏出内联错误块。 */
 	readonly deleteError: WeKnoraErrorCode | null;
 	readonly saving: boolean;
@@ -71,6 +74,8 @@ export interface WeKnoraPageViewProps {
 	readonly onOpenSession: (sessionId: string) => void;
 	/** 删除历史会话（AC-8）；返回是否成功（失败时确认弹窗不关）。 */
 	readonly onDeleteSession: (sessionId: string) => Promise<boolean>;
+	/** 批量删除历史会话（AC-10）；返回聚合结果（成功 / 失败明细）。 */
+	readonly onDeleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
 	readonly onReloadSessions: () => void;
 	readonly onSaveSetup: (input: { baseUrl: string; apiKey?: string }) => void;
 	readonly onReloadAgents: () => void;
@@ -92,6 +97,7 @@ export function WeKnoraPageView({
 	loadingSessionId,
 	streamingSessionIds,
 	deletingSessionId,
+	batchDeleting,
 	deleteError,
 	saving,
 	saveError,
@@ -101,6 +107,7 @@ export function WeKnoraPageView({
 	onNewConversation,
 	onOpenSession,
 	onDeleteSession,
+	onDeleteSessions,
 	onReloadSessions,
 	onSaveSetup,
 	onReloadAgents,
@@ -218,11 +225,13 @@ export function WeKnoraPageView({
 					>
 						<ConversationList
 							agents={agents}
+							batchDeleting={batchDeleting}
 							currentSessionId={currentSessionId}
 							deleteError={deleteError}
 							deletingSessionId={deletingSessionId}
 							loadingSessionId={loadingSessionId}
 							onDeleteSession={onDeleteSession}
+							onDeleteSessions={onDeleteSessions}
 							onNewConversation={onNewConversation}
 							onOpenSession={onOpenSession}
 							onReload={onReloadSessions}

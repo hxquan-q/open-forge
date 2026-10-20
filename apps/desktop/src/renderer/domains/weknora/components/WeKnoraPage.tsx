@@ -16,6 +16,7 @@ export function WeKnoraPage(): JSX.Element {
 			agents={model.agents}
 			agentsStatus={model.agentsStatus}
 			baseUrl={model.config?.baseUrl ?? ""}
+			batchDeleting={model.batchDeleting}
 			configured={model.configured}
 			currentSessionId={model.currentSessionId}
 			deleteError={model.deleteError}
@@ -32,6 +33,7 @@ export function WeKnoraPage(): JSX.Element {
 			streamingSessionIds={model.streamingSessionIds}
 			onCancel={model.actions.cancel}
 			onDeleteSession={model.actions.deleteSession}
+			onDeleteSessions={model.actions.deleteSessions}
 			onNewConversation={model.actions.newConversation}
 			onOpenSession={model.actions.openSession}
 			onReloadAgents={model.actions.reloadAgents}

@@ -60,7 +60,25 @@
 		"thinkingPending": "思考中"
 	},
 	"menu": {
-		"delete": "删除会话"
+		"delete": "删除会话",
+		"multiSelect": "多选"
+	},
+	"selection": {
+		"selected": "已选 {{count}}",
+		"selectAll": "全选",
+		"delete": "批量删除",
+		"exit": "取消"
+	},
+	"batchDelete": {
+		"confirmTitle": "删除所选会话",
+		"confirmBody": "将删除选中的 {{count}} 个会话。删除后不可恢复,这些会话及其全部消息将从服务端永久移除。",
+		"cancel": "取消",
+		"confirm": "删除",
+		"deleting": "删除中…",
+		"resultTitle": "删除结果",
+		"resultSucceeded": "成功删除 {{count}} 个会话。",
+		"resultFailed": "以下 {{count}} 个会话删除失败:",
+		"close": "关闭"
 	},
 	"export": {
 		"citationSource": "来源"

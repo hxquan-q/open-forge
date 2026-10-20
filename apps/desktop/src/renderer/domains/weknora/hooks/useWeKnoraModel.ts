@@ -11,6 +11,7 @@ import {
 	weKnoraAgentsStatusAtom,
 } from "../atoms";
 import { useWeKnoraAgents } from "./useWeKnoraAgents";
+import { useWeKnoraBatchActions, type WeKnoraBatchDeleteResult } from "./useWeKnoraBatchActions";
 import { useWeKnoraChat } from "./useWeKnoraChat";
 import { useWeKnoraHistory } from "./useWeKnoraHistory";
 import { useWeKnoraSetup, type WeKnoraSetupInput } from "./useWeKnoraSetup";
@@ -37,6 +38,11 @@ export interface WeKnoraModelActions {
 	 * 随后重拉列表。返回是否成功（失败码在 `deleteError`，由侧栏内联错误块展示）。
 	 */
 	readonly deleteSession: (sessionId: string) => Promise<boolean>;
+	/**
+	 * 批量删除历史会话（AC-10）：逐个复用 `removeSession`，聚合成「成功 N / 失败 M(会话 id + 错误码)」；
+	 * 删到当前会话则回空态，完成后重拉列表（失败项原样保留，列表如实刷新）。
+	 */
+	readonly deleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
 }
 
 export interface WeKnoraViewModel {
@@ -58,6 +64,8 @@ export interface WeKnoraViewModel {
 	readonly loadingSessionId: string | null;
 	/** 正在删除的会话 id（AC-12 请求进行中标记，确认按钮防重复的驱动源）；`null` = 无。 */
 	readonly deletingSessionId: string | null;
+	/** 批量删除进行中（T04：确认按钮防重复的驱动源）；`false` = 无。 */
+	readonly batchDeleting: boolean;
 	/** 删除失败的归一化错误码（AC-11，侧栏内联错误块的数据源）；`null` = 无。 */
 	readonly deleteError: WeKnoraErrorCode | null;
 	/** 允许提问：已配置 + 有可用智能体 + 无进行中的回答（AC-7 / AC-19）。 */
@@ -81,6 +89,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 	const setup = useWeKnoraSetup();
 	const agents = useWeKnoraAgents({ config: setup.config });
 	const history = useWeKnoraHistory({ config: setup.config });
+	const batch = useWeKnoraBatchActions({ removeSession: history.removeSession });
 	const chat = useWeKnoraChat({
 		config: setup.config,
 		agents: agents.agents,
@@ -129,8 +138,8 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 	 */
 	const deleteSession = useCallback(
 		async (sessionId: string): Promise<boolean> => {
-			const deleted = await history.removeSession(sessionId);
-			if (!deleted) return false;
+			const outcome = await history.removeSession(sessionId);
+			if (!outcome.ok) return false;
 			// AC-9：删的是当前打开的会话 → 复用「新建对话」语义回空态（消息清空、指针置空）。
 			// 禁删判定（AC-10）已保证被删会话无活跃流，不会误伤后台思考。
 			if (chat.sessionId === sessionId) chat.newConversation();
@@ -138,6 +147,21 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			return true;
 		},
 		[chat.newConversation, chat.sessionId, history.loadSessions, history.removeSession],
+	);
+
+	/**
+	 * 批量删除的**编排**（AC-10）：串行循环归 `useWeKnoraBatchActions`，这里只做跨 actor 的收尾——
+	 * 删到当前会话则回空态（同单删语义），完成后**重拉一次**列表（不是每删一个拉一次）。
+	 * 失败项不静默：聚合结果原样返回给调用方展示，列表重拉后失败会话仍在（不假装删掉）。
+	 */
+	const deleteSessions = useCallback(
+		async (sessionIds: readonly string[]): Promise<WeKnoraBatchDeleteResult> => {
+			const result = await batch.deleteSessions(sessionIds);
+			if (chat.sessionId !== null && result.succeeded.includes(chat.sessionId)) chat.newConversation();
+			await history.loadSessions();
+			return result;
+		},
+		[batch.deleteSessions, chat.newConversation, chat.sessionId, history.loadSessions],
 	);
 
 	return {
@@ -154,6 +178,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		sessionsStatus: history.sessionsStatus,
 		loadingSessionId: history.loadingSessionId,
 		deletingSessionId: history.deletingSessionId,
+		batchDeleting: batch.running,
 		deleteError: history.deleteError,
 		canAsk: chat.canAsk,
 		saving: setup.saving,
@@ -167,6 +192,7 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			reloadSessions: history.reloadSessions,
 			openSession: chat.openSession,
 			deleteSession,
+			deleteSessions,
 		},
 	};
 }

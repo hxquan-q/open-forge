@@ -60,7 +60,25 @@
 		"thinkingPending": "Thinking"
 	},
 	"menu": {
-		"delete": "Delete conversation"
+		"delete": "Delete conversation",
+		"multiSelect": "Select"
+	},
+	"selection": {
+		"selected": "{{count}} selected",
+		"selectAll": "Select all",
+		"delete": "Delete selected",
+		"exit": "Cancel"
+	},
+	"batchDelete": {
+		"confirmTitle": "Delete selected conversations",
+		"confirmBody": "This will delete {{count}} selected conversations. This cannot be undone; they and all of their messages will be permanently removed from the server.",
+		"cancel": "Cancel",
+		"confirm": "Delete",
+		"deleting": "Deleting…",
+		"resultTitle": "Delete result",
+		"resultSucceeded": "Deleted {{count}} conversations.",
+		"resultFailed": "{{count}} conversations could not be deleted:",
+		"close": "Close"
 	},
 	"export": {
 		"citationSource": "Source"
