@@ -40,8 +40,8 @@ export interface ConversationListProps {
  *
  * - 「新建对话」清空当前对话（AC-12，由连接层落实，本组件只发信号）。
  * - 每行显示会话标题、绑定的 agent 名（映射不到显示「未知」，AC-20）与更新时间。
- * - **点行不直接切换**：先弹确认（用户 2026-10-16 裁定 1d）——因为打开会替换当前对话；
- *   取消则什么都不做（不切换、不载入），只有确认才回调 `onOpenSession`。
+ * - **点行直接切换**：点击历史会话行立即回调 `onOpenSession`（用户 2026-10-20 裁定去掉「替换确认」）；
+ *   loading 期间该行禁用（`loadingSessionId`），其余行为与去确认前一致。
  * - **右键行弹上下文菜单**（AC-6，仅「删除会话」）→ 确认弹窗（AC-7，注明不可恢复）→
  *   真删（AC-8）。失败出内联错误块可重试（AC-11），会话行**原样保留**（不假装删掉）；
  *   请求进行中确认按钮防重复（AC-12）。
@@ -61,20 +61,12 @@ export function ConversationList({
 	onDeleteSession,
 }: ConversationListProps): JSX.Element {
 	const { t } = useTranslation("weknora");
-	const [pending, setPending] = useState<WeKnoraSession | null>(null);
 	/** 右键落点 + 目标会话；非空即渲染菜单（portal 到 body）。 */
 	const [menu, setMenu] = useState<{ x: number; y: number; session: WeKnoraSession } | null>(null);
 	/** 待确认删除的会话（确认弹窗的目标）。 */
 	const [pendingDelete, setPendingDelete] = useState<WeKnoraSession | null>(null);
 	/** 最近一次删除失败的目标：内联错误块的重试对象（块本身由 `deleteError` 驱动显隐）。 */
 	const [failedDeleteId, setFailedDeleteId] = useState<string | null>(null);
-
-	const confirmOpen = (): void => {
-		if (pending === null) return;
-		const targetId = pending.id;
-		setPending(null);
-		onOpenSession(targetId);
-	};
 
 	// 菜单项按目标会话现算（可扩展结构，AC-6）：AC-10 禁删 = 目标在 T01 的活跃流集合里
 	// （含后台思考）；禁用时原因写进菜单文案（照「运行中禁归档」先例，不弹 toast）。
@@ -181,7 +173,7 @@ export function ConversationList({
 										isCurrent ? "border-primary/40 bg-primary/10" : "border-transparent hover:bg-muted/30"
 									}`}
 									disabled={session.id === loadingSessionId}
-									onClick={() => setPending(session)}
+									onClick={() => onOpenSession(session.id)}
 									onContextMenu={(event) => {
 										// AC-6：右键弹菜单（坐标 = 指针落点，与 project 侧右键菜单同一模式）。
 										event.preventDefault();
@@ -209,29 +201,7 @@ export function ConversationList({
 				</ul>
 			</div>
 
-			<Dialog
-				open={pending !== null}
-				onOpenChange={(open) => {
-					if (!open) setPending(null);
-				}}
-			>
-				<DialogContent className="max-w-[380px]">
-					<DialogHeader>
-						<DialogTitle>{t("conversation.confirmTitle")}</DialogTitle>
-						<DialogDescription>{t("conversation.confirmBody")}</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button onClick={() => setPending(null)} type="button" variant="outline">
-							{t("conversation.confirmCancel")}
-						</Button>
-						<Button onClick={confirmOpen} type="button" variant="primary">
-							{t("conversation.confirmOk")}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-
-			{/* AC-7：删除确认弹窗（与「打开历史会话」确认同款交互）。请求进行中不提前关、
+			{/* AC-7：删除确认弹窗。请求进行中不提前关、
 			    确认按钮防重复（AC-12）；失败保持打开、按钮恢复可用。 */}
 			<Dialog
 				open={pendingDelete !== null}

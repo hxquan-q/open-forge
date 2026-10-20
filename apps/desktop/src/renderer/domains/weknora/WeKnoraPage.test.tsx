@@ -267,8 +267,11 @@ describe("WeKnoraPage · 历史会话（AC-12/13/14/20）", () => {
 		expect(items[1]?.textContent).toContain("旧会话");
 	});
 
-	it("点历史会话先弹确认；取消则什么都不做（1d）", async () => {
-		const { api } = installApi({ listSessions: vi.fn(async () => [session("s1", { title: "会话一" })]) });
+	it("点历史会话直接切换，不再弹替换确认（AC-1）", async () => {
+		const { api } = installApi({
+			listSessions: vi.fn(async () => [session("s2", { title: "会话一" })]),
+			loadMessages: vi.fn(async () => [message("m1", "user", "历史提问")]),
+		});
 		renderPage();
 		await waitReady();
 		await sendMessage(api, "当前问题");
@@ -277,16 +280,14 @@ describe("WeKnoraPage · 历史会话（AC-12/13/14/20）", () => {
 		const nav = screen.getByRole("navigation", { name: "历史会话" });
 		await userEvent.click(within(nav).getByRole("button", { name: /会话一/ }));
 
-		const dialog = await screen.findByRole("dialog");
-		expect(within(dialog).getByText(/当前对话将被替换/)).toBeTruthy();
-
-		await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
-
-		expect(api.loadMessages).not.toHaveBeenCalled();
-		expect(screen.getByText("当前问题")).toBeTruthy();
+		// 去确认（用户 2026-10-20 裁定）：点击直达切换，不出现任何替换确认弹窗。
+		expect(screen.queryByRole("dialog")).toBeNull();
+		await waitFor(() => expect(api.loadMessages).toHaveBeenCalledWith({ sessionId: "s2", limit: 20 }));
+		await waitFor(() => expect(screen.getByText("历史提问")).toBeTruthy());
+		expect(screen.queryByText("当前问题")).toBeNull();
 	});
 
-	it("确认后调 load-messages 并切换为当前对话（AC-14 / 1d）", async () => {
+	it("点历史会话直接调 load-messages 并切换为当前对话（AC-14）", async () => {
 		const { api } = installApi({
 			listSessions: vi.fn(async () => [session("s9", { title: "旧会话" })]),
 			loadMessages: vi.fn(async () => [
@@ -299,9 +300,6 @@ describe("WeKnoraPage · 历史会话（AC-12/13/14/20）", () => {
 
 		const nav = screen.getByRole("navigation", { name: "历史会话" });
 		await userEvent.click(within(nav).getByRole("button", { name: /旧会话/ }));
-
-		const dialog = await screen.findByRole("dialog");
-		await userEvent.click(within(dialog).getByRole("button", { name: "替换当前对话" }));
 
 		await waitFor(() => expect(api.loadMessages).toHaveBeenCalledWith({ sessionId: "s9", limit: 20 }));
 		await waitFor(() => expect(screen.getByText("历史提问")).toBeTruthy());

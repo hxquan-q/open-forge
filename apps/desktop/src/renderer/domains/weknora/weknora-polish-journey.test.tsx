@@ -182,12 +182,10 @@ async function askViaUi(text: string, labels: { placeholder: string; send: strin
 
 const ZH_ASK = { placeholder: "输入你的问题…", send: "发送" };
 
-/** 经确认弹窗打开某历史会话（点行 → 确认替换当前对话）。 */
+/** 打开某历史会话（点行即直接切换，不再弹替换确认）。 */
 async function openSessionViaUi(nav: HTMLElement, name: RegExp | string): Promise<void> {
 	const user = userEvent.setup();
 	await user.click(within(nav).getByRole("button", { name }));
-	const dialog = await screen.findByRole("dialog");
-	await user.click(within(dialog).getByRole("button", { name: "替换当前对话" }));
 	await act(async () => {
 		await Promise.resolve();
 	});

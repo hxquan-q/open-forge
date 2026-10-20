@@ -47,11 +47,7 @@
 		"refresh": "刷新",
 		"unknownAgent": "未知",
 		"untitled": "未命名会话",
-		"thinking": "思考中",
-		"confirmTitle": "打开历史会话",
-		"confirmBody": "当前对话将被替换为该历史会话,未保存的内容不会保留。",
-		"confirmCancel": "取消",
-		"confirmOk": "替换当前对话"
+		"thinking": "思考中"
 	},
 	"message": {
 		"you": "我",
