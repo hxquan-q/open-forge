@@ -87,6 +87,7 @@ function installFake(): FakeHarness {
 			return state.messagesBySession[sessionId] ?? [];
 		}),
 		deleteSession: vi.fn(async () => undefined),
+		getChunk: vi.fn(async () => ({ content: "chunk" })),
 		ask: vi.fn(async (input) => {
 			let sessionId = input.sessionId;
 			if (!sessionId) {

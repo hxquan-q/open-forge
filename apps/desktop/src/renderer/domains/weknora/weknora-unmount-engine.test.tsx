@@ -119,6 +119,7 @@ function installChatFake(): ChatFake {
 		listSessions: vi.fn(async () => []),
 		loadMessages: vi.fn(async () => []),
 		deleteSession: vi.fn(async () => undefined),
+		getChunk: vi.fn(async () => ({ content: "chunk" })),
 		ask: vi.fn(async () => {
 			askSeq += 1;
 			return { requestId: `r${askSeq}`, sessionId: `s${askSeq}` };
@@ -299,6 +300,7 @@ function installPageFake(): PageFake {
 		listSessions: vi.fn(async () => [...state.sessions]),
 		loadMessages: vi.fn(async ({ sessionId }) => state.messagesBySession[sessionId] ?? []),
 		deleteSession: vi.fn(async () => undefined),
+		getChunk: vi.fn(async () => ({ content: "chunk" })),
 		ask: vi.fn(async (input) => {
 			counters.ask += 1;
 			let sessionId = input.sessionId;

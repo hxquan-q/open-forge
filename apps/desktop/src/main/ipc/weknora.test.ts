@@ -36,6 +36,8 @@ interface Harness {
 	sent: Array<{ channel: string; payload: unknown }>;
 	/** 假客户端收到的删除请求（按序）。 */
 	deleted: string[];
+	/** 假客户端收到的 chunk 取数请求（按序）。 */
+	fetchedChunks: string[];
 }
 
 const DEFAULT_CONFIG = { baseUrl: "http://weknora.test:8083", defaultAgentId: "agent-default", pageSize: 50 };
@@ -47,10 +49,15 @@ function createHarness(): Harness {
 
 	// 假客户端：建会话返回固定 id；流式同步吐出 4 个事件（含 2 个 answer.delta）。
 	const deleted: string[] = [];
+	const fetchedChunks: string[] = [];
 	const fakeClient = {
 		createSession: async () => ({ id: "session-created" }),
 		deleteSession: async (sessionId: string) => {
 			deleted.push(sessionId);
+		},
+		getChunkById: async (chunkId: string) => {
+			fetchedChunks.push(chunkId);
+			return { content: "chunk 原文", knowledgeId: "k-1", kbId: "kb-1" };
 		},
 		streamAgentChat: async (input: {
 			requestId: string;
@@ -85,7 +92,7 @@ function createHarness(): Harness {
 		},
 	} as unknown as WebContents;
 
-	return { service, webContents, sent, deleted };
+	return { service, webContents, sent, deleted, fetchedChunks };
 }
 
 /**
@@ -332,5 +339,30 @@ describe("registerWeKnoraIpc · ask 显式携带 agentId（AC-18 v5）", () => {
 
 		await expect(ask?.({}, { query: "你好", agentId: "" })).rejects.toThrow("agentId must be a non-empty string");
 		await expect(ask?.({}, { query: "你好", agentId: 42 })).rejects.toThrow("agentId must be a non-empty string");
+	});
+});
+
+describe("registerWeKnoraIpc · get-chunk(AC-14 只读数据面)", () => {
+	it("薄层转调:合法入参原样下传 service,归一化结果直返渲染层", async () => {
+		const { service, webContents, fetchedChunks } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		// getChunkById 走 restClient,需已配置凭据(AC-2);用运行时值写入,不引入 Key 字面量(红线 C2)。
+		await mocks.handlers.get(WEKNORA_CHANNELS.SET_API_KEY)?.({}, randomUUID());
+
+		const chunk = await mocks.handlers.get(WEKNORA_CHANNELS.GET_CHUNK)?.({}, { chunkId: "chunk-1" });
+
+		expect(fetchedChunks).toEqual(["chunk-1"]);
+		expect(chunk).toEqual({ content: "chunk 原文", knowledgeId: "k-1", kbId: "kb-1" });
+	});
+
+	it("入参校验:非对象 / 缺 chunkId / 空串 / 非字符串明确报错,不静默", async () => {
+		const { service, webContents } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		const getChunk = mocks.handlers.get(WEKNORA_CHANNELS.GET_CHUNK);
+
+		await expect(getChunk?.({}, "nope")).rejects.toThrow("get-chunk requires an object argument");
+		await expect(getChunk?.({}, {})).rejects.toThrow("chunkId must be a non-empty string");
+		await expect(getChunk?.({}, { chunkId: "  " })).rejects.toThrow("chunkId must be a non-empty string");
+		await expect(getChunk?.({}, { chunkId: 42 })).rejects.toThrow("chunkId must be a non-empty string");
 	});
 });

@@ -61,6 +61,7 @@ function installApi(overrides: Partial<WeKnoraApi> = {}): Harness {
 		listSessions: vi.fn(async () => []),
 		loadMessages: vi.fn(async () => []),
 		deleteSession: vi.fn(async () => undefined),
+		getChunk: vi.fn(async () => ({ content: "chunk" })),
 		ask: vi.fn(async () => ({ requestId: "r1", sessionId: "s1" })),
 		cancel: vi.fn(async () => undefined),
 		onStreamEvent: vi.fn((next: (event: WeKnoraStreamEvent) => void) => {

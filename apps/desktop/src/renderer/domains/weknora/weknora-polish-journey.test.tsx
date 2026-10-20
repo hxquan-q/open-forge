@@ -102,6 +102,7 @@ function installFake(): FakeHarness {
 			ops.push(`delete:${sessionId}`);
 			state.sessions = state.sessions.filter((session) => session.id !== sessionId);
 		}),
+		getChunk: vi.fn(async () => ({ content: "chunk" })),
 		ask: vi.fn(async (input) => {
 			counters.ask.push(input);
 			let sessionId = input.sessionId;

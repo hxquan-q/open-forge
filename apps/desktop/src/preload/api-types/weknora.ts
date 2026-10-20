@@ -5,19 +5,28 @@ import type {
 	WeKnoraAskInput,
 	WeKnoraAskResult,
 	WeKnoraDeleteSessionInput,
+	WeKnoraGetChunkInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraPublicConfig,
 } from "../../main/weknora/service.js";
-import type { WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "../../main/weknora/types.js";
+import type {
+	WeKnoraAgent,
+	WeKnoraChunk,
+	WeKnoraMessage,
+	WeKnoraSession,
+	WeKnoraStreamEvent,
+} from "../../main/weknora/types.js";
 
 // 渲染进程按这份合同调用；类型定义留在主进程领域模块，不另建第二套事实源（红线 C8）。
 export type {
 	WeKnoraAgent,
 	WeKnoraAskInput,
 	WeKnoraAskResult,
+	WeKnoraChunk,
 	WeKnoraConfigPatch,
 	WeKnoraDeleteSessionInput,
+	WeKnoraGetChunkInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraMessage,
@@ -43,6 +52,11 @@ export interface DesktopWeKnoraApi {
 	 * 失败以归一化错误码的 `Error` 拒绝。
 	 */
 	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
+	/**
+	 * 取 chunk 原文（AC-14，只读）：GET `/api/v1/chunks/by-id/:id` 的归一化结果。
+	 * 失败以归一化错误码的 `Error` 拒绝；缓存与重试策略在渲染层 chunkClient。
+	 */
+	getChunk(input: WeKnoraGetChunkInput): Promise<WeKnoraChunk>;
 	/** 提问；`input.agentId` 为当前选中的智能体（AC-18 v5），缺省时回落到配置默认值。 */
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): Promise<void>;
