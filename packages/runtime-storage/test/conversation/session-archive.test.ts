@@ -189,9 +189,10 @@ describe("session archive format v2 (migration workspace)", () => {
 	): Uint8Array {
 		const metaLen = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(10, false);
 		const metaStart = 14;
-		const meta = JSON.parse(
-			new TextDecoder().decode(bytes.subarray(metaStart, metaStart + metaLen)),
-		) as Record<string, unknown>;
+		const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(metaStart, metaStart + metaLen))) as Record<
+			string,
+			unknown
+		>;
 		mutate(meta);
 		const metaBytes = new TextEncoder().encode(JSON.stringify(meta));
 		const tail = bytes.subarray(metaStart + metaLen);
@@ -265,7 +266,7 @@ describe("session archive format v2 (migration workspace)", () => {
 					sessionId: "s1",
 					fingerprintSource: { sessionId: "s1" },
 					records: [{ type: "message", id: "1" }],
-			},
+				},
 			],
 		});
 		expect(new DataView(archive.buffer, archive.byteOffset, archive.byteLength).getUint16(8, false)).toBe(1);
@@ -308,18 +309,20 @@ describe("session archive format v2 (migration workspace)", () => {
 
 	it("Given a version the decoder does not know, When decoded, Then it is rejected as UNSUPPORTED_VERSION", async () => {
 		const archive = await encodeMigrationArchive([]);
-		const forged = patchHeader(archive, (meta) => {
-			meta.formatVersion = 3;
-		}, 3);
+		const forged = patchHeader(
+			archive,
+			(meta) => {
+				meta.formatVersion = 3;
+			},
+			3,
+		);
 		await expect(decodeSessionArchive(forged, "pw")).rejects.toMatchObject({
 			archiveCode: SESSION_ARCHIVE_ERROR_CODES.UNSUPPORTED_VERSION,
 		});
 	});
 
 	it("Given frames with an unknown kind, When decoded, Then they are rejected", () => {
-		const frames = encodeFrames([
-			{ kind: 0x05 as never, payload: new Uint8Array([1, 2, 3]) },
-		]);
+		const frames = encodeFrames([{ kind: 0x05 as never, payload: new Uint8Array([1, 2, 3]) }]);
 		expect(() => decodeFrames(frames)).toThrow(SessionArchiveError);
 		expect(() => decodeFrames(frames)).toThrow(/Unknown frame kind/);
 	});

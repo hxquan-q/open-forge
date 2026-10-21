@@ -12,12 +12,12 @@ import {
 	SESSION_ARCHIVE_CIPHER,
 	SESSION_ARCHIVE_FORMAT,
 	SESSION_ARCHIVE_FORMAT_VERSION,
-	type SessionArchiveFormatVersion,
 	SESSION_ARCHIVE_FRAME,
 	SESSION_ARCHIVE_KDF,
 	SESSION_ARCHIVE_MAGIC,
 	type SessionArchiveEncodeInput,
 	type SessionArchiveFileMetadata,
+	type SessionArchiveFormatVersion,
 } from "./types.js";
 
 export async function encodeSessionArchive(input: SessionArchiveEncodeInput): Promise<Uint8Array> {

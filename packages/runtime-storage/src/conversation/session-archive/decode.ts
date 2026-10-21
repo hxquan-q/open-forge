@@ -1,22 +1,17 @@
 import { decryptGzipPayload, type ScryptParams } from "./crypto.js";
 import { SESSION_ARCHIVE_ERROR_CODES, SessionArchiveError } from "./errors.js";
-import {
-	decodeAttachmentFrame,
-	decodeFrames,
-	decodeJsonPayload,
-	decodeWorkspaceFileFrame,
-} from "./frames.js";
+import { decodeAttachmentFrame, decodeFrames, decodeJsonPayload, decodeWorkspaceFileFrame } from "./frames.js";
 import { safePath } from "./safe-path.js";
 import {
 	SESSION_ARCHIVE_CIPHER,
 	SESSION_ARCHIVE_FORMAT,
-	type SessionArchiveFormatVersion,
 	SESSION_ARCHIVE_FRAME,
 	SESSION_ARCHIVE_KDF,
 	SESSION_ARCHIVE_MAGIC,
 	type SessionArchiveDecodedSession,
 	type SessionArchiveDecodeResult,
 	type SessionArchiveFileMetadata,
+	type SessionArchiveFormatVersion,
 	type SessionArchiveWorkspaceFileDecoded,
 } from "./types.js";
 
@@ -92,10 +87,7 @@ export async function decodeSessionArchive(bytes: Uint8Array, passphrase: string
 		);
 	}
 
-	const workspace =
-		formatVersion === 2
-			? { sourceCwd: metadata.sourceCwd, files: workspaceFiles }
-			: undefined;
+	const workspace = formatVersion === 2 ? { sourceCwd: metadata.sourceCwd, files: workspaceFiles } : undefined;
 
 	return { metadata, sessions, workspace };
 }
@@ -200,9 +192,9 @@ function parseMetadata(value: unknown, formatVersion: SessionArchiveFormatVersio
 		typeof record.createdAt !== "string" ||
 		(record.sourceCwd !== undefined && typeof record.sourceCwd !== "string") ||
 		(record.workspaceFileCount !== undefined &&
-				(typeof record.workspaceFileCount !== "number" ||
-					!Number.isInteger(record.workspaceFileCount) ||
-					record.workspaceFileCount < 0)) ||
+			(typeof record.workspaceFileCount !== "number" ||
+				!Number.isInteger(record.workspaceFileCount) ||
+				record.workspaceFileCount < 0)) ||
 		typeof scryptRecord.N !== "number" ||
 		typeof scryptRecord.r !== "number" ||
 		typeof scryptRecord.p !== "number" ||
