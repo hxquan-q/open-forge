@@ -44,7 +44,7 @@ exclusive_paths:
   - packages/agent/src/engine/tool-failure-guard.ts
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -119,7 +119,7 @@ updated: 2026-10-21
 
 - 工程验证：完成。定向 3 文件 34 例、`test:impact`（agent 1+8 文件 / coding-agent 2+32 文件）、`check:quick`、根 `tsgo`、Desktop `typecheck:incremental` 全部通过。
 - 技术评审：待独立评审。
-- 集成：待集成。
+- 集成：实现 `f2728086a` 已推送 origin/dev 并核对远端（同批 `1f555175b`）。
 - 人工功能验收：待验收；需要一次真实模型回合观察错误文案与重复次数下降。
 - 发布：未授权。
 

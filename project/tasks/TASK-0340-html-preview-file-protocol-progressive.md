@@ -46,7 +46,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/domains/file-preview/preview-assets.ts
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -123,7 +123,7 @@ updated: 2026-10-21
 
 - 工程验证：定向测试 3 个文件 / 30 例通过（desktop 27、theme-ui 3）；`test:impact` 全绿；根 `tsgo` 与 Desktop 增量类型检查通过；`check:quick` 通过（`ratchet new=0`）。
 - 技术评审：待执行（串行自审：`src` 模式不再注入 preview chrome，属已知取舍已记录）。
-- 集成：待集成。
+- 集成：实现 `1f555175b` 已推送 origin/dev 并核对远端（同批 `f2728086a`）。
 - 人工功能验收：待验收；需要在真实 Desktop 中打开多文件 HTML 项目，观察资源归属、首帧与刷新行为。
 - 发布：未授权。
 
