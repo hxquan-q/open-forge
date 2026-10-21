@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import type {
 	BrowserActInput,
@@ -25,6 +26,7 @@ import type {
 	BrowserEngineSession,
 	BrowserProfilePort,
 	BrowserRuntimePort,
+	BrowserRuntimeStatusQuery,
 	BrowserSessionRecord,
 } from "./contracts.js";
 import { BrowserAutomationError } from "./contracts.js";
@@ -70,8 +72,8 @@ export class BrowserAutomationService {
 		this.logger = options.logger;
 	}
 
-	runtimeStatus(signal?: AbortSignal): Promise<BrowserRuntimeStatus> {
-		return this.runtime.status(signal);
+	runtimeStatus(signal?: AbortSignal, query?: BrowserRuntimeStatusQuery): Promise<BrowserRuntimeStatus> {
+		return this.runtime.status(signal, query);
 	}
 
 	installRuntime(input: BrowserRuntimeInstallInput, signal?: AbortSignal): Promise<BrowserRuntimeStatus> {
@@ -82,6 +84,8 @@ export class BrowserAutomationService {
 		signal?.throwIfAborted();
 		const runtime = await this.runtime.status(signal);
 		if (runtime.phase !== "ready") {
+			// 缓存可能还停在旧的 ready；会话起不来时让下一次查询重新探测。
+			this.runtime.invalidate();
 			throw new BrowserAutomationError("runtime_not_ready", `Browser runtime is ${runtime.phase}`);
 		}
 		const source = input.source ?? "managed";
@@ -342,6 +346,10 @@ export class BrowserAutomationService {
 			});
 			return result;
 		} catch (error) {
+			if (error instanceof BrowserAutomationError && error.code === "engine_failed") {
+				// 引擎起不来通常意味着运行时被替换或损坏，旧的就绪结论不再可信。
+				this.runtime.invalidate();
+			}
 			this.logger.warn("browser operation failed", {
 				namespace,
 				sessionRef: browserResourceRef(sessionId),

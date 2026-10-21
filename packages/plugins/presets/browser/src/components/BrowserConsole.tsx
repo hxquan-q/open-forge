@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { type JSX, useEffect, useState } from "react";
 import type { BrowserRuntimeController, RuntimeStatus } from "../runtime/runtime-controller";
@@ -68,7 +69,7 @@ export function BrowserConsole({ ports }: { ports: BrowserConsolePorts }): JSX.E
 					status={status}
 					onInstallRuntime={() => void ports.runtime.installRuntime()}
 					onInstallBrowser={() => void ports.runtime.installBrowser()}
-					onRecheck={() => void ports.runtime.refresh()}
+					onRecheck={() => void ports.runtime.refresh({ fresh: true })}
 				/>
 
 				<CapabilitiesSection />

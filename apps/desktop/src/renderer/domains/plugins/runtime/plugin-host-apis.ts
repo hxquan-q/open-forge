@@ -182,9 +182,11 @@ export function createBrowserApi(plugin: InstalledPlugin, capabilitySessionId: s
 			store.set(openUrlInBrowserAtom, normalizedUrl);
 		},
 		runtime: {
-			status: () => {
+			status: (options) => {
 				permissions.require("browser.read");
-				return browser.runtimeStatus(capabilitySessionId);
+				return options
+					? browser.runtimeStatus(capabilitySessionId, options)
+					: browser.runtimeStatus(capabilitySessionId);
 			},
 			install: (step) => {
 				permissions.require("browser.runtime.manage");

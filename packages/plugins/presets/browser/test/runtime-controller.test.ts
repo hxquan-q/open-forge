@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginBrowserApi, PluginBrowserRuntimeStatus } from "@vetta-org/plugin-sdk";
 import { describe, expect, it, vi } from "vitest";
 import { BrowserRuntimeController } from "../src/runtime/runtime-controller";
@@ -40,6 +41,15 @@ describe("BrowserRuntimeController", () => {
 		const controller = new BrowserRuntimeController({ browser });
 		await controller.installBrowser();
 		expect(browser.runtime.install).toHaveBeenCalledWith("browser");
+	});
+
+	it("人工重检透传 fresh，预热保持缓存路径", async () => {
+		const browser = createBrowser([{ phase: "ready", version: "0.34.0" }]);
+		const controller = new BrowserRuntimeController({ browser });
+		await controller.refresh();
+		await controller.refresh({ fresh: true });
+		expect(browser.runtime.status).toHaveBeenNthCalledWith(1, undefined);
+		expect(browser.runtime.status).toHaveBeenNthCalledWith(2, { fresh: true });
 	});
 
 	it("宿主调用失败进入可诊断 error 状态", async () => {

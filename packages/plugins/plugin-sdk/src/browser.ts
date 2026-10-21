@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type PluginBrowserSource = "managed" | "attach";
 export type PluginBrowserRuntimePhase =
 	| "checking"
@@ -84,7 +85,8 @@ export interface PluginBrowserApi {
 	 */
 	open(url: string): void;
 	runtime: {
-		status(): Promise<PluginBrowserRuntimeStatus>;
+		/** `fresh` 绕过宿主缓存做一次真实探测；缺省命中缓存。 */
+		status(options?: { fresh?: boolean }): Promise<PluginBrowserRuntimeStatus>;
 		install(step: "runtime" | "browser"): Promise<PluginBrowserRuntimeStatus>;
 	};
 	sessions: {

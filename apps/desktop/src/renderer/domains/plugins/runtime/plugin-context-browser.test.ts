@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import type { InstalledPlugin } from "@preload/api";
 import {
 	activeSessionAtom,
@@ -171,6 +172,8 @@ describe("PluginContext browser facade", () => {
 		const ctx = createContext(["browser.read"]);
 		await expect(ctx.browser.runtime.status()).resolves.toEqual({ phase: "ready" });
 		expect(bridge.runtimeStatus).toHaveBeenCalledWith("capability-1");
+		await expect(ctx.browser.runtime.status({ fresh: true })).resolves.toEqual({ phase: "ready" });
+		expect(bridge.runtimeStatus).toHaveBeenCalledWith("capability-1", { fresh: true });
 		expect(() => ctx.browser.open("https://example.com")).toThrow("Plugin permission denied: browser.open");
 		expect(() => ctx.browser.sessions.create({ profile: { type: "persistent", id: "account" } })).toThrow(
 			"Plugin permission denied: browser.profile.persist",

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	type BrowserActionResult,
 	type BrowserPageState,
@@ -67,11 +68,17 @@ function readOwnedSession(access: PluginCapabilitySessionAccess, sessionId: stri
 }
 
 export const pluginBrowserMethods = {
-	getBrowserRuntimeStatus(this: PluginCapabilitySessionAccess, sessionId: string): Promise<BrowserRuntimeStatus> {
+	getBrowserRuntimeStatus(
+		this: PluginCapabilitySessionAccess,
+		sessionId: string,
+		options?: unknown,
+	): Promise<BrowserRuntimeStatus> {
 		const session = readSession(this, sessionId);
-		return session.access.client.invoke(FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_STATUS, {
+		const input = FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_STATUS.parseInput({
+			...objectInput(options),
 			namespace: session.pluginId,
 		});
+		return session.access.client.invoke(FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_STATUS, input);
 	},
 
 	installBrowserRuntime(

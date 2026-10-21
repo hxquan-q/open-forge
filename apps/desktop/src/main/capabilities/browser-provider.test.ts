@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CapabilityHub } from "@vetta/capability-runtime";
 import {
 	type BrowserRuntimeStatus,
@@ -38,6 +39,28 @@ describe("desktop browser capability provider", () => {
 				),
 			).resolves.toEqual({ phase: "ready", version: "0.34.0" });
 			expect(browser.runtimeStatus).toHaveBeenCalledOnce();
+		} finally {
+			registration.dispose();
+		}
+	});
+
+	it("forwards the fresh recheck flag to the runtime probe", async () => {
+		const hub = new CapabilityHub();
+		const browser = service();
+		const registration = registerDesktopBrowserProvider(hub.foundation, browser);
+		try {
+			await hub.invoke(
+				FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_STATUS,
+				{ namespace: "publisher", fresh: true },
+				{ signal: new AbortController().signal, traceId: "browser-status-fresh" },
+			);
+			expect(browser.runtimeStatus).toHaveBeenCalledWith(expect.anything(), { fresh: true });
+			await hub.invoke(
+				FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_STATUS,
+				{ namespace: "publisher" },
+				{ signal: new AbortController().signal, traceId: "browser-status-cached" },
+			);
+			expect(browser.runtimeStatus).toHaveBeenLastCalledWith(expect.anything(), undefined);
 		} finally {
 			registration.dispose();
 		}

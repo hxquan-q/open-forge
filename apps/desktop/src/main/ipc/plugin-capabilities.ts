@@ -89,8 +89,8 @@ export function registerPluginCapabilitiesIpc(): () => void {
 	ipcMain.handle(PLUGIN_CAPABILITY_CHANNELS.CLOSE_SESSION, (_event, sessionId: unknown) =>
 		adapter.closeSession(requireString(sessionId, "sessionId")),
 	);
-	ipcMain.handle(PLUGIN_CAPABILITY_CHANNELS.BROWSER_RUNTIME_STATUS, (_event, sessionId: unknown) =>
-		adapter.getBrowserRuntimeStatus(requireString(sessionId, "sessionId")),
+	ipcMain.handle(PLUGIN_CAPABILITY_CHANNELS.BROWSER_RUNTIME_STATUS, (_event, sessionId: unknown, options: unknown) =>
+		adapter.getBrowserRuntimeStatus(requireString(sessionId, "sessionId"), options),
 	);
 	ipcMain.handle(PLUGIN_CAPABILITY_CHANNELS.BROWSER_RUNTIME_INSTALL, (_event, sessionId: unknown, step: unknown) =>
 		adapter.installBrowserRuntime(requireString(sessionId, "sessionId"), step),

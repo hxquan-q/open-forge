@@ -688,7 +688,7 @@ export interface DesktopPluginSystemApi {
 }
 
 export interface DesktopPluginCapabilityBrowserApi {
-	runtimeStatus(sessionId: string): Promise<PluginBrowserRuntimeStatus>;
+	runtimeStatus(sessionId: string, options?: { fresh?: boolean }): Promise<PluginBrowserRuntimeStatus>;
 	runtimeInstall(sessionId: string, step: "runtime" | "browser"): Promise<PluginBrowserRuntimeStatus>;
 	createSession(sessionId: string, options?: PluginBrowserSessionOptions): Promise<PluginBrowserSession>;
 	getSession(sessionId: string, browserSessionId: string): Promise<PluginBrowserSession>;

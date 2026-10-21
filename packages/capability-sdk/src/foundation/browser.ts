@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import { createCapabilityCatalog } from "../catalog.js";
 import { CAPABILITY_LAYERS, defineCapability } from "../contracts.js";
@@ -13,7 +14,11 @@ const namespaceType = Type.String({
 const identifierType = Type.String({ minLength: 1, maxLength: 128, pattern: "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$" });
 const requiredStringType = Type.String({ minLength: 1 });
 const allowedHostType = Type.String({ minLength: 1, maxLength: 253, pattern: "\\S" });
-const browserRuntimeStatusInputType = Type.Object({ namespace: namespaceType });
+const browserRuntimeStatusInputType = Type.Object({
+	namespace: namespaceType,
+	/** 绕过宿主的状态缓存，强制一次真实探测（人工重检）。 */
+	fresh: Type.Optional(Type.Boolean()),
+});
 
 const browserRuntimePhaseType = Type.Union([
 	Type.Literal("checking"),

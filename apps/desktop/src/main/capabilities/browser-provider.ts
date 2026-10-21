@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { bindCapability, type CapabilityRegistry } from "@vetta/capability-runtime";
 import {
 	CAPABILITY_ERROR_CODES,
@@ -65,8 +66,11 @@ export function registerDesktopBrowserProvider(
 ): Disposable {
 	return registry.registerOwner(BROWSER_PROVIDER_OWNER, [
 		bindCapability(FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_STATUS, {
-			execute: async (_input, context) =>
-				executeBrowser(() => service.runtimeStatus(context.signal), context.signal),
+			execute: async (input, context) =>
+				executeBrowser(
+					() => service.runtimeStatus(context.signal, input.fresh ? { fresh: true } : undefined),
+					context.signal,
+				),
 		}),
 		bindCapability(FOUNDATION_BROWSER_CAPABILITIES.RUNTIME_INSTALL, {
 			execute: async (input, context) =>

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginBrowserApi, PluginBrowserRuntimeStatus } from "@vetta-org/plugin-sdk";
 
 /**
@@ -74,11 +75,12 @@ export class BrowserRuntimeController {
 		for (const listener of this.listeners) listener(this.status);
 	}
 
-	async refresh(): Promise<RuntimeStatus> {
+	/** `fresh` 供人工重检使用：绕过宿主缓存，强制一次真实探测。 */
+	async refresh(options?: { fresh?: boolean }): Promise<RuntimeStatus> {
 		if (this.installing) return this.status;
 		this.emit({ phase: "checking", message: undefined, recentOutput: undefined, step: undefined });
 		try {
-			this.emit({ ...(await this.ports.browser.runtime.status()), step: undefined });
+			this.emit({ ...(await this.ports.browser.runtime.status(options)), step: undefined });
 		} catch (error) {
 			this.emit({ phase: "error", message: errorMessage(error), step: undefined });
 		}

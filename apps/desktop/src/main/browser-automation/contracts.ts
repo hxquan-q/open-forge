@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	BrowserAction,
 	BrowserRuntimeInstallInput,
@@ -55,9 +56,16 @@ export interface BrowserEngine {
 	close(session: BrowserEngineSession, signal?: AbortSignal): Promise<void>;
 }
 
+export interface BrowserRuntimeStatusQuery {
+	/** 绕过状态缓存，强制一次真实探测；人工重检使用。 */
+	fresh?: boolean;
+}
+
 export interface BrowserRuntimePort {
-	status(signal?: AbortSignal): Promise<BrowserRuntimeStatus>;
+	status(signal?: AbortSignal, query?: BrowserRuntimeStatusQuery): Promise<BrowserRuntimeStatus>;
 	install(input: BrowserRuntimeInstallInput, signal?: AbortSignal): Promise<BrowserRuntimeStatus>;
+	/** 作废缓存的就绪判断，下一次查询重新探测。 */
+	invalidate(): void;
 }
 
 export interface BrowserProfilePort {

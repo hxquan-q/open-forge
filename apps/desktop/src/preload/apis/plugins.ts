@@ -63,7 +63,8 @@ export function createPluginsApi(ipc: IpcRenderer, webUtils: WebUtils): Pick<Des
 				openSession: (pluginId) => ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.OPEN_SESSION, pluginId),
 				closeSession: (sessionId) => ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.CLOSE_SESSION, sessionId),
 				browser: {
-					runtimeStatus: (sessionId) => ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.BROWSER_RUNTIME_STATUS, sessionId),
+					runtimeStatus: (sessionId, options) =>
+						ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.BROWSER_RUNTIME_STATUS, sessionId, options),
 					runtimeInstall: (sessionId, step) =>
 						ipc.invoke(PLUGIN_CAPABILITY_CHANNELS.BROWSER_RUNTIME_INSTALL, sessionId, step),
 					createSession: (sessionId, options) =>

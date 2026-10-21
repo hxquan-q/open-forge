@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -5,13 +6,14 @@ import type { BrowserAction, BrowserRuntimeStatus } from "@vetta-org/capability-
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BrowserAutomationService } from "./browser-automation-service.js";
 import { BrowserProfileRegistry } from "./browser-profile-registry.js";
-import type {
-	BrowserAutomationLogger,
-	BrowserEngine,
-	BrowserEnginePageResult,
-	BrowserEngineSession,
-	BrowserProfilePort,
-	BrowserRuntimePort,
+import {
+	BrowserAutomationError,
+	type BrowserAutomationLogger,
+	type BrowserEngine,
+	type BrowserEnginePageResult,
+	type BrowserEngineSession,
+	type BrowserProfilePort,
+	type BrowserRuntimePort,
 } from "./contracts.js";
 
 class FakeBrowserEngine implements BrowserEngine {
@@ -53,7 +55,7 @@ class FakeBrowserEngine implements BrowserEngine {
 
 function readyRuntime(): BrowserRuntimePort {
 	const status: BrowserRuntimeStatus = { phase: "ready", version: "0.34.0" };
-	return { status: async () => status, install: async () => status };
+	return { status: async () => status, install: async () => status, invalidate: () => undefined };
 }
 
 describe("BrowserAutomationService", () => {
@@ -128,16 +130,45 @@ describe("BrowserAutomationService", () => {
 		expect(JSON.stringify(logCalls)).not.toContain("token=hidden");
 	});
 
-	it("reports runtime readiness instead of creating a partial session", async () => {
+	it("reports runtime readiness instead of creating a partial session and invalidates the probe cache", async () => {
+		const invalidate = vi.fn();
 		const unavailable = new BrowserAutomationService({
 			engine,
-			runtime: { status: async () => ({ phase: "missing" }), install: async () => ({ phase: "missing" }) },
+			runtime: {
+				status: async () => ({ phase: "missing" }),
+				install: async () => ({ phase: "missing" }),
+				invalidate,
+			},
 			profiles: new BrowserProfileRegistry({ baseDirectory: temporaryDirectory }),
 			logger,
 		});
 		await expect(unavailable.createSession({ namespace: "publisher", allowedHosts: ["*"] })).rejects.toMatchObject({
 			code: "runtime_not_ready",
 		});
+		expect(invalidate).toHaveBeenCalledOnce();
+	});
+
+	it("invalidates the probe cache when the engine fails to start", async () => {
+		const invalidate = vi.fn();
+		const failingEngine = new FakeBrowserEngine();
+		failingEngine.navigate = vi.fn(async () => {
+			throw new BrowserAutomationError("engine_failed", "Browser engine failed to start");
+		});
+		const failingService = new BrowserAutomationService({
+			engine: failingEngine,
+			runtime: {
+				status: async () => ({ phase: "ready", version: "0.34.0" }),
+				install: async () => ({ phase: "ready", version: "0.34.0" }),
+				invalidate,
+			},
+			profiles: new BrowserProfileRegistry({ baseDirectory: temporaryDirectory }),
+			logger,
+		});
+		const session = await failingService.createSession({ namespace: "publisher", allowedHosts: ["example.com"] });
+		await expect(
+			failingService.navigate({ namespace: "publisher", sessionId: session.id, url: "https://example.com/" }),
+		).rejects.toMatchObject({ code: "engine_failed" });
+		expect(invalidate).toHaveBeenCalledOnce();
 	});
 
 	it("reuses one active persistent profile and rejects conflicting live settings", async () => {
