@@ -124,7 +124,7 @@ updated: 2026-10-21
 
 - 工程验证：定向 5 文件 / 46 例通过（desktop 4 文件 40 例、browser preset 6 例）；`test:impact` 中 desktop 978 文件 / 5323 例通过（受影响包均通过，单个无关包假红已单跑复绿）；根 `tsgo`、Desktop 增量类型检查、`check:quick` 与完整 `bun run check` 通过（`ratchet new=0`）；capability catalog 已按新输入重新生成。
 - 技术评审：串行自审；共享探测不绑定调用方取消、安装代次丢弃旧探测、`fresh` 缺省等价旧行为均已用测试锁定。
-- 集成：实现 `a59e4c0f2` 已提交 main，随本次记录提交推送 `origin/dev`。
+- 集成：实现 `a59e4c0f2` 已集成 main；记录 `70e452421` 已推送 `origin/dev` 并核对远端。
 - 人工功能验收：待验收；需要在真实 Desktop 中反复打开面板并在缓存期内观察新增版本探测子进程为 0。
 - 发布：未授权。
 
