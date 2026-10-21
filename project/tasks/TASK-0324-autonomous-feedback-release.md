@@ -1,7 +1,7 @@
 ---
 id: TASK-0324
 type: task
-status: verifying
+status: done
 priority: P1
 owner: project/agent-workflow
 requirement: REQ-0019
@@ -23,7 +23,7 @@ depends_on: [TASK-0323]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0130, TASK-0153, TASK-0154, TASK-0197, TASK-0218, TASK-0223, TASK-0276]
 integration_status: integrated
 created: 2026-10-19
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -82,3 +82,4 @@ Node runner 覆盖信号重放、证据有效性/日期去重、未知用量、�
 - 冻结候选树 3e067fa1a2d62e6ac9b9599c8481cd0837c8efc9 经完整 test:changed --base origin/dev：46 包全部通过，2077.1 秒；CLI 238 通过 / 14 跳过，Desktop 5278 通过 / 17 跳过，未新增 skip 或改变断言/超时。日志为系统临时目录 open-forge-autonomy-integrated-test-changed-20261019.log。
 - 七个他人 temp 文件仍原位未跟踪；来源和候选校验未发生其他代码变化。仅更新本次集成管理记录，最终完整 check 仍须在合并提交前通过。
 - 本 Task 保持 verifying，真实执行/评审、UI 与外部服务接入仍未验收；完整目标和恢复条件见 VERIFY-0019，不能把本地软件验证当成真实 L4。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

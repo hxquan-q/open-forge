@@ -1,7 +1,7 @@
 ---
 id: TASK-0338
 type: task
-status: verifying
+status: done
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -149,3 +149,4 @@ updated: 2026-10-21
 - 质量检查：完整 `bun run check` 通过（exit 0；含 lint 4962 files、根 `tsgo`、Desktop `typecheck:incremental`、guards，ratchet `new=0`）。
 - Worktree：未拆出；表单与两个弹窗串行修改。
 - 剩余风险：弹窗视觉与真实交互仍需人工验收；主题 UI 包既有 `check` 报错与本 Task 改动无关。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

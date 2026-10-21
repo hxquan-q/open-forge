@@ -1,7 +1,7 @@
 ---
 id: TASK-0313
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement:
@@ -28,7 +28,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -107,3 +107,4 @@ Windows 下 bash 工具 spawn 加 `windowsHide: true` 消除控制台窗口闪�
 ### test:impact 归因汇总（TASK-0310～0313 共用）
 
 `test:impact`（desktop、cli-host、coding-agent、runtime-desktop、runtime-node 并行）exit 非 0：cli-host、runtime-desktop 过；runtime-node 7 红、coding-agent 1 红串行复跑均为 `spawn rg ENOENT`（本机 PATH 无 ripgrep，TASK-0307 已记录的同款存量环境红，与本轮改动无关）；desktop 改包内 `bun run test` 串行复跑两次：4 个收集崩溃文件与 BUG-0107 记录的四个文件逐一相同（`process.resourcesPath` TypeError，2026-10-14 起存量 investigating），其余红（useSessionManager 队列、model-call-frame、远程 SSH 流、ImBridge 超时）在两次同树运行间集合不同、属负载型 flaky/超时类，均不在本轮改动域；首轮通过 5076/5077。完整 `bun run check` 全绿（期间修复 biome 一处 import 排序，并补齐并行会话 TASK-0309 合并遗漏的 15 个声明头使 ratchet new=0，另作 chore 提交）。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

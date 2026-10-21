@@ -1,7 +1,7 @@
 ---
 id: TASK-0315
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/plugins
 requirement: REQ-0005
@@ -45,7 +45,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -110,3 +110,4 @@ updated: 2026-10-18
 - 实际运行：定向 32/32（source-locator/tagger/payload/engine-config/layout-probe）；包内 `tsc --noEmit` 修复后 0 错；包内全量与 impact 待 desktop 套件让路后串行复跑（首轮全量 548/548 断言全过、29 文件收集失败系与后台 desktop 套件并发资源枯竭，单跑复现已转绿）。
 - 未运行及原因：引擎真实 dev serve 的端到端（tagger babel 链路、上下文包在画布上的呈现）待用户实机；real-model 回合不适用（纯确定性合同）。
 - 剩余风险：babel 访问器本体仅经工厂签名与值构造测试锁定，端到端依赖实机 dev serve；旧引擎实例（未重物化）回传的 payload 无上下文包字段——消费方按可选字段处理，已测。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

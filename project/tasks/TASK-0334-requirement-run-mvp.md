@@ -1,7 +1,7 @@
 ---
 id: TASK-0334
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -46,7 +46,7 @@ depends_on: []
 conflicts_with: [TASK-0326, TASK-0327, TASK-0328, TASK-0329, TASK-0330, TASK-0331, TASK-0332, TASK-0333]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -177,3 +177,4 @@ updated: 2026-10-20
 - 未运行及原因：真实 Provider、真实模型、真实 UI、CI、发布、遥测均不在本 Task 授权内；`requirement-run` 的默认 `verify` 路径只用注入 `execute` 测过，未调用真实 `cycle`/adapter。
 - Worktree：未拆出；serial 共享 `scripts/agents`，单 Agent 串行修改。
 - 剩余风险：覆盖 manifest 由 Agent/协调者编写，路径存在性不能证明证据语义正确；`verifying` 依赖仍需人工接受，需求级闭环会在该点停下；Phase 2–4 未实现；真实模型回合未验收。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

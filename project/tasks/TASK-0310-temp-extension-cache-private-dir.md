@@ -1,7 +1,7 @@
 ---
 id: TASK-0310
 type: task
-status: verifying
+status: done
 priority: P0
 owner: packages/coding-agent
 requirement:
@@ -33,7 +33,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -110,3 +110,4 @@ updated: 2026-10-18
 - 未运行及原因：Windows 下 0700 位断言按平台跳过（ACL 语义不同），由调用合同断言与 Linux CI 补充。
 - Worktree：未拆出（串行小改动）
 - 剩余风险：历史 `os.tmpdir()/pi-extensions` 残留目录不主动清理（无害残留）；`locationFacts.temporaryDirectory` 合同字段保留但本消费方不再使用。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

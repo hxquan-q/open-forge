@@ -1,7 +1,7 @@
 ---
 id: TASK-0327
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -23,7 +23,7 @@ depends_on: [TASK-0326]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0328, TASK-0329]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -101,3 +101,4 @@ updated: 2026-10-20
 - 未运行及原因：未运行真实模型、真实 UI、分布式控制器或外部发布；用户已明确没有隔离 VM/runner 与模型环境。循环通过注入的 `cycle` 替身验证状态边界，真实多 Task 长跑仍需受限环境。
 - Worktree：协调控制器在 main 串行；目标 Task 的后续真实执行仍必须进入各自 Task Worktree。
 - 剩余风险：单机文件锁不证明分布式调度安全；CLI 当前没有后台守护，取消依赖进程信号，失联进程仍需恢复流程确认清理。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

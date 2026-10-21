@@ -1,7 +1,7 @@
 ---
 id: TASK-0312
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement:
@@ -27,7 +27,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -101,3 +101,4 @@ updated: 2026-10-18
 - 未运行及原因：不在真实浏览器开箱逐例目验——净化逻辑为纯函数，提取求值已覆盖行为；导出运行时链路由既有 export-html-runtime 测试守卫。
 - Worktree：未拆出（串行小改动）
 - 剩余风险：白名单外的自定义 scheme（如 `obsidian:`）会被拒——与上游一致的预期收紧。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

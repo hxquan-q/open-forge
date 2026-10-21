@@ -1,7 +1,7 @@
 ---
 id: TASK-0309
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/plugins
 requirement: REQ-0005
@@ -41,7 +41,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -122,3 +122,4 @@ updated: 2026-10-18
 - 实际运行：包内 `bun run test` 711/711；定向新用例覆盖全部 G/W/T；根 `test:impact` 167 过 + BUG-0107 四文件存量收集崩（归因：文件清单与 BUG-0107 记载一致、均不在本 diff）；`check:quick` 在补齐 5 个新文件声明头后本任务部分通过（工作树残余 new=15 为并行会话在途修复的存量，见下）。
 - 未运行及原因：真实 Electron 实机验证未做（须用户授权启动 dev，见人工验收清单）；desktop window-manager 无单测（BUG-0107 使该链路在 vitest 无覆盖，按 isolated-window 先例处理，靠完整 check + 实机）。
 - 剩余风险：① `--ignore-scripts` 使依赖 postinstall 二进制安装的包装而不可用（ADR-0068 修订已记，构建报错提示，可手动 `npm rebuild`）；② 首开自动补装不二次弹确认（脚本执行面已由 flag 消解，确认门只在导入流，Task「不做」已声明）；③ no-cors 就绪探测在真实 Electron file:// 源下的行为需实机确认；④ 推送时点须待并行会话把主树 15 个存量声明头修复提交入库，否则 origin/dev 的 CI ratchet 会红（与本任务无关的耦合）。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0317
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement:
@@ -29,7 +29,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -119,3 +119,4 @@ per-pid/per-command 隔离语义不变。
 - Worktree：task-0317-cli-userdata-private-dir（branch task/TASK-0317-cli-userdata-private-dir，Worker 提交 `a15ee5f82`）。
 - 集成：`fb6ed3cd4`（--no-ff 合并）；待推送 origin/dev 后清理 Worktree。
 - 剩余风险：历史 `os.tmpdir()/openforge-*-cli*` 残留不主动清理（无害残留）；Electron 在极少数创建失败场景仍会按私有路径自行建目录（告警留痕）。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

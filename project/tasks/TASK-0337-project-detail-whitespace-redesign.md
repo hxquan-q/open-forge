@@ -1,7 +1,7 @@
 ---
 id: TASK-0337
 type: task
-status: verifying
+status: done
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -160,3 +160,4 @@ updated: 2026-10-21
 - 质量检查：完整 `bun run check` 通过（exit 0；含 lint 4962 files、根 `tsgo`、Desktop `typecheck:incremental`、guards，ratchet `new=0`）。
 - Worktree：未拆出；跨 theme-ui / desktop / coding-agent 串行接线。
 - 剩余风险：最近会话区在无会话时整块隐藏；视觉留白与标签切换手感需人工在真实项目页确认。上下文双读默认让 CLAUDE.md 与 AGENTS.md 同时进入提示词，若项目两份文件内容大量重复会增 token，由同目录 AGENTS.md 优先声明约束冲突。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

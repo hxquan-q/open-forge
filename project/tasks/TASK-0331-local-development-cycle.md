@@ -1,7 +1,7 @@
 ---
 id: TASK-0331
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -21,7 +21,7 @@ depends_on: [TASK-0326, TASK-0327]
 conflicts_with: [TASK-0326, TASK-0327, TASK-0328, TASK-0329, TASK-0330]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -50,3 +50,4 @@ updated: 2026-10-20
 已修正 verification-failed 的有界续接，只有实际执行且清理确认的验证失败才重试；审批、租约、配置或清理未知仍停止。扩展真实 Git 回归先复现 needs-action，再证明第二轮实现/独立评审/验证成功，随后保持合并重验和 main 前进拒绝。该新扩展用例包含两轮实际进程，单例验证时限为 15 秒；产品限时和原有其他用例时限未改。最终命令/结果和提交事实见 VERIFY-0019。
 
 Windows 首次影响测试因 WSL 安装后系统 bash 优先、以及并发进程用例超时而失败；明确使用已安装 Git Bash 并将测试单 worker 串行后，最终同一质量集合 58 文件 / 635 例通过，未删断言或改变产品阈值。WSL2 最终 20 文件 / 107 例通过，完整 `bun run check` exit 0；验证为独立最小依赖副本，不复制 Windows node_modules，不代表完整产品 Linux 构建或真实模型质量。真实 CI/UI、模型与签名发布未运行。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

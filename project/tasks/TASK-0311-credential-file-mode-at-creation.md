@@ -1,7 +1,7 @@
 ---
 id: TASK-0311
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement:
@@ -29,7 +29,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -105,3 +105,4 @@ updated: 2026-10-18
 - 未运行及原因：Windows 位断言平台跳过；不做 temp+rename 原子写（属会话原子性批次，BUG-0054/0060 约束另行评估）。
 - Worktree：未拆出（串行小改动）
 - 剩余风险：Windows 上 mode 大体无效（读写语义不变），DPAPI/safeStorage 为独立议题。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

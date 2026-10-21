@@ -1,7 +1,7 @@
 ---
 id: TASK-0314
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement:
@@ -50,7 +50,7 @@ depends_on: []
 conflicts_with: [TASK-0154, TASK-0218]
 integration_status: integrated
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -140,3 +140,4 @@ updated: 2026-10-18
 - Worktree：task-0314-project-trust-gating（branch task/TASK-0314-project-trust-gating，Worker 提交 `a3566d09c`）。
 - 集成：`89827bfb1`（--no-ff 合并，18 文件）。
 - 剩余风险：拒绝不持久记忆（按决策③，下个会话再次询问）；`resolveAdditionalSources({local:true})` 调用链当前仅 temporary 场景使用、未加门禁（无现实调用面，登记后续观察）。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

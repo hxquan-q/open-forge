@@ -1,7 +1,7 @@
 ---
 id: TASK-0328
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents; apps/desktop/scripts
 requirement: REQ-0019
@@ -23,7 +23,7 @@ depends_on: [TASK-0326]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0327, TASK-0329]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -109,3 +109,4 @@ D01–D11 源审计边界、现有 fresh Profile 生命周期与 `verify:ui:*` �
 - 未运行及原因：本机未见完整 Playwright Chromium 缓存，未获当前任务 UI 启动授权，未启用真实 Provider。
 - Worktree：main 串行。
 - 剩余风险：浏览器缺失、Electron 驱动兼容性和六主题人工视觉仍属后续验收。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

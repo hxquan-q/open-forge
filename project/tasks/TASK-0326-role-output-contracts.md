@@ -1,7 +1,7 @@
 ---
 id: TASK-0326
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -23,7 +23,7 @@ depends_on: [TASK-0325]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0327, TASK-0328, TASK-0329]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -100,3 +100,4 @@ updated: 2026-10-20
 - 未运行及原因：未调用真实模型、未启用 adapter、未运行独立模型评审；用户已明确没有实现模型与异家族评审配置。模型提示的语义质量仍需真实受限运行与 A/B 评估。
 - Worktree：`scripts/agents` 共享控制器路径，单 Agent 串行 main，未拆出独立 Worktree。
 - 剩余风险：闭合 Schema 只证明输出形状和仓库只读边界，不证明模型建议正确；真实 Provider 的消息格式、usage 与错误语义仍需适配验收。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0340
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement:
@@ -150,3 +150,4 @@ updated: 2026-10-21
 - 未运行及原因：未启动 Desktop、未运行 `verify:ui:*`，首帧与请求归属仍需真实 Electron 环境人工确认；完整 `bun run check` 留待 TASK-0341 完成后一次执行。`packages/theme-ui` 包级 `bun run check` 在本机存在与本次改动无关的存量报错（`JSX` 命名空间、`import.meta.dirname` 等），本次以根 `tsgo` 为准，未追改。
 - Worktree：未拆出；预览组件与监听链路串行修改。
 - 剩余风险：`src` 模式下不再注入 preview chrome（滚动条样式与 `color-scheme` 由页面自身决定）；这是换取真实目录语义的已知取舍。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

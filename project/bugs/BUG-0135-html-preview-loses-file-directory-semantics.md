@@ -1,7 +1,7 @@
 ---
 id: BUG-0135
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement:
@@ -78,3 +78,4 @@ updated: 2026-10-21
 - 测试：新增 `preview-assets.test.ts`（15 例）与 `HtmlPreviewView.test.tsx`（3 例），`usePreviewBodyModel.test.tsx` 增加 6 例；desktop 定向 2 文件 / 27 例与 theme-ui 3 例全通过。
 - 检查：`test:impact`、根 `tsgo`、Desktop 增量类型检查与 `check:quick` 均通过；完整 `check` 与真实 Desktop 验收待后续。
 - 未运行及原因：真实 Desktop 上的首帧与资源归属实测未执行，需在获得 UI 验证授权后按验收包人工确认。
+- 人工验收（2026-10-21）：用户随修复 Task（TASK-0339 / TASK-0340）确认验收完成，据用户结论闭合；批次记录见 TASK-0342。

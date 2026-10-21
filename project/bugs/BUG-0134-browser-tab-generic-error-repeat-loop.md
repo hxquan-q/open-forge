@@ -1,7 +1,7 @@
 ---
 id: BUG-0134
 type: bug
-status: verifying
+status: done
 priority: P1
 owner: coding-agent
 requirement:
@@ -80,3 +80,4 @@ updated: 2026-10-21
 - 测试：见 TASK-0339 的定向测试清单；旧实现下缺 action 只会得到 `invalid browser_tab tool input`，新测试断言动作清单、示例与恢复步骤，因此必红。
 - 检查：见 TASK-0339 的质量检查（定向 34 例、impact、根 tsgo、Desktop typecheck、check:quick 通过）。
 - 未运行及原因：原始流式片段的离线夹具（区分缺参数、截断 JSON、参数分片、工具名分片）不在本次修复范围，未执行。
+- 人工验收（2026-10-21）：用户随修复 Task（TASK-0339 / TASK-0340）确认验收完成，据用户结论闭合；批次记录见 TASK-0342。

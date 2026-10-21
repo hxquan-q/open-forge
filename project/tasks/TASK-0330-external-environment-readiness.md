@@ -1,7 +1,7 @@
 ---
 id: TASK-0330
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents; project/agent-workflow
 requirement: REQ-0019
@@ -23,7 +23,7 @@ depends_on: [TASK-0325, TASK-0326, TASK-0327, TASK-0328]
 conflicts_with: [TASK-0322, TASK-0323, TASK-0324, TASK-0325, TASK-0326, TASK-0327, TASK-0328, TASK-0329]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -135,3 +135,4 @@ readiness 只读、凭据最小暴露、配置校验不冒充真实证明、人�
 - 未运行及原因：用户已明确没有隔离 VM/runner、实现与独立评审模型、签名/监控环境；未读取任何凭据值。
 - Worktree：main 串行。
 - 剩余风险：readiness 只能反映实际可核验事实，不会替你创建外部基础设施。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

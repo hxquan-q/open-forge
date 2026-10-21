@@ -15,39 +15,40 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0339` | `verifying` | — | BUG-0134：browser_tab 可纠正错误（缺 action/非法动作/`file://`/无会话给恢复步骤）+ 通用链路「相同工具+相同参数+相同确定性错误」连续 3 次止损；定向 34 例、impact、根 tsgo、Desktop typecheck 与 check:quick 通过；实现 `f2728086a` 已推送 origin/dev，待真实模型回合验收；serial，main 主工作区串行。 |
-| `TASK-0340` | `verifying` | — | BUG-0135：HTML 预览改走 `vetta-file://` 恢复目录语义、取消 `opacity-0` 门槛、合并目录事件并按被引用资源刷新；工程验证通过，实现 `1f555175b` 已推送 origin/dev，待真实 Desktop 人工验收；serial，main 主工作区串行。 |
-| `TASK-0341` | `ready` | — | RESEARCH-0034：浏览器运行时探测缓存（成功约 60s / 失败约 4s）与在途去重，人工重检绕过、安装代次失效、执行失败失效；排 TASK-0340 之后；serial，main 主工作区串行。 |
-| `TASK-0335` | `verifying` | PLAN-0014 | mono 主题配色对齐上游 `313be5324` 并补 token 覆盖测试；实现 `b0c2148f0` 已集成 main，定向 2 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
-| `TASK-0336` | `verifying` | PLAN-0014 | 已完成消息默认折叠、虚线「已完成」头与展开时间线；实现 `47b51ac8c` 已集成 main，定向 16 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
-| `TASK-0337` | `verifying` | PLAN-0014 | 项目详情页去线留白、指令预览/编辑与 CLAUDE.md+AGENTS.md 双读；实现 `39d28557c` 已集成 main，定向 41 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
-| `TASK-0338` | `verifying` | PLAN-0014 | 自定义 MCP 连接器弹窗去线留白重构，保留工具清单与 idleTimeout；实现 `b53a6fd98` 已集成 main，定向 14 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
-| `TASK-0334` | `verifying` | PLAN-0019 | Requirement Run Phase 1 已实施并本地验证：coverage schema/runner/CLI、19 例定向、116 例 agents、31 例记录检查与完整 check 通过；实现 `54e080673`、记录 `c1b45985d` 已推送 origin/dev 并核对远端；待独立评审与人工验收；serial。 |
+| `TASK-0342` | `done` | — | 验收批次收口（用户决策）：26 个 Task 从 `verifying` 闭合为 `done`（安全与设计插件 0309–0317、PLAN-0019 自主开发 0322–0328/0330–0332/0334、上游 UI 同步 0335–0338、浏览器/预览线 0339/0340），`BUG-0134`/`BUG-0135` 同步关闭；纯台账改动，`bun run check` 校验索引一致性。 |
+| `TASK-0339` | `done` | — | BUG-0134：browser_tab 可纠正错误（缺 action/非法动作/`file://`/无会话给恢复步骤）+ 通用链路「相同工具+相同参数+相同确定性错误」连续 3 次止损；定向 34 例、impact、根 tsgo、Desktop typecheck 与 check:quick 通过；实现 `f2728086a` 已推送 origin/dev，待真实模型回合验收；serial，main 主工作区串行。 2026-10-21 用户验收闭合。 |
+| `TASK-0340` | `done` | — | BUG-0135：HTML 预览改走 `vetta-file://` 恢复目录语义、取消 `opacity-0` 门槛、合并目录事件并按被引用资源刷新；工程验证通过，实现 `1f555175b` 已推送 origin/dev，待真实 Desktop 人工验收；serial，main 主工作区串行。 2026-10-21 用户验收闭合。 |
+| `TASK-0341` | `in_progress` | — | RESEARCH-0034：浏览器运行时探测缓存（成功约 60s / 失败约 4s）与在途去重，人工重检绕过、安装代次失效、执行失败失效；已验证 TASK-0340 完成，正在实施；serial，main 主工作区串行。 |
+| `TASK-0335` | `done` | PLAN-0014 | mono 主题配色对齐上游 `313be5324` 并补 token 覆盖测试；实现 `b0c2148f0` 已集成 main，定向 2 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0336` | `done` | PLAN-0014 | 已完成消息默认折叠、虚线「已完成」头与展开时间线；实现 `47b51ac8c` 已集成 main，定向 16 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0337` | `done` | PLAN-0014 | 项目详情页去线留白、指令预览/编辑与 CLAUDE.md+AGENTS.md 双读；实现 `39d28557c` 已集成 main，定向 41 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0338` | `done` | PLAN-0014 | 自定义 MCP 连接器弹窗去线留白重构，保留工具清单与 idleTimeout；实现 `b53a6fd98` 已集成 main，定向 14 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0334` | `done` | PLAN-0019 | Requirement Run Phase 1 已实施并本地验证：coverage schema/runner/CLI、19 例定向、116 例 agents、31 例记录检查与完整 check 通过；实现 `54e080673`、记录 `c1b45985d` 已推送 origin/dev 并核对远端；待独立评审与人工验收；serial。 2026-10-21 用户验收闭合。 |
 | `TASK-0333` | `done` | PLAN-0019 | 干净副本累计批次 46/46 包、quality 635 例及完整 check 通过；8dcd7a3d2 已 fast-forward 推送 origin/dev 并核对远端；原 temp 保留；serial。 |
-| `TASK-0332` | `verifying` | PLAN-0019 | 图谱调查与当前会话协作已接入 intake；29 例、quick/guards 通过，原生新上下文只读审查已实际派发回收；Claude 端与完整开发流程待使用验收；serial。 |
-| `TASK-0326` | `verifying` | PLAN-0019 | 角色合同已随 ecfe01f17 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实模型仍待验收；serial。 |
-| `TASK-0327` | `verifying` | PLAN-0019 | 有界队列编排已随 94560c460 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实外部循环仍待验收；serial。 |
-| `TASK-0328` | `verifying` | PLAN-0019 | UI 接线与合同测试已实现：显式授权、六主题运行证据、独立视觉评审、清理与绑定；真实 UI 验收延期；serial。 |
+| `TASK-0332` | `done` | PLAN-0019 | 图谱调查与当前会话协作已接入 intake；29 例、quick/guards 通过，原生新上下文只读审查已实际派发回收；Claude 端与完整开发流程待使用验收；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0326` | `done` | PLAN-0019 | 角色合同已随 ecfe01f17 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实模型仍待验收；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0327` | `done` | PLAN-0019 | 有界队列编排已随 94560c460 集成 main；TASK-0333 组合 46/46 包通过并回填集成元数据，真实外部循环仍待验收；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0328` | `done` | PLAN-0019 | UI 接线与合同测试已实现：显式授权、六主题运行证据、独立视觉评审、清理与绑定；真实 UI 验收延期；serial。 2026-10-21 用户验收闭合。 |
 | `TASK-0329` | `blocked` | PLAN-0019 | 用户暂无问题来源，外部采集先搁置；不阻塞明确 Task 的开发闭环。 |
-| `TASK-0331` | `verifying` | PLAN-0019 | 单任务失败修复续接与合并重验已接通；WSL2 受控 Git/进程验证，真实模型与 CI/UI 验收延期；serial。 |
-| `TASK-0330` | `verifying` | PLAN-0019 | WSL2 完整独立副本、Bun 1.3.14 / Node 22.23.3 与 Linux 依赖已准备；107 例通过、software ready，模型/发布关闭，真实隔离未验；serial。 |
-| `TASK-0325` | `verifying` | PLAN-0019 | 基线与发布时钟修复：制品 14、合同 137、Desktop 29 例通过；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，合并前完整 check exit 0；实际环境与适配差距见 VERIFY-0019。 |
-| `TASK-0324` | `verifying` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实环境仍关闭。 |
-| `TASK-0323` | `verifying` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实 UI/部署未验收。 |
-| `TASK-0322` | `verifying` | PLAN-0019 | 自主研发运行合同、租约、进程、评审与可信验证核心；已集成 main `80ad98655`，全量受影响测试历史超时经组合 46/46 包验证；完整范围见 PLAN-0019。 |
+| `TASK-0331` | `done` | PLAN-0019 | 单任务失败修复续接与合并重验已接通；WSL2 受控 Git/进程验证，真实模型与 CI/UI 验收延期；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0330` | `done` | PLAN-0019 | WSL2 完整独立副本、Bun 1.3.14 / Node 22.23.3 与 Linux 依赖已准备；107 例通过、software ready，模型/发布关闭，真实隔离未验；serial。 2026-10-21 用户验收闭合。 |
+| `TASK-0325` | `done` | PLAN-0019 | 基线与发布时钟修复：制品 14、合同 137、Desktop 29 例通过；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，合并前完整 check exit 0；实际环境与适配差距见 VERIFY-0019。 2026-10-21 用户验收闭合。 |
+| `TASK-0324` | `done` | PLAN-0019 | 反馈、三日期经验候选、用量摘要、发布幂等与灰度/清理恢复；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实环境仍关闭。 2026-10-21 用户验收闭合。 |
+| `TASK-0323` | `done` | PLAN-0019 | 调度、签名人工闸门、最终合并重验与 DESIGN 源审计；已集成 main `80ad98655`，组合 test:changed 46/46 包通过，真实 UI/部署未验收。 2026-10-21 用户验收闭合。 |
+| `TASK-0322` | `done` | PLAN-0019 | 自主研发运行合同、租约、进程、评审与可信验证核心；已集成 main `80ad98655`，全量受影响测试历史超时经组合 46/46 包验证；完整范围见 PLAN-0019。 2026-10-21 用户验收闭合。 |
 | `TASK-0321` | `verifying` | — | ISSUE-0029：dev push 只跑轻量质量检查，三平台单测与 desktop-packaged 改为 PR/手动触发；名下其他私有仓库 Actions 已停用；serial，main 主工作区串行。 |
 | `TASK-0320` | `done` | — | BUG-0131：把插件宿主失效点从 `did-start-navigation` 改为已提交的 `did-navigate`，抽出可测试导航接线；真实拦截导航后工具不再永久 loading；serial，main 主工作区串行。 |
 | `TASK-0319` | `verifying` | — | REQ-0018：侧边栏「能力」→「技能与连接器」、「设计」→「原型设计」，同步页面跳转目标名/新手引导入口标题/设置助手路径提示与中英文 catalog；新增入口命名一致性合同测试 2 例，定向 22 文件/132 例、`check:quick` 与完整 `check` 全绿；serial，main 主工作区串行，待人工目验。 |
 | `TASK-0318` | `verifying` | — | REQ-0017：桌面端「智能客服」直连 WeKnora（连接层 + 通道层 + 界面层 + 文案）；13 个原子提交在本地 main，feature 测试 16 文件 / 149 例全绿、三个受影响域回归 243 文件 / 1329 例通过；`integration_status: pending`，未推送；serial，main 主工作区串行。 |
-| `TASK-0317` | `verifying` | — | RESEARCH-0032 积压 #16 已实施并入 main（`fb6ed3cd4`，Worker 提交 `a15ee5f82`）：CLI 子进程 userData 迁入 `<vettaHome>/tmp/<openforge-…-cli[-pid]>`（0700 创建即生效 + chmod 收紧），不再落共享 `os.tmpdir()` 可预测路径；新增 cli-user-data 模块 5 例（Windows 跳 2 个位断言）；定向、check:quick、完整 check、impact 全绿；人工验收不适用，待发布。 |
-| `TASK-0315` | `verifying` | PLAN-0018 | F1/F2 数据层已实施并入 main（`aec55c508`）：插桩升级 `file:line:column`（source-tagger 抽取+登记 ENGINE_FILES）、parseSourceLocator 跨代解析、元素上下文包（outerHTML/样式摘要进 SelectedElementPayload 与 vetd_notes）；附带 design-session 类型谓词修复与 0309/0315 触碰文件声明头补齐（ratchet new=0）；包内 732/732、合并后 754/754 绿、tsc 0 错；待用户实机（画布选元素看列级 locator/上下文包）。 |
-| `TASK-0316` | `verifying` | PLAN-0018 | F3 前置 AST 写回骨架已实施并入 main（`5fa25533f`，fork 会话执行）：src/inspector/ast-edit 六模块 + 22 例（parse/guards/locate/style/text，magic-string 保格式、动态 className 只读拒绝），新增 @babel/parser、magic-string、tailwind-merge；design-session 类型红双修按约定保留谓词版；合并后 754/754 绿；待用户实机。 |
-| `TASK-0310` | `verifying` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效）已实施；`ensureDirectory` 端口加可选 mode，git-update 测试改用生产路径助手消除真实 tmpdir 污染；定向 103 例 + 完整 check 全绿，impact 红归因存量（见 TASK-0313 汇总）；人工验收不适用，待发布。 |
-| `TASK-0311` | `verifying` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（chmod 兜底保留）、MCP OAuth state 补 `0o600`/目录 `0o700` 已实施；fs 调用合同断言抓创建窗口（终态断言抓不到），POSIX 位断言平台跳过；定向 18 例 + 完整 check 全绿；人工验收不适用，待发布。 |
-| `TASK-0312` | `verifying` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义已实施；测试从资产提取求值纯函数做行为断言；定向 8 例 + 完整 check 全绿；人工验收不适用，待发布。 |
-| `TASK-0313` | `verifying` | — | RESEARCH-0032 / pi agent 0.75.4+0.84.4：bash spawn `windowsHide`、taskkill System32 绝对路径 + `error` 监听（修未处理 ENOENT 崩溃）已实施；定向 10 例 + 完整 check 全绿；待 Windows 实机人工验收（无黑框闪烁、中止稳定）。 |
-| `TASK-0314` | `verifying` | — | RESEARCH-0032 / GHSA-mqxh（medium）已实施并入 main（`89827bfb1`，Worker 提交 `a3566d09c`）：域层 `ProjectResourceTrustPort` 三处拦截（resolve/updateSkills/指纹）+ sdk/cli 非交互默认拒绝（trust.json + `OPENFORGE_TRUST_PROJECT=1`）+ desktop 本机首解析弹窗（信任并记住/仅本次/拒绝，按路径记忆；ssh:// 拒绝）；新增 15 例全绿、受影响套件 107 例零回归、完整 check 全绿；待实机对话框目验。 |
-| `TASK-0309` | `verifying` | PLAN-0018 | P0 安全热修七项已实施并入 main（五原子提交，插件包 711/711 绿，impact 存量红归因 BUG-0107）：zip 越界整包拒绝、安装 `--ignore-scripts`＋导入确认、vite cors:false/fs.strict＋no-cors 探测、iframe sandbox、主窗口 will-navigate、设计写队列+原子写；待用户实机验收（导入确认/画布交互/主窗口/引擎就绪）。 |
+| `TASK-0317` | `done` | — | RESEARCH-0032 积压 #16 已实施并入 main（`fb6ed3cd4`，Worker 提交 `a15ee5f82`）：CLI 子进程 userData 迁入 `<vettaHome>/tmp/<openforge-…-cli[-pid]>`（0700 创建即生效 + chmod 收紧），不再落共享 `os.tmpdir()` 可预测路径；新增 cli-user-data 模块 5 例（Windows 跳 2 个位断言）；定向、check:quick、完整 check、impact 全绿；人工验收不适用，待发布。 2026-10-21 用户验收闭合。 |
+| `TASK-0315` | `done` | PLAN-0018 | F1/F2 数据层已实施并入 main（`aec55c508`）：插桩升级 `file:line:column`（source-tagger 抽取+登记 ENGINE_FILES）、parseSourceLocator 跨代解析、元素上下文包（outerHTML/样式摘要进 SelectedElementPayload 与 vetd_notes）；附带 design-session 类型谓词修复与 0309/0315 触碰文件声明头补齐（ratchet new=0）；包内 732/732、合并后 754/754 绿、tsc 0 错；待用户实机（画布选元素看列级 locator/上下文包）。 2026-10-21 用户验收闭合。 |
+| `TASK-0316` | `done` | PLAN-0018 | F3 前置 AST 写回骨架已实施并入 main（`5fa25533f`，fork 会话执行）：src/inspector/ast-edit 六模块 + 22 例（parse/guards/locate/style/text，magic-string 保格式、动态 className 只读拒绝），新增 @babel/parser、magic-string、tailwind-merge；design-session 类型红双修按约定保留谓词版；合并后 754/754 绿；待用户实机。 2026-10-21 用户验收闭合。 |
+| `TASK-0310` | `done` | — | RESEARCH-0032 / GHSA-jfgx（high）：临时扩展缓存迁出共享 `os.tmpdir()` 到 `<agentDir>/tmp/extensions`（0700 创建即生效）已实施；`ensureDirectory` 端口加可选 mode，git-update 测试改用生产路径助手消除真实 tmpdir 污染；定向 103 例 + 完整 check 全绿，impact 红归因存量（见 TASK-0313 汇总）；人工验收不适用，待发布。 2026-10-21 用户验收闭合。 |
+| `TASK-0311` | `done` | — | RESEARCH-0032 / GHSA-r95r：`transactional-text-storage` 写入直接带 `mode:0o600`（chmod 兜底保留）、MCP OAuth state 补 `0o600`/目录 `0o700` 已实施；fs 调用合同断言抓创建窗口（终态断言抓不到），POSIX 位断言平台跳过；定向 18 例 + 完整 check 全绿；人工验收不适用，待发布。 2026-10-21 用户验收闭合。 |
+| `TASK-0312` | `done` | — | RESEARCH-0032 / GHSA-7v5m：HTML 导出 link/image scheme 白名单（http/https/mailto/tel/ftp + C0 剥离）与 `escapeHtml` 引号转义已实施；测试从资产提取求值纯函数做行为断言；定向 8 例 + 完整 check 全绿；人工验收不适用，待发布。 2026-10-21 用户验收闭合。 |
+| `TASK-0313` | `done` | — | RESEARCH-0032 / pi agent 0.75.4+0.84.4：bash spawn `windowsHide`、taskkill System32 绝对路径 + `error` 监听（修未处理 ENOENT 崩溃）已实施；定向 10 例 + 完整 check 全绿；待 Windows 实机人工验收（无黑框闪烁、中止稳定）。 2026-10-21 用户验收闭合。 |
+| `TASK-0314` | `done` | — | RESEARCH-0032 / GHSA-mqxh（medium）已实施并入 main（`89827bfb1`，Worker 提交 `a3566d09c`）：域层 `ProjectResourceTrustPort` 三处拦截（resolve/updateSkills/指纹）+ sdk/cli 非交互默认拒绝（trust.json + `OPENFORGE_TRUST_PROJECT=1`）+ desktop 本机首解析弹窗（信任并记住/仅本次/拒绝，按路径记忆；ssh:// 拒绝）；新增 15 例全绿、受影响套件 107 例零回归、完整 check 全绿；待实机对话框目验。 2026-10-21 用户验收闭合。 |
+| `TASK-0309` | `done` | PLAN-0018 | P0 安全热修七项已实施并入 main（五原子提交，插件包 711/711 绿，impact 存量红归因 BUG-0107）：zip 越界整包拒绝、安装 `--ignore-scripts`＋导入确认、vite cors:false/fs.strict＋no-cors 探测、iframe sandbox、主窗口 will-navigate、设计写队列+原子写；待用户实机验收（导入确认/画布交互/主窗口/引擎就绪）。 2026-10-21 用户验收闭合。 |
 | `TASK-0307` | `verifying` | — | REQ-0016 A1 / RESEARCH-0030：受管工具 `inspect()` 解析记录 + `.version` 标记已实施（已并入 main `ef864b76c`）——resolve 合同不动，纯静态检查，缓存标记免 spawn、存量回退一次探针；定向 24 例、完整 check 全绿；impact 7 红经基线复跑归因存量（PATH 无 rg）。 |
 | `TASK-0308` | `verifying` | — | REQ-0016 A2 / RESEARCH-0030：`openforge doctor` 子命令（已并入 main `705fe6857`）+ 诊断包 `managed-tools.json`（`4b2c81e32`，`resolveDesktopCodingToolsDirectory` 单一事实源）已实施；cli-host 11 例、desktop 2 例、完整 check 全绿、integration_status: integrated；待用户实机 doctor/诊断包验收。 |
 | `TASK-0306` | `verifying` | — | BUG-0130：模型设置页脚改显运行时真实配置路径（新只读 IPC）；回归 2 例、typecheck 与完整 check 全绿；待用户设置页目验。 |

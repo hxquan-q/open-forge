@@ -1,7 +1,7 @@
 ---
 id: TASK-0339
 type: task
-status: verifying
+status: done
 priority: P1
 owner: coding-agent
 requirement:
@@ -145,3 +145,4 @@ updated: 2026-10-21
 - 未运行及原因：未启动 Desktop、未运行 `verify:ui:*`、未连接真实模型；`bun run check` 完整套件留待本轮三个 Task 全部完成后一次执行。
 - Worktree：未拆出；串行修改契约与执行链路。
 - 剩余风险：止损阈值固定为 3，真实会话中模型可能在 3 次内仍无进展；`{}` 入参的生成/解析异常仍需离线流式夹具定位（不在本 Task 范围）。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。

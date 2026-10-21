@@ -1,7 +1,7 @@
 ---
 id: TASK-0332
 type: task
-status: verifying
+status: done
 priority: P1
 owner: project/agent-workflow
 requirement: REQ-0019
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: [TASK-0326, TASK-0327, TASK-0328, TASK-0330, TASK-0331]
 integration_status: integrated
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -66,3 +66,4 @@ updated: 2026-10-20
 - 本轮调查复盘：前期把后台控制器的未配置状态误当作现有 Claude/Codex 会话的必需准入；通过图谱分层、模块源码和用户澄清纠正。该原因记录于 RESEARCH-0033，不用一次认知纠正虚增 LESSONS Seen 或晋升硬规则。
 - 提交/集成：`e2734e423`，13 路径原子提交到本地 main；提交钩子通过且未重写文件，本轮后续仅回填集成元数据。审查无阻塞发现，无需修改候选规则。七个原有 temp 文件未读取、未改动或提交，未 push。
 - 现有未跟踪 temp 文件原位保留；WSL 副本不自动覆盖，产品构建与 CI/UI 延期保持。
+- 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。
