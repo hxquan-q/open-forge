@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0351` | `verifying` | PLAN-0006 | BUG-0136：点选元素后发送会发起对话，模型须写回源码并用 `browser_tab` 确认同一页；定向测试与 check:quick 通过，完整 check 被 TASK-0349 未提交文件挡住；待真实 Desktop 验收。 |
+| `TASK-0351` | `verifying` | PLAN-0006 | BUG-0136：点选后发送给 Agent；选区条改为页面下方全宽栏，不再写死 288px。待真实 Desktop 看宽栏、窄栏和矮窗口。 |
 | `TASK-0350` | `done` | — | 最近14天日志只读调查完成：55份运行日志+8份辅助日志，RESEARCH-0035与脱敏指纹附表已落盘；优先沙箱制品核查、消息身份、远端资源及启动测量，区分历史修复与测试污染；文档索引/合同/发布说明检查通过，无产品修复；coordination-only。 |
 | `TASK-0349` | `verifying` | — | 用户请求：完善会话管理——项目级多会话 `.ofar` 导出（服务+IPC+preload+项目右键菜单，菜单重构为声明式）、导入写入后 emit 列表变更让侧栏即时刷新、导入/导出反馈 alert→Toast；定向 6 文件 30 例、impact（desktop 85 例 + theme-ui 186 例）、desktop tsc 与完整 check 全绿；待真实 Desktop 人工验收；serial，main 主工作区串行。 |
 | `TASK-0342` | `done` | — | 验收批次收口（用户决策）：26 个 Task 从 `verifying` 闭合为 `done`（安全与设计插件 0309–0317、PLAN-0019 自主开发 0322–0328/0330–0332/0334、上游 UI 同步 0335–0338、浏览器/预览线 0339/0340），`BUG-0134`/`BUG-0135` 同步关闭；纯台账改动，`bun run check` 校验索引一致性。 |

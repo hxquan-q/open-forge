@@ -171,7 +171,7 @@ describe("BrowserPanelView picker chrome", () => {
 				{ kind: "text", before: "Save", after: "Send", target: "form > button#save" },
 			],
 		});
-		renderPanel(model);
+		const { container } = renderPanel(model);
 		expect(screen.getByText("Save button")).toBeTruthy();
 		expect(screen.getByText("Edits (2)")).toBeTruthy();
 
@@ -190,6 +190,11 @@ describe("BrowserPanelView picker chrome", () => {
 		await user.type(screen.getByRole("textbox", { name: "Tell the Agent" }), "Make it blue");
 		await user.click(screen.getByRole("button", { name: "Send to Agent" }));
 		expect(model.onSend).toHaveBeenCalledWith("Make it blue");
+		const bar = container.querySelector("[data-browser-selection-bar]");
+		expect(bar?.className).toContain("w-full");
+		expect(bar?.className).not.toContain("w-72");
+		const host = container.querySelector("[data-browser-view-host]");
+		expect(host?.parentElement?.nextElementSibling).toBe(bar?.parentElement);
 		await user.click(screen.getAllByRole("button", { name: "Discard" })[0]);
 		expect(model.onDiscard).toHaveBeenCalled();
 	});

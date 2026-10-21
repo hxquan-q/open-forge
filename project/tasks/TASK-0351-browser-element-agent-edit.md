@@ -51,7 +51,7 @@ depends_on: []
 conflicts_with: [TASK-0349]
 integration_status: pending
 created: 2026-10-21
-updated: 2026-10-21
+updated: 2026-10-22
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -144,4 +144,5 @@ updated: 2026-10-21
 - `bun run check:quick -- <本任务文件>` 通过。
 - `bun run check` 未通过，失败在 TASK-0349 未提交的会话归档格式和 `useChatViewModel.archive.test.tsx` 类型错误。本任务文件不在该失败列表中。未跑 `test:impact` 与 `verify:ui`。
 - 未在真实 Desktop 里点选页面并看到源码改动后的刷新。
-- 集成：实现与本记录在同一提交，integration_status 仍为 pending；不推送。
+- 集成：实现提交 `79b7fe4bb`。2026-10-22 续作：选区条改为页面下方的全宽栏，取消 `w-72`，窄栏换行，高度不超过栏高的 42% 且不超过 18rem。
+- 不推送。

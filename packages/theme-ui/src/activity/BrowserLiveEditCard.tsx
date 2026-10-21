@@ -124,7 +124,10 @@ export function BrowserLiveEditCard({
 	const errorText = error === "stale_reference" || !hasElement ? labels.stale : error ? labels.failed : null;
 
 	return (
-		<div className="pointer-events-auto flex w-72 flex-col gap-2 rounded-lg border border-border/70 bg-background/95 p-3 shadow-lg backdrop-blur">
+		<div
+			data-browser-selection-bar=""
+			className="pointer-events-auto flex w-full min-w-0 max-w-full flex-col gap-2"
+		>
 			<div className="flex min-w-0 items-center gap-1.5">
 				<span className="icon-[mdi--cursor-default-click-outline] h-4 w-4 shrink-0 text-primary" />
 				<span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground" title={target}>
@@ -164,13 +167,13 @@ export function BrowserLiveEditCard({
 				/>
 			</label>
 
-			<form onSubmit={submitText} className="flex items-center gap-1.5">
+			<form onSubmit={submitText} className="flex min-w-0 flex-wrap items-center gap-1.5">
 				<input
 					type="text"
 					name="text"
 					placeholder={labels.textPlaceholder}
 					disabled={busy || !hasElement}
-					className="h-7 min-w-0 flex-1 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
+					className="h-7 min-w-0 flex-1 basis-24 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
 				/>
 				<button
 					type="submit"
@@ -181,12 +184,12 @@ export function BrowserLiveEditCard({
 				</button>
 			</form>
 
-			<form onSubmit={submitStyle} className="flex items-center gap-1.5">
+			<form onSubmit={submitStyle} className="flex min-w-0 flex-wrap items-center gap-1.5">
 				<select
 					name="property"
 					defaultValue={styleProperties[0] ?? ""}
 					disabled={busy || !hasElement}
-					className="h-7 w-28 shrink-0 rounded-md border border-border/60 bg-background px-1.5 text-[11px] text-foreground outline-none focus:border-primary/40 disabled:opacity-40"
+					className="h-7 min-w-0 max-w-full flex-1 basis-24 rounded-md border border-border/60 bg-background px-1.5 text-[11px] text-foreground outline-none focus:border-primary/40 disabled:opacity-40"
 					aria-label={labels.styleProperty}
 				>
 					{styleProperties.map((property) => (
@@ -200,7 +203,7 @@ export function BrowserLiveEditCard({
 					name="value"
 					placeholder={labels.styleValuePlaceholder}
 					disabled={busy || !hasElement}
-					className="h-7 min-w-0 flex-1 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
+					className="h-7 min-w-0 flex-1 basis-24 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
 				/>
 				<button
 					type="submit"
