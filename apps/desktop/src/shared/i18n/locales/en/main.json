@@ -1,7 +1,9 @@
 {
 	"browserAnnotation": {
 		"placeholder": "How should this element change?",
-		"send": "Send to Agent"
+		"send": "Send to Agent",
+		"selectedCount": "{count} selected",
+		"selectionLimit": "You can select up to 4 elements at once"
 	},
 	"taskApproval": {
 		"title": "Allow {{tool}} to run?"

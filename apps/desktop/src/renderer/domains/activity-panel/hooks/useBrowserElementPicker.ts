@@ -18,9 +18,38 @@ import {
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BROWSER_ELEMENT_PICKER_TOGGLE_EVENT } from "@/shared/browser-tab-ipc";
+import {
+	BROWSER_ELEMENT_PICKER_TOGGLE_EVENT,
+	DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK,
+	type DesktopBrowserAnnotationChrome,
+} from "@/shared/browser-tab-ipc";
 import { buildBrowserElementAgentText } from "../services/browser-element-agent-message";
 import { applyBrowserElementSelectionToDraft } from "../services/browser-element-draft";
+
+/** 网页里的批注用不到应用样式表，这里读取当前主题已经算好的颜色。 */
+function readAnnotationChrome(): DesktopBrowserAnnotationChrome {
+	const style = getComputedStyle(document.documentElement);
+	const read = (name: keyof DesktopBrowserAnnotationChrome, variable: string): string => {
+		const value = style.getPropertyValue(variable).replace(/\s+/g, " ").trim();
+		if (!value || value.length > 240 || /[;{}<>]|url\s*\(|expression\s*\(/i.test(value)) {
+			return DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK[name];
+		}
+		return value;
+	};
+	return {
+		background: read("background", "--popover"),
+		foreground: read("foreground", "--popover-foreground"),
+		border: read("border", "--border"),
+		primary: read("primary", "--primary"),
+		primaryForeground: read("primaryForeground", "--primary-foreground"),
+		muted: read("muted", "--muted-foreground"),
+		destructive: read("destructive", "--destructive"),
+		radius: read("radius", "--radius"),
+		shadow: read("shadow", "--shadow-md"),
+		font: read("font", "--font-sans"),
+		ring: read("ring", "--ring"),
+	};
+}
 
 /** 点选命中后的编辑态：胶囊先停在卡片上，确认后才写入输入框附件（TASK-0085）。 */
 export interface BrowserElementPickedSelection {
@@ -173,6 +202,9 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 				annotation: {
 					placeholder: t("browser.liveEdit.commentPlaceholder"),
 					send: t("browser.liveEdit.send"),
+					selectedCount: t("browser.liveEdit.selectedCount"),
+					selectionLimit: t("browser.liveEdit.selectionLimit"),
+					chrome: readAnnotationChrome(),
 				},
 			})
 			.then((result) => {

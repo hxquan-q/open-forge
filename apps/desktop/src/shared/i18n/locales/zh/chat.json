@@ -559,6 +559,8 @@
 			"revertOne": "撤销这条",
 			"revertAll": "全部还原",
 			"send": "发送给 Agent",
+			"selectedCount": "已选 {count} 个",
+			"selectionLimit": "一次最多选择 4 个元素",
 			"comment": "对 Agent 说",
 			"commentPlaceholder": "要怎么改这个元素",
 			"defaultRequest": "请根据我选中的页面元素「{{target}}」修改对应源码，并在内置浏览器里确认页面已经变化。",

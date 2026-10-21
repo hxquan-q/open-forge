@@ -1,7 +1,9 @@
 {
 	"browserAnnotation": {
 		"placeholder": "要怎么改这个元素",
-		"send": "发送给 Agent"
+		"send": "发送给 Agent",
+		"selectedCount": "已选 {count} 个",
+		"selectionLimit": "一次最多选择 4 个元素"
 	},
 	"taskApproval": {
 		"title": "允许 {{tool}} 执行？"

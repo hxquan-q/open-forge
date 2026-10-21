@@ -37,9 +37,48 @@ export interface DesktopBrowserTabGetSessionRequest {
 	readonly workspaceId: string;
 }
 
+/**
+ * 批注画在网页内部，读不到应用的 CSS 变量，所以由宿主把当前主题色传进去。
+ * 字段对应浮层：popover 底、1px border、shadow-md、主按钮、输入聚焦 ring。
+ */
+export interface DesktopBrowserAnnotationChrome {
+	readonly background: string;
+	readonly foreground: string;
+	readonly border: string;
+	readonly primary: string;
+	readonly primaryForeground: string;
+	readonly muted: string;
+	readonly destructive: string;
+	readonly radius: string;
+	readonly shadow: string;
+	readonly font: string;
+	readonly ring: string;
+}
+
+/**
+ * 出厂 mono 暗色。宿主还没把算好的变量传进来时使用。
+ * 色值对齐 `themes/mono.ts` 的 dark 与 `styles.css` 的 `--shadow-md` / `--font-sans` / `--radius`。
+ */
+export const DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK: DesktopBrowserAnnotationChrome = {
+	background: "rgb(28, 28, 28)",
+	foreground: "rgb(208, 208, 208)",
+	border: "rgb(42, 42, 42)",
+	primary: "rgb(228, 228, 228)",
+	primaryForeground: "rgb(8, 8, 10)",
+	muted: "rgb(128, 128, 128)",
+	destructive: "rgb(255, 91, 91)",
+	radius: "0.5rem",
+	shadow: "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18)",
+	font: '-apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif',
+	ring: "rgb(228, 228, 228)",
+};
+
 export interface DesktopBrowserAnnotationLabels {
 	readonly placeholder: string;
 	readonly send: string;
+	readonly selectedCount?: string;
+	readonly selectionLimit?: string;
+	readonly chrome?: DesktopBrowserAnnotationChrome;
 }
 
 export interface DesktopBrowserTabSetPickerRequest {

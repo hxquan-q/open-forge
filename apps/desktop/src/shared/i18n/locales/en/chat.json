@@ -559,6 +559,8 @@
 			"revertOne": "Revert this edit",
 			"revertAll": "Revert all",
 			"send": "Send to Agent",
+			"selectedCount": "{count} selected",
+			"selectionLimit": "You can select up to 4 elements at once",
 			"comment": "Tell the Agent",
 			"commentPlaceholder": "How should this element change?",
 			"defaultRequest": "Update the source for the selected page element \"{{target}}\" and confirm the change in the in-app browser.",

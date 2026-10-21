@@ -10,6 +10,7 @@ import {
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK } from "@/shared/browser-tab-ipc";
 import { BROWSER_ELEMENT_ATTACHMENT_ID, resetBrowserElementDraftForTests } from "../services/browser-element-draft.js";
 
 const insertImageToken = vi.fn();
@@ -188,6 +189,9 @@ describe("useBrowserElementPicker", () => {
 				annotation: {
 					placeholder: "browser.liveEdit.commentPlaceholder",
 					send: "browser.liveEdit.send",
+					selectedCount: "browser.liveEdit.selectedCount",
+					selectionLimit: "browser.liveEdit.selectionLimit",
+					chrome: DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK,
 				},
 			}),
 		);

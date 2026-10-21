@@ -9,6 +9,7 @@ import {
 	readBrowserElementSelectionContext,
 } from "@vetta/coding-agent/function-extensions";
 import type {
+	DesktopBrowserAnnotationLabels,
 	DesktopBrowserCropRect,
 	DesktopBrowserCropScreenshotResult,
 	DesktopBrowserLiveEditAction,
@@ -106,7 +107,7 @@ interface WorkspaceSession {
 	lastPickDevicePixelRatio?: number;
 	/** 最近一次 picker-result 的 ref；live-edit 只作用于它，防止改到过期元素。 */
 	lastPickedRef: BrowserElementRef | null;
-	annotationLabels?: { placeholder: string; send: string };
+	annotationLabels?: DesktopBrowserAnnotationLabels;
 }
 
 export class InAppBrowserSessionController {
@@ -179,7 +180,7 @@ export class InAppBrowserSessionController {
 	async setPicker(
 		workspaceId: string,
 		enabled: boolean,
-		annotation?: { placeholder: string; send: string },
+		annotation?: DesktopBrowserAnnotationLabels,
 	): Promise<boolean> {
 		const session = this.ensureSession(workspaceId);
 		if (annotation?.placeholder && annotation.send) session.annotationLabels = annotation;
@@ -402,6 +403,8 @@ export class InAppBrowserSessionController {
 			const labels = session.annotationLabels ?? {
 				placeholder: mainT("browserAnnotation.placeholder"),
 				send: mainT("browserAnnotation.send"),
+				selectedCount: mainT("browserAnnotation.selectedCount"),
+				selectionLimit: mainT("browserAnnotation.selectionLimit"),
 			};
 			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start", labels));
 		} catch (error) {
