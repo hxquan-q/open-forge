@@ -18,7 +18,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0352` | `blocked` | PLAN-0020 | Windows沙箱制品完整性与运行时定位；来源BUG-0137，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0353` | `verifying` | PLAN-0020 | 消息历史与live合并身份去重及可读诊断；来源BUG-0123，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0354` | `verifying` | PLAN-0020 | 远端会话资源加载去重与有界等待；来源BUG-0125，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
-| `TASK-0355` | `in_progress` | PLAN-0020 | 启动paint与超时分流及阶段观测；来源BUG-0138，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0355` | `verifying` | PLAN-0020 | 启动paint与超时分流及阶段观测；来源BUG-0138，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0356` | `in_progress` | PLAN-0020 | 插件Hook派发与渲染端代次生命周期对齐；来源BUG-0124，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0357` | `in_progress` | PLAN-0020 | HostedRoute能力注册与模块重载一致性；来源BUG-0139，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0358` | `verifying` | PLAN-0020 | Desktop测试日志与真实数据根隔离；来源BUG-0140，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |

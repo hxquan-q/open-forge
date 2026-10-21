@@ -17,7 +17,7 @@
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
 | `BUG-0137` | 安装版Windows沙箱二进制缺失或定位失败 | blocked | P1 | PLAN-0020 |
-| `BUG-0138` | 启动绘制超时被记录为内容已可见 | investigating | P1 | PLAN-0020 |
+| `BUG-0138` | 启动绘制超时被记录为内容已可见 | verifying | P1 | PLAN-0020 |
 | `BUG-0139` | 插件HostedRoute能力在模块重载后未注册 | investigating | P2 | PLAN-0020 |
 | `BUG-0140` | Desktop测试日志写入默认用户数据目录 | verifying | P2 | PLAN-0020 |
 | `BUG-0141` | Windows输入适配器重复初始化触发原生类型重名 | investigating | P2 | PLAN-0020 |

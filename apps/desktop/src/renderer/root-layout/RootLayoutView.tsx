@@ -2,6 +2,7 @@
 import { Outlet } from "@tanstack/react-router";
 import { cn } from "@shared/lib/utils";
 import { PerfSendProfiler } from "@shared/lib/perf-send";
+import { useRendererContentPaint } from "./useRendererContentPaint";
 import { ThemeSurface } from "@vetta-org/theme-ui/appearance";
 import { RouteContentLoadingView } from "@vetta-org/theme-ui/app";
 import { AppFrame, MainContentFrame, SidebarDock, SidebarOverlay } from "@vetta-org/theme-ui/layout";
@@ -68,19 +69,7 @@ export function RootLayoutView({ model }: RootLayoutViewProps): JSX.Element {
 	const ensureSidebarVisible = useCallback(() => {
 		if (narrow) actions.openOverlay();
 	}, [actions.openOverlay, narrow]);
-	useEffect(() => {
-		if (routePending) return;
-		let contentPaintFrame = 0;
-		const layoutFrame = requestAnimationFrame(() => {
-			contentPaintFrame = requestAnimationFrame(() => {
-				window.vetta.appLifecycle.reportRendererContentPainted();
-			});
-		});
-		return () => {
-			cancelAnimationFrame(layoutFrame);
-			if (contentPaintFrame !== 0) cancelAnimationFrame(contentPaintFrame);
-		};
-	}, [routePending]);
+	useRendererContentPaint(routePending);
 	const pageHeader =
 		pageLayout === "content" ? (
 			<PerfSendProfiler id="PageHeader">

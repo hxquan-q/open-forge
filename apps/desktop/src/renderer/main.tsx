@@ -33,17 +33,22 @@ const root = createRoot(rootElement, {
 	onCaughtError: captureReactError,
 	onRecoverableError: captureReactError,
 });
-const appReadyPromise = window.vetta.appLifecycle.whenReady();
+const appReadyPromise = window.vetta.appLifecycle.whenReady().then(() => {
+	window.vetta.appLifecycle.reportStartupPhase?.("app-ready");
+});
 
 root.render(<AppBootLoadingView />);
 
 // 两帧后再通知主进程显示窗口，确保主题变量与 theme-ui 启动骨架已经完成绘制。
 // 窗口隐藏或被系统判为遮挡时 rAF 不会触发（见 BUG-0016）：此刻没人看得到画面，
 // 不得把渲染进程锁死在骨架屏，直接放行让应用完成挂载。
-const bootPaintedPromise = waitForCommittedPaint({ timeoutMs: null }).then(() => {
-	window.vetta.appLifecycle.reportRendererBootPainted();
+const bootPaintedPromise = waitForCommittedPaint({ timeoutMs: null }).then((result) => {
+	window.vetta.appLifecycle.reportRendererBootPainted(result);
 });
-const renderAppPromise = import("./renderApp");
+const renderAppPromise = import("./renderApp").then((module) => {
+	window.vetta.appLifecycle.reportStartupPhase?.("renderer-module-loaded");
+	return module;
+});
 
 void Promise.all([appReadyPromise, bootPaintedPromise, renderAppPromise])
 	.then(([, , { renderApp }]) => {

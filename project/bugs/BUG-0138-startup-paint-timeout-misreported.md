@@ -1,7 +1,7 @@
 ---
 id: BUG-0138
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: desktop
 requirement: REQ-0002
@@ -43,3 +43,9 @@ Windows、本地Open Forge 0.1.3；dev main content 33条中30条timeout。证�
 - 修复：待实施，关联TASK-0355。
 - 测试/检查：待执行。
 - 未运行：真实Desktop、Provider、SSH及发布不在当前授权中。
+
+## 2026-10-22 TASK-0355 实现与隔离回归
+
+IPC生产者/消费者传递paint结果，未知载荷忽略，无参旧上报仍视为painted；启动ready/module/route阶段可观测。timeout日志不再声称visible；hook覆盖routePending完成、两帧、hidden、卸载/重新pending取消上报。隐藏结果旧实现红→lifecycle/renderer-startup/committed-paint 11绿，新增真实React接线2例绿。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0355，本地main原子提交绑定；仍待真实用户流程验收，未发布。
