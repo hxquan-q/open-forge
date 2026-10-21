@@ -1,7 +1,7 @@
 ---
 id: ISSUE-0034
 type: issue
-status: draft
+status: done
 priority: P2
 owner: apps/desktop
 related_requirement: []
@@ -14,7 +14,6 @@ created: 2026-10-22
 updated: 2026-10-22
 ---
 <!-- Copyright The Open Forge contributors. -->
-
 # 会话归档跨设备迁移的两个产品缺口：导入位置自选与产物打包
 
 ## 背景
@@ -45,3 +44,7 @@ TASK-0349 交付后用户追问跨设备场景：① 导入到另一台设备/�
 ## 决策触发条件
 
 用户裁定范围（做 B+C / 仅 B / 仅 C / 维持现状）后转 REQ + 实施 Task；实施前需 ADR 记录 cwd 重写与指纹规范（若选 B）。
+
+## 结论（2026-10-22）
+
+用户裁定 **B+C（完整项目迁移）**：已转 [REQ-0026](../requirements/REQ-0026-project-migration.md) + [TASK-0361](../tasks/TASK-0361-project-migration-archive.md)，技术合同见 [ADR-0147](../../docs/adr/0147-project-migration-archive-v2.md)；未决决策两项均按推荐方案落地。
