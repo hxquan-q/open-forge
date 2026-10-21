@@ -37,9 +37,15 @@ export interface DesktopBrowserTabGetSessionRequest {
 	readonly workspaceId: string;
 }
 
+export interface DesktopBrowserAnnotationLabels {
+	readonly placeholder: string;
+	readonly send: string;
+}
+
 export interface DesktopBrowserTabSetPickerRequest {
 	readonly workspaceId: string;
 	readonly enabled: boolean;
+	readonly annotation?: DesktopBrowserAnnotationLabels;
 }
 
 export interface DesktopBrowserCropRect {
@@ -102,7 +108,11 @@ export type DesktopBrowserTabLiveEditResult =
 
 export type DesktopBrowserTabEvent =
 	| { readonly kind: "session-changed"; readonly session: DesktopBrowserTabSession }
-	| { readonly kind: "picker-result"; readonly context: BrowserElementSelectionContext }
+	| {
+			readonly kind: "picker-result";
+			readonly context: BrowserElementSelectionContext;
+			readonly comment?: string;
+	  }
 	| { readonly kind: "page-revision"; readonly workspaceId: string; readonly pageRevision: number };
 
 export interface DesktopBrowserTabEventEnvelope {

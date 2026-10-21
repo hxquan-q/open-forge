@@ -1,4 +1,8 @@
 {
+	"browserAnnotation": {
+		"placeholder": "How should this element change?",
+		"send": "Send to Agent"
+	},
 	"taskApproval": {
 		"title": "Allow {{tool}} to run?"
 	},

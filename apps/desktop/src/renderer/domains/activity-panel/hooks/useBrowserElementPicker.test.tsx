@@ -177,7 +177,16 @@ describe("useBrowserElementPicker", () => {
 		const ready = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		ready.result.current.onTogglePicker();
-		await waitFor(() => expect(window.vetta.browserTab.setPicker).toHaveBeenCalledWith({ workspaceId: "ws-1", enabled: true }));
+		await waitFor(() =>
+			expect(window.vetta.browserTab.setPicker).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				enabled: true,
+				annotation: {
+					placeholder: "browser.liveEdit.commentPlaceholder",
+					send: "browser.liveEdit.send",
+				},
+			}),
+		);
 	});
 
 	it("发送给 Agent 时发起带评论的会话，截图不先写入草稿；发送未启动则把正文留在输入框", async () => {
@@ -209,5 +218,26 @@ describe("useBrowserElementPicker", () => {
 		});
 		await waitFor(() => expect(prependPlainText).toHaveBeenCalledWith("把按钮改成蓝色\n\n"));
 		expect(insertImageToken).toHaveBeenCalledWith("C:/cache/el.png");
+	});
+
+	it("页面旁批注提交后把元素和这句话发给 Agent，不再停在页面下方的卡片", async () => {
+		const send = vi.fn(async () => ({ status: "sent" as const }));
+		sendMessageFnRef.current = send;
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		listener?.({
+			workspaceId: "ws-1",
+			event: { kind: "picker-result", context: context(), comment: "把按钮改成蓝色" },
+		});
+		await waitFor(() =>
+			expect(send).toHaveBeenCalledWith(undefined, {
+				composed: {
+					text: "把按钮改成蓝色",
+					imagePaths: ["C:/cache/el.png"],
+					preserveDraft: true,
+				},
+			}),
+		);
+		expect(result.current.selection).toBeNull();
 	});
 });

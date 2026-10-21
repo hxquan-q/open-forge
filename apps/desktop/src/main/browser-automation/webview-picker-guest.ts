@@ -75,12 +75,15 @@ function inAppBrowserGuestRuntime(
 	type PickerState = {
 		overlay: HTMLDivElement;
 		highlight: HTMLDivElement;
+		annotation: HTMLElement | null;
+		selected: Element | null;
 		promise: Promise<unknown>;
 		resolve: (value: unknown) => void;
 		disposed: boolean;
 		onMove: (event: Event) => void;
 		onClick: (event: Event) => void;
 		onKey: (event: Event) => void;
+		reposition: () => void;
 	};
 
 	const current = store[stateKey] as PickerState | undefined;
@@ -204,6 +207,8 @@ function inAppBrowserGuestRuntime(
 		window.removeEventListener("dblclick", current.onClick, true);
 		window.removeEventListener("auxclick", current.onClick, true);
 		window.removeEventListener("keydown", current.onKey, true);
+		window.removeEventListener("scroll", current.reposition, true);
+		window.removeEventListener("resize", current.reposition);
 		current.overlay.remove();
 		current.resolve({ cancelled: true });
 		store[stateKey] = undefined;
@@ -385,6 +390,46 @@ function inAppBrowserGuestRuntime(
 		};
 	};
 
+	function annotationCopy(value: unknown): { placeholder: string; send: string } {
+		if (value && typeof value === "object") {
+			const record = value as Record<string, unknown>;
+			if (
+				typeof record.placeholder === "string" &&
+				record.placeholder &&
+				typeof record.send === "string" &&
+				record.send
+			) {
+				return { placeholder: record.placeholder, send: record.send };
+			}
+		}
+		return { placeholder: "Describe the change", send: "Send" };
+	}
+
+	function placeHighlight(element: Element): void {
+		const rect = element.getBoundingClientRect();
+		highlight.style.left = `${rect.left}px`;
+		highlight.style.top = `${rect.top}px`;
+		highlight.style.width = `${rect.width}px`;
+		highlight.style.height = `${rect.height}px`;
+	}
+
+	function placeAnnotation(box: HTMLElement, rect: DOMRect): void {
+		const margin = 8;
+		const width = Math.min(280, Math.max(160, window.innerWidth - margin * 2));
+		box.style.width = `${width}px`;
+		const height = box.offsetHeight || 96;
+		let left = rect.right + margin;
+		let top = rect.top;
+		if (left + width > window.innerWidth - margin) left = rect.left - width - margin;
+		if (left < margin) {
+			left = margin;
+			top = rect.bottom + margin;
+		}
+		if (top + height > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - height - margin);
+		box.style.left = `${Math.max(margin, left)}px`;
+		box.style.top = `${Math.max(margin, top)}px`;
+	}
+
 	let resolvePick: (value: unknown) => void = () => undefined;
 	const promise = new Promise((resolve) => {
 		resolvePick = resolve;
@@ -392,37 +437,32 @@ function inAppBrowserGuestRuntime(
 	const state: PickerState = {
 		overlay,
 		highlight,
+		annotation: null,
+		selected: null,
 		promise,
 		resolve: resolvePick,
 		disposed: false,
 		onMove: (event) => {
+			if (state.annotation) return;
 			const target = pickTarget(event);
 			if (!target) return;
-			const rect = target.getBoundingClientRect();
-			highlight.style.left = `${rect.left}px`;
-			highlight.style.top = `${rect.top}px`;
-			highlight.style.width = `${rect.width}px`;
-			highlight.style.height = `${rect.height}px`;
+			placeHighlight(target);
 		},
 		onClick: (event) => {
+			const eventTarget = event.target;
+			if (eventTarget instanceof Node && state.annotation?.contains(eventTarget)) return;
 			event.preventDefault();
 			event.stopPropagation();
 			if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
 			if (event.type !== "click") return;
 			const target = pickTarget(event);
 			if (!target || state.disposed) return;
-			state.disposed = true;
-			window.removeEventListener("mousemove", state.onMove, true);
-			window.removeEventListener("pointerdown", state.onClick, true);
-			window.removeEventListener("mousedown", state.onClick, true);
-			window.removeEventListener("click", state.onClick, true);
-			window.removeEventListener("dblclick", state.onClick, true);
-			window.removeEventListener("auxclick", state.onClick, true);
-			window.removeEventListener("keydown", state.onKey, true);
-			overlay.remove();
-			editStore().current = target;
-			store[stateKey] = undefined;
-			state.resolve(collect(target));
+			openAnnotation(target);
+		},
+		reposition: () => {
+			if (!state.selected || !state.annotation) return;
+			placeHighlight(state.selected);
+			placeAnnotation(state.annotation, state.selected.getBoundingClientRect());
 		},
 		onKey: (event) => {
 			const keyEvent = event as KeyboardEvent;
@@ -432,6 +472,59 @@ function inAppBrowserGuestRuntime(
 			void inAppBrowserGuestRuntime("stop", null, deps);
 		},
 	};
+	function finishAnnotation(): void {
+		const selected = state.selected;
+		if (!selected || state.disposed) return;
+		const field = state.annotation?.querySelector("textarea");
+		const comment = field instanceof HTMLTextAreaElement ? field.value.slice(0, 2000) : "";
+		state.disposed = true;
+		window.removeEventListener("mousemove", state.onMove, true);
+		window.removeEventListener("pointerdown", state.onClick, true);
+		window.removeEventListener("mousedown", state.onClick, true);
+		window.removeEventListener("click", state.onClick, true);
+		window.removeEventListener("dblclick", state.onClick, true);
+		window.removeEventListener("auxclick", state.onClick, true);
+		window.removeEventListener("keydown", state.onKey, true);
+		window.removeEventListener("scroll", state.reposition, true);
+		window.removeEventListener("resize", state.reposition);
+		overlay.remove();
+		editStore().current = selected;
+		store[stateKey] = undefined;
+		state.resolve({ ...collect(selected), comment });
+	}
+
+	function openAnnotation(target: Element): void {
+		state.selected = target;
+		placeHighlight(target);
+		state.annotation?.remove();
+		const copy = annotationCopy(arg);
+		const box = document.createElement("form");
+		box.setAttribute("data-vetta-annotation", "");
+		box.style.cssText =
+			"position:fixed;z-index:2147483647;pointer-events:auto;display:flex;flex-direction:column;gap:6px;box-sizing:border-box;padding:8px;border:1px solid rgba(59,130,246,0.45);border-radius:8px;background:#fff;color:#111;box-shadow:0 8px 24px rgba(0,0,0,0.16);font:12px/1.4 sans-serif;";
+		const field = document.createElement("textarea");
+		field.rows = 2;
+		field.placeholder = copy.placeholder;
+		field.setAttribute("aria-label", copy.placeholder);
+		field.style.cssText =
+			"width:100%;box-sizing:border-box;resize:none;border:1px solid #d0d0d0;border-radius:6px;padding:6px;font:inherit;color:inherit;background:#fff;";
+		const send = document.createElement("button");
+		send.type = "submit";
+		send.textContent = copy.send;
+		send.style.cssText =
+			"align-self:flex-end;border:0;border-radius:6px;padding:4px 10px;background:#2563eb;color:#fff;font:inherit;cursor:pointer;";
+		box.append(field, send);
+		box.addEventListener("submit", (submitEvent) => {
+			submitEvent.preventDefault();
+			finishAnnotation();
+		});
+		overlay.setAttribute("aria-hidden", "false");
+		overlay.append(box);
+		state.annotation = box;
+		placeAnnotation(box, target.getBoundingClientRect());
+		field.focus();
+	}
+
 	store[stateKey] = state;
 	window.addEventListener("mousemove", state.onMove, true);
 	window.addEventListener("pointerdown", state.onClick, true);
@@ -440,6 +533,8 @@ function inAppBrowserGuestRuntime(
 	window.addEventListener("dblclick", state.onClick, true);
 	window.addEventListener("auxclick", state.onClick, true);
 	window.addEventListener("keydown", state.onKey, true);
+	window.addEventListener("scroll", state.reposition, true);
+	window.addEventListener("resize", state.reposition);
 	return promise;
 }
 

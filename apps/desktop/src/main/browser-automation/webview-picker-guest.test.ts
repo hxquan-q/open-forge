@@ -27,13 +27,17 @@ describe("in-app browser picker guest", () => {
 		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
 		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeTruthy();
 		button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 8, clientY: 8 }));
+		const annotation = document.querySelector("[data-vetta-annotation]");
+		expect(annotation).toBeTruthy();
+		expect(pageClicked).toBe(false);
+		annotation?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 		const result = await pick;
 
-		expect(pageClicked).toBe(false);
 		expect(result.role).toBe("button");
 		expect(result.accessibleName).toBe("Go");
 		expect(result.domPath).toBe("button#go");
 		expect(result.sourceHint).toBeUndefined();
+		expect(result.comment).toBe("");
 		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeNull();
 	});
 
@@ -43,8 +47,13 @@ describe("in-app browser picker guest", () => {
 		if (!button) throw new Error("missing button");
 		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
 		button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 8, clientY: 8 }));
+		const field = document.querySelector("[data-vetta-annotation] textarea");
+		if (!(field instanceof HTMLTextAreaElement)) throw new Error("missing annotation");
+		field.value = "把按钮改成蓝色";
+		field.closest("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 		await expect(pick).resolves.toMatchObject({
 			sourceHint: { kind: "attribute", file: "src/App.tsx", line: 12, column: 3 },
+			comment: "把按钮改成蓝色",
 		});
 
 		const bad = document.getElementById("bad");
@@ -92,6 +101,9 @@ describe("in-app browser picker guest", () => {
 		>;
 		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeTruthy();
 		button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 6, clientY: 6 }));
+		document
+			.querySelector("[data-vetta-annotation]")
+			?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 		const result = await pick;
 
 		expect(result.role).toBe("button");

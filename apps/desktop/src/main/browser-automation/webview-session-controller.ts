@@ -16,6 +16,7 @@ import type {
 	DesktopBrowserTabLiveEditResult,
 	DesktopBrowserTabSession,
 } from "../../shared/browser-tab-ipc.js";
+import { mainT } from "../i18n/index.js";
 import { readExtractedBrowserElement } from "./webview-element-extract.js";
 import { createBrowserElementRef, validateBrowserElementRef } from "./webview-element-ref.js";
 import { buildInAppBrowserGuestScript } from "./webview-picker-guest.js";
@@ -49,6 +50,12 @@ export type PersistBrowserScreenshot = (
 	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
 ) => Promise<readonly { path: string; width?: number; height?: number }[]>;
 
+function readPickComment(raw: unknown): string | undefined {
+	if (!raw || typeof raw !== "object" || !("comment" in raw)) return undefined;
+	const comment = (raw as { comment?: unknown }).comment;
+	return typeof comment === "string" ? comment.slice(0, 2000) : "";
+}
+
 async function persistBrowserScreenshotDefault(
 	sessionId: string,
 	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
@@ -69,6 +76,7 @@ interface WorkspaceSession {
 	lastPickDevicePixelRatio?: number;
 	/** 最近一次 picker-result 的 ref；live-edit 只作用于它，防止改到过期元素。 */
 	lastPickedRef: BrowserElementRef | null;
+	annotationLabels?: { placeholder: string; send: string };
 }
 
 export class InAppBrowserSessionController {
@@ -138,8 +146,13 @@ export class InAppBrowserSessionController {
 		return session.pageRevision;
 	}
 
-	async setPicker(workspaceId: string, enabled: boolean): Promise<boolean> {
+	async setPicker(
+		workspaceId: string,
+		enabled: boolean,
+		annotation?: { placeholder: string; send: string },
+	): Promise<boolean> {
 		const session = this.ensureSession(workspaceId);
+		if (annotation?.placeholder && annotation.send) session.annotationLabels = annotation;
 		session.pickerEnabled = enabled;
 		if (enabled) void this.runPicker(session);
 		else await this.stopPicker(session);
@@ -356,7 +369,11 @@ export class InAppBrowserSessionController {
 	private async waitForPick(session: WorkspaceSession, contents: InAppBrowserWebContents): Promise<PickerOutcome> {
 		let raw: unknown;
 		try {
-			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start"));
+			const labels = session.annotationLabels ?? {
+				placeholder: mainT("browserAnnotation.placeholder"),
+				send: mainT("browserAnnotation.send"),
+			};
+			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start", labels));
 		} catch (error) {
 			// 注入脚本自身抛错（历史上是打包器辅助函数缺失，BUG-0051）此前被静默吞掉，
 			// 面板上只表现为「点选没反应」；这里留下证据再回到 idle。
@@ -400,12 +417,16 @@ export class InAppBrowserSessionController {
 			},
 		});
 		if (!context) return "idle";
-		this.emitPickerResult(session.workspaceId, context);
+		this.emitPickerResult(session.workspaceId, context, readPickComment(raw));
 		return "picked";
 	}
 
-	private emitPickerResult(workspaceId: string, context: BrowserElementSelectionContext): void {
-		this.sink({ workspaceId, event: { kind: "picker-result", context } });
+	private emitPickerResult(workspaceId: string, context: BrowserElementSelectionContext, comment?: string): void {
+		this.sink({
+			workspaceId,
+			event:
+				comment === undefined ? { kind: "picker-result", context } : { kind: "picker-result", context, comment },
+		});
 	}
 
 	private emitRevision(session: WorkspaceSession): void {

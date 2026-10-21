@@ -48,11 +48,60 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	attachmentRef.current = promptAttachment;
 	const pickerShortcut = useEffectiveShortcut("browser-element-picker");
 
+	const deliverSelection = useCallback(
+		(
+			context: BrowserElementSelectionContext,
+			screenshotPath: string | undefined,
+			edits: readonly BrowserElementLiveEdit[],
+			options?: { comment?: string; send?: boolean },
+		) => {
+			const nextContext: BrowserElementSelectionContext =
+				edits.length > 0 ? { ...context, payload: { ...context.payload, liveEdits: [...edits] } } : context;
+			const send = options?.send ? sendMessageFnRef.current : null;
+			applyBrowserElementSelectionToDraft(
+				{
+					getAttachment: () => attachmentRef.current,
+					setAttachment: setPromptAttachment,
+					insertImage: insertImageToken,
+					removeImage: removeImageToken,
+				},
+				{
+					context: nextContext,
+					label: t("browser.elementAttached"),
+					...(screenshotPath ? { screenshotPath } : {}),
+					...(send ? { stageScreenshot: false } : {}),
+				},
+			);
+			const text = buildBrowserElementAgentText({
+				comment: options?.comment ?? "",
+				target: nextContext.payload.accessibleName || nextContext.payload.domPath,
+				edits,
+			});
+			if (send) {
+				void send(undefined, {
+					composed: {
+						text,
+						...(screenshotPath ? { imagePaths: [screenshotPath] } : {}),
+						preserveDraft: true,
+					},
+				}).then((result) => {
+					if (result) return;
+					if (screenshotPath) insertImageToken(screenshotPath);
+					prependPlainText(`${text}\n\n`);
+				});
+				return;
+			}
+			if (typeof options?.comment === "string") prependPlainText(`${text}\n\n`);
+		},
+		[setPromptAttachment, t],
+	);
+
 	const captureSelection = useCallback(
 		async (
 			context: unknown,
 			rect: { x: number; y: number; width: number; height: number },
 			devicePixelRatio: number,
+			comment?: string,
 		) => {
 			const crop = await window.vetta.browserTab.cropScreenshot({
 				workspaceId,
@@ -71,9 +120,13 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 					: context;
 			const parsed = readBrowserElementSelectionContext(nextContext);
 			if (!parsed) return;
+			if (typeof comment === "string") {
+				deliverSelection(parsed, crop.ok ? crop.path : undefined, [], { comment, send: true });
+				return;
+			}
 			setSelection({ context: parsed, ...(crop.ok ? { screenshotPath: crop.path } : {}) });
 		},
-		[workspaceId],
+		[deliverSelection, workspaceId],
 	);
 
 	useEffect(() => {
@@ -94,7 +147,8 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			}
 			if (envelope.event.kind !== "picker-result") return;
 			const { payload } = envelope.event.context;
-			void captureSelection(envelope.event.context, payload.boundingRect, 1);
+			const comment = envelope.event.comment;
+			void captureSelection(envelope.event.context, payload.boundingRect, 1, comment);
 		});
 		return () => {
 			cancelled = true;
@@ -104,56 +158,28 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	const togglePicker = useCallback(() => {
 		if (!input.hasPage) return;
-		void window.vetta.browserTab.setPicker({ workspaceId, enabled: !pickerEnabled }).then((result) => {
-			if (result.ok) setPickerEnabled(result.pickerEnabled);
-		});
-	}, [input.hasPage, pickerEnabled, workspaceId]);
+		void window.vetta.browserTab
+			.setPicker({
+				workspaceId,
+				enabled: !pickerEnabled,
+				annotation: {
+					placeholder: t("browser.liveEdit.commentPlaceholder"),
+					send: t("browser.liveEdit.send"),
+				},
+			})
+			.then((result) => {
+				if (result.ok) setPickerEnabled(result.pickerEnabled);
+			});
+	}, [input.hasPage, pickerEnabled, t, workspaceId]);
 
 	const confirmSelection = useCallback(
 		(edits: readonly BrowserElementLiveEdit[], options?: { comment?: string; send?: boolean }) => {
 			if (!selection) return;
-			const context: BrowserElementSelectionContext =
-				edits.length > 0
-					? { ...selection.context, payload: { ...selection.context.payload, liveEdits: [...edits] } }
-					: selection.context;
-			const screenshotPath = selection.screenshotPath;
-			const send = options?.send ? sendMessageFnRef.current : null;
-			applyBrowserElementSelectionToDraft(
-				{
-					getAttachment: () => attachmentRef.current,
-					setAttachment: setPromptAttachment,
-					insertImage: insertImageToken,
-					removeImage: removeImageToken,
-				},
-				{
-					context,
-					label: t("browser.elementAttached"),
-					...(screenshotPath ? { screenshotPath } : {}),
-					...(send ? { stageScreenshot: false } : {}),
-				},
-			);
-			if (send) {
-				const text = buildBrowserElementAgentText({
-					comment: options?.comment ?? "",
-					target: context.payload.accessibleName || context.payload.domPath,
-					edits,
-				});
-				void send(undefined, {
-					composed: {
-						text,
-						...(screenshotPath ? { imagePaths: [screenshotPath] } : {}),
-						preserveDraft: true,
-					},
-				}).then((result) => {
-					if (result) return;
-					if (screenshotPath) insertImageToken(screenshotPath);
-					prependPlainText(`${text}\n\n`);
-				});
-			}
+			deliverSelection(selection.context, selection.screenshotPath, edits, options);
 			setSelection(null);
 			void window.vetta.browserTab.setPicker({ workspaceId, enabled: false });
 		},
-		[selection, setPromptAttachment, t, workspaceId],
+		[deliverSelection, selection, workspaceId],
 	);
 
 	const discardSelection = useCallback(() => {
