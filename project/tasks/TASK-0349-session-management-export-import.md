@@ -25,7 +25,7 @@ base_commit: 1b25abff0004fd32898eae4b442c3e73108fb0ae
 read_paths: [apps/desktop/src/main/conversations/, apps/desktop/src/main/ipc/, apps/desktop/src/preload/, apps/desktop/src/renderer/domains/project/, apps/desktop/src/renderer/domains/conversation/hooks/useChatViewModel.ts, packages/runtime-storage/src/conversation/session-archive/, packages/theme-ui/src/project/]
 write_paths: [apps/desktop/src/main/conversations/session-archive-service.ts, apps/desktop/src/main/ipc/session-archive.ts, apps/desktop/src/preload/apis/session-archive.ts, apps/desktop/src/preload/api-types/session-archive.ts, apps/desktop/src/renderer/domains/conversation/services/session-archive.ts, apps/desktop/src/renderer/domains/conversation/hooks/useChatViewModel.ts, apps/desktop/src/renderer/domains/project/components/ProjectContextMenu.tsx, apps/desktop/src/renderer/domains/project/hooks/useProjectContextMenuModel.ts, apps/desktop/src/renderer/domains/project/hooks/useProjectsPanelMenusModel.ts, apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/ProjectsPanelMenus.tsx, packages/theme-ui/src/project/ProjectContextMenuView.tsx, apps/desktop/src/shared/i18n/locales/, project/tasks/, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
-integration_status: integrated（本地 main，提交待回填；未推送）
+integration_status: integrated（本地 main `35d35faec`；未推送）
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -134,4 +134,4 @@ updated: 2026-10-21
   - **验证**：定向 6 文件 30 例全过；`test:impact` desktop 18 文件 85 例 + theme-ui 25 文件 186 例全过；desktop `tsc --noEmit` 0 错；`check:quick`、完整 `bun run check`（lint+types+guards）exit 0。
   - **并行说明**：同工作区 TASK-0351（浏览器元素直发 Agent）在途；其提交 `79b7fe4bb` 连带提交了本任务先行写入的 3 条 v0.1.3 发布说明条目（内容无损，已在 HEAD）；本任务其余文件单独提交。
   - **未运行项**：`verify:ui:*`（未获用户授权）；真实 Desktop 人工验收（导出→导入→侧栏即时可见→打开续跑）待做。
-  - **提交**：见 frontmatter `base_commit` 之后本任务原子提交（哈希回填于提交后）。
+  - **提交**：`35d35faec`（本地 main，24 文件；pre-commit 门禁通过；未推送——推送 origin 需按协作规则另行授权）。
