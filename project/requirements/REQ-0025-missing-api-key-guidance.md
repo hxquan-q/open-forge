@@ -1,5 +1,5 @@
 ---
-id: REQ-0024
+id: REQ-0025
 type: requirement
 status: ready
 priority: P1
@@ -7,7 +7,7 @@ owner: desktop
 source: user-request（2026-10-20：首次未配置 API Key 时点发送「弹一下就没了」，应提示并引导去配置；2026-10-21 指定按钮文案「去配置模型 key」）
 related_requirement: []
 related_plan: []
-related_tasks: [TASK-0327]
+related_tasks: [TASK-0347]
 related_issues: []
 related_bugs: []
 created: 2026-10-20
@@ -32,4 +32,4 @@ updated: 2026-10-21
 ## 交付记录
 
 - T01 发送闸门+对话框+跳转(206fad2bd / 66e8c55e0);T02/T03(闪一下机制修复/错误分类加固)按用户 2026-10-21 裁定**缓做**。证据链见 `docs/devflow/missing-api-key-guidance/`(本地过程文档)。
-- 本地编号(REQ-0024/TASK-0327)与 origin/dev 撞车(dev 已至 TASK-0338),推送前统一改号。
+- 本地编号(REQ-0025/TASK-0347)与 origin/dev 撞车(dev 已至 TASK-0338),推送前统一改号。

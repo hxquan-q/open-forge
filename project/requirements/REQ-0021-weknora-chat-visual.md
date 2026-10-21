@@ -1,13 +1,13 @@
 ---
-id: REQ-0020
+id: REQ-0021
 type: requirement
 status: ready
 priority: P1
 owner: desktop
 source: user-request（2026-10-19：智能客服页视觉打磨——收掉顶部大块留白、逐字输出、思考三点动画、收起动画、副标题文案；2026-10-20 追加：顶部留白去掉 48px 空白拖拽带）
-related_requirement: [REQ-0017, REQ-0019]
+related_requirement: [REQ-0017, REQ-0020]
 related_plan: []
-related_tasks: [TASK-0323]
+related_tasks: [TASK-0343]
 related_issues: []
 related_bugs: []
 created: 2026-10-19

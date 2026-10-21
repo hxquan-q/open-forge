@@ -13,7 +13,7 @@ import { MessageBubble } from "./components/MessageBubble";
 import { WeKnoraPage } from "./components/WeKnoraPage";
 
 /**
- * 视觉打磨（REQ-0019）的**用户流程级**独立用例（③ 测试相位自建）。
+ * 视觉打磨（REQ-0020）的**用户流程级**独立用例（③ 测试相位自建）。
  *
  * 沿真实用户路径把「提问 → 等待首字 → 首字到达 → 生成中收起侧栏 → 完成」串成一条链，
  * 每步断言**结果**（而非「点击成功」）。角度与实现者自建的组件级用例不同：这里走整页装配 +

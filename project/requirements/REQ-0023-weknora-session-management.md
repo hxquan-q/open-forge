@@ -1,13 +1,13 @@
 ---
-id: REQ-0022
+id: REQ-0023
 type: requirement
 status: ready
 priority: P1
 owner: desktop
 source: user-request（2026-10-20：切换会话去掉替换确认；会话导出 TXT/MD/docx + 路径自选默认桌面；右键多选批量删除/批量导出）
-related_requirement: [REQ-0017, REQ-0019, REQ-0020, REQ-0021]
+related_requirement: [REQ-0017, REQ-0020, REQ-0021, REQ-0022]
 related_plan: []
-related_tasks: [TASK-0325]
+related_tasks: [TASK-0345]
 related_issues: []
 related_bugs: []
 created: 2026-10-20

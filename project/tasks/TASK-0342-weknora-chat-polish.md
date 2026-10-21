@@ -1,19 +1,19 @@
 ---
-id: TASK-0322
+id: TASK-0342
 type: task
 status: in_progress
 priority: P1
 owner: desktop
-requirement: REQ-0019
+requirement: REQ-0020
 plan: null
-source: REQ-0019
+source: REQ-0020
 related_bugs: []
 execution: serial
 branch: task/TASK-0318-weknora-customer-service
 worktree: .
 base_commit: 2dd89d53f
 read_paths: [apps/desktop, packages/theme-sdk, packages/ui, docs/devflow]
-write_paths: [apps/desktop/src/main/weknora, apps/desktop/src/main/ipc, apps/desktop/src/preload, apps/desktop/src/renderer/domains/weknora, apps/desktop/src/shared/i18n, .github/release-notes/v0.1.3.md, docs/weknora-connector.md, project/requirements/REQ-0019-weknora-chat-polish.md, project/tasks/TASK-0322-weknora-chat-polish.md]
+write_paths: [apps/desktop/src/main/weknora, apps/desktop/src/main/ipc, apps/desktop/src/preload, apps/desktop/src/renderer/domains/weknora, apps/desktop/src/shared/i18n, .github/release-notes/v0.1.3.md, docs/weknora-connector.md, project/requirements/REQ-0020-weknora-chat-polish.md, project/tasks/TASK-0342-weknora-chat-polish.md]
 exclusive_paths: [apps/desktop/src/main/weknora, apps/desktop/src/renderer/domains/weknora]
 depends_on: []
 conflicts_with: []
@@ -27,7 +27,7 @@ updated: 2026-10-19
 
 ## 目标与来源
 
-需求见 [REQ-0019](../requirements/REQ-0019-weknora-chat-polish.md)：在 REQ-0017 交付的智能客服页面上叠加三条打磨能力——侧栏可收起、右键删除历史会话、回答后台思考。
+需求见 [REQ-0020](../requirements/REQ-0020-weknora-chat-polish.md)：在 REQ-0017 交付的智能客服页面上叠加三条打磨能力——侧栏可收起、右键删除历史会话、回答后台思考。
 
 **分支说明**：本任务与 REQ-0017 同分支（`task/TASK-0318-weknora-customer-service`，PR #16）——用户 2026-10-19 裁定，依据是该 PR 尚无任何审查记录，堆叠隔离无收益。基线 `2dd89d53f`（REQ-0017 交付顶点）。
 
@@ -70,4 +70,4 @@ updated: 2026-10-19
 | `0967c0d88` | T03 | 侧栏收起持久化纯函数 |
 | `a75201f21` | T03 | 页头收起开关与条件渲染 |
 
-文档（T04）：REQ-0019 / TASK-0322 立项记录、`docs/weknora-connector.md` 增补、`v0.1.3` 发布说明三条目。
+文档（T04）：REQ-0020 / TASK-0342 立项记录、`docs/weknora-connector.md` 增补、`v0.1.3` 发布说明三条目。

@@ -1,13 +1,13 @@
 ---
-id: REQ-0021
+id: REQ-0022
 type: requirement
 status: ready
 priority: P1
 owner: desktop
 source: user-request（2026-10-20：智能客服回答里的 <kb/> 引用标签显示为乱码——要么去掉、要么做成可点击引用来源；用户要求先实测成因再动手）
-related_requirement: [REQ-0017, REQ-0019, REQ-0020]
+related_requirement: [REQ-0017, REQ-0020, REQ-0021]
 related_plan: []
-related_tasks: [TASK-0324]
+related_tasks: [TASK-0344]
 related_issues: []
 related_bugs: []
 created: 2026-10-20

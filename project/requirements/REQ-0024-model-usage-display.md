@@ -1,5 +1,5 @@
 ---
-id: REQ-0023
+id: REQ-0024
 type: requirement
 status: ready
 priority: P2
@@ -7,7 +7,7 @@ owner: desktop
 source: user-request（2026-10-20：模型选型区显示当前 API Key 余额；Coding/Agent Plan 套餐显示 5 小时/周/月额度。2026-10-21 收窄：首期 DeepSeek+Kimi，ARK 押后；会话 token 小字部分撤销）
 related_requirement: [REQ-0017]
 related_plan: []
-related_tasks: [TASK-0326]
+related_tasks: [TASK-0346]
 related_issues: []
 related_bugs: []
 created: 2026-10-20
@@ -34,4 +34,4 @@ updated: 2026-10-21
 ## 交付记录
 
 - T01 主进程余额数据面(04e3bd81d);T02 渲染层余额行(4f8277a58)。AC 7 条与证据链见 `docs/devflow/model-usage-display/`(本地过程文档)。
-- 说明:本地编号序列(REQ-0023/TASK-0326)与 origin/dev 撞车(dev 已至 TASK-0338),**推送前统一改号**(先例:REQ-0018→0019 手术)。
+- 说明:本地编号序列(REQ-0024/TASK-0346)与 origin/dev 撞车(dev 已至 TASK-0338),**推送前统一改号**(先例:REQ-0018→0019 手术)。

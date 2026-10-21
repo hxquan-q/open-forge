@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * 视觉打磨（REQ-0019）的**静态契约**独立用例（③ 测试相位自建）。
+ * 视觉打磨（REQ-0020）的**静态契约**独立用例（③ 测试相位自建）。
  *
  * 角度与实现者自建的组件用例不同：这些是 jsdom 测不到的「源码/样式表层面」事实 ——
  * AC-4 的「纯 CSS @keyframes、只动 opacity/transform、时长 420ms」、AC-9 的 reduced-motion

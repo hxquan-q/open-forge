@@ -1,19 +1,19 @@
 ---
-id: TASK-0323
+id: TASK-0343
 type: task
 status: in_progress
 priority: P1
 owner: desktop
-requirement: REQ-0020
+requirement: REQ-0021
 plan: null
-source: REQ-0020
+source: REQ-0021
 related_bugs: []
 execution: serial
 branch: main
 worktree: .
 base_commit: e0f0c5e33
 read_paths: [apps/desktop, packages/theme-ui, packages/ui, docs/devflow]
-write_paths: [apps/desktop/src/renderer/domains/weknora, apps/desktop/src/renderer/shared/lib/live-animations.ts, apps/desktop/src/renderer/styles.css, apps/desktop/src/shared/i18n, apps/desktop/DESIGN.md, docs/weknora-connector.md, .github/release-notes/v0.1.3.md, project/requirements/REQ-0020-weknora-chat-visual.md, project/tasks/TASK-0323-weknora-chat-visual.md]
+write_paths: [apps/desktop/src/renderer/domains/weknora, apps/desktop/src/renderer/shared/lib/live-animations.ts, apps/desktop/src/renderer/styles.css, apps/desktop/src/shared/i18n, apps/desktop/DESIGN.md, docs/weknora-connector.md, .github/release-notes/v0.1.3.md, project/requirements/REQ-0021-weknora-chat-visual.md, project/tasks/TASK-0343-weknora-chat-visual.md]
 exclusive_paths: [apps/desktop/src/renderer/domains/weknora]
 depends_on: []
 conflicts_with: []
@@ -27,9 +27,9 @@ updated: 2026-10-20
 
 ## 目标与来源
 
-需求见 [REQ-0020](../requirements/REQ-0020-weknora-chat-visual.md)：收掉顶部留白、逐字入场、思考三点、收起动画、副标题文案。
+需求见 [REQ-0021](../requirements/REQ-0021-weknora-chat-visual.md)：收掉顶部留白、逐字入场、思考三点、收起动画、副标题文案。
 
-**编号说明**：本任务原在本地按 REQ-0019/TASK-0320 记录（dev 当时空闲），2026-10-20 发现 dev 已被 `sidebar-nav-labels`（REQ-0018/TASK-0319）与 `plugin-host-blocked-navigation`（TASK-0320）占用，故整体改号为 REQ-0020/TASK-0323。同批改号：三件套打磨 REQ-0018/TASK-0319 → REQ-0019/TASK-0322。
+**编号说明**：本任务原在本地按 REQ-0020/TASK-0320 记录（dev 当时空闲），2026-10-20 发现 dev 已被 `sidebar-nav-labels`（REQ-0018/TASK-0319）与 `plugin-host-blocked-navigation`（TASK-0320）占用，故整体改号为 REQ-0021/TASK-0343。同批改号：三件套打磨 REQ-0018/TASK-0319 → REQ-0020/TASK-0342。
 
 **分支说明**：dev 已于 2026-10-19 合并 PR #16；本任务与视觉修复先在本地 `main` 开发，待并入最新 `origin/dev` 后开 PR（用户 2026-10-20 授权本地手术，推送待另行确认）。
 
