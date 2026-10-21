@@ -19,6 +19,19 @@ vi.mock("../conversations/session-archive-service.js", () => ({
 	fingerprintConversationFile: vi.fn(async () => "fp"),
 }));
 
+const exportMigration = vi.fn(async (_input: unknown) => ({ saved: true, sessionCount: 2, workspaceFileCount: 3 }));
+const previewMigration = vi.fn(async (_passphrase: string) => ({ canceled: true }));
+const applyMigration = vi.fn(async (_input: unknown) => ({
+	sessions: [],
+	workspace: { written: 0, skipped: 0, overwritten: 0, failed: [] },
+}));
+
+vi.mock("../conversations/project-migration-service.js", () => ({
+	exportProjectMigrationArchive: (input: unknown) => exportMigration(input),
+	previewProjectMigrationArchive: (passphrase: string) => previewMigration(passphrase),
+	applyProjectMigrationArchive: (input: unknown) => applyMigration(input),
+}));
+
 const listSessionHistory = vi.fn(async (_cwd: string) => [{ path: "C:/s/a.jsonl" }, { path: "C:/s/b.jsonl" }]);
 
 vi.mock("../conversations/session-query-service.js", () => ({
@@ -42,6 +55,13 @@ describe("session archive IPC", () => {
 		expect(handlers.has(SESSION_ARCHIVE_CHANNELS.EXPORT)).toBe(true);
 		expect(handlers.has(SESSION_ARCHIVE_CHANNELS.EXPORT_PROJECT)).toBe(true);
 		expect(handlers.has(SESSION_ARCHIVE_CHANNELS.IMPORT)).toBe(true);
+	});
+
+	it("registers the three project migration channels", () => {
+		registerSessionArchiveIpc();
+		expect(handlers.has(SESSION_ARCHIVE_CHANNELS.EXPORT_MIGRATION)).toBe(true);
+		expect(handlers.has(SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION)).toBe(true);
+		expect(handlers.has(SESSION_ARCHIVE_CHANNELS.APPLY_MIGRATION)).toBe(true);
 	});
 
 	it("bundles every session the project lists into one archive export", async () => {
@@ -87,5 +107,72 @@ describe("session archive IPC", () => {
 			passphrase: "pw",
 			defaultFileName: "a",
 		});
+	});
+});
+
+describe("project migration IPC", () => {
+	it("export-migration bundles listSessionHistory paths and defaults includeWorkspace to true", async () => {
+		registerSessionArchiveIpc();
+		listSessionHistory.mockResolvedValueOnce([{ path: "C:/s/a.jsonl" }, { path: "C:/s/b.jsonl" }]);
+		const result = await handler(SESSION_ARCHIVE_CHANNELS.EXPORT_MIGRATION)(null, {
+			cwd: "C:/repo",
+			passphrase: "pw",
+			defaultFileName: "repo",
+		});
+		expect(result).toEqual({ saved: true, sessionCount: 2, workspaceFileCount: 3 });
+		expect(listSessionHistory).toHaveBeenCalledWith("C:/repo");
+		expect(exportMigration).toHaveBeenCalledWith(
+			expect.objectContaining({
+				cwd: "C:/repo",
+				passphrase: "pw",
+				includeWorkspace: true,
+				defaultFileName: "repo",
+				listSessionPaths: expect.any(Function),
+			}),
+		);
+		const call = vi.mocked(exportMigration).mock.calls[0]?.[0] as {
+			listSessionPaths: () => Promise<string[]>;
+		} | undefined;
+		expect(await call?.listSessionPaths()).toEqual(["C:/s/a.jsonl", "C:/s/b.jsonl"]);
+	});
+
+	it("export-migration forwards an explicit includeWorkspace=false and rejects a missing cwd", async () => {
+		registerSessionArchiveIpc();
+		await handler(SESSION_ARCHIVE_CHANNELS.EXPORT_MIGRATION)(null, { cwd: "C:/repo", includeWorkspace: false });
+		expect(exportMigration).toHaveBeenLastCalledWith(
+			expect.objectContaining({ includeWorkspace: false }),
+		);
+		await expect(handler(SESSION_ARCHIVE_CHANNELS.EXPORT_MIGRATION)(null, {})).rejects.toThrow(/cwd is required/);
+	});
+
+	it("preview-migration forwards the passphrase only", async () => {
+		registerSessionArchiveIpc();
+		await handler(SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION)(null, { passphrase: "pw" });
+		expect(previewMigration).toHaveBeenCalledWith("pw");
+	});
+
+	it("apply-migration validates required fields and forwards options", async () => {
+		registerSessionArchiveIpc();
+		await handler(SESSION_ARCHIVE_CHANNELS.APPLY_MIGRATION)(null, {
+			archivePath: "C:/pkg.ofar",
+			passphrase: "pw",
+			targetCwd: "C:/target",
+			overwriteWorkspace: true,
+		});
+		expect(applyMigration).toHaveBeenCalledWith(
+			expect.objectContaining({
+				archivePath: "C:/pkg.ofar",
+				passphrase: "pw",
+				targetCwd: "C:/target",
+				overwriteWorkspace: true,
+				listKnownFingerprints: expect.any(Function),
+			}),
+		);
+		await expect(handler(SESSION_ARCHIVE_CHANNELS.APPLY_MIGRATION)(null, { targetCwd: "C:/t" })).rejects.toThrow(
+			/archivePath is required/,
+		);
+		await expect(
+			handler(SESSION_ARCHIVE_CHANNELS.APPLY_MIGRATION)(null, { archivePath: "C:/pkg.ofar" }),
+		).rejects.toThrow(/targetCwd is required/);
 	});
 });
