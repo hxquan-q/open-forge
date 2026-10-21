@@ -8,8 +8,8 @@ requirement:
 plan:
 source: 用户提供的 dev 日志（desktop-app/logs/2026-10-16，render 侧）
 related_requirement: []
-related_plan: []
-related_tasks: []
+related_plan: [PLAN-0020]
+related_tasks: [TASK-0353]
 related_issues: []
 related_bugs: []
 created: 2026-10-16
@@ -74,3 +74,9 @@ updated: 2026-10-16
 - 检查：`bun run --cwd apps/desktop typecheck:incremental`、`bun run test:impact` 137 例全绿。
 - 未运行及原因：`verify:ui:*` 未获授权；真实复现交人工验收。
 - 剩余风险：重复本身未消除，仅可定位；一旦拿到现场诊断即可按「头部翻页重叠」或「live/canonical 双留」定向修复。
+
+## 2026-10-22 TASK-0353 实现与隔离回归
+
+重叠durable历史只入列一次，无ID合法重复marker保留；await后读取当前backlog，同路径reset淘汰陈旧请求。成功提交推进尾部序号，reset失败也清loading；诊断序列化白名单身份避免[object Object]。首次分页4红→59绿，诊断合并4文件84绿；复审新增3红→controller24绿。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0353，本地main原子提交绑定；仍待真实用户流程验收，未发布。

@@ -393,6 +393,46 @@ function headPage(entries: HistoryEntry[], overrides?: Partial<HistoryPage>): Hi
 }
 
 describe("prependTranscriptPage", () => {
+	it("removes an anchored overlap including no-id markers but retains legitimate repetitions", () => {
+		const marker: HistoryEntry = {
+			type: "prompt_ref_marker",
+			promptRef: { kind: "skill", name: "same-marker" },
+			timestamp: "2024-01-01T00:00:00Z",
+		};
+		const user = userEntry("u9", "new window value");
+		const assistant = assistantEntry("a9", "a9");
+		const current = [user, marker, marker, assistant];
+		const merged = prependTranscriptPage(
+			current,
+			headPage([
+				userEntry("u8", "q8"),
+				userEntry("u9", "old page value"),
+				marker,
+				marker,
+				assistantEntry("a9", "a9"),
+			]),
+		);
+		expect(merged).toEqual([userEntry("u8", "q8"), ...current]);
+		expect(merged[1]).toBe(user);
+		expect(merged[2]).toBe(marker);
+		expect(merged[3]).toBe(marker);
+		expect(prependTranscriptPage([marker, user], headPage([userEntry("u8", "q8"), marker]))).toEqual([
+			userEntry("u8", "q8"),
+			marker,
+			marker,
+			user,
+		]);
+	});
+
+	it("deduplicates only durable identities and prefers current window objects", () => {
+		const user = userEntry("u9", "current");
+		const merged = prependTranscriptPage(
+			[user, user],
+			headPage([userEntry("u8", "q8"), userEntry("u9", "stale"), userEntry("u7", "q7"), userEntry("u8", "q8")]),
+		);
+		expect(merged.map(entryIdOf)).toEqual(["u8", "u7", "u9"]);
+		expect(merged.at(-1)).toBe(user);
+	});
 	it("更早页拼到窗口前面，顺序旧→新", () => {
 		const windowEntries = [userEntry("u-4", "q4"), assistantEntry("a-4", "a4")];
 		const older = headPage([userEntry("u-2", "q2"), userEntry("u-3", "q3")], {

@@ -392,8 +392,8 @@ describe("MessageListView virtualization", () => {
 
 		render(<MessageListView {...viewProps} />);
 
-		expect(warn).toHaveBeenCalledWith(
-			"[conversation-keys] duplicate render keys",
+		expect(warn.mock.calls[0]?.[0]).toBe("[conversation-keys] duplicate render keys");
+		expect(JSON.parse(String(warn.mock.calls[0]?.[1]))).toEqual(
 			expect.objectContaining({
 				sessionId: "/sessions/a.jsonl",
 				total: 2,
