@@ -1,7 +1,7 @@
 ---
 id: BUG-0141
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: desktop
 requirement: REQ-0002
@@ -43,3 +43,9 @@ Windows、本地Open Forge 0.1.3；default远程输入27条告警及隔离koffi�
 - 修复：待实施，关联TASK-0359。
 - 测试/检查：待执行。
 - 未运行：真实Desktop、Provider、SSH及发布不在当前授权中。
+
+## 2026-10-22 TASK-0359 实现与隔离回归
+
+匿名INPUT结构配合typed SendInput函数绑定，不再占用全局类型名。仅替换FFI/OS边界的Windows夹具复现第二适配器unsupported，修后两适配器supported，启用/撤销独立；2文件3例绿，未发送真实系统输入。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0359，本地main原子提交绑定；仍待真实用户流程验收，未发布。
