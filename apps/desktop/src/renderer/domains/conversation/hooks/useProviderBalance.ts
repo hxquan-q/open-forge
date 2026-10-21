@@ -10,6 +10,9 @@ type GetBalance = (providerId: string) => Promise<ProviderBalanceResult>;
 /**
  * 60s 短缓存（D4）：余额不是秒级数据，选型面板反复开合、切回同一 provider 时命中缓存
  * 即不再打上游。模块级 Map 让同一 provider 的多个输入框共享一份结果。
+ *
+ * 只缓存非结构化失败（无 errorCode）的结果：失败是瞬态的，缓存它会让面板在 60s 内
+ * 一直空着，即使上游已恢复；而 `supported: false` 是稳定的能力事实，仍照常缓存。
  */
 export const PROVIDER_BALANCE_CACHE_TTL_MS = 60_000;
 
@@ -104,7 +107,11 @@ export function useProviderBalance(options: UseProviderBalanceOptions = {}): Use
 		const seq = ++requestSeqRef.current;
 		try {
 			const next = await getBalance(targetProvider);
-			balanceCache.set(targetProvider, { result: next, fetchedAt: Date.now() });
+			// 结构化失败（errorCode）是瞬态的：缓存它会让面板在 60s 内一直空着，即使上游已恢复，
+			// 所以只缓存非 errorCode 结果。`supported: false` 是稳定的能力事实，仍要缓存。
+			if (!next.errorCode) {
+				balanceCache.set(targetProvider, { result: next, fetchedAt: Date.now() });
+			}
 			if (seq === requestSeqRef.current && activeProviderRef.current === targetProvider) setResult(next);
 		} catch {
 			// 失败零渲染：不缓存、不回显错误，只清掉当前展示。
