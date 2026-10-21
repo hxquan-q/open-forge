@@ -3,6 +3,13 @@ export interface SessionArchiveExportResult {
 	readonly path?: string;
 }
 
+export interface ProjectSessionArchiveExportResult {
+	readonly saved: boolean;
+	readonly path?: string;
+	readonly sessionCount?: number;
+	readonly reason?: "no-sessions";
+}
+
 export interface SessionArchiveImportDecision {
 	readonly fingerprint: string;
 	readonly sessionId: string;
@@ -25,5 +32,10 @@ export interface DesktopSessionArchiveApi {
 		passphrase?: string;
 		defaultFileName?: string;
 	}): Promise<SessionArchiveExportResult>;
+	exportProject(input: {
+		cwd: string;
+		passphrase?: string;
+		defaultFileName?: string;
+	}): Promise<ProjectSessionArchiveExportResult>;
 	import(input?: { passphrase?: string }): Promise<SessionArchiveImportResult>;
 }

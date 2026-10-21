@@ -117,6 +117,7 @@
 	},
 	"sessionArchive": {
 		"exportDialogTitle": "Export session archive",
+		"projectExportDialogTitle": "Export project session archive",
 		"importDialogTitle": "Import session archive",
 		"filterName": "Open Forge session archive"
 	},

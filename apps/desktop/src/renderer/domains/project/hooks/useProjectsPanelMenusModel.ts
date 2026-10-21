@@ -8,9 +8,11 @@ import {
 	sessionContextMenuAtom,
 	sessionDisplayLabel,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import type { ProjectsPanelModel } from "../components/sidebar/projects/panel/types";
+import { exportPortableProjectSessionArchive } from "../services/session-archive";
 
 export function useProjectsPanelMenusModel(model: ProjectsPanelModel) {
 	const [contextMenu, setContextMenu] = useAtom(sessionContextMenuAtom);
@@ -58,6 +60,44 @@ export function useProjectsPanelMenusModel(model: ProjectsPanelModel) {
 			archiveProject: (cwd: string) => {
 				setProjectMenu(null);
 				model.actions.archiveProject(cwd);
+			},
+			exportProjectSessions: (cwd: string, projectName?: string) => {
+				setProjectMenu(null);
+				// 项目归档口令与单会话导出一致：确认对话框输入，可留空；结果走 Toast，
+				// 不再用阻塞式原生提示。
+				setConfirm({
+					title: t("contextMenu.exportSessions"),
+					message: t("projectExport.passphrasePrompt"),
+					input: { password: true },
+					onConfirm: (_checkboxChecked: boolean, passphrase = "") => {
+						void (async () => {
+							try {
+								const result = await exportPortableProjectSessionArchive({
+									cwd,
+									passphrase,
+									defaultFileName: projectName?.trim() || undefined,
+								});
+								if (result.reason === "no-sessions") {
+									showToast({ variant: "info", message: t("projectExport.noSessions") });
+									return;
+								}
+								if (result.saved) {
+									showToast({
+										variant: "success",
+										message: t("projectExport.done", { count: result.sessionCount ?? 0 }),
+									});
+								}
+							} catch (error) {
+								showToast({
+									variant: "error",
+									message: t("projectExport.failed", {
+										message: error instanceof Error ? error.message : String(error),
+									}),
+								});
+							}
+						})();
+					},
+				});
 			},
 			removeProject: (cwd: string) => {
 				setProjectMenu(null);

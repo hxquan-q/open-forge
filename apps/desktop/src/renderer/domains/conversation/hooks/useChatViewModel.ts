@@ -27,6 +27,7 @@ import {
 	sessionsMapAtom,
 	syncHardIsolationContributionModes,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { parseProjectLocation } from "@vetta/ssh-transport/project-uri";
 import { useThemeSurface } from "@vetta-org/theme-sdk/appearance";
 import { RemoteSessionBadgeView } from "@vetta-org/theme-ui/chat";
@@ -179,11 +180,13 @@ export function useChatViewModel(): ChatViewModelResult {
 					try {
 						await exportPortableSessionArchive({ sessionPath, passphrase, defaultFileName });
 					} catch (error) {
-						alert(
-							i18n.t("chat:chatView.archiveExport.failed", {
+						// BUG-0031 同源：阻塞式原生 alert 不再使用，失败统一走 Toast。
+						showToast({
+							variant: "error",
+							message: i18n.t("chat:chatView.archiveExport.failed", {
 								message: error instanceof Error ? error.message : String(error),
 							}),
-						);
+						});
 					} finally {
 						setArchiveExporting(false);
 					}
@@ -200,13 +203,19 @@ export function useChatViewModel(): ChatViewModelResult {
 				void (async () => {
 					try {
 						const result = await importPortableSessionArchive(passphrase);
-						alert(i18n.t(`chat:chatView.archiveImport.${result.messageKey}`));
+						// 导入成功后主进程已按写入会话广播列表变更，侧栏即时刷新；
+						// 这里只负责结果反馈，不再弹阻塞式原生框。
+						showToast({
+							variant: result.messageKey === "doneCopy" ? "success" : "info",
+							message: i18n.t(`chat:chatView.archiveImport.${result.messageKey}`),
+						});
 					} catch (error) {
-						alert(
-							i18n.t("chat:chatView.archiveImport.failed", {
+						showToast({
+							variant: "error",
+							message: i18n.t("chat:chatView.archiveImport.failed", {
 								message: error instanceof Error ? error.message : String(error),
 							}),
-						);
+						});
 					}
 				})();
 			},

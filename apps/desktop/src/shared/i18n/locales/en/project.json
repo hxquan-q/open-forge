@@ -108,6 +108,7 @@
 		"clearClawDisabled": "Stop the running Claw session first",
 		"clawSettings": "Claw settings",
 		"archiveProject": "Archive project",
+		"exportSessions": "Export session archive",
 		"removeFromList": "Remove from list",
 		"deleteProject": "Delete project",
 		"rename": "Rename",
@@ -124,6 +125,13 @@
 			"new": "New tag…",
 			"manage": "Manage tags…"
 		}
+	},
+	"projectExport": {
+		"passphrasePrompt": "Set a passphrase for the archive (optional; includes every session in this project)",
+		"done": "Exported {{count}} sessions",
+		"done_one": "Exported {{count}} session",
+		"noSessions": "No sessions to export in this project yet",
+		"failed": "Failed to export the session archive: {{message}}"
 	},
 	"tagEditor": {
 		"createTitle": "New tag",

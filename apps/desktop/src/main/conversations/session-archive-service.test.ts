@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import { ENV_AGENT_DIR } from "@vetta/coding-agent/config";
+import { decodeSessionArchive } from "@vetta/runtime-storage/conversation";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_CONVERSATION_CWD } from "../config/desktop-config-store.js";
+import { onConversationListChanged } from "./conversation-list-events.js";
 import { resolveSessionImportDir } from "./session-paths.js";
 
 const openDialogResult = vi.fn(
@@ -12,11 +15,16 @@ const openDialogResult = vi.fn(
 		filePaths: [],
 	}),
 );
+const saveDialogResult = vi.fn(
+	async (): Promise<{ canceled: boolean; filePath?: string }> => ({
+		canceled: true,
+	}),
+);
 
 vi.mock("electron", () => ({
 	app: { getVersion: () => "0.1.1" },
 	dialog: {
-		showSaveDialog: async () => ({ canceled: true }),
+		showSaveDialog: () => saveDialogResult(),
 		showOpenDialog: () => openDialogResult(),
 	},
 }));
@@ -30,6 +38,8 @@ vi.mock("../logger.js", () => ({
 }));
 
 const {
+	exportProjectSessionsArchiveToBytes,
+	exportProjectSessionsArchiveWithDialog,
 	exportSessionArchiveToBytes,
 	fingerprintConversationFile,
 	importSessionArchiveFromBytes,
@@ -163,6 +173,118 @@ describe("desktop session archive service", () => {
 		} finally {
 			if (previous === undefined) delete process.env[ENV_AGENT_DIR];
 			else process.env[ENV_AGENT_DIR] = previous;
+		}
+	});
+
+	async function writeSessionFile(root: string, fileName: string, sessionId: string, cwd: string): Promise<string> {
+		const sessionPath = join(root, fileName);
+		const content = [
+			JSON.stringify({ type: "session", version: 3, id: sessionId, timestamp: "2026-01-01T00:00:00.000Z", cwd }),
+			JSON.stringify({
+				type: "message",
+				id: `m-${sessionId}`,
+				parentId: null,
+				timestamp: "2026-01-01T00:00:01.000Z",
+				message: { role: "user", content: `hi ${sessionId}`, timestamp: "2026-01-01T00:00:01.000Z" },
+			}),
+		].join("\n");
+		await writeFile(sessionPath, `${content}\n`, "utf8");
+		return sessionPath;
+	}
+
+	it("Given a project with several sessions, When exported as one archive, Then every session round-trips with its records", async () => {
+		const root = await mkdtemp(join(tmpdir(), "session-archive-proj-"));
+		roots.push(root);
+		const a = await writeSessionFile(root, "a.jsonl", "sess-a", root);
+		const b = await writeSessionFile(root, "b.jsonl", "sess-b", root);
+
+		const bytes = await exportProjectSessionsArchiveToBytes({
+			sessionPaths: [a, b],
+			passphrase: "pw",
+			appVersion: "0.1.1",
+		});
+
+		const decoded = await decodeSessionArchive(bytes, "pw");
+		expect(decoded.metadata.sessionCount).toBe(2);
+		expect(decoded.sessions.map((session) => session.sessionId).sort()).toEqual(["sess-a", "sess-b"]);
+		const sessionA = decoded.sessions.find((session) => session.sessionId === "sess-a");
+		expect(sessionA?.cwd).toBe(root);
+		const userRecord = sessionA?.records.find((record) => (record as { type?: string }).type === "message") as {
+			message?: { content?: string };
+		};
+		expect(userRecord?.message?.content).toBe("hi sess-a");
+	});
+
+	it("Given no sessions, When a project export is requested, Then it refuses without opening a save dialog", async () => {
+		await expect(exportProjectSessionsArchiveToBytes({ sessionPaths: [], passphrase: "" })).rejects.toThrow(
+			/no sessions to export/,
+		);
+		saveDialogResult.mockClear();
+		const result = await exportProjectSessionsArchiveWithDialog({ sessionPaths: [], passphrase: "" });
+		expect(result).toEqual({ saved: false, reason: "no-sessions" });
+		expect(saveDialogResult).not.toHaveBeenCalled();
+	});
+
+	it("Given one unreadable session file, When a project export is requested, Then the whole export fails naming the file", async () => {
+		const root = await mkdtemp(join(tmpdir(), "session-archive-broken-"));
+		roots.push(root);
+		const ok = await writeSessionFile(root, "ok.jsonl", "sess-ok", root);
+
+		await expect(
+			exportProjectSessionsArchiveToBytes({ sessionPaths: [ok, join(root, "missing.jsonl")], passphrase: "" }),
+		).rejects.toThrow(/missing\.jsonl/);
+	});
+
+	it("Given an imported session lands on disk, Then each written session broadcasts a list change; idempotent skips stay silent", async () => {
+		const root = await mkdtemp(join(tmpdir(), "session-archive-events-"));
+		roots.push(root);
+		const projectCwd = await mkdtemp(join(tmpdir(), "session-archive-events-cwd-"));
+		roots.push(projectCwd);
+		const sessionPath = await writeSessionFile(root, "demo.jsonl", "sess-events", projectCwd);
+		const bytes = await exportSessionArchiveToBytes({ sessionPath, passphrase: "", appVersion: "0.1.1" });
+		const fingerprint = await fingerprintConversationFile(await readFile(sessionPath, "utf8"));
+
+		const events: Array<{ cwd: string; sessionPath: string }> = [];
+		const unsubscribe = onConversationListChanged((event) => events.push(event));
+		try {
+			const first = await importSessionArchiveFromBytes(bytes, "", {
+				listKnownFingerprints: async () => new Map(),
+				resolveImportDirectory: async () => root,
+			});
+			expect(first[0]?.conflict.action).toBe("create-copy");
+			expect(events).toEqual([{ cwd: projectCwd, sessionPath: first[0]!.writtenPath! }]);
+
+			events.length = 0;
+			const second = await importSessionArchiveFromBytes(bytes, "", {
+				listKnownFingerprints: async () =>
+					new Map([[fingerprint, { sessionPath: first[0]!.writtenPath!, mtimeMs: 1 }]]),
+				resolveImportDirectory: async () => root,
+			});
+			expect(second[0]?.conflict.action).toBe("skip-idempotent");
+			expect(events).toEqual([]);
+		} finally {
+			unsubscribe();
+		}
+	});
+
+	it("Given an imported session whose records carry a default-conversation workspace cwd, Then the broadcast maps it to the default conversation list cwd", async () => {
+		const root = await mkdtemp(join(tmpdir(), "session-archive-defcwd-"));
+		roots.push(root);
+		const workspaceCwd = join(DEFAULT_CONVERSATION_CWD, "0e4f2d51-2b3f-4c5d-8e9f-0a1b2c3d4e5f");
+		const sessionPath = await writeSessionFile(root, "demo.jsonl", "sess-defcwd", workspaceCwd);
+		const bytes = await exportSessionArchiveToBytes({ sessionPath, passphrase: "", appVersion: "0.1.1" });
+
+		const events: Array<{ cwd: string; sessionPath: string }> = [];
+		const unsubscribe = onConversationListChanged((event) => events.push(event));
+		try {
+			await importSessionArchiveFromBytes(bytes, "", {
+				listKnownFingerprints: async () => new Map(),
+				resolveImportDirectory: async () => root,
+			});
+			expect(events).toHaveLength(1);
+			expect(events[0]?.cwd).toBe(DEFAULT_CONVERSATION_CWD);
+		} finally {
+			unsubscribe();
 		}
 	});
 });

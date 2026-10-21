@@ -108,6 +108,7 @@
 		"clearClawDisabled": "请先停止运行中的 Claw 会话",
 		"clawSettings": "Claw 设置",
 		"archiveProject": "归档项目",
+		"exportSessions": "导出项目会话归档",
 		"removeFromList": "从列表中移除",
 		"deleteProject": "删除项目",
 		"rename": "重命名",
@@ -124,6 +125,12 @@
 			"new": "新标签…",
 			"manage": "管理标签…"
 		}
+	},
+	"projectExport": {
+		"passphrasePrompt": "为归档设置口令（可留空，将打包该项目全部会话）",
+		"done": "已导出 {{count}} 条会话",
+		"noSessions": "项目暂无可导出的会话",
+		"failed": "导出项目会话归档失败：{{message}}"
 	},
 	"tagEditor": {
 		"createTitle": "新建标签",

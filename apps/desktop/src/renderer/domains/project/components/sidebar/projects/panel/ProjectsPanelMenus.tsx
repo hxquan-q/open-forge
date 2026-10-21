@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ProjectsPanelMenusView } from "@vetta-org/theme-ui/project";
 import { ConversationTagEditorDialog } from "../../../ConversationTagEditorDialog";
 import { useProjectsPanelMenusModel } from "../../../../hooks/useProjectsPanelMenusModel";
@@ -44,6 +45,7 @@ export function ProjectsPanelMenus({ model }: ProjectsPanelMenusProps): JSX.Elem
 						onOpenClawSettings={menus.actions.openClawSettings}
 						clearConversationDisabled={menus.clearConversationDisabled}
 						clearClawDisabled={menus.clearClawDisabled}
+						onExportSessions={menus.actions.exportProjectSessions}
 					/>
 				) : null
 			}

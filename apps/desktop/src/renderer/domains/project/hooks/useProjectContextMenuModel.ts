@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Project } from "@shared/store/atoms";
 import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
 import type { ProjectContextMenuViewProps } from "@vetta-org/theme-ui/project";
@@ -15,6 +16,8 @@ interface UseProjectContextMenuModelArgs {
 	onClearConversation?: (cwd: string) => void;
 	onClose: () => void;
 	onDelete: (cwd: string) => void;
+	/** 导出项目全部会话；projectName 仅用做默认文件名。 */
+	onExportSessions?: (cwd: string, projectName?: string) => void;
 	onOpenClawSettings?: () => void;
 	onRemove: (cwd: string) => void;
 	project: Project;
@@ -29,6 +32,7 @@ export function useProjectContextMenuModel({
 	onClearConversation,
 	onClose,
 	onDelete,
+	onExportSessions,
 	onOpenClawSettings,
 	onRemove,
 	project,
@@ -56,6 +60,11 @@ export function useProjectContextMenuModel({
 		onClose();
 	}, [cwd, onDelete, onClose]);
 
+	const handleExportSessions = useCallback(() => {
+		onExportSessions?.(cwd, project.name);
+		onClose();
+	}, [cwd, onClose, onExportSessions, project.name]);
+
 	const handleOpenClawSettings = useCallback(() => {
 		onOpenClawSettings?.();
 		onClose();
@@ -80,6 +89,7 @@ export function useProjectContextMenuModel({
 		isDefault: project.isDefault === true,
 		labels: {
 			openInFolder: isMac ? t("contextMenu.openInFinder") : t("contextMenu.openInExplorer"),
+			exportSessions: t("contextMenu.exportSessions"),
 			archiveProject: t("contextMenu.archiveProject"),
 			removeFromList: t("contextMenu.removeFromList"),
 			deleteProject: t("contextMenu.deleteProject"),
@@ -94,6 +104,7 @@ export function useProjectContextMenuModel({
 		onClearConversation: onClearConversation ? handleClearConversation : undefined,
 		onClose,
 		onDelete: handleDelete,
+		onExportSessions: onExportSessions ? handleExportSessions : undefined,
 		onOpenClawSettings: onOpenClawSettings ? handleOpenClawSettings : undefined,
 		onOpenInFolder: handleOpenInFolder,
 		onRemove: handleRemove,

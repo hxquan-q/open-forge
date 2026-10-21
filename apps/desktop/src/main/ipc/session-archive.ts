@@ -4,6 +4,7 @@ import { getAgentDir } from "@vetta/coding-agent/config";
 import { ipcMain } from "electron";
 import { DEFAULT_CONVERSATION_SESSION_DIR } from "../config/desktop-config-store.js";
 import {
+	exportProjectSessionsArchiveWithDialog,
 	exportSessionArchiveWithDialog,
 	fingerprintConversationFile,
 	importSessionArchiveWithDialog,
@@ -11,9 +12,11 @@ import {
 	SESSION_ARCHIVE_EXTENSION,
 } from "../conversations/session-archive-service.js";
 import { resolveSessionImportDir } from "../conversations/session-paths.js";
+import { listSessionHistory } from "../conversations/session-query-service.js";
 
 export const SESSION_ARCHIVE_CHANNELS = {
 	EXPORT: "vetta:session-archive:export",
+	EXPORT_PROJECT: "vetta:session-archive:export-project",
 	IMPORT: "vetta:session-archive:import",
 } as const;
 
@@ -66,6 +69,27 @@ export function registerSessionArchiveIpc(): void {
 			const defaultFileName = typeof input.defaultFileName === "string" ? input.defaultFileName : undefined;
 			return exportSessionArchiveWithDialog({
 				sessionPath: input.sessionPath,
+				passphrase,
+				defaultFileName,
+			});
+		},
+	);
+
+	ipcMain.handle(
+		SESSION_ARCHIVE_CHANNELS.EXPORT_PROJECT,
+		async (_event, input: { cwd?: unknown; passphrase?: unknown; defaultFileName?: unknown }) => {
+			if (typeof input?.cwd !== "string" || !input.cwd.trim()) {
+				throw new Error("cwd is required");
+			}
+			// 会话记录始终落在本机（项目 cwd 对应的分片目录），远程 ssh:// 项目同样可导出。
+			const sessions = await listSessionHistory(input.cwd);
+			if (sessions.length === 0) {
+				return { saved: false as const, reason: "no-sessions" as const };
+			}
+			const passphrase = typeof input.passphrase === "string" ? input.passphrase : "";
+			const defaultFileName = typeof input.defaultFileName === "string" ? input.defaultFileName : undefined;
+			return exportProjectSessionsArchiveWithDialog({
+				sessionPaths: sessions.map((session) => session.path),
 				passphrase,
 				defaultFileName,
 			});
