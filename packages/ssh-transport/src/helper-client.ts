@@ -1,4 +1,18 @@
+// Modified by The Open Forge contributors.
 import type { SshProcessChannel } from "./process-runner.js";
+
+export class SshHelperRequestAbortedError extends Error {
+	readonly verdict = "unverifiable" as const;
+	constructor(readonly reason: "aborted" | "timeout") {
+		super(`Remote helper request ${reason === "timeout" ? "timed out" : "was aborted"}`);
+		this.name = "SshHelperRequestAbortedError";
+	}
+}
+
+interface SshHelperCallOptions {
+	readonly signal?: AbortSignal;
+	readonly timeoutMs?: number;
+}
 
 /**
  * 与远端 helper（`apps/ssh-helper`）对话的客户端。
@@ -84,12 +98,39 @@ export class SshHelperClient {
 		return this.closed !== undefined;
 	}
 
-	call<Result>(method: string, params?: unknown): Promise<Result> {
+	call<Result>(method: string, params?: unknown, options: SshHelperCallOptions = {}): Promise<Result> {
 		if (this.closed) return Promise.reject(this.closed);
+		if (options.signal?.aborted) return Promise.reject(new SshHelperRequestAbortedError("aborted"));
 		const id = this.nextId++;
 		return new Promise<Result>((resolve, reject) => {
-			this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
-			this.channel.write(new TextEncoder().encode(`${JSON.stringify({ id, method, params })}\n`));
+			let settled = false;
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const cleanup = (): boolean => {
+				if (settled) return false;
+				settled = true;
+				this.pending.delete(id);
+				if (timer !== undefined) clearTimeout(timer);
+				options.signal?.removeEventListener("abort", onAbort);
+				return true;
+			};
+			const fail = (error: Error): void => {
+				if (cleanup()) reject(error);
+			};
+			const onAbort = (): void => fail(new SshHelperRequestAbortedError("aborted"));
+			options.signal?.addEventListener("abort", onAbort, { once: true });
+			if (options.timeoutMs !== undefined)
+				timer = setTimeout(() => fail(new SshHelperRequestAbortedError("timeout")), options.timeoutMs);
+			this.pending.set(id, {
+				resolve: (value) => {
+					if (cleanup()) resolve(value as Result);
+				},
+				reject: fail,
+			});
+			try {
+				this.channel.write(new TextEncoder().encode(`${JSON.stringify({ id, method, params })}\n`));
+			} catch (error) {
+				fail(error instanceof Error ? error : new Error(String(error)));
+			}
 		});
 	}
 

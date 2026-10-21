@@ -20,50 +20,61 @@ export async function resolvePromptInput(
 	}
 }
 
-async function loadContextFilesFromDir(
-	access: ResourceAccessPort,
-	dir: string,
-	signal?: AbortSignal,
-): Promise<Array<{ path: string; content: string }>> {
-	const files: Array<{ path: string; content: string }> = [];
-	for (const filename of ["CLAUDE.md", "AGENTS.md"]) {
-		const filePath = access.paths.join(dir, filename);
-		if (!(await access.files.stat(filePath, { signal }))) continue;
-		try {
-			files.push({ path: filePath, content: await access.files.readText(filePath, { signal }) });
-		} catch (error) {
-			signal?.throwIfAborted();
-			console.error(chalk.yellow(`Warning: Could not read ${filePath}: ${error}`));
-		}
-	}
-	return files;
-}
-
 export async function loadProjectContextFiles(
 	access: ResourceAccessPort,
 	cwd: string,
 	agentDir: string,
 	signal?: AbortSignal,
 ): Promise<Array<{ path: string; content: string }>> {
-	const files: Array<{ path: string; content: string }> = [];
-	const seen = new Set<string>();
-	const globalContext = await loadContextFilesFromDir(access, agentDir, signal);
-	for (const context of globalContext) {
-		files.push(context);
-		seen.add(context.path);
-	}
-	const ancestors: Array<Array<{ path: string; content: string }>> = [];
+	const ancestors: string[] = [];
 	let currentDir = access.paths.resolve(cwd);
 	while (true) {
-		const contexts = await loadContextFilesFromDir(access, currentDir, signal);
-		ancestors.unshift(contexts.filter((context) => !seen.has(context.path)));
-		for (const context of contexts) seen.add(context.path);
-		const parentDir = access.paths.dirname(currentDir);
-		if (parentDir === currentDir) break;
-		currentDir = parentDir;
+		ancestors.unshift(currentDir);
+		const parent = access.paths.dirname(currentDir);
+		if (parent === currentDir) break;
+		currentDir = parent;
 	}
-	files.push(...ancestors.flat());
-	return files;
+	const directories = [agentDir, ...ancestors.filter((dir) => dir !== agentDir)];
+	const paths = [
+		...new Set(directories.flatMap((dir) => ["CLAUDE.md", "AGENTS.md"].map((name) => access.paths.join(dir, name)))),
+	];
+	const results: Array<{ path: string; content: string } | undefined> = new Array(paths.length);
+	let next = 0;
+	const controller = new AbortController();
+	const onAbort = (): void => controller.abort(signal?.reason);
+	if (signal?.aborted) onAbort();
+	else signal?.addEventListener("abort", onAbort, { once: true });
+	const worker = async (): Promise<void> => {
+		try {
+			while (next < paths.length) {
+				controller.signal.throwIfAborted();
+				const index = next++;
+				const filePath = paths[index];
+				if (!(await access.files.stat(filePath, { signal: controller.signal }))) continue;
+				try {
+					results[index] = {
+						path: filePath,
+						content: await access.files.readText(filePath, { signal: controller.signal }),
+					};
+				} catch (error) {
+					controller.signal.throwIfAborted();
+					console.error(chalk.yellow(`Warning: Could not read ${filePath}: ${error}`));
+				}
+			}
+		} catch (error) {
+			controller.abort(error);
+			throw error;
+		}
+	};
+	try {
+		// All admitted reads settle before returning; a failure cancels siblings and prevents new work.
+		await Promise.allSettled(Array.from({ length: Math.min(4, paths.length) }, worker));
+		controller.signal.throwIfAborted();
+	} finally {
+		signal?.removeEventListener("abort", onAbort);
+	}
+
+	return results.filter((result): result is { path: string; content: string } => result !== undefined);
 }
 
 export async function discoverPromptFile(

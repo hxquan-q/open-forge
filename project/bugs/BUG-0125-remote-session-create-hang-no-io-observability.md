@@ -8,8 +8,8 @@ requirement:
 plan:
 source: 用户提供的 dev 日志（desktop-app/logs/2026-10-16，main）
 related_requirement: []
-related_plan: []
-related_tasks: []
+related_plan: [PLAN-0020]
+related_tasks: [TASK-0354]
 related_issues: []
 related_bugs: []
 created: 2026-10-17
@@ -77,3 +77,9 @@ updated: 2026-10-17
 - 检查：`packages/runtime-ssh` / `packages/runtime-desktop` 构建通过、desktop typecheck 通过、`test:impact` 5006 例通过（4 个 BUG-0107 存量收集期红 + 1 例并行偶发假红，单独复跑全绿）；覆盖 resource-runtime 的 7 个测试文件单独复跑 26 通过 / 1 跳过。
 - 未运行及原因：真实远端主机量测交用户执行（按规则不主动连真实主机）；`verify:ui:*` 未获授权。
 - 剩余风险：`initial-system-prompt`（约占 30.7 分钟中的 18.7 分钟）尚未有独立观测落点，仍是最大未知量。
+
+## 2026-10-22 TASK-0354 实现与隔离回归
+
+helper请求拥有pending、定时器和abort监听的统一收尾；7个只读入口传signal与30秒单次IO期限，映射unverifiable取消/超时，不降级重放。context最多4路，按路径去重、原顺序输出，首个metadata失败取消兄弟并停止新任务。helper旧实现2超时红；context串行峰值1红；修后客户端/连接7入口和context7均绿，SSH整包Git Bash环境236通过/25既有跳过。冷平台探测仍有既有4分钟上限；未证明真实30分钟初始化现象已完全消除。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0354，本地main原子提交绑定；仍待真实用户流程验收，未发布。

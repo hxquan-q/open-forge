@@ -3,7 +3,12 @@
 import { randomBytes } from "node:crypto";
 import { parseRemoteDirectoryListing, type RemoteDirectoryEntry } from "./directory-listing.js";
 import { SshOperationAbortedError, SshRemoteCommandError, SshTransportError } from "./errors.js";
-import { type SshHelperClient, SshHelperClosedError, SshHelperError } from "./helper-client.js";
+import {
+	type SshHelperClient,
+	SshHelperClosedError,
+	SshHelperError,
+	SshHelperRequestAbortedError,
+} from "./helper-client.js";
 import { type ConnectSshHelperOptions, connectSshHelper } from "./helper-deployment.js";
 import {
 	SSH_TRANSPORT_FAILURE_EXIT_CODE,
@@ -296,25 +301,36 @@ export class SshConnection {
 
 	async readFile(remotePath: string, signal?: AbortSignal): Promise<Uint8Array> {
 		const viaHelper = await this.viaHelper((helper) =>
-			helper.call<{ data: string }>("fs.readFile", { path: remotePath, offset: 0, length: -1 }),
+			helper.call<{ data: string }>(
+				"fs.readFile",
+				{ path: remotePath, offset: 0, length: -1 },
+				{ signal, timeoutMs: 30_000 },
+			),
 		);
 		if (viaHelper) return Buffer.from(viaHelper.value.data, "base64");
-		const result = await this.runChecked(`cat -- ${quoteShellArgument(remotePath)}`, { signal });
+		const result = await this.runChecked(`cat -- ${quoteShellArgument(remotePath)}`, { signal, timeoutMs: 30_000 });
 		return result.stdout;
 	}
 
 	/** 只取文件开头若干字节，用于判断类型：不必为了看一眼文件头把整份文件拖过网络。 */
 	async readFileHead(remotePath: string, byteCount: number, signal?: AbortSignal): Promise<Uint8Array> {
 		const viaHelper = await this.viaHelper((helper) =>
-			helper.call<{ data: string }>("fs.readFile", {
-				path: remotePath,
-				offset: 0,
-				length: Math.max(0, Math.floor(byteCount)),
-			}),
+			helper.call<{ data: string }>(
+				"fs.readFile",
+				{
+					path: remotePath,
+					offset: 0,
+					length: Math.max(0, Math.floor(byteCount)),
+				},
+				{ signal, timeoutMs: 30_000 },
+			),
 		);
 		if (viaHelper) return Buffer.from(viaHelper.value.data, "base64");
 		const count = Math.max(0, Math.floor(byteCount));
-		const result = await this.runChecked(`head -c ${count} -- ${quoteShellArgument(remotePath)}`, { signal });
+		const result = await this.runChecked(`head -c ${count} -- ${quoteShellArgument(remotePath)}`, {
+			signal,
+			timeoutMs: 30_000,
+		});
 		return result.stdout;
 	}
 
@@ -324,17 +340,24 @@ export class SshConnection {
 	 */
 	async readFileRange(remotePath: string, start: number, length: number, signal?: AbortSignal): Promise<Uint8Array> {
 		const viaHelper = await this.viaHelper((helper) =>
-			helper.call<{ data: string }>("fs.readFile", {
-				path: remotePath,
-				offset: Math.max(0, Math.floor(start)),
-				length: Math.max(0, Math.floor(length)),
-			}),
+			helper.call<{ data: string }>(
+				"fs.readFile",
+				{
+					path: remotePath,
+					offset: Math.max(0, Math.floor(start)),
+					length: Math.max(0, Math.floor(length)),
+				},
+				{ signal, timeoutMs: 30_000 },
+			),
 		);
 		if (viaHelper) return Buffer.from(viaHelper.value.data, "base64");
 		const from = Math.max(0, Math.floor(start)) + 1;
 		const count = Math.max(0, Math.floor(length));
 		const quoted = quoteShellArgument(remotePath);
-		const result = await this.runChecked(`tail -c +${from} -- ${quoted} | head -c ${count}`, { signal });
+		const result = await this.runChecked(`tail -c +${from} -- ${quoted} | head -c ${count}`, {
+			signal,
+			timeoutMs: 30_000,
+		});
 		return result.stdout;
 	}
 
@@ -549,16 +572,23 @@ export class SshConnection {
 		signal?: AbortSignal,
 	): Promise<string[]> {
 		const viaHelper = await this.viaHelper((helper) =>
-			helper.call<{ files: string[] }>("fs.listRecursive", {
-				path: remotePath,
-				ignoredDirectories: options.ignoredDirectoryNames,
-				limit: options.limit,
-				names: options.names,
-			}),
+			helper.call<{ files: string[] }>(
+				"fs.listRecursive",
+				{
+					path: remotePath,
+					ignoredDirectories: options.ignoredDirectoryNames,
+					limit: options.limit,
+					names: options.names,
+				},
+				{ signal, timeoutMs: 30_000 },
+			),
 		);
 		// 旧版 helper 不认识 `names`、会照常全列，所以这里总是再筛一遍。
 		if (viaHelper) return keepNamedFiles(viaHelper.value.files, options.names);
-		const result = await this.runChecked(buildListFilesRecursiveCommand(remotePath, options), { signal });
+		const result = await this.runChecked(buildListFilesRecursiveCommand(remotePath, options), {
+			signal,
+			timeoutMs: 30_000,
+		});
 		return decode(result.stdout)
 			.split("\n")
 			.map((line) => line.replace(/^\.\//, ""))
@@ -572,12 +602,12 @@ export class SshConnection {
 
 	async listDirectory(remotePath: string, signal?: AbortSignal): Promise<RemoteDirectoryEntry[]> {
 		const viaHelper = await this.viaHelper((helper) =>
-			helper.call<{ entries: HelperEntry[] }>("fs.readDir", { path: remotePath }),
+			helper.call<{ entries: HelperEntry[] }>("fs.readDir", { path: remotePath }, { signal, timeoutMs: 30_000 }),
 		);
 		if (viaHelper) return viaHelper.value.entries.map(fromHelperEntry);
 		const platform = await this.probePlatform(signal);
 		const command = buildListDirectoryCommand(remotePath, platform.statFlavor);
-		const result = await this.runChecked(command, { signal });
+		const result = await this.runChecked(command, { signal, timeoutMs: 30_000 });
 		const output = decode(result.stdout);
 		const entries = parseRemoteDirectoryListing(output);
 		// 只在「有输出却解析不出条目」时上报：那是解析与远端输出格式对不上的信号，
@@ -595,14 +625,21 @@ export class SshConnection {
 		options: { readonly followSymlinks?: boolean } = {},
 	): Promise<RemoteDirectoryEntry | null> {
 		const viaHelper = await this.viaHelper((helper) =>
-			helper.call<{ entry: HelperEntry | null }>("fs.stat", {
-				path: remotePath,
-				followSymlinks: options.followSymlinks === true,
-			}),
+			helper.call<{ entry: HelperEntry | null }>(
+				"fs.stat",
+				{
+					path: remotePath,
+					followSymlinks: options.followSymlinks === true,
+				},
+				{ signal, timeoutMs: 30_000 },
+			),
 		);
 		if (viaHelper) return viaHelper.value.entry ? fromHelperEntry(viaHelper.value.entry) : null;
 		const platform = await this.probePlatform(signal);
-		const result = await this.runChecked(buildStatCommand(remotePath, platform.statFlavor, options), { signal });
+		const result = await this.runChecked(buildStatCommand(remotePath, platform.statFlavor, options), {
+			signal,
+			timeoutMs: 30_000,
+		});
 		const entries = parseRemoteDirectoryListing(decode(result.stdout));
 		const entry = entries[0];
 		if (!entry) return null;
@@ -614,7 +651,9 @@ export class SshConnection {
 	async realPath(remotePath: string, signal?: AbortSignal): Promise<string> {
 		const viaHelper = await this.viaHelper(async (helper) => {
 			try {
-				return (await helper.call<{ path: string }>("fs.realPath", { path: remotePath })).path;
+				return (
+					await helper.call<{ path: string }>("fs.realPath", { path: remotePath }, { signal, timeoutMs: 30_000 })
+				).path;
 			} catch (error) {
 				// 与 exec 那条路同义：路径不存在时原样返回。
 				if (error instanceof SshHelperError && error.code === "ENOENT") return remotePath;
@@ -622,7 +661,7 @@ export class SshConnection {
 			}
 		});
 		if (viaHelper) return viaHelper.value;
-		const result = await this.run(buildRealPathCommand(remotePath), { signal });
+		const result = await this.run(buildRealPathCommand(remotePath), { signal, timeoutMs: 30_000 });
 		const resolved = decode(result.stdout).trim();
 		return result.exitCode === 0 && resolved.startsWith("/") ? resolved : remotePath;
 	}
@@ -961,6 +1000,9 @@ export class SshConnection {
 		try {
 			return { value: await operation(helper) };
 		} catch (error) {
+			if (error instanceof SshHelperRequestAbortedError) {
+				throw new SshOperationAbortedError(error.message, this.host.id, error.reason);
+			}
 			if (error instanceof SshHelperClosedError) return undefined;
 			if (error instanceof SshHelperError) {
 				throw new SshRemoteCommandError(
