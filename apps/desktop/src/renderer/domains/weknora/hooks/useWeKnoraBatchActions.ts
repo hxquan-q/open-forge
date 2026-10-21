@@ -51,12 +51,6 @@ export interface WeKnoraBatchActions {
 	) => Promise<WeKnoraBatchExportResult | null>;
 }
 
-/** 路径末段（写盘返回的是绝对路径，用文件名回映射到会话）。 */
-function baseNameOf(path: string): string {
-	const index = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-	return index >= 0 ? path.slice(index + 1) : path;
-}
-
 /** 逐会话已序列化、待写盘的文件（`utf8` / `base64` 恰好其一）。 */
 interface PendingExportFile {
 	readonly sessionId: string;
@@ -147,11 +141,17 @@ export function useWeKnoraBatchActions(input: {
 					files: pending.map((file) => file.entry),
 				});
 
-				// 写盘结果按文件名回映射到会话（批内名字唯一，可安全回查）。
+				// 写盘结果回映射到会话：**不靠文件名相等**（ER-B F3 闭环）。主进程按**输入顺序**逐个写盘，
+				// 成功的进 `written`（盘上已有同名时可能已加序号改名，如 `标题 (2).txt`）、失败的进 `failed`
+				// （带请求名）。故「成功项」= 输入名里未出现在 `failed` 的那些，顺序与 `written` 一一对应 ——
+				// 改名不再让会话被静默漏计。批内请求名唯一（`exportFileNames` 去重），顺序映射无歧义。
 				const sessionByFileName = new Map(pending.map((file) => [file.name, file.sessionId]));
+				const failedNames = new Set(writeResult.failed.map((entry) => entry.name));
+				const succeededNames = pending.map((file) => file.name).filter((name) => !failedNames.has(name));
 				const succeeded: string[] = [];
-				for (const path of writeResult.written) {
-					const sessionId = sessionByFileName.get(baseNameOf(path));
+				for (let index = 0; index < writeResult.written.length; index += 1) {
+					const name = succeededNames[index];
+					const sessionId = name === undefined ? undefined : sessionByFileName.get(name);
 					if (sessionId !== undefined) succeeded.push(sessionId);
 				}
 				for (const entry of writeResult.failed) {
