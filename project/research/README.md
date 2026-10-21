@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| Browser 插件、文件 HTML 预览与 browser_tab 优化核对：现有激活预热/按插件 dev 开关、复用文件协议、停止重复确定性失败，并区分空参数与流解析回退 | [RESEARCH-0034](RESEARCH-0034-browser-preview-optimization.md) |
 | .ua 图谱全局结构/增量与现有开发入口核对：区分原生会话协作、产品 Agent Team/AllstarCoding 和后台 scripts/agents，复用统一入口落实自动开发 | [RESEARCH-0033](RESEARCH-0033-graph-and-native-development-workflow.md) |
 | 设计插件参考项目与许可证审计（「对话出界面」产品/开源项目/源码定位工具三类分流、可直接复用模块与禁复制清单，2026-10-18 核对） | [RESEARCH-0031](RESEARCH-0031-design-reference-projects-license-audit.md) |
 | 受管 fd/rg 工具 inspect() 解析记录与 CLI/Desktop 双 doctor 出口可行性核对（草案四处修正：source 枚举跨进程收敛、version 标记落点、CLI 注册点实名、Desktop 桥接需导出 helper；CometixCode /doctor 先例） | [RESEARCH-0030](RESEARCH-0030-managed-coding-tool-doctor-inspection.md) |
