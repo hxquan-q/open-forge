@@ -307,7 +307,12 @@ function orderChronologically(messages: readonly WeKnoraExportMessage[]): WeKnor
  *
  * - 从最新一页起向更早翻；每页结果**预置**到累积数组前 → 整体最早在前。
  * - 去重（按 id）：相邻页边界可能重叠。
- * - 终止：空页 / 不足一页 / 无新消息（游标不前进的保护）/ 触达 `maxPages` / 无可推导游标。
+ * - 终止（任一即停）：**空页** / **无新消息**（`hasFresh` 为假）/ **游标不前进**（本页最早一条与
+ *   上一页游标相同 → 服务端没推进，停且**不累加**本页）/ **无可推导游标**（本页无 `created_at`，
+ *   推不出更早的游标，收下这页后停）/ 触达 `maxPages`。
+ *   刻意**不**用「本页不足 `pageSize` 即止」（ER-B F4）：那假设服务端一定按 `limit` 返回整页，而这是
+ *   **未承诺**的分页细节（服务端可能钳制 `limit`），据此提前收尾会漏掉更早的历史 —— 只有上面几条
+ *   才真正说明「已到最早」。
  * - 顺序校正：消息带 `created_at` 时按时间升序稳定排序；否则维持分页预置顺序。
  */
 export async function loadAllMessages(
@@ -329,13 +334,16 @@ export async function loadAllMessages(
 		if (messages.length === 0) break;
 		const hasFresh = messages.some((message) => message.id === "" || !seen.has(message.id));
 		if (!hasFresh) break;
+		const oldest = oldestTimestamp(messages);
+		// 游标不前进：本页最早一条与上一页游标相同 → 服务端没按 `before_time` 推进（重复返回同一批）。
+		// 停且**不累加**本页 —— 空 id 批的 id 为空使 `hasFresh` 恒真，若不在此拦下会重复堆叠到 `maxPages`。
+		if (beforeTime !== undefined && oldest === beforeTime) break;
 		for (const message of messages) {
 			if (message.id !== "") seen.add(message.id);
 		}
 		collected.unshift(...messages);
-		const oldest = oldestTimestamp(messages);
+		// 本页无可用时间戳 → 推不出更早的游标：收下这页后停（单页，不臆造游标）。
 		if (oldest === undefined) break;
-		if (messages.length < pageSize) break;
 		beforeTime = oldest;
 	}
 	return orderChronologically(dedupeById(collected));

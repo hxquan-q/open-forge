@@ -276,10 +276,12 @@ describe("AC-6 · 全量分页拉取", () => {
 
 		expect(result.map((m) => m.id)).toEqual(all.map((m) => m.id));
 		expect(new Set(result.map((m) => m.id)).size).toBe(45); // 无重复
-		expect(calls).toHaveLength(3);
+		// ER-B F4 授权演进：短页(末页 5 条)不再终止，多翻一次得空页才停。意图不变：45 条全拉、无重复。
+		expect(calls).toHaveLength(4);
 		expect(calls[0]?.beforeTime).toBeUndefined();
 		expect(calls[1]?.beforeTime).toBe(all[25]?.created_at);
 		expect(calls[2]?.beforeTime).toBe(all[5]?.created_at);
+		expect(calls[3]?.beforeTime).toBe(all[0]?.created_at);
 	});
 
 	it("相邻页边界重叠 5 条：按 id 去重后既不重复也不丢失", async () => {
@@ -325,8 +327,14 @@ describe("AC-6 · 全量分页拉取", () => {
 		const result = await loadAllMessages("sess-x");
 
 		expect(result.map((m) => m.id)).toEqual(all.map((m) => m.id));
-		expect(calls.map((call) => call.limit)).toEqual([50, 50, 50]);
-		expect(calls.map((call) => call.beforeTime)).toEqual([undefined, all[70]?.created_at, all[20]?.created_at]);
+		// ER-B F4 授权演进：末页 20 条(短页)不再终止，多翻一次得空页才停。意图不变：120 条全拉、游标推进。
+		expect(calls.map((call) => call.limit)).toEqual([50, 50, 50, 50]);
+		expect(calls.map((call) => call.beforeTime)).toEqual([
+			undefined,
+			all[70]?.created_at,
+			all[20]?.created_at,
+			all[0]?.created_at,
+		]);
 		expect(calls.every((call) => call.sessionId === "sess-x")).toBe(true);
 	});
 });
