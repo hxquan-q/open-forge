@@ -24,10 +24,13 @@ vi.mock("@shared/shortcuts", () => ({
 }));
 const prependPlainText = vi.fn();
 
+const focusInputEditor = vi.fn();
+
 vi.mock("@domains/conversation/components/input-bar/editor/inputEditorHandle", () => ({
 	insertImageToken: (...args: unknown[]) => insertImageToken(...args),
 	removeImageToken: (...args: unknown[]) => removeImageToken(...args),
 	prependPlainText: (...args: unknown[]) => prependPlainText(...args),
+	focusInputEditor: () => focusInputEditor(),
 }));
 
 const { useBrowserElementPicker } = await import("./useBrowserElementPicker.js");
@@ -64,6 +67,7 @@ describe("useBrowserElementPicker", () => {
 		insertImageToken.mockReset();
 		removeImageToken.mockReset();
 		prependPlainText.mockReset();
+		focusInputEditor.mockReset();
 		sendMessageFnRef.current = null;
 		listener = undefined;
 		window.vetta = {
@@ -238,6 +242,23 @@ describe("useBrowserElementPicker", () => {
 				},
 			}),
 		);
+		expect(result.current.selection).toBeNull();
+	});
+
+	it("Alt+点击只把元素放进输入框并聚焦，不发送", async () => {
+		const send = vi.fn(async () => ({ status: "sent" as const }));
+		sendMessageFnRef.current = send;
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		listener?.({
+			workspaceId: "ws-1",
+			event: { kind: "picker-result", context: context(), placement: "input" },
+		});
+		await waitFor(() =>
+			expect(store.get(promptAttachmentAtom)?.context?.payload).toMatchObject({ domPath: "input#email" }),
+		);
+		expect(send).not.toHaveBeenCalled();
+		expect(focusInputEditor).toHaveBeenCalled();
 		expect(result.current.selection).toBeNull();
 	});
 });

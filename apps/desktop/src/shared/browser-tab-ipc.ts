@@ -112,6 +112,7 @@ export type DesktopBrowserTabEvent =
 			readonly kind: "picker-result";
 			readonly context: BrowserElementSelectionContext;
 			readonly comment?: string;
+			readonly placement?: "input" | "annotation";
 	  }
 	| { readonly kind: "page-revision"; readonly workspaceId: string; readonly pageRevision: number };
 

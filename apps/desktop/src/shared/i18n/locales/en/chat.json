@@ -543,7 +543,7 @@
 		"tab": "Browser",
 		"picker": "Pick element",
 		"pickerActive": "Picking an element — click again or use the shortcut to exit",
-		"pickerHint": "Hover a page element and click it. Then tell the Agent how to change it. Sending updates the source and checks this browser page. The page button will not fire.",
+		"pickerHint": "Click an element and a box appears beside it. Describe the page or logic change, then send it to the Agent. Alt+click puts the element in the chat input so you can add detail before sending. The page button will not fire.",
 		"elementAttached": "Page element attached",
 		"elementReplace": "A new selection replaces the current attachment",
 		"staleSelection": "The page changed; this selection may be stale",

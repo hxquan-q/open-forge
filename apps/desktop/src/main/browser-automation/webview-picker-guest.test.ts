@@ -61,6 +61,21 @@ describe("in-app browser picker guest", () => {
 		expect(readBrowserElementSourceHint(bad)).toBeUndefined();
 	});
 
+	it("Alt+点击把元素放进输入，不打开旁边批注", async () => {
+		document.body.innerHTML = `<button id="go">Go</button>`;
+		const button = document.getElementById("go");
+		if (!button) throw new Error("missing button");
+		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
+		button.dispatchEvent(
+			new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 8, clientY: 8, altKey: true }),
+		);
+		const result = await pick;
+		expect(result).toMatchObject({ role: "button", placement: "input" });
+		expect(result.comment).toBeUndefined();
+		expect(document.querySelector("[data-vetta-annotation]")).toBeNull();
+		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeNull();
+	});
+
 	it("空白点到 body 时不产生 capsule，并保持 picker", async () => {
 		document.body.innerHTML = `<button id="go">Go</button>`;
 		Object.defineProperty(document.body, "getBoundingClientRect", {

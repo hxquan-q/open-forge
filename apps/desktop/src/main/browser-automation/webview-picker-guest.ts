@@ -457,6 +457,10 @@ function inAppBrowserGuestRuntime(
 			if (event.type !== "click") return;
 			const target = pickTarget(event);
 			if (!target || state.disposed) return;
+			if ((event as MouseEvent).altKey) {
+				finishPick(target, "input");
+				return;
+			}
 			openAnnotation(target);
 		},
 		reposition: () => {
@@ -472,11 +476,10 @@ function inAppBrowserGuestRuntime(
 			void inAppBrowserGuestRuntime("stop", null, deps);
 		},
 	};
-	function finishAnnotation(): void {
-		const selected = state.selected;
-		if (!selected || state.disposed) return;
-		const field = state.annotation?.querySelector("textarea");
-		const comment = field instanceof HTMLTextAreaElement ? field.value.slice(0, 2000) : "";
+	function finishPick(selected: Element, placement: "input" | "annotation"): void {
+		if (state.disposed) return;
+		const field = placement === "annotation" ? state.annotation?.querySelector("textarea") : null;
+		const comment = field instanceof HTMLTextAreaElement ? field.value.slice(0, 2000) : undefined;
 		state.disposed = true;
 		window.removeEventListener("mousemove", state.onMove, true);
 		window.removeEventListener("pointerdown", state.onClick, true);
@@ -490,7 +493,17 @@ function inAppBrowserGuestRuntime(
 		overlay.remove();
 		editStore().current = selected;
 		store[stateKey] = undefined;
-		state.resolve({ ...collect(selected), comment });
+		state.resolve({
+			...collect(selected),
+			placement,
+			...(comment === undefined ? {} : { comment }),
+		});
+	}
+
+	function finishAnnotation(): void {
+		const selected = state.selected;
+		if (!selected) return;
+		finishPick(selected, "annotation");
 	}
 
 	function openAnnotation(target: Element): void {

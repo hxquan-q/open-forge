@@ -6,7 +6,7 @@ priority: P1
 owner: apps/desktop
 requirement: REQ-0001
 plan: PLAN-0006
-source: 用户请求完善 Browser 与 Agent 联动，并支持点选元素后对话改页面；BUG-0136
+source: 用户请求完善 Browser 与 Agent 联动；BUG-0136；RESEARCH-0036
 related_requirement: [REQ-0001]
 related_plan: [PLAN-0006]
 related_tasks: [TASK-0085, TASK-0063, TASK-0062, TASK-0339]
@@ -144,5 +144,6 @@ updated: 2026-10-22
 - `bun run check:quick -- <本任务文件>` 通过。
 - `bun run check` 未通过，失败在 TASK-0349 未提交的会话归档格式和 `useChatViewModel.archive.test.tsx` 类型错误。本任务文件不在该失败列表中。未跑 `test:impact` 与 `verify:ui`。
 - 未在真实 Desktop 里点选页面并看到源码改动后的刷新。
-- 集成：实现提交 `79b7fe4bb`，全宽栏 `1af5c0253`。2026-10-22 按用户口径改为页面内批注：点中元素后，输入框出现在该元素旁边；提交后元素和这句话进入 Agent 对话。页面由主进程绘制，批注画在页面内部，不能浮在页面外的栏上。
-- 不推送。真实 Desktop 尚未点选验收。
+- 对照见 RESEARCH-0036。单击仍是元素旁批注，提交后进入对话。Alt+单击把元素和截图放进对话输入框并聚焦，不发送。
+- 定向测试：picker guest 6 例、session controller 10 例、picker hook 6 例通过。未跑真实 Desktop 点选，未跑完整 check。
+- 不推送。

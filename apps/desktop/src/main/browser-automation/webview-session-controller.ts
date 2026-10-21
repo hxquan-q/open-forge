@@ -56,6 +56,12 @@ function readPickComment(raw: unknown): string | undefined {
 	return typeof comment === "string" ? comment.slice(0, 2000) : "";
 }
 
+function readPickPlacement(raw: unknown): "input" | "annotation" | undefined {
+	if (!raw || typeof raw !== "object" || !("placement" in raw)) return undefined;
+	const placement = (raw as { placement?: unknown }).placement;
+	return placement === "input" || placement === "annotation" ? placement : undefined;
+}
+
 async function persistBrowserScreenshotDefault(
 	sessionId: string,
 	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
@@ -417,15 +423,24 @@ export class InAppBrowserSessionController {
 			},
 		});
 		if (!context) return "idle";
-		this.emitPickerResult(session.workspaceId, context, readPickComment(raw));
+		this.emitPickerResult(session.workspaceId, context, readPickComment(raw), readPickPlacement(raw));
 		return "picked";
 	}
 
-	private emitPickerResult(workspaceId: string, context: BrowserElementSelectionContext, comment?: string): void {
+	private emitPickerResult(
+		workspaceId: string,
+		context: BrowserElementSelectionContext,
+		comment?: string,
+		placement?: "input" | "annotation",
+	): void {
 		this.sink({
 			workspaceId,
-			event:
-				comment === undefined ? { kind: "picker-result", context } : { kind: "picker-result", context, comment },
+			event: {
+				kind: "picker-result",
+				context,
+				...(comment === undefined ? {} : { comment }),
+				...(placement === undefined ? {} : { placement }),
+			},
 		});
 	}
 

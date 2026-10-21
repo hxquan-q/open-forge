@@ -1,6 +1,7 @@
 // Copyright The Open Forge contributors.
 
 import {
+	focusInputEditor,
 	insertImageToken,
 	prependPlainText,
 	removeImageToken,
@@ -102,6 +103,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			rect: { x: number; y: number; width: number; height: number },
 			devicePixelRatio: number,
 			comment?: string,
+			placement?: "input" | "annotation",
 		) => {
 			const crop = await window.vetta.browserTab.cropScreenshot({
 				workspaceId,
@@ -120,8 +122,14 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 					: context;
 			const parsed = readBrowserElementSelectionContext(nextContext);
 			if (!parsed) return;
+			const screenshotPath = crop.ok ? crop.path : undefined;
+			if (placement === "input") {
+				deliverSelection(parsed, screenshotPath, [], { send: false });
+				focusInputEditor();
+				return;
+			}
 			if (typeof comment === "string") {
-				deliverSelection(parsed, crop.ok ? crop.path : undefined, [], { comment, send: true });
+				deliverSelection(parsed, screenshotPath, [], { comment, send: true });
 				return;
 			}
 			setSelection({ context: parsed, ...(crop.ok ? { screenshotPath: crop.path } : {}) });
@@ -148,7 +156,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			if (envelope.event.kind !== "picker-result") return;
 			const { payload } = envelope.event.context;
 			const comment = envelope.event.comment;
-			void captureSelection(envelope.event.context, payload.boundingRect, 1, comment);
+			void captureSelection(envelope.event.context, payload.boundingRect, 1, comment, envelope.event.placement);
 		});
 		return () => {
 			cancelled = true;
