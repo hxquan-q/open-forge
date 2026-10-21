@@ -15,6 +15,14 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0352` | `blocked` | PLAN-0020 | Windows沙箱制品完整性与运行时定位；来源BUG-0137，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0353` | `in_progress` | PLAN-0020 | 消息历史与live合并身份去重及可读诊断；来源BUG-0123，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0354` | `in_progress` | PLAN-0020 | 远端会话资源加载去重与有界等待；来源BUG-0125，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0355` | `in_progress` | PLAN-0020 | 启动paint与超时分流及阶段观测；来源BUG-0138，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0356` | `in_progress` | PLAN-0020 | 插件Hook派发与渲染端代次生命周期对齐；来源BUG-0124，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0357` | `in_progress` | PLAN-0020 | HostedRoute能力注册与模块重载一致性；来源BUG-0139，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0358` | `in_progress` | PLAN-0020 | Desktop测试日志与真实数据根隔离；来源BUG-0140，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0359` | `in_progress` | PLAN-0020 | Windows远程输入类型初始化幂等；来源BUG-0141，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0351` | `verifying` | PLAN-0006 | BUG-0136：点中元素后，输入框出现在元素旁边，提交后进入 Agent 对话。待真实 Desktop 点选验收。 |
 | `TASK-0350` | `done` | — | 最近14天日志只读调查完成：55份运行日志+8份辅助日志，RESEARCH-0035与脱敏指纹附表已落盘；优先沙箱制品核查、消息身份、远端资源及启动测量，区分历史修复与测试污染；文档索引/合同/发布说明检查通过，无产品修复；coordination-only。 |
 | `TASK-0349` | `verifying` | — | 用户请求：完善会话管理——项目级多会话 `.ofar` 导出（服务+IPC+preload+项目右键菜单，菜单重构为声明式）、导入写入后 emit 列表变更让侧栏即时刷新、导入/导出反馈 alert→Toast；定向 6 文件 30 例、impact（desktop 85 例 + theme-ui 186 例）、desktop tsc 与完整 check 全绿；待真实 Desktop 人工验收；serial，main 主工作区串行。 |

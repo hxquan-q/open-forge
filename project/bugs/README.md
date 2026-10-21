@@ -16,6 +16,11 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0137` | 安装版Windows沙箱二进制缺失或定位失败 | blocked | P1 | PLAN-0020 |
+| `BUG-0138` | 启动绘制超时被记录为内容已可见 | investigating | P1 | PLAN-0020 |
+| `BUG-0139` | 插件HostedRoute能力在模块重载后未注册 | investigating | P2 | PLAN-0020 |
+| `BUG-0140` | Desktop测试日志写入默认用户数据目录 | investigating | P2 | PLAN-0020 |
+| `BUG-0141` | Windows输入适配器重复初始化触发原生类型重名 | investigating | P2 | PLAN-0020 |
 | `BUG-0136` | 点选页面元素后「发送给 Agent」不发起对话，模型也不会把改动写回源码 | verifying | P1 | PLAN-0006 |
 | `BUG-0135` | 文件树 HTML 预览丢失文件目录语义（`srcDoc` 继承宿主地址）并用「加载完才可见」放大白屏；已按 TASK-0340 修复，工程验证通过，待真实 Desktop 验收 | done | P1 | — |
 | `BUG-0134` | browser_tab 校验失败只回泛化文案，单回合把一次错误放大成 105 次；已按 TASK-0339 实现可纠正错误与有界止损，待集成与真实回合验收 | done | P1 | — |
