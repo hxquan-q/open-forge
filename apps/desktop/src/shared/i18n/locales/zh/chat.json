@@ -1076,6 +1076,11 @@
 			"thinking": "{{count}} 个思考过程"
 		}
 	},
+	"missingModelDialog": {
+		"title": "尚未配置模型",
+		"body": "您当前没有配置通用模型的 API Key，请去配置哦",
+		"configureAction": "去配置模型 key"
+	},
 	"modelSelector": {
 		"defaultBadge": "默认",
 		"selectModel": "选择模型",

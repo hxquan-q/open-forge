@@ -1,7 +1,7 @@
 import type { ModelsConfigData } from "@preload/api";
 import { localModelsConfigAtom, remoteProvidersAtom } from "@shared/store/atoms";
 import { modelCatalog } from "@shared/store/model-catalog";
-import { useAtomValue } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
 import { useEffect, useMemo } from "react";
 import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 
@@ -127,4 +127,18 @@ export function useModelOptions(): UseModelOptionsResult {
 	};
 
 	return { options, grouped, defaultKey: config?.defaultModel, iconFor, labelFor };
+}
+
+/**
+ * 发送前置闸门的真值:当前是否有用户可见的可用模型。
+ *
+ * 与模型选择器同源——共用 {@link mergeModelOptions} 的合并口径,保证「选择器为空 ⇔ 闸门命中」。
+ * 目录尚未加载(本地 models.json 未到且无远程目录)时不判定,视为可用:启动瞬间的未知态
+ * 不应误报「没有配置模型」。可在非 React 环境(发送 hook 内)直接调用。
+ */
+export function hasAvailableModel(store = getDefaultStore()): boolean {
+	const config = store.get(localModelsConfigAtom);
+	const remote = store.get(remoteProvidersAtom);
+	if (config === null && Object.keys(remote).length === 0) return true;
+	return mergeModelOptions(config, remote).length > 0;
 }

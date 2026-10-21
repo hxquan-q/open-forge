@@ -2,6 +2,7 @@
 import { waitForPluginHostFirstReady } from "@domains/plugins/runtime/plugin-events";
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import type { PersistedImageResult } from "@preload/api";
+import { hasAvailableModel } from "@shared/components/ModelSelect/useModelOptions";
 import { type ConversationUserMessageViewModel, createConversationUserMessage } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {
@@ -33,6 +34,7 @@ import {
 	isStreamingAtom,
 	knowledgeRetrievalActiveAtom,
 	mentionedFilesAtom,
+	missingModelDialogOpenAtom,
 	pendingMessageEditAtom,
 	pendingSessionCreationAtom,
 	pendingSessionOpenAtom,
@@ -127,6 +129,13 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 
 	const sendMessage = useCallback(
 		async (overrideText?: string, options?: SendMessageOptions): Promise<SendMessageResult | undefined> => {
+			// 发送前置闸门:没有可用模型时不派发,改为给出「去配置模型 key」引导。放在最前,
+			// 确保不产生任何会话副作用(暂存气泡 / 清草稿 / 乐观侧边栏等)。真值与模型选择器
+			// 同源(hasAvailableModel),命中即弹对话框并原样保留用户输入。
+			if (!hasAvailableModel()) {
+				getDefaultStore().set(missingModelDialogOpenAtom, true);
+				return;
+			}
 			const interactionId = options?.interactionId;
 			let stagedInput = options?.stagedInput;
 			// 目标会话读共享 atom（store 直读，不走 React 闭包）：openSession 同步写入
