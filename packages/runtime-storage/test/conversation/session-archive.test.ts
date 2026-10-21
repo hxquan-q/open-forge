@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
 	canonicalizeJson,
+	decodeFrames,
 	decodeSessionArchive,
+	encodeFrames,
 	encodeSessionArchive,
 	fingerprintSessionPayload,
 	resolveSessionArchiveImportConflict,
@@ -172,6 +174,158 @@ describe("session archive format", () => {
 				},
 			],
 		});
+		await expect(decodeSessionArchive(archive, "wrong")).rejects.toMatchObject({
+			archiveCode: SESSION_ARCHIVE_ERROR_CODES.AUTH_FAILED,
+		});
+	});
+});
+
+describe("session archive format v2 (migration workspace)", () => {
+	/** 头部未被 MAC 覆盖，可在字节层伪造：magic(8) + ver(2) + metaLen(4) + meta + salt/iv/ct。 */
+	function patchHeader(
+		bytes: Uint8Array,
+		mutate: (meta: Record<string, unknown>) => void,
+		headerVersion?: number,
+	): Uint8Array {
+		const metaLen = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(10, false);
+		const metaStart = 14;
+		const meta = JSON.parse(
+			new TextDecoder().decode(bytes.subarray(metaStart, metaStart + metaLen)),
+		) as Record<string, unknown>;
+		mutate(meta);
+		const metaBytes = new TextEncoder().encode(JSON.stringify(meta));
+		const tail = bytes.subarray(metaStart + metaLen);
+		const out = new Uint8Array(metaStart + metaBytes.byteLength + tail.byteLength);
+		out.set(bytes.subarray(0, metaStart), 0);
+		out.set(metaBytes, metaStart);
+		out.set(tail, metaStart + metaBytes.byteLength);
+		if (headerVersion !== undefined) {
+			new DataView(out.buffer, out.byteOffset, out.byteLength).setUint16(8, headerVersion, false);
+		}
+		return out;
+	}
+
+	async function encodeMigrationArchive(files: ReadonlyArray<{ relativePath: string; bytes: Uint8Array }>) {
+		return encodeSessionArchive({
+			appVersion: "0.1.3",
+			passphrase: "pw",
+			randomBytes: fixedRandom(11),
+			sessions: [
+				{
+					sessionId: "sess-mig",
+					name: "Migration demo",
+					cwd: "C:/source/project",
+					fingerprintSource: { sessionId: "sess-mig", entries: [{ text: "hi" }] },
+					records: [{ type: "message", id: "m1", text: "hi" }],
+				},
+			],
+			workspace: { sourceCwd: "C:/source/project", files },
+		});
+	}
+
+	it("Given sessions plus workspace files, When encoded as v2 and decoded, Then workspace bytes round-trip without stringifying and metadata carries sourceCwd/count", async () => {
+		const sourceA = new Uint8Array([0x00, 0xff, 0x10, 0x80, 0x00, 0x7f]);
+		const sourceB = new Uint8Array(1024).fill(0xcd);
+		const archive = await encodeMigrationArchive([
+			{ relativePath: "src/main.ts", bytes: sourceA },
+			{ relativePath: "docs/nested/蓝图.md", bytes: sourceB },
+		]);
+
+		// 头部版本字节是 v2，metadata 声明 workspace。
+		expect(new DataView(archive.buffer, archive.byteOffset, archive.byteLength).getUint16(8, false)).toBe(2);
+
+		const decoded = await decodeSessionArchive(archive, "pw");
+		expect(decoded.metadata.formatVersion).toBe(2);
+		expect(decoded.metadata.sourceCwd).toBe("C:/source/project");
+		expect(decoded.metadata.workspaceFileCount).toBe(2);
+		expect(decoded.sessions).toHaveLength(1);
+		expect(decoded.sessions[0]?.records).toEqual([{ type: "message", id: "m1", text: "hi" }]);
+		expect(decoded.workspace?.sourceCwd).toBe("C:/source/project");
+		expect(decoded.workspace?.files.map((file) => file.relativePath)).toEqual(["src/main.ts", "docs/nested/蓝图.md"]);
+		expect(decoded.workspace?.files[0]?.bytes).toEqual(sourceA);
+		expect(decoded.workspace?.files[1]?.bytes).toEqual(sourceB);
+		expect(decoded.workspace?.files[0]?.bytes).toBeInstanceOf(Uint8Array);
+	});
+
+	it("Given a v2 migration archive with zero workspace files, When decoded, Then workspace exists but is empty (still a migration package)", async () => {
+		const archive = await encodeMigrationArchive([]);
+		const decoded = await decodeSessionArchive(archive, "pw");
+		expect(decoded.metadata.formatVersion).toBe(2);
+		expect(decoded.metadata.workspaceFileCount).toBe(0);
+		expect(decoded.workspace?.files).toEqual([]);
+	});
+
+	it("Given an encode without workspace input, When encoded, Then bytes stay v1 and decode yields no workspace", async () => {
+		const archive = await encodeSessionArchive({
+			appVersion: "0.1.3",
+			passphrase: "pw",
+			randomBytes: fixedRandom(42),
+			sessions: [
+				{
+					sessionId: "s1",
+					fingerprintSource: { sessionId: "s1" },
+					records: [{ type: "message", id: "1" }],
+			},
+			],
+		});
+		expect(new DataView(archive.buffer, archive.byteOffset, archive.byteLength).getUint16(8, false)).toBe(1);
+		const decoded = await decodeSessionArchive(archive, "pw");
+		expect(decoded.metadata.formatVersion).toBe(1);
+		expect(decoded.metadata.sourceCwd).toBeUndefined();
+		expect(decoded.metadata.workspaceFileCount).toBeUndefined();
+		expect(decoded.workspace).toBeUndefined();
+	});
+
+	it("Given a v1 archive whose payload smuggles workspace frames, When decoded, Then the illegal version/frame mix is rejected", async () => {
+		const archive = await encodeMigrationArchive([{ relativePath: "a.txt", bytes: new Uint8Array([1]) }]);
+		// 头部未 MAC：把版本与 metadata 一同伪造成 v1，验证 v1 不接受 workspace 帧。
+		const forged = patchHeader(
+			archive,
+			(meta) => {
+				meta.formatVersion = 1;
+				delete meta.sourceCwd;
+				delete meta.workspaceFileCount;
+			},
+			1,
+		);
+		await expect(decodeSessionArchive(forged, "pw")).rejects.toMatchObject({
+			archiveCode: SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME,
+		});
+	});
+
+	it("Given a v2 archive whose declared workspaceFileCount disagrees with the frames, When decoded, Then it is rejected", async () => {
+		const archive = await encodeMigrationArchive([
+			{ relativePath: "a.txt", bytes: new Uint8Array([1]) },
+			{ relativePath: "b.txt", bytes: new Uint8Array([2]) },
+		]);
+		const forged = patchHeader(archive, (meta) => {
+			meta.workspaceFileCount = 5;
+		});
+		await expect(decodeSessionArchive(forged, "pw")).rejects.toMatchObject({
+			archiveCode: SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME,
+		});
+	});
+
+	it("Given a version the decoder does not know, When decoded, Then it is rejected as UNSUPPORTED_VERSION", async () => {
+		const archive = await encodeMigrationArchive([]);
+		const forged = patchHeader(archive, (meta) => {
+			meta.formatVersion = 3;
+		}, 3);
+		await expect(decodeSessionArchive(forged, "pw")).rejects.toMatchObject({
+			archiveCode: SESSION_ARCHIVE_ERROR_CODES.UNSUPPORTED_VERSION,
+		});
+	});
+
+	it("Given frames with an unknown kind, When decoded, Then they are rejected", () => {
+		const frames = encodeFrames([
+			{ kind: 0x05 as never, payload: new Uint8Array([1, 2, 3]) },
+		]);
+		expect(() => decodeFrames(frames)).toThrow(SessionArchiveError);
+		expect(() => decodeFrames(frames)).toThrow(/Unknown frame kind/);
+	});
+
+	it("Given a v2 migration archive, When decoded with the wrong passphrase, Then auth fails and nothing materializes", async () => {
+		const archive = await encodeMigrationArchive([{ relativePath: "a.txt", bytes: new Uint8Array([9]) }]);
 		await expect(decodeSessionArchive(archive, "wrong")).rejects.toMatchObject({
 			archiveCode: SESSION_ARCHIVE_ERROR_CODES.AUTH_FAILED,
 		});

@@ -1,17 +1,23 @@
 import { decryptGzipPayload, type ScryptParams } from "./crypto.js";
 import { SESSION_ARCHIVE_ERROR_CODES, SessionArchiveError } from "./errors.js";
-import { decodeAttachmentFrame, decodeFrames, decodeJsonPayload } from "./frames.js";
+import {
+	decodeAttachmentFrame,
+	decodeFrames,
+	decodeJsonPayload,
+	decodeWorkspaceFileFrame,
+} from "./frames.js";
 import { safePath } from "./safe-path.js";
 import {
 	SESSION_ARCHIVE_CIPHER,
 	SESSION_ARCHIVE_FORMAT,
-	SESSION_ARCHIVE_FORMAT_VERSION,
+	type SessionArchiveFormatVersion,
 	SESSION_ARCHIVE_FRAME,
 	SESSION_ARCHIVE_KDF,
 	SESSION_ARCHIVE_MAGIC,
 	type SessionArchiveDecodedSession,
 	type SessionArchiveDecodeResult,
 	type SessionArchiveFileMetadata,
+	type SessionArchiveWorkspaceFileDecoded,
 } from "./types.js";
 
 export async function decodeSessionArchive(bytes: Uint8Array, passphrase: string): Promise<SessionArchiveDecodeResult> {
@@ -26,12 +32,15 @@ export async function decodeSessionArchive(bytes: Uint8Array, passphrase: string
 	let offset = SESSION_ARCHIVE_MAGIC.byteLength;
 	const version = view.getUint16(offset, false);
 	offset += 2;
-	if (version !== SESSION_ARCHIVE_FORMAT_VERSION) {
+	// v1 是纯会话归档，v2 额外携带 workspace 帧；其余版本一律拒绝（含 v2 包在旧版本上的
+	// UNSUPPORTED_VERSION，不谈兼容）。
+	if (version !== 1 && version !== 2) {
 		throw new SessionArchiveError(
 			SESSION_ARCHIVE_ERROR_CODES.UNSUPPORTED_VERSION,
 			`Unsupported session archive version: ${version}`,
 		);
 	}
+	const formatVersion = version as SessionArchiveFormatVersion;
 
 	const metaLen = view.getUint32(offset, false);
 	offset += 4;
@@ -39,7 +48,7 @@ export async function decodeSessionArchive(bytes: Uint8Array, passphrase: string
 		throw new SessionArchiveError(SESSION_ARCHIVE_ERROR_CODES.CORRUPT_HEADER, "Metadata truncated");
 	}
 
-	const metadata = parseMetadata(decodeJsonPayload(bytes.subarray(offset, offset + metaLen)));
+	const metadata = parseMetadata(decodeJsonPayload(bytes.subarray(offset, offset + metaLen)), formatVersion);
 	offset += metaLen;
 
 	const saltLength = metadata.scrypt.saltLength;
@@ -60,7 +69,7 @@ export async function decodeSessionArchive(bytes: Uint8Array, passphrase: string
 	};
 	const plain = await decryptGzipPayload(ciphertext, passphrase, salt, iv, scryptParams);
 	const frames = decodeFrames(plain);
-	const sessions = materializeSessions(frames);
+	const { sessions, workspaceFiles } = materializeFrames(frames);
 
 	if (sessions.length !== metadata.sessionCount) {
 		throw new SessionArchiveError(
@@ -69,11 +78,34 @@ export async function decodeSessionArchive(bytes: Uint8Array, passphrase: string
 		);
 	}
 
-	return { metadata, sessions };
+	// v1 归档不允许携带 workspace 帧：版本与帧形态必须一致，拒绝非法混合。
+	if (formatVersion === 1 && workspaceFiles.length > 0) {
+		throw new SessionArchiveError(
+			SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME,
+			"Workspace frame in a v1 session archive",
+		);
+	}
+	if (metadata.workspaceFileCount !== undefined && metadata.workspaceFileCount !== workspaceFiles.length) {
+		throw new SessionArchiveError(
+			SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME,
+			`Workspace file count mismatch: header ${metadata.workspaceFileCount}, frames ${workspaceFiles.length}`,
+		);
+	}
+
+	const workspace =
+		formatVersion === 2
+			? { sourceCwd: metadata.sourceCwd, files: workspaceFiles }
+			: undefined;
+
+	return { metadata, sessions, workspace };
 }
 
-function materializeSessions(frames: ReturnType<typeof decodeFrames>): SessionArchiveDecodedSession[] {
+function materializeFrames(frames: ReturnType<typeof decodeFrames>): {
+	sessions: SessionArchiveDecodedSession[];
+	workspaceFiles: SessionArchiveWorkspaceFileDecoded[];
+} {
 	const sessions: SessionArchiveDecodedSession[] = [];
+	const workspaceFiles: SessionArchiveWorkspaceFileDecoded[] = [];
 	let current: {
 		sessionId: string;
 		conversationId?: string;
@@ -120,6 +152,12 @@ function materializeSessions(frames: ReturnType<typeof decodeFrames>): SessionAr
 			};
 			continue;
 		}
+		// workspace 帧是归档级的，不依赖任何会话头，可以在任意位置出现。
+		if (frame.kind === SESSION_ARCHIVE_FRAME.WORKSPACE_FILE) {
+			const { meta, bytes } = decodeWorkspaceFileFrame(frame.payload);
+			workspaceFiles.push({ relativePath: safePath(meta.relativePath), bytes });
+			continue;
+		}
 		if (!current) {
 			throw new SessionArchiveError(SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME, "Frame before session header");
 		}
@@ -139,10 +177,10 @@ function materializeSessions(frames: ReturnType<typeof decodeFrames>): SessionAr
 		}
 	}
 	flush();
-	return sessions;
+	return { sessions, workspaceFiles };
 }
 
-function parseMetadata(value: unknown): SessionArchiveFileMetadata {
+function parseMetadata(value: unknown, formatVersion: SessionArchiveFormatVersion): SessionArchiveFileMetadata {
 	if (value === null || typeof value !== "object") {
 		throw new SessionArchiveError(SESSION_ARCHIVE_ERROR_CODES.CORRUPT_HEADER, "Metadata is not an object");
 	}
@@ -154,12 +192,17 @@ function parseMetadata(value: unknown): SessionArchiveFileMetadata {
 	const scryptRecord = scrypt as Record<string, unknown>;
 	if (
 		record.format !== SESSION_ARCHIVE_FORMAT ||
-		record.formatVersion !== SESSION_ARCHIVE_FORMAT_VERSION ||
+		record.formatVersion !== formatVersion ||
 		record.cipher !== SESSION_ARCHIVE_CIPHER ||
 		record.kdf !== SESSION_ARCHIVE_KDF ||
 		typeof record.appVersion !== "string" ||
 		typeof record.sessionCount !== "number" ||
 		typeof record.createdAt !== "string" ||
+		(record.sourceCwd !== undefined && typeof record.sourceCwd !== "string") ||
+		(record.workspaceFileCount !== undefined &&
+				(typeof record.workspaceFileCount !== "number" ||
+					!Number.isInteger(record.workspaceFileCount) ||
+					record.workspaceFileCount < 0)) ||
 		typeof scryptRecord.N !== "number" ||
 		typeof scryptRecord.r !== "number" ||
 		typeof scryptRecord.p !== "number" ||
@@ -170,12 +213,14 @@ function parseMetadata(value: unknown): SessionArchiveFileMetadata {
 	}
 	return {
 		format: SESSION_ARCHIVE_FORMAT,
-		formatVersion: SESSION_ARCHIVE_FORMAT_VERSION,
+		formatVersion,
 		cipher: SESSION_ARCHIVE_CIPHER,
 		kdf: SESSION_ARCHIVE_KDF,
 		appVersion: record.appVersion,
 		sessionCount: record.sessionCount,
 		createdAt: record.createdAt,
+		sourceCwd: record.sourceCwd,
+		workspaceFileCount: record.workspaceFileCount,
 		scrypt: {
 			N: scryptRecord.N,
 			r: scryptRecord.r,

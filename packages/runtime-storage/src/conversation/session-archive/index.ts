@@ -21,9 +21,11 @@ export {
 	decodeAttachmentFrame,
 	decodeFrames,
 	decodeJsonPayload,
+	decodeWorkspaceFileFrame,
 	encodeAttachmentFrame,
 	encodeFrames,
 	encodeJsonFrame,
+	encodeWorkspaceFileFrame,
 } from "./frames.js";
 export { safePath } from "./safe-path.js";
 export { scrypt } from "./scrypt.js";
@@ -34,6 +36,7 @@ export {
 	SESSION_ARCHIVE_FRAME,
 	SESSION_ARCHIVE_KDF,
 	SESSION_ARCHIVE_MAGIC,
+	type SessionArchiveFormatVersion,
 	type SessionArchiveAttachmentDecoded,
 	type SessionArchiveAttachmentInput,
 	type SessionArchiveDecodedSession,
@@ -45,4 +48,8 @@ export {
 	type SessionArchiveImportConflictInput,
 	type SessionArchiveImportConflictResult,
 	type SessionArchiveSessionPayload,
+	type SessionArchiveWorkspaceDecoded,
+	type SessionArchiveWorkspaceFileDecoded,
+	type SessionArchiveWorkspaceFileInput,
+	type SessionArchiveWorkspaceInput,
 } from "./types.js";
