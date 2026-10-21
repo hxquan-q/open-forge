@@ -343,7 +343,7 @@ export async function importSessionArchiveWithDialog(
 	}
 }
 
-function sanitizeFileStem(value: string): string {
+export function sanitizeFileStem(value: string): string {
 	const cleaned = value.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
 	return cleaned.slice(0, 64) || "session";
 }
