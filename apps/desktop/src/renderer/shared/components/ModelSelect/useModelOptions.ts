@@ -53,6 +53,21 @@ function flattenModels(config: ModelsConfigData, remote?: boolean): ModelOption[
 	return result;
 }
 
+/**
+ * 本地 models.json 与远程 provider 目录的合并口径唯一真源(local 覆盖 remote 同 key)。
+ * 模型选择器与发送前置闸门({@link hasAvailableModel})共用,避免「选择器为空」与
+ * 「闸门命中」出现两套判断。
+ */
+function mergeModelOptions(config: ModelsConfigData | null, remoteProviders: Record<string, unknown>): ModelOption[] {
+	const localModels = config ? flattenModels(config) : [];
+	const remoteModels =
+		Object.keys(remoteProviders).length > 0
+			? flattenModels({ providers: remoteProviders as ModelsConfigData["providers"] }, true)
+			: [];
+	const localKeys = new Set(localModels.map((m) => m.key));
+	return [...localModels, ...remoteModels.filter((m) => !localKeys.has(m.key))];
+}
+
 export interface UseModelOptionsResult {
 	/** Merged local + remote options (local wins on duplicate key) */
 	options: ModelOption[];
@@ -84,19 +99,7 @@ export function useModelOptions(): UseModelOptionsResult {
 		void modelCatalog.revalidate();
 	}, []);
 
-	const localModels = useMemo(() => (config ? flattenModels(config) : []), [config]);
-	const remoteModels = useMemo(
-		() =>
-			Object.keys(remoteProviders).length > 0
-				? flattenModels({ providers: remoteProviders as ModelsConfigData["providers"] }, true)
-				: [],
-		[remoteProviders],
-	);
-
-	const options = useMemo(() => {
-		const localKeys = new Set(localModels.map((m) => m.key));
-		return [...localModels, ...remoteModels.filter((m) => !localKeys.has(m.key))];
-	}, [localModels, remoteModels]);
+	const options = useMemo(() => mergeModelOptions(config, remoteProviders), [config, remoteProviders]);
 
 	const grouped = useMemo(() => {
 		const groups = new Map<string, ModelOption[]>();
