@@ -986,6 +986,10 @@
 		"disabledDuringTurn": "Available once the current turn finishes",
 		"multiplier": "{{value}}×",
 		"free": "Free",
+		"balance": {
+			"label": "Balance {{value}}",
+			"refresh": "Refresh balance"
+		},
 		"reasoningLevel": {
 			"minimal": "Minimal",
 			"low": "Low",

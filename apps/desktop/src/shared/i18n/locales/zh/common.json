@@ -986,6 +986,10 @@
 		"disabledDuringTurn": "当前回合进行中，回合结束后可切换模型",
 		"multiplier": "{{value}}×",
 		"free": "免费",
+		"balance": {
+			"label": "余额 {{value}}",
+			"refresh": "刷新余额"
+		},
 		"reasoningLevel": {
 			"minimal": "极简",
 			"low": "低",
