@@ -25,6 +25,12 @@ import type {
 export const DEFAULT_TIMEOUT_MS = 120_000;
 /** agents / sessions 列表的默认分页大小（01-spec §3.6）。 */
 export const DEFAULT_PAGE_SIZE = 50;
+/**
+ * 单个取回文件的体积上限（ER-A·F1）：`getFileData` 整块缓冲后还要 base64（约 1.34×）
+ * 跨 IPC 送到渲染层，不设限时单文件就能撑爆主进程内存与传输。WeKnora 内嵌引用图
+ * 实测为 KB 量级（1MB 已属大图），20MB 只拦异常值，不碰正常路径。
+ */
+export const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 export interface WeKnoraHttpClientOptions {
 	baseUrl: string;
@@ -142,6 +148,7 @@ export class WeKnoraHttpClient {
 	 * 实测该代理是取回 `minio://` 内嵌图片的唯一通路（`?resource_urls=public` 在本实例不改写）。
 	 *
 	 * 只接受 `image/*` 响应：非图片（误传 PDF/JSON 等）按坏响应抛归一化错误，渲染层据此回退占位。
+	 * 体积超 `MAX_FILE_BYTES` 同样按坏响应抛归一化错误（ER-A·F1），渲染层走同一条占位回退。
 	 * 回传 **data URL**（票面二选一取「最简」）：渲染层 `<img src>` 直接可用、无需自定义协议；
 	 * 代价是 base64 体积约 1.34×，由渲染层 `fileClient` 的模块级缓存限制重复传输。
 	 */
@@ -164,7 +171,23 @@ export class WeKnoraHttpClient {
 			if (!contentType.startsWith("image/")) {
 				throw new WeKnoraRequestError({ code: "unknown", detail: "getFileData: response is not an image" });
 			}
+			// 体积闸（ER-A·F1）两道：先按 content-length 在缓冲前拒绝（超限文件根本不读进内存），
+			// 再以实际 byteLength 兜底——无该头/chunked 传输时 content-length 不可靠。
+			// 解析失败得 NaN，与任何数值比较均为 false，恰好走兜底一道，不会误拒。
+			const declaredBytes = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+			if (declaredBytes > MAX_FILE_BYTES) {
+				throw new WeKnoraRequestError({
+					code: "unknown",
+					detail: `getFileData: content-length ${declaredBytes} exceeds ${MAX_FILE_BYTES}`,
+				});
+			}
 			const buffer = Buffer.from(await response.arrayBuffer());
+			if (buffer.byteLength > MAX_FILE_BYTES) {
+				throw new WeKnoraRequestError({
+					code: "unknown",
+					detail: `getFileData: response body ${buffer.byteLength} exceeds ${MAX_FILE_BYTES}`,
+				});
+			}
 			return { dataUrl: `data:${contentType};base64,${buffer.toString("base64")}`, contentType };
 		} catch (error) {
 			if (error instanceof WeKnoraRequestError) throw error;
