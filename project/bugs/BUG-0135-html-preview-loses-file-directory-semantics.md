@@ -1,7 +1,7 @@
 ---
 id: BUG-0135
 type: bug
-status: investigating
+status: verifying
 priority: P1
 owner: desktop
 requirement:
@@ -74,7 +74,7 @@ updated: 2026-10-21
 
 ## 修复与验证
 
-- 修复：见 TASK-0340。
-- 测试：见 TASK-0340 的定向测试清单。
-- 检查：见 TASK-0340 的质量检查。
+- 修复：`TASK-0340` 已实施——文件型 HTML 改走 `vetta-file://` 的 `src` 模式（`preview-assets.ts` 负责映射与资源解析），取消 `opacity-0` 门槛并改为独立加载条，主进程广播文件名、renderer 按被引用资源判定刷新。
+- 测试：新增 `preview-assets.test.ts`（15 例）与 `HtmlPreviewView.test.tsx`（3 例），`usePreviewBodyModel.test.tsx` 增加 6 例；desktop 定向 2 文件 / 27 例与 theme-ui 3 例全通过。
+- 检查：`test:impact`、根 `tsgo`、Desktop 增量类型检查与 `check:quick` 均通过；完整 `check` 与真实 Desktop 验收待后续。
 - 未运行及原因：真实 Desktop 上的首帧与资源归属实测未执行，需在获得 UI 验证授权后按验收包人工确认。

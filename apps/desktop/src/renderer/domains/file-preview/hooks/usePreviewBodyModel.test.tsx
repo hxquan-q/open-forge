@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 
 import type { DesktopApi } from "@preload/api";
 import { pluginFilePreviewsAtom } from "@shared/store/atoms";
@@ -26,19 +27,34 @@ function createWrapper(store = createStore()) {
 describe("usePreviewBodyModel", () => {
 	let readFile: ReturnType<typeof vi.fn>;
 	let readTextPreviewFile: ReturnType<typeof vi.fn>;
+	let watchDir: ReturnType<typeof vi.fn>;
+	let onDirChanged: ReturnType<typeof vi.fn>;
+	let dirChangedHandlers: Set<(dirPath: string, fileNames?: readonly string[]) => void>;
+
+	function emitDirChanged(dirPath: string, fileNames?: readonly string[]): void {
+		act(() => {
+			for (const handler of [...dirChangedHandlers]) handler(dirPath, fileNames);
+		});
+	}
 
 	beforeEach(() => {
 		readFile = vi.fn();
 		readTextPreviewFile = vi.fn();
+		watchDir = vi.fn(async () => undefined);
+		dirChangedHandlers = new Set();
+		onDirChanged = vi.fn((handler: (dirPath: string, fileNames?: readonly string[]) => void) => {
+			dirChangedHandlers.add(handler);
+			return () => dirChangedHandlers.delete(handler);
+		});
 		Object.defineProperty(window, "vetta", {
 			configurable: true,
 			value: {
 				fs: {
 					readFile,
 					readTextPreviewFile,
-					watchDir: vi.fn(async () => undefined),
+					watchDir,
 					unwatchDir: vi.fn(async () => undefined),
-					onDirChanged: vi.fn(() => () => undefined),
+					onDirChanged,
 				},
 			} as unknown as DesktopApi,
 		});
@@ -120,5 +136,100 @@ describe("usePreviewBodyModel", () => {
 		act(() => rerender({ refreshNonce: 1 }));
 
 		await waitFor(() => expect(readTextPreviewFile).toHaveBeenCalledTimes(2));
+	});
+
+	describe("HTML preview", () => {
+		const htmlPath = "C:\\workspace\\site\\index.html";
+
+		function loadedHtmlProps(
+			result: { current: ReturnType<typeof usePreviewBodyModel> },
+		): { sourcePath?: string; revision?: string; content: string } {
+			const state = result.current.state;
+			if (state.status !== "content") throw new Error(`Expected content preview, got ${state.status}`);
+			return (state.content as { props: { sourcePath?: string; revision?: string; content: string } }).props;
+		}
+
+		function renderHtml() {
+			return renderHook(() => usePreviewBodyModel({ name: "index.html", path: htmlPath }), {
+				wrapper: createWrapper(),
+			});
+		}
+
+		it("loads the real document through vetta-file:// so relative assets resolve", async () => {
+			readFile.mockResolvedValue({ content: "<html><body>one</body></html>", encoding: "utf8" });
+			const { result } = renderHtml();
+
+			await waitFor(() => expect(result.current.state.status).toBe("content"));
+			const props = loadedHtmlProps(result);
+
+			expect(readFile).toHaveBeenCalledWith(htmlPath);
+			// 渲染层据此切到 `src` 模式；映射本身的用例在 preview-assets.test.ts。
+			expect(props.sourcePath).toBe(htmlPath);
+			expect(props.revision).toBe("0:0");
+			expect(props.content).toBe("<html><body>one</body></html>");
+			expect(watchDir).toHaveBeenCalledWith("C:\\workspace\\site");
+		});
+
+		it("keeps the frame identity when a same-directory write leaves the content unchanged", async () => {
+			readFile.mockResolvedValue({ content: "<html><body>same</body></html>", encoding: "utf8" });
+			const { result } = renderHtml();
+			await waitFor(() => expect(result.current.state.status).toBe("content"));
+
+			emitDirChanged("C:\\workspace\\site", ["index.html"]);
+
+			await waitFor(() => expect(readFile).toHaveBeenCalledTimes(2));
+			expect(loadedHtmlProps(result).revision).toBe("0:0");
+		});
+
+		it("bumps the revision when the document content changes", async () => {
+			readFile.mockResolvedValue({ content: "<html><body>one</body></html>", encoding: "utf8" });
+			const { result } = renderHtml();
+			await waitFor(() => expect(result.current.state.status).toBe("content"));
+
+			readFile.mockResolvedValue({ content: "<html><body>two</body></html>", encoding: "utf8" });
+			emitDirChanged("C:\\workspace\\site", ["index.html"]);
+
+			await waitFor(() => expect(loadedHtmlProps(result).content).toBe("<html><body>two</body></html>"));
+			expect(loadedHtmlProps(result).revision).toBe("1:0");
+		});
+
+		it("reloads the frame when a referenced script changes", async () => {
+			readFile.mockResolvedValue({
+				content: '<html><head><script src="./app.js"></script></head></html>',
+				encoding: "utf8",
+			});
+			const { result } = renderHtml();
+			await waitFor(() => expect(result.current.state.status).toBe("content"));
+
+			emitDirChanged("C:\\workspace\\site", ["app.js"]);
+
+			await waitFor(() => expect(loadedHtmlProps(result).revision).toBe("1:0"));
+		});
+
+		it("watches referenced asset directories and reloads when they change", async () => {
+			const html = '<html><head><link rel="stylesheet" href="../shared/base.css"></head></html>';
+			readFile.mockResolvedValue({ content: html, encoding: "utf8" });
+			const { result } = renderHtml();
+			await waitFor(() => expect(result.current.state.status).toBe("content"));
+
+			expect(watchDir).toHaveBeenCalledWith("C:\\workspace\\site");
+			await waitFor(() => expect(watchDir).toHaveBeenCalledWith("C:/workspace/shared"));
+
+			// 旧宿主可能拿不到文件名，资源目录的变化按目录保守判定。
+			emitDirChanged("C:\\workspace\\shared", undefined);
+
+			await waitFor(() => expect(loadedHtmlProps(result).revision).toBe("1:0"));
+		});
+
+		it("does not reload the frame for an unrelated write", async () => {
+			readFile.mockResolvedValue({ content: "<html><body>same</body></html>", encoding: "utf8" });
+			const { result } = renderHtml();
+			await waitFor(() => expect(result.current.state.status).toBe("content"));
+
+			emitDirChanged("C:\\workspace\\site", ["notes.txt"]);
+
+			await waitFor(() => expect(readFile).toHaveBeenCalledTimes(2));
+			expect(loadedHtmlProps(result).revision).toBe("0:0");
+		});
 	});
 });

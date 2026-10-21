@@ -1,7 +1,17 @@
+// Modified by The Open Forge contributors.
 import { useMemo, useState, type JSX } from "react";
 
 export interface HtmlPreviewViewProps {
-	readonly content: string;
+	/** Inline HTML. Used as `srcDoc` when `src` is absent; ignored when `src` is set. */
+	readonly content?: string;
+	/**
+	 * Document URL (for file previews: the `vetta-file://` address of the real file).
+	 * Loading through `src` keeps relative CSS/JS/image references resolved against
+	 * the file's own directory instead of the host page address.
+	 */
+	readonly src?: string;
+	/** Bumps remount the iframe when the document or one of its assets changed. */
+	readonly revision?: string | number;
 	/**
 	 * Kept for call-site compatibility. Preview canvas does not follow app theme —
 	 * page CSS owns appearance; chrome uses a fixed light document color-scheme.
@@ -94,26 +104,41 @@ function injectPreviewChrome(content: string): string {
 
 function HtmlPreviewFrame({
 	srcDoc,
+	src,
+	revision,
 	title,
 }: {
-	readonly srcDoc: string;
+	readonly srcDoc?: string;
+	readonly src?: string;
+	readonly revision?: string | number;
 	readonly title: string;
 }): JSX.Element {
-	const [loadedSrcDoc, setLoadedSrcDoc] = useState<string | null>(null);
-	const loaded = loadedSrcDoc === srcDoc;
+	// 本次加载的身份：src 模式由 URL + revision 决定（资源变化要重载），srcDoc 模式由内容决定。
+	const frameKey = src ? `${src}\u0000${revision ?? 0}` : (srcDoc ?? "");
+	const [loadedKey, setLoadedKey] = useState<string | null>(null);
+	const loaded = loadedKey === frameKey;
 
 	return (
 		<div aria-busy={!loaded} className="relative min-h-0 w-full flex-1 bg-white">
+			{/* No opacity gate: the first frame is visible immediately; the bar only reports the
+			    load phase. srcDoc inherits the host document address, so file previews pass src. */}
 			<iframe
+				key={src ? frameKey : undefined}
 				title={title}
-				srcDoc={srcDoc}
+				{...(src ? { src } : { srcDoc })}
 				sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-				onLoad={() => setLoadedSrcDoc(srcDoc)}
-				className={`absolute inset-0 h-full w-full border-0 bg-white ${
-					loaded ? "opacity-100" : "opacity-0"
-				}`}
+				onLoad={() => setLoadedKey(frameKey)}
+				className="absolute inset-0 h-full w-full border-0 bg-white"
 				style={{ colorScheme: "light" }}
 			/>
+			{!loaded && (
+				<div
+					data-preview-loading
+					className="pointer-events-none absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-muted"
+				>
+					<div className="h-full w-1/3 animate-pulse bg-foreground/30" />
+				</div>
+			)}
 		</div>
 	);
 }
@@ -123,13 +148,13 @@ function HtmlPreviewFrame({
  * text editor layer (edit mode) — this view has no nested preview/code chrome.
  * Does not follow app light/dark theme; the HTML document owns its look.
  */
-export function HtmlPreviewView({ content, title }: HtmlPreviewViewProps): JSX.Element {
-	const srcDoc = useMemo(() => injectPreviewChrome(content), [content]);
+export function HtmlPreviewView({ content, src, revision, title }: HtmlPreviewViewProps): JSX.Element {
+	const srcDoc = useMemo(() => (src ? undefined : injectPreviewChrome(content ?? "")), [src, content]);
 
 	return (
 		<div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
 			{/* iframe ignores flex-grow in many engines — absolute fill matches parent height. */}
-			<HtmlPreviewFrame srcDoc={srcDoc} title={title} />
+			<HtmlPreviewFrame srcDoc={srcDoc} src={src} revision={revision} title={title} />
 		</div>
 	);
 }

@@ -337,11 +337,13 @@ export function registerFsIpc(): () => void {
 	// same directory. Only close the underlying watcher when the last releases it.
 	const watchers = new Map<string, { watcher: FSWatcher; count: number }>();
 	const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	/** 一个防抖窗口内收到的文件名，随广播一起发出，供预览判断是否命中被引用资源。 */
+	const pendingChanges = new Map<string, Set<string>>();
 	const remoteWatchers = new Map<string, { stop: () => void; count: number }>();
 
-	function broadcastDirChanged(dirPath: string): void {
+	function broadcastDirChanged(dirPath: string, fileNames?: readonly string[]): void {
 		for (const win of BrowserWindow.getAllWindows()) {
-			win.webContents.send(CHANNELS.DIR_CHANGED, dirPath);
+			win.webContents.send(CHANNELS.DIR_CHANGED, dirPath, fileNames);
 		}
 	}
 
@@ -368,21 +370,30 @@ export function registerFsIpc(): () => void {
 			return;
 		}
 		try {
-			const watcher = watch(resolved, (_eventType) => {
+			const watcher = watch(resolved, (_eventType, filename) => {
 				// Debounce to avoid flooding on rapid changes
+				const changed = pendingChanges.get(resolved) ?? new Set<string>();
+				if (typeof filename === "string" && filename) changed.add(filename);
+				pendingChanges.set(resolved, changed);
 				const existing = debounceTimers.get(resolved);
 				if (existing) clearTimeout(existing);
 				debounceTimers.set(
 					resolved,
 					setTimeout(() => {
 						debounceTimers.delete(resolved);
-						broadcastDirChanged(resolved);
+						const fileNames = pendingChanges.get(resolved);
+						pendingChanges.delete(resolved);
+						broadcastDirChanged(resolved, fileNames && fileNames.size > 0 ? [...fileNames] : undefined);
 					}, DEBOUNCE_MS),
 				);
 			});
 			watcher.on("error", () => {
 				// Directory deleted or became inaccessible — clean up
 				watchers.delete(resolved);
+				const timer = debounceTimers.get(resolved);
+				if (timer) clearTimeout(timer);
+				debounceTimers.delete(resolved);
+				pendingChanges.delete(resolved);
 				watcher.close();
 			});
 			watchers.set(resolved, { watcher, count: 1 });
@@ -413,6 +424,7 @@ export function registerFsIpc(): () => void {
 					clearTimeout(timer);
 					debounceTimers.delete(resolved);
 				}
+				pendingChanges.delete(resolved);
 			}
 		}
 	});

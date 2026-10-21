@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CodePreview } from "../../activity-panel/components/previews/CodePreview";
 import { HtmlPreview } from "../../activity-panel/components/previews/HtmlPreview";
 import { MarkdownPreview } from "../../activity-panel/components/previews/MarkdownPreview";
+import { previewFileUrl } from "../preview-assets";
 
 const MARKDOWN_EXTENSIONS = new Set(["md", "mdx", "markdown"]);
 const SCROLL_WRAP = "text-preview-content min-h-0 flex-1 overflow-y-auto";
@@ -12,15 +13,18 @@ export function TextPreviewRenderer({
 	content,
 	extension,
 	sourcePath,
+	revision,
 }: {
 	content: string;
 	extension: string;
 	sourcePath?: string;
+	/** Bumps when the document or a referenced asset changed; file previews reload the frame. */
+	revision?: string | number;
 }): JSX.Element {
 	const theme = useAtomValue(resolvedThemeAtom);
 	const { t } = useTranslation("chat");
 	if (extension === "html" || extension === "htm" || extension === "xhtml") {
-		return <HtmlPreview content={content} theme={theme} />;
+		return <HtmlPreview content={content} theme={theme} src={previewFileUrl(sourcePath)} revision={revision} />;
 	}
 	if (MARKDOWN_EXTENSIONS.has(extension)) {
 		return (

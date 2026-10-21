@@ -1,7 +1,7 @@
 ---
 id: TASK-0340
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: desktop
 requirement:
@@ -121,8 +121,8 @@ updated: 2026-10-21
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：待执行。
+- 工程验证：定向测试 3 个文件 / 30 例通过（desktop 27、theme-ui 3）；`test:impact` 全绿；根 `tsgo` 与 Desktop 增量类型检查通过；`check:quick` 通过（`ratchet new=0`）。
+- 技术评审：待执行（串行自审：`src` 模式不再注入 preview chrome，属已知取舍已记录）。
 - 集成：待集成。
 - 人工功能验收：待验收；需要在真实 Desktop 中打开多文件 HTML 项目，观察资源归属、首帧与刷新行为。
 - 发布：未授权。
@@ -137,8 +137,16 @@ updated: 2026-10-21
 
 ## 交付记录
 
-- 实际修改：待回填。
-- 实际运行：待回填。
-- 未运行及原因：待回填。
+- 实际修改：
+  - `packages/theme-ui/src/activity/HtmlPreviewView.tsx`：`content` 改为可选并新增 `src` / `revision`；`src` 模式用 `<iframe src>` 并以 `src + revision` 作 key 触发确定性重载，`srcDoc` 模式保持 chrome 注入；移除 `opacity-0` 整页门槛，加载态改为 `aria-busy` + 顶部 `data-preview-loading` 细进度条（语义色 `bg-muted` / `bg-foreground/30`，通过 DESIGN D01）。
+  - `apps/desktop/src/renderer/domains/activity-panel/components/previews/HtmlPreview.tsx`：向 `HtmlPreviewView` 透传 `src` 与 `revision`。
+  - `apps/desktop/src/renderer/domains/file-preview/preview-assets.ts`（新增）：`previewFileUrl` 把本机绝对路径与 `ssh://` 映射为 `vetta-file://`，对已有协议、相对路径与非文件来源返回 `undefined` 回退 `srcDoc`；`extractPreviewAssetReferences` 提取 `src` / `href` / CSS `url(...)`，忽略锚点、协议相对与外链，剥掉 `?query` / `#fragment`；`collectPreviewAssets` 绝对化引用路径、排除 HTML 自身目录、资源目录上限 8；`matchesPreviewAssetChange` 在主机给出文件名时按「目录 + 文件名」精确比对，拿不到文件名时只对资源子目录保守判定。
+  - `apps/desktop/src/renderer/domains/file-preview/components/TextPreviewRenderer.tsx`：HTML 分支把 `sourcePath` 映射为 `previewFileUrl(sourcePath)` 并下传 `revision`。
+  - `apps/desktop/src/renderer/domains/file-preview/hooks/usePreviewBodyModel.tsx`：新增 `revision` 与内容等价短路（重读内容未变时既不更新界面也不递增版本）；按 `collectPreviewAssets` 额外 watch/unwatch 被引用资源目录；目录事件先做路径归一化，HTML 目录变化重读、命中被引用资源才递增 `revision`。
+  - `apps/desktop/src/main/ipc/fs.ts`：防抖窗口内收集 `filename`，随 `DIR_CHANGED` 一起广播；监听错误与最后一个消费者释放时清理待发文件名。
+  - `apps/desktop/src/preload/fs-types.ts`：`onDirChanged` 增加可选 `fileNames` 第二参数，既有只读目录路径的消费者不受影响。
+  - 测试：新增 `preview-assets.test.ts`（15 例：URL 映射、引用提取、目录解析、上限、命中判定）与 `HtmlPreviewView.test.tsx`（3 例：`src` 代替 `srcDoc`、`srcDoc` 路径保留、首帧可见无 `opacity-0`）；`usePreviewBodyModel.test.tsx` 增加 6 例（内容未变保持、内容变化递增、脚本变化递增、资源目录保守刷新、无关写入不动、`sourcePath` 下传）。
+- 实际运行：`bun run --cwd apps/desktop test src/renderer/domains/file-preview/preview-assets.test.ts src/renderer/domains/file-preview/hooks/usePreviewBodyModel.test.tsx` → 2 files / 27 tests passed；`bun run --cwd packages/theme-ui test src/activity/HtmlPreviewView.test.tsx` → 3 tests passed；`bun run test:impact` → desktop 84 files（83 passed / 1 skipped，488 tests passed）、theme-ui 3 tests passed；`bunx tsgo --noEmit` → 通过；`bun run --cwd apps/desktop typecheck:incremental` → 通过；`bun run check:quick` → 通过（`ratchet new=0`；首轮报 4 个文件缺声明头与加载条使用 zinc 调色盘，已补头并改用语义色后复跑通过）。
+- 未运行及原因：未启动 Desktop、未运行 `verify:ui:*`，首帧与请求归属仍需真实 Electron 环境人工确认；完整 `bun run check` 留待 TASK-0341 完成后一次执行。`packages/theme-ui` 包级 `bun run check` 在本机存在与本次改动无关的存量报错（`JSX` 命名空间、`import.meta.dirname` 等），本次以根 `tsgo` 为准，未追改。
 - Worktree：未拆出；预览组件与监听链路串行修改。
 - 剩余风险：`src` 模式下不再注入 preview chrome（滚动条样式与 `color-scheme` 由页面自身决定）；这是换取真实目录语义的已知取舍。

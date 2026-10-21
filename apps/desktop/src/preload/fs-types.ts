@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export interface FsEntry {
 	name: string;
 	path: string;
@@ -125,7 +126,8 @@ export interface DesktopFsApi {
 	listFilesRecursive(rootPath: string): Promise<FsFileRef[]>;
 	watchDir(dirPath: string): Promise<void>;
 	unwatchDir(dirPath: string): Promise<void>;
-	onDirChanged(handler: (dirPath: string) => void): () => void;
+	/** 监听已 watch 目录的变化；fileNames 可能缺失（平台/宿主不提供文件名时）。 */
+	onDirChanged(handler: (dirPath: string, fileNames?: readonly string[]) => void): () => void;
 	/**
 	 * 同步获取 drag-and-drop / `<input type=file>` File 对象的绝对路径。
 	 * Electron 32+ 已移除 `File.path`，统一通过 preload 的 webUtils 转换。
