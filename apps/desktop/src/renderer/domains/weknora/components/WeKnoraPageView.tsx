@@ -3,13 +3,46 @@
 import type { WeKnoraAgent, WeKnoraSession } from "@preload/api";
 import { Input } from "@shared/components/ui/input";
 import { Button } from "@vetta-org/ui";
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
+import type { WeKnoraBatchDeleteResult, WeKnoraBatchExportResult } from "../hooks/useWeKnoraBatchActions";
+import type { WeKnoraExportFormat } from "../services/weknoraExport";
+import {
+	persistWeKnoraSidebarCollapsed,
+	readPersistedWeKnoraSidebarCollapsed,
+} from "../weknora-sidebar-state";
 import { AgentSelector } from "./AgentSelector";
 import { ConversationList } from "./ConversationList";
 import { MessageList } from "./MessageList";
 import { WeKnoraComposer } from "./WeKnoraComposer";
+
+/**
+ * 侧栏收起/展开动画（D 组 AC-10~12）。
+ *
+ * - 展开宽度 = `ConversationList` 的 `nav` 宽度（`w-64` = 16rem）+ 原内容行 `flex gap-4` 的间隙（1rem）。
+ *   间隙并入动画宽度一起归零：若把它留在内容行的 `gap-4` 上，收起终态会残留 16px 空隙
+ *   （票面「flex 间隙」提醒的正是这个坑）。
+ * - 时长约 200ms；缓动与 abilities 域入场先例一致。
+ * - **终态必须卸载**（AC-11）：动画只是过渡，不得留下不可见占位节点，故用 `sidebarPresent` 控制挂载。
+ */
+const SIDEBAR_SLOT_WIDTH = "17rem";
+const SIDEBAR_ANIMATION_MS = 200;
+const SIDEBAR_EASE = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * 渲染期读取系统「减少动态效果」偏好（AC-12）：为真时收起/展开瞬时切换。
+ *
+ * 直接读 `matchMedia`，不用 motion 的 `useReducedMotion`——后者在进程内首次调用时一次性
+ * 缓存结果，既不随偏好变化更新，也无法在单个测试文件内分别验证两种分支
+ * （仓库 live-animations / theme/apply 同样是直接读法）。
+ */
+function prefersReducedMotion(): boolean {
+	return typeof window !== "undefined" && typeof window.matchMedia === "function"
+		? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+		: false;
+}
 
 export interface WeKnoraPageViewProps {
 	readonly configured: boolean;
@@ -24,6 +57,16 @@ export interface WeKnoraPageViewProps {
 	readonly sessions: readonly WeKnoraSession[];
 	readonly sessionsStatus: WeKnoraHistoryStatus;
 	readonly loadingSessionId: string | null;
+	/** 有活跃流（含后台思考）的会话 id 集合（AC-19 行级指示 / AC-10 禁删判定的状态源）。 */
+	readonly streamingSessionIds: ReadonlySet<string>;
+	/** 正在删除的会话 id（AC-12 防重复标记）；`null` = 无进行中的删除请求。 */
+	readonly deletingSessionId: string | null;
+	/** 批量删除进行中（T04：批量确认按钮防重复的驱动源）。 */
+	readonly batchDeleting: boolean;
+	/** 导出进行中（T05：单会话 / 批量任一在跑；入口防重复的驱动源）。 */
+	readonly exporting: boolean;
+	/** 删除失败的归一化错误码（AC-11）；非 `null` 时侧栏出内联错误块。 */
+	readonly deleteError: WeKnoraErrorCode | null;
 	readonly saving: boolean;
 	/** 最近一次保存配置失败的归一化错误码；`null` = 无错误（④）。 */
 	readonly saveError: WeKnoraErrorCode | null;
@@ -32,6 +75,17 @@ export interface WeKnoraPageViewProps {
 	readonly onCancel: () => void;
 	readonly onNewConversation: () => void;
 	readonly onOpenSession: (sessionId: string) => void;
+	/** 删除历史会话（AC-8）；返回是否成功（失败时确认弹窗不关）。 */
+	readonly onDeleteSession: (sessionId: string) => Promise<boolean>;
+	/** 批量删除历史会话（AC-10）；返回聚合结果（成功 / 失败明细）。 */
+	readonly onDeleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
+	/** 单会话导出（AC-3）：拉全量 → 序列化 → 保存对话框（默认桌面）。 */
+	readonly onExportSession: (sessionId: string, format: WeKnoraExportFormat) => Promise<void>;
+	/** 批量导出（AC-9）：选目录 → 逐会话一文件；取消目录选择返回 `null`。 */
+	readonly onExportSessions: (
+		sessionIds: readonly string[],
+		format: WeKnoraExportFormat,
+	) => Promise<WeKnoraBatchExportResult | null>;
 	readonly onReloadSessions: () => void;
 	readonly onSaveSetup: (input: { baseUrl: string; apiKey?: string }) => void;
 	readonly onReloadAgents: () => void;
@@ -51,6 +105,11 @@ export function WeKnoraPageView({
 	sessions,
 	sessionsStatus,
 	loadingSessionId,
+	streamingSessionIds,
+	deletingSessionId,
+	batchDeleting,
+	exporting,
+	deleteError,
 	saving,
 	saveError,
 	onSelectAgent,
@@ -58,13 +117,49 @@ export function WeKnoraPageView({
 	onCancel,
 	onNewConversation,
 	onOpenSession,
+	onDeleteSession,
+	onDeleteSessions,
+	onExportSession,
+	onExportSessions,
 	onReloadSessions,
 	onSaveSetup,
 	onReloadAgents,
 }: WeKnoraPageViewProps): JSX.Element {
 	const { t } = useTranslation("weknora");
+	const reduceMotion = prefersReducedMotion();
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	// 侧栏收起是单页面 UI 铬件状态（02-plan §2.5）：本地 state 而非 atom，
+	// 惰性初始化只读一次落盘（AC-3 重启保持），切换时写回。
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(readPersistedWeKnoraSidebarCollapsed);
+	// 侧栏是否留在 DOM（AC-11）：展开时恒为 true；收起时先播退出动画、动画结束再卸载。
+	const [sidebarPresent, setSidebarPresent] = useState(!sidebarCollapsed);
+	// 仅首次挂载不播入场动画（`initial={false}`），之后每次展开都从 0 宽度滑入。
+	const sidebarMountedOnce = useRef(false);
 	const agentsReady = agentsStatus === "ready" && agents.length > 0;
+
+	useEffect(() => {
+		sidebarMountedOnce.current = true;
+	}, []);
+
+	// 收起：reduced-motion 立即卸载；否则等动画播完再卸载（AC-11 终态不渲染、不占宽）。
+	useEffect(() => {
+		if (!sidebarCollapsed) {
+			setSidebarPresent(true);
+			return;
+		}
+		if (reduceMotion) {
+			setSidebarPresent(false);
+			return;
+		}
+		const timer = window.setTimeout(() => setSidebarPresent(false), SIDEBAR_ANIMATION_MS);
+		return () => window.clearTimeout(timer);
+	}, [sidebarCollapsed, reduceMotion]);
+
+	const toggleSidebar = (): void => {
+		const next = !sidebarCollapsed;
+		setSidebarCollapsed(next);
+		persistWeKnoraSidebarCollapsed(next);
+	};
 
 	let statusNotice: JSX.Element | null = null;
 	if (configured && agentsStatus === "loading") {
@@ -77,13 +172,39 @@ export function WeKnoraPageView({
 
 	return (
 		<div className="relative flex h-full w-full flex-1 flex-col overflow-hidden">
-			<div className="drag-region h-12 shrink-0" />
-
-			<header className="shrink-0 px-8 pb-4">
+			{/* AC-1/AC-1c：左右内边距 32→12px（px-8→px-3）、页头下边距 16→8px（pb-4→pb-2），
+			    收掉顶部那一大块留白。原先这里有一条 `drag-region h-12`（48px 纯空白带），本 feature 删除它：
+			    窗口拖拽由外壳页头承担——`PageHeaderFrame` 自身即 `drag-region`，且 `/weknora` 走 content 路由
+			    ⇒ `MainContentFrame` 必然渲染它（证据见 00-requirement.md），故本页不再需要自己的拖拽带。 */}
+			<header className="shrink-0 px-3 pb-2">
 				<div className="flex items-end justify-between gap-4">
-					<div>
-						<h1 className="text-[15px] font-semibold text-foreground">{t("page.title")}</h1>
-						<p className="mt-1 text-[12px] text-muted-foreground/60">{t("page.subtitle")}</p>
+					<div className="flex items-center gap-2">
+						{/* AC-1/AC-4：侧栏显隐开关只对已配置用户出现；状态由 aria-expanded 暴露，
+						    图标指向收拢方向（展开时朝左收、收起后朝右放）。 */}
+						{configured ? (
+							<Button
+								aria-expanded={!sidebarCollapsed}
+								aria-label={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+								onClick={toggleSidebar}
+								size="icon-xs"
+								title={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+								type="button"
+								variant="ghost"
+							>
+								<span
+									aria-hidden="true"
+									className={`h-3.5 w-3.5 ${
+										sidebarCollapsed
+											? "icon-[solar--alt-arrow-right-linear]"
+											: "icon-[solar--alt-arrow-left-linear]"
+									}`}
+								/>
+							</Button>
+						) : null}
+						<div>
+							<h1 className="text-[15px] font-semibold text-foreground">{t("page.title")}</h1>
+							<p className="mt-1 text-[12px] text-muted-foreground/60">{t("page.subtitle")}</p>
+						</div>
 					</div>
 					<div className="flex items-center gap-2">
 						{configured && agentsReady ? (
@@ -100,18 +221,41 @@ export function WeKnoraPageView({
 				</div>
 			</header>
 
-			<div className="flex flex-1 gap-4 overflow-hidden px-8 pb-8">
-				{configured ? (
-					<ConversationList
-						agents={agents}
-						currentSessionId={currentSessionId}
-						loadingSessionId={loadingSessionId}
-						onNewConversation={onNewConversation}
-						onOpenSession={onOpenSession}
-						onReload={onReloadSessions}
-						sessions={sessions}
-						status={sessionsStatus}
-					/>
+			{/* AC-2/AC-1b：内容行左右与页头对齐（px-3），下边距 32→12px（pb-8→pb-3），
+			    使历史会话栏（含「新建对话」）整体上移贴近页头。
+			    注意：这里刻意不再用 `gap-4`——间隙并入侧栏动画宽度（见 SIDEBAR_SLOT_WIDTH），
+			    否则收起终态会残留 16px 空隙。 */}
+			<div className="flex flex-1 overflow-hidden px-3 pb-3">
+				{/* AC-10/AC-11：收起/展开为宽度滑动 + 内容淡出/淡入（约 200ms）；动画结束后整栏卸载，
+				    不占宽（终态与 AC-2 一致）。动画期间 `aria-hidden` 让辅助技术按「已收起」看待它。 */}
+				{configured && sidebarPresent ? (
+					<motion.div
+						animate={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? "0rem" : SIDEBAR_SLOT_WIDTH }}
+						aria-hidden={sidebarCollapsed || undefined}
+						className="shrink-0 overflow-hidden"
+						initial={sidebarMountedOnce.current ? { opacity: 0, width: "0rem" } : false}
+						transition={reduceMotion ? { duration: 0 } : { duration: SIDEBAR_ANIMATION_MS / 1000, ease: SIDEBAR_EASE }}
+					>
+						<ConversationList
+							agents={agents}
+							batchDeleting={batchDeleting}
+							currentSessionId={currentSessionId}
+							deleteError={deleteError}
+							deletingSessionId={deletingSessionId}
+							exporting={exporting}
+							loadingSessionId={loadingSessionId}
+							onDeleteSession={onDeleteSession}
+							onDeleteSessions={onDeleteSessions}
+							onExportSession={onExportSession}
+							onExportSessions={onExportSessions}
+							onNewConversation={onNewConversation}
+							onOpenSession={onOpenSession}
+							onReload={onReloadSessions}
+							sessions={sessions}
+							status={sessionsStatus}
+							streamingSessionIds={streamingSessionIds}
+						/>
+					</motion.div>
 				) : null}
 
 				<div className="flex flex-1 flex-col gap-4 overflow-hidden">

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -17,6 +18,7 @@ const labels: PresetProvidersSectionLabels = {
 	collapse: "Collapse",
 	cancel: "Cancel",
 	changeKey: "Change key",
+	configureApiKey: "Configure API Key",
 	remove: "Remove",
 	enable: "Enable",
 	apiKeyDirect: (provider) => `${provider} API key`,

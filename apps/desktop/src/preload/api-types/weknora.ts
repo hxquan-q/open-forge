@@ -4,18 +4,33 @@ import type { WeKnoraConfigPatch } from "../../main/weknora/config.js";
 import type {
 	WeKnoraAskInput,
 	WeKnoraAskResult,
+	WeKnoraDeleteSessionInput,
+	WeKnoraGetChunkInput,
+	WeKnoraGetFileInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraPublicConfig,
 } from "../../main/weknora/service.js";
-import type { WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "../../main/weknora/types.js";
+import type {
+	WeKnoraAgent,
+	WeKnoraChunk,
+	WeKnoraFileData,
+	WeKnoraMessage,
+	WeKnoraSession,
+	WeKnoraStreamEvent,
+} from "../../main/weknora/types.js";
 
 // 渲染进程按这份合同调用；类型定义留在主进程领域模块，不另建第二套事实源（红线 C8）。
 export type {
 	WeKnoraAgent,
 	WeKnoraAskInput,
 	WeKnoraAskResult,
+	WeKnoraChunk,
 	WeKnoraConfigPatch,
+	WeKnoraDeleteSessionInput,
+	WeKnoraFileData,
+	WeKnoraGetChunkInput,
+	WeKnoraGetFileInput,
 	WeKnoraListParams,
 	WeKnoraLoadMessagesInput,
 	WeKnoraMessage,
@@ -36,6 +51,21 @@ export interface DesktopWeKnoraApi {
 	listAgents(params?: WeKnoraListParams): Promise<WeKnoraAgent[]>;
 	listSessions(params?: WeKnoraListParams): Promise<WeKnoraSessionSummary[]>;
 	loadMessages(input: WeKnoraLoadMessagesInput): Promise<WeKnoraMessage[]>;
+	/**
+	 * 删除会话（AC-8）：WeKnora 侧软删、无恢复入口（调用方负责确认与禁删判定）。
+	 * 失败以归一化错误码的 `Error` 拒绝。
+	 */
+	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
+	/**
+	 * 取 chunk 原文（AC-14，只读）：GET `/api/v1/chunks/by-id/:id` 的归一化结果。
+	 * 失败以归一化错误码的 `Error` 拒绝；缓存与重试策略在渲染层 chunkClient。
+	 */
+	getChunk(input: WeKnoraGetChunkInput): Promise<WeKnoraChunk>;
+	/**
+	 * 取回内嵌图片（F3 v2，只读）：`GET /files?file_path=<minio://…>` 的 data URL 形态。
+	 * 鉴权头只在主进程（C2）；失败以归一化错误码的 `Error` 拒绝，缓存与回退在渲染层 fileClient / 弹层。
+	 */
+	getFile(input: WeKnoraGetFileInput): Promise<WeKnoraFileData>;
 	/** 提问；`input.agentId` 为当前选中的智能体（AC-18 v5），缺省时回落到配置默认值。 */
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): Promise<void>;

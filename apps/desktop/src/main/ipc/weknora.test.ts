@@ -34,6 +34,12 @@ interface Harness {
 	webContents: WebContents;
 	/** webContents.send 收到的 (channel, payload)。 */
 	sent: Array<{ channel: string; payload: unknown }>;
+	/** 假客户端收到的删除请求（按序）。 */
+	deleted: string[];
+	/** 假客户端收到的 chunk 取数请求（按序）。 */
+	fetchedChunks: string[];
+	/** 假客户端收到的文件（图片）取数请求（按序，F3 v2）。 */
+	fetchedFiles: string[];
 }
 
 const DEFAULT_CONFIG = { baseUrl: "http://weknora.test:8083", defaultAgentId: "agent-default", pageSize: 50 };
@@ -44,8 +50,22 @@ function createHarness(): Harness {
 	const sent: Array<{ channel: string; payload: unknown }> = [];
 
 	// 假客户端：建会话返回固定 id；流式同步吐出 4 个事件（含 2 个 answer.delta）。
+	const deleted: string[] = [];
+	const fetchedChunks: string[] = [];
+	const fetchedFiles: string[] = [];
 	const fakeClient = {
 		createSession: async () => ({ id: "session-created" }),
+		deleteSession: async (sessionId: string) => {
+			deleted.push(sessionId);
+		},
+		getChunkById: async (chunkId: string) => {
+			fetchedChunks.push(chunkId);
+			return { content: "chunk 原文", knowledgeId: "k-1", kbId: "kb-1" };
+		},
+		getFileData: async (fileRef: string) => {
+			fetchedFiles.push(fileRef);
+			return { dataUrl: "data:image/png;base64,AAAA", contentType: "image/png" };
+		},
 		streamAgentChat: async (input: {
 			requestId: string;
 			sessionId: string;
@@ -79,7 +99,7 @@ function createHarness(): Harness {
 		},
 	} as unknown as WebContents;
 
-	return { service, webContents, sent };
+	return { service, webContents, sent, deleted, fetchedChunks, fetchedFiles };
 }
 
 /**
@@ -209,6 +229,17 @@ describe("registerWeKnoraIpc", () => {
 		});
 	});
 
+	it("delete-session 薄层转调:合法入参原样下传 service,不夹带业务", async () => {
+		const { service, webContents, deleted } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		// deleteSession 走 restClient,需已配置凭据(AC-2);用运行时值写入,不引入 Key 字面量(红线 C2)。
+		await mocks.handlers.get(WEKNORA_CHANNELS.SET_API_KEY)?.({}, randomUUID());
+
+		await mocks.handlers.get(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, { sessionId: "sess-1" });
+
+		expect(deleted).toEqual(["sess-1"]);
+	});
+
 	it("触发一次流:webContents.send 收到 stream-event,载荷形状符合 WeKnoraStreamEvent", async () => {
 		const { service, webContents, sent } = createHarness();
 		registerWeKnoraIpc(webContents, service);
@@ -251,6 +282,15 @@ describe("registerWeKnoraIpc", () => {
 			"page must be a positive integer",
 		);
 		await expect(handler(WEKNORA_CHANNELS.LOAD_MESSAGES)?.({}, { limit: 5 })).rejects.toThrow(
+			"sessionId must be a non-empty string",
+		);
+		await expect(handler(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, "nope")).rejects.toThrow(
+			"delete-session requires an object argument",
+		);
+		await expect(handler(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, {})).rejects.toThrow(
+			"sessionId must be a non-empty string",
+		);
+		await expect(handler(WEKNORA_CHANNELS.DELETE_SESSION)?.({}, { sessionId: "  " })).rejects.toThrow(
 			"sessionId must be a non-empty string",
 		);
 		await expect(handler(WEKNORA_CHANNELS.ASK)?.({}, { query: "   " })).rejects.toThrow(
@@ -306,5 +346,55 @@ describe("registerWeKnoraIpc · ask 显式携带 agentId（AC-18 v5）", () => {
 
 		await expect(ask?.({}, { query: "你好", agentId: "" })).rejects.toThrow("agentId must be a non-empty string");
 		await expect(ask?.({}, { query: "你好", agentId: 42 })).rejects.toThrow("agentId must be a non-empty string");
+	});
+});
+
+describe("registerWeKnoraIpc · get-chunk(AC-14 只读数据面)", () => {
+	it("薄层转调:合法入参原样下传 service,归一化结果直返渲染层", async () => {
+		const { service, webContents, fetchedChunks } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		// getChunkById 走 restClient,需已配置凭据(AC-2);用运行时值写入,不引入 Key 字面量(红线 C2)。
+		await mocks.handlers.get(WEKNORA_CHANNELS.SET_API_KEY)?.({}, randomUUID());
+
+		const chunk = await mocks.handlers.get(WEKNORA_CHANNELS.GET_CHUNK)?.({}, { chunkId: "chunk-1" });
+
+		expect(fetchedChunks).toEqual(["chunk-1"]);
+		expect(chunk).toEqual({ content: "chunk 原文", knowledgeId: "k-1", kbId: "kb-1" });
+	});
+
+	it("入参校验:非对象 / 缺 chunkId / 空串 / 非字符串明确报错,不静默", async () => {
+		const { service, webContents } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		const getChunk = mocks.handlers.get(WEKNORA_CHANNELS.GET_CHUNK);
+
+		await expect(getChunk?.({}, "nope")).rejects.toThrow("get-chunk requires an object argument");
+		await expect(getChunk?.({}, {})).rejects.toThrow("chunkId must be a non-empty string");
+		await expect(getChunk?.({}, { chunkId: "  " })).rejects.toThrow("chunkId must be a non-empty string");
+		await expect(getChunk?.({}, { chunkId: 42 })).rejects.toThrow("chunkId must be a non-empty string");
+	});
+});
+
+describe("registerWeKnoraIpc · get-file(F3 v2 只读数据面)", () => {
+	it("薄层转调:合法入参原样下传 service,data URL 结果直返渲染层", async () => {
+		const { service, webContents, fetchedFiles } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		// getFileData 走 restClient,需已配置凭据(AC-2);运行时值写入,不引入 Key 字面量(红线 C2)。
+		await mocks.handlers.get(WEKNORA_CHANNELS.SET_API_KEY)?.({}, randomUUID());
+
+		const file = await mocks.handlers.get(WEKNORA_CHANNELS.GET_FILE)?.({}, { fileRef: "minio://images/1/a.png" });
+
+		expect(fetchedFiles).toEqual(["minio://images/1/a.png"]);
+		expect(file).toEqual({ dataUrl: "data:image/png;base64,AAAA", contentType: "image/png" });
+	});
+
+	it("入参校验:非对象 / 缺 fileRef / 空串 / 非字符串明确报错,不静默", async () => {
+		const { service, webContents } = createHarness();
+		registerWeKnoraIpc(webContents, service);
+		const getFile = mocks.handlers.get(WEKNORA_CHANNELS.GET_FILE);
+
+		await expect(getFile?.({}, "nope")).rejects.toThrow("get-file requires an object argument");
+		await expect(getFile?.({}, {})).rejects.toThrow("fileRef must be a non-empty string");
+		await expect(getFile?.({}, { fileRef: "  " })).rejects.toThrow("fileRef must be a non-empty string");
+		await expect(getFile?.({}, { fileRef: 42 })).rejects.toThrow("fileRef must be a non-empty string");
 	});
 });

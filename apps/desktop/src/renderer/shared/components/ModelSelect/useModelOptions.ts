@@ -1,7 +1,7 @@
 import type { ModelsConfigData } from "@preload/api";
 import { localModelsConfigAtom, remoteProvidersAtom } from "@shared/store/atoms";
 import { modelCatalog } from "@shared/store/model-catalog";
-import { useAtomValue } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
 import { useEffect, useMemo } from "react";
 import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 
@@ -53,6 +53,21 @@ function flattenModels(config: ModelsConfigData, remote?: boolean): ModelOption[
 	return result;
 }
 
+/**
+ * 本地 models.json 与远程 provider 目录的合并口径唯一真源(local 覆盖 remote 同 key)。
+ * 模型选择器与发送前置闸门({@link hasAvailableModel})共用,避免「选择器为空」与
+ * 「闸门命中」出现两套判断。
+ */
+function mergeModelOptions(config: ModelsConfigData | null, remoteProviders: Record<string, unknown>): ModelOption[] {
+	const localModels = config ? flattenModels(config) : [];
+	const remoteModels =
+		Object.keys(remoteProviders).length > 0
+			? flattenModels({ providers: remoteProviders as ModelsConfigData["providers"] }, true)
+			: [];
+	const localKeys = new Set(localModels.map((m) => m.key));
+	return [...localModels, ...remoteModels.filter((m) => !localKeys.has(m.key))];
+}
+
 export interface UseModelOptionsResult {
 	/** Merged local + remote options (local wins on duplicate key) */
 	options: ModelOption[];
@@ -84,19 +99,7 @@ export function useModelOptions(): UseModelOptionsResult {
 		void modelCatalog.revalidate();
 	}, []);
 
-	const localModels = useMemo(() => (config ? flattenModels(config) : []), [config]);
-	const remoteModels = useMemo(
-		() =>
-			Object.keys(remoteProviders).length > 0
-				? flattenModels({ providers: remoteProviders as ModelsConfigData["providers"] }, true)
-				: [],
-		[remoteProviders],
-	);
-
-	const options = useMemo(() => {
-		const localKeys = new Set(localModels.map((m) => m.key));
-		return [...localModels, ...remoteModels.filter((m) => !localKeys.has(m.key))];
-	}, [localModels, remoteModels]);
+	const options = useMemo(() => mergeModelOptions(config, remoteProviders), [config, remoteProviders]);
 
 	const grouped = useMemo(() => {
 		const groups = new Map<string, ModelOption[]>();
@@ -124,4 +127,18 @@ export function useModelOptions(): UseModelOptionsResult {
 	};
 
 	return { options, grouped, defaultKey: config?.defaultModel, iconFor, labelFor };
+}
+
+/**
+ * 发送前置闸门的真值:当前是否有用户可见的可用模型。
+ *
+ * 与模型选择器同源——共用 {@link mergeModelOptions} 的合并口径,保证「选择器为空 ⇔ 闸门命中」。
+ * 目录尚未加载(本地 models.json 未到且无远程目录)时不判定,视为可用:启动瞬间的未知态
+ * 不应误报「没有配置模型」。可在非 React 环境(发送 hook 内)直接调用。
+ */
+export function hasAvailableModel(store = getDefaultStore()): boolean {
+	const config = store.get(localModelsConfigAtom);
+	const remote = store.get(remoteProvidersAtom);
+	if (config === null && Object.keys(remote).length === 0) return true;
+	return mergeModelOptions(config, remote).length > 0;
 }

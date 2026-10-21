@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PersistedImageResult, PersistImageInput } from "../../shared/image-cache.js";
 
 export interface SelectedImageFile {
@@ -17,6 +18,21 @@ export interface DialogSaveDataOptions {
 	title?: string;
 	/** Defaults to a single filter derived from the default file name's extension. */
 	filters?: Array<{ name: string; extensions: string[] }>;
+	/** 保存对话框的初始目录；缺省为系统桌面（`app.getPath("desktop")`）。 */
+	defaultDirectory?: string;
+}
+
+/**
+ * 批量写盘的单文件条目：文件名 + 内容，内容二选一（utf8 文本 / base64）。
+ *
+ * 名字必须是**扁平文件名**（不含路径分隔符）；主进程会再净化一次，防路径逃逸。
+ */
+export type DialogWriteFileEntry = { name: string; utf8: string } | { name: string; base64: string };
+
+/** 批量写盘结果：成功写出的绝对路径 + 每个失败条目的原因（部分失败如实上报，不假装全成功）。 */
+export interface DialogWriteFilesResult {
+	written: string[];
+	failed: Array<{ name: string; error: string }>;
 }
 
 export interface DialogOpenFileContentsOptions {
@@ -62,6 +78,16 @@ export interface DesktopDialogApi {
 	 * 源路径需可读（项目根或用户主目录）；取消时返回 null。
 	 */
 	saveCopy(sourcePath: string, options?: DialogSaveCopyOptions): Promise<string | null>;
+	/**
+	 * 选单个目录（批量导出落地用）。取消返回 null。
+	 * 选中目录会登记为批量写盘的允许目标（见 writeFilesToDirectory）。
+	 */
+	selectDirectory(): Promise<string | null>;
+	/**
+	 * 把多个内存文件写进用户**已选**目录（须先经 selectDirectory）。
+	 * 只写该目录内的扁平文件名：名字含分隔符 / 逃逸一律拒绝；单个失败不中断整批，结果如实上报。
+	 */
+	writeFilesToDirectory(input: { directory: string; files: DialogWriteFileEntry[] }): Promise<DialogWriteFilesResult>;
 	/**
 	 * 把附加图片落盘到 ~/.vetta/image-cache/<sessionId>/，返回路径与压缩文件元数据。
 	 * 用于以 @路径 方式引用图片，避免把 base64 直接塞进上下文。

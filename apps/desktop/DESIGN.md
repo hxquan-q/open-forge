@@ -280,6 +280,8 @@ grid 自适应：`grid-cols-[repeat(auto-fill,minmax(240px,1fr))]`（小卡）/ 
 
 **The No-Fixed-Grid Rule.** 卡片网格一律用 `auto-fill` + `minmax` 自适应。写死列数会在用户拉窄窗口时立刻破版。
 
+**已知特例（智能客服页 `/weknora`）**：该页**不**用页面外层 `px-8` + `pb-8`，而用 `px-3` + `pb-2`(页头) / `pb-3`(内容行)。原因：用户 2026-10-19 明确要求收掉顶部那一大块留白、让历史会话栏贴近页头。该页原有的 `drag-region h-12`（48px 空白带）已于 2026-10-20 删除——窗口拖拽由外壳页头承担，页面再加一条是重复的空白。其它页面仍按 `px-8` + `pb-8`。
+
 ---
 
 ## Elevation & Depth
@@ -468,7 +470,7 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 - **Do** 只在七档字号里选（`10 / 11 / 12 / 13 / 14 / 15 / 20+`）。
 - **Do** 用 `auto-fill` + `minmax` 做卡片网格（小卡 `240px`、行式列表 `320px`）。
 - **Do** 新图标优先 solar linear（`icon-[solar--*-linear]`），其次 mdi。
-- **Do** 顶栏留 `<div className="drag-region h-12 shrink-0" />` 作可拖拽空白，交互元素套 `.no-drag`。
+- **Do** 页面若**没有外壳页头覆盖**（即 `pageLayout === "app"` 的路由；注意：沉浸式 `headerOverlay` 路由**仍**渲染外壳页头），顶栏留 `<div className="drag-region h-12 shrink-0" />` 作可拖拽空白，交互元素套 `.no-drag`。**外壳 `PageHeaderFrame` 之下的常规内容路由不要再加**——外壳页头本身即拖拽区，再加一条会白占 48px（智能客服页 2026-10-20 已据此删除）。既有 theme-ui 全幅视图（插件工作区、批处理/自动化页）里的小拖拽带属历史实现，暂保留不动。
 
 ### Don't:
 
@@ -480,6 +482,7 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 - **Don't** 用 `rounded-3xl` 或任意 `rounded-[Npx]`。
 - **Don't** 写 `transition-all`（优先 `transition-colors` 或具体属性），也不要写长于 0.6s 的进入动画。
 - **Don't** 在业务组件里自写 `@keyframes … infinite` 做「进行中」指示。两条合法路径：常驻指示走宿主统一挂载（见下节），加载指示用现成的 `<Spin>`。`Spin` 自己那份无限 keyframes 是全局单例基元，属于被允许的例外——**不要**在 `src/renderer/**` 里再写第二份。
+  - **已知特例（智能客服页 `/weknora`）**：该页的「思考中」三点走宿主统一挂载（在 `live-animations.ts` 登记 `.weknora-thinking-dot-{1,2,3}`，相位错开 150ms），符合本规则而非例外。另：该页**流式文本做逐字淡入**，与 `styles.css` 中 `.markdown-streaming-tail`「流式文本不做淡入」的取舍不同——理由见该处注释，实现用**尾部窗口（64 字符）**把同时挂动画的字符数封顶，避免流式全程连续出帧。
 - **Don't** 在组件里手写 `::-webkit-scrollbar` / `scrollbar-width`，也不要单独覆盖 `::selection`。
 - **Don't** 机械地给每个 token 类再写一份 `dark:`——绝大多数 token 颜色会自适应，只有装饰性效果（外发光、网格纹理）需要明暗变体。**例外**：当一个部件的两个面在同一模式下对比度不足时（如 Switch 的轨道与滑块），该部件必须按模式调换前后景 token。判断标准是对比度，不是"补一份更保险"。
 - **Don't** 在 `drag-region` 内放交互元素（必须放时套 `.no-drag`），也不要给它加 `cursor-*` 或 `onClick`。
@@ -499,7 +502,9 @@ rounded-md bg-foreground px-3 py-1.5 text-xs text-background
 
 ### 标题栏
 
-新页面顶部留 `<div className="drag-region h-12 shrink-0" />` 作为可拖拽空白，再写页面 header；不要把 header 自身设为 drag-region。
+**仅当页面没有外壳页头时**（`pageLayout === "app"`；沉浸式 `headerOverlay` 路由仍会渲染外壳页头，不算此列），新页面顶部才留 `<div className="drag-region h-12 shrink-0" />` 作为可拖拽空白，再写页面 header；不要把 header 自身设为 drag-region。
+
+常规内容路由（`MainContentFrame` 会渲染 `PageHeaderFrame`，它自身就是 `drag-region`）**不要**再加这条：重复的拖拽带只会白占 48px 顶部空间。智能客服页 2026-10-20 据此删除了自己的 h-12 空白带。
 
 ### 滚动条
 
@@ -576,7 +581,8 @@ solar 常用对照：菜单 `menu-dots`、关闭 `close-circle`、删除 `trash-
 | --- | --- |
 | 行内 inline 状态点 | `h-2.5 w-2.5` |
 | chip 内、tag 内 | `h-3 w-3` |
-| 按钮内、菜单项前缀 | `h-3.5 w-3.5` |
+| 按钮内、菜单项前缀（默认 28px 及以下按钮） | `h-3.5 w-3.5` |
+| 32px 图标按钮内（`size="icon"`，如预设服务商的钥匙/刷新/删除） | `h-4 w-4` |
 | 卡片左侧主图标块（含底色） | `h-4 w-4` |
 | Hero / 空状态居中大图标 | `h-8 w-8` ~ `h-10 w-10` |
 
@@ -595,7 +601,7 @@ solar 常用对照：菜单 `menu-dots`、关闭 `close-circle`、删除 `trash-
 - [ ] **D07** 字号只落在 `10 / 11 / 12 / 13 / 14 / 15 / 20+` 七档（`text-base md:text-sm` 的输入基元惯用法除外，见「Typography · 已知例外」）
 - [ ] **D08** hover `whileHover` 不超过总则表格
 - [ ] **D09** 没有自写 `@keyframes … infinite`；进行中指示走宿主挂载，加载态用 `<Spin>`
-- [ ] **D10** 顶栏拖拽区域单独 `<div className="drag-region h-12 shrink-0" />`
+- [ ] **D10** 顶栏拖拽区域单独 `<div className="drag-region h-12 shrink-0" />`（**仅限无外壳页头的页面**；外壳页头之下的内容路由不加）
 - [ ] **D11** 没有手写 scrollbar 样式
 
 ---

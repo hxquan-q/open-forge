@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
+import { hasAvailableModel } from "@shared/components/ModelSelect/useModelOptions";
 import { perfSendBegin, perfSendMark } from "@shared/lib/perf-send";
 import type { OpenSessionOptions, SendMessageOptions, SessionExecutionMode } from "@shared/store/atoms";
-import { chatMessagesAtom, pendingSessionSendAtom } from "@shared/store/atoms";
+import { chatMessagesAtom, missingModelDialogOpenAtom, pendingSessionSendAtom } from "@shared/store/atoms";
 import { getDefaultStore } from "jotai";
 import { useCallback, useRef } from "react";
 import { startAssistantTurn } from "../../services/chat-service";
@@ -39,6 +41,13 @@ export function useNewSessionSend(options: NewSessionSendOptions): {
 	const send = useCallback(
 		async (overrideText?: string, context?: SendInteractionContext): Promise<void> => {
 			if (sendingRef.current) return;
+			// 发送前置闸门:没有可用模型时绝不派发。否则建会话会抛「requires at least
+			// one available model」,错误上屏后又被恢复逻辑清掉——用户只看到「闪一下」。
+			// 真值与模型选择器同源(hasAvailableModel);命中即弹引导对话框,零会话副作用。
+			if (!hasAvailableModel()) {
+				getDefaultStore().set(missingModelDialogOpenAtom, true);
+				return;
+			}
 			sendingRef.current = true;
 			const interactionId = context?.interactionId ?? perfSendBegin("new-session-programmatic");
 			perfSendMark("new-session-submit", interactionId);

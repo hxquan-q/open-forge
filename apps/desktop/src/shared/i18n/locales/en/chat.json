@@ -1077,6 +1077,11 @@
 			"thinking": "{{count}} thinking steps"
 		}
 	},
+	"missingModelDialog": {
+		"title": "No model configured",
+		"body": "You haven't configured an API key for a general model yet. Please set one up.",
+		"configureAction": "Configure model key"
+	},
 	"modelSelector": {
 		"defaultBadge": "Default",
 		"selectModel": "Select model",

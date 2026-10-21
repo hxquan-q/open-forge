@@ -191,6 +191,128 @@ describe("WeKnoraHttpClient · REST", () => {
 		expect(calls[0]?.url).toBe(`${BASE_URL}/api/v1/messages/sess-1/load?limit=20`);
 	});
 
+	// AC-8：DELETE /api/v1/sessions/{id}。成功响应体为 {"success":true,"message":"Session deleted successfully"}
+	// （t00-run/v1-delete.json 实测形态），无需归一化数据，2xx 即成功。
+	it("deleteSession:DELETE /api/v1/sessions/{id}，带 X-API-Key，成功不抛", async () => {
+		const { fetchImpl, calls } = jsonFetch(200, { success: true, message: "Session deleted successfully" });
+		await expect(clientWith(fetchImpl).deleteSession("sess-1")).resolves.toBeUndefined();
+		expect(calls[0]?.url).toBe(`${BASE_URL}/api/v1/sessions/sess-1`);
+		expect(calls[0]?.init?.method).toBe("DELETE");
+		expect(calls[0]?.init?.body).toBeUndefined();
+		expect((calls[0]?.init?.headers as Record<string, string>)["X-API-Key"]).toBe(API_KEY);
+	});
+
+	it("deleteSession:sessionId 经 encodeURIComponent，特殊字符不破坏路径", async () => {
+		const { fetchImpl, calls } = jsonFetch(200, { success: true });
+		await clientWith(fetchImpl).deleteSession("a b/c");
+		expect(calls[0]?.url).toBe(`${BASE_URL}/api/v1/sessions/a%20b%2Fc`);
+	});
+
+	// t00-run/v1-delete-missing.json 实测：删除不存在的会话 → 404 +
+	// {"error":{"code":1003,"message":"session not found"},"success":false}。复用既有归一化：404 落 `unknown`
+	// 并把服务端错误体截进 detail（不新增错误码，02-plan §2.1「错误码走既有归一化」）。
+	it("deleteSession:404 → unknown，detail 携带服务端错误体", async () => {
+		const { fetchImpl } = jsonFetch(404, {
+			error: { code: 1003, details: null, message: "session not found" },
+			success: false,
+		});
+		await expect(clientWith(fetchImpl).deleteSession("missing")).rejects.toMatchObject({
+			weknora: { code: "unknown", status: 404, detail: expect.stringContaining("session not found") },
+		});
+	});
+
+	it("deleteSession:403 → capability_missing，标记缺 chat", async () => {
+		const { fetchImpl } = jsonFetch(403, { error: "forbidden" });
+		await expect(clientWith(fetchImpl).deleteSession("sess-1")).rejects.toMatchObject({
+			weknora: { code: "capability_missing", missingCapability: "chat", status: 403 },
+		});
+	});
+
+	it("deleteSession:网络失败 → network", async () => {
+		const fetchImpl = (async () => {
+			throw new TypeError("fetch failed");
+		}) as unknown as typeof fetch;
+		await expect(clientWith(fetchImpl).deleteSession("sess-1")).rejects.toMatchObject({
+			weknora: { code: "network", detail: "fetch failed" },
+		});
+	});
+
+	// AC-14/AC-15：GET /api/v1/chunks/by-id/{id}（只读数据面）。200 夹具取自 T00 实测
+	// （t00-run/chunk-probe.json，2026-10-20；字段名与真实响应一致，长文本裁剪保持可读，
+	// 响应不含任何凭据）。
+	it("getChunkById:GET /api/v1/chunks/by-id/{id}，归一化 content/knowledgeId/kbId，带 X-API-Key", async () => {
+		const { fetchImpl, calls } = jsonFetch(200, {
+			data: {
+				id: "f2acd65e-3969-4700-88f6-612579891ec6",
+				knowledge_id: "012cd98e-3327-4610-aa0c-387073d9747d",
+				knowledge_base_id: "78c47382-49f4-41bb-a11a-bc9c6f06f3a9",
+				content: "该图展示了金蝶六大产品线的36个精品自学专题，且全部免费学习。",
+				chunk_index: 0,
+				chunk_type: "image_caption",
+			},
+			success: true,
+		});
+		const chunk = await clientWith(fetchImpl).getChunkById("f2acd65e-3969-4700-88f6-612579891ec6");
+		expect(chunk).toEqual({
+			content: "该图展示了金蝶六大产品线的36个精品自学专题，且全部免费学习。",
+			knowledgeId: "012cd98e-3327-4610-aa0c-387073d9747d",
+			kbId: "78c47382-49f4-41bb-a11a-bc9c6f06f3a9",
+		});
+		expect(calls[0]?.url).toBe(`${BASE_URL}/api/v1/chunks/by-id/f2acd65e-3969-4700-88f6-612579891ec6`);
+		expect(calls[0]?.init?.method).toBe("GET");
+		expect(calls[0]?.init?.body).toBeUndefined();
+		expect((calls[0]?.init?.headers as Record<string, string>)["X-API-Key"]).toBe(API_KEY);
+	});
+
+	it("getChunkById:chunkId 经 encodeURIComponent，特殊字符不破坏路径", async () => {
+		const { fetchImpl, calls } = jsonFetch(200, { data: { content: "c" } });
+		await clientWith(fetchImpl).getChunkById("a b/c");
+		expect(calls[0]?.url).toBe(`${BASE_URL}/api/v1/chunks/by-id/a%20b%2Fc`);
+	});
+
+	// 404 夹具沿用服务端标准错误包络（delete 的 t00-run/v1-delete-missing.json 同形态）；
+	// chunks 端点的数值码未实测，归一化只依赖 message，不依赖数值码。
+	it("getChunkById:404 → unknown，detail 携带服务端错误体", async () => {
+		const { fetchImpl } = jsonFetch(404, {
+			error: { code: 1003, details: null, message: "chunk not found" },
+			success: false,
+		});
+		await expect(clientWith(fetchImpl).getChunkById("missing")).rejects.toMatchObject({
+			weknora: { code: "unknown", status: 404, detail: expect.stringContaining("chunk not found") },
+		});
+	});
+
+	it("getChunkById:403 → capability_missing，标记缺 retrieve（AC-14 失败态前提）", async () => {
+		const { fetchImpl } = jsonFetch(403, { error: "forbidden" });
+		await expect(clientWith(fetchImpl).getChunkById("c1")).rejects.toMatchObject({
+			weknora: { code: "capability_missing", missingCapability: "retrieve", status: 403 },
+		});
+	});
+
+	it("getChunkById:网络失败 → network", async () => {
+		const fetchImpl = (async () => {
+			throw new TypeError("fetch failed");
+		}) as unknown as typeof fetch;
+		await expect(clientWith(fetchImpl).getChunkById("c1")).rejects.toMatchObject({
+			weknora: { code: "network", detail: "fetch failed" },
+		});
+	});
+
+	// 缺 content = 坏响应：抛归一化错误，不猜、不兜底空串（02-plan §2-7）。
+	it("getChunkById:200 但缺 data.content → unknown 归一化错误", async () => {
+		const { fetchImpl } = jsonFetch(200, { data: { id: "c1" }, success: true });
+		await expect(clientWith(fetchImpl).getChunkById("c1")).rejects.toMatchObject({
+			weknora: { code: "unknown", detail: "getChunkById: missing data.content" },
+		});
+	});
+
+	it("getChunkById:content 非字符串 → 同样按坏响应归一化报错", async () => {
+		const { fetchImpl } = jsonFetch(200, { data: { content: 42 }, success: true });
+		await expect(clientWith(fetchImpl).getChunkById("c1")).rejects.toMatchObject({
+			weknora: { code: "unknown", detail: "getChunkById: missing data.content" },
+		});
+	});
+
 	it("listAgents:解析 {id,name,description}[]", async () => {
 		const { fetchImpl, calls } = jsonFetch(200, {
 			data: [

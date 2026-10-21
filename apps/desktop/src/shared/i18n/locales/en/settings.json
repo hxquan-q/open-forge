@@ -1410,6 +1410,7 @@
 	"modelsCount": "{{count}} models",
 	"collapse": "Collapse",
 	"changeKey": "Replace API Key",
+	"configureApiKey": "Configure API Key",
 	"copyApiKey": "Copy API Key",
 	"apiKeyCopied": "API key copied; the clipboard will be cleared in 30 seconds",
 	"apiKeyCopyFailed": "No API key is available to copy",

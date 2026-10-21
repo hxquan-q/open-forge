@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useRef, type JSX, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button, cn } from "@vetta-org/ui";
@@ -34,6 +35,8 @@ export interface PresetProviderRowViewLabels {
 	readonly collapse: string;
 	readonly cancel: string;
 	readonly changeKey: string;
+	/** 未启用时钥匙按钮的提示文案。与 enable 分开：enable 同时是编辑器内主按钮的文案。 */
+	readonly configureApiKey: string;
 	readonly remove: string;
 	readonly enable: string;
 	readonly apiKeyDirect: (name: string) => string;
@@ -195,13 +198,13 @@ export function PresetProviderRowView({
 								{row.hasApiKey && (
 									<Button
 										variant="ghost"
-										size="icon-sm"
+										size="icon"
 										onClick={onCopyApiKey}
 										title={labels.copyApiKey}
 										aria-label={labels.copyApiKey}
 										className="shrink-0 text-muted-foreground hover:text-foreground"
 									>
-										<span className="icon-[mdi--content-copy] h-3.5 w-3.5" />
+										<span className="icon-[mdi--content-copy] h-4 w-4" />
 									</Button>
 								)}
 								<Button
@@ -215,14 +218,14 @@ export function PresetProviderRowView({
 								</Button>
 								<Button
 									variant="ghost"
-									size="icon-sm"
+									size="icon"
 									onClick={onToggleEditor}
 									disabled={saving}
 									title={labels.cancel}
 									aria-label={labels.cancel}
 									className="shrink-0 text-muted-foreground hover:text-foreground"
 								>
-									<span className="icon-[mdi--close] h-3.5 w-3.5" />
+									<span className="icon-[mdi--close] h-4 w-4" />
 								</Button>
 							</motion.div>
 						) : (
@@ -236,7 +239,7 @@ export function PresetProviderRowView({
 								{row.adopted && !row.offline && (
 									<Button
 										variant="ghost"
-										size="icon-sm"
+										size="icon"
 										onClick={onRefreshModels}
 										disabled={row.refreshing}
 										title={row.refreshing ? labels.refreshingModels : labels.refreshModels}
@@ -244,7 +247,7 @@ export function PresetProviderRowView({
 									>
 										<span
 											className={cn(
-												"icon-[mdi--refresh] h-3.5 w-3.5",
+												"icon-[mdi--refresh] h-4 w-4",
 												row.refreshing && "animate-spin",
 											)}
 										/>
@@ -253,10 +256,10 @@ export function PresetProviderRowView({
 								{canEditKey && (
 									<Button
 										variant="ghost"
-										size="icon-sm"
+										size="icon"
 										onClick={onToggleEditor}
-										title={row.adopted ? labels.changeKey : labels.enable}
-										aria-label={row.adopted ? labels.changeKey : labels.enable}
+										title={row.adopted ? labels.changeKey : labels.configureApiKey}
+										aria-label={row.adopted ? labels.changeKey : labels.configureApiKey}
 										className={cn(
 											"text-muted-foreground hover:text-foreground",
 											!row.adopted && "hover:text-primary",
@@ -264,7 +267,7 @@ export function PresetProviderRowView({
 									>
 										<span
 											className={cn(
-												"h-3.5 w-3.5",
+												"h-4 w-4",
 												row.adopted ? "icon-[mdi--key-outline]" : "icon-[mdi--key-plus]",
 											)}
 										/>
@@ -273,13 +276,13 @@ export function PresetProviderRowView({
 								{row.adopted && (
 									<Button
 										variant="ghost"
-										size="icon-sm"
+										size="icon"
 										onClick={onRemove}
 										title={labels.remove}
 										aria-label={labels.remove}
 										className="text-muted-foreground hover:text-destructive"
 									>
-										<span className="icon-[mdi--delete-outline] h-3.5 w-3.5" />
+										<span className="icon-[mdi--delete-outline] h-4 w-4" />
 									</Button>
 								)}
 								{row.offline && !row.adopted && (

@@ -6,11 +6,19 @@ import { useCallback, useEffect } from "react";
 import {
 	type WeKnoraAgentsStatus,
 	type WeKnoraChatMessage,
+	type WeKnoraErrorCode,
 	type WeKnoraHistoryStatus,
 	weKnoraAgentsStatusAtom,
 } from "../atoms";
+import type { WeKnoraExportFormat } from "../services/weknoraExport";
 import { useWeKnoraAgents } from "./useWeKnoraAgents";
+import {
+	useWeKnoraBatchActions,
+	type WeKnoraBatchDeleteResult,
+	type WeKnoraBatchExportResult,
+} from "./useWeKnoraBatchActions";
 import { useWeKnoraChat } from "./useWeKnoraChat";
+import { useWeKnoraExport } from "./useWeKnoraExport";
 import { useWeKnoraHistory } from "./useWeKnoraHistory";
 import { useWeKnoraSetup, type WeKnoraSetupInput } from "./useWeKnoraSetup";
 import { isConfigured } from "./weKnoraModelSupport";
@@ -31,6 +39,23 @@ export interface WeKnoraModelActions {
 	readonly reloadSessions: () => void;
 	/** 载入历史会话的消息并恢复为当前对话，之后追问接上（AC-14）。 */
 	readonly openSession: (sessionId: string) => Promise<void>;
+	/**
+	 * 删除历史会话（AC-8/9）：真删 WeKnora 侧；成功且是当前会话则重置为「新对话」空态，
+	 * 随后重拉列表。返回是否成功（失败码在 `deleteError`，由侧栏内联错误块展示）。
+	 */
+	readonly deleteSession: (sessionId: string) => Promise<boolean>;
+	/**
+	 * 批量删除历史会话（AC-10）：逐个复用 `removeSession`，聚合成「成功 N / 失败 M(会话 id + 错误码)」；
+	 * 删到当前会话则回空态，完成后重拉列表（失败项原样保留，列表如实刷新）。
+	 */
+	readonly deleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
+	/** 单会话导出（AC-3）：拉全量 → 序列化 → 保存对话框（默认桌面）；取消零写入。 */
+	readonly exportSession: (sessionId: string, format: WeKnoraExportFormat) => Promise<void>;
+	/** 批量导出（AC-9）：选目录 → 逐会话一文件写盘；取消目录选择返回 `null`（零写入）。 */
+	readonly exportSessions: (
+		sessionIds: readonly string[],
+		format: WeKnoraExportFormat,
+	) => Promise<WeKnoraBatchExportResult | null>;
 }
 
 export interface WeKnoraViewModel {
@@ -40,13 +65,24 @@ export interface WeKnoraViewModel {
 	readonly agentsStatus: WeKnoraAgentsStatus;
 	readonly selectedAgentId: string | null;
 	readonly messages: readonly WeKnoraChatMessage[];
+	/** **当前会话**是否在流式中（per-session 语义，AC-18）：驱动输入区与取消入口。 */
 	readonly isStreaming: boolean;
+	/** 有活跃流（含后台思考）的会话 id 集合：历史列表行级指示（AC-19）与禁删判定（AC-10）的事实源。 */
+	readonly streamingSessionIds: ReadonlySet<string>;
 	/** 当前对话绑定的 WeKnora 会话 id；`null` 表示「新对话，尚未建会话」（AC-11/12）。 */
 	readonly currentSessionId: string | null;
 	readonly sessions: readonly WeKnoraSession[];
 	readonly sessionsStatus: WeKnoraHistoryStatus;
 	/** 正在载入的历史会话 id（用于列表行 loading 态）。 */
 	readonly loadingSessionId: string | null;
+	/** 正在删除的会话 id（AC-12 请求进行中标记，确认按钮防重复的驱动源）；`null` = 无。 */
+	readonly deletingSessionId: string | null;
+	/** 批量删除进行中（T04：确认按钮防重复的驱动源）；`false` = 无。 */
+	readonly batchDeleting: boolean;
+	/** 导出进行中（T05：单会话或批量任一在跑即 `true`；入口按钮/菜单项防重复的驱动源）。 */
+	readonly exporting: boolean;
+	/** 删除失败的归一化错误码（AC-11，侧栏内联错误块的数据源）；`null` = 无。 */
+	readonly deleteError: WeKnoraErrorCode | null;
 	/** 允许提问：已配置 + 有可用智能体 + 无进行中的回答（AC-7 / AC-19）。 */
 	readonly canAsk: boolean;
 	readonly saving: boolean;
@@ -68,6 +104,13 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 	const setup = useWeKnoraSetup();
 	const agents = useWeKnoraAgents({ config: setup.config });
 	const history = useWeKnoraHistory({ config: setup.config });
+	// 会话 id → 标题：导出文件名基名用；空标题交给 `safeFileName` 回退「未命名会话」（不在模型层拼文案）。
+	const titleOf = useCallback(
+		(sessionId: string): string => history.sessions.find((session) => session.id === sessionId)?.title?.trim() ?? "",
+		[history.sessions],
+	);
+	const batch = useWeKnoraBatchActions({ removeSession: history.removeSession, titleOf });
+	const exportActions = useWeKnoraExport({ titleOf });
 	const chat = useWeKnoraChat({
 		config: setup.config,
 		agents: agents.agents,
@@ -109,6 +152,39 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		[setup.writeSetup, agents.loadAgents, history.loadSessions],
 	);
 
+	/**
+	 * 删除会话的**编排**（AC-8/9）：跨 history（删 + 重拉）与 chat（当前会话回空态）两个
+	 * actor，天然归本组装层（02-plan §2.4）。失败时不动聊天区、不重拉 —— 失败码已由
+	 * `removeSession` 落进 `deleteError`，侧栏出内联错误，列表保持原样（不假装删掉）。
+	 */
+	const deleteSession = useCallback(
+		async (sessionId: string): Promise<boolean> => {
+			const outcome = await history.removeSession(sessionId);
+			if (!outcome.ok) return false;
+			// AC-9：删的是当前打开的会话 → 复用「新建对话」语义回空态（消息清空、指针置空）。
+			// 禁删判定（AC-10）已保证被删会话无活跃流，不会误伤后台思考。
+			if (chat.sessionId === sessionId) chat.newConversation();
+			await history.loadSessions();
+			return true;
+		},
+		[chat.newConversation, chat.sessionId, history.loadSessions, history.removeSession],
+	);
+
+	/**
+	 * 批量删除的**编排**（AC-10）：串行循环归 `useWeKnoraBatchActions`，这里只做跨 actor 的收尾——
+	 * 删到当前会话则回空态（同单删语义），完成后**重拉一次**列表（不是每删一个拉一次）。
+	 * 失败项不静默：聚合结果原样返回给调用方展示，列表重拉后失败会话仍在（不假装删掉）。
+	 */
+	const deleteSessions = useCallback(
+		async (sessionIds: readonly string[]): Promise<WeKnoraBatchDeleteResult> => {
+			const result = await batch.deleteSessions(sessionIds);
+			if (chat.sessionId !== null && result.succeeded.includes(chat.sessionId)) chat.newConversation();
+			await history.loadSessions();
+			return result;
+		},
+		[batch.deleteSessions, chat.newConversation, chat.sessionId, history.loadSessions],
+	);
+
 	return {
 		configured: isConfigured(setup.config),
 		config: setup.config,
@@ -117,10 +193,15 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 		selectedAgentId: agents.selectedAgentId,
 		messages: chat.messages,
 		isStreaming: chat.isStreaming,
+		streamingSessionIds: chat.streamingSessionIds,
 		currentSessionId: chat.sessionId,
 		sessions: history.sessions,
 		sessionsStatus: history.sessionsStatus,
 		loadingSessionId: history.loadingSessionId,
+		deletingSessionId: history.deletingSessionId,
+		batchDeleting: batch.running,
+		exporting: exportActions.exporting || batch.exportRunning,
+		deleteError: history.deleteError,
 		canAsk: chat.canAsk,
 		saving: setup.saving,
 		actions: {
@@ -132,6 +213,10 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			newConversation: chat.newConversation,
 			reloadSessions: history.reloadSessions,
 			openSession: chat.openSession,
+			deleteSession,
+			deleteSessions,
+			exportSession: exportActions.exportSession,
+			exportSessions: batch.exportSessions,
 		},
 	};
 }

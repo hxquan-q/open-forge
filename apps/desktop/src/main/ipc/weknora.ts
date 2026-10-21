@@ -5,6 +5,9 @@ import type { WeKnoraConfigPatch } from "../weknora/config.js";
 import {
 	getWeKnoraService,
 	type WeKnoraAskInput,
+	type WeKnoraDeleteSessionInput,
+	type WeKnoraGetChunkInput,
+	type WeKnoraGetFileInput,
 	type WeKnoraListParams,
 	type WeKnoraLoadMessagesInput,
 	type WeKnoraService,
@@ -18,6 +21,9 @@ export const WEKNORA_CHANNELS = {
 	LIST_AGENTS: "vetta:weknora:list-agents",
 	LIST_SESSIONS: "vetta:weknora:list-sessions",
 	LOAD_MESSAGES: "vetta:weknora:load-messages",
+	DELETE_SESSION: "vetta:weknora:delete-session",
+	GET_CHUNK: "vetta:weknora:get-chunk",
+	GET_FILE: "vetta:weknora:get-file",
 	ASK: "vetta:weknora:ask",
 	CANCEL: "vetta:weknora:cancel",
 	STREAM_EVENT: "vetta:weknora:stream-event",
@@ -31,6 +37,9 @@ export const WEKNORA_INVOKE_CHANNELS = [
 	WEKNORA_CHANNELS.LIST_AGENTS,
 	WEKNORA_CHANNELS.LIST_SESSIONS,
 	WEKNORA_CHANNELS.LOAD_MESSAGES,
+	WEKNORA_CHANNELS.DELETE_SESSION,
+	WEKNORA_CHANNELS.GET_CHUNK,
+	WEKNORA_CHANNELS.GET_FILE,
 	WEKNORA_CHANNELS.ASK,
 	WEKNORA_CHANNELS.CANCEL,
 ] as const;
@@ -71,6 +80,21 @@ export function registerWeKnoraIpc(
 
 	ipcMain.handle(WEKNORA_CHANNELS.LOAD_MESSAGES, async (_event, input: unknown) =>
 		service.loadMessages(parseLoadMessagesInput(input)),
+	);
+
+	// AC-8：删除会话。薄层转调（删除的确认/禁删判定/失败反馈都在渲染层，这里零业务逻辑）。
+	ipcMain.handle(WEKNORA_CHANNELS.DELETE_SESSION, async (_event, input: unknown) =>
+		service.deleteSession(parseDeleteSessionInput(input)),
+	);
+
+	// AC-14：取 chunk 原文（只读数据面）。薄层转调（缓存与失败反馈在渲染层 chunkClient，这里零业务逻辑）。
+	ipcMain.handle(WEKNORA_CHANNELS.GET_CHUNK, async (_event, input: unknown) =>
+		service.getChunkById(parseGetChunkInput(input)),
+	);
+
+	// F3 v2：取内嵌图片（只读数据面，data URL）。薄层转调（缓存与失败回退在渲染层 fileClient / 弹层）。
+	ipcMain.handle(WEKNORA_CHANNELS.GET_FILE, async (_event, input: unknown) =>
+		service.getFileData(parseGetFileInput(input)),
 	);
 
 	ipcMain.handle(WEKNORA_CHANNELS.ASK, async (_event, input: unknown) => service.ask(parseAskInput(input)));
@@ -134,9 +158,28 @@ function parseListParams(value: unknown): WeKnoraListParams {
 
 function parseLoadMessagesInput(value: unknown): WeKnoraLoadMessagesInput {
 	const input = requireObject(value, "load-messages");
-	const sessionId = requireNonEmptyString(input.sessionId, "sessionId");
-	if (input.limit === undefined) return { sessionId };
-	return { sessionId, limit: requirePositiveInteger(input.limit, "limit") };
+	const parsed: WeKnoraLoadMessagesInput = { sessionId: requireNonEmptyString(input.sessionId, "sessionId") };
+	if (input.limit !== undefined) parsed.limit = requirePositiveInteger(input.limit, "limit");
+	// AC-6：翻页游标可选透出；一旦传入必须是合法非空字符串（畸形入参明确报错，不静默）。
+	if (input.beforeTime !== undefined) {
+		parsed.beforeTime = requireNonEmptyString(input.beforeTime, "beforeTime");
+	}
+	return parsed;
+}
+
+function parseDeleteSessionInput(value: unknown): WeKnoraDeleteSessionInput {
+	const input = requireObject(value, "delete-session");
+	return { sessionId: requireNonEmptyString(input.sessionId, "sessionId") };
+}
+
+function parseGetChunkInput(value: unknown): WeKnoraGetChunkInput {
+	const input = requireObject(value, "get-chunk");
+	return { chunkId: requireNonEmptyString(input.chunkId, "chunkId") };
+}
+
+function parseGetFileInput(value: unknown): WeKnoraGetFileInput {
+	const input = requireObject(value, "get-file");
+	return { fileRef: requireNonEmptyString(input.fileRef, "fileRef") };
 }
 
 function parseAskInput(value: unknown): WeKnoraAskInput {

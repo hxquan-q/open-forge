@@ -5,6 +5,8 @@ import { createWeKnoraStreamParser } from "./sse.js";
 import type {
 	WeKnoraAgent,
 	WeKnoraCapability,
+	WeKnoraChunk,
+	WeKnoraFileData,
 	WeKnoraKnowledgeReference,
 	WeKnoraMessage,
 	WeKnoraMessageRole,
@@ -12,6 +14,12 @@ import type {
 	WeKnoraSessionLastRequestState,
 	WeKnoraStreamEvent,
 } from "./types.js";
+
+/*
+ * C7 说明（>400 行仍单文件）：本文件只有一个 actor —— WeKnora REST 门面。全部端点的鉴权头、
+ * 超时守卫、错误归一化与响应收窄（asRecord/asString 家族）总是一起改，按判据拆开只会制造
+ * shotgun surgery（CONSTRAINTS C7 / weknora-kb-citation 02-plan D6）。
+ */
 
 /** 单次请求的默认超时（01-spec §3.6）。 */
 export const DEFAULT_TIMEOUT_MS = 120_000;
@@ -96,6 +104,74 @@ export class WeKnoraHttpClient {
 		const body = await this.requestJson(url, { method: "GET" }, signal, "chat");
 		const raw = Array.isArray(body) ? body : asRecord(body)?.data;
 		return toArray(raw).map(toMessage).filter(isDefined);
+	}
+
+	/**
+	 * 删除会话（AC-8）：`DELETE /api/v1/sessions/{id}`（WeKnora 软删，服务端无恢复入口）。
+	 *
+	 * 成功返回（`{success:true}` 响应体无需归一化数据）；失败以 `WeKnoraRequestError` 抛出，
+	 * 错误码复用既有归一化（404 → `unknown` + 服务端 detail，如 `session not found`，见 t00-run 实测夹具）。
+	 */
+	async deleteSession(sessionId: string, signal?: AbortSignal): Promise<void> {
+		await this.requestJson(`/api/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }, signal, "chat");
+	}
+
+	/**
+	 * 取 chunk 原文（AC-14，**只读**数据面）：`GET /api/v1/chunks/by-id/{id}`。
+	 *
+	 * capability 标注 `retrieve`：Key 缺该能力时 403 归一化为 `capability_missing`
+	 * （missingCapability=retrieve），渲染层据此出降级文案。缺 `data.content` 视为坏响应，
+	 * 抛归一化错误，不猜（02-plan D7）。
+	 */
+	async getChunkById(chunkId: string, signal?: AbortSignal): Promise<WeKnoraChunk> {
+		const body = await this.requestJson(
+			`/api/v1/chunks/by-id/${encodeURIComponent(chunkId)}`,
+			{ method: "GET" },
+			signal,
+			"retrieve",
+		);
+		const chunk = toChunk(asRecord(body)?.data);
+		if (!chunk) throw new WeKnoraRequestError({ code: "unknown", detail: "getChunkById: missing data.content" });
+		return chunk;
+	}
+
+	/**
+	 * 取回 WeKnora 文件（内嵌图片）并以 data URL 形态返回（实机验收 F3 v2，**只读**数据面）。
+	 *
+	 * `GET /files?file_path=<minio://…>`：鉴权走 `X-API-Key`（只在主进程，渲染层永不接触，C2）。
+	 * 实测该代理是取回 `minio://` 内嵌图片的唯一通路（`?resource_urls=public` 在本实例不改写）。
+	 *
+	 * 只接受 `image/*` 响应：非图片（误传 PDF/JSON 等）按坏响应抛归一化错误，渲染层据此回退占位。
+	 * 回传 **data URL**（票面二选一取「最简」）：渲染层 `<img src>` 直接可用、无需自定义协议；
+	 * 代价是 base64 体积约 1.34×，由渲染层 `fileClient` 的模块级缓存限制重复传输。
+	 */
+	async getFileData(fileRef: string, signal?: AbortSignal): Promise<WeKnoraFileData> {
+		const guard = createTimeoutGuard(signal, this.timeoutMs);
+		try {
+			const response = await this.fetchImpl(this.absolute(withQuery("/files", { file_path: fileRef })), {
+				method: "GET",
+				headers: { "X-API-Key": this.apiKey },
+				signal: guard.signal,
+			});
+			if (!response.ok) {
+				const text = await response.text();
+				throw new WeKnoraRequestError(
+					normalizeHttpError(response.status, parseJson(text) ?? text, { capability: "retrieve" }),
+				);
+			}
+			// content-type 可能带 `;charset=…`，只取媒体类型段。
+			const contentType = (response.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+			if (!contentType.startsWith("image/")) {
+				throw new WeKnoraRequestError({ code: "unknown", detail: "getFileData: response is not an image" });
+			}
+			const buffer = Buffer.from(await response.arrayBuffer());
+			return { dataUrl: `data:${contentType};base64,${buffer.toString("base64")}`, contentType };
+		} catch (error) {
+			if (error instanceof WeKnoraRequestError) throw error;
+			throw new WeKnoraRequestError(normalizeThrownError(error, { timedOut: guard.timedOut() }));
+		} finally {
+			guard.dispose();
+		}
 	}
 
 	/** 列出该 Key 可见的全部智能体；**空列表是合法结果**（AC-16 / AC-19）。 */
@@ -303,6 +379,8 @@ function toMessage(raw: unknown): WeKnoraMessage | undefined {
 		request_id: asString(record.request_id),
 		role: toRole(record.role),
 		content: content ?? "",
+		// AC-6：透出 created_at 供渲染层翻页（before_time 游标）与顺序校正；缺省不臆造。
+		created_at: asString(record.created_at),
 		knowledge_references: toReferences(record.knowledge_references),
 	};
 }
@@ -318,6 +396,23 @@ function toAgent(raw: unknown): WeKnoraAgent | undefined {
 	const id = record ? asString(record.id) : undefined;
 	if (!record || !id) return undefined;
 	return { id, name: asString(record.name) ?? "", description: asString(record.description) };
+}
+
+/**
+ * 归一化 chunk 原文；`content` 缺失 / 非字符串一律返回 `undefined`（由调用方抛归一化错误）。
+ *
+ * 与 `toMessage` 的「容忍缺字段」相反：引用弹层的全部价值就在 `content`，静默弹一张空卡片
+ * 比明确报错更迷惑，故不猜、不兜底空串。
+ */
+function toChunk(raw: unknown): WeKnoraChunk | undefined {
+	const record = asRecord(raw);
+	const content = record ? asString(record.content) : undefined;
+	if (!record || content === undefined) return undefined;
+	return {
+		content,
+		knowledgeId: asString(record.knowledge_id),
+		kbId: asString(record.knowledge_base_id),
+	};
 }
 
 /**

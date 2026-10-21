@@ -19,7 +19,7 @@
 | 渲染层页面 | `apps/desktop/src/renderer/domains/weknora/` |
 | 文案 | `apps/desktop/src/shared/i18n/locales/{zh,en}/weknora.json` |
 
-改动**以新增为主**;对既有文件的改动只有 11 处、合计 +55/−4 行,全部是"加一个导航项绕不开的连带改动"(路由表、IPC 注册点、i18n 注册点、`theme-sdk` 的两个封闭联合类型)。**只增不删。**
+改动**以新增为主**。首期(REQ-0017)新增 weknora 域并接入导航;二期打磨(REQ-0020)在其上叠加三能力,31 个文件 +2394/−91(9 个新文件),对既有文件只加不改结构。
 
 ---
 
@@ -31,8 +31,12 @@
 - 智能体选择器:列出当前凭据可见的**全部**智能体,可切换,选中项持久化
 - 提问 → **流式逐字回答**
 - **思考旁白与正式回答分区显示**:旁白收进可折叠的「思考过程」区,回答结束自动收起
-- **新建对话与历史会话**:侧栏列出此前的对话(标题、所用智能体、时间),可新建对话并在多个对话间切换;点历史对话会**先弹确认**(因为会替换当前对话),取消则不做任何改动
-- 取消(保留已收到的部分内容)
+- **新建对话与历史会话**:侧栏列出此前的对话(标题、所用智能体、时间),可新建对话并在多个对话间切换;点历史对话**直接切换**载入(REQ-0023 起去掉替换确认——消息由服务端保存,无需二次确认)
+- **后台思考**(REQ-0020):回答生成中切到别的对话,原对话在后台继续生成;侧栏行亮「思考中」呼吸点;切回立即续显;多对话可并行提问;后台完成仅静默刷新列表,无弹窗
+- **右键删除历史对话**(REQ-0020):右键 →「删除会话」→ 确认(明示不可恢复)→ 从 WeKnora 删除并刷新列表;删的是当前打开的对话则聊天区回到空白新对话;生成中的对话删除项置灰;失败内联报错可重试
+- **侧栏收起**(REQ-0020):页头开关一键收起/展开左侧历史栏,状态跨重启记住,首次默认展开
+- **页面观感打磨**(REQ-0021):页头与内容贴窗口边缘(收掉顶部大块留白)、历史会话栏上移;回答生成时新字符逐个淡入上浮;等待首字时显示「思考中」三点动画;侧栏收起/展开为宽度滑动 + 淡出。副标题文案改为「由小爱酱知识库为你回答」。
+- 取消(保留已收到的部分内容;仅作用于当前打开的对话,后台对话生成到自然结束)
 - 未配置时的中文引导页
 - 中英双语
 
@@ -41,7 +45,8 @@
 | 缺什么 | 影响 |
 |---|---|
 | 引用来源角标 | 回答里没有来源角标 —— 见 §4 |
-| 错误提示的完整度 | 冷门错误(403 缺能力 / 409 用错 Key 类型)不点名原因 |
+| 错误提示的完整度 | 冷门错误(403 缺能力 / 409 用错 Key 类型)不点名原因;删除失败为通用文案不按错误码细分 |
+| 后台流的取消入口 | 后台生成中的对话只能等它跑完;取消按钮只对当前打开的对话生效(用户裁定的取舍) |
 
 ---
 
@@ -69,17 +74,19 @@ WeKnora 设置 → 发布集成 → API 集成 → 创建 API Key
 
 API Key 存入 Electron `safeStorage` 加密凭据库,不进配置文件、不进日志、不进 Git。界面只显示「已配置 / 未配置」,不回显密钥。
 
-### 调用的接口(全部只读)
+### 调用的接口(纯数据面调用)
 
 ```
-POST /api/v1/sessions                建会话
-POST /api/v1/agent-chat/{session_id} 提问(SSE 流式)
-GET  /api/v1/agents                  智能体列表
-GET  /api/v1/sessions                会话列表(尚未接)
-GET  /api/v1/messages/{id}/load      载入消息(尚未接)
+POST   /api/v1/sessions                建会话
+POST   /api/v1/agent-chat/{session_id} 提问(SSE 流式,多路并发已实测互不串台)
+GET    /api/v1/agents                  智能体列表
+GET    /api/v1/sessions                会话列表
+GET    /api/v1/messages/{id}/load      载入消息
+GET    /api/v1/chunks/by-id/{chunk_id} 引用原文(2026-10-20 实测:200;引用角标点开弹层用,只读)
+DELETE /api/v1/sessions/{id}           删除会话(2026-10-19 实测:200 成功 / 404 不存在)
 ```
 
-**不改 WeKnora 侧的任何配置。**
+**不改 WeKnora 侧的任何配置。**删除与建会话同为数据面操作,调用方 Key 需具备对话能力(chat);引用原文接口需 `retrieve` 能力(2026-10-20 实测现有租户 Key 具备;若未来换成无该能力的 Key,弹层降级为"暂不可用",角标与正文不受影响)。
 
 ---
 
@@ -109,28 +116,17 @@ GET  /api/v1/messages/{id}/load      载入消息(尚未接)
 
 **建议**:演示前修好前者绑定的模型凭据,或改用后者。
 
-### 坑 2:WeKnora 在 agent 路径下不产生引用角标
+### 坑 2:引用角标的出现是**非确定的**,结构化引用数据在 agent 路径缺失(2026-10-20 修订)
 
-**实测**:一次完整的流式问答(447 个事件)中,`tool_result` 里**有 21 个真实文档 URL**,但:
+> 2026-10-16 初版结论"agent 路径不产生引用角标"已被 2026-10-20 三轮实测**部分推翻**,现口径如下:
 
-```
-SSE 里的 references 事件         : 0 个
-回答里的 <ref/> 角标             : 0 个
-持久化消息的 knowledge_references : 空
-回答正文里的 URL                 : 0 个
-```
+**现行事实**(Tencent/WeKnora v0.8.2 源码 + 公司实例三轮实测):
 
-**根因**(WeKnora 源码 `internal/modelcontext/registry.go:318`):
+1. 回答正文里的 `<kb doc chunk_id kb_id/>` / `<web url title/>` 内联标签**会出现,但非确定**——是否引用由模型自行决定(系统提示词让模型写私有句柄 `<ref id="cN"/>`,服务端展开成标签)。实测:同一 agent 同样两连问,2026-10-19 真实会话出过 8 个标签,2026-10-20 三轮复现 0 个。**历史已存消息里的标签是永久的**。
+2. SSE `references` 事件与消息持久化的 `knowledge_references`:**agent-chat 路径上始终缺失**(447 事件实测 + 三轮复现一致;v0.8.2 源码里该事件只挂在 knowledge-chat 管道)。引用数据只能取自标签自身属性。
+3. chunk 原文反查 `GET /api/v1/chunks/by-id/{chunk_id}` 可用(需 `retrieve` 能力,现有租户 Key 具备)。
 
-```go
-if result.Success && (toolName == "call_mcp_tool" || strings.HasPrefix(toolName, "mcp_")) {
-    modelOutput += r.mcpSourceCandidates(result.Output)
-}
-```
-
-引用扫描**只对 MCP 工具生效**;内置的 `search_knowledge` 不产生引用。而 `Allstar智能助手` 的配置是 `mcp_selection_mode: "none"`(未挂任何 MCP)。
-
-**影响**:若演示预期看到"引用来源",现在看不到。属 WeKnora 内部行为。
+**桌面端已按此口径适配**(2026-10-20,REQ-0022):标签渲染为可点击角标(悬停看文档名,点击经 chunks/by-id 弹只读原文卡片,失败降级);思考区/流式期间剥除标签;解析不了的标签按纯过滤剥除(fail-open)。WeKnora 侧零改动。
 
 ---
 
@@ -150,6 +146,8 @@ bun scripts/quality/run-vitest.mjs --run --config apps/desktop/vitest.config.ts 
 # 启动开发版
 cd apps/desktop && bun run dev
 ```
+
+**⚠️ 改过 main/preload 之后做实机验证,必须完整退出再 `bun run dev`,刷新页面无效** —— main/preload 只在启动时构建,旧实例上会出现 `deleteSession is not a function` 之类的**假故障**(新 IPC 合同不在旧 bundle 里)。
 
 **已知基线失败**(与本次改动无关):`src/main/ipc/browser-view.test.ts`
 原因:`src/main/window-manager.ts` 在模块加载时读 `process.resourcesPath`,而测试用的 electron stub 未提供该属性。

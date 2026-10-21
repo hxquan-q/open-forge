@@ -38,6 +38,8 @@ export function createSystemApi(
 		dialog: {
 			selectFolder: () => ipc.invoke("vetta:dialog:select-folder"),
 			selectFolders: () => ipc.invoke("vetta:dialog:select-folders"),
+			selectDirectory: () => ipc.invoke("vetta:dialog:select-directory"),
+			writeFilesToDirectory: (input) => ipc.invoke("vetta:dialog:write-files-to-directory", input),
 			selectImages: () => ipc.invoke("vetta:dialog:select-images"),
 			selectFiles: (defaultPath) => ipc.invoke("vetta:dialog:select-files", defaultPath),
 			openFileContents: (options) => ipc.invoke("vetta:dialog:open-file-contents", options),
@@ -214,6 +216,7 @@ export function createSystemApi(
 			probe: (ref) => ipc.invoke("vetta:models:probe", ref),
 			fetchProviderModels: (providerName) => ipc.invoke("vetta:models:fetch-provider-models", providerName),
 			testProvider: (providerName) => ipc.invoke("vetta:models:test-provider", providerName),
+			getBalance: (providerId) => ipc.invoke("vetta:models:get-balance", providerId),
 			configPath: () => ipc.invoke("vetta:models:config-path"),
 			onChanged: (handler) => onIpcEvent(ipc, "vetta:models:changed", handler),
 		},

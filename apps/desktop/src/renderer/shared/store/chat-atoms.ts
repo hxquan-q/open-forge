@@ -264,6 +264,12 @@ export const pendingSessionOpenAtom = atom<PendingSessionOpen | null>(null);
 /** 已接受发送、但新会话/runtime 尚未准备好的 UI 过渡态。 */
 export const pendingSessionSendAtom = atom<{ messageId: string; interactionId: string } | null>(null);
 
+/**
+ * 发送前置闸门命中「无可用模型」时打开的引导对话框。由发送路径置真、由
+ * {@link MissingModelDialog} 消费;对话框只能经【取消】/【去配置模型 key】关闭。
+ */
+export const missingModelDialogOpenAtom = atom(false);
+
 const LAST_ACTIVE_SESSION_STORAGE_KEY = "vetta-last-active-session";
 
 function readLastActiveSession(): LastActiveSession | null {

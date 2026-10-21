@@ -10,8 +10,8 @@
 /** 会话消息角色。 */
 export type WeKnoraMessageRole = "user" | "assistant" | "system";
 
-/** 能力授权项（对应 API Key 的「能力授权」勾选项，见 01-spec §3.1）。 */
-export type WeKnoraCapability = "read_agents" | "chat";
+/** 能力授权项（对应 API Key 的「能力授权」勾选项，见 01-spec §3.1）；`retrieve` 供 chunk 反查（AC-14）。 */
+export type WeKnoraCapability = "read_agents" | "chat" | "retrieve";
 
 /** 会话最后一次请求的状态；`agent_id` 供历史列表映射 agent 名（AC-20）。 */
 export interface WeKnoraSessionLastRequestState {
@@ -50,6 +50,11 @@ export interface WeKnoraMessage {
 	request_id?: string;
 	role: WeKnoraMessageRole;
 	content: string;
+	/**
+	 * 消息创建时间（服务端 `created_at` 原串）。分页拉全的翻页游标（`before_time`）取自它，
+	 * 导出侧也用它做顺序校正（AC-6）；服务端未给时缺省（不臆造）。
+	 */
+	created_at?: string;
 	knowledge_references?: WeKnoraKnowledgeReference[];
 }
 
@@ -58,6 +63,33 @@ export interface WeKnoraAgent {
 	id: string;
 	name: string;
 	description?: string;
+}
+
+/**
+ * chunk 原文（引用弹层的数据面，AC-14；GET `/api/v1/chunks/by-id/:id` 的归一化结果）。
+ *
+ * `content` 是弹层唯一刚需，缺失即归一化失败（http 层抛错，不猜）；`knowledgeId`/`kbId`
+ * 为窄化可选字段，仅作展示/调试缝，UI 不依赖。
+ */
+export interface WeKnoraChunk {
+	content: string;
+	/** 所属知识条目 id（wire 字段 `knowledge_id`）。 */
+	knowledgeId?: string;
+	/** 所属知识库 id（wire 字段 `knowledge_base_id`）。 */
+	kbId?: string;
+}
+
+/**
+ * WeKnora 文件（图片）取回结果（引用弹层真图渲染的数据面，实机验收 F3 v2）。
+ *
+ * 走 `GET /files?file_path=<minio://…>` 鉴权代理（实测唯一通路）；回传形态取 **data URL**
+ * （票面二选一取「最简」）：渲染层 `<img src>` 直接可用，无需注册自定义协议。
+ */
+export interface WeKnoraFileData {
+	/** `data:<mime>;base64,<…>`；渲染层直接喂 `<img src>`。 */
+	dataUrl: string;
+	/** 响应 content-type（实测 `image/png`）。 */
+	contentType: string;
 }
 
 /**

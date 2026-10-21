@@ -8,6 +8,7 @@ import type {
 	WeKnoraStreamEvent,
 } from "@preload/api";
 import { atom } from "jotai";
+import type { WeKnoraSessionBuffers, WeKnoraStreamRoutes } from "./weKnoraStreamStore";
 
 /**
  * 「智能客服」页面的状态原子。
@@ -57,6 +58,27 @@ export const weKnoraMessagesAtom = atom<WeKnoraChatMessage[]>([]);
 export const weKnoraSessionIdAtom = atom<string | null>(null);
 export const weKnoraStreamingAtom = atom<boolean>(false);
 export const weKnoraActiveRequestIdAtom = atom<string | null>(null);
+/**
+ * 流归属表（后台思考，02-plan §2.6）：requestId → 所属会话 id。
+ *
+ * 模块级跨挂载存活：切走页面 / 切换会话都不清（后台流照跑，AC-16）；
+ * 终态 / 取消 / 失败即注销（见 weKnoraStreamStore）。
+ */
+export const weKnoraStreamRoutesAtom = atom<WeKnoraStreamRoutes>({});
+/**
+ * 每会话消息缓冲（后台思考）：键 = 会话 id 或草稿键 `draft:<视图代次>`。
+ *
+ * **条目存在即「该会话有活跃流」**——AC-19 行级指示、AC-10 禁删都从它派生；
+ * 仅活跃流留条目，终态释放（R6 内存有界），回看走 openSession。
+ */
+export const weKnoraSessionBuffersAtom = atom<WeKnoraSessionBuffers>({});
+/**
+ * 视图代次：每次切换当前对话（新建 / 打开历史）自增。
+ *
+ * 用途：草稿期发起的 ask 还没有 sessionId，靠代次标记「属于哪个视图回合」——
+ * ask 返回时若代次已变（用户切走了），该流按后台处理，不劫持新视图（防串台）。
+ */
+export const weKnoraViewSeqAtom = atom<number>(0);
 /** 历史会话列表（从 WeKnora 读，本地不持久化，红线 C8）。 */
 export const weKnoraSessionsAtom = atom<WeKnoraSession[]>([]);
 export const weKnoraSessionsStatusAtom = atom<WeKnoraHistoryStatus>("idle");
@@ -67,6 +89,25 @@ export const weKnoraSessionsStatusAtom = atom<WeKnoraHistoryStatus>("idle");
  * 故失败反馈走独立 atom 由连接层（`WeKnoraPage`）读取，而不是给 view model 加字段。
  */
 export const weKnoraSaveErrorAtom = atom<WeKnoraErrorCode | null>(null);
+/**
+ * 正在删除的会话 id（AC-12 防重复标记）；`null` = 无进行中的删除请求。
+ *
+ * 确认按钮的 loading/禁用与内联错误块的重试按钮都由它驱动；由历史 actor
+ * （`useWeKnoraHistory.removeSession`）写入，编排见 `useWeKnoraModel.deleteSession`。
+ */
+export const weKnoraDeletingSessionIdAtom = atom<string | null>(null);
+/**
+ * 删除会话失败的归一化错误码（AC-11）；`null` = 无错误。新删除开始 / 成功时清。
+ * 侧栏内联错误块读它；**列表本身绝不因失败而移除会话**（不假装删掉）。
+ */
+export const weKnoraDeleteErrorAtom = atom<WeKnoraErrorCode | null>(null);
+/**
+ * 当前打开的引用弹层锚点(T04;02-plan D4 弹层互斥):值 = 打开弹层的角标按钮元素,
+ * `null` = 全关。记锚点元素而非裸 chunkId——同一 chunk 的两个角标不会同时开两朵
+ * 弹层,弹层定位也直接复用锚点矩形;后开者覆写锚点,先开者的弹层随比较失效卸载
+ * (后开先关)。弹层自身无状态可丢,不参与任何持久化(store 数据零改动,D1)。
+ */
+export const weKnoraCitationAnchorAtom = atom<HTMLElement | null>(null);
 
 /** 流事件的终态（收到即结束本轮，AC-22 的收敛依据）。 */
 export function isTerminalStreamEvent(event: WeKnoraStreamEvent): boolean {

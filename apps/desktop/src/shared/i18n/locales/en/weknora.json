@@ -1,7 +1,7 @@
 {
 	"page": {
 		"title": "Customer Service",
-		"subtitle": "Answered by WeKnora agents",
+		"subtitle": "Answered by Xiaoaijiang knowledge base",
 		"openSettings": "Settings",
 		"closeSettings": "Hide settings",
 		"notConfiguredTitle": "Customer Service is not configured yet",
@@ -10,6 +10,10 @@
 		"agentsEmpty": "No agents are available for this API Key. Make sure the key is granted the \"read agents\" capability.",
 		"agentsError": "Failed to load the agent list. Check the configuration and network, then retry.",
 		"retry": "Retry"
+	},
+	"sidebar": {
+		"collapse": "Hide history",
+		"expand": "Show history"
 	},
 	"setup": {
 		"baseUrl": "Service URL",
@@ -43,10 +47,7 @@
 		"refresh": "Refresh",
 		"unknownAgent": "Unknown",
 		"untitled": "Untitled conversation",
-		"confirmTitle": "Open conversation",
-		"confirmBody": "The current conversation will be replaced by this one; unsaved content will be lost.",
-		"confirmCancel": "Cancel",
-		"confirmOk": "Replace"
+		"thinking": "Thinking"
 	},
 	"message": {
 		"you": "You",
@@ -55,7 +56,73 @@
 		"interrupted": "Incomplete",
 		"thinking": "Thinking",
 		"thinkingShow": "Show thinking",
-		"thinkingHide": "Hide thinking"
+		"thinkingHide": "Hide thinking",
+		"thinkingPending": "Thinking"
+	},
+	"menu": {
+		"delete": "Delete conversation",
+		"multiSelect": "Select",
+		"export": "Export conversation"
+	},
+	"selection": {
+		"selected": "{{count}} selected",
+		"selectAll": "Select all",
+		"export": "Export selected",
+		"delete": "Delete selected",
+		"exit": "Cancel"
+	},
+	"batchDelete": {
+		"confirmTitle": "Delete selected conversations",
+		"confirmBody": "This will delete {{count}} selected conversations. This cannot be undone; they and all of their messages will be permanently removed from the server.",
+		"cancel": "Cancel",
+		"confirm": "Delete",
+		"deleting": "Deleting…",
+		"resultTitle": "Delete result",
+		"resultSucceeded": "Deleted {{count}} conversations.",
+		"resultFailed": "{{count}} conversations could not be deleted:",
+		"resultFailedItem": "{{name}}: {{reason}}",
+		"close": "Close"
+	},
+	"export": {
+		"citationSource": "Source",
+		"formatTitleSingle": "Export conversation",
+		"formatTitleBatch": "Export selected",
+		"formatDescription": "Exports the question-and-answer text only, without the thinking process.",
+		"formatTxt": "Text (.txt)",
+		"formatMd": "Markdown (.md)",
+		"formatDocx": "Word (.docx)",
+		"cancel": "Cancel",
+		"saveTitle": "Save conversation export",
+		"singleSuccess": "Conversation exported.",
+		"singleFailed": "Export failed. Try again."
+	},
+	"batchExport": {
+		"exporting": "Exporting…",
+		"resultTitle": "Export result",
+		"resultSucceeded": "Exported {{count}} conversations.",
+		"resultFailed": "{{count}} conversations could not be exported:",
+		"resultFailedItem": "{{name}}: {{reason}}",
+		"writeFailed": "Failed to write the file",
+		"close": "Close"
+	},
+	"citation": {
+		"badgeLabel": "Cited source: {{doc}}",
+		"popoverTitle": "Cited source",
+		"loading": "Loading the cited source…",
+		"loadFailed": "The cited source could not be loaded. Try again later.",
+		"close": "Close cited source",
+		"imagePlaceholder": "[Image]",
+		"imageFailed": "Image failed to load"
+	},
+	"delete": {
+		"disabledStreaming": "A reply is still generating, so it cannot be deleted yet",
+		"confirmTitle": "Delete conversation",
+		"confirmBody": "This cannot be undone. The conversation and all of its messages will be permanently removed from the server.",
+		"cancel": "Cancel",
+		"confirm": "Delete",
+		"deleting": "Deleting…",
+		"error": "Failed to delete. The conversation was not removed.",
+		"retry": "Retry"
 	},
 	"error": {
 		"not_configured": "The WeKnora service URL or API Key is not configured yet.",

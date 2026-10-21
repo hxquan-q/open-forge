@@ -65,6 +65,10 @@ function createHarness(options: { apiKey?: string; streamMode?: "complete" | "ma
 			sessionCounter += 1;
 			return jsonResponse(201, { success: true, data: { id: `s${sessionCounter}` } });
 		}
+		if (init?.method === "DELETE" && url.includes("/api/v1/sessions/")) {
+			// T00 实测的删除成功响应形态（v1-delete.json）。
+			return jsonResponse(200, { success: true, message: "Session deleted successfully" });
+		}
 		if (url.includes("/api/v1/agent-chat/")) {
 			if (options.streamMode === "manual") {
 				const body = controllableSse();
@@ -187,6 +191,29 @@ describe("createWeKnoraService · ask 编排", () => {
 		const harness = createHarness(); // 无 apiKey
 
 		await expect(harness.service.ask({ query: "你好" })).rejects.toMatchObject({
+			weknora: { code: "not_configured" },
+		});
+		expect(harness.calls).toHaveLength(0);
+	});
+});
+
+describe("createWeKnoraService · deleteSession 编排", () => {
+	it("AC-8:对 DELETE /api/v1/sessions/{id} 发起调用，带 X-API-Key", async () => {
+		const apiKey = randomUUID();
+		const harness = createHarness({ apiKey });
+
+		await harness.service.deleteSession({ sessionId: "sess-9" });
+
+		expect(harness.calls).toHaveLength(1);
+		expect(harness.calls[0]?.url).toBe(`${BASE_URL}/api/v1/sessions/sess-9`);
+		expect(harness.calls[0]?.init?.method).toBe("DELETE");
+		expect(headerOf(harness.calls[0]!, "X-API-Key")).toBe(apiKey);
+	});
+
+	it("AC-2:未配置凭据时 deleteSession 抛 not_configured，且一个请求都不发", async () => {
+		const harness = createHarness(); // 无 apiKey
+
+		await expect(harness.service.deleteSession({ sessionId: "sess-1" })).rejects.toMatchObject({
 			weknora: { code: "not_configured" },
 		});
 		expect(harness.calls).toHaveLength(0);

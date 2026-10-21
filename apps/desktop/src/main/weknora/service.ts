@@ -5,7 +5,14 @@ import { readWeKnoraConfig, updateWeKnoraConfig, type WeKnoraConfig, type WeKnor
 import { hasWeKnoraApiKey, readWeKnoraApiKey, writeWeKnoraApiKey } from "./credentials.js";
 import { WeKnoraRequestError } from "./errors.js";
 import { WeKnoraHttpClient, type WeKnoraHttpClientOptions } from "./http.js";
-import type { WeKnoraAgent, WeKnoraMessage, WeKnoraSession, WeKnoraStreamEvent } from "./types.js";
+import type {
+	WeKnoraAgent,
+	WeKnoraChunk,
+	WeKnoraFileData,
+	WeKnoraMessage,
+	WeKnoraSession,
+	WeKnoraStreamEvent,
+} from "./types.js";
 
 /** 单次问答超时（01-spec §3.6）：T00·F5 实测一次完整问答可达 420s，10 分钟留足余量。 */
 const ASK_TIMEOUT_MS = 600_000;
@@ -29,6 +36,27 @@ export interface WeKnoraListParams {
 export interface WeKnoraLoadMessagesInput {
 	sessionId: string;
 	limit?: number;
+	/**
+	 * 向更早翻页的游标（= 已取最早一条的 `created_at`）；首页不传（AC-6 分页拉全）。
+	 *
+	 * 透传到 HTTP 层的 `before_time` 查询参数；缺省时该参数不出现（既有单页调用零回归）。
+	 */
+	beforeTime?: string;
+}
+
+export interface WeKnoraDeleteSessionInput {
+	/** 要删除的 WeKnora 会话 id（服务端按租户强制归属校验，删别人的删不到）。 */
+	sessionId: string;
+}
+
+export interface WeKnoraGetChunkInput {
+	/** 要取原文的 chunk id（引用标签 `chunk_id` 属性的原样值）。 */
+	chunkId: string;
+}
+
+export interface WeKnoraGetFileInput {
+	/** 文件引用（正文里 `minio://…` 的原串；wire 参数名 `file_path`）。 */
+	fileRef: string;
 }
 
 export interface WeKnoraAskInput {
@@ -63,6 +91,12 @@ export interface WeKnoraService {
 	/** 返回 T01 的 `WeKnoraSession`（含 `last_request_state.agent_id`，供 AC-20 映射 agent 名）。 */
 	listSessions(params?: WeKnoraListParams): Promise<WeKnoraSession[]>;
 	loadMessages(input: WeKnoraLoadMessagesInput): Promise<WeKnoraMessage[]>;
+	/** 删除会话（AC-8）：转调 HTTP 客户端；失败经 `WeKnoraRequestError` 归一化上抛。 */
+	deleteSession(input: WeKnoraDeleteSessionInput): Promise<void>;
+	/** 取 chunk 原文（AC-14，只读数据面）：转调 HTTP 客户端；失败经 `WeKnoraRequestError` 归一化上抛。 */
+	getChunkById(input: WeKnoraGetChunkInput): Promise<WeKnoraChunk>;
+	/** 取回内嵌图片（F3 v2，只读数据面，data URL）：转调 HTTP 客户端；失败归一化上抛。 */
+	getFileData(input: WeKnoraGetFileInput): Promise<WeKnoraFileData>;
 	ask(input: WeKnoraAskInput): Promise<WeKnoraAskResult>;
 	cancel(requestId: string): void;
 	onStreamEvent(handler: (event: WeKnoraStreamEvent) => void): () => void;
@@ -134,8 +168,23 @@ export function createWeKnoraService(dependencies: WeKnoraServiceDependencies = 
 			return (await restClient()).listSessions(params ?? {});
 		},
 
-		async loadMessages({ sessionId, limit }) {
-			return (await restClient()).loadMessages(sessionId, limit === undefined ? {} : { limit });
+		async loadMessages({ sessionId, limit, beforeTime }) {
+			const params: { limit?: number; beforeTime?: string } = {};
+			if (limit !== undefined) params.limit = limit;
+			if (beforeTime !== undefined) params.beforeTime = beforeTime;
+			return (await restClient()).loadMessages(sessionId, params);
+		},
+
+		async deleteSession({ sessionId }) {
+			await (await restClient()).deleteSession(sessionId);
+		},
+
+		async getChunkById({ chunkId }) {
+			return (await restClient()).getChunkById(chunkId);
+		},
+
+		async getFileData({ fileRef }) {
+			return (await restClient()).getFileData(fileRef);
 		},
 
 		async ask({ sessionId, query, agentId }) {

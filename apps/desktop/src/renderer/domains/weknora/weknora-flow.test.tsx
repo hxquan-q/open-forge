@@ -115,6 +115,9 @@ function installFake(): FakeHarness {
 			counters.loadMessages.push(sessionId);
 			return state.messagesBySession[sessionId] ?? [];
 		}),
+		deleteSession: vi.fn(async () => undefined),
+		getChunk: vi.fn(async () => ({ content: "chunk" })),
+		getFile: vi.fn(async () => ({ dataUrl: "data:image/png;base64,", contentType: "image/png" })),
 		ask: vi.fn(async (input) => {
 			counters.ask.push(input);
 			let sessionId = input.sessionId;
@@ -243,21 +246,8 @@ describe("智能客服 · 用户流程（跨组件）", () => {
 		act(() => harness.emit({ type: "turn.completed", requestId: "r3" }));
 		await waitFor(() => expect(within(nav).getAllByRole("listitem").length).toBe(2));
 
-		// ⑦ 点左栏某个历史对话 → 断言：先弹确认。
+		// ⑦ 点左栏某个历史对话 → 断言：直接载入并切换为当前会话（不再弹替换确认，AC-1）。
 		await user.click(within(nav).getByRole("button", { name: /会话 s1/ }));
-		const dialog = await screen.findByRole("dialog");
-		expect(within(dialog).getByText(/当前对话将被替换/)).toBeTruthy();
-
-		// ⑧ 取消确认 → 断言：什么都不变（不载入、不切换、消息不变）。
-		const loadCallsBeforeCancel = harness.counters.loadMessages.length;
-		await user.click(within(dialog).getByRole("button", { name: "取消" }));
-		expect(harness.counters.loadMessages.length).toBe(loadCallsBeforeCancel);
-		expect(screen.getByText("第三问")).toBeTruthy();
-
-		// ⑨ 再点 → 确认 → 断言：载入消息且当前会话切过去。
-		await user.click(within(nav).getByRole("button", { name: /会话 s1/ }));
-		const dialog2 = await screen.findByRole("dialog");
-		await user.click(within(dialog2).getByRole("button", { name: "替换当前对话" }));
 
 		await waitFor(() => expect(harness.counters.loadMessages).toContain("s1"));
 		await waitFor(() => expect(screen.getByText("第一问")).toBeTruthy());

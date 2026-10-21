@@ -1,3 +1,10 @@
+// Modified by The Open Forge contributors.
+/**
+ * 为什么预设服务商这一整块留在一个文件里（C7，>400 行复核）：
+ * 它只对一个 actor 负责——「预设服务商行的读取、草稿 Key、启用/移除与模型刷新编排」。
+ * 这些状态总是一起改：同一个 draftKeys 记录、同一份 saving 标记、同一套错误翻译，
+ * 拆开只会造成 shotgun surgery；行数来自大量小分支与文案映射，不是职责堆积。
+ */
 import type { ModelsConfigData, PresetError, PresetProviderInfo } from "@preload/api.js";
 import { showToast } from "@shared/store/toast-atoms";
 import type { TFunction } from "i18next";
@@ -48,6 +55,8 @@ export interface PresetProvidersSectionLabels {
 	collapse: string;
 	cancel: string;
 	changeKey: string;
+	/** 未启用时钥匙按钮的提示文案；与 enable（编辑器内主按钮文案）分开，避免复用共享键。 */
+	configureApiKey: string;
 	remove: string;
 	enable: string;
 	apiKeyDirect: (provider: string) => string;
@@ -358,6 +367,7 @@ export function usePresetProvidersSectionModel({
 			collapse: t("collapse"),
 			cancel: t("cancel"),
 			changeKey: t("changeKey"),
+			configureApiKey: t("configureApiKey"),
 			remove: t("remove"),
 			enable: t("enable"),
 			apiKeyDirect: (provider: string) => t("apiKeyDirect", { provider }),

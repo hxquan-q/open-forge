@@ -116,6 +116,33 @@ export interface ProviderTestResult {
 	detail?: string;
 }
 
+/** 服务商余额查询的结构化错误码；文案由渲染层查 i18n。 */
+export type ProviderBalanceErrorCode =
+	| "unsupported"
+	| "missing-key"
+	| "missing-base-url"
+	| "invalid-base-url"
+	| "timeout"
+	| "unauthorized"
+	| "http-status"
+	| "network"
+	| "invalid-response";
+
+/** 单个 provider 的归一化余额。Key 只在主进程使用，本结构永不含凭据（C2）。 */
+export interface ProviderBalanceResult {
+	provider: string;
+	/** 该 provider 是否具备余额查询能力；false 时其余字段缺省（静默降级）。 */
+	supported: boolean;
+	/** 余额币种（如 CNY / USD）；接口未给时缺省。 */
+	currency?: string;
+	/** 可用余额金额（主币种）；接口未给或解析不出时缺省。 */
+	available?: number;
+	/** 接口给出的「余额是否足够调用」；接口未给时缺省。 */
+	isAvailable?: boolean;
+	/** 查询失败的结构化错误码；成功时缺省。 */
+	errorCode?: ProviderBalanceErrorCode;
+}
+
 /**
  * `GET {baseUrl}/models` 返回的单个模型。接口只保证 id；上下文窗口、能力等字段
  * 各家网关的键名与丰富程度不同，拿不到时留空。
@@ -156,6 +183,8 @@ export interface DesktopModelsApi {
 	fetchProviderModels(providerName: string): Promise<{ models: FetchedProviderModel[]; error?: string }>;
 	/** 对已保存的自定义服务商做轻量可用性测试（`GET {baseUrl}/models`），报告延迟与结构化失败原因。 */
 	testProvider(providerName: string): Promise<ProviderTestResult>;
+	/** 查询某 provider 的服务商余额。Key 只在主进程使用；返回值不含任何凭据。 */
+	getBalance(providerId: string): Promise<ProviderBalanceResult>;
 	/** 当前运行时的模型配置文件绝对路径（只读展示用；随数据根 env 覆盖/迁移变化）。 */
 	configPath(): Promise<string>;
 	onChanged(handler: (event: { providerIds: string[] }) => void): () => void;
