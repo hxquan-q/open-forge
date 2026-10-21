@@ -8,7 +8,7 @@ export type PluginToolRendererInvocationLease =
 	| { readonly ok: false; readonly error: Error };
 
 /**
- * Owns the document-scoped renderer availability contract for plugin tool IPC.
+ * Owns the document-scoped renderer availability contract for plugin tool and hook IPC.
  * Contribution registrations may survive a renderer reload, but their handlers do not.
  */
 export class PluginToolRendererHostLifecycle {
@@ -33,10 +33,7 @@ export class PluginToolRendererHostLifecycle {
 		this.transitionTo("disposed", "Plugin host renderer was disposed");
 	}
 
-	/**
-	 * 只读渲染端可用性状态。派发前的结构化取证用（BUG-0124）：hook 调用点不像 tool
-	 * 调用点那样消费可用性 lease，把该状态记进日志即可判定「渲染端已重载但主进程仍在派发」。
-	 */
+	/** Read-only availability diagnostics for dispatch logging. */
 	readState(): PluginToolRendererHostState {
 		return this.state;
 	}

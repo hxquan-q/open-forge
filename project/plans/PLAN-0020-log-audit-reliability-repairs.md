@@ -34,7 +34,7 @@ depends_on: []
 - TASK-0353：消息历史与live合并身份去重及可读诊断；verifying（定向/候选完整check通过，组合验证与人工验收分开记录）。
 - TASK-0354：远端会话资源加载去重与有界等待；verifying（定向/候选完整check通过，组合验证与人工验收分开记录）。
 - TASK-0355：启动paint与超时分流及阶段观测；verifying（定向/候选完整check通过，组合验证与人工验收分开记录）。
-- TASK-0356：插件Hook派发与渲染端代次生命周期对齐；in_progress（实现候选已形成，组合验证中）。
+- TASK-0356：插件Hook派发与渲染端代次生命周期对齐；verifying（定向/候选完整check通过，组合验证与人工验收分开记录）。
 - TASK-0357：HostedRoute能力注册与模块重载一致性；in_progress（实现候选已形成，组合验证中）。
 - TASK-0358：Desktop测试日志与真实数据根隔离；verifying（定向/候选完整check通过，组合验证与人工验收分开记录）。
 - TASK-0359：Windows远程输入类型初始化幂等；in_progress（实现候选已形成，组合验证中）。

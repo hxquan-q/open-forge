@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginCodingAgentHookEventName } from "@vetta-org/plugin-sdk";
 
 export interface DesktopPluginHookRegistration {
@@ -125,6 +126,14 @@ export class DesktopPluginHookRegistry {
 			revoked += 1;
 		}
 		return revoked;
+	}
+
+	/** A replaced renderer has lost even the handlers retained by active Turn leases. */
+	invalidateRendererDocument(reason: string): void {
+		const current = this.readCurrentGenerations();
+		for (const generation of [...current, ...this.retired]) generation.revokedReason ??= reason;
+		this.plugins.clear();
+		for (const generation of current) this.retire(generation);
 	}
 
 	readInvocationRejection(pluginId: string, handlerId: string, activationId?: string): string | undefined {
