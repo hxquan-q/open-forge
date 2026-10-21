@@ -163,11 +163,13 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 			if (!outcome.ok) return false;
 			// AC-9：删的是当前打开的会话 → 复用「新建对话」语义回空态（消息清空、指针置空）。
 			// 禁删判定（AC-10）已保证被删会话无活跃流，不会误伤后台思考。
-			if (chat.sessionId === sessionId) chat.newConversation();
+			// ER-B F5：删除在途用户可能已切到别的会话，判定必须读**最新**当前会话 id（直读 atom），
+			// 不能用闭包快照 —— 否则会把删除返回前新打开的会话误清成空态。
+			if (chat.readCurrentSessionId() === sessionId) chat.newConversation();
 			await history.loadSessions();
 			return true;
 		},
-		[chat.newConversation, chat.sessionId, history.loadSessions, history.removeSession],
+		[chat.newConversation, chat.readCurrentSessionId, history.loadSessions, history.removeSession],
 	);
 
 	/**
@@ -178,11 +180,13 @@ export function useWeKnoraModel(): WeKnoraViewModel {
 	const deleteSessions = useCallback(
 		async (sessionIds: readonly string[]): Promise<WeKnoraBatchDeleteResult> => {
 			const result = await batch.deleteSessions(sessionIds);
-			if (chat.sessionId !== null && result.succeeded.includes(chat.sessionId)) chat.newConversation();
+			// ER-B F5：同单删 —— 批删在途切会话后，用**最新**当前会话 id 判定是否回空态。
+			const current = chat.readCurrentSessionId();
+			if (current !== null && result.succeeded.includes(current)) chat.newConversation();
 			await history.loadSessions();
 			return result;
 		},
-		[batch.deleteSessions, chat.newConversation, chat.sessionId, history.loadSessions],
+		[batch.deleteSessions, chat.newConversation, chat.readCurrentSessionId, history.loadSessions],
 	);
 
 	return {
