@@ -329,6 +329,14 @@ function readBrowserElementSourceHintValueFields(
 	};
 }
 
+export function readBrowserElementCompanions(value: unknown): ExtractedBrowserElement[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map((item) => readExtractedBrowserElement(item))
+		.filter((item): item is ExtractedBrowserElement => item !== undefined)
+		.slice(0, 3);
+}
+
 export function readExtractedBrowserElement(value: unknown): ExtractedBrowserElement | undefined {
 	if (typeof value !== "object" || value === null) return undefined;
 	const record = value as Record<string, unknown>;

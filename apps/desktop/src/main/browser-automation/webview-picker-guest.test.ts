@@ -61,6 +61,26 @@ describe("in-app browser picker guest", () => {
 		expect(readBrowserElementSourceHint(bad)).toBeUndefined();
 	});
 
+	it("Shift+点击把后选的元素留在同一次批注里", async () => {
+		document.body.innerHTML = `<button id="a">A</button><button id="b">B</button>`;
+		const first = document.getElementById("a");
+		const second = document.getElementById("b");
+		if (!first || !second) throw new Error("missing buttons");
+		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
+		first.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 4, clientY: 4 }));
+		second.dispatchEvent(
+			new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 20, clientY: 4, shiftKey: true }),
+		);
+		const field = document.querySelector("[data-vetta-annotation] textarea");
+		if (!(field instanceof HTMLTextAreaElement)) throw new Error("missing annotation");
+		field.value = "让 B 和 A 一样";
+		field.closest("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+		const result = await pick;
+		expect(result.domPath).toBe("button#a");
+		expect(result.companions).toEqual([expect.objectContaining({ domPath: "button#b" })]);
+		expect(result.comment).toBe("让 B 和 A 一样");
+	});
+
 	it("Alt+点击把元素放进输入，不打开旁边批注", async () => {
 		document.body.innerHTML = `<button id="go">Go</button>`;
 		const button = document.getElementById("go");

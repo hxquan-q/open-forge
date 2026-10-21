@@ -17,7 +17,11 @@ import type {
 	DesktopBrowserTabSession,
 } from "../../shared/browser-tab-ipc.js";
 import { mainT } from "../i18n/index.js";
-import { readExtractedBrowserElement } from "./webview-element-extract.js";
+import {
+	type ExtractedBrowserElement,
+	readBrowserElementCompanions,
+	readExtractedBrowserElement,
+} from "./webview-element-extract.js";
 import { createBrowserElementRef, validateBrowserElementRef } from "./webview-element-ref.js";
 import { buildInAppBrowserGuestScript } from "./webview-picker-guest.js";
 import { resolveCaptureCrop, scaledScreenshotSize } from "./webview-screenshot-crop.js";
@@ -49,6 +53,26 @@ export type PersistBrowserScreenshot = (
 	sessionId: string,
 	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
 ) => Promise<readonly { path: string; width?: number; height?: number }[]>;
+
+function companionFields(items: readonly ExtractedBrowserElement[]): {
+	companions?: Array<Omit<ExtractedBrowserElement, "devicePixelRatio">>;
+} {
+	if (items.length === 0) return {};
+	return {
+		companions: items.map((item) => ({
+			role: item.role,
+			accessibleName: item.accessibleName,
+			attributes: item.attributes,
+			domPath: item.domPath,
+			xpath: item.xpath,
+			computedStyle: item.computedStyle,
+			outerHTML: item.outerHTML,
+			surroundingText: item.surroundingText,
+			boundingRect: item.boundingRect,
+			...(item.sourceHint ? { sourceHint: item.sourceHint } : {}),
+		})),
+	};
+}
 
 function readPickComment(raw: unknown): string | undefined {
 	if (!raw || typeof raw !== "object" || !("comment" in raw)) return undefined;
@@ -420,6 +444,7 @@ export class InAppBrowserSessionController {
 				surroundingText: extracted.surroundingText,
 				boundingRect: extracted.boundingRect,
 				...(extracted.sourceHint ? { sourceHint: extracted.sourceHint } : {}),
+				...companionFields(readBrowserElementCompanions((raw as { companions?: unknown }).companions)),
 			},
 		});
 		if (!context) return "idle";

@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0360` | `verifying` | PLAN-0006 | Shift+点击多选已接入页内批注，最多 4 个元素一次发送。待真实 Desktop 点选验收。 |
 | `TASK-0352` | `blocked` | PLAN-0020 | Windows沙箱制品完整性与运行时定位；来源BUG-0137，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0353` | `verifying` | PLAN-0020 | 消息历史与live合并身份去重及可读诊断；来源BUG-0123，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0354` | `verifying` | PLAN-0020 | 远端会话资源加载去重与有界等待；来源BUG-0125，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |

@@ -77,6 +77,8 @@ function inAppBrowserGuestRuntime(
 		highlight: HTMLDivElement;
 		annotation: HTMLElement | null;
 		selected: Element | null;
+		selections: Element[];
+		marks: HTMLDivElement[];
 		promise: Promise<unknown>;
 		resolve: (value: unknown) => void;
 		disposed: boolean;
@@ -405,14 +407,6 @@ function inAppBrowserGuestRuntime(
 		return { placeholder: "Describe the change", send: "Send" };
 	}
 
-	function placeHighlight(element: Element): void {
-		const rect = element.getBoundingClientRect();
-		highlight.style.left = `${rect.left}px`;
-		highlight.style.top = `${rect.top}px`;
-		highlight.style.width = `${rect.width}px`;
-		highlight.style.height = `${rect.height}px`;
-	}
-
 	function placeAnnotation(box: HTMLElement, rect: DOMRect): void {
 		const margin = 8;
 		const width = Math.min(280, Math.max(160, window.innerWidth - margin * 2));
@@ -439,6 +433,8 @@ function inAppBrowserGuestRuntime(
 		highlight,
 		annotation: null,
 		selected: null,
+		selections: [],
+		marks: [],
 		promise,
 		resolve: resolvePick,
 		disposed: false,
@@ -457,16 +453,22 @@ function inAppBrowserGuestRuntime(
 			if (event.type !== "click") return;
 			const target = pickTarget(event);
 			if (!target || state.disposed) return;
-			if ((event as MouseEvent).altKey) {
-				finishPick(target, "input");
+			const point = event as MouseEvent;
+			if (point.altKey) {
+				finishPick(target, "input", []);
+				return;
+			}
+			if (point.shiftKey) {
+				toggleSelection(target);
 				return;
 			}
 			openAnnotation(target);
 		},
 		reposition: () => {
-			if (!state.selected || !state.annotation) return;
-			placeHighlight(state.selected);
-			placeAnnotation(state.annotation, state.selected.getBoundingClientRect());
+			syncHighlights();
+			const anchor = state.selections[state.selections.length - 1];
+			if (!anchor || !state.annotation) return;
+			placeAnnotation(state.annotation, anchor.getBoundingClientRect());
 		},
 		onKey: (event) => {
 			const keyEvent = event as KeyboardEvent;
@@ -476,10 +478,40 @@ function inAppBrowserGuestRuntime(
 			void inAppBrowserGuestRuntime("stop", null, deps);
 		},
 	};
-	function finishPick(selected: Element, placement: "input" | "annotation"): void {
+	const maxSelections = 4;
+
+	function placeMark(mark: HTMLElement, element: Element): void {
+		const rect = element.getBoundingClientRect();
+		mark.style.left = `${rect.left}px`;
+		mark.style.top = `${rect.top}px`;
+		mark.style.width = `${rect.width}px`;
+		mark.style.height = `${rect.height}px`;
+	}
+
+	function syncHighlights(): void {
+		for (const mark of state.marks) mark.remove();
+		state.marks = [];
+		const [first, ...rest] = state.selections;
+		if (!first) {
+			highlight.style.width = "0px";
+			highlight.style.height = "0px";
+			return;
+		}
+		placeMark(highlight, first);
+		for (const element of rest) {
+			const mark = document.createElement("div");
+			mark.style.cssText = highlight.style.cssText;
+			overlay.append(mark);
+			placeMark(mark, element);
+			state.marks.push(mark);
+		}
+	}
+
+	function finishPick(selected: Element, placement: "input" | "annotation", companions: readonly Element[]): void {
 		if (state.disposed) return;
 		const field = placement === "annotation" ? state.annotation?.querySelector("textarea") : null;
 		const comment = field instanceof HTMLTextAreaElement ? field.value.slice(0, 2000) : undefined;
+		const companionPayload = companions.map((element) => collect(element));
 		state.disposed = true;
 		window.removeEventListener("mousemove", state.onMove, true);
 		window.removeEventListener("pointerdown", state.onClick, true);
@@ -497,18 +529,40 @@ function inAppBrowserGuestRuntime(
 			...collect(selected),
 			placement,
 			...(comment === undefined ? {} : { comment }),
+			...(companionPayload.length > 0 ? { companions: companionPayload } : {}),
 		});
 	}
 
 	function finishAnnotation(): void {
-		const selected = state.selected;
-		if (!selected) return;
-		finishPick(selected, "annotation");
+		const primary = state.selections[0];
+		if (!primary) return;
+		finishPick(primary, "annotation", state.selections.slice(1));
 	}
 
-	function openAnnotation(target: Element): void {
+	function toggleSelection(target: Element): void {
+		const index = state.selections.indexOf(target);
+		if (index >= 0) state.selections.splice(index, 1);
+		else if (state.selections.length < maxSelections) state.selections.push(target);
+		const anchor = state.selections[state.selections.length - 1] ?? null;
+		state.selected = anchor;
+		syncHighlights();
+		if (!anchor) {
+			state.annotation?.remove();
+			state.annotation = null;
+			return;
+		}
+		if (!state.annotation) {
+			openAnnotation(anchor, true);
+			return;
+		}
+		placeAnnotation(state.annotation, anchor.getBoundingClientRect());
+	}
+
+	function openAnnotation(target: Element, keepGroup = false): void {
+		if (!keepGroup) state.selections = [target];
 		state.selected = target;
-		placeHighlight(target);
+		const previous = state.annotation?.querySelector("textarea");
+		const previousText = previous instanceof HTMLTextAreaElement ? previous.value : "";
 		state.annotation?.remove();
 		const copy = annotationCopy(arg);
 		const box = document.createElement("form");
@@ -534,6 +588,8 @@ function inAppBrowserGuestRuntime(
 		overlay.setAttribute("aria-hidden", "false");
 		overlay.append(box);
 		state.annotation = box;
+		if (keepGroup && previousText) field.value = previousText;
+		syncHighlights();
 		placeAnnotation(box, target.getBoundingClientRect());
 		field.focus();
 	}
