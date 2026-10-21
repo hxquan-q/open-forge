@@ -1,7 +1,7 @@
 ---
 id: BUG-0139
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: desktop
 requirement: REQ-0002
@@ -43,3 +43,9 @@ Windows、本地Open Forge 0.1.3；dev/render/2026-10-21.log:48–131 共29条�
 - 修复：待实施，关联TASK-0357。
 - 测试/检查：待执行。
 - 未运行：真实Desktop、Provider、SSH及发布不在当前授权中。
+
+## 2026-10-22 TASK-0357 实现与隔离回归
+
+同一document共享host/service/registration owner，initializer重评估替换闭包，整页reload自然建立新所有者；逐个登记保证部分失败可逆序回滚。真实宿主bind/open的模块重载与失败重试在旧实现复现两红→6文件12例绿。组合受资源竞争时beforeAll图谱加载超时，改为collection期静态导入，未放宽时限。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0357，本地main原子提交绑定；仍待真实用户流程验收，未发布。

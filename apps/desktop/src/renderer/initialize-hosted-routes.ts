@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Disposable, HostedRouteRef } from "@vetta-org/capability-sdk";
 import { getDefaultStore } from "jotai";
 import { PLUGIN_RENDERER_ROUTE_NAMESPACE } from "./domains/plugins/runtime/plugin-hosted-route-capability.js";
@@ -13,6 +14,7 @@ import {
 	themeHostedRouteNavigationTarget,
 	themeHostedRoutePath,
 } from "./shared/hosted-routes/hosted-route-descriptors.js";
+import { hostedRouteDocumentState } from "./shared/hosted-routes/hosted-route-document-state.js";
 import {
 	desktopHostedRouteService,
 	type HostedRouteNamespaceAdapter,
@@ -20,7 +22,7 @@ import {
 import { pluginWorkspaceViewsAtom } from "./shared/store/atoms.js";
 import { THEME_RENDERER_ROUTE_NAMESPACE } from "./shared/theme/pages/theme-hosted-route-capability.js";
 
-let registrations: readonly Disposable[] | undefined;
+const registrationOwner = Symbol("hosted-route-initializer");
 
 function createPluginRouterAdapter(): HostedRouteNamespaceAdapter {
 	return {
@@ -52,15 +54,22 @@ function createThemeRouterAdapter(): HostedRouteNamespaceAdapter {
 }
 
 export function initializeHostedRoutes(): void {
-	if (registrations) return;
+	const document = hostedRouteDocumentState();
+	if (document.registrationOwner === registrationOwner) return;
+	for (const registration of [...(document.registrations ?? [])].reverse()) registration.dispose();
+	document.registrations = undefined;
+	document.registrationOwner = undefined;
 	const next: Disposable[] = [];
 	try {
 		next.push(
 			desktopHostedRouteService.registerNamespace(PLUGIN_RENDERER_ROUTE_NAMESPACE, createPluginRouterAdapter()),
-			desktopHostedRouteService.registerNamespace(THEME_RENDERER_ROUTE_NAMESPACE, createThemeRouterAdapter()),
-			registerHostedRouteCapabilityProvider(rendererCapabilityHost, desktopHostedRouteService),
 		);
-		registrations = next;
+		next.push(
+			desktopHostedRouteService.registerNamespace(THEME_RENDERER_ROUTE_NAMESPACE, createThemeRouterAdapter()),
+		);
+		next.push(registerHostedRouteCapabilityProvider(rendererCapabilityHost, desktopHostedRouteService));
+		document.registrations = next;
+		document.registrationOwner = registrationOwner;
 	} catch (error) {
 		for (const registration of next.reverse()) registration.dispose();
 		throw error;

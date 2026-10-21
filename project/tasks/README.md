@@ -20,7 +20,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0354` | `verifying` | PLAN-0020 | 远端会话资源加载去重与有界等待；来源BUG-0125，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0355` | `verifying` | PLAN-0020 | 启动paint与超时分流及阶段观测；来源BUG-0138，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0356` | `verifying` | PLAN-0020 | 插件Hook派发与渲染端代次生命周期对齐；来源BUG-0124，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
-| `TASK-0357` | `in_progress` | PLAN-0020 | HostedRoute能力注册与模块重载一致性；来源BUG-0139，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0357` | `verifying` | PLAN-0020 | HostedRoute能力注册与模块重载一致性；来源BUG-0139，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0358` | `verifying` | PLAN-0020 | Desktop测试日志与真实数据根隔离；来源BUG-0140，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
 | `TASK-0359` | `in_progress` | PLAN-0020 | Windows远程输入类型初始化幂等；来源BUG-0141，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0351` | `verifying` | PLAN-0006 | BUG-0136：点中元素后，输入框出现在元素旁边，提交后进入 Agent 对话。待真实 Desktop 点选验收。 |

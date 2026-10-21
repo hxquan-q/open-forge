@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { type Disposable, type HostedRouteRef, isValidHostedRouteSegment } from "@vetta-org/capability-sdk";
+import { hostedRouteDocumentState } from "./hosted-route-document-state.js";
 
 export interface HostedRouteNamespaceAdapter {
 	path(route: HostedRouteRef): string;
@@ -52,4 +54,6 @@ export class HostedRouteService {
 	}
 }
 
-export const desktopHostedRouteService = new HostedRouteService();
+const documentState = hostedRouteDocumentState();
+documentState.routes ??= new HostedRouteService();
+export const desktopHostedRouteService = documentState.routes;
