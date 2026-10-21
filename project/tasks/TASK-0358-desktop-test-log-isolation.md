@@ -1,7 +1,7 @@
 ---
 id: TASK-0358
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: desktop-testing
 requirement: REQ-0002
@@ -21,7 +21,7 @@ write_paths: ['apps/desktop/vitest.config.ts', 'apps/desktop/src/test', 'apps/de
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -59,20 +59,27 @@ updated: 2026-10-22
 
 ## 测试与验证
 
-- 首个候选定向命令：`bun run vitest --run apps/desktop/src/main/app-monitor/process-health.test.ts apps/desktop/src/main/abilities/open-marketplace/marketplace-bundle-service.test.ts`；依实际测试接缝调整并回写，不把测试收集失败当目标红灯。
+- 实际定向入口：Desktop在apps/desktop执行`bun ../../scripts/quality/run-vitest.mjs --run <相关测试文件>`；资源与SSH在各包目录执行同一Node runner。实际结果见交付记录；未使用裸bun test。
 - 修改后：定向回归、代表性用户流程、`bun run test:impact -- <本Task实现路径>`、中间`check:quick`，交付前完整`bun run check`；组合按影响执行test:changed。
 - 性能切片保留相同受控条件的前后调用数/耗时证据，不以生产收益承诺代替测量。
 
 ## 验收分层与验收包
 
-- 工程验证：待执行；独立评审：待原生只读审查；集成pending。
-- 人工功能验收：待真实Desktop场景确认，不以单元测试冒充已接受；发布未授权。
+- 定向工程验证通过，独立复审未发现剩余阻断；本次提交集成本地main。组合门禁详见PLAN-0020交付记录，工程完成不等于人工接受。
+- 内部测试基础设施无需人工功能验收；需定向与Desktop组合回归完成后才闭合，发布未授权。
 - 入口：该Task的正常功能入口；执行上列连续流程，结果及失败恢复须符合合同。详细入口/限制在完成时回写。
 
 ## 交付记录
 
-- 待记录红/绿、修改、实际命令、评审、未运行项、风险和本地提交。
+在 setup 中先建立每文件临时VETTA_HOME，顺序执行后续setup；退出时核验绝对父目录后清理。真实logger写文件回归旧配置先红，隔离后连同进程健康与marketplace连续流程3文件8例通过。
 
 ## 原生协作与复审
 
 /root/identity_diagnosis、/root/plugin_diagnosis、/root/remote_diagnosis完成分域只读调查；/root/repair_review独立审查实际diff。发现并修复分页reset失败loading与请求淘汰、合法marker夹具与mock类型、绘制Hook接线覆盖、context路径重复及并发失败继续派发、Hook staged activation迟到commit。复审未发现可确认剩余阻断；上述角色均未改文件/Git、未代跑测试，不声称异模型家族评审。组合测试与完整check结果待最后回填。
+
+## 当前候选门禁与入口
+
+- 隔离候选：main的3c3a50d47加本次源码与新增测试；不含另一任务未完成的session-archive-service.test.ts修改。完整`bun run check`通过（lint、全部类型、guards、mobile lint），源工作区该文件的临时类型错误单独保留，不伪称源工作区全绿。
+- 候选副本仅隔离源码，复用128处已安装node_modules链接；初次副本缺深层依赖/符号链接的检查失败已补齐后重跑通过。未改检查阈值。
+- 影响命令：`bun run test:impact -- apps/desktop/vitest.config.ts packages/coding-agent/src/resources/runtime/context-resources.ts packages/ssh-transport/src/ssh-connection.ts`自动回退test:changed。Coding Agent 252文件1620通过/3既有跳过，Runtime Desktop 13文件51通过；SSH首次误用系统WSL bash失败，改进程PATH选择既有Git Bash后21文件236通过/25既有跳过。CLI/Desktop组合仍在跑，最终结果见PLAN-0020。
+- 实际源码/测试路径以本Task write_paths与本提交为准；承载本记录的原子提交完成绑定。未运行真实UI/Provider/远端SSH或发布。

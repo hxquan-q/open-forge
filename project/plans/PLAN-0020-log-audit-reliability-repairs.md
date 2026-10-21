@@ -36,7 +36,7 @@ depends_on: []
 - TASK-0355：启动paint与超时分流及阶段观测；in_progress（实现候选已形成，组合验证中）。
 - TASK-0356：插件Hook派发与渲染端代次生命周期对齐；in_progress（实现候选已形成，组合验证中）。
 - TASK-0357：HostedRoute能力注册与模块重载一致性；in_progress（实现候选已形成，组合验证中）。
-- TASK-0358：Desktop测试日志与真实数据根隔离；in_progress（先建立测试隔离，再跑后续回归）。
+- TASK-0358：Desktop测试日志与真实数据根隔离；verifying（定向/候选完整check通过，组合验证与人工验收分开记录）。
 - TASK-0359：Windows远程输入类型初始化幂等；in_progress（实现候选已形成，组合验证中）。
 
 本轮生产代码串行；允许原生只读子任务独立调查消息身份、插件生命周期、远端资源，主会话继续沙箱核查。所有实现回收后进行独立只读审查；Task索引由Coordinator统一维护。

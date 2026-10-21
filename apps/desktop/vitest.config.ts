@@ -209,7 +209,8 @@ export default defineConfig({
 		// .tsx 用于 renderer 组件测试；这类文件各自用 `@vitest-environment jsdom` docblock
 		// 声明 DOM 环境，其余测试继续跑在 node 环境里。
 		include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
-		setupFiles: ["src/test/setup.ts"],
+		setupFiles: ["src/test/isolated-home.ts", "src/test/setup.ts"],
+		sequence: { setupFiles: "list" },
 		// Opt-in via `bun run test:coverage` only; default `test` is unchanged.
 		// Full src denominator is intentional — low totals reflect thin unit coverage,
 		// not a trimmed include list. UI still relies on verify:ui:*, not V8.

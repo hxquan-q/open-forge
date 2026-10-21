@@ -1,7 +1,7 @@
 ---
 id: BUG-0140
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: desktop
 requirement: REQ-0002
@@ -43,3 +43,9 @@ Windows、本地Open Forge 0.1.3；default市场255条中254条有test.ts调用�
 - 修复：待实施，关联TASK-0358。
 - 测试/检查：待执行。
 - 未运行：真实Desktop、Provider、SSH及发布不在当前授权中。
+
+## 2026-10-22 TASK-0358 实现与隔离回归
+
+在 setup 中先建立每文件临时VETTA_HOME，顺序执行后续setup；退出时核验绝对父目录后清理。真实logger写文件回归旧配置先红，隔离后连同进程健康与marketplace连续流程3文件8例通过。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0358，本地main原子提交绑定；仍待真实用户流程验收，未发布。
