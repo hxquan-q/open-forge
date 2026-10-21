@@ -1,7 +1,7 @@
 ---
 id: TASK-0341
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: desktop
 requirement:
@@ -50,7 +50,7 @@ exclusive_paths:
   - apps/desktop/src/main/browser-automation/browser-runtime-manager.ts
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-21
 updated: 2026-10-21
 ---
@@ -80,7 +80,7 @@ updated: 2026-10-21
 
 1. `BrowserRuntimeManager` 增加状态缓存：成功（`ready` / `browser-missing` / `outdated` 等可判定结果）缓存约 60 秒，失败或不可判定（`missing` / `error`）缓存约 4 秒；参数以可注入时钟与 TTL 的形式暴露，便于测试。
 2. 同一执行环境的在途探测去重：多个调用方共享同一个探测 Promise；任一调用方取消只结束自己的等待，不取消共享探测。
-3. 代次保护：安装开始时递增代次并清空缓存；安装前启动的旧探测即使晚到也不得写回缓存；安装结束后强制重新探测。
+3. 代次保护：安装开始、失败与取消时都递增代次并清空缓存；安装前或安装期间启动的旧探测即使晚到也不得写回缓存；安装结束后强制重新探测。
 4. 人工重检绕过缓存：`status` 增加可选的 `fresh` 语义，沿 capability 输入（`fresh?: boolean`）、plugin capability 方法、preload 通道、插件 SDK 类型、`runtime-controller.refresh({ fresh })` 一路透传；`BrowserConsole` 的重检按钮使用 `fresh: true`，`activate()` 的预热仍走缓存。
 5. 执行失败仍更新状态：会话创建在 `runtime_not_ready` 或其他启动失败时使缓存失效，下一次状态查询重新探测。
 6. 测试：缓存窗口内重复 `status()` 只 spawn 一次；并发 `status()` 只 spawn 一次；调用方取消不打断共享探测；安装开始使旧缓存失效且旧代次晚到结果不写回；`fresh` 绕过缓存；失败 TTL 短于成功 TTL；会话创建失败使缓存失效。
@@ -122,9 +122,9 @@ updated: 2026-10-21
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：待执行。
-- 集成：待集成。
+- 工程验证：定向 5 文件 / 46 例通过（desktop 4 文件 40 例、browser preset 6 例）；`test:impact` 中 desktop 978 文件 / 5323 例通过（受影响包均通过，单个无关包假红已单跑复绿）；根 `tsgo`、Desktop 增量类型检查、`check:quick` 与完整 `bun run check` 通过（`ratchet new=0`）；capability catalog 已按新输入重新生成。
+- 技术评审：串行自审；共享探测不绑定调用方取消、安装代次丢弃旧探测、`fresh` 缺省等价旧行为均已用测试锁定。
+- 集成：实现 `a59e4c0f2` 已提交 main，随本次记录提交推送 `origin/dev`。
 - 人工功能验收：待验收；需要在真实 Desktop 中反复打开面板并在缓存期内观察新增版本探测子进程为 0。
 - 发布：未授权。
 
@@ -138,8 +138,25 @@ updated: 2026-10-21
 
 ## 交付记录
 
-- 实际修改：待回填。
-- 实际运行：待回填。
-- 未运行及原因：待回填。
+- 实际修改：
+  - `apps/desktop/src/main/browser-automation/browser-runtime-manager.ts`：新增可注入时钟与 TTL（成功 `60_000`、失败 `4_000`），按 phase 区分长/短缓存；`status(signal, { fresh })` 先查缓存，`fresh` 绕过；同一代次内共享同一个在途探测 Promise，调用方取消只结束自己的等待；安装开始、结束、失败与取消都推进代次并清空缓存/在途探测，旧探测晚到不写回；`invalidate()` 供执行失败时作废缓存；探测子进程不再绑定单个调用方的 `AbortSignal`。
+  - `contracts.ts`：`BrowserRuntimePort` 增加 `status` 的 `BrowserRuntimeStatusQuery` 与 `invalidate()`。
+  - `browser-automation-service.ts`：`runtimeStatus` 透传 `fresh`；`createSession` 在 `runtime_not_ready` 与 `engine_failed` 时调用 `invalidate()`。
+  - `capabilities/browser-provider.ts`：从 capability 输入读取 `fresh` 并传给 service（缺省不传，保持旧调用等价）。
+  - `packages/capability-sdk/src/foundation/browser.ts`：`browserRuntimeStatusInputType` 增加可选 `fresh`。
+  - `capabilities/integrations/plugin/foundation/browser.ts`：`getBrowserRuntimeStatus(sessionId, options?)` 解析并透传 `fresh`。
+  - `main/ipc/plugin-capabilities.ts`、`preload/api-types/plugins.ts`、`preload/apis/plugins.ts`、`renderer/domains/plugins/runtime/plugin-host-apis.ts`、`packages/plugins/plugin-sdk/src/browser.ts`：`fresh` 沿 IPC 与插件 API 全程可选透传；未传时仍以单参数调用，旧断言与旧调用不变。
+  - `packages/plugins/presets/browser/src/runtime/runtime-controller.ts`：`refresh(options?)` 透传 `fresh`；`components/BrowserConsole.tsx` 的「重新检测」使用 `refresh({ fresh: true })`，`activate()` 预热仍走缓存。
+  - 测试：`browser-runtime-manager.test.ts` 增至 11 例（相位判定、成功/失败 TTL 边界、并发共享、单方取消、fresh 绕过、安装去重、安装代次丢弃旧探测、安装失败使缓存失效、browser-missing 流转、invalidate）；`browser-automation-service.test.ts` 增加 runtime_not_ready 与 engine_failed 失效 2 例；`browser-provider.test.ts` 增加 fresh 透传 1 例；`plugin-context-browser.test.ts` 增加 fresh 桥接断言；`runtime-controller.test.ts` 增加 fresh 透传 1 例。
+  - 声明头：按门禁为 13 个此前缺声明头的修改文件补 `// Modified by The Open Forge contributors.`。
+- 实际运行：
+  - `bun run --cwd apps/desktop test src/main/browser-automation/browser-runtime-manager.test.ts src/main/browser-automation/browser-automation-service.test.ts src/main/capabilities/browser-provider.test.ts src/renderer/domains/plugins/runtime/plugin-context-browser.test.ts` → 4 files / 40 tests passed。
+  - `bun run --cwd packages/plugins/presets/browser test test/runtime-controller.test.ts` → 6 tests passed。
+  - `bun run test:impact` → desktop 978 files passed / 4 skipped、5323 tests passed / 17 skipped；`presets/browser`、`capability-sdk` 等受影响包通过。`presets/vetta-ui-design` 在串行组合中因 `127.0.0.1:5173` 连接被拒失败，单独复跑 115 files / 754 tests passed，归因为环境性假红，与本改动无关。
+  - `bunx tsgo --noEmit` → 通过；`bun run --cwd apps/desktop typecheck:incremental` → 通过。
+  - `bun run --cwd packages/capability-sdk catalog:generate` → 仅新增 runtime-status 的 `fresh` 输入字段；差异 3 行。
+  - `bun run check:quick` → 通过（`ratchet new=0`；首轮 catalog 过期与 2 处 biome 格式问题已修正后复跑）。
+  - `bun run check` → exit 0；根 `tsgo`、Desktop `typecheck:incremental`、guards（含声明头 ratchet `new=0`、index 一致性、package boundaries）全部通过。
+- 未运行及原因：未启动 Desktop、未运行 `verify:ui:*`，缓存期内「新增探测子进程为 0」仍待真实 Electron 环境人工确认。
 - Worktree：未拆出；缓存语义跨主进程与插件层，串行修改。
 - 剩余风险：60 秒/4 秒 TTL 是待验证参数，若实际使用中出现「外部安装后长时间不刷新」可再调整。
