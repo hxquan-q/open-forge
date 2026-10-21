@@ -8,6 +8,7 @@ import {
 	inputValueAtom,
 	localModelsConfigAtom,
 	missingModelDialogOpenAtom,
+	promptAttachmentAtom,
 } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -53,6 +54,7 @@ describe("useSessionMessageSender 发送前置闸门", () => {
 		store.set(activeSessionAtom, { cwd: "/workspace", runtimeId: "runtime-1", sessionPath: "/w/s.jsonl" });
 		store.set(inputValueAtom, "你好");
 		store.set(chatMessagesAtom, []);
+		store.set(promptAttachmentAtom, null);
 		Object.defineProperty(window, "vetta", {
 			configurable: true,
 			value: { session: { prompt } },
@@ -83,5 +85,52 @@ describe("useSessionMessageSender 发送前置闸门", () => {
 
 		expect(prompt).toHaveBeenCalledOnce();
 		expect(store.get(missingModelDialogOpenAtom)).toBe(false);
+	});
+
+	it("元素选区另起一条消息：带上截图路径和元素附件，并保留输入框里已有的草稿", async () => {
+		store.set(localModelsConfigAtom, modelsConfig({ openai: { models: [{ id: "gpt-5" }] } }));
+		store.set(inputValueAtom, "先别发这段");
+		store.set(promptAttachmentAtom, {
+			id: "vetta.browser.element-selection",
+			ownerPluginId: "vetta.browser",
+			label: "element",
+			lifecycle: "once",
+			context: {
+				schema: "vetta.browser.element-selection",
+				version: 1,
+				payload: { pageUrl: "http://127.0.0.1:5173/", domPath: "button#save" },
+			},
+		});
+		const { result } = renderHook(() => useSessionMessageSender({ bumpSuggestionToken: vi.fn() }));
+
+		await act(async () => {
+			await result.current.sendMessage(undefined, {
+				composed: {
+					text: "把按钮改成蓝色",
+					imagePaths: ["C:/cache/el.png"],
+					preserveDraft: true,
+				},
+			});
+		});
+
+		expect(prompt).toHaveBeenCalledOnce();
+		const calls = prompt.mock.calls as unknown as Array<
+			[
+				string,
+				{
+					text?: string;
+					metadata?: { pluginPromptContexts?: Array<{ schema?: string }> };
+					attachments?: Array<{ path?: string }>;
+				},
+			]
+		>;
+		const request = calls[0]?.[1];
+		expect(request?.text).toBe("把按钮改成蓝色");
+		expect(request.metadata?.pluginPromptContexts?.[0]?.schema).toBe("vetta.browser.element-selection");
+		expect(request.attachments).toEqual(
+			expect.arrayContaining([expect.objectContaining({ path: "C:/cache/el.png" })]),
+		);
+		expect(store.get(inputValueAtom)).toBe("先别发这段");
+		expect(store.get(promptAttachmentAtom)).toBeNull();
 	});
 });

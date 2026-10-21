@@ -173,9 +173,12 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 			// 作为独立 prompt 直发，不带技能 / @文件前缀，也不消费当前草稿与附图。
 			const override = typeof overrideText === "string" ? overrideText.trim() : "";
 			const hasOverride = stagedInput?.hasOverride ?? override.length > 0;
+			const composedText = options?.composed?.text.trim() ?? "";
+			const hasComposed = composedText.length > 0;
 			if (
 				!session?.runtimeId ||
 				(!hasOverride &&
+					!hasComposed &&
 					!inputValue.trim() &&
 					attachedImages.length === 0 &&
 					mentionedFiles.length === 0 &&
@@ -195,17 +198,19 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				});
 			}
 			perfSendMark("sender-enter", interactionId);
-			const rawText = stagedInput?.rawText ?? (hasOverride ? override : inputValue.trim());
+			const rawText = hasComposed
+				? composedText
+				: (stagedInput?.rawText ?? (hasOverride ? override : inputValue.trim()));
 			let preparedInput: ReturnType<typeof prepareInputPrompt>;
 			try {
-				preparedInput = prepareInputPrompt(rawText, hasOverride ? undefined : inputSegments);
+				preparedInput = prepareInputPrompt(rawText, hasOverride || hasComposed ? undefined : inputSegments);
 			} catch (error) {
 				if (!(error instanceof MultipleSceneReferencesError)) throw error;
 				const message = i18n.t("chat:inputBar.error.multipleScenes");
 				setChatMessages((prev) => appendError(prev, message));
 				return { status: "failed", error: { message } };
 			}
-			const images = !hasOverride && attachedImages.length > 0 ? attachedImages : undefined;
+			const images = !hasOverride && !hasComposed && attachedImages.length > 0 ? attachedImages : undefined;
 			// 把附图落盘到会话图片缓存，改用 @路径 引用而非把 base64 塞进上下文：
 			// 视觉模型经 Read 工具即可看到图，不支持视觉的模型也能用工具对图做 OCR/改图等。
 			let imagePaths: string[] = [];
@@ -222,11 +227,11 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				}
 			}
 			const promptRef =
-				!hasOverride && preparedInput.sceneName
+				!hasOverride && !hasComposed && preparedInput.sceneName
 					? { kind: "scene" as const, name: preparedInput.sceneName }
 					: undefined;
 			const attachmentsByPath = new Map<string, PromptAttachmentRef>();
-			if (!hasOverride) {
+			if (!hasOverride && !hasComposed) {
 				for (const attachment of deriveAttachments(preparedInput.segments)) {
 					attachmentsByPath.set(toTokenPath(attachment.path), attachment);
 				}
@@ -248,8 +253,13 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 					attachmentsByPath.set(toTokenPath(path), { kind: "image", path });
 				}
 			}
+			for (const path of options?.composed?.imagePaths ?? []) {
+				const trimmed = path.trim();
+				if (!trimmed) continue;
+				attachmentsByPath.set(toTokenPath(trimmed), { kind: "image", path: trimmed });
+			}
 			const attachments = [...attachmentsByPath.values()];
-			const text = hasOverride ? rawText : preparedInput.text;
+			const text = hasComposed || hasOverride ? rawText : preparedInput.text;
 			if (stagedInput && imagePaths.length > 0) {
 				const stagedId = stagedInput.optimisticMessage.id;
 				setChatMessages((messages) =>
@@ -261,18 +271,18 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				);
 			}
 			recordInputContextUsed({
-				files: hasOverride ? [] : mentionedFiles,
-				images: hasOverride ? [] : persistedImages,
+				files: hasOverride || hasComposed ? [] : mentionedFiles,
+				images: hasOverride || hasComposed ? [] : persistedImages,
 				...(promptRef ? { promptRef } : {}),
 			});
 			// 行内 skill 是软引用，不进 promptRef，但调用次数仍要计入 app-monitor
 			// （命令面板按使用频次排序依赖这份统计）。每个被引用的 skill 记一次。
-			if (!hasOverride) {
+			if (!hasOverride && !hasComposed) {
 				for (const name of deriveSkillNames(preparedInput.segments)) {
 					recordInputContextUsed({ promptRef: { kind: "skill", name } });
 				}
 			}
-			if (!hasOverride) {
+			if (!hasOverride && !options?.composed?.preserveDraft) {
 				// 普通发送清理当前草稿；提前上屏的新会话首条只补记历史。
 				perfSendMark("clear-draft-start", interactionId);
 				if (stagedInput) {
@@ -380,7 +390,7 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 					id: nextId("user"),
 					deliveryPhase: "pending",
 					text,
-					...(hasOverride ? {} : { inputSegments: preparedInput.segments }),
+					...(hasOverride || hasComposed ? {} : { inputSegments: preparedInput.segments }),
 					timestamp: Date.now(),
 					model: modelKeyToParts(selectedModel),
 					promptRef,
@@ -391,10 +401,10 @@ export function useSessionMessageSender({ bumpSuggestionToken }: SessionMessageS
 				if (images && imagePaths.length === 0) {
 					userMsg.images = images.map((img) => ({ data: img.data, mimeType: img.mimeType, name: img.name }));
 				}
-				if (appshot) {
+				if (appshot && !hasComposed) {
 					userMsg.appshot = appshot;
 				}
-				userMsg.mentionedFiles = mentionedFiles.slice();
+				userMsg.mentionedFiles = hasComposed ? [] : mentionedFiles.slice();
 				const settingsAssistTabId = options?.settingsAssistTabId?.trim();
 				if (settingsAssistTabId) {
 					userMsg.settingsAssistTabId = settingsAssistTabId;

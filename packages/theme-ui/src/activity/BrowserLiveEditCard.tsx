@@ -1,4 +1,4 @@
-import type { FormEvent, JSX } from "react";
+import { type FormEvent, type JSX, useRef } from "react";
 
 /** 卡片内所有用户可见文案由宿主经 i18n 提供。 */
 export interface BrowserLiveEditLabels {
@@ -12,6 +12,8 @@ export interface BrowserLiveEditLabels {
 	revertOne: string;
 	revertAll: string;
 	send: string;
+	comment: string;
+	commentPlaceholder: string;
 	discard: string;
 	stale: string;
 	failed: string;
@@ -39,7 +41,7 @@ export interface BrowserLiveEditCardProps {
 	onApplyStyle: (property: string, value: string) => void;
 	onRevertEdit: (index: number) => void;
 	onRevertAll: () => void;
-	onSend: () => void;
+	onSend: (comment: string) => void;
 	onDiscard: () => void;
 }
 
@@ -100,6 +102,10 @@ export function BrowserLiveEditCard({
 	onSend,
 	onDiscard,
 }: BrowserLiveEditCardProps): JSX.Element {
+	const commentRef = useRef<HTMLTextAreaElement>(null);
+	const sendComment = (): void => {
+		onSend(commentRef.current?.value ?? "");
+	};
 	// 输入框非受控：草稿值属于瞬时 UI 态，随表单提交读取，不进 view model。
 	const submitText = (event: FormEvent<HTMLFormElement>): void => {
 		event.preventDefault();
@@ -138,6 +144,25 @@ export function BrowserLiveEditCard({
 			<div className="truncate font-mono text-[10px] text-muted-foreground/70" title={target}>
 				{target}
 			</div>
+
+			<label className="flex flex-col gap-1">
+				<span className="text-[11px] text-muted-foreground">{labels.comment}</span>
+				<textarea
+					ref={commentRef}
+					name="agentComment"
+					rows={2}
+					placeholder={labels.commentPlaceholder}
+					aria-label={labels.comment}
+					disabled={busy || !hasElement}
+					autoFocus
+					onKeyDown={(event) => {
+						if (event.key !== "Enter" || event.shiftKey) return;
+						event.preventDefault();
+						sendComment();
+					}}
+					className="min-h-14 w-full resize-none rounded-md border border-border/60 bg-transparent px-2 py-1 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
+				/>
+			</label>
 
 			<form onSubmit={submitText} className="flex items-center gap-1.5">
 				<input
@@ -230,7 +255,7 @@ export function BrowserLiveEditCard({
 				<button
 					type="button"
 					disabled={busy}
-					onClick={onSend}
+					onClick={sendComment}
 					className="h-7 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
 				>
 					{labels.send}

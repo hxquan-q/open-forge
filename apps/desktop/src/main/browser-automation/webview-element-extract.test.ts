@@ -6,6 +6,7 @@ import {
 	buildDomPath,
 	buildXPath,
 	extractBrowserElement,
+	readBrowserElementSourceHint,
 	readExtractedBrowserElement,
 	sanitizeOuterHTML,
 } from "./webview-element-extract.js";
@@ -32,6 +33,32 @@ describe("browser element extract", () => {
 		expect(extracted.role).toBe("textbox");
 		expect(extracted.accessibleName).toBe("Email");
 		expect(extracted.attributes).toMatchObject({ id: "email", name: "email", type: "email" });
+	});
+
+	it("reads React, Vue and attribute source locations, and drops javascript urls", () => {
+		const button = mount(`<button id="save" data-insp-path="javascript:alert(1)">Save</button>`);
+		expect(readBrowserElementSourceHint(button)).toBeUndefined();
+		Object.assign(button, {
+			__reactFiber$test: {
+				_debugSource: { fileName: "file://src/SaveButton.tsx", lineNumber: 8, columnNumber: 2 },
+				type: { displayName: "SaveButton" },
+			},
+		});
+		expect(readBrowserElementSourceHint(button)).toEqual({
+			kind: "react",
+			file: "src/SaveButton.tsx",
+			line: 8,
+			column: 2,
+			component: "SaveButton",
+		});
+
+		const vue = mount(`<p id="label">Hi</p>`);
+		Object.assign(vue, { __vueParentComponent: { type: { __file: "src/Label.vue", name: "Label" } } });
+		expect(extractBrowserElement(vue, document, window).sourceHint).toEqual({
+			kind: "vue",
+			file: "src/Label.vue",
+			component: "Label",
+		});
 	});
 
 	it("uses nth-of-type when siblings share a tag and have no unique id", () => {

@@ -22,6 +22,15 @@ export interface ExtractedBrowserElement {
 	readonly surroundingText: string;
 	readonly boundingRect: { x: number; y: number; width: number; height: number };
 	readonly devicePixelRatio: number;
+	readonly sourceHint?: BrowserElementSourceHint;
+}
+
+export interface BrowserElementSourceHint {
+	readonly kind: "react" | "vue" | "attribute";
+	readonly file: string;
+	readonly line?: number;
+	readonly column?: number;
+	readonly component?: string;
 }
 
 const IMPLICIT_ROLES: Record<string, string> = {
@@ -165,6 +174,7 @@ export function extractBrowserElement(
 ): ExtractedBrowserElement {
 	const maskValues = isSensitiveFormControl(element);
 	const rect = element.getBoundingClientRect();
+	const sourceHint = readBrowserElementSourceHint(element);
 	return {
 		role: implicitElementRole(element),
 		accessibleName: readAccessibleName(element, documentRef),
@@ -176,6 +186,146 @@ export function extractBrowserElement(
 		surroundingText: readSurroundingText(element),
 		boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
 		devicePixelRatio: Number.isFinite(windowRef.devicePixelRatio) ? windowRef.devicePixelRatio : 1,
+		...(sourceHint ? { sourceHint } : {}),
+	};
+}
+
+/**
+ * 从页面元素读取开发构建暴露的组件位置。函数体必须自包含：guest 按 toString() 注入，
+ * 不能引用模块里的其他绑定。
+ */
+export function readBrowserElementSourceHint(element: Element): BrowserElementSourceHint | undefined {
+	const maxHops = 8;
+	const readFile = (value: unknown): string | undefined => {
+		if (typeof value !== "string") return undefined;
+		const trimmed = value.trim().replace(/^file:\/\//, "");
+		if (!trimmed || trimmed.length > 512 || /[<>\r\n]/.test(trimmed)) return undefined;
+		if (/^(javascript|data|https?):/i.test(trimmed)) return undefined;
+		return trimmed;
+	};
+	const readName = (value: unknown): string | undefined => {
+		if (typeof value !== "string") return undefined;
+		const trimmed = value.trim();
+		if (!trimmed || trimmed.length > 128 || !/^[$A-Za-z_][$\w.]*$/.test(trimmed)) return undefined;
+		return trimmed;
+	};
+	const readLine = (value: unknown): number | undefined => {
+		const line = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+		if (!Number.isInteger(line) || line < 1 || line > 1_000_000) return undefined;
+		return line;
+	};
+	const parseLocation = (raw: string): { file: string; line?: number; column?: number } | undefined => {
+		const trimmed = raw.trim();
+		const withColumn = /^(.*):(\d+):(\d+)$/.exec(trimmed);
+		const withLine = withColumn ? undefined : /^(.*):(\d+)$/.exec(trimmed);
+		const match = withColumn ?? withLine;
+		if (!match?.[1]) {
+			const file = readFile(trimmed);
+			return file ? { file } : undefined;
+		}
+		const file = readFile(match[1]);
+		if (!file) return undefined;
+		const line = readLine(match[2]);
+		const column = match[3] ? readLine(match[3]) : undefined;
+		return { file, ...(line ? { line } : {}), ...(column ? { column } : {}) };
+	};
+	const nodes: Element[] = [];
+	let cursor: Element | null = element;
+	for (let hop = 0; cursor && hop < maxHops; hop += 1) {
+		nodes.push(cursor);
+		cursor = cursor.parentElement;
+	}
+	for (const node of nodes) {
+		const record = node as unknown as Record<string, unknown>;
+		let fiber: Record<string, unknown> | undefined;
+		for (const key of Object.keys(record)) {
+			if (!key.startsWith("__reactFiber$") && !key.startsWith("__reactInternalInstance$")) continue;
+			const value = record[key];
+			if (value && typeof value === "object") fiber = value as Record<string, unknown>;
+			break;
+		}
+		for (let hop = 0; fiber && hop < 6; hop += 1) {
+			const debug = fiber._debugSource;
+			if (debug && typeof debug === "object") {
+				const source = debug as Record<string, unknown>;
+				const file = readFile(source.fileName);
+				if (file) {
+					const line = readLine(source.lineNumber);
+					const column = readLine(source.columnNumber);
+					const type = fiber.type ?? fiber.elementType;
+					const typeRecord = type && typeof type === "object" ? (type as Record<string, unknown>) : undefined;
+					const component = readName(
+						typeRecord?.displayName ?? typeRecord?.name ?? (typeof type === "function" ? type.name : undefined),
+					);
+					return {
+						kind: "react",
+						file,
+						...(line ? { line } : {}),
+						...(column ? { column } : {}),
+						...(component ? { component } : {}),
+					};
+				}
+			}
+			const parent = fiber.return;
+			fiber = parent && typeof parent === "object" ? (parent as Record<string, unknown>) : undefined;
+		}
+	}
+	for (const node of nodes) {
+		const vue = (node as unknown as { __vueParentComponent?: { type?: Record<string, unknown> } })
+			.__vueParentComponent;
+		const file = readFile(vue?.type?.__file);
+		if (!file) continue;
+		const component = readName(vue?.type?.name ?? vue?.type?.__name);
+		return { kind: "vue", file, ...(component ? { component } : {}) };
+	}
+	for (const node of nodes) {
+		for (const name of ["data-insp-path", "data-source-path", "data-source"]) {
+			const parsed = parseLocation(node.getAttribute(name) ?? "");
+			if (parsed) return { kind: "attribute", ...parsed };
+		}
+	}
+	return undefined;
+}
+
+export function readBrowserElementSourceHintValue(value: unknown): BrowserElementSourceHint | undefined {
+	if (!value || typeof value !== "object") return undefined;
+	const record = value as Record<string, unknown>;
+	if (record.kind !== "react" && record.kind !== "vue" && record.kind !== "attribute") return undefined;
+	const hint = readBrowserElementSourceHintValueFields(record);
+	return hint;
+}
+
+function readBrowserElementSourceHintValueFields(
+	record: Record<string, unknown>,
+): BrowserElementSourceHint | undefined {
+	if (typeof record.file !== "string" || record.file.length < 1 || record.file.length > 512) return undefined;
+	if (/[<>\r\n]/.test(record.file) || /^(javascript|data|https?):/i.test(record.file)) return undefined;
+	const line = record.line;
+	const column = record.column;
+	if (line !== undefined && (typeof line !== "number" || !Number.isInteger(line) || line < 1 || line > 1_000_000)) {
+		return undefined;
+	}
+	if (
+		column !== undefined &&
+		(typeof column !== "number" || !Number.isInteger(column) || column < 1 || column > 1_000_000)
+	) {
+		return undefined;
+	}
+	if (
+		record.component !== undefined &&
+		(typeof record.component !== "string" ||
+			record.component.length < 1 ||
+			record.component.length > 128 ||
+			!/^[$A-Za-z_][$\w.]*$/.test(record.component))
+	) {
+		return undefined;
+	}
+	return {
+		kind: record.kind as BrowserElementSourceHint["kind"],
+		file: record.file,
+		...(typeof line === "number" ? { line } : {}),
+		...(typeof column === "number" ? { column } : {}),
+		...(typeof record.component === "string" ? { component: record.component } : {}),
 	};
 }
 
@@ -204,6 +354,7 @@ export function readExtractedBrowserElement(value: unknown): ExtractedBrowserEle
 	const attributes = readStringRecord(record.attributes, BROWSER_ELEMENT_ATTRIBUTE_KEYS, ATTRIBUTE_MAX);
 	const computedStyle = readStringRecord(record.computedStyle, BROWSER_ELEMENT_COMPUTED_STYLE_KEYS, STYLE_MAX);
 	if (!attributes || !computedStyle) return undefined;
+	const sourceHint = readBrowserElementSourceHintValue(record.sourceHint);
 	return {
 		role: record.role.slice(0, 128),
 		accessibleName: record.accessibleName.slice(0, 512),
@@ -216,6 +367,7 @@ export function readExtractedBrowserElement(value: unknown): ExtractedBrowserEle
 		boundingRect: { x, y, width, height },
 		devicePixelRatio:
 			typeof record.devicePixelRatio === "number" && record.devicePixelRatio > 0 ? record.devicePixelRatio : 1,
+		...(sourceHint ? { sourceHint } : {}),
 	};
 }
 

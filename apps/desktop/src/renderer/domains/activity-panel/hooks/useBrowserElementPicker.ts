@@ -2,11 +2,12 @@
 
 import {
 	insertImageToken,
+	prependPlainText,
 	removeImageToken,
 } from "@domains/conversation/components/input-bar/editor/inputEditorHandle";
 import { useEffectiveShortcut } from "@shared/hooks/useShortcuts";
 import { useShortcutScope } from "@shared/shortcuts";
-import { promptAttachmentAtom } from "@shared/store/plugin-atoms";
+import { promptAttachmentAtom, sendMessageFnRef } from "@shared/store/atoms";
 import {
 	type BrowserElementLiveEdit,
 	type BrowserElementRef,
@@ -17,6 +18,7 @@ import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BROWSER_ELEMENT_PICKER_TOGGLE_EVENT } from "@/shared/browser-tab-ipc";
+import { buildBrowserElementAgentText } from "../services/browser-element-agent-message";
 import { applyBrowserElementSelectionToDraft } from "../services/browser-element-draft";
 
 /** 点选命中后的编辑态：胶囊先停在卡片上，确认后才写入输入框附件（TASK-0085）。 */
@@ -31,7 +33,10 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	selection: BrowserElementPickedSelection | null;
 	selectionRef: BrowserElementRef | null;
 	onTogglePicker: () => void;
-	confirmSelection: (edits: readonly BrowserElementLiveEdit[]) => void;
+	confirmSelection: (
+		edits: readonly BrowserElementLiveEdit[],
+		options?: { readonly comment?: string; readonly send?: boolean },
+	) => void;
 	discardSelection: () => void;
 } {
 	const { t } = useTranslation("chat");
@@ -105,12 +110,14 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	}, [input.hasPage, pickerEnabled, workspaceId]);
 
 	const confirmSelection = useCallback(
-		(edits: readonly BrowserElementLiveEdit[]) => {
+		(edits: readonly BrowserElementLiveEdit[], options?: { comment?: string; send?: boolean }) => {
 			if (!selection) return;
 			const context: BrowserElementSelectionContext =
 				edits.length > 0
 					? { ...selection.context, payload: { ...selection.context.payload, liveEdits: [...edits] } }
 					: selection.context;
+			const screenshotPath = selection.screenshotPath;
+			const send = options?.send ? sendMessageFnRef.current : null;
 			applyBrowserElementSelectionToDraft(
 				{
 					getAttachment: () => attachmentRef.current,
@@ -121,9 +128,28 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 				{
 					context,
 					label: t("browser.elementAttached"),
-					...(selection.screenshotPath ? { screenshotPath: selection.screenshotPath } : {}),
+					...(screenshotPath ? { screenshotPath } : {}),
+					...(send ? { stageScreenshot: false } : {}),
 				},
 			);
+			if (send) {
+				const text = buildBrowserElementAgentText({
+					comment: options?.comment ?? "",
+					target: context.payload.accessibleName || context.payload.domPath,
+					edits,
+				});
+				void send(undefined, {
+					composed: {
+						text,
+						...(screenshotPath ? { imagePaths: [screenshotPath] } : {}),
+						preserveDraft: true,
+					},
+				}).then((result) => {
+					if (result) return;
+					if (screenshotPath) insertImageToken(screenshotPath);
+					prependPlainText(`${text}\n\n`);
+				});
+			}
 			setSelection(null);
 			void window.vetta.browserTab.setPicker({ workspaceId, enabled: false });
 		},

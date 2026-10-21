@@ -2,6 +2,7 @@
 // Copyright The Open Forge contributors.
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateInjectedGuestScript } from "../../test/injected-guest-script.js";
+import { readBrowserElementSourceHint } from "./webview-element-extract.js";
 import {
 	buildInAppBrowserGuestScript,
 	IN_APP_BROWSER_PICKER_ROOT_ID,
@@ -32,7 +33,23 @@ describe("in-app browser picker guest", () => {
 		expect(result.role).toBe("button");
 		expect(result.accessibleName).toBe("Go");
 		expect(result.domPath).toBe("button#go");
+		expect(result.sourceHint).toBeUndefined();
 		expect(document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID)).toBeNull();
+	});
+
+	it("点选带 data-insp-path 的元素时带回文件位置，并拒绝 javascript 地址", async () => {
+		document.body.innerHTML = `<button id="go" data-insp-path="src/App.tsx:12:3">Go</button><a id="bad" data-source="javascript:alert(1)">Bad</a>`;
+		const button = document.getElementById("go");
+		if (!button) throw new Error("missing button");
+		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
+		button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 8, clientY: 8 }));
+		await expect(pick).resolves.toMatchObject({
+			sourceHint: { kind: "attribute", file: "src/App.tsx", line: 12, column: 3 },
+		});
+
+		const bad = document.getElementById("bad");
+		if (!bad) throw new Error("missing link");
+		expect(readBrowserElementSourceHint(bad)).toBeUndefined();
 	});
 
 	it("空白点到 body 时不产生 capsule，并保持 picker", async () => {

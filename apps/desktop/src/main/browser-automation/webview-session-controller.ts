@@ -396,6 +396,7 @@ export class InAppBrowserSessionController {
 				outerHTML: extracted.outerHTML,
 				surroundingText: extracted.surroundingText,
 				boundingRect: extracted.boundingRect,
+				...(extracted.sourceHint ? { sourceHint: extracted.sourceHint } : {}),
 			},
 		});
 		if (!context) return "idle";

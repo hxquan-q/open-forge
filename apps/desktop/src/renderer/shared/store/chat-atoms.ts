@@ -556,6 +556,15 @@ export interface SendMessageOptions {
 	stagedInput?: StagedSendInput;
 	/** 用户发送意图：Ctrl+Enter 走 steer，Enter 走 followUp。 */
 	streamingBehavior?: "steer" | "followUp";
+	/**
+	 * 浏览器元素选区等「另起一条消息」的发送。正文不走输入框草稿；
+	 * preserveDraft 为 true 时不清除用户正在写的草稿。
+	 */
+	composed?: {
+		text: string;
+		imagePaths?: readonly string[];
+		preserveDraft?: boolean;
+	};
 }
 
 /** sendMessage 的回执（ADR-0060）：streaming 中入 kernel 队列时返回 queued + 条目 id。 */

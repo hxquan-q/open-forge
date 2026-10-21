@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
+import { sendMessageFnRef } from "@shared/store/atoms";
 import { promptAttachmentAtom } from "@shared/store/plugin-atoms";
 import {
 	BROWSER_ELEMENT_SELECTION_SCHEMA,
@@ -21,9 +22,12 @@ vi.mock("@shared/hooks/useShortcuts", () => ({
 vi.mock("@shared/shortcuts", () => ({
 	useShortcutScope: () => undefined,
 }));
+const prependPlainText = vi.fn();
+
 vi.mock("@domains/conversation/components/input-bar/editor/inputEditorHandle", () => ({
 	insertImageToken: (...args: unknown[]) => insertImageToken(...args),
 	removeImageToken: (...args: unknown[]) => removeImageToken(...args),
+	prependPlainText: (...args: unknown[]) => prependPlainText(...args),
 }));
 
 const { useBrowserElementPicker } = await import("./useBrowserElementPicker.js");
@@ -59,6 +63,8 @@ describe("useBrowserElementPicker", () => {
 		store.set(promptAttachmentAtom, null);
 		insertImageToken.mockReset();
 		removeImageToken.mockReset();
+		prependPlainText.mockReset();
+		sendMessageFnRef.current = null;
 		listener = undefined;
 		window.vetta = {
 			browserTab: {
@@ -172,5 +178,36 @@ describe("useBrowserElementPicker", () => {
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		ready.result.current.onTogglePicker();
 		await waitFor(() => expect(window.vetta.browserTab.setPicker).toHaveBeenCalledWith({ workspaceId: "ws-1", enabled: true }));
+	});
+
+	it("发送给 Agent 时发起带评论的会话，截图不先写入草稿；发送未启动则把正文留在输入框", async () => {
+		const send = vi.fn(async () => undefined);
+		sendMessageFnRef.current = send;
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		listener?.({
+			workspaceId: "ws-1",
+			event: { kind: "picker-result", context: context() },
+		});
+		await waitFor(() => expect(result.current.selection).not.toBeNull());
+
+		act(() => {
+			result.current.confirmSelection([], { comment: "把按钮改成蓝色", send: true });
+		});
+
+		expect(send).toHaveBeenCalledWith(undefined, {
+			composed: {
+				text: "把按钮改成蓝色",
+				imagePaths: ["C:/cache/el.png"],
+				preserveDraft: true,
+			},
+		});
+		expect(insertImageToken).not.toHaveBeenCalled();
+		expect(store.get(promptAttachmentAtom)?.context?.payload).toMatchObject({
+			accessibleName: "Email",
+			domPath: "input#email",
+		});
+		await waitFor(() => expect(prependPlainText).toHaveBeenCalledWith("把按钮改成蓝色\n\n"));
+		expect(insertImageToken).toHaveBeenCalledWith("C:/cache/el.png");
 	});
 });

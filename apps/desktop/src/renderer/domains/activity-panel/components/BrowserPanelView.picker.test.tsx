@@ -110,6 +110,8 @@ describe("BrowserPanelView picker chrome", () => {
 				revertOne: "Revert",
 				revertAll: "Revert all",
 				send: "Send to Agent",
+				comment: "Tell the Agent",
+				commentPlaceholder: "How should this element change?",
 				discard: "Discard",
 				stale: "Selection is stale",
 				failed: "Edit failed",
@@ -185,8 +187,9 @@ describe("BrowserPanelView picker chrome", () => {
 		expect(model.onRevertEdit).toHaveBeenCalledWith(1);
 		await user.click(screen.getByRole("button", { name: "Revert all" }));
 		expect(model.onRevertAll).toHaveBeenCalledTimes(1);
+		await user.type(screen.getByRole("textbox", { name: "Tell the Agent" }), "Make it blue");
 		await user.click(screen.getByRole("button", { name: "Send to Agent" }));
-		expect(model.onSend).toHaveBeenCalledTimes(1);
+		expect(model.onSend).toHaveBeenCalledWith("Make it blue");
 		await user.click(screen.getAllByRole("button", { name: "Discard" })[0]);
 		expect(model.onDiscard).toHaveBeenCalled();
 	});

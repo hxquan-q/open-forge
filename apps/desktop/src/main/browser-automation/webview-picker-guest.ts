@@ -4,6 +4,7 @@ import {
 	BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
 } from "@vetta/coding-agent/function-extensions";
 import { assembleGuestScript } from "./guest-script-shim.js";
+import { readBrowserElementSourceHint } from "./webview-element-extract.js";
 import {
 	applyInAppBrowserLiveEdit,
 	type InAppBrowserLiveEditEntry,
@@ -38,9 +39,10 @@ interface InAppBrowserGuestDeps {
 	readonly revertLiveEditEntries: typeof revertInAppBrowserLiveEditEntries;
 	readonly styleKeys: readonly string[];
 	readonly maxEdits: number;
+	readonly readSourceHint: typeof readBrowserElementSourceHint;
 }
 
-const guestDepsLiteral = `{choosePickTarget:${chooseInAppBrowserPickTarget.toString()},applyLiveEdit:${applyInAppBrowserLiveEdit.toString()},revertLiveEditEntry:${revertInAppBrowserLiveEditEntry.toString()},revertLiveEditEntries:${revertInAppBrowserLiveEditEntries.toString()},styleKeys:${JSON.stringify([...BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS])},maxEdits:${JSON.stringify(BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS)}}`;
+const guestDepsLiteral = `{choosePickTarget:${chooseInAppBrowserPickTarget.toString()},applyLiveEdit:${applyInAppBrowserLiveEdit.toString()},revertLiveEditEntry:${revertInAppBrowserLiveEditEntry.toString()},revertLiveEditEntries:${revertInAppBrowserLiveEditEntries.toString()},styleKeys:${JSON.stringify([...BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS])},maxEdits:${JSON.stringify(BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS)},readSourceHint:${readBrowserElementSourceHint.toString()}}`;
 
 export function buildInAppBrowserGuestScript(command: InAppBrowserPickerCommand, arg?: unknown): string {
 	// runtime 源码与 deps 字面量都要交给垫片扫描：两者都可能被 keepNames 插入辅助函数调用。
@@ -364,6 +366,7 @@ function inAppBrowserGuestRuntime(
 			}
 		}
 		const rect = element.getBoundingClientRect();
+		const sourceHint = deps.readSourceHint(element);
 		return {
 			role: role.slice(0, 128),
 			accessibleName,
@@ -378,6 +381,7 @@ function inAppBrowserGuestRuntime(
 				.slice(0, 2 * 1024),
 			boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
 			devicePixelRatio: window.devicePixelRatio || 1,
+			...(sourceHint ? { sourceHint } : {}),
 		};
 	};
 
@@ -451,5 +455,6 @@ export function runInAppBrowserGuestCommand(command: InAppBrowserPickerCommand, 
 		revertLiveEditEntries: revertInAppBrowserLiveEditEntries,
 		styleKeys: BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
 		maxEdits: BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS,
+		readSourceHint: readBrowserElementSourceHint,
 	});
 }

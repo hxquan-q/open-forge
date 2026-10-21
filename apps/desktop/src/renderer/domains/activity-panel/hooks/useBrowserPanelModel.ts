@@ -261,6 +261,8 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 				revertOne: t("browser.liveEdit.revertOne"),
 				revertAll: t("browser.liveEdit.revertAll"),
 				send: t("browser.liveEdit.send"),
+				comment: t("browser.liveEdit.comment"),
+				commentPlaceholder: t("browser.liveEdit.commentPlaceholder"),
 				discard: t("browser.liveEdit.discard"),
 				stale: t("browser.liveEdit.stale"),
 				failed: t("browser.liveEdit.failed"),
@@ -269,7 +271,7 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 			onApplyStyle: (property, value) => void liveEdit.applyStyle(property, value),
 			onRevertEdit: (index) => void liveEdit.revertEdit(index),
 			onRevertAll: () => void liveEdit.revertAll(),
-			onSend: () => picker.confirmSelection(liveEdit.edits),
+			onSend: (comment) => picker.confirmSelection(liveEdit.edits, { comment, send: true }),
 			onDiscard: () => {
 				void liveEdit.revertAll().finally(() => picker.discardSelection());
 			},
