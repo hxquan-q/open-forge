@@ -17,7 +17,7 @@ branch: main
 worktree: .
 base_commit: a524856ef0cd94a182ebc35380494fda7ec9f21c
 read_paths: ['apps/desktop/vitest.config.ts', 'apps/desktop/src/test', 'apps/desktop/src/main/logger.ts']
-write_paths: ['apps/desktop/vitest.config.ts', 'apps/desktop/src/test', 'apps/desktop/src/main/logger.ts', 'project/tasks/TASK-0358-desktop-test-log-isolation.md', '.github/release-notes/v0.1.3.md']
+write_paths: ['apps/desktop/src/main/conversations/session-archive-service.test.ts', 'apps/desktop/vitest.config.ts', 'apps/desktop/src/test', 'apps/desktop/src/main/logger.ts', 'project/tasks/TASK-0358-desktop-test-log-isolation.md', '.github/release-notes/v0.1.3.md']
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -79,7 +79,17 @@ updated: 2026-10-22
 
 ## 当前候选门禁与入口
 
-- 隔离候选：main的3c3a50d47加本次源码与新增测试；不含另一任务未完成的session-archive-service.test.ts修改。完整`bun run check`通过（lint、全部类型、guards、mobile lint），源工作区该文件的临时类型错误单独保留，不伪称源工作区全绿。
+- 隔离候选：main的3c3a50d47加本次源码与新增测试；完整`bun run check`的lint、全部类型、guards、mobile lint均通过。候选副本Desktop测试有12个文件因复用的工作区包缺少构建产物而无法解析；这不作为源代码失败或通过证据。
 - 候选副本仅隔离源码，复用128处已安装node_modules链接；初次副本缺深层依赖/符号链接的检查失败已补齐后重跑通过。未改检查阈值。
-- 影响命令：`bun run test:impact -- apps/desktop/vitest.config.ts packages/coding-agent/src/resources/runtime/context-resources.ts packages/ssh-transport/src/ssh-connection.ts`自动回退test:changed。Coding Agent 252文件1620通过/3既有跳过，Runtime Desktop 13文件51通过；SSH首次误用系统WSL bash失败，改进程PATH选择既有Git Bash后21文件236通过/25既有跳过。CLI/Desktop组合仍在跑，最终结果见PLAN-0020。
+- 影响命令：`bun run test:impact -- apps/desktop/vitest.config.ts packages/coding-agent/src/resources/runtime/context-resources.ts packages/ssh-transport/src/ssh-connection.ts`自动回退test:changed。Coding Agent 252文件1620通过/3既有跳过，Runtime Desktop 13文件51通过；SSH首次误用系统WSL bash失败，改进程PATH选择既有Git Bash后21文件236通过/25既有跳过。CLI两个超时用例分别单跑通过；Desktop组合回归结果见下文。
 - 实际源码/测试路径以本Task write_paths与本提交为准；承载本记录的原子提交完成绑定。未运行真实UI/Provider/远端SSH或发布。
+
+## 组合验证中新增的必要测试兼容修正
+
+真实主工作区完整check揭示另一会话提交45fbcb77e的3个带`?instanceB`字面量import触发TS2307。本片只修测试模块重载接线：保留`vi.resetModules()`、homeB环境、A导出/B导入与所有断言；删除无必要的query后缀，使服务、paths与config使用重载后的同一模块图，同时保持静态类型。相较忽略类型/声明通配模块/动态字符串逃避检查，直接普通模块标识更小且保留类型合同。不会回退/夹带他人用例或更改产品源码；该追加的独立只读判断与定向验证结果见后续交付。
+
+- 兼容修正结果：/root/repair_review只读确认resetModules会重建B模块图、保留mocks，普通模块导入可共享正确的B配置/事件状态。源码check的TS2307为失败基线；仅删除3处query，新增B默认会话目录必须位于homeB的隔离断言，原断言全部保留。
+
+- 恢复静态类型后，完整check进一步指出同一新增迁移夹具的3个目录解析端口以同步函数实现Promise合同（5处调用报错）；夹具改为async包装，返回目录及所有断言不变，不改产品端口或放宽类型。
+- 当前主工作区最终验证（2026-10-22）：`bun ../../scripts/quality/run-vitest.mjs --run src/main/conversations/session-archive-service.test.ts src/test/log-home-isolation.test.ts`（`apps/desktop`）2文件12例通过；`bun run check`通过（lint、全部类型、guards、mobile lint）。
+- 较宽Desktop回归曾有`src/main/browser-automation/webview-live-edit.test.ts`的3个5秒超时；该文件属于其他Task，本Task未改动。该组合结果仍待稳定后复验，因此本Task保持`verifying`。未运行真实Desktop UI、Provider、远端SSH或发布。

@@ -344,7 +344,7 @@ describe("跨实例迁移（实例 A 导出 → 实例 B 导入）", () => {
 		try {
 			const importOptions = {
 				listKnownFingerprints: () => buildShardFingerprintIndex(agentDirB),
-				resolveImportDirectory: (cwdHint?: string) => resolveSessionImportDir(cwdHint),
+				resolveImportDirectory: async (cwdHint?: string) => resolveSessionImportDir(cwdHint),
 			};
 			const decisions = await importSessionArchiveFromBytes(new Uint8Array(bytes), "pw", importOptions);
 			const shardB = codingAgentSessionShardPath(projectCwd, agentDirB);
@@ -389,7 +389,7 @@ describe("跨实例迁移（实例 A 导出 → 实例 B 导入）", () => {
 		try {
 			const decisions = await importSessionArchiveFromBytes(bytes, "", {
 				listKnownFingerprints: () => buildShardFingerprintIndex(agentDirB),
-				resolveImportDirectory: (cwdHint?: string) => resolveSessionImportDir(cwdHint),
+				resolveImportDirectory: async (cwdHint?: string) => resolveSessionImportDir(cwdHint),
 			});
 			const expectedShard = codingAgentSessionShardPath(foreignCwd, agentDirB);
 			expect(decisions[0]?.conflict.action).toBe("create-copy");
@@ -420,9 +420,10 @@ describe("跨实例迁移（实例 A 导出 → 实例 B 导入）", () => {
 		process.env.VETTA_HOME = homeB;
 		try {
 			vi.resetModules();
-			const instanceB = await import("./session-archive-service.js?instanceB");
-			const instanceBPaths = await import("./session-paths.js?instanceB");
-			const instanceBConfig = await import("../config/desktop-config-store.js?instanceB");
+			const instanceB = await import("./session-archive-service.js");
+			const instanceBPaths = await import("./session-paths.js");
+			const instanceBConfig = await import("../config/desktop-config-store.js");
+			expect(instanceBConfig.DEFAULT_CONVERSATION_SESSION_DIR.startsWith(homeB)).toBe(true);
 			const events: Array<{ cwd: string; sessionPath: string }> = [];
 			// 服务内部依赖的是无 query 的 conversation-list-events：订阅必须拿同一实例才能收到广播。
 			const unsubscribe = (await import("./conversation-list-events.js")).onConversationListChanged(
@@ -431,7 +432,7 @@ describe("跨实例迁移（实例 A 导出 → 实例 B 导入）", () => {
 			try {
 				const decisions = await instanceB.importSessionArchiveFromBytes(bytes, "", {
 					listKnownFingerprints: async () => new Map(),
-					resolveImportDirectory: (cwdHint?: string) => instanceBPaths.resolveSessionImportDir(cwdHint),
+					resolveImportDirectory: async (cwdHint?: string) => instanceBPaths.resolveSessionImportDir(cwdHint),
 				});
 				expect(decisions[0]?.conflict.action).toBe("create-copy");
 				expect(decisions[0]!.writtenPath!.startsWith(instanceBConfig.DEFAULT_CONVERSATION_SESSION_DIR)).toBe(true);
