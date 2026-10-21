@@ -9,7 +9,7 @@ import {
 	type CodingAgentBrowserTabFunctionRequest,
 	type CodingAgentBrowserTabFunctionResult,
 	formatBrowserTabToolResult,
-	readBrowserTabToolInput,
+	readBrowserTabToolInputResult,
 } from "./browser-tab-tool-contract.js";
 
 export interface BrowserTabToolOptions {
@@ -28,20 +28,20 @@ export function createBrowserTabTool(options: BrowserTabToolOptions): RuntimeToo
 		inputSchema: BrowserTabToolInputSchema,
 		...(options.modelOrder === undefined ? {} : { modelOrder: options.modelOrder }),
 		validateInput: (input) => {
-			const parsed = readBrowserTabToolInput(input);
-			if (!parsed) throw new Error("invalid browser_tab tool input");
-			return parsed;
+			const parsed = readBrowserTabToolInputResult(input);
+			if (!parsed.ok) throw new Error(parsed.message);
+			return parsed.input;
 		},
 		async execute({ input, sessionId, turnId, signal }): Promise<RuntimeToolResult> {
-			const parsed = readBrowserTabToolInput(input);
-			if (!parsed) {
-				return formatBrowserTabToolResult(browserTabToolError("invalid_input", "invalid browser_tab tool input"));
+			const parsed = readBrowserTabToolInputResult(input);
+			if (!parsed.ok) {
+				return formatBrowserTabToolResult(browserTabToolError("invalid_input", parsed.message));
 			}
-			const outcome = await options.invoke({ sessionId, turnId, input: parsed }, signal);
+			const outcome = await options.invoke({ sessionId, turnId, input: parsed.input }, signal);
 			if (!outcome) {
 				return formatBrowserTabToolResult(
 					browserTabToolError("unimplemented", "browser_tab host function is unavailable in this session.", {
-						action: parsed.action,
+						action: parsed.input.action,
 					}),
 				);
 			}

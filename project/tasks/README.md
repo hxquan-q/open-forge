@@ -15,6 +15,9 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0339` | `verifying` | — | BUG-0134：browser_tab 可纠正错误（缺 action/非法动作/`file://`/无会话给恢复步骤）+ 通用链路「相同工具+相同参数+相同确定性错误」连续 3 次止损；定向 34 例、impact、根 tsgo、Desktop typecheck 与 check:quick 通过；待集成与真实模型回合验收；serial，main 主工作区串行。 |
+| `TASK-0340` | `ready` | — | BUG-0135：HTML 预览改走 `vetta-file://` 恢复目录语义、取消 `opacity-0` 门槛、合并目录事件并按被引用资源刷新；待 TASK-0339 收口后串行开始；serial，main 主工作区串行。 |
+| `TASK-0341` | `ready` | — | RESEARCH-0034：浏览器运行时探测缓存（成功约 60s / 失败约 4s）与在途去重，人工重检绕过、安装代次失效、执行失败失效；排 TASK-0340 之后；serial，main 主工作区串行。 |
 | `TASK-0335` | `verifying` | PLAN-0014 | mono 主题配色对齐上游 `313be5324` 并补 token 覆盖测试；实现 `b0c2148f0` 已集成 main，定向 2 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
 | `TASK-0336` | `verifying` | PLAN-0014 | 已完成消息默认折叠、虚线「已完成」头与展开时间线；实现 `47b51ac8c` 已集成 main，定向 16 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |
 | `TASK-0337` | `verifying` | PLAN-0014 | 项目详情页去线留白、指令预览/编辑与 CLAUDE.md+AGENTS.md 双读；实现 `39d28557c` 已集成 main，定向 41 例、impact 与完整 check 通过；记录 `2fcc7d9e7` 已推送 origin/dev 并核对远端；serial。 |

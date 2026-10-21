@@ -2,6 +2,7 @@
 import { Value } from "@sinclair/typebox/value";
 import type { Message, ToolCall, ToolResultMessage } from "@vetta/ai";
 import { AgentToolExecutionError } from "../tool-execution-error.js";
+import { AGENT_TOOL_CALL_STOPPED, type ToolFailureGuard } from "./tool-failure-guard.js";
 import type {
 	AgentExecutionEvent,
 	AgentInputCollector,
@@ -21,6 +22,8 @@ interface ExecuteToolCallsRequest {
 	readonly policy: AgentToolPolicy;
 	readonly emit: (event: AgentExecutionEvent) => void;
 	readonly takeSteeringMessages?: AgentInputCollector;
+	/** 回合级有界止损；缺省不启用，调用方按 RunState 传入以实现新回合重置。 */
+	readonly failureGuard?: ToolFailureGuard;
 }
 
 export interface ToolExecutionBatchResult {
@@ -72,6 +75,10 @@ export async function executeRuntimeToolCalls(request: ExecuteToolCallsRequest):
 			request.signal.throwIfAborted();
 			if (!outcome.ok) throw outcome.error;
 			const { prepared, result, durationMs } = outcome;
+			request.failureGuard?.recordResult(prepared.call.name, prepared.call.arguments, {
+				isError: result.isError === true,
+				code: toolResultErrorCode(result),
+			});
 			request.emit({
 				type: "tool_execution_finish",
 				call: prepared.call,
@@ -111,6 +118,17 @@ async function prepareToolCall(call: ToolCall, request: ExecuteToolCallsRequest)
 	const startedAt = Date.now();
 	const phases: AgentToolPhase[] = [];
 	const tool = request.tools.find((candidate) => candidate.name === call.name);
+	// 止损先于校验：同一个坏参数已经连续失败到阈值时，不再重复校验、审批或执行。
+	const verdict = request.failureGuard?.check(call.name, call.arguments);
+	if (verdict?.blocked) {
+		request.emit({ type: "tool_execution_start", call, startedAt });
+		const result = toolError(call, verdict.message, AGENT_TOOL_CALL_STOPPED, {
+			code: AGENT_TOOL_CALL_STOPPED,
+			stoppedErrorCode: verdict.code,
+			attempts: verdict.attempts,
+		});
+		return { call, startedAt, phases, execute: async () => result };
+	}
 	const validation = tool
 		? validateToolInput(tool, call)
 		: { valid: false as const, error: `Tool ${call.name} not found` };
@@ -228,6 +246,14 @@ function skipToolCall(call: ToolCall, emit: (event: AgentExecutionEvent) => void
 	emit({ type: "tool_execution_start", call, startedAt });
 	emit({ type: "tool_execution_finish", call, result, startedAt, durationMs: 0, phases: [] });
 	return result;
+}
+
+/** 工具结果的错误码：既覆盖执行链自己的 `{ code }`，也覆盖工具自定义的 details 载荷。 */
+function toolResultErrorCode(result: ToolResultMessage): string | undefined {
+	const details = result.details;
+	if (details === null || typeof details !== "object" || Array.isArray(details)) return undefined;
+	const code = (details as { code?: unknown }).code;
+	return typeof code === "string" ? code : undefined;
 }
 
 function toolError(call: ToolCall, message: string, code: string, details?: unknown): ToolResultMessage {

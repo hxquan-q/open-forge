@@ -10,6 +10,7 @@ import {
 import { isSilentAssistantMessage, silentTurnNudgeMessage } from "../silent-turn.js";
 import { validateAgentRunLimits } from "./limits.js";
 import { executeRuntimeToolCalls } from "./tool-executor.js";
+import { ToolFailureGuard } from "./tool-failure-guard.js";
 import type {
 	AgentCheckpointResult,
 	AgentExecutionEvent,
@@ -26,6 +27,8 @@ interface RunState {
 	modelCalls: number;
 	toolCalls: number;
 	recoveryAttempts: number;
+	/** 回合级有界止损：新回合自然重置，模型在新回合里可以重试此前被止损的调用。 */
+	toolFailureGuard: ToolFailureGuard;
 	/** 自最近一次模型调用产出可用结果以来的连续恢复次数；恢复策略据此区分“重试仍失败”与“推进后再次失败”。 */
 	consecutiveRecoveryAttempts: number;
 	lastAssistantMessage?: AgentRunResult["lastAssistantMessage"];
@@ -61,6 +64,7 @@ async function executeRun(
 		toolCalls: 0,
 		recoveryAttempts: 0,
 		consecutiveRecoveryAttempts: 0,
+		toolFailureGuard: new ToolFailureGuard(),
 	};
 	const emit = createEmitter(stream, request.observer);
 	emit({ type: "run_start" });
@@ -233,6 +237,7 @@ async function executeRun(
 					policy: request.toolPolicy,
 					emit,
 					takeSteeringMessages: request.takeSteeringMessages,
+					failureGuard: state.toolFailureGuard,
 				}),
 				signal,
 			);

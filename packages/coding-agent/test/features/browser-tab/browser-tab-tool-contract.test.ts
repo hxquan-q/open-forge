@@ -18,6 +18,7 @@ import {
 	raiseBrowserTabToolRisk,
 	readBrowserElementRef,
 	readBrowserTabToolInput,
+	readBrowserTabToolInputResult,
 } from "../../../src/features/browser-tab/browser-tab-tool-contract.js";
 
 const ref = { id: "e1", pageRevision: 3 };
@@ -103,6 +104,29 @@ describe("browser_tab input schema", () => {
 		expect(readBrowserTabToolInput({ action: "navigate", url: "javascript:alert(1)" })).toBeUndefined();
 		expect(isAllowedBrowserTabUrl("http://localhost:3000")).toBe(true);
 		expect(Value.Check(BrowserTabToolInputSchema, { action: "snapshot", eval: "no" })).toBe(false);
+	});
+});
+
+describe("browser_tab 单一判定入口", () => {
+	it("成功返回规范化入参，失败返回可纠正说明且判定不变", () => {
+		expect(readBrowserTabToolInputResult({ action: "click", elementRef: "v1:3:e1" })).toEqual({
+			ok: true,
+			input: { action: "click", elementRef: ref },
+		});
+		for (const invalid of [
+			{ action: "click", elementRef: "e1" },
+			{ action: "evaluate" },
+			{ action: "navigate", url: "file:///etc/passwd" },
+			{ action: "snapshot", eval: "1+1" },
+			undefined,
+		]) {
+			expect(readBrowserTabToolInput(invalid)).toBeUndefined();
+			const read = readBrowserTabToolInputResult(invalid);
+			expect(read.ok).toBe(false);
+			if (read.ok) continue;
+			expect(read.message.length).toBeGreaterThan(0);
+			expect(read.message).toContain("browser_tab");
+		}
 	});
 });
 

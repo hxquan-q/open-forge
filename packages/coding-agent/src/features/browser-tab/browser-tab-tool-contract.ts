@@ -151,8 +151,10 @@ function buildBrowserTabActionSchemas<TRef extends TSchema>(elementRef: () => TR
 	];
 }
 
+const BrowserTabProviderActionSchemas = buildBrowserTabActionSchemas(() => BrowserElementRefInputSchema);
+
 /** 发给 Provider 的入参 Schema：elementRef 接受 snapshot 打印的编码串或已解码的对象。 */
-export const BrowserTabToolInputSchema = Type.Union(buildBrowserTabActionSchemas(() => BrowserElementRefInputSchema));
+export const BrowserTabToolInputSchema = Type.Union(BrowserTabProviderActionSchemas);
 
 /** 运行时校验用的规范化 Schema：elementRef 只接受对象，编码串在校验前已被解码。 */
 const BrowserTabNormalizedInputSchema = Type.Union(buildBrowserTabActionSchemas(() => BrowserElementRefSchema));
@@ -295,6 +297,87 @@ export function readBrowserTabToolInput(value: unknown): BrowserTabToolInput | u
 	return normalized;
 }
 
+export type BrowserTabToolInputRead =
+	| { readonly ok: true; readonly input: BrowserTabToolInput }
+	| { readonly ok: false; readonly message: string };
+
+/** 校验入口：成功给规范化入参，失败给可纠正的问题描述（模型据此能直接改调用）。 */
+export function readBrowserTabToolInputResult(value: unknown): BrowserTabToolInputRead {
+	const input = readBrowserTabToolInput(value);
+	return input ? { ok: true, input } : { ok: false, message: describeBrowserTabToolInputProblem(value) };
+}
+
+/** 从动作分支 Schema 推导合法字段，避免另维护一份字段清单。 */
+function browserTabActionFields(action: BrowserTabToolAction): readonly string[] {
+	for (const schema of BrowserTabProviderActionSchemas) {
+		const properties = (schema as { properties?: Record<string, { const?: unknown }> }).properties;
+		if (properties?.action?.const === action) return Object.keys(properties);
+	}
+	return ["action"];
+}
+
+function describeAllowedInput(action: BrowserTabToolAction): string {
+	return `Allowed fields for ${action}: ${browserTabActionFields(action).join(", ")}.`;
+}
+
+function describeSchemaProblems(normalized: unknown): string {
+	const errors = [...Value.Errors(BrowserTabNormalizedInputSchema, normalized)];
+	if (errors.length === 0) return "the input does not match any browser_tab action.";
+	return errors
+		.slice(0, 3)
+		.map((error) => `${error.path || "/"}: ${error.message}`)
+		.join("; ");
+}
+
+function describeUrlScheme(url: string): string {
+	try {
+		return new URL(url).protocol.replace(/:$/, "");
+	} catch {
+		return "unparseable";
+	}
+}
+
+/**
+ * 把一次校验失败讲清楚：模型收到的错误必须能直接指导下一次调用。
+ * 保持严格判定不变——这里只解释「为什么被拒」和「怎么改」，不替模型猜动作。
+ */
+export function describeBrowserTabToolInputProblem(value: unknown): string {
+	const actions = BROWSER_TAB_TOOL_ACTIONS.join(", ");
+	const minimalExample = '{"action":"snapshot"}';
+	if (value === null || typeof value !== "object" || Array.isArray(value)) {
+		return `browser_tab input must be a JSON object. Actions: ${actions}. Minimal example: ${minimalExample}.`;
+	}
+	const record = value as Record<string, unknown>;
+	const action = record.action;
+	if (typeof action !== "string" || action.trim() === "") {
+		return `browser_tab is missing "action". Actions: ${actions}. Minimal example: ${minimalExample}.`;
+	}
+	if (!isBrowserTabToolAction(action)) {
+		return `browser_tab does not support action ${JSON.stringify(action)}. Actions: ${actions}. Minimal example: ${minimalExample}.`;
+	}
+	const allowedFields = browserTabActionFields(action);
+	const extraFields = Object.keys(record).filter((key) => !allowedFields.includes(key));
+	if (extraFields.length > 0) {
+		return `browser_tab ${action} does not accept ${extraFields.map((field) => JSON.stringify(field)).join(", ")}. ${describeAllowedInput(action)}`;
+	}
+	if (record.elementRef !== undefined && readBrowserElementRef(record.elementRef) === undefined) {
+		return `browser_tab ${action}: elementRef must be the opaque token snapshot printed (v1:<pageRevision>:<id>) or {"id","pageRevision"}. Take a snapshot and pass the token back verbatim.`;
+	}
+	if (action === "navigate") {
+		if (typeof record.url !== "string" || record.url.trim() === "") {
+			return 'browser_tab navigate requires "url". Example: {"action":"navigate","url":"https://example.com"}.';
+		}
+		if (!isAllowedBrowserTabUrl(record.url)) {
+			const scheme = describeUrlScheme(record.url);
+			if (scheme === "file" || scheme === "vetta-file") {
+				return "browser_tab navigate accepts only http/https URLs; local files are not browser pages. Open the file with the file preview (file tree or Files panel) instead.";
+			}
+			return `browser_tab navigate accepts only http/https URLs (got ${JSON.stringify(scheme)}). Example: {"action":"navigate","url":"https://example.com"}.`;
+		}
+	}
+	return `browser_tab ${action} input is invalid: ${describeSchemaProblems(normalizeBrowserElementRefInput(value))}. ${describeAllowedInput(action)}`;
+}
+
 export function readBrowserTabToolError(value: unknown): BrowserTabToolError | undefined {
 	return Value.Check(BrowserTabToolErrorSchema, value) ? value : undefined;
 }
@@ -353,7 +436,10 @@ function formatBrowserTabToolError(error: BrowserTabToolError): string {
 		return `stale_reference: pageRevision is now ${error.pageRevision ?? "?"}; take a new snapshot before acting.`;
 	}
 	if (error.code === "no_browser_session") {
-		return "no_browser_session: the in-app WebView is not available.";
+		return `no_browser_session: ${error.message} Open the in-app Browser page in the current workspace, then retry with a fresh snapshot; retrying the same call while that page stays closed cannot succeed.`;
+	}
+	if (error.code === "unimplemented") {
+		return `unimplemented: ${error.message} Ask the user to open the in-app Browser page in the current workspace; retrying the same call will not help.`;
 	}
 	if (error.code === "policy_denied") {
 		return `policy_denied: ${error.message}`;
