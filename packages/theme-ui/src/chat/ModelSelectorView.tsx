@@ -16,6 +16,7 @@ import {
 import { ThemeSurface } from "../appearance/ThemeSurface";
 import { MultiplierTag } from "../shared/MultiplierTag";
 import { ProviderIcon } from "../shared/provider-icon";
+import { ModelSelectorBalanceBadge } from "./ModelSelectorBalanceBadge";
 
 /**
  * 模型选择器的视图层：搜索、按 provider 分组、推理档位子菜单、云端/默认/视觉徽章。
@@ -23,6 +24,10 @@ import { ProviderIcon } from "../shared/provider-icon";
  * 纯展示——模型从哪来、选中后写到哪、文案怎么翻译，全部由调用方通过 props 决定。
  * 宿主的输入栏用它，插件（看板等）经 `@vetta-org/theme-ui/plugin-ui` 用的也是同一个，
  * 两边因此不会长成两副样子。
+ *
+ * C7：本文件超过 400 行，但没有第二个 actor——搜索、分组、推理子菜单、开合状态都服务于
+ * 「同一个模型选择面板」，且总是一起改；余额徽标的交互态已拆到
+ * `ModelSelectorBalanceBadge.tsx`。
  */
 
 /** 选择器需要的模型字段；宿主的 ModelOption 结构上即满足它。 */
@@ -72,6 +77,24 @@ export interface ModelSelectorProviderGroup {
 	models: readonly ModelSelectorOptionView[];
 }
 
+export interface ModelSelectorBalanceLabels {
+	/** 显示余额（闭眼按钮的可访问名）。 */
+	readonly show: string;
+	/** 隐藏余额（睁眼按钮的可访问名）。 */
+	readonly hide: string;
+	/** 刷新余额。 */
+	readonly refresh: string;
+}
+
+export interface ModelSelectorBalanceProps {
+	/** 余额归属的 provider id；只在该 provider 的分组标题行渲染。 */
+	readonly provider: string;
+	/** 宿主已按语言格式化好的整段文本（含「余额」前缀）；视图不做 i18n/数字格式。 */
+	readonly text: string;
+	readonly labels: ModelSelectorBalanceLabels;
+	readonly onRefresh: () => void;
+}
+
 export interface ModelSelectorViewProps {
 	selectedModel?: string;
 	selectedOption: ModelSelectorOptionView | null;
@@ -80,6 +103,8 @@ export interface ModelSelectorViewProps {
 	groups: readonly ModelSelectorProviderGroup[];
 	defaultKey?: string;
 	labels: ModelSelectorLabels;
+	/** 当前 provider 的余额区；不下发则完全不渲染（插件等消费方零影响）。 */
+	balance?: ModelSelectorBalanceProps;
 	/** 宿主在活动 Turn 期间整体禁用选择器（如回合进行中不允许改模型）。 */
 	disabled?: boolean;
 	className?: string;
@@ -114,6 +139,7 @@ export function ModelSelectorView({
 	groups,
 	defaultKey,
 	labels,
+	balance,
 	disabled = false,
 	className,
 	classNames,
@@ -124,6 +150,7 @@ export function ModelSelectorView({
 	const [open, setOpen] = useState(false);
 	const [reasoningOpen, setReasoningOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [balanceRevealed, setBalanceRevealed] = useState(false);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const modelListRef = useRef<HTMLDivElement>(null);
 
@@ -145,10 +172,18 @@ export function ModelSelectorView({
 		});
 	}, [groups, searchQuery]);
 
+	// 内容区 forceMount，关闭不卸载，所以揭示状态不能靠卸载归零：
+	// 每次打开都回到隐藏态；切换到别的 provider 时同样收回，避免把上一个的揭示偏好带过去。
+	useEffect(() => {
+		setBalanceRevealed(false);
+	}, [balance?.provider]);
+
 	const handleOpenChange = useCallback(
 		(nextOpen: boolean) => {
 			setOpen(nextOpen);
-			if (!nextOpen) {
+			if (nextOpen) {
+				setBalanceRevealed(false);
+			} else {
 				setReasoningOpen(false);
 				setSearchQuery("");
 			}
@@ -373,6 +408,16 @@ export function ModelSelectorView({
 													<span className="shrink-0 rounded-full bg-primary/15 px-1 text-[9px] font-medium text-primary">
 														{labels.cloudOnly}
 													</span>
+												)}
+												{balance && group.provider === balance.provider && (
+													<ModelSelectorBalanceBadge
+														className="ml-auto"
+														revealed={balanceRevealed}
+														text={balance.text}
+														labels={balance.labels}
+														onToggle={() => setBalanceRevealed((revealed) => !revealed)}
+														onRefresh={balance.onRefresh}
+													/>
 												)}
 											</div>
 											{group.models.map((model) => (
