@@ -171,6 +171,33 @@ const MarkdownDocument = memo(function MarkdownDocument({
 	);
 });
 
+/** 已冻结块的整体再包一层 memo：reveal tick 触发的重渲染里，只要块数组引用不变
+ * （见下方 append-only 复用），整棵已提交子树直接 bail，不重建 memo 子元素。 */
+const CommittedDocuments = memo(function CommittedDocuments({
+	blocks,
+	components,
+	definition,
+}: {
+	blocks: readonly string[];
+	components: Components;
+	definition: MarkdownDefinition;
+}): JSX.Element {
+	return (
+		<>
+			{blocks.map((block, index) => (
+				<MarkdownDocument
+					key={`committed-${index}`}
+					animateChunks={false}
+					components={components}
+					definition={definition}
+					live={false}
+					text={block}
+				/>
+			))}
+		</>
+	);
+});
+
 /**
  * Memo'd markdown renderer for chat text blocks. Host injects file/url handlers and theme.
  *
@@ -424,22 +451,19 @@ export const MarkdownContent = memo(function MarkdownContent({
 		() => renderText === displayText ? candidateSplit : splitDocuments ? splitStableMarkdownBlocks(renderText) : null,
 		[renderText, displayText, candidateSplit, splitDocuments],
 	);
-	const committed = split?.committed ?? [];
+	// append-only 流式期间，已提交块只可能追加（单调前缀性）：块数未变即内容未变，
+	// 复用上一次的数组引用，让 CommittedDocuments 的 memo 生效；内容被改写（replaced）
+	// 或块数变化时换新引用。
+	const committedBlocks = split?.committed ?? [];
+	const committedRef = useRef<readonly string[]>([]);
+	const committed = replaced || committedRef.current.length !== committedBlocks.length ? committedBlocks : committedRef.current;
+	committedRef.current = committed;
 	const tail = split ? split.tail : renderText;
 	const showTail = !split || tail.length > 0 || committed.length === 0;
 
 	return (
 		<MarkdownHostProvider host={host}><div className={cn("markdown-body break-words", animateChunks && "markdown-streaming-tail", className)}>
-			{committed.map((block, index) => (
-				<MarkdownDocument
-					key={`committed-${index}`}
-					animateChunks={false}
-					components={components}
-					definition={definition}
-					live={false}
-					text={block}
-				/>
-			))}
+			<CommittedDocuments blocks={committed} components={components} definition={definition} />
 			{showTail ? (
 				<MarkdownDocument
 					key="tail"
