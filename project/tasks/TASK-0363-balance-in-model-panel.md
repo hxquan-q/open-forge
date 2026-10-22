@@ -1,7 +1,7 @@
 ---
 id: TASK-0363
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: desktop
 requirement: REQ-0027
@@ -72,6 +72,13 @@ updated: 2026-10-22
 |---|---|---|
 | `93ef8aa14` | T01 | theme-ui 视图可选 `balance` prop + 余额徽标（闭眼/睁眼、打开即重置） |
 | `426dedf79` | T02 | 桌面接线：余额改挂选型面板，删除 `InputBarBalance`，`formatBalanceValue` 迁 `lib/`，i18n show/hide |
-| 待回填 | T03 | 需求/台账/发布说明 |
+| `c97fdb2d5` | T03 | REQ-0027 / TASK-0363 立项与发布说明 |
+| `e1b6e762e` | testing | AC-1~13 矩阵：4 个新测试文件 + i18n 更新（23 条） |
+| `0ef2108d9` | CP3 | 余额区键盘可达（keydown 逃生口）、金额 `title`、`aria-pressed`、注释更正（#1/#4/#5/#6；#2/#3 记已知限制） |
+| `f6b99490e` | CP3 复验 | 键盘路径 4 条用例 + 测试注释更正 |
+
+**已知限制（CP3 裁定不修）**：面板打开时以程序化方式切换模型，可能有一帧旧金额/旧揭示态；正常选中模型会关闭面板，不可见。
+
+**验证**：feature 用例 10 文件 51/51；`tsc` 0；OCR 原生模式（magpie → devin/claude-opus-5-5）8/8 文件 100%，无 critical/high。
 
 推送回执：待用户授权后回填。
