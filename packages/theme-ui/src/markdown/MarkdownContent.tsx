@@ -78,12 +78,15 @@ const ABSOLUTE_PATH_LABEL = /^(?:\/|[A-Za-z]:[\\/]|\\\\|~\/)/;
 
 /** 尾块快照的自适应节奏：一次解析的成本按占空比折算目标间隔（解析耗时 × 10，
  * 即解析开销不超过快照节奏的 ~10%），高于基础节奏时立即放慢，变便宜后逐步恢复。
- * 只作用于仍在增长的尾块，小尾块维持原有节奏。 */
+ * 只作用于仍在增长的尾块；小尾块仅当单次解析超过一帧预算（16ms）时才退避。 */
 const TAIL_PARSE_DUTY_DIVISOR = 10;
+const TAIL_FRAME_BUDGET_MS = 16;
 const TAIL_MAX_INTERVAL_MS = 800;
 
 export function nextTailInterval(baseInterval: number, previousInterval: number, parseDurationMs: number): number {
-	if (baseInterval <= 0) return 0;
+	// 小尾块（无基础节流）只有解析超过一帧预算才自适应放慢：小而便宜的尾块保持
+	// 逐 tick 更新，小而昂贵的尾块（如稠密构造）按占空比退避。
+	if (baseInterval <= 0 && parseDurationMs <= TAIL_FRAME_BUDGET_MS) return 0;
 	const target = Math.min(
 		TAIL_MAX_INTERVAL_MS,
 		Math.max(baseInterval, Math.round(parseDurationMs * TAIL_PARSE_DUTY_DIVISOR)),

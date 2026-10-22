@@ -46,6 +46,56 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("中等尺寸表格与围栏（2.5k-12k）也走快路径且最终等价", () => {
+		// 此前阈值 12k 与节流阈值对齐，2.5k-12k 的单构造尾块每 tick 全量解析；
+		// 现在快路径覆盖到 2.5k：迷你/直渲染固定开销远低于全量解析。
+		const header = "| Name | Description | Value |\n| --- | --- | ---: |\n";
+		const mediumTable = header + tableChunk(60, 0);
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={mediumTable} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(container.querySelectorAll("tbody tr").length).toBe(60);
+
+		const withFence = mediumTable + "\n```python\n" + Array.from({ length: 100 }, (_, i) => `print(${i})\n`).join("");
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={withFence} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(container.textContent).toContain("print(99)");
+
+		const finalText = withFence + "```\n\nafter medium fence.\n";
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("正文→大表→正文→大围栏→正文 全程内容正确，最终与整篇渲染等价", () => {
 		// 阶段 1：纯正文（常规路径 + 段落冻结）。
 		const prose1 = "Intro paragraph one.\n\nIntro paragraph two.\n\n";

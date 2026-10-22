@@ -36,7 +36,7 @@ describe("detectGrowingTable", () => {
 	});
 
 	it("小于阈值、混合结构或缺少分隔行的尾块不启用", () => {
-		expect(detectGrowingTable(makeTable(100))).toBeNull();
+		expect(detectGrowingTable(makeTable(30))).toBeNull();
 		expect(detectGrowingTable(makeTable(400) + "\nplain paragraph follows")).toBeNull();
 		expect(detectGrowingTable(`| a | b |\nnot a delimiter\n| 1 | 2 |\n`.repeat(200))).toBeNull();
 	});

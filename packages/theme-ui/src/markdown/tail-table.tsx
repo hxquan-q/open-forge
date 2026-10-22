@@ -13,8 +13,9 @@ interface HastNodePosition {
 	position?: { start?: { offset?: number } };
 }
 
-/** 触发增长表格快路径的最小尾块长度：与解析合并节流的阈值对齐；小表格走常规路径。 */
-export const TAIL_TABLE_MIN_LENGTH = 12000;
+/** 触发增长表格快路径的最小尾块长度：迷你解析（表头+变化行）的固定开销
+ * 远低于全表解析，此阈值取检测扫描与常规解析的收支平衡点；更小的表格常规解析本就便宜。 */
+export const TAIL_TABLE_MIN_LENGTH = 2500;
 
 const remarkPlugins = [remarkGfm, ...richRemarkPlugins];
 

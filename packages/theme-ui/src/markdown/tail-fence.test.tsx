@@ -46,7 +46,7 @@ describe("detectGrowingFence", () => {
 		expect(detectGrowingFence(makeFence(1200).replace(/\n/g, "\r\n"))).toBeNull();
 		expect(detectGrowingFence(`  \`\`\`ts\n${"code\n".repeat(5000)}`)).toBeNull();
 		expect(detectGrowingFence(`\`\`\`ts\`oops\n${"code\n".repeat(5000)}`)).toBeNull();
-		expect(detectGrowingFence(makeFence(100))).toBeNull();
+		expect(detectGrowingFence(makeFence(30))).toBeNull();
 	});
 });
 

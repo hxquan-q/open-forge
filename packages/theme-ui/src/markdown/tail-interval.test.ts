@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import { nextTailInterval } from "./MarkdownContent";
 
 describe("nextTailInterval", () => {
-	it("小尾块（无基础节流）不启用自适应节奏", () => {
-		expect(nextTailInterval(0, 0, 35)).toBe(0);
+	it("小尾块解析便宜时不启用自适应节奏，超过一帧预算时按占空比退避", () => {
+		expect(nextTailInterval(0, 0, 5)).toBe(0);
+		expect(nextTailInterval(0, 0, 16)).toBe(0);
+		// 35ms × 10 = 350ms：小而昂贵的尾块（稠密构造）也受占空比保护。
+		expect(nextTailInterval(0, 0, 35)).toBe(350);
 	});
 
 	it("解析便宜时维持基础节奏", () => {

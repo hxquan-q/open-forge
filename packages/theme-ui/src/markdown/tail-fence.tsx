@@ -5,8 +5,9 @@ import { BuiltinCodeBlock } from "./builtin-renderers";
 import type { MarkdownDefinition } from "./definition";
 import type { MarkdownLabels } from "./rich-labels";
 
-/** 触发未闭合围栏直渲染的最小尾块长度：小围栏解析便宜，走常规路径保持一致性。 */
-export const TAIL_FENCE_MIN_LENGTH = 12000;
+/** 触发未闭合围栏直渲染的最小尾块长度：直渲染固定开销极低，此阈值取检测扫描
+ * 与常规解析的收支平衡点；更小的围栏常规解析本就便宜。 */
+export const TAIL_FENCE_MIN_LENGTH = 2500;
 
 export interface GrowingFenceShape {
 	/** info string 首词（语言），与 remark-rehype 生成的 `language-` 类一致。 */
