@@ -296,7 +296,7 @@ flowchart TD
 | TASK-0370 | A | 1 | integrated | 17861fae7 | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（13 例定向 + 完整 check 绿） |
 | TASK-0372 | A | 1 | integrated | 5341cff2f | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（572 例 + 完整 check 绿） |
 | TASK-0373 | A | 1 | integrated | cc6f698af | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（576+38 例与完整 check 绿） |
-| TASK-0374 | A | — | 未派发 | — | — | — | — | — | pending |
+| TASK-0374 | A | 1 | integrated | 8a177fc00 | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 1633 例 + 完整 check 绿） |
 | TASK-0375 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0376 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0377 | A | — | 未派发 | — | — | — | — | — | pending |

@@ -15,8 +15,8 @@ export default defineConfig({
 			),
 			"@vetta/ecosystem-adapter": fileURLToPath(new URL("../ecosystem-adapter/src/index.ts", import.meta.url)),
 			"@vetta/runtime-knowledge": fileURLToPath(new URL("../runtime-knowledge/src/index.ts", import.meta.url)),
-			"@vetta/runtime-memory": fileURLToPath(new URL("../runtime-memory/src/index.ts", import.meta.url)),
 			"@vetta/runtime-memory/fixtures": fileURLToPath(new URL("../runtime-memory/src/fixtures.ts", import.meta.url)),
+			"@vetta/runtime-memory": fileURLToPath(new URL("../runtime-memory/src/index.ts", import.meta.url)),
 			"@vetta/runtime-subagents": fileURLToPath(new URL("../runtime-subagents/src/index.ts", import.meta.url)),
 			"@vetta/runtime-storage/conversation": fileURLToPath(
 				new URL("../runtime-storage/src/conversation/index.ts", import.meta.url),

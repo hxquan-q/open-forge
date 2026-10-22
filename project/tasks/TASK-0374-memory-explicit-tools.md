@@ -1,7 +1,7 @@
 ---
 id: TASK-0374
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 8a177fc00
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -30,14 +30,15 @@ write_paths:
   - packages/coding-agent/src/memory/memory-runtime-feature.ts
   - packages/coding-agent/test/memory/explicit-tools.test.ts
   - project/tasks/TASK-0374-memory-explicit-tools.md
-  - .github/release-notes/fragments/v0.1.3/task-0374-memory.md
+  - .github/release-notes/v0.1.3.md
+  - packages/coding-agent/vitest.config.ts
 exclusive_paths:
   - packages/coding-agent/src/memory/tools
   - packages/coding-agent/src/memory/memory-runtime-feature.ts
   - packages/coding-agent/test/memory/explicit-tools.test.ts
 depends_on: [TASK-0372, TASK-0373]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -128,8 +129,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补入 vitest.config.ts（fixtures 别名接线）并按发布说明事实改 v0.1.3.md。
+- 实际修改：新增 `src/memory/tools/`（版本化五工具 memory_remember/recall/get/correct/forget：scope 由宿主绑定上下文折算（模型只能在允许清单内选 user/project，自述身份被拒 SCOPE_NOT_ALLOWED），写入返回稳定 ID/revision/scope/状态，correct 强制 expectedRevision，forget 家族级+alsoProcessSources 只登记不伪装完成；注册工厂 scopeUse 覆盖除 im-claw 外全部场景，与 legacy memory 工具不共存）；`memory-runtime-feature.ts` 重载支持单注册与多注册装配。工具经 ExplicitMemoryServices 端口驱动 runtime-node 存储（0375 接线时由宿主注入真实实例）。
+- 实际运行（2026-10-22，win32-x64，真实存储驱动）：coding-agent 定向 254 文件 1633 例全绿（新增 explicit-tools 6 例：ID/revision/scope/来源、短词回退标注 degraded、冲突不吞、遗忘拒复活、未授权 scope 拒绝、注册合同）；完整 `bun run check` 全绿。
+- 未运行：真实 Provider/模型行为；自动抽取（0380）；宿主装配接线（0375）。
+- 承载提交即集成绑定；人工功能验收不适用（工具面，用户入口在 0375 接线后的正常会话）。
+- 剩余风险：工具与宿主策略（memoryPolicy off 时不装配）的判定在 peripheral-assembly 接线时落地；召回注入预算留 0382。
