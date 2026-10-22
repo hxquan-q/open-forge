@@ -282,12 +282,14 @@ describe("AC-6 · 导出拉全量（>20 条不截断）", () => {
 		expect(content.startsWith("我: c0\n\n")).toBe(true);
 		expect(content.endsWith("智能客服: c119")).toBe(true); // 末轮 m119 为 assistant
 		expect(content).toContain("我: c118");
-		// 缺省导出页大小 50 → 3 次调用，游标逐页推进。
+		// 缺省导出页大小 50；ER-B F4 授权演进：末页 20 条(短页)不再终止，多翻一次得空页才停。
+		// 意图不变：120 条全拉、正文顺序正确、游标逐页推进。
 		const calls = harness.loadCalls.filter((call) => call.sessionId === "s1");
-		expect(calls.map((call) => call.limit)).toEqual([50, 50, 50]);
+		expect(calls.map((call) => call.limit)).toEqual([50, 50, 50, 50]);
 		expect(calls[0]?.beforeTime).toBeUndefined();
 		expect(calls[1]?.beforeTime).toBe(all[70]?.created_at);
 		expect(calls[2]?.beforeTime).toBe(all[20]?.created_at);
+		expect(calls[3]?.beforeTime).toBe(all[0]?.created_at);
 	});
 });
 

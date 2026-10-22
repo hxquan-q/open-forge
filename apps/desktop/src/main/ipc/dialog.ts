@@ -321,6 +321,10 @@ export function registerDialogIpc(): () => void {
 	 *
 	 * 路径安全（T03）：目标目录必须在白名单内；每个文件名再经 {@link resolveFileTarget} 净化，
 	 * 含分隔符 / 逃逸 / 空名的条目一律拒绝、不落盘。**部分失败如实上报**：单个条目失败不中断整批。
+	 *
+	 * 盘上同名防覆盖（ER-B F3）：落点若已被**同名文件**占用，自动改用 `基名 (2).ext`、
+	 * `基名 (3).ext`… 的第一个空位（{@link resolveAvailableTarget}）——不弹窗、不中断批量，
+	 * `written` 回**真实落点**（含序号）。渲染层的批内去重只保证**批内**唯一，管不到盘上已存在的同名文件。
 	 */
 	ipcMain.handle(
 		"vetta:dialog:write-files-to-directory",
@@ -333,12 +337,13 @@ export function registerDialogIpc(): () => void {
 			const written: string[] = [];
 			const failed: Array<{ name: string; error: string }> = [];
 			for (const file of files) {
-				const target = resolveFileTarget(root, file.name);
-				if (target === undefined) {
+				const base = resolveFileTarget(root, file.name);
+				if (base === undefined) {
 					failed.push({ name: file.name, error: "invalid file name" });
 					continue;
 				}
 				try {
+					const target = await resolveAvailableTarget(root, base, file.name);
 					await writeFile(target, file.content, file.encoding);
 					written.push(target);
 				} catch (error) {
@@ -434,4 +439,48 @@ function resolveFileTarget(root: string, name: string): string | undefined {
 	if (name.includes("/") || name.includes("\\") || name.includes("\0")) return undefined;
 	const target = resolve(root, name);
 	return dirname(target) === root ? target : undefined;
+}
+
+/**
+ * 防覆盖时的序号上限（ER-B F3）：`基名 (2)` … `基名 (1000)`。
+ *
+ * 纯防御病态目录（上千个同名文件）；触顶即抛错，由调用方按条目失败上报 —— 绝不回退成静默覆盖。
+ */
+const MAX_DEDUPE_SUFFIX = 1000;
+
+/**
+ * `path` 是否已被**文件**占用（ER-B F3 防覆盖的判据）。
+ *
+ * 只认文件：`writeFile` 能**静默覆盖**的只有同名文件，防的就是这个；同名**目录**占位时
+ * `writeFile` 自己会报 `EISDIR`/`EPERM`（如实进 `failed`），不需要在这里改名 —— 这也让
+ * 「目标不可写」的既有失败用例（用同名目录模拟）保持原语义。
+ */
+async function fileExists(path: string): Promise<boolean> {
+	try {
+		return (await stat(path)).isFile();
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * 为批量写盘条目找**不覆盖盘上已有文件**的落点（ER-B F3）。
+ *
+ * 入参 `base` 是已过 {@link resolveFileTarget} 净化（且非 undefined）的落点、`name` 是原始扁平名
+ * （拆扩展名用）。落点空闲则原样返回；被同名文件占用则按 `基名 (2).ext`、`基名 (3).ext`… 取第一个
+ * 空位。写盘即落盘，故**同一批次内**后写条目天然能看见先写的，无需额外批内状态。
+ *
+ * 序号上限 {@link MAX_DEDUPE_SUFFIX} 触顶时抛错（不静默覆盖）。
+ */
+async function resolveAvailableTarget(root: string, base: string, name: string): Promise<string> {
+	if (!(await fileExists(base))) return base;
+	const ext = extname(name);
+	const stem = ext === "" ? name : name.slice(0, name.length - ext.length);
+	for (let suffix = 2; suffix <= MAX_DEDUPE_SUFFIX; suffix += 1) {
+		const candidate = resolveFileTarget(root, `${stem} (${suffix})${ext}`);
+		// 理论上不会发生（加了纯数字序号仍非法）；真发生则按条目失败，不静默覆盖。
+		if (candidate === undefined) throw new Error("no available file name");
+		if (!(await fileExists(candidate))) return candidate;
+	}
+	throw new Error("no available file name");
 }

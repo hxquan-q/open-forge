@@ -1,7 +1,7 @@
 // Copyright The Open Forge contributors.
 
-import { describe, expect, it } from "vitest";
-import { WeKnoraHttpClient } from "./http.js";
+import { describe, expect, it, vi } from "vitest";
+import { MAX_FILE_BYTES, WeKnoraHttpClient } from "./http.js";
 
 /**
  * `WeKnoraHttpClient.getFileData` 合同(F3 v2,只读数据面;07-acceptance-fixes.md)。
@@ -80,5 +80,60 @@ describe("WeKnoraHttpClient · getFileData(F3 v2)", () => {
 		await expect(clientWith(fetchImpl).getFileData(REF)).rejects.toMatchObject({
 			weknora: { code: "capability_missing", missingCapability: "retrieve", status: 403 },
 		});
+	});
+});
+
+/**
+ * 体积上限闸(ER-A·F1):content-length 预检须在缓冲前拒绝,arrayBuffer 兜底覆盖无头/chunked。
+ * 用手搓响应对象(`as unknown as Response`)而非真 Response:才能监视 arrayBuffer 是否被调、
+ * 才能注入 20MB+ 的假 content-length 而不真造 20MB 头。既有小图行为由上方用例锁住。
+ */
+describe("WeKnoraHttpClient · getFileData 体积上限(ER-A·F1)", () => {
+	it("content-length 超限 → 缓冲前即抛 unknown,不产出 data URL,不读 body 进内存", async () => {
+		const arrayBuffer = vi.fn(async () => new ArrayBuffer(4));
+		const response = {
+			ok: true,
+			headers: new Headers({ "Content-Type": "image/png", "Content-Length": String(MAX_FILE_BYTES + 1) }),
+			arrayBuffer,
+		} as unknown as Response;
+		const { fetchImpl } = capturingFetch(() => response);
+
+		await expect(clientWith(fetchImpl).getFileData(REF)).rejects.toMatchObject({
+			weknora: {
+				code: "unknown",
+				detail: `getFileData: content-length ${MAX_FILE_BYTES + 1} exceeds ${MAX_FILE_BYTES}`,
+			},
+		});
+		expect(arrayBuffer).not.toHaveBeenCalled();
+	});
+
+	it("无 content-length 头但 body 超限 → byteLength 兜底仍抛 unknown(覆盖 chunked 场景)", async () => {
+		const response = {
+			ok: true,
+			headers: new Headers({ "Content-Type": "image/png" }),
+			arrayBuffer: async () => new ArrayBuffer(MAX_FILE_BYTES + 1),
+		} as unknown as Response;
+		const { fetchImpl } = capturingFetch(() => response);
+
+		await expect(clientWith(fetchImpl).getFileData(REF)).rejects.toMatchObject({
+			weknora: {
+				code: "unknown",
+				detail: `getFileData: response body ${MAX_FILE_BYTES + 1} exceeds ${MAX_FILE_BYTES}`,
+			},
+		});
+	});
+
+	it("小图且 content-length 在限内 → 两道闸均放行,正常产出 data URL", async () => {
+		const bytes = new Uint8Array([137, 80, 78, 71]);
+		const response = {
+			ok: true,
+			headers: new Headers({ "Content-Type": "image/png", "Content-Length": String(bytes.byteLength) }),
+			arrayBuffer: async () => bytes.buffer,
+		} as unknown as Response;
+		const { fetchImpl } = capturingFetch(() => response);
+
+		const file = await clientWith(fetchImpl).getFileData(REF);
+		expect(file.contentType).toBe("image/png");
+		expect(file.dataUrl).toBe(`data:image/png;base64,${Buffer.from(bytes).toString("base64")}`);
 	});
 });

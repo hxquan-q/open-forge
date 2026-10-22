@@ -988,7 +988,9 @@
 		"free": "免费",
 		"balance": {
 			"label": "余额 {{value}}",
-			"refresh": "刷新余额"
+			"refresh": "刷新余额",
+			"show": "显示余额",
+			"hide": "隐藏余额"
 		},
 		"reasoningLevel": {
 			"minimal": "极简",

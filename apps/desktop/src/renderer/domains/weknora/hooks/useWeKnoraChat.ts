@@ -57,6 +57,13 @@ export interface WeKnoraChatState {
 	readonly newConversation: () => void;
 	/** 载入历史会话并恢复为当前对话，之后追问接上（AC-14 / AC-17）。 */
 	readonly openSession: (sessionId: string) => Promise<void>;
+	/**
+	 * 读**最新**的当前会话 id（调用时直读 atom，不信渲染快照）。
+	 *
+	 * ER-B F5：异步编排（删除）在途时用户可能已切到别的会话，闭包快照会陈旧 —— 需要判定
+	 * 「删的是不是**此刻**打开的会话」时用它，避免把新打开的会话误清成空态。
+	 */
+	readonly readCurrentSessionId: () => string | null;
 }
 
 /**
@@ -313,6 +320,9 @@ export function useWeKnoraChat(deps: WeKnoraChatDeps): WeKnoraChatState {
 	/** AC-19 指示源：缓冲键里非草稿的部分 = 有活跃流（含后台、含未决 ask）的会话集合。 */
 	const streamingSessionIds = useMemo(() => new Set(sessionIdsWithLiveStream(buffers)), [buffers]);
 
+	/** ER-B F5：调用时直读 atom 的「最新当前会话 id」读取口（不信闭包快照）。 */
+	const readCurrentSessionId = useCallback((): string | null => store.get(weKnoraSessionIdAtom), [store]);
+
 	return {
 		messages,
 		sessionId,
@@ -323,5 +333,6 @@ export function useWeKnoraChat(deps: WeKnoraChatDeps): WeKnoraChatState {
 		cancel,
 		newConversation,
 		openSession,
+		readCurrentSessionId,
 	};
 }

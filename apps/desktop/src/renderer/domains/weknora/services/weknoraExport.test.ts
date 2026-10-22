@@ -192,10 +192,13 @@ describe("loadAllMessages · 分页拉全（AC-6）", () => {
 		const result = await loadAllMessages("s1", { pageSize: 20, loadPage });
 
 		expect(result.map((m) => m.id)).toEqual(all.map((m) => m.id));
-		expect(calls).toHaveLength(3);
+		// ER-B F4 授权演进：不再「末页不足一页即止」——第 3 页仅 5 条(短页)仍继续翻，
+		// 第 4 次拿到空页才停(见函数头终止条件)。意图不变：45 条全拉、最早在前、无重复。
+		expect(calls).toHaveLength(4);
 		expect(calls[0].beforeTime).toBeUndefined();
 		expect(calls[1].beforeTime).toBe(all[25].created_at); // 首页最早一条
 		expect(calls[2].beforeTime).toBe(all[5].created_at);
+		expect(calls[3].beforeTime).toBe(all[0].created_at); // 末页(5 条)最早一条 → 再翻得空页
 	});
 
 	it("顺序校正：页内为倒序时，最终仍按时间升序", async () => {
@@ -240,7 +243,7 @@ describe("loadAllMessages · 分页拉全（AC-6）", () => {
 		expect(calls).toBe(1);
 	});
 
-	it("不足一页：单次调用即返回", async () => {
+	it("不足一页不再即止：继续翻到「无新消息」才停", async () => {
 		let calls = 0;
 		const messages = [msg("m1", "user", "q", isoAt(0))];
 		const loadPage: LoadMessagesPage = async () => {
@@ -248,7 +251,8 @@ describe("loadAllMessages · 分页拉全（AC-6）", () => {
 			return messages;
 		};
 		const result = await loadAllMessages("s1", { pageSize: 20, loadPage });
-		expect(calls).toBe(1);
+		// ER-B F4 授权演进：短页不再终止；第二次仍返回同一批(无新消息)才停。意图不变：单条会话照拉。
+		expect(calls).toBe(2);
 		expect(result.map((m) => m.id)).toEqual(["m1"]);
 	});
 

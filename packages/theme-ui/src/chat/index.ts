@@ -302,6 +302,8 @@ export {
 	MessageVisualOutgoingBubble,
 } from "./MessageVisualView";
 export type {
+	ModelSelectorBalanceLabels,
+	ModelSelectorBalanceProps,
 	ModelSelectorLabels,
 	ModelSelectorOptionView,
 	ModelSelectorProviderGroup,

@@ -3,9 +3,8 @@ import { ContextRing } from "../ContextRing";
 import { ExecutionModeSelector } from "../ExecutionModeSelector";
 import { ModelSelector } from "../ModelSelector";
 import { SendButton } from "../SendButton";
-import { useCallback, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ActiveActionCapsules, type ActiveActionCapsule } from "./ActiveActionCapsules";
-import { InputBarBalance } from "./InputBarBalance";
 import { InputBarToolbarButton } from "./InputBarToolbarButton";
 import type { SpeechInputModel } from "./types";
 import type { ContextRingModel } from "../../hooks/useContextRingModel";
@@ -107,15 +106,9 @@ export function InputBarActiveActions({
 }
 
 export function InputBarModelAction({ visible, updateActiveSession = true, scope }: { readonly visible: boolean; readonly updateActiveSession?: boolean; readonly scope?: ModelSelectorScope }): JSX.Element {
-	// 选型面板每次打开自增，作为余额「打开时拉取」的触发信号（尊重 60s 缓存，D4）。
-	const [balanceRefreshTick, setBalanceRefreshTick] = useState(0);
-	const handleSelectorOpenChange = useCallback((open: boolean) => {
-		if (open) setBalanceRefreshTick((tick) => tick + 1);
-	}, []);
 	return (
 		<div className={visible ? "flex min-w-0 shrink items-center gap-1" : "hidden"}>
-			<InputBarBalance modelKey={scope?.modelKey} refreshTick={balanceRefreshTick} />
-			<ModelSelector updateActiveSession={updateActiveSession} scope={scope} onOpenChange={handleSelectorOpenChange} />
+			<ModelSelector updateActiveSession={updateActiveSession} scope={scope} />
 		</div>
 	);
 }

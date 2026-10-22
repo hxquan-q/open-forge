@@ -988,7 +988,9 @@
 		"free": "Free",
 		"balance": {
 			"label": "Balance {{value}}",
-			"refresh": "Refresh balance"
+			"refresh": "Refresh balance",
+			"show": "Show balance",
+			"hide": "Hide balance"
 		},
 		"reasoningLevel": {
 			"minimal": "Minimal",
