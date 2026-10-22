@@ -151,6 +151,7 @@
 			"@vetta/runtime-node/mcp": ["./packages/runtime-node/src/mcp/index.ts"],
 			"@vetta/runtime-node/host": ["./packages/runtime-node/src/host/index.ts"],
 			"@vetta/runtime-node/sandbox": ["./packages/runtime-node/src/sandbox/index.ts"],
+			"@vetta/runtime-node/memory": ["./packages/runtime-node/src/memory/index.ts"],
 			"@vetta/runtime-node/*": ["./packages/runtime-node/src/*"],
 			"@vetta/runtime-telemetry": ["./packages/runtime-telemetry/src/index.ts"],
 			"@vetta/runtime-telemetry/langfuse": ["./packages/runtime-telemetry/src/langfuse.ts"],

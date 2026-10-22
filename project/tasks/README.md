@@ -19,7 +19,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |
 | `TASK-0369` | `done` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；@vetta/runtime-memory 合同包 + memoryPolicy 会话边界校验 + ADR-0149/0150 落地，完整 check 全绿。 |
 | `TASK-0370` | `draft` | PLAN-0021 | [稳定项目记忆身份与 Worktree 关联](TASK-0370-memory-project-identity.md)；待前置产物，未开工；serial。 |
-| `TASK-0371` | `draft` | PLAN-0021 | [SQLite 事实修订存储与资源生命周期](TASK-0371-memory-sqlite-revision-store.md)；待前置产物，未开工；serial。 |
+| `TASK-0371` | `done` | PLAN-0021 | [SQLite 事实修订存储与资源生命周期](TASK-0371-memory-sqlite-revision-store.md)；@vetta/runtime-node/memory 落地（worker 存储+迁移+lease 池+staging 工具），563 例与完整 check 全绿。 |
 | `TASK-0372` | `draft` | PLAN-0021 | [有作用域的词法与中文短词检索](TASK-0372-memory-lexical-retrieval.md)；待前置产物，未开工；serial。 |
 | `TASK-0373` | `draft` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；待前置产物，未开工；serial。 |
 | `TASK-0374` | `draft` | PLAN-0021 | [显式记住、检索、更正与遗忘工具](TASK-0374-memory-explicit-tools.md)；待前置产物，未开工；serial。 |

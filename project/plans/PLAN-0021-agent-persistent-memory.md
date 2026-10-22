@@ -292,7 +292,7 @@ flowchart TD
 | TASK-0367 | A | 1 | integrated | 9bb2d8a77 开工基线（取证见 VERIFY-0020） | main | 主工作区（coordination-only） | — | 承载提交即绑定（VERIFY-0020 + Task done/integrated） | integrated |
 | TASK-0368 | B | 1 | integrated | 8c07b195b（分支实际父，含 802233321；交接报告基线写 9bb2d8a77→视为 802233321，落后一个冲突登记提交，已核实无实质偏差） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已集成，待推送后清理；物理 Worktree 本批保留） | project/verification/HANDOFF-TASK-0368-window-b.md | 5637b2e95 + 73cd79f56 | integrated（--no-ff 合入本地 main；复验全绿） |
 | TASK-0369 | A | 1 | integrated | 537af264e 开工基线 | main | 主工作区（serial） | — | 承载提交即绑定（含 ADR-0149/0150） | integrated（完整 check 全绿） |
-| TASK-0371 | A | — | 未派发（先于 0370） | — | — | — | — | — | pending |
+| TASK-0371 | A | 1 | integrated | 777539cb4 | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（563 例 + staging 验证全绿，完整 check 绿） |
 | TASK-0370 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0372 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0373 | A | — | 未派发 | — | — | — | — | — | pending |

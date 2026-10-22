@@ -38,6 +38,10 @@
 		"./sandbox": {
 			"types": "./dist/sandbox/index.d.ts",
 			"import": "./dist/sandbox/index.js"
+		},
+		"./memory": {
+			"types": "./dist/memory/index.d.ts",
+			"import": "./dist/memory/index.js"
 		}
 	},
 	"files": [
@@ -63,6 +67,8 @@
 		"@vetta/runtime-storage": "workspace:*",
 		"@vetta/runtime-subagents": "workspace:*",
 		"@vetta/runtime-tools": "workspace:*",
+		"@vetta/runtime-memory": "workspace:*",
+		"better-sqlite3": "13.0.3",
 		"diff": "^8.0.2",
 		"extract-zip": "^2.0.1",
 		"file-type": "^21.1.1",
