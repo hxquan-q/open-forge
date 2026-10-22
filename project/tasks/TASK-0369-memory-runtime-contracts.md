@@ -1,7 +1,7 @@
 ---
 id: TASK-0369
 type: task
-status: draft
+status: in_progress
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 537af264e7ab2fb7364dded0649734ada07f2b01
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -46,7 +46,7 @@ write_paths:
   - docs/adr
   - project/decisions/README.md
   - project/tasks/TASK-0369-memory-runtime-contracts.md
-  - .github/release-notes/fragments/v0.1.3/task-0369-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/runtime-memory
   - packages/coding-agent/src/composition/contracts/runtime-session-options.ts
@@ -80,7 +80,7 @@ updated: 2026-10-22
 - 输入：上面关联的需求/方案、当前源码与测试、前置任务的接口/验证/回滚产物。
 - 依赖：[TASK-0367](TASK-0367-memory-entry-compatibility-baseline.md)、[TASK-0368](TASK-0368-memory-sqlite-native-probe.md)。
 - 输出：ADR、公开类型/Schema/fixture、包边界与干净导出验证；新包必须可由标准构建/测试入口发现。
-- 准入：前置产物尚未交付，保持draft；依赖验证通过并回读实际文件清单/接口后再转ready。
+- 准入：前置 TASK-0367 已 done（VERIFY-0020）、TASK-0368 已 integrated（537af264e，win32-x64 门禁证据与跨平台未验证项已登记）；2026-10-22 回读合同与源码后转 in_progress。serial 任务发布说明直接入 v0.1.3.md（fragments 路径与仓库发布说明事实不符，已从写域移除）。
 - 规划基线：`2f9d42762e2638601c5907bb1edfd88b36e0e68c`；真正开工或创建Worktree时重新核对HEAD与依赖，不把此Hash当作已包含上游Task结果。
 - 原生依赖、模型下载、真实Provider/费用、UI实例、迁移用户数据与发布分别遵守授权边界；本次“出Task”不执行这些动作。
 
