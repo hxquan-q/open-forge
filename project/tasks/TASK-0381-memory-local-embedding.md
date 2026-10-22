@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0381-memory-local-embedding
-worktree: unassigned（仅规划，未创建）
-base_commit: 1ba7d8bde
+worktree: ../open-forge-wt/task-0381-memory-local-embedding
+base_commit: e66f1f259a29550b9e2566e0c890fc5aff4aafe4
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -113,19 +113,21 @@ updated: 2026-10-22
 
 - 层级：按下列公开合同/真实内部装配证明GWT；受控Provider/模型替身仅用于外部边界，不将内部协作者全部Mock后只测调用。
 - 代表流程：生成向量、重启、升级模型版本→维度/归一化一致，不同版本禁止混算，事实不改；进入或重试embedding工作→状态明确、词法仍可用、被忘事实无向量写回。
-- 拟定定向命令（新测试文件在实施时创建并核实；均未运行）：
-  - `bun run test:impact -- packages/runtime-node/test/memory/embedding-adapter.test.ts`
-- 质量检查：实际实施按选定文件运行test:impact与check:quick，代码任务完成运行完整 `bun run check`；完整检查不替代行为测试。
-- 仅使用仓库Node runner；不裸跑bun test或直接Vitest。Go命令在 `apps/im-gateway` 执行，根检查不替代Go。
-- 不默认启动dev或verify:ui，不调用真实Provider；真实模型质量、跨平台/真实窗口证据无授权或无环境时单列未执行。
-- 当前版本发布碎片在实施时按Desktop manifest核实；并行Worker不改汇编正文或公共索引。
+- 定向命令（2026-10-23 实测，窗口 B，Worktree ../open-forge-wt/task-0381-memory-local-embedding）：
+  - packages/runtime-node 内 bun run test test/memory/embedding-adapter.test.ts → 14/14 通过（真实临时 SQLite + 真实事实 worker/擦除层：确定性适配器跨实例稳定与 l2 归一化、空输入/dispose 明确错误、写入→重启→检索 cosine≈1 且 memory_revisions 行数不变、双空间隔离与 dropSpace 只清派生层、维度/归一化/关闭后写入拒绝、scope 过滤、资源四态 directory-missing/artifact-missing/checksum-not-pinned/checksum-mismatch→degraded/ready、未下载与加载失败与取消的错误码 + 同库词法检索不受影响、ONNX 前缀注入与维度校验、幂等入队与重启完成态、入队后遗忘 abandoned 且写入点拒 suppressed、模型不可用任务 failed 原因可读、过期 lease 回收重领）。
+  - node --test apps/desktop/src/main/memory/embedding-models.node-test.mjs → 3/3 通过（候选目录不变量：维度384/前缀/许可证/checksum 如实 null；状态解析六分支纯函数；描述输出无路径/密钥）。
+  - bunx tsgo --noEmit（根）→ 无错误。
+- 质量检查（同 Worktree 实测）：完整 `bun run check` → types（root/desktop/docs/mobile）、lint、mobile-lint 全绿；check:guards 唯一红为 project-indexes `unknown TASK-0365`（并行会话已提交索引行但文件未入库，干净检出必红、主工作区因未提交文件在盘而绿——先存血统问题，不在本 Task 写域）。runtime-node 全包测试 89/92 文件通过，3 文件红（import-export/glob/grep）经主工作区基线复跑同样红，属先存问题。test:impact 并行重套件 20 分钟无产出已终止，以上述等价覆盖替代。
+- 仅使用仓库Node runner；不裸跑bun test或直接Vitest（node-test 文件按合同命令 node --test 直跑）。Go命令在 apps/im-gateway 执行，根检查不替代Go。
+- 不默认启动dev或verify:ui，不调用真实Provider；真实模型下载/跨平台推理质量无授权未运行，如实单列。
+- 发布说明：按派工备忘（同 TASK-0368），B 不写发布说明，由 Coordinator 在集成提交更新 v0.1.3.md。
 
 ## 验收分层
 
-- 工程验证：待执行；必须绑定版本、实际命令、上述GWT结果和未运行项。
+- 工程验证：合同级完成——适配器端口（确定性 + ONNX 双实现、注入运行库端口）、版本化向量存储（空间键全字段隔离、写入点校验、遗忘/时间/scope 过滤检索、dropSpace 重建）、持久 embedding 任务队列（幂等/lease/过期回收/完成前 erasure+suppressed 复检）、桌面候选模型目录与 ready/unavailable/degraded 纯函数状态解析。真实模型下载、ONNX 实际推理、跨平台行为未运行（无授权/无环境，如实未验证；checksum 与运行库版本待授权下载时钉住）。
 - 技术评审：未执行；允许的评审方式与实际发现届时记录，不伪造独立评审。
-- 集成：pending；尚无实现commit/Worktree，不因建Task而标integrated。
-- 人工功能验收：待验收；工程完成后提供正常入口验收包，用户沉默不算接受。
+- 集成：pending；候选提交在 task/TASK-0381-memory-local-embedding，待 Coordinator 审查集成。
+- 人工功能验收：待验收（工程完成后由后续 Desktop 控制面任务提供入口；本 Task 交付底层资源与存储合同）。
 - 发布：未授权；Task存在和工程完成都不自动发布。
 
 ## 功能验收包
@@ -139,8 +141,10 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改（窗口 B，2026-10-23）：新增 packages/runtime-node/src/memory/embedding/（embedding-adapter.ts、vector-store.ts、embedding-jobs.ts、index.ts）、packages/runtime-node/test/memory/embedding-adapter.test.ts、apps/desktop/src/main/memory/embedding-models.ts 与 embedding-models.node-test.mjs；更新本 Task 合同。package.json、bun.lock、migrations/migrations.ts 与生产既有文件零变化——向量表为派生索引表（沿用 0372 词法索引先例，不进 MEMORY_SCHEMA_VERSION 事实迁移）；ONNX 运行库按清单懒加载注入，不新增安装依赖。
+- 关键设计：向量空间键（model/revision/dimension/normalization）进主键与全部查询，跨版本混算结构性不可能；被忘事实三重防线（入队 epoch 复检、完成前 epoch+suppressed 复检、写入点 suppressed 拒绝）；模型不可用/损坏/取消均有稳定错误码，词法路径不受影响；候选模型 checksum 如实 null——未钉住的候选不可判 ready，「模型卡可用」不伪装成「已有可发布本地产物」。
+- 实际运行：见上方定向命令；14/14 与 3/3 通过，根 tsgo 无错误。
+- 未运行：真实模型下载与 ONNX 推理（需用户授权，届时钉 sha256/bytes/运行库版本并独立验收）、跨平台行为、Desktop UI 入口（后续任务）。
+- Worktree：../open-forge-wt/task-0381-memory-local-embedding（派工代次 1，base e66f1f259）；候选提交在本分支，未 push、未合 main。
+- 需要 Coordinator 处理：① packages/runtime-node/src/memory/index.ts 增一行 embedding 再导出（该文件不在本 Task 写域，未擅自修改；0382 消费前接入）；② 遗忘流程对向量表的联动清理可在 0382/0373 复核（本 Task 已提供 purgeMemory/purgeScope/dropSpace 与检索期过滤）；③ e5 ONNX 产物 checksum/运行库版本钉住需用户授权下载后回填 EMBEDDING_MODEL_CATALOG。
+- 剩余风险：确定性适配器非语义（测试边界已注明）；真实 e5-small 量化产物的质量/体积/加载时间未测；多进程并发写同一向量表的压测未做（WAL+busy_timeout 同词法层约定）。
