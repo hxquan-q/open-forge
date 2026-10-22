@@ -172,8 +172,8 @@ export function ModelSelectorView({
 		});
 	}, [groups, searchQuery]);
 
-	// 内容区 forceMount，关闭不卸载，所以揭示状态不能靠卸载归零：
-	// 每次打开都回到隐藏态；切换到别的 provider 时同样收回，避免把上一个的揭示偏好带过去。
+	// 揭示状态由父视图持有，父视图跨面板开合常驻（内容区本身会卸载）；
+	// 因此每次打开/切换 provider 时显式归零，避免把上一次的揭示偏好带过去。
 	useEffect(() => {
 		setBalanceRevealed(false);
 	}, [balance?.provider]);
@@ -410,14 +410,22 @@ export function ModelSelectorView({
 													</span>
 												)}
 												{balance && group.provider === balance.provider && (
-													<ModelSelectorBalanceBadge
-														className="ml-auto"
-														revealed={balanceRevealed}
-														text={balance.text}
-														labels={balance.labels}
-														onToggle={() => setBalanceRevealed((revealed) => !revealed)}
-														onRefresh={balance.onRefresh}
-													/>
+													// Radix 菜单拦 Tab、方向键只遍历菜单项；给徽标按钮留一个 keydown 逃生口，
+													// 让它们能像搜索框一样参与键盘导航，Escape 仍冒泡给菜单处理。
+													<span
+														className="ml-auto inline-flex"
+														onKeyDown={(event) => {
+															if (event.key !== "Escape") event.stopPropagation();
+														}}
+													>
+														<ModelSelectorBalanceBadge
+															revealed={balanceRevealed}
+															text={balance.text}
+															labels={balance.labels}
+															onToggle={() => setBalanceRevealed((revealed) => !revealed)}
+															onRefresh={balance.onRefresh}
+														/>
+													</span>
 												)}
 											</div>
 											{group.models.map((model) => (
