@@ -15,6 +15,7 @@ import type {
 } from "@vetta/coding-agent/runtime";
 import type { SessionConfig } from "@vetta/runtime-core";
 import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
+import type { MemoryPolicyConfiguration } from "@vetta/runtime-memory";
 import { normalizeProjectCwd } from "@vetta/ssh-transport";
 import { resolveDesktopBrandName } from "../../shared/desktop-brand.js";
 import { getAppLanguage } from "../i18n/index.js";
@@ -63,6 +64,12 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	readonly sessionExtensionFunctions?: SessionExtensionFunctionSource;
 	readonly bindPinnedModelContext?: CodingAgentPinnedModelContextBinder;
 	readonly promptCacheKey?: string;
+	/**
+	 * 新结构化记忆策略（ADR-0149，TASK-0375）：与 legacy memoryMode 正交；
+	 * 未提供（缺省）即不启用新线路，旧行为零变化；值由产品控制面（后续）
+	 * 从用户设置解析后随会话下发，RuntimeHost 边界首次结构校验。
+	 */
+	readonly memoryPolicy?: MemoryPolicyConfiguration;
 }
 
 export interface ResolvedDesktopSessionConfig {
@@ -234,6 +241,7 @@ export async function resolveDesktopSessionConfig(
 		agentConfiguration: _agentConfiguration,
 		sessionRuntimeTools: _sessionRuntimeTools,
 		sessionExtensionFunctions: _sessionExtensionFunctions,
+		memoryPolicy: _memoryPolicy,
 		...runtimeConfig
 	} = config ?? {};
 	return {
@@ -256,6 +264,7 @@ export async function resolveDesktopSessionConfig(
 					sessionExtensionFunctions: config?.sessionExtensionFunctions,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,
+					...(config?.memoryPolicy ? { memoryPolicy: config.memoryPolicy } : {}),
 				},
 				config?.agent,
 			),

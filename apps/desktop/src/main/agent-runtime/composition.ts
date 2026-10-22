@@ -7,6 +7,7 @@ import {
 	CODING_AGENT_SESSION_ASSISTANCE_OBSERVATION,
 	CODING_AGENT_SESSION_INITIALIZATION_OBSERVATION,
 	CODING_AGENT_SUBAGENT_ISSUE_OBSERVATION,
+	type CodingAgentRuntimeSessionOptions,
 	createCodingAgentMemoryRolloverRuntime,
 	publishCodingAgentExecutionRuntimeDefinition,
 } from "@vetta/coding-agent/composition";
@@ -16,6 +17,11 @@ import {
 	createCodingAgentPluginMcpRuntime,
 	createCodingAgentSharedModelController,
 } from "@vetta/coding-agent/host-services";
+import {
+	createExplicitMemoryToolRegistrations,
+	createMemoryEvidenceContextProvider,
+	type ExplicitMemoryServices,
+} from "@vetta/coding-agent/memory";
 import { AGENT_CONFIGURATION_OBSERVATION } from "@vetta/coding-agent/session-extensions";
 import {
 	CatalogRoutedRuntimeHostSessionBackend,
@@ -31,6 +37,7 @@ import {
 	RuntimeObservationHub,
 	type RuntimeObservationPublisher,
 } from "@vetta/runtime-core";
+import type { AgentFeatureDefinition } from "@vetta/runtime-core/kernel";
 import {
 	createDesktopHistoricalSessionFormat,
 	createDesktopResultArtifactRuntime,
@@ -46,6 +53,7 @@ import {
 	setDesktopSshConnectionResolver,
 } from "@vetta/runtime-desktop";
 import { scanLocalSources } from "@vetta/runtime-knowledge";
+import type { MemoryScope } from "@vetta/runtime-memory";
 import { FileConversationRuntimeSessionFileHistoryReader } from "@vetta/runtime-node/conversation";
 import { profileDatasetFile } from "@vetta/runtime-node/dataset";
 import {
@@ -54,6 +62,7 @@ import {
 	NodeTextFileStorage,
 } from "@vetta/runtime-node/host";
 import { loadVettaCredentials } from "@vetta/runtime-node/mcp";
+import { acquireMemoryStoreLease, LexicalMemoryIndex, SqliteMemoryErasure } from "@vetta/runtime-node/memory";
 import { getModePrompt } from "../agent-modes/index.js";
 import { createDesktopAgentObservability } from "../agent-observability/composition.js";
 import { recordRuntimeCompaction } from "../app-monitor/app-monitor-service.js";
@@ -73,6 +82,8 @@ import { getDesktopMcpTaskCoordinator } from "../mcp/mcp-task-runtime.js";
 import { createDesktopPluginHookAdapterFactory } from "../plugins/coding-agent-hook-adapter.js";
 import { pluginAgentContributionService } from "../plugins/plugin-catalog.js";
 import { getDesktopCodingAgentPluginRuntimeSource } from "../plugins/plugin-runtime-service.js";
+import { resolveMemoryIdentity } from "../projects/memory-identity.js";
+import { loadMemoryIdentityRegistry, saveMemoryIdentityRegistry } from "../projects/memory-identity-storage.js";
 import { getDesktopRuntimeConfigurationService } from "../runtime-configuration/runtime-configuration-composition.js";
 import { getAvailableLinuxBubblewrapPath, getAvailableMacosSandboxExecPath } from "../sandbox/capability.js";
 import { resolveWindowsSandboxHostBinary } from "../sandbox/windows-binary-resolver.js";
@@ -221,6 +232,9 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 						journalStorage: new NodeTextFileStorage(join(options.cwd, "JOURNAL.md")),
 					});
 				},
+				// 新结构化记忆（TASK-0375）：memoryPolicy 活跃时装配；策略关闭时返回
+				// undefined，旧 memoryMode 路径不受影响（ADR-0149）。
+				createExplicitMemoryRuntime: (sessionOptions) => createDesktopExplicitMemoryRuntime(sessionOptions),
 				observationHub: {
 					onIssue: (issue) => log.warn("[runtime-observation] coding agent hub issue", issue),
 				},
@@ -366,4 +380,109 @@ function logSessionRoute(decision: RuntimeHostSessionBackendRouteDecision): void
 				? "conversation-v2-catalog"
 				: "unknown-catalog";
 	log.info(`[agent-runtime] session-route route=${decision.routeId ?? "unknown"} reason=${reason}`);
+}
+
+/**
+ * 新结构化记忆 Runtime 装配（TASK-0375）：memoryPolicy 活跃时创建
+ * 「显式工具组 + 证据上下文」Feature。资源生命周期都在 prepare/dispose：
+ * - store lease 按会话持有（owner = session id），dispose 时释放；
+ * - 词法索引与遗忘屏障共享同一数据库路径（WAL）；
+ * - 初始化失败在 prepare 中抛错（会话创建如实失败），不静默降级。
+ * - 身份注册表同步读写（原子写）；目录无 Git 时按普通目录解析。
+ */
+function createDesktopExplicitMemoryRuntime(
+	sessionOptions: CodingAgentRuntimeSessionOptions,
+): AgentFeatureDefinition | undefined {
+	const policy = sessionOptions.memoryPolicy;
+	if (policy === undefined || policy.mode === "off") {
+		return undefined;
+	}
+	const agentDir = getAgentDir();
+	const memoryDir = join(agentDir, "memory", "profile-default");
+	const registryPath = join(memoryDir, "identity-registry.json");
+	const principal = { principalId: "desktop-profile-default" };
+	const registry = loadMemoryIdentityRegistry({ filePath: registryPath, principal });
+	const resolved = resolveMemoryIdentity({
+		registry,
+		cwd: sessionOptions.cwd ?? process.cwd(),
+		ensureWorkspaceView: false,
+	});
+	saveMemoryIdentityRegistry({ filePath: registryPath, registry: resolved.registry });
+	const databasePath = join(memoryDir, "memory.sqlite");
+	const allowedScopes: MemoryScope[] = resolved.allowedScopes.map((entry) => ({
+		name: entry.name,
+		identity:
+			entry.projectId === undefined
+				? { principalId: entry.principalId }
+				: { principalId: entry.principalId, projectId: entry.projectId },
+	}));
+	const projectScope = allowedScopes.find((scope) => scope.name === "project") ?? allowedScopes[0];
+	const sessionOwner = `session:${sessionOptions.sessionId}`;
+
+	return {
+		id: "coding-agent.persistent-memory",
+		async prepare(context) {
+			context.signal.throwIfAborted();
+			const lease = await acquireMemoryStoreLease({
+				databasePath,
+				allowedScopes,
+				owner: sessionOwner,
+			});
+			let index: LexicalMemoryIndex | undefined;
+			let erasure: SqliteMemoryErasure | undefined;
+			try {
+				index = await LexicalMemoryIndex.open({ databasePath });
+				erasure = await SqliteMemoryErasure.open({ databasePath });
+				const services: ExplicitMemoryServices = {
+					write: (scope, command) => lease.store.write(scope, command),
+					read: (scope, selector) => lease.store.read(scope, selector),
+					listRevisions: (memoryId, scope) => lease.store.listRevisions(memoryId, scope),
+					listSources: (memoryId, scope) => lease.store.listSources(memoryId, scope),
+					search: (scope, query, selector, limit) =>
+						Promise.resolve(index?.search(scope, query, selector, limit) ?? { entries: [], degraded: false }),
+					forget: async (memoryId) => {
+						const outcome = erasure?.forgetMemoryFamily({ memoryId });
+						return { erasureEpoch: outcome?.erasureEpoch ?? 0 };
+					},
+				};
+				const registrations = createExplicitMemoryToolRegistrations({
+					services,
+					scopeContext: {
+						allowed: allowedScopes.map((scope) => ({
+							name: scope.name === "user" ? ("user" as const) : ("project" as const),
+							scope,
+						})),
+					},
+				});
+				const provider = createMemoryEvidenceContextProvider({
+					scope: projectScope,
+					reader: {
+						readEvidence: async (scope) => {
+							const entries = await lease.store.read(scope, { asOf: new Date().toISOString() });
+							return [...entries]
+								.sort((left, right) => (right.pinned === true ? 1 : 0) - (left.pinned === true ? 1 : 0))
+								.sort((left, right) => (right.recordedAt > left.recordedAt ? 1 : -1));
+						},
+					},
+				});
+				const tools = registrations.map((registration) => registration.tool);
+				return {
+					async contribute(contributionContext) {
+						contributionContext.signal.throwIfAborted();
+						return { tools, contextProviders: [provider] };
+					},
+					async dispose() {
+						index?.close();
+						erasure?.close();
+						await lease.release();
+					},
+				};
+			} catch (error) {
+				index?.close();
+				erasure?.close();
+				await lease.release();
+				throw error;
+			}
+		},
+	};
 }

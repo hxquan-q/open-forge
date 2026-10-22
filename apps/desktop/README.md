@@ -247,6 +247,7 @@ internal_dependencies:
   - "@vetta/runtime-desktop"
   - "@vetta/runtime-knowledge"
   - "@vetta/runtime-mcp"
+  - "@vetta/runtime-memory"
   - "@vetta/runtime-node"
   - "@vetta/runtime-storage"
   - "@vetta/runtime-telemetry"

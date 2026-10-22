@@ -47,6 +47,7 @@ import {
 import { CODING_AGENT_TODO_OBSERVATION } from "../../features/todo/todo-session-extension-contract.js";
 import { CodingAgentSessionConfigurationState } from "../../host/session-configuration/configuration-state.js";
 import { createCodingAgentSessionProfileStateExtension } from "../../host/session-configuration/session-profile-state-extension.js";
+import { isPersistentMemoryActive } from "../../memory/context/index.js";
 import { type CodingAgentMemoryRolloverRuntime, createCodingAgentMemoryRuntimeFeature } from "../../memory/index.js";
 import { createCodingAgentPluginConfigurationSessionExtension } from "../../plugins/runtime/plugin-configuration-session-extension.js";
 import type { ConversationScenario } from "../../profiles/index.js";
@@ -98,6 +99,8 @@ export interface CodingAgentSessionPeripheralAssembly {
 	readonly mcpController?: McpDeferredToolController;
 	readonly executionRuntime: CodingAgentSessionExecutionRuntime;
 	readonly memoryRuntime?: CodingAgentMemoryRolloverRuntime;
+	/** 新结构化记忆 Feature（memoryPolicy 活跃时由宿主工厂提供；0375）。 */
+	readonly explicitMemoryFeature?: AgentFeatureDefinition;
 	readonly todoRuntime: CodingAgentTodoRuntime;
 	readonly todoRegistration: CodingAgentRuntimeToolRegistration;
 	readonly todoEnabled: boolean;
@@ -311,6 +314,10 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			rollback: () => memoryRuntime.dispose(),
 		});
 	}
+	// 新结构化记忆：仅当策略活跃且宿主提供工厂时装配；关闭或未配置时零变化（ADR-0149）。
+	const explicitMemoryFeature = isPersistentMemoryActive(sessionOptions.memoryPolicy)
+		? profile.createExplicitMemoryRuntime?.(sessionOptions)
+		: undefined;
 	const features = [
 		...options.codingTools.capabilities.features,
 		executionRuntime.feature,
@@ -319,6 +326,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			: []),
 		...sessionExtensions.features,
 		...(memoryRuntime ? [createCodingAgentMemoryRuntimeFeature(memoryRuntime.toolRegistration)] : []),
+		...(explicitMemoryFeature ? [explicitMemoryFeature] : []),
 		...(mcpController ? [mcpController.createFeature({ includePromptInstruction: false })] : []),
 	];
 	const baseCapabilities: RuntimeCapabilityDefinition = {
@@ -339,6 +347,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 		mcpController,
 		executionRuntime,
 		memoryRuntime,
+		explicitMemoryFeature,
 		todoRuntime,
 		todoRegistration,
 		todoEnabled,

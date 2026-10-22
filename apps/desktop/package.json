@@ -164,6 +164,7 @@
 		"@vetta/runtime-desktop": "workspace:*",
 		"@vetta/runtime-knowledge": "workspace:*",
 		"@vetta/runtime-mcp": "workspace:*",
+		"@vetta/runtime-memory": "workspace:*",
 		"@vetta/runtime-node": "workspace:*",
 		"@vetta/runtime-storage": "workspace:*",
 		"@vetta/runtime-telemetry": "workspace:*",

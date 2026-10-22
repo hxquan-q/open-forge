@@ -1,7 +1,7 @@
 ---
 id: TASK-0375
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 32d1fbbac
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -27,6 +27,7 @@ read_paths:
   - apps/desktop/src/main/agent-runtime/composition.ts
   - packages/runtime-desktop/src/backend-pool.ts
   - packages/coding-agent/src/composition/session-initialization
+  - packages/coding-agent/src/composition/contracts/runtime-composition-options.ts
   - packages/coding-agent/src/memory/context
   - packages/coding-agent/test/composition/persistent-memory.test.ts
 write_paths:
@@ -35,21 +36,31 @@ write_paths:
   - apps/desktop/src/main/agent-runtime/composition.ts
   - packages/runtime-desktop/src/backend-pool.ts
   - packages/coding-agent/src/composition/session-initialization
+  - packages/coding-agent/src/composition/contracts/runtime-composition-options.ts
   - packages/coding-agent/src/memory/context
   - packages/coding-agent/test/composition/persistent-memory.test.ts
+  - packages/coding-agent/src/public-api/memory.ts
+  - packages/coding-agent/package.json
+  - apps/desktop/package.json
+  - apps/desktop/README.md
+  - tsconfig.json
+  - apps/desktop/tsconfig.json
+  - docs/architecture/dependents.md
+  - bun.lock
   - project/tasks/TASK-0375-memory-desktop-session-wiring.md
-  - .github/release-notes/fragments/v0.1.3/task-0375-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - apps/desktop/src/main/conversations/resolve-session-config.ts
   - apps/desktop/src/main/conversations/resolve-session-config.test.ts
   - apps/desktop/src/main/agent-runtime/composition.ts
   - packages/runtime-desktop/src/backend-pool.ts
   - packages/coding-agent/src/composition/session-initialization
+  - packages/coding-agent/src/composition/contracts/runtime-composition-options.ts
   - packages/coding-agent/src/memory/context
   - packages/coding-agent/test/composition/persistent-memory.test.ts
 depends_on: [TASK-0367, TASK-0370, TASK-0374]
 conflicts_with: [TASK-0382]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -140,8 +151,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补入记忆公共出口/清单/路径图/边界声明等接线文件（生产接线必需），fragments 改 v0.1.3.md。
+- 实际修改：①`@vetta/coding-agent/memory` 公共出口（工具组+上下文 Feature）；②composition 选项新增 `createExplicitMemoryRuntime` 宿主工厂，peripheral-assembly 在 memoryPolicy 活跃时装配（关闭/未配置零变化，不改旧 memoryMode/compaction 路径）；③`memory/context/`：证据上下文（有界条数/字符预算、来源与时间标记、明示数据非指令框架、空记忆不注入）与 `createPersistentMemoryFeature`；④Desktop `resolve-session-config` 透传 `memoryPolicy`（缺省不携带）；⑤Desktop `composition.ts` 提供 `createDesktopExplicitMemoryRuntime`：身份注册表解析 → store lease（会话 owner，prepare 内获取/dispose 释放）+ 词法索引 + 遗忘屏障 → 工具组与证据注入；初始化失败在 prepare 抛错不静默降级。
+- 实际运行（2026-10-22，win32-x64）：定向 persistent-memory 5/5（策略开关、预算、工具+Provider 组合、下一 Turn 最新、遗忘过滤）、resolve-session-config 15/15（含缺省零变化、透传、非法策略边界拒绝）；完整 `bun run check` 全绿。
+- 未运行：真实 Desktop 实例/Electron 主进程（verify:ui 未授权）；团队子 Agent/批量场景授权细化（后续控制面 0376 消费同一接线）；automatic 预算真实调用。
+- 承载提交即集成绑定；人工功能验收对象：后续控制面（0377）提供入口后的用户流程。
+- 剩余风险：证据注入按 store 当前有效读取（pinned 优先/recordedAt 倒序）；预算调优留 0382；用户设置入口在 0376/0377。

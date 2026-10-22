@@ -20,6 +20,7 @@
 			"@vetta/coding-agent/composition": ["./packages/coding-agent/src/composition/index.ts"],
 			"@vetta/coding-agent/model-context": ["./packages/coding-agent/src/public-api/model-context.ts"],
 			"@vetta/coding-agent/config": ["./packages/coding-agent/src/config.ts"],
+			"@vetta/coding-agent/memory": ["./packages/coding-agent/src/public-api/memory.ts"],
 			"@vetta/coding-agent/extensions": ["./packages/coding-agent/src/public-api/extensions.ts"],
 			"@vetta/coding-agent/extensions/pi-compat": ["./packages/coding-agent/src/extensions/pi-compat/index.ts"],
 			"@vetta/coding-agent/function-extensions": [
