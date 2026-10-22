@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 
+export * from "./embedding/index.js";
 export type { ErasureAuditEntry, MemoryErasureOutcome } from "./erasure/index.js";
 export { SqliteMemoryErasure } from "./erasure/index.js";
 export type { ExportEntry, ImportOutcome } from "./import-export/index.js";
