@@ -329,6 +329,15 @@
 - 增量等价已由既有字符级语料覆盖（Run#36 全绿即含）
 - 225+1157 全绿；144.7（干净带，第七次带内采样）
 
+### Run #38（keep）：conversation 域外集成面扩展（发现 main 预存失败）
+
+- 扩展验证 weknora + activity-panel + shared（187 文件/1079 测试）：1078 全绿
+- **发现 main 预存失败**：weknora-background-flow「AC-20 多路合并请求计数」在
+  基线（主检出 main）3/3 失败、本分支 3/4 失败——时序敏感测试的预存回归，与
+  markdown 分支无机制关联（断言请求计数）；已记录，不在本分支修复（范围纪律）
+- 基线对照方法：主检出跑同一测试（读操作）；junction worktree 对照因 transitive
+  deps 不 scaling 而弃用
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
