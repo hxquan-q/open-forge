@@ -10,11 +10,17 @@ import { BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS } from "@vetta/coding-agent/functi
 import type { BrowserLiveEditCardProps, BrowserPanelLabels } from "@vetta-org/theme-ui/activity";
 import { OVERLAY_DRAG_EVENT } from "@vetta-org/theme-ui/layout";
 import { useAtomValue, useSetAtom } from "jotai";
-import { type FormEvent, type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type Ref, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DesktopBrowserViewState } from "@/shared/browser-view-ipc";
+import type { DesktopBrowserViewBounds, DesktopBrowserViewState } from "@/shared/browser-view-ipc";
 import { useActivityTabActivation } from "../registry/activation-context";
 import { useActivityWorkspace } from "../registry/context";
+import {
+	createBrowserViewBoundsSender,
+	nextBrowserViewBoundsReport,
+	observeBrowserViewLayout,
+	readBrowserViewBounds,
+} from "../services/browser-view-layout";
 import { useBrowserElementPicker } from "./useBrowserElementPicker";
 import { useBrowserLiveEdit } from "./useBrowserLiveEdit";
 
@@ -26,14 +32,8 @@ function normalizeUrl(input: string): string | null {
 	return `https://${trimmed}`;
 }
 
-function boundsOf(el: HTMLElement): { x: number; y: number; width: number; height: number } {
-	const rect = el.getBoundingClientRect();
-	return {
-		x: Math.round(rect.x),
-		y: Math.round(rect.y),
-		width: Math.round(rect.width),
-		height: Math.round(rect.height),
-	};
+function boundsOf(el: HTMLElement): DesktopBrowserViewBounds {
+	return readBrowserViewBounds(el);
 }
 
 export interface BrowserPanelModel {
@@ -160,18 +160,24 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		};
 	}, [workspaceId, applyState, attachAttempt]);
 
-	// bounds 跟随：布局/窗口变化经 ResizeObserver 回报占位矩形。
-	useEffect(() => {
+	// bounds 跟随：占位洞自身变尺寸、祖先布局把它平移（左栏一步收起）、
+	// 浮动页签改 style、窗口缩放，以及页签从隐藏恢复，都要重测。
+	// 0×0（display:none）不上报，避免把原生视图压扁后停在错误坐标。
+	useLayoutEffect(() => {
 		const el = hostRef.current;
-		if (!el || typeof ResizeObserver === "undefined") return;
+		// 页签隐藏时不观测、不上报 0×0。重新显示会因 tabActive 变化再量一次，
+		// 祖先尺寸未必变，不能只等 ResizeObserver。
+		if (!el || typeof ResizeObserver === "undefined" || !tabActive) return;
+		const submit = createBrowserViewBoundsSender((bounds) =>
+			window.vetta.browserView.update({ workspaceId, bounds }),
+		);
 		const report = (): void => {
-			void window.vetta.browserView.update({ workspaceId, bounds: boundsOf(el) });
+			submit(nextBrowserViewBoundsReport(null, readBrowserViewBounds(el)));
 		};
-		const observer = new ResizeObserver(report);
-		observer.observe(el);
+		const stop = observeBrowserViewLayout(el, report);
 		report();
-		return () => observer.disconnect();
-	}, [workspaceId]);
+		return stop;
+	}, [workspaceId, tabActive]);
 
 	// 可见性：tab 切换/空态/失败覆盖层切换时同步 view.setVisible。
 	useEffect(() => {

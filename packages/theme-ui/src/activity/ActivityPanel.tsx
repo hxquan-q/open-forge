@@ -12,6 +12,7 @@ import {
 	useState,
 } from "react";
 import { ResizeHandle } from "../layout/ResizeHandle";
+import { activityPanelShellWidthTransition } from "./activity-panel-shell";
 
 interface ActivityPanelContextValue {
 	readonly displayedWidth: number;
@@ -113,7 +114,7 @@ export const ActivityPanelDesktop = forwardRef<HTMLElement, ActivityPanelDesktop
 		{ present = true, className, children, style, ...props },
 		forwardedRef,
 	) {
-		const { displayedWidth, isOpen, isResizing } = useActivityPanelContext("Desktop");
+		const { displayedWidth, isOpen } = useActivityPanelContext("Desktop");
 		if (!present) return null;
 		return (
 			<aside
@@ -125,7 +126,7 @@ export const ActivityPanelDesktop = forwardRef<HTMLElement, ActivityPanelDesktop
 				style={{
 					...style,
 					width: isOpen ? displayedWidth : 0,
-					transition: isResizing ? "none" : "width 0.2s ease-in-out",
+					transition: activityPanelShellWidthTransition(),
 				}}
 				{...props}
 			>
