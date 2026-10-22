@@ -46,6 +46,51 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("任务列表（GFM checkbox）流式正确且最终等价", () => {
+		const line = (i: number) => `- [${i % 3 === 0 ? "x" : " "}] task ${i}: a checklist item with detail text.\n`;
+		const initial = Array.from({ length: 120 }, (_, i) => line(i)).join("");
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={initial} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		const finalText = initial + "- [ ] appended task.\n";
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.textContent).toContain("task 119");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("有序/loose/嵌套/多行项列表流式正确且最终等价", () => {
 		const ol = Array.from({ length: 100 }, (_, i) => `${i + 5}. step ${i} of the ordered flow.\n`).join("");
 		const loose = Array.from({ length: 60 }, (_, i) => `- loose ${i}\n\n`).join("");
