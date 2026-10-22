@@ -75,6 +75,8 @@ interface TailTableProps {
 	components: Components;
 	definition: MarkdownDefinition;
 	onRenderDuration?: (durationMs: number) => void;
+	/** 带 key 的回放克隆缓存：宿主持有以便新表格时与行缓存一起清理。 */
+	prependCache: Map<string, ReactElement>;
 	promotedRef: { current: number };
 	rowCache: TableRowCache;
 	shape: GrowingTableShape;
@@ -101,6 +103,7 @@ export const TailTableDocument = memo(function TailTableDocument({
 	components,
 	definition,
 	onRenderDuration,
+	prependCache,
 	promotedRef,
 	rowCache,
 	shape,
@@ -124,8 +127,8 @@ export const TailTableDocument = memo(function TailTableDocument({
 
 	// 动态状态经 ref 读取，包装组件每实例只创建一次：组件身份变化会让 React 把整个
 	// tbody 子树当新组件类型重挂，稳定行的 DOM 身份保证就失效了。
-	const dynamicRef = useRef({ stableLines, rowCache, miniText });
-	dynamicRef.current = { stableLines, rowCache, miniText };
+	const dynamicRef = useRef({ stableLines, rowCache, prependCache, miniText });
+	dynamicRef.current = { stableLines, rowCache, prependCache, miniText };
 
 	const resolved = useMemo(() => {
 		const base: Components = { ...components, ...definition.components, ...definition.elements };
@@ -134,17 +137,25 @@ export const TailTableDocument = memo(function TailTableDocument({
 		const wrapped: Components = {
 			...base,
 			tbody: (function TailTableBody({ children }: { children?: React.ReactNode }) {
-				const { stableLines: lines, rowCache: cache } = dynamicRef.current;
+				const { stableLines: lines, rowCache: cache, prependCache } = dynamicRef.current;
 				const rows: ReactElement[] = [];
-				for (const line of lines) {
-					const cached = cache.get(line);
-					if (!cached) return null;
-					rows.push(cached);
+				for (let index = 0; index < lines.length; index += 1) {
+					const line = lines[index];
+					// 带 key 的克隆也缓存：跨快照复用同一元素引用，React 对整行子树
+					// 直接跳过（新克隆对象会触发逐行浅渲染，350 行 × 每快照 ≈ 数 ms）。
+					let clone = prependCache.get(line);
+					if (clone === undefined) {
+						const cached = cache.get(line);
+						if (!cached) return null;
+						clone = cloneElement(cached, { key: `stable-${index}` });
+						prependCache.set(line, clone);
+					}
+					rows.push(clone);
 				}
 				const BaseTbodyComponent = BaseTbody as React.ComponentType<{ children?: React.ReactNode }>;
 				return (
 					<BaseTbodyComponent>
-						{rows.map((row, index) => cloneElement(row, { key: `stable-${index}` }))}
+						{rows}
 						{children}
 					</BaseTbodyComponent>
 				);

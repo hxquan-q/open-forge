@@ -3,7 +3,7 @@ import { MarkdownHostProvider } from "./host";
 import type { MarkdownHost } from "./host";
 import { MarkdownImage } from "./MarkdownImage";
 import { createContext, memo, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components, Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -476,6 +476,7 @@ export const MarkdownContent = memo(function MarkdownContent({
 	// 元素（详见 tail-table.tsx）。小表格、行内 token、混合结构或含链接语法（需要
 	// 文件链接归一化，与缓存的原始行键不一致）的尾块走常规路径。
 	const tableRowCacheRef = useRef<TableRowCache>(new Map());
+	const tablePrependCacheRef = useRef<Map<string, ReactElement>>(new Map());
 	const tablePromotedRef = useRef(0);
 	const tableHeaderRef = useRef<string | null>(null);
 	const growingTableShape = useMemo(() => {
@@ -487,6 +488,7 @@ export const MarkdownContent = memo(function MarkdownContent({
 				// 新表格（或表格重写）：清空行缓存与推进状态重新积累。
 			tableHeaderRef.current = shape.headerBlock;
 			tableRowCacheRef.current.clear();
+			tablePrependCacheRef.current.clear();
 			tablePromotedRef.current = 0;
 		}
 		// 渲染前校验稳定行缓存完备性：任何缺失都回退常规路径（结构性不应发生）。
@@ -525,6 +527,7 @@ export const MarkdownContent = memo(function MarkdownContent({
 						components={components}
 						definition={definition}
 						onRenderDuration={isStreamingTail ? reportTailParseDuration : undefined}
+						prependCache={tablePrependCacheRef.current}
 						promotedRef={tablePromotedRef}
 						rowCache={tableRowCacheRef.current}
 						shape={growingTableShape}
