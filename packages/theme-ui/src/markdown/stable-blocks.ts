@@ -223,7 +223,8 @@ function runScan(
 		if (state.candidateClass === null || !state.candidateHadBlank || state.candidateEnd <= 0) return;
 		// 只有未提交内容开头的块能冻结（候选前的纯空白段随首块一起提交，不丢字符）；
 		// 已提交块必须是严格前缀，失败过的块之后不再提交。
-		if (state.candidateStart !== state.start && text.slice(state.start, state.candidateStart).trim().length > 0) return;
+		if (state.candidateStart !== state.start && text.slice(state.start, state.candidateStart).trim().length > 0)
+			return;
 		if (!state.candidateClean || state.candidateHasBracket) return;
 		// 后继块首行不能续上当前块，也不能开启会回溯改写前块的结构。
 		if (continuesBlock(state.candidateClass, nextLine)) return;
@@ -259,7 +260,10 @@ function runScan(
 		}
 		const outsideLiteral = !state.inFence && !state.literalEnd;
 		const math = outsideLiteral ? /^ {0,3}(\${2,})\s*$/.exec(line) : null;
-		const html = outsideLiteral && !math ? /^ {0,3}<(svg|html|script|style|div|section|article|table|body|head)(?:\s|>)/i.exec(line) : null;
+		const html =
+			outsideLiteral && !math
+				? /^ {0,3}<(svg|html|script|style|div|section|article|table|body|head)(?:\s|>)/i.exec(line)
+				: null;
 		const doctype = outsideLiteral && !math && !html ? /^ {0,3}<!doctype\s+html/i.test(line) : false;
 		const opening = outsideLiteral && !math && !html && !doctype ? isFenceOpeningLine(line) : null;
 

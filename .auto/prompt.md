@@ -99,6 +99,16 @@
   CommittedDocuments memo 让 reveal tick 间已冻结子树完全跳过
 - 总 357.4→314.8（-12%）；prose 39.1 / table 217 / code 58.7；置信 15.8×
 
+### Run #8（keep）：增量扫描器 + 分段剪枝 + 前缀性漏洞修复
+
+- 增量稳定块扫描器（边界恢复 + COW + 无新增提交时数组引用稳定），reveal tick 只扫
+  新增行；rehypeStreamingChunks 剪枝 inCode 子树
+- 修复：部分行上的冻结判定可被追加翻转（`1`→`1.`）破坏前缀性→ 判定只对完整行
+- 两个恢复态 bug 被字符级等价 property test 抓出：围栏闭合行 text.length 依赖
+  （推迟整行处理）、快照 index 在 lineEnd 赋值前拷贝（幽灵提交）
+- 总 314.8→291.7（-7.3%）；⚠️ 曾误删 11 个既有测试（python 替换失控），从 HEAD
+  恢复重建后 209+105 全绿——批量改测试必须前后对账 it( 数量
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
