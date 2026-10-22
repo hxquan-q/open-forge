@@ -303,7 +303,7 @@ flowchart TD
 | TASK-0378 | A | 1 | integrated | f2f546e5b | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（legacy 5 + 导入导出 5 + 组件 2 例，完整 check 绿） |
 | TASK-0379 | A | 1 | integrated | 7406851cf | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（队列 6 + Observer 4 例，完整 check 绿） |
 | TASK-0380 | A | — | 未派发（0379 集成后） | — | — | — | — | — | pending |
-| TASK-0381 | B | 1 | assigned（0379 已集成，可开工） | 1ba7d8bde（创建后核实） | task/TASK-0381-memory-local-embedding | C:\Users\xquan\Desktop\open-forge-wt\task-0381-memory-local-embedding（创建后核实） | project/verification/HANDOFF-TASK-0381-window-b.md | — | pending |
+| TASK-0381 | B | 1 | assigned | e66f1f259（定稿：分支 HEAD = 该提交，B 开工即核对） | task/TASK-0381-memory-local-embedding | C:\Users\xquan\Desktop\open-forge-wt\task-0381-memory-local-embedding（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0381-window-b.md | — | pending |
 | TASK-0382 | A | — | 未派发（0380/0381 集成后） | — | — | — | — | — | pending |
 | TASK-0388 | A | — | 未派发（0382 集成后） | — | — | — | — | — | pending |
 
