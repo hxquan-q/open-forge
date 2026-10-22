@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import { richRemarkPlugins } from "./rich-syntax";
 import type { MarkdownDefinition } from "./definition";
 import { rehypeStreamingChunks } from "./streaming";
-import { chatUrlTransform } from "./markdown-link";
+import { chatUrlTransform, normalizeLocalFileLinksInMarkdown } from "./markdown-link";
 /** react-markdown 传入的 hast 节点（位置信息用于行源文本定位）。 */
 interface HastNodePosition {
 	position?: { start?: { offset?: number } };
@@ -120,15 +120,26 @@ export const TailTableDocument = memo(function TailTableDocument({
 		}
 		return text.slice(offset);
 	}, [shape, promoted, text]);
-	const miniText = useMemo(() => shape.headerBlock + changedBlock, [shape, changedBlock]);
+	// 迷你文本按行做文件链接归一化（表行的内联构造不跨行，逐行 ≡ 整篇）：
+	// 含链接的表格与常规路径渲染一致。缓存键保持原始行文本——经「迷你偏移→
+	// 行号→原始行」映射获得，归一化改写不破坏键。
+	const miniText = useMemo(() => {
+		const headerLines = shape.headerBlock.split("\n");
+		const changedLines = changedBlock.split("\n");
+		const normalized: string[] = [];
+		for (const line of [...headerLines.slice(0, -1), ...changedLines]) {
+			normalized.push(line.length === 0 ? line : normalizeLocalFileLinksInMarkdown(line));
+		}
+		return normalized.join("\n");
+	}, [shape, changedBlock]);
 
 	const renderStartRef = useRef(0);
 	renderStartRef.current = performance.now();
 
 	// 动态状态经 ref 读取，包装组件每实例只创建一次：组件身份变化会让 React 把整个
 	// tbody 子树当新组件类型重挂，稳定行的 DOM 身份保证就失效了。
-	const dynamicRef = useRef({ stableLines, rowCache, prependCache, miniText });
-	dynamicRef.current = { stableLines, rowCache, prependCache, miniText };
+	const dynamicRef = useRef({ stableLines, rowCache, prependCache, miniText, rowLines: shape.rowLines, promoted });
+	dynamicRef.current = { stableLines, rowCache, prependCache, miniText, rowLines: shape.rowLines, promoted };
 
 	const resolved = useMemo(() => {
 		const base: Components = { ...components, ...definition.components, ...definition.elements };
@@ -161,13 +172,19 @@ export const TailTableDocument = memo(function TailTableDocument({
 				);
 			}) as Components["tbody"],
 			tr: (function TailTableRow({ children, node }: { children?: React.ReactNode; node?: HastNodePosition }) {
-				const { rowCache: cache, miniText: mini } = dynamicRef.current;
+				const { rowCache: cache, miniText: mini, rowLines, promoted } = dynamicRef.current;
 				const BaseTrComponent = BaseTr as React.ComponentType<{ children?: React.ReactNode }>;
 				const element = <BaseTrComponent>{children}</BaseTrComponent>;
 				const offset = node?.position?.start?.offset;
 				if (typeof offset === "number") {
-					const line = sourceLineAt(mini, offset);
-					if (line !== null && line.includes("|")) cache.set(line, element);
+					// 迷你文本可能被逐行归一化改写，键取原始行：迷你行号（0=表头，
+					// 1=分隔行）映射回尾块的原始行文本。
+					const miniLineIndex = countLineStartsBefore(mini, offset);
+					if (miniLineIndex >= 2) {
+						const rawLine = rowLines[promoted + miniLineIndex - 2];
+						((globalThis as any).__stashLog ??= []).push({ miniLineIndex, promoted, has: rawLine !== undefined, raw: rawLine?.slice(0, 30) });
+						if (rawLine !== undefined) cache.set(rawLine, element);
+					}
 				}
 				return element;
 			}) as Components["tr"],
@@ -206,10 +223,11 @@ export const TailTableDocument = memo(function TailTableDocument({
 	return markdown;
 });
 
-/** 从迷你文本按偏移取行文本（去换行）；越界返回 null。 */
-function sourceLineAt(text: string, offset: number): string | null {
-	if (offset < 0 || offset >= text.length) return null;
-	const start = text.lastIndexOf("\n", Math.max(0, offset - 1)) + 1;
-	const end = text.indexOf("\n", offset);
-	return text.slice(start, end === -1 ? text.length : end).replace(/\r$/, "");
+/** 偏移之前有多少个换行（即该偏移所在的 0 基行号）。 */
+function countLineStartsBefore(text: string, offset: number): number {
+	let count = 0;
+	for (let index = 0; index < offset && index < text.length; index += 1) {
+		if (text[index] === "\n") count += 1;
+	}
+	return count;
 }

@@ -473,15 +473,14 @@ export const MarkdownContent = memo(function MarkdownContent({
 	const showTail = !split || tail.length > 0 || committed.length === 0;
 
 	// 增长表格快路径：整段尾块就是一张大表时，只解析表头与变化行，稳定行复用缓存
-	// 元素（详见 tail-table.tsx）。小表格、行内 token、混合结构或含链接语法（需要
-	// 文件链接归一化，与缓存的原始行键不一致）的尾块走常规路径。
+	// 元素（详见 tail-table.tsx；迷你文本按行归一化，含链接的表格同样适用）。
+	// 小表格、行内 token 或混合结构走常规路径。
 	const tableRowCacheRef = useRef<TableRowCache>(new Map());
 	const tablePrependCacheRef = useRef<Map<string, ReactElement>>(new Map());
 	const tablePromotedRef = useRef(0);
 	const tableHeaderRef = useRef<string | null>(null);
 	const growingTableShape = useMemo(() => {
 		if (!showTail || !isStreamingTail || inlineTokens) return null;
-		if (tail.includes("](")) return null;
 		const shape = detectGrowingTable(tail);
 		if (!shape) return null;
 		if (tableHeaderRef.current !== shape.headerBlock) {

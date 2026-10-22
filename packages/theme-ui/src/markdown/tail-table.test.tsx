@@ -101,6 +101,35 @@ describe("TailTableDocument 流式大表快路径", () => {
 		expect(streamedHtml).toBe(plainHtml);
 	});
 
+	it("含文件链接的大表同样走快路径且渲染与整篇等价", () => {
+		const header = "| Name | Doc | Value |\n| --- | --- | ---: |\n";
+		const body = Array.from(
+			{ length: 400 },
+			(_, i) => `| Item ${i} | see [doc ${i}](./file-${i}.md) | ${i} |\n`,
+		).join("");
+		const text = header + body;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		// 链接被归一化为绝对路径徽标（与常规路径一致），而不是被快路径跳过。
+		expect(container.querySelectorAll("tbody tr").length).toBe(400);
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		const plainHtml = plainContainer.querySelector(".markdown-body")?.innerHTML;
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		// 历史渲染不走冻结拆分，含链接单元格的输出必须与流式快路径一致。
+		const streamedHtml = container.querySelector(".markdown-body")?.innerHTML;
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("节流期间快照保持新鲜：中途内容持续可见（不冻结）", () => {
 		const text = makeTable(400);
 		act(() => {
