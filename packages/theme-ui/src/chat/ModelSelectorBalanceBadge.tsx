@@ -1,5 +1,6 @@
+// Copyright The Open Forge contributors.
 import type { JSX } from "react";
-import { cn } from "@vetta-org/ui";
+import { Button, cn } from "@vetta-org/ui";
 import type { ModelSelectorBalanceLabels } from "./ModelSelectorView";
 
 /**
@@ -18,8 +19,7 @@ export interface ModelSelectorBalanceBadgeProps {
 	readonly className?: string;
 }
 
-const BADGE_BUTTON_CLASS =
-	"inline-flex size-4 shrink-0 items-center justify-center rounded transition-colors hover:bg-muted hover:text-foreground";
+const BADGE_BUTTON_CLASS = "size-4 rounded transition-colors hover:bg-muted hover:text-foreground";
 
 export function ModelSelectorBalanceBadge({
 	revealed,
@@ -34,19 +34,23 @@ export function ModelSelectorBalanceBadge({
 			{revealed && (
 				<>
 					<span title={text} className="min-w-0 max-w-[7rem] truncate tabular-nums">{text}</span>
-					<button
+					<Button
 						type="button"
+						variant="ghost"
+						size="icon-xs"
 						onClick={onRefresh}
 						aria-label={labels.refresh}
 						title={labels.refresh}
 						className={BADGE_BUTTON_CLASS}
 					>
 						<span aria-hidden="true" className="icon-[solar--refresh-linear] size-3" />
-					</button>
+					</Button>
 				</>
 			)}
-			<button
+			<Button
 				type="button"
+				variant="ghost"
+				size="icon-xs"
 				onClick={onToggle}
 				aria-label={revealed ? labels.hide : labels.show}
 				aria-pressed={revealed}
@@ -57,7 +61,7 @@ export function ModelSelectorBalanceBadge({
 					aria-hidden="true"
 					className={cn("size-3", revealed ? "icon-[solar--eye-linear]" : "icon-[solar--eye-closed-linear]")}
 				/>
-			</button>
+			</Button>
 		</span>
 	);
 }
