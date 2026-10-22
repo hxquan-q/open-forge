@@ -60,6 +60,7 @@
 | `@vetta/runtime-desktop` | `@vetta/desktop` |
 | `@vetta/runtime-knowledge` | `@vetta/coding-agent`<br>`@vetta/desktop`<br>`@vetta/runtime-node` |
 | `@vetta/runtime-mcp` | `@vetta/cli-host`<br>`@vetta/coding-agent`<br>`@vetta/desktop`<br>`@vetta/runtime-desktop`<br>`@vetta/runtime-node` |
+| `@vetta/runtime-memory` | `@vetta/coding-agent` |
 | `@vetta/runtime-node` | `@vetta/cli-host`<br>`@vetta/coding-agent`<br>`@vetta/desktop`<br>`@vetta/runtime-desktop`<br>`@vetta/runtime-ssh` |
 | `@vetta/runtime-ssh` | `@vetta/runtime-desktop` |
 | `@vetta/runtime-storage` | `@vetta/cli-host`<br>`@vetta/coding-agent`<br>`@vetta/desktop`<br>`@vetta/runtime-desktop`<br>`@vetta/runtime-node` |

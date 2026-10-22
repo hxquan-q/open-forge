@@ -76,6 +76,9 @@
 				"../../packages/runtime-storage/src/conversation/session-archive/index.ts"
 			],
 			"@vetta/runtime-storage/*": ["../../packages/runtime-storage/src/*"],
+			"@vetta/runtime-memory": ["../../packages/runtime-memory/src/index.ts"],
+			"@vetta/runtime-memory/fixtures": ["../../packages/runtime-memory/src/fixtures.ts"],
+			"@vetta/runtime-memory/*": ["../../packages/runtime-memory/src/*"],
 			"@vetta/runtime-node": ["../../packages/runtime-node/src/index.ts"],
 			"@vetta/runtime-node/coding": ["../../packages/runtime-node/src/coding/index.ts"],
 			"@vetta/runtime-node/mcp": ["../../packages/runtime-node/src/mcp/index.ts"],

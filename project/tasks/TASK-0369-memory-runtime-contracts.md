@@ -1,7 +1,7 @@
 ---
 id: TASK-0369
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -61,7 +61,7 @@ exclusive_paths:
   - project/decisions/README.md
 depends_on: [TASK-0367, TASK-0368]
 conflicts_with: [TASK-0371, TASK-0373, TASK-0381, TASK-0386, TASK-0387]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -153,8 +153,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改：新增 `packages/runtime-memory`（@vetta/runtime-memory，零内部依赖的窄合同包：errors/scopes/policy/legacy 正交解析/records 双时态/sources/temporal 选择/erasure 屏障/commands 并发规则/ports/schema/fixtures 子出口，35 例合同测试）；coding-agent 会话合同新增可选 `memoryPolicy` 字段并在 `parseCodingAgentRuntimeSessionConfiguration` 首次进入边界时结构校验；workspace/tsconfig(desktop)/bun.lock 三处登记；[ADR-0149](../../docs/adr/0149-memory-policy-legacy-decoupling.md)（memoryPolicy 与 legacy 解耦）、[ADR-0150](../../docs/adr/0150-runtime-memory-contract-package.md)（窄合同包与 SQLite 事实源方向）落盘；coding-agent README Context Boundary 与 dependents.md 同步。
+- 实际运行（2026-10-22，win32-x64）：`bun run test:pkg runtime-memory` 通过（4 文件 35 例）；`bun run test:impact` 定向（memory-policy + runtime-host-retry-policy + resolve-session-config + session-agent-mode）共 29 例全绿；完整 `bun run check`（lint/types/guards/mobile-lint）全绿。
+- 不变量证据：旧配置（无 memoryPolicy）解析路径零变化（retry-policy/resolve-session-config 既有合同全绿）；GWT 两面均覆盖：新旧字段同传正交组合（IM 场景）、automatic 缺预算/未知 mode/off 携带预算等非法输入报稳定错误。
+- 未运行：真实 Provider/模型、UI、打包链路（无该面变更）；跨平台原生矩阵（TASK-0368 范围）。
+- 工程验证完成；本任务无用户可见入口（纯合同层），人工功能验收对象是后续宿主接入（0375+），此处不适用并按工程证据闭合；承载提交即集成绑定。
+- 剩余风险：Schema 与类型的同步演化依赖后续评审；fixture 将随 0371/0374 实现侧测试扩展。

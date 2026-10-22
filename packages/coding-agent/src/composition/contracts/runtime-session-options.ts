@@ -1,6 +1,8 @@
 import type { Message } from "@vetta/ai";
 import type { SessionConfig, SessionExecutionMode } from "@vetta/runtime-core";
 import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
+import type { MemoryPolicyConfiguration } from "@vetta/runtime-memory";
+import { parseMemoryPolicyConfiguration } from "@vetta/runtime-memory";
 import {
 	type AgentConfigurationSelection,
 	parseAgentConfigurationSelection,
@@ -58,6 +60,11 @@ export interface CodingAgentRuntimeSessionOptions {
 	readonly memoryMode?: boolean;
 	readonly memoryFile?: string;
 	readonly memoryCharLimit?: number;
+	/**
+	 * 新结构化记忆策略（ADR-0149，TASK-0369）：与 legacy memoryMode 正交；
+	 * 值为宿主已解析的 MemoryPolicyConfiguration，首次进入边界时校验。
+	 */
+	readonly memoryPolicy?: MemoryPolicyConfiguration;
 	/** 子 Session 内部 Profile 使用；根宿主无需设置。 */
 	readonly systemPromptAddon?: string;
 	/** Host-owned system instructions shared byte-for-byte before a cache boundary. */
@@ -144,13 +151,20 @@ export function parseCodingAgentRuntimeSessionConfiguration(value: unknown): Cod
 		"pluginTurnHandlerLeaseProvider",
 		"sessionExtensionFunctions",
 		"knowledgePageWriter",
+		"memoryPolicy",
 	]);
+	const memoryPolicy =
+		value.memoryPolicy === undefined ? undefined : parseMemoryPolicyConfiguration(value.memoryPolicy);
 	if (value.env !== undefined) {
 		if (!isRecord(value.env) || Object.values(value.env).some((item) => typeof item !== "string")) {
 			throw new Error("Coding Agent Runtime Session field env must contain only string values");
 		}
 	}
-	return { ...value, ...(agentConfiguration ? { agentConfiguration } : {}) } as CodingAgentRuntimeSessionConfiguration;
+	return {
+		...value,
+		...(agentConfiguration ? { agentConfiguration } : {}),
+		...(memoryPolicy ? { memoryPolicy } : {}),
+	} as CodingAgentRuntimeSessionConfiguration;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

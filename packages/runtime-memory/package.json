@@ -1,0 +1,32 @@
+{
+	"name": "@vetta/runtime-memory",
+	"version": "0.1.3",
+	"private": true,
+	"description": "Platform-neutral agent memory contracts: scopes, revisions, temporal selection, erasure and policy schemas",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./fixtures": {
+			"types": "./dist/fixtures.d.ts",
+			"import": "./dist/fixtures.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "tsgo -p tsconfig.build.json",
+		"test": "bun ../../scripts/quality/run-vitest.mjs --run --config vitest.config.ts"
+	},
+	"dependencies": {
+		"@sinclair/typebox": "^0.34.41"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.2",
+		"@types/node": "^22.10.5"
+	}
+}
