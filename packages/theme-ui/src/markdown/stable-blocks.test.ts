@@ -183,6 +183,9 @@ describe("splitStableMarkdownBlocks", () => {
 			"<html>\n<body\n```\nraw fence inside html\n```\n</body>\n</html>\n\nafter ",
 			"- a\n\n1\n.\nnext line\n\nplain after\n\n| a | b |\n|---|---|\nplain\n",
 			"$$\nE = mc^2\n$$\n\nafter math\n\n```\nunclosed fence\n",
+			// 定义行中途到达：触发乐观冻结的同帧重置（增量恢复态与中途归零重扫的交互）。
+			"uses [label] here.\n\nplain\n\n[label]: https://e.com\n\nafter def\n\nmore plain\n",
+			"footnote user[^1].\n\ntext\n\n[^1]: note body\n\nend\n",
 		];
 		for (const base of documents) {
 			const scanner = createStableMarkdownScanner();
