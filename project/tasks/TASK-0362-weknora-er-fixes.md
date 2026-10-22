@@ -1,5 +1,5 @@
 ---
-id: TASK-0349
+id: TASK-0362
 type: task
 status: in_progress
 priority: P2
@@ -10,17 +10,17 @@ source: 外部代码审查（同事静态审查，用户转达）
 related_requirement: [REQ-0023, REQ-0024]
 related_bugs: []
 execution: serial
-branch: task/TASK-0349-weknora-er-fixes
+branch: task/TASK-0362-weknora-er-fixes
 worktree: .
-base_commit: 1b25abff0
+base_commit: 2a74e7fc1
 read_paths: [apps/desktop, docs/devflow]
-write_paths: [apps/desktop/src/main/weknora, apps/desktop/src/main/ipc/dialog.ts, apps/desktop/src/renderer/domains/weknora, apps/desktop/src/renderer/domains/conversation/hooks/useProviderBalance.ts, project/tasks/TASK-0349-weknora-er-fixes.md]
+write_paths: [apps/desktop/src/main/weknora, apps/desktop/src/main/ipc/dialog.ts, apps/desktop/src/renderer/domains/weknora, apps/desktop/src/renderer/domains/conversation/hooks/useProviderBalance.ts, project/tasks/TASK-0362-weknora-er-fixes.md]
 exclusive_paths: [apps/desktop/src/main/weknora, apps/desktop/src/renderer/domains/weknora]
 depends_on: []
 conflicts_with: [TASK-0343, TASK-0344, TASK-0345, TASK-0346, TASK-0348]
 integration_status: pending
 created: 2026-10-21
-updated: 2026-10-21
+updated: 2026-10-22
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -32,7 +32,7 @@ updated: 2026-10-21
 
 **用户裁定**：全修便宜项（F1~F5 + F6 只修一半）；F7 不修（B 端不过度防御）；F3 翻转此前「盘上同名静默覆盖=接受」裁定；F4 需真实 API 实测背书；CI 红为仓库级 Actions 预算问题，不处置（本地验证自证）。
 
-**分支说明**：PR #18（`task/TASK-0342-weknora-suite`，本批六 feature）已被用户合并进 `dev`（merge commit `1b25abff0`）。本任务自最新 `origin/dev` 切新分支 `task/TASK-0349-weknora-er-fixes`，cherry-pick 修复提交；旧分支保留作安全网。编号核对：dev 当时最大 REQ-0025 / TASK-0348，本任务取 TASK-0349。
+**分支说明**：PR #18（`task/TASK-0342-weknora-suite`，本批六 feature）已被用户合并进 `dev`（merge commit `1b25abff0`）。本任务自最新 `origin/dev` 切新分支，cherry-pick 修复提交；旧分支保留作安全网。**编号更正（2026-10-22）**：立项时 dev 最大为 TASK-0348，故取 TASK-0349；随后 dev 侧新增了自己的 `TASK-0349-session-management-export-import`，与本任务**撞号**。本分支尚未 push，经用户 CP2 放行后改为 **TASK-0362**，分支同步改名 `task/TASK-0362-weknora-er-fixes`；并已本地合并 `origin/dev@2a74e7fc1`（`base_commit` 随之更新）。
 
 ## 范围与并发
 
