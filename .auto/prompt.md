@@ -60,7 +60,19 @@
   parse+runSync+post(visit/toJsxRuntime) 全程同步
 - prose/table 夹具没有围栏 → 永不冻结 → 每次节流快照对全文 ~33k/22k 字符重新
   parse + toJsxRuntime + React reconcile（~7000 元素）；code 夹具因围栏冻结 + 节流已很快
-- 基准中 12 次解析 commit ~30ms 是主要成本；41 次 reveal commit 很便宜
+
+## 相位剖析（2026-10-22，临时 instrument react-markdown，已回滚）
+
+| 阶段 | prose | table | code | 结论 |
+|---|---|---|---|---|
+| setup(processor) | 0.2 | 0.2 | 0 | 可忽略 |
+| **parse(micromark)** | **332.9** | **388.3** | 80.8 | **瓶颈：重复 tokenize 行内语法** |
+| run(gfm+rehype) | 38.4 | 31.6 | 0.5 | 随树缩小自动受益 |
+| post(visit+toJsxRuntime) | 71.8 | 49.4 | 0.5 | 同上 |
+| reactRenderMs 总计 | 481.3 | 519.7 | 102.9 | React reconcile 仅 ~38ms，几乎免费 |
+
+→ 元素缓存（原主推方向）上限只有 ~40ms，优先级大降；主攻「冻结更多稳定块避免重复解析」
+（prose 直接受益），表格是单一增长块需另外手段。
 
 ## What's Been Tried
 

@@ -22,9 +22,123 @@ describe("splitStableMarkdownBlocks", () => {
 		});
 	});
 
-	it("空行不提交段落，避免拆开松散列表和缩进代码", () => {
+	it("后继块开始后提交已完成的顶层段落", () => {
 		const text = "First paragraph.\n\nSecond";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["First paragraph.\n"],
+			tail: "\nSecond",
+		});
+	});
+
+	it("尾部的增长段落留在 tail，不提前提交", () => {
+		const text = "First paragraph.\n\nSecond still growing";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["First paragraph.\n"],
+			tail: "\nSecond still growing",
+		});
+	});
+
+	it("含裸方括号的块不冻结，之后的块也不再提交（保持前缀性）", () => {
+		const text = "see [ref] here\n\nplain1\n\nplain2";
 		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	});
+
+	it("行内链接与图片自含，可以冻结", () => {
+		const text = "[text](url) and ![alt](img.png)\n\nSecond";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["[text](url) and ![alt](img.png)\n"],
+			tail: "\nSecond",
+		});
+	});
+
+	it("松散列表跨空行续项，直到非列表块开始才整体冻结", () => {
+		const text = "1. foo\n\n2. bar\n\nNext paragraph";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["1. foo\n\n2. bar\n"],
+			tail: "\nNext paragraph",
+		});
+	});
+
+	it("列表后紧跟新列表项时不拆分，整段留在 tail", () => {
+		const text = "1. foo\n\n- bar\n";
+		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	});
+
+	it("引用跨空行延续，非引用块开始后整体冻结", () => {
+		const text = "> a\n\n> b\n\nPlain";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["> a\n\n> b\n"],
+			tail: "\nPlain",
+		});
+	});
+
+	it("完成的表格在非表格块开始后冻结，增长中的表格留在 tail", () => {
+		const growing = "| a | b |\n|---|---|\n| 1 | 2 |";
+		expect(splitStableMarkdownBlocks(growing)).toEqual({ committed: [], tail: growing });
+
+		const done = "| a | b |\n|---|---|\n| 1 | 2 |\n\nAfter";
+		expect(splitStableMarkdownBlocks(done)).toEqual({
+			committed: ["| a | b |\n|---|---|\n| 1 | 2 |\n"],
+			tail: "\nAfter",
+		});
+	});
+
+	it("含管道符的块后继行仍含管道时不冻结，避免拆表或回溯表头", () => {
+		const text = "| a | b |\n\n|---|---|";
+		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	});
+
+	it("缩进块不冻结", () => {
+		const text = "    indented code\n\nNext";
+		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	});
+
+	it("以 < 开头的行不冻结，保持 rich HTML 解析上下文", () => {
+		const text = "<custom>\nfoo\n\nNext";
+		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	});
+
+	it("setext 标题整体冻结", () => {
+		const text = "Title\n===\n\nNext";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["Title\n===\n"],
+			tail: "\nNext",
+		});
+	});
+
+	it("前导空行随首个提交块一起提交，不丢字符", () => {
+		const text = "\n\nPara one.\n\nSecond";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["\n\nPara one.\n"],
+			tail: "\nSecond",
+		});
+	});
+
+	it("CRLF 段落也能提交", () => {
+		const text = "First paragraph.\r\n\r\nSecond";
+		expect(splitStableMarkdownBlocks(text)).toEqual({
+			committed: ["First paragraph.\r\n"],
+			tail: "\r\nSecond",
+		});
+	});
+
+	it("追加流式文本时已提交块是严格前缀，且拼接等于原文", () => {
+		const documents = [
+			"Intro paragraph.\n\n```js\nconst a = 1;\n```\n\n| h |\n|---|\n| 1 |\n\n- item\n\n- item2\n\n> quote\n\nTail ",
+			"see [ref] here\n\nplain\n\n```ts\ncode\n```\n\ntail ",
+			"<html>\n<body\n```\nraw fence inside html\n```\n</body>\n</html>\n\nafter ",
+		];
+		for (const base of documents) {
+			let previous: string[] = [];
+			let text = "";
+			for (const chunk of base.match(/\S+\s*|\s+/g) ?? []) {
+				text += chunk;
+				const split = splitStableMarkdownBlocks(text);
+				expect(split.committed.slice(0, previous.length)).toEqual(previous);
+				expect(split.committed.join("") + split.tail).toBe(text);
+				previous = [...split.committed];
+			}
+		}
 	});
 
 	it("松散有序列表整段留在 tail", () => {

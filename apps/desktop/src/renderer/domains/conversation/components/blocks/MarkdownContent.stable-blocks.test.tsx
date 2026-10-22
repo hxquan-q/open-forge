@@ -46,6 +46,24 @@ describe("MarkdownContent 稳定块冻结", () => {
 		expect(screen.getByText(/Beta continues now/)).toBeTruthy();
 	});
 
+	it("没有围栏的流式回复中，已完成段落也冻结并保持节点身份", () => {
+		const view = render(
+			<MarkdownContent {...environment} text={"Alpha one.\n\nBeta"} isStreamingTail />,
+		);
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		const alpha = screen.getByText("Alpha one.");
+		view.rerender(
+			<MarkdownContent {...environment} text={"Alpha one.\n\nBeta grows with more words."} isStreamingTail />,
+		);
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(screen.getByText("Alpha one.")).toBe(alpha);
+		expect(screen.getByText(/Beta grows with more words/)).toBeTruthy();
+	});
+
 	it("流式结束后冻结块节点保持身份，已展示文本不再重新包成淡入片段", () => {
 		const prefix = "Hello frozen paragraph.\n\n```js\nconst a = 1;\n```\n\n";
 		const text = `${prefix}Beta continues now.`;
