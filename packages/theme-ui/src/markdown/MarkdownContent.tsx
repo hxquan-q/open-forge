@@ -39,6 +39,7 @@ import { useMarkdownDefinition } from "./definition";
 import type { MarkdownDefinition } from "./definition";
 import { createStableMarkdownScanner } from "./stable-blocks";
 import { detectGrowingTable, TailTableDocument } from "./tail-table";
+import { detectGrowingFence, TailFenceDocument } from "./tail-fence";
 import type { TableRowCache } from "./tail-table";
 import type { StableMarkdownScanner } from "./stable-blocks";
 
@@ -495,11 +496,29 @@ export const MarkdownContent = memo(function MarkdownContent({
 		}
 		return shape;
 	}, [tail, showTail, isStreamingTail, inlineTokens]);
+	// 未闭合围栏直渲染：尾块是单一未闭合顶层围栏时，解析结果确定（代码块组件 +
+	// 围栏内容），无需 markdown 解析。小围栏或含闭合/CRLF 的尾块走常规路径。
+	const growingFenceShape = useMemo(
+		() => (showTail && isStreamingTail && !inlineTokens && !growingTableShape ? detectGrowingFence(tail) : null),
+		[tail, showTail, isStreamingTail, inlineTokens, growingTableShape],
+	);
 
 	return (
 		<MarkdownHostProvider host={host}><div className={cn("markdown-body break-words", animateChunks && "markdown-streaming-tail", className)}>
 			<CommittedDocuments blocks={committed} components={components} definition={definition} />
-			{showTail && growingTableShape ? (
+			{showTail && growingFenceShape ? (
+				<MarkdownCodeLiveContext.Provider key="tail-fence" value={isStreamingTail}>
+					<TailFenceDocument
+						content={growingFenceShape.content}
+						definition={definition}
+						lang={growingFenceShape.lang}
+						labelsRef={labelsRef}
+						live={isStreamingTail}
+						onRenderDuration={isStreamingTail ? reportTailParseDuration : undefined}
+						theme={theme}
+					/>
+				</MarkdownCodeLiveContext.Provider>
+			) : showTail && growingTableShape ? (
 				<MarkdownCodeLiveContext.Provider key="tail-table" value={isStreamingTail}>
 					<TailTableDocument
 						animateChunks={chunkedRef.current}

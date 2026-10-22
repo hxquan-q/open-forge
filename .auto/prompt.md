@@ -140,6 +140,15 @@
 - ⚠️ 调试教训：HTMLCollection/children 是活集合（after-vs-after 比较恒真），
   身份断言必须持有 Node 引用对比
 
+### Run #12（keep）：未闭合围栏直渲染（tail-fence.tsx）
+
+- 尾块是单一未闭合顶层围栏（≥12k、0 缩进、无闭合行、无 CRLF、info 无反引号）时，
+  解析结果完全确定（CodeBlock + 围栏内容），零 markdown 解析直渲染
+- code 67→31.1ms（parse 8→3，p95 0.4ms）；总计 222.8→181.9（vs 基线 -85.5%）；
+  **全场景 p95 最差 2.9ms**（基线 50.6ms——流式长帧基本消除）
+- 等价性：代码内容两路径完全一致（流式装饰 span 用既有归一化处理）；
+  216+1157 测试全绿；BuiltinCodeBlock 的特殊语言分派（mermaid/html/math）自动继承
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
