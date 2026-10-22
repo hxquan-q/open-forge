@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@vetta-org/ui";
 import { AnimatePresence, motion } from "motion/react";
 import {
