@@ -1,7 +1,7 @@
 ---
 id: TASK-0378
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: f2f546e5b
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -33,10 +33,13 @@ write_paths:
   - packages/runtime-node/src/memory/import-export
   - apps/desktop/src/main/memory/import-export.ts
   - apps/desktop/src/renderer/domains/memory/components/MemoryTransfer.tsx
+  - apps/desktop/src/renderer/domains/memory/components/MemoryTransfer.test.tsx
+  - packages/coding-agent/src/public-api/memory.ts
+  - packages/runtime-node/src/memory/index.ts
   - packages/coding-agent/test/memory/legacy-import.test.ts
   - packages/runtime-node/test/memory/import-export.test.ts
   - project/tasks/TASK-0378-memory-legacy-import-export.md
-  - .github/release-notes/fragments/v0.1.3/task-0378-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/coding-agent/src/memory/legacy
   - packages/runtime-node/src/memory/import-export
@@ -46,7 +49,7 @@ exclusive_paths:
   - packages/runtime-node/test/memory/import-export.test.ts
 depends_on: [TASK-0377]
 conflicts_with: [TASK-0376, TASK-0377, TASK-0387]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -137,8 +140,10 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补 MemoryTransfer.test、公共出口两处（出口接线必要），fragments 改 v0.1.3.md。
+- 实际修改：①`coding-agent/src/memory/legacy/`（MEMORY.md 解析：分隔符切分、内容原样、fnv1a 文件 hash+序号幂等键、Markdown 版本化导出渲染）；②`runtime-node/src/memory/import-export/`（importLegacyEntries：validFrom 开区间+role=legacy-import+hash 来源、重复导入幂等、已撤销来源不重生；exportMemories：仅授权 scope 当前有效+版本时间标记）；③desktop `main/memory/import-export.ts`（显式路径入口+回滚合同校验）；④`MemoryTransfer.tsx` 展示组件（动作注入，报告如实/失败不吞/处理中禁用）。
+- 实际运行（2026-10-22，win32-x64，真实 SQLite）：legacy 解析 5/5；import-export 5/5（幂等、变更后新条目、撤销不重生、导出 scope 过滤+遗忘不导出）；MemoryTransfer 2/2；完整 `bun run check` 全绿。
+- 设计说明：legacy 条目导入取开区间 validFrom=""（可检索），缺失时间语义由 role=legacy-import+hash 携带，不猜测日期。
+- 未运行：真实用户 MEMORY.md 文件（无授权）；导入预览 UI（后续反馈切片）；双向 watcher（不做）。
+- 承载提交即集成绑定；人工验收：待用户以自有 MEMORY.md 实机导入。
+- 剩余风险：幂等判定现按来源遍历（S2 规模可接受），ledger 表加速登记到数据量实测后。

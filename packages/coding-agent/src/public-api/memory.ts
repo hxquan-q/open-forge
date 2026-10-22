@@ -8,6 +8,12 @@ export {
 	isPersistentMemoryActive,
 	renderMemoryEvidenceBlock,
 } from "../memory/context/index.js";
+export type { LegacyMemoryDocument, LegacyMemoryEntry } from "../memory/legacy/index.js";
+export {
+	hashLegacyContent,
+	parseLegacyMemoryDocument,
+	renderLegacyMemoryMarkdown,
+} from "../memory/legacy/index.js";
 export type {
 	ExplicitMemoryScopeContext,
 	ExplicitMemoryServices,
