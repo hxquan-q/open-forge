@@ -46,6 +46,57 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("details 折叠块与嵌套 div 流式正确且最终等价", () => {
+		const item = (i: number) =>
+			`<details><summary>Item ${i}</summary>\n\nContent ${i} with text.\n\n</details>\n\n`;
+		const part1 = `intro.\n\n${item(1)}${item(2)}`;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={part1} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1200);
+		});
+		expect(container.textContent).toContain("Item 1");
+
+		const nested = `\n<div>\nouter\n<div>inner</div>\nstill outer\n</div>\n\n`;
+		const finalText = part1 + nested + `${item(3)}done.\n`;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.textContent).toContain("Item 3");
+		expect(container.textContent).toContain("still outer");
+		expect(container.textContent).toContain("done.");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("正文与 \$\$ 数学区交替流式：区域逐个冻结且最终等价", () => {
 		const para = (i: number) => `Problem ${i} statement.\n\n`;
 		const math = (i: number) => `$$\nS_${i} = \\frac{n(n+1)}{2}\n$$\n\n`;

@@ -205,6 +205,9 @@ describe("splitStableMarkdownBlocks", () => {
 			// 定义行中途到达：触发乐观冻结的同帧重置（增量恢复态与中途归零重扫的交互）。
 			"uses [label] here.\n\nplain\n\n[label]: https://e.com\n\nafter def\n\nmore plain\n",
 			"footnote user[^1].\n\ntext\n\n[^1]: note body\n\nend\n",
+			// 嵌套 HTML 与 details：深度感知闭合的恢复态（区域中途的 literalDepth 快照）。
+			"para.\n\n<div>\nA\n<div>\nB\n</div>\nC\n</div>\n\nafter\n",
+			"intro.\n\n<details><summary>T</summary>\n\nbody\n\n</details>\n\nafter\n",
 		];
 		for (const base of documents) {
 			const scanner = createStableMarkdownScanner();
