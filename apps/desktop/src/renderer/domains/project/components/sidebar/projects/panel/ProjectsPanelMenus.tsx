@@ -46,6 +46,7 @@ export function ProjectsPanelMenus({ model }: ProjectsPanelMenusProps): JSX.Elem
 						clearConversationDisabled={menus.clearConversationDisabled}
 						clearClawDisabled={menus.clearClawDisabled}
 						onExportSessions={menus.actions.exportProjectSessions}
+						onExportMigration={menus.actions.exportMigrationPackage}
 					/>
 				) : null
 			}

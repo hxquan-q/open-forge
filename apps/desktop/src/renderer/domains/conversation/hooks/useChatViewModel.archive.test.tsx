@@ -35,6 +35,19 @@ const sessionArchive = {
 			}>;
 		}> => ({ canceled: false, decisions: [] }),
 	),
+	previewMigration: vi.fn(
+		async (): Promise<{
+			canceled: boolean;
+			classic?: boolean;
+			archivePath?: string;
+			sourceCwd?: string;
+			sessionCount?: number;
+			sessions?: Array<{ sessionId: string; name?: string }>;
+			workspaceFileCount?: number;
+			workspaceBytes?: number;
+			formatVersion?: number;
+		}> => ({ canceled: false, classic: true, archivePath: "/in/classic.ofar" }),
+	),
 };
 
 const alertSpy = vi.fn();
@@ -73,6 +86,12 @@ describe("useChatViewModel 归档导出/导入口令", () => {
 		stubVettaWindow();
 		sessionArchive.export.mockClear();
 		sessionArchive.import.mockClear();
+		sessionArchive.previewMigration.mockReset();
+		sessionArchive.previewMigration.mockResolvedValue({
+			canceled: false,
+			classic: true,
+			archivePath: "/in/classic.ofar",
+		});
 		alertSpy.mockClear();
 		getDefaultStore().set(toastsAtom, []);
 		const store = getDefaultStore();
@@ -82,6 +101,7 @@ describe("useChatViewModel 归档导出/导入口令", () => {
 		store.set(atoms.activeSessionAtom, makeActiveSession());
 		store.set(atoms.pendingSessionOpenAtom, null);
 		store.set(atoms.confirmDialogAtom, null);
+		store.set(atoms.migrationImportWizardAtom, null);
 	});
 
 	it("exportArchive 打开带 input 的确认对话框，不触碰 window.prompt", () => {
@@ -115,7 +135,7 @@ describe("useChatViewModel 归档导出/导入口令", () => {
 		});
 	});
 
-	it("importArchive 同样走对话框并把口令传给 sessionArchive.import", async () => {
+	it("importArchive 先经 preview 分流：v1 归档回落现行 import 并传口令", async () => {
 		const { result } = renderHook(() => useChatViewModel());
 		act(() => result.current.actions.importArchive());
 		const dialog = getDefaultStore().get(atoms.confirmDialogAtom);
@@ -125,7 +145,57 @@ describe("useChatViewModel 归档导出/导入口令", () => {
 			dialog?.onConfirm(false, "pw");
 		});
 
+		expect(sessionArchive.previewMigration).toHaveBeenCalledWith({ passphrase: "pw" });
 		expect(sessionArchive.import).toHaveBeenCalledWith({ passphrase: "pw" });
+	});
+
+	it("preview 识别迁移包时不走 import，打开迁移向导并提示", async () => {
+		sessionArchive.previewMigration.mockResolvedValueOnce({
+			canceled: false,
+			classic: false,
+			archivePath: "C:/pkg/mig.ofar",
+			sourceCwd: "C:/source/proj",
+			sessionCount: 2,
+			sessions: [
+				{ sessionId: "s1", name: "A" },
+				{ sessionId: "s2" },
+		],
+		workspaceFileCount: 5,
+		workspaceBytes: 1234,
+		formatVersion: 2,
+		});
+		const { result } = renderHook(() => useChatViewModel());
+		act(() => result.current.actions.importArchive());
+		const dialog = getDefaultStore().get(atoms.confirmDialogAtom);
+
+		await act(async () => {
+			dialog?.onConfirm(false, "pw");
+		});
+
+		expect(sessionArchive.import).not.toHaveBeenCalled();
+		const wizard = getDefaultStore().get(atoms.migrationImportWizardAtom);
+		expect(wizard?.passphrase).toBe("pw");
+		expect(wizard?.preview.archivePath).toBe("C:/pkg/mig.ofar");
+		expect(wizard?.preview.sessionCount).toBe(2);
+		expect(wizard?.preview.workspaceFileCount).toBe(5);
+		const toasts = getDefaultStore().get(toastsAtom);
+		expect(toasts[0]?.variant).toBe("info");
+		expect(toasts[0]?.message).toMatch(/migrationDetected|迁移向导/);
+	});
+
+	it("preview 取消选择时仅提示取消，不调用 import", async () => {
+		sessionArchive.previewMigration.mockResolvedValueOnce({ canceled: true });
+		const { result } = renderHook(() => useChatViewModel());
+		act(() => result.current.actions.importArchive());
+		const dialog = getDefaultStore().get(atoms.confirmDialogAtom);
+
+		await act(async () => {
+			dialog?.onConfirm(false, "");
+		});
+
+		expect(sessionArchive.import).not.toHaveBeenCalled();
+		expect(getDefaultStore().get(atoms.migrationImportWizardAtom)).toBeNull();
+		expect(getDefaultStore().get(toastsAtom)[0]?.message).toMatch(/canceled|已取消导入/);
 	});
 
 	it("无活动会话时 exportArchive 不打开对话框", () => {

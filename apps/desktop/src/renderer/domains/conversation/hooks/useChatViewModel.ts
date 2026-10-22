@@ -17,6 +17,7 @@ import {
 	inlineFilePreviewContextReadonlyAtom,
 	isConversationBusyAtom,
 	loadInputActionStateForSession,
+	migrationImportWizardAtom,
 	pageHeaderTitleAtom,
 	pageHeaderTitleBadgeAtom,
 	pendingSessionOpenAtom,
@@ -38,6 +39,7 @@ import { useTranslation } from "react-i18next";
 import { useOpenTerminal } from "../../bottom-panel/hooks/useOpenTerminal";
 import type { ChatViewModelResult } from "../components/chat-view/types";
 import { exportPortableSessionArchive, importPortableSessionArchive } from "../services/session-archive";
+import { previewProjectMigrationArchive } from "../../project/services/session-archive";
 import { drainActiveTranscriptWindow } from "../services/transcript-window-controller";
 
 /**
@@ -164,6 +166,7 @@ export function useChatViewModel(): ChatViewModelResult {
 	}, [activeSessionPath, activeSessionCwd, defaultCwd, sessionsMap]);
 
 	const setConfirmDialog = useSetAtom(confirmDialogAtom);
+	const setMigrationImportWizard = useSetAtom(migrationImportWizardAtom);
 
 	// Electron 不支持 window.prompt；归档口令统一走应用内确认对话框的 input 字段。
 	const exportArchive = useCallback(() => {
@@ -202,12 +205,37 @@ export function useChatViewModel(): ChatViewModelResult {
 			onConfirm: (_checkboxChecked, passphrase = "") => {
 				void (async () => {
 					try {
-						const result = await importPortableSessionArchive(passphrase);
-						// 导入成功后主进程已按写入会话广播列表变更，侧栏即时刷新；
-						// 这里只负责结果反馈，不再弹阻塞式原生框。
+						// TASK-0361：preview 先行分流——v1 会话归档回落现行导入；迁移包打开迁移向导。
+						const preview = await previewProjectMigrationArchive(passphrase);
+						if (preview.canceled) {
+							showToast({ variant: "info", message: i18n.t("chat:chatView.archiveImport.canceled") });
+							return;
+						}
+						if (preview.classic) {
+							// v1：现行导入流程不变（主进程另行框选文件）。
+							const result = await importPortableSessionArchive(passphrase);
+							showToast({
+								variant: result.messageKey === "doneCopy" ? "success" : "info",
+								message: i18n.t(`chat:chatView.archiveImport.${result.messageKey}`),
+							});
+							return;
+						}
+						// 迁移包：交给全局迁移向导（目标选择/冲突策略/执行报告）。
 						showToast({
-							variant: result.messageKey === "doneCopy" ? "success" : "info",
-							message: i18n.t(`chat:chatView.archiveImport.${result.messageKey}`),
+							variant: "info",
+							message: i18n.t("chat:chatView.archiveImport.migrationDetected"),
+						});
+						setMigrationImportWizard({
+							preview: {
+								archivePath: preview.archivePath,
+								sourceCwd: preview.sourceCwd,
+								sessionCount: preview.sessionCount,
+								sessions: preview.sessions,
+								workspaceFileCount: preview.workspaceFileCount,
+								workspaceBytes: preview.workspaceBytes,
+								formatVersion: preview.formatVersion,
+							},
+							passphrase,
 						});
 					} catch (error) {
 						showToast({
@@ -220,7 +248,7 @@ export function useChatViewModel(): ChatViewModelResult {
 				})();
 			},
 		});
-	}, [setConfirmDialog]);
+	}, [setConfirmDialog, setMigrationImportWizard]);
 
 	useEffect(() => {
 		setHeaderTitle(sessionTitle);

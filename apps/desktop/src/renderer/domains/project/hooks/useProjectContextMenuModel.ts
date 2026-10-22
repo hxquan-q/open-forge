@@ -18,6 +18,8 @@ interface UseProjectContextMenuModelArgs {
 	onDelete: (cwd: string) => void;
 	/** 导出项目全部会话；projectName 仅用做默认文件名。 */
 	onExportSessions?: (cwd: string, projectName?: string) => void;
+	/** 导出项目迁移包（会话+产物）；远程 ssh:// 项目不提供。 */
+	onExportMigration?: (cwd: string, projectName?: string) => void;
 	onOpenClawSettings?: () => void;
 	onRemove: (cwd: string) => void;
 	project: Project;
@@ -33,6 +35,7 @@ export function useProjectContextMenuModel({
 	onClose,
 	onDelete,
 	onExportSessions,
+	onExportMigration,
 	onOpenClawSettings,
 	onRemove,
 	project,
@@ -65,6 +68,11 @@ export function useProjectContextMenuModel({
 		onClose();
 	}, [cwd, onClose, onExportSessions, project.name]);
 
+	const handleExportMigration = useCallback(() => {
+		onExportMigration?.(cwd, project.name);
+		onClose();
+	}, [cwd, onClose, onExportMigration, project.name]);
+
 	const handleOpenClawSettings = useCallback(() => {
 		onOpenClawSettings?.();
 		onClose();
@@ -90,6 +98,7 @@ export function useProjectContextMenuModel({
 		labels: {
 			openInFolder: isMac ? t("contextMenu.openInFinder") : t("contextMenu.openInExplorer"),
 			exportSessions: t("contextMenu.exportSessions"),
+			exportMigration: t("contextMenu.exportMigration"),
 			archiveProject: t("contextMenu.archiveProject"),
 			removeFromList: t("contextMenu.removeFromList"),
 			deleteProject: t("contextMenu.deleteProject"),
@@ -105,6 +114,8 @@ export function useProjectContextMenuModel({
 		onClose,
 		onDelete: handleDelete,
 		onExportSessions: onExportSessions ? handleExportSessions : undefined,
+		// 产物在本机才可打包；远程 ssh:// 项目导出迁移包必败，不提供入口（服务层另有兜底拒绝）。
+		onExportMigration: onExportMigration && !isSshProjectUri(cwd) ? handleExportMigration : undefined,
 		onOpenClawSettings: onOpenClawSettings ? handleOpenClawSettings : undefined,
 		onOpenInFolder: handleOpenInFolder,
 		onRemove: handleRemove,

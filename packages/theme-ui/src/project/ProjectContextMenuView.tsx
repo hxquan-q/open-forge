@@ -7,6 +7,8 @@ export type ProjectContextMenuScope = "conversation" | "claw";
 export interface ProjectContextMenuViewLabels {
 	openInFolder: string;
 	exportSessions: string;
+	/** 导出项目迁移包（会话+产物，OFAR v2）；远程项目不提供。 */
+	exportMigration: string;
 	archiveProject: string;
 	removeFromList: string;
 	deleteProject: string;
@@ -35,6 +37,8 @@ export interface ProjectContextMenuViewProps {
 	onDelete: () => void;
 	/** Export every session of this project into one portable archive. */
 	onExportSessions?: () => void;
+	/** Export a full migration package (sessions + workspace files). Remote projects never provide this. */
+	onExportMigration?: () => void;
 	onOpenClawSettings?: () => void;
 	onOpenInFolder: () => void;
 	onRemove: () => void;
@@ -55,6 +59,7 @@ export function ProjectContextMenuView({
 	onClose,
 	onDelete,
 	onExportSessions,
+	onExportMigration,
 	onOpenClawSettings,
 	onOpenInFolder,
 	onRemove,
@@ -118,6 +123,15 @@ export function ProjectContextMenuView({
 				label: labels.exportSessions,
 				iconClassName: "icon-[solar--export-linear]",
 				onSelect: onExportSessions,
+			});
+		}
+		if (onExportMigration) {
+			items.push({
+				kind: "item",
+				id: "export-migration",
+				label: labels.exportMigration,
+				iconClassName: "icon-[solar--suitcase-linear]",
+				onSelect: onExportMigration,
 			});
 		}
 		items.push({

@@ -607,7 +607,8 @@
 			"passphrasePrompt": "输入归档口令（无口令可留空）",
 			"doneSkip": "已跳过相同会话（指纹幂等）",
 			"doneCopy": "已导入为新会话副本",
-			"canceled": "已取消导入"
+			"canceled": "已取消导入",
+			"migrationDetected": "检测到项目迁移包，已打开迁移向导"
 		},
 		"newSessionButton": {
 			"title": "新会话"

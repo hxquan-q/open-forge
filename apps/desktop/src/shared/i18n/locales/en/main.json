@@ -125,7 +125,8 @@
 		"exportDialogTitle": "Export session archive",
 		"projectExportDialogTitle": "Export project session archive",
 		"importDialogTitle": "Import session archive",
-		"filterName": "Open Forge session archive"
+		"filterName": "Open Forge session archive",
+		"migrationExportDialogTitle": "Export Project Migration Package"
 	},
 	"markdown": {
 		"previewTitle": "HTML preview · closes after 30 seconds"

@@ -17,6 +17,7 @@ interface ProjectContextMenuProps {
 	onClearClaw?: (cwd: string) => void;
 	onOpenClawSettings?: () => void;
 	onExportSessions?: (cwd: string, projectName?: string) => void;
+	onExportMigration?: (cwd: string, projectName?: string) => void;
 	clearConversationDisabled?: boolean;
 	clearClawDisabled?: boolean;
 }
@@ -34,6 +35,7 @@ export function ProjectContextMenu({
 	onClearClaw,
 	onOpenClawSettings,
 	onExportSessions,
+	onExportMigration,
 	clearConversationDisabled,
 	clearClawDisabled,
 }: ProjectContextMenuProps): JSX.Element {
@@ -47,6 +49,8 @@ export function ProjectContextMenu({
 		onClearConversation,
 		onClearClaw,
 		onOpenClawSettings,
+		onExportSessions,
+		onExportMigration,
 		clearConversationDisabled,
 		clearClawDisabled,
 	});

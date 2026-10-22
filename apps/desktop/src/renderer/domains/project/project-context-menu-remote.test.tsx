@@ -4,6 +4,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ProjectContextMenuView, type ProjectContextMenuViewProps } from "@vetta-org/theme-ui/project";
+import { useProjectContextMenuModel } from "./hooks/useProjectContextMenuModel";
+import type { Project } from "@shared/store/atoms";
 
 /**
  * radix 的浮层原语在 jsdom 下依赖大量布局 API，仓库既有做法是把 `@vetta-org/ui` 换成
@@ -59,6 +61,7 @@ const props: ProjectContextMenuViewProps = {
 		clearClaw: "Clear claw",
 		clearClawDisabled: "Nothing to clear",
 		clawSettings: "Claw settings",
+		exportMigration: "Export migration package",
 	},
 	onArchive: noop,
 	onClose: noop,
@@ -97,5 +100,45 @@ describe("ProjectContextMenuView", () => {
 	it("omits the session export entry when the host provides no exporter", () => {
 		render(<ProjectContextMenuView {...props} />);
 		expect(screen.queryByRole("menuitem", { name: "Export sessions" })).toBeNull();
+	});
+
+	it("renders the migration package entry when the host provides an exporter", () => {
+		const onExportMigration = vi.fn();
+		render(<ProjectContextMenuView {...props} onExportMigration={onExportMigration} />);
+		fireEvent.click(screen.getByRole("menuitem", { name: "Export migration package" }));
+		expect(onExportMigration).toHaveBeenCalledOnce();
+	});
+
+	it("omits the migration package entry when the host provides no exporter", () => {
+		render(<ProjectContextMenuView {...props} />);
+		expect(screen.queryByRole("menuitem", { name: "Export migration package" })).toBeNull();
+	});
+});
+
+describe("useProjectContextMenuModel 迁移入口门控", () => {
+	const baseProject: Project = { cwd: "C:/work/repo", name: "repo", sessionCount: 0, type: "normal" };
+
+	function modelFor(project: Project, onExportMigration?: (cwd: string) => void) {
+		let latest: ReturnType<typeof useProjectContextMenuModel> | undefined;
+		function Probe(): null {
+			latest = useProjectContextMenuModel({
+				project,
+				onClose: () => {},
+				onArchive: () => {},
+				onRemove: () => {},
+				onDelete: () => {},
+				onExportMigration,
+			});
+			return null;
+		}
+		render(<Probe />);
+		return latest!;
+	}
+
+	it("本地项目提供迁移导出入口，远程 ssh:// 项目不提供（产物在远端无法打包）", () => {
+		const onExportMigration = vi.fn();
+		expect(modelFor(baseProject, onExportMigration).onExportMigration).toBeTypeOf("function");
+		const remote: Project = { ...baseProject, cwd: "ssh://host-id/srv/project" };
+		expect(modelFor(remote, onExportMigration).onExportMigration).toBeUndefined();
 	});
 });

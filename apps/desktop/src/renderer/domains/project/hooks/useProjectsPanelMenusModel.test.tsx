@@ -14,18 +14,31 @@ vi.mock("react-i18next", () => ({
 }));
 
 // 删除确认后还要摘掉该会话的标签标注与归档标记，走 preload 的 conversationTags / archivedSessions 通道；
-// 项目会话导出走 sessionArchive.exportProject。
+// 项目会话导出走 sessionArchive.exportProject，迁移包导出走 sessionArchive.exportMigration。
 const forgetConversations = vi.fn();
 const forgetArchivedSessions = vi.fn();
 type ExportProjectResult = { saved: boolean; sessionCount?: number; reason?: "no-sessions" };
 const exportProject = vi.fn(async (): Promise<ExportProjectResult> => ({ saved: true, sessionCount: 2 }));
+type ExportMigrationResult = {
+	saved: boolean;
+	path?: string;
+	sessionCount?: number;
+	workspaceFileCount?: number;
+	reason?: "no-sessions" | "remote-unsupported" | "workspace-too-large";
+	detail?: string;
+};
+const exportMigration = vi.fn(async (): Promise<ExportMigrationResult> => ({
+	saved: true,
+	sessionCount: 2,
+	workspaceFileCount: 7,
+}));
 vi.stubGlobal(
 	"window",
 	Object.assign(globalThis.window, {
 		vetta: {
 			conversationTags: { forgetConversations },
 			archivedSessions: { forget: forgetArchivedSessions },
-			sessionArchive: { exportProject },
+			sessionArchive: { exportProject, exportMigration },
 		},
 	}),
 );
@@ -58,6 +71,8 @@ describe("useProjectsPanelMenusModel", () => {
 		forgetArchivedSessions.mockClear();
 		exportProject.mockReset();
 		exportProject.mockResolvedValue({ saved: true, sessionCount: 2 });
+		exportMigration.mockReset();
+		exportMigration.mockResolvedValue({ saved: true, sessionCount: 2, workspaceFileCount: 7 });
 		getDefaultStore().set(toastsAtom, []);
 	});
 
@@ -157,6 +172,93 @@ describe("useProjectsPanelMenusModel", () => {
 
 		expect(getDefaultStore().get(toastsAtom)).toEqual([
 			expect.objectContaining({ variant: "error", message: "projectExport.failed" }),
+		]);
+	});
+
+	it("asks for the migration passphrase with the include-workspace checkbox (default on), then reports counts via toast", async () => {
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.exportMigrationPackage("C:/repo", "My Repo"));
+
+		const confirmation = store.get(confirmDialogAtom);
+		expect(exportMigration).not.toHaveBeenCalled();
+		expect(confirmation).toMatchObject({
+			title: "contextMenu.exportMigration",
+			input: { password: true },
+			checkbox: { label: "migrationExport.includeWorkspace", checked: true },
+		});
+
+		await act(async () => confirmation?.onConfirm(true, "pw"));
+
+		expect(exportMigration).toHaveBeenCalledWith({
+			cwd: "C:/repo",
+			passphrase: "pw",
+			includeWorkspace: true,
+			defaultFileName: "My Repo",
+		});
+		expect(getDefaultStore().get(toastsAtom)).toEqual([
+			expect.objectContaining({ variant: "success", message: "migrationExport.done" }),
+		]);
+	});
+
+	it("forwards an unchecked include-workspace checkbox as false", async () => {
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.exportMigrationPackage("C:/repo"));
+		await act(async () => store.get(confirmDialogAtom)?.onConfirm(false, ""));
+
+		expect(exportMigration).toHaveBeenCalledWith({
+			cwd: "C:/repo",
+			passphrase: "",
+			includeWorkspace: false,
+			defaultFileName: undefined,
+		});
+	});
+
+	it("distinguishes no-sessions / remote / too-large migration export outcomes in toasts", async () => {
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		exportMigration.mockResolvedValueOnce({ saved: false, reason: "no-sessions" });
+		act(() => result.current.actions.exportMigrationPackage("C:/empty"));
+		await act(async () => store.get(confirmDialogAtom)?.onConfirm(false, ""));
+		expect(getDefaultStore().get(toastsAtom)).toEqual([
+			expect.objectContaining({ variant: "info", message: "migrationExport.noSessions" }),
+		]);
+
+		getDefaultStore().set(toastsAtom, []);
+		exportMigration.mockResolvedValueOnce({ saved: false, reason: "remote-unsupported" });
+		act(() => result.current.actions.exportMigrationPackage("ssh://h/p"));
+		await act(async () => store.get(confirmDialogAtom)?.onConfirm(false, ""));
+		expect(getDefaultStore().get(toastsAtom)).toEqual([
+			expect.objectContaining({ variant: "warning", message: "migrationExport.remoteUnsupported" }),
+		]);
+
+		getDefaultStore().set(toastsAtom, []);
+		exportMigration.mockResolvedValueOnce({ saved: false, reason: "workspace-too-large", detail: "big.bin" });
+		act(() => result.current.actions.exportMigrationPackage("C:/huge"));
+		await act(async () => store.get(confirmDialogAtom)?.onConfirm(false, ""));
+		expect(getDefaultStore().get(toastsAtom)).toEqual([
+			expect.objectContaining({ variant: "warning", message: "migrationExport.tooLarge" }),
+		]);
+	});
+
+	it("reports migration export failures as an error toast", async () => {
+		exportMigration.mockRejectedValueOnce(new Error("disk full"));
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.exportMigrationPackage("C:/repo"));
+		await act(async () => store.get(confirmDialogAtom)?.onConfirm(false, ""));
+
+		expect(getDefaultStore().get(toastsAtom)).toEqual([
+			expect.objectContaining({ variant: "error", message: "migrationExport.failed" }),
 		]);
 	});
 });

@@ -125,7 +125,8 @@
 		"exportDialogTitle": "导出会话归档",
 		"projectExportDialogTitle": "导出项目会话归档",
 		"importDialogTitle": "导入会话归档",
-		"filterName": "Open Forge 会话归档"
+		"filterName": "Open Forge 会话归档",
+		"migrationExportDialogTitle": "导出项目迁移包"
 	},
 	"markdown": {
 		"previewTitle": "HTML 预览 · 30 秒后自动关闭"

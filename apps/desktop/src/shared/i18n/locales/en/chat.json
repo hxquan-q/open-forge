@@ -607,7 +607,8 @@
 			"passphrasePrompt": "Enter archive passphrase (leave empty if none)",
 			"doneSkip": "Skipped identical session (fingerprint idempotent)",
 			"doneCopy": "Imported as a new session copy",
-			"canceled": "Import canceled"
+			"canceled": "Import canceled",
+			"migrationDetected": "Project migration package detected — the migration wizard is open"
 		},
 		"newSessionButton": {
 			"title": "New session"

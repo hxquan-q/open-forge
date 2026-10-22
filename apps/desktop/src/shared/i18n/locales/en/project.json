@@ -124,7 +124,8 @@
 			"label": "Tags",
 			"new": "New tag…",
 			"manage": "Manage tags…"
-		}
+		},
+		"exportMigration": "Export Project Migration Package…"
 	},
 	"projectExport": {
 		"passphrasePrompt": "Set a passphrase for the archive (optional; includes every session in this project)",
@@ -182,7 +183,9 @@
 		"agentsMdHint": "AGENTS.md defines project-level AI instructions; every session loads this file automatically.",
 		"claudeMdHint": "CLAUDE.md is also loaded automatically; if it conflicts with AGENTS.md, AGENTS.md takes priority.",
 		"quickSave": "Quick save",
-		"context": { "title": "Project instructions" },
+		"context": {
+			"title": "Project instructions"
+		},
 		"recentSessions": {
 			"title": "Recent sessions",
 			"empty": "No sessions in this project yet",
@@ -292,5 +295,42 @@
 		"hostInUse": "This host already has {{count}} project(s); binding here would disconnect them. Pick another host, or add this machine again separately for this project.",
 		"notOrphaned": "This project no longer needs rebinding. Try refreshing.",
 		"footnote": "The host takes over the identity recorded in the project. If you had chosen to remember a password, you may be asked for it once more."
+	},
+	"migrationExport": {
+		"passphrasePrompt": "Set a passphrase for the migration package (optional; packs every session and project file)",
+		"includeWorkspace": "Include project files (excludes .git / node_modules)",
+		"done": "Migration package exported: {{sessionCount}} sessions, {{fileCount}} project files",
+		"noSessions": "This project has no sessions to export",
+		"remoteUnsupported": "Migration packages are not available for remote projects yet: sessions can still be exported, but project files live on the remote host",
+		"tooLarge": "Project files exceed the migration package limits (512MB per file, 4GB total). Trim it first: {{path}}",
+		"failed": "Failed to export migration package: {{message}}"
+	},
+	"migrationWizard": {
+		"title": "Import Project Migration Package",
+		"description": "Migrate sessions and project files to a location you choose; session working directories are rewritten to the target.",
+		"sourcePath": "Source path",
+		"sourceUnknown": "(no source path declared in the package)",
+		"sessionCount": "Sessions",
+		"count": "{{count}}",
+		"workspaceFiles": "Project files",
+		"workspaceSummary": "{{count}} files, {{size}}",
+		"existingTarget": "Migrate into an existing project",
+		"existingTargetPlaceholder": "Pick a project…",
+		"newPath": "Or migrate to a new path",
+		"newPathPlaceholder": "Enter or pick the target directory",
+		"browse": "Browse…",
+		"overwrite": "Overwrite files that already exist at the target",
+		"overwriteHint": "Existing files are skipped by default; your current content stays untouched.",
+		"apply": "Start Migration",
+		"applying": "Migrating…",
+		"cancel": "Cancel",
+		"done": "Done",
+		"failed": "Migration failed:",
+		"reportSummary": "Migration finished",
+		"reportSessions": "Sessions",
+		"reportSessionsValue": "imported {{imported}}, skipped {{skipped}} (idempotent)",
+		"reportFiles": "Project files",
+		"reportFilesValue": "written {{written}}, skipped {{skipped}}, overwritten {{overwritten}}",
+		"reportFailed": "These files could not be restored:"
 	}
 }
