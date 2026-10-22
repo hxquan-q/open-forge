@@ -46,6 +46,63 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("有序/loose/嵌套/多行项列表流式正确且最终等价", () => {
+		const ol = Array.from({ length: 100 }, (_, i) => `${i + 5}. step ${i} of the ordered flow.\n`).join("");
+		const loose = Array.from({ length: 60 }, (_, i) => `- loose ${i}\n\n`).join("");
+		const nested = Array.from(
+			{ length: 40 },
+			(_, i) => `- top ${i}\n  - nested ${i}a\n  - nested ${i}b\n`,
+		).join("");
+		const multi = Array.from({ length: 40 }, (_, i) => `- multi ${i}\n  continued line ${i}\n`).join("");
+		const texts = { ol, loose, nested, multi };
+		for (const [name, text] of Object.entries(texts)) {
+			act(() => {
+				root.render(<MarkdownContent {...environment} text={text} isStreamingTail />);
+			});
+			act(() => {
+				vi.advanceTimersByTime(1500);
+			});
+			const grown = text + (name === "ol" ? "105. appended step.\n" : `- appended ${name} item.\n`);
+			act(() => {
+				root.render(<MarkdownContent {...environment} text={grown} isStreamingTail />);
+			});
+			act(() => {
+				vi.advanceTimersByTime(4000);
+			});
+			act(() => {
+				root.render(<MarkdownContent {...environment} text={grown} isStreamingTail={false} />);
+			});
+			act(() => {
+				vi.advanceTimersByTime(4000);
+			});
+			const plainContainer = document.createElement("div");
+			const plainRoot = createRoot(plainContainer);
+			document.body.append(plainContainer);
+			act(() => {
+				plainRoot.render(<MarkdownContent {...environment} text={grown} isStreamingTail={false} />);
+			});
+			const normalize = (host: HTMLElement): string => {
+				const clone = host.cloneNode(true) as HTMLElement;
+				for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+					span.replaceWith(...[...span.childNodes]);
+				}
+				const body = clone.querySelector(".markdown-body") ?? clone;
+				return [...body.children].map((node) => node.outerHTML).join("");
+			};
+			const streamedHtml = normalize(container);
+			const plainHtml = normalize(plainContainer);
+			act(() => plainRoot.unmount());
+			plainContainer.remove();
+			expect(streamedHtml).toBe(plainHtml);
+			if (name === "ol") {
+				// 宿主 ol 组件不透传 start 属性（预存行为，两路径一致）；
+				// 编号按 DOM 位置由 CSS 生成，缓存项保位即可保号。
+				expect(container.querySelectorAll("ol li").length).toBe(101);
+			}
+		}
+
+	});
+
 	it("纯长列表流式：快路径项缓存且最终等价", () => {
 		const line = (i: number) => `- item ${i}: a detailed bullet point describing step ${i} with detail.\n`;
 		const initial = Array.from({ length: 120 }, (_, i) => line(i)).join("");
