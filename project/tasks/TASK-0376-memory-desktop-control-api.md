@@ -1,7 +1,7 @@
 ---
 id: TASK-0376
 type: task
-status: draft
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: a13c1759a
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -34,7 +34,7 @@ write_paths:
   - apps/desktop/src/preload
   - apps/desktop/src/shared/memory.ts
   - project/tasks/TASK-0376-memory-desktop-control-api.md
-  - .github/release-notes/fragments/v0.1.3/task-0376-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - apps/desktop/src/main/memory
   - apps/desktop/src/main/ipc/memory.ts
@@ -43,7 +43,7 @@ exclusive_paths:
   - apps/desktop/src/shared/memory.ts
 depends_on: [TASK-0375]
 conflicts_with: [TASK-0378, TASK-0381, TASK-0387]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -134,8 +134,8 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改：①`shared/memory.ts`（Renderer/主进程共享合同：通道、分页/搜索/详情/更正/遗忘/模式 DTO，不暴露 principal/DB 路径）；②`main/memory/`（MemoryControlService：短连接复用同库 store/索引/erasure，分页+scope 过滤+倒序、搜索含 degraded 标注、详情修订+来源、更正 expectedRevision、遗忘同一 erasure 事务且 alsoProcessSources 只登记、模式/预算 settings.json 原子持久化，automatic 无模型被拒）；③`main/ipc/memory.ts` + index 注册（含 teardown）；④preload apis/api-types 接线（DesktopApi.memoryControl）。
+- 实际运行（2026-10-22，win32-x64）：定向 7/7（分页 hasMore、短词 degraded、详情/来源与 NOT_FOUND、冲突不吞、遗忘清空+来源登记、策略 roundtrip+校验、接口面无 principal/path 方法）；完整 `bun run check` 全绿（含 desktop 类型）。
+- 未运行：真实 Electron IPC 往返（预加载/主进程实机，属 0377 界面实机验收）；窗口销毁取消（ipcMain.handle 生命周期随 app，合同由服务短连接保证不留资源）。
+- 承载提交即集成绑定；人工功能验收对象：0377 界面。
+- 剩余风险：policy 注入新会话的读取方（conversation service）在 0377 接入；列表跨项目 scope 由身份注册表枚举，项目极多时分页性能后续评估。

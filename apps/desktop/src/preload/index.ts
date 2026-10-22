@@ -18,6 +18,7 @@ import { createDownloadsApi } from "./apis/downloads.js";
 import { createI18nApi } from "./apis/i18n.js";
 import { createImApi } from "./apis/im.js";
 import { createMarkdownApi } from "./apis/markdown.js";
+import { createMemoryControlApi } from "./apis/memory.js";
 import { createMessageAnnotationsApi } from "./apis/message-annotations.js";
 import { createNotificationApi } from "./apis/notification.js";
 import { createPetApi } from "./apis/pet.js";
@@ -73,6 +74,7 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createThemesApi(ipcRenderer),
 	...createPetApi(ipcRenderer),
 	...createConversationTagsApi(ipcRenderer),
+	...createMemoryControlApi(ipcRenderer),
 	...createArchivedSessionsApi(ipcRenderer),
 	...createReviewChangesApi(ipcRenderer),
 	...createProjectApi(ipcRenderer),

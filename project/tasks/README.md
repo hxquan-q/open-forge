@@ -24,7 +24,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0373` | `done` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；事务性家族清除+来源抑制+epoch 重检合同+无正文审计落地，576+38 例与完整 check 全绿。 |
 | `TASK-0374` | `done` | PLAN-0021 | [显式记住、检索、更正与遗忘工具](TASK-0374-memory-explicit-tools.md)；memory_remember/recall/get/correct/forget 五工具落地（宿主绑定 scope、expectedRevision 冲突、家族遗忘），定向 1633 例全绿。 |
 | `TASK-0375` | `done` | PLAN-0021 | [Desktop 正常会话接线与有界上下文注入](TASK-0375-memory-desktop-session-wiring.md)；memoryPolicy 透传+组合装配+证据注入（有界/来源/数据框架）落地，策略关闭零变化，定向 20 例与完整 check 全绿。 |
-| `TASK-0376` | `draft` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；待前置产物，未开工；serial。 |
+| `TASK-0376` | `done` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；shared 合同+主进程服务+IPC+preload 接线（分页/搜索/详情/更正/遗忘/模式），定向 7 例全绿。 |
 | `TASK-0377` | `draft` | PLAN-0021 | [记忆查看、纠正、遗忘与设置界面](TASK-0377-memory-desktop-control-ui.md)；待前置产物，未开工；serial。 |
 | `TASK-0378` | `draft` | PLAN-0021 | [旧记忆导入、Markdown 导出与回滚](TASK-0378-memory-legacy-import-export.md)；待前置产物，未开工；serial。 |
 | `TASK-0379` | `draft` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；待前置产物，未开工；serial。 |

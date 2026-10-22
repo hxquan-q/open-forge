@@ -1,6 +1,9 @@
 // Modified by The Open Forge contributors.
+
+import { getAgentDir } from "@vetta/coding-agent/config";
 import type { WebContents } from "electron";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
+import { createDefaultMemoryControlService } from "../memory/index.js";
 import { getMessageAnnotationService } from "../message-annotations/host.js";
 import { registerNotificationIpc } from "../notifications/index.js";
 import type { PluginActionService } from "../plugins/plugin-action-service.js";
@@ -24,6 +27,7 @@ import { registerFsIpc } from "./fs.js";
 import { registerImIpc } from "./im.js";
 import { registerMarkdownIpc } from "./markdown.js";
 import { registerMediaIpc } from "./media.js";
+import { registerMemoryIpc } from "./memory.js";
 import { registerMessageAnnotationsIpc } from "./message-annotations.js";
 import { registerOnboardingIpc } from "./onboarding.js";
 import { registerPermissionsIpc } from "./permissions.js";
@@ -82,6 +86,7 @@ interface IpcTeardown {
 	teardownWebhook: () => void;
 	teardownRuntimes: () => void;
 	teardownRuntimeConfiguration: () => void;
+	teardownMemoryControl: () => void;
 	teardownPermissions: () => void;
 	teardownPlugins: () => void;
 	teardownPluginCapabilities: () => void;
@@ -145,6 +150,7 @@ export function registerAllIpc(
 		teardownWebhook: registerWebhookIpc(),
 		teardownRuntimes: registerRuntimesIpc(),
 		teardownRuntimeConfiguration: registerRuntimeConfigurationIpc(webContents),
+		teardownMemoryControl: registerMemoryIpc(createDefaultMemoryControlService(getAgentDir())),
 		teardownPermissions: registerPermissionsIpc(),
 		teardownPlugins: registerPluginsIpc(options.pluginActionService),
 		teardownPluginCapabilities: registerPluginCapabilitiesIpc(),
