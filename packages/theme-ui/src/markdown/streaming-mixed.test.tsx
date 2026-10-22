@@ -46,6 +46,58 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("括号块乐观冻结后定义行中途到达：同帧重置且最终链接正确解析", () => {
+		// 阶段 1：无定义——括号块乐观冻结（渲染为字面 [label]，与全量解析一致）。
+		const before = "Uses [label] and [label][ref] here.\n\nplain paragraph.\n\n";
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={before} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1200);
+		});
+		expect(container.textContent).toContain("[label]");
+
+		// 阶段 2：定义行到达——同帧重置重拆，此前冻结块回到 tail。
+		const mid = `${before}[label]: https://example.com/defined\n`;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={mid} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1200);
+		});
+
+		// 阶段 3：再补第二个定义与结尾，最终链接必须正确解析且与整篇渲染等价。
+		const finalText = `${mid}[ref]: https://example.com/other\n\nafter definitions.\n`;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		const link = container.querySelector("a");
+		expect(link?.getAttribute("href")).toBe("https://example.com/defined");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("中文内容与含数学/代码跨格的表格流式正确且最终等价", () => {
 		const header = "| 名称 | 说明 | 数值 |\n| --- | --- | ---: |\n";
 		const rows = [

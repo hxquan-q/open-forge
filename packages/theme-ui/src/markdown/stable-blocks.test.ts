@@ -139,7 +139,7 @@ describe("splitStableMarkdownBlocks", () => {
 		});
 	});
 
-	it("字符级追加流下已提交块是严格前缀，拼接等于原文", () => {
+	it("字符级追加流下已提交块是严格前缀（定义边界单次收缩例外），拼接恒等", () => {
 		const documents = [
 			"Intro paragraph.\n\n```js\nconst a = 1;\n```\n\n| h |\n|---|\n| 1 |\n\n- item\n\n- item2\n\n> quote\n\nTail ",
 			"see [ref] here\n\nplain\n\n```ts\ncode\n```\n\ntail ",
@@ -157,6 +157,23 @@ describe("splitStableMarkdownBlocks", () => {
 				previous = [...split.committed];
 			}
 		}
+		// 定义行到达会单次收缩已提交集（乐观冻结的重置）；此后重新单调。
+		const withDef = "see [ref] here\n\nplain\n\n[ref]: https://e.com\n";
+		let shrunk = false;
+		let previous: string[] = [];
+		for (let size = 1; size <= withDef.length; size += 1) {
+			const text = withDef.slice(0, size);
+			const split = splitStableMarkdownBlocks(text);
+			if (split.committed.length < previous.length) {
+				expect(shrunk).toBe(false);
+				shrunk = true;
+			} else {
+				expect(split.committed.slice(0, previous.length)).toEqual(previous);
+			}
+			expect(split.committed.join("") + split.tail).toBe(text);
+			previous = [...split.committed];
+		}
+		expect(shrunk).toBe(true);
 	});
 
 	it("增量扫描器与全量扫描在字符级追加流下结果一致", () => {
