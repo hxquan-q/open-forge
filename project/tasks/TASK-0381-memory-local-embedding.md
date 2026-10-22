@@ -1,7 +1,7 @@
 ---
 id: TASK-0381
 type: task
-status: draft
+status: in_progress
 priority: P1
 owner: packages/runtime-node
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: parallel
 branch: task/TASK-0381-memory-local-embedding
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 1ba7d8bde
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -35,9 +35,11 @@ write_paths:
   - packages/runtime-node/package.json
   - bun.lock
   - apps/desktop/src/main/memory/embedding-models.ts
+  - apps/desktop/src/main/memory/embedding-models.node-test.mjs
   - project/tasks/TASK-0381-memory-local-embedding.md
-  - .github/release-notes/fragments/v0.1.3/task-0381-memory.md
+  - project/verification/HANDOFF-TASK-0381-window-b.md
 exclusive_paths:
+  - project/verification/HANDOFF-TASK-0381-window-b.md
   - packages/runtime-node/src/memory/embedding
   - packages/runtime-node/src/memory/migrations
   - packages/runtime-node/test/memory/embedding-adapter.test.ts
@@ -45,7 +47,7 @@ exclusive_paths:
   - bun.lock
   - apps/desktop/src/main/memory/embedding-models.ts
 depends_on: [TASK-0379]
-conflicts_with: [TASK-0369, TASK-0371, TASK-0372, TASK-0373, TASK-0376, TASK-0379]
+conflicts_with: [TASK-0369, TASK-0371, TASK-0372, TASK-0373, TASK-0376, TASK-0379, TASK-0197]
 integration_status: pending
 created: 2026-10-22
 updated: 2026-10-22
