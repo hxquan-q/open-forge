@@ -1,7 +1,7 @@
 ---
 id: TASK-0370
 type: task
-status: draft
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 17861fae7
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -32,7 +32,7 @@ write_paths:
   - apps/desktop/src/main/projects/memory-identity-storage.ts
   - apps/desktop/src/main/projects/memory-identity-storage.test.ts
   - project/tasks/TASK-0370-memory-project-identity.md
-  - .github/release-notes/fragments/v0.1.3/task-0370-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - apps/desktop/src/main/projects/memory-identity.ts
   - apps/desktop/src/main/projects/memory-identity.test.ts
@@ -40,7 +40,7 @@ exclusive_paths:
   - apps/desktop/src/main/projects/memory-identity-storage.test.ts
 depends_on: [TASK-0369, TASK-0371]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -131,8 +131,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改：新增 `apps/desktop/src/main/projects/memory-identity.ts`（principal/project UUID/location alias/authority/workspaceView 解析：alias 规范化与大小写不敏感比较、git-common-dir 仅产生关联候选、confirmWorktreeAssociation 显式确认、moveProjectBinding 保留 ID、copyProjectAsNewBinding 新 ID、resolveConversationProjectRoot 子 cwd 归属、SSH 客户端命名空间不回落本机目录、allowedScopes 受控输出）与 `memory-identity-storage.ts`（JSON 注册表：版本标记、原子写 tmp+rename、损坏/不兼容显式报错不静默重建、重启 roundtrip）；不重写 ProjectEntry/cwd 主键。
+- 存储位置说明：本切片注册表是身份映射唯一事实源（desktop 记忆状态目录 identity-registry.json）；runtime-memory v1 schema 已在 SQLite 预留 memory_identity_bindings 表，宿主接线（0375+）按行平移入同库，不双写。
+- 实际运行（2026-10-22，win32-x64）：`bun run test:impact` 定向两文件 13/13 全绿（同名仓库隔离、Worktree 候选/确认/view 隔离、移动/复制、Windows 大小写分隔符、对话子 cwd、SSH、损坏注册表报错、重启 roundtrip）；完整 `bun run check` 全绿。
+- 未运行：真实 SSH 连接（不访问，仅客户端命名空间）；真实用户状态目录（未接线，Feature 关闭）；UI。
+- 承载提交即集成绑定；人工功能验收不适用（内部解析层，用户入口在后续控制面切片）。
+- 剩余风险：确认关联后的跨项目事实共享在检索层（0372/0374）实现；Worktree 探测输入（gitCommonDir）由宿主接线时提供真实值。
