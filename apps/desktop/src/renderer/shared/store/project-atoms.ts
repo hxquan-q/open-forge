@@ -102,6 +102,25 @@ export function sessionDisplayLabel(session: Pick<SessionInfo, "name" | "firstMe
 
 export type SidebarFilter = "all" | "normal" | "batch";
 
+// ── 项目迁移向导（ADR-0147）──
+
+/** 迁移向导所需的预览摘要与口令；由 chat 导入口令对话框经 preview 分流后写入。 */
+export interface MigrationImportWizardState {
+	readonly preview: {
+		readonly archivePath: string;
+		readonly sourceCwd?: string;
+		readonly sessionCount: number;
+		readonly sessions: readonly { sessionId: string; name?: string }[];
+		readonly workspaceFileCount: number;
+		readonly workspaceBytes: number;
+		readonly formatVersion: number;
+	};
+	readonly passphrase: string;
+}
+
+/** 全局迁移向导对话框的开合与载荷；入口在 chat 顶栏，对话框挂在 RootGlobalOverlays。 */
+export const migrationImportWizardAtom = atom<MigrationImportWizardState | null>(null);
+
 export const projectsAtom = atom<Project[]>([]);
 export const projectsInitializedAtom = atom<boolean>(false);
 export const expandedProjectsAtom = atom<Set<string>>(new Set<string>());

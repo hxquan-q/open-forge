@@ -50,6 +50,65 @@ function createMemoryResourceAccess(
 }
 
 describe("context resources host port", () => {
+	it("deduplicates normalized global paths and stops fan-out after a metadata failure", async () => {
+		const base = createMemoryResourceAccess({ "/workspace/AGENTS.md": "only once" });
+		const stat = vi.fn(base.files.stat);
+		const access: ResourceAccessPort = { ...base, files: { ...base.files, stat } };
+		const loaded = await loadProjectContextFiles(access, "/workspace/project", "/workspace/");
+		expect(loaded).toEqual([{ path: "/workspace/AGENTS.md", content: "only once" }]);
+		expect(stat.mock.calls.filter(([path]) => path === "/workspace/AGENTS.md")).toHaveLength(1);
+		const failed = vi.fn(async (_path: string, options?: { signal?: AbortSignal }) => {
+			if (failed.mock.calls.length === 1) throw new Error("metadata unavailable");
+			return new Promise<undefined>((_resolve, reject) =>
+				options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true }),
+			);
+		});
+		await expect(
+			loadProjectContextFiles({ ...base, files: { ...base.files, stat: failed } }, "/a/b/c", "/agent"),
+		).rejects.toThrow("metadata unavailable");
+		expect(failed).toHaveBeenCalledTimes(4);
+		await expect(loadProjectContextFiles(base, "/workspace/project", "/workspace/")).resolves.toHaveLength(1);
+	});
+
+	it("overlaps bounded metadata reads while preserving global, ancestor and filename order", async () => {
+		vi.useFakeTimers();
+		try {
+			const entries = {
+				"/agent/AGENTS.md": "global",
+				"/CLAUDE.md": "root",
+				"/workspace/AGENTS.md": "workspace",
+				"/workspace/project/CLAUDE.md": "project",
+			};
+			const access = createMemoryResourceAccess(entries);
+			const stat = access.files.stat;
+			let active = 0;
+			let peak = 0;
+			const delayed: ResourceAccessPort = {
+				...access,
+				files: {
+					...access.files,
+					stat: async (resourcePath, options) => {
+						active++;
+						peak = Math.max(peak, active);
+						await new Promise((resolve) => setTimeout(resolve, 10));
+						active--;
+						return stat(resourcePath, options);
+					},
+				},
+			};
+			const start = Date.now();
+			const loading = loadProjectContextFiles(delayed, "/workspace/project", "/agent");
+			await vi.runAllTimersAsync();
+			const result = await loading;
+			expect(result.map((item) => item.path)).toEqual(Object.keys(entries));
+			expect(peak).toBeGreaterThan(1);
+			expect(peak).toBeLessThanOrEqual(4);
+			expect(Date.now() - start).toBeLessThanOrEqual(20);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("loads both instruction files from global and project directories, with local AGENTS.md last", async () => {
 		const access = createMemoryResourceAccess({
 			"/agent/AGENTS.md": "global agents",

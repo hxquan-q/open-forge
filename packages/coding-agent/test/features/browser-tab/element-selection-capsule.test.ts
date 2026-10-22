@@ -84,6 +84,39 @@ describe("vetta.browser.element-selection capsule v1", () => {
 		expect(BROWSER_ELEMENT_COMPUTED_STYLE_KEYS).toHaveLength(15);
 	});
 
+	it("接受一起选中的其他元素，并拒绝超过 3 个", () => {
+		const companion = {
+			role: "button",
+			accessibleName: "B",
+			attributes: { id: "b" },
+			domPath: "button#b",
+			xpath: '//*[@id="b"]',
+			computedStyle: { display: "block" },
+			outerHTML: '<button id="b">B</button>',
+			surroundingText: "B",
+			boundingRect: { x: 0, y: 0, width: 10, height: 10 },
+		};
+		expect(readBrowserElementSelectionPayload(validPayload({ companions: [companion] }))?.companions).toEqual([
+			companion,
+		]);
+		expect(
+			readBrowserElementSelectionPayload(validPayload({ companions: [companion, companion, companion, companion] })),
+		).toBeUndefined();
+	});
+
+	it("接受可选的组件位置，并拒绝多出来的字段", () => {
+		const hinted = validPayload({
+			sourceHint: { kind: "react", file: "src/App.tsx", line: 12, column: 3, component: "SaveButton" },
+		});
+		expect(readBrowserElementSelectionPayload(hinted)?.sourceHint).toEqual(hinted.sourceHint);
+		expect(
+			readBrowserElementSelectionPayload({
+				...validPayload(),
+				sourceHint: { kind: "react", file: "src/App.tsx", secret: "no" },
+			} as BrowserElementSelectionPayload),
+		).toBeUndefined();
+	});
+
 	it("拒绝未知 schema 版本，保持 v1 兼容边界", () => {
 		expect(
 			readBrowserElementSelectionContext({

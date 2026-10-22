@@ -50,11 +50,14 @@ export function findDuplicateConversationKeys(items: readonly ChatTimelineItem[]
 export function reportDuplicateConversationKeys(sessionId: string | null, items: readonly ChatTimelineItem[]): void {
 	const duplicates = findDuplicateConversationKeys(items);
 	if (duplicates.length === 0) return;
-	console.warn("[conversation-keys] duplicate render keys", {
-		sessionId,
-		total: items.length,
-		duplicates,
-	});
+	console.warn(
+		"[conversation-keys] duplicate render keys",
+		JSON.stringify({
+			sessionId,
+			total: items.length,
+			duplicates,
+		}),
+	);
 }
 
 function identityOf(item: ChatTimelineItem, index: number): ConversationKeyIdentity {

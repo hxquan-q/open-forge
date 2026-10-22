@@ -1,12 +1,14 @@
 // Copyright The Open Forge contributors.
 
 import {
+	focusInputEditor,
 	insertImageToken,
+	prependPlainText,
 	removeImageToken,
 } from "@domains/conversation/components/input-bar/editor/inputEditorHandle";
 import { useEffectiveShortcut } from "@shared/hooks/useShortcuts";
 import { useShortcutScope } from "@shared/shortcuts";
-import { promptAttachmentAtom } from "@shared/store/plugin-atoms";
+import { promptAttachmentAtom, sendMessageFnRef } from "@shared/store/atoms";
 import {
 	type BrowserElementLiveEdit,
 	type BrowserElementRef,
@@ -16,8 +18,38 @@ import {
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BROWSER_ELEMENT_PICKER_TOGGLE_EVENT } from "@/shared/browser-tab-ipc";
+import {
+	BROWSER_ELEMENT_PICKER_TOGGLE_EVENT,
+	DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK,
+	type DesktopBrowserAnnotationChrome,
+} from "@/shared/browser-tab-ipc";
+import { buildBrowserElementAgentText } from "../services/browser-element-agent-message";
 import { applyBrowserElementSelectionToDraft } from "../services/browser-element-draft";
+
+/** 网页里的批注用不到应用样式表，这里读取当前主题已经算好的颜色。 */
+function readAnnotationChrome(): DesktopBrowserAnnotationChrome {
+	const style = getComputedStyle(document.documentElement);
+	const read = (name: keyof DesktopBrowserAnnotationChrome, variable: string): string => {
+		const value = style.getPropertyValue(variable).replace(/\s+/g, " ").trim();
+		if (!value || value.length > 240 || /[;{}<>]|url\s*\(|expression\s*\(/i.test(value)) {
+			return DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK[name];
+		}
+		return value;
+	};
+	return {
+		background: read("background", "--popover"),
+		foreground: read("foreground", "--popover-foreground"),
+		border: read("border", "--border"),
+		primary: read("primary", "--primary"),
+		primaryForeground: read("primaryForeground", "--primary-foreground"),
+		muted: read("muted", "--muted-foreground"),
+		destructive: read("destructive", "--destructive"),
+		radius: read("radius", "--radius"),
+		shadow: read("shadow", "--shadow-md"),
+		font: read("font", "--font-sans"),
+		ring: read("ring", "--ring"),
+	};
+}
 
 /** 点选命中后的编辑态：胶囊先停在卡片上，确认后才写入输入框附件（TASK-0085）。 */
 export interface BrowserElementPickedSelection {
@@ -31,7 +63,10 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	selection: BrowserElementPickedSelection | null;
 	selectionRef: BrowserElementRef | null;
 	onTogglePicker: () => void;
-	confirmSelection: (edits: readonly BrowserElementLiveEdit[]) => void;
+	confirmSelection: (
+		edits: readonly BrowserElementLiveEdit[],
+		options?: { readonly comment?: string; readonly send?: boolean },
+	) => void;
 	discardSelection: () => void;
 } {
 	const { t } = useTranslation("chat");
@@ -43,11 +78,61 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	attachmentRef.current = promptAttachment;
 	const pickerShortcut = useEffectiveShortcut("browser-element-picker");
 
+	const deliverSelection = useCallback(
+		(
+			context: BrowserElementSelectionContext,
+			screenshotPath: string | undefined,
+			edits: readonly BrowserElementLiveEdit[],
+			options?: { comment?: string; send?: boolean },
+		) => {
+			const nextContext: BrowserElementSelectionContext =
+				edits.length > 0 ? { ...context, payload: { ...context.payload, liveEdits: [...edits] } } : context;
+			const send = options?.send ? sendMessageFnRef.current : null;
+			applyBrowserElementSelectionToDraft(
+				{
+					getAttachment: () => attachmentRef.current,
+					setAttachment: setPromptAttachment,
+					insertImage: insertImageToken,
+					removeImage: removeImageToken,
+				},
+				{
+					context: nextContext,
+					label: t("browser.elementAttached"),
+					...(screenshotPath ? { screenshotPath } : {}),
+					...(send ? { stageScreenshot: false } : {}),
+				},
+			);
+			const text = buildBrowserElementAgentText({
+				comment: options?.comment ?? "",
+				target: nextContext.payload.accessibleName || nextContext.payload.domPath,
+				edits,
+			});
+			if (send) {
+				void send(undefined, {
+					composed: {
+						text,
+						...(screenshotPath ? { imagePaths: [screenshotPath] } : {}),
+						preserveDraft: true,
+					},
+				}).then((result) => {
+					if (result) return;
+					if (screenshotPath) insertImageToken(screenshotPath);
+					prependPlainText(`${text}\n\n`);
+				});
+				return;
+			}
+			if (typeof options?.comment === "string") prependPlainText(`${text}\n\n`);
+		},
+		[setPromptAttachment, t],
+	);
+
 	const captureSelection = useCallback(
 		async (
 			context: unknown,
 			rect: { x: number; y: number; width: number; height: number },
 			devicePixelRatio: number,
+			comment?: string,
+			placement?: "input" | "annotation",
 		) => {
 			const crop = await window.vetta.browserTab.cropScreenshot({
 				workspaceId,
@@ -66,9 +151,19 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 					: context;
 			const parsed = readBrowserElementSelectionContext(nextContext);
 			if (!parsed) return;
+			const screenshotPath = crop.ok ? crop.path : undefined;
+			if (placement === "input") {
+				deliverSelection(parsed, screenshotPath, [], { send: false });
+				focusInputEditor();
+				return;
+			}
+			if (typeof comment === "string") {
+				deliverSelection(parsed, screenshotPath, [], { comment, send: true });
+				return;
+			}
 			setSelection({ context: parsed, ...(crop.ok ? { screenshotPath: crop.path } : {}) });
 		},
-		[workspaceId],
+		[deliverSelection, workspaceId],
 	);
 
 	useEffect(() => {
@@ -89,7 +184,8 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			}
 			if (envelope.event.kind !== "picker-result") return;
 			const { payload } = envelope.event.context;
-			void captureSelection(envelope.event.context, payload.boundingRect, 1);
+			const comment = envelope.event.comment;
+			void captureSelection(envelope.event.context, payload.boundingRect, 1, comment, envelope.event.placement);
 		});
 		return () => {
 			cancelled = true;
@@ -99,35 +195,31 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	const togglePicker = useCallback(() => {
 		if (!input.hasPage) return;
-		void window.vetta.browserTab.setPicker({ workspaceId, enabled: !pickerEnabled }).then((result) => {
-			if (result.ok) setPickerEnabled(result.pickerEnabled);
-		});
-	}, [input.hasPage, pickerEnabled, workspaceId]);
+		void window.vetta.browserTab
+			.setPicker({
+				workspaceId,
+				enabled: !pickerEnabled,
+				annotation: {
+					placeholder: t("browser.liveEdit.commentPlaceholder"),
+					send: t("browser.liveEdit.send"),
+					selectedCount: t("browser.liveEdit.selectedCount"),
+					selectionLimit: t("browser.liveEdit.selectionLimit"),
+					chrome: readAnnotationChrome(),
+				},
+			})
+			.then((result) => {
+				if (result.ok) setPickerEnabled(result.pickerEnabled);
+			});
+	}, [input.hasPage, pickerEnabled, t, workspaceId]);
 
 	const confirmSelection = useCallback(
-		(edits: readonly BrowserElementLiveEdit[]) => {
+		(edits: readonly BrowserElementLiveEdit[], options?: { comment?: string; send?: boolean }) => {
 			if (!selection) return;
-			const context: BrowserElementSelectionContext =
-				edits.length > 0
-					? { ...selection.context, payload: { ...selection.context.payload, liveEdits: [...edits] } }
-					: selection.context;
-			applyBrowserElementSelectionToDraft(
-				{
-					getAttachment: () => attachmentRef.current,
-					setAttachment: setPromptAttachment,
-					insertImage: insertImageToken,
-					removeImage: removeImageToken,
-				},
-				{
-					context,
-					label: t("browser.elementAttached"),
-					...(selection.screenshotPath ? { screenshotPath: selection.screenshotPath } : {}),
-				},
-			);
+			deliverSelection(selection.context, selection.screenshotPath, edits, options);
 			setSelection(null);
 			void window.vetta.browserTab.setPicker({ workspaceId, enabled: false });
 		},
-		[selection, setPromptAttachment, t, workspaceId],
+		[deliverSelection, selection, workspaceId],
 	);
 
 	const discardSelection = useCallback(() => {

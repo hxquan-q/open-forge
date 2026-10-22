@@ -543,7 +543,7 @@
 		"tab": "浏览器",
 		"picker": "选取元素",
 		"pickerActive": "正在选取元素，再点一次或按快捷键退出",
-		"pickerHint": "把指针移到页面上的元素，点击后会附加到输入框，不会触发页面上的按钮。",
+		"pickerHint": "点击元素后，输入框出现在元素旁边。按住 Shift 再点可以多选，一起描述它们的关系。按住 Alt 再点，则把这一个元素放进对话输入框。点击不会触发页面上的按钮。",
 		"elementAttached": "已附加页面元素",
 		"elementReplace": "新的选区会替换当前附件",
 		"staleSelection": "页面已变化，这个选区可能失效",
@@ -559,6 +559,12 @@
 			"revertOne": "撤销这条",
 			"revertAll": "全部还原",
 			"send": "发送给 Agent",
+			"selectedCount": "已选 {count} 个",
+			"selectionLimit": "一次最多选择 4 个元素",
+			"comment": "对 Agent 说",
+			"commentPlaceholder": "要怎么改这个元素",
+			"defaultRequest": "请根据我选中的页面元素「{{target}}」修改对应源码，并在内置浏览器里确认页面已经变化。",
+			"editsRequest": "请把我在页面上对「{{target}}」的预览改动写回源码，并在内置浏览器里确认：{{summary}}",
 			"discard": "放弃",
 			"stale": "页面已变化，这个选区已失效",
 			"failed": "没能应用改动"
@@ -601,7 +607,8 @@
 			"passphrasePrompt": "输入归档口令（无口令可留空）",
 			"doneSkip": "已跳过相同会话（指纹幂等）",
 			"doneCopy": "已导入为新会话副本",
-			"canceled": "已取消导入"
+			"canceled": "已取消导入",
+			"migrationDetected": "检测到项目迁移包，已打开迁移向导"
 		},
 		"newSessionButton": {
 			"title": "新会话"

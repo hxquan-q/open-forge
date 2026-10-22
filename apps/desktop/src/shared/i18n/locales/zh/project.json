@@ -108,6 +108,7 @@
 		"clearClawDisabled": "请先停止运行中的 Claw 会话",
 		"clawSettings": "Claw 设置",
 		"archiveProject": "归档项目",
+		"exportSessions": "导出项目会话归档",
 		"removeFromList": "从列表中移除",
 		"deleteProject": "删除项目",
 		"rename": "重命名",
@@ -123,7 +124,14 @@
 			"label": "标签",
 			"new": "新标签…",
 			"manage": "管理标签…"
-		}
+		},
+		"exportMigration": "导出项目迁移包…"
+	},
+	"projectExport": {
+		"passphrasePrompt": "为归档设置口令（可留空，将打包该项目全部会话）",
+		"done": "已导出 {{count}} 条会话",
+		"noSessions": "项目暂无可导出的会话",
+		"failed": "导出项目会话归档失败：{{message}}"
 	},
 	"tagEditor": {
 		"createTitle": "新建标签",
@@ -174,7 +182,9 @@
 		"agentsMdHint": "AGENTS.md 用于定义项目级别的 AI 指令，所有会话都会自动加载此文件。",
 		"claudeMdHint": "CLAUDE.md 同样会自动加载；与 AGENTS.md 冲突时，以 AGENTS.md 为准。",
 		"quickSave": "快速保存",
-		"context": { "title": "项目指令" },
+		"context": {
+			"title": "项目指令"
+		},
 		"recentSessions": {
 			"title": "最近与置顶会话",
 			"empty": "该项目下还没有会话记录",
@@ -284,5 +294,42 @@
 		"hostInUse": "这台主机下已经有 {{count}} 个项目，绑到这里会让它们失联。请选另一台，或先为这个项目单独添加一次这台主机。",
 		"notOrphaned": "这个项目已经不需要重新绑定了，刷新一下试试。",
 		"footnote": "绑定后这台主机沿用项目里记着的标识；如果之前勾选过「记住密码」，连接时可能需要再输入一次。"
+	},
+	"migrationExport": {
+		"passphrasePrompt": "为迁移包设置口令（可留空，将打包该项目全部会话与项目文件）",
+		"includeWorkspace": "包含项目文件（排除 .git / node_modules）",
+		"done": "已导出迁移包：{{sessionCount}} 条会话、{{fileCount}} 个项目文件",
+		"noSessions": "项目暂无可导出的会话",
+		"remoteUnsupported": "远程项目暂不支持导出迁移包：会话记录可正常导出，项目文件在远端无法打包",
+		"tooLarge": "项目文件超出迁移包上限（单文件 512MB、总量 4GB），请先精简：{{path}}",
+		"failed": "导出项目迁移包失败：{{message}}"
+	},
+	"migrationWizard": {
+		"title": "导入项目迁移包",
+		"description": "把会话与项目文件迁移到自选位置；会话记录的工作目录将改写为目标位置。",
+		"sourcePath": "源路径",
+		"sourceUnknown": "（迁移包未声明源路径）",
+		"sessionCount": "会话",
+		"count": "{{count}} 条",
+		"workspaceFiles": "项目文件",
+		"workspaceSummary": "{{count}} 个，共 {{size}}",
+		"existingTarget": "迁移到现有项目",
+		"existingTargetPlaceholder": "选择项目…",
+		"newPath": "或迁移到新路径",
+		"newPathPlaceholder": "输入或选择目标目录路径",
+		"browse": "浏览…",
+		"overwrite": "覆盖目标位置已存在的文件",
+		"overwriteHint": "默认跳过已存在的文件，不会改动你的现有内容。",
+		"apply": "开始迁移",
+		"applying": "正在迁移…",
+		"cancel": "取消",
+		"done": "完成",
+		"failed": "迁移失败：",
+		"reportSummary": "迁移完成",
+		"reportSessions": "会话",
+		"reportSessionsValue": "导入 {{imported}} 条，幂等跳过 {{skipped}} 条",
+		"reportFiles": "项目文件",
+		"reportFilesValue": "写入 {{written}}，跳过 {{skipped}}，覆盖 {{overwritten}}",
+		"reportFailed": "以下文件未能恢复："
 	}
 }

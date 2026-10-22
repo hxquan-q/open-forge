@@ -116,6 +116,99 @@ beforeEach(() => {
 });
 
 describe("loadOlderTranscriptPage", () => {
+	it("clears older loading when a reset fails and allows pagination to recover", async () => {
+		setActiveSession();
+		seedWindow([userEntry("u1", "one")], { hasMore: true, nextBeforeEntry: "cursor" });
+		const older = deferred<HistoryPage>();
+		openViewer.mockReturnValueOnce(older.promise).mockRejectedValueOnce(new Error("offline"));
+		const loading = loadOlderTranscriptPage();
+		await expect(resetTranscriptWindowToTail()).rejects.toThrow("offline");
+		older.resolve(page([userEntry("u0", "zero")]));
+		await loading;
+		expect(store.get(transcriptWindowStateAtom).loadingOlder).toBe(false);
+		openViewer.mockResolvedValueOnce(page([userEntry("u0", "zero")]));
+		expect(await loadOlderTranscriptPage()).toBe(1);
+	});
+	it.each(["failed", "declined"])("retains an earlier successful tail when a newer refresh is %s", async (outcome) => {
+		setActiveSession();
+		seedWindow([userEntry("u1", "one")], { hasMore: false });
+		const first = deferred<HistoryPage>();
+		openViewer.mockReturnValueOnce(first.promise);
+		const a = refreshTranscriptTail();
+		if (outcome === "failed") {
+			openViewer.mockRejectedValueOnce(new Error("offline"));
+			await expect(refreshTranscriptTail()).rejects.toThrow("offline");
+		} else {
+			openViewer.mockResolvedValueOnce(page([userEntry("u1", "one"), agentEntry("a2", "declined")]));
+			await refreshTranscriptTail({ shouldCommit: () => false });
+		}
+		first.resolve(page([userEntry("u1", "one"), agentEntry("a1", "accepted")]));
+		await a;
+		expect(entryIds()).toEqual(["u1", "a1"]);
+	});
+
+	it("merges overlapping history once while retaining live identity, drafts and the scroll anchor", async () => {
+		setActiveSession();
+		seedWindow([userEntry("u-9", "q9"), agentEntry("a-9", "a9")], { nextBeforeEntry: "c1", hasMore: true });
+		const [oldUser, oldAgent] = store.get(chatMessagesAtom);
+		const draft = createConversationAgentMessage({ id: "draft", phase: "streaming", blocks: [] });
+		store.set(chatMessagesAtom, [...store.get(chatMessagesAtom), draft]);
+		openViewer.mockResolvedValueOnce(
+			page([userEntry("u-8", "q8"), agentEntry("a-8", "a8"), userEntry("u-9", "q9"), agentEntry("a-9", "a9")], {
+				head: false,
+			}),
+		);
+		expect(await loadOlderTranscriptPage()).toBe(2);
+		expect(readTranscriptBacklog(SESSION_PATH)?.entries.map(entryIdOf)).toEqual(["u-8", "a-8", "u-9", "a-9"]);
+		expect(store.get(transcriptWindowStateAtom).firstItemIndex).toBe(TRANSCRIPT_WINDOW_FIRST_INDEX - 2);
+		expect(store.get(chatMessagesAtom).slice(2)).toEqual([oldUser, oldAgent, draft]);
+		expect(store.get(chatMessagesAtom)[2]).toBe(oldUser);
+		expect(store.get(chatMessagesAtom)[3]).toBe(oldAgent);
+		expect(store.get(chatMessagesAtom)[4]).toBe(draft);
+		openViewer.mockResolvedValueOnce(
+			page([userEntry("u-9", "q9"), agentEntry("a-9", "a9"), userEntry("u-10", "q10")]),
+		);
+		await refreshTranscriptTail();
+		expect(readTranscriptBacklog(SESSION_PATH)?.entries.map(entryIdOf)).toEqual(["u-8", "a-8", "u-9", "a-9", "u-10"]);
+	});
+
+	it.each(["older-first", "tail-first"])(
+		"retains both sides of concurrent pagination and live refresh (%s)",
+		async (order) => {
+			setActiveSession();
+			seedWindow([userEntry("u-9", "q9")], { nextBeforeEntry: "c1", hasMore: true });
+			const older = deferred<HistoryPage>();
+			const tail = deferred<HistoryPage>();
+			openViewer.mockReturnValueOnce(older.promise).mockReturnValueOnce(tail.promise);
+			const load = loadOlderTranscriptPage();
+			const refresh = refreshTranscriptTail();
+			if (order === "older-first") {
+				older.resolve(page([userEntry("u-8", "q8")], { head: false }));
+				await load;
+				tail.resolve(page([userEntry("u-9", "q9"), userEntry("u-10", "q10")]));
+			} else {
+				tail.resolve(page([userEntry("u-9", "q9"), userEntry("u-10", "q10")]));
+				await refresh;
+				older.resolve(page([userEntry("u-8", "q8")], { head: false }));
+			}
+			await Promise.all([load, refresh]);
+			expect(readTranscriptBacklog(SESSION_PATH)?.entries.map(entryIdOf)).toEqual(["u-8", "u-9", "u-10"]);
+			expect(entryIds()).toEqual(["u-8", "u-9", "u-10"]);
+		},
+	);
+
+	it("does not reinsert an old page after the same session's history was reset", async () => {
+		setActiveSession();
+		seedWindow([userEntry("old-tail", "before edit")], { nextBeforeEntry: "c1", hasMore: true });
+		const older = deferred<HistoryPage>();
+		openViewer.mockReturnValueOnce(older.promise).mockResolvedValueOnce(page([userEntry("new-tail", "after edit")]));
+		const load = loadOlderTranscriptPage();
+		await resetTranscriptWindowToTail();
+		older.resolve(page([userEntry("old-page", "outdated")], { head: false }));
+		expect(await load).toBe(0);
+		expect(entryIds()).toEqual(["new-tail"]);
+	});
+
 	it("向 openViewer 回传游标、前插旧页并前移 firstItemIndex", async () => {
 		setActiveSession();
 		seedWindow([userEntry("u-9", "q9"), agentEntry("a-9", "a9")], {

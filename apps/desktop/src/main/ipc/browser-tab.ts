@@ -73,7 +73,10 @@ export function registerBrowserTabIpc(): () => void {
 		const workspaceId = readWorkspaceId(request);
 		if (!workspaceId) return { ok: true as const, pickerEnabled: false };
 		controller.getSession(workspaceId);
-		return { ok: true as const, pickerEnabled: await controller.setPicker(workspaceId, request.enabled === true) };
+		return {
+			ok: true as const,
+			pickerEnabled: await controller.setPicker(workspaceId, request.enabled === true, request.annotation),
+		};
 	});
 	ipcMain.handle(CHANNELS.CROP_SCREENSHOT, async (_event, request: DesktopBrowserCropScreenshotRequest) => {
 		const parsed = readCropRequest(request);

@@ -46,6 +46,8 @@ export function applyBrowserElementSelectionToDraft(
 		context: unknown;
 		label: string;
 		screenshotPath?: string;
+		/** 为 false 时只记住路径，不插入输入框。发送失败后再插入。 */
+		stageScreenshot?: boolean;
 	},
 ): BrowserElementSelectionContext | undefined {
 	const context = readBrowserElementSelectionContext(input.context);
@@ -54,8 +56,8 @@ export function applyBrowserElementSelectionToDraft(
 	lastScreenshotPath = undefined;
 	ports.setAttachment(createBrowserElementAttachment(context, input.label));
 	if (input.screenshotPath) {
-		ports.insertImage(input.screenshotPath);
 		lastScreenshotPath = input.screenshotPath;
+		if (input.stageScreenshot !== false) ports.insertImage(input.screenshotPath);
 	}
 	return context;
 }

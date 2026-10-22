@@ -9,6 +9,7 @@ import {
 	readBrowserElementSelectionContext,
 } from "@vetta/coding-agent/function-extensions";
 import type {
+	DesktopBrowserAnnotationLabels,
 	DesktopBrowserCropRect,
 	DesktopBrowserCropScreenshotResult,
 	DesktopBrowserLiveEditAction,
@@ -16,7 +17,12 @@ import type {
 	DesktopBrowserTabLiveEditResult,
 	DesktopBrowserTabSession,
 } from "../../shared/browser-tab-ipc.js";
-import { readExtractedBrowserElement } from "./webview-element-extract.js";
+import { mainT } from "../i18n/index.js";
+import {
+	type ExtractedBrowserElement,
+	readBrowserElementCompanions,
+	readExtractedBrowserElement,
+} from "./webview-element-extract.js";
 import { createBrowserElementRef, validateBrowserElementRef } from "./webview-element-ref.js";
 import { buildInAppBrowserGuestScript } from "./webview-picker-guest.js";
 import { resolveCaptureCrop, scaledScreenshotSize } from "./webview-screenshot-crop.js";
@@ -49,6 +55,38 @@ export type PersistBrowserScreenshot = (
 	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
 ) => Promise<readonly { path: string; width?: number; height?: number }[]>;
 
+function companionFields(items: readonly ExtractedBrowserElement[]): {
+	companions?: Array<Omit<ExtractedBrowserElement, "devicePixelRatio">>;
+} {
+	if (items.length === 0) return {};
+	return {
+		companions: items.map((item) => ({
+			role: item.role,
+			accessibleName: item.accessibleName,
+			attributes: item.attributes,
+			domPath: item.domPath,
+			xpath: item.xpath,
+			computedStyle: item.computedStyle,
+			outerHTML: item.outerHTML,
+			surroundingText: item.surroundingText,
+			boundingRect: item.boundingRect,
+			...(item.sourceHint ? { sourceHint: item.sourceHint } : {}),
+		})),
+	};
+}
+
+function readPickComment(raw: unknown): string | undefined {
+	if (!raw || typeof raw !== "object" || !("comment" in raw)) return undefined;
+	const comment = (raw as { comment?: unknown }).comment;
+	return typeof comment === "string" ? comment.slice(0, 2000) : "";
+}
+
+function readPickPlacement(raw: unknown): "input" | "annotation" | undefined {
+	if (!raw || typeof raw !== "object" || !("placement" in raw)) return undefined;
+	const placement = (raw as { placement?: unknown }).placement;
+	return placement === "input" || placement === "annotation" ? placement : undefined;
+}
+
 async function persistBrowserScreenshotDefault(
 	sessionId: string,
 	images: readonly { id: string; mimeType: string; source: { kind: "bytes"; data: ArrayBuffer } }[],
@@ -69,6 +107,7 @@ interface WorkspaceSession {
 	lastPickDevicePixelRatio?: number;
 	/** 最近一次 picker-result 的 ref；live-edit 只作用于它，防止改到过期元素。 */
 	lastPickedRef: BrowserElementRef | null;
+	annotationLabels?: DesktopBrowserAnnotationLabels;
 }
 
 export class InAppBrowserSessionController {
@@ -138,8 +177,13 @@ export class InAppBrowserSessionController {
 		return session.pageRevision;
 	}
 
-	async setPicker(workspaceId: string, enabled: boolean): Promise<boolean> {
+	async setPicker(
+		workspaceId: string,
+		enabled: boolean,
+		annotation?: DesktopBrowserAnnotationLabels,
+	): Promise<boolean> {
 		const session = this.ensureSession(workspaceId);
+		if (annotation?.placeholder && annotation.send) session.annotationLabels = annotation;
 		session.pickerEnabled = enabled;
 		if (enabled) void this.runPicker(session);
 		else await this.stopPicker(session);
@@ -356,7 +400,13 @@ export class InAppBrowserSessionController {
 	private async waitForPick(session: WorkspaceSession, contents: InAppBrowserWebContents): Promise<PickerOutcome> {
 		let raw: unknown;
 		try {
-			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start"));
+			const labels = session.annotationLabels ?? {
+				placeholder: mainT("browserAnnotation.placeholder"),
+				send: mainT("browserAnnotation.send"),
+				selectedCount: mainT("browserAnnotation.selectedCount"),
+				selectionLimit: mainT("browserAnnotation.selectionLimit"),
+			};
+			raw = await contents.executeJavaScript(buildInAppBrowserGuestScript("start", labels));
 		} catch (error) {
 			// 注入脚本自身抛错（历史上是打包器辅助函数缺失，BUG-0051）此前被静默吞掉，
 			// 面板上只表现为「点选没反应」；这里留下证据再回到 idle。
@@ -396,15 +446,30 @@ export class InAppBrowserSessionController {
 				outerHTML: extracted.outerHTML,
 				surroundingText: extracted.surroundingText,
 				boundingRect: extracted.boundingRect,
+				...(extracted.sourceHint ? { sourceHint: extracted.sourceHint } : {}),
+				...companionFields(readBrowserElementCompanions((raw as { companions?: unknown }).companions)),
 			},
 		});
 		if (!context) return "idle";
-		this.emitPickerResult(session.workspaceId, context);
+		this.emitPickerResult(session.workspaceId, context, readPickComment(raw), readPickPlacement(raw));
 		return "picked";
 	}
 
-	private emitPickerResult(workspaceId: string, context: BrowserElementSelectionContext): void {
-		this.sink({ workspaceId, event: { kind: "picker-result", context } });
+	private emitPickerResult(
+		workspaceId: string,
+		context: BrowserElementSelectionContext,
+		comment?: string,
+		placement?: "input" | "annotation",
+	): void {
+		this.sink({
+			workspaceId,
+			event: {
+				kind: "picker-result",
+				context,
+				...(comment === undefined ? {} : { comment }),
+				...(placement === undefined ? {} : { placement }),
+			},
+		});
 	}
 
 	private emitRevision(session: WorkspaceSession): void {

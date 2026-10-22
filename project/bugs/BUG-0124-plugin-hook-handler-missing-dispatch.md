@@ -8,8 +8,8 @@ requirement:
 plan:
 source: 用户提供的 dev 日志（desktop-app/logs 的 2026-10-14 与 2026-10-16，main/render 双侧）
 related_requirement: []
-related_plan: []
-related_tasks: []
+related_plan: [PLAN-0020]
+related_tasks: [TASK-0356]
 related_issues: []
 related_bugs: []
 created: 2026-10-16
@@ -75,3 +75,9 @@ ac-fence 属于安全围栏：处理器没跑等于围栏没生效，而当前�
 - 检查：`bun run --cwd apps/desktop typecheck:incremental`、`bun run test:impact` 459 例通过（2 个 BUG-0107 存量收集期红）。
 - 未运行及原因：`verify:ui:*` 未获授权；dev HMR/reload 复现交人工验收。
 - 剩余风险：不对称（hook 调用点不消费渲染端 lease）未修，陈旧派发仍会发生但可归因。
+
+## 2026-10-22 TASK-0356 实现与隔离回归
+
+dispatcher统一释放callback、abort监听和document lease，覆盖发送失败/取消/迟到响应/回包前权限撤销。committed navigation、renderer gone、teardown使current+retired失效；未提交activation同时废弃，旧commit被拒绝，新document可重新激活。原registry失效回归红、staged activation迟到commit红→registry/service/dispatcher/navigation/lifecycle组合绿（首轮18，补测3文件10）。
+
+定向与独立复审通过；候选完整check通过，组合测试最终结果见PLAN-0020。相关Task为TASK-0356，本地main原子提交绑定；仍待真实用户流程验收，未发布。

@@ -90,6 +90,7 @@ import { mapSessionEventToPetPresentation } from "../pet/session-event-action-po
 import { sendPetCommandToWindow } from "../pet-window.js";
 import { setDesktopPluginHookInvoker } from "../plugins/coding-agent-hook-invocation.js";
 import { listPlugins, pluginAgentContributionService } from "../plugins/plugin-catalog.js";
+import { createPluginHookRendererDispatcher } from "../plugins/plugin-hook-renderer-dispatcher.js";
 import { summarizeAgentPluginRuntimeConfig } from "../plugins/plugin-runtime-config-builder.js";
 import { getDesktopCodingAgentPluginRuntimeSource } from "../plugins/plugin-runtime-service.js";
 import { PluginToolRendererHostLifecycle } from "../plugins/plugin-tool-renderer-host-lifecycle.js";
@@ -737,75 +738,38 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		});
 	});
 
-	setDesktopPluginHookInvoker((request, signal?: AbortSignal) => {
+	const dispatchHook = createPluginHookRendererDispatcher({
+		host: pluginToolRendererHost,
+		pending: pluginHookMap,
+		readRejection: (request) =>
+			pluginAgentContributionService.readHookInvocationRejection(
+				request.pluginId,
+				request.handlerId,
+				request.activationId,
+			),
+		send: (request) => webContents.send(CHANNELS.PLUGIN_HOOK_REQUEST, request),
+		onFailure: (request, message) =>
+			pluginLog.warn("hook handler reported failure", {
+				pluginId: request.pluginId,
+				hookId: request.hookId,
+				handlerId: request.handlerId,
+				activationId: request.activationId,
+				sessionId: request.session.id,
+				message,
+			}),
+	});
+	setDesktopPluginHookInvoker((request, signal) => {
 		if (webContents.isDestroyed()) return Promise.resolve(undefined);
-		const rejection = pluginAgentContributionService.readHookInvocationRejection(
-			request.pluginId,
-			request.handlerId,
-			request.activationId,
-		);
-		// 双侧取证（BUG-0124）：hook 调用点不像 tool 调用点那样消费渲染端可用性 lease，
-		// 派发时把身份、lease 诊断与渲染端可用性一并落盘，才能区分「渲染端已重载」与
-		// 「generation 抖动」。仅记录，不参与判定。
-		const leaseDiagnostics = pluginAgentContributionService.readHookLeaseDiagnostics();
 		pluginLog.debug("hook dispatch", {
 			pluginId: request.pluginId,
 			hookId: request.hookId,
 			handlerId: request.handlerId,
 			activationId: request.activationId,
 			sessionId: request.session.id,
-			rejection: rejection ?? null,
 			rendererHostState: pluginToolRendererHost.readState(),
-			retiredGenerations: leaseDiagnostics.retiredGenerations,
-			activeLeases: leaseDiagnostics.activeLeases,
+			...pluginAgentContributionService.readHookLeaseDiagnostics(),
 		});
-		if (rejection) return Promise.reject(new Error(rejection));
-		return new Promise<unknown>((resolve, reject) => {
-			const requestId = randomUUID();
-			const finish = (result: unknown): void => {
-				pluginHookMap.delete(requestId);
-				if (signal) signal.removeEventListener("abort", onAbort);
-				if (typeof result === "object" && result !== null && "error" in result) {
-					const message = String((result as { error?: unknown }).error ?? "Plugin hook failed");
-					// 渲染端回传的失败此前被压成一条 message，handlerId/activationId 随之丢失；
-					// 这里补回身份，才能把同一陈旧 id 的连续失败归因到具体 generation。
-					pluginLog.warn("hook handler reported failure", {
-						pluginId: request.pluginId,
-						hookId: request.hookId,
-						handlerId: request.handlerId,
-						activationId: request.activationId,
-						sessionId: request.session.id,
-						message,
-					});
-					reject(new Error(message));
-					return;
-				}
-				const currentRejection = pluginAgentContributionService.readHookInvocationRejection(
-					request.pluginId,
-					request.handlerId,
-					request.activationId,
-				);
-				if (currentRejection) {
-					reject(new Error(currentRejection));
-					return;
-				}
-				resolve((result as { value?: unknown })?.value);
-			};
-			const onAbort = (): void => {
-				pluginHookMap.delete(requestId);
-				reject(new Error("Plugin hook invocation was aborted"));
-			};
-			if (signal?.aborted) {
-				reject(new Error("Plugin hook invocation was aborted"));
-				return;
-			}
-			if (signal) signal.addEventListener("abort", onAbort, { once: true });
-			pluginHookMap.set(requestId, finish);
-			webContents.send(CHANNELS.PLUGIN_HOOK_REQUEST, {
-				...request,
-				requestId,
-			});
-		});
+		return dispatchHook(request, signal);
 	});
 
 	pluginRuntimeSource.setContinuationInvoker((request: AgentPluginContinuationInvocation, signal?: AbortSignal) => {
@@ -1765,7 +1729,13 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		}
 	});
 
-	const detachPluginHostNavigation = attachPluginToolRendererHostNavigation(webContents, pluginToolRendererHost);
+	const detachPluginHostNavigation = attachPluginToolRendererHostNavigation(
+		webContents,
+		pluginToolRendererHost,
+		() => {
+			pluginAgentContributionService.invalidateHookRendererDocument("Plugin host renderer document was replaced");
+		},
+	);
 
 	// 渲染进程崩溃 / 重新加载时，旧 subscription 永远不会等到 UNSUBSCRIBE IPC
 	// 调用——它们的回调还挂在 runtime 上、继续接收 agent 事件、继续往 dead
@@ -1774,6 +1744,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const onRenderGone = (): void => {
 		sessionLog.warn(`render-process-gone; clearing ${subscriptionMap.size} subscription(s)`);
 		pluginToolRendererHost.markUnavailable();
+		pluginAgentContributionService.invalidateHookRendererDocument("Plugin host renderer is unavailable");
 		for (const unsubscribe of subscriptionMap.values()) {
 			unsubscribe();
 		}
@@ -1886,6 +1857,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		detachPluginHostNavigation();
 		webContents.removeListener("render-process-gone", onRenderGone);
 		pluginToolRendererHost.dispose();
+		pluginAgentContributionService.invalidateHookRendererDocument("Plugin host renderer was disposed");
 		for (const sub of viewerSubs.values()) {
 			try {
 				sub.watcher.close();

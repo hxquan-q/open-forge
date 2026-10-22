@@ -7,6 +7,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0020` | 日志巡检后的可靠性与性能修复 | in_progress | REQ-0002、RESEARCH-0035，TASK-0352–0359逐片修复与验收 |
 | `PLAN-0019` | 自主研发全流程实施与验收 | in_progress | [REQ-0019](../requirements/REQ-0019-autonomous-development.md)、完整实施合同 |
 | `PLAN-0018` | 设计插件统一路线图 v2（去品牌 × 安全 × 设计能力 × 可借鉴代码） | draft | [REQ-0005](../requirements/REQ-0005-openforge-independent-release-and-compliance.md)、[RESEARCH-0031](../research/RESEARCH-0031-design-reference-projects-license-audit.md) |
 | `PLAN-0017` | MCP 工具暴露粒度（direct / deferred）最小设计 | draft | [REQ-0010](../requirements/REQ-0010-mcp-tool-exposure-granularity.md)、[RESEARCH-0024](../research/RESEARCH-0024-pi-workflow-post-design-review.md) |

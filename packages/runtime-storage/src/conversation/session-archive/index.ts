@@ -21,9 +21,11 @@ export {
 	decodeAttachmentFrame,
 	decodeFrames,
 	decodeJsonPayload,
+	decodeWorkspaceFileFrame,
 	encodeAttachmentFrame,
 	encodeFrames,
 	encodeJsonFrame,
+	encodeWorkspaceFileFrame,
 } from "./frames.js";
 export { safePath } from "./safe-path.js";
 export { scrypt } from "./scrypt.js";
@@ -40,9 +42,14 @@ export {
 	type SessionArchiveDecodeResult,
 	type SessionArchiveEncodeInput,
 	type SessionArchiveFileMetadata,
+	type SessionArchiveFormatVersion,
 	type SessionArchiveFrameKind,
 	type SessionArchiveImportAction,
 	type SessionArchiveImportConflictInput,
 	type SessionArchiveImportConflictResult,
 	type SessionArchiveSessionPayload,
+	type SessionArchiveWorkspaceDecoded,
+	type SessionArchiveWorkspaceFileDecoded,
+	type SessionArchiveWorkspaceFileInput,
+	type SessionArchiveWorkspaceInput,
 } from "./types.js";

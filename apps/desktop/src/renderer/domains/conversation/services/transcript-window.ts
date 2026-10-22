@@ -266,10 +266,7 @@ export function applyTranscriptWindow(
 // 重置。窗口合并只操作 HistoryEntry；消息层的 reconcile 负责在重投影后
 // 回收 live item（占位态、renderKey、流式草稿不动）。
 
-/** 把更早一页拼到已加载窗口前面。游标来自该窗口且排他，两页天然紧邻。 */
-export function prependTranscriptPage(windowEntries: readonly HistoryEntry[], page: HistoryPage): HistoryEntry[] {
-	return [...page.history, ...windowEntries];
-}
+export { prependTranscriptPage } from "./transcript-history-page-merge";
 
 export type TranscriptHeadMerge =
 	| { readonly kind: "extend"; readonly entries: HistoryEntry[] }

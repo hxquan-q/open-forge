@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Project } from "@shared/store/atoms";
 import { ProjectContextMenuView } from "@vetta-org/theme-ui/project";
 import { createPortal } from "react-dom";
@@ -15,6 +16,8 @@ interface ProjectContextMenuProps {
 	onClearConversation?: (cwd: string) => void;
 	onClearClaw?: (cwd: string) => void;
 	onOpenClawSettings?: () => void;
+	onExportSessions?: (cwd: string, projectName?: string) => void;
+	onExportMigration?: (cwd: string, projectName?: string) => void;
 	clearConversationDisabled?: boolean;
 	clearClawDisabled?: boolean;
 }
@@ -31,6 +34,8 @@ export function ProjectContextMenu({
 	onClearConversation,
 	onClearClaw,
 	onOpenClawSettings,
+	onExportSessions,
+	onExportMigration,
 	clearConversationDisabled,
 	clearClawDisabled,
 }: ProjectContextMenuProps): JSX.Element {
@@ -44,6 +49,8 @@ export function ProjectContextMenu({
 		onClearConversation,
 		onClearClaw,
 		onOpenClawSettings,
+		onExportSessions,
+		onExportMigration,
 		clearConversationDisabled,
 		clearClawDisabled,
 	});

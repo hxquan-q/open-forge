@@ -91,6 +91,13 @@ export class PluginAgentContributionService {
 			.map((plugin) => plugin.id);
 	}
 
+	invalidateHookRendererDocument(reason: string): void {
+		this.dependencies.hooks.invalidateRendererDocument(reason);
+		for (const { pluginId, contributions } of this.registry.discardPendingActivations()) {
+			this.releaseUnpublishedHandlers(pluginId, contributions);
+		}
+	}
+
 	readHookInvocationRejection(pluginId: string, handlerId: string, activationId?: string): string | undefined {
 		return this.dependencies.hooks.readInvocationRejection(pluginId, handlerId, activationId);
 	}

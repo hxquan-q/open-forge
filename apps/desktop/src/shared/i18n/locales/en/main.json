@@ -1,4 +1,10 @@
 {
+	"browserAnnotation": {
+		"placeholder": "How should this element change?",
+		"send": "Send to Agent",
+		"selectedCount": "{count} selected",
+		"selectionLimit": "You can select up to 4 elements at once"
+	},
 	"taskApproval": {
 		"title": "Allow {{tool}} to run?"
 	},
@@ -117,8 +123,10 @@
 	},
 	"sessionArchive": {
 		"exportDialogTitle": "Export session archive",
+		"projectExportDialogTitle": "Export project session archive",
 		"importDialogTitle": "Import session archive",
-		"filterName": "Open Forge session archive"
+		"filterName": "Open Forge session archive",
+		"migrationExportDialogTitle": "Export Project Migration Package"
 	},
 	"markdown": {
 		"previewTitle": "HTML preview · closes after 30 seconds"

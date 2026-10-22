@@ -1,7 +1,33 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { DesktopPluginHookRegistry } from "./coding-agent-hook-registry.js";
 
 describe("DesktopPluginHookRegistry", () => {
+	it("invalidates current and retired document generations without reviving them after re-registration", () => {
+		const registry = new DesktopPluginHookRegistry();
+		registry.register("plugin-a", registration("a", "handler-a"));
+		const old = registry.acquireSnapshot();
+		registry.register("plugin-a", registration("b", "handler-b"));
+		const current = registry.acquireSnapshot();
+		registry.invalidateRendererDocument("Renderer document was replaced");
+		expect(registry.snapshot()).toEqual([]);
+		for (const [handler, activation] of [
+			["handler-a", "a"],
+			["handler-b", "b"],
+		]) {
+			expect(registry.readInvocationRejection("plugin-a", handler, activation)).toBe(
+				"Renderer document was replaced",
+			);
+		}
+		registry.register("plugin-a", registration("c", "handler-c"));
+		const next = registry.acquireSnapshot();
+		expect(registry.readInvocationRejection("plugin-a", "handler-c", "c")).toBeUndefined();
+		old.release();
+		current.release();
+		next.release();
+		expect(registry.snapshot()).toMatchObject([{ handlerId: "handler-c" }]);
+	});
+
 	it("replaces registrations by plugin and hook id while stale activations cannot remove the replacement", () => {
 		const registry = new DesktopPluginHookRegistry();
 		registry.register("plugin-a", registration("activation-1", "handler-1"));

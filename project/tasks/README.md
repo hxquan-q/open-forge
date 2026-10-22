@@ -15,6 +15,19 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0361` | `verifying` | — | REQ-0026 / ADR-0147：项目迁移包已实施——OFAR v2 workspace 帧、preview/apply 两段式导入（cwd 重写+指纹按落盘形态）、产物打包恢复（默认不覆盖）、迁移向导 UI 与 i18n；定向 73 例、impact 119 例、完整 check 全绿；六提交本地 main 未推送；顺带修复 TASK-0349 菜单接线缺口；待真实双目录迁移人工验收；serial。 |
+| `TASK-0360` | `verifying` | PLAN-0006 | 用户要求 UI 测试。正在用隔离 Fresh 实例核对页内批注。不附着日常 Desktop。 |
+| `TASK-0352` | `blocked` | PLAN-0020 | Windows沙箱制品完整性与运行时定位；来源BUG-0137，生产实现serial、独立调查只读；待红/绿与工程验收。 |
+| `TASK-0353` | `verifying` | PLAN-0020 | 消息历史与live合并身份去重及可读诊断；来源BUG-0123，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0354` | `verifying` | PLAN-0020 | 远端会话资源加载去重与有界等待；来源BUG-0125，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0355` | `verifying` | PLAN-0020 | 启动paint与超时分流及阶段观测；来源BUG-0138，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0356` | `verifying` | PLAN-0020 | 插件Hook派发与渲染端代次生命周期对齐；来源BUG-0124，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0357` | `verifying` | PLAN-0020 | HostedRoute能力注册与模块重载一致性；来源BUG-0139，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0358` | `verifying` | PLAN-0020 | Desktop测试日志与真实数据根隔离；来源BUG-0140，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0359` | `verifying` | PLAN-0020 | Windows远程输入类型初始化幂等；来源BUG-0141，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |
+| `TASK-0351` | `verifying` | PLAN-0006 | RESEARCH-0036：单击在元素旁批注并发送；Alt+单击只把元素放进输入框。待真实 Desktop 点选验收。 |
+| `TASK-0350` | `done` | — | 最近14天日志只读调查完成：55份运行日志+8份辅助日志，RESEARCH-0035与脱敏指纹附表已落盘；优先沙箱制品核查、消息身份、远端资源及启动测量，区分历史修复与测试污染；文档索引/合同/发布说明检查通过，无产品修复；coordination-only。 |
+| `TASK-0349` | `verifying` | — | 用户请求：完善会话管理——项目级多会话 `.ofar` 导出（服务+IPC+preload+项目右键菜单，菜单重构为声明式）、导入写入后 emit 列表变更让侧栏即时刷新、导入/导出反馈 alert→Toast；定向 6 文件 30 例、impact（desktop 85 例 + theme-ui 186 例）、desktop tsc 与完整 check 全绿；待真实 Desktop 人工验收；serial，main 主工作区串行。 |
 | `TASK-0342` | `done` | — | 验收批次收口（用户决策）：26 个 Task 从 `verifying` 闭合为 `done`（安全与设计插件 0309–0317、PLAN-0019 自主开发 0322–0328/0330–0332/0334、上游 UI 同步 0335–0338、浏览器/预览线 0339/0340），`BUG-0134`/`BUG-0135` 同步关闭；纯台账改动，`bun run check` 校验索引一致性。 |
 | `TASK-0339` | `done` | — | BUG-0134：browser_tab 可纠正错误（缺 action/非法动作/`file://`/无会话给恢复步骤）+ 通用链路「相同工具+相同参数+相同确定性错误」连续 3 次止损；定向 34 例、impact、根 tsgo、Desktop typecheck 与 check:quick 通过；实现 `f2728086a` 已推送 origin/dev，待真实模型回合验收；serial，main 主工作区串行。 2026-10-21 用户验收闭合。 |
 | `TASK-0340` | `done` | — | BUG-0135：HTML 预览改走 `vetta-file://` 恢复目录语义、取消 `opacity-0` 门槛、合并目录事件并按被引用资源刷新；工程验证通过，实现 `1f555175b` 已推送 origin/dev，待真实 Desktop 人工验收；serial，main 主工作区串行。 2026-10-21 用户验收闭合。 |

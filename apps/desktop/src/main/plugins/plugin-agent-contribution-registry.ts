@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	AgentPluginContinuationContribution,
 	AgentPluginSystemPromptProviderContribution,
@@ -53,6 +54,21 @@ export class PluginAgentContributionRegistry {
 			systemPrompts: new Map(),
 		});
 		return this.counts(pluginId);
+	}
+
+	/** Remove candidates atomically before notifying cleanup listeners. */
+	discardPendingActivations(): Array<{ pluginId: string; contributions: PendingPluginAgentContributions }> {
+		const discarded = [...this.pending].map(([pluginId, candidate]) => ({
+			pluginId,
+			contributions: {
+				tools: [...candidate.tools.values()],
+				hooks: [...candidate.hooks.values()],
+				continuations: [...candidate.continuations.values()],
+				systemPrompts: [...candidate.systemPrompts.values()],
+			},
+		}));
+		this.pending.clear();
+		return discarded;
 	}
 
 	commit(pluginId: string, activationId: string): boolean {

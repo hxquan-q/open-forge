@@ -17,6 +17,7 @@ import {
 	inlineFilePreviewContextReadonlyAtom,
 	isConversationBusyAtom,
 	loadInputActionStateForSession,
+	migrationImportWizardAtom,
 	pageHeaderTitleAtom,
 	pageHeaderTitleBadgeAtom,
 	pendingSessionOpenAtom,
@@ -27,6 +28,7 @@ import {
 	sessionsMapAtom,
 	syncHardIsolationContributionModes,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { parseProjectLocation } from "@vetta/ssh-transport/project-uri";
 import { useThemeSurface } from "@vetta-org/theme-sdk/appearance";
 import { RemoteSessionBadgeView } from "@vetta-org/theme-ui/chat";
@@ -35,6 +37,7 @@ import { selectAtom } from "jotai/utils";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOpenTerminal } from "../../bottom-panel/hooks/useOpenTerminal";
+import { previewProjectMigrationArchive } from "../../project/services/session-archive";
 import type { ChatViewModelResult } from "../components/chat-view/types";
 import { exportPortableSessionArchive, importPortableSessionArchive } from "../services/session-archive";
 import { drainActiveTranscriptWindow } from "../services/transcript-window-controller";
@@ -163,6 +166,7 @@ export function useChatViewModel(): ChatViewModelResult {
 	}, [activeSessionPath, activeSessionCwd, defaultCwd, sessionsMap]);
 
 	const setConfirmDialog = useSetAtom(confirmDialogAtom);
+	const setMigrationImportWizard = useSetAtom(migrationImportWizardAtom);
 
 	// Electron 不支持 window.prompt；归档口令统一走应用内确认对话框的 input 字段。
 	const exportArchive = useCallback(() => {
@@ -179,11 +183,13 @@ export function useChatViewModel(): ChatViewModelResult {
 					try {
 						await exportPortableSessionArchive({ sessionPath, passphrase, defaultFileName });
 					} catch (error) {
-						alert(
-							i18n.t("chat:chatView.archiveExport.failed", {
+						// BUG-0031 同源：阻塞式原生 alert 不再使用，失败统一走 Toast。
+						showToast({
+							variant: "error",
+							message: i18n.t("chat:chatView.archiveExport.failed", {
 								message: error instanceof Error ? error.message : String(error),
 							}),
-						);
+						});
 					} finally {
 						setArchiveExporting(false);
 					}
@@ -199,19 +205,50 @@ export function useChatViewModel(): ChatViewModelResult {
 			onConfirm: (_checkboxChecked, passphrase = "") => {
 				void (async () => {
 					try {
-						const result = await importPortableSessionArchive(passphrase);
-						alert(i18n.t(`chat:chatView.archiveImport.${result.messageKey}`));
+						// TASK-0361：preview 先行分流——v1 会话归档回落现行导入；迁移包打开迁移向导。
+						const preview = await previewProjectMigrationArchive(passphrase);
+						if (preview.canceled) {
+							showToast({ variant: "info", message: i18n.t("chat:chatView.archiveImport.canceled") });
+							return;
+						}
+						if (preview.classic) {
+							// v1：现行导入流程不变（主进程另行框选文件）。
+							const result = await importPortableSessionArchive(passphrase);
+							showToast({
+								variant: result.messageKey === "doneCopy" ? "success" : "info",
+								message: i18n.t(`chat:chatView.archiveImport.${result.messageKey}`),
+							});
+							return;
+						}
+						// 迁移包：交给全局迁移向导（目标选择/冲突策略/执行报告）。
+						showToast({
+							variant: "info",
+							message: i18n.t("chat:chatView.archiveImport.migrationDetected"),
+						});
+						setMigrationImportWizard({
+							preview: {
+								archivePath: preview.archivePath,
+								sourceCwd: preview.sourceCwd,
+								sessionCount: preview.sessionCount,
+								sessions: preview.sessions,
+								workspaceFileCount: preview.workspaceFileCount,
+								workspaceBytes: preview.workspaceBytes,
+								formatVersion: preview.formatVersion,
+							},
+							passphrase,
+						});
 					} catch (error) {
-						alert(
-							i18n.t("chat:chatView.archiveImport.failed", {
+						showToast({
+							variant: "error",
+							message: i18n.t("chat:chatView.archiveImport.failed", {
 								message: error instanceof Error ? error.message : String(error),
 							}),
-						);
+						});
 					}
 				})();
 			},
 		});
-	}, [setConfirmDialog]);
+	}, [setConfirmDialog, setMigrationImportWizard]);
 
 	useEffect(() => {
 		setHeaderTitle(sessionTitle);

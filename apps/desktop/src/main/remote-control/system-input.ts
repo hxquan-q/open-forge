@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createRequire } from "node:module";
 import type { RemoteInputMessage } from "@vetta/remote-desktop";
 import { systemPreferences } from "electron";
@@ -81,11 +82,13 @@ function createWindowsInputAdapter(): SystemInputAdapter {
 		wParamL: "uint16_t",
 		wParamH: "uint16_t",
 	});
-	const INPUT = koffi.struct("INPUT", {
+	// Anonymous native types belong to this binding, so recreating a host (or
+	// re-evaluating the module) cannot collide with Koffi's process-wide names.
+	const INPUT = koffi.struct({
 		type: "uint32_t",
 		u: koffi.union({ mi: MOUSEINPUT, ki: KEYBDINPUT, hi: HARDWAREINPUT }),
 	});
-	const SendInput = user32.func("uint32 __stdcall SendInput(uint32, _In_ INPUT *, int)");
+	const SendInput = user32.func("__stdcall", "SendInput", "uint32", ["uint32", koffi.pointer(INPUT), "int"]);
 	const SetCursorPos = user32.func("int __stdcall SetCursorPos(int, int)");
 	const GetSystemMetrics = user32.func("int __stdcall GetSystemMetrics(int)");
 	const MapVirtualKey = user32.func("uint32 __stdcall MapVirtualKeyW(uint32, uint32)");

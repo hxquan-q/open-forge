@@ -91,7 +91,10 @@ describe("reportDuplicateConversationKeys", () => {
 		reportDuplicateConversationKeys("/history/session.jsonl", items);
 
 		expect(warn).toHaveBeenCalledTimes(1);
-		expect(warn).toHaveBeenCalledWith("[conversation-keys] duplicate render keys", {
+		expect(warn.mock.calls[0]?.[0]).toBe("[conversation-keys] duplicate render keys");
+		const payload: unknown = warn.mock.calls[0]?.[1];
+		expect(typeof payload).toBe("string");
+		expect(JSON.parse(String(payload))).toEqual({
 			sessionId: "/history/session.jsonl",
 			total: 2,
 			duplicates: [
@@ -105,6 +108,13 @@ describe("reportDuplicateConversationKeys", () => {
 				},
 			],
 		});
+	});
+
+	it("does not serialize message contents into the diagnostic", () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const first = Object.assign(agentMessage({ id: "a", entryId: "same" }), { text: "private-body-fixture" });
+		reportDuplicateConversationKeys(null, [first, agentMessage({ id: "b", entryId: "same" })]);
+		expect(String(warn.mock.calls[0]?.[1])).not.toContain("private-body-fixture");
 	});
 
 	it("键唯一时零输出（不产生常态噪音）", () => {

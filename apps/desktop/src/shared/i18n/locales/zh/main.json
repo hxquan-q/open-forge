@@ -1,4 +1,10 @@
 {
+	"browserAnnotation": {
+		"placeholder": "要怎么改这个元素",
+		"send": "发送给 Agent",
+		"selectedCount": "已选 {count} 个",
+		"selectionLimit": "一次最多选择 4 个元素"
+	},
 	"taskApproval": {
 		"title": "允许 {{tool}} 执行？"
 	},
@@ -117,8 +123,10 @@
 	},
 	"sessionArchive": {
 		"exportDialogTitle": "导出会话归档",
+		"projectExportDialogTitle": "导出项目会话归档",
 		"importDialogTitle": "导入会话归档",
-		"filterName": "Open Forge 会话归档"
+		"filterName": "Open Forge 会话归档",
+		"migrationExportDialogTitle": "导出项目迁移包"
 	},
 	"markdown": {
 		"previewTitle": "HTML 预览 · 30 秒后自动关闭"

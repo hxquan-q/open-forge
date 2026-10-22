@@ -1,6 +1,12 @@
 import { DEFAULT_SCRYPT_PARAMS, encryptGzipPayload, IV_LENGTH, SALT_LENGTH } from "./crypto.js";
 import { fingerprintSessionPayload } from "./fingerprint.js";
-import { type EncodedFrame, encodeAttachmentFrame, encodeFrames, encodeJsonFrame } from "./frames.js";
+import {
+	type EncodedFrame,
+	encodeAttachmentFrame,
+	encodeFrames,
+	encodeJsonFrame,
+	encodeWorkspaceFileFrame,
+} from "./frames.js";
 import { safePath } from "./safe-path.js";
 import {
 	SESSION_ARCHIVE_CIPHER,
@@ -11,6 +17,7 @@ import {
 	SESSION_ARCHIVE_MAGIC,
 	type SessionArchiveEncodeInput,
 	type SessionArchiveFileMetadata,
+	type SessionArchiveFormatVersion,
 } from "./types.js";
 
 export async function encodeSessionArchive(input: SessionArchiveEncodeInput): Promise<Uint8Array> {
@@ -49,6 +56,23 @@ export async function encodeSessionArchive(input: SessionArchiveEncodeInput): Pr
 			);
 		}
 	}
+	// v2 迁移包：workspace 帧是归档级的，附在全部会话帧之后；无 workspace 输入时写 v1，
+	// 字节与历史 v1 导出完全一致（版本、metadata 均为 1）。
+	const formatVersion: SessionArchiveFormatVersion = input.workspace ? SESSION_ARCHIVE_FORMAT_VERSION : 1;
+	if (input.workspace) {
+		for (const file of input.workspace.files) {
+			const relativePath = safePath(file.relativePath);
+			frames.push(
+				encodeWorkspaceFileFrame(
+					{
+						relativePath,
+						byteLength: file.bytes.byteLength,
+					},
+					file.bytes,
+				),
+			);
+		}
+	}
 
 	const plain = encodeFrames(frames);
 	const { salt, iv, ciphertext } = await encryptGzipPayload(plain, input.passphrase, {
@@ -58,12 +82,14 @@ export async function encodeSessionArchive(input: SessionArchiveEncodeInput): Pr
 
 	const metadata: SessionArchiveFileMetadata = {
 		format: SESSION_ARCHIVE_FORMAT,
-		formatVersion: SESSION_ARCHIVE_FORMAT_VERSION,
+		formatVersion,
 		cipher: SESSION_ARCHIVE_CIPHER,
 		kdf: SESSION_ARCHIVE_KDF,
 		appVersion: input.appVersion,
 		sessionCount: input.sessions.length,
 		createdAt: input.createdAt ?? new Date().toISOString(),
+		sourceCwd: input.workspace?.sourceCwd,
+		workspaceFileCount: input.workspace ? input.workspace.files.length : undefined,
 		scrypt: {
 			N: DEFAULT_SCRYPT_PARAMS.N,
 			r: DEFAULT_SCRYPT_PARAMS.r,
@@ -81,7 +107,7 @@ export async function encodeSessionArchive(input: SessionArchiveEncodeInput): Pr
 	header.set(SESSION_ARCHIVE_MAGIC, offset);
 	offset += SESSION_ARCHIVE_MAGIC.byteLength;
 	const view = new DataView(header.buffer);
-	view.setUint16(offset, SESSION_ARCHIVE_FORMAT_VERSION, false);
+	view.setUint16(offset, formatVersion, false);
 	offset += 2;
 	view.setUint32(offset, metaBytes.byteLength, false);
 	offset += 4;

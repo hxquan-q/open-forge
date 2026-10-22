@@ -543,7 +543,7 @@
 		"tab": "Browser",
 		"picker": "Pick element",
 		"pickerActive": "Picking an element — click again or use the shortcut to exit",
-		"pickerHint": "Hover a page element, then click to attach it to the message box. The page button will not fire.",
+		"pickerHint": "Click an element and a box appears beside it. Shift+click adds more elements so you can describe how they relate. Alt+click puts that one element in the chat input. The page button will not fire.",
 		"elementAttached": "Page element attached",
 		"elementReplace": "A new selection replaces the current attachment",
 		"staleSelection": "The page changed; this selection may be stale",
@@ -559,6 +559,12 @@
 			"revertOne": "Revert this edit",
 			"revertAll": "Revert all",
 			"send": "Send to Agent",
+			"selectedCount": "{count} selected",
+			"selectionLimit": "You can select up to 4 elements at once",
+			"comment": "Tell the Agent",
+			"commentPlaceholder": "How should this element change?",
+			"defaultRequest": "Update the source for the selected page element \"{{target}}\" and confirm the change in the in-app browser.",
+			"editsRequest": "Write these preview edits for \"{{target}}\" back to source and confirm them in the in-app browser: {{summary}}",
 			"discard": "Discard",
 			"stale": "The page changed; this selection is stale",
 			"failed": "Could not apply the edit"
@@ -601,7 +607,8 @@
 			"passphrasePrompt": "Enter archive passphrase (leave empty if none)",
 			"doneSkip": "Skipped identical session (fingerprint idempotent)",
 			"doneCopy": "Imported as a new session copy",
-			"canceled": "Import canceled"
+			"canceled": "Import canceled",
+			"migrationDetected": "Project migration package detected — the migration wizard is open"
 		},
 		"newSessionButton": {
 			"title": "New session"

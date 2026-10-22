@@ -4,6 +4,7 @@ import {
 	BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
 } from "@vetta/coding-agent/function-extensions";
 import { assembleGuestScript } from "./guest-script-shim.js";
+import { readBrowserElementSourceHint } from "./webview-element-extract.js";
 import {
 	applyInAppBrowserLiveEdit,
 	type InAppBrowserLiveEditEntry,
@@ -38,9 +39,10 @@ interface InAppBrowserGuestDeps {
 	readonly revertLiveEditEntries: typeof revertInAppBrowserLiveEditEntries;
 	readonly styleKeys: readonly string[];
 	readonly maxEdits: number;
+	readonly readSourceHint: typeof readBrowserElementSourceHint;
 }
 
-const guestDepsLiteral = `{choosePickTarget:${chooseInAppBrowserPickTarget.toString()},applyLiveEdit:${applyInAppBrowserLiveEdit.toString()},revertLiveEditEntry:${revertInAppBrowserLiveEditEntry.toString()},revertLiveEditEntries:${revertInAppBrowserLiveEditEntries.toString()},styleKeys:${JSON.stringify([...BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS])},maxEdits:${JSON.stringify(BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS)}}`;
+const guestDepsLiteral = `{choosePickTarget:${chooseInAppBrowserPickTarget.toString()},applyLiveEdit:${applyInAppBrowserLiveEdit.toString()},revertLiveEditEntry:${revertInAppBrowserLiveEditEntry.toString()},revertLiveEditEntries:${revertInAppBrowserLiveEditEntries.toString()},styleKeys:${JSON.stringify([...BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS])},maxEdits:${JSON.stringify(BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS)},readSourceHint:${readBrowserElementSourceHint.toString()}}`;
 
 export function buildInAppBrowserGuestScript(command: InAppBrowserPickerCommand, arg?: unknown): string {
 	// runtime 源码与 deps 字面量都要交给垫片扫描：两者都可能被 keepNames 插入辅助函数调用。
@@ -73,12 +75,17 @@ function inAppBrowserGuestRuntime(
 	type PickerState = {
 		overlay: HTMLDivElement;
 		highlight: HTMLDivElement;
+		annotation: HTMLElement | null;
+		selected: Element | null;
+		selections: Element[];
+		marks: HTMLDivElement[];
 		promise: Promise<unknown>;
 		resolve: (value: unknown) => void;
 		disposed: boolean;
 		onMove: (event: Event) => void;
 		onClick: (event: Event) => void;
 		onKey: (event: Event) => void;
+		reposition: () => void;
 	};
 
 	const current = store[stateKey] as PickerState | undefined;
@@ -202,6 +209,8 @@ function inAppBrowserGuestRuntime(
 		window.removeEventListener("dblclick", current.onClick, true);
 		window.removeEventListener("auxclick", current.onClick, true);
 		window.removeEventListener("keydown", current.onKey, true);
+		window.removeEventListener("scroll", current.reposition, true);
+		window.removeEventListener("resize", current.reposition);
 		current.overlay.remove();
 		current.resolve({ cancelled: true });
 		store[stateKey] = undefined;
@@ -215,8 +224,9 @@ function inAppBrowserGuestRuntime(
 	overlay.setAttribute("aria-hidden", "true");
 	overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;pointer-events:none;background:transparent;";
 	const highlight = document.createElement("div");
-	highlight.style.cssText =
-		"position:fixed;pointer-events:none;border:1px solid rgba(59,130,246,0.9);background:rgba(59,130,246,0.12);border-radius:2px;";
+	const pickerChrome = annotationCopy(arg);
+	// 高亮画在外部网页上。主色描边再套 1px 前景色领圈，白页和深色页都能看见。
+	highlight.style.cssText = `position:fixed;pointer-events:none;box-sizing:border-box;border:1px solid ${pickerChrome.primary};box-shadow:0 0 0 1px ${pickerChrome.primaryForeground};background:transparent;border-radius:0;`;
 	overlay.append(highlight);
 	document.documentElement.append(overlay);
 
@@ -364,6 +374,7 @@ function inAppBrowserGuestRuntime(
 			}
 		}
 		const rect = element.getBoundingClientRect();
+		const sourceHint = deps.readSourceHint(element);
 		return {
 			role: role.slice(0, 128),
 			accessibleName,
@@ -378,8 +389,102 @@ function inAppBrowserGuestRuntime(
 				.slice(0, 2 * 1024),
 			boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
 			devicePixelRatio: window.devicePixelRatio || 1,
+			...(sourceHint ? { sourceHint } : {}),
 		};
 	};
+
+	function safeCss(value: unknown, fallback: string): string {
+		if (typeof value !== "string") return fallback;
+		const trimmed = value.replace(/\s+/g, " ").trim();
+		if (!trimmed || trimmed.length > 240 || /[;{}<>]|url\s*\(|expression\s*\(/i.test(trimmed)) return fallback;
+		return trimmed;
+	}
+
+	function annotationCopy(value: unknown): {
+		placeholder: string;
+		send: string;
+		selectedCount: string;
+		selectionLimit: string;
+		background: string;
+		foreground: string;
+		border: string;
+		primary: string;
+		primaryForeground: string;
+		muted: string;
+		destructive: string;
+		radius: string;
+		shadow: string;
+		font: string;
+		ring: string;
+	} {
+		// 与 DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK 保持同一套出厂 mono 暗色。注入脚本不能 import。
+		const fallback = {
+			placeholder: "How should this element change?",
+			send: "Send to Agent",
+			selectedCount: "{count} selected",
+			selectionLimit: "You can select up to 4 elements at once",
+			background: "rgb(28, 28, 28)",
+			foreground: "rgb(208, 208, 208)",
+			border: "rgb(42, 42, 42)",
+			primary: "rgb(228, 228, 228)",
+			primaryForeground: "rgb(8, 8, 10)",
+			muted: "rgb(128, 128, 128)",
+			destructive: "rgb(255, 91, 91)",
+			radius: "0.5rem",
+			shadow: "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18)",
+			font: '-apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif',
+			ring: "rgb(228, 228, 228)",
+		};
+		if (!value || typeof value !== "object") return fallback;
+		const record = value as Record<string, unknown>;
+		const chrome =
+			record.chrome && typeof record.chrome === "object" ? (record.chrome as Record<string, unknown>) : {};
+		return {
+			placeholder:
+				typeof record.placeholder === "string" && record.placeholder ? record.placeholder : fallback.placeholder,
+			send: typeof record.send === "string" && record.send ? record.send : fallback.send,
+			selectedCount:
+				typeof record.selectedCount === "string" && record.selectedCount
+					? record.selectedCount
+					: fallback.selectedCount,
+			selectionLimit:
+				typeof record.selectionLimit === "string" && record.selectionLimit
+					? record.selectionLimit
+					: fallback.selectionLimit,
+			background: safeCss(chrome.background, fallback.background),
+			foreground: safeCss(chrome.foreground, fallback.foreground),
+			border: safeCss(chrome.border, fallback.border),
+			primary: safeCss(chrome.primary, fallback.primary),
+			primaryForeground: safeCss(chrome.primaryForeground, fallback.primaryForeground),
+			muted: safeCss(chrome.muted, fallback.muted),
+			destructive: safeCss(chrome.destructive, fallback.destructive),
+			radius: safeCss(chrome.radius, fallback.radius),
+			shadow: safeCss(chrome.shadow, fallback.shadow),
+			font: safeCss(chrome.font, fallback.font),
+			ring: safeCss(chrome.ring, fallback.ring),
+		};
+	}
+
+	function formatSelectedCount(template: string, count: number): string {
+		return template.split("{count}").join(String(count));
+	}
+
+	function placeAnnotation(box: HTMLElement, rect: DOMRect): void {
+		const margin = 8;
+		const width = Math.min(280, Math.max(160, window.innerWidth - margin * 2));
+		box.style.width = `${width}px`;
+		const height = box.offsetHeight || 96;
+		let left = rect.right + margin;
+		let top = rect.top;
+		if (left + width > window.innerWidth - margin) left = rect.left - width - margin;
+		if (left < margin) {
+			left = margin;
+			top = rect.bottom + margin;
+		}
+		if (top + height > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - height - margin);
+		box.style.left = `${Math.max(margin, left)}px`;
+		box.style.top = `${Math.max(margin, top)}px`;
+	}
 
 	let resolvePick: (value: unknown) => void = () => undefined;
 	const promise = new Promise((resolve) => {
@@ -388,37 +493,44 @@ function inAppBrowserGuestRuntime(
 	const state: PickerState = {
 		overlay,
 		highlight,
+		annotation: null,
+		selected: null,
+		selections: [],
+		marks: [],
 		promise,
 		resolve: resolvePick,
 		disposed: false,
 		onMove: (event) => {
+			if (state.annotation) return;
 			const target = pickTarget(event);
 			if (!target) return;
-			const rect = target.getBoundingClientRect();
-			highlight.style.left = `${rect.left}px`;
-			highlight.style.top = `${rect.top}px`;
-			highlight.style.width = `${rect.width}px`;
-			highlight.style.height = `${rect.height}px`;
+			placeHighlight(target);
 		},
 		onClick: (event) => {
+			const eventTarget = event.target;
+			if (eventTarget instanceof Node && state.annotation?.contains(eventTarget)) return;
 			event.preventDefault();
 			event.stopPropagation();
 			if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
 			if (event.type !== "click") return;
 			const target = pickTarget(event);
 			if (!target || state.disposed) return;
-			state.disposed = true;
-			window.removeEventListener("mousemove", state.onMove, true);
-			window.removeEventListener("pointerdown", state.onClick, true);
-			window.removeEventListener("mousedown", state.onClick, true);
-			window.removeEventListener("click", state.onClick, true);
-			window.removeEventListener("dblclick", state.onClick, true);
-			window.removeEventListener("auxclick", state.onClick, true);
-			window.removeEventListener("keydown", state.onKey, true);
-			overlay.remove();
-			editStore().current = target;
-			store[stateKey] = undefined;
-			state.resolve(collect(target));
+			const point = event as MouseEvent;
+			if (point.altKey) {
+				finishPick(target, "input", []);
+				return;
+			}
+			if (point.shiftKey) {
+				toggleSelection(target);
+				return;
+			}
+			openAnnotation(target);
+		},
+		reposition: () => {
+			syncHighlights();
+			const anchor = state.selections[state.selections.length - 1];
+			if (!anchor || !state.annotation) return;
+			placeAnnotation(state.annotation, anchor.getBoundingClientRect());
 		},
 		onKey: (event) => {
 			const keyEvent = event as KeyboardEvent;
@@ -428,6 +540,208 @@ function inAppBrowserGuestRuntime(
 			void inAppBrowserGuestRuntime("stop", null, deps);
 		},
 	};
+	const maxSelections = 4;
+
+	function placeHighlight(element: Element): void {
+		placeMark(highlight, element);
+	}
+
+	function placeMark(mark: HTMLElement, element: Element): void {
+		const rect = element.getBoundingClientRect();
+		mark.style.left = `${rect.left}px`;
+		mark.style.top = `${rect.top}px`;
+		mark.style.width = `${rect.width}px`;
+		mark.style.height = `${rect.height}px`;
+	}
+
+	function syncHighlights(): void {
+		for (const mark of state.marks) mark.remove();
+		state.marks = [];
+		const [first, ...rest] = state.selections;
+		if (!first) {
+			highlight.style.width = "0px";
+			highlight.style.height = "0px";
+			return;
+		}
+		placeMark(highlight, first);
+		for (const element of rest) {
+			const mark = document.createElement("div");
+			mark.style.cssText = highlight.style.cssText;
+			overlay.append(mark);
+			placeMark(mark, element);
+			state.marks.push(mark);
+		}
+	}
+
+	function finishPick(selected: Element, placement: "input" | "annotation", companions: readonly Element[]): void {
+		if (state.disposed) return;
+		const field = placement === "annotation" ? state.annotation?.querySelector("textarea") : null;
+		const comment = field instanceof HTMLTextAreaElement ? field.value.slice(0, 2000) : undefined;
+		const companionPayload = companions.map((element) => collect(element));
+		state.disposed = true;
+		window.removeEventListener("mousemove", state.onMove, true);
+		window.removeEventListener("pointerdown", state.onClick, true);
+		window.removeEventListener("mousedown", state.onClick, true);
+		window.removeEventListener("click", state.onClick, true);
+		window.removeEventListener("dblclick", state.onClick, true);
+		window.removeEventListener("auxclick", state.onClick, true);
+		window.removeEventListener("keydown", state.onKey, true);
+		window.removeEventListener("scroll", state.reposition, true);
+		window.removeEventListener("resize", state.reposition);
+		overlay.remove();
+		editStore().current = selected;
+		store[stateKey] = undefined;
+		state.resolve({
+			...collect(selected),
+			placement,
+			...(comment === undefined ? {} : { comment }),
+			...(companionPayload.length > 0 ? { companions: companionPayload } : {}),
+		});
+	}
+
+	function finishAnnotation(): void {
+		const primary = state.selections[0];
+		if (!primary) return;
+		finishPick(primary, "annotation", state.selections.slice(1));
+	}
+
+	function toggleSelection(target: Element): void {
+		const index = state.selections.indexOf(target);
+		if (index >= 0) state.selections.splice(index, 1);
+		else if (state.selections.length < maxSelections) state.selections.push(target);
+		else showSelectionLimit();
+		const anchor = state.selections[state.selections.length - 1] ?? null;
+		state.selected = anchor;
+		syncHighlights();
+		if (!anchor) {
+			state.annotation?.remove();
+			state.annotation = null;
+			return;
+		}
+		if (!state.annotation) {
+			openAnnotation(anchor, true);
+			return;
+		}
+		placeAnnotation(state.annotation, anchor.getBoundingClientRect());
+		refreshSelectionStatus();
+	}
+
+	function showSelectionLimit(): void {
+		const limit = state.annotation?.querySelector("[data-vetta-selection-limit]");
+		if (limit instanceof HTMLElement) limit.hidden = false;
+	}
+
+	function refreshSelectionStatus(): void {
+		const copy = annotationCopy(arg);
+		const count = state.annotation?.querySelector("[data-vetta-selection-count]");
+		if (count instanceof HTMLElement)
+			count.textContent = formatSelectedCount(copy.selectedCount, state.selections.length);
+		const limit = state.annotation?.querySelector("[data-vetta-selection-limit]");
+		if (limit instanceof HTMLElement && state.selections.length < maxSelections) limit.hidden = true;
+	}
+
+	function openAnnotation(target: Element, keepGroup = false): void {
+		if (!keepGroup) state.selections = [target];
+		state.selected = target;
+		const previous = state.annotation?.querySelector("textarea");
+		const previousText = previous instanceof HTMLTextAreaElement ? previous.value : "";
+		state.annotation?.remove();
+		const copy = annotationCopy(arg);
+		const box = document.createElement("form");
+		box.setAttribute("data-vetta-annotation", "");
+		box.style.cssText = [
+			"position:fixed",
+			"z-index:2147483647",
+			"pointer-events:auto",
+			"display:flex",
+			"flex-direction:column",
+			"gap:8px",
+			"box-sizing:border-box",
+			"padding:10px",
+			`border:1px solid ${copy.border}`,
+			`border-radius:${copy.radius}`,
+			`background:${copy.background}`,
+			`color:${copy.foreground}`,
+			`box-shadow:${copy.shadow}`,
+			`font-family:${copy.font}`,
+			"font-size:14px",
+			"line-height:1.45",
+			"font-weight:400",
+		].join(";");
+		const placeholderStyle = document.createElement("style");
+		placeholderStyle.textContent = `[data-vetta-annotation] textarea::placeholder{color:${copy.muted}}`;
+		const count = document.createElement("p");
+		count.setAttribute("data-vetta-selection-count", "");
+		count.style.cssText = `margin:0;color:${copy.muted};font-size:11px;font-weight:500;line-height:16px;`;
+		const limit = document.createElement("p");
+		limit.setAttribute("data-vetta-selection-limit", "");
+		limit.hidden = true;
+		limit.textContent = copy.selectionLimit;
+		limit.style.cssText = `margin:0;color:${copy.destructive};font-size:11px;font-weight:500;line-height:16px;`;
+		const field = document.createElement("textarea");
+		field.rows = 2;
+		field.placeholder = copy.placeholder;
+		field.setAttribute("aria-label", copy.placeholder);
+		field.style.cssText = [
+			"width:100%",
+			"box-sizing:border-box",
+			"resize:none",
+			"min-height:64px",
+			`border:1px solid ${copy.border}`,
+			`border-radius:${copy.radius}`,
+			"padding:8px 10px",
+			"margin:0",
+			"font:inherit",
+			`color:${copy.foreground}`,
+			"background:transparent",
+			"box-shadow:none",
+			"outline:none",
+		].join(";");
+		field.addEventListener("focus", () => {
+			field.style.borderColor = copy.ring;
+		});
+		field.addEventListener("blur", () => {
+			field.style.borderColor = copy.border;
+		});
+		const send = document.createElement("button");
+		send.type = "submit";
+		send.textContent = copy.send;
+		send.style.cssText = [
+			"align-self:flex-end",
+			"height:32px",
+			"border:1px solid transparent",
+			`border-radius:${copy.radius}`,
+			"padding:0 10px",
+			`background:${copy.primary}`,
+			`color:${copy.primaryForeground}`,
+			"font-family:inherit",
+			"font-size:14px",
+			"font-weight:500",
+			"line-height:1",
+			"cursor:pointer",
+			"box-shadow:none",
+		].join(";");
+		send.addEventListener("mouseenter", () => {
+			send.style.opacity = "0.9";
+		});
+		send.addEventListener("mouseleave", () => {
+			send.style.opacity = "1";
+		});
+		box.append(placeholderStyle, count, limit, field, send);
+		box.addEventListener("submit", (submitEvent) => {
+			submitEvent.preventDefault();
+			finishAnnotation();
+		});
+		overlay.setAttribute("aria-hidden", "false");
+		overlay.append(box);
+		state.annotation = box;
+		if (keepGroup && previousText) field.value = previousText;
+		syncHighlights();
+		refreshSelectionStatus();
+		placeAnnotation(box, target.getBoundingClientRect());
+		field.focus();
+	}
+
 	store[stateKey] = state;
 	window.addEventListener("mousemove", state.onMove, true);
 	window.addEventListener("pointerdown", state.onClick, true);
@@ -436,6 +750,8 @@ function inAppBrowserGuestRuntime(
 	window.addEventListener("dblclick", state.onClick, true);
 	window.addEventListener("auxclick", state.onClick, true);
 	window.addEventListener("keydown", state.onKey, true);
+	window.addEventListener("scroll", state.reposition, true);
+	window.addEventListener("resize", state.reposition);
 	return promise;
 }
 
@@ -451,5 +767,6 @@ export function runInAppBrowserGuestCommand(command: InAppBrowserPickerCommand, 
 		revertLiveEditEntries: revertInAppBrowserLiveEditEntries,
 		styleKeys: BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
 		maxEdits: BROWSER_ELEMENT_LIVE_EDIT_MAX_ITEMS,
+		readSourceHint: readBrowserElementSourceHint,
 	});
 }

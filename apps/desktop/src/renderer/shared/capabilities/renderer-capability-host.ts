@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CapabilityAccessController, CapabilityHub, type CapabilityProviderBinding } from "@vetta/capability-runtime";
 import type {
 	CapabilityAccessHandle,
@@ -5,6 +6,7 @@ import type {
 	CapabilityAccessSessionOptions,
 	Disposable,
 } from "@vetta-org/capability-sdk";
+import { hostedRouteDocumentState } from "../hosted-routes/hosted-route-document-state.js";
 
 export class RendererCapabilityHost implements CapabilityAccessSessionFactory {
 	private readonly hub = new CapabilityHub();
@@ -19,4 +21,6 @@ export class RendererCapabilityHost implements CapabilityAccessSessionFactory {
 	}
 }
 
-export const rendererCapabilityHost = new RendererCapabilityHost();
+const documentState = hostedRouteDocumentState();
+documentState.capabilityHost ??= new RendererCapabilityHost();
+export const rendererCapabilityHost = documentState.capabilityHost;

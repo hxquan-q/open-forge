@@ -23,9 +23,11 @@ export interface PluginToolRendererHostNavigationSource {
 export function attachPluginToolRendererHostNavigation(
 	source: PluginToolRendererHostNavigationSource,
 	host: Pick<PluginToolRendererHostLifecycle, "markLoading">,
+	onDocumentInvalidated?: () => void,
 ): () => void {
 	const onDidNavigate = (): void => {
 		host.markLoading();
+		onDocumentInvalidated?.();
 	};
 	source.on("did-navigate", onDidNavigate);
 	return () => source.removeListener("did-navigate", onDidNavigate);

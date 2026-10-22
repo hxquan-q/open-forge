@@ -1,7 +1,8 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { InstalledPlugin } from "../../preload/api-types/plugins.js";
 import { DesktopPluginAgentHandlerRegistry } from "./coding-agent-handler-registry.js";
-import type { DesktopPluginHookRegistry } from "./coding-agent-hook-registry.js";
+import { DesktopPluginHookRegistry } from "./coding-agent-hook-registry.js";
 import { PluginAgentContributionService } from "./plugin-agent-contribution-service.js";
 
 function plugin(overrides: Partial<InstalledPlugin> = {}): InstalledPlugin {
@@ -55,6 +56,39 @@ function createService(
 }
 
 describe("PluginAgentContributionService", () => {
+	it("discards staged handlers when their renderer document is lost and permits a new activation", () => {
+		const hooks = new DesktopPluginHookRegistry();
+		const service = new PluginAgentContributionService({
+			listPlugins: () => [plugin()],
+			isDevLinked: () => false,
+			resolveFilePath: (_id, path) => path,
+			logger: { debug: vi.fn(), warn: vi.fn() },
+			hooks,
+			handlers: new DesktopPluginAgentHandlerRegistry(),
+		});
+		const register = (activationId: string) =>
+			service.registerHook("demo", {
+				id: "hook",
+				eventName: "SessionStart",
+				handlerId: activationId,
+				activationId,
+				scope_use: ["cli"],
+			});
+		service.beginLoad("demo", "old");
+		register("old");
+		service.invalidateHookRendererDocument("document lost");
+		expect(() => service.commitLoad("demo", "old")).toThrow();
+		expect(hooks.snapshot()).toEqual([]);
+		register("old");
+		expect(hooks.snapshot()).toEqual([]);
+		service.beginLoad("demo", "new");
+		register("new");
+		service.commitLoad("demo", "new");
+		const lease = hooks.acquireSnapshot();
+		expect(hooks.readInvocationRejection("demo", "new", "new")).toBeUndefined();
+		lease.release();
+	});
+
 	it("applies the contribution mode gate before hook invocation", () => {
 		const service = createService(plugin());
 		service.registerModeGate("demo");

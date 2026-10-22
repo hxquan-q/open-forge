@@ -81,9 +81,19 @@ export function ensureTranscriptItemRestored(itemId: string): ChatConversationIt
 //   React 自动 batch 保证 Virtuoso 看到的是一致的一帧。
 // - await 边界之后一律复核 activeSession 仍为该 sessionPath。
 
-const windowOpsInFlight = new Set<string>();
+const windowOpsInFlight = new Map<string, symbol>();
+let windowGeneration = 0;
+let tailRequest = 0;
+let committedTailRequest = 0;
+
+function invalidateWindowRequests(): void {
+	windowGeneration += 1;
+	windowOpsInFlight.clear();
+	getDefaultStore().set(transcriptWindowStateAtom, (previous) => ({ ...previous, loadingOlder: false }));
+}
 
 function resetWindowState(sessionPath: string | null, hasMore: boolean): void {
+	invalidateWindowRequests();
 	getDefaultStore().set(transcriptWindowStateAtom, {
 		sessionPath,
 		firstItemIndex: TRANSCRIPT_WINDOW_FIRST_INDEX,
@@ -113,7 +123,7 @@ export function commitTranscriptWindow(
 		sessionPath,
 		firstItemIndex: prev.sessionPath === sessionPath ? prev.firstItemIndex : TRANSCRIPT_WINDOW_FIRST_INDEX,
 		hasMore: backlog.hasMore === true,
-		loadingOlder: false,
+		loadingOlder: windowOpsInFlight.has(sessionPath),
 	}));
 }
 
@@ -175,22 +185,26 @@ export async function loadOlderTranscriptPage(): Promise<number> {
 	const backlog = readTranscriptBacklog(sessionPath);
 	if (!backlog || backlog.unbounded || !backlog.hasMore || !backlog.nextBeforeEntry) return 0;
 	if (windowOpsInFlight.has(sessionPath)) return 0;
-	windowOpsInFlight.add(sessionPath);
+	const generation = windowGeneration;
+	const operation = Symbol();
+	windowOpsInFlight.set(sessionPath, operation);
 	store.set(transcriptWindowStateAtom, (prev) => ({ ...prev, loadingOlder: true }));
 	try {
 		const page = await window.vetta.session.openViewer(sessionPath, {
 			beforeEntry: backlog.nextBeforeEntry,
 		});
-		if (store.get(activeSessionAtom)?.sessionPath !== sessionPath) return 0;
+		if (store.get(activeSessionAtom)?.sessionPath !== sessionPath || windowGeneration !== generation) return 0;
 		if ("stale" in page) {
 			// 游标失效 = 历史被外部改写；按合同回退 head 页对账。
 			await refreshTranscriptTail({ sessionPath });
 			return 0;
 		}
-		const merged = prependTranscriptPage(backlog.entries, page);
+		const current = readTranscriptBacklog(sessionPath);
+		if (!current || current.unbounded) return 0;
+		const merged = prependTranscriptPage(current.entries, page);
 		const { prependedCount } = commitWindowedProjection({
 			sessionPath,
-			mediaSessionId: backlog.mediaSessionId ?? session.runtimeId,
+			mediaSessionId: current.mediaSessionId ?? session.runtimeId,
 			entries: merged,
 			cursor: { nextBeforeEntry: page.nextBeforeEntry, hasMore: page.hasMore },
 		});
@@ -203,8 +217,12 @@ export async function loadOlderTranscriptPage(): Promise<number> {
 		}
 		return prependedCount;
 	} finally {
-		windowOpsInFlight.delete(sessionPath);
-		getDefaultStore().set(transcriptWindowStateAtom, (prev) => ({ ...prev, loadingOlder: false }));
+		if (windowOpsInFlight.get(sessionPath) === operation) {
+			windowOpsInFlight.delete(sessionPath);
+			getDefaultStore().set(transcriptWindowStateAtom, (prev) =>
+				prev.sessionPath === sessionPath ? { ...prev, loadingOlder: false } : prev,
+			);
+		}
 	}
 }
 
@@ -229,21 +247,32 @@ export async function refreshTranscriptTail(options?: TranscriptTailRefreshOptio
 	if (!sessionPath || !session) return false;
 	const backlog = readTranscriptBacklog(sessionPath);
 	if (!backlog || backlog.unbounded) return false;
+	const generation = windowGeneration;
+	const request = ++tailRequest;
 	const page = await window.vetta.session.openViewer(sessionPath, {});
-	if (store.get(activeSessionAtom)?.sessionPath !== sessionPath) return true;
+	if (
+		store.get(activeSessionAtom)?.sessionPath !== sessionPath ||
+		generation !== windowGeneration ||
+		request < committedTailRequest
+	)
+		return true;
 	if ("stale" in page) return true; // head 页不可能 stale；防御性短路。
-	const merge = mergeTranscriptHeadPage(backlog.entries, page);
-	if (merge.kind === "unchanged") return true;
+	const current = readTranscriptBacklog(sessionPath);
+	if (!current || current.unbounded) return true;
+	const merge = mergeTranscriptHeadPage(current.entries, page);
 	if (options?.shouldCommit && !options.shouldCommit()) return true;
+	committedTailRequest = request;
+	if (merge.kind === "unchanged") return true;
+	if (merge.kind === "replaced") invalidateWindowRequests();
 	const entries = merge.entries;
 	commitWindowedProjection({
 		sessionPath,
-		mediaSessionId: backlog.mediaSessionId ?? session.runtimeId,
+		mediaSessionId: current.mediaSessionId ?? session.runtimeId,
 		entries,
 		cursor:
 			merge.kind === "replaced"
 				? { nextBeforeEntry: page.nextBeforeEntry, hasMore: page.hasMore }
-				: { nextBeforeEntry: backlog.nextBeforeEntry, hasMore: backlog.hasMore === true },
+				: { nextBeforeEntry: current.nextBeforeEntry, hasMore: current.hasMore === true },
 		patchCanonical: options?.patchCanonical,
 	});
 	return true;
@@ -261,8 +290,10 @@ export async function resetTranscriptWindowToTail(sessionPath?: string): Promise
 	if (!path || !session) return false;
 	const backlog = readTranscriptBacklog(path);
 	if (backlog?.unbounded) return false;
+	invalidateWindowRequests();
+	const generation = windowGeneration;
 	const page = await window.vetta.session.openViewer(path, {});
-	if (store.get(activeSessionAtom)?.sessionPath !== path) return true;
+	if (store.get(activeSessionAtom)?.sessionPath !== path || generation !== windowGeneration) return true;
 	if ("stale" in page) return true;
 	commitWindowedProjection({
 		sessionPath: path,

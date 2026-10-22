@@ -2,6 +2,7 @@
 import { MissingModelDialog } from "../domains/conversation/components/MissingModelDialog";
 import { FilePreviewDialog } from "../domains/file-preview/components/FilePreviewDialog";
 import { KnowledgeDropOverlay } from "../domains/knowledge-base/components/KnowledgeDropOverlay";
+import { MigrationImportWizardDialog } from "../domains/project/components/MigrationImportWizardDialog";
 import { PluginGlobalSlotHost } from "../domains/plugins/components/PluginGlobalSlotHost";
 import { SetupWizard } from "../domains/setup-wizard";
 import { ActionApprovalCenter } from "../shared/action-approval/ActionApprovalCenter";
@@ -52,6 +53,7 @@ export function RootGlobalOverlays(): JSX.Element {
 		<>
 			<ThemedConfirmDialog />
 			<MissingModelDialog />
+			<MigrationImportWizardDialog />
 			<ThemedFilePreviewDialog />
 			<ThemedUpdateRestartDialog />
 			<SshPromptDialog />

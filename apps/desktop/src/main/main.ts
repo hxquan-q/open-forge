@@ -28,7 +28,7 @@ import { APP_ASSET_PROTOCOL_PRIVILEGE, registerAppAssetProtocol } from "./app-as
 import { createAppDebugRuntime } from "./app-debug/index.js";
 import { createDebugRpcRuntime } from "./app-debug/rpc.js";
 import { configureRendererCdp } from "./app-debug/ui/renderer-cdp.js";
-import { registerAppLifecycleIpc } from "./app-lifecycle.js";
+import { logRendererPaintResult, registerAppLifecycleIpc } from "./app-lifecycle.js";
 import { installApplicationMenu } from "./app-menu.js";
 import { initializeAppMonitor, shutdownAppMonitor } from "./app-monitor/app-monitor-service.js";
 import { initializePerfMonitor, shutdownPerfMonitor } from "./app-monitor/perf-monitor-service.js";
@@ -467,7 +467,11 @@ if (!gotSingleLock) {
 		// 若晚于 createWindow 注册会与异步 page-load 抢跑、读到 undefined 回落错语言（首帧闪）。
 		// i18n IPC 与具体窗口无关（广播给全部窗口），故脱离 registerAllIpc 独立早注册、app 级常驻。
 		registerI18nIpc();
-		const appLifecycle = registerAppLifecycleIpc();
+		let rendererBootStartedAt = Date.now();
+		const appLifecycle = registerAppLifecycleIpc({
+			onPhase: (phase) =>
+				mainLog.info("renderer startup phase", { phase, durationMs: Date.now() - rendererBootStartedAt }),
+		});
 
 		// 必须放在 whenReady 之后：早于 ready 调用时主进程 bundle identity
 		// 尚未在 launchd/TCC 子系统注册，syscall 关联不到 io.github.hxquanq.openforge，
@@ -490,7 +494,7 @@ if (!gotSingleLock) {
 		// Chromium 可能跨重启复用旧 chunk；但 clearCache() 会中断已经开始的网络请求，
 		// 因此必须在创建窗口、加载 Vite renderer 之前完成。打包版使用版本化资源，不清缓存。
 		// 协议响应的 no-store 继续作为插件开发资源的第二层保证。
-		const rendererBootStartedAt = Date.now();
+		rendererBootStartedAt = Date.now();
 		const mainWindow = await startRendererAfterSessionPreparation({
 			resetDevelopmentCache: app.isPackaged ? undefined : () => session.defaultSession.clearCache(),
 			startRenderer: () => {
@@ -531,10 +535,7 @@ if (!gotSingleLock) {
 			// Windows: first ShowWindow may be swallowed by STARTUPINFO SW_HIDE
 			// from an older version launcher; revealMainWindow double-shows on win32.
 			revealMainWindow(mainWindow);
-			mainLog.info("renderer boot frame visible", {
-				durationMs: Date.now() - rendererBootStartedAt,
-				result,
-			});
+			logRendererPaintResult(mainLog, "boot", result, Date.now() - rendererBootStartedAt);
 		});
 
 		// 提前发现系统插件（ADR-0024）：填充 id 集合供协议解析，staging 不完整时早告警。
@@ -868,10 +869,7 @@ if (!gotSingleLock) {
 		void rendererContentPaintPromise
 			.then((contentPaintResult) => {
 				if (mainWindow.isDestroyed()) return;
-				mainLog.info("renderer content frame visible", {
-					durationMs: Date.now() - rendererBootStartedAt,
-					result: contentPaintResult,
-				});
+				logRendererPaintResult(mainLog, "content", contentPaintResult, Date.now() - rendererBootStartedAt);
 
 				// App Monitor 是纯旁路能力：迁移和历史统计读取不得阻塞 renderer 或业务 IPC。
 				void ensureAppMonitorInitialized().catch((error: unknown) => {

@@ -112,7 +112,7 @@ export function BrowserPanelView({
 	}
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col">
+		<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 			<div className="flex shrink-0 items-center gap-1 border-b border-border/60 px-1.5 py-1.5">
 				<ToolbarButton icon="icon-[mdi--arrow-left]" title={labels.back} disabled={!canBack} onClick={onBack} />
 				<ToolbarButton
@@ -158,17 +158,12 @@ export function BrowserPanelView({
 				/>
 			</div>
 			{pickerEnabled ? (
-				<div className="shrink-0 border-b border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
+				<div className="min-w-0 shrink-0 border-b border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
 					{labels.pickerHint}
 				</div>
 			) : null}
-			{liveEdit ? (
-				<div className="shrink-0 border-b border-border/60 px-2 py-2">
-					<BrowserLiveEditCard {...liveEdit} />
-				</div>
-			) : null}
 
-			<div className="relative flex min-h-0 flex-1">
+			<div className="relative flex min-h-0 min-w-0 flex-1">
 				{/* TASK-0072：guest 已迁为主进程 WebContentsView；此占位矩形只做
 				    bounds/可见性上报，页面由主进程 view 覆盖绘制在本区域上。 */}
 				<div ref={hostRef} data-browser-view-host="" className="h-full w-full" />
@@ -192,6 +187,11 @@ export function BrowserPanelView({
 					</div>
 				)}
 			</div>
+			{liveEdit ? (
+				<div className="max-h-[min(42%,18rem)] min-w-0 shrink-0 overflow-y-auto border-t border-border/60 px-2.5 py-2">
+					<BrowserLiveEditCard {...liveEdit} />
+				</div>
+			) : null}
 		</div>
 	);
 }

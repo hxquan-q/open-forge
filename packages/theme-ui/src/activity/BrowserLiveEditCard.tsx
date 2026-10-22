@@ -1,4 +1,4 @@
-import type { FormEvent, JSX } from "react";
+import { type FormEvent, type JSX, useRef } from "react";
 
 /** 卡片内所有用户可见文案由宿主经 i18n 提供。 */
 export interface BrowserLiveEditLabels {
@@ -12,6 +12,8 @@ export interface BrowserLiveEditLabels {
 	revertOne: string;
 	revertAll: string;
 	send: string;
+	comment: string;
+	commentPlaceholder: string;
 	discard: string;
 	stale: string;
 	failed: string;
@@ -39,7 +41,7 @@ export interface BrowserLiveEditCardProps {
 	onApplyStyle: (property: string, value: string) => void;
 	onRevertEdit: (index: number) => void;
 	onRevertAll: () => void;
-	onSend: () => void;
+	onSend: (comment: string) => void;
 	onDiscard: () => void;
 }
 
@@ -100,6 +102,10 @@ export function BrowserLiveEditCard({
 	onSend,
 	onDiscard,
 }: BrowserLiveEditCardProps): JSX.Element {
+	const commentRef = useRef<HTMLTextAreaElement>(null);
+	const sendComment = (): void => {
+		onSend(commentRef.current?.value ?? "");
+	};
 	// 输入框非受控：草稿值属于瞬时 UI 态，随表单提交读取，不进 view model。
 	const submitText = (event: FormEvent<HTMLFormElement>): void => {
 		event.preventDefault();
@@ -118,7 +124,10 @@ export function BrowserLiveEditCard({
 	const errorText = error === "stale_reference" || !hasElement ? labels.stale : error ? labels.failed : null;
 
 	return (
-		<div className="pointer-events-auto flex w-72 flex-col gap-2 rounded-lg border border-border/70 bg-background/95 p-3 shadow-lg backdrop-blur">
+		<div
+			data-browser-selection-bar=""
+			className="pointer-events-auto flex w-full min-w-0 max-w-full flex-col gap-2"
+		>
 			<div className="flex min-w-0 items-center gap-1.5">
 				<span className="icon-[mdi--cursor-default-click-outline] h-4 w-4 shrink-0 text-primary" />
 				<span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground" title={target}>
@@ -139,13 +148,32 @@ export function BrowserLiveEditCard({
 				{target}
 			</div>
 
-			<form onSubmit={submitText} className="flex items-center gap-1.5">
+			<label className="flex flex-col gap-1">
+				<span className="text-[11px] text-muted-foreground">{labels.comment}</span>
+				<textarea
+					ref={commentRef}
+					name="agentComment"
+					rows={2}
+					placeholder={labels.commentPlaceholder}
+					aria-label={labels.comment}
+					disabled={busy || !hasElement}
+					autoFocus
+					onKeyDown={(event) => {
+						if (event.key !== "Enter" || event.shiftKey) return;
+						event.preventDefault();
+						sendComment();
+					}}
+					className="min-h-14 w-full resize-none rounded-md border border-border/60 bg-transparent px-2 py-1 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
+				/>
+			</label>
+
+			<form onSubmit={submitText} className="flex min-w-0 flex-wrap items-center gap-1.5">
 				<input
 					type="text"
 					name="text"
 					placeholder={labels.textPlaceholder}
 					disabled={busy || !hasElement}
-					className="h-7 min-w-0 flex-1 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
+					className="h-7 min-w-0 flex-1 basis-24 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
 				/>
 				<button
 					type="submit"
@@ -156,12 +184,12 @@ export function BrowserLiveEditCard({
 				</button>
 			</form>
 
-			<form onSubmit={submitStyle} className="flex items-center gap-1.5">
+			<form onSubmit={submitStyle} className="flex min-w-0 flex-wrap items-center gap-1.5">
 				<select
 					name="property"
 					defaultValue={styleProperties[0] ?? ""}
 					disabled={busy || !hasElement}
-					className="h-7 w-28 shrink-0 rounded-md border border-border/60 bg-background px-1.5 text-[11px] text-foreground outline-none focus:border-primary/40 disabled:opacity-40"
+					className="h-7 min-w-0 max-w-full flex-1 basis-24 rounded-md border border-border/60 bg-background px-1.5 text-[11px] text-foreground outline-none focus:border-primary/40 disabled:opacity-40"
 					aria-label={labels.styleProperty}
 				>
 					{styleProperties.map((property) => (
@@ -175,7 +203,7 @@ export function BrowserLiveEditCard({
 					name="value"
 					placeholder={labels.styleValuePlaceholder}
 					disabled={busy || !hasElement}
-					className="h-7 min-w-0 flex-1 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
+					className="h-7 min-w-0 flex-1 basis-24 rounded-md border border-border/60 bg-transparent px-2 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 disabled:opacity-40"
 				/>
 				<button
 					type="submit"
@@ -230,7 +258,7 @@ export function BrowserLiveEditCard({
 				<button
 					type="button"
 					disabled={busy}
-					onClick={onSend}
+					onClick={sendComment}
 					className="h-7 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
 				>
 					{labels.send}
