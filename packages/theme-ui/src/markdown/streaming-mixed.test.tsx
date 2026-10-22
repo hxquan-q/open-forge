@@ -46,6 +46,53 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("纯长列表流式：快路径项缓存且最终等价", () => {
+		const line = (i: number) => `- item ${i}: a detailed bullet point describing step ${i} with detail.\n`;
+		const initial = Array.from({ length: 120 }, (_, i) => line(i)).join("");
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={initial} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1200);
+		});
+		expect(container.querySelectorAll("li").length).toBe(120);
+
+		const finalText = initial + line(120) + line(121);
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.querySelectorAll("li").length).toBe(122);
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("details 折叠块与嵌套 div 流式正确且最终等价", () => {
 		const item = (i: number) =>
 			`<details><summary>Item ${i}</summary>\n\nContent ${i} with text.\n\n</details>\n\n`;

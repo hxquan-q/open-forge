@@ -40,6 +40,7 @@ import type { MarkdownDefinition } from "./definition";
 import { createStableMarkdownScanner } from "./stable-blocks";
 import { detectGrowingTable, TailTableDocument } from "./tail-table";
 import { detectGrowingFence, TailFenceDocument } from "./tail-fence";
+import { detectGrowingList, TailListDocument } from "./tail-list";
 import type { TableRowCache } from "./tail-table";
 import type { StableMarkdownScanner } from "./stable-blocks";
 
@@ -513,11 +514,50 @@ export const MarkdownContent = memo(function MarkdownContent({
 		() => (showTail && isStreamingTail && !inlineTokens && !growingTableShape ? detectGrowingFence(tail) : null),
 		[tail, showTail, isStreamingTail, inlineTokens, growingTableShape],
 	);
+	const listItemCacheRef = useRef<Map<string, ReactElement>>(new Map());
+	const listPrependCacheRef = useRef<Map<string, ReactElement>>(new Map());
+	const listPromotedRef = useRef(0);
+	const listFirstLineRef = useRef<string | null>(null);
+	const growingListShape = useMemo(() => {
+		if (!showTail || !isStreamingTail || inlineTokens || growingTableShape || growingFenceShape) return null;
+		const shape = detectGrowingList(tail);
+		if (!shape) return null;
+		if (listFirstLineRef.current !== shape.firstItemLine) {
+			listFirstLineRef.current = shape.firstItemLine;
+			listItemCacheRef.current.clear();
+			listPrependCacheRef.current.clear();
+			listPromotedRef.current = 0;
+		}
+		const promoted = Math.min(listPromotedRef.current, shape.itemLines.length - 1);
+		for (let index = 1; index <= promoted; index += 1) {
+			if (!listItemCacheRef.current.has(shape.itemLines[index])) {
+				listItemCacheRef.current.clear();
+				listPrependCacheRef.current.clear();
+				listPromotedRef.current = 0;
+				return null;
+			}
+		}
+		return shape;
+	}, [tail, showTail, isStreamingTail, inlineTokens, growingTableShape, growingFenceShape]);
 
 	return (
 		<MarkdownHostProvider host={host}><div className={cn("markdown-body break-words", animateChunks && "markdown-streaming-tail", className)}>
 			<CommittedDocuments blocks={committed} components={components} definition={definition} />
-			{showTail && growingFenceShape ? (
+			{showTail && growingListShape ? (
+				<MarkdownCodeLiveContext.Provider key="tail-list" value={isStreamingTail}>
+					<TailListDocument
+						animateChunks={chunkedRef.current}
+						components={components}
+						definition={definition}
+						itemCache={listItemCacheRef.current}
+						onRenderDuration={isStreamingTail ? reportTailParseDuration : undefined}
+						prependCache={listPrependCacheRef.current}
+						promotedRef={listPromotedRef}
+						shape={growingListShape}
+						text={tail}
+					/>
+				</MarkdownCodeLiveContext.Provider>
+			) : showTail && growingFenceShape ? (
 				<MarkdownCodeLiveContext.Provider key="tail-fence" value={isStreamingTail}>
 					<TailFenceDocument
 						content={growingFenceShape.content}

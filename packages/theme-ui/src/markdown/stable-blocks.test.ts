@@ -208,6 +208,8 @@ describe("splitStableMarkdownBlocks", () => {
 			// 嵌套 HTML 与 details：深度感知闭合的恢复态（区域中途的 literalDepth 快照）。
 			"para.\n\n<div>\nA\n<div>\nB\n</div>\nC\n</div>\n\nafter\n",
 			"intro.\n\n<details><summary>T</summary>\n\nbody\n\n</details>\n\nafter\n",
+			// 纯列表：快路径的扫描器语义（列表作为不可冻结块留在 tail）。
+			"- item one\n\n- item two with detail\n\n- item three\n",
 		];
 		for (const base of documents) {
 			const scanner = createStableMarkdownScanner();

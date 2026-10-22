@@ -93,13 +93,11 @@ export async function run() {
 	await page.route("**/*", (route) => (new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort()));
 	await page.goto(`http://127.0.0.1:${server.address().port}`);
 	const result = await page.evaluate(async () => {
-		(globalThis).__resetProfile = 1;
 		const { run } = await import("/diag.js");
 		return run();
 	});
 
-	const prof = await page.evaluate(() => ({ tl: globalThis.__tlProfile, chooser: globalThis.__tlChooser }));
-	console.log(JSON.stringify({ browser: browser.version(), mode: "list-diagnostic", result, prof }, null, 2));
+	console.log(JSON.stringify({ browser: browser.version(), mode: "list-diagnostic", result }, null, 2));
 } finally {
 	await browser?.close();
 	if (server) await new Promise((resolve) => server.close(resolve));
