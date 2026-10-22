@@ -43,9 +43,7 @@ export async function exportProjectMigrationPackage(input: {
 	});
 }
 
-export async function previewProjectMigrationArchive(
-	passphrase: string,
-): Promise<ProjectMigrationPreviewResult> {
+export async function previewProjectMigrationArchive(passphrase: string): Promise<ProjectMigrationPreviewResult> {
 	return window.vetta.sessionArchive.previewMigration({ passphrase });
 }
 

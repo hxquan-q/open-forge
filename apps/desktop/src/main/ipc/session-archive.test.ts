@@ -130,18 +130,18 @@ describe("project migration IPC", () => {
 				listSessionPaths: expect.any(Function),
 			}),
 		);
-		const call = vi.mocked(exportMigration).mock.calls[0]?.[0] as {
-			listSessionPaths: () => Promise<string[]>;
-		} | undefined;
+		const call = vi.mocked(exportMigration).mock.calls[0]?.[0] as
+			| {
+					listSessionPaths: () => Promise<string[]>;
+			  }
+			| undefined;
 		expect(await call?.listSessionPaths()).toEqual(["C:/s/a.jsonl", "C:/s/b.jsonl"]);
 	});
 
 	it("export-migration forwards an explicit includeWorkspace=false and rejects a missing cwd", async () => {
 		registerSessionArchiveIpc();
 		await handler(SESSION_ARCHIVE_CHANNELS.EXPORT_MIGRATION)(null, { cwd: "C:/repo", includeWorkspace: false });
-		expect(exportMigration).toHaveBeenLastCalledWith(
-			expect.objectContaining({ includeWorkspace: false }),
-		);
+		expect(exportMigration).toHaveBeenLastCalledWith(expect.objectContaining({ includeWorkspace: false }));
 		await expect(handler(SESSION_ARCHIVE_CHANNELS.EXPORT_MIGRATION)(null, {})).rejects.toThrow(/cwd is required/);
 	});
 

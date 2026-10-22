@@ -1,9 +1,10 @@
 // Modified by The Open Forge contributors.
-import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
+
 import type { ProjectMigrationApplyReport } from "@preload/api-types/session-archive";
+import { type MigrationImportWizardState, projectsAtom } from "@shared/store/atoms";
+import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
 import { useAtomValue } from "jotai";
 import { useCallback, useMemo, useState } from "react";
-import { projectsAtom, type MigrationImportWizardState } from "@shared/store/atoms";
 import { applyProjectMigrationArchive } from "../services/session-archive";
 
 /** 报告的视图形态：会话按决策分桶，产物按恢复策略计数并保留失败路径清单。 */

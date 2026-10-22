@@ -1,3 +1,5 @@
+// Copyright The Open Forge contributors.
+
 /**
  * 项目迁移包服务（OFAR v2，ADR-0147）：会话 + 项目产物一起打包，
  * 导入侧自选目标位置、重写会话头 cwd、指纹按最终落盘形态计算。
@@ -5,7 +7,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { type Dirent, type Stats } from "node:fs";
+import type { Dirent, Stats } from "node:fs";
 import { lstat, mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";

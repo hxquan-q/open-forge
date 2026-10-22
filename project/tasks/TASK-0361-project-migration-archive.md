@@ -101,4 +101,42 @@ updated: 2026-10-22
 
 ## 交付记录
 
-（交付时回填）
+### 工程交付（2026-10-22，主工作区串行，提交均路径限定）
+
+**切片 1：格式 v2（runtime-storage）——提交 `2ca917e2e`（随行 Biome 格式化 `f1a63434e`）**
+
+- 改动：`session-archive/{types,frames,encode,decode,index}.ts` + `test/conversation/session-archive.test.ts`（新增 8 例）。
+- 要点：`SESSION_ARCHIVE_FORMAT_VERSION = 2`，`WORKSPACE_FILE = 0x04`（复用 ATTACHMENT 帧布局，meta 无 id/mimeType）；decode 接受 {1,2}，v1 拒绝 workspace 帧非法混合、声明 workspaceFileCount 时校验帧数一致，未知帧仍拒绝；无 workspace 输入时 encode 仍写 v1（版本与 metadata 均为 1，字节不变）。
+- 验证：`bun.exe ../../scripts/quality/run-vitest.mjs --run test/conversation/session-archive.test.ts` → 13 pass（5 旧 + 8 新）。
+
+**切片 2：主进程迁移服务——提交 `2825da5fc`**
+
+- 改动：新增 `conversations/project-migration-service.ts` + 同名测试（14 例）；`session-archive-service.ts` 仅导出 `sanitizeFileStem` 供复用。
+- 要点：导出排除 `.git`/`node_modules`/`.vetta`（含嵌套）与 symlink，512MB/4GB 上限在 stat 阶段拦截（测试注入 `workspaceLimits` 缝隙，默认 ADR 常量并断言其值）；零会话/远程/超限以 reason 返回不弹框；preview 框选解码不落盘、v1 识别 classic；apply 先重写会话头 cwd（仅 `type:"session"` 且等于 sourceCwd）再算指纹，同包同目标二次导入全部 skip-idempotent，换目标建副本，产物默认 skip-existing、symlink/目录类型不一致计入 failed，每写入会话按目标列表 cwd 广播。
+- 验证：`bun.exe ../../scripts/quality/run-vitest.mjs --run src/main/conversations/project-migration-service.test.ts` → 14 pass；连带旧服务回归 11 pass。
+
+**切片 3：IPC 三通道 + preload——提交 `d6dd9c874`**
+
+- 改动：`main/ipc/session-archive.ts`（EXPORT_MIGRATION / PREVIEW_MIGRATION / APPLY_MIGRATION，既有通道不动）+ 测试新增 5 例；`preload/api-types/session-archive.ts` 与 `preload/apis/session-archive.ts` 同步 + 测试新增 1 例。
+- 验证：两文件 `run-vitest --run` → 12 pass；`bun.exe x tsc --noEmit -p apps/desktop/tsconfig.json` 无错误。
+
+**切片 4：UI——提交 `b57cb0332`（含 i18n，UI 代码依赖 key 类型无法分离提交）**
+
+- 改动：theme-ui `ProjectContextMenuView`（新菜单项）；`useProjectContextMenuModel`（远程 ssh:// 不提供迁移入口）；`ProjectContextMenu.tsx`（补齐 0349 遗留的 onExportSessions 接线缺口）；`useProjectsPanelMenusModel.exportMigrationPackage`（口令+含文件复选默认勾选+分型 Toast）；`useChatViewModel.importArchive` preview 先行分流；新增 `useMigrationImportWizardModel` + `MigrationImportWizardDialog`（挂 RootGlobalOverlays）+ `migrationImportWizardAtom`；project 服务新增三 helper；i18n zh/en（project/main/chat ns）全量；发布说明 v0.1.3 新增段一条。
+- 测试：`MigrationImportWizardDialog.test.tsx` 11 例（组件 8：预览摘要/目标必填/新路径执行与登记/浏览填充/覆盖复选/失败态/取消；模型 3：下拉过滤本地非默认项目、选现有项目执行与报告、新路径优先）——注：Radix Select 在 jsdom 嵌套 Dialog 模态下无法展开，下拉交互下沉模型层验证；`useProjectsPanelMenusModel.test.tsx` 新增 4 例；`useChatViewModel.archive.test.tsx` 新增 2 例改写 1 例；`project-context-menu-remote.test.tsx` 新增 3 例。
+- 验证：8 个归档族测试文件 `run-vitest --run` → 73 pass（含既有回归）；tsc 无错误。
+
+**切片 5：发布说明与台账——本提交**
+
+- `.github/release-notes/v0.1.3.md` 新增段补一条（用户视角）；本交付记录回填。
+
+### 验证汇总（Windows 主工作区，bun.exe + Node vitest runner）
+
+- 定向：runtime-storage 13 例、desktop 主进程 25 例（11 旧 + 14 新）、IPC+preload 12 例、UI 38 例（8 文件合计 73 例全绿，含既有 30 例归档族回归）。
+- `bun.exe x tsc --noEmit -p apps/desktop/tsconfig.json` 通过；仓库根 `bun.exe run check:quick` 结果见下方。
+
+### 未运行项与风险（如实）
+
+- 未运行：`verify:ui:*`（未授权）、完整 `bun run check` 与 `test:impact`（由协调者执行）、真实双目录/双实例人工迁移走查（待人工验收）。
+- 已知取舍：workspace 收集上限判定用 stat 尺寸（稀疏文件按逻辑尺寸计）；导出为全量内存帧（4GB 上限内大项目可能内存压力大，增量留待后续）；迁移向导在 jsdom 下无法验证 Radix Select 展开，靠模型层测试兜底；旧版本应用打开 v2 包报 UNSUPPORTED_VERSION（预期）。
+- 人工验收前状态保持 in_progress；工程完成/验证状态由协调者裁定。

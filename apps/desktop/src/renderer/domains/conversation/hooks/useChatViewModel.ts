@@ -37,9 +37,9 @@ import { selectAtom } from "jotai/utils";
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOpenTerminal } from "../../bottom-panel/hooks/useOpenTerminal";
+import { previewProjectMigrationArchive } from "../../project/services/session-archive";
 import type { ChatViewModelResult } from "../components/chat-view/types";
 import { exportPortableSessionArchive, importPortableSessionArchive } from "../services/session-archive";
-import { previewProjectMigrationArchive } from "../../project/services/session-archive";
 import { drainActiveTranscriptWindow } from "../services/transcript-window-controller";
 
 /**
