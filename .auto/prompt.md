@@ -89,6 +89,16 @@
   （快升慢降，上限 800ms）。⚠️不能用 JSX 创建计时（element 创建≠组件执行）
 - 背靠背同负载：table 666→217（-67%），code 零回归；总 526→374（vs 基线 -70%）
 
+### Run #6（keep）：验证复测
+
+- HEAD 稳定复现 357.4（keep#4 357.1），18.5× 噪声置信
+
+### Run #7（keep）：已提交子树整体 bail
+
+- append-only 下 O(1) 复用块数组引用（replaced 强制新引用；块数不变⇒内容不变），
+  CommittedDocuments memo 让 reveal tick 间已冻结子树完全跳过
+- 总 357.4→314.8（-12%）；prose 39.1 / table 217 / code 58.7；置信 15.8×
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
