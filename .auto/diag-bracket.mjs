@@ -18,10 +18,10 @@ const playwrightRequire = createRequire(repoRequire.resolve("@playwright/cli/pac
 const { build } = createRequire(join(desktop, "package.json"))("vite");
 const { chromium } = playwrightRequire("playwright");
 const directory = await mkdtemp(join(tmpdir(), "vetta-bracket-diag-"));
+let entry = "";
 let browser;
 let server;
 try {
-	let entry = "";
 	entry = join(desktop, "diag-entry.tmp.tsx");
 	await writeFile(entry, `
 import { Profiler } from "react";
