@@ -2,7 +2,7 @@
 import { MarkdownHostProvider } from "./host";
 import type { MarkdownHost } from "./host";
 import { MarkdownImage } from "./MarkdownImage";
-import { createContext, memo, useContext, useMemo, useRef } from "react";
+import { createContext, memo, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components, Options } from "react-markdown";
@@ -69,6 +69,26 @@ export interface MarkdownContentProps {
 /** 绝对路径形式的链接文字（POSIX、Windows 盘符、UNC、~/）。相对路径保留原样，用于同名文件的区分。 */
 const ABSOLUTE_PATH_LABEL = /^(?:\/|[A-Za-z]:[\\/]|\\\\|~\/)/;
 
+/** 尾块快照的自适应节奏：一次解析的成本按占空比折算目标间隔（解析耗时 × 10，
+ * 即解析开销不超过快照节奏的 ~10%），高于基础节奏时立即放慢，变便宜后逐步恢复。
+ * 只作用于仍在增长的尾块，小尾块维持原有节奏。 */
+const TAIL_PARSE_DUTY_DIVISOR = 10;
+const TAIL_MAX_INTERVAL_MS = 800;
+
+export function nextTailInterval(baseInterval: number, previousInterval: number, parseDurationMs: number): number {
+	if (baseInterval <= 0) return 0;
+	const target = Math.min(
+		TAIL_MAX_INTERVAL_MS,
+		Math.max(baseInterval, Math.round(parseDurationMs * TAIL_PARSE_DUTY_DIVISOR)),
+	);
+	if (target > previousInterval) return target;
+	// 解析目标间隔不到当前一半时逐步恢复，避免抖动。
+	if (parseDurationMs * TAIL_PARSE_DUTY_DIVISOR * 2 <= previousInterval) {
+		return Math.max(target, Math.round(previousInterval / 2));
+	}
+	return previousInterval;
+}
+
 function basename(path: string): string {
 	const normalized = path.replace(/[\\/]+$/, "");
 	const idx = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
@@ -81,6 +101,7 @@ interface MarkdownDocumentProps {
 	definition: MarkdownDefinition;
 	inlineTokens?: InlineTokenSupport;
 	live: boolean;
+	onRenderDuration?: (durationMs: number) => void;
 	text: string;
 }
 
@@ -94,6 +115,7 @@ const MarkdownDocument = memo(function MarkdownDocument({
 	definition,
 	inlineTokens,
 	live,
+	onRenderDuration,
 	text,
 }: MarkdownDocumentProps): JSX.Element {
 	const hasStructuredAnnotations = inlineTokens?.annotations !== undefined;
@@ -126,6 +148,15 @@ const MarkdownDocument = memo(function MarkdownDocument({
 		() => ({ ...components, ...definition.components, ...definition.elements }),
 		[components, definition],
 	);
+	// 成本只在正文变化的那次渲染里测量（memo 拦下未变化的重渲染）。真正的解析发生在
+	// React 渲染 Markdown 子树期间（创建 element 只是把组件函数排队），因此以组件函数
+	// 开始到布局效果的时间差为准：包含 processor 构建、解析、hast→元素转换与该子树的
+	// 协调；布局效果在整棵树渲染完成后同步触发，提交后上报避免渲染阶段副作用。
+	const renderPassStartRef = useRef(0);
+	renderPassStartRef.current = performance.now();
+	useLayoutEffect(() => {
+		onRenderDuration?.(performance.now() - renderPassStartRef.current);
+	}, [onRenderDuration, markdownSource]);
 	return (
 		<MarkdownCodeLiveContext.Provider value={live}>
 			<ReactMarkdown
@@ -177,7 +208,17 @@ export const MarkdownContent = memo(function MarkdownContent({
 	// Keep small replies responsive; bound full parsing of long tails without splitting
 	// paragraphs/lists/reference definitions into semantically different documents.
 	const tailLength = (candidateSplit?.tail ?? displayText).length;
-	const renderInterval = tailLength >= 50000 ? 400 : tailLength >= 12000 ? 200 : 0;
+	const baseRenderInterval = tailLength >= 50000 ? 400 : tailLength >= 12000 ? 200 : 0;
+	const [tailInterval, setTailInterval] = useState(baseRenderInterval);
+	const reportTailParseDuration = useCallback(
+		(parseDurationMs: number) => {
+			setTailInterval((current) =>
+				nextTailInterval(baseRenderInterval, Math.max(current, baseRenderInterval), parseDurationMs),
+			);
+		},
+		[baseRenderInterval],
+	);
+	const renderInterval = Math.min(TAIL_MAX_INTERVAL_MS, Math.max(baseRenderInterval, tailInterval));
 	const previousText = useRef(displayText);
 	const replaced = !displayText.startsWith(previousText.current);
 	previousText.current = displayText;
@@ -407,6 +448,7 @@ export const MarkdownContent = memo(function MarkdownContent({
 					definition={definition}
 					inlineTokens={inlineTokens}
 					live={isStreamingTail}
+					onRenderDuration={isStreamingTail ? reportTailParseDuration : undefined}
 					text={tail}
 				/>
 			) : null}
