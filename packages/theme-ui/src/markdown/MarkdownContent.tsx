@@ -493,10 +493,17 @@ export const MarkdownContent = memo(function MarkdownContent({
 			tablePrependCacheRef.current.clear();
 			tablePromotedRef.current = 0;
 		}
-		// 渲染前校验稳定行缓存完备性：任何缺失都回退常规路径（结构性不应发生）。
+		// 渲染前校验稳定行缓存完备性。单表内缺失结构性不应发生；唯一情形是相同
+		// 表头的新表（headerBlock 相同不触发重置，promotedRef 携带旧行数）——此时
+		// 清空重积，让下一快照以 promoted=0 重新进入快路径，而不是永远卡在常规路径。
 		const promoted = Math.min(tablePromotedRef.current, shape.rowLines.length);
 		for (let index = 0; index < promoted; index += 1) {
-			if (!tableRowCacheRef.current.has(shape.rowLines[index])) return null;
+			if (!tableRowCacheRef.current.has(shape.rowLines[index])) {
+				tableRowCacheRef.current.clear();
+				tablePrependCacheRef.current.clear();
+				tablePromotedRef.current = 0;
+				return null;
+			}
 		}
 		return shape;
 	}, [tail, showTail, isStreamingTail, inlineTokens]);

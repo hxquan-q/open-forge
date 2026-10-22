@@ -46,6 +46,53 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("相同表头的两张表被正文隔开：第二张表正确渲染且最终等价", () => {
+		const header = "| Name | Description | Value |\n| --- | --- | ---: |\n";
+		const table1 = header + tableChunk(80, 0);
+		const separator = "\nBetween tables.\n\n";
+		const table2 = header + tableChunk(80, 1000);
+		const text = table1 + separator + table2;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={table1} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1200);
+		});
+		// 第二张表（相同表头）接续流式：此前会因 promotedRef 携带旧行数而卡在常规路径。
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		const bodies = container.querySelectorAll("tbody");
+		expect(bodies.length).toBe(2);
+		expect(bodies[0]?.querySelectorAll("tr").length).toBe(80);
+		expect(bodies[1]?.querySelectorAll("tr").length).toBe(80);
+		expect(container.textContent).toContain("Between tables.");
+		expect(container.textContent).toContain("Item 1079");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("中等尺寸表格与围栏（2.5k-12k）也走快路径且最终等价", () => {
 		// 此前阈值 12k 与节流阈值对齐，2.5k-12k 的单构造尾块每 tick 全量解析；
 		// 现在快路径覆盖到 2.5k：迷你/直渲染固定开销远低于全量解析。

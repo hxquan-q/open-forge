@@ -17,6 +17,9 @@ interface HastNodePosition {
  * 远低于全表解析，此阈值取检测扫描与常规解析的收支平衡点；更小的表格常规解析本就便宜。 */
 export const TAIL_TABLE_MIN_LENGTH = 2500;
 
+/** 行元素缓存的最大行数：超出后回退常规路径，避免病态超大表的内存放大。 */
+export const TAIL_TABLE_MAX_ROWS = 4000;
+
 const remarkPlugins = [remarkGfm, ...richRemarkPlugins];
 
 const DELIMITER_ROW = /^ {0,3}\|?(?:\s*:?-{1,}:?\s*\|)+\s*:?-{0,}:?\s*\|?\s*$/;
@@ -60,6 +63,9 @@ export function detectGrowingTable(tail: string): GrowingTableShape | null {
 		index = newline === -1 ? tail.length : newline + 1;
 	}
 	if (rowLines.length < 2) return null;
+	// 病态超大表（>4000 行 ≈ 240KB 源文本）不缓存行元素（内存与描述符开销），
+	// 由常规路径 + 自适应节流兜底。
+	if (rowLines.length > TAIL_TABLE_MAX_ROWS) return null;
 	return {
 		headerBlock: tail.slice(start, secondNewline + 1),
 		rowLines,
