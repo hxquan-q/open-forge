@@ -43,7 +43,18 @@ export async function exportProjectMigrationPackage(input: {
 	});
 }
 
-export async function previewProjectMigrationArchive(passphrase: string): Promise<ProjectMigrationPreviewResult> {
+/**
+ * 预览归档：不传 `archivePath` 时由主进程弹框选文件（chat 顶栏流程）；
+ * 传了就只解码这一个文件——项目导入入口已经选过文件（BUG-0143）。
+ */
+export async function previewProjectMigrationArchive(
+	passphrase: string,
+	options?: { readonly archivePath?: string },
+): Promise<ProjectMigrationPreviewResult> {
+	const archivePath = options?.archivePath;
+	if (archivePath) {
+		return window.vetta.sessionArchive.previewMigration({ passphrase, archivePath });
+	}
 	return window.vetta.sessionArchive.previewMigration({ passphrase });
 }
 

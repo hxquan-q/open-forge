@@ -1,5 +1,5 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { getAgentDir } from "@vetta/coding-agent/config";
 import { ipcMain } from "electron";
 import { DEFAULT_CONVERSATION_SESSION_DIR } from "../config/desktop-config-store.js";
@@ -7,6 +7,7 @@ import {
 	applyProjectMigrationArchive,
 	exportProjectMigrationArchive,
 	previewProjectMigrationArchive,
+	previewProjectMigrationFromFile,
 } from "../conversations/project-migration-service.js";
 import {
 	exportProjectSessionsArchiveWithDialog,
@@ -140,9 +141,22 @@ export function registerSessionArchiveIpc(): void {
 
 	ipcMain.handle(
 		SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION,
-		async (_event, input: { passphrase?: unknown } | undefined) => {
+		async (_event, input: { passphrase?: unknown; archivePath?: unknown } | undefined) => {
 			const passphrase = typeof input?.passphrase === "string" ? input.passphrase : "";
-			return previewProjectMigrationArchive(passphrase);
+			const requestedPath = input?.archivePath;
+			// 不传 archivePath：chat 顶栏流程照旧由主进程弹框选文件。
+			if (requestedPath === undefined || requestedPath === null || requestedPath === "") {
+				return previewProjectMigrationArchive(passphrase);
+			}
+			// 项目侧「导入项目」已选好文件（BUG-0143）：直接解码，不再弹第二次框。
+			if (typeof requestedPath !== "string" || !requestedPath.trim()) {
+				throw new Error("archivePath must be a non-empty string");
+			}
+			const archivePath = requestedPath.trim();
+			if (!isAbsolute(archivePath) || !archivePath.toLowerCase().endsWith(`.${SESSION_ARCHIVE_EXTENSION}`)) {
+				throw new Error(`archivePath must be an absolute .${SESSION_ARCHIVE_EXTENSION} path`);
+			}
+			return previewProjectMigrationFromFile(archivePath, passphrase);
 		},
 	);
 

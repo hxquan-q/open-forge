@@ -7,7 +7,9 @@ import AdmZip from "adm-zip";
 import { dialog, ipcMain } from "electron";
 import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import { emitConversationListChanged } from "../conversations/conversation-list-events.js";
+import { SESSION_ARCHIVE_EXTENSION } from "../conversations/session-archive-service.js";
 import { resolveSessionListCwd } from "../conversations/session-paths.js";
+import { mainT } from "../i18n/index.js";
 import { getAppLogger } from "../logger.js";
 import { allowProjectRoot, readDesktopConfig, updateDesktopConfig } from "./fs.js";
 
@@ -59,6 +61,19 @@ export interface ImportProjectResult {
 	/** For batch projects: items[].sourcePath that no longer exist on disk. */
 	missingSources?: string[];
 }
+
+/**
+ * `vetta:project:import` 选中 `.ofar`（会话归档 / 项目迁移包，ADR-0147）时的结果。
+ * 归档不能当成 zip 项目就地解包：口令确认、v1/迁移包分流与目标位置都在渲染端
+ * 的迁移向导里完成（BUG-0143），主进程只把用户选中的文件交回去。
+ */
+export interface MigrationArchiveImportResult {
+	kind: "migration-archive";
+	archivePath: string;
+}
+
+/** zip 项目包仍是完整导入（无 `kind` 字段，保持既有合同）；`.ofar` 交回渲染端。 */
+export type ImportSelectionResult = ImportProjectResult | MigrationArchiveImportResult;
 
 export class ProjectExportError extends Error {
 	constructor(
@@ -378,14 +393,27 @@ async function handleExport(projectDir: string): Promise<ExportProjectResult> {
 
 // ─── Import ───
 
-async function handleImport(): Promise<ImportProjectResult | null> {
+async function handleImport(): Promise<ImportSelectionResult | null> {
 	const open = await dialog.showOpenDialog({
-		title: "导入项目",
+		title: mainT("projectImport.dialogTitle"),
 		properties: ["openFile"],
-		filters: [{ name: `${DESKTOP_BRAND.displayName} Project Export`, extensions: ["zip"] }],
+		// 一个过滤器同时列出 .zip 与 .ofar：分成两个过滤器时默认只显示 zip，
+		// .ofar 依旧「看不见」（BUG-0143 的现场）。
+		filters: [
+			{
+				name: mainT("projectImport.filterName", { brand: DESKTOP_BRAND.displayName }),
+				extensions: ["zip", SESSION_ARCHIVE_EXTENSION],
+			},
+		],
 	});
 	if (open.canceled || open.filePaths.length === 0) return null;
-	const zipPath = open.filePaths[0];
+	const selectedPath = open.filePaths[0]!;
+
+	// `.ofar` 是归档而不是项目包：不落盘、不登记项目，交渲染端走迁移向导（BUG-0143）。
+	if (selectedPath.toLowerCase().endsWith(`.${SESSION_ARCHIVE_EXTENSION}`)) {
+		return { kind: "migration-archive", archivePath: selectedPath };
+	}
+	const zipPath = selectedPath;
 
 	let zip: AdmZip;
 	try {

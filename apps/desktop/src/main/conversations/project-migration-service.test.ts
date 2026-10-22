@@ -43,6 +43,7 @@ const {
 	collectWorkspaceFiles,
 	exportProjectMigrationArchive,
 	previewProjectMigrationArchive,
+	previewProjectMigrationFromFile,
 	WORKSPACE_MAX_FILE_BYTES,
 	WORKSPACE_MAX_TOTAL_BYTES,
 } = await import("./project-migration-service.js");
@@ -341,6 +342,39 @@ describe("project migration service: preview", () => {
 	it("取消选择返回 canceled 且不抛错", async () => {
 		openDialogResult.mockResolvedValueOnce({ canceled: true, filePaths: [] });
 		await expect(previewProjectMigrationArchive("pw")).resolves.toEqual({ canceled: true });
+	});
+
+	// BUG-0143：项目侧导入已经选好文件，预览不应再弹一次框。
+	it("给定 archivePath 时直接读文件解码，不再弹文件框", async () => {
+		const archivePath = await buildArchive("v2");
+		openDialogResult.mockClear();
+
+		const result = await previewProjectMigrationFromFile(archivePath, "pw");
+
+		expect(openDialogResult).not.toHaveBeenCalled();
+		if (result.canceled || result.classic) throw new Error("expected migration preview");
+		expect(result.archivePath).toBe(archivePath);
+		expect(result.formatVersion).toBe(2);
+		expect(result.sessionCount).toBe(1);
+		expect(result.workspaceFileCount).toBeGreaterThanOrEqual(1);
+	});
+
+	it("给定 archivePath 且是 v1 会话归档时仍报 classic，由调用方给指引", async () => {
+		const archivePath = await buildArchive("v1");
+		openDialogResult.mockClear();
+
+		await expect(previewProjectMigrationFromFile(archivePath, "pw")).resolves.toEqual({
+			canceled: false,
+			classic: true,
+			archivePath,
+		});
+		expect(openDialogResult).not.toHaveBeenCalled();
+	});
+
+	it("给定非绝对路径时拒绝，不去弹框也不读文件", async () => {
+		openDialogResult.mockClear();
+		await expect(previewProjectMigrationFromFile(join("pkg", "mig.ofar"), "pw")).rejects.toThrow(/absolute/);
+		expect(openDialogResult).not.toHaveBeenCalled();
 	});
 });
 

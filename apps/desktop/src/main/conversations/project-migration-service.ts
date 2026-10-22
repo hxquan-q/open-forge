@@ -316,7 +316,20 @@ export async function previewProjectMigrationArchive(passphrase: string): Promis
 	if (open.canceled || open.filePaths.length === 0) {
 		return { canceled: true };
 	}
-	const archivePath = open.filePaths[0]!;
+	return previewProjectMigrationFromFile(open.filePaths[0]!, passphrase);
+}
+
+/**
+ * 预览指定迁移包（不弹框）：项目侧「导入项目」已经选好 `.ofar`，再弹一次文件框
+ * 等于让用户为同一个文件选两遍（BUG-0143）。解码与摘要结构同 preview 其它分支。
+ */
+export async function previewProjectMigrationFromFile(
+	archivePath: string,
+	passphrase: string,
+): Promise<ProjectMigrationPreviewResult> {
+	if (!isAbsolute(archivePath)) {
+		throw new Error("archivePath must be an absolute path");
+	}
 	const bytes = new Uint8Array(await readFile(archivePath));
 	const decoded = await decodeSessionArchive(bytes, passphrase);
 

@@ -1,4 +1,6 @@
 // Copyright The Open Forge contributors.
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -21,6 +23,11 @@ vi.mock("../conversations/session-archive-service.js", () => ({
 
 const exportMigration = vi.fn(async (_input: unknown) => ({ saved: true, sessionCount: 2, workspaceFileCount: 3 }));
 const previewMigration = vi.fn(async (_passphrase: string) => ({ canceled: true }));
+const previewMigrationFromFile = vi.fn(async (_archivePath: string, _passphrase: string) => ({
+	canceled: false,
+	classic: false,
+	archivePath: _archivePath,
+}));
 const applyMigration = vi.fn(async (_input: unknown) => ({
 	sessions: [],
 	workspace: { written: 0, skipped: 0, overwritten: 0, failed: [] },
@@ -29,6 +36,8 @@ const applyMigration = vi.fn(async (_input: unknown) => ({
 vi.mock("../conversations/project-migration-service.js", () => ({
 	exportProjectMigrationArchive: (input: unknown) => exportMigration(input),
 	previewProjectMigrationArchive: (passphrase: string) => previewMigration(passphrase),
+	previewProjectMigrationFromFile: (archivePath: string, passphrase: string) =>
+		previewMigrationFromFile(archivePath, passphrase),
 	applyProjectMigrationArchive: (input: unknown) => applyMigration(input),
 }));
 
@@ -147,8 +156,37 @@ describe("project migration IPC", () => {
 
 	it("preview-migration forwards the passphrase only", async () => {
 		registerSessionArchiveIpc();
+		previewMigration.mockClear();
+		previewMigrationFromFile.mockClear();
 		await handler(SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION)(null, { passphrase: "pw" });
 		expect(previewMigration).toHaveBeenCalledWith("pw");
+		// chat 顶栏流程不变：不传 archivePath 时依旧由主进程弹框选文件。
+		expect(previewMigrationFromFile).not.toHaveBeenCalled();
+	});
+
+	it("preview-migration decodes the given archivePath without opening a dialog (BUG-0143)", async () => {
+		registerSessionArchiveIpc();
+		previewMigration.mockClear();
+		previewMigrationFromFile.mockClear();
+		const archivePath = join(tmpdir(), "mig.ofar");
+
+		await handler(SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION)(null, { passphrase: "pw", archivePath });
+
+		expect(previewMigrationFromFile).toHaveBeenCalledWith(archivePath, "pw");
+		expect(previewMigration).not.toHaveBeenCalled();
+	});
+
+	it("preview-migration rejects a non-absolute archivePath and a non-ofar file", async () => {
+		registerSessionArchiveIpc();
+		previewMigrationFromFile.mockClear();
+
+		await expect(
+			handler(SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION)(null, { archivePath: join("pkg", "mig.ofar") }),
+		).rejects.toThrow(/absolute/);
+		await expect(
+			handler(SESSION_ARCHIVE_CHANNELS.PREVIEW_MIGRATION)(null, { archivePath: join(tmpdir(), "mig.zip") }),
+		).rejects.toThrow(/ofar/);
+		expect(previewMigrationFromFile).not.toHaveBeenCalled();
 	});
 
 	it("apply-migration validates required fields and forwards options", async () => {

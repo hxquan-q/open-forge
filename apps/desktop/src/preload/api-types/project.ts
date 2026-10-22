@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // ─── Project import / export ───
 //
 // Mirrors `src/main/ipc/project-export.ts`. Both directions can return either
@@ -28,6 +29,17 @@ export interface ProjectImportSuccess {
 	missingSources?: string[];
 }
 
+/**
+ * 选中 `.ofar`（会话归档 / 项目迁移包）时的结果：主进程不落盘，由渲染端收集口令、
+ * 分流 v1 会话归档并打开迁移向导（BUG-0143）。
+ */
+export interface ProjectMigrationArchiveImport {
+	kind: "migration-archive";
+	archivePath: string;
+}
+
+export type ProjectImportResult = ProjectImportSuccess | ProjectMigrationArchiveImport;
+
 // ─── Project list (CRUD) ───
 //
 // Mirrors `src/main/ipc/projects.ts`, which delegates to the one `ProjectService`
@@ -49,8 +61,8 @@ export interface ProjectListSnapshot {
 export interface DesktopProjectApi {
 	/** Export a project to a zip via native save dialog. */
 	export(projectDir: string): Promise<ProjectExportSuccess | ProjectExportError>;
-	/** Import a project from a zip via native open dialog. `null` = user cancelled. */
-	import(): Promise<ProjectImportSuccess | ProjectExportError | null>;
+	/** Import a project from a zip or a `.ofar` migration archive via native open dialog. `null` = user cancelled. */
+	import(): Promise<ProjectImportResult | ProjectExportError | null>;
 	/** Read a project's `.vetta/meta.json` (used to detect project type). `null` if absent. */
 	readMeta(projectDir: string): Promise<Record<string, unknown> | null>;
 	/** Active and archived projects plus the configured workspace root. */

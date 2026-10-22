@@ -156,6 +156,12 @@
 		"partialMore": "\n…还有 {{count}} 项",
 		"doneTitle": "导入完成",
 		"doneMessage": "项目「{{name}}」已导入到工作区。",
+		"migrationTitle": "导入项目迁移包",
+		"migrationMessage": "「{{name}}」是项目迁移包，导入后可自选目标位置、恢复会话与项目文件。若导出时设了口令，请在这里输入；没设口令则留空。",
+		"migrationPassphraseLabel": "归档口令",
+		"migrationConfirm": "继续",
+		"classicTitle": "这是会话归档",
+		"classicMessage": "「{{name}}」是会话归档（.ofar v1），只能恢复会话、不能作为项目导入。请到会话页顶栏的「导入会话归档」里导入它，会话会回到原来的项目下。",
 		"viewProject": "查看项目",
 		"gotIt": "知道了"
 	},

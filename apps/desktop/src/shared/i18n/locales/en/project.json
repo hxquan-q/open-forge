@@ -157,6 +157,12 @@
 		"partialMore": "\n…and {{count}} more",
 		"doneTitle": "Import done",
 		"doneMessage": "Project \"{{name}}\" has been imported into the workspace.",
+		"migrationTitle": "Import project migration package",
+		"migrationMessage": "\"{{name}}\" is a project migration package: you can pick the target location and restore its sessions and project files. Enter the passphrase used when exporting; leave it empty if there was none.",
+		"migrationPassphraseLabel": "Archive passphrase",
+		"migrationConfirm": "Continue",
+		"classicTitle": "This is a session archive",
+		"classicMessage": "\"{{name}}\" is a session archive (.ofar v1): it restores sessions and cannot be imported as a project. Use \"Import session archive\" in the chat page header; the sessions go back to their original project.",
 		"viewProject": "View project",
 		"gotIt": "Got it"
 	},

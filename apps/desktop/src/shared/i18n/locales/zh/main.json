@@ -130,5 +130,9 @@
 	},
 	"markdown": {
 		"previewTitle": "HTML 预览 · 30 秒后自动关闭"
+	},
+	"projectImport": {
+		"dialogTitle": "导入项目",
+		"filterName": "{{brand}} 项目包与会话归档（.zip / .ofar）"
 	}
 }

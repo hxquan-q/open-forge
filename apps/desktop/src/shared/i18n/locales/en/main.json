@@ -130,5 +130,9 @@
 	},
 	"markdown": {
 		"previewTitle": "HTML preview · closes after 30 seconds"
+	},
+	"projectImport": {
+		"dialogTitle": "Import project",
+		"filterName": "{{brand}} project package and session archive (.zip / .ofar)"
 	}
 }

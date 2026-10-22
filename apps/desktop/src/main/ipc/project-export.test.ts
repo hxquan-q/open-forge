@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -9,8 +9,12 @@ import AdmZip from "adm-zip";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onConversationListChanged } from "../conversations/conversation-list-events.js";
 
+interface OpenDialogOptions {
+	filters?: { name: string; extensions: string[] }[];
+}
+
 const openDialogResult = vi.fn(
-	async (): Promise<{ canceled: boolean; filePaths: string[] }> => ({
+	async (_options?: OpenDialogOptions): Promise<{ canceled: boolean; filePaths: string[] }> => ({
 		canceled: true,
 		filePaths: [],
 	}),
@@ -27,7 +31,7 @@ const ipcHandlers = new Map<string, IpcHandler>();
 vi.mock("electron", () => ({
 	dialog: {
 		showSaveDialog: () => saveDialogResult(),
-		showOpenDialog: () => openDialogResult(),
+		showOpenDialog: (options?: OpenDialogOptions) => openDialogResult(options),
 	},
 	ipcMain: {
 		handle: (channel: string, handler: IpcHandler): void => {
@@ -279,6 +283,48 @@ describe("project export/import（.openforge.zip）", () => {
 				expect(await readFile(join(workspace, "OldProj", "README.md"), "utf8")).toBe("old\n");
 				expect(configState.projects).toContainEqual({ path: join(workspace, "OldProj"), name: "OldProj" });
 				expect(existsSync(join(workspace, "OldProj", ".vetta", "sessions"))).toBe(false);
+				expect(events).toEqual([]);
+			} finally {
+				unsubscribe();
+			}
+		} finally {
+			unregister();
+		}
+	});
+
+	it("导入文件框同时列出 zip 与 ofar：.ofar 迁移包在项目导入里可选", async () => {
+		const unregister = registerProjectExportIpc();
+		try {
+			openDialogResult.mockResolvedValueOnce({ canceled: true, filePaths: [] });
+			await invokeImport();
+
+			const options = openDialogResult.mock.calls.at(-1)?.[0];
+			const extensions = (options?.filters ?? []).flatMap((filter) => filter.extensions);
+			expect(extensions).toContain("zip");
+			expect(extensions).toContain("ofar");
+		} finally {
+			unregister();
+		}
+	});
+
+	it("选中 .ofar 只回传 archivePath，不做 zip 导入的落盘/登记/广播（迁移向导负责目标位置）", async () => {
+		const workspace = await tempDir("pex-ws-ofar-");
+		const filesDir = await tempDir("pex-files-ofar-");
+		configState = { projects: [], archivedProjects: [], workspacePath: workspace };
+		const archivePath = join(filesDir, "页面原型展示-migration.ofar");
+		await writeFile(archivePath, "ofar-bytes", "utf8");
+
+		const unregister = registerProjectExportIpc();
+		try {
+			const events: unknown[] = [];
+			const unsubscribe = onConversationListChanged((event) => events.push(event));
+			try {
+				openDialogResult.mockResolvedValueOnce({ canceled: false, filePaths: [archivePath] });
+
+				await expect(invokeImport()).resolves.toEqual({ kind: "migration-archive", archivePath });
+
+				expect(configState.projects).toEqual([]);
+				expect(readdirSync(workspace)).toEqual([]);
 				expect(events).toEqual([]);
 			} finally {
 				unsubscribe();

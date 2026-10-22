@@ -87,7 +87,7 @@ export interface DesktopSessionArchiveApi {
 		defaultFileName?: string;
 	}): Promise<ProjectMigrationExportResult>;
 	/** 框选并预览归档：v1 会话归档返回 classic 由调用方回落现行导入；不落盘。 */
-	previewMigration(input?: { passphrase?: string }): Promise<ProjectMigrationPreviewResult>;
+	previewMigration(input?: { passphrase?: string; archivePath?: string }): Promise<ProjectMigrationPreviewResult>;
 	/** 应用迁移包到目标位置（cwd 重写 + 产物恢复）。 */
 	applyMigration(input: {
 		archivePath: string;

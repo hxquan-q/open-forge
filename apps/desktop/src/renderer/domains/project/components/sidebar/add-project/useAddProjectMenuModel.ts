@@ -1,12 +1,14 @@
 // Modified by The Open Forge contributors.
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { isDuplicateProjectName } from "@shared/lib/project-name";
-import { confirmDialogAtom, projectsAtom } from "@shared/store/atoms";
+import { pathBasename } from "@shared/lib/utils";
+import { confirmDialogAtom, migrationImportWizardAtom, projectsAtom } from "@shared/store/atoms";
 import { useNavigate } from "@tanstack/react-router";
 import { getDefaultStore, useSetAtom } from "jotai";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useProjectActions } from "../../../hooks/useProjects";
+import { previewProjectMigrationArchive } from "../../../services/session-archive";
 import type { AddProjectMenuItemModel } from "./types";
 
 export function useAddProjectMenuModel(): {
@@ -28,11 +30,66 @@ export function useAddProjectMenuModel(): {
 	const { createProject, openProject, openProjectPath, refreshProjects } = useProjectActions();
 	const { refreshProjects: refreshBatchProjects } = useBatchTasks();
 	const setConfirm = useSetAtom(confirmDialogAtom);
+	const setMigrationImportWizard = useSetAtom(migrationImportWizardAtom);
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [showNewProject, setShowNewProject] = useState(false);
 	const [showRemotePicker, setShowRemotePicker] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
+
+	/**
+	 * 「导入项目」选中 `.ofar`（会话归档 / 项目迁移包）后的分流（BUG-0143）：
+	 * 归档与 zip 项目包的导入语义不同——先问口令，再看包版本。
+	 * - v2 迁移包：交给全局迁移向导（目标位置 / 冲突策略 / 报告）；
+	 * - v1 会话归档：只在这里给出「去会话页导入」的指引，真正通道的语义不动。
+	 */
+	const openMigrationArchive = (archivePath: string): void => {
+		const name = pathBasename(archivePath);
+		setConfirm({
+			title: t("importDialog.migrationTitle"),
+			message: t("importDialog.migrationMessage", { name }),
+			confirmLabel: t("importDialog.migrationConfirm"),
+			cancelLabel: t("importDialog.gotIt"),
+			input: { password: true, label: t("importDialog.migrationPassphraseLabel") },
+			onConfirm: (_checkboxChecked: boolean, passphrase = "") => {
+				void (async () => {
+					try {
+						const preview = await previewProjectMigrationArchive(passphrase, { archivePath });
+						if (preview.canceled) return;
+						if (preview.classic) {
+							setConfirm({
+								title: t("importDialog.classicTitle"),
+								message: t("importDialog.classicMessage", { name }),
+								confirmLabel: t("importDialog.gotIt"),
+								onConfirm: () => {},
+							});
+							return;
+						}
+						setMigrationImportWizard({
+							preview: {
+								archivePath: preview.archivePath,
+								sourceCwd: preview.sourceCwd,
+								sessionCount: preview.sessionCount,
+								sessions: preview.sessions,
+								workspaceFileCount: preview.workspaceFileCount,
+								workspaceBytes: preview.workspaceBytes,
+								formatVersion: preview.formatVersion,
+							},
+							passphrase,
+						});
+					} catch (error) {
+						setConfirm({
+							title: t("importDialog.failedTitle"),
+							message: error instanceof Error ? error.message : String(error),
+							confirmLabel: t("importDialog.failedConfirm"),
+							variant: "danger",
+							onConfirm: () => {},
+						});
+					}
+				})();
+			},
+		});
+	};
 
 	const handleImport = async (): Promise<void> => {
 		setOpen(false);
@@ -46,6 +103,11 @@ export function useAddProjectMenuModel(): {
 				variant: "danger",
 				onConfirm: () => {},
 			});
+			return;
+		}
+		// `.ofar` 不是项目包：主进程只回传路径，不落盘也不登记项目。
+		if ("kind" in result) {
+			openMigrationArchive(result.archivePath);
 			return;
 		}
 		await Promise.all([refreshProjects(), refreshBatchProjects()]).catch(() => {});
