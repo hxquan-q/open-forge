@@ -46,6 +46,54 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("正文与 \$\$ 数学区交替流式：区域逐个冻结且最终等价", () => {
+		const para = (i: number) => `Problem ${i} statement.\n\n`;
+		const math = (i: number) => `$$\nS_${i} = \\frac{n(n+1)}{2}\n$$\n\n`;
+		const part1 = para(1) + math(1) + para(2);
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={part1} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1200);
+		});
+		expect(container.textContent).toContain("Problem 1");
+
+		const finalText = part1 + math(2) + para(3);
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.textContent).toContain("Problem 3");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("括号块乐观冻结后定义行中途到达：同帧重置且最终链接正确解析", () => {
 		// 阶段 1：无定义——括号块乐观冻结（渲染为字面 [label]，与全量解析一致）。
 		const before = "Uses [label] and [label][ref] here.\n\nplain paragraph.\n\n";
