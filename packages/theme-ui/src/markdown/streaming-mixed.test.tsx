@@ -46,6 +46,61 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("CRLF 输入的大表与围栏流式正确且最终等价", () => {
+		const toCrlf = (text: string): string => text.replace(/\n/g, "\r\n");
+		const header = "| Name | Description | Value |\r\n| --- | --- | ---: |\r\n";
+		const tableBody = Array.from(
+			{ length: 120 },
+			(_, i) => `| Item ${i} | A detailed description of this record ${i} | ${i} |\r\n`,
+		).join("");
+		const fence = "```ts\r\n" + Array.from({ length: 200 }, (_, i) => `const v${i} = ${i};\r\n`).join("");
+		const text = toCrlf("Intro line.\n\n") + header + tableBody + toCrlf("\nafter table.\n\n") + fence + "```\r\n\r\ndone.\r\n";
+
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={header + tableBody} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		const streamedRows = container.querySelectorAll("tbody tr").length;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(streamedRows).toBe(120);
+		expect(container.textContent).toContain("after table.");
+		expect(container.textContent).toContain("const v199");
+		expect(container.textContent).toContain("done.");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("相同表头的两张表被正文隔开：第二张表正确渲染且最终等价", () => {
 		const header = "| Name | Description | Value |\n| --- | --- | ---: |\n";
 		const table1 = header + tableChunk(80, 0);
