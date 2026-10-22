@@ -46,6 +46,67 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("八形态全混合消息渐进流式：全程正确且最终整篇等价", () => {
+		const para = (i: number) => `Mixed intro paragraph ${i} with **bold** and [inline](https://e.com/${i}).\n\n`;
+		const table = (n: number) => `| Name | Desc | V |\n| --- | --- | ---: |\n${Array.from({ length: n }, (_, i) => `| row ${i} | description ${i} | ${i} |\n`).join("")}`;
+		const fence = (n: number) => `\`\`\`ts\n${Array.from({ length: n }, (_, i) => `const v${i} = ${i};\n`).join("")}\`\`\`\n\n`;
+		const math = (n: number) => Array.from({ length: n }, (_, i) => `$$\nS_${i} = \\frac{n(${i})}{2}\n$$\n\n`).join("");
+		const list = (n: number) => Array.from({ length: n }, (_, i) => `- list item ${i} with detail.\n`).join("");
+		const task = (n: number) => Array.from({ length: n }, (_, i) => `- [${i % 2 ? "x" : " "}] todo ${i}.\n`).join("");
+		const details = (n: number) => Array.from({ length: n }, (_, i) => `<details><summary>D${i}</summary>\n\nbody ${i}.\n\n</details>\n\n`).join("");
+		const bracket = (n: number) => Array.from({ length: n }, (_, i) => `Config arr[${i}] and keys[${i}] documented.\n\n`).join("");
+
+		// 渐进渲染：每阶段追加一种形态（覆盖所有快路径与冻结机制的交替启用/退出）。
+		const stages = [
+			para(0) + table(8),
+			table(40),
+			para(1) + fence(60),
+			fence(200) + math(6),
+			math(30) + list(80),
+			list(150) + task(40),
+			task(60) + details(6),
+			details(20) + bracket(40),
+			bracket(80) + "Final closing paragraph.\n",
+		];
+		let text = "";
+		for (const stage of stages) {
+			text += stage;
+			act(() => {
+				root.render(<MarkdownContent {...environment} text={text} isStreamingTail />);
+			});
+			act(() => {
+				vi.advanceTimersByTime(1200);
+			});
+		}
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.textContent).toContain("Final closing paragraph.");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("任务列表（GFM checkbox）流式正确且最终等价", () => {
 		const line = (i: number) => `- [${i % 3 === 0 ? "x" : " "}] task ${i}: a checklist item with detail text.\n`;
 		const initial = Array.from({ length: 120 }, (_, i) => line(i)).join("");

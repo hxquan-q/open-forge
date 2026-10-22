@@ -381,6 +381,9 @@ function runScan(
 				} else {
 					state.literalEnd = null;
 				}
+				// 提交分支同样必须清 literalEnd：僵尸闭合正则会让后续 $$ 行
+				// 持续误闭合（连续数学区场景，终极混合测试发现）。
+				state.literalEnd = null;
 				state.literalStart = -1;
 				state.literalCommittable = false;
 				state.literalTag = null;
