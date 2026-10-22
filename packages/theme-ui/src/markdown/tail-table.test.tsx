@@ -101,6 +101,25 @@ describe("TailTableDocument 流式大表快路径", () => {
 		expect(streamedHtml).toBe(plainHtml);
 	});
 
+	it("节流期间快照保持新鲜：中途内容持续可见（不冻结）", () => {
+		const text = makeTable(400);
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail />);
+		});
+		// 推进约数个节流间隔（未到 settle）：内容应已大幅跟上，而不是停在节流开启前的文本。
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		const midRows = container.querySelectorAll("tbody tr").length;
+		expect(midRows).toBeGreaterThan(300);
+		const midText = container.querySelector(".markdown-body")?.textContent ?? "";
+		expect(midText).toContain("Item 250");
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.querySelectorAll("tbody tr").length).toBe(400);
+	});
+
 	it("纯追加新行后旧行保持身份，行数完整", () => {
 		const initial = makeTable(400);
 		act(() => {
