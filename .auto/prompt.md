@@ -125,6 +125,21 @@
   （真实世界鲁棒性，基准中性）；table parse 6→7 是测量更准带来的预期节奏变化
 - ⚠️ 自定义管线方向的剩余封锁仍是 hast-util-to-jsx-runtime 依赖（未变）
 
+### Run #11（keep）：增长表格尾块快路径（tail-table.tsx）
+
+- 单一增长 GFM 大表（≥12k、纯管道行、无 `](` 链接语法、无 inlineTokens）的尾块改为
+  「稳定行元素缓存 + 变化后缀迷你解析」：每次快照只解析表头+分隔行+变化行（~1ms），
+  稳定行回放缓存元素（React 子树免重渲染）
+- 关键协议：promotedRef 滞后一拍（只提升已被迷你渲染过完整内容的行）；末行永远留
+  在迷你（保证 tbody 存在）；选择器渲染前校验缓存完备性（miss 回退常规路径）；
+  表头变化即整表重置；**必须 memo**（首版无 memo 每 reveal tick 重跑迷你解析，
+  table 反而 297.8ms 且 parse 91 次）
+- 结果：table 297.8→111.9ms（parse 11，p95 commit ~30→2.7ms）；总计 222.8 新低
+- 已知限制：稳定行 DOM 身份不保证（React 键重排可能重建行节点，未定位根因）；
+  正确性由行内容 + 整表 DOM 等价测试守卫
+- ⚠️ 调试教训：HTMLCollection/children 是活集合（after-vs-after 比较恒真），
+  身份断言必须持有 Node 引用对比
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较

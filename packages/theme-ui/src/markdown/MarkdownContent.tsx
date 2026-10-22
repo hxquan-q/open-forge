@@ -38,6 +38,8 @@ import type { HastElement } from "./nodes";
 import { useMarkdownDefinition } from "./definition";
 import type { MarkdownDefinition } from "./definition";
 import { createStableMarkdownScanner } from "./stable-blocks";
+import { detectGrowingTable, TailTableDocument } from "./tail-table";
+import type { TableRowCache } from "./tail-table";
 import type { StableMarkdownScanner } from "./stable-blocks";
 
 /** 文件 / 链接 badge 的公共样式：半透明主题色底 + 主题色描边与文字。 */
@@ -469,10 +471,48 @@ export const MarkdownContent = memo(function MarkdownContent({
 	const tail = split ? split.tail : renderText;
 	const showTail = !split || tail.length > 0 || committed.length === 0;
 
+	// 增长表格快路径：整段尾块就是一张大表时，只解析表头与变化行，稳定行复用缓存
+	// 元素（详见 tail-table.tsx）。小表格、行内 token、混合结构或含链接语法（需要
+	// 文件链接归一化，与缓存的原始行键不一致）的尾块走常规路径。
+	const tableRowCacheRef = useRef<TableRowCache>(new Map());
+	const tablePromotedRef = useRef(0);
+	const tableHeaderRef = useRef<string | null>(null);
+	const growingTableShape = useMemo(() => {
+		if (!showTail || !isStreamingTail || inlineTokens) return null;
+		if (tail.includes("](")) return null;
+		const shape = detectGrowingTable(tail);
+		if (!shape) return null;
+		if (tableHeaderRef.current !== shape.headerBlock) {
+				// 新表格（或表格重写）：清空行缓存与推进状态重新积累。
+			tableHeaderRef.current = shape.headerBlock;
+			tableRowCacheRef.current.clear();
+			tablePromotedRef.current = 0;
+		}
+		// 渲染前校验稳定行缓存完备性：任何缺失都回退常规路径（结构性不应发生）。
+		const promoted = Math.min(tablePromotedRef.current, shape.rowLines.length);
+		for (let index = 0; index < promoted; index += 1) {
+			if (!tableRowCacheRef.current.has(shape.rowLines[index])) return null;
+		}
+		return shape;
+	}, [tail, showTail, isStreamingTail, inlineTokens]);
+
 	return (
 		<MarkdownHostProvider host={host}><div className={cn("markdown-body break-words", animateChunks && "markdown-streaming-tail", className)}>
 			<CommittedDocuments blocks={committed} components={components} definition={definition} />
-			{showTail ? (
+			{showTail && growingTableShape ? (
+				<MarkdownCodeLiveContext.Provider key="tail-table" value={isStreamingTail}>
+					<TailTableDocument
+						animateChunks={chunkedRef.current}
+						components={components}
+						definition={definition}
+						onRenderDuration={isStreamingTail ? reportTailParseDuration : undefined}
+						promotedRef={tablePromotedRef}
+						rowCache={tableRowCacheRef.current}
+						shape={growingTableShape}
+						text={tail}
+					/>
+				</MarkdownCodeLiveContext.Provider>
+			) : showTail ? (
 				<MarkdownDocument
 					key="tail"
 					animateChunks={chunkedRef.current}
