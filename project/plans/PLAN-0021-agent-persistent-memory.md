@@ -304,7 +304,7 @@ flowchart TD
 | TASK-0379 | A | 1 | integrated | 7406851cf | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（队列 6 + Observer 4 例，完整 check 绿） |
 | TASK-0380 | A | 1 | integrated | 201fb087e | main | 主工作区（serial，与 B 的 0381 并行） | — | 承载提交即绑定 | integrated（定向 7 例 + 完整 check 绿；真实抽取 Provider 未授权不跑） |
 | TASK-0381 | B | 1 | integrated | e66f1f259（交接基线一致） | task/TASK-0381-memory-local-embedding | C:\Users\xquan\Desktop\open-forge-wt\task-0381-memory-local-embedding（已集成，待推送后清理；物理 Worktree 保留） | project/verification/HANDOFF-TASK-0381-window-b.md | dcf9735bc + e4c71279e | integrated（--no-ff 合入本地 main；92 文件 600 例、模型目录 3 例、完整 check 全绿复验） |
-| TASK-0382 | A | — | 未派发（0380/0381 集成后） | — | — | — | — | — | pending |
+| TASK-0382 | A | 1 | integrated | 5e1dfb5fa | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（hybrid 9 + budget 7 例，完整 check 绿） |
 | TASK-0388 | A | — | 未派发（0382 集成后） | — | — | — | — | — | pending |
 
 派工备忘（由 Coordinator 续记）：

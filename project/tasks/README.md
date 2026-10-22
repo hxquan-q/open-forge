@@ -30,7 +30,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0379` | `done` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；持久 jobs 队列（幂等/lease/过期回收/高水位/纪元复检）+捕获过滤 Observer，定向 10 例与完整 check 全绿。 |
 | `TASK-0380` | `done` | PLAN-0021 | [受预算约束的自动抽取与事实合并](TASK-0380-memory-automatic-extraction.md)；决策层落地（预算账本/错误分类/建议校验去重），定向 7 例全绿；真实 Provider 未授权不跑。 |
 | `TASK-0381` | `done` | PLAN-0021 | [本地 embedding 资源与版本化向量存储](TASK-0381-memory-local-embedding.md)；窗口B交付并集成：适配端口+版本化向量存储+持久任务（真实模型推理未授权保持未验证）。 |
-| `TASK-0382` | `draft` | PLAN-0021 | [混合检索、融合排名与注入预算](TASK-0382-memory-hybrid-retrieval-context.md)；待前置产物，未开工；serial。 |
+| `TASK-0382` | `done` | PLAN-0021 | [混合检索、融合排名与注入预算](TASK-0382-memory-hybrid-retrieval-context.md)；RRF 双路融合+注入预算（pin 占额/scope 保底）落地，定向 16 例全绿；参数为待评测初值。 |
 | `TASK-0383` | `draft` | PLAN-0021 | [迟到更正、历史已知视图与冲突状态](TASK-0383-memory-bitemporal-queries.md)；待前置产物，未开工；serial。 |
 | `TASK-0384` | `draft` | PLAN-0021 | [经验晋升、软衰减与可重建摘要](TASK-0384-memory-experience-evolution.md)；待前置产物，未开工；serial。 |
 | `TASK-0385` | `draft` | PLAN-0021 | [CLI 显式策略与跨会话记忆接入](TASK-0385-memory-cli-host-integration.md)；待前置产物，未开工；serial。 |

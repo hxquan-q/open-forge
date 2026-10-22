@@ -1,7 +1,7 @@
 ---
 id: TASK-0382
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 5e1dfb5fa
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -23,27 +23,30 @@ read_paths:
   - project/research/RESEARCH-0038-agent-persistent-memory.md
   - project/research/RESEARCH-0039-pi-memory-implementation-benchmarks.md
   - packages/runtime-node/src/memory/retrieval
+  - packages/runtime-node/src/memory/index.ts
   - packages/coding-agent/src/memory/context
   - packages/coding-agent/src/memory/retrieval
   - packages/runtime-node/test/memory/hybrid-retrieval.test.ts
   - packages/coding-agent/test/memory/context-budget.test.ts
 write_paths:
   - packages/runtime-node/src/memory/retrieval
+  - packages/runtime-node/src/memory/index.ts
   - packages/coding-agent/src/memory/context
   - packages/coding-agent/src/memory/retrieval
   - packages/runtime-node/test/memory/hybrid-retrieval.test.ts
   - packages/coding-agent/test/memory/context-budget.test.ts
   - project/tasks/TASK-0382-memory-hybrid-retrieval-context.md
-  - .github/release-notes/fragments/v0.1.3/task-0382-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/runtime-node/src/memory/retrieval
+  - packages/runtime-node/src/memory/index.ts
   - packages/coding-agent/src/memory/context
   - packages/coding-agent/src/memory/retrieval
   - packages/runtime-node/test/memory/hybrid-retrieval.test.ts
   - packages/coding-agent/test/memory/context-budget.test.ts
 depends_on: [TASK-0381, TASK-0375]
 conflicts_with: [TASK-0372, TASK-0375, TASK-0383]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -134,8 +137,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补 runtime-node memory/index.ts 出口（接线必要），fragments 改 v0.1.3.md。
+- 实际修改：①`retrieval/hybrid-fusion.ts`（RRF 按排名倒数融合（k=60，不混合原始分数）、去同源、字符预算截断、降级计划（无模型/超时/索引旧 epoch））；②`retrieval/hybrid-retriever.ts`（HybridMemoryRetriever：词法+语义双通道，语义回调注入、软超时退词法并标注）；③`coding-agent memory/context/injection-budget.ts`（注入预算：pin 占预算、user/project 各保底 2 条防全局偏好挤掉项目证据、上下文余量收缩）；④两处出口。
+- 实际运行（2026-10-23，win32-x64）：runtime-node 93 文件 609 例全绿（含 hybrid 9 例：共识排前、预算截断、去同源、字符截断、降级计划、真实词法+语义替身融合/单路/超时/短词标注）；coding-agent context-budget 7/7（pin/scope 保底/双上限/余量收缩）；完整 `bun run check` 全绿。
+- 未运行：真实 embedding 语义通道（模型未授权，语义回调在 0381 实测后接入）；连续任务净收益对照（0388 评测工具就位后跑）。
+- 承载提交即集成绑定；人工验收不适用（内部检索层）。
+- 剩余风险：RRF k=60 与各 20 候选/8 条/1536 字符为待评测初值，非已测最优；语义回调接入真实向量存储时补端到端。
