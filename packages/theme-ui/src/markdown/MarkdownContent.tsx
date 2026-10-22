@@ -152,27 +152,25 @@ const MarkdownDocument = memo(function MarkdownDocument({
 		() => ({ ...components, ...definition.components, ...definition.elements }),
 		[components, definition],
 	);
-	// 成本只在正文变化的那次渲染里测量（memo 拦下未变化的重渲染）。真正的解析发生在
-	// React 渲染 Markdown 子树期间（创建 element 只是把组件函数排队），因此以组件函数
-	// 开始到布局效果的时间差为准：包含 processor 构建、解析、hast→元素转换与该子树的
-	// 协调；布局效果在整棵树渲染完成后同步触发，提交后上报避免渲染阶段副作用。
-	const renderPassStartRef = useRef(0);
-	renderPassStartRef.current = performance.now();
+	// react-markdown 的同步 Markdown 是无 hook 的纯函数（v10），直接调用而非作为子组件
+	// 排队：解析成本（processor 构建、解析、hast→元素转换）可在渲染期精确测量，自适应
+	// 快照节奏不会把同帧其他组件的渲染耗时误计入尾块解析（忙碌页面过度节流）。交错
+	// A/B 基准对照确认与子组件渲染等价（见 ADR/会话记录）。测量在提交后上报。
+	const parseStartRef = useRef(0);
+	parseStartRef.current = performance.now();
+	const markdown = ReactMarkdown({
+		remarkPlugins: activeRemarkPlugins,
+		rehypePlugins: rehypePlugins,
+		components: resolvedComponents,
+		urlTransform: chatUrlTransform,
+		children: markdownSource,
+	});
+	const parseDurationRef = useRef(0);
+	parseDurationRef.current = performance.now() - parseStartRef.current;
 	useLayoutEffect(() => {
-		onRenderDuration?.(performance.now() - renderPassStartRef.current);
+		onRenderDuration?.(parseDurationRef.current);
 	}, [onRenderDuration, markdownSource]);
-	return (
-		<MarkdownCodeLiveContext.Provider value={live}>
-			<ReactMarkdown
-				remarkPlugins={activeRemarkPlugins}
-				rehypePlugins={rehypePlugins}
-				components={resolvedComponents}
-				urlTransform={chatUrlTransform}
-			>
-				{markdownSource}
-			</ReactMarkdown>
-		</MarkdownCodeLiveContext.Provider>
-	);
+	return <MarkdownCodeLiveContext.Provider value={live}>{markdown}</MarkdownCodeLiveContext.Provider>;
 });
 
 /** 已冻结块的整体再包一层 memo：reveal tick 触发的重渲染里，只要块数组引用不变

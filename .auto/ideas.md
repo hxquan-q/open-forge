@@ -30,8 +30,8 @@
   remark-gfm 表格扩展（bare 3.3ms → +gfm 22.5ms，math 零影响）；上游 micromark 内部无法绕过。
   Worker 方案需要主线程把 hast→React 元素——`hast-util-to-jsx-runtime` 不是 theme-ui 直接依赖
   （新增依赖需授权），元素跨 worker 结构化克隆不可行（组件函数/Symbol）；绕过 react-markdown
-  又受 Run#5 未解释的 profiling 反直觉阻塞。解锁条件：引入 hast-util-to-jsx-runtime 依赖授权
-  + 解释 Run#5。
+  的直接调用已由交错 A/B 证明与子组件渲染等价（Run#5 结论系负载伪影，已翻案）；剩余封锁只有
+  hast-util-to-jsx-runtime 依赖授权一项。
 - **表格行级增量/元素子树缓存**：table 是单一 mdast 构造，源级拆分=两个 <table>（渲染改变）；
   hast 子树缓存需替换 react-markdown post()——而 Run#5 表明绕过组件结构有意外的性能反直觉，
   先搞清 React 19 profiling 归因再动。
