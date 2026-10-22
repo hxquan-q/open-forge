@@ -11,6 +11,7 @@ import enBatchTasks from "./locales/en/batch-tasks.json";
 import enChat from "./locales/en/chat.json";
 import enCommon from "./locales/en/common.json";
 import enMain from "./locales/en/main.json";
+import enMemory from "./locales/en/memory.json";
 import enMessage from "./locales/en/message.json";
 import enPet from "./locales/en/pet.json";
 import enProject from "./locales/en/project.json";
@@ -24,6 +25,7 @@ import zhBatchTasks from "./locales/zh/batch-tasks.json";
 import zhChat from "./locales/zh/chat.json";
 import zhCommon from "./locales/zh/common.json";
 import zhMain from "./locales/zh/main.json";
+import zhMemory from "./locales/zh/memory.json";
 import zhMessage from "./locales/zh/message.json";
 import zhPet from "./locales/zh/pet.json";
 import zhProject from "./locales/zh/project.json";
@@ -46,6 +48,7 @@ export const resources = {
 		automation: zhAutomation,
 		"agent-teams": zhAgentTeams,
 		weknora: zhWeknora,
+		memory: zhMemory,
 	},
 	en: {
 		common: enCommon,
@@ -61,6 +64,7 @@ export const resources = {
 		automation: enAutomation,
 		"agent-teams": enAgentTeams,
 		weknora: enWeknora,
+		memory: enMemory,
 	},
 } as const;
 

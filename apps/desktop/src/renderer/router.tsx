@@ -50,6 +50,9 @@ const PluginWorkspaceViewRoute = lazy(loadPluginWorkspaceViewRoute);
 const ThemePageRoute = lazy(async () => ({
 	default: (await import("./shared/theme/pages/ThemePageRoute")).ThemePageRoute,
 }));
+const MemoryPage = lazy(async () => ({
+	default: (await import("./domains/memory/MemoryPage")).MemoryPage,
+}));
 
 const rootRoute = createRootRoute({
 	component: RootLayout,
@@ -213,6 +216,13 @@ const weknoraRoute = createRoute({
 	pendingComponent: NoPendingComponent,
 });
 
+const memoryRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/memory",
+	component: MemoryPage,
+	pendingComponent: NoPendingComponent,
+});
+
 const settingsTabRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/settings/$tab",
@@ -294,6 +304,7 @@ const routeTree = rootRoute.addChildren([
 	knowledgeRoute,
 	knowledgeListRoute,
 	weknoraRoute,
+	memoryRoute,
 	abilitiesRoute,
 	abilityDetailRedirectRoute,
 	skillsRedirectRoute,

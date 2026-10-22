@@ -299,7 +299,7 @@ flowchart TD
 | TASK-0374 | A | 1 | integrated | 8a177fc00 | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 1633 例 + 完整 check 绿） |
 | TASK-0375 | A | 1 | integrated | 32d1fbbac | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 20 例 + 完整 check 绿） |
 | TASK-0376 | A | 1 | integrated | a13c1759a | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 7 例 + 完整 check 绿） |
-| TASK-0377 | A | — | 未派发 | — | — | — | — | — | pending |
+| TASK-0377 | A | 1 | integrated | 8f7132a37 | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 6 例 + 完整 check 绿；实机验收待用户） |
 | TASK-0378 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0379 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0380 | A | — | 未派发（0379 集成后） | — | — | — | — | — | pending |
