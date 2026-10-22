@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0381-memory-local-embedding
-worktree: unassigned（仅规划，未创建）
-base_commit: 1ba7d8bde
+worktree: ../open-forge-wt/task-0381-memory-local-embedding
+base_commit: e66f1f259a29550b9e2566e0c890fc5aff4aafe4
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
