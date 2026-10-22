@@ -269,6 +269,13 @@
 - 至此流式渲染路径每个模块（stable-blocks/scanner/streaming/reveal/
   MarkdownContent/tail-table/tail-fence/use-render-snapshot）均已审计有界
 
+### Run #29（keep）：模块级可变状态 containment 审计（通过）
+
+- 本会话全部新增机制（scanner/rowCache/prependCache/promotedRef/fast paths）
+  零模块级可变状态——全部实例级 refs，无跨消息泄漏向量
+- 仅有的模块状态为原有设计且有界：math-client（公式缓存+worker 池）、
+  WebsiteIcon（失败缓存 128 站点/5 分钟，文档化）
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
