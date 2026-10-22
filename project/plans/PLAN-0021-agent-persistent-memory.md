@@ -290,7 +290,7 @@ flowchart TD
 | Task | 窗口 | 派工代次 | 状态 | base commit | branch | Worktree 绝对路径 | 交接文件路径 | 候选 commit | 集成结果 |
 |---|---|---|---|---|---|---|---|---|---|
 | TASK-0367 | A | 1 | integrated | 9bb2d8a77 开工基线（取证见 VERIFY-0020） | main | 主工作区（coordination-only） | — | 承载提交即绑定（VERIFY-0020 + Task done/integrated） | integrated |
-| TASK-0368 | B | 1 | assigned | 8c07b195b（定稿：分支 HEAD = 该提交，含索引修正与冲突登记；B 开工即核对） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
+| TASK-0368 | B | 1 | integrated | 8c07b195b（分支实际父，含 802233321；交接报告基线写 9bb2d8a77→视为 802233321，落后一个冲突登记提交，已核实无实质偏差） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已集成，待推送后清理；物理 Worktree 本批保留） | project/verification/HANDOFF-TASK-0368-window-b.md | 5637b2e95 + 73cd79f56 | integrated（--no-ff 合入本地 main；复验全绿） |
 | TASK-0369 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0371 | A | — | 未派发（先于 0370） | — | — | — | — | — | pending |
 | TASK-0370 | A | — | 未派发 | — | — | — | — | — | pending |
@@ -311,6 +311,7 @@ flowchart TD
 
 - 2026-10-22 事故与修复：9bb2d8a77 无 pathspec 提交曾把并发会话暂存的六行他人未提交索引改动（PLAN-0022/REQ-0028/RESEARCH-0040/0037/TASK-0365/0366）卷入提交；802233321 已从已提交索引移除六行并原样归还工作区未提交状态，未动他人未跟踪记录文件。教训：共享索引无锁，本批所有提交一律带 pathspec。
 - 2026-10-22：TASK-0368 登记 conflicts_with TASK-0197（其合同声明 project/tasks 整目录写域且仍为 in_progress/parallel，写域检查在 0368 声明 Worktree 后判负）；仅调度登记，0197 实际已无活动 Worktree。B 的 Worktree 分支已快进到 802233321 之后的最新 main。
+- 2026-10-22：TASK-0368 审查与集成（Coordinator）：合同测试 15/15、`--help`、全矩阵 probe（node 26.3.1/bun 1.4.2/electron 41.10.7 × 12 检查，退出码 0）均独立复现；diff 严格在写域内。集成验证中 `scripts/agents/runner.test.mjs` 与 `scripts/quality/desktop-release-workflow.test.mjs` 各 1 例红，已在批前基线 7bf921977（独立 Worktree 复跑）确认同样红：desktop-release-workflow 为 Windows 临时目录 rmSync EPERM（环境问题），runner 为已登记时序 flake（单跑绿）；均与本批无因果，不阻塞集成。另：应用 origin/dev 已合入的 7326aa159 同内容声明头修复（d25bc1380），消除 main 基线 check:guards 红，保障后续完整 check 可判读。
 
 - 2026-10-22：TASK-0368 原合同 write_paths 中的 `.github/release-notes/fragments/v0.1.3/task-0368-memory.md` 与仓库发布说明事实不符——`v0.1.3.md` 为手写正文（无汇编标记），与碎片共存会被 release-notes 门禁判负。派工前已将该路径从合同移除，改为：B 不写发布说明，Coordinator 在集成提交按交付规则更新 `v0.1.3.md`。
 - 2026-10-22：`bun run worktree:check --all` 在本批之前即因 TASK-0344–0347 的日期格式与若干历史 worktree 声明漂移而红（先存事实，非本批造成）。本批派工改用 `worktree:check --task <ID>` 定向门禁 + 逐 Task 核对，不动他人记录。
