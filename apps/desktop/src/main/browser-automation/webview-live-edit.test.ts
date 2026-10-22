@@ -98,12 +98,16 @@ describe("applyInAppBrowserLiveEdit", () => {
 });
 
 describe("guest live-edit commands", () => {
+	// b5e601a61 起点中元素先打开批注卡，点选在批注提交时才完成（finishPick resolve）。
 	const pickButton = async (): Promise<void> => {
 		document.body.innerHTML = `<button id="go">Go</button>`;
 		const pick = runInAppBrowserGuestCommand("start") as Promise<unknown>;
 		document
 			.getElementById("go")!
 			.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 4, clientY: 4 }));
+		const box = document.querySelector("[data-vetta-annotation]");
+		if (!(box instanceof HTMLFormElement)) throw new Error("missing annotation");
+		box.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 		await pick;
 	};
 
@@ -159,6 +163,9 @@ describe("guest live-edit commands", () => {
 		document
 			.getElementById("next")!
 			.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 4, clientY: 4 }));
+		const box = document.querySelector("[data-vetta-annotation]");
+		if (!(box instanceof HTMLFormElement)) throw new Error("missing annotation");
+		box.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 		await pick;
 		const after = runInAppBrowserGuestCommand("edit-state") as { hasElement: boolean; edits: { target?: string }[] };
 		expect(after.hasElement).toBe(true);
