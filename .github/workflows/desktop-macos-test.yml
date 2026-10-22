@@ -1,0 +1,163 @@
+# Copyright The Open Forge contributors.
+name: desktop-macos-test
+
+# 只产出一个「能装上、能跑」的 macOS 测试包：
+#   - 不签名、不公证（未签名 DMG 自带「修复已损坏.app」helper，见 docs/adr/0003-dmg-repair-helper.md）
+#   - 不发布：不写 GitHub Release、不传 R2、不合并 latest-mac.yml
+#   - 只跑 macOS，不带 Win/Linux leg、不跑 packaged E2E，用来把等待时间压到一个 runner
+# 正式发版仍然走 desktop-release.yml（tag 或 stable/test dispatch），两者互不影响。
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "目标架构：Apple Silicon 选 arm64，Intel Mac 选 x64。"
+        type: choice
+        options: [arm64, x64, both]
+        default: arm64
+      brand_profile:
+        description: "品牌档案：distribution = Allstr ai / 小爱ai；self = Open Forge（应用名与图标随之变化）。"
+        type: choice
+        options: [distribution, self]
+        default: distribution
+      notes:
+        description: "写入本次运行摘要，方便追溯测试包来源。"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# 同一分支的重复演练直接顶掉旧的，测试包没有保留价值。
+concurrency:
+  group: desktop-macos-test-${{ github.ref_name }}-${{ github.event.inputs.arch }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    name: resolve arch matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.arch.outputs.matrix }}
+
+    steps:
+      - name: Resolve runner matrix
+        id: arch
+        shell: bash
+        env:
+          INPUT_ARCH: ${{ github.event.inputs.arch }}
+        run: |
+          # 每个架构都用匹配的托管 runner：electron-builder 的 mac 目标不能交叉编译，
+          # 内置 node/python 运行时也按宿主架构落盘。
+          ARM='{"arch":"arm64","runner":"macos-15"}'
+          X64='{"arch":"x64","runner":"macos-15-intel"}'
+          case "${INPUT_ARCH:-arm64}" in
+            arm64) MATRIX="[${ARM}]" ;;
+            x64) MATRIX="[${X64}]" ;;
+            both) MATRIX="[${ARM},${X64}]" ;;
+            *) echo "Unsupported arch input: ${INPUT_ARCH}" >&2; exit 1 ;;
+          esac
+          echo "matrix=${MATRIX}" >> "${GITHUB_OUTPUT}"
+
+  build:
+    name: package macos-${{ matrix.arch }}
+    needs: resolve
+    runs-on: ${{ matrix.runner }}
+    # 未签名构建省掉签名与公证的 10~30 分钟；冷缓存下仍要下 Electron、运行时与模型。
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.resolve.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # im-gateway sidecar 由 prepare-pack 交叉编译进包内，缺 Go 会直接失败。
+      - name: Set up Go for IM gateway
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/im-gateway/go.mod
+          cache-dependency-path: apps/im-gateway/go.sum
+
+      - name: Restore packaging tool downloads
+        id: download-cache
+        uses: ./.github/actions/desktop-download-cache
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-bun-dependencies
+
+      - name: Prepare cached release resources
+        uses: ./.github/actions/prepare-desktop-resources
+
+      # release/ 不在版本控制里，actions/checkout 清不掉；残留的旧产物会混进本次上传。
+      - name: Clean previous release artifacts
+        shell: bash
+        run: rm -rf apps/desktop/release
+
+      - name: Resolve package version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./apps/desktop/package.json').version")"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "VETTA test package version: ${VERSION}"
+
+      # dist:opensource 自动关闭 cloud、更新源指向 GitHub Releases、不要求任何 .env；
+      # 只是这里不发布，所以更新源对测试包没有实际副作用。
+      # 未设置签名凭据 → prepare-pack 走 identity: null，产出未签名包。
+      - name: Build unsigned macOS installer
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          VETTA_BRAND_PROFILE: ${{ github.event.inputs.brand_profile }}
+          VETTA_VENDOR_PLATFORM: darwin-${{ matrix.arch }}
+          VETTA_CLI_TARGET_PLATFORMS: darwin-${{ matrix.arch }}
+        # 只要 DMG。需要验证自动更新时把 --target dmg 换成默认（dmg + zip + blockmap）。
+        run: bun run dist:opensource -- --platform mac --arch ${{ matrix.arch }} --target dmg
+
+      - name: Save packaging tool downloads
+        if: ${{ !cancelled() && steps.download-cache.outputs.tools-key != '' && steps.download-cache.outputs.tools-cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ steps.download-cache.outputs.tools-path }}
+          key: ${{ steps.download-cache.outputs.tools-key }}
+
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-${{ steps.version.outputs.version }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/latest-mac.yml
+
+      - name: Write run summary
+        shell: bash
+        env:
+          INPUT_NOTES: ${{ github.event.inputs.notes }}
+          INPUT_BRAND: ${{ github.event.inputs.brand_profile }}
+          OUTPUT_VERSION: ${{ steps.version.outputs.version }}
+          OUTPUT_ARCH: ${{ matrix.arch }}
+        run: |
+          {
+            echo "## macOS 测试包（未签名）"
+            echo
+            echo "| 项 | 值 |"
+            echo "| --- | --- |"
+            echo "| 版本 | ${OUTPUT_VERSION} |"
+            echo "| 架构 | ${OUTPUT_ARCH} |"
+            echo "| 品牌档案 | ${INPUT_BRAND} |"
+            echo "| 产物 | Artifacts → \`macos-${OUTPUT_ARCH}-${OUTPUT_VERSION}\` |"
+            echo "| 备注 | ${INPUT_NOTES:-（未填写）} |"
+            echo
+            echo "首次安装：拖进「应用程序」后**右键 → 打开**（或把 DMG 里的「修复已损坏.app」拖到桌面运行一次）。"
+            echo "该包不可用于自动更新验证，也不应对外分发。"
+          } >> "${GITHUB_STEP_SUMMARY}"
