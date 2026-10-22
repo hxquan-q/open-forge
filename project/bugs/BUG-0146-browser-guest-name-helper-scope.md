@@ -9,7 +9,7 @@ plan: PLAN-0006
 source: 用户要求验证 browser tab 效果（2026-10-22）；Fresh 隔离实例真实 UI 验证发现，与 BUG-0136「真实 Desktop 未人工验收」互为印证
 related_requirement: []
 related_plan: [PLAN-0006]
-related_tasks: [TASK-0360, TASK-0363]
+related_tasks: [TASK-0360, TASK-0365]
 related_bugs: [BUG-0136, BUG-0145]
 related_issues: []
 created: 2026-10-22
@@ -21,7 +21,7 @@ updated: 2026-10-22
 
 ## 用户流程
 
-- Given：内置 Browser 已打开页面，点选模式已打开（TASK-0363 修复后批注能正常出现）。
+- Given：内置 Browser 已打开页面，点选模式已打开（TASK-0365 修复后批注能正常出现）。
 - When：用户在批注里写下要求并点「发送给 Agent」；或按住 Alt 点选把元素放进对话输入框；或再次点工具栏按钮退出点选。
 - Then：发送应把元素与批注送进当前会话，Alt 应把单个元素放进输入框，退出应干净收尾。
 
@@ -69,7 +69,7 @@ updated: 2026-10-22
 
 ## 修复与验证
 
-- 修复：TASK-0364。`assembleGuestScript` 把垫片改为外层 IIFE 形参注入，实参与内层 `expression` 都词法可见，无辅助函数时保持既有形状；外层补 `return` 保住脚本完成值（BUG-0052）。
+- 修复：TASK-0366。`assembleGuestScript` 把垫片改为外层 IIFE 形参注入，实参与内层 `expression` 都词法可见，无辅助函数时保持既有形状；外层补 `return` 保住脚本完成值（BUG-0052）。
 - 测试：`guest-script-shim.test.ts` 新增 2 例（修复前红：实参位置的依赖函数调用抛 `ReferenceError: o`；修复后绿），连同 picker guest 13、session controller 10、picker hook 6、agent guest、picker target 全绿。
 - 真实 Desktop（Fresh 实例复验，2026-10-22）：批注发送后 webview console 零 `ReferenceError`，批注文字、元素截图与「按钮 A」附件进入输入框（无活动会话按 BUG-0136 合同留在草稿）；Alt 交付「按钮 C」chip；停止/重开点选罩层正常回归，picker 会话可循环，卡死消失。
-- 未运行及原因：完整 `bun run check`（工作区尚有 TASK-0363 未提交文件）；真实模型回合未验证（无 Provider）。
+- 未运行及原因：完整 `bun run check`（工作区尚有 TASK-0365 未提交文件）；真实模型回合未验证（无 Provider）。

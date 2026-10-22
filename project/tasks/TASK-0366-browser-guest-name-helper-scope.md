@@ -1,5 +1,5 @@
 ---
-id: TASK-0364
+id: TASK-0366
 type: task
 status: verifying
 priority: P1
@@ -9,7 +9,7 @@ plan: PLAN-0006
 source: BUG-0146；用户要求验证 browser tab 效果时在真实 Desktop 实证发现，并授权当场修复
 related_requirement: []
 related_plan: [PLAN-0006]
-related_tasks: [TASK-0360, TASK-0363]
+related_tasks: [TASK-0360, TASK-0365]
 related_bugs: [BUG-0146]
 related_issues: []
 execution: serial
@@ -27,7 +27,7 @@ write_paths:
   - apps/desktop/src/main/browser-automation/webview-live-edit.test.ts
   - project/bugs/BUG-0146-browser-guest-name-helper-scope.md
   - project/bugs/README.md
-  - project/tasks/TASK-0364-browser-guest-name-helper-scope.md
+  - project/tasks/TASK-0366-browser-guest-name-helper-scope.md
   - project/tasks/README.md
 depends_on: []
 conflicts_with: []
@@ -48,7 +48,7 @@ updated: 2026-10-22
 ### 并发评估
 
 - 结论：串行，主工作区，不拆 worktree。
-- 冲突文件：无（`webview-picker-guest.ts` 归 TASK-0363，本任务不写它）。
+- 冲突文件：无（`webview-picker-guest.ts` 归 TASK-0365，本任务不写它）。
 
 ### 做
 
@@ -58,7 +58,7 @@ updated: 2026-10-22
 
 ### 不做
 
-- 不改 `webview-picker-guest.ts`（TASK-0363 独占中）。
+- 不改 `webview-picker-guest.ts`（TASK-0365 独占中）。
 - 不给 waiter 加超时解卡（另行评估）；修复后触发条件已消失。
 
 ## Given / When / Then
@@ -95,6 +95,6 @@ updated: 2026-10-22
 - 实际修改：`guest-script-shim.ts` 外层 IIFE 形参注入垫片；`guest-script-shim.test.ts` 新增 2 例（实参可见性、多别名）；`webview-live-edit.test.ts` 同步批注流。
 - 实际运行：shim 8 例（修复前新增 2 例红：`ReferenceError: o is not defined`，修复后绿）；picker guest 13、session controller 10、picker hook 6、agent guest 与 picker target 全绿；live-edit 8 例（修复前 3 例存量超时红）。
 - 真实 Desktop（Fresh 实例 + 本地测试页）：批注发送后 webview console 零 `ReferenceError`；批注文字、元素截图（图 1）与「按钮 A」附件进入输入框（无活动会话，按 BUG-0136 合同留在草稿不丢）；Alt 点选交付「按钮 C」chip；停止/重开点选罩层正常回归，picker 会话可循环（卡死消失）；页面按钮全程未被触发。
-- 未运行及原因：完整 `bun run check`（工作区尚有 TASK-0363 未提交文件）。
+- 未运行及原因：完整 `bun run check`（工作区尚有 TASK-0365 未提交文件）。
 - Worktree：未拆。
 - 剩余风险：waiter 仍无超时保护，若未来再出现「脚本求值通过但 promise 永不 settle」的缺陷仍会卡死（触发条件已消除）；真实模型回合的端到端发送未验证（无 Provider，客观阻塞）。
