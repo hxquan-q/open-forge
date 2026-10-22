@@ -290,7 +290,7 @@ flowchart TD
 | Task | 窗口 | 派工代次 | 状态 | base commit | branch | Worktree 绝对路径 | 交接文件路径 | 候选 commit | 集成结果 |
 |---|---|---|---|---|---|---|---|---|---|
 | TASK-0367 | A | 1 | assigned | 9bb2d8a77（开工基线，重校子 2f9d42762） | main | 主工作区（coordination-only） | — | — | pending |
-| TASK-0368 | B | 1 | assigned | 802233321（已核实：分支 HEAD = 该提交，含索引修正） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
+| TASK-0368 | B | 1 | assigned | 8c07b195b（定稿：分支 HEAD = 该提交，含索引修正与冲突登记；B 开工即核对） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
 | TASK-0369 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0371 | A | — | 未派发（先于 0370） | — | — | — | — | — | pending |
 | TASK-0370 | A | — | 未派发 | — | — | — | — | — | pending |
