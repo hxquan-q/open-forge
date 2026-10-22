@@ -76,7 +76,24 @@
 
 ## What's Been Tried
 
-（随实验更新）
+### Run #2（keep, 5e99af75）：扩展稳定块冻结
+
+- `splitStableMarkdownBlocks` 新增顶层完整块冻结（守卫：col-0、无裸方括号、无 `<` 行、
+  无围栏/字面量内容、列表/引用/表格续行不可续、后继块已开始、候选必须是未提交开头）
+- prose 625.8→44.1ms（-93%）；总 1252→526
+
+### Run #3（keep）：尾块快照自适应节奏
+
+- MarkdownDocument 用「组件函数开始→useLayoutEffect」测每次正文变化渲染的总成本，
+  MarkdownContent 按占空比 target=max(base, cost×10) 调 useRenderSnapshot 间隔
+  （快升慢降，上限 800ms）。⚠️不能用 JSX 创建计时（element 创建≠组件执行）
+- 背靠背同负载：table 666→217（-67%），code 零回归；总 526→374（vs 基线 -70%）
+
+### 相位剖析结论（勿重走弯路）
+
+- React reconcile 几乎免费（~38ms/流）；processor setup 可忽略（0.2ms）；
+  parse（重复 tokenize）才是瓶颈——元素缓存方向上限只有 ~40ms，已降级
+- 第一版自适应测量完全失效（JSX 计时=0），浪费一轮；布局效果时间差才是对的
 
 ### Baseline（2026-10-22，Chrome 155.0.8059.85，3 reps 中位数）
 
