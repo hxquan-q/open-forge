@@ -289,8 +289,8 @@ flowchart TD
 
 | Task | 窗口 | 派工代次 | 状态 | base commit | branch | Worktree 绝对路径 | 交接文件路径 | 候选 commit | 集成结果 |
 |---|---|---|---|---|---|---|---|---|---|
-| TASK-0367 | A | 1 | preparing | 2f9d42762 | main | 主工作区（coordination-only） | — | — | pending |
-| TASK-0368 | B | 1 | preparing | 2f9d42762（创建后核实） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（创建后核实） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
+| TASK-0367 | A | 1 | assigned | 9bb2d8a77（开工基线，重校子 2f9d42762） | main | 主工作区（coordination-only） | — | — | pending |
+| TASK-0368 | B | 1 | assigned | 9bb2d8a77661dcb4a631a9f40a09fafc5df1ff4c（已核实：分支 HEAD = 该提交） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
 | TASK-0369 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0371 | A | — | 未派发（先于 0370） | — | — | — | — | — | pending |
 | TASK-0370 | A | — | 未派发 | — | — | — | — | — | pending |
@@ -312,6 +312,7 @@ flowchart TD
 - 2026-10-22：TASK-0368 原合同 write_paths 中的 `.github/release-notes/fragments/v0.1.3/task-0368-memory.md` 与仓库发布说明事实不符——`v0.1.3.md` 为手写正文（无汇编标记），与碎片共存会被 release-notes 门禁判负。派工前已将该路径从合同移除，改为：B 不写发布说明，Coordinator 在集成提交按交付规则更新 `v0.1.3.md`。
 - 2026-10-22：`bun run worktree:check --all` 在本批之前即因 TASK-0344–0347 的日期格式与若干历史 worktree 声明漂移而红（先存事实，非本批造成）。本批派工改用 `worktree:check --task <ID>` 定向门禁 + 逐 Task 核对，不动他人记录。
 - 2026-10-22：编号占用事实——`origin/dev`（5833041dc）已合并占用 TASK-0367 编号的 PR #21（desktop-macos-test-workflow）与 TASK-0368 分支名的 PR #22（notice-activity-panel），本地 `main`（2f9d42762）落后 `origin/dev` 且主工作区含他人未提交内容。本批仅本地集成、不推送；未来同步 `origin/dev` 时需先处理台账撞号（两个 TASK-0367 文件同库会被 project-indexes 判 duplicate）。本批不合并 `origin/dev`。
+- 2026-10-22：TASK-0368 Worktree 已由 `worktree:create` 从 main@9bb2d8a77 创建（branch/task 同名，依赖安装完成，`worktree:check --task TASK-0368` 通过）；任务状态转 in_progress，B 可开工。TASK-0367 同步转 in_progress，由 A 在主工作区执行。
 - 2026-10-22：A 侧串行任务按 0369 → 0371 → 0370 → 0372 → 0373 → 0374 → 0375 → 0376 → 0377 → 0378 → 0379 → 0380 → 0382 → 0388 的依赖序推进；TASK-0369 准入需 0367 与 0368 工程证据齐备。
 
 ## 验证与回滚

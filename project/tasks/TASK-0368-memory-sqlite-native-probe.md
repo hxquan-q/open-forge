@@ -1,7 +1,7 @@
 ---
 id: TASK-0368
 type: task
-status: ready
+status: in_progress
 priority: P1
 owner: packages/runtime-node
 requirement: REQ-0027
@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0368-memory-sqlite-native-probe
-worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+worktree: ../open-forge-wt/task-0368-memory-sqlite-native-probe
+base_commit: 9bb2d8a77661dcb4a631a9f40a09fafc5df1ff4c
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
