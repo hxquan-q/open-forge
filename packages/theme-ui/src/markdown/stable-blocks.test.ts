@@ -8,7 +8,11 @@ describe("splitStableMarkdownBlocks", () => {
 		(rich) => {
 			const prefix = "```ts\nconst x = 1;\n```\n";
 			const text = `${prefix}\n${rich}\nAfter`;
-			expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [prefix], tail: `\n${rich}\nAfter` });
+			// 闭合的字面量区（含区内形似围栏的行——不会误分裂）作为整区提交。
+			expect(splitStableMarkdownBlocks(text)).toEqual({
+				committed: [prefix, `\n${rich}\n`],
+				tail: "After",
+			});
 		},
 	);
 	it("空文本没有已提交块", () => {

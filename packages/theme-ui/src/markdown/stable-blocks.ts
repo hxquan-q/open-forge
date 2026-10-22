@@ -115,6 +115,10 @@ interface ScanState {
 	committedBracket: boolean;
 	/** 本轮扫描已因定义行到达重置过（重扫期间禁用括号块的乐观冻结）。 */
 	definitionReset: boolean;
+	/** 当前字面量区（$$/原始 HTML）起始行偏移；-1 = 不在字面量区。 */
+	literalStart: number;
+	/** 字面量区是否可提交（开行 0 缩进，与围栏提交口径一致）。 */
+	literalCommittable: boolean;
 }
 
 function initialScanState(): ScanState {
@@ -136,6 +140,8 @@ function initialScanState(): ScanState {
 		sawDefinition: false,
 		committedBracket: false,
 		definitionReset: false,
+		literalStart: -1,
+		literalCommittable: false,
 	};
 }
 
@@ -158,6 +164,8 @@ function copyScanState(from: ScanState, to: ScanState): void {
 	to.sawDefinition = from.sawDefinition;
 	to.committedBracket = from.committedBracket;
 	to.definitionReset = from.definitionReset;
+	to.literalStart = from.literalStart;
+	to.literalCommittable = from.literalCommittable;
 }
 
 /** 已提交块数组的写时复制容器：无新增提交时保持数组引用稳定，
@@ -298,6 +306,17 @@ function runScan(
 		) {
 			break;
 		}
+		// 可提交字面量区的闭合行同款推迟：是否随文提交取决于其后是否还有正文
+		// （与围栏一致的文本长度依赖决策，增量扫描器可安全恢复）。
+		if (
+			state.literalEnd &&
+			state.literalCommittable &&
+			lineComplete &&
+			lineEnd === text.length &&
+			state.literalEnd.test(line)
+		) {
+			break;
+		}
 		const outsideLiteral = !state.inFence && !state.literalEnd;
 		const math = outsideLiteral ? /^ {0,3}(\${2,})\s*$/.exec(line) : null;
 		const html =
@@ -317,13 +336,31 @@ function runScan(
 		} else if (state.literalEnd) {
 			// Do not freeze fence-looking text inside raw documents or display formulas.
 			// Track this while scanning so previously committed prefixes remain stable.
-			if (state.literalEnd.test(line)) state.literalEnd = null;
+			if (state.literalEnd.test(line)) {
+				// 闭合的字面量区（$$ 公式块 / 完整 HTML）是自包含构造：与围栏一致，
+				// 0 缩进开行且后有正文时随文提交，整区冻结。
+				if (state.literalCommittable && lineEnd < text.length) {
+					commitThrough(lineEnd);
+				} else {
+					state.literalEnd = null;
+				}
+				state.literalStart = -1;
+				state.literalCommittable = false;
+			}
 			state.candidateClean = false;
 		} else if (math || html || doctype) {
+			state.literalStart = lineStart;
+			state.literalCommittable = !startsIndented(line);
 			state.literalEnd = math
 				? new RegExp(`^ {0,3}\\${"$"}{${math[1].length},}\\s*$`)
 				: new RegExp(`</${html?.[1] ?? "html"}\\s*>`, "i");
-			if (!math && state.literalEnd.test(line)) state.literalEnd = null;
+			if (!math && state.literalEnd.test(line)) {
+				// 单行 HTML 区：当行闭合。同样按可提交口径随文提交。
+				if (state.literalCommittable && lineEnd < text.length) commitThrough(lineEnd);
+				state.literalStart = -1;
+				state.literalCommittable = false;
+				state.literalEnd = null;
+			}
 			state.candidateClean = false;
 		} else if (opening) {
 			state.inFence = true;
