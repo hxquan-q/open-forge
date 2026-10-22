@@ -261,6 +261,14 @@
   全量重挂）/ code 9.9ms（围栏闭合冻结解析）/ prose 1.4ms（无尖峰）
 - 结论：单次 28ms 帧在流结束时刻，换取架构手术不值——ideas.md 备档数字与理由
 
+### Run #28（keep）：streaming-reveal.ts 终审（负面结果，审计 100% 覆盖）
+
+- markdown 模块最后一个未通读文件：全部成本按行/短语长度有界
+  （holdBackUnclosedInline O(当前行)、snapToTokenBoundary O(词)、
+  splitStreamingSegments 仅尾块文本、per-tick 数学 O(1)）——无文档级操作
+- 至此流式渲染路径每个模块（stable-blocks/scanner/streaming/reveal/
+  MarkdownContent/tail-table/tail-fence/use-render-snapshot）均已审计有界
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
