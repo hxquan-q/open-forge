@@ -69,6 +69,29 @@ function startsIndented(line: string): boolean {
  * 引用定义或脚注定义追溯解析成链接；后接 `(` 的行内链接/图片自含，不受影响。 */
 const UNRESOLVED_REFERENCE = /\[[^\]\n]*\](?!\()/;
 
+/** 行内某标签的开/闭出现次数（深度感知闭合用）。 */
+function countTagOccurrences(line: string, tag: string, closing: boolean): number {
+	const pattern = closing ? new RegExp(`</${tag}(?:\\s|>)`, "gi") : new RegExp(`<${tag}(?=[\\s>])`, "gi");
+	let count = 0;
+	pattern.lastIndex = 0;
+	while (pattern.exec(line) !== null) count += 1;
+	return count;
+}
+
+/** 该行是否使当前字面量区闭合（math：定界行匹配；html：深度加该行净开标签数后
+ * 归零）。以行前深度调用（不改变状态）；推迟守卫用。 */
+function literalClosesRegion(
+	literalTag: string | null,
+	literalDepth: number,
+	literalEnd: RegExp | null,
+	line: string,
+): boolean {
+	if (literalTag === null) return literalEnd?.test(line) ?? false;
+	return (
+		literalDepth + countTagOccurrences(line, literalTag, false) - countTagOccurrences(line, literalTag, true) <= 0
+	);
+}
+
 /** 链接引用 / 脚注定义行（含 ≤3 空格缩进；脚注为 [^…]: 形式）。 */
 const DEFINITION_LINE = /^ {0,3}\[\^?[^\]\n]+\]:\s*\S/;
 
@@ -119,6 +142,10 @@ interface ScanState {
 	literalStart: number;
 	/** 字面量区是否可提交（开行 0 缩进，与围栏提交口径一致）。 */
 	literalCommittable: boolean;
+	/** html 字面量区的标签名（深度感知闭合用）；math 区为 null。 */
+	literalTag: string | null;
+	/** html 字面量区当前嵌套深度（开标签 - 闭标签）。 */
+	literalDepth: number;
 }
 
 function initialScanState(): ScanState {
@@ -142,6 +169,8 @@ function initialScanState(): ScanState {
 		definitionReset: false,
 		literalStart: -1,
 		literalCommittable: false,
+		literalTag: null,
+		literalDepth: 0,
 	};
 }
 
@@ -166,6 +195,8 @@ function copyScanState(from: ScanState, to: ScanState): void {
 	to.definitionReset = from.definitionReset;
 	to.literalStart = from.literalStart;
 	to.literalCommittable = from.literalCommittable;
+	to.literalTag = from.literalTag;
+	to.literalDepth = from.literalDepth;
 }
 
 /** 已提交块数组的写时复制容器：无新增提交时保持数组引用稳定，
@@ -313,7 +344,7 @@ function runScan(
 			state.literalCommittable &&
 			lineComplete &&
 			lineEnd === text.length &&
-			state.literalEnd.test(line)
+			literalClosesRegion(state.literalTag, state.literalDepth, state.literalEnd, line)
 		) {
 			break;
 		}
@@ -321,7 +352,7 @@ function runScan(
 		const math = outsideLiteral ? /^ {0,3}(\${2,})\s*$/.exec(line) : null;
 		const html =
 			outsideLiteral && !math
-				? /^ {0,3}<(svg|html|script|style|div|section|article|table|body|head)(?:\s|>)/i.exec(line)
+				? /^ {0,3}<(svg|html|script|style|div|details|section|article|table|body|head)(?:\s|>)/i.exec(line)
 				: null;
 		const doctype = outsideLiteral && !math && !html ? /^ {0,3}<!doctype\s+html/i.test(line) : false;
 		const opening = outsideLiteral && !math && !html && !doctype ? isFenceOpeningLine(line) : null;
@@ -336,7 +367,13 @@ function runScan(
 		} else if (state.literalEnd) {
 			// Do not freeze fence-looking text inside raw documents or display formulas.
 			// Track this while scanning so previously committed prefixes remain stable.
-			if (state.literalEnd.test(line)) {
+			if (state.literalTag !== null) {
+				// html 区按嵌套深度推进：闭标签递减、开标签递增，只有最外层闭合
+				// （深度归零）才结束区域，避免在内层闭标签处提前截断。
+				state.literalDepth +=
+					countTagOccurrences(line, state.literalTag, false) - countTagOccurrences(line, state.literalTag, true);
+			}
+			if (state.literalTag !== null ? state.literalDepth <= 0 : (state.literalEnd?.test(line) ?? false)) {
 				// 闭合的字面量区（$$ 公式块 / 完整 HTML）是自包含构造：与围栏一致，
 				// 0 缩进开行且后有正文时随文提交，整区冻结。
 				if (state.literalCommittable && lineEnd < text.length) {
@@ -346,6 +383,8 @@ function runScan(
 				}
 				state.literalStart = -1;
 				state.literalCommittable = false;
+				state.literalTag = null;
+				state.literalDepth = 0;
 			}
 			state.candidateClean = false;
 		} else if (math || html || doctype) {
@@ -354,12 +393,19 @@ function runScan(
 			state.literalEnd = math
 				? new RegExp(`^ {0,3}\\${"$"}{${math[1].length},}\\s*$`)
 				: new RegExp(`</${html?.[1] ?? "html"}\\s*>`, "i");
-			if (!math && state.literalEnd.test(line)) {
-				// 单行 HTML 区：当行闭合。同样按可提交口径随文提交。
+			const literalTagName = math ? null : (html?.[1] ?? "html");
+			state.literalTag = literalTagName;
+			state.literalDepth = literalTagName
+				? countTagOccurrences(line, literalTagName, false) - countTagOccurrences(line, literalTagName, true)
+				: 0;
+			if (!math && state.literalDepth <= 0) {
+				// 单行 HTML 区（同线开闭平衡）：当行闭合。同样按可提交口径随文提交。
 				if (state.literalCommittable && lineEnd < text.length) commitThrough(lineEnd);
 				state.literalStart = -1;
 				state.literalCommittable = false;
 				state.literalEnd = null;
+				state.literalTag = null;
+				state.literalDepth = 0;
 			}
 			state.candidateClean = false;
 		} else if (opening) {

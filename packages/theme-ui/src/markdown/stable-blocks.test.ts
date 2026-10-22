@@ -47,6 +47,21 @@ describe("splitStableMarkdownBlocks", () => {
 		expect(splitStableMarkdownBlocks("- a\n\nplain\n").committed).toEqual(["- a\n"]);
 	});
 
+	it("嵌套 HTML 区域延伸到最外层闭合；details 折叠块同样整区冻结", () => {
+		// 嵌套 div：内层 </div> 不截断区域（提交块不得包含未闭合外层）。
+		const nested = "para one.\n\n<div>\nA\n<div>\nB\n</div>\nC\n</div>\n\nafter\n";
+		expect(splitStableMarkdownBlocks(nested)).toEqual({
+			committed: ["para one.\n\n<div>\nA\n<div>\nB\n</div>\nC\n</div>\n"],
+			tail: "\nafter\n",
+		});
+		// details 折叠块（LLM 常见输出）：整区冻结。
+		const details = "intro.\n\n<details><summary>Title</summary>\n\nbody text.\n\n</details>\n\nafter\n";
+		expect(splitStableMarkdownBlocks(details)).toEqual({
+			committed: ["intro.\n\n<details><summary>Title</summary>\n\nbody text.\n\n</details>\n"],
+			tail: "\nafter\n",
+		});
+	});
+
 	it("裸方括号块乐观冻结；引用定义行到达时同帧重置重拆", () => {
 		// 无定义：括号块与后续块照常冻结（定义未到达时渲染与全量解析一致）。
 		const noDef = "see [ref] here\n\nplain1\n\nplain2\n";

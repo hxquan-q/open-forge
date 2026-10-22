@@ -29,7 +29,7 @@ import { createRoot } from "react-dom/client";
 import { MarkdownContent } from "@vetta-org/theme-ui/markdown";
 
 const line = (i) =>
-	"Problem " + i + ": compute the sum.\\n\\n$$\\nS_" + i + " = \\\\sum_{k=1}^{n} k = \\\\frac{n(n+1)}{2}\\n$$\\n\\nTherefore the closed form holds for all n.\\n\\n";
+	"<details><summary>Item " + i + "</summary>\\n\\nContent for item " + i + " with code and bold text.\\n\\n</details>\\n\\n";
 const bracketProse = Array.from({ length: 350 }, (_, i) => line(i)).join("");
 const env = { theme: "dark", labels: { copy: "c", copied: "d" }, getFileIconClass: () => "", onOpenFile: () => {}, onOpenUrl: () => {} };
 
