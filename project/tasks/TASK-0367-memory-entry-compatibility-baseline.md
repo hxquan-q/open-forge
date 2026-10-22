@@ -1,7 +1,7 @@
 ---
 id: TASK-0367
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -33,7 +33,7 @@ exclusive_paths:
   - project/verification
 depends_on: []
 conflicts_with: [TASK-0388, TASK-0389]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -124,8 +124,8 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改：无生产代码变更；交付 [VERIFY-0020](../verification/VERIFY-0020-memory-entry-compatibility-baseline.md)（三宿主启用矩阵、rollover/压缩耦合点、6 条兼容基线）与本状态更新，承载提交即集成绑定。
+- 实际运行：`bun run test:impact` 定向 3 文件 19 例全绿；`go test ./internal/command/ ./internal/bridge/ ./internal/hostclient/...` 4 包 ok；project-indexes / task-worktrees（382, 0 warning）/ `worktree:check --task TASK-0368` 通过。详见 VERIFY-0020。
+- 未运行：真实 Desktop/IM 实例、真实用户历史/状态目录、完整 `bun run check`（无生产代码变更）、打包 ABI（TASK-0368）、模型质量评测（TASK-0388）。
+- Worktree：不适用（coordination-only，主工作区串行）。
+- 工程验证完成；人工功能验收不适用（内部基线按证据合同验收），状态转 done。剩余风险：源码锚点随后续提交漂移时以 VERIFY-0020 记录的 commit 基线（8c07b195b）为准回溯。
