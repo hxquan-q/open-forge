@@ -29,7 +29,7 @@ import { createRoot } from "react-dom/client";
 import { MarkdownContent } from "@vetta-org/theme-ui/markdown";
 
 const line = (i) =>
-	"<details><summary>Item " + i + "</summary>\\n\\nContent for item " + i + " with code and bold text.\\n\\n</details>\\n\\n";
+	"- item " + i + ": a detailed bullet point describing step " + i + " of the process.\\n"
 const bracketProse = Array.from({ length: 350 }, (_, i) => line(i)).join("");
 const env = { theme: "dark", labels: { copy: "c", copied: "d" }, getFileIconClass: () => "", onOpenFile: () => {}, onOpenUrl: () => {} };
 
@@ -51,7 +51,7 @@ export async function run() {
 	durations.length = 0;
 	let text = bracketProse;
 	for (let i = 0; i < 40; i++) {
-		text += \'tail word \' + i + \'. \';
+		text += '- appended item ' + i + ' with more detail.\\n';
 		render(text, true);
 		await pause(50);
 	}
@@ -93,10 +93,13 @@ export async function run() {
 	await page.route("**/*", (route) => (new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort()));
 	await page.goto(`http://127.0.0.1:${server.address().port}`);
 	const result = await page.evaluate(async () => {
+		(globalThis).__resetProfile = 1;
 		const { run } = await import("/diag.js");
 		return run();
 	});
-	console.log(JSON.stringify({ browser: browser.version(), mode: "bracket-prose-diagnostic", result }, null, 2));
+
+	const prof = await page.evaluate(() => ({ tl: globalThis.__tlProfile, chooser: globalThis.__tlChooser }));
+	console.log(JSON.stringify({ browser: browser.version(), mode: "list-diagnostic", result, prof }, null, 2));
 } finally {
 	await browser?.close();
 	if (server) await new Promise((resolve) => server.close(resolve));
