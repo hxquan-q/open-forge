@@ -49,6 +49,42 @@ describe("guest 注入脚本的打包器垫片", () => {
 		expect(evaluateInjectedGuestScript(script)).toBe(2);
 	});
 
+	it("垫片对 deps 实参里的依赖函数体同样可见（BUG-0146）", () => {
+		// 压缩产物里依赖函数体内的命名内层箭头同样被包成 o(...)，而依赖源码嵌在
+		// IIFE 调用的实参 deps 里。实参表达式按词法处于脚本顶层作用域：垫片若只
+		// 声明在 IIFE 体内，start 求值不炸（函数体未执行），依赖被调用时才抛
+		// `ReferenceError: o is not defined`——点选提交链在真实 Desktop 上必死。
+		const depSource = `function readHint(t) {
+  const read = /* @__PURE__ */ o((v) => String(v), "read");
+  return read(t);
+}`;
+		const script = assembleGuestScript({
+			sources: [depSource],
+			parameters: "command,arg,deps",
+			expression: "deps.readHint(command)",
+			arguments: `41,null,{readHint:${depSource}}`,
+		});
+		expect(evaluateInjectedGuestScript(script)).toBe("41");
+	});
+
+	it("多个依赖同时带辅助调用时垫片覆盖全部别名（BUG-0146）", () => {
+		const pickSource = `function pick(t) {
+  const asEl = /* @__PURE__ */ o((v) => v, "asElement");
+  return asEl(t);
+}`;
+		const revertSource = `function revert(entries) {
+  const kebab = /* @__PURE__ */ q((v) => v, "kebabCase");
+  return kebab(entries.length);
+}`;
+		const script = assembleGuestScript({
+			sources: [pickSource, revertSource],
+			parameters: "command,arg,deps",
+			expression: '[deps.pick(command), deps.revert(arg)].join(":")',
+			arguments: `7,["a","b"],{pick:${pickSource},revert:${revertSource}}`,
+		});
+		expect(evaluateInjectedGuestScript(script)).toBe("7:2");
+	});
+
 	it("源码里没有辅助函数调用时不注入任何垫片", () => {
 		const source = "function bare(t) { const inner = () => t; return inner(); }";
 		expect(collectBundlerNameHelperAliases([source])).toEqual([]);

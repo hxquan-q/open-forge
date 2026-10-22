@@ -205,11 +205,9 @@ export function collectBundlerNameHelperAliases(sources: readonly string[]): str
 	return [...aliases];
 }
 
-/** 无辅助函数可补时返回空串，注入脚本保持与源码逐字一致。 */
-function bundlerNameHelperShim(sources: readonly string[]): string {
-	return collectBundlerNameHelperAliases(sources)
-		.map((alias) => `function ${alias}(target){return target}`)
-		.join("");
+/** 每个别名对应一个等价垫片实现：返回被包裹的函数本身，guest 里的 `.name` 毫无意义。 */
+function helperImplementations(count: number): string {
+	return Array.from({ length: count }, () => "(function(target){return target})").join(",");
 }
 
 export interface GuestScriptAssembly {
@@ -224,13 +222,22 @@ export interface GuestScriptAssembly {
 }
 
 /**
- * 组装注入 guest 的脚本：IIFE 体内补上打包器辅助函数垫片，再求值 `expression` 并把结果返回。
+ * 组装注入 guest 的脚本：补上打包器辅助函数垫片，再求值 `expression` 并把结果返回。
  *
  * `return` 不能省：脚本的完成值就是 `executeJavaScript` 的结果，外层 IIFE 少一个 return
  * 时点选/改稿的返回值永远是 undefined，用户表现为「点了元素但对话框里什么都没有」（BUG-0052）。
- * 垫片是函数声明，提升后对 `expression` 与内联 runtime 都可见。
+ *
+ * 垫片以**外层 IIFE 形参**注入（BUG-0146）：依赖函数源码嵌在调用的实参 `deps` 里，
+ * 实参表达式按词法处于脚本顶层作用域，垫片若只声明在内层 IIFE 体内，`start` 求值不炸
+ * （函数体未执行），依赖被调用时才抛 `ReferenceError: o is not defined`——点选提交链在
+ * 压缩产物里必死。外层形参对内层 `expression` 与实参都词法可见，也不向页面全局泄漏绑定。
+ * 无辅助函数时保持与源码逐字一致的既有形状。
  */
 export function assembleGuestScript(assembly: GuestScriptAssembly): string {
-	const shim = bundlerNameHelperShim(assembly.sources);
-	return `void 0;(function(${assembly.parameters}){${shim}return ${assembly.expression}})(${assembly.arguments})`;
+	const aliases = collectBundlerNameHelperAliases(assembly.sources);
+	if (aliases.length === 0) {
+		return `void 0;(function(${assembly.parameters}){return ${assembly.expression}})(${assembly.arguments})`;
+	}
+	const params = aliases.join(",");
+	return `void 0;(function(${params}){return (function(${assembly.parameters}){return ${assembly.expression}})(${assembly.arguments})})(${helperImplementations(aliases.length)})`;
 }
