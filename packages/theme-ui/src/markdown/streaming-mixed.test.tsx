@@ -46,6 +46,54 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("中文内容与含数学/代码跨格的表格流式正确且最终等价", () => {
+		const header = "| 名称 | 说明 | 数值 |\n| --- | --- | ---: |\n";
+		const rows = [
+			"| 方案甲 | 中文说明第一行，含 **加粗** 与 `代码` | 1 |",
+			"| 方案乙 | 单元格内数学 $E=mc^2$ 与转义管道 \| 测试 | 2 |",
+			"| 方案丙 | 组合：**粗体**内嵌 $x_i^2$ 与 `a|b` 跨格 | 3 |",
+		];
+		// 行文本循环复用：同时覆盖重复行文本下回放克隆的跨位共享。
+		const body = Array.from({ length: 100 }, (_, i) => `${rows[i % rows.length]}\n`).join("");
+		const text = "中文引言段落。\n\n" + header + body + "\n表格结束。\n";
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={"中文引言段落。\n\n" + header + body} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(container.querySelectorAll("tbody tr").length).toBe(100);
+		expect(container.textContent).toContain("方案甲");
+
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.textContent).toContain("表格结束。");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={text} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body2 = clone.querySelector(".markdown-body") ?? clone;
+			return [...body2.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("CRLF 输入的大表与围栏流式正确且最终等价", () => {
 		const toCrlf = (text: string): string => text.replace(/\n/g, "\r\n");
 		const header = "| Name | Description | Value |\r\n| --- | --- | ---: |\r\n";
