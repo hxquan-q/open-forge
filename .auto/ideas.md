@@ -23,3 +23,16 @@
 - 提高解析合并节流（200→400ms 更激进）：改的是文档合同里的 UX 行为，属变相 cheat，不做。
 - reveal tick 合并：reveal commit 已很便宜，不是瓶颈。
 - 虚拟化/懒渲染：基准场景是单一实例流式，与 DOM 虚拟化正交；改动面大。
+
+## 本轮已探明、暂缓的方向（2026-10-22 会话）
+
+- **Worker/异步解析**：彻底消除同步 parse 阻塞（table 场景 ~35ms/次仍是长帧），但 react-markdown
+  管线（rich 插件、streaming chunks、组件树）深度假设同步渲染；需要消息级架构改造。
+- **表格行级增量/元素子树缓存**：table 是单一 mdast 构造，源级拆分=两个 <table>（渲染改变）；
+  hast 子树缓存需替换 react-markdown post()——而 Run#5 表明绕过组件结构有意外的性能反直觉，
+  先搞清 React 19 profiling 归因再动。
+- **冻结「裸方括号」块的语义**：coding 回复里 `arr[0]`/`[1]` 常见，这些段落后的内容全部
+  回退整篇重解析。未来可做「检测到引用定义时一次性解冻重拆」语义（罕见 remount 换常态冻结），
+  需要打破现有「前缀不可变」不变量并评估闪烁。
+- **splitStableMarkdownBlocks 增量扫描 + 结果缓存**：每次 reveal tick 全文 O(N) 扫描与数组
+  重建，~2% 总量，低优先级。

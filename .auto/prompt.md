@@ -89,6 +89,17 @@
   （快升慢降，上限 800ms）。⚠️不能用 JSX 创建计时（element 创建≠组件执行）
 - 背靠背同负载：table 666→217（-67%），code 零回归；总 526→374（vs 基线 -70%）
 
+### Run #4（keep）：等价性安全网
+
+- 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
+
+### Run #5（discard）：直接调用 react-markdown 纯函数精确测量——失败
+
+- 两次独立对照均慢 22-34%（parse 数相同、相位正常、机制未明，疑似 React 19 profiling
+  对组件边界的记账差异）；⚠️包级只导出 default（命名 Markdown 运行时 undefined）
+- 已回退到子组件 + layoutEffect 时间差方案（测量混入同帧无关组件的成本，由 800ms
+  上限与慢恢复兜底）
+
 ### 相位剖析结论（勿重走弯路）
 
 - React reconcile 几乎免费（~38ms/流）；processor setup 可忽略（0.2ms）；
