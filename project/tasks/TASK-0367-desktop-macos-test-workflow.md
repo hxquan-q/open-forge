@@ -12,7 +12,7 @@ related_plan: []
 related_tasks: [TASK-0159]
 related_issues: []
 related_bugs: []
-execution: serial
+execution: parallel
 branch: task/TASK-0367-desktop-macos-test-workflow
 worktree: ../open-forge-wt/task-0367-desktop-macos-test
 base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
@@ -33,8 +33,8 @@ write_paths:
   - project/tasks/README.md
 exclusive_paths: []
 depends_on: []
-conflicts_with: []
-integration_status: pending
+conflicts_with: [TASK-0197, TASK-0223]
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -54,7 +54,7 @@ updated: 2026-10-22
 - 执行方式：serial
 - 可并行 Task：无
 - 前置依赖：无（不改动 `desktop-release` / `desktop-packaged` 语义）
-- 冲突文件/独占路径：无；仅新增一个 workflow 文件与一行文档
+- 冲突文件/独占路径：`project/tasks/README.md` 与 `project/tasks/` 索引区与 TASK-0197、TASK-0223 的写路径重叠，已登记 `conflicts_with`；本 Task 只追加一行索引，不重排既有行
 - Branch：`task/TASK-0367-desktop-macos-test-workflow`
 - Worktree：`../open-forge-wt/task-0367-desktop-macos-test`
 - 集成负责人：Coordinator
@@ -98,7 +98,7 @@ updated: 2026-10-22
 
 - 工程验证：待执行；尚无真实运行记录，首次 dispatch 的 build job 日志与 Artifacts 即为证据。
 - 技术评审：自审；风险点是 `workflow_dispatch` 的注册条件（文件必须在默认分支），已在文档与 PR 说明中写明。
-- 集成：`integration_status=pending`；提交 `ed28cfb4e` 保留在 task 分支，未推送。
+- 集成：`integration_status=integrated`；PR #21 合入 dev（merge `427427cac`），随后随 `dev → main` 晋升进入默认分支（`5833041dc`）。
 - 人工功能验收：待验收；需要测试同学在真机装一次并反馈安装/启动结果。
 - 发布：不适用，本 Task 不产出对外发布物。
 
