@@ -21,7 +21,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0370` | `done` | PLAN-0021 | [稳定项目记忆身份与 Worktree 关联](TASK-0370-memory-project-identity.md)；身份解析器+JSON 注册表落地（alias 规范化、Worktree 候选/确认、移动/复制映射），13 例与完整 check 全绿。 |
 | `TASK-0371` | `done` | PLAN-0021 | [SQLite 事实修订存储与资源生命周期](TASK-0371-memory-sqlite-revision-store.md)；@vetta/runtime-node/memory 落地（worker 存储+迁移+lease 池+staging 工具），563 例与完整 check 全绿。 |
 | `TASK-0372` | `done` | PLAN-0021 | [有作用域的词法与中文短词检索](TASK-0372-memory-lexical-retrieval.md)；trigram FTS+短词 instr 回退+字面量转义落地（先 scope/时间过滤后匹配），572 例与完整 check 全绿。 |
-| `TASK-0373` | `draft` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；待前置产物，未开工；serial。 |
+| `TASK-0373` | `done` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；事务性家族清除+来源抑制+epoch 重检合同+无正文审计落地，576+38 例与完整 check 全绿。 |
 | `TASK-0374` | `draft` | PLAN-0021 | [显式记住、检索、更正与遗忘工具](TASK-0374-memory-explicit-tools.md)；待前置产物，未开工；serial。 |
 | `TASK-0375` | `draft` | PLAN-0021 | [Desktop 正常会话接线与有界上下文注入](TASK-0375-memory-desktop-session-wiring.md)；待前置产物，未开工；serial。 |
 | `TASK-0376` | `draft` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；待前置产物，未开工；serial。 |
