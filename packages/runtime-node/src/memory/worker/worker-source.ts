@@ -152,6 +152,8 @@ function assertNotSuppressed(memoryId) {
 
 function parseValidFrom(value) {
 	if (value === undefined) return nowIso();
+	// 空串 = 开区间起点（导入的 legacy 事实：自导入起一直有效，不猜测日期）。
+	if (value === "") return "";
 	requireNonEmptyString(value, "validFrom");
 	if (!isValidTime(value)) {
 		throw new WorkerError(ERROR_CODES.INVALID_MEMORY_INPUT, "validFrom 不是合法时间：" + value);

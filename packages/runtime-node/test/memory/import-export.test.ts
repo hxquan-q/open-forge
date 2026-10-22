@@ -71,9 +71,15 @@ describe("legacy 导入", () => {
 		expect(first.imported).toBe(1);
 		const memories = await store.read(FIXTURE_USER_SCOPE, { asOf: "2030-01-01T00:00:00Z" });
 		erasure.forgetMemoryFamily({ memoryId: memories[0]?.memoryId ?? "" });
-		const again = await importLegacyEntries({ store, scope: FIXTURE_USER_SCOPE, entries: document.entries });
-		// 来源于抑制表：store 写入按 suppressed 家族拒绝 → 计入 suppressed 跳过。
+		const again = await importLegacyEntries({
+			store,
+			scope: FIXTURE_USER_SCOPE,
+			entries: document.entries,
+			isSourceSuppressed: (sourceId) => erasure.isSourceSuppressed(sourceId),
+		});
+		// 来源于抑制表：再导入被拒绝 → 计入 suppressed 跳过，不重生。
 		expect(again.imported).toBe(0);
+		expect(again.skippedSuppressed).toBe(1);
 		expect(await store.read(FIXTURE_USER_SCOPE, { asOf: "2030-01-01T00:00:00Z" })).toEqual([]);
 	});
 });

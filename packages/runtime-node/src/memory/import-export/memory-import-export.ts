@@ -21,11 +21,17 @@ export async function importLegacyEntries(options: {
 	readonly store: SqliteMemoryWorkerStore;
 	readonly scope: MemoryScope;
 	readonly entries: readonly { readonly content: string; readonly sourceId: string }[];
+	/** 来源抑制检查（0373 memory_suppressed_sources）：已遗忘来源不因再导入重生。 */
+	readonly isSourceSuppressed?: (sourceId: string) => boolean;
 }): Promise<ImportOutcome> {
 	let imported = 0;
 	let skippedDuplicates = 0;
 	let skippedSuppressed = 0;
 	for (const entry of options.entries) {
+		if (options.isSourceSuppressed?.(entry.sourceId) === true) {
+			skippedSuppressed += 1;
+			continue;
+		}
 		const already = await hasSource(options.store, options.scope, entry.sourceId);
 		if (already) {
 			skippedDuplicates += 1;

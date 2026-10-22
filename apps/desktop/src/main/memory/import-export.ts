@@ -35,8 +35,16 @@ export async function importLegacyMemoryFile(options: {
 		databasePath: `${options.memoryDirectory}/memory.sqlite`,
 		allowedScopes: [options.scope],
 	});
+	const erasure = await SqliteMemoryErasure.open({
+		databasePath: `${options.memoryDirectory}/memory.sqlite`,
+	});
 	try {
-		const outcome = await importLegacyEntries({ store, scope: options.scope, entries: document.entries });
+		const outcome = await importLegacyEntries({
+			store,
+			scope: options.scope,
+			entries: document.entries,
+			isSourceSuppressed: (sourceId) => erasure.isSourceSuppressed(sourceId),
+		});
 		return {
 			file: options.filePath,
 			fileHash: document.fileHash,
@@ -47,6 +55,7 @@ export async function importLegacyMemoryFile(options: {
 		};
 	} finally {
 		await store.close();
+		erasure.close();
 	}
 }
 
@@ -84,5 +93,4 @@ export async function verifyRollbackContract(options: {
 	}
 }
 
-void SqliteMemoryErasure;
 void renderLegacyMemoryMarkdown;
