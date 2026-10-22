@@ -12,7 +12,7 @@ related_tasks: [TASK-0346]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: task/TASK-0362-weknora-er-fixes
+branch: task/TASK-0364-weknora-er-fixes
 worktree: .
 base_commit: 2a74e7fc1
 read_paths: [apps/desktop, packages/theme-ui, docs/devflow]
