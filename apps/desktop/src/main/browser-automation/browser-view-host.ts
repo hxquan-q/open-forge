@@ -1,5 +1,6 @@
 // Copyright The Open Forge contributors.
 import { isAllowedBrowserTabUrl } from "@vetta/coding-agent/function-extensions";
+import { isReportableBrowserViewBounds } from "../../shared/browser-view-bounds.js";
 import type {
 	DesktopBrowserViewBounds,
 	DesktopBrowserViewControlAction,
@@ -71,6 +72,8 @@ interface ViewRecord {
 	passthrough: boolean;
 	loading: boolean;
 	failed: boolean;
+	/** 已经发出、getURL() 尚未落到该地址的目标。重复 attach 同一地址不再 loadURL。 */
+	pendingUrl: string | null;
 	/** 最近使用的单调序号（attach/detach 时刷新），detached 驱逐按它取最老。 */
 	lastUsedAt: number;
 }
@@ -103,17 +106,13 @@ export class InAppBrowserViewHost {
 			win.contentView.addChildView(record.view);
 			record.attached = true;
 		}
-		record.view.setBounds(request.bounds);
+		this.applyBounds(record, request.bounds);
 		record.visible = request.visible ?? true;
 		record.passthrough = false;
 		record.lastUsedAt = ++this.lastUsedSeq;
 		this.applyVisible(record);
 		const url = request.url?.trim();
-		if (url && url !== record.view.webContents.getURL()) {
-			void record.view.webContents
-				.loadURL(url)
-				.catch((error: unknown) => this.onLoadRejected(request.workspaceId, record, error));
-		}
+		if (url && this.shouldStartLoad(record, url)) this.startLoad(request.workspaceId, record, url);
 		this.enforceDetachedLimit();
 		return this.stateOf(request.workspaceId, record);
 	}
@@ -121,7 +120,7 @@ export class InAppBrowserViewHost {
 	setBounds(workspaceId: string, bounds: DesktopBrowserViewBounds): void {
 		const record = this.views.get(workspaceId);
 		if (!record || record.view.webContents.isDestroyed()) return;
-		record.view.setBounds(bounds);
+		this.applyBounds(record, bounds);
 	}
 
 	setVisible(workspaceId: string, visible: boolean): void {
@@ -147,10 +146,14 @@ export class InAppBrowserViewHost {
 		const record = this.views.get(workspaceId);
 		if (!record || record.view.webContents.isDestroyed()) return { ok: false, code: "no_view" };
 		if (!isAllowedBrowserTabUrl(url)) return { ok: false, code: "policy_denied" };
+		if (!this.shouldStartLoad(record, url)) return { ok: true };
+		record.pendingUrl = url;
 		try {
 			await record.view.webContents.loadURL(url);
+			if (record.pendingUrl === url) record.pendingUrl = null;
 			return { ok: true };
 		} catch (error) {
+			if (record.pendingUrl === url) record.pendingUrl = null;
 			if (isAbortedNavigation(error)) return { ok: true };
 			record.failed = true;
 			record.loading = false;
@@ -252,6 +255,7 @@ export class InAppBrowserViewHost {
 			passthrough: false,
 			loading: false,
 			failed: false,
+			pendingUrl: null,
 			lastUsedAt: 0,
 		};
 		this.views.set(workspaceId, record);
@@ -297,6 +301,32 @@ export class InAppBrowserViewHost {
 			record.attached = false;
 			record.visible = false;
 		});
+	}
+
+	/** 隐藏页签的 0×0 不能覆盖上一次有效矩形，否则视图被压扁后停在错误位置。 */
+	private applyBounds(record: ViewRecord, bounds: DesktopBrowserViewBounds): void {
+		if (!isReportableBrowserViewBounds(bounds)) return;
+		record.view.setBounds(bounds);
+	}
+
+	/** getURL() 还停在 about:blank 时，在途的同一地址不能再 loadURL，否则会把首载中止。 */
+	private shouldStartLoad(record: ViewRecord, url: string): boolean {
+		if (url === record.view.webContents.getURL()) return false;
+		return url !== record.pendingUrl;
+	}
+
+	private startLoad(workspaceId: string, record: ViewRecord, url: string): void {
+		record.pendingUrl = url;
+		void record.view.webContents.loadURL(url).then(
+			() => {
+				if (record.pendingUrl === url) record.pendingUrl = null;
+			},
+			(error: unknown) => {
+				if (record.pendingUrl !== url) return;
+				record.pendingUrl = null;
+				this.onLoadRejected(workspaceId, record, error);
+			},
+		);
 	}
 
 	/**

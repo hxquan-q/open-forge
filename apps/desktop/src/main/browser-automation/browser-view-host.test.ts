@@ -21,6 +21,9 @@ class FakeContents implements BrowserViewContents {
 	title = "";
 	destroyed = false;
 	loads: string[] = [];
+	/** 置上后 loadURL 先记入 loads，等这个 promise 才把 getURL() 改成目标地址。 */
+	static nextLoadGate: Promise<void> | null = null;
+	loadGate: Promise<void> | null = FakeContents.nextLoadGate;
 	reloads = 0;
 	stops = 0;
 	readonly navigationHistory = {
@@ -55,6 +58,7 @@ class FakeContents implements BrowserViewContents {
 	}
 	async loadURL(url: string): Promise<void> {
 		this.loads.push(url);
+		if (this.loadGate) await this.loadGate;
 		this.url = url;
 	}
 	reload(): void {
@@ -132,6 +136,7 @@ function makeHost() {
 
 beforeEach(() => {
 	resetInAppBrowserSessionControllerForTests();
+	FakeContents.nextLoadGate = null;
 });
 
 describe("InAppBrowserViewHost", () => {
@@ -160,6 +165,32 @@ describe("InAppBrowserViewHost", () => {
 		// 后续可见性仍由 update 驱动
 		host.setVisible("ws-1", true);
 		expect(views[0].visible).toBe(true);
+	});
+
+	it("在途的同一 URL 不第二次 loadURL，0 尺寸也不覆盖上一次有效矩形", async () => {
+		let releaseLoad: (() => void) | undefined;
+		FakeContents.nextLoadGate = new Promise((resolve) => {
+			releaseLoad = resolve;
+		});
+		const { host, views } = makeHost();
+		host.attach({ workspaceId: "ws-1", bounds: BOUNDS, url: "http://localhost:8080/" });
+		expect(views[0].webContents.url).toBe("about:blank");
+		expect(views[0].webContents.loads).toEqual(["http://localhost:8080/"]);
+
+		host.attach({
+			workspaceId: "ws-1",
+			bounds: { x: 0, y: 0, width: 0, height: 0 },
+			url: "http://localhost:8080/",
+		});
+		host.setBounds("ws-1", { x: 1, y: 2, width: 0, height: 10 });
+		expect(views[0].webContents.loads).toEqual(["http://localhost:8080/"]);
+		expect(views[0].bounds).toEqual(BOUNDS);
+
+		releaseLoad?.();
+		await vi.waitFor(() => expect(views[0].webContents.url).toBe("http://localhost:8080/"));
+		host.attach({ workspaceId: "ws-1", bounds: { ...BOUNDS, x: 8 }, url: "http://localhost:8080/" });
+		expect(views[0].webContents.loads).toEqual(["http://localhost:8080/"]);
+		expect(views[0].bounds?.x).toBe(8);
 	});
 
 	it("attach 时 URL 与当前页不同才加载（view 常驻，不每回重挂页面）", async () => {

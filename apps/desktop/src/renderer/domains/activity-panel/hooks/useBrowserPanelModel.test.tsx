@@ -52,15 +52,57 @@ function Probe({ harness }: { harness: Harness }): JSX.Element {
 	return <div ref={model.hostRef} data-browser-view-host="" />;
 }
 
+class RecordingResizeObserver {
+	static instances: RecordingResizeObserver[] = [];
+	readonly targets: Element[] = [];
+	constructor(private readonly callback: ResizeObserverCallback) {
+		RecordingResizeObserver.instances.push(this);
+	}
+	observe(target: Element): void {
+		this.targets.push(target);
+	}
+	unobserve(): void {
+		return undefined;
+	}
+	disconnect(): void {
+		this.targets.length = 0;
+	}
+	/** 只通知真正观察了该元素的实例。占位洞自身没变尺寸时，旧实现收不到。 */
+	static notify(target: Element): void {
+		for (const instance of RecordingResizeObserver.instances) {
+			if (!instance.targets.includes(target)) continue;
+			instance.callback([], instance as unknown as ResizeObserver);
+		}
+	}
+}
+
+function domRect(x: number, y: number, width: number, height: number): DOMRect {
+	return {
+		x,
+		y,
+		width,
+		height,
+		top: y,
+		left: x,
+		right: x + width,
+		bottom: y + height,
+		toJSON() {
+			return {};
+		},
+	} as DOMRect;
+}
+
 function renderPanel(harness: Harness, { workspaceId = "ws-1", active = true }: { workspaceId?: string; active?: boolean } = {}) {
 	return render(
-		<ActivityPanelContextProvider
-			value={{ workspace: { id: workspaceId, cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
-		>
-			<ActivityTabActivationContextProvider value={active}>
-				<Probe harness={harness} />
-			</ActivityTabActivationContextProvider>
-		</ActivityPanelContextProvider>,
+		<div data-layout-ancestor="">
+			<ActivityPanelContextProvider
+				value={{ workspace: { id: workspaceId, cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+			>
+				<ActivityTabActivationContextProvider value={active}>
+					<Probe harness={harness} />
+				</ActivityTabActivationContextProvider>
+			</ActivityPanelContextProvider>
+		</div>,
 	);
 }
 
@@ -95,9 +137,15 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		};
 		window.vetta = { browserView: api } as unknown as Window["vetta"];
 		store.set(browserUrlByWorkspaceAtom, new Map());
+		RecordingResizeObserver.instances = [];
+		vi.stubGlobal("ResizeObserver", RecordingResizeObserver);
 	});
 
-	afterEach(cleanup);
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
+		cleanup();
+	});
 
 	it("挂载时按 workspace 建 view 并上报占位 bounds，应用 attach 返回的页面状态", async () => {
 		const harness: Harness = { model: { current: null } };
@@ -279,6 +327,88 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		renderPanel(harness);
 		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
 		errors.mockRestore();
+	});
+
+	it("左栏把占位洞平移而宽高不变时，祖先布局通知仍上报新原点", async () => {
+		let current = domRect(240, 80, 640, 480);
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+			if (this.hasAttribute("data-browser-view-host")) return current;
+			return domRect(0, 0, 800, 600);
+		});
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				bounds: { x: 240, y: 80, width: 640, height: 480 },
+			}),
+		);
+		const ancestor = document.querySelector("[data-layout-ancestor]");
+		expect(ancestor).not.toBeNull();
+		expect(RecordingResizeObserver.instances.some((instance) => instance.targets.includes(ancestor as Element))).toBe(
+			true,
+		);
+
+		api.update.mockClear();
+		current = domRect(8, 80, 640, 480);
+		act(() => {
+			RecordingResizeObserver.notify(ancestor as Element);
+		});
+		expect(api.update).toHaveBeenCalledWith({
+			workspaceId: "ws-1",
+			bounds: { x: 8, y: 80, width: 640, height: 480 },
+		});
+	});
+
+	it("页签隐藏测得 0×0 时不上报，重新显示后上报新位置", async () => {
+		let current = domRect(240, 80, 640, 480);
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+			if (this.hasAttribute("data-browser-view-host")) return current;
+			return domRect(0, 0, 800, 600);
+		});
+		const harness: Harness = { model: { current: null } };
+		const panel = renderPanel(harness, { active: true });
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				bounds: { x: 240, y: 80, width: 640, height: 480 },
+			}),
+		);
+
+		api.update.mockClear();
+		current = domRect(0, 0, 0, 0);
+		panel.rerender(
+			<div data-layout-ancestor="">
+				<ActivityPanelContextProvider
+					value={{ workspace: { id: "ws-1", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+				>
+					<ActivityTabActivationContextProvider value={false}>
+						<Probe harness={harness} />
+					</ActivityTabActivationContextProvider>
+				</ActivityPanelContextProvider>
+			</div>,
+		);
+		const boundsWhileHidden = api.update.mock.calls.filter((call) => "bounds" in (call[0] as object));
+		expect(boundsWhileHidden).toEqual([]);
+
+		current = domRect(8, 80, 640, 480);
+		panel.rerender(
+			<div data-layout-ancestor="">
+				<ActivityPanelContextProvider
+					value={{ workspace: { id: "ws-1", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+				>
+					<ActivityTabActivationContextProvider value={true}>
+						<Probe harness={harness} />
+					</ActivityTabActivationContextProvider>
+				</ActivityPanelContextProvider>
+			</div>,
+		);
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				bounds: { x: 8, y: 80, width: 640, height: 480 },
+			}),
+		);
 	});
 
 	it("卸载时摘下 view（view 本体在主进程保活供 agent 复用）", async () => {
