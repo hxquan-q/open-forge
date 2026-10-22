@@ -46,6 +46,74 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("连续同类构造压力变体：每形态相邻重复且带类型切换", () => {
+		const t1 = "| A | B |\n| --- | --- |\n" + Array.from({ length: 30 }, (_, i) => `| a${i} | b${i} |\n`).join("");
+		const t2 = "| X | Y | Z |\n| --- | --- | ---: |\n" + Array.from({ length: 30 }, (_, i) => `| x${i} | y${i} | ${i} |\n`).join("");
+		const l1 = Array.from({ length: 30 }, (_, i) => `- dash ${i}\n`).join("");
+		const l2 = Array.from({ length: 30 }, (_, i) => `* star ${i}\n`).join("");
+		const l3 = Array.from({ length: 30 }, (_, i) => `${i + 1}. ordered ${i}\n`).join("");
+		const f1 = "```js\n" + Array.from({ length: 60 }, (_, i) => `let a${i} = ${i};\n`).join("") + "```\n\n";
+		const f2 = "~~~python\n" + Array.from({ length: 60 }, (_, i) => `b${i} = ${i}\n`).join("") + "~~~\n\n";
+		const m1 = Array.from({ length: 8 }, (_, i) => `$$\nM1_${i}\n$$\n\n`).join("");
+		const m2 = Array.from({ length: 8 }, (_, i) => `$$\nM2_${i} = \\alpha_{${i}}\n$$\n\n`).join("");
+		const d1 = Array.from({ length: 6 }, (_, i) => `<details><summary>DA${i}</summary>\n\nx${i}\n\n</details>\n\n`).join("");
+		const d2 = Array.from({ length: 6 }, (_, i) => `<div>div${i}\n<span>s${i}</span>\n</div>\n\n`).join("");
+
+		const stages = [
+			t1,
+			t1 + "\nsep\n\n" + t2,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3 + "\n\n" + f1,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3 + "\n\n" + f1 + f2,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3 + "\n\n" + f1 + f2 + m1,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3 + "\n\n" + f1 + f2 + m1 + m2,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3 + "\n\n" + f1 + f2 + m1 + m2 + d1,
+			t1 + "\nsep\n\n" + t2 + "\n" + l1 + "\n" + l2 + "\n" + l3 + "\n\n" + f1 + f2 + m1 + m2 + d1 + d2 + "end.\n",
+		];
+		const env2 = environment;
+		let text = "";
+		for (const stage of stages) {
+			text = stage;
+			act(() => {
+				root.render(<MarkdownContent {...env2} text={text} isStreamingTail />);
+			});
+			act(() => {
+				vi.advanceTimersByTime(1500);
+			});
+		}
+		act(() => {
+			root.render(<MarkdownContent {...env2} text={text} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.querySelectorAll("tbody").length).toBe(2);
+		expect(container.querySelectorAll("ul").length).toBeGreaterThanOrEqual(2);
+		expect(container.querySelector("ol")).toBeTruthy();
+		expect(container.textContent).toContain("end.");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...env2} text={text} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("八形态全混合消息渐进流式：全程正确且最终整篇等价", () => {
 		const para = (i: number) => `Mixed intro paragraph ${i} with **bold** and [inline](https://e.com/${i}).\n\n`;
 		const table = (n: number) => `| Name | Desc | V |\n| --- | --- | ---: |\n${Array.from({ length: n }, (_, i) => `| row ${i} | description ${i} | ${i} |\n`).join("")}`;
