@@ -26,8 +26,12 @@
 
 ## 本轮已探明、暂缓的方向（2026-10-22 会话）
 
-- **Worker/异步解析**：彻底消除同步 parse 阻塞（table 场景 ~35ms/次仍是长帧），但 react-markdown
-  管线（rich 插件、streaming chunks、组件树）深度假设同步渲染；需要消息级架构改造。
+- **Worker/异步解析（本轮已做依赖审计，被依赖政策封死）**：剖析确认 table 解析 85% 成本在
+  remark-gfm 表格扩展（bare 3.3ms → +gfm 22.5ms，math 零影响）；上游 micromark 内部无法绕过。
+  Worker 方案需要主线程把 hast→React 元素——`hast-util-to-jsx-runtime` 不是 theme-ui 直接依赖
+  （新增依赖需授权），元素跨 worker 结构化克隆不可行（组件函数/Symbol）；绕过 react-markdown
+  又受 Run#5 未解释的 profiling 反直觉阻塞。解锁条件：引入 hast-util-to-jsx-runtime 依赖授权
+  + 解释 Run#5。
 - **表格行级增量/元素子树缓存**：table 是单一 mdast 构造，源级拆分=两个 <table>（渲染改变）；
   hast 子树缓存需替换 react-markdown post()——而 Run#5 表明绕过组件结构有意外的性能反直觉，
   先搞清 React 19 profiling 归因再动。
