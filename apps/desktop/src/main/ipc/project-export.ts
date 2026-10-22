@@ -2,9 +2,12 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { basename, join, resolve, sep } from "node:path";
+import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import AdmZip from "adm-zip";
 import { dialog, ipcMain } from "electron";
 import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
+import { emitConversationListChanged } from "../conversations/conversation-list-events.js";
+import { resolveSessionListCwd } from "../conversations/session-paths.js";
 import { getAppLogger } from "../logger.js";
 import { allowProjectRoot, readDesktopConfig, updateDesktopConfig } from "./fs.js";
 
@@ -110,6 +113,29 @@ function addDirectoryToZip(zip: AdmZip, sourceDir: string, zipDir: string): void
 		if (!entry.isFile()) continue;
 		if (shouldSkipForExport(zipRelative)) continue;
 		zip.addLocalFile(sourcePath, zipDir);
+	}
+}
+
+/**
+ * 现行会话落点在全局分片目录 `codingAgentSessionShardPath(projectDir)`，不在项目目录里；
+ * 不补进包的话，导出的项目在新机器上一条会话都没有（BUG-0142）。会话按
+ * `<rootDir>/.vetta/sessions/<文件名>` 进包，与项目内存量会话目录并集、按文件名去重
+ * （同名时项目内文件优先——它是该目录在磁盘上的事实源）。只收 `.jsonl`，
+ * `*.lock` / `*.tmp` 等过程文件天然不入包。
+ */
+function addShardSessionsToZip(zip: AdmZip, projectDir: string, rootDir: string): void {
+	const shardDir = codingAgentSessionShardPath(projectDir);
+	if (!existsSync(shardDir)) return;
+	const sessionsPrefix = `${rootDir}/.vetta/sessions`;
+	const presentNames = new Set<string>();
+	for (const entry of zip.getEntries()) {
+		if (!entry.entryName.startsWith(`${sessionsPrefix}/`)) continue;
+		presentNames.add(entry.entryName.slice(sessionsPrefix.length + 1));
+	}
+	for (const entry of readdirSync(shardDir, { withFileTypes: true })) {
+		if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+		if (presentNames.has(entry.name)) continue;
+		zip.addLocalFile(join(shardDir, entry.name), sessionsPrefix);
 	}
 }
 
@@ -343,6 +369,7 @@ async function handleExport(projectDir: string): Promise<ExportProjectResult> {
 	};
 	zip.addFile(MANIFEST_NAME, Buffer.from(JSON.stringify(manifest, null, 2), "utf-8"));
 	addDirectoryToZip(zip, projectDir, projectName);
+	addShardSessionsToZip(zip, projectDir, projectName);
 	zip.writeZip(saveResult.filePath);
 
 	log.info(`exported ${type} project ${projectName} → ${saveResult.filePath}`);
@@ -427,6 +454,20 @@ async function handleImport(): Promise<ImportProjectResult | null> {
 			? fresh
 			: { ...fresh, projects: [...fresh.projects, { path: projectDir, name }] },
 	);
+
+	// 恢复出的会话对渲染端不可见（会话目录没有 watcher；项目导入流程本身也不触发列表刷新，
+	// 见 project-migration-service 同款处理）：按写入的 jsonl 逐条广播目标列表 cwd，
+	// 让侧栏即时刷新。旧包没有 .vetta/sessions 时自然零广播。
+	const restoredSessionsDir = join(projectDir, ".vetta", "sessions");
+	if (existsSync(restoredSessionsDir)) {
+		for (const entry of readdirSync(restoredSessionsDir, { withFileTypes: true })) {
+			if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+			emitConversationListChanged({
+				cwd: resolveSessionListCwd(projectDir),
+				sessionPath: join(restoredSessionsDir, entry.name),
+			});
+		}
+	}
 
 	const missingSources = manifest.type === "batch" ? collectMissingBatchSources(projectDir) : undefined;
 
