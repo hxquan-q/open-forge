@@ -1,41 +1,25 @@
-# Ideas Backlog
+# Ideas Backlog（2026-10-23 会话收官整理）
 
-## 高价值 / 复杂
+## 已解锁方向（依赖授权后可做）
 
-- **hast 子树级元素缓存**（自建 renderer 替换 react-markdown 的 toJsxRuntime 输出）：
-  按 (tagName + source span + 轻量签名) 缓存 ReactElement；命中则复用同一元素引用，
-  React 对该子树直接 bail。守卫：文档含 link-reference definition 时整体旁路（后续
-  ref-def 会追溯改变前文链接）；尾部最后 2 个 chunk/块豁免（recent/latest 亮度类会变）。
-  prose 收益 ~95% reconcile；table 需要块内(行级)缓存。
-- **表格行级缓存**：table 是单一 mdast 块，行级 position 稳定，只最后一行增长。
-- **processor 缓存**：react-markdown v10 每次 render `unified().use(...)` 重建 processor；
-  插件数组已由 useMemo 稳定，可按数组身份缓存 processor（省 setup 开销，量级待测）。
+- **Worker/异步解析**：彻底消除同步 parse（长帧 p95 已压到 ~2.5ms，剩余价值是
+  极端构造与大文档首屏）。封锁项唯一：主线程需要 `hast-util-to-jsx-runtime`
+  （非 theme-ui 直接依赖，新增依赖需授权）；React 元素跨 worker 不可克隆（组件函数）。
+  直接调用 react-markdown 已被交错 A/B 证明等价（Run#10），管线替换无性能玄学。
 
-## 中价值
+## 未来候选（低优先）
 
-- `post()` 的 `visit(tree, transform)` url-transform 遍历：每次 parse 全树访问；可只在
-  元素含 URL 属性时早退（已按属性表循环，但 visit 本身 O(n)）。小头。
-- `splitStableMarkdownBlocks` 每次 displayText 变化全文扫描 O(N)：append-only 场景可
-  增量扫描（记住上次扫描位置与状态）。量级可能太小，先测。
+- **冻结「裸方括号」块 + 检测到引用定义时一次性解冻重拆**：`arr[0]`/`[1]` 常见的
+  coding 回复目前整体回退（正确性优先）。需要打破「前缀不可变」不变量并评估
+  罕见 remount 的闪烁；收益=这类消息的冻结覆盖。
+- **表格快路径的 DOM 身份保序**：React 键重排根因未定位（react-markdown 行键是
+  per-parent 计数 tr-N）；克隆缓存已让性能达标，身份仅影响逐行 DOM 复用。
+- **冻结段落分组挂载**（prose 43 挂载→~11）：~8ms（5%），复杂度/收益比不佳。
 
-## 低价值 / 已排除
+## 已排除/已完成（勿重试）
 
-- 提高解析合并节流（200→400ms 更激进）：改的是文档合同里的 UX 行为，属变相 cheat，不做。
-- reveal tick 合并：reveal commit 已很便宜，不是瓶颈。
-- 虚拟化/懒渲染：基准场景是单一实例流式，与 DOM 虚拟化正交；改动面大。
-
-## 本轮已探明、暂缓的方向（2026-10-22 会话）
-
-- **Worker/异步解析（本轮已做依赖审计，被依赖政策封死）**：剖析确认 table 解析 85% 成本在
-  remark-gfm 表格扩展（bare 3.3ms → +gfm 22.5ms，math 零影响）；上游 micromark 内部无法绕过。
-  Worker 方案需要主线程把 hast→React 元素——`hast-util-to-jsx-runtime` 不是 theme-ui 直接依赖
-  （新增依赖需授权），元素跨 worker 结构化克隆不可行（组件函数/Symbol）；绕过 react-markdown
-  的直接调用已由交错 A/B 证明与子组件渲染等价（Run#5 结论系负载伪影，已翻案）；剩余封锁只有
-  hast-util-to-jsx-runtime 依赖授权一项。
-- **~~表格行级增量~~（Run#11 已落地）**：稳定行元素缓存 + 迷你后缀解析；剩余方向是把
-  DOM 身份保序也做实（React 键重排根因未定位，见 prompt.md Run#11）。
-- **冻结「裸方括号」块的语义**：coding 回复里 `arr[0]`/`[1]` 常见，这些段落后的内容全部
-  回退整篇重解析。未来可做「检测到引用定义时一次性解冻重拆」语义（罕见 remount 换常态冻结），
-  需要打破现有「前缀不可变」不变量并评估闪烁。
-- **splitStableMarkdownBlocks 增量扫描 + 结果缓存**：每次 reveal tick 全文 O(N) 扫描与数组
-  重建，~2% 总量，低优先级。
+- 元素子树缓存（reconcile 本就便宜，parse 才是瓶颈）→ 已被稳定块冻结+迷你解析取代
+- 增量 splitStableMarkdownBlocks → Run#8 落地（字符级等价测试守卫）
+- 尾块快照自适应节奏 → Run#3；表格迷你解析 → Run#11；围栏直渲染 → Run#12；
+  回放克隆缓存 → Run#13；含链接表格覆盖 → Run#15
+- reveal state 低频提交 → Run#14 交错 A/B 噪声级，弃（催生快照新鲜度测试）
