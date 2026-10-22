@@ -171,10 +171,17 @@ export const TailTableDocument = memo(function TailTableDocument({
 					rows.push(clone);
 				}
 				const BaseTbodyComponent = BaseTbody as React.ComponentType<{ children?: React.ReactNode }>;
+				// 迷你行重打绝对行号键：react-markdown 的行键是每父级计数（tr-0 永远指
+				// 迷你第一行），提升转换时旧行 fiber 会被新 tr-0 匹配并整体移动到尾部
+				// （稳定行 DOM 身份断裂的根因）。绝对键在任意转换下都不语义碰撞。
+				const miniChildren = Array.isArray(children) ? children : children !== undefined && children !== null ? [children] : [];
+				const miniRows = miniChildren.map((row, index) =>
+					cloneElement(row as ReactElement, { key: `fresh-${lines.length + index}` }),
+				);
 				return (
 					<BaseTbodyComponent>
 						{rows}
-						{children}
+						{miniRows}
 					</BaseTbodyComponent>
 				);
 			}) as Components["tbody"],

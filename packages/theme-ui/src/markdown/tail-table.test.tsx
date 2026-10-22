@@ -160,7 +160,22 @@ describe("TailTableDocument 流式大表快路径", () => {
 		expect(container.querySelectorAll("tbody tr").length).toBe(400);
 		const lastRowText = container.querySelectorAll("tbody tr")[399]?.textContent;
 
-		const grown = `${initial}| Item 400 | brand new row | 400 |\n`;
+		// 第一次追加完成「全迷你→稳定回放」的提升转换（转换本身允许一次性重建）。
+		const transitioned = `${initial}| Item 400 | transition row | 400 |\n`;
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={transitioned} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.querySelectorAll("tbody tr").length).toBe(401);
+
+		// 转换后的稳态：稳定行由缓存克隆渲染（同一元素引用），跨追加必须保序。
+		const firstRow = container.querySelector("tbody tr");
+		const row1 = container.querySelectorAll("tbody tr")[1];
+		const row200 = container.querySelectorAll("tbody tr")[200];
+
+		const grown = `${transitioned}| Item 401 | brand new row | 401 |\n`;
 		act(() => {
 			root.render(<MarkdownContent {...environment} text={grown} isStreamingTail />);
 		});
@@ -168,11 +183,11 @@ describe("TailTableDocument 流式大表快路径", () => {
 			vi.advanceTimersByTime(4000);
 		});
 		const rows = container.querySelectorAll("tbody tr");
-		expect(rows.length).toBe(401);
-		// DOM 身份不作为本快路径的保证（React 按键重排时可能重建行节点）；
-		// 正确性由行内容与整表等价性保证。
+		expect(rows.length).toBe(402);
+		expect(rows[0]).toBe(firstRow);
+		expect(rows[1]).toBe(row1);
+		expect(rows[200]).toBe(row200);
 		expect(rows[399]?.textContent).toBe(lastRowText);
-		expect(rows[0]?.textContent).toContain("Item 0");
-		expect(rows[400]?.textContent).toContain("brand new row");
+		expect(rows[401]?.textContent).toContain("brand new row");
 	});
 });
