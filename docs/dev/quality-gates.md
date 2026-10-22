@@ -235,6 +235,8 @@ workspace 包声明解析。因此，上游源码修改但 `dist/*.d.ts` 尚未�
 
 Desktop 生产边界由独立的 `.github/workflows/desktop-packaged.yml` 负责：它始终运行打包合同检查，涉及 Desktop 主进程、preload、打包脚本、原生依赖、远程控制或锁文件的变更才会启动 Windows、macOS、Linux runners，构建 unpacked packaged 应用并运行 Electron 启动与 updater E2E；无关变更不会构建 Desktop。上述 workflow 都使用只读检查，不会自动修复候选提交。
 
+只想拿一个 macOS 测试安装包时，运行 `.github/workflows/desktop-macos-test.yml`（手动触发，`arch=arm64|x64|both`）。它只构建 macOS 未签名 DMG、不发布、不跑 Win/Linux leg 与 packaged E2E，产物在 run 的 Artifacts 里；测试包不可用于更新验证，也不能对外分发，正式发版仍然只有 `desktop-release` 一条路径。
+
 Desktop 打包合同可在本地快速运行：
 
 ```text
