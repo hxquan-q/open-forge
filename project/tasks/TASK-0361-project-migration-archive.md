@@ -1,7 +1,7 @@
 ---
 id: TASK-0361
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop + packages/runtime-storage
 requirement: REQ-0026
@@ -20,7 +20,7 @@ worktree: unassigned（主工作区串行执行；注意与其他会话共享工
 read_paths: [docs/adr/0147-project-migration-archive-v2.md, packages/runtime-storage/src/conversation/session-archive/, apps/desktop/src/main/conversations/session-archive-service.ts, apps/desktop/src/main/ipc/session-archive.ts, apps/desktop/src/preload/, apps/desktop/src/renderer/domains/project/, apps/desktop/src/renderer/domains/conversation/hooks/useChatViewModel.ts]
 write_paths: [packages/runtime-storage/src/conversation/session-archive/, apps/desktop/src/main/conversations/, apps/desktop/src/main/ipc/, apps/desktop/src/preload/, apps/desktop/src/renderer/domains/project/, apps/desktop/src/renderer/domains/conversation/, apps/desktop/src/shared/i18n/locales/, .github/release-notes/v0.1.3.md, project/tasks/]
 exclusive_paths: []
-integration_status: pending
+integration_status: integrated（本地 main 六提交序列；未推送）
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -140,3 +140,16 @@ updated: 2026-10-22
 - 未运行：`verify:ui:*`（未授权）、完整 `bun run check` 与 `test:impact`（由协调者执行）、真实双目录/双实例人工迁移走查（待人工验收）。
 - 已知取舍：workspace 收集上限判定用 stat 尺寸（稀疏文件按逻辑尺寸计）；导出为全量内存帧（4GB 上限内大项目可能内存压力大，增量留待后续）；迁移向导在 jsdom 下无法验证 Radix Select 展开，靠模型层测试兜底；旧版本应用打开 v2 包报 UNSUPPORTED_VERSION（预期）。
 - 人工验收前状态保持 in_progress；工程完成/验证状态由协调者裁定。
+
+### 协调者复核（2026-10-22，工程交付后）
+
+- 复核关键合同点：`project-migration-service.ts` apply 侧「先重写 cwd 再算指纹」（源码 380-384 行确认）；`ProjectContextMenu.tsx` `onExportSessions` 已透传至模型（见下勘误）。
+- `test:impact`（7 个变更生产文件）：desktop 17 文件/102 例 + runtime-storage 3 文件/17 例全过。
+- 完整 `bun run check` exit 0（lint+types+guards，含 desktop tsc 与 v0.1.3 发布说明存在性）。
+- Worker 报告的偏离与取舍（workspaceLimits 测试接缝、classic 分流二次选文件、Radix Select jsdom 限制下沉模型测试、pre-commit biome 与全量规范差异）已审阅接受，风险如实保留。
+- 提交序列：`2ca917e2e`→`f1a63434e`→`2825da5fc`→`d6dd9c874`→`b57cb0332`→`f41a4a858`（本地 main，未推送）。
+- 状态：工程验证通过 → `verifying`；待真实双目录/双实例人工迁移走查。
+
+### TASK-0349 勘误（顺带发现）
+
+TASK-0349 的项目会话导出菜单项存在接线缺口：`ProjectContextMenu.tsx` 接收了 `onExportSessions` 但未传入 `useProjectContextMenuModel`，菜单项实际不可达（模型/视图测试各自通过，连接层未覆盖）。已由本任务切片 4（`b57cb0332`）修复并补连接层断言；TASK-0349 的工程验证结论据此修正——「真实入口可用」以修复后为准。
