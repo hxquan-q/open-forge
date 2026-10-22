@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
-import { splitStableMarkdownBlocks } from "./stable-blocks";
+import { createStableMarkdownScanner, splitStableMarkdownBlocks } from "./stable-blocks";
 
 describe("splitStableMarkdownBlocks", () => {
 	it.each(["$$\n```\nformula\n```\n$$", "<html>\n```\npage\n```\n</html>"])(
@@ -22,20 +22,25 @@ describe("splitStableMarkdownBlocks", () => {
 		});
 	});
 
-	it("后继块开始后提交已完成的顶层段落", () => {
-		const text = "First paragraph.\n\nSecond";
+	it("后继块的完整首行到达后提交已完成的顶层段落", () => {
+		const text = "First paragraph.\n\nSecond\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["First paragraph.\n"],
-			tail: "\nSecond",
+			tail: "\nSecond\n",
 		});
 	});
 
-	it("尾部的增长段落留在 tail，不提前提交", () => {
+	it("增长中的部分行不触发前一段落的冻结判定", () => {
+		// 部分行还可能长成列表标记（1 → 1.）或管道行，在其上判定会破坏前缀性。
 		const text = "First paragraph.\n\nSecond still growing";
-		expect(splitStableMarkdownBlocks(text)).toEqual({
-			committed: ["First paragraph.\n"],
-			tail: "\nSecond still growing",
-		});
+		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	});
+
+	it("部分行的追加可能翻转守卫时不产生前缀违例", () => {
+		expect(splitStableMarkdownBlocks("- a\n\n1").committed).toEqual([]);
+		expect(splitStableMarkdownBlocks("- a\n\n1.").committed).toEqual([]);
+		expect(splitStableMarkdownBlocks("- a\n\n1. x\n").committed).toEqual([]);
+		expect(splitStableMarkdownBlocks("- a\n\nplain\n").committed).toEqual(["- a\n"]);
 	});
 
 	it("含裸方括号的块不冻结，之后的块也不再提交（保持前缀性）", () => {
@@ -44,18 +49,18 @@ describe("splitStableMarkdownBlocks", () => {
 	});
 
 	it("行内链接与图片自含，可以冻结", () => {
-		const text = "[text](url) and ![alt](img.png)\n\nSecond";
+		const text = "[text](url) and ![alt](img.png)\n\nSecond\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["[text](url) and ![alt](img.png)\n"],
-			tail: "\nSecond",
+			tail: "\nSecond\n",
 		});
 	});
 
 	it("松散列表跨空行续项，直到非列表块开始才整体冻结", () => {
-		const text = "1. foo\n\n2. bar\n\nNext paragraph";
+		const text = "1. foo\n\n2. bar\n\nNext paragraph\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["1. foo\n\n2. bar\n"],
-			tail: "\nNext paragraph",
+			tail: "\nNext paragraph\n",
 		});
 	});
 
@@ -65,10 +70,10 @@ describe("splitStableMarkdownBlocks", () => {
 	});
 
 	it("引用跨空行延续，非引用块开始后整体冻结", () => {
-		const text = "> a\n\n> b\n\nPlain";
+		const text = "> a\n\n> b\n\nPlain\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["> a\n\n> b\n"],
-			tail: "\nPlain",
+			tail: "\nPlain\n",
 		});
 	});
 
@@ -76,10 +81,10 @@ describe("splitStableMarkdownBlocks", () => {
 		const growing = "| a | b |\n|---|---|\n| 1 | 2 |";
 		expect(splitStableMarkdownBlocks(growing)).toEqual({ committed: [], tail: growing });
 
-		const done = "| a | b |\n|---|---|\n| 1 | 2 |\n\nAfter";
+		const done = "| a | b |\n|---|---|\n| 1 | 2 |\n\nAfter\n";
 		expect(splitStableMarkdownBlocks(done)).toEqual({
 			committed: ["| a | b |\n|---|---|\n| 1 | 2 |\n"],
-			tail: "\nAfter",
+			tail: "\nAfter\n",
 		});
 	});
 
@@ -99,46 +104,81 @@ describe("splitStableMarkdownBlocks", () => {
 	});
 
 	it("setext 标题整体冻结", () => {
-		const text = "Title\n===\n\nNext";
+		const text = "Title\n===\n\nNext\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["Title\n===\n"],
-			tail: "\nNext",
+			tail: "\nNext\n",
 		});
 	});
 
 	it("前导空行随首个提交块一起提交，不丢字符", () => {
-		const text = "\n\nPara one.\n\nSecond";
+		const text = "\n\nPara one.\n\nSecond\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["\n\nPara one.\n"],
-			tail: "\nSecond",
+			tail: "\nSecond\n",
 		});
 	});
 
 	it("CRLF 段落也能提交", () => {
-		const text = "First paragraph.\r\n\r\nSecond";
+		const text = "First paragraph.\r\n\r\nSecond\r\n";
 		expect(splitStableMarkdownBlocks(text)).toEqual({
 			committed: ["First paragraph.\r\n"],
-			tail: "\r\nSecond",
+			tail: "\r\nSecond\r\n",
 		});
 	});
 
-	it("追加流式文本时已提交块是严格前缀，且拼接等于原文", () => {
+	it("字符级追加流下已提交块是严格前缀，拼接等于原文", () => {
 		const documents = [
 			"Intro paragraph.\n\n```js\nconst a = 1;\n```\n\n| h |\n|---|\n| 1 |\n\n- item\n\n- item2\n\n> quote\n\nTail ",
 			"see [ref] here\n\nplain\n\n```ts\ncode\n```\n\ntail ",
 			"<html>\n<body\n```\nraw fence inside html\n```\n</body>\n</html>\n\nafter ",
+			"- a\n\n1\n.\nnext line\n\nplain after\n\n| a | b |\n|---|---|\nplain\n",
 		];
 		for (const base of documents) {
 			let previous: string[] = [];
 			let text = "";
-			for (const chunk of base.match(/\S+\s*|\s+/g) ?? []) {
-				text += chunk;
+			for (let size = 1; size <= base.length; size += 1) {
+				text = base.slice(0, size);
 				const split = splitStableMarkdownBlocks(text);
 				expect(split.committed.slice(0, previous.length)).toEqual(previous);
 				expect(split.committed.join("") + split.tail).toBe(text);
 				previous = [...split.committed];
 			}
 		}
+	});
+
+	it("增量扫描器与全量扫描在字符级追加流下结果一致", () => {
+		const documents = [
+			"Intro paragraph.\n\n```js\nconst a = 1;\n```\n\n| h |\n|---|\n| 1 |\n\n- item\n\n- item2\n\n> quote\n\nTail ",
+			"see [ref] here\n\nplain\n\n```ts\ncode\n```\n\ntail ",
+			"<html>\n<body\n```\nraw fence inside html\n```\n</body>\n</html>\n\nafter ",
+			"- a\n\n1\n.\nnext line\n\nplain after\n\n| a | b |\n|---|---|\nplain\n",
+			"$$\nE = mc^2\n$$\n\nafter math\n\n```\nunclosed fence\n",
+		];
+		for (const base of documents) {
+			const scanner = createStableMarkdownScanner();
+			let text = "";
+			for (let size = 1; size <= base.length; size += 1) {
+				text = base.slice(0, size);
+				const incremental = scanner.scan(text);
+				const full = splitStableMarkdownBlocks(text);
+				expect(incremental.committed).toEqual(full.committed);
+				expect(incremental.tail).toBe(full.tail);
+			}
+		}
+	});
+
+	it("增量扫描器无新增提交时保持数组引用稳定，文本改写时自动重扫", () => {
+		const scanner = createStableMarkdownScanner();
+		const first = scanner.scan("One.\n\nTwo\n");
+		expect(first.committed).toEqual(["One.\n"]);
+		const again = scanner.scan("One.\n\nTwo\nmore words");
+		expect(again.committed).toBe(first.committed);
+		const grown = scanner.scan("One.\n\nTwo\nmore words.\n\nThree\n");
+		expect(grown.committed.length).toBe(2);
+		expect(grown.committed[0]).toBe("One.\n");
+		const replaced = scanner.scan("Completely different.\n\nNext\n");
+		expect(replaced.committed).toEqual(["Completely different.\n"]);
 	});
 
 	it("松散有序列表整段留在 tail", () => {

@@ -22,7 +22,10 @@ export function rehypeStreamingChunks() {
 	return (tree: HastRoot): void => {
 		const chunks: HastElement[] = [];
 		function visit(node: HastRoot | HastElement, inCode: boolean): void {
+			// inCode 子树（代码/表格/SVG 等字面量区）内永远不会包分段：不递归、不重建
+			// children 数组——大表格/长代码文档的流式重解析期间避免无意义的全树遍历与分配。
 			const newChildren: Array<(typeof node.children)[number]> = [];
+			let changed = false;
 			for (const child of node.children) {
 				if (child.type === "text" && !inCode) {
 					for (const segment of splitStreamingSegments((child as HastText).value)) {
@@ -38,6 +41,7 @@ export function rehypeStreamingChunks() {
 						};
 						chunks.push(chunk);
 						newChildren.push(chunk);
+						changed = true;
 					}
 				} else {
 					newChildren.push(child);
@@ -45,11 +49,12 @@ export function rehypeStreamingChunks() {
 						const tag = child.tagName;
 						// 表格也当字面量：单元格文字被拆成片段再逐步增长会反复触发列宽重算，
 						// 流式期表格会抖动。
-						visit(child, inCode || tag === "code" || tag === "pre" || tag === "table" || tag === "vetta-svg");
+						const childInCode = inCode || tag === "code" || tag === "pre" || tag === "table" || tag === "vetta-svg";
+						if (!childInCode) visit(child, false);
 					}
 				}
 			}
-			node.children = newChildren as typeof node.children;
+			if (changed) node.children = newChildren as typeof node.children;
 		}
 
 		visit(tree, false);

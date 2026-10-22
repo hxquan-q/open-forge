@@ -37,7 +37,8 @@ import type { InlineTokenSupport } from "./inline-tokens";
 import type { HastElement } from "./nodes";
 import { useMarkdownDefinition } from "./definition";
 import type { MarkdownDefinition } from "./definition";
-import { splitStableMarkdownBlocks } from "./stable-blocks";
+import { createStableMarkdownScanner } from "./stable-blocks";
+import type { StableMarkdownScanner } from "./stable-blocks";
 
 /** 文件 / 链接 badge 的公共样式：半透明主题色底 + 主题色描边与文字。 */
 const LINK_BADGE_CLASS =
@@ -46,6 +47,9 @@ const LINK_BADGE_CLASS =
 const remarkPlugins = [remarkGfm, ...richRemarkPlugins];
 
 const MarkdownCodeLiveContext = createContext(false);
+
+/** 稳定空列表：无已提交块时避免每次渲染新数组打断 memo。 */
+const EMPTY_COMMITTED: readonly string[] = [];
 
 function cn(...parts: Array<string | false | null | undefined>): string {
 	return parts.filter(Boolean).join(" ");
@@ -228,8 +232,13 @@ export const MarkdownContent = memo(function MarkdownContent({
 	const frozenBlocksRef = useRef(false);
 	if (isStreamingTail && !inlineTokens) frozenBlocksRef.current = true;
 	const splitDocuments = frozenBlocksRef.current && !inlineTokens;
+	// 增量扫描器：reveal tick 只扫描新增行；displayText（匀速放出）与 renderText
+	// （节流快照）是两条单调追加流，各用一个扫描器实例。
+	const displayScannerRef = useRef<StableMarkdownScanner | null>(null);
+	if (displayScannerRef.current === null) displayScannerRef.current = createStableMarkdownScanner();
+	const renderScannerRef = useRef<StableMarkdownScanner | null>(null);
 	const candidateSplit = useMemo(
-		() => splitDocuments ? splitStableMarkdownBlocks(displayText) : null,
+		() => splitDocuments ? displayScannerRef.current?.scan(displayText) ?? null : null,
 		[displayText, splitDocuments],
 	);
 	// Keep small replies responsive; bound full parsing of long tails without splitting
@@ -448,16 +457,17 @@ export const MarkdownContent = memo(function MarkdownContent({
 	// 已冻结块并回单一文档，已上屏的节点会整段重挂并再包成 `.streaming-chunk` 重放淡入。
 	// 稳定块只按已闭合的顶层围栏切分，分块与整篇渲染结果一致，因此结束后不需要再合并。
 	const split = useMemo(
-		() => renderText === displayText ? candidateSplit : splitDocuments ? splitStableMarkdownBlocks(renderText) : null,
+		() =>
+			renderText === displayText
+				? candidateSplit
+				: splitDocuments
+					? (renderScannerRef.current ??= createStableMarkdownScanner()).scan(renderText)
+					: null,
 		[renderText, displayText, candidateSplit, splitDocuments],
 	);
-	// append-only 流式期间，已提交块只可能追加（单调前缀性）：块数未变即内容未变，
-	// 复用上一次的数组引用，让 CommittedDocuments 的 memo 生效；内容被改写（replaced）
-	// 或块数变化时换新引用。
-	const committedBlocks = split?.committed ?? [];
-	const committedRef = useRef<readonly string[]>([]);
-	const committed = replaced || committedRef.current.length !== committedBlocks.length ? committedBlocks : committedRef.current;
-	committedRef.current = committed;
+	// 扫描器在无新增提交时返回同一数组引用，CommittedDocuments 的 memo 由此在
+	// reveal tick 间整体跳过已冻结子树；空列表也用稳定引用。
+	const committed = split?.committed ?? EMPTY_COMMITTED;
 	const tail = split ? split.tail : renderText;
 	const showTail = !split || tail.length > 0 || committed.length === 0;
 
