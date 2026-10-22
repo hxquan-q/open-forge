@@ -290,7 +290,7 @@ flowchart TD
 | Task | 窗口 | 派工代次 | 状态 | base commit | branch | Worktree 绝对路径 | 交接文件路径 | 候选 commit | 集成结果 |
 |---|---|---|---|---|---|---|---|---|---|
 | TASK-0367 | A | 1 | assigned | 9bb2d8a77（开工基线，重校子 2f9d42762） | main | 主工作区（coordination-only） | — | — | pending |
-| TASK-0368 | B | 1 | assigned | 9bb2d8a77661dcb4a631a9f40a09fafc5df1ff4c（已核实：分支 HEAD = 该提交） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
+| TASK-0368 | B | 1 | assigned | 802233321（已核实：分支 HEAD = 该提交，含索引修正） | task/TASK-0368-memory-sqlite-native-probe | C:\Users\xquan\Desktop\open-forge-wt\task-0368-memory-sqlite-native-probe（已创建并核实，干净，bun install 完成） | project/verification/HANDOFF-TASK-0368-window-b.md | — | pending |
 | TASK-0369 | A | — | 未派发 | — | — | — | — | — | pending |
 | TASK-0371 | A | — | 未派发（先于 0370） | — | — | — | — | — | pending |
 | TASK-0370 | A | — | 未派发 | — | — | — | — | — | pending |
@@ -308,6 +308,9 @@ flowchart TD
 | TASK-0388 | A | — | 未派发（0382 集成后） | — | — | — | — | — | pending |
 
 派工备忘（由 Coordinator 续记）：
+
+- 2026-10-22 事故与修复：9bb2d8a77 无 pathspec 提交曾把并发会话暂存的六行他人未提交索引改动（PLAN-0022/REQ-0028/RESEARCH-0040/0037/TASK-0365/0366）卷入提交；802233321 已从已提交索引移除六行并原样归还工作区未提交状态，未动他人未跟踪记录文件。教训：共享索引无锁，本批所有提交一律带 pathspec。
+- 2026-10-22：TASK-0368 登记 conflicts_with TASK-0197（其合同声明 project/tasks 整目录写域且仍为 in_progress/parallel，写域检查在 0368 声明 Worktree 后判负）；仅调度登记，0197 实际已无活动 Worktree。B 的 Worktree 分支已快进到 802233321 之后的最新 main。
 
 - 2026-10-22：TASK-0368 原合同 write_paths 中的 `.github/release-notes/fragments/v0.1.3/task-0368-memory.md` 与仓库发布说明事实不符——`v0.1.3.md` 为手写正文（无汇编标记），与碎片共存会被 release-notes 门禁判负。派工前已将该路径从合同移除，改为：B 不写发布说明，Coordinator 在集成提交按交付规则更新 `v0.1.3.md`。
 - 2026-10-22：`bun run worktree:check --all` 在本批之前即因 TASK-0344–0347 的日期格式与若干历史 worktree 声明漂移而红（先存事实，非本批造成）。本批派工改用 `worktree:check --task <ID>` 定向门禁 + 逐 Task 核对，不动他人记录。

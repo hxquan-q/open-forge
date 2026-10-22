@@ -15,7 +15,7 @@ related_bugs: []
 execution: parallel
 branch: task/TASK-0368-memory-sqlite-native-probe
 worktree: ../open-forge-wt/task-0368-memory-sqlite-native-probe
-base_commit: 9bb2d8a77661dcb4a631a9f40a09fafc5df1ff4c
+base_commit: 802233321
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -36,7 +36,7 @@ exclusive_paths:
   - scripts/verify-memory-native.node-test.mjs
   - project/verification/HANDOFF-TASK-0368-window-b.md
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0197]
 integration_status: pending
 created: 2026-10-22
 updated: 2026-10-22
