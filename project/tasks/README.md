@@ -15,6 +15,31 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0367` | `ready` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；仅建任务，可先行基线/验证；coordination-only。 |
+| `TASK-0368` | `ready` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；仅建任务，可先行基线/验证；parallel。 |
+| `TASK-0369` | `draft` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；待前置产物，未开工；serial。 |
+| `TASK-0370` | `draft` | PLAN-0021 | [稳定项目记忆身份与 Worktree 关联](TASK-0370-memory-project-identity.md)；待前置产物，未开工；serial。 |
+| `TASK-0371` | `draft` | PLAN-0021 | [SQLite 事实修订存储与资源生命周期](TASK-0371-memory-sqlite-revision-store.md)；待前置产物，未开工；serial。 |
+| `TASK-0372` | `draft` | PLAN-0021 | [有作用域的词法与中文短词检索](TASK-0372-memory-lexical-retrieval.md)；待前置产物，未开工；serial。 |
+| `TASK-0373` | `draft` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；待前置产物，未开工；serial。 |
+| `TASK-0374` | `draft` | PLAN-0021 | [显式记住、检索、更正与遗忘工具](TASK-0374-memory-explicit-tools.md)；待前置产物，未开工；serial。 |
+| `TASK-0375` | `draft` | PLAN-0021 | [Desktop 正常会话接线与有界上下文注入](TASK-0375-memory-desktop-session-wiring.md)；待前置产物，未开工；serial。 |
+| `TASK-0376` | `draft` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；待前置产物，未开工；serial。 |
+| `TASK-0377` | `draft` | PLAN-0021 | [记忆查看、纠正、遗忘与设置界面](TASK-0377-memory-desktop-control-ui.md)；待前置产物，未开工；serial。 |
+| `TASK-0378` | `draft` | PLAN-0021 | [旧记忆导入、Markdown 导出与回滚](TASK-0378-memory-legacy-import-export.md)；待前置产物，未开工；serial。 |
+| `TASK-0379` | `draft` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；待前置产物，未开工；serial。 |
+| `TASK-0380` | `draft` | PLAN-0021 | [受预算约束的自动抽取与事实合并](TASK-0380-memory-automatic-extraction.md)；待前置产物，未开工；parallel。 |
+| `TASK-0381` | `draft` | PLAN-0021 | [本地 embedding 资源与版本化向量存储](TASK-0381-memory-local-embedding.md)；待前置产物，未开工；parallel。 |
+| `TASK-0382` | `draft` | PLAN-0021 | [混合检索、融合排名与注入预算](TASK-0382-memory-hybrid-retrieval-context.md)；待前置产物，未开工；serial。 |
+| `TASK-0383` | `draft` | PLAN-0021 | [迟到更正、历史已知视图与冲突状态](TASK-0383-memory-bitemporal-queries.md)；待前置产物，未开工；serial。 |
+| `TASK-0384` | `draft` | PLAN-0021 | [经验晋升、软衰减与可重建摘要](TASK-0384-memory-experience-evolution.md)；待前置产物，未开工；serial。 |
+| `TASK-0385` | `draft` | PLAN-0021 | [CLI 显式策略与跨会话记忆接入](TASK-0385-memory-cli-host-integration.md)；待前置产物，未开工；serial。 |
+| `TASK-0386` | `draft` | PLAN-0021 | [IM 记忆身份选择与 legacy 兼容适配](TASK-0386-memory-im-identity-adapter.md)；待前置产物，未开工；serial。 |
+| `TASK-0387` | `draft` | PLAN-0021 | [项目记忆的可选迁移包与副本隔离](TASK-0387-memory-project-archive.md)；待前置产物，未开工；serial。 |
+| `TASK-0388` | `draft` | PLAN-0021 | [记忆连续流程、质量对照与发布门槛](TASK-0388-memory-evaluation-harness.md)；待前置产物，未开工；serial。 |
+| `TASK-0389` | `draft` | PLAN-0021 | [可选多跳关系或概要检索消融实验](TASK-0389-memory-graph-ablation.md)；待前置产物，未开工；serial。 |
+| `TASK-0366` | `verifying` | PLAN-0006 | BUG-0146：注入垫片改外层 IIFE 形参，依赖函数在压缩产物可用，点选提交链与停止点选实机验证通过，卡死消失。定向全绿。串行。 |
+| `TASK-0365` | `verifying` | PLAN-0006 | BUG-0145：点选改在 pointerdown 打开元素旁批注。定向 12 例通过。主进程脚本，需重启 dev 后实机看。串行。未提交。 |
 | `TASK-0362` | `verifying` | — | BUG-0144：内置浏览器占位洞跟着布局与窗口缩放走到终值。用户已确认侧栏与缩窗可用。定向 34 例通过。主工作区串行。 |
 | `TASK-0361` | `verifying` | — | REQ-0026 / ADR-0147：项目迁移包已实施——OFAR v2 workspace 帧、preview/apply 两段式导入（cwd 重写+指纹按落盘形态）、产物打包恢复（默认不覆盖）、迁移向导 UI 与 i18n；定向 73 例、impact 119 例、完整 check 全绿；六提交本地 main 未推送；顺带修复 TASK-0349 菜单接线缺口；待真实双目录迁移人工验收；serial。 |
 | `TASK-0360` | `verifying` | PLAN-0006 | 用户要求 UI 测试。正在用隔离 Fresh 实例核对页内批注。不附着日常 Desktop。 |

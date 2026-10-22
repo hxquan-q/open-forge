@@ -7,6 +7,8 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
+| `REQ-0028` | Pi 生态接入与原生插件演进 | ready | [PLAN-0022](../plans/PLAN-0022-pi-ecosystem-and-plugin-evolution.md)、[RESEARCH-0040](../research/RESEARCH-0040-pi-extension-ecosystem-compatibility.md)；仅研究与候选方案，未实施 |
+| `REQ-0027` | Agent 全局与项目持久记忆 | ready | [PLAN-0021 / Task DAG](../plans/PLAN-0021-agent-persistent-memory.md#已建-task-与依赖)、[RESEARCH-0038](../research/RESEARCH-0038-agent-persistent-memory.md)；23项Task已建，未开工 |
 | `REQ-0019` | 任务合同驱动的自主研发全流程 | ready | [PLAN-0019](../plans/PLAN-0019-autonomous-development.md) |
 | `REQ-0018` | 桌面侧边栏入口命名与页面内容一致 | ready | [TASK-0319](../tasks/TASK-0319-sidebar-nav-labels.md)（verifying：catalog 改名与相邻文案已落地，定向 132 例与完整 check 全绿，待人工验收） |
 | `REQ-0017` | 桌面端「智能客服」直连 WeKnora | ready | [TASK-0318](../tasks/TASK-0318-weknora-customer-service.md)（verifying：实现与测试完成，待人工验收） |

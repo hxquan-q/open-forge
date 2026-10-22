@@ -7,6 +7,8 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0022` | Pi 生态接入与原生插件演进 | draft | [方案](PLAN-0022-pi-ecosystem-and-plugin-evolution.md)、[REQ-0028](../requirements/REQ-0028-pi-ecosystem-and-plugin-evolution.md)、[RESEARCH-0040](../research/RESEARCH-0040-pi-extension-ecosystem-compatibility.md)；版本化兼容、正常入口、显式信任及安装/加载恢复，未实施 |
+| `PLAN-0021` | Agent 持久记忆：作用域、来源、时态、检索与宿主迁移 | draft | [REQ-0027](../requirements/REQ-0027-agent-persistent-memory.md)、[Task DAG](PLAN-0021-agent-persistent-memory.md#已建-task-与依赖)；TASK-0367–0389已建，2 ready / 21 draft，未开工 |
 | `PLAN-0020` | 日志巡检后的可靠性与性能修复 | in_progress | REQ-0002、RESEARCH-0035，TASK-0352–0359逐片修复与验收 |
 | `PLAN-0019` | 自主研发全流程实施与验收 | in_progress | [REQ-0019](../requirements/REQ-0019-autonomous-development.md)、完整实施合同 |
 | `PLAN-0018` | 设计插件统一路线图 v2（去品牌 × 安全 × 设计能力 × 可借鉴代码） | draft | [REQ-0005](../requirements/REQ-0005-openforge-independent-release-and-compliance.md)、[RESEARCH-0031](../research/RESEARCH-0031-design-reference-projects-license-audit.md) |
