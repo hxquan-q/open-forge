@@ -237,6 +237,14 @@
 - 203.5（中等负载带，p95 1.9ms）——至此分支满足仓库「完成代码任务运行完整
   check」要求，可交付评审
 
+### Run #24（keep）：desktop 集成审计（负面结果）+ 验证
+
+- 审计 MarkdownContent 全部调用链（RendererMarkdownContent→useRendererMarkdownModel
+  →useMarkdownLabels/useMarkdownHost；TextBlock→RendererMarkdownContent）：labels/
+  callbacks/host/model 全链 useMemo/useCallback，TextBlock 有显式引用稳定性注释
+  ——集成无 memo 失效浪费，负面结果备查（无需修复）
+- 唯一潜在抖动点：inlineTokens 父级对象身份（仅用户消息路径，上游自行控制）
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
