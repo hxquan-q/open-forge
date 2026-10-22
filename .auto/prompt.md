@@ -276,6 +276,14 @@
 - 仅有的模块状态为原有设计且有界：math-client（公式缓存+worker 池）、
   WebsiteIcon（失败缓存 128 站点/5 分钟，文档化）
 
+### Run #30（keep）：括号 prose 残余 jank 量化（诊断，产品决策项备档）
+
+- 独立诊断（.auto/diag-bracket.mjs，不动仓库基准）：29k 括号 prose 流式
+  p95 22.7-26.1ms / max 29.5-36ms / 总 190-215ms（对照无括号 prose p95 1.0ms）
+- 编程回复（arr[0]/[1]）是唯一剩余的用户可感知 jank 场景；优化方案与代价
+  （引用链接罕见的一次性视觉翻转）已完整备档 ideas.md——正确性立场 vs 常见
+  jank 的产品取舍，非 autoresearch 单方可决
+
 ### Run #4（keep）：等价性安全网
 
 - 流式冻结拆分 vs 整篇渲染 DOM 等价性模糊测试（10 份棘手文档），root 级元素序列比较
