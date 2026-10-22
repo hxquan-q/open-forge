@@ -69,6 +69,9 @@ function startsIndented(line: string): boolean {
  * 引用定义或脚注定义追溯解析成链接；后接 `(` 的行内链接/图片自含，不受影响。 */
 const UNRESOLVED_REFERENCE = /\[[^\]\n]*\](?!\()/;
 
+/** 链接引用 / 脚注定义行（含 ≤3 空格缩进；脚注为 [^…]: 形式）。 */
+const DEFINITION_LINE = /^ {0,3}\[\^?[^\]\n]+\]:\s*\S/;
+
 type BlockClass = "list" | "quote" | "plain";
 
 function classifyBlockStart(line: string): BlockClass {
@@ -106,6 +109,12 @@ interface ScanState {
 	candidateClean: boolean;
 	candidateHasBracket: boolean;
 	candidateHasPipe: boolean;
+	/** 文本中是否出现过链接引用/脚注定义行（append-only 下只增不减）。 */
+	sawDefinition: boolean;
+	/** 已提交块中是否含裸方括号构造（定义行到达时需重拆）。 */
+	committedBracket: boolean;
+	/** 本轮扫描已因定义行到达重置过（重扫期间禁用括号块的乐观冻结）。 */
+	definitionReset: boolean;
 }
 
 function initialScanState(): ScanState {
@@ -124,6 +133,9 @@ function initialScanState(): ScanState {
 		candidateClean: true,
 		candidateHasBracket: false,
 		candidateHasPipe: false,
+		sawDefinition: false,
+		committedBracket: false,
+		definitionReset: false,
 	};
 }
 
@@ -143,6 +155,9 @@ function copyScanState(from: ScanState, to: ScanState): void {
 	to.candidateClean = from.candidateClean;
 	to.candidateHasBracket = from.candidateHasBracket;
 	to.candidateHasPipe = from.candidateHasPipe;
+	to.sawDefinition = from.sawDefinition;
+	to.committedBracket = from.committedBracket;
+	to.definitionReset = from.definitionReset;
 }
 
 /** 已提交块数组的写时复制容器：无新增提交时保持数组引用稳定，
@@ -150,6 +165,7 @@ function copyScanState(from: ScanState, to: ScanState): void {
 interface CommittedStore {
 	readonly array: readonly string[];
 	push(block: string): void;
+	clear(): void;
 }
 
 function createCommittedStore(base?: readonly string[]): CommittedStore {
@@ -165,6 +181,10 @@ function createCommittedStore(base?: readonly string[]): CommittedStore {
 				cloned = true;
 			}
 			(current as string[]).push(block);
+		},
+		clear(): void {
+			current = [];
+			cloned = true;
 		},
 	};
 }
@@ -215,6 +235,7 @@ function runScan(
 			return;
 		}
 		committed.push(block);
+		if (!state.definitionReset && UNRESOLVED_REFERENCE.test(block)) state.committedBracket = true;
 		state.start = end;
 		resetCandidate();
 	};
@@ -225,7 +246,10 @@ function runScan(
 		// 已提交块必须是严格前缀，失败过的块之后不再提交。
 		if (state.candidateStart !== state.start && text.slice(state.start, state.candidateStart).trim().length > 0)
 			return;
-		if (!state.candidateClean || state.candidateHasBracket) return;
+		if (!state.candidateClean) return;
+		// 乐观冻结括号块：定义未到达时其渲染与全量解析一致（均为字面文本）；
+		// 定义行到达由上方检测同帧重置。重置后的文本不再冻结括号块（保守等价）。
+		if (state.candidateHasBracket && state.sawDefinition) return;
 		// 后继块首行不能续上当前块，也不能开启会回溯改写前块的结构。
 		if (continuesBlock(state.candidateClass, nextLine)) return;
 		if (startsIndented(nextLine)) return;
@@ -246,6 +270,22 @@ function runScan(
 		const line = stripLineEnding(text.slice(lineStart, newline === -1 ? text.length : newline));
 		/** 该行是否已完整（带换行）：只有完整行上的内容不再变化，冻结判定才可恢复。 */
 		const lineComplete = newline !== -1;
+
+		// 链接引用/脚注定义行会追溯解析先前的裸方括号构造。此前乐观冻结的括号块
+		// 渲染与现状一致（定义未到达时全量解析也输出字面文本），但定义到达后冻结
+		// 块无法解析成链接——同帧重置重拆：清空已提交内容从头重扫，本轮起括号块
+		// 不再冻结（与保守行为等价）。append-only 下每条流最多触发一次。
+		if (lineComplete && !state.inFence && !state.literalEnd && !state.sawDefinition && DEFINITION_LINE.test(line)) {
+			state.sawDefinition = true;
+			if (state.committedBracket && state.start > 0) {
+				committed.clear();
+				state.start = 0;
+				state.index = 0;
+				state.definitionReset = true;
+				resetCandidate();
+				continue;
+			}
+		}
 
 		// 围栏闭合行恰好是全文最后一个完整行时推迟处理：是否随文提交取决于其后是否
 		// 还有正文，这一决策随文本增长才稳定；不处理也不快照，增量扫描器下次从上一

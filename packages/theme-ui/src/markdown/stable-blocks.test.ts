@@ -43,9 +43,21 @@ describe("splitStableMarkdownBlocks", () => {
 		expect(splitStableMarkdownBlocks("- a\n\nplain\n").committed).toEqual(["- a\n"]);
 	});
 
-	it("含裸方括号的块不冻结，之后的块也不再提交（保持前缀性）", () => {
-		const text = "see [ref] here\n\nplain1\n\nplain2";
-		expect(splitStableMarkdownBlocks(text)).toEqual({ committed: [], tail: text });
+	it("裸方括号块乐观冻结；引用定义行到达时同帧重置重拆", () => {
+		// 无定义：括号块与后续块照常冻结（定义未到达时渲染与全量解析一致）。
+		const noDef = "see [ref] here\n\nplain1\n\nplain2\n";
+		// 前两块冻结（末块无后继块不冻结，与非括号行为一致）。
+		expect(splitStableMarkdownBlocks(noDef).committed.length).toBe(2);
+
+		// 定义行到达：同帧重置——已提交的括号块回到 tail；重扫时首块（括号）不可
+		// 冻结，前缀规则使其后块也保持 tail（=保守行为，整条流其余部分全量解析）。
+		const withDef = "see [ref] here\n\nplain1\n\n[ref]: https://example.com\n\nafter\n";
+		const split = splitStableMarkdownBlocks(withDef);
+		expect(split.committed).toEqual([]);
+		expect(split.tail).toBe(withDef);
+		// 定义行之后再出现的新非括号块同样不再冻结（sawDefinition 终生为真）。
+		const later = `${withDef}plain3\n`;
+		expect(splitStableMarkdownBlocks(later).committed).toEqual([]);
 	});
 
 	it("行内链接与图片自含，可以冻结", () => {

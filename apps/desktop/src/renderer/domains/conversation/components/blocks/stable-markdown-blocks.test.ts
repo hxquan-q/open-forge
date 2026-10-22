@@ -20,7 +20,11 @@ describe("splitStableMarkdownBlocks", () => {
 		const partial = "First paragraph.\n\nSecond";
 		expect(splitStableMarkdownBlocks(partial)).toEqual({ committed: [], tail: partial });
 
+		// 裸方括号块改为乐观冻结（渲染与全量解析一致）；定义行到达时同帧重置回退。
 		const bracket = "see [ref] here\n\nSecond\n";
-		expect(splitStableMarkdownBlocks(bracket)).toEqual({ committed: [], tail: bracket });
+		// 括号块冻结；Second 为末块（无后继块）不冻结——与非括号行为一致。
+		expect(splitStableMarkdownBlocks(bracket).committed.length).toBe(1);
+		const withDef = "see [ref] here\n\nSecond\n\n[ref]: https://e.com\n";
+		expect(splitStableMarkdownBlocks(withDef).committed).toEqual([]);
 	});
 });
