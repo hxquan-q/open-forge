@@ -27,7 +27,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0376` | `done` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；shared 合同+主进程服务+IPC+preload 接线（分页/搜索/详情/更正/遗忘/模式），定向 7 例全绿。 |
 | `TASK-0377` | `done` | PLAN-0021 | [记忆查看、纠正、遗忘与设置界面](TASK-0377-memory-desktop-control-ui.md)；/memory 页面（模式/范围/搜索/详情/纠正/忘记）+zh/en i18n，定向 6 例与完整 check 全绿；实机验收待用户。 |
 | `TASK-0378` | `done` | PLAN-0021 | [旧记忆导入、Markdown 导出与回滚](TASK-0378-memory-legacy-import-export.md)；MEMORY.md 幂等导入（hash 键/撤销不重生）+版本化导出+展示组件，定向 12 例与完整 check 全绿。 |
-| `TASK-0379` | `draft` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；待前置产物，未开工；serial。 |
+| `TASK-0379` | `done` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；持久 jobs 队列（幂等/lease/过期回收/高水位/纪元复检）+捕获过滤 Observer，定向 10 例与完整 check 全绿。 |
 | `TASK-0380` | `draft` | PLAN-0021 | [受预算约束的自动抽取与事实合并](TASK-0380-memory-automatic-extraction.md)；待前置产物，未开工；parallel。 |
 | `TASK-0381` | `draft` | PLAN-0021 | [本地 embedding 资源与版本化向量存储](TASK-0381-memory-local-embedding.md)；待前置产物，未开工；parallel。 |
 | `TASK-0382` | `draft` | PLAN-0021 | [混合检索、融合排名与注入预算](TASK-0382-memory-hybrid-retrieval-context.md)；待前置产物，未开工；serial。 |

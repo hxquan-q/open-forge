@@ -301,7 +301,7 @@ flowchart TD
 | TASK-0376 | A | 1 | integrated | a13c1759a | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 7 例 + 完整 check 绿） |
 | TASK-0377 | A | 1 | integrated | 8f7132a37 | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（定向 6 例 + 完整 check 绿；实机验收待用户） |
 | TASK-0378 | A | 1 | integrated | f2f546e5b | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（legacy 5 + 导入导出 5 + 组件 2 例，完整 check 绿） |
-| TASK-0379 | A | — | 未派发 | — | — | — | — | — | pending |
+| TASK-0379 | A | 1 | integrated | 7406851cf | main | 主工作区（serial） | — | 承载提交即绑定 | integrated（队列 6 + Observer 4 例，完整 check 绿） |
 | TASK-0380 | A | — | 未派发（0379 集成后） | — | — | — | — | — | pending |
 | TASK-0381 | B | — | 未派发（0379 集成后，届时建独立 Worktree 与交接文件） | — | — | — | — | — | pending |
 | TASK-0382 | A | — | 未派发（0380/0381 集成后） | — | — | — | — | — | pending |
