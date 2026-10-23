@@ -3,6 +3,7 @@
 export type { MemoryEvidenceBudget, MemoryEvidenceReader } from "../memory/context/index.js";
 export {
 	createMemoryEvidenceContextProvider,
+	createMergedMemoryEvidenceProvider,
 	createPersistentMemoryFeature,
 	DEFAULT_MEMORY_EVIDENCE_BUDGET,
 	isPersistentMemoryActive,
@@ -14,6 +15,8 @@ export {
 	parseLegacyMemoryDocument,
 	renderLegacyMemoryMarkdown,
 } from "../memory/legacy/index.js";
+export type { PersistentMemoryAssemblyOptions } from "../memory/session-assembly.js";
+export { createPersistentMemorySessionRuntime } from "../memory/session-assembly.js";
 export type {
 	ExplicitMemoryScopeContext,
 	ExplicitMemoryServices,

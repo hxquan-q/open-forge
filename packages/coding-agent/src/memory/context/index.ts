@@ -7,4 +7,5 @@ export {
 	isPersistentMemoryActive,
 	renderMemoryEvidenceBlock,
 } from "./memory-evidence-context.js";
+export { createMergedMemoryEvidenceProvider } from "./merged-evidence.js";
 export { createPersistentMemoryFeature } from "./persistent-memory-feature.js";
