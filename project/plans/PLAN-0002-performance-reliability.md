@@ -7,7 +7,7 @@ requirement: REQ-0002
 owner: runtime-core/desktop/ai
 source: exprot/session-memory.md and exprot/differential-testing-observability.md
 created: 2026-09-22
-updated: 2026-09-23
+updated: 2026-10-24
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -38,7 +38,17 @@ updated: 2026-09-23
 - 其余 P1 ready 项为 `TASK-0034`（done 待核）、`TASK-0036`（在途）、`TASK-0038`（draft）。P2 防御项 `TASK-0039`、`TASK-0042` 仍为 draft。
 - 已知在途干扰：`check`/`check:quick` 全量暂不可绿——工作区含多个其他 Agent 在途改动（plugin artifacts、task-activity、agent-text 去重契约 RED 测试、coding-agent/projects 路径映射守卫），本批任务文件自身 lint/format/typecheck 已清。
 
-## 完成标准
+## 2026-10-24 Desktop 启动与占用优化批次
+
+用户已授权按 [RESEARCH-0044](../research/RESEARCH-0044-desktop-startup-resource-audit.md) 的三个 P1 实施，复用 REQ-0002。此前进度保留为历史记录，不代表本批基线。
+
+1. [TASK-0399](../tasks/TASK-0399-runtime-startup-async-probes.md)：运行环境子进程探测异步化，受控慢进程验证主线程可响应。
+2. [TASK-0400](../tasks/TASK-0400-file-editor-lazy-startup.md)：文件编辑器按需加载，以同配置构建静态闭包和正常预览/编辑流程验证。
+3. [TASK-0401](../tasks/TASK-0401-bounded-session-auto-restore.md)：启动自动恢复保持有界 tail，验证空元信息、大历史、分页与live兼容。
+
+产品代码由 Coordinator 串行写入 main；只读调查与评审可并行。工作区其他修改保留，次级候选不自动纳入。各Task独立回滚，组合门禁通过后按原子提交交付；不以受控指标冒充实机启动/RAM收益，不运行真实用户实例或发布。
+
+## 本计划完成标准
 
 - 失败、取消和超时都有明确终态。
 - 同一 Session 不并发执行多个 Compaction。
