@@ -261,3 +261,45 @@ describe("会话注入工具（TASK-0095）", () => {
 		expect(sessionConfiguration?.sessionRuntimeTools).toHaveLength(1);
 	});
 });
+
+describe("记忆策略透传（TASK-0375，ADR-0149）", () => {
+	it("缺省不携带 memoryPolicy：旧行为零变化", async () => {
+		const root = await createTemporaryRoot();
+		const resolved = await resolveDesktopSessionConfig(undefined, "conversation", "interactive");
+		const sessionConfiguration = parseCodingAgentRuntimeSessionConfiguration(
+			resolved.config.agent?.sessionConfiguration,
+		);
+		expect(sessionConfiguration.memoryPolicy).toBeUndefined();
+		expect(sessionConfiguration.memoryMode).toBeUndefined();
+		void root;
+	});
+
+	it("memoryPolicy 原样透传进会话配置并被边界接受", async () => {
+		const resolved = await resolveDesktopSessionConfig(
+			{
+				cwd: process.cwd(),
+				memoryPolicy: { mode: "explicit", allowedScopes: ["user", "project"] },
+			},
+			"conversation",
+			"interactive",
+		);
+		const sessionConfiguration = parseCodingAgentRuntimeSessionConfiguration(
+			resolved.config.agent?.sessionConfiguration,
+		);
+		expect(sessionConfiguration.memoryPolicy).toEqual({ mode: "explicit", allowedScopes: ["user", "project"] });
+	});
+
+	it("非法 memoryPolicy 在 RuntimeHost 边界被稳定错误拒绝", async () => {
+		const resolved = await resolveDesktopSessionConfig(
+			{
+				cwd: process.cwd(),
+				memoryPolicy: { mode: "automatic", allowedScopes: ["user"] },
+			},
+			"conversation",
+			"interactive",
+		);
+		expect(() =>
+			parseCodingAgentRuntimeSessionConfiguration(resolved.config.agent?.sessionConfiguration),
+		).toThrowError(/extractionBudget|memoryPolicy/);
+	});
+});

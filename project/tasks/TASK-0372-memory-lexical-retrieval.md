@@ -1,7 +1,7 @@
 ---
 id: TASK-0372
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 5341cff2f
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -23,21 +23,27 @@ read_paths:
   - project/research/RESEARCH-0038-agent-persistent-memory.md
   - project/research/RESEARCH-0039-pi-memory-implementation-benchmarks.md
   - packages/runtime-node/src/memory/retrieval
+  - packages/runtime-node/src/memory/index.ts
+  - packages/runtime-node/vitest.config.ts
   - packages/runtime-node/src/memory/migrations
   - packages/runtime-node/test/memory/lexical-retrieval.test.ts
 write_paths:
   - packages/runtime-node/src/memory/retrieval
+  - packages/runtime-node/src/memory/index.ts
+  - packages/runtime-node/vitest.config.ts
   - packages/runtime-node/src/memory/migrations
   - packages/runtime-node/test/memory/lexical-retrieval.test.ts
   - project/tasks/TASK-0372-memory-lexical-retrieval.md
-  - .github/release-notes/fragments/v0.1.3/task-0372-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/runtime-node/src/memory/retrieval
+  - packages/runtime-node/src/memory/index.ts
+  - packages/runtime-node/vitest.config.ts
   - packages/runtime-node/src/memory/migrations
   - packages/runtime-node/test/memory/lexical-retrieval.test.ts
 depends_on: [TASK-0370, TASK-0371]
 conflicts_with: [TASK-0371, TASK-0373, TASK-0379, TASK-0381, TASK-0382, TASK-0383]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -128,8 +134,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补入 `src/memory/index.ts` 与 `vitest.config.ts`（检索出口接线为原合同遗漏，fragments 路径按仓库发布说明事实改为 v0.1.3.md）。
+- 实际修改：新增 `src/memory/retrieval/`：`lexical-query.ts`（纯查询计划：FTS5 字面量转义、Unicode 码点计数、<3 字短词 instr 回退并标 degraded、limit 有界）与 `lexical-index.ts`（独立连接同库 WAL，自持 trigram FTS 表，refresh 幂等重建、search 先按 scope/有效时间过滤行再匹配，绝不全库召回后屏蔽）；memory/index.ts 增补检索出口。
+- 实际运行（2026-10-22，win32-x64，真实 FTS5）：`bun run test`（runtime-node）88 文件 572 例全绿（新增 lexical 11 例：计划/转义纯函数 3 + 作用域隔离、短词回退、路径/引号/星号/OR 字面量、双时态过滤、遗忘后重建不复活、空结果不降级混同 8）；完整 `bun run check` 全绿。
+- 未运行：embedding/语义召回（0381/0382）；真实用户数据；多进程并发压测（WAL+busy_timeout 合同已由 0371 覆盖）。
+- 承载提交即集成绑定；人工功能验收不适用（内部检索层，用户入口在 0374 工具/0377 界面）。
+- 剩余风险：refresh 全量重建为 O(n)，S2 规模可接受，大数据量时改增量同步（登记到 0382 混合检索时评估）；检索层与 worker 写入的事务窗口由 WAL 快照隔离。

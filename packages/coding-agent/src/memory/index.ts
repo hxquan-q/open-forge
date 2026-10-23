@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 export {
 	AiMemoryFactExtractor,
 	parseMemoryFactCandidates,
 	serializeMessagesForMemoryFlush,
 } from "./ai-memory-fact-extractor.js";
+export { createMergedMemoryEvidenceProvider } from "./context/merged-evidence.js";
 export {
 	type CodingAgentMemoryController,
 	CodingAgentSessionMemoryController,
@@ -57,3 +59,4 @@ export {
 	MEMORY_TOOL_SCOPES,
 	type MemoryToolRegistrationOptions,
 } from "./memory-tool-registration.js";
+export { createPersistentMemorySessionRuntime, type PersistentMemoryAssemblyOptions } from "./session-assembly.js";

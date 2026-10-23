@@ -37,6 +37,7 @@ internal_dependencies:
   - "@vetta/runtime-core"
   - "@vetta/runtime-knowledge"
   - "@vetta/runtime-mcp"
+  - "@vetta/runtime-memory"
   - "@vetta/runtime-storage"
   - "@vetta/runtime-tools"
 ```

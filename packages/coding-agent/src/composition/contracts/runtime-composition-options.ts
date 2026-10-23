@@ -10,7 +10,7 @@ import type {
 	RuntimeObservationRouteOptions,
 	SessionConfig,
 } from "@vetta/runtime-core";
-import type { AgentCoreTurnEngineOptions } from "@vetta/runtime-core/kernel";
+import type { AgentCoreTurnEngineOptions, AgentFeatureDefinition } from "@vetta/runtime-core/kernel";
 import type {
 	SessionExtensionDefinition,
 	SessionExtensionFunctionSource,
@@ -231,6 +231,14 @@ export interface CodingAgentRuntimeContextOptions {
 		options: CodingAgentMemoryRuntimeFactoryOptions,
 		sessionOptions: CodingAgentRuntimeSessionOptions,
 	) => CodingAgentMemoryRolloverRuntime;
+	/**
+	 * 为 memoryPolicy 活跃（explicit/automatic）的 Session 创建新结构化记忆
+	 * Runtime（显式工具组 + 证据上下文注入）；未提供或策略关闭时不装配，
+	 * 旧 memoryMode 路径不受影响（ADR-0149，TASK-0375）。
+	 */
+	readonly createExplicitMemoryRuntime?: (
+		sessionOptions: CodingAgentRuntimeSessionOptions,
+	) => AgentFeatureDefinition | undefined;
 }
 
 export interface CodingAgentRuntimeObservabilityOptions {

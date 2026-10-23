@@ -30,6 +30,7 @@
 		"packages/runtime-tools",
 		"packages/runtime-mcp",
 		"packages/runtime-storage",
+		"packages/runtime-memory",
 		"packages/runtime-node",
 		"packages/runtime-telemetry",
 		"packages/runtime-desktop",

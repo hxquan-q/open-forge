@@ -22,6 +22,10 @@
 			"types": "./dist/public-api/host-services.d.ts",
 			"import": "./dist/public-api/host-services.js"
 		},
+		"./memory": {
+			"types": "./dist/public-api/memory.d.ts",
+			"import": "./dist/public-api/memory.js"
+		},
 		"./historical-sessions": {
 			"types": "./dist/public-api/historical-sessions.d.ts",
 			"import": "./dist/public-api/historical-sessions.js"
@@ -136,6 +140,7 @@
 		"@vetta/runtime-mcp": "workspace:*",
 		"@vetta/runtime-node": "workspace:*",
 		"@vetta/runtime-knowledge": "workspace:*",
+		"@vetta/runtime-memory": "workspace:*",
 		"@vetta/runtime-storage": "workspace:*",
 		"@vetta/runtime-subagents": "workspace:*",
 		"@vetta/runtime-telemetry": "workspace:*",

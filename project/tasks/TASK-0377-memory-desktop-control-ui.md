@@ -1,7 +1,7 @@
 ---
 id: TASK-0377
 type: task
-status: draft
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 8f7132a37
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -34,7 +34,9 @@ write_paths:
   - apps/desktop/src/renderer/router.tsx
   - apps/desktop/src/shared/i18n
   - project/tasks/TASK-0377-memory-desktop-control-ui.md
-  - .github/release-notes/fragments/v0.1.3/task-0377-memory.md
+  - .github/release-notes/v0.1.3.md
+  - apps/desktop/src/renderer/shared/i18n/i18next.d.ts
+  - apps/desktop/src/renderer/shared/i18n/index.ts
 exclusive_paths:
   - apps/desktop/src/renderer/domains/memory
   - apps/desktop/src/renderer/domains/project
@@ -43,7 +45,7 @@ exclusive_paths:
   - apps/desktop/src/shared/i18n
 depends_on: [TASK-0376]
 conflicts_with: [TASK-0378, TASK-0387]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -134,8 +136,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补入 renderer i18n 类型增强/实例（ns 注册必要），fragments 改 v0.1.3.md。
+- 实际修改：①`renderer/domains/memory/`（MemoryPage：壳先行 loading/空/失败/重试，模式选择（off/explicit/automatic，保存态）、范围切换、搜索与降级标注、列表分页、详情（修订+来源）、纠正（冲突态、取消）、忘记（确认+来源处理登记）；useMemoryListModel 状态机；memoryControlClient 薄封装）；②i18n：zh/en memory catalog + NAMESPACES/resources 三处注册 + 类型增强；③router 挂 /memory 路由（lazy）。文案全部 i18n（zh/en），操作用原生可聚焦 Button（D03 合同）。
+- 实际运行（2026-10-22，win32-x64，jsdom）：定向 6/6（壳先行+空/失败/重试、模式 IPC 保存、详情历史/来源、纠正冲突呈现与重试、忘记传参与清空、搜索降级标注）；完整 `bun run check` 全绿（含 DESIGN/ratchet/类型增强）。
+- 未运行：真实 Electron 实机（verify:ui 未授权）；与设置页/项目页导航入口（后续用户反馈决定挂载点，当前路由直达）。
+- 承载提交即集成绑定；人工功能验收：待用户在实机打开 /memory 页验证完整流程（启用→记住→新会话使用→纠正→切项目→忘记→重开）。
+- 剩余风险：更正 expectedRevision 取自已打开详情长度（未开详情时为 1），冲突时提示重开详情；无障碍深度审计留实机验收。

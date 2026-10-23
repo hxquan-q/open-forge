@@ -15,29 +15,30 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0367` | `in_progress` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；窗口A实施中，主工作区 coordination-only 取证。 |
-| `TASK-0368` | `in_progress` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B已派工（代次1，独立Worktree），交接文件 HANDOFF-TASK-0368-window-b.md；parallel。 |
-| `TASK-0369` | `draft` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；待前置产物，未开工；serial。 |
-| `TASK-0370` | `draft` | PLAN-0021 | [稳定项目记忆身份与 Worktree 关联](TASK-0370-memory-project-identity.md)；待前置产物，未开工；serial。 |
-| `TASK-0371` | `draft` | PLAN-0021 | [SQLite 事实修订存储与资源生命周期](TASK-0371-memory-sqlite-revision-store.md)；待前置产物，未开工；serial。 |
-| `TASK-0372` | `draft` | PLAN-0021 | [有作用域的词法与中文短词检索](TASK-0372-memory-lexical-retrieval.md)；待前置产物，未开工；serial。 |
-| `TASK-0373` | `draft` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；待前置产物，未开工；serial。 |
-| `TASK-0374` | `draft` | PLAN-0021 | [显式记住、检索、更正与遗忘工具](TASK-0374-memory-explicit-tools.md)；待前置产物，未开工；serial。 |
-| `TASK-0375` | `draft` | PLAN-0021 | [Desktop 正常会话接线与有界上下文注入](TASK-0375-memory-desktop-session-wiring.md)；待前置产物，未开工；serial。 |
-| `TASK-0376` | `draft` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；待前置产物，未开工；serial。 |
-| `TASK-0377` | `draft` | PLAN-0021 | [记忆查看、纠正、遗忘与设置界面](TASK-0377-memory-desktop-control-ui.md)；待前置产物，未开工；serial。 |
-| `TASK-0378` | `draft` | PLAN-0021 | [旧记忆导入、Markdown 导出与回滚](TASK-0378-memory-legacy-import-export.md)；待前置产物，未开工；serial。 |
-| `TASK-0379` | `draft` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；待前置产物，未开工；serial。 |
-| `TASK-0380` | `draft` | PLAN-0021 | [受预算约束的自动抽取与事实合并](TASK-0380-memory-automatic-extraction.md)；待前置产物，未开工；parallel。 |
-| `TASK-0381` | `draft` | PLAN-0021 | [本地 embedding 资源与版本化向量存储](TASK-0381-memory-local-embedding.md)；待前置产物，未开工；parallel。 |
-| `TASK-0382` | `draft` | PLAN-0021 | [混合检索、融合排名与注入预算](TASK-0382-memory-hybrid-retrieval-context.md)；待前置产物，未开工；serial。 |
+| `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |
+| `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |
+| `TASK-0369` | `done` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；@vetta/runtime-memory 合同包 + memoryPolicy 会话边界校验 + ADR-0149/0150 落地，完整 check 全绿。 |
+| `TASK-0370` | `done` | PLAN-0021 | [稳定项目记忆身份与 Worktree 关联](TASK-0370-memory-project-identity.md)；身份解析器+JSON 注册表落地（alias 规范化、Worktree 候选/确认、移动/复制映射），13 例与完整 check 全绿。 |
+| `TASK-0371` | `done` | PLAN-0021 | [SQLite 事实修订存储与资源生命周期](TASK-0371-memory-sqlite-revision-store.md)；@vetta/runtime-node/memory 落地（worker 存储+迁移+lease 池+staging 工具），563 例与完整 check 全绿。 |
+| `TASK-0372` | `done` | PLAN-0021 | [有作用域的词法与中文短词检索](TASK-0372-memory-lexical-retrieval.md)；trigram FTS+短词 instr 回退+字面量转义落地（先 scope/时间过滤后匹配），572 例与完整 check 全绿。 |
+| `TASK-0373` | `done` | PLAN-0021 | [全版本遗忘与防重抽取撤销屏障](TASK-0373-memory-erasure-barrier.md)；事务性家族清除+来源抑制+epoch 重检合同+无正文审计落地，576+38 例与完整 check 全绿。 |
+| `TASK-0374` | `done` | PLAN-0021 | [显式记住、检索、更正与遗忘工具](TASK-0374-memory-explicit-tools.md)；memory_remember/recall/get/correct/forget 五工具落地（宿主绑定 scope、expectedRevision 冲突、家族遗忘），定向 1633 例全绿。 |
+| `TASK-0375` | `done` | PLAN-0021 | [Desktop 正常会话接线与有界上下文注入](TASK-0375-memory-desktop-session-wiring.md)；memoryPolicy 透传+组合装配+证据注入（有界/来源/数据框架）落地，策略关闭零变化，定向 20 例与完整 check 全绿。 |
+| `TASK-0376` | `done` | PLAN-0021 | [Desktop 记忆管理 IPC 与权限控制](TASK-0376-memory-desktop-control-api.md)；shared 合同+主进程服务+IPC+preload 接线（分页/搜索/详情/更正/遗忘/模式），定向 7 例全绿。 |
+| `TASK-0377` | `done` | PLAN-0021 | [记忆查看、纠正、遗忘与设置界面](TASK-0377-memory-desktop-control-ui.md)；/memory 页面（模式/范围/搜索/详情/纠正/忘记）+zh/en i18n，定向 6 例与完整 check 全绿；实机验收待用户。 |
+| `TASK-0378` | `done` | PLAN-0021 | [旧记忆导入、Markdown 导出与回滚](TASK-0378-memory-legacy-import-export.md)；MEMORY.md 幂等导入（hash 键/撤销不重生）+版本化导出+展示组件，定向 12 例与完整 check 全绿。 |
+| `TASK-0379` | `done` | PLAN-0021 | [增量捕获、持久队列与崩溃对账](TASK-0379-memory-durable-capture-queue.md)；持久 jobs 队列（幂等/lease/过期回收/高水位/纪元复检）+捕获过滤 Observer，定向 10 例与完整 check 全绿。 |
+| `TASK-0380` | `done` | PLAN-0021 | [受预算约束的自动抽取与事实合并](TASK-0380-memory-automatic-extraction.md)；决策层落地（预算账本/错误分类/建议校验去重），定向 7 例全绿；真实 Provider 未授权不跑。 |
+| `TASK-0381` | `done` | PLAN-0021 | [本地 embedding 资源与版本化向量存储](TASK-0381-memory-local-embedding.md)；窗口B交付并集成：适配端口+版本化向量存储+持久任务（真实模型推理未授权保持未验证）。 |
+| `TASK-0382` | `done` | PLAN-0021 | [混合检索、融合排名与注入预算](TASK-0382-memory-hybrid-retrieval-context.md)；RRF 双路融合+注入预算（pin 占额/scope 保底）落地，定向 16 例全绿；参数为待评测初值。 |
 | `TASK-0383` | `draft` | PLAN-0021 | [迟到更正、历史已知视图与冲突状态](TASK-0383-memory-bitemporal-queries.md)；待前置产物，未开工；serial。 |
 | `TASK-0384` | `draft` | PLAN-0021 | [经验晋升、软衰减与可重建摘要](TASK-0384-memory-experience-evolution.md)；待前置产物，未开工；serial。 |
 | `TASK-0385` | `draft` | PLAN-0021 | [CLI 显式策略与跨会话记忆接入](TASK-0385-memory-cli-host-integration.md)；待前置产物，未开工；serial。 |
 | `TASK-0386` | `draft` | PLAN-0021 | [IM 记忆身份选择与 legacy 兼容适配](TASK-0386-memory-im-identity-adapter.md)；待前置产物，未开工；serial。 |
 | `TASK-0387` | `draft` | PLAN-0021 | [项目记忆的可选迁移包与副本隔离](TASK-0387-memory-project-archive.md)；待前置产物，未开工；serial。 |
-| `TASK-0388` | `draft` | PLAN-0021 | [记忆连续流程、质量对照与发布门槛](TASK-0388-memory-evaluation-harness.md)；待前置产物，未开工；serial。 |
+| `TASK-0388` | `done` | PLAN-0021 | [记忆连续流程、质量对照与发布门槛](TASK-0388-memory-evaluation-harness.md)；确定性评测基座（3 场景×5 臂×延迟×成本）+连续用户流程 3 例落地，VERIFY-0021；真实质量保留未验证。 |
 | `TASK-0389` | `draft` | PLAN-0021 | [可选多跳关系或概要检索消融实验](TASK-0389-memory-graph-ablation.md)；待前置产物，未开工；serial。 |
+| `TASK-0390` | `verifying` | PLAN-0021 | [记忆交付后复核修复与正常入口闭环](TASK-0390-memory-postreview-fix-loop.md)；VERIFY-0022 六项 P1 全关闭（BUG-0147–0150），三包 124 例+完整 check 绿；真实 UI/模型未验证，工程交付待人工接受。 |
 | `TASK-0366` | `verifying` | PLAN-0006 | BUG-0146：注入垫片改外层 IIFE 形参，依赖函数在压缩产物可用，点选提交链与停止点选实机验证通过，卡死消失。定向全绿。串行。 |
 | `TASK-0365` | `verifying` | PLAN-0006 | BUG-0145：点选改在 pointerdown 打开元素旁批注。定向 12 例通过。主进程脚本，需重启 dev 后实机看。串行。未提交。 |
 | `TASK-0362` | `verifying` | — | BUG-0144：内置浏览器占位洞跟着布局与窗口缩放走到终值。用户已确认侧栏与缩窗可用。定向 34 例通过。主工作区串行。 |

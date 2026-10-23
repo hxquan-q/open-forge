@@ -19,6 +19,10 @@
 | `BUG-0146` | 注入 guest 的依赖函数在压缩产物里抛 `ReferenceError: o`，点选提交链与停止点选在真实 Desktop 上必死并卡死会话 | verifying | P1 | PLAN-0006 |
 | `BUG-0143` | 项目导出 `.ofar`，「导入项目」却只接受 `.zip` | done | P1 | — |
 | `BUG-0145` | 内置浏览器点选已打开，但单击不会在元素旁出现输入框 | verifying | P1 | PLAN-0006 |
+| `BUG-0147` | 记忆存储身份未落库、按 memoryId 操作无归属核验、共享 lease 继承授权（跨项目读写已复现） | fixed | P1 | REQ-0027 |
+| `BUG-0148` | 设置页保存的记忆策略没有进入普通新建与恢复会话 | fixed | P1 | REQ-0027 |
+| `BUG-0149` | 自动捕获与混合检索未进入生产装配 | fixed | P1 | REQ-0027 |
+| `BUG-0150` | 恒真隔离断言与评测非目标命中计分 | fixed | P1 | REQ-0027 |
 | `BUG-0144` | 内置浏览器在侧边栏与页签切换后错位、溢出，开发态重复加载变慢 | verifying | P1 | — |
 | `BUG-0137` | 安装版Windows沙箱二进制缺失或定位失败 | blocked | P1 | PLAN-0020 |
 | `BUG-0138` | 启动绘制超时被记录为内容已可见 | verifying | P1 | PLAN-0020 |

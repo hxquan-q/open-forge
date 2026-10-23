@@ -1,7 +1,7 @@
 ---
 id: TASK-0388
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: b356465f0
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -30,14 +30,14 @@ write_paths:
   - packages/coding-agent/test/memory/memory-user-flow.test.ts
   - project/verification
   - project/tasks/TASK-0388-memory-evaluation-harness.md
-  - .github/release-notes/fragments/v0.1.3/task-0388-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - scripts/evals/memory
   - packages/coding-agent/test/memory/memory-user-flow.test.ts
   - project/verification
 depends_on: [TASK-0378, TASK-0380, TASK-0382]
 conflicts_with: [TASK-0367, TASK-0389]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -129,8 +129,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；真实模型质量评测的Provider/费用授权须在harness具体可审阅后获得；本轮仅建任务。
+- 实际修改：①`scripts/evals/memory/run-deterministic.ts`（确定性评测基座：3 合成场景 × 5 检索对照臂 × p50/p95 × 成本账本，bun 执行）；②`test/memory/memory-user-flow.test.ts`（3 例连续流程：记住→重启→纠正→隔离→忘记不复活、短词降级+注入有界、失败不伪装）；③[VERIFY-0021](../verification/VERIFY-0021-memory-deterministic-eval.md)（isolation/short-query 实测数据）。
+- 实际运行（2026-10-23，win32-x64）：user-flow 3/3；评测基座两场景 5 臂全跑退出 0；完整 `bun run check` 全绿。
+- 关键结论：短词 lexical 1/2 为预期（1 字走 instr、trigram 需 ≥3 字）；summary 全命中不代表真实质量；hybrid 补齐但有双路开销。
+- **真实 Provider / embedding 质量未验证（未授权）**：不冒充质量结论，不据此扩大 automatic 默认启用。
+- 承载提交即集成绑定；真实质量对照待授权后在本基座上执行。
+- 剩余风险：合成场景规模小（冷热延迟不代表真实负载）；连续任务净收益对照待授权。

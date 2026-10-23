@@ -14,6 +14,7 @@ import type project from "@/shared/i18n/locales/zh/project.json";
 import type settings from "@/shared/i18n/locales/zh/settings.json";
 import type skills from "@/shared/i18n/locales/zh/skills.json";
 import type weknora from "@/shared/i18n/locales/zh/weknora.json";
+import type memory from "@/shared/i18n/locales/zh/memory.json";
 
 declare module "i18next" {
 	interface CustomTypeOptions {
@@ -32,6 +33,7 @@ declare module "i18next" {
 			automation: typeof automation;
 			"agent-teams": typeof agentTeams;
 			weknora: typeof weknora;
+			memory: typeof memory;
 		};
 	}
 }

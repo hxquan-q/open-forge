@@ -1,7 +1,7 @@
 ---
 id: TASK-0371
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 777539cb4
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -43,7 +43,7 @@ write_paths:
   - apps/desktop/scripts/memory-native-staging.mjs
   - apps/desktop/scripts/memory-native-staging.node-test.mjs
   - project/tasks/TASK-0371-memory-sqlite-revision-store.md
-  - .github/release-notes/fragments/v0.1.3/task-0371-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/runtime-node/src/memory/index.ts
   - packages/runtime-node/src/memory/store
@@ -57,7 +57,7 @@ exclusive_paths:
   - apps/desktop/scripts/memory-native-staging.node-test.mjs
 depends_on: [TASK-0369]
 conflicts_with: [TASK-0369, TASK-0372, TASK-0373, TASK-0379, TASK-0381]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -150,8 +150,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改：新增 `@vetta/runtime-node/memory`（subpath 导出）：`worker/protocol.ts`（RPC 协议与存储层专用错误码）、`worker/worker-source.ts`（生成式 worker 引导源：迁移、短事务写入、scope/erasure/expectedRevision 事务内校验、备份）、`worker/memory-worker.ts`（静态异步工厂 + 同路径引用计数 lease 池，幂等关闭）、`migrations/migrations.ts`（v1 迁移清单，单调追加）；runtime-node 固定依赖 `better-sqlite3@13.0.3`；`apps/desktop/scripts/memory-native-staging.mjs`（staging 计划/复制/显式 nativeBinding 验证）及 5 例 node-test；vitest 别名、README 边界、dependents、tsconfig path、bun.lock 同步。
+- 实际运行（2026-10-22，win32-x64，真实临时 SQLite + 真实 worker_threads）：`bun run test`（runtime-node）87 文件 563 例全绿（新增 revision-store 9 例：修订链/来源、并发更正 REVISION_CONFLICT、双时态区间关闭、遗忘家族清除与拒绝复活、越权 SCOPE_NOT_ALLOWED、重启一致、备份恢复、新 schema 拒绝且不破坏原库；worker-lifecycle 4 例：同路径共享、幂等释放、再获取、双 close）；`node --test apps/desktop/scripts/memory-native-staging.node-test.mjs` 5/5；`--verify` 在隔离 staging 目录用显式 nativeBinding 实际加载（SQLite 3.53.4）；完整 `bun run check` 全绿。
+- Feature 保持关闭：无任何宿主接入（0375 起），不动用户状态。
+- 未运行：强制 SQLITE_BUSY（>5s 写锁保持）与磁盘错误注入未模拟（busy_timeout=5000 与 WAL 合同由并发双连接覆盖）；macOS/Linux 打包链（无环境）；真实 Provider/UI。
+- 承载提交即集成绑定；人工功能验收不适用（内部存储层，宿主入口在后续切片）。
+- 剩余风险：生成式 worker 引导源与打包产物集成（asar unpack、DEFINITIONS 登记）在宿主接入/打包验证时落地；FTS 索引扩展点留给 0372。

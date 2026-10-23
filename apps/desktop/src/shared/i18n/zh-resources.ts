@@ -10,6 +10,7 @@ import zhBatchTasks from "./locales/zh/batch-tasks.json";
 import zhChat from "./locales/zh/chat.json";
 import zhCommon from "./locales/zh/common.json";
 import zhMain from "./locales/zh/main.json";
+import zhMemory from "./locales/zh/memory.json";
 import zhMessage from "./locales/zh/message.json";
 import zhPet from "./locales/zh/pet.json";
 import zhProject from "./locales/zh/project.json";
@@ -31,4 +32,5 @@ export const zhResources = {
 	automation: zhAutomation,
 	"agent-teams": zhAgentTeams,
 	weknora: zhWeknora,
+	memory: zhMemory,
 } as const;

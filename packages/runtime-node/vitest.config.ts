@@ -9,6 +9,7 @@ export default defineConfig({
 			"@vetta/runtime-node/conversation/legacy": fileURLToPath(
 				new URL("./src/conversation/legacy.ts", import.meta.url),
 			),
+			"@vetta/runtime-node/memory": fileURLToPath(new URL("./src/memory/index.ts", import.meta.url)),
 			"@vetta/runtime-node/host": fileURLToPath(new URL("./src/host/index.ts", import.meta.url)),
 			"@vetta/runtime-node/sandbox": fileURLToPath(new URL("./src/sandbox/index.ts", import.meta.url)),
 			"@vetta/runtime-node/coding": fileURLToPath(new URL("./src/coding/index.ts", import.meta.url)),
@@ -32,6 +33,8 @@ export default defineConfig({
 				new URL("../runtime-storage/src/conversation/index.ts", import.meta.url),
 			),
 			"@vetta/runtime-storage": fileURLToPath(new URL("../runtime-storage/src/index.ts", import.meta.url)),
+			"@vetta/runtime-memory/fixtures": fileURLToPath(new URL("../runtime-memory/src/fixtures.ts", import.meta.url)),
+			"@vetta/runtime-memory": fileURLToPath(new URL("../runtime-memory/src/index.ts", import.meta.url)),
 			"@vetta/runtime-tools/coding": fileURLToPath(
 				new URL("../runtime-tools/src/coding/index.ts", import.meta.url),
 			),

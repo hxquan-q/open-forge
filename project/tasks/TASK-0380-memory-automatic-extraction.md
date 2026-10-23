@@ -1,7 +1,7 @@
 ---
 id: TASK-0380
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/coding-agent
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: parallel
 branch: task/TASK-0380-memory-automatic-extraction
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 201fb087e
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -30,14 +30,14 @@ write_paths:
   - packages/coding-agent/src/memory/ai-memory-fact-extractor.ts
   - packages/coding-agent/test/memory/automatic-extraction.test.ts
   - project/tasks/TASK-0380-memory-automatic-extraction.md
-  - .github/release-notes/fragments/v0.1.3/task-0380-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/coding-agent/src/memory/extraction
   - packages/coding-agent/src/memory/ai-memory-fact-extractor.ts
   - packages/coding-agent/test/memory/automatic-extraction.test.ts
 depends_on: [TASK-0379]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -128,8 +128,8 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 实际修改：新增 `src/memory/extraction/`（AutomaticExtractionRunner：日预算账本（领即计）、单 job 输出上限、ExtractorPort 事务外调用、错误三分类（provider-transient/invalid-output/budget-exhausted）；validateSuggestion（越权 scope/空内容/revision 不匹配降 NOOP，自动抽取不授予高证据等级）；mergeSuggestions（同键去重，NOOP 丢弃））。
+- 实际运行（2026-10-22，win32-x64，确定性替身）：定向 7/7（校验降级、revision 匹配、证据降级、去重、预算耗尽/分类、完整流程、输出上限）；完整 `bun run check` 全绿。
+- 未运行：真实抽取 Provider（未授权，模型质量保持未验证，不扩大 automatic 默认启用）；与捕获队列的调度集成（后续消费方接线）；真实会话事件流。
+- 承载提交即集成绑定；人工验收不适用（内部决策层）。
+- 剩余风险：输出上限用保守 token 换算（每条 40）；调度与退避接入队列层时统一验证。

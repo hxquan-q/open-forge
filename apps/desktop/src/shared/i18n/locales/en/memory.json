@@ -1,0 +1,63 @@
+{
+	"title": "Memory",
+	"subtitle": "View, correct, and forget the agent's persistent memory; turning it off keeps existing data.",
+	"mode": {
+		"label": "Memory mode",
+		"off": "Off",
+		"explicit": "Explicit only",
+		"automatic": "Automatic (model required)",
+		"saving": "Saving…",
+		"saved": "Saved",
+		"automaticNeedsModel": "Automatic mode requires an extraction model"
+	},
+	"scope": {
+		"all": "All",
+		"user": "User preferences",
+		"project": "Project"
+	},
+	"search": {
+		"placeholder": "Search memories…",
+		"degraded": "Short term matched via substring fallback",
+		"empty": "No matching memories"
+	},
+	"list": {
+		"loading": "Loading…",
+		"empty": "No memories yet. Ask the agent to remember something explicit, or wait for automatic consolidation.",
+		"error": "Failed to load",
+		"retry": "Retry",
+		"loadMore": "Load more",
+		"pinned": "Pinned",
+		"evidence": {
+			"claimed": "Assistant claim",
+			"tool-verified": "Tool verified",
+			"user-confirmed": "User confirmed"
+		}
+	},
+	"detail": {
+		"title": "Memory detail",
+		"revisions": "Revision history",
+		"sources": "Sources",
+		"noSources": "No recorded sources"
+	},
+	"correct": {
+		"action": "Correct",
+		"title": "Correct memory",
+		"contentLabel": "New content",
+		"submit": "Save correction",
+		"saving": "Saving…",
+		"conflict": "Version conflict: this memory was updated. Reopen it and try again.",
+		"cancel": "Cancel"
+	},
+	"forget": {
+		"action": "Forget",
+		"title": "Forget this memory?",
+		"description": "Deletes all versions and blocks re-extraction from old sources; original conversations are not deleted.",
+		"alsoProcessSources": "Also process original conversation sources (existing flow)",
+		"confirm": "Forget",
+		"cancel": "Cancel"
+	},
+	"policy": {
+		"loading": "Loading settings…",
+		"error": "Failed to load settings"
+	}
+}

@@ -25,6 +25,7 @@ import type { DesktopImApi } from "./api-types/im.js";
 import type { DesktopKnowledgeApi } from "./api-types/knowledge.js";
 import type { DesktopMcpApi } from "./api-types/mcp.js";
 import type { DesktopMediaApi } from "./api-types/media.js";
+import type { DesktopMemoryControlApi } from "./api-types/memory.js";
 import type { DesktopModelsApi } from "./api-types/models.js";
 import type { DesktopNotificationApi } from "./api-types/notification.js";
 import type { DesktopPetApi } from "./api-types/pet.js";
@@ -160,6 +161,7 @@ export interface DesktopApi {
 	plugins: DesktopPluginsApi;
 	pet: DesktopPetApi;
 	conversationTags: DesktopConversationTagsApi;
+	memoryControl: DesktopMemoryControlApi;
 	archivedSessions: DesktopArchivedSessionsApi;
 	reviewChanges: DesktopReviewChangesApi;
 	task: DesktopTaskApi;

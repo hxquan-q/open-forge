@@ -1,7 +1,7 @@
 ---
 id: TASK-0373
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: cc6f698af
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -32,7 +32,8 @@ write_paths:
   - packages/runtime-node/test/memory/erasure.test.ts
   - packages/runtime-memory/test/erasure-contract.test.ts
   - project/tasks/TASK-0373-memory-erasure-barrier.md
-  - .github/release-notes/fragments/v0.1.3/task-0373-memory.md
+  - .github/release-notes/v0.1.3.md
+  - packages/runtime-node/src/memory/index.ts
 exclusive_paths:
   - packages/runtime-node/src/memory/erasure
   - packages/runtime-node/src/memory/migrations
@@ -40,7 +41,7 @@ exclusive_paths:
   - packages/runtime-memory/test/erasure-contract.test.ts
 depends_on: [TASK-0372]
 conflicts_with: [TASK-0369, TASK-0371, TASK-0372, TASK-0379, TASK-0381]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -131,8 +132,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补入 `src/memory/index.ts`（erasure 出口接线）并按发布说明事实改 v0.1.3.md。
+- 实际修改：新增 `src/memory/erasure/memory-erasure.ts`：`SqliteMemoryErasure`（独立连接同库）：事务性 `forgetMemoryFamily`（单事务内 epoch 推进、家族全版本+来源+FTS 派生行清除、来源抑制登记、无正文审计行）、`undoLastCorrection`（显式撤销一次更正：从历史追加恢复修订，expectedRevision 检查，绝不自动恢复 parent）、`assertCommitAllowed`（派生消费者提交前 epoch 重检合同，向量/摘要/后续 job 接同一合同）、`isSourceSuppressed`；边界如实说明：WAL/用户备份/另存副本不受逻辑遗忘影响，处理原始对话来源是独立入口。
+- 实际运行（2026-10-22，win32-x64，真实 SQLite）：runtime-node 89 文件 576 例全绿（新增 erasure 4 例：全版本清除+来源抑制+epoch+无正文审计+同源拒绝、FTS 遗忘不复活含重建、撤销更正与遗忘区分且版本链 3 修订、epoch 重检落后拒绝）；runtime-memory 38 例（新增 erasure-contract 3 例共享纯合同）；完整 `bun run check` 全绿。
+- 未运行：向量/摘要派生层的实际接入（后续 0381/0382 接同一 assertCommitAllowed 合同）；真实用户数据；跨进程并发遗忘。
+- 承载提交即集成绑定；人工功能验收不适用（内部屏障层，用户入口在 0377 遗忘 UI）。
+- 剩余风险：worker 写路径的来源级重抽取拦截在捕获队列（0379）接线时接入 memory_suppressed_sources；多进程同时遗忘依赖 SQLite 单写者串行化。

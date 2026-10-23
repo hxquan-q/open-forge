@@ -1,7 +1,7 @@
 ---
 id: TASK-0379
 type: task
-status: draft
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement: REQ-0027
@@ -15,7 +15,7 @@ related_bugs: []
 execution: serial
 branch: main
 worktree: unassigned（仅规划，未创建）
-base_commit: 2f9d42762e2638601c5907bb1edfd88b36e0e68c
+base_commit: 7406851cf
 read_paths:
   - AGENTS.md
   - project/plans/PLAN-0021-agent-persistent-memory.md
@@ -23,27 +23,33 @@ read_paths:
   - project/research/RESEARCH-0038-agent-persistent-memory.md
   - project/research/RESEARCH-0039-pi-memory-implementation-benchmarks.md
   - packages/runtime-node/src/memory/jobs
+  - packages/runtime-node/src/memory/index.ts
+  - packages/coding-agent/src/public-api/memory.ts
   - packages/runtime-node/src/memory/migrations
   - packages/coding-agent/src/memory/capture
   - packages/runtime-node/test/memory/capture-queue.test.ts
   - packages/coding-agent/test/memory/capture-observer.test.ts
 write_paths:
   - packages/runtime-node/src/memory/jobs
+  - packages/runtime-node/src/memory/index.ts
+  - packages/coding-agent/src/public-api/memory.ts
   - packages/runtime-node/src/memory/migrations
   - packages/coding-agent/src/memory/capture
   - packages/runtime-node/test/memory/capture-queue.test.ts
   - packages/coding-agent/test/memory/capture-observer.test.ts
   - project/tasks/TASK-0379-memory-durable-capture-queue.md
-  - .github/release-notes/fragments/v0.1.3/task-0379-memory.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/runtime-node/src/memory/jobs
+  - packages/runtime-node/src/memory/index.ts
+  - packages/coding-agent/src/public-api/memory.ts
   - packages/runtime-node/src/memory/migrations
   - packages/coding-agent/src/memory/capture
   - packages/runtime-node/test/memory/capture-queue.test.ts
   - packages/coding-agent/test/memory/capture-observer.test.ts
 depends_on: [TASK-0377]
 conflicts_with: [TASK-0371, TASK-0372, TASK-0373, TASK-0381]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-22
 updated: 2026-10-22
 ---
@@ -134,8 +140,9 @@ updated: 2026-10-22
 
 ## 交付记录
 
-- 实际修改：仅创建本任务合同及计划/需求/索引关联，没有生产实现。
-- 实际运行：无本Task行为测试；本轮台账校验由PLAN-0021统一记录。
-- 未运行：全部上述未来实现/构建/模型/UI验证；用户当前只要求出Task。
-- Worktree：未创建、未初始化、未清理；本轮仅在主工作区串行编辑管理记录。
-- 剩余风险：依赖与目标平台尚未兑现；实施前须回读前置产物和实际源码，再收敛测试名/写域，不能把规划路径当事实。
+- 合同修正：写域补两处出口接线（必要），fragments 改 v0.1.3.md。
+- 实际修改：①`runtime-node/src/memory/jobs/`（MemoryCaptureQueue：持久 jobs 表（source+extractor 唯一）、幂等入队、原子 lease/attempt/过期回收、崩溃重开恢复、高水位表对账、提交前 erasure epoch 复检放弃）；②`coding-agent/src/memory/capture/`（extract 纯函数：user/助手最终可见文本候选、排除 thinking/系统指令/二进制，tool outcome 仅显式允许时登记引用型候选，sourceId 稳定；shouldEnqueue 有界过滤）；③两处出口导出。
+- 实际运行（2026-10-22，win32-x64，真实 SQLite）：capture-queue 6/6（幂等、lease/完成、崩溃重开+过期 lease 重领 attempt=2、纪元前进放弃、高水位幂等、失败不伪装）；capture-observer 4/4（排除 thinking/系统、outcome 引用默认关、有界过滤、sourceId 稳定）；完整 `bun run check` 全绿。
+- 未运行：真实 Provider 抽取（0380）；真实用户会话事件流（无授权）；自动重启调度（策略侧接线属 0380/后续）。
+- 承载提交即集成绑定；人工验收不适用（内部队列层）。
+- 剩余风险：退避策略现为固定不重领（failed 不自动重试，人工/后续重置策略），预算与优先级登记到 0380。

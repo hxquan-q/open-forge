@@ -1,0 +1,63 @@
+{
+	"title": "记忆管理",
+	"subtitle": "查看、纠正、忘记 Agent 的持久记忆；关闭不会删除既有数据。",
+	"mode": {
+		"label": "记忆模式",
+		"off": "关闭",
+		"explicit": "明确记住",
+		"automatic": "自动整理（需配置模型）",
+		"saving": "保存中…",
+		"saved": "已保存",
+		"automaticNeedsModel": "自动整理需要先配置抽取模型"
+	},
+	"scope": {
+		"all": "全部",
+		"user": "用户偏好",
+		"project": "项目"
+	},
+	"search": {
+		"placeholder": "搜索记忆…",
+		"degraded": "短词已用子串回退匹配",
+		"empty": "没有匹配的记忆"
+	},
+	"list": {
+		"loading": "加载中…",
+		"empty": "还没有记忆。在对话里让 Agent 明确保存，或等待自动整理。",
+		"error": "加载失败",
+		"retry": "重试",
+		"loadMore": "加载更多",
+		"pinned": "已固定",
+		"evidence": {
+			"claimed": "助手陈述",
+			"tool-verified": "工具验证",
+			"user-confirmed": "用户确认"
+		}
+	},
+	"detail": {
+		"title": "记忆详情",
+		"revisions": "修订历史",
+		"sources": "来源",
+		"noSources": "无来源记录"
+	},
+	"correct": {
+		"action": "纠正",
+		"title": "纠正记忆",
+		"contentLabel": "新内容",
+		"submit": "保存更正",
+		"saving": "保存中…",
+		"conflict": "版本冲突：该记忆已被更新，请重新打开后再试",
+		"cancel": "取消"
+	},
+	"forget": {
+		"action": "忘记",
+		"title": "忘记这条记忆？",
+		"description": "将删除全部历史版本并阻止旧来源重新提取；原始对话不会被删除。",
+		"alsoProcessSources": "同时处理原始对话来源（走既有会话删除流程）",
+		"confirm": "忘记",
+		"cancel": "取消"
+	},
+	"policy": {
+		"loading": "读取设置中…",
+		"error": "设置读取失败"
+	}
+}

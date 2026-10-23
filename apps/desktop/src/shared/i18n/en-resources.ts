@@ -12,6 +12,7 @@ import enBatchTasks from "./locales/en/batch-tasks.json";
 import enChat from "./locales/en/chat.json";
 import enCommon from "./locales/en/common.json";
 import enMain from "./locales/en/main.json";
+import enMemory from "./locales/en/memory.json";
 import enMessage from "./locales/en/message.json";
 import enPet from "./locales/en/pet.json";
 import enProject from "./locales/en/project.json";
@@ -33,4 +34,5 @@ export const enResources = {
 	automation: enAutomation,
 	"agent-teams": enAgentTeams,
 	weknora: enWeknora,
+	memory: enMemory,
 } as const;
