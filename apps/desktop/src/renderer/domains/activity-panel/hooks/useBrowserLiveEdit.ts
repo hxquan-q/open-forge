@@ -1,7 +1,7 @@
 // Copyright The Open Forge contributors.
 
 import type { BrowserElementLiveEdit, BrowserElementRef } from "@vetta/coding-agent/function-extensions";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DesktopBrowserLiveEditAction } from "@/shared/browser-tab-ipc";
 
 export type BrowserLiveEditError = "stale_reference" | "apply_failed" | "unavailable";
@@ -26,13 +26,17 @@ export function useBrowserLiveEdit(input: { workspaceId: string; elementRef: Bro
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<BrowserLiveEditError | null>(null);
 	const [hasElement, setHasElement] = useState(true);
+	/** 代次守卫：重新点选/换工作空间后，在途调用的迟到响应不再提交状态。 */
+	const runSeqRef = useRef(0);
 
 	const run = useCallback(
 		async (action: DesktopBrowserLiveEditAction): Promise<boolean> => {
 			if (!elementRef) return false;
+			const sequence = ++runSeqRef.current;
 			setBusy(true);
 			try {
 				const result = await window.vetta.browserTab.liveEdit({ workspaceId, elementRef, action });
+				if (sequence !== runSeqRef.current) return false;
 				if (!result.ok) {
 					setError(
 						result.code === "stale_reference" || result.code === "no_browser_session"
@@ -46,19 +50,22 @@ export function useBrowserLiveEdit(input: { workspaceId: string; elementRef: Bro
 				setError(null);
 				return true;
 			} catch {
-				setError("unavailable");
+				if (sequence === runSeqRef.current) setError("unavailable");
 				return false;
 			} finally {
-				setBusy(false);
+				if (sequence === runSeqRef.current) setBusy(false);
 			}
 		},
 		[elementRef, workspaceId],
 	);
 
 	useEffect(() => {
+		// 新元素使在途调用的迟到响应全部失效，再拉取 guest 侧既有日志。
+		runSeqRef.current += 1;
 		setEdits([]);
 		setError(null);
 		setHasElement(true);
+		setBusy(false);
 		if (elementRef) void run({ type: "state" });
 	}, [elementRef, run]);
 
