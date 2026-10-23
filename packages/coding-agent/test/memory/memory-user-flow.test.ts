@@ -77,9 +77,8 @@ describe("记忆连续用户流程（合成夹具）", () => {
 				expect(revisions).toHaveLength(2);
 				const sources = await store.listSources(memoryId, FIXTURE_PROJECT_SCOPE);
 				expect(sources[0]?.sourceId).toBe("session/flow/turn/1");
-				// 4. 切项目隔离（当前合同）：user scope 不可见项目事实（scope 名隔离成立）；
-				// 同名 project 的跨 projectId 隔离待 0370 身份绑定接入存储 schema 后生效，
-				// 此处记录为已知边界（见 Task 交付记录）。
+				// 4. 切项目隔离：user scope 不可见项目事实；同名 project 的跨
+				// projectId 隔离已随完整身份落库生效（BUG-0147）。
 				await expect(
 					store.read(
 						{ name: "user", identity: { principalId: "principal-fixture-1" } },
@@ -88,6 +87,7 @@ describe("记忆连续用户流程（合成夹具）", () => {
 						},
 					),
 				).resolves.toEqual([]);
+				await expect(store.read(OTHER_PROJECT_SCOPE, { asOf: "2030-01-01T00:00:00Z" })).resolves.toEqual([]);
 			} finally {
 				await store.close();
 			}
@@ -135,16 +135,16 @@ describe("记忆连续用户流程（合成夹具）", () => {
 			const short = index.search(FIXTURE_PROJECT_SCOPE, "短词", { asOf: "2030-01-01T00:00:00Z" });
 			expect(short.degraded).toBe(true);
 			expect(short.entries.length).toBeGreaterThan(0);
-			const other = index.search(
-				{ name: "project", identity: { principalId: "principal-fixture-1", projectId: "project-x" } },
-				"短词",
-				{ asOf: "2030-01-01T00:00:00Z" },
-			);
-			// 词法层按授权 scope 名匹配；跨项目隔离由存储层授权保证（上面已断言）。
-			other.entries.forEach((entry) => {
-				expect(entry.memoryId).toBeDefined();
-			});
-			expect(other.entries.every((entry) => entry.memoryId !== short.entries[0]?.memoryId || true)).toBe(true);
+			// BUG-0150：跨项目否定检查必须是真正能失败的断言——不同 projectId
+			// 的同名 project scope 既读不到存储行，也检索不到词法命中。
+			const otherScope = {
+				name: "project" as const,
+				identity: { principalId: "principal-fixture-1", projectId: "project-x" },
+			};
+			const other = index.search(otherScope, "短词", { asOf: "2030-01-01T00:00:00Z" });
+			expect(other.entries).toEqual([]);
+			const otherFull = index.search(otherScope, "记忆短词回退", { asOf: "2030-01-01T00:00:00Z" });
+			expect(otherFull.entries.map((entry) => entry.memoryId)).not.toContain(short.entries[0]?.memoryId);
 			// 注入层：有界 + 来源标记 + 数据框架。
 			const block = renderMemoryEvidenceBlock([
 				{
