@@ -74,7 +74,12 @@ export class LexicalMemoryIndex {
 		this.db = db;
 	}
 
-	static async open(options: { readonly databasePath: string }): Promise<LexicalMemoryIndex> {
+	/**
+	 * 同步打开：底层 better-sqlite3 全部是同步 API，此前 async 包装只是让宿主
+	 * 必须在异步上下文里装配；Desktop 的 createExplicitMemoryRuntime 是同步工厂，
+	 * 同步化后 `await open(...)` 依旧成立（await 非 Promise 值合法），调用点零改动。
+	 */
+	static open(options: { readonly databasePath: string }): LexicalMemoryIndex {
 		const require = createRequire(import.meta.url);
 		const Database = require(require.resolve("better-sqlite3")) as new (path: string) => BetterSqlite3Database;
 		const db = new Database(options.databasePath);

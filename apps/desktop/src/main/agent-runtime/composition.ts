@@ -58,6 +58,7 @@ import {
 	NodeTextFileStorage,
 } from "@vetta/runtime-node/host";
 import { loadVettaCredentials } from "@vetta/runtime-node/mcp";
+import { createRuntimeNodePersistentMemoryStorage, openLexicalMemoryIndex } from "@vetta/runtime-node/memory";
 import { getModePrompt } from "../agent-modes/index.js";
 import { createDesktopAgentObservability } from "../agent-observability/composition.js";
 import { recordRuntimeCompaction } from "../app-monitor/app-monitor-service.js";
@@ -416,13 +417,21 @@ function createDesktopExplicitMemoryRuntime(
 				? { principalId: entry.principalId }
 				: { principalId: entry.principalId, projectId: entry.projectId },
 	}));
+	const databasePath = join(memoryDir, "memory.sqlite");
+	// BUG-0149/TASK-0390 之后共享装配要求宿主提供存储端口与词法索引句柄；Desktop
+	// 调用点此前遗漏，导致类型错误与运行时缺端口。词法索引由装配在 dispose 关闭
+	// （session-assembly 持有句柄），这里只负责打开。
+	const storage = createRuntimeNodePersistentMemoryStorage();
+	const lexical = openLexicalMemoryIndex(databasePath);
 	return createPersistentMemorySessionRuntime({
 		policy,
-		databasePath: join(memoryDir, "memory.sqlite"),
+		databasePath,
 		allowedScopes,
 		leaseOwner: sessionOwnerOf(sessionOptions),
-		// 语义通道与真实抽取 Provider 由后续授权切片注入；缺省时共享装配
-		// 明确降级词法/以可读错误失败，不冒充模型能力。
+		storage,
+		lexical,
+		// 模型语义通道与真实抽取 Provider 仍由后续授权切片经 extractor 注入；
+		// 缺省时装配明确降级词法，不冒充模型能力。
 	});
 }
 

@@ -119,6 +119,9 @@ export default defineConfig({
 				replacement: resolve(__dirname, "../../packages/coding-agent/src/projects/index.ts"),
 			},
 			{ find: /^@vetta\/coding-agent\/(.+)\.js$/, replacement: `${codingAgentSrc}/$1.ts` },
+			// 子路径别名必须排在无锚定的包级别名之前（vite 字符串 find 是前缀匹配）。
+			{ find: /^@vetta\/coding-agent\/memory$/, replacement: resolve(__dirname, "../../packages/coding-agent/src/memory/index.ts") },
+			{ find: /^@vetta\/runtime-node\/memory$/, replacement: resolve(__dirname, "../../packages/runtime-node/src/memory/index.ts") },
 			{ find: "@vetta/coding-agent", replacement: resolve(__dirname, "../../packages/coding-agent/src/index.ts") },
 			{
 				find: "@vetta/runtime-core/kernel",

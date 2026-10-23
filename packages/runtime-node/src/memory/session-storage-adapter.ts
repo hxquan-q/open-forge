@@ -55,6 +55,6 @@ export function createRuntimeNodePersistentMemoryStorage(options: RuntimeNodeMem
 	};
 }
 
-export async function openLexicalMemoryIndex(databasePath: string): Promise<LexicalMemoryIndex> {
+export function openLexicalMemoryIndex(databasePath: string): LexicalMemoryIndex {
 	return LexicalMemoryIndex.open({ databasePath });
 }

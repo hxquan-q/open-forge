@@ -64,7 +64,10 @@ export function withHostMemoryPolicy<Config extends { memoryPolicy?: MemoryPolic
 	if (config?.memoryPolicy !== undefined) return config;
 	const resolved = resolveHostMemoryPolicy(readSavedMemoryPolicyState(memoryDirectory));
 	if (resolved === undefined) return config;
-	return { ...config, memoryPolicy: resolved };
+	// 展开保留 Config 的其余字段、只覆盖 memoryPolicy：TS 无法证明
+	// `{ ...Config, memoryPolicy }` 仍是 Config 的具体子类型（泛型展开限制），
+	// 这里的断言是结构等价的：原位只多/改 memoryPolicy 一个已知可选键。
+	return { ...config, memoryPolicy: resolved } as Config;
 }
 
 /** 桌面记忆目录（与 composition/控制面同款布局）。 */
