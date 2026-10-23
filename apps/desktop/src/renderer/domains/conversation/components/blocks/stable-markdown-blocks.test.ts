@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { splitStableMarkdownBlocks } from "@vetta-org/theme-ui/markdown";
 import { describe, expect, it } from "vitest";
 

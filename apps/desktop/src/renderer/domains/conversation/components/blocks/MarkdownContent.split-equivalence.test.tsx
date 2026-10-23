@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { act, render } from "@testing-library/react";
 import { MarkdownContent } from "@vetta-org/theme-ui/markdown";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
