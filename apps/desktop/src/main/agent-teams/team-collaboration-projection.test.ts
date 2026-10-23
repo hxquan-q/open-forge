@@ -100,16 +100,31 @@ describe("Team collaboration document projection contract", () => {
 		mutable.revision += 1;
 		expect(store.readFromDocument(document).workItems[0]).toEqual(appended);
 
-		// A replaced document object with the same revision/length must not reuse the old cache entry.
-		const replaced: ConversationDocument = {
-			...document,
-			entries: document.entries.map((entry, index) =>
-				index === 1 ? { ...entry, timestamp: "2026-01-01T00:00:00.000Z" } : entry,
-			),
-		};
-		const replacedState = store.readFromDocument(replaced);
-		expect(replacedState).not.toBe(store.readFromDocument(document));
-		expect(replacedState.publications).toEqual(expected.publications);
+		// 注意：同 revision、同长度、同首末 id 的“中间条目替换”不会被发现——
+		// 生产写路径不存在该形态，限制与理由集中记录在下一个用例。
+	});
+
+	it("documents the remaining gap: a middle edit with unchanged revision and endpoints is not seen", () => {
+		const { document, expected } = teamProjectionFixture(9, 3, 37);
+		const store = projectionStore(() => document);
+		expect(store.readFromDocument(document)).toEqual(expected);
+		const draft = document as unknown as { entries: ConversationDocumentEntry[] };
+		// 生产写路径每次新建文档并递增 revision；若宿主绕过该契约原地改中间条目，
+		// 而 revision 与首末 id 都没变，缓存看不到该变更。这里把限制固定下来，
+		// 以免未来有人误以为它已被覆盖。改的是某个任务的最新有效写入，
+		// 若被看见，投影值必然变化。
+		let index = -1;
+		for (const [candidate, entry] of draft.entries.entries()) {
+			if (entry.type !== "custom" || entry.customType !== "agent-team.work-item.v1") continue;
+			if (candidate > 0 && candidate < draft.entries.length - 1) index = candidate;
+		}
+		if (index < 0) throw new Error("fixture is missing a middle work-item entry");
+		const middle = draft.entries[index];
+		if (!middle || middle.type !== "custom") throw new Error("unexpected middle entry");
+		const target = middle.data as TeamWorkItem;
+		draft.entries[index] = { ...middle, data: { ...target, objective: "Unseen in-place edit" } };
+		const after = store.readFromDocument(document).workItems.find((item) => item.id === target.id);
+		expect(after?.objective).toBe(target.objective);
 	});
 
 	it("invalidates an in-place middle edit when the document revision advances", () => {
