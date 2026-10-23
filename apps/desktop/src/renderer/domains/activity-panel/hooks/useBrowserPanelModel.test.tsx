@@ -243,7 +243,6 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);
 		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
-		act(() => harness.model.current?.onAddressFocus());
 		act(() => harness.model.current?.onAddressChange("localhost:5173/preview"));
 		// Agent/页内导航真实改变了页面：工作区记忆与 currentUrl 跟随，但不覆盖未提交草稿。
 		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://agent.opened/page" }) }));
@@ -259,7 +258,6 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);
 		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
-		act(() => harness.model.current?.onAddressFocus());
 		act(() => harness.model.current?.onAddressChange("vetta.dev/docs"));
 		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
 		await waitFor(() =>
@@ -267,6 +265,48 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		);
 		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://vetta.dev/docs" }) }));
 		expect(harness.model.current?.address).toBe("https://vetta.dev/docs");
+	});
+
+	it("提交后继续输入重新进入草稿保护", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
+		act(() => harness.model.current?.onAddressChange("vetta.dev/a"));
+		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
+		// 提交后输入框仍聚焦：继续输入 B，页面事件不得覆盖 B。
+		act(() => harness.model.current?.onAddressChange("vetta.dev/b"));
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://after/x" }) }));
+		expect(harness.model.current?.address).toBe("vetta.dev/b");
+		act(() => harness.model.current?.onAddressBlur());
+		expect(harness.model.current?.address).toBe("https://after/x");
+	});
+
+	it("空页面失焦清空未提交草稿", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(viewListener).toBeTypeOf("function"));
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "about:blank" }) }));
+		act(() => harness.model.current?.onAddressChange("example.dev/draft"));
+		act(() => harness.model.current?.onAddressBlur());
+		expect(harness.model.current?.address).toBe("");
+	});
+
+	it("切换工作空间后不再沿用旧编辑态阻同步", async () => {
+		const harness: Harness = { model: { current: null } };
+		const panel = renderPanel(harness, { workspaceId: "ws-1" });
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressChange("old-workspace/draft"));
+		api.attach.mockResolvedValueOnce({ ok: true, state: viewState() });
+		panel.rerender(
+			<ActivityPanelContextProvider
+				value={{ workspace: { id: "ws-2", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+			>
+				<ActivityTabActivationContextProvider value={true}>
+					<Probe harness={harness} />
+				</ActivityTabActivationContextProvider>
+			</ActivityPanelContextProvider>,
+		);
+		await waitFor(() => expect(harness.model.current?.address).toBe("https://example.com"));
 	});
 
 	it("地址栏提交经 workspace URL 回写触发 navigate；回退/前进/重载/停止走 control", async () => {

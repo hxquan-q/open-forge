@@ -40,6 +40,16 @@ vi.mock("@domains/conversation/components/input-bar/editor/inputEditorHandle", (
 
 const { useBrowserElementPicker } = await import("./useBrowserElementPicker.js");
 
+function baseSession(): NonNullable<DesktopBrowserTabGetSessionResult["session"]> {
+	return {
+		workspaceId: "ws-1",
+		pageUrl: "https://example.com/form",
+		title: "Example",
+		pageRevision: 4,
+		pickerEnabled: false,
+	};
+}
+
 function context(): BrowserElementSelectionContext {
 	return {
 		schema: BROWSER_ELEMENT_SELECTION_SCHEMA,
@@ -243,6 +253,53 @@ describe("useBrowserElementPicker", () => {
 		act(() => listener?.({ workspaceId: "ws-1", event: { kind: "session-changed", session } }));
 		expect(commits).toBe(baseline + 2);
 		expect(result.current.agentActivity).toBeUndefined();
+	});
+
+	it("迟到的点选开关响应不覆盖更新的事件也不跨工作空间污染", async () => {
+		let resolveToggle: ((value: { ok: boolean; pickerEnabled: boolean }) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.setPicker).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveToggle = resolve;
+				}),
+		);
+		const initial = renderHook(
+			({ workspaceId, hasPage }: { workspaceId: string; hasPage: boolean }) =>
+				useBrowserElementPicker({ workspaceId, hasPage: hasPage ?? true }),
+			{ initialProps: { workspaceId: "ws-1", hasPage: true } },
+		);
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		act(() => initial.result.current.onTogglePicker());
+		// 更新的会话事件先到：点选已被关闭。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: { kind: "session-changed", session: { ...baseSession(), pickerEnabled: false } },
+			}),
+		);
+		await act(async () => resolveToggle?.({ ok: true, pickerEnabled: true }));
+		expect(initial.result.current.pickerEnabled).toBe(false);
+		// 跨工作空间：在 ws-1 发出的迟到响应不得改写 ws-2 的会话。
+		let resolveCross: ((value: { ok: boolean; pickerEnabled: boolean }) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.setPicker).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveCross = resolve;
+				}),
+		);
+		act(() => initial.result.current.onTogglePicker());
+		initial.rerender({ workspaceId: "ws-2", hasPage: true });
+		act(() =>
+			listener?.({
+				workspaceId: "ws-2",
+				event: {
+					kind: "session-changed",
+					session: { ...baseSession(), workspaceId: "ws-2", pickerEnabled: false },
+				},
+			}),
+		);
+		await act(async () => resolveCross?.({ ok: true, pickerEnabled: true }));
+		expect(initial.result.current.pickerEnabled).toBe(false);
 	});
 
 	it("点选命中后先停在选择态、不立即附加；确认后才把胶囊（含 liveEdits）写入草稿", async () => {

@@ -77,6 +77,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	/** 镜像最新已应用会话：React 19 对 no-op setState 仍会提交一次，投影未变时
 	 * 必须在调用 setState 之前短路。 */
 	const sessionRef = useRef<DesktopBrowserTabSession | null>(null);
+	const pickerToggleSeqRef = useRef(0);
 	/** 可观察投影：点选开关与 Agent 动作名（activeCount 不展示）。导航/重订正等只改
 	 * pageRevision/title 的事件不再触发面板重渲。 */
 	const applySession = useCallback((next: DesktopBrowserTabSession | null) => {
@@ -199,6 +200,8 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			if (envelope.workspaceId !== workspaceId) return;
 			if (envelope.event.kind === "session-changed") {
 				receivedSessionEvent = true;
+				// 会话事件是权威：任何在途点选开关的乐观合并就此失效。
+				pickerToggleSeqRef.current += 1;
 				applySession(envelope.event.session);
 				return;
 			}
@@ -226,6 +229,9 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	const togglePicker = useCallback(() => {
 		if (!input.hasPage) return;
+		// 序号 + 工作空间双重校验：迟到的开关响应既不得倒灌更新的会话，也不得跨工作空间污染。
+		const requestWorkspace = workspaceId;
+		const sequence = ++pickerToggleSeqRef.current;
 		void window.vetta.browserTab
 			.setPicker({
 				workspaceId,
@@ -239,6 +245,13 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 				},
 			})
 			.then((result) => {
+				if (
+					!result.ok ||
+					sequence !== pickerToggleSeqRef.current ||
+					sessionRef.current?.workspaceId !== requestWorkspace
+				) {
+					return;
+				}
 				// 乐观同步开关；主进程随后的 session-changed 会被投影等值短路。
 				if (result.ok) {
 					const previous = sessionRef.current;
