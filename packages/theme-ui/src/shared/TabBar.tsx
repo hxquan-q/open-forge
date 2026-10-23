@@ -4,6 +4,7 @@ import {
 	type JSX,
 	memo,
 	type DragEvent as ReactDragEvent,
+	type KeyboardEvent as ReactKeyboardEvent,
 	type ReactNode,
 	type PointerEvent as ReactPointerEvent,
 	type RefObject,
@@ -674,11 +675,36 @@ export function TabBar<T extends string>({
 		[clearFileDragHover],
 	);
 
+	// 键盘导航（ARIA tabs：roving tabindex + 方向键跟随激活）。拖拽中让位给指针。
+	const onTablistKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+		if (dragKeyRef.current != null || event.defaultPrevented) return;
+		const currentIndex = visibleItems.findIndex((item) => item.key === value);
+		if (currentIndex === -1) return;
+		let nextIndex: number | null = null;
+		if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % visibleItems.length;
+		else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length;
+		else if (event.key === "Home") nextIndex = 0;
+		else if (event.key === "End") nextIndex = visibleItems.length - 1;
+		const next = nextIndex == null ? undefined : visibleItems[nextIndex];
+		if (!next) return;
+		event.preventDefault();
+		onChange(next.key);
+		// 焦点跟随选择：等受控重渲提交后聚焦新激活页签。
+		requestAnimationFrame(() => {
+			rowRef.current?.querySelector<HTMLButtonElement>(`[data-tabkey="${next.key}"] button`)?.focus();
+		});
+	};
+
 	const overflowSet = responsive ? new Set(overflowKeys) : null;
 	const visibleItems = overflowSet ? renderItems.filter((it) => !overflowSet.has(it.key)) : renderItems;
 	return (
 		<div className={cn("group/tabbar relative z-10 min-w-0", className)}>
-			<div ref={setRowRef} role="tablist" className="flex h-8 items-end overflow-visible pl-5 pr-3">
+			<div
+				ref={setRowRef}
+				role="tablist"
+				onKeyDown={onTablistKeyDown}
+				className="flex h-8 items-end overflow-visible pl-5 pr-3"
+			>
 				{visibleItems.map(({ key, label, icon, badge, removable }, index) => {
 					const active = value === key;
 					const isDragged = dragKey === key;
@@ -715,6 +741,7 @@ export function TabBar<T extends string>({
 							<button
 								type="button"
 								role="tab"
+								tabIndex={active ? 0 : -1}
 								title={label}
 								aria-selected={active}
 								onClick={(event) => {
