@@ -138,7 +138,7 @@ updated: 2026-10-24
   - `browser-atoms.ts`：URL 写入等值短路，避免无变化 Map 克隆广播。
   - i18n zh/en chat.json：`browser.addressLabel/agentReady/agentAction.*`。
 - 测试（新增性质）：TabBar 宽度缓存/容器与内容尺寸失效/关闭能力变化失效/reduced-motion；真实 host→controller→事件桥→BrowserPanel 连续流程（agent 流中地址草稿、焦点、占位身份、退订）；agentActivity 生命周期（成功/异常/取消/并发/换绑）；地址草稿保护；URL 等值不重发；View 旧标签合同兼容。既有拖拽/点选/面板流程全部保持绿。
-- 实际运行：定向 10 文件 68 例通过；`test:changed --base ea67d951e` 下 theme-ui 30 文件 233 例、kanban 102 例、xianxia 1 例通过；desktop 包全量在批处理中出既有失败（主检出 main 基线复跑 skill-presentation-read 2 例同样红，属预存；weknora cp3 1 例未复跑单独核实；model-call-frame 2 例为超时型，主检出同样超时）→ 以定向+影响面为准，不宣称 desktop 包全量绿；完整 `bun run check`（lint/types/guards/mobile）exit 0。
+- 实际运行：定向 10 文件 68 例通过；`test:changed --base ea67d951e` 下 theme-ui 30 文件 233 例、kanban 102 例、xianxia 1 例通过；desktop 包全量在批处理中出既有失败（主检出 main 基线复跑 skill-presentation-read 2 例同样红，属预存；weknora cp3 与 model-call-frame 各 2 例在隔离复跑中均通过，属批处理负载型偶发，未在主检出复现；工作树内未再单独重跑全量确认）→ 以定向+影响面为准，不宣称 desktop 包全量绿；完整 `bun run check`（lint/types/guards/mobile）exit 0。
 - 性能（隔离 Chromium 生产 profiling，固定 4/12/30 页签×48 次切换/缩放，同窗反平衡三轮，中位数）：原版 67.6ms → 候选 52.2ms（≈ -23%），宽度读取 4,370→0，每轮提交 144→96，p95 commit ≤0.4ms，p95 双帧可见 14.8ms；冷首轮带 40–50% 负载噪声，结论取同窗对照中位数。
 - 隔离组件视觉探针（`reducedMotion` + 360/800 × dark/light）：无页面错误、无横向溢出、地址输入最小 86px、状态行角色/对比可读；截图存 `.auto/screenshots/`。当前会话模型不能读图，人工目验未执行。
 - 独立只读审查：新上下文 Explore 审查实际 diff，发现 1 项 P2（关闭能力 padding-only 不触发重测→溢出持续旧宽），已红→绿回归+修复；其余接线/边界未发现 P1/P2；「连续流程测试存在且未绕过接线」获确认；Electron IPC/preload 与 WebContents 仍为边界 fake，如实不称跨进程验证。

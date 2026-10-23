@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0392` | `in_progress` | PLAN-0006 | [Browser 与 Agent 联动及标签栏性能](TASK-0392-browser-agent-tabs.md)；独立 worktree，内部串行；先固定组件交互基准，再补动作反馈、导航同步与 UI；不连接真实模型或用户实例。 |
+| `TASK-0392` | `verifying` | PLAN-0006 | [Browser 与 Agent 联动及标签栏性能](TASK-0392-browser-agent-tabs.md)；独立 worktree 分支 task/TASK-0392-browser-agent-tabs（实现+审查修复已提交），定向 68 例/影响面/完整 check 绿，同窗反平衡对原版约 -17～-23%、布局读取 4370→0；待用户真机验收。 |
 | `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |
 | `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |
 | `TASK-0369` | `done` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；@vetta/runtime-memory 合同包 + memoryPolicy 会话边界校验 + ADR-0149/0150 落地，完整 check 全绿。 |
