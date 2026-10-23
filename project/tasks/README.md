@@ -17,7 +17,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 |---|---|---|---|
 | `TASK-0394` | `done` | PLAN-0024 | [Agent 执行一手参照](TASK-0394-agent-execution-reference-research.md)；RESEARCH-0043 固定版本证据已回读；coordination-only。 |
 | `TASK-0395` | `blocked` | PLAN-0024 | [Team 状态投影性能](TASK-0395-team-state-projection-performance.md)；固定基准/差分测试已准备，性能实验待共享会话配置隔离；独立 Worktree。 |
-| `TASK-0396` | `in_progress` | PLAN-0024 | [通知消费期间新通知续跑](TASK-0396-team-notification-drain.md)；BUG-0151 红绿已成立，审查/完整验证中；独立 Worktree。 |
+| `TASK-0396` | `verifying` | PLAN-0024 | [通知续跑](TASK-0396-team-notification-drain.md)；BUG-0151 已修，独立审查 P2 已闭合，36 文件 277 例与完整 check 通过；独立 Worktree 候选，main 脏未集成。 |
 | `TASK-0397` | `draft` | PLAN-0024 | [内核执行热点](TASK-0397-agent-execution-hot-path.md)；已消费 frame 保留与 FIFO 两候选待量化；尚未编码。 |
 | `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |
 | `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |

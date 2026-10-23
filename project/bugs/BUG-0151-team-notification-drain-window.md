@@ -1,7 +1,7 @@
 ---
 id: BUG-0151
 type: bug
-status: in_progress
+status: verifying
 priority: P2
 owner: apps/desktop/agent-teams
 requirement: REQ-0002
@@ -48,7 +48,7 @@ updated: 2026-10-24
 
 ## 根因证据
 
-`TeamTurnCoordinator.scheduleNotification` 用 Set 同时表示排队/执行中的 continuation；中途调度请求因 has(key) 被吞掉，finally 仅 delete。与 journal 提前消费、通道未释放两项假设对照中；新增测试保持正常分派与发布链路。
+`TeamTurnCoordinator.scheduleNotification` 用 Set 同时表示排队/执行中的 continuation；中途调度请求因 has(key) 被吞掉，finally 仅 delete。已用回归确认 B 通知持久化但未被领取，释放 A 后旧实现仍不准入 B；补 owner/rerun 标记后同一流程立即推进。新增测试保持正常分派与发布链路。
 
 ## 回归测试
 
@@ -56,6 +56,7 @@ updated: 2026-10-24
 
 ## 修复与验证
 
-- 修复：待实现，预期使用带身份的 pending ownership 与 rerun 标记，仅在本轮仍拥有标记且收到后续调度请求时重新走原准入。
-- 测试：红基线已记录；绿与完整检查待执行。
+- 修复：带身份的 pending ownership + rerun 标记；只有本轮仍持有 key 且接收任务持久 completed 才重新走原准入。失败/无进展保留既有恢复和退避。
+- 测试：红基线成立；独立审查抓到首版 fulfilled-but-failed 绕过退避，新增两红后修正；最终六形态+stop/resume交错，agent-teams 36 文件277例全绿。
+- 检查：test:impact（直接62+related158）与最终完整 bun run check通过；细节/环境失败归属见 TASK-0396。工程已完成，候选分支未集成，人工待接受。
 - 未运行：真实 Provider/UI、性能自动实验（主检出共享配置被另一会话占用）；此项作为独立正确性修复，不伪造性能分数。

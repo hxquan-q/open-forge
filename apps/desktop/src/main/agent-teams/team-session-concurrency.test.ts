@@ -7,6 +7,7 @@ import {
 	createLegacyTeamMemberDelegationEvent,
 	createLegacyTeamMemberResultEvent,
 	createLegacyTeamUserMessageEvent,
+	isTeamMemberTurnAttempt,
 	isTeamMessageDelivery,
 	isTeamWorkItem,
 	type TeamContextProjectionPolicy,
@@ -919,6 +920,277 @@ describe("Team member concurrency", () => {
 		const leaderMessages = publicAgentMessagesBy(fixture, leader);
 		expect(leaderMessages.map((entry) => entry.turnId)).toEqual(["plan", "plan:continuation:1"]);
 		expect(JSON.stringify(leaderMessages[1])).toContain("Wrap-up after review");
+	});
+
+	it.each(["completed", "stopped", "storage-failed", "retryable-failure", "persisted-failure", "no-result"] as const)(
+		"handles a new completion during a %s initiator drain without polling",
+		async (outcome) => {
+			vi.useFakeTimers();
+			const firstNoticeStarted = deferred();
+			const releaseFirstNotice = deferred();
+			let restoreStorage = () => {};
+			let fixture: Awaited<ReturnType<typeof createFixture>> | undefined;
+			try {
+				fixture = await createFixture();
+				const current = fixture;
+				const [leader, member] = current.members;
+				const leaderRuntime = current.session.memberRuntime[leader]!.sessionId;
+				const batches: string[][] = [];
+				vi.mocked(current.runtime.deliverSessionContext).mockImplementation(async (id, records, mode) => {
+					if (id !== leaderRuntime || mode !== "triggerTurn") return;
+					batches.push(
+						records.flatMap((record) => {
+							const metadata = record.metadata;
+							return metadata &&
+								typeof metadata === "object" &&
+								"teamTaskId" in metadata &&
+								typeof metadata.teamTaskId === "string"
+								? [metadata.teamTaskId]
+								: [];
+						}),
+					);
+					if (batches.length === 1) {
+						firstNoticeStarted.resolve();
+						await releaseFirstNotice.promise;
+						if (outcome === "retryable-failure")
+							throw {
+								code: "AI_TIMEOUT",
+								message: "Synthetic provider timeout",
+								retryable: true,
+								origin: "provider",
+								details: { retryAfterMs: 1000 },
+							};
+						if (outcome === "persisted-failure") {
+							current.history.set(id, [
+								...(current.history.get(id) ?? []),
+								{
+									type: "error",
+									entryId: "drain-failure",
+									code: "AI_TIMEOUT",
+									message: "Synthetic persisted timeout",
+									retryable: true,
+									origin: "provider",
+									timestamp: "2",
+									details: { retryAfterMs: 1000 },
+								},
+							]);
+							return;
+						}
+						if (outcome === "no-result") return;
+					}
+					current.appendHistory(id, {
+						...createAssistantMessage({ api: "openai-responses", provider: "openai", model: "test" }),
+						content: [{ type: "text", text: `Integrated batch ${batches.length}` }],
+					});
+				});
+				const tasks = current.service.taskControls(current.session.id);
+				const caller = taskCaller(current, leader);
+				const firstTurn = current.turn(member, "First completion");
+				const first = await tasks.delegateTask({
+					...caller,
+					requestId: "drain-first",
+					targetHandle: current.session.memberHandles[member]!,
+					objective: "First completion",
+				});
+				await firstTurn.started.promise;
+				firstTurn.finish.resolve();
+				await firstNoticeStarted.promise;
+
+				const secondTurn = current.turn(member, "Second completion");
+				const second = await tasks.delegateTask({
+					...caller,
+					requestId: "drain-second",
+					targetHandle: current.session.memberHandles[member]!,
+					objective: "Second completion",
+				});
+				await secondTurn.started.promise;
+				const secondCompleted = current.workState(second.teamTaskId, "completed");
+				secondTurn.finish.resolve();
+				await secondCompleted;
+				await vi.advanceTimersByTimeAsync(0);
+				expect(batches).toEqual([[first.teamTaskId]]);
+				const coordination = current.conversations.get(current.session.coordinationRuntime!.sessionId)!;
+				const pendingNotice = coordination.entries.find(
+					(entry) =>
+						entry.type === "custom" &&
+						entry.customType === "agent-team.task-notification.v1" &&
+						typeof entry.data === "object" &&
+						entry.data !== null &&
+						"workItem" in entry.data &&
+						isTeamWorkItem(entry.data.workItem) &&
+						entry.data.workItem.id === second.teamTaskId,
+				);
+				expect(pendingNotice).toBeDefined();
+				const accepted = coordination.entries.flatMap((entry) =>
+					entry.type === "custom" && isTeamWorkItem(entry.data) ? (entry.data.notificationIds ?? []) : [],
+				);
+				expect(accepted.some((id) => id.includes(second.teamTaskId))).toBe(false);
+
+				if (outcome === "stopped") await current.service.abort(current.session.id);
+				if (outcome === "storage-failed") {
+					const append = current.runtime.appendSessionMetadataEntry;
+					const spy = vi
+						.spyOn(current.runtime, "appendSessionMetadataEntry")
+						.mockImplementation(async (id, type, data) => {
+							if (
+								type === "agent-team.work-item.v1" &&
+								isTeamWorkItem(data) &&
+								data.assignedToParticipantId === leader
+							)
+								throw new Error("Synthetic drain storage unavailable");
+							await append(id, type, data);
+						});
+					restoreStorage = () => spy.mockRestore();
+				}
+				releaseFirstNotice.resolve();
+				await vi.advanceTimersByTimeAsync(0);
+				expect(batches).toEqual(
+					outcome === "completed" ? [[first.teamTaskId], [second.teamTaskId]] : [[first.teamTaskId]],
+				);
+				if (outcome === "completed") expect(publicAgentMessagesBy(current, leader)).toHaveLength(2);
+				expect(vi.mocked(current.runtime.prompt)).toHaveBeenCalledTimes(2);
+				// No newly arriving notice means no additional model continuation or hot retry.
+				await vi.advanceTimersByTimeAsync(0);
+				expect(batches).toHaveLength(outcome === "completed" ? 2 : 1);
+				if (outcome === "retryable-failure" || outcome === "persisted-failure") {
+					const stored = current.conversations.get(current.session.coordinationRuntime!.sessionId)!;
+					const leaderWork = stored.entries
+						.flatMap((entry) =>
+							entry.type === "custom" &&
+							isTeamWorkItem(entry.data) &&
+							entry.data.assignedToParticipantId === leader
+								? [entry.data]
+								: [],
+						)
+						.at(-1)!;
+					const retry = stored.entries
+						.flatMap((entry) =>
+							entry.type === "custom" &&
+							isTeamMemberTurnAttempt(entry.data) &&
+							entry.data.workItemId === leaderWork.id
+								? [entry.data]
+								: [],
+						)
+						.at(-1)!;
+					expect(leaderWork.recovery?.automaticRetries).toBe(0);
+					expect(retry.nextRetryAt).toBe(Date.now() + 1000);
+					await vi.advanceTimersByTimeAsync(999);
+					expect(batches).toHaveLength(1);
+					await vi.advanceTimersByTimeAsync(1);
+					expect(batches).toHaveLength(2);
+				}
+				if (outcome === "completed" || outcome === "storage-failed") {
+					restoreStorage();
+					await vi.advanceTimersByTimeAsync(30_000);
+					expect(batches).toEqual([[first.teamTaskId], [second.teamTaskId]]);
+					await vi.advanceTimersByTimeAsync(30_000);
+					expect(batches).toHaveLength(2);
+					expect(vi.mocked(current.runtime.prompt)).toHaveBeenCalledTimes(2);
+					const stored = current.conversations.get(current.session.coordinationRuntime!.sessionId)!;
+					const latest = new Map(
+						stored.entries.flatMap((entry) =>
+							entry.type === "custom" && isTeamWorkItem(entry.data)
+								? [[entry.data.id, entry.data] as const]
+								: [],
+						),
+					);
+					const receipts = [...latest.values()].flatMap((work) => work.notificationIds ?? []);
+					expect(receipts).toHaveLength(2);
+					expect(new Set(receipts).size).toBe(2);
+				}
+			} finally {
+				restoreStorage();
+				releaseFirstNotice.resolve();
+				if (fixture) await fixture.service.abort(fixture.session.id);
+				vi.clearAllTimers();
+				vi.useRealTimers();
+			}
+		},
+	);
+
+	it("keeps a resumed notification drain owned when the stopped drain finishes late", async () => {
+		vi.useFakeTimers();
+		const oldStarted = deferred();
+		const releaseOld = deferred();
+		const resumedStarted = deferred();
+		const releaseResumed = deferred();
+		let fixture: Awaited<ReturnType<typeof createFixture>> | undefined;
+		try {
+			fixture = await createFixture();
+			const current = fixture;
+			const [leader, member] = current.members;
+			const leaderRuntime = current.session.memberRuntime[leader]!.sessionId;
+			const notifications: string[] = [];
+			vi.mocked(current.runtime.deliverSessionContext).mockImplementation(async (id, records, mode) => {
+				if (id !== leaderRuntime || mode !== "triggerTurn") return;
+				for (const record of records) {
+					const data = record.metadata;
+					if (data && typeof data === "object" && "teamTaskId" in data && typeof data.teamTaskId === "string")
+						notifications.push(data.teamTaskId);
+				}
+				if (notifications.length === 1) {
+					oldStarted.resolve();
+					await releaseOld.promise;
+				}
+				if (notifications.length === 2) {
+					resumedStarted.resolve();
+					await releaseResumed.promise;
+				}
+				current.appendHistory(id, {
+					...createAssistantMessage({ api: "openai-responses", provider: "openai", model: "test" }),
+					content: [{ type: "text", text: `Integrated ${notifications.length}` }],
+				});
+			});
+			const tasks = current.service.taskControls(current.session.id);
+			const caller = taskCaller(current, leader);
+			const complete = async (name: string) => {
+				const turn = current.turn(member, name);
+				const admitted = await tasks.delegateTask({
+					...caller,
+					requestId: name,
+					targetHandle: current.session.memberHandles[member]!,
+					objective: name,
+				});
+				await turn.started.promise;
+				const settled = current.workState(admitted.teamTaskId, "completed");
+				turn.finish.resolve();
+				await settled;
+				await vi.advanceTimersByTimeAsync(0);
+				return admitted.teamTaskId;
+			};
+			const first = await complete("before-stop");
+			await oldStarted.promise;
+			await current.service.abort(current.session.id);
+
+			const fresh = current.turn(leader, "New user request");
+			const send = current.service.send(current.session.id, {
+				requestId: "new-generation",
+				text: "New user request",
+				targetMemberIds: [leader],
+			});
+			await vi.advanceTimersByTimeAsync(0);
+			const second = await complete("after-resume");
+			// The new drain is queued behind the new user request, while the old owner still exists.
+			releaseOld.resolve();
+			await fresh.started.promise;
+			fresh.finish.resolve();
+			await send;
+			await resumedStarted.promise;
+			const third = await complete("during-resumed-drain");
+			expect(notifications).toEqual([first, second]);
+			releaseResumed.resolve();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(notifications).toEqual([first, second, third]);
+			await vi.advanceTimersByTimeAsync(30_000);
+			expect(notifications).toEqual([first, second, third]);
+			expect(current.runtime.prompt).toHaveBeenCalledTimes(4);
+		} finally {
+			releaseOld.resolve();
+			releaseResumed.resolve();
+			if (fixture) await fixture.service.abort(fixture.session.id);
+			vi.clearAllTimers();
+			vi.useRealTimers();
+		}
 	});
 
 	it("lets the leader delegate fresh work to the same member after an earlier task completed", async () => {
