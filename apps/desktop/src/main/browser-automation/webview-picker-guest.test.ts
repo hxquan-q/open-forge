@@ -127,6 +127,51 @@ describe("in-app browser picker guest", () => {
 		await expect(pick).resolves.toEqual({ cancelled: true });
 	});
 
+	it("罩层接住指针时，仍命中下面的按钮并打开批注，页面按钮不触发", async () => {
+		document.body.innerHTML = `<button id="go">Go</button>`;
+		const button = document.getElementById("go");
+		if (!button) throw new Error("missing button");
+		let pageClicked = false;
+		button.addEventListener("click", () => {
+			pageClicked = true;
+		});
+		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
+		const overlay = document.getElementById(IN_APP_BROWSER_PICKER_ROOT_ID);
+		if (!(overlay instanceof HTMLElement)) throw new Error("missing overlay");
+		expect(overlay.style.cursor).toBe("crosshair");
+		expect(overlay.style.pointerEvents).toBe("auto");
+		const original = document.elementsFromPoint.bind(document);
+		document.elementsFromPoint = (x, y) => {
+			if (overlay.style.display === "none") return [button];
+			return [overlay, ...original(x, y)];
+		};
+		const down = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 8, clientY: 8 });
+		overlay.dispatchEvent(down);
+		expect(down.defaultPrevented).toBe(true);
+		expect(document.querySelector("[data-vetta-annotation]")).toBeTruthy();
+		expect(pageClicked).toBe(false);
+		await runInAppBrowserGuestCommand("stop");
+		await expect(pick).resolves.toEqual({ cancelled: true });
+	});
+
+	it("只有 pointerdown、没有后续 click 时，仍在元素旁打开批注且页面按钮不触发", async () => {
+		document.body.innerHTML = `<button id="go">Go</button>`;
+		const button = document.getElementById("go");
+		if (!button) throw new Error("missing button");
+		let pageClicked = false;
+		button.addEventListener("click", () => {
+			pageClicked = true;
+		});
+		const pick = runInAppBrowserGuestCommand("start") as Promise<Record<string, unknown>>;
+		const down = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 8, clientY: 8 });
+		button.dispatchEvent(down);
+		expect(down.defaultPrevented).toBe(true);
+		expect(document.querySelector("[data-vetta-annotation]")).toBeTruthy();
+		expect(pageClicked).toBe(false);
+		await runInAppBrowserGuestCommand("stop");
+		await expect(pick).resolves.toEqual({ cancelled: true });
+	});
+
 	it("注入脚本整段求值也能完成点选（与 executeJavaScript 同一入口）", async () => {
 		document.body.innerHTML = `<button id="go">Go</button>`;
 		const button = document.getElementById("go");

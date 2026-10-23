@@ -82,6 +82,7 @@ function inAppBrowserGuestRuntime(
 		promise: Promise<unknown>;
 		resolve: (value: unknown) => void;
 		disposed: boolean;
+		pointerPicked: boolean;
 		onMove: (event: Event) => void;
 		onClick: (event: Event) => void;
 		onKey: (event: Event) => void;
@@ -222,7 +223,8 @@ function inAppBrowserGuestRuntime(
 	const overlay = document.createElement("div");
 	overlay.id = rootId;
 	overlay.setAttribute("aria-hidden", "true");
-	overlay.style.cssText = "position:fixed;inset:0;z-index:2147483646;pointer-events:none;background:transparent;";
+	overlay.style.cssText =
+		"position:fixed;inset:0;z-index:2147483646;pointer-events:auto;cursor:crosshair;background:transparent;";
 	const highlight = document.createElement("div");
 	const pickerChrome = annotationCopy(arg);
 	// 高亮画在外部网页上。主色描边再套 1px 前景色领圈，白页和深色页都能看见。
@@ -232,8 +234,47 @@ function inAppBrowserGuestRuntime(
 
 	const pickTarget = (event: Event): Element | null => {
 		const point = event as MouseEvent;
-		return deps.choosePickTarget(point, document, rootId);
+		const raw = event.target instanceof Element ? event.target : null;
+		const hitOverlay = !raw || raw === overlay || overlay.contains(raw);
+		// 事件已经落在页面元素上时，沿用该目标。罩层接住指针时事件目标是罩层自己，
+		// 必须先把罩层拿开再量下面的元素，否则只有光标变、批注不出现。
+		if (!hitOverlay && raw !== document.documentElement && raw !== document.body) {
+			try {
+				return deps.choosePickTarget(point, document, rootId) ?? raw;
+			} catch {
+				return raw;
+			}
+		}
+		const fromPoint = elementUnderOverlay(point.clientX, point.clientY);
+		if (!fromPoint) return null;
+		try {
+			return (
+				deps.choosePickTarget(
+					{ target: fromPoint, clientX: point.clientX, clientY: point.clientY },
+					document,
+					rootId,
+				) ?? fromPoint
+			);
+		} catch {
+			return fromPoint;
+		}
 	};
+
+	function elementUnderOverlay(x: number, y: number): Element | null {
+		if (typeof document.elementsFromPoint !== "function" || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+		const previous = overlay.style.display;
+		overlay.style.display = "none";
+		try {
+			for (const node of document.elementsFromPoint(x, y)) {
+				if (!(node instanceof Element) || overlay.contains(node)) continue;
+				if (node === document.documentElement || node === document.body) continue;
+				return node;
+			}
+			return null;
+		} finally {
+			overlay.style.display = previous;
+		}
+	}
 
 	function describeNode(element: Element): string {
 		const tag = element.tagName.toLowerCase();
@@ -500,6 +541,7 @@ function inAppBrowserGuestRuntime(
 		promise,
 		resolve: resolvePick,
 		disposed: false,
+		pointerPicked: false,
 		onMove: (event) => {
 			if (state.annotation) return;
 			const target = pickTarget(event);
@@ -509,13 +551,23 @@ function inAppBrowserGuestRuntime(
 		onClick: (event) => {
 			const eventTarget = event.target;
 			if (eventTarget instanceof Node && state.annotation?.contains(eventTarget)) return;
+			const point = event as MouseEvent;
+			// 右键留给页面。主键的点选落在 pointerdown：Chromium 取消 pointerdown 后
+			// 不再派发 click，若只在 click 里打开批注，输入框永远不会出现。
+			if (event.type === "pointerdown" && point.button !== 0) return;
 			event.preventDefault();
 			event.stopPropagation();
 			if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
-			if (event.type !== "click") return;
+			const isPointerDown = event.type === "pointerdown";
+			const isClick = event.type === "click";
+			if (!isPointerDown && !isClick) return;
+			if (isClick && state.pointerPicked) {
+				state.pointerPicked = false;
+				return;
+			}
 			const target = pickTarget(event);
 			if (!target || state.disposed) return;
-			const point = event as MouseEvent;
+			if (isPointerDown) state.pointerPicked = true;
 			if (point.altKey) {
 				finishPick(target, "input", []);
 				return;
