@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { extname, isAbsolute, resolve } from "node:path";
 import type { AgentTeamDocument } from "@vetta/agent-team";
+import { getAgentDir } from "@vetta/coding-agent/config";
 import { CODING_AGENT_SESSION_TITLE_GENERATE } from "@vetta/coding-agent/session-extensions";
 import {
 	isSessionError,
@@ -22,6 +23,7 @@ import { ensureLegacyAgentTeamOwnershipCatalog } from "../agent-teams/team-owner
 import { monitorRuntimeSession } from "../app-monitor/app-monitor-service.js";
 import { allowProjectRoot, readDesktopConfig } from "../ipc/fs.js";
 import { getAppLogger } from "../logger.js";
+import { desktopMemoryDirectory, withHostMemoryPolicy } from "../memory/policy-entry.js";
 import { getSharedRuntime } from "../runtime.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
 import { createDesktopScheduledTaskSessionTools } from "../scheduler/agent-task-tools.js";
@@ -219,19 +221,20 @@ export class DesktopConversationService {
 			// 绑定的 Agent：新建取渲染层传入的身份，恢复取会话目录旁挂的记录。
 			// 能力白名单在这里由主进程查表折算，渲染层始终只经手身份。
 			const agentProfile = await trace.measure("resolve-agent-profile", () => this.resolveBoundAgentProfile(config));
+			// BUG-0148/R4：宿主读取设置页保存的记忆策略并注入普通新建/恢复
+			// 会话；显式传入的 memoryPolicy 优先，off/缺省不注入。
+			const configWithAgent = agentProfile
+				? {
+						...config,
+						agentConfiguration: agentProfile.agentConfiguration,
+						systemPromptVolatileAddon: agentProfile.systemPromptVolatileAddon,
+					}
+				: config;
+			const configWithMemory = withHostMemoryPolicy(configWithAgent, desktopMemoryDirectory(getAgentDir()));
 			const resolvedConfig = await trace.measure("resolve-config", () =>
-				resolveDesktopSessionConfig(
-					agentProfile
-						? {
-								...config,
-								agentConfiguration: agentProfile.agentConfiguration,
-								systemPromptVolatileAddon: agentProfile.systemPromptVolatileAddon,
-							}
-						: config,
-					kind,
-					source,
-					{ createSessionRuntimeTools: createDesktopScheduledTaskSessionTools },
-				),
+				resolveDesktopSessionConfig(configWithMemory, kind, source, {
+					createSessionRuntimeTools: createDesktopScheduledTaskSessionTools,
+				}),
 			);
 			const result = await trace.measure("runtime-create", () => this.runtime.createSession(resolvedConfig.config));
 			const sessionPath = this.runtime.getSessionPath(result.sessionId);

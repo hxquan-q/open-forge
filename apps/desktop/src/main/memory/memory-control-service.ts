@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MemoryScope } from "@vetta/runtime-memory";
 import { LexicalMemoryIndex, SqliteMemoryErasure, SqliteMemoryWorkerStore } from "@vetta/runtime-node/memory";
@@ -18,6 +18,7 @@ import type {
 	MemorySearchResult,
 } from "../../shared/memory.js";
 import { loadMemoryIdentityRegistry } from "../projects/memory-identity-storage.js";
+import { readSavedMemoryPolicyState } from "./policy-entry.js";
 
 /**
  * 记忆控制面服务（TASK-0376）：主进程内的用户记忆管理入口。
@@ -165,6 +166,14 @@ export class MemoryControlService {
 	}
 
 	async forget(request: MemoryForgetRequest): Promise<MemoryForgetResult> {
+		// BUG-0147/R2：先验证目标真实归属——跨 scope/不存在的记忆拒绝遗忘。
+		await this.withStore(async (store) => {
+			for (const scope of this.allowedScopes) {
+				const revisions = await store.listRevisions(request.memoryId, scope);
+				if (revisions.length > 0) return;
+			}
+			throw new Error(`NOT_FOUND：记忆 ${request.memoryId} 不存在或已遗忘`);
+		});
 		const erasure = await SqliteMemoryErasure.open({ databasePath: this.databasePath });
 		try {
 			const outcome = erasure.forgetMemoryFamily({ memoryId: request.memoryId });
@@ -179,19 +188,7 @@ export class MemoryControlService {
 	}
 
 	readPolicy(): MemoryPolicyState {
-		try {
-			const parsed = JSON.parse(readFileSync(this.policyPath, "utf8")) as MemoryPolicyState;
-			if (parsed.mode === "off" || parsed.mode === "explicit" || parsed.mode === "automatic") {
-				return {
-					mode: parsed.mode,
-					...(typeof parsed.extractionModel === "string" ? { extractionModel: parsed.extractionModel } : {}),
-					...(typeof parsed.dailyRequestLimit === "number" ? { dailyRequestLimit: parsed.dailyRequestLimit } : {}),
-				};
-			}
-			return { mode: "off" };
-		} catch {
-			return { mode: "off" };
-		}
+		return readSavedMemoryPolicyState(join(this.policyPath, ".."));
 	}
 
 	async setPolicy(state: MemoryPolicyState): Promise<MemoryPolicyState> {

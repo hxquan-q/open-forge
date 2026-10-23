@@ -17,11 +17,7 @@ import {
 	createCodingAgentPluginMcpRuntime,
 	createCodingAgentSharedModelController,
 } from "@vetta/coding-agent/host-services";
-import {
-	createExplicitMemoryToolRegistrations,
-	createMemoryEvidenceContextProvider,
-	type ExplicitMemoryServices,
-} from "@vetta/coding-agent/memory";
+import { createPersistentMemorySessionRuntime } from "@vetta/coding-agent/memory";
 import { AGENT_CONFIGURATION_OBSERVATION } from "@vetta/coding-agent/session-extensions";
 import {
 	CatalogRoutedRuntimeHostSessionBackend,
@@ -62,7 +58,6 @@ import {
 	NodeTextFileStorage,
 } from "@vetta/runtime-node/host";
 import { loadVettaCredentials } from "@vetta/runtime-node/mcp";
-import { acquireMemoryStoreLease, LexicalMemoryIndex, SqliteMemoryErasure } from "@vetta/runtime-node/memory";
 import { getModePrompt } from "../agent-modes/index.js";
 import { createDesktopAgentObservability } from "../agent-observability/composition.js";
 import { recordRuntimeCompaction } from "../app-monitor/app-monitor-service.js";
@@ -390,6 +385,12 @@ function logSessionRoute(decision: RuntimeHostSessionBackendRouteDecision): void
  * - 初始化失败在 prepare 中抛错（会话创建如实失败），不静默降级。
  * - 身份注册表同步读写（原子写）；目录无 Git 时按普通目录解析。
  */
+/**
+ * 新结构化记忆 Runtime 装配（TASK-0375；BUG-0149/R5 重接线）：
+ * 宿主只负责身份解析与资源路径；工具/合并证据注入/自动捕获与混合检索
+ * 全部委托 coding-agent 的共享生产装配（测试与宿主同一路径，模型能力
+ * 经注入边界）。资源生命周期在 prepare/dispose；初始化失败如实抛错。
+ */
 function createDesktopExplicitMemoryRuntime(
 	sessionOptions: CodingAgentRuntimeSessionOptions,
 ): AgentFeatureDefinition | undefined {
@@ -408,7 +409,6 @@ function createDesktopExplicitMemoryRuntime(
 		ensureWorkspaceView: false,
 	});
 	saveMemoryIdentityRegistry({ filePath: registryPath, registry: resolved.registry });
-	const databasePath = join(memoryDir, "memory.sqlite");
 	const allowedScopes: MemoryScope[] = resolved.allowedScopes.map((entry) => ({
 		name: entry.name,
 		identity:
@@ -416,73 +416,16 @@ function createDesktopExplicitMemoryRuntime(
 				? { principalId: entry.principalId }
 				: { principalId: entry.principalId, projectId: entry.projectId },
 	}));
-	const projectScope = allowedScopes.find((scope) => scope.name === "project") ?? allowedScopes[0];
-	const sessionOwner = `session:${sessionOptions.sessionId}`;
+	return createPersistentMemorySessionRuntime({
+		policy,
+		databasePath: join(memoryDir, "memory.sqlite"),
+		allowedScopes,
+		leaseOwner: sessionOwnerOf(sessionOptions),
+		// 语义通道与真实抽取 Provider 由后续授权切片注入；缺省时共享装配
+		// 明确降级词法/以可读错误失败，不冒充模型能力。
+	});
+}
 
-	return {
-		id: "coding-agent.persistent-memory",
-		async prepare(context) {
-			context.signal.throwIfAborted();
-			const lease = await acquireMemoryStoreLease({
-				databasePath,
-				allowedScopes,
-				owner: sessionOwner,
-			});
-			let index: LexicalMemoryIndex | undefined;
-			let erasure: SqliteMemoryErasure | undefined;
-			try {
-				index = await LexicalMemoryIndex.open({ databasePath });
-				erasure = await SqliteMemoryErasure.open({ databasePath });
-				const services: ExplicitMemoryServices = {
-					write: (scope, command) => lease.store.write(scope, command),
-					read: (scope, selector) => lease.store.read(scope, selector),
-					listRevisions: (memoryId, scope) => lease.store.listRevisions(memoryId, scope),
-					listSources: (memoryId, scope) => lease.store.listSources(memoryId, scope),
-					search: (scope, query, selector, limit) =>
-						Promise.resolve(index?.search(scope, query, selector, limit) ?? { entries: [], degraded: false }),
-					forget: async (memoryId) => {
-						const outcome = erasure?.forgetMemoryFamily({ memoryId });
-						return { erasureEpoch: outcome?.erasureEpoch ?? 0 };
-					},
-				};
-				const registrations = createExplicitMemoryToolRegistrations({
-					services,
-					scopeContext: {
-						allowed: allowedScopes.map((scope) => ({
-							name: scope.name === "user" ? ("user" as const) : ("project" as const),
-							scope,
-						})),
-					},
-				});
-				const provider = createMemoryEvidenceContextProvider({
-					scope: projectScope,
-					reader: {
-						readEvidence: async (scope) => {
-							const entries = await lease.store.read(scope, { asOf: new Date().toISOString() });
-							return [...entries]
-								.sort((left, right) => (right.pinned === true ? 1 : 0) - (left.pinned === true ? 1 : 0))
-								.sort((left, right) => (right.recordedAt > left.recordedAt ? 1 : -1));
-						},
-					},
-				});
-				const tools = registrations.map((registration) => registration.tool);
-				return {
-					async contribute(contributionContext) {
-						contributionContext.signal.throwIfAborted();
-						return { tools, contextProviders: [provider] };
-					},
-					async dispose() {
-						index?.close();
-						erasure?.close();
-						await lease.release();
-					},
-				};
-			} catch (error) {
-				index?.close();
-				erasure?.close();
-				await lease.release();
-				throw error;
-			}
-		},
-	};
+function sessionOwnerOf(sessionOptions: CodingAgentRuntimeSessionOptions): string {
+	return sessionOptions.sessionId === undefined ? "desktop-memory-session" : `session:${sessionOptions.sessionId}`;
 }
