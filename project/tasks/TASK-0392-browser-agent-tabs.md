@@ -147,6 +147,6 @@ updated: 2026-10-24
 - 独立只读审查：新上下文 Explore 审查实际 diff，发现 1 项 P2（关闭能力 padding-only 不触发重测→溢出持续旧宽），已红→绿回归+修复；其余接线/边界未发现 P1/P2；「连续流程测试存在且未绕过接线」获确认；Electron IPC/preload 与 WebContents 仍为边界 fake，如实不称跨进程验证。
 - 发布说明：v0.1.3 未发布，既有 365 行手写小节逐字迁入 `fragments/v0.1.3/000-existing-v0.1.3.md`（SHA256 be9c8f64…比对一致），由原生成器汇编，`--check` 与完整 check 均绿；生成器与检查规则未改。
 - 未运行及原因：真实 Desktop/真实模型/真实 Electron IPC 未授权；desktop 包全量 Vitest 未获绿（预存失败+批处理超时，已基线对照）；`verify:ui:*` 未获授权；浏览器 E2E 未跑。
-- Worktree：task/TASK-0392-browser-agent-tabs（基线 ea67d951e），`worktree:check --all` 的 TASK-0344–0347 日期与历史注册告警为预存，未改他人台账。
+- Worktree：task/TASK-0392-browser-agent-tabs（基线 ea67d951e）；`worktree:check --all` 的 TASK-0344–0347 日期与历史注册告警为预存，未改他人台账。集成前置说明：`worktree:check --task` 从主检出读取任务文件，本任务合同仅在分支上故对其不可见（工具设计）；等效校验已由分支内完整 check 覆盖——task-worktrees 合同（含本任务 scope 与 conflicts_with 声明）及 project-indexes（焦点表与 frontmatter 一致）均通过。Coordinator 集成后可在主检出重跑 CLI 核实。
 - 剩余风险：无变化 URL 短路对“强制刷新同 URL”路径依赖显式入口（现状无此入口）；agentActivity 为元数据投影，不代表工具审批/取消语义变化；多 workspace 并发仅到双并发测试覆盖。
 - 发布说明必要迁移：本基线 v0.1.3 未发布、365行旧小节仍为手写正文，新增碎片后生成器按合同拒绝。先将既有全部小节逐条机械迁入 `000-existing-v0.1.3.md`，校验原条目与新事实源完全相同，再交由原生成器汇编；不改写既有条目含义，不变更生成器或检查规则。
