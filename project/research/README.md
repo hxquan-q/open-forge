@@ -7,8 +7,13 @@
 
 | 主题 | 来源 |
 |---|---|
+| Desktop 启动与占用再调查：近期开发/安装形态日志分组、同步运行环境探测、编辑器静态依赖、未知大小会话恢复及资源基线缺口 | [RESEARCH-0044](RESEARCH-0044-desktop-startup-resource-audit.md) |
+| Agent 执行与 Team 性能一手参照：固定 Pi/Codex/OpenHands SHA，状态投影缓存、通知 drain、FIFO 与并发边界；无实测加速声明 | [RESEARCH-0043](RESEARCH-0043-agent-execution-performance-references.md)、[PLAN-0024](../plans/PLAN-0024-agent-kernel-team-execution-performance.md) |
+| 产品运营后台优先设计：登录注册、个人/企业授权与席位、版本运营闭环；后续企业策略和统一插件/MCP/技能市场，附客户端事实与第一方证据 | [RESEARCH-0041](RESEARCH-0041-product-backoffice-and-enterprise-control.md) |
+| Pi插件生态与本仓兼容边界：固定官方1.4.0源码快照和8个生态仓库，核实工具/事件/会话/RPC与TUI差异，关联原生插件优化方案；未安装执行样本 | [RESEARCH-0040](RESEARCH-0040-pi-extension-ecosystem-compatibility.md)、[PLAN-0022](../plans/PLAN-0022-pi-ecosystem-and-plugin-evolution.md) |
 | Pi 生态记忆源码续研：固定版本对照 Pi、Chasen、openpi、pi-mind、pi-hermes；核实短词检索、Worktree、观察覆盖和 forget 恢复旧版本等边界，形成 PLAN-0021 输入 | [RESEARCH-0039](RESEARCH-0039-pi-memory-implementation-benchmarks.md) |
 | Agent 全局/项目长期记忆：Mem0、Graphiti、A-MEM、MemOS 与图 RAG 一手核查；对照本仓 4,000 字符快照链路，建议作用域/来源/时间版本、混合检索及任务评测路线 | [RESEARCH-0038](RESEARCH-0038-agent-persistent-memory.md) |
+| 浏览器元素批注外部基准（Cebian/stagewise/onUI 等 11 项对照）：核心链路已齐，真实差距为批注 intent+severity、CSS selector、控制台错误、iframe 穿透、MCP 暴露等 10 项，含 Apache-2.0 下的许可证边界 | [RESEARCH-0037](RESEARCH-0037-browser-tab-external-projects-benchmark.md) |
 | Cursor Design Mode 对照：单击是元素旁批注并改源码，Alt+单击才把元素放进输入框；本仓此前把两者合成一次发送 | [RESEARCH-0036](RESEARCH-0036-cursor-design-mode-annotation.md) |
 | 最近14天日志（10-08至10-21）：55份运行日志与8份构建/检查日志；区分paint超时、远端资源耗时、未闭环错误、历史修复及测试污染，附脱敏指纹清单 | [RESEARCH-0035](RESEARCH-0035-fourteen-day-log-performance-audit.md) |
 | Browser 插件、文件 HTML 预览与 browser_tab 优化核对：现有激活预热/按插件 dev 开关、复用文件协议、停止重复确定性失败，并区分空参数与流解析回退 | [RESEARCH-0034](RESEARCH-0034-browser-preview-optimization.md) |

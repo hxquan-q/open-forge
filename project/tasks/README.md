@@ -15,6 +15,15 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0402` | `verifying` | PLAN-0024 | [通知 journal 重复扫描](TASK-0402-notification-journal-projection.md)；单次遍历索引，交错 A/B 5.5–6.3×，159 例与完整 check 全绿；未独立审查，未集成。 |
+| `TASK-0399` | `in_progress` | PLAN-0002 | [运行环境启动探测异步化](TASK-0399-runtime-startup-async-probes.md)；先慢子进程响应性回归，main串行，保留安装/PATH/失败合同。 |
+| `TASK-0400` | `in_progress` | PLAN-0002 | [文件编辑器启动按需加载](TASK-0400-file-editor-lazy-startup.md)；基线静态JS闭包4,560,307字节；切编辑器/轻量入口/默认主题加载链，串行实施。 |
+| `TASK-0401` | `in_progress` | PLAN-0002 | [自动恢复会话有界加载](TASK-0401-bounded-session-auto-restore.md)；空元信息恢复显式tail，先稳定session-switch基线，保留手动full/分页/live。 |
+| `TASK-0398` | `done` | — | [Desktop 启动与占用调查](TASK-0398-desktop-startup-resource-audit.md)；RESEARCH-0044 含八次启动样本、同步探测/静态依赖/恢复全量风险与占用基线缺口；独立复核及文档检查通过，coordination-only，未实施性能改动。 |
+| `TASK-0394` | `done` | PLAN-0024 | [Agent 执行一手参照](TASK-0394-agent-execution-reference-research.md)；只读代码/公开源码，独占 RESEARCH-0043；coordination-only。 |
+| `TASK-0395` | `blocked` | PLAN-0024 | [Team 状态投影性能](TASK-0395-team-state-projection-performance.md)；独立 Worktree 已建，基准/合同22例与完整check通过，准备提交fc272b5b8；共享实验配置被TASK-0392占用，未测量/未改生产缓存。 |
+| `TASK-0396` | `verifying` | PLAN-0024 | [通知续跑](TASK-0396-team-notification-drain.md)；BUG-0151 已修，36 文件 277 例与完整 check 通过，独立复审接受；候选 22c28f639，main 脏未集成。 |
+| `TASK-0397` | `draft` | PLAN-0024 | [内核执行热点](TASK-0397-agent-execution-hot-path.md)；研究/测量后收紧合同，不盲目扩并发；尚未编码。 |
 | `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |
 | `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |
 | `TASK-0369` | `done` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；@vetta/runtime-memory 合同包 + memoryPolicy 会话边界校验 + ADR-0149/0150 落地，完整 check 全绿。 |

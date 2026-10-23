@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { isTeamWorkItem, type TeamSessionDocument, type TeamWorkItem } from "@vetta/agent-team";
 import type { ConversationDocument } from "@vetta/runtime-core";
 import type { SessionContextRecord } from "@vetta/runtime-core/kernel";
@@ -13,17 +14,35 @@ interface TaskNotification {
 	readonly cancelled: boolean;
 }
 
+interface JournalIndex {
+	readonly stopped: boolean;
+	readonly notices: readonly TaskNotification[];
+	readonly entriesById: ReadonlyMap<string, ConversationDocument["entries"][number]>;
+}
+
 /** The receiving work item's notificationIds are the durable admission receipt. */
 export class TeamNotificationJournal {
+	/**
+	 * One pass over a coordination snapshot serves stop checks, the pending list and
+	 * context building alike. The key is the document object plus the same cheap
+	 * invalidation signature the collaboration store uses, so an appended or
+	 * replaced snapshot can never serve stale notices.
+	 */
+	private readonly indexes = new WeakMap<
+		ConversationDocument,
+		{
+			readonly revision: number;
+			readonly length: number;
+			readonly firstId: string | undefined;
+			readonly lastId: string | undefined;
+			readonly index: JournalIndex;
+		}
+	>();
+
 	constructor(private readonly store: TeamCollaborationStore) {}
 
 	isStopped(session: TeamSessionDocument): boolean {
-		let stopped = false;
-		for (const entry of this.store.readDocument(session).entries) {
-			if (entry.type === "custom" && entry.customType === STOP_TYPE && typeof entry.data === "boolean")
-				stopped = entry.data;
-		}
-		return stopped;
+		return this.index(session).stopped;
 	}
 
 	async stop(session: TeamSessionDocument): Promise<void> {
@@ -64,8 +83,9 @@ export class TeamNotificationJournal {
 		if (this.isStopped(session)) return [];
 		const state = this.store.read(session);
 		const accepted = new Set(state.workItems.flatMap((item) => item.notificationIds ?? []));
-		return this.read(session).filter((notice) => {
-			const current = state.workItems.find((item) => item.id === notice.workItem.id);
+		const workItemsById = new Map(state.workItems.map((item) => [item.id, item]));
+		return this.index(session).notices.filter((notice) => {
+			const current = workItemsById.get(notice.workItem.id);
 			return (
 				!notice.cancelled &&
 				!accepted.has(notice.id) &&
@@ -77,11 +97,12 @@ export class TeamNotificationJournal {
 
 	contexts(session: TeamSessionDocument, ids: readonly string[]): readonly SessionContextRecord[] {
 		const wanted = new Set(ids);
-		return this.read(session)
+		const { notices, entriesById } = this.index(session);
+		return notices
 			.filter((notice) => wanted.has(notice.id))
 			.map((notice) => {
 				const item = notice.workItem;
-				const result = this.store.readDocument(session).entries.find((entry) => entry.id === item.resultMessageId);
+				const result = item.resultMessageId ? entriesById.get(item.resultMessageId) : undefined;
 				const resultText =
 					result?.type === "message" && result.kind === "agent"
 						? result.message.content
@@ -111,9 +132,31 @@ export class TeamNotificationJournal {
 	}
 
 	private read(session: TeamSessionDocument): readonly TaskNotification[] {
+		return this.index(session).notices;
+	}
+
+	private index(session: TeamSessionDocument): JournalIndex {
+		const document = this.store.readDocument(session);
+		const cached = this.indexes.get(document);
+		if (
+			cached &&
+			cached.revision === document.revision &&
+			cached.length === document.entries.length &&
+			cached.firstId === document.entries[0]?.id &&
+			cached.lastId === document.entries.at(-1)?.id
+		)
+			return cached.index;
 		const records = new Map<string, TaskNotification>();
-		for (const entry of this.store.readDocument(session).entries) {
-			if (entry.type !== "custom" || entry.customType !== NOTIFICATION_TYPE) continue;
+		const entriesById = new Map<string, ConversationDocument["entries"][number]>();
+		let stopped = false;
+		for (const entry of document.entries) {
+			if (entry.id) entriesById.set(entry.id, entry);
+			if (entry.type !== "custom") continue;
+			if (entry.customType === STOP_TYPE && typeof entry.data === "boolean") {
+				stopped = entry.data;
+				continue;
+			}
+			if (entry.customType !== NOTIFICATION_TYPE) continue;
 			const data = entry.data;
 			if (
 				typeof data !== "object" ||
@@ -128,7 +171,15 @@ export class TeamNotificationJournal {
 				continue;
 			records.set(data.id, { id: data.id, workItem: data.workItem, cancelled: data.cancelled });
 		}
-		return [...records.values()];
+		const index: JournalIndex = { stopped, notices: [...records.values()], entriesById };
+		this.indexes.set(document, {
+			revision: document.revision,
+			length: document.entries.length,
+			firstId: document.entries[0]?.id,
+			lastId: document.entries.at(-1)?.id,
+			index,
+		});
+		return index;
 	}
 }
 
