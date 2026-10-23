@@ -3,11 +3,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-	type BrowserLiveEditCardProps,
-	type BrowserPanelLabels,
-	BrowserPanelView,
-} from "@vetta-org/theme-ui/activity";
+import { type BrowserLiveEditCardProps, type BrowserPanelLabels, BrowserPanelView } from "@vetta-org/theme-ui/activity";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -62,9 +58,7 @@ describe("BrowserPanelView picker chrome", () => {
 			/>,
 		);
 		expect(screen.getByText("Hover then click")).toBeTruthy();
-		await user.click(
-			screen.getByRole("button", { name: "Picking an element" }),
-		);
+		await user.click(screen.getByRole("button", { name: "Picking an element" }));
 		expect(onTogglePicker).toHaveBeenCalledTimes(1);
 	});
 
@@ -96,15 +90,10 @@ describe("BrowserPanelView picker chrome", () => {
 		);
 		expect(screen.getByPlaceholderText("url")).toBeTruthy();
 		expect(screen.getByText("empty")).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Pick element" })).toHaveProperty(
-			"disabled",
-			true,
-		);
+		expect(screen.getByRole("button", { name: "Pick element" })).toHaveProperty("disabled", true);
 	});
 
-	function liveEditModel(
-		overrides: Partial<BrowserLiveEditCardProps> = {},
-	): BrowserLiveEditCardProps {
+	function liveEditModel(overrides: Partial<BrowserLiveEditCardProps> = {}): BrowserLiveEditCardProps {
 		return {
 			title: "Save button",
 			target: "form > button#save",
@@ -140,14 +129,11 @@ describe("BrowserPanelView picker chrome", () => {
 		};
 	}
 
-	function panelView(
-		liveEdit?: BrowserLiveEditCardProps,
-		agentStatus?: string,
-	) {
+	function panelView(liveEdit?: BrowserLiveEditCardProps, agentStatus?: string, viewLabels = labels) {
 		return (
 			<BrowserPanelView
 				workspaceId="ws-1"
-				labels={labels}
+				labels={viewLabels}
 				address="https://example.com"
 				canBack={false}
 				canForward={false}
@@ -183,20 +169,21 @@ describe("BrowserPanelView picker chrome", () => {
 		const address = screen.getByRole("textbox", { name: "Page address" });
 		await user.click(address);
 		const host = panel.container.querySelector("[data-browser-view-host]");
-		expect(screen.getByRole("status").textContent).toBe(
-			"Agent is reading this page",
-		);
+		expect(screen.getByRole("status").textContent).toBe("Agent is reading this page");
 		panel.rerender(panelView(undefined, "Agent is clicking an element"));
-		expect(screen.getByRole("status").textContent).toBe(
-			"Agent is clicking an element",
-		);
+		expect(screen.getByRole("status").textContent).toBe("Agent is clicking an element");
 		expect(document.activeElement).toBe(address);
-		expect(panel.container.querySelector("[data-browser-view-host]")).toBe(
-			host,
-		);
+		expect(panel.container.querySelector("[data-browser-view-host]")).toBe(host);
 		panel.rerender(panelView());
 		expect(screen.getByRole("status").textContent).toBe("Shared with Agent");
 		expect(document.activeElement).toBe(address);
+	});
+
+	it("accepts the previous label contract and uses its localized address hint as the name", () => {
+		const previousLabels = { ...labels, addressLabel: undefined, agentReady: undefined };
+		render(panelView(undefined, undefined, previousLabels));
+		expect(screen.getByRole("textbox", { name: "url" })).toBeTruthy();
+		expect(screen.queryByRole("status")).toBeNull();
 	});
 
 	it("renders a native-view host placeholder instead of a <webview> element", () => {
@@ -242,10 +229,7 @@ describe("BrowserPanelView picker chrome", () => {
 		expect(model.onRevertEdit).toHaveBeenCalledWith(1);
 		await user.click(screen.getByRole("button", { name: "Revert all" }));
 		expect(model.onRevertAll).toHaveBeenCalledTimes(1);
-		await user.type(
-			screen.getByRole("textbox", { name: "Tell the Agent" }),
-			"Make it blue",
-		);
+		await user.type(screen.getByRole("textbox", { name: "Tell the Agent" }), "Make it blue");
 		await user.click(screen.getByRole("button", { name: "Send to Agent" }));
 		expect(model.onSend).toHaveBeenCalledWith("Make it blue");
 		const bar = container.querySelector("[data-browser-selection-bar]");
@@ -260,9 +244,6 @@ describe("BrowserPanelView picker chrome", () => {
 	it("元素失效时显示 stale 提示并禁用输入", () => {
 		renderPanel(liveEditModel({ hasElement: false, error: "stale_reference" }));
 		expect(screen.getByText("Selection is stale")).toBeTruthy();
-		expect(screen.getByPlaceholderText("New text")).toHaveProperty(
-			"disabled",
-			true,
-		);
+		expect(screen.getByPlaceholderText("New text")).toHaveProperty("disabled", true);
 	});
 });

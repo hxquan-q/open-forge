@@ -12,10 +12,7 @@ import { getDefaultStore } from "jotai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DesktopBrowserTabGetSessionResult } from "@/shared/browser-tab-ipc";
 import { DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK } from "@/shared/browser-tab-ipc";
-import {
-	BROWSER_ELEMENT_ATTACHMENT_ID,
-	resetBrowserElementDraftForTests,
-} from "../services/browser-element-draft.js";
+import { BROWSER_ELEMENT_ATTACHMENT_ID, resetBrowserElementDraftForTests } from "../services/browser-element-draft.js";
 
 const insertImageToken = vi.fn();
 const removeImageToken = vi.fn();
@@ -33,19 +30,14 @@ const prependPlainText = vi.fn();
 
 const focusInputEditor = vi.fn();
 
-vi.mock(
-	"@domains/conversation/components/input-bar/editor/inputEditorHandle",
-	() => ({
-		insertImageToken: (...args: unknown[]) => insertImageToken(...args),
-		removeImageToken: (...args: unknown[]) => removeImageToken(...args),
-		prependPlainText: (...args: unknown[]) => prependPlainText(...args),
-		focusInputEditor: () => focusInputEditor(),
-	}),
-);
+vi.mock("@domains/conversation/components/input-bar/editor/inputEditorHandle", () => ({
+	insertImageToken: (...args: unknown[]) => insertImageToken(...args),
+	removeImageToken: (...args: unknown[]) => removeImageToken(...args),
+	prependPlainText: (...args: unknown[]) => prependPlainText(...args),
+	focusInputEditor: () => focusInputEditor(),
+}));
 
-const { useBrowserElementPicker } = await import(
-	"./useBrowserElementPicker.js"
-);
+const { useBrowserElementPicker } = await import("./useBrowserElementPicker.js");
 
 function context(): BrowserElementSelectionContext {
 	return {
@@ -124,18 +116,14 @@ describe("useBrowserElementPicker", () => {
 	afterEach(cleanup);
 
 	it("projects live Agent activity without letting an older session query overwrite it", async () => {
-		let finishQuery:
-			| ((value: DesktopBrowserTabGetSessionResult) => void)
-			| undefined;
+		let finishQuery: ((value: DesktopBrowserTabGetSessionResult) => void) | undefined;
 		vi.mocked(window.vetta.browserTab.getSession).mockImplementationOnce(
 			() =>
 				new Promise((resolve) => {
 					finishQuery = resolve;
 				}),
 		);
-		const { result } = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		const session = {
 			workspaceId: "ws-1",
@@ -185,20 +173,14 @@ describe("useBrowserElementPicker", () => {
 	});
 
 	it("点选命中后先停在选择态、不立即附加；确认后才把胶囊（含 liveEdits）写入草稿", async () => {
-		const { result } = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		listener?.({
 			workspaceId: "ws-1",
 			event: { kind: "picker-result", context: context() },
 		});
 		// 选中即截图并打开编辑卡，但草稿附件尚未写入
-		await waitFor(() =>
-			expect(result.current.selection?.context.payload.domPath).toBe(
-				"input#email",
-			),
-		);
+		await waitFor(() => expect(result.current.selection?.context.payload.domPath).toBe("input#email"));
 		expect(store.get(promptAttachmentAtom)).toBeNull();
 		expect(result.current.selectionRef).toEqual({ id: "e3", pageRevision: 4 });
 
@@ -248,9 +230,7 @@ describe("useBrowserElementPicker", () => {
 	});
 
 	it("放弃选择不写附件；页面翻页事件清空失效的选中态", async () => {
-		const { result } = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		listener?.({
 			workspaceId: "ws-1",
@@ -277,15 +257,11 @@ describe("useBrowserElementPicker", () => {
 	});
 
 	it("toggles picker through the frozen IPC and ignores workspaces without a page", async () => {
-		const empty = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: false }),
-		);
+		const empty = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: false }));
 		empty.result.current.onTogglePicker();
 		expect(window.vetta.browserTab.setPicker).not.toHaveBeenCalled();
 
-		const ready = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const ready = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		ready.result.current.onTogglePicker();
 		await waitFor(() =>
@@ -306,9 +282,7 @@ describe("useBrowserElementPicker", () => {
 	it("发送给 Agent 时发起带评论的会话，截图不先写入草稿；发送未启动则把正文留在输入框", async () => {
 		const send = vi.fn(async () => undefined);
 		sendMessageFnRef.current = send;
-		const { result } = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		listener?.({
 			workspaceId: "ws-1",
@@ -335,18 +309,14 @@ describe("useBrowserElementPicker", () => {
 			accessibleName: "Email",
 			domPath: "input#email",
 		});
-		await waitFor(() =>
-			expect(prependPlainText).toHaveBeenCalledWith("把按钮改成蓝色\n\n"),
-		);
+		await waitFor(() => expect(prependPlainText).toHaveBeenCalledWith("把按钮改成蓝色\n\n"));
 		expect(insertImageToken).toHaveBeenCalledWith("C:/cache/el.png");
 	});
 
 	it("页面旁批注提交后把元素和这句话发给 Agent，不再停在页面下方的卡片", async () => {
 		const send = vi.fn(async () => ({ status: "sent" as const }));
 		sendMessageFnRef.current = send;
-		const { result } = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		listener?.({
 			workspaceId: "ws-1",
@@ -371,9 +341,7 @@ describe("useBrowserElementPicker", () => {
 	it("Alt+点击只把元素放进输入框并聚焦，不发送", async () => {
 		const send = vi.fn(async () => ({ status: "sent" as const }));
 		sendMessageFnRef.current = send;
-		const { result } = renderHook(() =>
-			useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }),
-		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		listener?.({
 			workspaceId: "ws-1",

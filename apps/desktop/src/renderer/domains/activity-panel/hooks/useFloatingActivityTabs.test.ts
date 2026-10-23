@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 
 import { TabBar } from "@shared/components/ui/tab-bar";
 import type { ActivityTabKey } from "@shared/lib/project-profile";
@@ -9,7 +10,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useFloatingActivityTabs } from "./useFloatingActivityTabs";
 
-vi.mock("motion/react", () => ({ motion: { span: () => null } }));
+vi.mock("motion/react", () => ({ motion: { span: () => null }, useReducedMotion: () => false }));
 
 const ActivityTabBar = TabBar<ActivityTabKey>;
 

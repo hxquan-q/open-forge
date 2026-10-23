@@ -84,9 +84,7 @@ it("shares one page with Agent and keeps the user's address draft and focus thro
 		</ActivityPanelContextProvider>,
 	);
 	const address = screen.getByRole("textbox", { name: "browser.addressLabel" });
-	await waitFor(() =>
-		expect(address).toHaveProperty("value", contents.getURL()),
-	);
+	await waitFor(() => expect(address).toHaveProperty("value", contents.getURL()));
 	const host = panel.container.querySelector("[data-browser-view-host]");
 	await user.clear(address);
 	await user.type(address, "https://next.example/draft");
@@ -102,11 +100,7 @@ it("shares one page with Agent and keeps the user's address draft and focus thro
 			{ controller, resolveWorkspaceId: () => "flow-workspace" },
 		);
 	});
-	await waitFor(() =>
-		expect(screen.getByRole("status").textContent).toBe(
-			"browser.agentAction.snapshot",
-		),
-	);
+	await waitFor(() => expect(screen.getByRole("status").textContent).toBe("browser.agentAction.snapshot"));
 	expect(address).toHaveProperty("value", "https://next.example/draft");
 	expect(document.activeElement).toBe(address);
 	await act(async () => {

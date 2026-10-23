@@ -1,7 +1,7 @@
 ---
 id: TASK-0392
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop
 requirement: REQ-0001
@@ -37,6 +37,7 @@ write_paths:
   - apps/desktop/scripts/browser-tabs.bench.tsx
   - project/tasks/TASK-0392-browser-agent-tabs.md
   - project/tasks/README.md
+  - .github/release-notes/fragments/v0.1.3/000-existing-v0.1.3.md
   - .github/release-notes/fragments/v0.1.3/task-0392-browser-agent-tabs.md
   - .github/release-notes/v0.1.3.md
 exclusive_paths:
@@ -114,10 +115,10 @@ updated: 2026-10-24
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：实施完成后独立只读审查；当前未执行。
-- 集成：pending，候选仅独立分支。
-- 人工功能验收：待用户检查浏览器操作反馈、地址栏与窄栏切换体验。
+- 工程验证：通过（定向 10 文件 68 例、影响面、完整 check、隔离性能/视觉探针）；desktop 包全量 Vitest 因预存失败/超时未计为门禁。
+- 技术评审：独立只读审查完成（1 项 P2 已修复复验）；Electron 跨进程与真实模型仍属未验证。
+- 集成：pending（候选仅在本分支，未合入 main、未推送）。
+- 人工功能验收：待验收（真实 Desktop 中查看 agent 操作反馈、地址栏窄宽体验与页签切换观感）。
 - 发布：未授权。
 
 ## 功能验收包
@@ -128,5 +129,21 @@ updated: 2026-10-24
 
 ## 交付记录
 
-- 创建独立分支/工作树，基线 ea67d951e；主检出与旧实验未改交付文件。
-- 实际实现、测试、性能指标、评审与未运行项：后续据实追加。
+- 实际修改（均在本 worktree）：
+  - `packages/theme-ui/src/shared/TabBar.tsx`：自然宽度缓存（跨选中切换存活，ResizeObserver border-box 观测容器+测量节点）、溢出改为几何快照的同步派生（选中不再二次提交 state）、隐藏测量层与 TabInner memo、reduced-motion 静态指示器、页签 title/focus-visible、关闭能力变化纳入测量失效、solar 关闭图标。
+  - `packages/theme-ui/src/activity/BrowserPanelView.tsx`：工具栏改用 `Button`(ghost/icon-sm)+Spin、地址表单带边框/焦点环与可访问名称、新增 `agentStatus` 只读状态行（`<output aria-live>`）、图标迁 solar、重试按钮组件化；labels 新增键可选，旧标签合同兼容。
+  - `apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts` + `webview-session-controller.ts` + `shared/browser-tab-ipc.ts`：browser_tab 执行期经 `beginAgentAction` 租约向 session 投影 `agentActivity`（动作名+并发数），finally/abort/换绑/解绑必清；会话事件沿用既有桥。
+  - `useBrowserElementPicker.ts`：订阅 session-changed 全量会话（含 agentActivity），旧初始查询迟到不覆盖新事件；事件订阅不再依赖 captureSelection 引用。
+  - `useBrowserPanelModel.ts`：仅页面 URL 实际变化时同步地址草稿（loading 等重复事件不再覆盖输入）；透传 agentStatus 本地化文案。
+  - `browser-atoms.ts`：URL 写入等值短路，避免无变化 Map 克隆广播。
+  - i18n zh/en chat.json：`browser.addressLabel/agentReady/agentAction.*`。
+- 测试（新增性质）：TabBar 宽度缓存/容器与内容尺寸失效/关闭能力变化失效/reduced-motion；真实 host→controller→事件桥→BrowserPanel 连续流程（agent 流中地址草稿、焦点、占位身份、退订）；agentActivity 生命周期（成功/异常/取消/并发/换绑）；地址草稿保护；URL 等值不重发；View 旧标签合同兼容。既有拖拽/点选/面板流程全部保持绿。
+- 实际运行：定向 10 文件 68 例通过；`test:changed --base ea67d951e` 下 theme-ui 30 文件 233 例、kanban 102 例、xianxia 1 例通过；desktop 包全量在批处理中出既有失败（主检出 main 基线复跑 skill-presentation-read 2 例同样红，属预存；weknora cp3 1 例未复跑单独核实；model-call-frame 2 例为超时型，主检出同样超时）→ 以定向+影响面为准，不宣称 desktop 包全量绿；完整 `bun run check`（lint/types/guards/mobile）exit 0。
+- 性能（隔离 Chromium 生产 profiling，固定 4/12/30 页签×48 次切换/缩放，同窗反平衡三轮，中位数）：原版 67.6ms → 候选 52.2ms（≈ -23%），宽度读取 4,370→0，每轮提交 144→96，p95 commit ≤0.4ms，p95 双帧可见 14.8ms；冷首轮带 40–50% 负载噪声，结论取同窗对照中位数。
+- 隔离组件视觉探针（`reducedMotion` + 360/800 × dark/light）：无页面错误、无横向溢出、地址输入最小 86px、状态行角色/对比可读；截图存 `.auto/screenshots/`。当前会话模型不能读图，人工目验未执行。
+- 独立只读审查：新上下文 Explore 审查实际 diff，发现 1 项 P2（关闭能力 padding-only 不触发重测→溢出持续旧宽），已红→绿回归+修复；其余接线/边界未发现 P1/P2；「连续流程测试存在且未绕过接线」获确认；Electron IPC/preload 与 WebContents 仍为边界 fake，如实不称跨进程验证。
+- 发布说明：v0.1.3 未发布，既有 365 行手写小节逐字迁入 `fragments/v0.1.3/000-existing-v0.1.3.md`（SHA256 be9c8f64…比对一致），由原生成器汇编，`--check` 与完整 check 均绿；生成器与检查规则未改。
+- 未运行及原因：真实 Desktop/真实模型/真实 Electron IPC 未授权；desktop 包全量 Vitest 未获绿（预存失败+批处理超时，已基线对照）；`verify:ui:*` 未获授权；浏览器 E2E 未跑。
+- Worktree：task/TASK-0392-browser-agent-tabs（基线 ea67d951e），`worktree:check --all` 的 TASK-0344–0347 日期与历史注册告警为预存，未改他人台账。
+- 剩余风险：无变化 URL 短路对“强制刷新同 URL”路径依赖显式入口（现状无此入口）；agentActivity 为元数据投影，不代表工具审批/取消语义变化；多 workspace 并发仅到双并发测试覆盖。
+- 发布说明必要迁移：本基线 v0.1.3 未发布、365行旧小节仍为手写正文，新增碎片后生成器按合同拒绝。先将既有全部小节逐条机械迁入 `000-existing-v0.1.3.md`，校验原条目与新事实源完全相同，再交由原生成器汇编；不改写既有条目含义，不变更生成器或检查规则。

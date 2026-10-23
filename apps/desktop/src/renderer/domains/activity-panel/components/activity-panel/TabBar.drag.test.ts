@@ -239,8 +239,14 @@ describe("TabBar pointer drag", () => {
 	});
 
 	it("invalidates natural widths when close capability changes without an observer notification", () => {
-		const items = [{ key: "a", label: "A", removable: true }, { key: "b", label: "B", removable: true }, { key: "c", label: "C", removable: true }];
-		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+		const items = [
+			{ key: "a", label: "A", removable: true },
+			{ key: "b", label: "B", removable: true },
+			{ key: "c", label: "C", removable: true },
+		];
+		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (
+			this: HTMLElement,
+		) {
 			return this.classList.contains("pr-7") ? 96 : 80;
 		});
 		const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200);
@@ -250,9 +256,17 @@ describe("TabBar pointer drag", () => {
 		try {
 			act(() => root.render(createElement(TabBar, { items, value: "a", onChange, onOverflowChange })));
 			expect(onOverflowChange).toHaveBeenLastCalledWith(["c"]);
-			act(() => root.render(createElement(TabBar, { items, value: "a", onChange, onOverflowChange, onRemove, removeLabel: "Hide" })));
+			act(() =>
+				root.render(
+					createElement(TabBar, { items, value: "a", onChange, onOverflowChange, onRemove, removeLabel: "Hide" }),
+				),
+			);
 			expect(onOverflowChange).toHaveBeenLastCalledWith(["b", "c"]);
-			act(() => root.render(createElement(TabBar, { items, value: "b", onChange, onOverflowChange, onRemove, removeLabel: "Hide" })));
+			act(() =>
+				root.render(
+					createElement(TabBar, { items, value: "b", onChange, onOverflowChange, onRemove, removeLabel: "Hide" }),
+				),
+			);
 			expect(onOverflowChange).toHaveBeenLastCalledWith(["a", "c"]);
 			act(() => root.render(createElement(TabBar, { items, value: "b", onChange, onOverflowChange })));
 			expect(onOverflowChange).toHaveBeenLastCalledWith(["c"]);

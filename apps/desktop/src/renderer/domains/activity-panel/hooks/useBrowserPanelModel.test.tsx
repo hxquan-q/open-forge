@@ -35,9 +35,7 @@ vi.mock("./useBrowserLiveEdit", () => ({
 
 const { useBrowserPanelModel } = await import("./useBrowserPanelModel.js");
 
-function viewState(
-	overrides: Partial<DesktopBrowserViewState> = {},
-): DesktopBrowserViewState {
+function viewState(overrides: Partial<DesktopBrowserViewState> = {}): DesktopBrowserViewState {
 	return {
 		workspaceId: "ws-1",
 		url: "https://example.com",
@@ -101,10 +99,7 @@ function domRect(x: number, y: number, width: number, height: number): DOMRect {
 
 function renderPanel(
 	harness: Harness,
-	{
-		workspaceId = "ws-1",
-		active = true,
-	}: { workspaceId?: string; active?: boolean } = {},
+	{ workspaceId = "ws-1", active = true }: { workspaceId?: string; active?: boolean } = {},
 ) {
 	return render(
 		<div data-layout-ancestor="">
@@ -124,12 +119,7 @@ function renderPanel(
 
 describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 	const store = getDefaultStore();
-	let viewListener:
-		| ((envelope: {
-				workspaceId: string;
-				state: DesktopBrowserViewState;
-		  }) => void)
-		| undefined;
+	let viewListener: ((envelope: { workspaceId: string; state: DesktopBrowserViewState }) => void) | undefined;
 	let api: {
 		attach: ReturnType<typeof vi.fn>;
 		update: ReturnType<typeof vi.fn>;
@@ -182,9 +172,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 			// 尚无页面：view 挂载即保持隐藏，避免原生层闪帧盖过空态覆盖层。
 			visible: false,
 		});
-		await waitFor(() =>
-			expect(harness.model.current?.currentUrl).toBe("https://example.com"),
-		);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
 		expect(harness.model.current?.canBack).toBe(true);
 		expect(harness.model.current?.hasPage).toBe(true);
 	});
@@ -204,14 +192,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 				}),
 			});
 		});
-		await waitFor(() =>
-			expect(harness.model.current?.address).toBe("https://a.dev/x"),
-		);
+		await waitFor(() => expect(harness.model.current?.address).toBe("https://a.dev/x"));
 		expect(harness.model.current?.loading).toBe(true);
 		expect(harness.model.current?.canForward).toBe(true);
-		expect(store.get(browserUrlByWorkspaceAtom).get("ws-1")).toBe(
-			"https://a.dev/x",
-		);
+		expect(store.get(browserUrlByWorkspaceAtom).get("ws-1")).toBe("https://a.dev/x");
 
 		// 其它 workspace 的事件不串台
 		act(() => {
@@ -226,9 +210,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 	it("keeps an address draft through unchanged background events, then navigates the submitted draft", async () => {
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);
-		await waitFor(() =>
-			expect(harness.model.current?.currentUrl).toBe("https://example.com"),
-		);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
 		act(() => harness.model.current?.onAddressChange("localhost:5173/preview"));
 		act(() =>
 			viewListener?.({
@@ -254,9 +236,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 				state: viewState({ url: "https://localhost:5173/preview" }),
 			}),
 		);
-		expect(harness.model.current?.address).toBe(
-			"https://localhost:5173/preview",
-		);
+		expect(harness.model.current?.address).toBe("https://localhost:5173/preview");
 	});
 
 	it("地址栏提交经 workspace URL 回写触发 navigate；回退/前进/重载/停止走 control", async () => {
@@ -266,9 +246,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 		const model = () => harness.model.current as BrowserPanelModel;
 		act(() => model().onAddressChange("vetta.dev/docs"));
-		act(() =>
-			model().onAddressSubmit({ preventDefault: () => undefined } as never),
-		);
+		act(() => model().onAddressSubmit({ preventDefault: () => undefined } as never));
 		await waitFor(() =>
 			expect(api.navigate).toHaveBeenCalledWith({
 				workspaceId: "ws-1",
@@ -357,9 +335,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
 
 		act(() => {
-			window.dispatchEvent(
-				new CustomEvent(OVERLAY_DRAG_EVENT, { detail: { active: true } }),
-			);
+			window.dispatchEvent(new CustomEvent(OVERLAY_DRAG_EVENT, { detail: { active: true } }));
 		});
 		await waitFor(() =>
 			expect(api.setInputPassthrough).toHaveBeenCalledWith({
@@ -369,9 +345,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		);
 
 		act(() => {
-			window.dispatchEvent(
-				new CustomEvent(OVERLAY_DRAG_EVENT, { detail: { active: false } }),
-			);
+			window.dispatchEvent(new CustomEvent(OVERLAY_DRAG_EVENT, { detail: { active: false } }));
 		});
 		await waitFor(() =>
 			expect(api.setInputPassthrough).toHaveBeenCalledWith({
@@ -390,11 +364,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 			state: viewState({ url: "about:blank" }),
 		});
 		renderPanel(harness);
-		await waitFor(() =>
-			expect(api.attach).toHaveBeenCalledWith(
-				expect.objectContaining({ url: "https://a.dev" }),
-			),
-		);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledWith(expect.objectContaining({ url: "https://a.dev" })));
 
 		await waitFor(() => expect(harness.model.current?.failed).toBe(false));
 		expect(api.navigate).not.toHaveBeenCalled();
@@ -414,10 +384,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
 
 		act(() => {
-			store.set(
-				browserUrlByWorkspaceAtom,
-				new Map([["ws-1", "https://b.dev"]]),
-			);
+			store.set(browserUrlByWorkspaceAtom, new Map([["ws-1", "https://b.dev"]]));
 		});
 		expect(api.navigate).not.toHaveBeenCalled();
 
@@ -433,13 +400,9 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 	it("attach 被主进程处理器拒绝/抛错时不静默：进入失败态，重试重走 attach 而非 reload", async () => {
 		const harness: Harness = { model: { current: null } };
-		const errors = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => undefined);
+		const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		// 历史故障形态：主进程处理器抛「Cannot find module」→ invoke 直接拒绝。
-		api.attach.mockRejectedValueOnce(
-			new Error("Cannot find module '../window-manager.js'"),
-		);
+		api.attach.mockRejectedValueOnce(new Error("Cannot find module '../window-manager.js'"));
 		renderPanel(harness);
 
 		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
@@ -459,9 +422,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 	it("attach 回 no_window 同样进入失败态", async () => {
 		const harness: Harness = { model: { current: null } };
-		const errors = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => undefined);
+		const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		api.attach.mockResolvedValueOnce({ ok: false, code: "no_window" });
 		renderPanel(harness);
 		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
@@ -470,12 +431,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 	it("左栏把占位洞平移而宽高不变时，祖先布局通知仍上报新原点", async () => {
 		let current = domRect(240, 80, 640, 480);
-		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-			function (this: HTMLElement) {
-				if (this.hasAttribute("data-browser-view-host")) return current;
-				return domRect(0, 0, 800, 600);
-			},
-		);
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+			if (this.hasAttribute("data-browser-view-host")) return current;
+			return domRect(0, 0, 800, 600);
+		});
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);
 		await waitFor(() =>
@@ -486,11 +445,9 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		);
 		const ancestor = document.querySelector("[data-layout-ancestor]");
 		expect(ancestor).not.toBeNull();
-		expect(
-			RecordingResizeObserver.instances.some((instance) =>
-				instance.targets.includes(ancestor as Element),
-			),
-		).toBe(true);
+		expect(RecordingResizeObserver.instances.some((instance) => instance.targets.includes(ancestor as Element))).toBe(
+			true,
+		);
 
 		api.update.mockClear();
 		current = domRect(8, 80, 640, 480);
@@ -505,12 +462,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 	it("页签隐藏测得 0×0 时不上报，重新显示后上报新位置", async () => {
 		let current = domRect(240, 80, 640, 480);
-		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-			function (this: HTMLElement) {
-				if (this.hasAttribute("data-browser-view-host")) return current;
-				return domRect(0, 0, 800, 600);
-			},
-		);
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+			if (this.hasAttribute("data-browser-view-host")) return current;
+			return domRect(0, 0, 800, 600);
+		});
 		const harness: Harness = { model: { current: null } };
 		const panel = renderPanel(harness, { active: true });
 		await waitFor(() =>
@@ -536,9 +491,7 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 				</ActivityPanelContextProvider>
 			</div>,
 		);
-		const boundsWhileHidden = api.update.mock.calls.filter(
-			(call) => "bounds" in (call[0] as object),
-		);
+		const boundsWhileHidden = api.update.mock.calls.filter((call) => "bounds" in (call[0] as object));
 		expect(boundsWhileHidden).toEqual([]);
 
 		current = domRect(8, 80, 640, 480);

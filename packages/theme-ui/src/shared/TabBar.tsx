@@ -138,17 +138,14 @@ function ActiveTabIndicator({
 		if (!indicator) return;
 		const updateWidth: ResizeObserverCallback = (entries): void => {
 			const nextWidth = entries[0]?.contentRect.width ?? 0;
-			setTabWidth((currentWidth) =>
-				currentWidth === nextWidth ? currentWidth : nextWidth,
-			);
+			setTabWidth((currentWidth) => (currentWidth === nextWidth ? currentWidth : nextWidth));
 		};
 		const observer = new ResizeObserver(updateWidth);
 		observer.observe(indicator);
 		return () => observer.disconnect();
 	}, [suppressLayoutAnimation, reducedMotion]);
 
-	const geometry =
-		tabWidth > 0 ? createConnectedTabOutlineGeometry(tabWidth) : null;
+	const geometry = tabWidth > 0 ? createConnectedTabOutlineGeometry(tabWidth) : null;
 
 	const content = (
 		<>
@@ -182,8 +179,7 @@ function ActiveTabIndicator({
 	// 否则轮廓整体下移 1px，下探量会多出一像素压到内容卡片上。
 	const indicatorProps = {
 		"aria-hidden": true,
-		className:
-			"pointer-events-none absolute -inset-x-px -top-px -bottom-px rounded-t-lg bg-muted",
+		className: "pointer-events-none absolute -inset-x-px -top-px -bottom-px rounded-t-lg bg-muted",
 		"data-active-tab-indicator": true,
 	};
 
@@ -223,13 +219,7 @@ const TabInner = memo(function TabInner({
 		<span className="relative z-10 flex min-w-0 flex-1 items-center gap-1.5">
 			{icon != null &&
 				(typeof icon === "string" ? (
-					<span
-						className={cn(
-							icon,
-							"h-3.5 w-3.5 shrink-0",
-							active ? "text-primary" : "opacity-70",
-						)}
-					/>
+					<span className={cn(icon, "h-3.5 w-3.5 shrink-0", active ? "text-primary" : "opacity-70")} />
 				) : (
 					<span
 						className={cn(
@@ -360,11 +350,7 @@ export function TabBar<T extends string>({
 	const onFileDragLeave = useCallback(
 		(event: ReactDragEvent<HTMLDivElement>, key: T): void => {
 			const nextTarget = event.relatedTarget;
-			if (
-				nextTarget instanceof Node &&
-				event.currentTarget.contains(nextTarget)
-			)
-				return;
+			if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
 			clearFileDragHover(key);
 		},
 		[clearFileDragHover],
@@ -393,9 +379,7 @@ export function TabBar<T extends string>({
 	const renderItems = useMemo(() => {
 		if (order == null) return items;
 		const byKey = new Map(items.map((item) => [item.key, item]));
-		return order
-			.map((key) => byKey.get(key))
-			.filter((item): item is TabBarItem<T> => item != null);
+		return order.map((key) => byKey.get(key)).filter((item): item is TabBarItem<T> => item != null);
 	}, [items, order]);
 
 	const beginDrag = (key: T) => {
@@ -408,12 +392,7 @@ export function TabBar<T extends string>({
 	const dragOver = (overKey: T) => {
 		const currentDragKey = dragKeyRef.current;
 		const currentOrder = orderRef.current;
-		if (
-			currentDragKey == null ||
-			currentOrder == null ||
-			currentDragKey === overKey
-		)
-			return;
+		if (currentDragKey == null || currentOrder == null || currentDragKey === overKey) return;
 		const nextOrder = moveTabKey(currentOrder, currentDragKey, overKey);
 		orderRef.current = nextOrder;
 		setOrder(nextOrder);
@@ -445,12 +424,7 @@ export function TabBar<T extends string>({
 	const findOverKey = (clientX: number, clientY: number): T | null => {
 		const row = rowRef.current;
 		const session = pointerSessionRef.current;
-		if (
-			!row ||
-			!session ||
-			clientY < session.bounds.top - 16 ||
-			clientY > session.bounds.bottom + 16
-		) {
+		if (!row || !session || clientY < session.bounds.top - 16 || clientY > session.bounds.bottom + 16) {
 			return null;
 		}
 		let closest: { distance: number; key: T } | null = null;
@@ -464,23 +438,16 @@ export function TabBar<T extends string>({
 		return closest?.key ?? null;
 	};
 
-	const finishPointerDrag = (
-		clientX: number,
-		clientY: number,
-		cancelled: boolean,
-	): void => {
+	const finishPointerDrag = (clientX: number, clientY: number, cancelled: boolean): void => {
 		const session = pointerSessionRef.current;
 		if (!session) return;
 		pointerSessionRef.current = null;
 		session.cleanupGlobalCapture?.();
 		if (session.started) {
-			const shouldCommit =
-				onTabDragEnd?.(dragEvent(session, clientX, clientY, cancelled)) !==
-				false;
+			const shouldCommit = onTabDragEnd?.(dragEvent(session, clientX, clientY, cancelled)) !== false;
 			endDrag(!cancelled && shouldCommit);
 			setTimeout(() => {
-				if (suppressClickRef.current === session.key)
-					suppressClickRef.current = null;
+				if (suppressClickRef.current === session.key) suppressClickRef.current = null;
 			}, 0);
 		}
 	};
@@ -495,9 +462,7 @@ export function TabBar<T extends string>({
 		onTabDragMove?.(dragEvent(session, clientX, clientY));
 	};
 
-	const startGlobalCapture = (
-		session: NonNullable<typeof pointerSessionRef.current>,
-	): void => {
+	const startGlobalCapture = (session: NonNullable<typeof pointerSessionRef.current>): void => {
 		if (session.cleanupGlobalCapture) return;
 		const overlay = document.createElement("div");
 		overlay.dataset.tabDragOverlay = "";
@@ -522,11 +487,9 @@ export function TabBar<T extends string>({
 			finishPointerDrag(event.clientX, event.clientY, true);
 		};
 		const onKeyDown = (event: KeyboardEvent): void => {
-			if (event.key === "Escape")
-				finishPointerDrag(session.clientX, session.clientY, true);
+			if (event.key === "Escape") finishPointerDrag(session.clientX, session.clientY, true);
 		};
-		const onWindowBlur = (): void =>
-			finishPointerDrag(session.clientX, session.clientY, true);
+		const onWindowBlur = (): void => finishPointerDrag(session.clientX, session.clientY, true);
 		const cleanup = (): void => {
 			overlay.removeEventListener("pointermove", onPointerMove);
 			overlay.removeEventListener("pointerup", onPointerUp);
@@ -548,16 +511,10 @@ export function TabBar<T extends string>({
 		session.cleanupGlobalCapture = cleanup;
 	};
 
-	const onTabPointerDown = (
-		event: ReactPointerEvent<HTMLDivElement>,
-		key: T,
-	): void => {
+	const onTabPointerDown = (event: ReactPointerEvent<HTMLDivElement>, key: T): void => {
 		if (
 			event.button !== 0 ||
-			(onReorder == null &&
-				onTabDragStart == null &&
-				onTabDragMove == null &&
-				onTabDragEnd == null)
+			(onReorder == null && onTabDragStart == null && onTabDragMove == null && onTabDragEnd == null)
 		) {
 			return;
 		}
@@ -589,10 +546,7 @@ export function TabBar<T extends string>({
 		if (!session || session.pointerId !== event.pointerId) return;
 		if (
 			!session.started &&
-			!hasReachedTabDragDistance(
-				event.clientX - session.startX,
-				event.clientY - session.startY,
-			)
+			!hasReachedTabDragDistance(event.clientX - session.startX, event.clientY - session.startY)
 		) {
 			return;
 		}
@@ -627,17 +581,12 @@ export function TabBar<T extends string>({
 	}));
 	const measureWidths = useCallback(() => {
 		const widths = new Map<string, number>();
-		for (const child of Array.from(
-			measureRef.current?.children ?? [],
-		) as HTMLElement[]) {
+		for (const child of Array.from(measureRef.current?.children ?? []) as HTMLElement[]) {
 			const key = child.dataset.tabkey;
 			if (key != null) widths.set(key, child.offsetWidth);
 		}
 		const previous = widthsRef.current;
-		if (
-			widths.size !== previous.size ||
-			[...widths].some(([key, width]) => previous.get(key) !== width)
-		) {
+		if (widths.size !== previous.size || [...widths].some(([key, width]) => previous.get(key) !== width)) {
 			widthsRef.current = widths;
 		}
 	}, []);
@@ -647,26 +596,18 @@ export function TabBar<T extends string>({
 		const available = row.clientWidth - ROW_PADDING_LEFT - ROW_PADDING_RIGHT;
 		const widths = widthsRef.current;
 		setMeasurements((previous) =>
-			previous.available === available && previous.widths === widths
-				? previous
-				: { available, widths },
+			previous.available === available && previous.widths === widths ? previous : { available, widths },
 		);
 	}, []);
 	const computedOverflow = useMemo(
 		() =>
 			responsive
-				? computeOverflow(
-						renderItems,
-						value,
-						measurements.available,
-						(key) => measurements.widths.get(key) ?? 0,
-					)
+				? computeOverflow(renderItems, value, measurements.available, (key) => measurements.widths.get(key) ?? 0)
 				: [],
 		[responsive, renderItems, value, measurements],
 	);
 	const overflowRef = useRef<T[]>([]);
-	if (!sameKeys(overflowRef.current, computedOverflow))
-		overflowRef.current = computedOverflow;
+	if (!sameKeys(overflowRef.current, computedOverflow)) overflowRef.current = computedOverflow;
 	const overflowKeys = overflowRef.current;
 
 	// Selection does not change natural widths. Keep the observer and its width cache
@@ -713,16 +654,10 @@ export function TabBar<T extends string>({
 	);
 
 	const overflowSet = responsive ? new Set(overflowKeys) : null;
-	const visibleItems = overflowSet
-		? renderItems.filter((it) => !overflowSet.has(it.key))
-		: renderItems;
+	const visibleItems = overflowSet ? renderItems.filter((it) => !overflowSet.has(it.key)) : renderItems;
 	return (
 		<div className={cn("group/tabbar relative z-10 min-w-0", className)}>
-			<div
-				ref={setRowRef}
-				role="tablist"
-				className="flex h-8 items-end overflow-visible pl-5 pr-3"
-			>
+			<div ref={setRowRef} role="tablist" className="flex h-8 items-end overflow-visible pl-5 pr-3">
 				{visibleItems.map(({ key, label, icon, badge, removable }, index) => {
 					const active = value === key;
 					const isDragged = dragKey === key;
@@ -736,6 +671,7 @@ export function TabBar<T extends string>({
 						!fileDragHovered &&
 						fileDragHoverKey !== nextItem.key;
 					return (
+						// biome-ignore lint/a11y/noStaticElementInteractions: Drag events are delegated by the tab and close buttons; this wrapper must not become a second keyboard target.
 						<div
 							key={key}
 							role="presentation"
@@ -743,12 +679,8 @@ export function TabBar<T extends string>({
 							data-file-drag-hover={fileDragHovered ? "" : undefined}
 							onPointerDown={(event) => onTabPointerDown(event, key)}
 							onPointerMove={onTabPointerMove}
-							onPointerUp={(event) =>
-								finishPointerDrag(event.clientX, event.clientY, false)
-							}
-							onPointerCancel={(event) =>
-								finishPointerDrag(event.clientX, event.clientY, true)
-							}
+							onPointerUp={(event) => finishPointerDrag(event.clientX, event.clientY, false)}
+							onPointerCancel={(event) => finishPointerDrag(event.clientX, event.clientY, true)}
 							onDragEnter={(event) => onFileDragEnter(event, key)}
 							onDragLeave={(event) => onFileDragLeave(event, key)}
 							onDragOver={onFileDragOver}
@@ -776,27 +708,15 @@ export function TabBar<T extends string>({
 									"relative flex h-8 w-full select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 border-transparent pl-3 text-[11px] font-medium leading-none transition-colors focus-visible:border-ring",
 									canRemove ? "pr-7" : "pr-3",
 									isDragged ? "cursor-grabbing" : "cursor-pointer",
-									active
-										? "text-foreground"
-										: "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-									fileDragHovered &&
-										!active &&
-										"border-primary/50 bg-primary/10 text-foreground",
+									active ? "text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+									fileDragHovered && !active && "border-primary/50 bg-primary/10 text-foreground",
 									fileDragHovered && active && "text-primary",
 								)}
 							>
 								{active && (
-									<ActiveTabIndicator
-										layoutId={layoutId}
-										suppressLayoutAnimation={suppressLayoutAnimation}
-									/>
+									<ActiveTabIndicator layoutId={layoutId} suppressLayoutAnimation={suppressLayoutAnimation} />
 								)}
-								<TabInner
-									icon={icon}
-									label={label}
-									badge={badge}
-									active={active}
-								/>
+								<TabInner icon={icon} label={label} badge={badge} active={active} />
 							</button>
 							{showSeparator && (
 								<span
@@ -825,13 +745,7 @@ export function TabBar<T extends string>({
 			</div>
 
 			{/* 隐藏测量层：渲染全部页签（非激活样式）量自然宽度，供 recompute 计算容纳数量。 */}
-			{responsive && (
-				<TabMeasurements
-					items={renderItems}
-					removable={canRenderRemove}
-					containerRef={measureRef}
-				/>
-			)}
+			{responsive && <TabMeasurements items={renderItems} removable={canRenderRemove} containerRef={measureRef} />}
 		</div>
 	);
 }

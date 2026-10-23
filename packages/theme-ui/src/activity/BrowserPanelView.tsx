@@ -1,10 +1,7 @@
 // Modified by The Open Forge contributors.
 import { Button, Spin } from "@vetta-org/ui";
 import type { FormEvent, JSX, Ref } from "react";
-import {
-	BrowserLiveEditCard,
-	type BrowserLiveEditCardProps,
-} from "./BrowserLiveEditCard";
+import { BrowserLiveEditCard, type BrowserLiveEditCardProps } from "./BrowserLiveEditCard";
 
 export interface BrowserPanelLabels {
 	noSession: string;
@@ -13,8 +10,8 @@ export interface BrowserPanelLabels {
 	stop: string;
 	reload: string;
 	addressPlaceholder: string;
-	addressLabel: string;
-	agentReady: string;
+	addressLabel?: string;
+	agentReady?: string;
 	openExternal: string;
 	empty: string;
 	loading: string;
@@ -79,9 +76,7 @@ function ToolbarButton({
 			disabled={disabled}
 			onClick={onClick}
 			className={`shrink-0 rounded-md transition-colors focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-30 ${
-				pressed
-					? "bg-primary/10 text-primary"
-					: "text-muted-foreground hover:text-foreground"
+				pressed ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
 			}`}
 		>
 			<span aria-hidden className={`${icon} h-4 w-4`} />
@@ -141,17 +136,9 @@ export function BrowserPanelView({
 					onClick={onForward}
 				/>
 				{loading ? (
-					<ToolbarButton
-						icon="icon-[solar--close-circle-linear]"
-						title={labels.stop}
-						onClick={onStop}
-					/>
+					<ToolbarButton icon="icon-[solar--close-circle-linear]" title={labels.stop} onClick={onStop} />
 				) : (
-					<ToolbarButton
-						icon="icon-[solar--refresh-linear]"
-						title={labels.reload}
-						onClick={onReload}
-					/>
+					<ToolbarButton icon="icon-[solar--refresh-linear]" title={labels.reload} onClick={onReload} />
 				)}
 				<form
 					onSubmit={onAddressSubmit}
@@ -162,7 +149,7 @@ export function BrowserPanelView({
 						value={address}
 						spellCheck={false}
 						placeholder={labels.addressPlaceholder}
-						aria-label={labels.addressLabel}
+						aria-label={labels.addressLabel ?? labels.addressPlaceholder}
 						onChange={(e) => onAddressChange(e.target.value)}
 						className="h-7 w-full min-w-0 rounded-md bg-transparent px-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
 					/>
@@ -188,7 +175,7 @@ export function BrowserPanelView({
 					onClick={onOpenExternal}
 				/>
 			</div>
-			{hasPage && !failed ? (
+			{hasPage && !failed && (agentStatus || labels.agentReady) ? (
 				<output
 					aria-live="polite"
 					aria-atomic="true"
@@ -212,25 +199,17 @@ export function BrowserPanelView({
 			<div className="relative flex min-h-0 min-w-0 flex-1">
 				{/* TASK-0072：guest 已迁为主进程 WebContentsView；此占位矩形只做
 				    bounds/可见性上报，页面由主进程 view 覆盖绘制在本区域上。 */}
-				<div
-					ref={hostRef}
-					data-browser-view-host=""
-					className="h-full w-full"
-				/>
+				<div ref={hostRef} data-browser-view-host="" className="h-full w-full" />
 				{!hasPage && (
 					<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted p-6 text-center">
 						<span className="icon-[solar--global-linear] h-8 w-8 text-muted-foreground/30" />
-						<span className="text-[12px] text-muted-foreground/60">
-							{labels.empty}
-						</span>
+						<span className="text-[12px] text-muted-foreground/60">{labels.empty}</span>
 					</div>
 				)}
 				{failed && (
 					<div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
 						<span className="icon-[solar--danger-circle-linear] h-8 w-8 text-muted-foreground/40" />
-						<span className="text-[12px] text-muted-foreground/70">
-							{labels.failed}
-						</span>
+						<span className="text-[12px] text-muted-foreground/70">{labels.failed}</span>
 						<Button type="button" variant="outline" size="sm" onClick={onRetry}>
 							{labels.retry}
 						</Button>
