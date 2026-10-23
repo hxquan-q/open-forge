@@ -29,7 +29,7 @@ import { createRoot } from "react-dom/client";
 import { MarkdownContent } from "@vetta-org/theme-ui/markdown";
 
 const line = (i) =>
-	"> quoted passage " + i + " with some emphasis and code spans in the cited material.\\n";
+	"> quoted passage " + i + " with emphasis and detail in the cited material.\\n>\\n";
 const bracketProse = Array.from({ length: 350 }, (_, i) => line(i)).join("");
 const env = { theme: "dark", labels: { copy: "c", copied: "d" }, getFileIconClass: () => "", onOpenFile: () => {}, onOpenUrl: () => {} };
 
@@ -97,7 +97,8 @@ export async function run() {
 		return run();
 	});
 
-	console.log(JSON.stringify({ browser: browser.version(), mode: "list-diagnostic", result }, null, 2));
+	const tq = await page.evaluate(() => globalThis.__tq);
+	console.log(JSON.stringify({ browser: browser.version(), mode: "quote-diagnostic", result, tq }, null, 2));
 } finally {
 	await browser?.close();
 	if (server) await new Promise((resolve) => server.close(resolve));
