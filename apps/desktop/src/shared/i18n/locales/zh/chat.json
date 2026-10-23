@@ -530,6 +530,19 @@
 	},
 	"browser": {
 		"addressPlaceholder": "输入网址并回车",
+		"addressLabel": "页面地址",
+		"agentReady": "与 Agent 共用当前页面",
+		"agentAction": {
+			"snapshot": "Agent 正在读取页面",
+			"inspect": "Agent 正在检查元素",
+			"click": "Agent 正在点击元素",
+			"fill": "Agent 正在填写内容",
+			"press": "Agent 正在按键操作",
+			"scroll": "Agent 正在滚动页面",
+			"wait": "Agent 正在等待页面",
+			"screenshot": "Agent 正在截取页面",
+			"navigate": "Agent 正在打开页面"
+		},
 		"back": "后退",
 		"empty": "点击会话中的链接，或在地址栏输入网址",
 		"failed": "页面加载失败",

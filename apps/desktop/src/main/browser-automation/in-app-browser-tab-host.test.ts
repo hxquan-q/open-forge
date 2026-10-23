@@ -235,6 +235,75 @@ describe("browser_tab 宿主函数", () => {
 		expect(result).toMatchObject({ ok: true, action: "screenshot", screenshotAttachmentId: expect.any(String) });
 	});
 
+	it("publishes workspace-scoped activity while the real host action runs and clears it on success", async () => {
+		let finish: ((value: unknown) => void) | undefined;
+		const contents = fakeContents({
+			executeJavaScript: async (code) => {
+				if (code.includes('"kind":"snapshot"'))
+					return new Promise((resolve) => {
+						finish = resolve;
+					});
+				return undefined;
+			},
+		});
+		const { deps, controller } = makeDeps(contents);
+		const pending = invokeDesktopBrowserTab(request({ action: "snapshot" }), new AbortController().signal, deps);
+		expect(controller.getSession(WORKSPACE).agentActivity).toEqual({ action: "snapshot", activeCount: 1 });
+		expect(controller.getSession("other-workspace").agentActivity).toBeUndefined();
+		finish?.(snapshotPayload);
+		expect(await pending).toMatchObject({ ok: true, action: "snapshot" });
+		expect(controller.getSession(WORKSPACE).agentActivity).toBeUndefined();
+	});
+
+	it("clears activity on rejection without swallowing the host error", async () => {
+		const { deps, controller } = makeDeps(
+			fakeContents({
+				executeJavaScript: async (code) => {
+					if (code.includes('"kind":"snapshot"')) throw new Error("guest failure");
+					return undefined;
+				},
+			}),
+		);
+		await expect(
+			invokeDesktopBrowserTab(request({ action: "snapshot" }), new AbortController().signal, deps),
+		).rejects.toThrow("guest failure");
+		expect(controller.getSession(WORKSPACE).agentActivity).toBeUndefined();
+	});
+
+	it("cancellation and old completion do not clear another concurrent action", async () => {
+		const finish = new Map<string, (value: unknown) => void>();
+		const contents = fakeContents({
+			executeJavaScript: async (code) => {
+				for (const action of ["snapshot", "wait"]) {
+					if (code.includes(`"kind":"${action}"`))
+						return new Promise((resolve) => {
+							finish.set(action, resolve);
+						});
+				}
+				return undefined;
+			},
+		});
+		const { deps, controller } = makeDeps(contents);
+		const abort = new AbortController();
+		const first = invokeDesktopBrowserTab(request({ action: "snapshot" }), abort.signal, deps);
+		const second = invokeDesktopBrowserTab(
+			request({ action: "wait", timeoutMs: 1000 }),
+			new AbortController().signal,
+			deps,
+		);
+		expect(controller.getSession(WORKSPACE).agentActivity).toEqual({ action: "wait", activeCount: 2 });
+		abort.abort();
+		expect(controller.getSession(WORKSPACE).agentActivity).toEqual({ action: "wait", activeCount: 1 });
+		finish.get("snapshot")?.(snapshotPayload);
+		await first;
+		expect(controller.getSession(WORKSPACE).agentActivity).toEqual({ action: "wait", activeCount: 1 });
+		controller.detachWebContents(contents);
+		expect(controller.getSession(WORKSPACE).agentActivity).toBeUndefined();
+		finish.get("wait")?.({ ok: true });
+		await second;
+		expect(controller.getSession(WORKSPACE).agentActivity).toBeUndefined();
+	});
+
 	it("信号取消返回 cancelled", async () => {
 		const controller = new AbortController();
 		controller.abort();

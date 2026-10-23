@@ -1,4 +1,6 @@
 // Copyright The Open Forge contributors.
+
+import type { BrowserTabToolInput } from "@vetta/coding-agent/function-extensions";
 import {
 	BROWSER_SCREENSHOT_FORMAT,
 	BROWSER_SCREENSHOT_MAX_LONG_EDGE_PX,
@@ -31,6 +33,11 @@ export interface DesktopBrowserTabSession {
 	readonly title: string;
 	readonly pageRevision: number;
 	readonly pickerEnabled: boolean;
+	/** Read-only host execution metadata; never includes tool arguments or page content. */
+	readonly agentActivity?: {
+		readonly action: BrowserTabToolInput["action"];
+		readonly activeCount: number;
+	};
 }
 
 export interface DesktopBrowserTabGetSessionRequest {

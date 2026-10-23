@@ -46,6 +46,7 @@ export interface BrowserPanelModel {
 	failed: boolean;
 	hasPage: boolean;
 	currentUrl: string;
+	agentStatus?: string;
 	hostRef: Ref<HTMLDivElement>;
 	onAddressChange: (value: string) => void;
 	onAddressSubmit: (event: FormEvent) => void;
@@ -98,12 +99,13 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		(state: DesktopBrowserViewState) => {
 			// about:blank 是占位初始页，不当作真实页面回写。
 			const url = state.url === "about:blank" ? "" : state.url;
+			const pageChanged = url !== viewUrlRef.current;
 			viewUrlRef.current = url;
 			setLoading(state.loading);
 			setCanBack(state.canBack);
 			setCanForward(state.canForward);
 			setFailed(state.failed);
-			if (url) {
+			if (url && pageChanged) {
 				setCurrentUrl(url);
 				setAddress(url);
 				setWorkspaceUrl({ workspaceId, url });
@@ -292,6 +294,8 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 			stop: t("browser.stop"),
 			reload: t("browser.reload"),
 			addressPlaceholder: t("browser.addressPlaceholder"),
+			addressLabel: t("browser.addressLabel"),
+			agentReady: t("browser.agentReady"),
 			openExternal: t("browser.openExternal"),
 			empty: t("browser.empty"),
 			loading: t("browser.loading"),
@@ -321,6 +325,7 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		failed: failed || attachFailed,
 		hasPage,
 		currentUrl,
+		agentStatus: picker.agentActivity ? t(`browser.agentAction.${picker.agentActivity.action}`) : undefined,
 		hostRef,
 		onAddressChange: setAddress,
 		onAddressSubmit,

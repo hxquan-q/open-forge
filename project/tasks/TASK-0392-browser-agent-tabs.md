@@ -37,13 +37,14 @@ write_paths:
   - apps/desktop/scripts/browser-tabs.bench.tsx
   - project/tasks/TASK-0392-browser-agent-tabs.md
   - project/tasks/README.md
-  - .github/release-notes
+  - .github/release-notes/fragments/v0.1.3/task-0392-browser-agent-tabs.md
+  - .github/release-notes/v0.1.3.md
 exclusive_paths:
   - packages/theme-ui/src/shared/TabBar.tsx
   - apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts
   - apps/desktop/src/renderer/domains/activity-panel/hooks/useBrowserPanelModel.ts
 depends_on: []
-conflicts_with: [TASK-0360, TASK-0362, TASK-0365, TASK-0366]
+conflicts_with: [TASK-0154, TASK-0197, TASK-0218, TASK-0223, TASK-0360, TASK-0362, TASK-0365, TASK-0366, TASK-0391]
 integration_status: pending
 created: 2026-10-24
 updated: 2026-10-24
@@ -72,7 +73,7 @@ updated: 2026-10-24
 - 执行方式：parallel（与主检出隔离），内部串行。
 - Branch：task/TASK-0392-browser-agent-tabs；Worktree：../open-forge-wt/task-0392-browser-agent-tabs。
 - 创建：为避免向主检出添加 Task 文件，先用原生 git worktree add 从已提交 main 建空候选，再在候选内登记合同并执行 worktree CLI 检查；未复制主检出未提交文件。
-- 冲突：上述历史浏览器 Task 验收/热文件串行集成；主检出现有 Task-0360、Project 文档等修改不属于本任务。
+- 冲突：上述历史浏览器 Task 验收/热文件串行集成；0154/0197/0218/0223/0391 与本次共享 Task 索引或汇编发布说明，已显式登记冲突，本分支仅改自己的候选，后续由 Coordinator 串行核对集成。主检出现有 Task-0360、Project 文档等修改不属于本任务。
 - Coordinator：当前会话；不合入脏 main、不推送、不清理其他 worktree。
 
 ### 做

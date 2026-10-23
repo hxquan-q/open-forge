@@ -22,6 +22,7 @@ import {
 	BROWSER_ELEMENT_PICKER_TOGGLE_EVENT,
 	DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK,
 	type DesktopBrowserAnnotationChrome,
+	type DesktopBrowserTabSession,
 } from "@/shared/browser-tab-ipc";
 import { buildBrowserElementAgentText } from "../services/browser-element-agent-message";
 import { applyBrowserElementSelectionToDraft } from "../services/browser-element-draft";
@@ -59,6 +60,7 @@ export interface BrowserElementPickedSelection {
 
 export function useBrowserElementPicker(input: { workspaceId: string; hasPage: boolean }): {
 	pickerEnabled: boolean;
+	agentActivity: DesktopBrowserTabSession["agentActivity"];
 	pickerShortcut: string;
 	selection: BrowserElementPickedSelection | null;
 	selectionRef: BrowserElementRef | null;
@@ -72,6 +74,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	const { t } = useTranslation("chat");
 	const workspaceId = input.workspaceId;
 	const [pickerEnabled, setPickerEnabled] = useState(false);
+	const [session, setSession] = useState<DesktopBrowserTabSession | null>(null);
 	const [selection, setSelection] = useState<BrowserElementPickedSelection | null>(null);
 	const [promptAttachment, setPromptAttachment] = useAtom(promptAttachmentAtom);
 	const attachmentRef = useRef(promptAttachment);
@@ -166,14 +169,22 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 		[deliverSelection, workspaceId],
 	);
 
+	const captureSelectionRef = useRef(captureSelection);
+	captureSelectionRef.current = captureSelection;
 	useEffect(() => {
 		let cancelled = false;
+		let receivedSessionEvent = false;
 		void window.vetta.browserTab.getSession({ workspaceId }).then((result) => {
-			if (!cancelled && result.ok) setPickerEnabled(result.session?.pickerEnabled ?? false);
+			if (!cancelled && !receivedSessionEvent && result.ok) {
+				setPickerEnabled(result.session?.pickerEnabled ?? false);
+				setSession(result.session);
+			}
 		});
 		const unsubscribe = window.vetta.browserTab.onEvent((envelope) => {
 			if (envelope.workspaceId !== workspaceId) return;
 			if (envelope.event.kind === "session-changed") {
+				receivedSessionEvent = true;
+				setSession(envelope.event.session);
 				setPickerEnabled(envelope.event.session.pickerEnabled);
 				return;
 			}
@@ -185,13 +196,19 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			if (envelope.event.kind !== "picker-result") return;
 			const { payload } = envelope.event.context;
 			const comment = envelope.event.comment;
-			void captureSelection(envelope.event.context, payload.boundingRect, 1, comment, envelope.event.placement);
+			void captureSelectionRef.current(
+				envelope.event.context,
+				payload.boundingRect,
+				1,
+				comment,
+				envelope.event.placement,
+			);
 		});
 		return () => {
 			cancelled = true;
 			unsubscribe();
 		};
-	}, [captureSelection, workspaceId]);
+	}, [workspaceId]);
 
 	const togglePicker = useCallback(() => {
 		if (!input.hasPage) return;
@@ -247,6 +264,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	return {
 		pickerEnabled,
+		agentActivity: session?.workspaceId === workspaceId ? session.agentActivity : undefined,
 		pickerShortcut,
 		selection,
 		selectionRef: selection?.context.payload.elementRef ?? null,

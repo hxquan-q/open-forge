@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { atom } from "jotai";
 import { activityPanelOpenAtom, activityPanelTabByProjectAtom, setActivityPanelWidthAtom } from "./activity-atoms";
 import { activeSessionAtom } from "./chat-atoms";
@@ -21,6 +22,7 @@ export const getBrowserUrlForSession = getBrowserUrlForWorkspace;
 /** 在显式工作空间打开 URL：写入预览地址 + 展开面板 + 切到浏览器 tab。 */
 export const openUrlInActivityWorkspaceAtom = atom(null, (_get, set, input: { workspaceId: string; url: string }) => {
 	set(browserUrlByWorkspaceAtom, (prev) => {
+		if (prev.get(input.workspaceId) === input.url) return prev;
 		const next = new Map(prev);
 		next.set(input.workspaceId, input.url);
 		return next;
@@ -41,6 +43,7 @@ export const openUrlInBrowserAtom = atom(null, (get, set, url: string) => {
 /** 回写某工作空间浏览器实际导航到的 URL（webview 内部跳转后同步，用于地址栏与工作空间记忆）。 */
 export const setBrowserUrlForWorkspaceAtom = atom(null, (_get, set, payload: { workspaceId: string; url: string }) => {
 	set(browserUrlByWorkspaceAtom, (prev) => {
+		if (prev.get(payload.workspaceId) === payload.url) return prev;
 		const next = new Map(prev);
 		next.set(payload.workspaceId, payload.url);
 		return next;

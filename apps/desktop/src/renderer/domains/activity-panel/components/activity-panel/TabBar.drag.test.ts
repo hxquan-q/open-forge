@@ -1,15 +1,32 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 
 import { TabBar } from "@shared/components/ui/tab-bar";
 import { act, createElement, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("motion/react", () => ({ motion: { span: () => null } }));
+const reducedMotion = vi.hoisted(() => ({ value: false }));
+vi.mock("motion/react", () => ({ motion: { span: () => null }, useReducedMotion: () => reducedMotion.value }));
 
 class ResizeObserverStub {
-	disconnect(): void {}
-	observe(): void {}
+	static instances: ResizeObserverStub[] = [];
+	readonly targets = new Set<Element>();
+	constructor(readonly callback: ResizeObserverCallback) {
+		ResizeObserverStub.instances.push(this);
+	}
+	disconnect(): void {
+		this.targets.clear();
+	}
+	observe(target: Element): void {
+		this.targets.add(target);
+	}
+	static notify(target: Element): void {
+		for (const observer of ResizeObserverStub.instances) {
+			if (observer.targets.has(target))
+				observer.callback([{ target } as ResizeObserverEntry], observer as unknown as ResizeObserver);
+		}
+	}
 }
 
 const capturedPointers = new WeakMap<Element, Set<number>>();
@@ -55,6 +72,8 @@ describe("TabBar pointer drag", () => {
 
 	beforeEach(() => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+		reducedMotion.value = false;
+		ResizeObserverStub.instances = [];
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		Object.defineProperties(HTMLElement.prototype, {
 			setPointerCapture: {
@@ -117,6 +136,14 @@ describe("TabBar pointer drag", () => {
 		expect(container.querySelector("[data-active-tab-indicator]")).toBeNull();
 	});
 
+	it("keeps the connected indicator static when reduced motion is requested", () => {
+		reducedMotion.value = true;
+		act(() =>
+			root.render(createElement(TabBar, { items: [{ key: "a", label: "A" }], value: "a", onChange: vi.fn() })),
+		);
+		expect(container.querySelector("[data-active-tab-indicator]")).not.toBeNull();
+	});
+
 	it("does not synchronously read the active indicator width", () => {
 		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(80);
 
@@ -155,6 +182,80 @@ describe("TabBar pointer drag", () => {
 			expect(container.querySelector('[data-tabkey="c"] button[aria-selected="true"]')).not.toBeNull();
 			expect(onOverflowChange).toHaveBeenLastCalledWith(["b"]);
 			expect(offsetWidth).not.toHaveBeenCalled();
+		} finally {
+			offsetWidth.mockRestore();
+			clientWidth.mockRestore();
+		}
+	});
+
+	it("refreshes overflow after container and natural content sizes change", () => {
+		let width = 200;
+		let itemWidth = 80;
+		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(() => itemWidth);
+		const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
+		let frame: FrameRequestCallback | undefined;
+		vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+			frame = callback;
+			return 1;
+		});
+		vi.stubGlobal("cancelAnimationFrame", () => {
+			frame = undefined;
+		});
+		const onOverflowChange = vi.fn();
+		const onChange = vi.fn();
+		const items = [
+			{ key: "a", label: "文件" },
+			{ key: "b", label: "浏览器" },
+			{ key: "c", label: "终端" },
+		];
+		try {
+			act(() => root.render(createElement(TabBar, { items, value: "c", onChange, onOverflowChange })));
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["b"]);
+			const row = container.querySelector('[role="tablist"]')!;
+			offsetWidth.mockClear();
+			width = 300;
+			act(() => {
+				ResizeObserverStub.notify(row);
+				frame?.(0);
+			});
+			expect(onOverflowChange).toHaveBeenLastCalledWith([]);
+			expect(offsetWidth).not.toHaveBeenCalled();
+			// Font/custom icon changes can resize a measurement child without changing items.
+			itemWidth = 120;
+			const measurement = container.querySelector('[aria-hidden] [data-tabkey="b"]')!;
+			act(() => {
+				ResizeObserverStub.notify(measurement);
+				frame?.(0);
+			});
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["b"]);
+			const nextItems = [...items, { key: "d", label: "新增页面" }];
+			act(() => root.render(createElement(TabBar, { items: nextItems, value: "d", onChange, onOverflowChange })));
+			expect(container.querySelector('[data-tabkey="d"] button[aria-selected="true"]')).not.toBeNull();
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["b", "c"]);
+		} finally {
+			offsetWidth.mockRestore();
+			clientWidth.mockRestore();
+		}
+	});
+
+	it("invalidates natural widths when close capability changes without an observer notification", () => {
+		const items = [{ key: "a", label: "A", removable: true }, { key: "b", label: "B", removable: true }, { key: "c", label: "C", removable: true }];
+		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+			return this.classList.contains("pr-7") ? 96 : 80;
+		});
+		const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200);
+		const onOverflowChange = vi.fn();
+		const onChange = vi.fn();
+		const onRemove = vi.fn();
+		try {
+			act(() => root.render(createElement(TabBar, { items, value: "a", onChange, onOverflowChange })));
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["c"]);
+			act(() => root.render(createElement(TabBar, { items, value: "a", onChange, onOverflowChange, onRemove, removeLabel: "Hide" })));
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["b", "c"]);
+			act(() => root.render(createElement(TabBar, { items, value: "b", onChange, onOverflowChange, onRemove, removeLabel: "Hide" })));
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["a", "c"]);
+			act(() => root.render(createElement(TabBar, { items, value: "b", onChange, onOverflowChange })));
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["c"]);
 		} finally {
 			offsetWidth.mockRestore();
 			clientWidth.mockRestore();

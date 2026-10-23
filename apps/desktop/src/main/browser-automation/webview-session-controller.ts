@@ -1,4 +1,6 @@
 // Copyright The Open Forge contributors.
+
+import type { BrowserTabToolInput } from "@vetta/coding-agent/function-extensions";
 import {
 	BROWSER_ELEMENT_SELECTION_SCHEMA,
 	BROWSER_ELEMENT_SELECTION_VERSION,
@@ -8,6 +10,8 @@ import {
 	type BrowserElementSelectionContext,
 	readBrowserElementSelectionContext,
 } from "@vetta/coding-agent/function-extensions";
+import type { Disposable } from "@vetta/toolkit";
+import { toDisposable } from "@vetta/toolkit";
 import type {
 	DesktopBrowserAnnotationLabels,
 	DesktopBrowserCropRect,
@@ -108,6 +112,7 @@ interface WorkspaceSession {
 	/** 最近一次 picker-result 的 ref；live-edit 只作用于它，防止改到过期元素。 */
 	lastPickedRef: BrowserElementRef | null;
 	annotationLabels?: DesktopBrowserAnnotationLabels;
+	readonly agentActions: Map<symbol, BrowserTabToolInput["action"]>;
 }
 
 export class InAppBrowserSessionController {
@@ -121,7 +126,10 @@ export class InAppBrowserSessionController {
 
 	attachWebContents(workspaceId: string, webContents: InAppBrowserWebContents): DesktopBrowserTabSession {
 		const session = this.ensureSession(workspaceId);
-		if (session.webContents && session.webContents.id !== webContents.id) this.unbindContents(session.webContents);
+		if (session.webContents && session.webContents.id !== webContents.id) {
+			this.unbindContents(session.webContents);
+			session.agentActions.clear();
+		}
 		session.webContents = webContents;
 		this.contentsToWorkspace.set(webContents.id, workspaceId);
 		this.syncPageIdentity(session, webContents);
@@ -137,6 +145,7 @@ export class InAppBrowserSessionController {
 		const session = this.sessions.get(workspaceId);
 		if (!session || session.webContents?.id !== webContents.id) return;
 		session.webContents = null;
+		session.agentActions.clear();
 		this.contentsToWorkspace.delete(webContents.id);
 		this.emitSession(session);
 	}
@@ -152,6 +161,17 @@ export class InAppBrowserSessionController {
 	getWebContents(workspaceId: string): InAppBrowserWebContents | null {
 		const contents = this.sessions.get(workspaceId)?.webContents ?? null;
 		return contents && !contents.isDestroyed() ? contents : null;
+	}
+
+	/** Each invocation owns its lease; stale completion cannot erase another action. */
+	beginAgentAction(workspaceId: string, action: BrowserTabToolInput["action"]): Disposable {
+		const session = this.ensureSession(workspaceId);
+		const token = Symbol(action);
+		session.agentActions.set(token, action);
+		this.emitSession(session);
+		return toDisposable(() => {
+			if (session.agentActions.delete(token)) this.emitSession(session);
+		});
 	}
 
 	createElementRef(workspaceId: string): BrowserElementRef | undefined {
@@ -299,6 +319,7 @@ export class InAppBrowserSessionController {
 			pickerWaiter: null,
 			lastPickDevicePixelRatio: undefined,
 			lastPickedRef: null,
+			agentActions: new Map(),
 		};
 		this.sessions.set(workspaceId, created);
 		return created;
@@ -487,12 +508,14 @@ export class InAppBrowserSessionController {
 	}
 
 	private toPublic(session: WorkspaceSession): DesktopBrowserTabSession {
+		const action = [...session.agentActions.values()].at(-1);
 		return {
 			workspaceId: session.workspaceId,
 			pageUrl: session.pageUrl,
 			title: session.title,
 			pageRevision: session.pageRevision,
 			pickerEnabled: session.pickerEnabled,
+			...(action ? { agentActivity: { action, activeCount: session.agentActions.size } } : {}),
 		};
 	}
 }

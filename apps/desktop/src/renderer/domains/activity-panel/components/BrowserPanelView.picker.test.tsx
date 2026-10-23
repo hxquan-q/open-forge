@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
-import { BrowserPanelView, type BrowserLiveEditCardProps, type BrowserPanelLabels } from "@vetta-org/theme-ui/activity";
+
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import {
+	type BrowserLiveEditCardProps,
+	type BrowserPanelLabels,
+	BrowserPanelView,
+} from "@vetta-org/theme-ui/activity";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +18,8 @@ const labels: BrowserPanelLabels = {
 	stop: "stop",
 	reload: "reload",
 	addressPlaceholder: "url",
+	addressLabel: "Page address",
+	agentReady: "Shared with Agent",
 	openExternal: "external",
 	empty: "empty",
 	loading: "loading",
@@ -55,7 +62,9 @@ describe("BrowserPanelView picker chrome", () => {
 			/>,
 		);
 		expect(screen.getByText("Hover then click")).toBeTruthy();
-		await user.click(screen.getByRole("button", { name: "Picking an element" }));
+		await user.click(
+			screen.getByRole("button", { name: "Picking an element" }),
+		);
 		expect(onTogglePicker).toHaveBeenCalledTimes(1);
 	});
 
@@ -87,10 +96,15 @@ describe("BrowserPanelView picker chrome", () => {
 		);
 		expect(screen.getByPlaceholderText("url")).toBeTruthy();
 		expect(screen.getByText("empty")).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Pick element" })).toHaveProperty("disabled", true);
+		expect(screen.getByRole("button", { name: "Pick element" })).toHaveProperty(
+			"disabled",
+			true,
+		);
 	});
 
-	function liveEditModel(overrides: Partial<BrowserLiveEditCardProps> = {}): BrowserLiveEditCardProps {
+	function liveEditModel(
+		overrides: Partial<BrowserLiveEditCardProps> = {},
+	): BrowserLiveEditCardProps {
 		return {
 			title: "Save button",
 			target: "form > button#save",
@@ -126,8 +140,11 @@ describe("BrowserPanelView picker chrome", () => {
 		};
 	}
 
-	function renderPanel(liveEdit?: BrowserLiveEditCardProps) {
-		return render(
+	function panelView(
+		liveEdit?: BrowserLiveEditCardProps,
+		agentStatus?: string,
+	) {
+		return (
 			<BrowserPanelView
 				workspaceId="ws-1"
 				labels={labels}
@@ -151,9 +168,36 @@ describe("BrowserPanelView picker chrome", () => {
 				pickerDisabled={false}
 				onTogglePicker={() => undefined}
 				liveEdit={liveEdit}
-			/>,
+				agentStatus={agentStatus}
+			/>
 		);
 	}
+
+	function renderPanel(liveEdit?: BrowserLiveEditCardProps) {
+		return render(panelView(liveEdit));
+	}
+
+	it("announces Agent operations without replacing the address or the native page host", async () => {
+		const user = userEvent.setup();
+		const panel = render(panelView(undefined, "Agent is reading this page"));
+		const address = screen.getByRole("textbox", { name: "Page address" });
+		await user.click(address);
+		const host = panel.container.querySelector("[data-browser-view-host]");
+		expect(screen.getByRole("status").textContent).toBe(
+			"Agent is reading this page",
+		);
+		panel.rerender(panelView(undefined, "Agent is clicking an element"));
+		expect(screen.getByRole("status").textContent).toBe(
+			"Agent is clicking an element",
+		);
+		expect(document.activeElement).toBe(address);
+		expect(panel.container.querySelector("[data-browser-view-host]")).toBe(
+			host,
+		);
+		panel.rerender(panelView());
+		expect(screen.getByRole("status").textContent).toBe("Shared with Agent");
+		expect(document.activeElement).toBe(address);
+	});
 
 	it("renders a native-view host placeholder instead of a <webview> element", () => {
 		const { container } = renderPanel();
@@ -167,8 +211,19 @@ describe("BrowserPanelView picker chrome", () => {
 		const user = userEvent.setup();
 		const model = liveEditModel({
 			edits: [
-				{ kind: "style", property: "color", before: "", after: "red", target: "form > button#save" },
-				{ kind: "text", before: "Save", after: "Send", target: "form > button#save" },
+				{
+					kind: "style",
+					property: "color",
+					before: "",
+					after: "red",
+					target: "form > button#save",
+				},
+				{
+					kind: "text",
+					before: "Save",
+					after: "Send",
+					target: "form > button#save",
+				},
 			],
 		});
 		const { container } = renderPanel(model);
@@ -187,7 +242,10 @@ describe("BrowserPanelView picker chrome", () => {
 		expect(model.onRevertEdit).toHaveBeenCalledWith(1);
 		await user.click(screen.getByRole("button", { name: "Revert all" }));
 		expect(model.onRevertAll).toHaveBeenCalledTimes(1);
-		await user.type(screen.getByRole("textbox", { name: "Tell the Agent" }), "Make it blue");
+		await user.type(
+			screen.getByRole("textbox", { name: "Tell the Agent" }),
+			"Make it blue",
+		);
 		await user.click(screen.getByRole("button", { name: "Send to Agent" }));
 		expect(model.onSend).toHaveBeenCalledWith("Make it blue");
 		const bar = container.querySelector("[data-browser-selection-bar]");
@@ -202,6 +260,9 @@ describe("BrowserPanelView picker chrome", () => {
 	it("元素失效时显示 stale 提示并禁用输入", () => {
 		renderPanel(liveEditModel({ hasElement: false, error: "stale_reference" }));
 		expect(screen.getByText("Selection is stale")).toBeTruthy();
-		expect(screen.getByPlaceholderText("New text")).toHaveProperty("disabled", true);
+		expect(screen.getByPlaceholderText("New text")).toHaveProperty(
+			"disabled",
+			true,
+		);
 	});
 });
