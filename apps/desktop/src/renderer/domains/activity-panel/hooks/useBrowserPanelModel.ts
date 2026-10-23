@@ -47,6 +47,8 @@ export interface BrowserPanelModel {
 	hasPage: boolean;
 	currentUrl: string;
 	agentStatus?: string;
+	onAddressFocus: () => void;
+	onAddressBlur: () => void;
 	hostRef: Ref<HTMLDivElement>;
 	onAddressChange: (value: string) => void;
 	onAddressSubmit: (event: FormEvent) => void;
@@ -82,6 +84,10 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	const [overlayDragging, setOverlayDragging] = useState(false);
 	const [address, setAddress] = useState(targetUrl ?? "");
 	const [currentUrl, setCurrentUrl] = useState(targetUrl ?? "");
+	// 地址栏编辑态：焦点在内时页面导航（含 agent 导航）不覆盖未提交草稿，失焦回显实际页面。
+	const [addressFocused, setAddressFocused] = useState(false);
+	const addressFocusedRef = useRef(false);
+	addressFocusedRef.current = addressFocused;
 	const [canBack, setCanBack] = useState(false);
 	const [canForward, setCanForward] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -107,7 +113,7 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 			setFailed(state.failed);
 			if (url && pageChanged) {
 				setCurrentUrl(url);
-				setAddress(url);
+				if (!addressFocusedRef.current) setAddress(url);
 				setWorkspaceUrl({ workspaceId, url });
 			}
 		},
@@ -223,6 +229,8 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	const onAddressSubmit = useCallback(
 		(event: FormEvent) => {
 			event.preventDefault();
+			// 提交即消耗草稿：后续页面事件可回写规范化地址。
+			setAddressFocused(false);
 			navigate(address);
 		},
 		[address, navigate],
@@ -326,6 +334,11 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		hasPage,
 		currentUrl,
 		agentStatus: picker.agentActivity ? t(`browser.agentAction.${picker.agentActivity.action}`) : undefined,
+		onAddressFocus: () => setAddressFocused(true),
+		onAddressBlur: () => {
+			setAddressFocused(false);
+			if (viewUrlRef.current) setAddress(viewUrlRef.current);
+		},
 		hostRef,
 		onAddressChange: setAddress,
 		onAddressSubmit,

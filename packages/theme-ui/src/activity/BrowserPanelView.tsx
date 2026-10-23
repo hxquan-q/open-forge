@@ -39,6 +39,9 @@ export interface BrowserPanelViewProps {
 	hostRef: Ref<HTMLDivElement>;
 	onAddressChange: (value: string) => void;
 	onAddressSubmit: (event: FormEvent) => void;
+	/** 焦点在内时宿主不覆盖未提交草稿；失焦回显实际页面。 */
+	onAddressFocus?: () => void;
+	onAddressBlur?: () => void;
 	onBack: () => void;
 	onForward: () => void;
 	onStop: () => void;
@@ -101,6 +104,8 @@ export function BrowserPanelView({
 	hostRef,
 	onAddressChange,
 	onAddressSubmit,
+	onAddressFocus,
+	onAddressBlur,
 	onBack,
 	onForward,
 	onStop,
@@ -151,6 +156,8 @@ export function BrowserPanelView({
 						placeholder={labels.addressPlaceholder}
 						aria-label={labels.addressLabel ?? labels.addressPlaceholder}
 						onChange={(e) => onAddressChange(e.target.value)}
+						onFocus={onAddressFocus}
+						onBlur={onAddressBlur}
 						className="h-7 w-full min-w-0 rounded-md bg-transparent px-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
 					/>
 				</form>

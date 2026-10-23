@@ -239,6 +239,36 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		expect(harness.model.current?.address).toBe("https://localhost:5173/preview");
 	});
 
+	it("agent 导航时保留正在编辑的地址草稿，失焦后回显实际页面", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressFocus());
+		act(() => harness.model.current?.onAddressChange("localhost:5173/preview"));
+		// Agent/页内导航真实改变了页面：工作区记忆与 currentUrl 跟随，但不覆盖未提交草稿。
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://agent.opened/page" }) }));
+		expect(harness.model.current?.address).toBe("localhost:5173/preview");
+		expect(harness.model.current?.currentUrl).toBe("https://agent.opened/page");
+		expect(store.get(browserUrlByWorkspaceAtom).get("ws-1")).toBe("https://agent.opened/page");
+		// 失焦即回显实际页面（与浏览器地址栏惯例一致）。
+		act(() => harness.model.current?.onAddressBlur());
+		expect(harness.model.current?.address).toBe("https://agent.opened/page");
+	});
+
+	it("地址提交即消耗草稿：后续页面事件在未失焦时也回写规范化地址", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
+		act(() => harness.model.current?.onAddressFocus());
+		act(() => harness.model.current?.onAddressChange("vetta.dev/docs"));
+		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
+		await waitFor(() =>
+			expect(api.navigate).toHaveBeenCalledWith({ workspaceId: "ws-1", url: "https://vetta.dev/docs" }),
+		);
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://vetta.dev/docs" }) }));
+		expect(harness.model.current?.address).toBe("https://vetta.dev/docs");
+	});
+
 	it("地址栏提交经 workspace URL 回写触发 navigate；回退/前进/重载/停止走 control", async () => {
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);

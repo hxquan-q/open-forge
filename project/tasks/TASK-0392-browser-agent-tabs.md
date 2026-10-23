@@ -134,7 +134,7 @@ updated: 2026-10-24
   - `packages/theme-ui/src/activity/BrowserPanelView.tsx`：工具栏改用 `Button`(ghost/icon-sm)+Spin、地址表单带边框/焦点环与可访问名称、新增 `agentStatus` 只读状态行（`<output aria-live>`）、图标迁 solar、重试按钮组件化；labels 新增键可选，旧标签合同兼容。
   - `apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts` + `webview-session-controller.ts` + `shared/browser-tab-ipc.ts`：browser_tab 执行期经 `beginAgentAction` 租约向 session 投影 `agentActivity`（动作名+并发数），finally/abort/换绑/解绑必清；会话事件沿用既有桥。
   - `useBrowserElementPicker.ts`：订阅 session-changed 全量会话（含 agentActivity），旧初始查询迟到不覆盖新事件；事件订阅不再依赖 captureSelection 引用。
-  - `useBrowserPanelModel.ts`：仅页面 URL 实际变化时同步地址草稿（loading 等重复事件不再覆盖输入）；透传 agentStatus 本地化文案。
+  - `useBrowserPanelModel.ts`：地址栏编辑态保护——焦点在内时页面导航（含 agent `navigate`）不覆盖未提交草稿，仅同步工作区记忆与当前页；失焦回显实际页面，提交即消耗草稿使后续事件回写规范化地址；仅页面 URL 实际变化时同步（loading 等重复事件不覆盖输入）；透传 agentStatus 本地化文案。
   - `browser-atoms.ts`：URL 写入等值短路，避免无变化 Map 克隆广播。
   - i18n zh/en chat.json：`browser.addressLabel/agentReady/agentAction.*`。
   - `useActivityPanelModel.ts`：页签解析诊断日志（2026-08 遗留）改为仅开发构建输出；生产里每次切换/面板状态变化不再序列化约 3.3KB 页签投影并经 console-message 桥接主进程。
