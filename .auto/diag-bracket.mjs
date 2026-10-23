@@ -29,7 +29,7 @@ import { createRoot } from "react-dom/client";
 import { MarkdownContent } from "@vetta-org/theme-ui/markdown";
 
 const line = (i) =>
-	"A paragraph with **emphasis** for the generic diagnostic fixture.\n";
+	"> quoted passage " + i + " with emphasis and detail in the cited material.\\n>\\n";
 const bracketProse = Array.from({ length: 350 }, (_, i) => line(i)).join("");
 const env = { theme: "dark", labels: { copy: "c", copied: "d" }, getFileIconClass: () => "", onOpenFile: () => {}, onOpenUrl: () => {} };
 
@@ -51,7 +51,7 @@ export async function run() {
 	durations.length = 0;
 	let text = bracketProse;
 	for (let i = 0; i < 40; i++) {
-			text += 'more generic content ' + i + '. ';
+					text += '> appended quote line ' + i + ' with more detail.\\n>\\n';
 		render(text, true);
 		await pause(50);
 	}
@@ -97,7 +97,7 @@ export async function run() {
 		return run();
 	});
 
-	console.log(JSON.stringify({ browser: browser.version(), mode: "generic-diagnostic", result, tq }, null, 2));
+	console.log(JSON.stringify({ browser: browser.version(), mode: "generic-quote-baseline", result }, null, 2));
 } finally {
 	await browser?.close();
 	if (server) await new Promise((resolve) => server.close(resolve));
