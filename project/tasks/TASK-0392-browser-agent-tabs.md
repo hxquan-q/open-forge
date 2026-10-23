@@ -130,7 +130,7 @@ updated: 2026-10-24
 ## 交付记录
 
 - 实际修改（均在本 worktree）：
-  - `packages/theme-ui/src/shared/TabBar.tsx`：自然宽度缓存（跨选中切换存活，ResizeObserver border-box 观测容器+测量节点）、溢出改为几何快照的同步派生（选中不再二次提交 state）、隐藏测量层与 TabInner memo、拖拽命中检测改用边界缓存（首次建立、重排后重建、无实际重排时不失效也不重渲）、reduced-motion 静态指示器、页签 title/focus-visible、关闭能力变化纳入测量失效、solar 关闭图标。
+  - `packages/theme-ui/src/shared/TabBar.tsx`：自然宽度缓存（跨选中切换存活，ResizeObserver border-box 观测容器+测量节点）、溢出改为几何快照的同步派生（选中不再二次提交 state）、隐藏测量层与 TabInner memo、拖拽命中检测改用边界缓存（首次建立、重排或几何/可见集变化后重建——拖拽中容器收窄不再命中已隐藏页签的旧坐标、无实际重排时不失效也不重渲）、reduced-motion 静态指示器、页签 title/focus-visible、关闭能力变化纳入测量失效、solar 关闭图标。
   - `packages/theme-ui/src/activity/BrowserPanelView.tsx`：工具栏改用 `Button`(ghost/icon-sm)+Spin、地址表单带边框/焦点环与可访问名称、新增 `agentStatus` 只读状态行（`<output aria-live>`）、图标迁 solar、重试按钮组件化；labels 新增键可选，旧标签合同兼容。
   - `apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts` + `webview-session-controller.ts` + `shared/browser-tab-ipc.ts`：browser_tab 执行期经 `beginAgentAction` 租约向 session 投影 `agentActivity`（动作名+并发数），finally/abort/换绑/解绑必清；会话事件沿用既有桥。
   - `useBrowserElementPicker.ts`：订阅 session-changed 后按可观察投影（workspaceId/pickerEnabled/agentActivity.action）短路——导航/重订正/同名并发等未改变投影的事件不再 setState（React 19 对 no-op setState 仍提交一次，故用 ref 镜像在调用前短路）；pickerEnabled 改由会话派生，点选开关乐观合并受「序号 + 会话事件推进 + 工作空间」三重校验，迟到响应不倒灌也不跨工作空间污染；旧初始查询迟到不覆盖新事件；事件订阅不再依赖 captureSelection 引用。

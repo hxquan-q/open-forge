@@ -309,6 +309,15 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		await waitFor(() => expect(harness.model.current?.address).toBe("https://example.com"));
 	});
 
+	it("提交规范化后等于当前页面时也回写规范化地址", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressChange("example.com"));
+		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
+		expect(harness.model.current?.address).toBe("https://example.com");
+	});
+
 	it("地址栏提交经 workspace URL 回写触发 navigate；回退/前进/重载/停止走 control", async () => {
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);

@@ -230,8 +230,11 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	const onAddressSubmit = useCallback(
 		(event: FormEvent) => {
 			event.preventDefault();
-			// 提交即消耗当前草稿：后续页面事件可回写规范化地址。
+			// 提交即消耗当前草稿；直接回写规范化地址，不依赖后续页面事件（目标等于
+			// 当前页时导航会被等值短路，不会再有回写机会）。再次输入重新进入保护。
+			const normalized = normalizeUrl(address);
 			setAddressDirty(false);
+			if (normalized) setAddress(normalized);
 			navigate(address);
 		},
 		[address, navigate],

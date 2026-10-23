@@ -334,6 +334,68 @@ describe("TabBar pointer drag", () => {
 		expect(onReorder).toHaveBeenCalledWith(["a", "c", "b"]);
 	});
 
+	it("拖拽中几何/可见集变化使边界缓存失效并重测", () => {
+		let width = 400;
+		const itemWidth = 100;
+		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(() => itemWidth);
+		const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => width);
+		let frame: FrameRequestCallback | undefined;
+		vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+			frame = callback;
+			return 1;
+		});
+		vi.stubGlobal("cancelAnimationFrame", () => {
+			frame = undefined;
+		});
+		const onReorder = vi.fn();
+		const items = [
+			{ key: "a", label: "A" },
+			{ key: "b", label: "B" },
+			{ key: "c", label: "C" },
+		];
+		try {
+			act(() => {
+				root.render(
+					createElement(TabBar, { items, value: "a", onChange: vi.fn(), onReorder, onOverflowChange: vi.fn() }),
+				);
+			});
+			setTabBounds(container);
+			let measured = 0;
+			for (const tab of Array.from(container.querySelectorAll<HTMLElement>("[data-tabkey]"))) {
+				const original = tab.getBoundingClientRect.bind(tab);
+				tab.getBoundingClientRect = () => {
+					measured += 1;
+					return original();
+				};
+			}
+			const tab = container.querySelector<HTMLElement>('[data-tabkey="b"]');
+			if (!tab) throw new Error("tab not found");
+			act(() => {
+				tab.dispatchEvent(pointerEvent("pointerdown", 110, 10));
+				tab.dispatchEvent(pointerEvent("pointermove", 130, 10));
+			});
+			const overlay = document.querySelector<HTMLElement>("[data-tab-drag-overlay]");
+			if (!overlay) throw new Error("drag overlay not found");
+			act(() => overlay.dispatchEvent(pointerEvent("pointermove", 150, 10)));
+			const cachedMoves = measured;
+			act(() => overlay.dispatchEvent(pointerEvent("pointermove", 151, 10)));
+			expect(measured).toBe(cachedMoves);
+			// 拖拽中容器收窄：溢出/几何变化必须使缓存失效，下一次移动重读当前 DOM。
+			width = 260;
+			const row = container.querySelector('[role="tablist"]');
+			if (!row) throw new Error("tab row not found");
+			act(() => {
+				ResizeObserverStub.notify(row);
+				frame?.(0);
+			});
+			act(() => overlay.dispatchEvent(pointerEvent("pointermove", 152, 10)));
+			expect(measured).toBeGreaterThan(cachedMoves);
+		} finally {
+			offsetWidth.mockRestore();
+			clientWidth.mockRestore();
+		}
+	});
+
 	it("keeps a click below the drag threshold", () => {
 		const onChange = vi.fn();
 		const onDragStart = vi.fn();

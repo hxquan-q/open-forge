@@ -625,6 +625,12 @@ export function TabBar<T extends string>({
 	if (!sameKeys(overflowRef.current, computedOverflow)) overflowRef.current = computedOverflow;
 	const overflowKeys = overflowRef.current;
 
+	// 拖拽中容器尺寸/自然宽度变化会改变可见集与坐标：测量快照更新后使拖拽边界缓存
+	// 失效，下一次命中检测重读当前 DOM（重排自身的失效仍由 dragOver 显式完成）。
+	useLayoutEffect(() => {
+		dragBoundsRef.current = null;
+	}, [measurements]);
+
 	// Selection does not change natural widths. Keep the observer and its width cache
 	// alive across switches; only content/font/geometry changes invalidate measurement.
 	useLayoutEffect(() => {
