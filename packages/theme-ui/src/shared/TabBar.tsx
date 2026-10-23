@@ -1,8 +1,11 @@
 import { motion } from "motion/react";
 import {
+	memo,
 	useCallback,
 	useEffect,
 	useId,
+	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
 	type JSX,
@@ -235,6 +238,34 @@ function TabInner({
 	);
 }
 
+/** Natural-size content is independent of selection and must not rerender on every switch. */
+const TabMeasurements = memo(function TabMeasurements({
+	items,
+	removable,
+	containerRef,
+}: {
+	items: TabBarItem<string>[];
+	removable: boolean;
+	containerRef: RefObject<HTMLDivElement | null>;
+}): JSX.Element {
+	return (
+		<div ref={containerRef} aria-hidden className="pointer-events-none absolute left-0 top-0 flex items-end opacity-0">
+			{items.map(({ key, label, icon, badge, removable: itemRemovable }) => (
+				<div
+					key={key}
+					data-tabkey={key}
+					className={cn(
+						"flex h-8 min-w-[72px] max-w-[160px] select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 pl-3 text-[11px] font-medium leading-none",
+						itemRemovable && removable ? "pr-7" : "pr-3",
+					)}
+				>
+					<TabInner icon={icon} label={label} badge={badge} active={false} />
+				</div>
+			))}
+		</div>
+	);
+});
+
 /**
  * 浏览器式选项卡：所有页签保持等高、互不覆盖。激活页签与内容卡片同色并向下延伸
  * 1px 盖住卡片描边；非激活页签仅在 hover 时显示浅背景，避免切换时产生尺寸跳动。
@@ -339,10 +370,11 @@ export function TabBar<T extends string>({
 	);
 
 	// 拖拽中按临时顺序渲染，否则按 props 顺序
-	const renderItems =
-		order != null
-			? order.map((k) => items.find((it) => it.key === k)).filter((it): it is TabBarItem<T> => it != null)
-			: items;
+	const renderItems = useMemo(() => {
+		if (order == null) return items;
+		const byKey = new Map(items.map((item) => [item.key, item]));
+		return order.map((key) => byKey.get(key)).filter((item): item is TabBarItem<T> => item != null);
+	}, [items, order]);
 
 	const beginDrag = (key: T) => {
 		dragKeyRef.current = key;
@@ -536,40 +568,57 @@ export function TabBar<T extends string>({
 	const rafRef = useRef<number | undefined>(undefined);
 	const [overflowKeys, setOverflowKeys] = useState<T[]>([]);
 	const responsive = onOverflowChange != null;
+	const widthsRef = useRef(new Map<string, number>());
+	const measureWidths = useCallback(() => {
+		const widths = new Map<string, number>();
+		for (const child of Array.from(measureRef.current?.children ?? []) as HTMLElement[]) {
+			const key = child.dataset.tabkey;
+			if (key != null) widths.set(key, child.offsetWidth);
+		}
+		widthsRef.current = widths;
+	}, []);
 
 	const recompute = useCallback(() => {
 		const row = rowRef.current;
-		const mz = measureRef.current;
-		if (!row || !mz) return;
+		if (!row) return;
 		const avail = row.clientWidth - ROW_PADDING_LEFT - ROW_PADDING_RIGHT;
-		const widths = new Map<string, number>();
-		for (const c of Array.from(mz.children) as HTMLElement[]) {
-			const k = c.dataset.tabkey;
-			if (k != null) widths.set(k, c.offsetWidth);
-		}
-		const widthOf = (key: T) => widths.get(key) ?? 0;
-		const next = computeOverflow(renderItems, value, avail, widthOf);
+		const next = computeOverflow(renderItems, value, avail, (key) => widthsRef.current.get(key) ?? 0);
 		setOverflowKeys((prev) => (sameKeys(prev, next) ? prev : next));
 	}, [renderItems, value]);
+	const recomputeRef = useRef(recompute);
+	recomputeRef.current = recompute;
 
-	useEffect(() => {
+	// Selection does not change natural widths. Keep the observer and its width cache
+	// alive across switches; only content/font/geometry changes invalidate measurement.
+	useLayoutEffect(() => {
 		if (!responsive) return;
 		const row = rowRef.current;
-		if (!row) return;
-		recompute();
-		const scheduleRecompute = () => {
-			if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+		const measurement = measureRef.current;
+		if (!row || !measurement) return;
+		measureWidths();
+		recomputeRef.current();
+		let widthsChanged = false;
+		const ro = new ResizeObserver((entries) => {
+			widthsChanged ||= entries.some((entry) => entry.target !== row);
+			if (rafRef.current != null) return;
 			rafRef.current = requestAnimationFrame(() => {
 				rafRef.current = undefined;
-				recompute();
+				if (widthsChanged) measureWidths();
+				widthsChanged = false;
+				recomputeRef.current();
 			});
-		};
-		const ro = new ResizeObserver(scheduleRecompute);
+		});
 		ro.observe(row);
+		for (const child of Array.from(measurement.children)) ro.observe(child);
 		return () => {
 			ro.disconnect();
 			if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+			rafRef.current = undefined;
 		};
+	}, [responsive, renderItems, measureWidths]);
+
+	useLayoutEffect(() => {
+		if (responsive) recompute();
 	}, [responsive, recompute]);
 
 	useEffect(() => {
@@ -676,24 +725,7 @@ export function TabBar<T extends string>({
 
 			{/* 隐藏测量层：渲染全部页签（非激活样式）量自然宽度，供 recompute 计算容纳数量。 */}
 			{responsive && (
-				<div
-					ref={measureRef}
-					aria-hidden
-					className="pointer-events-none absolute left-0 top-0 flex items-end opacity-0"
-				>
-					{renderItems.map(({ key, label, icon, badge, removable }) => (
-						<div
-							key={key}
-							data-tabkey={key}
-							className={cn(
-								"flex h-8 min-w-[72px] max-w-[160px] select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 pl-3 text-[11px] font-medium leading-none",
-								removable && onRemove != null && removeLabel != null ? "pr-7" : "pr-3",
-							)}
-						>
-							<TabInner icon={icon} label={label} badge={badge} active={false} />
-						</div>
-					))}
-				</div>
+				<TabMeasurements items={renderItems} removable={onRemove != null && removeLabel != null} containerRef={measureRef} />
 			)}
 		</div>
 	);

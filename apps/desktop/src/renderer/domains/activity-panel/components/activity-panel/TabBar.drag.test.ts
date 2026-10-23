@@ -137,6 +137,30 @@ describe("TabBar pointer drag", () => {
 		}
 	});
 
+	it("reuses natural widths when only the selected tab changes", () => {
+		const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(80);
+		const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200);
+		const items = [
+			{ key: "a", label: "文件" },
+			{ key: "b", label: "浏览器" },
+			{ key: "c", label: "终端" },
+		];
+		const onOverflowChange = vi.fn();
+		const onChange = vi.fn();
+		try {
+			act(() => root.render(createElement(TabBar, { items, value: "a", onChange, onOverflowChange })));
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["c"]);
+			offsetWidth.mockClear();
+			act(() => root.render(createElement(TabBar, { items, value: "c", onChange, onOverflowChange })));
+			expect(container.querySelector('[data-tabkey="c"] button[aria-selected="true"]')).not.toBeNull();
+			expect(onOverflowChange).toHaveBeenLastCalledWith(["b"]);
+			expect(offsetWidth).not.toHaveBeenCalled();
+		} finally {
+			offsetWidth.mockRestore();
+			clientWidth.mockRestore();
+		}
+	});
+
 	it("keeps a click below the drag threshold", () => {
 		const onChange = vi.fn();
 		const onDragStart = vi.fn();
