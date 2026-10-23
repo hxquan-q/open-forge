@@ -211,7 +211,8 @@ describe("TabBar pointer drag", () => {
 		try {
 			act(() => root.render(createElement(TabBar, { items, value: "c", onChange, onOverflowChange })));
 			expect(onOverflowChange).toHaveBeenLastCalledWith(["b"]);
-			const row = container.querySelector('[role="tablist"]')!;
+			const row = container.querySelector('[role="tablist"]');
+			if (!row) throw new Error("tab row not found");
 			offsetWidth.mockClear();
 			width = 300;
 			act(() => {
@@ -222,7 +223,8 @@ describe("TabBar pointer drag", () => {
 			expect(offsetWidth).not.toHaveBeenCalled();
 			// Font/custom icon changes can resize a measurement child without changing items.
 			itemWidth = 120;
-			const measurement = container.querySelector('[aria-hidden] [data-tabkey="b"]')!;
+			const measurement = container.querySelector('[aria-hidden] [data-tabkey="b"]');
+			if (!measurement) throw new Error("measurement node not found");
 			act(() => {
 				ResizeObserverStub.notify(measurement);
 				frame?.(0);
@@ -274,6 +276,62 @@ describe("TabBar pointer drag", () => {
 			offsetWidth.mockRestore();
 			clientWidth.mockRestore();
 		}
+	});
+
+	it("drag hit-testing reuses tab bounds instead of re-measuring on every move", () => {
+		const onReorder = vi.fn();
+		act(() => {
+			root.render(
+				createElement(TabBar, {
+					items: [
+						{ key: "a", label: "A" },
+						{ key: "b", label: "B" },
+						{ key: "c", label: "C" },
+					],
+					value: "a",
+					onChange: vi.fn(),
+					onReorder,
+				}),
+			);
+		});
+		setTabBounds(container);
+		let measured = 0;
+		for (const tab of Array.from(container.querySelectorAll<HTMLElement>("[data-tabkey]"))) {
+			const original = tab.getBoundingClientRect.bind(tab);
+			tab.getBoundingClientRect = () => {
+				measured += 1;
+				return original();
+			};
+		}
+		const tab = container.querySelector<HTMLElement>('[data-tabkey="b"]');
+		if (!tab) throw new Error("tab not found");
+		act(() => {
+			tab.dispatchEvent(pointerEvent("pointerdown", 110, 10));
+			tab.dispatchEvent(pointerEvent("pointermove", 130, 10));
+		});
+		const overlay = document.querySelector<HTMLElement>("[data-tab-drag-overlay]");
+		if (!overlay) throw new Error("drag overlay not found");
+		measured = 0;
+		act(() => {
+			// 悬停在被拖页签自身：不发生重排，只允许首轮建立缓存的一次性测量。
+			overlay.dispatchEvent(pointerEvent("pointermove", 150, 10));
+			overlay.dispatchEvent(pointerEvent("pointermove", 151, 10));
+			overlay.dispatchEvent(pointerEvent("pointermove", 152, 10));
+			overlay.dispatchEvent(pointerEvent("pointermove", 153, 10));
+		});
+		expect(measured).toBeLessThanOrEqual(3);
+		act(() => {
+			// 跨过 c 触发一次真实重排：允许重建一次（再 +3），随后的移动不得再重读。
+			overlay.dispatchEvent(pointerEvent("pointermove", 250, 10));
+		});
+		expect(measured).toBeLessThanOrEqual(6);
+		act(() => {
+			overlay.dispatchEvent(pointerEvent("pointermove", 251, 10));
+			overlay.dispatchEvent(pointerEvent("pointermove", 252, 10));
+		});
+		expect(measured).toBeLessThanOrEqual(6);
+		act(() => overlay.dispatchEvent(pointerEvent("pointerup", 250, 10)));
+		expect(onReorder).toHaveBeenCalledWith(["a", "c", "b"]);
 	});
 
 	it("keeps a click below the drag threshold", () => {

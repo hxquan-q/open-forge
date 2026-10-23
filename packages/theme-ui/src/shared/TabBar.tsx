@@ -316,6 +316,8 @@ export function TabBar<T extends string>({
 		started: boolean;
 	} | null>(null);
 	const suppressClickRef = useRef<T | null>(null);
+	/** 拖拽期页签边界缓存：同一次拖拽内 DOM 不随移动变化，重排提交后置空重建。 */
+	const dragBoundsRef = useRef<Map<T, { left: number; right: number }> | null>(null);
 	const fileDragHoverRef = useRef<{ key: T; timer: number } | null>(null);
 	const fileDragHoverKeyRef = useRef<T | null>(null);
 	const [fileDragHoverKey, setFileDragHoverKey] = useState<T | null>(null);
@@ -394,7 +396,11 @@ export function TabBar<T extends string>({
 		const currentOrder = orderRef.current;
 		if (currentDragKey == null || currentOrder == null || currentDragKey === overKey) return;
 		const nextOrder = moveTabKey(currentOrder, currentDragKey, overKey);
+		const changed = nextOrder.some((k, i) => k !== currentOrder[i]);
+		if (!changed) return;
 		orderRef.current = nextOrder;
+		// 重排真实发生时各页签位置会变：下一次命中检测前重建一次边界缓存。
+		dragBoundsRef.current = null;
 		setOrder(nextOrder);
 	};
 	const endDrag = (commit: boolean) => {
@@ -405,6 +411,7 @@ export function TabBar<T extends string>({
 		}
 		dragKeyRef.current = null;
 		orderRef.current = null;
+		dragBoundsRef.current = null;
 		setDragKey(null);
 		setOrder(null);
 	};
@@ -427,11 +434,19 @@ export function TabBar<T extends string>({
 		if (!row || !session || clientY < session.bounds.top - 16 || clientY > session.bounds.bottom + 16) {
 			return null;
 		}
+		let cache = dragBoundsRef.current;
+		if (cache == null) {
+			cache = new Map();
+			for (const child of Array.from(row.children) as HTMLElement[]) {
+				const key = child.dataset.tabkey as T | undefined;
+				if (!key) continue;
+				const rect = child.getBoundingClientRect();
+				cache.set(key, { left: rect.left, right: rect.right });
+			}
+			dragBoundsRef.current = cache;
+		}
 		let closest: { distance: number; key: T } | null = null;
-		for (const child of Array.from(row.children) as HTMLElement[]) {
-			const key = child.dataset.tabkey as T | undefined;
-			if (!key) continue;
-			const bounds = child.getBoundingClientRect();
+		for (const [key, bounds] of cache) {
 			const distance = Math.abs(clientX - (bounds.left + bounds.right) / 2);
 			if (!closest || distance < closest.distance) closest = { distance, key };
 		}
