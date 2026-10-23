@@ -9,6 +9,7 @@ import {
 	type BrowserElementSelectionContext,
 } from "@vetta/coding-agent/function-extensions";
 import { getDefaultStore } from "jotai";
+import { Profiler, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DesktopBrowserTabGetSessionResult } from "@/shared/browser-tab-ipc";
 import { DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK } from "@/shared/browser-tab-ipc";
@@ -169,6 +170,78 @@ describe("useBrowserElementPicker", () => {
 				event: { kind: "session-changed", session },
 			}),
 		);
+		expect(result.current.agentActivity).toBeUndefined();
+	});
+
+	it("不因可观察投影未变的会话事件重渲面板", async () => {
+		let commits = 0;
+		const Wrapper = ({ children }: { children: ReactNode }): JSX.Element => (
+			<Profiler
+				id="picker"
+				onRender={() => {
+					commits += 1;
+				}}
+			>
+				{children}
+			</Profiler>
+		);
+		// 初始查询返回开启态：用它作为会话已落定的确定性信号，避免基线包含 null→对象的首次提交。
+		vi.mocked(window.vetta.browserTab.getSession).mockResolvedValueOnce({
+			ok: true,
+			session: {
+				workspaceId: "ws-1",
+				pageUrl: "https://example.com/form",
+				title: "Example",
+				pageRevision: 4,
+				pickerEnabled: true,
+			},
+		});
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }), {
+			wrapper: Wrapper,
+		});
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		await waitFor(() => expect(result.current.pickerEnabled).toBe(true));
+		const baseline = commits;
+		const session = {
+			workspaceId: "ws-1",
+			pageUrl: "https://example.com/form",
+			title: "Example",
+			pageRevision: 4,
+			pickerEnabled: true,
+		};
+		// 导航/重订正等只改 pageRevision/title：可观察投影未变，不应重渲。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: { kind: "session-changed", session: { ...session, pageRevision: 9, title: "Next" } },
+			}),
+		);
+		expect(commits).toBe(baseline);
+		// 可观察变化（动作首次出现）恰好一次提交。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: {
+					kind: "session-changed",
+					session: { ...session, agentActivity: { action: "snapshot", activeCount: 1 } },
+				},
+			}),
+		);
+		expect(commits).toBe(baseline + 1);
+		expect(result.current.agentActivity?.action).toBe("snapshot");
+		// 同名并发动作只改 activeCount（不展示）：不应再重渲。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: {
+					kind: "session-changed",
+					session: { ...session, agentActivity: { action: "snapshot", activeCount: 2 } },
+				},
+			}),
+		);
+		expect(commits).toBe(baseline + 1);
+		act(() => listener?.({ workspaceId: "ws-1", event: { kind: "session-changed", session } }));
+		expect(commits).toBe(baseline + 2);
 		expect(result.current.agentActivity).toBeUndefined();
 	});
 

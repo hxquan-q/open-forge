@@ -73,8 +73,26 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 } {
 	const { t } = useTranslation("chat");
 	const workspaceId = input.workspaceId;
-	const [pickerEnabled, setPickerEnabled] = useState(false);
 	const [session, setSession] = useState<DesktopBrowserTabSession | null>(null);
+	/** 镜像最新已应用会话：React 19 对 no-op setState 仍会提交一次，投影未变时
+	 * 必须在调用 setState 之前短路。 */
+	const sessionRef = useRef<DesktopBrowserTabSession | null>(null);
+	/** 可观察投影：点选开关与 Agent 动作名（activeCount 不展示）。导航/重订正等只改
+	 * pageRevision/title 的事件不再触发面板重渲。 */
+	const applySession = useCallback((next: DesktopBrowserTabSession | null) => {
+		const previous = sessionRef.current;
+		if (previous != null && next != null) {
+			const sameProjection =
+				previous.workspaceId === next.workspaceId &&
+				previous.pickerEnabled === next.pickerEnabled &&
+				previous.agentActivity?.action === next.agentActivity?.action;
+			if (sameProjection) return;
+		}
+		sessionRef.current = next;
+		setSession(next);
+	}, []);
+	const activeSession = session?.workspaceId === workspaceId ? session : null;
+	const pickerEnabled = activeSession?.pickerEnabled ?? false;
 	const [selection, setSelection] = useState<BrowserElementPickedSelection | null>(null);
 	const [promptAttachment, setPromptAttachment] = useAtom(promptAttachmentAtom);
 	const attachmentRef = useRef(promptAttachment);
@@ -175,17 +193,13 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 		let cancelled = false;
 		let receivedSessionEvent = false;
 		void window.vetta.browserTab.getSession({ workspaceId }).then((result) => {
-			if (!cancelled && !receivedSessionEvent && result.ok) {
-				setPickerEnabled(result.session?.pickerEnabled ?? false);
-				setSession(result.session);
-			}
+			if (!cancelled && !receivedSessionEvent && result.ok) applySession(result.session);
 		});
 		const unsubscribe = window.vetta.browserTab.onEvent((envelope) => {
 			if (envelope.workspaceId !== workspaceId) return;
 			if (envelope.event.kind === "session-changed") {
 				receivedSessionEvent = true;
-				setSession(envelope.event.session);
-				setPickerEnabled(envelope.event.session.pickerEnabled);
+				applySession(envelope.event.session);
 				return;
 			}
 			if (envelope.event.kind === "page-revision") {
@@ -208,7 +222,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			cancelled = true;
 			unsubscribe();
 		};
-	}, [workspaceId]);
+	}, [workspaceId, applySession]);
 
 	const togglePicker = useCallback(() => {
 		if (!input.hasPage) return;
@@ -225,7 +239,15 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 				},
 			})
 			.then((result) => {
-				if (result.ok) setPickerEnabled(result.pickerEnabled);
+				// 乐观同步开关；主进程随后的 session-changed 会被投影等值短路。
+				if (result.ok) {
+					const previous = sessionRef.current;
+					if (previous && previous.pickerEnabled !== result.pickerEnabled) {
+						const merged = { ...previous, pickerEnabled: result.pickerEnabled };
+						sessionRef.current = merged;
+						setSession(merged);
+					}
+				}
 			});
 	}, [input.hasPage, pickerEnabled, t, workspaceId]);
 
@@ -264,7 +286,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	return {
 		pickerEnabled,
-		agentActivity: session?.workspaceId === workspaceId ? session.agentActivity : undefined,
+		agentActivity: activeSession?.agentActivity,
 		pickerShortcut,
 		selection,
 		selectionRef: selection?.context.payload.elementRef ?? null,

@@ -133,7 +133,7 @@ updated: 2026-10-24
   - `packages/theme-ui/src/shared/TabBar.tsx`：自然宽度缓存（跨选中切换存活，ResizeObserver border-box 观测容器+测量节点）、溢出改为几何快照的同步派生（选中不再二次提交 state）、隐藏测量层与 TabInner memo、拖拽命中检测改用边界缓存（首次建立、重排后重建、无实际重排时不失效也不重渲）、reduced-motion 静态指示器、页签 title/focus-visible、关闭能力变化纳入测量失效、solar 关闭图标。
   - `packages/theme-ui/src/activity/BrowserPanelView.tsx`：工具栏改用 `Button`(ghost/icon-sm)+Spin、地址表单带边框/焦点环与可访问名称、新增 `agentStatus` 只读状态行（`<output aria-live>`）、图标迁 solar、重试按钮组件化；labels 新增键可选，旧标签合同兼容。
   - `apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts` + `webview-session-controller.ts` + `shared/browser-tab-ipc.ts`：browser_tab 执行期经 `beginAgentAction` 租约向 session 投影 `agentActivity`（动作名+并发数），finally/abort/换绑/解绑必清；会话事件沿用既有桥。
-  - `useBrowserElementPicker.ts`：订阅 session-changed 全量会话（含 agentActivity），旧初始查询迟到不覆盖新事件；事件订阅不再依赖 captureSelection 引用。
+  - `useBrowserElementPicker.ts`：订阅 session-changed 后按可观察投影（workspaceId/pickerEnabled/agentActivity.action）短路——导航/重订正/同名并发等未改变投影的事件不再 setState（React 19 对 no-op setState 仍提交一次，故用 ref 镜像在调用前短路）；pickerEnabled 改由会话派生，点选开关乐观合并同样受投影守卫；旧初始查询迟到不覆盖新事件；事件订阅不再依赖 captureSelection 引用。
   - `useBrowserPanelModel.ts`：地址栏编辑态保护——焦点在内时页面导航（含 agent `navigate`）不覆盖未提交草稿，仅同步工作区记忆与当前页；失焦回显实际页面，提交即消耗草稿使后续事件回写规范化地址；仅页面 URL 实际变化时同步（loading 等重复事件不覆盖输入）；透传 agentStatus 本地化文案。
   - `browser-atoms.ts`：URL 写入等值短路，避免无变化 Map 克隆广播。
   - i18n zh/en chat.json：`browser.addressLabel/agentReady/agentAction.*`。
