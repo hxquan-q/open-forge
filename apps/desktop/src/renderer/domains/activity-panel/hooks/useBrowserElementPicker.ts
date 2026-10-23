@@ -150,6 +150,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	const captureSelection = useCallback(
 		async (
+			sequence: number,
 			context: unknown,
 			rect: { x: number; y: number; width: number; height: number },
 			devicePixelRatio: number,
@@ -173,6 +174,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 					: context;
 			const parsed = readBrowserElementSelectionContext(nextContext);
 			if (!parsed) return;
+			if (sequence !== captureSeqRef.current) return;
 			const screenshotPath = crop.ok ? crop.path : undefined;
 			if (placement === "input") {
 				deliverSelection(parsed, screenshotPath, [], { send: false });
@@ -190,6 +192,8 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 
 	const captureSelectionRef = useRef(captureSelection);
 	captureSelectionRef.current = captureSelection;
+	/** 点选采集代次：页面翻版/再点选/放弃后，在途截图响应不再复活选区。 */
+	const captureSeqRef = useRef(0);
 	useEffect(() => {
 		let cancelled = false;
 		let receivedSessionEvent = false;
@@ -206,7 +210,8 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 				return;
 			}
 			if (envelope.event.kind === "page-revision") {
-				// 导航/改版后旧选中引用即失效，页面 DOM 也随之消失。
+				// 导航/改版后旧选中引用即失效，页面 DOM 也随之消失；在途采集一并作废。
+				captureSeqRef.current += 1;
 				setSelection(null);
 				return;
 			}
@@ -214,6 +219,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 			const { payload } = envelope.event.context;
 			const comment = envelope.event.comment;
 			void captureSelectionRef.current(
+				++captureSeqRef.current,
 				envelope.event.context,
 				payload.boundingRect,
 				1,
@@ -275,6 +281,7 @@ export function useBrowserElementPicker(input: { workspaceId: string; hasPage: b
 	);
 
 	const discardSelection = useCallback(() => {
+		captureSeqRef.current += 1;
 		setSelection(null);
 	}, []);
 

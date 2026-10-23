@@ -135,6 +135,7 @@ updated: 2026-10-24
   - `apps/desktop/src/main/browser-automation/in-app-browser-tab-host.ts` + `webview-session-controller.ts` + `shared/browser-tab-ipc.ts`：browser_tab 执行期经 `beginAgentAction` 租约向 session 投影 `agentActivity`（动作名+并发数），finally/abort/换绑/解绑必清；会话事件沿用既有桥。
   - `useBrowserElementPicker.ts`：订阅 session-changed 后按可观察投影（workspaceId/pickerEnabled/agentActivity.action）短路——导航/重订正/同名并发等未改变投影的事件不再 setState（React 19 对 no-op setState 仍提交一次，故用 ref 镜像在调用前短路）；pickerEnabled 改由会话派生，点选开关乐观合并受「序号 + 会话事件推进 + 工作空间」三重校验，迟到响应不倒灌也不跨工作空间污染；旧初始查询迟到不覆盖新事件；事件订阅不再依赖 captureSelection 引用。
   - `useBrowserLiveEdit.ts`：预览改动调用加代次守卫——重新点选/换工作空间后，在途响应不再提交状态（旧元素日志不覆盖新元素、不提前清 busy），新元素重置时同步失效全部在途代次。
+  - `useBrowserElementPicker.ts` 点选采集同样加代次：页面翻版/再点选/放弃选区后，在途截图响应不再复活失效选区或覆盖更新选区（连续点选以最后一次为准）。
   - `useBrowserPanelModel.ts`：地址草稿改为 dirty 标记（焦点不再兼职）——输入即保护、提交/失焦/切工作空间消耗，提交后再次输入重新进入保护（修复提交后继续输入仍被覆盖），失焦回显实际页面且空页回显空串；仅页面 URL 实际变化时同步（loading 等重复事件不覆盖输入）；透传 agentStatus 本地化文案。
   - `browser-atoms.ts`：URL 写入等值短路，避免无变化 Map 克隆广播。
   - i18n zh/en chat.json：`browser.addressLabel/agentReady/agentAction.*`。

@@ -15,6 +15,7 @@ import type {
 	DesktopBrowserTabGetSessionResult,
 	DesktopBrowserTabSession,
 	DesktopBrowserTabSetPickerResult,
+	DesktopBrowserCropScreenshotResult,
 } from "@/shared/browser-tab-ipc";
 import { DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK } from "@/shared/browser-tab-ipc";
 import { BROWSER_ELEMENT_ATTACHMENT_ID, resetBrowserElementDraftForTests } from "../services/browser-element-draft.js";
@@ -304,6 +305,78 @@ describe("useBrowserElementPicker", () => {
 		);
 		await act(async () => resolveCross?.({ ok: true, pickerEnabled: true }));
 		expect(initial.result.current.pickerEnabled).toBe(false);
+	});
+
+	it("页面翻版或再点选后，迟到的截图响应不复活失效选区", async () => {
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		let resolveCrop: ((value: DesktopBrowserCropScreenshotResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.cropScreenshot).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveCrop = resolve;
+				}),
+		);
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "picker-result", context: context() } });
+		});
+		// 选区还在截图途中，页面已经翻版：旧引用失效。
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "page-revision", workspaceId: "ws-1", pageRevision: 5 } });
+		});
+		expect(result.current.selection).toBeNull();
+		await act(async () => {
+			resolveCrop?.({
+				ok: true,
+				attachmentId: "img-late",
+				mimeType: "png",
+				width: 40,
+				height: 16,
+				path: "C:/cache/late.png",
+			});
+		});
+		expect(result.current.selection).toBeNull();
+		expect(insertImageToken).not.toHaveBeenCalled();
+	});
+
+	it("连续两次点选以最后一次为准，迟到的首次截图不覆盖", async () => {
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		let resolveFirst: ((value: DesktopBrowserCropScreenshotResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.cropScreenshot)
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						resolveFirst = resolve;
+					}),
+			)
+			.mockResolvedValueOnce({
+				ok: true,
+				attachmentId: "img-second",
+				mimeType: "png",
+				width: 40,
+				height: 16,
+				path: "C:/cache/second.png",
+			});
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "picker-result", context: context() } });
+		});
+		// 首次截图仍在途，第二次点选的截图先返回并成为当前选区。
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "picker-result", context: context() } });
+		});
+		await waitFor(() => expect(result.current.selection?.screenshotPath).toBe("C:/cache/second.png"));
+		await act(async () => {
+			resolveFirst?.({
+				ok: true,
+				attachmentId: "img-first",
+				mimeType: "png",
+				width: 40,
+				height: 16,
+				path: "C:/cache/first.png",
+			});
+		});
+		expect(result.current.selection?.screenshotPath).toBe("C:/cache/second.png");
 	});
 
 	it("点选命中后先停在选择态、不立即附加；确认后才把胶囊（含 liveEdits）写入草稿", async () => {
