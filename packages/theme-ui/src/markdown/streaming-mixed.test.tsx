@@ -46,6 +46,53 @@ describe("混合文档流式：快路径与常规路径的切换", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("纯长引用流式：快路径段缓存且最终等价", () => {
+		const para = (i: number) => `> quoted passage ${i} with some emphasis and detail in the cited material.\n>\n`;
+		const initial = Array.from({ length: 120 }, (_, i) => para(i)).join("");
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={initial} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(container.querySelectorAll("blockquote p").length).toBeGreaterThanOrEqual(119);
+
+		const finalText = initial + "> appended quoted passage at the end.\n";
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		act(() => {
+			root.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		act(() => {
+			vi.advanceTimersByTime(4000);
+		});
+		expect(container.textContent).toContain("appended quoted passage");
+
+		const plainContainer = document.createElement("div");
+		const plainRoot = createRoot(plainContainer);
+		document.body.append(plainContainer);
+		act(() => {
+			plainRoot.render(<MarkdownContent {...environment} text={finalText} isStreamingTail={false} />);
+		});
+		const normalize = (host: HTMLElement): string => {
+			const clone = host.cloneNode(true) as HTMLElement;
+			for (const span of [...clone.querySelectorAll("span.streaming-chunk")]) {
+				span.replaceWith(...[...span.childNodes]);
+			}
+			const body = clone.querySelector(".markdown-body") ?? clone;
+			return [...body.children].map((node) => node.outerHTML).join("");
+		};
+		const streamedHtml = normalize(container);
+		const plainHtml = normalize(plainContainer);
+		act(() => plainRoot.unmount());
+		plainContainer.remove();
+		expect(streamedHtml).toBe(plainHtml);
+	});
+
 	it("连续同类构造压力变体：每形态相邻重复且带类型切换", () => {
 		const t1 = "| A | B |\n| --- | --- |\n" + Array.from({ length: 30 }, (_, i) => `| a${i} | b${i} |\n`).join("");
 		const t2 = "| X | Y | Z |\n| --- | --- | ---: |\n" + Array.from({ length: 30 }, (_, i) => `| x${i} | y${i} | ${i} |\n`).join("");
