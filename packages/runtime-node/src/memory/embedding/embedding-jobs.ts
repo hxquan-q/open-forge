@@ -38,6 +38,10 @@ export interface MemoryEmbeddingJob {
 	readonly memoryId: string;
 	readonly revisionNo: number;
 	readonly scopeName: string;
+	/** BUG-0147/R1：完整身份随任务落库，写向量时使用同一身份。 */
+	readonly principalId: string;
+	readonly projectId: string;
+	readonly workspaceViewId: string;
 	readonly content: string;
 	readonly contentHash: string;
 	/** 入队时观察到的 erasure epoch；完成前与当前 epoch 复检。 */
@@ -52,6 +56,9 @@ export interface EnqueueEmbeddingOptions {
 	readonly memoryId: string;
 	readonly revisionNo: number;
 	readonly scopeName: string;
+	readonly principalId: string;
+	readonly projectId: string;
+	readonly workspaceViewId: string;
 	readonly content: string;
 	readonly contentHash: string;
 }
@@ -80,6 +87,9 @@ export class MemoryEmbeddingJobQueue {
 				memory_id TEXT NOT NULL,
 				revision_no INTEGER NOT NULL,
 				scope_name TEXT NOT NULL,
+				principal_id TEXT NOT NULL,
+				project_id TEXT NOT NULL,
+				workspace_view_id TEXT NOT NULL,
 				content TEXT NOT NULL,
 				content_hash TEXT NOT NULL,
 				erasure_epoch_seen INTEGER NOT NULL,
@@ -105,8 +115,8 @@ export class MemoryEmbeddingJobQueue {
 		const inserted = this.db
 			.prepare(
 				`INSERT INTO memory_embedding_jobs
-				 (model_id, model_revision, dimension, normalization, memory_id, revision_no, scope_name, content, content_hash, erasure_epoch_seen, status, created_at_ms)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+				 (model_id, model_revision, dimension, normalization, memory_id, revision_no, scope_name, principal_id, project_id, workspace_view_id, content, content_hash, erasure_epoch_seen, status, created_at_ms)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
 				 ON CONFLICT (model_id, model_revision, dimension, normalization, memory_id, revision_no, content_hash) DO NOTHING`,
 			)
 			.run(
@@ -117,6 +127,9 @@ export class MemoryEmbeddingJobQueue {
 				options.memoryId,
 				options.revisionNo,
 				options.scopeName,
+				options.principalId,
+				options.projectId,
+				options.workspaceViewId,
 				options.content,
 				options.contentHash,
 				options.erasureEpochSeen,
@@ -244,6 +257,9 @@ export class MemoryEmbeddingJobQueue {
 			memoryId: String(row.memory_id),
 			revisionNo: Number(row.revision_no),
 			scopeName: String(row.scope_name),
+			principalId: String(row.principal_id),
+			projectId: String(row.project_id),
+			workspaceViewId: String(row.workspace_view_id),
 			content: String(row.content),
 			contentHash: String(row.content_hash),
 			erasureEpochSeen: Number(row.erasure_epoch_seen),
@@ -321,6 +337,9 @@ export async function runEmbeddingJob(context: EmbeddingJobRunContext): Promise<
 		memoryId: job.memoryId,
 		revisionNo: job.revisionNo,
 		scopeName: job.scopeName,
+		principalId: job.principalId,
+		projectId: job.projectId,
+		workspaceViewId: job.workspaceViewId,
 		vector: vectors[0] as Float32Array,
 		erasureEpochSeen: erasure.erasureEpoch,
 	});

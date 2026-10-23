@@ -168,15 +168,25 @@ export class SqliteMemoryErasure {
 			this.db
 				.prepare(
 					`INSERT INTO memory_revisions
-						(memory_id, revision_no, revision_id, kind, content, scope_name, visibility, status,
+						(memory_id, revision_no, revision_id, kind, content, scope_name, principal_id, project_id, workspace_view_id, visibility, status,
 						valid_from, valid_to, recorded_at, supersedes, evidence, pinned, created_at_ms)
-					VALUES (?, ?, ?, 'fact', ?, (SELECT scope_name FROM memory_revisions WHERE memory_id = ? AND revision_no = ?), NULL, 'active', ?, '', ?, ?, 'user-confirmed', 0, ?)`,
+					VALUES (?, ?, ?, 'fact', ?, (SELECT scope_name FROM memory_revisions WHERE memory_id = ? AND revision_no = ?),
+						(SELECT principal_id FROM memory_revisions WHERE memory_id = ? AND revision_no = ?),
+						(SELECT project_id FROM memory_revisions WHERE memory_id = ? AND revision_no = ?),
+						(SELECT workspace_view_id FROM memory_revisions WHERE memory_id = ? AND revision_no = ?),
+						NULL, 'active', ?, '', ?, ?, 'user-confirmed', 0, ?)`,
 				)
 				.run(
 					options.memoryId,
 					next,
 					`rev-undo-${next}-${Date.now()}`,
 					previous.content,
+					options.memoryId,
+					currentRevision,
+					options.memoryId,
+					currentRevision,
+					options.memoryId,
+					currentRevision,
 					options.memoryId,
 					currentRevision,
 					now,

@@ -54,6 +54,7 @@ async function seedMemory(content: string): Promise<{ memoryId: string; revision
 			content,
 			kind: "convention",
 			scopeName: "project",
+			...VECTOR_ID,
 			validFrom: "2026-01-01T00:00:00Z",
 			sources: [
 				{ sourceId: "session/s1/turn/1/entry/1", role: "user-input", contentHash: "hash-1", retainsExcerpt: false },
@@ -83,6 +84,12 @@ function makeContext(options: {
 const fileDeps = {
 	readFile: async (path: string) => new Uint8Array(readFileSync(path)),
 	exists: (path: string) => existsSync(path),
+};
+
+const VECTOR_ID = {
+	principalId: FIXTURE_PROJECT_SCOPE.identity.principalId,
+	projectId: FIXTURE_PROJECT_SCOPE.identity.projectId ?? "",
+	workspaceViewId: FIXTURE_PROJECT_SCOPE.identity.workspaceViewId ?? "",
 };
 
 const SPACE_V1 = { modelId: "fixture-model", modelRevision: "v1", dimension: 8, normalization: "l2" as const };
@@ -128,6 +135,7 @@ describe("版本化向量存储（真实 SQLite）", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: seeded.revision,
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			vector,
 			erasureEpochSeen: 0,
 		});
@@ -139,6 +147,7 @@ describe("版本化向量存储（真实 SQLite）", () => {
 		const [query] = await adapter.embed(["项目使用 pnpm workspace"], "query");
 		const hits = reopened.search(SPACE_V1, query, {
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			asOf: "2026-06-01T00:00:00Z",
 			limit: 5,
 		});
@@ -166,13 +175,14 @@ describe("版本化向量存储（真实 SQLite）", () => {
 				memoryId: target.memoryId,
 				revisionNo: target.revision,
 				scopeName: FIXTURE_PROJECT_SCOPE.name,
+				...VECTOR_ID,
 				vector,
 				erasureEpochSeen: 0,
 			});
 		}
 		const [queryV1] = await adapterV1.embed(["向量版本隔离-乙"], "query");
 		const [queryV2] = await adapterV2.embed(["向量版本隔离-乙"], "query");
-		const search = { scopeName: FIXTURE_PROJECT_SCOPE.name, asOf: "2026-06-01T00:00:00Z", limit: 5 };
+		const search = { scopeName: FIXTURE_PROJECT_SCOPE.name, ...VECTOR_ID, asOf: "2026-06-01T00:00:00Z", limit: 5 };
 		// v1 空间检索看不到只存在于 v2 空间的乙：不同版本禁止混算。
 		const v1Hits = store.search(SPACE_V1, queryV1, search);
 		expect(v1Hits.map((hit) => hit.memoryId)).not.toContain(second.memoryId);
@@ -198,6 +208,7 @@ describe("版本化向量存储（真实 SQLite）", () => {
 				memoryId: "m",
 				revisionNo: 1,
 				scopeName: "project",
+				...VECTOR_ID,
 				vector: wrongDimension,
 				erasureEpochSeen: 0,
 			}),
@@ -208,6 +219,7 @@ describe("版本化向量存储（真实 SQLite）", () => {
 				memoryId: "m",
 				revisionNo: 1,
 				scopeName: "project",
+				...VECTOR_ID,
 				vector: notNormalized,
 				erasureEpochSeen: 0,
 			}),
@@ -215,7 +227,7 @@ describe("版本化向量存储（真实 SQLite）", () => {
 		store.close();
 		const query = new Float32Array(8);
 		expect(() =>
-			store.search(SPACE_V1, query, { scopeName: "project", asOf: "2026-01-01T00:00:00Z", limit: 1 }),
+			store.search(SPACE_V1, query, { scopeName: "project", ...VECTOR_ID, asOf: "2026-01-01T00:00:00Z", limit: 1 }),
 		).toThrow(EmbeddingAdapterError);
 	});
 
@@ -228,12 +240,14 @@ describe("版本化向量存储（真实 SQLite）", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: 1,
 			scopeName: "other-scope",
+			...VECTOR_ID,
 			vector,
 			erasureEpochSeen: 0,
 		});
 		const [query] = await adapter.embed(["x"], "query");
 		const hits = store.search(SPACE_V1, query, {
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			asOf: "2026-06-01T00:00:00Z",
 			limit: 5,
 		});
@@ -374,6 +388,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: seeded.revision,
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			content: "幂等任务",
 			contentHash: "hash-a",
 			erasureEpochSeen: 0,
@@ -383,6 +398,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: seeded.revision,
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			content: "幂等任务",
 			contentHash: "hash-a",
 			erasureEpochSeen: 0,
@@ -402,6 +418,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 		const [query] = await adapter.embed(["幂等"], "query");
 		const hits = store.search(SPACE_V1, query, {
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			asOf: "2026-06-01T00:00:00Z",
 			limit: 5,
 		});
@@ -421,6 +438,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: seeded.revision,
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			content: "将被遗忘",
 			contentHash: "hash-b",
 			erasureEpochSeen: erasure.readErasureState().erasureEpoch,
@@ -438,6 +456,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 				memoryId: seeded.memoryId,
 				revisionNo: 1,
 				scopeName: "project",
+				...VECTOR_ID,
 				vector,
 				erasureEpochSeen: 0,
 			}),
@@ -458,6 +477,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: seeded.revision,
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			content: "模型缺失时的任务",
 			contentHash: "hash-c",
 			erasureEpochSeen: 0,
@@ -498,6 +518,7 @@ describe("embedding 任务队列与遗忘屏障", () => {
 			memoryId: seeded.memoryId,
 			revisionNo: seeded.revision,
 			scopeName: FIXTURE_PROJECT_SCOPE.name,
+			...VECTOR_ID,
 			content: "租约恢复",
 			contentHash: "hash-d",
 			erasureEpochSeen: 0,

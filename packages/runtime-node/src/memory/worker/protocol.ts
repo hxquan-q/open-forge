@@ -33,18 +33,22 @@ export interface MemoryWorkerWriteRequest {
 		readonly workspaceViewId?: string;
 		readonly visibility?: string;
 	};
+	/** BUG-0147/R3：调用方自身授权集合；共享 worker 的各 lease 分别携带，缺省回落 open 时集合。 */
+	readonly authScopes?: MemoryWorkerOpenRequest["allowedScopes"];
 }
 
 export interface MemoryWorkerReadRequest {
 	readonly type: "read";
 	readonly scope: MemoryWorkerWriteRequest["scope"];
 	readonly selector: { readonly asOf: string; readonly knownAt?: string };
+	readonly authScopes?: MemoryWorkerOpenRequest["allowedScopes"];
 }
 
 export interface MemoryWorkerListRequest {
 	readonly type: "listRevisions" | "listSources";
 	readonly memoryId: string;
 	readonly scope: MemoryWorkerWriteRequest["scope"];
+	readonly authScopes?: MemoryWorkerOpenRequest["allowedScopes"];
 }
 
 export interface MemoryWorkerCloseRequest {

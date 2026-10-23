@@ -4,12 +4,13 @@ import type { MemoryScope, TemporalSelector } from "@vetta/runtime-memory";
 import { planLexicalQuery } from "./lexical-query.js";
 
 /**
- * 有作用域的词法检索索引（TASK-0372）。
+ * 有作用域的词法检索索引（TASK-0372；BUG-0147/R1 修订）。
  *
  * 独立连接同一 SQLite 库（WAL 支持与存储 worker 并存；写入仅限本层自有的
  * FTS 索引表）。索引表可由事实表（memory_revisions）完全重建：refresh()
- * 幂等同步，重复重建结果一致；检索前先按宿主 scope/有效时间过滤行，
- * 绝不靠“全库召回后屏蔽”。
+ * 幂等同步，重复重建结果一致。授权过滤（完整身份：principal/project/
+ * workspaceView）发生在候选 limit 之前的 SQL 内——绝不「全库召回后屏蔽」，
+ * 也不允许未授权行占掉候选名额。
  */
 
 interface LexicalRow {
@@ -51,8 +52,23 @@ interface BetterSqlite3Database {
 	close: () => void;
 }
 
+interface IdentityFilter {
+	readonly principalId: string;
+	readonly projectId: string;
+	readonly workspaceViewId: string;
+}
+
+function identityFilterOf(scope: MemoryScope): IdentityFilter {
+	return {
+		principalId: scope.identity.principalId,
+		projectId: scope.identity.projectId ?? "",
+		workspaceViewId: scope.identity.workspaceViewId ?? "",
+	};
+}
+
 export class LexicalMemoryIndex {
 	private readonly db: BetterSqlite3Database;
+	private closed = false;
 
 	private constructor(db: BetterSqlite3Database) {
 		this.db = db;
@@ -64,8 +80,17 @@ export class LexicalMemoryIndex {
 		const db = new Database(options.databasePath);
 		db.pragma("journal_mode = WAL");
 		db.pragma("busy_timeout = 5000");
+		// BUG-0147：旧形状（无身份列）是纯派生表——丢弃重建，不动事实层。
+		const columns = db.prepare("PRAGMA table_info(memory_lexical_tri)").all() as unknown as { name: string }[];
+		const hasIdentity =
+			columns.some((column) => column.name === "principalId") &&
+			columns.some((column) => column.name === "projectId") &&
+			columns.some((column) => column.name === "workspaceViewId");
+		if (columns.length > 0 && !hasIdentity) {
+			db.exec("DROP TABLE memory_lexical_tri");
+		}
 		db.exec(
-			"CREATE VIRTUAL TABLE IF NOT EXISTS memory_lexical_tri USING fts5(content, tokenize = 'trigram', memoryId UNINDEXED, revisionNo UNINDEXED, scopeName UNINDEXED)",
+			"CREATE VIRTUAL TABLE IF NOT EXISTS memory_lexical_tri USING fts5(content, tokenize = 'trigram', memoryId UNINDEXED, revisionNo UNINDEXED, scopeName UNINDEXED, principalId UNINDEXED, projectId UNINDEXED, workspaceViewId UNINDEXED)",
 		);
 		return new LexicalMemoryIndex(db);
 	}
@@ -77,14 +102,26 @@ export class LexicalMemoryIndex {
 			this.db.exec("DELETE FROM memory_lexical_tri");
 			const rows = this.db
 				.prepare(
-					"SELECT memory_id, revision_no, revision_id, content, scope_name FROM memory_revisions WHERE memory_id NOT IN (SELECT memory_id FROM memory_suppressed)",
+					"SELECT memory_id, revision_no, revision_id, content, scope_name, principal_id, project_id, workspace_view_id FROM memory_revisions WHERE memory_id NOT IN (SELECT memory_id FROM memory_suppressed)",
 				)
-				.all() as unknown as LexicalRow[];
+				.all() as unknown as (LexicalRow & {
+				principal_id: string;
+				project_id: string;
+				workspace_view_id: string;
+			})[];
 			const insert = this.db.prepare(
-				"INSERT INTO memory_lexical_tri (content, memoryId, revisionNo, scopeName) VALUES (?, ?, ?, ?)",
+				"INSERT INTO memory_lexical_tri (content, memoryId, revisionNo, scopeName, principalId, projectId, workspaceViewId) VALUES (?, ?, ?, ?, ?, ?, ?)",
 			);
 			for (const row of rows) {
-				insert.run(row.content, row.memory_id, row.revision_no, row.scope_name);
+				insert.run(
+					row.content,
+					row.memory_id,
+					row.revision_no,
+					row.scope_name,
+					row.principal_id,
+					row.project_id,
+					row.workspace_view_id,
+				);
 			}
 			this.db.exec("COMMIT");
 		} catch (error) {
@@ -94,49 +131,79 @@ export class LexicalMemoryIndex {
 	}
 
 	/**
-	 * 作用域词法检索：先过滤授权 scope 与有效时间，再匹配。
-	 * 短词走参数化 instr 回退（有界 limit）；FTS 输入一律字面量转义。
+	 * 作用域词法检索：完整身份 + 未遗忘 + 有效时间全部在候选 limit 之前
+	 * 约束；短词走参数化 instr 回退（同样先过滤授权再 limit）；FTS 输入
+	 * 一律字面量转义。
 	 */
 	search(scope: MemoryScope, query: string, selector: TemporalSelector, limit = 20): LexicalSearchResult {
 		const plan = planLexicalQuery(query, { limit });
 		this.refresh();
-		const baseRows = this.db
-			.prepare(
-				`SELECT memory_id, revision_no, revision_id, content, scope_name, valid_from, valid_to, recorded_at
-				 FROM memory_revisions
-				 WHERE memory_id NOT IN (SELECT memory_id FROM memory_suppressed)`,
-			)
-			.all() as unknown as LexicalRow[];
-		const allowed = baseRows.filter((row) => row.scope_name === scope.name && this.isEffectiveAt(row, selector.asOf));
-		const byKey = (rows: readonly { memoryId: string; revisionNo: number }[]) => {
-			const keys = new Set(rows.map((row) => `${row.memoryId}#${row.revisionNo}`));
-			return allowed.filter((row) => keys.has(`${row.memory_id}#${row.revision_no}`));
-		};
+		const identity = identityFilterOf(scope);
+		const effective = (row: Pick<LexicalRow, "valid_from" | "valid_to">) => this.isEffectiveAt(row, selector.asOf);
 
 		if (plan.matchKind === "trigram") {
 			const hits = this.db
-				.prepare("SELECT memoryId, revisionNo FROM memory_lexical_tri WHERE memory_lexical_tri MATCH ? LIMIT ?")
-				.all(plan.ftsLiteral, plan.limit * 4) as unknown as { memoryId: string; revisionNo: number }[];
-			const entries = byKey(hits)
-				.slice(0, plan.limit)
-				.map((row) => this.toEntry(row, "trigram"));
+				.prepare(
+					`SELECT memoryId, revisionNo FROM memory_lexical_tri
+					 WHERE memory_lexical_tri MATCH ?
+					   AND principalId = ? AND projectId = ? AND workspaceViewId = ?
+					 LIMIT ?`,
+				)
+				.all(
+					plan.ftsLiteral,
+					identity.principalId,
+					identity.projectId,
+					identity.workspaceViewId,
+					plan.limit,
+				) as unknown as {
+				memoryId: string;
+				revisionNo: number;
+			}[];
+			const entries: LexicalSearchEntry[] = [];
+			for (const hit of hits) {
+				const row = this.db
+					.prepare(
+						`SELECT memory_id, revision_no, revision_id, content, scope_name, valid_from, valid_to, recorded_at
+						 FROM memory_revisions
+						 WHERE memory_id = ? AND revision_no = ?
+						   AND memory_id NOT IN (SELECT memory_id FROM memory_suppressed)`,
+					)
+					.get(hit.memoryId, hit.revisionNo) as unknown as LexicalRow | undefined;
+				if (row === undefined || row.scope_name !== scope.name || !effective(row)) continue;
+				entries.push(this.toEntry(row, "trigram"));
+			}
 			return { entries, matchKind: "trigram", degraded: false, usedFallback: false };
 		}
 
 		const term = plan.instrTerm ?? "";
-		const instr = this.db.prepare(
-			`SELECT memory_id, revision_no FROM memory_revisions
-			 WHERE memory_id NOT IN (SELECT memory_id FROM memory_suppressed)
-			 AND instr(content, ?) > 0 LIMIT ?`,
-		);
-		const hits = instr.all(term, plan.limit * 4) as unknown as { memory_id: string; revision_no: number }[];
-		const entries = byKey(hits.map((row) => ({ memoryId: row.memory_id, revisionNo: row.revision_no })))
-			.slice(0, plan.limit)
-			.map((row) => this.toEntry(row, "instr-fallback"));
-		return { entries, matchKind: "instr-fallback", degraded: true, usedFallback: true };
+		const rows = this.db
+			.prepare(
+				`SELECT memory_id, revision_no, revision_id, content, scope_name, valid_from, valid_to, recorded_at
+				 FROM memory_revisions
+				 WHERE scope_name = ? AND principal_id = ? AND project_id = ? AND workspace_view_id = ?
+				   AND memory_id NOT IN (SELECT memory_id FROM memory_suppressed)
+				   AND instr(content, ?) > 0
+				 LIMIT ?`,
+			)
+			.all(
+				scope.name,
+				identity.principalId,
+				identity.projectId,
+				identity.workspaceViewId,
+				term,
+				plan.limit,
+			) as unknown as LexicalRow[];
+		return {
+			entries: rows.filter(effective).map((row) => this.toEntry(row, "instr-fallback")),
+			matchKind: "instr-fallback",
+			degraded: true,
+			usedFallback: true,
+		};
 	}
 
 	close(): void {
+		if (this.closed) return;
+		this.closed = true;
 		this.db.close();
 	}
 

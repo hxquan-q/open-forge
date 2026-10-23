@@ -1,3 +1,4 @@
+export { createRuntimeNodePersistentMemoryStorage, openLexicalMemoryIndex } from "./session-storage-adapter.js";
 // Modified by The Open Forge contributors.
 
 export * from "./embedding/index.js";

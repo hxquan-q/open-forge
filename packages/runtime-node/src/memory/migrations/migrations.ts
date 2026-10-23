@@ -8,7 +8,7 @@
  */
 
 /** 当前实现支持的 schema 版本（worker 引导源内嵌同值）。 */
-export const MEMORY_SCHEMA_VERSION = 1;
+export const MEMORY_SCHEMA_VERSION = 2;
 
 export interface MemorySchemaMigration {
 	readonly version: number;
@@ -21,5 +21,11 @@ export const MEMORY_SCHEMA_MIGRATIONS: readonly MemorySchemaMigration[] = [
 		version: 1,
 		summary:
 			"identity bindings、memory_revisions（双时态修订链）、memory_sources（来源引用）、memory_erasure（撤销纪元）、memory_suppressed（遗忘家族）与 scope/status 索引",
+	},
+	{
+		// v2（BUG-0147/R1）：memory_revisions 增完整身份列；旧行身份为空串
+		// ——不进入任何具名 scope 读写，不猜测项目、不自动提升全局，待显式迁移。
+		version: 2,
+		summary: "memory_revisions 完整作用域身份列（principal/project/workspaceView）与身份索引；旧行空身份隔离",
 	},
 ];

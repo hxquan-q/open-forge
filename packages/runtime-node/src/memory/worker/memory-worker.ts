@@ -19,9 +19,13 @@ import { MEMORY_STORE_ERROR_CODES } from "./protocol.js";
 import { memoryWorkerSource } from "./worker-source.js";
 
 /**
- * Memory worker 客户端（TASK-0371）：每个实例独占一个 worker_threads Worker，
- * RPC 按 id 配对；worker 侧错误码还原为 MemoryContractError（存储层专用码
- * 原样透传）。同进程共享走 acquireMemoryStoreLease 的引用计数。
+ * Memory worker 客户端（TASK-0371；BUG-0147/R3 修订）。
+ *
+ * 一个 worker（= 一个 SQLite 连接）由「通道」持有并被多个 store 视图共享；
+ * 每个 store 视图绑定自己的 allowedScopes 并随每个请求下发（authScopes），
+ * worker 按请求集合校验 scope——共享数据库资源与每次调用授权分离，后开
+ * 的项目不再继承首个会话的授权。直接 open 的 store 保持原行为（视图的
+ * 授权集合即 open 集合）。
  */
 export interface SqliteMemoryStoreOptions {
 	readonly databasePath: string;
@@ -56,23 +60,49 @@ function serializeScope(scope: MemoryScope): SerializedScope {
 	};
 }
 
+interface PendingEntry {
+	readonly owner: SqliteMemoryWorkerStore;
+	readonly resolve: (value: unknown) => void;
+	readonly reject: (error: Error) => void;
+}
+
+/** 共享 worker 通道：唯一 id 空间与 pending 表；worker 终止时全部失败。 */
+interface WorkerChannel {
+	readonly worker: Worker;
+	nextRequestId: number;
+	readonly pending: Map<number, PendingEntry>;
+	/** worker 已终止（root 关闭或进程退出）：后续请求立即明确失败，不悬挂。 */
+	terminated: boolean;
+}
+
 export class SqliteMemoryWorkerStore implements MemoryRevisionStore {
-	private readonly worker: Worker;
-	private nextRequestId = 1;
-	private readonly pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+	private readonly channel: WorkerChannel;
+	private readonly authScopes: readonly MemoryScope[];
 	private closed = false;
+	private readonly ownsWorker: boolean;
 	private opened!: { schemaVersion: number; sqliteVersion: string };
 
-	private constructor() {
-		this.worker = new Worker(memoryWorkerSource(), {
-			eval: true,
-			workerData: { readySignal: true },
-		});
-		this.worker.unref();
-		this.worker.on("message", (response: MemoryWorkerResponse) => {
-			const entry = this.pending.get(response.id);
+	private constructor(channel: WorkerChannel, authScopes: readonly MemoryScope[], ownsWorker: boolean) {
+		this.channel = channel;
+		this.authScopes = authScopes;
+		this.ownsWorker = ownsWorker;
+	}
+
+	static async open(options: SqliteMemoryStoreOptions): Promise<SqliteMemoryWorkerStore> {
+		const channel: WorkerChannel = {
+			worker: new Worker(memoryWorkerSource(), {
+				eval: true,
+				workerData: { readySignal: true },
+			}),
+			nextRequestId: 1,
+			pending: new Map(),
+			terminated: false,
+		};
+		channel.worker.unref();
+		channel.worker.on("message", (response: MemoryWorkerResponse) => {
+			const entry = channel.pending.get(response.id);
 			if (!entry) return;
-			this.pending.delete(response.id);
+			channel.pending.delete(response.id);
 			if (response.ok) {
 				entry.resolve(response.result);
 			} else {
@@ -84,13 +114,20 @@ export class SqliteMemoryWorkerStore implements MemoryRevisionStore {
 				entry.reject(new MemoryContractError(code as MemoryContractErrorCode, response.error.message));
 			}
 		});
-		this.worker.on("error", (error) => {
-			this.failAllPending(error);
+		channel.worker.on("error", (error) => {
+			failAllPending(channel, error);
 		});
-	}
-
-	static async open(options: SqliteMemoryStoreOptions): Promise<SqliteMemoryWorkerStore> {
-		const store = new SqliteMemoryWorkerStore();
+		channel.worker.on("exit", () => {
+			channel.terminated = true;
+			failAllPending(
+				channel,
+				new MemoryContractError(
+					MEMORY_STORE_ERROR_CODES.STORE_CLOSED as unknown as MemoryContractErrorCode,
+					"memory worker 已退出",
+				),
+			);
+		});
+		const store = new SqliteMemoryWorkerStore(channel, options.allowedScopes, true);
 		try {
 			store.opened = (await store.request({
 				type: "open",
@@ -105,9 +142,19 @@ export class SqliteMemoryWorkerStore implements MemoryRevisionStore {
 			return store;
 		} catch (error) {
 			// 初始化失败必须回收 worker，不让半开资源滞留。
-			void store.worker.terminate();
+			void channel.worker.terminate();
 			throw error;
 		}
+	}
+
+	/**
+	 * BUG-0147/R3：共享同一 worker 连接的授权视图。视图携带自己的
+	 * allowedScopes 随请求下发；关闭视图不影响底层 worker。
+	 */
+	forScope(allowedScopes: readonly MemoryScope[]): SqliteMemoryWorkerStore {
+		const view = new SqliteMemoryWorkerStore(this.channel, allowedScopes, false);
+		view.opened = this.opened;
+		return view;
 	}
 
 	get schemaVersion(): number {
@@ -147,24 +194,41 @@ export class SqliteMemoryWorkerStore implements MemoryRevisionStore {
 		await this.request({ type: "backup", destinationPath });
 	}
 
-	/** 幂等关闭：底层 worker 终止只发生一次。 */
+	/** 幂等关闭：视图只关自己（仅拒绝自己的在途请求）；worker 持有者关闭终止底层 worker 一次。 */
 	async close(): Promise<void> {
 		if (this.closed) return;
 		try {
-			await this.request({ type: "close" });
+			if (this.ownsWorker) {
+				await this.request({ type: "close" });
+			}
 		} finally {
 			this.closed = true;
-			void this.worker.terminate();
-			this.failAllPending(
+			const error = new MemoryContractError(
+				MEMORY_STORE_ERROR_CODES.STORE_CLOSED as unknown as MemoryContractErrorCode,
+				"store 已关闭",
+			);
+			for (const [id, entry] of [...this.channel.pending]) {
+				if (this.ownsWorker || entry.owner === this) {
+					this.channel.pending.delete(id);
+					entry.reject(error);
+				}
+			}
+			if (this.ownsWorker) {
+				this.channel.terminated = true;
+				void this.channel.worker.terminate();
+			}
+		}
+	}
+
+	private request(payload: MemoryWorkerRequest): Promise<unknown> {
+		if (this.channel.terminated) {
+			return Promise.reject(
 				new MemoryContractError(
 					MEMORY_STORE_ERROR_CODES.STORE_CLOSED as unknown as MemoryContractErrorCode,
 					"store 已关闭",
 				),
 			);
 		}
-	}
-
-	private request(payload: MemoryWorkerRequest): Promise<unknown> {
 		if (this.closed) {
 			return Promise.reject(
 				new MemoryContractError(
@@ -173,23 +237,25 @@ export class SqliteMemoryWorkerStore implements MemoryRevisionStore {
 				),
 			);
 		}
-		const id = this.nextRequestId++;
+		const id = this.channel.nextRequestId++;
+		const withAuth = { ...payload, id, authScopes: this.authScopes.map(serializeScope) };
 		return new Promise((resolve, reject) => {
-			this.pending.set(id, { resolve, reject });
-			this.worker.postMessage({ ...payload, id });
+			this.channel.pending.set(id, { owner: this, resolve, reject });
+			this.channel.worker.postMessage(withAuth);
 		});
-	}
-
-	private failAllPending(error: Error): void {
-		for (const [, entry] of this.pending) {
-			entry.reject(error);
-		}
-		this.pending.clear();
 	}
 }
 
+function failAllPending(channel: WorkerChannel, error: Error): void {
+	for (const [, entry] of channel.pending) {
+		entry.reject(error);
+	}
+	channel.pending.clear();
+}
+
 /**
- * 同进程引用计数池：同一数据库路径共享一个 store；lease 按显式 owner 计数，
+ * 同进程引用计数池：同一数据库路径共享一个 worker 连接；每个 lease 得到
+ * 绑定自身 allowedScopes 的视图（BUG-0147/R3：不继承、不合并他人授权），
  * 归零时关闭恰好一次。跨进程并发由 SQLite WAL + busy_timeout 承担。
  */
 export interface MemoryStoreLease {
@@ -199,7 +265,7 @@ export interface MemoryStoreLease {
 
 const sharedStores = new Map<
 	string,
-	{ store: SqliteMemoryWorkerStore; owners: Map<string, number>; closing: Promise<void> | null }
+	{ root: SqliteMemoryWorkerStore; owners: Map<string, number>; closing: Promise<void> | null }
 >();
 
 export async function acquireMemoryStoreLease(
@@ -211,7 +277,7 @@ export async function acquireMemoryStoreLease(
 		existing.owners.set(options.owner, (existing.owners.get(options.owner) ?? 0) + 1);
 		let released = false;
 		return {
-			store: existing.store,
+			store: existing.root.forScope(options.allowedScopes),
 			release: async () => {
 				if (released) return;
 				released = true;
@@ -219,16 +285,16 @@ export async function acquireMemoryStoreLease(
 			},
 		};
 	}
-	const store = await SqliteMemoryWorkerStore.open(options);
+	const root = await SqliteMemoryWorkerStore.open(options);
 	const entry = {
-		store,
+		root,
 		owners: new Map<string, number>([[options.owner, 1]]),
 		closing: null as Promise<void> | null,
 	};
 	sharedStores.set(key, entry);
 	let released = false;
 	return {
-		store,
+		store: root.forScope(options.allowedScopes),
 		release: async () => {
 			if (released) return;
 			released = true;
@@ -249,7 +315,7 @@ async function releaseOwner(key: string, owner: string): Promise<void> {
 	if (entry.owners.size > 0) return;
 	entry.closing = (async () => {
 		try {
-			await entry.store.close();
+			await entry.root.close();
 		} finally {
 			sharedStores.delete(key);
 		}

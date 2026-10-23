@@ -38,6 +38,10 @@ export interface VectorPutEntry {
 	readonly memoryId: string;
 	readonly revisionNo: number;
 	readonly scopeName: string;
+	/** BUG-0147/R1：向量行携带完整身份，检索在授权过滤后进行。 */
+	readonly principalId: string;
+	readonly projectId: string;
+	readonly workspaceViewId: string;
 	readonly vector: Float32Array;
 	/** 入队/生成时观察到的 erasure epoch；提交复检用。 */
 	readonly erasureEpochSeen: number;
@@ -52,6 +56,10 @@ export interface VectorSearchHit {
 
 export interface VectorSearchOptions {
 	readonly scopeName: string;
+	/** BUG-0147/R1：完整身份；授权过滤发生在候选与余弦之前。 */
+	readonly principalId: string;
+	readonly projectId: string;
+	readonly workspaceViewId: string;
 	/** 有效时间过滤（asOf），与词法检索同款语义；"unknown" 时间行不参与。 */
 	readonly asOf: string;
 	readonly limit: number;
@@ -77,6 +85,15 @@ export class VectorMemoryStore {
 		const db = new Database(options.databasePath);
 		db.pragma("journal_mode = WAL");
 		db.pragma("busy_timeout = 5000");
+		// BUG-0147：旧形状（无身份列）是纯派生表——丢弃重建，不动事实层。
+		const columns = db.prepare("PRAGMA table_info(memory_vectors)").all() as unknown as { name: string }[];
+		const hasIdentity =
+			columns.some((column) => column.name === "principal_id") &&
+			columns.some((column) => column.name === "project_id") &&
+			columns.some((column) => column.name === "workspace_view_id");
+		if (columns.length > 0 && !hasIdentity) {
+			db.exec("DROP TABLE memory_vectors");
+		}
 		db.exec(
 			`CREATE TABLE IF NOT EXISTS memory_vectors (
 				model_id TEXT NOT NULL,
@@ -86,6 +103,9 @@ export class VectorMemoryStore {
 				memory_id TEXT NOT NULL,
 				revision_no INTEGER NOT NULL,
 				scope_name TEXT NOT NULL,
+				principal_id TEXT NOT NULL,
+				project_id TEXT NOT NULL,
+				workspace_view_id TEXT NOT NULL,
 				vector BLOB NOT NULL,
 				erasure_epoch_seen INTEGER NOT NULL,
 				created_at_ms INTEGER NOT NULL,
@@ -93,7 +113,7 @@ export class VectorMemoryStore {
 			)`,
 		);
 		db.exec(
-			"CREATE INDEX IF NOT EXISTS memory_vectors_space_scope ON memory_vectors (model_id, model_revision, dimension, normalization, scope_name)",
+			"CREATE INDEX IF NOT EXISTS memory_vectors_space_scope ON memory_vectors (model_id, model_revision, dimension, normalization, scope_name, principal_id, project_id, workspace_view_id)",
 		);
 		return new VectorMemoryStore(db);
 	}
@@ -137,10 +157,10 @@ export class VectorMemoryStore {
 		this.db
 			.prepare(
 				`INSERT INTO memory_vectors
-				 (model_id, model_revision, dimension, normalization, memory_id, revision_no, scope_name, vector, erasure_epoch_seen, created_at_ms)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				 (model_id, model_revision, dimension, normalization, memory_id, revision_no, scope_name, principal_id, project_id, workspace_view_id, vector, erasure_epoch_seen, created_at_ms)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				 ON CONFLICT (model_id, model_revision, dimension, normalization, memory_id, revision_no)
-				 DO UPDATE SET scope_name = excluded.scope_name, vector = excluded.vector,
+				 DO UPDATE SET scope_name = excluded.scope_name, principal_id = excluded.principal_id, project_id = excluded.project_id, workspace_view_id = excluded.workspace_view_id, vector = excluded.vector,
 				               erasure_epoch_seen = excluded.erasure_epoch_seen, created_at_ms = excluded.created_at_ms`,
 			)
 			.run(
@@ -148,6 +168,9 @@ export class VectorMemoryStore {
 				entry.memoryId,
 				entry.revisionNo,
 				entry.scopeName,
+				entry.principalId,
+				entry.projectId,
+				entry.workspaceViewId,
 				Buffer.from(entry.vector.buffer, entry.vector.byteOffset, entry.vector.byteLength),
 				entry.erasureEpochSeen,
 				Date.now(),
@@ -176,10 +199,16 @@ export class VectorMemoryStore {
 				 FROM memory_vectors v
 				 JOIN memory_revisions r ON r.memory_id = v.memory_id AND r.revision_no = v.revision_no
 				 WHERE v.model_id = ? AND v.model_revision = ? AND v.dimension = ? AND v.normalization = ?
-				   AND v.scope_name = ?
+				   AND v.scope_name = ? AND v.principal_id = ? AND v.project_id = ? AND v.workspace_view_id = ?
 				   AND v.memory_id NOT IN (SELECT memory_id FROM memory_suppressed)`,
 			)
-			.all(...spaceColumns(space), options.scopeName) as unknown as {
+			.all(
+				...spaceColumns(space),
+				options.scopeName,
+				options.principalId,
+				options.projectId,
+				options.workspaceViewId,
+			) as unknown as {
 			memory_id: string;
 			revision_no: number;
 			vector: Uint8Array;

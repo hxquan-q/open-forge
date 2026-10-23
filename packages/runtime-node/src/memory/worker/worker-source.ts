@@ -12,7 +12,7 @@ export function memoryWorkerSource(): string {
 	return String.raw`
 "use strict";
 // TASK-0371 memory worker（由 runtime-node 生成；协议见 protocol.ts）
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const ERROR_CODES = {
 	INVALID_MEMORY_INPUT: "INVALID_MEMORY_INPUT",
 	SCOPE_NOT_ALLOWED: "SCOPE_NOT_ALLOWED",
@@ -45,6 +45,25 @@ function scopeKey(scope) {
 
 function isScopeAllowed(scope, allowedScopes) {
 	return allowedScopes.some((entry) => scopeKey(entry) === scopeKey(scope));
+}
+
+function identityOf(scope) {
+	return {
+		principalId: scope.principalId ?? "",
+		projectId: scope.projectId ?? "",
+		workspaceViewId: scope.workspaceViewId ?? "",
+	};
+}
+
+/** 数据行归属核验（BUG-0147/R1/R2）：完整身份一致才属于该 scope。 */
+function rowMatchesScope(row, scope) {
+	const identity = identityOf(scope);
+	return (
+		row.scope_name === scope.name &&
+		row.principal_id === identity.principalId &&
+		row.project_id === identity.projectId &&
+		row.workspace_view_id === identity.workspaceViewId
+	);
 }
 
 function requireNonEmptyString(value, field) {
@@ -88,6 +107,18 @@ const MIGRATIONS = [
 			"CREATE INDEX memory_revisions_scope_status ON memory_revisions(scope_name, status)",
 		],
 	},
+	{
+		// v2（BUG-0147/R1）：完整作用域身份落库。旧行身份列为空串——不猜测
+		// 项目、不自动提升全局：空身份行不进入任何具名 scope 的读写，后续
+		// 迁移以显式操作处理。
+		version: 2,
+		statements: [
+			"ALTER TABLE memory_revisions ADD COLUMN principal_id TEXT NOT NULL DEFAULT ''",
+			"ALTER TABLE memory_revisions ADD COLUMN project_id TEXT NOT NULL DEFAULT ''",
+			"ALTER TABLE memory_revisions ADD COLUMN workspace_view_id TEXT NOT NULL DEFAULT ''",
+			"CREATE INDEX memory_revisions_identity ON memory_revisions(scope_name, principal_id, project_id, workspace_view_id)",
+		],
+	},
 ];
 
 function runMigrations(database, ceiling) {
@@ -129,8 +160,11 @@ function assertOpen() {
 	}
 }
 
-function assertScope(scope) {
-	if (!isScopeAllowed(scope, allowedScopes)) {
+function assertScope(scope, requestAuthScopes) {
+	// BUG-0147/R3：请求可携带自身授权集合（共享 worker 的调用方各自绑定）；
+	// 未携带时回落 open 时集合（独立打开的 store 保持原行为）。
+	const auth = Array.isArray(requestAuthScopes) ? requestAuthScopes : allowedScopes;
+	if (!isScopeAllowed(scope, auth)) {
 		throw new WorkerError(ERROR_CODES.SCOPE_NOT_ALLOWED, "作用域未授权：" + scopeKey(scope));
 	}
 }
@@ -200,12 +234,16 @@ function handleOpen(request) {
 
 function handleWrite(request) {
 	assertOpen();
-	assertScope(request.scope);
+	assertScope(request.scope, request.authScopes);
 	const command = request.command;
 	if (typeof command !== "object" || command === null) {
 		throw new WorkerError(ERROR_CODES.INVALID_MEMORY_INPUT, "记忆命令必须是对象");
 	}
 	const now = nowIso();
+	const identity = identityOf(request.scope);
+	if (identity.principalId === "") {
+		throw new WorkerError(ERROR_CODES.INVALID_MEMORY_INPUT, "scope.principalId 必须是非空字符串");
+	}
 	if (command.action === "remember") {
 		requireNonEmptyString(command.content, "content");
 		requireNonEmptyString(command.kind, "kind");
@@ -213,13 +251,16 @@ function handleWrite(request) {
 		return db.transaction(() => {
 			const memoryId = "mem-" + randomId();
 			db.prepare(
-				"INSERT INTO memory_revisions (memory_id, revision_no, revision_id, kind, content, scope_name, visibility, status, valid_from, valid_to, recorded_at, supersedes, evidence, pinned, created_at_ms) VALUES (?, 1, ?, ?, ?, ?, ?, 'active', ?, '', ?, '', ?, ?, ?)",
+				"INSERT INTO memory_revisions (memory_id, revision_no, revision_id, kind, content, scope_name, principal_id, project_id, workspace_view_id, visibility, status, valid_from, valid_to, recorded_at, supersedes, evidence, pinned, created_at_ms) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, '', ?, '', ?, ?, ?)",
 			).run(
 				memoryId,
 				"rev-" + randomId(),
 				command.kind,
 				command.content,
 				request.scope.name,
+				identity.principalId,
+				identity.projectId,
+				identity.workspaceViewId,
 				request.scope.visibility ?? null,
 				validFrom,
 				now,
@@ -242,12 +283,20 @@ function handleWrite(request) {
 		const validFrom = parseValidFrom(command.validFrom);
 		return db.transaction(() => {
 			assertNotSuppressed(command.memoryId);
-			const current = db
-				.prepare("SELECT MAX(revision_no) AS n FROM memory_revisions WHERE memory_id = ?")
+			const currentRow = db
+				.prepare("SELECT * FROM memory_revisions WHERE memory_id = ? ORDER BY revision_no DESC LIMIT 1")
 				.get(command.memoryId);
-			const currentRevision = current && current.n != null ? current.n : 0;
+			const currentRevision = currentRow && currentRow.revision_no != null ? currentRow.revision_no : 0;
 			if (currentRevision === 0) {
 				throw new WorkerError(ERROR_CODES.INVALID_MEMORY_INPUT, "记忆 " + command.memoryId + " 不存在");
+			}
+			// BUG-0147/R2：先核验目标真实归属；更正保持原作用域（新修订继承
+			// 存储身份，不用请求 scope 改写归属；显式迁移是另一个操作）。
+			if (!rowMatchesScope(currentRow, request.scope)) {
+				throw new WorkerError(
+					ERROR_CODES.SCOPE_NOT_ALLOWED,
+					"记忆 " + command.memoryId + " 不属于该作用域，拒绝更正",
+				);
 			}
 			if (command.expectedRevision !== currentRevision) {
 				throw new WorkerError(
@@ -260,14 +309,17 @@ function handleWrite(request) {
 				"UPDATE memory_revisions SET status = 'superseded', valid_to = ? WHERE memory_id = ? AND revision_no = ?",
 			).run(validFrom, command.memoryId, currentRevision);
 			db.prepare(
-				"INSERT INTO memory_revisions (memory_id, revision_no, revision_id, kind, content, scope_name, visibility, status, valid_from, valid_to, recorded_at, supersedes, evidence, pinned, created_at_ms) VALUES (?, ?, ?, 'fact', ?, ?, ?, 'active', ?, '', ?, ?, 'claimed', 0, ?)",
+				"INSERT INTO memory_revisions (memory_id, revision_no, revision_id, kind, content, scope_name, principal_id, project_id, workspace_view_id, visibility, status, valid_from, valid_to, recorded_at, supersedes, evidence, pinned, created_at_ms) VALUES (?, ?, ?, 'fact', ?, ?, ?, ?, ?, ?, 'active', ?, '', ?, ?, 'claimed', 0, ?)",
 			).run(
 				command.memoryId,
 				next,
 				"rev-" + randomId(),
 				command.content,
-				request.scope.name,
-				request.scope.visibility ?? null,
+				currentRow.scope_name,
+				currentRow.principal_id,
+				currentRow.project_id,
+				currentRow.workspace_view_id,
+				currentRow.visibility ?? null,
 				validFrom,
 				now,
 				"rev-of-" + currentRevision,
@@ -280,6 +332,17 @@ function handleWrite(request) {
 	if (command.action === "forget") {
 		requireNonEmptyString(command.memoryId, "memoryId");
 		return db.transaction(() => {
+			const latest = db
+				.prepare("SELECT * FROM memory_revisions WHERE memory_id = ? ORDER BY revision_no DESC LIMIT 1")
+				.get(command.memoryId);
+			// BUG-0147/R2：仍有修订时核验归属；无修订（从未存在或已遗忘）保持
+			// 幂等语义，不因缺行误报授权失败。
+			if (latest && !rowMatchesScope(latest, request.scope)) {
+				throw new WorkerError(
+					ERROR_CODES.SCOPE_NOT_ALLOWED,
+					"记忆 " + command.memoryId + " 不属于该作用域，拒绝遗忘",
+				);
+			}
 			const erasure = readErasure();
 			db.prepare("UPDATE memory_erasure SET erasure_epoch = ? WHERE id = 1").run(erasure.erasureEpoch + 1);
 			db.prepare(
@@ -295,7 +358,7 @@ function handleWrite(request) {
 
 function handleRead(request) {
 	assertOpen();
-	assertScope(request.scope);
+	assertScope(request.scope, request.authScopes);
 	if (typeof request.selector !== "object" || request.selector === null || typeof request.selector.asOf !== "string") {
 		throw new WorkerError(ERROR_CODES.INVALID_MEMORY_INPUT, "temporal selector.asOf 必须是时间字符串");
 	}
@@ -305,7 +368,14 @@ function handleRead(request) {
 	if (request.selector.knownAt !== undefined && (!isValidTime(request.selector.knownAt) || request.selector.knownAt === "unknown")) {
 		throw new WorkerError(ERROR_CODES.INVALID_MEMORY_INPUT, "knownAt 不是合法时间");
 	}
-	const rows = db.prepare("SELECT * FROM memory_revisions WHERE scope_name = ?").all(request.scope.name);
+	// BUG-0147/R1：完整身份在 SQL 内约束；旧行（身份列空串）不进入任何
+	// 具名 scope 的结果——不猜测项目、不自动提升全局。
+	const identity = identityOf(request.scope);
+	const rows = db
+		.prepare(
+			"SELECT * FROM memory_revisions WHERE scope_name = ? AND principal_id = ? AND project_id = ? AND workspace_view_id = ?",
+		)
+		.all(request.scope.name, identity.principalId, identity.projectId, identity.workspaceViewId);
 	const knownAt = request.selector.knownAt;
 	return rows
 		.filter((row) =>
@@ -335,26 +405,32 @@ function toRevisionDto(row) {
 
 function handleListRevisions(request) {
 	assertOpen();
-	assertScope(request.scope);
+	assertScope(request.scope, request.authScopes);
 	requireNonEmptyString(request.memoryId, "memoryId");
 	const suppressed = db.prepare("SELECT 1 AS hit FROM memory_suppressed WHERE memory_id = ?").get(request.memoryId);
 	if (suppressed) return [];
-	return db
+	const rows = db
 		.prepare("SELECT * FROM memory_revisions WHERE memory_id = ? ORDER BY revision_no")
-		.all(request.memoryId)
-		.map(toRevisionDto);
+		.all(request.memoryId);
+	// BUG-0147/R2：目标不归属该 scope 时按「不存在」返回（不泄露他人记忆存在性）。
+	if (rows.length > 0 && !rowMatchesScope(rows[0], request.scope)) return [];
+	return rows.map(toRevisionDto);
 }
 
 function handleListSources(request) {
 	assertOpen();
-	assertScope(request.scope);
+	assertScope(request.scope, request.authScopes);
 	requireNonEmptyString(request.memoryId, "memoryId");
+	const latest = db
+		.prepare("SELECT * FROM memory_revisions WHERE memory_id = ? ORDER BY revision_no DESC LIMIT 1")
+		.get(request.memoryId);
+	if (latest && !rowMatchesScope(latest, request.scope)) return [];
 	return db
 		.prepare(
 			"SELECT source_id AS sourceId, role, content_hash AS contentHash, retains_excerpt AS retainsExcerpt FROM memory_sources WHERE memory_id = ?",
 		)
 		.all(request.memoryId)
-		.map((row) => ({ ...row, retainsExcerpt: row.retainsExcerpt === 1 }));
+		.map((row) => ({ ...row, retainsExcerpt: row.retains_excerpt === 1 }));
 }
 
 function handleClose() {

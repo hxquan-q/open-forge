@@ -2,7 +2,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FIXTURE_PROJECT_SCOPE } from "@vetta/runtime-memory/fixtures";
+import { FIXTURE_PROJECT_SCOPE, FIXTURE_USER_SCOPE } from "@vetta/runtime-memory/fixtures";
 import { acquireMemoryStoreLease, MEMORY_STORE_ERROR_CODES } from "@vetta/runtime-node/memory";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -32,10 +32,10 @@ afterEach(async () => {
 });
 
 describe("memory worker 引用计数与资源生命周期", () => {
-	it("同路径两个 owner 共享同一 store；全释放后关闭恰好一次", async () => {
+	it("同路径两个 owner 共享 worker 连接，但授权视图分离（BUG-0147/R3）", async () => {
 		const leaseA = await acquireMemoryStoreLease({
 			databasePath,
-			allowedScopes: [FIXTURE_PROJECT_SCOPE],
+			allowedScopes: [FIXTURE_USER_SCOPE],
 			owner: "owner-a",
 		});
 		const leaseB = await acquireMemoryStoreLease({
@@ -43,19 +43,22 @@ describe("memory worker 引用计数与资源生命周期", () => {
 			allowedScopes: [FIXTURE_PROJECT_SCOPE],
 			owner: "owner-b",
 		});
-		expect(leaseB.store).toBe(leaseA.store);
+		// 后开的 B 不再继承 A 的授权：访问 A 的 user scope 被拒绝。
+		await expect(leaseB.store.read(FIXTURE_USER_SCOPE, { asOf: "2030-01-01T00:00:00Z" })).rejects.toMatchObject({
+			code: "SCOPE_NOT_ALLOWED",
+		});
 
-		await leaseA.store.write(FIXTURE_PROJECT_SCOPE, {
+		await leaseA.store.write(FIXTURE_USER_SCOPE, {
 			action: "remember",
-			content: "共享写入",
-			kind: "fact",
-			scopeName: "project",
+			content: "A 的全局偏好",
+			kind: "preference",
+			scopeName: "user",
 		});
 
 		await leaseA.release();
-		// B 仍持有：store 仍可用。
+		// B 仍持有：连接仍可用，且读不到 A 的 user 记忆。
 		const effective = await leaseB.store.read(FIXTURE_PROJECT_SCOPE, { asOf: "2030-01-01T00:00:00Z" });
-		expect(effective.map((revision) => revision.content)).toEqual(["共享写入"]);
+		expect(effective).toEqual([]);
 
 		await leaseB.release();
 		// 全释放后：操作明确失败而不是悬挂。
@@ -75,7 +78,6 @@ describe("memory worker 引用计数与资源生命周期", () => {
 			allowedScopes: [FIXTURE_PROJECT_SCOPE],
 			owner: "owner-x",
 		});
-		expect(lease2.store).toBe(lease1.store);
 		await lease1.release();
 		await lease1.release(); // 幂等
 		await lease2.release();
