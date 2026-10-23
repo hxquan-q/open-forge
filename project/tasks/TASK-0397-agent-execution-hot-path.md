@@ -64,14 +64,20 @@ RESEARCH-0043 另发现 Pi 的双栈 FIFO 可供 EventStream 对照，但本仓 
 
 | 场景 | 轮次 / 工具 / schema 深度 | 基线净增量 | 改动后 |
 |---|---|---|---|
-| short | 8 / 4 / 2 | 0.48 MB | 0.45 MB |
-| loop | 40 / 24 / 4 | 1.74 MB | 0.58 MB |
-| long | 101 / 64 / 5 | 10.91 MB | 1.42 MB |
-| 合计 | — | **13.13 MB** | **2.46 MB** |
+| short | 8 / 4 / 2 | 0.48 MB | 0.47 MB |
+| loop | 40 / 24 / 4 | 1.74 MB | 0.74 MB |
+| long | 101 / 64 / 5 | 10.91–11.22 MB | 1.86–1.87 MB |
+| 合计 | — | **13.1–13.4 MB** | **3.1 MB** |
 
-基线两次分别 13.126 / 13.125 MB，改动后 2.461 / 2.401 MB，交错复跑一致；`spreadPct` 0.6–1.1%。剩余 2.46 MB 是当次调用的 frame 与夹具自身持有，不是历史累积。
+基线两次分别 13.126 / 13.125 MB，改动后 2.40–3.08 MB（跨会话波动），`spreadPct` 0.6–2.4%。剩余部分是当次调用的 frame 与夹具自身持有，不是历史累积。
 
-语义验证：`packages/runtime-core` 全量 93 文件 585 例、`packages/agent` 22 文件 149 例全绿；新增 `frame-release.test.ts` 三例覆盖长工具循环结果顺序、每次调用重新解析独立 frame（composer 调用次数与每轮不同 prompt）、无工具回合仍正常完成；把补丁临时移除后该文件仍全绿说明它锁的是既有语义，实际回归保护来自 core+agent 全量套件。完整 `bun run check` 待跑。
+**可失败的回归守卫**：`node --expose-gc packages/runtime-core/scripts/frame-retention.bench.mjs --assert-release` 断言 long 场景净占用 ≤5MB。实测——移除 `frames.delete` 后立即报 `11.22MB > 5MB` 失败，恢复后 1.87MB 通过。这是唯一能对“已消费帧被释放”失败的检查；`frame-release.test.ts` 三例锁的是既有语义（移除补丁后仍绿），已在文档中如实标注，不再声称它们保护了本次改动。
+
+语义验证：`packages/runtime-core` 全量 93 文件 585 例、`packages/agent` 22 文件 149 例全绿；完整 `bun run check` 全绿。
+
+**独立技术审查**（actor `e798cce0-25e0-496`）结论：无 P1/P2 阻断。逐项确认每个 `modelCallIndex` 恰好经历一次 `resolveTools`→`resolveModelCall`；`continue`、静默重跑、checkpoint retry 都回到循环开头获取新 index；`currentFrame` 在 `streamFn` 前赋值，composition lifecycle 只读闭包变量不读 Map。审查同时指出：`frame-release.test.ts` 三例移除补丁后仍全绿，属既有语义锁定——已按此意见新增 `--assert-release` 内存守卫作为真正的回归保护，并撤回原先“由该测试文件保护”的说法。
+
+审查另指出基准可外推性有限：仅成立于合成 64 工具×depth5 schema，`heapUsed` 含 tsx/ESM 缓存与同进程重复累积态，故本文数字降为两位小数并以区间表述。
 
 ## 验收分层与交付记录
 
