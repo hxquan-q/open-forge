@@ -7,7 +7,7 @@ requirement: REQ-0027
 owner: packages/coding-agent
 source: user-request；RESEARCH-0038；本仓当前源码与 Pi 生态续研
 created: 2026-10-22
-updated: 2026-10-22
+updated: 2026-10-23
 related_requirement: [REQ-0027, REQ-0026]
 related_tasks: [TASK-0367, TASK-0368, TASK-0369, TASK-0370, TASK-0371, TASK-0372, TASK-0373, TASK-0374, TASK-0375, TASK-0376, TASK-0377, TASK-0378, TASK-0379, TASK-0380, TASK-0381, TASK-0382, TASK-0383, TASK-0384, TASK-0385, TASK-0386, TASK-0387, TASK-0388, TASK-0389]
 related_issues: []
@@ -17,6 +17,8 @@ depends_on: []
 <!-- Copyright The Open Forge contributors. -->
 
 # Agent 持久记忆实施方案
+
+2026-10-23实现后复核：[VERIFY-0022](../verification/VERIFY-0022-memory-postimplementation-review.md)。虽已有TASK-0367～0382/0388实现提交，跨项目读写已用临时库复现，普通策略入口及自动/混合接线仍有缺口；不能仅据既有测试和Task状态宣称M2闭环就绪。先修复这些问题，再推进后续能力；历史方案与派工记录保留。
 
 ## 背景与目标
 
@@ -280,6 +282,8 @@ flowchart TD
 **首个可用版本交付S0–S3，完整自动混合版交付到S5；不能把仅有DB/内部工具称为用户闭环。** 双时态字段和来源从S1保留，基本更正/当前值从S2必有，S6只补复杂推理和经验演化。原始历史默认不自动回填；批量/知识处理不作为个人记忆学习源。
 
 并发结论为**条件支持**：本轮只有主会话串行编写任务，无后台研究或并行代码写入。可并行任务及共享路径以任务合同和上述DAG为准；实施并行按每Task独立Worktree，不在同检出目录平行改代码。
+
+> 2026-10-23：VERIFY-0022 复核六项 P1 已由 TASK-0390 修复闭环（BUG-0147–0150）；详见 [VERIFY-0022 修复闭环段](../verification/VERIFY-0022-memory-postimplementation-review.md)与 TASK-0390 交付记录。真实模型/UI 实机验收仍保留未验证。
 
 ## 窗口派工（Coordinator 维护，仅调度）
 

@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FIXTURE_PROJECT_SCOPE, FIXTURE_USER_SCOPE } from "../../../packages/runtime-memory/src/fixtures.ts";
@@ -117,6 +117,24 @@ export async function runDeterministicMemoryEval(options?: {
 			}
 
 			const selector = { asOf: "2030-01-01T00:00:00Z" };
+			// BUG-0150：命中判定核对目标 memoryId 与当前内容（纠正场景核对更正后
+			// 值）——返回错误记忆不得计分。当前内容镜像纠正结果，供各路与替身使用。
+			const CORRECTED_CONTENT = "部署目标是 windows-x64（更正后）";
+			const currentContent = scenario.seed.map((entry, position) =>
+				scenario.kind === "correction" && position === 0 ? CORRECTED_CONTENT : entry.content,
+			);
+			const isHit = (
+				entries: readonly { readonly memoryId?: string; readonly content: string }[],
+				queryIndex: number,
+			): boolean => {
+				const query = scenario.queries[queryIndex];
+				if (query === undefined) return false;
+				const expectedId = memoryIds[query.expectedMemoryIndex];
+				const match = entries.find((entry) => entry.memoryId === expectedId);
+				if (match === undefined) return false;
+				const expectedContent = currentContent[query.expectedMemoryIndex];
+				return expectedContent === undefined || match.content === expectedContent;
+			};
 			const measure = async (
 				arm: RetrieArmResult["arm"],
 				run: () => number,
@@ -141,7 +159,7 @@ export async function runDeterministicMemoryEval(options?: {
 
 			const summaryEntries = await store.read(FIXTURE_PROJECT_SCOPE, selector);
 			const semanticStub = async (query: string) => {
-				// 确定性替身：按字符重合度排序（非语义）。
+				// 确定性替身：按字符重合度排序（非语义）；内容镜像当前值（含更正）。
 				return scenario.seed
 					.map((entry, i) => ({
 						score: [...new Set(query)].filter((ch) => entry.content.includes(ch)).length,
@@ -151,7 +169,7 @@ export async function runDeterministicMemoryEval(options?: {
 					.map((entry) => ({
 						memoryId: memoryIds[entry.i] ?? `mem-${entry.i}`,
 						revisionId: `rev-${entry.i}`,
-						content: scenario.seed[entry.i]?.content ?? "",
+						content: currentContent[entry.i] ?? "",
 					}));
 			};
 			const hybridRetriever = new HybridMemoryRetriever({
@@ -168,30 +186,22 @@ export async function runDeterministicMemoryEval(options?: {
 			);
 			arms.push(
 				await measure("summary", () => {
-					return scenario.queries.filter(
-						(query) => summaryEntries.some((entry) => entry.content.includes(query.query.slice(0, 2))),
-					).length;
+					let hit = 0;
+					for (const [queryIndex] of scenario.queries.entries()) {
+						if (isHit(summaryEntries, queryIndex)) hit += 1;
+					}
+					return hit;
 				}),
 			);
 			arms.push(
 				await measure("lexical", () => {
 					let hit = 0;
-					for (const query of scenario.queries) {
+					for (const [queryIndex, query] of scenario.queries.entries()) {
 						const result = index.search(FIXTURE_PROJECT_SCOPE, query.query, selector, 5);
-						if (result.entries.length > 0) hit += 1;
+						if (isHit(result.entries, queryIndex)) hit += 1;
 					}
 					return hit;
 				}),
-			);
-			arms.push(
-				await measure("semantic-deterministic", async () => {
-					let hit = 0;
-					for (const query of scenario.queries) {
-						const entries = await semanticStub(query.query);
-						if (entries.length > 0) hit += 1;
-					}
-					return hit;
-				}).then(async (lexicalResult) => lexicalResult),
 			);
 			const semanticResult = await (async () => {
 				let hit = 0;
@@ -199,9 +209,9 @@ export async function runDeterministicMemoryEval(options?: {
 				for (let round = 0; round < warmupRounds + measuredRounds; round += 1) {
 					const start = performance.now();
 					hit = 0;
-					for (const query of scenario.queries) {
+					for (const [queryIndex, query] of scenario.queries.entries()) {
 						const entries = await semanticStub(query.query);
-						if (entries.length > 0) hit += 1;
+						if (isHit(entries, queryIndex)) hit += 1;
 					}
 					timings.push(performance.now() - start);
 				}
@@ -214,7 +224,7 @@ export async function runDeterministicMemoryEval(options?: {
 					p95Ms: round(timings[Math.floor(timings.length * 0.95)] ?? 0),
 				};
 			})();
-			arms[3] = semanticResult;
+			arms.push(semanticResult);
 			arms.push(
 				await (async () => {
 					let hit = 0;
@@ -222,9 +232,9 @@ export async function runDeterministicMemoryEval(options?: {
 					for (let round = 0; round < warmupRounds + measuredRounds; round += 1) {
 						const start = performance.now();
 						hit = 0;
-						for (const query of scenario.queries) {
+						for (const [queryIndex, query] of scenario.queries.entries()) {
 							const result = await hybridRetriever.search(FIXTURE_PROJECT_SCOPE, query.query, selector);
-							if (result.entries.length > 0) hit += 1;
+							if (isHit(result.entries, queryIndex)) hit += 1;
 						}
 						timings.push(performance.now() - start);
 					}
@@ -298,7 +308,6 @@ export async function main(argv: string[]): Promise<number> {
 	} else {
 		console.log(report);
 	}
-	void readFileSync;
 	return 0;
 }
 

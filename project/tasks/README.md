@@ -38,6 +38,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0387` | `draft` | PLAN-0021 | [项目记忆的可选迁移包与副本隔离](TASK-0387-memory-project-archive.md)；待前置产物，未开工；serial。 |
 | `TASK-0388` | `done` | PLAN-0021 | [记忆连续流程、质量对照与发布门槛](TASK-0388-memory-evaluation-harness.md)；确定性评测基座（3 场景×5 臂×延迟×成本）+连续用户流程 3 例落地，VERIFY-0021；真实质量保留未验证。 |
 | `TASK-0389` | `draft` | PLAN-0021 | [可选多跳关系或概要检索消融实验](TASK-0389-memory-graph-ablation.md)；待前置产物，未开工；serial。 |
+| `TASK-0390` | `verifying` | PLAN-0021 | [记忆交付后复核修复与正常入口闭环](TASK-0390-memory-postreview-fix-loop.md)；VERIFY-0022 六项 P1 全关闭（BUG-0147–0150），三包 124 例+完整 check 绿；真实 UI/模型未验证，工程交付待人工接受。 |
 | `TASK-0366` | `verifying` | PLAN-0006 | BUG-0146：注入垫片改外层 IIFE 形参，依赖函数在压缩产物可用，点选提交链与停止点选实机验证通过，卡死消失。定向全绿。串行。 |
 | `TASK-0365` | `verifying` | PLAN-0006 | BUG-0145：点选改在 pointerdown 打开元素旁批注。定向 12 例通过。主进程脚本，需重启 dev 后实机看。串行。未提交。 |
 | `TASK-0362` | `verifying` | — | BUG-0144：内置浏览器占位洞跟着布局与窗口缩放走到终值。用户已确认侧栏与缩窗可用。定向 34 例通过。主工作区串行。 |
