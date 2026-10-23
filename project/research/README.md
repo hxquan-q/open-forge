@@ -47,6 +47,7 @@
 | Northline 长程 Agent 委派与 OpenVetta Task/Worktree 治理对照 | [`RESEARCH-0016`](RESEARCH-0016-northline-openvetta-reference.md) |
 | 开发范式：OpenVetta、工程控制论与 Matt Pocock 方法对照 | [`RESEARCH-0017`](RESEARCH-0017-development-paradigm-synthesis.md) |
 | pi 上游安全通告审计与回移分诊（GHSA × 4 + 积压清单，雷达文档 docs/upstream/pi.md） | [`RESEARCH-0032`](RESEARCH-0032-pi-security-advisory-backport-audit.md) |
+| 流式 Markdown 渲染性能优化（autoresearch 60 轮：-88% 总耗时 / p95 -92~98%） | [`RESEARCH-0042`](RESEARCH-0042-streaming-markdown-render-perf.md) |
 
 ## Research Note 约束
 
