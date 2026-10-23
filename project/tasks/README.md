@@ -41,6 +41,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0390` | `verifying` | PLAN-0021 | [记忆交付后复核修复与正常入口闭环](TASK-0390-memory-postreview-fix-loop.md)；VERIFY-0022 六项 P1 全关闭（BUG-0147–0150），三包 124 例+完整 check 绿；真实 UI/模型未验证，工程交付待人工接受。 |
 | `TASK-0366` | `verifying` | PLAN-0006 | BUG-0146：注入垫片改外层 IIFE 形参，依赖函数在压缩产物可用，点选提交链与停止点选实机验证通过，卡死消失。定向全绿。串行。 |
 | `TASK-0365` | `verifying` | PLAN-0006 | BUG-0145：点选改在 pointerdown 打开元素旁批注。定向 12 例通过。主进程脚本，需重启 dev 后实机看。串行。未提交。 |
+| `TASK-0391` | `verifying` | — | 新增 macOS 测试包专用 workflow：手动 dispatch，只出未签名 DMG，不跑 quality / Win / Linux leg 与 packaged E2E；YAML 结构已校验，首次 dispatch 即真实验证；需先入 dev 并随 `dev → main` 晋升才出现运行按钮；serial。 |
 | `TASK-0362` | `verifying` | — | BUG-0144：内置浏览器占位洞跟着布局与窗口缩放走到终值。用户已确认侧栏与缩窗可用。定向 34 例通过。主工作区串行。 |
 | `TASK-0361` | `verifying` | — | REQ-0026 / ADR-0147：项目迁移包已实施——OFAR v2 workspace 帧、preview/apply 两段式导入（cwd 重写+指纹按落盘形态）、产物打包恢复（默认不覆盖）、迁移向导 UI 与 i18n；定向 73 例、impact 119 例、完整 check 全绿；六提交本地 main 未推送；顺带修复 TASK-0349 菜单接线缺口；待真实双目录迁移人工验收；serial。 |
 | `TASK-0360` | `verifying` | PLAN-0006 | 用户要求 UI 测试。正在用隔离 Fresh 实例核对页内批注。不附着日常 Desktop。 |
