@@ -173,6 +173,12 @@ export class StatelessAgentCoreTurnEngine implements TurnEnginePort {
 			resolveModelCall: async ({ modelCallIndex, messages: callMessages, tools, signal }) => {
 				const frame = frames.get(modelCallIndex);
 				if (!frame) throw turnProtocolError(`Missing model-call frame at index ${modelCallIndex}`);
+				// Each resolved frame is a one-shot handoff from resolveTools to this call:
+				// it owns a deep copy of every tool schema, and no later model call reads it
+				// again. Dropping the map entry here stops a long tool loop from pinning one
+				// frame per call until the turn ends; the local binding below (and
+				// `currentFrame`) still own everything this call needs.
+				frames.delete(modelCallIndex);
 				currentFrame = frame;
 				const runtimeMessages = toRuntimeMessages(callMessages, identities);
 				const finalizedMessages = request.snapshot.modelCallMessageFinalizer

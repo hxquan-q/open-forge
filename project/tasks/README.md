@@ -15,6 +15,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0394` | `done` | PLAN-0024 | [Agent 执行一手参照](TASK-0394-agent-execution-reference-research.md)；RESEARCH-0043 固定版本证据已回读；coordination-only。 |
+| `TASK-0395` | `verifying` | PLAN-0024 | [Team 状态投影性能](TASK-0395-team-state-projection-performance.md)；同快照投影缓存，交错 A/B 约 9×，独立审查与变异验证通过；分支已推送，未集成。 |
+| `TASK-0396` | `verifying` | PLAN-0024 | [通知续跑](TASK-0396-team-notification-drain.md)；BUG-0151 已修，277 例与完整 check 通过；分支已推送，未集成。 |
+| `TASK-0397` | `verifying` | PLAN-0024 | [内核执行热点](TASK-0397-agent-execution-hot-path.md)；已消费 ModelCallFrame 及时释放，活跃 Turn 净堆 13.13→2.46MB；分支待推送。 |
 | `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |
 | `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |
 | `TASK-0369` | `done` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；@vetta/runtime-memory 合同包 + memoryPolicy 会话边界校验 + ADR-0149/0150 落地，完整 check 全绿。 |
