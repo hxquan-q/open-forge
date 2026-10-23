@@ -92,7 +92,12 @@ export function teamProjectionFixture(taskCount: number, memberCount: number, sa
 }
 
 export function projectionStore(read: () => ConversationDocument): TeamCollaborationStore {
-	return new TeamCollaborationStore({ readSessionDocument: read, appendSessionMetadataEntry: async () => { throw new Error("Read-only fixture"); } });
+	return new TeamCollaborationStore({
+		readSessionDocument: read,
+		appendSessionMetadataEntry: async () => {
+			throw new Error("Read-only fixture");
+		},
+	});
 }
 
 function session(document: ConversationDocument): TeamSessionDocument {

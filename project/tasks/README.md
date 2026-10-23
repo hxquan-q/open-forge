@@ -16,7 +16,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
 | `TASK-0394` | `done` | PLAN-0024 | [Agent 执行一手参照](TASK-0394-agent-execution-reference-research.md)；RESEARCH-0043 固定版本证据已回读；coordination-only。 |
-| `TASK-0395` | `blocked` | PLAN-0024 | [Team 状态投影性能](TASK-0395-team-state-projection-performance.md)；基准/合同 22 例与完整check通过，仅准备基座；共享实验指针占用，未测量/未写生产缓存。 |
+| `TASK-0395` | `verifying` | PLAN-0024 | [Team 状态投影性能](TASK-0395-team-state-projection-performance.md)；同快照投影缓存，交错 A/B 约 9×（留出 12×），42+175 例与完整 check 全绿；独立审查未跑，独立分支未集成。 |
 | `TASK-0396` | `verifying` | PLAN-0024 | [通知续跑](TASK-0396-team-notification-drain.md)；另一隔离分支 22c28f639，277例与完整check通过，未集成；本树不含该修复。 |
 | `TASK-0397` | `draft` | PLAN-0024 | [内核执行热点](TASK-0397-agent-execution-hot-path.md)；研究/测量后收紧合同，不盲目扩并发；尚未编码。 |
 | `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |

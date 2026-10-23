@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import type { TeamWorkItem } from "@vetta/agent-team";
+import type { TeamMemberTurnAttempt, TeamWorkItem } from "@vetta/agent-team";
 import type { ConversationDocument, ConversationDocumentEntry } from "@vetta/runtime-core/conversation";
 import { describe, expect, it } from "vitest";
 import {
@@ -79,6 +79,73 @@ describe("Team collaboration document projection contract", () => {
 		expect(store.readFromDocument(first.document)).toEqual(first.expected);
 		expect(store.readFromDocument(sameIdentity)).toEqual(second.expected);
 		expect(store.readFromDocument(first.document)).toEqual(first.expected);
+	});
+
+	it("does not serve a cached projection for a replaced or mutated document", () => {
+		const { document, expected } = teamProjectionFixture(9, 3, 17);
+		const store = projectionStore(() => document);
+		expect(store.readFromDocument(document)).toEqual(expected);
+
+		// Same object, appended in place: revision/length must invalidate.
+		const appended = { ...expected.workItems[0]!, objective: "Same-object append", revision: 5 };
+		const mutable = document as unknown as { entries: unknown[]; revision: number };
+		mutable.entries.push({
+			type: "custom",
+			id: "in-place",
+			parentId: null,
+			timestamp: new Date(1).toISOString(),
+			customType: "agent-team.work-item.v1",
+			data: appended,
+		});
+		mutable.revision += 1;
+		expect(store.readFromDocument(document).workItems[0]).toEqual(appended);
+
+		// A replaced document object with the same revision/length must not reuse the old cache entry.
+		const replaced: ConversationDocument = {
+			...document,
+			entries: document.entries.map((entry, index) =>
+				index === 1 ? { ...entry, timestamp: "2026-01-01T00:00:00.000Z" } : entry,
+			),
+		};
+		const replacedState = store.readFromDocument(replaced);
+		expect(replacedState).not.toBe(store.readFromDocument(document));
+		expect(replacedState.publications).toEqual(expected.publications);
+	});
+
+	it("invalidates an in-place middle edit when the document revision advances", () => {
+		const { document, expected } = teamProjectionFixture(9, 3, 29);
+		const store = projectionStore(() => document);
+		expect(store.readFromDocument(document)).toEqual(expected);
+		const draft = document as unknown as { entries: ConversationDocumentEntry[]; revision: number };
+		// 同一任务先写 queued、再写 completed；投影以最后一次**有效**写入为准。
+		// 夹具尾部还有一条无效记录（已被投影忽略），所以只挑带 objective 的有效条目。
+		let index = -1;
+		for (const [candidate, entry] of draft.entries.entries()) {
+			if (entry.type !== "custom" || entry.customType !== "agent-team.work-item.v1") continue;
+			const data = entry.data as { objective?: unknown } | null;
+			if (typeof data?.objective === "string") index = candidate;
+		}
+		const original = draft.entries[index];
+		if (!original || original.type !== "custom") throw new Error("fixture is missing its latest valid work item");
+		const target = original.data as TeamWorkItem;
+		draft.entries[index] = {
+			...original,
+			data: { ...target, objective: "Edited in place" },
+		};
+		draft.revision += 1;
+		const updated = store.readFromDocument(document).workItems.find((item) => item.id === target.id);
+		expect(updated?.objective).toBe("Edited in place");
+	});
+
+	it("returns a fresh mutable result so callers cannot corrupt the cached projection", () => {
+		const { document, expected } = teamProjectionFixture(7, 2, 23);
+		const store = projectionStore(() => document);
+		const first = store.readFromDocument(document);
+		(first.workItems as TeamWorkItem[]).length = 0;
+		(first.attempts as TeamMemberTurnAttempt[]).sort(() => 1);
+		const second = store.readFromDocument(document);
+		expect(second).toEqual(expected);
+		expect(second.workItems).not.toBe(first.workItems);
 	});
 
 	it("does not let invalid later records hide valid state for any record family", () => {

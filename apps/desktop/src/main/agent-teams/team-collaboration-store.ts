@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	canAutomaticallyRecoverTeamTask,
 	type classifyTeamAttemptTerminal,
@@ -57,6 +58,24 @@ export interface TeamWorkItemInput {
 export class TeamCollaborationStore {
 	private readonly mutations = new TeamOperationQueue();
 	private readonly listeners = new Map<string, Set<() => void>>();
+	/**
+	 * 同一文档快照的投影缓存。仅缓存七类 id 折叠这个 O(entries) 扫描及其结构校验；
+	 * 每次调用仍返回新的数组，因此调用方拿到的可变语义与缓前一致。
+	 *
+	 * 失效不依赖“文档永不原地变更”：除了对象身份，还校验 revision、条目数、
+	 * 首尾条目 id，覆盖 `applyStoredEventToConversationDocument` 的整对象替换、
+	 * 恢复时的 replaceDocument，以及测试/宿主原地 push 的写法。
+	 */
+	private readonly projections = new WeakMap<
+		ConversationDocument,
+		{
+			readonly revision: number;
+			readonly length: number;
+			readonly firstId: string | undefined;
+			readonly lastId: string | undefined;
+			readonly state: TeamCollaborationState;
+		}
+	>();
 
 	constructor(
 		private readonly conversation: TeamCollaborationConversationPort,
@@ -96,50 +115,24 @@ export class TeamCollaborationStore {
 
 	/** Pure projection used by the UI bootstrap path before a Runtime is restored. */
 	readFromDocument(document: ConversationDocument): TeamCollaborationState {
-		const entries = document.entries;
-		const workItems = new Map<string, TeamWorkItem>();
-		const attempts = new Map<string, TeamMemberTurnAttempt>();
-		const deliveries = new Map<string, TeamMessageDelivery>();
-		const publications = new Map<string, TeamPublicationOperationRecord>();
-		const checkpoints = new Map<string, TeamSharedContextCheckpoint>();
-		const contextGenerations = new Map<string, TeamSharedContextGeneration>();
-		const contextReceipts = new Map<string, TeamContextProjectionReceipt>();
-		for (const entry of entries) {
-			if (entry.type !== "custom") continue;
-			if (entry.customType === "agent-team.work-item.v1" && isTeamWorkItem(entry.data)) {
-				workItems.set(entry.data.id, entry.data);
-			}
-			if (entry.customType === "agent-team.member-attempt.v1" && isTeamMemberTurnAttempt(entry.data)) {
-				attempts.set(entry.data.id, entry.data);
-			}
-			if (entry.customType === "agent-team.message-delivery.v1" && isTeamMessageDelivery(entry.data)) {
-				deliveries.set(entry.data.id, entry.data);
-			}
-			if (
-				entry.customType === "agent-team.publication-operation.v1" &&
-				isTeamPublicationOperationRecord(entry.data)
-			) {
-				publications.set(entry.data.operationId, entry.data);
-			}
-			if (entry.customType === "agent-team.shared-checkpoint.v1" && isTeamSharedContextCheckpoint(entry.data)) {
-				checkpoints.set(entry.data.id, entry.data);
-			}
-			if (entry.customType === "agent-team.context-generation.v1" && isTeamSharedContextGeneration(entry.data)) {
-				contextGenerations.set(entry.data.id, entry.data);
-			}
-			if (entry.customType === "agent-team.context-receipt.v1" && isTeamContextProjectionReceipt(entry.data)) {
-				contextReceipts.set(JSON.stringify([entry.data.participantId, entry.data.generationId]), entry.data);
-			}
-		}
-		return {
-			workItems: [...workItems.values()],
-			attempts: [...attempts.values()],
-			deliveries: [...deliveries.values()],
-			publications: [...publications.values()],
-			checkpoints: [...checkpoints.values()],
-			contextGenerations: [...contextGenerations.values()],
-			contextReceipts: [...contextReceipts.values()],
-		};
+		const cached = this.projections.get(document);
+		if (
+			cached &&
+			cached.revision === document.revision &&
+			cached.length === document.entries.length &&
+			cached.firstId === document.entries[0]?.id &&
+			cached.lastId === document.entries.at(-1)?.id
+		)
+			return cloneState(cached.state);
+		const state = projectCollaborationState(document);
+		this.projections.set(document, {
+			revision: document.revision,
+			length: document.entries.length,
+			firstId: document.entries[0]?.id,
+			lastId: document.entries.at(-1)?.id,
+			state,
+		});
+		return cloneState(state);
 	}
 
 	async append(session: TeamSessionDocument, customType: string, data: unknown): Promise<void> {
@@ -600,4 +593,64 @@ function workItemStateForAttempt(attempt: TeamMemberTurnAttempt): TeamWorkItem["
 		default:
 			return "waiting";
 	}
+}
+
+/**
+ * 七类 Team 持久记录的完整投影：最后一次有效写入胜出，Map 保留首次插入顺序，
+ * 无效记录被忽略而不是清掉此前有效状态。缓存只复用这份结果，不改写规则。
+ */
+function projectCollaborationState(document: ConversationDocument): TeamCollaborationState {
+	const workItems = new Map<string, TeamWorkItem>();
+	const attempts = new Map<string, TeamMemberTurnAttempt>();
+	const deliveries = new Map<string, TeamMessageDelivery>();
+	const publications = new Map<string, TeamPublicationOperationRecord>();
+	const checkpoints = new Map<string, TeamSharedContextCheckpoint>();
+	const contextGenerations = new Map<string, TeamSharedContextGeneration>();
+	const contextReceipts = new Map<string, TeamContextProjectionReceipt>();
+	for (const entry of document.entries) {
+		if (entry.type !== "custom") continue;
+		if (entry.customType === "agent-team.work-item.v1" && isTeamWorkItem(entry.data)) {
+			workItems.set(entry.data.id, entry.data);
+		}
+		if (entry.customType === "agent-team.member-attempt.v1" && isTeamMemberTurnAttempt(entry.data)) {
+			attempts.set(entry.data.id, entry.data);
+		}
+		if (entry.customType === "agent-team.message-delivery.v1" && isTeamMessageDelivery(entry.data)) {
+			deliveries.set(entry.data.id, entry.data);
+		}
+		if (entry.customType === "agent-team.publication-operation.v1" && isTeamPublicationOperationRecord(entry.data)) {
+			publications.set(entry.data.operationId, entry.data);
+		}
+		if (entry.customType === "agent-team.shared-checkpoint.v1" && isTeamSharedContextCheckpoint(entry.data)) {
+			checkpoints.set(entry.data.id, entry.data);
+		}
+		if (entry.customType === "agent-team.context-generation.v1" && isTeamSharedContextGeneration(entry.data)) {
+			contextGenerations.set(entry.data.id, entry.data);
+		}
+		if (entry.customType === "agent-team.context-receipt.v1" && isTeamContextProjectionReceipt(entry.data)) {
+			contextReceipts.set(JSON.stringify([entry.data.participantId, entry.data.generationId]), entry.data);
+		}
+	}
+	return {
+		workItems: [...workItems.values()],
+		attempts: [...attempts.values()],
+		deliveries: [...deliveries.values()],
+		publications: [...publications.values()],
+		checkpoints: [...checkpoints.values()],
+		contextGenerations: [...contextGenerations.values()],
+		contextReceipts: [...contextReceipts.values()],
+	};
+}
+
+/** 调用方仍可自由排序/截取返回值，命中缓存不能把可变数组共享出去。 */
+function cloneState(state: TeamCollaborationState): TeamCollaborationState {
+	return {
+		workItems: [...state.workItems],
+		attempts: [...state.attempts],
+		deliveries: [...state.deliveries],
+		publications: [...state.publications],
+		checkpoints: [...state.checkpoints],
+		contextGenerations: [...state.contextGenerations],
+		contextReceipts: [...state.contextReceipts],
+	};
 }
