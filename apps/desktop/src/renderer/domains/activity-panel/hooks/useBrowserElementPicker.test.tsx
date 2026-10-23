@@ -11,7 +11,11 @@ import {
 import { getDefaultStore } from "jotai";
 import { Profiler, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DesktopBrowserTabGetSessionResult } from "@/shared/browser-tab-ipc";
+import type {
+	DesktopBrowserTabGetSessionResult,
+	DesktopBrowserTabSession,
+	DesktopBrowserTabSetPickerResult,
+} from "@/shared/browser-tab-ipc";
 import { DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK } from "@/shared/browser-tab-ipc";
 import { BROWSER_ELEMENT_ATTACHMENT_ID, resetBrowserElementDraftForTests } from "../services/browser-element-draft.js";
 
@@ -40,7 +44,7 @@ vi.mock("@domains/conversation/components/input-bar/editor/inputEditorHandle", (
 
 const { useBrowserElementPicker } = await import("./useBrowserElementPicker.js");
 
-function baseSession(): NonNullable<DesktopBrowserTabGetSessionResult["session"]> {
+function baseSession(): DesktopBrowserTabSession {
 	return {
 		workspaceId: "ws-1",
 		pageUrl: "https://example.com/form",
@@ -256,7 +260,7 @@ describe("useBrowserElementPicker", () => {
 	});
 
 	it("迟到的点选开关响应不覆盖更新的事件也不跨工作空间污染", async () => {
-		let resolveToggle: ((value: { ok: boolean; pickerEnabled: boolean }) => void) | undefined;
+		let resolveToggle: ((value: DesktopBrowserTabSetPickerResult) => void) | undefined;
 		vi.mocked(window.vetta.browserTab.setPicker).mockImplementationOnce(
 			() =>
 				new Promise((resolve) => {
@@ -280,7 +284,7 @@ describe("useBrowserElementPicker", () => {
 		await act(async () => resolveToggle?.({ ok: true, pickerEnabled: true }));
 		expect(initial.result.current.pickerEnabled).toBe(false);
 		// 跨工作空间：在 ws-1 发出的迟到响应不得改写 ws-2 的会话。
-		let resolveCross: ((value: { ok: boolean; pickerEnabled: boolean }) => void) | undefined;
+		let resolveCross: ((value: DesktopBrowserTabSetPickerResult) => void) | undefined;
 		vi.mocked(window.vetta.browserTab.setPicker).mockImplementationOnce(
 			() =>
 				new Promise((resolve) => {

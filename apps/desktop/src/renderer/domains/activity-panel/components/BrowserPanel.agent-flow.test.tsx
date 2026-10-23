@@ -114,6 +114,13 @@ it("shares one page with Agent and keeps the user's address draft and focus thro
 	expect(screen.getByRole("status").textContent).toBe("browser.agentReady");
 	expect(panel.container.querySelector("[data-browser-view-host]")).toBe(host);
 	expect(document.activeElement).toBe(address);
+	// 失焦经真实 View 接线回显实际页面。
+	await user.tab();
+	expect(document.activeElement).not.toBe(address);
+	expect(screen.getByRole("textbox", { name: "browser.addressLabel" })).toHaveProperty(
+		"value",
+		contents.getURL(),
+	);
 	panel.unmount();
 	expect(listeners.size).toBe(0);
 });
