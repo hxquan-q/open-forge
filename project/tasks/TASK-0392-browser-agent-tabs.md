@@ -152,3 +152,12 @@ updated: 2026-10-24
 - 集成预览（2026-10-24，临时工作树合入当前 main HEAD `1584b54df` 验证后即删）：唯一冲突在 `.github/release-notes/v0.1.3.md`——main 直接向手写正文新增 TASK-0398 行，与本分支碎片化迁移冲突；已按生成器合同把该行移植为碎片（`81b0ef9c4`），合并解为保留分支侧汇编结构，内容零丢失。合并后：release-notes `--check` ✓、`check:guards`（task-worktrees 389 任务、project-indexes）✓、浏览器域 68 文件 390 例 ✓、theme-ui 233 例 ✓、完整 `bun run check` 九段 ✓。分支对当前 main 可干净集成（集成时需先构建 workspace 依赖闭包，turbo 缓存命中时秒级）；主检出于集成时须干净——当前被另一 Agent 的 runtimes/file-preview 在途改动占用，不可合入。
 - 剩余风险：无变化 URL 短路对“强制刷新同 URL”路径依赖显式入口（现状无此入口）；agentActivity 为元数据投影，不代表工具审批/取消语义变化；多 workspace 并发仅到双并发测试覆盖。
 - 发布说明必要迁移：本基线 v0.1.3 未发布、365行旧小节仍为手写正文，新增碎片后生成器按合同拒绝。先将既有全部小节逐条机械迁入 `000-existing-v0.1.3.md`，校验原条目与新事实源完全相同，再交由原生成器汇编；不改写既有条目含义，不变更生成器或检查规则。
+
+## 集成结果（2026-10-24）
+
+- 已合入本地 `main`（合并提交 `cf5f79d73`），并入 TASK-0218 之后的集成线。
+- 冲突解：`.github/release-notes/v0.1.3.md` 采分支侧碎片汇编结构（正文至此由 `fragments/v0.1.3/` 生成，不再手写）；`project/tasks/README.md` 保留主线批次行并追加本 Task 焦点行。
+- 主线在分支基线之后新增的手写条目（TASK-0218/0395/0396/0397/0399/0400/0401/0402/0403、PLAN-0024）按同一合同移植为碎片：`task-0218-browser-capability`、`task-0396-team-notify-resume`、`plan-0024-team-performance`、`plan-0024-desktop-startup`；`node scripts/release/release-notes.mjs --assemble` 后逐行比对原正文，内容零丢失。
+- 集成后验证：浏览器域（coding-agent 5 文件 39 例、desktop activity-panel/browser-automation 66 文件 384 例）、theme-ui 32 文件 236 例、release-notes 25 例、完整 `bun run check` 九段全绿。
+- 预存阻断：`test/runtime-core/session-initialization-profile.test.ts` 在 `origin/dev` 即失败（缺 `createExplicitMemoryRuntime` 期望项，来自 `a13c1759a`，非本次集成引入）；`project/verification/VERIFY-0023` 缺 Copyright 声明头已补。
+- 人工验收：仍为 `verifying`，待用户真机验收浏览器联动与页签行为。

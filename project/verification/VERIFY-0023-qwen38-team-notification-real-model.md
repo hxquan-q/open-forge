@@ -12,6 +12,7 @@ related_plan: [PLAN-0024]
 related_tasks: [TASK-0396, TASK-0402, TASK-0403]
 related_bugs: [BUG-0151]
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # qwen3.8-27b 真实模型团队会话：端点恢复确认与通知链路行为验证
 
