@@ -108,7 +108,8 @@ updated: 2026-10-22
 ## 测试与验证
 
 - 定向：picker guest 的主题色、已选数量、第 5 个上限、悬停高亮，以及 Shift+点击；picker hook 把主题色传给选取；session controller 仍能启动选取。
-- 不跑真实 Desktop，不跑完整 check。工作区里还有其他任务的未提交文件。
+- 用户已明确要求做 UI 测试。使用隔离的 Fresh 验证实例，不附着日常 Desktop，不调用真实模型。
+- 不跑完整 check。工作区里还有其他任务的未提交文件。
 
 ## 验收分层
 
@@ -130,3 +131,4 @@ updated: 2026-10-22
 - 调研：Cursor 官方只说明多选用于元素之间的关系；Shift+点击来自 Cursor 工程师 2026-06-05 的快捷键说明和 3.7 的二次报道。官方快捷键表没有把 Shift+点击写成一行，Shift+拖动仍是画区域，本轮不做。
 - 定向测试通过：picker guest 7 例（含 Shift+点击两个按钮）、胶囊 6 例、session controller 10 例、prompt 投影 4 例。未跑真实 Desktop，未跑完整 check。
 - 2026-10-22 主题适配：页内批注改用当前主题浮层色、14px 正文、32px 主按钮、`shadow-md`，并显示「已选 N 个」。第 5 次 Shift+点击不增加选择，并写出上限。悬停高亮恢复。没读到主题时用出厂 mono 暗色。定向：picker guest 11 例、picker hook 6 例、session controller 10 例。未跑真实 Desktop，未跑完整 `bun run check`。不推送。
+- 2026-10-22 真实 Desktop 验证（Fresh 隔离实例，本地测试页）：单击开批注、「已选 1/2 个」计数、Shift 加选与移出、4 个上限及一次最多 4 个提示、已写文字保留、点选不触发页面按钮、主题浮层样式，均在真实环境复现通过。但「发送给 Agent」提交与 Alt 放入输入框死于 BUG-0146（依赖函数在压缩产物抛 `ReferenceError: o`，finishPick 中断且 picker 会话卡死），验收包第 4 步（两个元素一起进入同一次 Agent 对话）未达成；人工功能验收维持待验收。
