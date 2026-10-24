@@ -1,7 +1,7 @@
 ---
 id: PLAN-0024
 type: plan
-status: in_progress
+status: done
 priority: P1
 requirement: REQ-0002
 owner: runtime-core/agent-team/desktop
@@ -77,3 +77,14 @@ depends_on: []
 ## 需要的 ADR
 
 当前仅内部缓存与既有续跑合同修复不新增 ADR；若改变通知生命周期、并发窗口、预算或持久格式，先记录替代方案和迁移影响再实施。
+## 集成终章（2026-10-24）
+
+五项优化全部集成本地 main：0395 状态投影缓存（62359876f）、0396 通知排空修复（e78cad175）、
+0397 帧释放（167255964）、0402 通知索引（cdd1104d2）、0403 哈希吞吐（1515a91dd）。
+逐分支定向测试与完整 `bun run check` 全绿；`test:changed` 中 cli-host 与 desktop media/skills
+的 11 个失败已用不含本批改动的基线 worktree 复跑证实为预存失败（skills 2 例在
+main@ea67d951e 分支上同样失败，cli-host 为 256s 级超时负载问题），与本批无关。
+
+候选处置：EventStream FIFO（否决，真实节奏差 0.2-0.5ms 低于噪声）、工具名索引（否决，
+微秒级无证据）、pinned-id 重复哈希（暂缓，每 Turn 一次 8ms，需使用画像）、共享上下文
+前置物化（0403 后降级为剩余 FNV 数学成本）。

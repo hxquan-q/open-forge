@@ -1,7 +1,7 @@
 ---
 id: TASK-0396
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/agent-teams
 requirement: REQ-0002
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: [BUG-0151]
 execution: parallel
 branch: task/TASK-0396-team-notification-drain
-worktree: ../open-forge-wt/task-0396-team-notification-drain
+worktree: unassigned（已集成，待推送后清理）
 base_commit: ea67d951e8bb29a464219812465d3a4ae2939179
 read_paths: [apps/desktop/src/main/agent-teams/, packages/agent-team/]
 write_paths: [apps/desktop/src/main/agent-teams/team-turn-coordinator.ts, apps/desktop/src/main/agent-teams/team-turn-coordinator.test.ts, apps/desktop/src/main/agent-teams/team-session-concurrency.test.ts]
 exclusive_paths: [apps/desktop/src/main/agent-teams/team-turn-coordinator.ts]
 depends_on: []
 conflicts_with: [TASK-0395, TASK-0154]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-23
 updated: 2026-10-24
 ---
@@ -73,3 +73,7 @@ updated: 2026-10-24
 - 发布说明：0.1.3 为无 tag、无碎片的历史手写正文，按其兼容规则补修复与内部研究条目，未发布。
 - 未运行：真实 Provider/UI、跨平台行为与真实团队耗时；本片是正确性修复，不把 0ms fake-clock 进展当实际吞吐收益。更深的重启交错、二次 provider 失败后的计时链由后续回归扩展，本轮已保留既有恢复测试。
 - 集成：主检出脏，候选分支保留，不推送/发布、不清理他人工作树。0395 的自动实验仍需独立 session cwd 或协调共享配置占用者。
+
+### 集成记录（2026-10-24）
+
+集成提交 e78cad175；agent-teams 37 文件 291 例通过。

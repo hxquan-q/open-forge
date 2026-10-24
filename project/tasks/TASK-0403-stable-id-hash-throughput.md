@@ -1,7 +1,7 @@
 ---
 id: TASK-0403
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/agent-team
 requirement: REQ-0002
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0403-stable-id-hash-throughput
-worktree: ../open-forge-wt/task-0403-stable-id-hash-throughput
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 1584b54dfd6db56ee49d070d652b886705355e4d
 read_paths: [packages/agent-team/, apps/desktop/src/main/agent-teams/]
 write_paths: [packages/agent-team/src/context-projector.ts, packages/agent-team/test/context-projector.test.ts, packages/agent-team/scripts/stable-id.bench.mjs]
 exclusive_paths: [packages/agent-team/src/context-projector.ts]
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-24
 updated: 2026-10-24
 ---
@@ -94,3 +94,7 @@ CLI 从 main@1584b54df 创建；独立安装；目标 `worktree:check` 通过。
 ### 剩余风险
 
 收益是纯 CPU（哈希吞吐），不改变任何持久化值；未测真实会话端到端收益（与消息频次相关）；`fnv64Reference` 保留为 oracle 增加约 20 行死代码面（有注释说明用途，knip 未报）。
+
+### 集成记录（2026-10-24）
+
+集成提交 1515a91dd；agent-team 94 例通过，集成时补一处测试夹具类型（assistant 消息完整字段）。

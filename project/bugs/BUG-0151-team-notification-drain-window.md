@@ -1,7 +1,7 @@
 ---
 id: BUG-0151
 type: bug
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/agent-teams
 requirement: REQ-0002

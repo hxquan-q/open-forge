@@ -1,7 +1,7 @@
 ---
 id: TASK-0402
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/agent-teams
 requirement: REQ-0002
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0402-notification-journal-projection
-worktree: ../open-forge-wt/task-0402-notification-journal-projection
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 1584b54dfd6db56ee49d070d652b886705355e4d
 read_paths: [apps/desktop/src/main/agent-teams/, packages/agent-team/]
 write_paths: [apps/desktop/src/main/agent-teams/team-notification-journal.ts, apps/desktop/src/main/agent-teams/team-notification-journal.test.ts]
 exclusive_paths: [apps/desktop/src/main/agent-teams/team-notification-journal.ts]
 depends_on: []
 conflicts_with: [TASK-0395, TASK-0396, TASK-0154]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-24
 updated: 2026-10-24
 ---
@@ -100,3 +100,7 @@ CLI 从 main@1584b54df 创建 `../open-forge-wt/task-0402-notification-journal-p
 ### 剩余风险
 
 基准是合成状态读取，不代表端到端任务加速；收益与“同一快照被多次查询”的频次成正比。
+
+### 集成记录（2026-10-24）
+
+集成提交 cdd1104d2；agent-teams 37 文件 295 例通过。

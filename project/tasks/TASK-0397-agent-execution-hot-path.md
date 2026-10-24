@@ -1,7 +1,7 @@
 ---
 id: TASK-0397
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/agent/runtime-core
 requirement: REQ-0002
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0397-agent-execution-hot-path
-worktree: ../open-forge-wt/task-0397-agent-execution-hot-path
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 1584b54dfd6db56ee49d070d652b886705355e4d
 read_paths: [packages/agent/, packages/ai/, packages/runtime-core/, packages/runtime-subagents/, packages/coding-agent/]
 write_paths: [packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts, packages/runtime-core/test/kernel/frame-release.test.ts, packages/runtime-core/scripts/frame-retention.bench.mjs]
 exclusive_paths: []
 depends_on: [TASK-0394]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-23
 updated: 2026-10-24
 ---
@@ -82,3 +82,7 @@ RESEARCH-0043 另发现 Pi 的双栈 FIFO 可供 EventStream 对照，但本仓 
 ## 验收分层与交付记录
 
 工程验证：内存收益已量化，套件全绿；技术评审：未执行独立审查；集成 pending；内部行为保持型优化人工验收不适用，模型质量未知；发布未授权。收益仅为活跃 Turn 的存活堆，未测 GC 暂停/延迟，不宣称端到端加速。
+
+### 集成记录（2026-10-24）
+
+集成提交 167255964；runtime-core 585 + agent 149 例通过。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0395
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/agent-teams
 requirement: REQ-0002
@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0395-team-state-projection-performance
-worktree: ../open-forge-wt/task-0395-team-state-projection-performance
+worktree: unassigned（已集成，待推送后清理）
 base_commit: ea67d951e8bb29a464219812465d3a4ae2939179
 read_paths: [packages/runtime-core/, packages/agent-team/, apps/desktop/src/main/agent-teams/, project/]
 write_paths: [apps/desktop/src/main/agent-teams/team-collaboration-store.ts, apps/desktop/src/main/agent-teams/team-collaboration-projection.ts, apps/desktop/src/main/agent-teams/team-collaboration-projection.test.ts, apps/desktop/src/main/agent-teams/team-collaboration-store.test.ts, apps/desktop/scripts/team-state-projection.bench.mjs, apps/desktop/scripts/team-state-projection.bench.ts]
 exclusive_paths: [apps/desktop/src/main/agent-teams/team-collaboration-store.ts]
 depends_on: []
 conflicts_with: [TASK-0396, TASK-0154]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-23
 updated: 2026-10-24
 ---
@@ -94,3 +94,7 @@ Conversation 唯一事实源；边界结构校验、最新同 ID 覆盖与迭代
 - 失效规则：按文档对象身份 + revision + 条目数 + 首末 id 校验；测试覆盖同对象原地追加、替换文档、无效尾记录、旧结果隔离。已知限制：若宿主**原地改中间条目且不推进 revision 或首末 id**，缓存会返回旧值；当前生产写入路径（`applyStoredEventToConversationDocument`）每次新建文档并递增 revision，未发现该写法。
 - 阻断解除：共享实验指针问题不再影响本片——改用手工交错 A/B（脚本在 `.auto/ab/`，不进仓库）。本树 `bun run check` 与 `test:impact` 全绿，可交付评审。
 - 剩余风险：合成状态读取基准，不代表端到端 Agent 加速；cold 读无回归但样本少；未跑跨平台与真实 Desktop；未集成到脏 main；通知 journal 的重复扫描未纳入本片。
+
+### 集成记录（2026-10-24）
+
+集成提交 62359876f；test:impact related 177 例通过，完整 check 全绿。
