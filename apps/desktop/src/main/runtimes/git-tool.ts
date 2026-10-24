@@ -1,5 +1,5 @@
 // Copyright The Open Forge contributors.
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -17,6 +17,7 @@ import {
 	runtimesDir,
 } from "./paths.js";
 import { installRuntimeArchive } from "./runtime-archive-installer.js";
+import { getRuntimePreparationSignal, runRuntimeCommand } from "./runtime-command.js";
 import type { GitToolStatus } from "./types.js";
 
 const log = getAppLogger("runtimes");
@@ -26,7 +27,7 @@ export interface GitToolDeps {
 	platform: NodeJS.Platform;
 	env: NodeJS.ProcessEnv;
 	exists(path: string): boolean;
-	run(command: string, args: readonly string[]): CommandResult;
+	run(command: string, args: readonly string[]): Promise<CommandResult>;
 	readOsRelease(): string | undefined;
 	launchXcodeInstaller(): void;
 	download(url: string, dest: string): Promise<void>;
@@ -53,10 +54,7 @@ export function createGitToolDeps(): GitToolDeps {
 		platform: process.platform,
 		env: process.env,
 		exists: existsSync,
-		run: (command, args) => {
-			const res = spawnSync(command, args, { encoding: "utf-8", timeout: 5000, windowsHide: true });
-			return { status: res.status, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-		},
+		run: (command, args) => runRuntimeCommand(command, args, { timeout: 5000 }),
 		readOsRelease: () => {
 			try {
 				return readFileSync("/etc/os-release", "utf-8");
@@ -69,7 +67,7 @@ export function createGitToolDeps(): GitToolDeps {
 			child.on("error", (err) => log.warn("xcode-select --install failed", err));
 			child.unref();
 		},
-		download: (url, dest) => downloadToFile(url, dest),
+		download: (url, dest) => downloadToFile(url, dest, undefined, getRuntimePreparationSignal()),
 		sha256File: async (path) =>
 			createHash("sha256")
 				.update(await readFile(path))
@@ -97,6 +95,7 @@ export function createGitToolDeps(): GitToolDeps {
 export class GitToolManager {
 	private status: GitToolStatus | null = null;
 	private installing: Promise<GitToolStatus> | null = null;
+	private detecting: Promise<GitToolStatus> | null = null;
 
 	constructor(private readonly deps: GitToolDeps = createGitToolDeps()) {}
 
@@ -104,14 +103,21 @@ export class GitToolManager {
 		return Boolean(this.deps.managed.entry) && this.deps.exists(this.deps.managed.executablePath);
 	}
 
-	detect(): GitToolStatus {
+	detect(): Promise<GitToolStatus> {
+		this.detecting ??= this.detectCurrent().finally(() => {
+			this.detecting = null;
+		});
+		return this.detecting;
+	}
+
+	private async detectCurrent(): Promise<GitToolStatus> {
 		const { deps } = this;
 		const install = gitInstallGuide({
 			platform: deps.platform,
 			managedVersion: deps.managed.entry ? deps.managed.version : undefined,
 			readOsRelease: deps.readOsRelease,
 		});
-		const system = detectSystemGit(
+		const system = await detectSystemGit(
 			{
 				platform: deps.platform,
 				pathValue: deps.env[pathKeyOf(deps.env)] ?? "",
@@ -120,6 +126,7 @@ export class GitToolManager {
 			},
 			[deps.managed.binDir],
 		);
+		getRuntimePreparationSignal().throwIfAborted();
 		if (system) {
 			this.status = {
 				available: true,
@@ -142,7 +149,7 @@ export class GitToolManager {
 		return this.status;
 	}
 
-	getStatus(): GitToolStatus {
+	async getStatus(): Promise<GitToolStatus> {
 		return this.status ?? this.detect();
 	}
 
@@ -150,10 +157,10 @@ export class GitToolManager {
 	 * macOS 上 PATH 命中 /usr/bin/git 却没装命令行工具时，执行它会弹系统安装框。
 	 * 宿主替插件挡掉这次调用；不可用时重新探测，用户刚装好就立即放行。
 	 */
-	shouldBlockGitCommand(): boolean {
+	async shouldBlockGitCommand(): Promise<boolean> {
 		if (this.deps.platform !== "darwin") return false;
-		if (this.getStatus().available) return false;
-		return !this.detect().available;
+		if ((await this.getStatus()).available) return false;
+		return !(await this.detect()).available;
 	}
 
 	/** 托管 MinGit 追加在 PATH 末尾：之后装上的系统 git 会自然盖过它。幂等。 */
@@ -168,9 +175,10 @@ export class GitToolManager {
 
 	/** macOS 调起系统安装窗口后立即返回；Windows 下载并装好 MinGit 后返回。 */
 	install(): Promise<GitToolStatus> {
+		if (getRuntimePreparationSignal().aborted) return Promise.reject(getRuntimePreparationSignal().reason);
 		if (this.deps.platform === "darwin") {
 			this.deps.launchXcodeInstaller();
-			return Promise.resolve(this.detect());
+			return this.detect();
 		}
 		if (this.deps.platform === "win32" && this.deps.managed.entry) {
 			this.installing ??= this.installManaged().finally(() => {
@@ -189,13 +197,17 @@ export class GitToolManager {
 		const archivePath = join(managed.cacheDir, entry.filename);
 		let lastError: unknown;
 		for (const template of managed.sources) {
+			getRuntimePreparationSignal().throwIfAborted();
 			const url = template.replace("{tag}", managed.tag).replace("{filename}", entry.filename);
 			try {
 				log.info(`downloading git from ${url}`);
 				await this.deps.download(url, archivePath);
+				getRuntimePreparationSignal().throwIfAborted();
 				const actual = await this.deps.sha256File(archivePath);
+				getRuntimePreparationSignal().throwIfAborted();
 				if (actual !== entry.sha256) throw new Error(`sha256 mismatch: expected ${entry.sha256}, got ${actual}`);
 				await this.deps.extractArchive(archivePath, managed.installDir);
+				getRuntimePreparationSignal().throwIfAborted();
 				if (!this.deps.exists(managed.executablePath)) throw new Error("git.exe missing after extraction");
 				this.applyEnv();
 				return this.detect();

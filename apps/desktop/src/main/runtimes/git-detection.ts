@@ -13,7 +13,7 @@ export interface GitProbeHost {
 	platform: NodeJS.Platform;
 	pathValue: string;
 	exists(path: string): boolean;
-	run(command: string, args: readonly string[]): CommandResult;
+	run(command: string, args: readonly string[]): Promise<CommandResult>;
 }
 
 export interface DetectedGit {
@@ -49,8 +49,8 @@ export function findGitOnPath(host: GitProbeHost, excludeDirs: readonly string[]
 	return undefined;
 }
 
-function macCommandLineToolsInstalled(host: GitProbeHost): boolean {
-	const res = host.run("xcode-select", ["-p"]);
+async function macCommandLineToolsInstalled(host: GitProbeHost): Promise<boolean> {
+	const res = await host.run("xcode-select", ["-p"]);
 	const developerDir = res.status === 0 ? res.stdout.trim() : "";
 	return developerDir.length > 0 && host.exists(posix.join(developerDir, "usr", "bin", "git"));
 }
@@ -61,13 +61,16 @@ export function parseGitVersion(output: string): string | undefined {
 }
 
 /** 探测系统 git；PATH 上第一个 git 不可用时视为没有，因为 shell 同样会命中它。 */
-export function detectSystemGit(host: GitProbeHost, excludeDirs: readonly string[] = []): DetectedGit | undefined {
+export async function detectSystemGit(
+	host: GitProbeHost,
+	excludeDirs: readonly string[] = [],
+): Promise<DetectedGit | undefined> {
 	const path = findGitOnPath(host, excludeDirs);
 	if (!path) return undefined;
-	if (host.platform === "darwin" && path === MACOS_GIT_SHIM && !macCommandLineToolsInstalled(host)) {
+	if (host.platform === "darwin" && path === MACOS_GIT_SHIM && !(await macCommandLineToolsInstalled(host))) {
 		return undefined;
 	}
-	const res = host.run(path, ["--version"]);
+	const res = await host.run(path, ["--version"]);
 	if (res.status !== 0) return undefined;
 	const version = parseGitVersion(`${res.stdout}${res.stderr}`);
 	return version ? { path, version } : undefined;

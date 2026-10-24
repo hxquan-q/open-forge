@@ -65,7 +65,7 @@ async function fakeArchive(type: "node" | "python"): Promise<Buffer> {
 		[
 			"-czf",
 			tarPathArgument(out),
-			...tarForceLocalArgs(detectTarFlavor()),
+			...tarForceLocalArgs(await detectTarFlavor()),
 			"-C",
 			tarPathArgument(staging),
 			entry.dir,
@@ -91,10 +91,12 @@ describe("RuntimeManager 自动下载", () => {
 			});
 
 			await manager.initialize();
-			await vi.waitFor(() => expect(manager.getStatus().node.ready).toBe(true), { timeout: 15_000 });
-			await vi.waitFor(() => expect(manager.getStatus().python.ready).toBe(true), { timeout: 15_000 });
+			await vi.waitFor(async () => expect((await manager.getStatus()).node.ready).toBe(true), { timeout: 15_000 });
+			await vi.waitFor(async () => expect((await manager.getStatus()).python.ready).toBe(true), { timeout: 15_000 });
 			// ready 先落位、收尾(记 registry/shim)后才清 downloading 标记
-			await vi.waitFor(() => expect(manager.getStatus().node.downloading).toBe(false), { timeout: 15_000 });
+			await vi.waitFor(async () => expect((await manager.getStatus()).node.downloading).toBe(false), {
+				timeout: 15_000,
+			});
 		},
 		30_000,
 	);
@@ -135,8 +137,10 @@ describe("RuntimeManager 自动下载", () => {
 			});
 
 			await manager.initialize();
-			await vi.waitFor(() => expect(manager.getStatus().node.downloading).toBe(false), { timeout: 15_000 });
-			expect(manager.getStatus().node.ready).toBe(false);
+			await vi.waitFor(async () => expect((await manager.getStatus()).node.downloading).toBe(false), {
+				timeout: 15_000,
+			});
+			expect((await manager.getStatus()).node.ready).toBe(false);
 		},
 		30_000,
 	);

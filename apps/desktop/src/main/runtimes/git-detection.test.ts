@@ -21,7 +21,7 @@ function host(options: {
 		pathValue: options.pathValue,
 		calls,
 		exists: (path) => options.files.includes(path),
-		run: (command, args) => {
+		run: async (command, args) => {
 			const key = [command, ...args].join(" ");
 			calls.push(key);
 			return options.commands?.[key] ?? { status: 1, stdout: "", stderr: "not found" };
@@ -32,17 +32,17 @@ function host(options: {
 const ok = (stdout: string): CommandResult => ({ status: 0, stdout, stderr: "" });
 
 describe("detectSystemGit", () => {
-	it("returns the first git on PATH with its version", () => {
+	it("returns the first git on PATH with its version", async () => {
 		const probe = host({
 			platform: "linux",
 			pathValue: "/usr/local/bin:/usr/bin",
 			files: ["/usr/bin/git"],
 			commands: { "/usr/bin/git --version": ok("git version 2.43.0\n") },
 		});
-		expect(detectSystemGit(probe)).toEqual({ path: "/usr/bin/git", version: "2.43.0" });
+		expect(await detectSystemGit(probe)).toEqual({ path: "/usr/bin/git", version: "2.43.0" });
 	});
 
-	it("never runs the macOS /usr/bin/git shim when Command Line Tools are missing", () => {
+	it("never runs the macOS /usr/bin/git shim when Command Line Tools are missing", async () => {
 		const probe = host({
 			platform: "darwin",
 			pathValue: "/usr/bin:/bin:/opt/homebrew/bin",
@@ -50,11 +50,11 @@ describe("detectSystemGit", () => {
 			commands: { "xcode-select -p": { status: 2, stdout: "", stderr: "unable to get active developer directory" } },
 		});
 		// shell 同样会先命中 /usr/bin/git，所以后面的 homebrew git 不算数。
-		expect(detectSystemGit(probe)).toBeUndefined();
+		expect(await detectSystemGit(probe)).toBeUndefined();
 		expect(probe.calls).toEqual(["xcode-select -p"]);
 	});
 
-	it("uses the macOS shim once the developer directory actually contains git", () => {
+	it("uses the macOS shim once the developer directory actually contains git", async () => {
 		const probe = host({
 			platform: "darwin",
 			pathValue: "/usr/bin",
@@ -64,41 +64,41 @@ describe("detectSystemGit", () => {
 				"/usr/bin/git --version": ok("git version 2.39.5 (Apple Git-154)\n"),
 			},
 		});
-		expect(detectSystemGit(probe)).toEqual({ path: "/usr/bin/git", version: "2.39.5" });
+		expect(await detectSystemGit(probe)).toEqual({ path: "/usr/bin/git", version: "2.39.5" });
 	});
 
-	it("treats a stale developer directory as missing tools", () => {
+	it("treats a stale developer directory as missing tools", async () => {
 		const probe = host({
 			platform: "darwin",
 			pathValue: "/usr/bin",
 			files: ["/usr/bin/git"],
 			commands: { "xcode-select -p": ok("/Applications/Xcode.app/Contents/Developer\n") },
 		});
-		expect(detectSystemGit(probe)).toBeUndefined();
+		expect(await detectSystemGit(probe)).toBeUndefined();
 	});
 
-	it("skips excluded directories so the managed copy is not reported as system git", () => {
+	it("skips excluded directories so the managed copy is not reported as system git", async () => {
 		const probe = host({
 			platform: "win32",
 			pathValue: "C:\\Windows\\System32;C:\\Users\\me\\.vetta\\runtimes\\git\\2.55.0.5\\cmd",
 			files: ["C:\\Users\\me\\.vetta\\runtimes\\git\\2.55.0.5\\cmd\\git.exe"],
 		});
-		expect(detectSystemGit(probe, ["c:\\users\\me\\.vetta\\runtimes\\git\\2.55.0.5\\cmd\\"])).toBeUndefined();
+		expect(await detectSystemGit(probe, ["c:\\users\\me\\.vetta\\runtimes\\git\\2.55.0.5\\cmd\\"])).toBeUndefined();
 	});
 
-	it("finds Git for Windows through a quoted PATH entry", () => {
+	it("finds Git for Windows through a quoted PATH entry", async () => {
 		const probe = host({
 			platform: "win32",
 			pathValue: 'C:\\Windows;"C:\\Program Files\\Git\\cmd"',
 			files: ["C:\\Program Files\\Git\\cmd\\git.exe"],
 			commands: { "C:\\Program Files\\Git\\cmd\\git.exe --version": ok("git version 2.55.0.windows.5\n") },
 		});
-		expect(detectSystemGit(probe)).toEqual({ path: "C:\\Program Files\\Git\\cmd\\git.exe", version: "2.55.0" });
+		expect(await detectSystemGit(probe)).toEqual({ path: "C:\\Program Files\\Git\\cmd\\git.exe", version: "2.55.0" });
 	});
 
-	it("reports nothing when git exists but fails to run", () => {
+	it("reports nothing when git exists but fails to run", async () => {
 		const probe = host({ platform: "linux", pathValue: "/usr/bin", files: ["/usr/bin/git"] });
-		expect(detectSystemGit(probe)).toBeUndefined();
+		expect(await detectSystemGit(probe)).toBeUndefined();
 	});
 });
 

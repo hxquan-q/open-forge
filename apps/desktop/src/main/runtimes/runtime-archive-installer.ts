@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import { extractZipArchiveSafely } from "../archive/safe-zip-extract.js";
+import { getRuntimePreparationSignal, runRuntimeCommand } from "./runtime-command.js";
 
 export interface RuntimeArchiveInstallOptions {
 	archivePath: string;
@@ -19,7 +19,7 @@ export interface RuntimeDirectoryInstallOptions {
 
 export type TarFlavor = "gnu" | "bsd" | "unknown";
 
-let cachedTarFlavor: TarFlavor | undefined;
+let cachedTarFlavor: Promise<TarFlavor> | undefined;
 
 /**
  * 按实际 tar 实现决定是否加 `--force-local`。
@@ -29,13 +29,13 @@ let cachedTarFlavor: TarFlavor | undefined;
  * `tar: Option --force-local is not supported` 并退出 1。探测结果缓存一次，
  * 只在进程内跑一次 `tar --version`。
  */
-export function detectTarFlavor(): TarFlavor {
-	if (cachedTarFlavor !== undefined) return cachedTarFlavor;
-	const probe = spawnSync("tar", ["--version"], { encoding: "utf-8", timeout: 10_000 });
-	const output = `${probe.stdout ?? ""}${probe.stderr ?? ""}`.toLowerCase();
-	if (output.includes("gnu tar")) cachedTarFlavor = "gnu";
-	else if (output.includes("bsdtar") || output.includes("libarchive")) cachedTarFlavor = "bsd";
-	else cachedTarFlavor = "unknown";
+export function detectTarFlavor(): Promise<TarFlavor> {
+	cachedTarFlavor ??= runRuntimeCommand("tar", ["--version"], { timeout: 10_000 }).then((probe): TarFlavor => {
+		const output = `${probe.stdout}${probe.stderr}`.toLowerCase();
+		if (output.includes("gnu tar")) return "gnu";
+		if (output.includes("bsdtar") || output.includes("libarchive")) return "bsd";
+		return "unknown";
+	});
 	return cachedTarFlavor;
 }
 
@@ -71,12 +71,11 @@ async function extractArchive(
 	// GNU tar（Git Bash/MSYS2 环境优先命中），它会把 `C:\…` 误判成 `host:path`
 	// 远程语法、且 `-C` 的 chdir 不认反斜杠盘符；统一转成正斜杠路径，并只在确认
 	// 为 GNU tar 时补 `--force-local`。
-	const flavor = detectTarFlavor();
-	const result = spawnSync(
+	const flavor = await detectTarFlavor();
+	const result = await runRuntimeCommand(
 		"tar",
 		["-xf", tarPathArgument(archivePath), ...tarForceLocalArgs(flavor), "-C", tarPathArgument(destination)],
 		{
-			encoding: "utf-8",
 			timeout: 180_000,
 		},
 	);
@@ -96,6 +95,7 @@ async function installViaStaging(
 	stagingPrefix: string,
 	prepare: (stagingDirectory: string) => Promise<string>,
 ): Promise<void> {
+	getRuntimePreparationSignal().throwIfAborted();
 	const targetParent = dirname(targetDirectory);
 	await mkdir(targetParent, { recursive: true });
 	const stagingDirectory = await mkdtemp(join(targetParent, `.${basename(targetDirectory)}-${stagingPrefix}-`));
@@ -107,6 +107,7 @@ async function installViaStaging(
 			throw new Error(`runtime payload is missing directory: ${preparedDirectory}`);
 		}
 
+		getRuntimePreparationSignal().throwIfAborted();
 		await rm(targetDirectory, { recursive: true, force: true });
 		await rename(preparedDirectory, targetDirectory);
 	} finally {

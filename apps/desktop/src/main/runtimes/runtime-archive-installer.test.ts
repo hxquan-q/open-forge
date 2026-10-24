@@ -1,4 +1,5 @@
-import { spawnSync } from "node:child_process";
+import type * as ChildProcessModule from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,12 +15,13 @@ import {
 } from "./runtime-archive-installer";
 
 vi.mock("node:child_process", async () => {
-	const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
-	return { ...actual, spawnSync: vi.fn(actual.spawnSync) };
+	const actual = await vi.importActual<typeof ChildProcessModule>("node:child_process");
+	return { ...actual, spawnSync: vi.fn(actual.spawnSync), execFile: vi.fn(actual.execFile) };
 });
 
 const spawnSyncMock = vi.mocked(spawnSync);
-const tarCalls = () => spawnSyncMock.mock.calls.filter(([command]) => command === "tar");
+const tarCalls = () =>
+	[...spawnSyncMock.mock.calls, ...vi.mocked(execFile).mock.calls].filter(([command]) => command === "tar");
 
 let testRoot = "";
 
@@ -33,7 +35,7 @@ afterEach(async () => {
 
 // GNU tar 会把 `C:\…` 盘符路径误判成远程 host:path，需要 `--force-local`；Windows 自带的
 // bsdtar 不认识该选项，因此与实现侧共用同一组 helper 决定参数形态。
-const tarLocalArgs = () => tarForceLocalArgs(detectTarFlavor());
+const tarLocalArgs = async () => tarForceLocalArgs(await detectTarFlavor());
 const toTarPath = tarPathArgument;
 
 // zip fixture 用 adm-zip 生成：不依赖 PATH 里的 tar 实现（GNU tar 压根产不出 zip），
@@ -61,8 +63,8 @@ describe("tar 参数按实现品类选择", () => {
 		expect(tarPathArgument(posixPath)).toBe(posixPath);
 	});
 
-	it("探测到的实现与参数形态一致（本机真实 tar）", () => {
-		const flavor = detectTarFlavor();
+	it("探测到的实现与参数形态一致（本机真实 tar）", async () => {
+		const flavor = await detectTarFlavor();
 		expect(["gnu", "bsd", "unknown"]).toContain(flavor);
 		expect(tarForceLocalArgs(flavor)).toEqual(flavor === "gnu" ? ["--force-local"] : []);
 	});
@@ -78,7 +80,7 @@ describe("installRuntimeArchive", () => {
 		const archivePath = join(testRoot, "runtime.tar.gz");
 		const archive = spawnSync(
 			"tar",
-			["-czf", toTarPath(archivePath), ...tarLocalArgs(), "-C", toTarPath(sourceRoot), "runtime"],
+			["-czf", toTarPath(archivePath), ...(await tarLocalArgs()), "-C", toTarPath(sourceRoot), "runtime"],
 			{ encoding: "utf8" },
 		);
 		expect(archive.status, archive.stderr || archive.stdout).toBe(0);
@@ -113,6 +115,7 @@ describe("installRuntimeArchive", () => {
 
 		const targetDirectory = join(testRoot, "managed", "22.22.2");
 		spawnSyncMock.mockClear();
+		vi.mocked(execFile).mockClear();
 		await installRuntimeArchive({
 			archivePath,
 			archiveType: "zip",

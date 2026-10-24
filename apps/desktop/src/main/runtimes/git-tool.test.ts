@@ -1,10 +1,12 @@
 // Copyright The Open Forge contributors.
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CommandResult } from "./git-detection.js";
-import { type GitToolDeps, GitToolManager } from "./git-tool.js";
+import { createGitToolDeps, type GitToolDeps, GitToolManager } from "./git-tool.js";
 
 vi.mock("../logger.js", () => ({
 	getAppLogger: () => ({ info: () => undefined, warn: () => undefined }),
@@ -13,6 +15,11 @@ vi.mock("../logger.js", () => ({
 const MANAGED_BIN = join("runtimes", "git", "2.55.0.5", "cmd");
 const MANAGED_EXE = join(MANAGED_BIN, "git.exe");
 const GOOD_SHA = "good-sha";
+const cacheDirectories: string[] = [];
+
+afterEach(async () => {
+	for (const directory of cacheDirectories.splice(0)) await rm(directory, { recursive: true, force: true });
+});
 
 interface FakeWorld {
 	deps: GitToolDeps;
@@ -25,6 +32,8 @@ interface FakeWorld {
 }
 
 function world(platform: NodeJS.Platform, pathValue: string): FakeWorld {
+	const cacheDir = mkdtempSync(join(tmpdir(), "vetta-git-tool-"));
+	cacheDirectories.push(cacheDir);
 	const files = new Set<string>();
 	const downloads: string[] = [];
 	const commands = new Map<string, CommandResult>();
@@ -40,7 +49,7 @@ function world(platform: NodeJS.Platform, pathValue: string): FakeWorld {
 			platform,
 			env: { PATH: pathValue },
 			exists: (path) => files.has(path),
-			run: (command, args) =>
+			run: async (command, args) =>
 				commands.get([command, ...args].join(" ")) ?? { status: 1, stdout: "", stderr: "missing" },
 			readOsRelease: () => "ID=ubuntu",
 			launchXcodeInstaller: () => {
@@ -64,7 +73,7 @@ function world(platform: NodeJS.Platform, pathValue: string): FakeWorld {
 				binDir: MANAGED_BIN,
 				executablePath: MANAGED_EXE,
 				installDir: join("runtimes", "git", "2.55.0.5"),
-				cacheDir: mkdtempSync(join(tmpdir(), "vetta-git-tool-")),
+				cacheDir,
 			},
 		},
 	};
@@ -72,11 +81,56 @@ function world(platform: NodeJS.Platform, pathValue: string): FakeWorld {
 }
 
 describe("GitToolManager on Windows", () => {
+	it("keeps the host responsive while a slow version probe is running", async () => {
+		const w = world("linux", "/audit");
+		w.files.add("/audit/git");
+		let heartbeats = 0;
+		// Identical subprocess workload for the old synchronous adapter and the real current adapter.
+		const args = ["-e", "setTimeout(() => console.log('git version 2.56.0'), 120)"];
+		const run = createGitToolDeps().run;
+		w.deps.run = () => run(process.execPath, args);
+		const timer = setInterval(() => {
+			heartbeats += 1;
+		}, 10);
+		try {
+			const baseline = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 5_000, windowsHide: true });
+			expect(baseline.status).toBe(0);
+			expect(heartbeats).toBe(0);
+			const status = await new GitToolManager(w.deps).detect();
+			expect(heartbeats).toBeGreaterThan(0);
+			expect(status).toMatchObject({ available: true, source: "system", version: "2.56.0" });
+		} finally {
+			clearInterval(timer);
+		}
+	});
+
+	it("shares in-flight detection and retries after a failed probe", async () => {
+		const w = world("linux", "/audit");
+		w.files.add("/audit/git");
+		let finish!: (result: CommandResult) => void;
+		w.deps.run = vi.fn(
+			() =>
+				new Promise<CommandResult>((resolve) => {
+					finish = resolve;
+				}),
+		);
+		const manager = new GitToolManager(w.deps);
+		const first = manager.detect();
+		const status = manager.getStatus();
+		expect(w.deps.run).toHaveBeenCalledOnce();
+		finish({ status: 1, stdout: "", stderr: "unavailable" });
+		expect((await first).available).toBe(false);
+		expect((await status).available).toBe(false);
+		const retried = manager.detect();
+		finish({ status: 0, stdout: "git version 2.56.0", stderr: "" });
+		expect(await retried).toMatchObject({ available: true, version: "2.56.0" });
+	});
+
 	it("installs MinGit for Vetta when git is missing and puts it at the end of PATH", async () => {
 		const w = world("win32", "C:\\Windows\\System32");
 		const manager = new GitToolManager(w.deps);
 
-		expect(manager.getStatus()).toEqual({
+		expect(await manager.getStatus()).toEqual({
 			available: false,
 			install: { kind: "managed-download", version: "2.55.0.5" },
 		});
@@ -98,7 +152,7 @@ describe("GitToolManager on Windows", () => {
 		expect(w.deps.env.PATH).toBe(["C:\\Windows\\System32", MANAGED_BIN].join(delimiter));
 	});
 
-	it("prefers a system git installed later over the managed copy", () => {
+	it("prefers a system git installed later over the managed copy", async () => {
 		const w = world("win32", "C:\\Program Files\\Git\\cmd");
 		w.files.add(MANAGED_EXE);
 		w.files.add("C:\\Program Files\\Git\\cmd\\git.exe");
@@ -108,7 +162,7 @@ describe("GitToolManager on Windows", () => {
 			stderr: "",
 		});
 
-		expect(new GitToolManager(w.deps).detect()).toMatchObject({
+		expect(await new GitToolManager(w.deps).detect()).toMatchObject({
 			available: true,
 			source: "system",
 			version: "2.56.0",
@@ -122,7 +176,7 @@ describe("GitToolManager on Windows", () => {
 
 		await expect(manager.install()).rejects.toThrow("HTTP 404");
 		expect(w.deps.env.PATH).toBe("C:\\Windows");
-		expect(manager.getStatus().available).toBe(false);
+		expect((await manager.getStatus()).available).toBe(false);
 	});
 });
 
@@ -136,14 +190,14 @@ describe("GitToolManager on macOS", () => {
 		const status = await manager.install();
 		expect(w.installerLaunches).toBe(1);
 		expect(status).toEqual({ available: false, install: { kind: "xcode-clt" } });
-		expect(manager.shouldBlockGitCommand()).toBe(true);
+		expect(await manager.shouldBlockGitCommand()).toBe(true);
 
 		w.commands.set("xcode-select -p", { status: 0, stdout: "/Library/Developer/CommandLineTools\n", stderr: "" });
 		w.files.add("/Library/Developer/CommandLineTools/usr/bin/git");
 		w.commands.set("/usr/bin/git --version", { status: 0, stdout: "git version 2.39.5 (Apple Git-154)", stderr: "" });
 
-		expect(manager.shouldBlockGitCommand()).toBe(false);
-		expect(manager.getStatus()).toMatchObject({ available: true, source: "system", version: "2.39.5" });
+		expect(await manager.shouldBlockGitCommand()).toBe(false);
+		expect(await manager.getStatus()).toMatchObject({ available: true, source: "system", version: "2.39.5" });
 	});
 });
 
@@ -152,8 +206,8 @@ describe("GitToolManager on Linux", () => {
 		const w = world("linux", "/usr/bin");
 		const manager = new GitToolManager(w.deps);
 
-		expect(manager.getStatus().install).toEqual({ kind: "package-manager", command: "sudo apt install git" });
-		expect(manager.shouldBlockGitCommand()).toBe(false);
+		expect((await manager.getStatus()).install).toEqual({ kind: "package-manager", command: "sudo apt install git" });
+		expect(await manager.shouldBlockGitCommand()).toBe(false);
 		await expect(manager.install()).rejects.toThrow("not supported");
 	});
 });

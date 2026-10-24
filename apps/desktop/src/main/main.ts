@@ -98,6 +98,7 @@ import { DesktopRemotePairingService } from "./remote-control/desktop-remote-pai
 import { startRendererAfterSessionPreparation } from "./renderer-startup.js";
 import { beginSharedRuntimeShutdown, disposeSharedRuntime, getSharedRuntime } from "./runtime.js";
 import { getRuntimeManager } from "./runtimes/manager.js";
+import { shutdownRuntimeCommands } from "./runtimes/runtime-command.js";
 import { initializeSandboxCapability } from "./sandbox/capability.js";
 import { initScheduler, scheduleTaskInCron, shutdownScheduler, unscheduleTaskInCron } from "./scheduler/scheduler.js";
 import { initializeDesktopSchedulerService } from "./scheduler/scheduler-service.js";
@@ -729,14 +730,17 @@ if (!gotSingleLock) {
 			});
 		}
 		const initializeManagedRuntimeAndCli = async (): Promise<void> => {
+			if (isQuitCleanupStarted()) return;
 			try {
 				const runtimeStartedAt = Date.now();
 				await runtimeManager.initialize();
+				if (isQuitCleanupStarted()) return;
 				runtimeManager.applyEnv();
 				mainLog.info("runtime startup initialization complete", { durationMs: Date.now() - runtimeStartedAt });
 			} catch (err) {
 				mainLog.error("runtime manager init failed", err);
 			}
+			if (isQuitCleanupStarted()) return;
 
 			try {
 				let vettaAppPath: string;
@@ -945,6 +949,7 @@ function desktopSignalingTarget(controlUrl: string | undefined): string | undefi
 // 之前先调用它——原因见该模块的注释。
 setQuitCleanup(async () => {
 	mainLog.info("quit cleanup started");
+	const runtimeCommandsShutdown = shutdownRuntimeCommands();
 	await stopDesktopRemoteAccess();
 	await stopDesktopRemoteDesktopHost();
 	beginSharedRuntimeShutdown();
@@ -973,6 +978,7 @@ setQuitCleanup(async () => {
 	disposeAllTerminals();
 
 	const consumerShutdownResults = await Promise.allSettled([
+		runtimeCommandsShutdown,
 		shutdownScheduler(),
 		shutdownBatchTaskExecutor(),
 		shutdownBrowserAutomationService(),

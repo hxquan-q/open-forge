@@ -99,7 +99,7 @@ export async function runPluginCommand(
 	}
 
 	// macOS 没装命令行工具时，/usr/bin/git 一执行就弹系统安装框；插件按「没装 git」处理即可。
-	if (file === "git" && getRuntimeManager().shouldBlockGitCommand()) {
+	if (file === "git" && (await getRuntimeManager().shouldBlockGitCommand())) {
 		throw new Error(`Command failed to start: ${file} (ENOENT)`);
 	}
 

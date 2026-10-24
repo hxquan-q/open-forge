@@ -1,5 +1,4 @@
 // Modified by The Open Forge contributors.
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { chmod } from "node:fs/promises";
 import { delimiter, join } from "node:path";
@@ -25,6 +24,7 @@ import {
 	vendorRuntimeDir,
 } from "./paths.js";
 import { installRuntimeArchive, installRuntimeDirectory } from "./runtime-archive-installer.js";
+import { getRuntimePreparationSignal, runRuntimeCommand } from "./runtime-command.js";
 import type { GitToolStatus, RuntimeRegistryData, RuntimeStatus, RuntimesStatus } from "./types.js";
 
 const log = getAppLogger("runtimes");
@@ -76,6 +76,7 @@ export class RuntimeManager {
 	}
 
 	private saveRegistry(): void {
+		if (getRuntimePreparationSignal().aborted) return;
 		try {
 			atomicWriteJSON(registryPath(), this.data);
 		} catch (err) {
@@ -84,19 +85,20 @@ export class RuntimeManager {
 	}
 
 	/** 探测系统已安装的同名运行时(用系统 PATH 快照,不含我们的注入)。 */
-	private detectSystem(type: RuntimeType): void {
+	private async detectSystem(type: RuntimeType): Promise<void> {
 		const candidates = type === "python" ? ["python3", "python"] : ["node"];
 		const env = { ...process.env, PATH: SYSTEM_PATH_SNAPSHOT, Path: SYSTEM_PATH_SNAPSHOT };
 		for (const cmd of candidates) {
 			try {
-				const res = spawnSync(cmd, ["--version"], { encoding: "utf-8", timeout: 5000, env });
+				const res = await runRuntimeCommand(cmd, ["--version"], { timeout: 5000, env });
+				if (getRuntimePreparationSignal().aborted) return;
 				if (res.status === 0) {
 					const version = parseVersion(`${res.stdout}${res.stderr}`);
-					const whichRes = spawnSync(process.platform === "win32" ? "where" : "which", [cmd], {
-						encoding: "utf-8",
+					const whichRes = await runRuntimeCommand(process.platform === "win32" ? "where" : "which", [cmd], {
 						timeout: 5000,
 						env,
 					});
+					if (getRuntimePreparationSignal().aborted) return;
 					const path = whichRes.stdout?.trim().split(/\r?\n/)[0];
 					if (version && path && existsSync(path)) {
 						this.data.systemDetection[type] = { path, version, detectedAt: Date.now() };
@@ -112,6 +114,7 @@ export class RuntimeManager {
 
 	/** 内置 vendor → ~/.vetta/runtimes 首启安装。返回是否完成 seed。 */
 	private async seedFromVendor(type: RuntimeType): Promise<boolean> {
+		getRuntimePreparationSignal().throwIfAborted();
 		const entry = platformEntry(type);
 		if (!entry) return false;
 		const version = runtimeVersion(type);
@@ -159,7 +162,9 @@ export class RuntimeManager {
 	}
 
 	private async finishInstall(type: RuntimeType, version: string): Promise<void> {
+		getRuntimePreparationSignal().throwIfAborted();
 		await this.makeExecutable(type, version);
+		getRuntimePreparationSignal().throwIfAborted();
 		writeFileSync(join(installDir(type, version), ".vendor-version"), version);
 	}
 
@@ -187,11 +192,13 @@ export class RuntimeManager {
 	 * 经 `downloads` 去重:并发调用共享同一任务,完成后写 registry 并刷新 env。
 	 */
 	private ensureDownloaded(type: RuntimeType): Promise<void> {
+		if (getRuntimePreparationSignal().aborted) return Promise.resolve();
 		const running = this.downloads.get(type);
 		if (running) return running;
 		const task = (async () => {
 			try {
 				if (await this.download(type)) {
+					getRuntimePreparationSignal().throwIfAborted();
 					this.recordManaged(type);
 					await this.ensureNpm(type);
 					await this.ensurePip(type);
@@ -223,9 +230,11 @@ export class RuntimeManager {
 		const tmpFile = join(runtimesDir(), ".cache", `${type}-${version}-${entry.filename}`);
 		mkdirSync(join(runtimesDir(), ".cache"), { recursive: true });
 		for (const url of urls) {
+			getRuntimePreparationSignal().throwIfAborted();
 			try {
 				log.info(`downloading ${type} from ${url}`);
 				await this.fetchToFile(url, tmpFile);
+				getRuntimePreparationSignal().throwIfAborted();
 				await this.installArchive(type, tmpFile, entry, version);
 				rmSync(tmpFile, { force: true });
 				return true;
@@ -240,9 +249,14 @@ export class RuntimeManager {
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), 180_000);
 		try {
-			const res = await this.fetchImpl(url, { signal: controller.signal, redirect: "follow" });
+			const res = await this.fetchImpl(url, {
+				signal: AbortSignal.any([controller.signal, getRuntimePreparationSignal()]),
+				redirect: "follow",
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			writeFileSync(dest, Buffer.from(await res.arrayBuffer()));
+			const body = Buffer.from(await res.arrayBuffer());
+			getRuntimePreparationSignal().throwIfAborted();
+			writeFileSync(dest, body);
 		} finally {
 			clearTimeout(timer);
 		}
@@ -331,6 +345,7 @@ export class RuntimeManager {
 	}
 
 	private async ensureNpm(type: RuntimeType): Promise<void> {
+		getRuntimePreparationSignal().throwIfAborted();
 		if (process.platform !== "win32") return;
 		if (type !== "node" || !this.isReady(type)) return;
 		this.writeNpmConfig();
@@ -426,12 +441,12 @@ export class RuntimeManager {
 		return this.pipEntryCandidates().some((path) => existsSync(path));
 	}
 
-	private runPython(args: string[], timeout: number, env?: NodeJS.ProcessEnv): boolean {
-		const res = spawnSync(executablePathFor("python"), args, {
-			encoding: "utf-8",
+	private async runPython(args: string[], timeout: number, env?: NodeJS.ProcessEnv): Promise<boolean> {
+		const res = await runRuntimeCommand(executablePathFor("python"), args, {
 			timeout,
 			env,
 		});
+		getRuntimePreparationSignal().throwIfAborted();
 		if (res.status === 0) return true;
 		log.warn("python command failed", {
 			args,
@@ -443,18 +458,19 @@ export class RuntimeManager {
 		return false;
 	}
 
-	private getEnsurepipBundledDir(): string | undefined {
-		const res = spawnSync(
+	private async getEnsurepipBundledDir(): Promise<string | undefined> {
+		const res = await runRuntimeCommand(
 			executablePathFor("python"),
 			["-c", "import ensurepip, pathlib; print(pathlib.Path(ensurepip.__file__).with_name('_bundled'))"],
-			{ encoding: "utf-8", timeout: 10_000 },
+			{ timeout: 10_000 },
 		);
+		getRuntimePreparationSignal().throwIfAborted();
 		const bundledDir = res.status === 0 ? res.stdout.trim() : "";
 		return bundledDir && existsSync(bundledDir) ? bundledDir : undefined;
 	}
 
 	private async writePipShimScripts(): Promise<void> {
-		if (!this.runPython(["-m", "pip", "--version"], 10_000)) return;
+		if (!(await this.runPython(["-m", "pip", "--version"], 10_000))) return;
 
 		const scriptsDir = this.pipScriptsDir();
 		mkdirSync(scriptsDir, { recursive: true });
@@ -497,6 +513,7 @@ export class RuntimeManager {
 	 * 再用本地 bundled wheel 修复官方入口,仅本地修复失败时走镜像网络兜底。
 	 */
 	private async ensurePip(type: RuntimeType): Promise<void> {
+		getRuntimePreparationSignal().throwIfAborted();
 		if (process.platform !== "win32") return;
 		if (type !== "python" || !this.isReady(type)) return;
 		this.writePipConfig();
@@ -509,15 +526,15 @@ export class RuntimeManager {
 		try {
 			mkdirSync(this.pipScriptsDir(), { recursive: true });
 
-			this.runPython(["-m", "ensurepip", "--upgrade", "--default-pip"], 30_000);
+			await this.runPython(["-m", "ensurepip", "--upgrade", "--default-pip"], 30_000);
 			if (this.hasPipEntry()) return;
 
 			await this.writePipShimScripts();
 			if (this.hasPipEntry()) return;
 
-			const bundledDir = this.getEnsurepipBundledDir();
+			const bundledDir = await this.getEnsurepipBundledDir();
 			if (bundledDir) {
-				this.runPython(
+				await this.runPython(
 					[
 						"-m",
 						"pip",
@@ -536,7 +553,7 @@ export class RuntimeManager {
 				if (this.hasPipEntry()) return;
 			}
 
-			this.runPython(
+			await this.runPython(
 				["-m", "pip", "install", "--force-reinstall", "--no-deps", "--no-warn-script-location", "pip"],
 				60_000,
 				{
@@ -554,6 +571,7 @@ export class RuntimeManager {
 	}
 
 	private recordManaged(type: RuntimeType): void {
+		getRuntimePreparationSignal().throwIfAborted();
 		const version = runtimeVersion(type);
 		this.data.binaries[type] = {
 			source: "managed",
@@ -567,19 +585,23 @@ export class RuntimeManager {
 
 	/** 探测系统 + 首启 seed(失败回退下载)。不抛错:任一运行时失败不阻断启动。 */
 	async initialize(): Promise<void> {
+		if (getRuntimePreparationSignal().aborted) return;
 		this.loadRegistry();
 		for (const type of RUNTIME_TYPES) {
+			if (getRuntimePreparationSignal().aborted) return;
 			try {
-				this.detectSystem(type);
+				await this.detectSystem(type);
 			} catch (err) {
 				log.warn(`detect system ${type} failed`, err);
 			}
+			if (getRuntimePreparationSignal().aborted) return;
 			try {
 				// 启动先走零网络的 vendor 归档解压(离线打包渠道);vendor 缺位时后台
 				// 下载补齐——不 await,避免离线/弱网环境拖住初始化。面板轮询状态可见
 				// downloading,失败可由「重新获取」重试。
 				if (!this.isReady(type)) {
 					const seeded = await this.seedFromVendor(type);
+					if (getRuntimePreparationSignal().aborted) return;
 					if (!seeded && !this.isReady(type)) void this.ensureDownloaded(type);
 				}
 				if (this.isReady(type)) {
@@ -594,9 +616,10 @@ export class RuntimeManager {
 				log.error(`ensure ${type} failed`, err);
 			}
 		}
+		if (getRuntimePreparationSignal().aborted) return;
 		this.saveRegistry();
 		try {
-			this.git.detect();
+			await this.git.detect();
 		} catch (err) {
 			log.warn("detect git failed", err);
 		}
@@ -608,6 +631,7 @@ export class RuntimeManager {
 	 * 幂等:重复调用安全。即使运行时未就绪也安全(前置不存在目录无害)。
 	 */
 	applyEnv(): void {
+		if (getRuntimePreparationSignal().aborted) return;
 		const dirs: string[] = process.platform === "win32" ? [npmGlobalBinDir()] : [];
 		for (const type of RUNTIME_TYPES) {
 			if (this.isReady(type)) dirs.push(...binDirsFor(type));
@@ -677,11 +701,11 @@ export class RuntimeManager {
 		};
 	}
 
-	getStatus(): RuntimesStatus {
+	async getStatus(): Promise<RuntimesStatus> {
 		return {
 			node: this.statusFor("node"),
 			python: this.statusFor("python"),
-			git: this.git.getStatus(),
+			git: await this.git.getStatus(),
 			mirrors: {
 				npmRegistry: RUNTIME_MANIFEST.mirrors.npmRegistry,
 				pipIndexUrl: RUNTIME_MANIFEST.mirrors.pipIndexUrl,
@@ -691,6 +715,7 @@ export class RuntimeManager {
 
 	/** 面板「升级/重新获取」:强制重新 seed/下载推荐版本,再刷新 env。 */
 	async reinstall(type: RuntimeType): Promise<RuntimeStatus> {
+		getRuntimePreparationSignal().throwIfAborted();
 		const target = installDir(type);
 		rmSync(join(target, ".vendor-version"), { force: true });
 		const seeded = await this.seedFromVendor(type);
@@ -706,15 +731,19 @@ export class RuntimeManager {
 	}
 
 	/** 面板「重新探测系统运行时」。 */
-	redetect(): RuntimesStatus {
-		for (const type of RUNTIME_TYPES) this.detectSystem(type);
+	async redetect(): Promise<RuntimesStatus> {
+		for (const type of RUNTIME_TYPES) {
+			getRuntimePreparationSignal().throwIfAborted();
+			await this.detectSystem(type);
+		}
+		getRuntimePreparationSignal().throwIfAborted();
 		this.saveRegistry();
-		this.git.detect();
+		await this.git.detect();
 		return this.getStatus();
 	}
 
 	/** 插件调用 git 前的宿主检查，见 GitToolManager.shouldBlockGitCommand。 */
-	shouldBlockGitCommand(): boolean {
+	shouldBlockGitCommand(): Promise<boolean> {
 		return this.git.shouldBlockGitCommand();
 	}
 

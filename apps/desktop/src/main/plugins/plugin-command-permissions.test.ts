@@ -10,6 +10,7 @@ const pluginState = vi.hoisted(() => ({
 	trustLevel: "local" as "community" | "local" | "official",
 	grantedPermissions: ["agent.command.run", "agent.command.spawn"],
 	gitBlocked: false,
+	gitGate: undefined as Promise<boolean> | undefined,
 }));
 
 vi.mock("electron", () => ({ webContents: { getAllWebContents: () => [] } }));
@@ -41,7 +42,7 @@ vi.mock("./command-launcher.js", async () => {
 	};
 });
 vi.mock("../runtimes/manager.js", () => ({
-	getRuntimeManager: () => ({ shouldBlockGitCommand: () => pluginState.gitBlocked }),
+	getRuntimeManager: () => ({ shouldBlockGitCommand: async () => pluginState.gitGate ?? pluginState.gitBlocked }),
 }));
 vi.mock("./plugin-catalog.js", () => ({
 	listPlugins: () => [
@@ -62,6 +63,7 @@ describe("plugin command permissions", () => {
 		pluginState.trustLevel = "local";
 		pluginState.grantedPermissions = ["agent.command.run", "agent.command.spawn"];
 		pluginState.gitBlocked = false;
+		pluginState.gitGate = undefined;
 		vi.mocked(spawnCrossPlatformCommand).mockClear();
 	});
 
@@ -94,5 +96,17 @@ describe("plugin command permissions", () => {
 			exitCode: 0,
 		});
 		expect(spawnCrossPlatformCommand).toHaveBeenCalledOnce();
+	});
+
+	it("waits for the host git check before starting a permitted command", async () => {
+		let finishProbe!: (blocked: boolean) => void;
+		pluginState.gitGate = new Promise<boolean>((resolve) => {
+			finishProbe = resolve;
+		});
+		const command = runPluginCommand("command-test", "git", ["--version"], undefined);
+		await Promise.resolve();
+		expect(spawnCrossPlatformCommand).not.toHaveBeenCalled();
+		finishProbe(false);
+		await expect(command).resolves.toMatchObject({ exitCode: 0 });
 	});
 });
