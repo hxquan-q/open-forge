@@ -67,8 +67,8 @@ export class TeamTurnCoordinator {
 	/** Sessions the user stopped. Cleared only by the next user send. */
 	private readonly stopped = new Set<string>();
 	private readonly stopGenerations = new Map<string, number>();
-	/** Completion notices waiting for an initiator's lane, keyed by Team session and member. */
-	private readonly pendingContinuations = new Set<string>();
+	/** Owns each pending drain; later notices request another pass after its lane is released. */
+	private readonly pendingContinuations = new Map<string, { rerunRequested: boolean }>();
 	private readonly notificationJournal: TeamNotificationJournal;
 	private readonly recoveryMonitor: TeamRecoveryMonitor;
 	private readonly taskControl: TeamTaskControlService;
@@ -582,10 +582,20 @@ export class TeamTurnCoordinator {
 
 	private scheduleNotification(sessionId: string, memberId: string): void {
 		const key = continuationKey(sessionId, memberId);
-		if (this.pendingContinuations.has(key) || this.stopped.has(sessionId)) return;
-		this.pendingContinuations.add(key);
+		if (this.stopped.has(sessionId)) return;
+		const pending = this.pendingContinuations.get(key);
+		if (pending) {
+			pending.rerunRequested = true;
+			return;
+		}
+		const drain = { rerunRequested: false };
+		this.pendingContinuations.set(key, drain);
+		let completed = false;
 		// Never hold an assignee's execution lane while its initiator handles the notice.
 		void this.scheduleInitiatorContinuation(sessionId, memberId)
+			.then((drained) => {
+				completed = drained;
+			})
 			.catch((error: unknown) => {
 				log.warn("Team task notification awaits recovery", {
 					teamSessionId: sessionId,
@@ -594,25 +604,29 @@ export class TeamTurnCoordinator {
 				});
 			})
 			.finally(() => {
+				// A stopped/restarted generation may already own a different drain at this key.
+				if (this.pendingContinuations.get(key) !== drain) return;
 				this.pendingContinuations.delete(key);
+				// Re-read durable notices through normal admission, but never hot-retry a failed drain.
+				if (completed && drain.rerunRequested) this.scheduleNotification(sessionId, memberId);
 			});
 	}
 
-	private async scheduleInitiatorContinuation(sessionId: string, memberId: string): Promise<void> {
+	private async scheduleInitiatorContinuation(sessionId: string, memberId: string): Promise<boolean> {
 		const stopGeneration = this.stopGenerations.get(sessionId) ?? 0;
-		await this.memberScheduler.schedule({
+		return await this.memberScheduler.schedule({
 			teamSessionId: sessionId,
 			memberId,
 			run: async () => {
-				if (!this.isAdmissionCurrent(sessionId, stopGeneration)) return;
+				if (!this.isAdmissionCurrent(sessionId, stopGeneration)) return false;
 				const session = this.options.sessionState.get(sessionId) ?? (await this.options.readSession(sessionId));
 				const notices = this.notificationJournal.pending(session, memberId);
-				if (!notices.length) return;
+				if (!notices.length) return false;
 				const ids = notices.map((notice) => notice.id);
 				const records = this.notificationJournal.contexts(session, ids);
 				const state = this.options.collaborationStore.read(session);
 				const plan = planTeamInitiatorContinuation({ session, state, memberId, records });
-				if (!plan && state.workItems.some((item) => item.assignedToParticipantId === memberId)) return;
+				if (!plan && state.workItems.some((item) => item.assignedToParticipantId === memberId)) return false;
 				const requestId = `notification:${ids[0]}`;
 				const request: TeamMemberTurnRequest = plan?.request ?? {
 					teamSessionId: session.id,
@@ -633,13 +647,19 @@ export class TeamTurnCoordinator {
 						"automatic",
 						ids,
 					);
-					if (!admitted.requeued) return;
+					if (!admitted.requeued) return false;
 				}
-				if (!this.isAdmissionCurrent(sessionId, stopGeneration)) return;
-				await this.runCancellableMemberTurn(plan?.workItemId ?? `work:${requestId}:${memberId}`, {
+				if (!this.isAdmissionCurrent(sessionId, stopGeneration)) return false;
+				const workItemId = plan?.workItemId ?? `work:${requestId}:${memberId}`;
+				const settledSession = await this.runCancellableMemberTurn(workItemId, {
 					...request,
 					notificationIds: ids,
 				});
+				// The runner may resolve after interruption or retryable failure. Only a durable
+				// completed result permits immediate draining; retries keep their existing deadline.
+				return this.options.collaborationStore
+					.read(settledSession)
+					.workItems.some((item) => item.id === workItemId && item.state === "completed");
 			},
 		});
 	}
