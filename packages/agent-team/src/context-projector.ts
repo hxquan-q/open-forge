@@ -4,7 +4,16 @@ import { TEAM_DELIVERED_EVENT_ID_WINDOW, type TeamMemberAssignment, type TeamSes
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
 const MASK_64 = 0xffffffffffffffffn;
-function fnv64(value: string, seed: bigint): string {
+const FNV_OFFSET_HI = Number(FNV_OFFSET >> 32n);
+const FNV_OFFSET_LO = Number(FNV_OFFSET & 0xffffffffn);
+const FNV_PRIME_HI = 0x100; // PRIME >> 32: 0x100000001b3 = 0x100 * 2^32 + 0x1b3
+const FNV_PRIME_LO = 0x1b3; // PRIME & 0xffffffff
+
+/**
+ * BigInt reference implementation; exported for tests to pin output equality.
+ * Do not call this on hot paths.
+ */
+export function fnv64Reference(value: string, seed: bigint): string {
 	let hash = seed;
 	for (const byte of new TextEncoder().encode(value)) {
 		hash ^= BigInt(byte);
@@ -12,9 +21,49 @@ function fnv64(value: string, seed: bigint): string {
 	}
 	return hash.toString(16).padStart(16, "0");
 }
+
+/**
+ * FNV-1a 64 over UTF-8 bytes using two 32-bit limbs instead of BigInt per byte.
+ *
+ * Every intermediate product stays below 2^49 (hi,lo < 2^32 and limbs < 2^17),
+ * so float64 arithmetic is exact here. Output is byte-identical to
+ * {@link fnv64Reference}; that equivalence is pinned by the projector tests.
+ */
+const INVERTED_OFFSET = FNV_OFFSET ^ MASK_64;
+const INVERTED_OFFSET_HI = Number(INVERTED_OFFSET >> 32n);
+const INVERTED_OFFSET_LO = Number(INVERTED_OFFSET & 0xffffffffn);
+
+/**
+ * Both FNV passes share one encode + one loop, so large inputs are hashed once.
+ * Output is identical to calling {@link fnv64} with the two seeds separately.
+ */
+function fnv64Pair(value: string): [primary: string, inverted: string] {
+	const bytes = new TextEncoder().encode(value);
+	let primaryHi = FNV_OFFSET_HI;
+	let primaryLo = FNV_OFFSET_LO;
+	let invertedHi = INVERTED_OFFSET_HI;
+	let invertedLo = INVERTED_OFFSET_LO;
+	for (let index = 0; index < bytes.length; index += 1) {
+		const byte = bytes[index];
+		primaryLo = (primaryLo ^ byte) >>> 0;
+		invertedLo = (invertedLo ^ byte) >>> 0;
+		const primaryMiddle = primaryHi * FNV_PRIME_LO + primaryLo * FNV_PRIME_HI;
+		const primaryLower = primaryLo * FNV_PRIME_LO;
+		primaryLo = primaryLower % 0x100000000;
+		primaryHi = (primaryMiddle + Math.floor(primaryLower / 0x100000000)) % 0x100000000;
+		const invertedMiddle = invertedHi * FNV_PRIME_LO + invertedLo * FNV_PRIME_HI;
+		const invertedLower = invertedLo * FNV_PRIME_LO;
+		invertedLo = invertedLower % 0x100000000;
+		invertedHi = (invertedMiddle + Math.floor(invertedLower / 0x100000000)) % 0x100000000;
+	}
+	const toHex = (hi: number, lo: number) => (BigInt(hi) * 0x100000000n + BigInt(lo)).toString(16).padStart(16, "0");
+	return [toHex(primaryHi, primaryLo), toHex(invertedHi, invertedLo)];
+}
+
 export function stableTeamEventId(parts: readonly string[]): string {
 	const canonical = parts.map((part) => `${part.length}:${part}`).join("|");
-	return `team-v1-${fnv64(canonical, FNV_OFFSET)}${fnv64(canonical, FNV_OFFSET ^ MASK_64)}`;
+	const [primary, inverted] = fnv64Pair(canonical);
+	return `team-v1-${primary}${inverted}`;
 }
 /**
  * 任务书的配置指纹。成员运行时按 (Profile 修订, 任务书指纹, 名册指纹) 判断是否需要重开，

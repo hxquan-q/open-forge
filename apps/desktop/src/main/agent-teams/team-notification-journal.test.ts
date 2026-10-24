@@ -290,7 +290,23 @@ function indexFixture(tasks: number) {
 			timestamp: new Date(index + 1).toISOString(),
 			turnId: `turn-${index}`,
 			author: { kind: "agent", id: "member" },
-			message: { role: "assistant", content: [{ type: "text", text: `Result ${index}` }], timestamp: index + 1 },
+			message: {
+				role: "assistant",
+				content: [{ type: "text", text: `Result ${index}` }],
+				api: "openai-responses",
+				provider: "openai",
+				model: "test",
+				usage: {
+					input: 1,
+					output: 1,
+					cacheRead: 0,
+					cacheWrite: 0,
+					totalTokens: 2,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				},
+				stopReason: "stop",
+				timestamp: index + 1,
+			},
 		});
 	}
 	let document: ConversationDocument = {
