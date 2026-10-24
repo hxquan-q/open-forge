@@ -61,11 +61,42 @@ notificationIds 是持久准入凭据；`pending` 对 workItems 当前 revision/
 
 ## 验收分层
 
-工程验证待执行；技术审查待执行；集成 pending；内部行为保持型优化人工验收不适用；发布未授权。
+工程验证：通过；技术审查：未执行独立审查（自审 + 变异/差分测试）；集成 pending；内部行为保持型优化人工验收不适用；发布未授权。
 
 ## 交付记录
 
-- 实际修改：Task 合同先行。
-- 实际运行：仅 grep 与探针测量，未改生产代码。
-- Worktree：待创建。
-- 剩余风险：缓存键必须覆盖“同 revision 不同内容”，否则会返回陈旧通知。
+### 实际修改
+
+`apps/desktop/src/main/agent-teams/team-notification-journal.ts`：
+
+- 新增实例级 `WeakMap<ConversationDocument, {revision, length, firstId, lastId, index}>`，一次遍历同时得出 stop 标记、通知表（后写覆盖 + 首次插入顺序）与 `entriesById` 结果条目索引。
+- `isStopped` / `pending` / `contexts` / 私有 `read` 全部改用该索引；`pending` 的 workItems 关联改为 Map 查找（原为每条通知一次 `find`）。
+- 失效签名与 TASK-0395 的 Store 缓存一致：对象身份 + revision + entries 长度 + 首末 id，覆盖整对象替换、恢复 replaceDocument 与测试内的原地 push。
+
+`apps/desktop/src/main/agent-teams/team-notification-journal.test.ts`：新增 4 例（stop→resume 失效、异快照隔离、cancelled 过滤、已接收通知剔除），并保留原有 3 例。
+
+### 实际运行
+
+- 定向：`team-notification-journal.test.ts` 7 例通过。
+- `bun run test:impact -- apps/desktop/src/main/agent-teams/team-notification-journal.ts`：related 13 文件 **159 例通过**。
+- 完整 `bun run check`：lint / types(root,cli,desktop,docs,mobile) / guards / mobile lint 全绿，ratchet new=0。
+- 交错 A/B（`.auto/ab.mjs`，同一 512 任务文档，60 次排空循环，预热点，6 轮交错取中位）：
+  - 旧实现 160.26ms → 新实现 29.21ms（5.49×）；
+  - 复跑一轮 357.41 → 56.33（6.35×，机器负载偏高，比值稳定）；
+  - 单进程探针（`.auto/journal-probe.mjs`）：493.6ms → 26.9–27.9ms（long 场景 60 循环）。
+
+### 未运行及原因
+
+真实 Provider / Desktop UI 未授权；跨平台未跑；未做独立技术审查（本片为同一模式的第二次应用，已用差分用例与交错 A/B 自证）。
+
+### 已知限制
+
+与 TASK-0395 相同：若宿主原地改写中间条目且 revision 与首末 id 均不变，缓存返回旧值；生产写路径不存在该形态。`entriesById` 会为快照保留一份条目索引，内存与文档同阶、随旧文档回收。
+
+### Worktree
+
+CLI 从 main@1584b54df 创建 `../open-forge-wt/task-0402-notification-journal-projection`，独立 frozen-lockfile 安装；目标 `worktree:check` 通过。此前误把四个 README 平铺复制到 `project/README.md`，已用 `git checkout -- project/README.md` 恢复，并移除误带入的 PLAN-0022/0023 索引行。
+
+### 剩余风险
+
+基准是合成状态读取，不代表端到端任务加速；收益与“同一快照被多次查询”的频次成正比。
