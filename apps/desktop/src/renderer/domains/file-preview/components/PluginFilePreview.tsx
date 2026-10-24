@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { PluginFilePreviewContribution } from "@vetta-org/plugin-sdk";
 import type { FilePreviewItem } from "@vetta-org/theme-ui/file-preview";
-import { PluginFilePreviewView } from "@vetta-org/theme-ui/file-preview";
+import { PluginFilePreviewView } from "@vetta-org/theme-ui/file-preview/core";
 import { usePluginFilePreviewModel } from "../hooks/usePluginFilePreviewModel";
 
 /**

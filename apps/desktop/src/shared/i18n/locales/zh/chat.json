@@ -420,6 +420,8 @@
 	},
 	"fileEditor": {
 		"loading": "正在打开文件…",
+		"errorLoadEditor": "编辑器未能加载，请重试",
+		"retry": "重试",
 		"edit": "编辑",
 		"preview": "预览",
 		"save": "保存",
@@ -969,11 +971,7 @@
 			"busy": "会话正在运行，请等当前回复结束后再试",
 			"recoveryRequired": "会话需要先恢复才能续跑，请先处理恢复提示"
 		},
-		"streamingPhrases": [
-			"Vetta 正在回复…",
-			"请耐心等待…",
-			"Vetta 正在努力工作…"
-		],
+		"streamingPhrases": ["Vetta 正在回复…", "请耐心等待…", "Vetta 正在努力工作…"],
 		"copyButton": {
 			"copied": "已复制",
 			"copy": "复制"

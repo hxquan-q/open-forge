@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import { codeToHtml } from "shiki";
-import { getTextEditorLanguageId } from "../file-preview/text-editor-language";
+import { getTextEditorLanguageId } from "../file-preview/text-editor-language-id";
 import { latchLargeObjectDegradation, type LargeObjectKind } from "../shared/large-object-limits";
 
 export interface CodePreviewProps {
@@ -30,8 +30,11 @@ export function CodePreview({
 	// 打开预览时一次性判定：超阈值的大对象直接走纯文本，不再跑语法高亮/索引。
 	const [degraded] = useState(
 		() =>
-			latchLargeObjectDegradation({ kind: degradationKind, bytes: content.length, lines: countLines(content) })
-				.current().degraded,
+			latchLargeObjectDegradation({
+				kind: degradationKind,
+				bytes: content.length,
+				lines: countLines(content),
+			}).current().degraded,
 	);
 
 	useEffect(() => {

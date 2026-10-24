@@ -2,7 +2,7 @@
 import { pathDirname, pathNormalize } from "@shared/lib/utils";
 import { pluginFilePreviewsAtom } from "@shared/store/atoms";
 import type { FilePreviewItem, PreviewBodyViewProps } from "@vetta-org/theme-ui/file-preview";
-import { getExtension } from "@vetta-org/theme-ui/file-preview";
+import { getExtension } from "@vetta-org/theme-ui/file-preview/core";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,19 +18,13 @@ type LoadState =
 	| { status: "unsupported" }
 	| { status: "loaded"; content: string; extension: string };
 
-export function usePreviewBodyModel(
-	item: FilePreviewItem,
-	refreshNonce = 0,
-): PreviewBodyViewProps {
+export function usePreviewBodyModel(item: FilePreviewItem, refreshNonce = 0): PreviewBodyViewProps {
 	const ext = useMemo(() => getExtension(item.name), [item.name]);
 	const supported = isPreviewSupported(item.name);
 	const canLoad = supported || Boolean(item.path);
 	const { t } = useTranslation("chat");
 	const pluginPreviews = useAtomValue(pluginFilePreviewsAtom);
-	const pluginPreview = useMemo(
-		() => pluginPreviews.find((p) => p.extensions.includes(ext)),
-		[pluginPreviews, ext],
-	);
+	const pluginPreview = useMemo(() => pluginPreviews.find((p) => p.extensions.includes(ext)), [pluginPreviews, ext]);
 
 	const [state, setState] = useState<LoadState>({ status: "loading" });
 	const [watchTick, setWatchTick] = useState(0);

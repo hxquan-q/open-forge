@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { ReactNode } from "react";
-import { PreviewErrorBoundary as ThemePreviewErrorBoundary } from "@vetta-org/theme-ui/file-preview";
+import { PreviewErrorBoundary as ThemePreviewErrorBoundary } from "@vetta-org/theme-ui/file-preview/core";
 
 interface Props {
 	resetKey?: unknown;

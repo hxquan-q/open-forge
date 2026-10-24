@@ -65,6 +65,10 @@
 			"types": "./src/file-preview/index.ts",
 			"import": "./src/file-preview/index.ts"
 		},
+		"./file-preview/core": {
+			"types": "./src/file-preview/core.ts",
+			"import": "./src/file-preview/core.ts"
+		},
 		"./file-explorer": {
 			"types": "./src/file-explorer/index.ts",
 			"import": "./src/file-explorer/index.ts"
@@ -104,6 +108,14 @@
 		"./settings": {
 			"types": "./src/settings/index.ts",
 			"import": "./src/settings/index.ts"
+		},
+		"./settings/ssh-host-form": {
+			"types": "./src/settings/ssh-host-form.ts",
+			"import": "./src/settings/ssh-host-form.ts"
+		},
+		"./settings/shortcut-recorder": {
+			"types": "./src/settings/shortcut-recorder.ts",
+			"import": "./src/settings/shortcut-recorder.ts"
 		},
 		"./shared": {
 			"types": "./src/shared/index.ts",

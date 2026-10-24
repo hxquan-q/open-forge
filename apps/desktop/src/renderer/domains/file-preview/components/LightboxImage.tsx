@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { FilePreviewItem } from "@vetta-org/theme-ui/file-preview";
-import { LightboxImageView } from "@vetta-org/theme-ui/file-preview";
+import { LightboxImageView } from "@vetta-org/theme-ui/file-preview/core";
 import { useImageSrc, useLightboxImageModel } from "../hooks/useLightboxImageModel";
 
 export { useImageSrc };

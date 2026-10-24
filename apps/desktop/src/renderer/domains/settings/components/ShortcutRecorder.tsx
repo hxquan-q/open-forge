@@ -1,4 +1,5 @@
-import { ShortcutRecorderView } from "@vetta-org/theme-ui/settings";
+// Modified by The Open Forge contributors.
+import { ShortcutRecorderView } from "@vetta-org/theme-ui/settings/shortcut-recorder";
 import { eventToShortcut, formatShortcut } from "@shared/lib/platform";
 
 export function ShortcutRecorder({

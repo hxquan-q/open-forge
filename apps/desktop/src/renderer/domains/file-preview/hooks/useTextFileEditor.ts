@@ -84,6 +84,9 @@ export function useTextFileEditor(path: string, refreshNonce: number): TextFileE
 	useEffect(() => {
 		if (!Number.isFinite(refreshNonce)) return;
 		void loadFromDisk(false);
+		return () => {
+			loadRequestIdRef.current += 1;
+		};
 	}, [loadFromDisk, refreshNonce]);
 
 	useEffect(() => {

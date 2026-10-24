@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { FilePreviewContext } from "@vetta-org/theme-ui/file-preview";
-import { FilePreviewView as ThemeFilePreviewView } from "@vetta-org/theme-ui/file-preview";
+import { FilePreviewView as ThemeFilePreviewView } from "@vetta-org/theme-ui/file-preview/core";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useFilePreviewKeyboardScope } from "../hooks/useFilePreviewKeyboardScope";
@@ -89,12 +90,7 @@ export function FilePreviewView({
  * Hook 返回标准的 prev/next/close 导航回调，绑定到一个可写的预览上下文 atom。
  */
 export function usePreviewNav(
-	setCtx: (
-		ctx:
-			| FilePreviewContext
-			| null
-			| ((prev: FilePreviewContext | null) => FilePreviewContext | null),
-	) => void,
+	setCtx: (ctx: FilePreviewContext | null | ((prev: FilePreviewContext | null) => FilePreviewContext | null)) => void,
 ): {
 	goPrev: () => void;
 	goNext: () => void;

@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { FilePreviewItem } from "@vetta-org/theme-ui/file-preview";
-import { getExtension, type LightboxImageViewProps } from "@vetta-org/theme-ui/file-preview";
+import { getExtension, type LightboxImageViewProps } from "@vetta-org/theme-ui/file-preview/core";
 import { useEffect, useState } from "react";
 
 const MIME_MAP: Record<string, string> = {

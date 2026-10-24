@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { pluginFilePreviewsAtom } from "@shared/store/atoms";
 import {
 	AUDIO_EXTENSIONS,
@@ -7,11 +8,11 @@ import {
 	getExtension,
 	getPreviewLabel,
 	type FilePreviewItem,
-} from "@vetta-org/theme-ui/file-preview";
+} from "@vetta-org/theme-ui/file-preview/core";
 import { useAtomValue } from "jotai";
 import { usePreviewBodyModel } from "../hooks/usePreviewBodyModel";
 import { downloadItem, isPreviewSupported, isTextExtension } from "../preview-utils";
-import { EditableTextFileView } from "./EditableTextFileView";
+import { LazyEditableTextFileView } from "./LazyEditableTextFileView";
 
 export {
 	AUDIO_EXTENSIONS,
@@ -41,22 +42,13 @@ export function PreviewBody({
 	const pluginOwnsPreview = pluginPreviews.some((preview) => preview.extensions.includes(extension));
 	if (editable && item.path && isTextExtension(extension) && !pluginOwnsPreview) {
 		return (
-			<EditableTextFileView
-				item={{ ...item, path: item.path }}
-				refreshNonce={refreshNonce}
-			/>
+			<LazyEditableTextFileView key={item.path} item={{ ...item, path: item.path }} refreshNonce={refreshNonce} />
 		);
 	}
 	return <ReadonlyPreviewBody item={item} refreshNonce={refreshNonce} />;
 }
 
-function ReadonlyPreviewBody({
-	item,
-	refreshNonce,
-}: {
-	item: FilePreviewItem;
-	refreshNonce: number;
-}): JSX.Element {
+function ReadonlyPreviewBody({ item, refreshNonce }: { item: FilePreviewItem; refreshNonce: number }): JSX.Element {
 	const model = usePreviewBodyModel(item, refreshNonce);
 	return <PreviewBodyView {...model} />;
 }

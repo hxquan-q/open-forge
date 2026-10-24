@@ -1,4 +1,5 @@
-import { isEditableKeyboardTarget } from "@vetta-org/theme-ui/file-preview";
+// Modified by The Open Forge contributors.
+import { isEditableKeyboardTarget } from "@vetta-org/theme-ui/file-preview/core";
 import { matchesShortcut } from "../lib/platform";
 
 /**

@@ -1,19 +1,11 @@
+// Modified by The Open Forge contributors.
 import type { DesktopThemePackage } from "@preload/api";
 import { DEFAULT_THEME_MODULE, ThemeProvider, type ThemeModule } from "@vetta-org/theme-sdk";
 import { AppBootLoadingView } from "@vetta-org/theme-ui/app";
-import {
-	type ErrorInfo,
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { type ErrorInfo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemeErrorBoundary } from "./ThemeErrorBoundary";
 import { themeRendererCapabilityHost } from "../pages/theme-renderer-capability-host";
 import { ThemeRuntimeContext } from "./ThemeRuntimeContext";
-import { loadThemePackage } from "./themeLoader";
 import type { ThemeRuntimeValue } from "./types";
 
 const UI_THEME_STORAGE_KEY = "vetta-ui-theme";
@@ -56,7 +48,9 @@ export function ThemeRuntimeProvider({ children }: { children: ReactNode }): JSX
 		}
 		const descriptor = themes.find((theme) => theme.id === themeId);
 		if (!descriptor) {
-			console.warn(`[theme-runtime] theme "${themeId}" not found elapsed=${formatMs(start)}, falling back to default`);
+			console.warn(
+				`[theme-runtime] theme "${themeId}" not found elapsed=${formatMs(start)}, falling back to default`,
+			);
 			disposeRef.current();
 			disposeRef.current = () => {};
 			localStorage.setItem(UI_THEME_STORAGE_KEY, DEFAULT_THEME_MODULE.meta.id);
@@ -67,6 +61,7 @@ export function ThemeRuntimeProvider({ children }: { children: ReactNode }): JSX
 		setStatus("loading");
 		try {
 			const loadStart = performance.now();
+			const { loadThemePackage } = await import("./themeLoader");
 			const loaded = await loadThemePackage(descriptor);
 			console.debug(`[theme-runtime] loadThemePackage awaited "${descriptor.id}" elapsed=${formatMs(loadStart)}`);
 			disposeRef.current();
@@ -98,7 +93,9 @@ export function ThemeRuntimeProvider({ children }: { children: ReactNode }): JSX
 
 	const handleThemeRenderError = useCallback(
 		(error: Error, info: ErrorInfo): void => {
-			console.error(`[theme-runtime] theme "${activeTheme.meta.id}" failed to render: ${error.message} ${JSON.stringify(info)}`);
+			console.error(
+				`[theme-runtime] theme "${activeTheme.meta.id}" failed to render: ${error.message} ${JSON.stringify(info)}`,
+			);
 			disposeRef.current();
 			disposeRef.current = () => {};
 			setActiveTheme(DEFAULT_THEME_MODULE);

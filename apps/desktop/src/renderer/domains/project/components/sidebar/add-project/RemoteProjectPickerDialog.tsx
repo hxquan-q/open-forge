@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import { useSshHostFormLabels } from "@shared/hooks/useSshHostFormLabels";
-import { SshHostFormFieldsView } from "@vetta-org/theme-ui/settings";
+import { SshHostFormFieldsView } from "@vetta-org/theme-ui/settings/ssh-host-form";
 import {
 	Button,
 	Dialog,

@@ -72,6 +72,29 @@ describe("useTextFileEditor 驻留登记", () => {
 		expect(document?.savedContent).toBe("disk-content");
 	});
 
+	it("关闭仍在读取的文件后，不重新写入已释放的文档", async () => {
+		stubVettaFs();
+		const read = vi.mocked(window.vetta.fs.readEditableTextFile);
+		const snapshot = await read("/tmp/a.txt");
+		let finish!: (value: typeof snapshot) => void;
+		read.mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve;
+				}),
+		);
+		const store = createStore();
+		const { unmount } = renderHook(() => useTextFileEditor("/tmp/a.txt", 0), {
+			wrapper: createWrapper(store),
+		});
+		unmount();
+		await act(async () => finish(snapshot));
+
+		expect(store.get(fileEditorDocumentsAtom).has("/tmp/a.txt")).toBe(false);
+		expect(store.get(fileEditorOpenDocumentCountsAtom).size).toBe(0);
+		expect(window.vetta.fs.unwatchDir).toHaveBeenCalledWith("/tmp");
+	});
+
 	it("切 path 释放旧 path 干净文档、登记新 path；脏的旧 path 保留", async () => {
 		stubVettaFs();
 		const store = createStore();
@@ -87,6 +110,32 @@ describe("useTextFileEditor 驻留登记", () => {
 		expect(store.get(fileEditorOpenDocumentCountsAtom).has("/tmp/a.txt")).toBe(false);
 		expect(store.get(fileEditorDocumentsAtom).get("/tmp/a.txt")?.draftContent).toBe("dirty-a");
 		expect(store.get(fileEditorOpenDocumentCountsAtom).get("/tmp/b.txt")).toBe(1);
+	});
+
+	it("切换文件后忽略旧文件晚到的读取结果", async () => {
+		stubVettaFs();
+		const read = vi.mocked(window.vetta.fs.readEditableTextFile);
+		const snapshot = await read("/tmp/a.txt");
+		let finish!: (value: typeof snapshot) => void;
+		read.mockImplementation((path) =>
+			path === "/tmp/a.txt"
+				? new Promise((resolve) => {
+						finish = resolve;
+					})
+				: Promise.resolve({ ...snapshot, content: "new-file" }),
+		);
+		const store = createStore();
+		const { result, rerender } = renderHook(({ path }) => useTextFileEditor(path, 0), {
+			initialProps: { path: "/tmp/a.txt" },
+			wrapper: createWrapper(store),
+		});
+		rerender({ path: "/tmp/b.txt" });
+		await waitFor(() => expect(result.current.document?.draftContent).toBe("new-file"));
+		await act(async () => finish(snapshot));
+
+		expect(store.get(fileEditorDocumentsAtom).has("/tmp/a.txt")).toBe(false);
+		expect(result.current.document?.draftContent).toBe("new-file");
+		expect(window.vetta.fs.unwatchDir).toHaveBeenCalledWith("/tmp");
 	});
 
 	it("StrictMode 下 register/release 对称（净计数为 1）", async () => {

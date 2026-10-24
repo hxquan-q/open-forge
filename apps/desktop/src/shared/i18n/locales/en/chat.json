@@ -419,6 +419,8 @@
 		}
 	},
 	"fileEditor": {
+		"errorLoadEditor": "The editor could not load. Please try again.",
+		"retry": "Retry",
 		"loading": "Opening file…",
 		"edit": "Edit",
 		"preview": "Preview",
@@ -969,11 +971,7 @@
 			"busy": "The session is running; wait for the current reply to finish.",
 			"recoveryRequired": "This session must be recovered before it can continue."
 		},
-		"streamingPhrases": [
-			"Vetta is replying…",
-			"Please hold on…",
-			"Vetta is working hard…"
-		],
+		"streamingPhrases": ["Vetta is replying…", "Please hold on…", "Vetta is working hard…"],
 		"copyButton": {
 			"copied": "Copied",
 			"copy": "Copy"
