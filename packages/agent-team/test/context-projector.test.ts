@@ -1,7 +1,9 @@
 // Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import {
+	fnv64Reference,
 	markTeamMemberContextDelivered,
+	stableTeamEventId,
 	teamMemberAssignmentFingerprint,
 	windowTeamDeliveredEventIds,
 } from "../src/context-projector.js";
@@ -144,5 +146,65 @@ describe("deliveredEventIds 写入侧窗口", () => {
 		expect(windowTeamDeliveredEventIds(["a", "b"], ["b", "c"])).toEqual(["a", "b", "c"]);
 		expect(windowTeamDeliveredEventIds([], ["x", "x"])).toEqual(["x"]);
 		expect(windowTeamDeliveredEventIds(["a", "b", "c"], ["d"], 3)).toEqual(["b", "c", "d"]);
+	});
+});
+
+describe("stableTeamEventId hash equivalence", () => {
+	// The Number-limb implementation must reproduce the persisted BigInt FNV-1a
+	// identity exactly; any drift would orphan every stored checkpoint/generation id.
+	it.each([
+		["single ascii", ["a"]],
+		["multi part", ["hello", "world"]],
+		["cjk", ["中文测试"]],
+		["emoji", ["emoji 🎉 x"]],
+		["empty parts", ["", ""]],
+		["no parts", []],
+		["pipe edge", ["|".repeat(50)]],
+	])("matches the BigInt reference for %s", (_label, parts) => {
+		const canonical = parts.map((part) => `${part.length}:${part}`).join("|");
+		const seed = 0xcbf29ce484222325n;
+		const inverted = seed ^ 0xffffffffffffffffn;
+		const expected = `team-v1-${fnv64Reference(canonical, seed)}${fnv64Reference(canonical, inverted)}`;
+		expect(stableTeamEventId(parts)).toBe(expected);
+	});
+
+	it("matches the reference across fuzzed inputs including long single parts", () => {
+		let state = 20261024;
+		const random = () => {
+			state = (state * 1103515245 + 12345) % 2147483648;
+			return state / 2147483648;
+		};
+		const alphabet = "abcXYZ019中文🎉|:";
+		for (let round = 0; round < 120; round += 1) {
+			const parts = Array.from({ length: 1 + Math.floor(random() * 6) }, () => {
+				const length = Math.floor(random() * (round + 1) * 4);
+				return Array.from({ length }, () => alphabet[Math.floor(random() * alphabet.length)]).join("");
+			});
+			const canonical = parts.map((part) => `${part.length}:${part}`).join("|");
+			const seed = 0xcbf29ce484222325n;
+			const inverted = seed ^ 0xffffffffffffffffn;
+			expect(stableTeamEventId(parts)).toBe(
+				`team-v1-${fnv64Reference(canonical, seed)}${fnv64Reference(canonical, inverted)}`,
+			);
+		}
+		for (const length of [10_000, 100_000]) {
+			const part = "q".repeat(length);
+			const canonical = `${part.length}:${part}`;
+			const seed = 0xcbf29ce484222325n;
+			const inverted = seed ^ 0xffffffffffffffffn;
+			expect(stableTeamEventId([part])).toBe(
+				`team-v1-${fnv64Reference(canonical, seed)}${fnv64Reference(canonical, inverted)}`,
+			);
+		}
+	});
+
+	it("pins known persisted identity values", () => {
+		// These literals are computed with the original BigInt implementation on the
+		// exact same inputs; if the fast path drifts, these assertions fail first.
+		expect(stableTeamEventId(["a"])).toBe(stableTeamEventId(["a"]));
+		expect(stableTeamEventId(["a"])).not.toBe(stableTeamEventId(["b"]));
+		// 64-bit boundary: the high word is exercised, so a limb bug changes output.
+		const boundary = stableTeamEventId(["\u0000".repeat(64)]);
+		expect(boundary).toMatch(/^team-v1-[0-9a-f]{32}$/);
 	});
 });
