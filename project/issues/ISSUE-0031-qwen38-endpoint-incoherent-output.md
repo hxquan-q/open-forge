@@ -1,7 +1,7 @@
 ---
 id: ISSUE-0031
 type: issue
-status: draft
+status: done
 priority: P2
 owner: packages/ai
 related_requirement: []
@@ -58,3 +58,7 @@ qwen3.8 被要求作为可用测试/使用模型时必须先闭合本 Issue；�
 
 - 本裁定**不闭合**本 Issue：qwen3.8 端点根因（推荐路径 B→A）仍待查；「决策触发条件」原文继续有效——**qwen3.8 在本 Issue 闭合前不应用于任何真实流程验证**。
 - 授权范围：验收用途、隔离 Debug Profile（`verify:ui:*:debug`）、glm 端点 `:16800`；不扩大到发布、用户日常实例或其它端点。
+## 复测结论（2026-10-24，VERIFY-0023）
+
+端点已恢复：极简判别「只回复两个字：你好」精确回复「你好」（main@1515a91dd，Debug Profile 04987e4e）。
+后续 22 次调用（含团队委派/工具循环）全部 `stop` 正常。端点未上报价格字段。本议题按端点侧已修复关闭。
