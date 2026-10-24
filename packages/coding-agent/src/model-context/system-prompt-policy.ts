@@ -81,6 +81,9 @@ export function buildDesktopCliGuidance(brandName: string = DEFAULT_BRAND_NAME):
 }
 
 const TOOL_SELECTION_GUIDANCE =
+	"Use the currently callable tools and their results as capability evidence, not assumptions carried over from earlier replies. " +
+	"The deferred MCP index is not an inventory of built-in tools; an empty search does not mean that an already exposed capability is unavailable. " +
+	"Loading a Skill does not register tools or grant permissions. If a capability fails, report the specific tool error and missing prerequisite rather than denying every related capability. " +
 	"Before selecting a tool, identify the requested outcome, target resource, and whether the user wants explanation, inspection, or execution. " +
 	"Match the tool's purpose and prerequisites, not just its name or a shared keyword. Honor its exclusion cases and use its suggested alternative when applicable. " +
 	"Use fitting capabilities and their necessary supporting steps proactively; the user does not need to name a tool or skill. Do not narrow a capability's declared purpose merely to avoid making a selection decision. " +
@@ -316,6 +319,15 @@ function buildGuidelines(tools: string[], scenario?: ConversationScenario): stri
 		);
 		guidelinesList.push(
 			"Before bash/shell: if the process may not exit on its own (dev server, watcher, docker compose up without -d, make dev), MUST set run_in_background: true. Foreground blocks the entire agent turn until exit (or auto-promote after the soft wait).",
+		);
+	}
+
+	if (tools.includes("browser_tab")) {
+		guidelinesList.push(
+			"In-app browser access is available through `browser_tab` for the page the user is viewing. No shell, CLI installation, or MCP search is needed for this tool. " +
+				"Use snapshot before choosing an elementRef, and use the returned ref rather than guessing a locator. Tool availability does not guarantee that the in-app page is open or ready; follow a specific error's recovery guidance. " +
+				"A browser CLI or another browser tool may use a separate browser session: do not silently substitute it for the user's open page or assume it shares login state. " +
+				"This tool is not a shell, raw network probe, or arbitrary JavaScript executor. Use it for webpage tasks, not to replace unavailable command tools or bypass permissions.",
 		);
 	}
 

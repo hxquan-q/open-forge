@@ -93,3 +93,7 @@ updated: 2026-10-06
 - Browser 代码提交：a326a644b（task/TASK-0218-browser-capability-evidence），工作树干净。
 - 主检出仍存在其他任务的文档站/品牌源码与 bun.lock 未提交变更，不满足合并前干净条件；此处只记录交接，不表示 Browser 代码已进入 main/origin/dev。
 - 后续：其他任务完成后，按开发流程核对目标文件与冲突记录，串行合入该分支，重跑受影响测试与 check；本轮不清理未集成 Worktree。
+
+### 集成结果
+
+- 2026-10-24 合入本地 main：`browser-tab-tool-contract.ts` 冲突按主检出已有的 `no_browser_session`/`unimplemented` 分码保留，并叠加本 Task 的 `BROWSER_TAB_NO_SESSION_GUIDANCE`，两处语义合并后仍区分「该页未打开」与「能力不可用」。
