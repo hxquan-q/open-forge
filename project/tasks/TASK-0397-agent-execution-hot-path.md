@@ -17,7 +17,7 @@ branch: task/TASK-0397-agent-execution-hot-path
 worktree: ../open-forge-wt/task-0397-agent-execution-hot-path
 base_commit: 1584b54dfd6db56ee49d070d652b886705355e4d
 read_paths: [packages/agent/, packages/ai/, packages/runtime-core/, packages/runtime-subagents/, packages/coding-agent/]
-write_paths: [packages/agent/src/engine/, packages/agent/test/, packages/runtime-core/src/kernel/, packages/runtime-core/test/kernel/]
+write_paths: [packages/runtime-core/src/kernel/stateless-agent-core-turn-engine.ts, packages/runtime-core/test/kernel/frame-release.test.ts, packages/runtime-core/scripts/frame-retention.bench.mjs]
 exclusive_paths: []
 depends_on: [TASK-0394]
 conflicts_with: []
@@ -56,6 +56,29 @@ Turn generation 固定、工具授权顺序、parallel-safe/exclusive 屏障、s
 
 RESEARCH-0043 另发现 Pi 的双栈 FIFO 可供 EventStream 对照，但本仓 fail/end/multiple-waiter 合同更强；该候选触及 ai 包，须另开/收紧 Task 并测实际积压，不与 frame 引用释放一起试。
 
+## 实施结果（2026-10-24）
+
+改动：`resolveModelCall` 取到 frame 后立即 `frames.delete(modelCallIndex)`，让每个已消费 frame 只作为 resolveTools→resolveModelCall 的一次性交接；局部 `frame` 与 `currentFrame` 仍持有本次调用所需的 instructions/tools/缓存布局，事件屏障、检查点、恢复与工具执行全部不变。
+
+测量（`packages/runtime-core/scripts/frame-retention.bench.mjs`，`node --expose-gc`，在**最后一轮模型调用内**强制 GC 后再采样，因此所有更早的 frame 仍在活跃 Turn 里；每场景配对“只跑 1 轮同工具集”的对照并相减）：
+
+| 场景 | 轮次 / 工具 / schema 深度 | 基线净增量 | 改动后 |
+|---|---|---|---|
+| short | 8 / 4 / 2 | 0.48 MB | 0.47 MB |
+| loop | 40 / 24 / 4 | 1.74 MB | 0.74 MB |
+| long | 101 / 64 / 5 | 10.91–11.22 MB | 1.86–1.87 MB |
+| 合计 | — | **13.1–13.4 MB** | **3.1 MB** |
+
+基线两次分别 13.126 / 13.125 MB，改动后 2.40–3.08 MB（跨会话波动），`spreadPct` 0.6–2.4%。剩余部分是当次调用的 frame 与夹具自身持有，不是历史累积。
+
+**可失败的回归守卫**：`node --expose-gc packages/runtime-core/scripts/frame-retention.bench.mjs --assert-release` 断言 long 场景净占用 ≤5MB。实测——移除 `frames.delete` 后立即报 `11.22MB > 5MB` 失败，恢复后 1.87MB 通过。这是唯一能对“已消费帧被释放”失败的检查；`frame-release.test.ts` 三例锁的是既有语义（移除补丁后仍绿），已在文档中如实标注，不再声称它们保护了本次改动。
+
+语义验证：`packages/runtime-core` 全量 93 文件 585 例、`packages/agent` 22 文件 149 例全绿；完整 `bun run check` 全绿。
+
+**独立技术审查**（actor `e798cce0-25e0-496`）结论：无 P1/P2 阻断。逐项确认每个 `modelCallIndex` 恰好经历一次 `resolveTools`→`resolveModelCall`；`continue`、静默重跑、checkpoint retry 都回到循环开头获取新 index；`currentFrame` 在 `streamFn` 前赋值，composition lifecycle 只读闭包变量不读 Map。审查同时指出：`frame-release.test.ts` 三例移除补丁后仍全绿，属既有语义锁定——已按此意见新增 `--assert-release` 内存守卫作为真正的回归保护，并撤回原先“由该测试文件保护”的说法。
+
+审查另指出基准可外推性有限：仅成立于合成 64 工具×depth5 schema，`heapUsed` 含 tsx/ESM 缓存与同进程重复累积态，故本文数字降为两位小数并以区间表述。
+
 ## 验收分层与交付记录
 
-工程/技术审查尚未执行；集成 pending；内部行为保持型优化人工验收不适用，模型质量未知；发布未授权。已取得明确热点候选但缺实测，原会话共享 Autoresearch 配置由 TASK-0392 占用，需从隔离目录启动实验后才能建立新指标与 baseline，不把 draft 当编码许可。
+工程验证：内存收益已量化，套件全绿；技术评审：未执行独立审查；集成 pending；内部行为保持型优化人工验收不适用，模型质量未知；发布未授权。收益仅为活跃 Turn 的存活堆，未测 GC 暂停/延迟，不宣称端到端加速。
