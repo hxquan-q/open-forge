@@ -46,6 +46,9 @@ export interface BrowserPanelModel {
 	failed: boolean;
 	hasPage: boolean;
 	currentUrl: string;
+	agentStatus?: string;
+	/** 失焦回显实际页面（空页为空串）并解除草稿保护。 */
+	onAddressBlur: () => void;
 	hostRef: Ref<HTMLDivElement>;
 	onAddressChange: (value: string) => void;
 	onAddressSubmit: (event: FormEvent) => void;
@@ -81,6 +84,11 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	const [overlayDragging, setOverlayDragging] = useState(false);
 	const [address, setAddress] = useState(targetUrl ?? "");
 	const [currentUrl, setCurrentUrl] = useState(targetUrl ?? "");
+	// 草稿脏标记：用户改过且未提交/未失焦的地址不受页面导航（含 agent 导航）覆盖。
+	// 提交会消耗脏标记（回写规范化地址），再次输入重新进入保护。
+	const [addressDirty, setAddressDirty] = useState(false);
+	const addressDirtyRef = useRef(false);
+	addressDirtyRef.current = addressDirty;
 	const [canBack, setCanBack] = useState(false);
 	const [canForward, setCanForward] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -98,14 +106,15 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		(state: DesktopBrowserViewState) => {
 			// about:blank 是占位初始页，不当作真实页面回写。
 			const url = state.url === "about:blank" ? "" : state.url;
+			const pageChanged = url !== viewUrlRef.current;
 			viewUrlRef.current = url;
 			setLoading(state.loading);
 			setCanBack(state.canBack);
 			setCanForward(state.canForward);
 			setFailed(state.failed);
-			if (url) {
+			if (url && pageChanged) {
 				setCurrentUrl(url);
-				setAddress(url);
+				if (!addressDirtyRef.current) setAddress(url);
 				setWorkspaceUrl({ workspaceId, url });
 			}
 		},
@@ -114,7 +123,7 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 
 	// 挂载/换 workspace：建 view、挂窗、登记事件订阅；卸载时摘下（view 本体保活）。
 	// targetUrl 变化由下方导航 effect 负责；attach 只取挂载时的快照。
-	// biome-ignore lint/correctness/useExhaustiveDependencies: attach 仅需挂载时快照，targetUrl 导航由独立 effect 处理
+	// biome-ignore lint/correctness/useExhaustiveDependencies: attachAttempt 是重试触发器而非响应式输入，重试需要重走挂载。
 	useEffect(() => {
 		const el = hostRef.current;
 		if (!el) return;
@@ -221,10 +230,22 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 	const onAddressSubmit = useCallback(
 		(event: FormEvent) => {
 			event.preventDefault();
+			// 提交即消耗当前草稿；直接回写规范化地址，不依赖后续页面事件（目标等于
+			// 当前页时导航会被等值短路，不会再有回写机会）。再次输入重新进入保护。
+			const normalized = normalizeUrl(address);
+			setAddressDirty(false);
+			if (normalized) setAddress(normalized);
 			navigate(address);
 		},
 		[address, navigate],
 	);
+
+	// 切工作空间不复用旧草稿保护：新工作空间的页面事件正常同步地址（渲染期重置，先于新事件到达）。
+	const [draftWorkspace, setDraftWorkspace] = useState(workspaceId);
+	if (draftWorkspace !== workspaceId) {
+		setDraftWorkspace(workspaceId);
+		setAddressDirty(false);
+	}
 
 	const retry = useCallback(() => {
 		// view 没建起来时 reload 无从作用（control 会被主进程静默丢弃），重走 attach。
@@ -292,6 +313,8 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 			stop: t("browser.stop"),
 			reload: t("browser.reload"),
 			addressPlaceholder: t("browser.addressPlaceholder"),
+			addressLabel: t("browser.addressLabel"),
+			agentReady: t("browser.agentReady"),
 			openExternal: t("browser.openExternal"),
 			empty: t("browser.empty"),
 			loading: t("browser.loading"),
@@ -321,8 +344,16 @@ export function useBrowserPanelModel(): BrowserPanelModel {
 		failed: failed || attachFailed,
 		hasPage,
 		currentUrl,
+		agentStatus: picker.agentActivity ? t(`browser.agentAction.${picker.agentActivity.action}`) : undefined,
+		onAddressBlur: () => {
+			setAddressDirty(false);
+			setAddress(viewUrlRef.current || "");
+		},
 		hostRef,
-		onAddressChange: setAddress,
+		onAddressChange: (value: string) => {
+			setAddress(value);
+			setAddressDirty(true);
+		},
 		onAddressSubmit,
 		onBack: () => control("back"),
 		onForward: () => control("forward"),

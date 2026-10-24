@@ -532,6 +532,19 @@
 	},
 	"browser": {
 		"addressPlaceholder": "Enter a URL and press Enter",
+		"addressLabel": "Page address",
+		"agentReady": "Sharing this page with Agent",
+		"agentAction": {
+			"snapshot": "Agent is reading the page",
+			"inspect": "Agent is inspecting an element",
+			"click": "Agent is clicking an element",
+			"fill": "Agent is filling in content",
+			"press": "Agent is pressing a key",
+			"scroll": "Agent is scrolling the page",
+			"wait": "Agent is waiting for the page",
+			"screenshot": "Agent is capturing the page",
+			"navigate": "Agent is opening a page"
+		},
 		"back": "Back",
 		"empty": "Click a link in the conversation, or type a URL above",
 		"failed": "Failed to load page",

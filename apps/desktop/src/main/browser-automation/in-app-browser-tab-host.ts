@@ -65,6 +65,10 @@ export async function invokeDesktopBrowserTab(
 			throw error;
 		}
 	};
+	const activity = resolvedDeps.controller.beginAgentAction(workspaceId, request.input.action);
+	const finishActivity = (): void => activity.dispose();
+	signal.addEventListener("abort", finishActivity, { once: true });
+	if (signal.aborted) finishActivity();
 	try {
 		return await dispatchBrowserTabAction(request.input, {
 			workspaceId,
@@ -85,6 +89,9 @@ export async function invokeDesktopBrowserTab(
 			);
 		}
 		throw error;
+	} finally {
+		signal.removeEventListener("abort", finishActivity);
+		finishActivity();
 	}
 }
 

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
 import { browserUrlByWorkspaceAtom } from "@shared/store/atoms";
-import { OVERLAY_DRAG_EVENT } from "@vetta-org/theme-ui/layout";
 import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { OVERLAY_DRAG_EVENT } from "@vetta-org/theme-ui/layout";
 import { getDefaultStore } from "jotai";
 import type { JSX } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,9 @@ import { ActivityTabActivationContextProvider } from "../registry/activation-con
 import { ActivityPanelContextProvider } from "../registry/context";
 import type { BrowserPanelModel } from "./useBrowserPanelModel";
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+	useTranslation: () => ({ t: (key: string) => key }),
+}));
 vi.mock("./useBrowserElementPicker", () => ({
 	useBrowserElementPicker: () => ({
 		pickerEnabled: false,
@@ -23,7 +25,12 @@ vi.mock("./useBrowserElementPicker", () => ({
 	}),
 }));
 vi.mock("./useBrowserLiveEdit", () => ({
-	useBrowserLiveEdit: () => ({ edits: [], busy: false, hasElement: false, error: null }),
+	useBrowserLiveEdit: () => ({
+		edits: [],
+		busy: false,
+		hasElement: false,
+		error: null,
+	}),
 }));
 
 const { useBrowserPanelModel } = await import("./useBrowserPanelModel.js");
@@ -61,9 +68,7 @@ class RecordingResizeObserver {
 	observe(target: Element): void {
 		this.targets.push(target);
 	}
-	unobserve(): void {
-		return undefined;
-	}
+	unobserve(): void {}
 	disconnect(): void {
 		this.targets.length = 0;
 	}
@@ -92,11 +97,17 @@ function domRect(x: number, y: number, width: number, height: number): DOMRect {
 	} as DOMRect;
 }
 
-function renderPanel(harness: Harness, { workspaceId = "ws-1", active = true }: { workspaceId?: string; active?: boolean } = {}) {
+function renderPanel(
+	harness: Harness,
+	{ workspaceId = "ws-1", active = true }: { workspaceId?: string; active?: boolean } = {},
+) {
 	return render(
 		<div data-layout-ancestor="">
 			<ActivityPanelContextProvider
-				value={{ workspace: { id: workspaceId, cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+				value={{
+					workspace: { id: workspaceId, cwd: null, runtimeIds: [] },
+					knowledgeHistory: false,
+				}}
 			>
 				<ActivityTabActivationContextProvider value={active}>
 					<Probe harness={harness} />
@@ -153,7 +164,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
 		expect(api.attach).toHaveBeenCalledWith({
 			workspaceId: "ws-1",
-			bounds: expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) }),
+			bounds: expect.objectContaining({
+				width: expect.any(Number),
+				height: expect.any(Number),
+			}),
 			url: undefined,
 			// 尚无页面：view 挂载即保持隐藏，避免原生层闪帧盖过空态覆盖层。
 			visible: false,
@@ -171,7 +185,11 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		act(() => {
 			viewListener?.({
 				workspaceId: "ws-1",
-				state: viewState({ url: "https://a.dev/x", loading: true, canForward: true }),
+				state: viewState({
+					url: "https://a.dev/x",
+					loading: true,
+					canForward: true,
+				}),
 			});
 		});
 		await waitFor(() => expect(harness.model.current?.address).toBe("https://a.dev/x"));
@@ -181,9 +199,123 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 		// 其它 workspace 的事件不串台
 		act(() => {
-			viewListener?.({ workspaceId: "ws-2", state: viewState({ url: "https://other.dev" }) });
+			viewListener?.({
+				workspaceId: "ws-2",
+				state: viewState({ url: "https://other.dev" }),
+			});
 		});
 		expect(harness.model.current?.address).toBe("https://a.dev/x");
+	});
+
+	it("keeps an address draft through unchanged background events, then navigates the submitted draft", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressChange("localhost:5173/preview"));
+		act(() =>
+			viewListener?.({
+				workspaceId: "ws-1",
+				state: viewState({ loading: true }),
+			}),
+		);
+		expect(harness.model.current?.address).toBe("localhost:5173/preview");
+		act(() =>
+			harness.model.current?.onAddressSubmit({
+				preventDefault: () => undefined,
+			} as never),
+		);
+		await waitFor(() =>
+			expect(api.navigate).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				url: "https://localhost:5173/preview",
+			}),
+		);
+		act(() =>
+			viewListener?.({
+				workspaceId: "ws-1",
+				state: viewState({ url: "https://localhost:5173/preview" }),
+			}),
+		);
+		expect(harness.model.current?.address).toBe("https://localhost:5173/preview");
+	});
+
+	it("agent 导航时保留正在编辑的地址草稿，失焦后回显实际页面", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressChange("localhost:5173/preview"));
+		// Agent/页内导航真实改变了页面：工作区记忆与 currentUrl 跟随，但不覆盖未提交草稿。
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://agent.opened/page" }) }));
+		expect(harness.model.current?.address).toBe("localhost:5173/preview");
+		expect(harness.model.current?.currentUrl).toBe("https://agent.opened/page");
+		expect(store.get(browserUrlByWorkspaceAtom).get("ws-1")).toBe("https://agent.opened/page");
+		// 失焦即回显实际页面（与浏览器地址栏惯例一致）。
+		act(() => harness.model.current?.onAddressBlur());
+		expect(harness.model.current?.address).toBe("https://agent.opened/page");
+	});
+
+	it("地址提交即消耗草稿：后续页面事件在未失焦时也回写规范化地址", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
+		act(() => harness.model.current?.onAddressChange("vetta.dev/docs"));
+		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
+		await waitFor(() =>
+			expect(api.navigate).toHaveBeenCalledWith({ workspaceId: "ws-1", url: "https://vetta.dev/docs" }),
+		);
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://vetta.dev/docs" }) }));
+		expect(harness.model.current?.address).toBe("https://vetta.dev/docs");
+	});
+
+	it("提交后继续输入重新进入草稿保护", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(1));
+		act(() => harness.model.current?.onAddressChange("vetta.dev/a"));
+		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
+		// 提交后输入框仍聚焦：继续输入 B，页面事件不得覆盖 B。
+		act(() => harness.model.current?.onAddressChange("vetta.dev/b"));
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "https://after/x" }) }));
+		expect(harness.model.current?.address).toBe("vetta.dev/b");
+		act(() => harness.model.current?.onAddressBlur());
+		expect(harness.model.current?.address).toBe("https://after/x");
+	});
+
+	it("空页面失焦清空未提交草稿", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(viewListener).toBeTypeOf("function"));
+		act(() => viewListener?.({ workspaceId: "ws-1", state: viewState({ url: "about:blank" }) }));
+		act(() => harness.model.current?.onAddressChange("example.dev/draft"));
+		act(() => harness.model.current?.onAddressBlur());
+		expect(harness.model.current?.address).toBe("");
+	});
+
+	it("切换工作空间后不再沿用旧编辑态阻同步", async () => {
+		const harness: Harness = { model: { current: null } };
+		const panel = renderPanel(harness, { workspaceId: "ws-1" });
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressChange("old-workspace/draft"));
+		api.attach.mockResolvedValueOnce({ ok: true, state: viewState() });
+		panel.rerender(
+			<ActivityPanelContextProvider
+				value={{ workspace: { id: "ws-2", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+			>
+				<ActivityTabActivationContextProvider value={true}>
+					<Probe harness={harness} />
+				</ActivityTabActivationContextProvider>
+			</ActivityPanelContextProvider>,
+		);
+		await waitFor(() => expect(harness.model.current?.address).toBe("https://example.com"));
+	});
+
+	it("提交规范化后等于当前页面时也回写规范化地址", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+		act(() => harness.model.current?.onAddressChange("example.com"));
+		act(() => harness.model.current?.onAddressSubmit({ preventDefault: () => undefined } as never));
+		expect(harness.model.current?.address).toBe("https://example.com");
 	});
 
 	it("地址栏提交经 workspace URL 回写触发 navigate；回退/前进/重载/停止走 control", async () => {
@@ -195,7 +327,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		act(() => model().onAddressChange("vetta.dev/docs"));
 		act(() => model().onAddressSubmit({ preventDefault: () => undefined } as never));
 		await waitFor(() =>
-			expect(api.navigate).toHaveBeenCalledWith({ workspaceId: "ws-1", url: "https://vetta.dev/docs" }),
+			expect(api.navigate).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				url: "https://vetta.dev/docs",
+			}),
 		);
 
 		model().onBack();
@@ -211,37 +346,66 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		const harness: Harness = { model: { current: null } };
 		const panel = renderPanel(harness, { active: true });
 		await waitFor(() => expect(harness.model.current?.hasPage).toBe(true));
-		await waitFor(() => expect(api.update).toHaveBeenCalledWith({ workspaceId: "ws-1", visible: true }));
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				visible: true,
+			}),
+		);
 
 		api.update.mockClear();
 		panel.rerender(
 			<ActivityPanelContextProvider
-				value={{ workspace: { id: "ws-1", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+				value={{
+					workspace: { id: "ws-1", cwd: null, runtimeIds: [] },
+					knowledgeHistory: false,
+				}}
 			>
 				<ActivityTabActivationContextProvider value={false}>
 					<Probe harness={harness} />
 				</ActivityTabActivationContextProvider>
 			</ActivityPanelContextProvider>,
 		);
-		await waitFor(() => expect(api.update).toHaveBeenCalledWith({ workspaceId: "ws-1", visible: false }));
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				visible: false,
+			}),
+		);
 
 		api.update.mockClear();
 		panel.rerender(
 			<ActivityPanelContextProvider
-				value={{ workspace: { id: "ws-1", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+				value={{
+					workspace: { id: "ws-1", cwd: null, runtimeIds: [] },
+					knowledgeHistory: false,
+				}}
 			>
 				<ActivityTabActivationContextProvider value={true}>
 					<Probe harness={harness} />
 				</ActivityTabActivationContextProvider>
 			</ActivityPanelContextProvider>,
 		);
-		await waitFor(() => expect(api.update).toHaveBeenCalledWith({ workspaceId: "ws-1", visible: true }));
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				visible: true,
+			}),
+		);
 
 		act(() => {
-			viewListener?.({ workspaceId: "ws-1", state: viewState({ failed: true }) });
+			viewListener?.({
+				workspaceId: "ws-1",
+				state: viewState({ failed: true }),
+			});
 		});
 		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
-		await waitFor(() => expect(api.update).toHaveBeenCalledWith({ workspaceId: "ws-1", visible: false }));
+		await waitFor(() =>
+			expect(api.update).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				visible: false,
+			}),
+		);
 	});
 
 	it("DOM 拖拽 overlay 广播时让原生 view 穿透指针事件，结束后恢复", async () => {
@@ -253,14 +417,20 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 			window.dispatchEvent(new CustomEvent(OVERLAY_DRAG_EVENT, { detail: { active: true } }));
 		});
 		await waitFor(() =>
-			expect(api.setInputPassthrough).toHaveBeenCalledWith({ workspaceId: "ws-1", passthrough: true }),
+			expect(api.setInputPassthrough).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				passthrough: true,
+			}),
 		);
 
 		act(() => {
 			window.dispatchEvent(new CustomEvent(OVERLAY_DRAG_EVENT, { detail: { active: false } }));
 		});
 		await waitFor(() =>
-			expect(api.setInputPassthrough).toHaveBeenCalledWith({ workspaceId: "ws-1", passthrough: false }),
+			expect(api.setInputPassthrough).toHaveBeenCalledWith({
+				workspaceId: "ws-1",
+				passthrough: false,
+			}),
 		);
 	});
 
@@ -268,7 +438,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		const harness: Harness = { model: { current: null } };
 		store.set(browserUrlByWorkspaceAtom, new Map([["ws-1", "https://a.dev"]]));
 		// attach 提交前 getURL() 仍是 about:blank：旧实现据此判定「地址不一致」又发一次导航。
-		api.attach.mockResolvedValueOnce({ ok: true, state: viewState({ url: "about:blank" }) });
+		api.attach.mockResolvedValueOnce({
+			ok: true,
+			state: viewState({ url: "about:blank" }),
+		});
 		renderPanel(harness);
 		await waitFor(() => expect(api.attach).toHaveBeenCalledWith(expect.objectContaining({ url: "https://a.dev" })));
 
@@ -298,7 +471,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 			resolveAttach?.({ ok: true, state: viewState({ url: "about:blank" }) });
 		});
 		await waitFor(() => expect(api.navigate).toHaveBeenCalledTimes(1));
-		expect(api.navigate).toHaveBeenCalledWith({ workspaceId: "ws-1", url: "https://b.dev" });
+		expect(api.navigate).toHaveBeenCalledWith({
+			workspaceId: "ws-1",
+			url: "https://b.dev",
+		});
 	});
 
 	it("attach 被主进程处理器拒绝/抛错时不静默：进入失败态，重试重走 attach 而非 reload", async () => {
@@ -310,7 +486,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 
 		await waitFor(() => expect(harness.model.current?.failed).toBe(true));
 		expect(harness.model.current?.hasPage).toBe(false);
-		expect(errors).toHaveBeenCalledWith("[browser-panel] attach failed", expect.objectContaining({ workspaceId: "ws-1" }));
+		expect(errors).toHaveBeenCalledWith(
+			"[browser-panel] attach failed",
+			expect.objectContaining({ workspaceId: "ws-1" }),
+		);
 
 		act(() => harness.model.current?.onRetry());
 		await waitFor(() => expect(api.attach).toHaveBeenCalledTimes(2));
@@ -380,7 +559,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		panel.rerender(
 			<div data-layout-ancestor="">
 				<ActivityPanelContextProvider
-					value={{ workspace: { id: "ws-1", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+					value={{
+						workspace: { id: "ws-1", cwd: null, runtimeIds: [] },
+						knowledgeHistory: false,
+					}}
 				>
 					<ActivityTabActivationContextProvider value={false}>
 						<Probe harness={harness} />
@@ -395,7 +577,10 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		panel.rerender(
 			<div data-layout-ancestor="">
 				<ActivityPanelContextProvider
-					value={{ workspace: { id: "ws-1", cwd: null, runtimeIds: [] }, knowledgeHistory: false }}
+					value={{
+						workspace: { id: "ws-1", cwd: null, runtimeIds: [] },
+						knowledgeHistory: false,
+					}}
 				>
 					<ActivityTabActivationContextProvider value={true}>
 						<Probe harness={harness} />

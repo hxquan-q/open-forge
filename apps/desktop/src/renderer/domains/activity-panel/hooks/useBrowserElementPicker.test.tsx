@@ -2,21 +2,30 @@
 // Copyright The Open Forge contributors.
 import { sendMessageFnRef } from "@shared/store/atoms";
 import { promptAttachmentAtom } from "@shared/store/plugin-atoms";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import {
 	BROWSER_ELEMENT_SELECTION_SCHEMA,
 	BROWSER_ELEMENT_SELECTION_VERSION,
 	type BrowserElementSelectionContext,
 } from "@vetta/coding-agent/function-extensions";
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
+import { Profiler, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+	DesktopBrowserTabGetSessionResult,
+	DesktopBrowserTabSession,
+	DesktopBrowserTabSetPickerResult,
+	DesktopBrowserCropScreenshotResult,
+} from "@/shared/browser-tab-ipc";
 import { DESKTOP_BROWSER_ANNOTATION_CHROME_FALLBACK } from "@/shared/browser-tab-ipc";
 import { BROWSER_ELEMENT_ATTACHMENT_ID, resetBrowserElementDraftForTests } from "../services/browser-element-draft.js";
 
 const insertImageToken = vi.fn();
 const removeImageToken = vi.fn();
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+	useTranslation: () => ({ t: (key: string) => key }),
+}));
 vi.mock("@shared/hooks/useShortcuts", () => ({
 	useEffectiveShortcut: () => "mod+shift+d",
 }));
@@ -35,6 +44,16 @@ vi.mock("@domains/conversation/components/input-bar/editor/inputEditorHandle", (
 }));
 
 const { useBrowserElementPicker } = await import("./useBrowserElementPicker.js");
+
+function baseSession(): DesktopBrowserTabSession {
+	return {
+		workspaceId: "ws-1",
+		pageUrl: "https://example.com/form",
+		title: "Example",
+		pageRevision: 4,
+		pickerEnabled: false,
+	};
+}
 
 function context(): BrowserElementSelectionContext {
 	return {
@@ -83,8 +102,15 @@ describe("useBrowserElementPicker", () => {
 						pickerEnabled: false,
 					},
 				})),
-				setPicker: vi.fn(async ({ enabled }: { enabled: boolean }) => ({ ok: true, pickerEnabled: enabled })),
-				liveEdit: vi.fn(async () => ({ ok: true, edits: [], hasElement: true })),
+				setPicker: vi.fn(async ({ enabled }: { enabled: boolean }) => ({
+					ok: true,
+					pickerEnabled: enabled,
+				})),
+				liveEdit: vi.fn(async () => ({
+					ok: true,
+					edits: [],
+					hasElement: true,
+				})),
 				cropScreenshot: vi.fn(async () => ({
 					ok: true,
 					attachmentId: "img-1",
@@ -105,6 +131,254 @@ describe("useBrowserElementPicker", () => {
 
 	afterEach(cleanup);
 
+	it("projects live Agent activity without letting an older session query overwrite it", async () => {
+		let finishQuery: ((value: DesktopBrowserTabGetSessionResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.getSession).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					finishQuery = resolve;
+				}),
+		);
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		const session = {
+			workspaceId: "ws-1",
+			pageUrl: "https://example.com",
+			title: "Example",
+			pageRevision: 4,
+			pickerEnabled: false,
+		};
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: {
+					kind: "session-changed",
+					session: {
+						...session,
+						agentActivity: { action: "snapshot", activeCount: 1 },
+					},
+				},
+			}),
+		);
+		expect(result.current.agentActivity).toEqual({
+			action: "snapshot",
+			activeCount: 1,
+		});
+		await act(async () => finishQuery?.({ ok: true, session }));
+		expect(result.current.agentActivity).toEqual({
+			action: "snapshot",
+			activeCount: 1,
+		});
+		act(() =>
+			listener?.({
+				workspaceId: "ws-other",
+				event: {
+					kind: "session-changed",
+					session: { ...session, workspaceId: "ws-other" },
+				},
+			}),
+		);
+		expect(result.current.agentActivity?.action).toBe("snapshot");
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: { kind: "session-changed", session },
+			}),
+		);
+		expect(result.current.agentActivity).toBeUndefined();
+	});
+
+	it("不因可观察投影未变的会话事件重渲面板", async () => {
+		let commits = 0;
+		const Wrapper = ({ children }: { children: ReactNode }): JSX.Element => (
+			<Profiler
+				id="picker"
+				onRender={() => {
+					commits += 1;
+				}}
+			>
+				{children}
+			</Profiler>
+		);
+		// 初始查询返回开启态：用它作为会话已落定的确定性信号，避免基线包含 null→对象的首次提交。
+		vi.mocked(window.vetta.browserTab.getSession).mockResolvedValueOnce({
+			ok: true,
+			session: {
+				workspaceId: "ws-1",
+				pageUrl: "https://example.com/form",
+				title: "Example",
+				pageRevision: 4,
+				pickerEnabled: true,
+			},
+		});
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }), {
+			wrapper: Wrapper,
+		});
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		await waitFor(() => expect(result.current.pickerEnabled).toBe(true));
+		const baseline = commits;
+		const session = {
+			workspaceId: "ws-1",
+			pageUrl: "https://example.com/form",
+			title: "Example",
+			pageRevision: 4,
+			pickerEnabled: true,
+		};
+		// 导航/重订正等只改 pageRevision/title：可观察投影未变，不应重渲。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: { kind: "session-changed", session: { ...session, pageRevision: 9, title: "Next" } },
+			}),
+		);
+		expect(commits).toBe(baseline);
+		// 可观察变化（动作首次出现）恰好一次提交。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: {
+					kind: "session-changed",
+					session: { ...session, agentActivity: { action: "snapshot", activeCount: 1 } },
+				},
+			}),
+		);
+		expect(commits).toBe(baseline + 1);
+		expect(result.current.agentActivity?.action).toBe("snapshot");
+		// 同名并发动作只改 activeCount（不展示）：不应再重渲。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: {
+					kind: "session-changed",
+					session: { ...session, agentActivity: { action: "snapshot", activeCount: 2 } },
+				},
+			}),
+		);
+		expect(commits).toBe(baseline + 1);
+		act(() => listener?.({ workspaceId: "ws-1", event: { kind: "session-changed", session } }));
+		expect(commits).toBe(baseline + 2);
+		expect(result.current.agentActivity).toBeUndefined();
+	});
+
+	it("迟到的点选开关响应不覆盖更新的事件也不跨工作空间污染", async () => {
+		let resolveToggle: ((value: DesktopBrowserTabSetPickerResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.setPicker).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveToggle = resolve;
+				}),
+		);
+		const initial = renderHook(
+			({ workspaceId, hasPage }: { workspaceId: string; hasPage: boolean }) =>
+				useBrowserElementPicker({ workspaceId, hasPage: hasPage ?? true }),
+			{ initialProps: { workspaceId: "ws-1", hasPage: true } },
+		);
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		act(() => initial.result.current.onTogglePicker());
+		// 更新的会话事件先到：点选已被关闭。
+		act(() =>
+			listener?.({
+				workspaceId: "ws-1",
+				event: { kind: "session-changed", session: { ...baseSession(), pickerEnabled: false } },
+			}),
+		);
+		await act(async () => resolveToggle?.({ ok: true, pickerEnabled: true }));
+		expect(initial.result.current.pickerEnabled).toBe(false);
+		// 跨工作空间：在 ws-1 发出的迟到响应不得改写 ws-2 的会话。
+		let resolveCross: ((value: DesktopBrowserTabSetPickerResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.setPicker).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveCross = resolve;
+				}),
+		);
+		act(() => initial.result.current.onTogglePicker());
+		initial.rerender({ workspaceId: "ws-2", hasPage: true });
+		act(() =>
+			listener?.({
+				workspaceId: "ws-2",
+				event: {
+					kind: "session-changed",
+					session: { ...baseSession(), workspaceId: "ws-2", pickerEnabled: false },
+				},
+			}),
+		);
+		await act(async () => resolveCross?.({ ok: true, pickerEnabled: true }));
+		expect(initial.result.current.pickerEnabled).toBe(false);
+	});
+
+	it("页面翻版或再点选后，迟到的截图响应不复活失效选区", async () => {
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		let resolveCrop: ((value: DesktopBrowserCropScreenshotResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.cropScreenshot).mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveCrop = resolve;
+				}),
+		);
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "picker-result", context: context() } });
+		});
+		// 选区还在截图途中，页面已经翻版：旧引用失效。
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "page-revision", workspaceId: "ws-1", pageRevision: 5 } });
+		});
+		expect(result.current.selection).toBeNull();
+		await act(async () => {
+			resolveCrop?.({
+				ok: true,
+				attachmentId: "img-late",
+				mimeType: "png",
+				width: 40,
+				height: 16,
+				path: "C:/cache/late.png",
+			});
+		});
+		expect(result.current.selection).toBeNull();
+		expect(insertImageToken).not.toHaveBeenCalled();
+	});
+
+	it("连续两次点选以最后一次为准，迟到的首次截图不覆盖", async () => {
+		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
+		await waitFor(() => expect(listener).toBeTypeOf("function"));
+		let resolveFirst: ((value: DesktopBrowserCropScreenshotResult) => void) | undefined;
+		vi.mocked(window.vetta.browserTab.cropScreenshot)
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						resolveFirst = resolve;
+					}),
+			)
+			.mockResolvedValueOnce({
+				ok: true,
+				attachmentId: "img-second",
+				mimeType: "png",
+				width: 40,
+				height: 16,
+				path: "C:/cache/second.png",
+			});
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "picker-result", context: context() } });
+		});
+		// 首次截图仍在途，第二次点选的截图先返回并成为当前选区。
+		act(() => {
+			listener?.({ workspaceId: "ws-1", event: { kind: "picker-result", context: context() } });
+		});
+		await waitFor(() => expect(result.current.selection?.screenshotPath).toBe("C:/cache/second.png"));
+		await act(async () => {
+			resolveFirst?.({
+				ok: true,
+				attachmentId: "img-first",
+				mimeType: "png",
+				width: 40,
+				height: 16,
+				path: "C:/cache/first.png",
+			});
+		});
+		expect(result.current.selection?.screenshotPath).toBe("C:/cache/second.png");
+	});
+
 	it("点选命中后先停在选择态、不立即附加；确认后才把胶囊（含 liveEdits）写入草稿", async () => {
 		const { result } = renderHook(() => useBrowserElementPicker({ workspaceId: "ws-1", hasPage: true }));
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
@@ -119,7 +393,13 @@ describe("useBrowserElementPicker", () => {
 
 		act(() => {
 			result.current.confirmSelection([
-				{ kind: "style", property: "color", before: "", after: "red", target: "input#email" },
+				{
+					kind: "style",
+					property: "color",
+					before: "",
+					after: "red",
+					target: "input#email",
+				},
 				{ kind: "text", before: "Old", after: "New", target: "input#email" },
 			]);
 		});
@@ -132,14 +412,23 @@ describe("useBrowserElementPicker", () => {
 				domPath: "input#email",
 				screenshotAttachmentId: "img-1",
 				liveEdits: [
-					{ kind: "style", property: "color", before: "", after: "red", target: "input#email" },
+					{
+						kind: "style",
+						property: "color",
+						before: "",
+						after: "red",
+						target: "input#email",
+					},
 					{ kind: "text", before: "Old", after: "New", target: "input#email" },
 				],
 			});
 			expect(insertImageToken).toHaveBeenCalledWith("C:/cache/el.png");
 		});
 		expect(result.current.selection).toBeNull();
-		expect(window.vetta.browserTab.setPicker).toHaveBeenCalledWith({ workspaceId: "ws-1", enabled: false });
+		expect(window.vetta.browserTab.setPicker).toHaveBeenCalledWith({
+			workspaceId: "ws-1",
+			enabled: false,
+		});
 		expect(window.vetta.browserTab.cropScreenshot).toHaveBeenCalledWith({
 			workspaceId: "ws-1",
 			rect: { x: 8, y: 16, width: 120, height: 24 },
@@ -209,7 +498,10 @@ describe("useBrowserElementPicker", () => {
 		await waitFor(() => expect(result.current.selection).not.toBeNull());
 
 		act(() => {
-			result.current.confirmSelection([], { comment: "把按钮改成蓝色", send: true });
+			result.current.confirmSelection([], {
+				comment: "把按钮改成蓝色",
+				send: true,
+			});
 		});
 
 		expect(send).toHaveBeenCalledWith(undefined, {
@@ -235,7 +527,11 @@ describe("useBrowserElementPicker", () => {
 		await waitFor(() => expect(listener).toBeTypeOf("function"));
 		listener?.({
 			workspaceId: "ws-1",
-			event: { kind: "picker-result", context: context(), comment: "把按钮改成蓝色" },
+			event: {
+				kind: "picker-result",
+				context: context(),
+				comment: "把按钮改成蓝色",
+			},
 		});
 		await waitFor(() =>
 			expect(send).toHaveBeenCalledWith(undefined, {
@@ -259,7 +555,9 @@ describe("useBrowserElementPicker", () => {
 			event: { kind: "picker-result", context: context(), placement: "input" },
 		});
 		await waitFor(() =>
-			expect(store.get(promptAttachmentAtom)?.context?.payload).toMatchObject({ domPath: "input#email" }),
+			expect(store.get(promptAttachmentAtom)?.context?.payload).toMatchObject({
+				domPath: "input#email",
+			}),
 		);
 		expect(send).not.toHaveBeenCalled();
 		expect(focusInputEditor).toHaveBeenCalled();

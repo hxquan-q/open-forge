@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // Copyright The Open Forge contributors.
-import { BrowserPanelView, type BrowserLiveEditCardProps, type BrowserPanelLabels } from "@vetta-org/theme-ui/activity";
+
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type BrowserLiveEditCardProps, type BrowserPanelLabels, BrowserPanelView } from "@vetta-org/theme-ui/activity";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +14,8 @@ const labels: BrowserPanelLabels = {
 	stop: "stop",
 	reload: "reload",
 	addressPlaceholder: "url",
+	addressLabel: "Page address",
+	agentReady: "Shared with Agent",
 	openExternal: "external",
 	empty: "empty",
 	loading: "loading",
@@ -126,11 +129,11 @@ describe("BrowserPanelView picker chrome", () => {
 		};
 	}
 
-	function renderPanel(liveEdit?: BrowserLiveEditCardProps) {
-		return render(
+	function panelView(liveEdit?: BrowserLiveEditCardProps, agentStatus?: string, viewLabels = labels) {
+		return (
 			<BrowserPanelView
 				workspaceId="ws-1"
-				labels={labels}
+				labels={viewLabels}
 				address="https://example.com"
 				canBack={false}
 				canForward={false}
@@ -151,9 +154,37 @@ describe("BrowserPanelView picker chrome", () => {
 				pickerDisabled={false}
 				onTogglePicker={() => undefined}
 				liveEdit={liveEdit}
-			/>,
+				agentStatus={agentStatus}
+			/>
 		);
 	}
+
+	function renderPanel(liveEdit?: BrowserLiveEditCardProps) {
+		return render(panelView(liveEdit));
+	}
+
+	it("announces Agent operations without replacing the address or the native page host", async () => {
+		const user = userEvent.setup();
+		const panel = render(panelView(undefined, "Agent is reading this page"));
+		const address = screen.getByRole("textbox", { name: "Page address" });
+		await user.click(address);
+		const host = panel.container.querySelector("[data-browser-view-host]");
+		expect(screen.getByRole("status").textContent).toBe("Agent is reading this page");
+		panel.rerender(panelView(undefined, "Agent is clicking an element"));
+		expect(screen.getByRole("status").textContent).toBe("Agent is clicking an element");
+		expect(document.activeElement).toBe(address);
+		expect(panel.container.querySelector("[data-browser-view-host]")).toBe(host);
+		panel.rerender(panelView());
+		expect(screen.getByRole("status").textContent).toBe("Shared with Agent");
+		expect(document.activeElement).toBe(address);
+	});
+
+	it("accepts the previous label contract and uses its localized address hint as the name", () => {
+		const previousLabels = { ...labels, addressLabel: undefined, agentReady: undefined };
+		render(panelView(undefined, undefined, previousLabels));
+		expect(screen.getByRole("textbox", { name: "url" })).toBeTruthy();
+		expect(screen.queryByRole("status")).toBeNull();
+	});
 
 	it("renders a native-view host placeholder instead of a <webview> element", () => {
 		const { container } = renderPanel();
@@ -167,8 +198,19 @@ describe("BrowserPanelView picker chrome", () => {
 		const user = userEvent.setup();
 		const model = liveEditModel({
 			edits: [
-				{ kind: "style", property: "color", before: "", after: "red", target: "form > button#save" },
-				{ kind: "text", before: "Save", after: "Send", target: "form > button#save" },
+				{
+					kind: "style",
+					property: "color",
+					before: "",
+					after: "red",
+					target: "form > button#save",
+				},
+				{
+					kind: "text",
+					before: "Save",
+					after: "Send",
+					target: "form > button#save",
+				},
 			],
 		});
 		const { container } = renderPanel(model);

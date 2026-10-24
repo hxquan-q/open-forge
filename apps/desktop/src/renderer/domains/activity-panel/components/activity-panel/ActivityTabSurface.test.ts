@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 
 import { act, createElement, type ReactNode, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -9,7 +10,7 @@ import type { ActivityPanelFrameProps } from "./ActivityPanelFrame";
 import { ActivityTabSurface } from "./ActivityTabSurface";
 import type { ActivityPanelActions } from "./types";
 
-vi.mock("motion/react", () => ({ motion: { span: () => null } }));
+vi.mock("motion/react", () => ({ motion: { span: () => null }, useReducedMotion: () => false }));
 
 function frame({ children }: ActivityPanelFrameProps): ReturnType<typeof createElement> {
 	return createElement("div", { "data-frame": "" }, children as ReactNode);

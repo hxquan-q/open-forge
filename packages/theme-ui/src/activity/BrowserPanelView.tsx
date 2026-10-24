@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+import { Button, Spin } from "@vetta-org/ui";
 import type { FormEvent, JSX, Ref } from "react";
 import { BrowserLiveEditCard, type BrowserLiveEditCardProps } from "./BrowserLiveEditCard";
 
@@ -8,6 +10,8 @@ export interface BrowserPanelLabels {
 	stop: string;
 	reload: string;
 	addressPlaceholder: string;
+	addressLabel?: string;
+	agentReady?: string;
 	openExternal: string;
 	empty: string;
 	loading: string;
@@ -29,10 +33,14 @@ export interface BrowserPanelViewProps {
 	failed: boolean;
 	hasPage: boolean;
 	currentUrl: string;
+	/** Localized, read-only host execution feedback. No business state is read here. */
+	agentStatus?: string;
 	/** WebContentsView 占位矩形：宿主经它上报 bounds/可见性给主进程。 */
 	hostRef: Ref<HTMLDivElement>;
 	onAddressChange: (value: string) => void;
 	onAddressSubmit: (event: FormEvent) => void;
+	/** 失焦回显实际页面（空页为空串）；草稿保护由宿主 dirty 标记负责。 */
+	onAddressBlur?: () => void;
 	onBack: () => void;
 	onForward: () => void;
 	onStop: () => void;
@@ -60,19 +68,21 @@ function ToolbarButton({
 	onClick: () => void;
 }): JSX.Element {
 	return (
-		<button
+		<Button
 			type="button"
+			variant="ghost"
+			size="icon-sm"
 			title={title}
 			aria-label={title}
 			aria-pressed={pressed}
 			disabled={disabled}
 			onClick={onClick}
-			className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-muted-foreground/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent ${
+			className={`shrink-0 rounded-md transition-colors focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-30 ${
 				pressed ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
 			}`}
 		>
-			<span className={`${icon} h-4 w-4`} />
-		</button>
+			<span aria-hidden className={`${icon} h-4 w-4`} />
+		</Button>
 	);
 }
 
@@ -89,9 +99,11 @@ export function BrowserPanelView({
 	failed,
 	hasPage,
 	currentUrl,
+	agentStatus,
 	hostRef,
 	onAddressChange,
 	onAddressSubmit,
+	onAddressBlur,
 	onBack,
 	onForward,
 	onStop,
@@ -113,50 +125,75 @@ export function BrowserPanelView({
 
 	return (
 		<div className="flex min-h-0 min-w-0 flex-1 flex-col">
-			<div className="flex shrink-0 items-center gap-1 border-b border-border/60 px-1.5 py-1.5">
-				<ToolbarButton icon="icon-[mdi--arrow-left]" title={labels.back} disabled={!canBack} onClick={onBack} />
+			<div className="no-drag flex shrink-0 items-center gap-1 border-b border-border/60 px-1.5 py-1.5">
 				<ToolbarButton
-					icon="icon-[mdi--arrow-right]"
+					icon="icon-[solar--arrow-left-linear]"
+					title={labels.back}
+					disabled={!canBack}
+					onClick={onBack}
+				/>
+				<ToolbarButton
+					icon="icon-[solar--arrow-right-linear]"
 					title={labels.forward}
 					disabled={!canForward}
 					onClick={onForward}
 				/>
 				{loading ? (
-					<ToolbarButton icon="icon-[mdi--close]" title={labels.stop} onClick={onStop} />
+					<ToolbarButton icon="icon-[solar--close-circle-linear]" title={labels.stop} onClick={onStop} />
 				) : (
-					<ToolbarButton icon="icon-[mdi--refresh]" title={labels.reload} onClick={onReload} />
+					<ToolbarButton icon="icon-[solar--refresh-linear]" title={labels.reload} onClick={onReload} />
 				)}
-				<form onSubmit={onAddressSubmit} className="min-w-0 flex-1">
+				<form
+					onSubmit={onAddressSubmit}
+					className="min-w-0 flex-1 rounded-md border border-border/60 bg-background/40 transition-colors focus-within:border-ring"
+				>
 					<input
 						type="text"
 						value={address}
 						spellCheck={false}
 						placeholder={labels.addressPlaceholder}
+						aria-label={labels.addressLabel ?? labels.addressPlaceholder}
 						onChange={(e) => onAddressChange(e.target.value)}
-						className="h-7 w-full rounded-md border border-transparent bg-transparent px-2.5 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/40 focus:bg-background"
+						onBlur={onAddressBlur}
+						className="h-7 w-full min-w-0 rounded-md bg-transparent px-2.5 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
 					/>
 				</form>
 				{/* 原生 view 盖在 DOM 之上，加载徽标只能待在工具栏区，不能再悬浮页面上。 */}
 				{loading ? (
 					<span className="flex shrink-0 items-center gap-1 px-1 text-[11px] text-muted-foreground">
-						<span className="icon-[mdi--loading] h-3.5 w-3.5 animate-spin" />
+						<Spin size="sm" />
 						{labels.loading}
 					</span>
 				) : null}
 				<ToolbarButton
-					icon="icon-[mdi--cursor-default-click-outline]"
+					icon="icon-[solar--cursor-linear]"
 					title={pickerEnabled ? labels.pickerActive : labels.picker}
 					disabled={pickerDisabled}
 					pressed={pickerEnabled}
 					onClick={onTogglePicker}
 				/>
 				<ToolbarButton
-					icon="icon-[mdi--open-in-new]"
+					icon="icon-[solar--square-top-down-linear]"
 					title={labels.openExternal}
 					disabled={!currentUrl}
 					onClick={onOpenExternal}
 				/>
 			</div>
+			{hasPage && !failed && (agentStatus || labels.agentReady) ? (
+				<output
+					aria-live="polite"
+					aria-atomic="true"
+					className="flex h-6 min-w-0 shrink-0 items-center gap-1.5 border-b border-border/60 px-2.5 text-[11px] text-muted-foreground"
+				>
+					<span
+						aria-hidden
+						className={`h-3 w-3 shrink-0 ${agentStatus ? "icon-[solar--mouse-circle-linear] text-primary" : "icon-[solar--link-linear]"}`}
+					/>
+					<span className="truncate" title={agentStatus ?? labels.agentReady}>
+						{agentStatus ?? labels.agentReady}
+					</span>
+				</output>
+			) : null}
 			{pickerEnabled ? (
 				<div className="min-w-0 shrink-0 border-b border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
 					{labels.pickerHint}
@@ -169,21 +206,17 @@ export function BrowserPanelView({
 				<div ref={hostRef} data-browser-view-host="" className="h-full w-full" />
 				{!hasPage && (
 					<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted p-6 text-center">
-						<span className="icon-[mdi--web] h-8 w-8 text-muted-foreground/30" />
+						<span className="icon-[solar--global-linear] h-8 w-8 text-muted-foreground/30" />
 						<span className="text-[12px] text-muted-foreground/60">{labels.empty}</span>
 					</div>
 				)}
 				{failed && (
 					<div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
-						<span className="icon-[mdi--alert-circle-outline] h-8 w-8 text-muted-foreground/40" />
+						<span className="icon-[solar--danger-circle-linear] h-8 w-8 text-muted-foreground/40" />
 						<span className="text-[12px] text-muted-foreground/70">{labels.failed}</span>
-						<button
-							type="button"
-							onClick={onRetry}
-							className="rounded-md border border-border bg-background px-3 py-1 text-[12px] text-foreground transition-colors hover:bg-muted-foreground/10"
-						>
+						<Button type="button" variant="outline" size="sm" onClick={onRetry}>
 							{labels.retry}
-						</button>
+						</Button>
 					</div>
 				)}
 			</div>

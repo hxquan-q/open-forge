@@ -286,6 +286,9 @@ export function useActivityPanelModel({
 		return dockedTabItems[0]?.key ?? fallback;
 	}, [knowledgeHistory, workspaceId, tabByProject, profile, dockedTabItems, tabItems]);
 	useEffect(() => {
+		// 页签解析诊断只随开发构建存在：生产里每次切换都要序列化整个页签投影
+		// （约 3KB）并经 console-message 桥接到主进程，属纯损耗。
+		if (!import.meta.env.DEV) return;
 		console.debug(
 			`[activity-tab-debug] resolved ${JSON.stringify({
 				cwd,

@@ -1,15 +1,20 @@
-import { motion } from "motion/react";
+// Modified by The Open Forge contributors.
+import { motion, useReducedMotion } from "motion/react";
 import {
+	type JSX,
+	memo,
+	type DragEvent as ReactDragEvent,
+	type KeyboardEvent as ReactKeyboardEvent,
+	type ReactNode,
+	type PointerEvent as ReactPointerEvent,
+	type RefObject,
 	useCallback,
 	useEffect,
 	useId,
+	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
-	type JSX,
-	type DragEvent as ReactDragEvent,
-	type PointerEvent as ReactPointerEvent,
-	type ReactNode,
-	type RefObject,
 } from "react";
 import { createConnectedTabOutlineGeometry } from "./connected-tab-outline";
 import { hasReachedTabDragDistance, moveTabKey } from "./tab-drag";
@@ -126,6 +131,7 @@ function ActiveTabIndicator({
 	suppressLayoutAnimation: boolean;
 }): JSX.Element {
 	const indicatorRef = useRef<HTMLSpanElement>(null);
+	const reducedMotion = useReducedMotion();
 	const [tabWidth, setTabWidth] = useState(0);
 
 	useEffect(() => {
@@ -138,7 +144,7 @@ function ActiveTabIndicator({
 		const observer = new ResizeObserver(updateWidth);
 		observer.observe(indicator);
 		return () => observer.disconnect();
-	}, []);
+	}, [suppressLayoutAnimation, reducedMotion]);
 
 	const geometry = tabWidth > 0 ? createConnectedTabOutlineGeometry(tabWidth) : null;
 
@@ -147,7 +153,7 @@ function ActiveTabIndicator({
 			{geometry && (
 				<svg
 					viewBox={`0 0 ${geometry.width} ${geometry.height}`}
-					aria-hidden
+					aria-hidden="true"
 					className="absolute top-0 overflow-visible fill-muted stroke-border"
 					data-connected-tab-outline
 					shapeRendering="geometricPrecision"
@@ -178,7 +184,7 @@ function ActiveTabIndicator({
 		"data-active-tab-indicator": true,
 	};
 
-	if (suppressLayoutAnimation) {
+	if (suppressLayoutAnimation || reducedMotion) {
 		return (
 			<span ref={indicatorRef} {...indicatorProps}>
 				{content}
@@ -199,7 +205,7 @@ function ActiveTabIndicator({
 }
 
 /** 页签内容（图标 + 文字 + 小红点），真实页签与隐藏测量层共用，保证宽度一致。 */
-function TabInner({
+const TabInner = memo(function TabInner({
 	icon,
 	label,
 	badge,
@@ -233,7 +239,39 @@ function TabInner({
 			) : null}
 		</span>
 	);
-}
+});
+
+/** Natural-size content is independent of selection and must not rerender on every switch. */
+const TabMeasurements = memo(function TabMeasurements({
+	items,
+	removable,
+	containerRef,
+}: {
+	items: TabBarItem<string>[];
+	removable: boolean;
+	containerRef: RefObject<HTMLDivElement | null>;
+}): JSX.Element {
+	return (
+		<div
+			ref={containerRef}
+			aria-hidden
+			className="pointer-events-none absolute left-0 top-0 flex items-end opacity-0"
+		>
+			{items.map(({ key, label, icon, badge, removable: itemRemovable }) => (
+				<div
+					key={key}
+					data-tabkey={key}
+					className={cn(
+						"flex h-8 min-w-[72px] max-w-[160px] select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 pl-3 text-[11px] font-medium leading-none",
+						itemRemovable && removable ? "pr-7" : "pr-3",
+					)}
+				>
+					<TabInner icon={icon} label={label} badge={badge} active={false} />
+				</div>
+			))}
+		</div>
+	);
+});
 
 /**
  * 浏览器式选项卡：所有页签保持等高、互不覆盖。激活页签与内容卡片同色并向下延伸
@@ -279,6 +317,8 @@ export function TabBar<T extends string>({
 		started: boolean;
 	} | null>(null);
 	const suppressClickRef = useRef<T | null>(null);
+	/** 拖拽期页签边界缓存：同一次拖拽内 DOM 不随移动变化，重排提交后置空重建。 */
+	const dragBoundsRef = useRef<Map<T, { left: number; right: number }> | null>(null);
 	const fileDragHoverRef = useRef<{ key: T; timer: number } | null>(null);
 	const fileDragHoverKeyRef = useRef<T | null>(null);
 	const [fileDragHoverKey, setFileDragHoverKey] = useState<T | null>(null);
@@ -339,10 +379,11 @@ export function TabBar<T extends string>({
 	);
 
 	// 拖拽中按临时顺序渲染，否则按 props 顺序
-	const renderItems =
-		order != null
-			? order.map((k) => items.find((it) => it.key === k)).filter((it): it is TabBarItem<T> => it != null)
-			: items;
+	const renderItems = useMemo(() => {
+		if (order == null) return items;
+		const byKey = new Map(items.map((item) => [item.key, item]));
+		return order.map((key) => byKey.get(key)).filter((item): item is TabBarItem<T> => item != null);
+	}, [items, order]);
 
 	const beginDrag = (key: T) => {
 		dragKeyRef.current = key;
@@ -356,7 +397,11 @@ export function TabBar<T extends string>({
 		const currentOrder = orderRef.current;
 		if (currentDragKey == null || currentOrder == null || currentDragKey === overKey) return;
 		const nextOrder = moveTabKey(currentOrder, currentDragKey, overKey);
+		const changed = nextOrder.some((k, i) => k !== currentOrder[i]);
+		if (!changed) return;
 		orderRef.current = nextOrder;
+		// 重排真实发生时各页签位置会变：下一次命中检测前重建一次边界缓存。
+		dragBoundsRef.current = null;
 		setOrder(nextOrder);
 	};
 	const endDrag = (commit: boolean) => {
@@ -367,6 +412,7 @@ export function TabBar<T extends string>({
 		}
 		dragKeyRef.current = null;
 		orderRef.current = null;
+		dragBoundsRef.current = null;
 		setDragKey(null);
 		setOrder(null);
 	};
@@ -389,11 +435,19 @@ export function TabBar<T extends string>({
 		if (!row || !session || clientY < session.bounds.top - 16 || clientY > session.bounds.bottom + 16) {
 			return null;
 		}
+		let cache = dragBoundsRef.current;
+		if (cache == null) {
+			cache = new Map();
+			for (const child of Array.from(row.children) as HTMLElement[]) {
+				const key = child.dataset.tabkey as T | undefined;
+				if (!key) continue;
+				const rect = child.getBoundingClientRect();
+				cache.set(key, { left: rect.left, right: rect.right });
+			}
+			dragBoundsRef.current = cache;
+		}
 		let closest: { distance: number; key: T } | null = null;
-		for (const child of Array.from(row.children) as HTMLElement[]) {
-			const key = child.dataset.tabkey as T | undefined;
-			if (!key) continue;
-			const bounds = child.getBoundingClientRect();
+		for (const [key, bounds] of cache) {
 			const distance = Math.abs(clientX - (bounds.left + bounds.right) / 2);
 			if (!closest || distance < closest.distance) closest = { distance, key };
 		}
@@ -534,43 +588,78 @@ export function TabBar<T extends string>({
 	);
 	const measureRef = useRef<HTMLDivElement>(null);
 	const rafRef = useRef<number | undefined>(undefined);
-	const [overflowKeys, setOverflowKeys] = useState<T[]>([]);
 	const responsive = onOverflowChange != null;
-
-	const recompute = useCallback(() => {
-		const row = rowRef.current;
-		const mz = measureRef.current;
-		if (!row || !mz) return;
-		const avail = row.clientWidth - ROW_PADDING_LEFT - ROW_PADDING_RIGHT;
+	const canRenderRemove = onRemove != null && removeLabel != null;
+	const widthsRef = useRef(new Map<string, number>());
+	const [measurements, setMeasurements] = useState(() => ({
+		available: Number.POSITIVE_INFINITY,
+		widths: widthsRef.current,
+	}));
+	const measureWidths = useCallback(() => {
 		const widths = new Map<string, number>();
-		for (const c of Array.from(mz.children) as HTMLElement[]) {
-			const k = c.dataset.tabkey;
-			if (k != null) widths.set(k, c.offsetWidth);
+		for (const child of Array.from(measureRef.current?.children ?? []) as HTMLElement[]) {
+			const key = child.dataset.tabkey;
+			if (key != null) widths.set(key, child.offsetWidth);
 		}
-		const widthOf = (key: T) => widths.get(key) ?? 0;
-		const next = computeOverflow(renderItems, value, avail, widthOf);
-		setOverflowKeys((prev) => (sameKeys(prev, next) ? prev : next));
-	}, [renderItems, value]);
-
-	useEffect(() => {
-		if (!responsive) return;
+		const previous = widthsRef.current;
+		if (widths.size !== previous.size || [...widths].some(([key, width]) => previous.get(key) !== width)) {
+			widthsRef.current = widths;
+		}
+	}, []);
+	const publishMeasurements = useCallback(() => {
 		const row = rowRef.current;
 		if (!row) return;
-		recompute();
-		const scheduleRecompute = () => {
-			if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+		const available = row.clientWidth - ROW_PADDING_LEFT - ROW_PADDING_RIGHT;
+		const widths = widthsRef.current;
+		setMeasurements((previous) =>
+			previous.available === available && previous.widths === widths ? previous : { available, widths },
+		);
+	}, []);
+	const computedOverflow = useMemo(
+		() =>
+			responsive
+				? computeOverflow(renderItems, value, measurements.available, (key) => measurements.widths.get(key) ?? 0)
+				: [],
+		[responsive, renderItems, value, measurements],
+	);
+	const overflowRef = useRef<T[]>([]);
+	if (!sameKeys(overflowRef.current, computedOverflow)) overflowRef.current = computedOverflow;
+	const overflowKeys = overflowRef.current;
+
+	// 拖拽中容器尺寸/自然宽度变化会改变可见集与坐标：测量快照更新后使拖拽边界缓存
+	// 失效，下一次命中检测重读当前 DOM（重排自身的失效仍由 dragOver 显式完成）。
+	useLayoutEffect(() => {
+		dragBoundsRef.current = null;
+	}, [measurements]);
+
+	// Selection does not change natural widths. Keep the observer and its width cache
+	// alive across switches; only content/font/geometry changes invalidate measurement.
+	useLayoutEffect(() => {
+		if (!responsive) return;
+		const row = rowRef.current;
+		const measurement = measureRef.current;
+		if (!row || !measurement) return;
+		measureWidths();
+		publishMeasurements();
+		let widthsChanged = false;
+		const ro = new ResizeObserver((entries) => {
+			widthsChanged ||= entries.some((entry) => entry.target !== row);
+			if (rafRef.current != null) return;
 			rafRef.current = requestAnimationFrame(() => {
 				rafRef.current = undefined;
-				recompute();
+				if (widthsChanged) measureWidths();
+				widthsChanged = false;
+				publishMeasurements();
 			});
-		};
-		const ro = new ResizeObserver(scheduleRecompute);
+		});
 		ro.observe(row);
+		for (const child of Array.from(measurement.children)) ro.observe(child, { box: "border-box" });
 		return () => {
 			ro.disconnect();
 			if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+			rafRef.current = undefined;
 		};
-	}, [responsive, recompute]);
+	}, [responsive, renderItems, canRenderRemove, measureWidths, publishMeasurements]);
 
 	useEffect(() => {
 		onOverflowChange?.(overflowKeys);
@@ -586,16 +675,41 @@ export function TabBar<T extends string>({
 		[clearFileDragHover],
 	);
 
+	// 键盘导航（ARIA tabs：roving tabindex + 方向键跟随激活）。拖拽中让位给指针。
+	const onTablistKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+		if (dragKeyRef.current != null || event.defaultPrevented) return;
+		const currentIndex = visibleItems.findIndex((item) => item.key === value);
+		if (currentIndex === -1) return;
+		let nextIndex: number | null = null;
+		if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % visibleItems.length;
+		else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length;
+		else if (event.key === "Home") nextIndex = 0;
+		else if (event.key === "End") nextIndex = visibleItems.length - 1;
+		const next = nextIndex == null ? undefined : visibleItems[nextIndex];
+		if (!next) return;
+		event.preventDefault();
+		onChange(next.key);
+		// 焦点跟随选择：等受控重渲提交后聚焦新激活页签。
+		requestAnimationFrame(() => {
+			rowRef.current?.querySelector<HTMLButtonElement>(`[data-tabkey="${next.key}"] button`)?.focus();
+		});
+	};
+
 	const overflowSet = responsive ? new Set(overflowKeys) : null;
 	const visibleItems = overflowSet ? renderItems.filter((it) => !overflowSet.has(it.key)) : renderItems;
 	return (
 		<div className={cn("group/tabbar relative z-10 min-w-0", className)}>
-			<div ref={setRowRef} role="tablist" className="flex h-8 items-end overflow-visible pl-5 pr-3">
+			<div
+				ref={setRowRef}
+				role="tablist"
+				onKeyDown={onTablistKeyDown}
+				className="flex h-8 items-end overflow-visible pl-5 pr-3"
+			>
 				{visibleItems.map(({ key, label, icon, badge, removable }, index) => {
 					const active = value === key;
 					const isDragged = dragKey === key;
 					const fileDragHovered = fileDragHoverKey === key;
-					const canRemove = removable && onRemove != null && removeLabel != null;
+					const canRemove = removable && canRenderRemove;
 					const nextItem = visibleItems[index + 1];
 					const showSeparator =
 						!active &&
@@ -604,8 +718,10 @@ export function TabBar<T extends string>({
 						!fileDragHovered &&
 						fileDragHoverKey !== nextItem.key;
 					return (
+						// biome-ignore lint/a11y/noStaticElementInteractions: Drag events are delegated by the tab and close buttons; this wrapper must not become a second keyboard target.
 						<div
 							key={key}
+							role="presentation"
 							data-tabkey={key}
 							data-file-drag-hover={fileDragHovered ? "" : undefined}
 							onPointerDown={(event) => onTabPointerDown(event, key)}
@@ -625,6 +741,8 @@ export function TabBar<T extends string>({
 							<button
 								type="button"
 								role="tab"
+								tabIndex={active ? 0 : -1}
+								title={label}
 								aria-selected={active}
 								onClick={(event) => {
 									if (suppressClickRef.current === key) {
@@ -635,7 +753,7 @@ export function TabBar<T extends string>({
 									onChange(key);
 								}}
 								className={cn(
-									"relative flex h-8 w-full select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 border-transparent pl-3 text-[11px] font-medium leading-none transition-colors",
+									"relative flex h-8 w-full select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 border-transparent pl-3 text-[11px] font-medium leading-none transition-colors focus-visible:border-ring",
 									canRemove ? "pr-7" : "pr-3",
 									isDragged ? "cursor-grabbing" : "cursor-pointer",
 									active ? "text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -666,7 +784,7 @@ export function TabBar<T extends string>({
 									}}
 									className="absolute right-1 top-1/2 z-20 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 								>
-									<span className="icon-[mdi--close] h-3.5 w-3.5" />
+									<span className="icon-[solar--close-circle-linear] h-3.5 w-3.5" />
 								</button>
 							)}
 						</div>
@@ -675,26 +793,7 @@ export function TabBar<T extends string>({
 			</div>
 
 			{/* 隐藏测量层：渲染全部页签（非激活样式）量自然宽度，供 recompute 计算容纳数量。 */}
-			{responsive && (
-				<div
-					ref={measureRef}
-					aria-hidden
-					className="pointer-events-none absolute left-0 top-0 flex items-end opacity-0"
-				>
-					{renderItems.map(({ key, label, icon, badge, removable }) => (
-						<div
-							key={key}
-							data-tabkey={key}
-							className={cn(
-								"flex h-8 min-w-[72px] max-w-[160px] select-none items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-b-0 pl-3 text-[11px] font-medium leading-none",
-								removable && onRemove != null && removeLabel != null ? "pr-7" : "pr-3",
-							)}
-						>
-							<TabInner icon={icon} label={label} badge={badge} active={false} />
-						</div>
-					))}
-				</div>
-			)}
+			{responsive && <TabMeasurements items={renderItems} removable={canRenderRemove} containerRef={measureRef} />}
 		</div>
 	);
 }
