@@ -8,9 +8,9 @@ source: user-request; current-source; retained-performance-logs; official-docume
 created: 2026-10-24
 updated: 2026-10-24
 related_requirement: [REQ-0002]
-related_plan: []
+related_plan: [PLAN-0002]
 related_issue: []
-related_tasks: [TASK-0398, TASK-0355]
+related_tasks: [TASK-0398, TASK-0355, TASK-0399, TASK-0400, TASK-0401]
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -161,3 +161,9 @@ Renderer 证据锚点：
 ## 下一步触发信号
 
 用户要求实施后，将 P1-A、P1-B、P1-C 分别收紧为独立 Task 并先复测基线。若基线表明同步探测实际占比很小，按 trace 调整顺序；若隐藏驻留或技能缓存未构成显著资源增长，保持 P2，不为理论收益增加生命周期复杂度。
+
+## 后续实施回链（2026-10-24）
+
+以上正文保留调查时点的源码与日志基线。用户随后授权三个 P1 的实施，已按 [PLAN-0002](../plans/PLAN-0002-performance-reliability.md) 交付 [TASK-0399](../tasks/TASK-0399-runtime-startup-async-probes.md)、[TASK-0400](../tasks/TASK-0400-file-editor-lazy-startup.md)、[TASK-0401](../tasks/TASK-0401-bounded-session-auto-restore.md)；当前实现、实际验证与兼容边界以这些 Task 为准，不能再把原同步探测和默认启动依赖链描述为当前未修状态。
+
+受控证据为异步探测期间心跳可推进、组合构建启动静态 JS 减少 29.40%、合成 2000 条历史自动恢复仅驻留 10 条且保留分页/full。三个 Task 已完成独立复审及组合检查，在本地 main 原子提交，保持 `verifying` 等待人工体验验收；未推送、未发布。没有新的真实启动或分进程 RAM/CPU 样本，调查中关于实机测量和 P2 候选的限制仍然适用。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0401
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: desktop-conversation
 requirement: REQ-0002
@@ -17,11 +17,11 @@ branch: main
 worktree: .
 base_commit: ea67d951e8bb29a464219812465d3a4ae2939179
 read_paths: [apps/desktop, packages/theme-ui, project, docs]
-write_paths: ["apps/desktop/src/renderer/root-layout/useRootLayoutModel.ts","apps/desktop/src/renderer/root-layout","apps/desktop/src/renderer/domains/conversation/hooks/useSessionOpener.ts","apps/desktop/src/renderer/domains/conversation/hooks/useSessionManager.session-switch.test.ts","project/tasks/TASK-0401-bounded-session-auto-restore.md","project/tasks/README.md","project/plans/PLAN-0002-performance-reliability.md",".github/release-notes/v0.1.3.md"]
+write_paths: ["apps/desktop/src/renderer/root-layout/useRootLayoutModel.ts","apps/desktop/src/renderer/root-layout","apps/desktop/src/renderer/domains/conversation/hooks/useSessionOpener.ts","apps/desktop/src/renderer/domains/conversation/hooks/useSessionManager.session-switch.test.ts","project/tasks/TASK-0401-bounded-session-auto-restore.md","project/tasks/README.md","project/plans/PLAN-0002-performance-reliability.md","project/research/RESEARCH-0044-desktop-startup-resource-audit.md",".github/release-notes/v0.1.3.md"]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-24
 updated: 2026-10-24
 ---
@@ -59,15 +59,26 @@ Given 已记录上一大会话且 sessionsMap 尚空；When 启动自动恢复�
 
 ## 验收分层与功能验收包
 
-- 工程：待实现、回归与门禁；独立复审实际 diff 后处置发现。
-- 集成：pending；原子提交仅含本Task内容，其他工作原样保留；脏工作区不推送。
-- 人工：工程完成后 verifying，等待用户确认启动/恢复/编辑的实际体验。未运行的实机范围明确列出。
+- 工程：实现、定向/组合验证与完整check已完成；独立复审发现已处置。
+- 集成：integrated，由承载本记录的本地main原子提交绑定；其他工作原样保留，未推送。
+- 人工：verifying，等待用户确认实际启动/恢复/编辑体验；本轮未启动真实Desktop/Provider或运行verify:ui。
 - 发布：未授权。
 - 入口：正常启动与本Task影响的操作入口；预期为上述 Given/When/Then，具体提交和验证结果交付时补齐。
 
 ## 交付记录
 
-- 尚未修改生产代码/测试；后续逐切片记录 red/green、检查、评审与限制。
+- 初始准入时未修改生产代码/测试；后续各切片的实际证据按时间补记如下。
 - 最小实现决策：仅自动恢复入口显式传已有 `historyLoadMode: tail`；手动打开和resolveHistoryLoadMode默认策略不变。必要时将一次性恢复effect提取为useLastSessionRestore接缝，供真实SessionManager/分页集成回归使用，不新增协议。
 - 初轮既有基线将session-switch与controller并行运行：首项动态import/transform约31s超过原30s期限，继发7项失败，controller24项通过；尚无证据将其归为产品Bug。源码冻结后改为单文件/单worker重新建基线，未调高超时或删断言。
 - 源冻结后单文件 `bun ../../scripts/quality/run-vitest.mjs --run src/renderer/domains/conversation/hooks/useSessionManager.session-switch.test.ts --maxWorkers 1` 九项全部通过（21.58s）；controller既有24项已通过。此基线不包含新有界自动恢复行为。
+- 一次性恢复effect原行为提取后基线10项通过。新增流程改静态装配，将收集成本与既有10s行为期限分开；有效旧红为chatMessages实际2000、期望10（行为81–89ms），未提高期限或删除断言。
+- 修复后真实恢复→后台回调→延迟侧栏元信息写回→向上分页100条→用户显式full连续流程通过：自动阶段chat/backlog为10且bounded，IPC历史payload从2+2000变为2+10；分页后110条，显式full恢复完整2000。实际命令为Node runner：新流程1项、原session-switch9项、controller与chat-route-pending29项，共39通过，未用合成条目推算MB或主进程成本。
+- 独立只读复审未发现P1/P2；route-pending仅是骨架纯函数证据，不声称真实导航guard/UI已实测。补充无记录/已有活动/恢复拒绝的生命周期分支测试，待组合验证。
+
+## 本轮工程交付（2026-10-24）
+
+- 自动恢复显式tail，手动默认与显式full保留。真实manager/分页连续流程将合成2000条的自动Renderer驻留降至10条，IPC历史2+2000→2+10；分页再载100，显式full恢复2000。定向39项及新增生命周期分支均被Desktop整包覆盖，独立复核无P1/P2。
+- 组合验证：按test:changed影响图，externals/kanban 102、theme-ui 236、内置xianxia 1项通过；Desktop整包6155通过、3项进程型超时、18原跳过，隔离复跑相关3文件11通过、2原平台skip，覆盖全部先前超时及修正后的主题夹具。不是单次test:changed全绿；初轮WSL bash环境不符的运行已中止，不计通过。验证仅在当前进程将Git Bash放在PATH首位，未改持久环境/超时/断言。
+- 采用更保守的完整命中包测试替代重复impact筛选；完整 `bun run check` 最终退出0，lint、全部类型、设计、模块边界、声明头和Project合同均通过。本机日志：`temp/desktop-performance-check-accepted.log`、`temp/desktop-performance-desktop-validated.log`、`temp/desktop-performance-final-recheck.log`。
+- 无代码Worktree：全程单一串行Writer切换，原生只读分域调查和独立审查；源码/测试按本Task路径提交。共享导航在工作区同步，提交例外见WAIVER-0007，不夹带他人记录。
+- 验收入口：重启开发版后观察启动响应、首次文件编辑及上次会话恢复；更早历史可向上加载、主动完整加载可用。真实安装版/系统性能采样及人工体验尚未执行，不以构建字节或夹具条目推算实际RAM/CPU降幅；未发布、未推送。

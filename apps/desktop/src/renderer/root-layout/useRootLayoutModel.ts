@@ -46,8 +46,7 @@ import { showToast } from "../shared/store/toast-atoms";
 import { shouldShowChatRoutePending } from "./chat-route-pending";
 import { syncPendingInteractions } from "./pending-interaction-sync";
 import type { RootLayoutModel } from "./types";
-
-type SessionRestoreState = "pending" | "restoring" | "complete";
+import { useLastSessionRestore } from "./useLastSessionRestore";
 
 export function useRootLayoutModel(): RootLayoutModel {
 	const { openProject, ensureLocalSession } = useProjectActions();
@@ -59,16 +58,13 @@ export function useRootLayoutModel(): RootLayoutModel {
 	const activeSession = useAtomValue(activeSessionAtom);
 	const pendingSessionCreation = useAtomValue(pendingSessionCreationAtom);
 	const pendingSessionOpen = useAtomValue(pendingSessionOpenAtom);
-	const setActiveSession = useSetAtom(activeSessionAtom);
-	const [lastActiveSession, setLastActiveSession] = useAtom(lastActiveSessionAtom);
+	const lastActiveSession = useAtomValue(lastActiveSessionAtom);
 	const matchesForGuard = useMatches();
 	const currentPath = matchesForGuard[matchesForGuard.length - 1]?.pathname ?? "/";
 	const [sidebarCollapsed, setSidebarCollapsed] = useAtom(sidebarCollapsedAtom);
 	// 左栏占位宽度与侧边栏面板读同一个 atom（拖拽改宽时逐帧同步），见 SidebarDock。
 	const sidebarWidth = useAtomValue(sidebarWidthAtom);
 	const hasUnsavedFileChanges = useAtomValue(fileEditorHasUnsavedChangesAtom);
-	const [sessionRestoreState, setSessionRestoreState] = useState<SessionRestoreState>("pending");
-	const sessionRestoreAttemptedRef = useRef(false);
 	const toggleSidebar = useCallback(() => {
 		setSidebarCollapsed((v) => !v);
 	}, [setSidebarCollapsed]);
@@ -117,6 +113,7 @@ export function useRootLayoutModel(): RootLayoutModel {
 	// 接力消费，renderer 不再需要全局出队调度器。
 	// 会话打开/发送的唯一挂载点。ChatPage 与新会话页走模块级 ref，避免再挂一份。
 	const { openSession, sendMessage } = useSessionManager();
+	const sessionRestoreState = useLastSessionRestore(currentPath, openSession);
 
 	useEffect(() => {
 		if (!hasUnsavedFileChanges) return;
@@ -137,37 +134,6 @@ export function useRootLayoutModel(): RootLayoutModel {
 			console.warn("[RootLayout] preload new session page failed", error);
 		});
 	}, [currentPath, activeSession, pendingSessionCreation, pendingSessionOpen, lastActiveSession]);
-
-	// 刷新根路由时先用持久化的 cwd + sessionPath 重建 runtime session。
-	// 持久化定位信息已足够恢复，无需等待默认 cwd 或侧栏历史列表完成加载。
-	// runtimeId 不能跨 renderer 生命周期复用，必须重新走 openSession/session.create。
-	useEffect(() => {
-		if (currentPath !== "/" || sessionRestoreAttemptedRef.current) {
-			return;
-		}
-		sessionRestoreAttemptedRef.current = true;
-		if (activeSession || pendingSessionCreation || pendingSessionOpen || !lastActiveSession) {
-			setSessionRestoreState("complete");
-			return;
-		}
-		setSessionRestoreState("restoring");
-		void openSession(lastActiveSession.cwd, lastActiveSession.sessionPath)
-			.catch((error: unknown) => {
-				console.warn("[RootLayout] restore active session failed", error);
-				setActiveSession(null);
-				setLastActiveSession(null);
-			})
-			.finally(() => setSessionRestoreState("complete"));
-	}, [
-		currentPath,
-		activeSession,
-		pendingSessionCreation,
-		pendingSessionOpen,
-		lastActiveSession,
-		openSession,
-		setActiveSession,
-		setLastActiveSession,
-	]);
 
 	// 路由守卫：仅在确认没有可恢复会话后，才跳到默认「对话」项目的 NewSession 页。
 	useEffect(() => {

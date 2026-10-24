@@ -602,6 +602,8 @@ it("resolveHistoryLoadMode 尊重显式模式并在小文件时直接走完整�
 	);
 
 	await expect(resolveHistoryLoadMode(smallPath, cwd, undefined)).resolves.toBe("full");
+	await expect(resolveHistoryLoadMode("C:\\sessions\\unknown.jsonl", cwd, undefined)).resolves.toBe("full");
+	await expect(resolveHistoryLoadMode(largePath, cwd, { historyLoadMode: "full" })).resolves.toBe("full");
 	expect(store.get(confirmDialogAtom)).toBeNull();
 	await expect(resolveHistoryLoadMode(largePath, cwd, { historyLoadMode: "tail" })).resolves.toBe("tail");
 	expect(store.get(confirmDialogAtom)).toBeNull();
