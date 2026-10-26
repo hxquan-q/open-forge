@@ -52,6 +52,9 @@ describe("Flow pipeline contracts", () => {
 		expect(run).toContain("sha256sum --check --status");
 		expect(run).toContain("dnf install -y nodejs ripgrep unzip");
 		expect(run).not.toContain("apt-get");
+		expect(run).toContain("registry.npmmirror.com/-/binary/bun/");
+		expect(run).toContain("BUN_CONFIG_REGISTRY=https://registry.npmmirror.com");
+		expect(run).not.toContain("github.com/oven-sh/bun");
 		expect(run.indexOf("bun run test:changed")).toBeLessThan(run.indexOf("bun run build:cli"));
 		expect(run).not.toMatch(/release:desktop|publish:private|continue-on-error/);
 	});

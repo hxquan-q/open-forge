@@ -99,6 +99,8 @@ GitHub `hxquan-q/open-forge` 保持唯一写入源；由 GitHub Actions 定时�
 - 同步链路调整：云效公共集群到 github.com 多次连接超时（run 3/4），同步改由 GitHub Actions 定时任务执行（`.github/workflows/codeup-sync.yml`：默认分支每 5 分钟 + `main` push + 手动，公网仓库标准 runner 免费）；写凭据存于 Actions secret `CODEUP_GIT_TOKEN`。云效只保留 Codeup 构建流水线 5347074；同步流水线 5346917 与变量组 `allstar_codeup` 保留为人工备用，GitHub webhook 已删除。
 - 真实同步验收：本机执行 `node scripts/ci/codeup-sync.mjs` 返回 `{"branches":24,"tags":1,"updated":1}`；GitHub 与 Codeup 的 24 个分支 + `v0.1.2` 标签逐项 SHA 一致（`chenxvhua` = c5700985d）。
 - 本地验证：`scripts/ci` 三个测试文件 9 例通过；`bun run check` 通过（修正 `.ps1` 声明头风格分类）；`check-project-indexes` 与 Release Notes 汇编/校验通过。
-- 未运行/待办：Actions 工作流需进入 `main` 才能定时运行（等待 main 晋升或授权）；云效构建 run 1 结果待完成；GitHub 定时任务可能延迟、仓库 60 天无活动会自动停用，需运营确认。
+- 推送与 Actions 验收：提交 2fc5147f5 已推 `origin/dev` 与 `origin/main`；`codeup-sync` 运行 40276666496 成功（19 秒），推送后 GitHub/Codeup 25 个 refs 仍完全一致（`main`/`dev` = 2fc5147f5）。
+- 云效构建环境：首次 run 卡在从 GitHub 下载 Bun；改用 npmmirror 同一归档（SHA-256 与仓库钉值一致）并设置 `BUN_CONFIG_REGISTRY`，取消卡住的 run 1/2，重跑结果待完成。
+- 未运行/待办：云效构建重跑结果待完成；GitHub 定时任务可能延迟、仓库 60 天无活动会自动停用，需运营确认；Flow 同步流水线仅作人工备用。
 - 触发配置：同步源使用官方 `branchesFilter: .*` 覆盖全部分支；构建源限 `^dev$`，避免首次导入 24 个分支各触发一次构建。云效定时触发目前只有 UI 配置说明，未找到公开 YAML 字段。
 - Worktree：主工作区串行，不存在并行写入者。
