@@ -380,6 +380,12 @@ describe("Desktop release workflow contracts", () => {
 		expect(workflow).toContain("excluding macOS legs");
 	});
 
+	it("can explicitly downgrade the Windows sandbox check for a release", () => {
+		expect(workflow).toContain("VETTA_SKIP_WINDOWS_SANDBOX");
+		expect(workflow).toContain("VETTA_SKIP_SANDBOX_ARTIFACT_CHECK");
+		expect(workflow).toContain("Windows 产物未包含内置沙盒");
+	});
+
 	it("provides an isolated test-channel workflow for real install and restart upgrades", () => {
 		expect(upgradeWorkflow).toContain("baseline_version:");
 		expect(upgradeWorkflow).toContain("candidate_version:");

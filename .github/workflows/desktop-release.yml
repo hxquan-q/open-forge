@@ -456,6 +456,8 @@ jobs:
           # fork 不配任何值就得到开源版。空 optional 键不会写入 GITHUB_ENV。
           VETTA_UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           VETTA_UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
+          # 显式人工豁免：仅当仓库变量为 1 时允许 Windows 产物不带受控沙盒（WAIVER-0009）。
+          VETTA_SKIP_SANDBOX_ARTIFACT_CHECK: ${{ vars.VETTA_SKIP_WINDOWS_SANDBOX }}
         run: bun run ${{ matrix.command }}
 
       # Archive before verification so an E2E/install failure never discards a signed build.
@@ -718,11 +720,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
+          VETTA_SKIP_WINDOWS_SANDBOX: ${{ vars.VETTA_SKIP_WINDOWS_SANDBOX }}
         shell: bash
         run: |
           VERSION="${BUILD_VERSION:-$(node -p "require('./apps/desktop/package.json').version")}"
           TAG="v${VERSION}"
           NOTES_FILE="$(node scripts/release/release-notes.mjs --version "${VERSION}")"
+          if [[ "${VETTA_SKIP_WINDOWS_SANDBOX:-}" == "1" ]]; then
+            { cat "${NOTES_FILE}"; printf '\n> **Windows 产物未包含内置沙盒**：本次 Windows 安装包未携带受控沙盒制品（sandbox.status=unavailable）。请勿在依赖沙盒隔离的场景使用；后续版本将补回（WAIVER-0009）。\n'; } > "${RUNNER_TEMP}/release-notes-windows-sandbox.md"
+            NOTES_FILE="${RUNNER_TEMP}/release-notes-windows-sandbox.md"
+          fi
           # 0.x 为 Preview 时代：Release 标记 Pre-release，1.0.0 起自动转正式。
           PRERELEASE_ARGS=()
           if [[ "${VERSION}" =~ ^0\. ]]; then PRERELEASE_ARGS+=("--prerelease"); fi
