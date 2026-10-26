@@ -456,7 +456,6 @@ jobs:
           # fork 不配任何值就得到开源版。空 optional 键不会写入 GITHUB_ENV。
           VETTA_UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           VETTA_UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-          # 显式人工豁免：仅当仓库变量为 1 时允许 Windows 产物不带受控沙盒（WAIVER-0009）。
           VETTA_SKIP_SANDBOX_ARTIFACT_CHECK: ${{ vars.VETTA_SKIP_WINDOWS_SANDBOX }}
         run: bun run ${{ matrix.command }}
 
@@ -524,7 +523,8 @@ jobs:
           BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
         run: |
           rm -rf apps/desktop/release
-          (cd "${RUNNER_TEMP}/release-checkpoint" && tar -xf release-build.tar -C "${GITHUB_WORKSPACE}/apps/desktop")
+          TARBALL="${RUNNER_TEMP}/release-checkpoint/release-build.tar"; [[ "${RUNNER_OS}" == "Windows" ]] && TARBALL="$(cygpath -u "${TARBALL}")"
+          (cd "${GITHUB_WORKSPACE}/apps/desktop" && tar -xf "${TARBALL}")
           SIGNATURE="$(cat apps/desktop/release/require-mac-signature.txt)"
           case "${SIGNATURE}" in 0|1) ;; *) echo "Invalid signature requirement" >&2; exit 1 ;; esac
           echo "VETTA_REQUIRE_MAC_SIGNATURE=${SIGNATURE}" >> "${GITHUB_ENV}"

@@ -1,9 +1,13 @@
+// Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { LINUX_PACKAGE_METADATA, LINUX_RELEASE_TARGETS } from "./linux-packaging-contract.mjs";
 import {
+	normalizeArtifactFileNames,
 	resolveDefaultTargets,
 	resolveElectronBuilderPublishMode,
 	resolveElectronBuilderTargets,
@@ -33,6 +37,28 @@ test("Windows release builds Inno, MSI, and ZIP without exposing Inno to electro
 		() => resolveElectronBuilderTargets("linux", ["inno"]),
 		/The inno target requires a Windows build/,
 	);
+});
+
+test("release artifact file names drop spaces to match updater metadata", () => {
+	const directory = mkdtempSync(join(tmpdir(), "openforge-artifact-names-"));
+	try {
+		writeFileSync(join(directory, "Allstr ai-0.1.3.AppImage"), "appimage");
+		writeFileSync(join(directory, "Allstr ai-0.1.3.AppImage.blockmap"), "blockmap");
+		mkdirSync(join(directory, "Allstr ai.app"));
+		const renamed = normalizeArtifactFileNames(directory);
+		assert.deepEqual(
+			renamed.map(({ from, to }) => `${from}>${to}`).sort(),
+			[
+				"Allstr ai-0.1.3.AppImage>Allstr-ai-0.1.3.AppImage",
+				"Allstr ai-0.1.3.AppImage.blockmap>Allstr-ai-0.1.3.AppImage.blockmap",
+			].sort(),
+		);
+		assert.ok(existsSync(join(directory, "Allstr-ai-0.1.3.AppImage")));
+		assert.ok(existsSync(join(directory, "Allstr-ai-0.1.3.AppImage.blockmap")));
+		assert.ok(existsSync(join(directory, "Allstr ai.app")));
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
+	}
 });
 
 test("package scripts can build every Linux format independently", async () => {

@@ -97,3 +97,4 @@ updated: 2026-10-26
 - 已完成 intake 与用户授权；显式未签名开关、发布断言边界、WAIVER-0008 与发布说明警告已落盘。
 - 2026-10-26 发布尝试：tag `v0.1.3` 与 release 提交 d859f3a7a 已推送；tag run 40279526764 在 `build windows` 失败——受控沙盒 exe 缺失、清单 SHA 为 null，打包按设计阻断。用户选择本次跳过 Windows 沙盒（WAIVER-0009）。
 - 恢复路径：从 `main` 以 stable dispatch 重新构建并发布到既有 `v0.1.3`；显式 `VETTA_SKIP_WINDOWS_SANDBOX=1`，Release 正文追加未带沙盒警告。资产构建自 main（tag 之后仅发布/豁免文档变更，产品代码不变），如实记录 tag/资产提交差异。
+- dispatch run 40282832623：四个平台构建全部成功（Windows 已跳过沙盒检查）；四个 verify 失败——Linux/macOS 的 updater 元数据引用连字符产物名而磁盘文件保留品牌空格，Windows 的 checkpoint 还原用带盘符 `-C` 失败。已修：构建后统一把 release 顶层产物文件空格改连字符（含回归测试），Windows 改为 `cd` 后解压；重跑待执行。
