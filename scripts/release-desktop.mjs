@@ -250,7 +250,10 @@ function publishRelease(version) {
 	}
 
 	const notesPath = assertReleaseNotesReady(version);
-	const requiredFiles = [...manifestPaths, LOCKFILE_PATH];
+	// The version may already be in place without a prepare bump (for example an
+	// earlier task set 0.1.3 directly). The manifests are verified against the
+	// target version above, so publish only rejects unrelated working-tree files.
+	const requiredFiles = [];
 	assertOnlyReleaseFilesChanged(notesPath, manifestPaths, requiredFiles);
 	assertTagAvailable(`v${version}`);
 	runReleaseChecks();

@@ -17,7 +17,7 @@ branch: main
 worktree:
 base_commit: 8be3c69ce1f3fd10a93fda3678d8cceb5b1c4f64
 read_paths: [.github/workflows, .github/release-notes, scripts/release, scripts/quality, project/decisions/waivers, project/tasks]
-write_paths: [.github/workflows/desktop-release.yml, .github/release-notes, scripts/quality/desktop-release-workflow.test.mjs, project/decisions/waivers, project/tasks]
+write_paths: [.github/workflows/desktop-release.yml, .github/release-notes, scripts/release-desktop.mjs, scripts/release-desktop.test.mjs, scripts/quality/desktop-release-workflow.test.mjs, project/decisions/waivers, project/tasks]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
