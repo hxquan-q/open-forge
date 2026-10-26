@@ -88,7 +88,7 @@ export interface PluginTeamPreset {
 	readonly workflow: string;
 	/** 本团队接管的历史团队 id，用于认领用户已有的同一支团队。 */
 	readonly legacyTeamIds: readonly string[];
-	/** 工作区档位归属；缺省两档可见（见 AgentResourceMode）。 */
+	/** 工作区档位归属；缺省归「文档与研究」档（见 AgentResourceMode）。 */
 	readonly mode?: AgentResourceMode;
 }
 
@@ -106,7 +106,7 @@ export interface PluginAgentPreset {
 	readonly legacyBlueprintIds: readonly string[];
 	/** 本智能体对外供货的角色 slug；别的插件按它引用到这里。 */
 	readonly roles: readonly string[];
-	/** 工作区档位归属；缺省两档可见（见 AgentResourceMode）。 */
+	/** 工作区档位归属；缺省归「文档与研究」档（见 AgentResourceMode）。 */
 	readonly mode?: AgentResourceMode;
 }
 

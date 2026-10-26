@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /**
- * 档位归属过滤（TASK-0406）：声明了 mode 的团队/智能体只出现在对应档的下拉里；
- * 未声明两档可见；已选中的 chip 不过滤（切档后身份仍完整回显，发送不拦）。
+ * 档位归属过滤（TASK-0406）：智能体/团队固定归属一个档、只在对应档出现——两档对等，
+ * 文档看不到 coding 的，coding 也看不到文档的；未声明默认归 work 档。已选中的 chip
+ * 不过滤（切档后身份仍完整回显，发送不拦）。
  */
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -81,34 +82,32 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-async function openPicker() {
+/** 打开下拉并等待列表就绪；anchor 传该档下必然可见的条目名（档位过滤后用它当加载信号）。 */
+async function openPicker(anchor: string) {
 	// 触发器是唯一原生 button；aria-label 恒为 triggerLabel 的 i18n key（identity mock）。
 	fireEvent.click(screen.getByRole("button", { name: "newSession.agentSelector.triggerLabel" }));
-	await waitFor(() => expect(screen.getByText("通用助手")).toBeDefined());
+	await waitFor(() => expect(screen.getByText(anchor)).toBeDefined());
 }
 
 describe("NewSessionAgentSelector 档位过滤", () => {
-	it("work 档：coding 归属的团队与智能体不出现，未声明与 work 归属可见", async () => {
+	it("work 档：coding 归属的团队与智能体不出现，未声明（默认 work）与 work 归属可见", async () => {
 		render(
 			<NewSessionAgentSelector selectedKey={null} onSelect={vi.fn()} workspaceMode="work" />,
 		);
-		await openPicker();
+		await openPicker("通用助手");
 
-		expect(screen.getByText("通用助手")).toBeDefined();
 		expect(screen.getByText("资料研究员")).toBeDefined();
 		expect(screen.queryByText("电子表单工坊")).toBeNull();
 		expect(screen.queryByText("表单匠")).toBeNull();
 	});
 
-	it("coding 档：coding 归属可见，work 归属不出现", async () => {
+	it("coding 档：只见 coding 归属——未声明（默认 work）与 work 归属都不出现（两档对等）", async () => {
 		render(
 			<NewSessionAgentSelector selectedKey={null} onSelect={vi.fn()} workspaceMode="coding" />,
 		);
-		await openPicker();
-
-		expect(screen.getByText("电子表单工坊")).toBeDefined();
+		await openPicker("电子表单工坊");
 		expect(screen.getByText("表单匠")).toBeDefined();
-		expect(screen.getByText("通用助手")).toBeDefined();
+		expect(screen.queryByText("通用助手")).toBeNull();
 		expect(screen.queryByText("资料研究员")).toBeNull();
 	});
 
@@ -122,7 +121,7 @@ describe("NewSessionAgentSelector 档位过滤", () => {
 		);
 		// 触发器上仍是完整身份（名录异步加载完成后）：名字可见，且列表里不再出现该团队。
 		await waitFor(() => expect(screen.getByText("电子表单工坊")).toBeDefined());
-		await openPicker();
+		await openPicker("通用助手");
 		expect(screen.queryByText("表单匠")).toBeNull();
 	});
 });

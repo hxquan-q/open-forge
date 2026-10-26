@@ -86,13 +86,16 @@ updated: 2026-10-26
 
 ## Given / When / Then
 
+> 2026-10-26 用户走查后语义修订：归属**固定单向、两档对等**——文档看不到 coding 的，
+> coding 也看不到文档的；未声明（含用户自建、未标注插件贡献）默认归「文档与研究」档。
+
 - Given 已启用 eform-craft（mode=coding），When 用户在文档与研究档打开新会话选择器，
   Then 团队组与智能体组均不出现电子表单条目；
-- When 用户经「Allstar自主开发」入口（coding 档）打开选择器，Then 电子表单团队与成员
-  智能体可见可选；
+- When 用户在 coding 档（Allstar 入口）打开选择器，Then 只见 coding 归属条目——电子
+  表单团队/成员可见，未声明与 work 归属的智能体/团队**不出现**；
 - Given 用户在 coding 档选中电子表单团队后把项目切回 work 档，When 打开选择器下拉，
-  Then 列表过滤但已选中 chip 保留（发送不拦）；
-- Given 插件未声明 mode，Then 两档均可见（存量预置与用户自建不回归）。
+  Then 列表按 work 档过滤但已选中 chip 保留（发送不拦）；
+- Given 插件未声明 mode，Then 档案归「文档与研究」档，仅在该档可见（存量清单零迁移）。
 
 ## 必须保持
 

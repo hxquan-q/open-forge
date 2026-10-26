@@ -48,5 +48,6 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0031`：qwen3.8-27b 端点（`:18081`）实测输出不连贯、任何 prompt 均无法获得可用回复；应用侧链路经 glm 对照证伪，疑点在端点 `/responses` 实现或模型部署（draft；推荐先核查端点，再按需要 wire 档比对。2026-10-09 用户授权 `glm/glm-5.3-flash` 作为验收模型（隔离 Debug Profile），VERIFY-0017 的模型面验收解阻；qwen3.8 本身在其闭合前仍禁用于真实流程）。
 - `ISSUE-0032`：ac-fence 写域 glob 与 agent-browser 通道的词法匹配边界——写域 `..` 逃逸（v0.4 起既有面）、shell 重定向写不受写域判定、通道引擎 URL scheme 越界均待统一裁决（draft；BUG-0082 只修了黑盒新增面，全角色统一修法与宿主侧配合待触发）。
 - `ISSUE-0033`：`artifact` 工具 union 顶层 schema 在 glm 网关上不可用——模型 13 次调用全部空参被拒，报告退化为普通 write 文件；同会话 object 顶层工具全部正常，主假设是网关不接受非 object 顶层的 function parameters（draft；推荐 C 错误信息带 schema 提示 + B schema 包 object 顶层可移植化，wire 档后备定谳；阻塞 TASK-0074 与 0025/0026 的 Artifact 产出条款）。
+- `ISSUE-0035`：Agent 定位重合的处置（draft；用户 2026-10-26 在 TASK-0406 走查中提出，未点名条目；推荐先按档位收窄展示面，M2 人设盘点时集中定下架清单）。
 - `ISSUE-0034`：会话归档跨设备迁移两个产品缺口——导入目标位置自选（需 cwd 重写与指纹规范，推荐项目迁移向导）与产物/整目录打包（完整项目备份，需排除规则与冲突策略）；**2026-10-22 用户裁定 B+C**，已转 REQ-0026 + TASK-0361（ADR-0147）实施（done）。
 

@@ -60,10 +60,11 @@ export function filterTargetOptions(
 }
 
 /**
- * 档位归属过滤（用户层可见性）：声明了 mode 的智能体/团队只出现在对应档的下拉里，
- * 未声明（含用户自建）两档都可见。只影响列表展示——已选中的 chip 与深链 target 不过滤，
- * 发送链路也不做模式校验（用户口径）。
+ * 档位归属过滤（用户层可见性）：智能体/团队固定归属一个档，只在对应档的下拉里出现——
+ * 两档对等，文档看不到 coding 的，coding 也看不到文档的。未声明 mode（含用户自建、
+ * 未标注的插件贡献）默认归「文档与研究」档（它是默认视图）。只影响列表展示——已选中的
+ * chip 与深链 target 不过滤，发送链路也不做模式校验（用户口径）。
  */
 export function matchesTargetMode(mode: "work" | "coding" | undefined, currentMode: "work" | "coding"): boolean {
-	return mode === undefined || mode === currentMode;
+	return (mode ?? "work") === currentMode;
 }

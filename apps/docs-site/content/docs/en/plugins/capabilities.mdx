@@ -33,7 +33,7 @@ The `ctx` passed to `activate(ctx)` is the single outlet for every capability. O
 | Manage CLIs and local services | `ctx.cliProviders.*`, `ctx.services.*` | declared through manifest `providers` | The host owns probing, installation, start and stop, and health checks |
 | Register discoverable actions | `ctx.appActions.register` | `app.actions.register` + `app.actionHandler.execute` | High-impact operations still need confirmation |
 | Provide skills or MCP servers | the `agent` field in `plugin.json` | `agent.skills.control` / `agent.mcp.control` | Re-verify source and permissions on install, enable, and reload |
-| Contribute agents and teams | `agent.agents`, `agent.teams` in `plugin.json` | none | The host lays them down as ordinary profiles; members may cross plugins, but the leader must be this plugin's own. Declaring a `mode` (`work` / `coding`) limits the entry to that workspace mode's new-session picker; unset means both |
+| Contribute agents and teams | `agent.agents`, `agent.teams` in `plugin.json` | none | The host lays them down as ordinary profiles; members may cross plugins, but the leader must be this plugin's own. Agents and teams belong to exactly one workspace mode (`mode`: `work` / `coding`) and only appear in that mode's new-session picker; unset defaults to docs & research |
 | Stage material on the new-session page | `ctx.ui.registerNewSessionContext` | `ui.slot.new-session-context` | Activation may only name this plugin's own agents or abilities, and never sees raw keystrokes |
 | Add localized copy | `ctx.i18n` and package `locales/` | none | Keep keys and `defaultLocale` aligned |
 

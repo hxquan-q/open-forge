@@ -279,7 +279,7 @@ export const BUILTIN_PLUGIN_AGENT_ROLES = [
 
 export type BuiltinPluginAgentRole = (typeof BUILTIN_PLUGIN_AGENT_ROLES)[number];
 
-/** 智能体/团队的工作区档位归属：声明后只出现在对应档的新会话选择器里，缺省两档可见。 */
+/** 智能体/团队的工作区档位归属：声明后只出现在对应档的新会话选择器里，缺省归「文档与研究」档。 */
 export const PluginAgentResourceModeSchema = Type.Union([Type.Literal("work"), Type.Literal("coding")]);
 
 /** 插件贡献的智能体（blueprint）。人设、头像、职责都由插件提供，宿主只负责铺档案。 */
@@ -319,7 +319,7 @@ export const PluginAgentProfileManifestSchema = Type.Object(
 		roles: Type.Optional(Type.Array(PluginAgentRoleSchema, { maxItems: 8 })),
 		/**
 		 * 工作区档位归属（`work` 文档与研究 / `coding` 代码）。声明后该智能体只出现在对应档的
-		 * 新会话选择器；这是用户层可见性过滤，不影响调用。缺省两档可见。
+		 * 新会话选择器；这是用户层可见性过滤，不影响调用。缺省归「文档与研究」档。
 		 */
 		mode: Type.Optional(PluginAgentResourceModeSchema),
 	},
@@ -380,7 +380,7 @@ export const PluginAgentTeamManifestSchema = Type.Object(
 		/**
 		 * 工作区档位归属（`work` 文档与研究 / `coding` 代码）。声明后整支团队只出现在对应档的
 		 * 新会话选择器；成员智能体建议同标，否则单选入口与团队入口的可见性不一致。
-		 * 缺省两档可见。
+		 * 缺省归「文档与研究」档。
 		 */
 		mode: Type.Optional(PluginAgentResourceModeSchema),
 	},
