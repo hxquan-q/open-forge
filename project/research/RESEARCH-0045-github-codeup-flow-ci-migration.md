@@ -17,9 +17,9 @@ related_issue: [ISSUE-0029]
 
 ## 问题与范围
 
-**可行：继续在 GitHub 开发、提 PR 和合并，以 GitHub 为唯一写入源；单向同步到 Codeup，由 Flow 执行检查、测试、构建和部署。合并后的自动化可以做到零 GitHub Actions；保留 GitHub 合并前的必需检查，需要另外打通 PR 事件和结果回写。** 这是基于公开接口的设计结论，尚未在用户的云效组织完整执行该 CI/CD 链路，不等于现成的一键镜像功能；指定代码库的只读连接和推送演练结果见 2.1 节。
+**可行：继续在 GitHub 开发、提 PR 和合并，以 GitHub 为唯一写入源；单向同步到 Codeup，由 Flow 执行检查、测试、构建和部署。合并后的自动化可以做到零 GitHub Actions；保留 GitHub 合并前的必需检查，需要另外打通 PR 事件和结果回写。** 这是基于公开接口的设计结论，尚未在用户的云效组织完整执行该 CI/CD 链路，不等于现成的一键镜像功能；两个指定代码库的只读连接和推送演练结果见 2.1、2.2 节。
 
-**2026-10-26 用户澄清：同步全部分支和记录，不限 `dev` / `main`。** 本方案因此以 GitHub 的全部 `refs/heads/*`、全部 `refs/tags/*` 及其可达完整提交历史为同步范围，目标为 [Codeup AI_Plat](https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/AI_Plat)。提交对象保持原样，包含作者、时间、消息、父提交和 merge commit；GitHub 的 PR/Issue/评审/评论、Release 附件、Actions 日志及平台权限并不因此迁移。云效通用迁移明确列出代码、分支、提交、标签，网页导入明确不含合并请求和成员权限。[通用三方迁移](https://help.aliyun.com/zh/yunxiao/user-guide/common-tripartite-code-platform-migration)、[网页导入范围](https://help.aliyun.com/zh/yunxiao/user-guide/import-the-three-party-code-base-through-the-web-page)
+**2026-10-26 用户澄清：同步全部分支和记录，不限 `dev` / `main`。** 本方案因此以 GitHub 的全部 `refs/heads/*`、全部 `refs/tags/*` 及其可达完整提交历史为同步范围；用户随后将当前目标指定为 [Codeup ALLSTAR-AI](https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/ALLSTAR-AI)，此前 AI_Plat 的验证保留为历史记录。提交对象保持原样，包含作者、时间、消息、父提交和 merge commit；GitHub 的 PR/Issue/评审/评论、Release 附件、Actions 日志及平台权限并不因此迁移。云效通用迁移明确列出代码、分支、提交、标签，网页导入明确不含合并请求和成员权限。[通用三方迁移](https://help.aliyun.com/zh/yunxiao/user-guide/common-tripartite-code-platform-migration)、[网页导入范围](https://help.aliyun.com/zh/yunxiao/user-guide/import-the-three-party-code-base-through-the-web-page)
 
 **如果“创建的云效仓库”是普通新建空库，不能直接套用 Codeup 原生“仓库同步”。** 官方仅承诺网页导入库及指定 GitLab 迁移库具有该入口；既有普通库可通过受控 Git 推送接收代码，无需删除重建。[Codeup 仓库同步](https://help.aliyun.com/zh/yunxiao/user-guide/warehouse-synchronization/)
 
@@ -103,8 +103,9 @@ flowchart LR
 首次同步的建议命令如下，**这里只给出示例，本轮没有执行克隆或实际推送**；工作目录须为新建的专用目录，目标同名分支/标签存在时先比较历史。`--bare` 完整克隆把来源分支放入本地 heads，省略 `--depth` 保留完整历史；不能在日常开发工作区简单执行 `push --all`，那只选本地 heads，且会混入尚未进入 GitHub 的内容。[git-clone](https://git-scm.com/docs/git-clone)、[git-push](https://git-scm.com/docs/git-push)
 
 ```powershell
-git -c http.version=HTTP/1.1 clone --bare https://github.com/hxquan-q/open-forge.git open-forge-codeup.git
-git -C open-forge-codeup.git -c http.version=HTTP/1.1 push --dry-run --atomic https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/AI_Plat.git 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
+$syncDir = 'C:\Users\xquan\Desktop\open-forge-allstar-sync.git'
+git -c http.version=HTTP/1.1 clone --bare https://github.com/hxquan-q/open-forge.git $syncDir
+git -C $syncDir -c http.version=HTTP/1.1 push --dry-run --atomic https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/ALLSTAR-AI.git 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
 ```
 
 演练和发布触发隔离核对后，实际同步使用同一推送命令移除 `--dry-run`。后续 Flow 每轮重新获取全部 heads/tags；仍须比较来源快照与目标 SHA，校验源端 ref 集合一致。历史导入前先控制目标流水线的自动发布入口，防止旧 `v*` 标签入库触发发版。LFS 实体与子模块仍需独立核查。
@@ -123,6 +124,20 @@ git -C open-forge-codeup.git -c http.version=HTTP/1.1 push --dry-run --atomic ht
 最初两端连接均在 TLS 阶段失败，指定单命令 `http.version=HTTP/1.1` 后本轮多次读取得到成功；未改全局 Git 配置或关闭证书验证，不据此断言已定位 TLS 根因。演练直接使用本地已有的精确对象，没有向 Codeup 发送提交对象或更新 ref。`--dry-run` 成功只证明本次推送规划及协商通过，尚未验证真实数据传输、服务端接收钩子/配额、分支保护、默认分支、LFS 或下游流水线行为；不能称全量同步已完成。
 
 此处 5682 只统计 GitHub 当前 heads/tags 可达历史，不包括已删除且不可达的历史引用、GitHub 平台记录、仅本地未推送的提交，也不包含独立仓库的 LFS 二进制/子模块对象。实际写入后应重新读取两端全部 heads/tags 并逐项比较名称与对象 ID，而不是只检查文件树或最新一条 commit。
+
+### 2.2 更换目标 ALLSTAR-AI 的实际验证（2026-10-26）
+
+用户随后要求核对 `Allstar_AI/ALLSTAR-AI`，本轮仅将验证目标切换至该库，不写入 AI_Plat 或 ALLSTAR-AI，也不更改本地远端配置。
+
+| 检查 | 实际结果 |
+|---|---|
+| 新目标读取 | `ALLSTAR-AI.git` 的 `ls-remote --symref` 退出码 0、返回 0 个引用 |
+| 实时来源 | 重新读取 GitHub，而非使用本地缓存：24 个分支、1 个标签；其中 `chenxvhua` 已与 `dev` 指向相同提交，不能沿用此前的旧 SHA |
+| 历史与对象 | 来源引用可达 5682 个去重提交、126828 个 Git 对象，缺失对象 0 |
+| 原子推送演练 | 对新目标运行 `push --dry-run --atomic --porcelain`，退出码 0，24 项 `[new branch]` 与 1 项 `[new tag]` |
+| 演练后核对 | 新目标仍返回 0 个引用；重新读取的 GitHub heads/tags 与演练快照一致，验证期间没有来源变化 |
+
+本轮采用与 2.1 节相同的只读/演练边界：没有真实传输 Git 对象、创建远端引用或触发流水线。初步连接与协商通过不等于已经验证服务端接收钩子、配额或后续 Flow 行为。上方命令现指向 ALLSTAR-AI；正式推送前须核对其历史标签的发布触发隔离，之后再移除 `--dry-run`，真实写入后逐项比较来源与目标的全部 heads/tags。
 
 ### 3. 合并后 CI/CD 与合并前 PR 门禁是两条链路
 
