@@ -21,9 +21,11 @@ related_issue: [ISSUE-0029]
 
 **2026-10-26 用户澄清：同步全部分支和记录，不限 `dev` / `main`。** 本方案因此以 GitHub 的全部 `refs/heads/*`、全部 `refs/tags/*` 及其可达完整提交历史为同步范围；用户随后将当前目标指定为 [Codeup ALLSTAR-AI](https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/ALLSTAR-AI)，此前 AI_Plat 的验证保留为历史记录。提交对象保持原样，包含作者、时间、消息、父提交和 merge commit；GitHub 的 PR/Issue/评审/评论、Release 附件、Actions 日志及平台权限并不因此迁移。云效通用迁移明确列出代码、分支、提交、标签，网页导入明确不含合并请求和成员权限。[通用三方迁移](https://help.aliyun.com/zh/yunxiao/user-guide/common-tripartite-code-platform-migration)、[网页导入范围](https://help.aliyun.com/zh/yunxiao/user-guide/import-the-three-party-code-base-through-the-web-page)
 
+**随后用户已执行首次手动同步，Agent 核对两端全部 24 个分支、1 个标签的名称与 SHA 一致。持续自动同步和 CI 迁移尚未验收完成；GitHub 的 11 个自定义 Actions 工作流仍启用，可访问的现有 Flow 配置未关联本目标。** 证据和权限边界见 2.3 节；不能继续把 2.1、2.2 节的空库演练状态当成当前状态。
+
 **如果“创建的云效仓库”是普通新建空库，不能直接套用 Codeup 原生“仓库同步”。** 官方仅承诺网页导入库及指定 GitLab 迁移库具有该入口；既有普通库可通过受控 Git 推送接收代码，无需删除重建。[Codeup 仓库同步](https://help.aliyun.com/zh/yunxiao/user-guide/warehouse-synchronization/)
 
-本研究关联 [ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)，提供证据、候选架构、成本条件与后续验收要求，并在用户指定目标库后追加只读连接与推送演练。没有实际推送代码、创建云效资源、安装 GitHub App、配置密钥、修改工作流、触发远程构建或发布。实施、付费和发布仍需其明确范围。
+本研究关联 [ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)，提供证据、候选架构、成本条件与后续验收要求，并在用户指定目标库后追加连接、推送演练和手动同步后的只读审计。Agent 未实际推送代码、创建云效资源、安装 GitHub App、修改工作流、触发远程构建或发布；首次实际同步由用户执行。实施、付费和发布仍需其明确范围。
 
 ## 事实来源
 
@@ -138,6 +140,26 @@ git -C $syncDir -c http.version=HTTP/1.1 push --dry-run --atomic https://codeup.
 | 演练后核对 | 新目标仍返回 0 个引用；重新读取的 GitHub heads/tags 与演练快照一致，验证期间没有来源变化 |
 
 本轮采用与 2.1 节相同的只读/演练边界：没有真实传输 Git 对象、创建远端引用或触发流水线。初步连接与协商通过不等于已经验证服务端接收钩子、配额或后续 Flow 行为。上方命令现指向 ALLSTAR-AI；正式推送前须核对其历史标签的发布触发隔离，之后再移除 `--dry-run`，真实写入后逐项比较来源与目标的全部 heads/tags。
+
+### 2.3 首次手动同步与现有自动化状态审计（2026-10-26）
+
+用户报告已完成同步后，Agent 多次重新读取两端 `ls-remote --heads --tags` 并逐行比较。GitHub 与 ALLSTAR-AI 各为 24 个分支、1 个标签，名称与对象 ID 全部一致。这确认了当前 Git 引用快照一致，不证明将来的提交会自动同步，也不覆盖 LFS 实体或 PR/Issue 等平台记录。
+
+| 检查项 | 实际证据 | 结论 |
+|---|---|---|
+| GitHub Actions | `actions/permissions` 返回 `enabled: true`；11 个 `.github/workflows/` 自定义工作流全部 `active`，另有系统 Dependency Graph 工作流 | 现有 Actions 仍启用，尚未完成切换停用 |
+| GitHub 仓库 Webhook | 仓库 Hooks API 返回 0 项 | 未见仓库级 Webhook 同步入口；不能据此排除 GitHub App、组织级或云效定时任务 |
+| 仓库内同步实现 | 当前 11 个 workflow 中没有 Codeup/ALLSTAR-AI 同步配置；未发现 Flow 配置事实源 | 不能把克隆来的 Actions YAML 当作已创建的 Flow 流水线 |
+| Codeup API | 用户终端查询成功，目标 ALLSTAR-AI 的仓库 ID 为 `7608911` | CLI 认证与该代码库查询可用 |
+| Flow 列表 | 用户终端返回 3 条现有流水线 | 列表存在不等于已关联本项目，需核对详情 |
+| 可访问的 Flow `5059259` | 只读摘要显示 `sources: []`；配置中未发现 ALLSTAR-AI、目标仓库 ID、GitHub 来源、`git push`、本仓质量检查/质量测试及调度关键字 | 没有本目标已接通自动同步/CI 的配置证据；关键字检查不替代完整运行验收 |
+| 其余两条旧 Flow | 详情返回 `403 InvalidPipeline.NotHavePipelinePermission` | 停止重复查询，不请求扩大组织权限，也不改动这些流水线；其内部配置未知 |
+
+官方 `GetPipeline` 返回代码源的仓库、分支、`isTrigger`、事件和流程配置；列表权限与单条流水线权限不能混同。[GetPipeline](https://help.aliyun.com/zh/yunxiao/developer-reference/getpipeline-get-pipeline-details)
+
+用户令牌仅配置于其原 PowerShell 进程，Agent 进程及 User 环境中均未发现令牌。因此详情由用户终端调用 CLI，输出经过筛选的本地摘要供 Agent 阅读；未将 PAT、Webhook 地址、完整流程脚本或其他业务仓库清单存入本仓。首个长 JMESPath 表达式在复制过程中被破坏，改用安装目录外部的只读 PowerShell 查询助手后取得摘要；助手的本地自测验证了字段提取及敏感字段排除，不调用真实 API。
+
+后续应以 ALLSTAR-AI 为目标建立专用的同步及 CI 流水线，验证新的 GitHub 提交能自动到达 Codeup 的同一 SHA，且 Flow 执行/回写符合门禁合同后，再停用对应 Actions。本轮未创建、修改或运行任何云效流水线，也未停用 GitHub Actions。现有公开 GitHub 仓库使用标准托管 runner 的运行分钟免费，不把历史预算故障直接当作当前账单结论。[GitHub 计费](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 
 ### 3. 合并后 CI/CD 与合并前 PR 门禁是两条链路
 
