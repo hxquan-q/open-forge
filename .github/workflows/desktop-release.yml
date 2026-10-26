@@ -187,6 +187,7 @@ jobs:
         env:
           OUTPUT_SHOULD_PUBLISH: ${{ steps.config.outputs.should_publish }}
           VAR_MACOS_RELEASE: ${{ vars.VETTA_MACOS_RELEASE }}
+          VAR_ALLOW_UNSIGNED: ${{ vars.VETTA_ALLOW_UNSIGNED_RELEASE }}
           SECRET_MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           SECRET_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           SECRET_APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
@@ -206,8 +207,13 @@ jobs:
             never) INCLUDE_MAC=0 ;;
             auto)
               if [[ "${OUTPUT_SHOULD_PUBLISH}" == "true" && "${MAC_SIGNED}" -eq 0 ]]; then
-                INCLUDE_MAC=0
-                echo "macOS signing secrets are not configured; excluding macOS legs from this published release." >&2
+                if [[ "${VAR_ALLOW_UNSIGNED:-false}" == "true" ]]; then
+                  INCLUDE_MAC=1
+                  echo "::warning::VETTA_ALLOW_UNSIGNED_RELEASE is enabled; including unsigned macOS legs in this published release."
+                else
+                  INCLUDE_MAC=0
+                  echo "macOS signing secrets are not configured; excluding macOS legs from this published release." >&2
+                fi
               else
                 INCLUDE_MAC=1
               fi
@@ -340,6 +346,7 @@ jobs:
           SECRET_APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           SECRET_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           REQUIRE_RELEASE_SIGNATURE: ${{ needs.prepare.outputs.should-publish == 'true' }}
+          VAR_ALLOW_UNSIGNED: ${{ vars.VETTA_ALLOW_UNSIGNED_RELEASE }}
         run: |
           # 托管 runner 上凭据全部来自下面的 CI Secret。这个分支只在 runner 自身环境
           # 已经提供凭据时生效（自持签名机把它们放在 runner 目录的 .env 里）。
@@ -375,9 +382,15 @@ jobs:
             fi
           done
           if [[ "${PROVIDED}" -eq 0 ]]; then
-            # 任何会进入发布 job 的构建都必须使用生产级签名；只有不发布的
+            # 默认任何会进入发布 job 的构建都必须使用生产级签名；只有不发布的
             # workflow_dispatch 构建才允许生成未签名包供本地调试。
+            # VETTA_ALLOW_UNSIGNED_RELEASE 是显式、临时的人工豁免（见 WAIVER-0008）。
             if [[ "${REQUIRE_RELEASE_SIGNATURE}" == "true" ]]; then
+              if [[ "${VAR_ALLOW_UNSIGNED:-false}" == "true" ]]; then
+                echo "::warning::VETTA_ALLOW_UNSIGNED_RELEASE is enabled; producing unsigned macOS artifacts for this published release."
+                echo "VETTA_REQUIRE_MAC_SIGNATURE=0" >> "${GITHUB_ENV}"
+                exit 0
+              fi
               echo "A published macOS build requires signing and notarization credentials." >&2
               exit 1
             fi

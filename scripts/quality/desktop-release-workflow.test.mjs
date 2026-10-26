@@ -372,6 +372,14 @@ describe("Desktop release workflow contracts", () => {
 		}
 	});
 
+	it("allows unsigned macOS releases only through an explicit opt-in", () => {
+		expect(workflow).toContain("VAR_ALLOW_UNSIGNED");
+		expect(workflow).toContain("VETTA_ALLOW_UNSIGNED_RELEASE");
+		expect(workflow).toContain("including unsigned macOS legs");
+		expect(workflow).toContain("VETTA_REQUIRE_MAC_SIGNATURE=0");
+		expect(workflow).toContain("excluding macOS legs");
+	});
+
 	it("provides an isolated test-channel workflow for real install and restart upgrades", () => {
 		expect(upgradeWorkflow).toContain("baseline_version:");
 		expect(upgradeWorkflow).toContain("candidate_version:");
