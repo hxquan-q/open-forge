@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0406` | `verifying` | PLAN-0025 | [Agent/团队所属模式](TASK-0406-agent-team-mode-attribution.md)：清单声明 mode + 选择器按档过滤已交付（eform/allstar-coding 标 coding）；对外合同六件套齐；定向/完整 check 全绿，impact 被系统内存收割待补跑；待用户两档走查。 |
+| `TASK-0406` | `done` | PLAN-0025 | [Agent/团队所属模式](TASK-0406-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0035 定位重合讨论。 |
 | `TASK-0405` | `ready` | PLAN-0025 | [M1 版块壳：/allstar 路由、项目空间、会话管理与配置 v1](TASK-0405-allstar-dev-section-shell.md)；前置 ADR 需用户当日评审；serial，2026-11-06 前收口发 0.1.4。 |
 | `TASK-0404` | `done` | PLAN-0025 | [「Allstar自主开发」版块入口](TASK-0404-allstar-dev-section-entry.md)：代码模式独立入口、新会话默认文档与研究档、右栏随会话轴；`c5700985d` 已推 origin/chenxvhua，工程验证与用户实机验收通过。 |
 | `TASK-0403` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |

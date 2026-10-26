@@ -1,7 +1,7 @@
 ---
 id: TASK-0406
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement: REQ-0030
@@ -122,8 +122,8 @@ updated: 2026-10-26
   0.3.12→0.3.13（patch，preset 均为 workspace:* 无范围影响）、PLUGIN_API_VERSION 2.11.0、
   docs-site capabilities 中英两份结论句、Schema 合同测试。
 - 集成：pending（本地提交待做）。
-- 人工功能验收：待验收（dev 实机两档对比走查：普通档选择器无电子表单/流水线，Allstar 入口
-  可见可选）。
+- 人工功能验收：接受（2026-10-26 用户 dev 实机走查：档位对等语义修订后确认「agent 归属
+  这一块应该没问题了」；两轮反馈——列表加载失败由 f19ead604 修复，单向归属由 ceef9d9f3 落地）。
 - 发布：未授权。
 
 ## 功能验收包
