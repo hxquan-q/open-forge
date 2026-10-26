@@ -17,11 +17,13 @@ related_issue: [ISSUE-0029]
 
 ## 问题与范围
 
-**可行：继续在 GitHub 开发、提 PR 和合并，以 GitHub 为唯一写入源；单向同步到 Codeup，由 Flow 执行检查、测试、构建和部署。合并后的自动化可以做到零 GitHub Actions；保留 GitHub 合并前的必需检查，需要另外打通 PR 事件和结果回写。** 这是基于公开接口的设计结论，尚未在用户的云效组织实测，不等于现成的一键镜像功能。
+**可行：继续在 GitHub 开发、提 PR 和合并，以 GitHub 为唯一写入源；单向同步到 Codeup，由 Flow 执行检查、测试、构建和部署。合并后的自动化可以做到零 GitHub Actions；保留 GitHub 合并前的必需检查，需要另外打通 PR 事件和结果回写。** 这是基于公开接口的设计结论，尚未在用户的云效组织完整执行该 CI/CD 链路，不等于现成的一键镜像功能；指定代码库的只读连接和推送演练结果见 2.1 节。
+
+**2026-10-26 用户澄清：同步全部分支和记录，不限 `dev` / `main`。** 本方案因此以 GitHub 的全部 `refs/heads/*`、全部 `refs/tags/*` 及其可达完整提交历史为同步范围，目标为 [Codeup AI_Plat](https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/AI_Plat)。提交对象保持原样，包含作者、时间、消息、父提交和 merge commit；GitHub 的 PR/Issue/评审/评论、Release 附件、Actions 日志及平台权限并不因此迁移。云效通用迁移明确列出代码、分支、提交、标签，网页导入明确不含合并请求和成员权限。[通用三方迁移](https://help.aliyun.com/zh/yunxiao/user-guide/common-tripartite-code-platform-migration)、[网页导入范围](https://help.aliyun.com/zh/yunxiao/user-guide/import-the-three-party-code-base-through-the-web-page)
 
 **如果“创建的云效仓库”是普通新建空库，不能直接套用 Codeup 原生“仓库同步”。** 官方仅承诺网页导入库及指定 GitLab 迁移库具有该入口；既有普通库可通过受控 Git 推送接收代码，无需删除重建。[Codeup 仓库同步](https://help.aliyun.com/zh/yunxiao/user-guide/warehouse-synchronization/)
 
-本研究关联 [ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)，只提供证据、候选架构、成本条件与后续验收要求；没有创建云效资源、安装 GitHub App、配置密钥、修改工作流、触发远程构建或发布。用户当前请求是调研，实施、付费和发布应在后续任务明确范围。
+本研究关联 [ISSUE-0029](../issues/ISSUE-0029-ci-actions-budget-exhausted.md)，提供证据、候选架构、成本条件与后续验收要求，并在用户指定目标库后追加只读连接与推送演练。没有实际推送代码、创建云效资源、安装 GitHub App、配置密钥、修改工作流、触发远程构建或发布。实施、付费和发布仍需其明确范围。
 
 ## 事实来源
 
@@ -63,8 +65,8 @@ related_issue: [ISSUE-0029]
 
 ```mermaid
 flowchart LR
-  GH[GitHub：开发 / PR / 合并] -->|受信分支 push| SYNC[Flow：受控同步流水线]
-  SYNC -->|白名单 refs 快进推送| CU[Codeup：单向代码副本]
+  GH[GitHub：开发 / PR / 合并] -->|分支 push / 受校验事件| SYNC[Flow：受控同步流水线]
+  SYNC -->|全部分支与标签快进推送| CU[Codeup：单向代码副本]
   SYNC -->|核验 SHA 后显式启动| CI[Flow：以 Codeup 为源检查 / 测试 / 构建]
   CU --> CI
   CI -->|已验证制品 + 独立发布权限| CD[Flow：审批 / 部署 / 发布]
@@ -74,7 +76,7 @@ flowchart LR
   BRIDGE -->|GitHub Commit Status| GH
 ```
 
-合并后路线可以不经过 Actions：GitHub 的 push Webhook 直接触发 Flow 的 GitHub 代码源；同步任务把准入分支快进推到 Codeup，再启动 Codeup 为源的下游。Flow 已文档化 GitHub push、Codeup 源及流水线间触发能力；“受控 Git 推送 + 精确 SHA 校验”是基于这些能力组合的工程建议。[A3](https://help.aliyun.com/zh/yunxiao/user-guide/code-source-trigger)、[A4](https://help.aliyun.com/zh/yunxiao/user-guide/pipeline-sources)
+路线可以不经过 Actions：GitHub 的 push Webhook 直接触发 Flow 的 GitHub 代码源；同步任务把全部来源分支和标签同步到 Codeup。构建、部署和发布另外按事件、分支、路径及授权筛选，不因同步全量历史就执行每个历史版本的任务；GitHub 标签事件仍需桥接或定时对账，不能假定原生提交触发完整覆盖。Flow 已文档化 GitHub push、Codeup 源及流水线间触发能力；“受控 Git 推送 + 精确 SHA 校验”是基于这些能力组合的工程建议。[A3](https://help.aliyun.com/zh/yunxiao/user-guide/code-source-trigger)、[A4](https://help.aliyun.com/zh/yunxiao/user-guide/pipeline-sources)
 
 同步任务只执行受信控制脚本，不运行刚拉取代码的安装钩子、测试或任意命令。获取 GitHub 对象与向 Codeup 写入分离；真正检查、测试、构建在代码入 Codeup 且校验通过之后进行。这样既符合“单向入库后跑流水线”，也避免有写库凭据的同步节点执行外部 PR 代码。
 
@@ -96,7 +98,31 @@ flowchart LR
 
 `TriggerRepositoryMirrorSync` 可以请求同步，但响应只说明触发结果，不能据此判断 Codeup 已收到指定 SHA。若后续选择此路线，需等待并验证目标 ref/对象，在超时/失败时停止下游；API 套餐可用性、目标组织支持情况与调用限额仍需核实。[A2](https://help.aliyun.com/zh/yunxiao/developer-reference/api-devops-2021-06-25-triggerrepositorymirrorsync/)
 
-推荐采用显式 `dev`、`main` 和已批准发布标签的 ref 白名单，初次同步可检查所有需要保留的分支/tag，再只对实际变化推送。不默认同步 `refs/pull/*`、平台内部 refs、开发者临时分支。普通快进失败、来源历史改写、标签冲突时报警并停机；删除默认不传播，另行审查处理。`git push --mirror` 会强推全部 refs 并删除目标多余 refs，与本仓禁止自动 force push 的边界冲突，因此不作为默认命令。[G6](https://git-scm.com/docs/git-push)
+按照用户澄清，同步范围为全部 `refs/heads/*` 和 `refs/tags/*`，包含 GitHub 上的 Task 分支；不默认混入 `refs/pull/*`、平台内部 refs、`refs/remotes/*` 或只存在于开发机器的本地分支。普通快进失败、来源历史改写、标签冲突时报警并停机；删除默认不传播，另行审查处理。`git push --mirror` 会强推全部 refs 并删除目标多余 refs，与本仓禁止自动 force push 的边界冲突，因此采用明确的分支/标签 refspec。[G6](https://git-scm.com/docs/git-push)
+
+首次同步的建议命令如下，**这里只给出示例，本轮没有执行克隆或实际推送**；工作目录须为新建的专用目录，目标同名分支/标签存在时先比较历史。`--bare` 完整克隆把来源分支放入本地 heads，省略 `--depth` 保留完整历史；不能在日常开发工作区简单执行 `push --all`，那只选本地 heads，且会混入尚未进入 GitHub 的内容。[git-clone](https://git-scm.com/docs/git-clone)、[git-push](https://git-scm.com/docs/git-push)
+
+```powershell
+git -c http.version=HTTP/1.1 clone --bare https://github.com/hxquan-q/open-forge.git open-forge-codeup.git
+git -C open-forge-codeup.git -c http.version=HTTP/1.1 push --dry-run --atomic https://codeup.aliyun.com/621301e6c5006adb19febbd6/Allstar_AI/AI_Plat.git 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
+```
+
+演练和发布触发隔离核对后，实际同步使用同一推送命令移除 `--dry-run`。后续 Flow 每轮重新获取全部 heads/tags；仍须比较来源快照与目标 SHA，校验源端 ref 集合一致。历史导入前先控制目标流水线的自动发布入口，防止旧 `v*` 标签入库触发发版。LFS 实体与子模块仍需独立核查。
+
+### 2.1 指定 AI_Plat 的实际验证（2026-10-26）
+
+| 检查 | 实际结果 |
+|---|---|
+| GitHub 源库远端 refs | `ls-remote --heads --tags origin` 成功，24 个分支、1 个标签 `v0.1.2` |
+| Codeup 指定目标库 | `ls-remote` 成功，返回 0 个引用；仅表明当前凭据可见范围未列出分支/标签 |
+| 完整 Git 对象可用性 | 遍历上述 25 个来源引用：5682 个去重可达提交、126828 个 Git 对象、缺失对象 0；当前本地库非浅克隆 |
+| 全量推送演练 | 对上述 25 个精确对象/ref 映射执行 `push --dry-run --atomic --porcelain`，退出码 0，24 项 `[new branch]`、1 项 `[new tag]` |
+| 演练后目标复查 | 再次 `ls-remote` 成功，仍返回 0 个引用，未创建目标分支/标签 |
+| 本地与 GitHub 差异 | 本地 36 个分支、18 个标签；多出的本地内容和上游标签不自动成为 GitHub 来源范围 |
+
+最初两端连接均在 TLS 阶段失败，指定单命令 `http.version=HTTP/1.1` 后本轮多次读取得到成功；未改全局 Git 配置或关闭证书验证，不据此断言已定位 TLS 根因。演练直接使用本地已有的精确对象，没有向 Codeup 发送提交对象或更新 ref。`--dry-run` 成功只证明本次推送规划及协商通过，尚未验证真实数据传输、服务端接收钩子/配额、分支保护、默认分支、LFS 或下游流水线行为；不能称全量同步已完成。
+
+此处 5682 只统计 GitHub 当前 heads/tags 可达历史，不包括已删除且不可达的历史引用、GitHub 平台记录、仅本地未推送的提交，也不包含独立仓库的 LFS 二进制/子模块对象。实际写入后应重新读取两端全部 heads/tags 并逐项比较名称与对象 ID，而不是只检查文件树或最新一条 commit。
 
 ### 3. 合并后 CI/CD 与合并前 PR 门禁是两条链路
 
