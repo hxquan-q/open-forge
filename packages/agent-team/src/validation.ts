@@ -58,6 +58,7 @@ const resourceSource = Type.Object(
 	},
 	{ additionalProperties: false },
 );
+const resourceMode = Type.Union([Type.Literal("work"), Type.Literal("coding")]);
 const profile = Type.Object(
 	{
 		id,
@@ -75,6 +76,7 @@ const profile = Type.Object(
 		]),
 		copiedFrom: Type.Optional(id),
 		source: Type.Optional(resourceSource),
+		mode: Type.Optional(resourceMode),
 		createdAt: timestamp,
 		updatedAt: timestamp,
 	},
@@ -226,6 +228,7 @@ const team = Type.Object(
 		orchestrationPolicyId: id,
 		contextPolicyId: id,
 		source: Type.Optional(resourceSource),
+		mode: Type.Optional(resourceMode),
 		createdAt: timestamp,
 		updatedAt: timestamp,
 	},
