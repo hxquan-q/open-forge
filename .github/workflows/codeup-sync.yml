@@ -1,0 +1,41 @@
+# Copyright The Open Forge contributors.
+name: codeup-sync
+
+on:
+  schedule:
+    # GitHub may delay scheduled runs; the synchronization itself is idempotent.
+    - cron: "*/5 * * * *"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: codeup-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: GitHub → Codeup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sync all branches and tags
+        env:
+          CODEUP_GIT_TOKEN: ${{ secrets.CODEUP_GIT_TOKEN }}
+          CODEUP_GIT_USERNAME: oauth2
+        run: node scripts/ci/codeup-sync.mjs

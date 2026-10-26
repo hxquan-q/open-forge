@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0404` | `in_progress` | — | [GitHub → Codeup 自动同步及云效构建测试](TASK-0404-yunxiao-sync-and-ci.md)；复用 ISSUE-0029 / RESEARCH-0045，串行实施、独立只读研究与评审，真实云端验收待执行。 |
 | `TASK-0403` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0402` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0397` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |

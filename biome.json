@@ -33,6 +33,7 @@
 			"knip.config.ts",
 			".claude/hooks/**/*.mjs",
 			"scripts/quality/**/*.mjs",
+			"scripts/ci/**/*.mjs",
 			"scripts/worktree/**/*.mjs",
 			"scripts/eval/**/*.ts",
 			"scripts/eval/**/*.mjs",
