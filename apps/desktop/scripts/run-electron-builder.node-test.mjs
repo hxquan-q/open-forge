@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,6 +44,10 @@ test("release artifact file names drop spaces to match updater metadata", () => 
 	try {
 		writeFileSync(join(directory, "Allstr ai-0.1.3.AppImage"), "appimage");
 		writeFileSync(join(directory, "Allstr ai-0.1.3.AppImage.blockmap"), "blockmap");
+		writeFileSync(
+			join(directory, "latest.yml"),
+			"path: Allstr ai-0.1.3.AppImage\nfiles:\n  - url: Allstr%20ai-0.1.3.AppImage.blockmap\n",
+		);
 		mkdirSync(join(directory, "Allstr ai.app"));
 		const renamed = normalizeArtifactFileNames(directory);
 		assert.deepEqual(
@@ -56,6 +60,11 @@ test("release artifact file names drop spaces to match updater metadata", () => 
 		assert.ok(existsSync(join(directory, "Allstr-ai-0.1.3.AppImage")));
 		assert.ok(existsSync(join(directory, "Allstr-ai-0.1.3.AppImage.blockmap")));
 		assert.ok(existsSync(join(directory, "Allstr ai.app")));
+		const metadata = readFileSync(join(directory, "latest.yml"), "utf8");
+		assert.match(metadata, /Allstr-ai-0\.1\.3\.AppImage/);
+		assert.match(metadata, /Allstr-ai-0\.1\.3\.AppImage\.blockmap/);
+		assert.doesNotMatch(metadata, /Allstr ai/);
+		assert.doesNotMatch(metadata, /Allstr%20ai/);
 	} finally {
 		rmSync(directory, { recursive: true, force: true });
 	}

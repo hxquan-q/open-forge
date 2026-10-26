@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, readdirSync, renameSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -54,6 +54,24 @@ export function normalizeArtifactFileNames(directory) {
 		if (existsSync(target)) throw new Error(`Artifact rename collision: ${name} -> ${next}`);
 		renameSync(source, target);
 		renamed.push({ from: name, to: next });
+	}
+	// updater 元数据可能仍引用带空格的旧名（Windows Inno 尤其如此），一并改写。
+	if (renamed.length > 0) {
+		for (const metadataName of readdirSync(directory)) {
+			if (!/^latest.*\.yml$/.test(metadataName)) continue;
+			const metadataPath = join(directory, metadataName);
+			if (!statSync(metadataPath).isFile()) continue;
+			let text = readFileSync(metadataPath, "utf8");
+			let changed = false;
+			for (const { from, to } of renamed) {
+				for (const needle of new Set([from, encodeURIComponent(from), from.replaceAll(" ", "%20")])) {
+					if (!text.includes(needle)) continue;
+					text = text.split(needle).join(to);
+					changed = true;
+				}
+			}
+			if (changed) writeFileSync(metadataPath, text);
+		}
 	}
 	return renamed;
 }
