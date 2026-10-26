@@ -38,6 +38,7 @@ export type SidebarLabelKey =
 	| "sidebar.nav.agentSettings"
 	| "sidebar.nav.appearance"
 	| "sidebar.nav.extensions"
+	| "sidebar.nav.allstarDev"
 	| "sidebar.nav.more";
 
 export interface SidebarProps {
@@ -157,6 +158,13 @@ export interface SidebarModel {
 	readonly navIndicatorBounds: NavIndicatorBounds | null;
 	/** 置顶区导航项（含锁定的「新会话」，不含「更多」收纳项）。 */
 	readonly navItems: readonly SidebarNavItem[];
+	/**
+	 * 「更多」之后的固定版块入口（如 Allstar 自主开发）。不进导航目录与布局存储，
+	 * 不可拖拽、不可置顶；点击仍走 actions.openNavItem（按 key 分发）。缺省不渲染。
+	 */
+	readonly sectionEntryNavItem?: SidebarNavItem;
+	/** 版块入口按钮 ref，供活动态指示条测量（与 setMoreButtonRef 同一机制）。 */
+	readonly setSectionEntryNavItemRef?: RefCallback<HTMLButtonElement>;
 	/** 置顶区是否还有空位（含「新会话」计数，上限 5）。 */
 	readonly canPinMore: boolean;
 	readonly setMoreButtonRef: RefCallback<HTMLButtonElement>;

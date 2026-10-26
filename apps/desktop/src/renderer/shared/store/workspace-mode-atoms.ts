@@ -1,15 +1,22 @@
 // Copyright The Open Forge contributors.
-import { atom } from "jotai";
+import { atom, getDefaultStore } from "jotai";
 
 /**
  * 工作区模式（IA 定稿：apps/desktop/.impeccable/surfaces/workspace-modes.md）。
- * coding 即现状布局；work 把会话右栏换成 Plan/Sources/Artifacts/Review 插槽面板。
- * 模式是项目级 UI 偏好——只决定布局与面板内容，不改变会话、不中断执行。
+ * coding 是「Allstar自主开发」版块（原「代码」档）：会话右栏保持执行/预览面板；
+ * work（文档与研究）把会话右栏换成 Plan/Sources/Artifacts/Review 插槽面板，是默认档。
+ * 档位是项目级偏好，只在新会话创建时决定解释模式与工具面，不改变已开会话、不中断执行；
+ * 写入一律走 {@link enterWorkspaceSection}（「新会话」类入口回落 work，侧边栏
+ * 「Allstar自主开发」入口进入 coding）。
  */
 
 export const WORKSPACE_MODES = ["coding", "work"] as const;
 export type WorkspaceMode = (typeof WORKSPACE_MODES)[number];
-export const DEFAULT_WORKSPACE_MODE: WorkspaceMode = "coding";
+/**
+ * 默认档是 work（文档与研究）。存量存储只可能有 work 记录（旧默认 coding 从不落盘，
+ * writeWorkspaceMode 对默认档只删不写），翻转默认无需迁移。
+ */
+export const DEFAULT_WORKSPACE_MODE: WorkspaceMode = "work";
 export const WORKSPACE_MODE_STORAGE_KEY = "vetta-workspace-mode";
 
 export function normalizeWorkspaceMode(value: unknown): WorkspaceMode | null {
@@ -70,3 +77,11 @@ export const workspaceModeByProjectAtom = atom(
 		localStorage.setItem(WORKSPACE_MODE_STORAGE_KEY, JSON.stringify(Object.fromEntries(value)));
 	},
 );
+
+/**
+ * 版块入口的统一写入点：「新会话」类入口进 work（默认档，等于清除该项目记录），
+ * 侧边栏「Allstar自主开发」入口进 coding。集中在此，入口侧不再各自手写 atom 更新。
+ */
+export function enterWorkspaceSection(cwd: string, mode: WorkspaceMode): void {
+	getDefaultStore().set(workspaceModeByProjectAtom, (prev) => writeWorkspaceMode(prev, cwd, mode));
+}

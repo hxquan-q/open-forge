@@ -1260,8 +1260,8 @@
 		"emptyMessageLabel": "(image)",
 		"axes": {
 			"aligned": {
-				"work": "This session started as docs & research · the header switch will not change it",
-				"coding": "This session started as code · the header switch will not change it"
+				"work": "This session started as docs & research · its mode is fixed at creation",
+				"coding": "This session started as code · its mode is fixed at creation"
 			},
 			"divergent": "This session: {{interpretation}} · {{profile}}",
 			"interpretation": {
@@ -1458,12 +1458,6 @@
 		"originalLocation": "Original: {{path}}"
 	},
 	"workspace": {
-		"mode": {
-			"coding": "Code",
-			"hint": "The right-hand workspace switches right away. New chats start in this mode; the current chat does not change.",
-			"switch": "Switch workspace: docs & research or code",
-			"work": "Docs & research"
-		},
 		"work": {
 			"panelTitle": "Docs & research",
 			"panelLead": "This session’s plans, sources, and deliverables live here",

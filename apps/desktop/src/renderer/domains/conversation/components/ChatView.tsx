@@ -1,7 +1,12 @@
 // Modified by The Open Forge contributors.
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useEffect, useMemo } from "react";
-import { pageHeaderLeftSlotAtom, pageHeaderRightSlotAtom } from "@shared/store/atoms";
+import {
+	activeSessionAtom,
+	pageHeaderLeftSlotAtom,
+	pageHeaderRightSlotAtom,
+	type WorkspaceMode,
+} from "@shared/store/atoms";
 import { useActiveSessionRuntimeIds } from "@shared/workspace/active-session-runtime";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
 import { useWorkspaceMode } from "@domains/workspace-mode";
@@ -37,7 +42,17 @@ export const DefaultChatComposer = memo(function DefaultChatComposer({
 
 export function ChatView(props: ChatViewProps): JSX.Element {
 	const { actions, model } = useChatViewModel();
-	const { mode: workspaceMode } = useWorkspaceMode(model.cwd);
+	const { mode: projectMode } = useWorkspaceMode(model.cwd);
+	const activeSession = useAtomValue(activeSessionAtom);
+	// 右栏布局跟随会话自身的工具面（capabilityProfile 创建时固化）；项目档位只决定新会话
+	// 页的默认档。若仍按项目档位取值，进入「Allstar自主开发」版块（档位=coding）后，同一
+	// 项目的已有研究会话右栏会被翻成执行面板。折叠口径与 main 侧一致：profile 缺失/未知按
+	// coding（旧会话维持现状的执行面板）；无活动会话时回落项目档位。
+	const workspaceMode: WorkspaceMode = activeSession
+		? activeSession.capabilityProfile === "work"
+			? "work"
+			: "coding"
+		: projectMode;
 	const participants = useBoundAgentParticipants();
 	const runtimeIds = useActiveSessionRuntimeIds();
 	const setHeaderRightSlot = useSetAtom(pageHeaderRightSlotAtom);

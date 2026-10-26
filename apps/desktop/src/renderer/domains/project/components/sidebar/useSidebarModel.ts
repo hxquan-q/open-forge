@@ -1,11 +1,15 @@
 import { desktopHostedRouteService } from "@shared/hosted-routes/hosted-route-service";
 import {
+	activeSessionAtom,
+	defaultConversationCwdAtom,
 	pluginWorkspaceViewsAtom,
+	readWorkspaceModeFor,
 	SIDEBAR_WIDTH_STORAGE_KEY,
 	sidebarFilterAtom,
 	sidebarWidthAtom,
+	workspaceModeByProjectAtom,
 } from "@shared/store/atoms";
-import { useMatches, useNavigate } from "@tanstack/react-router";
+import { useMatches, useNavigate, useSearch } from "@tanstack/react-router";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,9 +21,10 @@ import {
 	workspaceViewNavKey,
 	workspaceViewPath,
 } from "../../../plugins/runtime/workspace-view-registry";
-import { useNewChatNavigation } from "../../hooks/useNewChatNavigation";
+import { useAllstarDevNavigation, useNewChatNavigation } from "../../hooks/useNewChatNavigation";
 import { toSidebarNavBadge } from "./sidebar-nav-badge";
 import {
+	ALLSTAR_DEV_NAV_KEY,
 	canPinMore as canPinMoreKeys,
 	EXTENSIONS_NAV_KEY,
 	migrateSidebarNavLayout,
@@ -189,6 +194,19 @@ function isRouteActive(path: string, currentPath: string): boolean {
 	return currentPath === path;
 }
 
+/**
+ * 路由层携带的 cwd 是 URI 编码串（navigate 方显式 encodeURIComponent），统一解码；
+ * 含非法转义序列时按原样使用，不因解码失败让 hook 崩掉。
+ */
+function decodeRouteCwd(value: string | undefined | null): string | null {
+	if (!value) return null;
+	try {
+		return decodeURIComponent(value);
+	} catch {
+		return value;
+	}
+}
+
 function toNavItem(
 	item: (typeof BUILTIN_NAV_ITEMS)[number],
 	label: string,
@@ -272,6 +290,38 @@ export function useSidebarModel({
 	const [moreOpen, setMoreOpen] = useState(false);
 
 	const onNewChat = useNewChatNavigation();
+	const onAllstarDev = useAllstarDevNavigation();
+	const search = useSearch({ strict: false }) as { cwd?: string };
+	const workspaceModeMap = useAtomValue(workspaceModeByProjectAtom);
+	const activeSession = useAtomValue(activeSessionAtom);
+	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
+	const sectionEntryButtonRef = useRef<HTMLButtonElement | null>(null);
+	const setSectionEntryNavItemRef = useCallback((element: HTMLButtonElement | null) => {
+		sectionEntryButtonRef.current = element;
+	}, []);
+	/**
+	 * 「Allstar自主开发」版块入口：「更多」之后的固定行，不进导航目录与布局存储。
+	 * 高亮时机：开发档的新会话页（/new-session 且上下文项目档位为 coding），或聊天页上
+	 * 正打开代码模式会话（capabilityProfile 创建时固化）。新会话页的上下文项目可能被
+	 * 页内选择器换走，这里按路由 cwd 近似——入口点击总是带 cwd 落到新会话页，够用。
+	 */
+	const sectionEntryNavItem = useMemo<SidebarNavItem>(
+		() => ({
+			key: ALLSTAR_DEV_NAV_KEY,
+			type: "custom",
+			label: t("sidebar.nav.allstarDev"),
+			labelKey: "sidebar.nav.allstarDev",
+			icon: "icon-[solar--code-linear]",
+			active:
+				(currentPath === "/new-session" &&
+					readWorkspaceModeFor(workspaceModeMap, decodeRouteCwd(search.cwd) ?? defaultConversationCwd) ===
+						"coding") ||
+				(currentPath === "/" && activeSession?.capabilityProfile === "coding"),
+			title: t("sidebar.nav.allstarDev"),
+			locked: true,
+		}),
+		[activeSession?.capabilityProfile, currentPath, defaultConversationCwd, search.cwd, t, workspaceModeMap],
+	);
 	// committed 宽度。拖拽途中它不变——实时宽度只写 CSS 变量，见下面的 resize。
 	const [width, setWidth] = useAtom(sidebarWidthAtom);
 	const liveWidthRef = useRef(width);
@@ -390,13 +440,19 @@ export function useSidebarModel({
 		void moreOpen;
 		void activeMoreKey;
 		void navItems;
-		const activeElement = moreActive ? moreButtonRef.current : navItemRefs.current[activeNavIndex];
+		void sectionEntryNavItem.active;
+		// 版块入口激活时路由必为 /new-session 或 /，不会与「更多」/置顶项同时高亮。
+		const activeElement = sectionEntryNavItem.active
+			? sectionEntryButtonRef.current
+			: moreActive
+				? moreButtonRef.current
+				: navItemRefs.current[activeNavIndex];
 		if (!activeElement) {
 			setNavIndicatorBounds(null);
 			return;
 		}
 		setNavIndicatorBounds(getNavIndicatorBounds(activeElement));
-	}, [activeMoreKey, activeNavIndex, moreActive, moreOpen, navItems, width]);
+	}, [activeMoreKey, activeNavIndex, moreActive, moreOpen, navItems, sectionEntryNavItem.active, width]);
 
 	const [imOnline, setImOnline] = useState(false);
 
@@ -478,6 +534,11 @@ export function useSidebarModel({
 	}, []);
 	const openNavItem = useCallback(
 		(item: SidebarNavItem) => {
+			// 版块入口先于类型分发：它是 key 约定的 custom 项，没有 path/settingsTab/workspaceView。
+			if (item.key === ALLSTAR_DEV_NAV_KEY) {
+				onAllstarDev();
+				return;
+			}
 			if (item.type === "new-session") {
 				onNewChat();
 				return;
@@ -494,7 +555,7 @@ export function useSidebarModel({
 			}
 			if (item.path) void navigate({ to: item.path });
 		},
-		[navigate, onNewChat],
+		[navigate, onAllstarDev, onNewChat],
 	);
 
 	return {
@@ -503,6 +564,8 @@ export function useSidebarModel({
 		filter,
 		navItems,
 		moreNavItems,
+		sectionEntryNavItem,
+		setSectionEntryNavItemRef,
 		moreLabel,
 		moreOpen,
 		moreActive,

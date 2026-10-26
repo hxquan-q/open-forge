@@ -7,22 +7,12 @@ function interpolate(template: string, values: Record<string, string>): string {
 	return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{{${key}}}`, value), template);
 }
 
+/**
+ * 工作区两档的用户文案合同。页头切换器与 workspace.mode.* 文案已随「Allstar自主开发」
+ * 版块入口改造删除；仍存在的两个出口——新会话页只读确认句与会话徽标——继续锁定
+ * 「文档与研究 / 代码」的任务类型词汇，不用「办公 / 编程」这类系统词。
+ */
 describe("工作区两档用户文案", () => {
-	it("页头分段控件用任务类型，不用办公或编程", () => {
-		expect(zhChat.workspace.mode.work).toBe("文档与研究");
-		expect(zhChat.workspace.mode.coding).toBe("代码");
-		expect(enChat.workspace.mode.work).toBe("Docs & research");
-		expect(enChat.workspace.mode.coding).toBe("Code");
-		expect(`${zhChat.workspace.mode.work}${zhChat.workspace.mode.coding}`).not.toMatch(/办公|编程/);
-	});
-
-	it("页头后果说明：立刻换右栏，新会话跟着走，当前会话不变", () => {
-		expect(zhChat.workspace.mode.hint).toContain("当前会话不会变");
-		expect(zhChat.workspace.mode.hint).toContain("新会话");
-		expect(zhChat.workspace.mode.hint).toContain("立即换新");
-		expect(enChat.workspace.mode.hint).toMatch(/current chat does not/i);
-	});
-
 	it("新会话页只读确认句按任务类型区分，词汇与右栏一致", () => {
 		expect(zhChat.newSession.workspace.hint.work).toContain("文档与研究");
 		expect(zhChat.newSession.workspace.hint.work).toContain("不含终端");
@@ -31,10 +21,10 @@ describe("工作区两档用户文案", () => {
 		expect(zhChat.newSession.workspace.hint.work).not.toMatch(/办公|编程/);
 	});
 
-	it("已固化对齐会话的徽标说明切页头不会改", () => {
-		expect(zhChat.session.axes.aligned.work).toBe("本会话按文档与研究开的 · 切页头不会改");
-		expect(zhChat.session.axes.aligned.coding).toBe("本会话按代码开的 · 切页头不会改");
-		expect(enChat.session.axes.aligned.work).toContain("will not change it");
+	it("已固化对齐会话的徽标说明模式在创建时固定", () => {
+		expect(zhChat.session.axes.aligned.work).toBe("本会话按文档与研究开的 · 模式创建时已固定");
+		expect(zhChat.session.axes.aligned.coding).toBe("本会话按代码开的 · 模式创建时已固定");
+		expect(enChat.session.axes.aligned.work).toContain("fixed at creation");
 	});
 
 	it("(work, coding) 分歧会话两轴各自成立", () => {

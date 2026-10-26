@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 侧边栏导航布局（置顶区 / 收纳区）的纯逻辑。
  *
@@ -19,6 +20,13 @@ export const NEW_SESSION_NAV_KEY = "new-session";
  * 排到别的位置或被置顶都会让这层语义失效，所以既不可拖动也不可置顶。
  */
 export const EXTENSIONS_NAV_KEY = "/settings/extensions";
+
+/**
+ * 「Allstar自主开发」版块入口的导航 key：不进导航目录（catalog），也就不参与
+ * pinned/more 布局存储；由渲染层固定排在「更多」触发器之后，不可拖拽、不可置顶。
+ * 点击行为在 useSidebarModel.openNavItem 按 key 分发到 useAllstarDevNavigation。
+ */
+export const ALLSTAR_DEV_NAV_KEY = "allstar-dev";
 
 /** 位置锁死、不参与用户排布的 key。 */
 const LOCKED_NAV_KEYS: readonly string[] = [NEW_SESSION_NAV_KEY, EXTENSIONS_NAV_KEY];

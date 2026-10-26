@@ -1260,8 +1260,8 @@
 		"emptyMessageLabel": "(图片)",
 		"axes": {
 			"aligned": {
-				"work": "本会话按文档与研究开的 · 切页头不会改",
-				"coding": "本会话按代码开的 · 切页头不会改"
+				"work": "本会话按文档与研究开的 · 模式创建时已固定",
+				"coding": "本会话按代码开的 · 模式创建时已固定"
 			},
 			"divergent": "本会话：{{interpretation}} · {{profile}}",
 			"interpretation": {
@@ -1458,12 +1458,6 @@
 		"originalLocation": "原位置：{{path}}"
 	},
 	"workspace": {
-		"mode": {
-			"coding": "代码",
-			"hint": "右侧工作台立即换新。新会话按这一档开始；当前会话不会变。",
-			"switch": "切换工作区：文档与研究或代码",
-			"work": "文档与研究"
-		},
 		"work": {
 			"panelTitle": "文档与研究",
 			"panelLead": "这个会话的计划、来源资料和产物都在这里",

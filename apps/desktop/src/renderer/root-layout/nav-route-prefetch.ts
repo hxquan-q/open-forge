@@ -1,3 +1,6 @@
+// Modified by The Open Forge contributors.
+
+import { ALLSTAR_DEV_NAV_KEY } from "@domains/project/components/sidebar/sidebar-nav-layout";
 import type { SidebarNavItem } from "@vetta-org/theme-sdk/sidebar";
 import {
 	loadAbilitiesPage,
@@ -14,7 +17,8 @@ import {
 type PageLoader = () => Promise<unknown>;
 
 export function navItemPageLoader(item: SidebarNavItem): PageLoader | null {
-	if (item.type === "new-session") return loadNewSessionPage;
+	// 「Allstar自主开发」版块入口与「新会话」落到同一张 NewSession 页。
+	if (item.type === "new-session" || item.key === ALLSTAR_DEV_NAV_KEY) return loadNewSessionPage;
 	if (item.workspaceView) return loadPluginWorkspaceViewRoute;
 	if (item.settingsTab) return loadSettingsPage;
 	switch (item.path) {

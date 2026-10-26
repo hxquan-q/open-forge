@@ -163,9 +163,9 @@ afterEach(cleanup);
 describe("InputBarView 会话轴徽标", () => {
 	it("已固化轴的会话在输入卡片下沿展示只读徽标", () => {
 		const label = connectorSessionAxesLabel("work", "work");
-		expect(label).toBe("本会话按文档与研究开的 · 切页头不会改");
+		expect(label).toBe("本会话按文档与研究开的 · 模式创建时已固定");
 		render(<InputBarView model={{ ...createBaseModel(), sessionAxesLabel: label }} />);
-		expect(screen.getByTestId("session-axes-badge").textContent).toBe("本会话按文档与研究开的 · 切页头不会改");
+		expect(screen.getByTestId("session-axes-badge").textContent).toBe("本会话按文档与研究开的 · 模式创建时已固定");
 	});
 
 	it("普通会话（无固化轴）不渲染徽标", () => {
