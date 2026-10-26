@@ -33,6 +33,12 @@ export interface AgentAbilitySelection {
 
 export type AgentProfileScope = { readonly kind: "library" } | { readonly kind: "team"; readonly teamId: string };
 
+/**
+ * 档案/团队的工作区档位归属。缺省 = 两档（文档与研究 / 代码）都可见；声明后只出现在
+ * 对应档的新会话选择器里。这是**用户层可见性过滤**——不进会话创建合同，发送与深链不校验。
+ */
+export type AgentResourceMode = "work" | "coding";
+
 export interface AgentProfile {
 	readonly id: string;
 	readonly revision: number;
@@ -49,6 +55,8 @@ export interface AgentProfile {
 	readonly copiedFrom?: string;
 	/** 提供方；缺省即用户自建。扩展提供的档案由提供方维护，宿主不允许删除。 */
 	readonly source?: AgentResourceSource;
+	/** 工作区档位归属（见 {@link AgentResourceMode}）；缺省两档可见。 */
+	readonly mode?: AgentResourceMode;
 	readonly createdAt: number;
 	readonly updatedAt: number;
 }
@@ -88,6 +96,8 @@ export interface TeamDefinition {
 	readonly contextPolicyId: string;
 	/** 提供方；语义同 {@link AgentProfile.source}。 */
 	readonly source?: AgentResourceSource;
+	/** 工作区档位归属（见 {@link AgentResourceMode}）；缺省两档可见。 */
+	readonly mode?: AgentResourceMode;
 	readonly createdAt: number;
 	readonly updatedAt: number;
 }

@@ -5,6 +5,7 @@ All notable changes to `@vetta-org/plugin-sdk` are documented in this file.
 
 ## [Unreleased]
 
+- 清单新增 `agent.agents[].mode` / `agent.teams[].mode`（`work` / `coding`）：声明档位归属后，该智能体或团队只出现在对应档的新会话选择器里——面向不懂开发的用户时，开发向的 agent 集合（如电子表单、流水线）不再混进普通对话的候选列表。这是用户层可见性过滤：已选中的会话、深链与 `@` 提及不受影响，不做调用时校验；缺省两档可见，存量清单零变化。使用者应声明 `pluginApiVersion: ^2.11.0`（清单校验 fail-closed，旧宿主会整份拒绝带该字段的清单）。
 - `PluginModelDefinition` 新增可选 `input?: ("text" | "image")[]`：插件注册的模型声明图像输入后，写入与读回（`listOwnedProviders`）不再丢失该能力；`listOwnedProviders` 同时把历史配置里的任意字符串输入归一为可往返的 `text` / `image`（去重、过滤未知值、空则省略）。此前 `replaceOwnedProviders` 的写入合同不接受 `input`，图像能力在注册时即被丢弃。
 - `useBottomPanel()` 新增 `openTerminal` / `revealInstance`：插件可让宿主在内置终端里替用户跑一条命令（真终端、可交互、支持远程项目），新终端落在发起实例所在格子；`revealInstance` 把已开实例切到前台。受新权限 `terminal.run` 门控（高风险：命令以用户身份跑在可见终端里）。使用者应声明 `pluginApiVersion: ^2.10.0`。
 - 活动面板 `retention: "pinned"` 的宿主驻留改为有预算的 LRU：每个面板最多保留 3 个非活动 pinned 页签，超出后按最近激活顺序淘汰，当前活动与浮动页签始终驻留。此前 pinned 只要贡献可用就全部常驻，而每个常驻页签都是一个独立 guest 渲染进程，插件给每个页签声明 pinned 就会随页签数量无限累积进程。被淘汰的页签再次打开会重新挂载、状态从零重建（与 warm 的逐出语义一致）；不需要跨切换保留运行时状态的页签应保持缺省 warm 或声明 active-only。纯宿主运行期行为调整，不涉及清单字段，也不改变 `pluginApiVersion` 要求。

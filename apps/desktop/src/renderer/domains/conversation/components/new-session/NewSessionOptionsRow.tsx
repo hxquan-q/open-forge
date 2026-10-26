@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { WorkspaceMode } from "@shared/store/atoms";
 import { NewSessionProjectSelector } from "./project-selector/NewSessionProjectSelector";
 import type { ProjectOption, ProjectSelection } from "./project-selector/project-selection";
@@ -51,7 +52,7 @@ export function NewSessionOptionsRow({
 						onSelectPendingProject={onSelectPendingProject}
 					/>
 				)}
-				<NewSessionAgentSelector selectedKey={targetKey} onSelect={onSelectTarget} />
+				<NewSessionAgentSelector selectedKey={targetKey} onSelect={onSelectTarget} workspaceMode={workspaceMode} />
 			</div>
 			<NewSessionWorkspaceHint mode={workspaceMode} />
 		</div>

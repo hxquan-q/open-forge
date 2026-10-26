@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type NewSessionTargetKey = string & { readonly __newSessionTargetKey: unique symbol };
 
 export const CONVERSATION_TARGET_KEY = "conversation" as NewSessionTargetKey;
@@ -43,6 +44,8 @@ export interface NewSessionTargetOption {
 	readonly avatarUrls?: readonly string[];
 	readonly selected: boolean;
 	readonly disabled?: boolean;
+	/** 档位归属；缺省两档可见（见 matchesTargetMode）。 */
+	readonly mode?: "work" | "coding";
 }
 
 export function filterTargetOptions(
@@ -54,4 +57,13 @@ export function filterTargetOptions(
 	return options.filter((option) =>
 		`${option.title} ${option.subtitle ?? ""}`.toLocaleLowerCase().includes(normalized),
 	);
+}
+
+/**
+ * 档位归属过滤（用户层可见性）：声明了 mode 的智能体/团队只出现在对应档的下拉里，
+ * 未声明（含用户自建）两档都可见。只影响列表展示——已选中的 chip 与深链 target 不过滤，
+ * 发送链路也不做模式校验（用户口径）。
+ */
+export function matchesTargetMode(mode: "work" | "coding" | undefined, currentMode: "work" | "coding"): boolean {
+	return mode === undefined || mode === currentMode;
 }

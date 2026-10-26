@@ -9,8 +9,10 @@
  * - 2.8.0：Task Artifact Renderer contribution (`registerArtifactRenderer`) 与 `ui.slot.artifact-renderer` 权限。
  * - 2.9.0：`fs.listFilesRecursive` 的文件名筛选与额外忽略目录。
  * - 2.10.0：底部面板实例的 `openTerminal` / `revealInstance` 与 `terminal.run` 权限。
+ * - 2.11.0：智能体与团队的档位归属声明（`agent.agents[].mode` / `agent.teams[].mode`，
+ *   `work` / `coding`；缺省两档可见）。
  *
  * 清单校验对未知字段 fail-closed。作者把 `pluginApiVersion` 写成用到的那一档，
  * 旧宿主才能给出明确的版本错误。
  */
-export const PLUGIN_API_VERSION = "2.10.0";
+export const PLUGIN_API_VERSION = "2.11.0";
