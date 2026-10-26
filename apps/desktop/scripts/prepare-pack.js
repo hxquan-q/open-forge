@@ -967,6 +967,7 @@ const builderConfig = {
 	},
 	linux: {
 		target: LINUX_RELEASE_TARGETS,
+		packageName: "openforge",
 		category: "Utility",
 		description: `${desktopBrand.displayName} AI agent desktop application`,
 		icon: "build/icon.png",
