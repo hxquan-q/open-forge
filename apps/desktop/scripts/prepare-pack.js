@@ -967,7 +967,6 @@ const builderConfig = {
 	},
 	linux: {
 		target: LINUX_RELEASE_TARGETS,
-		packageName: "openforge",
 		category: "Utility",
 		description: `${desktopBrand.displayName} AI agent desktop application`,
 		icon: "build/icon.png",
@@ -975,6 +974,8 @@ const builderConfig = {
 		synopsis: "AI agent desktop application",
 		vendor: LINUX_PACKAGE_METADATA.vendor,
 	},
+	deb: { packageName: "openforge" },
+	rpm: { packageName: "openforge" },
 	// Sidecar binaries are picked up from the staged ./im-gateway dir
 	// (populated above by the cross-build step).
 	extraResources,

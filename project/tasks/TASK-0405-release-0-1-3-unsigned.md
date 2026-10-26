@@ -100,4 +100,5 @@ updated: 2026-10-26
 - dispatch run 40282832623：四个平台构建全部成功（Windows 已跳过沙盒检查）；四个 verify 失败——Linux/macOS 的 updater 元数据引用连字符产物名而磁盘文件保留品牌空格，Windows 的 checkpoint 还原用带盘符 `-C` 失败。已修：构建后统一把 release 顶层产物文件空格改连字符（含回归测试），Windows 改为 `cd` 后解压。
 - dispatch run 40288854205：构建仍全部成功；verify 暴露三处——Windows 改名后 `latest.yml` 仍引用空格旧名，Linux 包检查子进程 `maxBuffer` 溢出，macOS/Linux packaged E2E 写死 `Open Forge` 品牌路径。已修：改名时同步改写 `latest*.yml`、包检查提升到 64MB、E2E 按实际 `.app`/`.AppImage` 发现产物。
 - dispatch run 40294640871：macOS 两个 verify 已通过；Windows supplemental 包校验写死 `Open Forge`、Linux deb/rpm 包名 `vetta` 与校验期望 `openforge` 不一致。已修：Windows MSI/ZIP 改用与构建一致的品牌 slug，Linux 显式 `packageName=openforge`。
-- dispatch run 40300005479：quality 在 `test:packaging` 失败——R2 发布测试 fixture 仍写死 `Open Forge` 的 MSI/ZIP 名。已改用 `windowsSupplementalArtifactNames` 同源命名；`test:packaging` 127 例通过，重跑待执行。
+- dispatch run 40300005479：quality 在 `test:packaging` 失败——R2 发布测试 fixture 仍写死 `Open Forge` 的 MSI/ZIP 名。已改用 `windowsSupplementalArtifactNames` 同源命名；`test:packaging` 127 例通过。
+- dispatch run 40301036921：quality 通过；四平台构建全部因 electron-builder 配置校验失败——`linux.packageName` 不是 `LinuxConfiguration` 的合法键。已改为 `deb.packageName` / `rpm.packageName`（schema 已核对）；重跑待执行。
