@@ -25,37 +25,30 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 		);
 	}
 	return (
-		<div className="flex flex-col gap-5 px-8 pb-8 pt-6">
+		<div className="flex h-full flex-col gap-5 px-8 pb-8 pt-6">
 			<p className="text-[13px] text-muted-foreground">{model.labels.intro}</p>
-			<section className="flex flex-col gap-3">
+			<section className="flex min-h-0 flex-1 flex-col gap-3">
 				<h2 className="text-[15px] font-medium text-foreground">{model.labels.projectsTitle}</h2>
 				{model.projectCards.length === 0 ? (
-					<AllstarDevHomeEmptyState model={model} />
+					<div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-border/50 px-3.5 py-10">
+						<span aria-hidden className="icon-[solar--code-linear] h-10 w-10 text-muted-foreground/60" />
+						<p className="text-[13px] text-foreground">{model.labels.emptyTitle}</p>
+						<p className="text-xs text-muted-foreground">{model.labels.emptyHint}</p>
+					</div>
 				) : (
-					<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
+					<div className="grid content-start grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
 						{model.projectCards.map((card) => (
 							<AllstarDevProjectCardView
 								key={card.cwd}
 								card={card}
 								labels={model.labels}
 								onOpenSession={model.onOpenSession}
-								onStartNewSession={model.onStartNewSession}
 							/>
 						))}
 					</div>
 				)}
 			</section>
-		</div>
-	);
-}
-
-function AllstarDevHomeEmptyState({ model }: { model: AllstarDevHomePageModel }): JSX.Element {
-	return (
-		<div className="flex flex-col items-center gap-2 rounded-xl border border-border/50 px-3.5 py-10">
-			<span aria-hidden className="icon-[solar--code-linear] h-10 w-10 text-muted-foreground/60" />
-			<p className="text-[13px] text-foreground">{model.labels.emptyTitle}</p>
-			<p className="mb-2 text-xs text-muted-foreground">{model.labels.emptyHint}</p>
-			<div className="flex items-center gap-2.5">
+			<div className="flex items-center justify-center gap-2.5 border-t border-border/40 pt-4">
 				<Select value={model.selectedCwd} onValueChange={model.onSelectProject}>
 					<SelectTrigger className="w-64" aria-label={model.labels.emptyProjectLabel}>
 						<SelectValue placeholder={model.labels.emptyProjectLabel} />
@@ -84,12 +77,10 @@ function AllstarDevProjectCardView({
 	card,
 	labels,
 	onOpenSession,
-	onStartNewSession,
 }: {
 	card: AllstarDevProjectCard;
 	labels: AllstarDevHomePageModel["labels"];
 	onOpenSession: AllstarDevHomePageModel["onOpenSession"];
-	onStartNewSession: AllstarDevHomePageModel["onStartNewSession"];
 }): JSX.Element {
 	const hiddenCount = card.totalSessions - card.sessions.length;
 	return (
@@ -116,16 +107,6 @@ function AllstarDevProjectCardView({
 					</li>
 				)}
 			</ul>
-			<footer className="border-t border-border/40 p-2">
-				<Button
-					variant="ghost"
-					size="sm"
-					className="w-full text-xs"
-					onClick={() => onStartNewSession(card.cwd)}
-				>
-					{labels.newSession}
-				</Button>
-			</footer>
 		</article>
 	);
 }

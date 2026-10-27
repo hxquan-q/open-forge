@@ -42,7 +42,7 @@ describe("AllstarDevHomePageView", () => {
 		expect(screen.queryByText("dev projects")).toBeNull();
 	});
 
-	it("空态：说明 + 项目选择 + 新建按钮；按钮携带所选项目触发动作", async () => {
+	it("空态：说明占位，底部新会话区仍可用并携带所选项目", async () => {
 		const user = userEvent.setup();
 		const onStartNewSession = vi.fn();
 		render(<AllstarDevHomePageView model={model({ onStartNewSession })} />);
@@ -53,7 +53,7 @@ describe("AllstarDevHomePageView", () => {
 		expect(onStartNewSession).toHaveBeenCalledWith("/proj/a");
 	});
 
-	it("卡片网格：项目名、会话行点击打开、每卡新建按钮、超出上限显示还有 N 条", async () => {
+	it("卡片网格：项目名、会话行点击打开、超出上限显示还有 N 条；新会话只在底部区", async () => {
 		const user = userEvent.setup();
 		const onOpenSession = vi.fn();
 		const onStartNewSession = vi.fn();
@@ -83,16 +83,18 @@ describe("AllstarDevHomePageView", () => {
 			/>,
 		);
 
-		expect(screen.getByText("a")).toBeDefined();
+		// 项目名与行内容（"a" 与底部选择区当前值同名，用 b 与行文案证明卡片渲染）。
 		expect(screen.getByText("b")).toBeDefined();
+		expect(screen.getByText("环境配置")).toBeDefined();
 		expect(screen.getByText("4 more")).toBeDefined();
 
 		await user.click(screen.getByRole("button", { name: /修登录缺陷/ }));
 		expect(onOpenSession).toHaveBeenCalledWith("/proj/a", "/shard/a/a1.jsonl");
 
-		// 每卡的新建按钮带自己的 cwd：b 卡的第 1 个"new dev session"（DOM 序）。
+		// 新会话按钮只在底部区出现一枚（卡片不再各带按钮），携带所选项目。
 		const newButtons = screen.getAllByRole("button", { name: "new dev session" });
-		await user.click(newButtons[1]!);
-		expect(onStartNewSession).toHaveBeenCalledWith("/proj/b");
+		expect(newButtons).toHaveLength(1);
+		await user.click(newButtons[0]!);
+		expect(onStartNewSession).toHaveBeenCalledWith("/proj/a");
 	});
 });
