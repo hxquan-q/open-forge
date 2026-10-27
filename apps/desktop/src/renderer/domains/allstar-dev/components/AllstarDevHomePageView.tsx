@@ -36,7 +36,7 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 						<p className="text-xs text-muted-foreground">{model.labels.emptyHint}</p>
 					</div>
 				) : (
-					<div className="grid content-start grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
+					<div className="flex gap-3 overflow-x-auto pb-1">
 						{model.projectCards.map((card) => (
 							<AllstarDevProjectCardView
 								key={card.cwd}
@@ -84,7 +84,7 @@ function AllstarDevProjectCardView({
 }): JSX.Element {
 	const hiddenCount = card.totalSessions - card.sessions.length;
 	return (
-		<article className="flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40">
+		<article className="flex w-60 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40">
 			<header className="flex items-baseline justify-between gap-2 px-3.5 pb-2 pt-3">
 				<h3 className="truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
 				<span className="shrink-0 text-xs text-muted-foreground">{card.totalSessions}</span>
