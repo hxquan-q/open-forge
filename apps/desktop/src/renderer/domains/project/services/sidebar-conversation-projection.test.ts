@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionInfo } from "@shared/store/atoms";
 import { describe, expect, it } from "vitest";
 import type { DesktopTeamSidebarConversation } from "../../../../shared/sidebar-conversation";
@@ -76,5 +77,15 @@ describe("projectSidebarConversations", () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.kind).toBe("agent-team");
+	});
+
+	it("普通侧栏过滤 coding 会话（ADR-0151 决策 5），无标记的 work 会话保留", () => {
+		const coding = { ...ordinary, id: "coding", path: "C:/sessions/coding.jsonl", agentMode: "coding" };
+		const legacy = { ...ordinary, id: "legacy", path: "C:/sessions/legacy.jsonl" };
+		const work = { ...ordinary, id: "work", path: "C:/sessions/work.jsonl", agentMode: "work" };
+
+		const result = projectSidebarConversations([coding, legacy, work], [], { kind: "default" });
+
+		expect(result.map((item) => (item as { id: string }).id)).toEqual(["legacy", "work"]);
 	});
 });
