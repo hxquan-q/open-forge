@@ -12,7 +12,8 @@
 			"task": "Tasks",
 			"ports": "Port forwarding",
 			"canvas": "Canvas",
-			"terminal": "Terminal"
+			"terminal": "Terminal",
+			"git": "Git"
 		},
 		"backgroundTasks": {
 			"statusRunning": "Running",
@@ -308,6 +309,21 @@
 		},
 		"plan": {
 			"headline": "Current plan"
+		},
+		"git": {
+			"noProject": "This session has no project directory",
+			"loading": "Reading repository…",
+			"notRepo": "Not a git repository",
+			"clean": "Working tree clean",
+			"refresh": "Refresh",
+			"changeCount": "{{count}} change(s)",
+			"status": {
+				"added": "Added",
+				"modified": "Modified",
+				"deleted": "Deleted",
+				"untracked": "Untracked",
+				"renamed": "Renamed"
+			}
 		}
 	},
 	"preview": {
@@ -817,7 +833,8 @@
 		"toolbar": {
 			"addImage": "Add image",
 			"attachFile": "Attach file reference",
-			"skills": "Skills / Scenes"
+			"skills": "Skills / Scenes",
+			"gitBranchTitle": "Current branch"
 		},
 		"speech": {
 			"actions": {
@@ -984,7 +1001,11 @@
 			"busy": "The session is running; wait for the current reply to finish.",
 			"recoveryRequired": "This session must be recovered before it can continue."
 		},
-		"streamingPhrases": ["Vetta is replying…", "Please hold on…", "Vetta is working hard…"],
+		"streamingPhrases": [
+			"Vetta is replying…",
+			"Please hold on…",
+			"Vetta is working hard…"
+		],
 		"copyButton": {
 			"copied": "Copied",
 			"copy": "Copy"

@@ -46,6 +46,7 @@ import { showToast } from "../shared/store/toast-atoms";
 import { shouldShowChatRoutePending } from "./chat-route-pending";
 import { syncPendingInteractions } from "./pending-interaction-sync";
 import type { RootLayoutModel } from "./types";
+import { useCodingSessionLayout } from "./useCodingSessionLayout";
 import { useLastSessionRestore } from "./useLastSessionRestore";
 
 export function useRootLayoutModel(): RootLayoutModel {
@@ -104,6 +105,8 @@ export function useRootLayoutModel(): RootLayoutModel {
 	useAppInit();
 	useNotificationInit();
 	useUpdaterInit();
+	// 演示定稿：code 模式会话自动收左栏、开右栏；切回普通会话展开左栏（档位边沿生效）。
+	useCodingSessionLayout();
 	// 模型目录保鲜：focus / 切回可见时按 TTL 重拉，服务端增删模型无需重启应用。
 	useModelCatalogSync();
 	// 全局 running-sessions 订阅必须挂在始终挂载的 App 上：它是 streaming 状态真值

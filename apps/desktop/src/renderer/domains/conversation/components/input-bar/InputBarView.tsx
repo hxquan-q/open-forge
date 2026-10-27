@@ -34,6 +34,7 @@ import {
 	InputBarSpeechAction,
 	InputBarToolbarDivider,
 } from "./InputBarToolbar";
+import { InputBarGitBranchChip } from "./InputBarGitBranchChip";
 import { InputEditor } from "./editor/InputEditor";
 import { PromptAttachmentLabels } from "./PromptAttachmentLabels";
 import type { InputBarViewProps } from "./types";
@@ -252,6 +253,8 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 							{model.leadingTools.map((tool) => (
 								<InputBarExecutionModeAction key={tool.kind} visible={!slashOpen} model={tool.model} />
 							))}
+							{/* 演示定稿：code 模式下在权限/执行模式选项之后显示当前 git 分支。 */}
+							<InputBarGitBranchChip cwd={model.effectiveCwd} visible={!slashOpen} />
 											<InputBarActiveActions
 												items={model.activeActions}
 												removeHint={model.labels.capsule.removeDefault}

@@ -12,7 +12,8 @@
 			"task": "任务",
 			"ports": "端口映射",
 			"canvas": "画布",
-			"terminal": "终端"
+			"terminal": "终端",
+			"git": "Git"
 		},
 		"backgroundTasks": {
 			"statusRunning": "运行中",
@@ -308,6 +309,21 @@
 		},
 		"plan": {
 			"headline": "当前计划"
+		},
+		"git": {
+			"noProject": "此会话没有项目目录",
+			"loading": "正在读取仓库…",
+			"notRepo": "当前目录不是 git 仓库",
+			"clean": "工作区干净，没有变更",
+			"refresh": "刷新",
+			"changeCount": "{{count}} 处变更",
+			"status": {
+				"added": "新增",
+				"modified": "修改",
+				"deleted": "删除",
+				"untracked": "未跟踪",
+				"renamed": "重命名"
+			}
 		}
 	},
 	"preview": {
@@ -817,7 +833,8 @@
 		"toolbar": {
 			"addImage": "添加图片",
 			"attachFile": "附加文件引用",
-			"skills": "技能/场景"
+			"skills": "技能/场景",
+			"gitBranchTitle": "当前分支"
 		},
 		"speech": {
 			"actions": {
@@ -984,7 +1001,11 @@
 			"busy": "会话正在运行，请等当前回复结束后再试",
 			"recoveryRequired": "会话需要先恢复才能续跑，请先处理恢复提示"
 		},
-		"streamingPhrases": ["Vetta 正在回复…", "请耐心等待…", "Vetta 正在努力工作…"],
+		"streamingPhrases": [
+			"Vetta 正在回复…",
+			"请耐心等待…",
+			"Vetta 正在努力工作…"
+		],
 		"copyButton": {
 			"copied": "已复制",
 			"copy": "复制"
