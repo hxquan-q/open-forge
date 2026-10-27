@@ -24,6 +24,7 @@ import { registerDialogIpc } from "./dialog.js";
 import { registerDownloadsIpc } from "./downloads.js";
 import { registerFileTransferIpc } from "./file-transfer.js";
 import { registerFsIpc } from "./fs.js";
+import { registerGitIpc } from "./git.js";
 import { registerImIpc } from "./im.js";
 import { registerMarkdownIpc } from "./markdown.js";
 import { registerMediaIpc } from "./media.js";
@@ -79,6 +80,7 @@ interface IpcTeardown {
 	teardownIm: () => void;
 	teardownMedia: () => void;
 	teardownDebug: () => void;
+	teardownGit: () => void;
 	teardownProjectExport: () => void;
 	teardownProjects: () => void;
 	teardownSsh: () => void;
@@ -143,6 +145,7 @@ export function registerAllIpc(
 		teardownIm: registerImIpc(webContents),
 		teardownMedia: registerMediaIpc(),
 		teardownDebug: registerDebugIpc(),
+		teardownGit: registerGitIpc(),
 		teardownProjectExport: registerProjectExportIpc(),
 		teardownProjects: registerProjectsIpc(),
 		teardownSsh: registerSshIpc(),
@@ -197,6 +200,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownIm();
 	teardown.teardownMedia();
 	teardown.teardownDebug();
+	teardown.teardownGit();
 	teardown.teardownProjectExport();
 	teardown.teardownProjects();
 	teardown.teardownSsh();
