@@ -344,15 +344,15 @@
 		"home": {
 			"intro": "Your autonomous development workspace: enter dev projects and coding sessions from here.",
 			"loading": "Loading…",
-			"quickStart": {
-				"title": "Quick start",
-				"projectLabel": "Choose a project",
-				"newSession": "New dev session"
+			"projects": {
+				"title": "Dev projects",
+				"newSession": "New dev session",
+				"more": "{{count}} more"
 			},
-			"recent": {
-				"title": "Recent dev sessions",
-				"emptyTitle": "No dev sessions yet",
-				"emptyHint": "Pick a project above to start your first dev session"
+			"empty": {
+				"title": "No dev sessions yet",
+				"hint": "Pick a project to start your first dev session; it will show up on that project's card",
+				"projectLabel": "Choose a project"
 			}
 		}
 	}

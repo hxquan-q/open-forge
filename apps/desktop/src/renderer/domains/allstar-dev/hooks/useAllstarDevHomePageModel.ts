@@ -16,21 +16,22 @@ import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-/** 版块首页「近期开发会话」的展示条数；完整列表由项目空间（M1-3/4）承载。 */
-const RECENT_SESSIONS_LIMIT = 8;
+/** 每张项目卡片直接展示的会话条数；完整列表由项目空间（M1-3/4）承载。 */
+const CARD_SESSIONS_LIMIT = 5;
 
-export interface AllstarDevRecentSession {
+export interface AllstarDevCardSession {
 	/** Session JSONL 路径；打开会话的唯一标识。 */
 	readonly path: string;
-	/** 会话所属项目根（sessionsMap 的 bucket key），打开与归档都以此为 cwd。 */
-	readonly cwd: string;
 	readonly title: string;
-	readonly projectName: string;
 }
 
-export interface AllstarDevProjectOption {
+export interface AllstarDevProjectCard {
+	/** 项目根（sessionsMap 的 bucket key），新建/打开会话都以此为 cwd。 */
 	readonly cwd: string;
-	readonly name: string;
+	readonly projectName: string;
+	readonly sessions: readonly AllstarDevCardSession[];
+	/** 该项目的 coding 会话总数（超过展示上限时用于「还有 N 条」）。 */
+	readonly totalSessions: number;
 }
 
 export interface AllstarDevHomePageModel {
@@ -38,28 +39,31 @@ export interface AllstarDevHomePageModel {
 	readonly labels: {
 		readonly intro: string;
 		readonly loading: string;
-		readonly quickStartTitle: string;
-		readonly projectLabel: string;
+		readonly projectsTitle: string;
 		readonly newSession: string;
-		readonly recentTitle: string;
+		readonly moreSessions: (count: number) => string;
 		readonly emptyTitle: string;
 		readonly emptyHint: string;
+		readonly emptyProjectLabel: string;
 	};
-	readonly projects: readonly AllstarDevProjectOption[];
+	/** 按项目分组的开发会话卡片，按最近活跃排序；空 = 尚无任何 coding 会话。 */
+	readonly projectCards: readonly AllstarDevProjectCard[];
+	/** 空态引导用的项目选择（版块册 M1-3 落地前暂用现有项目清单兜底）。 */
+	readonly projects: readonly { cwd: string; name: string }[];
 	readonly selectedCwd: string;
-	readonly recentSessions: readonly AllstarDevRecentSession[];
 	onSelectProject: (cwd: string) => void;
 	onOpenSession: (cwd: string, sessionPath: string) => void;
-	onStartNewSession: () => void;
+	onStartNewSession: (cwd: string) => void;
 }
 
 /**
  * 「Allstar 自主开发」版块首页（/allstar）的连接层。版块态的可见性按 ADR-0151 决策 5/7：
- * 近期开发会话聚合全部 coding 会话（不限项目册），普通侧栏内容不受本页影响。
+ * 版块只承载 coding 会话（普通侧栏已按同一决策过滤），项目卡片从会话池按模式分组派生
+ * ——版块册（allstarProjects，M1-3）落地前这是版块项目列表的临时事实源，只有存在
+ * coding 会话的项目才会出现，天然与普通侧栏的项目列表分离。
  *
  * 会话数据复用 project 域的 sessionsMap（useProjectActions.loadSessions 填充、
- * onSessionsChanged 全局刷新），不建第二份列表事实源；agentMode 过滤依据 listSessions
- * 随行下发的固化模式（决策 6），无记录的历史会话不算开发会话。
+ * onSessionsChanged 全局刷新），不建第二份列表事实源。
  */
 export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	// 文案放 project ns：版块入口标签（sidebar.nav.allstarDev）已在其中，版块首页同域；
@@ -74,9 +78,51 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	const sessionsMap = useAtomValue(sessionsMapAtom);
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
 
-	// 版块册（allstarProjects）在 M1-3 落地前，快速开始的项目选择暂用现有项目列表
-	//（含默认「对话」项目）——与 M0 入口的落点口径一致，coding 会话创建不受影响。
-	const projectOptions = useMemo<AllstarDevProjectOption[]>(
+	const projectCards = useMemo<AllstarDevProjectCard[]>(() => {
+		interface Group {
+			readonly projectName: string;
+			readonly sessions: Array<AllstarDevCardSession & { modifiedAt: number }>;
+			latestModifiedAt: number;
+		}
+		const groups = new Map<string, Group>();
+		for (const [bucketCwd, sessions] of sessionsMap) {
+			for (const session of sessions) {
+				if (session.agentMode !== "coding") continue;
+				let group = groups.get(bucketCwd);
+				if (!group) {
+					group = {
+						projectName: getProjectDisplayName(bucketCwd, defaultConversationCwd),
+						sessions: [],
+						latestModifiedAt: 0,
+					};
+					groups.set(bucketCwd, group);
+				}
+				group.latestModifiedAt = Math.max(group.latestModifiedAt, session.modifiedAt);
+				group.sessions.push({
+					path: session.path,
+					title: sessionDisplayLabel(session),
+					modifiedAt: session.modifiedAt,
+				});
+			}
+		}
+		return Array.from(groups.entries())
+			.map(([cwd, group]) => ({
+				cwd,
+				projectName: group.projectName,
+				sessions: [...group.sessions]
+					.sort((left, right) => right.modifiedAt - left.modifiedAt)
+					.slice(0, CARD_SESSIONS_LIMIT)
+					.map(({ modifiedAt: _modifiedAt, ...item }) => item),
+				totalSessions: group.sessions.length,
+				latestModifiedAt: group.latestModifiedAt,
+			}))
+			.sort((left, right) => right.latestModifiedAt - left.latestModifiedAt)
+			.map(({ latestModifiedAt: _latest, ...card }) => card);
+	}, [defaultConversationCwd, sessionsMap]);
+
+	// 空态引导的选择器暂用现有项目清单（含默认「对话」项目）；M1-3 版块册落地后替换为
+	// 版块册条目 + 打开已有目录登记。
+	const projectOptions = useMemo(
 		() =>
 			projects.map((project) => ({
 				cwd: project.cwd,
@@ -86,7 +132,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	);
 
 	const [selectedCwd, setSelectedCwd] = useState("");
-	// 初次进入或所选项目消失时回落到默认项目 / 首个项目，保证「新建开发会话」始终可用。
+	// 空态引导默认选默认项目 / 首个项目，保证「新建开发会话」始终可用。
 	useEffect(() => {
 		if (projectOptions.length === 0) return;
 		if (projectOptions.some((option) => option.cwd === selectedCwd)) return;
@@ -108,24 +154,6 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		// 加载只由项目清单与初始化状态驱动。
 	}, [loadSessions, projectCwds, projectsInitialized, sessionsMap]);
 
-	const recentSessions = useMemo<AllstarDevRecentSession[]>(() => {
-		const items: Array<AllstarDevRecentSession & { modifiedAt: number }> = [];
-		for (const [bucketCwd, sessions] of sessionsMap) {
-			for (const session of sessions) {
-				if (session.agentMode !== "coding") continue;
-				items.push({
-					path: session.path,
-					cwd: bucketCwd,
-					title: sessionDisplayLabel(session),
-					projectName: getProjectDisplayName(bucketCwd, defaultConversationCwd),
-					modifiedAt: session.modifiedAt,
-				});
-			}
-		}
-		items.sort((a, b) => b.modifiedAt - a.modifiedAt);
-		return items.slice(0, RECENT_SESSIONS_LIMIT).map(({ modifiedAt: _modifiedAt, ...item }) => item);
-	}, [defaultConversationCwd, sessionsMap]);
-
 	const onSelectProject = useCallback((cwd: string) => {
 		setSelectedCwd(cwd);
 	}, []);
@@ -137,28 +165,31 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		[openProjectSession],
 	);
 
-	const onStartNewSession = useCallback(() => {
-		if (!selectedCwd) return;
-		// 与 M0 版块入口同一条创建链路：写 coding 档后落新会话页，会话按代码模式创建。
-		enterWorkspaceSection(selectedCwd, "coding");
-		void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(selectedCwd) } });
-	}, [navigate, selectedCwd]);
+	const onStartNewSession = useCallback(
+		(cwd: string) => {
+			if (!cwd) return;
+			// 与 M0 版块入口同一条创建链路：写 coding 档后落新会话页，会话按代码模式创建。
+			enterWorkspaceSection(cwd, "coding");
+			void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(cwd) } });
+		},
+		[navigate],
+	);
 
 	return {
 		loading: !projectsInitialized,
 		labels: {
 			intro: t("allstarDev.home.intro"),
 			loading: t("allstarDev.home.loading"),
-			quickStartTitle: t("allstarDev.home.quickStart.title"),
-			projectLabel: t("allstarDev.home.quickStart.projectLabel"),
-			newSession: t("allstarDev.home.quickStart.newSession"),
-			recentTitle: t("allstarDev.home.recent.title"),
-			emptyTitle: t("allstarDev.home.recent.emptyTitle"),
-			emptyHint: t("allstarDev.home.recent.emptyHint"),
+			projectsTitle: t("allstarDev.home.projects.title"),
+			newSession: t("allstarDev.home.projects.newSession"),
+			moreSessions: (count: number) => t("allstarDev.home.projects.more", { count }),
+			emptyTitle: t("allstarDev.home.empty.title"),
+			emptyHint: t("allstarDev.home.empty.hint"),
+			emptyProjectLabel: t("allstarDev.home.empty.projectLabel"),
 		},
+		projectCards,
 		projects: projectOptions,
 		selectedCwd,
-		recentSessions,
 		onSelectProject,
 		onOpenSession,
 		onStartNewSession,

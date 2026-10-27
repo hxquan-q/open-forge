@@ -1,9 +1,9 @@
 // Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 /**
- * 版块首页 model 的行为合同（ADR-0151 决策 5/7）：近期开发会话聚合全部项目的 coding
- * 会话（agentMode 过滤、modifiedAt 倒序、截取上限），项目选项含默认「对话」项目，
- * 新建开发会话走「写 coding 档 → 新会话页」链路，打开会话委托全局上下文。
+ * 版块首页 model 的行为合同（ADR-0151 决策 5/7）：项目卡片从会话池按 coding 模式分组
+ * 派生（组内倒序截取、卡片按最近活跃排序、只统计 coding），空态引导的选择回落默认
+ * 项目，新建开发会话走「写 coding 档 → 新会话页」链路，打开会话委托全局上下文。
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -71,9 +71,17 @@ function seedFixtures(): void {
 			[
 				"/proj/a",
 				[
-					session({ path: "/shard/a/a1.jsonl", modifiedAt: 5, agentMode: "coding", firstMessage: "修登录缺陷" }),
-					session({ path: "/shard/a/a2.jsonl", modifiedAt: 3, agentMode: "work" }),
-					session({ path: "/shard/a/a3.jsonl", modifiedAt: 1, agentMode: "coding" }),
+					// 7 条 coding：验证组内倒序截取 5 条 + totalSessions 全量。
+					...Array.from({ length: 7 }, (_, index) =>
+						session({
+							path: `/shard/a/a${index + 1}.jsonl`,
+							modifiedAt: index + 1,
+							agentMode: "coding",
+							firstMessage: `会话 ${index + 1}`,
+						}),
+					),
+					session({ path: "/shard/a/work.jsonl", modifiedAt: 99, agentMode: "work" }),
+					session({ path: "/shard/a/legacy.jsonl", modifiedAt: 98 }),
 				],
 			],
 			[
@@ -82,6 +90,11 @@ function seedFixtures(): void {
 					session({ path: "/shard/b/b1.jsonl", cwd: "/proj/b", modifiedAt: 9, agentMode: "coding", name: "数据看板" }),
 					session({ path: "/shard/b/b2.jsonl", cwd: "/proj/b", modifiedAt: 8, agentMode: "work" }),
 				],
+			],
+			[
+				"/proj/work-only",
+				// 只有 work 会话的项目不出现卡片（版块项目列表与普通侧栏天然分离）。
+				[session({ path: "/shard/w/w1.jsonl", cwd: "/proj/work-only", modifiedAt: 50, agentMode: "work" })],
 			],
 		]),
 	);
@@ -96,20 +109,28 @@ beforeEach(() => {
 	seedFixtures();
 });
 
-it("聚合全部项目的 coding 会话：倒序截取、过滤 work 与无记录、项目名归一", () => {
+it("项目卡片按 coding 会话分组派生：组内倒序截取、卡片按最近活跃排序、work/无记录排除", () => {
 	const { result } = renderHook(() => useAllstarDevHomePageModel());
 
-	const recent = result.current.recentSessions;
-	expect(recent.map((item) => item.path)).toEqual([
-		"/shard/b/b1.jsonl",
-		"/shard/default/d1.jsonl",
-		"/shard/a/a1.jsonl",
-		"/shard/a/a3.jsonl",
+	const cards = result.current.projectCards;
+	// 最近活跃：b(9) > default(7) = a(7)；同值平局按 sessionsMap 插入序稳定排（default
+	// 桶先建组）。work-only 无卡片。
+	expect(cards.map((card) => card.cwd)).toEqual(["/proj/b", "/proj/default", "/proj/a"]);
+
+	const cardA = cards.find((card) => card.cwd === "/proj/a");
+	expect(cardA).toBeDefined();
+	expect(cardA?.totalSessions).toBe(7);
+	expect(cardA?.sessions.map((item) => item.title)).toEqual([
+		"会话 7",
+		"会话 6",
+		"会话 5",
+		"会话 4",
+		"会话 3",
 	]);
-	// 展示名：命名优先，其次首条消息；项目名默认项目显示「对话」。
-	expect(recent[0]).toMatchObject({ title: "数据看板", projectName: "b" });
-	expect(recent[1]).toMatchObject({ title: "未命名会话", projectName: "对话" });
-	expect(recent[2]).toMatchObject({ title: "修登录缺陷", projectName: "a" });
+
+	// 项目名归一：默认项目显示「对话」，其余显示目录名。
+	expect(cards.find((card) => card.cwd === "/proj/default")?.projectName).toBe("对话");
+	expect(cards.find((card) => card.cwd === "/proj/b")?.projectName).toBe("b");
 });
 
 it("项目未初始化时呈现 loading，且已初始化的项目不再重复拉取列表", () => {
@@ -120,16 +141,12 @@ it("项目未初始化时呈现 loading，且已初始化的项目不再重复�
 	act(() => {
 		store.set(projectsInitializedAtom, true);
 	});
-	// 三个项目的会话桶都已就位，不应触发任何补拉。
 	expect(loadSessions).not.toHaveBeenCalled();
 	expect(result.current.loading).toBe(false);
 });
 
 it("会话桶缺失的项目在初始化后补拉列表", async () => {
-	store.set(
-		sessionsMapAtom,
-		new Map<string, SessionInfo[]>([["/proj/default", []]]),
-	);
+	store.set(sessionsMapAtom, new Map<string, SessionInfo[]>([["/proj/default", []]]));
 	renderHook(() => useAllstarDevHomePageModel());
 
 	await waitFor(() => {
@@ -139,22 +156,22 @@ it("会话桶缺失的项目在初始化后补拉列表", async () => {
 	expect(loadSessions).not.toHaveBeenCalledWith("/proj/default");
 });
 
-it("新建开发会话：默认选默认项目，写 coding 档并导航新会话页", () => {
+it("空态引导默认选默认项目；新建开发会话按传入 cwd 写 coding 档并导航新会话页", () => {
 	const { result } = renderHook(() => useAllstarDevHomePageModel());
 	expect(result.current.selectedCwd).toBe("/proj/default");
 
 	act(() => {
-		result.current.onStartNewSession();
+		result.current.onStartNewSession("/proj/b");
 	});
 	expect(navigate).toHaveBeenCalledWith({
 		to: "/new-session/$cwd",
-		params: { cwd: encodeURIComponent("/proj/default") },
+		params: { cwd: encodeURIComponent("/proj/b") },
 	});
 	const modes = store.get(workspaceModeByProjectAtom);
-	expect(modes.get("/proj/default")).toBe("coding");
+	expect(modes.get("/proj/b")).toBe("coding");
 });
 
-it("打开近期会话委托全局会话打开上下文", () => {
+it("打开卡片会话委托全局会话打开上下文", () => {
 	const { result } = renderHook(() => useAllstarDevHomePageModel());
 	act(() => {
 		result.current.onOpenSession("/proj/b", "/shard/b/b1.jsonl");

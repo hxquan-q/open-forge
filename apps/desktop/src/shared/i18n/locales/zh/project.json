@@ -343,15 +343,15 @@
 		"home": {
 			"intro": "面向自主开发的工作区：从这里进入开发项目与代码模式会话。",
 			"loading": "正在加载…",
-			"quickStart": {
-				"title": "快速开始",
-				"projectLabel": "选择项目",
-				"newSession": "新建开发会话"
+			"projects": {
+				"title": "开发项目",
+				"newSession": "新建开发会话",
+				"more": "还有 {{count}} 条"
 			},
-			"recent": {
-				"title": "近期开发会话",
-				"emptyTitle": "还没有开发会话",
-				"emptyHint": "在上方选择项目，开始第一个开发会话"
+			"empty": {
+				"title": "还没有开发会话",
+				"hint": "选择项目开始第一个开发会话，创建后会出现在对应的项目卡片里",
+				"projectLabel": "选择项目"
 			}
 		}
 	}
