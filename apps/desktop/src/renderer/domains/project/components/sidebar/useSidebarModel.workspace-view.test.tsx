@@ -5,9 +5,11 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const navigate = vi.hoisted(() => vi.fn());
 const onNewChat = vi.hoisted(() => vi.fn());
-const onAllstarDev = vi.hoisted(() => vi.fn());
 const prefetchNavItem = vi.hoisted(() => vi.fn());
 const hostedRouteOpen = vi.hoisted(() => vi.fn(async () => undefined));
+
+/** 当前路由态：useMatches 的 pathname 由用例改写，验证版块入口在版块路由下高亮。 */
+const routeState = vi.hoisted(() => ({ current: { pathname: "/" } }));
 
 /**
  * 插件文案解析合同的替身：%key% 走目录，其余原样回显。
@@ -16,7 +18,7 @@ const hostedRouteOpen = vi.hoisted(() => vi.fn(async () => undefined));
 const pluginCatalog = vi.hoisted(() => ({ current: {} as Record<string, string> }));
 
 vi.mock("@tanstack/react-router", () => ({
-	useMatches: () => [{ pathname: "/" }],
+	useMatches: () => [{ pathname: routeState.current.pathname }],
 	useNavigate: () => navigate,
 	useSearch: () => ({}),
 }));
@@ -26,7 +28,6 @@ vi.mock("@shared/hosted-routes/hosted-route-service", () => ({
 }));
 vi.mock("../../hooks/useNewChatNavigation", () => ({
 	useNewChatNavigation: () => onNewChat,
-	useAllstarDevNavigation: () => onAllstarDev,
 }));
 vi.mock("../../../plugins/runtime/plugin-i18n", () => ({
 	usePluginTextResolver: () => (_pluginId: string, raw: string | undefined) => {
@@ -66,9 +67,9 @@ function render() {
 beforeEach(() => {
 	navigate.mockReset();
 	onNewChat.mockReset();
-	onAllstarDev.mockReset();
 	prefetchNavItem.mockReset();
 	hostedRouteOpen.mockReset();
+	routeState.current = { pathname: "/" };
 	localStorage.removeItem(SIDEBAR_NAV_LAYOUT_STORAGE_KEY);
 	store.set(activeSessionAtom, null);
 	pluginCatalog.current = {
@@ -106,7 +107,7 @@ it("description 缺省时 tooltip 回落到插件名", () => {
 	expect(item?.title).toBe("设计 · Vetta 设计");
 });
 
-it("版块入口不进置顶/收纳布局，点击分发到 Allstar 开发导航", () => {
+it("版块入口不进置顶/收纳布局，点击导航到版块首页 /allstar", () => {
 	const { result } = render();
 	const entry = result.current.sectionEntryNavItem;
 	expect(entry).toBeDefined();
@@ -117,9 +118,14 @@ it("版块入口不进置顶/收纳布局，点击分发到 Allstar 开发导航
 	expect(result.current.moreNavItems.some((item) => item.key === "allstar-dev")).toBe(false);
 
 	result.current.actions.openNavItem(entry!);
-	expect(onAllstarDev).toHaveBeenCalledTimes(1);
+	expect(navigate).toHaveBeenCalledWith({ to: "/allstar" });
 	expect(onNewChat).not.toHaveBeenCalled();
-	expect(navigate).not.toHaveBeenCalled();
+});
+
+it("版块路由（/allstar）下版块入口高亮", () => {
+	routeState.current = { pathname: "/allstar" };
+	const { result } = render();
+	expect(result.current.sectionEntryNavItem?.active).toBe(true);
 });
 
 it("聊天页打开代码模式会话时版块入口高亮，研究会话不高亮", () => {

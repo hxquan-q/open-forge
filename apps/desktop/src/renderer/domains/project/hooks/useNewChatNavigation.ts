@@ -5,16 +5,16 @@ import {
 	DEFAULT_WORKSPACE_MODE,
 	defaultConversationCwdAtom,
 	enterWorkspaceSection,
-	type WorkspaceMode,
 } from "@shared/store/atoms";
 import { useMatches, useNavigate } from "@tanstack/react-router";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback } from "react";
 
 /**
- * 新会话版块入口的统一行为：解析目标项目 cwd、写入版块档位，再跳转到 NewSession 页。
- * 「新会话」与「Allstar自主开发」两个入口共用同一套解析与导航，只在档位上分叉，
- * 避免目标 cwd 解析规则出现第二处实现。
+ * 「新会话」入口：文档与研究（默认档）版块的进入点。目标项目可能停留在上一次的
+ * 开发档，这里统一回落，保证新会话默认按文档与研究开。「Allstar自主开发」版块入口
+ * 已改为导航版块首页 /allstar（ADR-0151，见 useSidebarModel 的 openNavItem 分发），
+ * 开发会话的创建由版块内动作写 coding 档。
  *
  * 目标 cwd 解析顺序：
  *   1. 当前路由参数 cwd（/project/$cwd 或 /new-session/$cwd）—— 项目详情聚焦
@@ -59,7 +59,7 @@ async function resolveNewSessionCwd(initial: string, cacheDefault: (cwd: string)
 	}
 }
 
-function useWorkspaceSectionNavigation(mode: WorkspaceMode): () => void {
+export function useNewChatNavigation(): () => void {
 	const navigate = useNavigate();
 	const newChatCwd = useNewSessionTargetCwd();
 	const setDefaultConversationCwd = useSetAtom(defaultConversationCwdAtom);
@@ -68,27 +68,11 @@ function useWorkspaceSectionNavigation(mode: WorkspaceMode): () => void {
 		void (async () => {
 			const targetCwd = await resolveNewSessionCwd(newChatCwd, setDefaultConversationCwd);
 			if (!targetCwd) return;
-			enterWorkspaceSection(targetCwd, mode);
+			enterWorkspaceSection(targetCwd, DEFAULT_WORKSPACE_MODE);
 			void navigate({
 				to: "/new-session/$cwd",
 				params: { cwd: encodeURIComponent(targetCwd) },
 			});
 		})();
-	}, [mode, navigate, newChatCwd, setDefaultConversationCwd]);
-}
-
-/**
- * 「新会话」入口：文档与研究（默认档）版块的进入点。目标项目可能停留在上一次的
- * 开发档，这里统一回落，保证新会话默认按文档与研究开。
- */
-export function useNewChatNavigation(): () => void {
-	return useWorkspaceSectionNavigation(DEFAULT_WORKSPACE_MODE);
-}
-
-/**
- * 「Allstar自主开发」版块入口：目标项目解析与「新会话」一致，区别只是进入前把该项目
- * 档位写为 coding——落在同一张 NewSession 页上，确认句与创建出的会话按代码模式走。
- */
-export function useAllstarDevNavigation(): () => void {
-	return useWorkspaceSectionNavigation("coding");
+	}, [navigate, newChatCwd, setDefaultConversationCwd]);
 }

@@ -957,7 +957,8 @@
 			"plugins": "插件",
 			"settings": "设置",
 			"project": "项目详情",
-			"chat": "对话"
+			"chat": "对话",
+			"allstarDev": "Allstar 自主开发"
 		},
 		"sidebarTrigger": {
 			"open": "侧边栏",

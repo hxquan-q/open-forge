@@ -47,10 +47,21 @@ it("new-session options row renders no mode switcher", () => {
 
 it("sidebar section entry is the only coding-mode entry", () => {
 	const model = readFileSync(join(rendererRoot, "domains/project/components/sidebar/useSidebarModel.ts"), "utf8");
-	// 版块入口经 openNavItem 按 key 分发到 useAllstarDevNavigation，且不进导航目录。
+	// 版块入口经 openNavItem 按 key 分发到 /allstar 版块首页，且不进导航目录。
 	expect(model).toContain("ALLSTAR_DEV_NAV_KEY");
-	expect(model).toContain("useAllstarDevNavigation");
+	expect(model).toContain('to: "/allstar"');
+	expect(model).not.toContain("useAllstarDevNavigation");
 	expect(model).not.toContain("workspaceModeSwitcher");
+});
+
+it("allstar dev section has a dedicated content-area route", () => {
+	const router = readFileSync(join(rendererRoot, "router.tsx"), "utf8");
+	expect(router).toContain('path: "/allstar"');
+	const prefetch = readFileSync(join(rendererRoot, "root-layout/nav-route-prefetch.ts"), "utf8");
+	// 版块入口悬停预取的是版块首页模块，不再与新会话页共用加载器。
+	expect(prefetch).toContain("loadAllstarDevHomePage");
+	const header = readFileSync(join(rendererRoot, "shared/app-shell/page-header/usePageHeaderModel.ts"), "utf8");
+	expect(header).toContain("match: /^\\/allstar$/");
 });
 
 it("page header no longer injects a workspace-mode switcher", () => {

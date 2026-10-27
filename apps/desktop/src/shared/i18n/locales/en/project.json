@@ -339,5 +339,21 @@
 		"reportFiles": "Project files",
 		"reportFilesValue": "written {{written}}, skipped {{skipped}}, overwritten {{overwritten}}",
 		"reportFailed": "These files could not be restored:"
+	},
+	"allstarDev": {
+		"home": {
+			"intro": "Your autonomous development workspace: enter dev projects and coding sessions from here.",
+			"loading": "Loading…",
+			"quickStart": {
+				"title": "Quick start",
+				"projectLabel": "Choose a project",
+				"newSession": "New dev session"
+			},
+			"recent": {
+				"title": "Recent dev sessions",
+				"emptyTitle": "No dev sessions yet",
+				"emptyHint": "Pick a project above to start your first dev session"
+			}
+		}
 	}
 }

@@ -40,7 +40,7 @@ import {
 	resolveDesktopSessionConfig,
 } from "./resolve-session-config.js";
 import { readSessionAgentBinding, recordSessionAgentBinding } from "./session-agent-binding-store.js";
-import { recordSessionAgentMode } from "./session-agent-mode-store.js";
+import { readSessionAgentModes, recordSessionAgentMode } from "./session-agent-mode-store.js";
 import { type ResolvedSessionAgentProfile, resolveSessionAgentProfile } from "./session-agent-profile.js";
 import { DesktopSessionCreationTrace } from "./session-creation-trace.js";
 import {
@@ -419,10 +419,14 @@ export class DesktopConversationService {
 		const sessions = this.ownershipCatalog
 			? await this.ownershipCatalog.filterUserSessions(catalogSessions)
 			: catalogSessions;
+		// agentMode 批量随列表下发（ADR-0151 决策 6）：每个会话目录只读一份 agent-modes.json，
+		// 版块/侧栏过滤与徽章都以此为准，不在渲染层产生第二个模式事实源。
+		const agentModes = await readSessionAgentModes(sessions.map((session) => session.path));
 		return Promise.all(
 			sessions.map(async (session) => ({
 				...session,
 				access: (await this.runtime.resolveSessionAccess(session.path)) ?? UNAVAILABLE_RUNTIME_SESSION_ACCESS,
+				...(agentModes.has(session.path) ? { agentMode: agentModes.get(session.path) } : {}),
 			})),
 		);
 	}

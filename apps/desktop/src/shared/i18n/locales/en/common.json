@@ -957,7 +957,8 @@
 			"plugins": "Plugins",
 			"settings": "Settings",
 			"project": "Project Details",
-			"chat": "Chat"
+			"chat": "Chat",
+			"allstarDev": "Allstar Dev"
 		},
 		"sidebarTrigger": {
 			"open": "Sidebar",

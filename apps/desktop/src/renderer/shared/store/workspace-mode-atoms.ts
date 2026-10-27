@@ -6,8 +6,8 @@ import { atom, getDefaultStore } from "jotai";
  * coding 是「Allstar自主开发」版块（原「代码」档）：会话右栏保持执行/预览面板；
  * work（文档与研究）把会话右栏换成 Plan/Sources/Artifacts/Review 插槽面板，是默认档。
  * 档位是项目级偏好，只在新会话创建时决定解释模式与工具面，不改变已开会话、不中断执行；
- * 写入一律走 {@link enterWorkspaceSection}（「新会话」类入口回落 work，侧边栏
- * 「Allstar自主开发」入口进入 coding）。
+ * 写入一律走 {@link enterWorkspaceSection}（「新会话」类入口回落 work；coding 由版块内的
+ * 创建动作写入——版块入口本身已改为导航 /allstar 首页，不再直接落新会话页）。
  */
 
 export const WORKSPACE_MODES = ["coding", "work"] as const;

@@ -73,7 +73,8 @@ function sessionListsEqual(a: readonly SessionInfo[], b: readonly SessionInfo[])
 			left.firstMessage !== right.firstMessage ||
 			left.modifiedAt !== right.modifiedAt ||
 			left.cwd !== right.cwd ||
-			left.fileSizeBytes !== right.fileSizeBytes
+			left.fileSizeBytes !== right.fileSizeBytes ||
+			left.agentMode !== right.agentMode
 		) {
 			return false;
 		}

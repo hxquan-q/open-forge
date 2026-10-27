@@ -5,6 +5,7 @@ import type { SidebarNavItem } from "@vetta-org/theme-sdk/sidebar";
 import {
 	loadAbilitiesPage,
 	loadAgentCenterPage,
+	loadAllstarDevHomePage,
 	loadAutomationPage,
 	loadBatchTasksPage,
 	loadKnowledgeBasePage,
@@ -17,8 +18,9 @@ import {
 type PageLoader = () => Promise<unknown>;
 
 export function navItemPageLoader(item: SidebarNavItem): PageLoader | null {
-	// 「Allstar自主开发」版块入口与「新会话」落到同一张 NewSession 页。
-	if (item.type === "new-session" || item.key === ALLSTAR_DEV_NAV_KEY) return loadNewSessionPage;
+	// 「Allstar自主开发」版块入口落到版块首页（/allstar）。
+	if (item.key === ALLSTAR_DEV_NAV_KEY) return loadAllstarDevHomePage;
+	if (item.type === "new-session") return loadNewSessionPage;
 	if (item.workspaceView) return loadPluginWorkspaceViewRoute;
 	if (item.settingsTab) return loadSettingsPage;
 	switch (item.path) {

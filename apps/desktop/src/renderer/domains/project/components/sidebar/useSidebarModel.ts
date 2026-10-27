@@ -21,7 +21,7 @@ import {
 	workspaceViewNavKey,
 	workspaceViewPath,
 } from "../../../plugins/runtime/workspace-view-registry";
-import { useAllstarDevNavigation, useNewChatNavigation } from "../../hooks/useNewChatNavigation";
+import { useNewChatNavigation } from "../../hooks/useNewChatNavigation";
 import { toSidebarNavBadge } from "./sidebar-nav-badge";
 import {
 	ALLSTAR_DEV_NAV_KEY,
@@ -290,7 +290,6 @@ export function useSidebarModel({
 	const [moreOpen, setMoreOpen] = useState(false);
 
 	const onNewChat = useNewChatNavigation();
-	const onAllstarDev = useAllstarDevNavigation();
 	const search = useSearch({ strict: false }) as { cwd?: string };
 	const workspaceModeMap = useAtomValue(workspaceModeByProjectAtom);
 	const activeSession = useAtomValue(activeSessionAtom);
@@ -300,10 +299,12 @@ export function useSidebarModel({
 		sectionEntryButtonRef.current = element;
 	}, []);
 	/**
-	 * 「Allstar自主开发」版块入口：「更多」之后的固定行，不进导航目录与布局存储。
-	 * 高亮时机：开发档的新会话页（/new-session 且上下文项目档位为 coding），或聊天页上
-	 * 正打开代码模式会话（capabilityProfile 创建时固化）。新会话页的上下文项目可能被
-	 * 页内选择器换走，这里按路由 cwd 近似——入口点击总是带 cwd 落到新会话页，够用。
+	 * 「Allstar自主开发」版块入口：「更多」之后的固定行，不进导航目录与布局存储；点击
+	 * 进入版块首页（/allstar，ADR-0151 决策 5——coding 导航由版块内容区承载，侧栏不加载
+	 * coding 内容）。高亮时机：版块任意路由（/allstar），开发档的新会话页（/new-session 且
+	 * 上下文项目档位为 coding——版块内发起创建的直达态），或聊天页上正打开代码模式会话
+	 * （capabilityProfile 创建时固化）。新会话页的上下文项目可能被页内选择器换走，这里按
+	 * 路由 cwd 近似，够用。
 	 */
 	const sectionEntryNavItem = useMemo<SidebarNavItem>(
 		() => ({
@@ -313,6 +314,7 @@ export function useSidebarModel({
 			labelKey: "sidebar.nav.allstarDev",
 			icon: "icon-[solar--code-linear]",
 			active:
+				currentPath === "/allstar" ||
 				(currentPath === "/new-session" &&
 					readWorkspaceModeFor(workspaceModeMap, decodeRouteCwd(search.cwd) ?? defaultConversationCwd) ===
 						"coding") ||
@@ -536,7 +538,7 @@ export function useSidebarModel({
 		(item: SidebarNavItem) => {
 			// 版块入口先于类型分发：它是 key 约定的 custom 项，没有 path/settingsTab/workspaceView。
 			if (item.key === ALLSTAR_DEV_NAV_KEY) {
-				onAllstarDev();
+				void navigate({ to: "/allstar" });
 				return;
 			}
 			if (item.type === "new-session") {
@@ -555,7 +557,7 @@ export function useSidebarModel({
 			}
 			if (item.path) void navigate({ to: item.path });
 		},
-		[navigate, onAllstarDev, onNewChat],
+		[navigate, onNewChat],
 	);
 
 	return {
