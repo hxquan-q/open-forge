@@ -6,8 +6,8 @@ priority: P1
 owner: coordinator
 source: user-request
 created: 2026-10-02
-updated: 2026-10-02
-related_plan: [PLAN-0014]
+updated: 2026-10-28
+related_plan: [PLAN-0014, PLAN-0025]
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -20,6 +20,8 @@ related_plan: [PLAN-0014]
 ## 范围
 
 择优引入稳定性、模型兼容、资源/MCP/团队准备、目标模式、消息展示、项目工具与 Windows 沙盒完整性；逐项判定 adopt/adapt/retain/defer。实施依赖与文件证据以 [PLAN-0014](../plans/PLAN-0014-selective-upstream-nonmobile.md) 为准。
+
+2026-10-28 新增“MCP 重试 → 画布卡顿、闪白修复 → 真实图片素材 → 设计方向与质量检查”串行批次，见 [PLAN-0025](../plans/PLAN-0025-upstream-mcp-design-adaptation.md)；本次仅立项，尚未实施。
 
 ## 不做什么
 

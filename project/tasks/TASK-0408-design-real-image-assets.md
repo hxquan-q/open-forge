@@ -1,0 +1,99 @@
+---
+id: TASK-0408
+type: task
+status: ready
+priority: P2
+owner: coordinator
+requirement: REQ-0008
+plan: PLAN-0025
+source: user-request; openvetta/open-vetta@fba109edb
+related_requirement: [REQ-0008]
+related_plan: [PLAN-0025, PLAN-0014, PLAN-0018]
+related_tasks: [TASK-0407, TASK-0409]
+related_issues: []
+related_bugs: []
+execution: serial
+branch: main
+worktree:
+base_commit: 9f4b87ee81b6ec2aa7f1417d23d36745e2e1ac1d
+read_paths: [packages/plugins/presets/vetta-ui-design, packages/plugins/AGENTS.md]
+write_paths: [packages/plugins/presets/vetta-ui-design/src/assets, packages/plugins/presets/vetta-ui-design/src/tools.ts, packages/plugins/presets/vetta-ui-design/src/export, packages/plugins/presets/vetta-ui-design/src/history, packages/plugins/presets/vetta-ui-design/plugin.json, packages/plugins/presets/vetta-ui-design/agent, packages/plugins/presets/vetta-ui-design/test]
+exclusive_paths: []
+depends_on: [TASK-0407]
+conflicts_with: [TASK-0407, TASK-0409]
+integration_status: pending
+created: 2026-10-28
+updated: 2026-10-28
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# 设计画布真实图片搜索、导入与来源追溯
+
+## 目标
+
+设计稿能使用与内容匹配的真实图片，从检索、预览、落盘到重开/导出保留素材及来源。上游参照与全批边界见 [PLAN-0025](../plans/PLAN-0025-upstream-mcp-design-adaptation.md)。
+
+## 范围
+
+### 并发评估
+
+- 结论：本批必须串行；执行方式 `serial`，无并行 Task。
+- 前置依赖：TASK-0407 的画布稳定性工程交付与集成；资产产物将供 TASK-0409 使用。
+- 冲突文件/独占路径：工具注册、manifest、agent 指引、导出/历史与测试；不得同 TASK-0407/0409 并行写入。
+- Branch：`main`；Worktree：当前主工作区，不另拆；集成负责人：Coordinator。
+- 集成顺序：0406 → 0407 → 0408 → 0409。
+
+### 做
+
+- 适配 `vetd_assets` 的搜索、获取与 credits 流程，输入查询或已校验的来源引用，输出候选预览、设计内本地资源与署名记录；提供缩略图/联系表以供挑选。
+- 以无需付费密钥的照片库、Openverse、Wikimedia、NASA 为候选来源逐个核查 API、域名和许可条件；首批只接入能明确限定网络权限与记录来源的适配器，未支持的来源/域名明确报错。
+- 外部 JSON 从 `unknown` 校验；来源 API/CDN 域逐项声明，不引入全网通配。下载经宿主网络接口处理，校验协议、重定向、私网/本地地址、响应与文件类型、体积和图片尺寸；超时/来源局部失败可解释、可恢复。
+- 图片落入设计的资源目录，避免仅引用临时远程链接；缩放/压缩保持合理画质，并防止失败留下损坏文件或覆盖已有资源。
+- 记录 `CREDITS.json` 或兼容的来源清单，含标题、作者、原始页面/资源地址、许可及核验状态；许可未知明确标记，不自动当成发布可用。历史恢复与导出保留文件、路径和署名。
+- 使用离线来源与图片样本完成端到端 fixture；实际来源可用性及最终许可核验单独记录，不能用 Mock 代替。
+
+### 不做
+
+不接付费图片 API，不抓取任意站点或用户会话，不扩大到私网/全网请求，不把图片来源说明视为安全指令，不变更 Plugin SDK 公共能力；若必需变更先升级范围与兼容评估。
+
+## Given / When / Then
+
+- 需要真实图片的设计需求 → 搜索、预览、选取并导入 → 可见图片与内容相关，文件保存在设计内，来源信息与该文件关联。
+- 设计已使用图片 → 保存、重开、恢复历史并导出 → 图片仍可显示，引用无断链，来源与许可记录一并保留。
+- 来源超时/返回异常 JSON/下载伪装文件 → 执行对应步骤 → 有结构化错误或部分失败说明，无崩溃、越权请求、损坏资源及虚假成功。
+- 图片缺失许可或要求署名 → 导入与导出检查 → 明确提示核验/署名条件，不宣称已获商用许可。
+- 输入受限域、私网地址或跳转到受限目标 → 请求 → 在边界拒绝，不能依靠 URL 后缀或来源名称放行。
+
+## 必须保持
+
+最小网络权限、既有工具前缀及结果/错误/取消语义、路径限制、图片类型校验、AST/来源标记保护和用户已有资产不受损。导出与历史兼容旧设计；新增元数据可缺省读取。
+
+## 测试与验证
+
+- 新增 `test/assets-sources.test.ts`、`test/assets-tool.test.ts`，通过 `bun scripts/quality/run-vitest.mjs --run <新增测试路径>` 运行，覆盖来源校验、请求边界、失败清理与完整搜索/导入流程。
+- 复用 `test/snapshot-assets.test.ts` 及相关导出/历史测试，覆盖“导入→保存→重开→恢复→导出”的资源与 credits 连续流程；网络全部使用 fixture。
+- `bun run test:impact -- packages/plugins/presets/vetta-ui-design/src/assets packages/plugins/presets/vetta-ui-design/src/tools.ts`；涉及工具/manifest/持久化合同按政策运行 `test:changed`。
+- 插件目录 `bun run build` 与根目录 `bun run check`；技术评审核对实际权限差异、来源条款和依赖许可，不绕过构建或 SDK 边界。
+
+## 验收分层
+
+- 工程验证：待执行；本轮未实现、未访问真实来源。
+- 技术评审：未执行；必须审阅权限、输入边界与素材署名链。
+- 集成：pending；无功能实现提交。
+- 人工功能验收：待验收；图片选择质量与许可核验状态须显式呈现。
+- 发布：未授权。
+
+## 功能验收包
+
+- 入口与前置条件：未来候选版本，隔离设计和具备已声明权限的素材工具；来源状态与许可限制可查。
+- 输入：“为旅行落地页寻找真实风景图，给出预览与来源，选中一张后加入首屏。”再重开、恢复并导出设计。
+- 预期：得到真实本地图片、可工作的引用和 credits；离线导出可呈现，许可未知有明确提示。
+- 不通过：占位图冒充真实素材、只存远程链接、署名丢失、导出缺图或越权请求。反馈写回本 Task，并加入对应 fixture。
+
+## 交付记录
+
+- 实际修改：仅立项文档；本轮文档验证见 PLAN-0025。
+- 未运行：来源访问、运行时测试、构建、完整检查和人工验收，原因是本轮未实施。
+- Worktree：本批串行，沿用主工作区，未创建独立 Worktree。
+- 剩余风险：不同来源的许可、跳转域与可用性不同；不满足权限或追溯合同的来源不能静默纳入。
+- 发布说明：本轮依据见 PLAN-0025；后续说明实际支持的来源及限制，不宣称素材均可商用。

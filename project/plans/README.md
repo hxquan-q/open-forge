@@ -7,6 +7,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0025` | 上游 MCP 恢复与设计画布能力适配 | ready | [方案](PLAN-0025-upstream-mcp-design-adaptation.md)、REQ-0008；TASK-0406 → 0407 → 0408 → 0409 串行，固定上游 v0.5.68 参照，仅立项、未实施 |
 | `PLAN-0023` | 第一期个人产品平台：账号/Web中心、Skill/MCP市场、官网文档与下载镜像 | draft | [r4方案](PLAN-0023-product-platform-backoffice.md)、[REQ-0029](../requirements/REQ-0029-product-backoffice-and-licensing.md)、[RESEARCH-0041](../research/RESEARCH-0041-product-backoffice-and-enterprise-control.md)；支付不考虑，企业/私有化后置，未实施 |
 | `PLAN-0022` | Pi 生态接入与原生插件演进 | draft | [方案](PLAN-0022-pi-ecosystem-and-plugin-evolution.md)、[REQ-0028](../requirements/REQ-0028-pi-ecosystem-and-plugin-evolution.md)、[RESEARCH-0040](../research/RESEARCH-0040-pi-extension-ecosystem-compatibility.md)；版本化兼容、正常入口、显式信任及安装/加载恢复，未实施 |
 | `PLAN-0024` | Agent 内核与 Team 执行性能：证据驱动优化 | done | [方案](PLAN-0024-agent-kernel-team-execution-performance.md)、REQ-0002/0006；TASK-0394–0403，固定一手参照、隔离基准、状态投影/通知/哈希吞吐，真实 Provider 不运行 |
