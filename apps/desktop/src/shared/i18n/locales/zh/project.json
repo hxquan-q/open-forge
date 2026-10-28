@@ -346,7 +346,8 @@
 			"projects": {
 				"title": "开发项目",
 				"newSession": "新建开发会话",
-				"more": "还有 {{count}} 条"
+				"more": "还有 {{count}} 条",
+				"openProject": "打开已有项目"
 			},
 			"empty": {
 				"title": "还没有开发会话",

@@ -19,6 +19,7 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	emptyTitle: "no sessions",
 	emptyHint: "pick a project above",
 	emptyProjectLabel: "pick project",
+	openProject: "open project",
 };
 
 function model(overrides: Partial<AllstarDevHomePageModel> = {}): AllstarDevHomePageModel {
@@ -31,6 +32,7 @@ function model(overrides: Partial<AllstarDevHomePageModel> = {}): AllstarDevHome
 		onSelectProject: vi.fn(),
 		onOpenSession: vi.fn(),
 		onStartNewSession: vi.fn(),
+		onOpenExistingProject: vi.fn(),
 		...overrides,
 	};
 }
@@ -66,6 +68,7 @@ describe("AllstarDevHomePageView", () => {
 						{
 							cwd: "/proj/a",
 							projectName: "a",
+							registered: true,
 							totalSessions: 6,
 							sessions: [
 								{ path: "/shard/a/a1.jsonl", title: "修登录缺陷" },
@@ -75,6 +78,7 @@ describe("AllstarDevHomePageView", () => {
 						{
 							cwd: "/proj/b",
 							projectName: "b",
+							registered: true,
 							totalSessions: 1,
 							sessions: [{ path: "/shard/b/b1.jsonl", title: "环境配置" }],
 						},

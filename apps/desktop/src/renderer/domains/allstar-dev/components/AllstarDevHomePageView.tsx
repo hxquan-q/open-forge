@@ -45,10 +45,20 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 								onOpenSession={model.onOpenSession}
 							/>
 						))}
+						{/* ADR-0151 决策 7：一键归入版块的空卡片（打开已有项目入口）。 */}
+						<AllstarDevAddProjectCardView label={model.labels.openProject} onClick={model.onOpenExistingProject} />
 					</div>
 				)}
 			</section>
 			<div className="flex items-center justify-center gap-2.5 border-t border-border/40 pt-4">
+				<Button
+					variant="outline"
+					onClick={model.onOpenExistingProject}
+					title={model.labels.openProject}
+				>
+					<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
+					{model.labels.openProject}
+				</Button>
 				<Select value={model.selectedCwd} onValueChange={model.onSelectProject}>
 					<SelectTrigger className="w-64" aria-label={model.labels.emptyProjectLabel}>
 						<SelectValue placeholder={model.labels.emptyProjectLabel} />
@@ -89,24 +99,49 @@ function AllstarDevProjectCardView({
 				<h3 className="truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
 				<span className="shrink-0 text-xs text-muted-foreground">{card.totalSessions}</span>
 			</header>
-			<ul className="flex-1 border-t border-border/40">
-				{card.sessions.map((session) => (
-					<li key={session.path} className="border-b border-border/40 last:border-b-0">
-						<Button
-							variant="ghost"
-							className="h-auto w-full justify-start rounded-none px-3.5 py-2 text-left font-normal"
-							onClick={() => onOpenSession(card.cwd, session.path)}
-						>
-							<span className="truncate text-[13px] text-foreground">{session.title}</span>
-						</Button>
-					</li>
-				))}
-				{hiddenCount > 0 && (
-					<li className="border-t border-border/40 px-3.5 py-1.5 text-xs text-muted-foreground">
-						{labels.moreSessions(hiddenCount)}
-					</li>
-				)}
-			</ul>
+			{card.sessions.length === 0 ? (
+				<p className="border-t border-border/40 px-3.5 py-4 text-xs text-muted-foreground">
+					{labels.emptyHint}
+				</p>
+			) : (
+				<ul className="flex-1 border-t border-border/40">
+					{card.sessions.map((session) => (
+						<li key={session.path} className="border-b border-border/40 last:border-b-0">
+							<Button
+								variant="ghost"
+								className="h-auto w-full justify-start rounded-none px-3.5 py-2 text-left font-normal"
+								onClick={() => onOpenSession(card.cwd, session.path)}
+							>
+								<span className="truncate text-[13px] text-foreground">{session.title}</span>
+							</Button>
+						</li>
+					))}
+					{hiddenCount > 0 && (
+						<li className="border-t border-border/40 px-3.5 py-1.5 text-xs text-muted-foreground">
+							{labels.moreSessions(hiddenCount)}
+						</li>
+					)}
+				</ul>
+			)}
 		</article>
+	);
+}
+
+function AllstarDevAddProjectCardView({
+	label,
+	onClick,
+}: {
+	label: string;
+	onClick: () => void;
+}): JSX.Element {
+	return (
+		<Button
+			variant="outline"
+			className="flex h-auto w-60 shrink-0 flex-col items-center justify-center gap-2 border-dashed px-3.5 py-6 text-muted-foreground"
+			onClick={onClick}
+		>
+			<span aria-hidden className="icon-[solar--add-folder-linear] h-8 w-8 text-muted-foreground/60" />
+			<span className="text-xs">{label}</span>
+		</Button>
 	);
 }

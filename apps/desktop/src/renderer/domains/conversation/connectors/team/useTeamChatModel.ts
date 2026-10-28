@@ -359,7 +359,7 @@ export function useTeamChatModel(
 			if (!mounted || eventSessionId !== session.id) return;
 			// 演示定稿：成员的写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签
 			// 热跟随（与普通会话的 useSessionEventController 同一 atom，跨宿主形态生效）。
-			if (event.type === "conversation.agent-message-event" && event.event.type === "tool.start") {
+			if (event.type === "desktop.team-tool-execution" && event.event.type === "start") {
 				const editTarget = aiEditTargetFromToolCall(
 					event.event.toolName,
 					event.event.args,

@@ -39,6 +39,29 @@ import { useAllstarDevHomePageModel } from "./useAllstarDevHomePageModel";
 
 const store = getDefaultStore();
 
+/** 版块册快照；各用例自行覆写返回值。 */
+const allstarSnapshot = {
+	workspacePath: "",
+	projects: [],
+	archivedProjects: [],
+	allstarProjects: [] as readonly { path: string; name?: string; id?: string }[],
+	allstarArchivedProjects: [],
+};
+
+beforeEach(() => {
+	Object.defineProperty(window, "vetta", {
+		configurable: true,
+		writable: true,
+		value: {
+			project: {
+				list: vi.fn(async () => allstarSnapshot),
+				openAllstar: vi.fn(async () => ({ path: "/x" })),
+			},
+			dialog: { selectFolder: vi.fn(async () => null) },
+		},
+	});
+});
+
 function session(overrides: Partial<SessionInfo> & { path: string }): SessionInfo {
 	return {
 		id: overrides.path,

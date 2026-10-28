@@ -28,6 +28,8 @@ export interface AllstarDevCardSession {
 export interface AllstarDevProjectCard {
 	/** 项目根（sessionsMap 的 bucket key），新建/打开会话都以此为 cwd。 */
 	readonly cwd: string;
+	/** ADR-0151：是否已登记版块册（allstarProjects）。false = 仅有 coding 会话但未归册。 */
+	readonly registered: boolean;
 	readonly projectName: string;
 	readonly sessions: readonly AllstarDevCardSession[];
 	/** 该项目的 coding 会话总数（超过展示上限时用于「还有 N 条」）。 */
@@ -45,6 +47,7 @@ export interface AllstarDevHomePageModel {
 		readonly emptyTitle: string;
 		readonly emptyHint: string;
 		readonly emptyProjectLabel: string;
+		readonly openProject: string;
 	};
 	/** 按项目分组的开发会话卡片，按最近活跃排序；空 = 尚无任何 coding 会话。 */
 	readonly projectCards: readonly AllstarDevProjectCard[];
@@ -54,6 +57,8 @@ export interface AllstarDevHomePageModel {
 	onSelectProject: (cwd: string) => void;
 	onOpenSession: (cwd: string, sessionPath: string) => void;
 	onStartNewSession: (cwd: string) => void;
+	/** ADR-0151 决策 7：打开已有项目 = 在版块册登记（弹系统目录选择器）。 */
+	onOpenExistingProject: () => void;
 }
 
 /**
@@ -78,25 +83,58 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	const sessionsMap = useAtomValue(sessionsMapAtom);
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
 
+	// ADR-0151 第二册：从主进程拉版块册清单（config.allstarProjects）。
+	// 挂载时拉一次；openAllstar / removeAllstar 后手动 refresh。
+	const [allstarProjects, setAllstarProjects] = useState<readonly { cwd: string; name?: string }[]>([]);
+	const [allstarVersion, setAllstarVersion] = useState(0);
+	const refreshAllstar = useCallback(() => setAllstarVersion((v) => v + 1), []);
+	useEffect(() => {
+		// allstarVersion 是手动刷新的重触发哨兵，本身不参与逻辑。
+		void allstarVersion;
+		let cancelled = false;
+		void window.vetta.project
+			.list()
+			.then((snapshot) => {
+				if (!cancelled) setAllstarProjects(snapshot.allstarProjects.map((e) => ({ cwd: e.path, name: e.name })));
+			})
+			.catch(() => {
+				// 拉不到版块册（非阻断性）：退化为仅会话池派生卡片，不影响首页可用。
+				if (!cancelled) setAllstarProjects([]);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [allstarVersion]);
+
 	const projectCards = useMemo<AllstarDevProjectCard[]>(() => {
 		interface Group {
 			readonly projectName: string;
 			readonly sessions: Array<AllstarDevCardSession & { modifiedAt: number }>;
 			latestModifiedAt: number;
 		}
+		const registeredSet = new Set(allstarProjects.map((p) => p.cwd));
 		const groups = new Map<string, Group>();
+		const ensureGroup = (bucketCwd: string, fallbackName?: string): Group => {
+			let group = groups.get(bucketCwd);
+			if (!group) {
+				group = {
+					projectName:
+						fallbackName ??
+						allstarProjects.find((p) => p.cwd === bucketCwd)?.name ??
+						getProjectDisplayName(bucketCwd, defaultConversationCwd),
+					sessions: [],
+					latestModifiedAt: 0,
+				};
+				groups.set(bucketCwd, group);
+			}
+			return group;
+		};
+		// 已归册的项目即使没有 coding 会话也出现（空卡片）。
+		for (const entry of allstarProjects) ensureGroup(entry.cwd, entry.name);
 		for (const [bucketCwd, sessions] of sessionsMap) {
 			for (const session of sessions) {
 				if (session.agentMode !== "coding") continue;
-				let group = groups.get(bucketCwd);
-				if (!group) {
-					group = {
-						projectName: getProjectDisplayName(bucketCwd, defaultConversationCwd),
-						sessions: [],
-						latestModifiedAt: 0,
-					};
-					groups.set(bucketCwd, group);
-				}
+				const group = ensureGroup(bucketCwd);
 				group.latestModifiedAt = Math.max(group.latestModifiedAt, session.modifiedAt);
 				group.sessions.push({
 					path: session.path,
@@ -109,6 +147,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			.map(([cwd, group]) => ({
 				cwd,
 				projectName: group.projectName,
+				registered: registeredSet.has(cwd),
 				sessions: [...group.sessions]
 					.sort((left, right) => right.modifiedAt - left.modifiedAt)
 					.slice(0, CARD_SESSIONS_LIMIT)
@@ -118,7 +157,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			}))
 			.sort((left, right) => right.latestModifiedAt - left.latestModifiedAt)
 			.map(({ latestModifiedAt: _latest, ...card }) => card);
-	}, [defaultConversationCwd, sessionsMap]);
+	}, [allstarProjects, defaultConversationCwd, sessionsMap]);
 
 	// 空态引导的选择器暂用现有项目清单（含默认「对话」项目）；M1-3 版块册落地后替换为
 	// 版块册条目 + 打开已有目录登记。
@@ -175,6 +214,18 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		[navigate],
 	);
 
+	// ADR-0151 决策 7：版块内"打开已有项目"= 在版块册登记条目。系统对话框选目录 →
+	// 主进程校验 → 落 config.allstarProjects + 信任种子 + 刷新清单。
+	const onOpenExistingProject = useCallback(() => {
+		void window.vetta.dialog.selectFolder().then((path) => {
+			if (!path) return;
+			void window.vetta.project
+				.openAllstar({ path })
+				.then(refreshAllstar)
+				.catch(() => undefined);
+		});
+	}, [refreshAllstar]);
+
 	return {
 		loading: !projectsInitialized,
 		labels: {
@@ -186,6 +237,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			emptyTitle: t("allstarDev.home.empty.title"),
 			emptyHint: t("allstarDev.home.empty.hint"),
 			emptyProjectLabel: t("allstarDev.home.empty.projectLabel"),
+			openProject: t("allstarDev.home.projects.openProject"),
 		},
 		projectCards,
 		projects: projectOptions,
@@ -193,5 +245,6 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		onSelectProject,
 		onOpenSession,
 		onStartNewSession,
+		onOpenExistingProject,
 	};
 }

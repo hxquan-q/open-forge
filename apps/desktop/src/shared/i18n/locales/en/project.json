@@ -347,7 +347,8 @@
 			"projects": {
 				"title": "Dev projects",
 				"newSession": "New dev session",
-				"more": "{{count}} more"
+				"more": "{{count}} more",
+				"openProject": "Open project"
 			},
 			"empty": {
 				"title": "No dev sessions yet",
