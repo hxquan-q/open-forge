@@ -1,7 +1,7 @@
 ---
 id: TASK-0411
 type: task
-status: verifying
+status: done
 priority: P1
 owner: runtime-subagents/coding-agent
 requirement: REQ-0002
@@ -14,16 +14,16 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0411-subagent-admission-observation
-worktree: ../open-forge-wt/task-0411-subagent-admission-observation
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 6bb27d048c5dccade7decafde58f4eeb8ec6686c
 read_paths: [packages/runtime-subagents/, packages/coding-agent/, packages/runtime-core/src/observation/, docs/adr/0087-tool-catalog-generations-and-subagent-observation-boundary.md, project/]
 write_paths: [packages/runtime-subagents/src/contracts.ts, packages/runtime-subagents/src/subagent-dispatcher.ts, packages/runtime-subagents/src/subagent-pool.ts, packages/runtime-subagents/src/subagent-run.ts, packages/runtime-subagents/src/scheduling-observation.ts, packages/runtime-subagents/test/coordinator-admission-observation.test.ts, packages/runtime-subagents/test/support/fixture.ts, packages/runtime-subagents/README.md, packages/coding-agent/src/composition/subagent/runtime.ts, packages/coding-agent/src/composition/subagent/session-assembly.ts, packages/coding-agent/src/runtime-contracts/subagent-observability.ts, packages/coding-agent/test/composition/subagent-admission-observation.test.ts, packages/coding-agent/test/runtime-core/session-initialization-profile.test.ts]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-29
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -76,7 +76,7 @@ updated: 2026-10-28
 
 - 工程验证：隔离候选通过；实际命令和范围见交付记录。
 - 技术评审：独立只读审查已完成；P2 无 sessionFile 身份丢失已先红后绿修复，deadline/epoch 覆盖与 hook 类型已补齐，最终无未解决 P1/P2。
-- 集成：pending。
+- 集成：已合入本地 main；无冲突集成后定向影响测试 15 例与完整 bun run check exit 0；本记录随该 Task merge 提交绑定，不冒充已推送或发布。
 - 人工功能验收：不适用；这是不改变产品交互/模型行为的内部诊断合同，按事件、隐私、兼容回归及独立审查验收，不声称用户已确认。
 - 发布：稳定发布未授权。
 
@@ -96,3 +96,5 @@ updated: 2026-10-28
 - 检查：`check:quick` 和最终完整 `bun run check` exit 0；首轮新增/改动文件声明头遗漏已修复，未放宽基线。完整检查包含 lint、五组类型与 guards/mobile lint。
 - 协作：只读调查 `/root/subagent_observation_fixture` 提供最小生产 assembly 接缝与 generation 时序；独立审查 `/root/review_subagent_admission` 复核最终实际 diff，未执行测试或写代码，不冒充跨模型家族评审。
 - 未运行/边界：跨包 `test:changed` 在组合候选执行；未授权 UI/真实 Provider，未测真实模型吞吐。`released` 只证明调度槽释放，宽限耗尽不等于物理资源退出。
+- 集成复验：main 产品 3 例/子代理 12 例通过，授权执行环境完整检查 exit 0。权限切换期间首次检查因 Desktop 增量缓存写入 EPERM 失败，使用同一命令在授权环境复跑通过，未修改源码或降低标准。
+- 发布说明：按 WAIVER-0014 暂存 .github/release-notes/fragments/v0.1.4/task-0411-subagent-admission-observation.md；0.1.3 已发布正文与 manifest 保留，未发布。跨包组合证据在 PLAN-0026 追加。

@@ -3,6 +3,35 @@ export type SubagentTypeId = string;
 
 export type SubagentStatus = "queued" | "pending" | "running" | "completed" | "failed" | "interrupted";
 
+export type SubagentSchedulingPhase = "queued" | "admitted" | "rejected" | "settling" | "settle-deadline" | "released";
+
+export type SubagentSchedulingReason =
+	| "capacity"
+	| "completed"
+	| "failed"
+	| "interrupted"
+	| "cancelled-before-start"
+	| "settle-deadline"
+	| "parent-disposed";
+
+/** Diagnostic projection only: no task names, pending IDs, content, paths or persistent state. */
+export interface SubagentSchedulingEvent {
+	readonly phase: SubagentSchedulingPhase;
+	readonly reason?: SubagentSchedulingReason;
+	readonly timestamp: number;
+	readonly parentSessionId: string;
+	/** Opaque per-coordinator execution identity; stable across child ID binding and terminal generation changes. */
+	readonly admissionId?: string;
+	readonly childSessionId?: string;
+	/** Current snapshot delivery generation, which advances at terminal commit rather than admission. */
+	readonly generation?: number;
+	readonly maxConcurrent: number;
+	readonly activeCount: number;
+	readonly queuedCount: number;
+	readonly waitMs?: number;
+	readonly heldMs?: number;
+}
+
 export interface SubagentUsageSnapshot {
 	readonly input: number;
 	readonly output: number;
@@ -147,6 +176,8 @@ export interface SubagentCoordinatorOptions<TProfile = unknown> {
 	readonly onUpdate?: (agents: readonly SubagentSnapshot[]) => void;
 	readonly onDeliveryClaimed?: (marker: SubagentDeliveryMarker) => void;
 	readonly onError?: (error: unknown, operation: string) => void;
+	/** Best-effort diagnostics; callback failures never change scheduling or delivery. */
+	readonly onSchedulingEvent?: (event: SubagentSchedulingEvent) => void | Promise<void>;
 	readonly formatInitialMessage?: (snapshot: SubagentSnapshot, message: string) => string;
 	readonly clock?: { now(): number };
 	readonly idGenerator?: { next(): string };

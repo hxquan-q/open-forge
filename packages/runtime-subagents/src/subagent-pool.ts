@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SubagentSnapshot } from "./contracts.js";
 import { isTerminalStatus } from "./snapshot.js";
 import type { SubagentRun } from "./subagent-run.js";
@@ -20,6 +21,10 @@ export class SubagentPool<TProfile> {
 
 	get activeCount(): number {
 		return this.active.size;
+	}
+
+	get queuedCount(): number {
+		return this.queue.length;
 	}
 
 	get hasCapacity(): boolean {
