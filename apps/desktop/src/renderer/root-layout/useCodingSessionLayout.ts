@@ -57,6 +57,8 @@ export function useCodingSessionLayout(): void {
 		const previous = prevRef.current;
 		prevRef.current = active;
 		if (active === previous) return;
+		// 临时诊断（演示走查）：定位左栏意外弹回的写入方，定位后移除。
+		console.debug("[sidebar-diag] coding-layout edge", { active, previous });
 		if (active) {
 			store.set(sidebarCollapsedAtom, true);
 			store.set(activityPanelOpenAtom, true);
