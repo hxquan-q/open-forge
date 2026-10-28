@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 重工具的反向触发描述（改造方案 1.1）。
  *
@@ -43,6 +44,8 @@ const HEAVY_TOOLS = [
 	"vetd_notes",
 	"vetd_restore",
 	"vetd_export",
+	"vetd_direction",
+	"vetd_assets",
 ] as const;
 
 describe("重工具描述", () => {

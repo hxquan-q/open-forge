@@ -1,7 +1,7 @@
 ---
 id: TASK-0409
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -86,9 +86,9 @@ updated: 2026-10-28
 
 ## 验收分层
 
-- 工程验证：待执行；方向工具和质量诊断尚未实施。
-- 技术评审：未执行；重点为诊断有效性/误报、旧设计兼容、字体许可及提示词合同。
-- 集成：pending；无功能实现提交。
+- 工程验证：已完成（隔离工作树）。插件整包 128 文件 / 919 例通过；`bun run check`（lint 5172 文件、types、guards）、插件 `bun run build`（56 runtime 文件）exit 0；`test:changed` 中 `scripts/agents/runner.test.mjs`、`scripts/agents/integrate.test.mjs` 超时，已在 TASK-0408 工作树同一提交复现，属环境性既有失败，非本任务引入。
+- 技术评审：待独立审查；重点为诊断有效性/误报、旧设计兼容、字体许可及提示词合同。
+- 集成：pending；候选提交在 `task/TASK-0409-design-direction-quality`，未推送、未集成，等待 0407 → 0408 之后。
 - 人工功能验收：待验收；固定案例产物须单独评审，不因测试通过自动接受。
 - 发布：未授权。
 
@@ -101,8 +101,18 @@ updated: 2026-10-28
 
 ## 交付记录
 
-- 实际修改：仅立项文档；本轮文档验证见 PLAN-0025。
-- 未运行：功能/模型评估、渲染验证、构建、完整检查及视觉验收，原因是本轮未实施。
-- Worktree：本批串行，沿用主工作区，未创建独立 Worktree。
-- 剩余风险：设计审美与真实模型遵循度需人工评估，自动检查只覆盖声明的确定性合同。
-- 发布说明：本轮依据见 PLAN-0025；后续分别说明可用方向能力、检查范围及限制。
+- Worktree / 分支：`../open-forge-wt/task-0409-design-direction-quality` / `task/TASK-0409-design-direction-quality`，基于 0408 候选 `157f0906e`。
+- 实际修改（相对 0408 候选）：
+  - 引入上游 `src/direction/`（deal、deal-service、direction-file、direction-tool、fontsource、intent、library、proposal、record、sheet、topics 与 `vendor/taste-skill` 研究库）、`src/vetd/tells-probe.ts`、`test/direction-*.test.ts`、`test/create-deals-direction.test.ts`、`test/proposal-fixture.ts`、`test/skill-rules.test.ts`、`test/tells-probe.test.ts`、`references/taste/app/*.md`。
+  - `src/tools.ts`：`vetd_create` 接入发牌（`brief`/`sector`/`screens`/`keep`/`have`/`intent`）、`firstStep` 指引、方向段（`mode`/`options`/`ask`/`next`）；截图链路读取 direction tells 并追加 `tellIssues`；`vetd_status`/`vetd_screenshot` 的 `issues` 改为分档输出。
+  - `src/vetd/check-sources.ts`：新增 `THEME_PLACEHOLDER_RULE` + `checkPlaceholderTheme`，以及 `CheckSeverity`/`severityOf`/`classifyIssues` 分档（error / warning / review），只读元数据。
+  - `src/vetd/scaffold.ts`：默认 `theme.css` 换成中性灰占位并打 `vetd:placeholder-theme` 标记，去掉 indigo/slate/amber。
+  - 注册与文案：`tool-gate.ts` DESIGN_ONLY 增加 `vetd_direction`；`locales/en|zh` 增加工具名；`agent/agents/designer.md`、`SKILL.md`、`references/taste/*` 更新；`references/quality.md` 增「Check severities」与「Fixed evaluation cases and the review record」（三固定案例 + 记录模板）。
+  - 工具链：`scripts/quality/check-modified-file-notices.mjs` 的许可证白名单从根 `LICENSE` 放宽到任意 `LICENSE`，使 vendor 第三方许可证正文免声明头。
+- 验证：目标测试（check-sources / screenshot-batch-tool / direction-* ）通过；插件整包 128 文件 919 例通过；根 `bun run check` exit 0；插件 `bun run build` 生成 `release/vetta-ui-design-0.7.2.vettapkg`（56 runtime 文件）。
+- 保留限制：
+  - 真实模型与视觉验收未运行；固定案例仅提供样例请求与记录格式，无实机产物。
+  - 未联网访问真实字体/许可来源；`fontsource.ts` 的可用性来自 vendored 清单核验，不等同于运行时下载验证。
+  - 未照抄上游删除项（`src/inspector/ast-edit/*`、`shared/design-fs|entry-path|source-locator`、engine `source-tagger` 等）；上游对 `tools.ts` 的 `toNoteView` 简化未采纳，笔记锚点保持 fork 语义。
+  - 未提升插件版本或写发布说明（与 0408 一致，等 ISSUE-0007 定首发版本）。
+  - `test:changed` 的两个 `scripts/agents` 集成测试在本机 5s 超时，已在 0408 工作树同一提交复现为既有环境问题。

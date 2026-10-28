@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 设计源码的机检。
  *
@@ -14,6 +15,7 @@
 import { isFrameFile } from "../../engine/src/routes";
 import { ENGINE_PROVIDED_PACKAGES } from "../engine/engine-files";
 import { parseFrameMeta } from "./frame-meta";
+import { PLACEHOLDER_THEME_MARK } from "./scaffold";
 
 export interface SourceIssue {
 	/** 相对设计包目录的路径，如 `frames/login.tsx`。 */
@@ -22,6 +24,54 @@ export interface SourceIssue {
 	line: number | null;
 	rule: string;
 	message: string;
+}
+
+/**
+ * 检查结果分三档：`error` 会直接坏掉或没有可执行的内容（语法、缺包、占位主题、
+ * 未选方向），必须先修；`warning` 是量到的具体缺陷，改法明确；`review` 是审美判断，
+ * 工具只能提示，留给人和模型的视觉评审。分档只读，不阻塞画布。
+ */
+export type CheckSeverity = "error" | "warning" | "review";
+
+export interface ClassifiedIssue extends SourceIssue {
+	severity: CheckSeverity;
+}
+
+const RULE_SEVERITY: Record<string, CheckSeverity> = {
+	// error：不修就产不出可信的界面
+	"syntax-error": "error",
+	"uninstalled-import": "error",
+	"unknown-icon-set": "error",
+	"custom-icon-component": "error",
+	"undefined-theme-token": "error",
+	"uninstalled-css-import": "error",
+	"font-not-imported": "error",
+	"frame-size-missing": "error",
+	"theme-placeholder": "error",
+	"direction-not-chosen": "error",
+	// warning：量到的缺陷，改法明确
+	"fake-router": "warning",
+	"anchor-navigation": "warning",
+	"hardcoded-color": "warning",
+	"viewport-height": "warning",
+	"minified-source": "warning",
+	"font-family-mismatch": "warning",
+	"icon-missing": "warning",
+	"bg-token-undefined": "warning",
+	"text-clipped": "warning",
+	"unintended-wrap": "warning",
+	"edge-misaligned": "warning",
+};
+
+/** 规则 → 档位。`tell-*` 是审美判断，没登记的规则按 warning 处理。 */
+export function severityOf(rule: string): CheckSeverity {
+	if (rule.startsWith("tell-")) return "review";
+	return RULE_SEVERITY[rule] ?? "warning";
+}
+
+/** 给检查出的 issue 标上档位；只读，不改原数组。 */
+export function classifyIssues(issues: readonly SourceIssue[]): ClassifiedIssue[] {
+	return issues.map((issue) => ({ ...issue, severity: severityOf(issue.rule) }));
 }
 
 export interface SourceFile {
@@ -434,6 +484,25 @@ function checkFrameSize(file: SourceFile, others: readonly SourceFile[]): Source
 	};
 }
 
+export const THEME_PLACEHOLDER_RULE = "theme-placeholder";
+
+/**
+ * 画框已经开写，theme.css 却还是脚手架的占位：配色字体没人定过，画出来的就是默认样子。
+ * 整份设计级的问题，截图时报给每一帧。
+ */
+function checkPlaceholderTheme(themeCss: string, files: readonly SourceFile[]): SourceIssue[] {
+	if (!themeCss.includes(PLACEHOLDER_THEME_MARK) || !files.some((file) => frameIdOf(file.path) !== null)) return [];
+	return [
+		{
+			file: "theme.css",
+			line: 1,
+			rule: THEME_PLACEHOLDER_RULE,
+			message:
+				"theme.css is still the scaffold's neutral placeholder, so every frame sits on colours and type nobody chose. Write the direction's theme.css over the whole file (vetd_direction `show` reprints it), or for a slide or poster set your own palette and faces.",
+		},
+	];
+}
+
 /**
  * 每条规则每个文件只报一次：同一个毛病在一个文件里往往命中几十行，全报出来会把
  * vetd_status 的返回撑爆，而 agent 需要的信息第一条就给全了。
@@ -448,7 +517,11 @@ export function checkSources(
 	const installed = new Set([...ENGINE_PACKAGES, ...designDependencies]);
 	const rules = rulesFor(installed);
 	if (themeCss !== null) {
-		issues.push(...checkThemeImports(themeCss, installed), ...checkFontTokens(themeCss, files, installed));
+		issues.push(
+			...checkThemeImports(themeCss, installed),
+			...checkFontTokens(themeCss, files, installed),
+			...checkPlaceholderTheme(themeCss, files),
+		);
 	}
 	for (const file of files) {
 		const sizeIssue = checkFrameSize(file, files);
