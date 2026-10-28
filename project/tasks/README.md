@@ -56,7 +56,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0365` | `verifying` | PLAN-0006 | BUG-0145：点选改在 pointerdown 打开元素旁批注。定向 13 例与 `check:quick` 全绿。主进程脚本，需重启 dev 后实机看。串行。本地 main 已提交，未推送。 |
 | `TASK-0391` | `verifying` | — | 新增 macOS 测试包专用 workflow：手动 dispatch，只出未签名 DMG，不跑 quality / Win / Linux leg 与 packaged E2E；YAML 结构已校验，首次 dispatch 即真实验证；需先入 dev 并随 `dev → main` 晋升才出现运行按钮；serial。 |
 | `TASK-0362` | `verifying` | — | BUG-0144：内置浏览器占位洞跟着布局与窗口缩放走到终值。用户已确认侧栏与缩窗可用。定向 34 例通过。主工作区串行。 |
-| `TASK-0361` | `verifying` | — | REQ-0026 / ADR-0147：项目迁移包已实施——OFAR v2 workspace 帧、preview/apply 两段式导入（cwd 重写+指纹按落盘形态）、产物打包恢复（默认不覆盖）、迁移向导 UI 与 i18n；定向 73 例、impact 119 例、完整 check 全绿；六提交本地 main 未推送；顺带修复 TASK-0349 菜单接线缺口；待真实双目录迁移人工验收；serial。 |
+| `TASK-0361` | `verifying` | — | [项目会话与产物跨设备迁移优化](TASK-0361-project-migration-archive.md)：REQ-0026；原生历史 canonical/标题/cwd 修复，安全产物/附件恢复与幂等；定向 75、UI 29+5、impact direct50/related78 及完整 check 全绿，独立复审两 P2 已关闭；本地 main 串行集成，待物理双设备/人工接受；serial。 |
 | `TASK-0360` | `verifying` | PLAN-0006 | 用户要求 UI 测试。正在用隔离 Fresh 实例核对页内批注。不附着日常 Desktop。 |
 | `TASK-0352` | `blocked` | PLAN-0020 | Windows沙箱制品完整性与运行时定位；来源BUG-0137，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0353` | `verifying` | PLAN-0020 | 消息历史与live合并身份去重及可读诊断；来源BUG-0123，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |

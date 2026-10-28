@@ -3,22 +3,25 @@
  * IPC and UI stay thin; this module owns file I/O and conflict policy.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { resolveConversationFilePath } from "@vetta/runtime-node/conversation";
 import {
 	decodeSessionArchive,
 	encodeSessionArchive,
 	fingerprintSessionPayload,
+	isConversationFileHeader,
 	resolveSessionArchiveImportConflict,
+	SESSION_ARCHIVE_ERROR_CODES,
 	SessionArchiveError,
 	type SessionArchiveImportConflictResult,
 	type SessionArchiveSessionPayload,
-	safePath,
 } from "@vetta/runtime-storage/conversation";
 import { app, dialog } from "electron";
 import { DEFAULT_CONVERSATION_CWD } from "../config/desktop-config-store.js";
 import { mainT } from "../i18n/index.js";
 import { getAppLogger } from "../logger.js";
+import { restoreArchiveAttachments, restoreArchiveFile } from "./archive-file-restore.js";
 import { emitConversationListChanged } from "./conversation-list-events.js";
 import { resolveSessionListCwd } from "./session-paths.js";
 
@@ -84,31 +87,49 @@ interface ParsedConversationFile {
 	readonly records: readonly unknown[];
 }
 
-/**
- * Parse a raw conversation jsonl into archive payload fields. Bad lines degrade to a
- * content hash so the fingerprint still changes with the file instead of throwing.
- */
+/** Extract metadata without changing journal records; a backup must not silently discard corrupt lines. */
 export function parseConversationFile(content: string, fallbackSessionId: string): ParsedConversationFile {
 	const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0);
 	const records: unknown[] = [];
 	let sessionId = fallbackSessionId;
 	let name: string | undefined;
 	let cwd: string | undefined;
-	for (const line of lines) {
+	for (const [index, line] of lines.entries()) {
+		let value: unknown;
 		try {
-			const parsed = JSON.parse(line) as Record<string, unknown>;
-			records.push(parsed);
-			if (parsed.type === "session" && typeof parsed.id === "string") {
-				sessionId = parsed.id;
-			}
-			if (parsed.type === "session_info" && typeof parsed.name === "string") {
-				name = parsed.name;
-			}
-			if (parsed.type === "session" && typeof parsed.cwd === "string") {
-				cwd = parsed.cwd;
-			}
+			value = JSON.parse(line) as unknown;
 		} catch {
-			records.push({ rawLineSha256: createHash("sha256").update(line).digest("hex") });
+			throw new SessionArchiveError(
+				SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME,
+				mainT("sessionArchive.invalidRecord", { file: fallbackSessionId, line: index + 1 }),
+			);
+		}
+		records.push(value);
+		if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
+		const parsed = value as Record<string, unknown>;
+		if (isConversationFileHeader(value)) {
+			sessionId = value.sessionId;
+			if ("cwd" in value && typeof value.cwd === "string") cwd = value.cwd;
+		}
+		if (parsed.type === "session") {
+			if (typeof parsed.id === "string") sessionId = parsed.id;
+			if (typeof parsed.cwd === "string") cwd = parsed.cwd;
+		}
+		if (
+			(parsed.type === "session_info" ||
+				parsed.recordType === "conversation.seed" ||
+				parsed.recordType === "conversation.import.seed") &&
+			typeof parsed.name === "string"
+		) {
+			name = parsed.name;
+		}
+		if (
+			parsed.recordType === "conversation.document.operation" &&
+			parsed.command !== null &&
+			typeof parsed.command === "object"
+		) {
+			const command = parsed.command as Record<string, unknown>;
+			if (command.type === "session.name.set" && typeof command.name === "string") name = command.name;
 		}
 	}
 	return { sessionId, name, cwd, records };
@@ -190,7 +211,7 @@ export async function exportSessionArchiveWithDialog(input: {
 	if (!savedTo) {
 		return { saved: false };
 	}
-	await writeFile(savedTo, Buffer.from(bytes));
+	await restoreArchiveFile(dirname(savedTo), basename(savedTo), bytes, true);
 	return { saved: true, path: savedTo };
 }
 
@@ -212,7 +233,7 @@ export async function exportProjectSessionsArchiveWithDialog(input: {
 	if (!savedTo) {
 		return { saved: false };
 	}
-	await writeFile(savedTo, Buffer.from(bytes));
+	await restoreArchiveFile(dirname(savedTo), basename(savedTo), bytes, true);
 	return { saved: true, path: savedTo, sessionCount: input.sessionPaths.length };
 }
 
@@ -242,7 +263,7 @@ export async function importSessionArchiveFromBytes(
 	},
 ): Promise<SessionArchiveImportDecision[]> {
 	const decoded = await decodeSessionArchive(bytes, passphrase);
-	const known = await options.listKnownFingerprints();
+	const known = new Map(await options.listKnownFingerprints());
 	const decisions: SessionArchiveImportDecision[] = [];
 
 	for (const session of decoded.sessions) {
@@ -256,6 +277,8 @@ export async function importSessionArchiveFromBytes(
 		});
 
 		if (conflict.action === "skip-idempotent") {
+			// Record fingerprints exclude attachments; deduplicating history must not discard new or conflicting bytes.
+			if (existing) await restoreArchiveAttachments(dirname(existing.sessionPath), session.attachments);
 			decisions.push({
 				fingerprint: session.fingerprint,
 				sessionId: session.sessionId,
@@ -266,32 +289,26 @@ export async function importSessionArchiveFromBytes(
 		}
 
 		const targetDir = await options.resolveImportDirectory(session.cwd);
-		await mkdir(targetDir, { recursive: true });
-		const targetName = `${sanitizeFileStem(session.name || session.sessionId)}-${randomUUID().slice(0, 8)}.jsonl`;
-		let targetPath = join(targetDir, targetName);
-
-		if (conflict.action === "overwrite" && existing?.sessionPath) {
-			targetPath = existing.sessionPath;
-		}
-
-		const jsonl = `${session.records.map((record) => JSON.stringify(record)).join("\n")}\n`;
-		const tempPath = `${targetPath}.${randomUUID()}.tmp`;
-		await writeFile(tempPath, jsonl, "utf8");
-
-		for (const attachment of session.attachments) {
-			const relative = safePath(attachment.relativePath);
-			const attachmentPath = join(dirname(targetPath), relative);
-			await mkdir(dirname(attachmentPath), { recursive: true });
-			await writeFile(attachmentPath, Buffer.from(attachment.bytes));
-		}
-
-		await rename(tempPath, targetPath);
+		const restored = await restoreArchiveSession({
+			...session,
+			targetDir,
+			fingerprint: session.fingerprint,
+			overwritePath: conflict.action === "overwrite" ? existing?.sessionPath : undefined,
+		});
+		const targetPath = restored.path;
+		known.set(session.fingerprint, { sessionPath: targetPath, mtimeMs: 0 });
 		decisions.push({
 			fingerprint: session.fingerprint,
 			sessionId: session.sessionId,
-			conflict,
+			conflict: restored.written
+				? conflict
+				: resolveSessionArchiveImportConflict({
+						existingFingerprint: session.fingerprint,
+						incomingFingerprint: session.fingerprint,
+					}),
 			writtenPath: targetPath,
 		});
+		if (!restored.written) continue;
 		// 导入落盘对渲染端不可见（会话目录没有 watcher，只有本进程写入才广播）。
 		// 按写入会话的列表 cwd 广播，侧栏沿用既有 sessions-changed 防抖重拉即时刷新。
 		emitConversationListChanged({
@@ -341,6 +358,46 @@ export async function importSessionArchiveWithDialog(
 		}
 		throw error;
 	}
+}
+
+/** Native journals require their canonical basename; random .jsonl copies are invisible to Runtime. */
+export async function restoreArchiveSession(input: {
+	readonly sessionId: string;
+	readonly name?: string;
+	readonly records: readonly unknown[];
+	readonly attachments: readonly { readonly relativePath: string; readonly bytes: Uint8Array }[];
+	readonly fingerprint: string;
+	readonly targetDir: string;
+	readonly overwritePath?: string;
+}): Promise<{ readonly path: string; readonly written: boolean }> {
+	const header = input.records[0];
+	const native = isConversationFileHeader(header);
+	const path =
+		input.overwritePath ??
+		(native
+			? resolveConversationFilePath(input.targetDir, header.sessionId)
+			: join(
+					input.targetDir,
+					`${sanitizeFileStem(input.name || input.sessionId)}-${randomUUID().slice(0, 8)}.jsonl`,
+				));
+	const jsonl = `${input.records.map((record) => JSON.stringify(record)).join("\n")}\n`;
+	await restoreArchiveAttachments(dirname(path), input.attachments);
+	const result = await restoreArchiveFile(
+		dirname(path),
+		basename(path),
+		new TextEncoder().encode(jsonl),
+		input.overwritePath !== undefined,
+	);
+	if (result === "skipped") {
+		if ((await fingerprintConversationFile(await readFile(path, "utf8"))) !== input.fingerprint) {
+			throw new SessionArchiveError(
+				SESSION_ARCHIVE_ERROR_CODES.INVALID_FRAME,
+				mainT("sessionArchive.sessionConflict"),
+			);
+		}
+		return { path, written: false };
+	}
+	return { path, written: true };
 }
 
 export function sanitizeFileStem(value: string): string {

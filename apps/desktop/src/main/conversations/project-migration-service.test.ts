@@ -545,6 +545,48 @@ describe("project migration service: apply（跨实例迁移）", () => {
 		});
 	});
 
+	it.each([false, true])("产物恢复不跟随目标内的目录链接（overwrite=%s）", async (overwriteWorkspace) => {
+		const { archivePath } = await buildMigrationPackage();
+		await withAgentDirB(async (agentDir) => {
+			const targetCwd = await mkdtemp(join(tmpdir(), "apply-target-link-"));
+			const outside = await mkdtemp(join(tmpdir(), "apply-outside-"));
+			roots.push(targetCwd, outside);
+			await symlink(outside, join(targetCwd, "nested"), process.platform === "win32" ? "junction" : "dir");
+
+			const report = await applyProjectMigrationArchive({
+				archivePath,
+				passphrase: "pw",
+				targetCwd,
+				overwriteWorkspace,
+				listKnownFingerprints: () => buildShardFingerprintIndex(agentDir),
+			});
+
+			expect(report.workspace.failed).toEqual(["nested/deep.txt"]);
+			expect(await readdir(outside)).toEqual([]);
+			expect(await readFile(join(targetCwd, "artifact.txt"), "utf8")).toBe("artifact-content");
+		});
+	});
+
+	it("无效目标目录在会话落盘前失败，不留下不可访问的历史", async () => {
+		const { archivePath } = await buildMigrationPackage();
+		await withAgentDirB(async (agentDir) => {
+			const parent = await mkdtemp(join(tmpdir(), "apply-invalid-root-"));
+			roots.push(parent);
+			const targetCwd = join(parent, "not-a-directory");
+			await writeFile(targetCwd, "user-owned", "utf8");
+			await expect(
+				applyProjectMigrationArchive({
+					archivePath,
+					passphrase: "pw",
+					targetCwd,
+					listKnownFingerprints: () => buildShardFingerprintIndex(agentDir),
+				}),
+			).rejects.toThrow();
+			expect(existsSync(join(agentDir, "sessions"))).toBe(false);
+			expect(await readFile(targetCwd, "utf8")).toBe("user-owned");
+		});
+	});
+
 	it("错误口令直接拒绝且不落盘；相对 targetCwd 拒绝", async () => {
 		const { archivePath } = await buildMigrationPackage();
 		await withAgentDirB(async (agentDir) => {

@@ -126,7 +126,11 @@
 		"projectExportDialogTitle": "导出项目会话归档",
 		"importDialogTitle": "导入会话归档",
 		"filterName": "Open Forge 会话归档",
-		"migrationExportDialogTitle": "导出项目迁移包"
+		"migrationExportDialogTitle": "导出项目迁移包",
+		"invalidRecord": "会话「{{file}}」的第 {{line}} 条记录已损坏，已停止导出，原文件未修改。请修复会话后重试。",
+		"sessionConflict": "目标项目中已有同一会话的不同历史，未覆盖原会话。请选择另一个项目目录后重试。",
+		"unsafeDestination": "无法安全恢复此文件：目标包含目录链接、文件类型冲突或不兼容的文件名。请检查目标位置后重试。",
+		"attachmentConflict": "目标中已有内容不同的会话附件，未覆盖原文件。请选择另一个目标位置后重试。"
 	},
 	"markdown": {
 		"previewTitle": "HTML 预览 · 30 秒后自动关闭"

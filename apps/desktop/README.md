@@ -63,6 +63,21 @@ initialize, start, audio, and stop.
 
 See [team task recovery](docs/agent-team-recovery.md) for automatic recovery limits, initiator notifications, and stop behavior.
 
+## Project migration and portable history
+
+To move a local project to another device:
+
+1. Right-click the source project and choose **Export Project Migration Package**. Keep **Include project files** selected to carry its files and generated outputs as well as conversation history. Set a passphrase before transferring sensitive data.
+2. Transfer the resulting `.ofar` file to the other device.
+3. Choose **Add project → Import project**, select the `.ofar`, enter its passphrase, and choose an existing local project or a new absolute folder path in the migration dialog.
+4. Leave file overwrite disabled unless you explicitly want to replace existing files. Review the import report, then open the restored conversations and files under the destination project.
+
+Native and legacy conversation histories are supported. Native histories retain their title, identity, events and usage; their working-directory header is relocated to the target. Reimporting the same unchanged history is idempotent. If a different native history with the same identity already exists at the target, import stops rather than overwriting it or creating an unreadable copy; choose another destination project.
+
+The package includes project-directory files, excluding `.git`, `node_modules`, `.vetta` directories and symbolic links. Project-local secrets such as `.env` files are not automatically redacted: review the project before export and protect the package with a passphrase. Files in plugin-private storage or outside the project directory, global account settings and credentials, project memory, and remote SSH project files are not included. Single-session/history-only exports do not collect the project file tree.
+
+Historical message and tool paths are preserved as facts, not rewritten; use the destination project's Files panel to open relocated outputs. Unsafe directory links, conflicting attachment bytes, and incompatible filenames are rejected or reported as file failures rather than silently followed or overwritten. Damaged JSON records stop export without changing the source. Existing size limits remain 512 MiB per workspace file and 4 GiB total; encoding currently buffers the package in memory, so large projects may still require reducing the included files.
+
 ## Development
 
 ### Sidebar conversation search
