@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| Pi codemode worker 准入：全进程容量、FIFO/超时/取消、旧报错与子代理限制分层，对照本仓既有队列和有界收尾；仅调研 | [RESEARCH-0047](RESEARCH-0047-pi-codemode-worker-admission.md) |
 | 会话与产物跨设备迁移：Cherry Studio/LobeHub 固定 SHA 对照、当前原生头兼容、文件恢复和无损导出边界 | [RESEARCH-0046](RESEARCH-0046-project-migration-portability.md)、[TASK-0361](../tasks/TASK-0361-project-migration-archive.md) |
 | GitHub 开发/PR 与 Codeup 单向同步、Flow 执行 CI/CD：区分同步与 PR 门禁，核实事件/状态回写、精确 SHA、跨平台执行器与版本计费边界；仅调研，未实施迁移 | [RESEARCH-0045](RESEARCH-0045-github-codeup-flow-ci-migration.md) |
 | Desktop 启动与占用再调查：近期开发/安装形态日志分组、同步运行环境探测、编辑器静态依赖、未知大小会话恢复及资源基线缺口 | [RESEARCH-0044](RESEARCH-0044-desktop-startup-resource-audit.md) |
