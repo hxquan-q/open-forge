@@ -185,18 +185,11 @@ export function useActivityPanelModel({
 			if (shouldCollapse) {
 				if (widthCollapsedSidebarRef.current === null) {
 					widthCollapsedSidebarRef.current = sidebarCollapsed;
-					// 临时诊断（演示走查）：定位 code 会话任务开始后左栏意外弹回的写入方，定位后移除。
-					console.debug("[sidebar-diag] panel reconcile collapse", {
-						liveWidth,
-						openLimit,
-						record: sidebarCollapsed,
-					});
 					setSidebarCollapsed(true);
 				}
 			} else if (widthCollapsedSidebarRef.current !== null) {
 				const restore = widthCollapsedSidebarRef.current;
 				widthCollapsedSidebarRef.current = null;
-				console.debug("[sidebar-diag] panel reconcile restore", { liveWidth, openLimit, restore });
 				setSidebarCollapsed(restore);
 			}
 		},
@@ -266,21 +259,11 @@ export function useActivityPanelModel({
 		if (shouldCollapse) {
 			if (widthCollapsedSidebarRef.current === null) {
 				widthCollapsedSidebarRef.current = sidebarCollapsed;
-				console.debug("[sidebar-diag] panel effect collapse", {
-					effectiveWidth: sidebarDecisionWidth,
-					openLimit,
-					record: sidebarCollapsed,
-				});
 				setSidebarCollapsed(true);
 			}
 		} else if (widthCollapsedSidebarRef.current !== null) {
 			const restore = widthCollapsedSidebarRef.current;
 			widthCollapsedSidebarRef.current = null;
-			console.debug("[sidebar-diag] panel effect restore", {
-				effectiveWidth: sidebarDecisionWidth,
-				openLimit,
-				restore,
-			});
 			setSidebarCollapsed(restore);
 		}
 	}, [effectiveWidth, windowWidth, sidebarWidth, isOpen, isResizing, sidebarCollapsed, setSidebarCollapsed, setWidth]);
