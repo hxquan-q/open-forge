@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0410-shared-resource-admission
-worktree: unassigned（待创建）
-base_commit: 052192d4568039ff9d304ee9b704f5db83553154
+worktree: ../open-forge-wt/task-0410-shared-resource-admission
+base_commit: 6bb27d048c5dccade7decafde58f4eeb8ec6686c
 read_paths: [packages/runtime-tools/, packages/runtime-node/, packages/coding-agent/, docs/adr/, project/]
 write_paths: [packages/runtime-tools/src/coding/async-execution-gate.ts, packages/runtime-tools/src/coding/async-execution-gate-contracts.ts, packages/runtime-tools/src/coding/host/desktop-command.ts, packages/runtime-tools/src/coding/host/index.ts, packages/runtime-tools/src/coding/index.ts, packages/runtime-tools/test/coding/async-execution-gate.test.ts, packages/runtime-tools/README.md, packages/runtime-node/src/coding/tools/extract-text-from-image/extract-text-from-image-tool.ts, packages/runtime-node/src/coding/tools/extract-text-from-pdf/extract-text-from-pdf-tool.ts, packages/runtime-node/test/coding-suite/ocr-admission.test.ts, packages/coding-agent/src/tool-policy/ocr-execution-gate.ts, packages/coding-agent/src/composition/session-initialization/peripheral-assembly.ts, packages/coding-agent/test/tool-policy/ocr-execution-gate.test.ts, docs/adr/0151-resource-admission-and-release.md]
 exclusive_paths: []
@@ -37,7 +37,7 @@ updated: 2026-10-28
 
 ### 并发评估
 
-- 结论：条件支持，与 TASK-0411 无实现写域重叠；各用独立工作树，集成顺序 0410 → 0411。
+- 结论：条件支持，与 TASK-0411 无实现写域重叠；各用独立工作树，集成顺序 0411 → 0410（先纳入已验证的旧 profile 测试维护）。
 - 执行方式：parallel；0410 原生 Worker 写入，Coordinator 负责索引/发布说明/最终集成；不是独占代码库，保留其他人修改。
 - Branch：`task/TASK-0410-shared-resource-admission`；Worktree 由仓库 CLI 创建回填；基线本地 main；集成负责人 Coordinator。
 - 前置依赖：无；共享导出/合同仅本 Task 修改，增加必要辅助文件前先回写读写范围。
@@ -89,3 +89,4 @@ OCR 默认 1、image 5 分钟/PDF 30 分钟执行时限、输出/取消文本、
 ## 交付记录
 
 - 实际修改/运行/审查/工作树/剩余风险：待实施回填；不将规划描述当成已通过证据。
+- 原生实现 Worker：`/root/resource_admission_impl`，仅在本 Task 工作树写入；独立只读审查 `/root/review_resource_admission`，只读回包与新增补证由 Coordinator 回收。工作树标准 CLI 创建/冻结安装/目标检查通过；主检出不含 Worker 运行时代码。

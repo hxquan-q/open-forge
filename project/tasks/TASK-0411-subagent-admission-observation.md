@@ -1,7 +1,7 @@
 ---
 id: TASK-0411
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: runtime-subagents/coding-agent
 requirement: REQ-0002
@@ -14,10 +14,10 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0411-subagent-admission-observation
-worktree: unassigned（待创建）
-base_commit: 052192d4568039ff9d304ee9b704f5db83553154
+worktree: ../open-forge-wt/task-0411-subagent-admission-observation
+base_commit: 6bb27d048c5dccade7decafde58f4eeb8ec6686c
 read_paths: [packages/runtime-subagents/, packages/coding-agent/, packages/runtime-core/src/observation/, docs/adr/0087-tool-catalog-generations-and-subagent-observation-boundary.md, project/]
-write_paths: [packages/runtime-subagents/src/contracts.ts, packages/runtime-subagents/src/subagent-dispatcher.ts, packages/runtime-subagents/src/subagent-pool.ts, packages/runtime-subagents/src/subagent-run.ts, packages/runtime-subagents/src/scheduling-observation.ts, packages/runtime-subagents/test/coordinator-admission-observation.test.ts, packages/runtime-subagents/test/support/fixture.ts, packages/runtime-subagents/README.md, packages/coding-agent/src/composition/subagent/runtime.ts, packages/coding-agent/src/composition/subagent/session-assembly.ts, packages/coding-agent/src/runtime-contracts/subagent-observability.ts, packages/coding-agent/test/composition/subagent-admission-observation.test.ts]
+write_paths: [packages/runtime-subagents/src/contracts.ts, packages/runtime-subagents/src/subagent-dispatcher.ts, packages/runtime-subagents/src/subagent-pool.ts, packages/runtime-subagents/src/subagent-run.ts, packages/runtime-subagents/src/scheduling-observation.ts, packages/runtime-subagents/test/coordinator-admission-observation.test.ts, packages/runtime-subagents/test/support/fixture.ts, packages/runtime-subagents/README.md, packages/coding-agent/src/composition/subagent/runtime.ts, packages/coding-agent/src/composition/subagent/session-assembly.ts, packages/coding-agent/src/runtime-contracts/subagent-observability.ts, packages/coding-agent/test/composition/subagent-admission-observation.test.ts, packages/coding-agent/test/runtime-core/session-initialization-profile.test.ts]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -38,7 +38,7 @@ updated: 2026-10-28
 ### 并发评估
 
 - 结论：条件支持，与 TASK-0410 写域独立；execution parallel，Coordinator 在独立 Task Worktree 写入。
-- Branch：`task/TASK-0411-subagent-admission-observation`；Worktree 由仓库 CLI 创建；前置依赖无；最终集成 0410 → 0411。
+- Branch：`task/TASK-0411-subagent-admission-observation`；Worktree 由仓库 CLI 创建；前置依赖无；最终集成 0411 → 0410。
 - 共享 Project/发布索引仅 Coordinator 在主检出维护；不改 0410 的 OCR policy/peripheral 或 runtime-tools 导出。
 
 ### 做
@@ -66,14 +66,16 @@ updated: 2026-10-28
 
 ## 测试与验证
 
+- 影响验证补充（2026-10-28，先记范围再编辑）：`test:impact` 的 profile 测试漏了既有 `createExplicitMemoryRuntime` 字段；在无本轮运行时代码的 main@6bb27d048 同文件复跑同样 1 失败，现行源码来源 a13c1759a。补齐期望字段并验证工厂引用保留，不修改 profile 实现、不删除/过滤旧断言，作为本切片验证合同维护。
+
 - 定向：公开 coordinator 连续流程 + Coding Agent 产品组装 observation；显式 deferred/fake clock，无任意 sleep。
 - 现有 API/scheduling/terminal-state/recovery/shutdown/delivery 测试作为兼容基线；`test:impact`、跨包 `test:changed`、`check:quick`、完整 `bun run check`。
 - 新观测先红后绿；没有真实 Provider/UI 验证权限，不把 Fake 运行称为真实模型性能测试。
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：待独立只读评审。
+- 工程验证：隔离候选通过；实际命令和范围见交付记录。
+- 技术评审：独立只读审查已完成；P2 无 sessionFile 身份丢失已先红后绿修复，deadline/epoch 覆盖与 hook 类型已补齐，最终无未解决 P1/P2。
 - 集成：pending。
 - 人工功能验收：不适用；这是不改变产品交互/模型行为的内部诊断合同，按事件、隐私、兼容回归及独立审查验收，不声称用户已确认。
 - 发布：稳定发布未授权。
@@ -86,4 +88,11 @@ updated: 2026-10-28
 
 ## 交付记录
 
-- 实际修改/运行/独立审查/工作树/剩余风险：待实施回填。
+- 工作树：标准 CLI 创建 `../open-forge-wt/task-0411-subagent-admission-observation`，冻结安装成功，目标 `worktree:check` 通过；实际基线 `6bb27d048`。源码候选 `ddf02a58026b5487b848e320d0f5c0618faae5ec`，无工作树未提交变更；尚未集成/清理。
+- 实际修改：安全 scheduling callback、独立 admissionId、真实绑定身份事实、排队/容量/收尾/释放事件、epoch 保护与产品 publisher 接线；快照/通知/默认保持。补既有 profile 测试字段和工厂引用断言，无 profile 运行时改动。
+- 红绿：初始正常连续流程缺事件失败→通过；异步 callback 拒绝产生 unhandled→隔离；审查发现合法无文件句柄 followUp 身份丢失，回归先红后绿。自然 stop deadline 和旧 epoch 延迟各有 fake-clock 回归。
+- 定向：runtime-subagents 全包 `bun ../../scripts/quality/run-vitest.mjs --run`，9 文件 49 例通过；产品 assembly/控制工具 3 文件 15 例通过。
+- 影响：`bun run test:impact -- packages/runtime-subagents/src/scheduling-observation.ts packages/runtime-subagents/test/coordinator-admission-observation.test.ts packages/coding-agent/src/composition/subagent/session-assembly.ts packages/coding-agent/test/composition/subagent-admission-observation.test.ts packages/coding-agent/test/runtime-core/session-initialization-profile.test.ts` exit 0，产品相关 30 文件 108 例、子代理相关 9 文件 49 例及直接测试通过（有重叠，不相加宣称唯一总数）。
+- 检查：`check:quick` 和最终完整 `bun run check` exit 0；首轮新增/改动文件声明头遗漏已修复，未放宽基线。完整检查包含 lint、五组类型与 guards/mobile lint。
+- 协作：只读调查 `/root/subagent_observation_fixture` 提供最小生产 assembly 接缝与 generation 时序；独立审查 `/root/review_subagent_admission` 复核最终实际 diff，未执行测试或写代码，不冒充跨模型家族评审。
+- 未运行/边界：跨包 `test:changed` 在组合候选执行；未授权 UI/真实 Provider，未测真实模型吞吐。`released` 只证明调度槽释放，宽限耗尽不等于物理资源退出。

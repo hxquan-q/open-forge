@@ -45,11 +45,13 @@ OCR 初始策略：保持并发 1，最多 8 个等待请求（与现有 workflo
 
 1. [TASK-0410](../tasks/TASK-0410-shared-resource-admission.md)：共享 gate 合同与实现、可取消/有界等待、可选 owner 轮转、无内容事件、OCR 正常入口接线和回归；记录 ADR-0151。
 2. [TASK-0411](../tasks/TASK-0411-subagent-admission-observation.md)：子代理调度安全事件与产品 observation 接线，区分终态和调度释放，报告收尾宽限耗尽而不改变原有取消合同。
-3. Coordinator 回收独立只读审查并修复，依次集成 0410 → 0411；补发布说明，跑定向/影响/跨包与完整检查后交付。
+3. Coordinator 回收独立只读审查并修复，依次集成 0411 → 0410；补发布说明，跑定向/影响/跨包与完整检查后交付。
 
 两项条件支持并发：代码写域独立，0410 的 Coding Agent 修改限于 OCR policy/peripheral；0411 限于 subagent runtime/assembly/observability。各用独立 Task Worktree，不并行写共享索引、ADR 索引或发布说明；Coordinator 维护管理记录，集成串行。
 
 前置实测：全量 `worktree:check --all` 因 TASK-0344–0347 历史缺日期失败，无本批 scope 冲突；按 [WAIVER-0013](../decisions/waivers/WAIVER-0013-resource-admission-worktree-baseline.md) 隔离推进并逐 Task 检查。当前 0.1.3 已打 tag，按 [WAIVER-0014](../decisions/waivers/WAIVER-0014-resource-admission-release-fragments.md) 暂存未发布 0.1.4 碎片，不改已发布正文或版本。
+
+执行调整：影响验证发现既有 profile 测试漏记 `createExplicitMemoryRuntime`，已在原 main 基线复现并由 0411 补齐原合同断言。两项实现仍独立；先集成 0411 让组合测试具备正确基线，再集成 0410，避免重复保留已定位的旧失败。
 
 ## 不做什么
 
