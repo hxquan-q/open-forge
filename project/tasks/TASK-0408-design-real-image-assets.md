@@ -1,7 +1,7 @@
 ---
 id: TASK-0408
 type: task
-status: ready
+status: in_progress
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -12,12 +12,12 @@ related_plan: [PLAN-0025, PLAN-0014, PLAN-0018]
 related_tasks: [TASK-0407, TASK-0409]
 related_issues: []
 related_bugs: []
-execution: serial
-branch: main
-worktree:
-base_commit: 9f4b87ee81b6ec2aa7f1417d23d36745e2e1ac1d
+execution: parallel
+branch: task/TASK-0408-design-real-image-assets
+worktree: ../open-forge-wt/task-0408-design-real-image-assets
+base_commit: 6ebd359b567da1ac46e37327c5178bc9c53fca50
 read_paths: [packages/plugins/presets/vetta-ui-design, packages/plugins/AGENTS.md]
-write_paths: [packages/plugins/presets/vetta-ui-design/src/assets, packages/plugins/presets/vetta-ui-design/src/tools.ts, packages/plugins/presets/vetta-ui-design/src/export, packages/plugins/presets/vetta-ui-design/src/history, packages/plugins/presets/vetta-ui-design/plugin.json, packages/plugins/presets/vetta-ui-design/agent, packages/plugins/presets/vetta-ui-design/test]
+write_paths: [packages/plugins/presets/vetta-ui-design/src/assets, packages/plugins/presets/vetta-ui-design/src/tools.ts, packages/plugins/presets/vetta-ui-design/src/vetd/tool-gate.ts, packages/plugins/presets/vetta-ui-design/src/export, packages/plugins/presets/vetta-ui-design/src/history, packages/plugins/presets/vetta-ui-design/plugin.json, packages/plugins/presets/vetta-ui-design/locales, packages/plugins/presets/vetta-ui-design/agent, packages/plugins/presets/vetta-ui-design/test]
 exclusive_paths: []
 depends_on: [TASK-0407]
 conflicts_with: [TASK-0407, TASK-0409]
@@ -37,11 +37,11 @@ updated: 2026-10-28
 
 ### 并发评估
 
-- 结论：本批必须串行；执行方式 `serial`，无并行 Task。
-- 前置依赖：TASK-0407 的画布稳定性工程交付与集成；资产产物将供 TASK-0409 使用。
-- 冲突文件/独占路径：工具注册、manifest、agent 指引、导出/历史与测试；不得同 TASK-0407/0409 并行写入。
-- Branch：`main`；Worktree：当前主工作区，不另拆；集成负责人：Coordinator。
-- 集成顺序：0406 → 0407 → 0408 → 0409。
+- 结论：2026-10-28 用户明确要求隔离工作树实施 0408/0409；元数据 `parallel` 表示可隔离于主工作区，本轮实现仍按 0408 → 0409 串行，不派并行写入者。
+- 前置依赖：0407 当前为 ready、未集成。源码确认资产逻辑不依赖其画布修复，可先交付隔离候选；最终 main 集成仍等待 0407，不冒充依赖完成。
+- 冲突文件/独占路径：工具注册、manifest、agent 指引、导出/历史与测试；不与 0407/0409 共享目录写入。
+- Branch：`task/TASK-0408-design-real-image-assets`；Worktree：`../open-forge-wt/task-0408-design-real-image-assets`；Coordinator 单人串行实现，完成后原生只读独立审查。
+- 集成顺序仍为 0406 → 0407 → 0408 → 0409；主工作区存在其他任务修改，本轮不强行集成或推送。
 
 ### 做
 
@@ -67,6 +67,16 @@ updated: 2026-10-28
 ## 必须保持
 
 最小网络权限、既有工具前缀及结果/错误/取消语义、路径限制、图片类型校验、AST/来源标记保护和用户已有资产不受损。导出与历史兼容旧设计；新增元数据可缺省读取。
+
+## 本轮实施合同（2026-10-28）
+
+- 归属：Open-Forge-only 适配；保留 vetd 前缀和旧分享包/历史兼容，不变更 Plugin SDK。
+- 输入：受约束来源的查询或来源 ID；输出：带出处/许可状态的候选、本地预览、设计内图片及 CREDITS.json。外部返回全部视为不可信数据。
+- 方案：直接复用宿主 network.request、设计级写队列/原子写及通用 assets 打包/历史路径；将来源解析、下载校验、credits 与工具装配隔离为局部模块，不向 tools.ts 累加业务逻辑。
+- 来源：先核查无需密钥的 Wikimedia、Openverse、NASA 和照片库第一方文档；只有域/许可/宿主边界都可限定的适配器启用，其余显式 unsupported。
+- 失败/取消/恢复：限时宿主请求，拒绝受限地址/伪文件/异常 JSON；下载完成并校验后才排队提交；失败不覆盖已有文件，credits 失败回滚本次新资源，可重新搜索/导入。
+- 已有事实：图谱 2026-10-12 / 254796d 落后于当前 6ebd359；已回读工具、fs、manifest、导出、来源检查与渲染合同。主工作区已有其他 concern 修改，保留不动。
+- 最低验证：正常注册工具搜索→预览→导入→保存/重开→历史→导出/离线资源；安全/部分失败 fixture；定向、impact、changed、插件 build、完整 check。真实来源可用性和许可核验单列，UI/真实模型未授权不运行。
 
 ## 测试与验证
 

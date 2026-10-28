@@ -12,12 +12,12 @@ related_plan: [PLAN-0025, PLAN-0014, PLAN-0018]
 related_tasks: [TASK-0408]
 related_issues: []
 related_bugs: []
-execution: serial
-branch: main
-worktree:
-base_commit: 9f4b87ee81b6ec2aa7f1417d23d36745e2e1ac1d
+execution: parallel
+branch: task/TASK-0409-design-direction-quality
+worktree: ../open-forge-wt/task-0409-design-direction-quality
+base_commit: 157f0906eefe93d2e570231b8e9bc64c688a88b0
 read_paths: [packages/plugins/presets/vetta-ui-design]
-write_paths: [packages/plugins/presets/vetta-ui-design/src/tools.ts, packages/plugins/presets/vetta-ui-design/src/vetd, packages/plugins/presets/vetta-ui-design/src/assets, packages/plugins/presets/vetta-ui-design/agent, packages/plugins/presets/vetta-ui-design/test]
+write_paths: [packages/plugins/presets/vetta-ui-design/src/tools.ts, packages/plugins/presets/vetta-ui-design/src/vetd, packages/plugins/presets/vetta-ui-design/src/assets, packages/plugins/presets/vetta-ui-design/agent, packages/plugins/presets/vetta-ui-design/locales, packages/plugins/presets/vetta-ui-design/test]
 exclusive_paths: []
 depends_on: [TASK-0408]
 conflicts_with: [TASK-0407, TASK-0408]
@@ -37,11 +37,11 @@ updated: 2026-10-28
 
 ### 并发评估
 
-- 结论：本批必须串行；执行方式 `serial`，无并行 Task。
-- 前置依赖：TASK-0408 工程交付与集成，复用其真实素材及 credits 合同。
-- 冲突文件/独占路径：工具注册、agent 指引、素材目录和检查/渲染测试；与 TASK-0407/0408 共享设计状态，不并行写入。
-- Branch：`main`；Worktree：当前主工作区，不另拆；集成负责人：Coordinator。
-- 集成顺序：0406 → 0407 → 0408 → 0409。
+- 结论：按本轮用户要求使用隔离工作树，`parallel` 表示可隔离于主工作区；0408 → 0409 仍串行实现，不派并行写入者。
+- 前置依赖：先验证并提交 0408 候选，再在由已提交 main 创建的 0409 工作树引入该候选，复用其素材/credits 合同；最终 main 集成仍等待 0407/0408。
+- 冲突文件/独占路径：工具注册、agent 指引、素材目录和检查/渲染测试；与 TASK-0407/0408 不共享目录写入。
+- Branch：`task/TASK-0409-design-direction-quality`；Worktree：`../open-forge-wt/task-0409-design-direction-quality`；Coordinator 单人串行实现，原生只读独立审查。
+- 集成顺序仍为 0406 → 0407 → 0408 → 0409；主工作区脏或依赖未完成时仅保留候选，不强行集成/推送。
 
 ### 做
 
@@ -67,6 +67,14 @@ updated: 2026-10-28
 ## 必须保持
 
 来源标记/AST 编辑与骨架保护、工具 Schema 和角色/错误/usage/stop 语义、已有主题兼容、最小网络权限及素材许可来源合同。新增字体只能来自已核验来源，不能静默请求未声明远程域。
+
+## 本轮实施合同（2026-10-28）
+
+- 归属：Open-Forge-only；输入为产品需求/既有品牌/用户选择，输出为可校验三案、持久方向及可定位诊断/修订指引。不改变 design.json 既有格式和 AST/来源保护。
+- 方案：方向选择与检查分别置于 vetd 局部模块，工具只装配；使用可选、可缺省读取的附加元数据，旧设计的 DESIGN.md/theme.css 优先，不随机覆盖品牌/内容。
+- 字体：只提供已核验许可/字重/自托管方式的清单；实际加载与声明分开检测，离线保留系统 fallback，不偷偷增加远程域。
+- 检查：复用源码与渲染验证，分 error/warning/review，明确范围/位置/建议。检查只读，不自动改稿；依据当前源码/资源指纹拒绝过期截图，修订保留选定方向和用户内容。
+- 最低验证：正常工具入口三案→选择→落实→检查→定点修订→再检查；已有品牌重开；缺字体/credits/占位主题/小画框夹具；impact/changed/build/check。四个固定案例及视觉记录格式随候选交付，实机/真实模型未授权不运行。
 
 ## 测试与验证
 
