@@ -102,6 +102,27 @@ describe("useNewSessionProjectSelection", () => {
 		expect(result.current.selection).toEqual({ kind: "project", cwd: "/w/alpha", name: "Alpha" });
 	});
 
+	it("切换/打开本地项目时档位随迁：开发档新会话页换项目不静默回落默认档", () => {
+		const { result, store } = renderSelection("/w/alpha");
+		// 开发档进入：alpha 已是 coding（版块入口写入）。
+		act(() =>
+			store.set(
+				workspaceModeByProjectAtom,
+				writeWorkspaceMode(new Map<string, WorkspaceMode>(), "/w/alpha", "coding"),
+			),
+		);
+		// 「打开本地项目」刚登记的新项目（选择列表随之出现）——切换过去带走 coding 档。
+		act(() =>
+			store.set(projectsAtom, [
+				...PROJECTS,
+				{ cwd: "/w/newly-opened", name: "刚打开", sessionCount: 0, type: "normal" } as Project,
+			]),
+		);
+		act(() => result.current.selectProject("/w/newly-opened"));
+		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), "/w/newly-opened")).toBe("coding");
+		expect(result.current.selection).toEqual({ kind: "project", cwd: "/w/newly-opened", name: "刚打开" });
+	});
+
 	it("takenNames 覆盖全部项目名，重名判断不漏掉默认与批量项目", () => {
 		const { result } = renderSelection(DEFAULT_CWD);
 		expect(result.current.takenNames).toEqual(["对话", "Alpha", "批量"]);

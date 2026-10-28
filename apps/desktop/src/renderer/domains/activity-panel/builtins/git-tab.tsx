@@ -19,14 +19,11 @@ export const gitTabDefinition: ActivityTabDefinition = {
 		const { t } = useTranslation("chat");
 		const cwd = useActivityPanelCwd();
 		const { status } = useGitRepoStatus(cwd);
-		if (status === undefined) {
-			return { label: t("activityPanel.tabs.git"), icon: "icon-[mdi--source-branch]" };
-		}
-		if (status === null) return null;
+		// 页签常显（非 git 仓库在面板内给占位说明），有变更时角标计数。
 		return {
 			label: t("activityPanel.tabs.git"),
 			icon: "icon-[mdi--source-branch]",
-			badge: status.changes.length || undefined,
+			badge: status?.changes.length || undefined,
 		};
 	},
 	component: GitActivityTab,

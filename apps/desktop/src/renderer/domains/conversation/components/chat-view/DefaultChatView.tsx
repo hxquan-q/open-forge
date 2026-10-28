@@ -55,6 +55,9 @@ function sameActivity(
 		sameOptionalIds(left.enabledBuiltinTabs, right.enabledBuiltinTabs);
 }
 
+/** 演示定稿：code 会话的活动面板内置页签白名单（文件 / Git / 浏览器），插件页签不参与。 */
+const CODING_ACTIVITY_BUILTIN_TABS = ["file", "git", "browser"] as const;
+
 const ActivityColumn = memo(
 	function ActivityColumn({
 		workspace,
@@ -74,15 +77,20 @@ const ActivityColumn = memo(
 			);
 		}
 		if (rightPanel === "none") return null;
+		const coding = workspaceMode === "coding";
 		return activity ? (
 			<ActivityPanel
 				workspace={workspace}
-				enablePluginTabs={activity.enablePluginTabs}
-				enabledBuiltinTabs={activity.enabledBuiltinTabs}
+				enablePluginTabs={coding ? false : activity.enablePluginTabs}
+				enabledBuiltinTabs={coding ? CODING_ACTIVITY_BUILTIN_TABS : activity.enabledBuiltinTabs}
 				pluginScenario={activity.pluginScenario}
 			/>
 		) : (
-			<CurrentScenarioActivityPanel workspace={workspace} />
+			<CurrentScenarioActivityPanel
+				workspace={workspace}
+				enablePluginTabs={coding ? false : undefined}
+				enabledBuiltinTabs={coding ? CODING_ACTIVITY_BUILTIN_TABS : undefined}
+			/>
 		);
 	},
 	(previous, next) =>
