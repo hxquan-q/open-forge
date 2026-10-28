@@ -47,7 +47,12 @@
 	"network": {
 		"allowedHosts": [
 			"cdn.jsdelivr.net",
-			"raw.githubusercontent.com"
+			"raw.githubusercontent.com",
+			"commons.wikimedia.org",
+			"upload.wikimedia.org",
+			"thumb.wikimedia.org",
+			"images-api.nasa.gov",
+			"images-assets.nasa.gov"
 		]
 	},
 	"commands": [

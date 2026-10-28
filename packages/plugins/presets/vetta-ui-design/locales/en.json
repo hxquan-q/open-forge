@@ -7,6 +7,8 @@
 	"tool.vetd_screenshot": "Design screenshot",
 	"tool.vetd_status": "Design status",
 	"tool.vetd_install": "Install design dependencies",
+	"tool.vetd_assets": "Real image assets",
+	"assets.exportReview": "This export includes {{count}} imported image(s) and CREDITS.json. Source-reported or unknown licenses are not legal clearance: verify author attribution, reuse conditions and other rights before publishing.",
 	"controlbar.designSystems": "Design systems",
 	"ds.title": "Design systems",
 	"ds.subtitle": "Pick a palette & spec and apply it to the whole design",

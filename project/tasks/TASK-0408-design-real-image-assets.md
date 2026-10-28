@@ -1,7 +1,7 @@
 ---
 id: TASK-0408
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: coordinator
 requirement: REQ-0008
@@ -23,7 +23,7 @@ depends_on: [TASK-0407]
 conflicts_with: [TASK-0407, TASK-0409]
 integration_status: pending
 created: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-29
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -100,10 +100,18 @@ updated: 2026-10-28
 - 预期：得到真实本地图片、可工作的引用和 credits；离线导出可呈现，许可未知有明确提示。
 - 不通过：占位图冒充真实素材、只存远程链接、署名丢失、导出缺图或越权请求。反馈写回本 Task，并加入对应 fixture。
 
-## 交付记录
+## 交付记录（2026-10-29 隔离候选）
 
-- 实际修改：仅立项文档；本轮文档验证见 PLAN-0025。
-- 未运行：来源访问、运行时测试、构建、完整检查和人工验收，原因是本轮未实施。
-- Worktree：本批串行，沿用主工作区，未创建独立 Worktree。
-- 剩余风险：不同来源的许可、跳转域与可用性不同；不满足权限或追溯合同的来源不能静默纳入。
-- 发布说明：本轮依据见 PLAN-0025；后续说明实际支持的来源及限制，不宣称素材均可商用。
+- 实际修改：新增 `src/assets/{sources,images,credits,tool}.ts`（`vetd_assets`：search / preview / import / credits）与 `test/assets-*.test.ts`、真实 Wikimedia JPEG fixture；注册工具与 `DESIGN_ONLY_TOOLS`，manifest 仅新增 5 个精确 host（无通配），导出改为在写队列内构建并在包含 CREDITS 时给出许可提醒；补 SKILL 与 `references/real-images.md`。
+- 来源启用：Wikimedia Commons 与 NASA images-api；Openverse/Unsplash/任意站点显式 unsupported，不静默替换 URL。导入按 source/id 重新解析，不采信模型给出的 URL 或署名。
+- 已运行：定向 `assets-{tool,sources,lifecycle}` 39 例；整包 `bun run test` 793 例、`test:changed`（presets/vetta-ui-design）793 例；插件 `tsc --noEmit`、`bun run build`（`release/vetta-ui-design-0.7.2.vettapkg`，45 个运行时文件）与根 `bun run check` 全通过。
+- 独立只读审查（新上下文）指出的两项 P2 已处置：CREDITS 读写同用一个 4,000,000 字符上限并在写图片前拒绝超限（回归用例）；预览批次遇宿主取消立即中止、导入取消不落盘（回归用例）；另补 2048px 缩放/WebP 编码失败关闭解码、真实 Vite 构建下的资源改名与 snapshot 内联断言。
+- 未运行：真实来源联网访问（付费/生产边界，未获授权）、Desktop 人工验收、`verify:ui:*`。测试用离线 fixture 与 stub 网络，真实性以下述限制为准。
+- 剩余风险（保留限制，不当作已通过）：
+  - 宿主 `PluginNetworkApi` 不暴露 redirect 目标、最终 URL、DNS 与 `AbortSignal`；跨域跳转/私网解析只能在 URL 前缀与宿主网关层约束，排队等待写队列或已进入预览循环后的用户取消无法观测。已在 `references/real-images.md` 明示，需宿主侧能力才能消除。
+  - 图片解码依赖 `createImageBitmap`/`OffscreenCanvas`；不可用时按失败处理、不落盘，但该分支仅在测试 stub 下覆盖。
+  - 许可状态为 `source-reported` / `unknown`，不构成法律许可结论；含 CREDITS 的导出只给警告。
+- 集成：未被要求集成，也未推送；`integration_status: pending`，最终顺序 0406 → 0407 → 0408 → 0409，0407 未完成前不合并入库。
+- 发布说明：`apps/desktop/package.json` 当前为 0.1.3，但 v0.1.3 已有发布 tag，正文不得再改（`release-notes.mjs --check` 拒绝），碎片也因此不归入该版本。候选文案暂记于本 Task，首发 Open Forge 版本确定（ISSUE-0007）后归入自己的 Release Notes：
+
+  > 设计画布新增真实图片素材工具（`vetd_assets`）：按关键词从 Wikimedia Commons 或 NASA 图片库检索候选、生成联系表挑选，选中后下载到设计资源目录并写入 `CREDITS.json`（标题、作者、原始页面、许可、SHA-256）；重开、历史恢复与离线导出保留图片与署名。仅启用这两个免密钥来源，Openverse/Unsplash/任意站点明确报不支持；许可仅按来源上报，导入与导出提示自行核验署名与商用条件。

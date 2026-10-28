@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 
 import type { PluginContext } from "@vetta-org/plugin-sdk";
+import { registerAssetsTool } from "./assets/tool";
 import type { ElementQuery, SelectedElementPayload } from "./canvas/bridge-client";
 import {
 	type CanvasController,
@@ -115,6 +116,7 @@ function statusNote(
 }
 
 export function registerDesignTools(ctx: PluginContext): void {
+	registerAssetsTool(ctx);
 	ctx.agent.registerTool<CreateInput>({
 		id: "vetd-create",
 		name: "vetd_create",
