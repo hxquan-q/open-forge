@@ -129,7 +129,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 		cwd: options.sessionCwd,
 		agentDir: profile.agentDir,
 		scenario: options.scenario,
-		ocrExecutionGate: getCodingAgentOcrExecutionGate(profile.ocrMaxConcurrent),
+		ocrExecutionGate: getCodingAgentOcrExecutionGate(profile.ocrMaxConcurrent, options.observationPublisher),
 		configurationSource: options.configurationSource,
 	});
 	const specializedToolRegistrations = [

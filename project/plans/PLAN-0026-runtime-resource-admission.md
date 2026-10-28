@@ -1,12 +1,12 @@
 ---
 id: PLAN-0026
 type: plan
-status: in_progress
+status: verifying
 priority: P1
 requirement: REQ-0002
 owner: runtime-tools/runtime-subagents/coding-agent
 created: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-29
 related_requirement: [REQ-0002]
 related_tasks: [TASK-0410, TASK-0411]
 depends_on: []
@@ -69,4 +69,12 @@ OCR 初始策略：保持并发 1，最多 8 个等待请求（与现有 workflo
 
 ## 需要的 ADR
 
-ADR-0151 记录 gate 的兼容扩展、调用结果与底层资源分离、OCR 显式策略以及保持子代理有界逻辑收尾的原因；沿 ADR-0077/0087 的所有权，不引入包或持久化迁移。
+[ADR-0151](../../docs/adr/0151-resource-admission-and-release.md) 记录 gate 的兼容扩展、调用结果与底层资源分离、OCR 显式策略以及保持子代理有界逻辑收尾的原因；沿 ADR-0077/0087 的所有权，不引入包或持久化迁移。
+
+## 交付结果（2026-10-29）
+
+- TASK-0411 源候选 ddf02a580 已通过 f9d906c24053ec1f1b5e76f8d66d4cd6cf54580e 集成本地 main；内部观测合同按自动化与独立审查验收，done。TASK-0410 源候选 619cd9c3b 随承载本记录的 merge 提交集成，保留真实 OCR 人工功能验收，verifying。
+- 正常 OCR 工具连续流程、gate 取消/轮转/收敛、新子代理安全事件与实际产品 publisher 装配均通过；两项新上下文独立只读审查闭环，未宣称跨模型家族或真实 Provider 性能验证。
+- 组合 test:changed 完整执行：coding-agent、runtime-subagents、runtime-tools、runtime-node、runtime-desktop、cli-host 全通过，2684 例通过；Desktop 6233 例通过、14 例失败。原基线独立临时检出逐例复现完全相同的 14 项，详见 [ISSUE-0035](../issues/ISSUE-0035-windows-desktop-test-baseline.md)。完整 bun run check 通过，不将跨包门禁写成全绿。
+- 按 [WAIVER-0015](../decisions/waivers/WAIVER-0015-resource-admission-local-baseline.md) 仅完成本地集成；origin/dev 门禁保留，当前未推送，两个 Task 工作树保留待推送后清理。0.1.4 发布碎片已暂存，未发布。
+- Plan 保持 verifying：真实 OCR/UI/Provider 未运行，等待功能接受；未扩张为无关 Desktop 修复或稳定发布。

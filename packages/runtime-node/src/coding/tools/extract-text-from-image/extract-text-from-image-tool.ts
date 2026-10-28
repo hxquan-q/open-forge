@@ -51,7 +51,7 @@ export function createExtractTextFromImageTool(
 		description: EXTRACT_TEXT_FROM_IMAGE_TOOL_DESCRIPTION,
 		inputSchema: ExtractTextFromImageToolInputSchema,
 		modelOrder: options.modelOrder,
-		async execute({ input, signal, reportPhase }) {
+		async execute({ input, signal, reportPhase, sessionId, toolCallId }) {
 			if (signal.aborted) throw new Error("Operation aborted");
 			reportPhase?.("locate");
 			const inputPath = resolveExistingPath(input.input, cwd);
@@ -66,16 +66,19 @@ export function createExtractTextFromImageTool(
 			reportPhase?.("ocr");
 			let result: DesktopCommandResult;
 			try {
-				result = await options.executionGate.run(async () => {
-					if (signal.aborted) throw new Error("Operation aborted");
-					return options.desktop.run(desktop.path, ["--ocr-img", inputPath, "--output", outputPath], {
-						signal,
-						timeoutMs: OCR_TIMEOUT_MS,
-						maxBufferBytes: 32 * 1024 * 1024,
-					});
-				});
+				result = await options.executionGate.run(
+					async () => {
+						if (signal.aborted) throw new Error("Operation aborted");
+						return options.desktop.run(desktop.path, ["--ocr-img", inputPath, "--output", outputPath], {
+							signal,
+							timeoutMs: OCR_TIMEOUT_MS,
+							maxBufferBytes: 32 * 1024 * 1024,
+						});
+					},
+					{ signal, ownerId: sessionId, requestId: toolCallId },
+				);
 			} catch (error) {
-				if (error instanceof DesktopCommandAbortedError) throw new Error("Operation aborted");
+				if (signal.aborted || error instanceof DesktopCommandAbortedError) throw new Error("Operation aborted");
 				throw error;
 			}
 			if (signal.aborted) throw new Error("Operation aborted");

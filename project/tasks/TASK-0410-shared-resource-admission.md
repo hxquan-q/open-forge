@@ -1,7 +1,7 @@
 ---
 id: TASK-0410
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: runtime-tools/runtime-node/coding-agent
 requirement: REQ-0002
@@ -10,20 +10,20 @@ source: user-request; RESEARCH-0047
 related_requirement: [REQ-0002]
 related_plan: [PLAN-0026]
 related_tasks: [TASK-0411]
-related_issues: []
+related_issues: [ISSUE-0035]
 related_bugs: []
 execution: parallel
 branch: task/TASK-0410-shared-resource-admission
-worktree: ../open-forge-wt/task-0410-shared-resource-admission
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 6bb27d048c5dccade7decafde58f4eeb8ec6686c
 read_paths: [packages/runtime-tools/, packages/runtime-node/, packages/coding-agent/, docs/adr/, project/]
 write_paths: [packages/runtime-tools/src/coding/async-execution-gate.ts, packages/runtime-tools/src/coding/async-execution-gate-contracts.ts, packages/runtime-tools/src/coding/host/desktop-command.ts, packages/runtime-tools/src/coding/host/index.ts, packages/runtime-tools/src/coding/index.ts, packages/runtime-tools/test/coding/async-execution-gate.test.ts, packages/runtime-tools/README.md, packages/runtime-node/src/coding/tools/extract-text-from-image/extract-text-from-image-tool.ts, packages/runtime-node/src/coding/tools/extract-text-from-pdf/extract-text-from-pdf-tool.ts, packages/runtime-node/test/coding-suite/ocr-admission.test.ts, packages/coding-agent/src/tool-policy/ocr-execution-gate.ts, packages/coding-agent/src/composition/session-initialization/peripheral-assembly.ts, packages/coding-agent/test/tool-policy/ocr-execution-gate.test.ts, docs/adr/0151-resource-admission-and-release.md]
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-29
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -74,9 +74,9 @@ OCR 默认 1、image 5 分钟/PDF 30 分钟执行时限、输出/取消文本、
 
 ## 验收分层
 
-- 工程验证：待执行。
-- 技术评审：待独立只读评审。
-- 集成：pending；Coordinator 集成后绑定实际提交与复验。
+- 工程验证：隔离候选、新行为流程、六个其他受影响包与完整 check 通过；Desktop 14 项存量失败经独立原基线逐例复现，按 WAIVER-0015 仅本地集成，不宣称全跨包绿灯。
+- 技术评审：新上下文独立只读审查完成，无未解决 P1/P2 或实质测试缺口；补齐重入、监听器清理和晚到拒绝回归。
+- 集成：已集成本地 main；源候选 619cd9c3b，无冲突，随承载本记录的 merge 提交绑定；未推送，工作树保留待门禁解决及推送后清理。
 - 人工功能验收：待验收；真实 OCR/UI 未获授权，提供自动化证据与操作预期。
 - 发布：稳定发布未授权；开发候选推送按已有批次合同判断。
 
@@ -88,5 +88,20 @@ OCR 默认 1、image 5 分钟/PDF 30 分钟执行时限、输出/取消文本、
 
 ## 交付记录
 
-- 实际修改/运行/审查/工作树/剩余风险：待实施回填；不将规划描述当成已通过证据。
-- 原生实现 Worker：`/root/resource_admission_impl`，仅在本 Task 工作树写入；独立只读审查 `/root/review_resource_admission`，只读回包与新增补证由 Coordinator 回收。工作树标准 CLI 创建/冻结安装/目标检查通过；主检出不含 Worker 运行时代码。
+- 原生实现 Worker：`/root/resource_admission_impl`，仅在本 Task 工作树写入；独立只读审查 `/root/review_resource_admission`，只读回包与新增补证由 Coordinator 回收。工作树标准 CLI 创建/冻结安装/目标检查通过；实施期间主检出不含 Worker 运行时代码；最终由 Coordinator 串行集成。
+
+- 候选与接手：源候选 619cd9c3bcf2e4acb8e3af1f55e46c68db1a9250；Worker完成实现与补证，收尾中断后由Coordinator回读暂存范围、重跑测试和完整检查并提交。未根据完成总结冒充代码已提交。
+- 实际修改：兼容gate合同、稳定错误code、可取消有界排队、owner轮转、原始操作收敛前的资源占用、无内容事件，以及OCR原生工具/会话publisher接线；README和ADR-0151成套更新。
+- 红绿：gate取消/资源保留2例先红后绿；image等待取消先红后绿；补充queued/started/released事件重入和同步取消、监听器成对清理、原操作晚到拒绝后补位。
+- 最终定向：runtime-tools gate 17例；runtime-node新旧OCR工具2文件10例；Coding Agent OCR策略4例，均由Coordinator实际复跑 exit 0。
+- 隔离检查：最终完整 bun run check exit 0，前一候选 check:quick也通过；首轮ADR声明头和测试callback返回类型问题已修复，不放宽守卫。
+- 影响验证：原生工具相关30文件247例通过；Coding Agent首次相关108例中的profile旧断言失败已在main原基线重现，由0411保留原合同补齐。最终组合从公开合同同时覆盖两个Task，不隐藏先前失败。
+- 评审：/root/review_resource_admission只读复核全部实际候选，新增测试的Node依赖边界问题已移除并复核，未使用真实模型/UI或声称异模型家族评审。
+- 发布：按WAIVER-0014暂存 .github/release-notes/fragments/v0.1.4/task-0410-shared-resource-admission.md；0.1.3正文与manifest保留。
+- 最终组合：bun run test:changed --base 6bb27d048 exit 1，六包全通过（2684例），Desktop 1102文件通过/7失败/4既有跳过，6233例通过/14失败/18既有跳过。完整 bun run check exit 0。真实OCR/UI/Provider未运行，人工功能验收保持待验收。
+
+- 组合验证路径调整（2026-10-29）：六个包已通过，Desktop全包出现本轮未修改的远端命令/文件与后台流程失败。用本地共享clone建立6bb27d048的独立只读源码基线，冻结安装后在同一宿主重跑失败测试；不复制用户状态，不修改失败断言，不将归因前结果声明为存量。
+
+- 基线方法纠正：node_modules内检出的远端测试复现同类shell失败，但TSX测试出现React未定义，受依赖目录的JSX转换影响，不计作UI基线证据。另建独立Temp本地检出重复UI对照，保留无效对照事实而不冒充通过。
+
+- 最终归因与集成：独立 Temp 基线冻结安装后复跑七文件，14失败/17通过/3既有跳过，完整失败名称与候选逐项相等；不是本轮引入的失败。见 [ISSUE-0035](../issues/ISSUE-0035-windows-desktop-test-baseline.md)。按 [WAIVER-0015](../decisions/waivers/WAIVER-0015-resource-admission-local-baseline.md) 仅允许本地集成，推送门禁保留；不改任何存量失败测试的断言、skip、超时或生产行为。

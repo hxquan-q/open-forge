@@ -50,3 +50,4 @@ Issue 可以有多个候选方案；Bug 必须有复现、期望行为、实际�
 - `ISSUE-0033`：`artifact` 工具 union 顶层 schema 在 glm 网关上不可用——模型 13 次调用全部空参被拒，报告退化为普通 write 文件；同会话 object 顶层工具全部正常，主假设是网关不接受非 object 顶层的 function parameters（draft；推荐 C 错误信息带 schema 提示 + B schema 包 object 顶层可移植化，wire 档后备定谳；阻塞 TASK-0074 与 0025/0026 的 Artifact 产出条款）。
 - `ISSUE-0034`：会话归档跨设备迁移两个产品缺口——导入目标位置自选（需 cwd 重写与指纹规范，推荐项目迁移向导）与产物/整目录打包（完整项目备份，需排除规则与冲突策略）；**2026-10-22 用户裁定 B+C**，已转 REQ-0026 + TASK-0361（ADR-0147）实施（done）。
 
+- `ISSUE-0035`：Windows Desktop 广域测试的存量失败归因（draft；PLAN-0026 候选与独立原基线精确复现同一 7 文件 14 用例，远端 shell 与后台刷新根因待调查；仅本地集成，开发分支推送门禁保留）。

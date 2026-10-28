@@ -10,7 +10,7 @@ source: user-request; RESEARCH-0047
 related_requirement: [REQ-0002]
 related_plan: [PLAN-0026]
 related_tasks: [TASK-0410]
-related_issues: []
+related_issues: [ISSUE-0035]
 related_bugs: []
 execution: parallel
 branch: task/TASK-0411-subagent-admission-observation
@@ -88,13 +88,13 @@ updated: 2026-10-29
 
 ## 交付记录
 
-- 工作树：标准 CLI 创建 `../open-forge-wt/task-0411-subagent-admission-observation`，冻结安装成功，目标 `worktree:check` 通过；实际基线 `6bb27d048`。源码候选 `ddf02a58026b5487b848e320d0f5c0618faae5ec`，无工作树未提交变更；尚未集成/清理。
+- 工作树：标准 CLI 创建 `../open-forge-wt/task-0411-subagent-admission-observation`，冻结安装成功，目标 `worktree:check` 通过；实际基线 `6bb27d048`。源码候选 `ddf02a58026b5487b848e320d0f5c0618faae5ec`，无工作树未提交变更；已于 f9d906c24053ec1f1b5e76f8d66d4cd6cf54580e 集成本地 main，保留工作树待推送后清理。
 - 实际修改：安全 scheduling callback、独立 admissionId、真实绑定身份事实、排队/容量/收尾/释放事件、epoch 保护与产品 publisher 接线；快照/通知/默认保持。补既有 profile 测试字段和工厂引用断言，无 profile 运行时改动。
 - 红绿：初始正常连续流程缺事件失败→通过；异步 callback 拒绝产生 unhandled→隔离；审查发现合法无文件句柄 followUp 身份丢失，回归先红后绿。自然 stop deadline 和旧 epoch 延迟各有 fake-clock 回归。
 - 定向：runtime-subagents 全包 `bun ../../scripts/quality/run-vitest.mjs --run`，9 文件 49 例通过；产品 assembly/控制工具 3 文件 15 例通过。
 - 影响：`bun run test:impact -- packages/runtime-subagents/src/scheduling-observation.ts packages/runtime-subagents/test/coordinator-admission-observation.test.ts packages/coding-agent/src/composition/subagent/session-assembly.ts packages/coding-agent/test/composition/subagent-admission-observation.test.ts packages/coding-agent/test/runtime-core/session-initialization-profile.test.ts` exit 0，产品相关 30 文件 108 例、子代理相关 9 文件 49 例及直接测试通过（有重叠，不相加宣称唯一总数）。
 - 检查：`check:quick` 和最终完整 `bun run check` exit 0；首轮新增/改动文件声明头遗漏已修复，未放宽基线。完整检查包含 lint、五组类型与 guards/mobile lint。
 - 协作：只读调查 `/root/subagent_observation_fixture` 提供最小生产 assembly 接缝与 generation 时序；独立审查 `/root/review_subagent_admission` 复核最终实际 diff，未执行测试或写代码，不冒充跨模型家族评审。
-- 未运行/边界：跨包 `test:changed` 在组合候选执行；未授权 UI/真实 Provider，未测真实模型吞吐。`released` 只证明调度槽释放，宽限耗尽不等于物理资源退出。
+- 未运行/边界：跨包 `test:changed` 已在组合候选执行，六包通过、Desktop 14 项经原基线逐例复现，详情见 PLAN-0026 与 ISSUE-0035；按 WAIVER-0015 只本地集成，未推送。未授权 UI/真实 Provider，未测真实模型吞吐。`released` 只证明调度槽释放，宽限耗尽不等于物理资源退出。
 - 集成复验：main 产品 3 例/子代理 12 例通过，授权执行环境完整检查 exit 0。权限切换期间首次检查因 Desktop 增量缓存写入 EPERM 失败，使用同一命令在授权环境复跑通过，未修改源码或降低标准。
 - 发布说明：按 WAIVER-0014 暂存 .github/release-notes/fragments/v0.1.4/task-0411-subagent-admission-observation.md；0.1.3 已发布正文与 manifest 保留，未发布。跨包组合证据在 PLAN-0026 追加。
