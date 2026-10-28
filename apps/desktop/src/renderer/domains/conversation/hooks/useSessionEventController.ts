@@ -5,6 +5,8 @@ import {
 	activeSessionStreamingAtom,
 	activeToolNamesAtom,
 	activityPanelTabByProjectAtom,
+	aiEditTargetAtom,
+	aiEditTargetFromToolCall,
 	type BackgroundTask,
 	backgroundTasksBySessionAtom,
 	type ChatTimelineItem,
@@ -460,6 +462,14 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			// ── Tool start ──
 			if (event.type === "tool.start") {
 				flushDeltas();
+				// 演示定稿：写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签热跟随。
+				const editTarget = aiEditTargetFromToolCall(
+					event.toolName,
+					event.args,
+					activeSessionRef.current?.cwd ?? null,
+					Date.now(),
+				);
+				if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
 				setChatMessages((prev) =>
 					handleToolStart(
 						prev,

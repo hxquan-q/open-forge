@@ -8,7 +8,7 @@ import type { ActivityTabDefinition } from "../registry/types";
 function FileActivityTab(): JSX.Element {
 	const cwd = useActivityPanelCwd();
 	// 演示定稿：文件页签的预览跟随 AI 正在编辑的文件（见 useFollowAiFileEdits）。
-	useFollowAiFileEdits(cwd);
+	useFollowAiFileEdits();
 	return <FileTabContent cwd={cwd} />;
 }
 

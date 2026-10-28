@@ -3,6 +3,7 @@
 
 export * from "./action-approval-atoms";
 export * from "./activity-atoms";
+export * from "./ai-activity-atoms";
 export * from "./archived-sessions-atoms";
 export * from "./auth-atoms";
 export * from "./background-tasks-atoms";

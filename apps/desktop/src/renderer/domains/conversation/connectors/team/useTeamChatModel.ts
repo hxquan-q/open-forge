@@ -17,12 +17,17 @@ import {
 } from "@shared/lib/input-tokens";
 import { persistBase64Images } from "@shared/lib/persist-input-images";
 import { pathBasename } from "@shared/lib/utils";
-import { reasoningByModelAtom, selectedModelAtom } from "@shared/store/atoms";
+import {
+	aiEditTargetAtom,
+	aiEditTargetFromToolCall,
+	reasoningByModelAtom,
+	selectedModelAtom,
+} from "@shared/store/atoms";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
 import type { AgentTeamDocument, TeamSessionListItem } from "@vetta/agent-team";
 import type { PromptAttachmentRef, SessionExecutionMode } from "@vetta/runtime-core";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
-import { useAtomValue } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveSessionContextComposition } from "../../services/context-composition-cache";
@@ -352,6 +357,17 @@ export function useTeamChatModel(
 					? event.teamSessionId
 					: event.conversationId;
 			if (!mounted || eventSessionId !== session.id) return;
+			// 演示定稿：成员的写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签
+			// 热跟随（与普通会话的 useSessionEventController 同一 atom，跨宿主形态生效）。
+			if (event.type === "conversation.agent-message-event" && event.event.type === "tool.start") {
+				const editTarget = aiEditTargetFromToolCall(
+					event.event.toolName,
+					event.event.args,
+					sessionRef.current?.cwd ?? null,
+					Date.now(),
+				);
+				if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
+			}
 			// session-updated 用快照的 messages 把已落盘的 turn 从流里裁掉。这个裁剪
 			// 必须和快照的采纳同进同退：快照因版本过旧被拒时若照裁不误，这条回复就从
 			// 流和快照两边同时消失（页面重进才恢复）。
