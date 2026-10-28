@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export interface DesktopCommandLocation {
 	readonly path: string;
 	readonly staleConfiguredPath?: string;
@@ -23,9 +24,7 @@ export interface DesktopCommandPort extends CommandProcessPort {
 	locate(): Promise<DesktopCommandLocation>;
 }
 
-export interface AsyncExecutionGate {
-	run<T>(operation: () => Promise<T>): Promise<T>;
-}
+export type { AsyncExecutionGate } from "../async-execution-gate-contracts.js";
 
 export class DesktopCommandAbortedError extends Error {
 	constructor() {

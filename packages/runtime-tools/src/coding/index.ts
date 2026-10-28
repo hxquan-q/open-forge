@@ -1,4 +1,13 @@
+// Modified by The Open Forge contributors.
 export { createAsyncExecutionGate } from "./async-execution-gate.js";
+export {
+	AsyncExecutionGateError,
+	type AsyncExecutionGateErrorCode,
+	type AsyncExecutionGateEvent,
+	type AsyncExecutionGateOptions,
+	type AsyncExecutionGatePhase,
+	type AsyncExecutionGateRunOptions,
+} from "./async-execution-gate-contracts.js";
 export {
 	CODING_TOOL_AVAILABILITY_ERROR_CODES,
 	CodingToolAvailabilityError,
