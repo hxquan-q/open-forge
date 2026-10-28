@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 位图截图队列的竞态回归测试。
  *
@@ -65,10 +66,7 @@ async function advance(ms: number): Promise<void> {
 	});
 }
 
-async function mount(
-	frameIds: readonly string[],
-	offscreen?: TestOffscreenContext | null,
-): Promise<void> {
+async function mount(frameIds: readonly string[], offscreen?: TestOffscreenContext | null): Promise<void> {
 	container = document.createElement("div");
 	document.body.appendChild(container);
 	root = createRoot(container);
@@ -136,6 +134,7 @@ it("截图期间被 invalidate 的 frame 会重新截图，而不是停在旧位
 	// 旧内容的截图此刻才落地。
 	captures[0].resolve("data:stale");
 	await flushMicrotasks();
+	expect(latest.rasterOf("a")).not.toBe("data:stale");
 
 	// 脏标记必须还在：重新排队截一张新的。
 	await advance(SETTLE);
@@ -221,6 +220,44 @@ it("没有 invalidate 时只截一次，位图落地后 frame 退出活体", asy
 
 	await advance(SETTLE * 4);
 	expect(captures.length).toBe(1);
+});
+
+it("旧位图重截失败后显示活体，继续手势与手动恢复不会被旧图遮住", async () => {
+	const failureLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+	const capture = vi
+		.fn()
+		.mockResolvedValueOnce({ dataUrl: "data:old", scaleFactor: 2 })
+		.mockRejectedValueOnce(new Error("capture unavailable"))
+		.mockResolvedValue({ dataUrl: "data:fresh", scaleFactor: 2 });
+	setPluginCtx({
+		capture: { offscreen: capture, releaseOffscreen: () => Promise.resolve() },
+	} as unknown as PluginContext);
+	try {
+		const offscreen = { port: 5173, sizeOf: () => ({ width: 390, height: 844 }) };
+		await mount(["a"], offscreen);
+		await advance(50);
+		await flushMicrotasks();
+		expect(latest.rasterOf("a")).toBe("data:old");
+		act(() => latest.invalidate("a"));
+		await advance(50);
+		await flushMicrotasks();
+		expect(latest.isMounted("a")).toBe(true);
+		expect(latest.isLive("a")).toBe(true);
+		expect(latest.rasterOf("a")).toBeNull();
+		await act(async () =>
+			root.render(createElement(Harness, { frameIds: ["a"], activeFrameId: null, interacting: true, offscreen })),
+		);
+		expect(latest.isLive("a")).toBe(true);
+		act(() => latest.refreshAll());
+		expect(latest.isLive("a")).toBe(true);
+		expect(latest.rasterOf("a")).toBeNull();
+		await advance(50);
+		await flushMicrotasks();
+		expect(latest.rasterOf("a")).toBe("data:fresh");
+	} finally {
+		failureLog.mockRestore();
+		setPluginCtx(null as unknown as PluginContext);
+	}
 });
 
 /**
@@ -400,12 +437,14 @@ it("交互期把有位图的 frame 降为位图，iframe 收起但不卸载", as
 		// 手势开始：位图顶上，iframe 收起。
 		await render(true);
 		expect(latest.isLive("a")).toBe(false);
+		expect(latest.isParked("a")).toBe(true);
 		// 但必须还挂着——卸掉就要整页重新加载，操作结束会看见一轮重启。
 		expect(latest.isMounted("a")).toBe(true);
 
 		// 结束后恢复活体。
 		await render(false);
 		expect(latest.isLive("a")).toBe(true);
+		expect(latest.isParked("a")).toBe(false);
 	} finally {
 		setPluginCtx(null as unknown as PluginContext);
 	}
@@ -420,6 +459,7 @@ it("交互期没有位图的 frame 仍然保持活体", async () => {
 	});
 	expect(latest.rasterOf("a")).toBe(null);
 	expect(latest.isLive("a")).toBe(true);
+	expect(latest.isParked("a")).toBe(false);
 });
 
 /**

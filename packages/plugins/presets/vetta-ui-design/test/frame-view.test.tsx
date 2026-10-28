@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+// @vitest-environment-options {"settings":{"disableIframePageLoading":true}}
 
 /**
  * 画框外壳：标题栏限宽、选中时的尺寸标签、还没画出来时的启动占位。
@@ -43,6 +44,7 @@ function renderFrame(
 				resizable={false}
 				mounted={false}
 				live={false}
+				parked={false}
 				raster={raster}
 				reloadNonce={0}
 				paintTick={0}
@@ -98,9 +100,7 @@ it("shows the size badge only while selected, under the frame", () => {
 	idle.cleanup();
 
 	const active = renderFrame(false, true);
-	const badge = [...active.host.querySelectorAll<HTMLElement>("div")].find(
-		(node) => node.textContent === "390×1046",
-	);
+	const badge = [...active.host.querySelectorAll<HTMLElement>("div")].find((node) => node.textContent === "390×1046");
 	expect(badge).toBeDefined();
 	expect(badge?.className).toContain("bg-primary");
 	// frame 底边下方、水平居中，且跟着 --vetd-lscale 反向缩放。
@@ -138,6 +138,7 @@ it("挂载的 frame iframe 带 sandbox 白名单：不放行顶层导航与弹�
 				resizable={false}
 				mounted
 				live
+				parked={false}
 				raster={null}
 				reloadNonce={0}
 				paintTick={0}

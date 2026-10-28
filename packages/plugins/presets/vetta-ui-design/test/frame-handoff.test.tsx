@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+// @vitest-environment-options {"settings":{"disableIframePageLoading":true}}
 /**
  * 位图 → 活体的交接时机。
  *
@@ -47,10 +49,25 @@ interface Scene {
 	live: boolean;
 	paintTick: number;
 	mounted?: boolean;
+	parked?: boolean;
 }
 
-function mountFrame(scene: Scene): { host: HTMLElement; update(next: Scene): Promise<void>; cleanup(): void } {
+function mountFrame(scene: Scene): {
+	host: HTMLElement;
+	update(next: Scene): Promise<void>;
+	paintRaster(): Promise<void>;
+	cleanup(): void;
+} {
 	const host = document.createElement("div");
+	let manualRasterLoad = false;
+	// Image decoding is an external boundary; advance it explicitly in this fixture.
+	host.addEventListener(
+		"load",
+		(event) => {
+			if (event.target instanceof HTMLImageElement && !manualRasterLoad) event.stopPropagation();
+		},
+		true,
+	);
 	document.body.appendChild(host);
 	let root: Root | null = null;
 	const draw = (current: Scene): void => {
@@ -66,6 +83,7 @@ function mountFrame(scene: Scene): { host: HTMLElement; update(next: Scene): Pro
 				resizable={false}
 				mounted={current.mounted ?? true}
 				live={current.live}
+				parked={current.parked ?? false}
 				raster="data:image/jpeg;base64,shot"
 				reloadNonce={0}
 				paintTick={current.paintTick}
@@ -95,6 +113,11 @@ function mountFrame(scene: Scene): { host: HTMLElement; update(next: Scene): Pro
 		update: async (next: Scene) => {
 			await act(async () => draw(next));
 		},
+		paintRaster: async () => {
+			manualRasterLoad = true;
+			await act(async () => host.querySelector("img")?.dispatchEvent(new Event("load")));
+			manualRasterLoad = false;
+		},
 		cleanup: () => {
 			act(() => root?.unmount());
 			host.remove();
@@ -109,6 +132,33 @@ function rasterCovers(host: HTMLElement): boolean {
 	if (!img) throw new Error("raster not rendered");
 	return img.style.opacity === "1";
 }
+
+it("手势期间停放 iframe 保持布局，栅格就绪前保留可用画面，结束后恢复活体", async () => {
+	installRaf();
+	const scene = mountFrame({ live: true, paintTick: 0 });
+	try {
+		const iframe = scene.host.querySelector("iframe");
+		const raster = scene.host.querySelector("img");
+		if (!iframe || !raster) throw new Error("Missing frame layers");
+		const src = iframe.src;
+		await scene.update({ live: false, parked: true, paintTick: 0 });
+		expect(iframe.style.display).toBe("block");
+		expect(iframe.style.opacity).not.toBe("0");
+		await scene.paintRaster();
+		expect(iframe.style.display).toBe("block");
+		expect(iframe.style.opacity).toBe("0");
+		await scene.update({ live: true, parked: false, paintTick: 1 });
+		await paintFrame();
+		await paintFrame();
+		expect(scene.host.querySelector("iframe")).toBe(iframe);
+		expect(iframe.src).toBe(src);
+		expect(iframe.style.display).toBe("block");
+		expect(iframe.style.opacity).not.toBe("0");
+		expect(rasterCovers(scene.host)).toBe(false);
+	} finally {
+		scene.cleanup();
+	}
+});
 
 it("收到画好的信号后仍多盖两帧，等跨源子帧的合成面提交上来", async () => {
 	installRaf();
