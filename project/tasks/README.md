@@ -15,6 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0410` | `in_progress` | PLAN-0026 | [共享资源准入与 OCR 接线](TASK-0410-shared-resource-admission.md)；可取消、有界排队、session 公平及底层操作收敛记账，独立工作树，先红后绿。 |
+| `TASK-0411` | `in_progress` | PLAN-0026 | [子代理准入与收尾观测](TASK-0411-subagent-admission-observation.md)；安全事件与产品 publisher 接线，保留默认与有界取消，独立工作树。 |
 | `TASK-0406` | `verifying` | PLAN-0025 | [MCP 候选失败退避重试](TASK-0406-mcp-candidate-retry.md)；已集成 main，影响 65 / Node 68 / Desktop 12 例及 check 通过；已知跨包红灯按 WAIVER-0012 保留。 |
 | `TASK-0407` | `verifying` | PLAN-0025 | [设计画布卡顿与闪白修复](TASK-0407-design-canvas-stability.md)；候选 dd7feffcd 已随 `826af3caa` 集成 main，main 复验 130 文件 928 例/check/build 通过；实机首屏与输入待验收。 |
 | `TASK-0408` | `verifying` | PLAN-0025 | [真实图片素材与来源追溯](TASK-0408-design-real-image-assets.md)；候选 `157f0906e` 已随 `c2f2e2851` 集成 main，独立审查 P2 已处置；真实来源与视觉验收待执行。 |
