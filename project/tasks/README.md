@@ -15,7 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0406` | `verifying` | PLAN-0025 | [MCP 候选失败退避重试](TASK-0406-mcp-candidate-retry.md)；独立候选 d51a45afc，MCP 测试及 check 通过；跨包回归红，集成待处理。 |
+| `TASK-0406` | `verifying` | PLAN-0025 | [MCP 候选失败退避重试](TASK-0406-mcp-candidate-retry.md)；已集成 main，影响 65 / Node 68 / Desktop 12 例及 check 通过；已知跨包红灯按 WAIVER-0012 保留。 |
 | `TASK-0407` | `verifying` | PLAN-0025 | [设计画布卡顿与闪白修复](TASK-0407-design-canvas-stability.md)；独立候选 dd7feffcd，763 例/构建/check 通过；实机首屏与输入待验收、集成 pending。 |
 | `TASK-0408` | `in_progress` | PLAN-0025 | [真实图片素材与来源追溯](TASK-0408-design-real-image-assets.md)；用户要求独立工作树，先实现隔离候选，最终集成仍待 0407；最小网络权限与本地资源/credits 闭环。 |
 | `TASK-0409` | `ready` | PLAN-0025 | [设计方向与质量检查](TASK-0409-design-direction-quality.md)；待 0408 候选通过后在独立工作树串行实施；main 集成仍待前置任务，视觉/模型验收分层。 |

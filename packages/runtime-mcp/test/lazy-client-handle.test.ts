@@ -92,12 +92,28 @@ describe("LazyMcpClientHandle", () => {
 		const pending = handle.callTool("one");
 		pending.catch(() => undefined);
 		await handle.disconnect();
+		expect(stale.closed).toBe(true);
+		await expect(handle.callTool("two")).resolves.toEqual({ content: [{ type: "text", text: "two" }] });
 		gate.resolve();
 		await expect(pending).rejects.toThrow("superseded");
 		expect(stale.closed).toBe(true);
 
 		await expect(handle.callTool("two")).resolves.toEqual({ content: [{ type: "text", text: "two" }] });
 		expect(fresh.initializeCalls).toBe(1);
+	});
+
+	it("closes an initializing transport before its handshake settles", async () => {
+		const gate = new Deferred<void>();
+		const inner = new RecordingClient("pending", gate);
+		const handle = createHandle(() => inner);
+		const pending = handle.callTool("one");
+		pending.catch(() => undefined);
+		await handle.close();
+		expect(inner.closed).toBe(true);
+		await expect(handle.callTool("two")).rejects.toThrow(/closed/);
+		gate.resolve();
+		await expect(pending).rejects.toThrow("superseded");
+		expect(inner.callToolNames).toEqual([]);
 	});
 
 	it("counts a pending connection attempt as in-flight work", async () => {

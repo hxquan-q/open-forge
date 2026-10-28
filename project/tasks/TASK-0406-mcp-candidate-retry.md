@@ -14,14 +14,14 @@ related_issues: []
 related_bugs: [BUG-0152]
 execution: parallel
 branch: task/TASK-0406-mcp-candidate-retry
-worktree: ../open-forge-wt/task-0406-mcp-candidate-retry
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 6ebd359b567da1ac46e37327c5178bc9c53fca50
 read_paths: [packages/runtime-mcp, packages/runtime-node/src/mcp, apps/desktop/src/main/agent-runtime/mcp-supervisor.ts]
 write_paths: [packages/runtime-mcp/src/server/supervisor.ts, packages/runtime-mcp/src/client/lazy-client-handle.ts, packages/runtime-mcp/test/server-supervisor.test.ts, packages/runtime-mcp/test/lazy-client-handle.test.ts]
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0154]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-28
 updated: 2026-10-28
 ---
@@ -77,7 +77,7 @@ MCP 配置更新产生的候选首次暂时失败后，后续正常请求能在�
 
 - 工程验证：定向 33 例、影响 65 例、runtime-mcp 全包 84 例及完整 `bun run check` 通过；跨包 `test:changed` 未通过，不能宣称组合验收通过。
 - 技术评审：独立只读 `/root/mcp_final_review` 审实际四文件及消费者；关闭 pending 客户端缺口已修复，无本次阻断发现。真实 HTTP/fetch 取消限制属于既有适配器边界，未扩展公共取消协议。
-- 集成：pending；代码候选 `d51a45afc748311d97c8e2827acb851a3b46ef9e`，未合入 main、未推送。
+- 集成：integrated；代码候选 `d51a45afc748311d97c8e2827acb851a3b46ef9e` 与记录提交 `51ed65dcc` 已合入本地 main，由承载本记录的 merge commit 绑定；Task 分支已推 origin，main 开发候选按本轮指令待推 origin/dev。
 - 人工功能验收：待验收；提供隔离故障恢复场景和实际版本，不使用真实用户服务测试。
 - 发布：未授权。
 
@@ -104,3 +104,7 @@ MCP 配置更新产生的候选首次暂时失败后，后续正常请求能在�
 ## 2026-10-28 集成指令续接
 
 用户在上述红灯与未运行项说明后要求“提交推送，然后合并入main”，并明确同意一并提交主工作区现有共享文档。按 WAIVER-0012 执行单次开发候选集成：先推已提交 Task 分支，干净 main 按 0406 → 0407 合并，补偿验证必须通过，再普通推送 origin/dev；不发布、不推 origin/main，不将已知跨包红灯改写为通过。实际合并与新验证结果在各次集成提交回填。
+
+- 归属：Open-Forge-only 适配；保留本仓 supervisor/generation/lease 和平台边界，不向 upstream 推送。
+- 本次 main 合并无运行时代码冲突；三份共享台账保留较新的 main 内容与授权记录，0408/0409 的台账均保留。
+- main 实际复验：`bun run test:impact -- packages/runtime-mcp/src/server/supervisor.ts packages/runtime-mcp/src/client/lazy-client-handle.ts` 为 7 文件 65 例；runtime-node 的 `test/mcp` 为 11 文件 68 例；Desktop supervisor/resource-manager/resource-scope 为 3 文件 12 例；完整 `bun run check` exit 0。前轮全跨包失败与 UI 未运行仍有效。
