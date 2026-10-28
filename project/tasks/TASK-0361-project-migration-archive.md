@@ -21,7 +21,7 @@ worktree: unassigned（主工作区串行执行；注意与其他会话共享工
 read_paths: [docs/adr/0147-project-migration-archive-v2.md, packages/runtime-storage/src/conversation/session-archive/, apps/desktop/src/main/conversations/session-archive-service.ts, apps/desktop/src/main/ipc/session-archive.ts, apps/desktop/src/preload/, apps/desktop/src/renderer/domains/project/, apps/desktop/src/renderer/domains/conversation/hooks/useChatViewModel.ts]
 write_paths: [apps/desktop/src/main/conversations/, apps/desktop/src/shared/i18n/locales/zh/main.json, apps/desktop/src/shared/i18n/locales/en/main.json, apps/desktop/README.md, docs/adr/0147-project-migration-archive-v2.md, .github/release-notes/fragments/v0.1.4/task-0361-project-migration.md, project/tasks/TASK-0361-project-migration-archive.md, project/tasks/README.md, project/bugs/BUG-0153-archive-restore-path-boundary.md, project/bugs/BUG-0154-native-session-archive-unreadable.md, project/bugs/README.md, project/research/RESEARCH-0046-project-migration-portability.md, project/research/README.md]
 exclusive_paths: []
-integration_status: integrated（本地 main 串行原子提交；由承载本记录的提交绑定；未推送）
+integration_status: integrated（本地 main 串行原子提交 `46785aaac`；已核对包含于 origin/dev `2806052dd`，origin/main 未推送）
 created: 2026-10-22
 updated: 2026-10-28
 ---
@@ -197,7 +197,10 @@ TASK-0349 的项目会话导出菜单项存在接线缺口：`ProjectContextMenu
 
 ### 集成与剩余边界
 
-- 初始代码基线 `9f4b87ee8`；验证期间其他会话的文档提交使 main 前进到 `6ebd359b5`，已核对其非本任务生产变更。当前原子提交只包含本轮明确路径和共享台账自身行，不夹带 MCP/设计变更；承载本记录的提交绑定本轮集成事实，不另建哈希回执提交。不推送带其他未验收 Task 的 main。
+- 初始代码基线 `9f4b87ee8`；验证期间其他会话的文档提交使 main 前进到 `6ebd359b5`，已核对其非本任务生产变更。当前原子提交只包含本轮明确路径和共享台账自身行，不夹带 MCP/设计变更；承载本记录的提交绑定本轮集成事实，不另建哈希回执提交。其他并行任务随后由各自 Coordinator 集成到本地 main 并推送 `origin/dev`，本任务未代为推送或修改其验收状态。
+- 推送回执（不另建提交）：用户确认的 `6ebd359b5` 与 `46785aaac` 已包含在 `origin/dev`；远端现为 `2806052dd`，经 `merge-base --is-ancestor` 核实本任务提交在其历史中，`origin/dev..main` 为空，普通 fast-forward 推送返回 up-to-date。`origin/main` 仍为 `9f4b87ee8`，未推送稳定分支。
+- 推送前失败分流（不把环境失败写成代码通过）：共享工作区 `test:changed` 首次失败来自 Windows `PATH` 优先命中 WSL `bash.exe`，以及 Git Bash 的 `/bin/gzip` 在本机不可执行；把 Git Bash `/usr/bin` 置于测试进程 PATH 后远程文件/命令/技能套件与归档套件通过。共享 checkout 在验证期间被并行任务合入并前进，故改用固定提交 `46785aaac` 的临时 detached Worktree，按冻结锁文件安装，避免后续提交混入本批次验证。
+- 隔离验证最终 `test:changed --base origin/dev`：完整跑完 1113 个文件，**6245 通过 / 2 失败 / 18 跳过**；两项失败均为完整套件并发压力下的 5 秒测试超时（dialog 序号上限、DatePicker Escape 焦点），单独复跑 14/14 全绿，未改超时、断言或测试筛选。隔离副本完整 `bun run check` **exit 0**。临时 Worktree 验证时状态干净；删除目录后，Git 注册元数据由 `git worktree prune` 清理，未改动其他工作树目录。
 - 工程与独立审查通过；Task 保持 `verifying`，人工功能接受、发布均未完成。未启动真实 Desktop、`verify:ui:*`、长驻 dev、Provider 或真实用户状态；Repository 续写不等于真实模型续跑。
 - 已验证平台是 Windows；POSIX 执行位、macOS/Linux 及物理双设备仍待 CI/人工验收。无硬链接 fallback 保持不覆盖，但无跨文件/崩溃事务保证；恶意并发目录替换不是普通文件 API 的安全承诺。
 - 仍沿用 512 MiB/4 GiB 及全量内存编码；未宣称内存优化。项目外插件私有文件/全局账号配置/记忆/远程 SSH 产物不在包内；历史消息内旧绝对路径保留为事实。包含项目文件时 `.env` 等项目内敏感内容不会自动脱敏，转移前应检查并设置口令。
