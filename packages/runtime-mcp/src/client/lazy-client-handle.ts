@@ -47,6 +47,7 @@ export interface LazyMcpClientHandleOptions {
  */
 export class LazyMcpClientHandle implements McpClientHandle {
 	private client?: McpClientHandle;
+	private connectingClient?: McpClientHandle;
 	private connectPromise?: Promise<McpInitializeResult>;
 	private epoch = 0;
 	private inFlight = 0;
@@ -173,8 +174,10 @@ export class LazyMcpClientHandle implements McpClientHandle {
 	 */
 	async disconnect(): Promise<void> {
 		this.epoch += 1;
-		const client = this.client;
+		// A transport already owns resources while its handshake is pending.
+		const client = this.client ?? this.connectingClient;
 		this.client = undefined;
+		this.connectingClient = undefined;
 		this.connectPromise = undefined;
 		if (!client) return;
 		try {
@@ -195,6 +198,7 @@ export class LazyMcpClientHandle implements McpClientHandle {
 		const epoch = this.epoch;
 		const promise = (async (): Promise<McpInitializeResult> => {
 			const client = this.options.createClient();
+			this.connectingClient = client;
 			try {
 				const result = await init(client);
 				if (this.permanentlyClosed || this.epoch !== epoch) {
@@ -223,6 +227,8 @@ export class LazyMcpClientHandle implements McpClientHandle {
 				}
 				this.options.onConnectFailed?.(error);
 				throw error;
+			} finally {
+				if (this.connectingClient === client) this.connectingClient = undefined;
 			}
 		})();
 		this.connectPromise = promise;

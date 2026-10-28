@@ -88,6 +88,8 @@ export interface McpServerSupervisorOptions {
 /** Fallback idle timeout for stdio servers when nothing configures one. */
 export const MCP_DEFAULT_STDIO_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
+const MCP_CANDIDATE_RETRY_BACKOFF_MS = 30_000;
+
 /**
  * Owns MCP server lifecycle and file/dynamic config reconciliation.
  * Product-specific auth UX and tool adaptation remain in host adapters.
@@ -95,6 +97,7 @@ export const MCP_DEFAULT_STDIO_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 export class McpServerSupervisor {
 	private readonly servers = new Map<string, ManagedMcpServer>();
 	private readonly retiredServers = new Set<ManagedMcpServer>();
+	private readonly startingServers = new Set<ManagedMcpServer>();
 	private readonly configSource: McpConfigSource;
 	private readonly clientFactory: RuntimeMcpClientFactory;
 	private readonly protocolVersion: string;
@@ -111,6 +114,10 @@ export class McpServerSupervisor {
 	private dynamicServers = new Map<string, McpServerConfig>();
 	private dynamicSignature = "none";
 	private lastSignature: string | undefined;
+	private failedSignature: string | undefined;
+	private retryNotBefore = 0;
+	private closed = false;
+	private pendingReconcile: { readonly signature: string; readonly promise: Promise<boolean> } | undefined;
 	private globalConfig: McpConfig | undefined;
 	private projectConfig: McpConfig | undefined;
 	private reconcileRevision = 0;
@@ -134,7 +141,7 @@ export class McpServerSupervisor {
 	}
 
 	async initialize(): Promise<void> {
-		if (!this.enabled) {
+		if (!this.enabled || this.closed) {
 			this.log("MCP is disabled, skipping initialization");
 			return;
 		}
@@ -164,6 +171,7 @@ export class McpServerSupervisor {
 	}
 
 	async setDynamicServers(next: McpDynamicServerSet): Promise<boolean> {
+		if (this.closed) return false;
 		if (!this.enabled) {
 			this.dynamicServers.clear();
 			this.dynamicSignature = "none";
@@ -178,25 +186,28 @@ export class McpServerSupervisor {
 	}
 
 	hasConfigChanged(): boolean {
-		if (!this.enabled) return false;
+		if (!this.enabled || this.closed) return false;
 		return this.lastSignature !== this.combinedSignature();
 	}
 
 	async reloadIfChanged(): Promise<boolean> {
-		if (!this.enabled) return false;
+		if (!this.enabled || this.closed) return false;
 		const signature = this.combinedSignature();
 		if (this.lastSignature !== undefined && this.lastSignature === signature) return false;
+		if (this.failedSignature === signature && Date.now() < this.retryNotBefore) return false;
 		this.log("MCP config changed, diff-reloading");
 		return this.reconcileToEffectiveConfig();
 	}
 
 	async reload(): Promise<void> {
+		if (!this.enabled || this.closed) return;
 		this.log("Reloading MCP configuration");
 		this.lastSignature = undefined;
 		await this.reconcileToEffectiveConfig();
 	}
 
 	async restartServer(name: string, config: McpServerConfig): Promise<void> {
+		if (this.closed) return;
 		const current = this.servers.get(name);
 		if (config.disabled) {
 			if (current) {
@@ -206,6 +217,10 @@ export class McpServerSupervisor {
 			return;
 		}
 		const candidate = await this.startServer(name, config, false);
+		if (this.closed) {
+			await this.retireServer(candidate);
+			return;
+		}
 		if (candidate.status !== "ready") {
 			if (current) {
 				await this.retireServer(candidate);
@@ -220,14 +235,17 @@ export class McpServerSupervisor {
 	}
 
 	async disconnectServer(name: string, outcome: McpServerDisconnectOutcome): Promise<void> {
+		if (this.closed) return;
 		const server = this.servers.get(name);
 		if (!server) return;
 		this.servers.delete(name);
 		await this.retireServer(server);
+		if (this.closed) return;
 		this.servers.set(name, createManagedServer(name, server.config, outcome.status, outcome.error));
 	}
 
 	async enableServer(name: string): Promise<void> {
+		if (this.closed) return;
 		const server = this.servers.get(name);
 		if (!server) throw new Error(`Server '${name}' not found`);
 		if (server.status === "ready") {
@@ -235,6 +253,10 @@ export class McpServerSupervisor {
 			return;
 		}
 		const candidate = await this.startServer(name, { ...server.config, disabled: false }, false);
+		if (this.closed) {
+			await this.retireServer(candidate);
+			return;
+		}
 		if (candidate.status !== "ready") {
 			await this.retireServer(candidate);
 			this.log(`Server ${name} enable failed; keeping stopped generation`);
@@ -245,18 +267,24 @@ export class McpServerSupervisor {
 	}
 
 	async disableServer(name: string): Promise<void> {
+		if (this.closed) return;
 		const server = this.servers.get(name);
 		if (!server) throw new Error(`Server '${name}' not found`);
 		const config = { ...server.config, disabled: true };
 		this.servers.delete(name);
 		await this.retireServer(server);
+		if (this.closed) return;
 		this.servers.set(name, createManagedServer(name, config, "stopped"));
 		this.log(`Server ${name} disabled`);
 	}
 
 	async shutdown(): Promise<void> {
 		this.log("Shutting down all MCP servers");
-		const generations = [...this.servers.values(), ...this.retiredServers];
+		this.closed = true;
+		this.reconcileRevision += 1;
+		this.failedSignature = undefined;
+		this.retryNotBefore = 0;
+		const generations = [...new Set([...this.servers.values(), ...this.retiredServers, ...this.startingServers])];
 		this.servers.clear();
 		for (const server of generations) await this.retireServer(server);
 		await Promise.all(generations.map((server) => this.waitForServerDisposal(server)));
@@ -351,6 +379,7 @@ export class McpServerSupervisor {
 		let toolsMs = 0;
 		let resourcesMs = 0;
 		const server = createManagedServer(name, config, "starting");
+		this.startingServers.add(server);
 		if (publish) this.servers.set(name, server);
 
 		try {
@@ -468,6 +497,8 @@ export class McpServerSupervisor {
 			server.status = "error";
 			server.error = getErrorMessage(error);
 			this.log(`Failed to initialize server ${name}: ${server.error}`);
+		} finally {
+			this.startingServers.delete(server);
 		}
 		return server;
 	}
@@ -554,13 +585,31 @@ export class McpServerSupervisor {
 	}
 
 	private async reconcileToEffectiveConfig(): Promise<boolean> {
+		if (!this.enabled || this.closed) return false;
+		const signature = this.combinedSignature();
+		if (this.pendingReconcile?.signature === signature) return this.pendingReconcile.promise;
+		const pending = { signature, promise: this.reconcileConfig(signature) };
+		this.pendingReconcile = pending;
+		try {
+			return await pending.promise;
+		} finally {
+			if (this.pendingReconcile === pending) this.pendingReconcile = undefined;
+		}
+	}
+
+	private async reconcileConfig(signature: string): Promise<boolean> {
 		const revision = ++this.reconcileRevision;
 		let config: McpConfig;
+		let globalConfig: McpConfig | undefined;
+		let projectConfig: McpConfig | undefined;
 		try {
 			config = this.loadEffectiveConfig();
+			globalConfig = this.configSource.loadGlobal() ?? undefined;
+			projectConfig = this.configSource.loadProject() ?? undefined;
 		} catch (error) {
 			this.log(`Failed to load effective MCP config, keeping current state: ${getErrorMessage(error)}`);
-			this.lastSignature = this.combinedSignature();
+			// Invalid configuration needs an edit, not timed connection retries.
+			this.lastSignature = signature;
 			return false;
 		}
 
@@ -576,16 +625,26 @@ export class McpServerSupervisor {
 			);
 		}
 		await Promise.allSettled(starts);
-		if (revision !== this.reconcileRevision) {
+		if (
+			this.closed ||
+			!this.enabled ||
+			revision !== this.reconcileRevision ||
+			signature !== this.combinedSignature()
+		) {
 			await Promise.all([...candidates.values()].map((candidate) => this.retireServer(candidate)));
 			return false;
 		}
 		const failed = [...candidates.values()].filter((candidate) => candidate.status !== "ready");
 		if (failed.length > 0) {
 			await Promise.all([...candidates.values()].map((candidate) => this.retireServer(candidate)));
-			this.globalConfig = this.configSource.loadGlobal() ?? undefined;
-			this.projectConfig = this.configSource.loadProject() ?? undefined;
-			this.lastSignature = this.combinedSignature();
+			if (this.closed || revision !== this.reconcileRevision) return false;
+			if (failed.some((candidate) => candidate.status === "needs_auth")) {
+				// Authorization remains an explicit host-owned lifecycle operation.
+				this.lastSignature = signature;
+			} else {
+				this.failedSignature = signature;
+				this.retryNotBefore = Date.now() + MCP_CANDIDATE_RETRY_BACKOFF_MS;
+			}
 			this.log(
 				`MCP candidate generation failed for ${failed.map(({ name }) => name).join(", ")}; keeping complete last-known-good generation`,
 			);
@@ -616,9 +675,12 @@ export class McpServerSupervisor {
 		// Publish the complete candidate set without an await so no Turn can observe
 		// a mixture of old and new server generations during physical retirement.
 		await Promise.all(retired.map((server) => this.retireServer(server)));
-		this.globalConfig = this.configSource.loadGlobal() ?? undefined;
-		this.projectConfig = this.configSource.loadProject() ?? undefined;
-		this.lastSignature = this.combinedSignature();
+		if (this.closed || revision !== this.reconcileRevision) return changed;
+		this.globalConfig = globalConfig;
+		this.projectConfig = projectConfig;
+		this.lastSignature = signature;
+		this.failedSignature = undefined;
+		this.retryNotBefore = 0;
 		this.log(`Reconcile done, ${this.servers.size} servers active`);
 		return changed;
 	}
