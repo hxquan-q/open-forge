@@ -21,7 +21,7 @@ write_paths: [packages/plugins/presets/vetta-ui-design/src/assets, packages/plug
 exclusive_paths: []
 depends_on: [TASK-0407]
 conflicts_with: [TASK-0407, TASK-0409]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-28
 updated: 2026-10-29
 ---
@@ -111,7 +111,16 @@ updated: 2026-10-29
   - 宿主 `PluginNetworkApi` 不暴露 redirect 目标、最终 URL、DNS 与 `AbortSignal`；跨域跳转/私网解析只能在 URL 前缀与宿主网关层约束，排队等待写队列或已进入预览循环后的用户取消无法观测。已在 `references/real-images.md` 明示，需宿主侧能力才能消除。
   - 图片解码依赖 `createImageBitmap`/`OffscreenCanvas`；不可用时按失败处理、不落盘，但该分支仅在测试 stub 下覆盖。
   - 许可状态为 `source-reported` / `unknown`，不构成法律许可结论；含 CREDITS 的导出只给警告。
-- 集成：未被要求集成，也未推送；`integration_status: pending`，最终顺序 0406 → 0407 → 0408 → 0409，0407 未完成前不合并入库。
+- 集成：`c2f2e2851` 已并入本地 main（0406 → 0407 之后）；origin/dev 推送与 origin/main 晋升按授权单独执行。
 - 发布说明：`apps/desktop/package.json` 当前为 0.1.3，但 v0.1.3 已有发布 tag，正文不得再改（`release-notes.mjs --check` 拒绝），碎片也因此不归入该版本。候选文案暂记于本 Task，首发 Open Forge 版本确定（ISSUE-0007）后归入自己的 Release Notes：
 
   > 设计画布新增真实图片素材工具（`vetd_assets`）：按关键词从 Wikimedia Commons 或 NASA 图片库检索候选、生成联系表挑选，选中后下载到设计资源目录并写入 `CREDITS.json`（标题、作者、原始页面、许可、SHA-256）；重开、历史恢复与离线导出保留图片与署名。仅启用这两个免密钥来源，Openverse/Unsplash/任意站点明确报不支持；许可仅按来源上报，导入与导出提示自行核验署名与商用条件。
+
+## 2026-10-28 集成记录
+
+用户本轮要求“提交推送合并”，0408 候选随 0406 → 0407 之后进入 main。
+
+- 合并：`c2f2e2851 merge(design): 集成 TASK-0408 真实图片素材候选`，保留候选提交 `157f0906e`；台账冲突取分支侧交付记录，任务索引保留主线较新的 0406/0407 行。
+- main 复验：插件整包 130 文件 928 例通过；根 `bun run check` exit 0；插件 `bun run build` 生成 `release/vetta-ui-design-0.7.2.vettapkg`（56 runtime 文件）。
+- 未运行：真实模型/Provider、真实 Desktop 实机首屏与跨进程输入、固定案例视觉评审与人工接受；不由 Git 合并代替。
+- 发布：未授权，未改版本与已发布发布说明。

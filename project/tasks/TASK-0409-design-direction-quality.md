@@ -21,7 +21,7 @@ write_paths: [packages/plugins/presets/vetta-ui-design/src/tools.ts, packages/pl
 exclusive_paths: []
 depends_on: [TASK-0408]
 conflicts_with: [TASK-0407, TASK-0408]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-28
 updated: 2026-10-28
 ---
@@ -88,7 +88,7 @@ updated: 2026-10-28
 
 - 工程验证：已完成（隔离工作树）。插件整包 128 文件 / 919 例通过；`bun run check`（lint 5172 文件、types、guards）、插件 `bun run build`（56 runtime 文件）exit 0；`test:changed` 中 `scripts/agents/runner.test.mjs`、`scripts/agents/integrate.test.mjs` 超时，已在 TASK-0408 工作树同一提交复现，属环境性既有失败，非本任务引入。
 - 技术评审：待独立审查；重点为诊断有效性/误报、旧设计兼容、字体许可及提示词合同。
-- 集成：pending；候选提交在 `task/TASK-0409-design-direction-quality`，未推送、未集成，等待 0407 → 0408 之后。
+- 集成：`9237363e2` 已并入本地 main（0407 → 0408 之后）；origin/dev 推送与 origin/main 晋升按授权单独执行。
 - 人工功能验收：待验收；固定案例产物须单独评审，不因测试通过自动接受。
 - 发布：未授权。
 
@@ -116,3 +116,12 @@ updated: 2026-10-28
   - 未照抄上游删除项（`src/inspector/ast-edit/*`、`shared/design-fs|entry-path|source-locator`、engine `source-tagger` 等）；上游对 `tools.ts` 的 `toNoteView` 简化未采纳，笔记锚点保持 fork 语义。
   - 未提升插件版本或写发布说明（与 0408 一致，等 ISSUE-0007 定首发版本）。
   - `test:changed` 的两个 `scripts/agents` 集成测试在本机 5s 超时，已在 0408 工作树同一提交复现为既有环境问题。
+
+## 2026-10-28 集成记录
+
+用户本轮要求“提交推送合并”，0409 候选在 0408 之后进入 main。
+
+- 合并：`9237363e2 merge(design): 集成 TASK-0409 设计方向与质量检查候选`，保留候选提交 `9374d708d`；台账无冲突。
+- main 复验：插件整包 130 文件 928 例通过；根 `bun run check` exit 0；插件 `bun run build` 生成 `release/vetta-ui-design-0.7.2.vettapkg`（56 runtime 文件）。
+- 未运行：真实模型/Provider、真实 Desktop 实机首屏与跨进程输入、固定案例视觉评审与人工接受；不由 Git 合并代替。
+- 发布：未授权，未改版本与已发布发布说明。

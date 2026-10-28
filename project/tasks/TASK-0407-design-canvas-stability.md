@@ -21,7 +21,7 @@ write_paths: [packages/plugins/presets/vetta-ui-design/engine, packages/plugins/
 exclusive_paths: []
 depends_on: [TASK-0406]
 conflicts_with: [TASK-0408, TASK-0409]
-integration_status: pending
+integration_status: integrated
 created: 2026-10-28
 updated: 2026-10-28
 ---
@@ -79,7 +79,7 @@ iframe sandbox、源码来源标记、AST 编辑与骨架保护、帧选择、�
 
 - 工程验证：局部回归及插件全包 117 文件、763 例通过；插件类型、构建和完整根检查通过。真实首屏/输入指标未验收，不以 DOM 证据替代。
 - 技术评审：独立只读 `/root/canvas_final_review` 发现原子写临时文件漏排，补正常保存链回归并修复后复审，无新阻断。
-- 集成：pending；代码候选 `dd7feffcdda257047fadbd6c006d5b84c835a7a0`，尚未合入 main/推送；最终仍按 0406 → 0407。
+- 集成：`826af3caa` 已并入本地 main（0406 之后），保留候选 `dd7feffcdda257047fadbd6c006d5b84c835a7a0`；origin/dev 推送与 origin/main 晋升按授权单独执行。
 - 人工功能验收：待验收；需实际画布操作证据。
 - 发布：未授权。
 
@@ -106,3 +106,12 @@ iframe sandbox、源码来源标记、AST 编辑与骨架保护、帧选择、�
 ## 2026-10-28 集成指令续接
 
 用户已要求提交推送并合入 main，随后同意纳入当前共享文档。按 WAIVER-0012 在 0406 之后集成并复验全包和完整 check；实机首屏、跨进程输入与人工接受仍保持未验收，不由本次 Git 指令代替。0408/0409 仅提交现有台账，不合入其实现。
+
+## 2026-10-28 合并执行结果
+
+用户本轮要求“提交推送合并”，据此在 main 完成 0406 之后的集成，并纠正了上一段“0408/0409 仅提交台账、不合入实现”的旧判断：0408/0409 的实现候选一并合并。
+
+- 合并：`826af3caa merge(design): 集成 TASK-0407 画布稳定候选`，保留原候选提交 `dd7feffcd`、`c53ad5e7e`；`project/bugs/README.md`、`project/tasks/README.md` 冲突按主线较新记录解决。
+- main 复验：插件整包 130 文件 928 例通过；根 `bun run check` exit 0；插件 `bun run build` 生成 `release/vetta-ui-design-0.7.2.vettapkg`（56 runtime 文件）。
+- 未运行：真实模型/Provider、真实 Desktop 实机首屏与跨进程输入、固定案例视觉评审与人工接受；不由 Git 合并代替。
+- 发布：未授权，未改版本与已发布发布说明。
