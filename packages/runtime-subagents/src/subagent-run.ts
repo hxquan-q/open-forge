@@ -16,7 +16,9 @@ export interface SubagentRunHooks<TProfile> {
 	rekey(run: SubagentRun<TProfile>, previousId: string, nextId: string): void;
 	onChanged(): void;
 	onTerminal(snapshot: SubagentSnapshot): void;
-	onSettled(run: SubagentRun<TProfile>): void;
+	onSettling(run: SubagentRun<TProfile>): void;
+	onSettlementDeadline(run: SubagentRun<TProfile>): void;
+	onSettled(run: SubagentRun<TProfile>, deadlineExceeded: boolean): void;
 	onError(error: unknown, operation: string): void;
 }
 
@@ -34,6 +36,7 @@ export interface SubagentRunOptions<TProfile> {
 export class SubagentRun<TProfile> {
 	private readonly snapshot;
 	private handle?: SubagentChildHandle;
+	private boundChildSessionId?: string;
 	private unsubscribe?: () => void;
 	private queuedRequest?: SubagentSpawnRequest;
 	private startLifecycleCompleted: boolean;
@@ -41,6 +44,7 @@ export class SubagentRun<TProfile> {
 	private executionEpoch: number;
 	private endingEpoch: number | undefined;
 	private settled = false;
+	private settlementDeadlineExceeded = false;
 	private settlement: Promise<void>;
 	private resolveSettlement: () => void = () => {};
 	private disposePromise: Promise<void> | undefined;
@@ -52,6 +56,7 @@ export class SubagentRun<TProfile> {
 		private readonly options: SubagentRunOptions<TProfile>,
 	) {
 		this.snapshot = mutableSnapshot(snapshot);
+		this.boundChildSessionId = snapshot.sessionFile === undefined ? undefined : snapshot.id;
 		this.queuedRequest = queuedRequest;
 		this.startLifecycleCompleted = snapshot.sessionFile !== undefined;
 		this.executionEpoch = snapshot.status === "queued" ? 0 : 1;
@@ -80,6 +85,10 @@ export class SubagentRun<TProfile> {
 
 	get hasLiveHandle(): boolean {
 		return this.handle !== undefined;
+	}
+
+	get childSessionId(): string | undefined {
+		return this.boundChildSessionId;
 	}
 
 	get endedAt(): number | undefined {
@@ -186,6 +195,7 @@ export class SubagentRun<TProfile> {
 
 	interrupt(): SubagentSnapshot {
 		if (isTerminalStatus(this.snapshot.status)) return this.readSnapshot();
+		this.options.hooks.onSettling(this);
 		const epoch = this.executionEpoch;
 		this.executionEpoch += 1;
 		const handle = this.handle;
@@ -219,7 +229,7 @@ export class SubagentRun<TProfile> {
 		const handle = this.handle;
 		this.handle = undefined;
 		if (!handle) return Promise.resolve();
-		return this.disposeForeignHandle(handle, `dispose child "${this.taskName}"`);
+		return this.disposeForeignHandle(handle, `dispose child "${this.taskName}"`, this.executionEpoch);
 	}
 
 	dispose(): Promise<void> {
@@ -251,6 +261,7 @@ export class SubagentRun<TProfile> {
 		const previousId = this.snapshot.id;
 		this.options.hooks.rekey(this, previousId, handle.sessionId);
 		this.snapshot.id = handle.sessionId;
+		this.boundChildSessionId = handle.sessionId;
 		this.snapshot.sessionFile = handle.sessionFile;
 		this.handle = handle;
 		this.unsubscribe = handle.subscribe((event) => {
@@ -303,6 +314,7 @@ export class SubagentRun<TProfile> {
 							),
 							this.options.settleDeadlineMs,
 							`subagent "${this.taskName}" beforeStop lifecycle`,
+							() => this.reportSettlementDeadline(epoch),
 						)
 					)?.continuation;
 				} catch (error) {
@@ -367,6 +379,7 @@ export class SubagentRun<TProfile> {
 				})(),
 				this.options.settleDeadlineMs,
 				`settle interrupted subagent "${this.taskName}"`,
+				() => this.reportSettlementDeadline(epoch + 1),
 			);
 		} catch (error) {
 			this.options.hooks.onError(error, "settle interrupted subagent");
@@ -392,12 +405,18 @@ export class SubagentRun<TProfile> {
 		this.unsubscribe = undefined;
 	}
 
-	private async disposeForeignHandle(handle: SubagentChildHandle, operation: string): Promise<void> {
+	private async disposeForeignHandle(
+		handle: SubagentChildHandle,
+		operation: string,
+		settlingEpoch?: number,
+	): Promise<void> {
 		try {
 			const disposal = (async () => {
 				await handle.dispose();
 			})();
-			await this.withDeadline(disposal, this.options.settleDeadlineMs, operation);
+			await this.withDeadline(disposal, this.options.settleDeadlineMs, operation, () => {
+				if (settlingEpoch !== undefined) this.reportSettlementDeadline(settlingEpoch);
+			});
 		} catch (error) {
 			this.options.hooks.onError(error, operation);
 		}
@@ -431,6 +450,7 @@ export class SubagentRun<TProfile> {
 
 	private beginSettlement(): void {
 		this.settled = false;
+		this.settlementDeadlineExceeded = false;
 		this.settlement = this.createSettlement();
 	}
 
@@ -444,7 +464,13 @@ export class SubagentRun<TProfile> {
 		if (this.settled) return;
 		this.settled = true;
 		this.resolveSettlement();
-		this.options.hooks.onSettled(this);
+		this.options.hooks.onSettled(this, this.settlementDeadlineExceeded);
+	}
+
+	private reportSettlementDeadline(epoch: number): void {
+		if (this.executionEpoch !== epoch || this.settled || this.settlementDeadlineExceeded) return;
+		this.settlementDeadlineExceeded = true;
+		this.options.hooks.onSettlementDeadline(this);
 	}
 }
 

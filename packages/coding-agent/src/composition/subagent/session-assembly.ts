@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type { EcosystemHookRuntime } from "@vetta/ecosystem-adapter";
 import {
@@ -22,6 +23,7 @@ import type { ConversationScenario } from "../../profiles/index.js";
 import type { CodingAgentRuntimeToolRegistration, CodingAgentToolActivation } from "../../runtime-contracts/index.js";
 import {
 	CODING_AGENT_SUBAGENT_ISSUE_OBSERVATION,
+	CODING_AGENT_SUBAGENT_SCHEDULING_OBSERVATION,
 	type CodingAgentSubagentIssueOperation,
 } from "../../runtime-contracts/subagent-observability.js";
 import type {
@@ -167,6 +169,9 @@ export function createCodingAgentSubagentSessionAssembly(
 			});
 		},
 		onError: (error) => observeSubagentIssue(options, "coordinator", runtimeObservationFailure(error)),
+		onSchedulingEvent: options.observationPublisher
+			? (event) => options.observationPublisher?.record(CODING_AGENT_SUBAGENT_SCHEDULING_OBSERVATION, event)
+			: undefined,
 		onNotify: (agents) => {
 			const payload = buildSubagentNotification(agents);
 			void options.resourceContext
