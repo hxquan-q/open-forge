@@ -2,6 +2,21 @@
 
 import type { PluginContext } from "@vetta-org/plugin-sdk";
 import { registerAssetsTool } from "./assets/tool";
+import { ASSETS, PAGE_SECTORS } from "./direction/deal";
+import {
+	awaitProposalInDesign,
+	dealInputFor,
+	dealIntoDesign,
+	dealtNote,
+	DirectionError,
+	directionModeFor,
+	openDealSession,
+	styleFixedByPack,
+} from "./direction/deal-service";
+import { registerDirectionTool } from "./direction/direction-tool";
+import { INTENT_SCHEMA, statedIntentFrom } from "./direction/intent";
+import { DIRECTION_FILE } from "./direction/record";
+import { readDirectionTells } from "./direction/direction-file";
 import type { ElementQuery, SelectedElementPayload } from "./canvas/bridge-client";
 import {
 	type CanvasController,
@@ -24,12 +39,13 @@ import { composeNotePins } from "./notes/annotate";
 import { notesFilePath } from "./notes/notes-store";
 import { type DesignNote, type NotesFile, noteStatus, parseNotesFile, pendingNotes } from "./notes/types";
 import { CANVAS_TAB_ID } from "./tab-ids";
-import type { SourceIssue } from "./vetd/check-sources";
+import { type ClassifiedIssue, classifyIssues, type SourceIssue, THEME_PLACEHOLDER_RULE } from "./vetd/check-sources";
 import { blockingSyntaxIssues, SYNTAX_RULE } from "./vetd/check-syntax";
 import { readDesignDependencies } from "./vetd/design-package";
 import { findVetdFiles } from "./vetd/discover";
 import { inspectIssues } from "./vetd/inspect";
 import { layoutIssues } from "./vetd/layout-probe";
+import { tellIssues } from "./vetd/tells-probe";
 import { PRODUCT_SIZE_SUMMARY, PRODUCT_TYPES, resolveDefaultFrameSize } from "./vetd/product-size";
 import { DESIGN_ONLY_TOOLS } from "./vetd/tool-gate";
 import {
@@ -51,9 +67,26 @@ interface CreateInput {
 	name?: string;
 	product?: string;
 	frameSize?: { width: number; height: number };
+	brief?: string;
+	sector?: string;
+	screens?: string[];
+	keep?: string[];
+	have?: string[];
+	intent?: unknown;
 }
 
 type ScreenshotInput = ScreenshotSelectionInput;
+
+/** vetd_create 结果开头那句「先做什么」：没有方向就不许开画。 */
+function firstStep(dealt: { ask: readonly unknown[] } | null, awaitingProposal: boolean): string {
+	if (awaitingProposal) {
+		return 'FIRST propose three directions with vetd_direction action "propose" as `direction.propose` describes, ask the user to pick when the result carries `ask`, choose, and apply its sheet — no frame before that. ';
+	}
+	if (!dealt) return "";
+	return dealt.ask.length > 0
+		? "FIRST ask the user `direction.ask`, then choose with vetd_direction and apply its sheet — no frame before that. "
+		: "FIRST choose one of `direction.options` with vetd_direction and apply its sheet — no frame before that. ";
+}
 
 /**
  * 这份设计当前的复用面：公共外壳与已有组件。
@@ -94,8 +127,15 @@ function statusNote(
 		// 语法错是硬阻塞（那一帧根本没在渲染），不能和风格违规并列。
 		return `${syntaxCount} file(s) do not parse — the canvas cannot build them, so those frames are frozen on their last good rendering. Fix these first, with a targeted edit at the reported line rather than a full rewrite.`;
 	}
-	if (issues.length > 0) {
-		return `${issues.length} issue(s) found by deterministic source checks. Fix them with a targeted edit before reporting back; each message names the rule and the reference to read.`;
+	const classified = classifyIssues(issues);
+	const blocking = classified.filter((issue) => issue.severity === "error").length;
+	const warnings = classified.filter((issue) => issue.severity === "warning").length;
+	const reviews = classified.filter((issue) => issue.severity === "review").length;
+	if (blocking > 0 || warnings > 0) {
+		return `${blocking} error(s) and ${warnings} warning(s) found by deterministic source checks. Fix them with a targeted edit before reporting back; each message names the rule and the reference to read.`;
+	}
+	if (reviews > 0) {
+		return `${reviews} review item(s) only: these are judgement calls the checker cannot settle (generated-looking gradients, shadows, type, picture count). Read the images and decide, then state what you kept and why.`;
 	}
 	if (renderVerification.status === "stale") {
 		return `The latest rendered verification is stale for: ${renderVerification.staleFrames.join(", ")}. Those sources changed after capture; verify the touched frames again, preferably in one screenshot batch.`;
@@ -117,6 +157,7 @@ function statusNote(
 
 export function registerDesignTools(ctx: PluginContext): void {
 	registerAssetsTool(ctx);
+	registerDirectionTool(ctx, { scopeUse: SCOPE_USE });
 	ctx.agent.registerTool<CreateInput>({
 		id: "vetd-create",
 		name: "vetd_create",
@@ -126,7 +167,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 		// 反向触发段（Do NOT / Only for）是误调防线的第一层：这个工具会在用户工作区
 		// 里建一整棵目录，模型在「写个页面」这种指令上最容易把它当成实现路径。
 		description:
-			"Create a new Vetta UI Design document (a `<name>.vetd/` directory holding design.json + sources) in the current workspace and open it on the design canvas. Requires the product type (or an explicit frame size) — that is what the design defaults to, so decide it from the user's request BEFORE calling. Each frames/<id>.tsx is one canvas frame AND one route — invoke the vetta-ui-design skill for the rules before writing any of them.\nDo NOT use when the user is writing or modifying code in an existing codebase — implement the page directly in that repo's own framework instead.\nOnly for standalone visual exploration decoupled from any codebase, when the user asked for a design/mockup rather than working code.",
+			"Create a new Vetta UI Design document (a `<name>.vetd/` directory holding design.json + sources) in the current workspace and open it on the design canvas. Requires the product type (or an explicit frame size) — that is what the design defaults to, so decide it from the user's request BEFORE calling. Each frames/<id>.tsx is one canvas frame AND one route — invoke the vetta-ui-design skill for the rules before writing any of them. For a landing page or app screens also pass `brief` (and `sector` for a landing page): a landing page gets three art directions dealt to choose from with vetd_direction; app screens get the brief for proposing three directions of your own there.\nDo NOT use when the user is writing or modifying code in an existing codebase — implement the page directly in that repo's own framework instead.\nOnly for standalone visual exploration decoupled from any codebase, when the user asked for a design/mockup rather than working code.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -150,6 +191,29 @@ export function registerDesignTools(ctx: PluginContext): void {
 					description:
 						"Explicit default size in PIXELS, for whatever `product` cannot express — the user named a size (`800x800`), or a physical format you convert yourself (A4 at 96dpi is 794x1123, at 300dpi 2480x3508). Wins over `product` when both are given.",
 				},
+				brief: {
+					type: "string",
+					description: "landing / mobile / desktop: one line about the subject, in English.",
+				},
+				sector: { type: "string", enum: [...PAGE_SECTORS], description: "landing: the closest sector." },
+				screens: {
+					type: "array",
+					items: { type: "string" },
+					description: "mobile / desktop: the screens to design, in your words.",
+				},
+				keep: {
+					type: "array",
+					items: { type: "string", enum: ["palette", "type"] },
+					description:
+						"What an existing brand the user named already fixes (its colour → palette); only the rest is dealt.",
+				},
+				have: {
+					type: "array",
+					items: { type: "string", enum: [...ASSETS] },
+					description:
+						"Assets that really exist (the project's own photos or product photos, real UI screenshots).",
+				},
+				intent: INTENT_SCHEMA,
 			},
 			additionalProperties: false,
 		},
@@ -164,6 +228,26 @@ export function registerDesignTools(ctx: PluginContext): void {
 					ok: false,
 					error: `Pass \`product\` (${PRODUCT_TYPES.join(" | ")}) or an explicit \`frameSize\` in pixels. This is the size the design defaults to — decide it from what the user asked for, do not guess after the fact.`,
 				};
+			}
+			// 落地页与 App 在建目录之前先校验发牌参数：缺了就整个调用失败，而不是先建出
+			// 一份没有方向的设计——那样模型会直接开画，发牌这一步就再也回不来了。
+			const directionMode = directionModeFor(trigger.input.product);
+			let dealSession: Awaited<ReturnType<typeof openDealSession>> | null = null;
+			let dealParams: CreateInput | null = null;
+			if (directionMode) {
+				const packed = await styleFixedByPack(host.fs, session.cwd, null);
+				const keep = [...new Set([...(trigger.input.keep ?? []), ...(packed ? ["palette", "type"] : [])])];
+				dealParams = { ...trigger.input, keep };
+				dealSession = await openDealSession(ctx);
+				try {
+					dealInputFor(directionMode, dealParams);
+				} catch (error) {
+					if (!(error instanceof DirectionError)) throw error;
+					return {
+						ok: false,
+						error: `${error.message} A ${trigger.input.product} design starts by dealing its art direction, so vetd_create needs it up front — pass \`brief\` too.`,
+					};
+				}
 			}
 			const result = await scaffoldDesign(host.fs, session.cwd, trigger.input.name ?? "design", defaultFrameSize);
 			// Provider 在一个 Turn 内只执行一次：仅更新 presence 只能让下一 Turn 开闸。
@@ -181,12 +265,32 @@ export function registerDesignTools(ctx: PluginContext): void {
 			);
 			ctx.ui.setActivityTabVisible(CANVAS_TAB_ID, true, { cwd: session.cwd });
 			ctx.ui.openActivityTab(CANVAS_TAB_ID, { width: "max", cwd: session.cwd });
+			const stated = statedIntentFrom(trigger.input.intent);
+			const dealt =
+				directionMode === "page" && dealSession && dealParams
+					? await dealIntoDesign(dealSession, host.fs, result.dirPath, dealParams, stated)
+					: null;
+			const proposal =
+				directionMode === "app" && dealSession && dealParams
+					? await awaitProposalInDesign(dealSession, host.fs, result.dirPath, dealParams, stated)
+					: null;
 			return {
 				ok: true,
 				vetdPath: result.vetdPath,
 				sourcesDir: result.dirPath,
 				defaultFrameSize,
-				note: `Design created and opened on the canvas, with NO frames yet. Its default size is ${defaultFrameSize.width}x${defaultFrameSize.height} — still declare it per frame: every frames/<id>.tsx starts with \`export const frame = { width: ${defaultFrameSize.width}, height: ${defaultFrameSize.height}, title }\`, and a screen of a different product type declares its own. Never edit design.json. More than one screen? Write the shared chrome FIRST (components/, or frames/_layout.tsx), then every frame as a short skeleton so the whole set reaches the canvas immediately, and only then fill them in one at a time — see the vetta-ui-design skill.`,
+				...(dealt
+					? {
+							direction: {
+								mode: directionMode,
+								options: dealt.options,
+								...(dealt.ask.length > 0 ? { ask: dealt.ask } : {}),
+								next: dealtNote(dealt.ask),
+							},
+						}
+					: {}),
+				...(proposal ? { direction: { mode: "app", ...proposal } } : {}),
+				note: `${firstStep(dealt, proposal !== null)}Design created and opened on the canvas, with NO frames yet. Its default size is ${defaultFrameSize.width}x${defaultFrameSize.height} — still declare it per frame: every frames/<id>.tsx starts with \`export const frame = { width: ${defaultFrameSize.width}, height: ${defaultFrameSize.height}, title }\`, and a screen of a different product type declares its own. Never edit design.json. More than one screen? Write the shared chrome FIRST (components/, or frames/_layout.tsx), then every frame as a short skeleton so the whole set reaches the canvas immediately, and only then fill them in one at a time — see the vetta-ui-design skill.`,
 			};
 		},
 	});
@@ -245,9 +349,10 @@ export function registerDesignTools(ctx: PluginContext): void {
 			}
 			const { dirPath, vetdPath } = controller.session;
 			// 源码检查与指纹各做一次，而不是跟帧数线性重复。
-			const [sourceIssues, sourceFingerprints] = await Promise.all([
+			const [sourceIssues, sourceFingerprints, tells] = await Promise.all([
 				inspectIssues(ctx, host.fs, dirPath),
 				designSourceFingerprints(host.fs, dirPath, known),
+				readDirectionTells(host.fs, dirPath),
 			]);
 			const useOffscreen = offscreenRasterSupported();
 			type Success = {
@@ -257,7 +362,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 				dataUrl: string;
 				width: number;
 				height: number;
-				issues: SourceIssue[];
+				issues: ClassifiedIssue[];
 				pendingNotes: number;
 				verification: ReturnType<typeof recordVerificationCapture>;
 			};
@@ -327,8 +432,13 @@ export function registerDesignTools(ctx: PluginContext): void {
 					return { ok: false, frame: frameId, retryable: true, error: `Frame failed to build during capture:\n${lateError}` };
 				}
 				const frameIssues = [
-					...sourceIssues.filter((issue) => issue.file === `frames/${frameId}.tsx`),
+					// 整份设计级的 issue（发了方向没选、主题还是占位）报给每一帧：哪一帧都不该在它清掉前算完成。
+					...sourceIssues.filter(
+						(issue) =>
+							issue.file === `frames/${frameId}.tsx` || issue.file === DIRECTION_FILE || issue.rule === THEME_PLACEHOLDER_RULE,
+					),
 					...layoutIssues(probe, frameId),
+					...tellIssues(probe, frameId, tells),
 				];
 				const capturedAt = Date.now();
 				const path = snapshotPath(dirPath, frameId, capturedAt);
@@ -344,7 +454,7 @@ export function registerDesignTools(ctx: PluginContext): void {
 					dataUrl,
 					width: frameSize.width,
 					height: frameSize.height,
-					issues: frameIssues,
+					issues: classifyIssues(frameIssues),
 					pendingNotes: framePendingNotes,
 					verification: recordVerificationCapture({
 						vetdPath,
@@ -476,7 +586,8 @@ export function registerDesignTools(ctx: PluginContext): void {
 							// 先掂量能不能用 Tailwind + React 写出来，真需要才 vetd_install。
 							...(dependencies.length > 0 ? { dependencies } : {}),
 							// 保留 `issues` 字段兼容旧客户端/提示词，但明确它只来自源码检查。
-							issues,
+							// 每条按 error / warning / review 分档：前两档该修，review 留给视觉评审。
+							issues: classifyIssues(issues),
 							renderVerification,
 							// 用户在画布上留的待处理备注数。非零时先调 vetd_notes 看内容。
 							pendingNotes: pendingNotes(controller.notes.notes).length,

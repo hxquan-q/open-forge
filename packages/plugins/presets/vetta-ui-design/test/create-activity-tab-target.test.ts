@@ -38,6 +38,7 @@ describe("vetd_create activity-tab target", () => {
 				},
 			},
 			ui: { setActivityTabVisible, openActivityTab },
+			storage: { readFile: async () => null },
 		} as unknown as PluginContext;
 		registerDesignTools(ctx);
 	});

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type {
 	PluginAgentToolHandler,
 	PluginAgentToolRegistration,
@@ -122,4 +123,52 @@ it("checks sources once and captures every member of one batch", async () => {
 	expect(inspectIssues).toHaveBeenCalledTimes(1);
 	expect(captureFrame).toHaveBeenCalledTimes(2);
 	expect(writes.filter((path) => path.includes("/.snapshots/")).length).toBeGreaterThanOrEqual(2);
+});
+
+it("marks every reported issue with its severity so the model knows what blocks and what is a judgement call", async () => {
+	inspectIssues.mockImplementationOnce(
+		async () =>
+			[
+				{ file: "theme.css", line: 1, rule: "theme-placeholder", message: "placeholder" },
+				{ file: "frames/login.tsx", line: 12, rule: "hardcoded-color", message: "hardcoded" },
+				{ file: "direction.json", line: null, rule: "direction-not-chosen", message: "no direction" },
+			] as never,
+	);
+	const files = new Map([
+		["C:/work/design.vetd/frames/login.tsx", "export default function Login() { return <div /> }"],
+		["C:/work/design.vetd/theme.css", "@theme {}"],
+		["C:/work/design.vetd/package.json", "{}"],
+	]);
+	const fs = {
+		readDir: async (dirPath: string) => {
+			if (dirPath.endsWith("/.snapshots")) return [];
+			const prefix = dirPath.endsWith("/components") ? null : `${dirPath}/`;
+			return prefix === null
+				? []
+				: [...files.keys()]
+						.filter((path) => path.startsWith(prefix) && !path.slice(prefix.length).includes("/"))
+						.map((path) => {
+							const name = path.slice(prefix.length);
+							return { name, path, isDirectory: false, size: 1, modifiedAt: 1 };
+						});
+		},
+		readFile: async (path: string) => {
+			const content = files.get(path);
+			if (content === undefined) throw new Error(`missing: ${path}`);
+			return { content, encoding: "utf8" as const };
+		},
+		writeFile: async () => {},
+		stat: async () => ({ isDirectory: false, size: 1, modifiedAt: 1 }),
+	} as unknown as PluginFsApi;
+
+	const result = (await screenshotHandler({
+		host: { fs },
+		session: { cwd: "C:/work" },
+		trigger: { input: { frames: ["login"] } },
+	} as never)) as { frames: { issues: { rule: string; severity: string }[] }[] };
+
+	const severities = Object.fromEntries(result.frames[0].issues.map((issue) => [issue.rule, issue.severity]));
+	expect(severities["theme-placeholder"]).toBe("error");
+	expect(severities["direction-not-chosen"]).toBe("error");
+	expect(severities["hardcoded-color"]).toBe("warning");
 });

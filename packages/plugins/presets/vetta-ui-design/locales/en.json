@@ -8,6 +8,7 @@
 	"tool.vetd_status": "Design status",
 	"tool.vetd_install": "Install design dependencies",
 	"tool.vetd_assets": "Real image assets",
+	"tool.vetd_direction": "Design direction",
 	"assets.exportReview": "This export includes {{count}} imported image(s) and CREDITS.json. Source-reported or unknown licenses are not legal clearance: verify author attribution, reuse conditions and other rights before publishing.",
 	"controlbar.designSystems": "Design systems",
 	"ds.title": "Design systems",

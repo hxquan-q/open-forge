@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Quality bar
 
 Read before declaring a frame done. Applies to every product type; the product
@@ -83,11 +84,16 @@ you added last.
   where content was expected, an unstyled control.
 
 **5. Generated-UI tells** — taste, but taste that users read as "AI made this"
-within a second. Look for each in the shot; the fixes are in
+within a second. On a design whose direction was dealt or proposed (`vetd_direction`),
+`vetd_screenshot` measures gradients, resting shadows, glass, tiny tracked
+labels, small text, monospace, typeface count, long headlines, icon tiles,
+emoji, picture slots faked with a gradient and an icon, and a landing page with
+too few real pictures, and reports them as `tell-*` issues with their fix — clear those like any
+other issue. Look for the rest in the shot; the fixes are in
 `references/taste/anti-patterns.md`.
 
-- The scaffold palette still in place: indigo primary, slate surfaces and text,
-  amber accent.
+- The scaffold's neutral placeholder still in theme.css (`theme-placeholder`
+  reports it), or a hand-picked indigo primary on slate.
 - Display and body in the same face; an italic headline or italic emphasis word.
 - Purple/blue gradient surfaces, gradient text, blurred blobs, decorative glass.
 - Card-in-card, side-stripe cards, colored glow shadows, or lines and boxes doing
@@ -118,7 +124,10 @@ remote URL that renders perfectly on screen will still:
   of remote images turns a ~100ms shot into seconds.
 
 Local assets are served same-origin by the engine dev server and have neither
-problem.
+problem. `vetd_assets` searches Wikimedia Commons and NASA, previews the
+candidates, and imports the one you pick into `assets/` (downscaled to at most
+2048px as WebP) with its credit recorded in `CREDITS.json`, so a real picture
+costs one call, not a placeholder.
 
 ## When a frame fails to build
 
@@ -135,3 +144,52 @@ declare a frame done while it still reports one.
 
 `vetd_status` also returns the engine's recent build output, which is where to
 look when a frame renders blank for no obvious reason.
+
+## Check severities
+
+Every issue `vetd_status` and `vetd_screenshot` return carries a `severity`:
+
+- **error** — the design cannot be trusted as it stands: source that does not
+  parse, a package or icon set that is not installed, a token `theme.css` never
+  defines, a frame with no declared size, `theme.css` still the scaffold
+  placeholder, or a dealt/proposed direction never chosen. Fix these before
+  anything else; a capture taken on top of one is not evidence.
+- **warning** — a measured defect with a stated fix (hardcoded colour,
+  `h-screen`, minified source, a font family no installed package provides, a
+  layout defect the probe measured). Fix or explain each one.
+- **review** — a judgement call the checker cannot settle: the generated-UI
+  tells (`tell-*` rules) such as gradient text, glass, tinted icon tiles or too
+  few real pictures. Read the image, decide, and say what you kept and why.
+
+Severity is read-only metadata: it changes what you do first, never the files.
+A clean `issues: []` means the source checks are clear, not that the design is
+good.
+
+## Fixed evaluation cases and the review record
+
+Three cases are fixed so two reviews can be compared; the wording may be
+localised, the scope must not be:
+
+| Case | Request | Product | Must exercise |
+|---|---|---|---|
+| `landing-product` | A landing page for a named product with one clear CTA | `landing` | dealt directions, one hero picture, proof section, footer |
+| `app-trip` | A trip-planning app: home, search, detail, checkout | `mobile` | proposed directions, shared shell, list + detail + form states |
+| `desk-console` | An operations console with a sidebar, KPI row and a table | `desktop` | proposed directions, dense table, empty and error states |
+
+For each case, capture every frame in one `vetd_screenshot` batch and record:
+
+```markdown
+### <case> — <date>
+
+- Directions: <ids chosen, or the three proposed and why one won>
+- Checks: <n> error / <n> warning / <n> review — <rules still open>
+- Evidence: <snapshot paths actually Read> (captured after the last edit)
+- Judgement: <what a person sees: hierarchy, spacing, palette, type, realism>
+- Findings: <defects the checks missed, if any>
+- Verdict: accept / revise (<what changes>) / reject (<why>)
+- Limits: <what this review did not cover>
+```
+
+The engineering verdict (checks pass, tests green) and the human verdict above
+are separate records: neither substitutes for the other, and an agent must not
+write the human one on the user's behalf.
