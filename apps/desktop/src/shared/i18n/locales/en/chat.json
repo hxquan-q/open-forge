@@ -833,8 +833,7 @@
 		"toolbar": {
 			"addImage": "Add image",
 			"attachFile": "Attach file reference",
-			"skills": "Skills / Scenes",
-			"gitBranchTitle": "Current branch"
+			"skills": "Skills / Scenes"
 		},
 		"speech": {
 			"actions": {
