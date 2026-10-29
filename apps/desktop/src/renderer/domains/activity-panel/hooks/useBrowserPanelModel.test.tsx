@@ -239,6 +239,33 @@ describe("useBrowserPanelModel（WebContentsView 占位宿主）", () => {
 		expect(harness.model.current?.address).toBe("https://localhost:5173/preview");
 	});
 
+	it("地址栏输入本地路径转 file:// URL 打开（Windows 盘符/posix/带空格中文）", async () => {
+		const harness: Harness = { model: { current: null } };
+		renderPanel(harness);
+		await waitFor(() => expect(harness.model.current?.currentUrl).toBe("https://example.com"));
+
+		const cases: Array<[input: string, expected: string]> = [
+			["D:\\demo\\index.html", "file:///D:/demo/index.html"],
+			["D:/我的 站点/index.html", "file:///D:/%E6%88%91%E7%9A%84%20%E7%AB%99%E7%82%B9/index.html"],
+			["/home/x/index.html", "file:///home/x/index.html"],
+		];
+		for (const [input, expected] of cases) {
+			api.navigate.mockClear();
+			act(() => harness.model.current?.onAddressChange(input));
+			act(() =>
+				harness.model.current?.onAddressSubmit({
+					preventDefault: () => undefined,
+				} as never),
+			);
+			await waitFor(() =>
+				expect(api.navigate).toHaveBeenCalledWith({
+					workspaceId: "ws-1",
+					url: expected,
+				}),
+			);
+		}
+	});
+
 	it("agent 导航时保留正在编辑的地址草稿，失焦后回显实际页面", async () => {
 		const harness: Harness = { model: { current: null } };
 		renderPanel(harness);

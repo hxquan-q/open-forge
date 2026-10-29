@@ -279,7 +279,10 @@ export function readBrowserElementRef(value: unknown): BrowserElementRef | undef
 export function isAllowedBrowserTabUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url);
-		return parsed.protocol === "http:" || parsed.protocol === "https:";
+		// file: 用于本地文件预览（工作区产物直接在侧边栏浏览器打开，无需先起静态
+		// 服务）：webview 走隔离 session 且默认 webSecurity 开启，file 页面脚本无法
+		// 跨 file 读取其他本地文件；http(s) 的 host 白名单语义由上层另行校验。
+		return parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "file:";
 	} catch {
 		return false;
 	}

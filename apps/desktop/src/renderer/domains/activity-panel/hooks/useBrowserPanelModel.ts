@@ -24,10 +24,25 @@ import {
 import { useBrowserElementPicker } from "./useBrowserElementPicker";
 import { useBrowserLiveEdit } from "./useBrowserLiveEdit";
 
-/** 把地址栏输入规整为可加载的 URL：已带协议直接用，否则补 https://，空则返回 null。 */
+/**
+ * 本地路径 → file:// URL：Windows 盘符（`D:\…`/`D:/…`）、UNC（`\\server\…`）、
+ * posix 绝对路径（`/…`）。文件名里的 `#`/`?` 对 URL 是片段/查询语义，必须转义。
+ */
+function localPathToFileUrl(trimmed: string): string | null {
+	const isWindowsDrive = /^[a-zA-Z]:[\\/]/.test(trimmed);
+	const isUnc = trimmed.startsWith("\\\\");
+	const isPosixAbsolute = trimmed.startsWith("/");
+	if (!isWindowsDrive && !isUnc && !isPosixAbsolute) return null;
+	const path = trimmed.replace(/\\/g, "/").replace(/^\/+/, "");
+	return `file:///${encodeURI(path).replace(/#/g, "%23").replace(/\?/g, "%3F")}`;
+}
+
+/** 把地址栏输入规整为可加载的 URL：本地路径转 file://，已带协议直接用，否则补 https://，空则返回 null。 */
 function normalizeUrl(input: string): string | null {
 	const trimmed = input.trim();
 	if (!trimmed) return null;
+	const fileUrl = localPathToFileUrl(trimmed);
+	if (fileUrl) return fileUrl;
 	if (/^[a-z]+:\/\//i.test(trimmed)) return trimmed;
 	return `https://${trimmed}`;
 }
