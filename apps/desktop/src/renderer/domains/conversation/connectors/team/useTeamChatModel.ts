@@ -20,6 +20,11 @@ import { pathBasename } from "@shared/lib/utils";
 import {
 	aiEditTargetAtom,
 	aiEditTargetFromToolCall,
+	aiTerminalCommandFromToolCall,
+	aiTerminalOutputFromResult,
+	aiTerminalTeamKey,
+	markAiTerminalEntryDone,
+	pushAiTerminalEntry,
 	reasoningByModelAtom,
 	selectedModelAtom,
 } from "@shared/store/atoms";
@@ -367,6 +372,25 @@ export function useTeamChatModel(
 					Date.now(),
 				);
 				if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
+				// 演示定稿：shell 命令投屏（与普通会话同一 feed；key 加会话前缀防跨会话撞键）。
+				const terminalCommand = aiTerminalCommandFromToolCall(event.event.toolName, event.event.args);
+				if (terminalCommand) {
+					pushAiTerminalEntry(getDefaultStore(), {
+						command: terminalCommand,
+						key: aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
+						running: true,
+						at: Date.now(),
+						cwd: sessionRef.current?.cwd ?? null,
+					});
+				}
+			}
+			// shell 命令投屏的 end 配对：补输出并结束 running 态；非 shell 工具的 key 不在 feed 里，no-op。
+			if (event.type === "desktop.team-tool-execution" && event.event.type === "end") {
+				markAiTerminalEntryDone(
+					getDefaultStore(),
+					aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
+					aiTerminalOutputFromResult(event.event.result),
+				);
 			}
 			// session-updated 用快照的 messages 把已落盘的 turn 从流里裁掉。这个裁剪
 			// 必须和快照的采纳同进同退：快照因版本过旧被拒时若照裁不误，这条回复就从

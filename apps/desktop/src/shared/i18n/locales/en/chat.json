@@ -15,6 +15,11 @@
 			"terminal": "Terminal",
 			"git": "Git"
 		},
+		"terminal": {
+			"title": "AI command replay",
+			"empty": "Commands the AI runs will appear here live",
+			"running": "Running"
+		},
 		"backgroundTasks": {
 			"statusRunning": "Running",
 			"statusCompleted": "Completed",

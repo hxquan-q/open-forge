@@ -15,6 +15,11 @@
 			"terminal": "终端",
 			"git": "Git"
 		},
+		"terminal": {
+			"title": "AI 命令回放",
+			"empty": "AI 执行的命令会在这里实时显示",
+			"running": "执行中"
+		},
 		"backgroundTasks": {
 			"statusRunning": "运行中",
 			"statusCompleted": "已完成",

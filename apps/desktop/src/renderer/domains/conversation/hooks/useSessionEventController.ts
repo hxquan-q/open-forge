@@ -7,6 +7,8 @@ import {
 	activityPanelTabByProjectAtom,
 	aiEditTargetAtom,
 	aiEditTargetFromToolCall,
+	aiTerminalCommandFromToolCall,
+	aiTerminalOutputFromResult,
 	type BackgroundTask,
 	backgroundTasksBySessionAtom,
 	type ChatTimelineItem,
@@ -21,12 +23,14 @@ import {
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
+	markAiTerminalEntryDone,
 	mountedActivityWorkspacesAtom,
 	pendingCanvasArtifactIdAtom,
 	planModeStateBySessionAtom,
 	projectsAtom,
 	promptPredictingAtom,
 	promptSuggestionsAtom,
+	pushAiTerminalEntry,
 	rememberSubagentsForSession,
 	resolveActivityWorkspaceKey,
 	retryProgressAtom,
@@ -470,6 +474,17 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 					Date.now(),
 				);
 				if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
+				// 演示定稿：shell 命令投屏——start 入队 running 条目，终端页签只读回放。
+				const terminalCommand = aiTerminalCommandFromToolCall(event.toolName, event.args);
+				if (terminalCommand) {
+					pushAiTerminalEntry(getDefaultStore(), {
+						command: terminalCommand,
+						key: event.toolCallId,
+						running: true,
+						at: Date.now(),
+						cwd: activeSessionRef.current?.cwd ?? null,
+					});
+				}
 				setChatMessages((prev) =>
 					handleToolStart(
 						prev,
@@ -491,6 +506,8 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			// ── Tool end ──
 			if (event.type === "tool.end") {
 				flushDeltas();
+				// 演示定稿：shell 命令投屏——end 配对补输出；非 shell 工具的 key 不在 feed 里，no-op。
+				markAiTerminalEntryDone(getDefaultStore(), event.toolCallId, aiTerminalOutputFromResult(event.result));
 				setChatMessages((prev) =>
 					handleToolEnd(
 						prev,

@@ -1,6 +1,7 @@
 // Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
+import { aiTerminalFeedAtom, type AiTerminalEntry } from "@shared/store/atoms";
 import { cleanup, render, renderHook, screen } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
@@ -17,17 +18,6 @@ import {
 import { TERMINAL_ACTIVITY_TAB_ID, terminalTabDefinition } from "./terminal-tab";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-
-vi.mock("@domains/bottom-panel/terminal/TerminalSurface", () => ({
-	TerminalSurface: ({ handle }: { handle: { tabId: string; cwd: string | null; active: boolean } }) => (
-		<div
-			data-testid="activity-terminal-surface"
-			data-tab-id={handle.tabId}
-			data-cwd={handle.cwd ?? ""}
-			data-active={String(handle.active)}
-		/>
-	),
-}));
 
 function wrapperFor(store: ReturnType<typeof createStore>, workspaceId = "ws-1", cwd = "/repo") {
 	return ({ children }: { children: ReactNode }) => (
@@ -58,13 +48,20 @@ describe("activity panel terminal tab", () => {
 		expect(terminalTabDefinition.retention).toBe("warm");
 	});
 
-	it("右栏 surface 使用 workspace 级 tabId，与底部面板实例隔离", () => {
+	it("页签 body 是 AI 命令回放：feed 里的命令直接可见", () => {
 		const store = createStore();
+		const feedEntry: AiTerminalEntry = {
+			command: "bun run check",
+			key: "call-1",
+			running: true,
+			at: 1,
+			cwd: "/repo",
+		};
+		store.set(aiTerminalFeedAtom, [feedEntry]);
 		const Content = terminalTabDefinition.component;
 		render(<Content />, { wrapper: wrapperFor(store) });
-		const surface = screen.getByTestId("activity-terminal-surface");
-		expect(surface.getAttribute("data-tab-id")).toBe("activity-terminal:ws-1");
-		expect(surface.getAttribute("data-cwd")).toBe("/repo");
+		expect(screen.getByRole("log")).toBeTruthy();
+		expect(screen.getByText("bun run check")).toBeTruthy();
 	});
 
 	it("useMeta 始终返回标签，方便进「+」挂载池", () => {
