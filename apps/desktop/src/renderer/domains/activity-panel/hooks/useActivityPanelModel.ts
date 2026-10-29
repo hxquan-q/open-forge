@@ -13,6 +13,7 @@ import {
 	activityPanelWidthModeAtom,
 	activityTabOrderAtom,
 	attachedPluginTabsAtom,
+	codingLayoutActiveAtom,
 	type FloatingActivityTabPlacement,
 	hiddenActivityTabsAtom,
 	resolveActivityPanelWidth,
@@ -79,6 +80,7 @@ export function useActivityPanelModel({
 	const sidebarWidth = useAtomValue(sidebarWidthAtom);
 	const maxWidth = activityPanelMaxWidth(windowWidth);
 	const [sidebarCollapsed, setSidebarCollapsed] = useAtom(sidebarCollapsedAtom);
+	const codingLayoutActive = useAtomValue(codingLayoutActiveAtom);
 	const widthCollapsedSidebarRef = useRef<boolean | null>(null);
 	const prevSidebarCollapsedRef = useRef(sidebarCollapsed);
 	const liveWidthRef = useRef(width);
@@ -190,10 +192,12 @@ export function useActivityPanelModel({
 			} else if (widthCollapsedSidebarRef.current !== null) {
 				const restore = widthCollapsedSidebarRef.current;
 				widthCollapsedSidebarRef.current = null;
-				setSidebarCollapsed(restore);
+				// 版块态（code 语境）期间不恢复展开：版块态自身要求左栏收起，此处恢复会把
+				// 刚进入 code 会话时收起的左栏又弹开；版块态离开的边沿自会展开。
+				if (!codingLayoutActive) setSidebarCollapsed(restore);
 			}
 		},
-		[isOpen, setSidebarCollapsed, sidebarCollapsed, sidebarWidth, windowWidth],
+		[isOpen, setSidebarCollapsed, sidebarCollapsed, sidebarWidth, windowWidth, codingLayoutActive],
 	);
 	const onResizeStart = useCallback(() => {
 		liveWidthRef.current = width;
@@ -264,9 +268,21 @@ export function useActivityPanelModel({
 		} else if (widthCollapsedSidebarRef.current !== null) {
 			const restore = widthCollapsedSidebarRef.current;
 			widthCollapsedSidebarRef.current = null;
-			setSidebarCollapsed(restore);
+			// 版块态（code 语境）期间不恢复展开：版块态自身要求左栏收起，此处恢复会把
+			// 刚进入 code 会话时收起的左栏又弹开；版块态离开的边沿自会展开。
+			if (!codingLayoutActive) setSidebarCollapsed(restore);
 		}
-	}, [effectiveWidth, windowWidth, sidebarWidth, isOpen, isResizing, sidebarCollapsed, setSidebarCollapsed, setWidth]);
+	}, [
+		effectiveWidth,
+		windowWidth,
+		sidebarWidth,
+		isOpen,
+		isResizing,
+		sidebarCollapsed,
+		setSidebarCollapsed,
+		setWidth,
+		codingLayoutActive,
+	]);
 
 	const activeTab = useMemo<ActivityTabKey>(() => {
 		if (knowledgeHistory && dockedTabItems.some((item) => item.key === "knowledge-history")) {

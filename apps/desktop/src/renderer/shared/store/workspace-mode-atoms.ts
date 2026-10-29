@@ -85,3 +85,10 @@ export const workspaceModeByProjectAtom = atom(
 export function enterWorkspaceSection(cwd: string, mode: WorkspaceMode): void {
 	getDefaultStore().set(workspaceModeByProjectAtom, (prev) => writeWorkspaceMode(prev, cwd, mode));
 }
+
+/**
+ * 版块态布局当前是否激活（code 语境：coding 会话、团队会话路由、开发档新会话页，
+ * 判定见 root-layout 的 useCodingSessionLayout，唯一写入方也是它）。活动面板的
+ * 宽度联动读它——版块态要求左栏收起，联动不得在此期间把临时收起的侧栏恢复展开。
+ */
+export const codingLayoutActiveAtom = atom<boolean>(false);

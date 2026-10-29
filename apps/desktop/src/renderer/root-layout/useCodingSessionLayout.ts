@@ -2,6 +2,7 @@
 import {
 	activeSessionAtom,
 	activityPanelOpenAtom,
+	codingLayoutActiveAtom,
 	defaultConversationCwdAtom,
 	readWorkspaceModeFor,
 	sidebarCollapsedAtom,
@@ -57,6 +58,11 @@ export function useCodingSessionLayout(): void {
 	const active = useCodingLayoutActive();
 	const store = getDefaultStore();
 	const prevRef = useRef<boolean | null>(null);
+
+	// 判定同步进全局 atom：宽度联动等旁路写入方据此克制，不在版块态期间恢复侧栏。
+	useEffect(() => {
+		store.set(codingLayoutActiveAtom, active);
+	}, [active, store]);
 
 	useEffect(() => {
 		const previous = prevRef.current;
