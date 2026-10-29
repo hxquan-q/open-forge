@@ -31,8 +31,11 @@ function hasRenderedPreview(extension: string): boolean {
 	return RENDERED_PREVIEW_EXTENSIONS.has(extension);
 }
 
-function defaultEditorMode(extension: string): TextFileEditorMode {
-	return hasRenderedPreview(extension) ? "preview" : "edit";
+/** 这些渲染格式默认以代码详情打开：HTML 效果预览与右栏浏览器页签定位重合（演示定稿）。 */
+const CODE_DEFAULT_EXTENSIONS = new Set(["html", "htm", "xhtml"]);
+
+export function defaultEditorMode(extension: string): TextFileEditorMode {
+	return hasRenderedPreview(extension) && !CODE_DEFAULT_EXTENSIONS.has(extension) ? "preview" : "edit";
 }
 
 export function EditableTextFileView({
