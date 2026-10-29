@@ -88,7 +88,9 @@ export function enterWorkspaceSection(cwd: string, mode: WorkspaceMode): void {
 
 /**
  * 版块态布局当前是否激活（code 语境：coding 会话、团队会话路由、开发档新会话页，
- * 判定见 root-layout 的 useCodingSessionLayout，唯一写入方也是它）。活动面板的
- * 宽度联动读它——版块态要求左栏收起，联动不得在此期间把临时收起的侧栏恢复展开。
+ * 判定见 root-layout 的 useCodingSessionLayout，唯一写入方也是它）。版块态布局是
+ * 一次性初始化：进入时收左栏、开右栏，离开时不做任何回写（左右栏状态此后完全
+ * 跟随用户手动操作）。活动面板宽度联动读它——active 期间不把临时收起的侧栏恢复
+ * 展开。
  */
 export const codingLayoutActiveAtom = atom<boolean>(false);

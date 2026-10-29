@@ -44,22 +44,20 @@ function useCodingLayoutActive(): boolean {
 	return false;
 }
 
-/** 展开延迟：吸收「发首条消息」的过渡闪断（新会话页→聊天页瞬间 activeSession 未提交，版块态会短暂判否）。 */
-const LEAVE_DELAY_MS = 1200;
-
 /**
- * 演示定稿（版块态布局）：进入 code 模式语境（coding 会话、团队会话路由、开发档
- * 新会话页）时**立即**收起左侧栏并打开右栏活动面板；离开时**延迟**展开——新会话页
- * 发出首条消息跳到聊天页的瞬间，activeSession 尚未提交，版块态会短暂判否（真因见
- * 演示走查诊断），稳定离开才展开。只在**状态迁移边沿**写状态，用户随后的手动开合
- * 不被覆盖。
+ * 演示定稿（版块态布局 = 一次性初始化）：**进入** code 语境（coding 会话、团队会话
+ * 路由、开发档新会话页）时收起左侧栏并打开右栏活动面板；**离开时不做任何回写**——
+ * code 会话里左栏默认收起，用户要切去普通会话必先手动展开左栏，离开时刻的左栏
+ * 状态就是用户想要的状态，自动展开只会制造弹跳（发首条消息跳聊天页的过渡窗口、
+ * 插件加载慢于任何固定延迟都会把刚收起的左栏弹开）。右栏同理交给用户与页面自身
+ * 逻辑。只在**进入边沿**写一次，此后的手动开合永不被覆盖。
  */
 export function useCodingSessionLayout(): void {
 	const active = useCodingLayoutActive();
 	const store = getDefaultStore();
 	const prevRef = useRef<boolean | null>(null);
 
-	// 判定同步进全局 atom：宽度联动等旁路写入方据此克制，不在版块态期间恢复侧栏。
+	// 判定同步进全局 atom：宽度联动等旁路写入方据此克制，active 期间不恢复侧栏。
 	useEffect(() => {
 		store.set(codingLayoutActiveAtom, active);
 	}, [active, store]);
@@ -71,15 +69,6 @@ export function useCodingSessionLayout(): void {
 		if (active) {
 			store.set(sidebarCollapsedAtom, true);
 			store.set(activityPanelOpenAtom, true);
-			return;
 		}
-		if (previous !== true) return;
-		const timer = window.setTimeout(() => {
-			// 计时期间版块态若恢复（activeSession 提交完成），这里已是过期的展开——
-			// 以最新状态为准，不再展开。
-			if (prevRef.current === true) return;
-			store.set(sidebarCollapsedAtom, false);
-		}, LEAVE_DELAY_MS);
-		return () => window.clearTimeout(timer);
 	}, [active, store]);
 }

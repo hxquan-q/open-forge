@@ -193,7 +193,7 @@ export function useActivityPanelModel({
 				const restore = widthCollapsedSidebarRef.current;
 				widthCollapsedSidebarRef.current = null;
 				// 版块态（code 语境）期间不恢复展开：版块态自身要求左栏收起，此处恢复会把
-				// 刚进入 code 会话时收起的左栏又弹开；版块态离开的边沿自会展开。
+				// 刚收起的左栏弹开；离开版块态后左栏状态交给用户手动操作。
 				if (!codingLayoutActive) setSidebarCollapsed(restore);
 			}
 		},
@@ -269,7 +269,7 @@ export function useActivityPanelModel({
 			const restore = widthCollapsedSidebarRef.current;
 			widthCollapsedSidebarRef.current = null;
 			// 版块态（code 语境）期间不恢复展开：版块态自身要求左栏收起，此处恢复会把
-			// 刚进入 code 会话时收起的左栏又弹开；版块态离开的边沿自会展开。
+			// 刚收起的左栏弹开；离开版块态后左栏状态交给用户手动操作。
 			if (!codingLayoutActive) setSidebarCollapsed(restore);
 		}
 	}, [
