@@ -19,6 +19,8 @@ vi.mock("@tanstack/react-router", () => ({
 import {
 	activeSessionAtom,
 	activityPanelOpenAtom,
+	activityPanelWidthAtom,
+	setActivityPanelWidthAtom,
 	sidebarCollapsedAtom,
 	workspaceModeByProjectAtom,
 } from "@shared/store/atoms";
@@ -62,7 +64,8 @@ beforeEach(() => {
 	setRoute("/");
 });
 
-it("coding 会话：收左栏、开右栏", () => {
+it("coding 会话：收左栏、开右栏、会话区与右栏宽度对半分", () => {
+	Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280, writable: true });
 	const { rerender } = renderHook(() => useCodingSessionLayout());
 	act(() => {
 		setCodingSession(true);
@@ -70,6 +73,22 @@ it("coding 会话：收左栏、开右栏", () => {
 	rerender();
 	expect(store.get(sidebarCollapsedAtom)).toBe(true);
 	expect(store.get(activityPanelOpenAtom)).toBe(true);
+	// (1280 - 24) / 2 = 628：扣除 AppFrame 内衬（16×2）与列间 gap（8）后五五分，
+	// 落成当时的固定像素；窄窗口由 resolveActivityPanelWidth 夹到 [260, 上限]。
+	expect(store.get(activityPanelWidthAtom)).toBe(628);
+
+	// 用户随后手动改宽：code 语境内无新边沿，初始化不再覆盖。
+	act(() => store.set(setActivityPanelWidthAtom, 540));
+	act(() => {
+		store.set(activeSessionAtom, {
+			cwd: "/proj/a",
+			runtimeId: "rt-coding-2",
+			sessionPath: "/proj/a/s2.jsonl",
+			capabilityProfile: "coding",
+		} as never);
+	});
+	rerender();
+	expect(store.get(activityPanelWidthAtom)).toBe(540);
 });
 
 it("团队会话路由（不写 activeSession）：收左栏、开右栏", () => {
