@@ -14,9 +14,9 @@ function TerminalActivityTab(): JSX.Element {
 
 export const terminalTabDefinition: ActivityTabDefinition = {
 	id: TERMINAL_ACTIVITY_TAB_ID,
-	order: 16,
+	// 演示定稿：code 会话右栏自带页签，顺序「文件(0)、Git(5)、终端、浏览器(15)」。
+	order: 6,
 	removable: true,
-	initiallyVisible: false,
 	source: "builtin",
 	retention: "warm",
 	useMeta: () => {

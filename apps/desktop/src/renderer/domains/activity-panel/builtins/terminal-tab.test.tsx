@@ -40,12 +40,16 @@ describe("activity panel terminal tab", () => {
 		cleanup();
 	});
 
-	it("定义可移除、默认不上栏、每 workspace 单实例", () => {
+	it("定义可移除、默认上栏，排序落在 Git 与浏览器之间", () => {
 		expect(terminalTabDefinition.id).toBe(TERMINAL_ACTIVITY_TAB_ID);
 		expect(terminalTabDefinition.removable).toBe(true);
-		expect(terminalTabDefinition.initiallyVisible).toBe(false);
 		expect(terminalTabDefinition.source).toBe("builtin");
 		expect(terminalTabDefinition.retention).toBe("warm");
+		// 演示定稿：code 会话自带页签「文件(0)、Git(5)、终端、浏览器(15)」。
+		expect(terminalTabDefinition.order).toBeGreaterThan(5);
+		expect(terminalTabDefinition.order).toBeLessThan(15);
+		// 默认上栏：不进「默认隐藏」清单，新建 code 会话右栏直接携带。
+		expect(defaultHiddenBuiltinTabIds([terminalTabDefinition])).toEqual([]);
 	});
 
 	it("页签 body 是 AI 命令回放：feed 里的命令直接可见", () => {
@@ -75,7 +79,7 @@ describe("activity panel terminal tab", () => {
 		});
 	});
 
-	it("用户从「+」挂载后再关闭：上栏出现终端，关闭后回到挂载池", () => {
+	it("用户关闭终端页签后进「+」挂载池，可再挂回上栏", () => {
 		const file: ActivityTabDefinition = {
 			id: "file",
 			order: 0,
@@ -91,28 +95,18 @@ describe("activity panel terminal tab", () => {
 			terminal: { label: "activityPanel.tabs.terminal" },
 		});
 
-		const hidden = resolveActivityTabs({
+		// 默认上栏：文件与终端都在栏上。
+		const initial = resolveActivityTabs({
 			definitions,
 			metaById: metas,
 			tabVisibilityRecords: [],
 			hiddenKeys: effectiveHiddenActivityTabKeys(undefined, defaultHiddenIds),
 			tabOrder: [],
 		});
-		expect(hidden.onBar.map((tab) => tab.id)).toEqual(["file"]);
-		expect(hidden.restorable.map((tab) => tab.id)).toEqual(["terminal"]);
+		expect(initial.onBar.map((tab) => tab.id)).toEqual(["file", "terminal"]);
 
-		const mountedKeys = revealActivityTabKeys(undefined, "terminal", defaultHiddenIds);
-		const mounted = resolveActivityTabs({
-			definitions,
-			metaById: metas,
-			tabVisibilityRecords: [],
-			hiddenKeys: effectiveHiddenActivityTabKeys(mountedKeys, defaultHiddenIds),
-			tabOrder: [],
-		});
-		expect(mounted.onBar.map((tab) => tab.id)).toEqual(["file", "terminal"]);
-		expect(mounted.restorable).toEqual([]);
-
-		const closedKeys = hideActivityTabKeys(mountedKeys, "terminal", defaultHiddenIds);
+		// 用户关闭终端：默认上栏的 tab 记显式隐藏，进挂载池。
+		const closedKeys = hideActivityTabKeys(undefined, "terminal", defaultHiddenIds);
 		const closed = resolveActivityTabs({
 			definitions,
 			metaById: metas,
@@ -122,5 +116,17 @@ describe("activity panel terminal tab", () => {
 		});
 		expect(closed.onBar.map((tab) => tab.id)).toEqual(["file"]);
 		expect(closed.restorable.map((tab) => tab.id)).toEqual(["terminal"]);
+
+		// 从「+」挂回：恢复上栏。
+		const mountedKeys = revealActivityTabKeys(closedKeys, "terminal", defaultHiddenIds);
+		const mounted = resolveActivityTabs({
+			definitions,
+			metaById: metas,
+			tabVisibilityRecords: [],
+			hiddenKeys: effectiveHiddenActivityTabKeys(mountedKeys, defaultHiddenIds),
+			tabOrder: [],
+		});
+		expect(mounted.onBar.map((tab) => tab.id)).toEqual(["file", "terminal"]);
+		expect(mounted.restorable).toEqual([]);
 	});
 });
