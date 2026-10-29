@@ -11,46 +11,56 @@ import { getDefaultStore } from "jotai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLastSessionRestore } from "./useLastSessionRestore";
 
-const previous = { cwd: "/workspace", sessionPath: "/sessions/previous.jsonl" };
+const mocks = vi.hoisted(() => ({ navigate: vi.fn(async () => undefined) }));
+
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => mocks.navigate }));
 
 beforeEach(() => {
 	const store = getDefaultStore();
 	store.set(activeSessionAtom, null);
 	store.set(pendingSessionCreationAtom, null);
 	store.set(pendingSessionOpenAtom, null);
-	store.set(lastActiveSessionAtom, previous);
+	store.set(lastActiveSessionAtom, { cwd: "/workspace", sessionPath: "/sessions/previous.jsonl" });
+	mocks.navigate.mockClear();
 });
 afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
 });
 
-describe("last-session restore lifecycle", () => {
-	it("completes without opening a session when no saved session exists", () => {
-		getDefaultStore().set(lastActiveSessionAtom, null);
-		const openSession = vi.fn(async () => undefined);
-		const { result } = renderHook(() => useLastSessionRestore("/", openSession));
-		expect(result.current).toBe("complete");
-		expect(openSession).not.toHaveBeenCalled();
+describe("startup falls through to new session (演示定稿：不恢复上次会话)", () => {
+	it("根路由启动导航到新会话页，不自动恢复上次会话", async () => {
+		const { result } = renderHook(() => useLastSessionRestore("/"));
+		await waitFor(() => expect(result.current).toBe("complete"));
+		expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({ to: "/new-session" });
+		// 持久化的上次会话定位被清掉，不留残留误导后续消费者。
+		expect(getDefaultStore().get(lastActiveSessionAtom)).toBeNull();
+		expect(getDefaultStore().get(activeSessionAtom)).toBeNull();
 	});
-	it("keeps an already active session and does not restore over it", () => {
+
+	it("已有活动会话（深链先落）不抢跳，保持原路由行为", () => {
 		const store = getDefaultStore();
 		const active = { cwd: "/workspace", runtimeId: "active", sessionPath: "/sessions/active.jsonl" };
 		store.set(activeSessionAtom, active);
-		const openSession = vi.fn(async () => undefined);
-		const { result } = renderHook(() => useLastSessionRestore("/", openSession));
+		const { result } = renderHook(() => useLastSessionRestore("/"));
 		expect(result.current).toBe("complete");
 		expect(store.get(activeSessionAtom)).toBe(active);
-		expect(openSession).not.toHaveBeenCalled();
+		expect(mocks.navigate).not.toHaveBeenCalled();
 	});
-	it("clears an unavailable saved session and completes so the normal fallback can proceed", async () => {
-		vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+	it("会话创建/打开进行中不抢跳", () => {
 		const store = getDefaultStore();
-		const openSession = vi.fn(async () => { throw new Error("session no longer available"); });
-		const { result } = renderHook(() => useLastSessionRestore("/", openSession));
-		await waitFor(() => expect(result.current).toBe("complete"));
-		expect(store.get(activeSessionAtom)).toBeNull();
-		expect(store.get(lastActiveSessionAtom)).toBeNull();
-		expect(openSession).toHaveBeenCalledOnce();
+		store.set(pendingSessionOpenAtom, {
+			cwd: "/workspace",
+			sessionPath: "/sessions/opening.jsonl",
+		} as never);
+		const { result } = renderHook(() => useLastSessionRestore("/"));
+		expect(result.current).toBe("complete");
+		expect(mocks.navigate).not.toHaveBeenCalled();
+	});
+
+	it("非根路由（深链直达会话等）不做启动处理", () => {
+		renderHook(() => useLastSessionRestore("/chat/deep-link"));
+		expect(mocks.navigate).not.toHaveBeenCalled();
 	});
 });
