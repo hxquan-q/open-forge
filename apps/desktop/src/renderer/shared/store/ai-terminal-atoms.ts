@@ -50,23 +50,30 @@ export function aiTerminalCommandFromToolCall(toolName: string | undefined, args
  * 的防御路径。空输出返回 undefined。
  */
 export function aiTerminalOutputFromResult(result: unknown): string | undefined {
-	const text = typeof result === "string" ? result : readContentText(result);
+	const text = typeof result === "string" ? result : readContentText(result, MAX_OUTPUT_CHARS);
 	const trimmed = text?.trim();
 	return trimmed ? trimmed.slice(0, MAX_OUTPUT_CHARS) : undefined;
 }
 
-function readContentText(result: unknown): string | undefined {
+function readContentText(result: unknown, maxChars: number): string | undefined {
 	if (!result || typeof result !== "object") return undefined;
 	const content = (result as { content?: unknown }).content;
 	if (!Array.isArray(content)) return undefined;
+	// 逐块累加、超预算即停：read 类工具的 result 可能是整个大文件，全量 join
+	// 再截断会给每个 tool.end 制造一次大字符串洪峰（本函数对所有工具无条件调用）。
 	const parts: string[] = [];
+	let total = 0;
 	for (const block of content) {
 		if (block && typeof block === "object" && (block as { type?: unknown }).type === "text") {
 			const text = (block as { text?: unknown }).text;
-			if (typeof text === "string" && text.length > 0) parts.push(text);
+			if (typeof text === "string" && text.length > 0) {
+				parts.push(text);
+				total += text.length;
+				if (total >= maxChars) break;
+			}
 		}
 	}
-	return parts.length > 0 ? parts.join("\n") : undefined;
+	return parts.length > 0 ? parts.join("\n").slice(0, maxChars) : undefined;
 }
 
 /** 团队会话条目的配对键：加会话前缀，避免与其他会话的 toolCallId 撞键误判重。 */
