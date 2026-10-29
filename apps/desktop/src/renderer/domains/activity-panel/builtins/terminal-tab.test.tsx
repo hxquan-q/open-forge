@@ -64,7 +64,7 @@ describe("activity panel terminal tab", () => {
 		store.set(aiTerminalFeedAtom, [feedEntry]);
 		const Content = terminalTabDefinition.component;
 		render(<Content />, { wrapper: wrapperFor(store) });
-		expect(screen.getByRole("log")).toBeTruthy();
+		expect(screen.getByRole("region", { name: "activityPanel.terminal.title" })).toBeTruthy();
 		expect(screen.getByText("bun run check")).toBeTruthy();
 	});
 

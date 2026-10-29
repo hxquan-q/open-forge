@@ -36,8 +36,8 @@ describe("AiTerminalReplayPanel", () => {
 			entry({ key: "a", command: "git status", output: "nothing to commit" }),
 			entry({ key: "b", command: "bun run check" }),
 		]);
-		const log = screen.getByRole("log");
-		expect(log.getAttribute("aria-label")).toBe("activityPanel.terminal.title");
+		const log = screen.getByRole("region", { name: "activityPanel.terminal.title" });
+		expect(log).toBeTruthy();
 		expect(screen.getByText("git status")).toBeTruthy();
 		expect(screen.getByText("nothing to commit")).toBeTruthy();
 		// 每条一个命令提示符，均为纯装饰。

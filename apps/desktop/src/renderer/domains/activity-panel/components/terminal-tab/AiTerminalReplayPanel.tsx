@@ -60,8 +60,10 @@ export function AiTerminalReplayPanel(): JSX.Element {
 	return (
 		<div
 			ref={scrollRef}
-			role="log"
+			role="region"
 			aria-label={t("activityPanel.terminal.title")}
+			// 不用 role="log"（隐式 aria-live）：live region 会为无障碍通知保留内容
+			// 历史，命令流高频更新时该缓存在渲染进程内单调增长，长任务下足以 OOM。
 			className="flex h-full flex-col gap-3 overflow-y-auto p-3"
 		>
 			{feed.map((entry) => (
