@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, currentScenarioAtom, mountedActivityWorkspacesAtom } from "@shared/store/atoms";
 import { useActiveSessionRuntimeIds } from "@shared/workspace/active-session-runtime";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
@@ -9,6 +10,7 @@ import { ActivityTabMetaHost } from "../registry/ActivityTabMetaHost";
 import { ActivityPanelContextProvider } from "../registry/context";
 import type { ActivityTabDefinition, ActivityTabId, ActivityTabMeta } from "../registry/types";
 import { useActivityTabDefinitions } from "../registry/useActivityTabDefinitions";
+import { useFollowAiActivity } from "../hooks/useFollowAiActivity";
 import { ActivityPanelFrame } from "./activity-panel/ActivityPanelFrame";
 import { ActivityPanelView } from "./activity-panel/ActivityPanelView";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
@@ -54,6 +56,8 @@ export function ActivityPanel(props: ActivityPanelProps): JSX.Element {
 
 	const contextValue = useMemo(() => ({ workspace, knowledgeHistory }), [workspace, knowledgeHistory]);
 	useMountedActivityWorkspace(workspace);
+	// 演示定稿：AI 活动跟随——shell 开跑切终端、编辑文件切文件页、内嵌浏览器会话变化切浏览器。
+	useFollowAiActivity();
 
 	return (
 		<ActivityPanelContextProvider value={contextValue}>
