@@ -28,6 +28,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 import {
+	codingSessionCreateIntentAtom,
 	defaultConversationCwdAtom,
 	projectsAtom,
 	projectsInitializedAtom,
@@ -209,7 +210,7 @@ it("选中兜底随册：册内默认项目优先，默认不在册取首个册�
 	expect(emptyBook.result.current.selectedCwd).toBe("");
 });
 
-it("新建开发会话按传入 cwd 写 coding 档并导航新会话页", () => {
+it("新建开发会话按传入 cwd 写 coding 档并登记创建意图，导航新会话页", () => {
 	const { result } = renderHook(() => useAllstarDevHomePageModel());
 
 	act(() => {
@@ -221,6 +222,10 @@ it("新建开发会话按传入 cwd 写 coding 档并导航新会话页", () => 
 	});
 	const modes = store.get(workspaceModeByProjectAtom);
 	expect(modes.get("/proj/b")).toBe("coding");
+	// 创建意图（一次性布局初始化的驱动源，BUG-0158）随之登记。
+	const intent = store.get(codingSessionCreateIntentAtom);
+	expect(intent?.cwd).toBe("/proj/b");
+	expect(typeof intent?.nonce).toBe("number");
 });
 
 it("打开卡片会话委托全局会话打开上下文", () => {

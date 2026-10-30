@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0414` | `verifying` | PLAN-0026 | [新建 code 会话意图驱动初始化](TASK-0414-coding-create-intent.md)：BUG-0158（F01/F02/F02b，P1），布局红 7→绿+相邻 39/39；待实机三流程走查；serial。 |
 | `TASK-0413` | `verifying` | PLAN-0026 | [终端条目完成结算解耦](TASK-0413-terminal-entry-stuck-running.md)：BUG-0157（F06），end 结算提升闸门前红 1→绿，控制器 13/13+团队 40/40；serial。 |
 | `TASK-0412` | `verifying` | PLAN-0026 | [coding 增量行侧栏漏过滤](TASK-0412-incremental-coding-sidebar-leak.md)：BUG-0156（F09），档位端到端透传红 3→绿 17+12 例；顺带修复该主进程套件既有收集断裂（ipc/session 单点 mock）；serial。 |
 | `TASK-0411` | `verifying` | PLAN-0026 | [同一 AI 文件再次编辑跟回](TASK-0411-ai-file-edit-refollow.md)：BUG-0155（F04），双条件去重红 1→绿 8/8（含相邻）；serial。 |

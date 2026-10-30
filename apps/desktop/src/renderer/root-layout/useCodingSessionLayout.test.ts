@@ -1,9 +1,10 @@
 // Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 /**
- * 版块态布局合同（一次性初始化）：coding 会话、团队会话路由、开发档新会话页三种
- * 语境进入时收左栏、开右栏；**离开时不做任何回写**——code 会话里左栏默认收起，
- * 用户要切走必先手动展开，离开时刻的左右栏状态就是用户想要的，自动展开只会弹跳。
+ * 版块态布局合同（意图驱动的一次性初始化，BUG-0158/F01-F02）：创建意图
+ * （beginCodingSessionCreation 登记）在 code 语境成立时应用一次——连续新建各自
+ * 初始化、首条消息提交过渡不重复不覆盖手动选择、打开既有 coding 会话不初始化；
+ * 团队路由与开发档新会话页保留边沿初始化；**离开时不做任何回写**。
  */
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -20,6 +21,7 @@ import {
 	activeSessionAtom,
 	activityPanelOpenAtom,
 	activityPanelWidthAtom,
+	codingSessionCreateIntentAtom,
 	setActivityPanelWidthAtom,
 	sidebarCollapsedAtom,
 	workspaceModeByProjectAtom,
@@ -27,6 +29,7 @@ import {
 import { useCodingSessionLayout } from "./useCodingSessionLayout";
 
 const store = getDefaultStore();
+let intentNonce = 0;
 
 function setCodingSession(active: boolean): void {
 	store.set(
@@ -52,6 +55,11 @@ function setPlainSession(): void {
 	} as never);
 }
 
+function setCreateIntent(cwd = "/proj/a"): void {
+	intentNonce += 1;
+	store.set(codingSessionCreateIntentAtom, { cwd, nonce: intentNonce });
+}
+
 function setRoute(pathname: string, search: { cwd?: string } = {}): void {
 	routeState.current = { pathname, search };
 }
@@ -60,14 +68,17 @@ beforeEach(() => {
 	store.set(activeSessionAtom, null);
 	store.set(sidebarCollapsedAtom, false);
 	store.set(activityPanelOpenAtom, false);
+	store.set(codingSessionCreateIntentAtom, null);
 	store.set(workspaceModeByProjectAtom, new Map());
 	setRoute("/");
 });
 
-it("coding 会话：收左栏、开右栏、会话区与右栏宽度对半分", () => {
+it("创建意图在 code 语境成立时初始化一次；其后手动选择不被同语境覆盖", () => {
 	Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280, writable: true });
 	const { rerender } = renderHook(() => useCodingSessionLayout());
+
 	act(() => {
+		setCreateIntent();
 		setCodingSession(true);
 	});
 	rerender();
@@ -77,7 +88,7 @@ it("coding 会话：收左栏、开右栏、会话区与右栏宽度对半分", 
 	// 落成当时的固定像素；窄窗口由 resolveActivityPanelWidth 夹到 [260, 上限]。
 	expect(store.get(activityPanelWidthAtom)).toBe(628);
 
-	// 用户随后手动改宽：code 语境内无新边沿，初始化不再覆盖。
+	// 用户随后手动改宽：同一意图已消费，会话对象更新不覆盖。
 	act(() => store.set(setActivityPanelWidthAtom, 540));
 	act(() => {
 		store.set(activeSessionAtom, {
@@ -89,6 +100,91 @@ it("coding 会话：收左栏、开右栏、会话区与右栏宽度对半分", 
 	});
 	rerender();
 	expect(store.get(activityPanelWidthAtom)).toBe(540);
+});
+
+it("连续新建：code 会话中经创建入口再新建，新意图重新初始化（F01）", () => {
+	Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280, writable: true });
+	const { rerender } = renderHook(() => useCodingSessionLayout());
+
+	act(() => {
+		setCreateIntent();
+		setCodingSession(true);
+	});
+	rerender();
+	// 用户手动展开左栏、收右栏、改宽。
+	act(() => {
+		store.set(sidebarCollapsedAtom, false);
+		store.set(activityPanelOpenAtom, false);
+		store.set(setActivityPanelWidthAtom, 540);
+	});
+
+	// 从版块再次进入同项目的新 code 会话：active 全程为 true，靠新意图触发。
+	act(() => {
+		setCreateIntent();
+	});
+	rerender();
+	expect(store.get(sidebarCollapsedAtom)).toBe(true);
+	expect(store.get(activityPanelOpenAtom)).toBe(true);
+	expect(store.get(activityPanelWidthAtom)).toBe(628);
+});
+
+it("发首条消息的过渡不重复初始化：手动选择贯穿新会话页到会话提交（F02）", () => {
+	Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280, writable: true });
+	const { rerender } = renderHook(() => useCodingSessionLayout());
+
+	act(() => {
+		store.set(workspaceModeByProjectAtom, new Map([["/proj/a", "coding"]]));
+		setCreateIntent();
+		setRoute("/new-session", { cwd: encodeURIComponent("/proj/a") });
+	});
+	rerender();
+	expect(store.get(sidebarCollapsedAtom)).toBe(true);
+
+	// 用户在新会话页手动调整布局。
+	act(() => {
+		store.set(sidebarCollapsedAtom, false);
+		store.set(activityPanelOpenAtom, false);
+		store.set(setActivityPanelWidthAtom, 540);
+	});
+
+	// 发首条消息跳聊天页：路由离开 new-session 且 activeSession 未提交——判定
+	// 短暂为否，不回写也不消费新意图。
+	act(() => {
+		setRoute("/");
+	});
+	rerender();
+	expect(store.get(sidebarCollapsedAtom)).toBe(false);
+
+	// activeSession 提交（coding）：意图已消费，手动选择保留。
+	act(() => {
+		store.set(activeSessionAtom, {
+			cwd: "/proj/a",
+			runtimeId: "rt-new",
+			sessionPath: "/proj/a/new.jsonl",
+			capabilityProfile: "coding",
+		} as never);
+	});
+	rerender();
+	expect(store.get(sidebarCollapsedAtom)).toBe(false);
+	expect(store.get(activityPanelOpenAtom)).toBe(false);
+	expect(store.get(activityPanelWidthAtom)).toBe(540);
+});
+
+it("打开既有 coding 会话不初始化（F02b）", () => {
+	const { rerender } = renderHook(() => useCodingSessionLayout());
+	// work 会话语境（active false），用户手动展开左栏。
+	act(() => {
+		setPlainSession();
+		store.set(sidebarCollapsedAtom, true);
+	});
+	rerender();
+
+	act(() => {
+		setCodingSession(true);
+	});
+	rerender();
+	expect(store.get(sidebarCollapsedAtom)).toBe(true);
+	expect(store.get(activityPanelOpenAtom)).toBe(false);
 });
 
 it("团队会话路由（不写 activeSession）：收左栏、开右栏", () => {
@@ -120,39 +216,10 @@ it("开发档新会话页触发初始化；普通档新会话页不动作", () =
 	expect(store.get(sidebarCollapsedAtom)).toBe(false);
 });
 
-it("发首条消息的过渡窗口（activeSession 未提交、插件加载中）从不展开左栏", () => {
-	const { rerender } = renderHook(() => useCodingSessionLayout());
-	act(() => {
-		store.set(workspaceModeByProjectAtom, new Map([["/proj/a", "coding"]]));
-		setRoute("/new-session", { cwd: encodeURIComponent("/proj/a") });
-	});
-	rerender();
-	expect(store.get(sidebarCollapsedAtom)).toBe(true);
-
-	// 发首条消息跳聊天页：路由离开 new-session 且 activeSession 未提交——判定
-	// 短暂为否。此前实现（离开延迟展开）在慢机器上会在此把左栏弹开。
-	act(() => {
-		setRoute("/");
-	});
-	rerender();
-	expect(store.get(sidebarCollapsedAtom)).toBe(true);
-
-	// activeSession 提交（coding），版块态恢复：重新初始化收起。
-	act(() => {
-		store.set(activeSessionAtom, {
-			cwd: "/proj/a",
-			runtimeId: "rt-new",
-			sessionPath: "/proj/a/new.jsonl",
-			capabilityProfile: "coding",
-		} as never);
-	});
-	rerender();
-	expect(store.get(sidebarCollapsedAtom)).toBe(true);
-});
-
 it("离开版块态不回写：用户手动开合保持，状态不变时不覆盖", () => {
 	const { rerender } = renderHook(() => useCodingSessionLayout());
 	act(() => {
+		setCreateIntent();
 		setCodingSession(true);
 	});
 	rerender();

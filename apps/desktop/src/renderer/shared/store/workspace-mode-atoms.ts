@@ -87,6 +87,27 @@ export function enterWorkspaceSection(cwd: string, mode: WorkspaceMode): void {
 }
 
 /**
+ * 新建 code 会话的创建意图（BUG-0158 / 审计 F01-F02）：由创建入口经
+ * {@link beginCodingSessionCreation} 登记，版块态布局按 nonce 消费一次——贯穿
+ * 新会话页到会话提交；连续新建各自产生新意图。打开既有会话不产生意图。
+ */
+export interface CodingSessionCreateIntent {
+	readonly cwd: string;
+	readonly nonce: number;
+}
+
+export const codingSessionCreateIntentAtom = atom<CodingSessionCreateIntent | null>(null);
+
+let codingIntentNonce = 0;
+
+/** 创建 code 会话的统一入口：写 coding 档并登记一次性布局初始化意图。 */
+export function beginCodingSessionCreation(cwd: string): void {
+	enterWorkspaceSection(cwd, "coding");
+	codingIntentNonce += 1;
+	getDefaultStore().set(codingSessionCreateIntentAtom, { cwd, nonce: codingIntentNonce });
+}
+
+/**
  * 版块态布局当前是否激活（code 语境：coding 会话、团队会话路由、开发档新会话页，
  * 判定见 root-layout 的 useCodingSessionLayout，唯一写入方也是它）。版块态布局是
  * 一次性初始化：进入时收左栏、开右栏，离开时不做任何回写（左右栏状态此后完全

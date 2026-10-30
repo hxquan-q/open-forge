@@ -3,8 +3,8 @@
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { useOpenProjectSession } from "@shared/app-shell/session-open-context";
 import {
+	beginCodingSessionCreation,
 	defaultConversationCwdAtom,
-	enterWorkspaceSection,
 	getProjectDisplayName,
 	projectsInitializedAtom,
 	sessionDisplayLabel,
@@ -210,8 +210,9 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	const onStartNewSession = useCallback(
 		(cwd: string) => {
 			if (!cwd) return;
-			// 与 M0 版块入口同一条创建链路：写 coding 档后落新会话页，会话按代码模式创建。
-			enterWorkspaceSection(cwd, "coding");
+			// 与 M0 版块入口同一条创建链路：写 coding 档并登记一次性布局初始化意图
+			// （beginCodingSessionCreation），随后落新会话页，会话按代码模式创建。
+			beginCodingSessionCreation(cwd);
 			void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(cwd) } });
 		},
 		[navigate],
