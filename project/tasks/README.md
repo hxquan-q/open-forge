@@ -15,13 +15,15 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0443` | `verifying` | — | [Windows TEMP Git 根路径规范化](TASK-0443-windows-temp-short-path-git-root-check.md)：BUG-0179；默认 TEMP 的 Git/integration 定向 28/28、`test:impact` 727/727、完整 check 通过；全 `scripts/agents` 尚有 2 个复杂集成用例触发 5 秒 timeout，独立分诊；serial。 |
+| `TASK-0442` | `verifying` | PLAN-0028 | [同 cwd 旧 AI 编辑目标不在面板挂载时回放](TASK-0442-stale-edit-target-replayed-on-panel-mount.md)：BUG-0178；先红 1→绿，direct 7/7 + related 118/118、完整 check 通过；serial。 |
 | `TASK-0441` | `verifying` | — | [Desktop fallback executable paths](TASK-0441-desktop-executable-fallback-paths.md)：BUG-0111；平台安装候选合同回归 9/9、`bun run check` 全绿；impact 相关测试 246/256，10 例因缺少 `rg` 与 Windows 下 `/tmp` 夹具失败，真实打包安装待验收；serial。 |
 | `TASK-0440` | `verifying` | PLAN-0014 | [提示音事件接入桌面渲染层](TASK-0440-notification-sound-event-wiring.md)：BUG-0080；回归测试先红后绿，direct 1/1 + related 56/56、完整 `bun run check` 全绿；真实音频实机验收待用户确认；serial。 |
 | `TASK-0439` | `verifying` | PLAN-0028 | [Team 首发 handoff 失败循环与人工重试](TASK-0439-handoff-failure-loop.md)：BUG-0177；原自动风暴已修，当前草稿/文件引用手动重试回归通过，未做实机验收；serial。 |
 | `TASK-0438` | `verifying` | PLAN-0028 | [Team 工作区纳入开发册与可选配置兼容](TASK-0438-team-workspace-dev-book.md)：BUG-0176；开发册/普通册/缺省字段用例通过，Desktop typecheck 与完整 check 全绿；待开发册实机验收；serial。 |
 | `TASK-0437` | `verifying` | PLAN-0028 | [CREATE 返回透传档位](TASK-0437-create-returns-profile.md)：BUG-0174（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |
 | `TASK-0436` | `verifying` | PLAN-0028 | [文件页签卸载不回拉宽度](TASK-0436-unmount-preview-width.md)：BUG-0175（验收反馈 P1），卸载/主动关闭语义拆分红 1→绿 2/2；serial。 |
-| `TASK-0435` | `in_progress` | PLAN-0028 | [编辑目标按来源过滤](TASK-0435-edit-target-cross-workspace.md)：BUG-0173 原跨项目过滤已落地；当前审查到同 cwd 旧目标挂载回放，修复续接待完善合同/验证；serial。 |
+| `TASK-0435` | `verifying` | PLAN-0028 | [编辑目标按来源过滤](TASK-0435-edit-target-cross-workspace.md)：BUG-0173 跨 cwd 过滤已红→绿并通过原验证；同 cwd 旧目标挂载回放现独立跟踪于 BUG-0178 / TASK-0442，不再混入本 Task；serial。 |
 | `TASK-0434` | `verifying` | PLAN-0028 | [热追踪收敛 code 独有](TASK-0434-hot-tracking-code-only.md)：REQ-0030/§11.3（P1），生产+消费同批红 3→绿 24/24；待实机；serial。 |
 | `TASK-0433` | `verifying` | PLAN-0028 | [新建 code 会话恢复四页签默认](TASK-0433-new-session-tab-defaults.md)：BUG-0172（F10），红 2→绿 9/9+相邻 10 例；待实机走查；serial。 |
 | `TASK-0432` | `verifying` | PLAN-0028 | [新建 code 会话意图驱动初始化](TASK-0432-coding-create-intent.md)：BUG-0171（F01/F02/F02b，P1），布局红 7→绿+相邻 39/39；待实机三流程走查；serial。 |

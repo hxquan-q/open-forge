@@ -23,7 +23,7 @@ export function useFollowAiFileEdits(): void {
 	const target = useAtomValue(aiEditTargetAtom);
 	const preview = useAtomValue(inlineFilePreviewAtom);
 	const setPreview = useSetAtom(inlineFilePreviewAtom);
-	const lastTargetRef = useRef<AiEditTarget | null>(null);
+	const lastTargetRef = useRef<AiEditTarget | null>(target);
 
 	useEffect(() => {
 		if (!hotTracking || !target) return;

@@ -38,6 +38,23 @@ beforeEach(() => {
 	store.set(inlineFilePreviewContextReadonlyAtom, null);
 });
 
+it("does not replay a same-cwd edit target that predates hook mount", () => {
+	store.set(aiEditTargetAtom, { path: "/proj/x/src/old.ts", at: 1, cwd: "/proj/x" });
+	store.set(inlineFilePreviewContextReadonlyAtom, {
+		items: [{ name: "manual.ts", path: "/proj/x/src/manual.ts" }],
+		index: 0,
+	});
+
+	const { rerender } = renderFollow();
+	expect(store.get(inlineFilePreviewContextReadonlyAtom)?.items[0]?.path).toBe("/proj/x/src/manual.ts");
+
+	act(() => {
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/new.ts", at: 2, cwd: "/proj/x" });
+	});
+	rerender();
+	expect(store.get(inlineFilePreviewContextReadonlyAtom)?.items[0]?.path).toBe("/proj/x/src/new.ts");
+});
+
 it("目标更新时把文件写进内嵌预览；同一目标不重复写，换目标即切换", () => {
 	const { rerender } = renderFollow();
 

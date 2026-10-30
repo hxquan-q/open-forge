@@ -1,7 +1,7 @@
 ---
 id: TASK-0435
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0030
@@ -54,4 +54,4 @@ updated: 2026-10-30
 - 实际运行：红 2→绿；全套件 23/23；`check:quick` 通过（ratchet new=0）。批次收尾完整 `bun run check` exit 0（含本片类型面）。
 - 未运行及原因：完整 check 见批次收尾；实机跨项目走查待用户。
 - Worktree：未拆出（主检出串行）。
-- 剩余风险：隔离粒度为 cwd（同项目多 code 会话视为同源），与 shell 分支一致；如需会话粒度另立切片。
+- 剩余风险：隔离粒度为 cwd（同项目多 code 会话视为同源），与 shell 分支一致；同 cwd 面板 remount 回放是独立 BUG-0178 / TASK-0442，已从本 Task 范围拆出。
