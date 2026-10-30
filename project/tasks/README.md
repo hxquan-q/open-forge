@@ -20,7 +20,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0444` | `verifying` | PLAN-0014 | [Scripts 面板 locale 完整性与 summary 插值](TASK-0444-scripts-panel-locale-contract.md)：BUG-0081；旧合同红 2→绿，`test:impact` Scripts preset 17/17、完整 check 通过；未启动真实 Desktop；serial。 |
 | `TASK-0443` | `verifying` | — | [Windows TEMP Git 根路径规范化](TASK-0443-windows-temp-short-path-git-root-check.md)：BUG-0179；默认 TEMP Git/integration 28/28、全 `scripts/agents` 重跑 142/142、impact 727/727、完整 check 通过；serial。 |
 | `TASK-0442` | `verifying` | PLAN-0028 | [同 cwd 旧 AI 编辑目标不在面板挂载时回放](TASK-0442-stale-edit-target-replayed-on-panel-mount.md)：BUG-0178；先红 1→绿，direct 7/7 + related 118/118、完整 check 通过；serial。 |
-| `TASK-0441` | `verifying` | — | [Desktop fallback executable paths](TASK-0441-desktop-executable-fallback-paths.md)：BUG-0111；平台安装候选合同回归 9/9、`bun run check` 全绿；impact 相关测试 246/256，10 例因缺少 `rg` 与 Windows 下 `/tmp` 夹具失败，真实打包安装待验收；serial。 |
+| `TASK-0441` | `verifying` | — | [Desktop fallback executable paths](TASK-0441-desktop-executable-fallback-paths.md)：BUG-0111；平台安装候选合同 9/9、`test:impact` direct 16/16、完整 check 通过；related 7 例仅因本机缺 `rg` 失败，打包安装待验收；serial。 |
 | `TASK-0440` | `verifying` | PLAN-0014 | [提示音事件接入桌面渲染层](TASK-0440-notification-sound-event-wiring.md)：BUG-0080；回归测试先红后绿，direct 1/1 + related 56/56、完整 `bun run check` 全绿；真实音频实机验收待用户确认；serial。 |
 | `TASK-0439` | `verifying` | PLAN-0028 | [Team 首发 handoff 失败循环与人工重试](TASK-0439-handoff-failure-loop.md)：BUG-0177；原自动风暴已修，当前草稿/文件引用手动重试回归通过，未做实机验收；serial。 |
 | `TASK-0438` | `verifying` | PLAN-0028 | [Team 工作区纳入开发册与可选配置兼容](TASK-0438-team-workspace-dev-book.md)：BUG-0176；开发册/普通册/缺省字段用例通过，Desktop typecheck 与完整 check 全绿；待开发册实机验收；serial。 |

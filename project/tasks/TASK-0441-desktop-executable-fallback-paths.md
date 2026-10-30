@@ -68,6 +68,6 @@ Replace the obsolete Vetta executable fallback candidates with paths used by cur
 
 - Implementation: replaced legacy Vetta fallback paths with the current Windows `Programs/OpenForge/OpenForge.exe` identity and the two supported branded macOS/Linux locations. Explicit environment and saved paths retain precedence.
 - Regression: candidate contract was red (4 failing cases) before the implementation; the focused command-port suite is now 9/9 green.
-- `test:impact`: direct 9/9 passed; related 246 passed and 10 failed due to missing `rg` and POSIX `/tmp` fixtures on Windows, unrelated to executable lookup.
+- `test:impact`: direct command-port + Windows-safe path-host tests passed 16/16; related tests passed 249, with 7 failing because this environment lacks the external `rg` executable (the prior `/tmp` fixture failures are fixed by BUG-0181). These failures do not exercise executable lookup.
 - `bun run check`: passed.
 - Not performed: no packaged Desktop was launched; artifact reachability still needs manual acceptance.

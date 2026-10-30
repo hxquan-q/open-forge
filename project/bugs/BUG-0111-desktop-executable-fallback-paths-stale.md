@@ -66,6 +66,6 @@ win32:  %LOCALAPPDATA%\Programs\Vetta\Vetta.exe ; %ProgramFiles%\Vetta\Vetta.exe
 ## 修复与验证
 
 - 修复：Windows 候选改为当前 Inno 安装目录 `Programs\\OpenForge\\OpenForge.exe`（另保留同身份 Program Files 候选）；macOS 与 Linux 分别覆盖 `/Applications/{Open Forge,Allstr ai}.app/Contents/MacOS/OpenForge` 和 `/opt/{Open Forge,Allstr ai}/OpenForge`。显式环境/配置路径优先级不变。
-- 测试：旧实现红 4 例；修复后 `vetta-desktop-command-port.test.ts` 9/9 通过。`test:impact` direct 9/9；related 246 通过、10 失败（缺少 `rg`，以及 Windows 下 `/tmp` 夹具路径不存在，均与 fallback 修改无关）。
+- 测试：旧实现红 4 例；修复后 `vetta-desktop-command-port.test.ts` 9/9 通过。随后加入 Windows-safe 远端路径夹具后，`test:impact` direct 16/16；related 249 通过、7 失败，均因测试环境缺少 `rg`，与 Desktop executable lookup 无关。
 - 检查：`bun run check` 全绿。
 - 未运行及原因：未启动真实已打包 Desktop；安装制品运行时可达性仍待人工验收。
