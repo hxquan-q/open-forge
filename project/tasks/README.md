@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0410` | `verifying` | PLAN-0026 | [开发册项目闭环](TASK-0410-allstar-book-project-closure.md)：BUG-0154（F08，P1），册为候选/补拉事实源，红 3→绿 7/7+View 3/3+相邻 26 例；待实机走查；serial。 |
 | `TASK-0409` | `verifying` | PLAN-0026 | [修复终端输出摘要内存保留](TASK-0409-terminal-output-retention.md)：BUG-0153，探针 48→0.01/4.91→0.22 MiB，定向与直接相关面 72/72 绿；impact 暴露范围外 weknora AC-20 既有失败待分诊；serial。 |
 | `TASK-0408` | `verifying` | PLAN-0026 | [修复 Git 页签分支名解析](TASK-0408-git-branch-status-parse.md)：BUG-0152 红基线 3 红→绿 5/5，check:quick 过；工程完成待批次收尾统一 check/impact；serial，主检出串行。 |
 | `TASK-0407` | `verifying` | PLAN-0025 | [Code 模式总体检测](TASK-0407-code-mode-comprehensive-audit.md)：报告已交付工作区；正常基线 115 例过，独立探针 12 场景中 10 个测试复现缺口；跨包失败已分流，未称全面验收通过。 |

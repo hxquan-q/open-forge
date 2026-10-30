@@ -2,8 +2,9 @@
 // @vitest-environment jsdom
 /**
  * 版块首页 model 的行为合同（ADR-0151 决策 5/7）：项目卡片从会话池按 coding 模式分组
- * 派生（组内倒序截取、卡片按最近活跃排序、只统计 coding），空态引导的选择回落默认
- * 项目，新建开发会话走「写 coding 档 → 新会话页」链路，打开会话委托全局上下文。
+ * 派生（组内倒序截取、卡片按最近活跃排序、只统计 coding）；版块册（allstarProjects）
+ * 是创建候选与历史补拉的事实源——册项目可选可拉、普通清单不兜底、未归册 coding 会话
+ * 仅作为已加载会话池的聚合路径；新建开发会话走「写 coding 档 → 新会话页」链路。
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -128,6 +129,7 @@ beforeEach(() => {
 	openProjectSession.mockReset();
 	loadSessions.mockReset();
 	localStorage.clear();
+	allstarSnapshot.allstarProjects = [];
 	store.set(workspaceModeByProjectAtom, new Map());
 	seedFixtures();
 });
@@ -168,20 +170,47 @@ it("项目未初始化时呈现 loading，且已初始化的项目不再重复�
 	expect(result.current.loading).toBe(false);
 });
 
-it("会话桶缺失的项目在初始化后补拉列表", async () => {
-	store.set(sessionsMapAtom, new Map<string, SessionInfo[]>([["/proj/default", []]]));
+it("会话桶缺失的册项目在初始化后补拉；普通-only 项目不因版块页拉取", async () => {
+	allstarSnapshot.allstarProjects = [{ path: "/proj/a" }, { path: "/code-only" }];
+	store.set(sessionsMapAtom, new Map<string, SessionInfo[]>([["/proj/a", []]]));
 	renderHook(() => useAllstarDevHomePageModel());
 
 	await waitFor(() => {
-		expect(loadSessions).toHaveBeenCalledWith("/proj/a");
-		expect(loadSessions).toHaveBeenCalledWith("/proj/b");
+		expect(loadSessions).toHaveBeenCalledWith("/code-only");
 	});
+	expect(loadSessions).not.toHaveBeenCalledWith("/proj/a");
+	expect(loadSessions).not.toHaveBeenCalledWith("/proj/b");
 	expect(loadSessions).not.toHaveBeenCalledWith("/proj/default");
 });
 
-it("空态引导默认选默认项目；新建开发会话按传入 cwd 写 coding 档并导航新会话页", () => {
+it("创建候选来自版块册：册项目可选且用册内名，普通-only 不入候选", async () => {
+	allstarSnapshot.allstarProjects = [{ path: "/proj/a", name: "册内名" }, { path: "/code-only" }];
 	const { result } = renderHook(() => useAllstarDevHomePageModel());
-	expect(result.current.selectedCwd).toBe("/proj/default");
+
+	await waitFor(() => {
+		expect(result.current.projects.map((option) => option.cwd)).toEqual(["/proj/a", "/code-only"]);
+	});
+	expect(result.current.projects[0]?.name).toBe("册内名");
+	expect(result.current.selectedCwd).toBe("/proj/a");
+});
+
+it("选中兜底随册：册内默认项目优先，默认不在册取首个册条目，空册为空", async () => {
+	allstarSnapshot.allstarProjects = [{ path: "/proj/b" }, { path: "/proj/default" }];
+	const withDefault = renderHook(() => useAllstarDevHomePageModel());
+	await waitFor(() => expect(withDefault.result.current.selectedCwd).toBe("/proj/default"));
+
+	allstarSnapshot.allstarProjects = [{ path: "/proj/b" }];
+	const withoutDefault = renderHook(() => useAllstarDevHomePageModel());
+	await waitFor(() => expect(withoutDefault.result.current.selectedCwd).toBe("/proj/b"));
+
+	allstarSnapshot.allstarProjects = [];
+	const emptyBook = renderHook(() => useAllstarDevHomePageModel());
+	await waitFor(() => expect(emptyBook.result.current.projects).toEqual([]));
+	expect(emptyBook.result.current.selectedCwd).toBe("");
+});
+
+it("新建开发会话按传入 cwd 写 coding 档并导航新会话页", () => {
+	const { result } = renderHook(() => useAllstarDevHomePageModel());
 
 	act(() => {
 		result.current.onStartNewSession("/proj/b");

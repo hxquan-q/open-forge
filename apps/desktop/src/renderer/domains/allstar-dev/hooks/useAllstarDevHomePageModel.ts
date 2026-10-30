@@ -6,7 +6,6 @@ import {
 	defaultConversationCwdAtom,
 	enterWorkspaceSection,
 	getProjectDisplayName,
-	projectsAtom,
 	projectsInitializedAtom,
 	sessionDisplayLabel,
 	sessionsMapAtom,
@@ -46,12 +45,14 @@ export interface AllstarDevHomePageModel {
 		readonly moreSessions: (count: number) => string;
 		readonly emptyTitle: string;
 		readonly emptyHint: string;
+		/** 已登记项目的空卡片文案（项目在册但尚无 coding 会话）。 */
+		readonly emptyCardHint: string;
 		readonly emptyProjectLabel: string;
 		readonly openProject: string;
 	};
 	/** 按项目分组的开发会话卡片，按最近活跃排序；空 = 尚无任何 coding 会话。 */
 	readonly projectCards: readonly AllstarDevProjectCard[];
-	/** 空态引导用的项目选择（版块册 M1-3 落地前暂用现有项目清单兜底）。 */
+	/** 新建开发会话的项目候选：版块册条目（ADR-0151 决策 7）；空 = 册为空，走「打开已有项目」登记。 */
 	readonly projects: readonly { cwd: string; name: string }[];
 	readonly selectedCwd: string;
 	onSelectProject: (cwd: string) => void;
@@ -64,8 +65,11 @@ export interface AllstarDevHomePageModel {
 /**
  * 「Allstar 自主开发」版块首页（/allstar）的连接层。版块态的可见性按 ADR-0151 决策 5/7：
  * 版块只承载 coding 会话（普通侧栏已按同一决策过滤），项目卡片从会话池按模式分组派生
- * ——版块册（allstarProjects，M1-3）落地前这是版块项目列表的临时事实源，只有存在
- * coding 会话的项目才会出现，天然与普通侧栏的项目列表分离。
+ * ——版块册（allstarProjects）与已加载的 coding 会话共同决定卡片集合，未归册项目的
+ * coding 会话是 ADR 允许的聚合路径（可达，不保证冷启动补拉）。
+ *
+ * 创建候选与历史补拉的事实源是版块册本身（BUG-0154）：普通项目清单不再兜底——
+ * 只登记在版块册的项目同样可补拉历史、可从选择器新建开发会话。
  *
  * 会话数据复用 project 域的 sessionsMap（useProjectActions.loadSessions 填充、
  * onSessionsChanged 全局刷新），不建第二份列表事实源。
@@ -78,7 +82,6 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	const openProjectSession = useOpenProjectSession();
 	const { loadSessions } = useProjectActions();
 
-	const projects = useAtomValue(projectsAtom);
 	const projectsInitialized = useAtomValue(projectsInitializedAtom);
 	const sessionsMap = useAtomValue(sessionsMapAtom);
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
@@ -159,15 +162,15 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			.map(({ latestModifiedAt: _latest, ...card }) => card);
 	}, [allstarProjects, defaultConversationCwd, sessionsMap]);
 
-	// 空态引导的选择器暂用现有项目清单（含默认「对话」项目）；M1-3 版块册落地后替换为
-	// 版块册条目 + 打开已有目录登记。
+	// 创建候选 = 版块册条目（BUG-0154）：册内登记名优先，缺省回落目录名归一。
+	// 普通项目清单不再参与版块候选与补拉；未归册项目的 coding 会话只经会话池聚合进卡片。
 	const projectOptions = useMemo(
 		() =>
-			projects.map((project) => ({
+			allstarProjects.map((project) => ({
 				cwd: project.cwd,
-				name: getProjectDisplayName(project.cwd, defaultConversationCwd),
+				name: project.name ?? getProjectDisplayName(project.cwd, defaultConversationCwd),
 			})),
-		[defaultConversationCwd, projects],
+		[allstarProjects, defaultConversationCwd],
 	);
 
 	const [selectedCwd, setSelectedCwd] = useState("");
@@ -236,6 +239,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			moreSessions: (count: number) => t("allstarDev.home.projects.more", { count }),
 			emptyTitle: t("allstarDev.home.empty.title"),
 			emptyHint: t("allstarDev.home.empty.hint"),
+			emptyCardHint: t("allstarDev.home.empty.cardHint"),
 			emptyProjectLabel: t("allstarDev.home.empty.projectLabel"),
 			openProject: t("allstarDev.home.projects.openProject"),
 		},

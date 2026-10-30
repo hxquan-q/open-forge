@@ -101,7 +101,7 @@ function AllstarDevProjectCardView({
 			</header>
 			{card.sessions.length === 0 ? (
 				<p className="border-t border-border/40 px-3.5 py-4 text-xs text-muted-foreground">
-					{labels.emptyHint}
+					{labels.emptyCardHint}
 				</p>
 			) : (
 				<ul className="flex-1 border-t border-border/40">

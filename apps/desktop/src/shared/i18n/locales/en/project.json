@@ -352,7 +352,8 @@
 			},
 			"empty": {
 				"title": "No dev sessions yet",
-				"hint": "Pick a project to start your first dev session; it will show up on that project's card",
+				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",
+				"cardHint": "No dev sessions yet — select this project below to start one",
 				"projectLabel": "Choose a project"
 			}
 		}
