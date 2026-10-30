@@ -52,7 +52,7 @@ const defaultDependencies: TeamWorkspaceDependencies = {
 		const config = await readDesktopConfig();
 		return [
 			...config.projects.map((project) => project.path),
-			...config.allstarProjects.map((project) => project.path),
+			...(config.allstarProjects ?? []).map((project) => project.path),
 		];
 	},
 };

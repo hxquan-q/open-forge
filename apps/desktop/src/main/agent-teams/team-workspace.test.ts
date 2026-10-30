@@ -4,16 +4,23 @@
  * 项目与普通册项目一样可作为 Team 会话工作区——F08 后版块新建目标取自开发册，
  * 名单不含开发册时 code 模式团队会话直接创建失败。
  */
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const configState = vi.hoisted(() => ({
+	projects: [{ path: "C:/ordinary" }],
+	allstarProjects: [{ path: "C:/dev-only" }] as { path: string }[] | undefined,
+}));
 
 vi.mock("../config/desktop-config-store.js", () => ({
-	readDesktopConfig: async () => ({
-		projects: [{ path: "C:/ordinary" }],
-		allstarProjects: [{ path: "C:/dev-only" }],
-	}),
+	readDesktopConfig: async () => configState,
 }));
 
 import { resolveTeamSessionWorkspace } from "./team-workspace.js";
+
+beforeEach(() => {
+	configState.projects = [{ path: "C:/ordinary" }];
+	configState.allstarProjects = [{ path: "C:/dev-only" }];
+});
 
 describe("resolveTeamSessionWorkspace", () => {
 	it("开发册项目可作为 Team 会话工作区", async () => {
@@ -22,6 +29,17 @@ describe("resolveTeamSessionWorkspace", () => {
 			path: "C:/dev-only",
 		});
 		expect(workspace).toEqual({ kind: "project", id: "C:/dev-only", cwd: "C:/dev-only" });
+	});
+
+	it("ordinary project remains valid when the optional developer book is absent", async () => {
+		configState.allstarProjects = undefined;
+
+		const workspace = await resolveTeamSessionWorkspace("team-1", "session-1", {
+			kind: "project",
+			path: "C:/ordinary",
+		});
+
+		expect(workspace).toEqual({ kind: "project", id: "C:/ordinary", cwd: "C:/ordinary" });
 	});
 
 	it("普通册项目照常解析；名单外路径仍拒绝", async () => {
