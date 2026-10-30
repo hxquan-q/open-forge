@@ -1,0 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
+## 其他
+
+- **本次 0.1.4 为未签名、未公证构建**：macOS 安装包未做 Developer ID 签名与公证，首次打开需在「系统设置 → 隐私与安全性」手动允许；Windows/Linux 安装包未做代码签名。本版不包含 Windows 沙箱宿主（TASK-0352 / BUG-0137），配置签名凭据后应补发签名版本（`WAIVER-0008`）。

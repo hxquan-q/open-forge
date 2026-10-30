@@ -7,7 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
-| `REQ-0030` | 「Allstar 自主开发」功能版块（入口→版块壳→流水线并入→内置 git/MCP） | ready | [PLAN-0025](../plans/PLAN-0025-allstar-dev-evolution.md)、[TASK-0404](../tasks/TASK-0404-allstar-dev-section-entry.md)（done：M0 入口已交付并验收）、[TASK-0405](../tasks/TASK-0405-allstar-dev-section-shell.md)（ready：M1 版块壳） |
+| `REQ-0030` | 「Allstar 自主开发」功能版块（入口→版块壳→流水线并入→内置 git/MCP） | ready | [PLAN-0027](../plans/PLAN-0027-allstar-dev-evolution.md)、[TASK-0422](../tasks/TASK-0422-allstar-dev-section-entry.md)（done：M0 入口已交付并验收）、[TASK-0423](../tasks/TASK-0423-allstar-dev-section-shell.md)（ready：M1 版块壳） |
 | `REQ-0029` | 个人产品平台：账号、Web中心、市场、官网文档与下载镜像 | draft | [PLAN-0023 r4](../plans/PLAN-0023-product-platform-backoffice.md)、[RESEARCH-0041](../research/RESEARCH-0041-product-backoffice-and-enterprise-control.md)；个人公开使用闭环为第一期，支付不考虑，未实施 |
 | `REQ-0028` | Pi 生态接入与原生插件演进 | ready | [PLAN-0022](../plans/PLAN-0022-pi-ecosystem-and-plugin-evolution.md)、[RESEARCH-0040](../research/RESEARCH-0040-pi-extension-ecosystem-compatibility.md)；仅研究与候选方案，未实施 |
 | `REQ-0027` | Agent 全局与项目持久记忆 | ready | [PLAN-0021 / Task DAG](../plans/PLAN-0021-agent-persistent-memory.md#已建-task-与依赖)、[RESEARCH-0038](../research/RESEARCH-0038-agent-persistent-memory.md)；23项Task已建，未开工 |
@@ -22,7 +22,7 @@
 | `REQ-0011` | 品牌档案默认口径（dev 与打包 = 外部分发） | ready | [TASK-0224](../tasks/TASK-0224-brand-profile-default-distribution.md) |
 | `REQ-0010` | MCP 工具暴露粒度（按 server / 工具选择常驻或按需） | draft | [RESEARCH-0024](../research/RESEARCH-0024-pi-workflow-post-design-review.md)、[PLAN-0017](../plans/PLAN-0017-mcp-tool-exposure-granularity.md) |
 | `REQ-0009` | Desktop 外观字体偏好 | ready | [RESEARCH-0020](../research/RESEARCH-0020-desktop-font-preferences-and-licenses.md) |
-| `REQ-0008` | 非手机上游能力选择性适配 | ready | [PLAN-0014](../plans/PLAN-0014-selective-upstream-nonmobile.md) |
+| `REQ-0008` | 非手机上游能力选择性适配 | ready | [PLAN-0014](../plans/PLAN-0014-selective-upstream-nonmobile.md)、[PLAN-0025](../plans/PLAN-0025-upstream-mcp-design-adaptation.md)；新增 MCP 与设计画布四项串行批次，仅立项 |
 | `REQ-0001` | work/coding 本地 Desktop MVP | ready | [`exprot/mvp-scope.md`](../../exprot/mvp-scope.md)、[`ISSUE-0006`](../issues/ISSUE-0006-conversation-task-promotion-policy.md) |
 | `REQ-0002` | Runtime 性能与可靠性基线 | ready | [`exprot/session-memory.md`](../../exprot/session-memory.md)、[`exprot/differential-testing-observability.md`](../../exprot/differential-testing-observability.md) |
 | `REQ-0003` | Open Forge 品牌化发布 | ready | [`exprot/rebrand-plan.md`](../../exprot/rebrand-plan.md) |

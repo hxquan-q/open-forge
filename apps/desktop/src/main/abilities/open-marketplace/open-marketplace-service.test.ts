@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cp, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,6 +28,14 @@ async function temporaryRoot(): Promise<string> {
 	const root = await mkdtemp(join(tmpdir(), "vetta-open-marketplace-test-"));
 	temporaryRoots.push(root);
 	return root;
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((settle) => {
+		resolve = settle;
+	});
+	return { promise, resolve };
 }
 
 function archive(options?: {
@@ -301,7 +310,13 @@ function githubManifestResponse(buffer: Buffer): Response {
 	});
 }
 
+const unexpectedFetch = vi.fn<typeof fetch>(async () => {
+	throw new Error("Unexpected network request: inject fetchArchive and fetchManifest");
+});
+
 beforeEach(() => {
+	unexpectedFetch.mockClear();
+	vi.stubGlobal("fetch", unexpectedFetch);
 	marketplaceLog.error.mockClear();
 	process.env.VETTA_OPEN_MARKETPLACE_REPOSITORY = "https://github.com/example/vetta-abilities";
 	process.env.VETTA_OPEN_MARKETPLACE_REF = "main";
@@ -309,10 +324,15 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-	await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
-	restoreEnvironment("VETTA_OPEN_MARKETPLACE_REPOSITORY", originalRepository);
-	restoreEnvironment("VETTA_OPEN_MARKETPLACE_REF", originalRef);
-	restoreEnvironment("VETTA_OPEN_MARKETPLACE_ARCHIVE_URL", originalArchiveUrl);
+	try {
+		await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+		expect(unexpectedFetch, "All marketplace network boundaries must use explicit fixtures").not.toHaveBeenCalled();
+	} finally {
+		vi.unstubAllGlobals();
+		restoreEnvironment("VETTA_OPEN_MARKETPLACE_REPOSITORY", originalRepository);
+		restoreEnvironment("VETTA_OPEN_MARKETPLACE_REF", originalRef);
+		restoreEnvironment("VETTA_OPEN_MARKETPLACE_ARCHIVE_URL", originalArchiveUrl);
+	}
 });
 
 describe("OpenMarketplaceService", () => {
@@ -329,6 +349,7 @@ describe("OpenMarketplaceService", () => {
 				hostApiVersion,
 				rootDir,
 				fetchArchive: async () => response(source),
+				fetchManifest: async () => manifestResponse(source),
 				installAbility: async (_root, ability) => {
 					installed.push(ability.version);
 				},
@@ -390,25 +411,36 @@ describe("OpenMarketplaceService", () => {
 			fetchArchive: async () => response(zip),
 		});
 		await initial.refresh();
+		const manifest = deferred<Response>();
 		const fetchManifest = vi.fn(async (_url: string, init?: RequestInit) => {
 			expect(init?.headers).toMatchObject({ Authorization: "Bearer secret-token" });
-			return githubManifestResponse(zip);
+			return manifest.promise;
 		});
+		const installAbility = vi.fn();
 		const service = new OpenMarketplaceService({
 			appVersion: APP_VERSION,
 			rootDir,
 			getAccessToken: () => "secret-token",
 			fetchManifest,
+			installAbility,
 		});
 
 		const snapshot = await service.list();
-
-		expect(snapshot.marketplaceVersion).toBe("2026.07.1");
-		await vi.waitFor(() => expect(fetchManifest).toHaveBeenCalledOnce());
-		expect(fetchManifest).toHaveBeenCalledWith(
-			"https://api.github.com/repos/example/vetta-abilities/contents/.vetta/marketplace.json?ref=main",
-			expect.objectContaining({ redirect: "follow" }),
-		);
+		const installation = service.install("skill", "demo-skill");
+		try {
+			expect(snapshot.marketplaceVersion).toBe("2026.07.1");
+			await vi.waitFor(() => expect(fetchManifest).toHaveBeenCalledOnce());
+			expect(fetchManifest).toHaveBeenCalledWith(
+				"https://api.github.com/repos/example/vetta-abilities/contents/.vetta/marketplace.json?ref=main",
+				expect.objectContaining({ redirect: "follow" }),
+			);
+			expect(installAbility).not.toHaveBeenCalled();
+		} finally {
+			// Installation joins the background check before the cache and fetch guard are torn down.
+			manifest.resolve(githubManifestResponse(zip));
+			await installation;
+		}
+		expect(installAbility).toHaveBeenCalledOnce();
 	});
 
 	it.each([
@@ -581,6 +613,7 @@ describe("OpenMarketplaceService", () => {
 			appVersion: APP_VERSION,
 			rootDir,
 			fetchArchive: async () => response(pluginBundleArchive()),
+			fetchManifest: async () => manifestResponse(pluginBundleArchive()),
 			prepareMcpAbility,
 		});
 		await service.refresh();
@@ -770,6 +803,7 @@ describe("OpenMarketplaceService", () => {
 			appVersion: APP_VERSION,
 			rootDir,
 			fetchArchive: async () => response(pluginBundleArchive()),
+			fetchManifest: async () => manifestResponse(pluginBundleArchive()),
 			installAbility,
 		});
 
@@ -945,23 +979,33 @@ describe("OpenMarketplaceService", () => {
 		});
 		await initial.refresh();
 		const fetchArchive = vi.fn(async () => response(archive()));
-		const fetchManifest = vi.fn(async () => manifestResponse(archive()));
+		const manifest = deferred<Response>();
+		const fetchManifest = vi.fn(async () => manifest.promise);
+		const installAbility = vi.fn();
 		const service = new OpenMarketplaceService({
 			appVersion: APP_VERSION,
 			rootDir,
 			fetchArchive,
 			fetchManifest,
+			installAbility,
 		});
 
 		const snapshot = await service.list();
-
-		expect(snapshot.marketplaceVersion).toBe("2026.07.1");
-		expect(snapshot.error).toBeUndefined();
-		await vi.waitFor(() => expect(fetchManifest).toHaveBeenCalledOnce());
-		expect(fetchManifest).toHaveBeenCalledWith(
-			"https://github.com/example/vetta-abilities/raw/refs/heads/main/.vetta/marketplace.json",
-			expect.objectContaining({ redirect: "follow" }),
-		);
+		const installation = service.install("skill", "demo-skill");
+		try {
+			expect(snapshot.marketplaceVersion).toBe("2026.07.1");
+			expect(snapshot.error).toBeUndefined();
+			await vi.waitFor(() => expect(fetchManifest).toHaveBeenCalledOnce());
+			expect(fetchManifest).toHaveBeenCalledWith(
+				"https://github.com/example/vetta-abilities/raw/refs/heads/main/.vetta/marketplace.json",
+				expect.objectContaining({ redirect: "follow" }),
+			);
+			expect(installAbility).not.toHaveBeenCalled();
+		} finally {
+			manifest.resolve(manifestResponse(archive()));
+			await installation;
+		}
+		expect(installAbility).toHaveBeenCalledOnce();
 		expect(fetchArchive).not.toHaveBeenCalled();
 	});
 
@@ -1119,6 +1163,7 @@ describe("OpenMarketplaceService", () => {
 			appVersion: APP_VERSION,
 			rootDir,
 			fetchArchive: async () => response(archive()),
+			fetchManifest: async () => manifestResponse(archive()),
 			installAbility,
 		});
 		await service.refresh();

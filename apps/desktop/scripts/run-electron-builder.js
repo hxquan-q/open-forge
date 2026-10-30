@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -34,6 +35,45 @@ export function resolveDefaultTargets(platform) {
 	const targets = defaultTargetsByPlatform[platform];
 	if (!targets) throw new Error(`Unsupported desktop build platform: ${platform}`);
 	return [...targets];
+}
+
+/**
+ * electron-builder 的 update 元数据会把产物名里的空格规范成连字符，但磁盘上的
+ * 文件保留 productName 的空格（例如 "Allstr ai-0.1.3.AppImage"）。发布校验按
+ * 元数据引用查找文件，必须把顶层产物文件同步改写为连字符名；目录与其他文件不动。
+ */
+export function normalizeArtifactFileNames(directory) {
+	if (!existsSync(directory)) return [];
+	const renamed = [];
+	for (const name of readdirSync(directory)) {
+		if (!name.includes(" ")) continue;
+		const source = join(directory, name);
+		if (!statSync(source).isFile()) continue;
+		const next = name.replaceAll(" ", "-");
+		const target = join(directory, next);
+		if (existsSync(target)) throw new Error(`Artifact rename collision: ${name} -> ${next}`);
+		renameSync(source, target);
+		renamed.push({ from: name, to: next });
+	}
+	// updater 元数据可能仍引用带空格的旧名（Windows Inno 尤其如此），一并改写。
+	if (renamed.length > 0) {
+		for (const metadataName of readdirSync(directory)) {
+			if (!/^latest.*\.yml$/.test(metadataName)) continue;
+			const metadataPath = join(directory, metadataName);
+			if (!statSync(metadataPath).isFile()) continue;
+			let text = readFileSync(metadataPath, "utf8");
+			let changed = false;
+			for (const { from, to } of renamed) {
+				for (const needle of new Set([from, encodeURIComponent(from), from.replaceAll(" ", "%20")])) {
+					if (!text.includes(needle)) continue;
+					text = text.split(needle).join(to);
+					changed = true;
+				}
+			}
+			if (changed) writeFileSync(metadataPath, text);
+		}
+	}
+	return renamed;
 }
 
 export function resolveElectronBuilderTargets(platform, targets) {
@@ -201,6 +241,14 @@ function main() {
 				stdio: "inherit",
 			});
 		}
+	}
+
+	const releaseDir = join(import.meta.dirname, "..", "release");
+	const renamed = normalizeArtifactFileNames(releaseDir);
+	if (renamed.length > 0) {
+		console.log(
+			`[run-electron-builder] normalized ${renamed.length} artifact name(s): ${renamed.map(({ from, to }) => `${from} -> ${to}`).join(", ")}`,
+		);
 	}
 }
 

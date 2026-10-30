@@ -23,8 +23,8 @@ async function createLayout(root, version) {
 
 test("Windows supplemental package names are stable and versioned", () => {
 	assert.deepEqual(windowsSupplementalArtifactNames("1.2.3"), [
-		"Open Forge-1.2.3-win-x64.msi",
-		"Open Forge-1.2.3-win-x64.zip",
+		"Allstr-ai-1.2.3-win-x64.msi",
+		"Allstr-ai-1.2.3-win-x64.zip",
 	]);
 });
 

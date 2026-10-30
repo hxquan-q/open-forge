@@ -15,24 +15,40 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0421` | `verifying` | PLAN-0026 | [Team 首发 handoff 失败循环与人工重试](TASK-0421-handoff-failure-loop.md)：BUG-0164；原自动风暴已修，当前草稿/文件引用手动重试回归通过，未做实机验收；serial。 |
-| `TASK-0420` | `verifying` | PLAN-0026 | [Team 工作区纳入开发册与可选配置兼容](TASK-0420-team-workspace-dev-book.md)：BUG-0163；开发册/普通册/缺省字段用例通过，Desktop typecheck 与完整 check 全绿；待开发册实机验收；serial。 |
-| `TASK-0419` | `verifying` | PLAN-0026 | [CREATE 返回透传档位](TASK-0419-create-returns-profile.md)：BUG-0161（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |
-| `TASK-0418` | `verifying` | PLAN-0026 | [文件页签卸载不回拉宽度](TASK-0418-unmount-preview-width.md)：BUG-0162（验收反馈 P1），卸载/主动关闭语义拆分红 1→绿 2/2；serial。 |
-| `TASK-0417` | `in_progress` | PLAN-0026 | [编辑目标按来源过滤](TASK-0417-edit-target-cross-workspace.md)：BUG-0160 原跨项目过滤已落地；当前审查到同 cwd 旧目标挂载回放，修复续接待完善合同/验证；serial。 |
-| `TASK-0416` | `verifying` | PLAN-0026 | [热追踪收敛 code 独有](TASK-0416-hot-tracking-code-only.md)：REQ-0030/§11.3（P1），生产+消费同批红 3→绿 24/24；待实机；serial。 |
-| `TASK-0415` | `verifying` | PLAN-0026 | [新建 code 会话恢复四页签默认](TASK-0415-new-session-tab-defaults.md)：BUG-0159（F10），红 2→绿 9/9+相邻 10 例；待实机走查；serial。 |
-| `TASK-0414` | `verifying` | PLAN-0026 | [新建 code 会话意图驱动初始化](TASK-0414-coding-create-intent.md)：BUG-0158（F01/F02/F02b，P1），布局红 7→绿+相邻 39/39；待实机三流程走查；serial。 |
-| `TASK-0413` | `verifying` | PLAN-0026 | [终端条目完成结算解耦](TASK-0413-terminal-entry-stuck-running.md)：BUG-0157（F06），end 结算提升闸门前红 1→绿，控制器 13/13+团队 40/40；serial。 |
-| `TASK-0412` | `verifying` | PLAN-0026 | [coding 增量行侧栏漏过滤](TASK-0412-incremental-coding-sidebar-leak.md)：BUG-0156（F09），档位端到端透传红 3→绿 17+12 例；顺带修复该主进程套件既有收集断裂（ipc/session 单点 mock）；serial。 |
-| `TASK-0411` | `verifying` | PLAN-0026 | [同一 AI 文件再次编辑跟回](TASK-0411-ai-file-edit-refollow.md)：BUG-0155（F04），双条件去重红 1→绿 8/8（含相邻）；serial。 |
-| `TASK-0410` | `verifying` | PLAN-0026 | [开发册项目闭环](TASK-0410-allstar-book-project-closure.md)：BUG-0154（F08，P1），册为候选/补拉事实源，红 3→绿 7/7+View 3/3+相邻 26 例；待实机走查；serial。 |
-| `TASK-0409` | `verifying` | PLAN-0026 | [修复终端输出摘要内存保留](TASK-0409-terminal-output-retention.md)：BUG-0153，探针 48→0.01/4.91→0.22 MiB，定向与直接相关面 72/72 绿；impact 暴露范围外 weknora AC-20 既有失败待分诊；serial。 |
-| `TASK-0408` | `verifying` | PLAN-0026 | [修复 Git 页签分支名解析](TASK-0408-git-branch-status-parse.md)：BUG-0152 红基线 3 红→绿 5/5，check:quick 过；工程完成待批次收尾统一 check/impact；serial，主检出串行。 |
-| `TASK-0407` | `verifying` | PLAN-0025 | [Code 模式总体检测](TASK-0407-code-mode-comprehensive-audit.md)：报告已交付工作区；正常基线 115 例过，独立探针 12 场景中 10 个测试复现缺口；跨包失败已分流，未称全面验收通过。 |
-| `TASK-0406` | `done` | PLAN-0025 | [Agent/团队所属模式](TASK-0406-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0035 定位重合讨论。 |
-| `TASK-0405` | `ready` | PLAN-0025 | [M1 版块壳：/allstar 路由、项目空间、会话管理与配置 v1](TASK-0405-allstar-dev-section-shell.md)；前置 ADR 需用户当日评审；serial，2026-11-06 前收口发 0.1.4。 |
-| `TASK-0404` | `done` | PLAN-0025 | [「Allstar自主开发」版块入口](TASK-0404-allstar-dev-section-entry.md)：代码模式独立入口、新会话默认文档与研究档、右栏随会话轴；`c5700985d` 已推 origin/chenxvhua，工程验证与用户实机验收通过。 |
+| `TASK-0439` | `verifying` | PLAN-0028 | [Team 首发 handoff 失败循环与人工重试](TASK-0439-handoff-failure-loop.md)：BUG-0177；原自动风暴已修，当前草稿/文件引用手动重试回归通过，未做实机验收；serial。 |
+| `TASK-0438` | `verifying` | PLAN-0028 | [Team 工作区纳入开发册与可选配置兼容](TASK-0438-team-workspace-dev-book.md)：BUG-0176；开发册/普通册/缺省字段用例通过，Desktop typecheck 与完整 check 全绿；待开发册实机验收；serial。 |
+| `TASK-0437` | `verifying` | PLAN-0028 | [CREATE 返回透传档位](TASK-0437-create-returns-profile.md)：BUG-0174（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |
+| `TASK-0436` | `verifying` | PLAN-0028 | [文件页签卸载不回拉宽度](TASK-0436-unmount-preview-width.md)：BUG-0175（验收反馈 P1），卸载/主动关闭语义拆分红 1→绿 2/2；serial。 |
+| `TASK-0435` | `in_progress` | PLAN-0028 | [编辑目标按来源过滤](TASK-0435-edit-target-cross-workspace.md)：BUG-0173 原跨项目过滤已落地；当前审查到同 cwd 旧目标挂载回放，修复续接待完善合同/验证；serial。 |
+| `TASK-0434` | `verifying` | PLAN-0028 | [热追踪收敛 code 独有](TASK-0434-hot-tracking-code-only.md)：REQ-0030/§11.3（P1），生产+消费同批红 3→绿 24/24；待实机；serial。 |
+| `TASK-0433` | `verifying` | PLAN-0028 | [新建 code 会话恢复四页签默认](TASK-0433-new-session-tab-defaults.md)：BUG-0172（F10），红 2→绿 9/9+相邻 10 例；待实机走查；serial。 |
+| `TASK-0432` | `verifying` | PLAN-0028 | [新建 code 会话意图驱动初始化](TASK-0432-coding-create-intent.md)：BUG-0171（F01/F02/F02b，P1），布局红 7→绿+相邻 39/39；待实机三流程走查；serial。 |
+| `TASK-0431` | `verifying` | PLAN-0028 | [终端条目完成结算解耦](TASK-0431-terminal-entry-stuck-running.md)：BUG-0170（F06），end 结算提升闸门前红 1→绿，控制器 13/13+团队 40/40；serial。 |
+| `TASK-0430` | `verifying` | PLAN-0028 | [coding 增量行侧栏漏过滤](TASK-0430-incremental-coding-sidebar-leak.md)：BUG-0169（F09），档位端到端透传红 3→绿 17+12 例；顺带修复该主进程套件既有收集断裂（ipc/session 单点 mock）；serial。 |
+| `TASK-0429` | `verifying` | PLAN-0028 | [同一 AI 文件再次编辑跟回](TASK-0429-ai-file-edit-refollow.md)：BUG-0168（F04），双条件去重红 1→绿 8/8（含相邻）；serial。 |
+| `TASK-0428` | `verifying` | PLAN-0028 | [开发册项目闭环](TASK-0428-allstar-book-project-closure.md)：BUG-0167（F08，P1），册为候选/补拉事实源，红 3→绿 7/7+View 3/3+相邻 26 例；待实机走查；serial。 |
+| `TASK-0427` | `verifying` | PLAN-0028 | [修复终端输出摘要内存保留](TASK-0427-terminal-output-retention.md)：BUG-0166，探针 48→0.01/4.91→0.22 MiB，定向与直接相关面 72/72 绿；impact 暴露范围外 weknora AC-20 既有失败待分诊；serial。 |
+| `TASK-0426` | `verifying` | PLAN-0028 | [修复 Git 页签分支名解析](TASK-0426-git-branch-status-parse.md)：BUG-0165 红基线 3 红→绿 5/5，check:quick 过；工程完成待批次收尾统一 check/impact；serial，主检出串行。 |
+| `TASK-0425` | `verifying` | PLAN-0027 | [Code 模式总体检测](TASK-0425-code-mode-comprehensive-audit.md)：报告已交付工作区；正常基线 115 例过，独立探针 12 场景中 10 个测试复现缺口；跨包失败已分流，未称全面验收通过。 |
+| `TASK-0424` | `done` | PLAN-0027 | [Agent/团队所属模式](TASK-0424-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0036 定位重合讨论。 |
+| `TASK-0423` | `ready` | PLAN-0027 | [M1 版块壳：/allstar 路由、项目空间、会话管理与配置 v1](TASK-0423-allstar-dev-section-shell.md)；前置 ADR 需用户当日评审；serial，2026-11-06 前收口发 0.1.5。 |
+| `TASK-0422` | `done` | PLAN-0027 | [「Allstar自主开发」版块入口](TASK-0422-allstar-dev-section-entry.md)：代码模式独立入口、新会话默认文档与研究档、右栏随会话轴；`c5700985d` 已推 origin/chenxvhua，工程验证与用户实机验收通过。 |
+| `TASK-0419` | `verifying` | — | [后台列表刷新合并](TASK-0419-weknora-background-refresh-coalesce.md)；第十批冻结候选 b6c7y60gc 中 Desktop 6247 通过、18 既有跳过，AC-20 未再失败。 |
+| `TASK-0418` | `verifying` | — | [SSH 握手预算取整](TASK-0418-ssh2-handshake-budget-floor.md)；第十批冻结候选 b6c7y60gc 中 ssh-transport 236 通过、25 既有跳过，239999 未再出现。 |
+| `TASK-0417` | `verifying` | — | [Worktree 准备沿用控制器运行时](TASK-0417-agent-prepare-controller-runtime.md)；第十批冻结候选 b6c7y60gc 的 test:changed 退出 0，90 路径字节快照未变。 |
+| `TASK-0416` | `verifying` | — | [控制器测试夹具生命周期](TASK-0416-agent-test-fixture-lifecycle.md)；第十批冻结候选 b6c7y60gc 的 quality 726 项通过，历史 EPERM 未在本批复现。 |
+| `TASK-0415` | `verifying` | — | [候选差异批量读取](TASK-0415-agent-git-change-batching.md)；第十批冻结候选 b6c7y60gc 的 test:changed 退出 0，不据此关闭历史超时根因。 |
+| `TASK-0414` | `verifying` | — | [市场测试网络隔离](TASK-0414-marketplace-test-network-isolation.md)；第十批冻结候选 b6c7y60gc 中 Desktop 广域通过，本批未再触及市场超时。 |
+| `TASK-0412` | `verifying` | — | [Desktop 交付基线复核](TASK-0412-desktop-delivery-baseline.md)；第十批冻结候选 b6c7y60gc 退出 0，约 72.8 分钟，90 路径字节快照未变；未发布、未打 tag。 |
+| `TASK-0413` | `verifying` | — | [CLI 记忆包源码解析](TASK-0413-cli-runtime-source-resolution.md)；BUG-0156 已补源码 alias 与真实 resolver 回归，定向合同及第三批 CLI 包测试通过；最终候选门禁、新 SHA 远端 CI 待完成。 |
+| `TASK-0410` | `verifying` | PLAN-0026 | [共享资源准入与 OCR 接线](TASK-0410-shared-resource-admission.md)；619cd9c3b 已集成本地 main，17例gate/10例工具/4例策略与完整check通过；跨包六包绿，Desktop存量14失败见ISSUE-0035；未推送，OCR待功能验收。 |
+| `TASK-0411` | `done` | PLAN-0026 | [子代理准入与收尾观测](TASK-0411-subagent-admission-observation.md)；ddf02a580 已集成本地 main，49例全包/108例相关与集成后完整check通过，独立审查闭环；内部诊断验收不需实机，组合门禁存量失败与未推送事实见PLAN-0026。 |
+| `TASK-0406` | `verifying` | PLAN-0025 | [MCP 候选失败退避重试](TASK-0406-mcp-candidate-retry.md)；已集成 main，影响 65 / Node 68 / Desktop 12 例及 check 通过；已知跨包红灯按 WAIVER-0012 保留。 |
+| `TASK-0407` | `verifying` | PLAN-0025 | [设计画布卡顿与闪白修复](TASK-0407-design-canvas-stability.md)；候选 dd7feffcd 已随 `826af3caa` 集成 main，main 复验 130 文件 928 例/check/build 通过；实机首屏与输入待验收。 |
+| `TASK-0408` | `verifying` | PLAN-0025 | [真实图片素材与来源追溯](TASK-0408-design-real-image-assets.md)；候选 `157f0906e` 已随 `c2f2e2851` 集成 main，独立审查 P2 已处置；真实来源与视觉验收待执行。 |
+| `TASK-0409` | `verifying` | PLAN-0025 | [设计方向与质量检查](TASK-0409-design-direction-quality.md)；候选 `9374d708d` 已随 `9237363e2` 集成 main；固定案例的视觉与模型验收待执行。 |
+| `TASK-0405` | `in_progress` | — | [发布修复与身份门禁](TASK-0405-release-0-1-3-unsigned.md)；品牌路径及 draft 身份定向、独立复审已完成，待最终完整门禁；既有 0.1.3 标签与新候选异 SHA，发布阻塞，不移动标签。 |
+| `TASK-0404` | `in_progress` | — | [GitHub → Codeup 自动同步及云效构建测试](TASK-0404-yunxiao-sync-and-ci.md)；复用 ISSUE-0029 / RESEARCH-0045，串行实施、独立只读研究与评审，真实云端验收待执行。 |
 | `TASK-0403` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0402` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0397` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
@@ -68,7 +84,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0365` | `verifying` | PLAN-0006 | BUG-0145：点选改在 pointerdown 打开元素旁批注。定向 13 例与 `check:quick` 全绿。主进程脚本，需重启 dev 后实机看。串行。本地 main 已提交，未推送。 |
 | `TASK-0391` | `verifying` | — | 新增 macOS 测试包专用 workflow：手动 dispatch，只出未签名 DMG，不跑 quality / Win / Linux leg 与 packaged E2E；YAML 结构已校验，首次 dispatch 即真实验证；需先入 dev 并随 `dev → main` 晋升才出现运行按钮；serial。 |
 | `TASK-0362` | `verifying` | — | BUG-0144：内置浏览器占位洞跟着布局与窗口缩放走到终值。用户已确认侧栏与缩窗可用。定向 34 例通过。主工作区串行。 |
-| `TASK-0361` | `verifying` | — | REQ-0026 / ADR-0147：项目迁移包已实施——OFAR v2 workspace 帧、preview/apply 两段式导入（cwd 重写+指纹按落盘形态）、产物打包恢复（默认不覆盖）、迁移向导 UI 与 i18n；定向 73 例、impact 119 例、完整 check 全绿；六提交本地 main 未推送；顺带修复 TASK-0349 菜单接线缺口；待真实双目录迁移人工验收；serial。 |
+| `TASK-0361` | `verifying` | — | [项目会话与产物跨设备迁移优化](TASK-0361-project-migration-archive.md)：REQ-0026；原生历史 canonical/标题/cwd 修复，安全产物/附件恢复与幂等；定向 75、UI 29+5、impact direct50/related78 及完整 check 全绿，独立复审两 P2 已关闭；本地 main 串行集成，待物理双设备/人工接受；serial。 |
 | `TASK-0360` | `verifying` | PLAN-0006 | 用户要求 UI 测试。正在用隔离 Fresh 实例核对页内批注。不附着日常 Desktop。 |
 | `TASK-0352` | `blocked` | PLAN-0020 | Windows沙箱制品完整性与运行时定位；来源BUG-0137，生产实现serial、独立调查只读；待红/绿与工程验收。 |
 | `TASK-0353` | `verifying` | PLAN-0020 | 消息历史与live合并身份去重及可读诊断；来源BUG-0123，生产实现serial、独立调查只读；定向回归与独立复审通过，组合证据见PLAN-0020；本地main提交，未发布。 |

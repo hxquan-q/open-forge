@@ -123,6 +123,148 @@ describe("McpServerSupervisor", () => {
 		await supervisor.shutdown();
 	});
 
+	it("retries a failed candidate on the next refresh after the backoff without interrupting old leases", async () => {
+		vi.useFakeTimers();
+		const source = new MutableConfigSource({ docs: stdio("docs-v1") });
+		const clients = new FakeClientFactory();
+		const supervisor = createSupervisor(source, clients.create);
+		await supervisor.initialize();
+		const oldClient = clients.clients[0];
+		const lease = supervisor.getServerBinding("docs")?.acquireLease();
+		if (!lease?.client) throw new Error("Missing old server lease");
+		try {
+			clients.initializeErrors.set("docs", new Error("temporarily offline"));
+			source.servers = { docs: stdio("docs-v2") };
+			source.signature = "files-v2";
+			expect(await supervisor.reloadIfChanged()).toBe(false);
+			expect(clients.clients).toHaveLength(2);
+			expect(clients.clients[1]?.closed).toBe(true);
+			clients.initializeErrors.delete("docs");
+			await vi.advanceTimersByTimeAsync(29_999);
+			await Promise.all(Array.from({ length: 20 }, () => supervisor.reloadIfChanged()));
+			expect(clients.clients).toHaveLength(2);
+			expect(await lease.client.callTool("tool-docs")).toEqual({ content: [] });
+			await vi.advanceTimersByTimeAsync(1);
+			// No timer starts a server: an ordinary refresh drives recovery.
+			expect(clients.clients).toHaveLength(2);
+			expect(await supervisor.reloadIfChanged()).toBe(true);
+			expect(supervisor.getServerBinding("docs")?.view.config).toEqual(stdio("docs-v2"));
+			expect(clients.clients).toHaveLength(3);
+			expect(oldClient?.closed).toBe(false);
+			await lease.release();
+			expect(oldClient?.closed).toBe(true);
+			expect(await supervisor.reloadIfChanged()).toBe(false);
+			expect(clients.clients).toHaveLength(3);
+		} finally {
+			await lease.release();
+			await supervisor.shutdown();
+		}
+	});
+
+	it("allows changed configuration during backoff and coalesces simultaneous refreshes", async () => {
+		vi.useFakeTimers();
+		const source = new MutableConfigSource({ docs: stdio("docs-v1") });
+		const clients = new FakeClientFactory();
+		const supervisor = createSupervisor(source, clients.create);
+		await supervisor.initialize();
+		clients.initializeErrors.set("docs", new Error("offline"));
+		source.servers = { docs: stdio("docs-v2") };
+		source.signature = "files-v2";
+		await supervisor.reloadIfChanged();
+		clients.initializeErrors.delete("docs");
+		const gate = new Deferred<void>();
+		clients.initializeGates.set("docs", gate);
+		source.servers = { docs: stdio("docs-v3") };
+		source.signature = "files-v3";
+		const refreshes = Array.from({ length: 20 }, () => supervisor.reloadIfChanged());
+		expect(clients.clients).toHaveLength(3);
+		gate.resolve();
+		await Promise.all(refreshes);
+		expect(supervisor.getServerBinding("docs")?.view.config).toEqual(stdio("docs-v3"));
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(await supervisor.reloadIfChanged()).toBe(false);
+		expect(clients.clients).toHaveLength(3);
+		await supervisor.shutdown();
+	});
+
+	it("does not retry invalid configuration or authorization failures as transient connections", async () => {
+		vi.useFakeTimers();
+		const source = new MutableConfigSource({ docs: stdio("docs-v1") });
+		const clients = new FakeClientFactory();
+		const supervisor = createSupervisor(source, clients.create);
+		await supervisor.initialize();
+		const load = vi.spyOn(source, "loadMerged");
+		source.signature = "invalid";
+		source.loadError = new Error("invalid config");
+		await supervisor.reloadIfChanged();
+		expect(load).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(60_000);
+		await supervisor.reloadIfChanged();
+		expect(load).toHaveBeenCalledTimes(1);
+		source.loadError = undefined;
+		source.servers = { docs: stdio("docs-v2") };
+		source.signature = "needs-auth";
+		clients.initializeErrors.set("docs", new McpAuthRequiredError("docs", "https://auth.test/mcp"));
+		await supervisor.reloadIfChanged();
+		await vi.advanceTimersByTimeAsync(60_000);
+		await supervisor.reloadIfChanged();
+		expect(clients.clients).toHaveLength(2);
+		await supervisor.shutdown();
+	});
+
+	it("discards a pending retry when shutdown wins and never resurrects on later refreshes", async () => {
+		vi.useFakeTimers();
+		const source = new MutableConfigSource({ docs: stdio("docs-v1") });
+		const clients = new FakeClientFactory();
+		const supervisor = createSupervisor(source, clients.create);
+		await supervisor.initialize();
+		clients.initializeErrors.set("docs", new Error("offline"));
+		source.servers = { docs: stdio("docs-v2") };
+		source.signature = "files-v2";
+		await supervisor.reloadIfChanged();
+		clients.initializeErrors.delete("docs");
+		await vi.advanceTimersByTimeAsync(30_000);
+		const gate = new Deferred<void>();
+		clients.initializeGates.set("docs", gate);
+		const retry = supervisor.reloadIfChanged();
+		expect(clients.clients).toHaveLength(3);
+		await supervisor.shutdown();
+		expect(clients.clients.every((client) => client.closed)).toBe(true);
+		gate.resolve();
+		expect(await retry).toBe(false);
+		source.signature = "files-v3";
+		expect(await supervisor.reloadIfChanged()).toBe(false);
+		await supervisor.reload();
+		await supervisor.setDynamicServers({ servers: new Map([["new", stdio("new")]]), signature: "new" });
+		await supervisor.restartServer("new", stdio("new"));
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(supervisor.getState().servers).toEqual([]);
+		expect(clients.clients).toHaveLength(3);
+		expect(clients.clients.every((client) => client.closed)).toBe(true);
+	});
+
+	it("does not publish or acknowledge a configuration that changes during candidate startup", async () => {
+		const source = new MutableConfigSource({ docs: stdio("docs-v1") });
+		const clients = new FakeClientFactory();
+		const supervisor = createSupervisor(source, clients.create);
+		await supervisor.initialize();
+		const gate = new Deferred<void>();
+		clients.initializeGates.set("docs", gate);
+		source.servers = { docs: stdio("docs-v2") };
+		source.signature = "files-v2";
+		const pending = supervisor.reloadIfChanged();
+		source.servers = { docs: stdio("docs-v3") };
+		source.signature = "files-v3";
+		gate.resolve();
+		expect(await pending).toBe(false);
+		expect(clients.clients[1]?.closed).toBe(true);
+		expect(supervisor.hasConfigChanged()).toBe(true);
+		clients.initializeGates.delete("docs");
+		expect(await supervisor.reloadIfChanged()).toBe(true);
+		expect(supervisor.getServerBinding("docs")?.view.config).toEqual(stdio("docs-v3"));
+		await supervisor.shutdown();
+	});
+
 	it("diff-reconciles file config and retains live state when loading fails", async () => {
 		const source = new MutableConfigSource({
 			stable: stdio("stable"),

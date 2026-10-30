@@ -63,6 +63,9 @@ const STYLE_BY_EXTENSION = {
 	cs: "slash",
 	sh: "hash",
 	bash: "hash",
+	ps1: "hash",
+	psm1: "hash",
+	psd1: "hash",
 	py: "hash",
 	rb: "hash",
 	pl: "hash",
@@ -115,7 +118,8 @@ const EXCLUDED_PATH_RULES = [
 	{ pattern: /^patches\//, reason: "bun patch 生成的第三方差异，加声明头会破坏补丁可应用性" },
 	{ pattern: /^\.github\/release-notes\//, reason: "Release 正文（含上游已发布原文）" },
 	{ pattern: /^NOTICE$/, reason: "声明载体本身" },
-	{ pattern: /^LICENSE$/, reason: "许可证正文" },
+	// 许可证正文（根目录与 vendor 进来的第三方原文）不带声明头。
+	{ pattern: /(^|\/)LICENSE$/, reason: "许可证正文" },
 	{ pattern: /^docs\/legal\//, reason: "法务原文" },
 	{ pattern: /^temp\//, reason: "未入库草稿与资产暂存" },
 ];

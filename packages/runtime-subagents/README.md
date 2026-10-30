@@ -34,6 +34,14 @@
 
 子代理执行是长生命周期并发状态机，不是线性管道。无状态的数据投影可以使用管道组合，状态转换则必须由上述单一所有者维护。
 
+## 准入与释放观测
+
+`SubagentCoordinatorOptions.onSchedulingEvent` 可选接收排队、准入、容量拒绝、取消收尾、收尾宽限到期和逻辑槽释放的安全事件；同步异常和异步拒绝均不影响调度。事件包含并发/队列计数、等待/持有时长及稳定身份，不包含任务名、正文、输出、路径或错误原文。
+
+每次执行以 `admissionId` 关联，真实 Child Handle 绑定后才附 `childSessionId`；启动前的 pending ID 含调用者任务名，不用于诊断。`generation` 保留快照的交付代际语义，在终态提交时递增，因此同次准入与释放可能不同，应按 `admissionId` 关联。
+
+`released` 表示逻辑调度名额归还；`reason: settle-deadline` 明确表明有界收尾宽限耗尽，不能据此断言底层进程/Provider 已退出。默认并发 3、单次 spawn 拒绝、批量 FIFO 和默认 10 秒收尾宽限保持不变。产品通过 callback 接 observation publisher，本包仍无 workspace 依赖。
+
 架构守卫要求 Coordinator 不得直接操作 Child Handle 或修改 Snapshot 状态，并阻止已退役的 Store/Scheduler/Internal 所有权文件重新出现。
 
 ## 验证

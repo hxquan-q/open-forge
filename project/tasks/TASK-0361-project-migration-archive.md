@@ -6,27 +6,46 @@ priority: P1
 owner: apps/desktop + packages/runtime-storage
 requirement: REQ-0026
 plan: []
-source: REQ-0026 / ISSUE-0034 方案 B+C 用户裁定（2026-10-22）
+source: REQ-0026 / ISSUE-0034 方案 B+C 用户裁定（2026-10-22）；用户续接要求（2026-10-28）调研 GitHub 并优化会话历史与产物跨设备导入导出
 related_requirement: [REQ-0026]
 related_plan: []
 related_tasks: [TASK-0349]
 related_issues: [ISSUE-0034]
-related_bugs: []
+related_bugs: [BUG-0153, BUG-0154]
 depends_on: []
 conflicts_with: []
 execution: serial
 branch: main
+base_commit: 9f4b87ee81b6ec2aa7f1417d23d36745e2e1ac1d
 worktree: unassigned（主工作区串行执行；注意与其他会话共享工作区，staging/提交须用路径限定）
 read_paths: [docs/adr/0147-project-migration-archive-v2.md, packages/runtime-storage/src/conversation/session-archive/, apps/desktop/src/main/conversations/session-archive-service.ts, apps/desktop/src/main/ipc/session-archive.ts, apps/desktop/src/preload/, apps/desktop/src/renderer/domains/project/, apps/desktop/src/renderer/domains/conversation/hooks/useChatViewModel.ts]
-write_paths: [packages/runtime-storage/src/conversation/session-archive/, apps/desktop/src/main/conversations/, apps/desktop/src/main/ipc/, apps/desktop/src/preload/, apps/desktop/src/renderer/domains/project/, apps/desktop/src/renderer/domains/conversation/, apps/desktop/src/shared/i18n/locales/, .github/release-notes/v0.1.3.md, project/tasks/]
+write_paths: [apps/desktop/src/main/conversations/, apps/desktop/src/shared/i18n/locales/zh/main.json, apps/desktop/src/shared/i18n/locales/en/main.json, apps/desktop/README.md, docs/adr/0147-project-migration-archive-v2.md, .github/release-notes/fragments/v0.1.4/task-0361-project-migration.md, project/tasks/TASK-0361-project-migration-archive.md, project/tasks/README.md, project/bugs/BUG-0153-archive-restore-path-boundary.md, project/bugs/BUG-0154-native-session-archive-unreadable.md, project/bugs/README.md, project/research/RESEARCH-0046-project-migration-portability.md, project/research/README.md]
 exclusive_paths: []
-integration_status: integrated（本地 main 六提交序列；未推送）
+integration_status: integrated（本地 main 串行原子提交 `46785aaac`；已核对包含于 origin/dev `2806052dd`，origin/main 未推送）
 created: 2026-10-22
-updated: 2026-10-22
+updated: 2026-10-28
 ---
 <!-- Copyright The Open Forge contributors. -->
 
 # 项目迁移包：OFAR v2 + cwd 重写导入 + 产物打包（REQ-0026 / ADR-0147）
+
+## 本轮续接合同（2026-10-28）
+
+- 来源：用户要求调研 GitHub 后优化现有项目，重点是会话历史与产物可以导出到其他设备导入。复用 REQ-0026 与本 Task，不重复建立迁移需求/计划；独立外部证据进入 RESEARCH-0046。
+- 当前事实：主工作区 `main` 在 `9f4b87ee81b6ec2aa7f1417d23d36745e2e1ac1d` 无既有改动；`.ua` 图谱为 2026-10-12 的 `254796d8`，相关归档模块此后已有变更，本轮以当前源码/Schema 为准。现有服务两文件基线 28/28 通过，但夹具只覆盖 legacy `type:session`，未覆盖当前 `conversation.header`。
+- 目标：兼容当前与历史会话的身份/标题/cwd；在不同设备路径迁移后，可由真实历史读取接口重新打开且再次导入幂等；防止文件恢复沿目标内已有目录链接越界、默认覆盖和重复条目误写；不能以成功导出掩盖坏历史记录丢失。
+- 不做：云端同步、远程 SSH 产物、账号/密钥迁移、项目记忆迁移、自动备份、新格式/新依赖、批量重写历史消息或工具路径。项目目录外的插件私有产物不假装已打包；延续既有 workspace 排除规则与大小上限。
+- 比较方案：不引入 Cherry Studio 式整库替换/重启恢复，不另造 ZIP/云端通道；沿用 OFAR v1/v2，修正现有头记录适配，并将两条归档恢复路径共同需要的文件安全写入收敛到小型宿主模块。格式与 IPC 无需变更；ADR-0147 仅补记当前头格式和安全落实，不重定义历史事实。
+- 执行：serial，当前 Coordinator 是本任务唯一写入者；branch/worktree 沿用上方。2026-10-28 其他会话随后开始独立 MCP/设计工作，共享索引采用小块编辑并保留其增量；不提交其文件，不在该目录并行派发代码 Worker。只读调查/最终独立评审可以原生子任务执行，禁止其写文件、改 Git 或运行真实实例。主进程归档服务与配套测试为共享合同，不能并行修改。读写路径沿用 frontmatter，并包含新建 `apps/desktop/src/main/conversations/archive-file-restore.ts` 及测试、RESEARCH-0046 与其索引、ADR-0147、Desktop README 和待发布说明碎片。
+- Given 当前原生会话与 legacy 会话以及二进制/嵌套产物；When 导出 → 预览 → 换临时 agent 数据目录及目标路径导入 → 使用真实读取器重新加载 → 重导；Then 身份、标题、消息/工具/usage/取消语义保留，仅会话头 cwd 指向目标，产物字节一致且重导不增副本。
+- 原生文件约束：现有 Runtime 只认按 sessionId 编码的 canonical `.conversation.jsonl`；必须使用公开 `resolveConversationFilePath`。同 ID 同内容幂等跳过；同 ID 不同内容明确拒绝、提示换目标项目，不改身份/事件以假装副本，也不静默覆盖。legacy 随机文件名副本行为保持。
+- Given 目标中已有文件/目录链接或归档内重复会话/附件路径；When 导入（默认及显式覆盖）；Then 用户文件默认不覆盖、链接外内容不改变、不能因半途失败提交残缺 JSONL；失败清楚报告且已提交结果可幂等重试。
+- Given 会话文件含非 JSON 行；When 导出；Then 明确失败而不是把原文替换成哈希后报告成功，源文件不动。
+- 验证：先最小失败回归，再服务正常连续流程和文件安全测试；`bun scripts/quality/run-vitest.mjs --run --config apps/desktop/vitest.config.ts <定向文件>`；`bun run test:impact -- <本轮源码及测试>`；跨包合同实际变动时追加 `test:changed`；最终 `bun run check`。不运行 `verify:ui:*`、真实 Provider 或真实用户目录；真实双设备人工验收保持待验证。
+- 发布说明：manifest 仍为 0.1.3，且已存在 `v0.1.3` tag，禁止修改已发布正文或擅自切版本。本轮候选说明放下一补丁版本碎片（待版本准备时汇编），交付记录说明此边界。
+- 归属：Open-Forge-only 迁移入口与宿主策略；Compatibility 保持 OFAR v1/v2、legacy 文件名副本、当前原生 identity/事件及公开 Runtime 文件路径合同，不复制第三方实现。
+- 独立只读调查已回收：原生子任务 `4ace6ae5-bb42-438` 核实 canonical 命名、标题来源和不可改 ID 的指纹边界；未写文件、未跑测试。
+- 验收：工程通过后回到 `verifying`，不冒充人工接受；串行提交只纳入本轮路径，不推送包含未验收批次的 main。其他会话的共享台账仍在变更时，Coordinator 使用独立临时 Git index 与明确的路径清单，共享 README 只写入本任务行；正常提交钩子照常运行，提交后仅将本次补丁同步到常规索引，不覆盖其余未暂存/已暂存内容。
 
 ## 目标
 
@@ -153,3 +172,43 @@ updated: 2026-10-22
 ### TASK-0349 勘误（顺带发现）
 
 TASK-0349 的项目会话导出菜单项存在接线缺口：`ProjectContextMenu.tsx` 接收了 `onExportSessions` 但未传入 `useProjectContextMenuModel`，菜单项实际不可达（模型/视图测试各自通过，连接层未覆盖）。已由本任务切片 4（`b57cb0332`）修复并补连接层断言；TASK-0349 的工程验证结论据此修正——「真实入口可用」以修复后为准。
+
+## 2026-10-28 续接交付证据
+
+### 实际改动
+
+- `session-archive-service.ts` 支持当前 `conversation.header` 的 sessionId/cwd、seed/import seed 及 name operation 标题；原生落盘使用公开 canonical 路径，保留 journal、消息、工具、usage/stop 等字段，legacy 副本不变。坏 JSON 记录明确报错，不再替换成哈希后导出成功。
+- `project-migration-service.ts` 同时重写 legacy/native 头 cwd；先验证目标根，再恢复会话；原生同 ID 不同历史拒绝覆盖并给出换项目目录指引。
+- 共用 `archive-file-restore.ts`：逐层检查目录链接及文件类型，拒绝 Windows 不兼容路径/ADS，临时完整写入后提交，默认 no-clobber，显式覆盖通过 rename（保留已有普通权限，不沿硬链接截断其他文件）。无硬链接文件系统 fallback `COPYFILE_EXCL`；保存 OFAR 也经临时文件提交。
+- 幂等会话仍安全补齐/核对附件，包内重复记录不再制造重复会话，也不丢第二条的独有附件。附件冲突失败不提交该条新 JSONL；同字节附件可重试。
+- Desktop README 补真实迁移入口、操作步骤、产物范围、敏感项目文件注意事项与限制；ADR-0147 补当前格式与落盘实现。四条错误文案均有 zh/en。
+- 发布说明候选：`.github/release-notes/fragments/v0.1.4/task-0361-project-migration.md`。0.1.3 已打 tag，未修改其正文、manifest 或 tag；未来准备 0.1.4 时汇编，未发布。
+
+### 失败基线与修复验证
+
+- 原有服务基线：2 文件 28/28。
+- 首轮红：目录链接默认/覆盖及无效目标提前拒绝 3/3 失败；原生 metadata/canonical/身份冲突/坏 JSON 4/4 失败，均为真实临时文件服务回归而非环境错误。修复后已绿。
+- 独立审查 `9f3fc6c8-de13-4dd` 提出两个 P2：overwrite 丢普通权限、包内去重遗漏附件。新增回归实际 5 红（权限 OS 边界 1、两个服务新增/冲突附件 4），修复后复审确认两项关闭、无新增 P1/P2；审查未代跑测试，不冒称异模型家族。
+- 最终定向：`bun scripts/quality/run-vitest.mjs --run --config apps/desktop/vitest.config.ts` + archive-file-restore / session-archive-portability / project-migration-service / session-archive-service / ipc/session-archive / preload/apis/session-archive 六文件，**75/75**。包括 fallback 成功及 EEXIST、真实 native catalog/reader/repository 重开与迁移后持久化续写、二进制产物、幂等与两服务附件三组合。
+- Renderer 既有流程：chat 归档 / 项目菜单 / MigrationImportWizardDialog 三文件 **29/29**；实际 `components/sidebar/add-project/useAddProjectMenuModel.test.tsx` 单文件 **5/5**。首次四路径命令有一个路径未匹配（实际仅收集三文件），已用真实路径补跑，不把未收集文件计为通过。
+- `bun run test:impact -- <本轮三生产文件和三测试>`：最终 direct **3 文件 50/50**，related **6 文件 78/78**，exit 0；两组有重复覆盖，不将其相加为唯一测试数。前一轮 300 秒进程超时发生在 related 调度阶段，确认没有残留本任务进程后以 600 秒预算重跑成功；未改超时/断言/门禁。
+- 完整 `bun run check`：最终 **exit 0**，lint、root/CLI/Desktop/docs/mobile 类型、mobile lint、全部 guards 均通过。首轮唯一失败为其他会话 TASK-0154/TASK-0406 的未登记并行范围；Owner 随后补齐 conflicts_with，本任务未修改其合同；复跑通过。
+- 中间 Biome 仅对本任务源码运行安全格式化；无 any、新依赖、协议版本或生成事实源改动。
+
+### 集成与剩余边界
+
+- 初始代码基线 `9f4b87ee8`；验证期间其他会话的文档提交使 main 前进到 `6ebd359b5`，已核对其非本任务生产变更。当前原子提交只包含本轮明确路径和共享台账自身行，不夹带 MCP/设计变更；承载本记录的提交绑定本轮集成事实，不另建哈希回执提交。其他并行任务随后由各自 Coordinator 集成到本地 main 并推送 `origin/dev`，本任务未代为推送或修改其验收状态。
+- 推送回执（不另建提交）：用户确认的 `6ebd359b5` 与 `46785aaac` 已包含在 `origin/dev`；远端现为 `2806052dd`，经 `merge-base --is-ancestor` 核实本任务提交在其历史中，`origin/dev..main` 为空，普通 fast-forward 推送返回 up-to-date。`origin/main` 仍为 `9f4b87ee8`，未推送稳定分支。
+- 推送前失败分流（不把环境失败写成代码通过）：共享工作区 `test:changed` 首次失败来自 Windows `PATH` 优先命中 WSL `bash.exe`，以及 Git Bash 的 `/bin/gzip` 在本机不可执行；把 Git Bash `/usr/bin` 置于测试进程 PATH 后远程文件/命令/技能套件与归档套件通过。共享 checkout 在验证期间被并行任务合入并前进，故改用固定提交 `46785aaac` 的临时 detached Worktree，按冻结锁文件安装，避免后续提交混入本批次验证。
+- 隔离验证最终 `test:changed --base origin/dev`：完整跑完 1113 个文件，**6245 通过 / 2 失败 / 18 跳过**；两项失败均为完整套件并发压力下的 5 秒测试超时（dialog 序号上限、DatePicker Escape 焦点），单独复跑 14/14 全绿，未改超时、断言或测试筛选。隔离副本完整 `bun run check` **exit 0**。临时 Worktree 验证时状态干净；删除目录后，Git 注册元数据由 `git worktree prune` 清理，未改动其他工作树目录。
+- 工程与独立审查通过；Task 保持 `verifying`，人工功能接受、发布均未完成。未启动真实 Desktop、`verify:ui:*`、长驻 dev、Provider 或真实用户状态；Repository 续写不等于真实模型续跑。
+- 已验证平台是 Windows；POSIX 执行位、macOS/Linux 及物理双设备仍待 CI/人工验收。无硬链接 fallback 保持不覆盖，但无跨文件/崩溃事务保证；恶意并发目录替换不是普通文件 API 的安全承诺。
+- 仍沿用 512 MiB/4 GiB 及全量内存编码；未宣称内存优化。项目外插件私有文件/全局账号配置/记忆/远程 SSH 产物不在包内；历史消息内旧绝对路径保留为事实。包含项目文件时 `.env` 等项目内敏感内容不会自动脱敏，转移前应检查并设置口令。
+
+### 本轮人工验收包
+
+1. 本地项目至少有一条当前会话和嵌套/二进制产物；右键「导出项目迁移包」，保留包含项目文件并设置口令。
+2. 在另一设备的「添加项目 → 导入项目」选择 `.ofar`，输入口令，选一个新本地目录，先不要勾覆盖。
+3. 核对报告的会话/产物数量，打开迁移会话看标题与完整历史，从目标 Files 面板打开产物，并继续一轮对话。
+4. 重导同包应跳过相同历史、保留已有文件；已有同 ID 不同历史应提示换目标项目，附件冲突不得覆盖原字节。
+5. 任一无提示丢历史/产物、工作目录仍指向源路径、默认覆盖用户文件或目录链接外部被改写，均为不通过反馈，续接本 Task。

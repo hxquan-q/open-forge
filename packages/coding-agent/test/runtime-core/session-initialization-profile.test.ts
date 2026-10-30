@@ -15,6 +15,11 @@ describe("Coding Agent session initialization profile", () => {
 			settingsSource: promptSettingsSource,
 		});
 		const createPluginRuntime = () => undefined;
+		const createExplicitMemoryRuntime: NonNullable<
+			CodingAgentRuntimeCompositionOptions["createExplicitMemoryRuntime"]
+		> = () => {
+			throw new Error("not called by profile projection");
+		};
 		const createSessionHookAdapterFactories = () => [];
 		const createContextRuntime = (() => {
 			throw new Error("not called by profile projection");
@@ -28,6 +33,7 @@ describe("Coding Agent session initialization profile", () => {
 			promptSettingsSource,
 			createPromptRuntimeSources,
 			createPluginRuntime,
+			createExplicitMemoryRuntime,
 			createSessionHookAdapterFactories,
 			createContextRuntime,
 			streamFn,
@@ -44,6 +50,7 @@ describe("Coding Agent session initialization profile", () => {
 			"agentDir",
 			"createCompactionExtensionRuntime",
 			"createContextRuntime",
+			"createExplicitMemoryRuntime",
 			"createMemoryRolloverRuntime",
 			"createPluginMcpRuntime",
 			"createPluginRuntime",
@@ -86,6 +93,7 @@ describe("Coding Agent session initialization profile", () => {
 		expect(profile.promptSettingsSource).toBe(promptSettingsSource);
 		expect(profile.createPromptRuntimeSources).toBe(createPromptRuntimeSources);
 		expect(profile.createPluginRuntime).toBe(createPluginRuntime);
+		expect(profile.createExplicitMemoryRuntime).toBe(createExplicitMemoryRuntime);
 		expect(profile.createContextRuntime).toBe(createContextRuntime);
 		expect(profile.streamFn).toBe(streamFn);
 		expect(profile.initialModel).toBe(MODEL);

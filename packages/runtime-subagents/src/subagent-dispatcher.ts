@@ -13,6 +13,7 @@ import {
 	taskPath,
 } from "./contracts.js";
 import { normalizeSubagentRecoveryState } from "./recovery.js";
+import { SubagentSchedulingObserver } from "./scheduling-observation.js";
 import { isTerminalStatus } from "./snapshot.js";
 import { SubagentPool } from "./subagent-pool.js";
 import { SubagentRun, type SubagentRunHooks } from "./subagent-run.js";
@@ -27,6 +28,7 @@ export interface SubagentDispatcherOptions<TProfile> extends SubagentCoordinator
 
 export class SubagentDispatcher<TProfile> {
 	private readonly pool: SubagentPool<TProfile>;
+	private readonly scheduling: SubagentSchedulingObserver<TProfile>;
 	private readonly clock: { now(): number };
 	private readonly idGenerator: { next(): string };
 	private readonly lifecycleAbortController = new AbortController();
@@ -41,6 +43,16 @@ export class SubagentDispatcher<TProfile> {
 			next: () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
 		};
 		this.pool = new SubagentPool(options.maxConcurrent ?? DEFAULT_MAX_CONCURRENT);
+		this.scheduling = new SubagentSchedulingObserver({
+			parentSessionId: options.parentSessionId,
+			now: () => this.clock.now(),
+			counts: () => ({
+				activeCount: this.pool.activeCount,
+				queuedCount: this.pool.queuedCount,
+				maxConcurrent: this.pool.maxConcurrent,
+			}),
+			onEvent: options.onSchedulingEvent,
+		});
 	}
 
 	list(): readonly SubagentSnapshot[] {
@@ -76,12 +88,14 @@ export class SubagentDispatcher<TProfile> {
 		this.assertNotDisposed();
 		const taskName = this.validateRequest(request);
 		if (!this.pool.hasCapacity) {
+			this.scheduling.rejected();
 			throw new Error(
 				`Too many active subagents (${this.pool.activeCount}/${this.pool.maxConcurrent}). Wait or interrupt one before spawning more.`,
 			);
 		}
 		const run = this.reserve(request, taskName, "pending");
 		if (!this.pool.acquire(run)) throw new Error("Subagent concurrency slot changed during spawn");
+		this.scheduling.admitted(run);
 		this.emitUpdate();
 		await this.startRun(run, request);
 		return run.readSnapshot();
@@ -114,9 +128,11 @@ export class SubagentDispatcher<TProfile> {
 			const run = this.reserve(request, taskName, hasSlot ? "pending" : "queued");
 			if (hasSlot) {
 				if (!this.pool.acquire(run)) throw new Error("Subagent concurrency slot changed during dispatch");
+				this.scheduling.admitted(run);
 				void this.startRunInBackground(run, request);
 			} else {
 				this.pool.enqueue(run);
+				this.scheduling.queued(run);
 			}
 			return run;
 		});
@@ -143,8 +159,10 @@ export class SubagentDispatcher<TProfile> {
 
 		await run.waitForSettled();
 		if (!this.pool.acquire(run)) {
+			this.scheduling.rejected();
 			throw new Error(`Too many active subagents (${this.pool.maxConcurrent} max)`);
 		}
+		this.scheduling.admitted(run);
 		const type = this.requireType(run.agentType);
 		try {
 			await run.resume(message, type);
@@ -219,10 +237,15 @@ export class SubagentDispatcher<TProfile> {
 
 	private createRun(snapshot: SubagentSnapshot, request?: SubagentSpawnRequest): SubagentRun<TProfile> {
 		const hooks: SubagentRunHooks<TProfile> = {
-			rekey: (owner, previousId, nextId) => this.pool.rekey(owner, previousId, nextId),
+			rekey: (owner, previousId, nextId) => {
+				this.pool.rekey(owner, previousId, nextId);
+				this.scheduling.bound(owner, nextId);
+			},
 			onChanged: () => this.emitUpdate(),
 			onTerminal: (terminal) => this.handleTerminal(terminal),
-			onSettled: (owner) => this.handleSettled(owner),
+			onSettling: (owner) => this.scheduling.settling(owner),
+			onSettlementDeadline: (owner) => this.scheduling.deadline(owner),
+			onSettled: (owner, deadlineExceeded) => this.handleSettled(owner, deadlineExceeded),
 			onError: (error, operation) => this.reportError(error, operation),
 		};
 		const run = new SubagentRun(snapshot, request, {
@@ -259,8 +282,12 @@ export class SubagentDispatcher<TProfile> {
 		this.safeCallback(() => this.options.onTerminal(snapshot), "publish subagent terminal snapshot");
 	}
 
-	private handleSettled(run: SubagentRun<TProfile>): void {
+	private handleSettled(run: SubagentRun<TProfile>, deadlineExceeded: boolean): void {
 		this.pool.release(run);
+		this.scheduling.released(
+			run,
+			deadlineExceeded ? "settle-deadline" : this.disposed ? "parent-disposed" : undefined,
+		);
 		this.drainQueue();
 	}
 
@@ -270,6 +297,7 @@ export class SubagentDispatcher<TProfile> {
 			const run = this.pool.takeNext();
 			if (!run) return;
 			run.activateQueued();
+			this.scheduling.admitted(run);
 			const request = run.readSnapshot();
 			void this.startRunInBackground(run, {
 				taskName: request.taskName,

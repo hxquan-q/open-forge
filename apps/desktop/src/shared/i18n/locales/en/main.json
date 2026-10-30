@@ -126,7 +126,11 @@
 		"projectExportDialogTitle": "Export project session archive",
 		"importDialogTitle": "Import session archive",
 		"filterName": "Open Forge session archive",
-		"migrationExportDialogTitle": "Export Project Migration Package"
+		"migrationExportDialogTitle": "Export Project Migration Package",
+		"invalidRecord": "Record {{line}} in session “{{file}}” is damaged. Export stopped and the original file was not changed. Repair the session and try again.",
+		"sessionConflict": "The target project already contains different history for this conversation. The existing conversation was not overwritten. Choose another project folder and try again.",
+		"unsafeDestination": "This file cannot be restored safely because the destination contains a directory link, a file-type conflict, or an incompatible filename. Check the destination and try again.",
+		"attachmentConflict": "A conversation attachment with different contents already exists at the destination. The existing file was not overwritten. Choose another destination and try again."
 	},
 	"markdown": {
 		"previewTitle": "HTML preview · closes after 30 seconds"

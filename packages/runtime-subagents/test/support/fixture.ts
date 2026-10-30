@@ -3,6 +3,7 @@ import {
 	type SubagentChildFactory,
 	SubagentCoordinator,
 	type SubagentLifecycle,
+	type SubagentSchedulingEvent,
 	type SubagentSnapshot,
 	SubagentTypeRegistry,
 } from "../../src/index.js";
@@ -16,6 +17,7 @@ export interface FixtureOptions {
 	readonly onDeliveryClaimed?: (marker: { readonly id: string; readonly generation: number }) => void;
 	readonly onUpdate?: (agents: readonly SubagentSnapshot[]) => void;
 	readonly onError?: (error: unknown, operation: string) => void;
+	readonly onSchedulingEvent?: (event: SubagentSchedulingEvent) => void | Promise<void>;
 	readonly now?: number;
 	readonly reopen?: boolean;
 	readonly reopenError?: Error;
@@ -57,6 +59,7 @@ export function createFixture(options: FixtureOptions = {}) {
 		onDeliveryClaimed: options.onDeliveryClaimed,
 		onUpdate: options.onUpdate,
 		onError: options.onError,
+		onSchedulingEvent: options.onSchedulingEvent,
 		lifecycle: options.lifecycle,
 		startDeadlineMs: options.startDeadlineMs,
 		settleDeadlineMs: options.settleDeadlineMs,

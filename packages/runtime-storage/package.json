@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/runtime-storage",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"private": true,
 	"description": "Platform-neutral conversation storage contracts and schemas for Vetta runtimes",
 	"type": "module",

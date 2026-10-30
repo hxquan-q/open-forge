@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { defineRuntimeObservation, type RuntimeObservationFailure } from "@vetta/runtime-core";
+import type { SubagentSchedulingEvent } from "@vetta/runtime-subagents";
 
 export type CodingAgentSubagentIssueOperation =
 	| "coordinator"
@@ -16,4 +18,10 @@ export const CODING_AGENT_SUBAGENT_ISSUE_OBSERVATION = defineRuntimeObservation<
 	"coding-agent.subagent",
 	"issue",
 	"warning",
+);
+
+export const CODING_AGENT_SUBAGENT_SCHEDULING_OBSERVATION = defineRuntimeObservation<SubagentSchedulingEvent>(
+	"coding-agent.subagent",
+	"scheduling",
+	"debug",
 );

@@ -79,7 +79,16 @@ export async function prepareTask({ root, store, policy, settings, token, tests,
 	let processResult;
 	try {
 		const result = await runProcess({
-			command: ["bun", "scripts/worktree/cli.mjs", "create", "--task", task.id, "--base", base.head, "--no-setup"],
+			command: [
+				process.execPath,
+				"scripts/worktree/cli.mjs",
+				"create",
+				"--task",
+				task.id,
+				"--base",
+				base.head,
+				"--no-setup",
+			],
 			cwd: root,
 			env: isolatedEnvironment(artifactRoot),
 			signal: controller.signal,

@@ -12,6 +12,7 @@ import {
 	validatePublishTarget,
 	verifyRemoteMetadataVersions,
 } from "./publish-update-artifacts-r2.mjs";
+import { windowsSupplementalArtifactNames } from "./windows-packaging-contract.mjs";
 
 test("contentTypeFor publishes native package formats with package media types", () => {
 	assert.equal(contentTypeFor("vetta_1.2.3_amd64.deb"), "application/vnd.debian.binary-package");
@@ -21,6 +22,8 @@ test("contentTypeFor publishes native package formats with package media types",
 
 test("collectArtifacts uploads updater files and matching Windows supplements before metadata", async () => {
 	const directory = await mkdtemp(join(tmpdir(), "vetta-r2-publish-"));
+	const [msiName, zipName] = windowsSupplementalArtifactNames("1.2.3");
+	const [staleMsiName] = windowsSupplementalArtifactNames("1.2.2");
 	try {
 		await Promise.all([
 			writeFile(
@@ -29,17 +32,17 @@ test("collectArtifacts uploads updater files and matching Windows supplements be
 			),
 			writeFile(join(directory, "Open Forge Setup 1.2.3.exe"), "installer"),
 			writeFile(join(directory, "Open Forge Setup 1.2.3.exe.blockmap"), "blockmap"),
-			writeFile(join(directory, "Open Forge-1.2.3-win-x64.msi"), "msi"),
-			writeFile(join(directory, "Open Forge-1.2.3-win-x64.zip"), "zip"),
+			writeFile(join(directory, msiName), "msi"),
+			writeFile(join(directory, zipName), "zip"),
 			writeFile(join(directory, "Open Forge Setup 1.2.2.exe"), "stale"),
-			writeFile(join(directory, "Open Forge-1.2.2-win-x64.msi"), "stale"),
+			writeFile(join(directory, staleMsiName), "stale"),
 		]);
 
 		assert.deepEqual(await collectArtifacts(directory), [
+			msiName,
+			zipName,
 			"Open Forge Setup 1.2.3.exe",
 			"Open Forge Setup 1.2.3.exe.blockmap",
-			"Open Forge-1.2.3-win-x64.msi",
-			"Open Forge-1.2.3-win-x64.zip",
 			"latest.yml",
 		]);
 	} finally {

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Color
 
 Generated UI fails on color first: it picks indigo, pure white and slate grey,
@@ -77,4 +78,4 @@ Not: whole sections, large fills, every button, decorative gradients, headings.
 - Grey text on a colored fill — use that fill's foreground token.
 - Opacity as a color definition (`text-primary/60` for body copy). A named token
   is opaque; alpha is for overlays and scrims.
-- The scaffold's indigo `#4f46e5` + slate + amber kept as the final palette.
+- The scaffold's neutral placeholder kept as the final palette, or indigo `#4f46e5` + slate + amber picked by habit.

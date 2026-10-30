@@ -180,6 +180,13 @@ jobs:
       # 进入发布 job 的 macOS 构建必须有生产签名凭据；凭据缺失时把 macOS leg
       # 从矩阵剔除，让 Win+Linux 首发不被未配置的签名阻塞。vars.VETTA_MACOS_RELEASE
       # 可显式覆盖：always（自持签名 runner 从 runner 环境取凭据）/ never / auto。
+      - name: Verify release source identity
+        if: steps.scope.outputs.should-build == 'true' && steps.config.outputs.should_publish == 'true' && steps.config.outputs.channel != 'test'
+        env:
+          BUILD_VERSION: ${{ steps.config.outputs.build_version }}
+          RELEASE_TARGET: ${{ steps.config.outputs.release_target }}
+        run: node scripts/release/verify-desktop-release-identity.mjs
+
       - name: Resolve platform matrix
         if: steps.scope.outputs.should-build == 'true'
         id: platforms
@@ -187,6 +194,7 @@ jobs:
         env:
           OUTPUT_SHOULD_PUBLISH: ${{ steps.config.outputs.should_publish }}
           VAR_MACOS_RELEASE: ${{ vars.VETTA_MACOS_RELEASE }}
+          VAR_ALLOW_UNSIGNED: ${{ vars.VETTA_ALLOW_UNSIGNED_RELEASE }}
           SECRET_MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           SECRET_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           SECRET_APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
@@ -206,8 +214,13 @@ jobs:
             never) INCLUDE_MAC=0 ;;
             auto)
               if [[ "${OUTPUT_SHOULD_PUBLISH}" == "true" && "${MAC_SIGNED}" -eq 0 ]]; then
-                INCLUDE_MAC=0
-                echo "macOS signing secrets are not configured; excluding macOS legs from this published release." >&2
+                if [[ "${VAR_ALLOW_UNSIGNED:-false}" == "true" ]]; then
+                  INCLUDE_MAC=1
+                  echo "::warning::VETTA_ALLOW_UNSIGNED_RELEASE is enabled; including unsigned macOS legs in this published release."
+                else
+                  INCLUDE_MAC=0
+                  echo "macOS signing secrets are not configured; excluding macOS legs from this published release." >&2
+                fi
               else
                 INCLUDE_MAC=1
               fi
@@ -340,6 +353,7 @@ jobs:
           SECRET_APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           SECRET_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           REQUIRE_RELEASE_SIGNATURE: ${{ needs.prepare.outputs.should-publish == 'true' }}
+          VAR_ALLOW_UNSIGNED: ${{ vars.VETTA_ALLOW_UNSIGNED_RELEASE }}
         run: |
           # 托管 runner 上凭据全部来自下面的 CI Secret。这个分支只在 runner 自身环境
           # 已经提供凭据时生效（自持签名机把它们放在 runner 目录的 .env 里）。
@@ -375,9 +389,15 @@ jobs:
             fi
           done
           if [[ "${PROVIDED}" -eq 0 ]]; then
-            # 任何会进入发布 job 的构建都必须使用生产级签名；只有不发布的
+            # 默认任何会进入发布 job 的构建都必须使用生产级签名；只有不发布的
             # workflow_dispatch 构建才允许生成未签名包供本地调试。
+            # VETTA_ALLOW_UNSIGNED_RELEASE 是显式、临时的人工豁免（见 WAIVER-0008）。
             if [[ "${REQUIRE_RELEASE_SIGNATURE}" == "true" ]]; then
+              if [[ "${VAR_ALLOW_UNSIGNED:-false}" == "true" ]]; then
+                echo "::warning::VETTA_ALLOW_UNSIGNED_RELEASE is enabled; producing unsigned macOS artifacts for this published release."
+                echo "VETTA_REQUIRE_MAC_SIGNATURE=0" >> "${GITHUB_ENV}"
+                exit 0
+              fi
               echo "A published macOS build requires signing and notarization credentials." >&2
               exit 1
             fi
@@ -443,6 +463,7 @@ jobs:
           # fork 不配任何值就得到开源版。空 optional 键不会写入 GITHUB_ENV。
           VETTA_UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           VETTA_UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
+          VETTA_SKIP_SANDBOX_ARTIFACT_CHECK: ${{ vars.VETTA_SKIP_WINDOWS_SANDBOX }}
         run: bun run ${{ matrix.command }}
 
       # Archive before verification so an E2E/install failure never discards a signed build.
@@ -509,7 +530,8 @@ jobs:
           BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
         run: |
           rm -rf apps/desktop/release
-          (cd "${RUNNER_TEMP}/release-checkpoint" && tar -xf release-build.tar -C "${GITHUB_WORKSPACE}/apps/desktop")
+          TARBALL="${RUNNER_TEMP}/release-checkpoint/release-build.tar"; [[ "${RUNNER_OS}" == "Windows" ]] && TARBALL="$(cygpath -u "${TARBALL}")"
+          (cd "${GITHUB_WORKSPACE}/apps/desktop" && tar -xf "${TARBALL}")
           SIGNATURE="$(cat apps/desktop/release/require-mac-signature.txt)"
           case "${SIGNATURE}" in 0|1) ;; *) echo "Invalid signature requirement" >&2; exit 1 ;; esac
           echo "VETTA_REQUIRE_MAC_SIGNATURE=${SIGNATURE}" >> "${GITHUB_ENV}"
@@ -544,17 +566,23 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         run: |
-          docker run --rm --volume "${PWD}/release:/release:ro" ubuntu:24.04 bash -euo pipefail -c '
+          PACKAGE_EXECUTABLE="$(node --input-type=module -e 'import { LINUX_PACKAGE_PATHS } from "./scripts/linux-packaging-contract.mjs"; console.log(LINUX_PACKAGE_PATHS.executable)')"
+          PACKAGE_TYPE="$(node --input-type=module -e 'import { LINUX_PACKAGE_PATHS } from "./scripts/linux-packaging-contract.mjs"; console.log(LINUX_PACKAGE_PATHS.packageType)')"
+          docker run --rm --volume "${PWD}/release:/release:ro" \
+            --env "PACKAGE_EXECUTABLE=${PACKAGE_EXECUTABLE}" --env "PACKAGE_TYPE=${PACKAGE_TYPE}" \
+            ubuntu:24.04 bash -euo pipefail -c '
             apt-get update
             apt-get install --yes /release/*.deb
-            test -x "/opt/Open Forge/OpenForge"
-            test "$(cat "/opt/Open Forge/resources/package-type")" = "deb"
+            test -x "${PACKAGE_EXECUTABLE}"
+            test "$(cat "${PACKAGE_TYPE}")" = "deb"
             find /usr/share/applications -maxdepth 1 -type f -iname "*openforge*.desktop" -print -quit | grep -q .
           '
-          docker run --rm --volume "${PWD}/release:/release:ro" fedora:latest bash -euo pipefail -c '
+          docker run --rm --volume "${PWD}/release:/release:ro" \
+            --env "PACKAGE_EXECUTABLE=${PACKAGE_EXECUTABLE}" --env "PACKAGE_TYPE=${PACKAGE_TYPE}" \
+            fedora:latest bash -euo pipefail -c '
             dnf install --assumeyes --nogpgcheck /release/*.rpm
-            test -x "/opt/Open Forge/OpenForge"
-            test "$(cat "/opt/Open Forge/resources/package-type")" = "rpm"
+            test -x "${PACKAGE_EXECUTABLE}"
+            test "$(cat "${PACKAGE_TYPE}")" = "rpm"
             find /usr/share/applications -maxdepth 1 -type f -iname "*openforge*.desktop" -print -quit | grep -q .
           '
 
@@ -656,6 +684,13 @@ jobs:
           OUTPUT_UPDATE_URL: ${{ needs.prepare.outputs.update_url }}
         run: node scripts/release/resolve-desktop-release-config.mjs --from-outputs --export-env >> "${GITHUB_ENV}"
 
+      - name: Verify release source identity
+        if: needs.prepare.outputs.channel != 'test'
+        env:
+          BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
+          RELEASE_TARGET: r2
+        run: node scripts/release/verify-desktop-release-identity.mjs
+
       - name: Publish artifacts before metadata
         working-directory: apps/desktop
         env:
@@ -705,11 +740,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
+          VETTA_SKIP_WINDOWS_SANDBOX: ${{ vars.VETTA_SKIP_WINDOWS_SANDBOX }}
+          RELEASE_TARGET: ${{ needs.prepare.outputs.release_target }}
         shell: bash
         run: |
+          node scripts/release/verify-desktop-release-identity.mjs
           VERSION="${BUILD_VERSION:-$(node -p "require('./apps/desktop/package.json').version")}"
           TAG="v${VERSION}"
           NOTES_FILE="$(node scripts/release/release-notes.mjs --version "${VERSION}")"
+          if [[ "${VETTA_SKIP_WINDOWS_SANDBOX:-}" == "1" ]]; then
+            { cat "${NOTES_FILE}"; printf '\n> **Windows 产物未包含内置沙盒**：本次 Windows 安装包未携带受控沙盒制品（sandbox.status=unavailable）。请勿在依赖沙盒隔离的场景使用；后续版本将补回（WAIVER-0009）。\n'; } > "${RUNNER_TEMP}/release-notes-windows-sandbox.md"
+            NOTES_FILE="${RUNNER_TEMP}/release-notes-windows-sandbox.md"
+          fi
           # 0.x 为 Preview 时代：Release 标记 Pre-release，1.0.0 起自动转正式。
           PRERELEASE_ARGS=()
           if [[ "${VERSION}" =~ ^0\. ]]; then PRERELEASE_ARGS+=("--prerelease"); fi
@@ -724,6 +766,7 @@ jobs:
           else
             gh release create "${TAG}" --draft --notes-file "${NOTES_FILE}" --title "Open Forge ${VERSION}" --target "${GITHUB_SHA}" "${PRERELEASE_ARGS[@]}"
           fi
+          node scripts/release/verify-desktop-release-identity.mjs --github-draft
           find apps/desktop/release -maxdepth 1 -type f -print0 \
             | xargs -0 gh release upload "${TAG}" --clobber
           gh release edit "${TAG}" --draft=false

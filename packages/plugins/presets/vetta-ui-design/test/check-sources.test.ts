@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 机检规则。样本取自真实翻车现场（design4/library-management）：agent 读完了
  * 完整 skill 正文，仍然伪造了 Link、自定义了 Icon、把整个组件压成一行。
@@ -5,8 +6,9 @@
  * 规则宁可漏报不误报——误报会让 agent 去改本来正确的代码，比不报更糟——所以
  * 「不该命中」的用例和「该命中」的一样重要。
  */
-import { expect, it } from "vitest";
-import { checkSources } from "../src/vetd/check-sources";
+import { describe, expect, it } from "vitest";
+import { checkSources, classifyIssues, severityOf, THEME_PLACEHOLDER_RULE } from "../src/vetd/check-sources";
+import { DEFAULT_THEME_CSS } from "../src/vetd/scaffold";
 
 const rulesFor = (content: string, path = "frames/demo.tsx"): string[] =>
 	checkSources([{ path, content }]).map((issue) => issue.rule);
@@ -321,4 +323,51 @@ it("does not guess about font families no fontsource package provides", () => {
 	// 系统字体、平台 CJK 字体都不归这条规则管：没有装的包作事实源就不报。
 	const themeCss = '@theme {\n\t--font-display: "Songti SC", "SimSun", serif;\n\t--font-body: "Segoe UI Variable", system-ui;\n}';
 	expect(fontRules(themeCss, ["react"])).toEqual([]);
+});
+
+describe("脚手架占位主题", () => {
+	const frame = { path: "frames/home.tsx", content: 'export const frame = { width: 390, height: 844, title: "Home" };' };
+
+	it("画框已开写、theme.css 还是占位：整份设计报一条", () => {
+		const issues = checkSources([frame], DEFAULT_THEME_CSS).filter((issue) => issue.rule === THEME_PLACEHOLDER_RULE);
+		expect(issues).toEqual([expect.objectContaining({ file: "theme.css", line: 1 })]);
+	});
+
+	it("还没有画框，或主题已经换掉：不报", () => {
+		const rules = (files: { path: string; content: string }[], css: string) =>
+			checkSources(files, css).map((issue) => issue.rule);
+		expect(rules([{ path: "frames/_layout.tsx", content: "" }], DEFAULT_THEME_CSS)).not.toContain(THEME_PLACEHOLDER_RULE);
+		expect(rules([frame], "@theme {\n\t--color-primary: #9c3d1c;\n}")).not.toContain(THEME_PLACEHOLDER_RULE);
+	});
+
+	it("占位不再是 indigo / slate / amber 那套 AI 默认配色", () => {
+		expect(DEFAULT_THEME_CSS).not.toMatch(/#4f46e5|#0f172a|#f59e0b/i);
+	});
+});
+
+describe("检查分档", () => {
+	it("语法、缺包、占位主题、未选方向是 error；量到的缺陷是 warning；审美提示是 review", () => {
+		expect(severityOf("syntax-error")).toBe("error");
+		expect(severityOf("uninstalled-import")).toBe("error");
+		expect(severityOf(THEME_PLACEHOLDER_RULE)).toBe("error");
+		expect(severityOf("direction-not-chosen")).toBe("error");
+		expect(severityOf("hardcoded-color")).toBe("warning");
+		expect(severityOf("text-clipped")).toBe("warning");
+		expect(severityOf("tell-gradient")).toBe("review");
+	});
+
+	it("没登记的规则按 warning 处理，不冒充 error", () => {
+		expect(severityOf("some-new-rule")).toBe("warning");
+	});
+
+	it("分档是只读的：不改原 issue，也不改数组顺序", () => {
+		const issues = [
+			{ file: "frames/home.tsx", line: 3, rule: "hardcoded-color", message: "x" },
+			{ file: "theme.css", line: 1, rule: THEME_PLACEHOLDER_RULE, message: "y" },
+		];
+		const classified = classifyIssues(issues);
+		expect(classified.map((issue) => issue.severity)).toEqual(["warning", "error"]);
+		expect(issues.every((issue) => !("severity" in issue))).toBe(true);
+		expect(classified[0]).not.toBe(issues[0]);
+	});
 });

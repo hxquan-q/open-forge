@@ -83,7 +83,7 @@ const imGatewayTargetByPlatformTag = {
 // Resolve electron version from the workspace
 const require = createRequire(import.meta.url);
 // 品牌档案与 vite 同开关（VETTA_BRAND_PROFILE）：默认（未设置）走外部分发档 Allstr ai，
-// 显式 self 回到 Open Forge；兼容标识（executableName / appId / 安装目录）跨档冻结。
+// 显式 self 回到 Open Forge；executableName / appId 冻结，Linux FPM 的 /opt 安装根随 displayName。
 const desktopBrand = require(
 	process.env.VETTA_BRAND_PROFILE === "self"
 		? "../src/shared/desktop-brand.json"
@@ -974,6 +974,8 @@ const builderConfig = {
 		synopsis: "AI agent desktop application",
 		vendor: LINUX_PACKAGE_METADATA.vendor,
 	},
+	deb: { packageName: "openforge" },
+	rpm: { packageName: "openforge" },
 	// Sidecar binaries are picked up from the staged ./im-gateway dir
 	// (populated above by the cross-build step).
 	extraResources,

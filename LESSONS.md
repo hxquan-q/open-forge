@@ -17,3 +17,10 @@
 - 原因：真实服务在请求发出后签发回执；使用发起时刻校验会把正常响应误判为未来数据。此前固定时钟夹具掩盖了这个错误。
 - 证据：来源提交 `c22ccc1c53053426d302fc2d7d159631dbf869dc`，[BUG-0133](project/bugs/BUG-0133-publication-receipt-clock.md)；真实子进程时钟回归先有 4/8 失败，修后 8/8 通过，未来/过期/篡改继续拒绝。
 - 日期：2026-10-19；promotion=collecting，enforced=false。通过公开 lesson 命令重放同一证据仍为 Seen 1×，未晋升为硬规则。
+
+### TASK-0407 原子保存夹具 — Seen 1×
+
+- 规则候选：文件监听/HMR 修复的回归应经过真实原子保存入口，并让临时文件跨过生产 debounce 窗口。
+- 原因：直接覆写 design.json 的夹具漏掉 queuedAtomicWrite 的 .tmp-* 文件，首次修复仍可能触发整页重载；独立审查指出后，实际保存链稳定复现 2 条更新，修后为 0，源码/新增帧正对照保留。
+- 证据：`dd7feffcdda257047fadbd6c006d5b84c835a7a0`，[BUG-0155](project/bugs/BUG-0155-design-canvas-handoff-and-reload.md)，117 文件 763 例通过；原生独立只读审查 `/root/canvas_final_review` 已复审此项，不冒充每日自主模型复盘。
+- 日期：2026-10-28；promotion=collecting，enforced=false。仅一次证据，不晋升为新硬规则。

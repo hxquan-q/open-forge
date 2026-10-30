@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import type { PluginContext, PluginDynamicSystemPromptOperation } from "@vetta-org/plugin-sdk";
 import { getCanvasController } from "../canvas/design-runtime";
 import { SCREENSHOT_TOOL_NAME } from "../cards/screenshot-card";
+import { DIRECTION_TOOL_NAME } from "../direction/direction-tool";
 import { hasDesignInWorkspace } from "./design-presence";
 
 /**
@@ -16,6 +18,8 @@ export const DESIGN_ONLY_TOOLS = [
 	"vetd_history",
 	"vetd_restore",
 	"vetd_export",
+	"vetd_assets",
+	DIRECTION_TOOL_NAME,
 ] as const;
 
 /** 这一轮该不该开闸：画布开着，或者 cwd 里确实有设计稿。 */

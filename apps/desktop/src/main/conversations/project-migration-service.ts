@@ -6,9 +6,8 @@
  * IPC 与 UI 保持薄层；本模块拥有文件 I/O 与冲突/恢复策略。
  */
 
-import { randomUUID } from "node:crypto";
-import type { Dirent, Stats } from "node:fs";
-import { lstat, mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import {
@@ -24,13 +23,14 @@ import { isSshProjectUri } from "@vetta/ssh-transport";
 import { app, dialog } from "electron";
 import { mainT } from "../i18n/index.js";
 import { getAppLogger } from "../logger.js";
+import { ensureArchiveDirectory, restoreArchiveAttachments, restoreArchiveFile } from "./archive-file-restore.js";
 import { emitConversationListChanged } from "./conversation-list-events.js";
 import {
 	type KnownArchiveFingerprint,
 	parseConversationFile,
+	restoreArchiveSession,
 	SESSION_ARCHIVE_EXTENSION,
 	type SessionArchiveImportDecision,
-	sanitizeFileStem,
 } from "./session-archive-service.js";
 import { resolveSessionListCwd } from "./session-paths.js";
 
@@ -272,7 +272,7 @@ export async function exportProjectMigrationArchive(
 	if (!savedTo) {
 		return { saved: false };
 	}
-	await writeFile(savedTo, Buffer.from(bytes));
+	await restoreArchiveFile(dirname(savedTo), basename(savedTo), bytes, true);
 	return {
 		saved: true,
 		path: savedTo,
@@ -354,13 +354,14 @@ export async function previewProjectMigrationFromFile(
 }
 
 /**
- * ADR-0147：仅重写会话头记录（type:"session"）里等于 sourceCwd 的 cwd 字段；
+ * ADR-0147：仅重写 legacy/session 与 native/conversation.header 里等于 sourceCwd 的 cwd 字段；
  * 历史消息/工具调用内的绝对路径是事实记录，保持原样。纯函数，两侧（导入/索引）同形。
  */
 export function rewriteSessionRecordCwd(record: unknown, sourceCwd: string | undefined, targetCwd: string): unknown {
 	if (sourceCwd === undefined || record === null || typeof record !== "object") return record;
 	const parsed = record as Record<string, unknown>;
-	if (parsed.type !== "session" || parsed.cwd !== sourceCwd) return record;
+	if ((parsed.type !== "session" && parsed.recordType !== "conversation.header") || parsed.cwd !== sourceCwd)
+		return record;
 	return { ...parsed, cwd: targetCwd };
 }
 
@@ -384,7 +385,10 @@ export async function applyProjectMigrationArchive(
 		throw new Error("not a v2 migration archive");
 	}
 
-	const known = await input.listKnownFingerprints();
+	const ensureTargetDir = input.ensureTargetDir ?? ensureArchiveDirectory;
+	await ensureTargetDir(targetCwd);
+	await ensureArchiveDirectory(targetCwd);
+	const known = new Map(await input.listKnownFingerprints());
 	const decisions: SessionArchiveImportDecision[] = [];
 	const sourceCwd = decoded.workspace?.sourceCwd;
 	const targetDir = codingAgentSessionShardPath(targetCwd);
@@ -401,6 +405,7 @@ export async function applyProjectMigrationArchive(
 		});
 
 		if (conflict.action === "skip-idempotent") {
+			if (existing) await restoreArchiveAttachments(dirname(existing.sessionPath), session.attachments);
 			decisions.push({
 				fingerprint,
 				sessionId: session.sessionId,
@@ -410,20 +415,21 @@ export async function applyProjectMigrationArchive(
 			continue;
 		}
 
-		const targetName = `${sanitizeFileStem(session.name || session.sessionId)}-${randomUUID().slice(0, 8)}.jsonl`;
-		const targetPath = join(targetDir, targetName);
-		const jsonl = `${records.map((record) => JSON.stringify(record)).join("\n")}\n`;
-		const tempPath = `${targetPath}.${randomUUID()}.tmp`;
-		await mkdir(targetDir, { recursive: true });
-		await writeFile(tempPath, jsonl, "utf8");
-		for (const attachment of session.attachments) {
-			const relative = safePath(attachment.relativePath);
-			const attachmentPath = join(dirname(targetPath), relative);
-			await mkdir(dirname(attachmentPath), { recursive: true });
-			await writeFile(attachmentPath, Buffer.from(attachment.bytes));
-		}
-		await rename(tempPath, targetPath);
-		decisions.push({ fingerprint, sessionId: session.sessionId, conflict, writtenPath: targetPath });
+		const restored = await restoreArchiveSession({ ...session, records, fingerprint, targetDir });
+		const targetPath = restored.path;
+		known.set(fingerprint, { sessionPath: targetPath, mtimeMs: 0 });
+		decisions.push({
+			fingerprint,
+			sessionId: session.sessionId,
+			conflict: restored.written
+				? conflict
+				: resolveSessionArchiveImportConflict({
+						existingFingerprint: fingerprint,
+						incomingFingerprint: fingerprint,
+					}),
+			writtenPath: targetPath,
+		});
+		if (!restored.written) continue;
 		// 导入落盘对渲染端不可见（会话目录没有 watcher）；按目标列表 cwd 广播即时刷新。
 		emitConversationListChanged({
 			cwd: resolveSessionListCwd(targetCwd),
@@ -431,8 +437,6 @@ export async function applyProjectMigrationArchive(
 		});
 	}
 
-	const ensureTargetDir = input.ensureTargetDir ?? ((dir: string) => mkdir(dir, { recursive: true }));
-	await ensureTargetDir(targetCwd);
 	const workspace = await restoreWorkspaceFiles(
 		decoded.workspace?.files ?? [],
 		targetCwd,
@@ -462,34 +466,15 @@ async function restoreWorkspaceFiles(
 			failed.push(file.relativePath);
 			continue;
 		}
-		const targetPath = join(targetCwd, relative);
-		let existing: Stats | undefined;
 		try {
-			existing = await lstat(targetPath);
-		} catch {
-			existing = undefined;
-		}
-		if (existing) {
-			// 符号链接不跟随（防逃逸），目录与文件类型不一致无法落盘：一律跳过并计入报告。
-			if (existing.isSymbolicLink() || existing.isDirectory()) {
-				failed.push(relative);
-				continue;
-			}
-			if (!overwrite) {
-				skipped++;
-				continue;
-			}
-		}
-		try {
-			await mkdir(dirname(targetPath), { recursive: true });
-			await writeFile(targetPath, Buffer.from(file.bytes));
+			const result = await restoreArchiveFile(targetCwd, relative, file.bytes, overwrite);
+			if (result === "skipped") skipped++;
+			else if (result === "overwritten") overwritten++;
+			else written++;
 		} catch (error) {
 			log.warn("workspace restore failed", relative, error instanceof Error ? error.message : undefined);
 			failed.push(relative);
-			continue;
 		}
-		if (existing) overwritten++;
-		else written++;
 	}
 
 	return { written, skipped, overwritten, failed };

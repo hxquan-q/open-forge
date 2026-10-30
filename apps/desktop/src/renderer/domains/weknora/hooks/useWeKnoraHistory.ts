@@ -2,7 +2,7 @@
 
 import type { WeKnoraPublicConfig, WeKnoraSession } from "@preload/api";
 import { useAtom } from "jotai";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
 	sortSessionsByRecency,
 	toChatMessages,
@@ -61,17 +61,24 @@ export function useWeKnoraHistory({ config }: { config: WeKnoraPublicConfig | nu
 	const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
 	const [deletingSessionId, setDeletingSessionId] = useAtom(weKnoraDeletingSessionIdAtom);
 	const [deleteError, setDeleteError] = useAtom(weKnoraDeleteErrorAtom);
+	const sessionsRequest = useRef<Promise<void> | null>(null);
 
-	const loadSessions = useCallback(async () => {
-		setSessionsStatus("loading");
-		try {
-			const list = await window.vetta.weknora.listSessions({ page: 1, pageSize: HISTORY_PAGE_SIZE });
-			setSessions(sortSessionsByRecency(list));
-			setSessionsStatus("ready");
-		} catch {
-			setSessions([]);
-			setSessionsStatus("error");
-		}
+	const loadSessions = useCallback(() => {
+		// A new session and a background terminal can request the list together.
+		sessionsRequest.current ??= (async () => {
+			setSessionsStatus("loading");
+			try {
+				const list = await window.vetta.weknora.listSessions({ page: 1, pageSize: HISTORY_PAGE_SIZE });
+				setSessions(sortSessionsByRecency(list));
+				setSessionsStatus("ready");
+			} catch {
+				setSessions([]);
+				setSessionsStatus("error");
+			} finally {
+				sessionsRequest.current = null;
+			}
+		})();
+		return sessionsRequest.current;
 	}, [setSessions, setSessionsStatus]);
 
 	const reloadSessions = useCallback(() => {

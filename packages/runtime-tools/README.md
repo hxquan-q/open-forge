@@ -76,3 +76,20 @@ internal_dependencies:
 
 原生 `read` 与 `grep` 声明为安全候选；写入、命令与其他未声明工具仍形成屏障。
 宿主可通过 `AgentCoreTurnEngineOptions.maxParallelToolCalls: 1` 保持全串行。
+
+## 共享资源准入
+
+`createAsyncExecutionGate(concurrency, options?)` 是资源局部的容量 owner，旧调用保持 FIFO。
+可显式设置 `maxQueued`，或选择 `scheduling: "round-robin"` 按 `ownerId` 轮转；同一 owner 内保持到达顺序。
+没有 owner 的请求属于同一个匿名组。轮转不抢占已运行任务，不保证任何 deadline 内都能获准。
+
+`run(operation, { signal, waitTimeoutMs, ownerId, requestId, onEvent }?)` 支持等待取消和准入期限。
+排队取消、等待超时或队满均不会调用 operation；已运行调用的取消结果可先返回，但原始 operation Promise
+没有收敛前仍占用容量并计入 draining。操作 Promise 必须代表真实资源的生命周期，不能把提前完成的 UI/取消
+Promise 作为资源退出证明。执行总时限由操作/宿主自己负责，`waitTimeoutMs` 只约束等待。
+
+事件仅含稳定宿主身份、阶段、计数和时长，不含 operation 参数、返回值或取消原因；同步抛错和异步拒绝的
+观察者均与业务隔离。队满、等待超时和取消使用 `AsyncExecutionGateError.code` 分类，不需要解析错误文案。
+
+产品层选择具体资源和预算。例如 Coding Agent OCR 跨 session 共用一个 gate，默认并发 1、最多 8 个等待请求，
+等待最长 60 秒且按 session 轮转；原图像/PDF 执行预算继续由 Node/SSH 进程宿主拥有。

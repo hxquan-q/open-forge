@@ -16,6 +16,7 @@ import {
 	type SubagentChildHandle,
 	SubagentCoordinator,
 	type SubagentLifecycle,
+	type SubagentSchedulingEvent,
 	type SubagentSnapshot,
 	type SubagentSpawnRequest,
 	type SubagentTypeDefinition,
@@ -73,6 +74,7 @@ export interface CodingAgentSubagentRuntimeOptions {
 	readonly validateRecoveredChild?: (snapshot: SubagentSnapshot) => Promise<string | undefined>;
 	readonly onRecoveryIssue?: (message: string) => void;
 	readonly onError?: (error: unknown, operation: string) => void;
+	readonly onSchedulingEvent?: (event: SubagentSchedulingEvent) => void | Promise<void>;
 }
 
 export interface CodingAgentSubagentChildTodoBinding {
@@ -108,6 +110,7 @@ export class CodingAgentSubagentRuntime
 			startDeadlineMs: options.startDeadlineMs,
 			settleDeadlineMs: options.settleDeadlineMs,
 			onError: options.onError,
+			onSchedulingEvent: options.onSchedulingEvent,
 			onNotify: (agents) => options.onNotify?.(this.todoProjection.projectAll(agents)),
 			onUpdate: (agents) => {
 				this.publishSnapshots(agents, options.onUpdate);

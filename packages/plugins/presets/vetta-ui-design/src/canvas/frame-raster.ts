@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BridgeHub } from "./bridge-client";
 import { getFrameError } from "./design-runtime";
@@ -101,6 +102,8 @@ export interface FrameRasterState {
 	isMounted(frameId: string): boolean;
 	/** 挂载之后是否显示活体（而不是位图）。截图失败的 frame 会留在活体，是安全兜底。 */
 	isLive(frameId: string): boolean;
+	/** Gesture target kept in layout under its raster, without live painting. */
+	isParked(frameId: string): boolean;
 	/**
 	 * 内容变了就作废旧位图，重新排队截图。调用方（DesignCanvas）在热更新到达、
 	 * 文件监听发现源码变更、以及交互改了 frame 尺寸时调用。
@@ -311,7 +314,7 @@ export function useFrameRasters({
 	 * 锁只保护「发 capture 到拿到结果」这一段——排队等待期间 frame 该挂着照样挂着。
 	 */
 	const captureLockRef = useRef<Promise<unknown>>(Promise.resolve());
-	const withCaptureLock = useCallback(<T,>(run: () => Promise<T>): Promise<T> => {
+	const withCaptureLock = useCallback(<T>(run: () => Promise<T>): Promise<T> => {
 		const next = captureLockRef.current.then(run, run);
 		captureLockRef.current = next.catch(() => undefined);
 		return next;
@@ -357,14 +360,11 @@ export function useFrameRasters({
 	);
 
 	/** 截图失败的 frame 不自动重试（免得死循环烧 CPU），靠这里手动重来。 */
-	const refreshAll = useCallback(
-		(): void => {
-			for (const frameId of frameIds) bumpSeq(frameId);
-			setFailures(new Map());
-			setDirty(new Set(frameIds));
-		},
-		[frameIds, bumpSeq],
-	);
+	const refreshAll = useCallback((): void => {
+		for (const frameId of frameIds) bumpSeq(frameId);
+		// Keep failed frames live until a fresh capture succeeds, including manual retries.
+		setDirty(new Set(frameIds));
+	}, [frameIds, bumpSeq]);
 
 	const reloadAll = useCallback((): void => {
 		refreshAll();
@@ -401,6 +401,7 @@ export function useFrameRasters({
 		// SETTLE 一起白费，还要从头再来一遍。（离屏模式截图不经过 iframe，不用留。）
 		if (!offscreenActive) for (const frameId of capturingRef.current.keys()) allowed.add(frameId);
 		for (const frameId of forced) allowed.add(frameId);
+		for (const frameId of frameIds) if (failures.has(frameId)) allowed.add(frameId);
 		let budget = MOUNT_WINDOW;
 		for (const frameId of frameIds) {
 			if (allowed.has(frameId)) continue;
@@ -412,7 +413,7 @@ export function useFrameRasters({
 			budget -= 1;
 		}
 		return allowed;
-	}, [frameIds, rasters, dirty, activeFrameId, forced, offscreenActive]);
+	}, [frameIds, rasters, dirty, activeFrameId, forced, offscreenActive, failures]);
 
 	const mountedRef = useRef(mounted);
 	mountedRef.current = mounted;
@@ -508,7 +509,14 @@ export function useFrameRasters({
 							// 解码在前、写状态在后：dirty 的清除在 finally，会等这个 await，
 							// 所以位图进入 rasters 时一定是「挂上就能画」的。
 							await decodeRaster(dataUrl);
+							if ((invalidationSeqRef.current.get(frameId) ?? 0) !== seqAtStart) return;
 							setRasters((current) => withBudget(current, frameId, dataUrl, mounted));
+							setFailures((current) => {
+								if (!current.has(frameId)) return current;
+								const next = new Map(current);
+								next.delete(frameId);
+								return next;
+							});
 							// 落盘失败不影响这一轮（内存里已经有图），代价只是下次进画布得重截。
 							void saveRaster(cacheKey, frameId, dataUrl);
 						})
@@ -587,34 +595,42 @@ export function useFrameRasters({
 		};
 	}, [bridge, cacheKey, dirty, activeFrameId, mounted, frameIds, withCaptureLock, offscreenActive]);
 
-	const rasterOf = useCallback((frameId: string): string | null => rasters.get(frameId) ?? null, [rasters]);
+	const rasterOf = useCallback(
+		(frameId: string): string | null => (failures.has(frameId) ? null : (rasters.get(frameId) ?? null)),
+		[rasters, failures],
+	);
 
 	const isMounted = useCallback((frameId: string): boolean => mounted.has(frameId), [mounted]);
 
-	const liveSet = useMemo(() => {
+	const { liveSet, parkedSet } = useMemo(() => {
 		const live = new Set<string>();
+		const parked = new Set<string>();
 		for (const frameId of mounted) {
 			// 截图期间被强制拉活的不能动：display:none 的 iframe 没有布局，截出来是空的。
-			if (forced.has(frameId)) {
+			if (forced.has(frameId) || failures.has(frameId)) {
 				live.add(frameId);
 				continue;
 			}
 			// 缩放/平移途中，有位图的一律先用位图顶着（见 interacting）。没位图的留活体：
 			// 那是它此刻唯一有内容的那一层，收起来只会在操作期间变成一片空白。
-			if (interacting && rasters.has(frameId)) continue;
 			if (frameId === activeFrameId || dirty.has(frameId) || !rasters.has(frameId)) {
+				if (interacting && rasters.has(frameId)) {
+					parked.add(frameId);
+					continue;
+				}
 				live.add(frameId);
 			}
 		}
-		return live;
-	}, [mounted, activeFrameId, forced, dirty, interacting, rasters]);
+		return { liveSet: live, parkedSet: parked };
+	}, [mounted, activeFrameId, forced, dirty, interacting, rasters, failures]);
 
 	const liveRef = useRef(liveSet);
 	liveRef.current = liveSet;
 
 	const isLive = useCallback((frameId: string): boolean => liveSet.has(frameId), [liveSet]);
+	const isParked = useCallback((frameId: string): boolean => parkedSet.has(frameId), [parkedSet]);
 
-	const runLive = useCallback(async <T,>(frameId: string, run: () => Promise<T>): Promise<T> => {
+	const runLive = useCallback(async <T>(frameId: string, run: () => Promise<T>): Promise<T> => {
 		// 本来就活着的话切过去只要一帧；如果它还没进过挂载窗口，iframe 是刚挂上的，
 		// 得等它把页面加载渲染出来，否则截到的是白板。
 		const wasLive = liveRef.current.has(frameId);
@@ -641,6 +657,7 @@ export function useFrameRasters({
 		rasterOf,
 		isMounted,
 		isLive,
+		isParked,
 		invalidate,
 		notifyRendered,
 		runLive,

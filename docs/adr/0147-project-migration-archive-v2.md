@@ -16,7 +16,7 @@
 ## 决策
 
 1. **OFAR 格式升 v2，向后兼容 v1。** 新增归档级 `WORKSPACE_FILE`（0x04）帧（与 ATTACHMENT 同构：u32 metaLen + `{relativePath, byteLength}` + 原始字节，不进 JS 字符串）；元数据新增可选 `sourceCwd`、`workspaceFileCount`。解码器接受 v1/v2（v1 无 workspace 帧）；未知帧 kind 仍拒绝。v1 会话归档语义与字节完全不变。
-2. **迁移导入时重写记录内 cwd，仅限会话头记录（`type:"session"` 的 `cwd` 字段）且值等于声明的 `sourceCwd`。** 历史消息/工具调用里的绝对路径是事实记录，不重写（在目标设备上表现为指向旧路径的历史引用，属预期）。
+2. **迁移导入时重写记录内 cwd，仅限会话头记录（legacy `type:"session"` 或当前原生 `recordType:"conversation.header"` 的 `cwd` 字段）且值等于声明的 `sourceCwd`。** 历史消息/工具调用里的绝对路径是事实记录，不重写（在目标设备上表现为指向旧路径的历史引用，属预期）。
 3. **指纹按「最终落盘形态」计算。** 冲突判定与已知指纹索引统一用落盘记录（重写后）的规范化哈希：`重写(记录, targetCwd)` 是纯函数，导入侧对解码记录先重写再算指纹，索引侧对磁盘文件直接算——两侧同形。同一包重复导入同一目标 → 幂等跳过；换目标 → 视为新位置建副本（正确语义）。不经迁移路径（v1 归档、目标即源路径）不做重写，指纹与 v1 行为一致。
 4. **产物恢复永不静默覆盖：默认 skip-existing，可显式选 overwrite。** 符号链接与路径逃逸（复用 `safePath`）一律跳过/拒绝。导出侧默认排除 `.git`、`node_modules`、`.vetta`（会话已单独成帧）；单文件 >512MB 或总量 >4GB 直接报错提示先精简，不做静默截断。
 5. **远程（`ssh://`）项目 v1 不提供迁移包**：产物在远端，走会话归档（本机分片记录）即可；明确报错而不是半包。
@@ -31,3 +31,13 @@
 
 - `SESSION_ARCHIVE_FORMAT_VERSION` 消费方（桌面导出/导入、runtime-storage 测试）需接受版本集合 {1,2}；导出迁移包固定写 v2。
 - 迁移导入需要两段式 IPC（preview 不落盘 / apply 执行），apply 侧指纹计算点在重写之后——TASK-0361 合同固化该顺序的回归测试。
+
+## 2026-10-28：当前原生格式与安全落盘落实
+
+本次续接没有改变 OFAR 帧、版本、指纹或 IPC。源码与真实 Runtime 回归表明，原生会话不能沿用 legacy 的随机 `.jsonl` 名称：目录、历史读取和恢复均要求 sessionId 对应的 canonical `.conversation.jsonl`。导入使用公开 `resolveConversationFilePath`，保留头与事件身份；标题从 seed/name operation 提取。
+
+同 ID、同最终记录幂等跳过；同 ID、不同记录明确拒绝并引导选择其他项目目录。否决「随机后缀副本」（Runtime 不认）和「随机新 ID」（需要改事件身份且破坏指纹幂等）；legacy 默认副本行为不变。这是此前原生迁移不可用的修正，不增加有损格式转换。导出发现坏 JSON 行时拒绝，而不是把原文替换成哈希后继续报告成功。
+
+文件安全由 Desktop 宿主补齐：先验证目标根，再逐层检查根内目录及叶子类型；session/附件/产物共用安全文件写入，默认不覆盖，附件已存在时须字节一致。写入完整临时文件后，以 exclusive link 无覆盖提交，显式覆盖采用 rename 并保留目标已有的普通权限位（不保留 setuid/setgid/sticky），避免原地截断硬链接关联的用户文件；保存归档也经临时文件提交。对不支持硬链接的文件系统采用 `COPYFILE_EXCL`，保留 no-clobber，但不承诺崩溃原子性。受控失败清理本次临时文件；整包仍非跨文件事务，部分恢复结果按现有报告/幂等重试处理。
+
+该边界不宣称是对恶意并发目录替换的 OS 沙箱；项目外插件存储与历史消息内的绝对路径仍不搬运/改写。事实、备选方案及测试证据见 [RESEARCH-0046](../../project/research/RESEARCH-0046-project-migration-portability.md) 与 [TASK-0361](../../project/tasks/TASK-0361-project-migration-archive.md)。

@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/runtime-ssh",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"private": true,
 	"description": "Coding Agent tool environment that executes against a remote host over SSH.",
 	"type": "module",

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { isolatedEnvironment, runProcess } from "./process.mjs";
+import { processFixture } from "./process-fixture.mjs";
 
 const roots = [];
 function folder() {
@@ -13,11 +14,108 @@ function folder() {
 	roots.push(root);
 	return root;
 }
-afterEach(() => {
+afterEach(async ({ cleanupOwnedProcess }) => {
+	await cleanupOwnedProcess?.();
 	for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+function ownedProcess(context, program) {
+	const root = folder();
+	const cancellation = new AbortController();
+	const owner = processFixture(AbortSignal.any([context.signal, cancellation.signal]));
+	let ready;
+	const started = new Promise((resolve) => {
+		ready = resolve;
+	});
+	let markSpawned;
+	const spawned = new Promise((resolve) => {
+		markSpawned = resolve;
+	});
+	let release;
+	const cleanup = new Promise((resolve) => {
+		release = resolve;
+	});
+	const completions = [];
+	let operation;
+	let closing;
+	context.cleanupOwnedProcess = async () => {
+		release();
+		cancellation.abort();
+		await owner.close();
+		await operation;
+		await closing;
+	};
+	operation = owner.run(async (signal) => {
+		const result = await runProcess({
+			command: [process.execPath, "-e", program],
+			cwd: root,
+			env: isolatedEnvironment(root),
+			signal,
+			onSpawn: markSpawned,
+			onActivity: ready,
+		});
+		await cleanup;
+		completions.push("operation");
+		return result;
+	});
+	return {
+		root,
+		owner,
+		started,
+		spawned,
+		release,
+		operation,
+		completions,
+		get completed() {
+			return completions.includes("operation");
+		},
+		close() {
+			closing ??= owner.close().then(() => {
+				completions.push("close");
+			});
+			return closing;
+		},
+	};
+}
+
 describe("isolated external process lifecycle", () => {
+	it("waits for owned process cleanup and refuses work after fixture closure", async (context) => {
+		const fixture = ownedProcess(context, "console.log('ready');setInterval(()=>{},1000)");
+		await fixture.started;
+		let closed = false;
+		const closing = fixture.close().then(() => {
+			closed = true;
+		});
+		expect(fixture.owner.signal.aborted).toBe(true);
+		expect(fixture.completed).toBe(false);
+		await Promise.resolve();
+		expect(closed).toBe(false);
+		fixture.release();
+		expect((await fixture.operation).reason).toBe("cancelled");
+		await closing;
+		expect(fixture.completed).toBe(true);
+		expect(fixture.completions).toEqual(["operation", "close"]);
+		let invoked = false;
+		await expect(
+			fixture.owner.run(() => {
+				invoked = true;
+			}),
+		).rejects.toThrow(/closed/);
+		expect(invoked).toBe(false);
+	});
+	it("drains an owned process from teardown without waiting for startup activity", async (context) => {
+		const fixture = ownedProcess(context, "setInterval(()=>{},1000)");
+		let ready = false;
+		fixture.started.then(() => {
+			ready = true;
+		});
+		await fixture.spawned;
+		await context.cleanupOwnedProcess();
+		expect(ready).toBe(false);
+		expect((await fixture.operation).reason).toBe("cancelled");
+		expect(fixture.completed).toBe(true);
+		expect(existsSync(fixture.root)).toBe(true);
+	});
 	it("reports unconfirmed termination instead of silently returning a clean cancellation", async () => {
 		const root = folder();
 		const cancellation = new AbortController();

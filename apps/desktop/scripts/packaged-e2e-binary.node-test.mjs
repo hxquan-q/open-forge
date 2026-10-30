@@ -80,6 +80,19 @@ test("Windows packaged E2E drives the versioned Electron binary instead of the d
 	}
 });
 
+test("macOS packaged E2E discovers the branded app bundle", async () => {
+	const packageRoot = await mkdtemp(join(tmpdir(), "vetta-packaged-e2e-"));
+	const binary = join(packageRoot, "release", "mac-arm64", "Allstr ai.app", "Contents", "MacOS", "OpenForge");
+	await mkdir(join(packageRoot, "release", "mac-arm64", "Allstr ai.app", "Contents", "MacOS"), { recursive: true });
+	await writeFile(binary, "electron");
+
+	try {
+		assert.equal(resolvePackagedE2eBinaryPath(packageRoot, "darwin"), binary);
+	} finally {
+		await rm(packageRoot, { recursive: true, force: true });
+	}
+});
+
 test("Windows packaged E2E rejects an unsafe version pointer", async () => {
 	const packageRoot = await mkdtemp(join(tmpdir(), "vetta-packaged-e2e-"));
 	const unpackedRoot = join(packageRoot, "release", "win-unpacked");

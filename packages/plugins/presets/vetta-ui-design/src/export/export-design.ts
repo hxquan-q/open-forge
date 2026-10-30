@@ -1,4 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { PluginContext } from "@vetta-org/plugin-sdk";
+import { CREDITS_FILE, readCredits } from "../assets/credits";
+import { withDesignWrite } from "../shared/design-fs";
 import { strToU8, zipSync, type Zippable } from "fflate";
 import { buildDesign } from "../engine/engine-manager";
 import { HISTORY_ENTRY, packHistoryForShare } from "../history/history-transfer";
@@ -44,8 +47,8 @@ function replaceOnce(source: string, needle: string, replacement: string): strin
 /**
  * Inline the vite build output (single chunk, see engine config) into one
  * self-contained snapshot.html so packaged previews render offline without a
- * server. Relative asset references (design assets/) are a documented v1
- * limitation of packaged previews.
+ * server. The share reader resolves bundled assets through inlineSnapshotAssets;
+ * their original files and CREDITS.json remain in design/ for provenance.
  */
 export async function buildSnapshotHtml(ctx: PluginContext, outDir: string): Promise<string> {
 	let html = (await ctx.fs.readFile(`${outDir}/index.html`)).content;
@@ -77,7 +80,17 @@ export interface DesignPackage {
  * manifest.json + design sources + snapshot.html. Returns the bytes; the
  * caller decides where they land.
  */
-export async function buildDesignPackage(ctx: PluginContext, session: DesignSession): Promise<DesignPackage> {
+export function buildDesignPackage(ctx: PluginContext, session: DesignSession): Promise<DesignPackage> {
+	// Do not observe an image between its file write and credits commit.
+	return withDesignWrite(session.dirPath, () => buildDesignPackageUnlocked(ctx, session));
+}
+
+async function buildDesignPackageUnlocked(ctx: PluginContext, session: DesignSession): Promise<DesignPackage> {
+	const files = await ctx.fs.listFilesRecursive(session.dirPath);
+	if (files.some((file) => file.relPath === CREDITS_FILE)) {
+		const credits = await readCredits(ctx.fs, session.dirPath);
+		if (credits.assets.length > 0) ctx.ui.notify({ variant: "warning", message: ctx.i18n.t("assets.exportReview", { count: credits.assets.length }) });
+	}
 	const outDir = `${session.dirPath}/${BUILD_DIR}`;
 	await buildDesign(ctx, session.dirPath, outDir);
 	const snapshotHtml = await buildSnapshotHtml(ctx, outDir);
@@ -86,7 +99,6 @@ export async function buildDesignPackage(ctx: PluginContext, session: DesignSess
 		"manifest.json": strToU8(`${JSON.stringify(session.manifest, null, "\t")}\n`),
 		"snapshot.html": strToU8(snapshotHtml),
 	};
-	const files = await ctx.fs.listFilesRecursive(session.dirPath);
 	for (const file of files) {
 		const rel = file.relPath.replaceAll("\\", "/");
 		if (EXCLUDED_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;

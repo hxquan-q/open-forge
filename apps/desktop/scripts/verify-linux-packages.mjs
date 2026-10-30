@@ -5,11 +5,14 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { parse } from "yaml";
+import { LINUX_PACKAGE_PATHS } from "./linux-packaging-contract.mjs";
 
 const execFileAsync = promisify(execFile);
+// dpkg-deb --contents / rpm -qlp on a packaged app can exceed the 1 MiB default.
+const PACKAGE_INSPECTION_OPTIONS = { maxBuffer: 64 * 1024 * 1024 };
 const packageDir = resolve(import.meta.dirname, "..");
 const defaultReleaseDir = join(packageDir, "release");
-const requiredPayloadPaths = ["/opt/Open Forge/OpenForge", "/opt/Open Forge/resources/package-type"];
+const requiredPayloadPaths = Object.values(LINUX_PACKAGE_PATHS);
 
 function requireValue(value, label) {
 	if (typeof value !== "string" || value.trim().length === 0) {
@@ -122,10 +125,10 @@ export async function verifyLinuxPackages({ releaseDir = defaultReleaseDir } = {
 		findExactlyOnePackage(releaseDir, ".rpm"),
 	]);
 	const [debFields, debContents, rpmFields, rpmContents] = await Promise.all([
-		execFileAsync("dpkg-deb", ["--field", debPath]),
-		execFileAsync("dpkg-deb", ["--contents", debPath]),
-		execFileAsync("rpm", ["-qp", "--queryformat", "%{NAME}\\n%{VERSION}\\n%{ARCH}\\n", rpmPath]),
-		execFileAsync("rpm", ["-qlp", rpmPath]),
+		execFileAsync("dpkg-deb", ["--field", debPath], PACKAGE_INSPECTION_OPTIONS),
+		execFileAsync("dpkg-deb", ["--contents", debPath], PACKAGE_INSPECTION_OPTIONS),
+		execFileAsync("rpm", ["-qp", "--queryformat", "%{NAME}\\n%{VERSION}\\n%{ARCH}\\n", rpmPath], PACKAGE_INSPECTION_OPTIONS),
+		execFileAsync("rpm", ["-qlp", rpmPath], PACKAGE_INSPECTION_OPTIONS),
 	]);
 	const inspection = {
 		deb: {

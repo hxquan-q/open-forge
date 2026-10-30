@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -30,11 +30,14 @@ export function resolvePackagedE2eAppImagePath(packageRoot, version) {
 	if (typeof version !== "string" || !PACKAGE_VERSION_PATTERN.test(version)) {
 		throw new Error(`Linux packaged E2E has an invalid application version: ${String(version)}`);
 	}
-	const appImagePath = join(packageRoot, "release", `Open Forge-${version}.AppImage`);
-	if (existsSync(appImagePath)) return appImagePath;
-	throw new Error(
-		`Linux packaged E2E AppImage not found: ${appImagePath}. Run bun run dist:linux:test first.`,
-	);
+	const releaseRoot = join(packageRoot, "release");
+	const appImages = existsSync(releaseRoot)
+		? readdirSync(releaseRoot).filter((name) => name.toLowerCase().endsWith(".appimage"))
+		: [];
+	const appImageName =
+		appImages.find((name) => name.includes(version)) ?? (appImages.length === 1 ? appImages[0] : undefined);
+	if (appImageName) return join(releaseRoot, appImageName);
+	throw new Error(`Linux packaged E2E AppImage not found for ${version} in ${releaseRoot}. Run bun run dist:linux:test first.`);
 }
 
 export function stagePackagedE2eAppImage(packageRoot, version, temporaryRoot = tmpdir()) {
@@ -59,17 +62,22 @@ export function clearLinuxUnpackedPackageType(packageRoot) {
 	rmSync(join(packageRoot, "release", "linux-unpacked", "resources", "package-type"), { force: true });
 }
 
+function findMacAppBinary(releaseRoot, directory) {
+	const root = join(releaseRoot, directory);
+	if (!existsSync(root)) return undefined;
+	const app = readdirSync(root).find((name) => name.endsWith(".app"));
+	return app ? join(root, app, "Contents", "MacOS", "OpenForge") : undefined;
+}
+
 export function resolvePackagedE2eBinaryPath(packageRoot, platform = process.platform) {
 	const releaseRoot = join(packageRoot, "release");
 	const candidates =
 		platform === "win32"
 			? [resolveWindowsVersionedBinary(join(releaseRoot, "win-unpacked"))]
 			: platform === "darwin"
-				? [
-						join(releaseRoot, "mac-arm64", "Open Forge.app", "Contents", "MacOS", "OpenForge"),
-						join(releaseRoot, "mac", "Open Forge.app", "Contents", "MacOS", "OpenForge"),
-						join(releaseRoot, "mac-x64", "Open Forge.app", "Contents", "MacOS", "OpenForge"),
-					]
+				? ["mac-arm64", "mac", "mac-x64"]
+						.map((directory) => findMacAppBinary(releaseRoot, directory))
+						.filter((candidate) => candidate !== undefined)
 				: platform === "linux"
 					? [join(releaseRoot, "linux-unpacked", "OpenForge")]
 					: [];

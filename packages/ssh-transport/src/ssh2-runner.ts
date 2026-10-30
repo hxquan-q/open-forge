@@ -893,8 +893,12 @@ function linkDeadline(signal: AbortSignal | undefined, timeoutMs: number | undef
 	return {
 		signal: controller.signal,
 		isTimeout: () => timedOut,
-		remainingMs: () =>
-			timeoutMs === undefined || timeoutMs <= 0 ? undefined : Math.max(1, timeoutMs - (Date.now() - startedAt)),
+		remainingMs: () => {
+			if (timeoutMs === undefined || timeoutMs <= 0) return undefined;
+			const elapsed = Date.now() - startedAt;
+			// Sub-millisecond setup must not shorten the caller budget by 1ms.
+			return Math.max(1, timeoutMs - (elapsed < 1 ? 0 : elapsed));
+		},
 		dispose: () => {
 			if (timer !== undefined) clearTimeout(timer);
 			signal?.removeEventListener("abort", onSignal);

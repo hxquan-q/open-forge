@@ -7,6 +7,9 @@
 
 | 主题 | 来源 |
 |---|---|
+| Pi codemode worker 准入：全进程容量、FIFO/超时/取消、旧报错与子代理限制分层，对照本仓既有队列和有界收尾；仅调研 | [RESEARCH-0047](RESEARCH-0047-pi-codemode-worker-admission.md) |
+| 会话与产物跨设备迁移：Cherry Studio/LobeHub 固定 SHA 对照、当前原生头兼容、文件恢复和无损导出边界 | [RESEARCH-0046](RESEARCH-0046-project-migration-portability.md)、[TASK-0361](../tasks/TASK-0361-project-migration-archive.md) |
+| GitHub 开发/PR 与 Codeup 单向同步、Flow 执行 CI/CD：区分同步与 PR 门禁，核实事件/状态回写、精确 SHA、跨平台执行器与版本计费边界；仅调研，未实施迁移 | [RESEARCH-0045](RESEARCH-0045-github-codeup-flow-ci-migration.md) |
 | Desktop 启动与占用再调查：近期开发/安装形态日志分组、同步运行环境探测、编辑器静态依赖、未知大小会话恢复及资源基线缺口 | [RESEARCH-0044](RESEARCH-0044-desktop-startup-resource-audit.md) |
 | Agent 执行与 Team 性能一手参照：固定 Pi/Codex/OpenHands SHA，状态投影缓存、通知 drain、FIFO 与并发边界；无实测加速声明 | [RESEARCH-0043](RESEARCH-0043-agent-execution-performance-references.md)、[PLAN-0024](../plans/PLAN-0024-agent-kernel-team-execution-performance.md) |
 | 产品运营后台优先设计：登录注册、个人/企业授权与席位、版本运营闭环；后续企业策略和统一插件/MCP/技能市场，附客户端事实与第一方证据 | [RESEARCH-0041](RESEARCH-0041-product-backoffice-and-enterprise-control.md) |
