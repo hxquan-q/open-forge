@@ -192,6 +192,10 @@ export default defineConfig({
 				replacement: fileURLToPath(new URL("../../packages/runtime-mcp/src/index.ts", import.meta.url)),
 			},
 			{
+				find: "@vetta/runtime-memory",
+				replacement: fileURLToPath(new URL("../../packages/runtime-memory/src/index.ts", import.meta.url)),
+			},
+			{
 				find: "@vetta/runtime-telemetry/langfuse",
 				replacement: fileURLToPath(new URL("../../packages/runtime-telemetry/src/langfuse.ts", import.meta.url)),
 			},
