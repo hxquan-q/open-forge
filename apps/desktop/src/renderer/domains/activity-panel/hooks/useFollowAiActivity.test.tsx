@@ -13,9 +13,12 @@ const workspace: ActivityWorkspace = { id: "ws-1", cwd: "/repo", runtimeIds: [] 
 function entry(key: string): AiTerminalEntry {
 	return { command: "bun run check", key, running: true, at: 1, cwd: "/repo" };
 }
-function renderFollow(store: ReturnType<typeof createStore>) {
+function renderFollow(store: ReturnType<typeof createStore>, enabled = true) {
 	const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
-	return renderHook(({ current }) => useFollowAiActivity(current), { wrapper, initialProps: { current: workspace } });
+	return renderHook(({ current }) => useFollowAiActivity(current, enabled), {
+		wrapper,
+		initialProps: { current: workspace },
+	});
 }
 function activeTab(store: ReturnType<typeof createStore>): string | undefined {
 	return store.get(activityPanelTabByProjectAtom).get("ws-1");
@@ -38,6 +41,14 @@ describe("useFollowAiActivity", () => {
 		const before = store.get(activityPanelTabByProjectAtom);
 		act(() => store.set(aiTerminalFeedAtom, [entry("a"), entry("b")]));
 		expect(store.get(activityPanelTabByProjectAtom)).toBe(before);
+	});
+
+	it("§11.3：enabled=false（非 coding 挂载点）不跟随任何活动", () => {
+		const store = createStore();
+		renderFollow(store, false);
+		act(() => store.set(aiTerminalFeedAtom, [entry("a")]));
+		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 1 }));
+		expect(activeTab(store)).toBeUndefined();
 	});
 
 	it("用户切走后，下一条同类活动重新跟随", () => {

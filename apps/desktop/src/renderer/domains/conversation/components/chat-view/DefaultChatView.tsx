@@ -84,12 +84,14 @@ const ActivityColumn = memo(
 				enablePluginTabs={coding ? false : activity.enablePluginTabs}
 				enabledBuiltinTabs={coding ? CODING_ACTIVITY_BUILTIN_TABS : activity.enabledBuiltinTabs}
 				pluginScenario={activity.pluginScenario}
+				hotTracking={coding}
 			/>
 		) : (
 			<CurrentScenarioActivityPanel
 				workspace={workspace}
 				enablePluginTabs={coding ? false : undefined}
 				enabledBuiltinTabs={coding ? CODING_ACTIVITY_BUILTIN_TABS : undefined}
+				hotTracking={coding}
 			/>
 		);
 	},

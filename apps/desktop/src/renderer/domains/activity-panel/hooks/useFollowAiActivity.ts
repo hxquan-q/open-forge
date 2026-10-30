@@ -7,8 +7,12 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 import type { DesktopBrowserTabEventEnvelope } from "@/shared/browser-tab-ipc";
 
-/** 跟随新发生的 AI 活动；工作区由面板显式传入，不能读取面板自身尚未提供的 Context。 */
-export function useFollowAiActivity(workspace: ActivityWorkspace): void {
+/**
+ * 跟随新发生的 AI 活动；工作区由面板显式传入，不能读取面板自身尚未提供的 Context。
+ * `enabled=false`（§11.3 非 coding 挂载点）时完全不跟随——不订阅浏览器事件、
+ * 不对任何活动信号写页签。
+ */
+export function useFollowAiActivity(workspace: ActivityWorkspace, enabled: boolean): void {
 	const feed = useAtomValue(aiTerminalFeedAtom);
 	const editTarget = useAtomValue(aiEditTargetAtom);
 	const setTabByProject = useSetAtom(activityPanelTabByProjectAtom);
@@ -27,23 +31,26 @@ export function useFollowAiActivity(workspace: ActivityWorkspace): void {
 	// 先记住挂载/切换工作区时的旧信号，不回放其他会话遗留的活动。
 	const lastShell = useRef({ workspaceId: workspace.id, key: feed.at(-1)?.key });
 	useEffect(() => {
+		if (!enabled) return;
 		const latest = feed.at(-1);
 		const previous = lastShell.current;
 		lastShell.current = { workspaceId: workspace.id, key: latest?.key };
 		if (previous.workspaceId !== workspace.id || !latest || latest.key === previous.key) return;
 		if (latest.cwd !== workspace.cwd) return;
 		follow("terminal");
-	}, [feed, workspace.id, workspace.cwd, follow]);
+	}, [enabled, feed, workspace.id, workspace.cwd, follow]);
 
 	const lastEdit = useRef({ workspaceId: workspace.id, target: editTarget });
 	useEffect(() => {
+		if (!enabled) return;
 		const previous = lastEdit.current;
 		lastEdit.current = { workspaceId: workspace.id, target: editTarget };
 		if (previous.workspaceId !== workspace.id || !editTarget || editTarget === previous.target) return;
 		follow("file");
-	}, [editTarget, workspace.id, follow]);
+	}, [enabled, editTarget, workspace.id, follow]);
 
 	useEffect(() => {
+		if (!enabled) return;
 		const subscribe = window.vetta.browserTab?.onEvent;
 		if (!subscribe) return;
 		return subscribe((envelope: DesktopBrowserTabEventEnvelope) => {
@@ -51,5 +58,5 @@ export function useFollowAiActivity(workspace: ActivityWorkspace): void {
 			const event = envelope.event;
 			if (event.kind === "session-changed" && event.session.agentActivity) follow("browser");
 		});
-	}, [workspace.id, follow]);
+	}, [enabled, workspace.id, follow]);
 }

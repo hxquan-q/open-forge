@@ -5,11 +5,14 @@ export interface ActivityPanelContextValue {
 	workspace: ActivityWorkspace;
 	/** 知识库会话：面板仅展示 knowledge-history。 */
 	knowledgeHistory: boolean;
+	/** §11.3（REQ-0030）：热追踪是否启用——内置页签组件（如文件跟随）据此短路。 */
+	hotTracking: boolean;
 }
 
 const ActivityPanelContext = createContext<ActivityPanelContextValue>({
 	workspace: { id: "unbound", cwd: null, runtimeIds: [] },
 	knowledgeHistory: false,
+	hotTracking: false,
 });
 
 export const ActivityPanelContextProvider = ActivityPanelContext.Provider;

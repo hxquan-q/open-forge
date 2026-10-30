@@ -17,7 +17,12 @@ import { useSessionEventController } from "./useSessionEventController";
 
 const store = getDefaultStore();
 const activeSessionRef = {
-	current: { runtimeId: "session-a", cwd: "C:/work/a", sessionPath: "C:/sessions/a.jsonl" },
+	current: {
+		runtimeId: "session-a",
+		cwd: "C:/work/a",
+		sessionPath: "C:/sessions/a.jsonl",
+		capabilityProfile: "coding",
+	} as { runtimeId: string; cwd: string; sessionPath: string; capabilityProfile?: string },
 };
 const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
@@ -58,7 +63,12 @@ function toolEnd(toolCallId: string): SessionEvent {
 
 beforeEach(() => {
 	setChatStreamOwner("session-a");
-	activeSessionRef.current = { runtimeId: "session-a", cwd: "C:/work/a", sessionPath: "C:/sessions/a.jsonl" };
+	activeSessionRef.current = {
+		runtimeId: "session-a",
+		cwd: "C:/work/a",
+		sessionPath: "C:/sessions/a.jsonl",
+		capabilityProfile: "coding",
+	};
 	store.set(aiTerminalFeedAtom, []);
 });
 
@@ -83,5 +93,18 @@ it("切走后旧会话的 tool.end 仍结算其终端条目", () => {
 it("未知键的 end 仍为 no-op，不新造条目", () => {
 	const { result } = renderHook(() => useSessionEventController({ activeSessionRef }), { wrapper });
 	act(() => result.current.createSessionEventHandler("session-a")(toolEnd("call-unknown")));
+	expect(store.get(aiTerminalFeedAtom)).toHaveLength(0);
+});
+
+it("§11.3：work 档会话的 tool.start 不投屏（热追踪收敛 code 独有）", () => {
+	activeSessionRef.current = {
+		runtimeId: "session-a",
+		cwd: "C:/work/a",
+		sessionPath: "C:/sessions/a.jsonl",
+		capabilityProfile: "work",
+	};
+	const { result } = renderHook(() => useSessionEventController({ activeSessionRef }), { wrapper });
+
+	act(() => result.current.createSessionEventHandler("session-a")(toolStart("call-work")));
 	expect(store.get(aiTerminalFeedAtom)).toHaveLength(0);
 });

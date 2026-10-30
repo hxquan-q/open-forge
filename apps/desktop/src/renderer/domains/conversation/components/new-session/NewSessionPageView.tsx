@@ -253,6 +253,7 @@ export function NewSessionPageView({
 						activityPanelCwd,
 						activeRuntimeIds,
 					)}
+					hotTracking={workspaceMode === "coding"}
 				/>
 			) : null}
 		</div>

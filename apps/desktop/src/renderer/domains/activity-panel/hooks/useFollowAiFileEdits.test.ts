@@ -9,10 +9,29 @@
 import { aiEditTargetAtom, inlineFilePreviewContextReadonlyAtom } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
+import type { ReactNode } from "react";
+import { createElement } from "react";
 import { beforeEach, expect, it } from "vitest";
+import { ActivityPanelContextProvider } from "../registry/context";
 import { useFollowAiFileEdits } from "./useFollowAiFileEdits";
 
 const store = getDefaultStore();
+
+function renderFollow(hotTracking = true): ReturnType<typeof renderHook> {
+	const wrapper = ({ children }: { children: ReactNode }) =>
+		createElement(
+			ActivityPanelContextProvider,
+			{
+				value: {
+					workspace: { id: "ws-1", cwd: "/proj/x", runtimeIds: [] },
+					knowledgeHistory: false,
+					hotTracking,
+				},
+			},
+			children,
+		);
+	return renderHook(() => useFollowAiFileEdits(), { wrapper });
+}
 
 beforeEach(() => {
 	store.set(aiEditTargetAtom, null);
@@ -20,7 +39,7 @@ beforeEach(() => {
 });
 
 it("目标更新时把文件写进内嵌预览；同一目标不重复写，换目标即切换", () => {
-	const { rerender } = renderHook(() => useFollowAiFileEdits());
+	const { rerender } = renderFollow();
 
 	act(() => {
 		store.set(aiEditTargetAtom, { path: "/proj/x/src/b.ts", at: 1 });
@@ -46,7 +65,7 @@ it("目标更新时把文件写进内嵌预览；同一目标不重复写，换�
 });
 
 it("用户切到别的文件后，同一文件的再次编辑跟回；无新活动不回拉手动浏览", () => {
-	const { rerender } = renderHook(() => useFollowAiFileEdits());
+	const { rerender } = renderFollow();
 
 	act(() => {
 		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1 });
@@ -78,7 +97,7 @@ it("用户切到别的文件后，同一文件的再次编辑跟回；无新活�
 });
 
 it("预览已在目标文件上时，连续编辑不重置多文件上下文", () => {
-	const { rerender } = renderHook(() => useFollowAiFileEdits());
+	const { rerender } = renderFollow();
 
 	act(() => {
 		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1 });
@@ -106,9 +125,18 @@ it("预览已在目标文件上时，连续编辑不重置多文件上下文", (
 });
 
 it("无目标（null）时不写预览", () => {
-	const { rerender } = renderHook(() => useFollowAiFileEdits());
+	const { rerender } = renderFollow();
 	act(() => {
 		store.set(aiEditTargetAtom, null);
+	});
+	rerender();
+	expect(store.get(inlineFilePreviewContextReadonlyAtom)).toBeNull();
+});
+
+it("§11.3：hotTracking=false（非 coding 挂载点）完全不跟随", () => {
+	const { rerender } = renderFollow(false);
+	act(() => {
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1 });
 	});
 	rerender();
 	expect(store.get(inlineFilePreviewContextReadonlyAtom)).toBeNull();

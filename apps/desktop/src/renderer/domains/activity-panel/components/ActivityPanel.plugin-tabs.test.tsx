@@ -72,7 +72,7 @@ function pluginTab(): RegisteredActivityTab {
 
 const workspace = createActivityWorkspace("agent-team:workspace", "/tmp/team-cwd", ["member-runtime"]);
 
-function renderPanel(scenario: "conversation" | undefined, open = true) {
+function renderPanel(scenario: "conversation" | undefined, open = true, hotTracking?: boolean) {
 	const store = createStore();
 	store.set(activityPanelOpenAtom, open);
 	store.set(pluginActivityTabsAtom, [pluginTab()]);
@@ -81,6 +81,7 @@ function renderPanel(scenario: "conversation" | undefined, open = true) {
 			<ActivityPanel
 				workspace={workspace}
 				{...(scenario ? { pluginScenario: scenario } : {})}
+				{...(hotTracking === undefined ? {} : { hotTracking })}
 			/>
 		</Provider>,
 	);
@@ -89,7 +90,7 @@ function renderPanel(scenario: "conversation" | undefined, open = true) {
 
 describe("activity panel plugin tabs outside the ordinary conversation host", () => {
 	it("真实面板入口把 shell 活动切到当前工作区终端，不写入 unbound", () => {
-		const store = renderPanel(undefined);
+		const store = renderPanel(undefined, true, true);
 		act(() => store.set(aiTerminalFeedAtom, [{
 			key: "shell-1", command: "bun run check", running: true, at: 1, cwd: workspace.cwd,
 		}]));
@@ -103,6 +104,17 @@ describe("activity panel plugin tabs outside the ordinary conversation host", ()
 		}]));
 		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBe("terminal");
 		expect(screen.getByText("git status")).toBeTruthy();
+	});
+
+	it("§11.3：默认（非 coding 挂载点）不热跟随，AI 终端页签不出现", () => {
+		const store = renderPanel("conversation");
+		act(() =>
+			store.set(aiTerminalFeedAtom, [
+				{ key: "shell-1", command: "bun run check", running: true, at: 1, cwd: workspace.cwd },
+			]),
+		);
+		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBeUndefined();
+		expect(screen.queryByText("bun run check")).toBeNull();
 	});
 
 	// A Team session never drives the global scenario atom, so the host must hand the

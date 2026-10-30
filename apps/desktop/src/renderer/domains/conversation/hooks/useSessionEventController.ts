@@ -476,23 +476,27 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			if (event.type === "tool.start") {
 				flushDeltas();
 				// 演示定稿：写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签热跟随。
-				const editTarget = aiEditTargetFromToolCall(
-					event.toolName,
-					event.args,
-					activeSessionRef.current?.cwd ?? null,
-					Date.now(),
-				);
-				if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
-				// 演示定稿：shell 命令投屏——start 入队 running 条目，终端页签只读回放。
-				const terminalCommand = aiTerminalCommandFromToolCall(event.toolName, event.args);
-				if (terminalCommand) {
-					pushAiTerminalEntry(getDefaultStore(), {
-						command: terminalCommand,
-						key: event.toolCallId,
-						running: true,
-						at: Date.now(),
-						cwd: activeSessionRef.current?.cwd ?? null,
-					});
+				// §11.3（REQ-0030）：LLM 行为热追踪收敛为 code 模式独有——非 coding
+				// 档会话不写全局编辑目标/终端 feed（团队泵天生 coding 档，不经此处）。
+				if (activeSessionRef.current?.capabilityProfile === "coding") {
+					const editTarget = aiEditTargetFromToolCall(
+						event.toolName,
+						event.args,
+						activeSessionRef.current?.cwd ?? null,
+						Date.now(),
+					);
+					if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
+					// 演示定稿：shell 命令投屏——start 入队 running 条目，终端页签只读回放。
+					const terminalCommand = aiTerminalCommandFromToolCall(event.toolName, event.args);
+					if (terminalCommand) {
+						pushAiTerminalEntry(getDefaultStore(), {
+							command: terminalCommand,
+							key: event.toolCallId,
+							running: true,
+							at: Date.now(),
+							cwd: activeSessionRef.current?.cwd ?? null,
+						});
+					}
 				}
 				setChatMessages((prev) =>
 					handleToolStart(
