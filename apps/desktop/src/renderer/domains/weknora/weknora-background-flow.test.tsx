@@ -285,6 +285,7 @@ describe("智能客服 · 后台思考（D 组用户流程）", () => {
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "新建对话" }));
 		await askViaUi("二问");
+			await waitFor(() => expect(harness.counters.ask).toHaveLength(2));
 		await user.click(screen.getByRole("button", { name: "新建对话" }));
 
 		const baseline = harness.counters.listSessions;
