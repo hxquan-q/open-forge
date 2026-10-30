@@ -8,6 +8,13 @@ const desktopBrand = createRequire(import.meta.url)(
 		: "../src/shared/desktop-brand.distribution.json",
 );
 
+// FPM 的安装根取 productName，二进制名则取 executableName；两档品牌均保留空格。
+const installationDirectory = `/opt/${desktopBrand.displayName}`;
+export const LINUX_PACKAGE_PATHS = Object.freeze({
+	executable: `${installationDirectory}/${desktopBrand.executableName}`,
+	packageType: `${installationDirectory}/resources/package-type`,
+});
+
 export const LINUX_RELEASE_TARGETS = Object.freeze(["AppImage", "deb", "rpm"]);
 
 export const LINUX_RELEASE_EXTENSIONS = Object.freeze([".AppImage", ".deb", ".rpm"]);

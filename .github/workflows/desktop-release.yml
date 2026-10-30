@@ -180,6 +180,13 @@ jobs:
       # 进入发布 job 的 macOS 构建必须有生产签名凭据；凭据缺失时把 macOS leg
       # 从矩阵剔除，让 Win+Linux 首发不被未配置的签名阻塞。vars.VETTA_MACOS_RELEASE
       # 可显式覆盖：always（自持签名 runner 从 runner 环境取凭据）/ never / auto。
+      - name: Verify release source identity
+        if: steps.scope.outputs.should-build == 'true' && steps.config.outputs.should_publish == 'true' && steps.config.outputs.channel != 'test'
+        env:
+          BUILD_VERSION: ${{ steps.config.outputs.build_version }}
+          RELEASE_TARGET: ${{ steps.config.outputs.release_target }}
+        run: node scripts/release/verify-desktop-release-identity.mjs
+
       - name: Resolve platform matrix
         if: steps.scope.outputs.should-build == 'true'
         id: platforms
@@ -559,17 +566,23 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         run: |
-          docker run --rm --volume "${PWD}/release:/release:ro" ubuntu:24.04 bash -euo pipefail -c '
+          PACKAGE_EXECUTABLE="$(node --input-type=module -e 'import { LINUX_PACKAGE_PATHS } from "./scripts/linux-packaging-contract.mjs"; console.log(LINUX_PACKAGE_PATHS.executable)')"
+          PACKAGE_TYPE="$(node --input-type=module -e 'import { LINUX_PACKAGE_PATHS } from "./scripts/linux-packaging-contract.mjs"; console.log(LINUX_PACKAGE_PATHS.packageType)')"
+          docker run --rm --volume "${PWD}/release:/release:ro" \
+            --env "PACKAGE_EXECUTABLE=${PACKAGE_EXECUTABLE}" --env "PACKAGE_TYPE=${PACKAGE_TYPE}" \
+            ubuntu:24.04 bash -euo pipefail -c '
             apt-get update
             apt-get install --yes /release/*.deb
-            test -x "/opt/Open Forge/OpenForge"
-            test "$(cat "/opt/Open Forge/resources/package-type")" = "deb"
+            test -x "${PACKAGE_EXECUTABLE}"
+            test "$(cat "${PACKAGE_TYPE}")" = "deb"
             find /usr/share/applications -maxdepth 1 -type f -iname "*openforge*.desktop" -print -quit | grep -q .
           '
-          docker run --rm --volume "${PWD}/release:/release:ro" fedora:latest bash -euo pipefail -c '
+          docker run --rm --volume "${PWD}/release:/release:ro" \
+            --env "PACKAGE_EXECUTABLE=${PACKAGE_EXECUTABLE}" --env "PACKAGE_TYPE=${PACKAGE_TYPE}" \
+            fedora:latest bash -euo pipefail -c '
             dnf install --assumeyes --nogpgcheck /release/*.rpm
-            test -x "/opt/Open Forge/OpenForge"
-            test "$(cat "/opt/Open Forge/resources/package-type")" = "rpm"
+            test -x "${PACKAGE_EXECUTABLE}"
+            test "$(cat "${PACKAGE_TYPE}")" = "rpm"
             find /usr/share/applications -maxdepth 1 -type f -iname "*openforge*.desktop" -print -quit | grep -q .
           '
 
@@ -671,6 +684,13 @@ jobs:
           OUTPUT_UPDATE_URL: ${{ needs.prepare.outputs.update_url }}
         run: node scripts/release/resolve-desktop-release-config.mjs --from-outputs --export-env >> "${GITHUB_ENV}"
 
+      - name: Verify release source identity
+        if: needs.prepare.outputs.channel != 'test'
+        env:
+          BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
+          RELEASE_TARGET: r2
+        run: node scripts/release/verify-desktop-release-identity.mjs
+
       - name: Publish artifacts before metadata
         working-directory: apps/desktop
         env:
@@ -721,8 +741,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BUILD_VERSION: ${{ needs.prepare.outputs.build-version }}
           VETTA_SKIP_WINDOWS_SANDBOX: ${{ vars.VETTA_SKIP_WINDOWS_SANDBOX }}
+          RELEASE_TARGET: ${{ needs.prepare.outputs.release_target }}
         shell: bash
         run: |
+          node scripts/release/verify-desktop-release-identity.mjs
           VERSION="${BUILD_VERSION:-$(node -p "require('./apps/desktop/package.json').version")}"
           TAG="v${VERSION}"
           NOTES_FILE="$(node scripts/release/release-notes.mjs --version "${VERSION}")"
@@ -744,6 +766,7 @@ jobs:
           else
             gh release create "${TAG}" --draft --notes-file "${NOTES_FILE}" --title "Open Forge ${VERSION}" --target "${GITHUB_SHA}" "${PRERELEASE_ARGS[@]}"
           fi
+          node scripts/release/verify-desktop-release-identity.mjs --github-draft
           find apps/desktop/release -maxdepth 1 -type f -print0 \
             | xargs -0 gh release upload "${TAG}" --clobber
           gh release edit "${TAG}" --draft=false
