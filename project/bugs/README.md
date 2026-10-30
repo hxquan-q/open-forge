@@ -16,6 +16,13 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0162` | 后台终态合并刷新与新会话即时刷新叠成两次列表请求 | verifying | P1 | TASK-0419 |
+| `BUG-0161` | 控制器测试超时后异步进程仍运行且提前删除夹具 | verifying | P1 | TASK-0416 |
+| `BUG-0160` | Git 对象头有损解码接受损坏协议字节 | verifying | P2 | TASK-0415 |
+| `BUG-0159` | 市场流程测试遗漏安装前 manifest 网络替身 | verifying | P1 | TASK-0414 |
+| `BUG-0158` | 缺标签时恢复旧目标 draft 可错配发布源码 | verifying | P1 | TASK-0405 |
+| `BUG-0157` | Linux 发布校验写死旧品牌安装目录 | verifying | P0 | TASK-0405 |
+| `BUG-0156` | 干净 CI 的 CLI 合同测试无法解析记忆包入口 | verifying | P0 | TASK-0413 |
 | `BUG-0155` | 画布布局回写触发重载，手势与失败栅格交接不安全 | verifying | P1 | PLAN-0025 |
 | `BUG-0154` | 原生会话归档头适配与文件名滞后，导入后不可读 | verifying | P1 | REQ-0026 |
 | `BUG-0153` | 归档恢复父目录链接越界及无效目标留下孤立会话 | verifying | P1 | REQ-0026 |

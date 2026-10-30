@@ -15,13 +15,21 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0419` | `verifying` | — | [后台列表刷新合并](TASK-0419-weknora-background-refresh-coalesce.md)；第十批冻结候选 b6c7y60gc 中 Desktop 6247 通过、18 既有跳过，AC-20 未再失败。 |
+| `TASK-0418` | `verifying` | — | [SSH 握手预算取整](TASK-0418-ssh2-handshake-budget-floor.md)；第十批冻结候选 b6c7y60gc 中 ssh-transport 236 通过、25 既有跳过，239999 未再出现。 |
+| `TASK-0417` | `verifying` | — | [Worktree 准备沿用控制器运行时](TASK-0417-agent-prepare-controller-runtime.md)；第十批冻结候选 b6c7y60gc 的 test:changed 退出 0，90 路径字节快照未变。 |
+| `TASK-0416` | `verifying` | — | [控制器测试夹具生命周期](TASK-0416-agent-test-fixture-lifecycle.md)；第十批冻结候选 b6c7y60gc 的 quality 726 项通过，历史 EPERM 未在本批复现。 |
+| `TASK-0415` | `verifying` | — | [候选差异批量读取](TASK-0415-agent-git-change-batching.md)；第十批冻结候选 b6c7y60gc 的 test:changed 退出 0，不据此关闭历史超时根因。 |
+| `TASK-0414` | `verifying` | — | [市场测试网络隔离](TASK-0414-marketplace-test-network-isolation.md)；第十批冻结候选 b6c7y60gc 中 Desktop 广域通过，本批未再触及市场超时。 |
+| `TASK-0412` | `verifying` | — | [Desktop 交付基线复核](TASK-0412-desktop-delivery-baseline.md)；第十批冻结候选 b6c7y60gc 退出 0，约 72.8 分钟，90 路径字节快照未变；未发布、未打 tag。 |
+| `TASK-0413` | `verifying` | — | [CLI 记忆包源码解析](TASK-0413-cli-runtime-source-resolution.md)；BUG-0156 已补源码 alias 与真实 resolver 回归，定向合同及第三批 CLI 包测试通过；最终候选门禁、新 SHA 远端 CI 待完成。 |
 | `TASK-0410` | `verifying` | PLAN-0026 | [共享资源准入与 OCR 接线](TASK-0410-shared-resource-admission.md)；619cd9c3b 已集成本地 main，17例gate/10例工具/4例策略与完整check通过；跨包六包绿，Desktop存量14失败见ISSUE-0035；未推送，OCR待功能验收。 |
 | `TASK-0411` | `done` | PLAN-0026 | [子代理准入与收尾观测](TASK-0411-subagent-admission-observation.md)；ddf02a580 已集成本地 main，49例全包/108例相关与集成后完整check通过，独立审查闭环；内部诊断验收不需实机，组合门禁存量失败与未推送事实见PLAN-0026。 |
 | `TASK-0406` | `verifying` | PLAN-0025 | [MCP 候选失败退避重试](TASK-0406-mcp-candidate-retry.md)；已集成 main，影响 65 / Node 68 / Desktop 12 例及 check 通过；已知跨包红灯按 WAIVER-0012 保留。 |
 | `TASK-0407` | `verifying` | PLAN-0025 | [设计画布卡顿与闪白修复](TASK-0407-design-canvas-stability.md)；候选 dd7feffcd 已随 `826af3caa` 集成 main，main 复验 130 文件 928 例/check/build 通过；实机首屏与输入待验收。 |
 | `TASK-0408` | `verifying` | PLAN-0025 | [真实图片素材与来源追溯](TASK-0408-design-real-image-assets.md)；候选 `157f0906e` 已随 `c2f2e2851` 集成 main，独立审查 P2 已处置；真实来源与视觉验收待执行。 |
 | `TASK-0409` | `verifying` | PLAN-0025 | [设计方向与质量检查](TASK-0409-design-direction-quality.md)；候选 `9374d708d` 已随 `9237363e2` 集成 main；固定案例的视觉与模型验收待执行。 |
-| `TASK-0405` | `in_progress` | — | [发布未签名的 Open Forge 0.1.3](TASK-0405-release-0-1-3-unsigned.md)；用户明确授权未签名 GitHub pre-release，显式开关 + WAIVER-0008，默认签名门禁不变。 |
+| `TASK-0405` | `in_progress` | — | [发布修复与身份门禁](TASK-0405-release-0-1-3-unsigned.md)；品牌路径及 draft 身份定向、独立复审已完成，待最终完整门禁；既有 0.1.3 标签与新候选异 SHA，发布阻塞，不移动标签。 |
 | `TASK-0404` | `in_progress` | — | [GitHub → Codeup 自动同步及云效构建测试](TASK-0404-yunxiao-sync-and-ci.md)；复用 ISSUE-0029 / RESEARCH-0045，串行实施、独立只读研究与评审，真实云端验收待执行。 |
 | `TASK-0403` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0402` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
