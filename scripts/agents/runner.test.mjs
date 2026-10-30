@@ -1,32 +1,52 @@
 // Copyright The Open Forge contributors.
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	appendFileSync,
+	cpSync,
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { digest } from "./contracts.mjs";
 import { exportEvidence } from "./evidence.mjs";
 import { testExecutionProof } from "./execution-proof-fixture.mjs";
 import { git, snapshot } from "./git.mjs";
 import { claim } from "./leases.mjs";
+import { processFixture } from "./process-fixture.mjs";
 import { codeBinding, executeAdapter as executeAdapterUnderTest } from "./runner.mjs";
 import { createStore } from "./store.mjs";
-import { verifyRun, visualReviewRequest } from "./verify.mjs";
+import { verifyRun as verifyRunUnderTest, visualReviewRequest } from "./verify.mjs";
 
-const roots = [];
+let template;
+beforeEach((context) => {
+	context.processes = processFixture(context.signal);
+	context.roots = [];
+	context.fixture = fixture(context);
+});
 function executeAdapter(context) {
-	testExecutionProof({ ...context, root: context.runContract.worktree });
-	return executeAdapterUnderTest(context);
+	return context.processes.run((signal) => {
+		testExecutionProof({ ...context, root: context.runContract.worktree });
+		return executeAdapterUnderTest({ ...context, signal });
+	});
 }
-function fixture() {
-	const root = mkdtempSync(join(tmpdir(), "forge-autonomy-runner-"));
-	roots.push(root);
-	const repo = join(root, "repo");
+function verifyRun(context) {
+	return context.processes.run((signal) => verifyRunUnderTest({ ...context, signal }));
+}
+beforeAll(() => {
+	template = mkdtempSync(join(tmpdir(), "forge-autonomy-runner-template-"));
+	const repo = join(template, "repo");
 	execFileSync("git", ["init", "--quiet", repo], { windowsHide: true });
-	git(repo, ["config", "user.name", "Fixture"]);
-	git(repo, ["config", "user.email", "fixture@example.invalid"]);
-	git(repo, ["config", "commit.gpgsign", "false"]);
+	appendFileSync(
+		join(repo, ".git/config"),
+		"\n[user]\n\tname = Fixture\n\temail = fixture@example.invalid\n[commit]\n\tgpgsign = false\n",
+	);
 	writeFileSync(join(repo, "feature.txt"), "broken\n");
 	writeFileSync(
 		join(repo, "feature.test.mjs"),
@@ -34,6 +54,16 @@ function fixture() {
 	);
 	git(repo, ["add", "--", "feature.txt", "feature.test.mjs"]);
 	git(repo, ["commit", "--quiet", "-m", "baseline", "--", "feature.txt", "feature.test.mjs"]);
+});
+afterAll(() => {
+	if (template) rmSync(template, { recursive: true, force: true });
+});
+function fixture({ processes, roots }) {
+	processes.signal.throwIfAborted();
+	const root = mkdtempSync(join(tmpdir(), "forge-autonomy-runner-"));
+	roots.push(root);
+	cpSync(template, root, { recursive: true });
+	const repo = join(root, "repo");
 	const task = {
 		id: "TASK-0001",
 		status: "in_progress",
@@ -66,7 +96,7 @@ function fixture() {
 		isolation: "external-sandbox",
 	});
 	const implementation =
-		"import {writeFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';writeFileSync('feature.txt','fixed\\n');execFileSync('git',['add','--','feature.txt']);execFileSync('git',['commit','--quiet','-m','fix','--','feature.txt']);console.log(JSON.stringify({status:'completed',summary:'fixed behavior'}));";
+		"import {writeFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';writeFileSync('feature.txt','fixed\\n');execFileSync('git',['commit','--quiet','-m','fix','--','feature.txt']);console.log(JSON.stringify({status:'completed',summary:'fixed behavior'}));";
 	const settings = {
 		version: 1,
 		adapters: [
@@ -92,15 +122,43 @@ function fixture() {
 		{ ...task, status: "ready" },
 		{ holder: "controller", runId: "run-one", ttl: policy.limits.leaseMs },
 	);
-	return { store, policy, settings, task, runContract, token, repo };
+	return { store, policy, settings, task, runContract, token, repo, processes };
 }
-afterEach(() => {
+afterEach(async ({ processes, roots }) => {
+	await processes.close();
 	for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("implementation and independent review through real processes and Git", () => {
-	it("does not mark an exit-zero but empty verification report as automatically repairable", async () => {
-		const context = fixture();
+	it("keeps repository copies and controller state independent from the test template", (test) => {
+		const first = test.fixture;
+		const second = fixture(test);
+		const original = join(template, "repo");
+		const oid = snapshot(first.repo).head;
+		const objects = [original, first.repo, second.repo].map((repo) => {
+			expect(snapshot(repo).head).toBe(oid);
+			expect(git(repo, ["rev-parse", "--git-common-dir"])).toBe(".git");
+			expect(existsSync(join(repo, ".git/objects/info/alternates"))).toBe(false);
+			const object = statSync(join(repo, ".git/objects", oid.slice(0, 2), oid.slice(2)));
+			expect(object.nlink).toBe(1);
+			return `${object.dev}:${object.ino}`;
+		});
+		expect(new Set(objects).size).toBe(3);
+		git(first.repo, ["tag", "only-first"]);
+		testExecutionProof({ ...first, root: first.repo });
+		first.store.transaction((state) => {
+			state.control.paused = true;
+		});
+		writeFileSync(join(first.repo, "feature.txt"), "only first\n");
+		for (const repo of [original, second.repo]) {
+			expect(git(repo, ["tag", "--list"])).toBe("");
+			expect(readFileSync(join(repo, "feature.txt"), "utf8")).toBe("broken\n");
+		}
+		expect(second.store.read().control.paused).toBe(false);
+		expect(existsSync(join(second.store.root, "execution-proof.json"))).toBe(false);
+	});
+	it("does not mark an exit-zero but empty verification report as automatically repairable", async (test) => {
+		const context = test.fixture;
 		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
 		await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
 		await expect(
@@ -119,8 +177,8 @@ describe("implementation and independent review through real processes and Git",
 			verificationRetryable: false,
 		});
 	});
-	it("retains UI runtime artifacts pending independent visual review, then verifies the exact cached result", async () => {
-		const context = fixture();
+	it("retains UI runtime artifacts pending independent visual review, then verifies the exact cached result", async (test) => {
+		const context = test.fixture;
 		const plan = { version: 1, steps: [{ action: "click", selector: "button" }] };
 		writeFileSync(join(context.repo, "ui-plan.json"), JSON.stringify(plan));
 		git(context.repo, ["add", "--", "ui-plan.json"]);
@@ -190,16 +248,16 @@ describe("implementation and independent review through real processes and Git",
 		expect(context.store.read().control.paused).toBe(true);
 		expect(context.store.read().runs[context.token.runId].status).toBe("cleanup-required");
 	}, 15000);
-	it("refuses real execution without a trusted boundary attestation before spawning", async () => {
-		const context = fixture();
+	it("refuses real execution without a trusted boundary attestation before spawning", async (test) => {
+		const context = test.fixture;
 		await expect(
 			executeAdapterUnderTest({ ...context, adapterId: "author", role: "implementer", request: "fix" }),
 		).rejects.toThrow(/boundary is unproven/);
 		expect(readFileSync(join(context.repo, "feature.txt"), "utf8")).toBe("broken\n");
 		expect(context.store.read().runs).toEqual({});
 	});
-	it("records runner-owned authorship and independently reviews the committed candidate", async () => {
-		const context = fixture();
+	it("records runner-owned authorship and independently reviews the committed candidate", async (test) => {
+		const context = test.fixture;
 		const implemented = await executeAdapter({
 			...context,
 			adapterId: "author",
@@ -220,15 +278,15 @@ describe("implementation and independent review through real processes and Git",
 		expect(reviewed.review.binding.head).toBe(snapshot(context.repo).head);
 		expect(reviewed.review.reviewer.actorId).not.toBe(reviewed.authors[0].actorId);
 	});
-	it("refuses same-family review before spawning and prevents model text from forging identity", async () => {
-		const context = fixture();
+	it("refuses same-family review before spawning and prevents model text from forging identity", async (test) => {
+		const context = test.fixture;
 		context.settings.adapters[1].family = "family-a";
 		context.runContract.adaptersDigest = digest(context.settings);
 		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
 		await expect(
 			executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" }),
 		).rejects.toThrow(/independent/);
-		const forged = fixture();
+		const forged = fixture(test);
 		forged.settings.adapters[1].command = [
 			process.execPath,
 			"-e",
@@ -241,8 +299,8 @@ describe("implementation and independent review through real processes and Git",
 		).rejects.toThrow(/unknown property/);
 		expect(forged.store.read().runs[forged.token.runId].review).toBe(null);
 	});
-	it("runs the actual candidate test after review and stores version-bound verification results", async () => {
-		const context = fixture();
+	it("runs the actual candidate test after review and stores version-bound verification results", async (test) => {
+		const context = test.fixture;
 		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
 		await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
 		const verified = await verifyRun({
@@ -259,8 +317,8 @@ describe("implementation and independent review through real processes and Git",
 		expect(evidence.binding.head).toBe(snapshot(context.repo).head);
 		expect(evidence.gates.gates).toEqual([]);
 	});
-	it("rejects a changed candidate instead of reusing its earlier review", async () => {
-		const context = fixture();
+	it("rejects a changed candidate instead of reusing its earlier review", async (test) => {
+		const context = test.fixture;
 		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
 		await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
 		writeFileSync(join(context.repo, "feature.txt"), "regressed\n");
@@ -269,8 +327,8 @@ describe("implementation and independent review through real processes and Git",
 		await expect(verifyRun(context)).rejects.toThrow(/stale/);
 		expect(context.store.read().runs[context.token.runId].checks).toEqual([]);
 	});
-	it("stores controller-owned triage advice without creating authorship or changing the Task status", async () => {
-		const context = fixture();
+	it("stores controller-owned triage advice without creating authorship or changing the Task status", async (test) => {
+		const context = test.fixture;
 		const triageOutput = {
 			status: "investigate",
 			kind: "bug",
@@ -301,8 +359,8 @@ describe("implementation and independent review through real processes and Git",
 		});
 		expect(result.attempts[0].role).toBe("triage");
 	});
-	it("requires approval before executing verification for a security-sensitive candidate", async () => {
-		const context = fixture();
+	it("requires approval before executing verification for a security-sensitive candidate", async (test) => {
+		const context = test.fixture;
 		const command = context.settings.adapters[0].command;
 		command[command.length - 1] = command.at(-1).replace("fixed", "fetch(");
 		context.runContract.adaptersDigest = digest(context.settings);
