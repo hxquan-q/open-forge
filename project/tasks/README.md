@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0417` | `verifying` | PLAN-0026 | [编辑目标按来源过滤](TASK-0417-edit-target-cross-workspace.md)：BUG-0160（F03，P2），红 2→绿 23/23；serial。批次 10/10 片全部工程完成，收尾跑完整 check。 |
 | `TASK-0416` | `verifying` | PLAN-0026 | [热追踪收敛 code 独有](TASK-0416-hot-tracking-code-only.md)：REQ-0030/§11.3（P1），生产+消费同批红 3→绿 24/24；待实机；serial。 |
 | `TASK-0415` | `verifying` | PLAN-0026 | [新建 code 会话恢复四页签默认](TASK-0415-new-session-tab-defaults.md)：BUG-0159（F10），红 2→绿 9/9+相邻 10 例；待实机走查；serial。 |
 | `TASK-0414` | `verifying` | PLAN-0026 | [新建 code 会话意图驱动初始化](TASK-0414-coding-create-intent.md)：BUG-0158（F01/F02/F02b，P1），布局红 7→绿+相邻 39/39；待实机三流程走查；serial。 |

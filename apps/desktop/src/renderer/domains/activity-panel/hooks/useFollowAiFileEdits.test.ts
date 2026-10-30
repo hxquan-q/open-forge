@@ -42,7 +42,7 @@ it("目标更新时把文件写进内嵌预览；同一目标不重复写，换�
 	const { rerender } = renderFollow();
 
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/b.ts", at: 1 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/b.ts", at: 1, cwd: "/proj/x" });
 	});
 	rerender();
 	expect(store.get(inlineFilePreviewContextReadonlyAtom)).toMatchObject({
@@ -51,14 +51,14 @@ it("目标更新时把文件写进内嵌预览；同一目标不重复写，换�
 
 	// 同一文件再次编辑（at 变化）：不重置预览。
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/b.ts", at: 2 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/b.ts", at: 2, cwd: "/proj/x" });
 	});
 	rerender();
 	expect(store.get(inlineFilePreviewContextReadonlyAtom)?.items[0]?.path).toBe("/proj/x/src/b.ts");
 
 	// 换目标：预览切换。
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "C:/abs/d.ts", at: 3 });
+		store.set(aiEditTargetAtom, { path: "C:/abs/d.ts", at: 3, cwd: "/proj/x" });
 	});
 	rerender();
 	expect(store.get(inlineFilePreviewContextReadonlyAtom)?.items[0]?.path).toBe("C:/abs/d.ts");
@@ -68,7 +68,7 @@ it("用户切到别的文件后，同一文件的再次编辑跟回；无新活�
 	const { rerender } = renderFollow();
 
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1, cwd: "/proj/x" });
 	});
 	rerender();
 	expect(store.get(inlineFilePreviewContextReadonlyAtom)?.items[0]?.path).toBe("/proj/x/src/a.ts");
@@ -88,7 +88,7 @@ it("用户切到别的文件后，同一文件的再次编辑跟回；无新活�
 
 	// AI 再次编辑 a：预览跟回 a（旧实现停留 b）。
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 2 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 2, cwd: "/proj/x" });
 	});
 	rerender();
 	const followed = store.get(inlineFilePreviewContextReadonlyAtom);
@@ -100,7 +100,7 @@ it("预览已在目标文件上时，连续编辑不重置多文件上下文", (
 	const { rerender } = renderFollow();
 
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1, cwd: "/proj/x" });
 	});
 	rerender();
 	// 用户重建多文件上下文且当前选中正是 a。
@@ -116,7 +116,7 @@ it("预览已在目标文件上时，连续编辑不重置多文件上下文", (
 	rerender();
 
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 2 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 2, cwd: "/proj/x" });
 	});
 	rerender();
 	const kept = store.get(inlineFilePreviewContextReadonlyAtom);
@@ -136,7 +136,17 @@ it("无目标（null）时不写预览", () => {
 it("§11.3：hotTracking=false（非 coding 挂载点）完全不跟随", () => {
 	const { rerender } = renderFollow(false);
 	act(() => {
-		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1 });
+		store.set(aiEditTargetAtom, { path: "/proj/x/src/a.ts", at: 1, cwd: "/proj/x" });
+	});
+	rerender();
+	expect(store.get(inlineFilePreviewContextReadonlyAtom)).toBeNull();
+});
+
+it("F03：其他项目遗留的编辑目标不被消费（按来源 cwd 过滤）", () => {
+	const { rerender } = renderFollow();
+	// 项目 A 遗留的全局目标，当前面板工作区是 /proj/x。
+	act(() => {
+		store.set(aiEditTargetAtom, { path: "/project-a/private.ts", at: 1, cwd: "/project-a" });
 	});
 	rerender();
 	expect(store.get(inlineFilePreviewContextReadonlyAtom)).toBeNull();

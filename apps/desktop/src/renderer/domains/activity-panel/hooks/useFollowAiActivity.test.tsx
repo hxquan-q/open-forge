@@ -47,7 +47,7 @@ describe("useFollowAiActivity", () => {
 		const store = createStore();
 		renderFollow(store, false);
 		act(() => store.set(aiTerminalFeedAtom, [entry("a")]));
-		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 1 }));
+		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 1, cwd: "/repo" }));
 		expect(activeTab(store)).toBeUndefined();
 	});
 
@@ -58,18 +58,18 @@ describe("useFollowAiActivity", () => {
 		act(() => store.set(activityPanelTabByProjectAtom, new Map([[workspace.id, "file"]])));
 		act(() => store.set(aiTerminalFeedAtom, [entry("b")]));
 		expect(activeTab(store)).toBe("terminal");
-		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 1 }));
+		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 1, cwd: "/repo" }));
 		expect(activeTab(store)).toBe("file");
 		act(() => store.set(activityPanelTabByProjectAtom, new Map([[workspace.id, "terminal"]])));
 		// 同一文件下一次编辑也属于新活动。
-		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 2 }));
+		act(() => store.set(aiEditTargetAtom, { path: "/repo/a.ts", at: 2, cwd: "/repo" }));
 		expect(activeTab(store)).toBe("file");
 	});
 
 	it("挂载不重放旧信号，切工作区不把已有命令带过去", () => {
 		const store = createStore();
 		store.set(aiTerminalFeedAtom, [entry("old")]);
-		store.set(aiEditTargetAtom, { path: "/repo/old.ts", at: 1 });
+		store.set(aiEditTargetAtom, { path: "/repo/old.ts", at: 1, cwd: "/repo" });
 		const { rerender } = renderFollow(store);
 		expect(activeTab(store)).toBeUndefined();
 		rerender({ current: { ...workspace, id: "ws-2", cwd: "/other" } });
@@ -94,4 +94,11 @@ describe("useFollowAiActivity", () => {
 		unmount();
 		expect(listeners.size).toBe(0);
 	});
+});
+
+it("F03：其他项目的编辑目标不切本工作区文件页签", () => {
+	const store = createStore();
+	renderFollow(store);
+	act(() => store.set(aiEditTargetAtom, { path: "/other/x.ts", at: 1, cwd: "/other" }));
+	expect(activeTab(store)).toBeUndefined();
 });

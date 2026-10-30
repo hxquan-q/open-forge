@@ -10,6 +10,8 @@ export interface AiEditTarget {
 	readonly path: string;
 	/** 发起时刻（毫秒），调试用；跟随判定只看 path。 */
 	readonly at: number;
+	/** 来源会话 cwd——消费端据此过滤跨项目的旧目标（BUG-0160 / 审计 F03）。 */
+	readonly cwd: string | null;
 }
 
 /**
@@ -44,7 +46,7 @@ export function aiEditTargetFromToolCall(
 		const value = record[key];
 		if (typeof value === "string" && value.trim()) {
 			const path = toAbsolutePath(cwd, value.trim());
-			return path ? { path, at } : null;
+			return path ? { path, at, cwd } : null;
 		}
 	}
 	return null;

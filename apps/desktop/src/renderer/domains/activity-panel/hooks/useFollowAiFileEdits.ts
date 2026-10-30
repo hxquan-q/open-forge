@@ -17,7 +17,7 @@ import { useActivityPanelContext } from "../registry/context";
  * 完全不跟随。
  */
 export function useFollowAiFileEdits(): void {
-	const { hotTracking } = useActivityPanelContext();
+	const { hotTracking, workspace } = useActivityPanelContext();
 	const target = useAtomValue(aiEditTargetAtom);
 	const preview = useAtomValue(inlineFilePreviewAtom);
 	const setPreview = useSetAtom(inlineFilePreviewAtom);
@@ -25,10 +25,12 @@ export function useFollowAiFileEdits(): void {
 
 	useEffect(() => {
 		if (!hotTracking || !target) return;
+		// F03：只消费本工作区的编辑目标——其他项目/会话遗留的全局目标不串台。
+		if (target.cwd !== workspace.cwd) return;
 		// 只跟随新 AI 活动：仅预览变化（用户浏览）不触发回拉。
 		if (lastTargetRef.current === target) return;
 		lastTargetRef.current = target;
 		if (preview?.path === target.path) return;
 		setPreview({ name: pathBasename(target.path), path: target.path });
-	}, [hotTracking, target, preview, setPreview]);
+	}, [hotTracking, workspace.cwd, target, preview, setPreview]);
 }

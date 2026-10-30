@@ -46,8 +46,10 @@ export function useFollowAiActivity(workspace: ActivityWorkspace, enabled: boole
 		const previous = lastEdit.current;
 		lastEdit.current = { workspaceId: workspace.id, target: editTarget };
 		if (previous.workspaceId !== workspace.id || !editTarget || editTarget === previous.target) return;
+		// F03：编辑目标按来源 cwd 过滤，其他项目的目标不切本工作区页签。
+		if (editTarget.cwd !== workspace.cwd) return;
 		follow("file");
-	}, [enabled, editTarget, workspace.id, follow]);
+	}, [enabled, editTarget, workspace.id, workspace.cwd, follow]);
 
 	useEffect(() => {
 		if (!enabled) return;
