@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/ecosystem-adapter",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"private": true,
 	"description": "Compatibility adapters for external agent ecosystems",
 	"type": "module",

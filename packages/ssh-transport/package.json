@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/ssh-transport",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"private": true,
 	"description": "SSH transport for remote Vetta projects: host model, connection reuse, remote exec and file operations.",
 	"type": "module",

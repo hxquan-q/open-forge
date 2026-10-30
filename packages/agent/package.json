@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/agent-core",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"private": true,
 	"description": "General-purpose agent with transport abstraction, state management, and attachment support",
 	"type": "module",
