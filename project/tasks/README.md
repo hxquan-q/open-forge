@@ -15,6 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0419` | `verifying` | PLAN-0026 | [CREATE 返回透传档位](TASK-0419-create-returns-profile.md)：BUG-0161（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |
+| `TASK-0418` | `verifying` | PLAN-0026 | [文件页签卸载不回拉宽度](TASK-0418-unmount-preview-width.md)：BUG-0162（验收反馈 P1），卸载/主动关闭语义拆分红 1→绿 2/2；serial。 |
 | `TASK-0417` | `verifying` | PLAN-0026 | [编辑目标按来源过滤](TASK-0417-edit-target-cross-workspace.md)：BUG-0160（F03，P2），红 2→绿 23/23；serial。批次 10/10 片全部工程完成，收尾跑完整 check。 |
 | `TASK-0416` | `verifying` | PLAN-0026 | [热追踪收敛 code 独有](TASK-0416-hot-tracking-code-only.md)：REQ-0030/§11.3（P1），生产+消费同批红 3→绿 24/24；待实机；serial。 |
 | `TASK-0415` | `verifying` | PLAN-0026 | [新建 code 会话恢复四页签默认](TASK-0415-new-session-tab-defaults.md)：BUG-0159（F10），红 2→绿 9/9+相邻 10 例；待实机走查；serial。 |
