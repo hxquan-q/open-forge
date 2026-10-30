@@ -33,10 +33,20 @@ export function parsePorcelainStatus(output: string): readonly GitRepoChange[] {
 		.filter((change): change is GitRepoChange => change !== null);
 }
 
-/** `git status -b --porcelain` 首行 "## branch...origin/x [ahead 1]" → 分支名；detached 给 null。 */
+/**
+ * `git status -b --porcelain` 首行 → 分支名；detached 给 null（调用方走短 SHA 兜底）。
+ * 形态：`## main` / `## main...origin/main [ahead 1]` / `## HEAD (no branch)`（旧形态
+ * `No branch`）/ 空仓库 `## No commits yet on main`。
+ */
 export function parseStatusBranchLine(line: string): string | null {
-	const branch = /^## (?!No branch)(\S+)/.exec(line.trim());
-	return branch ? branch[1] : null;
+	const rest = line.trim().replace(/^##\s*/, "");
+	if (!rest) return null;
+	if (/^HEAD(\s|$)/.test(rest) || rest.startsWith("No branch")) return null;
+	const pending = /^No commits yet on (\S+)/.exec(rest);
+	if (pending) return pending[1];
+	// 跟踪形态先去 "...upstream"，再去 ahead/behind 等空白后缀，只留本地分支名。
+	const branch = rest.split("...")[0].split(/\s/)[0];
+	return branch || null;
 }
 
 async function git(cwd: string, args: readonly string[]): Promise<string | null> {

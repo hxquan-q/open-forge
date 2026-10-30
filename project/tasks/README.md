@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0408` | `verifying` | PLAN-0026 | [修复 Git 页签分支名解析](TASK-0408-git-branch-status-parse.md)：BUG-0152 红基线 3 红→绿 5/5，check:quick 过；工程完成待批次收尾统一 check/impact；serial，主检出串行。 |
 | `TASK-0407` | `verifying` | PLAN-0025 | [Code 模式总体检测](TASK-0407-code-mode-comprehensive-audit.md)：报告已交付工作区；正常基线 115 例过，独立探针 12 场景中 10 个测试复现缺口；跨包失败已分流，未称全面验收通过。 |
 | `TASK-0406` | `done` | PLAN-0025 | [Agent/团队所属模式](TASK-0406-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0035 定位重合讨论。 |
 | `TASK-0405` | `ready` | PLAN-0025 | [M1 版块壳：/allstar 路由、项目空间、会话管理与配置 v1](TASK-0405-allstar-dev-section-shell.md)；前置 ADR 需用户当日评审；serial，2026-11-06 前收口发 0.1.4。 |
