@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0445` | `verifying` | — | [plugin-vite React singleton 测试选定暴露 chunk](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md)：BUG-0180；按 fixture 导出定位实际 chunk，focused 2/2、全包 46/46、完整 check 通过；serial。 |
 | `TASK-0444` | `verifying` | PLAN-0014 | [Scripts 面板 locale 完整性与 summary 插值](TASK-0444-scripts-panel-locale-contract.md)：BUG-0081；旧合同红 2→绿，`test:impact` Scripts preset 17/17、完整 check 通过；未启动真实 Desktop；serial。 |
 | `TASK-0443` | `verifying` | — | [Windows TEMP Git 根路径规范化](TASK-0443-windows-temp-short-path-git-root-check.md)：BUG-0179；默认 TEMP 的 Git/integration 定向 28/28、`test:impact` 727/727、完整 check 通过；全 `scripts/agents` 尚有 2 个复杂集成用例触发 5 秒 timeout，独立分诊；serial。 |
 | `TASK-0442` | `verifying` | PLAN-0028 | [同 cwd 旧 AI 编辑目标不在面板挂载时回放](TASK-0442-stale-edit-target-replayed-on-panel-mount.md)：BUG-0178；先红 1→绿，direct 7/7 + related 118/118、完整 check 通过；serial。 |

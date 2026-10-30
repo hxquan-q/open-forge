@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
@@ -81,10 +82,18 @@ describe("vettaPluginFederation production build", () => {
 			}
 
 			const assetsDir = join(rootDir, "dist", "assets");
-			const entryFile = (await readdir(assetsDir)).find((file) => /^index-.*\.js$/u.test(file));
-			expect(entryFile).toBeDefined();
-			const entryPath = join(assetsDir, entryFile ?? "");
-			const entrySource = await readFile(entryPath, "utf8");
+			const chunks = await Promise.all(
+				(await readdir(assetsDir))
+					.filter((file) => /^index-.*\.js$/u.test(file))
+					.map(async (file) => ({
+						file,
+						source: await readFile(join(assetsDir, file), "utf8"),
+					})),
+			);
+			const entry = chunks.find(({ source }) => source.includes("capturedUseState"));
+			expect(entry, "generated chunk exporting capturedUseState").toBeDefined();
+			const entryPath = join(assetsDir, entry?.file ?? "");
+			const entrySource = entry?.source ?? "";
 			expect(entrySource).not.toMatch(/\b(?:var|let|const)\s+[\w$]+\s*=\s*\$s\b/u);
 
 			const useState = () => ["fixture-state"];

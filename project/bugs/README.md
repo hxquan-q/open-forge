@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0180` | plugin-vite React sharing 测试误选 Federation bootstrap chunk；已修选择器，plugin-vite 46/46 | verifying | P2 | — |
 | `BUG-0179` | Windows TEMP 8.3 短路径使 Agent Git 根校验误拒绝真实仓库；已修，默认 TEMP Git/integration 28/28 | verifying | P2 | — |
 | `BUG-0178` | 新文件面板挂载时回放同 cwd 的旧 AI 编辑目标；已修，红 1→绿，direct 7/7 + related 118/118 | verifying | P2 | PLAN-0028 |
 | `BUG-0177` | Team 首发失败后自动重发风暴；已修（失败不重武装），红 1427→1 次，团队 42/42 | verifying | P1 | PLAN-0028 |
