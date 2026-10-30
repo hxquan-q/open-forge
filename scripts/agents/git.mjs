@@ -3,15 +3,22 @@ import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
-export function git(root, args, { trim = true } = {}) {
-	const output = execFileSync("git", ["-C", root, ...args], {
-		encoding: "utf8",
+const MAX_GIT_BYTES = 16777216;
+
+function gitOutput(root, args, { input, encoding = "utf8", maxBuffer = MAX_GIT_BYTES } = {}) {
+	return execFileSync("git", ["-C", root, ...args], {
+		encoding,
+		input,
 		windowsHide: true,
 		shell: false,
-		maxBuffer: 16777216,
+		maxBuffer,
 		timeout: 30000,
-		stdio: ["ignore", "pipe", "pipe"],
+		stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
 	});
+}
+
+export function git(root, args, { trim = true } = {}) {
+	const output = gitOutput(root, args);
 	return trim ? output.trimEnd() : output;
 }
 
@@ -63,17 +70,139 @@ export function changedFiles(root, base, head = "HEAD") {
 	return git(root, ["diff", "--name-only", "--no-renames", "-z", base, head]).split("\0").filter(Boolean);
 }
 
+function* objectBatches(items, byteCost) {
+	let batch = [];
+	let bytes = 0;
+	for (const item of items) {
+		const size = byteCost(item);
+		if (batch.length && bytes + size > MAX_GIT_BYTES) {
+			yield batch;
+			batch = [];
+			bytes = 0;
+		}
+		batch.push(item);
+		bytes += size;
+	}
+	if (batch.length) yield batch;
+}
+
+function objectHeader(output, offset) {
+	const end = output.indexOf(10, offset);
+	if (end < offset || end - offset > 128) throw new Error("invalid Git object header");
+	const match = /^([a-f0-9]{40}|[a-f0-9]{64}) (blob|tree|commit|tag) (0|[1-9][0-9]*)$/u.exec(
+		output.toString("latin1", offset, end),
+	);
+	if (!match || !Number.isSafeInteger(Number(match[3]))) throw new Error("invalid Git object header");
+	return { oid: match[1], type: match[2], size: Number(match[3]), offset: end + 1 };
+}
+
+function inspectObjects(root, requests) {
+	const objects = new Map();
+	for (const batch of objectBatches(requests, ([spec]) => Buffer.byteLength(spec) + 128)) {
+		const output = gitOutput(root, ["cat-file", "--batch-check", "-z"], {
+			input: Buffer.from(`${batch.map(([spec]) => spec).join("\0")}\0`),
+			encoding: null,
+		});
+		let offset = 0;
+		for (const [spec, allowMissing] of batch) {
+			// Missing responses echo the request, which can itself contain newlines.
+			const missing = Buffer.from(`${spec} missing\n`);
+			if (output.subarray(offset, offset + missing.length).equals(missing)) {
+				if (!allowMissing) throw new Error("missing Git evidence object");
+				objects.set(spec, null);
+				offset += missing.length;
+				continue;
+			}
+			const object = objectHeader(output, offset);
+			if (allowMissing ? object.type !== "tree" : object.oid !== spec || object.type !== "blob")
+				throw new Error("Git evidence object does not match the diff");
+			if (object.type === "blob" && object.size > MAX_GIT_BYTES) throw new Error("Git evidence blob exceeds 16MiB");
+			objects.set(spec, object);
+			offset = object.offset;
+		}
+		if (offset !== output.length) throw new Error("unexpected Git object metadata");
+	}
+	return objects;
+}
+
+function readObjects(root, objects) {
+	const bodies = new Map();
+	const blobs = [...objects.values()].filter((object) => object?.type === "blob");
+	const wireSize = (object) => object.size + object.oid.length + String(object.size).length + 8;
+	for (const batch of objectBatches(blobs, wireSize)) {
+		const output = gitOutput(root, ["cat-file", "--batch"], {
+			input: `${batch.map((object) => object.oid).join("\n")}\n`,
+			encoding: null,
+			// Protocol framing must not reduce the existing per-blob content limit.
+			maxBuffer: Math.max(
+				MAX_GIT_BYTES,
+				batch.reduce((bytes, object) => bytes + wireSize(object), 0),
+			),
+		});
+		let offset = 0;
+		for (const expected of batch) {
+			const object = objectHeader(output, offset);
+			const end = object.offset + object.size;
+			if (
+				object.oid !== expected.oid ||
+				object.type !== "blob" ||
+				object.size !== expected.size ||
+				end >= output.length ||
+				output[end] !== 10
+			)
+				throw new Error("invalid Git evidence body");
+			bodies.set(object.oid, output.toString("utf8", object.offset, end));
+			offset = end + 1;
+		}
+		if (offset !== output.length) throw new Error("unexpected Git object content");
+	}
+	return bodies;
+}
+
 export function readChanges(root, base, head = "HEAD") {
-	const at = (commit, path) => {
-		const entry = git(root, ["ls-tree", "-z", commit, "--", path]);
-		if (!entry) return { mode: null, body: "" };
-		const metadata = /^([0-9]{6}) blob ([a-f0-9]{40,64})\t/u.exec(entry);
-		if (!metadata) return { mode: "unknown", body: null };
-		return { mode: metadata[1], body: git(root, ["show", "--no-textconv", `${commit}:${path}`], { trim: false }) };
+	if (!/^[a-f0-9]{40,64}$/u.test(base) || (head !== "HEAD" && !/^[a-f0-9]{40,64}$/u.test(head)))
+		throw new Error("diff requires resolved commit ids");
+	if (head === "HEAD") head = git(root, ["rev-parse", "--verify", "HEAD^{commit}"]);
+	const raw = git(root, ["diff", "--raw", "--no-abbrev", "--no-renames", "--no-ext-diff", "-z", base, head], {
+		trim: false,
+	});
+	if (!raw) return [];
+	const records = raw.split("\0");
+	if (records.pop() !== "" || records.length % 2) throw new Error("invalid Git raw diff");
+	const changes = [];
+	const requests = new Map();
+	for (let index = 0; index < records.length; index += 2) {
+		const metadata = /^:([0-9]{6}) ([0-9]{6}) ([a-f0-9]{40}|[a-f0-9]{64}) ([a-f0-9]{40}|[a-f0-9]{64}) [ADMT]$/u.exec(
+			records[index],
+		);
+		const path = records[index + 1];
+		if (!metadata || !path) throw new Error("invalid Git raw diff");
+		const [, oldMode, newMode, oldOid, newOid] = metadata;
+		for (const [mode, oid, commit] of [
+			[oldMode, oldOid, base],
+			[newMode, newOid, head],
+		]) {
+			if (mode === "000000") {
+				// A missing leaf may instead have become a tree in a file/directory transition.
+				requests.set(`${commit}:${path}`, true);
+			} else if (mode !== "040000" && mode !== "160000") {
+				requests.set(oid, false);
+			}
+		}
+		changes.push({ path, oldMode, newMode, oldOid, newOid });
+	}
+	const objects = inspectObjects(root, requests);
+	const bodies = readObjects(root, objects);
+	const at = (mode, oid, commit, path) => {
+		if (mode === "000000")
+			return objects.get(`${commit}:${path}`) === null ? { mode: null, body: "" } : { mode: "unknown", body: null };
+		if (mode === "040000" || mode === "160000") return { mode: "unknown", body: null };
+		if (!bodies.has(oid)) throw new Error("missing Git evidence body");
+		return { mode, body: bodies.get(oid) };
 	};
-	return changedFiles(root, base, head).map((path) => {
-		const before = at(base, path);
-		const after = at(head, path);
+	return changes.map(({ path, oldMode, newMode, oldOid, newOid }) => {
+		const before = at(oldMode, oldOid, base, path);
+		const after = at(newMode, newOid, head, path);
 		return { path, before: before.body, after: after.body, oldMode: before.mode, newMode: after.mode };
 	});
 }
