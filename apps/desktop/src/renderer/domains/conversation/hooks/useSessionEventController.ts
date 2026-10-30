@@ -204,6 +204,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 
 	const createSessionEventHandler = useCallback(
 		(sessionId: string) => (event: SessionEvent) => {
+			// 终端投屏的 end 结算先于聊天闸门（BUG-0157）：feed 条目按事件自身的
+			// toolCallId 配对、惰性提取，不写任何聊天状态——用户切走后旧会话的
+			// 命令仍要落定，否则永久显示「执行中」。start 仍留在闸门后（cwd 取自
+			// 当前会话）。
+			if (event.type === "tool.end") {
+				markAiTerminalEntryDone(getDefaultStore(), event.toolCallId, () =>
+					aiTerminalOutputFromResult(event.result),
+				);
+			}
 			// Defensive guard: if user has already switched away to another
 			// session, drop this event so its delta/state can't bleed into
 			// the new session's atom. activeSessionRef is updated synchronously
@@ -506,11 +515,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			// ── Tool end ──
 			if (event.type === "tool.end") {
 				flushDeltas();
-				// 演示定稿：shell 命令投屏——end 配对补输出；惰性提取，非 shell 工具的
-				// key 不在 feed 里，不执行摘要拼接。
-				markAiTerminalEntryDone(getDefaultStore(), event.toolCallId, () =>
-					aiTerminalOutputFromResult(event.result),
-				);
+				// 终端条目的 end 结算已提升到闸门之前（见 handler 顶部），这里只走聊天投影。
 				setChatMessages((prev) =>
 					handleToolEnd(
 						prev,

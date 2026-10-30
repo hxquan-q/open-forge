@@ -361,6 +361,16 @@ export function useTeamChatModel(
 				event.type === "session-snapshot" || event.type === "session-updated"
 					? event.teamSessionId
 					: event.conversationId;
+			// 团队终端条目的 end 结算先于挂载/会话闸门（BUG-0157）：键自带会话前缀、
+			// 惰性提取，不写聊天状态——卸载或切走后旧成员命令仍要落定，不永久挂
+			// 「执行中」。
+			if (event.type === "desktop.team-tool-execution" && event.event.type === "end") {
+				markAiTerminalEntryDone(
+					getDefaultStore(),
+					aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
+					() => aiTerminalOutputFromResult(event.event.result),
+				);
+			}
 			if (!mounted || eventSessionId !== session.id) return;
 			// 演示定稿：成员的写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签
 			// 热跟随（与普通会话的 useSessionEventController 同一 atom，跨宿主形态生效）。
@@ -384,15 +394,7 @@ export function useTeamChatModel(
 					});
 				}
 			}
-			// shell 命令投屏的 end 配对：补输出并结束 running 态；惰性提取，非 shell
-			// 工具的 key 不在 feed 里，不执行摘要拼接。
-			if (event.type === "desktop.team-tool-execution" && event.event.type === "end") {
-				markAiTerminalEntryDone(
-					getDefaultStore(),
-					aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
-					() => aiTerminalOutputFromResult(event.event.result),
-				);
-			}
+			// 终端条目的 end 结算已提升到闸门之前（见订阅回调顶部），此处只承载聊天态。
 			// session-updated 用快照的 messages 把已落盘的 turn 从流里裁掉。这个裁剪
 			// 必须和快照的采纳同进同退：快照因版本过旧被拒时若照裁不误，这条回复就从
 			// 流和快照两边同时消失（页面重进才恢复）。
