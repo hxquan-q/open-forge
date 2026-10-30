@@ -384,12 +384,13 @@ export function useTeamChatModel(
 					});
 				}
 			}
-			// shell 命令投屏的 end 配对：补输出并结束 running 态；非 shell 工具的 key 不在 feed 里，no-op。
+			// shell 命令投屏的 end 配对：补输出并结束 running 态；惰性提取，非 shell
+			// 工具的 key 不在 feed 里，不执行摘要拼接。
 			if (event.type === "desktop.team-tool-execution" && event.event.type === "end") {
 				markAiTerminalEntryDone(
 					getDefaultStore(),
 					aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
-					aiTerminalOutputFromResult(event.event.result),
+					() => aiTerminalOutputFromResult(event.event.result),
 				);
 			}
 			// session-updated 用快照的 messages 把已落盘的 turn 从流里裁掉。这个裁剪

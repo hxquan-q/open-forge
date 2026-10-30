@@ -57,6 +57,36 @@ describe("aiTerminalOutputFromResult", () => {
 	it("超长输出截断到 2048 字符", () => {
 		expect(aiTerminalOutputFromResult({ content: [{ type: "text", text: "x".repeat(5000) }] })).toHaveLength(2048);
 	});
+
+	it("单块超预算内容正确：只取前缀，与整串截断一致", () => {
+		const text = "A".repeat(2048) + "B".repeat(3000);
+		expect(aiTerminalOutputFromResult({ content: [{ type: "text", text }] })).toBe("A".repeat(2048));
+	});
+
+	it("多块拼接与整串 join 后截断逐字符一致（预算含分隔符）", () => {
+		const a = "x".repeat(2000);
+		const b = "y".repeat(100);
+		const joined = `${a}\n${b}`.slice(0, 2048);
+		expect(
+			aiTerminalOutputFromResult({
+				content: [
+					{ type: "text", text: a },
+					{ type: "text", text: b },
+				],
+			}),
+		).toBe(joined);
+	});
+
+	it("预算耗尽后不再读取后续块", () => {
+		const full = `${"x".repeat(2048)}\nnever`;
+		const result = {
+			content: [
+				{ type: "text", text: "x".repeat(3000) },
+				{ type: "text", text: "tail-block" },
+			],
+		};
+		expect(aiTerminalOutputFromResult(result)).toBe(full.slice(0, 2048));
+	});
 });
 
 describe("feed 写入", () => {
@@ -89,6 +119,24 @@ describe("feed 写入", () => {
 		markAiTerminalEntryDone(store, "a", "again");
 		markAiTerminalEntryDone(store, "unknown", "x");
 		expect(store.get(aiTerminalFeedAtom)).toBe(afterFirst);
+	});
+
+	it("mark 惰性提取：命中 running 才调用提取器，未知/已完成 key 不提取", () => {
+		const store = createStore();
+		pushAiTerminalEntry(store, runningEntry({ key: "a" }));
+		let calls = 0;
+		const extract = () => {
+			calls += 1;
+			return "done";
+		};
+		markAiTerminalEntryDone(store, "a", extract);
+		expect(store.get(aiTerminalFeedAtom)[0]?.output).toBe("done");
+		expect(calls).toBe(1);
+
+		markAiTerminalEntryDone(store, "a", extract);
+		markAiTerminalEntryDone(store, "unknown", extract);
+		expect(calls).toBe(1);
+		expect(store.get(aiTerminalFeedAtom)[0]?.output).toBe("done");
 	});
 });
 

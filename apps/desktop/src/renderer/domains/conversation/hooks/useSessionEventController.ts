@@ -506,8 +506,11 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			// ── Tool end ──
 			if (event.type === "tool.end") {
 				flushDeltas();
-				// 演示定稿：shell 命令投屏——end 配对补输出；非 shell 工具的 key 不在 feed 里，no-op。
-				markAiTerminalEntryDone(getDefaultStore(), event.toolCallId, aiTerminalOutputFromResult(event.result));
+				// 演示定稿：shell 命令投屏——end 配对补输出；惰性提取，非 shell 工具的
+				// key 不在 feed 里，不执行摘要拼接。
+				markAiTerminalEntryDone(getDefaultStore(), event.toolCallId, () =>
+					aiTerminalOutputFromResult(event.result),
+				);
 				setChatMessages((prev) =>
 					handleToolEnd(
 						prev,

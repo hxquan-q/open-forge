@@ -7,9 +7,9 @@ requirement: REQ-0030
 owner: apps/desktop
 source: TASK-0407（code-mode-audit-2026-10-30）+ 用户授权逐问题修复
 related_requirement: [REQ-0030]
-related_tasks: [TASK-0408]
+related_tasks: [TASK-0408, TASK-0409]
 related_issues: []
-related_bugs: [BUG-0152]
+related_bugs: [BUG-0152, BUG-0153]
 depends_on: []
 created: 2026-10-30
 updated: 2026-10-30
@@ -47,7 +47,7 @@ TASK-0407 交付的总体检测报告（工作区 `code-mode-audit-2026-10-30.md
 | 序 | 问题 | 优先级 | 难度 | Task |
 |---|---|---|---|---|
 | 1 | G01 Git 分支名解析 | P2 | 低 | TASK-0408 |
-| 2 | M01 终端摘要内存保留 | P2 | 低 | 待建 |
+| 2 | M01 终端摘要内存保留 | P2 | 低 | TASK-0409 |
 | 3 | F08 开发册项目闭环 | P1 | 中 | 待建 |
 | 4 | F04 同文件再次编辑不跟回 | P2 | 中 | 待建 |
 | 5 | F09 增量行侧栏漏过滤 | P2 | 中 | 待建 |

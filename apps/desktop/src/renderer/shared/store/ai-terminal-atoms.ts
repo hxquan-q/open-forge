@@ -67,13 +67,30 @@ function readContentText(result: unknown, maxChars: number): string | undefined 
 		if (block && typeof block === "object" && (block as { type?: unknown }).type === "text") {
 			const text = (block as { text?: unknown }).text;
 			if (typeof text === "string" && text.length > 0) {
-				parts.push(text);
-				total += text.length;
-				if (total >= maxChars) break;
+				// join 的 \n 分隔符也计入预算，保证拼接结果不超 maxChars。
+				const budget = maxChars - total - parts.length;
+				if (budget <= 0) break;
+				if (text.length <= budget) {
+					parts.push(text);
+					total += text.length;
+				} else {
+					// 单块超预算：按字符复制出独立前缀。直接 slice 的 SlicedString
+					// 会把整个母串（可能是整个大文件）钉在堆上，摘要虽只有 2KB、
+					// 保留的却是母串全量（BUG-0153）。
+					parts.push(copyIndependentPrefix(text, budget));
+					break;
+				}
 			}
 		}
 	}
 	return parts.length > 0 ? parts.join("\n").slice(0, maxChars) : undefined;
+}
+
+/** 从大文本复制前 max 个字符为独立字符串：逐字符读取不产生引用母串的子串。 */
+function copyIndependentPrefix(text: string, max: number): string {
+	const chars = new Array<string>(max);
+	for (let i = 0; i < max; i++) chars[i] = text[i];
+	return chars.join("");
 }
 
 /** 团队会话条目的配对键：加会话前缀，避免与其他会话的 toolCallId 撞键误判重。 */
@@ -90,14 +107,19 @@ export function pushAiTerminalEntry(store: ReturnType<typeof getDefaultStore>, e
 	});
 }
 
-/** end 配对完成：命中才更新；未知 key 或已完成的 key 返回原数组，泵侧可无条件调用。 */
+/**
+ * end 配对完成：命中才更新；未知 key 或已完成的 key 返回原数组，泵侧可无条件调用。
+ * output 支持惰性提取器——只在真正命中 running 条目时执行，非 shell 工具的大
+ * result 不再白付一次摘要拼接。
+ */
 export function markAiTerminalEntryDone(
 	store: ReturnType<typeof getDefaultStore>,
 	key: string,
-	output: string | undefined,
+	output: string | undefined | (() => string | undefined),
 ): void {
 	store.set(aiTerminalFeedAtom, (prev) => {
 		if (!prev.some((e) => e.key === key && e.running)) return prev;
-		return prev.map((e) => (e.key === key ? { ...e, running: false, output } : e));
+		const resolved = typeof output === "function" ? output() : output;
+		return prev.map((e) => (e.key === key ? { ...e, running: false, output: resolved } : e));
 	});
 }

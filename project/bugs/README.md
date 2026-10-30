@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0153` | 终端输出摘要 2048 字符截断不约束保留内存（SlicedString 钉母串，探针 48MiB/4.91MiB） | in_progress | P2 | PLAN-0026 |
 | `BUG-0152` | Git 页签分支名解析两处稳定错误（跟踪串整段当分支名、detached 短 SHA 兜底不可达）；已修复，红 3→绿 5/5，待批次收尾验证 | verifying | P2 | PLAN-0026 |
 | `BUG-0151` | 主控消费通知期间的新完成通知未在释放后及时续跑 | done | P2 | PLAN-0024 |
 | `BUG-0146` | 注入 guest 的依赖函数在压缩产物里抛 `ReferenceError: o`，点选提交链与停止点选在真实 Desktop 上必死并卡死会话 | verifying | P1 | PLAN-0006 |
