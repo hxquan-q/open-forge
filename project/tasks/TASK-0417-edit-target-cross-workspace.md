@@ -1,7 +1,7 @@
 ---
 id: TASK-0417
 type: task
-status: verifying
+status: in_progress
 priority: P2
 owner: apps/desktop
 requirement: REQ-0030
@@ -15,7 +15,7 @@ related_bugs: [BUG-0160]
 execution: serial
 branch: unassigned（主检出 chenxvhua 串行）
 worktree: unassigned（不拆 worktree）
-base_commit: f3fac405c
+base_commit: fb4206f3c
 read_paths:
   - apps/desktop/src/renderer/shared/store/ai-activity-atoms.ts
   - apps/desktop/src/renderer/domains/activity-panel/hooks

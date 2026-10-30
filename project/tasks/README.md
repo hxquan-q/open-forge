@@ -15,11 +15,11 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
-| `TASK-0421` | `verifying` | PLAN-0026 | [Team 首发 handoff 失败循环](TASK-0421-handoff-failure-loop.md)：BUG-0164（验收反馈 P1），风暴红测 1427 次→1 次，团队 42/42；serial。 |
-| `TASK-0420` | `verifying` | PLAN-0026 | [Team 工作区纳入开发册](TASK-0420-team-workspace-dev-book.md)：BUG-0163（验收反馈 P1，F08 后置缺口），HEAD 实证红→绿；serial。 |
+| `TASK-0421` | `verifying` | PLAN-0026 | [Team 首发 handoff 失败循环与人工重试](TASK-0421-handoff-failure-loop.md)：BUG-0164；原自动风暴已修，当前草稿/文件引用手动重试回归通过，未做实机验收；serial。 |
+| `TASK-0420` | `verifying` | PLAN-0026 | [Team 工作区纳入开发册与可选配置兼容](TASK-0420-team-workspace-dev-book.md)：BUG-0163；开发册/普通册/缺省字段用例通过，Desktop typecheck 与完整 check 全绿；待开发册实机验收；serial。 |
 | `TASK-0419` | `verifying` | PLAN-0026 | [CREATE 返回透传档位](TASK-0419-create-returns-profile.md)：BUG-0161（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |
 | `TASK-0418` | `verifying` | PLAN-0026 | [文件页签卸载不回拉宽度](TASK-0418-unmount-preview-width.md)：BUG-0162（验收反馈 P1），卸载/主动关闭语义拆分红 1→绿 2/2；serial。 |
-| `TASK-0417` | `verifying` | PLAN-0026 | [编辑目标按来源过滤](TASK-0417-edit-target-cross-workspace.md)：BUG-0160（F03，P2），红 2→绿 23/23；serial。批次 10/10 片全部工程完成，收尾跑完整 check。 |
+| `TASK-0417` | `in_progress` | PLAN-0026 | [编辑目标按来源过滤](TASK-0417-edit-target-cross-workspace.md)：BUG-0160 原跨项目过滤已落地；当前审查到同 cwd 旧目标挂载回放，修复续接待完善合同/验证；serial。 |
 | `TASK-0416` | `verifying` | PLAN-0026 | [热追踪收敛 code 独有](TASK-0416-hot-tracking-code-only.md)：REQ-0030/§11.3（P1），生产+消费同批红 3→绿 24/24；待实机；serial。 |
 | `TASK-0415` | `verifying` | PLAN-0026 | [新建 code 会话恢复四页签默认](TASK-0415-new-session-tab-defaults.md)：BUG-0159（F10），红 2→绿 9/9+相邻 10 例；待实机走查；serial。 |
 | `TASK-0414` | `verifying` | PLAN-0026 | [新建 code 会话意图驱动初始化](TASK-0414-coding-create-intent.md)：BUG-0158（F01/F02/F02b，P1），布局红 7→绿+相邻 39/39；待实机三流程走查；serial。 |
