@@ -24,7 +24,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0396` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0395` | `done` | PLAN-0024 | 已集成 main，见 Task 集成记录。 |
 | `TASK-0394` | `done` | PLAN-0024 | RESEARCH-0043 固定版本证据已回读；coordination-only。 |
-| `TASK-0392` | `verifying` | PLAN-0006 | [Browser 与 Agent 联动及标签栏性能](TASK-0392-browser-agent-tabs.md)；已合入本地 main（2026-10-24），定向 68 例/影响面/完整 check 绿，同窗反平衡对原版约 -17～-23%、布局读取 4370→0；待用户真机验收。 |
+| `TASK-0392` | `verifying` | PLAN-0006 | 2026-10-29 续接：页签跟随接线修复，真实入口红→绿；impact 27 文件/113 例通过，完整 check 已通过；待批次收尾与用户验收。历史交付： [Browser 与 Agent 联动及标签栏性能](TASK-0392-browser-agent-tabs.md)；已合入本地 main（2026-10-24），定向 68 例/影响面/完整 check 绿，同窗反平衡对原版约 -17～-23%、布局读取 4370→0；待用户真机验收。 |
 | `TASK-0367` | `done` | PLAN-0021 | [记忆入口与 legacy rollover 兼容基线](TASK-0367-memory-entry-compatibility-baseline.md)；VERIFY-0020 三宿主启用矩阵与 6 条兼容基线交付，工程验证全绿，人工验收不适用。 |
 | `TASK-0368` | `done` | PLAN-0021 | [SQLite 驱动与多运行时隔离门禁](TASK-0368-memory-sqlite-native-probe.md)；窗口B交付并集成：probe 全矩阵三运行时×12检查全过（win32-x64），跨平台待环境复验。 |
 | `TASK-0369` | `done` | PLAN-0021 | [记忆协议包与新旧策略合同](TASK-0369-memory-runtime-contracts.md)；@vetta/runtime-memory 合同包 + memoryPolicy 会话边界校验 + ADR-0149/0150 落地，完整 check 全绿。 |

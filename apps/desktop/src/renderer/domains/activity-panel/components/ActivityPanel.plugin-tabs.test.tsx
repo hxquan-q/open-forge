@@ -7,6 +7,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	activityPanelOpenAtom,
+	activityPanelTabByProjectAtom,
+	aiTerminalFeedAtom,
 	floatingActivityTabsByProjectAtom,
 	pluginActivityTabsAtom,
 	type RegisteredActivityTab,
@@ -86,6 +88,23 @@ function renderPanel(scenario: "conversation" | undefined, open = true) {
 }
 
 describe("activity panel plugin tabs outside the ordinary conversation host", () => {
+	it("真实面板入口把 shell 活动切到当前工作区终端，不写入 unbound", () => {
+		const store = renderPanel(undefined);
+		act(() => store.set(aiTerminalFeedAtom, [{
+			key: "shell-1", command: "bun run check", running: true, at: 1, cwd: workspace.cwd,
+		}]));
+		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBe("terminal");
+		expect(store.get(activityPanelTabByProjectAtom).has("unbound")).toBe(false);
+		expect(screen.getByText("bun run check")).toBeTruthy();
+		// 用户切走后，下一次同类活动仍能跟随，而不是被上一次 AI 目标缓存挡掉。
+		act(() => store.set(activityPanelTabByProjectAtom, new Map([[workspace.id, "file"]])));
+		act(() => store.set(aiTerminalFeedAtom, [{
+			key: "shell-2", command: "git status", running: true, at: 2, cwd: workspace.cwd,
+		}]));
+		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBe("terminal");
+		expect(screen.getByText("git status")).toBeTruthy();
+	});
+
 	// A Team session never drives the global scenario atom, so the host must hand the
 	// panel its own scenario; without it plugin contributions fail closed and the bar
 	// collapses to the builtin tabs only.

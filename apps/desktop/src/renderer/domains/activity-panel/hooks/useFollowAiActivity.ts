@@ -1,67 +1,55 @@
 // Modified by The Open Forge contributors.
 
-import type { DesktopBrowserTabEventEnvelope } from "@shared/browser-tab-ipc";
+import type { ActivityTabKey } from "@shared/lib/project-profile";
 import { activityPanelTabByProjectAtom, aiEditTargetAtom, aiTerminalFeedAtom } from "@shared/store/atoms";
+import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useRef } from "react";
-import { useActivityWorkspace } from "../registry/context";
+import { useCallback, useEffect, useRef } from "react";
+import type { DesktopBrowserTabEventEnvelope } from "@/shared/browser-tab-ipc";
 
-/** 内置页签 id 与 DefaultChatView 白名单、builtins 定义同源的字面量。 */
-const TERMINAL_TAB_ID = "terminal";
-const FILE_TAB_ID = "file";
-const BROWSER_TAB_ID = "browser";
-
-/**
- * 演示定稿（右栏即 LLM 工作区）：AI 的活动把右栏页签带到对应画面——shell 命令
- * 开跑切「终端」投屏，写类工具发起切「文件」详情，内嵌浏览器会话变化切「浏览器」。
- * 演示语义是跟随：任务执行中 AI 信号优先，用户手动切走会被下一次活动带回；同类
- * 信号连续触发按目标页签去重，不产生多余写入。
- */
-export function useFollowAiActivity(): void {
-	const workspace = useActivityWorkspace();
+/** 跟随新发生的 AI 活动；工作区由面板显式传入，不能读取面板自身尚未提供的 Context。 */
+export function useFollowAiActivity(workspace: ActivityWorkspace): void {
 	const feed = useAtomValue(aiTerminalFeedAtom);
 	const editTarget = useAtomValue(aiEditTargetAtom);
 	const setTabByProject = useSetAtom(activityPanelTabByProjectAtom);
+	const follow = useCallback(
+		(tab: ActivityTabKey) => {
+			setTabByProject((previous) => {
+				if (previous.get(workspace.id) === tab) return previous;
+				const next = new Map(previous);
+				next.set(workspace.id, tab);
+				return next;
+			});
+		},
+		[workspace.id, setTabByProject],
+	);
 
-	// workspace.id 经 ref 进 effect：跟随逻辑只依赖活动信号本身。
-	const workspaceIdRef = useRef(workspace.id);
-	workspaceIdRef.current = workspace.id;
-	const lastTabRef = useRef<string | null>(null);
-	const followRef = useRef<(tabId: string) => void>(() => {});
-	followRef.current = (tabId: string) => {
-		if (lastTabRef.current === tabId) return;
-		lastTabRef.current = tabId;
-		setTabByProject((previous) => {
-			const map = new Map(previous);
-			map.set(workspaceIdRef.current, tabId);
-			return map;
-		});
-	};
-
-	// shell 命令开跑（feed 追加新条目）→ 终端页签（AI 命令投屏）。
-	const lastFeedKeyRef = useRef<string | null>(null);
+	// 先记住挂载/切换工作区时的旧信号，不回放其他会话遗留的活动。
+	const lastShell = useRef({ workspaceId: workspace.id, key: feed.at(-1)?.key });
 	useEffect(() => {
 		const latest = feed.at(-1);
-		if (!latest || lastFeedKeyRef.current === latest.key) return;
-		lastFeedKeyRef.current = latest.key;
-		followRef.current(TERMINAL_TAB_ID);
-	}, [feed]);
+		const previous = lastShell.current;
+		lastShell.current = { workspaceId: workspace.id, key: latest?.key };
+		if (previous.workspaceId !== workspace.id || !latest || latest.key === previous.key) return;
+		if (latest.cwd !== workspace.cwd) return;
+		follow("terminal");
+	}, [feed, workspace.id, workspace.cwd, follow]);
 
-	// 写类工具发起（编辑目标换文件）→ 文件页签；页签内的预览跟随由
-	// useFollowAiFileEdits 负责，这里只负责把页签带到台前。
-	const lastFileRef = useRef<string | null>(null);
+	const lastEdit = useRef({ workspaceId: workspace.id, target: editTarget });
 	useEffect(() => {
-		if (!editTarget || lastFileRef.current === editTarget.path) return;
-		lastFileRef.current = editTarget.path;
-		followRef.current(FILE_TAB_ID);
-	}, [editTarget]);
+		const previous = lastEdit.current;
+		lastEdit.current = { workspaceId: workspace.id, target: editTarget };
+		if (previous.workspaceId !== workspace.id || !editTarget || editTarget === previous.target) return;
+		follow("file");
+	}, [editTarget, workspace.id, follow]);
 
-	// 内嵌浏览器会话变化（LLM 或用户打开/导航页面）→ 浏览器页签。
 	useEffect(() => {
 		const subscribe = window.vetta.browserTab?.onEvent;
 		if (!subscribe) return;
-		return subscribe((event: DesktopBrowserTabEventEnvelope) => {
-			if (event.kind === "session-changed") followRef.current(BROWSER_TAB_ID);
+		return subscribe((envelope: DesktopBrowserTabEventEnvelope) => {
+			if (envelope.workspaceId !== workspace.id) return;
+			const event = envelope.event;
+			if (event.kind === "session-changed" && event.session.agentActivity) follow("browser");
 		});
-	}, []);
+	}, [workspace.id, follow]);
 }

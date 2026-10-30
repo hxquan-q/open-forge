@@ -57,7 +57,7 @@ export function ActivityPanel(props: ActivityPanelProps): JSX.Element {
 	const contextValue = useMemo(() => ({ workspace, knowledgeHistory }), [workspace, knowledgeHistory]);
 	useMountedActivityWorkspace(workspace);
 	// 演示定稿：AI 活动跟随——shell 开跑切终端、编辑文件切文件页、内嵌浏览器会话变化切浏览器。
-	useFollowAiActivity();
+	useFollowAiActivity(workspace);
 
 	return (
 		<ActivityPanelContextProvider value={contextValue}>
