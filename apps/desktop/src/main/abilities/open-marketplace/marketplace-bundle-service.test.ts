@@ -1,16 +1,29 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import AdmZip from "adm-zip";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { InstalledSkill } from "../../../preload/api-types/skills";
 import { installOpenMarketplaceAbility } from "./open-marketplace-installer";
 import { readOpenMarketplaceMcpPackage } from "./open-marketplace-mcp";
 import { OpenMarketplaceService } from "./open-marketplace-service";
 
 const roots: string[] = [];
+const unexpectedFetch = vi.fn<typeof fetch>(async () => {
+	throw new Error("Unexpected network request: inject fetchArchive and fetchManifest");
+});
+beforeEach(() => {
+	unexpectedFetch.mockClear();
+	vi.stubGlobal("fetch", unexpectedFetch);
+});
 afterEach(async () => {
-	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+	try {
+		await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+		expect(unexpectedFetch, "All marketplace network boundaries must use explicit fixtures").not.toHaveBeenCalled();
+	} finally {
+		vi.unstubAllGlobals();
+	}
 });
 
 function archive(version: string, listed = false, broken = false): Buffer {
@@ -72,6 +85,16 @@ function archive(version: string, listed = false, broken = false): Buffer {
 	return zip.toBuffer();
 }
 
+function manifestResponse(buffer: Buffer): Response {
+	const entry = new AdmZip(buffer).getEntry("market/.vetta/marketplace.json");
+	if (!entry) throw new Error("Marketplace manifest fixture is missing");
+	const body = entry.getData();
+	return new Response(new Uint8Array(body), {
+		status: 200,
+		headers: { "content-type": "application/json", "content-length": String(body.byteLength) },
+	});
+}
+
 it("keeps installed identities and disabled state when top-level entries become bundle-only, including cache reload and upgrades", async () => {
 	const root = await mkdtemp(join(tmpdir(), "vetta-bundle-service-test-"));
 	roots.push(root);
@@ -84,6 +107,7 @@ it("keeps installed identities and disabled state when top-level entries become 
 		sourceId: "test-source",
 		repository: "https://github.com/example/market",
 		fetchArchive: async () => new Response(new Uint8Array(data)),
+		fetchManifest: async () => manifestResponse(data),
 		installAbility: async (snapshot, ability, origin) => {
 			if (ability.type !== "skill") throw new Error("Unexpected install type");
 			await installOpenMarketplaceAbility(snapshot, ability, origin, {
