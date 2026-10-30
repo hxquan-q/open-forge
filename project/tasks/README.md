@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0412` | `verifying` | PLAN-0026 | [coding 增量行侧栏漏过滤](TASK-0412-incremental-coding-sidebar-leak.md)：BUG-0156（F09），档位端到端透传红 3→绿 17+12 例；顺带修复该主进程套件既有收集断裂（ipc/session 单点 mock）；serial。 |
 | `TASK-0411` | `verifying` | PLAN-0026 | [同一 AI 文件再次编辑跟回](TASK-0411-ai-file-edit-refollow.md)：BUG-0155（F04），双条件去重红 1→绿 8/8（含相邻）；serial。 |
 | `TASK-0410` | `verifying` | PLAN-0026 | [开发册项目闭环](TASK-0410-allstar-book-project-closure.md)：BUG-0154（F08，P1），册为候选/补拉事实源，红 3→绿 7/7+View 3/3+相邻 26 例；待实机走查；serial。 |
 | `TASK-0409` | `verifying` | PLAN-0026 | [修复终端输出摘要内存保留](TASK-0409-terminal-output-retention.md)：BUG-0153，探针 48→0.01/4.91→0.22 MiB，定向与直接相关面 72/72 绿；impact 暴露范围外 weknora AC-20 既有失败待分诊；serial。 |

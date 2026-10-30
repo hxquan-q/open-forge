@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 export interface ConversationListChangedEvent {
 	cwd: string;
 	sessionPath: string;
@@ -6,6 +7,8 @@ export interface ConversationListChangedEvent {
 		cwd: string;
 		firstMessage: string;
 		modifiedAt: number;
+		/** 会话创建时固化的档位（ADR-0151 决策 6）：渲染端增量插入据此过滤普通侧栏（BUG-0156）。 */
+		agentMode?: string;
 	};
 }
 

@@ -511,6 +511,8 @@ export class DesktopConversationService {
 							cwd: options.session.cwd,
 							firstMessage: options.prompt.text,
 							modifiedAt: Date.now(),
+							// 增量行过滤依据：缺它时渲染端把 coding 增量行误投影进普通侧栏（BUG-0156）。
+							agentMode: options.session.agentMode,
 						},
 					}
 				: {}),
