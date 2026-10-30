@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0440` | `verifying` | PLAN-0014 | [提示音事件接入桌面渲染层](TASK-0440-notification-sound-event-wiring.md)：BUG-0080；回归测试先红后绿，direct 1/1 + related 56/56、完整 `bun run check` 全绿；真实音频实机验收待用户确认；serial。 |
 | `TASK-0439` | `verifying` | PLAN-0028 | [Team 首发 handoff 失败循环与人工重试](TASK-0439-handoff-failure-loop.md)：BUG-0177；原自动风暴已修，当前草稿/文件引用手动重试回归通过，未做实机验收；serial。 |
 | `TASK-0438` | `verifying` | PLAN-0028 | [Team 工作区纳入开发册与可选配置兼容](TASK-0438-team-workspace-dev-book.md)：BUG-0176；开发册/普通册/缺省字段用例通过，Desktop typecheck 与完整 check 全绿；待开发册实机验收；serial。 |
 | `TASK-0437` | `verifying` | PLAN-0028 | [CREATE 返回透传档位](TASK-0437-create-returns-profile.md)：BUG-0174（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |

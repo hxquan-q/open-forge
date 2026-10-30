@@ -108,7 +108,7 @@
 | `BUG-0083` | React DEV 告警「flushSync was called from inside a lifecycle method」在 render 日志里成批落盘 | verifying | P3 | — |
 | `BUG-0082` | ac-fence 黑盒 shell 白名单可被复合命令绕过、读域前缀可被 .. 穿越 | verifying | P1 | — |
 | `BUG-0081` | 脚本面板 7 个 i18n key 缺条，界面显示原始 key 与 `{{count}}` | investigating | P3 | PLAN-0014 |
-| `BUG-0080` | 提示音开关可用但 Agent 终结事件从不响铃 | investigating | P2 | PLAN-0014 |
+| `BUG-0080` | 提示音开关可用但 Agent 终结事件从不响铃；渲染层接线已补，待实机播放验收 | verifying | P2 | PLAN-0014 |
 | `BUG-0079` | 终端能力被误判为缺失 | verifying | P1 | — |
 | `BUG-0078` | browser_tab 拒绝回传 snapshot 打印的 elementRef 编码串 | verifying | P1 | PLAN-0006 |
 | `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | done | P2 | — |

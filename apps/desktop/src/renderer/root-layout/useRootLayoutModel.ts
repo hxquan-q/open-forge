@@ -13,6 +13,7 @@ import { FILE_EDITOR_SAVE_EVENT } from "@/shared/shortcuts";
 import { loadNewSessionPage } from "../domains/conversation/components/loadNewSessionPage";
 import { useAppInit } from "../domains/conversation/hooks/useAppInit";
 import { useSessionManager } from "../domains/conversation/hooks/useSessionManager";
+import { useDesktopNotificationSound } from "../domains/message/hooks/useDesktopNotificationSound";
 import { useNotificationInit } from "../domains/message/hooks/useNotificationInit";
 import { useProjectActions } from "../domains/project/hooks/useProjects";
 import { useModelCatalogSync } from "../shared/hooks/useModelCatalogSync";
@@ -104,6 +105,7 @@ export function useRootLayoutModel(): RootLayoutModel {
 	// 云会话生命周期已上移到 App 根部的 <CloudAuthBoot />（lite 构建不挂载）
 	useAppInit();
 	useNotificationInit();
+	useDesktopNotificationSound();
 	useUpdaterInit();
 	// 演示定稿：code 模式会话自动收左栏、开右栏；切回普通会话展开左栏（档位边沿生效）。
 	useCodingSessionLayout();
