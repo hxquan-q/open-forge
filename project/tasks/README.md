@@ -15,6 +15,8 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0421` | `verifying` | PLAN-0026 | [Team 首发 handoff 失败循环](TASK-0421-handoff-failure-loop.md)：BUG-0164（验收反馈 P1），风暴红测 1427 次→1 次，团队 42/42；serial。 |
+| `TASK-0420` | `verifying` | PLAN-0026 | [Team 工作区纳入开发册](TASK-0420-team-workspace-dev-book.md)：BUG-0163（验收反馈 P1，F08 后置缺口），HEAD 实证红→绿；serial。 |
 | `TASK-0419` | `verifying` | PLAN-0026 | [CREATE 返回透传档位](TASK-0419-create-returns-profile.md)：BUG-0161（验收反馈 P1），恢复交互式会话终端热追踪，源码断言红 1→绿；serial。 |
 | `TASK-0418` | `verifying` | PLAN-0026 | [文件页签卸载不回拉宽度](TASK-0418-unmount-preview-width.md)：BUG-0162（验收反馈 P1），卸载/主动关闭语义拆分红 1→绿 2/2；serial。 |
 | `TASK-0417` | `verifying` | PLAN-0026 | [编辑目标按来源过滤](TASK-0417-edit-target-cross-workspace.md)：BUG-0160（F03，P2），红 2→绿 23/23；serial。批次 10/10 片全部工程完成，收尾跑完整 check。 |

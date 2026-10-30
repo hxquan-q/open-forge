@@ -48,7 +48,6 @@ import {
 	claimTeamSessionHandoff,
 	clearTeamSessionHandoff,
 	peekTeamSessionHandoff,
-	releaseTeamSessionHandoff,
 	type TeamSessionHandoff,
 	type TeamSessionSendHandoff,
 } from "./team-session-handoff";
@@ -881,7 +880,10 @@ export function useTeamChatModel(
 					});
 				}
 			} catch (cause) {
-				if (activeHandoff && !activeSessionId) releaseTeamSessionHandoff(activeHandoff.sessionId);
+				// 创建失败的 handoff 保持已领取，不 release 重武装：release 会让下面的
+				// 失败回填（草稿/附件/提及）重建 send → handoff effect 立即重领重发，
+				// 确定性失败时形成无限重试风暴（BUG-0164：实测 150ms 内重试上千次）。
+				// 草稿已回填输入框，由用户修正后手动重发。
 				console.error("[agent-team] send-message IPC failed", {
 					teamId,
 					teamSessionId: activeSessionId,
