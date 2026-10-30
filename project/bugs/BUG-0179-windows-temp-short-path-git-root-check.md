@@ -53,6 +53,6 @@ P2：Windows 默认 TEMP 下 Agent Git 集成相关测试与本地 Agent 工作�
 ## 修复与验证
 
 - 修复：仓库根和 Git 返回路径均用 `realpathSync.native()` 规范化；保留严格根边界与干净 worktree 检查。
-- 测试：新回归测试先红后绿；默认 TEMP 下 `git.test.mjs` + `integrate.test.mjs` 28/28 通过。完整 `scripts/agents` 目录另有 2 个长集成用例触发默认 5 秒 timeout（其余 140 通过），不再是仓库根校验错误。
+- 测试：新回归测试先红后绿；默认 TEMP 下 `git.test.mjs` + `integrate.test.mjs` 28/28 通过。完整 `scripts/agents` 曾在并行负载下出现 2 个 5 秒 timeout，随后重跑 142/142 通过；隔离 `integrate.test.mjs` 6/6。
 - 检查：`test:impact` quality 脚本 727/727 通过；`bun run check` 全绿。
-- 未运行及原因：真实 Agent provider 与产品流程未运行；集成用例的超时需独立分诊，不属于根路径规范化范围。
+- 未运行及原因：真实 Agent provider 与产品流程未运行；完整 `scripts/agents` 后续重跑 142/142，通过。

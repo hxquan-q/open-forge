@@ -64,6 +64,6 @@ Allow a valid repository root in default Windows TEMP when Node returns the shor
 
 - Implementation: use `realpathSync.native()` for both the requested path and Git's `--show-toplevel` before the strict identity comparison.
 - Regression: red before the fix; default-TEMP `git.test.mjs` + `integrate.test.mjs` passed 28/28 after the fix.
-- Broader `scripts/agents` run: 140 passed, 2 complex integration tests hit their default 5-second timeout. Focused Git/integration suites are green; the timeout observation is recorded separately from BUG-0179.
+- Broader `scripts/agents` run: the first parallel run had 2 tests hit their default 5-second timeout (140 passed); a later rerun passed 142/142. The integration file alone also passes 6/6.
 - `test:impact`: quality suite passed 727/727.
 - `bun run check`: passed.
