@@ -144,7 +144,11 @@ function buildBrowserTabActionSchemas<TRef extends TSchema>(elementRef: () => TR
 			{
 				action: Type.Literal("navigate"),
 				description: Type.Optional(Type.String()),
-				url: Type.String({ minLength: 1, description: "http(s) URL only; host allowlist is [*]" }),
+				url: Type.String({
+					minLength: 1,
+					description:
+						"HTTP(S) URL, file:// URL, or absolute local path (e.g. D:/demo/index.html) for local preview",
+				}),
 			},
 			{ additionalProperties: false },
 		),
@@ -153,8 +157,21 @@ function buildBrowserTabActionSchemas<TRef extends TSchema>(elementRef: () => TR
 
 const BrowserTabProviderActionSchemas = buildBrowserTabActionSchemas(() => BrowserElementRefInputSchema);
 
-/** 发给 Provider 的入参 Schema：elementRef 接受 snapshot 打印的编码串或已解码的对象。 */
-export const BrowserTabToolInputSchema = Type.Union(BrowserTabProviderActionSchemas);
+/** Provider 需要顶层 object/properties；动作间的必填/互斥规则仍由运行时联合校验。 */
+function buildBrowserTabProviderSchema() {
+	const properties: Record<string, TSchema> = {
+		action: Type.Union(BROWSER_TAB_TOOL_ACTIONS.map((action) => Type.Literal(action))),
+	};
+	for (const schema of BrowserTabProviderActionSchemas) {
+		for (const [name, property] of Object.entries(schema.properties)) {
+			if (name !== "action") properties[name] = Type.Optional(property);
+		}
+	}
+	return Type.Object(properties, { additionalProperties: false });
+}
+
+/** elementRef 接受 snapshot 打印的编码串或已解码对象，字段从动作分支推导。 */
+export const BrowserTabToolInputSchema = buildBrowserTabProviderSchema();
 
 /** 运行时校验用的规范化 Schema：elementRef 只接受对象，编码串在校验前已被解码。 */
 const BrowserTabNormalizedInputSchema = Type.Union(buildBrowserTabActionSchemas(() => BrowserElementRefSchema));
@@ -239,7 +256,7 @@ export const BROWSER_TAB_TOOL_DESCRIPTION = [
 	"snapshot returns an interactive accessibility tree with elementRef values that embed pageRevision.",
 	"Pass elementRef back exactly as snapshot printed it (the opaque v1:<pageRevision>:<id> token); {id, pageRevision} is accepted too.",
 	"After navigation or DOM change, old refs return stale_reference — take a new snapshot; never guess a new locator.",
-	"navigate accepts only http/https URLs. This tool cannot evaluate JavaScript, read cookies, or export tokens.",
+	"navigate accepts http/https URLs, file:// URLs and absolute local paths — open a local HTML artifact by its path directly, no static server needed. This tool cannot evaluate JavaScript, read cookies, or export tokens.",
 	"This is not the agent-browser CLI; that Skill uses a separate browser session.",
 	`If no_browser_session is returned: ${BROWSER_TAB_NO_SESSION_GUIDANCE}`,
 ].join(" ");
@@ -276,12 +293,36 @@ export function readBrowserElementRef(value: unknown): BrowserElementRef | undef
 	return Value.Check(BrowserElementRefSchema, value) ? value : undefined;
 }
 
+/**
+ * 本地路径 → file:// URL：Windows 盘符（`D:\…`/`D:/…`）、UNC（`\server\…`）、
+ * posix 绝对路径（`/…`）；非本地路径形态原样返回。文件名里的 `#`/`?` 对 URL 是
+ * 片段/查询语义，必须转义。地址栏与工具入参共用这一份规则（单一事实源）。
+ */
+export function localPathToBrowserFileUrl(raw: string): string {
+	const trimmed = raw.trim();
+	const isWindowsDrive = /^[a-zA-Z]:[\\/]/.test(trimmed);
+	const isUnc = trimmed.startsWith("\\\\") || trimmed.startsWith("//");
+	if (!isWindowsDrive && !isUnc && !trimmed.startsWith("/")) return raw;
+	const path = trimmed.replace(/\\/g, "/");
+	const encodePath = (value: string) => value.split("/").map(encodeURIComponent).join("/");
+	try {
+		if (isWindowsDrive) return `file:///${path.slice(0, 2)}/${encodePath(path.slice(3))}`;
+		if (isUnc) {
+			const slash = path.indexOf("/", 2);
+			if (slash < 0) return raw;
+			return new URL(`file://${path.slice(2, slash)}${encodePath(path.slice(slash))}`).href;
+		}
+		return `file://${encodePath(path)}`;
+	} catch {
+		return raw;
+	}
+}
+
 export function isAllowedBrowserTabUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url);
-		// file: 用于本地文件预览（工作区产物直接在侧边栏浏览器打开，无需先起静态
-		// 服务）：webview 走隔离 session 且默认 webSecurity 开启，file 页面脚本无法
-		// 跨 file 读取其他本地文件；http(s) 的 host 白名单语义由上层另行校验。
+		// 延续本地文件预览的协议集合；这里只判协议，不代表文件访问授权或目录隔离。
+		// 宿主的审批、页面会话及平台安全配置仍独立生效。
 		return parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "file:";
 	} catch {
 		return false;
@@ -303,8 +344,9 @@ function normalizeBrowserElementRefInput(value: unknown): unknown {
 export function readBrowserTabToolInput(value: unknown): BrowserTabToolInput | undefined {
 	const normalized = normalizeBrowserElementRefInput(value);
 	if (!Value.Check(BrowserTabNormalizedInputSchema, normalized)) return undefined;
-	if (normalized.action === "navigate" && !isAllowedBrowserTabUrl(normalized.url)) return undefined;
-	return normalized;
+	if (normalized.action !== "navigate") return normalized;
+	const url = localPathToBrowserFileUrl(normalized.url);
+	return isAllowedBrowserTabUrl(url) ? { ...normalized, url } : undefined;
 }
 
 export type BrowserTabToolInputRead =
@@ -380,9 +422,9 @@ export function describeBrowserTabToolInputProblem(value: unknown): string {
 		if (!isAllowedBrowserTabUrl(record.url)) {
 			const scheme = describeUrlScheme(record.url);
 			if (scheme === "file" || scheme === "vetta-file") {
-				return "browser_tab navigate accepts only http/https URLs; local files are not browser pages. Open the file with the file preview (file tree or Files panel) instead.";
+				return 'browser_tab navigate requires a valid http/https URL, file:// URL or absolute local path. Example: {"action":"navigate","url":"file:///D:/demo/index.html"}.';
 			}
-			return `browser_tab navigate accepts only http/https URLs (got ${JSON.stringify(scheme)}). Example: {"action":"navigate","url":"https://example.com"}.`;
+			return `browser_tab navigate accepts http/https URLs, file:// URLs and absolute local paths (got ${JSON.stringify(scheme)}). Example: {"action":"navigate","url":"https://example.com"}.`;
 		}
 	}
 	return `browser_tab ${action} input is invalid: ${describeSchemaProblems(normalizeBrowserElementRefInput(value))}. ${describeAllowedInput(action)}`;

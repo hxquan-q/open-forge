@@ -1,7 +1,7 @@
 ---
 id: TASK-0339
 type: task
-status: done
+status: verifying
 priority: P1
 owner: coding-agent
 requirement:
@@ -13,9 +13,9 @@ related_tasks: [TASK-0207, TASK-0218, TASK-0123]
 related_issues: [ISSUE-0026]
 related_bugs: [BUG-0134, BUG-0078]
 execution: serial
-branch: main
+branch: unassigned
 worktree: unassigned（主工作区串行，不拆 worktree）
-base_commit: 74877ddef
+base_commit: 98f7de9e6
 read_paths:
   - packages/coding-agent/src/features/browser-tab
   - packages/coding-agent/test/features/browser-tab
@@ -44,9 +44,9 @@ exclusive_paths:
   - packages/agent/src/engine/tool-failure-guard.ts
 depends_on: []
 conflicts_with: []
-integration_status: integrated
+integration_status: pending
 created: 2026-10-21
-updated: 2026-10-21
+updated: 2026-10-30
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -146,3 +146,32 @@ updated: 2026-10-21
 - Worktree：未拆出；串行修改契约与执行链路。
 - 剩余风险：止损阈值固定为 3，真实会话中模型可能在 3 次内仍无进展；`{}` 入参的生成/解析异常仍需离线流式夹具定位（不在本 Task 范围）。
 - 人工验收（2026-10-21）：用户在会话中确认本批次验收完成，据用户结论闭合；批次记录见 TASK-0342。
+
+## 2026-10-29 验收反馈续接：空参数与本地文件导航
+
+- 用户反馈：新回合反复调用 browser_tab 失败。只读提取所报会话的工具记录，确认参数均为 `{}`，错误是缺 action；不能据此认定流式解析或模型哪一方负责。
+- 已有在途修改：上一轮先改了合同中的 URL 描述和路径转换，尚未建立本次 Task 合同且转换正则转义有误。本次如实补记，不将此前修改说成经过红灯验证。
+- 所有者/候选：直接为模型猜 action 会破坏严格校验，否决。改为 Provider 使用有明确顶层 properties/action 的对象 Schema；运行时继续用动作联合严格校验。路径转换由合同侧唯一函数拥有，地址栏复用公开导出。
+- 目标：工具 Schema 明确暴露 action/url 等字段；http(s)、file URL 和绝对本地路径可用于 navigate；空参数仍拒绝并保持三次止损，elementRef、审批、取消与结果语义不变。
+- Given/When/Then：模型可见 Schema → 构造 navigate 绝对路径 → validateInput/execute → 宿主收到规范化 file URL；未知字段、非法动作/协议仍被拒绝；地址栏打开同一路径得到同一 URL。
+- 执行：serial，沿用户指定 `chenxvhua` 主检出；不另起并行工作树、不使用多 Agent、不访问远端 Git、不连接真实 Provider/运行中的 Desktop。
+- 本轮写域：browser-tab 合同与测试、function-extensions 公开导出、Desktop useBrowserPanelModel 与测试、相关发布碎片及本 Task/索引；不改通用 Provider 或止损执行器。
+- 验证：合同与工具适配连续流程、路径表驱动与地址栏组件测试；test:changed（跨包）、完整 bun run check；真实模型质量与 UI 人工验收保持未验证。
+- 归属：Upstreamable（工具合同修正）；集成状态本轮 pending，历史集成记录保留。
+
+### 本轮证据与阻断
+
+- Schema 回归先红：模型可见 inputSchema 无顶层 type/properties，改为顶层对象后该回归通过；没有原始 Provider 流式片段，不能据此断言用户会话的 `{}` 只由 Schema 导致。
+- 新路径/工具适配测试 8 例通过（包含驱动器/UNC/POSIX/中文/特殊字符、重复规范化与 validateInput→execute）；Desktop 定向 3 文件/29 例通过。
+- 浏览器工具域完整 5 文件/42 例：39 过、3 失败。失败项是旧合同的 file URL 拒绝断言（2 条 /etc/passwd，1 条本地 index.html）。98f7de9e6 已放行 file，但此前未同步这三条合同；本轮尝试更新被自动权限以 Security Test Removal/Security Weaken 拒绝，未通过其他工具绕过。
+- 请求用户批准：按已批准的本地 HTML 浏览需求更新这三条断言，并新增/保留 javascript、chrome 等非法协议拒绝断言；不删除严格动作校验、不扩大生产权限。
+- 完整 bun run check 已通过（lint/types/guards/mobile），但不包含行为测试，不据此称本 Task 完成。跨包 test:changed 和最终提交待该阻断解除后运行。
+- 真实 Provider、UI 验收未运行（未获当次授权）；当前候选未提交，历史提交状态不推断。
+
+### 2026-10-30 授权后复验
+
+- 用户在测试授权答复中明确要求继续测试、条件满足时阶段性收尾，随后全面审计并交付工作区报告；只允许工作区/主仓文件写入。三条旧合同已对齐，保留原 file 样本并验证当前行为，非法协议拒绝断言保留。
+- 浏览器工具域 5 文件/42 例全绿；跨包额外发现 browser-view-host.test.ts 的第四条同类旧断言，已一并对齐（fake WebContents，无实际文件读取）。模式/浏览器补验 6 文件/77 例全绿。
+- `test:changed` 实跑 coding-agent/runtime-desktop/cli-host/desktop：coding-agent 1677 过/3 失败/3 跳过；runtime-desktop 51 过；cli-host 238 过/14 跳过；desktop 6241 过/7 失败/19 跳过，整体 exit 1。日志在工作区 code-mode-audit-evidence/phase1-test-changed.log，不计为通过。
+- 10 条失败中：1 条本轮旧 file 断言已修并在 77 例中复验；3 条市场超时隔离复跑通过；其余 6 条稳定复现（Git 解析 2、远程命令退出码 1、资源夹具继承工作区 AGENTS 1、系统 rg 不可执行 1、初始化快照缺 memory 字段 1）。未修改其断言以换绿灯，详情交 TASK-0407 报告。
+- 因跨包回归未全绿，不宣称阶段性全量验收完成；保留当前未提交候选与已验证范围，供用户据报告决定后续修复。

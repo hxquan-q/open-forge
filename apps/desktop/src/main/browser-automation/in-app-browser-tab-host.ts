@@ -143,7 +143,9 @@ async function dispatchBrowserTabAction(
 	}
 	if (input.action === "navigate") {
 		if (!isAllowedBrowserTabUrl(input.url)) {
-			return browserTabToolError("policy_denied", "navigate accepts only http/https URLs", { action: "navigate" });
+			return browserTabToolError("policy_denied", "navigate requires a valid http/https or file URL", {
+				action: "navigate",
+			});
 		}
 		if (!context.loadURL) {
 			return browserTabToolError("unimplemented", "WebView cannot navigate", { action: "navigate" });

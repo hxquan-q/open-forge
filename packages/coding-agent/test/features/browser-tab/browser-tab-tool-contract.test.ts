@@ -50,6 +50,24 @@ describe("browser_tab elementRef encoding", () => {
 });
 
 describe("browser_tab input schema", () => {
+	it("模型可见 Schema 顶层暴露 action 和动作参数，不依赖根级 anyOf", () => {
+		const tool = createBrowserTabTool({ invoke: async () => undefined });
+		expect(tool.inputSchema).toMatchObject({
+			type: "object",
+			required: ["action"],
+			properties: {
+				action: expect.any(Object),
+				url: { type: "string" },
+				elementRef: expect.any(Object),
+			},
+		});
+		expect(tool.inputSchema.anyOf).toBeUndefined();
+		// Provider 表面允许各动作字段；执行前仍按动作联合严格校验。
+		expect(readBrowserTabToolInput({})).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "navigate" })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "snapshot", url: "https://example.com" })).toBeUndefined();
+	});
+
 	it("接受各动作的合法参数", () => {
 		const cases: BrowserTabToolInput[] = [
 			{ action: "snapshot", interactiveOnly: true },
@@ -61,6 +79,7 @@ describe("browser_tab input schema", () => {
 			{ action: "fill", elementRef: ref, value: "hello" },
 			{ action: "press", key: "Enter" },
 			{ action: "navigate", url: "https://example.com/path" },
+			{ action: "navigate", url: "file:///D:/demo/index.html" },
 		];
 		for (const input of cases) {
 			expect(readBrowserTabToolInput(input)).toEqual(input);
@@ -94,13 +113,13 @@ describe("browser_tab input schema", () => {
 		expect(Value.Check(BrowserTabToolInputSchema, { action: "click", elementRef: { id: "e1" } })).toBe(false);
 	});
 
-	it("拒绝 javascript 面、缺 revision 的 ref、非 http(s) 导航和多余字段", () => {
+	it("拒绝脚本面、缺 revision 的 ref、非法协议和多余字段", () => {
 		expect(readBrowserTabToolInput({ action: "evaluate", script: "1+1" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "click", elementRef: { id: "e1" } })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "click", elementRef: "e1" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "click", elementRef: "v1:-1:e1" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "click", elementRef: "v1:3:" })).toBeUndefined();
-		expect(readBrowserTabToolInput({ action: "navigate", url: "file:///etc/passwd" })).toBeUndefined();
+		expect(readBrowserTabToolInput({ action: "navigate", url: "chrome://version" })).toBeUndefined();
 		expect(readBrowserTabToolInput({ action: "navigate", url: "javascript:alert(1)" })).toBeUndefined();
 		expect(isAllowedBrowserTabUrl("http://localhost:3000")).toBe(true);
 		expect(Value.Check(BrowserTabToolInputSchema, { action: "snapshot", eval: "no" })).toBe(false);
@@ -120,8 +139,14 @@ describe("browser_tab 单一判定入口", () => {
 			{ action: "snapshot", eval: "1+1" },
 			undefined,
 		]) {
-			expect(readBrowserTabToolInput(invalid)).toBeUndefined();
 			const read = readBrowserTabToolInputResult(invalid);
+			// 保留原 file URL 样本，按用户已批准的本地文件导航合同显式验证成功。
+			if (invalid?.action === "navigate" && invalid.url === "file:///etc/passwd") {
+				expect(readBrowserTabToolInput(invalid)).toEqual(invalid);
+				expect(read).toEqual({ ok: true, input: invalid });
+				continue;
+			}
+			expect(readBrowserTabToolInput(invalid)).toBeUndefined();
 			expect(read.ok).toBe(false);
 			if (read.ok) continue;
 			expect(read.message.length).toBeGreaterThan(0);
