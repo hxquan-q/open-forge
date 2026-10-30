@@ -1,7 +1,7 @@
 ---
 id: BUG-0111
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: runtime-node / Desktop 命令端口
 requirement:
@@ -9,10 +9,10 @@ plan:
 source: TASK-0249 实施期静态核查（2026-10-14）
 related_requirement: []
 related_plan: []
-related_tasks: []
+related_tasks: [TASK-0249, TASK-0441]
 related_issues: []
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-30
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -61,11 +61,11 @@ win32:  %LOCALAPPDATA%\Programs\Vetta\Vetta.exe ; %ProgramFiles%\Vetta\Vetta.exe
 
 ## 回归测试
 
-需要一条合同测试断言候选路径与打包脚本产出的安装身份一致（安装目录名 / 可执行名 / 平台差异），避免品牌或安装位置变更后再次漂移。
+已新增候选路径合同测试，按 Windows / macOS / Linux 断言顺序和实际候选值，覆盖 Open Forge 与 Allstr ai 两种 displayName 及冻结的 `OpenForge` 可执行名。测试在旧实现上 4 例失败，实现后 `vetta-desktop-command-port.test.ts` 9/9 通过。
 
 ## 修复与验证
 
-- 修复：未排期。候选来源需要先决策——按冻结身份（`OpenForge` + 安装目录）重写，或改从 Windows 注册表 / macOS bundle 标识解析，或由宿主显式注入可执行路径。
-- 测试：待回填。
-- 检查：待回填。
-- 未运行及原因：待回填。
+- 修复：Windows 候选改为当前 Inno 安装目录 `Programs\\OpenForge\\OpenForge.exe`（另保留同身份 Program Files 候选）；macOS 与 Linux 分别覆盖 `/Applications/{Open Forge,Allstr ai}.app/Contents/MacOS/OpenForge` 和 `/opt/{Open Forge,Allstr ai}/OpenForge`。显式环境/配置路径优先级不变。
+- 测试：旧实现红 4 例；修复后 `vetta-desktop-command-port.test.ts` 9/9 通过。`test:impact` direct 9/9；related 246 通过、10 失败（缺少 `rg`，以及 Windows 下 `/tmp` 夹具路径不存在，均与 fallback 修改无关）。
+- 检查：`bun run check` 全绿。
+- 未运行及原因：未启动真实已打包 Desktop；安装制品运行时可达性仍待人工验收。
