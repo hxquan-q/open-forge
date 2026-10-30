@@ -21,7 +21,9 @@ import {
 	activeSessionAtom,
 	activityPanelOpenAtom,
 	activityPanelWidthAtom,
+	activityTabOrderAtom,
 	codingSessionCreateIntentAtom,
+	hiddenActivityTabsAtom,
 	setActivityPanelWidthAtom,
 	sidebarCollapsedAtom,
 	workspaceModeByProjectAtom,
@@ -185,6 +187,48 @@ it("打开既有 coding 会话不初始化（F02b）", () => {
 	rerender();
 	expect(store.get(sidebarCollapsedAtom)).toBe(true);
 	expect(store.get(activityPanelOpenAtom)).toBe(false);
+});
+
+it("创建意图初始化清页签偏好：新会话回四页签默认；此后手动偏好保留（F10）", () => {
+	const { rerender } = renderHook(() => useCodingSessionLayout());
+	// 项目有历史偏好：隐藏 terminal + 自定义排序。
+	act(() => {
+		store.set(hiddenActivityTabsAtom, new Map([["/proj/a", ["terminal"]]]));
+		store.set(activityTabOrderAtom, new Map([["/proj/a", ["browser", "file", "git", "terminal"]]]));
+	});
+	act(() => {
+		setCreateIntent();
+		setCodingSession(true);
+	});
+	rerender();
+	expect(store.get(hiddenActivityTabsAtom).has("/proj/a")).toBe(false);
+	expect(store.get(activityTabOrderAtom).has("/proj/a")).toBe(false);
+
+	// 初始化后用户重新隐藏 terminal：同语境会话对象更新不重置。
+	act(() => {
+		store.set(hiddenActivityTabsAtom, new Map([["/proj/a", ["terminal"]]]));
+		store.set(activeSessionAtom, {
+			cwd: "/proj/a",
+			runtimeId: "rt-coding-2",
+			sessionPath: "/proj/a/s2.jsonl",
+			capabilityProfile: "coding",
+		} as never);
+	});
+	rerender();
+	expect(store.get(hiddenActivityTabsAtom).get("/proj/a")).toEqual(["terminal"]);
+});
+
+it("开发档新会话页进入边沿也清该项目页签偏好", () => {
+	const { rerender } = renderHook(() => useCodingSessionLayout());
+	act(() => {
+		store.set(hiddenActivityTabsAtom, new Map([["/proj/a", ["terminal"]]]));
+		store.set(activityTabOrderAtom, new Map([["/proj/a", ["browser", "file", "git"]]]));
+		store.set(workspaceModeByProjectAtom, new Map([["/proj/a", "coding"]]));
+		setRoute("/new-session", { cwd: encodeURIComponent("/proj/a") });
+	});
+	rerender();
+	expect(store.get(hiddenActivityTabsAtom).has("/proj/a")).toBe(false);
+	expect(store.get(activityTabOrderAtom).has("/proj/a")).toBe(false);
 });
 
 it("团队会话路由（不写 activeSession）：收左栏、开右栏", () => {

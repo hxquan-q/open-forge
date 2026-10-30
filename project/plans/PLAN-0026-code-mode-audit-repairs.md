@@ -7,9 +7,9 @@ requirement: REQ-0030
 owner: apps/desktop
 source: TASK-0407（code-mode-audit-2026-10-30）+ 用户授权逐问题修复
 related_requirement: [REQ-0030]
-related_tasks: [TASK-0408, TASK-0409, TASK-0410, TASK-0411, TASK-0412, TASK-0413, TASK-0414]
+related_tasks: [TASK-0408, TASK-0409, TASK-0410, TASK-0411, TASK-0412, TASK-0413, TASK-0414, TASK-0415]
 related_issues: []
-related_bugs: [BUG-0152, BUG-0153, BUG-0154, BUG-0155, BUG-0156, BUG-0157, BUG-0158]
+related_bugs: [BUG-0152, BUG-0153, BUG-0154, BUG-0155, BUG-0156, BUG-0157, BUG-0158, BUG-0159]
 depends_on: []
 created: 2026-10-30
 updated: 2026-10-30
@@ -54,7 +54,7 @@ TASK-0407 交付的总体检测报告（工作区 `code-mode-audit-2026-10-30.md
 | 6 | F06 切走会话后完成态悬留 | P2 | 中 | TASK-0413 |
 | 7 | F01/F02 新建意图身份（含 F02b） | P1 | 高 | TASK-0414 |
 | 8 | §11.3 热追踪收敛 code 独有 | P1 | 高 | 待建 |
-| 9 | F10 新建页签默认值（依赖 7） | P2 | 高 | 待建 |
+| 9 | F10 新建页签默认值（依赖 7） | P2 | 高 | TASK-0415 |
 | 10 | F03 编辑目标来源隔离（依赖 8 的身份合同） | P2 | 高 | 待建 |
 
 每片流程：登记/续接 Task 与 Bug 记录 → 真实入口红测试 → 最小修复 → 定向绿 → 片内 `check:quick`；批次收尾统一 `test:impact` 与完整 `bun run check`。

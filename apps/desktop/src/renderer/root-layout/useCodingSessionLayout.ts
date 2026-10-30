@@ -6,6 +6,7 @@ import {
 	codingSessionCreateIntentAtom,
 	defaultConversationCwdAtom,
 	readWorkspaceModeFor,
+	resetActivityTabPreferencesFor,
 	setActivityPanelWidthAtom,
 	sidebarCollapsedAtom,
 	workspaceModeByProjectAtom,
@@ -24,10 +25,10 @@ function decodeRouteCwd(value: string | undefined): string | null {
 	}
 }
 
-/** 哪条规则命中了版块态：决定初始化走意图还是保留的边沿语境。 */
+/** 哪条规则命中了版块态：决定初始化走意图还是保留的边沿语境；contextCwd 用于页签偏好重置。 */
 type CodingLayoutContext = "session" | "team" | "new-session" | null;
 
-function useCodingLayoutState(): { active: boolean; context: CodingLayoutContext } {
+function useCodingLayoutState(): { active: boolean; context: CodingLayoutContext; contextCwd: string | null } {
 	const matches = useMatches();
 	const lastMatch = matches[matches.length - 1];
 	const currentPath = lastMatch?.pathname ?? "/";
@@ -37,18 +38,20 @@ function useCodingLayoutState(): { active: boolean; context: CodingLayoutContext
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
 
 	// 1) 活动的普通会话是 code 档（创建时固化）。
-	if (activeSession?.capabilityProfile === "coding") return { active: true, context: "session" };
+	if (activeSession?.capabilityProfile === "coding") {
+		return { active: true, context: "session", contextCwd: activeSession.cwd ?? null };
+	}
 	// 2) 团队会话路由：团队会话天生 coding 档（TEAM_CAPABILITY_PROFILE），
 	//    但 TeamChatPage 不写 activeSessionAtom，按路由判定。
-	if (currentPath.startsWith("/agent-teams")) return { active: true, context: "team" };
+	if (currentPath.startsWith("/agent-teams")) return { active: true, context: "team", contextCwd: null };
 	// 3) 开发档的新会话页：发出首条消息前还没有 activeSession，按项目档位近似。
 	if (currentPath === "/new-session") {
 		const routeCwd = decodeRouteCwd(search.cwd) ?? defaultConversationCwd ?? null;
 		if (readWorkspaceModeFor(workspaceModeMap, routeCwd) === "coding") {
-			return { active: true, context: "new-session" };
+			return { active: true, context: "new-session", contextCwd: routeCwd };
 		}
 	}
-	return { active: false, context: null };
+	return { active: false, context: null, contextCwd: null };
 }
 
 /**
@@ -69,7 +72,7 @@ const SPLIT_FIXED_OVERHEAD_PX = 24;
  * 手动开合与拖宽永不被覆盖。
  */
 export function useCodingSessionLayout(): void {
-	const { active, context } = useCodingLayoutState();
+	const { active, context, contextCwd } = useCodingLayoutState();
 	const intent = useAtomValue(codingSessionCreateIntentAtom);
 	const store = getDefaultStore();
 	const appliedIntentRef = useRef(0);
@@ -80,13 +83,18 @@ export function useCodingSessionLayout(): void {
 		store.set(codingLayoutActiveAtom, active);
 	}, [active, store]);
 
-	const applyInitialLayout = useCallback(() => {
-		store.set(sidebarCollapsedAtom, true);
-		store.set(activityPanelOpenAtom, true);
-		// 对半分落成当时的固定像素（初始化语义：此后不随窗口 resize 跟随）；
-		// 窄窗口下由 resolveActivityPanelWidth 夹到 [260, 窗口-384]。
-		store.set(setActivityPanelWidthAtom, Math.round((window.innerWidth - SPLIT_FIXED_OVERHEAD_PX) / 2));
-	}, [store]);
+	// 新建初始化同时恢复四页签默认（BUG-0159/F10）：清该项目的显隐/排序偏好。
+	const applyInitialLayout = useCallback(
+		(cwd: string | null) => {
+			store.set(sidebarCollapsedAtom, true);
+			store.set(activityPanelOpenAtom, true);
+			// 对半分落成当时的固定像素（初始化语义：此后不随窗口 resize 跟随）；
+			// 窄窗口下由 resolveActivityPanelWidth 夹到 [260, 窗口-384]。
+			store.set(setActivityPanelWidthAtom, Math.round((window.innerWidth - SPLIT_FIXED_OVERHEAD_PX) / 2));
+			if (cwd) resetActivityTabPreferencesFor(store, cwd);
+		},
+		[store],
+	);
 
 	// 意图驱动：每个创建意图在 code 语境首次成立时应用一次；意图消费后，语境内的
 	// 一切后续变化（会话对象更新、active 抖动回真）都不再初始化。
@@ -94,7 +102,7 @@ export function useCodingSessionLayout(): void {
 		if (!intent || !active) return;
 		if (appliedIntentRef.current === intent.nonce) return;
 		appliedIntentRef.current = intent.nonce;
-		applyInitialLayout();
+		applyInitialLayout(intent.cwd);
 	}, [intent, active, applyInitialLayout]);
 
 	// 边沿驱动（保留现状的两类语境）：团队路由进入、开发档新会话页进入（含页面内
@@ -103,6 +111,6 @@ export function useCodingSessionLayout(): void {
 		const previous = prevActiveRef.current;
 		prevActiveRef.current = active;
 		if (!active || active === previous) return;
-		if (context === "team" || context === "new-session") applyInitialLayout();
-	}, [active, context, applyInitialLayout]);
+		if (context === "team" || context === "new-session") applyInitialLayout(contextCwd);
+	}, [active, context, contextCwd, applyInitialLayout]);
 }
