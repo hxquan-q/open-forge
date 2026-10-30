@@ -295,7 +295,10 @@ describe("智能客服 · 后台思考（D 组用户流程）", () => {
 			await waitFor(() => expect(harness.counters.ask).toHaveLength(2));
 		await user.click(screen.getByRole("button", { name: "新建对话" }));
 
-		const baseline = harness.counters.listSessions;
+		const nav = screen.getByRole("navigation", { name: "历史会话" });
+			await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s1/ })).toBeTruthy());
+			await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s2/ })).toBeTruthy());
+			const baseline = harness.counters.listSessions;
 		act(() => harness.emit({ type: "turn.completed", requestId: "r1" }));
 		act(() => harness.emit({ type: "turn.completed", requestId: "r2" }));
 

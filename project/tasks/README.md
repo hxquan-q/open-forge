@@ -40,7 +40,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0424` | `done` | PLAN-0027 | [Agent/团队所属模式](TASK-0424-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0036 定位重合讨论。 |
 | `TASK-0423` | `ready` | PLAN-0027 | [M1 版块壳：/allstar 路由、项目空间、会话管理与配置 v1](TASK-0423-allstar-dev-section-shell.md)；前置 ADR 需用户当日评审；serial，2026-11-06 前收口发 0.1.5。 |
 | `TASK-0422` | `done` | PLAN-0027 | [「Allstar自主开发」版块入口](TASK-0422-allstar-dev-section-entry.md)：代码模式独立入口、新会话默认文档与研究档、右栏随会话轴；`c5700985d` 已推 origin/chenxvhua，工程验证与用户实机验收通过。 |
-| `TASK-0419` | `verifying` | — | [后台列表刷新合并](TASK-0419-weknora-background-refresh-coalesce.md)；第十批冻结候选 b6c7y60gc 中 Desktop 6247 通过、18 既有跳过，AC-20 未再失败。 |
+| `TASK-0419` | `verifying` | — | [后台列表刷新合并](TASK-0419-weknora-background-refresh-coalesce.md)；BUG-0162；AC-20 现在等待 s1/s2 历史行显示后才取基线，文件 7/7、AC-20 隔离 6 次通过；完整 test:changed 未重跑；serial。 |
 | `TASK-0418` | `verifying` | — | [SSH 握手预算取整](TASK-0418-ssh2-handshake-budget-floor.md)；第十批冻结候选 b6c7y60gc 中 ssh-transport 236 通过、25 既有跳过，239999 未再出现。 |
 | `TASK-0417` | `verifying` | — | [Worktree 准备沿用控制器运行时](TASK-0417-agent-prepare-controller-runtime.md)；第十批冻结候选 b6c7y60gc 的 test:changed 退出 0，90 路径字节快照未变。 |
 | `TASK-0416` | `verifying` | — | [控制器测试夹具生命周期](TASK-0416-agent-test-fixture-lifecycle.md)；第十批冻结候选 b6c7y60gc 的 quality 726 项通过，历史 EPERM 未在本批复现。 |
