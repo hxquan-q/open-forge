@@ -104,7 +104,7 @@ updated: 2026-10-30
 ## 交付记录
 
 - 实际修改：生产端 `useSessionEventController` 的 tool.start 投影按 `capabilityProfile === "coding"` 门控（团队泵不动）；消费端 `ActivityPanelProps.hotTracking`（默认 false）+ Context 增 `hotTracking`（默认 false）+ 非 hot 挂载滤除 `terminal` 内置页签 + `useFollowAiActivity(workspace, enabled)` / `useFollowAiFileEdits`（Context）短路；挂载点接线 DefaultChatView 两分支 `hotTracking={coding}`、NewSessionPageView 按项目档位、ProjectDetailPage 默认 false、ConversationActivityPanel 按 activeSession 档位；REQ-0030 补不变量与关联；types.ts 补 fork 声明头。
-- 实际运行：红 3（work 不投屏 / disabled 不跟随 / 默认面板无 terminal 页签）→ 绿；全套件 24/24（file-edits 5 含新增 disabled 用例、terminal-tab、plugin-tabs 6、follow-activity 5、terminal-settle 4、DefaultChatView×2）；`check:quick` 通过（ratchet new=0，首轮 types.ts 缺头已补）。
+- 实际运行：红 3（work 不投屏 / disabled 不跟随 / 默认面板无 terminal 页签）→ 绿；全套件 24/24（file-edits 5 含新增 disabled 用例、terminal-tab、plugin-tabs 6、follow-activity 5、terminal-settle 4、DefaultChatView×2）；`check:quick` 通过（ratchet new=0，首轮 types.ts 缺头已补）。批次收尾完整 `bun run check` 首轮抓出三处类型问题并已修：Context `hotTracking` 改可选（兼容既有测试字面量，缺省 false 兜底）；生产端门控改读 `activeSessionAtom`（`ActiveSessionHandle` 不携带 capabilityProfile，测试挂具同步设 atom）；团队 end 结算闭包提取 `endResult` 局部（联合窄化不进闭包）。复跑后完整 check exit 0。
 - 未运行及原因：完整 check 与 impact 留批次收尾；DefaultChatView/NewSessionPage 的 prop 接线未单测（面板级与 hook 级合同已锁，接线由 tsc 保证）；实机 work 会话验收待用户。
 - Worktree：未拆出（主检出串行）。
 - 剩余风险：feed/编辑目标仍为全局共享（code↔code 跨项目隔离 = F03 后续切片）；F06 的 end 结算对非 coding 会话自然 no-op（start 不入队）。

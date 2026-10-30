@@ -17,7 +17,9 @@ import { useActivityPanelContext } from "../registry/context";
  * 完全不跟随。
  */
 export function useFollowAiFileEdits(): void {
-	const { hotTracking, workspace } = useActivityPanelContext();
+	const context = useActivityPanelContext();
+	const workspace = context.workspace;
+	const hotTracking = context.hotTracking ?? false;
 	const target = useAtomValue(aiEditTargetAtom);
 	const preview = useAtomValue(inlineFilePreviewAtom);
 	const setPreview = useSetAtom(inlineFilePreviewAtom);

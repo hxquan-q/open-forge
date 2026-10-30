@@ -363,12 +363,13 @@ export function useTeamChatModel(
 					: event.conversationId;
 			// 团队终端条目的 end 结算先于挂载/会话闸门（BUG-0157）：键自带会话前缀、
 			// 惰性提取，不写聊天状态——卸载或切走后旧成员命令仍要落定，不永久挂
-			// 「执行中」。
+			// 「执行中」。result 提前取局部：闭包内不保留联合窄化。
 			if (event.type === "desktop.team-tool-execution" && event.event.type === "end") {
+				const endResult = event.event.result;
 				markAiTerminalEntryDone(
 					getDefaultStore(),
 					aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
-					() => aiTerminalOutputFromResult(event.event.result),
+					() => aiTerminalOutputFromResult(endResult),
 				);
 			}
 			if (!mounted || eventSessionId !== session.id) return;

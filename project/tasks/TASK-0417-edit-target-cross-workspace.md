@@ -51,7 +51,7 @@ updated: 2026-10-30
 ## 交付记录
 
 - 实际修改：`ai-activity-atoms.ts`（接口 + 工厂携带 cwd）；`useFollowAiFileEdits`（Context workspace.cwd 过滤）；`useFollowAiActivity` 编辑分支（同过滤）；三个测试文件（工厂断言、既有夹具补 cwd、跨项目红 2 用例）；BUG-0160/本 Task/索引与 v0.1.4 fragment。
-- 实际运行：红 2→绿；全套件 23/23；`check:quick` 通过（ratchet new=0）。
+- 实际运行：红 2→绿；全套件 23/23；`check:quick` 通过（ratchet new=0）。批次收尾完整 `bun run check` exit 0（含本片类型面）。
 - 未运行及原因：完整 check 见批次收尾；实机跨项目走查待用户。
 - Worktree：未拆出（主检出串行）。
 - 剩余风险：隔离粒度为 cwd（同项目多 code 会话视为同源），与 shell 分支一致；如需会话粒度另立切片。

@@ -6,7 +6,7 @@
  * toolCallId 配对，不写聊天状态；闸门对聊天流的保护由既有 cross-session-leak
  * 套件看守。
  */
-import { aiTerminalFeedAtom } from "@shared/store/atoms";
+import { activeSessionAtom, aiTerminalFeedAtom } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
 import type { SessionEvent } from "@vetta/runtime-core";
 import { getDefaultStore, Provider } from "jotai";
@@ -56,9 +56,20 @@ function toolEnd(toolCallId: string): SessionEvent {
 		args: { command: "bun run build" },
 		startedAt: 1,
 		durationMs: 9,
+		phases: [],
 		result: { content: [{ type: "text", text: "build ok" }] },
 		isError: false,
 	} as SessionEvent;
+}
+
+function setActiveProfile(profile: "coding" | "work"): void {
+	// §11.3 生产端门控读 activeSessionAtom（创建时固化的档位）。
+	store.set(activeSessionAtom, {
+		cwd: "C:/work/a",
+		runtimeId: "session-a",
+		sessionPath: "C:/sessions/a.jsonl",
+		capabilityProfile: profile,
+	} as never);
 }
 
 beforeEach(() => {
@@ -69,6 +80,7 @@ beforeEach(() => {
 		sessionPath: "C:/sessions/a.jsonl",
 		capabilityProfile: "coding",
 	};
+	setActiveProfile("coding");
 	store.set(aiTerminalFeedAtom, []);
 });
 
@@ -103,6 +115,7 @@ it("§11.3：work 档会话的 tool.start 不投屏（热追踪收敛 code 独�
 		sessionPath: "C:/sessions/a.jsonl",
 		capabilityProfile: "work",
 	};
+	setActiveProfile("work");
 	const { result } = renderHook(() => useSessionEventController({ activeSessionRef }), { wrapper });
 
 	act(() => result.current.createSessionEventHandler("session-a")(toolStart("call-work")));

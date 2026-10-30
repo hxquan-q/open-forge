@@ -18,6 +18,7 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	moreSessions: (count: number) => `${count} more`,
 	emptyTitle: "no sessions",
 	emptyHint: "pick a project above",
+	emptyCardHint: "no dev sessions on this card",
 	emptyProjectLabel: "pick project",
 	openProject: "open project",
 };
