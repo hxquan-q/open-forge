@@ -5,7 +5,50 @@ import { NodeCommandProcessAbortedError } from "../../src/coding/host/command-pr
 import { createNodeVettaDesktopCommandPort } from "../../src/coding/host/vetta-desktop-command-port.js";
 import { type CommandProcessPort, DesktopCommandAbortedError } from "../../src/coding/shared/desktop-command.js";
 
+const fallbackCandidates = [
+	{
+		platform: "win32" as const,
+		environment: { LOCALAPPDATA: "C:\\Users\\test\\AppData\\Local", ProgramFiles: "C:\\Program Files" },
+		expected: [
+			nodePath.win32.join("C:\\Users\\test\\AppData\\Local", "Programs", "OpenForge", "OpenForge.exe"),
+			nodePath.win32.join("C:\\Program Files", "OpenForge", "OpenForge.exe"),
+		],
+	},
+	{
+		platform: "darwin" as const,
+		environment: {},
+		expected: [
+			"/Applications/Open Forge.app/Contents/MacOS/OpenForge",
+			"/Applications/Allstr ai.app/Contents/MacOS/OpenForge",
+		],
+	},
+	{
+		platform: "linux" as const,
+		environment: {},
+		expected: ["/opt/Open Forge/OpenForge", "/opt/Allstr ai/OpenForge"],
+	},
+];
+
 describe("Node Vetta Desktop command port", () => {
+	it.each(fallbackCandidates)(
+		"uses installer identity paths for $platform fallbacks",
+		async ({ platform, environment, expected }) => {
+			const inspected: string[] = [];
+			const port = createNodeVettaDesktopCommandPort({
+				platform,
+				environment,
+				fileExists: async (filePath) => {
+					inspected.push(filePath);
+					return false;
+				},
+				readTextFile: async () => "{}",
+			});
+
+			await expect(port.locate()).rejects.toThrow(/Desktop app executable not found/);
+			expect(inspected).toEqual(expected);
+		},
+	);
+
 	it("prefers the explicit environment executable without reading configuration", async () => {
 		const readTextFile = vi.fn<() => Promise<string>>();
 		const port = createNodeVettaDesktopCommandPort({
@@ -40,12 +83,12 @@ describe("Node Vetta Desktop command port", () => {
 			platform: "darwin",
 			environment: {},
 			vettaHomePath: "/home/test/.vetta",
-			fileExists: async (filePath) => filePath === "/Applications/Vetta.app/Contents/MacOS/Vetta",
+			fileExists: async (filePath) => filePath === "/Applications/Allstr ai.app/Contents/MacOS/OpenForge",
 			readTextFile: async () => JSON.stringify({ vettaAppPath: "/old/Vetta" }),
 		});
 
 		await expect(port.locate()).resolves.toEqual({
-			path: "/Applications/Vetta.app/Contents/MacOS/Vetta",
+			path: "/Applications/Allstr ai.app/Contents/MacOS/OpenForge",
 			staleConfiguredPath: "/old/Vetta",
 		});
 	});

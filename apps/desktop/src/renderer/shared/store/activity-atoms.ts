@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import type { ActivityTabKey } from "@shared/lib/project-profile";
-import { atom, type Getter, type Setter } from "jotai";
+import { atom, type Getter, type getDefaultStore, type Setter } from "jotai";
 
 export const activityPanelOpenAtom = atom<boolean>(false);
 export const activityPanelResizingAtom = atom<boolean>(false);
@@ -270,3 +270,15 @@ export const ACTIVITY_TAB_ORDER_STORAGE_KEY = "vetta-activity-tab-order";
  * 未出现在此列表中的 tab（如新出现的动态/插件 tab）按自然顺序追加到末尾。
  */
 export const activityTabOrderAtom = createPersistedCwdStringListAtom(ACTIVITY_TAB_ORDER_STORAGE_KEY);
+
+/**
+ * 新建 code 会话时重置该项目的页签显隐/排序偏好（BUG-0159 / 审计 F10，用户裁决
+ * 新建用默认）：清除后 resolve 回四页签默认显隐与自然序；创建后的手动调整在下次
+ * 新建前一直保留。写走既有 atom setter，同步落 localStorage。
+ */
+export function resetActivityTabPreferencesFor(store: ReturnType<typeof getDefaultStore>, cwd: string): void {
+	const hidden = new Map(store.get(hiddenActivityTabsAtom));
+	if (hidden.delete(cwd)) store.set(hiddenActivityTabsAtom, hidden);
+	const order = new Map(store.get(activityTabOrderAtom));
+	if (order.delete(cwd)) store.set(activityTabOrderAtom, order);
+}

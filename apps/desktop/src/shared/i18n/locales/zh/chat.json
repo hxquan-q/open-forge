@@ -12,7 +12,13 @@
 			"task": "任务",
 			"ports": "端口映射",
 			"canvas": "画布",
-			"terminal": "终端"
+			"terminal": "终端",
+			"git": "Git"
+		},
+		"terminal": {
+			"title": "AI 命令回放",
+			"empty": "AI 执行的命令会在这里实时显示",
+			"running": "执行中"
 		},
 		"backgroundTasks": {
 			"statusRunning": "运行中",
@@ -308,6 +314,21 @@
 		},
 		"plan": {
 			"headline": "当前计划"
+		},
+		"git": {
+			"noProject": "此会话没有项目目录",
+			"loading": "正在读取仓库…",
+			"notRepo": "当前目录不是 git 仓库",
+			"clean": "工作区干净，没有变更",
+			"refresh": "刷新",
+			"changeCount": "{{count}} 处变更",
+			"status": {
+				"added": "新增",
+				"modified": "修改",
+				"deleted": "删除",
+				"untracked": "未跟踪",
+				"renamed": "重命名"
+			}
 		}
 	},
 	"preview": {
@@ -984,7 +1005,11 @@
 			"busy": "会话正在运行，请等当前回复结束后再试",
 			"recoveryRequired": "会话需要先恢复才能续跑，请先处理恢复提示"
 		},
-		"streamingPhrases": ["Vetta 正在回复…", "请耐心等待…", "Vetta 正在努力工作…"],
+		"streamingPhrases": [
+			"Vetta 正在回复…",
+			"请耐心等待…",
+			"Vetta 正在努力工作…"
+		],
 		"copyButton": {
 			"copied": "已复制",
 			"copy": "复制"
@@ -1260,8 +1285,8 @@
 		"emptyMessageLabel": "(图片)",
 		"axes": {
 			"aligned": {
-				"work": "本会话按文档与研究开的 · 切页头不会改",
-				"coding": "本会话按代码开的 · 切页头不会改"
+				"work": "本会话按文档与研究开的 · 模式创建时已固定",
+				"coding": "本会话按代码开的 · 模式创建时已固定"
 			},
 			"divergent": "本会话：{{interpretation}} · {{profile}}",
 			"interpretation": {
@@ -1458,12 +1483,6 @@
 		"originalLocation": "原位置：{{path}}"
 	},
 	"workspace": {
-		"mode": {
-			"coding": "代码",
-			"hint": "右侧工作台立即换新。新会话按这一档开始；当前会话不会变。",
-			"switch": "切换工作区：文档与研究或代码",
-			"work": "文档与研究"
-		},
 		"work": {
 			"panelTitle": "文档与研究",
 			"panelLead": "这个会话的计划、来源资料和产物都在这里",

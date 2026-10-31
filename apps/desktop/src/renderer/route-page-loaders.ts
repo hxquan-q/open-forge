@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { loadNewSessionPage } from "./domains/conversation/components/loadNewSessionPage";
 
 /** Shared by React.lazy routes and navigation intent prefetch. No page mounts here. */
@@ -5,6 +6,10 @@ export { loadNewSessionPage };
 
 export const loadAbilitiesPage = async () => ({
 	default: (await import("./domains/abilities/components/AbilitiesPage")).AbilitiesPage,
+});
+
+export const loadAllstarDevHomePage = async () => ({
+	default: (await import("./domains/allstar-dev/components/AllstarDevHomePage")).AllstarDevHomePage,
 });
 
 export const loadAgentCenterPage = async () => ({

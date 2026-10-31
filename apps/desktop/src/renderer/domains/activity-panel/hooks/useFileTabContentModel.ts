@@ -1,6 +1,8 @@
+// Copyright The Open Forge contributors.
 import { usePreviewNav } from "@domains/file-preview/components/FilePreviewView";
 import {
 	activityPanelPreviewAvailableAtom,
+	clearInlineFilePreviewContextAtom,
 	closeInlineFilePreviewAtom,
 	type FilePreviewContext,
 	inlineFilePreviewAtom,
@@ -66,7 +68,10 @@ export function useFileTabContentModel(): FileTabContentModel {
 		if (!showPreview) setTreeCollapsed(false);
 	}, [showPreview]);
 
-	useEffect(() => () => closePreview(), [closePreview]);
+	// 卸载只清预览上下文、不回拉宽度（BUG-0162）：切走页签时的面板宽度属于版块态
+	// 初始化或用户选择；回拉语义只属于用户主动点「关闭预览」。
+	const clearPreviewOnUnmount = useSetAtom(clearInlineFilePreviewContextAtom);
+	useEffect(() => () => clearPreviewOnUnmount(), [clearPreviewOnUnmount]);
 
 	return {
 		showTree: !showPreview || !treeCollapsed,

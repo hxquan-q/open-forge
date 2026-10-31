@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, currentScenarioAtom, mountedActivityWorkspacesAtom } from "@shared/store/atoms";
 import { useActiveSessionRuntimeIds } from "@shared/workspace/active-session-runtime";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
@@ -9,6 +10,7 @@ import { ActivityTabMetaHost } from "../registry/ActivityTabMetaHost";
 import { ActivityPanelContextProvider } from "../registry/context";
 import type { ActivityTabDefinition, ActivityTabId, ActivityTabMeta } from "../registry/types";
 import { useActivityTabDefinitions } from "../registry/useActivityTabDefinitions";
+import { useFollowAiActivity } from "../hooks/useFollowAiActivity";
 import { ActivityPanelFrame } from "./activity-panel/ActivityPanelFrame";
 import { ActivityPanelView } from "./activity-panel/ActivityPanelView";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
@@ -44,6 +46,8 @@ export function ActivityPanel(props: ActivityPanelProps): JSX.Element {
 	const { enablePluginTabs = true, knowledgeHistory = false, enabledBuiltinTabs, pluginScenario } = props;
 	const { workspace } = props;
 	const cwd = workspace.cwd;
+	// §11.3（REQ-0030）：热追踪默认关闭——host 必须显式声明 coding 语境。
+	const hotTracking = props.hotTracking ?? false;
 
 	const definitions = useActivityTabDefinitions({
 		enablePluginTabs,
@@ -51,18 +55,27 @@ export function ActivityPanel(props: ActivityPanelProps): JSX.Element {
 		enabledBuiltinTabs,
 		pluginScenario,
 	});
+	// 非 coding 挂载点不显示 AI 终端回放页签（该页签只承载热追踪投屏）。
+	const visibleDefinitions = hotTracking
+		? definitions
+		: definitions.filter((definition) => definition.id !== "terminal");
 
-	const contextValue = useMemo(() => ({ workspace, knowledgeHistory }), [workspace, knowledgeHistory]);
+	const contextValue = useMemo(
+		() => ({ workspace, knowledgeHistory, hotTracking }),
+		[workspace, knowledgeHistory, hotTracking],
+	);
 	useMountedActivityWorkspace(workspace);
+	// 演示定稿：AI 活动跟随——shell 开跑切终端、编辑文件切文件页、内嵌浏览器会话变化切浏览器。
+	useFollowAiActivity(workspace, hotTracking);
 
 	return (
 		<ActivityPanelContextProvider value={contextValue}>
-			<ActivityTabMetaHost definitions={definitions}>
+			<ActivityTabMetaHost definitions={visibleDefinitions}>
 				{(metaById) => (
 					<ActivityPanelWithMeta
 						cwd={cwd}
 						workspaceId={workspace.id}
-						definitions={definitions}
+						definitions={visibleDefinitions}
 						metaById={metaById}
 						knowledgeHistory={knowledgeHistory}
 						enablePluginTabs={enablePluginTabs}
@@ -101,7 +114,14 @@ export function ConversationActivityPanel(): JSX.Element {
 			),
 		[activeSession?.cwd, runtimeIds],
 	);
-	return <ActivityPanel workspace={workspace} pluginScenario={pluginScenario} />;
+	// §11.3：热追踪按会话创建时固化的档位，不随项目偏好联动。
+	return (
+		<ActivityPanel
+			workspace={workspace}
+			pluginScenario={pluginScenario}
+			hotTracking={activeSession?.capabilityProfile === "coding"}
+		/>
+	);
 }
 
 /** Adapter for non-conversation hosts that intentionally inherit the current plugin scenario. */

@@ -73,7 +73,8 @@ function sessionListsEqual(a: readonly SessionInfo[], b: readonly SessionInfo[])
 			left.firstMessage !== right.firstMessage ||
 			left.modifiedAt !== right.modifiedAt ||
 			left.cwd !== right.cwd ||
-			left.fileSizeBytes !== right.fileSizeBytes
+			left.fileSizeBytes !== right.fileSizeBytes ||
+			left.agentMode !== right.agentMode
 		) {
 			return false;
 		}
@@ -176,6 +177,8 @@ export function useProjectActions() {
 								cwd: session.cwd,
 								firstMessage: session.firstMessage,
 								modifiedAt: session.modifiedAt,
+								// 档位随载荷透传：增量窗口内 coding 行不误入普通侧栏（BUG-0156）。
+								...(session.agentMode ? { agentMode: session.agentMode } : {}),
 							});
 						} else {
 							const existing = nextSessions[existingIndex];

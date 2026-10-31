@@ -20,6 +20,7 @@ import type { DesktopDebugApi } from "./api-types/debug.js";
 import type { DesktopDiagnosticsApi } from "./api-types/diagnostics.js";
 import type { DesktopDialogApi } from "./api-types/dialog.js";
 import type { DesktopDownloadsApi } from "./api-types/downloads.js";
+import type { DesktopGitApi } from "./api-types/git.js";
 import type { DesktopI18nApi } from "./api-types/i18n.js";
 import type { DesktopImApi } from "./api-types/im.js";
 import type { DesktopKnowledgeApi } from "./api-types/knowledge.js";
@@ -112,6 +113,7 @@ export interface DesktopApi {
 	markdown: DesktopMarkdownApi;
 	messageAnnotations: MessageAnnotationsApi;
 	hostAccess: DesktopHostAccessApi;
+	git: DesktopGitApi;
 	abilities: DesktopAbilitiesApi;
 	agentTeams: DesktopAgentTeamsApi;
 	actionApproval: DesktopActionApprovalApi;

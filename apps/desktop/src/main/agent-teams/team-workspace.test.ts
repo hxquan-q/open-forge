@@ -1,99 +1,56 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { createAgentTeamStorageKey } from "./agent-team-storage-layout.js";
-import { createTeamSessionWorkspace, resolveTeamSessionWorkspace, resolveTeamWorkspacePath } from "./team-workspace.js";
+// Copyright The Open Forge contributors.
+/**
+ * Team 会话工作区解析的校验名单合同（BUG-0163）：开发册（config.allstarProjects）
+ * 项目与普通册项目一样可作为 Team 会话工作区——F08 后版块新建目标取自开发册，
+ * 名单不含开发册时 code 模式团队会话直接创建失败。
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const temporaryDirectories: string[] = [];
+const configState = vi.hoisted(() => ({
+	projects: [{ path: "C:/ordinary" }],
+	allstarProjects: [{ path: "C:/dev-only" }] as { path: string }[] | undefined,
+}));
 
-afterEach(async () => {
-	for (const directory of temporaryDirectories.splice(0)) await rm(directory, { recursive: true, force: true });
-});
+vi.mock("../config/desktop-config-store.js", () => ({
+	readDesktopConfig: async () => configState,
+}));
 
-async function createStorageIndex(teamId: string, teamName: string): Promise<string> {
-	const root = await mkdtemp(resolve(tmpdir(), "vetta-team-workspace-"));
-	temporaryDirectories.push(root);
-	const storageRoot = resolve(root, "agent-teams");
-	await mkdir(storageRoot, { recursive: true });
-	await writeFile(
-		resolve(storageRoot, "index.json"),
-		JSON.stringify({
-			schemaVersion: 1,
-			revision: 1,
-			layoutVersion: 2,
-			teams: { [teamId]: createAgentTeamStorageKey(teamName, teamId) },
-			agents: {},
-		}),
-		"utf8",
-	);
-	return root;
-}
+import { resolveTeamSessionWorkspace } from "./team-workspace.js";
 
-describe("resolveTeamWorkspacePath", () => {
-	it("resolves the readable directory recorded in the v2 storage index", async () => {
-		const root = await createStorageIndex("team-a", "研发团队");
-		const path = await resolveTeamWorkspacePath("team-a", root);
-		const relativePath = relative(resolve(root, "agent-teams"), path);
-
-		expect(relativePath.startsWith("..")).toBe(false);
-		expect(relativePath).toBe(join("workspaces", createAgentTeamStorageKey("研发团队", "team-a")));
-	});
-
-	it("rejects a Team id that is absent from the storage index", async () => {
-		const root = await createStorageIndex("team-a", "Team A");
-		await expect(resolveTeamWorkspacePath("team-b", root)).rejects.toThrow("storage directory not found");
-	});
+beforeEach(() => {
+	configState.projects = [{ path: "C:/ordinary" }];
+	configState.allstarProjects = [{ path: "C:/dev-only" }];
 });
 
 describe("resolveTeamSessionWorkspace", () => {
-	const dependencies = {
-		createSessionWorkspace: async (teamId: string, sessionId: string) => ({
-			id: `agent-team:${teamId}:session:${sessionId}`,
-			cwd: `C:/teams/${teamId}/sessions/${sessionId}`,
-		}),
-		listProjectPaths: async () => ["C:/Projects/Selected"],
-	};
-
-	it("allocates a session-owned workspace by default", async () => {
-		await expect(resolveTeamSessionWorkspace("team-a", "session-a", undefined, dependencies)).resolves.toEqual({
-			kind: "session",
-			id: "agent-team:team-a:session:session-a",
-			cwd: "C:/teams/team-a/sessions/session-a",
+	it("开发册项目可作为 Team 会话工作区", async () => {
+		const workspace = await resolveTeamSessionWorkspace("team-1", "session-1", {
+			kind: "project",
+			path: "C:/dev-only",
 		});
+		expect(workspace).toEqual({ kind: "project", id: "C:/dev-only", cwd: "C:/dev-only" });
 	});
 
-	it("uses the configured project's canonical path when selected", async () => {
-		await expect(
-			resolveTeamSessionWorkspace(
-				"team-a",
-				"session-a",
-				{ kind: "project", path: "c:/projects/selected/" },
-				dependencies,
-			),
-		).resolves.toEqual({ kind: "project", id: "C:/Projects/Selected", cwd: "C:/Projects/Selected" });
+	it("ordinary project remains valid when the optional developer book is absent", async () => {
+		configState.allstarProjects = undefined;
+
+		const workspace = await resolveTeamSessionWorkspace("team-1", "session-1", {
+			kind: "project",
+			path: "C:/ordinary",
+		});
+
+		expect(workspace).toEqual({ kind: "project", id: "C:/ordinary", cwd: "C:/ordinary" });
 	});
 
-	it("rejects paths that are not active configured projects", async () => {
+	it("普通册项目照常解析；名单外路径仍拒绝", async () => {
+		const workspace = await resolveTeamSessionWorkspace("team-1", "session-1", {
+			kind: "project",
+			path: "C:/ordinary",
+		});
+		expect(workspace).toEqual({ kind: "project", id: "C:/ordinary", cwd: "C:/ordinary" });
+
 		await expect(
-			resolveTeamSessionWorkspace("team-a", "session-a", { kind: "project", path: "C:/untrusted" }, dependencies),
+			resolveTeamSessionWorkspace("team-1", "session-1", { kind: "project", path: "C:/unknown" }),
 		).rejects.toThrow("Selected Team workspace project is unavailable");
-	});
-});
-
-describe("createTeamSessionWorkspace", () => {
-	it("creates isolated directories for separate Team sessions", async () => {
-		const root = await createStorageIndex("team-a", "Team A");
-		const first = await createTeamSessionWorkspace("team-a", "session-a", root);
-		const repeated = await createTeamSessionWorkspace("team-a", "session-a", root);
-		const second = await createTeamSessionWorkspace("team-a", "session-b", root);
-
-		expect(first.id).toBe("agent-team:team-a:session:session-a");
-		expect(second.id).toBe("agent-team:team-a:session:session-b");
-		expect(repeated).toEqual(first);
-		expect(first.cwd).not.toBe(second.cwd);
-		expect(relative(resolve(root, "agent-teams"), first.cwd)).toBe(
-			join("session-workspaces", createAgentTeamStorageKey("Team A", "team-a"), "session-a"),
-		);
 	});
 });

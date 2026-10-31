@@ -71,6 +71,11 @@ export interface SessionInfo {
 	parentEntryId?: string;
 	/** Session JSONL size in bytes when known from list indexing. */
 	fileSizeBytes?: number;
+	/**
+	 * 会话创建时固化的工作模式（ADR-0151 决策 6，随 listSessions 下发）。
+	 * 无记录的历史会话不带该字段，按 work 口径处理。
+	 */
+	agentMode?: string;
 }
 
 /** Team session fields retained by the shared context-menu state. */

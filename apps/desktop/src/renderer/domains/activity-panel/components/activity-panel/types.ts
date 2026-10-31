@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { TabBarDragEvent, TabBarItem } from "@shared/components/ui/tab-bar";
 import type { ActivityTabKey } from "@shared/lib/project-profile";
 import type { FloatingActivityTabPlacement } from "@shared/store/atoms";
@@ -15,6 +16,12 @@ export interface ActivityPanelProps {
 	/** Host-selected static abilities. Omitted means every built-in contribution. */
 	enabledBuiltinTabs?: readonly string[];
 	pluginScenario?: ConversationScenario;
+	/**
+	 * §11.3（REQ-0030）：LLM 行为热追踪（AI 命令投屏/文件跟随/页签跟随）是 code 模式
+	 * 独有。host 按会话档位/项目档位传入；缺省 false——非 coding 挂载点不跟随，
+	 * 也不显示 AI 终端回放页签（terminal 内置页签被滤除）。
+	 */
+	hotTracking?: boolean;
 }
 
 export interface ActivityPanelModel {

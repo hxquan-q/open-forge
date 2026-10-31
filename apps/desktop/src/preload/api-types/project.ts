@@ -50,12 +50,17 @@ export type ProjectImportResult = ProjectImportSuccess | ProjectMigrationArchive
 export interface ProjectEntrySnapshot {
 	path: string;
 	name?: string;
+	/** ADR-0151：版块册（allstarProjects）条目的稳定标识；普通册条目缺省。 */
+	id?: string;
 }
 
 export interface ProjectListSnapshot {
 	workspacePath: string;
 	projects: readonly ProjectEntrySnapshot[];
 	archivedProjects: readonly ProjectEntrySnapshot[];
+	/** ADR-0151 第二册：Allstar 自主开发版块的项目册。 */
+	allstarProjects: readonly ProjectEntrySnapshot[];
+	allstarArchivedProjects: readonly ProjectEntrySnapshot[];
 }
 
 export interface DesktopProjectApi {
@@ -77,4 +82,11 @@ export interface DesktopProjectApi {
 	unarchive(path: string): Promise<void>;
 	/** Forget the project. The directory on disk is left alone. */
 	remove(path: string): Promise<void>;
+	/**
+	 * ADR-0151 第二册：把已存在目录登记进版块册（生成稳定条目 id）。
+	 * 同路径可同时存在于普通册，两者是不同项目实体。已在册则幂等。
+	 */
+	openAllstar(input: { path: string; name?: string }): Promise<ProjectEntrySnapshot>;
+	/** 移出版块册条目（"移出版块"）；不动普通册条目，不动磁盘目录。 */
+	removeAllstar(path: string): Promise<void>;
 }

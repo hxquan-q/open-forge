@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionInfo } from "@shared/store/atoms";
 import type { DesktopTeamSidebarConversation } from "../../../../shared/sidebar-conversation";
 
@@ -42,8 +43,11 @@ export function projectSidebarConversations(
 	const projectedTeams = teamSessions.filter((session) => samePlacement(session.placement, placement));
 	const teamPaths = new Set(projectedTeams.map((session) => normalizedPath(session.coordinationSessionPath)));
 	return [
+		// ADR-0151 决策 5：普通侧栏只显 work 会话——coding 会话（含其置顶）的导航由
+		// 「Allstar自主开发」版块内容区承载；这是列表视图规则，不是权限边界。团队会话的
+		// 可见性走 0406 的团队档位归属，不在本过滤内。
 		...ordinarySessions
-			.filter((session) => !teamPaths.has(normalizedPath(session.path)))
+			.filter((session) => session.agentMode !== "coding" && !teamPaths.has(normalizedPath(session.path)))
 			.map((session): SidebarConversationInfo => ({ ...session, kind: "conversation" })),
 		...projectedTeams.map(
 			(session): SidebarConversationInfo => ({

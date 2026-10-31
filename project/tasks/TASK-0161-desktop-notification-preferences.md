@@ -60,7 +60,7 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 ## 交付记录（2026-10-03，TASK-0196 批次）
 
 - 范围裁决：按用户决策绕开 TASK-0151 依赖直接实施——通知偏好只是 desktop-config 上的新字段组，读写走既有原子写路径；0187 批落地配置事务后自然兼容。采纳上游 0afb42331 终态（单一提示音开关+时机），不移植 1794ef9db 的逐事件音色中间态。
-- 实际修改：SessionTurnNotificationController（终结状态折叠，failed 映射回本仓 notify 的 error）；notification-policy 按事件/时机判定投放；notification-service 偏好抑制+提示音命令；notification-sound-player（Audio 单例、内置 base64 WAV）；desktop-config schemaVersion 迁移框架（versioned-config future-fields）+notificationPreferences 规范化；preload 类型与 onSound；设置页通知分节与中英文案；root-layout onSound 播放接线。
+- 实际修改：SessionTurnNotificationController（终结状态折叠，failed 映射回本仓 notify 的 error）；notification-policy 按事件/时机判定投放；notification-service 偏好抑制+提示音命令；notification-sound-player（Audio 单例、内置 base64 WAV）；desktop-config schemaVersion 迁移框架（versioned-config future-fields）+notificationPreferences 规范化；preload 类型与 onSound；设置页通知分节与中英文案；渲染层 `onSound` 接线缺失由后续 BUG-0080 / TASK-0440 修复。
 - 实际运行：定向 580/580；test:impact 646+7skip；完整 check 通过。
 - 未运行及原因：真实系统横幅/音频实机播放不做实机验证。
 - 剩余风险：内置音色听感未人工评审；配置事务并发窗口为既有通用风险（0151 主题）。
@@ -78,4 +78,4 @@ Upstreamable 的通用行为补丁；Open Forge-only/Compatibility 的既有部�
 
 - 未观测：OS 系统横幅本身（主进程 `new Notification` 无日志行，且从渲染进程补挂 `onSound`/`notify` 订阅被 Electron host API 拒绝：`Host API access denied`），故 Agent 完成/等待横幅只有「策略 + 单测」级证据，与 TASK-0181 的 PTY 读数同类处理。
 - 交付记录修订：原「root-layout onSound 播放接线」与实现不符（特性提交 `3a49e5c2a` 的 37 个文件无 root-layout 变更），已在 BUG-0080 记录。
-- 闭合建议：迁移与持久化两条可利用；提示音与「只提示一次」的用户可见面需先修 BUG-0080 再复验。本项保持 `verifying`，等用户裁定（可选项：授权修复 BUG-0080 后复验 / 以单测口径接受并转 BUG 跟踪）。
+- 闭合建议：旧配置迁移与持久化可利用；提示音事件断链已由 BUG-0080 / TASK-0440 补接并通过渲染 hook 回归与全仓 check。TASK-0161 保持 `verifying`，等待真实 Desktop 的提示音和 OS 横幅人工验收。

@@ -20,6 +20,11 @@ import { DESKTOP_CONFIG_SCHEMA_VERSION, migrateDesktopConfig } from "./desktop/m
 export interface ProjectEntry {
 	path: string;
 	name?: string;
+	/**
+	 * 稳定条目标识（ADR-0151）：版块册（allstarProjects）必填，同路径双册登记时两册
+	 * 条目各有自己的 id；普通册存量条目缺省，回退以路径为标识。
+	 */
+	id?: string;
 }
 
 /** 实验性功能开关分组（设置页「Agent配置 → 扩展功能」）。新增实验项只加一个键。 */
@@ -44,6 +49,13 @@ export interface DesktopConfig {
 	schemaVersion: number;
 	projects: ProjectEntry[];
 	archivedProjects: ProjectEntry[];
+	/**
+	 * 「Allstar 自主开发」版块的项目册（ADR-0151 第二册）：与 projects 完全独立，
+	 * 同路径可两册各登记一条（条目 id 不同）。可选字段——存量配置与测试 fixture
+	 * 无需迁移；parse 层兜底为空数组。
+	 */
+	allstarProjects?: ProjectEntry[];
+	allstarArchivedProjects?: ProjectEntry[];
 	workspacePath: string;
 	defaultExecutionMode: "sandbox" | "full-access";
 	debugMode?: boolean;
@@ -123,6 +135,8 @@ const DEFAULT_CONFIG: DesktopConfig = {
 	schemaVersion: DESKTOP_CONFIG_SCHEMA_VERSION,
 	projects: [],
 	archivedProjects: [],
+	allstarProjects: [],
+	allstarArchivedProjects: [],
 	workspacePath: join(getVettaHomePath(), "workspace"),
 	defaultExecutionMode: "full-access",
 	defaultAgentMode: "work",
@@ -281,6 +295,8 @@ function parseDesktopConfig(parsed: Record<string, unknown>): DesktopConfig {
 				: DESKTOP_CONFIG_SCHEMA_VERSION,
 		projects: migrateProjectEntries(parsed.projects),
 		archivedProjects: migrateProjectEntries(parsed.archivedProjects),
+		allstarProjects: migrateProjectEntries(parsed.allstarProjects),
+		allstarArchivedProjects: migrateProjectEntries(parsed.allstarArchivedProjects),
 		workspacePath:
 			typeof parsed.workspacePath === "string"
 				? expandTildePath(parsed.workspacePath)

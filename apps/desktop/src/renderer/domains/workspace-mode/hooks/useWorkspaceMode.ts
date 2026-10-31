@@ -4,11 +4,9 @@ import {
 	readWorkspaceModeFor,
 	type WorkspaceMode,
 	workspaceModeByProjectAtom,
-	writeWorkspaceMode,
 } from "@shared/store/atoms";
 import { useParams, useSearch } from "@tanstack/react-router";
-import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback } from "react";
+import { useAtomValue } from "jotai";
 
 /**
  * 路由层携带的 cwd 按仓库约定是 URI 编码串（navigate 方显式 encodeURIComponent），
@@ -24,15 +22,16 @@ function decodeRouteCwd(value: string | undefined | null): string | null {
 }
 
 /**
- * 解析当前工作区的项目 cwd 与工作区模式。
+ * 解析当前工作区的项目 cwd 与工作区模式（只读）。
  * cwd 优先级：显式传入 > 路由 path param（/project/$cwd）>
- * 路由 search（/new-session?cwd=）> 活动会话 cwd。全部缺失时模式回落 coding，
- * 且 setMode 为空操作（没有可归属的项目，切换是无处持久化的假状态）。
+ * 路由 search（/new-session?cwd=）> 活动会话 cwd。全部缺失时模式回落默认档 work。
+ *
+ * 档位写入一律走 enterWorkspaceSection（版块入口，见 workspace-mode-atoms）：
+ * 新会话类入口回落 work，侧边栏「Allstar自主开发」入口进入 coding。
  */
 export function useWorkspaceMode(cwdOverride?: string | null): {
 	cwd: string | null;
 	mode: WorkspaceMode;
-	setMode: (mode: WorkspaceMode) => void;
 } {
 	const params = useParams({ strict: false }) as { cwd?: string };
 	const search = useSearch({ strict: false }) as { cwd?: string };
@@ -42,13 +41,5 @@ export function useWorkspaceMode(cwdOverride?: string | null): {
 			? cwdOverride
 			: (decodeRouteCwd(params.cwd) ?? decodeRouteCwd(search.cwd) ?? activeSessionCwd ?? null);
 	const map = useAtomValue(workspaceModeByProjectAtom);
-	const setMap = useSetAtom(workspaceModeByProjectAtom);
-	const setMode = useCallback(
-		(next: WorkspaceMode) => {
-			if (!cwd) return;
-			setMap((prev) => writeWorkspaceMode(prev, cwd, next));
-		},
-		[cwd, setMap],
-	);
-	return { cwd, mode: readWorkspaceModeFor(map, cwd), setMode };
+	return { cwd, mode: readWorkspaceModeFor(map, cwd) };
 }

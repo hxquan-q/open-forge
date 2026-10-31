@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
 import { beforeEach, expect, it, vi } from "vitest";
 
 const navigate = vi.hoisted(() => vi.fn());
+const onNewChat = vi.hoisted(() => vi.fn());
 const prefetchNavItem = vi.hoisted(() => vi.fn());
 const hostedRouteOpen = vi.hoisted(() => vi.fn(async () => undefined));
+
+/** 当前路由态：useMatches 的 pathname 由用例改写，验证版块入口在版块路由下高亮。 */
+const routeState = vi.hoisted(() => ({ current: { pathname: "/" } }));
 
 /**
  * 插件文案解析合同的替身：%key% 走目录，其余原样回显。
@@ -14,15 +18,16 @@ const hostedRouteOpen = vi.hoisted(() => vi.fn(async () => undefined));
 const pluginCatalog = vi.hoisted(() => ({ current: {} as Record<string, string> }));
 
 vi.mock("@tanstack/react-router", () => ({
-	useMatches: () => [{ pathname: "/" }],
+	useMatches: () => [{ pathname: routeState.current.pathname }],
 	useNavigate: () => navigate,
+	useSearch: () => ({}),
 }));
 vi.mock("../../../../root-layout/nav-route-prefetch", () => ({ prefetchNavItem }));
 vi.mock("@shared/hosted-routes/hosted-route-service", () => ({
 	desktopHostedRouteService: { open: hostedRouteOpen },
 }));
 vi.mock("../../hooks/useNewChatNavigation", () => ({
-	useNewChatNavigation: () => vi.fn(),
+	useNewChatNavigation: () => onNewChat,
 }));
 vi.mock("../../../plugins/runtime/plugin-i18n", () => ({
 	usePluginTextResolver: () => (_pluginId: string, raw: string | undefined) => {
@@ -35,7 +40,7 @@ vi.mock("react-i18next", () => ({
 	useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-import { pluginWorkspaceViewsAtom } from "@shared/store/atoms";
+import { activeSessionAtom, pluginWorkspaceViewsAtom } from "@shared/store/atoms";
 import { useSidebarModel } from "./useSidebarModel";
 import { SIDEBAR_NAV_LAYOUT_STORAGE_KEY } from "./sidebar-nav-layout";
 
@@ -61,9 +66,12 @@ function render() {
 
 beforeEach(() => {
 	navigate.mockReset();
+	onNewChat.mockReset();
 	prefetchNavItem.mockReset();
 	hostedRouteOpen.mockReset();
+	routeState.current = { pathname: "/" };
 	localStorage.removeItem(SIDEBAR_NAV_LAYOUT_STORAGE_KEY);
+	store.set(activeSessionAtom, null);
 	pluginCatalog.current = {
 		"gallery.nav.label": "设计",
 		"gallery.nav.description": "所有带设计稿的项目",
@@ -97,4 +105,53 @@ it("description 缺省时 tooltip 回落到插件名", () => {
 		(entry) => entry.key === "workspace:vetta-ui-design/gallery",
 	);
 	expect(item?.title).toBe("设计 · Vetta 设计");
+});
+
+it("版块入口不进置顶/收纳布局，点击导航到版块首页 /allstar", () => {
+	const { result } = render();
+	const entry = result.current.sectionEntryNavItem;
+	expect(entry).toBeDefined();
+	expect(entry?.key).toBe("allstar-dev");
+	expect(entry?.locked).toBe(true);
+	// 目录里没有它：置顶区与「更多」收纳区都不出现版块入口。
+	expect(result.current.navItems.some((item) => item.key === "allstar-dev")).toBe(false);
+	expect(result.current.moreNavItems.some((item) => item.key === "allstar-dev")).toBe(false);
+
+	result.current.actions.openNavItem(entry!);
+	expect(navigate).toHaveBeenCalledWith({ to: "/allstar" });
+	expect(onNewChat).not.toHaveBeenCalled();
+});
+
+it("版块路由（/allstar）下版块入口高亮", () => {
+	routeState.current = { pathname: "/allstar" };
+	const { result } = render();
+	expect(result.current.sectionEntryNavItem?.active).toBe(true);
+});
+
+it("聊天页打开代码模式会话时版块入口高亮，研究会话不高亮", () => {
+	const { result, rerender } = renderHook(() => useSidebarModel({ onCollapse: vi.fn() }));
+	// 默认（无活动会话）：不高亮。
+	expect(result.current.sectionEntryNavItem?.active).toBe(false);
+
+	act(() => {
+		store.set(activeSessionAtom, {
+			cwd: "/repo/a",
+			runtimeId: "rt-allstar-1",
+			sessionPath: "/repo/a/s.jsonl",
+			capabilityProfile: "coding",
+		});
+	});
+	rerender();
+	expect(result.current.sectionEntryNavItem?.active).toBe(true);
+
+	act(() => {
+		store.set(activeSessionAtom, {
+			cwd: "/repo/a",
+			runtimeId: "rt-allstar-2",
+			sessionPath: "/repo/a/s2.jsonl",
+			capabilityProfile: "work",
+		});
+	});
+	rerender();
+	expect(result.current.sectionEntryNavItem?.active).toBe(false);
 });

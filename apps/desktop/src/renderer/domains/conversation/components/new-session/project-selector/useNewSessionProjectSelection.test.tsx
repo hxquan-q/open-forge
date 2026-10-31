@@ -77,19 +77,20 @@ describe("useNewSessionProjectSelection", () => {
 	it("待创建项目落盘时，用户选好的模式档位随迁到新项目键（BUG-0037）", () => {
 		const { store, result } = renderSelection(DEFAULT_CWD);
 		act(() => result.current.selectPendingProject("新项目"));
-		// 待创建期间目录还不存在，切换器把档位写在路由 cwd 键上。
+		// 待创建期间目录还不存在，版块入口把档位写在路由 cwd 键上（这里以非默认档 coding 为例：
+		// 默认档 work 只删记录，迁移用例必须用会落盘的档位才有意义）。
 		act(() =>
 			store.set(
 				workspaceModeByProjectAtom,
-				writeWorkspaceMode(new Map<string, WorkspaceMode>(), DEFAULT_CWD, "work"),
+				writeWorkspaceMode(new Map<string, WorkspaceMode>(), DEFAULT_CWD, "coding"),
 			),
 		);
 
 		act(() => result.current.applyCreatedProject("/w/created", "新项目"));
 
 		// 会话派生按新项目 cwd 读：用户「看到并选择」的档位必须跟过去；路由 cwd 上的记录保留。
-		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), "/w/created")).toBe("work");
-		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), DEFAULT_CWD)).toBe("work");
+		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), "/w/created")).toBe("coding");
+		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), DEFAULT_CWD)).toBe("coding");
 	});
 
 	it("换一个新会话入口后本地覆盖作废，重新按入口推导", () => {
@@ -99,6 +100,27 @@ describe("useNewSessionProjectSelection", () => {
 
 		rerender({ cwd: "/w/alpha" });
 		expect(result.current.selection).toEqual({ kind: "project", cwd: "/w/alpha", name: "Alpha" });
+	});
+
+	it("切换/打开本地项目时档位随迁：开发档新会话页换项目不静默回落默认档", () => {
+		const { result, store } = renderSelection("/w/alpha");
+		// 开发档进入：alpha 已是 coding（版块入口写入）。
+		act(() =>
+			store.set(
+				workspaceModeByProjectAtom,
+				writeWorkspaceMode(new Map<string, WorkspaceMode>(), "/w/alpha", "coding"),
+			),
+		);
+		// 「打开本地项目」刚登记的新项目（选择列表随之出现）——切换过去带走 coding 档。
+		act(() =>
+			store.set(projectsAtom, [
+				...PROJECTS,
+				{ cwd: "/w/newly-opened", name: "刚打开", sessionCount: 0, type: "normal" } as Project,
+			]),
+		);
+		act(() => result.current.selectProject("/w/newly-opened"));
+		expect(readWorkspaceModeFor(store.get(workspaceModeByProjectAtom), "/w/newly-opened")).toBe("coding");
+		expect(result.current.selection).toEqual({ kind: "project", cwd: "/w/newly-opened", name: "刚打开" });
 	});
 
 	it("takenNames 覆盖全部项目名，重名判断不漏掉默认与批量项目", () => {

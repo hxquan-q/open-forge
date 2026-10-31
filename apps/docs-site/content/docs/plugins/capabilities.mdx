@@ -1,3 +1,4 @@
+{/* Modified by The Open Forge contributors. */}
 ---
 title: 插件能力参考
 description: 按目标查找 ctx 上的界面、对话、Agent、文件、网络、浏览器、模型、媒体与存储 API 及其权限边界。
@@ -32,7 +33,7 @@ description: 按目标查找 ctx 上的界面、对话、Agent、文件、网络
 | 管理 CLI 与本地服务 | `ctx.cliProviders.*`、`ctx.services.*` | 由清单 `providers` 声明 | 宿主负责探测、安装、启停与健康检查 |
 | 注册可发现动作 | `ctx.appActions.register` | `app.actions.register` + `app.actionHandler.execute` | 高影响文件和网络操作仍需确认 |
 | 提供技能或 MCP | `plugin.json` 的 `agent` 字段 | `agent.skills.control` / `agent.mcp.control` | 安装、启用和重载都要重新验证来源与权限 |
-| 贡献智能体与团队 | `plugin.json` 的 `agent.agents`、`agent.teams` | 无 | 宿主铺成普通档案；成员可跨插件引用，队长必须是本插件自己的 |
+| 贡献智能体与团队 | `plugin.json` 的 `agent.agents`、`agent.teams` | 无 | 宿主铺成普通档案；成员可跨插件引用，队长必须是本插件自己的。智能体与团队固定归属一个档（`mode`：`work` / `coding`），只在对应档的新会话选择器出现，未声明默认归文档与研究档 |
 | 在新会话页摆素材 | `ctx.ui.registerNewSessionContext` | `ui.slot.new-session-context` | 激活条件只能写本插件自己的智能体或能力，拿不到用户逐键输入 |
 | 提供多语言文案 | `ctx.i18n` 与包内 `locales/` | 无 | 文案 key 和 `defaultLocale` 要与清单一致 |
 

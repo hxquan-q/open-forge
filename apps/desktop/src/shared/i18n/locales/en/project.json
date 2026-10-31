@@ -15,6 +15,7 @@
 			"appearance": "Appearance",
 			"extensions": "More options",
 			"more": "More",
+			"allstarDev": "Allstar Dev",
 			"betaBadge": "BETA",
 			"pin": "Pin",
 			"unpin": "Unpin",
@@ -338,5 +339,23 @@
 		"reportFiles": "Project files",
 		"reportFilesValue": "written {{written}}, skipped {{skipped}}, overwritten {{overwritten}}",
 		"reportFailed": "These files could not be restored:"
+	},
+	"allstarDev": {
+		"home": {
+			"intro": "Your autonomous development workspace: enter dev projects and coding sessions from here.",
+			"loading": "Loading…",
+			"projects": {
+				"title": "Dev projects",
+				"newSession": "New dev session",
+				"more": "{{count}} more",
+				"openProject": "Open project"
+			},
+			"empty": {
+				"title": "No dev sessions yet",
+				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",
+				"cardHint": "No dev sessions yet — select this project below to start one",
+				"projectLabel": "Choose a project"
+			}
+		}
 	}
 }

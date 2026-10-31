@@ -3,13 +3,20 @@
 	"plugin.description": "Lists package.json scripts and Makefile targets in the session's bottom panel, finding every package in a monorepo, and runs one in a terminal with a single click.",
 	"panel.label": "Scripts",
 	"search.placeholder": "Search scripts",
-	"summary": "Total: {{count}}",
+	"search.clear": "Clear search",
+	"summary": "{{projects}} projects, {{scripts}} scripts",
 	"action.refresh": "Rescan",
 	"action.runInNewTerminal": "Run {{name}} in a new terminal",
+	"action.dismiss": "Dismiss",
 	"state.loading": "Scanning the project…",
+	"state.error.title": "Scan failed",
 	"state.error": "Scan failed: {{message}}",
 	"state.empty.title": "No runnable scripts found",
 	"state.empty.description": "Add scripts to a package.json or add a Makefile. Dependency folders such as node_modules are not scanned.",
 	"state.noMatch": "No matching scripts",
-	"error.run": "Couldn't run it: {{message}}"
+	"error.run": "Couldn't run it: {{message}}",
+	"card.root": "Root",
+	"card.scripts": "Scripts",
+	"card.showMore": "Show more",
+	"card.showLess": "Show less"
 }

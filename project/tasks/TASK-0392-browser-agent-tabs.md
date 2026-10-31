@@ -12,10 +12,10 @@ related_plan: [PLAN-0006]
 related_tasks: [TASK-0063, TASK-0351, TASK-0362, TASK-0366]
 related_issues: []
 related_bugs: []
-execution: parallel
-branch: task/TASK-0392-browser-agent-tabs
-worktree: ../open-forge-wt/task-0392-browser-agent-tabs
-base_commit: ea67d951e
+execution: serial
+branch: unassigned
+worktree: unassigned（用户指定主检出串行续接，历史 Worktree 见交付记录）
+base_commit: 98f7de9e6
 read_paths:
   - apps/desktop
   - packages/theme-ui
@@ -48,7 +48,7 @@ depends_on: []
 conflicts_with: [TASK-0154, TASK-0197, TASK-0218, TASK-0223, TASK-0360, TASK-0362, TASK-0365, TASK-0366, TASK-0391]
 integration_status: pending
 created: 2026-10-24
-updated: 2026-10-24
+updated: 2026-10-30
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -161,3 +161,23 @@ updated: 2026-10-24
 - 集成后验证：浏览器域（coding-agent 5 文件 39 例、desktop activity-panel/browser-automation 66 文件 384 例）、theme-ui 32 文件 236 例、release-notes 25 例、完整 `bun run check` 九段全绿。
 - 预存阻断：`test/runtime-core/session-initialization-profile.test.ts` 在 `origin/dev` 即失败（缺 `createExplicitMemoryRuntime` 期望项，来自 `a13c1759a`，非本次集成引入）；`project/verification/VERIFY-0023` 缺 Copyright 声明头已补。
 - 人工验收：仍为 `verifying`，待用户真机验收浏览器联动与页签行为。
+
+## 2026-10-29 验收反馈续接：AI 活动未切换页签
+
+- 源码证据：15e0821bd 中 useFollowAiActivity 在 ActivityPanelContextProvider 外调用，读到 workspace.id=`unbound`；浏览器订阅错把 envelope.kind 当动作，实际协议为 envelope.event.kind。
+- 目标：在真实 ActivityPanel 入口上，shell→终端、编辑→文件、同工作区浏览器 Agent 活动→浏览器；不修改侧栏显隐/宽度初始化，不跨工作区响应浏览器事件，不拿旧活动在挂载时强制跳页。
+- 方案：修正 Provider 内装配与事件读取；去重以当前页签值为准而非上一次 AI 目标，下一次活动可重新跟随；不新增 Context 或并行事件总线。
+- Given/When/Then：实际 ActivityPanel（不额外包测试 Context）→ 发布 shell 事件 → 当前工作区选终端且 unbound 无记录 → 用户手动切回文件 → 下一条 shell 活动再次切终端；浏览器 envelope 只改变同 workspace，取消订阅有效。
+- 执行：serial，沿用户指定 chenxvhua 主检出，本轮不使用旧历史 Worktree、不派多 Agent、不触碰用户运行实例；与 TASK-0339 共享索引与浏览器模型，串行验证集成。
+- 写域：ActivityPanel.tsx、useFollowAiActivity.ts/.test.tsx、活动面板集成测试、发布碎片及本 Task/索引；归属 Open-Forge-only；本轮 integration pending。
+- 验证：先新增真实入口回归（旧实现失败），再修复接线；补跨工作区/连续手动切换回归，影响面与完整检查；不宣称真实浏览器/模型已验收。
+
+### 本轮结果
+
+- 实现采用显式传入 ActivityWorkspace 的小接口（而非新增 Provider）：消除调用点读到默认 Context 的可能；浏览器消费 envelope.event 并按 workspaceId/agentActivity 过滤；去重读取实际选中页签，不缓存上次 AI 目标。
+- 真实入口回归先红（当前 workspace 没有 terminal），修复后绿；用户切回文件后下一条 shell 重新带回终端；同一文件再次编辑也可重新跟随；挂载/切工作区不重放旧 shell 活动。
+- Desktop 定向 3 文件/29 例通过；test:impact 两次运行，首次 27 文件/113 断言通过但存在 TeamChatFailureTerminalLoop.test.tsx 的 Git IPC 未处理异常，故该次整体失败。在该测试真实 IPC 边界补 getRepoStatus=null（不 mock 生产 hook）后，复跑 27 文件/113 例、exit 0，无未处理异常。
+- 完整 bun run check 通过；首轮发现本轮事件类型的 import 仍沿用错误 @shared 别名，已改为真实 @/shared 合同并通过 tsc；Project branch 字段按其“任务分支”语义设 unassigned，实际串行检出仍在 chenxvhua。
+- 本轮必要相邻修改追加：TeamChatFailureTerminalLoop.test.tsx 的外部 Git IPC 桩。
+- 自审：显式工作区、实际信封、幂等写入、订阅卸载、手动切走再跟随均有回归；无独立 Agent 审查、无真实 Desktop/Provider 验收。当前候选未提交，等待同批 TASK-0339 的旧测试更新授权后收尾。
+- 2026-10-30：授权已解除，浏览器域与相邻模式合同复验通过；跨包 test:changed 有 10 条失败（分流见 TASK-0339/0407），不称全量绿色收尾。本轮页签修复自身 test:impact 27 文件/113 例通过。后续总体审计发现的初始化/文件跟随/全局 feed 等问题保留报告，不静默扩大本轮修复。

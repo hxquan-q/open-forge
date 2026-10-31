@@ -15,6 +15,7 @@
 			"appearance": "外观",
 			"extensions": "更多选项",
 			"more": "更多",
+			"allstarDev": "Allstar自主开发",
 			"betaBadge": "BETA",
 			"pin": "置顶",
 			"unpin": "取消置顶",
@@ -337,5 +338,23 @@
 		"reportFiles": "项目文件",
 		"reportFilesValue": "写入 {{written}}，跳过 {{skipped}}，覆盖 {{overwritten}}",
 		"reportFailed": "以下文件未能恢复："
+	},
+	"allstarDev": {
+		"home": {
+			"intro": "面向自主开发的工作区：从这里进入开发项目与代码模式会话。",
+			"loading": "正在加载…",
+			"projects": {
+				"title": "开发项目",
+				"newSession": "新建开发会话",
+				"more": "还有 {{count}} 条",
+				"openProject": "打开已有项目"
+			},
+			"empty": {
+				"title": "还没有开发会话",
+				"hint": "用「打开已有项目」把一个目录登记为开发项目，再从这里新建开发会话",
+				"cardHint": "尚无开发会话，可从下方选择该项目新建",
+				"projectLabel": "选择项目"
+			}
+		}
 	}
 }

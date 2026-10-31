@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { auditDesign } from "./design.mjs";
-import { changedFiles, git, readChanges } from "./git.mjs";
+import { changedFiles, git, readChanges, snapshot } from "./git.mjs";
 import { classifyChanges } from "./policy.mjs";
 
 vi.mock("node:child_process", async (importOriginal) => {
@@ -370,5 +370,12 @@ describe("candidate change evidence from real Git objects", () => {
 		});
 
 		expect(() => readChanges(root, base, head)).toThrow(failure);
+	});
+
+	it("accepts a Git root created under the OS temporary directory", () => {
+		const root = fixture();
+		const head = commitTree(root, [{ path: "feature.txt", body: "base\n" }]);
+
+		expect(snapshot(root, { clean: false }).head).toBe(head);
 	});
 });

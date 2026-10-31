@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -6,6 +7,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	activityPanelOpenAtom,
+	activityPanelTabByProjectAtom,
+	aiTerminalFeedAtom,
 	floatingActivityTabsByProjectAtom,
 	pluginActivityTabsAtom,
 	type RegisteredActivityTab,
@@ -33,6 +36,12 @@ vi.mock("motion/react", () => {
 // The file tab owns a live fs watcher; this suite only cares about tab resolution.
 vi.mock("./file-tab/FileTabContent", () => ({
 	FileTabContent: () => <div>file body</div>,
+}));
+
+// 内置 Git 页签的 useMeta 会拉取仓库状态（window.vetta.git）；测试桥不带 git 通道，
+// 本套件只关心页签解析，桩掉该 hook 避免未处理 rejection。
+vi.mock("@shared/hooks/useGitRepoStatus", () => ({
+	useGitRepoStatus: () => ({ status: null, loading: false, refresh: () => {} }),
 }));
 
 class NoopResizeObserver {
@@ -63,7 +72,7 @@ function pluginTab(): RegisteredActivityTab {
 
 const workspace = createActivityWorkspace("agent-team:workspace", "/tmp/team-cwd", ["member-runtime"]);
 
-function renderPanel(scenario: "conversation" | undefined, open = true) {
+function renderPanel(scenario: "conversation" | undefined, open = true, hotTracking?: boolean) {
 	const store = createStore();
 	store.set(activityPanelOpenAtom, open);
 	store.set(pluginActivityTabsAtom, [pluginTab()]);
@@ -72,6 +81,7 @@ function renderPanel(scenario: "conversation" | undefined, open = true) {
 			<ActivityPanel
 				workspace={workspace}
 				{...(scenario ? { pluginScenario: scenario } : {})}
+				{...(hotTracking === undefined ? {} : { hotTracking })}
 			/>
 		</Provider>,
 	);
@@ -79,6 +89,34 @@ function renderPanel(scenario: "conversation" | undefined, open = true) {
 }
 
 describe("activity panel plugin tabs outside the ordinary conversation host", () => {
+	it("真实面板入口把 shell 活动切到当前工作区终端，不写入 unbound", () => {
+		const store = renderPanel(undefined, true, true);
+		act(() => store.set(aiTerminalFeedAtom, [{
+			key: "shell-1", command: "bun run check", running: true, at: 1, cwd: workspace.cwd,
+		}]));
+		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBe("terminal");
+		expect(store.get(activityPanelTabByProjectAtom).has("unbound")).toBe(false);
+		expect(screen.getByText("bun run check")).toBeTruthy();
+		// 用户切走后，下一次同类活动仍能跟随，而不是被上一次 AI 目标缓存挡掉。
+		act(() => store.set(activityPanelTabByProjectAtom, new Map([[workspace.id, "file"]])));
+		act(() => store.set(aiTerminalFeedAtom, [{
+			key: "shell-2", command: "git status", running: true, at: 2, cwd: workspace.cwd,
+		}]));
+		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBe("terminal");
+		expect(screen.getByText("git status")).toBeTruthy();
+	});
+
+	it("§11.3：默认（非 coding 挂载点）不热跟随，AI 终端页签不出现", () => {
+		const store = renderPanel("conversation");
+		act(() =>
+			store.set(aiTerminalFeedAtom, [
+				{ key: "shell-1", command: "bun run check", running: true, at: 1, cwd: workspace.cwd },
+			]),
+		);
+		expect(store.get(activityPanelTabByProjectAtom).get(workspace.id)).toBeUndefined();
+		expect(screen.queryByText("bun run check")).toBeNull();
+	});
+
 	// A Team session never drives the global scenario atom, so the host must hand the
 	// panel its own scenario; without it plugin contributions fail closed and the bar
 	// collapses to the builtin tabs only.

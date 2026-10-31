@@ -12,7 +12,13 @@
 			"task": "Tasks",
 			"ports": "Port forwarding",
 			"canvas": "Canvas",
-			"terminal": "Terminal"
+			"terminal": "Terminal",
+			"git": "Git"
+		},
+		"terminal": {
+			"title": "AI command replay",
+			"empty": "Commands the AI runs will appear here live",
+			"running": "Running"
 		},
 		"backgroundTasks": {
 			"statusRunning": "Running",
@@ -308,6 +314,21 @@
 		},
 		"plan": {
 			"headline": "Current plan"
+		},
+		"git": {
+			"noProject": "This session has no project directory",
+			"loading": "Reading repository…",
+			"notRepo": "Not a git repository",
+			"clean": "Working tree clean",
+			"refresh": "Refresh",
+			"changeCount": "{{count}} change(s)",
+			"status": {
+				"added": "Added",
+				"modified": "Modified",
+				"deleted": "Deleted",
+				"untracked": "Untracked",
+				"renamed": "Renamed"
+			}
 		}
 	},
 	"preview": {
@@ -984,7 +1005,11 @@
 			"busy": "The session is running; wait for the current reply to finish.",
 			"recoveryRequired": "This session must be recovered before it can continue."
 		},
-		"streamingPhrases": ["Vetta is replying…", "Please hold on…", "Vetta is working hard…"],
+		"streamingPhrases": [
+			"Vetta is replying…",
+			"Please hold on…",
+			"Vetta is working hard…"
+		],
 		"copyButton": {
 			"copied": "Copied",
 			"copy": "Copy"
@@ -1260,8 +1285,8 @@
 		"emptyMessageLabel": "(image)",
 		"axes": {
 			"aligned": {
-				"work": "This session started as docs & research · the header switch will not change it",
-				"coding": "This session started as code · the header switch will not change it"
+				"work": "This session started as docs & research · its mode is fixed at creation",
+				"coding": "This session started as code · its mode is fixed at creation"
 			},
 			"divergent": "This session: {{interpretation}} · {{profile}}",
 			"interpretation": {
@@ -1458,12 +1483,6 @@
 		"originalLocation": "Original: {{path}}"
 	},
 	"workspace": {
-		"mode": {
-			"coding": "Code",
-			"hint": "The right-hand workspace switches right away. New chats start in this mode; the current chat does not change.",
-			"switch": "Switch workspace: docs & research or code",
-			"work": "Docs & research"
-		},
 		"work": {
 			"panelTitle": "Docs & research",
 			"panelLead": "This session’s plans, sources, and deliverables live here",

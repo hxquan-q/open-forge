@@ -16,6 +16,23 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0181` | runtime-node 远端 POSIX 路径测试使用 Windows-safe TEMP 夹具；3 个 Windows `/tmp` 失败修复，7/7 | verifying | P2 | — |
+| `BUG-0180` | plugin-vite React sharing 测试误选 Federation bootstrap chunk；已修选择器，plugin-vite 46/46 | verifying | P2 | — |
+| `BUG-0179` | Windows TEMP 8.3 短路径使 Agent Git 根校验误拒绝真实仓库；已修，默认 TEMP Git/integration 28/28 | verifying | P2 | — |
+| `BUG-0178` | 新文件面板挂载时回放同 cwd 的旧 AI 编辑目标；已修，红 1→绿，direct 7/7 + related 118/118 | verifying | P2 | PLAN-0028 |
+| `BUG-0177` | Team 首发失败后自动重发风暴；已修（失败不重武装），红 1427→1 次，团队 42/42 | verifying | P1 | PLAN-0028 |
+| `BUG-0176` | Team 会话工作区校验不含开发册项目；已修（名单合并开发册），HEAD 实证红→绿 | verifying | P1 | PLAN-0028 |
+| `BUG-0174` | 交互式新建会话缺档位回传，热追踪门控误拦（终端空白）；已修透传，红 1→绿，待实机 | verifying | P1 | PLAN-0028 |
+| `BUG-0175` | 首条消息后右栏宽度被文件页签卸载清理回拉到默认；已修语义拆分，红 1→绿 2/2，待实机 | verifying | P1 | PLAN-0028 |
+| `BUG-0173` | 文件面板消费其他项目遗留的编辑目标；已修（目标携带来源 cwd 过滤），红 2→绿 23/23 | verifying | P2 | PLAN-0028 |
+| `BUG-0172` | 新建 code 会话不恢复四页签默认与固定顺序；已修（初始化清偏好），红 2→绿 9/9 | verifying | P2 | PLAN-0028 |
+| `BUG-0171` | 新建 code 会话布局初始化身份与次数错误；已修（意图驱动），红 7→绿+相邻 39/39，待实机走查 | verifying | P1 | PLAN-0028 |
+| `BUG-0170` | 切走会话后 shell 命令永久显示「执行中」；已修（end 结算提升闸门前），红 1→绿 13/13+40/40 | verifying | P2 | PLAN-0028 |
+| `BUG-0169` | coding 会话即时增量行短暂落入普通侧栏；已修（档位端到端透传），红 3→绿 17+12 | verifying | P2 | PLAN-0028 |
+| `BUG-0168` | 同一 AI 文件再次编辑不跟回内嵌预览；已修双条件去重，红 1→绿 8/8 | verifying | P2 | PLAN-0028 |
+| `BUG-0167` | 只登记在开发册的项目历史补拉与新建候选未闭环；已改为册为事实源，红 3→绿，待实机走查 | verifying | P1 | PLAN-0028 |
+| `BUG-0166` | 终端输出摘要 2048 字符截断不约束保留内存（SlicedString 钉母串，探针 48MiB/4.91MiB）；已修复，探针 0.01/0.22 MiB | verifying | P2 | PLAN-0028 |
+| `BUG-0165` | Git 页签分支名解析两处稳定错误（跟踪串整段当分支名、detached 短 SHA 兜底不可达）；已修复，红 3→绿 5/5，待批次收尾验证 | verifying | P2 | PLAN-0028 |
 | `BUG-0162` | 后台终态合并刷新与新会话即时刷新叠成两次列表请求 | verifying | P1 | TASK-0419 |
 | `BUG-0161` | 控制器测试超时后异步进程仍运行且提前删除夹具 | verifying | P1 | TASK-0416 |
 | `BUG-0160` | Git 对象头有损解码接受损坏协议字节 | verifying | P2 | TASK-0415 |
@@ -67,7 +84,7 @@
 | `BUG-0114` | 删除 runtime 未加载的 team 会话：SESSION_NOT_FOUND 抛穿 + 渲染端无 catch 成 unhandled rejection | verifying | P2 | — |
 | `BUG-0113` | 文档站搜索索引因跨语言 URL 重复而返回 500 | verifying | P2 | PLAN-0003 |
 | `BUG-0112` | 本地生产探针以回环 IP 绑定时产生 307 自重定向 | done | P3 | PLAN-0003 |
-| `BUG-0111` | Desktop 可执行文件兜底发现路径仍指向旧品牌安装位置，命中不了真实安装 | investigating | P2 | — |
+| `BUG-0111` | Desktop 可执行文件兜底路径已对齐 OpenForge 安装合同，待打包实机验收 | verifying | P2 | — |
 | `BUG-0110` | 上下文压缩提交与事件追加并发共享 `state.version`，压缩持久化间歇性版本冲突失败 | verifying | P2 | — |
 | `BUG-0109` | 续跑条「继续」把持久会话路径当 runtime session id 传给宿主，必然 `SESSION_NOT_FOUND` | verifying | P1 | — |
 | `BUG-0108` | 删除团队会话失败：通知日志写入与成员 runtime 释放失败双双掀翻删除 | verifying | P1 | — |
@@ -94,8 +111,8 @@
 | `BUG-0084` | team 会话引用文件后输入框反复重建内容：中文输入法组字被打断、光标闪烁无法输入 | verifying | P1 | — |
 | `BUG-0083` | React DEV 告警「flushSync was called from inside a lifecycle method」在 render 日志里成批落盘 | verifying | P3 | — |
 | `BUG-0082` | ac-fence 黑盒 shell 白名单可被复合命令绕过、读域前缀可被 .. 穿越 | verifying | P1 | — |
-| `BUG-0081` | 脚本面板 7 个 i18n key 缺条，界面显示原始 key 与 `{{count}}` | investigating | P3 | PLAN-0014 |
-| `BUG-0080` | 提示音开关可用但 Agent 终结事件从不响铃 | investigating | P2 | PLAN-0014 |
+| `BUG-0081` | Scripts 面板补齐 7 个中英文 locale key 并修正 summary 插值；locale 合同红 2→绿、17/17 | verifying | P3 | PLAN-0014 |
+| `BUG-0080` | 提示音开关可用但 Agent 终结事件从不响铃；渲染层接线已补，待实机播放验收 | verifying | P2 | PLAN-0014 |
 | `BUG-0079` | 终端能力被误判为缺失 | verifying | P1 | — |
 | `BUG-0078` | browser_tab 拒绝回传 snapshot 打印的 elementRef 编码串 | verifying | P1 | PLAN-0006 |
 | `BUG-0077` | git preset 的 noGit 回归缺少 @testing-library/react 依赖声明 | done | P2 | — |

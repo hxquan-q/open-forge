@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+import { randomUUID } from "node:crypto";
 import { parseProjectLocation } from "@vetta/ssh-transport";
 import type { DesktopConfig, DesktopConfigUpdater, ProjectEntry } from "../config/desktop-config-store.js";
 import { getSharedRuntime } from "../runtime.js";
@@ -33,6 +34,35 @@ export interface ProjectListSnapshot {
 	readonly workspacePath: string;
 	readonly projects: readonly ProjectEntry[];
 	readonly archivedProjects: readonly ProjectEntry[];
+	/** ADR-0151 第二册：Allstar 自主开发版块的项目册（与 projects 独立）。 */
+	readonly allstarProjects: readonly ProjectEntry[];
+	readonly allstarArchivedProjects: readonly ProjectEntry[];
+}
+
+/**
+ * 项目册（ADR-0151）：普通册与版块册是两套独立条目；同路径可两册各一条、条目 id 不同。
+ * 所有按册操作的服务方法都以此参数区分落点，批次内不引入第二套校验/广播路径。
+ */
+export type ProjectBookKind = "default" | "allstar";
+
+interface BookFields {
+	readonly projectsKey: "projects" | "allstarProjects";
+	readonly archivedKey: "archivedProjects" | "allstarArchivedProjects";
+}
+
+/** 读取册内清单；版块册字段是可选的，缺省空数组。 */
+function bookEntries(
+	config: DesktopConfig,
+	key: BookFields["projectsKey"] | BookFields["archivedKey"],
+): ProjectEntry[] {
+	const entries = config[key];
+	return Array.isArray(entries) ? entries : [];
+}
+
+function bookFields(book: ProjectBookKind): BookFields {
+	return book === "allstar"
+		? { projectsKey: "allstarProjects", archivedKey: "allstarArchivedProjects" }
+		: { projectsKey: "projects", archivedKey: "archivedProjects" };
 }
 
 function isAbsolutePath(path: string): boolean {
@@ -72,6 +102,11 @@ function assertProjectName(name: string): string {
 	return trimmed;
 }
 
+/** 版块册条目的稳定 id（ADR-0151）：同路径双册登记时用于区分两个项目实体。 */
+function createProjectEntryId(): string {
+	return randomUUID();
+}
+
 export class ProjectService {
 	constructor(private readonly dependencies: ProjectServiceDependencies) {}
 
@@ -88,6 +123,8 @@ export class ProjectService {
 			workspacePath: config.workspacePath,
 			projects: config.projects.map((entry) => ({ ...entry })),
 			archivedProjects: config.archivedProjects.map((entry) => ({ ...entry })),
+			allstarProjects: (config.allstarProjects ?? []).map((entry) => ({ ...entry })),
+			allstarArchivedProjects: (config.allstarArchivedProjects ?? []).map((entry) => ({ ...entry })),
 		};
 	}
 
@@ -118,7 +155,13 @@ export class ProjectService {
 		return { path: projectPath, name: normalizedName };
 	}
 
-	async open(path: string, name?: string): Promise<ProjectEntry> {
+	/**
+	 * 登记一个已存在目录（ADR-0151）。
+	 *
+	 * 默认册行为与既有实现完全一致（含「已在册则幂等」）。`book: "allstar"` 时把条目写进
+	 * 版块册并生成稳定条目 id——同路径可同时存在于普通册，两者是不同项目实体。
+	 */
+	async open(path: string, name?: string, book: ProjectBookKind = "default"): Promise<ProjectEntry> {
 		const location = resolveLocation(path);
 		if (location.kind === "ssh") {
 			// 主机不存在时立刻拒绝，而不是留下一条永远打不开的条目。
@@ -134,14 +177,19 @@ export class ProjectService {
 		if (await this.dependencies.isExistingNonDirectory(path)) {
 			throw new Error("Project path must be a directory.");
 		}
-		const entry = { path, name: name?.trim() || pathBasename(path) };
+		const fields = bookFields(book);
+		const entry: ProjectEntry = {
+			path,
+			name: name?.trim() || pathBasename(path),
+			...(book === "allstar" ? { id: createProjectEntryId() } : {}),
+		};
 		await this.commit((current) => {
-			const projects = current.projects.map((item) => ({ ...item }));
-			const archivedProjects = current.archivedProjects
+			const projects = bookEntries(current, fields.projectsKey).map((item) => ({ ...item }));
+			const archivedProjects = bookEntries(current, fields.archivedKey)
 				.filter((item) => !sameProjectPath(item.path, path))
 				.map((item) => ({ ...item }));
 			if (!findProject(projects, path)) projects.push(entry);
-			return { ...current, projects, archivedProjects };
+			return { ...current, [fields.projectsKey]: projects, [fields.archivedKey]: archivedProjects };
 		});
 		this.dependencies.allowProjectRoot(path);
 		emitAutomationHostEvent("project.opened", { cwd: path }, getSharedRuntime);
@@ -163,48 +211,51 @@ export class ProjectService {
 		return renamed;
 	}
 
-	async archive(path: string): Promise<void> {
+	async archive(path: string, book: ProjectBookKind = "default"): Promise<void> {
+		const fields = bookFields(book);
 		await this.commit((current) => {
-			const entry = findProject(current.projects, path);
+			const entry = findProject(bookEntries(current, fields.projectsKey), path);
 			if (!entry) throw new Error(`Active project not found: ${path}`);
-			const projects = current.projects
+			const projects = bookEntries(current, fields.projectsKey)
 				.filter((item) => !sameProjectPath(item.path, path))
 				.map((item) => ({ ...item }));
-			const archivedProjects = current.archivedProjects.map((item) => ({ ...item }));
+			const archivedProjects = bookEntries(current, fields.archivedKey).map((item) => ({ ...item }));
 			if (!findProject(archivedProjects, path)) archivedProjects.push({ ...entry });
-			return { ...current, projects, archivedProjects };
+			return { ...current, [fields.projectsKey]: projects, [fields.archivedKey]: archivedProjects };
 		});
 	}
 
-	async unarchive(path: string): Promise<void> {
+	async unarchive(path: string, book: ProjectBookKind = "default"): Promise<void> {
+		const fields = bookFields(book);
 		await this.commit((current) => {
-			const entry = findProject(current.archivedProjects, path);
+			const entry = findProject(bookEntries(current, fields.archivedKey), path);
 			if (!entry) throw new Error(`Archived project not found: ${path}`);
-			const archivedProjects = current.archivedProjects
+			const archivedProjects = bookEntries(current, fields.archivedKey)
 				.filter((item) => !sameProjectPath(item.path, path))
 				.map((item) => ({ ...item }));
-			const projects = current.projects.map((item) => ({ ...item }));
+			const projects = bookEntries(current, fields.projectsKey).map((item) => ({ ...item }));
 			if (!findProject(projects, path)) projects.push({ ...entry });
-			return { ...current, projects, archivedProjects };
+			return { ...current, [fields.projectsKey]: projects, [fields.archivedKey]: archivedProjects };
 		});
 		this.dependencies.allowProjectRoot(path);
 	}
 
-	async remove(path: string): Promise<void> {
+	async remove(path: string, book: ProjectBookKind = "default"): Promise<void> {
+		const fields = bookFields(book);
 		await this.commit((current) => {
-			const projects = current.projects
+			const projects = bookEntries(current, fields.projectsKey)
 				.filter((item) => !sameProjectPath(item.path, path))
 				.map((item) => ({ ...item }));
-			const archivedProjects = current.archivedProjects
+			const archivedProjects = bookEntries(current, fields.archivedKey)
 				.filter((item) => !sameProjectPath(item.path, path))
 				.map((item) => ({ ...item }));
 			if (
-				projects.length === current.projects.length &&
-				archivedProjects.length === current.archivedProjects.length
+				projects.length === bookEntries(current, fields.projectsKey).length &&
+				archivedProjects.length === bookEntries(current, fields.archivedKey).length
 			) {
 				throw new Error(`Project not found: ${path}`);
 			}
-			return { ...current, projects, archivedProjects };
+			return { ...current, [fields.projectsKey]: projects, [fields.archivedKey]: archivedProjects };
 		});
 	}
 }

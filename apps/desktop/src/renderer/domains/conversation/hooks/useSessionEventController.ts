@@ -2,9 +2,14 @@
 import { createConversationUserMessage, resolveConversationAgentText } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {
+	activeSessionAtom,
 	activeSessionStreamingAtom,
 	activeToolNamesAtom,
 	activityPanelTabByProjectAtom,
+	aiEditTargetAtom,
+	aiEditTargetFromToolCall,
+	aiTerminalCommandFromToolCall,
+	aiTerminalOutputFromResult,
 	type BackgroundTask,
 	backgroundTasksBySessionAtom,
 	type ChatTimelineItem,
@@ -19,12 +24,14 @@ import {
 	isCompactingAtom,
 	isReloadingMcpAtom,
 	lastTurnUsageAtom,
+	markAiTerminalEntryDone,
 	mountedActivityWorkspacesAtom,
 	pendingCanvasArtifactIdAtom,
 	planModeStateBySessionAtom,
 	projectsAtom,
 	promptPredictingAtom,
 	promptSuggestionsAtom,
+	pushAiTerminalEntry,
 	rememberSubagentsForSession,
 	resolveActivityWorkspaceKey,
 	retryProgressAtom,
@@ -198,6 +205,15 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 
 	const createSessionEventHandler = useCallback(
 		(sessionId: string) => (event: SessionEvent) => {
+			// 终端投屏的 end 结算先于聊天闸门（BUG-0157）：feed 条目按事件自身的
+			// toolCallId 配对、惰性提取，不写任何聊天状态——用户切走后旧会话的
+			// 命令仍要落定，否则永久显示「执行中」。start 仍留在闸门后（cwd 取自
+			// 当前会话）。
+			if (event.type === "tool.end") {
+				markAiTerminalEntryDone(getDefaultStore(), event.toolCallId, () =>
+					aiTerminalOutputFromResult(event.result),
+				);
+			}
 			// Defensive guard: if user has already switched away to another
 			// session, drop this event so its delta/state can't bleed into
 			// the new session's atom. activeSessionRef is updated synchronously
@@ -460,6 +476,31 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			// ── Tool start ──
 			if (event.type === "tool.start") {
 				flushDeltas();
+				// 演示定稿：写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签热跟随。
+				// §11.3（REQ-0030）：LLM 行为热追踪收敛为 code 模式独有——非 coding
+				// 档会话不写全局编辑目标/终端 feed（团队泵天生 coding 档，不经此处）。
+				// 档位读 activeSessionAtom（创建时固化）：activeSessionRef 的
+				// ActiveSessionHandle 不携带 capabilityProfile。
+				if (getDefaultStore().get(activeSessionAtom)?.capabilityProfile === "coding") {
+					const editTarget = aiEditTargetFromToolCall(
+						event.toolName,
+						event.args,
+						activeSessionRef.current?.cwd ?? null,
+						Date.now(),
+					);
+					if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
+					// 演示定稿：shell 命令投屏——start 入队 running 条目，终端页签只读回放。
+					const terminalCommand = aiTerminalCommandFromToolCall(event.toolName, event.args);
+					if (terminalCommand) {
+						pushAiTerminalEntry(getDefaultStore(), {
+							command: terminalCommand,
+							key: event.toolCallId,
+							running: true,
+							at: Date.now(),
+							cwd: activeSessionRef.current?.cwd ?? null,
+						});
+					}
+				}
 				setChatMessages((prev) =>
 					handleToolStart(
 						prev,
@@ -481,6 +522,7 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 			// ── Tool end ──
 			if (event.type === "tool.end") {
 				flushDeltas();
+				// 终端条目的 end 结算已提升到闸门之前（见 handler 顶部），这里只走聊天投影。
 				setChatMessages((prev) =>
 					handleToolEnd(
 						prev,

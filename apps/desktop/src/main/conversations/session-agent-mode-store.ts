@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { atomicWriteJSONAsync } from "@vetta/toolkit/atomic-write";
@@ -28,6 +29,36 @@ export function resolveAgentModeStorePath(sessionPath: string): string {
 
 function sessionKey(sessionPath: string): string {
 	return basename(sessionPath).replace(/\.jsonl$/i, "");
+}
+
+/**
+ * 一次列表查询的 agentMode 批量解析（ADR-0151 决策 6）：按会话文件所在目录分组，每个
+ * 目录只读一份 agent-modes.json（同目录共享索引），返回 会话文件路径 → 模式。键用完整
+ * 路径而不是文件名——不同目录（全局分片与 `.vetta/sessions` 存量兼容）可能同名。目录
+ * 缺失或解析失败按无记录处理（调用方回落 work 口径），不抛错——列表展示不因单个索引
+ * 损坏而失败。
+ */
+export async function readSessionAgentModes(sessionPaths: readonly string[]): Promise<Map<string, DesktopAgentMode>> {
+	const result = new Map<string, DesktopAgentMode>();
+	// 索引文件路径 → 落在该目录下的会话路径（同一目录的会话共享一份索引）。
+	const byStore = new Map<string, string[]>();
+	for (const sessionPath of sessionPaths) {
+		if (!sessionPath) continue;
+		const storePath = resolveAgentModeStorePath(sessionPath);
+		const bucket = byStore.get(storePath);
+		if (bucket) bucket.push(sessionPath);
+		else byStore.set(storePath, [sessionPath]);
+	}
+	await Promise.all(
+		Array.from(byStore.entries(), async ([storePath, paths]) => {
+			const store = await readStore(storePath);
+			for (const sessionPath of paths) {
+				const mode = store[sessionKey(sessionPath)];
+				if (isAgentMode(mode)) result.set(sessionPath, mode);
+			}
+		}),
+	);
+	return result;
 }
 
 async function readStore(storePath: string): Promise<Record<string, DesktopAgentMode>> {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pluginBlueprintId } from "@vetta/agent-team";
@@ -100,6 +101,46 @@ describe("plugin agent presets", () => {
 		expect(teams[0]?.name).toBe("设计团队");
 		expect(teams[0]?.description).toBe("出界面");
 		expect(teams[0]?.textKeys).toEqual({ nameKey: "team.design.name", descriptionKey: "team.design.description" });
+	});
+
+	it("carries the declared workspace mode and leaves it unset when undeclared", () => {
+		const designer = plugin().agent?.agents?.[0] ?? {
+			id: "designer",
+			name: "%agent.designer.name%",
+			systemPromptPath: "agent/designer.md",
+		};
+		const withMode = plugin({
+			agent: {
+				agents: [{ ...designer, mode: "coding" }],
+				teams: [
+					{
+						id: "design-team",
+						name: "设计团队",
+						members: [{ agent: "designer", responsibility: "Builds the frames." }],
+						workflow: "Run this team as a design loop.",
+						mode: "coding",
+					},
+				],
+			},
+		} as Partial<InstalledPlugin>);
+
+		const { agents, teams } = buildPluginAgentPresets({
+			plugins: [withMode],
+			logger: logger(),
+			readResource,
+			readBinaryResource,
+		});
+		expect(agents[0]?.mode).toBe("coding");
+		expect(teams[0]?.mode).toBe("coding");
+
+		// 未声明 → undefined：两档可见是缺省语义，不能落成显式值。
+		const undeclared = buildPluginAgentPresets({
+			plugins: [plugin()],
+			logger: logger(),
+			readResource,
+			readBinaryResource,
+		});
+		expect(undeclared.agents[0]?.mode).toBeUndefined();
 	});
 
 	it("pins its own plugin so the agent cannot be left without the ability it exists to drive", () => {

@@ -283,6 +283,7 @@ function presetAgentProfile(
 		},
 		scope: { kind: "library" },
 		source: { kind: "plugin", pluginId: preset.pluginId, ...preset.profileTextKeys },
+		...(preset.mode ? { mode: preset.mode } : {}),
 		createdAt: current?.createdAt ?? now,
 		updatedAt: now,
 	};
@@ -307,6 +308,7 @@ function presetTeam(
 		orchestrationPolicyId: current?.orchestrationPolicyId ?? "leader-delegates-v1",
 		contextPolicyId: current?.contextPolicyId ?? "public-results-v1",
 		source: { kind: "plugin", pluginId: preset.pluginId, ...preset.textKeys },
+		...(preset.mode ? { mode: preset.mode } : {}),
 		createdAt: current?.createdAt ?? now,
 		updatedAt: now,
 	};

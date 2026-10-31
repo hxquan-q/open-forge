@@ -436,6 +436,9 @@ export function registerFsIpc(): () => void {
 		// Ensure all known paths are authorized for file operations
 		for (const p of config.projects) allowProjectRoot(p.path);
 		for (const p of config.archivedProjects) allowProjectRoot(p.path);
+		// ADR-0151 决策 3：版块册（第二册）同样参与信任种子——漏读会让版块项目「在册但 fs 拒绝访问」。
+		for (const p of config.allstarProjects ?? []) allowProjectRoot(p.path);
+		for (const p of config.allstarArchivedProjects ?? []) allowProjectRoot(p.path);
 		if (config.workspacePath) allowProjectRoot(config.workspacePath);
 		allowProjectRoot(DEFAULT_CONVERSATION_CWD);
 		allowProjectRoot(DEFAULT_IM_CONVERSATION_CWD);

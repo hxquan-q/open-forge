@@ -1,6 +1,7 @@
 // Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
+import { aiTerminalFeedAtom, type AiTerminalEntry } from "@shared/store/atoms";
 import { cleanup, render, renderHook, screen } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
@@ -17,17 +18,6 @@ import {
 import { TERMINAL_ACTIVITY_TAB_ID, terminalTabDefinition } from "./terminal-tab";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-
-vi.mock("@domains/bottom-panel/terminal/TerminalSurface", () => ({
-	TerminalSurface: ({ handle }: { handle: { tabId: string; cwd: string | null; active: boolean } }) => (
-		<div
-			data-testid="activity-terminal-surface"
-			data-tab-id={handle.tabId}
-			data-cwd={handle.cwd ?? ""}
-			data-active={String(handle.active)}
-		/>
-	),
-}));
 
 function wrapperFor(store: ReturnType<typeof createStore>, workspaceId = "ws-1", cwd = "/repo") {
 	return ({ children }: { children: ReactNode }) => (
@@ -50,21 +40,32 @@ describe("activity panel terminal tab", () => {
 		cleanup();
 	});
 
-	it("定义可移除、默认不上栏、每 workspace 单实例", () => {
+	it("定义可移除、默认上栏，排序落在 Git 与浏览器之间", () => {
 		expect(terminalTabDefinition.id).toBe(TERMINAL_ACTIVITY_TAB_ID);
 		expect(terminalTabDefinition.removable).toBe(true);
-		expect(terminalTabDefinition.initiallyVisible).toBe(false);
 		expect(terminalTabDefinition.source).toBe("builtin");
 		expect(terminalTabDefinition.retention).toBe("warm");
+		// 演示定稿：code 会话自带页签「文件(0)、Git(5)、终端、浏览器(15)」。
+		expect(terminalTabDefinition.order).toBeGreaterThan(5);
+		expect(terminalTabDefinition.order).toBeLessThan(15);
+		// 默认上栏：不进「默认隐藏」清单，新建 code 会话右栏直接携带。
+		expect(defaultHiddenBuiltinTabIds([terminalTabDefinition])).toEqual([]);
 	});
 
-	it("右栏 surface 使用 workspace 级 tabId，与底部面板实例隔离", () => {
+	it("页签 body 是 AI 命令回放：feed 里的命令直接可见", () => {
 		const store = createStore();
+		const feedEntry: AiTerminalEntry = {
+			command: "bun run check",
+			key: "call-1",
+			running: true,
+			at: 1,
+			cwd: "/repo",
+		};
+		store.set(aiTerminalFeedAtom, [feedEntry]);
 		const Content = terminalTabDefinition.component;
 		render(<Content />, { wrapper: wrapperFor(store) });
-		const surface = screen.getByTestId("activity-terminal-surface");
-		expect(surface.getAttribute("data-tab-id")).toBe("activity-terminal:ws-1");
-		expect(surface.getAttribute("data-cwd")).toBe("/repo");
+		expect(screen.getByRole("region", { name: "activityPanel.terminal.title" })).toBeTruthy();
+		expect(screen.getByText("bun run check")).toBeTruthy();
 	});
 
 	it("useMeta 始终返回标签，方便进「+」挂载池", () => {
@@ -78,7 +79,7 @@ describe("activity panel terminal tab", () => {
 		});
 	});
 
-	it("用户从「+」挂载后再关闭：上栏出现终端，关闭后回到挂载池", () => {
+	it("用户关闭终端页签后进「+」挂载池，可再挂回上栏", () => {
 		const file: ActivityTabDefinition = {
 			id: "file",
 			order: 0,
@@ -94,28 +95,18 @@ describe("activity panel terminal tab", () => {
 			terminal: { label: "activityPanel.tabs.terminal" },
 		});
 
-		const hidden = resolveActivityTabs({
+		// 默认上栏：文件与终端都在栏上。
+		const initial = resolveActivityTabs({
 			definitions,
 			metaById: metas,
 			tabVisibilityRecords: [],
 			hiddenKeys: effectiveHiddenActivityTabKeys(undefined, defaultHiddenIds),
 			tabOrder: [],
 		});
-		expect(hidden.onBar.map((tab) => tab.id)).toEqual(["file"]);
-		expect(hidden.restorable.map((tab) => tab.id)).toEqual(["terminal"]);
+		expect(initial.onBar.map((tab) => tab.id)).toEqual(["file", "terminal"]);
 
-		const mountedKeys = revealActivityTabKeys(undefined, "terminal", defaultHiddenIds);
-		const mounted = resolveActivityTabs({
-			definitions,
-			metaById: metas,
-			tabVisibilityRecords: [],
-			hiddenKeys: effectiveHiddenActivityTabKeys(mountedKeys, defaultHiddenIds),
-			tabOrder: [],
-		});
-		expect(mounted.onBar.map((tab) => tab.id)).toEqual(["file", "terminal"]);
-		expect(mounted.restorable).toEqual([]);
-
-		const closedKeys = hideActivityTabKeys(mountedKeys, "terminal", defaultHiddenIds);
+		// 用户关闭终端：默认上栏的 tab 记显式隐藏，进挂载池。
+		const closedKeys = hideActivityTabKeys(undefined, "terminal", defaultHiddenIds);
 		const closed = resolveActivityTabs({
 			definitions,
 			metaById: metas,
@@ -125,5 +116,17 @@ describe("activity panel terminal tab", () => {
 		});
 		expect(closed.onBar.map((tab) => tab.id)).toEqual(["file"]);
 		expect(closed.restorable.map((tab) => tab.id)).toEqual(["terminal"]);
+
+		// 从「+」挂回：恢复上栏。
+		const mountedKeys = revealActivityTabKeys(closedKeys, "terminal", defaultHiddenIds);
+		const mounted = resolveActivityTabs({
+			definitions,
+			metaById: metas,
+			tabVisibilityRecords: [],
+			hiddenKeys: effectiveHiddenActivityTabKeys(mountedKeys, defaultHiddenIds),
+			tabOrder: [],
+		});
+		expect(mounted.onBar.map((tab) => tab.id)).toEqual(["file", "terminal"]);
+		expect(mounted.restorable).toEqual([]);
 	});
 });

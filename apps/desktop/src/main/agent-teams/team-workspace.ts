@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
@@ -45,7 +46,15 @@ export async function createTeamSessionWorkspace(
 
 const defaultDependencies: TeamWorkspaceDependencies = {
 	createSessionWorkspace: createTeamSessionWorkspace,
-	listProjectPaths: async () => (await readDesktopConfig()).projects.map((project) => project.path),
+	// 校验名单含开发册（allstarProjects）：版块新建目标可来自开发册，缺它时 code
+	// 模式团队会话创建直接抛 "project is unavailable"（BUG-0163）。
+	listProjectPaths: async () => {
+		const config = await readDesktopConfig();
+		return [
+			...config.projects.map((project) => project.path),
+			...(config.allstarProjects ?? []).map((project) => project.path),
+		];
+	},
 };
 
 /** Resolves the immutable workspace captured by a newly created Team session. */
