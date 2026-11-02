@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { AppMonitorPromptRefUsageMap, SkillInfo } from "@preload/api";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import {
 	getSkillDisplayDescription,
 	getSkillDisplayName,
@@ -7,6 +9,7 @@ import {
 } from "@vetta-org/capability-sdk";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { candidateVisibleInWorkspaceMode } from "../../workspace-mode/lib/candidate-visibility";
 import { filterSkills, sortSkillsForPanel } from "../lib/skill-ranking";
 
 export interface SkillListModel {
@@ -20,9 +23,19 @@ interface SkillListData {
 	usage: AppMonitorPromptRefUsageMap;
 }
 
-export function prepareSkillsForSurface(skills: readonly SkillInfo[], surface: SkillPresentationSurface): SkillInfo[] {
+export function prepareSkillsForSurface(
+	skills: readonly SkillInfo[],
+	surface: SkillPresentationSurface,
+	workspaceMode?: WorkspaceMode,
+): SkillInfo[] {
 	return skills
-		.filter((skill) => isSkillVisibleOnSurface(skill, surface))
+		.filter(
+			(skill) =>
+				isSkillVisibleOnSurface(skill, surface) &&
+				(surface !== "commandPalette" ||
+					workspaceMode === undefined ||
+					candidateVisibleInWorkspaceMode(skill.workspaceMode, workspaceMode)),
+		)
 		.map((skill) => ({
 			...skill,
 			alias: getSkillDisplayName(skill),
@@ -39,7 +52,8 @@ export function prepareSkillsForSurface(skills: readonly SkillInfo[], surface: S
  * 因此预取一次并缓存，展开时先用缓存立即出内容。
  *
  * 键带语言：内置 skill 的展示文案由主进程按当前语言给出，切语言后不能复用旧缓存。
- * 不带工作模式：skill 清单与顺序和模式无关（ADR-0071），主进程返回的清单不随模式增减。
+ * 缓存原始清单与用量，不带工作模式：数据源与顺序和模式无关（ADR-0071）；`workspaceMode`
+ * 只在派生命令面板候选时过滤，不产生重复缓存。
  */
 const cache = new Map<string, SkillListData>();
 const inflight = new Map<string, Promise<SkillListData>>();
@@ -89,12 +103,14 @@ export function useSkillList({
 	cwd,
 	filter,
 	surface,
+	workspaceMode,
 	prefetch = false,
 }: {
 	open: boolean;
 	cwd?: string;
 	filter: string;
 	surface: SkillPresentationSurface;
+	workspaceMode?: WorkspaceMode;
 	prefetch?: boolean;
 }): SkillListModel {
 	const { i18n } = useTranslation();
@@ -149,7 +165,10 @@ export function useSkillList({
 		};
 	}, [cwd, language, open]);
 
-	const presentedSkills = useMemo(() => prepareSkillsForSurface(skills, surface), [skills, surface]);
+	const presentedSkills = useMemo(
+		() => prepareSkillsForSurface(skills, surface, workspaceMode),
+		[skills, surface, workspaceMode],
+	);
 	const ranked = useMemo(() => sortSkillsForPanel(presentedSkills, usage), [presentedSkills, usage]);
 	const items = useMemo(() => filterSkills(ranked, filter), [filter, ranked]);
 

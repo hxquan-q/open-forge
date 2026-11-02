@@ -1,8 +1,10 @@
+// Modified by The Open Forge contributors.
 import type { FsEntry, FsFileRef } from "@preload/fs-types";
 import { type ShortcutBinding, useShortcutScope } from "@shared/shortcuts";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { candidateVisibleInWorkspaceMode } from "../../workspace-mode/lib/candidate-visibility";
 import type {
 	AtPanelEntryModel,
 	AtPanelItem,
@@ -114,6 +116,7 @@ export function useAtPanelModel({
 	onSelect,
 	filter,
 	cwd,
+	workspaceMode,
 	items = [],
 	className,
 	classNames,
@@ -190,10 +193,17 @@ export function useAtPanelModel({
 
 	const normalizedFilter = filter.startsWith("@") ? filter.slice(1) : filter;
 	const isSearching = normalizedFilter.length > 0;
+	const visibleItems = useMemo(
+		() =>
+			workspaceMode
+				? items.filter((item) => candidateVisibleInWorkspaceMode(item.workspaceMode, workspaceMode))
+				: items,
+		[items, workspaceMode],
+	);
 
 	const extraItems = useMemo(
 		(): DisplayItem[] =>
-			items.map((item, index) => ({
+			visibleItems.map((item, index) => ({
 				path: `@item/${item.id}/${index}`,
 				id: item.id,
 				name: item.name,
@@ -203,7 +213,7 @@ export function useAtPanelModel({
 				meta: item.meta,
 				item,
 			})),
-		[items],
+		[visibleItems],
 	);
 
 	const allItems = useMemo((): DisplayItem[] => {

@@ -303,7 +303,8 @@
 	"agentMode": {
 		"title": "Work Mode",
 		"work": "Work",
-		"coding": "Coding"
+		"coding": "Coding",
+		"both": "Both modes"
 	},
 	"density": {
 		"compact": "Compact",

@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
 import type { InputSegment } from "@shared/lib/input-tokens";
-import type { AppshotAttachment } from "@shared/store/atoms";
+import type { AppshotAttachment, WorkspaceMode } from "@shared/store/atoms";
 import type { TodoItem } from "@shared/store/todo-atoms";
 import type { CodingAgentPlanReviewRequest } from "@vetta/coding-agent/function-extensions";
 import type { BottomPanelTabViewModel } from "@vetta-org/theme-ui/bottom-panel";
@@ -25,6 +26,8 @@ export interface ConnectedInputBarProps {
 	 * 把该项目的 cwd 传进来：InputBar 把它视为「有会话」、@ 文件面板用它作为根目录。
 	 */
 	cwdOverride?: string;
+	/** Current new-session mode when there is not yet a persisted session. */
+	workspaceMode?: WorkspaceMode;
 	/**
 	 * 命令区展开 / 收起时回调。命令区向上生长，宿主可以据此腾出空间
 	 * （新会话页把整条输入栏下移，避免下方留白过大）。
@@ -165,6 +168,8 @@ export interface InputBarModel {
 	showPlaceholder: boolean;
 	hasCapsules: boolean;
 	effectiveCwd: string;
+	/** Frozen mode of the active session; only filters explicit user-facing candidates. */
+	workspaceMode?: WorkspaceMode;
 	/** 空输入时展示的占位文案；多条时垂直轮播 */
 	placeholderTexts: readonly string[];
 	/** 是否对 placeholderTexts 做自动上下切换（suggestion/thinking 等为 false） */

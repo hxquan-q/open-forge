@@ -198,6 +198,7 @@ export function NewSessionPageView({
 								onSend={onSend}
 								onAbort={onAbort}
 								cwdOverride={cwd}
+								workspaceMode={workspaceMode}
 								onExpandedChange={onCommandPanelExpandedChange}
 								sendPending={preparingProject ? { label: preparingLabel } : undefined}
 							/>

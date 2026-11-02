@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { SceneCardView } from "@vetta-org/theme-ui/skills";
 import { useTranslation } from "react-i18next";
 import type { ActionState, MergedSkill } from "../hooks/useSkillsPageModel";
@@ -17,10 +18,11 @@ export function SceneCard({
 	onPreview?: (scene: MergedSkill) => void;
 	actionState: ActionState;
 }): JSX.Element {
-	const { t } = useTranslation("skills");
+	const { t } = useTranslation(["skills", "settings"]);
+	const workspaceModeLabel = scene.workspaceMode ? t(`settings:agentMode.${scene.workspaceMode}`) : t("settings:agentMode.both");
 	return (
 		<SceneCardView
-			scene={scene}
+			scene={{ ...scene, workspaceModeLabel }}
 			isLoading={actionState === "loading"}
 			previewable={!!onPreview}
 			onInstall={() => onInstall(scene)}

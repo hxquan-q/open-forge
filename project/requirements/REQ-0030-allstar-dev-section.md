@@ -6,7 +6,7 @@ priority: P1
 owner: product
 source: user-request
 related_plan: [PLAN-0027, PLAN-0028]
-related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447]
+related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447, TASK-0448]
 related_issues: []
 related_bugs: []
 depends_on: []
@@ -28,6 +28,7 @@ updated: 2026-11-02
 - 最终态：入口升级为功能版块——自带项目管理、会话管理、各项目单独配置与开发环境配置/
   安装；allstar-coding 流水线 agent 集合体整体并入版块（预置插件形态退役）；内置面向
   实施用户的 git 能力（拉取/推送/跟踪，自带运行时、不依赖系统 git）与数据库 MCP。
+- 会话输入区通过 `/` 或 `@` 显式选择 Skill、连接器或 Agent 时，候选列表按会话 code/普通模式显示；未标记项两档可见。此规则只改变用户候选列表，不改变 LLM 可用性、手动输入、调用执行或结果记录。
 
 ## 范围
 

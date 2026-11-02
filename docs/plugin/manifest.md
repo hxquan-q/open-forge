@@ -212,14 +212,16 @@ revision 读取；不要依次调用多次 `writeFile()` 冒充多文件事务�
 
 - `defaultVisibility`：插件全部 Skill 的默认值，`visible` 或 `hidden`。
 - `surfaces`：按入口覆盖默认值，当前支持 `abilityCatalog`、`agentConfiguration`、`commandPalette`、`skillPicker`、`pluginDetail`。
-- `skills.<skill-name>`：按 `SKILL.md` 中的稳定 Skill 名覆盖插件默认值；可声明 `defaultVisibility`、`surfaces`、`displayName`、`displayDescription`。
+- `workspaceMode`：`work` / `coding`；只控制输入区 `/` Skill 候选列表在哪种会话模式中出现，未声明时两种模式均可见，不影响 Skill 加载、LLM 调用或权限。
+- `skills.<skill-name>`：按 `SKILL.md` 中的稳定 Skill 名覆盖插件默认值；可声明 `defaultVisibility`、`surfaces`、`workspaceMode`、`displayName`、`displayDescription`。
 - `displayName` / `displayDescription`：仅改变用户看到的文案，不改变 Skill 名、调用路由或已保存引用；支持插件 `%catalogKey%` 本地化占位符。
+- 使用 `workspaceMode` 的插件应声明 `pluginApiVersion: ^2.12.0`；旧宿主会按 fail-closed 版本合同拒绝不兼容清单。
 
 普通用户、项目、市场与 Vetta 内置 Skill 没有声明时继续默认可见。已安装的旧插件没有 `skillPresentation` 时按插件默认隐藏，避免把实现细节意外暴露为产品能力。
 
 ## 贡献智能体与团队
 
-`agent.agents` / `agent.teams` 让插件把**自己的人设**带进产品：宿主在插件启用时把它们铺进用户的智能体库与团队列表，与用户自建的档案并列出现在智能体中心、新会话选择器和 `@` 提及里。声明了 `mode` 档位归属的智能体/团队只在对应档（文档与研究 / 代码）的新会话选择器里出现——这是用户层的可见性过滤，不影响调用与 `@` 提及；未声明默认归「文档与研究」档（两档对等：coding 档同样看不到 work/未声明的智能体）。
+`agent.agents` / `agent.teams` 让插件把**自己的人设**带进产品：宿主在插件启用时把它们铺进用户的智能体库与团队列表，与用户自建的档案并列出现在智能体中心、新会话选择器和 `@` 提及里。声明了 `mode` 档位归属的智能体/团队只在对应档（文档与研究 / 代码）的新会话选择器里出现；在输入区 `@` 候选列表中，显式标记了 `mode` 的成员也按当前会话模式筛选，未标记的成员保留两档可见。以上均为用户层候选可见性过滤，不影响手动输入、已选会话、深链或实际调用。新会话选择器的未声明归属仍按既有合同归「文档与研究」档。
 
 **这些资产由你 1:1 维护**：清单是唯一的真相源，宿主每次同步都按它重铺一遍——你改名、换阵容、改任务书、撤掉一支团队，用户升级后都会如实生效。对应地，用户改不动也删不掉它们（UI 只读展示）；想要一份自己调教的版本，用户复制一份自建档案即可。
 

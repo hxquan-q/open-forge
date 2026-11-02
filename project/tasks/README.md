@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0448` | `verifying` | PLAN-0027 | [显式调用候选项按会话模式显示](TASK-0448-invocation-candidates-mode-visibility.md)：REQ-0030/TASK-0423/TASK-0424；`/` Skill/连接器与 `@` Agent 候选仅作用户层模式筛选，缺省两档可见，实际工具调用不变；定向测试、SDK 合同测试与完整 check 通过；impact 因未修改的 vetta-ui-design HMR fixture 失败退出，待用户实机验收；serial，main 主检出。 |
 | `TASK-0447` | `done` | PLAN-0027 | [Allstar 自主开发改为标准侧栏导航项](TASK-0447-allstar-sidebar-standard-nav-item.md)：REQ-0030；默认排在原型设计后，接入置顶/更多/拖拽布局并将容量提升至 6；定向 40/40+1/1、影响面过，用户实机确认默认位置（2026-11-02）；完整 check 仅被既有 WAIVER-0006/0007 阻断；`5e3a3774f` 已推 origin/chenxvhua；serial，main 主检出。 |
 | `TASK-0446` | `verifying` | — | [runtime-node 远端 POSIX 路径测试使用可移植临时目录](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md)：BUG-0181；Windows baseline 3 个 `/tmp` 失败消除，focused/impact 7/7 与完整 check 通过；serial。 |
 | `TASK-0445` | `verifying` | — | [plugin-vite React singleton 测试选定暴露 chunk](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md)：BUG-0180；按 fixture 导出定位实际 chunk，focused 2/2、全包 46/46、完整 check 通过；serial。 |
@@ -39,7 +40,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 | `TASK-0426` | `verifying` | PLAN-0028 | [修复 Git 页签分支名解析](TASK-0426-git-branch-status-parse.md)：BUG-0165 红基线 3 红→绿 5/5，check:quick 过；工程完成待批次收尾统一 check/impact；serial，主检出串行。 |
 | `TASK-0425` | `verifying` | PLAN-0027 | [Code 模式总体检测](TASK-0425-code-mode-comprehensive-audit.md)：报告已交付工作区；正常基线 115 例过，独立探针 12 场景中 10 个测试复现缺口；跨包失败已分流，未称全面验收通过。 |
 | `TASK-0424` | `done` | PLAN-0027 | [Agent/团队所属模式](TASK-0424-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0036 定位重合讨论。 |
-| `TASK-0423` | `in_progress` | PLAN-0027 | [M1 版块壳：/allstar 专属路由、项目空间、会话管理与配置 v1](TASK-0423-allstar-dev-section-shell.md)：ADR-0151、/allstar 首页、项目第二册与会话列表已先行交付（26e4b99f5/87a72fd62/caea2aed4）；剩余各项目单独配置 v1 与 0.1.5 收口（2026-11-06 前）；serial，main 主检出。 |
+| `TASK-0423` | `in_progress` | PLAN-0027 | [M1 版块壳：/allstar 专属路由、项目空间、会话管理与配置 v1](TASK-0423-allstar-dev-section-shell.md)：ADR-0151、/allstar 首页、项目第二册与会话列表已先行交付（26e4b99f5/87a72fd62/caea2aed4）；剩余默认执行档/围栏 scope/MCP 集配置与 0.1.5 收口（2026-11-06 前）；项目工具面配置已由用户否决，候选可见性移交 TASK-0448；serial，main 主检出。 |
 | `TASK-0422` | `done` | PLAN-0027 | [「Allstar自主开发」版块入口](TASK-0422-allstar-dev-section-entry.md)：代码模式独立入口、新会话默认文档与研究档、右栏随会话轴；`c5700985d` 已推 origin/chenxvhua，工程验证与用户实机验收通过。 |
 | `TASK-0419` | `verifying` | — | [后台列表刷新合并](TASK-0419-weknora-background-refresh-coalesce.md)；BUG-0162；AC-20 现在等待 s1/s2 历史行显示后才取基线，文件 7/7、AC-20 隔离 6 次通过；完整 test:changed 未重跑；serial。 |
 | `TASK-0418` | `verifying` | — | [SSH 握手预算取整](TASK-0418-ssh2-handshake-budget-floor.md)；第十批冻结候选 b6c7y60gc 中 ssh-transport 236 通过、25 既有跳过，239999 未再出现。 |

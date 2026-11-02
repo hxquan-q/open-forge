@@ -1,5 +1,11 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
-import { buildPluginSkillSources, findPluginSkillSource, resolvePluginSkillPresentation } from "./skill-provenance";
+import {
+	buildPluginSkillSources,
+	findPluginSkillSource,
+	resolvePluginSkillPresentation,
+	resolvePluginSkillWorkspaceMode,
+} from "./skill-provenance";
 
 describe("plugin skill provenance", () => {
 	it("retains the plugin id and icon for a contributed skill path", () => {
@@ -59,5 +65,16 @@ describe("plugin skill provenance", () => {
 			surfaces: { abilityCatalog: "visible", commandPalette: "hidden" },
 			displayName: "Vetta 设计",
 		});
+	});
+
+	it("resolves provider workspace mode with a per-skill override", () => {
+		const presentation = {
+			workspaceMode: "coding" as const,
+			skills: { "vetta-ui-design": { workspaceMode: "work" as const } },
+		};
+
+		expect(resolvePluginSkillWorkspaceMode(presentation, "vetta-ui-design")).toBe("work");
+		expect(resolvePluginSkillWorkspaceMode(presentation, "another-skill")).toBe("coding");
+		expect(resolvePluginSkillWorkspaceMode(undefined, "local-skill")).toBeUndefined();
 	});
 });

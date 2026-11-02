@@ -60,8 +60,8 @@ updated: 2026-11-02
   至此，悬停预取与结构合同（agent-mode-entry-points）同步更新；
 - Allstar 项目空间：新建/导入归入版块，列表卡片（环境/流水线状态占位从简）；
 - 版块会话管理：开发会话列表、归档/删除沿用既有基础设施、代码档徽章；
-- 各项目单独配置 v1：默认执行档、工具面、围栏默认 scope（MCP 集字段占位），versioned-config
-  落盘；
+- 各项目单独配置 v1：默认执行档、围栏默认 scope（MCP 集字段占位），versioned-config
+  落盘；项目级工具面配置经用户决策不做，显式调用候选按会话模式的可见性改由 TASK-0448 实施。
 - 存量迁移：现有 coding 会话/项目在版块内可见，不做破坏性搬移；
 - i18n zh/en、release notes 碎片、收尾验证链。
 
@@ -118,4 +118,4 @@ updated: 2026-11-02
   - Allstar 项目空间第二册 allstarProjects、ProjectService 按册参数化、IPC openAllstar/removeAllstar、版块首页册驱动卡片与「打开已有项目」——M1-3 交付（`caea2aed4`，2026-10-28）；存量 coding 会话/项目经幂等登记在版块内可见，无破坏性搬移；
   - 版块会话列表与续开已随 M1-2 落地；归档/删除沿用既有基础设施；
   - i18n zh/en 已随 M1-2 落地；release notes 碎片持续累积于 `fragments/v0.1.5/`。
-- 剩余范围：各项目单独配置 v1（默认执行档、工具面、围栏默认 scope、MCP 集字段占位，versioned-config 落盘）；收尾验证链（`check:quick` → `test:impact` → 完整 `bun run check`，需 WAIVER-0006/0007 核销后过全量）与 0.1.5 发布收口（2026-11-06 前）。
+- 剩余范围：各项目单独配置 v1（默认执行档、围栏默认 scope、MCP 集字段占位，versioned-config 落盘）；显式调用候选模式可见性独立见 TASK-0448。收尾验证链（`check:quick` → `test:impact` → 完整 `bun run check`，需 WAIVER-0006/0007 核销后过全量）与 0.1.5 发布收口（2026-11-06 前）。

@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+import type { WorkspaceMode } from "@shared/store/atoms";
 import type { AtPanelClassNames } from "@vetta-org/theme-ui/chat";
 
 export type {
@@ -18,6 +20,8 @@ export interface AtPanelItem {
 	readonly icon?: string;
 	readonly meta?: string;
 	readonly keywords?: readonly string[];
+	/** Product-owned candidate visibility tag; missing means visible in both modes. */
+	readonly workspaceMode?: WorkspaceMode;
 }
 
 export interface SelectedFile {
@@ -34,6 +38,7 @@ export interface AtPanelProps {
 	onSelect: (selection: AtPanelSelection) => void;
 	filter: string;
 	cwd: string;
+	workspaceMode?: WorkspaceMode;
 	/** Additional candidates supplied by a connector; ordinary chat leaves this empty. */
 	items?: readonly AtPanelItem[];
 	className?: string;

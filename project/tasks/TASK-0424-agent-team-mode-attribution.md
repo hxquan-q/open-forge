@@ -9,7 +9,7 @@ plan: PLAN-0027
 source: user-request
 related_requirement: [REQ-0030]
 related_plan: [PLAN-0027]
-related_tasks: [TASK-0422, TASK-0423]
+related_tasks: [TASK-0422, TASK-0423, TASK-0448]
 related_issues: []
 related_bugs: []
 execution: serial
@@ -151,3 +151,4 @@ updated: 2026-10-26
 - Worktree：未拆出（单串行批次，主工作区完成）。
 - 剩余风险：用户自建 agent/团队暂无模式编辑入口（backlog，见「不做」）；`@` 提及与
   智能体中心不受过滤（口径内）；齐套分析师未标注（待用户定夺归档）。
+- 后续范围：2026-11-02 用户通过 TASK-0448 决定输入区 `@` Agent 候选按会话模式过滤，仍不做调用时校验；TASK-0424 已验收的新会话选择器合同保持不变。

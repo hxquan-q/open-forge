@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	type BuiltinMcpLabelKey,
 	matchBuiltinMcpPreset,
@@ -6,8 +7,10 @@ import {
 	resolveMcpPresetIconUrl,
 } from "@domains/settings/mcp/builtin-mcp-presets";
 import type { McpServerConfigData } from "@preload/api";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { candidateVisibleInWorkspaceMode } from "../../workspace-mode/lib/candidate-visibility";
 import { connectorGridColumns } from "../lib/connector-grid";
 
 export interface ConnectorGridItem {
@@ -39,7 +42,7 @@ function isConfigured(name: string, config: McpServerConfigData): boolean {
  * 命令区顶部宫格：用户已接入的内置连接器。
  * `prefetch` 让它在展开前就把 mcp.json 读好——否则第一次展开时读盘与高度动画撞在一起。
  */
-export function useConnectorGrid(open: boolean, prefetch = false): ConnectorGridModel {
+export function useConnectorGrid(open: boolean, prefetch = false, workspaceMode?: WorkspaceMode): ConnectorGridModel {
 	const { t } = useTranslation("settings");
 	const [servers, setServers] = useState<Record<string, McpServerConfigData>>({});
 
@@ -65,6 +68,7 @@ export function useConnectorGrid(open: boolean, prefetch = false): ConnectorGrid
 			if (!isConfigured(name, config)) continue;
 			const preset = matchBuiltinMcpPreset(name, config);
 			if (!preset) continue;
+			if (workspaceMode && !candidateVisibleInWorkspaceMode(preset.workspaceMode, workspaceMode)) continue;
 			items.push({
 				name,
 				label: resolveMcpPresetDisplayName(preset, (key: BuiltinMcpLabelKey) => t(key)),
@@ -72,5 +76,5 @@ export function useConnectorGrid(open: boolean, prefetch = false): ConnectorGrid
 			});
 		}
 		return { items, columns: connectorGridColumns(items.length) };
-	}, [servers, t]);
+	}, [servers, t, workspaceMode]);
 }

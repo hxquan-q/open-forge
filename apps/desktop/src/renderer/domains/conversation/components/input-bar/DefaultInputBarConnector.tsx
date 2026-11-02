@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useBottomPanelPills } from "@domains/bottom-panel/hooks/useBottomPanelPills";
 import { GoalModeDialog } from "../GoalModeDialog";
 import { sessionAxesBadgeKind } from "@domains/workspace-mode";
@@ -153,6 +154,13 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 		showPlaceholder: session.placeholderVisible,
 		hasCapsules,
 		effectiveCwd: session.effectiveCwd,
+		workspaceMode:
+			props.workspaceMode ??
+			(session.activeSession
+				? session.activeSession.capabilityProfile === "work"
+					? "work"
+					: "coding"
+				: "work"),
 		placeholderTexts: placeholderModel.placeholderTexts,
 		placeholderRotating: placeholderModel.placeholderRotating,
 		isFocused: trigger.isFocused,
