@@ -1,7 +1,7 @@
 ---
 id: TASK-0447
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0030
@@ -104,8 +104,8 @@ Make “Allstar 自主开发” a normal sidebar navigation item instead of a fi
 
 - Engineering validation: targeted tests and impacted package suites passed; full `bun run check` remains blocked by pre-existing expired WAIVER-0006 and WAIVER-0007.
 - Technical review: self-review completed; standard nav contract replaces the obsolete fixed-row path.
-- Integration: done; code, tests, fragment, and ledger committed locally on `chenxvhua` (base `bdbf017e9`); not pushed — push is user-managed.
-- Manual feature acceptance: pending user acceptance; `verify:ui:*` was not run.
+- Integration: done; committed as `5e3a3774f` on `chenxvhua` (base `bdbf017e9`) and pushed to origin by the user.
+- Manual feature acceptance: passed — user ran the app (`bun run dev`) on 2026-11-02 and confirmed the entry's default position after 原型设计; pin/more/drag interactions are covered by the focused behavior tests (40/40).
 - Release: tag `v0.1.4` already exists and its published notes are immutable; the section entry never shipped in a tagged release, so the pending `fragments/v0.1.5/allstar-dev-section-home.md` was updated in place to describe the final standard-nav placement instead of adding a second fragment.
 
 ## Delivery record
@@ -115,4 +115,5 @@ Make “Allstar 自主开发” a normal sidebar navigation item instead of a fi
 - Not run and reasons: real Desktop / `verify:ui:*` was not authorized. Release note: `v0.1.4` is tagged and immutable, and the section entry never shipped in a tagged release, so the pending v0.1.5 fragment was updated in place rather than adding a v0.1.4/v0.1.5-duplicate fragment; `release:desktop:patch` was not run because it requires a clean worktree and the current quality guard is blocked.
 - Git: integrated as a single local commit on `chenxvhua` (code + tests + REQ-0030 + ledger + README + v0.1.5 fragment); no tag, no push, no remote operation — push is user-managed.
 - Worktree: no separate Worktree; serial main checkout.
-- Remaining risks: visual/manual acceptance remains pending; full repository check remains red until the two expired waivers (WAIVER-0006, WAIVER-0007) are resolved or renewed by their owners; v0.1.5 release preparation (notes assembly, version bump) is a separate task (TASK-0423 scope).
+- Remaining risks: none open for this task. Full repository check remains red until the two expired waivers (WAIVER-0006, WAIVER-0007) are resolved or renewed by their owners; v0.1.5 release preparation (notes assembly, version bump) is a separate task (TASK-0423 scope).
+- Acceptance (2026-11-02): user confirmed the default entry position in a real dev run; status moved verifying → done.
