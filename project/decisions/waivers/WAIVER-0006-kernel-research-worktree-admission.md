@@ -1,7 +1,7 @@
 ---
 id: WAIVER-0006
 rule: project/collaboration/development-workflow.md — 全量 worktree:check 严格历史台账准入
-status: active
+status: resolved
 owner: PLAN-0024-coordinator
 reason: main 基线 TASK-0344–0347 缺 created/updated，修复无关历史记录会扩大本轮内核优化范围；主检出存在他人未提交文件，不能夹带清理
 risk: 全量协调者严格门禁仍失败，不能宣称全仓台账或集成条件满足
@@ -16,3 +16,7 @@ expires: 2026-10-30
 2026-10-23 于 main@ea67d951e 执行 `bun run worktree:check --all` exit 1：TASK-0344、0345、0346、0347 均缺 created/updated；另有历史已删除 Worktree 警告和 TASK-0154/0395 的静态前缀范围重叠。0395 已补 `conflicts_with: TASK-0154`，0154 标为 integrated 且该 Worktree 不在本机；本轮不操作其文件或重写其状态。
 
 例外只涉及全量旧管理记录阻塞隔离 Task 创建这一 Policy，不豁免依赖/权限/Git 安全/测试不变量。目标 Task 合同、分支、绝对目录、实际写范围需逐个核对。最终完整检查如有失败应记录并保持 verifying/blocked，不能借此 waiver 声称通过。历史日期应由对应 owner 核实真实时间后修复，不倒填。
+
+## 核销（2026-11-02）
+
+根因已修复：TASK-0344–0347 按各自文件首次/最后提交补齐 `created`/`updated`（0344/0345 为 2026-10-20 创建、0346/0347 为 2026-10-21 创建，均 2026-10-21 最后改动，来源 git log --follow，未倒填）。修复后 `bun run worktree:check --all` 于 2026-11-02 通过（437 task(s)，exit 0；仅剩历史未注册 worktree 的非阻断 warn）。覆盖的隔离批次（TASK-0394–0397）已交付，本例外不再需要，置 resolved。

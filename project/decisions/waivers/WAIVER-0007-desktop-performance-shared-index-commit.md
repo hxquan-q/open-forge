@@ -1,7 +1,7 @@
 ---
 id: WAIVER-0007
 rule: docs/dev/agent-rules/collaboration.md 的串行Task交付索引同提交策略
-status: active
+status: resolved
 owner: desktop/coordinator
 reason: Task和Research导航README包含其他会话未提交行，现有precommit按整文件重暂存，无法只提交本批导航行而保留他人归属
 risk: 单独检出本批提交时共享README可能暂未列出新记录，记录正文和相对链接仍存在
@@ -18,3 +18,7 @@ expires: 2026-10-31
 仅豁免共享导航与正文必须在同一原子提交的 Policy；不豁免建立Task、工作区索引同步、测试、完整检查、原子源码提交及发布说明。其他路径明确逐项暂存和审核；不改Git hook、不覆盖或临时清除用户内容、不推送脏工作区。
 
 当前导航行已经在工作区，与frontmatter同步。每个Task正文记录实际交付和状态，RESEARCH-0044包含证据；共享导航归属协调完成后应由Coordinator合入对应行并将本例外置为resolved。到期不自动续期。
+
+## 核销（2026-11-02）
+
+共享导航归属已消解：TASK-0398–0401 及当时其他会话的导航行均已合入并随主仓提交（project/tasks/README.md 当前焦点表已包含全部相关行），不再存在"他人未提交行"的夹带风险。本例外置 resolved。

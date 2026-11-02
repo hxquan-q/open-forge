@@ -18,6 +18,8 @@ exclusive_paths: [apps/desktop/src/main/models/balance]
 depends_on: []
 conflicts_with: []
 integration_status: pending
+created: 2026-10-21
+updated: 2026-10-21
 ---
 <!-- Copyright The Open Forge contributors. -->
 

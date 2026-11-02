@@ -1,7 +1,7 @@
 ---
 id: TASK-0423
 type: task
-status: ready
+status: in_progress
 priority: P1
 owner: desktop
 requirement: REQ-0030
@@ -13,9 +13,9 @@ related_tasks: [TASK-0422]
 related_issues: []
 related_bugs: []
 execution: serial
-branch:
-worktree:
-base_commit:
+branch: main
+worktree: main checkout（不拆 Worktree）
+base_commit: 66154e576
 read_paths:
   - apps/desktop/src/renderer/domains/project/components/sidebar/
   - apps/desktop/src/renderer/router.tsx
@@ -30,7 +30,7 @@ depends_on: [TASK-0422]
 conflicts_with: []
 integration_status: pending
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-02
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -112,4 +112,10 @@ updated: 2026-10-26
 
 ## 交付记录
 
-- 待交付后回填。
+- 2026-11-02 对账（前体范围已先行交付，本 Task 由此收敛剩余范围）：
+  - ADR 先行：ADR-0151 版块项目册与可见性模型已入库（`26e4b99f5`，2026-10-27）；
+  - `/allstar` 专属路由与版块首页（近期开发会话、项目入口、快速开始）、入口改导航+悬停预取、agent-mode-entry-points 结构合同重写、`listSessions` 附带 agentMode——M1-2 交付（`87a72fd62`，2026-10-27）；
+  - Allstar 项目空间第二册 allstarProjects、ProjectService 按册参数化、IPC openAllstar/removeAllstar、版块首页册驱动卡片与「打开已有项目」——M1-3 交付（`caea2aed4`，2026-10-28）；存量 coding 会话/项目经幂等登记在版块内可见，无破坏性搬移；
+  - 版块会话列表与续开已随 M1-2 落地；归档/删除沿用既有基础设施；
+  - i18n zh/en 已随 M1-2 落地；release notes 碎片持续累积于 `fragments/v0.1.5/`。
+- 剩余范围：各项目单独配置 v1（默认执行档、工具面、围栏默认 scope、MCP 集字段占位，versioned-config 落盘）；收尾验证链（`check:quick` → `test:impact` → 完整 `bun run check`，需 WAIVER-0006/0007 核销后过全量）与 0.1.5 发布收口（2026-11-06 前）。

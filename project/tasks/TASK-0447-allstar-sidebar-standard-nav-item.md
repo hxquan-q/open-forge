@@ -40,7 +40,7 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: done
+integration_status: integrated
 created: 2026-11-02
 updated: 2026-11-02
 ---
