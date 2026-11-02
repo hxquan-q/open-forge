@@ -107,14 +107,17 @@ it("description 缺省时 tooltip 回落到插件名", () => {
 	expect(item?.title).toBe("设计 · Vetta 设计");
 });
 
-it("版块入口不进置顶/收纳布局，点击导航到版块首页 /allstar", () => {
+it("Allstar 是原型设计后的普通置顶项，点击导航到 /allstar", () => {
 	const { result } = render();
-	const entry = result.current.sectionEntryNavItem;
-	expect(entry).toBeDefined();
-	expect(entry?.key).toBe("allstar-dev");
-	expect(entry?.locked).toBe(true);
-	// 目录里没有它：置顶区与「更多」收纳区都不出现版块入口。
-	expect(result.current.navItems.some((item) => item.key === "allstar-dev")).toBe(false);
+	const navItems = result.current.navItems;
+	const galleryIndex = navItems.findIndex((item) => item.key === "workspace:vetta-ui-design/gallery");
+	const allstarIndex = navItems.findIndex((item) => item.key === "allstar-dev");
+	const entry = navItems[allstarIndex];
+
+	expect(galleryIndex).toBeGreaterThanOrEqual(0);
+	expect(allstarIndex).toBe(galleryIndex + 1);
+	expect(entry?.pinned).toBe(true);
+	expect(entry?.locked).not.toBe(true);
 	expect(result.current.moreNavItems.some((item) => item.key === "allstar-dev")).toBe(false);
 
 	result.current.actions.openNavItem(entry!);
@@ -122,17 +125,37 @@ it("版块入口不进置顶/收纳布局，点击导航到版块首页 /allstar
 	expect(onNewChat).not.toHaveBeenCalled();
 });
 
-it("版块路由（/allstar）下版块入口高亮", () => {
+it("Allstar 可像普通页签一样移入更多并持久化用户选择", () => {
+	const { result, rerender } = renderHook(() => useSidebarModel({ onCollapse: vi.fn() }));
+	expect(result.current.navItems.some((item) => item.key === "allstar-dev")).toBe(true);
+
+	act(() => result.current.actions.moveNavItem("allstar-dev", "more", null));
+	rerender();
+
+	const entry = result.current.moreNavItems.find((item) => item.key === "allstar-dev");
+	expect(entry?.pinned).toBe(false);
+	expect(localStorage.getItem(SIDEBAR_NAV_LAYOUT_STORAGE_KEY)).toContain("allstar-dev");
+	result.current.actions.openNavItem(entry!);
+	expect(navigate).toHaveBeenCalledWith({ to: "/allstar" });
+
 	routeState.current = { pathname: "/allstar" };
-	const { result } = render();
-	expect(result.current.sectionEntryNavItem?.active).toBe(true);
+	rerender();
+	expect(result.current.moreActive).toBe(true);
 });
 
-it("聊天页打开代码模式会话时版块入口高亮，研究会话不高亮", () => {
+it("Allstar 标准导航项保留页面与 coding 会话的激活状态", () => {
 	const { result, rerender } = renderHook(() => useSidebarModel({ onCollapse: vi.fn() }));
-	// 默认（无活动会话）：不高亮。
-	expect(result.current.sectionEntryNavItem?.active).toBe(false);
+	const isActive = (): boolean =>
+		[...result.current.navItems, ...result.current.moreNavItems].find((item) => item.key === "allstar-dev")?.active ??
+		false;
+	// 默认（无活动会话）不高亮。
+	expect(isActive()).toBe(false);
 
+	routeState.current = { pathname: "/allstar" };
+	rerender();
+	expect(isActive()).toBe(true);
+
+	routeState.current = { pathname: "/" };
 	act(() => {
 		store.set(activeSessionAtom, {
 			cwd: "/repo/a",
@@ -142,7 +165,7 @@ it("聊天页打开代码模式会话时版块入口高亮，研究会话不高�
 		});
 	});
 	rerender();
-	expect(result.current.sectionEntryNavItem?.active).toBe(true);
+	expect(isActive()).toBe(true);
 
 	act(() => {
 		store.set(activeSessionAtom, {
@@ -153,5 +176,5 @@ it("聊天页打开代码模式会话时版块入口高亮，研究会话不高�
 		});
 	});
 	rerender();
-	expect(result.current.sectionEntryNavItem?.active).toBe(false);
+	expect(isActive()).toBe(false);
 });

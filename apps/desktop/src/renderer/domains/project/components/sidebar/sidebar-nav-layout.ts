@@ -21,18 +21,14 @@ export const NEW_SESSION_NAV_KEY = "new-session";
  */
 export const EXTENSIONS_NAV_KEY = "/settings/extensions";
 
-/**
- * 「Allstar自主开发」版块入口的导航 key：不进导航目录（catalog），也就不参与
- * pinned/more 布局存储；由渲染层固定排在「更多」触发器之后，不可拖拽、不可置顶。
- * 点击行为在 useSidebarModel.openNavItem 按 key 分发到 useAllstarDevNavigation。
- */
+/** 「Allstar自主开发」版块入口的导航 key：作为普通目录项参与置顶、收纳与排序。 */
 export const ALLSTAR_DEV_NAV_KEY = "allstar-dev";
 
 /** 位置锁死、不参与用户排布的 key。 */
 const LOCKED_NAV_KEYS: readonly string[] = [NEW_SESSION_NAV_KEY, EXTENSIONS_NAV_KEY];
 
 /** 置顶区容量上限（含「新会话」）。 */
-export const MAX_PINNED_NAV_ITEMS = 5;
+export const MAX_PINNED_NAV_ITEMS = 6;
 
 export const SIDEBAR_NAV_LAYOUT_STORAGE_KEY = "vetta-sidebar-nav-layout";
 

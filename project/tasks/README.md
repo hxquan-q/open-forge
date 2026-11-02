@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0447` | `verifying` | PLAN-0027 | [Allstar 自主开发改为标准侧栏导航项](TASK-0447-allstar-sidebar-standard-nav-item.md)：REQ-0030；默认排在原型设计后，接入置顶/更多/拖拽布局并将容量提升至 6；定向测试 40/40+1/1 复验通过（影响面此前已过），完整 check 被两个过期 waiver 阻断；v0.1.5 待发碎片已就地更新为最终位置；已集成本地 chenxvhua（未推送），实机验收待用户；serial，main 主检出。 |
 | `TASK-0446` | `verifying` | — | [runtime-node 远端 POSIX 路径测试使用可移植临时目录](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md)：BUG-0181；Windows baseline 3 个 `/tmp` 失败消除，focused/impact 7/7 与完整 check 通过；serial。 |
 | `TASK-0445` | `verifying` | — | [plugin-vite React singleton 测试选定暴露 chunk](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md)：BUG-0180；按 fixture 导出定位实际 chunk，focused 2/2、全包 46/46、完整 check 通过；serial。 |
 | `TASK-0444` | `verifying` | PLAN-0014 | [Scripts 面板 locale 完整性与 summary 插值](TASK-0444-scripts-panel-locale-contract.md)：BUG-0081；旧合同红 2→绿，`test:impact` Scripts preset 17/17、完整 check 通过；未启动真实 Desktop；serial。 |

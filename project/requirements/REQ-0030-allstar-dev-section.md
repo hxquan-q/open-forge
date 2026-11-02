@@ -6,12 +6,12 @@ priority: P1
 owner: product
 source: user-request
 related_plan: [PLAN-0027, PLAN-0028]
-related_tasks: [TASK-0422, TASK-0423, TASK-0434]
+related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447]
 related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-02
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -24,8 +24,7 @@ updated: 2026-10-26
 
 ## 用户结果
 
-- 用户从侧边栏「更多」之后的「Allstar自主开发」入口进入开发版块；普通「新会话」一律默认
-  「文档与研究」档，代码模式只能经该入口进入（已交付，TASK-0422）。
+- 「Allstar自主开发」作为标准侧栏导航页签进入开发版块，默认排在「原型设计」之后，并遵循普通页签的置顶、收纳与排序；普通「新会话」一律默认「文档与研究」档，代码模式只能经该入口进入（原入口已交付，TASK-0422；导航调整由 TASK-0447 承接）。
 - 最终态：入口升级为功能版块——自带项目管理、会话管理、各项目单独配置与开发环境配置/
   安装；allstar-coding 流水线 agent 集合体整体并入版块（预置插件形态退役）；内置面向
   实施用户的 git 能力（拉取/推送/跟踪，自带运行时、不依赖系统 git）与数据库 MCP。

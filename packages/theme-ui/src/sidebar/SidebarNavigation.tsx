@@ -29,10 +29,6 @@ export interface SidebarNavigationProps {
 	moreOpen?: boolean;
 	/** 「更多」自定义面板文案；缺省时退化为不带自定义能力的旧列表。 */
 	navCustomizeLabels?: SidebarNavMorePanelLabels;
-	/** 「更多」之后的固定版块入口（如 Allstar 自主开发）；点击由宿主 model 分发，不参与拖拽排布。 */
-	sectionEntry?: SidebarNavItem;
-	onSectionEntryClick?: (item: SidebarNavItem) => void;
-	setSectionEntryRef?: RefCallback<HTMLButtonElement>;
 	onItemClick: (item: SidebarNavItem) => void;
 	onItemIntent?: (item: SidebarNavItem) => void;
 	onMoreOpenChange?: (open: boolean) => void;
@@ -57,9 +53,6 @@ export function SidebarNavigation({
 	moreLabel = "",
 	moreOpen = false,
 	navCustomizeLabels,
-	sectionEntry,
-	onSectionEntryClick,
-	setSectionEntryRef,
 	onItemClick,
 	onItemIntent,
 	onMoreOpenChange,
@@ -231,22 +224,6 @@ export function SidebarNavigation({
 						)}
 					</PopoverContent>
 				</Popover>
-			)}
-			{/* 版块入口是「更多」之后的固定行：不挂 drag props，也不进布局存储。 */}
-			{sectionEntry && (
-				<div className="relative">
-					<ThemeNavItemButton
-						className={cn("w-full", classNames?.item)}
-						classNames={{
-							badge: classNames?.itemBadge,
-							icon: classNames?.itemIcon,
-							label: classNames?.itemLabel,
-						}}
-						item={sectionEntry}
-						onClick={() => onSectionEntryClick?.(sectionEntry)}
-						ref={setSectionEntryRef}
-					/>
-				</div>
 			)}
 		</nav>
 	);

@@ -125,17 +125,16 @@ const BUILTIN_NAV_ITEMS = [
 ] as const;
 
 /**
- * 首次使用时的置顶区默认成员：留「技能与连接器」「智能体」「智能客服」和原型设计画廊，其余入口默认收纳。
- * 顺序由 navCatalog 决定（内置在前、插件视图在后），即「新会话 / 技能与连接器 / 智能体 / 智能客服 / 原型设计」。
- *
- * 新增的 key 只要从未落过盘，就会按此默认分区进入置顶区（见 sidebar-nav-layout.ts 的
- * resolveSidebarNavLayout）——「智能客服」是全新入口，老用户同样会默认置顶。
+ * 首次使用时的置顶区默认成员：保留「技能与连接器」「智能体」「智能客服」、原型设计画廊和
+ * Allstar 自主开发；「新会话」锁在首位，共六个置顶位置。新入口只在用户尚未保存该 key 时
+ * 按此集合进入置顶区，已保存的布局仍由用户选择决定。
  */
 const DEFAULT_PINNED_NAV_KEYS = [
 	"/abilities",
 	"/agents",
 	"/weknora",
 	workspaceViewNavKey("vetta-ui-design", "gallery"),
+	ALLSTAR_DEV_NAV_KEY,
 ];
 
 function loadStoredNavLayout(): SidebarNavLayout {
@@ -294,37 +293,7 @@ export function useSidebarModel({
 	const workspaceModeMap = useAtomValue(workspaceModeByProjectAtom);
 	const activeSession = useAtomValue(activeSessionAtom);
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
-	const sectionEntryButtonRef = useRef<HTMLButtonElement | null>(null);
-	const setSectionEntryNavItemRef = useCallback((element: HTMLButtonElement | null) => {
-		sectionEntryButtonRef.current = element;
-	}, []);
-	/**
-	 * 「Allstar自主开发」版块入口：「更多」之后的固定行，不进导航目录与布局存储；点击
-	 * 进入版块首页（/allstar，ADR-0151 决策 5——coding 导航由版块内容区承载，侧栏不加载
-	 * coding 内容）。高亮时机：版块任意路由（/allstar），开发档的新会话页（/new-session 且
-	 * 上下文项目档位为 coding——版块内发起创建的直达态），或聊天页上正打开代码模式会话
-	 * （capabilityProfile 创建时固化）。新会话页的上下文项目可能被页内选择器换走，这里按
-	 * 路由 cwd 近似，够用。
-	 */
-	const sectionEntryNavItem = useMemo<SidebarNavItem>(
-		() => ({
-			key: ALLSTAR_DEV_NAV_KEY,
-			type: "custom",
-			label: t("sidebar.nav.allstarDev"),
-			labelKey: "sidebar.nav.allstarDev",
-			icon: "icon-[solar--code-linear]",
-			active:
-				currentPath === "/allstar" ||
-				(currentPath === "/new-session" &&
-					readWorkspaceModeFor(workspaceModeMap, decodeRouteCwd(search.cwd) ?? defaultConversationCwd) ===
-						"coding") ||
-				(currentPath === "/" && activeSession?.capabilityProfile === "coding"),
-			title: t("sidebar.nav.allstarDev"),
-			locked: true,
-		}),
-		[activeSession?.capabilityProfile, currentPath, defaultConversationCwd, search.cwd, t, workspaceModeMap],
-	);
-	// committed 宽度。拖拽途中它不变——实时宽度只写 CSS 变量，见下面的 resize。
+	// committed 宽度。拖拽途中它不变——实时宽度只写 CSS 变量，见下面的 resize.
 	const [width, setWidth] = useAtom(sidebarWidthAtom);
 	const liveWidthRef = useRef(width);
 	const panelElementRef = useRef<HTMLDivElement | null>(null);
@@ -336,9 +305,9 @@ export function useSidebarModel({
 	// Resolve i18n in the model layer so theme-ui nav item stays props-driven.
 	const workspaceViews = useAtomValue(pluginWorkspaceViewsAtom);
 	const resolvePluginText = usePluginTextResolver();
-	/** 全部可用导航项（内置 + 插件工作区视图），按 key 索引；布局只存 key。 */
-	const navCatalog: SidebarNavItem[] = useMemo(
-		() => [
+	/** 全部可用导航项（内置 + 插件工作区视图 + Allstar），按 key 索引；布局只存 key。 */
+	const navCatalog: SidebarNavItem[] = useMemo(() => {
+		const items: SidebarNavItem[] = [
 			...BUILTIN_NAV_ITEMS.map((item) =>
 				toNavItem(
 					item,
@@ -365,9 +334,38 @@ export function useSidebarModel({
 					),
 				),
 			),
-		],
-		[currentPath, resolvePluginText, t, workspaceViews],
-	);
+		];
+		const allstarItem: SidebarNavItem = {
+			key: ALLSTAR_DEV_NAV_KEY,
+			type: "custom",
+			label: t("sidebar.nav.allstarDev"),
+			labelKey: "sidebar.nav.allstarDev",
+			icon: "icon-[solar--code-linear]",
+			active:
+				currentPath === "/allstar" ||
+				(currentPath === "/new-session" &&
+					readWorkspaceModeFor(workspaceModeMap, decodeRouteCwd(search.cwd) ?? defaultConversationCwd) ===
+						"coding") ||
+				(currentPath === "/" && activeSession?.capabilityProfile === "coding"),
+			title: t("sidebar.nav.allstarDev"),
+		};
+		// Default catalog ordering places Allstar immediately after Prototype Design. If that
+		// plugin view is disabled, keep the built-in entry reachable at the end of the catalog.
+		const prototypeDesignIndex = items.findIndex(
+			(item) => item.key === workspaceViewNavKey("vetta-ui-design", "gallery"),
+		);
+		if (prototypeDesignIndex < 0) return [...items, allstarItem];
+		return [...items.slice(0, prototypeDesignIndex + 1), allstarItem, ...items.slice(prototypeDesignIndex + 1)];
+	}, [
+		activeSession?.capabilityProfile,
+		currentPath,
+		defaultConversationCwd,
+		resolvePluginText,
+		search.cwd,
+		t,
+		workspaceModeMap,
+		workspaceViews,
+	]);
 
 	const [storedLayout, setStoredLayout] = useState<SidebarNavLayout>(loadStoredNavLayout);
 	const resolvedLayout = useMemo(
@@ -442,19 +440,13 @@ export function useSidebarModel({
 		void moreOpen;
 		void activeMoreKey;
 		void navItems;
-		void sectionEntryNavItem.active;
-		// 版块入口激活时路由必为 /new-session 或 /，不会与「更多」/置顶项同时高亮。
-		const activeElement = sectionEntryNavItem.active
-			? sectionEntryButtonRef.current
-			: moreActive
-				? moreButtonRef.current
-				: navItemRefs.current[activeNavIndex];
+		const activeElement = moreActive ? moreButtonRef.current : navItemRefs.current[activeNavIndex];
 		if (!activeElement) {
 			setNavIndicatorBounds(null);
 			return;
 		}
 		setNavIndicatorBounds(getNavIndicatorBounds(activeElement));
-	}, [activeMoreKey, activeNavIndex, moreActive, moreOpen, navItems, sectionEntryNavItem.active, width]);
+	}, [activeMoreKey, activeNavIndex, moreActive, moreOpen, navItems, width]);
 
 	const [imOnline, setImOnline] = useState(false);
 
@@ -566,8 +558,6 @@ export function useSidebarModel({
 		filter,
 		navItems,
 		moreNavItems,
-		sectionEntryNavItem,
-		setSectionEntryNavItemRef,
 		moreLabel,
 		moreOpen,
 		moreActive,
