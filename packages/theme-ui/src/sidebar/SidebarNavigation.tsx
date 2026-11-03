@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useMemo, type JSX, type RefCallback } from "react";
 import { useThemeComponent } from "@vetta-org/theme-sdk";
 import type { NavIndicatorBounds, SidebarNavItem } from "@vetta-org/theme-sdk/sidebar";

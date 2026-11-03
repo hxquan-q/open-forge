@@ -1,7 +1,8 @@
 // Modified by The Open Forge contributors.
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+
+import { useNavigate } from "@tanstack/react-router";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef, useState } from "react";
-import type { SessionOpenerController } from "../domains/conversation/hooks/useSessionOpener";
 import {
 	activeSessionAtom,
 	lastActiveSessionAtom,
@@ -11,46 +12,39 @@ import {
 
 type SessionRestoreState = "pending" | "restoring" | "complete";
 
-export function useLastSessionRestore(
-	currentPath: string,
-	openSession: SessionOpenerController["openSession"],
-): SessionRestoreState {
+/**
+ * 演示定稿：应用启动（根路由）不再恢复上次会话，默认落新会话页。版块态布局是
+ * 一次性初始化（useCodingSessionLayout，进入 code 语境收左栏开右栏），"恢复上次
+ * 会话"路径绕过了它——上次退出时左栏的收起状态在重启后表现为又弹开。新会话页
+ * 按默认项目档位走：coding 档会正确触发版块态初始化。状态机保留
+ * pending/restoring/complete 供根路由骨架使用。
+ */
+export function useLastSessionRestore(currentPath: string): SessionRestoreState {
+	const navigate = useNavigate();
 	const activeSession = useAtomValue(activeSessionAtom);
 	const pendingSessionCreation = useAtomValue(pendingSessionCreationAtom);
 	const pendingSessionOpen = useAtomValue(pendingSessionOpenAtom);
-	const [lastActiveSession, setLastActiveSession] = useAtom(lastActiveSessionAtom);
-	const setActiveSession = useSetAtom(activeSessionAtom);
+	const setLastActiveSession = useSetAtom(lastActiveSessionAtom);
 	const [state, setState] = useState<SessionRestoreState>("pending");
 	const attemptedRef = useRef(false);
 
-	// 刷新根路由时先用持久化的 cwd + sessionPath 重建 runtime session。
-	// 持久化定位信息已足够恢复，无需等待默认 cwd 或侧栏历史列表完成加载。
-	// runtimeId 不能跨 renderer 生命周期复用，必须重新走 openSession/session.create。
 	useEffect(() => {
 		if (currentPath !== "/" || attemptedRef.current) return;
 		attemptedRef.current = true;
-		if (activeSession || pendingSessionCreation || pendingSessionOpen || !lastActiveSession) {
+		// 已有活动/进行中的会话（如深链先落）不抢跳，保持原路由行为。
+		if (activeSession || pendingSessionCreation || pendingSessionOpen) {
 			setState("complete");
 			return;
 		}
+		// 持久化的上次会话定位不再自动恢复；顺手清掉，避免残留误导后续消费者。
+		setLastActiveSession(null);
 		setState("restoring");
-		void openSession(lastActiveSession.cwd, lastActiveSession.sessionPath, undefined, { historyLoadMode: "tail" })
+		void navigate({ to: "/new-session" })
 			.catch((error: unknown) => {
-				console.warn("[RootLayout] restore active session failed", error);
-				setActiveSession(null);
-				setLastActiveSession(null);
+				console.warn("[RootLayout] navigate to new session failed", error);
 			})
 			.finally(() => setState("complete"));
-	}, [
-		currentPath,
-		activeSession,
-		pendingSessionCreation,
-		pendingSessionOpen,
-		lastActiveSession,
-		openSession,
-		setActiveSession,
-		setLastActiveSession,
-	]);
+	}, [currentPath, activeSession, pendingSessionCreation, pendingSessionOpen, navigate, setLastActiveSession]);
 
 	return state;
 }

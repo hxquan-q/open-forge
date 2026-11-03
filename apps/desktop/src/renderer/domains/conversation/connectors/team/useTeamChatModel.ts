@@ -17,12 +17,22 @@ import {
 } from "@shared/lib/input-tokens";
 import { persistBase64Images } from "@shared/lib/persist-input-images";
 import { pathBasename } from "@shared/lib/utils";
-import { reasoningByModelAtom, selectedModelAtom } from "@shared/store/atoms";
+import {
+	aiEditTargetAtom,
+	aiEditTargetFromToolCall,
+	aiTerminalCommandFromToolCall,
+	aiTerminalOutputFromResult,
+	aiTerminalTeamKey,
+	markAiTerminalEntryDone,
+	pushAiTerminalEntry,
+	reasoningByModelAtom,
+	selectedModelAtom,
+} from "@shared/store/atoms";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
 import type { AgentTeamDocument, TeamSessionListItem } from "@vetta/agent-team";
 import type { PromptAttachmentRef, SessionExecutionMode } from "@vetta/runtime-core";
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
-import { useAtomValue } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveSessionContextComposition } from "../../services/context-composition-cache";
@@ -38,7 +48,6 @@ import {
 	claimTeamSessionHandoff,
 	clearTeamSessionHandoff,
 	peekTeamSessionHandoff,
-	releaseTeamSessionHandoff,
 	type TeamSessionHandoff,
 	type TeamSessionSendHandoff,
 } from "./team-session-handoff";
@@ -101,6 +110,7 @@ export function useTeamChatModel(
 	const [status, setStatus] = useState<TeamChatStatus>("loading");
 	const [, startTeamTransition] = useTransition();
 	const [error, setError] = useState<TeamDisplayError>();
+	const [failedHandoffSessionId, setFailedHandoffSessionId] = useState<string | null>(null);
 	const [contextUsages, setContextUsages] = useState<
 		Readonly<Record<string, NonNullable<TeamChatViewModel["contextUsage"]>>>
 	>({});
@@ -120,6 +130,9 @@ export function useTeamChatModel(
 	const streamsRef = useRef<TeamStreamState>({});
 	pendingRef.current = pending;
 	const routeHandoff = preferredSessionId ? peekTeamSessionHandoff(preferredSessionId) : undefined;
+	const handoffFailed = Boolean(preferredSessionId && failedHandoffSessionId === preferredSessionId);
+	const handoffFailedRef = useRef(handoffFailed);
+	handoffFailedRef.current = handoffFailed;
 	// 发往会话创建的是原始文档；本地化后的只用于渲染。
 	const handoffDocument = routeHandoff?.document ?? document;
 	const displayDocument = useLocalizedAgentTeamDocument(handoffDocument);
@@ -351,7 +364,41 @@ export function useTeamChatModel(
 				event.type === "session-snapshot" || event.type === "session-updated"
 					? event.teamSessionId
 					: event.conversationId;
+			// 团队终端条目的 end 结算先于挂载/会话闸门（BUG-0157）：键自带会话前缀、
+			// 惰性提取，不写聊天状态——卸载或切走后旧成员命令仍要落定，不永久挂
+			// 「执行中」。result 提前取局部：闭包内不保留联合窄化。
+			if (event.type === "desktop.team-tool-execution" && event.event.type === "end") {
+				const endResult = event.event.result;
+				markAiTerminalEntryDone(
+					getDefaultStore(),
+					aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
+					() => aiTerminalOutputFromResult(endResult),
+				);
+			}
 			if (!mounted || eventSessionId !== session.id) return;
+			// 演示定稿：成员的写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签
+			// 热跟随（与普通会话的 useSessionEventController 同一 atom，跨宿主形态生效）。
+			if (event.type === "desktop.team-tool-execution" && event.event.type === "start") {
+				const editTarget = aiEditTargetFromToolCall(
+					event.event.toolName,
+					event.event.args,
+					sessionRef.current?.cwd ?? null,
+					Date.now(),
+				);
+				if (editTarget) getDefaultStore().set(aiEditTargetAtom, editTarget);
+				// 演示定稿：shell 命令投屏（与普通会话同一 feed；key 加会话前缀防跨会话撞键）。
+				const terminalCommand = aiTerminalCommandFromToolCall(event.event.toolName, event.event.args);
+				if (terminalCommand) {
+					pushAiTerminalEntry(getDefaultStore(), {
+						command: terminalCommand,
+						key: aiTerminalTeamKey(event.conversationId, event.event.toolCallId),
+						running: true,
+						at: Date.now(),
+						cwd: sessionRef.current?.cwd ?? null,
+					});
+				}
+			}
+			// 终端条目的 end 结算已提升到闸门之前（见订阅回调顶部），此处只承载聊天态。
 			// session-updated 用快照的 messages 把已落盘的 turn 从流里裁掉。这个裁剪
 			// 必须和快照的采纳同进同退：快照因版本过旧被拒时若照裁不误，这条回复就从
 			// 流和快照两边同时消失（页面重进才恢复）。
@@ -520,8 +567,11 @@ export function useTeamChatModel(
 		],
 	);
 	const stagedPending = useMemo(
-		() => (routeHandoff ? pendingRequestFromHandoff(routeHandoff, team?.leaderMemberId ?? "leader") : undefined),
-		[routeHandoff, team?.leaderMemberId],
+		() =>
+			routeHandoff && !handoffFailed
+				? pendingRequestFromHandoff(routeHandoff, team?.leaderMemberId ?? "leader")
+				: undefined,
+		[handoffFailed, routeHandoff, team?.leaderMemberId],
 	);
 	const visiblePending = pending ?? stagedPending;
 	const fallbackPendingTargetId = session?.leaderMemberId ?? visiblePending?.leaderMemberId ?? team?.leaderMemberId;
@@ -669,9 +719,16 @@ export function useTeamChatModel(
 		) => {
 			const handoff = typeof handoffOrBehavior === "string" ? undefined : handoffOrBehavior;
 			const streamingBehavior = typeof handoffOrBehavior === "string" ? handoffOrBehavior : explicitBehavior;
+			const retryHandoff =
+				!handoff && !session && handoffFailedRef.current && preferredSessionId
+					? peekTeamSessionHandoff(preferredSessionId)
+					: undefined;
 			const activeHandoff =
-				handoff ?? (!session && preferredSessionId ? claimTeamSessionHandoff(preferredSessionId) : undefined);
-			const draftText = (activeHandoff?.text ?? draft).trim();
+				handoff ??
+				retryHandoff ??
+				(!session && preferredSessionId ? claimTeamSessionHandoff(preferredSessionId) : undefined);
+			const manualHandoffRetry = retryHandoff !== undefined;
+			const draftText = (manualHandoffRetry ? draft : (activeHandoff?.text ?? draft)).trim();
 			const attempt = {
 				teamId,
 				teamSessionId: session?.id,
@@ -697,21 +754,25 @@ export function useTeamChatModel(
 				return;
 			}
 			const text = draftText;
-			const requestId = activeHandoff?.requestId ?? crypto.randomUUID();
-			const sentAttachments = activeHandoff
-				? activeHandoff.attachments.map((attachment) => ({
-						path: attachment.path,
-						name: pathBasename(attachment.path),
-						kind: attachment.kind === "image" ? ("image" as const) : ("file" as const),
-					}))
-				: attachments;
+			const requestId = manualHandoffRetry ? crypto.randomUUID() : (activeHandoff?.requestId ?? crypto.randomUUID());
+			const sentAttachments = manualHandoffRetry
+				? attachments
+				: activeHandoff
+					? activeHandoff.attachments.map((attachment) => ({
+							path: attachment.path,
+							name: pathBasename(attachment.path),
+							kind: attachment.kind === "image" ? ("image" as const) : ("file" as const),
+						}))
+					: attachments;
 			const sentMemberMentions = projectMemberMentionsToTrimmedText(
-				activeHandoff?.text ?? draft,
+				manualHandoffRetry ? draft : (activeHandoff?.text ?? draft),
 				text,
-				activeHandoff?.memberMentions ?? memberMentions,
+				manualHandoffRetry ? memberMentions : (activeHandoff?.memberMentions ?? memberMentions),
 			);
 			const targetMemberIds = [...new Set(sentMemberMentions.map((mention) => mention.participantId))];
-			const promptAttachments = activeHandoff?.attachments ?? attachments.map(toPromptAttachment);
+			const promptAttachments = manualHandoffRetry
+				? attachments.map(toPromptAttachment)
+				: (activeHandoff?.attachments ?? attachments.map(toPromptAttachment));
 			const requestModelKey = activeHandoff?.modelKey ?? effectiveModelKey;
 			const requestReasoning = activeHandoff?.reasoning ?? effectiveReasoning;
 			const nextPending = {
@@ -722,11 +783,12 @@ export function useTeamChatModel(
 				targetMemberIds,
 				memberMentions: sentMemberMentions,
 				leaderMemberId: session?.leaderMemberId ?? team?.leaderMemberId ?? "leader",
-				timestamp: activeHandoff?.timestamp ?? Date.now(),
+				timestamp: manualHandoffRetry ? Date.now() : (activeHandoff?.timestamp ?? Date.now()),
 			};
 			pendingRef.current = nextPending;
 			inFlightRequestIds.current.add(requestId);
 			setPending(nextPending);
+			if (manualHandoffRetry) setFailedHandoffSessionId(null);
 			setStatus("sending");
 			setError(undefined);
 			setFailedMemberIds(new Set());
@@ -759,9 +821,11 @@ export function useTeamChatModel(
 				reasoning: requestReasoning,
 			});
 			let activeSessionId = session?.id;
+			let loaded: Awaited<ReturnType<typeof createReservedTeamChatSession>> | undefined;
+			let handoffSessionCreated = false;
 			try {
 				if (activeHandoff) await waitForCommittedPaint();
-				let loaded = session
+				loaded = session
 					? undefined
 					: activeHandoff
 						? await createReservedTeamChatSession({
@@ -772,6 +836,7 @@ export function useTeamChatModel(
 								...(activeHandoff.workspace ? { workspace: activeHandoff.workspace } : {}),
 							})
 						: await (sessionCreationRef.current ?? createTeamChatSession(teamId, document, sessions));
+				handoffSessionCreated = Boolean(activeHandoff && loaded);
 				// 新会话页的模型选择只随 handoff 传过来，不写全局偏好。必须在快照提交前把它
 				// 落进会话：否则“未配置会话取全局默认”的兜底会写入可能已失效的全局模型，而
 				// 委派任务不带 modelKey、只认 session.modelSettings。
@@ -837,7 +902,22 @@ export function useTeamChatModel(
 					});
 				}
 			} catch (cause) {
-				if (activeHandoff && !activeSessionId) releaseTeamSessionHandoff(activeHandoff.sessionId);
+				// 创建失败的 handoff 保持已领取，不 release 重武装：release 会让下面的
+				// 失败回填（草稿/附件/提及）重建 send → handoff effect 立即重领重发，
+				// 确定性失败时形成无限重试风暴（BUG-0164：实测 150ms 内重试上千次）。
+				// 草稿已回填输入框，由用户修正后手动重发。
+				if (activeHandoff && !handoffSessionCreated) {
+					setFailedHandoffSessionId(activeHandoff.sessionId);
+				} else if (activeHandoff && loaded && !session && peekTeamSessionHandoff(activeHandoff.sessionId)) {
+					loadedSessionRef.current = { teamId, sessionId: loaded.snapshot.session.id };
+					if (loaded.document) setDocument(loaded.document);
+					snapshotRef.current = loaded.snapshot;
+					setSnapshot(loaded.snapshot);
+					setContextUsages(readSnapshotContextUsages(loaded.snapshot));
+					setSessions(loaded.sessions);
+					notifyTeamSessionsChanged(teamId);
+					clearTeamSessionHandoff(activeHandoff.sessionId);
+				}
 				console.error("[agent-team] send-message IPC failed", {
 					teamId,
 					teamSessionId: activeSessionId,
@@ -1001,7 +1081,7 @@ export function useTeamChatModel(
 		() => ({
 			feedKey,
 			title: team ? teamDisplayName(team, t) : t("teams.title"),
-			status: routeHandoff && !session ? "sending" : status,
+			status: routeHandoff && !session && visiblePending ? "sending" : status,
 			draft,
 			draftMemberMentions: memberMentions,
 			history,

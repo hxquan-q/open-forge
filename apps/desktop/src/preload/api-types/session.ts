@@ -203,7 +203,14 @@ export interface DesktopSessionApi {
 		handler: (payload: {
 			cwd: string;
 			sessionPath: string;
-			session?: { id: string; cwd: string; firstMessage: string; modifiedAt: number };
+			session?: {
+				id: string;
+				cwd: string;
+				firstMessage: string;
+				modifiedAt: number;
+				/** 会话档位（ADR-0151 决策 6）：增量插入据此过滤普通侧栏。 */
+				agentMode?: string;
+			};
 		}) => void,
 	): () => void;
 	/** 回执（ADR-0060）：streaming 中带 streamingBehavior 的请求入 kernel 队列并立即返回 queued。 */

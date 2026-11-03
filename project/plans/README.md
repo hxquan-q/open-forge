@@ -7,6 +7,8 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0028` | Code 模式审计问题分阶段修复 | in_progress | [REQ-0030](../requirements/REQ-0030-allstar-dev-section.md)、[TASK-0425](../tasks/TASK-0425-code-mode-comprehensive-audit.md) 审计报告；G01/M01/F04/F06/F08–F10/F01–F03 与 §11.3 热追踪 code 独有；排除 F05/F07/M02 与环境项 |
+| `PLAN-0027` | Allstar 自主开发功能版块演进（月内收官） | in_progress | [REQ-0030](../requirements/REQ-0030-allstar-dev-section.md)；M0 入口已交付（TASK-0422 done），M1 版块壳 TASK-0423 ready，M2 并入/M3-core 内置 git 排期至 2026-11-26 |
 | `PLAN-0026` | 运行时共享资源准入与子代理调度观测 | verifying | [方案](PLAN-0026-runtime-resource-admission.md)；0410/0411 已集成本地 main，定向与完整 check 通过；Desktop 存量失败见 ISSUE-0035，未推送，OCR 待功能验收 |
 | `PLAN-0025` | 上游 MCP 恢复与设计画布能力适配 | in_progress | [方案](PLAN-0025-upstream-mcp-design-adaptation.md)、REQ-0008；0406/0407 已有独立代码候选与验证证据、待集成；其他 Task 执行状态见各自记录，最终按顺序集成 |
 | `PLAN-0023` | 第一期个人产品平台：账号/Web中心、Skill/MCP市场、官网文档与下载镜像 | draft | [r4方案](PLAN-0023-product-platform-backoffice.md)、[REQ-0029](../requirements/REQ-0029-product-backoffice-and-licensing.md)、[RESEARCH-0041](../research/RESEARCH-0041-product-backoffice-and-enterprise-control.md)；支付不考虑，企业/私有化后置，未实施 |

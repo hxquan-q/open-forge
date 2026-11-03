@@ -79,6 +79,7 @@ export {
 	isAllowedBrowserTabUrl,
 	isBrowserTabReadAction,
 	isBrowserTabWriteAction,
+	localPathToBrowserFileUrl,
 	raiseBrowserTabToolRisk,
 	readBrowserElementRef,
 	readBrowserTabToolError,

@@ -12,12 +12,16 @@ const hostedRouteOpen = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("@tanstack/react-router", () => ({
 	useMatches: () => [{ pathname: "/" }],
 	useNavigate: () => navigate,
+	useSearch: () => ({}),
 }));
 vi.mock("../../root-layout/nav-route-prefetch", () => ({ prefetchNavItem }));
 vi.mock("@shared/hosted-routes/hosted-route-service", () => ({
 	desktopHostedRouteService: { open: hostedRouteOpen },
 }));
-vi.mock("../project/hooks/useNewChatNavigation", () => ({ useNewChatNavigation: () => vi.fn() }));
+vi.mock("../project/hooks/useNewChatNavigation", () => ({
+	useNewChatNavigation: () => vi.fn(),
+	useAllstarDevNavigation: () => vi.fn(),
+}));
 vi.mock("../plugins/runtime/plugin-i18n", () => ({
 	usePluginTextResolver: () => (_pluginId: string, raw: string | undefined) => raw ?? "",
 }));

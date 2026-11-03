@@ -22,7 +22,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -48,4 +48,4 @@ updated: 2026-10-30
 
 ## 测试与验证
 
-包内入口运行 `weknora-background-flow.test.tsx`，保留全部原断言，定向 7/7 通过。第十批冻结候选 b6c7y60gc 的 Desktop 为 1109 文件通过、4 文件既有跳过，6247 项通过、18 项既有跳过，AC-20 未再失败；90 路径字节快照未变。该结果不表示已发布。
+包内入口运行 `weknora-background-flow.test.tsx`，保留全部原断言；AC-20 用例在两条新会话都已出现在历史列表后才记录终态刷新基线，避免把尚未完成的新会话即时拉取误计为终态刷新。2026-10-31 全文件 7/7、AC-20 隔离重跑 6 次通过；第十批冻结候选 b6c7y60gc 的 Desktop 6247 项通过、18 项既有跳过。该结果不表示已发布。

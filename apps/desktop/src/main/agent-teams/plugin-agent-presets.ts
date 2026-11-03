@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import { existsSync, readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
-import type { AgentBlueprint } from "@vetta/agent-team";
+import type { AgentBlueprint, AgentResourceMode } from "@vetta/agent-team";
 import { EMPTY_AGENT_ABILITIES, pluginBlueprintId } from "@vetta/agent-team";
 import type { InstalledPlugin } from "../../preload/api-types/plugins.js";
 import { describeError } from "../logger/describe-error.js";
@@ -88,6 +88,8 @@ export interface PluginTeamPreset {
 	readonly workflow: string;
 	/** 本团队接管的历史团队 id，用于认领用户已有的同一支团队。 */
 	readonly legacyTeamIds: readonly string[];
+	/** 工作区档位归属；缺省归「文档与研究」档（见 AgentResourceMode）。 */
+	readonly mode?: AgentResourceMode;
 }
 
 export interface PluginAgentPreset {
@@ -104,6 +106,8 @@ export interface PluginAgentPreset {
 	readonly legacyBlueprintIds: readonly string[];
 	/** 本智能体对外供货的角色 slug；别的插件按它引用到这里。 */
 	readonly roles: readonly string[];
+	/** 工作区档位归属；缺省归「文档与研究」档（见 AgentResourceMode）。 */
+	readonly mode?: AgentResourceMode;
 }
 
 export interface PluginAgentPresetBundle {
@@ -247,6 +251,7 @@ function buildAgentPreset(
 		mentionHandle: declared.mentionHandle ?? declared.id,
 		legacyBlueprintIds: declared.legacyIds ?? [],
 		roles: declared.roles ?? [],
+		...(declared.mode ? { mode: declared.mode } : {}),
 	};
 }
 
@@ -349,6 +354,7 @@ function buildTeamPreset(
 		members,
 		workflow: workflow?.trimEnd() ?? "",
 		legacyTeamIds: declared.legacyIds ?? [],
+		...(declared.mode ? { mode: declared.mode } : {}),
 	};
 }
 

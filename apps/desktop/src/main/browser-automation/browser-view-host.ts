@@ -245,7 +245,7 @@ export class InAppBrowserViewHost {
 		const contents = view.webContents;
 		// 与 webview 旧路径一致：window.open/target=_blank 不另开窗口，原地加载。
 		contents.setWindowOpenHandler(({ url }) => {
-			if (/^https?:\/\//i.test(url)) void contents.loadURL(url).catch(() => undefined);
+			if (/^(https?|file):/i.test(url)) void contents.loadURL(url).catch(() => undefined);
 			return { action: "deny" };
 		});
 		const record: ViewRecord = {

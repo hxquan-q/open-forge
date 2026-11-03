@@ -6,6 +6,7 @@ import { RootLayout } from "./App";
 import {
 	loadAbilitiesPage,
 	loadAgentCenterPage,
+	loadAllstarDevHomePage,
 	loadAutomationPage,
 	loadBatchTasksPage,
 	loadKnowledgeBasePage,
@@ -28,6 +29,7 @@ const SessionViewerPage = lazy(async () => ({
 	default: (await import("./domains/conversation/components/SessionViewerPage")).SessionViewerPage,
 }));
 const AutomationPage = lazy(loadAutomationPage);
+const AllstarDevHomePage = lazy(loadAllstarDevHomePage);
 const BatchTasksPage = lazy(loadBatchTasksPage);
 const AbilitiesPage = lazy(loadAbilitiesPage);
 const AgentCenterPage = lazy(loadAgentCenterPage);
@@ -71,6 +73,17 @@ const automationRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/automation",
 	component: AutomationPage,
+	pendingComponent: NoPendingComponent,
+});
+
+/**
+ * 「Allstar 自主开发」版块首页（ADR-0151）：内容区整页 + 全局侧栏保留（同 /automation
+ * 先例）。版块态下普通侧栏不变，coding 项目与会话的导航由本版块承载。
+ */
+const allstarDevRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/allstar",
+	component: AllstarDevHomePage,
 	pendingComponent: NoPendingComponent,
 });
 
@@ -293,6 +306,7 @@ const pluginWorkspaceViewRoute = createRoute({
 const routeTree = rootRoute.addChildren([
 	indexRoute,
 	automationRoute,
+	allstarDevRoute,
 	batchTasksRoute,
 	agentCenterRoute,
 	teamListRedirectRoute,

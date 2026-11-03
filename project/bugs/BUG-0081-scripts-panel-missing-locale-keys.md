@@ -1,16 +1,16 @@
 ---
 id: BUG-0081
 type: bug
-status: investigating
+status: verifying
 priority: P3
 owner: plugins/presets/scripts
 source: VERIFY-0017 组二（TASK-0158 人工验收实测中发现）
 related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
-related_tasks: [TASK-0158]
+related_tasks: [TASK-0158, TASK-0444]
 related_issues: []
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-30
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -67,13 +67,12 @@ updated: 2026-10-08
 
 ## 回归测试
 
-- 新增一个「loose ends」用例：在**不 mock** `useTranslation` 的前提下（或让 mock 读真实 `locales/zh.json`）渲染 `ScriptsPanel`，断言组件引用的每个 key 都能在 `locales/zh.json` 与 `locales/en.json` 中命中，且带参数调用（`summary`、`card.showMore`）的参数名与文案占位符一致。
-- 该用例在旧实现必然红：`card.root` 等 7 条查不到、`summary` 的参数名对不上。
-- 可选加固：把「预设插件 locale key 完整性」提为 `scripts/quality/` 的一条守卫，防止同类漏配再次发生（当前 16 个插件只有 `scripts` 不通过，基线干净，适合直接设为强门禁）。
+- 新增 `test/locale-contract.test.ts`：从 `ScriptsPanel` / `ProjectCard` 源码收集字面量 `t("…")` key，并断言 en/zh locale 全覆盖；同时比较 `summary` 调用点对象参数名与中英文占位符集合。
+- 旧 locale 下两个合同测试均红：缺 7 个 key，`count` 与 `{ projects, scripts }` 不匹配；修复后两个测试全绿。
 
 ## 修复与验证
 
-- 修复：未执行（本 Bug 由验收实测立案，未获修复授权）。
-- 测试：未执行。
-- 检查：未执行。
-- 未运行及原因：修复需改 `locales/zh.json`、`locales/en.json` 与 `ScriptsPanel.tsx:143` 的调用点；`scripts` 插件写路径属 TASK-0158 的 `write_paths`，修复应回到该任务或另立小任务，本轮只做验收取证。
+- 修复：在中英文 locale 补齐 `search.clear`、`action.dismiss`、`state.error.title` 与四个 `card.*` key；summary 改用 `projects` / `scripts` 两个实际传入的插值。
+- 测试：旧实现两个 locale 合同测试均失败；修复后合同测试 2/2，Scripts preset 全包 17/17。
+- 检查：`test:impact`（Scripts preset 全包 17/17）与 `bun run check` 通过。
+- 未运行及原因：未启动真实 Desktop；修复限于 locale 与静态插值合同，具体视觉措辞仍可在实机验收时反馈。

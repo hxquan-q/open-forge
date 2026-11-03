@@ -227,14 +227,15 @@ describe("InAppBrowserViewHost", () => {
 		expect(events.at(-1)?.state.failed).toBe(true);
 	});
 
-	it("navigate 只放行 http/https；未知 workspace 返回 no_view", async () => {
+	it("navigate 放行 http/https/file，仍拒绝脚本协议；未知 workspace 返回 no_view", async () => {
 		const { host, views } = makeHost();
 		expect(await host.navigate("ws-ghost", "https://a.example")).toEqual({ ok: false, code: "no_view" });
 		host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
-		expect(await host.navigate("ws-1", "file:///etc/passwd")).toEqual({ ok: false, code: "policy_denied" });
+		// 只使用 fake WebContents，不读取实际磁盘；保留原样本验证已批准的 file 协议合同。
+		expect(await host.navigate("ws-1", "file:///etc/passwd")).toEqual({ ok: true });
 		expect(await host.navigate("ws-1", "javascript:alert(1)")).toEqual({ ok: false, code: "policy_denied" });
 		expect(await host.navigate("ws-1", "https://ok.example")).toEqual({ ok: true });
-		expect(views[0].webContents.loads).toEqual(["https://ok.example"]);
+		expect(views[0].webContents.loads).toEqual(["file:///etc/passwd", "https://ok.example"]);
 	});
 
 	it("control 映射 back/forward/reload/stop；不可回退/前进时不调用 navigationHistory", () => {

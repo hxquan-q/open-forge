@@ -21,6 +21,12 @@ vi.mock("motion/react", () => {
 });
 vi.mock("./file-tab/FileTabContent", () => ({ FileTabContent: () => <div>file body</div> }));
 
+// 内置 Git 页签的 useMeta 会拉取仓库状态（window.vetta.git）；测试桥不带 git 通道，
+// 本套件只关心页签解析，桩掉该 hook 避免未处理 rejection。
+vi.mock("@shared/hooks/useGitRepoStatus", () => ({
+	useGitRepoStatus: () => ({ status: null, loading: false, refresh: () => {} }),
+}));
+
 class NoopResizeObserver {
 	observe(): void {}
 	unobserve(): void {}

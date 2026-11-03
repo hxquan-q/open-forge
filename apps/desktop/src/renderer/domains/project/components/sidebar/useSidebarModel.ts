@@ -1,11 +1,15 @@
 import { desktopHostedRouteService } from "@shared/hosted-routes/hosted-route-service";
 import {
+	activeSessionAtom,
+	defaultConversationCwdAtom,
 	pluginWorkspaceViewsAtom,
+	readWorkspaceModeFor,
 	SIDEBAR_WIDTH_STORAGE_KEY,
 	sidebarFilterAtom,
 	sidebarWidthAtom,
+	workspaceModeByProjectAtom,
 } from "@shared/store/atoms";
-import { useMatches, useNavigate } from "@tanstack/react-router";
+import { useMatches, useNavigate, useSearch } from "@tanstack/react-router";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +24,7 @@ import {
 import { useNewChatNavigation } from "../../hooks/useNewChatNavigation";
 import { toSidebarNavBadge } from "./sidebar-nav-badge";
 import {
+	ALLSTAR_DEV_NAV_KEY,
 	canPinMore as canPinMoreKeys,
 	EXTENSIONS_NAV_KEY,
 	migrateSidebarNavLayout,
@@ -120,17 +125,16 @@ const BUILTIN_NAV_ITEMS = [
 ] as const;
 
 /**
- * 首次使用时的置顶区默认成员：留「技能与连接器」「智能体」「智能客服」和原型设计画廊，其余入口默认收纳。
- * 顺序由 navCatalog 决定（内置在前、插件视图在后），即「新会话 / 技能与连接器 / 智能体 / 智能客服 / 原型设计」。
- *
- * 新增的 key 只要从未落过盘，就会按此默认分区进入置顶区（见 sidebar-nav-layout.ts 的
- * resolveSidebarNavLayout）——「智能客服」是全新入口，老用户同样会默认置顶。
+ * 首次使用时的置顶区默认成员：保留「技能与连接器」「智能体」「智能客服」、原型设计画廊和
+ * Allstar 自主开发；「新会话」锁在首位，共六个置顶位置。新入口只在用户尚未保存该 key 时
+ * 按此集合进入置顶区，已保存的布局仍由用户选择决定。
  */
 const DEFAULT_PINNED_NAV_KEYS = [
 	"/abilities",
 	"/agents",
 	"/weknora",
 	workspaceViewNavKey("vetta-ui-design", "gallery"),
+	ALLSTAR_DEV_NAV_KEY,
 ];
 
 function loadStoredNavLayout(): SidebarNavLayout {
@@ -187,6 +191,19 @@ function isRouteActive(path: string, currentPath: string): boolean {
 		return currentPath === path || currentPath.startsWith(`${path}/`);
 	}
 	return currentPath === path;
+}
+
+/**
+ * 路由层携带的 cwd 是 URI 编码串（navigate 方显式 encodeURIComponent），统一解码；
+ * 含非法转义序列时按原样使用，不因解码失败让 hook 崩掉。
+ */
+function decodeRouteCwd(value: string | undefined | null): string | null {
+	if (!value) return null;
+	try {
+		return decodeURIComponent(value);
+	} catch {
+		return value;
+	}
 }
 
 function toNavItem(
@@ -272,7 +289,11 @@ export function useSidebarModel({
 	const [moreOpen, setMoreOpen] = useState(false);
 
 	const onNewChat = useNewChatNavigation();
-	// committed 宽度。拖拽途中它不变——实时宽度只写 CSS 变量，见下面的 resize。
+	const search = useSearch({ strict: false }) as { cwd?: string };
+	const workspaceModeMap = useAtomValue(workspaceModeByProjectAtom);
+	const activeSession = useAtomValue(activeSessionAtom);
+	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
+	// committed 宽度。拖拽途中它不变——实时宽度只写 CSS 变量，见下面的 resize.
 	const [width, setWidth] = useAtom(sidebarWidthAtom);
 	const liveWidthRef = useRef(width);
 	const panelElementRef = useRef<HTMLDivElement | null>(null);
@@ -284,9 +305,9 @@ export function useSidebarModel({
 	// Resolve i18n in the model layer so theme-ui nav item stays props-driven.
 	const workspaceViews = useAtomValue(pluginWorkspaceViewsAtom);
 	const resolvePluginText = usePluginTextResolver();
-	/** 全部可用导航项（内置 + 插件工作区视图），按 key 索引；布局只存 key。 */
-	const navCatalog: SidebarNavItem[] = useMemo(
-		() => [
+	/** 全部可用导航项（内置 + 插件工作区视图 + Allstar），按 key 索引；布局只存 key。 */
+	const navCatalog: SidebarNavItem[] = useMemo(() => {
+		const items: SidebarNavItem[] = [
 			...BUILTIN_NAV_ITEMS.map((item) =>
 				toNavItem(
 					item,
@@ -313,9 +334,38 @@ export function useSidebarModel({
 					),
 				),
 			),
-		],
-		[currentPath, resolvePluginText, t, workspaceViews],
-	);
+		];
+		const allstarItem: SidebarNavItem = {
+			key: ALLSTAR_DEV_NAV_KEY,
+			type: "custom",
+			label: t("sidebar.nav.allstarDev"),
+			labelKey: "sidebar.nav.allstarDev",
+			icon: "icon-[solar--code-linear]",
+			active:
+				currentPath === "/allstar" ||
+				(currentPath === "/new-session" &&
+					readWorkspaceModeFor(workspaceModeMap, decodeRouteCwd(search.cwd) ?? defaultConversationCwd) ===
+						"coding") ||
+				(currentPath === "/" && activeSession?.capabilityProfile === "coding"),
+			title: t("sidebar.nav.allstarDev"),
+		};
+		// Default catalog ordering places Allstar immediately after Prototype Design. If that
+		// plugin view is disabled, keep the built-in entry reachable at the end of the catalog.
+		const prototypeDesignIndex = items.findIndex(
+			(item) => item.key === workspaceViewNavKey("vetta-ui-design", "gallery"),
+		);
+		if (prototypeDesignIndex < 0) return [...items, allstarItem];
+		return [...items.slice(0, prototypeDesignIndex + 1), allstarItem, ...items.slice(prototypeDesignIndex + 1)];
+	}, [
+		activeSession?.capabilityProfile,
+		currentPath,
+		defaultConversationCwd,
+		resolvePluginText,
+		search.cwd,
+		t,
+		workspaceModeMap,
+		workspaceViews,
+	]);
 
 	const [storedLayout, setStoredLayout] = useState<SidebarNavLayout>(loadStoredNavLayout);
 	const resolvedLayout = useMemo(
@@ -478,6 +528,11 @@ export function useSidebarModel({
 	}, []);
 	const openNavItem = useCallback(
 		(item: SidebarNavItem) => {
+			// 版块入口先于类型分发：它是 key 约定的 custom 项，没有 path/settingsTab/workspaceView。
+			if (item.key === ALLSTAR_DEV_NAV_KEY) {
+				void navigate({ to: "/allstar" });
+				return;
+			}
 			if (item.type === "new-session") {
 				onNewChat();
 				return;

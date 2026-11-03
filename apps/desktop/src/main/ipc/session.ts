@@ -969,6 +969,10 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 				// 回传生效的 Agent 绑定：新建时是渲染层自己传的，恢复时是主进程读回的，
 				// 渲染层据此在消息列表上展示该 Agent 的头像与昵称。
 				...(result.agentProfileId ? { agentProfileId: result.agentProfileId } : {}),
+				// 会话档位随创建结果透传（BUG-0161）：渲染端 activeSessionAtom 与
+				// §11.3 热追踪门控都以它为事实源，缺它时交互式 code 会话会被误判。
+				agentMode: result.agentMode,
+				capabilityProfile: result.capabilityProfile,
 			};
 		},
 	);

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import {
@@ -6,6 +7,7 @@ import {
 	activityPanelResizingAtom,
 	activityPanelWidthAtom,
 	activityPanelWidthModeAtom,
+	codingLayoutActiveAtom,
 	setActivityPanelWidthAtom,
 	sidebarCollapsedAtom,
 } from "@shared/store/atoms";
@@ -110,6 +112,68 @@ it("用户手动展开侧边栏时，过宽的面板仍被压到 openLimit 并�
 	act(() => store.set(sidebarCollapsedAtom, false));
 	expect(widths.at(-1)).toBe(1600 - 220 - 384);
 	expect(store.get(activityPanelWidthModeAtom)).toEqual({ kind: "fixed", px: 1600 - 220 - 384 });
+});
+
+it("面板过宽临时收起的侧栏，在宽度回到限内时恢复用户原值", () => {
+	const store = createStore();
+	store.set(activityPanelOpenAtom, true);
+	let latest: ReturnType<typeof useActivityPanelModel> | null = null;
+
+	function Probe() {
+		latest = useActivityPanelModel({
+			cwd: null,
+			workspaceId: "test",
+			definitions: [],
+			metaById: new Map(),
+		});
+		return null;
+	}
+
+	act(() => {
+		root = createRoot(container as HTMLDivElement);
+		root.render(createElement(Provider, { store }, createElement(Probe)));
+	});
+
+	// 拉满：超限 → 联动临时收起，记录用户原值（展开）。
+	act(() => store.set(setActivityPanelWidthAtom, "max"));
+	expect(store.get(sidebarCollapsedAtom)).toBe(true);
+
+	// 宽度回到限内：恢复用户原值（展开）。
+	act(() => latest?.actions.onResizeStart());
+	act(() => latest?.actions.onResizeEnd(540));
+	expect(store.get(sidebarCollapsedAtom)).toBe(false);
+});
+
+it("版块态（code 语境）期间宽度回到限内，不把刚收起的侧栏恢复展开", () => {
+	const store = createStore();
+	store.set(activityPanelOpenAtom, true);
+	let latest: ReturnType<typeof useActivityPanelModel> | null = null;
+
+	function Probe() {
+		latest = useActivityPanelModel({
+			cwd: null,
+			workspaceId: "test",
+			definitions: [],
+			metaById: new Map(),
+		});
+		return null;
+	}
+
+	act(() => {
+		root = createRoot(container as HTMLDivElement);
+		root.render(createElement(Provider, { store }, createElement(Probe)));
+	});
+
+	// 用户原本展开侧栏；拉满 → 超限 → 联动临时收起（记录原值=展开）。
+	act(() => store.set(setActivityPanelWidthAtom, "max"));
+	expect(store.get(sidebarCollapsedAtom)).toBe(true);
+
+	// 进入 code 会话语境（版块态激活）：宽度回到限内也不得恢复展开——否则新开
+	// code 会话时左栏会被宽度联动的恢复路径弹开，覆盖版块态的收起要求。
+	act(() => store.set(codingLayoutActiveAtom, true));
+	act(() => latest?.actions.onResizeStart());
+	act(() => latest?.actions.onResizeEnd(540));
+	expect(store.get(sidebarCollapsedAtom)).toBe(true);
 });
 
 it("面板拖动期间只同步离散阈值，结束时才提交并持久化最终宽度", () => {

@@ -1,16 +1,16 @@
 ---
 id: BUG-0080
 type: bug
-status: investigating
+status: verifying
 priority: P2
 owner: desktop notifications
 source: VERIFY-0017 组二（TASK-0161 人工验收实测中发现）
 related_requirement: [REQ-0008]
 related_plan: [PLAN-0014]
-related_tasks: [TASK-0161]
+related_tasks: [TASK-0161, TASK-0440]
 related_issues: []
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-30
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -52,11 +52,11 @@ P2：设置页承诺的功能整体不可用（完成 / 失败 / 等待审批全
 
 ## 回归测试
 
-缺一条渲染进程级断言：`window.vetta.notification.onSound` 收到载荷时应调用 `playNotificationSound(soundId, volume)`。现有 `shared/audio/notification-sound-player.test.ts` 只测播放器本体，`main/notifications/*.test.ts` 只测到「命令已发送」，两侧都不覆盖这段缺失的接线，故缺陷得以通过 580 例定向测试。
+已补渲染进程 hook 级回归：`useDesktopNotificationSound.test.tsx` 断言 `window.vetta.notification.onSound` 收到载荷后调用 `playNotificationSound(soundId, volume)`，并断言卸载时取消订阅。旧实现因 hook 不存在而在模块解析阶段失败；实现后 1/1 通过。
 
 ## 修复与验证
 
-- 修复：未修（等用户裁定修复授权）。
-- 测试：未增。
-- 检查：未跑。
-- 未运行及原因：修复未授权；本轮范围为人工验收。
+- 修复：新增 `useDesktopNotificationSound` 常驻 hook，订阅 preload `onSound` 并调用播放器；由 `useRootLayoutModel` 挂载，监听回调清理时调用 preload 返回的取消订阅。
+- 测试：新 hook 回归测试先红（模块缺失），实现后 1/1 通过，覆盖事件参数传递与卸载解绑。
+- 检查：`bun run check` 通过；`bun run test:impact -- apps/desktop/src/renderer/domains/message/hooks/useDesktopNotificationSound.ts apps/desktop/src/renderer/domains/message/hooks/useDesktopNotificationSound.test.tsx apps/desktop/src/renderer/root-layout/useRootLayoutModel.ts` 通过（direct 1/1 + related 56/56）。
+- 未运行及原因：未启动真实 Desktop；设置中打开声音后对完成/失败/等待审批三类终结事件的扬声器输出仍需实机验收。

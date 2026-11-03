@@ -11,6 +11,7 @@ import {
 	sessionsMapAtom,
 	transcriptWindowStateAtom,
 } from "@shared/store/atoms";
+import { waitFor } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -77,7 +78,7 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
-it("自动恢复未知大小会话后可分页并按用户选择打开完整历史", { timeout: 10_000 }, async () => {
+it("以有界模式打开未知大小会话后可分页并按用户选择打开完整历史", { timeout: 10_000 }, async () => {
 	const store = getDefaultStore();
 	const history = Array.from({ length: 2_000 }, (_, index) => userHistory(`message ${index}`, `user-${index}`)[0]);
 	const frames: FrameRequestCallback[] = [];
@@ -149,15 +150,21 @@ it("自动恢复未知大小会话后可分页并按用户选择打开完整历�
 
 	function Probe() {
 		manager = useSessionManager();
-		const state = useLastSessionRestore("/", manager.openSession);
-		return createElement("output", null, state);
+		useLastSessionRestore("/");
+		return null;
 	}
 
 	await act(async () => {
 		root = createRoot(container as HTMLDivElement);
 		root.render(createElement(Probe));
 	});
-	expect(container?.textContent).toBe("restoring");
+	// 演示定稿：启动不再恢复上次会话，导航新会话页；有界历史加载合同由显式打开触发。
+	await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: "/new-session" }));
+
+	let tailOpening: Promise<void> | undefined;
+	await act(async () => {
+		tailOpening = manager?.openSession(cwd, firstSessionPath, undefined, { historyLoadMode: "tail" });
+	});
 	expect(store.get(pendingSessionOpenAtom)?.sessionPath).toBe(firstSessionPath);
 	expect(store.get(activeSessionAtom)).toBeNull();
 	expect(visibleTexts(store.get(chatMessagesAtom))).toEqual(["message 1998", "message 1999"]);
@@ -171,8 +178,8 @@ it("自动恢复未知大小会话后可分页并按用户选择打开完整历�
 	expect(sessionApi.create).toHaveBeenCalledOnce();
 	await act(async () => {
 		creating.resolve({ cwd, sessionId: "runtime-restored", sessionPath: firstSessionPath });
+		await tailOpening;
 	});
-	expect(container?.textContent).toBe("complete");
 	expect(store.get(activeSessionAtom)?.runtimeId).toBe("runtime-restored");
 	expect(store.get(pendingSessionOpenAtom)).toBeNull();
 	expect(store.get(sessionsMapAtom).size).toBe(0);

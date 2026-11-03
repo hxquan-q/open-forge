@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ReactNode } from "react";
 import type { ActivityTabDefinition, ActivityTabId, ActivityTabMeta } from "./types";
 
@@ -29,7 +30,11 @@ function MetaFoldStep({ definitions, index, metas, render }: MetaFoldProps): JSX
 
 function MetaFold(props: MetaFoldProps): JSX.Element {
 	if (props.index >= props.definitions.length) return <>{props.render(props.metas)}</>;
-	return <MetaFoldStep {...props} />;
+	const definition = props.definitions[props.index]!;
+	// key 用 definition.id：定义列表动态变化（如 code 会话的页签白名单收口）时，
+	// 同一 fold 层位换定义必须换实例——复用旧实例会让新 useMeta 的 hooks 数量与旧实例
+	// 不一致，直接触发 "Rendered fewer hooks than expected"。
+	return <MetaFoldStep key={definition.id} {...props} />;
 }
 
 interface ActivityTabMetaHostProps {

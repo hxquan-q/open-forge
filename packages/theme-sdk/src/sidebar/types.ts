@@ -38,6 +38,7 @@ export type SidebarLabelKey =
 	| "sidebar.nav.agentSettings"
 	| "sidebar.nav.appearance"
 	| "sidebar.nav.extensions"
+	| "sidebar.nav.allstarDev"
 	| "sidebar.nav.more";
 
 export interface SidebarProps {
@@ -157,7 +158,7 @@ export interface SidebarModel {
 	readonly navIndicatorBounds: NavIndicatorBounds | null;
 	/** 置顶区导航项（含锁定的「新会话」，不含「更多」收纳项）。 */
 	readonly navItems: readonly SidebarNavItem[];
-	/** 置顶区是否还有空位（含「新会话」计数，上限 5）。 */
+	/** 置顶区是否还有空位（含「新会话」计数，上限由宿主布局定义）。 */
 	readonly canPinMore: boolean;
 	readonly setMoreButtonRef: RefCallback<HTMLButtonElement>;
 	/**

@@ -22,6 +22,13 @@ vi.mock("@shared/components/RendererMarkdownContent", () => ({
 	RendererMarkdownContent: ({ text }: { text: string }) => <div data-testid="weknora-markdown">{text}</div>,
 }));
 
+// 输入栏分支标签/Git 页签的 useMeta 会拉取仓库状态（window.vetta.git）；测试桥不带
+// git 通道，桩掉该 hook 避免未处理 rejection 干扰流程断言（vitest 会把未处理错误
+// 记为潜在假阳性）。
+vi.mock("@shared/hooks/useGitRepoStatus", () => ({
+	useGitRepoStatus: () => ({ status: null, loading: false, refresh: () => {} }),
+}));
+
 vi.mock("@shared/components/ui/select", () => ({
 	Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	SelectTrigger: ({ children, ...props }: { children: ReactNode } & Record<string, unknown>) => (
@@ -288,7 +295,10 @@ describe("智能客服 · 后台思考（D 组用户流程）", () => {
 			await waitFor(() => expect(harness.counters.ask).toHaveLength(2));
 		await user.click(screen.getByRole("button", { name: "新建对话" }));
 
-		const baseline = harness.counters.listSessions;
+		const nav = screen.getByRole("navigation", { name: "历史会话" });
+			await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s1/ })).toBeTruthy());
+			await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s2/ })).toBeTruthy());
+			const baseline = harness.counters.listSessions;
 		act(() => harness.emit({ type: "turn.completed", requestId: "r1" }));
 		act(() => harness.emit({ type: "turn.completed", requestId: "r2" }));
 

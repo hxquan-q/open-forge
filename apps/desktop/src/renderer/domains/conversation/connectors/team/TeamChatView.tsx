@@ -153,6 +153,9 @@ export function TeamChatView({
 		<DefaultChatView
 			messages={model.feedItems}
 			workspace={workspace}
+			// 团队会话天生 coding 档（TEAM_CAPABILITY_PROFILE）：声明档位使右栏走与 code
+			// 会话相同的页签白名单（文件/Git/浏览器，见 DefaultChatView 的演示定稿）。
+			workspaceMode="coding"
 			activity={activity}
 			subHeader={
 				<>

@@ -199,17 +199,31 @@ describe("browser_tab 宿主函数", () => {
 		expect(result).toMatchObject({ ok: false, code: "invalid_input", action: "fill" });
 	});
 
-	it("navigate 拒绝非 http(s) scheme 且不加载，放行 https 并返回新 revision", async () => {
+	it("navigate 拒绝白名单外 scheme 且不加载，放行 file（本地预览）与 https", async () => {
 		const loadURL = vi.fn(async () => undefined);
 		const { deps } = makeDeps(fakeContents({ loadURL }));
 
+		// 演示定稿：file: 放行用于本地文件预览（工作区产物直接在侧边栏打开）——
+		// 与 bash 全权限模式等价面（webview 隔离 session、webSecurity 默认开启）。
 		const denied = await invokeDesktopBrowserTab(
-			request({ action: "navigate", url: "file:///etc/passwd" }),
+			request({ action: "navigate", url: "chrome://version" }),
 			new AbortController().signal,
 			deps,
 		);
 		expect(denied).toMatchObject({ ok: false, code: "policy_denied", action: "navigate" });
 		expect(loadURL).not.toHaveBeenCalled();
+
+		const localFile = await invokeDesktopBrowserTab(
+			request({ action: "navigate", url: "file:///D:/demo/index.html" }),
+			new AbortController().signal,
+			deps,
+		);
+		expect(localFile).toMatchObject({
+			ok: true,
+			action: "navigate",
+			pageUrl: "file:///D:/demo/index.html",
+		});
+		expect(loadURL).toHaveBeenCalledWith("file:///D:/demo/index.html");
 
 		const allowed = await invokeDesktopBrowserTab(
 			request({ action: "navigate", url: "https://example.org" }),
@@ -220,7 +234,8 @@ describe("browser_tab 宿主函数", () => {
 			ok: true,
 			action: "navigate",
 			pageUrl: "https://example.org",
-			pageRevision: 1,
+			// 上一段 file 导航已 bump 到 1，这里顺延为 2。
+			pageRevision: 2,
 		});
 		expect(loadURL).toHaveBeenCalledWith("https://example.org");
 	});

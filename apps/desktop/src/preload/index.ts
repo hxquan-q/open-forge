@@ -15,6 +15,7 @@ import { createBrowserViewApi } from "./apis/browser-view.js";
 import { createCanvasApi } from "./apis/canvas.js";
 import { createConversationTagsApi } from "./apis/conversation-tags.js";
 import { createDownloadsApi } from "./apis/downloads.js";
+import { createGitApi } from "./apis/git.js";
 import { createI18nApi } from "./apis/i18n.js";
 import { createImApi } from "./apis/im.js";
 import { createMarkdownApi } from "./apis/markdown.js";
@@ -51,6 +52,7 @@ for (const eventName of ["keydown", "mousedown", "mousemove", "touchstart", "whe
 
 const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createAbilitiesApi(ipcRenderer),
+	...createGitApi(ipcRenderer),
 	...createAgentTeamsApi(ipcRenderer),
 	...createActionApprovalApi(ipcRenderer),
 	...createAppLifecycleApi(ipcRenderer),

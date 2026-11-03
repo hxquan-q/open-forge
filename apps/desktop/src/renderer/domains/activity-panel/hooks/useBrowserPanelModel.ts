@@ -6,7 +6,10 @@ import {
 	getBrowserUrlForWorkspace,
 	setBrowserUrlForWorkspaceAtom,
 } from "@shared/store/atoms";
-import { BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS } from "@vetta/coding-agent/function-extensions";
+import {
+	BROWSER_ELEMENT_LIVE_EDIT_STYLE_KEYS,
+	localPathToBrowserFileUrl,
+} from "@vetta/coding-agent/function-extensions";
 import type { BrowserLiveEditCardProps, BrowserPanelLabels } from "@vetta-org/theme-ui/activity";
 import { OVERLAY_DRAG_EVENT } from "@vetta-org/theme-ui/layout";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -24,12 +27,13 @@ import {
 import { useBrowserElementPicker } from "./useBrowserElementPicker";
 import { useBrowserLiveEdit } from "./useBrowserLiveEdit";
 
-/** 把地址栏输入规整为可加载的 URL：已带协议直接用，否则补 https://，空则返回 null。 */
+/** 地址栏与 browser_tab 共用本地路径规则；无协议的网络地址仍补 https://。 */
 function normalizeUrl(input: string): string | null {
 	const trimmed = input.trim();
 	if (!trimmed) return null;
-	if (/^[a-z]+:\/\//i.test(trimmed)) return trimmed;
-	return `https://${trimmed}`;
+	const url = localPathToBrowserFileUrl(trimmed);
+	if (/^[a-z]+:\/\//i.test(url)) return url;
+	return `https://${url}`;
 }
 
 function boundsOf(el: HTMLElement): DesktopBrowserViewBounds {

@@ -155,7 +155,7 @@ export function NewSessionPageView({
 							mounted={mounted}
 							subtitle={subtitle}
 						/>
-						{/* 会话前置选项（项目 / 工作模式）与 hero 同淡出：命令区向上生长时会盖到这一行。 */}
+						{/* 会话前置选项（项目 / 智能体）与 hero 同淡出：命令区向上生长时会盖到这一行。 */}
 						<NewSessionOptionsRow
 							creatingProject={preparingProject}
 							onSelectPendingProject={onSelectPendingProject}
@@ -167,7 +167,6 @@ export function NewSessionPageView({
 							onSelectTarget={onSelectTarget}
 							showProjectSelector={!stackProjectSelector}
 							workspaceMode={workspaceMode}
-							workspaceCwd={cwd}
 						/>
 					</motion.div>
 				}
@@ -254,6 +253,7 @@ export function NewSessionPageView({
 						activityPanelCwd,
 						activeRuntimeIds,
 					)}
+					hotTracking={workspaceMode === "coding"}
 				/>
 			) : null}
 		</div>

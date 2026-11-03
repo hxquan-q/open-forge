@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
@@ -50,7 +51,7 @@ function Harness(): JSX.Element {
 	const identity = useNewSessionTargetIdentity(targetKey);
 	return (
 		<>
-			<NewSessionAgentSelector selectedKey={targetKey} onSelect={setTargetKey} />
+			<NewSessionAgentSelector selectedKey={targetKey} onSelect={setTargetKey} workspaceMode="work" />
 			<DefaultNewSessionHero
 				avatarAutoplay={false}
 				greetingTitle="Hi, Ada"

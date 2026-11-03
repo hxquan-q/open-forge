@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import {
 	canPinMore,
@@ -25,6 +26,22 @@ describe("resolveSidebarNavLayout", () => {
 		const resolved = resolveSidebarNavLayout(CATALOG, EMPTY_SIDEBAR_NAV_LAYOUT, DEFAULT_PINNED);
 		expect(resolved.pinned).toEqual([NEW_SESSION_NAV_KEY, "/automation", "/knowledge", "/abilities"]);
 		expect(resolved.more).toEqual(["/batch-tasks", "/settings/models"]);
+	});
+
+	it("六项置顶容量容纳默认入口，Allstar 紧跟原型设计", () => {
+		const catalog = [
+			NEW_SESSION_NAV_KEY,
+			"/abilities",
+			"/agents",
+			"/weknora",
+			"workspace:vetta-ui-design/gallery",
+			"allstar-dev",
+		];
+		const resolved = resolveSidebarNavLayout(catalog, EMPTY_SIDEBAR_NAV_LAYOUT, catalog.slice(1));
+
+		expect(MAX_PINNED_NAV_ITEMS).toBe(6);
+		expect(resolved.pinned).toEqual(catalog);
+		expect(resolved.more).toEqual([]);
 	});
 
 	it("丢弃目录中已不存在的 key（插件卸载）", () => {
@@ -60,13 +77,16 @@ describe("resolveSidebarNavLayout", () => {
 
 	it("置顶区溢出项退回收纳区最前而非丢失", () => {
 		const resolved = resolveSidebarNavLayout(
-			CATALOG,
-			{ pinned: ["/automation", "/knowledge", "/abilities", "/batch-tasks", "/settings/models"], more: [] },
+			[...CATALOG, "/scenes"],
+			{
+				pinned: ["/automation", "/knowledge", "/abilities", "/batch-tasks", "/settings/models", "/scenes"],
+				more: [],
+			},
 			DEFAULT_PINNED,
 		);
 		expect(resolved.pinned).toHaveLength(MAX_PINNED_NAV_ITEMS);
 		expect(resolved.pinned[0]).toBe(NEW_SESSION_NAV_KEY);
-		expect(resolved.more).toEqual(["/settings/models"]);
+		expect(resolved.more).toEqual(["/scenes"]);
 	});
 
 	it("持久化里混入的 new-session 被忽略，不会占用用户可排布的位置", () => {
@@ -95,9 +115,12 @@ describe("pin / unpin", () => {
 	});
 
 	it("置顶区已满时 pin 无效（不挤掉已有项）", () => {
-		const full = pinNavKey(base, "/batch-tasks");
+		const full = {
+			pinned: [NEW_SESSION_NAV_KEY, "/automation", "/knowledge", "/abilities", "/batch-tasks", "/settings/models"],
+			more: ["/overflow"],
+		};
 		expect(canPinMore(full)).toBe(false);
-		expect(pinNavKey(full, "/settings/models")).toBe(full);
+		expect(pinNavKey(full, "/overflow")).toBe(full);
 	});
 
 	it("unpin 把置顶项收回收纳区最前", () => {
@@ -166,12 +189,11 @@ describe("moveNavKeyToRegion", () => {
 	});
 
 	it("置顶区已满时拒绝移入", () => {
-		const full = resolveSidebarNavLayout(
-			CATALOG,
-			{ pinned: ["/automation", "/knowledge", "/abilities", "/batch-tasks"], more: ["/settings/models"] },
-			[],
-		);
-		expect(moveNavKeyToRegion(full, "/settings/models", "pinned", null)).toBe(full);
+		const full = {
+			pinned: [NEW_SESSION_NAV_KEY, "/automation", "/knowledge", "/abilities", "/batch-tasks", "/settings/models"],
+			more: ["/overflow"],
+		};
+		expect(moveNavKeyToRegion(full, "/overflow", "pinned", null)).toBe(full);
 	});
 
 	it("同区移动等价于重排", () => {
@@ -271,7 +293,10 @@ describe("版本迁移", () => {
 	});
 
 	it("置顶区已满时跳过，不挤掉用户已有的置顶项", () => {
-		const full = { pinned: ["/abilities", "/knowledge", "/automation", "/batch-tasks"], more: ["/agents"] };
+		const full = {
+			pinned: ["/abilities", "/knowledge", "/automation", "/batch-tasks", "/settings/models"],
+			more: ["/agents"],
+		};
 		expect(migrateSidebarNavLayout(full, 0)).toEqual(full);
 		expect(full.pinned.length).toBe(MAX_PINNED_NAV_ITEMS - 1);
 	});
