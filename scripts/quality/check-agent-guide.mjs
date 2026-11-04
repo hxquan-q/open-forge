@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isDirectRun, repoRoot } from "./lib.mjs";
-import { brokenFileLinks, relativeMarkdownLinks } from "./workflow-skill-links.mjs";
+import { brokenFileLinks, markdownProse, relativeMarkdownLinks } from "./workflow-skill-links.mjs";
 
 export const ROOT_GUIDE_MAX_BYTES = 8192;
 export const RULE_DOCUMENTS = ["repository", "engineering", "testing", "delivery", "collaboration", "governance"].map(
@@ -20,9 +20,9 @@ function checkClaudeGuide(root) {
 	const problems = brokenFileLinks(file, text);
 	if (bytes.length > CLAUDE_GUIDE_MAX_BYTES)
 		problems.push(`Claude guide exceeds ${CLAUDE_GUIDE_MAX_BYTES} bytes: ${bytes.length}`);
-	for (const path of ["AGENTS.md", CLAUDE_SUPPLEMENT]) {
-		if (!links.includes(path)) problems.push(`Missing Claude pointer: ${path}`);
-	}
+	const imports = markdownProse(text).match(/^ {0,3}@AGENTS\.md[ \t]*$/gm) ?? [];
+	if (imports.length !== 1) problems.push(`Claude guide must import @AGENTS.md exactly once: found ${imports.length}`);
+	if (!links.includes(CLAUDE_SUPPLEMENT)) problems.push(`Missing Claude pointer: ${CLAUDE_SUPPLEMENT}`);
 	const supplement = join(root, CLAUDE_SUPPLEMENT);
 	if (!existsSync(supplement)) problems.push(`Missing Claude supplement: ${CLAUDE_SUPPLEMENT}`);
 	else problems.push(...brokenFileLinks(supplement, readFileSync(supplement, "utf8")));

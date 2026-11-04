@@ -84,10 +84,10 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 ## 三跳读取协议
 
-处理任务时不要全量加载本目录：
+按任务查询，不全量加载本目录：
 
-1. 读仓库 `AGENTS.md`；
-2. 读本 `project/README.md` 和目标目录 README；
-3. 只读当前 Requirement、Plan、Bug/Issue 以及最多 1–2 篇相关 Research/Verification Note。
+1. 已知 Task ID/主题时，先按 [Task 查询入口](tasks/README.md#按需读取)定位并读取该记录，核对实际 diff 与已有证据。
+2. 只读其关联且影响本次范围的来源；新增记录或归属不清时，再查本入口和管理规范的记录路由。
+3. 需要协调多个任务时才读取 Task 焦点表；历史通过原 Task 文件查询，完成结果不重复堆入导航。
 
 `exprot/` 暂不删除。迁移期间，`project/` 通过索引指向 `exprot/`，待链接和事实源审查完成后再决定是否归档或移除旧路径。

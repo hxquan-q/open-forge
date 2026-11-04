@@ -1,7 +1,7 @@
 <!-- Copyright The Open Forge contributors. -->
 # 使用已有知识图谱调查项目
 
-开发前用图谱建立结构导航，再以源码确认事实。它不替代 [仓库地图](../../../../docs/dev/agent-rules/repository.md)、最近一级 AGENTS 或任务合同。
+陌生跨模块问题、所有权或调用链不清时，用已有图谱辅助导航，再以源码确认事实；已知文件的局部任务直接查源码。图谱不替代 [仓库地图](../../../../docs/dev/agent-rules/repository.md)、最近一级 AGENTS 或任务合同，也不因目录存在而成为每次开工的必读项。
 
 ## 1. 确认图谱与新鲜度
 

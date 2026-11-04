@@ -3,9 +3,9 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-export function relativeMarkdownLinks(markdown) {
+export function markdownProse(markdown) {
 	let fence = null;
-	const prose = markdown
+	return markdown
 		.split(/\r?\n/)
 		.filter((line) => {
 			const delimiter = line.match(/^ {0,3}(`{3,}|~{3,})/);
@@ -19,6 +19,10 @@ export function relativeMarkdownLinks(markdown) {
 		})
 		.join("\n")
 		.replace(/(`+)[\s\S]*?\1/g, "");
+}
+
+export function relativeMarkdownLinks(markdown) {
+	const prose = markdownProse(markdown);
 	const pattern =
 		/\[[^\]\n]*\]\(\s*(?:<([^>\n]+)>|((?:\\.|[^\s()]|\([^()\n]*\))+))(?:\s+(?:"[^"\n]*"|'[^'\n]*'|\([^\n)]*\)))?\s*\)/g;
 	return [...prose.matchAll(pattern)]
