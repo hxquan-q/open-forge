@@ -15,6 +15,7 @@ draft → ready → in_progress → blocked → verifying → done → archived
 
 | Task ID | 状态 | Plan | 焦点 / 协调说明 |
 |---|---|---|---|
+| `TASK-0420` | `done` | — | [精简 Agent 指令入口](TASK-0420-minimal-agent-instructions.md)；AGENTS 65 行、CLAUDE 8 行，合计字节减少约 24%；边界校验与内部互信明确，文档守卫通过；串行本地提交，模型效果未实测。 |
 | `TASK-0419` | `verifying` | — | [后台列表刷新合并](TASK-0419-weknora-background-refresh-coalesce.md)；第十批冻结候选 b6c7y60gc 中 Desktop 6247 通过、18 既有跳过，AC-20 未再失败。 |
 | `TASK-0418` | `verifying` | — | [SSH 握手预算取整](TASK-0418-ssh2-handshake-budget-floor.md)；第十批冻结候选 b6c7y60gc 中 ssh-transport 236 通过、25 既有跳过，239999 未再出现。 |
 | `TASK-0417` | `verifying` | — | [Worktree 准备沿用控制器运行时](TASK-0417-agent-prepare-controller-runtime.md)；第十批冻结候选 b6c7y60gc 的 test:changed 退出 0，90 路径字节快照未变。 |
