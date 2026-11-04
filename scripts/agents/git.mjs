@@ -23,9 +23,9 @@ export function git(root, args, { trim = true } = {}) {
 }
 
 export function snapshot(root, { clean = true } = {}) {
-	const repository = realpathSync(root);
+	const repository = realpathSync.native(root);
 	const metadata = git(repository, ["rev-parse", "--show-toplevel", "HEAD", "HEAD^{tree}"]).split(/\r?\n/u);
-	if (metadata.length !== 3 || realpathSync(metadata[0]) !== repository)
+	if (metadata.length !== 3 || realpathSync.native(metadata[0]) !== repository)
 		throw new Error("worktree must name its repository root");
 	const status = git(repository, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
 	if (clean && status) throw new Error("worktree is not clean");

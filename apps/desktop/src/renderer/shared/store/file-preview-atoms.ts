@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { atom } from "jotai";
 import {
 	ACTIVITY_PANEL_DEFAULT_WIDTH,
@@ -131,4 +132,15 @@ export const closeInlineFilePreviewAtom = atom(null, (get, set) => {
 	if (get(activityPanelWidthAtom) >= ACTIVITY_PANEL_PREVIEW_MIN_WIDTH) {
 		set(setActivityPanelWidthAtom, target);
 	}
+});
+
+/**
+ * 卸载语义的「清预览」（BUG-0162）：只清空预览上下文与主动点开记录，**不回拉面板
+ * 宽度**——切走文件页签/切换会话时的宽度属于版块态初始化或用户选择，卸载清理无权
+ * 覆盖（回拉曾把初始化的对半分悄悄缩回默认 360）。用户主动关闭预览仍走
+ * {@link closeInlineFilePreviewAtom}（含回拉）。
+ */
+export const clearInlineFilePreviewContextAtom = atom(null, (_get, set) => {
+	set(inlineFilePreviewAtom, null);
+	set(inlinePreviewRestoreWidthAtom, null);
 });

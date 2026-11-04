@@ -52,12 +52,23 @@ describe("browser_tab 可纠正的入参错误", () => {
 		expect(message).toContain("Allowed fields for snapshot: action, description, interactiveOnly.");
 	});
 
-	it("file:// 导航指向文件预览而不是浏览器页", async () => {
-		const result = await executeRaw({ action: "navigate", url: "file:///tmp/index.html" });
-		const message = text(result);
-		expect(result.details).toMatchObject({ code: "invalid_input" });
-		expect(message).toContain("file preview");
-		expect(message).not.toContain("Open the in-app Browser page");
+	it("file:// 导航通过校验并将原地址交给浏览器宿主", async () => {
+		const received: unknown[] = [];
+		const tool = createBrowserTabTool({
+			invoke: async (request) => {
+				received.push(request.input);
+				return { ok: true, action: "navigate", pageUrl: "file:///tmp/index.html", pageRevision: 1 };
+			},
+		});
+		const result = await tool.execute({
+			sessionId: "s1",
+			turnId: "t1",
+			toolCallId: "c1",
+			signal,
+			input: { action: "navigate", url: "file:///tmp/index.html" },
+		});
+		expect(result.isError).toBeUndefined();
+		expect(received).toEqual([{ action: "navigate", url: "file:///tmp/index.html" }]);
 	});
 
 	it("其他非 http(s) 协议给出收到的协议名与示例", () => {

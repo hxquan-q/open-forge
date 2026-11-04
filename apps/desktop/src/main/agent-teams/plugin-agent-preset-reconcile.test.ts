@@ -139,6 +139,31 @@ describe("plugin agent preset reconcile", () => {
 		expect(team?.members[0]?.assignment?.instructions).toBe(teamPreset.workflow);
 	});
 
+	it("stamps the declared workspace mode on the agent profile and the team, and propagates changes", () => {
+		const first = reconcilePluginAgentPresets({
+			document: baseDocument(),
+			agents: [{ ...agentPreset, mode: "coding" }],
+			teams: [{ ...teamPreset, mode: "coding" }],
+		});
+		if (!first) throw new Error("expected a reconcile result");
+		expect(first.document.agents.find((agent) => agent.blueprintId === BLUEPRINT_ID)?.mode).toBe("coding");
+		expect(first.document.teams.find((team) => team.id === pluginTeamId(PLUGIN_ID, "design-team"))?.mode).toBe(
+			"coding",
+		);
+
+		// 清单撤掉声明 → 档位归属随之消失（比较含 mode，改了就要落新修订）。
+		const second = reconcilePluginAgentPresets({
+			document: first.document,
+			agents: [agentPreset],
+			teams: [teamPreset],
+		});
+		if (!second) throw new Error("expected a second reconcile result");
+		expect(second.document.agents.find((agent) => agent.blueprintId === BLUEPRINT_ID)?.mode).toBeUndefined();
+		expect(
+			second.document.teams.find((team) => team.id === pluginTeamId(PLUGIN_ID, "design-team"))?.mode,
+		).toBeUndefined();
+	});
+
 	it("does nothing on a second run", () => {
 		const first = reconcilePluginAgentPresets({
 			document: baseDocument(),

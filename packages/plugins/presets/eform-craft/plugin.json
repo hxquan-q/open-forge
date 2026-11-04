@@ -4,7 +4,7 @@
 	"version": "0.2.0",
 	"icon": "icon.png",
 	"defaultLocale": "zh",
-	"pluginApiVersion": "^2.0.0",
+	"pluginApiVersion": "^2.11.0",
 	"entry": "dist/mf-manifest.json",
 	"moduleFederation": {
 		"remoteName": "eform_craft",
@@ -19,6 +19,7 @@
 		"agents": [
 			{
 				"id": "eform",
+				"mode": "coding",
 				"name": "%agent.eform.name%",
 				"description": "%agent.eform.description%",
 				"mentionHandle": "eform",
@@ -27,6 +28,7 @@
 			},
 			{
 				"id": "esign",
+				"mode": "coding",
 				"name": "%agent.esign.name%",
 				"description": "%agent.esign.description%",
 				"mentionHandle": "esign",
@@ -35,6 +37,7 @@
 			},
 			{
 				"id": "eaudit",
+				"mode": "coding",
 				"name": "%agent.eaudit.name%",
 				"description": "%agent.eaudit.description%",
 				"mentionHandle": "eaudit",
@@ -45,6 +48,7 @@
 		"teams": [
 			{
 				"id": "eform-studio",
+				"mode": "coding",
 				"name": "%team.studio.name%",
 				"description": "%team.studio.description%",
 				"members": [

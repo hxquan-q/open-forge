@@ -131,6 +131,31 @@ describe("Agent Team IPC input validation", () => {
 		expect(parsed.agents[0]).toMatchObject({ blueprintId: "custom-coordinator" });
 	});
 
+	// 档位归属（TASK-0406）：档案与团队可选携带 mode，未知值仍 fail-closed。
+	// 回归背景：reconcile 会把它写进文档，schema 不认识就会让整份配置读废——
+	// 表现为两档的新会话选择器同时「列表加载失败」。
+	it("accepts an optional workspace mode on profiles and teams and rejects unknown values", () => {
+		const document = createAgentTeamFixture();
+		const first = document.agents[0];
+		const team = document.teams[0];
+		if (!first || !team) throw new Error("Expected an initial agent and team");
+
+		const parsed = parseAgentTeamDocument({
+			...document,
+			agents: [{ ...first, mode: "coding" }, ...document.agents.slice(1)],
+			teams: [{ ...team, mode: "coding" }],
+		});
+		expect(parsed.agents[0]?.mode).toBe("coding");
+		expect(parsed.teams[0]?.mode).toBe("coding");
+
+		expect(() =>
+			parseAgentTeamDocument({
+				...document,
+				agents: [{ ...first, mode: "dev" }, ...document.agents.slice(1)],
+			}),
+		).toThrow("Invalid Agent Team configuration document");
+	});
+
 	it("rejects unknown properties and invalid revisions", () => {
 		expect(() =>
 			parseUpdateAgentProfileInput({

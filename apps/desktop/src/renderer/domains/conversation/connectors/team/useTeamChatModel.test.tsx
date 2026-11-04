@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
 import {
@@ -898,6 +899,76 @@ describe("useTeamChatModel streaming flow", () => {
 			document,
 		});
 		expect(takeTeamSessionHandoff(baseSession.id)).toBeUndefined();
+	});
+
+	it("创建失败时 handoff 不重新武装：只尝试一次，草稿恢复交还用户（BUG-0164）", async () => {
+		vi.mocked(waitForCommittedPaint).mockResolvedValue("painted");
+		vi.mocked(createReservedTeamChatSession).mockRejectedValue(
+			new Error("Selected Team workspace project is unavailable"),
+		);
+		stageTeamSessionHandoff({
+			sessionId: baseSession.id,
+			requestId: "handoff-fail",
+			text: "开始任务",
+			memberMentions: [],
+			attachments: [{ kind: "file", path: "C:/workspace/brief.md" }],
+			timestamp: 10,
+			executionMode: "sandbox",
+		});
+
+		const { result } = renderHook(() => useTeamChatModel(team.id, baseSession.id), {
+			wrapper: ({ children }: { children: ReactNode }) => <StrictMode>{children}</StrictMode>,
+		});
+
+		await waitFor(() => expect(createReservedTeamChatSession).toHaveBeenCalledTimes(1));
+
+		// 观察窗口：失败后的草稿/附件回填会重建 send 与 handoff effect——旧实现在此
+		// 窗口内创建尝试数持续增长（release 重武装 → 无限重发风暴）。
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 150));
+		});
+		expect(createReservedTeamChatSession).toHaveBeenCalledTimes(1);
+		expect(window.vetta.agentTeams.sendMessage).not.toHaveBeenCalled();
+		expect(result.current.model.draft).toBe("开始任务");
+	});
+
+	it("allows a user-initiated retry after a failed handoff using the edited draft and file reference", async () => {
+		vi.mocked(waitForCommittedPaint).mockResolvedValue("painted");
+		vi.mocked(createReservedTeamChatSession)
+			.mockRejectedValueOnce(new Error("temporary workspace failure"))
+			.mockResolvedValueOnce({ document, snapshot: baseSnapshot, sessions: [] });
+		stageTeamSessionHandoff({
+			sessionId: baseSession.id,
+			requestId: "handoff-manual-retry",
+			text: "开始任务 @C:/workspace/brief.md",
+			memberMentions: [],
+			attachments: [{ kind: "file", path: "C:/workspace/brief.md" }],
+			timestamp: 10,
+			executionMode: "sandbox",
+		});
+
+		const { result } = renderHook(() => useTeamChatModel(team.id, baseSession.id), {
+			wrapper: ({ children }: { children: ReactNode }) => <StrictMode>{children}</StrictMode>,
+		});
+
+		await waitFor(() => expect(createReservedTeamChatSession).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(result.current.model.status).toBe("error"));
+		expect(result.current.model.canSend).toBe(true);
+
+		act(() => result.current.actions.setDraft("修正任务 @C:/workspace/brief.md"));
+		await waitFor(() => expect(result.current.model.canSend).toBe(true));
+		await act(async () => result.current.actions.send());
+
+		expect(createReservedTeamChatSession).toHaveBeenCalledTimes(2);
+		await waitFor(() => expect(window.vetta.agentTeams.sendMessage).toHaveBeenCalledTimes(1));
+		expect(window.vetta.agentTeams.sendMessage).toHaveBeenCalledWith(
+			baseSession.id,
+			expect.objectContaining({
+				text: "修正任务 @C:/workspace/brief.md",
+				attachments: [{ kind: "file", path: "C:/workspace/brief.md" }],
+			}),
+		);
+		expect(peekTeamSessionHandoff(baseSession.id)).toBeUndefined();
 	});
 
 	it("persists the new-session composer model instead of the global default so delegated tasks inherit it", async () => {

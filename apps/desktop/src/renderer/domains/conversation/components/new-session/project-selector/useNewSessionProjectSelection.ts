@@ -73,6 +73,9 @@ export function useNewSessionProjectSelection(routeCwd: string): NewSessionProje
 		[routeCwd],
 	);
 
+	const setWorkspaceModes = useSetAtom(workspaceModeByProjectAtom);
+	const contextCwd = resolveContextCwd({ selection, routeCwd, defaultConversationCwd });
+
 	const selectProject = useCallback(
 		(cwd: string | null) => {
 			if (cwd === null) {
@@ -80,18 +83,22 @@ export function useNewSessionProjectSelection(routeCwd: string): NewSessionProje
 				return;
 			}
 			const option = options.find((candidate) => candidate.cwd === cwd);
+			// BUG-0037 同款档位随迁：切换/「打开本地项目」都把当前档位带到目标项目，
+			// 开发档新会话页不会因换了项目而静默回落默认档（work）。
+			setWorkspaceModes((prev) => {
+				const mode = readWorkspaceModeFor(prev, contextCwd);
+				if (readWorkspaceModeFor(prev, cwd) === mode) return prev;
+				return writeWorkspaceMode(prev, cwd, mode);
+			});
 			setSelection({ kind: "project", cwd, name: option?.name ?? cwd });
 		},
-		[options, setSelection],
+		[contextCwd, options, setSelection, setWorkspaceModes],
 	);
 
 	const selectPendingProject = useCallback(
 		(name: string) => setSelection({ kind: "pending-create", name }),
 		[setSelection],
 	);
-
-	const setWorkspaceModes = useSetAtom(workspaceModeByProjectAtom);
-	const contextCwd = resolveContextCwd({ selection, routeCwd, defaultConversationCwd });
 
 	const applyCreatedProject = useCallback(
 		(cwd: string, name: string) => {

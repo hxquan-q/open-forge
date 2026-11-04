@@ -68,10 +68,20 @@ async function findVettaExecutable(
 	const candidates =
 		options.platform === "win32"
 			? [
-					nodePath.join(options.environment.LOCALAPPDATA ?? "", "Programs", "Vetta", "Vetta.exe"),
-					nodePath.join(options.environment.ProgramFiles ?? "C:\\Program Files", "Vetta", "Vetta.exe"),
+					options.environment.LOCALAPPDATA
+						? nodePath.win32.join(options.environment.LOCALAPPDATA, "Programs", "OpenForge", "OpenForge.exe")
+						: "",
+					nodePath.win32.join(
+						options.environment.ProgramFiles ?? "C:\\Program Files",
+						"OpenForge",
+						"OpenForge.exe",
+					),
 				]
-			: ["/Applications/Vetta.app/Contents/MacOS/Vetta", "/usr/local/bin/vetta-desktop"];
+			: options.platform === "darwin"
+				? ["Open Forge", "Allstr ai"].map(
+						(displayName) => `/Applications/${displayName}.app/Contents/MacOS/OpenForge`,
+					)
+				: ["Open Forge", "Allstr ai"].map((displayName) => `/opt/${displayName}/OpenForge`);
 	for (const candidate of candidates) {
 		if (candidate && (await options.fileExists(candidate))) {
 			return { path: candidate, staleConfiguredPath: configuredPath };

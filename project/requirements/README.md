@@ -7,6 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
+| `REQ-0030` | 「Allstar 自主开发」功能版块（入口→版块壳→流水线并入→内置 git/MCP） | ready | [PLAN-0027](../plans/PLAN-0027-allstar-dev-evolution.md)、[TASK-0422](../tasks/TASK-0422-allstar-dev-section-entry.md)（done：M0 入口已交付并验收）、[TASK-0423](../tasks/TASK-0423-allstar-dev-section-shell.md)（ready：M1 版块壳） |
 | `REQ-0029` | 个人产品平台：账号、Web中心、市场、官网文档与下载镜像 | draft | [PLAN-0023 r4](../plans/PLAN-0023-product-platform-backoffice.md)、[RESEARCH-0041](../research/RESEARCH-0041-product-backoffice-and-enterprise-control.md)；个人公开使用闭环为第一期，支付不考虑，未实施 |
 | `REQ-0028` | Pi 生态接入与原生插件演进 | ready | [PLAN-0022](../plans/PLAN-0022-pi-ecosystem-and-plugin-evolution.md)、[RESEARCH-0040](../research/RESEARCH-0040-pi-extension-ecosystem-compatibility.md)；仅研究与候选方案，未实施 |
 | `REQ-0027` | Agent 全局与项目持久记忆 | ready | [PLAN-0021 / Task DAG](../plans/PLAN-0021-agent-persistent-memory.md#已建-task-与依赖)、[RESEARCH-0038](../research/RESEARCH-0038-agent-persistent-memory.md)；23项Task已建，未开工 |

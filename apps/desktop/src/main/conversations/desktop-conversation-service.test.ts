@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,6 +52,13 @@ vi.mock("../runtime.js", () => ({
 
 vi.mock("../sandbox/capability.js", () => ({
 	assertSandboxAvailableForMode: async () => undefined,
+}));
+
+// 服务经 scheduler 工具链引用 ../ipc/session.js，后者拉起通知/窗口管理整条 Electron
+// 模块链，在本 node 测试环境必然失败；本套件不测调度任务，只留 task-executor 需要
+// 的那一个出口（该链在本图内无其他引用方）。
+vi.mock("../ipc/session.js", () => ({
+	ensureConversationSubCwd: async () => "C:/vetta/scheduled-tasks",
 }));
 
 const temporaryRoots: string[] = [];
@@ -537,3 +545,38 @@ async function createTemporaryRoot(): Promise<string> {
 	temporaryRoots.push(root);
 	return root;
 }
+
+describe("conversation list events", () => {
+	it("首条消息的列表变更事件携带会话档位（增量行过滤依据）", async () => {
+		const runtime = {
+			getState: vi.fn(() => ({ isStreaming: false })),
+			getMessages: vi.fn(() => []),
+			prompt: vi.fn(async () => ({ status: "completed" })),
+			abort: vi.fn(async () => {}),
+		} as unknown as RuntimeHost;
+		const events: Array<{ cwd: string; sessionPath: string; session?: { agentMode?: string } }> = [];
+		const stopListening = onConversationListChanged((event) => events.push(event));
+		const service = new DesktopConversationService(runtime);
+		try {
+			// 无 assistant 消息会按失败抛出，但首条消息事件在回合开始前已发射——此处只断言载荷。
+			await expect(
+				service.runTurn({
+					session: {
+						sessionId: "s-coding",
+						sessionPath: "C:/sessions/s-coding.conversation.jsonl",
+						cwd: "C:/workspace",
+						listCwd: "C:/workspace",
+						source: "interactive",
+						agentMode: "coding",
+						capabilityProfile: "coding",
+					},
+					prompt: { text: "构建它" },
+					timeoutMs: null,
+				}),
+			).rejects.toThrow("assistant message");
+		} finally {
+			stopListening();
+		}
+		expect(events[0]?.session?.agentMode).toBe("coding");
+	});
+});

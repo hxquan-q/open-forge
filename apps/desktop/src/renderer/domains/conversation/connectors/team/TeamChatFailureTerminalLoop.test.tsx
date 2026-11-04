@@ -288,6 +288,8 @@ describe("Team failure terminal state rendering stability", () => {
 		Object.defineProperty(window, "vetta", {
 			configurable: true,
 			value: {
+				// 右栏 Git 页签读取真实 IPC 边界；此夹具表示非 Git 工作区。
+				git: { getRepoStatus: vi.fn(async () => null) },
 				agentTeams: {
 					subscribe: vi.fn(
 						async (_sessionId: string, listener: (event: DesktopTeamSessionStreamEvent) => void) => {

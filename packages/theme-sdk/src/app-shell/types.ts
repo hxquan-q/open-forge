@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 export type PageHeaderTitleKey =
@@ -10,7 +11,8 @@ export type PageHeaderTitleKey =
 	| "appShell.routeTitles.plugins"
 	| "appShell.routeTitles.settings"
 	| "appShell.routeTitles.project"
-	| "appShell.routeTitles.chat";
+	| "appShell.routeTitles.chat"
+	| "appShell.routeTitles.allstarDev";
 
 export interface PageHeaderProps {
 	readonly className?: string;

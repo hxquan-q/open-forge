@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
 import { getDesktopProjectService } from "../projects/project-service-instance.js";
 
@@ -9,6 +10,9 @@ const CHANNELS = {
 	ARCHIVE: "vetta:projects:archive",
 	UNARCHIVE: "vetta:projects:unarchive",
 	REMOVE: "vetta:projects:remove",
+	/** ADR-0151：把已存在目录登记进版块册（allstarProjects，第二册）。 */
+	OPEN_ALLSTAR: "vetta:projects:open-allstar",
+	REMOVE_ALLSTAR: "vetta:projects:remove-allstar",
 } as const;
 
 function asString(value: unknown): string {
@@ -49,6 +53,16 @@ export function registerProjectsIpc(): () => void {
 	ipcMain.handle(CHANNELS.UNARCHIVE, (_event, path: unknown) => getDesktopProjectService().unarchive(asString(path)));
 
 	ipcMain.handle(CHANNELS.REMOVE, (_event, path: unknown) => getDesktopProjectService().remove(asString(path)));
+
+	// ADR-0151 第二册：版块项目与普通项目是两套独立条目，同路径可双册各一条。
+	ipcMain.handle(CHANNELS.OPEN_ALLSTAR, (_event, input: unknown) => {
+		const raw = (input ?? {}) as Record<string, unknown>;
+		return getDesktopProjectService().open(asString(raw.path), asOptionalString(raw.name), "allstar");
+	});
+
+	ipcMain.handle(CHANNELS.REMOVE_ALLSTAR, (_event, path: unknown) =>
+		getDesktopProjectService().remove(asString(path), "allstar"),
+	);
 
 	return () => {
 		for (const channel of Object.values(CHANNELS)) ipcMain.removeHandler(channel);

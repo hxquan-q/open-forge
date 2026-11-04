@@ -1,6 +1,8 @@
+// Modified by The Open Forge contributors.
 import { teamMemberAvatarUrls, useAgentAvatarResolver } from "@shared/agent-teams/agent-avatar";
 import { useLocalizedAgentTeamDocument } from "@shared/agent-teams/agent-team-localization";
 import { BotAvatar } from "@shared/components/BotAvatar";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import { type AgentTeamDocument, listLibraryAgentProfiles } from "@vetta/agent-team";
 import { NewSessionPicker, type NewSessionPickerRootProps } from "@vetta-org/theme-ui/chat";
 import { AvatarStackView } from "@vetta-org/theme-ui/shared";
@@ -10,6 +12,7 @@ import { loadAgentTeamDocument } from "./agent-team-directory";
 import {
 	agentTargetKey,
 	filterTargetOptions,
+	matchesTargetMode,
 	type NewSessionTargetKey,
 	type NewSessionTargetOption,
 	teamTargetKey,
@@ -18,6 +21,8 @@ import {
 export interface NewSessionAgentSelectorProps {
 	readonly selectedKey: NewSessionTargetKey | null;
 	readonly onSelect: (targetKey: NewSessionTargetKey | null) => void;
+	/** 当前工作区档位：声明了归属的智能体/团队只在对应档的下拉里出现（见 matchesTargetMode）。 */
+	readonly workspaceMode: WorkspaceMode;
 	readonly className?: string;
 }
 
@@ -31,6 +36,7 @@ const SEARCH_THRESHOLD = 5;
 export function NewSessionAgentSelector({
 	selectedKey,
 	onSelect,
+	workspaceMode,
 	className,
 }: NewSessionAgentSelectorProps): JSX.Element {
 	const { t } = useTranslation("chat");
@@ -66,7 +72,9 @@ export function NewSessionAgentSelector({
 		[document?.agents, resolveAvatar],
 	);
 
-	const teamOptions = useMemo<readonly NewSessionTargetOption[]>(
+	// 先做全量映射再按档位派生可见列表：已选中的 chip 要在两档都能解析出身份（切档后选择
+	// 仍完整可见可发送——可见性过滤只管「还能不能新挑到」，不做调用时校验）。
+	const allTeamOptions = useMemo<readonly NewSessionTargetOption[]>(
 		() =>
 			(document?.teams ?? []).map((team) => ({
 				targetKey: teamTargetKey(team.id),
@@ -74,12 +82,13 @@ export function NewSessionAgentSelector({
 				subtitle: t("newSession.agentSelector.memberCount", { count: team.members.length }),
 				avatarUrls: teamMemberAvatarUrls(team, agentsById, blueprintAvatars),
 				selected: selectedKey === teamTargetKey(team.id),
+				...(team.mode ? { mode: team.mode } : {}),
 			})),
 		[agentsById, blueprintAvatars, document?.teams, selectedKey, t],
 	);
 	// 只列智能体库里的 Agent：团队 `copy` 绑定产生的 team scope 副本是团队私有的，
 	// 摆进来会变成一堆同名影子条目。
-	const agentOptions = useMemo<readonly NewSessionTargetOption[]>(
+	const allAgentOptions = useMemo<readonly NewSessionTargetOption[]>(
 		() =>
 			(document ? listLibraryAgentProfiles(document) : []).map((agent) => ({
 				targetKey: agentTargetKey(agent.id),
@@ -87,12 +96,23 @@ export function NewSessionAgentSelector({
 				...(agent.description ? { subtitle: agent.description } : {}),
 				avatarUrls: [resolveAvatar(agent)],
 				selected: selectedKey === agentTargetKey(agent.id),
+				...(agent.mode ? { mode: agent.mode } : {}),
 			})),
 		[document, resolveAvatar, selectedKey],
 	);
+	const teamOptions = useMemo(
+		() => allTeamOptions.filter((option) => matchesTargetMode(option.mode, workspaceMode)),
+		[allTeamOptions, workspaceMode],
+	);
+	const agentOptions = useMemo(
+		() => allAgentOptions.filter((option) => matchesTargetMode(option.mode, workspaceMode)),
+		[allAgentOptions, workspaceMode],
+	);
 	const visibleTeams = useMemo(() => filterTargetOptions(teamOptions, query), [teamOptions, query]);
 	const visibleAgents = useMemo(() => filterTargetOptions(agentOptions, query), [agentOptions, query]);
-	const selectedOption = [...teamOptions, ...agentOptions].find((option) => option.targetKey === selectedKey);
+	const selectedOption = [...allTeamOptions, ...allAgentOptions].find(
+		(option) => option.targetKey === selectedKey,
+	);
 	const searchVisible = teamOptions.length + agentOptions.length > SEARCH_THRESHOLD;
 	const nothingVisible = visibleTeams.length === 0 && visibleAgents.length === 0;
 

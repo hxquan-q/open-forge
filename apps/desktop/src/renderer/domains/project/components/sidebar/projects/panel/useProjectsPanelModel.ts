@@ -14,6 +14,7 @@ import {
 	defaultImConversationCwdAtom,
 	expandedBatchProjectsAtom,
 	inlineFilePreviewAtom,
+	lastActiveSessionAtom,
 	pendingSessionOpenAtom,
 } from "@shared/store/atoms";
 import { showToast } from "@shared/store/toast-atoms";
@@ -337,7 +338,19 @@ export function useProjectsPanelModel({
 				void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(navigation.cwd) } });
 				return;
 			}
-			if (navigation.kind === "home") void navigate({ to: "/" });
+			if (navigation.kind === "home") {
+				// 回首页不应经 lastActive 恢复被删项目的会话（可能是 code 会话，删完项目却
+				// 落进开发版块很突兀）——属于该项目的恢复指针一并清除，回落默认「对话」。
+				const last = store.get(lastActiveSessionAtom) as { cwd?: string; sessionPath?: string } | null;
+				if (
+					last &&
+					(last.cwd === projectCwd ||
+						(typeof last.sessionPath === "string" && sessionPathsInProject.includes(last.sessionPath)))
+				) {
+					store.set(lastActiveSessionAtom, null);
+				}
+				void navigate({ to: "/" });
+			}
 		},
 		[
 			activeSessionCwd,
@@ -345,6 +358,7 @@ export function useProjectsPanelModel({
 			setActiveSession,
 			currentPath,
 			routeCwd,
+			store,
 			viewerSessionPath,
 			defaultConversationCwd,
 			navigate,

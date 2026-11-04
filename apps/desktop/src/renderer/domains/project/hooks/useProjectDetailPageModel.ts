@@ -6,6 +6,8 @@ import {
 	activityPanelOpenAtom,
 	batchProjectsAtom,
 	confirmDialogAtom,
+	DEFAULT_WORKSPACE_MODE,
+	enterWorkspaceSection,
 	isPersonalModeAtom,
 	pageHeaderTitleHiddenAtom,
 	pinnedSessionPathsAtom,
@@ -329,6 +331,8 @@ export function useProjectDetailPageModel(
 		onEditorFocus: () => setEditorFocused(true),
 		onExport: handleExportProject,
 		onNewSession: () => {
+			// 项目详情页的新会话也是文档与研究（默认档）版块入口：该项目可能停留在开发档，先回落。
+			enterWorkspaceSection(decodedCwd, DEFAULT_WORKSPACE_MODE);
 			void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(decodedCwd) } });
 		},
 		onSave: () => {

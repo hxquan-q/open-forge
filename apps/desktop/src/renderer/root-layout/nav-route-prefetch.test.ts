@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 import type { SidebarNavItem } from "@vetta-org/theme-sdk/sidebar";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const loaders = vi.hoisted(() => ({
 	abilities: vi.fn(async () => ({})),
 	agents: vi.fn(async () => ({})),
+	allstar: vi.fn(async () => ({})),
 	automation: vi.fn(async () => ({})),
 	batch: vi.fn(async () => ({})),
 	knowledge: vi.fn(async () => ({})),
@@ -16,6 +18,7 @@ const loaders = vi.hoisted(() => ({
 vi.mock("../route-page-loaders", () => ({
 	loadAbilitiesPage: loaders.abilities,
 	loadAgentCenterPage: loaders.agents,
+	loadAllstarDevHomePage: loaders.allstar,
 	loadAutomationPage: loaders.automation,
 	loadBatchTasksPage: loaders.batch,
 	loadKnowledgeBasePage: loaders.knowledge,
@@ -58,6 +61,11 @@ describe("sidebar route code prefetch", () => {
 		expect(navItemPageLoader(item({ path: "/skills" }))).toBe(loaders.abilities);
 		expect(navItemPageLoader(item({ path: "/plugins" }))).toBe(loaders.abilities);
 		expect(navItemPageLoader(item({}))).toBeNull();
+	});
+
+	it("版块入口预取版块首页模块，不再共用新会话页加载器", () => {
+		expect(navItemPageLoader(item({ key: "allstar-dev", type: "custom" }))).toBe(loaders.allstar);
+		expect(loaders.newSession).not.toHaveBeenCalled();
 	});
 
 	it("prepares code for selected command menu destinations", () => {
