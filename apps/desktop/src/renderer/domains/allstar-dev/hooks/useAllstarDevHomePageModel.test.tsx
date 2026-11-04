@@ -13,6 +13,14 @@ import { beforeEach, expect, it, vi } from "vitest";
 const navigate = vi.hoisted(() => vi.fn());
 const openProjectSession = vi.hoisted(() => vi.fn(async () => undefined));
 const loadSessions = vi.hoisted(() => vi.fn(async () => undefined));
+const projectConfigFiles = new Map<string, string>();
+const projectConfigFs = {
+	readFile: vi.fn(async (filePath: string) => ({ content: projectConfigFiles.get(filePath) ?? "", encoding: "utf8" as const })),
+	createDirectory: vi.fn(async (_directory: string) => undefined),
+	writeFile: vi.fn(async (filePath: string, content: string) => {
+		projectConfigFiles.set(filePath, content);
+	}),
+};
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigate,
@@ -60,6 +68,7 @@ beforeEach(() => {
 				openAllstar: vi.fn(async () => ({ path: "/x" })),
 			},
 			dialog: { selectFolder: vi.fn(async () => null) },
+			fs: projectConfigFs,
 		},
 	});
 });
@@ -129,6 +138,10 @@ beforeEach(() => {
 	navigate.mockReset();
 	openProjectSession.mockReset();
 	loadSessions.mockReset();
+	projectConfigFiles.clear();
+	projectConfigFs.readFile.mockClear();
+	projectConfigFs.createDirectory.mockClear();
+	projectConfigFs.writeFile.mockClear();
 	localStorage.clear();
 	allstarSnapshot.allstarProjects = [];
 	store.set(workspaceModeByProjectAtom, new Map());
@@ -226,6 +239,28 @@ it("新建开发会话按传入 cwd 写 coding 档并登记创建意图，导航
 	const intent = store.get(codingSessionCreateIntentAtom);
 	expect(intent?.cwd).toBe("/proj/b");
 	expect(typeof intent?.nonce).toBe("number");
+});
+
+it("项目配置保存到项目专属文件并在重新打开时读取", async () => {
+	const { result } = renderHook(() => useAllstarDevHomePageModel());
+	act(() => result.current.onConfigureProject("/proj/a", "a"));
+
+	await waitFor(() => expect(result.current.projectConfig.status).toBe("ready"));
+	expect(projectConfigFs.readFile).toHaveBeenCalledWith("/proj/a/.vetta/allstar/project-config.md");
+
+	const content = "# Project configuration\\n\\n## Git\\norigin: https://example.test/repo.git\\n";
+	act(() => result.current.projectConfig.changeContent(content));
+	await act(async () => result.current.projectConfig.save());
+
+	expect(projectConfigFs.createDirectory).toHaveBeenCalledWith("/proj/a/.vetta/allstar");
+	expect(projectConfigFs.writeFile).toHaveBeenCalledWith("/proj/a/.vetta/allstar/project-config.md", content);
+	expect(result.current.projectConfig.status).toBe("saved");
+
+	act(() => result.current.projectConfig.close());
+	act(() => result.current.onConfigureProject("/proj/a", "a"));
+	await waitFor(() => expect(projectConfigFs.readFile).toHaveBeenCalledTimes(2));
+	await waitFor(() => expect(result.current.projectConfig.status).toBe("ready"));
+	expect(result.current.projectConfig.content).toBe(content);
 });
 
 it("打开卡片会话委托全局会话打开上下文", () => {

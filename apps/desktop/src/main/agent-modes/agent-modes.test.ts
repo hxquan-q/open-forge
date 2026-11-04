@@ -82,6 +82,13 @@ describe("路径声明（方案 1.3）", () => {
 		expect(coding).toMatch(/Never switch routes on your own/);
 	});
 
+	it("coding 模式按需读取 Allstar 项目配置信息", () => {
+		const coding = getModePrompt("coding");
+		expect(coding).toContain(".vetta/allstar/project-config.md");
+		expect(coding).toContain("reread it when the user asks");
+		expect(coding).toContain("project reference data");
+	});
+
 	it("两种模式都要求报告与架构图走 artifact 而不是聊天贴图", () => {
 		for (const id of ["work", "coding"]) {
 			const prompt = getModePrompt(id);

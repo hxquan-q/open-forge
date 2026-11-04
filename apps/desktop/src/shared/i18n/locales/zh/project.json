@@ -355,6 +355,21 @@
 				"cardHint": "尚无开发会话，可从下方选择该项目新建",
 				"projectLabel": "选择项目"
 			}
+		},
+		"projectConfig": {
+			"configure": "项目配置",
+			"title": "项目配置信息",
+			"description": "保存供你和代码会话重复查阅的项目说明。配置仅供查阅，不会自动执行或连接服务。",
+			"contentLabel": "配置信息",
+			"template": "# 项目配置信息\n\n## Git 配置\n\n## 测试环境\n\n## 测试服务器\n\n## 数据库\n\n## 其他\n",
+			"privacyWarning": "内容保存在项目目录中，并可被该项目的代码会话读取。请勿填写密码、Token、私钥等机密。",
+			"loading": "正在读取项目配置…",
+			"loadFailed": "无法读取项目配置，请检查项目目录和远程主机连接后重试。",
+			"save": "保存配置",
+			"saving": "正在保存…",
+			"saved": "已保存",
+			"saveFailed": "保存失败，请检查项目目录权限后重试。",
+			"cancel": "取消"
 		}
 	}
 }

@@ -8,6 +8,7 @@ import {
 	SelectValue,
 } from "@shared/components/ui/select";
 import { Spin } from "@vetta-org/ui";
+import { AllstarProjectConfigDialog } from "./AllstarProjectConfigDialog";
 import type { AllstarDevHomePageModel, AllstarDevProjectCard } from "../hooks/useAllstarDevHomePageModel";
 
 /**
@@ -43,6 +44,7 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 								card={card}
 								labels={model.labels}
 								onOpenSession={model.onOpenSession}
+								onConfigureProject={model.onConfigureProject}
 							/>
 						))}
 						{/* ADR-0151 决策 7：一键归入版块的空卡片（打开已有项目入口）。 */}
@@ -79,6 +81,7 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 					{model.labels.newSession}
 				</Button>
 			</div>
+			<AllstarProjectConfigDialog configuration={model.projectConfig} labels={model.labels} />
 		</div>
 	);
 }
@@ -87,17 +90,31 @@ function AllstarDevProjectCardView({
 	card,
 	labels,
 	onOpenSession,
+	onConfigureProject,
 }: {
 	card: AllstarDevProjectCard;
 	labels: AllstarDevHomePageModel["labels"];
 	onOpenSession: AllstarDevHomePageModel["onOpenSession"];
+	onConfigureProject: AllstarDevHomePageModel["onConfigureProject"];
 }): JSX.Element {
 	const hiddenCount = card.totalSessions - card.sessions.length;
 	return (
 		<article className="flex w-60 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40">
 			<header className="flex items-baseline justify-between gap-2 px-3.5 pb-2 pt-3">
-				<h3 className="truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
-				<span className="shrink-0 text-xs text-muted-foreground">{card.totalSessions}</span>
+				<h3 className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
+				<div className="flex shrink-0 items-center gap-1.5">
+					<span className="text-xs text-muted-foreground">{card.totalSessions}</span>
+					{card.registered && (
+						<Button
+							variant="ghost"
+							size="xs"
+							title={labels.configureProject}
+							onClick={() => onConfigureProject(card.cwd, card.projectName)}
+						>
+							{labels.configureProject}
+						</Button>
+					)}
+				</div>
 			</header>
 			{card.sessions.length === 0 ? (
 				<p className="border-t border-border/40 px-3.5 py-4 text-xs text-muted-foreground">
