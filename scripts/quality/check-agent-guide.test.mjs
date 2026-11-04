@@ -16,7 +16,7 @@ function fixture() {
 	roots.push(root);
 	write(root, "AGENTS.md", RULE_DOCUMENTS.map((path) => `[Rules](${path})`).join("\n"));
 	for (const path of RULE_DOCUMENTS) write(root, path, "# Rules\n");
-	write(root, "CLAUDE.md", "[Root](AGENTS.md) [Claude](docs/dev/agent-rules/claude.md)\n");
+	write(root, "CLAUDE.md", "@AGENTS.md\n\n[Claude](docs/dev/agent-rules/claude.md)\n");
 	write(root, "docs/dev/agent-rules/claude.md", "# Claude\n");
 	return root;
 }
@@ -62,5 +62,20 @@ describe("root agent guide contract", () => {
 		expect(checkAgentGuide(root)).toEqual(
 			expect.arrayContaining([expect.stringContaining("Missing Claude pointer")]),
 		);
+	});
+	it("rejects a Markdown pointer without a native shared import", () => {
+		const root = fixture();
+		write(root, "CLAUDE.md", "[Root](AGENTS.md) [Claude](docs/dev/agent-rules/claude.md)\n");
+		expect(checkAgentGuide(root)).toContain("Claude guide must import @AGENTS.md exactly once: found 0");
+	});
+	it("rejects duplicate native imports", () => {
+		const root = fixture();
+		write(root, "CLAUDE.md", "@AGENTS.md\n@AGENTS.md\n[Claude](docs/dev/agent-rules/claude.md)\n");
+		expect(checkAgentGuide(root)).toContain("Claude guide must import @AGENTS.md exactly once: found 2");
+	});
+	it("does not count an import shown only as a code example", () => {
+		const root = fixture();
+		write(root, "CLAUDE.md", "```md\n@AGENTS.md\n```\n[Claude](docs/dev/agent-rules/claude.md)\n");
+		expect(checkAgentGuide(root)).toContain("Claude guide must import @AGENTS.md exactly once: found 0");
 	});
 });

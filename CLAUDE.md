@@ -1,7 +1,9 @@
 <!-- Modified by The Open Forge contributors. -->
 # Open Forge · Claude Code
 
-先完整读取 [AGENTS.md](AGENTS.md)，按任务路由加载最近一级规则和相关扩展；通用约束只在该入口及其扩展维护。
+@AGENTS.md
+
+共享规则由上面的原生导入加载；按任务读取目标最近一级规则及相关扩展，通用正文只在 AGENTS 及其扩展维护。
 
 提交拆分、执行提交或报告提交前，读取 [Claude 专属补充](docs/dev/agent-rules/claude.md)。只报告本轮成功提交；修补默认追加提交，amend 需用户在当前对话明确要求；不添加作者或会话尾注。
 

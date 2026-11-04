@@ -57,4 +57,9 @@ describe("project status index guard", () => {
 		write("project/plans/PLAN-0002-another.md", "---\nid: PLAN-0002\nstatus: draft\n---\n");
 		expect(findProjectIndexProblems(root)).toContain("project/plans/README.md: missing PLAN-0002");
 	});
+	it("allows an empty Task focus table after the last selected task is closed", () => {
+		writeIndexes({ taskStatus: "done" });
+		write("project/tasks/README.md", "## 当前执行焦点\n\n| Task ID | 状态 | Plan | Focus |\n|---|---|---|---|\n");
+		expect(findProjectIndexProblems(root)).toEqual([]);
+	});
 });

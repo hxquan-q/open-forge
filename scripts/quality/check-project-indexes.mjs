@@ -118,7 +118,7 @@ function checkIndex(root, definition) {
 			if (!indexed.has(id)) problems.push(`project/${definition.directory}/README.md: missing ${id}`);
 		}
 	}
-	if (parsed.rows.length === 0)
+	if (definition.requireAll && parsed.rows.length === 0)
 		problems.push(`project/${definition.directory}/README.md: ${definition.heading} has no indexed items`);
 	return problems;
 }

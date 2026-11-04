@@ -32,7 +32,7 @@ description: 为 Open Forge 的功能、缺陷、重构、UI/协议/CI 合同及
 
 ## 与统一入口的分工
 
-由 `open-forge-task-intake` 按需调用，也支持直接测试请求。直接请求涉及新增或修改测试/实现文件时，先读取 [统一入口的记录路由步骤](../open-forge-task-intake/SKILL.md#3-按记录路由建立文档再进入实施)，完成记录与实施条件核对后继续；已有相关 Task 时续接。上面的行为、Given/When/Then、测试层级和命令写入该 Task 或关联 Verification。仅测试设计、评审或运行已有测试按请求范围执行。记录政策见 [Project 规范](../../../project/CONVENTIONS.md#实施前记录)，验收分工与状态唯一来源是 [交付合同](../open-forge-task-intake/references/delivery.md)。
+由 `open-forge-task-intake` 按需调用，也支持直接测试请求。直接请求涉及新增或修改测试/实现文件时，先按 [统一入口的实施四步](../open-forge-task-intake/SKILL.md#实施四步)核对 Task 准入，已有相关 Task 时续接。行为、Given/When/Then、测试层级和命令写入该 Task 或关联 Verification；仅设计、评审或运行已有测试按请求范围执行。记录政策见 [Project 规范](../../../project/CONVENTIONS.md#实施前记录)，验收状态见 [交付合同](../open-forge-task-intake/references/delivery.md)。
 
 ## TDD 与行为保持型重构
 
