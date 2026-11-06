@@ -318,7 +318,7 @@ export async function runAdapter({ prompt, config: rawConfig, transport, emit, l
 		`Your working directory is the task worktree checkout at ${process.cwd()}.`,
 		role === "implementer"
 			? "You may read files and edit only the Task write paths; stage and commit your work with git_commit when done."
-			: "You are a read-only reviewer; inspect files and diffs but do not modify anything.",
+			: "You are a read-only reviewer; inspect files and diffs but do not modify anything. Base the verdict on git_diff(base=true) and the changed files; do not enumerate the repository.",
 		`You have at most ${config.maxToolRounds} tool rounds in total. ${role === "implementer" ? "Read the Task record and the files you must change, make the edit, then commit; do not explore the whole repository." : "Read the Task record and the changed files; keep the review focused."}`,
 		role === "implementer" && prompt.includes('"verificationFailure":"verification failed')
 			? "This is a repair round: the previous candidate failed verification. Fix the defect or, if the record claims verifications you could not have run, correct those claims to match what was actually done — then create a new commit. Returning without a new commit fails the run."
@@ -335,6 +335,7 @@ export async function runAdapter({ prompt, config: rawConfig, transport, emit, l
 	];
 	const usage = { input_tokens: 0, output_tokens: 0, cached_input_tokens: 0 };
 	let round = 0;
+	let emptyRetried = false;
 	let finalText = null;
 	while (finalText === null) {
 		round += 1;
@@ -394,6 +395,14 @@ export async function runAdapter({ prompt, config: rawConfig, transport, emit, l
 			break;
 		}
 		if (forced) {
+			if (!choice?.message?.content && !emptyRetried) {
+				emptyRetried = true;
+				messages.push({
+					role: "user",
+					content: "Your final message was empty. Reply with ONLY the required JSON object now.",
+				});
+				continue;
+			}
 			finalText = contractFor.fallback(String(choice?.message?.content ?? "").slice(0, 400));
 			break;
 		}
