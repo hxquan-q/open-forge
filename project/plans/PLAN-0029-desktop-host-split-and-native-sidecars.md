@@ -114,7 +114,9 @@ depends_on: []
 1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），ready。
 2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），ready。
 3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），ready。
-4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交、CI、评审证据绑定（1.2/1.3/1.5），draft，依赖 0450。
+4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），ready，依赖 0450；原 1.3/1.5 范围已拆出。
+   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），draft，依赖 0451。
+   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），draft，与 0451/0454 共享 `scripts/agents`，串行。
 5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），draft，依赖 0450、0451，且需用户提供模型与评审配置。
 6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），draft，待 0448 基线后转 ready。
 
