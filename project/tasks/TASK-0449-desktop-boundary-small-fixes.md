@@ -1,7 +1,7 @@
 ---
 id: TASK-0449
 type: task
-status: ready
+status: in_progress
 priority: P3
 owner: apps/desktop
 requirement: REQ-0002
@@ -52,7 +52,8 @@ updated: 2026-11-06
 
 ## 交付
 
-- 实际修改与验证：待执行
-- 评审与集成：待执行
-- 未运行与风险：待记录
+- 实际修改：当前候选包含 agent-rpc 类型的顶层 import、插件协议测试的公开包入口，以及 remote-relay/既存依赖例外的仓库地图说明；属于原有未提交候选，提交前已核对实际 diff。
+- 改动归属：Open-Forge-only。插件协议合同包含在本会话已通过的 Desktop 4 文件 15 例中，Desktop 类型检查通过；完整 check 仍有本轮未改的 docs/mobile 类型错误，未宣称本 Task 已完成全部验收。
+- 2026-11-06 用户明确要求提交推送，本提交保存至 `xquan`，目标 `origin/xquan`；集成状态保持 pending，完整 Task 范围继续按合同核对。
+- 未运行与风险：不启动真实 Desktop；不调整依赖方向或扩大依赖版本。全量验证失败详情见 TASK-0448。
 - 发布：不适用

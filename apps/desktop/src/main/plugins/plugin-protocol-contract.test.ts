@@ -1,8 +1,9 @@
+// Copyright The Open Forge contributors.
 import { readFileSync } from "node:fs";
+import * as pluginSdk from "@vetta-org/plugin-sdk";
+import * as themeUiPlugin from "@vetta-org/theme-ui/plugin-ui";
+import * as vettaUi from "@vetta-org/ui";
 import { describe, expect, it } from "vitest";
-import * as pluginSdk from "../../../../../packages/plugins/plugin-sdk/src/index.js";
-import * as themeUiPlugin from "../../../../../packages/theme-ui/src/plugin-ui/index.js";
-import * as vettaUi from "../../../../../packages/ui/src/index.js";
 
 const protocolSource = readFileSync(new URL("./plugin-protocol.ts", import.meta.url), "utf8");
 
