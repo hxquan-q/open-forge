@@ -7,6 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
+| `REQ-0032` | eform-craft AIMES CustomDev 五角色二开团队 | ready | [TASK-0450](../tasks/TASK-0450-eform-craft-customdev-team.md)；2026-11-06 用户确认五角色、CustomDev/AI workspace 边界与 Skill 触发合同 |
 | `REQ-0031` | Code 项目 AI 辅助工作区与项目源码分离 | ready | [PLAN-0029](../plans/PLAN-0029-code-project-ai-workspace-isolation.md)、[TASK-0449](../tasks/TASK-0449-code-project-ai-workspace-isolation.md)；已确认需求文档 `D:/Coding/WorkSpace/Vetta/vetta-code-mode-ai-workspace-isolation.md` |
 | `REQ-0030` | 「Allstar 自主开发」功能版块（入口→版块壳→流水线并入→内置 git/MCP） | ready | [PLAN-0027](../plans/PLAN-0027-allstar-dev-evolution.md)、[TASK-0422](../tasks/TASK-0422-allstar-dev-section-entry.md)（done：M0 入口已交付并验收）、[TASK-0423](../tasks/TASK-0423-allstar-dev-section-shell.md)（in_progress：M1 版块壳与项目配置信息） |
 | `REQ-0029` | 个人产品平台：账号、Web中心、市场、官网文档与下载镜像 | draft | [PLAN-0023 r4](../plans/PLAN-0023-product-platform-backoffice.md)、[RESEARCH-0041](../research/RESEARCH-0041-product-backoffice-and-enterprise-control.md)；个人公开使用闭环为第一期，支付不考虑，未实施 |

@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0450` | `verifying` | — | [eform-craft AIMES CustomDev 五角色团队改造](TASK-0450-eform-craft-customdev-team.md)：REQ-0032；五角色/19 Skills 完成，合同 14/14、包内 tsc、定向 Biome/守卫通过；构建包 41 文件与源码清单一致，旧七资产已按用户授权清理；v0.1.5 待发碎片已写，用户补充授权本地原子提交，不推送/部署，待实机验收；serial。 |
 | `TASK-0446` | `verifying` | — | [Use portable local temp fixtures for remote POSIX path tests (BUG-0181)](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md)<br>chenxvhua 补充（状态 `verifying`；Plan `—`）：[runtime-node 远端 POSIX 路径测试使用可移植临时目录](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md)：BUG-0181；Windows baseline 3 个 `/tmp` 失败消除，focused/impact 7/7 与完整 check 通过；serial。 |
 | `TASK-0445` | `verifying` | — | [Select the exposed chunk in the plugin-vite shared React test (BUG-0180)](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md)<br>chenxvhua 补充（状态 `verifying`；Plan `—`）：[plugin-vite React singleton 测试选定暴露 chunk](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md)：BUG-0180；按 fixture 导出定位实际 chunk，focused 2/2、全包 46/46、完整 check 通过；serial。 |
 | `TASK-0444` | `verifying` | PLAN-0014 | [Scripts 面板补齐中英文案与插值合同（BUG-0081）](TASK-0444-scripts-panel-locale-contract.md)<br>chenxvhua 补充（状态 `verifying`；Plan `PLAN-0014`）：[Scripts 面板 locale 完整性与 summary 插值](TASK-0444-scripts-panel-locale-contract.md)：BUG-0081；旧合同红 2→绿，`test:impact` Scripts preset 17/17、完整 check 通过；未启动真实 Desktop；serial。 |
