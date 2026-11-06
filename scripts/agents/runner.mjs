@@ -1,18 +1,34 @@
 // Copyright The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { decodeOutput, executionPrompt, outputKind, ROLES, selectAdapter } from "./adapters.mjs";
 import { contract, digest, requireCapability } from "./contracts.mjs";
 import { assertExecutionBoundary } from "./doctor.mjs";
 import { assertIndependentReview } from "./evidence.mjs";
-import { assertSeparateRoots, assertWriteScope, snapshot } from "./git.mjs";
+import { assertSeparateRoots, assertWriteScope, git, snapshot } from "./git.mjs";
 import { ACTIVE_RUN_STATUSES, assertLease, renew } from "./leases.mjs";
 import { isolatedEnvironment, runProcess } from "./process.mjs";
 import { reportedUsage } from "./usage.mjs";
 
 export function codeBinding(runContract, code) {
 	return { head: code.head, tree: code.tree, policy: runContract.policyDigest, contract: digest(runContract) };
+}
+
+/** The controller provisions the execution root; a reviewer must never share one with an implementer. */
+export function assertDistinctContext(authors, contextId) {
+	if (authors.some((author) => author?.contextId === contextId))
+		throw new Error("review shares an execution context with an implementer");
+	return true;
+}
+
+/** Remove the controller-provisioned detached review candidate; a leftover candidate fails the review. */
+export function removeReviewCandidate(worktree, reviewRoot) {
+	try {
+		git(worktree, ["worktree", "remove", "--force", reviewRoot]);
+	} catch (error) {
+		throw new Error("failed to remove the detached review candidate", { cause: error });
+	}
 }
 
 export async function executeAdapter({
@@ -50,6 +66,8 @@ export async function executeAdapter({
 	if (role === "implementer" && before.head !== (existing?.binding?.head ?? runContract.baseCommit))
 		throw new Error("worktree does not match the contracted base or last recorded candidate");
 	const attemptId = randomUUID();
+	const contextId =
+		role === "reviewer" ? join(dirname(worktree), `${basename(worktree)}-review-${attemptId.slice(0, 8)}`) : worktree;
 	const actorId = `${adapter.id}:${attemptId}`;
 	const identity = {
 		actorId,
@@ -57,6 +75,7 @@ export async function executeAdapter({
 		provider: adapter.provider,
 		family: adapter.family,
 		model: adapter.model,
+		contextId,
 	};
 	const binding = codeBinding(runContract, before);
 	store.transaction((state) => {
@@ -93,6 +112,7 @@ export async function executeAdapter({
 			);
 			if (run.binding?.head !== before.head || run.binding?.tree !== before.tree)
 				throw new Error("code changed before review");
+			assertDistinctContext(run.authors, contextId);
 		} else if (role === "implementer") {
 			run.checks = [];
 			run.review = null;
@@ -104,6 +124,21 @@ export async function executeAdapter({
 		run.attempts.push({ id: attemptId, role, identity, startedAt: Date.now(), status: "running" });
 		state.runs[token.runId] = run;
 	});
+	let reviewRoot;
+	let reviewBefore;
+	if (role === "reviewer") {
+		reviewRoot = contextId;
+		let added = false;
+		try {
+			git(worktree, ["worktree", "add", "--detach", reviewRoot, before.head]);
+			added = true;
+			reviewBefore = snapshot(reviewRoot, { clean: false });
+			if (!reviewBefore.clean) throw new Error("detached review candidate is not clean");
+		} catch (error) {
+			if (added) removeReviewCandidate(worktree, reviewRoot);
+			throw error;
+		}
+	}
 	const attemptDirectory = join(store.root, "artifacts", attemptId);
 	mkdirSync(attemptDirectory, { recursive: true, mode: 0o700 });
 	const controller = new AbortController();
@@ -126,7 +161,7 @@ export async function executeAdapter({
 	try {
 		result = await runProcess({
 			command: adapter.command.map((argument) => argument.replaceAll("{model}", adapter.model)),
-			cwd: worktree,
+			cwd: role === "reviewer" ? reviewRoot : worktree,
 			env: isolatedEnvironment(attemptDirectory),
 			input: executionPrompt(role, task, runContract, request),
 			timeoutMs: policy.limits.wallTimeMs,
@@ -143,8 +178,11 @@ export async function executeAdapter({
 		assertLease(store.read(), token, Date.now());
 		if (result.reason !== "success") throw new Error(`adapter ended with ${result.reason}`);
 		body = decodeOutput(result.stdout, role);
-		after = snapshot(worktree);
-		if (role !== "implementer" && (after.head !== before.head || after.tree !== before.tree))
+		after = role === "reviewer" ? snapshot(reviewRoot, { clean: false }) : snapshot(worktree);
+		if (role === "reviewer") {
+			if (after.head !== reviewBefore.head || after.tree !== reviewBefore.tree || !after.clean)
+				throw new Error("reviewer modified the candidate");
+		} else if (role !== "implementer" && (after.head !== before.head || after.tree !== before.tree))
 			throw new Error(`${role} modified the candidate`);
 		if (role === "implementer") {
 			const coordinatorPaths = store.read().runs[token.runId].integration?.coordinatorPaths ?? [];
@@ -158,6 +196,13 @@ export async function executeAdapter({
 	} finally {
 		clearInterval(heartbeat);
 		signal?.removeEventListener("abort", abort);
+		if (reviewRoot) {
+			try {
+				removeReviewCandidate(worktree, reviewRoot);
+			} catch (error) {
+				if (!failure) failure = error;
+			}
+		}
 	}
 	store.transaction((state) => {
 		assertLease(state, token, Date.now(), { allowExpired: true });
