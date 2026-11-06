@@ -1,7 +1,7 @@
 ---
 id: TASK-0456
 type: task
-status: ready
+status: in_progress
 priority: P3
 owner: docs
 requirement: []
@@ -13,9 +13,9 @@ related_tasks: [TASK-0451, TASK-0452]
 related_issues: []
 related_bugs: []
 execution: parallel
-branch:
-worktree:
-base_commit:
+branch: task/TASK-0456-autonomy-docs-candidate-verify-sync
+worktree: ../open-forge-wt/task-0456-autonomy-docs-candidate-verify-sync
+base_commit: 4a965aa4933e5496141a35dce2aa2e8349c6b1a7
 read_paths:
   - scripts/agents/README.md
   - project/autonomy-policy.json
