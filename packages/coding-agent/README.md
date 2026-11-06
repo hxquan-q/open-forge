@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/coding-agent
 
 Vetta Coding Agent 的能力、策略与稳定 API 语义层。

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginAppActionRegistration, PluginAppActionUsage, PluginContext } from "@vetta-org/plugin-sdk";
 
 const DOMAIN_USAGE = {

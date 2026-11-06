@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { activityPanelOpenAtom, planModeStateBySessionAtom, todoItemsBySessionAtom } from "@shared/store/atoms";

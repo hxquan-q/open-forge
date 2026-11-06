@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { afterEach, describe, expect, it } from "vitest";
 import { registerApiProvider, unregisterApiProviders } from "../src/api-registry.js";
 import {

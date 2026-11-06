@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ConversationParticipantViewModel } from "@shared/conversation";
 import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";

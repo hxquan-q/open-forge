@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/agent-core
 
 Stateful agent with tool execution and event streaming. Built on `@vetta/ai`.

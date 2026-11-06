@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ModelsConfigData } from "@preload/api";
 import { localModelsConfigAtom, remoteProvidersAtom } from "@shared/store/atoms";
 import { modelCatalog } from "@shared/store/model-catalog";

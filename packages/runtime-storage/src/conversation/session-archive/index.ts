@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export { resolveSessionArchiveImportConflict } from "./conflict.js";
 export {
 	DEFAULT_SCRYPT_PARAMS,

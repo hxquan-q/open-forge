@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { resolveWorkspaceRightPanel } from "@domains/workspace-mode";
 import type { WorkspaceMode } from "@shared/store/atoms";

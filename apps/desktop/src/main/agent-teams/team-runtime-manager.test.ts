@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentTeamDocument, TeamSessionDocument } from "@vetta/agent-team";
 import type { RuntimeHost, SessionConfig, SessionExecutionMode } from "@vetta/runtime-core";
 import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";

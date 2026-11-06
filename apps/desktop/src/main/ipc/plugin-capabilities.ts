@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
 import { PLUGIN_CAPABILITY_CHANNELS } from "../../shared/plugin-capability-ipc.js";
 import { getDesktopCapabilityHost } from "../capabilities/capability-host.js";

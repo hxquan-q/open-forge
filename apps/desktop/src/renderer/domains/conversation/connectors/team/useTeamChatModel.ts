@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopTeamSessionSnapshot } from "@preload/api-types/team-conversation-display";
 import { useAgentAvatarResolver } from "@shared/agent-teams/agent-avatar";
 import { useLocalizedAgentTeamDocument } from "@shared/agent-teams/agent-team-localization";

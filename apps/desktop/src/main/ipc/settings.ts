@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
 import { getModelTransport, setModelTransport } from "../agent-settings/model-transport-settings.js";
 import { readAgentSettingsDocument, updateAgentSettingsDocument } from "../agent-settings/settings-document-store.js";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { SESSION_ARCHIVE_ERROR_CODES, SessionArchiveError } from "./errors.js";
 import { SESSION_ARCHIVE_FRAME, type SessionArchiveFrameKind } from "./types.js";
 

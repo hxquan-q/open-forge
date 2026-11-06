@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { withPluginTabVisibility } from "@domains/plugins/runtime/attached-tabs";
 import type { TabBarItem } from "@shared/components/ui/tab-bar";
 import { useNarrowScreen, useWindowWidth } from "@shared/hooks/useNarrowScreen";

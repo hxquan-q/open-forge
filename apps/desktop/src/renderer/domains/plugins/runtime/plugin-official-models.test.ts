@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { getDefaultStore } from "jotai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DESKTOP_BRAND } from "@/shared/desktop-brand";

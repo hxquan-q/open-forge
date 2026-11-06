@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ActivityWorkspace } from "@shared/workspace/activity-workspace";
 import { createContext, useContext } from "react";
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 代码模式（Allstar 自主开发版块）的进入入口只保留侧边栏「更多」之后的版块入口一处：
  * 新会话选项行的 work/coding 切换器、页头全局切换器、侧边栏徽章、设置菜单区块与共享

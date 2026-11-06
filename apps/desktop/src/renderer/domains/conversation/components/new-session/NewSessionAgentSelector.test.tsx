@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 档位归属过滤（TASK-0406）：智能体/团队固定归属一个档、只在对应档出现——两档对等，
