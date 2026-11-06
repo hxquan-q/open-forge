@@ -1,7 +1,7 @@
 ---
 id: TASK-0451
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -38,9 +38,9 @@ exclusive_paths:
   - scripts/agents
 depends_on: [TASK-0450]
 conflicts_with: [TASK-0450, TASK-0452, TASK-0454, TASK-0455]
-integration_status: pending
+integration_status: integrated
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -99,3 +99,7 @@ updated: 2026-11-06
 - 未运行与风险：完整 `bun run check` 未运行（docs-site `fumadocs-ui` 与 mobile `react-native` 为既有环境问题，见 TASK-0448 记录）；真实 CI proof 签发链未实测（当前无签发服务，仅测试用 Ed25519 密钥）；`candidate-verify` 依赖操作者先 fetch，真实操作序列留待 TASK-0452 端到端。
 - 本提交保存至 `xquan`，目标 `origin/xquan`；`integration_status` 保持 pending。人工验收：不适用（内部控制器合同，无用户可见行为），完成标准为全量测试与门禁通过。
 - 发布：不适用
+
+## 集成补记（2026-11-07）
+
+- 实现已随 `bad1f1a76` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；真实签发链与操作序列由 TASK-0452 端到端验收（done）覆盖，`integration_status` 补记为 integrated，状态置 verifying。

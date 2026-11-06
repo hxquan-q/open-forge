@@ -1,12 +1,12 @@
 ---
 id: PLAN-0029
 type: plan
-status: draft
+status: in_progress
 priority: P1
 requirement: REQ-0002
 owner: apps/desktop/runtime-desktop/scripts-agents
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -21,7 +21,7 @@ depends_on: []
 2. 研发控制器（`scripts/agents`）先证明一个真实任务可完成开发、评审和集成闭环。
 3. 定死语言分工：Agent 内核保持 TS；Go 负责网络与远程守护；Rust 只做 Node 做不到或经基线证明需要的系统能力。两者都以 owner 接口后的 sidecar 接入。
 
-控制器线与 [PLAN-0019](PLAN-0019-autonomous-development.md)（REQ-0019）衔接，本计划只列首批缺口，不重复其台账。本计划为 draft，未授权实施。
+控制器线与 [PLAN-0019](PLAN-0019-autonomous-development.md)（REQ-0019）衔接，本计划只列首批缺口，不重复其台账。首批 Task 已按用户指示实施并集成 `origin/dev`（2026-11-07 补记），后续阶段按本计划推进。
 
 ## 当前事实
 
@@ -61,6 +61,8 @@ depends_on: []
 | 0.3 小修 | `agent-rpc-command.ts:68` 改顶层 `import type`；3 个 desktop 测试改走公开入口；仓库地图补 `remote-relay` 和两条例外依赖 | `bun run check` 通过 |
 | 0.4 分支职责 | 写清 `main`/`dev`/`origin/main` 职责 | 规则落盘，供 1.1 读取 |
 
+状态（2026-11-07）：0.2 脚本已集成、真实基线测量待授权（TASK-0448 in_progress）；0.3 已完成（TASK-0449，verifying）；0.4 已完成（TASK-0450，verifying）。
+
 ### Phase 1：研发控制器可信闭环（与 Phase 2 并行）
 
 1. 集成目标配置化，替换三处硬编码 `main`。
@@ -70,6 +72,8 @@ depends_on: []
 5. `requirement-run` 去掉 presence-only；工程完成、候选验证、人工验收、已发布分别记录。
 
 暂缓：团队租约、并行调度、自动发现问题、真实发布，待第 4 项通过后开启。
+
+状态（2026-11-07）：第 1–5 项均已实现并集成 `origin/dev`；第 4 项真实 adapter 端到端验收由 TASK-0452 完成（done）。暂缓项保持关闭。
 
 ### Phase 2：Host 合同化（进程内）
 
@@ -111,14 +115,14 @@ depends_on: []
 
 ## 首批 Task
 
-1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），ready。
-2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），ready。
-3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），ready。
-4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），ready，依赖 0450；原 1.3/1.5 范围已拆出。
-   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），ready，依赖 0451。
-   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），ready，与 0451/0454 共享 `scripts/agents`，串行（集成顺序 0451 → 0454 → 0455）。
-5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），draft，依赖 0450、0451，且需用户提供模型与评审配置。
-6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），draft，待 0448 基线后转 ready。
+1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），in_progress（脚本已集成，真实基线测量待授权）。
+2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），verifying（已集成 `origin/dev`）。
+3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），verifying（已集成 `origin/dev`）。
+4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），verifying（已集成 `origin/dev`），依赖 0450；原 1.3/1.5 范围已拆出。
+   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），verifying（已集成 `origin/dev`），依赖 0451。
+   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），verifying（已集成 `origin/dev`），与 0451/0454 共享 `scripts/agents`，串行（集成顺序 0451 → 0454 → 0455）。
+5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），done（qwen-http 真实 adapter 端到端验收完成）。
+6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），verifying（试点已集成 `origin/dev`，设置页 UI 走查待授权）。
 
 ## 不做什么
 
@@ -146,7 +150,7 @@ depends_on: []
 
 ## 需要的 ADR
 
-- Host 进程边界与 `host-protocol` 合同（Phase 2）。
-- 安全一方化：权限、审批、凭证归属（Phase 2）。
+- Host 进程边界与 `host-protocol` 合同：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
+- 安全一方化：权限、审批、凭证归属：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
 - 语言分工与原生 sidecar 准入条件（Phase 4 前）。
 - 分支职责与集成目标（Phase 0.4，可落协作规则代替 ADR）。

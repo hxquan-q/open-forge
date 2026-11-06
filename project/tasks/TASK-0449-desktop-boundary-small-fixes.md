@@ -1,7 +1,7 @@
 ---
 id: TASK-0449
 type: task
-status: in_progress
+status: verifying
 priority: P3
 owner: apps/desktop
 requirement: REQ-0002
@@ -34,9 +34,9 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -71,3 +71,7 @@ updated: 2026-11-06
 - 断言与用例未改动：迁移后 2 文件 14 例通过。
 - `apps/desktop/docs/markdown-rich-content.md` 的开发验证命令同步到新路径。
 - theme-ui 包级 `tsgo` 检查迁移前后同为 51 条既有错误（`JSX` 命名空间、`node:*` 类型），新文件未引入新错误；该检查不在 `bun run check` 内。
+
+## 集成补记（2026-11-07）
+
+- 三项范围（顶层 `import type`、测试改走公开入口/迁入 theme-ui、仓库地图补全）已随 `96ff5a6b0`/`1961cd20a` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；`integration_status` 补记为 integrated，状态置 verifying（人工验收不适用，完成标准见交付记录）。

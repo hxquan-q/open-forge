@@ -1,7 +1,7 @@
 ---
 id: TASK-0453
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -45,9 +45,9 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -85,3 +85,7 @@ updated: 2026-11-06
 - 本会话已执行 Host 包 11 例、Desktop 设置/transport/模型/插件合同 4 文件 15 例，均通过；根/CLI/Desktop 类型检查通过。完整 check 及质量套件的未改模块失败见 TASK-0448 的本轮评审修复记录；未宣称跨包全套或真实 UI 验收通过。
 - 2026-11-06 用户明确要求提交推送，候选提交到现有 `xquan` 并推送 `origin/xquan`；本提交承载记录，集成状态仍 pending，不代表 main/dev 集成或稳定发布。
 - 发布说明候选：内部建立设置领域的统一宿主协议入口，为后续宿主拆分提供合同边界。当前 0.1.4 已发布，既有正文保持只读；下一次版本准备时汇编。
+
+## 集成补记（2026-11-07）
+
+- 试点已随 `c25657b00` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；`integration_status` 补记为 integrated，状态置 verifying（设置页 UI 走查仍需授权，未执行）。

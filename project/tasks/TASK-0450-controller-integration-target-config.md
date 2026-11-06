@@ -1,7 +1,7 @@
 ---
 id: TASK-0450
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -37,9 +37,9 @@ exclusive_paths:
   - scripts/agents
 depends_on: []
 conflicts_with: [TASK-0451, TASK-0452]
-integration_status: pending
+integration_status: integrated
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -113,3 +113,7 @@ updated: 2026-11-06
 - 用户在知悉上述验证失败后明确要求“提交推送”；本提交承载本 Task 的配置化实现与评审修复，目标为现有上游 `origin/xquan`。
 - 改动归属：Open-Forge-only。复用相同文件、条件下已通过的定向、check:quick 与独立审查结果；完整门禁仍按上文记录失败。
 - 这是候选分支保存，不表示已集成本地 main、通过开发候选验收或获准稳定发布；`integration_status` 保持 pending。
+
+## 集成补记（2026-11-07）
+
+- 实现已随 `dad01f2dd` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；`integration_status` 补记为 integrated，状态置 verifying。
