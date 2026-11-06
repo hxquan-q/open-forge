@@ -116,14 +116,14 @@ depends_on: []
 ## 首批 Task
 
 1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），in_progress（脚本已集成，真实基线测量待授权）。
-2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），verifying（已集成 `origin/dev`）。
-3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），verifying（已集成 `origin/dev`）。
-4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），verifying（已集成 `origin/dev`），依赖 0450；原 1.3/1.5 范围已拆出。
-   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），verifying（已集成 `origin/dev`），依赖 0451。
-   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），verifying（已集成 `origin/dev`），与 0451/0454 共享 `scripts/agents`，串行（集成顺序 0451 → 0454 → 0455）。
+2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），done。
+3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），done。
+4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），done；原 1.3/1.5 范围已拆出。
+   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），done。
+   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），done。
 5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），done（qwen-http 真实 adapter 端到端验收完成）。
 6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），verifying（试点已集成 `origin/dev`，设置页 UI 走查待授权）。
-7. [TASK-0458](../tasks/TASK-0458-models-preset-catalog-host-domain.md)：模型预设目录（免 key 子域）迁到 Host 合同（2.1 延续），in_progress；凭证类通道与事件按 ADR-0152 单独评审后迁入。
+7. [TASK-0458](../tasks/TASK-0458-models-preset-catalog-host-domain.md)：模型预设目录（免 key 子域）迁到 Host 合同（2.1 延续），verifying（已集成，quality 全绿）；凭证类通道与事件按 ADR-0152 单独评审后迁入。
 
 ## 不做什么
 

@@ -30,16 +30,16 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0458` | `in_progress` | PLAN-0029 | [模型预设目录迁移到 Host 合同](TASK-0458-models-preset-catalog-host-domain.md) |
+| `TASK-0458` | `verifying` | PLAN-0029 | [模型预设目录迁移到 Host 合同](TASK-0458-models-preset-catalog-host-domain.md) |
 | `TASK-0457` | `done` | — | [docs-site MDX frontmatter 修复](TASK-0457-docs-site-mdx-frontmatter-fix.md) |
-| `TASK-0456` | `verifying` | — | [autonomy 文档同步推送后候选核验](TASK-0456-autonomy-docs-candidate-verify-sync.md) |
-| `TASK-0455` | `verifying` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
-| `TASK-0454` | `verifying` | PLAN-0029 | [评审独立：只读候选与独立上下文](TASK-0454-controller-review-isolation.md) |
+| `TASK-0456` | `done` | — | [autonomy 文档同步推送后候选核验](TASK-0456-autonomy-docs-candidate-verify-sync.md) |
+| `TASK-0455` | `done` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
+| `TASK-0454` | `done` | PLAN-0029 | [评审独立：只读候选与独立上下文](TASK-0454-controller-review-isolation.md) |
 | `TASK-0453` | `verifying` | PLAN-0029 | [host-protocol 骨架、进程内 Host 与“设置”领域试点](TASK-0453-host-protocol-in-process-host-pilot.md) |
 | `TASK-0452` | `done` | PLAN-0029 | [真实 adapter 端到端验收任务](TASK-0452-controller-real-adapter-e2e.md) |
-| `TASK-0451` | `verifying` | PLAN-0029 | [候选提交与 CI 证据绑定](TASK-0451-controller-candidate-ci-review-binding.md) |
-| `TASK-0450` | `verifying` | PLAN-0029 | [研发控制器集成目标配置化](TASK-0450-controller-integration-target-config.md) |
-| `TASK-0449` | `verifying` | PLAN-0029 | [Desktop 包边界小修与仓库地图补全](TASK-0449-desktop-boundary-small-fixes.md) |
+| `TASK-0451` | `done` | PLAN-0029 | [候选提交与 CI 证据绑定](TASK-0451-controller-candidate-ci-review-binding.md) |
+| `TASK-0450` | `done` | PLAN-0029 | [研发控制器集成目标配置化](TASK-0450-controller-integration-target-config.md) |
+| `TASK-0449` | `done` | PLAN-0029 | [Desktop 包边界小修与仓库地图补全](TASK-0449-desktop-boundary-small-fixes.md) |
 | `TASK-0448` | `in_progress` | PLAN-0029 | [Desktop 分进程资源基线测量脚本与基线记录](TASK-0448-desktop-resource-baseline-script.md) |
 | `TASK-0446` | `verifying` | — | [Use portable local temp fixtures for remote POSIX path tests (BUG-0181)](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md) |
 | `TASK-0445` | `verifying` | — | [Select the exposed chunk in the plugin-vite shared React test (BUG-0180)](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md) |

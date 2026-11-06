@@ -1,7 +1,7 @@
 ---
 id: TASK-0450
 type: task
-status: verifying
+status: done
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -117,3 +117,7 @@ updated: 2026-11-07
 ## 集成补记（2026-11-07）
 
 - 实现已随 `dad01f2dd` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；`integration_status` 补记为 integrated，状态置 verifying。
+
+## 完成收口（2026-11-07）
+
+- 集成代码已随 `origin/dev` 全绿收口：quality run 42270493203（e66e8e2b1）success，后续 dev 批次（16d7e620f / 78f8ba441 / 7334db9b3）quality 均 success；任务完成标准（全量测试与门禁）由远端权威门禁证实，状态置 done。

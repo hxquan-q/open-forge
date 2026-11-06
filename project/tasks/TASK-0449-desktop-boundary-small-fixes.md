@@ -1,7 +1,7 @@
 ---
 id: TASK-0449
 type: task
-status: verifying
+status: done
 priority: P3
 owner: apps/desktop
 requirement: REQ-0002
@@ -75,3 +75,7 @@ updated: 2026-11-07
 ## 集成补记（2026-11-07）
 
 - 三项范围（顶层 `import type`、测试改走公开入口/迁入 theme-ui、仓库地图补全）已随 `96ff5a6b0`/`1961cd20a` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；`integration_status` 补记为 integrated，状态置 verifying（人工验收不适用，完成标准见交付记录）。
+
+## 完成收口（2026-11-07）
+
+- 集成代码已随 `origin/dev` 全绿收口：quality run 42270493203（e66e8e2b1）success，后续 dev 批次（16d7e620f / 78f8ba441 / 7334db9b3）quality 均 success；任务完成标准（全量测试与门禁）由远端权威门禁证实，状态置 done。

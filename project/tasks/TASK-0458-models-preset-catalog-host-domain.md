@@ -1,7 +1,7 @@
 ---
 id: TASK-0458
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -37,7 +37,7 @@ write_paths:
 exclusive_paths: []
 depends_on: [TASK-0453]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -86,5 +86,7 @@ updated: 2026-11-07
 - 实际验证：定向 4 文件（desktop-host / host-transport / host.test / stream.test）24 例通过；`check:quick -- <8 个改动文件>` 通过（首轮 Biome 格式化 2 文件后复跑通过）；`bun run test:impact -- <7 个源文件>` 通过（desktop 与 host-protocol 受影响选择全绿，exit 0，1497.5s）；`count-ipc-channels` 由 693 降至 691（`ipc/settings.ts` 3 → 1）。
 - 构建产物：`packages/host-protocol` 重新 `tsgo` 构建（dist 为 gitignore 生成物，仅本地解析需要；测试经仓库 runner）。
 - 未运行与风险：完整 `bun run check` 未运行（docs-site/mobile 既有环境问题，见 TASK-0448/0453 记录）；设置页 UI 走查需授权未执行；settings 领域的空参数仍为宽松 `Type.Object({})`（本任务不改既有合同，如需封闭另行切片）；`presets-updated` 事件仍在旧通道。
+- 门禁异常与处置（2026-11-07）：推送批次时把 `bun run test:changed` 接在 `| tail` 管道后，首跑失败（exit 1）被管道退出码掩盖、推送仍执行——失误在命令写法，不在门禁本身；随后不带管道完整复跑 `test:changed --base origin/dev` 通过（exit 0），判定首跑为 Windows 偶发（与 TASK-0448/0450/0455 记录模式一致）。后续推送一律先单独跑门禁、确认退出码后再推。远端 `quality` 对 7334db9b3 的结论见下一条。
+- 远端 CI（2026-11-07）：quality run 42286034565 对 `7334db9b3` success（check + 受影响单测矩阵全绿）；串行主工作区任务随实现提交集成并推送 `origin/dev`，`integration_status: integrated`，状态置 verifying。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）；完成标准为定向测试与门禁通过。
 - 发布：不适用
