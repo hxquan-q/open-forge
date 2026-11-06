@@ -37,15 +37,32 @@ vi.mock("../models/presets/sync.js", () => ({
 	refreshPresetCatalog: vi.fn(async () => ({ ok: true, elapsedMs: 42, modelCount: 7 })),
 }));
 
+const rendererConfig: Record<string, unknown> = { providers: {} };
+const replaceConfig = vi.fn(async () => undefined);
+const getProviderApiKey = vi.fn(async () => undefined);
+vi.mock("../models/model-settings-host.js", () => ({
+	getDesktopModelSettingsService: () => ({
+		getRendererConfig: async () => rendererConfig,
+		replaceConfig,
+		getProviderApiKey,
+	}),
+}));
+vi.mock("@vetta/runtime-node/host", () => ({
+	resolveNodeConfigurationValue: (value: string) => `resolved:${value}`,
+}));
+
 describe("desktop host settings domain", () => {
 	beforeEach(() => {
 		document = {};
 	});
 
-	it("registers exactly the settings and models preset methods", () => {
+	it("registers exactly the settings and models host methods", () => {
 		expect(createDesktopHost().methods()).toEqual([
+			"models.copyApiKey",
+			"models.getConfig",
 			"models.listPresets",
 			"models.refreshPresetCatalog",
+			"models.setConfig",
 			"settings.getModelTransport",
 			"settings.getServerUrl",
 			"settings.getSessionInterruptContinue",
@@ -167,5 +184,59 @@ describe("desktop host models preset domain", () => {
 		} as Awaited<ReturnType<typeof listPresetProviders>>);
 		const response = await createDesktopHost().handle({ method: "models.listPresets", params: {} });
 		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_RESULT } });
+	});
+});
+
+describe("desktop host models config domain", () => {
+	beforeEach(() => {
+		rendererConfig.providers = {};
+		replaceConfig.mockClear();
+		getProviderApiKey.mockReset();
+	});
+
+	it("returns the renderer config with masked or referenced api keys", async () => {
+		rendererConfig.providers = {
+			deepseek: { apiKey: "***", credentialRef: "vault:abc" },
+			openrouter: { apiKey: "env:OPENROUTER_KEY" },
+		};
+		await expect(createDesktopHost().handle({ method: "models.getConfig", params: {} })).resolves.toEqual({
+			ok: true,
+			result: {
+				providers: {
+					deepseek: { apiKey: "***", credentialRef: "vault:abc" },
+					openrouter: { apiKey: "env:OPENROUTER_KEY" },
+				},
+			},
+		});
+	});
+
+	it("rejects plaintext api keys that escape the mask contract", async () => {
+		rendererConfig.providers = { deepseek: { apiKey: "sk-plaintext-secret" } };
+		const response = await createDesktopHost().handle({ method: "models.getConfig", params: {} });
+		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_RESULT } });
+	});
+
+	it("passes the submitted config to replaceConfig", async () => {
+		const config = { defaultModel: "deepseek/chat", providers: { deepseek: { apiKey: "sk-new" } } };
+		await expect(createDesktopHost().handle({ method: "models.setConfig", params: { config } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		expect(replaceConfig).toHaveBeenCalledWith(config);
+	});
+
+	it("reports whether a provider key was copied", async () => {
+		await expect(
+			createDesktopHost().handle({ method: "models.copyApiKey", params: { providerId: "deepseek" } }),
+		).resolves.toEqual({ ok: true, result: false });
+		getProviderApiKey.mockResolvedValue("vault:abc");
+		await expect(
+			createDesktopHost().handle({ method: "models.copyApiKey", params: { providerId: "deepseek" } }),
+		).resolves.toEqual({ ok: true, result: true });
+	});
+
+	it("rejects an empty provider id", async () => {
+		const response = await createDesktopHost().handle({ method: "models.copyApiKey", params: { providerId: "" } });
+		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

@@ -206,9 +206,9 @@ export function createSystemApi(
 			onStatusesChanged: (handler) => onIpcEvent(ipc, "vetta:kb:statuses-changed", handler),
 		},
 		models: {
-			get: () => ipc.invoke("vetta:models:get"),
-			set: (config) => ipc.invoke("vetta:models:set", config),
-			copyApiKey: (providerId) => ipc.invoke("vetta:models:copy-api-key", providerId),
+			get: () => host.call("models.getConfig", {}),
+			set: (config) => host.call("models.setConfig", { config }),
+			copyApiKey: (providerId) => host.call("models.copyApiKey", { providerId }),
 			fetchRemote: () => ipc.invoke("vetta:models:fetch-remote"),
 			listPresets: () => host.call("models.listPresets", {}),
 			refreshPresetModels: (providerId, apiKey) =>

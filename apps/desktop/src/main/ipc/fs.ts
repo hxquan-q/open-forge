@@ -4,9 +4,8 @@ import type { FSWatcher } from "node:fs";
 import { watch } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { resolveNodeConfigurationValue } from "@vetta/runtime-node/host";
 import { isSshProjectUri } from "@vetta/ssh-transport";
-import { BrowserWindow, clipboard, ipcMain, net } from "electron";
+import { BrowserWindow, ipcMain, net } from "electron";
 import type {
 	McpConfigData,
 	McpHttpServerConfigData,
@@ -76,7 +75,7 @@ import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
 import { getProviderBalance } from "../models/balance/index.js";
 import { fetchProviderModels } from "../models/fetch-models.js";
 import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
-import { MODELS_CONFIG_PATH, type ModelsConfig } from "../models/model-settings-service.js";
+import { MODELS_CONFIG_PATH } from "../models/model-settings-service.js";
 import { probeModelProvider } from "../models/probe.js";
 import { testProviderAvailability } from "../models/test-provider.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
@@ -158,9 +157,6 @@ const CHANNELS = {
 	DIR_CHANGED: "vetta:fs:dir-changed",
 	CONFIG_GET: "vetta:config:get",
 	CONFIG_SET: "vetta:config:set",
-	MODELS_GET: "vetta:models:get",
-	MODELS_SET: "vetta:models:set",
-	MODELS_COPY_API_KEY: "vetta:models:copy-api-key",
 	MODELS_PROBE: "vetta:models:probe",
 	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
 	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
@@ -198,13 +194,8 @@ export function registerFsIpc(): () => void {
 		}
 	});
 	const shortcuts = getDesktopShortcutService();
-	let apiKeyClipboardClearTimer: ReturnType<typeof setTimeout> | undefined;
-	let copiedApiKey: string | undefined;
-	const clearCopiedApiKey = (): void => {
-		if (copiedApiKey && clipboard.readText() === copiedApiKey) clipboard.clear();
-		copiedApiKey = undefined;
-		apiKeyClipboardClearTimer = undefined;
-	};
+	// 模型配置 get/set 与 copy-api-key 已迁到 Host 合同 models.*（TASK-0459，见 ../host/models-domain.ts）；
+	// 剪贴板 30s 清空状态随通道整体迁移，这里不再持有。
 	ipcMain.handle(CHANNELS.READ_DIR, async (_event, dirPath: unknown): Promise<FsEntry[]> => {
 		assertNonEmptyString(dirPath, "dirPath");
 		return readFilesystemDirectory(dirPath);
@@ -476,28 +467,6 @@ export function registerFsIpc(): () => void {
 		if (patch.proxy !== undefined) await refreshDesktopProxy();
 	});
 
-	ipcMain.handle(CHANNELS.MODELS_GET, async (): Promise<ModelsConfig> => {
-		return models.getRendererConfig();
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_SET, async (_event, config: unknown) => {
-		if (typeof config !== "object" || config === null) throw new Error("Invalid models config");
-		await models.replaceConfig(config as ModelsConfig);
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_COPY_API_KEY, async (_event, providerId: unknown): Promise<boolean> => {
-		assertNonEmptyString(providerId, "providerId");
-		const keyConfig = await models.getProviderApiKey(providerId.trim());
-		const apiKey = keyConfig ? resolveNodeConfigurationValue(keyConfig) : undefined;
-		if (!apiKey) return false;
-
-		clipboard.writeText(apiKey);
-		if (apiKeyClipboardClearTimer) clearTimeout(apiKeyClipboardClearTimer);
-		copiedApiKey = apiKey;
-		apiKeyClipboardClearTimer = setTimeout(clearCopiedApiKey, 30_000);
-		return true;
-	});
-
 	ipcMain.handle(CHANNELS.MODELS_PROBE, async (_event, ref: { provider: string; model: string }) => {
 		return probeModelProvider(ref);
 	});
@@ -644,8 +613,6 @@ export function registerFsIpc(): () => void {
 		watchers.clear();
 		for (const timer of debounceTimers.values()) clearTimeout(timer);
 		debounceTimers.clear();
-		if (apiKeyClipboardClearTimer) clearTimeout(apiKeyClipboardClearTimer);
-		clearCopiedApiKey();
 
 		ipcMain.removeHandler(CHANNELS.READ_DIR);
 		ipcMain.removeHandler(CHANNELS.READ_FILE);
@@ -666,9 +633,6 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.UNWATCH_DIR);
 		ipcMain.removeHandler(CHANNELS.CONFIG_GET);
 		ipcMain.removeHandler(CHANNELS.CONFIG_SET);
-		ipcMain.removeHandler(CHANNELS.MODELS_GET);
-		ipcMain.removeHandler(CHANNELS.MODELS_SET);
-		ipcMain.removeHandler(CHANNELS.MODELS_COPY_API_KEY);
 		ipcMain.removeHandler(CHANNELS.MODELS_PROBE);
 		ipcMain.removeHandler(CHANNELS.MODELS_FETCH_PROVIDER_MODELS);
 		ipcMain.removeHandler(CHANNELS.MODELS_GET_BALANCE);
