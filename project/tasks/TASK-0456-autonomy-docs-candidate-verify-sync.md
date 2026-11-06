@@ -12,7 +12,7 @@ related_plan: []
 related_tasks: [TASK-0451, TASK-0452]
 related_issues: []
 related_bugs: []
-execution: serial
+execution: parallel
 branch:
 worktree:
 base_commit:
@@ -41,7 +41,7 @@ updated: 2026-11-07
 
 ### 并发评估
 
-- 结论：纯文档单文件修改，串行执行，无并行诉求。
+- 结论：纯文档单文件修改，控制器独立 Worktree 执行（execution: parallel），无并行诉求。
 
 ### 做
 
