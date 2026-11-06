@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0457` | `verifying` | — | [docs-site MDX frontmatter 修复](TASK-0457-docs-site-mdx-frontmatter-fix.md) |
 | `TASK-0456` | `verifying` | — | [autonomy 文档同步推送后候选核验](TASK-0456-autonomy-docs-candidate-verify-sync.md) |
 | `TASK-0455` | `in_progress` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
 | `TASK-0454` | `in_progress` | PLAN-0029 | [评审独立：只读候选与独立上下文](TASK-0454-controller-review-isolation.md) |
