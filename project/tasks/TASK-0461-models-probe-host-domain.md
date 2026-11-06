@@ -1,7 +1,7 @@
 ---
 id: TASK-0461
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -75,3 +75,7 @@ updated: 2026-11-07
 ## 集成收口（2026-11-07）
 
 - 提交 `e10a88017` 已推送 `origin/dev`（门禁链 GATE 复跑绿后推送）；quality run 42307568616 对该批次 **success**。`integration_status: integrated`，状态置 verifying。
+
+## 完成收口（2026-11-07）
+
+- 批次 `e10a88017` 远端 quality success（run 42307568616），完成标准满足，状态置 done。

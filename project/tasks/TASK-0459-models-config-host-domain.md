@@ -1,7 +1,7 @@
 ---
 id: TASK-0459
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -91,3 +91,7 @@ updated: 2026-11-07
 - 远端 CI（2026-11-07）：quality run 42294078591 对 `796b373af` **failure**——两处类型错误（copy 测试 mock 签名只声明回 `undefined`；preload `set` 包装 `Promise<null>` 与 api 类型 `Promise<void>` 不符），本地 `check:quick` 不含 tsc 故未拦截。修复提交 `3626913bb`（补全 mock 参数/返回类型；`set` 改 await 后返回 void），本地 `apps/desktop typecheck` 通过、定向用例复跑通过；门禁绿后推送并复测 CI。流程教训：代码批次推送前须补跑对应包 typecheck。
 - 追记（2026-11-07）：修复批次的门禁复跑再次失败于同一 `weknora-background-flow` AC-20 时序用例（当日 3 次全量中第 2 次，隔离恒过）——按"再次复现即修复"另立任务处理；且本次推送命令再次以 `grep|tail` 链接到 push、门禁失败仍推出了批次（我的流程错误第二次，与门禁本身无关）。流程修正：门禁与推送合并为单条后台命令 `bun run test:changed --base origin/dev && git push origin main:dev && git ls-remote ...`，`&&` 直接吃 bun 的真实退出码，任何管道/摘要输出只在推送后读取。远端 CI 对 `3626913bb` 监视中。
 - 发布：不适用
+
+## 完成收口（2026-11-07）
+
+- 实现批次 `796b373af` CI 曾因两处类型错误失败，修复批次 `3626913bb` 远端 quality success（run 42297431939）；类型修复后完成标准满足，状态置 done。

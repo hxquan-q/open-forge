@@ -1,7 +1,7 @@
 ---
 id: TASK-0460
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: []
@@ -69,3 +69,7 @@ updated: 2026-11-07
 - 未运行与风险：`test:impact`/`test:changed` 门禁随批次执行；生产路径改动仅为登记表容器与测试导出，行为面（订阅幂等、去抖、事件路由）不变。
 - 人工验收：不适用（测试稳定性修复 + 内部隔离钩子）。
 - 发布：不适用
+
+## 完成收口（2026-11-07）
+
+- 批次 `ebf595e38` 远端 quality success（run 42303673330），完成标准满足，状态置 done。

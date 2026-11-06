@@ -1,7 +1,7 @@
 ---
 id: TASK-0462
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -77,3 +77,7 @@ updated: 2026-11-07
 - 未运行与风险：完整 `bun run check` 未运行（既有环境问题）；`mcp:get/set` 与 OAuth 六通道仍留旧 IPC（凭证面，待 §7 评审）。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
+
+## 完成收口（2026-11-07）
+
+- 批次 `482d93a33` 远端 quality success（run 42313913499），完成标准满足，状态置 done。

@@ -30,11 +30,11 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0462` | `verifying` | PLAN-0029 | [MCP 无凭证子域迁移到 Host 合同](TASK-0462-mcp-noncredential-host-domain.md) |
-| `TASK-0461` | `verifying` | PLAN-0029 | [模型探测与余额通道迁移到 Host 合同](TASK-0461-models-probe-host-domain.md) |
-| `TASK-0460` | `verifying` | — | [weknora AC-20 时序用例偶发修复](TASK-0460-weknora-ac20-flake-fix.md) |
-| `TASK-0459` | `verifying` | PLAN-0029 | [模型配置域迁移到 Host 合同](TASK-0459-models-config-host-domain.md) |
-| `TASK-0458` | `verifying` | PLAN-0029 | [模型预设目录迁移到 Host 合同](TASK-0458-models-preset-catalog-host-domain.md) |
+| `TASK-0462` | `done` | PLAN-0029 | [MCP 无凭证子域迁移到 Host 合同](TASK-0462-mcp-noncredential-host-domain.md) |
+| `TASK-0461` | `done` | PLAN-0029 | [模型探测与余额通道迁移到 Host 合同](TASK-0461-models-probe-host-domain.md) |
+| `TASK-0460` | `done` | — | [weknora AC-20 时序用例偶发修复](TASK-0460-weknora-ac20-flake-fix.md) |
+| `TASK-0459` | `done` | PLAN-0029 | [模型配置域迁移到 Host 合同](TASK-0459-models-config-host-domain.md) |
+| `TASK-0458` | `done` | PLAN-0029 | [模型预设目录迁移到 Host 合同](TASK-0458-models-preset-catalog-host-domain.md) |
 | `TASK-0457` | `done` | — | [docs-site MDX frontmatter 修复](TASK-0457-docs-site-mdx-frontmatter-fix.md) |
 | `TASK-0456` | `done` | — | [autonomy 文档同步推送后候选核验](TASK-0456-autonomy-docs-candidate-verify-sync.md) |
 | `TASK-0455` | `done` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |

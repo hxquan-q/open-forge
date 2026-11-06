@@ -1,7 +1,7 @@
 ---
 id: TASK-0458
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -90,3 +90,7 @@ updated: 2026-11-07
 - 远端 CI（2026-11-07）：quality run 42286034565 对 `7334db9b3` success（check + 受影响单测矩阵全绿）；串行主工作区任务随实现提交集成并推送 `origin/dev`，`integration_status: integrated`，状态置 verifying。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）；完成标准为定向测试与门禁通过。
 - 发布：不适用
+
+## 完成收口（2026-11-07）
+
+- 批次 `7334db9b3` 远端 quality success（run 42286034565），完成标准满足，状态置 done。
