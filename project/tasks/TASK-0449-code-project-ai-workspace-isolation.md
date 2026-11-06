@@ -136,10 +136,10 @@ updated: 2026-11-06
 
 - 实际修改：新增按规范化项目位置计算的持久 AI 工作区（本机路径及 SSH host/path）；项目配置改由专用主进程 API 原文读写；Code Prompt 明示项目根/AI 工作区根及材料落点；Code Memory/Journal 默认进入 AI 工作区，旧文件按单文件原子 no-clobber copy-then-delete；Code 模式本地 read/edit/write/ls/glob/grep/find/tree 文件工具限制到当前项目 cwd 与 AI 工作区，SSH 项目使用远端项目根及独立本机 workspace URI；Allstar 首页未登记历史 Code 项目也显示配置入口。
 - 实际运行：`coding-agent`、`runtime-node`、`runtime-ssh`、`runtime-desktop` 定向 build 均通过；定向测试：runtime-desktop 30/30、SSH 45 通过 / 2 skip、runtime-node read 29/29、Desktop 集成 67/67、Allstar Renderer 12/12。`bun run check:quick` 与 `bun run check` 的 Biome/lint/type 和非 waiver guards 通过，guards 仅被既有过期 WAIVER-0014/0015 阻断。v0.1.5 发布说明碎片已写入；未汇编或发布。
-- 影响面：`bun run test:impact` 首轮广域套件报 grep/glob/coding-agent 共 8 例 `spawn rg ENOENT`。复跑归因：本机无系统 rg（Git Bash 的 `rg` 是包装 `claude.exe` 的 shell 函数，Node PATH 无实体二进制）；把 Vetta 受管 `~/.openforge-dev/agent/bin/rg.exe` 前置 PATH 后三份套件 15+15+15 全绿——环境存量（同 TASK-0307 记录），非本任务回归。其余跨包行为由上述定向合同测试覆盖。
+- 影响面：`bun run test:impact` 首轮广域套件报 grep/glob/coding-agent 共 8 例 `spawn rg ENOENT`。归因：当时本机无系统 rg（Git Bash 的 `rg` 是包装 `claude.exe` 的 shell 函数，Node PATH 无实体二进制）；受管 rg 前置 PATH 复跑三份套件 15+15+15 全绿。2026-11-06 用户 winget 安装系统 rg 15.2.0 后，runtime-node 全包 622/622、coding-agent 全包 1685 通过/3 skip 复跑全绿——test:impact 红项全部消除，属环境存量而非本任务回归（同 TASK-0307 记录）。
 - 附带影响：修改声明审计在本任务新增文件上触发后，`--write` 仅支持全量写入，顺带补齐基线内 648 个存量缺失声明头（独立 chore 提交），ISSUE-0023 存量清零；后续可在安静窗口收缩基线快照。
 - 未运行及原因：未运行真实 Desktop、真实模型或真实 SSH 主机；不执行 UI 实机验证、发布、tag、部署或远程 Git 操作。
 - Worktree：未创建；主仓串行执行，当前检出 `chenxvhua`，无独立 Worktree。
 - 提交：四个原子提交本地落盘（fd1617700 runtime / 7cb67c39f desktop / 46f70a24b 声明头清扫 / 硬删除接线），未 push。
 - 硬删除清理（原阻塞项）：2026-11-06 用户授权后补齐——恢复 `deleteCodeProjectAiWorkspace` 并新增 `vetta:projects:delete-code-workspace` IPC；`deleteProjectFromDisk` 在会话/登记/项目目录清理完成后一并删除该项目 AI 工作区，归档与仅移除登记不经过此路径。存储隔离（只删本项目、ghost 幂等）、IPC 校验、渲染层顺序合同共 15/15 通过。旧 Renderer 路径 helper 已随 7cb67c39f 删除。
-- 剩余风险：真实 Desktop/SSH/模型行为未实测（未授权）；`bun run check` 仍被三条既有过期 waiver（0014/0015/0016）阻断，属仓库存量待治理，不由本任务处置；本机无系统 rg，含 rg 的广域套件需前置受管 rg 路径（`~/.openforge-dev/agent/bin`）运行。
+- 剩余风险：真实 Desktop/SSH/模型行为未实测（未授权）；`bun run check` 仍被三条既有过期 waiver（0014/0015/0016）阻断，属仓库存量待治理，不由本任务处置。rg 已随系统安装消除（新开 shell 自动生效；本任务会话内为等价 PATH 前置验证）。
