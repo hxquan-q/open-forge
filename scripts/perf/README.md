@@ -49,7 +49,7 @@ node scripts/perf/desktop-baseline.mjs --runs 5 --sessions 2 \
 - 目录须为空或带 `.openforge-perf-baseline` 标记（本脚本创建过）。
 - 每次运行使用 `<data-dir>/baseline-<stamp>/run-k/` 下的 `vetta-home`、`electron-user-data`、`home`。子进程环境删除全部 `VETTA_*`、`ELECTRON_*` 与 `NODE_OPTIONS`，再设置 `VETTA_HOME`、`VETTA_DESKTOP_USER_DATA_DIR`、`HOME`；Windows 另设 `USERPROFILE`、`APPDATA`、`LOCALAPPDATA`，Linux 等另设 `XDG_CONFIG_HOME`、`XDG_DATA_HOME`、`XDG_CACHE_HOME`、`XDG_STATE_HOME`，都指向本次运行的 `home` 下，macOS 不额外设置。
 - Electron userData 的实际隔离靠 `--user-data-dir`：`VETTA_DESKTOP_USER_DATA_DIR` 只由 `apps/desktop/scripts/run-dev-electron.mjs` 读取并转成该开关，Desktop 主进程不读它。单实例锁按 userData 区分，不会与用户正在运行的 Desktop 冲突。
-- 进程树清理只结束本次记录过、且命令行与创建时间都一致的进程，防止 PID 复用误杀；POSIX 的进程组信号在根进程已退出且无已记录存活进程时不再发送。
+- Windows 在根进程仍存活时用 `taskkill /T` 结束整棵树（该 PID 尚未退出）。根进程已退出后，以及 POSIX 的补杀，只结束命令行非空、且命令行与创建时间都和记录一致的进程，防止 PID 复用误杀。POSIX 的进程组信号在根进程已退出且无已记录存活进程时不再发送。
 - 日志只从隔离的 `vetta-home/desktop-app/logs/main/` 读取；输出中主目录前缀替换为 `~`，进程命令行不写入输出。
 
 ## 输出字段
