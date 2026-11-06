@@ -1,7 +1,7 @@
 ---
 id: TASK-0451
 type: task
-status: ready
+status: in_progress
 priority: P1
 owner: scripts/agents
 requirement: REQ-0019
@@ -89,3 +89,13 @@ updated: 2026-11-06
 ## 测试与验证
 
 - 先补失败用例再实现；`scripts/agents` 全量测试经仓库 runner；`bun run test:impact -- <files>`；`bun run check`。
+
+## 交付
+
+- 实现：`services.mjs` 的 `ci` proof 数据新增必填 `runId` 与 `remoteRef`；`integrate.mjs` 新增 `candidateSubject`、`verifyCandidate`（推送后独立核验，`applyIntegration`/`prepareIntegration` 未动）；CLI 新增 `candidate-verify`（恰好一个 `--proof`，在取租约前路由，已集成 run 不需要活动租约）；`release.test.mjs` 夹具补新字段；README 记录协作时序、核验清单与 job 名映射表（控制器不解析 job 名）。
+- 技术评审：主会话对两个子代理的 diff 逐变量自审（校验顺序、digest 守卫、错误文案、夹具字段）；未引入独立评审身份，不宣称独立评审。
+- 实际验证（2026-11-06）：`scripts/agents` 全量 22 文件 183 例经仓库 runner 串行通过；`bun run check:quick -- <7 个改动文件>` 通过；`bun run test:impact -- <7 个改动文件>` 67 文件 827 例通过。
+- 偏离合同：Task 要求“先补失败用例再实现”，实际由子代理与实现同步编写测试，未逐字执行 RED-first；合同所列失败用例均已断言。
+- 未运行与风险：完整 `bun run check` 未运行（docs-site `fumadocs-ui` 与 mobile `react-native` 为既有环境问题，见 TASK-0448 记录）；真实 CI proof 签发链未实测（当前无签发服务，仅测试用 Ed25519 密钥）；`candidate-verify` 依赖操作者先 fetch，真实操作序列留待 TASK-0452 端到端。
+- 本提交保存至 `xquan`，目标 `origin/xquan`；`integration_status` 保持 pending。人工验收：不适用（内部控制器合同，无用户可见行为），完成标准为全量测试与门禁通过。
+- 发布：不适用

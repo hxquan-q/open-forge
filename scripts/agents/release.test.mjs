@@ -142,6 +142,8 @@ function fixture({ loseResponse = false } = {}) {
 			repository: settings.publisher.repository,
 			head: code.head,
 			tree: code.tree,
+			runId: "1",
+			remoteRef: "origin/dev",
 			checks: ["tests", "check", "desktop-packaged", "tests/windows", "tests/macos", "tests/linux"],
 			passed: true,
 		}),

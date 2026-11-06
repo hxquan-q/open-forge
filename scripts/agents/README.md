@@ -6,7 +6,24 @@
 ## 权威入口
 
 - [策略](../../project/autonomy-policy.json)：目标 L4，当前 level=0，模型与发布能力默认不启用。
-- 集成目标：策略必填 `integration.branch`（本地集成分支，当前 `main`）与 `integration.candidateRef`（`<remote>/<branch>`，当前 `origin/dev`），无默认回退。准备（`prepareTask`）、集成（`prepareIntegration`）与发布授权均校验当前检出等于 `integration.branch`，报错带期望与实际分支。`candidateRef` 目前只做策略校验，尚未接入任何调用方（留给 TASK-0451）。分支角色以[协作规则](../../docs/dev/agent-rules/collaboration.md)为准。
+- 集成目标：策略必填 `integration.branch`（本地集成分支，当前 `main`）与 `integration.candidateRef`（`<remote>/<branch>`，当前 `origin/dev`），无默认回退。准备（`prepareTask`）、集成（`prepareIntegration`）与发布授权均校验当前检出等于 `integration.branch`，报错带期望与实际分支。`candidateRef` 由 `candidate-verify` 使用，推送开发候选后核验 CI。分支角色以[协作规则](../../docs/dev/agent-rules/collaboration.md)为准。
+- 推送后候选核验：协作顺序为本地 `main` 集成 → 推 `main:dev` → CI 在 `origin/dev` 运行 → 操作者 fetch → `candidate-verify --run-id <id> --proof <file>`。命令不需要活动租约，但需要 `integrate-dev` 能力。核验内容：
+  - run 已 applied；
+  - 本地 `refs/remotes/<candidateRef>` 等于已集成 head（控制器不联网，只读本地远端跟踪引用）；
+  - 签名 `ci` proof 的 subject 为 `candidateSubject(binding, remoteRef)`；
+  - proof 的 head、tree、remoteRef 与集成结果和策略一致；
+  - proof 的 checks 覆盖 `requiredChecks`；
+  - 通过后写入 `integration.candidateVerification` 并记录审计；任一项失败不改状态。
+
+  proof 的 `checks` 使用 policy 逻辑名，由签发方从 GitHub Actions job 名映射，控制器不解析 job 名：
+
+  | 逻辑名 | workflow / job |
+  |---|---|
+  | `check` | quality.yml / `check + quality tests` |
+  | `tests` | quality.yml / `affected unit tests (*)` 全部通过 |
+  | `tests/windows` `tests/macos` `tests/linux` | quality.yml / `affected unit tests (windows-latest / macos-latest / ubuntu-latest)` |
+  | `desktop-packaged` | desktop-packaged.yml / `Desktop packaging contract` 及 packaged E2E（仅 PR 触发） |
+  | `impact` | 签发方按受影响测试结果给出；当前 workflow 无同名 job，签发方须说明来源 |
 - [执行器配置](../../project/agents.json)：示例默认 disabled，启用前固定实际可执行文件、模型与隔离方式。
 - [JSON 合同](../../schemas/agents/)：边界采用闭合的 JSON Schema 子集；不支持的关键字报错，不静默略过约束。
 - 任务继续使用 project/tasks；不增加 GOAL 状态机。运行进程、租约与尝试次数不写进 Task 心跳提交。

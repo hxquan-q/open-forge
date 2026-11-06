@@ -9,7 +9,7 @@ import { contract, digest } from "./contracts.mjs";
 import { doctor } from "./doctor.mjs";
 import { exportEvidence } from "./evidence.mjs";
 import { snapshot } from "./git.mjs";
-import { applyIntegration, prepareIntegration } from "./integrate.mjs";
+import { applyIntegration, prepareIntegration, verifyCandidate } from "./integrate.mjs";
 import { claim, release } from "./leases.mjs";
 import { OPERATION_OPTIONS, OPERATIONS, operation } from "./operations.mjs";
 import { cycle, loop, loopRunPrefix } from "./orchestrate.mjs";
@@ -43,6 +43,7 @@ const COMMANDS = new Set([
 	"approval",
 	"integration-preview",
 	"integrate",
+	"candidate-verify",
 ]);
 const OPTIONS = new Set([
 	...OPERATION_OPTIONS,
@@ -233,6 +234,18 @@ export async function main(args) {
 			runId: required(options, "--run-id"),
 			ttl: config.policy.limits.leaseMs,
 			completed: completedTasks(loadTasks(root).tasks),
+		});
+	}
+	// 集成后租约已释放，候选核验必须在租约查找之前分流。
+	if (command === "candidate-verify") {
+		const proofs = options.proofs ?? [];
+		if (proofs.length !== 1) throw new Error("candidate-verify needs exactly one --proof");
+		return verifyCandidate({
+			root,
+			store,
+			policy: config.policy,
+			runId: required(options, "--run-id"),
+			proof: JSON.parse(readFileSync(resolve(proofs[0]), "utf8")),
 		});
 	}
 	const token = runToken(store, required(options, "--run-id"));

@@ -8,6 +8,7 @@ import { git, snapshot } from "./git.mjs";
 import { assertLease } from "./leases.mjs";
 import { bindRepository, taskIndexStatus, taskMetadata } from "./prepare.mjs";
 import { codeBinding } from "./runner.mjs";
+import { trustedServices, verifyServiceProof } from "./services.mjs";
 import { taskById } from "./tasks.mjs";
 
 function eligible({ root, store, policy, token }) {
@@ -163,4 +164,55 @@ export function applyIntegration(context) {
 		});
 		throw error;
 	}
+}
+
+/** Proof subject for the pushed development candidate: the integrated evidence binding plus the remote ref it was pushed to. */
+export function candidateSubject(binding, remoteRef) {
+	return digest({ binding, remoteRef });
+}
+
+/** Bind the locally fetched remote candidate ref and a signed CI proof to the applied integration evidence. */
+export function verifyCandidate({ root, store, policy, runId, proof, now = Date.now() }) {
+	requireCapability(policy, "integrate-dev");
+	bindRepository(store, root);
+	const run = store.read().runs[runId];
+	if (run?.status !== "integrated" || run.integration?.phase !== "applied")
+		throw new Error("candidate verification requires an applied integration");
+	const evidence = run.integration.evidence;
+	const binding = evidence.binding;
+	const remoteRef = policy.integration.candidateRef;
+	let remoteHead;
+	try {
+		remoteHead = git(root, ["rev-parse", "--verify", `refs/remotes/${remoteRef}^{commit}`]);
+	} catch {
+		throw new Error(`remote candidate ref is missing: ${remoteRef}; fetch it first`);
+	}
+	if (remoteHead !== binding.head) throw new Error(`${remoteRef} does not point at the integrated candidate`);
+	const payload = verifyServiceProof(proof, {
+		kind: "ci",
+		subject: candidateSubject(binding, remoteRef),
+		trust: trustedServices(store.root),
+		now,
+	});
+	const data = payload.data;
+	if (data.head !== binding.head || data.tree !== binding.tree)
+		throw new Error("CI proof targets another commit or tree");
+	if (data.remoteRef !== remoteRef) throw new Error("CI proof was not produced for the candidate ref");
+	if (policy.requiredChecks.some((check) => !data.checks.includes(check)))
+		throw new Error("CI proof is missing required checks");
+	store.transaction((state) => {
+		const current = state.runs[runId];
+		if (current.status !== "integrated" || digest(current.integration.evidence) !== digest(evidence))
+			throw new Error("integrated evidence changed during candidate verification");
+		current.integration.candidateVerification = {
+			runId: data.runId,
+			remoteRef,
+			head: binding.head,
+			tree: binding.tree,
+			keyId: payload.keyId,
+			at: now,
+		};
+		state.audit.push({ event: "candidate-verified", runId, head: binding.head, ciRunId: data.runId, at: now });
+	});
+	return { runId, status: "candidate-verified", head: binding.head, ciRunId: data.runId };
 }
