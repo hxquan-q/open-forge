@@ -404,14 +404,17 @@ function aliveKnownProcesses(known) {
 	});
 }
 
-/** 结束整棵进程树：Windows 用 taskkill /T /F；POSIX 先 SIGTERM 进程组，宽限后 SIGKILL。再逐个清理脱离树的已知进程。 */
+/** 结束整棵进程树：Windows 在根进程仍存活时用 taskkill /T /F（该 PID 尚未退出）；POSIX 先 SIGTERM 进程组，宽限后 SIGKILL。根进程已退出后只清理身份核对过的已知进程。 */
 async function terminateTree(rootPid, known, exited, hasExited) {
 	if (process.platform === "win32") {
-		spawnSync(WIN32_TASKKILL, ["/PID", String(rootPid), "/T", "/F"], {
-			stdio: "ignore",
-			shell: false,
-			windowsHide: true,
-		});
+		// 根进程已退出则 PID 可能被复用，taskkill /PID 不再安全；子进程交给下面的身份核对。
+		if (!hasExited()) {
+			spawnSync(WIN32_TASKKILL, ["/PID", String(rootPid), "/T", "/F"], {
+				stdio: "ignore",
+				shell: false,
+				windowsHide: true,
+			});
+		}
 	} else {
 		// 子进程以 detached 启动，pid 即进程组 id。根进程已退出且已知进程都不在时，
 		// 进程组 id 可能已被复用，不再向 -rootPid 发信号。
@@ -752,8 +755,21 @@ async function main(argv) {
 	if (!existsSync(scanRoot) || !statSync(scanRoot).isDirectory())
 		throw new Error(`--scan-root is not a directory: ${scanRoot}`);
 	// 扫描根同样不得落在真实状态根内（rg / 遍历会读取其中文件）；扫描本仓库允许，故跳过仓库根判定。
-	const scanRootProblem = dataDirIsolationProblem(scanRoot, { ...isolationContext(), repoRoot: undefined });
+	const scanRootProblem = dataDirIsolationProblem(scanRoot, {
+		...isolationContext(),
+		repoRoot: undefined,
+		realpath: realpathOrSelf,
+	});
 	if (scanRootProblem) throw new Error(`--scan-root: ${scanRootProblem.replaceAll("--data-dir", "scan root")}`);
+	const realScanRoot = realpathSync.native(scanRoot);
+	if (realScanRoot !== scanRoot) {
+		const realScanProblem = dataDirIsolationProblem(realScanRoot, {
+			...isolationContext(),
+			repoRoot: undefined,
+			realpath: realpathOrSelf,
+		});
+		if (realScanProblem) throw new Error(`--scan-root: ${realScanProblem.replaceAll("--data-dir", "scan root")}`);
+	}
 	const dataDir = prepareDataDir(options.dataDir);
 	const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 	const sessionDir = join(dataDir, `baseline-${stamp}`);
