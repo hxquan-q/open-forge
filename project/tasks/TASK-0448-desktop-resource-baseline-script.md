@@ -1,7 +1,7 @@
 ---
 id: TASK-0448
 type: task
-status: ready
+status: in_progress
 priority: P1
 owner: apps/desktop
 requirement: REQ-0002
@@ -24,6 +24,10 @@ read_paths:
 write_paths:
   - scripts/perf
   - project/verification
+  - biome.json
+  - package.json
+  - scripts/quality/test-changed.mjs
+  - scripts/quality/quality-gates.test.mjs
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
@@ -76,8 +80,33 @@ updated: 2026-11-06
 
 ## 验收分层
 
-- 工程验证：待执行
-- 技术评审：未执行
+- 工程验证：本轮修复定向测试与 check:quick 已通过；全量检查/影响测试仍有下述失败，真实基线尚未测量。
+- 技术评审：本轮修复经原生子任务独立只读复核，无阻断发现。
 - 集成：pending
 - 人工功能验收：不适用（内部度量工具）
 - 发布：未授权
+
+## 2026-11-06 评审修复
+
+- 来源：用户要求修复本轮 review 的 SIGTERM 清理缺口和性能脚本测试漏跑。
+- 本轮在已有 `xquan` 候选上串行修复；保留其他修改，不切换或集成分支，不启动真实 Desktop，也不执行实测基线。
+- 输入/输出：SIGINT 或 SIGTERM → 等待当前运行的同一清理 Promise 后退出（130 / 143）；仅修改 `scripts/perf` → 常规质量测试被选中且包含性能脚本测试。
+- Given 清理尚未完成 / When 收到终止信号或重复信号 / Then 不提前退出、不重复清理；Given 仅性能脚本变化 / When test:changed 或 CI 执行质量套件 / Then 两份性能测试均在范围内。
+- 保留：数据隔离、原采样顺序、统计口径、Desktop 实测授权边界；没有 UI 验证授权不影响普通 Node fixture 测试。
+- 验证：先补失败回归，再跑性能/质量选择定向测试、`test:impact`、`bun run check`；真实 Desktop 测量仍未授权。
+- 决策：沿用现有质量套件与变更选择器，不另建 CI 作业；信号处理提供窄的进程事件测试接缝，避免为测退出而启动 Electron。
+- 发布说明候选（当前 manifest 0.1.4 已发布，不改既有正文）：内部工具修复资源基线脚本终止时的进程清理，并将相关测试纳入常规质量门禁；下一次版本准备时汇编。
+- RED：新增回归在修复前失败 7 例（含本 Task 的 SIGTERM/重复信号和测试选择断言）；未削弱既有断言。
+- GREEN：`bun scripts/quality/run-vitest.mjs --run scripts/agents/contracts.test.mjs scripts/perf/desktop-baseline.test.mjs scripts/perf/baseline-stats.test.mjs scripts/quality/quality-gates.test.mjs`，4 文件 179 例通过。
+- `bun run check:quick -- <本轮 11 个文件>` 最终 exit 0（包含全部 guards）；`git diff --check` 通过。
+- `bun run test:impact -- <本轮 6 个源码/测试文件>` 确认选入 `scripts/perf`，共 67 文件 808 例：797 通过、11 失败；失败涉及 agents 的 Git 子进程超时、release identity 超时、Windows 发布 Bash 夹具和临时目录 EPERM，保留原门禁与日志。
+- 以 `--maxWorkers=1` 复跑上述 4 个定向文件及 5 个失败文件，9 文件 275 例：270 通过、5 失败，agents/integrate/release/runner 与 release identity 均通过；仅未修改的 `desktop-release-workflow.test.mjs` 稳定复现 1 个临时目录 EPERM 和 4 个 Bash 发布夹具失败。未修改超时、跳过测试或放宽门禁。
+- `bun run check` exit 1：根/CLI/Desktop 类型检查、lint 与 mobile lint 通过；docs-site 缺少 `fumadocs-ui` 模块，mobile 缺少 `react-native` 类型并有派生类型错误。上述目录及依赖段本轮未改；本轮修改导致的声明头/表达式赋值问题均已修正并经最终 check:quick 确认。
+- 独立审查：`/root/review_fixes` 对照修复前快照，只读复核，无阻断；真实 OS 信号与 Electron 进程树未实测。
+- 上一轮候选保留在原工作区，未提交、集成或推送。本轮修复不表示 TASK-0448 的真实基线记录已完成。
+
+## 候选分支提交（2026-11-06）
+
+- 用户在知悉上述验证失败后明确要求“提交推送”；本提交承载基线脚本、退出清理修复及自动测试接线，目标为现有上游 `origin/xquan`。
+- 改动归属：Open-Forge-only。复用已有定向、check:quick 与独立审查证据，完整门禁失败与未实测边界保留。
+- 本次仅保存候选，不表示已集成本地 main、完成真实资源基线或通过开发候选验收；`integration_status` 保持 pending。

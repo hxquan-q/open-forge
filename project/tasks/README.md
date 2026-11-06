@@ -35,7 +35,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0451` | `draft` | PLAN-0029 | [候选提交、CI 运行与评审证据绑定](TASK-0451-controller-candidate-ci-review-binding.md) |
 | `TASK-0450` | `in_progress` | PLAN-0029 | [研发控制器集成目标配置化](TASK-0450-controller-integration-target-config.md) |
 | `TASK-0449` | `ready` | PLAN-0029 | [Desktop 包边界小修与仓库地图补全](TASK-0449-desktop-boundary-small-fixes.md) |
-| `TASK-0448` | `ready` | PLAN-0029 | [Desktop 分进程资源基线测量脚本与基线记录](TASK-0448-desktop-resource-baseline-script.md) |
+| `TASK-0448` | `in_progress` | PLAN-0029 | [Desktop 分进程资源基线测量脚本与基线记录](TASK-0448-desktop-resource-baseline-script.md) |
 | `TASK-0446` | `verifying` | — | [Use portable local temp fixtures for remote POSIX path tests (BUG-0181)](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md) |
 | `TASK-0445` | `verifying` | — | [Select the exposed chunk in the plugin-vite shared React test (BUG-0180)](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md) |
 | `TASK-0444` | `verifying` | PLAN-0014 | [Scripts 面板补齐中英文案与插值合同（BUG-0081）](TASK-0444-scripts-panel-locale-contract.md) |

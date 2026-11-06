@@ -35,6 +35,7 @@
 			"scripts/quality/**/*.mjs",
 			"scripts/ci/**/*.mjs",
 			"scripts/worktree/**/*.mjs",
+			"scripts/perf/**/*.mjs",
 			"scripts/eval/**/*.ts",
 			"scripts/eval/**/*.mjs",
 			"packages/*/src/**/*.ts",
