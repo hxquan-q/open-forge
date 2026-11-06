@@ -189,6 +189,16 @@ describe.sequential("Task preparation through a verified final Git integration",
 		expect(run.verificationRetryable).toBe(false);
 		expect(readFileSync(join(context.root, "feature.txt"), "utf8")).toBe("broken\n");
 	}, 15000); // Two complete implementation/review/test rounds with real Git and subprocesses.
+	it("refuses a controller checkout that differs from the configured integration branch", async () => {
+		const policy = { ...context.policy, integration: { ...context.policy.integration, branch: "trunk" } };
+		await expect(prepareTask({ ...context, policy })).rejects.toThrow(
+			"controller checkout must be trunk (current: main)",
+		);
+		expect(() => prepareIntegration({ ...context, policy })).toThrow(
+			"integration target must be local trunk (current: main)",
+		);
+		expect(context.store.read().runs[context.token.runId].status).toBe("verified");
+	});
 	it("invalidates worker evidence when a final integration candidate is created", () => {
 		const source = context.store.read().runs[context.token.runId].binding.head;
 		const preview = prepareIntegration(context);

@@ -14,7 +14,9 @@ function eligible({ root, store, policy, token }) {
 	requireCapability(policy, "integrate-dev");
 	bindRepository(store, root);
 	assertLease(store.read(), token, Date.now());
-	if (git(root, ["branch", "--show-current"]) !== "main") throw new Error("integration target must be local main");
+	const expected = policy.integration.branch;
+	const actual = git(root, ["branch", "--show-current"]) || "(detached)";
+	if (actual !== expected) throw new Error(`integration target must be local ${expected} (current: ${actual})`);
 	const evidence = exportEvidence(store, token.runId, policy);
 	const run = store.read().runs[token.runId];
 	const documents = run.approvals ?? [];

@@ -25,5 +25,9 @@
 		"maxCrashRate": 0.01,
 		"maxCrashRatio": 1.2,
 		"maxTelemetryAgeMs": 900000
+	},
+	"integration": {
+		"branch": "main",
+		"candidateRef": "origin/dev"
 	}
 }

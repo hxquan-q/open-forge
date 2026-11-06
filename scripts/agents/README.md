@@ -6,6 +6,7 @@
 ## 权威入口
 
 - [策略](../../project/autonomy-policy.json)：目标 L4，当前 level=0，模型与发布能力默认不启用。
+- 集成目标：策略必填 `integration.branch`（本地集成分支，当前 `main`）与 `integration.candidateRef`（`<remote>/<branch>`，当前 `origin/dev`），无默认回退。准备（`prepareTask`）、集成（`prepareIntegration`）与发布授权均校验当前检出等于 `integration.branch`，报错带期望与实际分支。`candidateRef` 目前只做策略校验，尚未接入任何调用方（留给 TASK-0451）。分支角色以[协作规则](../../docs/dev/agent-rules/collaboration.md)为准。
 - [执行器配置](../../project/agents.json)：示例默认 disabled，启用前固定实际可执行文件、模型与隔离方式。
 - [JSON 合同](../../schemas/agents/)：边界采用闭合的 JSON Schema 子集；不支持的关键字报错，不静默略过约束。
 - 任务继续使用 project/tasks；不增加 GOAL 状态机。运行进程、租约与尝试次数不写进 Task 心跳提交。

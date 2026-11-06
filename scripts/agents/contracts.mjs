@@ -15,8 +15,26 @@ export function contract(name, value) {
 	return assertSchema(JSON.parse(readFileSync(schemaPath, "utf8")), value);
 }
 
+const BRANCH = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/u;
+const REMOTE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u;
+const validBranch = (name) =>
+	BRANCH.test(name) &&
+	name !== "HEAD" &&
+	!name.includes("..") &&
+	!name.endsWith(".") &&
+	name.split("/").every((part) => part !== "" && !part.startsWith(".") && !part.endsWith(".lock"));
+
 export function validatePolicy(value) {
 	contract("policy", value);
+	const { branch, candidateRef } = value.integration;
+	if (!validBranch(branch)) throw new Error("integration branch is not a valid branch name");
+	const separator = candidateRef.indexOf("/");
+	if (
+		separator < 0 ||
+		!REMOTE.test(candidateRef.slice(0, separator)) ||
+		!validBranch(candidateRef.slice(separator + 1))
+	)
+		throw new Error("integration candidateRef must be <remote>/<branch>");
 	if (value.level > value.targetLevel) throw new Error("current autonomy level exceeds its target");
 	if (value.limits.heartbeatMs * 2 >= value.limits.leaseMs) throw new Error("heartbeat must leave lease renewal room");
 	if (value.limits.stallMs > value.limits.wallTimeMs) throw new Error("stall timeout exceeds wall time");

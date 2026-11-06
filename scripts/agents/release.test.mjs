@@ -260,6 +260,13 @@ it("rejects unsigned, wrong-subject, missing-platform and stale authorization be
 	await expect(publishRelease(context)).rejects.toThrow(/artifact/);
 });
 
+it("refuses to publish from a checkout other than the configured integration branch", async () => {
+	const context = fixture();
+	git(context.repo, ["switch", "--quiet", "-c", "trunk"]);
+	await expect(publishRelease(context)).rejects.toThrow("release candidate must be on local main (current: trunk)");
+	expect(context.store.read().releases).toEqual({});
+});
+
 it("requires sandbox-owner proof to recover unknown cleanup and keeps the operator pause", () => {
 	const context = fixture();
 	context.store.transaction((state) => {
