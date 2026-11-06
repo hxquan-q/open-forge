@@ -24,7 +24,7 @@ write_paths:
   - project/tasks/TASK-0456-autonomy-docs-candidate-verify-sync.md
 exclusive_paths: []
 depends_on: []
-conflicts_with: []
+conflicts_with: [TASK-0197]
 integration_status: pending
 created: 2026-11-07
 updated: 2026-11-07
