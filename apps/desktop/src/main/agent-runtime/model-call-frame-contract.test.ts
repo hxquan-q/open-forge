@@ -2,6 +2,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { VETTA_HOME_ENV } from "@vetta/action-rpc";
 import type { Api, Model } from "@vetta/ai";
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import { ENV_AGENT_DIR, getAgentDir } from "@vetta/coding-agent/config";
@@ -14,7 +15,7 @@ import {
 import type { AgentPluginRuntimeConfig } from "@vetta/coding-agent/plugin-runtime";
 import { ALL_SCENARIOS, type ConversationScenario } from "@vetta/coding-agent/profile";
 import { RuntimeHost } from "@vetta/runtime-core";
-import { DesktopRuntimeBackendPool } from "@vetta/runtime-desktop";
+import { DesktopRuntimeBackendPool, resolveCodeProjectAiWorkspace } from "@vetta/runtime-desktop";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
 	type OpenAiResponsesTestServer,
@@ -48,11 +49,15 @@ describe("Desktop RuntimeHost model-call frame contract", () => {
 	const questionHandlerDisposals: Array<() => void> = [];
 	const servers: OpenAiResponsesTestServer[] = [];
 	const originalAgentDir = process.env[ENV_AGENT_DIR];
+	const originalVettaHome = process.env[VETTA_HOME_ENV];
 	let isolatedGlobalAgentDir: string;
+	let isolatedVettaHome: string;
 
 	beforeAll(async () => {
 		isolatedGlobalAgentDir = await mkdtemp(join(tmpdir(), "desktop-frame-global-agent-"));
+		isolatedVettaHome = await mkdtemp(join(tmpdir(), "desktop-frame-vetta-home-"));
 		process.env[ENV_AGENT_DIR] = isolatedGlobalAgentDir;
+		process.env[VETTA_HOME_ENV] = isolatedVettaHome;
 	});
 
 	afterEach(async () => {
@@ -67,7 +72,10 @@ describe("Desktop RuntimeHost model-call frame contract", () => {
 	afterAll(async () => {
 		if (originalAgentDir === undefined) delete process.env[ENV_AGENT_DIR];
 		else process.env[ENV_AGENT_DIR] = originalAgentDir;
+		if (originalVettaHome === undefined) delete process.env[VETTA_HOME_ENV];
+		else process.env[VETTA_HOME_ENV] = originalVettaHome;
 		await rm(isolatedGlobalAgentDir, { recursive: true, force: true });
+		await rm(isolatedVettaHome, { recursive: true, force: true });
 	});
 
 	for (const scenario of ALL_SCENARIOS) {
@@ -268,6 +276,7 @@ describe("Desktop RuntimeHost model-call frame contract", () => {
 	// 这条用例验证整条注入链——宿主 resolver → composition → Prompt Runtime → system prompt。
 	it("carries the Desktop-owned mode prompt into the system prompt of the session's agentMode", async () => {
 		const cwd = await temporaryDirectory("desktop-frame-mode-prompt-workspace-");
+		const projectWorkspace = resolveCodeProjectAiWorkspace(cwd);
 		const server = await createServer();
 		const model = { ...MODEL, baseUrl: server.baseUrl };
 		const agentStateDir = await temporaryDirectory("desktop-frame-mode-prompt-agent-");
@@ -283,6 +292,9 @@ describe("Desktop RuntimeHost model-call frame contract", () => {
 			agent: createCodingAgentRuntimeSessionSelection({
 				scenario: "conversation",
 				agentMode: "coding",
+				projectIdentity: cwd,
+				projectAiWorkspaceRoot: projectWorkspace.directory,
+				projectAiWorkspaceToolRoot: projectWorkspace.directory,
 				includeAgentSkills: false,
 			}),
 			executionMode: "full-access",

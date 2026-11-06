@@ -14,11 +14,13 @@ const navigate = vi.hoisted(() => vi.fn());
 const openProjectSession = vi.hoisted(() => vi.fn(async () => undefined));
 const loadSessions = vi.hoisted(() => vi.fn(async () => undefined));
 const projectConfigFiles = new Map<string, string>();
-const projectConfigFs = {
-	readFile: vi.fn(async (filePath: string) => ({ content: projectConfigFiles.get(filePath) ?? "", encoding: "utf8" as const })),
-	createDirectory: vi.fn(async (_directory: string) => undefined),
-	writeFile: vi.fn(async (filePath: string, content: string) => {
-		projectConfigFiles.set(filePath, content);
+const projectConfigApi = {
+	readCodeConfig: vi.fn(async (projectCwd: string) => {
+		const content = projectConfigFiles.get(projectCwd);
+		return { exists: content !== undefined, content: content ?? "" };
+	}),
+	writeCodeConfig: vi.fn(async (input: { projectCwd: string; content: string }) => {
+		projectConfigFiles.set(input.projectCwd, input.content);
 	}),
 };
 
@@ -66,9 +68,9 @@ beforeEach(() => {
 			project: {
 				list: vi.fn(async () => allstarSnapshot),
 				openAllstar: vi.fn(async () => ({ path: "/x" })),
+				...projectConfigApi,
 			},
 			dialog: { selectFolder: vi.fn(async () => null) },
-			fs: projectConfigFs,
 		},
 	});
 });
@@ -139,9 +141,8 @@ beforeEach(() => {
 	openProjectSession.mockReset();
 	loadSessions.mockReset();
 	projectConfigFiles.clear();
-	projectConfigFs.readFile.mockClear();
-	projectConfigFs.createDirectory.mockClear();
-	projectConfigFs.writeFile.mockClear();
+	projectConfigApi.readCodeConfig.mockClear();
+	projectConfigApi.writeCodeConfig.mockClear();
 	localStorage.clear();
 	allstarSnapshot.allstarProjects = [];
 	store.set(workspaceModeByProjectAtom, new Map());
@@ -246,19 +247,18 @@ it("项目配置保存到项目专属文件并在重新打开时读取", async (
 	act(() => result.current.onConfigureProject("/proj/a", "a"));
 
 	await waitFor(() => expect(result.current.projectConfig.status).toBe("ready"));
-	expect(projectConfigFs.readFile).toHaveBeenCalledWith("/proj/a/.vetta/allstar/project-config.md");
+	expect(projectConfigApi.readCodeConfig).toHaveBeenCalledWith("/proj/a");
 
 	const content = "# Project configuration\\n\\n## Git\\norigin: https://example.test/repo.git\\n";
 	act(() => result.current.projectConfig.changeContent(content));
 	await act(async () => result.current.projectConfig.save());
 
-	expect(projectConfigFs.createDirectory).toHaveBeenCalledWith("/proj/a/.vetta/allstar");
-	expect(projectConfigFs.writeFile).toHaveBeenCalledWith("/proj/a/.vetta/allstar/project-config.md", content);
+	expect(projectConfigApi.writeCodeConfig).toHaveBeenCalledWith({ projectCwd: "/proj/a", content });
 	expect(result.current.projectConfig.status).toBe("saved");
 
 	act(() => result.current.projectConfig.close());
 	act(() => result.current.onConfigureProject("/proj/a", "a"));
-	await waitFor(() => expect(projectConfigFs.readFile).toHaveBeenCalledTimes(2));
+	await waitFor(() => expect(projectConfigApi.readCodeConfig).toHaveBeenCalledTimes(2));
 	await waitFor(() => expect(result.current.projectConfig.status).toBe("ready"));
 	expect(result.current.projectConfig.content).toBe(content);
 });

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -259,6 +260,42 @@ describe("会话注入工具（TASK-0095）", () => {
 			| { sessionRuntimeTools?: readonly unknown[] }
 			| undefined;
 		expect(sessionConfiguration?.sessionRuntimeTools).toHaveLength(1);
+	});
+});
+
+describe("Code 项目 AI 工作区会话上下文（TASK-0449）", () => {
+	it("只为 coding 会话注入宿主解析的项目身份、AI 工作区路径和落点规则", async () => {
+		const root = await createTemporaryRoot();
+		const coding = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		const codingOptions = parseCodingAgentRuntimeSessionConfiguration(coding.config.agent?.sessionConfiguration);
+		expect(codingOptions.projectIdentity).toBe(resolve(root));
+		expect(codingOptions.projectAiWorkspaceRoot).toContain("workspace");
+		expect(codingOptions.projectAiWorkspaceToolRoot).toBe(codingOptions.projectAiWorkspaceRoot);
+		expect(codingOptions.systemPromptVolatileAddon).toContain("project-config.md");
+		expect(codingOptions.systemPromptVolatileAddon).toContain("Keep source, tests");
+
+		const sameProjectMember = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		const memberOptions = parseCodingAgentRuntimeSessionConfiguration(
+			sameProjectMember.config.agent?.sessionConfiguration,
+		);
+		expect(memberOptions.projectAiWorkspaceRoot).toBe(codingOptions.projectAiWorkspaceRoot);
+
+		const work = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "work", capabilityProfile: "work" },
+			"conversation",
+			"interactive",
+		);
+		const workOptions = parseCodingAgentRuntimeSessionConfiguration(work.config.agent?.sessionConfiguration);
+		expect(workOptions.projectIdentity).toBeUndefined();
+		expect(workOptions.projectAiWorkspaceRoot).toBeUndefined();
 	});
 });
 

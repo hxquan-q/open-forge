@@ -96,7 +96,7 @@ describe("AllstarDevHomePageView", () => {
 						{
 							cwd: "/proj/a",
 							projectName: "a",
-							registered: true,
+							registered: false,
 							totalSessions: 6,
 							sessions: [
 								{ path: "/shard/a/a1.jsonl", title: "修登录缺陷" },

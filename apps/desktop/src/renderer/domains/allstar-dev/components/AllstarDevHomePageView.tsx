@@ -104,16 +104,14 @@ function AllstarDevProjectCardView({
 				<h3 className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
 				<div className="flex shrink-0 items-center gap-1.5">
 					<span className="text-xs text-muted-foreground">{card.totalSessions}</span>
-					{card.registered && (
-						<Button
-							variant="ghost"
-							size="xs"
-							title={labels.configureProject}
-							onClick={() => onConfigureProject(card.cwd, card.projectName)}
-						>
-							{labels.configureProject}
-						</Button>
-					)}
+					<Button
+						variant="ghost"
+						size="xs"
+						title={labels.configureProject}
+						onClick={() => onConfigureProject(card.cwd, card.projectName)}
+					>
+						{labels.configureProject}
+					</Button>
 				</div>
 			</header>
 			{card.sessions.length === 0 ? (

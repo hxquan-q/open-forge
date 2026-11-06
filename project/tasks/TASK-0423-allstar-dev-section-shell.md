@@ -9,7 +9,7 @@ plan: PLAN-0027
 source: REQ-0030
 related_requirement: [REQ-0030]
 related_plan: [PLAN-0027]
-related_tasks: [TASK-0422]
+related_tasks: [TASK-0422, TASK-0449]
 related_issues: []
 related_bugs: []
 execution: serial

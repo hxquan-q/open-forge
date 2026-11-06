@@ -1,6 +1,5 @@
 // Copyright The Open Forge contributors.
 import { useEffect, useRef, useState } from "react";
-import { getAllstarProjectConfigDirectory, getAllstarProjectConfigPath } from "../services/project-configuration.js";
 
 export type AllstarProjectConfigStatus =
 	| "idle"
@@ -45,14 +44,10 @@ export function useAllstarProjectConfig(emptyTemplate: string): AllstarProjectCo
 		setContent("");
 		setSavedContent("");
 
-		void window.vetta.fs.readFile(getAllstarProjectConfigPath(target.cwd)).then(
+		void window.vetta.project.readCodeConfig(target.cwd).then(
 			(snapshot) => {
 				if (cancelled || request !== generation.current) return;
-				if (snapshot.encoding !== "utf8") {
-					setStatus("load-error");
-					return;
-				}
-				const nextContent = snapshot.content || emptyTemplateRef.current;
+				const nextContent = snapshot.exists ? snapshot.content : emptyTemplateRef.current;
 				setContent(nextContent);
 				setSavedContent(nextContent);
 				setStatus("ready");
@@ -90,11 +85,9 @@ export function useAllstarProjectConfig(emptyTemplate: string): AllstarProjectCo
 		if (!target) return;
 		const request = generation.current;
 		const nextContent = content;
-		const directory = getAllstarProjectConfigDirectory(target.cwd);
 		setStatus("saving");
 		try {
-			await window.vetta.fs.createDirectory(directory);
-			await window.vetta.fs.writeFile(getAllstarProjectConfigPath(target.cwd), nextContent);
+			await window.vetta.project.writeCodeConfig({ projectCwd: target.cwd, content: nextContent });
 			if (request !== generation.current) return;
 			setSavedContent(nextContent);
 			setStatus("saved");
