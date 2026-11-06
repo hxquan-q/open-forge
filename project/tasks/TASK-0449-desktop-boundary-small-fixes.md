@@ -25,6 +25,11 @@ write_paths:
   - apps/desktop/src/main/plugins/plugin-protocol-contract.test.ts
   - apps/desktop/src/renderer/domains/conversation/components/blocks/markdown-math-client.test.ts
   - apps/desktop/src/renderer/domains/conversation/components/blocks/MarkdownRichContent.test.tsx
+  - apps/desktop/docs/markdown-rich-content.md
+  - packages/theme-ui/src/markdown/math-client.test.ts
+  - packages/theme-ui/src/markdown/rich-content.test.tsx
+  - packages/theme-ui/package.json
+  - bun.lock
   - docs/dev/agent-rules/repository.md
 exclusive_paths: []
 depends_on: []
@@ -57,3 +62,12 @@ updated: 2026-11-06
 - 2026-11-06 用户明确要求提交推送，本提交保存至 `xquan`，目标 `origin/xquan`；集成状态保持 pending，完整 Task 范围继续按合同核对。
 - 未运行与风险：不启动真实 Desktop；不调整依赖方向或扩大依赖版本。全量验证失败详情见 TASK-0448。
 - 发布：不适用
+
+## 2026-11-06 深链测试迁入 theme-ui
+
+- 决策（用户选择）：`markdown-math-client.test.ts` 与 `MarkdownRichContent.test.tsx` 测的是 theme-ui 内部模块（`math-render`、`math-client`、`RichCodeBlock`、`use-render-snapshot`），这些模块不在公开 `exports` 中，且该包公开发布到 npm。选择把测试迁入 `packages/theme-ui/src/markdown/`（`math-client.test.ts`、`rich-content.test.tsx`），改用包内相对导入；不为测试扩大公开 exports。
+- Desktop 专用的 `markdown-host.fixture.ts` 仍被 `MarkdownMedia.test.tsx` 使用，原样保留；迁入的测试内联同结构的宿主替身。
+- theme-ui `devDependencies` 新增 `@testing-library/react@16.3.2`（与仓库内其他包已锁定版本一致，未升级）；`bun.lock` 随之重排，Desktop 继续解析 16.3.3。
+- 断言与用例未改动：迁移后 2 文件 14 例通过。
+- `apps/desktop/docs/markdown-rich-content.md` 的开发验证命令同步到新路径。
+- theme-ui 包级 `tsgo` 检查迁移前后同为 51 条既有错误（`JSX` 命名空间、`node:*` 类型），新文件未引入新错误；该检查不在 `bun run check` 内。
