@@ -1,7 +1,7 @@
 ---
 id: TASK-0456
 type: task
-status: in_progress
+status: verifying
 priority: P3
 owner: docs
 requirement: []
@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0456-autonomy-docs-candidate-verify-sync
-worktree: ../open-forge-wt/task-0456-autonomy-docs-candidate-verify-sync
-base_commit: 4a965aa4933e5496141a35dce2aa2e8349c6b1a7
+worktree: unassigned（已集成，待推送后清理）
+base_commit: 6f25584f94ae90ce5cc46dea44a71c6113e096c3
 read_paths:
   - scripts/agents/README.md
   - project/autonomy-policy.json
@@ -25,7 +25,7 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0197]
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -67,4 +67,6 @@ updated: 2026-11-07
 
 ## 交付记录
 
-- 待实现时填写。
+- 修改 `docs/dev/agent-rules/autonomy.md`「执行顺序」第 4 条：在"前进本地 main"之后补充推送后候选核验回路——本地 main 集成后推送 `main:dev`，远端 CI 通过后由操作者导入 Ed25519 签名的 CI 服务证明，`candidate-verify` 记录候选验证；检查名按策略逻辑名由签发方映射，store 中 `integration.candidateVerification` 为权威绑定。与 `scripts/agents/README.md`「推送后候选核验」节一致，未复述命令细节。
+- 未修改 scripts/agents 代码、schema、README 及其它 agent-rules 扩展文件；未改动「闸门与信任」信任模型表述。
+- 验证：`bun run check`（含 agent-guide 守卫）通过；`bun run test:impact -- docs/dev/agent-rules/autonomy.md` 通过；契约绑定 `scripts/agents/integrate.test.mjs` 覆盖 candidate-verify 绑定行为。
