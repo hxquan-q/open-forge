@@ -142,6 +142,23 @@ describe("buildTools confinement", () => {
 		expect(gitCalls[1]).toContain("user.name=open-forge-adapter");
 		expect(gitCalls[1].at(-1)).toBe("docs: sync");
 		expect(tools.get("git_commit").run({ files: ["README.md"], message: "x" })).toMatch(/refused/);
+		expect(tools.get("git_commit").run({ files: [], message: "x" })).toMatch(/no files to commit/);
+		gitCalls.length = 0;
+		expect(
+			tools.get("git_commit").run({ files: [], message: "chore: re-affirm candidate", allowEmpty: true }),
+		).toMatch(/committed \(empty\)/);
+		expect(gitCalls).toEqual([
+			[
+				"-c",
+				"user.name=open-forge-adapter",
+				"-c",
+				"user.email=adapter@open-forge.invalid",
+				"commit",
+				"--allow-empty",
+				"-m",
+				"chore: re-affirm candidate",
+			],
+		]);
 	});
 });
 

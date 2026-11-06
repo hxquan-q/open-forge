@@ -210,15 +210,19 @@ export function buildTools({ role, writePaths, baseCommit, config, runGit = git,
 	});
 	tools.set("git_commit", {
 		description:
-			"Stage the listed files (must be inside the Task write paths) and create one commit. Use a concise conventional-commit message.",
+			"Stage the listed files (must be inside the Task write paths) and create one commit. Use a concise conventional-commit message. Pass allowEmpty=true only when responding to a review that requires no file changes.",
 		parameters: {
 			type: "object",
 			required: ["files", "message"],
-			properties: { files: { type: "array", items: { type: "string" } }, message: { type: "string" } },
+			properties: {
+				files: { type: "array", items: { type: "string" } },
+				message: { type: "string" },
+				allowEmpty: { type: "boolean" },
+			},
 		},
 		run: (args) => {
 			const files = Array.isArray(args.files) ? args.files : [];
-			if (files.length === 0) return "error: no files to commit";
+			if (files.length === 0 && args.allowEmpty !== true) return "error: no files to commit";
 			if (typeof args.message !== "string" || args.message.trim().length === 0) return "error: empty message";
 			const staged = [];
 			for (const file of files) {
@@ -228,7 +232,7 @@ export function buildTools({ role, writePaths, baseCommit, config, runGit = git,
 				staged.push(rel);
 			}
 			const identity = config.commitIdentity ?? { name: "open-forge-adapter", email: "adapter@open-forge.invalid" };
-			runGit(["add", "--", ...staged], cwd);
+			if (staged.length > 0) runGit(["add", "--", ...staged], cwd);
 			const head = runGit(
 				[
 					"-c",
@@ -236,12 +240,13 @@ export function buildTools({ role, writePaths, baseCommit, config, runGit = git,
 					"-c",
 					`user.email=${identity.email}`,
 					"commit",
+					...(staged.length === 0 ? ["--allow-empty"] : []),
 					"-m",
 					args.message.trim(),
 				],
 				cwd,
 			);
-			return truncate(`committed ${staged.join(", ")}\n${head}`, 4000);
+			return truncate(`committed ${staged.join(", ") || "(empty)"}\n${head}`, 4000);
 		},
 	});
 	return tools;
