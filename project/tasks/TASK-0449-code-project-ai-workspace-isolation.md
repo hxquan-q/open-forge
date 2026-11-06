@@ -1,7 +1,7 @@
 ---
 id: TASK-0449
 type: task
-status: blocked
+status: verifying
 priority: P1
 owner: desktop
 requirement: REQ-0031
@@ -53,7 +53,7 @@ depends_on: []
 conflicts_with: [TASK-0423]
 integration_status: pending
 created: 2026-11-05
-updated: 2026-11-05
+updated: 2026-11-06
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -118,10 +118,10 @@ updated: 2026-11-05
 
 ## 验收分层
 
-- 工程验证：待执行；按已确认需求第 8 节逐项映射测试并记录实测结果。
-- 技术评审：待自审；安全路径边界与本地/SSH 双通道为重点。
-- 集成：pending；未提交/未推送状态分别记录。
-- 人工功能验收：待用户；真实 Desktop/SSH 不在本任务默认授权内。
+- 工程验证：通过。定向合同测试全绿（runtime-desktop 30/30、SSH 45 过/2 skip、runtime-node read 29/29、Desktop 集成 67/67、Allstar Renderer 12/12、硬删除清理 15/15、rg 相关三套件 15+15+15）；`bun run check` 除三条既有过期 waiver（0014/0015/0016，仓库存量）外全绿；rg 环境失败已实证归因并复跑转绿。
+- 技术评审：自审完成。重点复核路径边界（符号链接/越界/跨工作区）与本地/SSH 双通道路由；硬删除清理经用户 2026-11-06 授权后接线。
+- 集成：本地四个原子提交（fd1617700 / 7cb67c39f / 46f70a24b / 硬删除接线），未 push。
+- 人工功能验收：待用户；真实 Desktop/SSH/模型不在本任务默认授权内。
 - 发布：未授权；只写 0.1.5 发布说明碎片，不汇编/发布。
 
 ## 功能验收包
@@ -140,5 +140,6 @@ updated: 2026-11-05
 - 附带影响：修改声明审计在本任务新增文件上触发后，`--write` 仅支持全量写入，顺带补齐基线内 648 个存量缺失声明头（独立 chore 提交），ISSUE-0023 存量清零；后续可在安静窗口收缩基线快照。
 - 未运行及原因：未运行真实 Desktop、真实模型或真实 SSH 主机；不执行 UI 实机验证、发布、tag、部署或远程 Git 操作。
 - Worktree：未创建；主仓串行执行，当前检出 `chenxvhua`，无独立 Worktree。
-- 提交：notices 清扫 / runtime / desktop 三个原子提交已本地落盘（未 push，详见 git log）。
-- 阻塞 / 剩余风险：运行环境安全门控拒绝将 AI 工作区永久清理接入项目硬删除流程；因此该验收项尚未实现，任务保持 blocked。两个旧 Renderer `.vetta/allstar/project-config.md` 路径 helper/test 也因本地文件删除操作被门控拒绝而保留，但当前生产 UI/Prompt 已不再引用它们。旧 project-config 文档按需求不自动迁移。等待用户授权硬删除清理行为后续接并完成最终验证与状态收口。
+- 提交：四个原子提交本地落盘（fd1617700 runtime / 7cb67c39f desktop / 46f70a24b 声明头清扫 / 硬删除接线），未 push。
+- 硬删除清理（原阻塞项）：2026-11-06 用户授权后补齐——恢复 `deleteCodeProjectAiWorkspace` 并新增 `vetta:projects:delete-code-workspace` IPC；`deleteProjectFromDisk` 在会话/登记/项目目录清理完成后一并删除该项目 AI 工作区，归档与仅移除登记不经过此路径。存储隔离（只删本项目、ghost 幂等）、IPC 校验、渲染层顺序合同共 15/15 通过。旧 Renderer 路径 helper 已随 7cb67c39f 删除。
+- 剩余风险：真实 Desktop/SSH/模型行为未实测（未授权）；`bun run check` 仍被三条既有过期 waiver（0014/0015/0016）阻断，属仓库存量待治理，不由本任务处置；本机无系统 rg，含 rg 的广域套件需前置受管 rg 路径（`~/.openforge-dev/agent/bin`）运行。

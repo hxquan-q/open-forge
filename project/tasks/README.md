@@ -181,7 +181,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0449` | `blocked` | PLAN-0029 | [Code 项目 AI 工作区隔离与 Memory/Journal 迁移](TASK-0449-code-project-ai-workspace-isolation.md)：REQ-0031，关联 TASK-0423；本地/SSH 项目路径身份、会话级文件工具双根授权、配置与 Memory/Journal 迁移已完成定向验证；硬删除工作区清理被安全门控阻断，等待用户授权；serial，当前 chenxvhua 主检出。 |
+| `TASK-0449` | `verifying` | PLAN-0029 | [Code 项目 AI 工作区隔离与 Memory/Journal 迁移](TASK-0449-code-project-ai-workspace-isolation.md)：REQ-0031，关联 TASK-0423；本地/SSH 项目路径身份、会话级文件工具双根授权、配置与 Memory/Journal 迁移、硬删除清理（2026-11-06 用户授权后接线）均已定向验证全绿；本地四提交未 push；待用户实机验收；serial，chenxvhua 主检出。 |
 | `TASK-0448` | `verifying` | PLAN-0027 | [显式调用候选项按会话模式显示](TASK-0448-invocation-candidates-mode-visibility.md)：REQ-0030/TASK-0423/TASK-0424；`/` Skill/连接器与 `@` Agent 候选仅作用户层模式筛选，缺省两档可见，实际工具调用不变；定向测试、SDK 合同测试与完整 check 通过；impact 因未修改的 vetta-ui-design HMR fixture 失败退出，待用户实机验收；serial，main 主检出。 |
 | `TASK-0447` | `done` | PLAN-0027 | [Allstar 自主开发改为标准侧栏导航项](TASK-0447-allstar-sidebar-standard-nav-item.md)：REQ-0030；默认排在原型设计后，接入置顶/更多/拖拽布局并将容量提升至 6；定向 40/40+1/1、影响面过，用户实机确认默认位置（2026-11-02）；完整 check 仅被既有 WAIVER-0006/0007 阻断；`5e3a3774f` 已推 origin/chenxvhua；serial，main 主检出。 |
 | `TASK-0424` | `done` | PLAN-0027 | [Agent/团队所属模式](TASK-0424-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0036 定位重合讨论。 |

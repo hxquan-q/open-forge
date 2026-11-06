@@ -164,3 +164,15 @@ export async function writeCodeProjectConfig(
 		await rm(temporary, { force: true }).catch(() => undefined);
 	}
 }
+
+/**
+ * 硬删除项目时清理其 AI 工作区（ADR-0152 决策 6）。归档与仅移除登记不经过此路径；
+ * 目录不存在时静默通过，与硬删除流程的重试语义兼容。
+ */
+export async function deleteCodeProjectAiWorkspace(
+	projectCwd: string,
+	options: EnsureCodeProjectAiWorkspaceOptions = {},
+): Promise<void> {
+	const workspace = resolveCodeProjectAiWorkspace(projectCwd, { vettaHome: options.vettaHome });
+	await rm(workspace.directory, { recursive: true, force: true });
+}

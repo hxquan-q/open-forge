@@ -1,6 +1,10 @@
 // Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
-import { readCodeProjectConfig, writeCodeProjectConfig } from "../projects/code-project-ai-workspace.js";
+import {
+	deleteCodeProjectAiWorkspace,
+	readCodeProjectConfig,
+	writeCodeProjectConfig,
+} from "../projects/code-project-ai-workspace.js";
 import { getDesktopProjectService } from "../projects/project-service-instance.js";
 
 const CHANNELS = {
@@ -16,6 +20,7 @@ const CHANNELS = {
 	REMOVE_ALLSTAR: "vetta:projects:remove-allstar",
 	READ_CODE_CONFIG: "vetta:projects:read-code-config",
 	WRITE_CODE_CONFIG: "vetta:projects:write-code-config",
+	DELETE_CODE_WORKSPACE: "vetta:projects:delete-code-workspace",
 } as const;
 
 function asString(value: unknown): string {
@@ -89,6 +94,10 @@ export function registerProjectsIpc(): () => void {
 			requireString(record.content, "content"),
 		);
 	});
+
+	ipcMain.handle(CHANNELS.DELETE_CODE_WORKSPACE, (_event, projectCwd: unknown) =>
+		deleteCodeProjectAiWorkspace(requireNonEmptyString(projectCwd, "projectCwd")),
+	);
 
 	return () => {
 		for (const channel of Object.values(CHANNELS)) ipcMain.removeHandler(channel);

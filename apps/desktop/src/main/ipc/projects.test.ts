@@ -8,6 +8,7 @@ const ipc = vi.hoisted(() => ({
 const codeConfig = vi.hoisted(() => ({
 	read: vi.fn(async (projectCwd: string) => ({ exists: true, content: `config:${projectCwd}` })),
 	write: vi.fn(async (_projectCwd: string, _content: string) => undefined),
+	destroy: vi.fn(async (_projectCwd: string) => undefined),
 }));
 
 vi.mock("electron", () => ({
@@ -19,6 +20,7 @@ vi.mock("electron", () => ({
 vi.mock("../projects/code-project-ai-workspace.js", () => ({
 	readCodeProjectConfig: codeConfig.read,
 	writeCodeProjectConfig: codeConfig.write,
+	deleteCodeProjectAiWorkspace: codeConfig.destroy,
 }));
 vi.mock("../projects/project-service-instance.js", () => ({
 	getDesktopProjectService: () => ({
@@ -40,6 +42,7 @@ describe("Code project workspace IPC", () => {
 		ipc.removed.length = 0;
 		codeConfig.read.mockClear();
 		codeConfig.write.mockClear();
+		codeConfig.destroy.mockClear();
 	});
 
 	it("round-trips project identity and raw text through the workspace service", async () => {
@@ -66,5 +69,19 @@ describe("Code project workspace IPC", () => {
 
 		expect(() => write({}, { projectCwd: "C:/project", content: 1 })).toThrow("Invalid content");
 		expect(codeConfig.write).not.toHaveBeenCalled();
+	});
+
+	it("hard-delete cleanup delegates to the workspace service with a validated project path", async () => {
+		const teardown = registerProjectsIpc();
+		const removeWorkspace = ipc.handlers.get("vetta:projects:delete-code-workspace");
+		if (!removeWorkspace) throw new Error("Code workspace cleanup handler was not registered");
+
+		await expect(removeWorkspace({}, "C:/project")).resolves.toBeUndefined();
+		expect(codeConfig.destroy).toHaveBeenCalledWith("C:/project");
+
+		expect(() => removeWorkspace({}, "")).toThrow("Invalid projectCwd");
+		expect(codeConfig.destroy).toHaveBeenCalledTimes(1);
+		teardown();
+		expect(ipc.removed).toContain("vetta:projects:delete-code-workspace");
 	});
 });

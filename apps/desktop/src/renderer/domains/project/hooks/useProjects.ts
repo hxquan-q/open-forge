@@ -382,6 +382,9 @@ export function useProjectActions() {
 			await window.vetta.session.deleteAllForCwd(cwd);
 			await window.vetta.project.remove(cwd);
 			await window.vetta.fs.delete(cwd);
+			// 硬删除语义（REQ-0031）：项目目录删除完成后一并清理该项目 AI 工作区；
+			// 归档与仅移除登记不走此路径，工作区保留。
+			await window.vetta.project.deleteCodeWorkspace(cwd);
 			await refreshProjects();
 		},
 		[refreshProjects, store],

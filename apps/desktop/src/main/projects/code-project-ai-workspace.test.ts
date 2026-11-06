@@ -1,10 +1,11 @@
 // Copyright The Open Forge contributors.
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { resolveCodeProjectAiWorkspace } from "@vetta/runtime-desktop";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+	deleteCodeProjectAiWorkspace,
 	ensureCodeProjectAiWorkspace,
 	type LegacyProjectFilePort,
 	readCodeProjectConfig,
@@ -113,6 +114,23 @@ describe("ensureCodeProjectAiWorkspace Memory/Journal migration", () => {
 
 		await writeCodeProjectConfig(project, "", options);
 		expect(await readCodeProjectConfig(project, options)).toEqual({ exists: true, content: "" });
+	});
+
+	it("hard-deleting a project removes its AI workspace and only its own", async () => {
+		const { project, vettaHome } = await fixture();
+		const options = { vettaHome };
+		const other = join(dirname(project), "other-project");
+		const workspace = resolveCodeProjectAiWorkspace(project, options);
+		const otherWorkspace = resolveCodeProjectAiWorkspace(other, options);
+		await writeCodeProjectConfig(project, "config", options);
+		await ensureCodeProjectAiWorkspace(other, options);
+
+		await deleteCodeProjectAiWorkspace(project, options);
+
+		await expect(stat(workspace.directory)).rejects.toMatchObject({ code: "ENOENT" });
+		await expect(stat(otherWorkspace.directory)).resolves.toBeDefined();
+		// 从未建过工作区的项目重复硬删除不报错，与流程重试语义兼容。
+		await expect(deleteCodeProjectAiWorkspace(join(dirname(project), "ghost"), options)).resolves.toBeUndefined();
 	});
 });
 

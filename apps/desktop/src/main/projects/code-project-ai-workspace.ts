@@ -8,6 +8,7 @@ export type {
 } from "@vetta/runtime-desktop";
 export {
 	CODE_PROJECT_CONFIG_FILE_NAME,
+	deleteCodeProjectAiWorkspace,
 	ensureCodeProjectAiWorkspace,
 	readCodeProjectConfig,
 	writeCodeProjectConfig,

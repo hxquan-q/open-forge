@@ -1,12 +1,12 @@
 ---
 id: PLAN-0029
 type: plan
-status: blocked
+status: verifying
 priority: P1
 requirement: REQ-0031
 owner: desktop
 created: 2026-11-05
-updated: 2026-11-05
+updated: 2026-11-06
 depends_on: []
 related_requirement: [REQ-0031]
 related_tasks: [TASK-0449]

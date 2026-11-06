@@ -21,6 +21,7 @@ const project = {
 	archive: vi.fn(async () => {}),
 	unarchive: vi.fn(async () => {}),
 	remove: vi.fn(async () => {}),
+	deleteCodeWorkspace: vi.fn(async () => {}),
 };
 const selectFolder = vi.fn(async () => "/picked/repo");
 const fsDelete = vi.fn(async () => {});
@@ -105,7 +106,7 @@ describe("侧边栏的项目写入", () => {
 		expect(configSet).not.toHaveBeenCalled();
 	});
 
-	it("删除项目目录时，先清会话再摘登记，最后才动磁盘", async () => {
+	it("删除项目目录时，先清会话再摘登记，然后删目录，最后清理 AI 工作区", async () => {
 		const { result } = renderHook(() => useProjectActions());
 		const order: string[] = [];
 		deleteAllForCwd.mockImplementationOnce(async () => {
@@ -117,13 +118,18 @@ describe("侧边栏的项目写入", () => {
 		fsDelete.mockImplementationOnce(async () => {
 			order.push("disk");
 		});
+		project.deleteCodeWorkspace.mockImplementationOnce(async () => {
+			order.push("workspace");
+		});
 
 		await act(async () => {
 			await result.current.deleteProjectFromDisk("/picked/repo");
 		});
 
-		// 会话分片目录由 config.projects 推导，摘登记之后就找不到了，顺序不能反。
-		expect(order).toEqual(["sessions", "unregister", "disk"]);
+		// 会话分片目录由 config.projects 推导，摘登记之后就找不到了，顺序不能反；
+		// AI 工作区是硬删除语义的一部分（REQ-0031），在项目目录之后清理。
+		expect(order).toEqual(["sessions", "unregister", "disk", "workspace"]);
+		expect(project.deleteCodeWorkspace).toHaveBeenCalledWith("/picked/repo");
 		expect(configSet).not.toHaveBeenCalled();
 	});
 });
