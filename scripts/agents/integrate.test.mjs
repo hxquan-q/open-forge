@@ -106,6 +106,8 @@ describe.sequential("Task preparation through a verified final Git integration",
 			policy.capabilities = ["implement", "review", "verify", "integrate-dev"];
 			policy.allowedProviders = ["fixture"];
 			policy.requiredChecks = ["tests", "check"];
+			// This suite exercises cross-family review; the deployment policy may relax it.
+			policy.differentReviewerFamily = true;
 			const adapter = (id, family, script) => ({
 				id,
 				family,

@@ -85,6 +85,8 @@ function fixture({ processes, roots }) {
 	policy.capabilities = ["plan", "triage", "lessons", "implement", "review", "verify", "integrate-dev"];
 	policy.allowedProviders = ["fixture"];
 	policy.requiredChecks = ["tests", "check"];
+	// This suite enforces cross-family independence; the deployment policy may relax it.
+	policy.differentReviewerFamily = true;
 	policy.limits.heartbeatMs = 100;
 	policy.limits.leaseMs = 10000;
 	policy.limits.wallTimeMs = 10000;
