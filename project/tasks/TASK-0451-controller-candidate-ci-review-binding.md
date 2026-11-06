@@ -29,6 +29,8 @@ write_paths:
   - scripts/agents/integrate.test.mjs
   - scripts/agents/evidence.mjs
   - scripts/agents/evidence.test.mjs
+  - scripts/agents/cli.mjs
+  - scripts/agents/cli.test.mjs
   - scripts/agents/release.test.mjs
   - schemas/agents/service-proof.schema.json
   - scripts/agents/README.md
@@ -46,7 +48,7 @@ updated: 2026-11-06
 
 ## 目标
 
-集成前要求远端最终候选提交 SHA/树、该 SHA 上的 CI 结论与已有本地评审/检查绑定三者指向同一对象。原草稿的评审独立性拆至 [TASK-0454](TASK-0454-controller-review-isolation.md)，条款级证据拆至 [TASK-0455](TASK-0455-requirement-run-clause-evidence.md)。
+推送开发候选后，核验远端候选引用的 SHA/树、该 SHA 上的 CI 结论与已集成证据的本地评审/检查绑定三者指向同一对象。原草稿的评审独立性拆至 [TASK-0454](TASK-0454-controller-review-isolation.md)，条款级证据拆至 [TASK-0455](TASK-0455-requirement-run-clause-evidence.md)。
 
 ## 调查结论（2026-11-06，只读核对）
 
@@ -60,8 +62,12 @@ updated: 2026-11-06
 ### 做
 
 - `ci` proof 数据新增 `runId`（非空文本）与 `remoteRef`（`<remote>/<branch>`，与 policy 的 `integration.candidateRef` 校验口径一致）。
-- `applyIntegration` 接收 proofs，要求存在已验证的 `ci` proof：`head`/`tree` 等于最终候选，`remoteRef` 等于 policy 的 `integration.candidateRef`，`checks` 覆盖 `policy.requiredChecks`。
-- 发布阶段沿用同一 proof 字段，`release.test.mjs` 夹具补新字段；发布已有断言不削弱。
+- 时序决定（2026-11-06，用户选定）：协作规则是本地 `main` 集成后再推 `main:dev`，CI 才在 `origin/dev` 上运行，集成前不存在该 proof。因此 `applyIntegration` 不变，新增独立步骤 `verifyCandidate`（CLI `candidate-verify --run-id <id> --proof <file>`），在推送 dev 之后执行：
+  - 前置：run 为 `integrated` 且 `integration.phase === "applied"`，需 `integrate-dev` capability；租约已释放，不要求活动租约。
+  - 本地远端跟踪引用 `refs/remotes/<candidateRef>`（操作者先 fetch，控制器不联网）必须等于已集成证据的 head。
+  - proof 的 subject 为 `candidateSubject(binding, remoteRef)`；`head`/`tree` 等于已集成证据 binding，`remoteRef` 等于 policy 的 `integration.candidateRef`，`checks` 覆盖 `policy.requiredChecks`。
+  - 通过后在 `integration.candidateVerification` 记录 `{ runId, remoteRef, head, tree, keyId, at }` 并写审计；失败不改状态。
+- 发布阶段沿用同一 proof schema，`release.test.mjs` 夹具补新字段；发布已有断言不削弱，本 Task 不新增发布对 `candidateVerification` 的要求。
 - 检查名映射决定：proof 中的 `checks` 使用 policy 的逻辑名（如 `tests/windows`），由签发 proof 的服务把 workflow job 名映射为逻辑名；在 `scripts/agents/README.md` 记录映射表与签发方职责，控制器不解析 job 名。
 
 ### 不做
@@ -71,8 +77,9 @@ updated: 2026-11-06
 
 ## Given / When / Then
 
-- Given 已准备的集成候选与签名 CI proof / When `applyIntegration` / Then 仅在 proof 的 head、tree、remoteRef、checks 与候选及 policy 一致时前进。
-- 失败用例：proof 针对旧提交、树不一致、remoteRef 不是候选引用、缺少必需检查、缺 runId、无 proof，均拒绝且不改动目标分支。
+- Given 已集成（`applied`）的 run、已 fetch 的远端候选引用与签名 CI proof / When `verifyCandidate` / Then 仅在远端引用、proof 的 head、tree、remoteRef、checks 与已集成证据及 policy 一致时记录 `candidateVerification`。
+- 失败用例：run 未集成、远端引用不等于集成 head、proof 针对旧提交、树不一致、remoteRef 不是候选引用、缺少必需检查、缺 runId、无 proof、subject 不匹配，均拒绝且不改动 run 状态。
+- `applyIntegration` 的既有行为与测试不变。
 
 ## 必须保持
 
