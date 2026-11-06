@@ -5,6 +5,7 @@ import { PROJECTS_CHANNELS } from "../../shared/projects-ipc.js";
 import type { DesktopApi } from "../api.js";
 import type { DesktopThemeChangeRequest } from "../api-types/theme.js";
 import { FS_READ_TEXT_PREVIEW_CHANNEL } from "../fs-types.js";
+import { createDesktopHostClient } from "../host-transport.js";
 import { onIpcEvent, onIpcVoidEvent } from "./helper.js";
 
 export function createSystemApi(
@@ -34,6 +35,7 @@ export function createSystemApi(
 	| "diagnostics"
 	| "permissions"
 > {
+	const host = createDesktopHostClient(ipc);
 	return {
 		dialog: {
 			selectFolder: () => ipc.invoke("vetta:dialog:select-folder"),
@@ -245,16 +247,18 @@ export function createSystemApi(
 			installGit: () => ipc.invoke("vetta:runtimes:install-git"),
 		},
 		settings: {
-			getServerUrl: () => ipc.invoke("vetta:settings:get-server-url"),
-			getSiteUrl: () => ipc.invoke("vetta:settings:get-site-url"),
+			getServerUrl: () => host.call("settings.getServerUrl", {}),
+			getSiteUrl: () => host.call("settings.getSiteUrl", {}),
 			getServerToken: () => ipc.invoke("vetta:settings:get-server-token"),
 			setServerToken: (token) => ipc.invoke("vetta:settings:set-server-token", token),
 			getServerRefreshToken: () => ipc.invoke("vetta:settings:get-server-refresh-token"),
 			setServerRefreshToken: (token) => ipc.invoke("vetta:settings:set-server-refresh-token", token),
-			getModelTransport: () => ipc.invoke("vetta:settings:get-model-transport"),
-			setModelTransport: (transport) => ipc.invoke("vetta:settings:set-model-transport", transport),
-			getSessionInterruptContinue: () => ipc.invoke("vetta:settings:get-session-interrupt-continue"),
-			setSessionInterruptContinue: (mode) => ipc.invoke("vetta:settings:set-session-interrupt-continue", mode),
+			getModelTransport: () => host.call("settings.getModelTransport", {}),
+			setModelTransport: (transport) => host.call("settings.setModelTransport", { transport }),
+			getSessionInterruptContinue: () => host.call("settings.getSessionInterruptContinue", {}),
+			setSessionInterruptContinue: async (mode) => {
+				await host.call("settings.setSessionInterruptContinue", { mode });
+			},
 		},
 		subscription: {
 			getStatus: () => ipc.invoke("vetta:subscription:status"),

@@ -31,6 +31,7 @@
 		"packages/runtime-mcp",
 		"packages/runtime-storage",
 		"packages/runtime-memory",
+		"packages/host-protocol",
 		"packages/runtime-node",
 		"packages/runtime-telemetry",
 		"packages/runtime-desktop",

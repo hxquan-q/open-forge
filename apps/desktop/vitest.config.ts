@@ -37,6 +37,10 @@ export default defineConfig({
 				replacement: resolve(__dirname, "../../packages/plugins/plugin-sdk/src/manifest.ts"),
 			},
 			{
+				find: /^@vetta-org\/plugin-sdk$/,
+				replacement: resolve(__dirname, "../../packages/plugins/plugin-sdk/src/index.ts"),
+			},
+			{
 				find: "@vetta/ai/reasoning-presets",
 				replacement: resolve(__dirname, "../../packages/ai/src/reasoning-presets.ts"),
 			},
@@ -148,6 +152,11 @@ export default defineConfig({
 				replacement: resolve(__dirname, "../../packages/runtime-core/src/session-extensions/index.ts"),
 			},
 			{ find: "@vetta/runtime-core", replacement: resolve(__dirname, "../../packages/runtime-core/src/index.ts") },
+			{
+				find: "@vetta/host-protocol/client",
+				replacement: resolve(__dirname, "../../packages/host-protocol/src/client.ts"),
+			},
+			{ find: "@vetta/host-protocol", replacement: resolve(__dirname, "../../packages/host-protocol/src/index.ts") },
 			{ find: "@vetta/runtime-desktop", replacement: resolve(__dirname, "../../packages/runtime-desktop/src/index.ts") },
 			{ find: "@vetta/runtime-mcp/auth", replacement: resolve(__dirname, "../../packages/runtime-mcp/src/auth/index.ts") },
 			{

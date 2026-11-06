@@ -1,0 +1,32 @@
+{
+	"name": "@vetta/host-protocol",
+	"version": "0.1.4",
+	"private": true,
+	"description": "Transport-neutral Host request contracts: method definitions, envelopes, stable errors, owner slots and snapshot/delta streams",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./client": {
+			"types": "./dist/client.d.ts",
+			"import": "./dist/client.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "tsgo -p tsconfig.build.json",
+		"test": "bun ../../scripts/quality/run-vitest.mjs --run --config vitest.config.ts"
+	},
+	"dependencies": {
+		"@sinclair/typebox": "^0.34.41"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.2",
+		"@types/node": "^22.10.5"
+	}
+}

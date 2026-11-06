@@ -90,6 +90,7 @@
         "@vetta/capability-runtime": "workspace:*",
         "@vetta/cli-host": "workspace:*",
         "@vetta/coding-agent": "workspace:*",
+        "@vetta/host-protocol": "workspace:*",
         "@vetta/remote-control": "workspace:*",
         "@vetta/remote-desktop": "workspace:*",
         "@vetta/runtime-core": "workspace:*",
@@ -440,6 +441,17 @@
       "devDependencies": {
         "@types/node": "^22.10.5",
         "shx": "^0.4.0",
+        "typescript": "^5.9.2",
+      },
+    },
+    "packages/host-protocol": {
+      "name": "@vetta/host-protocol",
+      "version": "0.1.4",
+      "dependencies": {
+        "@sinclair/typebox": "^0.34.41",
+      },
+      "devDependencies": {
+        "@types/node": "^22.10.5",
         "typescript": "^5.9.2",
       },
     },
@@ -3488,6 +3500,8 @@
     "@vetta/docs-site": ["@vetta/docs-site@workspace:apps/docs-site"],
 
     "@vetta/ecosystem-adapter": ["@vetta/ecosystem-adapter@workspace:packages/ecosystem-adapter"],
+
+    "@vetta/host-protocol": ["@vetta/host-protocol@workspace:packages/host-protocol"],
 
     "@vetta/markdown": ["@vetta/markdown@workspace:packages/markdown"],
 
