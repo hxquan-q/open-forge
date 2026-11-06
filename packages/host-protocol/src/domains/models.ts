@@ -137,6 +137,86 @@ export const MODELS_HOST_METHODS = {
 		params: Type.Object({ providerId: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
 		result: Type.Boolean(),
 	}),
+	probe: defineHostMethod({
+		name: "models.probe",
+		params: Type.Object(
+			{ provider: Type.String({ minLength: 1 }), model: Type.String({ minLength: 1 }) },
+			{ additionalProperties: false },
+		),
+		result: Type.Object({
+			ok: Type.Boolean(),
+			message: Type.Optional(Type.String()),
+			error: Type.Optional(Type.String()),
+		}),
+	}),
+	fetchProviderModels: defineHostMethod({
+		name: "models.fetchProviderModels",
+		params: Type.Object({ providerName: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
+		result: Type.Object({
+			models: Type.Array(
+				Type.Object({
+					id: Type.String(),
+					name: Type.Optional(Type.String()),
+					contextWindow: Type.Optional(Type.Number()),
+					maxTokens: Type.Optional(Type.Number()),
+					vision: Type.Optional(Type.Boolean()),
+					reasoning: Type.Optional(Type.Boolean()),
+					reasoningLevels: Type.Optional(Type.Array(Type.String())),
+					ownedBy: Type.Optional(Type.String()),
+				}),
+			),
+			error: Type.Optional(Type.String()),
+		}),
+	}),
+	testProvider: defineHostMethod({
+		name: "models.testProvider",
+		params: Type.Object({ providerName: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
+		result: Type.Object({
+			ok: Type.Boolean(),
+			latencyMs: Type.Optional(Type.Number()),
+			status: Type.Optional(Type.Number()),
+			modelCount: Type.Optional(Type.Number()),
+			error: Type.Optional(
+				Type.Union([
+					Type.Literal("unknown-provider"),
+					Type.Literal("missing-base-url"),
+					Type.Literal("invalid-base-url"),
+					Type.Literal("timeout"),
+					Type.Literal("network"),
+				]),
+			),
+			detail: Type.Optional(Type.String()),
+		}),
+	}),
+	getBalance: defineHostMethod({
+		name: "models.getBalance",
+		params: Type.Object({ providerName: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
+		result: Type.Object({
+			provider: Type.String(),
+			supported: Type.Boolean(),
+			currency: Type.Optional(Type.String()),
+			available: Type.Optional(Type.Number()),
+			isAvailable: Type.Optional(Type.Boolean()),
+			errorCode: Type.Optional(
+				Type.Union([
+					Type.Literal("unsupported"),
+					Type.Literal("missing-key"),
+					Type.Literal("missing-base-url"),
+					Type.Literal("invalid-base-url"),
+					Type.Literal("timeout"),
+					Type.Literal("unauthorized"),
+					Type.Literal("http-status"),
+					Type.Literal("network"),
+					Type.Literal("invalid-response"),
+				]),
+			),
+		}),
+	}),
+	configPath: defineHostMethod({
+		name: "models.configPath",
+		params: NoParams,
+		result: Type.String(),
+	}),
 } as const;
 
 export type ModelsHostMethods = HostMethodSignatures<typeof MODELS_HOST_METHODS>;

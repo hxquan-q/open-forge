@@ -5,7 +5,7 @@ import { watch } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { isSshProjectUri } from "@vetta/ssh-transport";
-import { BrowserWindow, ipcMain, net } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
 import type {
 	McpConfigData,
 	McpHttpServerConfigData,
@@ -72,12 +72,7 @@ import {
 } from "../mcp/mcp-settings-service.js";
 import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.js";
 import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
-import { getProviderBalance } from "../models/balance/index.js";
-import { fetchProviderModels } from "../models/fetch-models.js";
-import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
-import { MODELS_CONFIG_PATH } from "../models/model-settings-service.js";
-import { probeModelProvider } from "../models/probe.js";
-import { testProviderAvailability } from "../models/test-provider.js";
+import { onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
 import { type DesktopProxyConfigSnapshot, redactProxyConfig } from "../proxy/proxy-settings.js";
 import { getLinuxSandboxCapability, getSandboxCapability, type SandboxCapability } from "../sandbox/capability.js";
@@ -157,11 +152,6 @@ const CHANNELS = {
 	DIR_CHANGED: "vetta:fs:dir-changed",
 	CONFIG_GET: "vetta:config:get",
 	CONFIG_SET: "vetta:config:set",
-	MODELS_PROBE: "vetta:models:probe",
-	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
-	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
-	MODELS_GET_BALANCE: "vetta:models:get-balance",
-	MODELS_CONFIG_PATH: "vetta:models:config-path",
 	MCP_CONFIG_PATH: "vetta:mcp:config-path",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
@@ -187,7 +177,6 @@ export { allowProjectRoot, assertPathReadableForPreview } from "../filesystem/fi
 export function registerFsIpc(): () => void {
 	const mcp = getDesktopMcpSettingsService();
 	const mcpOAuth = getDesktopMcpOAuthService();
-	const models = getDesktopModelSettingsService();
 	const disposeModelChanged = onDesktopModelSettingsChanged((providerIds) => {
 		for (const win of BrowserWindow.getAllWindows()) {
 			if (!win.isDestroyed()) win.webContents.send("vetta:models:changed", { providerIds: [...providerIds] });
@@ -467,31 +456,7 @@ export function registerFsIpc(): () => void {
 		if (patch.proxy !== undefined) await refreshDesktopProxy();
 	});
 
-	ipcMain.handle(CHANNELS.MODELS_PROBE, async (_event, ref: { provider: string; model: string }) => {
-		return probeModelProvider(ref);
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_FETCH_PROVIDER_MODELS, async (_event, providerName: unknown) => {
-		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
-		return fetchProviderModels(providerName.trim());
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_TEST_PROVIDER, async (_event, providerName: unknown) => {
-		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
-		const provider = (await models.getConfig()).providers[providerName.trim()];
-		return testProviderAvailability(provider, { fetchImpl: net.fetch });
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_GET_BALANCE, async (_event, providerName: unknown) => {
-		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
-		const provider = (await models.getConfig()).providers[providerName.trim()];
-		return getProviderBalance(providerName.trim(), provider, { fetchImpl: net.fetch });
-	});
-
-	// 只读：设置页脚展示当前运行时的模型配置真实路径（数据根可被 env 覆盖/迁移）。
-	ipcMain.handle(CHANNELS.MODELS_CONFIG_PATH, () => {
-		return MODELS_CONFIG_PATH;
-	});
+	// 模型探测四通道与 config-path 已迁到 Host 合同 models.*（TASK-0461，见 ../host/models-domain.ts）。
 
 	// 只读：MCP JSON 编辑器的路径提示，同模型配置路径一样不硬编码品牌数据根。
 	ipcMain.handle(CHANNELS.MCP_CONFIG_PATH, () => {
@@ -633,10 +598,6 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.UNWATCH_DIR);
 		ipcMain.removeHandler(CHANNELS.CONFIG_GET);
 		ipcMain.removeHandler(CHANNELS.CONFIG_SET);
-		ipcMain.removeHandler(CHANNELS.MODELS_PROBE);
-		ipcMain.removeHandler(CHANNELS.MODELS_FETCH_PROVIDER_MODELS);
-		ipcMain.removeHandler(CHANNELS.MODELS_GET_BALANCE);
-		ipcMain.removeHandler(CHANNELS.MODELS_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_GET);
 		ipcMain.removeHandler(CHANNELS.MCP_SET);

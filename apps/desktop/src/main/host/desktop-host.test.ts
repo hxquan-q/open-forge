@@ -45,10 +45,40 @@ vi.mock("../models/model-settings-host.js", () => ({
 		getRendererConfig: async () => rendererConfig,
 		replaceConfig,
 		getProviderApiKey,
+		getConfig: async () => ({ providers: { deepseek: {} } }),
 	}),
 }));
 vi.mock("@vetta/runtime-node/host", () => ({
 	resolveNodeConfigurationValue: (value: string) => `resolved:${value}`,
+}));
+
+vi.mock("../models/probe.js", () => ({
+	probeModelProvider: vi.fn(async () => ({ ok: true, message: "probe ok" })),
+}));
+vi.mock("../models/fetch-models.js", () => ({
+	fetchProviderModels: vi.fn(async () => ({
+		models: [{ id: "m1", name: "M1", contextWindow: 8192, vision: true }],
+	})),
+}));
+vi.mock("../models/test-provider.js", () => ({
+	testProviderAvailability: vi.fn(async () => ({
+		ok: true,
+		latencyMs: 120,
+		status: 200,
+		modelCount: 3,
+	})),
+}));
+vi.mock("../models/balance/index.js", () => ({
+	getProviderBalance: vi.fn(async () => ({
+		provider: "deepseek",
+		supported: true,
+		currency: "CNY",
+		available: 12.5,
+		isAvailable: true,
+	})),
+}));
+vi.mock("../models/model-settings-service.js", () => ({
+	MODELS_CONFIG_PATH: "C:\\vetta-home\\agent\\models.json",
 }));
 
 describe("desktop host settings domain", () => {
@@ -58,11 +88,16 @@ describe("desktop host settings domain", () => {
 
 	it("registers exactly the settings and models host methods", () => {
 		expect(createDesktopHost().methods()).toEqual([
+			"models.configPath",
 			"models.copyApiKey",
+			"models.fetchProviderModels",
+			"models.getBalance",
 			"models.getConfig",
 			"models.listPresets",
+			"models.probe",
 			"models.refreshPresetCatalog",
 			"models.setConfig",
+			"models.testProvider",
 			"settings.getModelTransport",
 			"settings.getServerUrl",
 			"settings.getSessionInterruptContinue",
@@ -238,5 +273,56 @@ describe("desktop host models config domain", () => {
 	it("rejects an empty provider id", async () => {
 		const response = await createDesktopHost().handle({ method: "models.copyApiKey", params: { providerId: "" } });
 		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host models probe domain", () => {
+	it("passes provider/model through to the probe and returns its verdict", async () => {
+		const { probeModelProvider } = await import("../models/probe.js");
+		await expect(
+			createDesktopHost().handle({ method: "models.probe", params: { provider: "deepseek", model: "chat" } }),
+		).resolves.toEqual({ ok: true, result: { ok: true, message: "probe ok" } });
+		expect(probeModelProvider).toHaveBeenCalledWith({ provider: "deepseek", model: "chat" });
+	});
+
+	it("returns fetched provider models and the balance verdict", async () => {
+		await expect(
+			createDesktopHost().handle({ method: "models.fetchProviderModels", params: { providerName: "deepseek" } }),
+		).resolves.toEqual({
+			ok: true,
+			result: { models: [{ id: "m1", name: "M1", contextWindow: 8192, vision: true }] },
+		});
+		await expect(
+			createDesktopHost().handle({ method: "models.getBalance", params: { providerName: "deepseek" } }),
+		).resolves.toEqual({
+			ok: true,
+			result: { provider: "deepseek", supported: true, currency: "CNY", available: 12.5, isAvailable: true },
+		});
+	});
+
+	it("returns the provider availability test result and the config path", async () => {
+		await expect(
+			createDesktopHost().handle({ method: "models.testProvider", params: { providerName: "deepseek" } }),
+		).resolves.toEqual({
+			ok: true,
+			result: { ok: true, latencyMs: 120, status: 200, modelCount: 3 },
+		});
+		await expect(createDesktopHost().handle({ method: "models.configPath", params: {} })).resolves.toEqual({
+			ok: true,
+			result: "C:\\vetta-home\\agent\\models.json",
+		});
+	});
+
+	it("rejects unknown probe params and empty provider names", async () => {
+		const probe = await createDesktopHost().handle({
+			method: "models.probe",
+			params: { provider: "deepseek" },
+		});
+		expect(probe).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const empty = await createDesktopHost().handle({
+			method: "models.testProvider",
+			params: { providerName: " " },
+		});
+		expect(empty).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });
