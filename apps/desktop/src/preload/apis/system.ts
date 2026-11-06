@@ -207,7 +207,9 @@ export function createSystemApi(
 		},
 		models: {
 			get: () => host.call("models.getConfig", {}),
-			set: (config) => host.call("models.setConfig", { config }),
+			set: async (config) => {
+				await host.call("models.setConfig", { config });
+			},
 			copyApiKey: (providerId) => host.call("models.copyApiKey", { providerId }),
 			fetchRemote: () => ipc.invoke("vetta:models:fetch-remote"),
 			listPresets: () => host.call("models.listPresets", {}),

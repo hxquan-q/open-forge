@@ -39,7 +39,7 @@ vi.mock("../models/presets/sync.js", () => ({
 
 const rendererConfig: Record<string, unknown> = { providers: {} };
 const replaceConfig = vi.fn(async () => undefined);
-const getProviderApiKey = vi.fn(async () => undefined);
+const getProviderApiKey = vi.fn(async (_providerId: string): Promise<string | undefined> => undefined);
 vi.mock("../models/model-settings-host.js", () => ({
 	getDesktopModelSettingsService: () => ({
 		getRendererConfig: async () => rendererConfig,
