@@ -210,10 +210,10 @@ export function createSystemApi(
 			set: (config) => ipc.invoke("vetta:models:set", config),
 			copyApiKey: (providerId) => ipc.invoke("vetta:models:copy-api-key", providerId),
 			fetchRemote: () => ipc.invoke("vetta:models:fetch-remote"),
-			listPresets: () => ipc.invoke("vetta:models:list-presets"),
+			listPresets: () => host.call("models.listPresets", {}),
 			refreshPresetModels: (providerId, apiKey) =>
 				ipc.invoke("vetta:models:refresh-preset-models", providerId, apiKey),
-			refreshPresetCatalog: () => ipc.invoke("vetta:models:refresh-preset-catalog"),
+			refreshPresetCatalog: () => host.call("models.refreshPresetCatalog", {}),
 			onPresetsUpdated: (handler) => onIpcVoidEvent(ipc, "vetta:models:presets-updated", handler),
 			probe: (ref) => ipc.invoke("vetta:models:probe", ref),
 			fetchProviderModels: (providerName) => ipc.invoke("vetta:models:fetch-provider-models", providerName),

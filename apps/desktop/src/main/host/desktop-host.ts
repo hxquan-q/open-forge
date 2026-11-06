@@ -1,5 +1,6 @@
 // Copyright The Open Forge contributors.
-import { HostDispatcher, HostOwnerRegistry, SETTINGS_HOST_METHODS } from "@vetta/host-protocol";
+import { HostDispatcher, HostOwnerRegistry, MODELS_HOST_METHODS, SETTINGS_HOST_METHODS } from "@vetta/host-protocol";
+import { modelsHostDomain } from "./models-domain.js";
 import { settingsHostDomain } from "./settings-domain.js";
 
 /**
@@ -9,5 +10,6 @@ import { settingsHostDomain } from "./settings-domain.js";
 export function createDesktopHost(): HostDispatcher {
 	const host = new HostDispatcher(new HostOwnerRegistry());
 	host.register(SETTINGS_HOST_METHODS, settingsHostDomain);
+	host.register(MODELS_HOST_METHODS, modelsHostDomain);
 	return host;
 }

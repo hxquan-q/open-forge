@@ -2,6 +2,7 @@
 
 export type { HostClient, HostTransport } from "./client.js";
 export { createHostClient } from "./client.js";
+export { MODELS_HOST_METHODS, type ModelsHostMethods } from "./domains/models.js";
 export {
 	ModelTransportSchema,
 	SETTINGS_HOST_METHODS,

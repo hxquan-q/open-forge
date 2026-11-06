@@ -14,13 +14,38 @@ vi.mock("../constants.js", () => ({
 
 const { createDesktopHost } = await import("./desktop-host.js");
 
+vi.mock("../models/presets/sync.js", () => ({
+	listPresetProviders: vi.fn(async () => ({
+		providers: [
+			{
+				id: "deepseek",
+				displayName: "DeepSeek",
+				api: "openai",
+				baseUrl: "https://api.deepseek.test",
+				icon: "deepseek",
+				catalogModels: [
+					{
+						id: "deepseek-chat",
+						contextWindow: 65536,
+						cost: { input: 0.14, output: 0.28, cacheRead: 0.014, cacheWrite: 0.14 },
+					},
+				],
+			},
+		],
+		catalogSource: "snapshot",
+	})),
+	refreshPresetCatalog: vi.fn(async () => ({ ok: true, elapsedMs: 42, modelCount: 7 })),
+}));
+
 describe("desktop host settings domain", () => {
 	beforeEach(() => {
 		document = {};
 	});
 
-	it("registers exactly the six pilot settings methods", () => {
+	it("registers exactly the settings and models preset methods", () => {
 		expect(createDesktopHost().methods()).toEqual([
+			"models.listPresets",
+			"models.refreshPresetCatalog",
 			"settings.getModelTransport",
 			"settings.getServerUrl",
 			"settings.getSessionInterruptContinue",
@@ -91,5 +116,56 @@ describe("desktop host settings domain", () => {
 		});
 		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 		expect(document).toEqual({});
+	});
+});
+
+describe("desktop host models preset domain", () => {
+	it("returns preset providers with catalog metadata over the host contract", async () => {
+		await expect(createDesktopHost().handle({ method: "models.listPresets", params: {} })).resolves.toEqual({
+			ok: true,
+			result: {
+				providers: [
+					{
+						id: "deepseek",
+						displayName: "DeepSeek",
+						api: "openai",
+						baseUrl: "https://api.deepseek.test",
+						icon: "deepseek",
+						catalogModels: [
+							{
+								id: "deepseek-chat",
+								contextWindow: 65536,
+								cost: { input: 0.14, output: 0.28, cacheRead: 0.014, cacheWrite: 0.14 },
+							},
+						],
+					},
+				],
+				catalogSource: "snapshot",
+			},
+		});
+	});
+
+	it("returns the manual catalog refresh outcome", async () => {
+		await expect(createDesktopHost().handle({ method: "models.refreshPresetCatalog", params: {} })).resolves.toEqual({
+			ok: true,
+			result: { ok: true, elapsedMs: 42, modelCount: 7 },
+		});
+	});
+
+	it("rejects unexpected params for the preset methods", async () => {
+		const response = await createDesktopHost().handle({
+			method: "models.listPresets",
+			params: { stale: true },
+		});
+		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+
+	it("flags results that drift from the catalog contract", async () => {
+		const { listPresetProviders } = await import("../models/presets/sync.js");
+		vi.mocked(listPresetProviders).mockResolvedValueOnce({
+			providers: [{ id: 1 as unknown as string }],
+		} as Awaited<ReturnType<typeof listPresetProviders>>);
+		const response = await createDesktopHost().handle({ method: "models.listPresets", params: {} });
+		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_RESULT } });
 	});
 });
