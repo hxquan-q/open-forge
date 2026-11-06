@@ -1,7 +1,7 @@
 ---
 id: TASK-0459
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -32,7 +32,7 @@ write_paths:
 exclusive_paths: []
 depends_on: [TASK-0458]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -87,4 +87,7 @@ updated: 2026-11-07
 - 行为差异说明：注册注销时不再主动清剪贴板定时器（定时器自清；原清理仅发生在 IPC 注销路径，生产生命周期内不触发）。
 - 未运行与风险：完整 `bun run check` 未运行（既有环境问题）；设置页 UI 走查需授权未执行；probe / fetch-provider-models / test-provider / get-balance / config-path 留待下一切片；`vetta:models:changed` 事件与 token 类通道不动。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
+- 门禁与推送时序（2026-11-07）：`test:changed --base origin/dev` 首跑 6314 通过 / 1 失败（`weknora-background-flow.test.tsx` AC-20 时序合并用例，与本次 diff 无关），未推送；该文件隔离复跑 7/7 通过，全量门禁复跑通过（GATE_EXIT=0）后推送 `origin/dev`（796b373af）。判定为已知 Windows 时序偶发（同 0455/0458 模式）。
+- 远端 CI（2026-11-07）：quality run 42294078591 对 `796b373af` **failure**——两处类型错误（copy 测试 mock 签名只声明回 `undefined`；preload `set` 包装 `Promise<null>` 与 api 类型 `Promise<void>` 不符），本地 `check:quick` 不含 tsc 故未拦截。修复提交 `3626913bb`（补全 mock 参数/返回类型；`set` 改 await 后返回 void），本地 `apps/desktop typecheck` 通过、定向用例复跑通过；门禁绿后推送并复测 CI。流程教训：代码批次推送前须补跑对应包 typecheck。
+- 追记（2026-11-07）：修复批次的门禁复跑再次失败于同一 `weknora-background-flow` AC-20 时序用例（当日 3 次全量中第 2 次，隔离恒过）——按"再次复现即修复"另立任务处理；且本次推送命令再次以 `grep|tail` 链接到 push、门禁失败仍推出了批次（我的流程错误第二次，与门禁本身无关）。流程修正：门禁与推送合并为单条后台命令 `bun run test:changed --base origin/dev && git push origin main:dev && git ls-remote ...`，`&&` 直接吃 bun 的真实退出码，任何管道/摘要输出只在推送后读取。远端 CI 对 `3626913bb` 监视中。
 - 发布：不适用

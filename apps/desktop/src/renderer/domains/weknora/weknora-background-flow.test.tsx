@@ -8,7 +8,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * D 组「后台思考」的用户流程级用例（AC-16~22，T01）。
@@ -17,6 +17,14 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
  * 切走 / 回切 / 并发 / 取消 / 后台终态都要在页面行为上可观察，纯函数级测不出
  * 「该路由的没路由」这类流程缺陷（R2 教训）。
  */
+
+// 引擎状态模块级存活（订阅常驻是有意设计），跨用例残留的 reload 定时器会闯进
+// 下一个用例的断言窗口（TASK-0460 根因）；逐用例重置隔离。
+import { resetWeKnoraStreamEngineForTest } from "./weKnoraStreamEngine.js";
+
+beforeEach(() => {
+	resetWeKnoraStreamEngineForTest();
+});
 
 vi.mock("@shared/components/RendererMarkdownContent", () => ({
 	RendererMarkdownContent: ({ text }: { text: string }) => <div data-testid="weknora-markdown">{text}</div>,
@@ -299,8 +307,12 @@ describe("智能客服 · 后台思考（D 组用户流程）", () => {
 			await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s1/ })).toBeTruthy());
 			await waitFor(() => expect(within(nav).getByRole("button", { name: /会话 s2/ })).toBeTruthy());
 			const baseline = harness.counters.listSessions;
-		act(() => harness.emit({ type: "turn.completed", requestId: "r1" }));
-		act(() => harness.emit({ type: "turn.completed", requestId: "r2" }));
+		// 两路终态须同 tick 连发：分两个 act 在满载机器上会被真实时钟拉开超过 500ms
+		// 去抖窗口，把合并语义误报为两次重拉（TASK-0460 根因）。
+		act(() => {
+			harness.emit({ type: "turn.completed", requestId: "r1" });
+			harness.emit({ type: "turn.completed", requestId: "r2" });
+		});
 
 		// 去抖窗口（500ms）后恰好合并为一次重拉。
 		await waitFor(() => expect(harness.counters.listSessions).toBe(baseline + 1), { timeout: 4000 });
