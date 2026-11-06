@@ -81,13 +81,31 @@ vi.mock("../models/model-settings-service.js", () => ({
 	MODELS_CONFIG_PATH: "C:\\vetta-home\\agent\\models.json",
 }));
 
+const hasAuth = vi.fn((name: string) => name === "github");
+vi.mock("../mcp/mcp-oauth-service.js", () => ({
+	getDesktopMcpOAuthService: () => ({ hasAuth }),
+}));
+vi.mock("../mcp/mcp-tool-catalog.js", () => ({
+	listMcpServerTools: vi.fn(async () => ({
+		tools: [{ name: "search", description: "Search the web", enabled: true, stale: false }],
+		cached: true,
+	})),
+}));
+vi.mock("../mcp/mcp-settings-service.js", () => ({
+	MCP_CONFIG_PATH: "C:\\vetta-home\\agent\\mcp.json",
+}));
+
 describe("desktop host settings domain", () => {
 	beforeEach(() => {
 		document = {};
 	});
 
-	it("registers exactly the settings and models host methods", () => {
+	it("registers exactly the settings, models and mcp host methods", () => {
 		expect(createDesktopHost().methods()).toEqual([
+			"mcp.authStatus",
+			"mcp.configPath",
+			"mcp.hasAuth",
+			"mcp.listServerTools",
 			"models.configPath",
 			"models.copyApiKey",
 			"models.fetchProviderModels",
@@ -324,5 +342,47 @@ describe("desktop host models probe domain", () => {
 			params: { providerName: " " },
 		});
 		expect(empty).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host mcp domain", () => {
+	beforeEach(() => {
+		hasAuth.mockClear();
+	});
+
+	it("reports oauth state per server and in bulk", async () => {
+		await expect(
+			createDesktopHost().handle({ method: "mcp.hasAuth", params: { serverName: "github" } }),
+		).resolves.toEqual({ ok: true, result: true });
+		await expect(
+			createDesktopHost().handle({ method: "mcp.hasAuth", params: { serverName: "other" } }),
+		).resolves.toEqual({ ok: true, result: false });
+		await expect(
+			createDesktopHost().handle({ method: "mcp.authStatus", params: { serverNames: ["github", "other"] } }),
+		).resolves.toEqual({ ok: true, result: { github: true, other: false } });
+	});
+
+	it("returns the tool list and the config path", async () => {
+		await expect(
+			createDesktopHost().handle({ method: "mcp.listServerTools", params: { serverName: "github" } }),
+		).resolves.toEqual({
+			ok: true,
+			result: {
+				tools: [{ name: "search", description: "Search the web", enabled: true, stale: false }],
+				cached: true,
+			},
+		});
+		await expect(createDesktopHost().handle({ method: "mcp.configPath", params: {} })).resolves.toEqual({
+			ok: true,
+			result: "C:\\vetta-home\\agent\\mcp.json",
+		});
+	});
+
+	it("rejects non-array auth status params", async () => {
+		const response = await createDesktopHost().handle({
+			method: "mcp.authStatus",
+			params: { serverNames: "github" },
+		});
+		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

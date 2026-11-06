@@ -126,6 +126,7 @@ depends_on: []
 7. [TASK-0458](../tasks/TASK-0458-models-preset-catalog-host-domain.md)：模型预设目录（免 key 子域）迁到 Host 合同（2.1 延续），verifying（已集成，quality 全绿）；凭证类通道与事件按 ADR-0152 单独评审后迁入。
 8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），verifying。
 9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，verifying（已集成，quality 全绿）。
+10. [TASK-0462](../tasks/TASK-0462-mcp-noncredential-host-domain.md)：MCP 无凭证子域（config-path/has-auth/auth-status/list-server-tools）迁移，verifying（已集成）；`mcp:get/set`（凭证面）与 OAuth 六通道按 ADR-0152 §7 留待评审。
 
 ## 不做什么
 

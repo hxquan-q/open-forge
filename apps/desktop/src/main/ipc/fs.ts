@@ -64,14 +64,8 @@ import {
 } from "../filesystem/filesystem-service.js";
 import { watchRemoteDirectory } from "../filesystem/remote-directory-watch.js";
 import { getDesktopMcpOAuthService } from "../mcp/mcp-oauth-service.js";
-import {
-	getDesktopMcpSettingsService,
-	MCP_CONFIG_PATH,
-	readMcpConfig,
-	writeMcpConfig,
-} from "../mcp/mcp-settings-service.js";
+import { getDesktopMcpSettingsService, readMcpConfig, writeMcpConfig } from "../mcp/mcp-settings-service.js";
 import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.js";
-import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
 import { onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
 import { type DesktopProxyConfigSnapshot, redactProxyConfig } from "../proxy/proxy-settings.js";
@@ -152,18 +146,14 @@ const CHANNELS = {
 	DIR_CHANGED: "vetta:fs:dir-changed",
 	CONFIG_GET: "vetta:config:get",
 	CONFIG_SET: "vetta:config:set",
-	MCP_CONFIG_PATH: "vetta:mcp:config-path",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
 	MCP_LOGIN: "vetta:mcp:login",
 	MCP_LOGOUT: "vetta:mcp:logout",
-	MCP_HAS_AUTH: "vetta:mcp:has-auth",
-	MCP_AUTH_STATUS: "vetta:mcp:auth-status",
 	MCP_GET_SETUP_LOGIN_STATUS: "vetta:mcp:get-setup-login-status",
 	MCP_START_SETUP_LOGIN: "vetta:mcp:start-setup-login",
 	MCP_CANCEL_SETUP_LOGIN: "vetta:mcp:cancel-setup-login",
 	MCP_CLEAR_SETUP_LOGIN: "vetta:mcp:clear-setup-login",
-	MCP_LIST_SERVER_TOOLS: "vetta:mcp:list-server-tools",
 } as const;
 
 function assertNonEmptyString(value: unknown, fieldName: string): asserts value is string {
@@ -459,10 +449,6 @@ export function registerFsIpc(): () => void {
 	// 模型探测四通道与 config-path 已迁到 Host 合同 models.*（TASK-0461，见 ../host/models-domain.ts）。
 
 	// 只读：MCP JSON 编辑器的路径提示，同模型配置路径一样不硬编码品牌数据根。
-	ipcMain.handle(CHANNELS.MCP_CONFIG_PATH, () => {
-		return MCP_CONFIG_PATH;
-	});
-
 	ipcMain.handle(CHANNELS.MCP_GET, async (): Promise<McpConfig> => {
 		return mcp.getConfig();
 	});
@@ -529,22 +515,6 @@ export function registerFsIpc(): () => void {
 		mcpOAuth.logout(serverName.trim());
 	});
 
-	ipcMain.handle(CHANNELS.MCP_HAS_AUTH, async (_event, serverName: unknown): Promise<boolean> => {
-		if (typeof serverName !== "string" || !serverName.trim()) return false;
-		return mcpOAuth.hasAuth(serverName.trim());
-	});
-
-	ipcMain.handle(CHANNELS.MCP_AUTH_STATUS, async (_event, serverNames: unknown): Promise<Record<string, boolean>> => {
-		if (!Array.isArray(serverNames)) return {};
-		const result: Record<string, boolean> = {};
-		for (const name of serverNames) {
-			if (typeof name === "string" && name.trim()) {
-				result[name.trim()] = mcpOAuth.hasAuth(name.trim());
-			}
-		}
-		return result;
-	});
-
 	ipcMain.handle(CHANNELS.MCP_GET_SETUP_LOGIN_STATUS, async (_event, serverName: unknown) => {
 		assertNonEmptyString(serverName, "serverName");
 		return getDesktopMcpSetupLoginService().getStatus(serverName.trim());
@@ -564,11 +534,6 @@ export function registerFsIpc(): () => void {
 	ipcMain.handle(CHANNELS.MCP_CLEAR_SETUP_LOGIN, async (_event, serverName: unknown) => {
 		assertNonEmptyString(serverName, "serverName");
 		return getDesktopMcpSetupLoginService().clear(serverName.trim());
-	});
-
-	ipcMain.handle(CHANNELS.MCP_LIST_SERVER_TOOLS, async (_event, serverName: unknown) => {
-		assertNonEmptyString(serverName, "serverName");
-		return listMcpServerTools(serverName.trim());
 	});
 
 	return () => {
@@ -598,18 +563,14 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.UNWATCH_DIR);
 		ipcMain.removeHandler(CHANNELS.CONFIG_GET);
 		ipcMain.removeHandler(CHANNELS.CONFIG_SET);
-		ipcMain.removeHandler(CHANNELS.MCP_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_GET);
 		ipcMain.removeHandler(CHANNELS.MCP_SET);
 		ipcMain.removeHandler(CHANNELS.MCP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_LOGOUT);
-		ipcMain.removeHandler(CHANNELS.MCP_HAS_AUTH);
-		ipcMain.removeHandler(CHANNELS.MCP_AUTH_STATUS);
 		ipcMain.removeHandler(CHANNELS.MCP_GET_SETUP_LOGIN_STATUS);
 		ipcMain.removeHandler(CHANNELS.MCP_START_SETUP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_CANCEL_SETUP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_CLEAR_SETUP_LOGIN);
-		ipcMain.removeHandler(CHANNELS.MCP_LIST_SERVER_TOOLS);
 		disposeModelChanged();
 	};
 }
