@@ -1,7 +1,7 @@
 ---
 id: TASK-0456
 type: task
-status: in_progress
+status: verifying
 priority: P3
 owner: docs
 requirement: []
@@ -14,7 +14,7 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0456-autonomy-docs-candidate-verify-sync
-worktree: ../open-forge-wt/task-0456-autonomy-docs-candidate-verify-sync
+worktree: unassigned（已集成，待推送后清理）
 base_commit: 6f25584f94ae90ce5cc46dea44a71c6113e096c3
 read_paths:
   - scripts/agents/README.md
@@ -25,7 +25,7 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: [TASK-0197]
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
