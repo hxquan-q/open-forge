@@ -1,7 +1,8 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { access, readFile } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { access, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import {
 	detectSupportedImageMimeTypeFromBuffer,
 	detectSupportedImageMimeTypeFromFile,
@@ -38,6 +39,48 @@ export interface SshReadOperationsOptions {
 	 * 只影响 read。写入与命令始终作用在远端：这些目录由 Vetta 管理，模型不该往里写。
 	 */
 	readonly localReadRoots?: readonly string[];
+	/** A local project AI workspace addressable only through its session-scoped virtual root. */
+	readonly localWorkspace?: { readonly directory: string; readonly toolRoot: string };
+}
+
+function localWorkspacePath(path: string, workspace: SshReadOperationsOptions["localWorkspace"]): string | undefined {
+	if (!workspace) return undefined;
+	const rootWithoutSlash = workspace.toolRoot.replace(/\/+$/, "");
+	if (path === rootWithoutSlash) return resolve(workspace.directory);
+	if (!path.startsWith(workspace.toolRoot)) return undefined;
+	const suffix = path.slice(workspace.toolRoot.length);
+	if (suffix.split("/").includes("..")) throw new Error("Path is outside the project AI workspace");
+	const target = resolve(workspace.directory, suffix);
+	const offset = relative(resolve(workspace.directory), target);
+	if (offset.startsWith("..") || isAbsolute(offset)) throw new Error("Path is outside the project AI workspace");
+	return target;
+}
+
+async function assertLocalWorkspacePath(
+	path: string,
+	workspace: NonNullable<SshReadOperationsOptions["localWorkspace"]>,
+): Promise<void> {
+	const root = await realpath(workspace.directory);
+	let current = resolve(path);
+	const missing: string[] = [];
+	while (true) {
+		try {
+			const boundary = await realpath(current);
+			const targetBoundary = resolve(boundary, ...missing.reverse());
+			const offset = relative(root, targetBoundary);
+			if (offset.startsWith("..") || isAbsolute(offset)) {
+				throw new Error("Path resolves outside the project AI workspace");
+			}
+			return;
+		} catch (error: unknown) {
+			const code = (error as NodeJS.ErrnoException).code;
+			if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
+			const parent = dirname(current);
+			if (parent === current) throw error;
+			missing.push(basename(current));
+			current = parent;
+		}
+	}
 }
 
 export function createSshReadOperations(
@@ -52,12 +95,28 @@ export function createSshReadOperations(
 			const offset = relative(root, resolve(path));
 			return offset === "" || (!offset.startsWith("..") && !isAbsolute(offset));
 		});
+	const workspace = options.localWorkspace;
+	const readLocal = async (path: string): Promise<string | undefined> => {
+		const localPath = localWorkspacePath(path, workspace);
+		if (localPath === undefined) return undefined;
+		if (!workspace) return undefined;
+		await assertLocalWorkspacePath(localPath, workspace);
+		return localPath;
+	};
 	return {
-		readFile: async (absolutePath) =>
-			isLocal(absolutePath)
+		readFile: async (absolutePath) => {
+			const workspacePath = await readLocal(absolutePath);
+			if (workspacePath) return readFile(workspacePath);
+			return isLocal(absolutePath)
 				? readFile(absolutePath)
-				: Buffer.from(await connection.readFile(await expand(absolutePath))),
+				: Buffer.from(await connection.readFile(await expand(absolutePath)));
+		},
 		access: async (absolutePath) => {
+			const workspacePath = await readLocal(absolutePath);
+			if (workspacePath) {
+				await access(workspacePath, constants.R_OK);
+				return;
+			}
 			if (isLocal(absolutePath)) {
 				await access(absolutePath, constants.R_OK);
 				return;
@@ -68,22 +127,41 @@ export function createSshReadOperations(
 			if (entry === null) throw new Error(`ENOENT: no such file or directory, access '${absolutePath}'`);
 		},
 		// 缺了它，read 会把远端的每张图片都当成二进制文件拒掉。
-		detectImageMimeType: async (absolutePath) =>
-			isLocal(absolutePath)
-				? detectSupportedImageMimeTypeFromFile(absolutePath)
-				: detectSupportedImageMimeTypeFromBuffer(
-						await connection.readFileHead(await expand(absolutePath), IMAGE_SNIFF_BYTES),
-					),
+		detectImageMimeType: async (absolutePath) => {
+			const workspacePath = await readLocal(absolutePath);
+			return workspacePath
+				? detectSupportedImageMimeTypeFromFile(workspacePath)
+				: isLocal(absolutePath)
+					? detectSupportedImageMimeTypeFromFile(absolutePath)
+					: detectSupportedImageMimeTypeFromBuffer(
+							await connection.readFileHead(await expand(absolutePath), IMAGE_SNIFF_BYTES),
+						);
+		},
 	};
 }
 
-export function createSshWriteOperations(connection: SshConnection): WriteOperations {
+export function createSshWriteOperations(
+	connection: SshConnection,
+	options: { readonly localWorkspace?: SshReadOperationsOptions["localWorkspace"] } = {},
+): WriteOperations {
 	const expand: Expand = (path) => connection.expandRemotePath(path);
 	return {
 		writeFile: async (absolutePath, content) => {
+			const workspacePath = localWorkspacePath(absolutePath, options.localWorkspace);
+			if (workspacePath !== undefined && options.localWorkspace) {
+				await assertLocalWorkspacePath(workspacePath, options.localWorkspace);
+				await writeFile(workspacePath, content, "utf8");
+				return;
+			}
 			await connection.writeFile(await expand(absolutePath), new TextEncoder().encode(content));
 		},
 		mkdir: async (directory) => {
+			const workspacePath = localWorkspacePath(directory, options.localWorkspace);
+			if (workspacePath !== undefined && options.localWorkspace) {
+				await assertLocalWorkspacePath(workspacePath, options.localWorkspace);
+				await mkdir(workspacePath, { recursive: true });
+				return;
+			}
 			await connection.makeDirectory(await expand(directory));
 		},
 	};
@@ -97,9 +175,12 @@ export function createSshWriteOperations(connection: SshConnection): WriteOperat
  * 远端有 helper 时写入带上读取那一刻的内容摘要，由 helper 在同一台机器上原子地核对：对不上
  * 就拒绝，让模型重新读。没有 helper 时退回无条件写——与引入 helper 之前一致。
  */
-export function createSshEditOperations(connection: SshConnection): EditOperations {
-	const read = createSshReadOperations(connection);
-	const write = createSshWriteOperations(connection);
+export function createSshEditOperations(
+	connection: SshConnection,
+	options: SshReadOperationsOptions = {},
+): EditOperations {
+	const read = createSshReadOperations(connection, options);
+	const write = createSshWriteOperations(connection, options);
 	const revisions = new Map<string, string>();
 	const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 	return {
@@ -112,7 +193,9 @@ export function createSshEditOperations(connection: SshConnection): EditOperatio
 		writeFile: async (absolutePath, content) => {
 			const bytes = new TextEncoder().encode(content);
 			const expectedRevision = revisions.get(absolutePath);
-			const helper = expectedRevision ? await connection.helper().catch(() => undefined) : undefined;
+			const isLocalWorkspaceFile = localWorkspacePath(absolutePath, options.localWorkspace) !== undefined;
+			const helper =
+				!isLocalWorkspaceFile && expectedRevision ? await connection.helper().catch(() => undefined) : undefined;
 			if (!helper || helper.isClosed || !expectedRevision) {
 				await write.writeFile(absolutePath, content);
 			} else {
@@ -140,17 +223,48 @@ export function createSshEditOperations(connection: SshConnection): EditOperatio
 	};
 }
 
-export function createSshLsOperations(connection: SshConnection): LsOperations {
+export function createSshLsOperations(
+	connection: SshConnection,
+	options: { readonly localWorkspace?: SshReadOperationsOptions["localWorkspace"] } = {},
+): LsOperations {
 	const expand: Expand = (path) => connection.expandRemotePath(path);
+	const localPath = async (path: string): Promise<string | undefined> => {
+		const target = localWorkspacePath(path, options.localWorkspace);
+		if (target === undefined || !options.localWorkspace) return undefined;
+		await assertLocalWorkspacePath(target, options.localWorkspace);
+		return target;
+	};
 	return {
-		exists: async (absolutePath) => (await connection.stat(await expand(absolutePath))) !== null,
+		exists: async (absolutePath) => {
+			const local = await localPath(absolutePath);
+			if (local) {
+				try {
+					await stat(local);
+					return true;
+				} catch (error: unknown) {
+					if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+					throw error;
+				}
+			}
+			return (await connection.stat(await expand(absolutePath))) !== null;
+		},
 		stat: async (absolutePath) => {
+			const local = await localPath(absolutePath);
+			if (local) {
+				const entry = await stat(local);
+				const isDirectory = entry.isDirectory();
+				return { isDirectory: () => isDirectory };
+			}
 			const entry = await connection.stat(await expand(absolutePath));
 			if (entry === null) throw new Error(`ENOENT: no such file or directory, stat '${absolutePath}'`);
 			const isDirectory = entry.kind === "directory";
 			return { isDirectory: () => isDirectory };
 		},
-		readdir: async (absolutePath) =>
-			(await connection.listDirectory(await expand(absolutePath))).map((entry) => entry.name),
+		readdir: async (absolutePath) => {
+			const local = await localPath(absolutePath);
+			return local
+				? readdir(local)
+				: (await connection.listDirectory(await expand(absolutePath))).map((entry) => entry.name);
+		},
 	};
 }

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { constants } from "node:fs";
 import { access as fsAccess, readFile as fsReadFile } from "node:fs/promises";
 import { extname } from "node:path";
@@ -61,6 +62,10 @@ export interface ReadOperations {
 	detectImageMimeType?(absolutePath: string): Promise<string | null | undefined>;
 }
 
+export interface ReadPathPolicy {
+	readonly getRejectionReason: (absolutePath: string) => string | undefined;
+}
+
 export interface ReadImageProcessor {
 	resize(buffer: Buffer, mimeType: string, options?: ImageResizeOptions): Promise<ImageResizeResult>;
 }
@@ -85,6 +90,7 @@ export interface ReadToolOptions {
 	readonly availableSkillNames?: () => ReadonlySet<string> | undefined;
 	/** 路径在哪台机器上解析；缺省为本机。远端项目必须换掉，见 {@link ToolPathHost}。 */
 	readonly pathHost?: ToolPathHost;
+	readonly pathPolicy?: ReadPathPolicy;
 }
 
 const defaultReadOperations: ReadOperations = {
@@ -148,6 +154,10 @@ export function createReadTool(cwd: string, options: ReadToolOptions = {}): Runt
 		execute(request) {
 			const { path, offset, limit } = request.input;
 			const absolutePath = resolveReadPath(path, cwd, options?.pathHost ?? localToolPathHost);
+			const rejectionReason = options.pathPolicy?.getRejectionReason(absolutePath);
+			if (rejectionReason !== undefined) {
+				return Promise.resolve({ content: [{ type: "text", text: rejectionReason }], details: undefined });
+			}
 
 			return new Promise<RuntimeToolResult>((resolve, reject) => {
 				if (request.signal.aborted) {

@@ -1,11 +1,15 @@
 // Copyright The Open Forge contributors.
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
 import { addSessionGrant, clearSessionGrants, findSessionGrant } from "@vetta/runtime-node/sandbox";
-import { afterEach, describe, expect, it } from "vitest";
-import { createDesktopCodingAgentSessionExecutionEnvironment } from "./coding-agent-tool-environment.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { resolveCodeProjectAiWorkspace } from "./code-project-ai-workspace.js";
+import {
+	createDesktopCodingAgentSessionExecutionEnvironment,
+	createDesktopCodingAgentToolEnvironment,
+} from "./coding-agent-tool-environment.js";
 
 /** 一个最小的 `.xlsx`（ZIP 魔数）：只要 read 判定为二进制文档即可，内容不进上下文。 */
 const WORKBOOK_BYTES = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]);
@@ -113,6 +117,95 @@ describe("Desktop 会话执行环境的沙箱授权缓存接线", () => {
 
 			expect(findSessionGrant(grantSessionId, grantRequest)).toBeUndefined();
 			expect(findSessionGrant(otherSessionId, grantRequest)).toBeDefined();
+		} finally {
+			await environment.dispose();
+		}
+	});
+});
+
+describe("Desktop Code file tool workspace boundaries", () => {
+	const temporaryRoots: string[] = [];
+	const previousVettaHome = process.env.VETTA_HOME;
+	let vettaHome = "";
+
+	beforeEach(async () => {
+		vettaHome = await mkdtemp(join(tmpdir(), "desktop-code-workspace-home-"));
+		process.env.VETTA_HOME = vettaHome;
+	});
+
+	afterEach(async () => {
+		if (previousVettaHome === undefined) delete process.env.VETTA_HOME;
+		else process.env.VETTA_HOME = previousVettaHome;
+		for (const root of temporaryRoots.splice(0)) await rm(root, { recursive: true, force: true });
+		await rm(vettaHome, { recursive: true, force: true });
+	});
+
+	it("limits read/edit/write and search tools to the current project and its AI workspace", async () => {
+		const root = await mkdtemp(join(tmpdir(), "desktop-code-tool-boundary-"));
+		temporaryRoots.push(root);
+		const project = join(root, "project");
+		const outside = join(root, "other-project");
+		const agentDir = join(root, "agent");
+		await Promise.all([mkdir(join(project, "src"), { recursive: true }), mkdir(outside), mkdir(agentDir)]);
+		const projectFile = join(project, "src", "index.ts");
+		const outsideFile = join(outside, "secret.md");
+		await writeFile(projectFile, "export const project = true;\n");
+		await writeFile(outsideFile, "must remain private\n");
+		const workspace = resolveCodeProjectAiWorkspace(project);
+		const environment = await createDesktopCodingAgentToolEnvironment({
+			cwd: project,
+			agentDir,
+			scenario: "project",
+			agentMode: "coding",
+			projectIdentity: project,
+			projectAiWorkspaceRoot: workspace.directory,
+			projectAiWorkspaceToolRoot: workspace.directory,
+		});
+		const tool = (name: string): RuntimeToolDefinition => {
+			const registration = environment.registrations.find((entry) => entry.tool.name === name);
+			if (!registration) throw new Error(`Expected ${name} tool registration`);
+			return registration.tool;
+		};
+		const execute = (name: string, input: Record<string, unknown>) =>
+			tool(name).execute({
+				sessionId: "code-workspace-boundary",
+				turnId: "turn",
+				toolCallId: `call-${name}`,
+				input,
+				signal: new AbortController().signal,
+			} as never);
+		try {
+			const written = await execute("write", {
+				path: join(workspace.directory, "project-config.md"),
+				content: "untrusted setup notes",
+			});
+			expect(written.content[0]?.type).toBe("text");
+			expect((await execute("read", { path: projectFile })).content.map((entry) => entry.type)).toContain("text");
+			expect(
+				(await execute("read", { path: join(workspace.directory, "project-config.md") })).content[0],
+			).toMatchObject({
+				type: "text",
+				text: expect.stringContaining("untrusted setup notes"),
+			});
+
+			for (const name of ["ls", "glob", "grep", "find", "dir_tree"]) {
+				const input =
+					name === "glob" || name === "find"
+						? { path: outside, pattern: "**/*.md" }
+						: name === "grep"
+							? { path: outside, pattern: "private" }
+							: { path: outside };
+				await expect(execute(name, input)).rejects.toThrow("limited to the current project");
+			}
+			await expect(execute("edit", { path: outsideFile, oldText: "private", newText: "changed" })).rejects.toThrow(
+				"limited to the current project",
+			);
+			const deniedWrite = await execute("write", { path: outsideFile, content: "changed" });
+			expect(deniedWrite.content[0]).toMatchObject({
+				type: "text",
+				text: expect.stringContaining("limited to the current project"),
+			});
+			expect(await readFile(outsideFile, "utf8")).toBe("must remain private\n");
 		} finally {
 			await environment.dispose();
 		}

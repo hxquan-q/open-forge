@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
 import type { AsyncExecutionGate, CodingToolExecutableResolver, CodingToolRegistration } from "@vetta/runtime-tools";
 import { createNodeSpecializedToolRegistrations } from "./host/specialized-tool-registrations.js";
@@ -17,7 +18,7 @@ import { createFindToolRegistration } from "./tools/find/index.js";
 import { createGlobToolRegistration } from "./tools/glob/index.js";
 import { createGrepToolRegistration } from "./tools/grep/index.js";
 import { createLsToolRegistration } from "./tools/ls/index.js";
-import { createReadToolRegistration, type ReadToolOptions } from "./tools/read/index.js";
+import { createReadToolRegistration, type ReadPathPolicy, type ReadToolOptions } from "./tools/read/index.js";
 import { createShellToolRegistration } from "./tools/shell/index.js";
 import { createTreeToolRegistration } from "./tools/tree/index.js";
 import { createWriteToolRegistration, type WritePathPolicy } from "./tools/write/index.js";
@@ -32,6 +33,7 @@ export interface NodeCodingToolEnvironmentOptions {
 	readonly executableResolver: CodingToolExecutableResolver;
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
+	readonly readPathPolicy?: ReadPathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	/** 会话级审查快照；只应注入有会话身份的共享/会话环境。 */
@@ -42,6 +44,7 @@ export interface NodeFileToolEnvironmentOptions {
 	readonly cwd: string;
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
+	readonly readPathPolicy?: ReadPathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly reviewSnapshots?: ReviewSnapshotBinding;
@@ -85,6 +88,7 @@ export function createNodeFileToolRegistrations(
 	return [
 		createReadToolRegistration(options.cwd, {
 			...options.readOptions,
+			pathPolicy: options.readPathPolicy,
 			configurationSource: options.configurationSource,
 		}),
 		createEditToolRegistration(options.cwd, {
@@ -142,6 +146,7 @@ export function createNodeCodingToolEnvironment(options: NodeCodingToolEnvironme
 		registrations: [
 			createReadToolRegistration(options.cwd, {
 				...options.readOptions,
+				pathPolicy: options.readPathPolicy,
 				configurationSource: options.configurationSource,
 			}),
 			createEditToolRegistration(options.cwd, {
@@ -149,11 +154,20 @@ export function createNodeCodingToolEnvironment(options: NodeCodingToolEnvironme
 				reviewSnapshots: options.reviewSnapshots,
 			}),
 			...commandEnvironment.registrations,
-			createLsToolRegistration(options.cwd),
-			createGlobToolRegistration(options.cwd),
-			createGrepToolRegistration(options.cwd, { executableResolver: options.executableResolver }),
-			createFindToolRegistration(options.cwd, { executableResolver: options.executableResolver }),
-			createTreeToolRegistration(options.cwd, { executableResolver: options.executableResolver }),
+			createLsToolRegistration(options.cwd, { pathPolicy: options.readPathPolicy }),
+			createGlobToolRegistration(options.cwd, { pathPolicy: options.readPathPolicy }),
+			createGrepToolRegistration(options.cwd, {
+				executableResolver: options.executableResolver,
+				pathPolicy: options.readPathPolicy,
+			}),
+			createFindToolRegistration(options.cwd, {
+				executableResolver: options.executableResolver,
+				pathPolicy: options.readPathPolicy,
+			}),
+			createTreeToolRegistration(options.cwd, {
+				executableResolver: options.executableResolver,
+				pathPolicy: options.readPathPolicy,
+			}),
 			createWriteToolRegistration(options.cwd, {
 				pathPolicy: options.writePathPolicy,
 				reviewSnapshots: options.reviewSnapshots,

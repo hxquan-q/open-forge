@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
 import type {
 	SandboxPermissionRequest,
@@ -54,6 +55,10 @@ export interface CodingAgentSessionExecutionEnvironmentContext {
 	readonly sessionId: string;
 	readonly cwd: string;
 	readonly agentDir?: string;
+	readonly agentMode?: string;
+	readonly projectIdentity?: string;
+	readonly projectAiWorkspaceRoot?: string;
+	readonly projectAiWorkspaceToolRoot?: string;
 	readonly scenario: ConversationScenario;
 	readonly env?: Readonly<Record<string, string>>;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;

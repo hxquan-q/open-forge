@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export { READ_TOOL_DESCRIPTION } from "./description.js";
 export { convertToPng } from "./image-convert.js";
 export {
@@ -23,6 +24,7 @@ export {
 	createReadTool,
 	type ReadImageProcessor,
 	type ReadOperations,
+	type ReadPathPolicy,
 	type ReadToolDetails,
 	type ReadToolInput,
 	ReadToolInputSchema,

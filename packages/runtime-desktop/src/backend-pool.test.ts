@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -25,14 +26,19 @@ import { createInMemoryConversationPersistence } from "@vetta/runtime-node/conve
 import type { CodingToolResultPolicy } from "@vetta/runtime-tools";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { DesktopRuntimeBackendPool } from "./backend-pool.js";
+import { resolveCodeProjectAiWorkspace } from "./code-project-ai-workspace.js";
 import { DesktopRuntimeSessionCatalog } from "./session-catalog.js";
 
 /** `getAgentDir()` 的环境变量开关；缺省会话落点由它决定，测试不得写进真实 `~/.vetta/agent`。 */
 const AGENT_DIR_ENV = "VETTA_CODING_AGENT_DIR";
+const VETTA_HOME_ENV = "VETTA_HOME";
 
 interface CodingAgentTestSessionConfig extends SessionConfig {
 	readonly scenario?: ConversationScenario;
 	readonly agentMode?: string;
+	readonly projectIdentity?: string;
+	readonly projectAiWorkspaceRoot?: string;
+	readonly projectAiWorkspaceToolRoot?: string;
 	readonly appendSystemPrompt?: string;
 	readonly enableBackgroundTasks?: boolean;
 	readonly includeAgentSkills?: boolean;
@@ -55,6 +61,9 @@ class RuntimeHost extends BaseRuntimeHost {
 					sessionId: config.sessionId,
 					scenario,
 					agentMode,
+					projectIdentity: config.projectIdentity,
+					projectAiWorkspaceRoot: config.projectAiWorkspaceRoot,
+					projectAiWorkspaceToolRoot: config.projectAiWorkspaceToolRoot,
 					systemPromptAddon: appendSystemPrompt,
 					enableBackgroundTasks,
 					includeAgentSkills,
@@ -74,17 +83,24 @@ describe("DesktopRuntimeBackendPool", () => {
 	const runtimes: RuntimeHost[] = [];
 	const pools: DesktopRuntimeBackendPool[] = [];
 	const previousAgentDir = process.env[AGENT_DIR_ENV];
+	const previousVettaHome = process.env[VETTA_HOME_ENV];
 	let agentDir = "";
+	let vettaHome = "";
 
 	beforeAll(async () => {
 		agentDir = await mkdtemp(join(tmpdir(), "desktop-runtime-agent-dir-"));
+		vettaHome = await mkdtemp(join(tmpdir(), "desktop-runtime-vetta-home-"));
 		process.env[AGENT_DIR_ENV] = agentDir;
+		process.env[VETTA_HOME_ENV] = vettaHome;
 	});
 
 	afterAll(async () => {
 		if (previousAgentDir === undefined) delete process.env[AGENT_DIR_ENV];
 		else process.env[AGENT_DIR_ENV] = previousAgentDir;
+		if (previousVettaHome === undefined) delete process.env[VETTA_HOME_ENV];
+		else process.env[VETTA_HOME_ENV] = previousVettaHome;
 		await rm(agentDir, { recursive: true, force: true });
+		await rm(vettaHome, { recursive: true, force: true });
 	});
 
 	afterEach(async () => {
@@ -134,6 +150,50 @@ describe("DesktopRuntimeBackendPool", () => {
 			runtime.invokeSessionExtensionSync(second.sessionId, CODING_AGENT_SESSION_PROFILE_STATE_READ, undefined)
 				.scenario,
 		).toBe("automation");
+	});
+
+	it("keeps work and Code file-tool scopes separate for the same project cwd", async () => {
+		const cwd = await temporaryDirectory("desktop-runtime-mode-scope-");
+		const codeWorkspace = resolveCodeProjectAiWorkspace(cwd);
+		const pool = createPool();
+		const runtime = new RuntimeHost({ sessionBackend: pool, getDefaultExecutionMode: () => "full-access" });
+		pools.push(pool);
+		runtimes.push(runtime);
+
+		await runtime.createSession({ cwd, model: MODEL, scenario: "conversation", agentMode: "work" });
+		await runtime.createSession({
+			cwd,
+			model: MODEL,
+			scenario: "conversation",
+			agentMode: "coding",
+			projectIdentity: cwd,
+			projectAiWorkspaceRoot: codeWorkspace.directory,
+			projectAiWorkspaceToolRoot: codeWorkspace.directory,
+		});
+
+		expect(pool.readScopeCount()).toBe(2);
+	});
+
+	it("separates Code file-tool scope from Work for the same project cwd", async () => {
+		const cwd = await temporaryDirectory("desktop-runtime-mode-scope-");
+		const codeWorkspace = resolveCodeProjectAiWorkspace(cwd);
+		const pool = createPool();
+		const runtime = new RuntimeHost({ sessionBackend: pool, getDefaultExecutionMode: () => "full-access" });
+		pools.push(pool);
+		runtimes.push(runtime);
+
+		await runtime.createSession({ cwd, model: MODEL, scenario: "conversation", agentMode: "work" });
+		await runtime.createSession({
+			cwd,
+			model: MODEL,
+			scenario: "conversation",
+			agentMode: "coding",
+			projectIdentity: cwd,
+			projectAiWorkspaceRoot: codeWorkspace.directory,
+			projectAiWorkspaceToolRoot: codeWorkspace.directory,
+		});
+
+		expect(pool.readScopeCount()).toBe(2);
 	});
 
 	it("owns one instance per session while sharing the workspace composition and MCP source", async () => {
