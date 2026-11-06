@@ -1,7 +1,7 @@
 ---
 id: TASK-0461
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -32,7 +32,7 @@ write_paths:
 exclusive_paths: []
 depends_on: [TASK-0459]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -71,3 +71,7 @@ updated: 2026-11-07
 - 未运行与风险：完整 `bun run check` 未运行（既有环境问题）；`vetta:models:changed` 事件与 `fetch-remote`（cloud 凭证流）仍留旧 IPC。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
+
+## 集成收口（2026-11-07）
+
+- 提交 `e10a88017` 已推送 `origin/dev`（门禁链 GATE 复跑绿后推送）；quality run 42307568616 对该批次 **success**。`integration_status: integrated`，状态置 verifying。

@@ -125,7 +125,7 @@ depends_on: []
 6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），verifying（试点已集成 `origin/dev`，设置页 UI 走查待授权）。
 7. [TASK-0458](../tasks/TASK-0458-models-preset-catalog-host-domain.md)：模型预设目录（免 key 子域）迁到 Host 合同（2.1 延续），verifying（已集成，quality 全绿）；凭证类通道与事件按 ADR-0152 单独评审后迁入。
 8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），verifying。
-9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，in_progress。
+9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，verifying（已集成，quality 全绿）。
 
 ## 不做什么
 
