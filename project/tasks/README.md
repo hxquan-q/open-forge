@@ -30,7 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0455` | `draft` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
+| `TASK-0455` | `in_progress` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
 | `TASK-0454` | `in_progress` | PLAN-0029 | [评审独立：只读候选与独立上下文](TASK-0454-controller-review-isolation.md) |
 | `TASK-0453` | `in_progress` | PLAN-0029 | [host-protocol 骨架、进程内 Host 与“设置”领域试点](TASK-0453-host-protocol-in-process-host-pilot.md) |
 | `TASK-0452` | `draft` | PLAN-0029 | [真实 adapter 端到端验收任务](TASK-0452-controller-real-adapter-e2e.md) |

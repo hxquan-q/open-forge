@@ -66,6 +66,10 @@ function clause(id, taskId, evidence = "r1.md") {
 	};
 }
 
+function clauseWithEntry(id, taskId, entry) {
+	return { id, text: `${id} requirement text`, tasks: [{ id: taskId, evidence: [entry] }] };
+}
+
 function runOptions(root, extras = {}) {
 	return {
 		root,
@@ -279,5 +283,166 @@ describe("requirement coverage uses the Task ledger and evidence paths, not queu
 		});
 		expect(result.complete).toBe(true);
 		expect(result.humanAcceptance).toBe("accepted");
+	});
+
+	it("marks clause-reference evidence when the file cites the requirement and clause", () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md", "# evidence REQ-0019 R1\n");
+		const result = checkRequirement({
+			root,
+			requirement: "REQ-0019",
+			plan: "PLAN-0019",
+			coverage: coverage([
+				clauseWithEntry("R1", "TASK-1001", { path: "evidence/r1.md", clauses: ["R1"], kind: "test" }),
+			]),
+		});
+		expect(result).toMatchObject({
+			runnable: true,
+			complete: true,
+			evidenceCheck: "clause-reference",
+			semanticReview: "not-performed",
+			humanAcceptance: "pending",
+		});
+		expect(result.clauses[0].status).toBe("covered");
+	});
+
+	it("rejects object evidence whose file does not cite the declared clause as a precise token", () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md", "# evidence REQ-0019 R10\n");
+		const result = checkRequirement({
+			root,
+			requirement: "REQ-0019",
+			plan: "PLAN-0019",
+			coverage: coverage([
+				clauseWithEntry("R1", "TASK-1001", { path: "evidence/r1.md", clauses: ["R1"], kind: "test" }),
+			]),
+		});
+		expect(result.runnable).toBe(false);
+		expect(result.problems.join(" ")).toMatch(/does not reference clause R1/u);
+	});
+
+	it("rejects object evidence whose file does not cite the requirement", () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md", "# evidence R1\n");
+		const result = checkRequirement({
+			root,
+			requirement: "REQ-0019",
+			plan: "PLAN-0019",
+			coverage: coverage([
+				clauseWithEntry("R1", "TASK-1001", { path: "evidence/r1.md", clauses: ["R1"], kind: "test" }),
+			]),
+		});
+		expect(result.runnable).toBe(false);
+		expect(result.problems.join(" ")).toMatch(/does not reference REQ-0019/u);
+	});
+
+	it("rejects object evidence declaring a clause that is not bound to the Task", () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001" });
+		writeTask(root, { id: "TASK-1002" });
+		writeEvidence(root, "r1.md", "# evidence REQ-0019\n");
+		const result = checkRequirement({
+			root,
+			requirement: "REQ-0019",
+			plan: "PLAN-0019",
+			coverage: coverage([
+				clauseWithEntry("R1", "TASK-1001", { path: "evidence/r1.md", clauses: ["R2"], kind: "test" }),
+				clause("R2", "TASK-1002"),
+			]),
+		});
+		expect(result.runnable).toBe(false);
+		expect(result.problems.join(" ")).toMatch(/not bound to this Task/u);
+	});
+
+	it("keeps the static check storeless for candidate verification", () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md");
+		const result = checkRequirement({
+			root,
+			requirement: "REQ-0019",
+			plan: "PLAN-0019",
+			coverage: coverage([clause("R1", "TASK-1001")]),
+		});
+		expect(result.evidenceCheck).toBe("presence-only");
+		expect(result.candidateVerification).toBeUndefined();
+	});
+
+	it("reports candidate verification from the store without inferring human acceptance", async () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md");
+		const options = runOptions(root, { coverage: coverage([clause("R1", "TASK-1001")]), execute: vi.fn() });
+		options.store.transaction((state) => {
+			state.runs["seed-verify"] = {
+				task: "TASK-1001",
+				status: "integrated",
+				integration: {
+					phase: "applied",
+					candidateVerification: {
+						runId: "ci-1",
+						remoteRef: "origin/xquan",
+						head: "a".repeat(40),
+						tree: "b".repeat(40),
+						keyId: "owner",
+						at: 0,
+					},
+				},
+			};
+		});
+		const report = await requirementRun(options);
+		expect(options.execute).not.toHaveBeenCalled();
+		expect(report.stopReason).toBe("engineering-complete");
+		expect(report.evidenceCheck).toBe("presence-only");
+		expect(report.tasks[0].candidateVerified).toBe(true);
+		expect(report.clauses[0].candidateVerification).toBe("verified");
+		expect(report.candidateVerification).toBe("verified");
+		expect(report.humanAcceptance).toBe("pending");
+	});
+
+	it("reports pending candidate verification without a store proof", async () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md");
+		const options = runOptions(root, { coverage: coverage([clause("R1", "TASK-1001")]), execute: vi.fn() });
+		const report = await requirementRun(options);
+		expect(report.stopReason).toBe("engineering-complete");
+		expect(report.tasks[0].candidateVerified).toBe(false);
+		expect(report.clauses[0].candidateVerification).toBe("pending");
+		expect(report.candidateVerification).toBe("pending");
+		expect(report.humanAcceptance).toBe("pending");
+	});
+
+	it("reports not-applicable candidate verification before engineering completes", async () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001" });
+		writeEvidence(root, "r1.md");
+		const report = await requirementRun(
+			runOptions(root, {
+				coverage: coverage([clause("R1", "TASK-1001")]),
+				limit: 1,
+				execute: async () => ({ status: "needs-action", reason: "fixture stop" }),
+			}),
+		);
+		expect(report.candidateVerification).toBe("not-applicable");
+		expect(report.tasks[0].candidateVerified).toBe(false);
+	});
+
+	it("keeps legacy reports valid without the new optional fields", async () => {
+		const root = fixture();
+		writeTask(root, { id: "TASK-1001", status: "verifying", integration: "integrated" });
+		writeEvidence(root, "r1.md");
+		const options = runOptions(root, { coverage: coverage([clause("R1", "TASK-1001")]), execute: vi.fn() });
+		const report = await requirementRun(options);
+		const stripped = structuredClone(report);
+		delete stripped.candidateVerification;
+		for (const clauseView of stripped.clauses) delete clauseView.candidateVerification;
+		for (const task of stripped.tasks) delete task.candidateVerified;
+		expect(() => validateRequirementReport(stripped)).not.toThrow();
+		stripped.evidenceCheck = "clause-reference";
+		expect(() => validateRequirementReport(stripped)).not.toThrow();
 	});
 });
