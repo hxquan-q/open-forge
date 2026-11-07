@@ -23,11 +23,9 @@ import {
 	CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED,
 	CODING_AGENT_BACKGROUND_TASKS_OBSERVATION,
 	CODING_AGENT_BACKGROUND_TASKS_READ,
-	CODING_AGENT_NEXT_PROMPT_SUGGESTIONS,
 	CODING_AGENT_PERMISSION_MODE_SET,
 	CODING_AGENT_PLAN_MODE_STATE_READ,
 	CODING_AGENT_SESSION_PROFILE_STATE_READ,
-	CODING_AGENT_SESSION_TITLE_GENERATE,
 	CODING_AGENT_SUBAGENT_INTERRUPT,
 	CODING_AGENT_SUBAGENTS_OBSERVATION,
 	CODING_AGENT_SUBAGENTS_READ,
@@ -190,9 +188,6 @@ const CHANNELS = {
 	DELETE: "vetta:session:delete",
 	/** 项目硬删除时清空该 cwd 名下的会话存储；会话不在项目目录内，见 project-session-purge。 */
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
-	RENAME: "vetta:session:rename",
-	AUTO_TITLE: "vetta:session:auto-title",
-	NEXT_PROMPT_SUGGESTIONS: "vetta:session:next-prompt-suggestions",
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
 	GET_SESSION_PATH: "vetta:session:get-session-path",
@@ -1137,42 +1132,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		});
 	});
 
-	ipcMain.handle(CHANNELS.RENAME, async (_event, sessionPath: unknown, name: unknown) => {
-		assertNonEmptyString(sessionPath, "sessionPath");
-		assertNonEmptyString(name, "name");
-		await assertOrdinaryConversationPath(sessionPath);
-		await runtime.renameSession(sessionPath, name);
-	});
-
-	ipcMain.handle(
-		CHANNELS.AUTO_TITLE,
-		async (_event, sessionId: unknown, userText: unknown, assistantText: unknown): Promise<string | null> => {
-			assertNonEmptyString(sessionId, "sessionId");
-			if (typeof userText !== "string" || typeof assistantText !== "string") {
-				throw new Error("Invalid auto-title payload");
-			}
-			if (userText.trim().length === 0 && assistantText.trim().length === 0) return null;
-			const title = await runtime.invokeSessionExtension(sessionId, CODING_AGENT_SESSION_TITLE_GENERATE, {
-				userText,
-				assistantText,
-			});
-			if (title) await runtime.renameSessionById(sessionId, title);
-			return title;
-		},
-	);
-
-	ipcMain.handle(
-		CHANNELS.NEXT_PROMPT_SUGGESTIONS,
-		async (_event, sessionId: unknown, conversation: unknown): Promise<string[]> => {
-			assertNonEmptyString(sessionId, "sessionId");
-			if (typeof conversation !== "string" || conversation.trim().length === 0) return [];
-			return [
-				...(await runtime.invokeSessionExtension(sessionId, CODING_AGENT_NEXT_PROMPT_SUGGESTIONS, {
-					conversation,
-				})),
-			];
-		},
-	);
+	// 标题与建议三通道（rename/auto-title/next-prompt-suggestions）已迁到
+	// Host 合同 session.*（TASK-0470；所有权守卫与空输入短路语义随实现迁移）。
 
 	ipcMain.handle(CHANNELS.DISPOSE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");

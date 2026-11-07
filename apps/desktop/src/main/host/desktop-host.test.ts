@@ -32,8 +32,13 @@ const sharedRuntime = {
 	replaceLastUserMessage: vi.fn(async () => ({ leafId: "e9" })),
 	forkSession: vi.fn(async () => ({ path: "C:\\sessions\\fork.jsonl", text: "forked" })),
 	invokeSessionExtension: vi.fn(async () => true),
+	renameSession: vi.fn(async () => undefined),
+	renameSessionById: vi.fn(async () => undefined),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
+vi.mock("../conversations/conversation-ownership-guard.js", () => ({
+	assertOrdinaryConversationPath: vi.fn(async (sessionPath: string) => sessionPath),
+}));
 
 const goalController = {
 	read: vi.fn(async () => null),
@@ -364,6 +369,7 @@ describe("desktop host registration and session defaults domain", () => {
 			"models.refreshPresetCatalog",
 			"models.setConfig",
 			"models.testProvider",
+			"session.autoTitle",
 			"session.clearGoal",
 			"session.clearQueue",
 			"session.clearTodos",
@@ -375,9 +381,11 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.getQueueState",
 			"session.getThinkingLevel",
 			"session.navigateForEdit",
+			"session.nextPromptSuggestions",
 			"session.pauseGoal",
 			"session.queueContextCompaction",
 			"session.removeQueuedMessage",
+			"session.rename",
 			"session.reorderQueuedMessages",
 			"session.replaceLastUserMessage",
 			"session.resumeGoal",
@@ -563,5 +571,49 @@ describe("desktop host session goal domain", () => {
 			params: { sessionId: "s1", objective: "" },
 		});
 		expect(emptyObjective).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session title domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+	});
+
+	it("renames through the ownership guard and shared runtime", async () => {
+		await expect(
+			createDesktopHost().handle({
+				method: "session.rename",
+				params: { sessionPath: "/sessions/s1.jsonl", name: "New" },
+			}),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(sharedRuntime.renameSession).toHaveBeenCalledWith("/sessions/s1.jsonl", "New");
+	});
+
+	it("short-circuits empty inputs and passes generated titles back", async () => {
+		const host = createDesktopHost();
+		await expect(
+			host.handle({ method: "session.autoTitle", params: { sessionId: "s1", userText: "  ", assistantText: "" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(sharedRuntime.invokeSessionExtension).not.toHaveBeenCalled();
+		sharedRuntime.invokeSessionExtension.mockResolvedValueOnce("Generated" as never);
+		await expect(
+			host.handle({ method: "session.autoTitle", params: { sessionId: "s1", userText: "hi", assistantText: "yo" } }),
+		).resolves.toEqual({ ok: true, result: "Generated" });
+		expect(sharedRuntime.renameSessionById).toHaveBeenCalledWith("s1", "Generated");
+		await expect(
+			host.handle({ method: "session.nextPromptSuggestions", params: { sessionId: "s1", conversation: "  " } }),
+		).resolves.toEqual({ ok: true, result: [] });
+		sharedRuntime.invokeSessionExtension.mockResolvedValueOnce(["try this"] as never);
+		await expect(
+			host.handle({ method: "session.nextPromptSuggestions", params: { sessionId: "s1", conversation: "hello" } }),
+		).resolves.toEqual({ ok: true, result: ["try this"] });
+	});
+
+	it("rejects empty identifiers with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptyPath = await host.handle({ method: "session.rename", params: { sessionPath: "", name: "n" } });
+		expect(emptyPath).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const emptyName = await host.handle({ method: "session.rename", params: { sessionPath: "/s.jsonl", name: "" } });
+		expect(emptyName).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

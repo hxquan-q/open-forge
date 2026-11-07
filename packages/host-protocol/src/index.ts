@@ -8,6 +8,7 @@ export { SESSION_DEFAULTS_HOST_METHODS, type SessionDefaultsHostMethods } from "
 export { SESSION_GOAL_HOST_METHODS, type SessionGoalHostMethods } from "./domains/session-goal.js";
 export { SESSION_HISTORY_HOST_METHODS, type SessionHistoryHostMethods } from "./domains/session-history.js";
 export { SESSION_QUEUE_HOST_METHODS, type SessionQueueHostMethods } from "./domains/session-queue.js";
+export { SESSION_TITLE_HOST_METHODS, type SessionTitleHostMethods } from "./domains/session-title.js";
 export {
 	ModelTransportSchema,
 	SETTINGS_HOST_METHODS,

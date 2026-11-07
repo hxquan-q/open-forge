@@ -7,6 +7,7 @@ import type {
 	SessionGoalHostMethods,
 	SessionHistoryHostMethods,
 	SessionQueueHostMethods,
+	SessionTitleHostMethods,
 	SettingsHostMethods,
 } from "@vetta/host-protocol";
 import {
@@ -27,7 +28,8 @@ export type DesktopHostClient = HostClient<
 		SessionDefaultsHostMethods &
 		SessionGoalHostMethods &
 		SessionHistoryHostMethods &
-		SessionQueueHostMethods
+		SessionQueueHostMethods &
+		SessionTitleHostMethods
 >;
 
 /**
@@ -66,7 +68,8 @@ export function createDesktopHostClient(ipc: IpcRenderer): DesktopHostClient {
 			SessionDefaultsHostMethods &
 			SessionGoalHostMethods &
 			SessionHistoryHostMethods &
-			SessionQueueHostMethods
+			SessionQueueHostMethods &
+			SessionTitleHostMethods
 	>((request) => {
 		startHandshake();
 		return (portTransport ?? invokeTransport)(request);

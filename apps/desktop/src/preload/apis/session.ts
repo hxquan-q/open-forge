@@ -63,9 +63,6 @@ const CHANNELS = {
 	GET_AGENT_MODES: "vetta:session:get-agent-modes",
 	DELETE: "vetta:session:delete",
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
-	RENAME: "vetta:session:rename",
-	AUTO_TITLE: "vetta:session:auto-title",
-	NEXT_PROMPT_SUGGESTIONS: "vetta:session:next-prompt-suggestions",
 	DISPOSE: "vetta:session:dispose",
 	EVENT: "vetta:session:event",
 	LIST_RUNNING: "vetta:session:list-running",
@@ -186,11 +183,13 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			forkSession: (sessionId, entryId) => host.call("session.forkSession", { sessionId, entryId }),
 			delete: (sessionPath) => ipc.invoke(CHANNELS.DELETE, sessionPath),
 			deleteAllForCwd: (cwd) => ipc.invoke(CHANNELS.DELETE_ALL_FOR_CWD, cwd),
-			rename: (sessionPath, name) => ipc.invoke(CHANNELS.RENAME, sessionPath, name),
+			rename: async (sessionPath, name) => {
+				await host.call("session.rename", { sessionPath, name });
+			},
 			autoTitle: (sessionId, userText, assistantText) =>
-				ipc.invoke(CHANNELS.AUTO_TITLE, sessionId, userText, assistantText),
+				host.call("session.autoTitle", { sessionId, userText, assistantText }),
 			nextPromptSuggestions: (sessionId, conversation) =>
-				ipc.invoke(CHANNELS.NEXT_PROMPT_SUGGESTIONS, sessionId, conversation),
+				host.call("session.nextPromptSuggestions", { sessionId, conversation }),
 			dispose: (sessionId) => ipc.invoke(CHANNELS.DISPOSE, sessionId),
 			listRunning: () => ipc.invoke(CHANNELS.LIST_RUNNING),
 			listRunningCwds: () => ipc.invoke(CHANNELS.LIST_RUNNING_CWDS),
