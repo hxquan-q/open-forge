@@ -17,6 +17,8 @@ export const HOST_PROTOCOL_ERROR_CODES = {
 	CAPABILITY_UNAVAILABLE: "CAPABILITY_UNAVAILABLE",
 	/** 实现抛出未分类错误。 */
 	INTERNAL: "INTERNAL",
+	/** 承载该领域的 Host 子进程不可用（崩溃后未重启，TASK-0464）。 */
+	HOST_UNAVAILABLE: "HOST_UNAVAILABLE",
 } as const;
 
 export type HostProtocolErrorCode = (typeof HOST_PROTOCOL_ERROR_CODES)[keyof typeof HOST_PROTOCOL_ERROR_CODES];
