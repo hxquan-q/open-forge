@@ -1,7 +1,7 @@
 ---
 id: TASK-0464
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -87,3 +87,7 @@ updated: 2026-11-07
 ## 收口更正（2026-11-07）
 
 - 前一条"完成收口"为**错误结论**：其引用的 run 42332033653 实为 codeup-sync 工作流、跑在 2026-10-30 的无关提交 5b8347d65（v0.1.4 发布）上——我当时以未过滤工作流的 per_page=1 查询误读了哈希；且实现提交曾因 precommit 拦截（测试夹具未用变量）在后台链上静默失败，文件一直停留在暂存区。实际实现提交为 `704b72ccf`（清理夹具变量后经 precommit）。状态回退 verifying，待该批次真实 quality 结论后另行收口。
+
+## 正式收口（2026-11-07，已核实）
+
+- 以过滤 `workflowName == "quality"` 的查询核实：run 42337996323 对 `186e46484`（含实现提交 `704b72ccf`）**success**。完成标准满足，状态置 done。

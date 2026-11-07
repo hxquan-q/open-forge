@@ -116,18 +116,18 @@ depends_on: []
 ## 首批 Task
 
 1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），in_progress（脚本已集成，真实基线测量待授权）。
-2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），verifying（实现提交 704b72ccf，CI 待验）。
-3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），verifying（实现提交 704b72ccf，CI 待验）。
+2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
 4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），done；原 1.3/1.5 范围已拆出。
-   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），verifying（实现提交 704b72ccf，CI 待验）。
-   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），verifying（实现提交 704b72ccf，CI 待验）。
+   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
 5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），done（qwen-http 真实 adapter 端到端验收完成）。
 6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），verifying（试点已集成 `origin/dev`，设置页 UI 走查待授权）。
 7. [TASK-0458](../tasks/TASK-0458-models-preset-catalog-host-domain.md)：模型预设目录（免 key 子域）迁到 Host 合同（2.1 延续），done；凭证类通道与事件按 ADR-0152 单独评审后迁入。
-8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），verifying（实现提交 704b72ccf，CI 待验）。
+8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
 9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，done。
 10. [TASK-0462](../tasks/TASK-0462-mcp-noncredential-host-domain.md)：MCP 无凭证子域（config-path/has-auth/auth-status/list-server-tools）迁移，done；`mcp:get/set`（凭证面）与 OAuth 六通道按 ADR-0152 §7 留待评审。
-11. [TASK-0463](../tasks/TASK-0463-host-messageport-transport.md)：Host MessagePort transport（Phase 3 第一步，换线不搬进程，done；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，CI 待验）。
+11. [TASK-0463](../tasks/TASK-0463-host-messageport-transport.md)：Host MessagePort transport（Phase 3 第一步，换线不搬进程，done；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
 
 ## 不做什么
 
@@ -159,4 +159,4 @@ depends_on: []
 - 安全一方化：权限、审批、凭证归属：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
 - 语言分工与原生 sidecar 准入条件（Phase 4 前）。
 - 分支职责与集成目标（Phase 0.4，可落协作规则代替 ADR）。
-12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，CI 待验）。
+12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
