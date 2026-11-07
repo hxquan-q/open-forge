@@ -42,3 +42,9 @@ PLAN-0029 Phase 3.1 要求"transport 换 `utilityProcess` + `MessagePort`，rend
 - `apps/desktop/vite.main.config.ts`（多入口构建）
 - `packages/host-protocol/src/{host,client}.ts`（transport 无关分发与客户端）
 - ADR-0152、PLAN-0029 Phase 3
+
+## 追记（2026-11-07）：models/mcp 子进程适配度结论
+
+- 实测依赖面：`probe/fetch-models/sync` 有意使用 `electron.net.fetch`（复用 GUI session 的代理与 Chromium 网络栈，源注释明示），`copyApiKey` 用 clipboard，`mcpOAuth` 读主进程凭据存储——按 ADR-0152 §5/§7 属宿主专属能力，**主进程侧是正确位置**，非待拆债务。
+- models 域子进程适配仅 getConfig/setConfig/configPath（3/10），mcp 仅 configPath/listServerTools（2/4）；为边际方法拆分域的复杂度不成立。结论：Phase 3 子进程化以 settings 域（已完成）为止点，后续子进程扩展仅在网络/剪贴板/凭据能力可经 owner 桥接或 Node 等价替换时再评估。
+- 下一步按 PLAN-0029 Phase 3 第 2 项推进**领域迁移主线**（会话流等 renderer 可见面），而非继续拆 models/mcp。
