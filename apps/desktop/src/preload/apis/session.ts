@@ -13,9 +13,7 @@ const CHANNELS = {
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
-	RETRY: "vetta:session:retry",
 	ABORT: "vetta:session:abort",
-	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
 	SUBSCRIBE: "vetta:session:subscribe",
@@ -50,9 +48,6 @@ const CHANNELS = {
 	SANDBOX_GRANTS_LIST: "vetta:session:sandbox-grants-list",
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
-	BACKGROUND_TASKS_CLEAR_FINISHED: "vetta:session:background-tasks-clear-finished",
-	BACKGROUND_TASKS_KILL: "vetta:session:background-tasks-kill",
-	SUBAGENT_INTERRUPT: "vetta:session:subagent-interrupt",
 	DELETE: "vetta:session:delete",
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	DISPOSE: "vetta:session:dispose",
@@ -79,9 +74,13 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			onSessionsChanged: (handler) => onIpcEvent(ipc, CHANNELS.SESSIONS_CHANGED, handler),
 			prompt: (sessionId, request, traceContext) => ipc.invoke(CHANNELS.PROMPT, sessionId, request, traceContext),
 			continue: (sessionId) => ipc.invoke(CHANNELS.CONTINUE, sessionId),
-			retry: (sessionId) => ipc.invoke(CHANNELS.RETRY, sessionId),
+			retry: async (sessionId) => {
+				await host.call("session.retry", { sessionId });
+			},
 			abort: (sessionId) => ipc.invoke(CHANNELS.ABORT, sessionId),
-			setInterruptDraftNonEmpty: (sessionId, nonEmpty) => ipc.invoke(CHANNELS.INTERRUPT_DRAFT, sessionId, nonEmpty),
+			setInterruptDraftNonEmpty: async (sessionId, nonEmpty) => {
+				await host.call("session.setInterruptDraftNonEmpty", { sessionId, nonEmpty });
+			},
 			onInterruptHealth: (handler) => onIpcEvent(ipc, CHANNELS.INTERRUPT_HEALTH, handler),
 			onInterruptedStartup: (handler) => onIpcEvent(ipc, CHANNELS.INTERRUPTED_STARTUP, handler),
 			getQueueState: (sessionId) => host.call("session.getQueueState", { sessionId }),
@@ -143,10 +142,10 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			listSandboxGrants: (sessionId) => ipc.invoke(CHANNELS.SANDBOX_GRANTS_LIST, sessionId),
 			revokeSandboxGrant: (sessionId, grantId) => ipc.invoke(CHANNELS.SANDBOX_GRANTS_REVOKE, sessionId, grantId),
 			revokeAllSandboxGrants: (sessionId) => ipc.invoke(CHANNELS.SANDBOX_GRANTS_REVOKE_ALL, sessionId),
-			clearFinishedBackgroundTasks: (sessionId) => ipc.invoke(CHANNELS.BACKGROUND_TASKS_CLEAR_FINISHED, sessionId),
-			killBackgroundTask: (sessionId, taskId) => ipc.invoke(CHANNELS.BACKGROUND_TASKS_KILL, sessionId, taskId),
-			interruptSubagent: (sessionId, target) => ipc.invoke(CHANNELS.SUBAGENT_INTERRUPT, sessionId, target),
-			getSessionPath: (sessionId) => ipc.invoke("vetta:session:get-session-path", sessionId),
+			clearFinishedBackgroundTasks: (sessionId) => host.call("session.clearFinishedBackgroundTasks", { sessionId }),
+			killBackgroundTask: (sessionId, taskId) => host.call("session.killBackgroundTask", { sessionId, taskId }),
+			interruptSubagent: (sessionId, target) => host.call("session.interruptSubagent", { sessionId, target }),
+			getSessionPath: async (sessionId) => (await host.call("session.getSessionPath", { sessionId })) ?? undefined,
 			updateSettings: async (sessionId, partialSettings) => {
 				await host.call("session.updateSettings", { sessionId, patch: partialSettings });
 			},

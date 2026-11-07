@@ -1,7 +1,7 @@
 ---
 id: TASK-0473
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -35,7 +35,7 @@ write_paths:
 exclusive_paths: []
 depends_on: [TASK-0472]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -69,7 +69,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列。
 - 踩坑记录：删除 INTERRUPT_DRAFT handler 时误写无效占位行，即时改为迁移注释（未进入任何提交）；preload retry 用例需补 `send` 假 ipc 且 invoke 返回 HostResponse 信封；`getSessionPath` mock 需显式标注 `string | undefined` 以支持 null 归一用例。
-- 实际验证：desktop 定向 44 例通过（desktop-host 36 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 646 → 640；`test:impact` 结果见下。
+- 实际验证：desktop 定向 44 例通过（desktop-host 36 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 646 → 640；`test:impact` 全量通过（desktop + host-protocol）。
 - 未运行与风险：dispose/subscribe 留旧 IPC；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用

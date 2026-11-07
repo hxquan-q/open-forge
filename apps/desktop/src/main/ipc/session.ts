@@ -19,12 +19,9 @@ import type {
 } from "@vetta/coding-agent/plugin-runtime";
 
 import {
-	CODING_AGENT_BACKGROUND_TASK_KILL,
-	CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED,
 	CODING_AGENT_BACKGROUND_TASKS_OBSERVATION,
 	CODING_AGENT_BACKGROUND_TASKS_READ,
 	CODING_AGENT_SESSION_PROFILE_STATE_READ,
-	CODING_AGENT_SUBAGENT_INTERRUPT,
 	CODING_AGENT_SUBAGENTS_OBSERVATION,
 	CODING_AGENT_SUBAGENTS_READ,
 } from "@vetta/coding-agent/session-extensions";
@@ -40,7 +37,6 @@ import {
 	runSessionInterruptStartupScan,
 	startSessionInterruptMonitor,
 } from "../agent-runtime/session-interrupt-bootstrap.js";
-import { setSessionInterruptDraftNonEmpty } from "../agent-runtime/session-interrupt-draft-registry.js";
 import {
 	clearSessionManualStop,
 	markSessionManualStop,
@@ -163,7 +159,6 @@ const CHANNELS = {
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
-	RETRY: "vetta:session:retry",
 	ABORT: "vetta:session:abort",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
@@ -176,7 +171,6 @@ const CHANNELS = {
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
-	GET_SESSION_PATH: "vetta:session:get-session-path",
 	EVENT: "vetta:session:event",
 	QUESTION_REQUEST: "vetta:session:question-request",
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
@@ -203,15 +197,10 @@ const CHANNELS = {
 	SANDBOX_GRANTS_LIST: "vetta:session:sandbox-grants-list",
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
-	BACKGROUND_TASKS_CLEAR_FINISHED: "vetta:session:background-tasks-clear-finished",
-	BACKGROUND_TASKS_KILL: "vetta:session:background-tasks-kill",
-	SUBAGENT_INTERRUPT: "vetta:session:subagent-interrupt",
 	LIST_RUNNING: "vetta:session:list-running",
 	/** 有会话在跑的项目 cwd 列表；会话路径无法反推项目，见处理器上的说明。 */
 	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
-	/** Renderer → Main：草稿非空镜像，供中断续接否决。 */
-	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
 	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
@@ -965,11 +954,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 
 	// 失败/中断后的显式续跑入口（footer「继续」条）：kernel retry 重跑最后一轮并
 	// 丢弃失败的助手尝试；忙碌/recovery_required 由 kernel 拒绝并透传给渲染端。
-	ipcMain.handle(CHANNELS.RETRY, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		clearSessionManualStop(sessionId);
-		await runtime.retry(sessionId);
-	});
+	// retry 与 interrupt-draft 两通道已迁到 Host 合同 session.*（TASK-0473）。
 
 	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
@@ -980,11 +965,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		await Promise.allSettled([runtime.abort(sessionId), stopSessionBackgroundWork(runtime, sessionId)]);
 	});
 
-	ipcMain.handle(CHANNELS.INTERRUPT_DRAFT, (_event, sessionId: unknown, nonEmpty: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		if (typeof nonEmpty !== "boolean") throw new Error("nonEmpty must be boolean");
-		setSessionInterruptDraftNonEmpty(sessionId, nonEmpty);
-	});
+	// interrupt-draft 已迁到 Host 合同 session.setInterruptDraftNonEmpty（TASK-0473）。
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
 	// 输入队列七通道已迁到 Host 合同 session.*（TASK-0467；queue-state 推送事件仍走旧 IPC）。
@@ -1065,10 +1046,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		await disposeInteractiveSession(sessionId);
 	});
 
-	ipcMain.handle(CHANNELS.GET_SESSION_PATH, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.getSessionPath(sessionId);
-	});
+	// get-session-path 已迁到 Host 合同 session.getSessionPath（TASK-0473）。
 
 	ipcMain.handle(CHANNELS.LIST_RUNNING, () => [
 		...new Set([
@@ -1332,23 +1310,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return runtime.revokeAllSandboxGrants(sessionId);
 	});
 
-	ipcMain.handle(CHANNELS.BACKGROUND_TASKS_CLEAR_FINISHED, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED, undefined);
-	});
-
-	ipcMain.handle(CHANNELS.BACKGROUND_TASKS_KILL, (_event, sessionId: unknown, taskId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(taskId, "taskId");
-		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_BACKGROUND_TASK_KILL, { taskId });
-	});
-
-	ipcMain.handle(CHANNELS.SUBAGENT_INTERRUPT, async (_event, sessionId: unknown, target: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(target, "target");
-		const snap = await runtime.invokeSessionExtension(sessionId, CODING_AGENT_SUBAGENT_INTERRUPT, { target });
-		return snap != null;
-	});
+	// 后台任务三通道（clear-finished/kill/subagent-interrupt）已迁到 Host 合同
+	// session.*（TASK-0473）。
 
 	ipcMain.handle(CHANNELS.SUBSCRIBE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");

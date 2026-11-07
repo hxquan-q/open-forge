@@ -10,6 +10,10 @@ export { SESSION_GOAL_HOST_METHODS, type SessionGoalHostMethods } from "./domain
 export { SESSION_HISTORY_HOST_METHODS, type SessionHistoryHostMethods } from "./domains/session-history.js";
 export { SESSION_PLAN_MODE_HOST_METHODS, type SessionPlanModeHostMethods } from "./domains/session-plan-mode.js";
 export { SESSION_QUEUE_HOST_METHODS, type SessionQueueHostMethods } from "./domains/session-queue.js";
+export {
+	SESSION_RUNTIME_OPS_HOST_METHODS,
+	type SessionRuntimeOpsHostMethods,
+} from "./domains/session-runtime-ops.js";
 export { SESSION_TITLE_HOST_METHODS, type SessionTitleHostMethods } from "./domains/session-title.js";
 export {
 	ModelTransportSchema,

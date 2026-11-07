@@ -9,6 +9,7 @@ import type {
 	SessionHistoryHostMethods,
 	SessionPlanModeHostMethods,
 	SessionQueueHostMethods,
+	SessionRuntimeOpsHostMethods,
 	SessionTitleHostMethods,
 	SettingsHostMethods,
 } from "@vetta/host-protocol";
@@ -33,6 +34,7 @@ export type DesktopHostClient = HostClient<
 		SessionHistoryHostMethods &
 		SessionPlanModeHostMethods &
 		SessionQueueHostMethods &
+		SessionRuntimeOpsHostMethods &
 		SessionTitleHostMethods
 >;
 
@@ -75,6 +77,7 @@ export function createDesktopHostClient(ipc: IpcRenderer): DesktopHostClient {
 			SessionHistoryHostMethods &
 			SessionPlanModeHostMethods &
 			SessionQueueHostMethods &
+			SessionRuntimeOpsHostMethods &
 			SessionTitleHostMethods
 	>((request) => {
 		startHandshake();

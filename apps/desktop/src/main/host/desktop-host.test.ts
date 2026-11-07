@@ -38,9 +38,19 @@ const sharedRuntime = {
 	updateSettings: vi.fn(async () => undefined),
 	setExecutionMode: vi.fn(async () => undefined),
 	updateGlobalThinkingLevel: vi.fn(),
-	getSessionPath: vi.fn(() => "/sessions/s1.jsonl"),
+	getSessionPath: vi.fn((): string | undefined => "/sessions/s1.jsonl"),
+	retry: vi.fn(async () => undefined),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
+const interruptDraftRegistry = vi.hoisted(() => ({
+	setSessionInterruptDraftNonEmpty: vi.fn(),
+}));
+vi.mock("../agent-runtime/session-interrupt-draft-registry.js", () => interruptDraftRegistry);
+vi.mock("../agent-runtime/session-interrupt-watch-registry.js", () => ({
+	clearSessionManualStop: vi.fn(),
+	markSessionManualStop: vi.fn(),
+	watchSessionForInterruptContinue: vi.fn(),
+}));
 vi.mock("../conversations/conversation-ownership-guard.js", () => ({
 	assertOrdinaryConversationPath: vi.fn(async (sessionPath: string) => sessionPath),
 }));
@@ -395,6 +405,7 @@ describe("desktop host registration and session defaults domain", () => {
 			"models.setConfig",
 			"models.testProvider",
 			"session.autoTitle",
+			"session.clearFinishedBackgroundTasks",
 			"session.clearGoal",
 			"session.clearQueue",
 			"session.clearTodos",
@@ -406,7 +417,10 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.getPersonas",
 			"session.getPlanModeState",
 			"session.getQueueState",
+			"session.getSessionPath",
 			"session.getThinkingLevel",
+			"session.interruptSubagent",
+			"session.killBackgroundTask",
 			"session.navigateForEdit",
 			"session.nextPromptSuggestions",
 			"session.pauseGoal",
@@ -417,11 +431,13 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.replaceLastUserMessage",
 			"session.resumeGoal",
 			"session.resumeQueue",
+			"session.retry",
 			"session.sendQueuedMessageNow",
 			"session.setExecutionMode",
 			"session.setGlobalAgentMode",
 			"session.setGlobalExecutionMode",
 			"session.setGlobalThinkingLevel",
+			"session.setInterruptDraftNonEmpty",
 			"session.setPersonalization",
 			"session.setPlanModePermissionMode",
 			"session.startGoal",
@@ -751,5 +767,64 @@ describe("desktop host session execution domain", () => {
 			params: { mode: "turbo" },
 		});
 		expect(badMode).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session runtime-ops domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+		interruptDraftRegistry.setSessionInterruptDraftNonEmpty.mockClear();
+	});
+
+	it("clears manual-stop before retry and mirrors the interrupt draft flag", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.retry", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		expect(sharedRuntime.retry).toHaveBeenCalledWith("s1");
+		await expect(
+			host.handle({ method: "session.setInterruptDraftNonEmpty", params: { sessionId: "s1", nonEmpty: true } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(interruptDraftRegistry.setSessionInterruptDraftNonEmpty).toHaveBeenCalledWith("s1", true);
+	});
+
+	it("returns the session path and bridges background task operations", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.getSessionPath", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: "/sessions/s1.jsonl",
+		});
+		sharedRuntime.getSessionPath.mockReturnValueOnce(undefined);
+		await expect(host.handle({ method: "session.getSessionPath", params: { sessionId: "gone" } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		sharedRuntime.invokeSessionExtension.mockResolvedValueOnce(3 as never);
+		await expect(
+			host.handle({ method: "session.clearFinishedBackgroundTasks", params: { sessionId: "s1" } }),
+		).resolves.toEqual({ ok: true, result: 3 });
+		await expect(
+			host.handle({ method: "session.killBackgroundTask", params: { sessionId: "s1", taskId: "t1" } }),
+		).resolves.toEqual({ ok: true, result: true });
+		sharedRuntime.invokeSessionExtension.mockResolvedValueOnce({ id: "snap" } as never);
+		await expect(
+			host.handle({ method: "session.interruptSubagent", params: { sessionId: "s1", target: "writer" } }),
+		).resolves.toEqual({ ok: true, result: true });
+		sharedRuntime.invokeSessionExtension.mockResolvedValueOnce(null as never);
+		await expect(
+			host.handle({ method: "session.interruptSubagent", params: { sessionId: "s1", target: "writer" } }),
+		).resolves.toEqual({ ok: true, result: false });
+	});
+
+	it("rejects empty identifiers and non-boolean draft flags with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptyId = await host.handle({ method: "session.retry", params: { sessionId: "" } });
+		expect(emptyId).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const badFlag = await host.handle({
+			method: "session.setInterruptDraftNonEmpty",
+			params: { sessionId: "s1", nonEmpty: "yes" },
+		});
+		expect(badFlag).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });
