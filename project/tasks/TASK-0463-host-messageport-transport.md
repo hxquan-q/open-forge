@@ -1,7 +1,7 @@
 ---
 id: TASK-0463
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -75,3 +75,7 @@ preload↔main 的 Host 请求通道从 `ipc.invoke(vetta:host:request)` 升级�
 - 发布：不适用
 
 - 远端 CI（2026-11-07）：首推 `c619a7adb` quality failure——根级 types 检查捕获 port-bridge 测试 mock 返回未被窄化为 HostResponse 判别联合（desktop 包 typecheck 不覆盖包测试文件，本地漏拦）。修复：mock 显式注解 `Promise<HostResponse>` 并补 envelope 类型导入；本地以 `bunx tsgo --noEmit`（根级）复验归零后重推。流程教训：凡改包内测试文件，推送前补跑根级 types。
+
+## 完成收口（2026-11-07）
+
+- 修复批次 `214b6cbb3` 远端 quality success（run 42328679948）；实现批次 `c619a7adb` 的类型错误已由修复批次闭合，完成标准满足，状态置 done。
