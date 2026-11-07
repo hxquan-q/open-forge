@@ -4,6 +4,7 @@ import type {
 	McpHostMethods,
 	ModelsHostMethods,
 	SessionDefaultsHostMethods,
+	SessionHistoryHostMethods,
 	SessionQueueHostMethods,
 	SettingsHostMethods,
 } from "@vetta/host-protocol";
@@ -19,7 +20,12 @@ import { HOST_PORT_CHANNEL, HOST_PORT_REQUEST_CHANNEL, HOST_REQUEST_CHANNEL } fr
 
 /** preload 侧 Host 客户端：MessagePort 为主通道、`ipc.invoke` 为引导期回退（TASK-0463，ADR-0152）。 */
 export type DesktopHostClient = HostClient<
-	SettingsHostMethods & ModelsHostMethods & McpHostMethods & SessionDefaultsHostMethods & SessionQueueHostMethods
+	SettingsHostMethods &
+		ModelsHostMethods &
+		McpHostMethods &
+		SessionDefaultsHostMethods &
+		SessionHistoryHostMethods &
+		SessionQueueHostMethods
 >;
 
 /**
@@ -52,7 +58,12 @@ export function createDesktopHostClient(ipc: IpcRenderer): DesktopHostClient {
 	};
 
 	return createHostClient<
-		SettingsHostMethods & ModelsHostMethods & McpHostMethods & SessionDefaultsHostMethods & SessionQueueHostMethods
+		SettingsHostMethods &
+			ModelsHostMethods &
+			McpHostMethods &
+			SessionDefaultsHostMethods &
+			SessionHistoryHostMethods &
+			SessionQueueHostMethods
 	>((request) => {
 		startHandshake();
 		return (portTransport ?? invokeTransport)(request);

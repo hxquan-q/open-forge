@@ -203,11 +203,6 @@ const CHANNELS = {
 	NEXT_PROMPT_SUGGESTIONS: "vetta:session:next-prompt-suggestions",
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
-	NAVIGATE_FOR_EDIT: "vetta:session:navigate-for-edit",
-	SWITCH_BRANCH: "vetta:session:switch-branch",
-	DELETE_MESSAGE: "vetta:session:delete-message",
-	REPLACE_LAST_USER_MESSAGE: "vetta:session:replace-last-user-message",
-	FORK_SESSION: "vetta:session:fork-session",
 	GET_SESSION_PATH: "vetta:session:get-session-path",
 	SET_GLOBAL_THINKING: "vetta:session:set-global-thinking-level",
 	GET_AGENT_MODES: "vetta:session:get-agent-modes",
@@ -1147,35 +1142,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return sliceHistoryPage(runtime.getFullHistory(sessionId), parseHistoryPageRequest(options));
 	});
 
-	ipcMain.handle(CHANNELS.NAVIGATE_FOR_EDIT, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.navigateForEdit(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.SWITCH_BRANCH, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.switchBranch(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.DELETE_MESSAGE, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.deleteMessage(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.REPLACE_LAST_USER_MESSAGE, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.replaceLastUserMessage(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.FORK_SESSION, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.forkSession(sessionId, entryId);
-	});
+	// 会话历史分支五通道（navigate-for-edit/switch-branch/delete-message/
+	// replace-last-user-message/fork-session）已迁到 Host 合同 session.*（TASK-0468）。
 
 	ipcMain.handle(CHANNELS.DELETE, async (_event, sessionPath: unknown) => {
 		assertNonEmptyString(sessionPath, "sessionPath");

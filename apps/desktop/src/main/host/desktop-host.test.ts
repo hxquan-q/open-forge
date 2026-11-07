@@ -15,7 +15,7 @@ vi.mock("@vetta/coding-agent/profile", () => ({
 	],
 }));
 
-const queueRuntime = {
+const sharedRuntime = {
 	getQueueState: vi.fn(() => ({
 		paused: true,
 		entries: [{ id: "q1", behavior: "steer", kind: "message", displayText: "hi" }],
@@ -26,8 +26,13 @@ const queueRuntime = {
 	sendQueuedMessageNow: vi.fn(async () => "promoted" as const),
 	resumeQueue: vi.fn(async () => undefined),
 	clearQueue: vi.fn(),
+	navigateForEdit: vi.fn(async () => ({ text: "draft", cancelled: false })),
+	switchBranch: vi.fn(async () => ({ leafId: "e2" })),
+	deleteMessage: vi.fn(async () => ({ leafId: null })),
+	replaceLastUserMessage: vi.fn(async () => ({ leafId: "e9" })),
+	forkSession: vi.fn(async () => ({ path: "C:\\sessions\\fork.jsonl", text: "forked" })),
 };
-vi.mock("../runtime.js", () => ({ getSharedRuntime: () => queueRuntime }));
+vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
 
 const { createDesktopHost } = await import("./desktop-host.js");
 
@@ -332,16 +337,21 @@ describe("desktop host registration and session defaults domain", () => {
 			"models.setConfig",
 			"models.testProvider",
 			"session.clearQueue",
+			"session.deleteMessage",
+			"session.forkSession",
 			"session.getPersonalization",
 			"session.getPersonas",
 			"session.getQueueState",
 			"session.getThinkingLevel",
+			"session.navigateForEdit",
 			"session.queueContextCompaction",
 			"session.removeQueuedMessage",
 			"session.reorderQueuedMessages",
+			"session.replaceLastUserMessage",
 			"session.resumeQueue",
 			"session.sendQueuedMessageNow",
 			"session.setPersonalization",
+			"session.switchBranch",
 		]);
 	});
 
@@ -385,7 +395,7 @@ describe("desktop host registration and session defaults domain", () => {
 
 describe("desktop host session queue domain", () => {
 	beforeEach(() => {
-		for (const fn of Object.values(queueRuntime)) fn.mockClear();
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
 	});
 
 	it("returns the queue state snapshot through the shared runtime", async () => {
@@ -395,7 +405,7 @@ describe("desktop host session queue domain", () => {
 			ok: true,
 			result: { paused: true, entries: [{ id: "q1", behavior: "steer", kind: "message", displayText: "hi" }] },
 		});
-		expect(queueRuntime.getQueueState).toHaveBeenCalledWith("s1");
+		expect(sharedRuntime.getQueueState).toHaveBeenCalledWith("s1");
 	});
 
 	it("bridges queue operations and rejects empty identifiers", async () => {
@@ -409,11 +419,52 @@ describe("desktop host session queue domain", () => {
 		await expect(
 			host.handle({ method: "session.reorderQueuedMessages", params: { sessionId: "s1", itemIds: ["q2", "q1"] } }),
 		).resolves.toEqual({ ok: true, result: null });
-		expect(queueRuntime.reorderQueuedMessages).toHaveBeenCalledWith("s1", ["q2", "q1"]);
+		expect(sharedRuntime.reorderQueuedMessages).toHaveBeenCalledWith("s1", ["q2", "q1"]);
 		await expect(
 			host.handle({ method: "session.sendQueuedMessageNow", params: { sessionId: "s1", itemId: "q1" } }),
 		).resolves.toEqual({ ok: true, result: "promoted" });
 		const empty = await host.handle({ method: "session.clearQueue", params: { sessionId: "" } });
 		expect(empty).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session history domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+	});
+
+	it("bridges history write commands through the shared runtime", async () => {
+		const host = createDesktopHost();
+		await expect(
+			host.handle({ method: "session.navigateForEdit", params: { sessionId: "s1", entryId: "e1" } }),
+		).resolves.toEqual({ ok: true, result: { text: "draft", cancelled: false } });
+		await expect(
+			host.handle({ method: "session.switchBranch", params: { sessionId: "s1", entryId: "e2" } }),
+		).resolves.toEqual({ ok: true, result: { leafId: "e2" } });
+		await expect(
+			host.handle({ method: "session.deleteMessage", params: { sessionId: "s1", entryId: "e3" } }),
+		).resolves.toEqual({ ok: true, result: { leafId: null } });
+		await expect(
+			host.handle({ method: "session.replaceLastUserMessage", params: { sessionId: "s1", entryId: "e4" } }),
+		).resolves.toEqual({ ok: true, result: { leafId: "e9" } });
+		await expect(
+			host.handle({ method: "session.forkSession", params: { sessionId: "s1", entryId: "e5" } }),
+		).resolves.toEqual({ ok: true, result: { path: "C:\\sessions\\fork.jsonl", text: "forked" } });
+		expect(sharedRuntime.navigateForEdit).toHaveBeenCalledWith("s1", "e1");
+		expect(sharedRuntime.switchBranch).toHaveBeenCalledWith("s1", "e2");
+		expect(sharedRuntime.deleteMessage).toHaveBeenCalledWith("s1", "e3");
+		expect(sharedRuntime.replaceLastUserMessage).toHaveBeenCalledWith("s1", "e4");
+		expect(sharedRuntime.forkSession).toHaveBeenCalledWith("s1", "e5");
+	});
+
+	it("rejects empty identifiers with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptySession = await host.handle({
+			method: "session.switchBranch",
+			params: { sessionId: "", entryId: "e1" },
+		});
+		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const emptyEntry = await host.handle({ method: "session.forkSession", params: { sessionId: "s1", entryId: "" } });
+		expect(emptyEntry).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });
