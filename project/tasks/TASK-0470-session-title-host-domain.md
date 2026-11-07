@@ -1,7 +1,7 @@
 ---
 id: TASK-0470
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -68,7 +68,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列。
 - 踩坑记录：注册清单码点排序（`autoTitle` 在 `clearGoal` 之前），首跑按字母位插入失败；`invokeSessionExtension` mock 的返回类型被首个 `true` 推断钉死，后续 string/string[] 返回需 `as never`。
-- 实际验证：desktop 定向 36 例通过（desktop-host 28 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 657 → 654；`test:impact` 全量通过（desktop + host-protocol）。
+- 实际验证：desktop 定向 36 例通过（desktop-host 28 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 657 → 654；`test:impact` 全量通过（desktop + host-protocol）；实现提交 `1eac2aa36` 后 `test:changed --base origin/dev` 通过并推送 `main:dev`，远端 quality run 42363373975（headSha `1eac2aa36`）success。
 - 未运行与风险：UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
