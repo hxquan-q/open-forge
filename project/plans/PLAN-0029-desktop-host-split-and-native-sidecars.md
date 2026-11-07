@@ -127,6 +127,7 @@ depends_on: []
 8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），done。
 9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，done。
 10. [TASK-0462](../tasks/TASK-0462-mcp-noncredential-host-domain.md)：MCP 无凭证子域（config-path/has-auth/auth-status/list-server-tools）迁移，done；`mcp:get/set`（凭证面）与 OAuth 六通道按 ADR-0152 §7 留待评审。
+11. [TASK-0463](../tasks/TASK-0463-host-messageport-transport.md)：Host MessagePort transport（Phase 3 第一步，换线不搬进程；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），in_progress。
 
 ## 不做什么
 

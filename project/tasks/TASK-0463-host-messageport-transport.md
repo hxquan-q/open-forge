@@ -1,0 +1,69 @@
+---
+id: TASK-0463
+type: task
+status: in_progress
+priority: P1
+owner: apps/desktop/runtime-desktop
+requirement: REQ-0002
+plan: PLAN-0029
+source: user-request
+related_requirement: [REQ-0002]
+related_plan: [PLAN-0029]
+related_tasks: [TASK-0453, TASK-0458, TASK-0459, TASK-0461, TASK-0462]
+related_issues: []
+related_bugs: []
+execution: serial
+branch: main
+worktree: unassigned（主工作区串行）
+base_commit: a7431093e
+read_paths:
+  - project/research/RESEARCH-0050-host-process-transport.md
+  - apps/desktop/src/main/ipc/host.ts
+  - apps/desktop/src/preload/host-transport.ts
+  - apps/desktop/src/main/speech-input/speech-input-service.ts
+write_paths:
+  - packages/host-protocol/src/port-bridge.ts
+  - packages/host-protocol/src/index.ts
+  - packages/host-protocol/test/port-bridge.test.ts
+  - apps/desktop/src/main/ipc/host.ts
+  - apps/desktop/src/main/host/host-port-bridge.ts
+  - apps/desktop/src/preload/host-transport.ts
+  - apps/desktop/src/preload/host-transport.test.ts
+  - project/plans/PLAN-0029-desktop-host-split-and-native-sidecars.md
+  - project/tasks/TASK-0463-host-messageport-transport.md
+  - project/tasks/README.md
+exclusive_paths: []
+depends_on: [TASK-0462]
+conflicts_with: []
+integration_status: pending
+created: 2026-11-07
+updated: 2026-11-07
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# Host MessagePort transport（Phase 3 第一步：换线不搬进程）
+
+## 目标
+
+preload↔main 的 Host 请求通道从 `ipc.invoke(vetta:host:request)` 升级为 `MessageChannelMain` 的 MessagePort，renderer 与领域实现零改动；`ipc.invoke` 保留为引导握手与回退。为 Phase 3 第二步（`utilityProcess` 承载 dispatcher）验证 transport 缝（RESEARCH-0050 结论 1）。
+
+## 设计（定稿）
+
+- **引导握手**：主进程在 Host 注册后向 renderer `webContents.postMessage(HOST_PORT_CHANNEL, null, [port1])`（一次性推送；窗口重建重推）；preload 收到前请求走 `ipc.invoke` 回退，收到后切换 MessagePort。回退与 MessagePort 同一信封，语义一致。
+- **关联**：MessagePort 消息带自增 `id`：`{ id, request }` / `{ id, response }`；乱序响应按 id 配对。关联逻辑进 `packages/host-protocol/src/port-bridge.ts`（transport 无关，纯 MessagePort-like 接口，供 preload 与（将来）host 进程两侧复用；不引入 Electron 依赖）。
+- **主进程侧**：`host-port-bridge.ts` 把 port2 的每条消息交给 `HostDispatcher.handle`，回写 `{ id, response }`；port 关闭即拆桥（不自动重建，等下次握手）。`ipcMain.handle(HOST_REQUEST_CHANNEL)` 保持现状（回退路径）。
+- **不做**：不搬 dispatcher 进程；不动领域实现与 owner 注册表；不迁移事件；不删 `vetta:host:request` channel（本阶段 IPC 计数不下降）。
+
+## Given / When / Then
+
+- Given Host 已注册且窗口加载 / When preload 发起 20 个既有方法调用 / Then 全部经 MessagePort 往返，结果与 `ipc.invoke` 路径逐字节一致；并发调用乱序完成仍按 id 正确配对。
+- Given 端口尚未送达 / When 首个调用 / Then 走 `ipc.invoke` 回退成功；端口送达后自动切换。
+- Given 端口关闭（窗口刷新前 teardown）/ When 调用 / Then 回退 `ipc.invoke`，不悬挂。
+
+## 测试与验证
+
+- `port-bridge` 单测（配对、乱序、关闭）；preload transport 测试补端口切换与回退分支；desktop 定向（desktop-host / host-transport / system）；`apps/desktop typecheck`；`check:quick`；`test:impact`；门禁链 + 远端 quality。
+
+## 交付记录
+
+- 待补
