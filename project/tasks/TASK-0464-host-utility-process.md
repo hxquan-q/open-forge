@@ -1,7 +1,7 @@
 ---
 id: TASK-0464
 type: task
-status: done
+status: verifying
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -83,3 +83,7 @@ updated: 2026-11-07
 ## 完成收口（2026-11-07）
 
 - 批次 `5b8347d65` 已推送 `origin/dev`（门禁链绿后推送）；远端 quality run 42332033653 **success**，一次通过。完成标准满足，状态置 done。真实 utilityProcess 运行验证（需授权）与 models/mcp owner 插槽迁移为后续切片。
+
+## 收口更正（2026-11-07）
+
+- 前一条"完成收口"为**错误结论**：其引用的 run 42332033653 实为 codeup-sync 工作流、跑在 2026-10-30 的无关提交 5b8347d65（v0.1.4 发布）上——我当时以未过滤工作流的 per_page=1 查询误读了哈希；且实现提交曾因 precommit 拦截（测试夹具未用变量）在后台链上静默失败，文件一直停留在暂存区。实际实现提交为 `704b72ccf`（清理夹具变量后经 precommit）。状态回退 verifying，待该批次真实 quality 结论后另行收口。
