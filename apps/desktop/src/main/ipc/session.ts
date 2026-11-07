@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import type {
 	CodingAgentQuestionFunctionRequest,
 	CodingAgentQuestionResult,
@@ -39,14 +38,11 @@ import {
 } from "../agent-runtime/session-interrupt-bootstrap.js";
 import {
 	clearSessionManualStop,
-	markSessionManualStop,
 	watchSessionForInterruptContinue,
 } from "../agent-runtime/session-interrupt-watch-registry.js";
-import { stopSessionBackgroundWork } from "../agent-runtime/stop-session-work.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service.js";
 import { onConversationListChanged } from "../conversations/conversation-list-events.js";
-import { assertOrdinaryConversationPath } from "../conversations/conversation-ownership-guard.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
 import { desktopSessionSearch } from "../conversations/desktop-session-search.js";
 import {
@@ -56,20 +52,17 @@ import {
 } from "../conversations/idle-session-residency.js";
 import { getDesktopMcpElicitationBroker } from "../conversations/mcp-elicitation-broker.js";
 import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.js";
-import { purgeProjectSessions } from "../conversations/project-session-purge.js";
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
-import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations/session-paths.js";
-import { listSessionHistory } from "../conversations/session-query-service.js";
+import { isConversationSubCwd } from "../conversations/session-paths.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
 import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
 import { getDesktopMcpTaskCoordinator, getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
-import { forgetMessageAnnotations } from "../message-annotations/host.js";
 import { notify } from "../notifications/index.js";
 import { SessionTurnNotificationController } from "../notifications/session-turn-notification-controller.js";
 import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
@@ -156,17 +149,12 @@ const CHANNELS = {
 	CREATE: "vetta:session:create",
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
-	CONTINUE: "vetta:session:continue",
-	ABORT: "vetta:session:abort",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
 	/** 默认工作模式已变更；仅用于各窗口新会话页 toggle 的显示同步，不改变任何活跃会话的行为。 */
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
 	GET_STATE: "vetta:session:get-state",
 	GET_MESSAGES: "vetta:session:get-messages",
-	DELETE: "vetta:session:delete",
-	/** 项目硬删除时清空该 cwd 名下的会话存储；会话不在项目目录内，见 project-session-purge。 */
-	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
 	EVENT: "vetta:session:event",
@@ -935,24 +923,13 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return conversationService.promptInteractiveSession(sessionId, req, sessionCwdMap.get(sessionId));
 	});
 
-	ipcMain.handle(CHANNELS.CONTINUE, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		clearSessionManualStop(sessionId);
-		await runtime.continue(sessionId);
-	});
+	// continue/abort/delete/delete-all-for-cwd 四通道已迁到 Host 合同
+	// session.*（TASK-0475；manual-stop 标记、所有权守卫与 ADR-0007
+	// 子目录回收语义随实现迁移）。
 
 	// 失败/中断后的显式续跑入口（footer「继续」条）：kernel retry 重跑最后一轮并
 	// 丢弃失败的助手尝试；忙碌/recovery_required 由 kernel 拒绝并透传给渲染端。
 	// retry 与 interrupt-draft 两通道已迁到 Host 合同 session.*（TASK-0473）。
-
-	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		markSessionManualStop(sessionId);
-		// Stopping is unconditional: the turn comes down together with the work it
-		// spawned. Subagents and background commands outlive the turn by design, so
-		// cancelling the turn alone would leave workflows running behind the button.
-		await Promise.allSettled([runtime.abort(sessionId), stopSessionBackgroundWork(runtime, sessionId)]);
-	});
 
 	// interrupt-draft 已迁到 Host 合同 session.setInterruptDraftNonEmpty（TASK-0473）。
 
@@ -999,36 +976,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// 会话历史分支五通道（navigate-for-edit/switch-branch/delete-message/
 	// replace-last-user-message/fork-session）已迁到 Host 合同 session.*（TASK-0468）。
 
-	ipcMain.handle(CHANNELS.DELETE, async (_event, sessionPath: unknown) => {
-		assertNonEmptyString(sessionPath, "sessionPath");
-		await assertOrdinaryConversationPath(sessionPath);
-		// ADR-0007: 「对话」项目下的 session cwd 是独立子目录；删除 session 时
-		// 连带回收子目录里的产物。读 header 先取 cwd，再 delete，最后 rm 子目录。
-		const cwdFromHeader = await readSessionCwdFromHeader(sessionPath);
-		await runtime.deleteSession(sessionPath);
-		await forgetMessageAnnotations(sessionPath);
-		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
-			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
-				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);
-			});
-		}
-	});
-
-	ipcMain.handle(CHANNELS.DELETE_ALL_FOR_CWD, async (_event, cwd: unknown) => {
-		assertNonEmptyString(cwd, "cwd");
-		return purgeProjectSessions(cwd, {
-			listSessions: (target) => listSessionHistory(target),
-			deleteSession: (sessionPath) => runtime.deleteSession(sessionPath),
-			// 分片目录是新会话的落点；`<项目>/.vetta/sessions` 是存量兼容位置，随项目目录
-			// 一起消失，这里不重复处理（见 composition.resolveDesktopRuntimeSessionRoots）。
-			resolveSessionDirs: (target) => [codingAgentSessionShardPath(target)],
-			removeDirectory: (dir) => rm(dir, { recursive: true, force: true }),
-			logError: (message, ...args) => sessionLog.error(message, ...args),
-		});
-	});
-
-	// 标题与建议三通道（rename/auto-title/next-prompt-suggestions）已迁到
-	// Host 合同 session.*（TASK-0470；所有权守卫与空输入短路语义随实现迁移）。
+	// delete/delete-all-for-cwd 详见顶部生命周期迁移注释（TASK-0475）。
 
 	ipcMain.handle(CHANNELS.DISPOSE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");

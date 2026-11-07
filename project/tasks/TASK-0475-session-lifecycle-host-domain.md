@@ -1,7 +1,7 @@
 ---
 id: TASK-0475
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -34,7 +34,7 @@ write_paths:
 exclusive_paths: []
 depends_on: [TASK-0474]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -68,7 +68,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列。
 - 踩坑记录：枚举清理两次手误——恢复 SUBSCRIBE 时制造 SESSIONS_CHANGED 重复键、去重时又整行删掉了仍在用的 SESSIONS_CHANGED（广播用），均被 biome/tsc 立即暴露后修复；`ProjectSessionPurgeResult.failed` 是 readonly 数组，与合同可变形状不兼容，域内展平；import 收窄时 clearSessionManualStop/isConversationSubCwd 仍有 PROMPT/CLEAR_DEFAULT_CONVERSATION 调用点，需保留。
-- 实际验证：desktop 定向 50 例通过（desktop-host 42 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 636 → 632；`test:impact` 结果见下。
+- 实际验证：desktop 定向 50 例通过（desktop-host 42 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 636 → 632；`test:impact` 首跑失败（输出被重定向丢弃无法定位），保留日志复跑全量通过（desktop 1291.9s + host-protocol）。
 - 未运行与风险：PROMPT/CREATE/SUBSCRIBE 留旧 IPC；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用

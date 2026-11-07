@@ -41,6 +41,9 @@ const sharedRuntime = {
 	getSessionPath: vi.fn((): string | undefined => "/sessions/s1.jsonl"),
 	getRunningSessionPaths: vi.fn(() => ["/sessions/s1.jsonl"]),
 	retry: vi.fn(async () => undefined),
+	continue: vi.fn(async () => undefined),
+	abort: vi.fn(async () => undefined),
+	deleteSession: vi.fn(async () => undefined),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
 const interruptDraftRegistry = vi.hoisted(() => ({
@@ -92,6 +95,23 @@ const sessionQuery = {
 vi.mock("../conversations/session-query-service.js", () => sessionQuery);
 vi.mock("../agent-teams/team-session-service.js", () => ({
 	agentTeamSessionService: { getRunningCoordinationSessionPaths: () => ["C:\\team\\t1.jsonl"] },
+}));
+const lifecycleDeps = {
+	stopSessionBackgroundWork: vi.fn(async () => undefined),
+	forgetMessageAnnotations: vi.fn(async () => undefined),
+	purgeProjectSessions: vi.fn(async () => ({ deleted: 2, failed: [] })),
+};
+vi.mock("../agent-runtime/stop-session-work.js", () => ({
+	stopSessionBackgroundWork: lifecycleDeps.stopSessionBackgroundWork,
+}));
+vi.mock("../message-annotations/host.js", () => ({
+	forgetMessageAnnotations: lifecycleDeps.forgetMessageAnnotations,
+}));
+vi.mock("../conversations/project-session-purge.js", () => ({
+	purgeProjectSessions: lifecycleDeps.purgeProjectSessions,
+}));
+vi.mock("../logger.js", () => ({
+	getAppLogger: () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }));
 
 const goalController = {
@@ -423,11 +443,15 @@ describe("desktop host registration and session defaults domain", () => {
 			"models.refreshPresetCatalog",
 			"models.setConfig",
 			"models.testProvider",
+			"session.abort",
 			"session.autoTitle",
 			"session.clearFinishedBackgroundTasks",
 			"session.clearGoal",
 			"session.clearQueue",
 			"session.clearTodos",
+			"session.continue",
+			"session.delete",
+			"session.deleteAllForCwd",
 			"session.deleteMessage",
 			"session.forkSession",
 			"session.getAgentModes",
@@ -899,5 +923,49 @@ describe("desktop host session catalog domain", () => {
 		const host = createDesktopHost();
 		const empty = await host.handle({ method: "session.listSessions", params: { cwd: "" } });
 		expect(empty).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session lifecycle domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+		for (const fn of Object.values(lifecycleDeps)) fn.mockClear();
+	});
+
+	it("continues after clearing manual-stop and aborts turn plus background work", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.continue", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		expect(sharedRuntime.continue).toHaveBeenCalledWith("s1");
+		await expect(host.handle({ method: "session.abort", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		expect(sharedRuntime.abort).toHaveBeenCalledWith("s1");
+		expect(lifecycleDeps.stopSessionBackgroundWork).toHaveBeenCalledTimes(1);
+	});
+
+	it("deletes sessions through the ownership guard and purges by cwd", async () => {
+		const host = createDesktopHost();
+		await expect(
+			host.handle({ method: "session.delete", params: { sessionPath: "/sessions/s1.jsonl" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(sharedRuntime.deleteSession).toHaveBeenCalledWith("/sessions/s1.jsonl");
+		expect(lifecycleDeps.forgetMessageAnnotations).toHaveBeenCalledWith("/sessions/s1.jsonl");
+		await expect(host.handle({ method: "session.deleteAllForCwd", params: { cwd: "C:\\proj" } })).resolves.toEqual({
+			ok: true,
+			result: { deleted: 2, failed: [] },
+		});
+		expect(lifecycleDeps.purgeProjectSessions).toHaveBeenCalledWith("C:\\proj", expect.anything());
+	});
+
+	it("rejects empty identifiers with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptySession = await host.handle({ method: "session.abort", params: { sessionId: "" } });
+		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const emptyPath = await host.handle({ method: "session.delete", params: { sessionPath: "" } });
+		expect(emptyPath).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

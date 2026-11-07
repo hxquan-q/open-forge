@@ -10,8 +10,6 @@ const CHANNELS = {
 	CREATE: "vetta:session:create",
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
-	CONTINUE: "vetta:session:continue",
-	ABORT: "vetta:session:abort",
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
 	SUBSCRIBE: "vetta:session:subscribe",
@@ -46,8 +44,6 @@ const CHANNELS = {
 	SANDBOX_GRANTS_LIST: "vetta:session:sandbox-grants-list",
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
-	DELETE: "vetta:session:delete",
-	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	DISPOSE: "vetta:session:dispose",
 	EVENT: "vetta:session:event",
 	RUNNING_CHANGED: "vetta:session:running-changed",
@@ -69,11 +65,15 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			searchSessions: (request, onEvent) => subscribeSessionSearch(ipc, request, onEvent),
 			onSessionsChanged: (handler) => onIpcEvent(ipc, CHANNELS.SESSIONS_CHANGED, handler),
 			prompt: (sessionId, request, traceContext) => ipc.invoke(CHANNELS.PROMPT, sessionId, request, traceContext),
-			continue: (sessionId) => ipc.invoke(CHANNELS.CONTINUE, sessionId),
+			continue: async (sessionId) => {
+				await host.call("session.continue", { sessionId });
+			},
 			retry: async (sessionId) => {
 				await host.call("session.retry", { sessionId });
 			},
-			abort: (sessionId) => ipc.invoke(CHANNELS.ABORT, sessionId),
+			abort: async (sessionId) => {
+				await host.call("session.abort", { sessionId });
+			},
 			setInterruptDraftNonEmpty: async (sessionId, nonEmpty) => {
 				await host.call("session.setInterruptDraftNonEmpty", { sessionId, nonEmpty });
 			},
@@ -177,8 +177,10 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			replaceLastUserMessage: (sessionId, entryId) =>
 				host.call("session.replaceLastUserMessage", { sessionId, entryId }),
 			forkSession: (sessionId, entryId) => host.call("session.forkSession", { sessionId, entryId }),
-			delete: (sessionPath) => ipc.invoke(CHANNELS.DELETE, sessionPath),
-			deleteAllForCwd: (cwd) => ipc.invoke(CHANNELS.DELETE_ALL_FOR_CWD, cwd),
+			delete: async (sessionPath) => {
+				await host.call("session.delete", { sessionPath });
+			},
+			deleteAllForCwd: (cwd) => host.call("session.deleteAllForCwd", { cwd }),
 			rename: async (sessionPath, name) => {
 				await host.call("session.rename", { sessionPath, name });
 			},

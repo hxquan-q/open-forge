@@ -9,6 +9,7 @@ export { SESSION_DEFAULTS_HOST_METHODS, type SessionDefaultsHostMethods } from "
 export { SESSION_EXECUTION_HOST_METHODS, type SessionExecutionHostMethods } from "./domains/session-execution.js";
 export { SESSION_GOAL_HOST_METHODS, type SessionGoalHostMethods } from "./domains/session-goal.js";
 export { SESSION_HISTORY_HOST_METHODS, type SessionHistoryHostMethods } from "./domains/session-history.js";
+export { SESSION_LIFECYCLE_HOST_METHODS, type SessionLifecycleHostMethods } from "./domains/session-lifecycle.js";
 export { SESSION_PLAN_MODE_HOST_METHODS, type SessionPlanModeHostMethods } from "./domains/session-plan-mode.js";
 export { SESSION_QUEUE_HOST_METHODS, type SessionQueueHostMethods } from "./domains/session-queue.js";
 export {

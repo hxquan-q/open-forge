@@ -8,6 +8,7 @@ import type {
 	SessionExecutionHostMethods,
 	SessionGoalHostMethods,
 	SessionHistoryHostMethods,
+	SessionLifecycleHostMethods,
 	SessionPlanModeHostMethods,
 	SessionQueueHostMethods,
 	SessionRuntimeOpsHostMethods,
@@ -34,6 +35,7 @@ export type DesktopHostClient = HostClient<
 		SessionExecutionHostMethods &
 		SessionGoalHostMethods &
 		SessionHistoryHostMethods &
+		SessionLifecycleHostMethods &
 		SessionPlanModeHostMethods &
 		SessionQueueHostMethods &
 		SessionRuntimeOpsHostMethods &
@@ -78,6 +80,7 @@ export function createDesktopHostClient(ipc: IpcRenderer): DesktopHostClient {
 			SessionExecutionHostMethods &
 			SessionGoalHostMethods &
 			SessionHistoryHostMethods &
+			SessionLifecycleHostMethods &
 			SessionPlanModeHostMethods &
 			SessionQueueHostMethods &
 			SessionRuntimeOpsHostMethods &
