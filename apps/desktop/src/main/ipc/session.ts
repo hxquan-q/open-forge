@@ -28,16 +28,14 @@ import {
 	CODING_AGENT_SUBAGENTS_OBSERVATION,
 	CODING_AGENT_SUBAGENTS_READ,
 } from "@vetta/coding-agent/session-extensions";
-import type { HistoryEntry, SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
+import type { HistoryEntry, SessionEvent } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
-import { assertProjectSupportsExecutionMode } from "@vetta/runtime-desktop";
 import { isMcpJsonValue, type McpJsonObject } from "@vetta/runtime-mcp";
 import { BrowserWindow, ipcMain, type WebContents } from "electron";
 import type { DesktopMcpAppResourceRead, DesktopMcpAppToolCall } from "../../shared/mcp-app.js";
 import type { DesktopMcpElicitationResponse, DesktopMcpElicitationValue } from "../../shared/mcp-interaction.js";
 import { PLUGIN_CONTRIBUTION_CHANNELS } from "../../shared/plugin-ipc.js";
 import { SESSION_SEARCH_CHANNELS } from "../../shared/session-search.js";
-import { DEFAULT_AGENT_MODE, isAgentMode, MODE_PROMPTS } from "../agent-modes/index.js";
 import {
 	runSessionInterruptStartupScan,
 	startSessionInterruptMonitor,
@@ -93,18 +91,14 @@ import {
 	tryNormalizeDynamicSystemPromptOperations,
 } from "../plugins/system-prompt-operations.js";
 import { getSharedRuntime } from "../runtime.js";
-import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
 import {
 	DEFAULT_CONVERSATION_CWD,
 	DEFAULT_CONVERSATION_SESSION_DIR,
 	DEFAULT_IM_CONVERSATION_CWD,
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
 	readConfigSync,
-	readDesktopConfig,
-	updateDesktopConfig,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
-import { updateSettings } from "./settings.js";
 
 export { ensureConversationSubCwd, resolveSessionDirForCwd } from "../conversations/session-paths.js";
 
@@ -173,11 +167,6 @@ const CHANNELS = {
 	ABORT: "vetta:session:abort",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
-	UPDATE_SETTINGS: "vetta:session:update-settings",
-	SET_EXECUTION_MODE: "vetta:session:set-execution-mode",
-	SET_GLOBAL_EXECUTION_MODE: "vetta:session:set-global-execution-mode",
-	/** 设置「新会话默认工作模式」。不影响任何已存在会话：mode 在会话创建时固化。 */
-	SET_GLOBAL_AGENT_MODE: "vetta:session:set-global-agent-mode",
 	/** 默认工作模式已变更；仅用于各窗口新会话页 toggle 的显示同步，不改变任何活跃会话的行为。 */
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
 	GET_STATE: "vetta:session:get-state",
@@ -188,8 +177,6 @@ const CHANNELS = {
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
 	GET_SESSION_PATH: "vetta:session:get-session-path",
-	SET_GLOBAL_THINKING: "vetta:session:set-global-thinking-level",
-	GET_AGENT_MODES: "vetta:session:get-agent-modes",
 	EVENT: "vetta:session:event",
 	QUESTION_REQUEST: "vetta:session:question-request",
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
@@ -373,11 +360,6 @@ function assertMcpAppSender(sender: WebContents, expected: WebContents): void {
 }
 
 export function registerSessionIpc(webContents: WebContents): () => void {
-	const resolveDefaultExecutionMode = async (): Promise<SessionExecutionMode> => {
-		const config = await readDesktopConfig();
-		return config.defaultExecutionMode;
-	};
-
 	const runtime = getSharedRuntime();
 	const pluginRuntimeSource = getDesktopCodingAgentPluginRuntimeSource();
 	const conversationService = getDesktopConversationService();
@@ -1010,62 +992,10 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// goal 五通道与 clear-todos 已迁到 Host 合同 session.*（TASK-0469；
 	// goal 编排保留在 DesktopGoalController，Host 侧经同一编排点桥接）。
 
-	ipcMain.handle(CHANNELS.UPDATE_SETTINGS, async (_event, sessionId: unknown, partialSettings: SettingsPatch) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		await runtime.updateSettings(sessionId, partialSettings);
-	});
-	ipcMain.handle(CHANNELS.SET_EXECUTION_MODE, async (_event, sessionId: unknown, mode: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertExecutionMode(mode);
-		const sessionPath = runtime.getSessionPath(sessionId);
-		const sessionCwd = sessionPath ? await readSessionCwdFromHeader(sessionPath) : undefined;
-		assertProjectSupportsExecutionMode(sessionCwd, mode as SessionExecutionMode);
-		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		await runtime.setExecutionMode(sessionId, mode as SessionExecutionMode);
-	});
-
-	ipcMain.handle(CHANNELS.SET_GLOBAL_EXECUTION_MODE, async (_event, mode: unknown) => {
-		assertExecutionMode(mode);
-		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		await updateDesktopConfig((settings) => ({
-			...settings,
-			defaultExecutionMode: mode as SessionExecutionMode,
-		}));
-	});
-
-	// 只更新「新会话默认工作模式」。工作模式在会话创建时固化、会话内不可变，
-	// 因此这里不重建任何活跃 session 的插件配置，也不重载 renderer 插件清单
-	// （模式已不再排除任何插件，重建出来的是同一份配置）。
-	// 广播仅用于各窗口新会话页 toggle 的显示同步。
-	ipcMain.handle(CHANNELS.SET_GLOBAL_AGENT_MODE, async (_event, mode: unknown) => {
-		const next = isAgentMode(mode) ? mode : DEFAULT_AGENT_MODE;
-		await updateDesktopConfig((settings) => ({ ...settings, defaultAgentMode: next }));
-		for (const win of BrowserWindow.getAllWindows()) {
-			win.webContents.send(CHANNELS.AGENT_MODE_CHANGED, next);
-		}
-	});
-
-	ipcMain.handle(CHANNELS.SET_GLOBAL_THINKING, (_event, level: unknown) => {
-		assertNonEmptyString(level, "level");
-		// Broadcast to all open sessions
-		runtime.updateGlobalThinkingLevel(level as any);
-		// Persist to settings.json
-		updateSettings((settings) => {
-			settings.defaultThinkingLevel = level;
-		});
-	});
-
-	// 工作模式注册表：唯一来源是 main/agent-modes 的 modes/*.md（ADR-0071），只下发
-	// id/label/description/icon，不含提示词正文。renderer 的模式 toggle 据此遍历渲染，
-	// 新增模式无需改任何 UI 代码。
-	ipcMain.handle(CHANNELS.GET_AGENT_MODES, () => {
-		return MODE_PROMPTS.map((m) => ({
-			id: m.id,
-			label: m.label,
-			description: m.description,
-			icon: m.icon,
-		}));
-	});
+	// 执行模式与全局设置六通道（update-settings/set-execution-mode/
+	// set-global-{execution-mode,agent-mode,thinking-level}/get-agent-modes）
+	// 已迁到 Host 合同 session.*（TASK-0472；sandbox 可用断言与落盘语义随实现
+	// 迁移，AGENT_MODE_CHANGED 显示同步广播留旧 IPC 事件面）。
 
 	// 个性化配置（人设 + 自定义指令）。仅写盘；运行中的 session 在下一轮 prompt 经
 	// settingsManager.reloadPersonalizationSettings() 懒重建生效，无需重启或广播。

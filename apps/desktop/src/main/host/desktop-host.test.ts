@@ -35,10 +35,34 @@ const sharedRuntime = {
 	invokeSessionExtensionSync: vi.fn(() => ({ permissionMode: "default" as const })),
 	renameSession: vi.fn(async () => undefined),
 	renameSessionById: vi.fn(async () => undefined),
+	updateSettings: vi.fn(async () => undefined),
+	setExecutionMode: vi.fn(async () => undefined),
+	updateGlobalThinkingLevel: vi.fn(),
+	getSessionPath: vi.fn(() => "/sessions/s1.jsonl"),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
 vi.mock("../conversations/conversation-ownership-guard.js", () => ({
 	assertOrdinaryConversationPath: vi.fn(async (sessionPath: string) => sessionPath),
+}));
+vi.mock("../conversations/session-paths.js", () => ({
+	isConversationSubCwd: () => false,
+	readSessionCwdFromHeader: vi.fn(async () => undefined),
+}));
+vi.mock("@vetta/runtime-desktop", () => ({
+	assertProjectSupportsExecutionMode: vi.fn(),
+}));
+vi.mock("../sandbox/capability.js", () => ({
+	assertSandboxAvailableForMode: vi.fn(async () => undefined),
+}));
+const desktopConfig = { defaultExecutionMode: "sandbox" as const, defaultAgentMode: "coding" };
+vi.mock("../config/desktop-config-store.js", () => ({
+	readDesktopConfig: vi.fn(async () => desktopConfig),
+	updateDesktopConfig: vi.fn(async (update: (config: unknown) => unknown) => update(desktopConfig)),
+}));
+vi.mock("../agent-modes/index.js", () => ({
+	DEFAULT_AGENT_MODE: "coding",
+	isAgentMode: (mode: string) => mode === "coding" || mode === "chat",
+	MODE_PROMPTS: [{ id: "coding", label: "Coding", description: "code it", icon: "lucide:code" }],
 }));
 
 const goalController = {
@@ -376,6 +400,7 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.clearTodos",
 			"session.deleteMessage",
 			"session.forkSession",
+			"session.getAgentModes",
 			"session.getGoalState",
 			"session.getPersonalization",
 			"session.getPersonas",
@@ -393,10 +418,15 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.resumeGoal",
 			"session.resumeQueue",
 			"session.sendQueuedMessageNow",
+			"session.setExecutionMode",
+			"session.setGlobalAgentMode",
+			"session.setGlobalExecutionMode",
+			"session.setGlobalThinkingLevel",
 			"session.setPersonalization",
 			"session.setPlanModePermissionMode",
 			"session.startGoal",
 			"session.switchBranch",
+			"session.updateSettings",
 		]);
 	});
 
@@ -661,6 +691,64 @@ describe("desktop host session plan-mode domain", () => {
 		const badMode = await host.handle({
 			method: "session.setPlanModePermissionMode",
 			params: { sessionId: "s1", permissionMode: "yolo" },
+		});
+		expect(badMode).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session execution domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+	});
+
+	it("bridges settings patches and agent mode catalog", async () => {
+		const host = createDesktopHost();
+		await expect(
+			host.handle({
+				method: "session.updateSettings",
+				params: { sessionId: "s1", patch: { thinkingLevel: "high", modelKey: "deepseek/chat" } },
+			}),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(sharedRuntime.updateSettings).toHaveBeenCalledWith("s1", {
+			thinkingLevel: "high",
+			modelKey: "deepseek/chat",
+		});
+		await expect(host.handle({ method: "session.getAgentModes", params: {} })).resolves.toEqual({
+			ok: true,
+			result: [{ id: "coding", label: "Coding", description: "code it", icon: "lucide:code" }],
+		});
+	});
+
+	it("orchestrates execution mode switches and persists global settings", async () => {
+		const host = createDesktopHost();
+		await expect(
+			host.handle({ method: "session.setExecutionMode", params: { sessionId: "s1", mode: "sandbox" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(sharedRuntime.setExecutionMode).toHaveBeenCalledWith("s1", "sandbox");
+		const sandbox = await import("@vetta/runtime-desktop");
+		expect(sandbox.assertProjectSupportsExecutionMode).toHaveBeenCalledWith(undefined, "sandbox");
+		const capability = await import("../sandbox/capability.js");
+		expect(capability.assertSandboxAvailableForMode).toHaveBeenCalled();
+		await expect(
+			host.handle({ method: "session.setGlobalExecutionMode", params: { mode: "full-access" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		const configStore = await import("../config/desktop-config-store.js");
+		expect(configStore.updateDesktopConfig).toHaveBeenCalled();
+		await expect(host.handle({ method: "session.setGlobalAgentMode", params: { mode: "chat" } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		await expect(
+			host.handle({ method: "session.setGlobalThinkingLevel", params: { level: "high" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(sharedRuntime.updateGlobalThinkingLevel).toHaveBeenCalledWith("high");
+	});
+
+	it("rejects invalid execution modes with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const badMode = await host.handle({
+			method: "session.setGlobalExecutionMode",
+			params: { mode: "turbo" },
 		});
 		expect(badMode).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});

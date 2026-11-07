@@ -20,10 +20,6 @@ const CHANNELS = {
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
-	UPDATE_SETTINGS: "vetta:session:update-settings",
-	SET_EXECUTION_MODE: "vetta:session:set-execution-mode",
-	SET_GLOBAL_EXECUTION_MODE: "vetta:session:set-global-execution-mode",
-	SET_GLOBAL_AGENT_MODE: "vetta:session:set-global-agent-mode",
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
 	GET_STATE: "vetta:session:get-state",
 	GET_MESSAGES: "vetta:session:get-messages",
@@ -57,8 +53,6 @@ const CHANNELS = {
 	BACKGROUND_TASKS_CLEAR_FINISHED: "vetta:session:background-tasks-clear-finished",
 	BACKGROUND_TASKS_KILL: "vetta:session:background-tasks-kill",
 	SUBAGENT_INTERRUPT: "vetta:session:subagent-interrupt",
-	SET_GLOBAL_THINKING: "vetta:session:set-global-thinking-level",
-	GET_AGENT_MODES: "vetta:session:get-agent-modes",
 	DELETE: "vetta:session:delete",
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	DISPOSE: "vetta:session:dispose",
@@ -153,16 +147,25 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			killBackgroundTask: (sessionId, taskId) => ipc.invoke(CHANNELS.BACKGROUND_TASKS_KILL, sessionId, taskId),
 			interruptSubagent: (sessionId, target) => ipc.invoke(CHANNELS.SUBAGENT_INTERRUPT, sessionId, target),
 			getSessionPath: (sessionId) => ipc.invoke("vetta:session:get-session-path", sessionId),
-			updateSettings: (sessionId, partialSettings) =>
-				ipc.invoke(CHANNELS.UPDATE_SETTINGS, sessionId, partialSettings),
-			setExecutionMode: (sessionId, mode) => ipc.invoke(CHANNELS.SET_EXECUTION_MODE, sessionId, mode),
-			setGlobalExecutionMode: (mode) => ipc.invoke(CHANNELS.SET_GLOBAL_EXECUTION_MODE, mode),
-			setGlobalAgentMode: (mode) => ipc.invoke(CHANNELS.SET_GLOBAL_AGENT_MODE, mode),
+			updateSettings: async (sessionId, partialSettings) => {
+				await host.call("session.updateSettings", { sessionId, patch: partialSettings });
+			},
+			setExecutionMode: async (sessionId, mode) => {
+				await host.call("session.setExecutionMode", { sessionId, mode });
+			},
+			setGlobalExecutionMode: async (mode) => {
+				await host.call("session.setGlobalExecutionMode", { mode });
+			},
+			setGlobalAgentMode: async (mode) => {
+				await host.call("session.setGlobalAgentMode", { mode });
+			},
 			onAgentModeChanged: (handler) => onIpcEvent(ipc, CHANNELS.AGENT_MODE_CHANGED, handler),
-			setGlobalThinkingLevel: (level) => ipc.invoke(CHANNELS.SET_GLOBAL_THINKING, level),
+			setGlobalThinkingLevel: async (level) => {
+				await host.call("session.setGlobalThinkingLevel", { level });
+			},
 			getGlobalThinkingLevel: () => host.call("session.getThinkingLevel", {}),
 			getPersonas: () => host.call("session.getPersonas", {}),
-			getAgentModes: () => ipc.invoke(CHANNELS.GET_AGENT_MODES),
+			getAgentModes: () => host.call("session.getAgentModes", {}),
 			getPersonalization: () => host.call("session.getPersonalization", {}),
 			setPersonalization: async (input) => {
 				await host.call("session.setPersonalization", input);
