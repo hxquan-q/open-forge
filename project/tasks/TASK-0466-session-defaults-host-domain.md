@@ -1,7 +1,7 @@
 ---
 id: TASK-0466
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -72,3 +72,7 @@ updated: 2026-11-07
 - 未运行与风险：runtime 耦合设置器（set-global-thinking 等）与事件/审批面仍留旧 IPC（TASK-0465 分组）；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
+
+## 完成收口（2026-11-07，已核实）
+
+- 过滤 `workflowName == "quality"` 核实：run 42347874248 对 `fe0832a52` **success**。完成标准满足，状态置 done。
