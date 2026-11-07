@@ -2,6 +2,7 @@ import type { IpcRenderer } from "electron";
 import { decodeSessionEvent } from "../../shared/session-event-codec.js";
 import type { DesktopApi } from "../api.js";
 import type { DesktopSessionApi } from "../api-types/session.js";
+import { createDesktopHostClient } from "../host-transport.js";
 import { onIpcEvent, subscribeById } from "./helper.js";
 import { subscribeSessionSearch } from "./session-search.js";
 
@@ -76,11 +77,7 @@ const CHANNELS = {
 	BACKGROUND_TASKS_KILL: "vetta:session:background-tasks-kill",
 	SUBAGENT_INTERRUPT: "vetta:session:subagent-interrupt",
 	SET_GLOBAL_THINKING: "vetta:session:set-global-thinking-level",
-	GET_GLOBAL_THINKING: "vetta:session:get-global-thinking-level",
-	GET_PERSONAS: "vetta:session:get-personas",
 	GET_AGENT_MODES: "vetta:session:get-agent-modes",
-	GET_PERSONALIZATION: "vetta:session:get-personalization",
-	SET_PERSONALIZATION: "vetta:session:set-personalization",
 	DELETE: "vetta:session:delete",
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	RENAME: "vetta:session:rename",
@@ -100,6 +97,7 @@ const CHANNELS = {
 } as const;
 
 export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> {
+	const host = createDesktopHostClient(ipc);
 	return {
 		session: {
 			create: (config, kind, traceContext) => ipc.invoke(CHANNELS.CREATE, config, kind, traceContext),
@@ -178,11 +176,13 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			setGlobalAgentMode: (mode) => ipc.invoke(CHANNELS.SET_GLOBAL_AGENT_MODE, mode),
 			onAgentModeChanged: (handler) => onIpcEvent(ipc, CHANNELS.AGENT_MODE_CHANGED, handler),
 			setGlobalThinkingLevel: (level) => ipc.invoke(CHANNELS.SET_GLOBAL_THINKING, level),
-			getGlobalThinkingLevel: () => ipc.invoke(CHANNELS.GET_GLOBAL_THINKING),
-			getPersonas: () => ipc.invoke(CHANNELS.GET_PERSONAS),
+			getGlobalThinkingLevel: () => host.call("session.getThinkingLevel", {}),
+			getPersonas: () => host.call("session.getPersonas", {}),
 			getAgentModes: () => ipc.invoke(CHANNELS.GET_AGENT_MODES),
-			getPersonalization: () => ipc.invoke(CHANNELS.GET_PERSONALIZATION),
-			setPersonalization: (input) => ipc.invoke(CHANNELS.SET_PERSONALIZATION, input),
+			getPersonalization: () => host.call("session.getPersonalization", {}),
+			setPersonalization: async (input) => {
+				await host.call("session.setPersonalization", input);
+			},
 			getState: (sessionId) => ipc.invoke(CHANNELS.GET_STATE, sessionId),
 			getMessages: (sessionId) => ipc.invoke(CHANNELS.GET_MESSAGES, sessionId),
 			getFullHistory: ((sessionId: string, options?: unknown) =>

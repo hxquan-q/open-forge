@@ -1,6 +1,11 @@
 // Copyright The Open Forge contributors.
 
-import type { McpHostMethods, ModelsHostMethods, SettingsHostMethods } from "@vetta/host-protocol";
+import type {
+	McpHostMethods,
+	ModelsHostMethods,
+	SessionDefaultsHostMethods,
+	SettingsHostMethods,
+} from "@vetta/host-protocol";
 import {
 	createHostClient,
 	type HostClient,
@@ -12,7 +17,9 @@ import type { IpcRenderer } from "electron";
 import { HOST_PORT_CHANNEL, HOST_PORT_REQUEST_CHANNEL, HOST_REQUEST_CHANNEL } from "../shared/host-ipc.js";
 
 /** preload 侧 Host 客户端：MessagePort 为主通道、`ipc.invoke` 为引导期回退（TASK-0463，ADR-0152）。 */
-export type DesktopHostClient = HostClient<SettingsHostMethods & ModelsHostMethods & McpHostMethods>;
+export type DesktopHostClient = HostClient<
+	SettingsHostMethods & ModelsHostMethods & McpHostMethods & SessionDefaultsHostMethods
+>;
 
 /**
  * renderer 侧 Electron MessagePort 为 EventEmitter 风格（on/once/postMessage/start/close），
@@ -43,8 +50,10 @@ export function createDesktopHostClient(ipc: IpcRenderer): DesktopHostClient {
 		ipc.send(HOST_PORT_REQUEST_CHANNEL);
 	};
 
-	return createHostClient<SettingsHostMethods & ModelsHostMethods & McpHostMethods>((request) => {
-		startHandshake();
-		return (portTransport ?? invokeTransport)(request);
-	});
+	return createHostClient<SettingsHostMethods & ModelsHostMethods & McpHostMethods & SessionDefaultsHostMethods>(
+		(request) => {
+			startHandshake();
+			return (portTransport ?? invokeTransport)(request);
+		},
+	);
 }

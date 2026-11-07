@@ -17,7 +17,7 @@ import type {
 	AgentPluginSystemPromptInvocation,
 	AgentPluginToolInvocation,
 } from "@vetta/coding-agent/plugin-runtime";
-import { DEFAULT_PERSONA_ID, PERSONAS } from "@vetta/coding-agent/profile";
+
 import {
 	CODING_AGENT_BACKGROUND_TASK_KILL,
 	CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED,
@@ -111,7 +111,7 @@ import {
 	updateDesktopConfig,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
-import { readSettings, updateSettings } from "./settings.js";
+import { updateSettings } from "./settings.js";
 
 export { ensureConversationSubCwd, resolveSessionDirForCwd } from "../conversations/session-paths.js";
 
@@ -217,11 +217,7 @@ const CHANNELS = {
 	FORK_SESSION: "vetta:session:fork-session",
 	GET_SESSION_PATH: "vetta:session:get-session-path",
 	SET_GLOBAL_THINKING: "vetta:session:set-global-thinking-level",
-	GET_GLOBAL_THINKING: "vetta:session:get-global-thinking-level",
-	GET_PERSONAS: "vetta:session:get-personas",
 	GET_AGENT_MODES: "vetta:session:get-agent-modes",
-	GET_PERSONALIZATION: "vetta:session:get-personalization",
-	SET_PERSONALIZATION: "vetta:session:set-personalization",
 	EVENT: "vetta:session:event",
 	QUESTION_REQUEST: "vetta:session:question-request",
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
@@ -1149,16 +1145,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		});
 	});
 
-	ipcMain.handle(CHANNELS.GET_GLOBAL_THINKING, () => {
-		const settings = readSettings();
-		return (settings.defaultThinkingLevel as string) ?? "off";
-	});
-
-	// 个性化人设清单：唯一来源是 coding-agent 注册表，只下发 id/label/description，不含提示词正文。
-	ipcMain.handle(CHANNELS.GET_PERSONAS, () => {
-		return PERSONAS.map((p) => ({ id: p.id, label: p.label, description: p.description }));
-	});
-
 	// 工作模式注册表：唯一来源是 main/agent-modes 的 modes/*.md（ADR-0071），只下发
 	// id/label/description/icon，不含提示词正文。renderer 的模式 toggle 据此遍历渲染，
 	// 新增模式无需改任何 UI 代码。
@@ -1173,31 +1159,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 
 	// 个性化配置（人设 + 自定义指令）。仅写盘；运行中的 session 在下一轮 prompt 经
 	// settingsManager.reloadPersonalizationSettings() 懒重建生效，无需重启或广播。
-	ipcMain.handle(CHANNELS.GET_PERSONALIZATION, () => {
-		const settings = readSettings();
-		const p = settings.personalization as { personaId?: string; customPrompt?: string } | undefined;
-		return {
-			personaId: p?.personaId ?? DEFAULT_PERSONA_ID,
-			customPrompt: p?.customPrompt ?? "",
-		};
-	});
-
-	ipcMain.handle(CHANNELS.SET_PERSONALIZATION, (_event, input: unknown) => {
-		if (typeof input !== "object" || input === null) {
-			throw new Error("Invalid personalization payload");
-		}
-		const { personaId, customPrompt } = input as { personaId?: unknown; customPrompt?: unknown };
-		if (typeof personaId !== "string" || !PERSONAS.some((p) => p.id === personaId)) {
-			throw new Error("Invalid personaId");
-		}
-		if (typeof customPrompt !== "string") {
-			throw new Error("Invalid customPrompt");
-		}
-		updateSettings((settings) => {
-			settings.personalization = { personaId, customPrompt };
-		});
-	});
-
 	ipcMain.handle(CHANNELS.GET_STATE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		const state = runtime.getState(sessionId);

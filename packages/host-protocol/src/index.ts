@@ -4,6 +4,7 @@ export type { HostClient, HostTransport } from "./client.js";
 export { createHostClient } from "./client.js";
 export { MCP_HOST_METHODS, type McpHostMethods } from "./domains/mcp.js";
 export { MODELS_HOST_METHODS, type ModelsHostMethods } from "./domains/models.js";
+export { SESSION_DEFAULTS_HOST_METHODS, type SessionDefaultsHostMethods } from "./domains/session-defaults.js";
 export {
 	ModelTransportSchema,
 	SETTINGS_HOST_METHODS,

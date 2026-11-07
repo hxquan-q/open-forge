@@ -2,6 +2,19 @@
 import { HOST_PROTOCOL_ERROR_CODES } from "@vetta/host-protocol";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+let document: Record<string, unknown>;
+vi.mock("../agent-settings/settings-document-store.js", () => ({
+	readAgentSettingsDocument: () => document,
+	updateAgentSettingsDocument: (mutate: (settings: Record<string, unknown>) => void) => mutate(document),
+}));
+vi.mock("@vetta/coding-agent/profile", () => ({
+	DEFAULT_PERSONA_ID: "default",
+	PERSONAS: [
+		{ id: "default", label: "A", description: "a" },
+		{ id: "concise", label: "B", description: "b" },
+	],
+}));
+
 const { createDesktopHost } = await import("./desktop-host.js");
 
 vi.mock("../models/presets/sync.js", () => ({
@@ -278,6 +291,72 @@ describe("desktop host mcp domain", () => {
 		const response = await createDesktopHost().handle({
 			method: "mcp.authStatus",
 			params: { serverNames: "github" },
+		});
+		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host registration and session defaults domain", () => {
+	beforeEach(() => {
+		document = {};
+	});
+
+	it("registers the models, mcp and session defaults methods", () => {
+		expect(createDesktopHost().methods()).toEqual([
+			"mcp.authStatus",
+			"mcp.configPath",
+			"mcp.hasAuth",
+			"mcp.listServerTools",
+			"models.configPath",
+			"models.copyApiKey",
+			"models.fetchProviderModels",
+			"models.getBalance",
+			"models.getConfig",
+			"models.listPresets",
+			"models.probe",
+			"models.refreshPresetCatalog",
+			"models.setConfig",
+			"models.testProvider",
+			"session.getPersonalization",
+			"session.getPersonas",
+			"session.getThinkingLevel",
+			"session.setPersonalization",
+		]);
+	});
+
+	it("returns thinking level and persona defaults", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.getThinkingLevel", params: {} })).resolves.toEqual({
+			ok: true,
+			result: "off",
+		});
+		document.defaultThinkingLevel = "high";
+		await expect(host.handle({ method: "session.getThinkingLevel", params: {} })).resolves.toEqual({
+			ok: true,
+			result: "high",
+		});
+		await expect(host.handle({ method: "session.getPersonas", params: {} })).resolves.toEqual({
+			ok: true,
+			result: [
+				{ id: "default", label: "A", description: "a" },
+				{ id: "concise", label: "B", description: "b" },
+			],
+		});
+	});
+
+	it("reads and persists personalization, rejecting unknown personas", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.getPersonalization", params: {} })).resolves.toEqual({
+			ok: true,
+			result: { personaId: "default", customPrompt: "" },
+		});
+		await expect(
+			host.handle({ method: "session.setPersonalization", params: { personaId: "concise", customPrompt: "x" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(document.personalization).toEqual({ personaId: "concise", customPrompt: "x" });
+		const response = await host.handle({
+			method: "session.setPersonalization",
+			params: { personaId: "ghost", customPrompt: "x" },
 		});
 		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
