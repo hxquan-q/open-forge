@@ -172,3 +172,4 @@ depends_on: []
 22. [TASK-0474](../tasks/TASK-0474-session-catalog-host-domain.md)：会话目录子域（list-projects/list-sessions/list-running/list-running-cwds 4 通道）迁移，done（实现提交 `6c247190f`，quality 42380285044 已核实；IPC 640→636）。
 23. [TASK-0475](../tasks/TASK-0475-session-lifecycle-host-domain.md)：会话生命周期控制与删除子域（continue/abort/delete/delete-all-for-cwd 4 通道）迁移，done（实现提交 `e4518f208`，quality 42388609012 已核实；IPC 636→632）。
 24. [TASK-0476](../tasks/TASK-0476-session-mcp-tasks-host-domain.md)：MCP 任务与待答清单子域（mcp-tasks-{list,cancel,clear-finished}/mcp-elicitation-list-pending 4 通道）迁移，verifying（IPC 632→628）。
+25. [TASK-0477](../tasks/TASK-0477-session-event-subscription-primitive.md)：会话事件订阅原语（port 事件帧 + session.subscribe/unsubscribe，TASK-0465 组 2 解锁件），in_progress（设计定稿，实施分三步；完成后 IPC 628→625）。
