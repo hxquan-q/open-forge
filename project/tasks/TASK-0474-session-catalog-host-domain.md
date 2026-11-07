@@ -1,7 +1,7 @@
 ---
 id: TASK-0474
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -69,7 +69,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列，另含 biome 归一（3 文件格式折叠）。
 - 踩坑记录：删 preload 枚举时一次编辑误用 LIST_RUNNING 文本替换 LIST_PROJECTS/LIST_SESSIONS 造成重复键，随即可见并修正（未进入任何提交）；listRunningCwds 用例需在用例内覆写 getRunningSessionPaths 返回两条路径以覆盖"不可读头丢弃"分支。
-- 实际验证：desktop 定向 47 例通过（desktop-host 39 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 640 → 636；`test:impact` 全量通过（desktop + host-protocol）。
+- 实际验证：desktop 定向 47 例通过（desktop-host 39 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 640 → 636；`test:impact` 全量通过（desktop + host-protocol）；实现提交 `6c247190f` 后 `test:changed --base origin/dev` 通过并推送 `main:dev`，远端 quality run 42380285044（headSha `6c247190f`）success。
 - 未运行与风险：SESSIONS_CHANGED/RUNNING_CHANGED 推送事件留旧 IPC；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
