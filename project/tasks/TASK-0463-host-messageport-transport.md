@@ -1,7 +1,7 @@
 ---
 id: TASK-0463
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -35,7 +35,7 @@ write_paths:
 exclusive_paths: []
 depends_on: [TASK-0462]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-07
 updated: 2026-11-07
 ---
@@ -66,4 +66,10 @@ preload↔main 的 Host 请求通道从 `ipc.invoke(vetta:host:request)` 升级�
 
 ## 交付记录
 
-- 待补
+- 实际修改（2026-11-07）：`packages/host-protocol/src/port-bridge.ts` 新增 `PortLike`（EventEmitter 风格最小端口合同）、`portHostTransport`（客户端：自增 id 配对、乱序安全、close 拒绝挂起请求）与 `serveHostOnPort`（服务端：畸形帧静默丢弃、handle 异常兜底 INTERNAL 信封），随 `/client` 子路径导出（不加载 typebox，供 preload 打包）与根出口；desktop 侧 `ipc/host.ts` 增拉取式握手——preload `ipc.send(HOST_PORT_REQUEST)` → 主进程 `MessageChannelMain` 每调用方独立端口对，`toPortLike` 适配 `MessagePortMain`，`vetta:host:request` invoke 保留为回退；preload `host-transport.ts` 首次调用发起握手，端口送达即切换，端口关闭回退 invoke 且本会话不再重握手。
+- 失败用例先行：port-bridge 4 用例（往返/乱序配对/close 拒绝/畸形帧）与 preload 4 用例（invoke 信封/错误信封/端口切换/close 回退），RED 后转绿；`system.test.ts` 两处 fake ipc 补 `send/on`。
+- 实际验证：desktop 定向 3 文件 33 例通过；`apps/desktop typecheck` 通过；`check:quick -- <7 个源文件>` 通过（Biome 格式化后复跑）；host-protocol 包 15 例通过；`test:impact` 通过（desktop 受影响 6324 通过，exit 0）。
+- 行为说明：握手为拉取式（每调用方独立通道，天然多窗口）；端口失效回退 invoke 不自动重握手（避免坏端口风暴）；本阶段不删 `vetta:host:request`（IPC 计数不降，Phase 3 后续删除）。
+- 未运行与风险：真实 Electron 运行时的端口行为（打包后 utilityProcess 前置验证）留待下一步；UI 走查需授权未执行。
+- 人工验收：不适用（transport 内部替换，renderer API 不变）。
+- 发布：不适用

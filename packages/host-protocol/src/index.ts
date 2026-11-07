@@ -24,5 +24,6 @@ export type {
 } from "./method.js";
 export { defineHostMethod } from "./method.js";
 export { HostOwnerRegistry } from "./owners.js";
+export { type PortLike, portHostTransport, serveHostOnPort } from "./port-bridge.js";
 export type { HostStreamEvent, HostStreamView } from "./stream.js";
 export { reduceHostStream } from "./stream.js";

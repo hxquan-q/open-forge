@@ -30,7 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0463` | `in_progress` | PLAN-0029 | [Host MessagePort transport（Phase 3 第一步）](TASK-0463-host-messageport-transport.md) |
+| `TASK-0463` | `verifying` | PLAN-0029 | [Host MessagePort transport（Phase 3 第一步）](TASK-0463-host-messageport-transport.md) |
 | `TASK-0462` | `done` | PLAN-0029 | [MCP 无凭证子域迁移到 Host 合同](TASK-0462-mcp-noncredential-host-domain.md) |
 | `TASK-0461` | `done` | PLAN-0029 | [模型探测与余额通道迁移到 Host 合同](TASK-0461-models-probe-host-domain.md) |
 | `TASK-0460` | `done` | — | [weknora AC-20 时序用例偶发修复](TASK-0460-weknora-ac20-flake-fix.md) |

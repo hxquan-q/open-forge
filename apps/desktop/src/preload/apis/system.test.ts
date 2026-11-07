@@ -76,7 +76,7 @@ describe("createSystemApi models provider test contract", () => {
 	it("sends the provider test over the host channel and unwraps the structured result", async () => {
 		const result = { ok: true, latencyMs: 120, modelCount: 2 };
 		const invoke = vi.fn(async () => ({ ok: true, result }));
-		const api = createSystemApi({ invoke } as unknown as IpcRenderer, {} as WebUtils);
+		const api = createSystemApi({ invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer, {} as WebUtils);
 
 		await expect(api.models.testProvider("relay")).resolves.toEqual(result);
 		expect(invoke).toHaveBeenCalledWith(HOST_REQUEST_CHANNEL, {
@@ -90,7 +90,7 @@ describe("createSystemApi models balance contract", () => {
 	it("sends the balance query over the host channel and unwraps the normalized result", async () => {
 		const result = { provider: "deepseek", supported: true, currency: "CNY", available: 110, isAvailable: true };
 		const invoke = vi.fn(async () => ({ ok: true, result }));
-		const api = createSystemApi({ invoke } as unknown as IpcRenderer, {} as WebUtils);
+		const api = createSystemApi({ invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer, {} as WebUtils);
 
 		await expect(api.models.getBalance("deepseek")).resolves.toEqual(result);
 		expect(invoke).toHaveBeenCalledWith(HOST_REQUEST_CHANNEL, {
