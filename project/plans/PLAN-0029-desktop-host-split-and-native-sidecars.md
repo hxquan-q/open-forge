@@ -164,4 +164,5 @@ depends_on: []
 14. [TASK-0466](../tasks/TASK-0466-session-defaults-host-domain.md)：会话默认项/个性化子域（thinking 读取/personas/personalization 读写 4 通道）迁移，done（quality 已核实；IPC 679→675）；runtime 耦合设置器与事件面按 0465 分组后续推进。
 15. [TASK-0467](../tasks/TASK-0467-session-queue-host-domain.md)：会话输入队列子域（queue-state getter + 6 队列操作 7 通道）迁移，done（实现提交 `b39984439`，quality 42353639237 已核实；IPC 675→668）；queue-state 推送事件留旧 IPC 待事件原语。
 16. [TASK-0468](../tasks/TASK-0468-session-history-host-domain.md)：会话历史分支子域（navigate-for-edit/switch-branch/delete-message/replace-last-user-message/fork-session 5 通道）迁移，done（实现提交 `369804316`，quality 42357038368 已核实；IPC 668→663）。
-17. [TASK-0469](../tasks/TASK-0469-session-goal-host-domain.md)：会话 goal/todos 子域（goal 五通道 + clear-todos）迁移，verifying（IPC 663→657）。
+17. [TASK-0469](../tasks/TASK-0469-session-goal-host-domain.md)：会话 goal/todos 子域（goal 五通道 + clear-todos）迁移，done（实现提交 `7204295ed`，quality 42360291016 已核实；IPC 663→657）。
+18. [TASK-0470](../tasks/TASK-0470-session-title-host-domain.md)：会话标题与建议子域（rename/auto-title/next-prompt-suggestions 3 通道）迁移，in_progress（IPC 657→654）。
