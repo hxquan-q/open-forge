@@ -113,6 +113,41 @@ vi.mock("../conversations/project-session-purge.js", () => ({
 vi.mock("../logger.js", () => ({
 	getAppLogger: () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }));
+const mcpTaskRuntime = {
+	listPublic: vi.fn(async () => [
+		{
+			id: "t1",
+			sessionId: "s1",
+			toolCallId: "call-1",
+			serverName: "srv",
+			toolName: "tool",
+			status: "working",
+			createdAt: "2026-11-07T00:00:00.000Z",
+			lastUpdatedAt: "2026-11-07T00:00:01.000Z",
+		},
+	]),
+	clearTerminal: vi.fn(async () => 1),
+	cancel: vi.fn(async () => true),
+};
+vi.mock("../mcp/mcp-task-runtime.js", () => ({
+	getDesktopMcpTaskRegistry: () => mcpTaskRuntime,
+	getDesktopMcpTaskCoordinator: () => mcpTaskRuntime,
+}));
+const mcpElicitationBroker = {
+	listPending: vi.fn(() => [
+		{
+			requestId: "e1",
+			sessionId: "s1",
+			serverName: "srv",
+			mode: "url",
+			message: "open this",
+			url: "https://example.test",
+		},
+	]),
+};
+vi.mock("../conversations/mcp-elicitation-broker.js", () => ({
+	getDesktopMcpElicitationBroker: () => mcpElicitationBroker,
+}));
 
 const goalController = {
 	read: vi.fn(async () => null),
@@ -468,6 +503,10 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.listRunning",
 			"session.listRunningCwds",
 			"session.listSessions",
+			"session.mcpElicitationListPending",
+			"session.mcpTasksCancel",
+			"session.mcpTasksClearFinished",
+			"session.mcpTasksList",
 			"session.navigateForEdit",
 			"session.nextPromptSuggestions",
 			"session.pauseGoal",
@@ -967,5 +1006,65 @@ describe("desktop host session lifecycle domain", () => {
 		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 		const emptyPath = await host.handle({ method: "session.delete", params: { sessionPath: "" } });
 		expect(emptyPath).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session mcp-tasks domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(mcpTaskRuntime)) fn.mockClear();
+		mcpElicitationBroker.listPending.mockClear();
+	});
+
+	it("lists, cancels and clears MCP tasks and lists pending elicitations", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.mcpTasksList", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: [
+				{
+					id: "t1",
+					sessionId: "s1",
+					toolCallId: "call-1",
+					serverName: "srv",
+					toolName: "tool",
+					status: "working",
+					createdAt: "2026-11-07T00:00:00.000Z",
+					lastUpdatedAt: "2026-11-07T00:00:01.000Z",
+				},
+			],
+		});
+		expect(mcpTaskRuntime.listPublic).toHaveBeenCalledWith("s1");
+		await expect(host.handle({ method: "session.mcpTasksList", params: {} })).resolves.toMatchObject({
+			ok: true,
+			result: [{ id: "t1" }],
+		});
+		expect(mcpTaskRuntime.listPublic).toHaveBeenLastCalledWith(undefined);
+		await expect(host.handle({ method: "session.mcpTasksCancel", params: { id: "t1" } })).resolves.toEqual({
+			ok: true,
+			result: true,
+		});
+		await expect(
+			host.handle({ method: "session.mcpTasksClearFinished", params: { sessionId: "s1" } }),
+		).resolves.toEqual({ ok: true, result: 1 });
+		await expect(host.handle({ method: "session.mcpElicitationListPending", params: {} })).resolves.toEqual({
+			ok: true,
+			result: [
+				{
+					requestId: "e1",
+					sessionId: "s1",
+					serverName: "srv",
+					mode: "url",
+					message: "open this",
+					url: "https://example.test",
+				},
+			],
+		});
+	});
+
+	it("rejects empty identifiers with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptyId = await host.handle({ method: "session.mcpTasksCancel", params: { id: "" } });
+		expect(emptyId).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const emptySession = await host.handle({ method: "session.mcpTasksClearFinished", params: { sessionId: "" } });
+		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

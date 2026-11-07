@@ -62,7 +62,7 @@ import { getDesktopUserQuestionBroker } from "../conversations/user-question-bro
 import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
-import { getDesktopMcpTaskCoordinator, getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
+import { getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
 import { notify } from "../notifications/index.js";
 import { SessionTurnNotificationController } from "../notifications/session-turn-notification-controller.js";
 import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
@@ -167,13 +167,9 @@ const CHANNELS = {
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
 	PLAN_REVIEW_RESPONSE: "vetta:session:plan-review-response",
 	MCP_ELICITATION_REQUEST: "vetta:session:mcp-elicitation-request",
-	MCP_ELICITATION_LIST_PENDING: "vetta:session:mcp-elicitation-list-pending",
 	MCP_ELICITATION_RESOLVED: "vetta:session:mcp-elicitation-resolved",
 	MCP_ELICITATION_RESPONSE: "vetta:session:mcp-elicitation-response",
 	MCP_TASKS_CHANGED: "vetta:session:mcp-tasks-changed",
-	MCP_TASKS_LIST: "vetta:session:mcp-tasks-list",
-	MCP_TASKS_CANCEL: "vetta:session:mcp-tasks-cancel",
-	MCP_TASKS_CLEAR_FINISHED: "vetta:session:mcp-tasks-clear-finished",
 	MCP_APP_SURFACE_GET: "vetta:session:mcp-app-surface-get",
 	MCP_APP_CALL_TOOL: "vetta:session:mcp-app-call-tool",
 	MCP_APP_READ_RESOURCE: "vetta:session:mcp-app-read-resource",
@@ -338,7 +334,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const questionBroker = getDesktopUserQuestionBroker();
 	const mcpElicitationBroker = getDesktopMcpElicitationBroker();
 	const mcpTaskRegistry = getDesktopMcpTaskRegistry();
-	const mcpTaskCoordinator = getDesktopMcpTaskCoordinator();
 	const mcpAppRegistry = getDesktopMcpAppRegistry();
 	const sandboxAuthorizationBroker = getDesktopSandboxAuthorizationBroker();
 	const unsubscribeConversationListChanged = onConversationListChanged((event) => {
@@ -1112,8 +1107,9 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
-	ipcMain.handle(CHANNELS.MCP_ELICITATION_LIST_PENDING, () => mcpElicitationBroker.listPending());
-
+	// MCP 任务与待答清单四通道（mcp-tasks-{list,cancel,clear-finished}/
+	// mcp-elicitation-list-pending）已迁到 Host 合同 session.*（TASK-0476；
+	// MCP_TASKS_CHANGED 推送与 elicitation 应答仍走旧 IPC）。
 	ipcMain.handle(CHANNELS.QUESTION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");
 		const resolve = questionMap.get(requestId);
@@ -1132,19 +1128,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	ipcMain.handle(CHANNELS.MCP_ELICITATION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");
 		mcpElicitationMap.get(requestId)?.(normalizeMcpElicitationResponse(result));
-	});
-	ipcMain.handle(CHANNELS.MCP_TASKS_LIST, (_event, sessionId: unknown) => {
-		if (sessionId === undefined) return mcpTaskRegistry.listPublic();
-		assertNonEmptyString(sessionId, "sessionId");
-		return mcpTaskRegistry.listPublic(sessionId);
-	});
-	ipcMain.handle(CHANNELS.MCP_TASKS_CANCEL, (_event, id: unknown) => {
-		assertNonEmptyString(id, "MCP task id");
-		return mcpTaskCoordinator.cancel(id);
-	});
-	ipcMain.handle(CHANNELS.MCP_TASKS_CLEAR_FINISHED, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return mcpTaskRegistry.clearTerminal(sessionId);
 	});
 	ipcMain.handle(CHANNELS.MCP_APP_SURFACE_GET, (event, id: unknown) => {
 		assertMcpAppSender(event.sender, webContents);

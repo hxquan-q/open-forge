@@ -24,17 +24,26 @@ describe("createSessionApi trace propagation", () => {
 	});
 
 	it("exposes MCP Task snapshot, cancellation and cleanup channels", async () => {
-		const invoke = vi.fn(async () => undefined);
-		const ipc = { invoke } as unknown as IpcRenderer;
+		const invoke = vi.fn(async () => ({ ok: true, result: [] }));
+		const ipc = { invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
 		await session.listMcpTasks("session-1");
 		await session.cancelMcpTask("task-record-1");
 		await session.clearFinishedMcpTasks("session-1");
 
-		expect(invoke).toHaveBeenNthCalledWith(1, "vetta:session:mcp-tasks-list", "session-1");
-		expect(invoke).toHaveBeenNthCalledWith(2, "vetta:session:mcp-tasks-cancel", "task-record-1");
-		expect(invoke).toHaveBeenNthCalledWith(3, "vetta:session:mcp-tasks-clear-finished", "session-1");
+		expect(invoke).toHaveBeenNthCalledWith(1, "vetta:host:request", {
+			method: "session.mcpTasksList",
+			params: { sessionId: "session-1" },
+		});
+		expect(invoke).toHaveBeenNthCalledWith(2, "vetta:host:request", {
+			method: "session.mcpTasksCancel",
+			params: { id: "task-record-1" },
+		});
+		expect(invoke).toHaveBeenNthCalledWith(3, "vetta:host:request", {
+			method: "session.mcpTasksClearFinished",
+			params: { sessionId: "session-1" },
+		});
 	});
 
 	it("exposes queued context compaction over the host channel", async () => {
