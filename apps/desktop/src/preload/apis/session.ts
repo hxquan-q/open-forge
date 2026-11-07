@@ -8,8 +8,6 @@ import { subscribeSessionSearch } from "./session-search.js";
 
 const CHANNELS = {
 	CREATE: "vetta:session:create",
-	LIST_PROJECTS: "vetta:session:list-projects",
-	LIST_SESSIONS: "vetta:session:list-sessions",
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
@@ -52,8 +50,6 @@ const CHANNELS = {
 	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
 	DISPOSE: "vetta:session:dispose",
 	EVENT: "vetta:session:event",
-	LIST_RUNNING: "vetta:session:list-running",
-	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
 	CLEAR_DEFAULT_ARTIFACTS: "vetta:session:clear-default-artifacts",
@@ -68,8 +64,8 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 	return {
 		session: {
 			create: (config, kind, traceContext) => ipc.invoke(CHANNELS.CREATE, config, kind, traceContext),
-			listProjects: () => ipc.invoke(CHANNELS.LIST_PROJECTS),
-			listSessions: (cwd) => ipc.invoke(CHANNELS.LIST_SESSIONS, cwd),
+			listProjects: () => host.call("session.listProjects", {}),
+			listSessions: (cwd) => host.call("session.listSessions", { cwd }),
 			searchSessions: (request, onEvent) => subscribeSessionSearch(ipc, request, onEvent),
 			onSessionsChanged: (handler) => onIpcEvent(ipc, CHANNELS.SESSIONS_CHANGED, handler),
 			prompt: (sessionId, request, traceContext) => ipc.invoke(CHANNELS.PROMPT, sessionId, request, traceContext),
@@ -191,8 +187,8 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			nextPromptSuggestions: (sessionId, conversation) =>
 				host.call("session.nextPromptSuggestions", { sessionId, conversation }),
 			dispose: (sessionId) => ipc.invoke(CHANNELS.DISPOSE, sessionId),
-			listRunning: () => ipc.invoke(CHANNELS.LIST_RUNNING),
-			listRunningCwds: () => ipc.invoke(CHANNELS.LIST_RUNNING_CWDS),
+			listRunning: () => host.call("session.listRunning", {}),
+			listRunningCwds: () => host.call("session.listRunningCwds", {}),
 			onRunningChanged: (handler) => onIpcEvent(ipc, CHANNELS.RUNNING_CHANGED, handler),
 			clearDefaultConversation: (scope) => ipc.invoke(CHANNELS.CLEAR_DEFAULT_CONVERSATION, scope),
 			clearDefaultArtifacts: (scope) => ipc.invoke(CHANNELS.CLEAR_DEFAULT_ARTIFACTS, scope),

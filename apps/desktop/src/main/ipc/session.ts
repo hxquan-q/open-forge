@@ -62,7 +62,7 @@ import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-s
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
 import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations/session-paths.js";
-import { listRuntimeSessionProjects, listSessionHistory } from "../conversations/session-query-service.js";
+import { listSessionHistory } from "../conversations/session-query-service.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
 import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
@@ -154,8 +154,6 @@ const pluginLog = getAppLogger("plugin");
 
 const CHANNELS = {
 	CREATE: "vetta:session:create",
-	LIST_PROJECTS: "vetta:session:list-projects",
-	LIST_SESSIONS: "vetta:session:list-sessions",
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	CONTINUE: "vetta:session:continue",
@@ -197,9 +195,6 @@ const CHANNELS = {
 	SANDBOX_GRANTS_LIST: "vetta:session:sandbox-grants-list",
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
-	LIST_RUNNING: "vetta:session:list-running",
-	/** 有会话在跑的项目 cwd 列表；会话路径无法反推项目，见处理器上的说明。 */
-	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
 	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
@@ -913,14 +908,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		},
 	);
 
-	ipcMain.handle(CHANNELS.LIST_PROJECTS, async () => {
-		return listRuntimeSessionProjects();
-	});
-
-	ipcMain.handle(CHANNELS.LIST_SESSIONS, async (_event, cwd: unknown) => {
-		assertNonEmptyString(cwd, "cwd");
-		return listSessionHistory(cwd);
-	});
+	// 目录四通道（list-projects/list-sessions/list-running/list-running-cwds）
+	// 已迁到 Host 合同 session.*（TASK-0474；sessions-changed 推送事件仍走旧 IPC）。
 
 	ipcMain.handle(SESSION_SEARCH_CHANNELS.start, (event, requestId: unknown, request: unknown) => {
 		desktopSessionSearch.start(event.sender, requestId, request);
@@ -1047,28 +1036,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	// get-session-path 已迁到 Host 合同 session.getSessionPath（TASK-0473）。
-
-	ipcMain.handle(CHANNELS.LIST_RUNNING, () => [
-		...new Set([
-			...runtime.getRunningSessionPaths(),
-			...agentTeamSessionService.getRunningCoordinationSessionPaths(),
-		]),
-	]);
-
-	/**
-	 * 当前有会话在跑的项目 cwd（去重）。
-	 *
-	 * 为什么不让调用方拿 LIST_RUNNING 的路径自己反推：会话文件默认落在
-	 * `<agentDir>/sessions/--编码后的 cwd--/` 下，而那个编码把 `/`、`\`、`:` 全压成 `-`
-	 * 且不可逆，`my-project` 与 `my/project` 会撞进同一个分片；`<cwd>/.vetta/sessions`
-	 * 等别的布局也同时存在。唯一可靠的来源是会话头里的 cwd。
-	 * 运行中的会话通常只有个位数，逐个读头的代价可以忽略。
-	 */
-	ipcMain.handle(CHANNELS.LIST_RUNNING_CWDS, async () => {
-		const paths = runtime.getRunningSessionPaths();
-		const cwds = await Promise.all(paths.map((path) => readSessionCwdFromHeader(path).catch(() => undefined)));
-		return [...new Set(cwds.filter((cwd): cwd is string => typeof cwd === "string" && cwd.length > 0))];
-	});
 
 	ipcMain.handle(CHANNELS.CLEAR_DEFAULT_CONVERSATION, async (_event, scope: unknown) => {
 		// 物理分家后（ADR-0005）每个 scope 对应一个独立 cwd，互不干扰：

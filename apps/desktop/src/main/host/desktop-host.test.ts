@@ -39,6 +39,7 @@ const sharedRuntime = {
 	setExecutionMode: vi.fn(async () => undefined),
 	updateGlobalThinkingLevel: vi.fn(),
 	getSessionPath: vi.fn((): string | undefined => "/sessions/s1.jsonl"),
+	getRunningSessionPaths: vi.fn(() => ["/sessions/s1.jsonl"]),
 	retry: vi.fn(async () => undefined),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
@@ -73,6 +74,24 @@ vi.mock("../agent-modes/index.js", () => ({
 	DEFAULT_AGENT_MODE: "coding",
 	isAgentMode: (mode: string) => mode === "coding" || mode === "chat",
 	MODE_PROMPTS: [{ id: "coding", label: "Coding", description: "code it", icon: "lucide:code" }],
+}));
+const sessionQuery = {
+	listRuntimeSessionProjects: vi.fn(async () => [{ cwd: "C:\\proj", sessionCount: 2 }]),
+	listSessionHistory: vi.fn(async () => [
+		{
+			id: "s1",
+			path: "C:\\proj\\s1.jsonl",
+			cwd: "C:\\proj",
+			firstMessage: "hi",
+			modifiedAt: 1,
+			access: { readHistory: true, resume: true, rename: true, delete: false },
+			agentMode: "coding",
+		},
+	]),
+};
+vi.mock("../conversations/session-query-service.js", () => sessionQuery);
+vi.mock("../agent-teams/team-session-service.js", () => ({
+	agentTeamSessionService: { getRunningCoordinationSessionPaths: () => ["C:\\team\\t1.jsonl"] },
 }));
 
 const goalController = {
@@ -421,6 +440,10 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.getThinkingLevel",
 			"session.interruptSubagent",
 			"session.killBackgroundTask",
+			"session.listProjects",
+			"session.listRunning",
+			"session.listRunningCwds",
+			"session.listSessions",
 			"session.navigateForEdit",
 			"session.nextPromptSuggestions",
 			"session.pauseGoal",
@@ -826,5 +849,55 @@ describe("desktop host session runtime-ops domain", () => {
 			params: { sessionId: "s1", nonEmpty: "yes" },
 		});
 		expect(badFlag).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session catalog domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+	});
+
+	it("lists projects, sessions and deduped running paths", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.listProjects", params: {} })).resolves.toEqual({
+			ok: true,
+			result: [{ cwd: "C:\\proj", sessionCount: 2 }],
+		});
+		await expect(host.handle({ method: "session.listSessions", params: { cwd: "C:\\proj" } })).resolves.toEqual({
+			ok: true,
+			result: [
+				{
+					id: "s1",
+					path: "C:\\proj\\s1.jsonl",
+					cwd: "C:\\proj",
+					firstMessage: "hi",
+					modifiedAt: 1,
+					access: { readHistory: true, resume: true, rename: true, delete: false },
+					agentMode: "coding",
+				},
+			],
+		});
+		expect(sessionQuery.listSessionHistory).toHaveBeenCalledWith("C:\\proj");
+		await expect(host.handle({ method: "session.listRunning", params: {} })).resolves.toEqual({
+			ok: true,
+			result: ["/sessions/s1.jsonl", "C:\\team\\t1.jsonl"],
+		});
+	});
+
+	it("derives running cwds from session headers and drops unreadable ones", async () => {
+		const paths = await import("../conversations/session-paths.js");
+		sharedRuntime.getRunningSessionPaths.mockReturnValueOnce(["/sessions/s1.jsonl", "/sessions/s2.jsonl"]);
+		vi.mocked(paths.readSessionCwdFromHeader).mockResolvedValueOnce("C:\\proj").mockResolvedValueOnce(undefined);
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.listRunningCwds", params: {} })).resolves.toEqual({
+			ok: true,
+			result: ["C:\\proj"],
+		});
+	});
+
+	it("rejects an empty cwd with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const empty = await host.handle({ method: "session.listSessions", params: { cwd: "" } });
+		expect(empty).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });
