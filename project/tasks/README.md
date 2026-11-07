@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0464` | `in_progress` | PLAN-0029 | [Host utilityProcess 承载（Phase 3 第二步）](TASK-0464-host-utility-process.md) |
 | `TASK-0463` | `done` | PLAN-0029 | [Host MessagePort transport（Phase 3 第一步）](TASK-0463-host-messageport-transport.md) |
 | `TASK-0462` | `done` | PLAN-0029 | [MCP 无凭证子域迁移到 Host 合同](TASK-0462-mcp-noncredential-host-domain.md) |
 | `TASK-0461` | `done` | PLAN-0029 | [模型探测与余额通道迁移到 Host 合同](TASK-0461-models-probe-host-domain.md) |

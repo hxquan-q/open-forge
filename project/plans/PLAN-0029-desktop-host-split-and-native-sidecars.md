@@ -159,3 +159,4 @@ depends_on: []
 - 安全一方化：权限、审批、凭证归属：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
 - 语言分工与原生 sidecar 准入条件（Phase 4 前）。
 - 分支职责与集成目标（Phase 0.4，可落协作规则代替 ADR）。
+12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），in_progress。
