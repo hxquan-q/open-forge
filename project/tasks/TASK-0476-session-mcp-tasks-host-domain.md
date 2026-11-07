@@ -1,7 +1,7 @@
 ---
 id: TASK-0476
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -70,7 +70,7 @@ updated: 2026-11-08
 
 - 实际修改（2026-11-08）：如"做"所列，另含 biome 归一；`ipc/session.ts` 的 mcpTaskCoordinator 局部与 import 一并移除。
 - 踩坑记录：一次注释替换误复制 MCP_APP_SURFACE_GET handler 造成重复注册，编译前即被 grep 发现修正；elicitation 联合的 readonly 嵌套数组（fields/options）与合同可变形状不兼容，先用 `as never` 后改为全类型化判别映射；impact 首跑启动早于最后一轮修复（文件竞态），终止作废并以最终代码重启；preload MCP 任务用例需补假 ipc `send/on` 与 HostResponse 信封。
-- 实际验证：desktop 定向 52 例通过（desktop-host 44 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 632 → 628；`test:impact` 全量通过（desktop + host-protocol）。
+- 实际验证：desktop 定向 52 例通过（desktop-host 44 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 632 → 628；`test:impact` 全量通过（desktop + host-protocol）；实现提交 `f3c3335a6` 后 `test:changed --base origin/dev` 通过（6348 例）并推送 `main:dev`；其 quality run 42393652717 被后续 docs 提交 `565a6a08e` 的推送在 concurrency 组中取消（非代码失败），以 `565a6a08e` 的 run 42393835326（headSha `565a6a08e`，含同一代码面 + docs-only 增量）success 为权威结论。
 - 未运行与风险：MCP_TASKS_CHANGED 推送与 elicitation 应答（窗口闭包）留旧 IPC；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
