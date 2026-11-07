@@ -1,7 +1,7 @@
 ---
 id: TASK-0468
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -68,7 +68,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列，另含 biome 归一（合同与 domain 两文件折叠格式）；测试 mock `queueRuntime` 更名 `sharedRuntime` 并补 5 个历史方法。
 - 踩坑记录：无——访问器模式沿用 TASK-0467，本次为纯同形桥接；`check:quick` 首跑仅 biome 格式拒绝，自动归一后通过。
-- 实际验证：desktop 定向 2 文件 31 例通过（desktop-host 23 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` 通过；`test:impact` 全量通过（desktop + host-protocol）；`count-ipc-channels` 668 → 663。
+- 实际验证：desktop 定向 2 文件 31 例通过（desktop-host 23 + preload session 8）；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` 通过；`test:impact` 全量通过（desktop + host-protocol）；`count-ipc-channels` 668 → 663；实现提交 `369804316` 后 `test:changed --base origin/dev` 通过并推送 `main:dev`，远端 quality run 42357038368（headSha `369804316`）success。
 - 未运行与风险：五命令的安全写语义（Turn 互斥、分支持久化）仍在 RuntimeHost 一侧未经本片改动；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用

@@ -30,7 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0468` | `verifying` | PLAN-0029 | [会话历史分支子域迁移](TASK-0468-session-history-host-domain.md) |
+| `TASK-0469` | `in_progress` | PLAN-0029 | [会话 goal/todos 子域迁移](TASK-0469-session-goal-host-domain.md) |
 | `TASK-0465` | `done` | PLAN-0029 | [会话流领域迁移调查与切片规划](TASK-0465-session-stream-migration-investigation.md) |
 | `TASK-0464` | `done` | PLAN-0029 | [Host utilityProcess 承载（Phase 3 第二步）](TASK-0464-host-utility-process.md) |
 | `TASK-0463` | `done` | PLAN-0029 | [Host MessagePort transport（Phase 3 第一步）](TASK-0463-host-messageport-transport.md) |
