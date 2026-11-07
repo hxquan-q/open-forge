@@ -160,3 +160,4 @@ depends_on: []
 - 语言分工与原生 sidecar 准入条件（Phase 4 前）。
 - 分支职责与集成目标（Phase 0.4，可落协作规则代替 ADR）。
 12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+13. [TASK-0465](../tasks/TASK-0465-session-stream-migration-investigation.md)：会话流领域迁移调查与切片规划（84 通道分组、事件原语缺口、切片顺序定稿），done；首个实现切片 TASK-0466（元数据/模式纯请求子域）待立项。
