@@ -15,6 +15,20 @@ vi.mock("@vetta/coding-agent/profile", () => ({
 	],
 }));
 
+const queueRuntime = {
+	getQueueState: vi.fn(() => ({
+		paused: true,
+		entries: [{ id: "q1", behavior: "steer", kind: "message", displayText: "hi" }],
+	})),
+	queueSessionContextCompaction: vi.fn(async () => ({ status: "queued" as const, id: "c1", pendingCount: 2 })),
+	removeQueuedMessage: vi.fn(async () => true),
+	reorderQueuedMessages: vi.fn(),
+	sendQueuedMessageNow: vi.fn(async () => "promoted" as const),
+	resumeQueue: vi.fn(async () => undefined),
+	clearQueue: vi.fn(),
+};
+vi.mock("../runtime.js", () => ({ getSharedRuntime: () => queueRuntime }));
+
 const { createDesktopHost } = await import("./desktop-host.js");
 
 vi.mock("../models/presets/sync.js", () => ({
@@ -301,7 +315,7 @@ describe("desktop host registration and session defaults domain", () => {
 		document = {};
 	});
 
-	it("registers the models, mcp and session defaults methods", () => {
+	it("registers the models, mcp and session host methods", () => {
 		expect(createDesktopHost().methods()).toEqual([
 			"mcp.authStatus",
 			"mcp.configPath",
@@ -317,9 +331,16 @@ describe("desktop host registration and session defaults domain", () => {
 			"models.refreshPresetCatalog",
 			"models.setConfig",
 			"models.testProvider",
+			"session.clearQueue",
 			"session.getPersonalization",
 			"session.getPersonas",
+			"session.getQueueState",
 			"session.getThinkingLevel",
+			"session.queueContextCompaction",
+			"session.removeQueuedMessage",
+			"session.reorderQueuedMessages",
+			"session.resumeQueue",
+			"session.sendQueuedMessageNow",
 			"session.setPersonalization",
 		]);
 	});
@@ -359,5 +380,40 @@ describe("desktop host registration and session defaults domain", () => {
 			params: { personaId: "ghost", customPrompt: "x" },
 		});
 		expect(response).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session queue domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(queueRuntime)) fn.mockClear();
+	});
+
+	it("returns the queue state snapshot through the shared runtime", async () => {
+		await expect(
+			createDesktopHost().handle({ method: "session.getQueueState", params: { sessionId: "s1" } }),
+		).resolves.toEqual({
+			ok: true,
+			result: { paused: true, entries: [{ id: "q1", behavior: "steer", kind: "message", displayText: "hi" }] },
+		});
+		expect(queueRuntime.getQueueState).toHaveBeenCalledWith("s1");
+	});
+
+	it("bridges queue operations and rejects empty identifiers", async () => {
+		const host = createDesktopHost();
+		await expect(
+			host.handle({ method: "session.queueContextCompaction", params: { sessionId: "s1" } }),
+		).resolves.toEqual({ ok: true, result: { status: "queued", id: "c1", pendingCount: 2 } });
+		await expect(
+			host.handle({ method: "session.removeQueuedMessage", params: { sessionId: "s1", itemId: "q1" } }),
+		).resolves.toEqual({ ok: true, result: true });
+		await expect(
+			host.handle({ method: "session.reorderQueuedMessages", params: { sessionId: "s1", itemIds: ["q2", "q1"] } }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(queueRuntime.reorderQueuedMessages).toHaveBeenCalledWith("s1", ["q2", "q1"]);
+		await expect(
+			host.handle({ method: "session.sendQueuedMessageNow", params: { sessionId: "s1", itemId: "q1" } }),
+		).resolves.toEqual({ ok: true, result: "promoted" });
+		const empty = await host.handle({ method: "session.clearQueue", params: { sessionId: "" } });
+		expect(empty).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

@@ -37,14 +37,20 @@ describe("createSessionApi trace propagation", () => {
 		expect(invoke).toHaveBeenNthCalledWith(3, "vetta:session:mcp-tasks-clear-finished", "session-1");
 	});
 
-	it("exposes queued context compaction without using the interrupting prompt path", async () => {
-		const invoke = vi.fn(async () => ({ status: "queued", id: "compact-1", pendingCount: 1 }));
-		const ipc = { invoke } as unknown as IpcRenderer;
+	it("exposes queued context compaction over the host channel", async () => {
+		const invoke = vi.fn(async () => ({ ok: true, result: { status: "queued", id: "compact-1", pendingCount: 1 } }));
+		const ipc = { invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
-		await session.queueContextCompaction("session-1");
-
-		expect(invoke).toHaveBeenCalledWith("vetta:session:queue-context-compaction", "session-1");
+		await expect(session.queueContextCompaction("session-1")).resolves.toEqual({
+			status: "queued",
+			id: "compact-1",
+			pendingCount: 1,
+		});
+		expect(invoke).toHaveBeenCalledWith("vetta:host:request", {
+			method: "session.queueContextCompaction",
+			params: { sessionId: "session-1" },
+		});
 	});
 
 	it("exposes goal lifecycle channels", async () => {

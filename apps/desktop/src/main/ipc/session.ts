@@ -178,13 +178,6 @@ const CHANNELS = {
 	CONTINUE: "vetta:session:continue",
 	RETRY: "vetta:session:retry",
 	ABORT: "vetta:session:abort",
-	QUEUE_STATE: "vetta:session:queue-state",
-	QUEUE_CONTEXT_COMPACTION: "vetta:session:queue-context-compaction",
-	QUEUE_REMOVE: "vetta:session:queue-remove",
-	QUEUE_REORDER: "vetta:session:queue-reorder",
-	QUEUE_SEND_NOW: "vetta:session:queue-send-now",
-	QUEUE_RESUME: "vetta:session:queue-resume",
-	QUEUE_CLEAR: "vetta:session:queue-clear",
 	CLEAR_TODOS: "vetta:session:clear-todos",
 	GOAL_GET_STATE: "vetta:session:goal-get-state",
 	GOAL_START: "vetta:session:goal-start",
@@ -1036,39 +1029,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
-	ipcMain.handle(CHANNELS.QUEUE_STATE, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.getQueueState(sessionId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_CONTEXT_COMPACTION, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.queueSessionContextCompaction(sessionId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_REMOVE, async (_event, sessionId: unknown, itemId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(itemId, "itemId");
-		return runtime.removeQueuedMessage(sessionId, itemId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_REORDER, async (_event, sessionId: unknown, itemIds: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		if (!Array.isArray(itemIds) || itemIds.some((id) => typeof id !== "string" || id.length === 0)) {
-			throw new Error("itemIds must be a non-empty-string array");
-		}
-		runtime.reorderQueuedMessages(sessionId, itemIds as string[]);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_SEND_NOW, async (_event, sessionId: unknown, itemId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(itemId, "itemId");
-		return runtime.sendQueuedMessageNow(sessionId, itemId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_RESUME, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		await runtime.resumeQueue(sessionId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_CLEAR, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		runtime.clearQueue(sessionId);
-	});
+	// 输入队列七通道已迁到 Host 合同 session.*（TASK-0467；queue-state 推送事件仍走旧 IPC）。
 
 	ipcMain.handle(CHANNELS.CLEAR_TODOS, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");

@@ -162,3 +162,4 @@ depends_on: []
 12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
 13. [TASK-0465](../tasks/TASK-0465-session-stream-migration-investigation.md)：会话流领域迁移调查与切片规划（84 通道分组、事件原语缺口、切片顺序定稿），done；首个实现切片 TASK-0466（元数据/模式纯请求子域）待立项。
 14. [TASK-0466](../tasks/TASK-0466-session-defaults-host-domain.md)：会话默认项/个性化子域（thinking 读取/personas/personalization 读写 4 通道）迁移，done（quality 已核实；IPC 679→675）；runtime 耦合设置器与事件面按 0465 分组后续推进。
+15. [TASK-0467](../tasks/TASK-0467-session-queue-host-domain.md)：会话输入队列子域（queue-state getter + 6 队列操作 7 通道）迁移，verifying（IPC 675→668；queue-state 推送事件留旧 IPC 待事件原语）。

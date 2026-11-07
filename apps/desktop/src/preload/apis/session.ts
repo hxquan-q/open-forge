@@ -18,13 +18,6 @@ const CHANNELS = {
 	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
-	QUEUE_STATE: "vetta:session:queue-state",
-	QUEUE_CONTEXT_COMPACTION: "vetta:session:queue-context-compaction",
-	QUEUE_REMOVE: "vetta:session:queue-remove",
-	QUEUE_REORDER: "vetta:session:queue-reorder",
-	QUEUE_SEND_NOW: "vetta:session:queue-send-now",
-	QUEUE_RESUME: "vetta:session:queue-resume",
-	QUEUE_CLEAR: "vetta:session:queue-clear",
 	CLEAR_TODOS: "vetta:session:clear-todos",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
@@ -112,13 +105,19 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			setInterruptDraftNonEmpty: (sessionId, nonEmpty) => ipc.invoke(CHANNELS.INTERRUPT_DRAFT, sessionId, nonEmpty),
 			onInterruptHealth: (handler) => onIpcEvent(ipc, CHANNELS.INTERRUPT_HEALTH, handler),
 			onInterruptedStartup: (handler) => onIpcEvent(ipc, CHANNELS.INTERRUPTED_STARTUP, handler),
-			getQueueState: (sessionId) => ipc.invoke(CHANNELS.QUEUE_STATE, sessionId),
-			queueContextCompaction: (sessionId) => ipc.invoke(CHANNELS.QUEUE_CONTEXT_COMPACTION, sessionId),
-			removeQueuedMessage: (sessionId, itemId) => ipc.invoke(CHANNELS.QUEUE_REMOVE, sessionId, itemId),
-			reorderQueuedMessages: (sessionId, itemIds) => ipc.invoke(CHANNELS.QUEUE_REORDER, sessionId, itemIds),
-			sendQueuedMessageNow: (sessionId, itemId) => ipc.invoke(CHANNELS.QUEUE_SEND_NOW, sessionId, itemId),
-			resumeQueue: (sessionId) => ipc.invoke(CHANNELS.QUEUE_RESUME, sessionId),
-			clearQueue: (sessionId) => ipc.invoke(CHANNELS.QUEUE_CLEAR, sessionId),
+			getQueueState: (sessionId) => host.call("session.getQueueState", { sessionId }),
+			queueContextCompaction: (sessionId) => host.call("session.queueContextCompaction", { sessionId }),
+			removeQueuedMessage: (sessionId, itemId) => host.call("session.removeQueuedMessage", { sessionId, itemId }),
+			reorderQueuedMessages: async (sessionId, itemIds) => {
+				await host.call("session.reorderQueuedMessages", { sessionId, itemIds });
+			},
+			sendQueuedMessageNow: (sessionId, itemId) => host.call("session.sendQueuedMessageNow", { sessionId, itemId }),
+			resumeQueue: async (sessionId) => {
+				await host.call("session.resumeQueue", { sessionId });
+			},
+			clearQueue: async (sessionId) => {
+				await host.call("session.clearQueue", { sessionId });
+			},
 			clearTodos: (sessionId) => ipc.invoke(CHANNELS.CLEAR_TODOS, sessionId),
 			subscribe: (sessionId, handler) =>
 				subscribeById(
