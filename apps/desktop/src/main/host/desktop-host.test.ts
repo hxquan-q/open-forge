@@ -31,8 +31,36 @@ const sharedRuntime = {
 	deleteMessage: vi.fn(async () => ({ leafId: null })),
 	replaceLastUserMessage: vi.fn(async () => ({ leafId: "e9" })),
 	forkSession: vi.fn(async () => ({ path: "C:\\sessions\\fork.jsonl", text: "forked" })),
+	invokeSessionExtension: vi.fn(async () => true),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
+
+const goalController = {
+	read: vi.fn(async () => null),
+	start: vi.fn(async (_sessionId: string, objective: string) => goalStateOf(objective)),
+	pause: vi.fn(async () => goalStateOf("pause it", "paused")),
+	resume: vi.fn(async () => goalStateOf("resume it", "active")),
+	clear: vi.fn(async () => null),
+};
+const goalStateOf = (objective: string, status = "active") => ({
+	goalId: "g1",
+	objective,
+	status,
+	tokensUsed: 12,
+	timeUsedSeconds: 34,
+	continuationCount: 1,
+	createdAt: "2026-11-07T00:00:00.000Z",
+	updatedAt: "2026-11-07T00:00:01.000Z",
+});
+vi.mock("../conversations/desktop-goal-controller.js", () => ({
+	DesktopGoalController: class {
+		read = goalController.read;
+		start = goalController.start;
+		pause = goalController.pause;
+		resume = goalController.resume;
+		clear = goalController.clear;
+	},
+}));
 
 const { createDesktopHost } = await import("./desktop-host.js");
 
@@ -336,21 +364,27 @@ describe("desktop host registration and session defaults domain", () => {
 			"models.refreshPresetCatalog",
 			"models.setConfig",
 			"models.testProvider",
+			"session.clearGoal",
 			"session.clearQueue",
+			"session.clearTodos",
 			"session.deleteMessage",
 			"session.forkSession",
+			"session.getGoalState",
 			"session.getPersonalization",
 			"session.getPersonas",
 			"session.getQueueState",
 			"session.getThinkingLevel",
 			"session.navigateForEdit",
+			"session.pauseGoal",
 			"session.queueContextCompaction",
 			"session.removeQueuedMessage",
 			"session.reorderQueuedMessages",
 			"session.replaceLastUserMessage",
+			"session.resumeGoal",
 			"session.resumeQueue",
 			"session.sendQueuedMessageNow",
 			"session.setPersonalization",
+			"session.startGoal",
 			"session.switchBranch",
 		]);
 	});
@@ -466,5 +500,68 @@ describe("desktop host session history domain", () => {
 		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 		const emptyEntry = await host.handle({ method: "session.forkSession", params: { sessionId: "s1", entryId: "" } });
 		expect(emptyEntry).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session goal domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+		for (const fn of Object.values(goalController)) fn.mockClear();
+	});
+
+	it("bridges goal commands through DesktopGoalController and clearTodos via the runtime", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.getGoalState", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: null,
+		});
+		await expect(
+			host.handle({ method: "session.startGoal", params: { sessionId: "s1", objective: "ship it" } }),
+		).resolves.toEqual({
+			ok: true,
+			result: {
+				goalId: "g1",
+				objective: "ship it",
+				status: "active",
+				tokensUsed: 12,
+				timeUsedSeconds: 34,
+				continuationCount: 1,
+				createdAt: "2026-11-07T00:00:00.000Z",
+				updatedAt: "2026-11-07T00:00:01.000Z",
+			},
+		});
+		await expect(
+			host.handle({ method: "session.pauseGoal", params: { sessionId: "s1", goalId: "g1" } }),
+		).resolves.toMatchObject({ ok: true, result: { status: "paused" } });
+		await expect(
+			host.handle({ method: "session.resumeGoal", params: { sessionId: "s1", goalId: "g1" } }),
+		).resolves.toMatchObject({ ok: true, result: { status: "active" } });
+		await expect(
+			host.handle({ method: "session.clearGoal", params: { sessionId: "s1", goalId: "g1" } }),
+		).resolves.toEqual({ ok: true, result: null });
+		await expect(host.handle({ method: "session.clearTodos", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: true,
+		});
+		expect(goalController.read).toHaveBeenCalledWith("s1");
+		expect(goalController.start).toHaveBeenCalledWith("s1", "ship it");
+		expect(goalController.pause).toHaveBeenCalledWith("s1", "g1");
+		expect(goalController.resume).toHaveBeenCalledWith("s1", "g1");
+		expect(goalController.clear).toHaveBeenCalledWith("s1", "g1");
+		expect(sharedRuntime.invokeSessionExtension).toHaveBeenCalled();
+	});
+
+	it("rejects empty identifiers and objectives with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptyGoalId = await host.handle({
+			method: "session.pauseGoal",
+			params: { sessionId: "s1", goalId: "" },
+		});
+		expect(emptyGoalId).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const emptyObjective = await host.handle({
+			method: "session.startGoal",
+			params: { sessionId: "s1", objective: "" },
+		});
+		expect(emptyObjective).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

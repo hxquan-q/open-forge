@@ -18,7 +18,6 @@ const CHANNELS = {
 	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
-	CLEAR_TODOS: "vetta:session:clear-todos",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
 	UPDATE_SETTINGS: "vetta:session:update-settings",
@@ -35,11 +34,7 @@ const CHANNELS = {
 	QUESTION_RESPONSE: "vetta:session:question-response",
 	PLAN_MODE_GET_STATE: "vetta:session:plan-mode-get-state",
 	PLAN_MODE_SET_PERMISSION_MODE: "vetta:session:plan-mode-set-permission-mode",
-	GOAL_GET_STATE: "vetta:session:goal-get-state",
-	GOAL_START: "vetta:session:goal-start",
-	GOAL_PAUSE: "vetta:session:goal-pause",
-	GOAL_RESUME: "vetta:session:goal-resume",
-	GOAL_CLEAR: "vetta:session:goal-clear",
+
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
 	PLAN_REVIEW_LIST_PENDING: "vetta:session:plan-review-list-pending",
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
@@ -113,7 +108,7 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			clearQueue: async (sessionId) => {
 				await host.call("session.clearQueue", { sessionId });
 			},
-			clearTodos: (sessionId) => ipc.invoke(CHANNELS.CLEAR_TODOS, sessionId),
+			clearTodos: (sessionId) => host.call("session.clearTodos", { sessionId }),
 			subscribe: (sessionId, handler) =>
 				subscribeById(
 					ipc,
@@ -131,11 +126,11 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			getPlanModeState: (sessionId) => ipc.invoke(CHANNELS.PLAN_MODE_GET_STATE, sessionId),
 			setPermissionMode: (sessionId, permissionMode) =>
 				ipc.invoke(CHANNELS.PLAN_MODE_SET_PERMISSION_MODE, sessionId, permissionMode),
-			getGoalState: (sessionId) => ipc.invoke(CHANNELS.GOAL_GET_STATE, sessionId),
-			startGoal: (sessionId, objective) => ipc.invoke(CHANNELS.GOAL_START, sessionId, objective),
-			pauseGoal: (sessionId, goalId) => ipc.invoke(CHANNELS.GOAL_PAUSE, sessionId, goalId),
-			resumeGoal: (sessionId, goalId) => ipc.invoke(CHANNELS.GOAL_RESUME, sessionId, goalId),
-			clearGoal: (sessionId, goalId) => ipc.invoke(CHANNELS.GOAL_CLEAR, sessionId, goalId),
+			getGoalState: (sessionId) => host.call("session.getGoalState", { sessionId }),
+			startGoal: (sessionId, objective) => host.call("session.startGoal", { sessionId, objective }),
+			pauseGoal: (sessionId, goalId) => host.call("session.pauseGoal", { sessionId, goalId }),
+			resumeGoal: (sessionId, goalId) => host.call("session.resumeGoal", { sessionId, goalId }),
+			clearGoal: (sessionId, goalId) => host.call("session.clearGoal", { sessionId, goalId }),
 			onPlanReviewRequest: (handler) => onIpcEvent(ipc, CHANNELS.PLAN_REVIEW_REQUEST, handler),
 			listPendingPlanReviews: () => ipc.invoke(CHANNELS.PLAN_REVIEW_LIST_PENDING),
 			onPlanReviewResolved: (handler) => onIpcEvent(ipc, CHANNELS.PLAN_REVIEW_RESOLVED, handler),

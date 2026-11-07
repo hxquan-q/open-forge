@@ -54,8 +54,8 @@ describe("createSessionApi trace propagation", () => {
 	});
 
 	it("exposes goal lifecycle channels", async () => {
-		const invoke = vi.fn(async () => undefined);
-		const ipc = { invoke } as unknown as IpcRenderer;
+		const invoke = vi.fn(async () => ({ ok: true, result: null }));
+		const ipc = { invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
 		await session.getGoalState("session-1");
@@ -65,11 +65,11 @@ describe("createSessionApi trace propagation", () => {
 		await session.clearGoal("session-1", "goal-1");
 
 		expect(invoke.mock.calls).toEqual([
-			["vetta:session:goal-get-state", "session-1"],
-			["vetta:session:goal-start", "session-1", "Ship"],
-			["vetta:session:goal-pause", "session-1", "goal-1"],
-			["vetta:session:goal-resume", "session-1", "goal-1"],
-			["vetta:session:goal-clear", "session-1", "goal-1"],
+			["vetta:host:request", { method: "session.getGoalState", params: { sessionId: "session-1" } }],
+			["vetta:host:request", { method: "session.startGoal", params: { sessionId: "session-1", objective: "Ship" } }],
+			["vetta:host:request", { method: "session.pauseGoal", params: { sessionId: "session-1", goalId: "goal-1" } }],
+			["vetta:host:request", { method: "session.resumeGoal", params: { sessionId: "session-1", goalId: "goal-1" } }],
+			["vetta:host:request", { method: "session.clearGoal", params: { sessionId: "session-1", goalId: "goal-1" } }],
 		]);
 	});
 

@@ -4,6 +4,7 @@ import type {
 	McpHostMethods,
 	ModelsHostMethods,
 	SessionDefaultsHostMethods,
+	SessionGoalHostMethods,
 	SessionHistoryHostMethods,
 	SessionQueueHostMethods,
 	SettingsHostMethods,
@@ -24,6 +25,7 @@ export type DesktopHostClient = HostClient<
 		ModelsHostMethods &
 		McpHostMethods &
 		SessionDefaultsHostMethods &
+		SessionGoalHostMethods &
 		SessionHistoryHostMethods &
 		SessionQueueHostMethods
 >;
@@ -62,6 +64,7 @@ export function createDesktopHostClient(ipc: IpcRenderer): DesktopHostClient {
 			ModelsHostMethods &
 			McpHostMethods &
 			SessionDefaultsHostMethods &
+			SessionGoalHostMethods &
 			SessionHistoryHostMethods &
 			SessionQueueHostMethods
 	>((request) => {
