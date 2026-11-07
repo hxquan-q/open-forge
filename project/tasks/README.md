@@ -34,7 +34,8 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0471` | `done` | PLAN-0029 | [会话 plan-mode 子域迁移](TASK-0471-session-plan-mode-host-domain.md) |
 | `TASK-0472` | `done` | PLAN-0029 | [会话执行模式与全局设置子域迁移](TASK-0472-session-execution-host-domain.md) |
 | `TASK-0474` | `done` | PLAN-0029 | [会话目录子域迁移](TASK-0474-session-catalog-host-domain.md) |
-| `TASK-0475` | `verifying` | PLAN-0029 | [会话生命周期控制与删除子域迁移](TASK-0475-session-lifecycle-host-domain.md) |
+| `TASK-0475` | `done` | PLAN-0029 | [会话生命周期控制与删除子域迁移](TASK-0475-session-lifecycle-host-domain.md) |
+| `TASK-0476` | `in_progress` | PLAN-0029 | [MCP 任务与待答清单子域迁移](TASK-0476-session-mcp-tasks-host-domain.md) |
 | `TASK-0465` | `done` | PLAN-0029 | [会话流领域迁移调查与切片规划](TASK-0465-session-stream-migration-investigation.md) |
 | `TASK-0464` | `done` | PLAN-0029 | [Host utilityProcess 承载（Phase 3 第二步）](TASK-0464-host-utility-process.md) |
 | `TASK-0463` | `done` | PLAN-0029 | [Host MessagePort transport（Phase 3 第一步）](TASK-0463-host-messageport-transport.md) |
