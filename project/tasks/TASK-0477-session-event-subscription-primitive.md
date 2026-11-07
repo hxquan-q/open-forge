@@ -80,4 +80,6 @@ TASK-0465 组 2 的解锁件：在 Host port 上建立事件推送原语，迁�
 
 ## 交付记录
 
-- （调查完成，实施待后续周期；本记录即设计交付物。）
+- 第一步完成（2026-11-08，提交 `56c37736c`）：host-protocol 帧扩展（event 变体）、`HostEventSink` 连接级发射器、`serveHostOnPort → {stop, events}` 句柄、`HostCallContext.events`（`HostDispatcher.handle(raw, {events})`）、客户端 `portHostEvents` 分发面；conformance 3 例新增（17/17 绿），desktop 两处调用点适配，双侧 typecheck 0，门禁全量绿（6348 例）。
+- 第二步待做：desktop `session-events-domain`（subscribe/unsubscribe + 三份快照回放，经 `ctx.events.emitEvent`）；preload `subscribe` 切 `host.call` 并加端口就绪门（bootstrap 期未建端口时回退旧 ipc，待验证后第三步删除）；`onSessionEvent` 改从 `portHostEvents` 收。
+- 第三步待做：删旧 SUBSCRIBE/UNSUBSCRIBE/EVENT 三通道，IPC 628 → 625。
