@@ -1,7 +1,7 @@
 ---
 id: TASK-0467
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -69,7 +69,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列，另含 biome 归一。`count-ipc-channels` 675 → 668（循环累计 693 → 668）。
 - 踩坑记录：迁移脚本首次因相对路径未生效（无副作用）后修正执行；`session.test.ts` 假 ipc 缺 `send/on` 由 impact 首跑暴露，补全并同步信封断言。
-- 实际验证：desktop 定向 4 文件 34 例通过；`session.test.ts` 8 例通过；双侧 typecheck 0 错；`check:quick` 通过；`test:impact` 首跑 1 失败（上述假 ipc）后复跑通过。
+- 实际验证：desktop 定向 4 文件 34 例通过；`session.test.ts` 8 例通过；双侧 typecheck 0 错；`check:quick` 通过；`test:impact` 首跑 1 失败（上述假 ipc）后复跑通过；实现提交 `b39984439` 后全量 `test:changed --base origin/dev` 6325 例通过并推送 `main:dev`，远端 quality run 42353639237（headSha `b39984439`）success。
 - 未运行与风险：queue-state 推送事件与 runtime 耦合设置器仍留旧 IPC；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用
