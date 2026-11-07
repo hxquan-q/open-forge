@@ -1,7 +1,7 @@
 ---
 id: TASK-0464
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -72,4 +72,14 @@ updated: 2026-11-07
 
 ## 交付记录
 
-- 待补
+- 实际修改（2026-11-07）：`errors.ts` 追加稳定码 `HOST_UNAVAILABLE`；新增子进程入口 `src/main/host-process.ts`（注册 settings 域并在 `process.parentPort` 收端口后 `serveHostOnPort`）；`host/host-process-service.ts`（`createHostProcessService`：端口转发 + 子进程退出置死 + HOST_UNAVAILABLE 信封 + dispose；`settingsDomainProxy`：逐方法转信封、错误还原 HostProtocolError）；`ipc/host.ts` fork（`serviceName: vetta-host-process`，fork 失败降级静态 unavailable 服务）并把 settings 代理挂到主 dispatcher；`desktop-host.ts` 移除本地 settings 注册（models/mcp 不变）；`vite.main.config.ts` 增 `host-process` 入口。
+- 测试迁移：desktop-host.test 的 settings 用例随注册位置迁入 `host-process-service.test.ts`（经内存端口对 + 真实 settings 域全链路断言：读写持久化、INVALID_PARAMS、HOST_UNAVAILABLE、dispose）；desktop-host.test 保留 models/mcp（注册清单 20 → 14）。
+- 踩坑记录：内存端口对首版收发映射接反（各自投递到独立表）；子进程入口相对路径笔误；均已修正。期间一次误覆盖 `settings-domain.ts`，立即以 `git show HEAD` 恢复原文（零 diff），无数据损失。
+- 实际验证：desktop 定向 4 文件 29 例通过；`apps/desktop typecheck` 0 错误；根级 `tsgo --noEmit` 0 错误；`check:quick` 通过（Biome 后复跑）；`test:impact` 通过（desktop 受影响全绿，exit 0）。
+- 未运行与风险：真实 utilityProcess 运行时行为（fork、parentPort 投递、打包路径）需真实启动验证——属 UI/真实运行验证，需当前任务授权，本切片未执行；子进程崩溃后 settings 面不可用直至重启应用（无自动重启，按设计）；主进程 `createDesktopHost` 的调用方（测试）已同步。
+- 人工验收：不适用（进程拓扑内部变更，renderer API 不变）。
+- 发布：不适用
+
+## 完成收口（2026-11-07）
+
+- 批次 `5b8347d65` 已推送 `origin/dev`（门禁链绿后推送）；远端 quality run 42332033653 **success**，一次通过。完成标准满足，状态置 done。真实 utilityProcess 运行验证（需授权）与 models/mcp owner 插槽迁移为后续切片。

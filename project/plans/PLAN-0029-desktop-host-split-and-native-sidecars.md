@@ -127,7 +127,7 @@ depends_on: []
 8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），done。
 9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，done。
 10. [TASK-0462](../tasks/TASK-0462-mcp-noncredential-host-domain.md)：MCP 无凭证子域（config-path/has-auth/auth-status/list-server-tools）迁移，done；`mcp:get/set`（凭证面）与 OAuth 六通道按 ADR-0152 §7 留待评审。
-11. [TASK-0463](../tasks/TASK-0463-host-messageport-transport.md)：Host MessagePort transport（Phase 3 第一步，换线不搬进程，done；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），in_progress。
+11. [TASK-0463](../tasks/TASK-0463-host-messageport-transport.md)：Host MessagePort transport（Phase 3 第一步，换线不搬进程，done；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），done。
 
 ## 不做什么
 
@@ -159,4 +159,4 @@ depends_on: []
 - 安全一方化：权限、审批、凭证归属：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
 - 语言分工与原生 sidecar 准入条件（Phase 4 前）。
 - 分支职责与集成目标（Phase 0.4，可落协作规则代替 ADR）。
-12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），in_progress。
+12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），done。
