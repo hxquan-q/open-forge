@@ -15,11 +15,22 @@ export interface PortLike {
 	close?(): void;
 }
 
-/** 端口帧：请求与响应都带单调关联 id，乱序响应按 id 配对。 */
+/** 端口帧：请求与响应都带单调关联 id，乱序响应按 id 配对；event 帧承载订阅事件（TASK-0477）。 */
 interface PortFrame {
 	readonly id: number;
 	readonly request?: HostRequest;
 	readonly response?: HostResponse;
+	readonly event?: PortHostEventFrame;
+}
+
+interface PortHostEventFrame {
+	readonly subscriptionId: string;
+	readonly payload: unknown;
+}
+
+/** host 侧事件发射器：经端口下发订阅事件；订阅语义（注册/清理）由域实现负责。 */
+export interface HostEventSink {
+	emitEvent(subscriptionId: string, payload: unknown): void;
 }
 
 function asFrame(value: unknown): PortFrame | undefined {
@@ -55,12 +66,31 @@ export function portHostTransport(port: PortLike): HostTransport {
 		});
 }
 
-/** 服务端：把端口上的每个请求帧交给 dispatcher 并回写响应帧；畸形帧静默丢弃。 */
-export function serveHostOnPort(port: PortLike, handle: (request: unknown) => Promise<HostResponse>): () => void {
+/** 服务端句柄：stop 关闭端口；events 供服务端在请求处理外推送订阅事件。 */
+export interface ServeHostPortHandle {
+	readonly events: HostEventSink;
+	stop(): void;
+}
+
+/**
+ * 服务端：把端口上的每个请求帧交给 dispatcher 并回写响应帧；畸形帧静默丢弃。
+ * handle 收到连接级事件发射器——订阅类方法经 ctx.events 推送，非订阅路径忽略。
+ */
+export function serveHostOnPort(
+	port: PortLike,
+	handle: (request: unknown, events: HostEventSink) => Promise<HostResponse>,
+): ServeHostPortHandle {
+	let eventSequence = 0;
+	const sink: HostEventSink = {
+		emitEvent: (subscriptionId, payload) => {
+			const id = ++eventSequence;
+			port.postMessage({ id, event: { subscriptionId, payload } } satisfies PortFrame);
+		},
+	};
 	const listener = (event: { data: unknown }): void => {
 		const frame = asFrame(event.data);
 		if (!frame || frame.request === undefined) return;
-		void handle(frame.request)
+		void handle(frame.request, sink)
 			.catch(
 				(error): HostResponse => ({
 					ok: false,
@@ -76,7 +106,31 @@ export function serveHostOnPort(port: PortLike, handle: (request: unknown) => Pr
 	};
 	port.on("message", listener);
 	port.start?.();
-	return () => {
-		port.close?.();
+	return {
+		events: sink,
+		stop: () => {
+			port.close?.();
+		},
+	};
+}
+
+/** 客户端事件面：按 subscriptionId 分发端口上的事件帧；返回退订函数。 */
+export function portHostEvents(port: PortLike): {
+	on(subscriptionId: string, handler: (payload: unknown) => void): () => void;
+} {
+	const handlers = new Map<string, (payload: unknown) => void>();
+	port.on("message", (event) => {
+		const frame = asFrame(event.data);
+		if (!frame || frame.event === undefined) return;
+		const handler = handlers.get(frame.event.subscriptionId);
+		handler?.(frame.event.payload);
+	});
+	return {
+		on: (subscriptionId, handler) => {
+			handlers.set(subscriptionId, handler);
+			return () => {
+				if (handlers.get(subscriptionId) === handler) handlers.delete(subscriptionId);
+			};
+		},
 	};
 }

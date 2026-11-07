@@ -27,5 +27,5 @@ if (!parentPort) throw new Error("host-process must be spawned by utilityProcess
 parentPort.on("message", (event) => {
 	// utilityProcess 子进程收到的 transferred port 为 MessagePortMain 形状，结构满足 PortLike。
 	const port = event.ports?.[0] as PortLike | undefined;
-	if (port) serveHostOnPort(port, (request) => host.handle(request));
+	if (port) serveHostOnPort(port, (request, events) => host.handle(request, { events }));
 });

@@ -54,7 +54,7 @@ export function registerHostIpc(host: HostDispatcher): () => void {
 		const { port1, port2 } = new MessageChannelMain();
 		served.add(port2);
 		port2.on("close", () => served.delete(port2));
-		serveHostOnPort(toPortLike(port2), (request) => host.handle(request));
+		serveHostOnPort(toPortLike(port2), (request, events) => host.handle(request, { events }));
 		event.sender.postMessage(HOST_PORT_CHANNEL, null, [port1]);
 	};
 

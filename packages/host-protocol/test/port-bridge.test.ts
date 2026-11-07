@@ -1,7 +1,7 @@
 // Copyright The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { HostResponse } from "../src/envelope.js";
-import { type PortLike, portHostTransport, serveHostOnPort } from "../src/port-bridge.js";
+import { type PortLike, portHostEvents, portHostTransport, serveHostOnPort } from "../src/port-bridge.js";
 
 /** 内存端口对：同步投递，模拟 MessageChannelMain 两端。 */
 class FakePort {
@@ -132,5 +132,42 @@ describe("host port bridge", () => {
 		// 带 id 的畸形请求帧由 handle 侧兜底（handle 恒回信封），此处仅验证健壮帧路径。
 		const transport = portHostTransport(portLike(client));
 		await expect(transport({ method: "ok", params: {} })).resolves.toEqual({ ok: true, result: null });
+	});
+
+	it("delivers subscription events to the client without disturbing request pairing", async () => {
+		const [client, server] = FakePort.pair();
+		const served = serveHostOnPort(portLike(server), (request) =>
+			Promise.resolve({ ok: true, result: (request as { method: string }).method }),
+		);
+		const events = portHostEvents(portLike(client));
+		const seen: Array<{ subscriptionId: string; payload: unknown }> = [];
+		const unsubscribe = events.on("sub-1", (payload) => seen.push({ subscriptionId: "sub-1", payload }));
+		const transport = portHostTransport(portLike(client));
+
+		served.events.emitEvent("sub-1", { hello: "world" });
+		await expect(transport({ method: "ping", params: {} })).resolves.toEqual({ ok: true, result: "ping" });
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(seen).toEqual([{ subscriptionId: "sub-1", payload: { hello: "world" } }]);
+		unsubscribe();
+		served.events.emitEvent("sub-1", { ignored: true });
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(seen).toHaveLength(1);
+	});
+
+	it("forwards the per-connection event sink into handle", async () => {
+		const [client, server] = FakePort.pair();
+		const handle = vi.fn(async (_request: unknown, events): Promise<HostResponse> => {
+			events.emitEvent("sub-2", 42);
+			return { ok: true, result: null };
+		});
+		serveHostOnPort(portLike(server), handle);
+		const events = portHostEvents(portLike(client));
+		const received: unknown[] = [];
+		events.on("sub-2", (payload) => received.push(payload));
+		const transport = portHostTransport(portLike(client));
+		await expect(transport({ method: "emit", params: {} })).resolves.toEqual({ ok: true, result: null });
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(received).toEqual([42]);
 	});
 });
