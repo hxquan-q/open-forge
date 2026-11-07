@@ -1,5 +1,6 @@
 // Copyright The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
+import type { HostResponse } from "../src/envelope.js";
 import { type PortLike, portHostTransport, serveHostOnPort } from "../src/port-bridge.js";
 
 /** 内存端口对：同步投递，模拟 MessageChannelMain 两端。 */
@@ -122,7 +123,7 @@ describe("host port bridge", () => {
 
 	it("answers malformed server-side frames with an internal error envelope", async () => {
 		const [client, server] = FakePort.pair();
-		const handle = vi.fn(async () => ({ ok: true, result: null }));
+		const handle = vi.fn(async (_request: unknown): Promise<HostResponse> => ({ ok: true, result: null }));
 		serveHostOnPort(portLike(server), handle);
 		// 直接注入畸形帧：无 id、请求缺失。
 		server.postMessage("not-a-frame");
