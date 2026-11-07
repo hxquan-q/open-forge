@@ -166,4 +166,4 @@ depends_on: []
 16. [TASK-0468](../tasks/TASK-0468-session-history-host-domain.md)：会话历史分支子域（navigate-for-edit/switch-branch/delete-message/replace-last-user-message/fork-session 5 通道）迁移，done（实现提交 `369804316`，quality 42357038368 已核实；IPC 668→663）。
 17. [TASK-0469](../tasks/TASK-0469-session-goal-host-domain.md)：会话 goal/todos 子域（goal 五通道 + clear-todos）迁移，done（实现提交 `7204295ed`，quality 42360291016 已核实；IPC 663→657）。
 18. [TASK-0470](../tasks/TASK-0470-session-title-host-domain.md)：会话标题与建议子域（rename/auto-title/next-prompt-suggestions 3 通道）迁移，done（实现提交 `1eac2aa36`，quality 42363373975 已核实；IPC 657→654）。
-19. [TASK-0471](../tasks/TASK-0471-session-plan-mode-host-domain.md)：会话 plan-mode 子域（get-state/set-permission-mode 2 通道）迁移，in_progress（IPC 654→652）。
+19. [TASK-0471](../tasks/TASK-0471-session-plan-mode-host-domain.md)：会话 plan-mode 子域（get-state/set-permission-mode 2 通道）迁移，verifying（IPC 654→652）。

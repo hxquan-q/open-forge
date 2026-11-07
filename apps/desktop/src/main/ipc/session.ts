@@ -23,13 +23,10 @@ import {
 	CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED,
 	CODING_AGENT_BACKGROUND_TASKS_OBSERVATION,
 	CODING_AGENT_BACKGROUND_TASKS_READ,
-	CODING_AGENT_PERMISSION_MODE_SET,
-	CODING_AGENT_PLAN_MODE_STATE_READ,
 	CODING_AGENT_SESSION_PROFILE_STATE_READ,
 	CODING_AGENT_SUBAGENT_INTERRUPT,
 	CODING_AGENT_SUBAGENTS_OBSERVATION,
 	CODING_AGENT_SUBAGENTS_READ,
-	isCodingAgentPermissionMode,
 } from "@vetta/coding-agent/session-extensions";
 import type { HistoryEntry, SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
@@ -198,8 +195,6 @@ const CHANNELS = {
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
 	QUESTION_RESPONSE: "vetta:session:question-response",
-	PLAN_MODE_GET_STATE: "vetta:session:plan-mode-get-state",
-	PLAN_MODE_SET_PERMISSION_MODE: "vetta:session:plan-mode-set-permission-mode",
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
 	PLAN_REVIEW_LIST_PENDING: "vetta:session:plan-review-list-pending",
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
@@ -1308,15 +1303,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		assertNonEmptyString(requestId, "requestId");
 		planReviewBroker.respond(requestId, result);
 	});
-	ipcMain.handle(CHANNELS.PLAN_MODE_GET_STATE, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.invokeSessionExtensionSync(sessionId, CODING_AGENT_PLAN_MODE_STATE_READ, undefined);
-	});
-	ipcMain.handle(CHANNELS.PLAN_MODE_SET_PERMISSION_MODE, (_event, sessionId: unknown, permissionMode: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		if (!isCodingAgentPermissionMode(permissionMode)) throw new Error("Invalid permission mode");
-		return runtime.invokeSessionExtensionSync(sessionId, CODING_AGENT_PERMISSION_MODE_SET, { permissionMode });
-	});
+	// plan-mode 两通道（get-state/set-permission-mode）已迁到 Host 合同
+	// session.*（TASK-0471；plan-review request/response 随事件原语另片）。
 
 	ipcMain.handle(CHANNELS.MCP_ELICITATION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");

@@ -32,6 +32,7 @@ const sharedRuntime = {
 	replaceLastUserMessage: vi.fn(async () => ({ leafId: "e9" })),
 	forkSession: vi.fn(async () => ({ path: "C:\\sessions\\fork.jsonl", text: "forked" })),
 	invokeSessionExtension: vi.fn(async () => true),
+	invokeSessionExtensionSync: vi.fn(() => ({ permissionMode: "default" as const })),
 	renameSession: vi.fn(async () => undefined),
 	renameSessionById: vi.fn(async () => undefined),
 };
@@ -378,6 +379,7 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.getGoalState",
 			"session.getPersonalization",
 			"session.getPersonas",
+			"session.getPlanModeState",
 			"session.getQueueState",
 			"session.getThinkingLevel",
 			"session.navigateForEdit",
@@ -392,6 +394,7 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.resumeQueue",
 			"session.sendQueuedMessageNow",
 			"session.setPersonalization",
+			"session.setPlanModePermissionMode",
 			"session.startGoal",
 			"session.switchBranch",
 		]);
@@ -615,5 +618,50 @@ describe("desktop host session title domain", () => {
 		expect(emptyPath).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 		const emptyName = await host.handle({ method: "session.rename", params: { sessionPath: "/s.jsonl", name: "" } });
 		expect(emptyName).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session plan-mode domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+	});
+
+	it("bridges sync plan-mode reads and writes through the shared runtime", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.getPlanModeState", params: { sessionId: "s1" } })).resolves.toEqual({
+			ok: true,
+			result: { permissionMode: "default" },
+		});
+		sharedRuntime.invokeSessionExtensionSync.mockReturnValueOnce({
+			permissionMode: "plan",
+			plan: { content: "do it", status: "pending-review", updatedAt: "2026-11-07T00:00:00.000Z" },
+		} as never);
+		await expect(
+			host.handle({
+				method: "session.setPlanModePermissionMode",
+				params: { sessionId: "s1", permissionMode: "plan" },
+			}),
+		).resolves.toEqual({
+			ok: true,
+			result: {
+				permissionMode: "plan",
+				plan: { content: "do it", status: "pending-review", updatedAt: "2026-11-07T00:00:00.000Z" },
+			},
+		});
+		expect(sharedRuntime.invokeSessionExtensionSync).toHaveBeenNthCalledWith(1, "s1", expect.anything(), undefined);
+		expect(sharedRuntime.invokeSessionExtensionSync).toHaveBeenNthCalledWith(2, "s1", expect.anything(), {
+			permissionMode: "plan",
+		});
+	});
+
+	it("rejects empty sessionId and unknown permission modes with INVALID_PARAMS", async () => {
+		const host = createDesktopHost();
+		const emptySession = await host.handle({ method: "session.getPlanModeState", params: { sessionId: "" } });
+		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+		const badMode = await host.handle({
+			method: "session.setPlanModePermissionMode",
+			params: { sessionId: "s1", permissionMode: "yolo" },
+		});
+		expect(badMode).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 	});
 });

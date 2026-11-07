@@ -32,8 +32,6 @@ const CHANNELS = {
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
 	QUESTION_RESPONSE: "vetta:session:question-response",
-	PLAN_MODE_GET_STATE: "vetta:session:plan-mode-get-state",
-	PLAN_MODE_SET_PERMISSION_MODE: "vetta:session:plan-mode-set-permission-mode",
 
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
 	PLAN_REVIEW_LIST_PENDING: "vetta:session:plan-review-list-pending",
@@ -120,9 +118,9 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			listPendingQuestions: () => ipc.invoke(CHANNELS.QUESTION_LIST_PENDING),
 			onQuestionResolved: (handler) => onIpcEvent(ipc, CHANNELS.QUESTION_RESOLVED, handler),
 			respondToQuestion: (requestId, result) => ipc.invoke(CHANNELS.QUESTION_RESPONSE, requestId, result),
-			getPlanModeState: (sessionId) => ipc.invoke(CHANNELS.PLAN_MODE_GET_STATE, sessionId),
+			getPlanModeState: (sessionId) => host.call("session.getPlanModeState", { sessionId }),
 			setPermissionMode: (sessionId, permissionMode) =>
-				ipc.invoke(CHANNELS.PLAN_MODE_SET_PERMISSION_MODE, sessionId, permissionMode),
+				host.call("session.setPlanModePermissionMode", { sessionId, permissionMode }),
 			getGoalState: (sessionId) => host.call("session.getGoalState", { sessionId }),
 			startGoal: (sessionId, objective) => host.call("session.startGoal", { sessionId, objective }),
 			pauseGoal: (sessionId, goalId) => host.call("session.pauseGoal", { sessionId, goalId }),
