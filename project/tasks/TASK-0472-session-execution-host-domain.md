@@ -1,7 +1,7 @@
 ---
 id: TASK-0472
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -70,7 +70,7 @@ updated: 2026-11-07
 
 - 实际修改（2026-11-07）：如"做"所列，另含 `agent-mode-ipc.test.ts` 源码钉死断言改指向 host/session-execution-domain.ts（原断言 handler 在 ipc/session.ts 内，随迁移改锚点；切片取 setGlobalAgentMode 起点到文件末尾以覆盖广播辅助函数）。
 - 踩坑记录：impact 首跑暴露上述源码钉死测试（2 例失败，其余 6335 例通过）——handler 位置即被测结构，迁移必须同步改锚点；host 域依赖须取 canonical 模块（config/desktop-config-store、agent-settings/settings-document-store），初版误连 ipc/ 转发层。
-- 实际验证：desktop 定向 41 例 + agent-mode-ipc 2 例通过；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 652 → 646；`test:impact` 首跑 2 失败（钉死测试）后修复复跑通过（desktop + host-protocol 全量）。
+- 实际验证：desktop 定向 41 例 + agent-mode-ipc 2 例通过；`apps/desktop typecheck` 0 错；根 `tsgo` 0 错；`check:quick` exit=0；`count-ipc-channels` 652 → 646；`test:impact` 首跑 2 失败（钉死测试）后修复复跑通过（desktop + host-protocol 全量）；实现提交 `a38fdae23` 后 `test:changed --base origin/dev` 通过并推送 `main:dev`，远端 quality run 42372254724（headSha `a38fdae23`）success。
 - 未运行与风险：AGENT_MODE_CHANGED 等事件广播仍走旧 IPC（事件原语另片）；UI 走查需授权未执行。
 - 人工验收：不适用（preload 合同迁移，renderer 签名与行为不变）。
 - 发布：不适用

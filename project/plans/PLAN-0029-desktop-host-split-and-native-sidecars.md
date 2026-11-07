@@ -167,4 +167,5 @@ depends_on: []
 17. [TASK-0469](../tasks/TASK-0469-session-goal-host-domain.md)：会话 goal/todos 子域（goal 五通道 + clear-todos）迁移，done（实现提交 `7204295ed`，quality 42360291016 已核实；IPC 663→657）。
 18. [TASK-0470](../tasks/TASK-0470-session-title-host-domain.md)：会话标题与建议子域（rename/auto-title/next-prompt-suggestions 3 通道）迁移，done（实现提交 `1eac2aa36`，quality 42363373975 已核实；IPC 657→654）。
 19. [TASK-0471](../tasks/TASK-0471-session-plan-mode-host-domain.md)：会话 plan-mode 子域（get-state/set-permission-mode 2 通道）迁移，done（实现提交 `b3167b761`，quality 42366677792 已核实；IPC 654→652）。
-20. [TASK-0472](../tasks/TASK-0472-session-execution-host-domain.md)：会话执行模式与全局设置子域（update-settings/set-execution-mode/set-global-*/get-agent-modes 6 通道）迁移，verifying（IPC 652→646）。
+20. [TASK-0472](../tasks/TASK-0472-session-execution-host-domain.md)：会话执行模式与全局设置子域（update-settings/set-execution-mode/set-global-*/get-agent-modes 6 通道）迁移，done（实现提交 `a38fdae23`，quality 42372254724 已核实；IPC 652→646）。
+21. [TASK-0473](../tasks/TASK-0473-session-runtime-ops-host-domain.md)：会话运行控制与后台任务子域（retry/interrupt-draft/get-session-path/background-tasks-*/subagent-interrupt 6 通道）迁移，in_progress（IPC 646→640）。
