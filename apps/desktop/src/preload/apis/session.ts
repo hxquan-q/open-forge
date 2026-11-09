@@ -19,14 +19,9 @@ const CHANNELS = {
 	GET_MESSAGES: "vetta:session:get-messages",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
 	QUESTION_REQUEST: "vetta:session:question-request",
-	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
-	QUESTION_RESPONSE: "vetta:session:question-response",
-
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
-	PLAN_REVIEW_LIST_PENDING: "vetta:session:plan-review-list-pending",
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
-	PLAN_REVIEW_RESPONSE: "vetta:session:plan-review-response",
 	MCP_ELICITATION_REQUEST: "vetta:session:mcp-elicitation-request",
 	MCP_ELICITATION_RESOLVED: "vetta:session:mcp-elicitation-resolved",
 	MCP_ELICITATION_RESPONSE: "vetta:session:mcp-elicitation-response",
@@ -150,9 +145,11 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			clearTodos: (sessionId) => host.call("session.clearTodos", { sessionId }),
 			subscribe: (sessionId, handler) => subscribeSessionEvents(host, sessionId, handler),
 			onQuestionRequest: (handler) => onIpcEvent(ipc, CHANNELS.QUESTION_REQUEST, handler),
-			listPendingQuestions: () => ipc.invoke(CHANNELS.QUESTION_LIST_PENDING),
+			listPendingQuestions: () => host.call("session.listPendingQuestions", {}),
 			onQuestionResolved: (handler) => onIpcEvent(ipc, CHANNELS.QUESTION_RESOLVED, handler),
-			respondToQuestion: (requestId, result) => ipc.invoke(CHANNELS.QUESTION_RESPONSE, requestId, result),
+			respondToQuestion: async (requestId, result) => {
+				await host.call("session.respondToQuestion", { requestId, result });
+			},
 			getPlanModeState: (sessionId) => host.call("session.getPlanModeState", { sessionId }),
 			setPermissionMode: (sessionId, permissionMode) =>
 				host.call("session.setPlanModePermissionMode", { sessionId, permissionMode }),
@@ -162,9 +159,11 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			resumeGoal: (sessionId, goalId) => host.call("session.resumeGoal", { sessionId, goalId }),
 			clearGoal: (sessionId, goalId) => host.call("session.clearGoal", { sessionId, goalId }),
 			onPlanReviewRequest: (handler) => onIpcEvent(ipc, CHANNELS.PLAN_REVIEW_REQUEST, handler),
-			listPendingPlanReviews: () => ipc.invoke(CHANNELS.PLAN_REVIEW_LIST_PENDING),
+			listPendingPlanReviews: () => host.call("session.listPendingPlanReviews", {}),
 			onPlanReviewResolved: (handler) => onIpcEvent(ipc, CHANNELS.PLAN_REVIEW_RESOLVED, handler),
-			respondToPlanReview: (requestId, result) => ipc.invoke(CHANNELS.PLAN_REVIEW_RESPONSE, requestId, result),
+			respondToPlanReview: async (requestId, result) => {
+				await host.call("session.respondToPlanReview", { requestId, result });
+			},
 			onMcpElicitationRequest: (handler) => onIpcEvent(ipc, CHANNELS.MCP_ELICITATION_REQUEST, handler),
 			listPendingMcpElicitations: () => host.call("session.mcpElicitationListPending", {}),
 			onMcpElicitationResolved: (handler) => onIpcEvent(ipc, CHANNELS.MCP_ELICITATION_RESOLVED, handler),

@@ -145,13 +145,9 @@ const CHANNELS = {
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
 	QUESTION_REQUEST: "vetta:session:question-request",
-	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
-	QUESTION_RESPONSE: "vetta:session:question-response",
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
-	PLAN_REVIEW_LIST_PENDING: "vetta:session:plan-review-list-pending",
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
-	PLAN_REVIEW_RESPONSE: "vetta:session:plan-review-response",
 	MCP_ELICITATION_REQUEST: "vetta:session:mcp-elicitation-request",
 	MCP_ELICITATION_RESOLVED: "vetta:session:mcp-elicitation-resolved",
 	MCP_ELICITATION_RESPONSE: "vetta:session:mcp-elicitation-response",
@@ -1056,22 +1052,13 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		if (!webContents.isDestroyed()) webContents.send(channel, payload);
 	});
 
-	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
 	// MCP 任务与待答清单四通道（mcp-tasks-{list,cancel,clear-finished}/
 	// mcp-elicitation-list-pending）已迁到 Host 合同 session.*（TASK-0476；
 	// MCP_TASKS_CHANGED 推送与 elicitation 应答仍走旧 IPC）。
-	ipcMain.handle(CHANNELS.QUESTION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
-		assertNonEmptyString(requestId, "requestId");
-		questionBroker.respond(requestId, result);
-	});
-
-	ipcMain.handle(CHANNELS.PLAN_REVIEW_LIST_PENDING, () => planReviewBroker.listPending());
-	ipcMain.handle(CHANNELS.PLAN_REVIEW_RESPONSE, (_event, requestId: unknown, result: unknown) => {
-		assertNonEmptyString(requestId, "requestId");
-		planReviewBroker.respond(requestId, result);
-	});
+	// 问答与计划评审的待答清单/应答四通道同样迁到 Host 合同 session.*
+	// （TASK-0465 组 3 / TASK-0478；question/plan-review 请求与 resolved 推送仍走旧 IPC）。
 	// plan-mode 两通道（get-state/set-permission-mode）已迁到 Host 合同
-	// session.*（TASK-0471；plan-review request/response 随事件原语另片）。
+	// session.*（TASK-0471）。
 
 	ipcMain.handle(CHANNELS.MCP_ELICITATION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");

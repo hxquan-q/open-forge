@@ -9,6 +9,7 @@ import type {
 	SessionExecutionHostMethods,
 	SessionGoalHostMethods,
 	SessionHistoryHostMethods,
+	SessionInteractionHostMethods,
 	SessionLifecycleHostMethods,
 	SessionMcpTasksHostMethods,
 	SessionPlanModeHostMethods,
@@ -37,6 +38,7 @@ type DesktopHostMethodMap = SettingsHostMethods &
 	SessionExecutionHostMethods &
 	SessionGoalHostMethods &
 	SessionHistoryHostMethods &
+	SessionInteractionHostMethods &
 	SessionLifecycleHostMethods &
 	SessionMcpTasksHostMethods &
 	SessionPlanModeHostMethods &

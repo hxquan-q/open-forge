@@ -10,6 +10,10 @@ export { SESSION_EVENTS_HOST_METHODS, type SessionEventsHostMethods } from "./do
 export { SESSION_EXECUTION_HOST_METHODS, type SessionExecutionHostMethods } from "./domains/session-execution.js";
 export { SESSION_GOAL_HOST_METHODS, type SessionGoalHostMethods } from "./domains/session-goal.js";
 export { SESSION_HISTORY_HOST_METHODS, type SessionHistoryHostMethods } from "./domains/session-history.js";
+export {
+	SESSION_INTERACTION_HOST_METHODS,
+	type SessionInteractionHostMethods,
+} from "./domains/session-interaction.js";
 export { SESSION_LIFECYCLE_HOST_METHODS, type SessionLifecycleHostMethods } from "./domains/session-lifecycle.js";
 export {
 	SESSION_MCP_TASKS_HOST_METHODS,
