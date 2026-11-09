@@ -172,4 +172,4 @@ depends_on: []
 22. [TASK-0474](../tasks/TASK-0474-session-catalog-host-domain.md)：会话目录子域（list-projects/list-sessions/list-running/list-running-cwds 4 通道）迁移，done（实现提交 `6c247190f`，quality 42380285044 已核实；IPC 640→636）。
 23. [TASK-0475](../tasks/TASK-0475-session-lifecycle-host-domain.md)：会话生命周期控制与删除子域（continue/abort/delete/delete-all-for-cwd 4 通道）迁移，done（实现提交 `e4518f208`，quality 42388609012 已核实；IPC 636→632）。
 24. [TASK-0476](../tasks/TASK-0476-session-mcp-tasks-host-domain.md)：MCP 任务与待答清单子域（mcp-tasks-{list,cancel,clear-finished}/mcp-elicitation-list-pending 4 通道）迁移，done（实现提交 `f3c3335a6`，quality 42393835326 已核实；IPC 632→628）。
-25. [TASK-0477](../tasks/TASK-0477-session-event-subscription-primitive.md)：会话事件订阅原语（port 事件帧 + session.subscribe/unsubscribe，TASK-0465 组 2 解锁件），in_progress（第一步帧原语、第二步 desktop 域与 preload 迁移已完成，待第三步删除旧三通道；完成后 IPC 628→625）。
+25. [TASK-0477](../tasks/TASK-0477-session-event-subscription-primitive.md)：会话事件订阅原语（port 事件帧 + session.subscribe/unsubscribe，TASK-0465 组 2 解锁件），done（本地 main 三步完成；IPC 628→626，event 为 `webContents.send` 推送不计 `ipcMain.handle` 口径，实际减 2）。

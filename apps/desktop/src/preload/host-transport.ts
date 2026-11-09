@@ -47,7 +47,7 @@ type DesktopHostMethodMap = SettingsHostMethods &
 /** preload 侧 Host 客户端：MessagePort 为主通道、`ipc.invoke` 为引导期回退（TASK-0463，ADR-0152）。 */
 export type DesktopHostClient = HostClient<DesktopHostMethodMap> & {
 	/**
-	 * 等待 MessagePort 就绪（TASK-0477）：引导期端口未到或已关闭返回 false，调用方回退旧 IPC；
+	 * 等待 MessagePort 就绪（TASK-0477）：引导期端口未到或已关闭返回 false，调用方显式失败；
 	 * 超时同样返回 false，避免阻塞式订阅一直等握手。
 	 */
 	whenPortReady(timeoutMs?: number): Promise<boolean>;

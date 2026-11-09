@@ -198,8 +198,6 @@ describe("createSessionApi event subscription", () => {
 		const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 		const invoke = vi.fn(async (channel: string, ...args: unknown[]) => {
 			if (channel === HOST_REQUEST_CHANNEL) return hostResponse(args[0]);
-			// 旧订阅通道：subscribeById 注册先于 invoke，resolve 后开始派发事件。
-			if (channel === "vetta:session:subscribe") return { subscriptionId: "legacy-sub" };
 			return undefined;
 		});
 		const send = vi.fn();
@@ -317,35 +315,31 @@ describe("createSessionApi event subscription", () => {
 		expect(handler).toHaveBeenCalledTimes(2);
 	});
 
-	it("falls back to the legacy channel when the host port never arrives", async () => {
+	it("rejects with CAPABILITY_UNAVAILABLE when the host port never arrives", async () => {
 		vi.useFakeTimers();
 		try {
 			const fake = fakeIpc();
 			const session = createSessionApi(fake.ipc).session;
-			const handler = vi.fn();
 
-			const subscription = session.subscribe("session-1", handler);
+			const subscription = session.subscribe("session-1", vi.fn());
+			// 先挂断言再推进计时器，避免拒绝在处理器挂载前落地成为 unhandled rejection。
+			const assertion = expect(subscription).rejects.toMatchObject({
+				code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE,
+			});
 			await vi.advanceTimersByTimeAsync(1500);
-			const unsubscribe = await subscription;
-
-			expect(fake.invoke).toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
-			fake.emit("vetta:session:event", "legacy-sub", runtimeEvent("legacy-1"));
-			expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "legacy-1" }));
-
-			unsubscribe();
-			expect(fake.invoke).toHaveBeenCalledWith("vetta:session:unsubscribe", "legacy-sub");
+			await assertion;
+			expect(fake.invoke).not.toHaveBeenCalled();
 		} finally {
 			vi.useRealTimers();
 		}
 	});
 
-	it("falls back to the legacy channel when the host rejects the event channel", async () => {
+	it("propagates a host rejection instead of subscribing twice", async () => {
 		const fake = fakeIpc();
 		const port = fakePort();
 		const session = createSessionApi(fake.ipc).session;
-		const handler = vi.fn();
 
-		const subscription = session.subscribe("session-1", handler);
+		const subscription = session.subscribe("session-1", vi.fn());
 		fake.deliverPort(port);
 		await flush();
 		port.emitFrame({
@@ -356,13 +350,8 @@ describe("createSessionApi event subscription", () => {
 			},
 		});
 
-		const unsubscribe = await subscription;
-		expect(fake.invoke).toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
-		fake.emit("vetta:session:event", "legacy-sub", runtimeEvent("legacy-1"));
-		expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "legacy-1" }));
-
-		unsubscribe();
-		expect(fake.invoke).toHaveBeenCalledWith("vetta:session:unsubscribe", "legacy-sub");
+		await expect(subscription).rejects.toMatchObject({ code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE });
+		expect(fake.invoke).not.toHaveBeenCalled();
 	});
 
 	it("rethrows implementation failures instead of subscribing twice", async () => {
@@ -379,16 +368,15 @@ describe("createSessionApi event subscription", () => {
 		});
 
 		await expect(subscription).rejects.toMatchObject({ code: HOST_PROTOCOL_ERROR_CODES.INTERNAL });
-		expect(fake.invoke).not.toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
+		expect(fake.invoke).not.toHaveBeenCalled();
 	});
 
-	it("falls back to the legacy channel when the port closes before the handler registers", async () => {
+	it("rejects with HOST_UNAVAILABLE when the port closes before the handler registers", async () => {
 		const fake = fakeIpc();
 		const port = fakePort();
 		const session = createSessionApi(fake.ipc).session;
-		const handler = vi.fn();
 
-		const subscription = session.subscribe("session-1", handler);
+		const subscription = session.subscribe("session-1", vi.fn());
 		fake.deliverPort(port);
 		await flush();
 		port.emitFrame({
@@ -397,12 +385,8 @@ describe("createSessionApi event subscription", () => {
 		});
 		port.emitClose();
 
-		const unsubscribe = await subscription;
-		expect(fake.invoke).toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
-		fake.emit("vetta:session:event", "legacy-sub", runtimeEvent("legacy-1"));
-		expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "legacy-1" }));
-
-		unsubscribe();
+		await expect(subscription).rejects.toMatchObject({ code: HOST_PROTOCOL_ERROR_CODES.HOST_UNAVAILABLE });
+		expect(fake.invoke).not.toHaveBeenCalled();
 	});
 
 	it("tolerates isolated undecodable payloads and fails on a consecutive run", async () => {

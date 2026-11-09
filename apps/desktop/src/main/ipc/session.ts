@@ -17,15 +17,8 @@ import type {
 	AgentPluginToolInvocation,
 } from "@vetta/coding-agent/plugin-runtime";
 
-import {
-	CODING_AGENT_BACKGROUND_TASKS_OBSERVATION,
-	CODING_AGENT_BACKGROUND_TASKS_READ,
-	CODING_AGENT_SESSION_PROFILE_STATE_READ,
-	CODING_AGENT_SUBAGENTS_OBSERVATION,
-	CODING_AGENT_SUBAGENTS_READ,
-} from "@vetta/coding-agent/session-extensions";
+import { CODING_AGENT_SESSION_PROFILE_STATE_READ } from "@vetta/coding-agent/session-extensions";
 import type { HistoryEntry, SessionEvent } from "@vetta/runtime-core";
-import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
 import { isMcpJsonValue, type McpJsonObject } from "@vetta/runtime-mcp";
 import { BrowserWindow, ipcMain, type WebContents } from "electron";
 import type { DesktopMcpAppResourceRead, DesktopMcpAppToolCall } from "../../shared/mcp-app.js";
@@ -55,14 +48,9 @@ import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
-import {
-	forgetSessionDebugState,
-	recordSessionEventForDebug,
-	rememberSessionDebugCwd,
-} from "../conversations/session-debug-recorder.js";
+import { forgetSessionDebugState, rememberSessionDebugCwd } from "../conversations/session-debug-recorder.js";
 import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
 import { isConversationSubCwd } from "../conversations/session-paths.js";
-import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
@@ -152,15 +140,12 @@ const CHANNELS = {
 	CREATE: "vetta:session:create",
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
-	SUBSCRIBE: "vetta:session:subscribe",
-	UNSUBSCRIBE: "vetta:session:unsubscribe",
 	/** 默认工作模式已变更；仅用于各窗口新会话页 toggle 的显示同步，不改变任何活跃会话的行为。 */
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
 	GET_STATE: "vetta:session:get-state",
 	GET_MESSAGES: "vetta:session:get-messages",
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
-	EVENT: "vetta:session:event",
 	QUESTION_REQUEST: "vetta:session:question-request",
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
@@ -342,7 +327,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const unsubscribeConversationListChanged = onConversationListChanged((event) => {
 		broadcastToAllWindows(CHANNELS.SESSIONS_CHANGED, event);
 	});
-	const subscriptionMap = new Map<string, () => void>();
 	const questionMap = new Map<string, (result: CodingAgentQuestionResult) => void>();
 	const mcpElicitationMap = new Map<string, (result: DesktopMcpElicitationResponse) => void>();
 	const sandboxGrantMap = new Map<string, (decision: CodingAgentSandboxAuthorizationDecision) => void>();
@@ -1210,84 +1194,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// 后台任务三通道（clear-finished/kill/subagent-interrupt）已迁到 Host 合同
 	// session.*（TASK-0473）。
 
-	ipcMain.handle(CHANNELS.SUBSCRIBE, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		const subscriptionId = `${sessionId}:${randomUUID()}`;
-		const unsubscribe = runtime.subscribe(sessionId, (runtimeEvent: SessionEvent) => {
-			recordSessionEventForDebug(sessionId, runtimeEvent);
-			// 渲染进程崩溃后 webContents 短暂处于"frame 已 disposed"状态——
-			// runtime 这边 agent 还在跑，每个事件都尝试 send 就会刷屏
-			// "Render frame was disposed before WebFrameMain could be accessed"。
-			// 此处提前 bail，避免把事件 buffer 灌进死掉的渲染端。
-			if (webContents.isDestroyed()) return;
-			webContents.send(CHANNELS.EVENT, subscriptionId, slimSessionEventForIpc(runtimeEvent));
-		});
-		subscriptionMap.set(subscriptionId, unsubscribe);
-
-		// 回放后台任务快照：注册表在主进程内存中跨 renderer 重载存活，但
-		// 后台任务扩展观察只在状态变化时推送——renderer 刷新后 atom
-		// 清空，若不回放，无输出的运行中任务（如 sleep）要等到结束才再现。
-		const backgroundTasks = await runtime.invokeSessionExtension(
-			sessionId,
-			CODING_AGENT_BACKGROUND_TASKS_READ,
-			undefined,
-		);
-		if (backgroundTasks.length > 0 && !webContents.isDestroyed()) {
-			webContents.send(CHANNELS.EVENT, subscriptionId, {
-				schemaVersion: 1,
-				channel: "runtime",
-				sessionId,
-				eventId: randomUUID(),
-				timestamp: Date.now(),
-				source: "extension",
-				...sessionExtensionObservation(CODING_AGENT_BACKGROUND_TASKS_OBSERVATION, backgroundTasks),
-			});
-		}
-
-		// 回放激活工具集：renderer 的 getState 快照取于 subscribe 之前，插件若恰好在这两步
-		// 之间才 activate，那次 active_tools_update 就没人接。补一次当前快照堵住这个窗口。
-		if (!webContents.isDestroyed()) {
-			try {
-				webContents.send(CHANNELS.EVENT, subscriptionId, {
-					schemaVersion: 1,
-					channel: "runtime",
-					sessionId,
-					eventId: randomUUID(),
-					timestamp: Date.now(),
-					source: "runtime-core",
-					type: "active_tools_update",
-					activeToolNames: runtime.getState(sessionId).activeToolNames,
-				});
-			} catch {
-				// session 可能已被销毁，回放失败不影响订阅本身。
-			}
-		}
-
-		const subagents = await runtime.invokeSessionExtension(sessionId, CODING_AGENT_SUBAGENTS_READ, undefined);
-		if (subagents.length > 0 && !webContents.isDestroyed()) {
-			webContents.send(CHANNELS.EVENT, subscriptionId, {
-				schemaVersion: 1,
-				channel: "runtime",
-				sessionId,
-				eventId: randomUUID(),
-				timestamp: Date.now(),
-				source: "extension",
-				...sessionExtensionObservation(CODING_AGENT_SUBAGENTS_OBSERVATION, subagents),
-			});
-		}
-
-		return { subscriptionId };
-	});
-
-	ipcMain.handle(CHANNELS.UNSUBSCRIBE, async (_event, subscriptionId: unknown) => {
-		assertNonEmptyString(subscriptionId, "subscriptionId");
-		sessionLog.debug(`unsubscribe subscription=${subscriptionId}`);
-		const unsubscribe = subscriptionMap.get(subscriptionId);
-		if (unsubscribe) {
-			unsubscribe();
-			subscriptionMap.delete(subscriptionId);
-		}
-	});
+	// 会话事件订阅已迁到 Host 合同（TASK-0477）：preload 经 `session.subscribe` 订阅、
+	// port 事件帧推送；旧 SUBSCRIBE/UNSUBSCRIBE/EVENT 三通道已删除，订阅清理随连接关闭。
 
 	const detachPluginHostNavigation = attachPluginToolRendererHostNavigation(
 		webContents,
@@ -1297,18 +1205,11 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		},
 	);
 
-	// 渲染进程崩溃 / 重新加载时，旧 subscription 永远不会等到 UNSUBSCRIBE IPC
-	// 调用——它们的回调还挂在 runtime 上、继续接收 agent 事件、继续往 dead
-	// frame 上 send（哪怕有 isDestroyed 守卫，事件流仍在 runtime 端继续）。
-	// 这里集中清理一次：渲染端恢复后会重新 SUBSCRIBE，生成新的 subscriptionId。
+	// 渲染进程崩溃 / 重新加载时，集中清理随 renderer 存活的主进程等待队列；
+	// 会话事件订阅已随 Host port 连接关闭在 Host 侧清理（TASK-0477）。
 	const onRenderGone = (): void => {
-		sessionLog.warn(`render-process-gone; clearing ${subscriptionMap.size} subscription(s)`);
 		pluginToolRendererHost.markUnavailable();
 		pluginAgentContributionService.invalidateHookRendererDocument("Plugin host renderer is unavailable");
-		for (const unsubscribe of subscriptionMap.values()) {
-			unsubscribe();
-		}
-		subscriptionMap.clear();
 		for (const resolve of questionMap.values()) {
 			resolve(CANCELLED_QUESTION);
 		}
@@ -1432,10 +1333,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			unsubscribe();
 		}
 		notificationSubs.clear();
-		for (const unsubscribe of subscriptionMap.values()) {
-			unsubscribe();
-		}
-		subscriptionMap.clear();
 		for (const resolve of questionMap.values()) {
 			resolve(CANCELLED_QUESTION);
 		}

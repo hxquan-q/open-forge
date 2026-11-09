@@ -1,7 +1,7 @@
 ---
 id: TASK-0477
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: apps/desktop/runtime-desktop
 requirement: REQ-0002
@@ -90,4 +90,4 @@ TASK-0465 组 2 的解锁件：在 Host port 上建立事件推送原语，迁�
 
 - 第一步完成（2026-11-08，提交 `56c37736c`）：host-protocol 帧扩展（event 变体）、`HostEventSink` 连接级发射器、`serveHostOnPort → {stop, events}` 句柄、`HostCallContext.events`（`HostDispatcher.handle(raw, {events})`）、客户端 `portHostEvents` 分发面；conformance 3 例新增（17/17 绿），desktop 两处调用点适配，双侧 typecheck 0，门禁全量绿（6348 例）。
 - 第二步完成（2026-11-09）：host-protocol `HostEventSink.onClose` 连接关闭通知、`portHostEvents` 有界缓冲（`MAX_BUFFERED_EVENTS = 256`，注册时按序补发回放、溢出逐最旧）；desktop 新增 `session-events-domain`（`session.subscribe/unsubscribe`，按连接 `WeakMap<HostEventSink, Map>` 管理订阅并在连接关闭时全量摘除；三份快照回放沿用旧序：后台任务 → 激活工具 → subagent），`desktop-host` 注册；preload `subscribe` 改走 `host.call("session.subscribe")`，以 `whenPortReady` 为就绪门（端口未建/关闭、`CAPABILITY_UNAVAILABLE`/`HOST_UNAVAILABLE` 回退旧 ipc；实现错误原样上抛，避免重复订阅），事件经 `host.onHostEvent` 收取并按旧阈值容错解码；调试录制逻辑抽到 `session-debug-recorder.ts` 供旧 IPC 与新域共用（行为不变）。验证：host-protocol 19/19、preload 21/21、desktop-host 47/47、desktop typecheck 0、`bun run check` 绿、`test:changed` 绿。旧三通道仍在，IPC 计数保持 628，第三步删除后降至 625。
-- 第三步待做：删旧 SUBSCRIBE/UNSUBSCRIBE/EVENT 三通道，IPC 628 → 625。
+- 第三步完成（2026-11-09）：删除主进程旧 `vetta:session:{subscribe,unsubscribe}` 两个 `ipcMain.handle` 与 `vetta:session:event` 推送通道；`onRenderGone`/dispose 不再维护订阅表，订阅清理随 Host port 连接关闭在 Host 侧完成（debug 录制已由 `session-events-domain` 承担）。preload `subscribe` 去掉旧 IPC 回退：端口未就绪以 `CAPABILITY_UNAVAILABLE`、响应后注册前断开以 `HOST_UNAVAILABLE` 显式失败（renderer `subscribeForPrompt` 捕获后走 `failSessionHydration`），退订走 `session.unsubscribe`；`session.test.ts` 重写为端口订阅/回放/退订、超时、Host 拒收、实现错误、注册前断开、坏包容错七例。IPC 计数实测 628 → 626：旧三通道中仅 subscribe/unsubscribe 计入 `ipcMain.handle` 口径，event 为 `webContents.send` 推送不计，故实际减 2，而非计划中的 3。验证：`bun run check` 全量绿；`test:changed` 绿（host-protocol 3 文件/19 例，desktop 1125 文件/6360 例通过、18 例跳过）；`check:quick` 与 `test:impact`（11 文件/128 例）绿。

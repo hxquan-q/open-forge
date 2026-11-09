@@ -14,8 +14,6 @@ const CHANNELS = {
 	PROMPT: "vetta:session:prompt",
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
-	SUBSCRIBE: "vetta:session:subscribe",
-	UNSUBSCRIBE: "vetta:session:unsubscribe",
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
 	GET_STATE: "vetta:session:get-state",
 	GET_MESSAGES: "vetta:session:get-messages",
@@ -43,7 +41,6 @@ const CHANNELS = {
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
 	DISPOSE: "vetta:session:dispose",
-	EVENT: "vetta:session:event",
 	RUNNING_CHANGED: "vetta:session:running-changed",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
 	CLEAR_DEFAULT_ARTIFACTS: "vetta:session:clear-default-artifacts",
@@ -53,46 +50,24 @@ const CHANNELS = {
 	VIEWER_EVENT: "vetta:session:viewer-event",
 } as const;
 
-function isSubscriptionChannelUnavailable(error: unknown): boolean {
-	return (
-		error instanceof HostProtocolError &&
-		(error.code === HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE ||
-			error.code === HOST_PROTOCOL_ERROR_CODES.HOST_UNAVAILABLE)
-	);
-}
-
 /**
- * 会话事件订阅（TASK-0477）：MessagePort 就绪时走 Host `session.subscribe`，事件帧经端口推送；
- * 引导期端口未建、订阅过程中端口断开或 Host 拒绝订阅时回退旧 IPC 通道（第三步删除旧通道）。
+ * 会话事件订阅（TASK-0477）：走 Host `session.subscribe`，事件帧经 MessagePort 推送；
+ * 旧 IPC 三通道已删除，端口未就绪或注册前断开时显式失败，由调用方降级提示。
  * 端口回放先于响应帧到达，由 portHostEvents 的有界缓冲在注册时按序补发；解码容错与旧通道一致。
  */
 async function subscribeSessionEvents(
 	host: DesktopHostClient,
-	ipc: IpcRenderer,
 	sessionId: string,
 	handler: (event: SessionEvent) => void,
 ): Promise<() => void> {
-	const legacy = (): Promise<() => void> =>
-		subscribeById(
-			ipc,
-			CHANNELS.SUBSCRIBE,
-			CHANNELS.EVENT,
-			CHANNELS.UNSUBSCRIBE,
-			handler,
-			[sessionId],
-			decodeSessionEvent,
+	if (!(await host.whenPortReady())) {
+		throw new HostProtocolError(
+			HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE,
+			"session.subscribe 需要 Host MessagePort，端口未建立或已关闭",
 		);
-
-	if (!(await host.whenPortReady())) return legacy();
-
-	let subscriptionId: string;
-	try {
-		({ subscriptionId } = await host.call("session.subscribe", { sessionId }));
-	} catch (error) {
-		// 回放失败等实现错误原样上抛（与旧通道一致）；只有事件面不可用才回退，避免重复订阅。
-		if (isSubscriptionChannelUnavailable(error) || !(await host.whenPortReady(0))) return legacy();
-		throw error;
 	}
+
+	const { subscriptionId } = await host.call("session.subscribe", { sessionId });
 
 	let consecutiveDecodeFailures = 0;
 	const deliver = (payload: unknown): void => {
@@ -117,8 +92,11 @@ async function subscribeSessionEvents(
 
 	const removeHandler = host.onHostEvent(subscriptionId, deliver);
 	if (!removeHandler) {
-		// 响应返回前端口已断开：Host 端订阅随连接清理，改走旧通道。
-		return legacy();
+		// 响应返回前端口已断开：Host 端订阅已随连接清理，此处显式失败避免静默丢事件。
+		throw new HostProtocolError(
+			HOST_PROTOCOL_ERROR_CODES.HOST_UNAVAILABLE,
+			"Host 端口在事件处理器注册前关闭，session.subscribe 订阅已失效",
+		);
 	}
 
 	let removed = false;
@@ -170,7 +148,7 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 				await host.call("session.clearQueue", { sessionId });
 			},
 			clearTodos: (sessionId) => host.call("session.clearTodos", { sessionId }),
-			subscribe: (sessionId, handler) => subscribeSessionEvents(host, ipc, sessionId, handler),
+			subscribe: (sessionId, handler) => subscribeSessionEvents(host, sessionId, handler),
 			onQuestionRequest: (handler) => onIpcEvent(ipc, CHANNELS.QUESTION_REQUEST, handler),
 			listPendingQuestions: () => ipc.invoke(CHANNELS.QUESTION_LIST_PENDING),
 			onQuestionResolved: (handler) => onIpcEvent(ipc, CHANNELS.QUESTION_RESOLVED, handler),
