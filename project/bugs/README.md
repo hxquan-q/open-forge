@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0182` | 已有会话增量模式漏收及旧列表回填回滚；两轮红3→绿9/9，相关流程27/27 | verifying | P2 | PLAN-0027 |
 | `BUG-0181` | runtime-node 远端 POSIX 路径测试使用 Windows-safe TEMP 夹具；3 个 Windows `/tmp` 失败修复，7/7 | verifying | P2 | — |
 | `BUG-0180` | plugin-vite React sharing 测试误选 Federation bootstrap chunk；已修选择器，plugin-vite 46/46 | verifying | P2 | — |
 | `BUG-0179` | Windows TEMP 8.3 短路径使 Agent Git 根校验误拒绝真实仓库；已修，默认 TEMP Git/integration 28/28 | verifying | P2 | — |

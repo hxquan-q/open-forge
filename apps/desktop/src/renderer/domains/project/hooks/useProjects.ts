@@ -39,7 +39,7 @@ let sessionListSubscribed = false;
  * 插件与 Action 走主进程的 ProjectService 改项目，渲染进程这份快照不会自己发现。
  */
 let projectsChangedSubscribed = false;
-const sessionLoadPromises = new Map<string, Promise<void>>();
+const sessionLoads = new Map<string, { promise: Promise<void>; modeUpdates: Map<string, string> }>();
 
 /**
  * `onSessionsChanged` 每轮对话至少触发 2~3 次（turn 开始 / 结束 / auto-title），
@@ -103,8 +103,9 @@ export function useProjectActions() {
 
 	const loadSessions = useCallback(
 		(cwd: string): Promise<void> => {
-			const activeLoad = sessionLoadPromises.get(cwd);
-			if (activeLoad) return activeLoad;
+			const activeLoad = sessionLoads.get(cwd);
+			if (activeLoad) return activeLoad.promise;
+			const modeUpdates = new Map<string, string>();
 			setSessionLoadingCwds((prev) => new Set(prev).add(cwd));
 			const loadPromise = window.vetta.session
 				.listSessions(cwd)
@@ -124,8 +125,18 @@ export function useProjectActions() {
 							if (!isUsableFirstMessage(s.firstMessage) && isUsableFirstMessage(known.firstMessage)) {
 								next = { ...next, firstMessage: known.firstMessage };
 							}
+							const agentMode = modeUpdates.get(s.path);
+							if (agentMode) {
+								next = { ...next, agentMode, modifiedAt: Math.max(next.modifiedAt, known.modifiedAt) };
+								modeUpdates.delete(s.path);
+							}
 							return next;
 						});
+						// 请求开始后的明确事件比该列表快照新，即使快照尚不含该行也不能撤销事件。
+						for (const path of modeUpdates.keys()) {
+							const known = prevByPath.get(path);
+							if (known) merged.push(known);
+						}
 						// 内容没变就保持原引用：listSessions 被高频触发时结果往往完全一致，
 						// 换引用会白白唤醒所有 useProjects() 消费者（含 RootLayout 整棵树）。
 						if (sessionListsEqual(prev.get(cwd) ?? [], merged)) return prev;
@@ -133,14 +144,14 @@ export function useProjectActions() {
 					}),
 				)
 				.finally(() => {
-					sessionLoadPromises.delete(cwd);
+					sessionLoads.delete(cwd);
 					setSessionLoadingCwds((prev) => {
 						const next = new Set(prev);
 						next.delete(cwd);
 						return next;
 					});
 				});
-			sessionLoadPromises.set(cwd, loadPromise);
+			sessionLoads.set(cwd, { promise: loadPromise, modeUpdates });
 			return loadPromise;
 		},
 		[setSessionLoadingCwds, setSessionsMap],
@@ -166,6 +177,7 @@ export function useProjectActions() {
 			sessionListSubscribed = true;
 			window.vetta.session.onSessionsChanged(({ cwd, sessionPath, session }) => {
 				if (session && isUsableFirstMessage(session.firstMessage)) {
+					if (session.agentMode) sessionLoads.get(cwd)?.modeUpdates.set(sessionPath, session.agentMode);
 					setSessionsMap((prev) => {
 						const sessions = prev.get(cwd) ?? [];
 						const existingIndex = sessions.findIndex((item) => item.path === sessionPath);
@@ -188,6 +200,7 @@ export function useProjectActions() {
 									? existing.firstMessage
 									: session.firstMessage,
 								modifiedAt: Math.max(existing.modifiedAt, session.modifiedAt),
+								...(session.agentMode ? { agentMode: session.agentMode } : {}),
 							};
 						}
 						return new Map([...prev, [cwd, nextSessions]]);
