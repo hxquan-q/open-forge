@@ -30,7 +30,10 @@ interface PortHostEventFrame {
 
 /** host 侧事件发射器：经端口下发订阅事件；订阅语义（注册/清理）由域实现负责。 */
 export interface HostEventSink {
+	/** 端口关闭后调用为 no-op：响应帧之后的事件不再下发。 */
 	emitEvent(subscriptionId: string, payload: unknown): void;
+	/** 连接关闭通知：域实现据此摘除该端口上的全部订阅；已关闭时立即回调。 */
+	onClose(listener: () => void): () => void;
 }
 
 function asFrame(value: unknown): PortFrame | undefined {
@@ -81,10 +84,40 @@ export function serveHostOnPort(
 	handle: (request: unknown, events: HostEventSink) => Promise<HostResponse>,
 ): ServeHostPortHandle {
 	let eventSequence = 0;
+	let closed = false;
+	const closeListeners = new Set<() => void>();
+	const notifyClosed = (): void => {
+		if (closed) return;
+		closed = true;
+		for (const listener of closeListeners) listener();
+		closeListeners.clear();
+	};
+	const post = (frame: PortFrame): boolean => {
+		if (closed) return false;
+		try {
+			port.postMessage(frame);
+			return true;
+		} catch {
+			// 端口已不可写：按关闭处理，通知域实现摘除该连接上的订阅。
+			notifyClosed();
+			return false;
+		}
+	};
+	port.on("close", notifyClosed);
 	const sink: HostEventSink = {
 		emitEvent: (subscriptionId, payload) => {
 			const id = ++eventSequence;
-			port.postMessage({ id, event: { subscriptionId, payload } } satisfies PortFrame);
+			post({ id, event: { subscriptionId, payload } } satisfies PortFrame);
+		},
+		onClose: (listener) => {
+			if (closed) {
+				listener();
+				return () => {};
+			}
+			closeListeners.add(listener);
+			return () => {
+				closeListeners.delete(listener);
+			};
 		},
 	};
 	const listener = (event: { data: unknown }): void => {
@@ -101,7 +134,7 @@ export function serveHostOnPort(
 				}),
 			)
 			.then((response) => {
-				port.postMessage({ id: frame.id, response } satisfies PortFrame);
+				post({ id: frame.id, response } satisfies PortFrame);
 			});
 	};
 	port.on("message", listener);
@@ -109,25 +142,62 @@ export function serveHostOnPort(
 	return {
 		events: sink,
 		stop: () => {
+			// 先通知再关端口：域实现还在排队的 runtime 订阅先摘除，避免关闭后继续收事件。
+			notifyClosed();
 			port.close?.();
 		},
 	};
 }
+
+/**
+ * 订阅建立瞬间的快照回放先于携带 subscriptionId 的响应帧到达端口，未注册时先入有界缓冲，
+ * 注册时按序补发；上限只防御异常对端，正常路径缓冲在同一个事件循环回合内排空。
+ */
+const MAX_BUFFERED_EVENTS = 256;
 
 /** 客户端事件面：按 subscriptionId 分发端口上的事件帧；返回退订函数。 */
 export function portHostEvents(port: PortLike): {
 	on(subscriptionId: string, handler: (payload: unknown) => void): () => void;
 } {
 	const handlers = new Map<string, (payload: unknown) => void>();
+	const pending = new Map<string, unknown[]>();
+	let pendingCount = 0;
+	port.on("close", () => {
+		pending.clear();
+		pendingCount = 0;
+	});
 	port.on("message", (event) => {
 		const frame = asFrame(event.data);
 		if (!frame || frame.event === undefined) return;
-		const handler = handlers.get(frame.event.subscriptionId);
-		handler?.(frame.event.payload);
+		const { subscriptionId, payload } = frame.event;
+		const handler = handlers.get(subscriptionId);
+		if (handler) {
+			handler(payload);
+			return;
+		}
+		if (pendingCount >= MAX_BUFFERED_EVENTS) {
+			const oldest = pending.keys().next().value;
+			if (oldest !== undefined) {
+				pendingCount -= pending.get(oldest)?.length ?? 0;
+				pending.delete(oldest);
+			}
+		}
+		const queue = pending.get(subscriptionId);
+		if (queue) queue.push(payload);
+		else pending.set(subscriptionId, [payload]);
+		pendingCount += 1;
 	});
 	return {
 		on: (subscriptionId, handler) => {
+			const queued = pending.get(subscriptionId);
+			if (queued) {
+				pending.delete(subscriptionId);
+				pendingCount -= queued.length;
+			}
 			handlers.set(subscriptionId, handler);
+			if (queued) {
+				for (const payload of queued) handler(payload);
+			}
 			return () => {
 				if (handlers.get(subscriptionId) === handler) handlers.delete(subscriptionId);
 			};

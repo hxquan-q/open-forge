@@ -25,10 +25,18 @@ write_paths:
   - packages/host-protocol/src/port-bridge.ts
   - packages/host-protocol/src/host.ts
   - packages/host-protocol/src/index.ts
+  - packages/host-protocol/src/client.ts
+  - packages/host-protocol/src/domains/session-events.ts
+  - packages/host-protocol/test/port-bridge.test.ts
+  - apps/desktop/src/main/conversations/session-debug-recorder.ts
+  - apps/desktop/src/main/ipc/session.ts
   - apps/desktop/src/main/host/session-events-domain.ts
   - apps/desktop/src/main/host/desktop-host.ts
+  - apps/desktop/src/main/host/desktop-host.test.ts
   - apps/desktop/src/preload/host-transport.ts
+  - apps/desktop/src/preload/host-transport.test.ts
   - apps/desktop/src/preload/apis/session.ts
+  - apps/desktop/src/preload/apis/session.test.ts
   - project/plans/PLAN-0029-desktop-host-split-and-native-sidecars.md
   - project/tasks/TASK-0477-session-event-subscription-primitive.md
   - project/tasks/README.md
@@ -37,7 +45,7 @@ depends_on: [TASK-0476]
 conflicts_with: []
 integration_status: pending
 created: 2026-11-08
-updated: 2026-11-08
+updated: 2026-11-09
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -81,5 +89,5 @@ TASK-0465 组 2 的解锁件：在 Host port 上建立事件推送原语，迁�
 ## 交付记录
 
 - 第一步完成（2026-11-08，提交 `56c37736c`）：host-protocol 帧扩展（event 变体）、`HostEventSink` 连接级发射器、`serveHostOnPort → {stop, events}` 句柄、`HostCallContext.events`（`HostDispatcher.handle(raw, {events})`）、客户端 `portHostEvents` 分发面；conformance 3 例新增（17/17 绿），desktop 两处调用点适配，双侧 typecheck 0，门禁全量绿（6348 例）。
-- 第二步待做：desktop `session-events-domain`（subscribe/unsubscribe + 三份快照回放，经 `ctx.events.emitEvent`）；preload `subscribe` 切 `host.call` 并加端口就绪门（bootstrap 期未建端口时回退旧 ipc，待验证后第三步删除）；`onSessionEvent` 改从 `portHostEvents` 收。
+- 第二步完成（2026-11-09）：host-protocol `HostEventSink.onClose` 连接关闭通知、`portHostEvents` 有界缓冲（`MAX_BUFFERED_EVENTS = 256`，注册时按序补发回放、溢出逐最旧）；desktop 新增 `session-events-domain`（`session.subscribe/unsubscribe`，按连接 `WeakMap<HostEventSink, Map>` 管理订阅并在连接关闭时全量摘除；三份快照回放沿用旧序：后台任务 → 激活工具 → subagent），`desktop-host` 注册；preload `subscribe` 改走 `host.call("session.subscribe")`，以 `whenPortReady` 为就绪门（端口未建/关闭、`CAPABILITY_UNAVAILABLE`/`HOST_UNAVAILABLE` 回退旧 ipc；实现错误原样上抛，避免重复订阅），事件经 `host.onHostEvent` 收取并按旧阈值容错解码；调试录制逻辑抽到 `session-debug-recorder.ts` 供旧 IPC 与新域共用（行为不变）。验证：host-protocol 19/19、preload 21/21、desktop-host 47/47、desktop typecheck 0、`bun run check` 绿、`test:changed` 绿。旧三通道仍在，IPC 计数保持 628，第三步删除后降至 625。
 - 第三步待做：删旧 SUBSCRIBE/UNSUBSCRIBE/EVENT 三通道，IPC 628 → 625。

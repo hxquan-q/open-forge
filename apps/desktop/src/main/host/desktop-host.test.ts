@@ -1,6 +1,8 @@
 // Copyright The Open Forge contributors.
-import { HOST_PROTOCOL_ERROR_CODES } from "@vetta/host-protocol";
+import { HOST_PROTOCOL_ERROR_CODES, type HostEventSink } from "@vetta/host-protocol";
+import type { SessionEvent } from "@vetta/runtime-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SLIM_ASSISTANT_PARTIAL } from "../conversations/slim-session-event-for-ipc.js";
 
 let document: Record<string, unknown>;
 vi.mock("../agent-settings/settings-document-store.js", () => ({
@@ -44,6 +46,8 @@ const sharedRuntime = {
 	continue: vi.fn(async () => undefined),
 	abort: vi.fn(async () => undefined),
 	deleteSession: vi.fn(async () => undefined),
+	subscribe: vi.fn((_sessionId: string, _handler: (event: SessionEvent) => void) => () => {}),
+	getState: vi.fn(() => ({ activeToolNames: ["read"] as string[] })),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
 const interruptDraftRegistry = vi.hoisted(() => ({
@@ -527,7 +531,9 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.setPersonalization",
 			"session.setPlanModePermissionMode",
 			"session.startGoal",
+			"session.subscribe",
 			"session.switchBranch",
+			"session.unsubscribe",
 			"session.updateSettings",
 		]);
 	});
@@ -1066,5 +1072,128 @@ describe("desktop host session mcp-tasks domain", () => {
 		expect(emptyId).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
 		const emptySession = await host.handle({ method: "session.mcpTasksClearFinished", params: { sessionId: "" } });
 		expect(emptySession).toMatchObject({ ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INVALID_PARAMS } });
+	});
+});
+
+describe("desktop host session events domain", () => {
+	beforeEach(() => {
+		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
+		sharedRuntime.invokeSessionExtension.mockResolvedValue(true);
+	});
+
+	function fakeEvents(): {
+		events: HostEventSink;
+		emitted: Array<{ subscriptionId: string; payload: unknown }>;
+		close: () => void;
+	} {
+		const emitted: Array<{ subscriptionId: string; payload: unknown }> = [];
+		const closeListeners = new Set<() => void>();
+		return {
+			events: {
+				emitEvent: (subscriptionId, payload) => {
+					emitted.push({ subscriptionId, payload });
+				},
+				onClose: (listener) => {
+					closeListeners.add(listener);
+					return () => closeListeners.delete(listener);
+				},
+			},
+			emitted,
+			close: () => {
+				for (const listener of [...closeListeners]) listener();
+			},
+		};
+	}
+
+	it("rejects subscribe when the connection has no event channel", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.subscribe", params: { sessionId: "s1" } })).resolves.toMatchObject({
+			ok: false,
+			error: { code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE },
+		});
+		expect(sharedRuntime.subscribe).not.toHaveBeenCalled();
+	});
+
+	it("replays background tasks, active tools and subagents before streaming runtime events", async () => {
+		const { events, emitted } = fakeEvents();
+		const runtimeUnsubscribe = vi.fn();
+		let runtimeHandler: ((event: SessionEvent) => void) | undefined;
+		sharedRuntime.subscribe.mockImplementation((_sessionId, handler) => {
+			runtimeHandler = handler;
+			return runtimeUnsubscribe;
+		});
+		sharedRuntime.getState.mockReturnValue({ activeToolNames: ["read", "grep"] });
+		const tasks = [{ taskId: "t1" }];
+		const subagents = [{ target: "s9" }];
+		sharedRuntime.invokeSessionExtension
+			.mockResolvedValueOnce(tasks as never)
+			.mockResolvedValueOnce(subagents as never);
+
+		const host = createDesktopHost();
+		const response = await host.handle({ method: "session.subscribe", params: { sessionId: "s1" } }, { events });
+		if (!response.ok) throw new Error("subscribe should succeed");
+		const { subscriptionId } = response.result as { subscriptionId: string };
+		expect(subscriptionId).toMatch(/^s1:/);
+		expect(sharedRuntime.subscribe).toHaveBeenCalledWith("s1", expect.any(Function));
+
+		expect(emitted.map(({ subscriptionId: id }) => id)).toEqual([subscriptionId, subscriptionId, subscriptionId]);
+		expect(emitted.map(({ payload }) => payload)).toEqual([
+			expect.objectContaining({
+				schemaVersion: 1,
+				sessionId: "s1",
+				type: "session.extension",
+				payload: tasks,
+			}),
+			expect.objectContaining({ sessionId: "s1", type: "active_tools_update", activeToolNames: ["read", "grep"] }),
+			expect.objectContaining({
+				schemaVersion: 1,
+				sessionId: "s1",
+				type: "session.extension",
+				payload: subagents,
+			}),
+		]);
+
+		const delta = {
+			schemaVersion: 1,
+			channel: "assistant",
+			sessionId: "s1",
+			eventId: "e1",
+			timestamp: 1,
+			source: "test",
+			type: "text_delta",
+			delta: "hi",
+			partial: { role: "assistant", content: [] },
+		} as unknown as SessionEvent;
+		runtimeHandler?.(delta);
+		expect(emitted.at(-1)?.payload).toMatchObject({
+			type: "text_delta",
+			delta: "hi",
+			partial: SLIM_ASSISTANT_PARTIAL,
+		});
+
+		await expect(
+			host.handle({ method: "session.unsubscribe", params: { subscriptionId } }, { events }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(runtimeUnsubscribe).toHaveBeenCalledTimes(1);
+		await expect(
+			host.handle({ method: "session.unsubscribe", params: { subscriptionId } }, { events }),
+		).resolves.toEqual({ ok: true, result: null });
+		expect(runtimeUnsubscribe).toHaveBeenCalledTimes(1);
+	});
+
+	it("unsubscribes every runtime subscription when the connection closes", async () => {
+		const { events, close } = fakeEvents();
+		const runtimeUnsubscribe = vi.fn();
+		sharedRuntime.subscribe.mockReturnValue(runtimeUnsubscribe);
+
+		const host = createDesktopHost();
+		const response = await host.handle({ method: "session.subscribe", params: { sessionId: "s1" } }, { events });
+		if (!response.ok) throw new Error("subscribe should succeed");
+		close();
+		expect(runtimeUnsubscribe).toHaveBeenCalledTimes(1);
+
+		const { subscriptionId } = response.result as { subscriptionId: string };
+		await host.handle({ method: "session.unsubscribe", params: { subscriptionId } }, { events });
+		expect(runtimeUnsubscribe).toHaveBeenCalledTimes(1);
 	});
 });

@@ -6,6 +6,7 @@ import {
 	MODELS_HOST_METHODS,
 	SESSION_CATALOG_HOST_METHODS,
 	SESSION_DEFAULTS_HOST_METHODS,
+	SESSION_EVENTS_HOST_METHODS,
 	SESSION_EXECUTION_HOST_METHODS,
 	SESSION_GOAL_HOST_METHODS,
 	SESSION_HISTORY_HOST_METHODS,
@@ -20,6 +21,7 @@ import { mcpHostDomain } from "./mcp-domain.js";
 import { modelsHostDomain } from "./models-domain.js";
 import { sessionCatalogHostDomain } from "./session-catalog-domain.js";
 import { sessionDefaultsHostDomain } from "./session-defaults-domain.js";
+import { sessionEventsHostDomain } from "./session-events-domain.js";
 import { sessionExecutionHostDomain } from "./session-execution-domain.js";
 import { sessionGoalHostDomain } from "./session-goal-domain.js";
 import { sessionHistoryHostDomain } from "./session-history-domain.js";
@@ -41,6 +43,7 @@ export function createDesktopHost(): HostDispatcher {
 	host.register(SESSION_DEFAULTS_HOST_METHODS, sessionDefaultsHostDomain);
 	host.register(SESSION_CATALOG_HOST_METHODS, sessionCatalogHostDomain);
 	host.register(SESSION_EXECUTION_HOST_METHODS, sessionExecutionHostDomain);
+	host.register(SESSION_EVENTS_HOST_METHODS, sessionEventsHostDomain);
 	host.register(SESSION_GOAL_HOST_METHODS, sessionGoalHostDomain);
 	host.register(SESSION_HISTORY_HOST_METHODS, sessionHistoryHostDomain);
 	host.register(SESSION_LIFECYCLE_HOST_METHODS, sessionLifecycleHostDomain);

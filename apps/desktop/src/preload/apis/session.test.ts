@@ -1,6 +1,9 @@
 // Modified by The Open Forge contributors.
+import { HOST_PROTOCOL_ERROR_CODES, type PortLike } from "@vetta/host-protocol/client";
 import type { IpcRenderer } from "electron";
 import { describe, expect, it, vi } from "vitest";
+import { HOST_PORT_CHANNEL, HOST_PORT_REQUEST_CHANNEL, HOST_REQUEST_CHANNEL } from "../../shared/host-ipc.js";
+import { MAX_CONSECUTIVE_DECODE_FAILURES } from "./helper.js";
 import { createSessionApi } from "./session.js";
 
 describe("createSessionApi trace propagation", () => {
@@ -166,5 +169,279 @@ describe("createSessionApi trace propagation", () => {
 		expect(invoke).toHaveBeenCalledWith("vetta:session:viewer-open", "C:/sessions/one.jsonl", {
 			tailTurns: 2,
 		});
+	});
+});
+
+describe("createSessionApi event subscription", () => {
+	function runtimeEvent(eventId: string): Record<string, unknown> {
+		return {
+			schemaVersion: 1,
+			channel: "runtime",
+			sessionId: "session-1",
+			eventId,
+			timestamp: 1,
+			source: "test",
+			type: "active_tools_update",
+			activeToolNames: [],
+		};
+	}
+
+	interface FakeIpc {
+		readonly ipc: IpcRenderer;
+		readonly invoke: ReturnType<typeof vi.fn>;
+		readonly send: ReturnType<typeof vi.fn>;
+		emit(channel: string, ...args: unknown[]): void;
+		deliverPort(port: PortLike): void;
+	}
+
+	function fakeIpc(hostResponse: (request: unknown) => unknown = () => ({ ok: true, result: null })): FakeIpc {
+		const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
+		const invoke = vi.fn(async (channel: string, ...args: unknown[]) => {
+			if (channel === HOST_REQUEST_CHANNEL) return hostResponse(args[0]);
+			// 旧订阅通道：subscribeById 注册先于 invoke，resolve 后开始派发事件。
+			if (channel === "vetta:session:subscribe") return { subscriptionId: "legacy-sub" };
+			return undefined;
+		});
+		const send = vi.fn();
+		const on = (channel: string, listener: (...args: unknown[]) => void): void => {
+			listeners.set(channel, [...(listeners.get(channel) ?? []), listener]);
+		};
+		const removeListener = (channel: string, listener: (...args: unknown[]) => void): void => {
+			listeners.set(
+				channel,
+				(listeners.get(channel) ?? []).filter((entry) => entry !== listener),
+			);
+		};
+		const ipc = { invoke, send, on, removeListener } as unknown as IpcRenderer;
+		const emit = (channel: string, ...args: unknown[]): void => {
+			for (const listener of [...(listeners.get(channel) ?? [])]) listener({}, ...args);
+		};
+		return {
+			ipc,
+			invoke,
+			send,
+			emit,
+			// Electron 把端口挂在事件对象上，host-transport 读 event.ports[0]。
+			deliverPort: (port) => {
+				for (const listener of [...(listeners.get(HOST_PORT_CHANNEL) ?? [])]) listener({ ports: [port] });
+			},
+		};
+	}
+
+	interface Frame {
+		readonly id: number;
+		readonly request?: { readonly method: string; readonly params: unknown };
+		readonly response?: unknown;
+		readonly event?: { readonly subscriptionId: string; readonly payload: unknown };
+	}
+
+	interface FakePort extends PortLike {
+		readonly frames: Frame[];
+		emitFrame(frame: Frame): void;
+		emitClose(): void;
+	}
+
+	/** renderer 侧内存端口：与 host-transport.test.ts 同形，额外记录客户端发出的帧。 */
+	function fakePort(): FakePort {
+		const listeners = new Map<string, Array<(event: { data: unknown }) => void>>();
+		const listenersFor = (event: string): Array<(event: { data: unknown }) => void> => listeners.get(event) ?? [];
+		const port = {
+			on: (event: "message" | "close", listener: (event: { data: unknown }) => void) => {
+				listeners.set(event, [...listenersFor(event), listener]);
+			},
+			once: (event: "message", listener: (event: { data: unknown }) => void) => {
+				const wrapped = (message: { data: unknown }): void => {
+					listeners.set(
+						event,
+						listenersFor(event).filter((entry) => entry !== wrapped),
+					);
+					listener(message);
+				};
+				port.on(event, wrapped);
+			},
+			start: () => {},
+			close: () => {},
+			postMessage: (message: unknown) => {
+				port.frames.push(message as Frame);
+			},
+			frames: [] as Frame[],
+			emitFrame: (frame: Frame) => {
+				for (const listener of [...listenersFor("message")]) listener({ data: frame });
+			},
+			emitClose: () => {
+				for (const listener of [...listenersFor("close")]) listener({ data: null });
+			},
+		} as unknown as FakePort;
+		return port;
+	}
+
+	async function flush(): Promise<void> {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+
+	it("subscribes over the port, drains buffered replay events and unsubscribes over the port", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const handler = vi.fn();
+
+		const subscription = session.subscribe("session-1", handler);
+		fake.deliverPort(port);
+		await flush();
+
+		expect(fake.send).toHaveBeenCalledWith(HOST_PORT_REQUEST_CHANNEL);
+		expect(port.frames).toHaveLength(1);
+		const request = port.frames[0];
+		expect(request?.request).toEqual({ method: "session.subscribe", params: { sessionId: "session-1" } });
+
+		// 回放事件先于响应帧到达：portHostEvents 有界缓冲后，在注册处理器时按序补发。
+		port.emitFrame({ id: 99, event: { subscriptionId: "session-1:sub", payload: runtimeEvent("replay-1") } });
+		port.emitFrame({ id: request?.id ?? -1, response: { ok: true, result: { subscriptionId: "session-1:sub" } } });
+
+		const unsubscribe = await subscription;
+		expect(handler).toHaveBeenCalledTimes(1);
+		expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "replay-1" }));
+		expect(fake.invoke).not.toHaveBeenCalledWith(HOST_REQUEST_CHANNEL, expect.anything());
+
+		port.emitFrame({ id: 100, event: { subscriptionId: "session-1:sub", payload: runtimeEvent("live-1") } });
+		expect(handler).toHaveBeenCalledTimes(2);
+
+		unsubscribe();
+		unsubscribe();
+		expect(port.frames[1]?.request).toEqual({
+			method: "session.unsubscribe",
+			params: { subscriptionId: "session-1:sub" },
+		});
+
+		port.emitFrame({ id: 101, event: { subscriptionId: "session-1:sub", payload: runtimeEvent("late-1") } });
+		expect(handler).toHaveBeenCalledTimes(2);
+	});
+
+	it("falls back to the legacy channel when the host port never arrives", async () => {
+		vi.useFakeTimers();
+		try {
+			const fake = fakeIpc();
+			const session = createSessionApi(fake.ipc).session;
+			const handler = vi.fn();
+
+			const subscription = session.subscribe("session-1", handler);
+			await vi.advanceTimersByTimeAsync(1500);
+			const unsubscribe = await subscription;
+
+			expect(fake.invoke).toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
+			fake.emit("vetta:session:event", "legacy-sub", runtimeEvent("legacy-1"));
+			expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "legacy-1" }));
+
+			unsubscribe();
+			expect(fake.invoke).toHaveBeenCalledWith("vetta:session:unsubscribe", "legacy-sub");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("falls back to the legacy channel when the host rejects the event channel", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const handler = vi.fn();
+
+		const subscription = session.subscribe("session-1", handler);
+		fake.deliverPort(port);
+		await flush();
+		port.emitFrame({
+			id: port.frames[0]?.id ?? -1,
+			response: {
+				ok: false,
+				error: { code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE, message: "no event channel" },
+			},
+		});
+
+		const unsubscribe = await subscription;
+		expect(fake.invoke).toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
+		fake.emit("vetta:session:event", "legacy-sub", runtimeEvent("legacy-1"));
+		expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "legacy-1" }));
+
+		unsubscribe();
+		expect(fake.invoke).toHaveBeenCalledWith("vetta:session:unsubscribe", "legacy-sub");
+	});
+
+	it("rethrows implementation failures instead of subscribing twice", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+
+		const subscription = session.subscribe("session-1", vi.fn());
+		fake.deliverPort(port);
+		await flush();
+		port.emitFrame({
+			id: port.frames[0]?.id ?? -1,
+			response: { ok: false, error: { code: HOST_PROTOCOL_ERROR_CODES.INTERNAL, message: "replay failed" } },
+		});
+
+		await expect(subscription).rejects.toMatchObject({ code: HOST_PROTOCOL_ERROR_CODES.INTERNAL });
+		expect(fake.invoke).not.toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
+	});
+
+	it("falls back to the legacy channel when the port closes before the handler registers", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const handler = vi.fn();
+
+		const subscription = session.subscribe("session-1", handler);
+		fake.deliverPort(port);
+		await flush();
+		port.emitFrame({
+			id: port.frames[0]?.id ?? -1,
+			response: { ok: true, result: { subscriptionId: "session-1:sub" } },
+		});
+		port.emitClose();
+
+		const unsubscribe = await subscription;
+		expect(fake.invoke).toHaveBeenCalledWith("vetta:session:subscribe", "session-1");
+		fake.emit("vetta:session:event", "legacy-sub", runtimeEvent("legacy-1"));
+		expect(handler).toHaveBeenCalledWith(expect.objectContaining({ eventId: "legacy-1" }));
+
+		unsubscribe();
+	});
+
+	it("tolerates isolated undecodable payloads and fails on a consecutive run", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const handler = vi.fn();
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			const subscription = session.subscribe("session-1", handler);
+			fake.deliverPort(port);
+			await flush();
+			port.emitFrame({
+				id: port.frames[0]?.id ?? -1,
+				response: { ok: true, result: { subscriptionId: "session-1:sub" } },
+			});
+			const unsubscribe = await subscription;
+
+			let frameId = 10;
+			const emitBad = (): void => {
+				port.emitFrame({
+					id: frameId++,
+					event: { subscriptionId: "session-1:sub", payload: { bad: true } },
+				});
+			};
+			for (let index = 0; index < MAX_CONSECUTIVE_DECODE_FAILURES - 1; index += 1) emitBad();
+			expect(handler).not.toHaveBeenCalled();
+
+			// 成功解码重置计数：偶发坏包永远不会累计成协议错误。
+			port.emitFrame({
+				id: frameId++,
+				event: { subscriptionId: "session-1:sub", payload: runtimeEvent("good-1") },
+			});
+			expect(handler).toHaveBeenCalledTimes(1);
+			for (let index = 0; index < MAX_CONSECUTIVE_DECODE_FAILURES - 1; index += 1) emitBad();
+			expect(() => emitBad()).toThrow(TypeError);
+			unsubscribe();
+		} finally {
+			errorSpy.mockRestore();
+		}
 	});
 });

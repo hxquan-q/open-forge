@@ -170,4 +170,38 @@ describe("host port bridge", () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(received).toEqual([42]);
 	});
+
+	it("buffers replay events that arrive before the subscription handler registers", () => {
+		const [client, server] = FakePort.pair();
+		const served = serveHostOnPort(portLike(server), () => Promise.resolve({ ok: true, result: null }));
+		const events = portHostEvents(portLike(client));
+		// 订阅响应尚未到达：快照回放先落到有界缓冲。
+		served.events.emitEvent("sub-replay", "snapshot-1");
+		served.events.emitEvent("sub-replay", "snapshot-2");
+
+		const received: unknown[] = [];
+		const unsubscribe = events.on("sub-replay", (payload) => received.push(payload));
+		expect(received).toEqual(["snapshot-1", "snapshot-2"]);
+
+		served.events.emitEvent("sub-replay", "delta");
+		expect(received).toEqual(["snapshot-1", "snapshot-2", "delta"]);
+		unsubscribe();
+	});
+
+	it("notifies close listeners once on stop and drops later events", () => {
+		const [, server] = FakePort.pair();
+		const served = serveHostOnPort(portLike(server), () => Promise.resolve({ ok: true, result: null }));
+		const closed = vi.fn();
+		served.events.onClose(closed);
+
+		served.events.emitEvent("sub-close", "before");
+		served.stop();
+		served.events.emitEvent("sub-close", "after");
+
+		expect(closed).toHaveBeenCalledTimes(1);
+		expect(server.posted).toEqual([{ id: 1, event: { subscriptionId: "sub-close", payload: "before" } }]);
+		const late = vi.fn();
+		served.events.onClose(late);
+		expect(late).toHaveBeenCalledTimes(1);
+	});
 });

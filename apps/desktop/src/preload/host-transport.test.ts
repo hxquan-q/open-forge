@@ -117,4 +117,49 @@ describe("preload host transport", () => {
 			params: {},
 		});
 	});
+
+	it("resolves whenPortReady when the port is delivered and reports false after close", async () => {
+		const { ipc, send, deliverPort } = fakeIpc({ ok: true, result: null });
+		const client = createDesktopHostClient(ipc);
+		const ready = client.whenPortReady();
+		expect(send).toHaveBeenCalledTimes(1);
+
+		const port = fakePort();
+		deliverPort(port);
+		await expect(ready).resolves.toBe(true);
+		await expect(client.whenPortReady()).resolves.toBe(true);
+
+		port.emitClose();
+		await expect(client.whenPortReady()).resolves.toBe(false);
+	});
+
+	it("reports false when the handshake times out", async () => {
+		const { ipc } = fakeIpc({ ok: true, result: null });
+		const client = createDesktopHostClient(ipc);
+		await expect(client.whenPortReady(1)).resolves.toBe(false);
+	});
+
+	it("delivers event frames only while a subscription is registered", async () => {
+		const { ipc, deliverPort } = fakeIpc({ ok: true, result: null });
+		const client = createDesktopHostClient(ipc);
+		expect(client.onHostEvent("session-1:sub", vi.fn())).toBeUndefined();
+
+		const port = fakePort();
+		const ready = client.whenPortReady();
+		deliverPort(port);
+		await expect(ready).resolves.toBe(true);
+		const handler = vi.fn();
+		const remove = client.onHostEvent("session-1:sub", handler);
+		expect(remove).toBeTypeOf("function");
+
+		port.emitFrame({ id: 7, event: { subscriptionId: "session-1:sub", payload: { eventId: "replay" } } });
+		expect(handler).toHaveBeenCalledWith({ eventId: "replay" });
+
+		remove?.();
+		port.emitFrame({ id: 8, event: { subscriptionId: "session-1:sub", payload: { eventId: "late" } } });
+		expect(handler).toHaveBeenCalledTimes(1);
+
+		port.emitClose();
+		expect(client.onHostEvent("session-1:sub", vi.fn())).toBeUndefined();
+	});
 });
