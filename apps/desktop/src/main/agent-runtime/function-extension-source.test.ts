@@ -31,11 +31,19 @@ describe("Desktop Coding Agent function source", () => {
 		const source = createDesktopCodingAgentFunctionSource({ logger: TEST_LOGGER });
 		expect(source.has(CODING_AGENT_ASK_USER_QUESTION_FUNCTION)).toBe(false);
 
-		const handler = vi.fn(async (request: CodingAgentQuestionFunctionRequest) => ({
-			cancelled: false,
-			answers: [{ question: request.questions[0]?.question ?? "", answers: ["允许"] }],
-		}));
-		disposals.push(getDesktopUserQuestionBroker().setInteractiveHandler(handler));
+		const presented: CodingAgentQuestionFunctionRequest[] = [];
+		const broker = getDesktopUserQuestionBroker();
+		disposals.push(
+			broker.setPresenter({
+				present: (request) => {
+					presented.push(request);
+					broker.respond(request.requestId, {
+						cancelled: false,
+						answers: [{ question: request.questions[0]?.question ?? "", answers: ["允许"] }],
+					});
+				},
+			}),
+		);
 		expect(source.has(CODING_AGENT_ASK_USER_QUESTION_FUNCTION)).toBe(true);
 		const signal = new AbortController().signal;
 
@@ -53,13 +61,12 @@ describe("Desktop Coding Agent function source", () => {
 			cancelled: false,
 			answers: [{ question: "Choose?", answers: ["允许"] }],
 		});
-		expect(handler).toHaveBeenCalledWith(
+		expect(presented).toEqual([
 			expect.objectContaining({
 				requestId: "question-1",
 				questions: [{ question: "Choose?", header: "Choice", options: [] }],
 			}),
-			signal,
-		);
+		]);
 	});
 
 	it("binds Sandbox authorization without exposing the product protocol to Runtime", async () => {

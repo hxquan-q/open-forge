@@ -93,10 +93,10 @@ describe("Desktop RuntimeHost model-call frame contract", () => {
 			const pluginRuntime = createMutablePluginRuntimeSource(pluginConfiguration());
 			const fixture = createRuntimeFixture(backend, agentStateDir, model, pluginRuntime.source);
 			fixtures.push(fixture);
-			const unregisterQuestion = getDesktopUserQuestionBroker().setInteractiveHandler(async () => ({
-				cancelled: true,
-				answers: [],
-			}));
+			const questionBroker = getDesktopUserQuestionBroker();
+			const unregisterQuestion = questionBroker.setPresenter({
+				present: (request) => questionBroker.respond(request.requestId, { cancelled: true, answers: [] }),
+			});
 			questionHandlerDisposals.push(unregisterQuestion);
 
 			const created = await fixture.runtime.createSession({

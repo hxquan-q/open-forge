@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -135,7 +136,7 @@ describe("Desktop RuntimeHost capabilities", () => {
 		expect(systemPromptInvocations).toHaveLength(1);
 	});
 
-	it("applies live user-question handler removal without rebuilding the Desktop session", async () => {
+	it("applies live user-question presenter removal without rebuilding the Desktop session", async () => {
 		const cwd = await temporaryDirectory("desktop-runtime-question-workspace-");
 		const sessionDir = await temporaryDirectory("desktop-runtime-question-sessions-");
 		const toolSurfaces: string[][] = [];
@@ -158,11 +159,16 @@ describe("Desktop RuntimeHost capabilities", () => {
 		];
 		let responseIndex = 0;
 		const questionBroker = getDesktopUserQuestionBroker();
-		const questionHandler = vi.fn(async () => ({
-			cancelled: false,
-			answers: [{ question: "Which implementation should be used?", answers: ["A"] }],
-		}));
-		const unregisterQuestion = questionBroker.setInteractiveHandler(questionHandler);
+		const presentedQuestion = vi.fn();
+		const unregisterQuestion = questionBroker.setPresenter({
+			present: (request) => {
+				presentedQuestion(request);
+				questionBroker.respond(request.requestId, {
+					cancelled: false,
+					answers: [{ question: "Which implementation should be used?", answers: ["A"] }],
+				});
+			},
+		});
 		disposers.push(async () => unregisterQuestion());
 		const pool = new DesktopRuntimeBackendPool({
 			compositionDefaults: {
@@ -197,7 +203,7 @@ describe("Desktop RuntimeHost capabilities", () => {
 		});
 		await runtime.prompt(created.sessionId, { text: "ask me" });
 
-		expect(questionHandler).toHaveBeenCalledOnce();
+		expect(presentedQuestion).toHaveBeenCalledOnce();
 		expect(toolSurfaces[0]).toContain("ask_user_question");
 		expect(runtime.getState(created.sessionId).activeToolNames).toContain("ask_user_question");
 

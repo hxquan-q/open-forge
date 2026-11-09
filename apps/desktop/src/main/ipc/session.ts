@@ -4,8 +4,6 @@ import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type {
-	CodingAgentQuestionFunctionRequest,
-	CodingAgentQuestionResult,
 	CodingAgentSandboxAuthorizationDecision,
 	CodingAgentSandboxAuthorizationFunctionRequest,
 } from "@vetta/coding-agent/function-extensions";
@@ -239,20 +237,6 @@ function assertSessionKind(value: unknown): asserts value is "conversation" | "o
 	}
 }
 
-/** Sanitize the renderer's ask_user_question reply into the Coding Agent product result. */
-function normalizeQuestionResult(value: unknown): CodingAgentQuestionResult {
-	if (typeof value !== "object" || value === null) return { cancelled: true, answers: [] };
-	const v = value as Record<string, unknown>;
-	if (v.cancelled === true || !Array.isArray(v.answers)) return { cancelled: true, answers: [] };
-	const answers = (v.answers as Array<Record<string, unknown>>)
-		.filter((a) => a && typeof a.question === "string" && Array.isArray(a.answers))
-		.map((a) => ({
-			question: a.question as string,
-			answers: (a.answers as unknown[]).filter((x): x is string => typeof x === "string"),
-		}));
-	return { cancelled: false, answers };
-}
-
 function normalizeMcpElicitationResponse(value: unknown): DesktopMcpElicitationResponse {
 	if (!value || typeof value !== "object") return { action: "cancel" };
 	const record = value as Record<string, unknown>;
@@ -327,7 +311,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const unsubscribeConversationListChanged = onConversationListChanged((event) => {
 		broadcastToAllWindows(CHANNELS.SESSIONS_CHANGED, event);
 	});
-	const questionMap = new Map<string, (result: CodingAgentQuestionResult) => void>();
 	const mcpElicitationMap = new Map<string, (result: DesktopMcpElicitationResponse) => void>();
 	const sandboxGrantMap = new Map<string, (decision: CodingAgentSandboxAuthorizationDecision) => void>();
 	const pluginToolMap = new Map<string, (result: unknown) => void>();
@@ -422,46 +405,30 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		});
 	};
 
-	const CANCELLED_QUESTION: CodingAgentQuestionResult = { cancelled: true, answers: [] };
-
-	// ask_user_question 后端：把请求送到渲染端「问答面板」，阻塞等用户提交/取消。
-	// 镜像 confirm 的 requestId map 模式；abort（中断/窗口销毁）一律视为取消。
-	const questionHandler = (
-		request: CodingAgentQuestionFunctionRequest,
-		signal?: AbortSignal,
-	): Promise<CodingAgentQuestionResult> => {
-		if (webContents.isDestroyed()) return Promise.resolve(CANCELLED_QUESTION);
-		return new Promise<CodingAgentQuestionResult>((resolve) => {
-			const sessionPath = runtime.getSessionPath(request.sessionId);
-			const finish = (result: CodingAgentQuestionResult): void => {
-				questionMap.delete(request.requestId);
-				if (signal) signal.removeEventListener("abort", onAbort);
-				// 问答结束（提交/取消/中断）后清掉「待答」标记并广播。
-				if (sessionPath) setPendingQuestion(sessionPath, false);
-				resolve(result);
-			};
-			const onAbort = (): void => finish(CANCELLED_QUESTION);
-			if (signal?.aborted) {
-				resolve(CANCELLED_QUESTION);
+	// 提问用户面板不再是用户开关：问答 presenter 恒注入（能力始终在）。是否向 agent 暴露
+	// ask_user_question 改由该工具的 scope_use（仅 conversation/project 场景）决定。
+	// 挂起、应答、中断与窗口失效由 broker 收口；这里只负责呈现与「待答」标记广播。
+	const unregisterQuestionPresenter = questionBroker.setPresenter({
+		present: (request) => {
+			if (webContents.isDestroyed()) {
+				questionBroker.respond(request.requestId, undefined);
 				return;
 			}
-			if (signal) signal.addEventListener("abort", onAbort, { once: true });
-			questionMap.set(request.requestId, finish);
 			webContents.send(CHANNELS.QUESTION_REQUEST, request);
 			// 广播「待答」给所有窗口（侧栏 + 快捷面板）。
+			const sessionPath = runtime.getSessionPath(request.sessionId);
 			if (sessionPath) setPendingQuestion(sessionPath, true);
 			// 同时发系统通知「有问题待确认」（点击跳转该 session）；前台看着该 session 时自动抑制。
 			const cwd = sessionCwdMap.get(request.sessionId);
 			if (sessionPath && cwd) {
 				void notify({ type: "agent-question-pending", sessionPath, cwd });
 			}
-		});
-	};
-
-	// 提问用户面板不再是用户开关：问答 handler 恒注入（能力始终在）。是否向 agent 暴露
-	// ask_user_question 改由该工具的 scope_use（仅 conversation/project 场景）决定。
-	const unregisterInteractiveQuestionHandler = questionBroker.setInteractiveHandler(questionHandler);
+		},
+	});
 	const unregisterQuestionResolved = questionBroker.onQuestionResolved((event) => {
+		// 问答结束（提交/取消/中断）后清掉「待答」标记并广播。
+		const sessionPath = runtime.getSessionPath(event.sessionId);
+		if (sessionPath) setPendingQuestion(sessionPath, false);
 		if (webContents.isDestroyed()) return;
 		try {
 			webContents.send(CHANNELS.QUESTION_RESOLVED, event);
@@ -1095,9 +1062,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// MCP_TASKS_CHANGED 推送与 elicitation 应答仍走旧 IPC）。
 	ipcMain.handle(CHANNELS.QUESTION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");
-		const resolve = questionMap.get(requestId);
-		if (!resolve) return;
-		resolve(normalizeQuestionResult(result));
+		questionBroker.respond(requestId, result);
 	});
 
 	ipcMain.handle(CHANNELS.PLAN_REVIEW_LIST_PENDING, () => planReviewBroker.listPending());
@@ -1210,10 +1175,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const onRenderGone = (): void => {
 		pluginToolRendererHost.markUnavailable();
 		pluginAgentContributionService.invalidateHookRendererDocument("Plugin host renderer is unavailable");
-		for (const resolve of questionMap.values()) {
-			resolve(CANCELLED_QUESTION);
-		}
-		questionMap.clear();
+		questionBroker.cancelAll();
 		planReviewBroker.cancelAll();
 		for (const resolve of mcpElicitationMap.values()) resolve({ action: "cancel" });
 		mcpElicitationMap.clear();
@@ -1333,10 +1295,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			unsubscribe();
 		}
 		notificationSubs.clear();
-		for (const resolve of questionMap.values()) {
-			resolve(CANCELLED_QUESTION);
-		}
-		questionMap.clear();
+		questionBroker.cancelAll();
 		planReviewBroker.cancelAll();
 		for (const resolve of mcpElicitationMap.values()) resolve({ action: "cancel" });
 		mcpElicitationMap.clear();
@@ -1356,7 +1315,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			resolve({ value: null });
 		}
 		pluginContinuationMap.clear();
-		unregisterInteractiveQuestionHandler();
+		unregisterQuestionPresenter();
 		unregisterPlanReviewPresenter();
 		unregisterQuestionResolved();
 		unregisterMcpElicitationHandler();
