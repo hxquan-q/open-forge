@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { IpcRenderer, WebUtils } from "electron";
 import { describe, expect, it, vi } from "vitest";
+import { HOST_REQUEST_CHANNEL } from "../../shared/host-ipc";
 import { PERSIST_IMAGE_FILES_CHANNEL } from "../../shared/image-cache";
 import { FS_READ_TEXT_PREVIEW_CHANNEL } from "../fs-types";
 import { createSystemApi } from "./system";
@@ -72,24 +73,30 @@ describe("createSystemApi fs preview contract", () => {
 });
 
 describe("createSystemApi models provider test contract", () => {
-	it("invokes the provider test channel with the provider name and forwards the structured result", async () => {
+	it("sends the provider test over the host channel and unwraps the structured result", async () => {
 		const result = { ok: true, latencyMs: 120, modelCount: 2 };
-		const invoke = vi.fn(async () => result);
-		const api = createSystemApi({ invoke } as unknown as IpcRenderer, {} as WebUtils);
+		const invoke = vi.fn(async () => ({ ok: true, result }));
+		const api = createSystemApi({ invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer, {} as WebUtils);
 
 		await expect(api.models.testProvider("relay")).resolves.toEqual(result);
-		expect(invoke).toHaveBeenCalledWith("vetta:models:test-provider", "relay");
+		expect(invoke).toHaveBeenCalledWith(HOST_REQUEST_CHANNEL, {
+			method: "models.testProvider",
+			params: { providerName: "relay" },
+		});
 	});
 });
 
 describe("createSystemApi models balance contract", () => {
-	it("invokes the get-balance channel with the provider id and forwards the normalized result", async () => {
+	it("sends the balance query over the host channel and unwraps the normalized result", async () => {
 		const result = { provider: "deepseek", supported: true, currency: "CNY", available: 110, isAvailable: true };
-		const invoke = vi.fn(async () => result);
-		const api = createSystemApi({ invoke } as unknown as IpcRenderer, {} as WebUtils);
+		const invoke = vi.fn(async () => ({ ok: true, result }));
+		const api = createSystemApi({ invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer, {} as WebUtils);
 
 		await expect(api.models.getBalance("deepseek")).resolves.toEqual(result);
-		expect(invoke).toHaveBeenCalledWith("vetta:models:get-balance", "deepseek");
+		expect(invoke).toHaveBeenCalledWith(HOST_REQUEST_CHANNEL, {
+			method: "models.getBalance",
+			params: { providerName: "deepseek" },
+		});
 	});
 });
 

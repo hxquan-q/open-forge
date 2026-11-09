@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { codingAgentSessionShardPath } from "@vetta/coding-agent/bootstrap";
 import type {
 	CodingAgentQuestionFunctionRequest,
 	CodingAgentQuestionResult,
@@ -17,50 +16,34 @@ import type {
 	AgentPluginSystemPromptInvocation,
 	AgentPluginToolInvocation,
 } from "@vetta/coding-agent/plugin-runtime";
-import { DEFAULT_PERSONA_ID, PERSONAS } from "@vetta/coding-agent/profile";
+
 import {
-	CODING_AGENT_BACKGROUND_TASK_KILL,
-	CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED,
 	CODING_AGENT_BACKGROUND_TASKS_OBSERVATION,
 	CODING_AGENT_BACKGROUND_TASKS_READ,
-	CODING_AGENT_NEXT_PROMPT_SUGGESTIONS,
-	CODING_AGENT_PERMISSION_MODE_SET,
-	CODING_AGENT_PLAN_MODE_STATE_READ,
 	CODING_AGENT_SESSION_PROFILE_STATE_READ,
-	CODING_AGENT_SESSION_TITLE_GENERATE,
-	CODING_AGENT_SUBAGENT_INTERRUPT,
 	CODING_AGENT_SUBAGENTS_OBSERVATION,
 	CODING_AGENT_SUBAGENTS_READ,
-	CODING_AGENT_TODO_CLEAR,
-	isCodingAgentPermissionMode,
 } from "@vetta/coding-agent/session-extensions";
-import type { HistoryEntry, SessionEvent, SessionExecutionMode, SettingsPatch } from "@vetta/runtime-core";
+import type { HistoryEntry, SessionEvent } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
-import { assertProjectSupportsExecutionMode } from "@vetta/runtime-desktop";
 import { isMcpJsonValue, type McpJsonObject } from "@vetta/runtime-mcp";
 import { BrowserWindow, ipcMain, type WebContents } from "electron";
 import type { DesktopMcpAppResourceRead, DesktopMcpAppToolCall } from "../../shared/mcp-app.js";
 import type { DesktopMcpElicitationResponse, DesktopMcpElicitationValue } from "../../shared/mcp-interaction.js";
 import { PLUGIN_CONTRIBUTION_CHANNELS } from "../../shared/plugin-ipc.js";
 import { SESSION_SEARCH_CHANNELS } from "../../shared/session-search.js";
-import { DEFAULT_AGENT_MODE, isAgentMode, MODE_PROMPTS } from "../agent-modes/index.js";
 import {
 	runSessionInterruptStartupScan,
 	startSessionInterruptMonitor,
 } from "../agent-runtime/session-interrupt-bootstrap.js";
-import { setSessionInterruptDraftNonEmpty } from "../agent-runtime/session-interrupt-draft-registry.js";
 import {
 	clearSessionManualStop,
-	markSessionManualStop,
 	watchSessionForInterruptContinue,
 } from "../agent-runtime/session-interrupt-watch-registry.js";
-import { stopSessionBackgroundWork } from "../agent-runtime/stop-session-work.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service.js";
 import { onConversationListChanged } from "../conversations/conversation-list-events.js";
-import { assertOrdinaryConversationPath } from "../conversations/conversation-ownership-guard.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
-import { DesktopGoalController } from "../conversations/desktop-goal-controller.js";
 import { desktopSessionSearch } from "../conversations/desktop-session-search.js";
 import {
 	collectRunningInteractiveSessionIds,
@@ -69,20 +52,17 @@ import {
 } from "../conversations/idle-session-residency.js";
 import { getDesktopMcpElicitationBroker } from "../conversations/mcp-elicitation-broker.js";
 import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.js";
-import { purgeProjectSessions } from "../conversations/project-session-purge.js";
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
-import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations/session-paths.js";
-import { listRuntimeSessionProjects, listSessionHistory } from "../conversations/session-query-service.js";
+import { isConversationSubCwd } from "../conversations/session-paths.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
 import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
-import { getDesktopMcpTaskCoordinator, getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
-import { forgetMessageAnnotations } from "../message-annotations/host.js";
+import { getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
 import { notify } from "../notifications/index.js";
 import { SessionTurnNotificationController } from "../notifications/session-turn-notification-controller.js";
 import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
@@ -100,18 +80,14 @@ import {
 	tryNormalizeDynamicSystemPromptOperations,
 } from "../plugins/system-prompt-operations.js";
 import { getSharedRuntime } from "../runtime.js";
-import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
 import {
 	DEFAULT_CONVERSATION_CWD,
 	DEFAULT_CONVERSATION_SESSION_DIR,
 	DEFAULT_IM_CONVERSATION_CWD,
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
 	readConfigSync,
-	readDesktopConfig,
-	updateDesktopConfig,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
-import { readSettings, updateSettings } from "./settings.js";
 
 export { ensureConversationSubCwd, resolveSessionDirForCwd } from "../conversations/session-paths.js";
 
@@ -171,76 +147,29 @@ const pluginLog = getAppLogger("plugin");
 
 const CHANNELS = {
 	CREATE: "vetta:session:create",
-	LIST_PROJECTS: "vetta:session:list-projects",
-	LIST_SESSIONS: "vetta:session:list-sessions",
 	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
-	CONTINUE: "vetta:session:continue",
-	RETRY: "vetta:session:retry",
-	ABORT: "vetta:session:abort",
-	QUEUE_STATE: "vetta:session:queue-state",
-	QUEUE_CONTEXT_COMPACTION: "vetta:session:queue-context-compaction",
-	QUEUE_REMOVE: "vetta:session:queue-remove",
-	QUEUE_REORDER: "vetta:session:queue-reorder",
-	QUEUE_SEND_NOW: "vetta:session:queue-send-now",
-	QUEUE_RESUME: "vetta:session:queue-resume",
-	QUEUE_CLEAR: "vetta:session:queue-clear",
-	CLEAR_TODOS: "vetta:session:clear-todos",
-	GOAL_GET_STATE: "vetta:session:goal-get-state",
-	GOAL_START: "vetta:session:goal-start",
-	GOAL_PAUSE: "vetta:session:goal-pause",
-	GOAL_RESUME: "vetta:session:goal-resume",
-	GOAL_CLEAR: "vetta:session:goal-clear",
 	SUBSCRIBE: "vetta:session:subscribe",
 	UNSUBSCRIBE: "vetta:session:unsubscribe",
-	UPDATE_SETTINGS: "vetta:session:update-settings",
-	SET_EXECUTION_MODE: "vetta:session:set-execution-mode",
-	SET_GLOBAL_EXECUTION_MODE: "vetta:session:set-global-execution-mode",
-	/** 设置「新会话默认工作模式」。不影响任何已存在会话：mode 在会话创建时固化。 */
-	SET_GLOBAL_AGENT_MODE: "vetta:session:set-global-agent-mode",
 	/** 默认工作模式已变更；仅用于各窗口新会话页 toggle 的显示同步，不改变任何活跃会话的行为。 */
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
 	GET_STATE: "vetta:session:get-state",
 	GET_MESSAGES: "vetta:session:get-messages",
-	DELETE: "vetta:session:delete",
-	/** 项目硬删除时清空该 cwd 名下的会话存储；会话不在项目目录内，见 project-session-purge。 */
-	DELETE_ALL_FOR_CWD: "vetta:session:delete-all-for-cwd",
-	RENAME: "vetta:session:rename",
-	AUTO_TITLE: "vetta:session:auto-title",
-	NEXT_PROMPT_SUGGESTIONS: "vetta:session:next-prompt-suggestions",
 	DISPOSE: "vetta:session:dispose",
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
-	NAVIGATE_FOR_EDIT: "vetta:session:navigate-for-edit",
-	SWITCH_BRANCH: "vetta:session:switch-branch",
-	DELETE_MESSAGE: "vetta:session:delete-message",
-	REPLACE_LAST_USER_MESSAGE: "vetta:session:replace-last-user-message",
-	FORK_SESSION: "vetta:session:fork-session",
-	GET_SESSION_PATH: "vetta:session:get-session-path",
-	SET_GLOBAL_THINKING: "vetta:session:set-global-thinking-level",
-	GET_GLOBAL_THINKING: "vetta:session:get-global-thinking-level",
-	GET_PERSONAS: "vetta:session:get-personas",
-	GET_AGENT_MODES: "vetta:session:get-agent-modes",
-	GET_PERSONALIZATION: "vetta:session:get-personalization",
-	SET_PERSONALIZATION: "vetta:session:set-personalization",
 	EVENT: "vetta:session:event",
 	QUESTION_REQUEST: "vetta:session:question-request",
 	QUESTION_LIST_PENDING: "vetta:session:question-list-pending",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
 	QUESTION_RESPONSE: "vetta:session:question-response",
-	PLAN_MODE_GET_STATE: "vetta:session:plan-mode-get-state",
-	PLAN_MODE_SET_PERMISSION_MODE: "vetta:session:plan-mode-set-permission-mode",
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
 	PLAN_REVIEW_LIST_PENDING: "vetta:session:plan-review-list-pending",
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
 	PLAN_REVIEW_RESPONSE: "vetta:session:plan-review-response",
 	MCP_ELICITATION_REQUEST: "vetta:session:mcp-elicitation-request",
-	MCP_ELICITATION_LIST_PENDING: "vetta:session:mcp-elicitation-list-pending",
 	MCP_ELICITATION_RESOLVED: "vetta:session:mcp-elicitation-resolved",
 	MCP_ELICITATION_RESPONSE: "vetta:session:mcp-elicitation-response",
 	MCP_TASKS_CHANGED: "vetta:session:mcp-tasks-changed",
-	MCP_TASKS_LIST: "vetta:session:mcp-tasks-list",
-	MCP_TASKS_CANCEL: "vetta:session:mcp-tasks-cancel",
-	MCP_TASKS_CLEAR_FINISHED: "vetta:session:mcp-tasks-clear-finished",
 	MCP_APP_SURFACE_GET: "vetta:session:mcp-app-surface-get",
 	MCP_APP_CALL_TOOL: "vetta:session:mcp-app-call-tool",
 	MCP_APP_READ_RESOURCE: "vetta:session:mcp-app-read-resource",
@@ -250,15 +179,7 @@ const CHANNELS = {
 	SANDBOX_GRANTS_LIST: "vetta:session:sandbox-grants-list",
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
-	BACKGROUND_TASKS_CLEAR_FINISHED: "vetta:session:background-tasks-clear-finished",
-	BACKGROUND_TASKS_KILL: "vetta:session:background-tasks-kill",
-	SUBAGENT_INTERRUPT: "vetta:session:subagent-interrupt",
-	LIST_RUNNING: "vetta:session:list-running",
-	/** 有会话在跑的项目 cwd 列表；会话路径无法反推项目，见处理器上的说明。 */
-	LIST_RUNNING_CWDS: "vetta:session:list-running-cwds",
 	RUNNING_CHANGED: "vetta:session:running-changed",
-	/** Renderer → Main：草稿非空镜像，供中断续接否决。 */
-	INTERRUPT_DRAFT: "vetta:session:interrupt-draft",
 	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
@@ -407,19 +328,12 @@ function assertMcpAppSender(sender: WebContents, expected: WebContents): void {
 }
 
 export function registerSessionIpc(webContents: WebContents): () => void {
-	const resolveDefaultExecutionMode = async (): Promise<SessionExecutionMode> => {
-		const config = await readDesktopConfig();
-		return config.defaultExecutionMode;
-	};
-
 	const runtime = getSharedRuntime();
-	const goalController = new DesktopGoalController(runtime);
 	const pluginRuntimeSource = getDesktopCodingAgentPluginRuntimeSource();
 	const conversationService = getDesktopConversationService();
 	const questionBroker = getDesktopUserQuestionBroker();
 	const mcpElicitationBroker = getDesktopMcpElicitationBroker();
 	const mcpTaskRegistry = getDesktopMcpTaskRegistry();
-	const mcpTaskCoordinator = getDesktopMcpTaskCoordinator();
 	const mcpAppRegistry = getDesktopMcpAppRegistry();
 	const sandboxAuthorizationBroker = getDesktopSandboxAuthorizationBroker();
 	const unsubscribeConversationListChanged = onConversationListChanged((event) => {
@@ -977,14 +891,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		},
 	);
 
-	ipcMain.handle(CHANNELS.LIST_PROJECTS, async () => {
-		return listRuntimeSessionProjects();
-	});
-
-	ipcMain.handle(CHANNELS.LIST_SESSIONS, async (_event, cwd: unknown) => {
-		assertNonEmptyString(cwd, "cwd");
-		return listSessionHistory(cwd);
-	});
+	// 目录四通道（list-projects/list-sessions/list-running/list-running-cwds）
+	// 已迁到 Host 合同 session.*（TASK-0474；sessions-changed 推送事件仍走旧 IPC）。
 
 	ipcMain.handle(SESSION_SEARCH_CHANNELS.start, (event, requestId: unknown, request: unknown) => {
 		desktopSessionSearch.start(event.sender, requestId, request);
@@ -1010,194 +918,29 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return conversationService.promptInteractiveSession(sessionId, req, sessionCwdMap.get(sessionId));
 	});
 
-	ipcMain.handle(CHANNELS.CONTINUE, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		clearSessionManualStop(sessionId);
-		await runtime.continue(sessionId);
-	});
+	// continue/abort/delete/delete-all-for-cwd 四通道已迁到 Host 合同
+	// session.*（TASK-0475；manual-stop 标记、所有权守卫与 ADR-0007
+	// 子目录回收语义随实现迁移）。
 
 	// 失败/中断后的显式续跑入口（footer「继续」条）：kernel retry 重跑最后一轮并
 	// 丢弃失败的助手尝试；忙碌/recovery_required 由 kernel 拒绝并透传给渲染端。
-	ipcMain.handle(CHANNELS.RETRY, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		clearSessionManualStop(sessionId);
-		await runtime.retry(sessionId);
-	});
+	// retry 与 interrupt-draft 两通道已迁到 Host 合同 session.*（TASK-0473）。
 
-	ipcMain.handle(CHANNELS.ABORT, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		markSessionManualStop(sessionId);
-		// Stopping is unconditional: the turn comes down together with the work it
-		// spawned. Subagents and background commands outlive the turn by design, so
-		// cancelling the turn alone would leave workflows running behind the button.
-		await Promise.allSettled([runtime.abort(sessionId), stopSessionBackgroundWork(runtime, sessionId)]);
-	});
-
-	ipcMain.handle(CHANNELS.INTERRUPT_DRAFT, (_event, sessionId: unknown, nonEmpty: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		if (typeof nonEmpty !== "boolean") throw new Error("nonEmpty must be boolean");
-		setSessionInterruptDraftNonEmpty(sessionId, nonEmpty);
-	});
+	// interrupt-draft 已迁到 Host 合同 session.setInterruptDraftNonEmpty（TASK-0473）。
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
-	ipcMain.handle(CHANNELS.QUEUE_STATE, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.getQueueState(sessionId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_CONTEXT_COMPACTION, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.queueSessionContextCompaction(sessionId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_REMOVE, async (_event, sessionId: unknown, itemId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(itemId, "itemId");
-		return runtime.removeQueuedMessage(sessionId, itemId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_REORDER, async (_event, sessionId: unknown, itemIds: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		if (!Array.isArray(itemIds) || itemIds.some((id) => typeof id !== "string" || id.length === 0)) {
-			throw new Error("itemIds must be a non-empty-string array");
-		}
-		runtime.reorderQueuedMessages(sessionId, itemIds as string[]);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_SEND_NOW, async (_event, sessionId: unknown, itemId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(itemId, "itemId");
-		return runtime.sendQueuedMessageNow(sessionId, itemId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_RESUME, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		await runtime.resumeQueue(sessionId);
-	});
-	ipcMain.handle(CHANNELS.QUEUE_CLEAR, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		runtime.clearQueue(sessionId);
-	});
+	// 输入队列七通道已迁到 Host 合同 session.*（TASK-0467；queue-state 推送事件仍走旧 IPC）。
 
-	ipcMain.handle(CHANNELS.CLEAR_TODOS, async (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_TODO_CLEAR, undefined);
-	});
+	// goal 五通道与 clear-todos 已迁到 Host 合同 session.*（TASK-0469；
+	// goal 编排保留在 DesktopGoalController，Host 侧经同一编排点桥接）。
 
-	ipcMain.handle(CHANNELS.GOAL_GET_STATE, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return goalController.read(sessionId);
-	});
-	ipcMain.handle(CHANNELS.GOAL_START, (_event, sessionId: unknown, objective: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(objective, "objective");
-		return goalController.start(sessionId, objective);
-	});
-	ipcMain.handle(CHANNELS.GOAL_PAUSE, (_event, sessionId: unknown, goalId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(goalId, "goalId");
-		return goalController.pause(sessionId, goalId);
-	});
-	ipcMain.handle(CHANNELS.GOAL_RESUME, (_event, sessionId: unknown, goalId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(goalId, "goalId");
-		return goalController.resume(sessionId, goalId);
-	});
-	ipcMain.handle(CHANNELS.GOAL_CLEAR, (_event, sessionId: unknown, goalId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(goalId, "goalId");
-		return goalController.clear(sessionId, goalId);
-	});
-
-	ipcMain.handle(CHANNELS.UPDATE_SETTINGS, async (_event, sessionId: unknown, partialSettings: SettingsPatch) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		await runtime.updateSettings(sessionId, partialSettings);
-	});
-	ipcMain.handle(CHANNELS.SET_EXECUTION_MODE, async (_event, sessionId: unknown, mode: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertExecutionMode(mode);
-		const sessionPath = runtime.getSessionPath(sessionId);
-		const sessionCwd = sessionPath ? await readSessionCwdFromHeader(sessionPath) : undefined;
-		assertProjectSupportsExecutionMode(sessionCwd, mode as SessionExecutionMode);
-		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		await runtime.setExecutionMode(sessionId, mode as SessionExecutionMode);
-	});
-
-	ipcMain.handle(CHANNELS.SET_GLOBAL_EXECUTION_MODE, async (_event, mode: unknown) => {
-		assertExecutionMode(mode);
-		await assertSandboxAvailableForMode(mode as SessionExecutionMode, resolveDefaultExecutionMode);
-		await updateDesktopConfig((settings) => ({
-			...settings,
-			defaultExecutionMode: mode as SessionExecutionMode,
-		}));
-	});
-
-	// 只更新「新会话默认工作模式」。工作模式在会话创建时固化、会话内不可变，
-	// 因此这里不重建任何活跃 session 的插件配置，也不重载 renderer 插件清单
-	// （模式已不再排除任何插件，重建出来的是同一份配置）。
-	// 广播仅用于各窗口新会话页 toggle 的显示同步。
-	ipcMain.handle(CHANNELS.SET_GLOBAL_AGENT_MODE, async (_event, mode: unknown) => {
-		const next = isAgentMode(mode) ? mode : DEFAULT_AGENT_MODE;
-		await updateDesktopConfig((settings) => ({ ...settings, defaultAgentMode: next }));
-		for (const win of BrowserWindow.getAllWindows()) {
-			win.webContents.send(CHANNELS.AGENT_MODE_CHANGED, next);
-		}
-	});
-
-	ipcMain.handle(CHANNELS.SET_GLOBAL_THINKING, (_event, level: unknown) => {
-		assertNonEmptyString(level, "level");
-		// Broadcast to all open sessions
-		runtime.updateGlobalThinkingLevel(level as any);
-		// Persist to settings.json
-		updateSettings((settings) => {
-			settings.defaultThinkingLevel = level;
-		});
-	});
-
-	ipcMain.handle(CHANNELS.GET_GLOBAL_THINKING, () => {
-		const settings = readSettings();
-		return (settings.defaultThinkingLevel as string) ?? "off";
-	});
-
-	// 个性化人设清单：唯一来源是 coding-agent 注册表，只下发 id/label/description，不含提示词正文。
-	ipcMain.handle(CHANNELS.GET_PERSONAS, () => {
-		return PERSONAS.map((p) => ({ id: p.id, label: p.label, description: p.description }));
-	});
-
-	// 工作模式注册表：唯一来源是 main/agent-modes 的 modes/*.md（ADR-0071），只下发
-	// id/label/description/icon，不含提示词正文。renderer 的模式 toggle 据此遍历渲染，
-	// 新增模式无需改任何 UI 代码。
-	ipcMain.handle(CHANNELS.GET_AGENT_MODES, () => {
-		return MODE_PROMPTS.map((m) => ({
-			id: m.id,
-			label: m.label,
-			description: m.description,
-			icon: m.icon,
-		}));
-	});
+	// 执行模式与全局设置六通道（update-settings/set-execution-mode/
+	// set-global-{execution-mode,agent-mode,thinking-level}/get-agent-modes）
+	// 已迁到 Host 合同 session.*（TASK-0472；sandbox 可用断言与落盘语义随实现
+	// 迁移，AGENT_MODE_CHANGED 显示同步广播留旧 IPC 事件面）。
 
 	// 个性化配置（人设 + 自定义指令）。仅写盘；运行中的 session 在下一轮 prompt 经
 	// settingsManager.reloadPersonalizationSettings() 懒重建生效，无需重启或广播。
-	ipcMain.handle(CHANNELS.GET_PERSONALIZATION, () => {
-		const settings = readSettings();
-		const p = settings.personalization as { personaId?: string; customPrompt?: string } | undefined;
-		return {
-			personaId: p?.personaId ?? DEFAULT_PERSONA_ID,
-			customPrompt: p?.customPrompt ?? "",
-		};
-	});
-
-	ipcMain.handle(CHANNELS.SET_PERSONALIZATION, (_event, input: unknown) => {
-		if (typeof input !== "object" || input === null) {
-			throw new Error("Invalid personalization payload");
-		}
-		const { personaId, customPrompt } = input as { personaId?: unknown; customPrompt?: unknown };
-		if (typeof personaId !== "string" || !PERSONAS.some((p) => p.id === personaId)) {
-			throw new Error("Invalid personaId");
-		}
-		if (typeof customPrompt !== "string") {
-			throw new Error("Invalid customPrompt");
-		}
-		updateSettings((settings) => {
-			settings.personalization = { personaId, customPrompt };
-		});
-	});
-
 	ipcMain.handle(CHANNELS.GET_STATE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		const state = runtime.getState(sessionId);
@@ -1225,132 +968,17 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return sliceHistoryPage(runtime.getFullHistory(sessionId), parseHistoryPageRequest(options));
 	});
 
-	ipcMain.handle(CHANNELS.NAVIGATE_FOR_EDIT, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.navigateForEdit(sessionId, entryId);
-	});
+	// 会话历史分支五通道（navigate-for-edit/switch-branch/delete-message/
+	// replace-last-user-message/fork-session）已迁到 Host 合同 session.*（TASK-0468）。
 
-	ipcMain.handle(CHANNELS.SWITCH_BRANCH, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.switchBranch(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.DELETE_MESSAGE, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.deleteMessage(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.REPLACE_LAST_USER_MESSAGE, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.replaceLastUserMessage(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.FORK_SESSION, async (_event, sessionId: unknown, entryId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(entryId, "entryId");
-		return runtime.forkSession(sessionId, entryId);
-	});
-
-	ipcMain.handle(CHANNELS.DELETE, async (_event, sessionPath: unknown) => {
-		assertNonEmptyString(sessionPath, "sessionPath");
-		await assertOrdinaryConversationPath(sessionPath);
-		// ADR-0007: 「对话」项目下的 session cwd 是独立子目录；删除 session 时
-		// 连带回收子目录里的产物。读 header 先取 cwd，再 delete，最后 rm 子目录。
-		const cwdFromHeader = await readSessionCwdFromHeader(sessionPath);
-		await runtime.deleteSession(sessionPath);
-		await forgetMessageAnnotations(sessionPath);
-		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
-			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
-				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);
-			});
-		}
-	});
-
-	ipcMain.handle(CHANNELS.DELETE_ALL_FOR_CWD, async (_event, cwd: unknown) => {
-		assertNonEmptyString(cwd, "cwd");
-		return purgeProjectSessions(cwd, {
-			listSessions: (target) => listSessionHistory(target),
-			deleteSession: (sessionPath) => runtime.deleteSession(sessionPath),
-			// 分片目录是新会话的落点；`<项目>/.vetta/sessions` 是存量兼容位置，随项目目录
-			// 一起消失，这里不重复处理（见 composition.resolveDesktopRuntimeSessionRoots）。
-			resolveSessionDirs: (target) => [codingAgentSessionShardPath(target)],
-			removeDirectory: (dir) => rm(dir, { recursive: true, force: true }),
-			logError: (message, ...args) => sessionLog.error(message, ...args),
-		});
-	});
-
-	ipcMain.handle(CHANNELS.RENAME, async (_event, sessionPath: unknown, name: unknown) => {
-		assertNonEmptyString(sessionPath, "sessionPath");
-		assertNonEmptyString(name, "name");
-		await assertOrdinaryConversationPath(sessionPath);
-		await runtime.renameSession(sessionPath, name);
-	});
-
-	ipcMain.handle(
-		CHANNELS.AUTO_TITLE,
-		async (_event, sessionId: unknown, userText: unknown, assistantText: unknown): Promise<string | null> => {
-			assertNonEmptyString(sessionId, "sessionId");
-			if (typeof userText !== "string" || typeof assistantText !== "string") {
-				throw new Error("Invalid auto-title payload");
-			}
-			if (userText.trim().length === 0 && assistantText.trim().length === 0) return null;
-			const title = await runtime.invokeSessionExtension(sessionId, CODING_AGENT_SESSION_TITLE_GENERATE, {
-				userText,
-				assistantText,
-			});
-			if (title) await runtime.renameSessionById(sessionId, title);
-			return title;
-		},
-	);
-
-	ipcMain.handle(
-		CHANNELS.NEXT_PROMPT_SUGGESTIONS,
-		async (_event, sessionId: unknown, conversation: unknown): Promise<string[]> => {
-			assertNonEmptyString(sessionId, "sessionId");
-			if (typeof conversation !== "string" || conversation.trim().length === 0) return [];
-			return [
-				...(await runtime.invokeSessionExtension(sessionId, CODING_AGENT_NEXT_PROMPT_SUGGESTIONS, {
-					conversation,
-				})),
-			];
-		},
-	);
+	// delete/delete-all-for-cwd 详见顶部生命周期迁移注释（TASK-0475）。
 
 	ipcMain.handle(CHANNELS.DISPOSE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");
 		await disposeInteractiveSession(sessionId);
 	});
 
-	ipcMain.handle(CHANNELS.GET_SESSION_PATH, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.getSessionPath(sessionId);
-	});
-
-	ipcMain.handle(CHANNELS.LIST_RUNNING, () => [
-		...new Set([
-			...runtime.getRunningSessionPaths(),
-			...agentTeamSessionService.getRunningCoordinationSessionPaths(),
-		]),
-	]);
-
-	/**
-	 * 当前有会话在跑的项目 cwd（去重）。
-	 *
-	 * 为什么不让调用方拿 LIST_RUNNING 的路径自己反推：会话文件默认落在
-	 * `<agentDir>/sessions/--编码后的 cwd--/` 下，而那个编码把 `/`、`\`、`:` 全压成 `-`
-	 * 且不可逆，`my-project` 与 `my/project` 会撞进同一个分片；`<cwd>/.vetta/sessions`
-	 * 等别的布局也同时存在。唯一可靠的来源是会话头里的 cwd。
-	 * 运行中的会话通常只有个位数，逐个读头的代价可以忽略。
-	 */
-	ipcMain.handle(CHANNELS.LIST_RUNNING_CWDS, async () => {
-		const paths = runtime.getRunningSessionPaths();
-		const cwds = await Promise.all(paths.map((path) => readSessionCwdFromHeader(path).catch(() => undefined)));
-		return [...new Set(cwds.filter((cwd): cwd is string => typeof cwd === "string" && cwd.length > 0))];
-	});
+	// get-session-path 已迁到 Host 合同 session.getSessionPath（TASK-0473）。
 
 	ipcMain.handle(CHANNELS.CLEAR_DEFAULT_CONVERSATION, async (_event, scope: unknown) => {
 		// 物理分家后（ADR-0005）每个 scope 对应一个独立 cwd，互不干扰：
@@ -1479,8 +1107,9 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	});
 
 	ipcMain.handle(CHANNELS.QUESTION_LIST_PENDING, () => questionBroker.listPendingQuestions());
-	ipcMain.handle(CHANNELS.MCP_ELICITATION_LIST_PENDING, () => mcpElicitationBroker.listPending());
-
+	// MCP 任务与待答清单四通道（mcp-tasks-{list,cancel,clear-finished}/
+	// mcp-elicitation-list-pending）已迁到 Host 合同 session.*（TASK-0476；
+	// MCP_TASKS_CHANGED 推送与 elicitation 应答仍走旧 IPC）。
 	ipcMain.handle(CHANNELS.QUESTION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");
 		const resolve = questionMap.get(requestId);
@@ -1493,32 +1122,12 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		assertNonEmptyString(requestId, "requestId");
 		planReviewBroker.respond(requestId, result);
 	});
-	ipcMain.handle(CHANNELS.PLAN_MODE_GET_STATE, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.invokeSessionExtensionSync(sessionId, CODING_AGENT_PLAN_MODE_STATE_READ, undefined);
-	});
-	ipcMain.handle(CHANNELS.PLAN_MODE_SET_PERMISSION_MODE, (_event, sessionId: unknown, permissionMode: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		if (!isCodingAgentPermissionMode(permissionMode)) throw new Error("Invalid permission mode");
-		return runtime.invokeSessionExtensionSync(sessionId, CODING_AGENT_PERMISSION_MODE_SET, { permissionMode });
-	});
+	// plan-mode 两通道（get-state/set-permission-mode）已迁到 Host 合同
+	// session.*（TASK-0471；plan-review request/response 随事件原语另片）。
 
 	ipcMain.handle(CHANNELS.MCP_ELICITATION_RESPONSE, (_event, requestId: unknown, result: unknown) => {
 		assertNonEmptyString(requestId, "requestId");
 		mcpElicitationMap.get(requestId)?.(normalizeMcpElicitationResponse(result));
-	});
-	ipcMain.handle(CHANNELS.MCP_TASKS_LIST, (_event, sessionId: unknown) => {
-		if (sessionId === undefined) return mcpTaskRegistry.listPublic();
-		assertNonEmptyString(sessionId, "sessionId");
-		return mcpTaskRegistry.listPublic(sessionId);
-	});
-	ipcMain.handle(CHANNELS.MCP_TASKS_CANCEL, (_event, id: unknown) => {
-		assertNonEmptyString(id, "MCP task id");
-		return mcpTaskCoordinator.cancel(id);
-	});
-	ipcMain.handle(CHANNELS.MCP_TASKS_CLEAR_FINISHED, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return mcpTaskRegistry.clearTerminal(sessionId);
 	});
 	ipcMain.handle(CHANNELS.MCP_APP_SURFACE_GET, (event, id: unknown) => {
 		assertMcpAppSender(event.sender, webContents);
@@ -1599,23 +1208,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		return runtime.revokeAllSandboxGrants(sessionId);
 	});
 
-	ipcMain.handle(CHANNELS.BACKGROUND_TASKS_CLEAR_FINISHED, (_event, sessionId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_BACKGROUND_TASKS_CLEAR_FINISHED, undefined);
-	});
-
-	ipcMain.handle(CHANNELS.BACKGROUND_TASKS_KILL, (_event, sessionId: unknown, taskId: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(taskId, "taskId");
-		return runtime.invokeSessionExtension(sessionId, CODING_AGENT_BACKGROUND_TASK_KILL, { taskId });
-	});
-
-	ipcMain.handle(CHANNELS.SUBAGENT_INTERRUPT, async (_event, sessionId: unknown, target: unknown) => {
-		assertNonEmptyString(sessionId, "sessionId");
-		assertNonEmptyString(target, "target");
-		const snap = await runtime.invokeSessionExtension(sessionId, CODING_AGENT_SUBAGENT_INTERRUPT, { target });
-		return snap != null;
-	});
+	// 后台任务三通道（clear-finished/kill/subagent-interrupt）已迁到 Host 合同
+	// session.*（TASK-0473）。
 
 	ipcMain.handle(CHANNELS.SUBSCRIBE, async (_event, sessionId: unknown) => {
 		assertNonEmptyString(sessionId, "sessionId");

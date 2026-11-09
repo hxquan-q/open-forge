@@ -30,15 +30,29 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0470` | `done` | PLAN-0029 | [会话标题与建议子域迁移](TASK-0470-session-title-host-domain.md) |
+| `TASK-0471` | `done` | PLAN-0029 | [会话 plan-mode 子域迁移](TASK-0471-session-plan-mode-host-domain.md) |
+| `TASK-0472` | `done` | PLAN-0029 | [会话执行模式与全局设置子域迁移](TASK-0472-session-execution-host-domain.md) |
+| `TASK-0474` | `done` | PLAN-0029 | [会话目录子域迁移](TASK-0474-session-catalog-host-domain.md) |
+| `TASK-0475` | `done` | PLAN-0029 | [会话生命周期控制与删除子域迁移](TASK-0475-session-lifecycle-host-domain.md) |
+| `TASK-0477` | `in_progress` | PLAN-0029 | [会话事件订阅原语（port 事件帧）](TASK-0477-session-event-subscription-primitive.md) |
+| `TASK-0465` | `done` | PLAN-0029 | [会话流领域迁移调查与切片规划](TASK-0465-session-stream-migration-investigation.md) |
+| `TASK-0464` | `done` | PLAN-0029 | [Host utilityProcess 承载（Phase 3 第二步）](TASK-0464-host-utility-process.md) |
+| `TASK-0463` | `done` | PLAN-0029 | [Host MessagePort transport（Phase 3 第一步）](TASK-0463-host-messageport-transport.md) |
+| `TASK-0462` | `done` | PLAN-0029 | [MCP 无凭证子域迁移到 Host 合同](TASK-0462-mcp-noncredential-host-domain.md) |
+| `TASK-0461` | `done` | PLAN-0029 | [模型探测与余额通道迁移到 Host 合同](TASK-0461-models-probe-host-domain.md) |
+| `TASK-0460` | `done` | — | [weknora AC-20 时序用例偶发修复](TASK-0460-weknora-ac20-flake-fix.md) |
+| `TASK-0459` | `done` | PLAN-0029 | [模型配置域迁移到 Host 合同](TASK-0459-models-config-host-domain.md) |
+| `TASK-0458` | `done` | PLAN-0029 | [模型预设目录迁移到 Host 合同](TASK-0458-models-preset-catalog-host-domain.md) |
 | `TASK-0457` | `done` | — | [docs-site MDX frontmatter 修复](TASK-0457-docs-site-mdx-frontmatter-fix.md) |
-| `TASK-0456` | `verifying` | — | [autonomy 文档同步推送后候选核验](TASK-0456-autonomy-docs-candidate-verify-sync.md) |
-| `TASK-0455` | `in_progress` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
-| `TASK-0454` | `in_progress` | PLAN-0029 | [评审独立：只读候选与独立上下文](TASK-0454-controller-review-isolation.md) |
-| `TASK-0453` | `in_progress` | PLAN-0029 | [host-protocol 骨架、进程内 Host 与“设置”领域试点](TASK-0453-host-protocol-in-process-host-pilot.md) |
+| `TASK-0456` | `done` | — | [autonomy 文档同步推送后候选核验](TASK-0456-autonomy-docs-candidate-verify-sync.md) |
+| `TASK-0455` | `done` | PLAN-0029 | [requirement-run 条款级证据关联](TASK-0455-requirement-run-clause-evidence.md) |
+| `TASK-0454` | `done` | PLAN-0029 | [评审独立：只读候选与独立上下文](TASK-0454-controller-review-isolation.md) |
+| `TASK-0453` | `verifying` | PLAN-0029 | [host-protocol 骨架、进程内 Host 与“设置”领域试点](TASK-0453-host-protocol-in-process-host-pilot.md) |
 | `TASK-0452` | `done` | PLAN-0029 | [真实 adapter 端到端验收任务](TASK-0452-controller-real-adapter-e2e.md) |
-| `TASK-0451` | `in_progress` | PLAN-0029 | [候选提交与 CI 证据绑定](TASK-0451-controller-candidate-ci-review-binding.md) |
-| `TASK-0450` | `in_progress` | PLAN-0029 | [研发控制器集成目标配置化](TASK-0450-controller-integration-target-config.md) |
-| `TASK-0449` | `in_progress` | PLAN-0029 | [Desktop 包边界小修与仓库地图补全](TASK-0449-desktop-boundary-small-fixes.md) |
+| `TASK-0451` | `done` | PLAN-0029 | [候选提交与 CI 证据绑定](TASK-0451-controller-candidate-ci-review-binding.md) |
+| `TASK-0450` | `done` | PLAN-0029 | [研发控制器集成目标配置化](TASK-0450-controller-integration-target-config.md) |
+| `TASK-0449` | `done` | PLAN-0029 | [Desktop 包边界小修与仓库地图补全](TASK-0449-desktop-boundary-small-fixes.md) |
 | `TASK-0448` | `in_progress` | PLAN-0029 | [Desktop 分进程资源基线测量脚本与基线记录](TASK-0448-desktop-resource-baseline-script.md) |
 | `TASK-0446` | `verifying` | — | [Use portable local temp fixtures for remote POSIX path tests (BUG-0181)](TASK-0446-runtime-node-remote-path-tests-use-posix-tmp.md) |
 | `TASK-0445` | `verifying` | — | [Select the exposed chunk in the plugin-vite shared React test (BUG-0180)](TASK-0445-plugin-vite-test-selects-bootstrap-chunk.md) |

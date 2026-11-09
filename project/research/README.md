@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| Host 出进程 transport 预研：Electron 41 + speech-input-host 先例可行；建议两步走（先 MessagePort 换线不搬进程，再 utilityProcess + owner 插槽拆 clipboard/凭据面）；仅调研，切片未实施 | [RESEARCH-0050](RESEARCH-0050-host-process-transport.md) |
 | Desktop 宿主拆分与研发控制器可信闭环：对照 17 个参考项目与许可，否决整体迁 Tauri/Rust/Viva，定进程拆分顺序与控制器首批缺口；仅调研，候选 Task 未建立 | [RESEARCH-0049](RESEARCH-0049-desktop-host-and-controller-refactor-references.md) |
 | Agent 指令、DeepSeek 决策记录与跨工具开发范式优化；仅调研，候选尚未实施 | [RESEARCH-0048](RESEARCH-0048-agent-guidance-and-development-paradigms.md) |
 | Pi codemode worker 准入：全进程容量、FIFO/超时/取消、旧报错与子代理限制分层，对照本仓既有队列和有界收尾；仅调研 | [RESEARCH-0047](RESEARCH-0047-pi-codemode-worker-admission.md) |

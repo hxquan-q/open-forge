@@ -6,9 +6,12 @@ import type { HostRequest, HostResponse } from "./envelope.js";
 import { HOST_PROTOCOL_ERROR_CODES, HostProtocolError, type HostProtocolErrorCode } from "./errors.js";
 import type { HostMethodDefinition } from "./method.js";
 import type { HostOwnerRegistry } from "./owners.js";
+import type { HostEventSink } from "./port-bridge.js";
 
 export interface HostCallContext {
 	readonly owners: HostOwnerRegistry;
+	/** 连接级事件发射器：仅 port 服务路径提供；invoke 回退通道缺省（事件走旧通道）。 */
+	readonly events?: HostEventSink;
 }
 
 export type HostMethodHandler<D extends HostMethodDefinition> = (
@@ -69,7 +72,7 @@ export class HostDispatcher {
 		return [...this.#methods.keys()].sort();
 	}
 
-	async handle(raw: unknown): Promise<HostResponse> {
+	async handle(raw: unknown, options?: { readonly events?: HostEventSink }): Promise<HostResponse> {
 		const request = asRequest(raw);
 		if (!request)
 			return failure(HOST_PROTOCOL_ERROR_CODES.INVALID_REQUEST, "Host request must be { method, params }");
@@ -93,7 +96,7 @@ export class HostDispatcher {
 		}
 		let result: unknown;
 		try {
-			result = await handler(request.params, { owners: this.owners });
+			result = await handler(request.params, { owners: this.owners, events: options?.events });
 		} catch (error) {
 			if (error instanceof HostProtocolError) return failure(error.code, error.message);
 			return failure(HOST_PROTOCOL_ERROR_CODES.INTERNAL, error instanceof Error ? error.message : String(error));

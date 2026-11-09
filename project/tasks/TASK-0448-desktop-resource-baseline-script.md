@@ -31,9 +31,9 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -112,3 +112,7 @@ updated: 2026-11-06
 - 本次仅保存候选，不表示已集成本地 main、完成真实资源基线或通过开发候选验收；`integration_status` 保持 pending。
 - 提交前回读当前候选还包含应用数据根隔离、计时器上限、进程创建时间识别、系统工具绝对路径及 readline 信号转发等新增内容；本会话保留并核对这些改动，补跑相同 4 个定向文件，共 191 例通过。此前 179 例和独立审查证据仅对应上一轮增量，不冒充新增内容的独立或实机验收。
 - 预提交检查规范化了 Node 路径导入顺序。提交期间的后续候选还包含根进程退出后的 PID 复用保护及扫描根真实路径校验，属于行为加固；对应 README 与本条同步澄清，不能将整个后续候选称为仅格式化。全量门禁失败与真实进程未实测边界继续保留。
+
+## 集成补记（2026-11-07）
+
+- 基线脚本与配套修复已随本地 `main` 集成并推送 `origin/dev`（16d7e620f），`integration_status` 补记为 integrated；真实资源基线测量仍未执行（需当前任务授权），Task 保持 in_progress。

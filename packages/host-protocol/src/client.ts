@@ -43,3 +43,5 @@ export function createHostClient<M extends HostMethodSignatureMap>(transport: Ho
 export type { HostRequest, HostResponse } from "./envelope.js";
 export type { HostProtocolErrorCode } from "./errors.js";
 export { HOST_PROTOCOL_ERROR_CODES, HostProtocolError, isHostProtocolErrorCode } from "./errors.js";
+// port-bridge 仅依赖 envelope/errors，不加载 typebox，随 client 子路径供 preload 打包（TASK-0463）。
+export { type PortLike, portHostTransport, serveHostOnPort } from "./port-bridge.js";

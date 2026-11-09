@@ -24,32 +24,47 @@ describe("createSessionApi trace propagation", () => {
 	});
 
 	it("exposes MCP Task snapshot, cancellation and cleanup channels", async () => {
-		const invoke = vi.fn(async () => undefined);
-		const ipc = { invoke } as unknown as IpcRenderer;
+		const invoke = vi.fn(async () => ({ ok: true, result: [] }));
+		const ipc = { invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
 		await session.listMcpTasks("session-1");
 		await session.cancelMcpTask("task-record-1");
 		await session.clearFinishedMcpTasks("session-1");
 
-		expect(invoke).toHaveBeenNthCalledWith(1, "vetta:session:mcp-tasks-list", "session-1");
-		expect(invoke).toHaveBeenNthCalledWith(2, "vetta:session:mcp-tasks-cancel", "task-record-1");
-		expect(invoke).toHaveBeenNthCalledWith(3, "vetta:session:mcp-tasks-clear-finished", "session-1");
+		expect(invoke).toHaveBeenNthCalledWith(1, "vetta:host:request", {
+			method: "session.mcpTasksList",
+			params: { sessionId: "session-1" },
+		});
+		expect(invoke).toHaveBeenNthCalledWith(2, "vetta:host:request", {
+			method: "session.mcpTasksCancel",
+			params: { id: "task-record-1" },
+		});
+		expect(invoke).toHaveBeenNthCalledWith(3, "vetta:host:request", {
+			method: "session.mcpTasksClearFinished",
+			params: { sessionId: "session-1" },
+		});
 	});
 
-	it("exposes queued context compaction without using the interrupting prompt path", async () => {
-		const invoke = vi.fn(async () => ({ status: "queued", id: "compact-1", pendingCount: 1 }));
-		const ipc = { invoke } as unknown as IpcRenderer;
+	it("exposes queued context compaction over the host channel", async () => {
+		const invoke = vi.fn(async () => ({ ok: true, result: { status: "queued", id: "compact-1", pendingCount: 1 } }));
+		const ipc = { invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
-		await session.queueContextCompaction("session-1");
-
-		expect(invoke).toHaveBeenCalledWith("vetta:session:queue-context-compaction", "session-1");
+		await expect(session.queueContextCompaction("session-1")).resolves.toEqual({
+			status: "queued",
+			id: "compact-1",
+			pendingCount: 1,
+		});
+		expect(invoke).toHaveBeenCalledWith("vetta:host:request", {
+			method: "session.queueContextCompaction",
+			params: { sessionId: "session-1" },
+		});
 	});
 
 	it("exposes goal lifecycle channels", async () => {
-		const invoke = vi.fn(async () => undefined);
-		const ipc = { invoke } as unknown as IpcRenderer;
+		const invoke = vi.fn(async () => ({ ok: true, result: null }));
+		const ipc = { invoke, send: vi.fn(), on: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
 		await session.getGoalState("session-1");
@@ -59,11 +74,11 @@ describe("createSessionApi trace propagation", () => {
 		await session.clearGoal("session-1", "goal-1");
 
 		expect(invoke.mock.calls).toEqual([
-			["vetta:session:goal-get-state", "session-1"],
-			["vetta:session:goal-start", "session-1", "Ship"],
-			["vetta:session:goal-pause", "session-1", "goal-1"],
-			["vetta:session:goal-resume", "session-1", "goal-1"],
-			["vetta:session:goal-clear", "session-1", "goal-1"],
+			["vetta:host:request", { method: "session.getGoalState", params: { sessionId: "session-1" } }],
+			["vetta:host:request", { method: "session.startGoal", params: { sessionId: "session-1", objective: "Ship" } }],
+			["vetta:host:request", { method: "session.pauseGoal", params: { sessionId: "session-1", goalId: "goal-1" } }],
+			["vetta:host:request", { method: "session.resumeGoal", params: { sessionId: "session-1", goalId: "goal-1" } }],
+			["vetta:host:request", { method: "session.clearGoal", params: { sessionId: "session-1", goalId: "goal-1" } }],
 		]);
 	});
 
@@ -104,17 +119,20 @@ describe("createSessionApi trace propagation", () => {
 	});
 
 	it("exposes retry and the interrupted-startup subscription on their own channels", async () => {
-		const invoke = vi.fn(async () => undefined);
+		const invoke = vi.fn(async () => ({ ok: true, result: null }));
 		const listeners = new Map<string, (event: unknown, data: unknown) => void>();
 		const on = vi.fn((channel: string, listener: (event: unknown, data: unknown) => void) => {
 			listeners.set(channel, listener);
 		});
-		const ipc = { invoke, on, removeListener: vi.fn() } as unknown as IpcRenderer;
+		const ipc = { invoke, on, send: vi.fn(), removeListener: vi.fn() } as unknown as IpcRenderer;
 		const session = createSessionApi(ipc).session;
 
-		// 「继续」条经专用 channel 触发内核 retry；名字对不上时点击将永远无响应。
+		// 「继续」条经 Host 合同触发内核 retry（迁移后入口换 session.retry，语义不变）。
 		await session.retry("session-1");
-		expect(invoke).toHaveBeenCalledWith("vetta:session:retry", "session-1");
+		expect(invoke).toHaveBeenCalledWith("vetta:host:request", {
+			method: "session.retry",
+			params: { sessionId: "session-1" },
+		});
 
 		// 启动扫描结果以一次性订阅下发：handler 收到原样载荷，退订即摘除监听。
 		const handler = vi.fn();

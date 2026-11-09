@@ -1,13 +1,53 @@
 // Copyright The Open Forge contributors.
-import { HostDispatcher, HostOwnerRegistry, SETTINGS_HOST_METHODS } from "@vetta/host-protocol";
-import { settingsHostDomain } from "./settings-domain.js";
+import {
+	HostDispatcher,
+	HostOwnerRegistry,
+	MCP_HOST_METHODS,
+	MODELS_HOST_METHODS,
+	SESSION_CATALOG_HOST_METHODS,
+	SESSION_DEFAULTS_HOST_METHODS,
+	SESSION_EXECUTION_HOST_METHODS,
+	SESSION_GOAL_HOST_METHODS,
+	SESSION_HISTORY_HOST_METHODS,
+	SESSION_LIFECYCLE_HOST_METHODS,
+	SESSION_MCP_TASKS_HOST_METHODS,
+	SESSION_PLAN_MODE_HOST_METHODS,
+	SESSION_QUEUE_HOST_METHODS,
+	SESSION_RUNTIME_OPS_HOST_METHODS,
+	SESSION_TITLE_HOST_METHODS,
+} from "@vetta/host-protocol";
+import { mcpHostDomain } from "./mcp-domain.js";
+import { modelsHostDomain } from "./models-domain.js";
+import { sessionCatalogHostDomain } from "./session-catalog-domain.js";
+import { sessionDefaultsHostDomain } from "./session-defaults-domain.js";
+import { sessionExecutionHostDomain } from "./session-execution-domain.js";
+import { sessionGoalHostDomain } from "./session-goal-domain.js";
+import { sessionHistoryHostDomain } from "./session-history-domain.js";
+import { sessionLifecycleHostDomain } from "./session-lifecycle-domain.js";
+import { sessionMcpTasksHostDomain } from "./session-mcp-tasks-domain.js";
+import { sessionPlanModeHostDomain } from "./session-plan-mode-domain.js";
+import { sessionQueueHostDomain } from "./session-queue-domain.js";
+import { sessionRuntimeOpsHostDomain } from "./session-runtime-ops-domain.js";
+import { sessionTitleHostDomain } from "./session-title-domain.js";
 
 /**
- * 进程内 Desktop Host（PLAN-0029 Phase 2）：按领域注册合同实现，transport 由调用方选择。
- * Phase 3 把同一个 dispatcher 搬进 utilityProcess 时，领域实现与 renderer 均不改。
+ * 进程内 Desktop Host（PLAN-0029 Phase 2/3）：models、mcp、会话默认项、目录、执行模式/全局设置、goal/todos、输入队列、历史分支、生命周期、MCP 任务、标题建议、plan-mode 与运行控制领域注册于此；
+ * settings 域由 host 子进程承载（TASK-0464），经 ipc/host.ts 的代理挂到同一 dispatcher。
  */
 export function createDesktopHost(): HostDispatcher {
 	const host = new HostDispatcher(new HostOwnerRegistry());
-	host.register(SETTINGS_HOST_METHODS, settingsHostDomain);
+	host.register(MODELS_HOST_METHODS, modelsHostDomain);
+	host.register(MCP_HOST_METHODS, mcpHostDomain);
+	host.register(SESSION_DEFAULTS_HOST_METHODS, sessionDefaultsHostDomain);
+	host.register(SESSION_CATALOG_HOST_METHODS, sessionCatalogHostDomain);
+	host.register(SESSION_EXECUTION_HOST_METHODS, sessionExecutionHostDomain);
+	host.register(SESSION_GOAL_HOST_METHODS, sessionGoalHostDomain);
+	host.register(SESSION_HISTORY_HOST_METHODS, sessionHistoryHostDomain);
+	host.register(SESSION_LIFECYCLE_HOST_METHODS, sessionLifecycleHostDomain);
+	host.register(SESSION_MCP_TASKS_HOST_METHODS, sessionMcpTasksHostDomain);
+	host.register(SESSION_PLAN_MODE_HOST_METHODS, sessionPlanModeHostDomain);
+	host.register(SESSION_QUEUE_HOST_METHODS, sessionQueueHostDomain);
+	host.register(SESSION_RUNTIME_OPS_HOST_METHODS, sessionRuntimeOpsHostDomain);
+	host.register(SESSION_TITLE_HOST_METHODS, sessionTitleHostDomain);
 	return host;
 }

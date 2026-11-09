@@ -1,12 +1,12 @@
 ---
 id: PLAN-0029
 type: plan
-status: draft
+status: in_progress
 priority: P1
 requirement: REQ-0002
 owner: apps/desktop/runtime-desktop/scripts-agents
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 depends_on: []
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -21,7 +21,7 @@ depends_on: []
 2. 研发控制器（`scripts/agents`）先证明一个真实任务可完成开发、评审和集成闭环。
 3. 定死语言分工：Agent 内核保持 TS；Go 负责网络与远程守护；Rust 只做 Node 做不到或经基线证明需要的系统能力。两者都以 owner 接口后的 sidecar 接入。
 
-控制器线与 [PLAN-0019](PLAN-0019-autonomous-development.md)（REQ-0019）衔接，本计划只列首批缺口，不重复其台账。本计划为 draft，未授权实施。
+控制器线与 [PLAN-0019](PLAN-0019-autonomous-development.md)（REQ-0019）衔接，本计划只列首批缺口，不重复其台账。首批 Task 已按用户指示实施并集成 `origin/dev`（2026-11-07 补记），后续阶段按本计划推进。
 
 ## 当前事实
 
@@ -61,6 +61,8 @@ depends_on: []
 | 0.3 小修 | `agent-rpc-command.ts:68` 改顶层 `import type`；3 个 desktop 测试改走公开入口；仓库地图补 `remote-relay` 和两条例外依赖 | `bun run check` 通过 |
 | 0.4 分支职责 | 写清 `main`/`dev`/`origin/main` 职责 | 规则落盘，供 1.1 读取 |
 
+状态（2026-11-07）：0.2 脚本已集成、真实基线测量待授权（TASK-0448 in_progress）；0.3 已完成（TASK-0449，verifying）；0.4 已完成（TASK-0450，verifying）。
+
 ### Phase 1：研发控制器可信闭环（与 Phase 2 并行）
 
 1. 集成目标配置化，替换三处硬编码 `main`。
@@ -70,6 +72,8 @@ depends_on: []
 5. `requirement-run` 去掉 presence-only；工程完成、候选验证、人工验收、已发布分别记录。
 
 暂缓：团队租约、并行调度、自动发现问题、真实发布，待第 4 项通过后开启。
+
+状态（2026-11-07）：第 1–5 项均已实现并集成 `origin/dev`；第 4 项真实 adapter 端到端验收由 TASK-0452 完成（done）。暂缓项保持关闭。
 
 ### Phase 2：Host 合同化（进程内）
 
@@ -111,14 +115,19 @@ depends_on: []
 
 ## 首批 Task
 
-1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），ready。
-2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），ready。
-3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），ready。
-4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），ready，依赖 0450；原 1.3/1.5 范围已拆出。
-   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），ready，依赖 0451。
-   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），ready，与 0451/0454 共享 `scripts/agents`，串行（集成顺序 0451 → 0454 → 0455）。
-5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），draft，依赖 0450、0451，且需用户提供模型与评审配置。
-6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），draft，待 0448 基线后转 ready。
+1. [TASK-0448](../tasks/TASK-0448-desktop-resource-baseline-script.md)：资源基线测量脚本与记录（0.2），in_progress（脚本已集成，真实基线测量待授权）。
+2. [TASK-0449](../tasks/TASK-0449-desktop-boundary-small-fixes.md)：包边界小修与仓库地图补全（0.3），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+3. [TASK-0450](../tasks/TASK-0450-controller-integration-target-config.md)：分支职责定稿与集成目标配置化（0.4 + 1.1），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+4. [TASK-0451](../tasks/TASK-0451-controller-candidate-ci-review-binding.md)：候选提交与 CI 证据绑定（1.2），done；原 1.3/1.5 范围已拆出。
+   - [TASK-0454](../tasks/TASK-0454-controller-review-isolation.md)：评审只读候选与独立上下文（1.3），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+   - [TASK-0455](../tasks/TASK-0455-requirement-run-clause-evidence.md)：requirement-run 条款级证据（1.5），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+5. [TASK-0452](../tasks/TASK-0452-controller-real-adapter-e2e.md)：真实 adapter 端到端验收（1.4），done（qwen-http 真实 adapter 端到端验收完成）。
+6. [TASK-0453](../tasks/TASK-0453-host-protocol-in-process-host-pilot.md)：`host-protocol` 骨架、进程内 Host、owner 插槽，以“设置”领域试点（2.1 + 2.2），verifying（试点已集成 `origin/dev`，设置页 UI 走查待授权）。
+7. [TASK-0458](../tasks/TASK-0458-models-preset-catalog-host-domain.md)：模型预设目录（免 key 子域）迁到 Host 合同（2.1 延续），done；凭证类通道与事件按 ADR-0152 单独评审后迁入。
+8. [TASK-0459](../tasks/TASK-0459-models-config-host-domain.md)：模型配置域（get/set/copy-api-key）迁移并落地 ADR-0152 §7 凭证通道评审（读路径 `apiKey` 合同钉死掩码/外部引用），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+9. [TASK-0461](../tasks/TASK-0461-models-probe-host-domain.md)：模型探测与余额通道（probe/fetch-provider-models/test-provider/get-balance/config-path）迁移，done。
+10. [TASK-0462](../tasks/TASK-0462-mcp-noncredential-host-domain.md)：MCP 无凭证子域（config-path/has-auth/auth-status/list-server-tools）迁移，done；`mcp:get/set`（凭证面）与 OAuth 六通道按 ADR-0152 §7 留待评审。
+11. [TASK-0463](../tasks/TASK-0463-host-messageport-transport.md)：Host MessagePort transport（Phase 3 第一步，换线不搬进程，done；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
 
 ## 不做什么
 
@@ -146,7 +155,21 @@ depends_on: []
 
 ## 需要的 ADR
 
-- Host 进程边界与 `host-protocol` 合同（Phase 2）。
-- 安全一方化：权限、审批、凭证归属（Phase 2）。
+- Host 进程边界与 `host-protocol` 合同：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
+- 安全一方化：权限、审批、凭证归属：已落地 [ADR-0152](../../docs/adr/0152-host-protocol-boundary-and-first-party-security.md)。
 - 语言分工与原生 sidecar 准入条件（Phase 4 前）。
 - 分支职责与集成目标（Phase 0.4，可落协作规则代替 ADR）。
+12. [TASK-0464](../tasks/TASK-0464-host-utility-process.md)：Host utilityProcess 承载（Phase 3 第二步，settings 域先行 + HOST_UNAVAILABLE 稳定码；预研见 [RESEARCH-0050](../research/RESEARCH-0050-host-process-transport.md)），verifying（实现提交 704b72ccf，quality 42337996323 已核实）。
+13. [TASK-0465](../tasks/TASK-0465-session-stream-migration-investigation.md)：会话流领域迁移调查与切片规划（84 通道分组、事件原语缺口、切片顺序定稿），done；首个实现切片 TASK-0466（元数据/模式纯请求子域）待立项。
+14. [TASK-0466](../tasks/TASK-0466-session-defaults-host-domain.md)：会话默认项/个性化子域（thinking 读取/personas/personalization 读写 4 通道）迁移，done（quality 已核实；IPC 679→675）；runtime 耦合设置器与事件面按 0465 分组后续推进。
+15. [TASK-0467](../tasks/TASK-0467-session-queue-host-domain.md)：会话输入队列子域（queue-state getter + 6 队列操作 7 通道）迁移，done（实现提交 `b39984439`，quality 42353639237 已核实；IPC 675→668）；queue-state 推送事件留旧 IPC 待事件原语。
+16. [TASK-0468](../tasks/TASK-0468-session-history-host-domain.md)：会话历史分支子域（navigate-for-edit/switch-branch/delete-message/replace-last-user-message/fork-session 5 通道）迁移，done（实现提交 `369804316`，quality 42357038368 已核实；IPC 668→663）。
+17. [TASK-0469](../tasks/TASK-0469-session-goal-host-domain.md)：会话 goal/todos 子域（goal 五通道 + clear-todos）迁移，done（实现提交 `7204295ed`，quality 42360291016 已核实；IPC 663→657）。
+18. [TASK-0470](../tasks/TASK-0470-session-title-host-domain.md)：会话标题与建议子域（rename/auto-title/next-prompt-suggestions 3 通道）迁移，done（实现提交 `1eac2aa36`，quality 42363373975 已核实；IPC 657→654）。
+19. [TASK-0471](../tasks/TASK-0471-session-plan-mode-host-domain.md)：会话 plan-mode 子域（get-state/set-permission-mode 2 通道）迁移，done（实现提交 `b3167b761`，quality 42366677792 已核实；IPC 654→652）。
+20. [TASK-0472](../tasks/TASK-0472-session-execution-host-domain.md)：会话执行模式与全局设置子域（update-settings/set-execution-mode/set-global-*/get-agent-modes 6 通道）迁移，done（实现提交 `a38fdae23`，quality 42372254724 已核实；IPC 652→646）。
+21. [TASK-0473](../tasks/TASK-0473-session-runtime-ops-host-domain.md)：会话运行控制与后台任务子域（retry/interrupt-draft/get-session-path/background-tasks-*/subagent-interrupt 6 通道）迁移，done（实现提交 `95cd44045`，quality 42376358108 已核实；IPC 646→640）。
+22. [TASK-0474](../tasks/TASK-0474-session-catalog-host-domain.md)：会话目录子域（list-projects/list-sessions/list-running/list-running-cwds 4 通道）迁移，done（实现提交 `6c247190f`，quality 42380285044 已核实；IPC 640→636）。
+23. [TASK-0475](../tasks/TASK-0475-session-lifecycle-host-domain.md)：会话生命周期控制与删除子域（continue/abort/delete/delete-all-for-cwd 4 通道）迁移，done（实现提交 `e4518f208`，quality 42388609012 已核实；IPC 636→632）。
+24. [TASK-0476](../tasks/TASK-0476-session-mcp-tasks-host-domain.md)：MCP 任务与待答清单子域（mcp-tasks-{list,cancel,clear-finished}/mcp-elicitation-list-pending 4 通道）迁移，done（实现提交 `f3c3335a6`，quality 42393835326 已核实；IPC 632→628）。
+25. [TASK-0477](../tasks/TASK-0477-session-event-subscription-primitive.md)：会话事件订阅原语（port 事件帧 + session.subscribe/unsubscribe，TASK-0465 组 2 解锁件），in_progress（设计定稿，实施分三步；完成后 IPC 628→625）。
