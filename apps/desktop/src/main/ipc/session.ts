@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { type Dirent, type FSWatcher, watch } from "node:fs";
 import { mkdir, readdir, rm } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import type {
 	CodingAgentQuestionFunctionRequest,
 	CodingAgentQuestionResult,
@@ -55,11 +55,15 @@ import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
+import {
+	forgetSessionDebugState,
+	recordSessionEventForDebug,
+	rememberSessionDebugCwd,
+} from "../conversations/session-debug-recorder.js";
 import { diffViewerHistory, parseHistoryPageRequest, sliceHistoryPage } from "../conversations/session-history-page.js";
 import { isConversationSubCwd } from "../conversations/session-paths.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
-import { type DebugRequestData, writeDebugRequest } from "../debug-writer.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
 import { getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
@@ -85,7 +89,6 @@ import {
 	DEFAULT_CONVERSATION_SESSION_DIR,
 	DEFAULT_IM_CONVERSATION_CWD,
 	DEFAULT_IM_CONVERSATION_SESSION_DIR,
-	readConfigSync,
 } from "./fs.js";
 import { parseSessionTraceContext } from "./session-trace-context.js";
 
@@ -350,10 +353,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const pluginSystemPromptMap = new Map<string, (result: unknown) => void>();
 	/** Track session cwd for debug file writing */
 	const sessionCwdMap = new Map<string, string>();
-	/** Track debug request sequence per session */
-	const debugSeqMap = new Map<string, number>();
-	/** Track turn start time per session for duration calculation */
-	const turnStartMap = new Map<string, number>();
 	const interactiveResidency = new InteractiveSessionResidencyTracker();
 	/**
 	 * ADR-0002: 交互式 session 的常驻通知订阅（独立于渲染端视图订阅，不随
@@ -413,8 +412,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const forgetInteractiveSession = (sessionId: string): void => {
 		interactiveResidency.forget(sessionId);
 		sessionCwdMap.delete(sessionId);
-		debugSeqMap.delete(sessionId);
-		turnStartMap.delete(sessionId);
+		forgetSessionDebugState(sessionId);
 		detachNotificationSub(sessionId);
 		stopMonitoringRuntimeSession(sessionId);
 	};
@@ -869,6 +867,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			interactiveResidency.touch(result.sessionId);
 			if (effectiveCwd) {
 				sessionCwdMap.set(result.sessionId, effectiveCwd);
+				rememberSessionDebugCwd(result.sessionId, effectiveCwd);
 			}
 			// ADR-0002: 经本通道创建的即交互式 session，挂常驻通知订阅。
 			attachNotificationSub(result.sessionId, effectiveCwd);
@@ -1215,44 +1214,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		assertNonEmptyString(sessionId, "sessionId");
 		const subscriptionId = `${sessionId}:${randomUUID()}`;
 		const unsubscribe = runtime.subscribe(sessionId, (runtimeEvent: SessionEvent) => {
-			// Debug mode: intercept events for request history recording
-			try {
-				if (runtimeEvent.type === "session.lifecycle" && runtimeEvent.phase === "turn_start") {
-					turnStartMap.set(sessionId, Date.now());
-				}
-				const assistantMessage =
-					runtimeEvent.channel === "assistant" && runtimeEvent.type === "done"
-						? runtimeEvent.message
-						: runtimeEvent.channel === "assistant" && runtimeEvent.type === "error"
-							? runtimeEvent.error
-							: undefined;
-				if (assistantMessage && readConfigSync().debugMode) {
-					const cwd = sessionCwdMap.get(sessionId);
-					if (cwd) {
-						const projectName = basename(cwd);
-						const seq = (debugSeqMap.get(sessionId) ?? 0) + 1;
-						debugSeqMap.set(sessionId, seq);
-						const msg = assistantMessage as unknown as Record<string, unknown>;
-						const usage = (msg.usage ?? {}) as DebugRequestData["usage"];
-						const turnStart = turnStartMap.get(sessionId) ?? Date.now();
-						const now = Date.now();
-						const data: DebugRequestData = {
-							timestamp: now,
-							sessionId,
-							model: (msg.model as string) ?? "unknown",
-							provider: (msg.provider as string) ?? "unknown",
-							api: (msg.api as string) ?? "unknown",
-							usage,
-							stopReason: (msg.stopReason as string) ?? "unknown",
-							durationMs: now - turnStart,
-							message: msg,
-						};
-						void writeDebugRequest(projectName, sessionId, data, seq);
-					}
-				}
-			} catch {
-				// Debug recording should never break the event pipeline
-			}
+			recordSessionEventForDebug(sessionId, runtimeEvent);
 			// 渲染进程崩溃后 webContents 短暂处于"frame 已 disposed"状态——
 			// runtime 这边 agent 还在跑，每个事件都尝试 send 就会刷屏
 			// "Render frame was disposed before WebFrameMain could be accessed"。
