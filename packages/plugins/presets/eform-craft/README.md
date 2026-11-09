@@ -78,7 +78,7 @@ SDK 的 roles 是 slug 而非固定枚举白名单，当前 Schema 支持这五�
 
 在 preset 目录运行 `bun run test`、`bun run check`、`bun run build`。测试从真实 SDK manifest 公共入口解析清单，检查共享合同、角色/locale、Skill 路由与资源链接；构建后还须核对 .vettapkg 中资源。它们不执行 CustomDev/远端操作，也不是 LLM 行为验收。
 
-代表性真实会话验收案例见 [acceptance-cases.md](test/acceptance-cases.md)，仅获授权后运行；当前不访问真实模型/Codeup/Nacos/DBX/服务器。已发布 v0.1.4 说明不修改，本次条目加入仓库已有 v0.1.5 待发碎片批次，不汇编/发布，见 TASK-0450。
+代表性真实会话验收案例见 [acceptance-cases.md](test/acceptance-cases.md)，仅获授权后运行；当前不访问真实模型/Codeup/Nacos/DBX/服务器。已发布 v0.1.4 说明不修改，本次条目加入仓库已有 v0.1.5 待发碎片批次，不汇编/发布，见 TASK-0480。
 
 ## Context Boundary
 

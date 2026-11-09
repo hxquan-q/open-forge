@@ -44,10 +44,21 @@ interface WeKnoraStreamEngineState {
  * 按 store 键控的原因：状态本体（atoms）挂在 jotai store 上——生产 App 无自定义
  * Provider，`useStore()` 恒返回默认 store；测试每个用例 `createStore()` 注入 Provider。
  * 引擎必须写「视图正在读的那个 store」，故以 store 为单例键：同一 store 幂等
- * （挂载 N 次也只订阅一次），不同 store 各持一条订阅互不串台。WeakMap 让引擎状态
- * 随 store 一起可回收，不阻止 GC。
+ * （挂载 N 次也只订阅一次），不同 store 各持一条订阅互不串台。用 Map 而非
+ * WeakMap：去抖定时器回调持状态引用，WeakMap 条目实际不可回收；生产恒为单一
+ * 默认 store 无增长面，测试经 `resetWeKnoraStreamEngineForTest` 逐用例清理。
  */
-const engines = new WeakMap<WeKnoraAtomStore, WeKnoraStreamEngineState>();
+const engines = new Map<WeKnoraAtomStore, WeKnoraStreamEngineState>();
+
+/** 测试隔离：清空全部引擎状态（含在飞去抖定时器），阻断跨用例定时器/引用泄漏（TASK-0460）。 */
+export function resetWeKnoraStreamEngineForTest(): void {
+	for (const state of engines.values()) {
+		if (state.reloadTimer !== null) window.clearTimeout(state.reloadTimer);
+		state.reloadTimer = null;
+		state.reload = null;
+	}
+	engines.clear();
+}
 
 /** 当前对话的缓冲键（语义同 hook 内同名 helper）：已落库会话用 sessionId；草稿用当前视图代次的 draft 键。 */
 function currentBufferKeyOf(store: WeKnoraAtomStore): string {

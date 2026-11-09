@@ -1,16 +1,25 @@
-// Modified by The Open Forge contributors.
-import { createMarkdownHostFixture } from "./markdown-host.fixture";
-import type { ComponentProps } from "react";
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
+import type { ComponentProps } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MarkdownContent, MarkdownHostProvider } from "@vetta-org/theme-ui/markdown";
-import { MarkdownPreviewView } from "@vetta-org/theme-ui/activity";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderFormula } from "../../../../../../../../packages/theme-ui/src/markdown/math-render";
-import { RichCodeBlock as RichCodeBlockView } from "../../../../../../../../packages/theme-ui/src/markdown/RichCodeBlock";
-import { useRenderSnapshot } from "../../../../../../../../packages/theme-ui/src/markdown/use-render-snapshot";
+import { MarkdownPreviewView } from "../activity";
+import { type MarkdownHost, MarkdownHostProvider } from "./host";
+import { MarkdownContent } from "./MarkdownContent";
+import { renderFormula } from "./math-render";
+import { RichCodeBlock as RichCodeBlockView } from "./RichCodeBlock";
+import { useRenderSnapshot } from "./use-render-snapshot";
 
-const { host, close } = createMarkdownHostFixture();
+const close = vi.fn();
+const host = {
+	openHtml: vi.fn(async () => close),
+	renderMermaid: vi.fn(async () => '<svg xmlns="http://www.w3.org/2000/svg"><text>Rendered</text></svg>'),
+	favicon: vi.fn(async () => null),
+	resolveImage: vi.fn(async (src: string) => src),
+	copyImage: vi.fn(async () => {}),
+	saveImage: vi.fn(async () => {}),
+	openImage: vi.fn(),
+} satisfies MarkdownHost;
 function RichCodeBlock(props: ComponentProps<typeof RichCodeBlockView>) { return <MarkdownHostProvider host={host}><RichCodeBlockView {...props} /></MarkdownHostProvider>; }
 
 const environment = {

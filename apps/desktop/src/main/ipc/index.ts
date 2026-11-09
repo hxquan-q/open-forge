@@ -3,6 +3,7 @@
 import { getAgentDir } from "@vetta/coding-agent/config";
 import type { WebContents } from "electron";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
+import { createDesktopHost } from "../host/desktop-host.js";
 import { createDefaultMemoryControlService } from "../memory/index.js";
 import { getMessageAnnotationService } from "../message-annotations/host.js";
 import { registerNotificationIpc } from "../notifications/index.js";
@@ -25,6 +26,7 @@ import { registerDownloadsIpc } from "./downloads.js";
 import { registerFileTransferIpc } from "./file-transfer.js";
 import { registerFsIpc } from "./fs.js";
 import { registerGitIpc } from "./git.js";
+import { registerHostIpc } from "./host.js";
 import { registerImIpc } from "./im.js";
 import { registerMarkdownIpc } from "./markdown.js";
 import { registerMediaIpc } from "./media.js";
@@ -68,6 +70,7 @@ interface IpcTeardown {
 	teardownMessageAnnotations: () => void;
 	teardownMarkdown: () => void;
 	teardownSettings: () => void;
+	teardownHost: () => void;
 	teardownUpdater: () => void;
 	teardownSkills: () => void;
 	teardownSpeechInput: () => void;
@@ -133,6 +136,7 @@ export function registerAllIpc(
 			return () => undefined;
 		})(),
 		teardownSettings: registerSettingsIpc(),
+		teardownHost: registerHostIpc(createDesktopHost()),
 		teardownUpdater: registerUpdaterIpc(),
 		teardownSkills: registerSkillsIpc(),
 		teardownSpeechInput: registerSpeechInputIpc(webContents),
@@ -188,6 +192,7 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownMarkdown();
 	teardown.teardownSessionArchive();
 	teardown.teardownSettings();
+	teardown.teardownHost();
 	teardown.teardownUpdater();
 	teardown.teardownSkills();
 	teardown.teardownSpeechInput();

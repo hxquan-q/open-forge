@@ -4,9 +4,8 @@ import type { FSWatcher } from "node:fs";
 import { watch } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { resolveNodeConfigurationValue } from "@vetta/runtime-node/host";
 import { isSshProjectUri } from "@vetta/ssh-transport";
-import { BrowserWindow, clipboard, ipcMain, net } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
 import type {
 	McpConfigData,
 	McpHttpServerConfigData,
@@ -65,20 +64,9 @@ import {
 } from "../filesystem/filesystem-service.js";
 import { watchRemoteDirectory } from "../filesystem/remote-directory-watch.js";
 import { getDesktopMcpOAuthService } from "../mcp/mcp-oauth-service.js";
-import {
-	getDesktopMcpSettingsService,
-	MCP_CONFIG_PATH,
-	readMcpConfig,
-	writeMcpConfig,
-} from "../mcp/mcp-settings-service.js";
+import { getDesktopMcpSettingsService, readMcpConfig, writeMcpConfig } from "../mcp/mcp-settings-service.js";
 import { getDesktopMcpSetupLoginService } from "../mcp/mcp-setup-login-service.js";
-import { listMcpServerTools } from "../mcp/mcp-tool-catalog.js";
-import { getProviderBalance } from "../models/balance/index.js";
-import { fetchProviderModels } from "../models/fetch-models.js";
-import { getDesktopModelSettingsService, onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
-import { MODELS_CONFIG_PATH, type ModelsConfig } from "../models/model-settings-service.js";
-import { probeModelProvider } from "../models/probe.js";
-import { testProviderAvailability } from "../models/test-provider.js";
+import { onDesktopModelSettingsChanged } from "../models/model-settings-host.js";
 import { refreshDesktopProxy } from "../proxy/proxy-host.js";
 import { type DesktopProxyConfigSnapshot, redactProxyConfig } from "../proxy/proxy-settings.js";
 import { getLinuxSandboxCapability, getSandboxCapability, type SandboxCapability } from "../sandbox/capability.js";
@@ -158,26 +146,14 @@ const CHANNELS = {
 	DIR_CHANGED: "vetta:fs:dir-changed",
 	CONFIG_GET: "vetta:config:get",
 	CONFIG_SET: "vetta:config:set",
-	MODELS_GET: "vetta:models:get",
-	MODELS_SET: "vetta:models:set",
-	MODELS_COPY_API_KEY: "vetta:models:copy-api-key",
-	MODELS_PROBE: "vetta:models:probe",
-	MODELS_FETCH_PROVIDER_MODELS: "vetta:models:fetch-provider-models",
-	MODELS_TEST_PROVIDER: "vetta:models:test-provider",
-	MODELS_GET_BALANCE: "vetta:models:get-balance",
-	MODELS_CONFIG_PATH: "vetta:models:config-path",
-	MCP_CONFIG_PATH: "vetta:mcp:config-path",
 	MCP_GET: "vetta:mcp:get",
 	MCP_SET: "vetta:mcp:set",
 	MCP_LOGIN: "vetta:mcp:login",
 	MCP_LOGOUT: "vetta:mcp:logout",
-	MCP_HAS_AUTH: "vetta:mcp:has-auth",
-	MCP_AUTH_STATUS: "vetta:mcp:auth-status",
 	MCP_GET_SETUP_LOGIN_STATUS: "vetta:mcp:get-setup-login-status",
 	MCP_START_SETUP_LOGIN: "vetta:mcp:start-setup-login",
 	MCP_CANCEL_SETUP_LOGIN: "vetta:mcp:cancel-setup-login",
 	MCP_CLEAR_SETUP_LOGIN: "vetta:mcp:clear-setup-login",
-	MCP_LIST_SERVER_TOOLS: "vetta:mcp:list-server-tools",
 } as const;
 
 function assertNonEmptyString(value: unknown, fieldName: string): asserts value is string {
@@ -191,20 +167,14 @@ export { allowProjectRoot, assertPathReadableForPreview } from "../filesystem/fi
 export function registerFsIpc(): () => void {
 	const mcp = getDesktopMcpSettingsService();
 	const mcpOAuth = getDesktopMcpOAuthService();
-	const models = getDesktopModelSettingsService();
 	const disposeModelChanged = onDesktopModelSettingsChanged((providerIds) => {
 		for (const win of BrowserWindow.getAllWindows()) {
 			if (!win.isDestroyed()) win.webContents.send("vetta:models:changed", { providerIds: [...providerIds] });
 		}
 	});
 	const shortcuts = getDesktopShortcutService();
-	let apiKeyClipboardClearTimer: ReturnType<typeof setTimeout> | undefined;
-	let copiedApiKey: string | undefined;
-	const clearCopiedApiKey = (): void => {
-		if (copiedApiKey && clipboard.readText() === copiedApiKey) clipboard.clear();
-		copiedApiKey = undefined;
-		apiKeyClipboardClearTimer = undefined;
-	};
+	// 模型配置 get/set 与 copy-api-key 已迁到 Host 合同 models.*（TASK-0459，见 ../host/models-domain.ts）；
+	// 剪贴板 30s 清空状态随通道整体迁移，这里不再持有。
 	ipcMain.handle(CHANNELS.READ_DIR, async (_event, dirPath: unknown): Promise<FsEntry[]> => {
 		assertNonEmptyString(dirPath, "dirPath");
 		return readFilesystemDirectory(dirPath);
@@ -476,59 +446,9 @@ export function registerFsIpc(): () => void {
 		if (patch.proxy !== undefined) await refreshDesktopProxy();
 	});
 
-	ipcMain.handle(CHANNELS.MODELS_GET, async (): Promise<ModelsConfig> => {
-		return models.getRendererConfig();
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_SET, async (_event, config: unknown) => {
-		if (typeof config !== "object" || config === null) throw new Error("Invalid models config");
-		await models.replaceConfig(config as ModelsConfig);
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_COPY_API_KEY, async (_event, providerId: unknown): Promise<boolean> => {
-		assertNonEmptyString(providerId, "providerId");
-		const keyConfig = await models.getProviderApiKey(providerId.trim());
-		const apiKey = keyConfig ? resolveNodeConfigurationValue(keyConfig) : undefined;
-		if (!apiKey) return false;
-
-		clipboard.writeText(apiKey);
-		if (apiKeyClipboardClearTimer) clearTimeout(apiKeyClipboardClearTimer);
-		copiedApiKey = apiKey;
-		apiKeyClipboardClearTimer = setTimeout(clearCopiedApiKey, 30_000);
-		return true;
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_PROBE, async (_event, ref: { provider: string; model: string }) => {
-		return probeModelProvider(ref);
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_FETCH_PROVIDER_MODELS, async (_event, providerName: unknown) => {
-		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
-		return fetchProviderModels(providerName.trim());
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_TEST_PROVIDER, async (_event, providerName: unknown) => {
-		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
-		const provider = (await models.getConfig()).providers[providerName.trim()];
-		return testProviderAvailability(provider, { fetchImpl: net.fetch });
-	});
-
-	ipcMain.handle(CHANNELS.MODELS_GET_BALANCE, async (_event, providerName: unknown) => {
-		if (typeof providerName !== "string" || !providerName.trim()) throw new Error("Invalid provider name");
-		const provider = (await models.getConfig()).providers[providerName.trim()];
-		return getProviderBalance(providerName.trim(), provider, { fetchImpl: net.fetch });
-	});
-
-	// 只读：设置页脚展示当前运行时的模型配置真实路径（数据根可被 env 覆盖/迁移）。
-	ipcMain.handle(CHANNELS.MODELS_CONFIG_PATH, () => {
-		return MODELS_CONFIG_PATH;
-	});
+	// 模型探测四通道与 config-path 已迁到 Host 合同 models.*（TASK-0461，见 ../host/models-domain.ts）。
 
 	// 只读：MCP JSON 编辑器的路径提示，同模型配置路径一样不硬编码品牌数据根。
-	ipcMain.handle(CHANNELS.MCP_CONFIG_PATH, () => {
-		return MCP_CONFIG_PATH;
-	});
-
 	ipcMain.handle(CHANNELS.MCP_GET, async (): Promise<McpConfig> => {
 		return mcp.getConfig();
 	});
@@ -595,22 +515,6 @@ export function registerFsIpc(): () => void {
 		mcpOAuth.logout(serverName.trim());
 	});
 
-	ipcMain.handle(CHANNELS.MCP_HAS_AUTH, async (_event, serverName: unknown): Promise<boolean> => {
-		if (typeof serverName !== "string" || !serverName.trim()) return false;
-		return mcpOAuth.hasAuth(serverName.trim());
-	});
-
-	ipcMain.handle(CHANNELS.MCP_AUTH_STATUS, async (_event, serverNames: unknown): Promise<Record<string, boolean>> => {
-		if (!Array.isArray(serverNames)) return {};
-		const result: Record<string, boolean> = {};
-		for (const name of serverNames) {
-			if (typeof name === "string" && name.trim()) {
-				result[name.trim()] = mcpOAuth.hasAuth(name.trim());
-			}
-		}
-		return result;
-	});
-
 	ipcMain.handle(CHANNELS.MCP_GET_SETUP_LOGIN_STATUS, async (_event, serverName: unknown) => {
 		assertNonEmptyString(serverName, "serverName");
 		return getDesktopMcpSetupLoginService().getStatus(serverName.trim());
@@ -632,11 +536,6 @@ export function registerFsIpc(): () => void {
 		return getDesktopMcpSetupLoginService().clear(serverName.trim());
 	});
 
-	ipcMain.handle(CHANNELS.MCP_LIST_SERVER_TOOLS, async (_event, serverName: unknown) => {
-		assertNonEmptyString(serverName, "serverName");
-		return listMcpServerTools(serverName.trim());
-	});
-
 	return () => {
 		void getDesktopMcpSetupLoginService().cancelAll();
 		// Close all directory watchers
@@ -644,8 +543,6 @@ export function registerFsIpc(): () => void {
 		watchers.clear();
 		for (const timer of debounceTimers.values()) clearTimeout(timer);
 		debounceTimers.clear();
-		if (apiKeyClipboardClearTimer) clearTimeout(apiKeyClipboardClearTimer);
-		clearCopiedApiKey();
 
 		ipcMain.removeHandler(CHANNELS.READ_DIR);
 		ipcMain.removeHandler(CHANNELS.READ_FILE);
@@ -666,25 +563,14 @@ export function registerFsIpc(): () => void {
 		ipcMain.removeHandler(CHANNELS.UNWATCH_DIR);
 		ipcMain.removeHandler(CHANNELS.CONFIG_GET);
 		ipcMain.removeHandler(CHANNELS.CONFIG_SET);
-		ipcMain.removeHandler(CHANNELS.MODELS_GET);
-		ipcMain.removeHandler(CHANNELS.MODELS_SET);
-		ipcMain.removeHandler(CHANNELS.MODELS_COPY_API_KEY);
-		ipcMain.removeHandler(CHANNELS.MODELS_PROBE);
-		ipcMain.removeHandler(CHANNELS.MODELS_FETCH_PROVIDER_MODELS);
-		ipcMain.removeHandler(CHANNELS.MODELS_GET_BALANCE);
-		ipcMain.removeHandler(CHANNELS.MODELS_CONFIG_PATH);
-		ipcMain.removeHandler(CHANNELS.MCP_CONFIG_PATH);
 		ipcMain.removeHandler(CHANNELS.MCP_GET);
 		ipcMain.removeHandler(CHANNELS.MCP_SET);
 		ipcMain.removeHandler(CHANNELS.MCP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_LOGOUT);
-		ipcMain.removeHandler(CHANNELS.MCP_HAS_AUTH);
-		ipcMain.removeHandler(CHANNELS.MCP_AUTH_STATUS);
 		ipcMain.removeHandler(CHANNELS.MCP_GET_SETUP_LOGIN_STATUS);
 		ipcMain.removeHandler(CHANNELS.MCP_START_SETUP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_CANCEL_SETUP_LOGIN);
 		ipcMain.removeHandler(CHANNELS.MCP_CLEAR_SETUP_LOGIN);
-		ipcMain.removeHandler(CHANNELS.MCP_LIST_SERVER_TOOLS);
 		disposeModelChanged();
 	};
 }

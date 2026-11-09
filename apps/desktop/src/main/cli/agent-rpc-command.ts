@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { RunAgentRuntimeCliOptions } from "@vetta/cli-host";
 import { app } from "electron";
 
 // ---------------------------------------------------------------------------
@@ -64,9 +65,7 @@ function resolveCodingAgentPackageDir(): string {
  * 装配失败（保险库不可用、日志子系统异常等）只降级为「不注入」：宁可让后续模型调用
  * 报自己的鉴权错误，也不能让整个 Claw 子进程起不来——本地无鉴权 provider 本来能用。
  */
-async function loadRuntimeCredentialInjector(): Promise<
-	NonNullable<Parameters<typeof import("@vetta/cli-host").runAgentRuntimeCli>[1]>["injectRuntimeCredentials"]
-> {
+async function loadRuntimeCredentialInjector(): Promise<RunAgentRuntimeCliOptions["injectRuntimeCredentials"]> {
 	try {
 		const [{ syncAgentRpcModelCredentials }, { getDesktopModelCredentialStore }, { getAppLogger }] =
 			await Promise.all([

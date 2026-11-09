@@ -352,6 +352,13 @@ describe("affected package selection", () => {
 		expect(plan.toTest).toEqual(Object.keys(TESTABLE_PACKAGES));
 	});
 
+	it.each(["scripts/perf/desktop-baseline.mjs", "scripts/perf/baseline-stats.test.mjs"])(
+		"runs quality tests for a performance-only change: %s",
+		(path) => {
+			expect(createChangedTestPlan([path])).toMatchObject({ runQuality: true, toTest: [] });
+		},
+	);
+
 	it("accepts both base argument forms and rejects unknown arguments", () => {
 		expect(parseArgs(["--base", "origin/main"])).toEqual({ base: "origin/main", files: [] });
 		expect(parseArgs(["--base=origin/release"])).toEqual({ base: "origin/release", files: [] });
@@ -454,6 +461,10 @@ describe("CI unit test coverage", () => {
 	it("keeps the local full-test entry point sequential and discovery-based", () => {
 		expect(rootManifest.scripts.test).toBe("bun run scripts/quality/test-pkg.mjs --all");
 		expect(rootManifest.scripts["test:unit"]).toBe("bun run scripts/quality/test-pkg.mjs --all");
+	});
+
+	it("includes performance script tests in the quality suite used by CI", () => {
+		expect(rootManifest.scripts["test:quality"].split(/\s+/)).toContain("scripts/perf");
 	});
 
 	it("builds the Android app and runs host tests when Kotlin changes", () => {

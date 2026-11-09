@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Enforce monorepo dependency direction (apps may depend on libs; libs must not
  * depend on apps / host packages).
@@ -33,6 +34,7 @@ const LIB_PREFIXES = [
 	"packages/runtime-telemetry/",
 	"packages/runtime-desktop/",
 	"packages/action-rpc/",
+	"packages/host-protocol/",
 	"packages/toolkit/",
 	"packages/theme-sdk/",
 	"packages/theme-ui/",
@@ -1565,6 +1567,7 @@ const roots = [
 	join(repoRoot, "packages/runtime-telemetry"),
 	join(repoRoot, "packages/runtime-desktop"),
 	join(repoRoot, "packages/action-rpc"),
+	join(repoRoot, "packages/host-protocol"),
 	join(repoRoot, "packages/toolkit"),
 	join(repoRoot, "packages/theme-sdk"),
 	join(repoRoot, "packages/theme-ui"),

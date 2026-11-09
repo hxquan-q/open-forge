@@ -84,12 +84,11 @@ function authorize({ root, store, policy, settings, request, proofs, now }) {
 	assertCheckResults(evidence.checks, policy.requiredChecks, evidence.binding);
 	assertIndependentReview(evidence.review, evidence.authors, evidence.binding, policy.differentReviewerFamily);
 	const current = snapshot(root);
-	if (
-		git(root, ["branch", "--show-current"]) !== "main" ||
-		current.head !== evidence.binding.head ||
-		current.tree !== evidence.binding.tree
-	)
-		throw new Error("release candidate no longer matches clean local main");
+	const expected = policy.integration.branch;
+	const actual = git(root, ["branch", "--show-current"]) || "(detached)";
+	if (actual !== expected) throw new Error(`release candidate must be on local ${expected} (current: ${actual})`);
+	if (current.head !== evidence.binding.head || current.tree !== evidence.binding.tree)
+		throw new Error(`release candidate no longer matches clean local ${expected}`);
 	const packageJson = JSON.parse(git(root, ["show", `${current.head}:apps/desktop/package.json`]));
 	if (packageJson.version !== request.productVersion)
 		throw new Error("release version differs from the committed Desktop version");

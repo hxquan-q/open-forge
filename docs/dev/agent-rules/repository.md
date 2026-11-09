@@ -11,7 +11,7 @@ Open Forge 是基于上游 OpenVetta 演进的 AI Agent 产品栈。**本仓库�
 
 顶层目录按「是否被别的包依赖」划分，新增目录必须遵守：
 
-- `apps/`：可交付的应用，依赖图的叶子节点，不被任何包 import。`desktop`、`cli-host`、`docs-site`、`mobile`（Expo/React Native）、`kotlin`（Kotlin Multiplatform，仅 Android）、`im-gateway`（Go）与 `ssh-helper`（Go，远程项目的远端 helper，见 ADR-0124）。
+- `apps/`：可交付的应用，依赖图的叶子节点，不被任何包 import。`desktop`、`cli-host`、`docs-site`、`mobile`（Expo/React Native）、`kotlin`（Kotlin Multiplatform，仅 Android）、`im-gateway`（Go）、`ssh-helper`（Go，远程项目的远端 helper，见 ADR-0124）与 `remote-relay`（Cloudflare Worker + Durable Object，在一台移动端与一台桌面端之间中继远程控制协议与 WebRTC 信令）。
 - `packages/`：可复用模块，只能被 `apps/` 或其它 `packages/` 依赖。
 
 主要分层：
@@ -25,7 +25,7 @@ Open Forge 是基于上游 OpenVetta 演进的 AI Agent 产品栈。**本仓库�
 核心依赖方向：
 
 ```text
-apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / ssh-helper)
+apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / ssh-helper / remote-relay)
                       |
                       v
        coding-agent / runtime-* / capability-*
@@ -35,6 +35,9 @@ apps/*  (desktop / cli-host / docs-site / mobile / kotlin / im-gateway / ssh-hel
 ```
 
 `packages/*` 不得反向依赖 `apps/*`，跨包调用优先使用目标包在 `package.json#exports` 中声明的公开入口，不得从其他包深度导入 `src/**`。
+
+现存例外（不作为新增依赖的先例）：`apps/desktop → @vetta/cli-host`（`--agent-rpc` 子命令懒加载，见 `apps/desktop/src/main/cli/agent-rpc-command.ts`）；`@vetta/runtime-desktop → @vetta/coding-agent`（层级倒置）。两者均计划由 [PLAN-0029](../../../project/plans/PLAN-0029-desktop-host-split-and-native-sidecars.md) Phase 4 消除。
+
 ## 指令作用域
 
 常用的包级规则：

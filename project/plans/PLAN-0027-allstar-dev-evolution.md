@@ -6,7 +6,7 @@ priority: P1
 owner: desktop
 source: REQ-0030
 related_requirement: [REQ-0030]
-related_tasks: [TASK-0422, TASK-0423, TASK-0448]
+related_tasks: [TASK-0422, TASK-0423, TASK-0478]
 related_issues: []
 related_bugs: []
 depends_on: []

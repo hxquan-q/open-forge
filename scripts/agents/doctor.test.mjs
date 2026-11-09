@@ -28,6 +28,8 @@ function context() {
 	policy.level = 1;
 	policy.allowedProviders = ["test"];
 	policy.capabilities = ["implement", "review", "verify"];
+	// The suite asserts same-family rejection; the deployment policy may relax it.
+	policy.differentReviewerFamily = true;
 	return { root, stateDirectory: root, policy, settings, probe: tools, now: 10000 };
 }
 afterEach(() => {

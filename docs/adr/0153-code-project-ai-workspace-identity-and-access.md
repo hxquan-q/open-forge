@@ -1,9 +1,9 @@
 <!-- Copyright The Open Forge contributors. -->
-# ADR-0152：Code 项目 AI 工作区身份与双根文件访问
+# ADR-0153：Code 项目 AI 工作区身份与双根文件访问
 
 ## 状态
 
-已采纳（2026-11-05，实施 TASK-0449；依据用户已确认的 REQ-0031）。
+已采纳（2026-11-05，实施 TASK-0479；依据用户已确认的 REQ-0031）。
 
 ## 背景
 

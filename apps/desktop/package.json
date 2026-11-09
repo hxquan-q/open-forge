@@ -161,6 +161,7 @@
 		"@vetta/remote-control": "workspace:*",
 		"@vetta/remote-desktop": "workspace:*",
 		"@vetta/runtime-core": "workspace:*",
+		"@vetta/host-protocol": "workspace:*",
 		"@vetta/runtime-desktop": "workspace:*",
 		"@vetta/runtime-knowledge": "workspace:*",
 		"@vetta/runtime-mcp": "workspace:*",

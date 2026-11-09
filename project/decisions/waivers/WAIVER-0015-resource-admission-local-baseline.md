@@ -1,7 +1,7 @@
 ---
 id: WAIVER-0015
 rule: project/collaboration/development-workflow.md 的本地集成要求全跨包测试全绿的 Policy
-status: active
+status: resolved
 owner: PLAN-0026-coordinator
 reason: PLAN-0026 的 test:changed 完整运行中 Desktop 7 文件 14 例失败，独立临时检出原基线 6bb27d048 在相同宿主逐例复现完全相同的失败集合；不将共享资源任务扩大为远端 shell 与后台刷新修复
 risk: Windows Desktop 广域门禁仍红，基线一致不能证明所有组合风险为零；相关存量测试与环境根因待 ISSUE-0035 定位
@@ -23,3 +23,7 @@ expires: 2026-11-04
 - 定向新行为、正常工具入口、实际产品 assembly、兼容回归和独立审查已完成；完整 bun run check exit 0。所有失败断言与执行强度保留。
 
 本条只处理本地集成的测试流程 Policy，不扩张 Git 授权 Invariant。origin/dev 推送须满足原有完整批次门禁，当前不推送；不触及 origin/main、upstream、tag、Release、真实 Provider、用户实例或真实状态。保留 Task 工作树，待失败解决及 dev 推送后按既有流程清理。到期不自动续期，归因/修复另立 Task，不把本条变为全仓测试基线豁免。
+
+## 处置（2026-11-06）
+
+覆盖的两个候选 `619cd9c3b`（TASK-0410）与 `ddf02a580`（TASK-0411）均已包含于 tag `v0.1.4`，本地集成已完成；本例外不再需要，置 resolved，不续期。Windows Desktop 存量失败仍按 ISSUE-0035 跟踪，不由本条覆盖后续任务。

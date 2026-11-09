@@ -1,5 +1,5 @@
 ---
-id: PLAN-0029
+id: PLAN-0030
 type: plan
 status: verifying
 priority: P1
@@ -9,7 +9,7 @@ created: 2026-11-05
 updated: 2026-11-06
 depends_on: []
 related_requirement: [REQ-0031]
-related_tasks: [TASK-0449]
+related_tasks: [TASK-0479]
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -64,4 +64,4 @@ related_tasks: [TASK-0449]
 
 ## 需要的 ADR
 
-- [ADR-0152](../../docs/adr/0152-code-project-ai-workspace-identity-and-access.md)：项目路径身份、双根工具授权、SSH 本机工作区路由与逐文件迁移合同。
+- [ADR-0153](../../docs/adr/0153-code-project-ai-workspace-identity-and-access.md)：项目路径身份、双根工具授权、SSH 本机工作区路由与逐文件迁移合同。

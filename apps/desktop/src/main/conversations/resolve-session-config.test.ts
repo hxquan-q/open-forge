@@ -263,7 +263,7 @@ describe("会话注入工具（TASK-0095）", () => {
 	});
 });
 
-describe("Code 项目 AI 工作区会话上下文（TASK-0449）", () => {
+describe("Code 项目 AI 工作区会话上下文（TASK-0479）", () => {
 	it("只为 coding 会话注入宿主解析的项目身份、AI 工作区路径和落点规则", async () => {
 		const root = await createTemporaryRoot();
 		const coding = await resolveDesktopSessionConfig(

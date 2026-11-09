@@ -42,7 +42,9 @@ export async function prepareTask({ root, store, policy, settings, token, tests,
 	requireCapability(policy, "implement");
 	bindRepository(store, root);
 	const base = snapshot(root);
-	if (git(root, ["branch", "--show-current"]) !== "main") throw new Error("controller checkout must be main");
+	const expected = policy.integration.branch;
+	const actual = git(root, ["branch", "--show-current"]) || "(detached)";
+	if (actual !== expected) throw new Error(`controller checkout must be ${expected} (current: ${actual})`);
 	const task = taskById(root, token.task);
 	if (task.status !== "ready" || task.worktreeDeclared) throw new Error("prepare needs an unassigned ready Task");
 	const indexPath = join(root, "project/tasks/README.md");

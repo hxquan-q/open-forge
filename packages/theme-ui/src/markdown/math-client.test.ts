@@ -1,6 +1,6 @@
 // Copyright The Open Forge contributors.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderFormula } from "../../../../../../../../packages/theme-ui/src/markdown/math-render";
+import { renderFormula } from "./math-render";
 
 class ControlledWorker {
 	static instances: ControlledWorker[] = [];
@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe("formula rendering budget", () => {
 	it("deduplicates formulas, serializes distinct jobs and serves completed results without worker work", async () => {
-		const { requestFormula } = await import("../../../../../../../../packages/theme-ui/src/markdown/math-client");
+		const { requestFormula } = await import("./math-client");
 		const first = vi.fn();
 		const duplicate = vi.fn();
 		const second = vi.fn();
@@ -59,7 +59,7 @@ describe("formula rendering budget", () => {
 	});
 
 	it("cancels abandoned jobs, ignores stale replies and recovers after a worker timeout", async () => {
-		const { requestFormula } = await import("../../../../../../../../packages/theme-ui/src/markdown/math-client");
+		const { requestFormula } = await import("./math-client");
 		const abandoned = vi.fn();
 		const next = vi.fn();
 		const cancel = requestFormula("old", false, abandoned);

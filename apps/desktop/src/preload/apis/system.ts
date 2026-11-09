@@ -5,6 +5,7 @@ import { PROJECTS_CHANNELS } from "../../shared/projects-ipc.js";
 import type { DesktopApi } from "../api.js";
 import type { DesktopThemeChangeRequest } from "../api-types/theme.js";
 import { FS_READ_TEXT_PREVIEW_CHANNEL } from "../fs-types.js";
+import { createDesktopHostClient } from "../host-transport.js";
 import { onIpcEvent, onIpcVoidEvent } from "./helper.js";
 
 export function createSystemApi(
@@ -34,6 +35,7 @@ export function createSystemApi(
 	| "diagnostics"
 	| "permissions"
 > {
+	const host = createDesktopHostClient(ipc);
 	return {
 		dialog: {
 			selectFolder: () => ipc.invoke("vetta:dialog:select-folder"),
@@ -204,35 +206,37 @@ export function createSystemApi(
 			onStatusesChanged: (handler) => onIpcEvent(ipc, "vetta:kb:statuses-changed", handler),
 		},
 		models: {
-			get: () => ipc.invoke("vetta:models:get"),
-			set: (config) => ipc.invoke("vetta:models:set", config),
-			copyApiKey: (providerId) => ipc.invoke("vetta:models:copy-api-key", providerId),
+			get: () => host.call("models.getConfig", {}),
+			set: async (config) => {
+				await host.call("models.setConfig", { config });
+			},
+			copyApiKey: (providerId) => host.call("models.copyApiKey", { providerId }),
 			fetchRemote: () => ipc.invoke("vetta:models:fetch-remote"),
-			listPresets: () => ipc.invoke("vetta:models:list-presets"),
+			listPresets: () => host.call("models.listPresets", {}),
 			refreshPresetModels: (providerId, apiKey) =>
 				ipc.invoke("vetta:models:refresh-preset-models", providerId, apiKey),
-			refreshPresetCatalog: () => ipc.invoke("vetta:models:refresh-preset-catalog"),
+			refreshPresetCatalog: () => host.call("models.refreshPresetCatalog", {}),
 			onPresetsUpdated: (handler) => onIpcVoidEvent(ipc, "vetta:models:presets-updated", handler),
-			probe: (ref) => ipc.invoke("vetta:models:probe", ref),
-			fetchProviderModels: (providerName) => ipc.invoke("vetta:models:fetch-provider-models", providerName),
-			testProvider: (providerName) => ipc.invoke("vetta:models:test-provider", providerName),
-			getBalance: (providerId) => ipc.invoke("vetta:models:get-balance", providerId),
-			configPath: () => ipc.invoke("vetta:models:config-path"),
+			probe: (ref) => host.call("models.probe", ref),
+			fetchProviderModels: (providerName) => host.call("models.fetchProviderModels", { providerName }),
+			testProvider: (providerName) => host.call("models.testProvider", { providerName }),
+			getBalance: (providerId) => host.call("models.getBalance", { providerName: providerId }),
+			configPath: () => host.call("models.configPath", {}),
 			onChanged: (handler) => onIpcEvent(ipc, "vetta:models:changed", handler),
 		},
 		mcp: {
 			get: () => ipc.invoke("vetta:mcp:get"),
 			set: (config) => ipc.invoke("vetta:mcp:set", config),
-			configPath: () => ipc.invoke("vetta:mcp:config-path"),
+			configPath: () => host.call("mcp.configPath", {}),
 			login: (serverName, options) => ipc.invoke("vetta:mcp:login", serverName, options),
 			logout: (serverName) => ipc.invoke("vetta:mcp:logout", serverName),
-			hasAuth: (serverName) => ipc.invoke("vetta:mcp:has-auth", serverName),
-			authStatus: (serverNames) => ipc.invoke("vetta:mcp:auth-status", serverNames),
+			hasAuth: (serverName) => host.call("mcp.hasAuth", { serverName }),
+			authStatus: (serverNames) => host.call("mcp.authStatus", { serverNames }),
 			getSetupLoginStatus: (serverName) => ipc.invoke("vetta:mcp:get-setup-login-status", serverName),
 			startSetupLogin: (serverName, requestId) => ipc.invoke("vetta:mcp:start-setup-login", serverName, requestId),
 			cancelSetupLogin: (requestId) => ipc.invoke("vetta:mcp:cancel-setup-login", requestId),
 			clearSetupLogin: (serverName) => ipc.invoke("vetta:mcp:clear-setup-login", serverName),
-			listServerTools: (serverName) => ipc.invoke("vetta:mcp:list-server-tools", serverName),
+			listServerTools: (serverName) => host.call("mcp.listServerTools", { serverName }),
 		},
 		media: {
 			listProviders: () => ipc.invoke("vetta:media:list-providers"),
@@ -245,16 +249,18 @@ export function createSystemApi(
 			installGit: () => ipc.invoke("vetta:runtimes:install-git"),
 		},
 		settings: {
-			getServerUrl: () => ipc.invoke("vetta:settings:get-server-url"),
-			getSiteUrl: () => ipc.invoke("vetta:settings:get-site-url"),
+			getServerUrl: () => host.call("settings.getServerUrl", {}),
+			getSiteUrl: () => host.call("settings.getSiteUrl", {}),
 			getServerToken: () => ipc.invoke("vetta:settings:get-server-token"),
 			setServerToken: (token) => ipc.invoke("vetta:settings:set-server-token", token),
 			getServerRefreshToken: () => ipc.invoke("vetta:settings:get-server-refresh-token"),
 			setServerRefreshToken: (token) => ipc.invoke("vetta:settings:set-server-refresh-token", token),
-			getModelTransport: () => ipc.invoke("vetta:settings:get-model-transport"),
-			setModelTransport: (transport) => ipc.invoke("vetta:settings:set-model-transport", transport),
-			getSessionInterruptContinue: () => ipc.invoke("vetta:settings:get-session-interrupt-continue"),
-			setSessionInterruptContinue: (mode) => ipc.invoke("vetta:settings:set-session-interrupt-continue", mode),
+			getModelTransport: () => host.call("settings.getModelTransport", {}),
+			setModelTransport: (transport) => host.call("settings.setModelTransport", { transport }),
+			getSessionInterruptContinue: () => host.call("settings.getSessionInterruptContinue", {}),
+			setSessionInterruptContinue: async (mode) => {
+				await host.call("settings.setSessionInterruptContinue", { mode });
+			},
 		},
 		subscription: {
 			getStatus: () => ipc.invoke("vetta:subscription:status"),

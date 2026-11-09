@@ -30,6 +30,50 @@
 			"command": ["claude", "-p", "--model", "{model}", "--output-format", "json"],
 			"doctorCommand": ["claude", "--version"],
 			"isolation": "none"
+		},
+		{
+			"id": "qwen-implementer",
+			"enabled": true,
+			"provider": "openai-compatible",
+			"family": "qwen",
+			"model": "qwen3.8-27b",
+			"roles": ["implementer"],
+			"command": [
+				"C:/Users/xquan/Tools/bun-windows-x64/bun.exe",
+				"E:/open-forge/scripts/agents/model-adapter.mjs",
+				"--config",
+				"E:/forge-controller/adapter.config.json"
+			],
+			"doctorCommand": [
+				"C:/Users/xquan/Tools/bun-windows-x64/bun.exe",
+				"E:/open-forge/scripts/agents/model-adapter.mjs",
+				"--config",
+				"E:/forge-controller/adapter.config.json",
+				"--doctor"
+			],
+			"isolation": "external-sandbox"
+		},
+		{
+			"id": "qwen-reviewer",
+			"enabled": true,
+			"provider": "openai-compatible",
+			"family": "qwen",
+			"model": "qwen3.8-27b",
+			"roles": ["reviewer"],
+			"command": [
+				"C:/Users/xquan/Tools/bun-windows-x64/bun.exe",
+				"E:/open-forge/scripts/agents/model-adapter.mjs",
+				"--config",
+				"E:/forge-controller/adapter.config.json"
+			],
+			"doctorCommand": [
+				"C:/Users/xquan/Tools/bun-windows-x64/bun.exe",
+				"E:/open-forge/scripts/agents/model-adapter.mjs",
+				"--config",
+				"E:/forge-controller/adapter.config.json",
+				"--doctor"
+			],
+			"isolation": "external-sandbox"
 		}
 	]
 }

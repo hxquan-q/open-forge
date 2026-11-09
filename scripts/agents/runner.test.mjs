@@ -11,7 +11,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { digest } from "./contracts.mjs";
@@ -20,7 +20,12 @@ import { testExecutionProof } from "./execution-proof-fixture.mjs";
 import { git, snapshot } from "./git.mjs";
 import { claim } from "./leases.mjs";
 import { processFixture } from "./process-fixture.mjs";
-import { codeBinding, executeAdapter as executeAdapterUnderTest } from "./runner.mjs";
+import {
+	assertDistinctContext,
+	codeBinding,
+	executeAdapter as executeAdapterUnderTest,
+	removeReviewCandidate,
+} from "./runner.mjs";
 import { createStore } from "./store.mjs";
 import { verifyRun as verifyRunUnderTest, visualReviewRequest } from "./verify.mjs";
 
@@ -80,6 +85,8 @@ function fixture({ processes, roots }) {
 	policy.capabilities = ["plan", "triage", "lessons", "implement", "review", "verify", "integrate-dev"];
 	policy.allowedProviders = ["fixture"];
 	policy.requiredChecks = ["tests", "check"];
+	// This suite enforces cross-family independence; the deployment policy may relax it.
+	policy.differentReviewerFamily = true;
 	policy.limits.heartbeatMs = 100;
 	policy.limits.leaseMs = 10000;
 	policy.limits.wallTimeMs = 10000;
@@ -374,5 +381,105 @@ describe("implementation and independent review through real processes and Git",
 				},
 			}),
 		).rejects.toThrow(/bound human approval/);
+	});
+});
+
+describe("detached review candidate", () => {
+	it("rejects a reviewer that shares an execution context with an implementer", () => {
+		expect(() => assertDistinctContext([{ actorId: "author-one", contextId: "/forge/repo" }], "/forge/repo")).toThrow(
+			new Error("review shares an execution context with an implementer"),
+		);
+		expect(
+			assertDistinctContext([{ actorId: "author-one", contextId: "/forge/repo" }], "/forge/repo-review-a1b2c3d4"),
+		).toBe(true);
+		expect(assertDistinctContext([{ actorId: "author-one" }, { actorId: "author-two" }], "/forge/repo")).toBe(true);
+	});
+	it("wraps the failure when the candidate is not a registered worktree", (test) => {
+		const context = test.fixture;
+		const plain = mkdtempSync(join(tmpdir(), "forge-autonomy-review-candidate-"));
+		test.roots.push(plain);
+		let caught;
+		try {
+			removeReviewCandidate(context.repo, plain);
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(Error);
+		expect(caught.message).toBe("failed to remove the detached review candidate");
+		expect(caught.cause).toBeInstanceOf(Error);
+	});
+	it("reviews a detached candidate in its own context and removes it afterwards", async (test) => {
+		const context = test.fixture;
+		const repo = context.repo;
+		context.settings.adapters[1].command = [
+			process.execPath,
+			"--input-type=module",
+			"-e",
+			"import {writeFileSync} from 'node:fs';import {join} from 'node:path';writeFileSync(join(process.env.TMPDIR,'cwd.txt'),process.cwd());console.log(JSON.stringify({verdict:'approve',findings:[]}));",
+		];
+		context.runContract.adaptersDigest = digest(context.settings);
+		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
+		const reviewed = await executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" });
+		const attempt = reviewed.attempts.find((entry) => entry.role === "reviewer");
+		const candidate = join(dirname(repo), `${basename(repo)}-review-${attempt.id.slice(0, 8)}`);
+		expect(reviewed.review.reviewer.contextId).toBe(candidate);
+		expect(attempt.identity.contextId).toBe(candidate);
+		expect(reviewed.attempts.find((entry) => entry.role === "implementer").identity.contextId).toBe(repo);
+		for (const author of reviewed.authors) {
+			expect(author.contextId).toBe(repo);
+			expect(author.contextId).not.toBe(candidate);
+		}
+		expect(readFileSync(join(context.store.root, "artifacts", attempt.id, "tmp", "cwd.txt"), "utf8")).toBe(candidate);
+		expect(git(repo, ["worktree", "list"]).replaceAll("\\", "/")).not.toContain(candidate.replaceAll("\\", "/"));
+		await verifyRun({
+			...context,
+			resolveCommand: (id, _contract, reportPath) => {
+				if (id === "tests") return [process.execPath, "feature.test.mjs", reportPath];
+				return [process.execPath, "--check", "feature.test.mjs"];
+			},
+		});
+		expect(() => exportEvidence(context.store, context.token.runId, context.policy)).not.toThrow();
+	});
+	it("fails the attempt without recording a review when the reviewer dirties the candidate", async (test) => {
+		const context = test.fixture;
+		const repo = context.repo;
+		context.settings.adapters[1].command = [
+			process.execPath,
+			"--input-type=module",
+			"-e",
+			"import {writeFileSync} from 'node:fs';writeFileSync('dirty.txt','x');console.log(JSON.stringify({verdict:'approve',findings:[]}));",
+		];
+		context.runContract.adaptersDigest = digest(context.settings);
+		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
+		await expect(
+			executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" }),
+		).rejects.toThrow(/reviewer modified the candidate/);
+		const run = context.store.read().runs[context.token.runId];
+		const attempt = run.attempts.find((entry) => entry.role === "reviewer");
+		const candidate = join(dirname(repo), `${basename(repo)}-review-${attempt.id.slice(0, 8)}`);
+		expect(attempt.status).toBe("failed");
+		expect(run.review).toBe(null);
+		expect(git(repo, ["worktree", "list"]).replaceAll("\\", "/")).not.toContain(candidate.replaceAll("\\", "/"));
+	});
+	it("fails the attempt without recording a review when the reviewer commits to the candidate", async (test) => {
+		const context = test.fixture;
+		const repo = context.repo;
+		context.settings.adapters[1].command = [
+			process.execPath,
+			"--input-type=module",
+			"-e",
+			"import {execFileSync} from 'node:child_process';execFileSync('git',['commit','--quiet','--allow-empty','-m','tamper']);console.log(JSON.stringify({verdict:'approve',findings:[]}));",
+		];
+		context.runContract.adaptersDigest = digest(context.settings);
+		await executeAdapter({ ...context, adapterId: "author", role: "implementer", request: "fix" });
+		await expect(
+			executeAdapter({ ...context, adapterId: "reviewer", role: "reviewer", request: "review" }),
+		).rejects.toThrow(/reviewer modified the candidate/);
+		const run = context.store.read().runs[context.token.runId];
+		const attempt = run.attempts.find((entry) => entry.role === "reviewer");
+		const candidate = join(dirname(repo), `${basename(repo)}-review-${attempt.id.slice(0, 8)}`);
+		expect(attempt.status).toBe("failed");
+		expect(run.review).toBe(null);
+		expect(git(repo, ["worktree", "list"]).replaceAll("\\", "/")).not.toContain(candidate.replaceAll("\\", "/"));
 	});
 });

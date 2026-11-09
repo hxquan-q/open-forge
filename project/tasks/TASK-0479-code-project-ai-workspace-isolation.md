@@ -1,14 +1,14 @@
 ---
-id: TASK-0449
+id: TASK-0479
 type: task
 status: verifying
 priority: P1
 owner: desktop
 requirement: REQ-0031
-plan: PLAN-0029
+plan: PLAN-0030
 source: D:/Coding/WorkSpace/Vetta/vetta-code-mode-ai-workspace-isolation.md
 related_requirement: [REQ-0030]
-related_plan: [PLAN-0029]
+related_plan: [PLAN-0030]
 related_tasks: [TASK-0423, TASK-0425]
 related_issues: []
 related_bugs: []

@@ -1,0 +1,109 @@
+---
+id: TASK-0451
+type: task
+status: done
+priority: P1
+owner: scripts/agents
+requirement: REQ-0019
+plan: PLAN-0029
+source: user-request
+related_requirement: [REQ-0019]
+related_plan: [PLAN-0029, PLAN-0019]
+related_tasks: [TASK-0450, TASK-0454, TASK-0455]
+related_issues: []
+related_bugs: []
+execution: serial
+branch: main
+worktree: unassigned（主工作区串行）
+base_commit:
+read_paths:
+  - scripts/agents/release.mjs
+  - scripts/agents/runner.mjs
+  - .github/workflows/quality.yml
+  - .github/workflows/desktop-packaged.yml
+  - project/research/RESEARCH-0045-github-codeup-flow-ci-migration.md
+write_paths:
+  - scripts/agents/services.mjs
+  - scripts/agents/services.test.mjs
+  - scripts/agents/integrate.mjs
+  - scripts/agents/integrate.test.mjs
+  - scripts/agents/evidence.mjs
+  - scripts/agents/evidence.test.mjs
+  - scripts/agents/cli.mjs
+  - scripts/agents/cli.test.mjs
+  - scripts/agents/release.test.mjs
+  - schemas/agents/service-proof.schema.json
+  - scripts/agents/README.md
+exclusive_paths:
+  - scripts/agents
+depends_on: [TASK-0450]
+conflicts_with: [TASK-0450, TASK-0452, TASK-0454, TASK-0455]
+integration_status: integrated
+created: 2026-11-06
+updated: 2026-11-07
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# 候选提交与 CI 证据绑定（PLAN-0029 Phase 1.2）
+
+## 目标
+
+推送开发候选后，核验远端候选引用的 SHA/树、该 SHA 上的 CI 结论与已集成证据的本地评审/检查绑定三者指向同一对象。原草稿的评审独立性拆至 [TASK-0454](TASK-0454-controller-review-isolation.md)，条款级证据拆至 [TASK-0455](TASK-0455-requirement-run-clause-evidence.md)。
+
+## 调查结论（2026-11-06，只读核对）
+
+- CI 门禁来源：GitHub Actions。`quality.yml` 在 push dev 与 PR 上运行，`desktop-packaged.yml` 仅 PR；`codeup-sync.yml` 只做镜像同步，RESEARCH-0045 记录 Codeup Flow 尚未建立、合并前门禁不能交给 Flow。
+- 控制器不直接调用 `gh`：`release.mjs` 只认签名 `ci` service proof（head/tree 一致且覆盖 `requiredChecks` + `desktop-packaged` + `tests/<platform>`）。本 Task 沿用签名 proof，不新增 `gh run` 依赖。
+- 已有：`runner.mjs` 的 `codeBinding`（head/tree/policy/contract）、`evidence.mjs` 对 checks 与 review 的 binding 校验、评审者 actorId 不在 authors 中且 family 不同。
+- 缺口：`services.mjs` 的 `ci` 数据无 `runId`、`remoteRef`；`integrate.mjs` 不校验 CI proof，只有发布阶段校验。
+
+## 范围
+
+### 做
+
+- `ci` proof 数据新增 `runId`（非空文本）与 `remoteRef`（`<remote>/<branch>`，与 policy 的 `integration.candidateRef` 校验口径一致）。
+- 时序决定（2026-11-06，用户选定）：协作规则是本地 `main` 集成后再推 `main:dev`，CI 才在 `origin/dev` 上运行，集成前不存在该 proof。因此 `applyIntegration` 不变，新增独立步骤 `verifyCandidate`（CLI `candidate-verify --run-id <id> --proof <file>`），在推送 dev 之后执行：
+  - 前置：run 为 `integrated` 且 `integration.phase === "applied"`，需 `integrate-dev` capability；租约已释放，不要求活动租约。
+  - 本地远端跟踪引用 `refs/remotes/<candidateRef>`（操作者先 fetch，控制器不联网）必须等于已集成证据的 head。
+  - proof 的 subject 为 `candidateSubject(binding, remoteRef)`；`head`/`tree` 等于已集成证据 binding，`remoteRef` 等于 policy 的 `integration.candidateRef`，`checks` 覆盖 `policy.requiredChecks`。
+  - 通过后在 `integration.candidateVerification` 记录 `{ runId, remoteRef, head, tree, keyId, at }` 并写审计；失败不改状态。
+- 发布阶段沿用同一 proof schema，`release.test.mjs` 夹具补新字段；发布已有断言不削弱，本 Task 不新增发布对 `candidateVerification` 的要求。
+- 检查名映射决定：proof 中的 `checks` 使用 policy 的逻辑名（如 `tests/windows`），由签发 proof 的服务把 workflow job 名映射为逻辑名；在 `scripts/agents/README.md` 记录映射表与签发方职责，控制器不解析 job 名。
+
+### 不做
+
+- 不接 GitHub API 或 Codeup Flow；不启用真实 adapter（TASK-0452）；不推送、不发布。
+- 不改评审执行方式（TASK-0454）和 requirement-run 证据（TASK-0455）。
+
+## Given / When / Then
+
+- Given 已集成（`applied`）的 run、已 fetch 的远端候选引用与签名 CI proof / When `verifyCandidate` / Then 仅在远端引用、proof 的 head、tree、remoteRef、checks 与已集成证据及 policy 一致时记录 `candidateVerification`。
+- 失败用例：run 未集成、远端引用不等于集成 head、proof 针对旧提交、树不一致、remoteRef 不是候选引用、缺少必需检查、缺 runId、无 proof、subject 不匹配，均拒绝且不改动 run 状态。
+- `applyIntegration` 的既有行为与测试不变。
+
+## 必须保持
+
+- 现有 integrate/release/evidence 测试断言不削弱；集成仍要求独立 worktree、有效租约与人工审批证据。
+- 签名校验、信任根与时间窗口语义不变。
+
+## 测试与验证
+
+- 先补失败用例再实现；`scripts/agents` 全量测试经仓库 runner；`bun run test:impact -- <files>`；`bun run check`。
+
+## 交付
+
+- 实现：`services.mjs` 的 `ci` proof 数据新增必填 `runId` 与 `remoteRef`；`integrate.mjs` 新增 `candidateSubject`、`verifyCandidate`（推送后独立核验，`applyIntegration`/`prepareIntegration` 未动）；CLI 新增 `candidate-verify`（恰好一个 `--proof`，在取租约前路由，已集成 run 不需要活动租约）；`release.test.mjs` 夹具补新字段；README 记录协作时序、核验清单与 job 名映射表（控制器不解析 job 名）。
+- 技术评审：主会话对两个子代理的 diff 逐变量自审（校验顺序、digest 守卫、错误文案、夹具字段）；未引入独立评审身份，不宣称独立评审。
+- 实际验证（2026-11-06）：`scripts/agents` 全量 22 文件 183 例经仓库 runner 串行通过；`bun run check:quick -- <7 个改动文件>` 通过；`bun run test:impact -- <7 个改动文件>` 67 文件 827 例通过。
+- 偏离合同：Task 要求“先补失败用例再实现”，实际由子代理与实现同步编写测试，未逐字执行 RED-first；合同所列失败用例均已断言。
+- 未运行与风险：完整 `bun run check` 未运行（docs-site `fumadocs-ui` 与 mobile `react-native` 为既有环境问题，见 TASK-0448 记录）；真实 CI proof 签发链未实测（当前无签发服务，仅测试用 Ed25519 密钥）；`candidate-verify` 依赖操作者先 fetch，真实操作序列留待 TASK-0452 端到端。
+- 本提交保存至 `xquan`，目标 `origin/xquan`；`integration_status` 保持 pending。人工验收：不适用（内部控制器合同，无用户可见行为），完成标准为全量测试与门禁通过。
+- 发布：不适用
+
+## 集成补记（2026-11-07）
+
+- 实现已随 `bad1f1a76` 集成本地 `main` 并推送 `origin/dev`（16d7e620f）；真实签发链与操作序列由 TASK-0452 端到端验收（done）覆盖，`integration_status` 补记为 integrated，状态置 verifying。
+
+## 完成收口（2026-11-07）
+
+- 集成代码已随 `origin/dev` 全绿收口：quality run 42270493203（e66e8e2b1）success，后续 dev 批次（16d7e620f / 78f8ba441 / 7334db9b3）quality 均 success；任务完成标准（全量测试与门禁）由远端权威门禁证实，状态置 done。

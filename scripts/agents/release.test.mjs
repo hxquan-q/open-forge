@@ -142,6 +142,8 @@ function fixture({ loseResponse = false } = {}) {
 			repository: settings.publisher.repository,
 			head: code.head,
 			tree: code.tree,
+			runId: "1",
+			remoteRef: "origin/dev",
 			checks: ["tests", "check", "desktop-packaged", "tests/windows", "tests/macos", "tests/linux"],
 			passed: true,
 		}),
@@ -258,6 +260,13 @@ it("rejects unsigned, wrong-subject, missing-platform and stale authorization be
 	await expect(publishRelease({ ...context, policy: { ...context.policy, level: 0 } })).rejects.toThrow(/paused/);
 	writeFileSync(context.request.artifacts[0].path, "tampered");
 	await expect(publishRelease(context)).rejects.toThrow(/artifact/);
+});
+
+it("refuses to publish from a checkout other than the configured integration branch", async () => {
+	const context = fixture();
+	git(context.repo, ["switch", "--quiet", "-c", "trunk"]);
+	await expect(publishRelease(context)).rejects.toThrow("release candidate must be on local main (current: trunk)");
+	expect(context.store.read().releases).toEqual({});
 });
 
 it("requires sandbox-owner proof to recover unknown cleanup and keeps the operator pause", () => {

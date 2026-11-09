@@ -20,6 +20,8 @@ const DATA = {
 		repository: text,
 		head: { type: "string", pattern: "^[a-f0-9]{40,64}$" },
 		tree: { type: "string", pattern: "^[a-f0-9]{40,64}$" },
+		runId: text,
+		remoteRef: { type: "string", minLength: 3, maxLength: 165 },
 		checks: { type: "array", minItems: 1, uniqueItems: true, items: text },
 		passed: { const: true },
 	}),

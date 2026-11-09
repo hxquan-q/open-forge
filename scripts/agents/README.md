@@ -6,6 +6,24 @@
 ## 权威入口
 
 - [策略](../../project/autonomy-policy.json)：目标 L4，当前 level=0，模型与发布能力默认不启用。
+- 集成目标：策略必填 `integration.branch`（本地集成分支，当前 `main`）与 `integration.candidateRef`（`<remote>/<branch>`，当前 `origin/dev`），无默认回退。准备（`prepareTask`）、集成（`prepareIntegration`）与发布授权均校验当前检出等于 `integration.branch`，报错带期望与实际分支。`candidateRef` 由 `candidate-verify` 使用，推送开发候选后核验 CI。分支角色以[协作规则](../../docs/dev/agent-rules/collaboration.md)为准。
+- 推送后候选核验：协作顺序为本地 `main` 集成 → 推 `main:dev` → CI 在 `origin/dev` 运行 → 操作者 fetch → `candidate-verify --run-id <id> --proof <file>`。命令不需要活动租约，但需要 `integrate-dev` 能力。核验内容：
+  - run 已 applied；
+  - 本地 `refs/remotes/<candidateRef>` 等于已集成 head（控制器不联网，只读本地远端跟踪引用）；
+  - 签名 `ci` proof 的 subject 为 `candidateSubject(binding, remoteRef)`；
+  - proof 的 head、tree、remoteRef 与集成结果和策略一致；
+  - proof 的 checks 覆盖 `requiredChecks`；
+  - 通过后写入 `integration.candidateVerification` 并记录审计；任一项失败不改状态。
+
+  proof 的 `checks` 使用 policy 逻辑名，由签发方从 GitHub Actions job 名映射，控制器不解析 job 名：
+
+  | 逻辑名 | workflow / job |
+  |---|---|
+  | `check` | quality.yml / `check + quality tests` |
+  | `tests` | quality.yml / `affected unit tests (*)` 全部通过 |
+  | `tests/windows` `tests/macos` `tests/linux` | quality.yml / `affected unit tests (windows-latest / macos-latest / ubuntu-latest)` |
+  | `desktop-packaged` | desktop-packaged.yml / `Desktop packaging contract` 及 packaged E2E（仅 PR 触发） |
+  | `impact` | 签发方按受影响测试结果给出；当前 workflow 无同名 job，签发方须说明来源 |
 - [执行器配置](../../project/agents.json)：示例默认 disabled，启用前固定实际可执行文件、模型与隔离方式。
 - [JSON 合同](../../schemas/agents/)：边界采用闭合的 JSON Schema 子集；不支持的关键字报错，不静默略过约束。
 - 任务继续使用 project/tasks；不增加 GOAL 状态机。运行进程、租约与尝试次数不写进 Task 心跳提交。
@@ -52,21 +70,23 @@ node scripts/agents/cli.mjs requirement-check --repo <repo> --requirement REQ-xx
 node scripts/agents/cli.mjs requirement-run --repo <repo> --state-dir <controller-state> --holder <id> --requirement REQ-xxxx --plan PLAN-xxxx --coverage <coverage.json> [--through verify|integrate] [--limit N] [--max-stalls N] [--test <file>] [--report <file>]
 ```
 
-coverage manifest 由协调者/Agent 拆解产生，结构见 `schemas/agents/requirement-run.schema.json`：每个条款 R1..Rn 至少绑定一个本 REQ/PLAN 内的 Task，每个 Task 至少一条仓库相对证据文件。`requirement-check` 只做结构、归属与证据路径存在性检查（`evidenceCheck: presence-only`、`semanticReview: not-performed`），输出覆盖矩阵；不证明证据语义正确。
+coverage manifest 由协调者/Agent 拆解产生，结构见 `schemas/agents/requirement-run.schema.json`：每个条款 R1..Rn 至少绑定一个本 REQ/PLAN 内的 Task，每个 Task 至少一条仓库相对证据文件。证据条目有两种形态：字符串只做路径存在性检查；对象 `{path, clauses, kind}` 额外要求文件内容以精确 token（紧邻字符不得属于 `A-Za-z0-9_.-`，R1 不匹配 R10）同时引用需求 ID 与每个声明条款 ID，且声明条款必须已绑定该 Task，`kind` 取 `test`/`verification`/`ci` 仅为声明，CI 的权威绑定是 store 里的 `candidateVerification`。只要存在任一对象条目，`evidenceCheck` 即为 `clause-reference`，否则为 `presence-only`。`requirement-check` 只做结构、归属与上述证据检查（`semanticReview: not-performed`），输出覆盖矩阵；机械引用检查不证明证据语义正确。
 
 `requirement-run` 是现有 `cycle` 之上的选择与报告层，不是新的状态机：每轮只从 manifest 内选择 `ready`、依赖已完成、无租约或路径冲突的 Task，串行调用 `cycle`；不领取 manifest 外 Task，不绕过 `depends_on`，不把 `verifying` 当依赖完成。停止原因包括 `engineering-complete`、`coverage-gap`、`blocked`、`stalled`、`needs-human`、`failed`、`limit`、`paused`、`cancelled`。`--through integrate` 需要 L2 `integrate-dev`，L0/L1 在 claim 前返回 `needs-human`。
 
-`engineering-complete` 只表示 manifest 内所有条款绑定的 Task 都已 `integration_status: integrated` 且状态为 `verifying`/`done`，并且证据路径存在；它不是用户接受，也不授权发布。报告中的 `humanAcceptance` 仅在全部绑定 Task 为 `done` 时为 `accepted`，否则为 `pending`；`release` 恒为 `not-authorized`。默认 `--through verify` 会在验证后停下，需要集成时显式使用 `--through integrate`（或在既有 run 上继续 `cycle`）。`--limit` 默认 10，`--max-stalls` 默认 2。
+`engineering-complete` 只表示 manifest 内所有条款绑定的 Task 都已 `integration_status: integrated` 且状态为 `verifying`/`done`，并且证据检查通过；它不是用户接受，也不授权发布。候选验证是独立维度：`requirement-run` 最终报告中的 `candidateVerified`（Task 级）与 `candidateVerification`（条款级、整体）只统计控制器 store 中该 Task 状态为 `integrated` 且带 `integration.candidateVerification`（由 `candidate-verify` 写入）的 run——无工程完成 Task 时整体为 `not-applicable`，全部工程完成 Task 均有证明时为 `verified`，否则为 `pending`；这些字段只在 `requirement-run` 报告中计算，`requirement-check` 静态检查不产出。报告中的 `humanAcceptance` 仅在全部绑定 Task 为 `done` 时为 `accepted`，否则为 `pending`；`release` 恒为 `not-authorized`；报告新增字段全部可选，存量报告仍通过校验。默认 `--through verify` 会在验证后停下，需要集成时显式使用 `--through integrate`（或在既有 run 上继续 `cycle`）。`--limit` 默认 10，`--max-stalls` 默认 2。
 
 `approval --run-id <ID> --approval <signed.json> --state-dir <dir>` 导入 Schema 定义的 Ed25519 外部批准。操作者把公钥写入独立状态目录的 `trusted-humans.json`（`{"version":1,"keys":[{"id":"operator","publicKey":"<PEM>"}]}`）；私钥不进入仓库或控制器 Worker。签名原文是 payload 的 `canonical()` UTF-8 字节，最多 24 小时；代码/合同变化后重签。工具不提供 human 自签按钮。
 
 ## 信任与恢复
 
-状态使用单机文件锁、fsync/原子替换与 HMAC 完整性校验；控制器密钥不能放入 Git 或挂载给 Worker。它不是分布式锁，运行目录也不是安全沙箱。真实执行必须有经过验证的 OS/VM/沙箱边界，令 Worker 与测试代码均不能访问控制器状态和发布凭据。配置里的 isolation 是执行要求，不是隔离证明。
+状态使用单机文件锁、fsync/原子替换与 HMAC 完整性校验；控制器密钥不能放入 Git 或挂载给 Worker。它不是分布式锁，运行目录也不是安全沙箱。真实执行必须有经过验证的 OS/VM/沙箱边界，令 Worker 与测试代码均不能访问控制器状态和发布凭据。配置里的 isolation 是执行要求，不是隔离证明；计入的隔离只有控制器自己落实的部分，单凭 adapter 声明 `external-sandbox`/`read-only` 不放宽任何检查。
 
 租约使用 task/run/holder/generation 四元组。过期结果拒绝；旧进程仍存活或生存状态未知时拒绝回收。暂停后心跳会中止本控制器正在管理的子进程，不根据陈旧 PID 随意杀死其他进程。重启后的进程确认、资源回收与部署演练仍需按父计划验证。
 
 运行器记录配置固定的身份和实际子进程结果，模型文本只能输出有限结果 Schema，不能声明自己是 human。身份元数据不等于厂商独立性或模型质量的数学证明；用量拿不到时记录 null，不能写成 0。
+
+评审隔离由控制器落实：reviewer 每次尝试在控制器创建的 detached 候选（任务 worktree 兄弟路径，检出已记录的 binding.head）上执行，集成工作区不被评审进程触及；结束后核对候选 head/tree 与工作区均未变并强制清理候选，清理失败按该次评审失败处理，不静默遗留。attempt 身份记录控制器生成的 `contextId`（本次执行的工作根路径：实现为任务 worktree，评审为本次 detached 候选），评审上下文与任一实现上下文相同即拒绝；该字段随 evidence 导出，存量 run 无此字段仍兼容。analysis 角色仍在任务 worktree 执行，沿用"不得改动候选"的事后核对。
 
 验证使用仓库 Node runner、完整 check 和 impact 入口。必需检查缺失、无实际通过断言、候选代码/策略/执行器配置变化时拒绝沿用旧证据。UI 和 packaged 检查需要明确能力；UI 使用下述显式授权接口，不以普通单测代替。cycle 仅在实际检查非零退出、进入 verification-failed 且清理确认后，沿既有实现/评审轮数限制尝试修复；空报告、超时、证据变化、审批、隔离、清理或租约前置失败直接停止。
 

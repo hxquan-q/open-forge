@@ -39,7 +39,7 @@ HTML 可以使用内联样式、脚本、Canvas 和 DOM 事件；可以嵌入 da
 开发验证：
 
 ```powershell
-bun scripts/quality/run-vitest.mjs --config apps/desktop/vitest.config.ts --run apps/desktop/src/renderer/domains/conversation/components/blocks/MarkdownRichContent.test.tsx apps/desktop/src/renderer/domains/conversation/components/blocks/markdown-math-client.test.ts
+bun scripts/quality/run-vitest.mjs --run packages/theme-ui/src/markdown/rich-content.test.tsx packages/theme-ui/src/markdown/math-client.test.ts
 node --test apps/desktop/scripts/markdown-preview.node-test.mjs
 node apps/desktop/scripts/markdown-render.bench.mjs
 node apps/desktop/scripts/markdown-isolation.test.mjs

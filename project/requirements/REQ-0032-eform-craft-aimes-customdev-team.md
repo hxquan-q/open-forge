@@ -8,7 +8,7 @@ source: user-request（2026-11-06 AIMES CustomDev 五角色 Agent Team 改造合
 created: 2026-11-06
 updated: 2026-11-06
 related_plan: []
-related_tasks: [TASK-0450]
+related_tasks: [TASK-0480]
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -70,4 +70,4 @@ related_tasks: [TASK-0450]
 
 - 删除 `@esign`、`@eaudit` Agent 标识会影响引用旧成员的用户自建 Team；需在 preset README/Task 说明将其改绑到新职责 Agent，不能静默复用旧标识承载新身份。
 - Skills 对模型调用时机的约束由静态合同测试验证，不能据此宣称真实模型行为或 CustomDev 工程能力已实机验收。
-- 远程 tag 查询确认 `v0.1.4` 已存在；已发布说明不可修改。本次条目加入仓库已有 `v0.1.5` 待发碎片批次（与 TASK-0449 同口径），不擅自改 Desktop 版本、不汇编或发布。
+- 远程 tag 查询确认 `v0.1.4` 已存在；已发布说明不可修改。本次条目加入仓库已有 `v0.1.5` 待发碎片批次（与 TASK-0479 同口径），不擅自改 Desktop 版本、不汇编或发布。

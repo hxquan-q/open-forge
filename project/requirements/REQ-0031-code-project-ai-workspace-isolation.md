@@ -8,8 +8,8 @@ source: user-confirmed workspace requirement D:/Coding/WorkSpace/Vetta/vetta-cod
 created: 2026-11-05
 updated: 2026-11-05
 related_requirement: [REQ-0030]
-related_plan: [PLAN-0029]
-related_tasks: [TASK-0449]
+related_plan: [PLAN-0030]
+related_tasks: [TASK-0479]
 related_issues: []
 related_bugs: []
 depends_on: []

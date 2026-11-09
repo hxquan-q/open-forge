@@ -1,14 +1,7 @@
 // Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
-import { getModelTransport, setModelTransport } from "../agent-settings/model-transport-settings.js";
 import { readAgentSettingsDocument, updateAgentSettingsDocument } from "../agent-settings/settings-document-store.js";
-import { DEFAULT_SERVER_URL, DEFAULT_SITE_URL } from "../constants.js";
-import {
-	listPresetProviders,
-	refreshPresetCatalog,
-	refreshPresetModels,
-	startPresetModelsAutoSync,
-} from "../models/presets/sync.js";
+import { refreshPresetModels, startPresetModelsAutoSync } from "../models/presets/sync.js";
 
 export function readSettings(): Record<string, unknown> {
 	return readAgentSettingsDocument();
@@ -38,56 +31,11 @@ export function registerSettingsIpc(): () => void {
 		});
 	}
 
-	ipcMain.handle("vetta:settings:get-server-url", () => {
-		return DEFAULT_SERVER_URL;
-	});
-
-	ipcMain.handle("vetta:settings:get-site-url", () => {
-		return DEFAULT_SITE_URL;
-	});
-
-	ipcMain.handle("vetta:settings:get-session-interrupt-continue", () => {
-		const settings = readSettings();
-		const raw = settings.sessionInterruptContinue;
-		if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-			return { mode: "notify", maxAttempts: 1 };
-		}
-		const mode = (raw as { mode?: unknown }).mode;
-		const maxAttempts = (raw as { maxAttempts?: unknown }).maxAttempts;
-		return {
-			mode: mode === "off" || mode === "notify" || mode === "auto" ? mode : "notify",
-			maxAttempts:
-				typeof maxAttempts === "number" && Number.isFinite(maxAttempts) && maxAttempts >= 1
-					? Math.floor(maxAttempts)
-					: 1,
-		};
-	});
-
-	ipcMain.handle("vetta:settings:set-session-interrupt-continue", (_event, mode: unknown) => {
-		if (mode !== "off" && mode !== "notify" && mode !== "auto") {
-			throw new Error("Invalid sessionInterruptContinue mode");
-		}
-		updateSettings((settings) => {
-			const prev =
-				settings.sessionInterruptContinue &&
-				typeof settings.sessionInterruptContinue === "object" &&
-				!Array.isArray(settings.sessionInterruptContinue)
-					? (settings.sessionInterruptContinue as Record<string, unknown>)
-					: {};
-			settings.sessionInterruptContinue = { ...prev, mode, maxAttempts: 1 };
-		});
-	});
-
-	// 预设服务商目录内置在客户端(见 ADR-0050);模型清单取自 models.dev 公共目录,免 key 可见。
-	ipcMain.handle("vetta:models:list-presets", async () => {
-		return listPresetProviders();
-	});
-
-	ipcMain.handle("vetta:settings:get-model-transport", () => getModelTransport());
-
-	ipcMain.handle("vetta:settings:set-model-transport", (_event, value: unknown) => setModelTransport(value));
+	// server/site URL、模型传输与会话中断续接已迁到 Host 合同（TASK-0453，见 ../host/settings-domain.ts）。
+	// 预设目录的 list-presets / refresh-preset-catalog 也已迁到 Host 合同（TASK-0458，见 ../host/models-domain.ts）。
 
 	// 手动刷新某预设服务商的模型列表:只拉不写,由渲染层连同 key 一起落盘。
+	// 带 key 参数的通道按 ADR-0152 第 7 条留在旧 IPC,凭证类迁移需单独评审。
 	ipcMain.handle("vetta:models:refresh-preset-models", async (_event, providerId: unknown, apiKey: unknown) => {
 		if (typeof providerId !== "string" || !providerId.trim()) {
 			return { models: [], error: { code: "unknown-provider", params: { provider: String(providerId) } } };
@@ -95,10 +43,8 @@ export function registerSettingsIpc(): () => void {
 		return refreshPresetModels(providerId.trim(), typeof apiKey === "string" ? apiKey : undefined);
 	});
 
-	// 手动刷新公共目录:清掉失败冷却强制重拉,错误原样回给渲染层。
-	ipcMain.handle("vetta:models:refresh-preset-catalog", async () => {
-		return refreshPresetCatalog();
-	});
+	// 手动刷新公共目录:清掉失败冷却强制重拉,把真实错误原样回给渲染层。
+	// → 已迁到 Host 合同 models.refreshPresetCatalog(TASK-0458)。
 
 	// 启动时同步一次已启用预设服务商的模型列表,之后每 12 小时一次。
 	// 即便用户从不打开设置页,ModelSelector 也能拿到上游最新模型。失败静默(保留本地快照)。
@@ -106,13 +52,6 @@ export function registerSettingsIpc(): () => void {
 
 	return () => {
 		stopPresetAutoSync();
-		ipcMain.removeHandler("vetta:settings:get-server-url");
-		ipcMain.removeHandler("vetta:settings:get-session-interrupt-continue");
-		ipcMain.removeHandler("vetta:settings:set-session-interrupt-continue");
-		ipcMain.removeHandler("vetta:models:list-presets");
-		ipcMain.removeHandler("vetta:models:refresh-preset-catalog");
 		ipcMain.removeHandler("vetta:models:refresh-preset-models");
-		ipcMain.removeHandler("vetta:settings:get-model-transport");
-		ipcMain.removeHandler("vetta:settings:set-model-transport");
 	};
 }

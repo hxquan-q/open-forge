@@ -240,4 +240,12 @@ describe("public autonomy command line", () => {
 		expect(status.runs).toEqual([]);
 		expect(status.leases).toEqual([]);
 	});
+	it("routes candidate-verify before lease lookup and requires exactly one proof", async () => {
+		const root = fixture();
+		const common = ["candidate-verify", "--repo", root, "--state-dir", join(root, "controller"), "--run-id", "run"];
+		const file = join(root, "ci-proof.json");
+		writeFileSync(file, JSON.stringify({ kind: "ci" }));
+		await expect(main([...common, "--proof", file])).rejects.toThrow(/autonomy is paused|integrate-dev/);
+		await expect(main(common)).rejects.toThrow(/exactly one --proof/);
+	});
 });

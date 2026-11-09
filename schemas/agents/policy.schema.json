@@ -13,7 +13,8 @@
 		"differentReviewerFamily",
 		"limits",
 		"requiredChecks",
-		"rollout"
+		"rollout",
+		"integration"
 	],
 	"properties": {
 		"version": { "const": 1 },
@@ -91,6 +92,15 @@
 				"maxCrashRate": { "type": "number", "minimum": 0, "maximum": 1 },
 				"maxCrashRatio": { "type": "number", "minimum": 1 },
 				"maxTelemetryAgeMs": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"integration": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["branch", "candidateRef"],
+			"properties": {
+				"branch": { "type": "string", "minLength": 1, "maxLength": 100 },
+				"candidateRef": { "type": "string", "minLength": 3, "maxLength": 165 }
 			}
 		}
 	}

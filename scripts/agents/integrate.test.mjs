@@ -1,18 +1,21 @@
 // Copyright The Open Forge contributors.
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { generateKeyPairSync, sign } from "node:crypto";
 import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { digest } from "./contracts.mjs";
 import { testExecutionProof } from "./execution-proof-fixture.mjs";
 import { git, snapshot } from "./git.mjs";
-import { applyIntegration, prepareIntegration } from "./integrate.mjs";
+import { applyIntegration, candidateSubject, prepareIntegration, verifyCandidate } from "./integrate.mjs";
 import { claim } from "./leases.mjs";
 import { cycle } from "./orchestrate.mjs";
 import { prepareTask } from "./prepare.mjs";
 import { processFixture } from "./process-fixture.mjs";
 import { executeAdapter } from "./runner.mjs";
+import { canonical } from "./schema.mjs";
 import { createStore } from "./store.mjs";
 import { taskById } from "./tasks.mjs";
 import { verifyRun } from "./verify.mjs";
@@ -103,6 +106,8 @@ describe.sequential("Task preparation through a verified final Git integration",
 			policy.capabilities = ["implement", "review", "verify", "integrate-dev"];
 			policy.allowedProviders = ["fixture"];
 			policy.requiredChecks = ["tests", "check"];
+			// This suite exercises cross-family review; the deployment policy may relax it.
+			policy.differentReviewerFamily = true;
 			const adapter = (id, family, script) => ({
 				id,
 				family,
@@ -189,6 +194,16 @@ describe.sequential("Task preparation through a verified final Git integration",
 		expect(run.verificationRetryable).toBe(false);
 		expect(readFileSync(join(context.root, "feature.txt"), "utf8")).toBe("broken\n");
 	}, 15000); // Two complete implementation/review/test rounds with real Git and subprocesses.
+	it("refuses a controller checkout that differs from the configured integration branch", async () => {
+		const policy = { ...context.policy, integration: { ...context.policy.integration, branch: "trunk" } };
+		await expect(prepareTask({ ...context, policy })).rejects.toThrow(
+			"controller checkout must be trunk (current: main)",
+		);
+		expect(() => prepareIntegration({ ...context, policy })).toThrow(
+			"integration target must be local trunk (current: main)",
+		);
+		expect(context.store.read().runs[context.token.runId].status).toBe("verified");
+	});
 	it("invalidates worker evidence when a final integration candidate is created", () => {
 		const source = context.store.read().runs[context.token.runId].binding.head;
 		const preview = prepareIntegration(context);
@@ -223,5 +238,131 @@ describe.sequential("Task preparation through a verified final Git integration",
 			integrationStatus: "integrated",
 		});
 		expect(context.store.read().leases["TASK-0001"].status).toBe("released");
+	});
+});
+
+describe("pushed candidate CI verification", () => {
+	const roots = [];
+	afterEach(() => {
+		for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+	});
+
+	function fixture() {
+		const root = mkdtempSync(join(tmpdir(), "forge-candidate-"));
+		roots.push(root);
+		const repo = join(root, "repo");
+		execFileSync("git", ["init", "--quiet", "--initial-branch=main", repo], { windowsHide: true });
+		git(repo, ["config", "user.name", "Fixture"]);
+		git(repo, ["config", "user.email", "fixture@example.invalid"]);
+		git(repo, ["config", "commit.gpgsign", "false"]);
+		writeFileSync(join(repo, "feature.txt"), "candidate");
+		git(repo, ["add", "--", "feature.txt"]);
+		git(repo, ["commit", "--quiet", "-m", "candidate"]);
+		const { head, tree } = snapshot(repo);
+		const store = createStore(join(root, "state"));
+		const keys = generateKeyPairSync("ed25519");
+		const publicKey = keys.publicKey.export({ type: "spki", format: "pem" });
+		writeFileSync(
+			join(store.root, "trusted-services.json"),
+			JSON.stringify({ version: 1, keys: [{ id: "fixture", publicKey, roles: ["ci"] }] }),
+		);
+		const policy = JSON.parse(
+			readFileSync(fileURLToPath(new URL("../../project/autonomy-policy.json", import.meta.url)), "utf8"),
+		);
+		policy.level = 2;
+		policy.capabilities = ["integrate-dev"];
+		policy.requiredChecks = ["tests", "check"];
+		const binding = { head, tree, policy: digest(policy), contract: digest("fixture") };
+		store.transaction((state) => {
+			state.runs.run = {
+				task: "TASK-0001",
+				status: "integrated",
+				integration: { phase: "applied", evidence: { binding } },
+			};
+		});
+		git(repo, ["update-ref", "refs/remotes/origin/dev", head]);
+		const now = Date.now();
+		const ciProof = (overrides = {}, subject = candidateSubject(binding, "origin/dev")) => {
+			const data = {
+				repository: "hxquan-q/open-forge",
+				head,
+				tree,
+				runId: "123",
+				remoteRef: "origin/dev",
+				checks: ["tests", "check"],
+				passed: true,
+				...overrides,
+			};
+			for (const [key, value] of Object.entries(overrides)) if (value === undefined) delete data[key];
+			const payload = {
+				version: 1,
+				kind: "ci",
+				keyId: "fixture",
+				issuedAt: now - 100,
+				expiresAt: now + 60000,
+				subject,
+				data,
+			};
+			return { payload, signature: sign(null, Buffer.from(canonical(payload)), keys.privateKey).toString("base64") };
+		};
+		const verify = (proof, override = policy) =>
+			verifyCandidate({ root: repo, store, policy: override, runId: "run", proof, now });
+		const verification = () => store.read().runs.run.integration.candidateVerification;
+		return { repo, store, policy, binding, head, tree, now, ciProof, verify, verification };
+	}
+
+	it("records a verified pushed candidate", () => {
+		const { store, head, tree, now, ciProof, verify, verification } = fixture();
+		expect(verify(ciProof())).toMatchObject({ status: "candidate-verified", head, ciRunId: "123" });
+		expect(verification()).toEqual({ runId: "123", remoteRef: "origin/dev", head, tree, keyId: "fixture", at: now });
+		expect(store.read().audit.at(-1).event).toBe("candidate-verified");
+	});
+
+	it("rejects CI proofs that do not match the integrated candidate", () => {
+		const { binding, verify, ciProof, verification } = fixture();
+		const cases = [
+			[ciProof({ head: "a".repeat(40) }), /another commit/],
+			[ciProof({ tree: "b".repeat(40) }), /another commit/],
+			[ciProof({ remoteRef: "origin/main" }), /candidate ref/],
+			[ciProof({ checks: ["tests"] }), /required checks/],
+			[ciProof({ runId: undefined }), undefined],
+			[ciProof({}, candidateSubject(binding, "origin/main")), /another subject/],
+		];
+		for (const [proof, error] of cases) {
+			if (error) expect(() => verify(proof)).toThrow(error);
+			else expect(() => verify(proof)).toThrow();
+			expect(verification()).toBeUndefined();
+		}
+	});
+
+	it("requires a fetched remote candidate ref", () => {
+		const { repo, verify, ciProof, verification } = fixture();
+		git(repo, ["update-ref", "-d", "refs/remotes/origin/dev"]);
+		expect(() => verify(ciProof())).toThrow(/fetch it first/);
+		expect(verification()).toBeUndefined();
+	});
+
+	it("rejects a remote candidate ref that points at another commit", () => {
+		const { repo, verify, ciProof, verification } = fixture();
+		writeFileSync(join(repo, "feature.txt"), "moved");
+		git(repo, ["commit", "--quiet", "-am", "moved"]);
+		git(repo, ["update-ref", "refs/remotes/origin/dev", snapshot(repo).head]);
+		expect(() => verify(ciProof())).toThrow(/does not point/);
+		expect(verification()).toBeUndefined();
+	});
+
+	it("requires an applied integration", () => {
+		const { store, verify, ciProof, verification } = fixture();
+		store.transaction((state) => {
+			state.runs.run.status = "integrating";
+		});
+		expect(() => verify(ciProof())).toThrow(/applied integration/);
+		expect(verification()).toBeUndefined();
+	});
+
+	it("requires the integrate-dev capability", () => {
+		const { policy, verify, ciProof, verification } = fixture();
+		expect(() => verify(ciProof(), { ...policy, capabilities: [] })).toThrow(/integrate-dev|autonomy/);
+		expect(verification()).toBeUndefined();
 	});
 });

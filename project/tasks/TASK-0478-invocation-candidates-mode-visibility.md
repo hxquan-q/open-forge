@@ -1,5 +1,5 @@
 ---
-id: TASK-0448
+id: TASK-0478
 type: task
 status: verifying
 priority: P1
@@ -44,9 +44,9 @@ write_paths:
   - docs/plugin/manifest.md
   - project/requirements/REQ-0030-allstar-dev-section.md
   - project/tasks/TASK-0423-allstar-dev-section-shell.md
-  - project/tasks/TASK-0448-invocation-candidates-mode-visibility.md
+  - project/tasks/TASK-0478-invocation-candidates-mode-visibility.md
   - project/tasks/README.md
-  - .github/release-notes/fragments/v0.1.5/task-0448-invocation-candidates-mode-visibility.md
+  - .github/release-notes/fragments/v0.1.5/task-0478-invocation-candidates-mode-visibility.md
 exclusive_paths: []
 depends_on: [TASK-0422]
 conflicts_with: []

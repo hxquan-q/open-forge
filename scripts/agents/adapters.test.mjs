@@ -31,6 +31,7 @@ const policy = {
 		maxCrashRatio: 1.2,
 		maxTelemetryAgeMs: 1,
 	},
+	integration: { branch: "main", candidateRef: "origin/dev" },
 };
 const output = {
 	planner: {

@@ -9,7 +9,7 @@ plan: PLAN-0027
 source: REQ-0030
 related_requirement: [REQ-0030]
 related_plan: [PLAN-0027]
-related_tasks: [TASK-0422, TASK-0449]
+related_tasks: [TASK-0422, TASK-0479]
 related_issues: []
 related_bugs: []
 execution: serial
@@ -70,7 +70,7 @@ updated: 2026-11-03
 - Allstar 项目空间：新建/导入归入版块，列表卡片（环境/流水线状态占位从简）；
 - 版块会话管理：开发会话列表、归档/删除沿用既有基础设施、代码档徽章；
 - 各项目单独配置 v1：默认执行档、围栏默认 scope（MCP 集字段占位），versioned-config
-  落盘；项目级工具面配置经用户决策不做，显式调用候选按会话模式的可见性改由 TASK-0448 实施。
+  落盘；项目级工具面配置经用户决策不做，显式调用候选按会话模式的可见性改由 TASK-0478 实施。
 - Code 项目配置信息：从项目卡片进入配置面板，编辑并保存 Git、测试环境、测试服务器、数据库及其他项目说明到项目专属 `.vetta/allstar/project-config.md`；用户可反复查看，Code 会话按需通过既有文件读取工具反复读取。内容只作为说明保存，不自动执行 Git 命令或连接环境、服务器、数据库；界面提示不得填写密码、Token 等机密。
 - 存量迁移：现有 coding 会话/项目在版块内可见，不做破坏性搬移；
 - i18n zh/en、release notes 碎片、收尾验证链。
@@ -134,4 +134,4 @@ updated: 2026-11-03
   - 定向测试：4 个文件 / 33 项通过；`bun run check:quick -- <本次 19 个文件>` 通过；Desktop typecheck 与全仓 `bun run check` 通过；`bun run build:renderer` 成功（出现图标名/资源告警，未阻断构建）。
   - 未运行：`test:impact`、`test:check`（按用户要求留待用户收尾时决定）；未启动 `bun run dev` / Electron，未做真实模型读取验证。
   - 发布说明碎片写入 `.github/release-notes/fragments/v0.1.5/allstar-project-config.md`；本地 `v0.1.4` 已打标签，未改已发布说明，未汇编未来版本。
-- 剩余范围：各项目单独配置 v1 的默认执行档、围栏默认 scope、MCP 集字段占位及 `versioned-config` 落盘仍待做；显式调用候选模式可见性独立见 TASK-0448。收尾验证链（`check:quick` → `test:impact` → 完整 `bun run check`，需 WAIVER-0006/0007 核销后过全量）与 0.1.5 发布收口（2026-11-06 前）。
+- 剩余范围：各项目单独配置 v1 的默认执行档、围栏默认 scope、MCP 集字段占位及 `versioned-config` 落盘仍待做；显式调用候选模式可见性独立见 TASK-0478。收尾验证链（`check:quick` → `test:impact` → 完整 `bun run check`，需 WAIVER-0006/0007 核销后过全量）与 0.1.5 发布收口（2026-11-06 前）。

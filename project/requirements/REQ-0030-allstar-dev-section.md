@@ -6,7 +6,7 @@ priority: P1
 owner: product
 source: user-request
 related_plan: [PLAN-0027, PLAN-0028]
-related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447, TASK-0448]
+related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447, TASK-0478]
 related_issues: []
 related_bugs: []
 depends_on: []

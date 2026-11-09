@@ -67,7 +67,60 @@ function evidenceCheck(root, rootReal, raw) {
 	return { path: normalized.path, problem: null };
 }
 
-function clauseView(root, rootReal, clause, byId) {
+/** Precise-token citation: the characters around the token must not extend it into another identifier. */
+function referencesToken(content, token) {
+	const escaped = token.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+	return new RegExp(`(?<![A-Za-z0-9_.-])${escaped}(?![A-Za-z0-9_.-])`, "u").test(content);
+}
+
+/** Any object-form evidence entry upgrades the manifest from presence checks to clause-reference checks. */
+function manifestEvidenceLevel(coverage) {
+	const clauses = Array.isArray(coverage?.clauses) ? coverage.clauses : [];
+	const hasObjectEntry = clauses.some((clause) =>
+		(Array.isArray(clause?.tasks) ? clause.tasks : []).some((ref) =>
+			(Array.isArray(ref?.evidence) ? ref.evidence : []).some(
+				(entry) => entry !== null && typeof entry === "object",
+			),
+		),
+	);
+	return hasObjectEntry ? "clause-reference" : "presence-only";
+}
+
+/**
+ * Problems for one evidence entry. String entries are presence checks; object entries additionally
+ * require the file to cite the requirement and every declared clause as precise tokens, and every
+ * declared clause must be bound to the Task somewhere in the manifest.
+ */
+function evidenceProblems(root, rootReal, entry, { requirement, taskId, boundClauses }) {
+	if (typeof entry === "string") {
+		const problem = evidenceCheck(root, rootReal, entry).problem;
+		return problem ? [problem] : [];
+	}
+	const checked = evidenceCheck(root, rootReal, entry.path);
+	if (checked.problem) return [checked.problem];
+	let content;
+	try {
+		content = readFileSync(join(root, checked.path), "utf8");
+	} catch (error) {
+		return [`cannot read evidence ${checked.path}: ${error.message}`];
+	}
+	const problems = [];
+	if (!referencesToken(content, requirement)) {
+		problems.push(`evidence ${checked.path} does not reference ${requirement}`);
+	}
+	for (const clauseId of entry.clauses) {
+		if (!boundClauses.get(taskId).has(clauseId)) {
+			problems.push(`evidence ${checked.path} declares clause ${clauseId}, which is not bound to this Task`);
+			continue;
+		}
+		if (!referencesToken(content, clauseId)) {
+			problems.push(`evidence ${checked.path} does not reference clause ${clauseId}`);
+		}
+	}
+	return problems;
+}
+
+function clauseView(root, rootReal, clause, byId, evidenceContext) {
 	const missingEvidence = [];
 	const refs = [];
 	let engineeringCount = 0;
@@ -75,7 +128,12 @@ function clauseView(root, rootReal, clause, byId) {
 		const task = byId.get(ref.id);
 		const engineering = task ? engineeringComplete(task) : false;
 		if (engineering) engineeringCount += 1;
-		const missing = ref.evidence.filter((path) => evidenceCheck(root, rootReal, path).problem);
+		const missing = [];
+		for (const entry of ref.evidence) {
+			if (evidenceProblems(root, rootReal, entry, { ...evidenceContext, taskId: ref.id }).length > 0) {
+				missing.push(typeof entry === "string" ? entry : entry.path);
+			}
+		}
 		missingEvidence.push(...missing);
 		refs.push({ id: ref.id, evidence: ref.evidence, engineering, missingEvidence: missing });
 	}
@@ -121,6 +179,7 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 			unmappedTasks: [],
 			complete: false,
 			acceptance: "not-applicable",
+			evidenceCheck: manifestEvidenceLevel(coverage),
 		};
 	}
 	let rootReal;
@@ -136,6 +195,7 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 			unmappedTasks: [],
 			complete: false,
 			acceptance: "not-applicable",
+			evidenceCheck: manifestEvidenceLevel(coverage),
 		};
 	}
 	if (!coverage || typeof coverage !== "object" || Array.isArray(coverage)) {
@@ -148,6 +208,7 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 			unmappedTasks: [],
 			complete: false,
 			acceptance: "not-applicable",
+			evidenceCheck: manifestEvidenceLevel(coverage),
 		};
 	}
 	try {
@@ -162,6 +223,7 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 			unmappedTasks: [],
 			complete: false,
 			acceptance: "not-applicable",
+			evidenceCheck: manifestEvidenceLevel(coverage),
 		};
 	}
 	if (coverage.requirement !== requirement) {
@@ -181,6 +243,14 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 		reportedProblems.add(message);
 		problems.push(message);
 	};
+	const boundClauses = new Map();
+	for (const clause of coverage.clauses) {
+		for (const ref of clause.tasks) {
+			if (!boundClauses.has(ref.id)) boundClauses.set(ref.id, new Set());
+			boundClauses.get(ref.id).add(clause.id);
+		}
+	}
+	const evidenceContext = { requirement, boundClauses };
 
 	for (const clause of coverage.clauses) {
 		if (clauseIds.has(clause.id)) reportProblem(`duplicate clause id: ${clause.id}`);
@@ -203,13 +273,15 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 			if (!mapped.has(ref.id)) mapped.set(ref.id, []);
 			mapped.get(ref.id).push(clause.id);
 			for (const evidence of ref.evidence) {
-				const checked = evidenceCheck(root, rootReal, evidence);
-				if (checked.problem) {
-					reportProblem(`clause ${clause.id} Task ${ref.id}: ${checked.problem}`);
+				for (const problem of evidenceProblems(root, rootReal, evidence, {
+					...evidenceContext,
+					taskId: ref.id,
+				})) {
+					reportProblem(`clause ${clause.id} Task ${ref.id}: ${problem}`);
 				}
 			}
 		}
-		clauses.push(clauseView(root, rootReal, clause, byId));
+		clauses.push(clauseView(root, rootReal, clause, byId, evidenceContext));
 	}
 
 	const unmappedTasks = taskList
@@ -220,14 +292,7 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 		warnings.push(`Task ${id} belongs to ${requirement}/${plan} but is not mapped in the coverage manifest`);
 	}
 
-	const clauseIdsByTask = new Map();
-	for (const clause of clauses) {
-		for (const id of clause.tasks) {
-			if (!clauseIdsByTask.has(id)) clauseIdsByTask.set(id, []);
-			clauseIdsByTask.get(id).push(clause.id);
-		}
-	}
-	const taskViews = [...clauseIdsByTask.entries()]
+	const taskViews = [...boundClauses.entries()]
 		.sort(([left], [right]) => left.localeCompare(right))
 		.map(([id, ids]) => {
 			const task = byId.get(id);
@@ -250,6 +315,7 @@ export function validateCoverage({ root, requirement, plan, coverage, tasks }) {
 		unmappedTasks,
 		complete,
 		acceptance: overallAcceptance(clauses),
+		evidenceCheck: manifestEvidenceLevel(coverage),
 	};
 }
 
@@ -274,7 +340,7 @@ export function checkRequirement({ root, requirement, plan, coverage, tasks }) {
 		stopReason: analysis.complete ? "engineering-complete" : "coverage-gap",
 		humanAcceptance: analysis.acceptance,
 		release: "not-authorized",
-		evidenceCheck: "presence-only",
+		evidenceCheck: analysis.evidenceCheck,
 		semanticReview: "not-performed",
 		clauses: analysis.clauses,
 		tasks: analysis.tasks,
@@ -463,6 +529,15 @@ function notRunEntries({ analysis, tasks, state, attemptedTasks, now }) {
 	return entries;
 }
 
+/** Task IDs whose integrated run in the store carries a verified development candidate. */
+function verifiedTaskIds(state) {
+	const verified = new Set();
+	for (const run of Object.values(state.runs ?? {})) {
+		if (run.task && run.status === "integrated" && run.integration?.candidateVerification) verified.add(run.task);
+	}
+	return verified;
+}
+
 function buildReport({
 	runId,
 	requirement,
@@ -474,8 +549,10 @@ function buildReport({
 	attempted,
 	notRun,
 	reportPath,
+	verifiedTasks,
 }) {
 	const now = Date.now();
+	const engineeringTasks = analysis.tasks.filter((task) => task.engineering);
 	const report = {
 		version: 1,
 		runId,
@@ -486,19 +563,28 @@ function buildReport({
 		finishedAt: now,
 		stopReason,
 		reason: reason ? truncate(reason, REASON_LIMIT) : null,
-		clauses: analysis.clauses.map(({ id, text, status, acceptance, tasks, missingEvidence }) => ({
+		clauses: analysis.clauses.map(({ id, text, status, acceptance, tasks, missingEvidence, refs }) => ({
 			id,
 			text,
 			status,
 			acceptance,
 			tasks,
 			missingEvidence,
+			candidateVerification: refs.every((ref) => ref.engineering && verifiedTasks.has(ref.id))
+				? "verified"
+				: "pending",
 		})),
-		tasks: analysis.tasks,
+		tasks: analysis.tasks.map((task) => ({ ...task, candidateVerified: verifiedTasks.has(task.id) })),
 		unmappedTasks: analysis.unmappedTasks,
 		humanAcceptance: analysis.acceptance,
 		release: "not-authorized",
-		evidenceCheck: "presence-only",
+		evidenceCheck: analysis.evidenceCheck,
+		candidateVerification:
+			engineeringTasks.length === 0
+				? "not-applicable"
+				: engineeringTasks.every((task) => verifiedTasks.has(task.id))
+					? "verified"
+					: "pending",
 		semanticReview: "not-performed",
 		attempted,
 		notRun,
@@ -567,6 +653,7 @@ export async function requirementRun({
 				unmappedTasks: [],
 				complete: false,
 				acceptance: "not-applicable",
+				evidenceCheck: manifestEvidenceLevel(coverage),
 			}
 		: validateCoverage({ root, requirement, plan, coverage, tasks: loaded.tasks });
 	let tasks = loaded.tasks;
@@ -738,6 +825,7 @@ export async function requirementRun({
 		attempted,
 		notRun: notRunEntries({ analysis, tasks, state, attemptedTasks, now: Date.now() }),
 		reportPath: target,
+		verifiedTasks: verifiedTaskIds(state),
 	});
 	writeReport(target, report);
 	return report;

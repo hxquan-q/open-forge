@@ -90,6 +90,7 @@
         "@vetta/capability-runtime": "workspace:*",
         "@vetta/cli-host": "workspace:*",
         "@vetta/coding-agent": "workspace:*",
+        "@vetta/host-protocol": "workspace:*",
         "@vetta/remote-control": "workspace:*",
         "@vetta/remote-desktop": "workspace:*",
         "@vetta/runtime-core": "workspace:*",
@@ -440,6 +441,17 @@
       "devDependencies": {
         "@types/node": "^22.10.5",
         "shx": "^0.4.0",
+        "typescript": "^5.9.2",
+      },
+    },
+    "packages/host-protocol": {
+      "name": "@vetta/host-protocol",
+      "version": "0.1.4",
+      "dependencies": {
+        "@sinclair/typebox": "^0.34.41",
+      },
+      "devDependencies": {
+        "@types/node": "^22.10.5",
         "typescript": "^5.9.2",
       },
     },
@@ -1272,6 +1284,7 @@
         "unified": "^11.0.5",
       },
       "devDependencies": {
+        "@testing-library/react": "16.3.2",
         "@types/canvas-confetti": "^1.9.0",
         "@types/react": "^19.1.1",
         "@types/react-dom": "^19.1.1",
@@ -3071,7 +3084,7 @@
 
     "@testing-library/dom": ["@testing-library/dom@10.4.2", "https://registry.npmmirror.com/@testing-library/dom/-/dom-10.4.2.tgz", { "dependencies": { "@babel/code-frame": "^7.10.4", "@babel/runtime": "^7.12.5", "@types/aria-query": "^5.0.1", "aria-query": "5.3.0", "dom-accessibility-api": "^0.5.9", "lz-string": "^1.5.0", "picocolors": "1.1.1", "pretty-format": "^27.0.2" } }, "sha512-yzr2S9HyAIdhz2/6qHgbs665Q7PKVcDF05vsOlHPxG1mo36gKVesdYVeDLnXgfjJ03CrKRk08knc6+E/9m8v2Q=="],
 
-    "@testing-library/react": ["@testing-library/react@16.3.3", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.3.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-Uo193NgQbPMz6lrrhtRQQFcMC6Re/ELLFbbuVL30WDlZxlpZf9/lMHTAVxPRLw1q1iu9OJmR1c2BLiENRstdBg=="],
+    "@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
 
     "@testing-library/user-event": ["@testing-library/user-event@14.6.7", "https://registry.npmmirror.com/@testing-library/user-event/-/user-event-14.6.7.tgz", { "peerDependencies": { "@testing-library/dom": ">=7.21.4" } }, "sha512-MPCpX8bxe8zS+JmmTwLp8jd0dy1rAm60Te/SL8JrQM3qvQJcBOs1d7IefJMyZzqM3EWBrDn/LWDt1BCGu4ASfg=="],
 
@@ -3488,6 +3501,8 @@
     "@vetta/docs-site": ["@vetta/docs-site@workspace:apps/docs-site"],
 
     "@vetta/ecosystem-adapter": ["@vetta/ecosystem-adapter@workspace:packages/ecosystem-adapter"],
+
+    "@vetta/host-protocol": ["@vetta/host-protocol@workspace:packages/host-protocol"],
 
     "@vetta/markdown": ["@vetta/markdown@workspace:packages/markdown"],
 
@@ -7495,27 +7510,21 @@
 
     "@vetta/coding-agent/@types/node": ["@types/node@24.19.0", "https://registry.npmmirror.com/@types/node/-/node-24.19.0.tgz", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-zY+5tKxXdhGh1PYI0ac+7juvEu4OI6vWtVVoj5i2m42jxAY1U+zHGt6QCyOFwykdP62sM3MJ9stoYYUw5aCWew=="],
 
+    "@vetta/desktop/@testing-library/react": ["@testing-library/react@16.3.3", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.3.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-Uo193NgQbPMz6lrrhtRQQFcMC6Re/ELLFbbuVL30WDlZxlpZf9/lMHTAVxPRLw1q1iu9OJmR1c2BLiENRstdBg=="],
+
     "@vetta/docs-site/@types/react-dom": ["@types/react-dom@19.2.3", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.2.3.tgz", { "peerDependencies": { "@types/react": "^19.2.0" } }, "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ=="],
 
     "@vetta/mobile/typescript": ["typescript@6.0.3", "https://registry.npmmirror.com/typescript/-/typescript-6.0.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
-    "@vetta/plugin-chinese-chess/@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
-
-    "@vetta/plugin-comfyui-media-provider/@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
-
-    "@vetta/plugin-content-creation/@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
-
     "@vetta/plugin-cowart-vetta/lucide-react": ["lucide-react@0.511.0", "https://registry.npmmirror.com/lucide-react/-/lucide-react-0.511.0.tgz", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-VK5a2ydJ7xm8GvBeKLS9mu1pVK6ucef9780JVUjw6bAjJL/QXnd4Y0p7SPeOUMC27YhzNCZvm5d/QX0Tp3rc0w=="],
-
-    "@vetta/plugin-git/@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
 
     "@vetta/plugin-global-slot-demo/@types/react-dom": ["@types/react-dom@19.1.1", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.1.1.tgz", { "peerDependencies": { "@types/react": "^19.0.0" } }, "sha512-jFf/woGTVTjUJsl2O7hcopJ1r0upqoq/vIOoCj0yLh3RIXxWcljlpuZ+vEBRXsymD1jhfeJrlyTy/S1UW+4y1w=="],
 
     "@vetta/plugin-mobile-ui-preview/@types/react-dom": ["@types/react-dom@19.1.1", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.1.1.tgz", { "peerDependencies": { "@types/react": "^19.0.0" } }, "sha512-jFf/woGTVTjUJsl2O7hcopJ1r0upqoq/vIOoCj0yLh3RIXxWcljlpuZ+vEBRXsymD1jhfeJrlyTy/S1UW+4y1w=="],
 
-    "@vetta/plugin-scripts/@testing-library/react": ["@testing-library/react@16.3.2", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.2.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
-
     "@vetta/plugin-security-probe/@types/react-dom": ["@types/react-dom@19.1.1", "https://registry.npmmirror.com/@types/react-dom/-/react-dom-19.1.1.tgz", { "peerDependencies": { "@types/react": "^19.0.0" } }, "sha512-jFf/woGTVTjUJsl2O7hcopJ1r0upqoq/vIOoCj0yLh3RIXxWcljlpuZ+vEBRXsymD1jhfeJrlyTy/S1UW+4y1w=="],
+
+    "@vetta/theme-xianxia/@testing-library/react": ["@testing-library/react@16.3.3", "https://registry.npmmirror.com/@testing-library/react/-/react-16.3.3.tgz", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-Uo193NgQbPMz6lrrhtRQQFcMC6Re/ELLFbbuVL30WDlZxlpZf9/lMHTAVxPRLw1q1iu9OJmR1c2BLiENRstdBg=="],
 
     "@visx/vendor/@types/d3-interpolate": ["@types/d3-interpolate@3.0.1", "https://registry.npmmirror.com/@types/d3-interpolate/-/d3-interpolate-3.0.1.tgz", { "dependencies": { "@types/d3-color": "*" } }, "sha512-jx5leotSeac3jr0RePOH1KdR9rISG91QIE4Q2PYTu4OymLTZfA3SrnURSLzKH48HmXVUru50b8nje4E79oQSQw=="],
 

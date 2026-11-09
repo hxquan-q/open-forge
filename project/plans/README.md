@@ -7,7 +7,8 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
-| `PLAN-0029` | Code 项目 AI 工作区隔离 | verifying | [REQ-0031](../requirements/REQ-0031-code-project-ai-workspace-isolation.md)、[TASK-0449](../tasks/TASK-0449-code-project-ai-workspace-isolation.md)、[ADR-0152](../../docs/adr/0152-code-project-ai-workspace-identity-and-access.md)；工程验证全绿、本地提交未推送，待用户实机验收 |
+| `PLAN-0030` | Code 项目 AI 工作区隔离 | verifying | [REQ-0031](../requirements/REQ-0031-code-project-ai-workspace-isolation.md)、[方案](PLAN-0030-code-project-ai-workspace-isolation.md)、[TASK-0479](../tasks/TASK-0479-code-project-ai-workspace-isolation.md)、[ADR-0153](../../docs/adr/0153-code-project-ai-workspace-identity-and-access.md)；工程验证全绿、本地提交未推送，待用户实机验收 |
+| `PLAN-0029` | Desktop 宿主拆分、研发控制器闭环与原生 Sidecar 分工 | in_progress | [方案](PLAN-0029-desktop-host-split-and-native-sidecars.md)、REQ-0002、[RESEARCH-0049](../research/RESEARCH-0049-desktop-host-and-controller-refactor-references.md)；TS 内核 + Go 网络/远程 + Rust 系统能力按基线开启；Phase 0/1 收口（0449–0452、0454–0456 done；0448 真实基线测量待授权），Phase 2 试点与预设目录迁移已集成（0453 verifying、0458 verifying） |
 | `PLAN-0028` | Code 模式审计问题分阶段修复 | in_progress | [REQ-0030](../requirements/REQ-0030-allstar-dev-section.md)、[TASK-0425](../tasks/TASK-0425-code-mode-comprehensive-audit.md) 审计报告；G01/M01/F04/F06/F08–F10/F01–F03 与 §11.3 热追踪 code 独有；排除 F05/F07/M02 与环境项 |
 | `PLAN-0027` | Allstar 自主开发功能版块演进（月内收官） | in_progress | [REQ-0030](../requirements/REQ-0030-allstar-dev-section.md)；M0 入口已交付（TASK-0422 done），M1 版块壳 TASK-0423 in_progress，M2 并入/M3-core 内置 git 排期至 2026-11-26 |
 | `PLAN-0026` | 运行时共享资源准入与子代理调度观测 | verifying | [方案](PLAN-0026-runtime-resource-admission.md)；0410/0411 已集成本地 main，定向与完整 check 通过；Desktop 存量失败见 ISSUE-0035，未推送，OCR 待功能验收 |

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Run vitest only for testable packages touched vs base ref (default origin/dev).
  *
@@ -40,7 +41,12 @@ export function createChangedTestPlan(files) {
 	const globalTriggers = files.filter(isGlobalTestTrigger);
 	const runQuality = files.some((file) => {
 		const normalized = file.replaceAll("\\", "/");
-		return normalized === "package.json" || normalized === "turbo.json" || normalized.startsWith("scripts/quality/");
+		return (
+			normalized === "package.json" ||
+			normalized === "turbo.json" ||
+			normalized.startsWith("scripts/quality/") ||
+			normalized.startsWith("scripts/perf/")
+		);
 	});
 	const direct = globalTriggers.length > 0 ? Object.keys(TESTABLE_PACKAGES) : touched;
 	return {

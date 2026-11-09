@@ -1,5 +1,5 @@
 ---
-id: TASK-0450
+id: TASK-0480
 type: task
 status: verifying
 priority: P1
@@ -31,9 +31,9 @@ write_paths:
   - packages/plugins/presets/eform-craft/
   - project/requirements/REQ-0032-eform-craft-aimes-customdev-team.md
   - project/requirements/README.md
-  - project/tasks/TASK-0450-eform-craft-customdev-team.md
+  - project/tasks/TASK-0480-eform-craft-customdev-team.md
   - project/tasks/README.md
-  - .github/release-notes/fragments/v0.1.5/task-0450-eform-craft-customdev-team.md
+  - .github/release-notes/fragments/v0.1.5/task-0480-eform-craft-customdev-team.md
 exclusive_paths:
   - packages/plugins/presets/eform-craft/
 depends_on: []
@@ -73,7 +73,7 @@ updated: 2026-11-06
 - 将五个已审阅候选 Skill 与 `eformSkill/` 全部 14 个现有 Skill 去重整编到 plugin 级共享路径；Workshop 规则显式标注适用范围，唯一权威规则不重复定义。
 - 扩展 `test/manifest.test.ts`，锁定五角色、IDs/handles、Skill 路径/触发条件、关键 CustomDev 安全与流程边界、旧 Demo 合同清除。
 - 更新 preset README/ability 文案；本次保持 preset 包版本，避免未经发行准备改动版本线和根锁文件；五角色迁移影响另行明确说明。
-- 记录远程 `v0.1.4` tag 已存在；不改已发布 Release Notes、不擅自 bump Desktop 版本；沿用 TASK-0449 与现有 `v0.1.5` 待发碎片批次写入本次条目，不汇编/发布。
+- 记录远程 `v0.1.4` tag 已存在；不改已发布 Release Notes、不擅自 bump Desktop 版本；沿用 TASK-0479 与现有 `v0.1.5` 待发碎片批次写入本次条目，不汇编/发布。
 
 ### 不做
 
@@ -128,6 +128,6 @@ updated: 2026-11-06
   - 用仓库 `parseFragmentSections` 核验新增待发碎片：改进小节、2 条合法条目。
 - 曾遇阻塞及处理：权限层两次拒绝删除旧七文件，随后向用户列明路径；用户明确批准后删除成功，未修改其他资产。清理前不构建混合规则包，清理后重新测试/构建/核包；该阻塞已解除。
 - 未运行及原因：完整全仓 check、test:impact/test:changed、其他插件/宿主构建按用户限定范围不运行；Codeup、Nacos、DBX、CustomDev、测试服务器和生产操作均未执行；真实 Desktop/模型/computer-use 行为验收未授权。远端仅执行用户后来明确允许的 `origin` v0.1.4 tag 查询，确认该版本已存在（5b8347d653ab3cc1323c53dbeddd4c009b330d96），未 fetch/pull/push。
-- 发布说明：沿用仓库已有 v0.1.5 待发碎片批次（与 TASK-0449 同口径），已写 `.github/release-notes/fragments/v0.1.5/task-0450-eform-craft-customdev-team.md`；保留已发布 v0.1.4，不改 Desktop 版本、不汇编/发布。preset 版本保持 0.2.0，发行准备时需考虑 Agent/Skill 迁移的不兼容性。
+- 发布说明：沿用仓库已有 v0.1.5 待发碎片批次（与 TASK-0479 同口径），已写 `.github/release-notes/fragments/v0.1.5/task-0480-eform-craft-customdev-team.md`；保留已发布 v0.1.4，不改 Desktop 版本、不汇编/发布。preset 版本保持 0.2.0，发行准备时需考虑 Agent/Skill 迁移的不兼容性。
 - Worktree：未拆出；单一 preset 写域串行。补充授权后的本地提交与本记录一同落在 chenxvhua，不单独追加 Hash 回执提交；未集成 main、未推送。
 - 剩余风险：文本合同测试不证明任意真实模型遵循；`@esign`/`@eaudit` 与旧 Skill 使用者需迁移自建配置，旧会话不自动转换。具体新字段 API/DTO/列映射、实际 qiankun 注册、组织授权、电子签/审计接口、Codeup/服务器操作资料仍需后续授权核实；没有自行将 Workshop/Practice 或 Demo 行为升级成已确认 CustomDev 能力。

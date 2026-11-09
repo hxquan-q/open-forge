@@ -25,6 +25,7 @@
 | `vetta-extension-custom-provider-qwen-cli` | — |
 | `vetta-extension-with-deps` | — |
 | `@vetta/ecosystem-adapter` | `@vetta/cli-host`<br>`@vetta/coding-agent` |
+| `@vetta/host-protocol` | `@vetta/desktop` |
 | `@vetta/markdown` | — |
 | `@vetta/plugin-chinese-chess` | — |
 | `@vetta/plugin-cowart-vetta` | — |

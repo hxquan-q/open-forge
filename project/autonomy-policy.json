@@ -1,11 +1,11 @@
 {
 	"version": 1,
 	"targetLevel": 4,
-	"level": 0,
+	"level": 2,
 	"paused": false,
-	"capabilities": [],
-	"allowedProviders": [],
-	"differentReviewerFamily": true,
+	"capabilities": ["implement", "review", "verify", "integrate-dev"],
+	"allowedProviders": ["openai-compatible"],
+	"differentReviewerFamily": false,
 	"limits": {
 		"implementers": 2,
 		"reviewers": 2,
@@ -25,5 +25,9 @@
 		"maxCrashRate": 0.01,
 		"maxCrashRatio": 1.2,
 		"maxTelemetryAgeMs": 900000
+	},
+	"integration": {
+		"branch": "main",
+		"candidateRef": "origin/dev"
 	}
 }

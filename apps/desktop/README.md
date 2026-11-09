@@ -255,6 +255,7 @@ internal_dependencies:
   - "@vetta/ai"
   - "@vetta/capability-runtime"
   - "@vetta/cli-host"
+  - "@vetta/host-protocol"
   - "@vetta/coding-agent"
   - "@vetta/remote-control"
   - "@vetta/remote-desktop"
