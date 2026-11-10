@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type { SessionConfig, SessionExecutionMode } from "@vetta/runtime-core";
 import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
@@ -28,6 +29,10 @@ export interface CodingAgentRuntimeSessionOptions {
 	readonly sessionId: string;
 	readonly scenario?: ConversationScenario;
 	readonly cwd?: string;
+	/** Host-resolved roots for Code-mode project file access; never accepted from the renderer directly. */
+	readonly projectIdentity?: string;
+	readonly projectAiWorkspaceRoot?: string;
+	readonly projectAiWorkspaceToolRoot?: string;
 	readonly model?: NonNullable<SessionConfig["model"]>;
 	readonly thinkingLevel?: NonNullable<SessionConfig["thinkingLevel"]>;
 	readonly agentMode?: string;
@@ -111,6 +116,9 @@ export function parseCodingAgentRuntimeSessionConfiguration(value: unknown): Cod
 		value.agentConfiguration === undefined ? undefined : parseAgentConfigurationSelection(value.agentConfiguration);
 	assertOptionalStringFields(value, [
 		"cwd",
+		"projectIdentity",
+		"projectAiWorkspaceRoot",
+		"projectAiWorkspaceToolRoot",
 		"scenario",
 		"thinkingLevel",
 		"agentMode",

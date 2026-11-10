@@ -1,9 +1,16 @@
+// Modified by The Open Forge contributors.
 import type {
 	DesktopTeamSessionSnapshot,
 	DesktopTeamSessionStreamEvent,
 } from "@preload/api-types/team-conversation-display";
 import { resolveConversationAgentText } from "@shared/conversation";
-import type { TeamDefinition, TeamSessionDocument } from "@vetta/agent-team";
+import {
+	AGENT_TEAM_SCHEMA_VERSION,
+	type AgentProfile,
+	type AgentTeamDocument,
+	type TeamDefinition,
+	type TeamSessionDocument,
+} from "@vetta/agent-team";
 import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
@@ -174,6 +181,43 @@ describe("resolveTeamMembers", () => {
 		const [resolved] = resolveTeamMembers(undefined, team, [], {}, (_profileId, fallbackHandle) => fallbackHandle);
 
 		expect(resolved?.avatar).toMatch(/agent-team-avatars\/[a-z]+\.webp$/u);
+	});
+
+	it("carries a profile mode to the explicit @ candidate", () => {
+		const profile: AgentProfile = {
+			id: "coding-agent",
+			revision: 1,
+			name: "Builder",
+			description: "",
+			mentionHandle: "builder",
+			blueprintId: "builder",
+			abilities: { selectionMode: "all", skills: [], mcpServers: [], plugins: [] },
+			scope: { kind: "library" },
+			mode: "coding",
+			createdAt: 1,
+			updatedAt: 1,
+		};
+		const document: AgentTeamDocument = {
+			schemaVersion: AGENT_TEAM_SCHEMA_VERSION,
+			revision: 1,
+			agents: [profile],
+			teams: [],
+		};
+		const codingTeam: TeamDefinition = {
+			...team,
+			members: [
+				{ id: "builder-member", handle: "builder", binding: { kind: "reference", agentProfileId: profile.id } },
+			],
+		};
+		const [resolved] = resolveTeamMembers(
+			document,
+			codingTeam,
+			[],
+			{},
+			(_profileId, fallbackHandle) => fallbackHandle,
+		);
+
+		expect(resolved?.workspaceMode).toBe("coding");
 	});
 });
 

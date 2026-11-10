@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
 import type { CodingToolRegistration } from "@vetta/runtime-tools";
 import { createNodeSandboxHost, type NodeSandboxHost, type NodeSandboxHostOptions } from "../../sandbox/index.js";
@@ -5,7 +6,7 @@ import { createForegroundCommandToolExecutor } from "../shared/foreground-comman
 import type { ReviewSnapshotBinding } from "../shared/review-capture.js";
 import { createBashToolRegistration } from "../tools/bash/index.js";
 import { createEditToolRegistration, type EditPathPolicy } from "../tools/edit/index.js";
-import { createReadToolRegistration, type ReadToolOptions } from "../tools/read/index.js";
+import { createReadToolRegistration, type ReadPathPolicy, type ReadToolOptions } from "../tools/read/index.js";
 import { createShellToolRegistration } from "../tools/shell/index.js";
 import { createWriteToolRegistration, type WritePathPolicy } from "../tools/write/index.js";
 
@@ -15,6 +16,7 @@ export interface NodeSandboxCodingToolEnvironmentOptions extends NodeSandboxHost
 	readonly protectedDirectories?: readonly string[];
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
+	readonly readPathPolicy?: ReadPathPolicy;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly reviewSnapshots?: ReviewSnapshotBinding;
@@ -47,6 +49,7 @@ export function createNodeSandboxCodingToolEnvironment(
 	return {
 		read: createReadToolRegistration(options.cwd, {
 			...options.readOptions,
+			pathPolicy: options.readPathPolicy,
 			configurationSource: options.configurationSource,
 		}),
 		write: createWriteToolRegistration(options.cwd, {

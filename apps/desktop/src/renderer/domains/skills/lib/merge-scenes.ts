@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { InstalledSkill, SkillInfo } from "@preload/api";
 import type { MarketAbility } from "@shared/lib/api";
 
@@ -23,11 +24,12 @@ export interface MergedSkill {
 	isAgent?: boolean;
 	/** 直接从本地目录发现、但未进入安装清单：只读展示，不接管目录生命周期。 */
 	isReadonly?: boolean;
-	/**
-	 * 来源标识（仅 agent/builtin 等 listSkills 结果会写入）。
+	/** 来源标识（仅 agent/builtin 等 listSkills 结果会写入）。
 	 * `agents-user` / `agents-project` 对应 ~/.agents/skills 兼容发现。
 	 */
 	source?: string;
+	/** 用户候选列表的产品模式标签；缺省表示两种模式均可见。 */
+	workspaceMode?: "work" | "coding";
 	downloadCount: number;
 	license: string;
 }
@@ -42,6 +44,11 @@ export function mergeScenes(
 	listedSkills: SkillInfo[] = [],
 ): MergedSkill[] {
 	const merged = new Map<string, MergedSkill>();
+	const workspaceModeByName = new Map(
+		listedSkills
+			.filter((skill) => skill.type === "scene" && skill.workspaceMode !== undefined)
+			.map((skill) => [skill.name, skill.workspaceMode] as const),
+	);
 
 	for (const entry of market) {
 		if (entry.type !== "scene") continue;
@@ -112,6 +119,11 @@ export function mergeScenes(
 			downloadCount: 0,
 			license: "",
 		});
+	}
+
+	for (const skill of merged.values()) {
+		const workspaceMode = workspaceModeByName.get(skill.name);
+		if (workspaceMode) skill.workspaceMode = workspaceMode;
 	}
 
 	return Array.from(merged.values());

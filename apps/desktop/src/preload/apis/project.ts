@@ -16,6 +16,9 @@ const CHANNELS = {
 	/** ADR-0151 第二册：版块册（allstarProjects）的登记与移除。 */
 	OPEN_ALLSTAR: "vetta:projects:open-allstar",
 	REMOVE_ALLSTAR: "vetta:projects:remove-allstar",
+	READ_CODE_CONFIG: "vetta:projects:read-code-config",
+	WRITE_CODE_CONFIG: "vetta:projects:write-code-config",
+	DELETE_CODE_WORKSPACE: "vetta:projects:delete-code-workspace",
 } as const;
 
 export function createProjectApi(ipc: IpcRenderer): Pick<DesktopApi, "project"> {
@@ -33,6 +36,9 @@ export function createProjectApi(ipc: IpcRenderer): Pick<DesktopApi, "project"> 
 			remove: (path) => ipc.invoke(CHANNELS.REMOVE, path),
 			openAllstar: (input) => ipc.invoke(CHANNELS.OPEN_ALLSTAR, input),
 			removeAllstar: (path) => ipc.invoke(CHANNELS.REMOVE_ALLSTAR, path),
+			readCodeConfig: (projectCwd) => ipc.invoke(CHANNELS.READ_CODE_CONFIG, projectCwd),
+			writeCodeConfig: (input) => ipc.invoke(CHANNELS.WRITE_CODE_CONFIG, input),
+			deleteCodeWorkspace: (projectCwd) => ipc.invoke(CHANNELS.DELETE_CODE_WORKSPACE, projectCwd),
 		},
 	};
 }

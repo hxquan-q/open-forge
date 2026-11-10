@@ -89,4 +89,9 @@ export interface DesktopProjectApi {
 	openAllstar(input: { path: string; name?: string }): Promise<ProjectEntrySnapshot>;
 	/** 移出版块册条目（"移出版块"）；不动普通册条目，不动磁盘目录。 */
 	removeAllstar(path: string): Promise<void>;
+	/** Read or save arbitrary user-authored Code project reference text in its AI workspace. */
+	readCodeConfig(projectCwd: string): Promise<{ readonly exists: boolean; readonly content: string }>;
+	writeCodeConfig(input: { readonly projectCwd: string; readonly content: string }): Promise<void>;
+	/** Hard-delete only: remove the project's AI workspace after its directory is deleted. Archiving and unregistering keep it. */
+	deleteCodeWorkspace(projectCwd: string): Promise<void>;
 }

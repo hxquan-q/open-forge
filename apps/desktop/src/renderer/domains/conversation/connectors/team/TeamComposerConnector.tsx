@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type InputSegment, isImagePath, parseInputSegments } from "@shared/lib/input-tokens";
 import { pathBasename, toVettaFileUrl } from "@shared/lib/utils";
 import { filePreviewAtom } from "@shared/store/file-preview-atoms";
@@ -114,6 +115,7 @@ export function TeamComposerConnector({
 				avatar: agentAvatarUrl(member),
 				meta: `${roleLabel} · @${handle}`,
 				keywords: [handle, roleLabel],
+				...(member.workspaceMode ? { workspaceMode: member.workspaceMode } : {}),
 			};
 		}),
 		[model.leaderMemberId, model.labels, model.members],
@@ -338,6 +340,7 @@ export function TeamComposerConnector({
 		showPlaceholder: model.draft.length === 0,
 		hasCapsules: model.attachments.length > 0,
 		effectiveCwd: model.workspace?.cwd ?? "",
+		workspaceMode: "coding",
 		placeholderTexts: [model.labels.placeholder],
 		placeholderRotating: false,
 		isFocused: trigger.isFocused,

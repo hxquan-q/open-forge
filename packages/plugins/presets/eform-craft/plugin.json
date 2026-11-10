@@ -13,9 +13,7 @@
 	"permissions": ["agent.skills.control"],
 	"agent": {
 		"skillPaths": ["agent/skills"],
-		"skillPresentation": {
-			"defaultVisibility": "hidden"
-		},
+		"skillPresentation": { "defaultVisibility": "hidden" },
 		"agents": [
 			{
 				"id": "eform",
@@ -27,22 +25,40 @@
 				"roles": ["master"]
 			},
 			{
-				"id": "esign",
+				"id": "requirements",
 				"mode": "coding",
-				"name": "%agent.esign.name%",
-				"description": "%agent.esign.description%",
-				"mentionHandle": "esign",
-				"systemPromptPath": "agent/agents/esign.md",
+				"name": "%agent.requirements.name%",
+				"description": "%agent.requirements.description%",
+				"mentionHandle": "eform-requirements",
+				"systemPromptPath": "agent/agents/requirements.md",
+				"roles": ["business"]
+			},
+			{
+				"id": "developer",
+				"mode": "coding",
+				"name": "%agent.developer.name%",
+				"description": "%agent.developer.description%",
+				"mentionHandle": "eform-developer",
+				"systemPromptPath": "agent/agents/developer.md",
 				"roles": ["developer"]
 			},
 			{
-				"id": "eaudit",
+				"id": "tester",
 				"mode": "coding",
-				"name": "%agent.eaudit.name%",
-				"description": "%agent.eaudit.description%",
-				"mentionHandle": "eaudit",
-				"systemPromptPath": "agent/agents/eaudit.md",
-				"roles": ["auditor"]
+				"name": "%agent.tester.name%",
+				"description": "%agent.tester.description%",
+				"mentionHandle": "eform-tester",
+				"systemPromptPath": "agent/agents/tester.md",
+				"roles": ["tester"]
+			},
+			{
+				"id": "deployer",
+				"mode": "coding",
+				"name": "%agent.deployer.name%",
+				"description": "%agent.deployer.description%",
+				"mentionHandle": "eform-deployer",
+				"systemPromptPath": "agent/agents/deployer.md",
+				"roles": ["deployer"]
 			}
 		],
 		"teams": [
@@ -54,15 +70,27 @@
 				"members": [
 					{
 						"agent": "eform",
-						"responsibility": "Team leader and single user entry: recognizes source forms, generates the six-artifact form app (list page + form page + lifecycle), guards the confirmation gate, and dispatches signature/audit injection work by schema capabilities."
+						"responsibility": "Coordinator and single user entry: preflight the session project, establish scope and authorization, coordinate and assist the four members without inventing project facts."
 					},
 					{
-						"agent": "esign",
-						"responsibility": "Signature specialist: injects the e-signature component into form pages at the agreed anchor — identity verification, canvas handwriting capture, clear-and-resign before effect, lock-on-approval."
+						"agent": "requirements",
+						"responsibility": "Requirements and prototypes: parse source attachments when present, confirm requirements and field-value logic, and produce optional presentation prototypes, not production implementation.",
+						"instructionsPath": "agent/operating-contract.md"
 					},
 					{
-						"agent": "eaudit",
-						"responsibility": "Audit specialist: injects the operation-audit component at the agreed anchor — auditEnabled toggle, create/save/approve/print/export event logging, append-only viewable journal."
+						"agent": "developer",
+						"responsibility": "Implement frontend, backend, APIs, configuration and SQL within the verified AIMES CustomDev contract and confirmed requirements.",
+						"instructionsPath": "agent/operating-contract.md"
+					},
+					{
+						"agent": "tester",
+						"responsibility": "Choose risk-based black-box and white-box tests; use computer-use where available, otherwise document alternatives; verify local behavior and the complete dev integration package.",
+						"instructionsPath": "agent/operating-contract.md"
+					},
+					{
+						"agent": "deployer",
+						"responsibility": "Update only the target CustomDev dev test service, restart it and support acceptance with a verified rollback path; no production deployment.",
+						"instructionsPath": "agent/operating-contract.md"
 					}
 				],
 				"workflowPath": "agent/workflows/studio.md"

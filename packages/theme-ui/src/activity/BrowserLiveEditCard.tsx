@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type FormEvent, type JSX, useRef } from "react";
 
 /** 卡片内所有用户可见文案由宿主经 i18n 提供。 */

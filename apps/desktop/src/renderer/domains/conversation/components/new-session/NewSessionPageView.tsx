@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CurrentScenarioActivityPanel } from "@domains/activity-panel/components/ActivityPanel";
 import { resolveWorkspaceRightPanel } from "@domains/workspace-mode";
 import type { WorkspaceMode } from "@shared/store/atoms";
@@ -198,6 +199,7 @@ export function NewSessionPageView({
 								onSend={onSend}
 								onAbort={onAbort}
 								cwdOverride={cwd}
+								workspaceMode={workspaceMode}
 								onExpandedChange={onCommandPanelExpandedChange}
 								sendPending={preparingProject ? { label: preparingLabel } : undefined}
 							/>

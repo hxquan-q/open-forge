@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX } from "react";
 import { motion } from "motion/react";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@vetta-org/ui";
@@ -64,6 +65,11 @@ export function SceneCardView({
 							<h4 className="truncate text-[13px] font-semibold tracking-tight text-foreground">
 								{scene.alias || scene.name}
 							</h4>
+								{scene.workspaceModeLabel && (
+									<span className="inline-flex h-4 shrink-0 items-center rounded-full bg-accent/50 px-1.5 text-[10px] font-medium text-muted-foreground/70">
+										{scene.workspaceModeLabel}
+									</span>
+								)}
 							{scene.installed && scene.localVersion && (
 								<span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/45">
 									v{scene.localVersion}

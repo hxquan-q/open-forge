@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -144,6 +145,47 @@ describe("read runtime boundaries", () => {
 
 		expect(resizeCount).toBe(1);
 		expect(result.content.some((item) => item.type === "image")).toBe(true);
+	});
+
+	it("rejects a path before touching the filesystem when the host policy denies it", async () => {
+		let accessCalls = 0;
+		const result = await createReadTool("C:/project", {
+			pathHost: {
+				path: {
+					isAbsolute: (path) => path.startsWith("C:/"),
+					resolve: (...parts) => parts.join("/"),
+					join: (...parts) => parts.join("/"),
+					dirname: (path) => path.slice(0, path.lastIndexOf("/")),
+					basename: (path) => path.slice(path.lastIndexOf("/") + 1),
+					relative: () => "",
+					parse: () => ({ root: "C:/" }),
+					sep: "/",
+				},
+				homeDirectory: () => undefined,
+				exists: () => false,
+				listDirectory: () => undefined,
+			},
+			pathPolicy: { getRejectionReason: () => "Access denied by test policy" },
+			operations: {
+				async access() {
+					accessCalls++;
+				},
+				async readFile() {
+					return Buffer.from("unreachable");
+				},
+			},
+		});
+
+		const denied = await result.execute({
+			sessionId: "session-1",
+			turnId: "turn-1",
+			toolCallId: "runtime-read-denied",
+			input: { path: "C:/outside/secret.txt" },
+			signal: new AbortController().signal,
+		});
+
+		expect(denied.content).toEqual([{ type: "text", text: "Access denied by test policy" }]);
+		expect(accessCalls).toBe(0);
 	});
 
 	it(

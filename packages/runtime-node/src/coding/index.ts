@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export { NodeCodingToolResultArtifactStore } from "../host/result-artifact-storage.js";
 export {
 	CODING_TOOL_AVAILABILITY_ERROR_CODES,
@@ -249,6 +250,7 @@ export {
 	READ_TOOL_DESCRIPTION,
 	type ReadImageProcessor,
 	type ReadOperations,
+	type ReadPathPolicy,
 	type ReadToolDetails,
 	type ReadToolInput,
 	ReadToolInputSchema,

@@ -11,6 +11,7 @@ export { WORK_PANEL_SECTIONS, WorkPanelSection, WorkWorkspacePanel } from "./com
 export { useTaskProjection } from "./hooks/useTaskProjection";
 export { useWorkspaceMode } from "./hooks/useWorkspaceMode";
 export { useWorkspaceRightPanel } from "./hooks/useWorkspaceRightPanel";
+export { candidateVisibleInWorkspaceMode } from "./lib/candidate-visibility";
 export {
 	resolveWorkspaceRightPanel,
 	sessionAxesBadgeKind,

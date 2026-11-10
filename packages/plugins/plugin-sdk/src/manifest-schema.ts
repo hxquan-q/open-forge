@@ -244,6 +244,7 @@ const PluginMcpServerMapSchema = Type.Record(
 export const PluginSkillPresentationRuleSchema = Type.Object(
 	{
 		defaultVisibility: Type.Optional(SkillVisibilitySchema),
+		workspaceMode: Type.Optional(Type.Union([Type.Literal("work"), Type.Literal("coding")])),
 		surfaces: Type.Optional(SkillSurfaceVisibilitySchema),
 		displayName: Type.Optional(NonWhitespaceStringSchema),
 		displayDescription: Type.Optional(NonWhitespaceStringSchema),
@@ -253,6 +254,7 @@ export const PluginSkillPresentationRuleSchema = Type.Object(
 export const PluginSkillPresentationSchema = Type.Object(
 	{
 		defaultVisibility: Type.Optional(SkillVisibilitySchema),
+		workspaceMode: Type.Optional(Type.Union([Type.Literal("work"), Type.Literal("coding")])),
 		surfaces: Type.Optional(SkillSurfaceVisibilitySchema),
 		skills: Type.Optional(Type.Record(NonWhitespaceStringSchema, PluginSkillPresentationRuleSchema)),
 	},

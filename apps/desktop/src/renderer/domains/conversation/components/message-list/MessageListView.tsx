@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { MessageFeed, MessageFeedLayout } from "@vetta-org/theme-ui/chat";
 import { useMessageFeedActiveItem } from "@shared/components/message-feed/useMessageFeedActiveItem";
 import { PerfMessageScrollProfiler } from "@shared/lib/perf-message-scroll-profiler";

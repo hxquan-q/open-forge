@@ -2,7 +2,7 @@
 // Copyright The Open Forge contributors.
 
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { McpServerToolList } from "@preload/api.js";
@@ -77,6 +77,7 @@ describe("McpServerForm 工具清单", () => {
 		expect(screen.getByText("read_file")).toBeTruthy();
 		expect(screen.getByText("Read a file")).toBeTruthy();
 		expect(screen.getByText("delete_thing")).toBeTruthy();
+		expect(screen.getAllByText("agentMode.both")).toHaveLength(2);
 	});
 
 	it("用户取消勾选某工具后写入 disabledTools，保存时提交更新后的配置", async () => {

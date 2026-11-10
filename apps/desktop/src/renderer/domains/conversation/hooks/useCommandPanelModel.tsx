@@ -1,5 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
 import { useShortcutScope, type ShortcutBinding } from "@shared/shortcuts";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import { activeSessionAtom, contextCompactionEligibilityAtom } from "@shared/store/atoms";
 import { getQueueForSession, messageQueueBySessionAtom } from "@shared/store/message-queue-atoms";
 import { showToast } from "@shared/store/toast-atoms";
@@ -28,6 +30,7 @@ export interface CommandPanelModelInput {
 	/** 触发词原文（含 `/`）。 */
 	filter: string;
 	cwd?: string;
+	workspaceMode?: WorkspaceMode;
 	className?: string;
 	/** 会话级操作仅在已绑定 Runtime 的聊天输入框中可用。 */
 	allowCompaction?: boolean;
@@ -44,6 +47,7 @@ export function useCommandPanelModel({
 	onSelectConnector,
 	filter,
 	cwd,
+	workspaceMode,
 	className,
 	allowCompaction = true,
 }: CommandPanelModelInput): CommandPanelModel {
@@ -69,9 +73,10 @@ export function useCommandPanelModel({
 		cwd,
 		filter: normalizedFilter,
 		surface: "commandPalette",
+		workspaceMode,
 		prefetch: true,
 	});
-	const { items: connectors, columns } = useConnectorGrid(open, true);
+	const { items: connectors, columns } = useConnectorGrid(open, true, workspaceMode);
 	const iconMap = useSkillIconMap(open, true);
 	const resolveIcon = useCallback((skill: SkillInfo) => skillIconOf(iconMap, skill), [iconMap]);
 	// 选中时把解析好的图标一起带出去：行内胶囊要和列表里显示的是同一张图。

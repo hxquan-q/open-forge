@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";
@@ -10,8 +11,20 @@ import { initI18n } from "@shared/i18n";
 import { useShortcutScope } from "@shared/shortcuts";
 import { useCommandPanelModel } from "./useCommandPanelModel";
 
-vi.mock("./useSkillList", () => ({ useSkillList: () => ({ items: [] }) }));
-vi.mock("./useConnectorGrid", () => ({ useConnectorGrid: () => ({ items: [], columns: 4 }) }));
+const captured = vi.hoisted(() => ({ skillInputs: [] as unknown[], connectorInputs: [] as unknown[] }));
+
+vi.mock("./useSkillList", () => ({
+	useSkillList: (input: unknown) => {
+		captured.skillInputs.push(input);
+		return { items: [] };
+	},
+}));
+vi.mock("./useConnectorGrid", () => ({
+	useConnectorGrid: (...input: unknown[]) => {
+		captured.connectorInputs.push(input);
+		return { items: [], columns: 4 };
+	},
+}));
 vi.mock("./useSkillIconMap", () => ({ useSkillIconMap: () => new Map(), skillIconOf: () => undefined }));
 vi.mock("../components/useInputActionBarModel", () => ({
 	useInputActionBarModel: () => ({ builtins: [], items: [], actions: { toggleItem: vi.fn() } }),
@@ -22,11 +35,29 @@ initI18n();
 
 describe("useCommandPanelModel context compaction", () => {
 	beforeEach(() => {
+		captured.skillInputs.length = 0;
+		captured.connectorInputs.length = 0;
 		const store = getDefaultStore();
 		store.set(activeSessionAtom, { cwd: "C:/workspace", runtimeId: "session-1", sessionPath: "C:/session.jsonl" });
 		store.set(contextUsageAtom, { percent: 60, contextTokens: 60_000, contextWindow: 100_000 });
 		store.set(isCompactingAtom, false);
 		store.set(messageQueueBySessionAtom, new Map());
+	});
+
+	it("passes the active session mode to explicit slash candidates", () => {
+		renderHook(() =>
+			useCommandPanelModel({
+				open: true,
+				onClose: vi.fn(),
+				onSelect: vi.fn(),
+				onSelectConnector: vi.fn(),
+				filter: "/",
+				workspaceMode: "coding",
+			}),
+		);
+
+		expect(captured.skillInputs.at(-1)).toMatchObject({ workspaceMode: "coding" });
+		expect(captured.connectorInputs.at(-1)).toEqual([true, true, "coding"]);
 	});
 
 	it("显示真实上下文占比，并从正常命令入口加入压缩队列", async () => {

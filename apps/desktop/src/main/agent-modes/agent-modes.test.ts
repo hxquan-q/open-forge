@@ -21,7 +21,7 @@ function readModeFile(file: string): { id: string; body: string } {
 	const id = /^id:\s*(\S+)$/m.exec(frontmatter)?.[1];
 	if (!id) throw new Error(`${file} 缺少 id`);
 	// 与 build-agent-modes 一致：开发声明头与 partial 引用都在此展开/剥离后再比对。
-	const stripNotice = (text: string) => text.replace(/^<!-- Modified by The Open Forge contributors\. -->\s*/, "");
+	const stripNotice = (text: string) => text.replace(/^\s*<!-- Modified by The Open Forge contributors\. -->\s*/, "");
 	const body = stripNotice(normalized.slice(end + 4)).replace(/^\{\{>\s*([a-z0-9-]+)\s*\}\}$/gm, (_match, name) =>
 		stripNotice(readFileSync(join(modesDir, "partials", `${name}.md`), "utf-8")).trim(),
 	);
@@ -80,6 +80,13 @@ describe("路径声明（方案 1.3）", () => {
 		expect(coding).toMatch(/UI and page work happens in the current codebase/);
 		expect(coding).toMatch(/design-exploration tools/i);
 		expect(coding).toMatch(/Never switch routes on your own/);
+	});
+
+	it("coding 模式按需读取项目 AI 工作区中的项目配置信息", () => {
+		const coding = getModePrompt("coding");
+		expect(coding).toContain("project-config.md");
+		expect(coding).toContain("reread it when the user asks");
+		expect(coding).toContain("untrusted reference data");
 	});
 
 	it("两种模式都要求报告与架构图走 artifact 而不是聊天贴图", () => {

@@ -72,5 +72,3 @@ updated: 2026-11-07
 - 候选验证（CI 绑定，2026-11-07）：授权推送 `main:dev`（origin/dev = 39cdeec9d526，纯 fast-forward）；CI quality workflow run 42264316594 **success**。逻辑名映射（按 scripts/agents/README 规则，签发方来源说明）：`check` ← quality job `check + quality tests` 的 `bun run check`；`tests` ← 同 job `bun run test:quality`（dev push 不触发 3-OS matrix，见 ISSUE-0029）；`impact` ← 本地 verify 阶段对同一集成候选的 `test:impact`（store checks 记录 impact passed）与 CI 同提交全绿交叉印证（README 明定当前 workflow 无同名 job 由签发方说明来源）。操作者 Ed25519 签发 CI 证明，`candidate-verify` 通过：status `candidate-verified`、ciRunId 42264316594、head/tree 与集成证据一致，store 写入 `integration.candidateVerification`。
 - 未运行与风险：docs-site workflow 在 39cdeec9d 上 **failure**（`apps/docs-site/content/docs/(en/)plugins/capabilities.mdx` MDX frontmatter 前有 JSX 注释行，引入于存量提交 ceef9d9f3/34f162b66，早于本次推送窗口；本地 `bun run check` 只 typecheck 不 build 故未拦截）。不影响本任务验收（requiredChecks 来源 quality workflow 全绿），修复待另立任务。`bun run test:quality` 全量与完整 check 未在主工作区对 39cdeec9d 重跑（verify 已在 worktree 内对集成候选执行 tests/check/impact 三项全绿，CI 同提交复核）。
 - 结论：验收条款全部达成——回路「独立执行 → 只读评审 → 修复语义（触发与熔断已验证）→ 远端候选 CI → 集成 origin/dev」真实跑通且无 mock；集成 SHA 与评审、审批、CI 记录三方一致；六轮失败如实入档。控制器不因此声明达到目标 level（rollout 另计）。
-
-

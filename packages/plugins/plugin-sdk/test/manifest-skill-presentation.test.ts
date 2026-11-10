@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { parsePluginManifest } from "../src/manifest.js";
 
@@ -22,10 +23,12 @@ describe("plugin manifest skill presentation", () => {
 				skillPaths: ["agent/skills"],
 				skillPresentation: {
 					defaultVisibility: "hidden",
+					workspaceMode: "coding",
 					surfaces: { abilityCatalog: "visible", pluginDetail: "visible" },
 					skills: {
 						" vetta-ui-design ": {
 							defaultVisibility: "visible",
+							workspaceMode: "work",
 							displayName: " %plugin.name% ",
 							displayDescription: " Design UI ",
 						},
@@ -36,10 +39,12 @@ describe("plugin manifest skill presentation", () => {
 
 		expect(manifest.agent?.skillPresentation).toEqual({
 			defaultVisibility: "hidden",
-				surfaces: { abilityCatalog: "visible", pluginDetail: "visible" },
+			workspaceMode: "coding",
+			surfaces: { abilityCatalog: "visible", pluginDetail: "visible" },
 			skills: {
 				"vetta-ui-design": {
 					defaultVisibility: "visible",
+					workspaceMode: "work",
 					surfaces: undefined,
 					displayName: "%plugin.name%",
 					displayDescription: "Design UI",
@@ -48,11 +53,17 @@ describe("plugin manifest skill presentation", () => {
 		});
 	});
 
-	it("rejects unknown surfaces and blank display text", () => {
+	it("rejects unknown surfaces, invalid workspace modes, and blank display text", () => {
 		expect(() =>
 			parsePluginManifest({
 				...baseManifest,
 				agent: { skillPresentation: { surfaces: { unknown: "hidden" } } },
+			}),
+		).toThrow("skillPresentation");
+		expect(() =>
+			parsePluginManifest({
+				...baseManifest,
+				agent: { skillPresentation: { workspaceMode: "both" } },
 			}),
 		).toThrow("skillPresentation");
 		expect(() =>

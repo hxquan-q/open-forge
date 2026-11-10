@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DEFAULT_THEME_ID, resolveThemeId } from "@shared/theme/themes";
 import { atom } from "jotai";
 import type { ReactNode } from "react";

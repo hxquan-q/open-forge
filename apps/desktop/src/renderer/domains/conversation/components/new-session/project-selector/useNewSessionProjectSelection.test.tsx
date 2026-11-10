@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 选择状态的接线：默认值跟随入口、用户选择只覆盖页面本地上下文、换入口后重新推导。

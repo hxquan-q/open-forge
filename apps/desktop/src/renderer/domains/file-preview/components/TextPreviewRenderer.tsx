@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { resolvedThemeAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";

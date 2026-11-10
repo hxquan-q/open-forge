@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ChatTimelineItem } from "@shared/store/atoms";
 import { mergeWithCausalAnchors } from "./pending-user-anchor";
 

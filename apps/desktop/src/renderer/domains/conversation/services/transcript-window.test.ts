@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { HistoryPage } from "@preload/api-types/session";
 import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
 import type { ChatConversationItem, ChatTimelineItem, TranscriptPlaceholderItem } from "@shared/store/atoms";

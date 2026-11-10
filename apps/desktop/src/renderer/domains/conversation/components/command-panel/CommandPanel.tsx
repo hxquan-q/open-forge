@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
+import type { WorkspaceMode } from "@shared/store/atoms";
 import { useThemeComponent } from "@vetta-org/theme-sdk";
 import { useCommandPanelModel } from "../../hooks/useCommandPanelModel";
 import type { ConnectorGridItem } from "../../hooks/useConnectorGrid";
@@ -14,6 +16,7 @@ export interface CommandPanelProps {
 	filter: string;
 	/** 当前会话/项目 cwd，用于列出项目级 skill 目录。 */
 	cwd?: string;
+	workspaceMode?: WorkspaceMode;
 	className?: string;
 	allowCompaction?: boolean;
 }

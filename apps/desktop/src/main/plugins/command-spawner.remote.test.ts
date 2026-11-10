@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

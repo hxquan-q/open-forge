@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { act, render, screen } from "@testing-library/react";
 import { MarkdownContent } from "@vetta-org/theme-ui/markdown";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { McpServerConfigData, McpStdioServerConfigData } from "@preload/api.js";
 
 /** settings 命名空间下、内置 MCP 可用的 i18n key（须与 locales 同步扩展） */
@@ -119,6 +120,8 @@ export interface BuiltinMcpPreset {
 	displayName?: string;
 	description?: string;
 	config: McpStdioServerConfigData | Extract<McpServerConfigData, { type: "http" }>;
+	/** 工作区模式下的用户可见范围；缺省两种模式均可见，不影响 MCP 实际调用。 */
+	workspaceMode?: "work" | "coding";
 	/** 需要用户提供的密钥；有则添加前弹出表单 */
 	secrets?: readonly BuiltinMcpSecretField[];
 	/** 弹窗内展示的「怎么获取」简短步骤（i18n，可用换行） */

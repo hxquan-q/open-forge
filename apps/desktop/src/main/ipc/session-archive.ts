@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readdir, readFile, stat } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { getAgentDir } from "@vetta/coding-agent/config";

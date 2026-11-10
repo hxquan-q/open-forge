@@ -1,114 +1,117 @@
 // Copyright The Open Forge contributors.
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { listPluginManifestResources, parsePluginManifest } from "@vetta-org/plugin-sdk/manifest";
 import { describe, expect, it } from "vitest";
 
-interface Manifest {
-	readonly id: string;
-	readonly name?: string;
-	readonly description?: string;
-	readonly version?: string;
-	readonly permissions?: string[];
-	readonly agent?: {
-		readonly skillPaths?: string[];
-		readonly skillPresentation?: {
-			readonly defaultVisibility?: string;
-		};
-		readonly agents?: {
-			id: string;
-			name: string;
-			description?: string;
-			mentionHandle?: string;
-			systemPromptPath?: string;
-			roles?: string[];
-		}[];
-		readonly teams?: {
-			id: string;
-			name: string;
-			description?: string;
-			members: {
-				agent?: string;
-				role?: string;
-				responsibility: string;
-			}[];
-			workflowPath?: string;
-		}[];
-	};
+const pluginRoot = resolve(import.meta.dirname, "..");
+const agentIds = ["eform", "requirements", "developer", "tester", "deployer"];
+const skillNames = [
+	"backend-crud-and-api-contract",
+	"build-release-and-rollback",
+	"database-change-control",
+	"electronic-signature-field-implementation",
+	"entity-form-attachment-parsing",
+	"form-field-specification-and-base-data",
+	"form-record-lifecycle",
+	"frontend-buttons-and-forms",
+	"idempotent-insert-operations",
+	"integration-debugging",
+	"lombok-annotation-processor-diagnosis",
+	"operation-audit-domain",
+	"organization-scope-and-data-permission",
+	"project-architecture-and-runtime-map",
+	"qiankun-subapp-integration",
+	"query-pagination-and-n-plus-one",
+	"relational-form-selector",
+	"requirements-design-to-delivery",
+	"user-metadata-and-audit-boundary",
+];
+
+function readSkill(name: string): Promise<string> {
+	return readPluginFile(`agent/skills/${name}/SKILL.md`);
 }
 
-async function readManifest(): Promise<Manifest> {
-	return JSON.parse(await readFile(resolve(import.meta.dirname, "../plugin.json"), "utf8")) as Manifest;
-}
-
-async function readLocale(locale: string): Promise<Record<string, string>> {
-	return JSON.parse(await readFile(resolve(import.meta.dirname, `../locales/${locale}.json`), "utf8")) as Record<
-		string,
-		string
-	>;
+async function markdownFiles(directory: string): Promise<string[]> {
+	const entries = await readdir(resolve(pluginRoot, directory), { withFileTypes: true });
+	const nested = await Promise.all(
+		entries.map((entry) => {
+			const path = `${directory}/${entry.name}`;
+			return entry.isDirectory() ? markdownFiles(path) : entry.name.endsWith(".md") ? [path] : [];
+		}),
+	);
+	return nested.flat();
 }
 
 function readPluginFile(relative: string): Promise<string> {
-	return readFile(resolve(import.meta.dirname, "..", relative), "utf8");
+	return readFile(resolve(pluginRoot, relative), "utf8");
 }
 
-describe("eform-craft manifest", () => {
-	it("declares the three-member team with the minimal skill-mount permission", async () => {
+async function readManifest() {
+	const raw: unknown = JSON.parse(await readPluginFile("plugin.json"));
+	return parsePluginManifest(raw);
+}
+
+describe("eform-craft five-role manifest", () => {
+	it("uses the existing SDK contract without broadening plugin permissions", async () => {
 		const manifest = await readManifest();
 		expect(manifest.id).toBe("eform-craft");
-		expect(manifest.agent?.agents?.map((agent) => agent.id)).toEqual(["eform", "esign", "eaudit"]);
-		// 纯提示词资产 preset：挂技能目录所需且仅此一项权限。
+		expect(manifest.pluginApiVersion).toBe("^2.11.0");
 		expect(manifest.permissions).toEqual(["agent.skills.control"]);
-		// 三成员角色：队长 master、签名专员 developer、审计专员 auditor。
-		const roles = Object.fromEntries((manifest.agent?.agents ?? []).map((agent) => [agent.id, agent.roles]));
-		expect(roles.eform).toContain("master");
-		expect(roles.esign).toContain("developer");
-		expect(roles.eaudit).toContain("auditor");
-	});
-
-	it("declares the eform-studio team led by eform with a workflow brief", async () => {
-		const manifest = await readManifest();
-		const teams = manifest.agent?.teams ?? [];
-		expect(teams.map((team) => team.id)).toEqual(["eform-studio"]);
-		const team = teams[0]!;
-		// 第一个成员即队长，必须解析到本插件 agent（eform）。
-		expect(team.members[0]?.agent).toBe("eform");
-		expect(team.members.map((member) => member.agent)).toEqual(["eform", "esign", "eaudit"]);
-		expect(team.workflowPath).toBe("agent/workflows/studio.md");
-		const workflow = await readPluginFile(team.workflowPath!);
-		expect(workflow.trim().length).toBeGreaterThan(400);
-		// 团队任务书必须写死派工协议与共享契约验收。
-		expect(workflow).toContain("team_delegate_task");
-		expect(workflow).toContain("capabilities");
-	});
-
-	it("ships a readable system prompt for every agent", async () => {
-		const manifest = await readManifest();
+		expect(manifest.agent?.agents?.map((agent) => agent.id)).toEqual(agentIds);
+		expect(manifest.agent?.agents?.map((agent) => agent.roles)).toEqual([
+			["master"],
+			["business"],
+			["developer"],
+			["tester"],
+			["deployer"],
+		]);
 		for (const agent of manifest.agent?.agents ?? []) {
-			expect(agent.systemPromptPath).toBeDefined();
+			expect(agent.mode).toBe("coding");
+			expect(agent.mentionHandle).toBe(agent.id === "eform" ? "eform" : `eform-${agent.id}`);
+		}
+	});
+
+	it("keeps the team and leader IDs and binds all five members explicitly", async () => {
+		const manifest = await readManifest();
+		expect(manifest.agent?.teams).toHaveLength(1);
+		const team = manifest.agent!.teams![0]!;
+		expect(team.id).toBe("eform-studio");
+		expect(team.mode).toBe("coding");
+		expect(team.members.map((member) => member.agent)).toEqual(agentIds);
+		expect(team.members.every((member) => !member.role && member.responsibility.trim())).toBe(true);
+		expect(team.workflowPath).toBe("agent/workflows/studio.md");
+	});
+
+	it("ships all manifest-declared prompt and workflow resources", async () => {
+		const manifest = await readManifest();
+		for (const resource of listPluginManifestResources(manifest)) {
+			if (resource.path.startsWith("dist/")) continue;
+			const info = await stat(resolve(pluginRoot, resource.path));
+			expect(info.isFile() || info.isDirectory(), resource.path).toBe(true);
+		}
+		for (const agent of manifest.agent?.agents ?? []) {
+			expect(agent.systemPromptPath).toBe(`agent/agents/${agent.id}.md`);
 			const prompt = await readPluginFile(agent.systemPromptPath!);
+			expect(prompt).toContain("AIMES CustomDev");
 			expect(prompt.trim().length).toBeGreaterThan(200);
 		}
 	});
 
-	it("hides plugin skills from product surfaces (internal manual)", async () => {
+	it("keeps Skills plugin-shared and resolves both locales", async () => {
 		const manifest = await readManifest();
 		expect(manifest.agent?.skillPaths).toEqual(["agent/skills"]);
 		expect(manifest.agent?.skillPresentation?.defaultVisibility).toBe("hidden");
-	});
-
-	it("resolves every %key% placeholder in both locales", async () => {
-		const manifest = await readManifest();
 		const placeholders = [
-			manifest.name ?? "",
-			manifest.description ?? "",
-			...(manifest.agent?.agents ?? []).flatMap((agent) => [agent.name, agent.description ?? ""]),
-			...(manifest.agent?.teams ?? []).flatMap((team) => [team.name, team.description ?? ""]),
+			manifest.name,
+			manifest.description,
+			...(manifest.agent?.agents ?? []).flatMap((agent) => [agent.name, agent.description]),
+			...(manifest.agent?.teams ?? []).flatMap((team) => [team.name, team.description]),
 		];
-		expect(placeholders.length).toBeGreaterThan(0);
 		for (const locale of ["zh", "en"]) {
-			const messages = await readLocale(locale);
+			const messages = JSON.parse(await readPluginFile(`locales/${locale}.json`)) as Record<string, string>;
 			for (const raw of placeholders) {
-				const key = /^%([^%]+)%$/.exec(raw)?.[1];
+				const key = /^%([^%]+)%$/.exec(raw ?? "")?.[1];
 				expect(key, `${raw} must be a locale placeholder`).toBeDefined();
 				expect(messages[key!], `${key} missing in ${locale}`).toBeTruthy();
 			}
@@ -116,196 +119,218 @@ describe("eform-craft manifest", () => {
 	});
 });
 
-describe("eform-craft skill (board 1: form generation)", () => {
-	it("ships the manual with valid frontmatter and substantive body", async () => {
-		const content = await readPluginFile("agent/skills/eform-craft/SKILL.md");
-		expect(content.startsWith("---")).toBe(true);
-		const frontmatterEnd = content.indexOf("---", 3);
-		expect(frontmatterEnd).toBeGreaterThan(0);
-		const frontmatter = content.slice(3, frontmatterEnd);
-		expect(frontmatter).toContain("name: eform-craft");
-		expect(frontmatter.match(/description:/)).toBeTruthy();
-		const body = content.slice(frontmatterEnd + 3);
-		expect(body.trim().length).toBeGreaterThan(500);
+describe("eform-craft shared Skills and migration", () => {
+	it("integrates all five reviewed candidates and all fourteen eformSkill topics, without legacy duplicates", async () => {
+		const directories = await readdir(resolve(pluginRoot, "agent/skills"));
+		expect(directories.sort()).toEqual(skillNames);
+		for (const name of skillNames) {
+			const content = await readSkill(name);
+			const header = /^---\r?\nname: ([^\r\n]+)\r?\ndescription: ("[^\r\n]+")\r?\n---/.exec(content);
+			expect(header, name).not.toBeNull();
+			expect(header![1]).toBe(name);
+			const description: unknown = JSON.parse(header![2]!);
+			expect(typeof description).toBe("string");
+			expect(String(description).length).toBeLessThanOrEqual(1024);
+			expect(content).toContain("来源");
+		}
 	});
 
-	it("keeps the recognition contract tables intact in the manual", async () => {
-		const content = await readPluginFile("agent/skills/eform-craft/SKILL.md");
-		// 识别合同锚点：固定命名映射的六个 fieldName 与类型标记枚举必须在场。
-		for (const fieldName of [
-			"F_Process",
-			"F_Lot Number",
-			"F_Product Name",
-			"F_Operator",
-			"F_Reviewer",
-			"F_Quality Inspector",
+	it("has no broken packaged Markdown links or hardcoded workstation paths", async () => {
+		for (const path of ["README.md", ...(await markdownFiles("agent"))]) {
+			const content = await readPluginFile(path);
+			expect(content, path).not.toMatch(/[A-Z]:[\\/]/i);
+			for (const match of content.matchAll(/\]\(([^)]+)\)/g)) {
+				const target = match[1]!.split("#")[0]!;
+				if (!target || /^[a-z]+:\/\//i.test(target)) continue;
+				const info = await stat(resolve(pluginRoot, dirname(path), target));
+				expect(info.isFile(), `${path} -> ${target}`).toBe(true);
+			}
+		}
+	});
+
+	it("keeps each shared domain rule under one authoritative Skill", async () => {
+		const skills = await Promise.all(skillNames.map(async (name) => ({ name, text: await readSkill(name) })));
+		expect(skills.filter(({ text }) => text.includes("UNIX_TIMESTAMP()")).map(({ name }) => name)).toEqual([
+			"database-change-control",
+		]);
+		expect(skills.filter(({ text }) => text.includes("creator_id")).map(({ name }) => name)).toEqual([
+			"user-metadata-and-audit-boundary",
+		]);
+		expect(skills.filter(({ text }) => text.includes("t_base_organization")).map(({ name }) => name)).toEqual([
+			"project-architecture-and-runtime-map",
+		]);
+		const metadata = await readSkill("user-metadata-and-audit-boundary");
+		for (const marker of ["modifier_id", "BIGINT", "t_sys_user.id", "UserContextHolder", "不接受 DTO 提交"]) {
+			expect(metadata).toContain(marker);
+		}
+		const database = await readSkill("database-change-control");
+		expect(database).toContain("秒级");
+		expect(database).toContain("Workshop");
+	});
+
+	it("limits Workshop UI rules and retains verified evidence without inventing CustomDev contracts", async () => {
+		const ui = await readSkill("frontend-buttons-and-forms");
+		expect(ui).toContain("不是 CustomDev 强制 UI 合同");
+		for (const marker of ["primary", "success", "danger", "mes-form", "#footer"]) expect(ui).toContain(marker);
+		const facts = await readSkill("project-architecture-and-runtime-map");
+		for (const marker of [
+			"2026-11-06",
+			"t_base_workshop",
+			"department_id",
+			"t_base_material",
+			"material_code",
+			"t_base_process",
+			"t_base_personnel",
+			"personnel_code",
+			"待验证",
 		]) {
-			expect(content).toContain(fieldName);
+			expect(facts).toContain(marker);
 		}
-		for (const marker of ["[文本]", "[日期]", "[长日期]", "[整数]", "[组织]", "[电子签]"]) {
-			expect(content).toContain(marker);
-		}
-		// 页面定位锚点：form.html/index.html 是一期交付的实际表单应用，
-		// 不是"视觉可糙"的原型——防止定位回退。
-		expect(content).toContain("实际表单应用");
-		expect(content).not.toContain("视觉可糙");
 	});
 
-	it("keeps the six-artifact contract and record lifecycle in the manual", async () => {
-		const content = await readPluginFile("agent/skills/eform-craft/SKILL.md");
-		for (const artifact of ["schema.json", "form.html", "index.html", "mock-data.json", "form-spec.md", "audit-log.jsonl", "__EFORM_MOCK__"]) {
-			expect(content).toContain(artifact);
+	it("removes legacy persona and injection protocols instead of advertising them as CustomDev features", async () => {
+		expect((await readdir(resolve(pluginRoot, "agent/agents"))).sort()).toEqual(
+			agentIds.map((id) => `${id}.md`).sort(),
+		);
+		for (const path of await markdownFiles("agent")) {
+			const content = await readPluginFile(path);
+			for (const legacy of [
+				"ESIGN-ANCHOR",
+				"AUDIT-ANCHOR",
+				"window.EFORM",
+				"__EFORM_MOCK__",
+				"F_Process",
+				"admin123",
+			]) {
+				expect(content, path).not.toContain(legacy);
+			}
 		}
-		// 数据生命周期状态机（draft→saved→approved 单向，approved 锁定）。
-		expect(content).toContain(`["draft","saved","approved"]`);
-		expect(content).toContain("approved 是终态");
-		// 按钮语义针对数据记录，不是网页文件的增删查改。
-		expect(content).toContain("数据记录的增删查改");
-	});
-
-	it("keeps the shared contract section as the single authority", async () => {
-		const content = await readPluginFile("agent/skills/eform-craft/SKILL.md");
-		// §6 共享契约：锚点、键前缀、桩函数、五类埋点事件、audit-log.jsonl 落点。
-		expect(content).toContain("共享契约（三成员唯一权威源");
-		expect(content).toContain("ESIGN-ANCHOR: signature components inject here (do not remove)");
-		expect(content).toContain("AUDIT-ANCHOR: audit components inject here (do not remove)");
-		expect(content).toContain("eform:<slug>:records");
-		expect(content).toContain("eform:<slug>:auditEnabled");
-		expect(content).toContain("eform:<slug>:audit-log");
-		expect(content).toContain("window.EFORM");
-		for (const event of ["eform:audit:create", "eform:audit:save", "eform:audit:approve", "eform:audit:print", "eform:audit:export"]) {
-			expect(content).toContain(event);
-		}
-		// capabilities 默认值：audit 默认 false。
-		expect(content).toContain("默认 **false**");
+		const readme = await readPluginFile("README.md");
+		expect(readme).toContain("旧 `@esign` / `@eaudit` Agent 不再提供");
+		expect(readme).toContain("自建 Team/配置需用户改绑");
+		expect(readme).toContain("不是 per-agent Skill 隔离");
 	});
 });
 
-describe("esign-craft skill (board 2: e-signature)", () => {
-	it("ships the manual with valid frontmatter and the full signing flow", async () => {
-		const content = await readPluginFile("agent/skills/esign-craft/SKILL.md");
-		expect(content.startsWith("---")).toBe(true);
-		const frontmatterEnd = content.indexOf("---", 3);
-		expect(frontmatterEnd).toBeGreaterThan(0);
-		expect(content.slice(3, frontmatterEnd)).toContain("name: esign-craft");
-		const body = content.slice(frontmatterEnd + 3);
-		expect(body.trim().length).toBeGreaterThan(500);
-		// 签名全流程要素：验证弹窗、手写录入、清空重签、审核锁定。
-		for (const anchor of ["身份验证", "手写", "清空重签", "锁定"]) {
-			expect(body).toContain(anchor);
+describe("eform-craft workflow text contracts (not LLM behavior evaluation)", () => {
+	it("delivers one shared operation contract to members and routes standalone agents to it", async () => {
+		const manifest = await readManifest();
+		const team = manifest.agent!.teams![0]!;
+		expect(team.members[0]?.instructionsPath).toBeUndefined();
+		for (const member of team.members.slice(1)) expect(member.instructionsPath).toBe("agent/operating-contract.md");
+		for (const id of agentIds) {
+			expect(await readPluginFile(`agent/agents/${id}.md`)).toContain("../operating-contract.md");
 		}
-		// 签名数据模型与状态。
-		expect(body).toContain("signatures");
-		expect(body).toContain("pending | signed | locked");
-		// 共享契约引用（不重述）与演示明示。
-		expect(body).toContain("eform-craft 技能 §6 共享契约");
-		expect(body).toContain("演示验证");
+		expect(await readPluginFile(team.workflowPath!)).toContain("../operating-contract.md");
 	});
 
-	it("keeps the injection discipline (anchor-only writes, idempotent, prefixed)", async () => {
-		const content = await readPluginFile("agent/skills/esign-craft/SKILL.md");
-		expect(content).toContain("ESIGN-ANCHOR");
-		expect(content).toContain("幂等");
-		expect(content).toContain("eform-esign-");
-		expect(content).toContain("不重定义");
-	});
-});
-
-describe("eaudit-craft skill (board 3: operation audit)", () => {
-	it("ships the manual with valid frontmatter and the five audited events", async () => {
-		const content = await readPluginFile("agent/skills/eaudit-craft/SKILL.md");
-		expect(content.startsWith("---")).toBe(true);
-		const frontmatterEnd = content.indexOf("---", 3);
-		expect(frontmatterEnd).toBeGreaterThan(0);
-		expect(content.slice(3, frontmatterEnd)).toContain("name: eaudit-craft");
-		const body = content.slice(frontmatterEnd + 3);
-		expect(body.trim().length).toBeGreaterThan(500);
-		// 五类操作事件 + 日志行结构。
-		expect(body).toContain("create | save | approve | print | export");
-		expect(body).toContain("fieldsSnapshot");
-		expect(body).toContain("recordId");
-		// 审计开关：默认 false（需求原文语义）。
-		expect(body).toContain("默认 **false**");
-	});
-
-	it("keeps the view-only red line and the shared contract reference", async () => {
-		const content = await readPluginFile("agent/skills/eaudit-craft/SKILL.md");
-		// 仅查看不可删（无删除入口、仅追加）。
-		expect(content).toContain("仅查看不可删");
-		expect(content).toContain("不提供任何删除");
-		expect(content).toContain("追加");
-		// 共享契约引用与注入纪律。
-		expect(content).toContain("eform-craft 技能 §6 共享契约");
-		expect(content).toContain("AUDIT-ANCHOR");
-		expect(content).toContain("eform-audit-");
-		expect(content).toContain("幂等");
-		// 落盘文件。
-		expect(content).toContain("audit-log.jsonl");
-	});
-});
-
-describe("eform-fields-catalog skill (board 1 support: field types)", () => {
-	it("ships the manual with valid frontmatter and substantive body", async () => {
-		const content = await readPluginFile("agent/skills/eform-fields-catalog/SKILL.md");
-		expect(content.startsWith("---")).toBe(true);
-		const frontmatterEnd = content.indexOf("---", 3);
-		expect(frontmatterEnd).toBeGreaterThan(0);
-		expect(content.slice(3, frontmatterEnd)).toContain("name: eform-fields-catalog");
-		const body = content.slice(frontmatterEnd + 3);
-		expect(body.trim().length).toBeGreaterThan(500);
-	});
-
-	it("keeps the three-column catalog using the JSON type vocabulary", async () => {
-		const content = await readPluginFile("agent/skills/eform-fields-catalog/SKILL.md");
-		// 速查总表固定三列（业务叫法 / fieldType / 值结构），且 type 词与 billformSchema 统一。
-		expect(content).toContain("| 业务叫法 | fieldType | 值结构 |");
-		// 用户点名与新增的类型全部在场，且用词为 JSON type 词。
-		for (const type of ["string", "int", "double", "date", "datetime", "time", "boolean", "object", "select", "entry", "subEntry"]) {
-			expect(content).toContain(type);
+	it("preserves the common source-attachment-to-engineering handoffs and test-server acceptance order", async () => {
+		const workflow = await readPluginFile("agent/workflows/studio.md");
+		const stages = [
+			"## 1. 环境预检",
+			"## 2. 需求与规格",
+			"## 3. 开发",
+			"## 4. 本地测试",
+			"## 5. 校验占位（跳过）",
+			"## 6. dev 集成",
+			"## 7. dev 测试包与测试服务器验收",
+		];
+		let previous = -1;
+		for (const stage of stages) {
+			const index = workflow.indexOf(stage);
+			expect(index, stage).toBeGreaterThan(previous);
+			previous = index;
 		}
-		// 单据体 / 子单据体的值结构与自嵌套约束在场。
-		expect(content).toContain("Array<Row>");
-		expect(content).toContain("可自嵌套");
+		for (const marker of ["team_delegate_task", "team_wait_tasks", "自包含", "不重做已产生的副作用"]) {
+			expect(workflow).toContain(marker);
+		}
+		const requirements = await readPluginFile("agent/agents/requirements.md");
+		expect(requirements.indexOf("entity-form-attachment-parsing")).toBeLessThan(
+			requirements.indexOf("requirements-design-to-delivery"),
+		);
+		expect(requirements).toContain("没有表单附件的一般二开");
+		expect(requirements).toContain("原型是需求材料，不替代");
+		expect(requirements).toContain("form-field-specification-and-base-data");
 	});
 
-	it("keeps the replacement framing and cross-references", async () => {
-		const content = await readPluginFile("agent/skills/eform-fields-catalog/SKILL.md");
-		// 本手册是字段类型唯一权威，取代 §1 的字段语义（非补充）。
-		expect(content).toContain("唯一权威");
-		// 层级归属交给结构模板 skill。
-		expect(content).toContain("eform-structure-templates");
-		// 电子签不在本主 agent 目录内，归 esign 专员子agent。
-		expect(content).toContain("esign-craft");
+	it("documents each conditional Skill's positive and negative trigger", async () => {
+		const signature = await readSkill("electronic-signature-field-implementation");
+		for (const marker of [
+			"同时确认",
+			"最终需求字段清单",
+			"明确要求新增/修改",
+			"仅有 signature 字段",
+			"均不触发",
+			"先由需求角色",
+			"不可抵赖",
+		])
+			expect(signature).toContain(marker);
+		const field = await readSkill("form-field-specification-and-base-data");
+		for (const marker of [
+			"classXxx",
+			"独立 `signature`",
+			"不并行输出旧",
+			"实际数据库标准列名",
+			"已有列直接沿用",
+			"非展示关联",
+		])
+			expect(field).toContain(marker);
+		const lifecycle = await readSkill("form-record-lifecycle");
+		expect(lifecycle).toContain("只有需求或已核实项目行为显示状态流转时才调用");
+		expect(lifecycle).toContain("不是 CustomDev 默认");
+		const audit = await readSkill("operation-audit-domain");
+		expect(audit).toContain("仅用户明确要求新增/修改表单操作审计功能时调用");
+		expect(audit).toContain("纸面签字栏不触发");
+		expect(audit).toContain("不默认保存完整表单快照");
 	});
-});
 
-describe("eform-structure-templates skill (board 1 support: structure template)", () => {
-	it("ships the manual with the inline sample JSON and substantive body", async () => {
-		const content = await readPluginFile("agent/skills/eform-structure-templates/SKILL.md");
-		// 本手册无 frontmatter（仅 H1 标题）；只校验正文体量。
-		expect(content.trim().length).toBeGreaterThan(500);
-		// 原样内联 billformSchema.json，层级以它为锚，不得二次抽象丢层级。
-		expect(content).toContain("billformSchema.json");
-		// 原样 JSON 锚点：工具栏 / 单据体 / 子单据体三层角色。
-		expect(content).toContain(`"name": "工具栏"`);
-		expect(content).toContain(`"type": "entry"`);
-		expect(content).toContain(`"type": "subEntry"`);
+	it("documents Runtime dual roots, Nacos failure and secret boundaries, without adding host gates", async () => {
+		const contract = await readPluginFile("agent/operating-contract.md");
+		for (const marker of [
+			"Runtime",
+			"per-project AI workspace",
+			"project-config.md",
+			"不自行拼接",
+			"不继续依赖",
+			"明确不存在",
+			"读取失败",
+			"配置冲突",
+			"环境身份不明",
+			"任何情况下都不修改 Nacos",
+			"不连接生产数据库",
+			"不复制到 Skill、源码、日志、提交说明或普通输出",
+			"DBX `aimes`",
+			"不执行写入或 DDL",
+			"不是 per-agent Skill 隔离",
+			"不是实现于宿主的不可绕过硬门禁",
+		]) {
+			expect(contract).toContain(marker);
+		}
 	});
 
-	it("keeps the layered-logic framing (template, not a fixed skeleton)", async () => {
-		const content = await readPluginFile("agent/skills/eform-structure-templates/SKILL.md");
-		// 价值在层级区分的逻辑，而非具体内容。
-		expect(content).toContain("层级区分的逻辑");
-		// 子单据体允许自嵌套，结构不封顶。
-		expect(content).toContain("允许自嵌套");
-		// 灵活形态：多单据体 / 多子单据体 / 仅单据头均合法（非绝对三/两层）。
-		expect(content).toContain("0~N 张单据体");
-		// 示例非绝对：尽信书不如无书。
-		expect(content).toContain("尽信书不如无书");
-		// 反向流转按钮保留提示（撤销提交 / 反审核）。
-		expect(content).toContain("撤销提交");
-		expect(content).toContain("反审核");
-		// 值类型去查字段目录 skill。
-		expect(content).toContain("eform-fields-catalog");
+	it("keeps the agreed Git sequence, risk-based tests and test-only deployment fallback", async () => {
+		const contract = await readPluginFile("agent/operating-contract.md");
+		for (const marker of [
+			"有未提交改动先报告",
+			"询问要新建的分支名",
+			"每项涉及 `dev`",
+			"任务级全权",
+			"不插入额外的本地复测",
+			"创建指向 `dev` 的远端 PR",
+			"实际集成提交",
+			"完整 CustomDev",
+			"computer-use",
+			"本地行为测试",
+			"不停止同机其他服务",
+			"只交付构建产物",
+			"不处理生产 `main` PR",
+		])
+			expect(contract).toContain(marker);
+		const tester = await readPluginFile("agent/agents/tester.md");
+		expect(tester).toContain("不可用/失败时说明原因");
+		expect(tester).toContain("不等于跳过本地测试或测试服务器验收");
+		const deployer = await readPluginFile("agent/agents/deployer.md");
+		expect(deployer).toContain("回滚路径");
+		expect(deployer).toContain("不猜目录/命令");
 	});
 });

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { InstalledSkill, SkillInfo } from "@preload/api";
 import type { MarketAbility } from "@shared/lib/api";
 import { describe, expect, it } from "vitest";
@@ -97,6 +98,14 @@ describe("mergeScenes", () => {
 			isCustom: true,
 			localVersion: "0.5.5",
 		});
+	});
+
+	it("keeps the product workspace mode on the read-only scene manager entry", () => {
+		const merged = mergeScenes([marketScene({ slug: "mode-scene" })], {}, [
+			listedScene({ name: "mode-scene", source: "plugin", workspaceMode: "coding" }),
+		]);
+
+		expect(merged[0]?.workspaceMode).toBe("coding");
 	});
 
 	it("自定义 skill 不进场景页", () => {

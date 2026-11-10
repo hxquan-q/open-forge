@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, statSync } from "node:fs";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
@@ -10,6 +11,7 @@ import {
 } from "../../shared/path-resolution.js";
 import { collectToolProcess, spawnLocalToolProcess, type ToolProcessSpawner } from "../../shared/tool-process.js";
 import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from "../../shared/truncation.js";
+import type { ReadPathPolicy } from "../read/index.js";
 import { TREE_TOOL_DESCRIPTION } from "./description.js";
 import { buildFdArgs, parseFdOutput, renderTreeOutput } from "./tree-model.js";
 
@@ -58,6 +60,7 @@ export interface TreeOperations {
 
 export interface TreeToolOptions {
 	readonly operations?: TreeOperations;
+	readonly pathPolicy?: ReadPathPolicy;
 	readonly fdPath?: string;
 	readonly executableResolver?: CodingToolExecutableResolver;
 	/** 路径在哪台机器上解析；缺省为本机。 */
@@ -98,6 +101,8 @@ export function createTreeTool(cwd: string, options: TreeToolOptions = {}): Runt
 		async execute(request) {
 			if (request.signal.aborted) throw new Error("Operation aborted");
 			const searchPath = resolveExistingPath(request.input.path ?? ".", cwd, pathHost);
+			const rejectionReason = options.pathPolicy?.getRejectionReason(searchPath);
+			if (rejectionReason !== undefined) throw new Error(rejectionReason);
 			const maxDepth = Math.max(0, Math.floor(request.input.maxDepth ?? DEFAULT_MAX_DEPTH));
 			const limit = Math.max(1, Math.floor(request.input.limit ?? DEFAULT_LIMIT));
 			const includeFiles = request.input.includeFiles ?? true;

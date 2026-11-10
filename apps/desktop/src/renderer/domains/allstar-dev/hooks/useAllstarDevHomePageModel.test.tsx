@@ -13,6 +13,16 @@ import { beforeEach, expect, it, vi } from "vitest";
 const navigate = vi.hoisted(() => vi.fn());
 const openProjectSession = vi.hoisted(() => vi.fn(async () => undefined));
 const loadSessions = vi.hoisted(() => vi.fn(async () => undefined));
+const projectConfigFiles = new Map<string, string>();
+const projectConfigApi = {
+	readCodeConfig: vi.fn(async (projectCwd: string) => {
+		const content = projectConfigFiles.get(projectCwd);
+		return { exists: content !== undefined, content: content ?? "" };
+	}),
+	writeCodeConfig: vi.fn(async (input: { projectCwd: string; content: string }) => {
+		projectConfigFiles.set(input.projectCwd, input.content);
+	}),
+};
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigate,
@@ -58,6 +68,7 @@ beforeEach(() => {
 			project: {
 				list: vi.fn(async () => allstarSnapshot),
 				openAllstar: vi.fn(async () => ({ path: "/x" })),
+				...projectConfigApi,
 			},
 			dialog: { selectFolder: vi.fn(async () => null) },
 		},
@@ -129,6 +140,9 @@ beforeEach(() => {
 	navigate.mockReset();
 	openProjectSession.mockReset();
 	loadSessions.mockReset();
+	projectConfigFiles.clear();
+	projectConfigApi.readCodeConfig.mockClear();
+	projectConfigApi.writeCodeConfig.mockClear();
 	localStorage.clear();
 	allstarSnapshot.allstarProjects = [];
 	store.set(workspaceModeByProjectAtom, new Map());
@@ -226,6 +240,27 @@ it("新建开发会话按传入 cwd 写 coding 档并登记创建意图，导航
 	const intent = store.get(codingSessionCreateIntentAtom);
 	expect(intent?.cwd).toBe("/proj/b");
 	expect(typeof intent?.nonce).toBe("number");
+});
+
+it("项目配置保存到项目专属文件并在重新打开时读取", async () => {
+	const { result } = renderHook(() => useAllstarDevHomePageModel());
+	act(() => result.current.onConfigureProject("/proj/a", "a"));
+
+	await waitFor(() => expect(result.current.projectConfig.status).toBe("ready"));
+	expect(projectConfigApi.readCodeConfig).toHaveBeenCalledWith("/proj/a");
+
+	const content = "# Project configuration\\n\\n## Git\\norigin: https://example.test/repo.git\\n";
+	act(() => result.current.projectConfig.changeContent(content));
+	await act(async () => result.current.projectConfig.save());
+
+	expect(projectConfigApi.writeCodeConfig).toHaveBeenCalledWith({ projectCwd: "/proj/a", content });
+	expect(result.current.projectConfig.status).toBe("saved");
+
+	act(() => result.current.projectConfig.close());
+	act(() => result.current.onConfigureProject("/proj/a", "a"));
+	await waitFor(() => expect(projectConfigApi.readCodeConfig).toHaveBeenCalledTimes(2));
+	await waitFor(() => expect(result.current.projectConfig.status).toBe("ready"));
+	expect(result.current.projectConfig.content).toBe(content);
 });
 
 it("打开卡片会话委托全局会话打开上下文", () => {

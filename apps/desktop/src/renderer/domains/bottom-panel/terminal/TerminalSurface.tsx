@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { FitAddon } from "@xterm/addon-fit";
 import { SerializeAddon } from "@xterm/addon-serialize";

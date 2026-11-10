@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Runtime Subagents
 
 `@vetta/runtime-subagents` 是与产品和宿主无关的子代理调度内核。

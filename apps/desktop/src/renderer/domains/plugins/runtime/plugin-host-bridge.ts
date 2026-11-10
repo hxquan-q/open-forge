@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useSidebarState } from "@shared/app-shell/sidebar-state";
 import {
 	activeSessionAtom,

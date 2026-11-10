@@ -1,29 +1,31 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
 import { describe, expect, it } from "vitest";
 import { prepareSkillsForSurface } from "./useSkillList";
 
-describe("prepareSkillsForSurface", () => {
-	it("filters each surface independently and applies product display text", () => {
-		const skills: SkillInfo[] = [
-			{ name: "native", description: "Native", source: "user", type: "skill" },
-			{ name: "internal", description: "Internal", source: "plugin", type: "skill" },
-			{
-				name: "design",
-				description: "Internal design",
-				source: "plugin",
-				type: "skill",
-				presentation: {
-					defaultVisibility: "hidden",
-					surfaces: { skillPicker: "visible", commandPalette: "hidden" },
-					displayName: "Vetta 设计",
-				},
-			},
-		];
+const skills: SkillInfo[] = [
+	{ name: "work-only", description: "", source: "builtin", type: "skill", workspaceMode: "work" },
+	{ name: "code-only", description: "", source: "builtin", type: "skill", workspaceMode: "coding" },
+	{ name: "shared", description: "", source: "builtin", type: "skill" },
+];
 
-		expect(prepareSkillsForSurface(skills, "commandPalette").map((skill) => skill.name)).toEqual(["native"]);
-		expect(prepareSkillsForSurface(skills, "skillPicker")).toEqual([
-			expect.objectContaining({ name: "native", alias: "native" }),
-			expect.objectContaining({ name: "design", alias: "Vetta 设计" }),
+describe("prepareSkillsForSurface workspace mode", () => {
+	it("filters explicit modes while keeping untagged skills visible", () => {
+		expect(prepareSkillsForSurface(skills, "commandPalette", "work").map((skill) => skill.name)).toEqual([
+			"work-only",
+			"shared",
+		]);
+		expect(prepareSkillsForSurface(skills, "commandPalette", "coding").map((skill) => skill.name)).toEqual([
+			"code-only",
+			"shared",
+		]);
+	});
+
+	it("does not mode-filter other skill surfaces", () => {
+		expect(prepareSkillsForSurface(skills, "skillPicker", "work").map((skill) => skill.name)).toEqual([
+			"work-only",
+			"code-only",
+			"shared",
 		]);
 	});
 });

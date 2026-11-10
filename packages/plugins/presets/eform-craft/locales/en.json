@@ -1,12 +1,16 @@
 {
 	"plugin.name": "eForm Studio",
-	"plugin.description": "A three-member team: upload a paper form as image, PDF, Excel or Word and get an interactive form app (list page + form page + record lifecycle), with e-signature and operation-audit components injected on demand, verified field by field and revisable via natural language.",
-	"agent.eform.name": "Form Crafter",
-	"agent.eform.description": "Team leader and single entry point: reads layout and field markers, generates the form app (list page + form page + record lifecycle), guards the field-level confirmation gate, and dispatches signature/audit injection by schema capabilities.",
-	"agent.esign.name": "Signature Smith",
-	"agent.esign.description": "E-signature specialist: injects the signature component into form pages — identity verification, handwriting capture, clear-and-resign before effect, locked on approval.",
-	"agent.eaudit.name": "Auditor",
-	"agent.eaudit.description": "Operation-audit specialist: injects the audit component — parameterized enablement, full logging of create/save/approve/print/export, view-only append-only journal.",
+	"plugin.description": "Five roles for AIMES CustomDev customization: coordinator, requirements/prototypes, development, testing and deployment. Confirmed specifications lead to real engineering and dev test acceptance; prototypes are not implementation, signatures/audits are conditional, and production deployment is out of scope.",
+	"agent.eform.name": "Coordinator",
+	"agent.eform.description": "Preserves the @eform entry: environment preflight, user interaction, scope decisions, coordination and assistance. Separates verified facts from unknown project rules.",
+	"agent.requirements.name": "Requirements & Prototypes",
+	"agent.requirements.description": "Clarifies requirements and field-value logic; parses source form attachments and produces presentation prototypes when needed. Materials feed requirements closure, not replace engineering.",
+	"agent.developer.name": "Developer",
+	"agent.developer.description": "Implements frontend, backend, APIs, configuration, SQL and behavior tests from confirmed requirements and the actual CustomDev contract, without importing Workshop or legacy demo assumptions.",
+	"agent.tester.name": "Tester",
+	"agent.tester.description": "Selects risk-based black-box/white-box tests and builds; uses computer-use where available and authorized, records gaps, and verifies the complete dev integration package.",
+	"agent.deployer.name": "Test Deployer",
+	"agent.deployer.description": "Dev test servers only: verifies artifacts, paths, target service and rollback before updating/restarting and supporting acceptance; provides artifacts and instructions when access or facts are missing. No production deployment.",
 	"team.studio.name": "eForm Studio",
-	"team.studio.description": "A three-board studio: form generation → signature injection → audit injection. The leader dispatches the two specialists by form capability flags; a shared anchor contract keeps injections from breaking page structure."
+	"team.studio.description": "Five-role AIMES CustomDev team: preflight → requirements → development → local tests → skipped validation placeholder → dev integration package → test-server acceptance. Skills are plugin-shared and invoked by responsibility and trigger."
 }

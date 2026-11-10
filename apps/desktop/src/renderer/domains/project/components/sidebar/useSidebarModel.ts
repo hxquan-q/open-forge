@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { desktopHostedRouteService } from "@shared/hosted-routes/hosted-route-service";
 import {
 	activeSessionAtom,

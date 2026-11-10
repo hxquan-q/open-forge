@@ -14,6 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { type AllstarProjectConfigModel, useAllstarProjectConfig } from "./useAllstarProjectConfig";
 
 /** 每张项目卡片直接展示的会话条数；完整列表由项目空间（M1-3/4）承载。 */
 const CARD_SESSIONS_LIMIT = 5;
@@ -49,6 +50,19 @@ export interface AllstarDevHomePageModel {
 		readonly emptyCardHint: string;
 		readonly emptyProjectLabel: string;
 		readonly openProject: string;
+		readonly configureProject: string;
+		readonly projectConfigTitle: string;
+		readonly projectConfigDescription: string;
+		readonly projectConfigFieldLabel: string;
+		readonly projectConfigTemplate: string;
+		readonly projectConfigPrivacyWarning: string;
+		readonly projectConfigLoading: string;
+		readonly projectConfigLoadFailed: string;
+		readonly projectConfigSave: string;
+		readonly projectConfigSaving: string;
+		readonly projectConfigSaved: string;
+		readonly projectConfigSaveFailed: string;
+		readonly projectConfigCancel: string;
 	};
 	/** 按项目分组的开发会话卡片，按最近活跃排序；空 = 尚无任何 coding 会话。 */
 	readonly projectCards: readonly AllstarDevProjectCard[];
@@ -60,6 +74,8 @@ export interface AllstarDevHomePageModel {
 	onStartNewSession: (cwd: string) => void;
 	/** ADR-0151 决策 7：打开已有项目 = 在版块册登记（弹系统目录选择器）。 */
 	onOpenExistingProject: () => void;
+	readonly projectConfig: AllstarProjectConfigModel;
+	onConfigureProject: (cwd: string, projectName: string) => void;
 }
 
 /**
@@ -78,6 +94,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	// 文案放 project ns：版块入口标签（sidebar.nav.allstarDev）已在其中，版块首页同域；
 	// 域文案膨胀后再评估独立 ns。
 	const { t } = useTranslation("project");
+	const projectConfig = useAllstarProjectConfig(t("allstarDev.projectConfig.template"));
 	const navigate = useNavigate();
 	const openProjectSession = useOpenProjectSession();
 	const { loadSessions } = useProjectActions();
@@ -243,6 +260,19 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			emptyCardHint: t("allstarDev.home.empty.cardHint"),
 			emptyProjectLabel: t("allstarDev.home.empty.projectLabel"),
 			openProject: t("allstarDev.home.projects.openProject"),
+			configureProject: t("allstarDev.projectConfig.configure"),
+			projectConfigTitle: t("allstarDev.projectConfig.title"),
+			projectConfigDescription: t("allstarDev.projectConfig.description"),
+			projectConfigFieldLabel: t("allstarDev.projectConfig.contentLabel"),
+			projectConfigTemplate: t("allstarDev.projectConfig.template"),
+			projectConfigPrivacyWarning: t("allstarDev.projectConfig.privacyWarning"),
+			projectConfigLoading: t("allstarDev.projectConfig.loading"),
+			projectConfigLoadFailed: t("allstarDev.projectConfig.loadFailed"),
+			projectConfigSave: t("allstarDev.projectConfig.save"),
+			projectConfigSaving: t("allstarDev.projectConfig.saving"),
+			projectConfigSaved: t("allstarDev.projectConfig.saved"),
+			projectConfigSaveFailed: t("allstarDev.projectConfig.saveFailed"),
+			projectConfigCancel: t("allstarDev.projectConfig.cancel"),
 		},
 		projectCards,
 		projects: projectOptions,
@@ -251,5 +281,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		onOpenSession,
 		onStartNewSession,
 		onOpenExistingProject,
+		projectConfig,
+		onConfigureProject: projectConfig.openForProject,
 	};
 }

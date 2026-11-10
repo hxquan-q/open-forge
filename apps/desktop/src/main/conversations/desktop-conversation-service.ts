@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { stat } from "node:fs/promises";
 import { extname, isAbsolute, resolve } from "node:path";
 import type { AgentTeamDocument } from "@vetta/agent-team";

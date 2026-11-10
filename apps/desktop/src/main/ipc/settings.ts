@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
 import { readAgentSettingsDocument, updateAgentSettingsDocument } from "../agent-settings/settings-document-store.js";
 import { refreshPresetModels, startPresetModelsAutoSync } from "../models/presets/sync.js";

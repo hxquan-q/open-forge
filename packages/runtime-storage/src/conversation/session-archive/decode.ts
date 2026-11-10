@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { decryptGzipPayload, type ScryptParams } from "./crypto.js";
 import { SESSION_ARCHIVE_ERROR_CODES, SessionArchiveError } from "./errors.js";
 import { decodeAttachmentFrame, decodeFrames, decodeJsonPayload, decodeWorkspaceFileFrame } from "./frames.js";
