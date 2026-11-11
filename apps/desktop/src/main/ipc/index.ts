@@ -3,6 +3,7 @@
 import { getAgentDir } from "@vetta/coding-agent/config";
 import type { WebContents } from "electron";
 import type { ActionApprovalBroker } from "../app-actions/approval-broker.js";
+import { controlComputerUse, getComputerUseState } from "../computer-use/host.js";
 import { createDesktopHost } from "../host/desktop-host.js";
 import { createDefaultMemoryControlService } from "../memory/index.js";
 import { getMessageAnnotationService } from "../message-annotations/host.js";
@@ -18,6 +19,7 @@ import { registerBrowserTabIpc } from "./browser-tab.js";
 import { registerBrowserViewIpc } from "./browser-view.js";
 import { registerCanvasIpc } from "./canvas.js";
 import { registerClipboardIpc } from "./clipboard.js";
+import { registerComputerUseIpc } from "./computer-use.js";
 import { registerConversationTagsIpc } from "./conversation-tags.js";
 import { registerDebugIpc } from "./debug.js";
 import { registerDiagnosticsIpc } from "./diagnostics.js";
@@ -61,6 +63,7 @@ import { registerWebhookIpc } from "./webhook.js";
 import { registerWeKnoraIpc } from "./weknora.js";
 
 interface IpcTeardown {
+	teardownComputerUse: () => void;
 	teardownAbilities: () => void;
 	teardownAgentTeams: () => void;
 	teardownActionApproval: () => void;
@@ -124,6 +127,10 @@ export function registerAllIpc(
 	},
 ): IpcTeardown {
 	return {
+		teardownComputerUse: registerComputerUseIpc(webContents, {
+			state: getComputerUseState,
+			control: controlComputerUse,
+		}),
 		teardownAbilities: registerAbilitiesIpc(),
 		teardownAgentTeams: registerAgentTeamsIpc(),
 		teardownActionApproval: registerActionApprovalIpc(options.actionApprovalBroker),
@@ -183,6 +190,7 @@ export function registerAllIpc(
 }
 
 export function teardownAllIpc(teardown: IpcTeardown): void {
+	teardown.teardownComputerUse();
 	teardown.teardownAbilities();
 	teardown.teardownAgentTeams();
 	teardown.teardownActionApproval();

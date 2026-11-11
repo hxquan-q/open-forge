@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0482` | `verifying` | PLAN-0031 | [Windows 电脑操作](TASK-0482-windows-computer-use.md)：REQ-0033；随包离线后端、授权/控制权、显隐与入口已实现，103项定向TS/20项原生/6项打包通过，完整check及生产构建通过；全量遗留失败详见Task，待实机接受；独立本地候选，不推送。 |
 | `TASK-0481` | `verifying` | PLAN-0027 | [已有会话增量模式更新](TASK-0481-session-event-mode.md)：BUG-0182；两轮先红后绿，9/9回归、相关流程27/27、最终impact 9/9+202/202、完整check通过，独立审查闭环；serial，本地task候选待集成/实机接受。 |
 | `TASK-0480` | `verifying` | — | [eform-craft AIMES CustomDev 五角色团队改造](TASK-0480-eform-craft-customdev-team.md)：REQ-0032；五角色/19 Skills 完成，合同 14/14、包内 tsc、定向 Biome/守卫通过；构建包 41 文件与源码清单一致，旧七资产已按用户授权清理；v0.1.5 待发碎片已写，用户补充授权本地原子提交，不推送/部署，待实机验收；serial。 |
 | `TASK-0470` | `done` | PLAN-0029 | [会话标题与建议子域迁移](TASK-0470-session-title-host-domain.md) |

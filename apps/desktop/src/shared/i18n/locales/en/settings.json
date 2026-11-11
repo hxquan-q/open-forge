@@ -1,4 +1,8 @@
 {
+	"shortcutComputerUseStopLabel": "Stop computer use",
+	"shortcutComputerUseStopDesc": "System shortcut: stop AI control and restore windows hidden by this feature.",
+	"shortcutComputerUseRecallLabel": "Recall the main window",
+	"shortcutComputerUseRecallDesc": "Recall the hidden main window from another app after enabling Computer Use.",
 	"clearChannel": "Disconnect",
 	"clearChannelConfirm": "Disconnect this channel? The credentials and account details stored on this machine are removed, and you will have to set it up again.",
 	"clearChannelOk": "Disconnected",

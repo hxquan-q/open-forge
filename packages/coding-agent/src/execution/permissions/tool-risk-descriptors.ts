@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+// Modified by The Open Forge contributors.
 import type { ToolRiskDescriptor } from "@vetta/runtime-core/task";
 
 /**
@@ -89,6 +90,7 @@ const BUILT_IN: Readonly<Record<string, ToolRiskDescriptor>> = Object.freeze({
 	todo: LIGHTWEIGHT,
 	artifact: LOCAL_WRITE,
 	browser_tab: READ_ONLY,
+	computer_use: { ...READ_ONLY, executionClass: "exclusive", externalSideEffect: true },
 	memory: LIGHTWEIGHT,
 	im_send_attachment: LOCAL_WRITE,
 	bg_task_output: READ_ONLY,

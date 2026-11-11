@@ -1,4 +1,8 @@
 {
+	"shortcutComputerUseStopLabel": "停止电脑操作",
+	"shortcutComputerUseStopDesc": "系统级快捷键：停止 AI 操作并恢复由本功能隐藏的窗口。",
+	"shortcutComputerUseRecallLabel": "唤回主窗口",
+	"shortcutComputerUseRecallDesc": "电脑操作启用后，即使主窗口隐藏，也可从其他应用唤回。",
 	"clearChannel": "解除绑定",
 	"clearChannelConfirm": "确认解除该渠道的绑定吗？将清除本机保存的凭据与账号信息，需要重新配置才能继续使用。",
 	"clearChannelOk": "已解除绑定",

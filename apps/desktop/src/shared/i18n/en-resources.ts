@@ -11,6 +11,7 @@ import enAutomation from "./locales/en/automation.json";
 import enBatchTasks from "./locales/en/batch-tasks.json";
 import enChat from "./locales/en/chat.json";
 import enCommon from "./locales/en/common.json";
+import enComputerUse from "./locales/en/computer-use.json";
 import enMain from "./locales/en/main.json";
 import enMemory from "./locales/en/memory.json";
 import enMessage from "./locales/en/message.json";
@@ -21,6 +22,7 @@ import enSkills from "./locales/en/skills.json";
 import enWeknora from "./locales/en/weknora.json";
 
 export const enResources = {
+	"computer-use": enComputerUse,
 	common: enCommon,
 	main: enMain,
 	chat: enChat,

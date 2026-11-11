@@ -19,6 +19,7 @@ import {
 	type ShortcutBindings,
 } from "../../shared/shortcuts.js";
 import { SHORTCUTS_CHANNELS } from "../../shared/shortcuts-ipc.js";
+import { refreshComputerUseShortcuts } from "../computer-use/shortcuts.js";
 import {
 	type DesktopConfig,
 	type DesktopConfigUpdater,
@@ -144,6 +145,7 @@ export async function syncQuickPanelTrigger(): Promise<void> {
 }
 
 function broadcastBindings(bindings: Record<string, string>): void {
+	void refreshComputerUseShortcuts();
 	const payload = { bindings };
 	for (const win of BrowserWindow.getAllWindows()) {
 		if (win.isDestroyed()) continue;

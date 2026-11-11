@@ -8,6 +8,7 @@ import {
 	CODING_AGENT_PLAN_REVIEW_FUNCTION,
 	CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION,
 	CODING_AGENT_TOOL_APPROVAL_FUNCTION,
+	COMPUTER_USE_FUNCTION,
 	type CodingAgentArtifactFunctionRequest,
 	type CodingAgentArtifactFunctionResult,
 } from "@vetta/coding-agent/function-extensions";
@@ -16,6 +17,7 @@ import {
 	type SessionExtensionFunctionSource,
 } from "@vetta/runtime-core/session-extensions";
 import { invokeDesktopBrowserTab } from "../browser-automation/in-app-browser-tab-host.js";
+import type { invokeComputerUse } from "../computer-use/host.js";
 import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.js";
 import { getDesktopSandboxAuthorizationBroker } from "../conversations/sandbox-authorization-broker.js";
 import { getDesktopUserQuestionBroker } from "../conversations/user-question-broker.js";
@@ -46,6 +48,7 @@ export interface DesktopCodingAgentFunctionSourceOptions {
 		signal: AbortSignal,
 	) => Promise<CodingAgentArtifactFunctionResult>;
 	readonly invokeBrowserTab?: typeof invokeDesktopBrowserTab;
+	readonly invokeComputerUse?: typeof invokeComputerUse;
 }
 
 /** Desktop product composition adapter; Runtime only receives the generic function source. */
@@ -77,6 +80,16 @@ export function createDesktopCodingAgentFunctionSource(
 		return outcome.ok ? { attached: true } : { attached: false, reason: outcome.message };
 	});
 	registry.register(CODING_AGENT_PLAN_REVIEW_FUNCTION, (request, signal) => planReviews.handle(request, signal));
+	registry.register(
+		COMPUTER_USE_FUNCTION,
+		options.invokeComputerUse ??
+			(async (request, signal) => {
+				signal.throwIfAborted();
+				const host = await import("../computer-use/host.js");
+				signal.throwIfAborted();
+				return host.invokeComputerUse(request, signal);
+			}),
+	);
 	// 应用内 WebView 会话能力由 Desktop 恒常提供；无页面时由 host 返回 no_browser_session。
 	registry.register(CODING_AGENT_BROWSER_TAB_FUNCTION, options.invokeBrowserTab ?? invokeDesktopBrowserTab);
 	const unavailable = new Set<string>();
@@ -106,6 +119,7 @@ export function createDesktopCodingAgentFunctionSource(
 			if (token.id === CODING_AGENT_PLAN_REVIEW_FUNCTION.id) {
 				return readAvailability(token.id, planReviews.isAvailable());
 			}
+			if (token.id === COMPUTER_USE_FUNCTION.id) return process.platform === "win32" && process.arch === "x64";
 			if (token.id === CODING_AGENT_BROWSER_TAB_FUNCTION.id) {
 				return true;
 			}

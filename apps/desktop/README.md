@@ -26,6 +26,13 @@ Electron desktop host for the Vetta runtime.
 - `src/preload`: safe bridge surface for the renderer
 - `src/renderer`: React application domains and UI
 
+## Windows Computer Use
+
+Windows x64 builds include a private offline Python backend for Computer Use; users do not install
+Python, WinHands, or an MCP server. The feature is disabled by default and requires per-conversation
+authorization. See [Computer Use](docs/computer-use.md) for window recovery, permissions, compatibility,
+and the non-desktop runtime smoke test. Other platforms do not load this backend.
+
 ## Windows Voice Input
 
 Local streaming voice input is currently available only on Windows x64. The Windows artifact includes

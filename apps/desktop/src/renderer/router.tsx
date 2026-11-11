@@ -8,6 +8,7 @@ import {
 	loadAgentCenterPage,
 	loadAllstarDevHomePage,
 	loadAutomationPage,
+	loadComputerUsePage,
 	loadBatchTasksPage,
 	loadKnowledgeBasePage,
 	loadNewSessionPage,
@@ -30,6 +31,7 @@ const SessionViewerPage = lazy(async () => ({
 }));
 const AutomationPage = lazy(loadAutomationPage);
 const AllstarDevHomePage = lazy(loadAllstarDevHomePage);
+const ComputerUsePage = lazy(loadComputerUsePage);
 const BatchTasksPage = lazy(loadBatchTasksPage);
 const AbilitiesPage = lazy(loadAbilitiesPage);
 const AgentCenterPage = lazy(loadAgentCenterPage);
@@ -229,6 +231,13 @@ const weknoraRoute = createRoute({
 	pendingComponent: NoPendingComponent,
 });
 
+const computerUseRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/computer-use",
+	component: ComputerUsePage,
+	pendingComponent: NoPendingComponent,
+});
+
 const memoryRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/memory",
@@ -318,6 +327,7 @@ const routeTree = rootRoute.addChildren([
 	knowledgeRoute,
 	knowledgeListRoute,
 	weknoraRoute,
+	computerUseRoute,
 	memoryRoute,
 	abilitiesRoute,
 	abilityDetailRedirectRoute,

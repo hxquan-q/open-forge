@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { app, Menu, nativeImage, Tray } from "electron";
 import { DESKTOP_BRAND } from "../shared/desktop-brand.js";
 import { mainT } from "./i18n/index.js";
@@ -11,6 +12,12 @@ const isMac = process.platform === "darwin";
 
 let tray: Tray | null = null;
 let hideToTrayOnClose = true;
+let computerUseActions: { stop: () => void; restore: () => void } | undefined;
+
+export function setComputerUseTrayActions(actions: typeof computerUseActions): void {
+	computerUseActions = actions;
+	rebuildTrayContextMenu();
+}
 
 export function getHideToTrayOnClose(): boolean {
 	return hideToTrayOnClose;
@@ -64,6 +71,12 @@ function buildTrayMenu(): Electron.Menu {
 
 	return Menu.buildFromTemplate([
 		toggleItem,
+		...(isWindows && computerUseActions
+			? [
+					{ label: mainT("computerUse.stop"), click: computerUseActions.stop },
+					{ label: mainT("computerUse.restore"), click: computerUseActions.restore },
+				]
+			: []),
 		{
 			label: hideToTrayOnClose ? mainT("tray.quit") : mainT("tray.hideToTray"),
 			click: () => {

@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 import {
 	CODING_AGENT_ARTIFACT_FUNCTION,
 	CODING_AGENT_ASK_USER_QUESTION_FUNCTION,
 	CODING_AGENT_BROWSER_TAB_FUNCTION,
 	CODING_AGENT_PLAN_REVIEW_FUNCTION,
 	CODING_AGENT_SANDBOX_AUTHORIZATION_FUNCTION,
+	COMPUTER_USE_FUNCTION,
 	type CodingAgentQuestionFunctionRequest,
 } from "@vetta/coding-agent/function-extensions";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +27,20 @@ describe("Desktop Coding Agent function source", () => {
 
 	afterEach(() => {
 		for (const dispose of disposals.splice(0).reverse()) dispose();
+	});
+
+	it("routes computer use through the explicit host function without losing images or session identity", async () => {
+		const invoke = vi.fn(async () => ({
+			content: [{ type: "image" as const, data: "cG5n", mimeType: "image/png" }],
+		}));
+		const source = createDesktopCodingAgentFunctionSource({ logger: TEST_LOGGER, invokeComputerUse: invoke });
+		expect(source.has(COMPUTER_USE_FUNCTION)).toBe(process.platform === "win32" && process.arch === "x64");
+		const signal = new AbortController().signal;
+		const request = { sessionId: "session-1", input: { action: "observe" as const, screenshot: true } };
+		expect((await source.invoke(COMPUTER_USE_FUNCTION, request, signal)).content).toEqual([
+			{ type: "image", data: "cG5n", mimeType: "image/png" },
+		]);
+		expect(invoke).toHaveBeenCalledWith(request, signal);
 	});
 
 	it("binds explicit questions to the rebindable question broker", async () => {

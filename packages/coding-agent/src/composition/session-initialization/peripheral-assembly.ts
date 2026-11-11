@@ -30,6 +30,7 @@ import {
 	createCodingAgentAskUserQuestionSessionExtension,
 } from "../../features/ask-user-question/index.js";
 import { createCodingAgentBrowserTabSessionExtension } from "../../features/browser-tab/browser-tab-session-extension.js";
+import { createComputerUseSessionExtension } from "../../features/computer-use/computer-use-session-extension.js";
 import { createCodingAgentFileOrganizeSessionExtension } from "../../features/file-organize/file-organize-session-extension.js";
 import { CODING_AGENT_GOAL_OBSERVATION, createCodingAgentGoalSessionExtension } from "../../features/goal/index.js";
 import {
@@ -219,6 +220,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			createCodingAgentAttachArtifactSessionExtension(),
 			createCodingAgentArtifactSessionExtension(),
 			createCodingAgentBrowserTabSessionExtension(),
+			createComputerUseSessionExtension(),
 			createCodingAgentBackgroundWorkSessionExtension(),
 			createCodingAgentPluginConfigurationSessionExtension(),
 			createCodingAgentSessionAssistanceExtension(),

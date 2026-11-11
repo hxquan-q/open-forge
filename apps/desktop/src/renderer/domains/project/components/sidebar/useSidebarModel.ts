@@ -52,6 +52,12 @@ const MAX_WIDTH = 400;
 // （见 sidebar-nav-layout.ts）；DEFAULT_PINNED_NAV_KEYS 只是首次使用时的默认分区。
 const BUILTIN_NAV_ITEMS = [
 	{
+		type: "route",
+		path: "/computer-use" as const,
+		labelKey: "sidebar.nav.computerUse",
+		icon: "icon-[solar--monitor-linear]",
+	},
+	{
 		type: "new-session",
 		labelKey: "sidebar.nav.newSession",
 		icon: "icon-[solar--pen-new-square-linear]",

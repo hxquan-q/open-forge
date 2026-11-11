@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 
+import type { ComputerUseApi } from "../shared/computer-use.js";
 import type { DesktopMarkdownApi } from "../shared/markdown-ipc.js";
 import type { MessageAnnotationsApi } from "../shared/message-annotations.js";
 import type { DesktopAbilitiesApi } from "./api-types/abilities.js";
@@ -110,6 +111,7 @@ export interface DesktopHostAccessApi {
 }
 
 export interface DesktopApi {
+	computerUse: ComputerUseApi;
 	markdown: DesktopMarkdownApi;
 	messageAnnotations: MessageAnnotationsApi;
 	hostAccess: DesktopHostAccessApi;

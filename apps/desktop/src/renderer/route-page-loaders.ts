@@ -4,6 +4,10 @@ import { loadNewSessionPage } from "./domains/conversation/components/loadNewSes
 /** Shared by React.lazy routes and navigation intent prefetch. No page mounts here. */
 export { loadNewSessionPage };
 
+export const loadComputerUsePage = async () => ({
+	default: (await import("./domains/computer-use/ComputerUsePage")).ComputerUsePage,
+});
+
 export const loadAbilitiesPage = async () => ({
 	default: (await import("./domains/abilities/components/AbilitiesPage")).AbilitiesPage,
 });

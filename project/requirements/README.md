@@ -7,6 +7,7 @@
 
 | ID | 名称 | 状态 | 现有证据 |
 |---|---|---|---|
+| `REQ-0033` | Windows 电脑操作，随包后端开箱可用 | ready | [PLAN-0031](../plans/PLAN-0031-windows-computer-use.md)、[TASK-0482](../tasks/TASK-0482-windows-computer-use.md)；2026-11-10 用户确认需求并授权主仓独立本地分支实施，无远程操作 |
 | `REQ-0032` | eform-craft AIMES CustomDev 五角色二开团队 | ready | [TASK-0480](../tasks/TASK-0480-eform-craft-customdev-team.md)；2026-11-06 用户确认五角色、CustomDev/AI workspace 边界与 Skill 触发合同 |
 | `REQ-0031` | Code 项目 AI 辅助工作区与项目源码分离 | ready | [PLAN-0030](../plans/PLAN-0030-code-project-ai-workspace-isolation.md)、[TASK-0479](../tasks/TASK-0479-code-project-ai-workspace-isolation.md)；已确认需求文档 `D:/Coding/WorkSpace/Vetta/vetta-code-mode-ai-workspace-isolation.md` |
 | `REQ-0030` | 「Allstar 自主开发」功能版块（入口→版块壳→流水线并入→内置 git/MCP） | ready | [PLAN-0027](../plans/PLAN-0027-allstar-dev-evolution.md)、[TASK-0422](../tasks/TASK-0422-allstar-dev-section-entry.md)（done：M0 入口已交付并验收）、[TASK-0423](../tasks/TASK-0423-allstar-dev-section-shell.md)（in_progress：M1 版块壳与项目配置信息） |

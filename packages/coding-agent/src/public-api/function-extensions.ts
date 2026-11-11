@@ -105,6 +105,12 @@ export {
 	readBrowserElementSelectionContext,
 	readBrowserElementSelectionPayload,
 } from "../features/browser-tab/element-selection-capsule.js";
+export type { ComputerUseInput, ComputerUseRequest } from "../features/computer-use/computer-use-contract.js";
+export {
+	COMPUTER_USE_FUNCTION,
+	ComputerUseInputSchema,
+	readComputerUseInput,
+} from "../features/computer-use/computer-use-contract.js";
 export {
 	DOCUMENT_ARTIFACT_KIND,
 	type DocumentExportResult,

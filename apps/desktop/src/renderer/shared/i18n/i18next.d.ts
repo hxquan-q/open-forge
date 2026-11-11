@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 // react-i18next 类型增强：基于 zh 资源给 t() / useTranslation 提供 key 自动补全与校验。
 import "i18next";
+import type computerUse from "@/shared/i18n/locales/zh/computer-use.json";
 import type abilities from "@/shared/i18n/locales/zh/abilities.json";
 import type agentTeams from "@/shared/i18n/locales/zh/agent-teams.json";
 import type automation from "@/shared/i18n/locales/zh/automation.json";
@@ -20,6 +21,7 @@ declare module "i18next" {
 	interface CustomTypeOptions {
 		defaultNS: "common";
 		resources: {
+			"computer-use": typeof computerUse;
 			common: typeof common;
 			main: typeof main;
 			message: typeof message;

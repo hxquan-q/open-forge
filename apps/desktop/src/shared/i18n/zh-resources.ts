@@ -9,6 +9,7 @@ import zhAutomation from "./locales/zh/automation.json";
 import zhBatchTasks from "./locales/zh/batch-tasks.json";
 import zhChat from "./locales/zh/chat.json";
 import zhCommon from "./locales/zh/common.json";
+import zhComputerUse from "./locales/zh/computer-use.json";
 import zhMain from "./locales/zh/main.json";
 import zhMemory from "./locales/zh/memory.json";
 import zhMessage from "./locales/zh/message.json";
@@ -19,6 +20,7 @@ import zhSkills from "./locales/zh/skills.json";
 import zhWeknora from "./locales/zh/weknora.json";
 
 export const zhResources = {
+	"computer-use": zhComputerUse,
 	common: zhCommon,
 	main: zhMain,
 	chat: zhChat,

@@ -45,6 +45,7 @@ import { parseHelpCliCommand, runHelpCliCommand } from "./cli/help-command.js";
 import { parseOcrCliCommand, runOcrCliCommand } from "./cli/ocr-command.js";
 import { parsePdfCliCommand, runPdfCliCommand } from "./cli/pdf-command.js";
 import type { CloudMainHandle } from "./cloud/index.js";
+import { disposeComputerUse, initializeComputerUseControls } from "./computer-use/host.js";
 import { ensureDevCliShim, ensureDevOpenForgeCliShim, ensureOpenForgeCommandShim } from "./dev-cli-shim.js";
 import {
 	getDiagnosticsLogPath,
@@ -869,6 +870,7 @@ if (!gotSingleLock) {
 
 		// 托盘属于桌面应用生命周期入口，需要及时可用，但创建不再位于 ready 之前。
 		createTray();
+		initializeComputerUseControls();
 
 		void rendererContentPaintPromise
 			.then((contentPaintResult) => {
@@ -978,6 +980,7 @@ setQuitCleanup(async () => {
 	disposeAllTerminals();
 
 	const consumerShutdownResults = await Promise.allSettled([
+		disposeComputerUse(),
 		runtimeCommandsShutdown,
 		shutdownScheduler(),
 		shutdownBatchTaskExecutor(),

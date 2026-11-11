@@ -6,6 +6,7 @@
 ```yaml
 purpose: Theme-aware shared UI components and host skin implementation
 provides:  
+  - "@vetta-org/theme-ui/computer-use"
   - "@vetta-org/theme-ui/markdown"
   - "@vetta-org/theme-ui"
   - "@vetta-org/theme-ui/appearance"

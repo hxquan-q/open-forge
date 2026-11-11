@@ -13,6 +13,7 @@ import { createBatchTasksApi } from "./apis/batch-tasks.js";
 import { createBrowserTabApi } from "./apis/browser-tab.js";
 import { createBrowserViewApi } from "./apis/browser-view.js";
 import { createCanvasApi } from "./apis/canvas.js";
+import { createComputerUseApi } from "./apis/computer-use.js";
 import { createConversationTagsApi } from "./apis/conversation-tags.js";
 import { createDownloadsApi } from "./apis/downloads.js";
 import { createGitApi } from "./apis/git.js";
@@ -51,6 +52,7 @@ for (const eventName of ["keydown", "mousedown", "mousemove", "touchstart", "whe
 }
 
 const rawApi: Omit<DesktopApi, "hostAccess"> = {
+	...createComputerUseApi(ipcRenderer),
 	...createAbilitiesApi(ipcRenderer),
 	...createGitApi(ipcRenderer),
 	...createAgentTeamsApi(ipcRenderer),

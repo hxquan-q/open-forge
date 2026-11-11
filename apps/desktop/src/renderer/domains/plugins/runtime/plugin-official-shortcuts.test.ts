@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createOfficialShortcutsApi } from "./plugin-official-shortcuts.js";
 
@@ -33,6 +34,8 @@ describe("createOfficialShortcutsApi", () => {
 		const api = createOfficialShortcutsApi(assertOfficial, "capability-session");
 
 		expect(api.listAvailableActions()).toEqual([
+			{ id: "computer-use-stop", defaultShortcut: "mod+alt+q" },
+			{ id: "computer-use-recall", defaultShortcut: "mod+alt+v" },
 			{ id: "new-session", defaultShortcut: "mod+n" },
 			{ id: "open-project", defaultShortcut: "mod+o" },
 			{ id: "open-settings", defaultShortcut: "mod+," },
