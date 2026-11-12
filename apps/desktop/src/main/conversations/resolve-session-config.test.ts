@@ -156,6 +156,43 @@ describe("能力 Profile 固化（TASK-0078）", () => {
 	});
 });
 
+describe("恢复链 agentMode 回落次序（BUG-0187）", () => {
+	it("恢复无固化记录的会话采纳显式请求的 agentMode（团队 Runtime 契约）", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "team-member.jsonl");
+		// 团队会话绕过 desktop-conversation-service 创建，agent-modes.json 永无记录；
+		// 恢复请求必须靠显式声明把档位钉回 coding，而不是回落 LEGACY 的 work。
+		const resumed = await resolveDesktopSessionConfig(
+			{ cwd: root, sessionPath, agentMode: "coding", capabilityProfile: "coding" },
+			"other",
+			"interactive",
+		);
+		expect(resumed.agentMode).toBe("coding");
+		expect(resumed.capabilityProfile).toBe("coding");
+	});
+
+	it("恢复有固化记录的会话仍忽略请求 agentMode，记录优先", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "pinned-work.jsonl");
+		await recordSessionAgentMode(sessionPath, "work");
+
+		const resumed = await resolveDesktopSessionConfig(
+			{ cwd: root, sessionPath, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		expect(resumed.agentMode).toBe("work");
+	});
+
+	it("普通会话恢复不携带 agentMode 时仍回落 LEGACY 的 work", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "legacy.jsonl");
+
+		const resumed = await resolveDesktopSessionConfig({ cwd: root, sessionPath }, "conversation", "interactive");
+		expect(resumed.agentMode).toBe("work");
+	});
+});
+
 describe("Profile 默认工具清单随会话下发（BUG-0014）", () => {
 	it("折算 work 默认工具时把同一清单作为软默认证据随会话下发", async () => {
 		const root = await createTemporaryRoot();

@@ -108,7 +108,10 @@ export interface ResolveDesktopSessionConfigOptions {
 /**
  * 工作模式的唯一来源：
  * - 新建会话优先取渲染层按当前工作区派生的 agentMode，否则回落 desktop-config 默认值；
- * - 恢复已有会话取该会话创建时固化的记录，缺记录时回落常量，绝不回落当前默认值，
+ * - 恢复已有会话取该会话创建时固化的记录，记录优先于一切请求；无记录的历史会话里
+ *   显式请求值优先于 LEGACY 常量（团队 Runtime 的档位由常量裁决、从不落盘，
+ *   BUG-0187），普通会话恢复不携带 agentMode（TASK-0078 后渲染层不随 resume 下发
+ *   派生轴），因此 LEGACY 回落语义不变；两条路径都绝不回落「当前默认值」，
  *   否则改默认值会连带改写历史会话的模式。
  * 同时带回「记录是否存在」：能力 Profile 的固化守卫要靠它区分
  * 「会话固化过记录」与「历史会话从无记录」两条恢复路径（TASK-0078）。
@@ -120,7 +123,8 @@ async function resolveSessionAgentMode(
 ): Promise<ResolvedSessionAgentAxes> {
 	if (existingSessionPath) {
 		const frozenAgentMode = await readSessionAgentMode(existingSessionPath);
-		return { agentMode: frozenAgentMode ?? LEGACY_SESSION_AGENT_MODE, frozenAgentMode };
+		if (frozenAgentMode !== undefined) return { agentMode: frozenAgentMode, frozenAgentMode };
+		return { agentMode: requestedAgentMode ?? LEGACY_SESSION_AGENT_MODE, frozenAgentMode: undefined };
 	}
 	return { agentMode: requestedAgentMode ?? defaultAgentMode, frozenAgentMode: undefined };
 }

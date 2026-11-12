@@ -30,13 +30,23 @@ import type { TeamSessionStateRepository } from "./team-session-state-repository
 const log = getAppLogger("agent-team-runtime-manager");
 
 /**
- * 团队 Runtime 的能力 Profile 裁决（TASK-0078）：成员与协调 Runtime 是委派合同的
- * 执行者（TASK-0069 自包含任务书、实现并自验证），必须保有 bash 等全量工具面，
- * 静默收窄到 WORK_PROFILE 没有产品依据。团队会话绕过 desktop-conversation-service
- * 创建（agent-modes.json 永不落盘），恢复时没有任何固化记录可回落，因此三处建/恢复
- * Runtime 的入口都显式声明 coding，不依赖缺省推导。
+ * 团队 Runtime 的档位两轴裁决：与单 Agent 的 code 模式会话等同，能力轴与行为轴都钉在
+ * coding——两轴分工不同，缺一不可：
+ * - 能力轴 capabilityProfile（TASK-0078）：决定默认工具子集。成员与协调 Runtime 是
+ *   委派合同的执行者（TASK-0069 自包含任务书、实现并自验证），必须保有 bash 等
+ *   全量工具面，静默收窄到 WORK_PROFILE 没有产品依据。
+ * - 行为轴 agentMode（BUG-0187）：决定 mode 提示词、项目 AI 工作区注入与
+ *   Memory/Journal 落点。不显式声明时缺省推导为 work（新建回落全局默认、恢复回落
+ *   LEGACY 常量，两者都是 work），成员会拿到 work.md「不做软件工程」的先验，
+ *   与 coding 工具面自相矛盾。
+ * 团队会话绕过 desktop-conversation-service 创建，agent-modes.json 永不落盘——共享
+ * 索引会放大 listSessions 全量解析，且 TeamSessionStateRepository.persist 是高频咽喉。
+ * 代价是档位由本常量每次裁决而非「创建时固化」：三处建/恢复 Runtime 的入口都必须
+ * 显式声明两轴（含恢复链的显式请求优先于 LEGACY 回落，见 resolveSessionAgentMode），
+ * 不依赖缺省推导。
  */
 const TEAM_CAPABILITY_PROFILE = "coding" as const;
+const TEAM_AGENT_MODE = "coding" as const;
 
 export interface TeamMemberPromptContext {
 	readonly systemPromptCachePrefixAddon: string;
@@ -103,6 +113,7 @@ export class TeamRuntimeManager {
 				cwd,
 				executionMode,
 				automaticRetry: false,
+				agentMode: TEAM_AGENT_MODE,
 				capabilityProfile: TEAM_CAPABILITY_PROFILE,
 				...promptContext,
 				agentConfiguration: {
@@ -140,6 +151,7 @@ export class TeamRuntimeManager {
 			{
 				cwd,
 				executionMode,
+				agentMode: TEAM_AGENT_MODE,
 				capabilityProfile: TEAM_CAPABILITY_PROFILE,
 				...(sessionPath ? { sessionPath } : {}),
 				...(sessionId ? { sessionId } : {}),
@@ -294,6 +306,7 @@ export class TeamRuntimeManager {
 					executionMode,
 					sessionPath,
 					automaticRetry: false,
+					agentMode: TEAM_AGENT_MODE,
 					capabilityProfile: TEAM_CAPABILITY_PROFILE,
 					...this.createMemberPromptContext(
 						session.id,

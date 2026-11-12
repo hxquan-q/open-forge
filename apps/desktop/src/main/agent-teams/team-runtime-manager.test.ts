@@ -111,14 +111,18 @@ function requestedConfigCapabilityProfiles(): (string | undefined)[] {
 	return vi.mocked(resolveDesktopSessionConfig).mock.calls.map(([config]) => config?.capabilityProfile);
 }
 
+function requestedConfigAgentModes(): (string | undefined)[] {
+	return vi.mocked(resolveDesktopSessionConfig).mock.calls.map(([config]) => config?.agentMode);
+}
+
 const executionMode: SessionExecutionMode = "full-access";
 
-describe("TeamRuntimeManager 能力 Profile 裁决（TASK-0078）", () => {
+describe("团队 Runtime 档位两轴裁决（TASK-0078 能力轴 / BUG-0187 行为轴）", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it("新建成员 Runtime 以 coding 能力 Profile 解析会话配置", async () => {
+	it("新建成员 Runtime 以 coding 档位两轴解析会话配置", async () => {
 		const document = teamDocument();
 		const manager = teamRuntimeManager(runtimeStub());
 
@@ -133,40 +137,64 @@ describe("TeamRuntimeManager 能力 Profile 裁决（TASK-0078）", () => {
 
 		expect(state.sessionPath).toBe("C:/sessions/runtime-1.jsonl");
 		expect(requestedConfigCapabilityProfiles()).toEqual(["coding"]);
+		expect(requestedConfigAgentModes()).toEqual(["coding"]);
 	});
 
-	it("新建协调 Runtime 以 coding 能力 Profile 解析会话配置", async () => {
+	it("新建协调 Runtime 以 coding 档位两轴解析会话配置", async () => {
 		const manager = teamRuntimeManager(runtimeStub());
 
 		const state = await manager.createCoordinationRuntime("C:/workspace");
 
 		expect(state.sessionPath).toBe("C:/sessions/runtime-1.jsonl");
 		expect(requestedConfigCapabilityProfiles()).toEqual(["coding"]);
+		expect(requestedConfigAgentModes()).toEqual(["coding"]);
 	});
 
-	it("恢复协调 Runtime 仍以 coding 能力 Profile 解析会话配置", async () => {
+	it("恢复协调 Runtime 仍以 coding 档位两轴解析会话配置", async () => {
 		const manager = teamRuntimeManager(runtimeStub());
 
 		const state = await manager.createCoordinationRuntime("C:/workspace", "C:/sessions/coord.jsonl", "coord");
 
 		expect(state).toEqual({ sessionId: "coord", sessionPath: "C:/sessions/coord.jsonl" });
 		expect(requestedConfigCapabilityProfiles()).toEqual(["coding"]);
+		expect(requestedConfigAgentModes()).toEqual(["coding"]);
 	});
 
-	it("恢复成员 Runtime 以 coding 能力 Profile 重建会话配置", async () => {
+	it("恢复成员 Runtime 以 coding 档位两轴重建会话配置", async () => {
 		const document = teamDocument();
 		const session = teamSessionDocument("C:/workspace");
 		const manager = teamRuntimeManager(runtimeStub());
 
 		const restored = await manager.restoreMembers(session, document);
 
-		// 恢复请求同时携带 sessionPath 与显式 coding：成员会话没有固化记录可回落，
-		// 裁决必须由请求显式声明，而不是指望缺省推导。
+		// 恢复请求同时携带 sessionPath 与显式 coding 两轴：成员会话没有固化记录可回落，
+		// 裁决必须由请求显式声明，而不是指望缺省推导（缺省会变 work）。
 		expect(requestedConfigCapabilityProfiles()).toEqual(["coding"]);
+		expect(requestedConfigAgentModes()).toEqual(["coding"]);
 		expect(restored.memberRuntime.member).toMatchObject({
 			sessionPath: "C:/sessions/member.jsonl",
 			agentProfileId: "agent",
 		});
+	});
+
+	it("两轴请求值始终同源，防止将来只改一轴", async () => {
+		const document = teamDocument();
+		const manager = teamRuntimeManager(runtimeStub());
+		await manager.createMemberRuntime(
+			"team-session",
+			document.teams[0].members[0],
+			document.teams[0],
+			document,
+			"C:/workspace",
+			executionMode,
+		);
+		await manager.createCoordinationRuntime("C:/workspace", "C:/sessions/coord.jsonl", "coord");
+		await manager.restoreMembers(teamSessionDocument("C:/workspace"), document);
+
+		// 每条路径上两轴的请求值都必须逐个相同：只改 TEAM_AGENT_MODE 或
+		// TEAM_CAPABILITY_PROFILE 一边，团队会话就不再是「等同单 Agent code 会话」。
+		expect(requestedConfigAgentModes()).toEqual(requestedConfigCapabilityProfiles());
+		expect(requestedConfigAgentModes().every((mode) => mode === "coding")).toBe(true);
 	});
 });
 
