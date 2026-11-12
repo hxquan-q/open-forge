@@ -1283,6 +1283,29 @@ export class AgentTeamSessionService {
 		return false;
 	}
 
+	/**
+	 * runtime 会话（团队成员或协调）所属的团队会话 id（BUG-0187 授权主体）：
+	 * O(1) 内存反向索引，供 computer-use 把工具调用方 runtime id 解析为团队授权主体；
+	 * 非团队 runtime 或会话已被空闲逐出时返回 undefined，调用方按 fail-closed 处理。
+	 */
+	teamSessionIdForRuntimeSession(runtimeSessionId: string): string | undefined {
+		return this.sessionState.teamSessionIdForRuntimeSession(runtimeSessionId);
+	}
+
+	/**
+	 * 该 id 是否是当前驻留内存的团队会话（BUG-0187）：授权主体校验端口用它区分
+	 * 「团队会话授权主体」与「runtime 会话 id」。只认内存驻留（O(1)、不读盘）：
+	 * 团队会话在页面上打开即有订阅、受驻留保护不会被逐出，授权入口天然满足前提。
+	 */
+	isKnownTeamSession(teamSessionId: string): boolean {
+		return this.sessionState.get(teamSessionId) !== undefined;
+	}
+
+	/** 团队会话标题（授权主体的展示名）；非驻留团队会话返回 undefined。 */
+	teamSessionName(teamSessionId: string): string | undefined {
+		return this.sessionState.get(teamSessionId)?.name;
+	}
+
 	notifyExternalConditionChanged(change: TeamExternalConditionChange): Promise<number> {
 		return this.turnCoordinator.notifyExternalConditionChanged(change);
 	}

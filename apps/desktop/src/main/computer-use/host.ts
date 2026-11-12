@@ -7,6 +7,7 @@ import type { ComputerUseRequest } from "@vetta/coding-agent/function-extensions
 import { type Disposable, DisposableStore, MutableDisposable, toDisposable } from "@vetta/toolkit";
 import { app, BrowserWindow } from "electron";
 import { COMPUTER_USE_CHANNELS, type ComputerControl, type ComputerUseState } from "../../shared/computer-use.js";
+import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { getApplicationCacheService } from "../cache/application-cache-service.js";
 import { getAppLogger } from "../logger.js";
 import { peekSharedRuntime } from "../runtime.js";
@@ -61,13 +62,19 @@ export function getComputerUseController(): ComputerUseController {
 			canHide: () => Boolean(getTray()) || computerUseShortcutsAvailable(),
 			canExclude: () => captureExclusionSupported(release()),
 		}),
-		validateSession: async (id) => {
+		validateSession: async (subjectId) => {
 			try {
-				return Boolean(peekSharedRuntime()?.getSessionView(id));
+				// 授权主体有两个 id 空间（BUG-0187）：团队会话 id 先按团队查，
+				// 其余按 runtime 会话校验——把团队会话 id 直接喂 getSessionView
+				// 会得到 undefined，授权按钮「能点、一点报 invalid_session」。
+				if (agentTeamSessionService.isKnownTeamSession(subjectId)) return true;
+				return Boolean(peekSharedRuntime()?.getSessionView(subjectId));
 			} catch {
 				return false;
 			}
 		},
+		resolveSubject: (runtimeSessionId) =>
+			agentTeamSessionService.teamSessionIdForRuntimeSession(runtimeSessionId) ?? runtimeSessionId,
 	});
 	return controller;
 }
@@ -82,10 +89,14 @@ export async function getComputerUseState(): Promise<ComputerUseState> {
 	}
 	let sessionName: string | undefined;
 	if (state.sessionId) {
-		try {
-			sessionName = peekSharedRuntime()?.readSessionName(state.sessionId);
-		} catch {
-			/* Recovery controls outlive sessions that have already closed. */
+		// 授权主体可能是团队会话：展示名优先团队会话标题，回落 runtime 会话名。
+		sessionName = agentTeamSessionService.teamSessionName(state.sessionId);
+		if (!sessionName) {
+			try {
+				sessionName = peekSharedRuntime()?.readSessionName(state.sessionId);
+			} catch {
+				/* Recovery controls outlive sessions that have already closed. */
+			}
 		}
 	}
 	return { ...state, sessionName, shortcutsAvailable: computerUseShortcutsAvailable() };

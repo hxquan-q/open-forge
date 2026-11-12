@@ -27,6 +27,14 @@ export class TeamSessionStateRepository {
 	private readonly sessions = new Map<string, TeamSessionDocument>();
 	private readonly coordinationPaths = new Map<string, string>();
 	private readonly persistedFingerprints = new Map<string, PersistedSessionFingerprint>();
+	/**
+	 * runtime 会话 id（成员/协调）→ 团队会话 id 的反向索引（BUG-0187 授权主体）：
+	 * computer-use 等按调用方 runtime id 反查所属团队的热路径用，O(1) 内存查、
+	 * 不遍历团队文档不读盘。随 set/remove/removeCached 增量维护；每会话记录
+	 * 自己当前贡献的键集合，换员/重配导致 runtimeId 漂移时先摘旧键再记新键。
+	 */
+	private readonly runtimeSessionIndex = new Map<string, string>();
+	private readonly sessionRuntimeIds = new Map<string, Set<string>>();
 	private readonly transactions = new TeamOperationQueue();
 
 	constructor(private readonly options: TeamSessionStateRepositoryOptions) {}
@@ -36,10 +44,12 @@ export class TeamSessionStateRepository {
 	}
 
 	set(session: TeamSessionDocument): void {
+		this.indexRuntimeSessions(session);
 		this.sessions.set(session.id, session);
 	}
 
 	remove(sessionId: string): void {
+		this.dropRuntimeSessionIndex(sessionId);
 		this.sessions.delete(sessionId);
 		this.coordinationPaths.delete(sessionId);
 		this.persistedFingerprints.delete(sessionId);
@@ -49,14 +59,37 @@ export class TeamSessionStateRepository {
 	 * 只移除内存缓存条目、保留 coordination path（与 remove 的删除语义相对）。
 	 * 空闲驻留逐出用它：会话文件与重开能力保持完整，之后 read(id) 无参仍可恢复。
 	 * 指纹一并丢弃，重开后的首次 persist 重走冷路径对磁盘真值精确核对。
+	 * 反向索引同步摘除：逐出即全体 runtime 已卸载，重开后 set 会重新登记。
 	 */
 	removeCached(sessionId: string): void {
+		this.dropRuntimeSessionIndex(sessionId);
 		this.sessions.delete(sessionId);
 		this.persistedFingerprints.delete(sessionId);
 	}
 
+	/** runtime 会话（成员或协调）所属的团队会话 id；非团队 runtime 或已逐出返回 undefined。 */
+	teamSessionIdForRuntimeSession(runtimeSessionId: string): string | undefined {
+		return this.runtimeSessionIndex.get(runtimeSessionId);
+	}
+
 	values(): readonly TeamSessionDocument[] {
 		return [...this.sessions.values()];
+	}
+
+	private indexRuntimeSessions(session: TeamSessionDocument): void {
+		this.dropRuntimeSessionIndex(session.id);
+		const runtimeIds = new Set<string>();
+		for (const runtime of Object.values(session.memberRuntime)) runtimeIds.add(runtime.sessionId);
+		if (session.coordinationRuntime) runtimeIds.add(session.coordinationRuntime.sessionId);
+		for (const runtimeId of runtimeIds) this.runtimeSessionIndex.set(runtimeId, session.id);
+		this.sessionRuntimeIds.set(session.id, runtimeIds);
+	}
+
+	private dropRuntimeSessionIndex(sessionId: string): void {
+		const runtimeIds = this.sessionRuntimeIds.get(sessionId);
+		if (!runtimeIds) return;
+		for (const runtimeId of runtimeIds) this.runtimeSessionIndex.delete(runtimeId);
+		this.sessionRuntimeIds.delete(sessionId);
 	}
 
 	rememberCoordinationPath(sessionId: string, sessionPath: string): void {

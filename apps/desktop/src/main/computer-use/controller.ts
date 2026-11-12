@@ -29,7 +29,19 @@ export class ComputerUseController {
 			backend: ComputerBackend;
 			ledger: HiddenWindowLedger;
 			display: ComputerDisplay;
-			validateSession: (id: string) => Promise<boolean>;
+			/**
+			 * 校验一个授权主体是否可授权（BUG-0187 后主体有两种 id 空间）：
+			 * 单 Agent 会话的 runtime session id，或团队会话 id（grant 的命令参数
+			 * 是授权主体，不是调用方 runtime id）。
+			 */
+			validateSession: (subjectId: string) => Promise<boolean>;
+			/**
+			 * 把工具调用方的 runtime session id 解析为授权主体（BUG-0187）：团队成员
+			 * 与协调 Runtime 调用 computer_* 时携带的是自己的 runtime id，授权却落在
+			 * 所属团队会话上，必须经此映射再比对。返回 undefined 即未知调用方，
+			 * fail-closed 拒绝。缺省恒等：单 Agent 会话的授权主体就是调用方自身。
+			 */
+			resolveSubject?: (runtimeSessionId: string) => string | undefined | Promise<string | undefined>;
 			onChange?: () => void;
 		},
 	) {
@@ -103,7 +115,10 @@ export class ComputerUseController {
 		if (this.controlCount || this.active) return failure("busy");
 		if (this.unsafe) return failure("stop_failed");
 		const { sessionId, phase } = this.stateValue;
-		if (!sessionId || sessionId !== request.sessionId) return failure("unauthorized");
+		// 调用方 runtime id 先解析成授权主体（团队映射 / 单 Agent 恒等）再比对：
+		// 未知调用方解析为 undefined，与主体不匹配一样 unauthorized（fail-closed）。
+		const subject = (await this.options.resolveSubject?.(request.sessionId)) ?? request.sessionId;
+		if (!sessionId || sessionId !== subject) return failure("unauthorized");
 		if (phase !== "ready") return failure(phase);
 		const input = readComputerUseInput(request.input);
 		const physical = input.action !== "observe";

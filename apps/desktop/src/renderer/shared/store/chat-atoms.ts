@@ -254,6 +254,18 @@ export const attachedImagesAtom = atom<AttachedImage[]>([]);
 export const activeSessionAtom = atom<ActiveSession | null>(null);
 
 /**
+ * 当前团队会话语境（BUG-0187）：TeamChatPage 不写 activeSessionAtom（团队会话
+ * 没有 activeSession 投影），跨页消费者（computer-use 授权页等）用它知道「当前
+ * 语境是哪个团队会话」。由 root-layout 的 useActiveTeamSessionContext 路由跟踪器
+ * 写入：团队会话路由激活时记录，进入普通会话面（/、/project、/new-session）时清空。
+ */
+export interface ActiveTeamSessionContext {
+	readonly teamId: string;
+	readonly sessionId: string;
+}
+export const activeTeamSessionAtom = atom<ActiveTeamSessionContext | null>(null);
+
+/**
  * 当前会话的 cwd（本地绝对路径或 `ssh://<hostId>/<path>`）。
  * 单独派生一个 atom：消费方只关心目录变化，订阅整个 activeSession 会让流式期间
  * 每条消息都触发一次重渲。

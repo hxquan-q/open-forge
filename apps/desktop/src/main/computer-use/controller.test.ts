@@ -19,7 +19,13 @@ const target: ComputerWindow = {
 	hidden: false,
 	showCommand: 3,
 };
-function fixture(options: { supported?: boolean; saved?: readonly ComputerWindow[] } = {}) {
+function fixture(
+	options: {
+		supported?: boolean;
+		saved?: readonly ComputerWindow[];
+		resolveSubject?: (id: string) => string | undefined;
+	} = {},
+) {
 	let saved = [...(options.saved ?? [])];
 	const calls: ComputerBackendCommand[] = [];
 	const backend: ComputerBackend = {
@@ -56,7 +62,8 @@ function fixture(options: { supported?: boolean; saved?: readonly ComputerWindow
 			yield: yields,
 			exclude: excludes,
 		},
-		validateSession: async (id) => id === "session-1" || id === "session-2",
+		validateSession: async (id) => id === "session-1" || id === "session-2" || id === "team-1",
+		...(options.resolveSubject ? { resolveSubject: options.resolveSubject } : {}),
 	});
 	const execute = (input: ComputerUseInput, sessionId = "session-1", signal = new AbortController().signal) =>
 		service.execute({ input, sessionId }, signal);
@@ -370,5 +377,52 @@ describe("computer use user workflow", () => {
 		const f = fixture({ supported: false });
 		expect((await f.service.control({ action: "enable", enabled: true })).issue).toBe("unsupported_platform");
 		expect(f.calls).toEqual([]);
+	});
+});
+
+describe("团队会话授权主体（BUG-0187）", () => {
+	/** 宿主接线的形态：成员/协调 runtime id 映射到所属团队会话，其余恒等。 */
+	const teamResolver = (id: string): string | undefined =>
+		id === "member-rt-1" || id === "member-rt-2" || id === "coord-rt" ? "team-1" : id;
+
+	it("授权给团队会话后，成员与协调 runtime 的 computer_* 调用经主体解析放行", async () => {
+		const f = fixture({ resolveSubject: teamResolver });
+		await f.service.control({ action: "enable", enabled: true });
+		expect((await f.grant("team-1")).phase).toBe("ready");
+
+		// 旧实现：execute 只比对原始 request.sessionId（member-rt-1 ≠ team-1），
+		// 授权成功也一律 unauthorized——「UI 能授权、工具一律拒绝」。
+		expect((await f.execute({ action: "observe" }, "member-rt-1")).isError).not.toBe(true);
+		expect(
+			(await f.execute({ action: "click", revision: "screen-1", x: 12, y: 24 }, "member-rt-2")).isError,
+		).not.toBe(true);
+		expect((await f.execute({ action: "press", keys: "enter" }, "coord-rt")).isError).not.toBe(true);
+
+		// 非本团队、未映射到该主体的调用方仍拒绝（单主体互斥不变）。
+		expect((await f.execute({ action: "observe" }, "session-1")).isError).toBe(true);
+		expect((await f.execute({ action: "observe" }, "session-2")).isError).toBe(true);
+	});
+
+	it("无主体映射时（单 Agent 形态）行为不变：授权主体就是调用方自身", async () => {
+		const f = fixture();
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant("session-1");
+		expect((await f.execute({ action: "observe" }, "session-1")).isError).not.toBe(true);
+		expect((await f.execute({ action: "observe" }, "session-2")).isError).toBe(true);
+	});
+
+	it("主体解析返回 undefined 的调用方一律 fail-closed 拒绝", async () => {
+		const f = fixture({ resolveSubject: (id) => (id === "member-rt-1" ? "team-1" : undefined) });
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant("team-1");
+		expect((await f.execute({ action: "observe" }, "member-rt-1")).isError).not.toBe(true);
+		expect((await f.execute({ action: "observe" }, "unknown-rt")).isError).toBe(true);
+	});
+
+	it("团队主体与普通会话仍互斥：授权团队后普通会话 grant 报 desktop_owned", async () => {
+		const f = fixture({ resolveSubject: teamResolver });
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant("team-1");
+		expect((await f.grant("session-1")).issue).toBe("desktop_owned");
 	});
 });
