@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import { TEAM_CONFIGURATION_CHANGED_EVENT, TEAM_SESSIONS_CHANGED_EVENT } from "@shared/agent-teams/team-session-events";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DesktopTeamSidebarConversation } from "../../../../shared/sidebar-conversation";
+import type { DesktopTeamSidebarConversation } from "@/shared/sidebar-conversation";
 
 export function useTeamSidebarConversations(projectPaths: readonly string[]): {
 	readonly conversations: readonly DesktopTeamSidebarConversation[];

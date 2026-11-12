@@ -2,6 +2,7 @@
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { useSshHosts } from "@shared/hooks/useSshHost";
+import { useTeamSidebarConversations } from "@shared/hooks/useTeamSidebarConversations";
 import { pathBasename } from "@shared/lib/utils";
 import type { SessionInfo } from "@shared/store/atoms";
 import {
@@ -27,7 +28,6 @@ import { useTranslation } from "react-i18next";
 import { resolveProjectGoneCleanup } from "../../../../hooks/project-gone-cleanup";
 import { resolveSessionOpenTarget } from "../../../../hooks/session-open-target";
 import { useProjects } from "../../../../hooks/useProjects";
-import { useTeamSidebarConversations } from "../../../../hooks/useTeamSidebarConversations";
 import {
 	projectSidebarConversations,
 	type SidebarConversationInfo,

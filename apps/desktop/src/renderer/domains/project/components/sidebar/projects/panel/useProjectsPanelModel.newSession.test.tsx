@@ -40,7 +40,7 @@ vi.mock("../../../../hooks/useProjects", () => ({
 		loadSessions: vi.fn(),
 	}),
 }));
-vi.mock("../../../../hooks/useTeamSidebarConversations", () => ({
+vi.mock("@shared/hooks/useTeamSidebarConversations", () => ({
 	useTeamSidebarConversations: () => ({ conversations: [], loading: false }),
 }));
 

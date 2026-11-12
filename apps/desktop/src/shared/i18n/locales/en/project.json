@@ -351,6 +351,7 @@
 				"more": "{{count}} more",
 				"openProject": "Open project"
 			},
+			"teamSession": "Team session",
 			"empty": {
 				"title": "No dev sessions yet",
 				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",

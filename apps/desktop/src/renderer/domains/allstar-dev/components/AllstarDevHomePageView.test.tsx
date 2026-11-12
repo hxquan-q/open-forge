@@ -16,6 +16,7 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	projectsTitle: "dev projects",
 	newSession: "new dev session",
 	moreSessions: (count: number) => `${count} more`,
+	teamSession: "team session",
 	emptyTitle: "no sessions",
 	emptyHint: "pick a project above",
 	emptyCardHint: "no dev sessions on this card",
@@ -70,6 +71,31 @@ describe("AllstarDevHomePageView", () => {
 		expect(screen.queryByText("dev projects")).toBeNull();
 	});
 
+	it("团队会话行带标识展示，点击把整条会话对象交给打开回调（由 model 分派团队路由）", async () => {
+		const user = userEvent.setup();
+		const onOpenSession = vi.fn();
+		const teamSession = {
+			kind: "team" as const,
+			path: "C:/sessions/coord.jsonl",
+			title: "eform 五角色彩排",
+			teamId: "team-1",
+			teamSessionId: "ts-1",
+		};
+		render(
+			<AllstarDevHomePageView
+				model={model({
+					onOpenSession,
+					projectCards: [
+						{ cwd: "/proj/a", registered: true, projectName: "a", sessions: [teamSession], totalSessions: 1 },
+					],
+				})}
+			/>,
+		);
+		expect(screen.getByTitle("team session")).toBeDefined();
+		await user.click(screen.getByRole("button", { name: "eform 五角色彩排" }));
+		expect(onOpenSession).toHaveBeenCalledWith("/proj/a", teamSession);
+	});
+
 	it("空态：说明占位，底部新会话区仍可用并携带所选项目", async () => {
 		const user = userEvent.setup();
 		const onStartNewSession = vi.fn();
@@ -99,8 +125,8 @@ describe("AllstarDevHomePageView", () => {
 							registered: false,
 							totalSessions: 6,
 							sessions: [
-								{ path: "/shard/a/a1.jsonl", title: "修登录缺陷" },
-								{ path: "/shard/a/a2.jsonl", title: "数据看板" },
+								{ kind: "chat", path: "/shard/a/a1.jsonl", title: "修登录缺陷" },
+								{ kind: "chat", path: "/shard/a/a2.jsonl", title: "数据看板" },
 							],
 						},
 						{
@@ -108,7 +134,7 @@ describe("AllstarDevHomePageView", () => {
 							projectName: "b",
 							registered: true,
 							totalSessions: 1,
-							sessions: [{ path: "/shard/b/b1.jsonl", title: "环境配置" }],
+							sessions: [{ kind: "chat", path: "/shard/b/b1.jsonl", title: "环境配置" }],
 						},
 					],
 				})}
@@ -121,7 +147,11 @@ describe("AllstarDevHomePageView", () => {
 		expect(screen.getByText("4 more")).toBeDefined();
 
 		await user.click(screen.getByRole("button", { name: /修登录缺陷/ }));
-		expect(onOpenSession).toHaveBeenCalledWith("/proj/a", "/shard/a/a1.jsonl");
+		expect(onOpenSession).toHaveBeenCalledWith("/proj/a", {
+			kind: "chat",
+			path: "/shard/a/a1.jsonl",
+			title: "修登录缺陷",
+		});
 
 		await user.click(screen.getAllByRole("button", { name: "project config" })[0]!);
 		expect(onConfigureProject).toHaveBeenCalledWith("/proj/a", "a");

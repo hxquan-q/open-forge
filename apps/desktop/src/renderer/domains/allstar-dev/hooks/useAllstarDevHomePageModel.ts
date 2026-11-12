@@ -2,6 +2,7 @@
 
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { useOpenProjectSession } from "@shared/app-shell/session-open-context";
+import { useTeamSidebarConversations } from "@shared/hooks/useTeamSidebarConversations";
 import {
 	beginCodingSessionCreation,
 	defaultConversationCwdAtom,
@@ -20,9 +21,17 @@ import { type AllstarProjectConfigModel, useAllstarProjectConfig } from "./useAl
 const CARD_SESSIONS_LIMIT = 5;
 
 export interface AllstarDevCardSession {
-	/** Session JSONL 路径；打开会话的唯一标识。 */
+	/** 会话种类（BUG-0187）：团队会话打开走团队路由，不是 JSONL 打开链路。 */
+	readonly kind: "chat" | "team";
+	/**
+	 * Session JSONL 路径（chat 会话打开的唯一标识）；团队会话为协调会话路径，
+	 * 仅作列表 key 使用，打开分派走 teamId/teamSessionId。
+	 */
 	readonly path: string;
 	readonly title: string;
+	/** 团队会话专属：打开目标 /agent-teams/$teamId/sessions/$sessionId。 */
+	readonly teamId?: string;
+	readonly teamSessionId?: string;
 }
 
 export interface AllstarDevProjectCard {
@@ -44,6 +53,8 @@ export interface AllstarDevHomePageModel {
 		readonly projectsTitle: string;
 		readonly newSession: string;
 		readonly moreSessions: (count: number) => string;
+		/** 卡片上团队会话行的标识（与普通 code 会话行区分）。 */
+		readonly teamSession: string;
 		readonly emptyTitle: string;
 		readonly emptyHint: string;
 		/** 已登记项目的空卡片文案（项目在册但尚无 coding 会话）。 */
@@ -70,7 +81,8 @@ export interface AllstarDevHomePageModel {
 	readonly projects: readonly { cwd: string; name: string }[];
 	readonly selectedCwd: string;
 	onSelectProject: (cwd: string) => void;
-	onOpenSession: (cwd: string, sessionPath: string) => void;
+	/** 打开卡片上的会话：chat 会话走 openProjectSession，团队会话分派团队路由。 */
+	onOpenSession: (cwd: string, session: AllstarDevCardSession) => void;
 	onStartNewSession: (cwd: string) => void;
 	/** ADR-0151 决策 7：打开已有项目 = 在版块册登记（弹系统目录选择器）。 */
 	onOpenExistingProject: () => void;
@@ -126,6 +138,11 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		};
 	}, [allstarVersion]);
 
+	// 团队会话并入版块卡片（BUG-0187）：团队会话是天生 coding 档的一等开发会话，
+	// 复用团队侧栏投影 hook；分组键用会话自身 cwd，不用 placement（placement 的
+	// project 名单解析有自己的历史问题，且版块本来就按 cwd 归卡）。
+	const teamSidebar = useTeamSidebarConversations(allstarProjects.map((project) => project.cwd));
+
 	const projectCards = useMemo<AllstarDevProjectCard[]>(() => {
 		interface Group {
 			readonly projectName: string;
@@ -157,11 +174,26 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 				const group = ensureGroup(bucketCwd);
 				group.latestModifiedAt = Math.max(group.latestModifiedAt, session.modifiedAt);
 				group.sessions.push({
+					kind: "chat",
 					path: session.path,
 					title: sessionDisplayLabel(session),
 					modifiedAt: session.modifiedAt,
 				});
 			}
+		}
+		// 团队会话按 cwd 并入同一张项目卡片：与普通 coding 会话混排、统一按
+		// 最近活跃排序；总数与「还有 N 条」口径一并合并。
+		for (const conversation of teamSidebar.conversations) {
+			const group = ensureGroup(conversation.cwd);
+			group.latestModifiedAt = Math.max(group.latestModifiedAt, conversation.updatedAt);
+			group.sessions.push({
+				kind: "team",
+				path: conversation.coordinationSessionPath,
+				title: conversation.sessionTitle,
+				teamId: conversation.teamId,
+				teamSessionId: conversation.teamSessionId,
+				modifiedAt: conversation.updatedAt,
+			});
 		}
 		return Array.from(groups.entries())
 			.map(([cwd, group]) => ({
@@ -177,7 +209,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			}))
 			.sort((left, right) => right.latestModifiedAt - left.latestModifiedAt)
 			.map(({ latestModifiedAt: _latest, ...card }) => card);
-	}, [allstarProjects, defaultConversationCwd, sessionsMap]);
+	}, [allstarProjects, defaultConversationCwd, sessionsMap, teamSidebar.conversations]);
 
 	// 创建候选 = 版块册条目（BUG-0154）：册内登记名优先，缺省回落目录名归一。
 	// 普通项目清单不再参与版块候选与补拉；未归册项目的 coding 会话只经会话池聚合进卡片。
@@ -218,10 +250,19 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	}, []);
 
 	const onOpenSession = useCallback(
-		(cwd: string, sessionPath: string) => {
-			void openProjectSession(cwd, sessionPath);
+		(cwd: string, session: AllstarDevCardSession) => {
+			// 团队会话不是 JSONL 打开链路（openProjectSession 只认会话文件路径），
+			// 分派到团队会话路由。
+			if (session.kind === "team" && session.teamId && session.teamSessionId) {
+				void navigate({
+					to: "/agent-teams/$teamId/sessions/$sessionId",
+					params: { teamId: session.teamId, sessionId: session.teamSessionId },
+				});
+				return;
+			}
+			void openProjectSession(cwd, session.path);
 		},
-		[openProjectSession],
+		[navigate, openProjectSession],
 	);
 
 	const onStartNewSession = useCallback(
@@ -255,6 +296,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			projectsTitle: t("allstarDev.home.projects.title"),
 			newSession: t("allstarDev.home.projects.newSession"),
 			moreSessions: (count: number) => t("allstarDev.home.projects.more", { count }),
+			teamSession: t("allstarDev.home.teamSession"),
 			emptyTitle: t("allstarDev.home.empty.title"),
 			emptyHint: t("allstarDev.home.empty.hint"),
 			emptyCardHint: t("allstarDev.home.empty.cardHint"),

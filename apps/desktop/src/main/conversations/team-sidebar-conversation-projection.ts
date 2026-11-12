@@ -14,10 +14,23 @@ export interface TeamSidebarConversationProjectionDependencies {
 	readonly listProjectPaths: () => Promise<readonly string[]>;
 }
 
+/**
+ * placement 解析用的项目名单：普通项目册 + 开发册（allstarProjects）。
+ * 开发册项目下的团队会话也要解析出 project placement（对齐 team-workspace 的
+ * BUG-0163 名单），否则一律落 default 分组，项目侧栏看不到该项目下的团队会话。
+ */
+export async function readSidebarProjectPaths(): Promise<readonly string[]> {
+	const config = await readDesktopConfig();
+	return [
+		...config.projects.map((project) => project.path),
+		...(config.allstarProjects ?? []).map((project) => project.path),
+	];
+}
+
 const defaultDependencies: TeamSidebarConversationProjectionDependencies = {
 	readDocument: () => agentTeamStore.read(),
 	listSessions: (teamId) => agentTeamSessionService.listSessions(teamId),
-	listProjectPaths: async () => (await readDesktopConfig()).projects.map((project) => project.path),
+	listProjectPaths: readSidebarProjectPaths,
 };
 
 /**

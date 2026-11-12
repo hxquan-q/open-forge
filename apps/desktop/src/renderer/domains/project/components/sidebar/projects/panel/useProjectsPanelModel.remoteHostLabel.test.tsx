@@ -29,7 +29,7 @@ const useProjectsMock = vi.fn();
 vi.mock("../../../../hooks/useProjects", () => ({
 	useProjects: () => useProjectsMock(),
 }));
-vi.mock("../../../../hooks/useTeamSidebarConversations", () => ({
+vi.mock("@shared/hooks/useTeamSidebarConversations", () => ({
 	useTeamSidebarConversations: () => ({ conversations: [], loading: false }),
 }));
 

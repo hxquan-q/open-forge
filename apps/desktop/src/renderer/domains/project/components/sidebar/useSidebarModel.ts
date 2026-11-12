@@ -1,20 +1,17 @@
 // Modified by The Open Forge contributors.
 import { desktopHostedRouteService } from "@shared/hosted-routes/hosted-route-service";
 import {
-	activeSessionAtom,
-	defaultConversationCwdAtom,
 	pluginWorkspaceViewsAtom,
-	readWorkspaceModeFor,
 	SIDEBAR_WIDTH_STORAGE_KEY,
 	sidebarFilterAtom,
 	sidebarWidthAtom,
-	workspaceModeByProjectAtom,
 } from "@shared/store/atoms";
-import { useMatches, useNavigate, useSearch } from "@tanstack/react-router";
+import { useMatches, useNavigate } from "@tanstack/react-router";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { prefetchNavItem } from "../../../../root-layout/nav-route-prefetch";
+import { useCodingLayoutState } from "../../../../root-layout/useCodingSessionLayout";
 import { pluginWorkspaceRoute } from "../../../plugins/runtime/plugin-hosted-route-capability";
 import { usePluginTextResolver } from "../../../plugins/runtime/plugin-i18n";
 import {
@@ -200,19 +197,6 @@ function isRouteActive(path: string, currentPath: string): boolean {
 	return currentPath === path;
 }
 
-/**
- * 路由层携带的 cwd 是 URI 编码串（navigate 方显式 encodeURIComponent），统一解码；
- * 含非法转义序列时按原样使用，不因解码失败让 hook 崩掉。
- */
-function decodeRouteCwd(value: string | undefined | null): string | null {
-	if (!value) return null;
-	try {
-		return decodeURIComponent(value);
-	} catch {
-		return value;
-	}
-}
-
 function toNavItem(
 	item: (typeof BUILTIN_NAV_ITEMS)[number],
 	label: string,
@@ -296,10 +280,9 @@ export function useSidebarModel({
 	const [moreOpen, setMoreOpen] = useState(false);
 
 	const onNewChat = useNewChatNavigation();
-	const search = useSearch({ strict: false }) as { cwd?: string };
-	const workspaceModeMap = useAtomValue(workspaceModeByProjectAtom);
-	const activeSession = useAtomValue(activeSessionAtom);
-	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
+	// 版块态语境（BUG-0187）：与 root-layout 的 useCodingSessionLayout 同一事实源——
+	// code 会话、团队会话路由、开发档新会话页都算「在版块里」，侧栏入口据此高亮。
+	const codingLayout = useCodingLayoutState();
 	// committed 宽度。拖拽途中它不变——实时宽度只写 CSS 变量，见下面的 resize.
 	const [width, setWidth] = useAtom(sidebarWidthAtom);
 	const liveWidthRef = useRef(width);
@@ -348,12 +331,9 @@ export function useSidebarModel({
 			label: t("sidebar.nav.allstarDev"),
 			labelKey: "sidebar.nav.allstarDev",
 			icon: "icon-[solar--code-linear]",
-			active:
-				currentPath === "/allstar" ||
-				(currentPath === "/new-session" &&
-					readWorkspaceModeFor(workspaceModeMap, decodeRouteCwd(search.cwd) ?? defaultConversationCwd) ===
-						"coding") ||
-				(currentPath === "/" && activeSession?.capabilityProfile === "coding"),
+			// 版块态高亮复用 useCodingLayoutState（BUG-0187）：code 会话 / 团队会话路由 /
+			// 开发档新会话页都会命中，团队路由不再漏高亮。
+			active: currentPath === "/allstar" || codingLayout.active,
 			title: t("sidebar.nav.allstarDev"),
 		};
 		// Default catalog ordering places Allstar immediately after Prototype Design. If that
@@ -363,16 +343,7 @@ export function useSidebarModel({
 		);
 		if (prototypeDesignIndex < 0) return [...items, allstarItem];
 		return [...items.slice(0, prototypeDesignIndex + 1), allstarItem, ...items.slice(prototypeDesignIndex + 1)];
-	}, [
-		activeSession?.capabilityProfile,
-		currentPath,
-		defaultConversationCwd,
-		resolvePluginText,
-		search.cwd,
-		t,
-		workspaceModeMap,
-		workspaceViews,
-	]);
+	}, [codingLayout.active, currentPath, resolvePluginText, t, workspaceViews]);
 
 	const [storedLayout, setStoredLayout] = useState<SidebarNavLayout>(loadStoredNavLayout);
 	const resolvedLayout = useMemo(

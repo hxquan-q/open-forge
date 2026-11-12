@@ -125,8 +125,15 @@ function AllstarDevProjectCardView({
 							<Button
 								variant="ghost"
 								className="h-auto w-full justify-start rounded-none px-3.5 py-2 text-left font-normal"
-								onClick={() => onOpenSession(card.cwd, session.path)}
+								title={session.kind === "team" ? labels.teamSession : undefined}
+								onClick={() => onOpenSession(card.cwd, session)}
 							>
+								{session.kind === "team" && (
+									<span
+										aria-hidden
+										className="icon-[solar--users-group-rounded-linear] mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+									/>
+								)}
 								<span className="truncate text-[13px] text-foreground">{session.title}</span>
 							</Button>
 						</li>
