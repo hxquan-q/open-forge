@@ -136,10 +136,16 @@ export interface InputBarCommandModel {
 	readonly onOpen: () => void;
 }
 
-export type InputBarLeadingTool = {
-	readonly kind: "execution-mode";
-	readonly model: ExecutionModeSelectorViewProps;
-};
+export interface InputBarHotTrackingModel {
+	readonly active: boolean;
+	readonly label: string;
+	readonly title: string;
+	readonly onToggle: () => void;
+}
+
+export type InputBarLeadingTool =
+	| { readonly kind: "execution-mode"; readonly model: ExecutionModeSelectorViewProps }
+	| { readonly kind: "hot-tracking"; readonly model: InputBarHotTrackingModel };
 export type InputBarTrailingTool = {
 	readonly kind: "context-usage";
 	readonly model: ContextRingModel;

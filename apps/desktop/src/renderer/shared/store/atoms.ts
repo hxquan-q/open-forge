@@ -20,6 +20,7 @@ export * from "./deploy-mode-atoms";
 export * from "./file-atoms";
 export * from "./file-preview-atoms";
 export * from "./goal-atoms";
+export * from "./hot-tracking-atoms";
 export * from "./knowledge-base-atoms";
 export * from "./mcp-task-atoms";
 export * from "./model-catalog";

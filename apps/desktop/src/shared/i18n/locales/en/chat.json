@@ -1,4 +1,5 @@
 {
+	"_comment": "Modified by The Open Forge contributors.",
 	"activityPanel": {
 		"tabs": {
 			"file": "Files",
@@ -834,6 +835,11 @@
 			"empty": "This team has no members to mention",
 			"clear": "Clear all",
 			"selected": "{{count}} members"
+		},
+		"hotTracking": {
+			"label": "LLM activity tracking",
+			"on": "LLM activity tracking is on: follow AI commands, files and browser activity. Applies to this session only; resets to on after restart.",
+			"off": "LLM activity tracking is off: new activity is not replayed or followed automatically. Applies to this session only; resets to on after restart."
 		},
 		"toolbar": {
 			"addImage": "Add image",

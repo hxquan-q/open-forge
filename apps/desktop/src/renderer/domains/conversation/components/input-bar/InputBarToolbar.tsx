@@ -6,7 +6,7 @@ import { SendButton } from "../SendButton";
 import type { ReactNode } from "react";
 import { ActiveActionCapsules, type ActiveActionCapsule } from "./ActiveActionCapsules";
 import { InputBarToolbarButton } from "./InputBarToolbarButton";
-import type { SpeechInputModel } from "./types";
+import type { InputBarHotTrackingModel, SpeechInputModel } from "./types";
 import type { ContextRingModel } from "../../hooks/useContextRingModel";
 import type { ExecutionModeSelectorViewProps } from "../execution-mode-selector/types";
 import type { ModelSelectorScope } from "../../hooks/useModelSelectorModel";
@@ -88,6 +88,21 @@ export function InputBarExecutionModeAction({ visible, model }: { readonly visib
 		<div className={visible ? "min-w-0 shrink" : "hidden"}>
 			<ExecutionModeSelector model={model} />
 		</div>
+	);
+}
+
+export function InputBarHotTrackingAction({ model, visible }: { readonly model: InputBarHotTrackingModel; readonly visible: boolean }): JSX.Element {
+	return (
+		<span className={visible ? "flex shrink-0" : "hidden"}>
+			<InputBarToolbarButton
+				icon="icon-[solar--eye-linear]"
+				title={model.title}
+				aria-label={model.label}
+				aria-pressed={model.active}
+				active={model.active}
+				onClick={model.onToggle}
+			/>
+		</span>
 	);
 }
 

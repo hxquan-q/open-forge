@@ -29,6 +29,7 @@ import {
 	InputBarAttachmentActions,
 	InputBarContextAction,
 	InputBarExecutionModeAction,
+	InputBarHotTrackingAction,
 	InputBarModelAction,
 	InputBarSendAction,
 	InputBarSkillsAction,
@@ -252,7 +253,9 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 												onSelectFiles={() => void model.actions.handleSelectFiles()}
 												onSelectImages={() => void model.actions.handleSelectImages()}
 											/>
-							{model.leadingTools.map((tool) => (
+							{model.leadingTools.map((tool) => tool.kind === "hot-tracking" ? (
+								<InputBarHotTrackingAction key={tool.kind} visible={!slashOpen} model={tool.model} />
+							) : (
 								<InputBarExecutionModeAction key={tool.kind} visible={!slashOpen} model={tool.model} />
 							))}
 											<InputBarActiveActions

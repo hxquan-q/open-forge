@@ -1,4 +1,5 @@
 {
+	"_comment": "Modified by The Open Forge contributors.",
 	"activityPanel": {
 		"tabs": {
 			"file": "文件",
@@ -834,6 +835,11 @@
 			"empty": "当前团队暂无可指定成员",
 			"clear": "取消全部",
 			"selected": "{{count}} 个成员"
+		},
+		"hotTracking": {
+			"label": "LLM 行为热追踪",
+			"on": "LLM 行为热追踪已开启：跟随 AI 命令、文件与浏览器活动；仅本会话生效，重启后恢复开启",
+			"off": "LLM 行为热追踪已关闭：不再投屏或自动跟随新活动；仅本会话生效，重启后恢复开启"
 		},
 		"toolbar": {
 			"addImage": "添加图片",

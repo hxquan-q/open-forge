@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { activeSessionAtom, currentScenarioAtom, mountedActivityWorkspacesAtom } from "@shared/store/atoms";
+import { activeSessionAtom, activeSessionHotTrackingAtom, currentScenarioAtom, mountedActivityWorkspacesAtom } from "@shared/store/atoms";
 import { useActiveSessionRuntimeIds } from "@shared/workspace/active-session-runtime";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
 import { useThemeComponent } from "@vetta-org/theme-sdk";
@@ -103,6 +103,7 @@ function useMountedActivityWorkspace(workspace: ActivityWorkspace): void {
 /** Conversation-page adapter. The generic panel itself never reads conversation state. */
 export function ConversationActivityPanel(): JSX.Element {
 	const activeSession = useAtomValue(activeSessionAtom);
+	const hotTracking = useAtomValue(activeSessionHotTrackingAtom);
 	const pluginScenario = useAtomValue(currentScenarioAtom) ?? undefined;
 	const runtimeIds = useActiveSessionRuntimeIds();
 	const workspace = useMemo(
@@ -119,7 +120,7 @@ export function ConversationActivityPanel(): JSX.Element {
 		<ActivityPanel
 			workspace={workspace}
 			pluginScenario={pluginScenario}
-			hotTracking={activeSession?.capabilityProfile === "coding"}
+			hotTracking={hotTracking}
 		/>
 	);
 }

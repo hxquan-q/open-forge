@@ -33,6 +33,11 @@ export interface DefaultChatViewProps {
 	 * coding（默认）保持现有 ActivityPanel。Team 等自定义 activity 的宿主不传此值。
 	 */
 	readonly workspaceMode?: WorkspaceMode;
+	/**
+	 * 会话级热追踪许可（TASK-0483）：普通会话宿主传 `activeSessionHotTrackingAtom` 的值。
+	 * 默认 true——团队宿主（天生 coding 档、不经会话开关）与未接线的宿主维持既有行为。
+	 */
+	readonly hotTracking?: boolean;
 }
 
 function sameIds(left: readonly string[], right: readonly string[]): boolean {
@@ -63,7 +68,8 @@ const ActivityColumn = memo(
 		workspace,
 		activity,
 		workspaceMode,
-	}: Pick<DefaultChatViewProps, "workspace" | "activity" | "workspaceMode">) {
+		hotTracking = true,
+	}: Pick<DefaultChatViewProps, "workspace" | "activity" | "workspaceMode" | "hotTracking">) {
 		const rightPanel = useWorkspaceRightPanel({
 			mode: workspaceMode,
 			runtimeIds: workspace.runtimeIds,
@@ -84,14 +90,14 @@ const ActivityColumn = memo(
 				enablePluginTabs={coding ? false : activity.enablePluginTabs}
 				enabledBuiltinTabs={coding ? CODING_ACTIVITY_BUILTIN_TABS : activity.enabledBuiltinTabs}
 				pluginScenario={activity.pluginScenario}
-				hotTracking={coding}
+				hotTracking={coding && hotTracking}
 			/>
 		) : (
 			<CurrentScenarioActivityPanel
 				workspace={workspace}
 				enablePluginTabs={coding ? false : undefined}
 				enabledBuiltinTabs={coding ? CODING_ACTIVITY_BUILTIN_TABS : undefined}
-				hotTracking={coding}
+				hotTracking={coding && hotTracking}
 			/>
 		);
 	},

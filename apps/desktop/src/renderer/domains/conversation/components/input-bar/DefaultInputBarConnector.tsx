@@ -1,5 +1,7 @@
 // Modified by The Open Forge contributors.
 import { useBottomPanelPills } from "@domains/bottom-panel/hooks/useBottomPanelPills";
+import { activeSessionHotTrackingAtom, toggleCurrentSessionHotTrackingAtom } from "@shared/store/atoms";
+import { useAtomValue, useSetAtom } from "jotai";
 import { GoalModeDialog } from "../GoalModeDialog";
 import { sessionAxesBadgeKind } from "@domains/workspace-mode";
 import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
@@ -32,6 +34,8 @@ import { usePlanModeModel } from "../../hooks/usePlanModeModel";
 export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(props: ConnectedInputBarProps): JSX.Element {
 	const { t } = useTranslation("chat");
 	const session = useInputBarSessionSource(props.cwdOverride);
+	const hotTracking = useAtomValue(activeSessionHotTrackingAtom);
+	const toggleHotTracking = useSetAtom(toggleCurrentSessionHotTrackingAtom);
 	const draft = useInputBarDraftSource();
 	const runtimeId = session.activeSession?.runtimeId;
 	const interactions = useInputBarInteractionSource(runtimeId);
@@ -196,7 +200,18 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 		contextMenu,
 		editor: { namespace: "chat-input" },
 		modelSelector: { updateActiveSession: true },
-		leadingTools: [{ kind: "execution-mode", model: executionModeModel }],
+		leadingTools: [
+			{ kind: "execution-mode", model: executionModeModel },
+			...(session.activeSession?.capabilityProfile === "coding" ? [{
+				kind: "hot-tracking" as const,
+				model: {
+					active: hotTracking,
+					label: t("inputBar.hotTracking.label"),
+					title: t(hotTracking ? "inputBar.hotTracking.on" : "inputBar.hotTracking.off"),
+					onToggle: toggleHotTracking,
+				},
+			}] : []),
+		],
 		trailingTools: contextUsageModel ? [{ kind: "context-usage", model: contextUsageModel }] : [],
 		sendBehavior: "queueable",
 		labels,

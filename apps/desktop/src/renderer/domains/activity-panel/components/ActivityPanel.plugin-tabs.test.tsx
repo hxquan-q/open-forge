@@ -4,9 +4,16 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { i18n, initI18n } from "@shared/i18n";
 import {
+	activeSessionAtom,
 	activityPanelOpenAtom,
+	activityTabOrderAtom,
+	aiEditTargetAtom,
+	hiddenActivityTabsAtom,
+	inlineFilePreviewAtom,
+	toggleCurrentSessionHotTrackingAtom,
 	activityPanelTabByProjectAtom,
 	aiTerminalFeedAtom,
 	floatingActivityTabsByProjectAtom,
@@ -14,7 +21,9 @@ import {
 	type RegisteredActivityTab,
 } from "@shared/store/atoms";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";
-import { ActivityPanel } from "./ActivityPanel";
+import { ActivityPanel, ConversationActivityPanel } from "./ActivityPanel";
+import { useFollowAiFileEdits } from "../hooks/useFollowAiFileEdits";
+import { useAtomValue } from "jotai";
 
 vi.mock("motion/react", () => {
 	const motion = new Proxy(
@@ -33,9 +42,13 @@ vi.mock("motion/react", () => {
 	};
 });
 
-// The file tab owns a live fs watcher; this suite only cares about tab resolution.
+// 文件树/真实 fs watcher 不参与本测试；保留真实文件跟随 hook 与 Context 接线。
 vi.mock("./file-tab/FileTabContent", () => ({
-	FileTabContent: () => <div>file body</div>,
+	FileTabContent: () => {
+		useFollowAiFileEdits();
+		const preview = useAtomValue(inlineFilePreviewAtom);
+		return <div>file body{preview ? <span>{preview.path}</span> : null}</div>;
+	},
 }));
 
 // 内置 Git 页签的 useMeta 会拉取仓库状态（window.vetta.git）；测试桥不带 git 通道，
@@ -50,12 +63,15 @@ class NoopResizeObserver {
 	disconnect(): void {}
 }
 
+beforeAll(async () => { await initI18n(); await i18n.changeLanguage("zh"); });
+
 beforeEach(() => {
 	vi.stubGlobal("ResizeObserver", NoopResizeObserver);
 });
 
 afterEach(() => {
 	cleanup();
+	vi.restoreAllMocks();
 	vi.unstubAllGlobals();
 });
 
@@ -89,6 +105,45 @@ function renderPanel(scenario: "conversation" | undefined, open = true, hotTrack
 }
 
 describe("activity panel plugin tabs outside the ordinary conversation host", () => {
+	it("普通 coding 会话关闭热追踪后移除终端、不跟随页签与文件；重新开启恢复且不改页签偏好", () => {
+		// jsdom 无布局，提供足够的栏宽以便按可访问 role 查询所有页签。
+		vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200);
+		vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(100);
+		const store = createStore();
+		const cwd = "/repo";
+		store.set(activeSessionAtom, { runtimeId: "code-a", sessionPath: "/a.jsonl", cwd, capabilityProfile: "coding" });
+		store.set(activityPanelOpenAtom, true);
+		store.set(hiddenActivityTabsAtom, new Map([[cwd, ["todo"]]]));
+		store.set(activityTabOrderAtom, new Map([[cwd, ["browser", "file", "terminal", "git"]]]));
+		const hiddenBefore = store.get(hiddenActivityTabsAtom);
+		const orderBefore = store.get(activityTabOrderAtom);
+		render(<Provider store={store}><ConversationActivityPanel /></Provider>);
+		expect(screen.getByRole("tab", { name: "终端" })).toBeTruthy();
+		act(() => store.set(aiEditTargetAtom, { path: "/repo/on.ts", cwd, at: 1 }));
+		expect(store.get(inlineFilePreviewAtom)?.path).toBe("/repo/on.ts");
+
+		act(() => store.set(toggleCurrentSessionHotTrackingAtom));
+		expect(screen.queryByRole("tab", { name: "终端" })).toBeNull();
+		act(() => {
+			store.set(aiTerminalFeedAtom, [{ key: "off", command: "no-follow", running: true, cwd, at: 2 }]);
+			store.set(aiEditTargetAtom, { path: "/repo/off.ts", cwd, at: 2 });
+		});
+		expect(store.get(activityPanelTabByProjectAtom).get(cwd)).toBe("file");
+		expect(store.get(inlineFilePreviewAtom)?.path).toBe("/repo/on.ts");
+		expect(screen.queryByText("no-follow")).toBeNull();
+
+		act(() => store.set(toggleCurrentSessionHotTrackingAtom));
+		expect(screen.getByRole("tab", { name: "终端" })).toBeTruthy();
+		act(() => store.set(aiTerminalFeedAtom, [{ key: "on", command: "follow-again", running: true, cwd, at: 3 }]));
+		expect(store.get(activityPanelTabByProjectAtom).get(cwd)).toBe("terminal");
+		expect(screen.getByText("follow-again")).toBeTruthy();
+		act(() => store.set(aiEditTargetAtom, { path: "/repo/again.ts", cwd, at: 4 }));
+		expect(store.get(activityPanelTabByProjectAtom).get(cwd)).toBe("file");
+		expect(store.get(inlineFilePreviewAtom)?.path).toBe("/repo/again.ts");
+		expect(store.get(hiddenActivityTabsAtom)).toBe(hiddenBefore);
+		expect(store.get(activityTabOrderAtom)).toBe(orderBefore);
+	});
+
 	it("真实面板入口把 shell 活动切到当前工作区终端，不写入 unbound", () => {
 		const store = renderPanel(undefined, true, true);
 		act(() => store.set(aiTerminalFeedAtom, [{

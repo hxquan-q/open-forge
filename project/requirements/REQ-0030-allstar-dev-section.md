@@ -6,12 +6,12 @@ priority: P1
 owner: product
 source: user-request
 related_plan: [PLAN-0027, PLAN-0028]
-related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447, TASK-0478]
+related_tasks: [TASK-0422, TASK-0423, TASK-0434, TASK-0447, TASK-0478, TASK-0483]
 related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-10-26
-updated: 2026-11-03
+updated: 2026-11-12
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -63,7 +63,9 @@ updated: 2026-11-03
 - **LLM 行为热追踪（AI 命令投屏/文件跟随/页签跟随）是 code 模式独有**（2026-10-30 用户
   决策，TASK-0434）：非 coding 档单会话不写全局活动，非 coding 挂载点不跟随、不显示 AI
   终端回放页签；团队会话天生 coding 档维持热追踪。行为取舍：work 会话的写类/命令活动
-  不再驱动右栏跟随与投屏（发布说明须写明）；
+  不再驱动右栏跟随与投屏（发布说明须写明）。code 会话另带**会话级内存开关**
+  （TASK-0483，2026-11-12）：输入栏可关本会话热追踪，默认开、按 runtimeId 进程内记忆、
+  不持久化、重启复位，生产端与消费端同源门控；work/团队会话不获得该开关或能力；
 - 内置 MCP 面向插件/MCP 不可信边界：最小权限声明、结构校验、写操作过审批。
 
 ## 验收标准
