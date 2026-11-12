@@ -26,7 +26,10 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 		);
 	}
 	return (
-		<div className="flex h-full flex-col gap-5 px-8 pb-8 pt-6">
+		// min-w-0：卡片行里的卡片是 shrink-0，其 min-content 宽度会沿 flex 链把本根节点
+		// 顶到远超内容区（18 张卡实测 4588px），底部新建会话区按整行宽度居中后推出视口。
+		// 宽度收缩在这里断链，溢出由卡片行自己的 overflow-x-auto 消化（BUG-0188）。
+		<div className="flex h-full min-w-0 flex-col gap-5 px-8 pb-8 pt-6">
 			<p className="text-[13px] text-muted-foreground">{model.labels.intro}</p>
 			<section className="flex min-h-0 flex-1 flex-col gap-3">
 				<h2 className="text-[15px] font-medium text-foreground">{model.labels.projectsTitle}</h2>
