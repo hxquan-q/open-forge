@@ -6,7 +6,7 @@ priority: P1
 requirement: REQ-0033
 owner: desktop
 created: 2026-11-10
-updated: 2026-11-11
+updated: 2026-11-12
 related_requirement: [REQ-0033]
 related_tasks: [TASK-0482]
 depends_on: []
@@ -44,4 +44,8 @@ Windows 原生窗口管理与 Vetta 显示由 Desktop 所有。任意 Python run
 
 ## 升级信号与 ADR
 
-现有 MCP 若不能在执行前强制权限、撤销阻断或等待真实进程停止，记录具体缺口再采用受管适配；不静默放宽安全边界。随包运行时、结构化执行与隐藏兼容策略已记录 [ADR-0154](../../docs/adr/0154-windows-computer-use-bundled-backend.md)。后端/安装包构建成功和真实桌面验收必须分别记录，不相互替代。
+## 2026-11-12 用户方向修订：全局桌面操作
+
+原窗口选择、观察/后台/前台权限分层与逐动作审批不再是本计划目标。全局桌面能力绑定用户授权的当前对话，不绑定任何应用窗口；模型可以先观察虚拟桌面，再通过全局键鼠打开未运行的应用并继续操作。工具按动作拆分为顶层 object schema，以兼容 OpenAI Responses。保留暂停/停止、后端取消与输入释放确认、Vetta 显隐/置顶，以及仅用于恢复旧版隐藏记录的窗口恢复台账；不加窗口选择、应用限制、终端限制、逐动作审批或用户输入自动接管。
+
+实现和测试按 TASK-0482 单条串行推进；后端使用 fake Win32/屏幕边界，不操作真实桌面或真实 Provider。后端构建和真实桌面人工验收分别记录，不相互替代。

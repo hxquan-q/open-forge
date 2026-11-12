@@ -10,7 +10,6 @@ import types
 ROOT = Path(__file__).resolve().parent
 sys.path[:0] = [str(ROOT), str(ROOT / "vendor")]
 from executor import Executor
-from input_guard import UserInputGuard
 from windows import DesktopError, Windows
 
 
@@ -24,15 +23,8 @@ def configure_comtypes(cache):
 
 
 def desktop_factory(cache):
-    configure_comtypes(cache)
-    import uiautomation
     from winhands import inputs
-    from winhands.uia import Desk, Registry, flatten, node_line
-    desktop = Desk()
-    # Hidden windows are deliberately included; the owner enforces window scope.
-    from uiautomation.uiautomation import _AutomationClient
-    desktop.cr.TreeFilter = _AutomationClient.instance().IUIAutomation.ControlViewCondition
-    return desktop, inputs, Registry, flatten, node_line
+    return inputs
 
 
 def self_test(cache=None):
@@ -57,10 +49,10 @@ def self_test(cache=None):
     print(json.dumps({"ok": True, "protocol": 1, "python": sys.version.split()[0]}))
 
 
-def serve(cache, excluded_pid):
+def serve(cache):
     protocol_output = sys.stdout
-    windows = Windows(excluded_pid)
-    engine = Executor(windows, lambda: desktop_factory(cache), UserInputGuard)
+    windows = Windows()
+    engine = Executor(windows, lambda: desktop_factory(cache))
     pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="computer-use")
     write_lock = threading.Lock()
     active = None
@@ -146,13 +138,12 @@ def serve(cache, excluded_pid):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache", type=Path)
-    parser.add_argument("--exclude-pid", type=int, default=0)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
         self_test(args.cache)
     elif args.cache and args.cache.is_absolute():
         args.cache.mkdir(parents=True, exist_ok=True)
-        serve(args.cache, args.exclude_pid)
+        serve(args.cache)
     else:
         parser.error("An absolute cache path is required")

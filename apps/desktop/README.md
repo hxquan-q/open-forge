@@ -29,9 +29,10 @@ Electron desktop host for the Vetta runtime.
 ## Windows Computer Use
 
 Windows x64 builds include a private offline Python backend for Computer Use; users do not install
-Python, WinHands, or an MCP server. The feature is disabled by default and requires per-conversation
-authorization. See [Computer Use](docs/computer-use.md) for window recovery, permissions, compatibility,
-and the non-desktop runtime smoke test. Other platforms do not load this backend.
+Python, WinHands, or an MCP server. The feature is disabled by default and requires authorization of
+the current conversation. AI operates on the global desktop and can open applications before they
+are running. See [Computer Use](docs/computer-use.md) for usage, legacy window recovery, and backend smoke tests.
+Other platforms do not load this backend.
 
 ## Windows Voice Input
 

@@ -41,6 +41,14 @@ const EXTERNAL_TOOL: ToolRiskDescriptor = Object.freeze({
 	requiredScopes: [],
 });
 
+const COMPUTER_USE: ToolRiskDescriptor = Object.freeze({
+	defaultLevel: "L0",
+	executionClass: "exclusive",
+	irreversible: false,
+	externalSideEffect: true,
+	requiredScopes: [],
+});
+
 const LIGHTWEIGHT: ToolRiskDescriptor = Object.freeze({
 	defaultLevel: "L1",
 	executionClass: "parallel-safe",
@@ -90,7 +98,11 @@ const BUILT_IN: Readonly<Record<string, ToolRiskDescriptor>> = Object.freeze({
 	todo: LIGHTWEIGHT,
 	artifact: LOCAL_WRITE,
 	browser_tab: READ_ONLY,
-	computer_use: { ...READ_ONLY, executionClass: "exclusive", externalSideEffect: true },
+	computer_observe: COMPUTER_USE,
+	computer_click: COMPUTER_USE,
+	computer_press: COMPUTER_USE,
+	computer_type: COMPUTER_USE,
+	computer_scroll: COMPUTER_USE,
 	memory: LIGHTWEIGHT,
 	im_send_attachment: LOCAL_WRITE,
 	bg_task_output: READ_ONLY,

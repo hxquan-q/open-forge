@@ -20,15 +20,10 @@ const target: ComputerWindow = {
 };
 function fixture(options: { supported?: boolean; saved?: readonly ComputerWindow[] } = {}) {
 	let saved = [...(options.saved ?? [])];
-	let hidden = false;
 	const calls: ComputerBackendCommand[] = [];
 	const backend: ComputerBackend = {
 		invoke: vi.fn(async (command: ComputerBackendCommand): Promise<ComputerBackendResult> => {
 			calls.push(command);
-			if (command.op === "windows" || command.op === "related")
-				return { ok: true, windows: [{ ...target, hidden }] };
-			if (command.op === "hide") hidden = true;
-			if (command.op === "restore") hidden = false;
 			return {
 				ok: true,
 				text: "Changed document",
@@ -61,46 +56,50 @@ function fixture(options: { supported?: boolean; saved?: readonly ComputerWindow
 	});
 	const execute = (input: ComputerUseInput, sessionId = "session-1", signal = new AbortController().signal) =>
 		service.execute({ input, sessionId }, signal);
-	const grant = (permission: "observe" | "background" | "foreground" = "background", sessionId = "session-1") =>
-		service.control({ action: "grant", sessionId, targetId: target.id, permission });
+	const grant = (sessionId = "session-1") => service.control({ action: "grant", sessionId });
 	return { service, backend, calls, execute, grant, saved: () => saved };
 }
 
 describe("computer use user workflow", () => {
-	it("enables, selects a session/window, observes, grants input, hides/restores and stops", async () => {
+	it("enables, authorizes a session and opens an app through global desktop input", async () => {
 		const f = fixture();
 		expect((await f.service.state()).enabled).toBe(false);
 		expect((await f.execute({ action: "observe" })).isError).toBe(true);
 		await f.service.control({ action: "enable", enabled: true });
-		expect((await f.grant("observe")).phase).toBe("ready");
-		const observed = await f.execute({ action: "observe", screenshot: true });
+		expect((await f.grant()).phase).toBe("ready");
+		const observed = await f.execute({ action: "observe" });
 		expect(observed.content).toContainEqual({ type: "image", data: "cG5n", mimeType: "image/png" });
-		expect((await f.execute({ action: "fill", element: "ref-1", text: "hello" })).isError).toBe(true);
-		await f.grant();
-		expect((await f.execute({ action: "fill", element: "ref-1", text: "hello" })).isError).not.toBe(true);
-		await f.service.control({ action: "hide-target" });
-		expect((await f.service.state()).target?.hidden).toBe(true);
-		expect(f.saved()[0]?.showCommand).toBe(3);
-		await f.service.control({ action: "restore", targetId: target.id });
-		expect((await f.service.state()).sessionId).toBe("session-1");
-		expect((await f.service.state()).target?.hidden).toBe(false);
+		await f.execute({ action: "press", keys: "win+r" });
+		await f.execute({ action: "type", text: "wsl.exe" });
+		await f.execute({ action: "press", keys: "enter" });
+		await f.execute({ action: "observe" });
+		await f.execute({ action: "type", text: 'cd Vetta && claude "你好"' });
+		const actions = f.calls.flatMap((command) => (command.op === "execute" ? [command.input.action] : []));
+		expect(actions).toEqual(["observe", "press", "type", "press", "observe", "type"]);
+		await f.service.control({ action: "pause" });
+		expect((await f.execute({ action: "press", keys: "enter" })).isError).toBe(true);
+		await f.service.control({ action: "resume" });
+		expect((await f.execute({ action: "press", keys: "enter" })).isError).not.toBe(true);
 		await f.service.control({ action: "stop" });
 		expect((await f.service.state()).sessionId).toBeUndefined();
-		expect(f.saved()).toEqual([]);
 		expect(f.backend.dispose).toHaveBeenCalledOnce();
 	});
 
-	it("never silently sends physical input in background or to a hidden target", async () => {
+	it("operates globally without a selected window or permission tier", async () => {
 		const f = fixture();
 		await f.service.control({ action: "enable", enabled: true });
 		await f.grant();
-		expect((await f.execute({ action: "press", keys: "enter" })).isError).toBe(true);
-		expect((await f.service.state()).phase).toBe("needs-foreground");
-		expect(f.calls.some((c) => c.op === "execute")).toBe(false);
-		await f.grant("foreground");
-		await f.service.control({ action: "hide-target" });
-		expect((await f.execute({ action: "press", keys: "enter" })).isError).toBe(true);
-		expect(f.calls.some((c) => c.op === "execute")).toBe(false);
+		for (const input of [
+			{ action: "press", keys: "win+r" },
+			{ action: "type", text: "wsl.exe" },
+			{ action: "click", revision: "screen-1", x: 12, y: 24 },
+			{ action: "scroll", revision: "screen-1", x: 12, y: 24, amount: 1 },
+		] as const) {
+			expect((await f.execute(input)).isError).not.toBe(true);
+		}
+		const executeCommands = f.calls.filter((command) => command.op === "execute");
+		expect(executeCommands.map((command) => command.input.action)).toEqual(["press", "type", "click", "scroll"]);
+		expect(executeCommands.every((command) => !("target" in command))).toBe(true);
 	});
 
 	it("rejects other sessions, invalid sessions and competing ownership", async () => {
@@ -108,9 +107,9 @@ describe("computer use user workflow", () => {
 		await f.service.control({ action: "enable", enabled: true });
 		await f.grant();
 		expect((await f.execute({ action: "observe" }, "session-2")).isError).toBe(true);
-		expect((await f.grant("background", "session-2")).issue).toBe("desktop_owned");
+		expect((await f.grant("session-2")).issue).toBe("desktop_owned");
 		await f.service.control({ action: "stop" });
-		expect((await f.grant("background", "invented-session")).issue).toBe("invalid_session");
+		expect((await f.grant("invented-session")).issue).toBe("invalid_session");
 	});
 
 	it("waits for actual cancellation acknowledgement before stopping and restoring", async () => {
@@ -167,16 +166,6 @@ describe("computer use user workflow", () => {
 		expect((await f.service.state()).vettaHidden).toBe(true);
 	});
 
-	it("hiding after user takeover does not resume AI execution", async () => {
-		const f = fixture();
-		await f.service.control({ action: "enable", enabled: true });
-		await f.grant();
-		await f.service.control({ action: "takeover" });
-		await f.service.control({ action: "hide-target" });
-		expect((await f.service.state()).phase).toBe("user");
-		expect((await f.execute({ action: "observe" })).isError).toBe(true);
-	});
-
 	it("an unconfirmed stop blocks new grants until the backend acknowledges stopping", async () => {
 		const f = fixture();
 		await f.service.control({ action: "enable", enabled: true });
@@ -190,18 +179,12 @@ describe("computer use user workflow", () => {
 		expect((await f.service.control({ action: "stop" })).phase).toBe("idle");
 	});
 
-	it("retains the recovery record if hiding or restoring fails", async () => {
-		const f = fixture();
-		await f.service.control({ action: "enable", enabled: true });
-		await f.grant();
-		vi.mocked(f.backend.invoke)
-			.mockResolvedValueOnce({ ok: true, windows: [target] })
-			.mockResolvedValueOnce({ ok: false, code: "backend_failed" });
-		await f.service.control({ action: "hide-target" });
-		expect(f.saved()).toEqual([target]);
+	it("retains legacy hidden-window recovery records until restoration succeeds", async () => {
+		const f = fixture({ saved: [target] });
 		vi.mocked(f.backend.invoke).mockResolvedValueOnce({ ok: false, code: "restore_failed" });
 		await f.service.control({ action: "restore-all" });
 		expect(f.saved()).toEqual([target]);
+		vi.mocked(f.backend.invoke).mockResolvedValueOnce({ ok: true });
 		await f.service.control({ action: "restore-all" });
 		expect(f.saved()).toEqual([]);
 	});
@@ -221,7 +204,7 @@ describe("computer use user workflow", () => {
 	it("normal completion after cancellation still requires an input-release acknowledgement", async () => {
 		const f = fixture();
 		await f.service.control({ action: "enable", enabled: true });
-		await f.grant("foreground");
+		await f.grant();
 		let entered!: () => void;
 		const started = new Promise<void>((resolve) => {
 			entered = resolve;
@@ -240,33 +223,12 @@ describe("computer use user workflow", () => {
 		expect(paused.issue).toBe("stop_failed");
 	});
 
-	it("restoring then regranting uses the restored visibility", async () => {
-		const f = fixture();
-		await f.service.control({ action: "enable", enabled: true });
-		await f.grant("foreground");
-		await f.service.control({ action: "hide-target" });
-		await f.service.control({ action: "restore", targetId: target.id });
-		const granted = await f.grant("foreground");
-		expect(granted.target?.hidden).toBe(false);
-		expect((await f.execute({ action: "press", keys: "enter" })).isError).not.toBe(true);
-	});
-
 	it("stop can recover previous-run hidden windows while the feature remains off", async () => {
 		const f = fixture({ saved: [target] });
 		const stopped = await f.service.control({ action: "stop" });
 		expect(stopped.hiddenWindows).toEqual([]);
 		expect(stopped.enabled).toBe(false);
 		expect(stopped.phase).toBe("disabled");
-	});
-
-	it("explicit takeover invalidates backend observation even between tool calls", async () => {
-		const f = fixture();
-		await f.service.control({ action: "enable", enabled: true });
-		await f.grant();
-		vi.mocked(f.backend.interrupt).mockClear();
-		await f.service.control({ action: "takeover" });
-		expect(f.backend.interrupt).toHaveBeenCalledOnce();
-		expect((await f.service.state()).phase).toBe("user");
 	});
 
 	it("does not load the backend on unsupported platforms", async () => {

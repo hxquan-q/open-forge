@@ -6,7 +6,6 @@ import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type { McpJsonObject, McpToolCallResult } from "@vetta/runtime-mcp";
 import { StdioMcpClient } from "@vetta/runtime-node/mcp";
-import { ComputerWindowSchema } from "../../shared/computer-use.js";
 import bundleContract from "../../shared/computer-use-backend.json";
 import type { ComputerBackend, ComputerBackendCommand, ComputerBackendResult } from "./contracts.js";
 
@@ -15,7 +14,6 @@ const BackendResultSchema = Type.Object(
 		ok: Type.Boolean(),
 		code: Type.Optional(Type.String({ maxLength: 128 })),
 		text: Type.Optional(Type.String({ maxLength: 70_000 })),
-		windows: Type.Optional(Type.Array(ComputerWindowSchema, { maxItems: 1024 })),
 		image: Type.Optional(
 			Type.Object(
 				{
@@ -172,15 +170,7 @@ export class BundledComputerBackend implements ComputerBackend {
 					timeout: 30_000,
 					config: {
 						command: join(this.options.root, "runtime", "pythonw.exe"),
-						args: [
-							"-I",
-							"-B",
-							join(this.options.root, "worker", "server.py"),
-							"--cache",
-							this.options.cache,
-							"--exclude-pid",
-							String(process.pid),
-						],
+						args: ["-I", "-B", join(this.options.root, "worker", "server.py"), "--cache", this.options.cache],
 						cwd: this.options.cache,
 					},
 				});

@@ -5,12 +5,13 @@ from pathlib import Path
 import queue
 import sys
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import server
-from test_executor import FakeGuard, FakeWindows, NativeFixture, TARGET
+from test_executor import FakeWindows, NativeFixture
 
 
 class InputPipe:
@@ -47,15 +48,14 @@ class BlockingNative(NativeFixture):
     def __init__(self):
         super().__init__()
         self.entered = threading.Event()
-        self.cancelled = None
 
     def press(self, keys):
         self.held.add(("key", keys))
         print("fixture dependency diagnostic")
         self.entered.set()
-        if not self.cancelled.wait(timeout=5):
-            raise RuntimeError("Cancellation never arrived")
-        self.check()
+        while True:
+            self.check()
+            time.sleep(0.01)
 
 
 class ServerProtocolTests(unittest.TestCase):
@@ -63,18 +63,14 @@ class ServerProtocolTests(unittest.TestCase):
         inputs, output, errors = InputPipe(), ProtocolOutput(), io.StringIO()
         native = BlockingNative()
 
-        def guard_factory(windows, target, physical, cancelled):
-            native.cancelled = cancelled
-            return FakeGuard(windows, target, physical, cancelled)
-
-        with patch.object(server, "Windows", FakeWindows), patch.object(server, "desktop_factory", lambda _: native.desktop()), patch.object(server, "UserInputGuard", guard_factory), patch("sys.stdin", inputs), patch("sys.stdout", output), patch("sys.stderr", errors):
-            thread = threading.Thread(target=server.serve, args=(Path("unused-fixture-cache"), 0))
+        with patch.object(server, "Windows", FakeWindows), patch.object(server, "desktop_factory", lambda _: native), patch("sys.stdin", inputs), patch("sys.stdout", output), patch("sys.stderr", errors):
+            thread = threading.Thread(target=server.serve, args=(Path("unused-fixture-cache"),))
             thread.start()
             try:
                 inputs.send({"id": 1, "method": "initialize"})
                 initialized = output.messages.get(timeout=5)
                 self.assertEqual(initialized["result"]["serverInfo"]["name"], "vetta-computer-use")
-                inputs.send({"id": 2, "method": "tools/call", "params": {"name": "computer_action", "arguments": {"op": "execute", "target": TARGET, "foreground": True, "hiddenWindows": [], "input": {"action": "press", "keys": "ctrl"}}}})
+                inputs.send({"id": 2, "method": "tools/call", "params": {"name": "computer_action", "arguments": {"op": "execute", "input": {"action": "press", "keys": "ctrl"}}}})
                 self.assertTrue(native.entered.wait(timeout=5))
                 inputs.send({"id": 3, "method": "tools/call", "params": {"name": "stop"}})
                 responses = {value["id"]: value for value in (output.messages.get(timeout=5), output.messages.get(timeout=5))}
@@ -82,13 +78,11 @@ class ServerProtocolTests(unittest.TestCase):
                 self.assertEqual(json.loads(responses[3]["result"]["content"][0]["text"]), {"ok": True})
                 self.assertEqual(native.held, set())
                 self.assertIn(("release", ("key", "ctrl", True)), native.events)
-                inputs.send({"id": 4, "method": "tools/call", "params": {"name": "computer_action", "arguments": {"op": "windows"}}})
+                inputs.send({"id": 4, "method": "tools/call", "params": {"name": "computer_action", "arguments": {"op": "execute", "input": {"action": "observe"}}}})
                 next_call = output.messages.get(timeout=5)
                 self.assertTrue(json.loads(next_call["result"]["content"][0]["text"])["ok"])
                 self.assertIn("fixture dependency diagnostic", errors.getvalue())
             finally:
-                if native.cancelled:
-                    native.cancelled.set()
                 inputs.queue.put(None)
                 thread.join(timeout=5)
                 self.assertFalse(thread.is_alive())

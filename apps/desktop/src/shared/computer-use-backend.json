@@ -22,7 +22,6 @@
     "worker/server.py",
     "worker/executor.py",
     "worker/windows.py",
-    "worker/input_guard.py",
     "worker/vendor/winhands/__init__.py",
     "worker/vendor/winhands/uia.py",
     "worker/vendor/winhands/inputs.py",

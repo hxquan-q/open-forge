@@ -1,6 +1,5 @@
 # Copyright The Open Forge contributors.
 import base64
-import hashlib
 import time
 import uuid
 from windows import DesktopError
@@ -17,53 +16,47 @@ def validate_window(target):
 
 
 def validate_command(command):
-    if not isinstance(command, dict) or command.get("op") not in {"windows", "related", "hide", "restore", "execute"}:
+    if not isinstance(command, dict) or command.get("op") not in {"restore", "execute"}:
         raise DesktopError("invalid_input")
     op = command["op"]
-    allowed = {"op"} if op == "windows" else {"op", "target", "input", "foreground", "hiddenWindows"} if op == "execute" else {"op", "target"}
+    allowed = {"op", "target"} if op == "restore" else {"op", "input"}
     if set(command) != allowed:
         raise DesktopError("invalid_input")
-    if op != "windows":
+    if op == "restore":
         validate_window(command["target"])
     if op == "execute":
-        known = command["hiddenWindows"]
-        if not isinstance(known, list) or len(known) > 1024:
-            raise DesktopError("invalid_input")
-        for window in known:
-            validate_window(window)
         value = command["input"]
-        if not isinstance(value, dict) or not isinstance(command["foreground"], bool):
+        if not isinstance(value, dict):
             raise DesktopError("invalid_input")
         action = value.get("action")
-        keys = {"observe": {"action", "screenshot"}, "invoke": {"action", "element"}, "fill": {"action", "element", "text"},
-                "press": {"action", "keys"}, "click": {"action", "revision", "x", "y"}, "scroll": {"action", "element", "amount"}}
-        if action not in keys or set(value) - keys[action] or keys[action] - set(value) not in (set(), {"screenshot"}):
+        fields = {
+            "observe": {"action"},
+            "click": {"action", "revision", "x", "y"},
+            "press": {"action", "keys"},
+            "type": {"action", "text"},
+            "scroll": {"action", "revision", "x", "y", "amount"},
+        }
+        if action not in fields or set(value) != fields[action]:
             raise DesktopError("invalid_input")
-        for key in ("element", "revision", "keys", "text"):
-            if key in value and (not isinstance(value[key], str) or len(value[key]) > (20_000 if key == "text" else 128)):
+        for key in ("revision", "keys", "text"):
+            if key in value and not isinstance(value[key], str):
                 raise DesktopError("invalid_input")
         for key in ("x", "y", "amount"):
             if key in value and type(value[key]) is not int:
                 raise DesktopError("invalid_input")
-        if "amount" in value and not -20 <= value["amount"] <= 20:
-            raise DesktopError("invalid_input")
-        if "screenshot" in value and not isinstance(value["screenshot"], bool):
-            raise DesktopError("invalid_input")
     return command
 
 
 class Executor:
-    def __init__(self, windows, desktop_factory, guard_factory):
-        self.windows, self.desktop_factory, self.guard_factory = windows, desktop_factory, guard_factory
-        self.desktop = None
-        self.refs = {}
-        self.shot = None
-        self.observed_target = None
+    def __init__(self, windows, input_factory):
+        self.windows = windows
+        self.input_factory = input_factory
         self.inputs = None
+        self.shot = None
 
     def load(self):
-        if self.desktop is None:
-            self.desktop, self.inputs, self.registry_type, self.flatten, self.node_line = self.desktop_factory()
+        if self.inputs is None:
+            self.inputs = self.input_factory()
 
     def release(self):
         if self.inputs is None:
@@ -81,155 +74,93 @@ class Executor:
 
     def stop(self):
         self.release()
-        self.refs = {}
         self.shot = None
-        self.observed_target = None
 
     def run(self, raw, cancelled):
         command = validate_command(raw)
         if cancelled.is_set():
             raise DesktopError("cancelled")
         op = command["op"]
-        if op == "windows":
-            return {"ok": True, "windows": self.windows.list()}
-        target = command["target"]
-        self.windows.validate(target)
-        if op == "related":
-            return {"ok": True, "windows": self.windows.related(target)}
-        if op == "hide":
-            self.shot = None
-            self.windows.hide(target)
-            return {"ok": True}
         if op == "restore":
             self.shot = None
-            self.windows.restore(target)
+            self.windows.restore(command["target"])
             return {"ok": True}
-        self.windows.track_hidden(command["hiddenWindows"])
+
         self.load()
-        action = command["input"]["action"]
-        physical = action in {"press", "click", "scroll"}
-        if physical and not command["foreground"]:
-            raise DesktopError("needs_foreground")
-        with self.guard_factory(self.windows, target, physical, cancelled) as guard:
-            self.inputs.check = guard.check
-            self.inputs.guard = guard.check
-            try:
-                if physical:
-                    self.windows.foreground(target)
-                guard.check()
-                if action == "observe":
-                    return self.observe(target, command["input"].get("screenshot", False), guard)
-                self.act(target, command["input"], guard)
-                guard.check()
-                self.refs = {}
-                self.shot = None
-                return {"ok": True, "text": "Action completed. Observe again before the next action; previous references are invalid."}
-            finally:
-                self.inputs.guard = None
-                self.inputs.check = None
-                self.release()
+        self.inputs.guard = lambda: self.check_cancelled(cancelled)
+        self.inputs.check = lambda: self.check_cancelled(cancelled)
+        try:
+            value = command["input"]
+            if value["action"] == "observe":
+                return self.observe(cancelled)
+            self.act(value, cancelled)
+            self.check_cancelled(cancelled)
+            self.shot = None
+            return {"ok": True, "text": "Action completed. Observe the desktop again before the next action."}
+        finally:
+            self.inputs.guard = None
+            self.inputs.check = None
+            self.release()
 
-    def observe(self, target, screenshot, guard):
-        self.refs = {}
-        self.shot = None
-        self.observed_target = target["id"]
-        self.desktop.reg = self.registry_type()
+    @staticmethod
+    def check_cancelled(cancelled):
+        if cancelled.is_set():
+            raise DesktopError("cancelled")
+
+    def observe(self, cancelled):
+        self.check_cancelled(cancelled)
+        image, bounds, size = self.windows.desktop_screenshot()
+        self.check_cancelled(cancelled)
         revision = uuid.uuid4().hex
-        lines = []
-        for window in self.windows.related(target):
-            guard.check()
-            control = self.desktop.auto.ControlFromHandle(int(window["hwnd"]))
-            tree = self.desktop._tree(control)
-            nodes = self.flatten(tree)[:300]
-            self.desktop.reg.assign(int(window["hwnd"]), nodes)
-            lines.append(f'Window {window["title"]!r} ({window["id"]})')
-            for node in nodes:
-                index = self.desktop.reg.id_of(node)
-                token = revision + ":" + window["id"] + ":" + str(index)
-                self.refs[token] = (window, index)
-                lines.append(self.node_line(token, node))
-                if len(lines) >= 600:
-                    lines.append("Tree truncated.")
-                    break
-        result = {"ok": True, "text": "\n".join(lines)[:60_000]}
-        if screenshot:
-            try:
-                image, bounds, size = self.windows.screenshot(target)
-                guard.check()
-                self.shot = {"revision": revision, "target": target["id"], "bounds": bounds, "size": size, "hash": hashlib.sha256(image).digest(), "time": time.monotonic()}
-                result["image"] = {"data": base64.b64encode(image).decode("ascii"), "mimeType": "image/png"}
-                result["text"] += f"\nScreenshot source: PrintWindow; revision={revision}; size={size[0]}x{size[1]}; clicks use screenshot-local pixel coordinates."
-            except DesktopError as error:
-                if str(error) != "capture_unavailable":
-                    raise
-                result["text"] += "\nScreenshot unavailable. No screen-pixel fallback was used. Use UIA references; do not guess coordinates."
-        return result
+        self.shot = {"revision": revision, "bounds": bounds, "size": size, "time": time.monotonic()}
+        text = (
+            f"Full desktop screenshot; revision={revision}; size={size[0]}x{size[1]}; "
+            f"virtual desktop origin=({bounds[0]},{bounds[1]}). Use screenshot-local coordinates for mouse actions."
+        )
+        return {"ok": True, "text": text, "image": {"data": base64.b64encode(image).decode("ascii"), "mimeType": "image/png"}}
 
-    def element(self, target, token):
-        if self.observed_target != target["id"] or token not in self.refs:
-            raise DesktopError("stale_reference")
-        window, index = self.refs[token]
-        self.windows.validate(window)
-        if not self.windows.belongs(window["hwnd"], target["hwnd"]):
-            raise DesktopError("stale_target")
-        try:
-            record, live = self.desktop._checked(index, need_rect=True)
-        except Exception as error:
-            raise DesktopError("stale_reference") from error
-        if record["hwnd"] != int(window["hwnd"]):
-            raise DesktopError("stale_reference")
-        try:
-            control = self.desktop._ctl(record)
-            live_window = control.GetTopLevelControl().NativeWindowHandle
-        except Exception as error:
-            raise DesktopError("stale_reference") from error
-        if not self.windows.belongs(str(live_window or 0), target["hwnd"]):
-            raise DesktopError("stale_target")
-        return record, live, window, control
+    def map_point(self, shot, x, y):
+        width, height = shot["size"]
+        if not (0 <= x < width and 0 <= y < height):
+            raise DesktopError("invalid_input")
+        left, top, right, bottom = shot["bounds"]
+        return left + round(x * (right - left) / width), top + round(y * (bottom - top) / height)
 
-    def act(self, target, value, guard):
+    def act(self, value, cancelled):
         action = value["action"]
-        if action in {"invoke", "fill", "scroll"}:
-            record, live, window, control = self.element(target, value["element"])
-            if action == "invoke":
-                if not record.get("invoke"):
-                    raise DesktopError("needs_foreground")
-                control.GetInvokePattern().Invoke(waitTime=0)
-            elif action == "fill":
-                if not record.get("settable"):
-                    raise DesktopError("needs_foreground")
-                control.GetValuePattern().SetValue(value["text"], waitTime=0)
-            else:
-                rect = live["rect"]
-                x, y = (rect[0] + rect[2]) // 2, (rect[1] + rect[3]) // 2
-                self.windows.check_point(target, x, y, expected=record["hwnd"])
-                self.inputs.guard = lambda: self.point_guard(guard, target, x, y, window)
-                guard.check()
-                self.inputs.move(x, y)
-                self.inputs.wheel(value["amount"])
-        elif action == "press":
+        if action == "press":
             self.inputs.press(value["keys"])
-        elif action == "click":
-            shot = self.shot
-            if not shot or shot["revision"] != value["revision"] or shot["target"] != target["id"]:
-                raise DesktopError("stale_reference")
-            if tuple(self.windows.bounds(target)) != tuple(shot["bounds"]) or time.monotonic() - shot["time"] > 10:
-                raise DesktopError("stale_reference")
-            current_image, _, current_size = self.windows.screenshot(target)
-            if current_size != shot["size"] or hashlib.sha256(current_image).digest() != shot["hash"]:
-                raise DesktopError("stale_reference")
-            x, y = value["x"], value["y"]
-            if not (0 <= x < shot["size"][0] and 0 <= y < shot["size"][1]):
-                raise DesktopError("invalid_input")
-            left, top, right, bottom = shot["bounds"]
-            x = left + round(x * (right - left) / shot["size"][0])
-            y = top + round(y * (bottom - top) / shot["size"][1])
-            self.windows.check_point(target, x, y)
-            self.inputs.guard = lambda: self.point_guard(guard, target, x, y, target)
-            guard.check()
+            return
+        if action == "type":
+            self.type_text(value["text"], cancelled)
+            return
+        shot = self.shot
+        if not shot or value["revision"] != shot["revision"]:
+            raise DesktopError("stale_reference")
+        x, y = self.map_point(shot, value["x"], value["y"])
+        self.check_cancelled(cancelled)
+        if action == "click":
             self.inputs.click_at(x, y)
+        else:
+            self.inputs.move(x, y)
+            self.inputs.wheel(value["amount"])
 
-    def point_guard(self, guard, target, x, y, expected):
-        guard.check()
-        self.windows.validate(expected)
-        self.windows.check_point(target, x, y, expected=expected["hwnd"])
+    def type_text(self, text, cancelled):
+        encoded = text.encode("utf-16-le", "surrogatepass")
+        for offset in range(0, len(encoded), 512):
+            self.check_cancelled(cancelled)
+            packets = []
+            for index in range(offset, min(offset + 512, len(encoded)), 2):
+                code_unit = encoded[index] | (encoded[index + 1] << 8)
+                down = self.inputs.INPUT(1, self.inputs._U(ki=self.inputs.KEYBDINPUT(0, code_unit, 4, 0, 0)))
+                up = self.inputs.INPUT(1, self.inputs._U(ki=self.inputs.KEYBDINPUT(0, code_unit, 6, 0, 0)))
+                packets.extend((down, up))
+            try:
+                self.inputs._raw(*packets)
+            except OSError:
+                for packet in packets[1::2]:
+                    try:
+                        self.inputs._raw(packet)
+                    except OSError:
+                        pass
+                raise

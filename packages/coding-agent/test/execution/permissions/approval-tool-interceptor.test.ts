@@ -76,6 +76,14 @@ describe("approval tool interceptor", () => {
 		expect(write).toBeUndefined();
 	});
 
+	it("session-authorized global computer-use actions do not prompt per call", async () => {
+		const { port, requests } = fakePort([{ decision: "deny" }]);
+		for (const name of ["computer_observe", "computer_click", "computer_press", "computer_type", "computer_scroll"]) {
+			expect(await interceptorWith(port).before?.(contextFor(name))).toBeUndefined();
+		}
+		expect(requests).toEqual([]);
+	});
+
 	it("L3 工具请求审批；批准后放行，拒绝则阻塞", async () => {
 		const approving = fakePort([{ decision: "approve" }]);
 		const allowed = await interceptorWith(approving.port).before?.(contextFor("bash", { command: "npm install" }));

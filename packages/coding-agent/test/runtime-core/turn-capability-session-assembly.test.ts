@@ -410,11 +410,6 @@ describe("Coding Agent Turn Capability session assembly", () => {
 			writeInput: { action: "click", elementRef: { id: "e1", pageRevision: 0 } },
 			readInput: { action: "snapshot" },
 		},
-		{
-			toolName: "computer_use",
-			writeInput: { action: "invoke", element: "snapshot:element" },
-			readInput: { action: "observe" },
-		},
 	])(
 		"$toolName 写动作经装配层提升 L3：拒绝则阻塞不执行，读动作直通不请示",
 		async ({ toolName, writeInput, readInput }) => {

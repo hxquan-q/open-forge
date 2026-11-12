@@ -37,7 +37,6 @@ export class ComputerUseController {
 			supported: options.supported,
 			enabled: false,
 			phase: "disabled",
-			windows: [],
 			hiddenWindows: [],
 			vettaHidden: false,
 			topmost: false,
@@ -64,7 +63,6 @@ export class ComputerUseController {
 		if (this.disposed) return Promise.reject(new Error("disposed"));
 		const revokes =
 			input.action === "pause" ||
-			input.action === "takeover" ||
 			input.action === "stop" ||
 			input.action === "grant" ||
 			(input.action === "enable" && !input.enabled);
@@ -100,16 +98,11 @@ export class ComputerUseController {
 		if (this.disposed || !this.stateValue.enabled) return failure("disabled");
 		if (this.controlCount || this.active) return failure("busy");
 		if (this.unsafe) return failure("stop_failed");
-		const { target, sessionId, permission, phase } = this.stateValue;
-		if (!target || sessionId !== request.sessionId || !permission) return failure("unauthorized");
+		const { sessionId, phase } = this.stateValue;
+		if (!sessionId || sessionId !== request.sessionId) return failure("unauthorized");
 		if (phase !== "ready") return failure(phase);
 		const input = readComputerUseInput(request.input);
-		if (input.action !== "observe" && permission === "observe") return failure("observation_only");
-		const physical = input.action === "press" || input.action === "click" || input.action === "scroll";
-		if (physical && (permission !== "foreground" || target.hidden)) {
-			this.patch({ phase: "needs-foreground", issue: "needs_foreground" });
-			return failure("needs_foreground");
-		}
+		const physical = input.action !== "observe";
 		const epoch = this.epoch;
 		const controller = new AbortController();
 		const abort = () => {
@@ -123,22 +116,13 @@ export class ComputerUseController {
 			const restoreDisplay = physical ? this.options.display.yield() : () => {};
 			try {
 				controller.signal.throwIfAborted();
-				if (target.hidden) await this.hideFamily(target, controller.signal);
 				controller.signal.throwIfAborted();
-				const result = await this.options.backend.invoke(
-					{ op: "execute", target, input, foreground: physical, hiddenWindows: this.stateValue.hiddenWindows },
-					controller.signal,
-				);
+				const result = await this.options.backend.invoke({ op: "execute", input }, controller.signal);
 				controller.signal.throwIfAborted();
 				if (epoch !== this.epoch) throw new DOMException("Cancelled", "AbortError");
 				if (!result.ok) {
 					this.patch({
-						phase:
-							result.code === "needs_foreground"
-								? "needs-foreground"
-								: result.code === "user_takeover"
-									? "user"
-									: "paused",
+						phase: "paused",
 						issue: result.code ?? "backend_failed",
 					});
 					return failure(result.code ?? "backend_failed");
@@ -214,7 +198,6 @@ export class ComputerUseController {
 				await this.stop();
 			}
 			this.patch({ enabled: command.enabled, phase: command.enabled ? "idle" : "disabled", issue: undefined });
-			if (command.enabled) await this.refresh();
 			return;
 		}
 		if (command.action === "restore-all") {
@@ -229,47 +212,23 @@ export class ComputerUseController {
 		}
 		if (!this.stateValue.enabled) throw new Error("disabled");
 		switch (command.action) {
-			case "refresh":
-				if (this.active) await this.quiesce();
-				await this.refresh();
-				break;
 			case "grant": {
 				await this.quiesce();
 				if (!(await this.options.validateSession(command.sessionId))) throw new Error("invalid_session");
-				const target = this.stateValue.windows.find((w) => w.id === command.targetId);
-				if (!target) throw new Error("stale_target");
 				if (this.stateValue.sessionId && this.stateValue.sessionId !== command.sessionId)
 					throw new Error("desktop_owned");
-				this.patch({
-					sessionId: command.sessionId,
-					target,
-					permission: command.permission,
-					phase: "ready",
-					issue: undefined,
-				});
+				this.patch({ sessionId: command.sessionId, phase: "ready", issue: undefined });
 				break;
 			}
 			case "pause":
-			case "takeover":
 				await this.quiesce();
-				this.patch({ phase: command.action === "pause" ? "paused" : "user", issue: undefined });
+				this.patch({ phase: "paused", issue: undefined });
 				break;
 			case "resume":
-				if (!this.stateValue.target || !this.stateValue.sessionId) throw new Error("unauthorized");
+				if (!this.stateValue.sessionId) throw new Error("unauthorized");
 				if (this.unsafe || this.stateValue.phase === "error") throw new Error("stop_failed");
 				this.patch({ phase: "ready", issue: undefined });
 				break;
-			case "hide-target": {
-				const phase = this.stateValue.phase === "running" ? "paused" : this.stateValue.phase;
-				await this.quiesce();
-				const target = this.stateValue.target;
-				if (!target) throw new Error("stale_target");
-				if (target.hidden) break;
-				await this.hideFamily(target);
-				this.patch({ target: { ...target, hidden: true }, phase });
-				await this.refresh();
-				break;
-			}
 		}
 	}
 
@@ -291,37 +250,9 @@ export class ComputerUseController {
 		}
 		this.patch({
 			sessionId: undefined,
-			target: undefined,
-			permission: undefined,
 			phase: this.stateValue.enabled ? "idle" : "disabled",
 			issue: undefined,
 		});
-	}
-	private async refresh(): Promise<void> {
-		const result = await this.options.backend.invoke({ op: "windows" });
-		if (!result.ok || !result.windows) throw new Error(result.code ?? "backend_failed");
-		const windows = new Map(this.stateValue.hiddenWindows.map((window) => [window.id, { ...window, hidden: true }]));
-		for (const window of result.windows) windows.set(window.id, window);
-		this.patch({
-			windows: [...windows.values()],
-			...(!this.stateValue.sessionId ? { phase: "idle" as const, issue: undefined } : {}),
-		});
-	}
-	private async hideFamily(target: NonNullable<ComputerUseState["target"]>, signal?: AbortSignal): Promise<void> {
-		const related = await this.options.backend.invoke({ op: "related", target }, signal);
-		if (!related.ok || !related.windows) throw new Error(related.code ?? "backend_failed");
-		const visible = related.windows.filter((window) => !window.hidden);
-		const records = new Map(this.stateValue.hiddenWindows.map((window) => [window.id, window]));
-		for (const window of visible) if (!records.has(window.id)) records.set(window.id, window);
-		if (!visible.length) return;
-		const hiddenWindows = [...records.values()];
-		await this.options.ledger.save(hiddenWindows);
-		this.patch({ hiddenWindows });
-		for (const window of visible.reverse()) {
-			signal?.throwIfAborted();
-			const hidden = await this.options.backend.invoke({ op: "hide", target: window }, signal);
-			if (!hidden.ok && hidden.code !== "stale_target") throw new Error(hidden.code ?? "backend_failed");
-		}
 	}
 	private async restoreAll(): Promise<void> {
 		let failed = false;
@@ -341,22 +272,7 @@ export class ComputerUseController {
 		if (!result.ok && result.code !== "stale_target") throw new Error(result.code ?? "restore_failed");
 		const hiddenWindows = this.stateValue.hiddenWindows.filter((w) => w.id !== id);
 		await this.options.ledger.save(hiddenWindows);
-		this.patch({
-			hiddenWindows,
-			windows: result.ok
-				? this.stateValue.windows.map((w) => (w.id === id ? { ...w, hidden: false } : w))
-				: this.stateValue.windows.filter((w) => w.id !== id),
-			...(this.stateValue.target?.id === id
-				? result.ok
-					? { target: { ...window, hidden: false } }
-					: {
-							target: undefined,
-							sessionId: undefined,
-							permission: undefined,
-							phase: this.stateValue.enabled ? ("idle" as const) : ("disabled" as const),
-						}
-				: {}),
-		});
+		this.patch({ hiddenWindows });
 	}
 	private patch(patch: Partial<ComputerUseState>): void {
 		this.stateValue = { ...this.stateValue, ...patch, revision: this.stateValue.revision + 1 };

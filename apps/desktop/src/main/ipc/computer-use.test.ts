@@ -23,7 +23,7 @@ function fixture() {
 	const event = { sender: main, senderFrame: frame } as unknown as IpcMainInvokeEvent;
 	const controller = new ComputerUseController({
 		supported: true,
-		backend: { invoke: async () => ({ ok: true, windows: [] }), interrupt: async () => {}, dispose: async () => {} },
+		backend: { invoke: async () => ({ ok: true }), interrupt: async () => {}, dispose: async () => {} },
 		ledger: { load: async () => [], save: async () => {} },
 		display: { read: () => ({ hidden: false, topmost: false }), update: () => {}, yield: () => () => {} },
 		validateSession: async () => true,

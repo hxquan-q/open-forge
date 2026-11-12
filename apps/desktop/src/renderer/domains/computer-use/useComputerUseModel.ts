@@ -2,7 +2,6 @@
 
 import { waitForCommittedPaint } from "@shared/lib/committed-paint";
 import type {
-	ComputerUsePermission,
 	ComputerUseViewActions,
 	ComputerUseViewLabels,
 	ComputerUseViewModel,
@@ -14,10 +13,7 @@ import type { ComputerControl, ComputerUseState } from "@/shared/computer-use";
 const knownIssues = [
 	"backend_not_bundled",
 	"backend_integrity_failed",
-	"needs_foreground",
-	"stale_target",
 	"stale_reference",
-	"user_takeover",
 	"stop_failed",
 	"restore_failed",
 	"recovery_failed",
@@ -38,16 +34,10 @@ export function useComputerUseModel(
 	const [failed, setFailed] = useState(false);
 	const [pending, setPending] = useState(0);
 	const [optimisticEnabled, setOptimisticEnabled] = useState<boolean>();
-	const [targetId, chooseTarget] = useState("");
-	const [permission, choosePermission] = useState<ComputerUsePermission>("observe");
 	const revision = useRef(-1);
 	const lifetime = useRef<AbortSignal | undefined>(undefined);
 	const accept = useCallback((next: ComputerUseState) => {
 		if (next.revision < revision.current) return;
-		if (revision.current === -1) {
-			chooseTarget(next.target?.id ?? "");
-			choosePermission(next.permission ?? "observe");
-		}
 		revision.current = next.revision;
 		setState(next);
 		setLoading(false);
@@ -86,7 +76,6 @@ export function useComputerUseModel(
 			const urgent =
 				command.action === "stop" ||
 				command.action === "pause" ||
-				command.action === "takeover" ||
 				(command.action === "enable" && !command.enabled);
 			void (async () => {
 				try {
@@ -113,37 +102,23 @@ export function useComputerUseModel(
 		enable: t("enable"),
 		unsupported: t("unsupported"),
 		loading: t("loading"),
-		window: t("window"),
-		selectWindow: t("selectWindow"),
-		noWindows: t("noWindows"),
-		refresh: t("refresh"),
 		session: t("session"),
 		noSession: t("noSession"),
-		permission: t("permission"),
-		observe: t("observe"),
-		background: t("background"),
-		foreground: t("foreground"),
-		permissionWarning: t("permissionWarning"),
+		owner: t("owner"),
+		noOwner: t("noOwner"),
 		grant: t("grant"),
 		chat: t("chat"),
 		pause: t("pause"),
-		takeover: t("takeover"),
 		resume: t("resume"),
 		stop: t("stop"),
-		owner: t("owner"),
-		noOwner: t("noOwner"),
-		currentTarget: t("currentTarget"),
-		noTarget: t("noTarget"),
-		hideTarget: t("hideTarget"),
-		restore: t("restore"),
 		hiddenWindows: t("hiddenWindows"),
+		restore: t("restore"),
 		restoreAll: t("restoreAll"),
 		noHidden: t("noHidden"),
 		display: t("display"),
 		hideVetta: t("hideVetta"),
 		showVetta: t("showVetta"),
 		topmost: t("topmost"),
-		backgroundHelp: t("backgroundHelp"),
 		shortcutHelp: t("shortcutHelp"),
 		shortcutsUnavailable: t("shortcutsUnavailable"),
 		retry: t("retry"),
@@ -168,16 +143,9 @@ export function useComputerUseModel(
 					: t("authorizedSessionId", { id: state.sessionId })
 			: "",
 		ownershipNotice: ownerMismatch ? t("ownershipMismatch") : undefined,
-		canGrant: Boolean(
-			!ownerMismatch && state?.enabled && sessionId && state.windows.some((window) => window.id === targetId),
-		),
+		canGrant: Boolean(!ownerMismatch && state?.enabled && sessionId),
 		hasGrant: Boolean(state?.sessionId),
-		canResume: Boolean(state?.target && ["paused", "user"].includes(state.phase)),
-		windows: (state?.windows ?? []).map((window) => ({ id: window.id, label: window.title || window.exe })),
-		targetId,
-		permission,
-		currentTarget: state?.target?.title || state?.target?.exe,
-		targetHidden: state?.target?.hidden ?? false,
+		canResume: Boolean(state?.sessionId && state.phase === "paused"),
 		hiddenWindows: (state?.hiddenWindows ?? []).map((window) => ({
 			id: window.id,
 			label: window.title || window.exe,
@@ -190,34 +158,26 @@ export function useComputerUseModel(
 		model,
 		actions: {
 			enable: (enabled) => dispatch({ action: "enable", enabled }),
-			refresh: () => dispatch({ action: "refresh" }),
-			chooseTarget,
-			choosePermission,
 			grant: () => {
-				if (sessionId && targetId) dispatch({ action: "grant", sessionId, targetId, permission });
+				if (sessionId) dispatch({ action: "grant", sessionId });
 			},
 			chat,
 			pause: () => dispatch({ action: "pause" }),
-			takeover: () => dispatch({ action: "takeover" }),
 			resume: () => dispatch({ action: "resume" }),
 			stop: () => dispatch({ action: "stop" }),
-			hideTarget: () => dispatch({ action: "hide-target" }),
 			restore: (id) => dispatch({ action: "restore", targetId: id }),
 			restoreAll: () => dispatch({ action: "restore-all" }),
 			display: (value) => dispatch({ action: "display", ...value }),
 			retry: () => {
-				if (state?.enabled) dispatch({ action: "refresh" });
-				else {
-					const signal = lifetime.current;
-					void window.vetta.computerUse
-						.state()
-						.then((next) => {
-							if (!signal?.aborted) accept(next);
-						})
-						.catch(() => {
-							if (!signal?.aborted) setFailed(true);
-						});
-				}
+				const signal = lifetime.current;
+				void window.vetta.computerUse
+					.state()
+					.then((next) => {
+						if (!signal?.aborted) accept(next);
+					})
+					.catch(() => {
+						if (!signal?.aborted) setFailed(true);
+					});
 			},
 		},
 	};

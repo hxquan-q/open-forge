@@ -12,7 +12,7 @@ function fixture() {
 			protocolVersion: "2024-11-05",
 			serverInfo: { name: "vetta-computer-use", version: "1.0.0" },
 		})),
-		callTool: vi.fn<StdioMcpClient["callTool"]>(async () => result({ ok: true, windows: [] })),
+		callTool: vi.fn<StdioMcpClient["callTool"]>(async () => result({ ok: true, text: "ok" })),
 		close: vi.fn(async () => {}),
 		getPid: vi.fn((): number | undefined => undefined),
 	};
@@ -31,11 +31,15 @@ describe("private bundled MCP backend", () => {
 	});
 	it("verifies resources, initializes once and preserves typed tool results", async () => {
 		const f = fixture();
-		expect(await f.backend.invoke({ op: "windows" })).toEqual({ ok: true, windows: [] });
-		await f.backend.invoke({ op: "windows" });
+		expect(await f.backend.invoke({ op: "execute", input: { action: "observe" } })).toEqual({ ok: true, text: "ok" });
+		await f.backend.invoke({ op: "execute", input: { action: "observe" } });
 		expect(f.verify).toHaveBeenCalledOnce();
 		expect(f.client.initialize).toHaveBeenCalledOnce();
-		expect(f.client.callTool).toHaveBeenCalledWith("computer_action", { op: "windows" }, { signal: undefined });
+		expect(f.client.callTool).toHaveBeenCalledWith(
+			"computer_action",
+			{ op: "execute", input: { action: "observe" } },
+			{ signal: undefined },
+		);
 		await f.backend.dispose();
 		expect(f.client.close).toHaveBeenCalledOnce();
 	});
@@ -43,7 +47,7 @@ describe("private bundled MCP backend", () => {
 		const f = fixture();
 		const cancel = new AbortController();
 		cancel.abort();
-		await expect(f.backend.invoke({ op: "windows" }, cancel.signal)).rejects.toThrow();
+		await expect(f.backend.invoke({ op: "execute", input: { action: "observe" } }, cancel.signal)).rejects.toThrow();
 		expect(f.client.callTool).not.toHaveBeenCalled();
 		await f.backend.dispose();
 	});
@@ -71,7 +75,7 @@ describe("private bundled MCP backend", () => {
 		});
 		const cancel = new AbortController();
 		let settled = false;
-		const action = f.backend.invoke({ op: "windows" }, cancel.signal).catch(() => {
+		const action = f.backend.invoke({ op: "execute", input: { action: "observe" } }, cancel.signal).catch(() => {
 			settled = true;
 		});
 		await running;
@@ -93,7 +97,7 @@ describe("private bundled MCP backend", () => {
 	});
 	it("does not hide a failed release acknowledgement when the process exited", async () => {
 		const f = fixture();
-		await f.backend.invoke({ op: "windows" });
+		await f.backend.invoke({ op: "execute", input: { action: "observe" } });
 		f.client.getPid.mockReturnValue(123);
 		f.client.callTool.mockResolvedValue(result({ ok: false, code: "input_release_failed" }));
 		const kill = vi.spyOn(process, "kill").mockImplementation(() => {

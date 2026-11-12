@@ -11,7 +11,7 @@ related_requirement: [REQ-0033]
 related_plan: [PLAN-0031]
 related_tasks: []
 related_issues: []
-related_bugs: []
+related_bugs: [BUG-0183]
 execution: serial
 branch: task/TASK-0482-computer-use
 worktree:
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-10
-updated: 2026-11-11
+updated: 2026-11-12
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -106,3 +106,23 @@ updated: 2026-11-11
 ## 权限历史与整洁
 
 2026-11-10 原自动权限模式曾拒绝源码导入及临时文件清理；用户随后明确切换可审批模式，受限原语提取成功。已装 winhands 始终只读。曾下载的官方 Python ZIP 已成为有校验的构建缓存，不是未使用残留；源代码不包含开发机 G 盘路径。全量验证专用目录 `D:/Coding/WorkSpace/Vetta/.task-0482-verification-qM1k4p` 已检查路径身份及67个顶层夹具/缓存项后删除；未清理其他工作区文件。
+
+## 验收反馈：开发态后端资源定位
+
+- 来源：2026-11-11 用户在 `apps/desktop` 执行 `bun run dev` 时，开启电脑操作提示 `backend_not_bundled`；见 [BUG-0183](../bugs/BUG-0183-computer-use-dev-backend-resource-path.md)。
+- Given：标准开发启动已将随包后端准备到 `apps/desktop/resources/computer-use/`；When：用户在开发态开启电脑操作；Then：开发主进程应从 `process.cwd()/resources/computer-use` 找到后端并刷新窗口列表。
+- 修复范围：仅调整开发态后端资源根路径，并覆盖开发态和打包态路径选择；保留打包态 `process.resourcesPath/computer-use` 路径及资源完整性校验。不调整 UI、随包资源合同或启用授权流程。
+- 验证：路径选择回归先红后绿（2/2），相关电脑操作测试 31/31，`check:quick` 和 `bun run check` 通过；未运行真实 Desktop，等待用户重启 dev 态验收。
+
+## 2026-11-11 用户决策：全局桌面操作
+
+- 范围调整：用户要求移除窗口选择、窗口身份绑定及按观察/后台/前台划分的操作权限；授权当前对话后，工具直接面向全局桌面，允许在没有目标窗口时观察桌面并通过全局输入打开应用。
+- 保留：开启/关闭、当前对话授权、暂停/停止、停止回执与输入释放、Vetta 主窗口显隐/置顶、旧版本已隐藏窗口的找回兼容。
+- 移除：目标窗口选择、动作风险审批、observe/background/foreground 权限档、用户输入自动接管、目标窗口隐藏/恢复新操作及应用/终端限制。基本参数结构校验和进程/按键释放属于功能正确性，不作为用户审批限制。
+- 工具面：按 observe/click/press/type/scroll 拆成顶层 object schema，保持 Responses 兼容；全局截图允许基于当前桌面启动尚未打开的应用。
+- Given/When/Then：开启电脑操作并授权当前对话后，即使目标应用尚未运行，AI 也能观察桌面、通过全局键鼠启动应用并继续操作；用户暂停或停止后，不再接受新动作，停止需等待后端确认并释放输入。
+- 验证范围：代表性连续流程覆盖授权当前对话→全桌面观察→打开应用→键鼠输入→暂停/停止；原生测试使用 fake Win32 与虚拟屏幕，不操作真实桌面。
+- 已运行：Coding Agent 定向测试 26/26、Desktop 定向测试 31/31、原生后端合同 14/14、后端资源打包合同 6/6；coding-agent 构建通过；改动 TypeScript Biome 检查通过。
+- 未运行：全量/大规模测试、`test:impact`、完整 `bun run check`、真实 Provider/Desktop；由用户按本次内存约定手动完成。`check:quick` 已运行，Biome 通过，但 guard 被存量过期 WAIVER-0011/0012 阻断。
+- 执行：单条串行任务；不运行真实模型、真实桌面或 `verify:ui:*`。
+- 续接：2026-11-12 用户明确授权本次全局桌面改造；全量/大规模测试依用户要求由用户手动执行。

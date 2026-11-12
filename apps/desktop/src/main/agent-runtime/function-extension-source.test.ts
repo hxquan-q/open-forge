@@ -36,7 +36,7 @@ describe("Desktop Coding Agent function source", () => {
 		const source = createDesktopCodingAgentFunctionSource({ logger: TEST_LOGGER, invokeComputerUse: invoke });
 		expect(source.has(COMPUTER_USE_FUNCTION)).toBe(process.platform === "win32" && process.arch === "x64");
 		const signal = new AbortController().signal;
-		const request = { sessionId: "session-1", input: { action: "observe" as const, screenshot: true } };
+		const request = { sessionId: "session-1", input: { action: "observe" as const } };
 		expect((await source.invoke(COMPUTER_USE_FUNCTION, request, signal)).content).toEqual([
 			{ type: "image", data: "cG5n", mimeType: "image/png" },
 		]);

@@ -18,21 +18,12 @@ export const ComputerWindowSchema = Type.Object(
 	strict,
 );
 export type ComputerWindow = Static<typeof ComputerWindowSchema>;
-export const ComputerPermissionSchema = Type.Union([
-	Type.Literal("observe"),
-	Type.Literal("background"),
-	Type.Literal("foreground"),
-]);
-export type ComputerPermission = Static<typeof ComputerPermissionSchema>;
 export const ComputerControlSchema = Type.Union([
 	Type.Object({ action: Type.Literal("enable"), enabled: Type.Boolean() }, strict),
-	Type.Object({ action: Type.Literal("refresh") }, strict),
 	Type.Object(
 		{
 			action: Type.Literal("grant"),
 			sessionId: Type.String({ minLength: 1, maxLength: 512 }),
-			targetId: Type.String({ minLength: 1, maxLength: 128 }),
-			permission: ComputerPermissionSchema,
 		},
 		strict,
 	),
@@ -40,10 +31,8 @@ export const ComputerControlSchema = Type.Union([
 		{
 			action: Type.Union([
 				Type.Literal("pause"),
-				Type.Literal("takeover"),
 				Type.Literal("resume"),
 				Type.Literal("stop"),
-				Type.Literal("hide-target"),
 				Type.Literal("restore-all"),
 			]),
 		},
@@ -60,16 +49,7 @@ export const ComputerControlSchema = Type.Union([
 	),
 ]);
 export type ComputerControl = Static<typeof ComputerControlSchema>;
-export type ComputerPhase =
-	| "disabled"
-	| "idle"
-	| "ready"
-	| "running"
-	| "stopping"
-	| "paused"
-	| "user"
-	| "needs-foreground"
-	| "error";
+export type ComputerPhase = "disabled" | "idle" | "ready" | "running" | "stopping" | "paused" | "error";
 export interface ComputerUseState {
 	readonly revision: number;
 	readonly shortcutsAvailable?: boolean;
@@ -78,9 +58,6 @@ export interface ComputerUseState {
 	readonly phase: ComputerPhase;
 	readonly sessionId?: string;
 	readonly sessionName?: string;
-	readonly target?: ComputerWindow;
-	readonly permission?: ComputerPermission;
-	readonly windows: readonly ComputerWindow[];
 	readonly hiddenWindows: readonly ComputerWindow[];
 	readonly vettaHidden: boolean;
 	readonly topmost: boolean;

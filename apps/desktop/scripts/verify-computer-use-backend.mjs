@@ -17,7 +17,7 @@ if (process.platform !== "win32" || process.arch !== "x64") {
 	const cache = await mkdtemp(join(temp, "computer-use-smoke-"));
 	const command = join(root, "runtime", "pythonw.exe");
 	const script = join(root, "worker", "server.py");
-	const client = new StdioMcpClient({ name: "computer-use-smoke", timeout: 10_000, config: { command, args: ["-I", "-B", script, "--cache", cache, "--exclude-pid", String(process.pid)], cwd: cache } });
+	const client = new StdioMcpClient({ name: "computer-use-smoke", timeout: 10_000, config: { command, args: ["-I", "-B", script, "--cache", cache], cwd: cache } });
 	try {
 		const test = await promisify(execFile)(command, ["-I", "-B", script, "--self-test", "--cache", cache], { cwd: cache, windowsHide: true });
 		const dependencyState = JSON.parse(test.stdout);

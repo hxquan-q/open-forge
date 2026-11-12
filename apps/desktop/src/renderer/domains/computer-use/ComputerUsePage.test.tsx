@@ -6,7 +6,7 @@ import { createStore, Provider } from "jotai";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, initI18n } from "@shared/i18n";
 import { activeSessionAtom } from "@shared/store/atoms";
-import type { ComputerUseApi, ComputerUseState, ComputerWindow } from "@/shared/computer-use";
+import type { ComputerUseApi, ComputerUseState } from "@/shared/computer-use";
 import { ComputerUseController } from "../../../main/computer-use/controller.js";
 import type { ComputerBackend } from "../../../main/computer-use/contracts.js";
 import { ComputerUsePage } from "./ComputerUsePage.js";
@@ -15,20 +15,21 @@ const { navigate, paint } = vi.hoisted(() => ({ navigate: vi.fn(), paint: vi.fn<
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 vi.mock("@shared/lib/committed-paint", () => ({ waitForCommittedPaint: paint }));
 
-const target: ComputerWindow = { id: "target-1", hwnd: "123", pid: 4, started: "567", instance: "42", className: "Editor", exe: "C:/editor.exe", title: "Example document", hidden: false, showCommand: 3 };
 function fixture(active = true, ownerName?: string) {
 	const present = (state: ComputerUseState): ComputerUseState => ({ ...state, sessionName: state.sessionId === "session-old" ? ownerName : undefined });
 	const listeners = new Set<Parameters<ComputerUseApi["onChanged"]>[0]>();
-	let hidden = false;
 	let display = { hidden: false, topmost: false };
 	let content = "original";
 	const backend: ComputerBackend = {
 		async invoke(command) {
-			if (command.op === "windows" || command.op === "related") return { ok: true, windows: [{ ...target, hidden }] };
-			if (command.op === "hide") hidden = true;
-			if (command.op === "restore") hidden = false;
-			if (command.op === "execute" && command.input.action === "fill") content = command.input.text;
-			return { ok: true, text: content };
+												if (command.op === "execute" && command.input.action === "type") content = command.input.text;
+			return {
+					ok: true,
+					text: content,
+					...(command.op === "execute" && command.input.action === "observe"
+						? { image: { data: "cG5n", mimeType: "image/png" as const } }
+						: {}),
+				};
 		}, interrupt: async () => {}, dispose: async () => {},
 	};
 	const service = new ComputerUseController({
@@ -57,41 +58,29 @@ beforeAll(async () => {
 beforeEach(() => { paint.mockResolvedValue(undefined); navigate.mockClear(); });
 afterEach(() => { cleanup(); });
 
-async function enableAndChoose() {
+async function enableAndAuthorize() {
 	await waitFor(() => expect((screen.getByRole("switch", { name: "开启电脑操作" }) as HTMLButtonElement).disabled).toBe(false));
 	await userEvent.click(screen.getByRole("switch", { name: "开启电脑操作" }));
-	await waitFor(() => expect((screen.getByRole("combobox", { name: "选择应用窗口" }) as HTMLButtonElement).disabled).toBe(false));
-	await userEvent.click(screen.getByRole("combobox", { name: "选择应用窗口" }));
-	await userEvent.click(await screen.findByRole("option", { name: "Example document" }));
+	await waitFor(() => expect((screen.getByRole("button", { name: "授权此对话" }) as HTMLButtonElement).disabled).toBe(false));
 }
 
 describe("computer use normal user workflow", () => {
-	it("enters from the page, grants observation then input, controls display, hides/restores and stops", async () => {
+	it("authorizes the current conversation for global desktop operation", async () => {
 		const f = fixture();
 		render(<Provider store={f.store}><ComputerUsePage /></Provider>);
-		await enableAndChoose();
+		await enableAndAuthorize();
 		await userEvent.click(screen.getByRole("button", { name: "授权此对话" }));
-		await waitFor(async () => expect((await f.service.state()).permission).toBe("observe"));
-		const request = { sessionId: "session-1", input: { action: "observe" as const } };
-		await act(async () => { expect((await f.service.execute(request, new AbortController().signal)).isError).not.toBe(true); });
-		await act(async () => { expect((await f.service.execute({ ...request, input: { action: "fill", element: "ref-1", text: "changed" } }, new AbortController().signal)).isError).toBe(true); });
-		await userEvent.click(screen.getByRole("combobox", { name: "允许 AI 做什么" }));
-		await userEvent.click(await screen.findByRole("option", { name: "协作：仅后台操作" }));
-		await userEvent.click(screen.getByRole("button", { name: "授权此对话" }));
-		await waitFor(async () => expect((await f.service.state()).permission).toBe("background"));
-		await act(async () => { await f.service.execute({ sessionId: "session-1", input: { action: "fill", element: "ref-1", text: "changed" } }, new AbortController().signal); });
-		expect(f.content()).toBe("changed");
-		await userEvent.click(screen.getByRole("switch", { name: "主窗口置顶" }));
-		await waitFor(async () => expect((await f.service.state()).topmost).toBe(true));
-		await userEvent.click(screen.getByRole("button", { name: "隐藏主窗口" }));
-		await screen.findByRole("button", { name: "唤回主窗口" });
-		await userEvent.click(screen.getByRole("button", { name: "隐藏目标窗口" }));
-		const hidden = screen.getByRole("region", { name: "由本功能隐藏的窗口" });
-		await userEvent.click(await within(hidden).findByRole("button", { name: "恢复查看: Example document" }));
-		expect((await f.service.state()).sessionId).toBe("session-1");
-		await userEvent.click(screen.getByRole("button", { name: "我来接管" }));
-		await screen.findByText("由你接管，AI 不会继续操作。");
-		await userEvent.click(screen.getByRole("button", { name: "结束并恢复窗口" }));
+		await waitFor(async () => expect((await f.service.state()).sessionId).toBe("session-1"));
+		const signal = new AbortController().signal;
+		await act(async () => {
+			expect((await f.service.execute({ sessionId: "session-1", input: { action: "observe" } }, signal)).isError).not.toBe(true);
+			expect((await f.service.execute({ sessionId: "session-1", input: { action: "press", keys: "win+r" } }, signal)).isError).not.toBe(true);
+			expect((await f.service.execute({ sessionId: "session-1", input: { action: "type", text: "wsl.exe" } }, signal)).isError).not.toBe(true);
+		});
+		await userEvent.click(screen.getByRole("button", { name: "暂停" }));
+		await waitFor(() => expect(screen.getByText("已暂停。")).toBeTruthy());
+		expect((await f.service.execute({ sessionId: "session-1", input: { action: "press", keys: "enter" } }, signal)).isError).toBe(true);
+		await userEvent.click(screen.getByRole("button", { name: "停止电脑操作" }));
 		await waitFor(async () => expect((await f.service.state()).sessionId).toBeUndefined());
 		await userEvent.click(screen.getByRole("button", { name: "返回对话下达任务" }));
 		expect(navigate).toHaveBeenCalledWith({ to: "/" });
@@ -111,28 +100,29 @@ describe("computer use normal user workflow", () => {
 	it("distinguishes the active owner from the next conversation awaiting authorization", async () => {
 		const f = fixture(true, "Earlier task");
 		await f.service.control({ action: "enable", enabled: true });
-		await f.service.control({ action: "grant", sessionId: "session-old", targetId: target.id, permission: "observe" });
+		await f.service.control({ action: "grant", sessionId: "session-old" });
 		render(<Provider store={f.store}><ComputerUsePage /></Provider>);
-		await screen.findByText("已授权，等待对话中的 AI 操作。");
+		await screen.findByText("已授权，AI 可以操作整个桌面。");
 		expect((screen.getByRole("button", { name: "授权此对话" }) as HTMLButtonElement).disabled).toBe(true);
 		expect(screen.getByText(/控制权仍属于另一个对话/)).toBeTruthy();
 		expect(screen.getByText(/已授权对话：Earlier task/)).toBeTruthy();
-		await userEvent.click(screen.getByRole("button", { name: "结束并恢复窗口" }));
+		await userEvent.click(screen.getByRole("button", { name: "停止电脑操作" }));
 		await waitFor(() => expect((screen.getByRole("button", { name: "授权此对话" }) as HTMLButtonElement).disabled).toBe(false));
 	});
 
 	it("identifies an unnamed previous owner by its stable identifier", async () => {
 		const f = fixture();
 		await f.service.control({ action: "enable", enabled: true });
-		await f.service.control({ action: "grant", sessionId: "session-old", targetId: target.id, permission: "observe" });
+		await f.service.control({ action: "grant", sessionId: "session-old" });
 		render(<Provider store={f.store}><ComputerUsePage /></Provider>);
 		expect(await screen.findByText(/未命名的已授权对话（标识：session-old）/)).toBeTruthy();
 	});
 
-	it("requires a current conversation rather than exposing raw session identifiers", async () => {
+	it("requires a current conversation before grant", async () => {
 		const f = fixture(false);
 		render(<Provider store={f.store}><ComputerUsePage /></Provider>);
-		await enableAndChoose();
+		await waitFor(() => expect((screen.getByRole("switch", { name: "开启电脑操作" }) as HTMLButtonElement).disabled).toBe(false));
+		await userEvent.click(screen.getByRole("switch", { name: "开启电脑操作" }));
 		expect((screen.getByRole("button", { name: "授权此对话" }) as HTMLButtonElement).disabled).toBe(true);
 		expect(screen.getByText(/请先在侧栏新建或打开一个对话/)).toBeTruthy();
 	});

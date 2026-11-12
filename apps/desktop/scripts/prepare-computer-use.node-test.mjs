@@ -15,7 +15,7 @@ async function fixture() {
 	const root = await mkdtemp(join(tmpdir(), "computer-use-pack-")); roots.push(root);
 	const source = join(root, "source");
 	await mkdir(join(source, "vendor", "winhands"), { recursive: true });
-	for (const name of ["server.py", "executor.py", "windows.py", "input_guard.py"]) await writeFile(join(source, name), "# test worker\n");
+	for (const name of ["server.py", "executor.py", "windows.py"]) await writeFile(join(source, name), "# test worker\n");
 	for (const name of ["__init__.py", "uia.py", "inputs.py", "LICENSE"]) await writeFile(join(source, "vendor", "winhands", name), "test primitive\n");
 	const zip = new AdmZip();
 	for (const name of COMPUTER_USE_BUNDLE_CONTRACT.requiredFiles.filter((file) => file.startsWith("runtime/")).map((file) => file.slice("runtime/".length))) zip.addFile(name, Buffer.from("fixture " + name));

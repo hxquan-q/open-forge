@@ -175,7 +175,6 @@ export interface CodingAgentTurnCapabilitySessionAssembly {
 function raiseToolRiskForCall(toolName: string, input: Readonly<Record<string, unknown>>): ToolRiskLevel | undefined {
 	if (toolName === "bash" || toolName === "shell") return raiseShellRiskLevel(input);
 	if (toolName === "browser_tab") return raiseBrowserTabToolRisk(input);
-	if (toolName === "computer_use") return input.action === "observe" ? "L0" : "L3";
 	return undefined;
 }
 

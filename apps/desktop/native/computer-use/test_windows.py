@@ -12,32 +12,20 @@ class NativeUser:
     def __init__(self):
         self.properties = {}
         self.visible = True
-        self.visible_by_hwnd = {}
-        self.foreground = 123
-        self.point = 123
         self.shown = []
-        self.focused = []
         self.title = "Document"
+        self.metrics = {76: -10, 77: 5, 78: 100, 79: 80}
 
     def IsWindow(self, _): return True
-    def IsWindowVisible(self, hwnd): return self.visible_by_hwnd.get(hwnd, self.visible)
-    def IsWindowEnabled(self, hwnd): return hwnd != 123 or self.foreground == 123
-    def IsIconic(self, _): return False
+    def IsWindowVisible(self, _): return self.visible
     def GetWindowThreadProcessId(self, _, pid): pid._obj.value = 9
     def GetWindowTextW(self, _, value, _size): value.value = self.title
     def GetClassNameW(self, _, value, _size): value.value = "Editor"
     def GetWindowPlacement(self, _, value): value._obj.showCmd = 3; return True
     def GetPropW(self, hwnd, name): return self.properties.get((hwnd, name), 0)
     def SetPropW(self, hwnd, name, value): self.properties[hwnd, name] = value; return True
-    def GetForegroundWindow(self): return self.foreground
-    def GetAncestor(self, hwnd, _):
-        if hwnd is not None and not isinstance(hwnd, int):
-            raise TypeError("HWND must be normalized before the native call")
-        return 42 if hwnd == 99 else hwnd
-    def GetWindow(self, hwnd, _): return 123 if hwnd in {42, 43} else 0
-    def WindowFromPoint(self, _): return self.point
-    def SetForegroundWindow(self, hwnd): self.focused.append(hwnd); self.foreground = hwnd
     def ShowWindow(self, hwnd, command): self.shown.append((hwnd, command)); self.visible = command != 0
+    def GetSystemMetrics(self, index): return self.metrics[index]
 
 
 class NativeKernel:
@@ -49,14 +37,12 @@ class NativeKernel:
 
 def native_fixture():
     windows = Windows.__new__(Windows)
-    windows.excluded = set()
-    windows.hidden_windows = {}
     windows.user, windows.kernel = NativeUser(), NativeKernel()
     return windows
 
 
-class WindowContractTests(unittest.TestCase):
-    def test_handle_reuse_inside_the_same_process_invalidates_old_authorization(self):
+class WindowRecoveryTests(unittest.TestCase):
+    def test_handle_reuse_invalidates_a_legacy_recovery_record(self):
         windows = native_fixture()
         with patch("secrets.randbits", side_effect=[101, 202]):
             old = windows.identity(123)
@@ -66,52 +52,28 @@ class WindowContractTests(unittest.TestCase):
             new = windows.identity(123)
         self.assertNotEqual(old["id"], new["id"])
 
-    def test_serialized_owned_window_handles_are_normalized_before_native_calls(self):
-        windows = native_fixture()
-        self.assertTrue(windows.belongs("42", "123"))
-        self.assertFalse(windows.belongs(None, "123"))
-
-    def test_hidden_owned_dialogs_remain_observable_only_when_explicitly_tracked(self):
-        windows = native_fixture()
-        windows.handles = lambda: [123, 42, 43]
-        root, hidden, untracked = windows.identity(123), windows.identity(42), windows.identity(43)
-        windows.user.visible_by_hwnd = {123: False, 42: False, 43: False}
-        windows.track_hidden([root, hidden])
-        related = windows.related(root)
-        self.assertEqual([window["id"] for window in related], [root["id"], hidden["id"]])
-        self.assertNotIn(untracked["id"], [window["id"] for window in related])
-
-    def test_title_changes_do_not_change_a_live_window_instance(self):
+    def test_title_changes_do_not_invalidate_a_legacy_recovery_record(self):
         windows = native_fixture()
         old = windows.identity(123)
         windows.user.title = "Renamed document"
         self.assertEqual(windows.validate(old)["id"], old["id"])
 
-    def test_owned_dialog_can_keep_foreground_and_receive_its_own_uia_scroll(self):
+    def test_restore_uses_the_original_show_command(self):
         windows = native_fixture()
-        root = windows.identity(123)
-        windows.user.foreground = 42
-        windows.user.point = 99
-        windows.foreground(root)
-        windows.check_point(root, 20, 30, expected=42)
-        self.assertEqual(windows.user.focused, [])
-
-    def test_root_screenshot_coordinates_never_click_an_overlapping_owned_dialog(self):
-        windows = native_fixture()
-        root = windows.identity(123)
-        windows.user.foreground = 42
-        windows.user.point = 99
-        with self.assertRaisesRegex(DesktopError, "target_occluded"):
-            windows.check_point(root, 20, 30)
-
-    def test_write_ahead_records_do_not_restore_never_hidden_or_user_restored_windows(self):
-        windows = native_fixture()
-        root = windows.identity(123)
-        windows.restore(root)
-        self.assertEqual(windows.user.shown, [])
+        target = windows.identity(123)
         windows.user.visible = False
-        windows.restore(root)
+        windows.restore(target)
         self.assertEqual(windows.user.shown, [(123, 3)])
+
+    def test_desktop_screenshot_captures_the_virtual_screen_without_a_window_target(self):
+        from PIL import Image
+        windows = native_fixture()
+        with patch("PIL.ImageGrab.grab", return_value=Image.new("RGB", (100, 80), (12, 34, 56))) as grab:
+            image, bounds, size = windows.desktop_screenshot()
+        grab.assert_called_once_with(all_screens=True)
+        self.assertEqual(bounds, (-10, 5, 90, 85))
+        self.assertEqual(size, (100, 80))
+        self.assertTrue(image.startswith(bytes([137, 80, 78, 71, 13, 10, 26, 10])))
 
 
 if __name__ == "__main__":
