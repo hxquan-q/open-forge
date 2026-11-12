@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+// Modified by The Open Forge contributors.
 
 import type { ComputerUseInput } from "@vetta/coding-agent/function-extensions";
 import { describe, expect, it, vi } from "vitest";
@@ -87,6 +88,70 @@ describe("computer use user workflow", () => {
 		await f.service.control({ action: "stop" });
 		expect((await f.service.state()).sessionId).toBeUndefined();
 		expect(f.backend.dispose).toHaveBeenCalledOnce();
+	});
+
+	it.each(["restore", "dispose", "interrupt"] as const)("disabling fails closed on %s failure", async (step) => {
+		const f = fixture({ saved: [target] });
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant();
+		const issue = step === "restore" ? "restore_failed" : step === "dispose" ? "dispose_failed" : "stop_failed";
+		if (step === "restore") vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error(issue));
+		else vi.mocked(f.backend[step]).mockRejectedValueOnce(new Error(issue));
+
+		const disabled = await f.service.control({ action: "enable", enabled: false });
+		expect(disabled.enabled).toBe(false);
+		expect(disabled.sessionId).toBeUndefined();
+		expect(disabled.phase).toBe("disabled");
+		expect(disabled.issue).toBe(issue);
+		expect(f.saved()).toEqual(step === "dispose" ? [] : [target]);
+		if (step !== "interrupt") expect(f.backend.dispose).toHaveBeenCalledOnce();
+
+		const callsAfterDisable = [...f.calls];
+		for (const command of [
+			{ action: "grant", sessionId: "session-1" },
+			{ action: "resume" },
+			{ action: "enable", enabled: true },
+			{ action: "grant", sessionId: "session-2" },
+		] as const) {
+			const state = await f.service.control(command);
+			expect(state.enabled).toBe(false);
+			expect(state.sessionId).toBeUndefined();
+			expect(state.phase).not.toBe("ready");
+			for (const sessionId of ["session-1", "session-2"]) {
+				expect((await f.execute({ action: "observe" }, sessionId)).isError).toBe(true);
+				expect((await f.execute({ action: "press", keys: "enter" }, sessionId)).isError).toBe(true);
+			}
+		}
+		expect(f.calls).toEqual(callsAfterDisable);
+	});
+
+	it("disables successfully and requires a new grant after re-enabling", async () => {
+		const f = fixture({ saved: [target] });
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant();
+		const disabled = await f.service.control({ action: "enable", enabled: false });
+		expect(disabled).toMatchObject({ enabled: false, phase: "disabled", hiddenWindows: [] });
+		expect(disabled.sessionId).toBeUndefined();
+		expect(disabled.issue).toBeUndefined();
+		expect(f.saved()).toEqual([]);
+		expect(f.backend.dispose).toHaveBeenCalledOnce();
+		expect((await f.grant()).phase).not.toBe("ready");
+		expect((await f.execute({ action: "observe" })).isError).toBe(true);
+		const enabled = await f.service.control({ action: "enable", enabled: true });
+		expect(enabled.phase).toBe("idle");
+		expect(enabled.sessionId).toBeUndefined();
+		expect((await f.execute({ action: "observe" })).isError).toBe(true);
+		expect((await f.grant()).phase).toBe("ready");
+		expect((await f.execute({ action: "observe" })).isError).not.toBe(true);
+	});
+
+	it("a grant cannot clear an error state even when the backend can acknowledge stopping", async () => {
+		const f = fixture();
+		await f.service.control({ action: "enable", enabled: true });
+		expect((await f.grant("invalid-session")).phase).toBe("error");
+		expect((await f.grant()).phase).toBe("error");
+		expect((await f.service.state()).sessionId).toBeUndefined();
+		expect((await f.execute({ action: "observe" })).isError).toBe(true);
 	});
 
 	it("operates globally without a selected window or permission tier", async () => {
@@ -178,7 +243,7 @@ describe("computer use user workflow", () => {
 		expect((await f.execute({ action: "observe" })).isError).not.toBe(true);
 	});
 
-	it("waits for actual cancellation acknowledgement before stopping and restoring", async () => {
+	it.each(["stop", "disable"] as const)("%s waits for cancellation acknowledgement", async (action) => {
 		const f = fixture();
 		await f.service.control({ action: "enable", enabled: true });
 		await f.grant();
@@ -199,9 +264,11 @@ describe("computer use user workflow", () => {
 		const operation = f.execute({ action: "observe" });
 		await entered;
 		let stopped = false;
-		const stop = f.service.control({ action: "stop" }).then(() => {
-			stopped = true;
-		});
+		const stop = f.service
+			.control(action === "stop" ? { action: "stop" } : { action: "enable", enabled: false })
+			.then(() => {
+				stopped = true;
+			});
 		await Promise.resolve();
 		expect(stopped).toBe(false);
 		expect((await f.service.state()).phase).toBe("stopping");
@@ -209,14 +276,16 @@ describe("computer use user workflow", () => {
 		complete();
 		await stop;
 		expect((await operation).isError).toBe(true);
-		expect((await f.service.state()).phase).toBe("idle");
+		expect((await f.service.state()).phase).toBe(action === "stop" ? "idle" : "disabled");
+		expect((await f.service.state()).sessionId).toBeUndefined();
+		expect(f.backend.dispose).toHaveBeenCalledOnce();
 	});
 
-	it("a stop invalidates an earlier queued grant", async () => {
+	it.each(["stop", "disable"] as const)("%s invalidates an earlier queued grant", async (action) => {
 		const f = fixture();
 		await f.service.control({ action: "enable", enabled: true });
 		const queued = f.grant();
-		const stop = f.service.control({ action: "stop" });
+		const stop = f.service.control(action === "stop" ? { action: "stop" } : { action: "enable", enabled: false });
 		await Promise.all([queued, stop]);
 		expect((await f.service.state()).sessionId).toBeUndefined();
 	});
@@ -239,9 +308,9 @@ describe("computer use user workflow", () => {
 		vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error("process failure"));
 		vi.mocked(f.backend.interrupt).mockRejectedValue(new Error("stop_failed"));
 		expect((await f.execute({ action: "observe" })).isError).toBe(true);
+		vi.mocked(f.backend.interrupt).mockResolvedValue(undefined);
 		expect((await f.grant()).phase).toBe("error");
 		expect((await f.execute({ action: "observe" })).isError).toBe(true);
-		vi.mocked(f.backend.interrupt).mockResolvedValue(undefined);
 		expect((await f.service.control({ action: "stop" })).phase).toBe("idle");
 	});
 

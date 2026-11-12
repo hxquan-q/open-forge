@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+// Modified by The Open Forge contributors.
 import { Value } from "@sinclair/typebox/value";
 import { type ComputerUseRequest, readComputerUseInput } from "@vetta/coding-agent/function-extensions";
 import type { RuntimeToolResult } from "@vetta/runtime-core/kernel";
@@ -81,7 +82,10 @@ export class ComputerUseController {
 				try {
 					await this.apply(input);
 				} catch (error) {
-					this.patch({ phase: "error", issue: error instanceof Error ? error.message : "backend_failed" });
+					this.patch({
+						phase: input.action === "enable" && !input.enabled ? "disabled" : "error",
+						issue: error instanceof Error ? error.message : "backend_failed",
+					});
 				}
 				return this.state();
 			})
@@ -196,14 +200,17 @@ export class ComputerUseController {
 			return;
 		}
 		if (command.action === "enable") {
-			if (command.enabled && this.stateValue.enabled) {
-				if (this.unsafe) throw new Error("stop_failed");
+			if (!command.enabled) {
+				try {
+					await this.stop();
+				} finally {
+					this.patch({ enabled: false, sessionId: undefined, phase: "disabled" });
+				}
 				return;
 			}
-			if (!command.enabled) {
-				await this.stop();
-			}
-			this.patch({ enabled: command.enabled, phase: command.enabled ? "idle" : "disabled", issue: undefined });
+			if (this.unsafe) throw new Error("stop_failed");
+			if (this.stateValue.enabled) return;
+			this.patch({ enabled: true, phase: "idle", issue: undefined });
 			return;
 		}
 		if (command.action === "restore-all") {
@@ -219,6 +226,7 @@ export class ComputerUseController {
 		if (!this.stateValue.enabled) throw new Error("disabled");
 		switch (command.action) {
 			case "grant": {
+				if (this.unsafe || this.stateValue.phase === "error") throw new Error("stop_failed");
 				await this.quiesce();
 				if (!(await this.options.validateSession(command.sessionId))) throw new Error("invalid_session");
 				if (this.stateValue.sessionId && this.stateValue.sessionId !== command.sessionId)
@@ -248,14 +256,20 @@ export class ComputerUseController {
 		this.unsafe = false;
 	}
 	private async stop(): Promise<void> {
-		await this.quiesce();
 		try {
-			await this.restoreAll();
+			await this.quiesce();
+			try {
+				await this.restoreAll();
+			} finally {
+				await this.options.backend.dispose();
+			}
+		} catch (error) {
+			this.unsafe = true;
+			throw error;
 		} finally {
-			await this.options.backend.dispose();
+			this.patch({ sessionId: undefined });
 		}
 		this.patch({
-			sessionId: undefined,
 			phase: this.stateValue.enabled ? "idle" : "disabled",
 			issue: undefined,
 		});
