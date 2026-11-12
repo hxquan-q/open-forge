@@ -26,4 +26,6 @@ export interface ComputerDisplay {
 	update(value: { hidden?: boolean; topmost?: boolean }): void;
 	/** Temporarily removes Vetta from the physical input surface; restoring must not steal focus. */
 	yield(): () => void;
+	/** Temporarily removes Vetta from screen capture while it stays visible on screen, so observations match the input surface. */
+	exclude(): () => void;
 }

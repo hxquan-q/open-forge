@@ -34,7 +34,14 @@ function fixture(active = true, ownerName?: string) {
 	};
 	const service = new ComputerUseController({
 		supported: true, backend, ledger: { load: async () => [], save: async () => {} },
-		display: { read: () => display, update: (next) => { display = { ...display, ...next }; }, yield: () => () => {} },
+		display: {
+			read: () => display,
+			update: (next) => {
+				display = { ...display, ...next };
+			},
+			yield: () => () => {},
+			exclude: () => () => {},
+		},
 		validateSession: async (id) => id === "session-1" || id === "session-old",
 		onChange: () => { void service.state().then((state) => { for (const listener of listeners) listener(present(state)); }); },
 	});

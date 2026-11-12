@@ -1,4 +1,6 @@
 // Copyright The Open Forge contributors.
+
+import { release } from "node:os";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
 import type { ComputerUseRequest } from "@vetta/coding-agent/function-extensions";
@@ -10,9 +12,10 @@ import { getAppLogger } from "../logger.js";
 import { peekSharedRuntime } from "../runtime.js";
 import { getTray, setComputerUseTrayActions } from "../tray-manager.js";
 import { getMainWindow, showMainWindow } from "../window-manager.js";
+import { resolveComputerUseBackendRoot } from "./backend-root.js";
 import { BundledComputerBackend, verifyBackendResources } from "./bundled-backend.js";
 import { ComputerUseController } from "./controller.js";
-import { ComputerWindowDisplay } from "./display.js";
+import { ComputerWindowDisplay, captureExclusionSupported } from "./display.js";
 import { createHiddenWindowLedger } from "./hidden-window-ledger.js";
 import { bindComputerUseShortcuts, computerUseShortcutsAvailable } from "./shortcuts.js";
 
@@ -27,9 +30,11 @@ let initialized = false;
 export function getComputerUseController(): ComputerUseController {
 	if (controller) return controller;
 	const cache = getApplicationCacheService().namespace("computer-use");
-	const root = app.isPackaged
-		? join(process.resourcesPath, "computer-use")
-		: join(app.getAppPath(), "resources", "computer-use");
+	const root = resolveComputerUseBackendRoot({
+		isPackaged: app.isPackaged,
+		resourcesPath: process.resourcesPath,
+		cwd: process.cwd(),
+	});
 	controller = new ComputerUseController({
 		supported,
 		onChange: () => {
@@ -54,6 +59,7 @@ export function getComputerUseController(): ComputerUseController {
 			all: () => BrowserWindow.getAllWindows(),
 			show: showMainWindow,
 			canHide: () => Boolean(getTray()) || computerUseShortcutsAvailable(),
+			canExclude: () => captureExclusionSupported(release()),
 		}),
 		validateSession: async (id) => {
 			try {

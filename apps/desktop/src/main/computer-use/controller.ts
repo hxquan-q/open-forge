@@ -113,7 +113,9 @@ export class ComputerUseController {
 		if (signal.aborted) controller.abort();
 		this.patch({ phase: "running", issue: undefined });
 		const operation = (async (): Promise<RuntimeToolResult> => {
-			const restoreDisplay = physical ? this.options.display.yield() : () => {};
+			// Observation excludes Vetta from capture and input yields it from the screen;
+			// both must show the same surface or coordinates taken from a screenshot click somewhere else.
+			const restoreDisplay = physical ? this.options.display.yield() : this.options.display.exclude();
 			try {
 				controller.signal.throwIfAborted();
 				controller.signal.throwIfAborted();

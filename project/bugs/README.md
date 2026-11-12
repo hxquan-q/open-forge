@@ -16,6 +16,8 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0184` | 电脑操作观察截图与动作输入画面不一致；已改为观察时捕获排除 Vetta（旧系统回退截图隐藏），红 5→绿，computer-use 44/44，待实机复验 | verifying | P1 | PLAN-0031 |
+| `BUG-0183` | 开发态电脑操作后端资源路径错误；已改为 cwd 定位、打包路径不变，回归 2/2 + 相关测试 31/31，待 dev 实机复验 | verifying | P1 | PLAN-0031 |
 | `BUG-0182` | 已有会话增量模式漏收及旧列表回填回滚；两轮红3→绿9/9，相关流程27/27 | verifying | P2 | PLAN-0027 |
 | `BUG-0181` | runtime-node 远端 POSIX 路径测试使用 Windows-safe TEMP 夹具；3 个 Windows `/tmp` 失败修复，7/7 | verifying | P2 | — |
 | `BUG-0180` | plugin-vite React sharing 测试误选 Federation bootstrap chunk；已修选择器，plugin-vite 46/46 | verifying | P2 | — |

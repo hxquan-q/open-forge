@@ -25,7 +25,12 @@ function fixture() {
 		supported: true,
 		backend: { invoke: async () => ({ ok: true }), interrupt: async () => {}, dispose: async () => {} },
 		ledger: { load: async () => [], save: async () => {} },
-		display: { read: () => ({ hidden: false, topmost: false }), update: () => {}, yield: () => () => {} },
+		display: {
+			read: () => ({ hidden: false, topmost: false }),
+			update: () => {},
+			yield: () => () => {},
+			exclude: () => () => {},
+		},
 		validateSession: async () => true,
 	});
 	const dispose = registerComputerUseIpc(main, {

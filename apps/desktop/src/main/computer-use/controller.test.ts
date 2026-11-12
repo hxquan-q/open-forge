@@ -36,6 +36,8 @@ function fixture(options: { supported?: boolean; saved?: readonly ComputerWindow
 		dispose: vi.fn(async () => {}),
 	};
 	let display = { hidden: false, topmost: false };
+	const yields = vi.fn(() => () => {});
+	const excludes = vi.fn(() => () => {});
 	const service = new ComputerUseController({
 		supported: options.supported ?? true,
 		backend,
@@ -50,14 +52,15 @@ function fixture(options: { supported?: boolean; saved?: readonly ComputerWindow
 			update: (patch) => {
 				display = { ...display, ...patch };
 			},
-			yield: vi.fn(() => () => {}),
+			yield: yields,
+			exclude: excludes,
 		},
 		validateSession: async (id) => id === "session-1" || id === "session-2",
 	});
 	const execute = (input: ComputerUseInput, sessionId = "session-1", signal = new AbortController().signal) =>
 		service.execute({ input, sessionId }, signal);
 	const grant = (sessionId = "session-1") => service.control({ action: "grant", sessionId });
-	return { service, backend, calls, execute, grant, saved: () => saved };
+	return { service, backend, calls, execute, grant, saved: () => saved, yields, excludes };
 }
 
 describe("computer use user workflow", () => {
@@ -110,6 +113,20 @@ describe("computer use user workflow", () => {
 		expect((await f.grant("session-2")).issue).toBe("desktop_owned");
 		await f.service.control({ action: "stop" });
 		expect((await f.grant("invented-session")).issue).toBe("invalid_session");
+	});
+
+	it("keeps the observed surface and the physical input surface identical", async () => {
+		const f = fixture();
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant();
+		await f.execute({ action: "observe" });
+		expect(f.excludes).toHaveBeenCalledOnce();
+		expect(f.yields).not.toHaveBeenCalled();
+		await f.execute({ action: "press", keys: "enter" });
+		expect(f.yields).toHaveBeenCalledOnce();
+		await f.execute({ action: "click", revision: "screen-1", x: 12, y: 24 });
+		expect(f.yields).toHaveBeenCalledTimes(2);
+		expect(f.excludes).toHaveBeenCalledOnce();
 	});
 
 	it("waits for actual cancellation acknowledgement before stopping and restoring", async () => {
