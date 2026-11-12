@@ -90,3 +90,13 @@ verification_note: 完整 check 与 impact 失败用例复跑按用户指示（�
 - 评审与集成：自审；本地 Task 分支提交，集成/推送/发布均未发生。
 - 未运行与风险：实机验收待用户（需完整重启 dev）；waiver 0011/0012 为存量阻断待用户处置。
 - 发布：v0.1.5 碎片 `.github/release-notes/fragments/v0.1.5/task-0483-session-hot-tracking-toggle.md`；未汇编、未 bump。
+
+## 交付增量（2026-11-12 消费端主链路漏接修复）
+
+- 复审发现：按钮与生产端已通，但 `ChatView` 传入的 `hotTracking` 被 `DefaultChatView` 丢弃（解构未取、未透传 `ActivityColumn`，且 memo 比较器不比该字段）——点灭开关后新命令停投（生产端直读 atom），右栏终端页签/自动跟随却照旧，两端状态不同源。
+- 实际修改（最小 diff 三处，均在 `DefaultChatView.tsx`）：解构补 `hotTracking`；`ActivityColumn` 透传 `hotTracking={hotTracking}`；memo 比较器补 `previous.hotTracking === next.hotTracking`。`ActivityColumn` 默认值 `true` 与 `coding && hotTracking` 双条件保持不变（团队宿主 `TeamChatView` 不传 prop，行为不变）。
+- 回归测试（红→绿，任务一部分）：新增 `DefaultChatView.hot-tracking.test.tsx`（真实 ActivityPanel 管线：关闭后 terminal 页签从页签栏消失、follow 钩子收 enabled=false，再点亮恢复——仅 hotTracking 变化必须穿过 memo 边界，旧代码两方向均红）；`DefaultChatView.memo.test.tsx` 补 memo 放行断言（旧代码红：期望 2 次重渲染实得 1 次）+ 补 Apache 声明头。
+- 实际运行（2026-11-12）：新增/改动测试 3 文件 7/7 绿；关联回归 9 文件 38/38 绿（hot-tracking-atoms、plugin-tabs、live-tabs、useFollowAiFileEdits、useFollowAiActivity、connector.hot-tracking、terminal-settle、TeamChatView、ChatView.composer）；`useSessionManager.session-switch.test.ts` 单跑两次均 9/9——上次 impact 唯一失败用例「只读历史预览失败回退」定性为偶发、非本次回归（本增量仅改 chat-view 组件层，与该链路无共享模块）。`check:quick` 仅剩存量过期 WAIVER-0011/0012 阻断（ratchet new=0）；本增量文件全为 `.tsx`，不在 Biome `*.ts` 范畴（全量 lint 的 3 个错误经目录级核查不在本任务范畴）。
+- 未运行及原因：`test:impact`、全量测试与完整 `bun run check` 按用户指示跳过（时间约束）；实机验收待用户（需完整重启 dev，HMR 不替代）。
+- 顺带核查结论（未改，待用户定夺）：`NewSessionPageView.tsx` 维持 `hotTracking={workspaceMode === "coding"}` 有意不接开关——新会话页无 activeSession，接 atom 会恒 false；语义代价是「关开关后回新会话页，面板恢复跟随」，存在档位切换跳变。`ConversationActivityPanel` 全仓仅 `ActivityPanel.plugin-tabs.test.tsx` 引用，确认为测试适配器，非主聊天页路径（主路径为 ChatView→DefaultChatView→ActivityColumn→ActivityPanel）。
+- 发布：v0.1.5 碎片同文件补「修复」一节（点灭后右栏不跟随的问题及修复后行为）。

@@ -106,7 +106,8 @@ const ActivityColumn = memo(
 		previous.workspace.cwd === next.workspace.cwd &&
 		sameIds(previous.workspace.runtimeIds, next.workspace.runtimeIds) &&
 		sameActivity(previous.activity, next.activity) &&
-		previous.workspaceMode === next.workspaceMode,
+		previous.workspaceMode === next.workspaceMode &&
+		previous.hotTracking === next.hotTracking,
 );
 
 export function DefaultChatView({
@@ -118,6 +119,7 @@ export function DefaultChatView({
 	exportState,
 	activity,
 	workspaceMode,
+	hotTracking,
 }: DefaultChatViewProps): JSX.Element {
 	return (
 		<PerfSendProfiler id="ChatView(total)">
@@ -145,7 +147,12 @@ export function DefaultChatView({
 					 * 「其余重渲」之间可归因，否则两者挤在 ChatView(total) 里分不开。
 					 */}
 					<PerfSendProfiler id="ChatView:rightColumn">
-						<ActivityColumn workspace={workspace} activity={activity} workspaceMode={workspaceMode} />
+						<ActivityColumn
+							workspace={workspace}
+							activity={activity}
+							workspaceMode={workspaceMode}
+							hotTracking={hotTracking}
+						/>
 					</PerfSendProfiler>
 				</div>
 			</div>

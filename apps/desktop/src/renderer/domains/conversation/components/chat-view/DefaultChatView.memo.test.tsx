@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
@@ -7,8 +8,13 @@ import { DefaultChatView } from "./DefaultChatView";
 const panelRendered = vi.hoisted(() => vi.fn());
 
 vi.mock("@domains/activity-panel/components/ActivityPanel", () => ({
-	ActivityPanel: (props: { workspace: { runtimeIds: readonly string[] }; pluginScenario?: string; enabledBuiltinTabs?: readonly string[] }) => {
-		panelRendered();
+	ActivityPanel: (props: {
+		workspace: { runtimeIds: readonly string[] };
+		pluginScenario?: string;
+		enabledBuiltinTabs?: readonly string[];
+		hotTracking?: boolean;
+	}) => {
+		panelRendered(props);
 		return createElement("aside", { "data-testid": "activity-panel" },
 			`${props.workspace.runtimeIds.join(",")}:${props.pluginScenario ?? ""}:${props.enabledBuiltinTabs === undefined ? "default" : "selected"}`);
 	},
@@ -61,5 +67,28 @@ describe("chat activity column", () => {
 		);
 		expect(screen.getByTestId("activity-panel").textContent).toBe("two:automation:selected");
 		expect(panelRendered).toHaveBeenCalledTimes(4);
+	});
+
+	it("hotTracking 变化穿过 memo 边界：ActivityColumn 重渲染并下发新值（TASK-0483）", () => {
+		panelRendered.mockClear();
+		const workspace = { id: "conversation:a", cwd: "/work", runtimeIds: ["one"] };
+		const activity = { pluginScenario: "project" as const };
+		const { rerender } = render(
+			<DefaultChatView messages={[]} workspace={workspace} activity={activity} workspaceMode="coding" hotTracking={true}>
+				<div />
+			</DefaultChatView>,
+		);
+		expect(panelRendered).toHaveBeenCalledTimes(1);
+		expect(panelRendered).toHaveBeenLastCalledWith(expect.objectContaining({ hotTracking: true }));
+
+		// ChatView 随会话开关传入 false：仅 hotTracking 变化也必须放行重渲染，
+		// 否则右栏消费者（terminal 页签显隐、AI 活动跟随）停在旧值。
+		rerender(
+			<DefaultChatView messages={[]} workspace={workspace} activity={activity} workspaceMode="coding" hotTracking={false}>
+				<div />
+			</DefaultChatView>,
+		);
+		expect(panelRendered).toHaveBeenCalledTimes(2);
+		expect(panelRendered).toHaveBeenLastCalledWith(expect.objectContaining({ hotTracking: false }));
 	});
 });
