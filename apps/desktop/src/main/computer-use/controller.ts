@@ -118,18 +118,17 @@ export class ComputerUseController {
 			const restoreDisplay = physical ? this.options.display.yield() : this.options.display.exclude();
 			try {
 				controller.signal.throwIfAborted();
-				controller.signal.throwIfAborted();
 				const result = await this.options.backend.invoke({ op: "execute", input }, controller.signal);
 				controller.signal.throwIfAborted();
 				if (epoch !== this.epoch) throw new DOMException("Cancelled", "AbortError");
 				if (!result.ok) {
-					this.patch({
-						phase: "paused",
-						issue: result.code ?? "backend_failed",
-					});
+					// A structured failure proves the backend stayed responsive and released
+					// held inputs, so the session stays operable: the model receives the code
+					// and can observe again instead of waiting for a human resume.
+					this.patch({ phase: "ready", issue: result.code ?? "backend_failed" });
 					return failure(result.code ?? "backend_failed");
 				}
-				this.patch({ phase: "ready" });
+				this.patch({ phase: "ready", issue: undefined });
 				return {
 					content: [
 						{ type: "text", text: result.text ?? "ok" },
@@ -146,7 +145,12 @@ export class ComputerUseController {
 					this.patch({ phase: "error", issue: "stop_failed" });
 					return failure("stop_failed");
 				}
-				this.patch({ phase: "paused", issue: controller.signal.aborted ? "cancelled" : "backend_failed" });
+				// The stop receipt confirms the backend released held inputs. A control
+				// revoke (pause/stop/disable) settles the phase itself afterwards; otherwise
+				// the model must stay able to observe and retry instead of being paused
+				// until a human resume.
+				if (epoch === this.epoch)
+					this.patch({ phase: "ready", issue: controller.signal.aborted ? undefined : "backend_failed" });
 				return failure(controller.signal.aborted ? "cancelled" : "backend_failed");
 			} finally {
 				restoreDisplay();

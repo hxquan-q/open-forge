@@ -11,7 +11,7 @@ related_requirement: [REQ-0033]
 related_plan: [PLAN-0031]
 related_tasks: []
 related_issues: []
-related_bugs: [BUG-0183]
+related_bugs: [BUG-0183, BUG-0184, BUG-0185]
 execution: serial
 branch: task/TASK-0482-computer-use
 worktree:
@@ -113,6 +113,12 @@ updated: 2026-11-12
 - Given：标准开发启动已将随包后端准备到 `apps/desktop/resources/computer-use/`；When：用户在开发态开启电脑操作；Then：开发主进程应从 `process.cwd()/resources/computer-use` 找到后端并刷新窗口列表。
 - 修复范围：仅调整开发态后端资源根路径，并覆盖开发态和打包态路径选择；保留打包态 `process.resourcesPath/computer-use` 路径及资源完整性校验。不调整 UI、随包资源合同或启用授权流程。
 - 验证：路径选择回归先红后绿（2/2），相关电脑操作测试 31/31，`check:quick` 和 `bun run check` 通过；未运行真实 Desktop，等待用户重启 dev 态验收。
+
+## 验收反馈：2026-11-12 黑盒审计指控 1/3
+
+- 来源：用户四项缺陷审计（指控 1 观察面不一致 → [BUG-0184](../bugs/BUG-0184-computer-use-observation-surface.md)，已于 6d5d10347 修复；指控 3 失败即 paused 死锁 → [BUG-0185](../bugs/BUG-0185-computer-use-failure-pause-deadlock.md)，本次修复）。指控 2/4 属实待用户定夺，不在本轮。
+- 指控 3 修复范围：仅 `controller.ts` execute 的失败落相位——结构化失败与确认停止回执的异常回 `ready`（issue 保留错误码、成功清除），control 撤销时交由暂停/停止流程落终态；人工 pause 仍拦 observe；`stop_failed` 失败关闭路径不变。
+- 验证：新增 3 例复现测试在旧实现失败、修复后 computer-use 9 文件 47/47 通过，desktop 增量类型检查通过，`check:quick` 仅剩存量 WAIVER-0011/0012（new=0）；未操作真实桌面，待用户实机验收「失败后 AI 自行重新观察恢复」。
 
 ## 2026-11-11 用户决策：全局桌面操作
 

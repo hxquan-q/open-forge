@@ -81,6 +81,7 @@ describe("computer use user workflow", () => {
 		expect(actions).toEqual(["observe", "press", "type", "press", "observe", "type"]);
 		await f.service.control({ action: "pause" });
 		expect((await f.execute({ action: "press", keys: "enter" })).isError).toBe(true);
+		expect((await f.execute({ action: "observe" })).isError).toBe(true);
 		await f.service.control({ action: "resume" });
 		expect((await f.execute({ action: "press", keys: "enter" })).isError).not.toBe(true);
 		await f.service.control({ action: "stop" });
@@ -127,6 +128,54 @@ describe("computer use user workflow", () => {
 		await f.execute({ action: "click", revision: "screen-1", x: 12, y: 24 });
 		expect(f.yields).toHaveBeenCalledTimes(2);
 		expect(f.excludes).toHaveBeenCalledOnce();
+	});
+
+	it("an action failure keeps the session operable so the model can recover by observing", async () => {
+		const f = fixture();
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant();
+		await f.execute({ action: "observe" });
+		for (const code of ["stale_reference", "invalid_input", "backend_failed"] as const) {
+			vi.mocked(f.backend.invoke).mockResolvedValueOnce({ ok: false, code });
+			expect((await f.execute({ action: "click", revision: "outdated", x: 1, y: 1 })).isError).toBe(true);
+			expect((await f.service.state()).phase).toBe("ready");
+			expect((await f.service.state()).issue).toBe(code);
+			expect((await f.execute({ action: "observe" })).isError).not.toBe(true);
+			expect((await f.service.state()).issue).toBeUndefined();
+		}
+	});
+
+	it("a transport failure with a confirmed stop receipt still lets the model continue", async () => {
+		const f = fixture();
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant();
+		await f.execute({ action: "observe" });
+		vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error("protocol"));
+		expect((await f.execute({ action: "press", keys: "enter" })).isError).toBe(true);
+		expect((await f.service.state()).phase).toBe("ready");
+		expect((await f.execute({ action: "observe" })).isError).not.toBe(true);
+	});
+
+	it("an agent-side cancellation returns the session to ready without a human resume", async () => {
+		const f = fixture();
+		await f.service.control({ action: "enable", enabled: true });
+		await f.grant();
+		let started!: () => void;
+		const entered = new Promise<void>((resolve) => {
+			started = resolve;
+		});
+		vi.mocked(f.backend.invoke).mockImplementationOnce(async (_command, signal) => {
+			started();
+			await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+			throw new DOMException("cancelled", "AbortError");
+		});
+		const agent = new AbortController();
+		const operation = f.execute({ action: "observe" }, "session-1", agent.signal);
+		await entered;
+		agent.abort();
+		expect((await operation).isError).toBe(true);
+		expect((await f.service.state()).phase).toBe("ready");
+		expect((await f.execute({ action: "observe" })).isError).not.toBe(true);
 	});
 
 	it("waits for actual cancellation acknowledgement before stopping and restoring", async () => {
