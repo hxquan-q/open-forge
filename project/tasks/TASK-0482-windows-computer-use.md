@@ -11,7 +11,7 @@ related_requirement: [REQ-0033]
 related_plan: [PLAN-0031]
 related_tasks: []
 related_issues: []
-related_bugs: [BUG-0183, BUG-0184, BUG-0185]
+related_bugs: [BUG-0183, BUG-0184, BUG-0185, BUG-0186]
 execution: serial
 branch: task/TASK-0482-computer-use
 worktree:
@@ -132,3 +132,23 @@ updated: 2026-11-12
 - 未运行：全量/大规模测试、`test:impact`、完整 `bun run check`、真实 Provider/Desktop；由用户按本次内存约定手动完成。`check:quick` 已运行，Biome 通过，但 guard 被存量过期 WAIVER-0011/0012 阻断。
 - 执行：单条串行任务；不运行真实模型、真实桌面或 `verify:ui:*`。
 - 续接：2026-11-12 用户明确授权本次全局桌面改造；全量/大规模测试依用户要求由用户手动执行。
+
+## 验收反馈：BUG-0186 前台窗口与 IME 状态反馈（2026-11-12）
+
+- 目标：修复模型动作空转的第一片；observe 文本与每次成功 click/press/type/scroll 回执均附带采样时的前台窗口标题、进程 exe 与前台线程默认 IME 的 open/closed/unknown 状态，不声称采样证明历史按键的实际接收者。
+- 执行：Owner desktop，**串行**，直接续接 `task/TASK-0482-computer-use`，不切分支或建 Worktree；输入为现有结构化动作，输出只增加既有 `text` 内容，不修改 TS Schema。已有 3 个未跟踪文件不属于本次交付，保留不暂存。
+- 实现范围：`apps/desktop/native/computer-use/{executor.py,windows.py,test_*.py,README.md}`；`resources/computer-use/` 只经 `apps/desktop/scripts/prepare-computer-use.mjs` 同步。配套 BUG-0186、Task/索引和 v0.1.5 发布碎片。
+- 方案：直接在现有 Windows 适配层增加只读采样、Executor 共用紧凑格式；仅提取身份逻辑中可复用的标题/映像查询，不调用会写 nonce 的 `identity()`，不引入额外后端或大规模重构。跨进程默认 IME 以 imm32 + 有界消息查询；无前台、权限拒绝、IME 不可用/超时或采样期间前台变化时如实标 unknown。
+- Given/When/Then：中文 IME 开启时 observe→press→click/type→再 observe，Then 每步文本可读到当前前台与 IME，且前台变化后不复用旧值；无前台或读取受限也返回明确 unknown，不把已完成的输入改判失败。
+- 保留合同/不做项：不激活窗口、不更改 IME、不把 press 改 Unicode、不动 display yield/exclude、controller、截图版本/分辨率、UIA/定位；保留取消、held-input 释放与旧隐藏窗口恢复，保护 6d5d10347 / a53adc41c 已有修复。
+- 验证计划：先补旧实现会失败的 Executor 反馈测试，再以 ctypes 替身覆盖 Win32/IME（含 64 位句柄与超时），用真实 worker 协议覆盖连续 observe/press/type/observe；定向 Python 测试→prepare 脚本同步→限定路径 check:quick。若未动 TS 合同，不为形式跑 TS 测试/类型检查；完整 check、全量测试不主动运行，完整 check 须先获用户同意。
+- 验收边界：只证明状态反馈合同，不证明模型必然改道；真实 Desktop/Provider 不用于本次测试，模型停止空转待用户黑盒复测。完成后回到 verifying，保留未验证项。
+
+### 本片交付证据
+
+- 已实现：前台只读查询 + 默认 IME open/closed/unknown，共用紧凑模型文本，Win32 句柄与消息结果使用指针宽度；IME 消息等待限 100 ms，查询不可用不覆写动作成功语义，查询后再次检查取消。未改 TS 合同、任何 UI 文案或输入/显示/controller 行为。
+- TDD：Executor 旧回执 9 个子场景断言失败→绿；Windows 旧适配层 1 失败/11 子场景错误→绿；采样期间取消补 2 个红灯→绿。最终随包 Python 定向发现 **31/31**，`bun run --cwd apps/desktop test:computer-use-native` **31/31**，包括协议连续 observe→press P→Win+R→type→observe、错误边界、输入释放、旧窗口恢复。
+- 资源与发布：prepare 脚本同步并校验 **334** 文件；再核验 bundle 与 native/worker 字节一致。v0.1.5 的 BUG-0186 发布碎片格式通过 `fragmentProblems`；0.1.4 manifest/已发布说明未改动，未产生 v0.1.5 汇编正文。
+- 质量：限定 11 文件 `check:quick` 实跑 **exit 1**，仅存量过期 WAIVER-0011/0012，其他守卫通过且 ratchet `new=0`；Biome 对 Python/Markdown 匹配 0 文件，不报告 Python lint 通过。技术评审为本会话自审，不声称独立评审或完整门禁全绿。
+- 未跑：未动 TS 合同，因此不触发 TS 定向/增量类型检查；完整 check 需用户先同意，未运行；未跑全量/大规模测试、UI 验证、真实桌面或真实模型。新反馈仅是采样时前台与默认 IME open 状态，不证明历史路由、控件焦点、输入语言或预编辑内容。
+- 状态：本片实现与定向验证完成，BUG-0186 / TASK-0482 保持 **verifying**、integration pending，待用户黑盒确认模型能从回执识别异常并改道；不切分支、不集成 main、不远程操作。既有 3 个未跟踪文件原样保留，不纳入本片提交。

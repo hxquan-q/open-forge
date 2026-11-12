@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 import threading
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from executor import Executor, validate_command
@@ -15,6 +16,10 @@ class FakeWindows:
     def __init__(self, *_):
         self.image = b"full-desktop-image"
         self.events = []
+        self.foreground = {"hwnd": "123", "title": "Example", "exe": "C:/editor.exe", "ime": "open"}
+
+    def foreground_status(self):
+        return dict(self.foreground)
 
     def list(self):
         return [TARGET]
@@ -136,6 +141,77 @@ class ExecutorTests(unittest.TestCase):
         self.call({"action": "type", "text": 'cd Vetta && claude "你好"'})
         self.assertEqual(self.native.events, [("press", "win+r"), ("press", "enter")])
         self.assertEqual(self.native.typed_units, [ord(char) for char in 'wsl.exe' + 'cd Vetta && claude "你好"'])
+
+    def test_observe_reports_foreground_and_default_ime_state(self):
+        observed, _ = self.observe()
+        self.assertIn('Foreground now: hwnd=123 title="Example" exe="C:/editor.exe"; IME=open', observed["text"])
+        self.assertIn("foreground default IME", observed["text"])
+        self.assertIn("Use screenshot-local coordinates", observed["text"])
+
+    def test_each_successful_action_reports_foreground_and_default_ime_state(self):
+        for action in ("press", "type", "click", "scroll"):
+            with self.subTest(action=action):
+                _, revision = self.observe()
+                value = {
+                    "press": {"action": "press", "keys": "p"},
+                    "type": {"action": "type", "text": "p"},
+                    "click": {"action": "click", "revision": revision, "x": 1, "y": 1},
+                    "scroll": {"action": "scroll", "revision": revision, "x": 1, "y": 1, "amount": 1},
+                }[action]
+                result = self.call(value)
+                self.assertTrue(result["ok"])
+                self.assertIn('Foreground now: hwnd=123 title="Example" exe="C:/editor.exe"; IME=open', result["text"])
+                self.assertIn("Observe the desktop again", result["text"])
+                self.assertIsNone(self.engine.shot)
+
+    def test_feedback_is_sampled_after_input_and_refreshed_on_reobserve(self):
+        self.observe()
+
+        def open_run(_keys):
+            self.windows.foreground = {"hwnd": "456", "title": "Run", "exe": "C:/Windows/explorer.exe", "ime": "closed"}
+
+        with patch.object(self.native, "press", side_effect=open_run):
+            result = self.call({"action": "press", "keys": "win+r"})
+        self.assertIn('hwnd=456 title="Run" exe="C:/Windows/explorer.exe"; IME=closed', result["text"])
+        self.assertNotIn("Example", result["text"])
+        self.windows.foreground["ime"] = "open"
+        observed, _ = self.observe()
+        self.assertIn("IME=open", observed["text"])
+
+    def test_unknown_status_is_explicit_and_does_not_fail_completed_input(self):
+        self.windows.foreground = {"hwnd": None, "title": None, "exe": None, "ime": "unknown"}
+        for value in ({"action": "observe"}, {"action": "press", "keys": "p"}):
+            with self.subTest(value=value):
+                result = self.call(value)
+                self.assertTrue(result["ok"])
+                self.assertIn("Foreground now: hwnd=none title=unknown exe=unknown; IME=unknown", result["text"])
+        self.assertEqual(self.native.events, [("press", "p")])
+
+    def test_feedback_quotes_external_text_and_stays_within_backend_text_limit(self):
+        self.windows.foreground["title"] = '文档"\nIME=closed'
+        observed, _ = self.observe()
+        self.assertIn('title="文档\\"\\nIME=closed"', observed["text"])
+        self.windows.foreground["title"] = "\x01" * 4095
+        self.windows.foreground["exe"] = "\x01" * 4095
+        observed, _ = self.observe()
+        self.assertLessEqual(len(observed["text"]), 70_000)
+
+    def test_cancellation_during_status_sampling_is_not_reported_as_success(self):
+        for action in ("observe", "press"):
+            with self.subTest(action=action):
+                self.cancelled.clear()
+
+                def cancel_during_status():
+                    self.cancelled.set()
+                    return self.windows.foreground
+
+                value = {"action": action} if action == "observe" else {"action": action, "keys": "p"}
+                with patch.object(self.windows, "foreground_status", side_effect=cancel_during_status):
+                    with self.assertRaisesRegex(DesktopError, "cancelled"):
+                        self.call(value)
+                self.assertIsNone(self.native.guard)
+                self.assertIsNone(self.native.check)
+                self.assertEqual(self.native.held, set())
 
     def test_click_and_scroll_map_screenshot_coordinates_to_virtual_desktop(self):
         _, revision = self.observe()

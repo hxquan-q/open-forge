@@ -1,5 +1,6 @@
 # Copyright The Open Forge contributors.
 import base64
+import json
 import time
 import uuid
 from windows import DesktopError
@@ -96,7 +97,9 @@ class Executor:
             self.act(value, cancelled)
             self.check_cancelled(cancelled)
             self.shot = None
-            return {"ok": True, "text": "Action completed. Observe the desktop again before the next action."}
+            text = f"Action completed. {self.foreground_text()} Observe the desktop again before the next action."
+            self.check_cancelled(cancelled)
+            return {"ok": True, "text": text}
         finally:
             self.inputs.guard = None
             self.inputs.check = None
@@ -107,6 +110,16 @@ class Executor:
         if cancelled.is_set():
             raise DesktopError("cancelled")
 
+    def foreground_text(self):
+        status = self.windows.foreground_status()
+        # Quote OS-owned strings so titles cannot forge additional status lines.
+        title = json.dumps(status["title"], ensure_ascii=False) if status["title"] is not None else "unknown"
+        exe = json.dumps(status["exe"], ensure_ascii=False) if status["exe"] is not None else "unknown"
+        return (
+            f"Foreground now: hwnd={status['hwnd'] or 'none'} title={title} exe={exe}; "
+            f"IME={status['ime']} (foreground default IME)."
+        )
+
     def observe(self, cancelled):
         self.check_cancelled(cancelled)
         image, bounds, size = self.windows.desktop_screenshot()
@@ -115,8 +128,10 @@ class Executor:
         self.shot = {"revision": revision, "bounds": bounds, "size": size, "time": time.monotonic()}
         text = (
             f"Full desktop screenshot; revision={revision}; size={size[0]}x{size[1]}; "
-            f"virtual desktop origin=({bounds[0]},{bounds[1]}). Use screenshot-local coordinates for mouse actions."
+            f"virtual desktop origin=({bounds[0]},{bounds[1]}). Use screenshot-local coordinates for mouse actions. "
+            f"{self.foreground_text()}"
         )
+        self.check_cancelled(cancelled)
         return {"ok": True, "text": text, "image": {"data": base64.b64encode(image).decode("ascii"), "mimeType": "image/png"}}
 
     def map_point(self, shot, x, y):
