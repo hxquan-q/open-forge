@@ -101,6 +101,30 @@
 		"database-analysis": {
 			"name": "Database questions & analysis",
 			"description": "Ask questions about connected databases and analyze metrics, trends, breakdowns, and period comparisons. Read-only by default, with definitions and query evidence."
+		},
+		"ap-router": {
+			"name": "Adaptive pipeline router",
+			"description": "At the start of any build task, grade its weight, print a one-line workflow plan, and decide whether each stage runs in this session or is delegated to a subagent."
+		},
+		"ap-prototype": {
+			"name": "Prototype & requirements",
+			"description": "Turn an idea into a single-file interactive HTML prototype plus a one-page requirements sheet (R# items, F# field lists, A# acceptance) so the direction is confirmed before any code."
+		},
+		"ap-design": {
+			"name": "Design notes",
+			"description": "Turn confirmed requirements into a one-page design.md with a file-level change list, architecture decisions, and risks; no business code in this stage."
+		},
+		"ap-dev": {
+			"name": "Development execution",
+			"description": "Execute coding with the change list first, incrementally and verifiably in dependency order, with self-tests, call-chain review, and a structured report."
+		},
+		"ap-test": {
+			"name": "Pipeline testing",
+			"description": "Verify basic functionality within a minutes-level budget: project health check, targeted executable cases, and a user-perspective checklist; writes test-report.md."
+		},
+		"ap-contract": {
+			"name": "Subagent contract template",
+			"description": "Assemble the spawn_agent task contract aligned with its actual slots before delegating a pipeline stage to a general subagent; the contract is the subagent's entire input."
 		}
 	}
 }
