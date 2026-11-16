@@ -1,7 +1,7 @@
 ---
 id: TASK-0486
 type: task
-status: in_progress
+status: verifying
 priority: P1
 owner: desktop
 requirement: REQ-0034
@@ -48,7 +48,7 @@ updated: 2026-11-16
 - 做 / 不做：做内核+UI+合同全套与测试；不做跨会话/agent-bus、不动 ap-* 技能正文、不迁移存量预设标记、不做件4 标签、头像不进子代理快照（载荷考量，记 roadmap）。串行执行，无并行冲突。
 - Given / When / Then：见 REQ-0034。
 - 保留：未标记资产零行为变化；Team 会话链路不动；spawn 契约 v1 槽位不变；恢复降级语义不变；manifest fail-closed + PLUGIN_API_VERSION 推版。
-- 验证：件1 合同测试（动态注册/spawn/守卫）、件2 状态转换测试（排队/不重复起实例）、件3 交互测试+i18n 零硬编码；`bun run test:pkg`/`run-vitest.mjs`；改动文件 check:quick → test:impact → 收尾完整 `bun run check`。
+- 验证：件1 合同测试（动态注册/spawn/守卫）、件2 状态转换测试（排队/不重复起实例）、件3 交互测试+i18n 零硬编码；统一走 `bun run test:pkg`/`run-vitest.mjs` 定向运行；改动文件 check:quick。**2026-11-16 用户指示：`test:impact`、全量测试与完整 `bun run check` 属单独行为，由用户自行发起，不在本任务流程内跑**（收尾在交付说明列明未运行项）。
 - 人工验收：用户手动 `bun run dev` 实机验证（选 worker agent/团队→委派行为、常驻排队、有主控团队不变）。
 
 ## 实施切片
@@ -61,4 +61,30 @@ updated: 2026-11-16
 
 ## 交付
 
-（完成后回填：实际修改、验证命令与结果、未运行项、发布说明、风险。）
+实际修改（两提交，`task/TASK-0486-delegation-mechanism`）：
+
+- `30a3dadb0` 件2：`packages/agent-team` lifecycle 合同与校验；store 创建/更新；`plugin-agent-presets`/`-reconcile` 铺标记；plugin-sdk manifest schema + 合同测试 + CHANGELOG + 版本 0.3.15；`PLUGIN_API_VERSION` 2.13.0；`docs/plugin/manifest.md`；Agent Center 编辑器三布局「会话方式」radio + i18n zh/en。
+- `b0b04534a` 件3+件1：`packages/coding-agent` 委任成员合同/校验/per-session 注册表/成员类型装配（leaf-worker 包裹+技能白名单+displayTitle）/spawn 常驻守卫；`packages/runtime-subagents` `displayTitle` 合同与快照回填；desktop 主进程 `session-agent-profile` 双态解析、`session-delegation`（成员解析+委派指引+团队绑定身份）、service/resolve-config 透传；渲染层 worker 团队路由（`delegationTeamId` 全链）、下拉「机组调度」徽标 i18n、`worker-target` 分类；发布说明碎片 `v0.1.5/delegation-mechanism.md`。
+- 件4 降级：未做 manifest 机器可读环节标签，v1 靠驾驶 LLM 读成员域描述（responsibility/description）匹配——委派指引已按此设计（roadmap 定稿允许）。
+
+实际运行验证（全部定向，2026-11-16）：
+
+- plugin-sdk manifest 17/17；presets 22/22 + reconcile 450 例包内；agent-team 包 109 例全绿。
+- 内核新测试 28 例：成员映射/注册表复制/边界校验 9、spawn 常驻守卫 4、displayTitle 3、装配级成员 spawn+守卫+不泄漏 10（subagent-session-assembly 扩展）。
+- desktop：绑定解析 11/11（persona/worker/团队三态）、路由与分类 6/6、编辑器交互 17/17；既有回归（选择器/发送链/会话服务/装配/准入观测）全绿。
+- 改动文件 check:quick 多轮通过（设计守卫 D03 曾拦原生 button，改语义 radio 后消）。
+
+未运行及原因：
+
+- `bun run test:impact`、全量测试与完整 `bun run check`：按用户 2026-11-16 指示属单独行为，由用户自行发起。守卫链已知存量阻断（与本任务无关，分支自带）：WAIVER-0011/0012 过期；BUG-0187 五文件缺 Modified-by 头（team-sidebar-conversation-projection 等）。
+- UI 实机验证（`bun run dev`）：留给用户；验证点=选 worker agent/无主控团队→默认会话驾驶+按域委派、常驻成员排队不重复起实例、有主控团队行为不变。
+
+发布说明：`.github/release-notes/fragments/v0.1.5/delegation-mechanism.md`（新增/改进/其他三节）。
+
+已知风险与遗留：
+
+- 委派靠驾驶 LLM 执行指引（域匹配/排队纪律），常驻守卫只拦重复 spawn；漏委派属模型行为，实机观察。
+- 成员头像不进子代理快照（data URL 会随高频快照推送放大载荷）——「UI 顶栏呈现成员名」由 title 满足，头像呈现留 P2.x。
+- MCP 面按继承（成员档案 mcpServers 勾选暂不收窄子代理 MCP 面）；写域为契约纪律（constraints 由驾驶 LLM 填），无机器围栏——与 P1 取舍一致。
+- 存量预设（allstar/eform）未打标记（内容决策，另行任务）；打标后其单选行为会切到机组语义。
+
