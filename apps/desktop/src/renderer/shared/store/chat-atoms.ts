@@ -515,6 +515,11 @@ export interface OpenSessionOptions {
 	 * 打开既有会话不必传，主进程从会话目录旁挂的绑定记录读回。
 	 */
 	agentProfileId?: string;
+	/**
+	 * 新建会话时绑定的无主控团队委任身份（REQ-0034）：主进程解析成员集与委派指引，
+	 * 会话保持默认驾驶。与 agentProfileId 互斥。
+	 */
+	delegationTeamId?: string;
 	/** Known JSONL size; used to offer tail-only history recovery for large sessions. */
 	fileSizeBytes?: number;
 	/** Skip prompting when the caller already chose a history load mode. */

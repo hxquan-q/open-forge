@@ -79,6 +79,11 @@ export interface SubagentTypeDefinition<TProfile = unknown> {
 	readonly label: string;
 	readonly description: string;
 	readonly profile: TProfile;
+	/**
+	 * 快照展示名的缺省值（REQ-0034）：声明后 spawn 未显式携带 title 时，
+	 * 快照以它作为 title（成员子代理呈成员名）。缺省不改变现有展示行为。
+	 */
+	readonly displayTitle?: string;
 }
 
 export interface SubagentTypeRegistryLike<TProfile = unknown> {

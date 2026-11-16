@@ -1,7 +1,10 @@
 // Modified by The Open Forge contributors.
 import { resolve } from "node:path";
 import { buildDesktopCliGuidance } from "@vetta/coding-agent/cli-guidance";
-import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
+import {
+	type CodingAgentDelegatedMember,
+	createCodingAgentRuntimeSessionSelection,
+} from "@vetta/coding-agent/composition";
 import type { AgentConfigurationSelection, ConversationScenario } from "@vetta/coding-agent/profile";
 import {
 	appliesAgentProfileDefaultTools,
@@ -43,6 +46,16 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	 * 与 systemPromptVolatileAddon 后再进来，渲染层无从自述能力。
 	 */
 	readonly agentProfileId?: string;
+	/**
+	 * 无主控团队的委任身份（REQ-0034，新建时由渲染层传入）：主进程解析成
+	 * delegatedMembers + 委派指引；与 agentProfileId 互斥使用。
+	 */
+	readonly delegationTeamId?: string;
+	/**
+	 * 委任成员定义（主进程解析产物）：声明式数据，随会话配置进入内核，
+	 * 内核据此动态注册 `member:<id>` 子代理类型。结构校验在内核边界完成。
+	 */
+	readonly delegatedMembers?: readonly CodingAgentDelegatedMember[];
 	/**
 	 * 能力 Profile（ADR-0128）：新建时由渲染层按当前 WorkspaceMode 派生传入，
 	 * 固化本会话的工具/Memory 默认；显式 agentConfiguration 选择优先于默认。
@@ -257,6 +270,8 @@ export async function resolveDesktopSessionConfig(
 		scenario: _scenario,
 		agentMode: _agentMode,
 		agentProfileId: _agentProfileId,
+		delegationTeamId: _delegationTeamId,
+		delegatedMembers: _delegatedMembers,
 		capabilityProfile: _capabilityProfile,
 		appendSystemPrompt: _appendSystemPrompt,
 		systemPromptCachePrefixAddon: _systemPromptCachePrefixAddon,
@@ -299,6 +314,9 @@ export async function resolveDesktopSessionConfig(
 					sessionExtensionFunctions: config?.sessionExtensionFunctions,
 					bindPinnedModelContext: config?.bindPinnedModelContext,
 					promptCacheKey: config?.promptCacheKey,
+					...(config?.delegatedMembers && config.delegatedMembers.length > 0
+						? { delegatedMembers: config.delegatedMembers }
+						: {}),
 					...(config?.memoryPolicy ? { memoryPolicy: config.memoryPolicy } : {}),
 				},
 				config?.agent,

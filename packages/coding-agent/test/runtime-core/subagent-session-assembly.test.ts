@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { win32 } from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { Api, Message, Model } from "@vetta/ai";
@@ -420,6 +421,81 @@ describe("Coding Agent Subagent session assembly", () => {
 			expect.any(AbortSignal),
 		);
 
+		await runtime.dispose();
+	});
+
+	it("registers delegated crew members per session without leaking into a shared base registry", async () => {
+		const baseRegistry = new SubagentTypeRegistry<CodingAgentSubagentProfile>();
+		const compositionRequests: CodingAgentSubagentChildCompositionRequest[] = [];
+		const childOptions: unknown[] = [];
+		const runtime = createCodingAgentSubagentSessionAssembly({
+			...baseOptions(),
+			typeRegistry: baseRegistry,
+			delegatedMembers: [
+				{
+					id: "agent-worker",
+					name: "Eform Developer",
+					description: "CustomDev implementation",
+					systemPrompt: "You are the eform developer.",
+					lifecycle: "resident",
+					skillNames: ["eform-implement"],
+				},
+			],
+			createChildComposition: async (request) => {
+				compositionRequests.push(request);
+				return {
+					createSession: async (options) => {
+						childOptions.push(options);
+						return childSession(options.sessionId, []);
+					},
+					resumeSession: async (options) => childSession(options.sessionId, []),
+					appendSessionContext() {},
+					async deliverSessionContext() {},
+					async dispose() {},
+				};
+			},
+		});
+		if (!runtime) throw new Error("Expected enabled Subagent runtime");
+		const spawnTool = runtime.readTools().find(({ name }) => name === "spawn_agent");
+		if (!spawnTool) throw new Error("Expected spawn_agent tool");
+		const input = {
+			description: "Implement the field",
+			task_name: "m_agent_worker",
+			message: "Implement the custom field.",
+			agent_type: "member:agent-worker",
+		};
+		const signal = new AbortController().signal;
+
+		const spawned = await spawnTool.execute({
+			sessionId: "parent",
+			turnId: "turn-1",
+			toolCallId: "spawn-1",
+			signal,
+			input,
+		});
+		// 快照携带成员名（displayTitle）：UI 顶栏/卡片呈现成员名。
+		expect(spawned.details).toMatchObject({ agentType: "member:agent-worker", title: "Eform Developer" });
+		await vi.waitFor(() => expect(runtime.list()[0]?.status).toBe("completed"));
+
+		// 成员子代理拿到 leaf-worker 包裹的 persona 与技能白名单。
+		expect(childOptions[0]).toMatchObject({
+			systemPromptAddon: expect.stringContaining("You are the eform developer."),
+		});
+		expect(compositionRequests[0]).toMatchObject({ skillPolicy: { mode: "allow", names: ["eform-implement"] } });
+
+		// 常驻守卫经会话注册表生效：重复 spawn 被拒并引导 followup_task。
+		await expect(
+			spawnTool.execute({
+				sessionId: "parent",
+				turnId: "turn-2",
+				toolCallId: "spawn-2",
+				signal,
+				input: { ...input, task_name: "another_task" },
+			}),
+		).rejects.toThrow(/followup_task\(target="m_agent_worker"/);
+
+		// 共享基础注册表未被会话成员污染。
+		expect(baseRegistry.ids()).not.toContain("member:agent-worker");
 		await runtime.dispose();
 	});
 

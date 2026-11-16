@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +9,7 @@ import {
 	recordSessionAgentBinding,
 	resolveAgentBindingStorePath,
 } from "./session-agent-binding-store.js";
-import { resolveSessionAgentProfile } from "./session-agent-profile.js";
+import { resolveSessionAgentProfile, resolveSessionTeamDelegation } from "./session-agent-profile.js";
 
 const temporaryRoots: string[] = [];
 
@@ -93,9 +94,12 @@ describe("session agent profile resolution", () => {
 			agentProfileId: "agent-1",
 			readDocument: async () => createDocument([createProfile()]),
 		});
-		expect(resolved?.agentProfileId).toBe("agent-1");
-		expect(resolved?.systemPromptVolatileAddon).toBe("You review code.");
-		expect(resolved?.agentConfiguration).toEqual({
+		// 未标记 lifecycle = 主控/接管型（现状行为）。
+		expect(resolved?.kind).toBe("persona");
+		if (resolved?.kind !== "persona") return;
+		expect(resolved.agentProfileId).toBe("agent-1");
+		expect(resolved.systemPromptVolatileAddon).toBe("You review code.");
+		expect(resolved.agentConfiguration).toEqual({
 			template: null,
 			overrides: { skills: ["review"], mcpServers: ["docs"], plugins: [] },
 		});
@@ -109,7 +113,8 @@ describe("session agent profile resolution", () => {
 					createProfile({ abilities: { selectionMode: "all", skills: [], mcpServers: [], plugins: [] } }),
 				]),
 		});
-		expect(resolved?.agentConfiguration.overrides).toEqual({});
+		if (resolved?.kind !== "persona") throw new Error("expected persona resolution");
+		expect(resolved.agentConfiguration.overrides).toEqual({});
 	});
 
 	it("resolves nothing when the profile is gone", async () => {
@@ -118,5 +123,121 @@ describe("session agent profile resolution", () => {
 			readDocument: async () => createDocument([createProfile()]),
 		});
 		expect(resolved).toBeUndefined();
+	});
+
+	it("turns a lifecycle-marked profile into a delegation bundle instead of a persona takeover", async () => {
+		const resolved = await resolveSessionAgentProfile({
+			agentProfileId: "agent-1",
+			readDocument: async () => createDocument([createProfile({ lifecycle: "resident" })]),
+		});
+		expect(resolved?.kind).toBe("delegation");
+		if (resolved?.kind !== "delegation") return;
+		// 会话保持默认驾驶：不折算能力白名单，人格不进系统提示词。
+		expect("agentConfiguration" in resolved).toBe(false);
+		expect(resolved.systemPromptVolatileAddon).not.toContain("You review code.");
+		expect(resolved.systemPromptVolatileAddon).toContain("Crew delegation");
+		expect(resolved.delegatedMembers).toEqual([
+			{
+				id: "agent-1",
+				name: "Reviewer",
+				description: "reviews code",
+				systemPrompt: "You review code.",
+				lifecycle: "resident",
+				skillNames: ["review"],
+			},
+		]);
+	});
+});
+
+describe("session team delegation resolution", () => {
+	function createTeamDocument(leaderLifecycle: "resident" | undefined, workerLifecycle: "oneshot" | undefined) {
+		const leader = createProfile({
+			id: "leader",
+			name: "Captain",
+			mentionHandle: "captain",
+			lifecycle: leaderLifecycle,
+		});
+		const worker = createProfile({
+			id: "worker",
+			name: "Wright",
+			mentionHandle: "wright",
+			lifecycle: workerLifecycle,
+		});
+		const unmarked = createProfile({ id: "unmarked", name: "Maestro", mentionHandle: "maestro" });
+		const document: AgentTeamDocument = {
+			schemaVersion: 1,
+			revision: 1,
+			agents: [leader, worker, unmarked],
+			teams: [
+				{
+					id: "team-1",
+					revision: 1,
+					name: "Crew",
+					description: "",
+					leaderMemberId: "member-leader",
+					members: [
+						{
+							id: "member-leader",
+							handle: "captain",
+							binding: { kind: "reference", agentProfileId: "leader" },
+							assignment: { responsibility: "Coordinates the crew" },
+						},
+						{
+							id: "member-worker",
+							handle: "wright",
+							binding: { kind: "reference", agentProfileId: "worker" },
+							assignment: { instructions: "Ship within the studio contract." },
+						},
+						{
+							id: "member-unmarked",
+							handle: "maestro",
+							binding: { kind: "reference", agentProfileId: "unmarked" },
+						},
+					],
+					orchestrationPolicyId: "leader-delegates-v1",
+					contextPolicyId: "public-results-v1",
+					createdAt: 0,
+					updatedAt: 0,
+				},
+			],
+		};
+		return { document, worker, unmarked };
+	}
+
+	it("staffs the session with worker members and keeps controller members out of leaf positions", async () => {
+		const { document, worker, unmarked } = createTeamDocument("resident", "oneshot");
+		const resolved = await resolveSessionTeamDelegation({ teamId: "team-1", readDocument: async () => document });
+		if (resolved?.kind !== "team-delegation") throw new Error("expected team delegation");
+		// 只有带标记的成员进叶子位；队长也是 worker，因此同样可委派。
+		expect(resolved.delegatedMembers.map((member) => member.id).sort()).toEqual(["leader", "worker"]);
+		const workerMember = resolved.delegatedMembers.find((member) => member.id === worker.id);
+		expect(workerMember?.lifecycle).toBe("oneshot");
+		expect(workerMember?.instructions).toBe("Ship within the studio contract.");
+		expect(workerMember?.skillNames).toEqual(["review"]);
+		// 指引包含成员域、resident 纪律与主控成员的"不可塞叶子位"声明。
+		expect(resolved.systemPromptVolatileAddon).toContain('agent_type: "member:worker"');
+		expect(resolved.systemPromptVolatileAddon).toContain("followup_task");
+		expect(resolved.systemPromptVolatileAddon).toContain("Controller-type members");
+		expect(resolved.systemPromptVolatileAddon).toContain(unmarked.name);
+	});
+
+	it("resolves nothing when the team is gone or has no delegatable members", async () => {
+		const { document } = createTeamDocument(undefined, undefined);
+		expect(
+			await resolveSessionTeamDelegation({ teamId: "missing", readDocument: async () => document }),
+		).toBeUndefined();
+		const controllerOnly: AgentTeamDocument = {
+			...document,
+			agents: document.agents.filter((profile) => profile.lifecycle === undefined || profile.id === "leader"),
+			teams: [
+				{
+					...document.teams[0]!,
+					members: [document.teams[0]!.members[0]!],
+				},
+			],
+		};
+		expect(
+			await resolveSessionTeamDelegation({ teamId: "team-1", readDocument: async () => controllerOnly }),
+		).toBeUndefined();
 	});
 });

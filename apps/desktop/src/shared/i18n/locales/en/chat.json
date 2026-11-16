@@ -1176,6 +1176,7 @@
 			"agentInvalid": "This agent is no longer available. Choose another one.",
 			"retry": "Retry",
 			"memberCount": "{{count}} members",
+			"crewBadge": "Crew dispatch",
 			"groupTeams": "Teams",
 			"groupAgents": "Agents",
 			"pick": "Switch agent",

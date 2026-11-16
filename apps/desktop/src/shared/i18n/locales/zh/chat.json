@@ -1176,6 +1176,7 @@
 			"agentInvalid": "这个智能体已不可用，请重新选择",
 			"retry": "重试",
 			"memberCount": "{{count}} 位成员",
+			"crewBadge": "机组调度",
 			"groupTeams": "团队",
 			"groupAgents": "智能体",
 			"pick": "切换智能体",

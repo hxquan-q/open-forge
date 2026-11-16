@@ -30,13 +30,18 @@ interface NewSessionSendOptions {
 	 * 技能 / MCP / 插件白名单，渲染层不经手任何能力字段。
 	 */
 	readonly agentProfileId?: string;
+	/**
+	 * 选中无主控团队时的委任身份（REQ-0034）：主进程解析成员集与委派指引，
+	 * 会话保持默认驾驶。与 agentProfileId 互斥。
+	 */
+	readonly delegationTeamId?: string;
 }
 
 export function useNewSessionSend(options: NewSessionSendOptions): {
 	readonly send: (overrideText?: string, context?: SendInteractionContext) => Promise<void>;
 } {
 	const sendingRef = useRef(false);
-	const { cwd, executionMode, prepareCwd, openSession, sendMessage, agentProfileId } = options;
+	const { cwd, executionMode, prepareCwd, openSession, sendMessage, agentProfileId, delegationTeamId } = options;
 
 	const send = useCallback(
 		async (overrideText?: string, context?: SendInteractionContext): Promise<void> => {
@@ -67,6 +72,7 @@ export function useNewSessionSend(options: NewSessionSendOptions): {
 				await openSession(targetCwd, undefined, executionMode, {
 					interactionId,
 					...(agentProfileId ? { agentProfileId } : {}),
+					...(delegationTeamId ? { delegationTeamId } : {}),
 					navigateBeforeCreate: true,
 					preserveMessagesBeforeCreate: true,
 					onCreateError: () => {
@@ -83,7 +89,7 @@ export function useNewSessionSend(options: NewSessionSendOptions): {
 				sendingRef.current = false;
 			}
 		},
-		[agentProfileId, cwd, executionMode, prepareCwd, openSession, sendMessage],
+		[agentProfileId, cwd, delegationTeamId, executionMode, prepareCwd, openSession, sendMessage],
 	);
 
 	return { send };

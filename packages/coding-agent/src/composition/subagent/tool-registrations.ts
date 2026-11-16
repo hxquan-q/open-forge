@@ -1,9 +1,11 @@
-import type { SubagentCoordinatorPort } from "@vetta/runtime-subagents";
+// Modified by The Open Forge contributors.
+import type { SubagentCoordinatorPort, SubagentTypeDefinition } from "@vetta/runtime-subagents";
 import type { CodingAgentWorkflowDispatcherPort } from "../../runtime-contracts/index.js";
 import {
 	CODING_AGENT_MODEL_TOOL_ORDER,
 	CODING_AGENT_SUBAGENT_MODEL_TOOL_ORDER_STEP,
 } from "../../tool-policy/model-tool-order.js";
+import type { CodingAgentSubagentProfile } from "../contracts/index.js";
 import {
 	createDispatchWorkflowsToolRegistration,
 	createFollowupTaskToolRegistration,
@@ -19,11 +21,12 @@ export function createCodingAgentSubagentRuntimeToolRegistrations(
 	getCoordinator: () => SubagentCoordinatorPort | undefined,
 	getWorkflowDispatcher: () => CodingAgentWorkflowDispatcherPort | undefined,
 	workflowTypeId = "workflow",
+	getType?: (agentType: string) => SubagentTypeDefinition<CodingAgentSubagentProfile> | undefined,
 ) {
 	const order = (index: number) =>
 		CODING_AGENT_MODEL_TOOL_ORDER.subagentStart + index * CODING_AGENT_SUBAGENT_MODEL_TOOL_ORDER_STEP;
 	return [
-		createSpawnAgentToolRegistration({ getCoordinator, modelOrder: order(0) }),
+		createSpawnAgentToolRegistration({ getCoordinator, getType, modelOrder: order(0) }),
 		createDispatchWorkflowsToolRegistration({ getWorkflowDispatcher, workflowTypeId, modelOrder: order(1) }),
 		createWaitAgentToolRegistration({ getCoordinator, workflowTypeId, modelOrder: order(2) }),
 		createListAgentsToolRegistration({ getCoordinator, modelOrder: order(3) }),

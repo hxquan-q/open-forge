@@ -420,6 +420,7 @@ export function useSessionOpener(): SessionOpenerController {
 						executionMode,
 						scenario,
 						...(options?.agentProfileId ? { agentProfileId: options.agentProfileId } : {}),
+						...(options?.delegationTeamId ? { delegationTeamId: options.delegationTeamId } : {}),
 						// 解释模式与能力 Profile 都从当前项目布局派生（ISSUE-0010 B）；仅新建会话下发。
 						// 恢复已有会话绝不能把「当前页头」的派生值带进 session.create：固化在创建时，
 						// 恢复值由主进程按会话记录回落，否则切过页头再重开就会把 coding 会话的

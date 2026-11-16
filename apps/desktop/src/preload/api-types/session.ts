@@ -82,6 +82,11 @@ export interface DesktopCodingAgentSessionConfig extends SessionConfig {
 	 * 恢复既有会话不必传，主进程从会话目录旁挂的绑定记录读回。
 	 */
 	readonly agentProfileId?: string;
+	/**
+	 * 无主控团队的委任身份（REQ-0034）：队长档案带生命周期标记的团队。
+	 * 主进程解析成员集与委派指引；与 agentProfileId 互斥。
+	 */
+	readonly delegationTeamId?: string;
 	/** 能力 Profile（ADR-0128）：新建时按当前 WorkspaceMode 派生；只设默认，主进程折算。 */
 	readonly capabilityProfile?: "work" | "coding";
 	readonly appendSystemPrompt?: string;

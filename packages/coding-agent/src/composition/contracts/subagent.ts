@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type { SessionConfig } from "@vetta/runtime-core";
 import type { McpRuntimeToolView } from "@vetta/runtime-mcp";
@@ -25,6 +26,11 @@ export interface CodingAgentSubagentProfile {
 	readonly workspacePolicy?: CodingAgentSubagentWorkspacePolicy;
 	readonly systemPromptAddon: string;
 	readonly createRuntimeTools?: (cwd: string) => readonly CodingAgentRuntimeToolRegistration[];
+	/**
+	 * 委任成员标记（REQ-0034）：resident 成员由 spawn 守卫拒绝重复起实例并引导
+	 * followup_task；缺省表示普通类型，不参与守卫。
+	 */
+	readonly delegation?: CodingAgentSubagentDelegationPolicy;
 	/** @deprecated Use toolPolicy. Kept while custom registries migrate. */
 	readonly activation?: CodingAgentToolActivation;
 	/** @deprecated Use mcpPolicy. Kept while custom registries migrate. */
@@ -35,6 +41,11 @@ export interface CodingAgentSubagentProfile {
 	readonly includeTodo?: boolean;
 	/** @deprecated Use mcpPolicy.denyNamePrefixes. */
 	readonly denyToolNamePrefixes?: readonly string[];
+}
+
+export interface CodingAgentSubagentDelegationPolicy {
+	/** resident：spawn 一次 durable 会话 + followup_task 排队；oneshot：每任务一次。 */
+	readonly lifecycle: "resident" | "oneshot";
 }
 
 export type CodingAgentSubagentToolPolicy =
