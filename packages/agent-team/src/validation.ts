@@ -59,6 +59,7 @@ const resourceSource = Type.Object(
 	{ additionalProperties: false },
 );
 const resourceMode = Type.Union([Type.Literal("work"), Type.Literal("coding")]);
+const profileLifecycle = Type.Union([Type.Literal("resident"), Type.Literal("oneshot")]);
 const profile = Type.Object(
 	{
 		id,
@@ -77,6 +78,7 @@ const profile = Type.Object(
 		copiedFrom: Type.Optional(id),
 		source: Type.Optional(resourceSource),
 		mode: Type.Optional(resourceMode),
+		lifecycle: Type.Optional(profileLifecycle),
 		createdAt: timestamp,
 		updatedAt: timestamp,
 	},
@@ -106,6 +108,7 @@ export const CreateAgentProfileInputSchema = Type.Object(
 		mentionHandle: id,
 		blueprintId: id,
 		abilities: Type.Optional(optionalAbilities),
+		lifecycle: Type.Optional(profileLifecycle),
 	},
 	{ additionalProperties: false },
 );
@@ -118,6 +121,7 @@ export const UpdateAgentProfileInputSchema = Type.Object(
 		mentionHandle: id,
 		systemPrompt: Type.Optional(text),
 		abilities,
+		lifecycle: Type.Optional(profileLifecycle),
 	},
 	{ additionalProperties: false },
 );

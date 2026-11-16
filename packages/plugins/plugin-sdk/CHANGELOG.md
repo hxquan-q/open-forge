@@ -5,6 +5,8 @@ All notable changes to `@vetta-org/plugin-sdk` are documented in this file.
 
 ## [Unreleased]
 
+- **清单新增 `agent.agents[].lifecycle`（`resident` / `oneshot`）——委任生命周期标记**：声明即表示该智能体是 worker 型，用户在新会话选择器选中它时不再由它的人格接管会话，而是由默认会话保持驾驶、任务落在其域内时按定义委派（`resident` 常驻：spawn 一次 durable 会话，后续任务 followup_task 顺序排队，绝不重复起实例；`oneshot` 一次性：每个任务起 one-shot 子代理）。**缺省不带标记 = 主控/接管型，行为与现状完全一致**；团队是否有主控由队长的 `lifecycle` 推导，成员各自的标记决定被委派时的生命周期。存量清单零迁移。使用者应声明 `pluginApiVersion: ^2.13.0`（清单校验 fail-closed，旧宿主会整份拒绝带该字段的清单）。
+
 - **Skill 展示策略可声明工作区模式**：`agent.skillPresentation.workspaceMode` 或按 Skill 覆盖的 `skills.<name>.workspaceMode` 只控制输入区 `/` 候选列表的显示；未标记默认两种模式都可见。它不限制 Skill 加载、LLM 调用或权限，使用此字段的插件应声明 `pluginApiVersion: ^2.12.0`。
 
 - 清单新增 `agent.agents[].mode` / `agent.teams[].mode`（`work` / `coding`）：声明档位归属后，该智能体或团队只出现在对应档的新会话选择器里；面向不懂开发的用户时，开发向的 agent 集合不再混进普通对话的候选列表。归属固定单向、两档对等：新会话选择器里未声明默认归「文档与研究」档，存量清单零迁移。新会话选择器和输入区 `@` 候选列表都只做用户层可见性过滤：`@` 中显式标记 `mode` 的成员按当前会话模式筛选，未标记的成员保留两档可见；手动输入、已选会话、深链与实际调用不受影响，不做调用时校验。使用者应声明 `pluginApiVersion: ^2.11.0`（清单校验 fail-closed，旧宿主会整份拒绝带该字段的清单）。

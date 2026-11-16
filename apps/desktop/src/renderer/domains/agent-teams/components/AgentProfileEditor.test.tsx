@@ -336,6 +336,67 @@ describe("AgentProfileEditor", () => {
 		);
 	});
 
+	it("saves the selected delegation lifecycle with the profile", async () => {
+		const user = userEvent.setup();
+		const onSave = vi.fn(async () => ({ updated: agent, impact }));
+		render(
+			<AgentProfileEditor
+				agent={agent}
+				capabilities={[]}
+				onPreview={vi.fn(async () => ({ ...impact, teamIds: [], teamNames: [] }))}
+				onSave={onSave}
+			/>,
+		);
+
+		await user.click(screen.getByRole("radio", { name: /profile.lifecycle.option.resident/ }));
+		await user.click(screen.getByRole("button", { name: "profile.save" }));
+		await waitFor(() =>
+			expect(onSave).toHaveBeenCalledWith(agent, expect.objectContaining({ lifecycle: "resident" })),
+		);
+	});
+
+	it("clears the lifecycle marker when takeover is re-selected", async () => {
+		const user = userEvent.setup();
+		const worker: AgentProfile = { ...agent, lifecycle: "oneshot" };
+		const onSave = vi.fn(async () => ({ updated: worker, impact }));
+		render(
+			<AgentProfileEditor
+				agent={worker}
+				capabilities={[]}
+				onPreview={vi.fn(async () => ({ ...impact, teamIds: [], teamNames: [] }))}
+				onSave={onSave}
+			/>,
+		);
+
+		expect(
+			(screen.getByRole("radio", { name: /profile.lifecycle.option.oneshot/ }) as HTMLInputElement).checked,
+		).toBe(true);
+		await user.click(screen.getByRole("radio", { name: /profile.lifecycle.option.takeover/ }));
+		await user.click(screen.getByRole("button", { name: "profile.save" }));
+		await waitFor(() =>
+			expect(onSave).toHaveBeenCalledWith(worker, expect.not.objectContaining({ lifecycle: expect.anything() })),
+		);
+	});
+
+	it("renders the lifecycle choices read-only for provider-owned profiles", () => {
+		render(
+			<AgentProfileEditor
+				agent={agent}
+				capabilities={[]}
+				readOnly
+				onPreview={vi.fn(async () => ({ ...impact, teamIds: [], teamNames: [] }))}
+				onSave={vi.fn(async () => ({ updated: agent, impact }))}
+			/>,
+		);
+
+		// 只读由 fieldset[disabled] 承载：真实表单控件随祖先禁用（jsdom 中自身 .disabled 仍为 false）。
+		const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+		expect(radios.length).toBe(3);
+		for (const radio of radios) {
+			expect(radio.closest("fieldset")?.disabled).toBe(true);
+		}
+	});
+
 	it("edits identity fields in the sheet layout and saves them", async () => {
 		const user = userEvent.setup();
 		const onSave = vi.fn(async () => ({ updated: agent, impact }));

@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0486` | `in_progress` | — | [自适应流水线 P2 委任机制](TASK-0486-delegation-mechanism.md)：REQ-0034；worker 标记→默认会话驾驶+按域委派（件1-4，件4降级）；本地 Task 分支 serial，不动 ap-* 技能正文与存量预设标记。 |
 | `TASK-0483` | `verifying` | — | [Code 会话热追踪开关](TASK-0483-session-hot-tracking-toggle.md)：默认开、runtimeId 内存态、生产消费同源；定向 52/52、impact 1328/1329（1 例 session-switch 存疑待分诊）；完整 check 按用户指示跳过；serial，本地 Task 分支，不动团队域与远程 Git。 |
 | `TASK-0482` | `verifying` | PLAN-0031 | [Windows 电脑操作](TASK-0482-windows-computer-use.md)：BUG-0186 已补回执/观察的前台窗口与 IME 只读反馈；先红后绿、原生 31/31、资源同步核验通过；`check:quick` 仅被过期 WAIVER-0011/0012 阻断。serial，完整 check 与黑盒验收待用户。 |
 | `TASK-0481` | `verifying` | PLAN-0027 | [已有会话增量模式更新](TASK-0481-session-event-mode.md)：BUG-0182；两轮先红后绿，9/9回归、相关流程27/27、最终impact 9/9+202/202、完整check通过，独立审查闭环；serial，本地task候选待集成/实机接受。 |
