@@ -180,7 +180,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0229` | `verifying` | — | [内置浏览器 detached view 上限 + LRU 驱逐](TASK-0229-browser-view-lru-eviction.md) |
 | `TASK-0228` | `verifying` | — | [team 成员 runtime 恢复按成员隔离失败：成功保留、失败留旧条目、自身半成品回收](TASK-0228-team-member-restore-isolation.md) |
 | `TASK-0227` | `verifying` | — | [recovery_required 的入坞恢复：存首因 + 下一次 admission 经 resumeSession 原地收敛](TASK-0227-session-recovery-admission.md) |
-| `TASK-0226` | `verifying` | — | [team 会话降级删除：coordination 文档读不出时仍清理索引、运行时与状态](TASK-0226-team-session-degraded-delete.md) |
+| `TASK-0226` | `in_progress` | — | [team 历史会话安全删除](TASK-0226-team-session-degraded-delete.md)：11-16 已实现配置/恢复独立删除及历史管理入口，真实存储/租约/并发回归通过；用户黑盒暂未遇问题，按新请求本地保存；完整check既有阻断仍在，serial、未集成。 |
 | `TASK-0225` | `verifying` | — | [内置浏览器拖拽穿透：Electron 无 per-view ignore-mouse，穿透期改由隐藏 view 让位](TASK-0225-browser-view-passthrough-target.md) |
 | `TASK-0224` | `verifying` | — | [dev 与打包默认品牌口径切换为外部分发（Allstr ai / 小爱ai）](TASK-0224-brand-profile-default-distribution.md) |
 | `TASK-0223` | `verifying` | — | [给流式停滞加专用重试上限：死 provider 连接不再烧满 30 分钟瞬态预算](TASK-0223-turn-terminal-stall-bound.md) |

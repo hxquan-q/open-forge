@@ -140,6 +140,11 @@ export class TeamSessionStateRepository {
 		return registerAgentTeamSessionOwnership(session, this.options.ownershipCatalog);
 	}
 
+	/** Serializes management without loading or restoring the historical Team. */
+	runManagement<T>(sessionId: string, operation: () => Promise<T>): Promise<T> {
+		return this.transactions.run(sessionId, operation);
+	}
+
 	coordinate<T>(
 		sessionId: string,
 		load: () => Promise<TeamSessionDocument>,

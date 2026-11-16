@@ -232,6 +232,7 @@ describe("AgentTeamSessionService streaming contract", () => {
 			register: async (next) => {
 				records.push(...next);
 			},
+			list: async () => records,
 			listByTeam: async (teamId) => records.filter((record) => record.owner.teamId === teamId),
 			getOwner: async () => undefined,
 			filterUserSessions: async (sessions) => [...sessions],
@@ -537,6 +538,7 @@ describe("AgentTeamSessionService streaming contract", () => {
 			register: async (records) => {
 				for (const record of records) ownershipRecords.set(record.sessionPath, record);
 			},
+			list: async () => [...ownershipRecords.values()],
 			listByTeam: async (teamId) =>
 				[...ownershipRecords.values()].filter((record) => record.owner.teamId === teamId),
 			getOwner: async (path) => ownershipRecords.get(path)?.owner,

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
@@ -31,6 +32,7 @@ interface ConversationOwnershipDocument {
 
 export interface ConversationOwnershipCatalogPort {
 	register(records: readonly ConversationOwnershipRecord[]): Promise<void>;
+	list(): Promise<readonly ConversationOwnershipRecord[]>;
 	removeByTeamSession?(teamId: string, teamSessionId: string): Promise<void>;
 	listByTeam(teamId: string): Promise<readonly ConversationOwnershipRecord[]>;
 	getOwner(sessionPath: string): Promise<ConversationOwner | undefined>;

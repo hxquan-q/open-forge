@@ -1,4 +1,5 @@
 // Modified by The Open Forge contributors.
+import { lstat } from "node:fs/promises";
 import {
 	type AgentTeamDocument,
 	type AgentTeamExtensionRegistry,
@@ -39,6 +40,7 @@ import { getDesktopCodingAgentFunctionSource } from "../agent-runtime/function-e
 import {
 	type ConversationOwnershipCatalogPort,
 	conversationOwnershipCatalog,
+	conversationOwnershipPathKey,
 } from "../conversations/conversation-ownership-catalog.js";
 import {
 	InteractiveSessionResidencyTracker,
@@ -118,6 +120,7 @@ export class AgentTeamSessionService {
 	private readonly autoTitleScheduledSessions = new Set<string>();
 	private readonly runningChangedListeners = new Set<TeamRunningChangedListener>();
 	private runtime: RuntimeHost | undefined;
+	private readonly deletingSessions = new Set<string>();
 	/** Known coordination paths let the bootstrap reader start restoration without blocking IPC. */
 	private readonly warmingSessions = new Map<string, Promise<unknown>>();
 	/** Per-member readiness lets the first addressed member proceed without waiting for siblings. */
@@ -434,6 +437,7 @@ export class AgentTeamSessionService {
 	}
 
 	async readSnapshot(id: string, coordinationSessionPath?: string): Promise<TeamSessionSnapshot> {
+		if (this.deletingSessions.has(id)) throw new Error("Team session is being deleted");
 		const cached = this.sessionState.get(id);
 		if (cached) {
 			this.teamResidency.touch(id);
@@ -451,7 +455,8 @@ export class AgentTeamSessionService {
 	}
 
 	private startSessionWarming(id: string, coordinationSessionPath: string): void {
-		if (this.sessionState.get(id) !== undefined || this.warmingSessions.has(id)) return;
+		if (this.deletingSessions.has(id) || this.sessionState.get(id) !== undefined || this.warmingSessions.has(id))
+			return;
 		const warming = this.read(id, coordinationSessionPath).catch((error: unknown) => {
 			log.error("failed to warm team session after bootstrap", { teamSessionId: id, error: describeError(error) });
 			throw error;
@@ -690,6 +695,7 @@ export class AgentTeamSessionService {
 		team: AgentTeamDocument["teams"][number],
 		document: AgentTeamDocument,
 	): Promise<void> {
+		if (this.deletingSessions.has(sessionId)) return;
 		const existing = this.warmingSessions.get(`runtime:${sessionId}`);
 		if (existing) {
 			await existing;
@@ -752,6 +758,7 @@ export class AgentTeamSessionService {
 		team: AgentTeamDocument["teams"][number],
 		document: AgentTeamDocument,
 	): Promise<void> {
+		if (this.deletingSessions.has(sessionId)) return Promise.reject(new Error("Team session is being deleted"));
 		const key = `runtime:${sessionId}:${member.id}`;
 		const existing = this.warmingMemberRuntimes.get(key);
 		if (existing) return existing;
@@ -812,6 +819,12 @@ export class AgentTeamSessionService {
 		}
 	}
 
+	async listHistoryTeamIds(): Promise<readonly string[]> {
+		if (!this.ownershipCatalog) return [];
+		await ensureLegacyAgentTeamOwnershipCatalog(this.repository, this.ownershipCatalog);
+		return [...new Set((await this.ownershipCatalog.list()).map((record) => record.owner.teamId))];
+	}
+
 	async listSessions(teamId: string): Promise<readonly TeamSessionListItem[]> {
 		if (!this.ownershipCatalog) return [];
 		await ensureLegacyAgentTeamOwnershipCatalog(this.repository, this.ownershipCatalog);
@@ -867,6 +880,7 @@ export class AgentTeamSessionService {
 	}
 
 	async read(id: string, coordinationSessionPath?: string): Promise<TeamSessionDocument> {
+		if (this.deletingSessions.has(id)) throw new Error("Team session is being deleted");
 		if (coordinationSessionPath) this.sessionState.rememberCoordinationPath(id, coordinationSessionPath);
 		return this.sessionState.coordinate(
 			id,
@@ -879,6 +893,7 @@ export class AgentTeamSessionService {
 	}
 
 	private async readInternal(id: string, coordinationSessionPath?: string): Promise<TeamSessionDocument> {
+		if (this.deletingSessions.has(id)) throw new Error("Team session is being deleted");
 		const cached = this.sessionState.get(id);
 		if (cached) {
 			this.teamResidency.touch(id);
@@ -1212,55 +1227,141 @@ export class AgentTeamSessionService {
 		reference: TeamSessionReference | { readonly id: string; readonly coordinationSessionPath?: string } | string,
 	): Promise<void> {
 		const sessionReference = teamSessionReferenceParts(reference);
-		let session: TeamSessionDocument | undefined;
-		let degraded = false;
-		try {
-			session = await this.read(sessionReference.id, sessionReference.coordinationSessionPath);
-		} catch (error) {
-			// coordination 文档损坏/丢失时 read 必败，旧实现到此为止——索引、运行时与
-			// 状态清理全部跳过，用户对着永远打不开的僵尸会话没有任何自助清除手段
-			// （BUG-0087）。降级为尽力清理：文档源退到内存快照与 legacy 索引，能枚举
-			// 多少删多少；索引三件套（repository / sessionState / residency）必达。
-			degraded = true;
-			log.warn("team session could not be loaded during delete; proceeding with degraded cleanup", {
-				teamSessionId: sessionReference.id,
-				error: describeError(error),
-			});
-			session =
-				this.sessionState.get(sessionReference.id) ??
-				(await this.repository.read(sessionReference.id).catch(() => undefined));
+		// Deletion is a management operation, not a request to restore the old Team.
+		if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(sessionReference.id)) {
+			throw new Error("Invalid Team session id");
 		}
-		await this.abort(sessionReference.id);
-		const runtimeIds = [
-			...(session?.coordinationRuntime ? [session.coordinationRuntime.sessionId] : []),
-			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionId),
-		];
-		const sessionPaths = [
-			...(session?.coordinationRuntime ? [session.coordinationRuntime.sessionPath] : []),
-			...Object.values(session?.memberRuntime ?? {}).map((runtime) => runtime.sessionPath),
-		];
-		for (const sessionPath of sessionPaths) {
+		if (this.deletingSessions.has(sessionReference.id)) throw new Error("Team session is being deleted");
+		this.deletingSessions.add(sessionReference.id);
+		try {
+			if (this.ownershipCatalog) await ensureLegacyAgentTeamOwnershipCatalog(this.repository, this.ownershipCatalog);
+			// Validate first, then stop outside the lane: stopTeam itself uses it.
+			await this.sessionState.runManagement(sessionReference.id, () =>
+				this.resolveSessionDeletion(sessionReference),
+			);
+			await this.abort(sessionReference.id);
+			await Promise.allSettled([
+				...[
+					this.warmingSessions.get(sessionReference.id),
+					this.warmingSessions.get(`runtime:${sessionReference.id}`),
+				].filter((pending): pending is Promise<unknown> => pending !== undefined),
+				...[...this.warmingMemberRuntimes]
+					.filter(([key]) => key.startsWith(`runtime:${sessionReference.id}:`))
+					.map(([, pending]) => pending),
+			]);
+			await this.sessionState.runManagement(sessionReference.id, async () => {
+				const { teamIds, runtimes, paths } = await this.resolveSessionDeletion(sessionReference);
+
+				for (const path of paths.values()) {
+					try {
+						await this.getRuntime().deleteSession(path);
+					} catch (error) {
+						// Missing files have no backend to claim them. Only this absence is
+						// idempotent; leases, permissions and other I/O failures stay visible.
+						const unrecognized =
+							hasErrorCode(error, "INVALID_REQUEST") &&
+							typeof error === "object" &&
+							error !== null &&
+							"message" in error &&
+							String(error.message).startsWith("Session is not recognized by this runtime:");
+						if (!isSessionNotFoundFailure(error) && !hasErrorCode(error, "ENOENT") && !unrecognized) throw error;
+						try {
+							await lstat(path);
+						} catch (fileError) {
+							if (hasErrorCode(fileError, "ENOENT")) continue;
+							throw fileError;
+						}
+						throw error;
+					}
+				}
+				for (const runtime of runtimes) this.eventHub.detach(runtime.sessionId);
+				await this.repository.delete?.(sessionReference.id);
+				for (const teamId of teamIds)
+					await this.ownershipCatalog?.removeByTeamSession?.(teamId, sessionReference.id);
+				this.updatePublisher.drop(sessionReference.id);
+				this.sessionState.remove(sessionReference.id);
+				this.teamResidency.forget(sessionReference.id);
+			});
+		} finally {
+			this.deletingSessions.delete(sessionReference.id);
+		}
+	}
+
+	private async resolveSessionDeletion(sessionReference: {
+		readonly id: string;
+		readonly coordinationSessionPath?: string;
+	}) {
+		const records = (await this.ownershipCatalog?.list()) ?? [];
+		const owned = records.filter((record) => record.owner.teamSessionId === sessionReference.id);
+		let session = this.sessionState.get(sessionReference.id);
+		if (!session && owned.length === 0) {
 			try {
-				await this.getRuntime().deleteSession(sessionPath);
+				session = await this.repository.read(sessionReference.id);
 			} catch (error) {
-				// 会话不在 runtime 内存目录（崩溃重启后未再打开、或已被并发清理）对删除
-				// 语义是幂等成功（BUG-0114）；其余失败仅在降级路径吞掉——非降级时仍须
-				// 严格传播（BUG-0087 契约：外部实例持租约等要让用户看见）。
-				if (!degraded && !isSessionNotFoundFailure(error)) throw error;
-				log.warn("team session delete could not remove a runtime session; continuing", {
-					teamSessionId: sessionReference.id,
-					sessionPath,
-					degraded,
-					error: describeError(error),
-				});
+				if (!hasErrorCode(error, "ENOENT")) throw error;
 			}
 		}
-		for (const runtimeId of runtimeIds) this.eventHub.detach(runtimeId);
-		await this.repository.delete?.(sessionReference.id);
-		if (session) await this.ownershipCatalog?.removeByTeamSession?.(session.teamId, session.id);
-		this.updatePublisher.drop(sessionReference.id);
-		this.sessionState.remove(sessionReference.id);
-		this.teamResidency.forget(sessionReference.id);
+		if (!session && owned.length === 0 && sessionReference.coordinationSessionPath) {
+			const path = sessionReference.coordinationSessionPath;
+			let exists = true;
+			try {
+				await lstat(path);
+			} catch (error) {
+				if (!hasErrorCode(error, "ENOENT")) throw error;
+				exists = false;
+			}
+			if (exists) {
+				const runtimeId = resolveTeamConversationSessionId(path);
+				session = readTeamSessionStateFromDocument(
+					sessionReference.id,
+					await readTeamConversationDocument(runtimeId, path),
+				);
+			}
+		}
+		if (session && session.id !== sessionReference.id) throw new Error("Team session identity conflict");
+		const teamIds = new Set(owned.map((record) => record.owner.teamId));
+		if (session) teamIds.add(session.teamId);
+		if (teamIds.size > 1) throw new Error("Team session ownership conflict");
+		const coordinationPaths = [
+			...owned.filter((record) => record.owner.role === "coordination").map((record) => record.sessionPath),
+			...(session?.coordinationRuntime ? [session.coordinationRuntime.sessionPath] : []),
+		];
+		if (new Set(coordinationPaths.map(conversationOwnershipPathKey)).size > 1) {
+			throw new Error("Team coordination Conversation binding conflict");
+		}
+		const requestedPath = sessionReference.coordinationSessionPath;
+		if (
+			requestedPath &&
+			(owned.length > 0 || session) &&
+			!coordinationPaths.some(
+				(path) => conversationOwnershipPathKey(path) === conversationOwnershipPathKey(requestedPath),
+			)
+		)
+			throw new Error("Team coordination Conversation binding conflict");
+		if (requestedPath) {
+			const owner = await this.ownershipCatalog?.getOwner(requestedPath);
+			if (owner && (owner.teamSessionId !== sessionReference.id || owner.role !== "coordination")) {
+				throw new Error("Team coordination Conversation belongs to another session");
+			}
+		}
+		const runtimes = [
+			...(session?.coordinationRuntime ? [session.coordinationRuntime] : []),
+			...Object.values(session?.memberRuntime ?? {}),
+		];
+		const paths = new Map([
+			...owned.map((record) => [conversationOwnershipPathKey(record.sessionPath), record.sessionPath] as const),
+			...runtimes.map(
+				(runtime) => [conversationOwnershipPathKey(runtime.sessionPath), runtime.sessionPath] as const,
+			),
+		]);
+		// Validate every association before stopping or removing anything.
+		for (const path of paths.values()) {
+			const owner = await this.ownershipCatalog?.getOwner(path);
+			if (owner && (owner.teamSessionId !== sessionReference.id || !teamIds.has(owner.teamId))) {
+				throw new Error("Team Conversation ownership conflict");
+			}
+		}
+		return { teamIds, runtimes, paths };
 	}
 
 	readCollaborationState(sessionId: string): Promise<TeamCollaborationState> {
@@ -1389,6 +1490,10 @@ function errorMessage(error: unknown): string {
 }
 
 /** runtime 对「会话不在内存目录」的统一判别：普通对象或挂了 code 的 Error 都算（BUG-0114）。 */
+function hasErrorCode(error: unknown, code: string): boolean {
+	return typeof error === "object" && error !== null && "code" in error && error.code === code;
+}
+
 function isSessionNotFoundFailure(error: unknown): boolean {
 	return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "SESSION_NOT_FOUND";
 }

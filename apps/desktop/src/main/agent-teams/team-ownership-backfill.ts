@@ -1,9 +1,13 @@
+// Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
 import type {
 	ConversationOwnershipCatalogPort,
 	ConversationOwnershipRecord,
 } from "../conversations/conversation-ownership-catalog.js";
-import { conversationOwnershipCatalog } from "../conversations/conversation-ownership-catalog.js";
+import {
+	conversationOwnershipCatalog,
+	conversationOwnershipPathKey,
+} from "../conversations/conversation-ownership-catalog.js";
 import { type LegacyTeamSessionSource, listLegacyTeamSessionDocuments } from "./team-session-legacy-source.js";
 
 const backfills = new WeakMap<ConversationOwnershipCatalogPort, Promise<void>>();
@@ -66,9 +70,26 @@ export function ensureLegacyAgentTeamOwnershipCatalog(
 	if (!source.list) return Promise.resolve();
 	const current = backfills.get(catalog);
 	if (current) return current;
-	const operation = source
-		.list()
-		.then((sessions) => catalog.register(sessions.flatMap(agentTeamConversationOwnershipRecords)));
+	const operation = source.list().then(async (sessions) => {
+		const discovered = sessions.flatMap(agentTeamConversationOwnershipRecords);
+		const owners = new Map(
+			(await catalog.list()).map((record) => [conversationOwnershipPathKey(record.sessionPath), record.owner]),
+		);
+		for (const record of discovered) {
+			const key = conversationOwnershipPathKey(record.sessionPath);
+			const owner = owners.get(key);
+			if (
+				owner &&
+				(owner.teamId !== record.owner.teamId ||
+					owner.teamSessionId !== record.owner.teamSessionId ||
+					owner.role !== record.owner.role)
+			) {
+				throw new Error("Team Conversation ownership conflict during legacy discovery");
+			}
+			owners.set(key, record.owner);
+		}
+		await catalog.register(discovered);
+	});
 	backfills.set(catalog, operation);
 	void operation.catch(() => {
 		if (backfills.get(catalog) === operation) backfills.delete(catalog);

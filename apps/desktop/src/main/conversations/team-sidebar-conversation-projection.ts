@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { dirname } from "node:path";
 import type { AgentTeamDocument, TeamSessionListItem } from "@vetta/agent-team";
 import { teamMemberAvatarUrls } from "../../shared/agent-team-avatar.js";
@@ -10,6 +11,7 @@ import { sameProjectPath } from "../projects/project-path.js";
 
 export interface TeamSidebarConversationProjectionDependencies {
 	readonly readDocument: () => Promise<AgentTeamDocument>;
+	readonly listHistoryTeamIds: () => Promise<readonly string[]>;
 	readonly listSessions: (teamId: string) => Promise<readonly TeamSessionListItem[]>;
 	readonly listProjectPaths: () => Promise<readonly string[]>;
 }
@@ -29,6 +31,7 @@ export async function readSidebarProjectPaths(): Promise<readonly string[]> {
 
 const defaultDependencies: TeamSidebarConversationProjectionDependencies = {
 	readDocument: () => agentTeamStore.read(),
+	listHistoryTeamIds: () => agentTeamSessionService.listHistoryTeamIds(),
 	listSessions: (teamId) => agentTeamSessionService.listSessions(teamId),
 	listProjectPaths: readSidebarProjectPaths,
 };
@@ -40,17 +43,24 @@ const defaultDependencies: TeamSidebarConversationProjectionDependencies = {
 export async function listTeamSidebarConversations(
 	dependencies: TeamSidebarConversationProjectionDependencies = defaultDependencies,
 ): Promise<readonly DesktopTeamSidebarConversation[]> {
-	const [document, projectPaths] = await Promise.all([dependencies.readDocument(), dependencies.listProjectPaths()]);
+	const [document, projectPaths, historyTeamIds] = await Promise.all([
+		dependencies.readDocument(),
+		dependencies.listProjectPaths(),
+		dependencies.listHistoryTeamIds(),
+	]);
+	const teamsById = new Map(document.teams.map((team) => [team.id, team]));
+	const teamIds = [...new Set([...teamsById.keys(), ...historyTeamIds])];
 	const agentsById = new Map(document.agents.map((agent) => [agent.id, agent]));
 	const blueprintsById = new Map(agentBlueprintRegistry.list().map((blueprint) => [blueprint.id, blueprint]));
 	const projected = (
 		await Promise.all(
-			document.teams.map(async (team) => {
+			teamIds.map(async (teamId) => {
+				const team = teamsById.get(teamId);
 				// 头像随人设走，人设由提供方维护：blueprint 解析得到才画得出提供方那张图。
-				const avatarUrls = teamMemberAvatarUrls(team, agentsById, blueprintsById);
-				return (await dependencies.listSessions(team.id)).map((session) => ({
+				const avatarUrls = team ? teamMemberAvatarUrls(team, agentsById, blueprintsById) : [];
+				return (await dependencies.listSessions(teamId)).map((session) => ({
 					kind: "agent-team" as const,
-					teamId: team.id,
+					teamId,
 					teamSessionId: session.id,
 					coordinationSessionPath: session.coordinationSessionPath,
 					cwd: session.cwd ?? dirname(session.coordinationSessionPath),
