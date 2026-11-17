@@ -110,8 +110,9 @@ describe("model input modality projection", () => {
 		// 两条投影路径（user 消息与 toolResult）共用同一常量；指引必须给出可执行的下一步。
 		const user = userContent(transformMessages(history(), textModel));
 		const tool = transformMessages(history(), textModel).find((message) => message.role === "toolResult");
-		const noticeBlocks = [...user, ...((tool?.content as Array<{ type: string; text?: string }>) ?? [])].filter(
-			(item) => item.type === "text" && item.text?.includes("does not support image input"),
+		const noticeBlocks = [...user, ...(tool?.content ?? [])].filter(
+			(item): item is { type: "text"; text: string } =>
+				item.type === "text" && item.text.includes("does not support image input"),
 		);
 		expect(noticeBlocks.length).toBeGreaterThanOrEqual(2);
 		for (const block of noticeBlocks) {
