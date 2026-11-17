@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
-import { afterEach, describe, expect, it } from "vitest";
+import { getEventListeners } from "node:events";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerApiProvider, unregisterApiProviders } from "../src/api-registry.js";
 import {
 	AI_ERROR_CODES,
@@ -478,6 +479,39 @@ describe("streamSimple unified retry", () => {
 		unregisterApiProviders(TEST_SOURCE);
 	});
 
+	it("releases caller abort listeners after a normal long stream", async () => {
+		const controller = new AbortController();
+		const existingListener = () => undefined;
+		controller.signal.addEventListener("abort", existingListener);
+		const baseline = getEventListeners(controller.signal, "abort").length;
+		const partial = createPartial();
+		const deltas = Array.from({ length: 32 }, () => deltaEvent(partial, "x"));
+		const scripted = new ScriptedLanguageModel([
+			{ events: [{ type: "start", partial }, ...deltas, doneEvent("x".repeat(32))] },
+		]);
+		registerApiProvider(
+			{
+				api: TEST_API,
+				stream: (model, context, options) => scripted.stream(model, context, options),
+				streamSimple: (model, context, options) => scripted.stream(model, context, options),
+			},
+			TEST_SOURCE,
+		);
+
+		try {
+			const { events, result } = await collect(streamSimple(MODEL, CONTEXT, { signal: controller.signal }));
+			expect(result.stopReason).toBe("stop");
+			expect(result.content).toEqual([{ type: "text", text: "x".repeat(32) }]);
+			expect(events.filter((event) => event.type === "text_delta")).toHaveLength(32);
+			expect(retryEvents(events)).toHaveLength(0);
+			expect(scripted.calls).toHaveLength(1);
+			expect(getEventListeners(controller.signal, "abort")).toHaveLength(baseline);
+		} finally {
+			controller.abort();
+			controller.signal.removeEventListener("abort", existingListener);
+		}
+	});
+
 	it("recovers a long-running call after consecutive 429s without transport retries", async () => {
 		const scripted = new ScriptedLanguageModel([
 			{
@@ -540,6 +574,130 @@ describe("streamSimple unified retry", () => {
 		expect(scripted.calls).toHaveLength(1);
 		expect(retryEvents(events)).toHaveLength(0);
 		expect(events.at(-1)?.type).toBe("error");
+	});
+});
+
+describe("provider retry wait resource cleanup", () => {
+	afterEach(() => {
+		vi.useRealTimers();
+		unregisterApiProviders(TEST_SOURCE);
+	});
+
+	it.each([true, false])("cleans rejected iterator waits with caller signal=%s", async (withSignal) => {
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		const controller = new AbortController();
+		const listenersBefore = getEventListeners(controller.signal, "abort").length;
+		const timersBefore = vi.getTimerCount();
+		const failure = new AIError(AI_ERROR_CODES.INVALID_REQUEST, "provider rejected the stream", {
+			retryable: false,
+		});
+		const opened: OpenedAttempt[] = [];
+		const { events, result } = await collect(
+			streamWithProviderRetry(scriptedOpener([{ fail: failure }], opened), {
+				model: MODEL,
+				...(withSignal ? { signal: controller.signal } : {}),
+				streamIdleTimeoutMs: 5_000,
+			}),
+		);
+
+		expect(result.stopReason).toBe("error");
+		expect(result.failure).toMatchObject({ code: AI_ERROR_CODES.INVALID_REQUEST, message: failure.message });
+		expect(events.map((event) => event.type)).toEqual(["error"]);
+		expect(opened).toHaveLength(1);
+		expect(getEventListeners(controller.signal, "abort")).toHaveLength(listenersBefore);
+		expect(vi.getTimerCount()).toBe(timersBefore);
+	});
+
+	it("cleans idle waits while preserving stalled-attempt retry and recovery", async () => {
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		const controller = new AbortController();
+		const listenersBefore = getEventListeners(controller.signal, "abort").length;
+		const timersBefore = vi.getTimerCount();
+		const specs: AttemptSpec[] = [{ hang: true }, { events: [startEvent(), doneEvent("recovered")] }];
+		const opened: OpenedAttempt[] = [];
+		const collecting = collect(
+			streamWithProviderRetry(scriptedOpener(specs, opened), {
+				model: MODEL,
+				signal: controller.signal,
+				streamIdleTimeoutMs: 40,
+				sleep: async () => undefined,
+			}),
+		);
+		expect(opened).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(40);
+		const { events, result } = await collecting;
+
+		expect(result.stopReason).toBe("stop");
+		expect(result.content).toEqual([{ type: "text", text: "recovered" }]);
+		expect(specs[0].aborted).toBe(true);
+		expect(opened).toHaveLength(2);
+		expect(retryEvents(events)).toMatchObject([{ reason: "transient", attempt: 1 }]);
+		expect(getEventListeners(controller.signal, "abort")).toHaveLength(listenersBefore);
+		expect(vi.getTimerCount()).toBe(timersBefore);
+	});
+
+	it("cleans cancelled waits and handles a provider's late rejection without retrying", async () => {
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		const controller = new AbortController();
+		const listenersBefore = getEventListeners(controller.signal, "abort").length;
+		const timersBefore = vi.getTimerCount();
+		const inner = new AssistantMessageEventStream();
+		let attempts = 0;
+		let attemptSignal: AbortSignal | undefined;
+		const collecting = collect(
+			streamWithProviderRetry(
+				(signal) => {
+					attempts += 1;
+					attemptSignal = signal;
+					return inner;
+				},
+				{ model: MODEL, signal: controller.signal, streamIdleTimeoutMs: 5_000 },
+			),
+		);
+		// The public call has synchronously opened the attempt and is waiting on its empty stream.
+		expect(attempts).toBe(1);
+		controller.abort();
+		const { events, result } = await collecting;
+		expect(result.stopReason).toBe("aborted");
+		expect(attemptSignal?.aborted).toBe(true);
+		expect(events.map((event) => event.type)).toEqual(["error"]);
+		expect(retryEvents(events)).toHaveLength(0);
+		expect(getEventListeners(controller.signal, "abort")).toHaveLength(listenersBefore);
+		expect(vi.getTimerCount()).toBe(timersBefore);
+
+		const lateFailure = new Error("provider rejected after cancellation");
+		inner.fail(lateFailure);
+		await expect(inner.result()).rejects.toBe(lateFailure);
+		expect(attempts).toBe(1);
+		expect(vi.getTimerCount()).toBe(timersBefore);
+	});
+
+	it("does not accumulate listeners across public model calls sharing a turn signal", async () => {
+		const controller = new AbortController();
+		const listenersBefore = getEventListeners(controller.signal, "abort").length;
+		const scripted = new ScriptedLanguageModel(
+			["first", "after tool", "final"].map((text) => ({ events: [startEvent(), doneEvent(text)] })),
+		);
+		registerApiProvider(
+			{
+				api: TEST_API,
+				stream: (model, context, options) => scripted.stream(model, context, options),
+				streamSimple: (model, context, options) => scripted.stream(model, context, options),
+			},
+			TEST_SOURCE,
+		);
+		try {
+			for (const text of ["first", "after tool", "final"]) {
+				const { events, result } = await collect(streamSimple(MODEL, CONTEXT, { signal: controller.signal }));
+				expect(result.stopReason).toBe("stop");
+				expect(result.content).toEqual([{ type: "text", text }]);
+				expect(events.map((event) => event.type)).toEqual(["start", "done"]);
+				expect(getEventListeners(controller.signal, "abort")).toHaveLength(listenersBefore);
+			}
+			expect(scripted.calls).toHaveLength(3);
+		} finally {
+			controller.abort();
+		}
 	});
 });
 

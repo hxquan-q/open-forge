@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0487` | `verifying` | — | [Provider逐事件取消监听配对释放](TASK-0487-provider-abort-listener-cleanup.md)：BUG-0189，红监听35≠1→绿5文件83/83，独立审查无阻断；全仓check仍既有问题阻断，本地候选pending，不改重试预算。 |
 | `TASK-0486` | `verifying` | — | [自适应流水线 P2 委任机制](TASK-0486-delegation-mechanism.md)：REQ-0034；两提交 30a3dadb0+b0b04534a 定向全绿；件4降级（LLM 读域描述）；待实机验收+用户自跑 impact/完整 check；serial。 |
 | `TASK-0483` | `verifying` | — | [Code 会话热追踪开关](TASK-0483-session-hot-tracking-toggle.md)：默认开、runtimeId 内存态、生产消费同源；定向 52/52、impact 1328/1329（1 例 session-switch 存疑待分诊）；完整 check 按用户指示跳过；serial，本地 Task 分支，不动团队域与远程 Git。 |
 | `TASK-0482` | `verifying` | PLAN-0031 | [Windows 电脑操作](TASK-0482-windows-computer-use.md)：BUG-0186 已补回执/观察的前台窗口与 IME 只读反馈；先红后绿、原生 31/31、资源同步核验通过；`check:quick` 仅被过期 WAIVER-0011/0012 阻断。serial，完整 check 与黑盒验收待用户。 |
