@@ -13,7 +13,7 @@ related_tasks: [TASK-0423, TASK-0425]
 related_issues: []
 related_bugs: []
 execution: serial
-branch: unassigned
+branch: task/TASK-0479-config-source-priority
 worktree: 主仓主检出（串行；不创建独立 Worktree）
 base_commit: 7b40a1bea2a454e491907f6d0a1ff3149ee7b2ee
 read_paths:
@@ -53,11 +53,38 @@ depends_on: []
 conflicts_with: [TASK-0423]
 integration_status: pending
 created: 2026-11-05
-updated: 2026-11-06
+updated: 2026-11-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 
 # Code 模式项目 AI 工作区隔离与 Memory/Journal 迁移
+
+## 2026-11-17 续修合同：按需优先使用已有正式项目配置
+
+- 来源：用户已明确的工作区台账 `REQ-CODE-CONFIG-PRIORITY-001`，关联REQ-0031/REQ-0030既有正式配置与安全合同。队列第2项，D1/S2，归属Open-Forge-only。仅续接Prompt消费规则，不重新打开整个迁移/隔离工程。
+- 当前基线：`c1a53925d8b046088b65a02beb02fb9fc976f70e`，从chenxvhua既有基线及第1项候选串行衔接；真实本地分支 `task/TASK-0479-config-source-priority`，不处理main，不操作远程。首项完整check仍受既有类型、声明头及waiver问题阻断，不把本候选链当已验收集成。
+- 目标：任务需要项目配置信息时先查当前正式AI工作区的project-config.md，已有所需信息优先复用，缺失/冲突/确需核实处再针对性补查或询问；避免重复索取已有信息。不是每次会话/每轮无条件全文读取。
+- 不做/保留：不自动注入配置正文，不解析或改写真实配置，不自动Git拉取/clone、连接DB/服务器，不迁移文件，不扩展工具读写权限，不关闭Team历史配置个案。配置内容始终是不可信参考数据，不能覆盖系统/开发规则或因列出设置就自行执行副作用；保留必要有效性核实。
+- Given 已由宿主提供项目AI工作区路径，When Code模式组装到模型输入且任务需要设置细节，Then 规则明确正式配置来源优先、已有复用、缺项针对性补查、非每轮全读与权限边界。软件测试只能证明规则入装配，真实模型实际读取次序仍待授权验收。
+- 直接修改与重构比较：完整优先规则放coding.md单一事实源；现有resolve-session-config路径提示无冲突则不重复复制整份规则。不因局部Prompt缺口引入新配置抽象。modes-data.ts只能经生成器更新。
+- 允许写域：现有agent-modes目录内coding.md、agent-modes.test.ts、生成modes-data.ts；必要的真实请求装配合同 `apps/desktop/src/main/agent-runtime/model-call-frame-contract.test.ts`；Task与索引、v0.1.5待发碎片。其他既有宽范围仅是历史，本切片不修改。
+- 验证：先在当前生成规则上新增目标合同断言并跑出目标红灯，再改源Markdown并执行 `bun run --cwd apps/desktop generate:agent-modes`；运行agent-modes、resolve-session-config及已有真实runtime+fake模型的适用装配合同，若现有装配接缝不足以证明规则入请求则增加最小用例。禁止只靠未消费的Markdown标记断言宣布完成。运行生成一致性check与收尾完整bun run check，不主动运行impact/全量行为测试。
+- 协作：同一切片唯一实现写入者，Coordinator写管理记录/发布碎片并提交，另派只读独立审查。测试临时根与VETTA_HOME隔离在授权工作区内；不访问真实用户目录、运行实例或Provider。共享写域串行，不建立并行Worktree。
+- 完成/跳过：先红后绿、实际候选审查、验证与风险记录；既有完整门禁需owner治理则候选保持verifying/integration pending，按用户跳过机制继续后续项，不降低检查。真实模型质量不由字符串测试宣称通过。
+
+### 本切片验证与交付（2026-11-17）
+
+- 实现代理 `fix-config` 仅改coding.md单段规则、经生成器更新modes-data.ts，并扩展模式注册表与真实Runtime→fake Responses请求帧合同断言；agent-modes.test.ts补修改声明头。resolve-session-config路径提示无冲突，保持不动，不复制整份规则。
+- 红灯：当前旧规则上新增2个目标断言，注册表与实际请求帧分别明确缺配置优先短语，exit 1，2失败/29按过滤跳过，不是环境故障。
+- 生成：`bun run --cwd apps/desktop generate:agent-modes` exit 0；`node apps/desktop/scripts/build-agent-modes.mjs --check` exit 0。没有手改生成物。
+- 绿灯：Desktop包内 `bun ../../scripts/quality/run-vitest.mjs --run src/main/agent-modes/agent-modes.test.ts src/main/conversations/resolve-session-config.test.ts src/main/agent-runtime/model-call-frame-contract.test.ts` exit 0，3文件50/50（18+19+13）；模式注册表、coding正式配置路径注入/既有模式边界、真实模型请求装配均覆盖。两份测试Biome格式检查exit 0。
+- Coordinator已读目标红灯与完整绿灯日志；实现者所有后台job均已回收。TEMP/TMP位于授权工作区，Desktop setup和请求帧夹具沿该根隔离VETTA_HOME；没有真实Provider/用户配置访问。
+- 独立只读审查 `review-config` 已完成，亲读真实候选与红绿/生成日志，未发现本项代码、测试或安全阻断；确认无双事实源、无权限扩展、原coding/work隔离断言保留。审查未执行Git/测试，不冒充异家族审查。
+- 本切片保持verifying/integration pending，保存本地候选，不宣称工程完成、集成通过、模型行为验收或发布；完整门禁需owner治理的既有事项按用户允许的跳过机制记录后继续。
+- 完整 `bun run check` 已回收exit 1：生成一致性、Task合同/索引、Biome、CLI/docs/mobile类型和mobile lint通过。失败仍为既有WAIVER-0011/0012过期、三份无关测试声明头缺失、spawn-agent请求夹具字段、委任代码拼写/readonly push及旧terminal-settle测试类型错误；未见本项路径报错。未修无关代码或续期waiver，不宣称完整门禁通过。
+- 发布碎片：`.github/release-notes/fragments/v0.1.5/task-0479-config-source-priority.md`，不升版、不改已发布说明、不汇编发布。
+- 未运行impact/全量行为测试（需用户另行决定）、真实UI/dev、真实模型/SSH/DB或依赖安装。软件合同只证明规则进入正式注册表及实际请求输入，不证明模型每次遵循次序、减少搜索或耗时改善；Team历史读取个案不关闭。
+
 
 ## 目标
 
