@@ -35,7 +35,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-16
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -60,6 +60,15 @@ updated: 2026-11-16
 5. 收尾：发布说明碎片、完整 check、索引同步、roadmap 更新。
 
 ## 交付
+
+### 续修（2026-11-17，纠错，分支 `task/TASK-0486-delegation-type-fix`）
+
+原交付跳过完整 check（见上文用户指示），chenxvhua 集成后完整 `bun run check` 暴露两处生产代码类型错误，本节为对已交付代码的纠错续修：
+
+- `desktop-conversation-service.ts` `resolveBoundAgentProfile`：错误详情与 log.warn 误用简写 `{ delegationTeamId }` 引用不存在的标识符——新建委任会话且目标团队已删时应抛 `AGENT_PROFILE_UNAVAILABLE`，实际先抛 `ReferenceError`（真运行时缺陷）。改为显式键值 `{ delegationTeamId: delegatedTeamId }`，键名保持与配置字段一致。先红后绿：`desktop-conversation-service.test.ts` 补"新建委任会话且团队已删 → 抛 `AGENT_PROFILE_UNAVAILABLE` 且详情含 `delegationTeamId`"用例，旧实现因 `ReferenceError: delegationTeamId is not defined` 失败，修复后通过。
+- `session-delegation.ts` `resolveTeamDelegation`：局部 `controllerMembers` 声明为 `ResolvedTeamDelegation["controllerMembers"]`（readonly 数组）却对其 `push`，TS2339；运行时 `[]` 可变无实际错误。改为元素只读的可变数组类型，返回处自然收窄，行为与公共类型不变。类型层验证依据：desktop typecheck 报错消失即红绿，不造运行时用例。
+- 验证：定向测试 29/29（service 18 + 绑定解析 11）；`bun run --cwd apps/desktop typecheck` 两处委任报错消失（仅剩 terminal-settle 等既有存量）；`check:quick` 改动文件无新增违规（守卫失败均为 WAIVER-0011/0012 与 3 份测试缺声明头等既有存量）；完整 `bun run check` 由用户另行发起，本续修门禁成功标准=两处委任报错从 check 日志消失（其余存量不在边界内，不修不续期）。
+- 发布说明：不新增碎片。理由：委任功能 v0.1.5 待发未发布，缺陷存在于原任务待发提交内，用户在任何已发布版本中不可触达；既有碎片 `v0.1.5/delegation-mechanism.md` 已覆盖该功能全部可感知面。
 
 实际修改（两提交，`task/TASK-0486-delegation-mechanism`）：
 

@@ -78,7 +78,8 @@ export interface ResolvedTeamDelegation {
 export function resolveTeamDelegation(document: AgentTeamDocument, team: TeamDefinition): ResolvedTeamDelegation {
 	const profiles = new Map(document.agents.map((profile) => [profile.id, profile]));
 	const members: CodingAgentDelegatedMember[] = [];
-	const controllerMembers: ResolvedTeamDelegation["controllerMembers"] = [];
+	// 局部构建需要 push：声明为元素只读的可变数组，返回处经 ResolvedTeamDelegation 的 readonly 字段自然收窄。
+	const controllerMembers: { readonly name: string; readonly description: string }[] = [];
 	for (const member of team.members) {
 		const profile = profiles.get(member.binding.agentProfileId);
 		if (!profile) continue;

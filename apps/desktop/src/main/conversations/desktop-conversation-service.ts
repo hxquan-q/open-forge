@@ -210,11 +210,12 @@ export class DesktopConversationService {
 				throw new DesktopConversationError(
 					"AGENT_PROFILE_UNAVAILABLE",
 					"The selected team is no longer available.",
-					{ delegationTeamId },
+					// 键名与配置字段 delegationTeamId 同名；值取局部变量 delegatedTeamId（此处曾误用简写导致 ReferenceError）。
+					{ delegationTeamId: delegatedTeamId },
 				);
 			}
 			log.warn("bound delegation team is gone; falling back to a plain conversation", {
-				delegationTeamId,
+				delegationTeamId: delegatedTeamId,
 				sessionPath: config?.sessionPath,
 			});
 			return undefined;
