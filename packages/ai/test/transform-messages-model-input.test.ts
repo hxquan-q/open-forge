@@ -105,6 +105,19 @@ describe("model input modality projection", () => {
 		const message: Message = { role: "user", content: "Hello", timestamp: 1 };
 		expect(transformMessages([message], textModel)).toEqual([message]);
 	});
+
+	it("points text models at extract_text_from_img instead of leaving a dead omission notice", () => {
+		// 两条投影路径（user 消息与 toolResult）共用同一常量；指引必须给出可执行的下一步。
+		const user = userContent(transformMessages(history(), textModel));
+		const tool = transformMessages(history(), textModel).find((message) => message.role === "toolResult");
+		const noticeBlocks = [...user, ...((tool?.content as Array<{ type: string; text?: string }>) ?? [])].filter(
+			(item) => item.type === "text" && item.text?.includes("does not support image input"),
+		);
+		expect(noticeBlocks.length).toBeGreaterThanOrEqual(2);
+		for (const block of noticeBlocks) {
+			expect(block.text).toContain("extract_text_from_img");
+		}
+	});
 });
 
 describe("Copilot transport headers follow model input capability", () => {
