@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { act, renderHook, waitFor } from "@testing-library/react";

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, pendingSessionOpenAtom, type SessionInfo } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
