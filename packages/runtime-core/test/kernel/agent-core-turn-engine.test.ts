@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	type AssistantMessage,
 	type AssistantMessageEvent,
@@ -998,6 +999,49 @@ describe("AgentCoreTurnEngine", () => {
 				metadata: { toolName: "dynamic" },
 			},
 		});
+	});
+
+	it("preserves resolved runtime error results in the next model call", async () => {
+		let executionCount = 0;
+		const denied = {
+			content: [{ type: "text" as const, text: "Access denied by host policy" }],
+			details: { code: "policy_denied" },
+			isError: true,
+		};
+		const tool: RuntimeToolDefinition = {
+			name: "restricted",
+			label: "Restricted",
+			description: "A tool with a host policy",
+			inputSchema: { type: "object" },
+			async execute() {
+				executionCount += 1;
+				return denied;
+			},
+		};
+		const responses = [
+			assistantMessage([{ type: "toolCall", id: "denied-call", name: "restricted", arguments: {} }], "toolUse"),
+			assistantMessage([{ type: "text", text: "request different input" }]),
+		];
+		const contexts: Context[] = [];
+		const engine = new AgentCoreTurnEngine({
+			model: model(),
+			streamFn: (_model, context) => {
+				contexts.push({ ...context, messages: [...context.messages] });
+				const response = responses[contexts.length - 1];
+				if (!response) throw new Error("Missing recorded response");
+				return new RecordedAssistantStream(response);
+			},
+		});
+
+		const events = await collect(engine, snapshot({ tools: [tool] }));
+
+		expect(executionCount).toBe(1);
+		expect(contexts).toHaveLength(2);
+		expect(contexts[1]?.messages.find((message) => message.role === "toolResult")).toMatchObject(denied);
+		expect(events.find((event) => event.type === "message" && event.message.role === "toolResult")).toMatchObject({
+			message: denied,
+		});
+		expect(events.at(-1)?.type).toBe("completed");
 	});
 
 	it("forwards the request cancellation signal and rejects the turn", async () => {

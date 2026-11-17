@@ -149,7 +149,8 @@ describe("read runtime boundaries", () => {
 
 	it("rejects a path before touching the filesystem when the host policy denies it", async () => {
 		let accessCalls = 0;
-		const result = await createReadTool("C:/project", {
+		let readFileCalls = 0;
+		const registration = createReadToolRegistration("C:/project", {
 			pathHost: {
 				path: {
 					isAbsolute: (path) => path.startsWith("C:/"),
@@ -171,12 +172,13 @@ describe("read runtime boundaries", () => {
 					accessCalls++;
 				},
 				async readFile() {
+					readFileCalls++;
 					return Buffer.from("unreachable");
 				},
 			},
 		});
 
-		const denied = await result.execute({
+		const denied = await registration.tool.execute({
 			sessionId: "session-1",
 			turnId: "turn-1",
 			toolCallId: "runtime-read-denied",
@@ -185,7 +187,10 @@ describe("read runtime boundaries", () => {
 		});
 
 		expect(denied.content).toEqual([{ type: "text", text: "Access denied by test policy" }]);
+		expect(denied.isError).toBe(true);
+		expect(denied.details).toEqual({ code: "policy_denied" });
 		expect(accessCalls).toBe(0);
+		expect(readFileCalls).toBe(0);
 	});
 
 	it(

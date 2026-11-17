@@ -156,7 +156,11 @@ export function createReadTool(cwd: string, options: ReadToolOptions = {}): Runt
 			const absolutePath = resolveReadPath(path, cwd, options?.pathHost ?? localToolPathHost);
 			const rejectionReason = options.pathPolicy?.getRejectionReason(absolutePath);
 			if (rejectionReason !== undefined) {
-				return Promise.resolve({ content: [{ type: "text", text: rejectionReason }], details: undefined });
+				return Promise.resolve({
+					content: [{ type: "text", text: rejectionReason }],
+					details: { code: "policy_denied" },
+					isError: true,
+				});
 			}
 
 			return new Promise<RuntimeToolResult>((resolve, reject) => {
