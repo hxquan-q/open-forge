@@ -38,7 +38,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-17
 base_commit: 393611e2a9a4e9daef69692ea0a403503cc0cbea
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -122,3 +122,5 @@ base_commit: 393611e2a9a4e9daef69692ea0a403503cc0cbea
 - computer-use 团队授权：换员/恢复导致成员 runtimeId 漂移时授权仍有效（主体是团队会话）；但团队会话被空闲逐出后 `isKnownTeamSession` 为 false（打开中的会话有订阅保护，正常不受影响）。授权主体是团队会话整体：任一成员都可操作，符合「单主体互斥」口径。
 - 团队档位不落盘：将来若把团队会话迁到走 desktop-conversation-service 创建，需同步处理 agent-modes.json 固化语义。
 - `activeTeamSessionAtom` 语境随重启重置（用户需重新进入团队会话后再开授权页）。
+
+2026-11-17 后续维护：上方「预存类型错误」中的 `useSessionEventController.terminal-settle.test.tsx` 一项已在专项纠偏提交（`fix(test): 对齐两份测试的事件/请求类型`）中清零——去掉 `as SessionEvent` 强转、按当前 `@vetta/runtime-core` 事件联合成员重构测试内对象（`tool.end` 不再携带生产类型中不存在的 `args`）；断言与测试场景无变化，本任务状态不动。

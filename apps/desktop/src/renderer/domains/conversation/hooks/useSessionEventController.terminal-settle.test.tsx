@@ -8,7 +8,7 @@
  */
 import { activeSessionAtom, aiEditTargetAtom, aiTerminalFeedAtom, hotTrackingBySessionAtom, toggleCurrentSessionHotTrackingAtom } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
-import type { SessionEvent } from "@vetta/runtime-core";
+import type { ToolEndEvent, ToolStartEvent } from "@vetta/runtime-core";
 import { getDefaultStore, Provider } from "jotai";
 import type { ReactNode } from "react";
 import { beforeEach, expect, it } from "vitest";
@@ -26,7 +26,7 @@ const activeSessionRef = {
 };
 const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-function toolStart(toolCallId: string): SessionEvent {
+function toolStart(toolCallId: string): ToolStartEvent {
 	return {
 		schemaVersion: 1,
 		channel: "runtime",
@@ -39,10 +39,10 @@ function toolStart(toolCallId: string): SessionEvent {
 		toolName: "bash",
 		args: { command: "bun run build" },
 		startedAt: 1,
-	} as SessionEvent;
+	};
 }
 
-function toolEnd(toolCallId: string): SessionEvent {
+function toolEnd(toolCallId: string): ToolEndEvent {
 	return {
 		schemaVersion: 1,
 		channel: "runtime",
@@ -53,13 +53,12 @@ function toolEnd(toolCallId: string): SessionEvent {
 		source: "runtime-core",
 		toolCallId,
 		toolName: "bash",
-		args: { command: "bun run build" },
+		isError: false,
+		result: { content: [{ type: "text", text: "build ok" }] },
 		startedAt: 1,
 		durationMs: 9,
 		phases: [],
-		result: { content: [{ type: "text", text: "build ok" }] },
-		isError: false,
-	} as SessionEvent;
+	};
 }
 
 function setActiveProfile(profile: "coding" | "work"): void {
@@ -107,7 +106,7 @@ it("切走后旧会话的 tool.end 仍结算其终端条目", () => {
 it("coding 开关关闭后不写 feed/编辑目标，重新开启恢复且 end 仍可结算", () => {
 	const { result } = renderHook(() => useSessionEventController({ activeSessionRef }), { wrapper });
 	const handler = result.current.createSessionEventHandler("session-a");
-	const editStart: SessionEvent = { ...toolStart("edit-on"), type: "tool.start", toolName: "write", args: { path: "src/a.ts" } };
+	const editStart: ToolStartEvent = { ...toolStart("edit-on"), type: "tool.start", toolName: "write", args: { path: "src/a.ts" } };
 	act(() => { handler(toolStart("before-off")); handler(editStart); });
 	expect(store.get(aiTerminalFeedAtom)).toHaveLength(1);
 	const previousTarget = store.get(aiEditTargetAtom);

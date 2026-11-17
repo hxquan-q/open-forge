@@ -1,10 +1,14 @@
 // Modified by The Open Forge contributors.
 
+import type { RuntimeToolExecutionRequest } from "@vetta/runtime-core/kernel";
 import type { SubagentCoordinatorPort, SubagentSnapshot, SubagentTypeDefinition } from "@vetta/runtime-subagents";
 import { emptyUsage, taskPath } from "@vetta/runtime-subagents";
 import { describe, expect, it, vi } from "vitest";
 import type { CodingAgentSubagentProfile } from "../../src/composition/contracts/index.js";
-import { createSpawnAgentTool } from "../../src/composition/subagent/tools/spawn-agent/spawn-agent-tool.js";
+import {
+	createSpawnAgentTool,
+	type SpawnAgentToolInput,
+} from "../../src/composition/subagent/tools/spawn-agent/spawn-agent-tool.js";
 
 function residentType(): SubagentTypeDefinition<CodingAgentSubagentProfile> {
 	return {
@@ -66,6 +70,18 @@ const contractInput = {
 	},
 };
 
+const abortController = new AbortController();
+
+function executeRequest(toolCallId: string): RuntimeToolExecutionRequest<SpawnAgentToolInput> {
+	return {
+		sessionId: "session-1",
+		turnId: "turn-1",
+		toolCallId,
+		input: contractInput,
+		signal: abortController.signal,
+	};
+}
+
 describe("spawn_agent resident crew guard", () => {
 	it("rejects a second spawn while the resident member already has an instance (running)", async () => {
 		const coordinator = coordinatorWith([snapshotOf("m_agent_1", "running")]);
@@ -73,9 +89,7 @@ describe("spawn_agent resident crew guard", () => {
 			getCoordinator: () => coordinator,
 			getType: (id) => (id === "member:agent-1" ? residentType() : undefined),
 		});
-		await expect(tool.execute({ input: contractInput, toolCallId: "tc1" })).rejects.toThrow(
-			/followup_task\(target="m_agent_1"/,
-		);
+		await expect(tool.execute(executeRequest("tc1"))).rejects.toThrow(/followup_task\(target="m_agent_1"/);
 		expect(coordinator.spawn).not.toHaveBeenCalled();
 	});
 
@@ -85,9 +99,7 @@ describe("spawn_agent resident crew guard", () => {
 			getCoordinator: () => coordinator,
 			getType: (id) => (id === "member:agent-1" ? residentType() : undefined),
 		});
-		await expect(tool.execute({ input: contractInput, toolCallId: "tc1" })).rejects.toThrow(
-			/already has a session instance/,
-		);
+		await expect(tool.execute(executeRequest("tc1"))).rejects.toThrow(/already has a session instance/);
 	});
 
 	it("lets the first spawn through and names the member instance in the result", async () => {
@@ -96,7 +108,7 @@ describe("spawn_agent resident crew guard", () => {
 			getCoordinator: () => coordinator,
 			getType: (id) => (id === "member:agent-1" ? residentType() : undefined),
 		});
-		const result = await tool.execute({ input: contractInput, toolCallId: "tc1" });
+		const result = await tool.execute(executeRequest("tc1"));
 		expect(coordinator.spawn).toHaveBeenCalledOnce();
 		expect(result.content[0]).toMatchObject({ type: "text" });
 	});
@@ -111,9 +123,9 @@ describe("spawn_agent resident crew guard", () => {
 			getCoordinator: () => coordinator,
 			getType: (id) => (id === "member:agent-1" ? oneshot : undefined),
 		});
-		await expect(tool.execute({ input: contractInput, toolCallId: "tc1" })).resolves.toBeTruthy();
+		await expect(tool.execute(executeRequest("tc1"))).resolves.toBeTruthy();
 
 		const noRegistry = createSpawnAgentTool({ getCoordinator: () => coordinator });
-		await expect(noRegistry.execute({ input: contractInput, toolCallId: "tc2" })).resolves.toBeTruthy();
+		await expect(noRegistry.execute(executeRequest("tc2"))).resolves.toBeTruthy();
 	});
 });
