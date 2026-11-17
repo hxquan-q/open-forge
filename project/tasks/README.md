@@ -33,7 +33,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0486` | `verifying` | — | [自适应流水线 P2 委任机制](TASK-0486-delegation-mechanism.md)：REQ-0034；两提交 30a3dadb0+b0b04534a 定向全绿；件4降级（LLM 读域描述）；待实机验收+用户自跑 impact/完整 check；serial。 |
 | `TASK-0483` | `verifying` | — | [Code 会话热追踪开关](TASK-0483-session-hot-tracking-toggle.md)：默认开、runtimeId 内存态、生产消费同源；定向 52/52、impact 1328/1329（1 例 session-switch 存疑待分诊）；完整 check 按用户指示跳过；serial，本地 Task 分支，不动团队域与远程 Git。 |
 | `TASK-0482` | `verifying` | PLAN-0031 | [Windows 电脑操作](TASK-0482-windows-computer-use.md)：BUG-0186 已补回执/观察的前台窗口与 IME 只读反馈；先红后绿、原生 31/31、资源同步核验通过；`check:quick` 仅被过期 WAIVER-0011/0012 阻断。serial，完整 check 与黑盒验收待用户。 |
-| `TASK-0481` | `verifying` | PLAN-0027 | [已有会话增量模式更新](TASK-0481-session-event-mode.md)：BUG-0182；两轮先红后绿，9/9回归、相关流程27/27、最终impact 9/9+202/202、完整check通过，独立审查闭环；serial，本地task候选待集成/实机接受。 |
+| `TASK-0481` | `verifying` | PLAN-0027 | [已有会话增量模式更新](TASK-0481-session-event-mode.md)：11-17续修F09测试合同，红5→绿4文件22/22，独立审查无本项阻断；完整check受既有类型/声明头/过期waiver阻断，本地Task候选、integration pending，未宣称工程完成。 |
 | `TASK-0480` | `verifying` | — | [eform-craft AIMES CustomDev 五角色团队改造](TASK-0480-eform-craft-customdev-team.md)：REQ-0032；五角色/19 Skills 完成，合同 14/14、包内 tsc、定向 Biome/守卫通过；构建包 41 文件与源码清单一致，旧七资产已按用户授权清理；v0.1.5 待发碎片已写，用户补充授权本地原子提交，不推送/部署，待实机验收；serial。 |
 | `TASK-0470` | `done` | PLAN-0029 | [会话标题与建议子域迁移](TASK-0470-session-title-host-domain.md) |
 | `TASK-0471` | `done` | PLAN-0029 | [会话 plan-mode 子域迁移](TASK-0471-session-plan-mode-host-domain.md) |

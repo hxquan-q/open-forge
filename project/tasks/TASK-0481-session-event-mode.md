@@ -12,7 +12,7 @@ related_tasks: [TASK-0430]
 related_issues: []
 related_bugs: [BUG-0182]
 execution: serial
-branch: task/TASK-0481-session-event-mode
+branch: task/TASK-0481-session-projection-test-contract
 worktree: unassigned（主检出串行；基于现检出 chenxvhua，不切换陈旧 main）
 base_commit: 2784c53ed7916aa77284696e9fea8338df244294
 read_paths:
@@ -27,16 +27,44 @@ write_paths:
   - project/bugs/BUG-0182-existing-session-event-mode.md
   - project/bugs/README.md
   - .github/release-notes/fragments/v0.1.5/task-0481-session-event-mode.md
+  - .github/release-notes/fragments/v0.1.5/task-0481-session-projection-test-contract.md
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-09
-updated: 2026-11-09
+updated: 2026-11-17
 ---
 <!-- Copyright The Open Forge contributors. -->
 
 # 已有会话行及时消费增量事件的明确模式
+
+## 2026-11-17 续修合同：F09 测试与当前会话投影合同对齐
+
+- 来源：工作区已讨论 Bug 台账 F09 覆盖缺口；用户授权按 `(难度升序, 严重程度降序)` 逐项串行修复。本切片难度 D1、严重程度 S2，为当前队列首项，不新增问题组。
+- 当前基线：`73f21c28b4c0465e6a976ba86388cc3a1fb2572e`；用户明确不处理残留 main，从 `chenxvhua` 基线在主检出串行创建本地 `task/TASK-0481-session-projection-test-contract` 候选分支，满足Task守卫；不创建或操作远程分支。下文 11-09 分支/通过数字均为历史。
+- 目标/不做：修正 `useProjects.sessionsChanged.test.tsx` 对 Allstar 会话对象旧形状的精确断言，保留明确模式事件与旧快照保护的行为证明；不修改生产实现、不恢复全部 M1 流程、不关闭历史归属个案。
+- 基线发现与必要前置（2026-11-17）：首次目标测试 exit 1，9例中5失败/4通过，先因外部宿主API替身缺少 `agentTeams.listSidebarConversations` 而在真实Team hook挂载时报TypeError，尚不能将该结果记作kind断言失败。允许仅在同一指定测试文件补齐返回空团队历史的外部IPC替身，不mock内部hook/model；随后重新执行，区分夹具错误与预期投影形状红灯，再对齐kind字段。该前置不扩大生产行为写域。
+- 输入/输出：当前 model 返回带 `kind: "chat"` 的会话投影 → 回归测试准确断言当前公开合同并继续验证即时归属及晚快照保护。
+- Given 当前真实 Hook/store/Allstar model 装配，When 收到明确 coding/work 事件及在途旧列表响应，Then 类型标记与归属状态均符合当前合同，原回归断言不得被删除或弱化。
+- 方案比较：直接对齐遗漏字段即可；没有生产职责或依赖问题，不为测试形状差异重构。
+- 验证：先实跑现有目标测试记录失败基线，再修改断言，跑该测试与相关投影/Allstar/项目写流程定向用例；收尾完整 `bun run check`。按用户工作区规则不主动运行 impact/全量行为测试，需单独申请，不将未运行写成通过。测试临时根定向至授权工作区内。
+- 协作：同一 Task 仅一个实现写入者；Coordinator 负责记录、索引、发布碎片与本地提交，实现后另派只读独立审查。不得并行实施后续 Bug。
+- 写域补充：允许新增 `.github/release-notes/fragments/v0.1.5/task-0481-session-projection-test-contract.md`（内部测试维护）；不修改已发布说明或升版。
+- 完成标准：定向回归与相关检查结果如实记录；必需全仓检查若被无关问题阻断则保留验证缺口，不降低门禁；历史用户个案/人工验收状态不变。
+
+### 本切片实际验证（2026-11-17）
+
+- 实现代理 `fix-f09` 仅修改目标测试3处：补齐外部Team历史API替身；两处精确相等期望补 `kind: "chat"`。没有生产实现修改、内部hook/model替换或行为断言删除。
+- 首次原测试：exit 1，5失败/4通过，为缺Team API的fixture错误。仅补外部IPC替身后再次运行：exit 1，5失败/4通过，失败差异仅为实际投影新增 `kind: "chat"`，确认合同滞后红灯。
+- 补字段后，在Desktop包内运行 `bun ../../scripts/quality/run-vitest.mjs --run src/renderer/domains/project/hooks/useProjects.sessionsChanged.test.tsx src/renderer/domains/project/services/sidebar-conversation-projection.test.ts src/renderer/domains/allstar-dev/hooks/useAllstarDevHomePageModel.test.tsx src/renderer/domains/project/hooks/useProjects.projectWrites.test.tsx`：exit 0，4文件22/22（9+6+3+4）通过。当前Allstar model仅3例，不沿用历史27例计数。
+- 原生实现子代理启动的3个后台验证任务均已回收；Coordinator已读取三份实际日志。TEMP/TMP指向授权工作区 `.bugfix-validation/tmp`，Desktop setup沿该临时根创建隔离VETTA_HOME。
+- 独立审查：未参与实现的新上下文 `review-f09` 已完成只读实际候选审查，亲读三份红绿日志，确认外部IPC替身合法、内部装配与精确断言保留，未发现本项代码/测试阻断。审查者没有运行测试或Git，不冒充异家族审查。
+- 收尾：本切片保持 `verifying` / `integration_status: pending`，只提交本地候选；完整check受既有问题阻断，不能记为工程完成或集成通过。按用户允许跳过需owner治理事项的约定，在记录缺口后继续后续队列；不修改waiver、不夹带无关修复。
+- 完整 `bun run check`：exit 1；全仓Biome、CLI/docs/mobile类型和mobile lint通过。失败包括既有WAIVER-0011/0012于11-11过期；3份无关测试文件缺声明头；`spawn-agent-resident-guard.test.ts`请求缺sessionId/turnId/signal；Desktop委任代码两处变量拼写、readonly push及旧terminal-settle测试类型错误。上述路径不在本次diff内，不修无关代码或擅自续期waiver，不宣称完整门禁通过。
+- 本次引入并已纠正的记录错误：Task原填 `branch: chenxvhua`不符合守卫。已从该基线创建符合规范的本地Task候选分支并修正元数据；定向复验 `check-task-worktrees.mjs`、`check-project-indexes.mjs`均exit 0，新增发布碎片由生产 `fragmentProblems`校验返回空问题列表。该自有错误与既有门禁问题分别记录。
+- 未运行：impact/全量行为测试（工作区规则需用户另行决定）、真实UI/Provider、开发服务、构建、发布；本切片只证明当前确定性回归合同恢复，不关闭历史归属故障或补齐全部M1流程。
+- 发布碎片：`.github/release-notes/fragments/v0.1.5/task-0481-session-projection-test-contract.md`；当前manifest仍0.1.4，不修改已发布说明、不升版。
 
 ## 合同
 
