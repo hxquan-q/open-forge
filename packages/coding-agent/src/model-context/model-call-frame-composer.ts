@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ContextCompositionSectionInput } from "@vetta/runtime-core";
 import type {
 	InstructionBlock,
@@ -360,6 +361,11 @@ export class CodingAgentModelCallFrameComposer implements ModelCallFrameComposer
 				...promptOptions,
 				selectedTools: orderModelToolNames(advertisedTools, availableTools),
 				toolDescriptions: Object.fromEntries([...availableTools].map(([name, tool]) => [name, tool.description])),
+				// 模型能力由 kernel 在 Turn admission 注入的不可变 modelBinding 提供；
+				// 无绑定（预览/SDK 场景）或绑定缺 model 时视为未知，视觉指引保守保留旧行为。
+				...(effectiveContext.modelBinding?.model?.input
+					? { modelSupportsImageInput: effectiveContext.modelBinding.model.input.includes("image") }
+					: {}),
 				...(mcpPromptState
 					? {
 							mcpTools: mcpPromptState.tools.map(({ name, description }) => ({ name, description })),

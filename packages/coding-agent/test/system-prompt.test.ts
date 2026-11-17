@@ -186,6 +186,55 @@ describe("buildSystemPrompt", () => {
 		});
 	});
 
+	describe("model input capability gating of vision guidance", () => {
+		test("text-only models get OCR guidance instead of read-first vision instructions", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "bash", "extract_text_from_img"],
+				contextFiles: [],
+				skills: [],
+				modelSupportsImageInput: false,
+			});
+
+			expect(prompt).not.toContain("if you have vision capabilities");
+			expect(prompt).toContain("cannot view images");
+			expect(prompt).toContain("`extract_text_from_img`");
+		});
+
+		test("text-only model without the OCR tool falls back to asking the user, never teaches read-first", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "bash"],
+				contextFiles: [],
+				skills: [],
+				modelSupportsImageInput: false,
+			});
+
+			expect(prompt).not.toContain("if you have vision capabilities");
+			expect(prompt).toContain("cannot view images");
+			expect(prompt).toContain("ask the user");
+		});
+
+		test("vision models keep the vision guidance", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "bash"],
+				contextFiles: [],
+				skills: [],
+				modelSupportsImageInput: true,
+			});
+
+			expect(prompt).toContain("if you have vision capabilities");
+		});
+
+		test("unset capability keeps the legacy combined guidance (SDK/preview calls)", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "bash"],
+				contextFiles: [],
+				skills: [],
+			});
+
+			expect(prompt).toContain("if you have vision capabilities");
+		});
+	});
+
 	describe("instruction precedence", () => {
 		test.each([
 			{ scenario: "conversation" as const, selectedTools: ["read", "bash", "edit"] },

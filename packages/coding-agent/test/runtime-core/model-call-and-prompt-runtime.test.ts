@@ -32,6 +32,41 @@ describe("Coding Agent model call and prompt runtime", () => {
 		expect(frame.promptCacheKey).toBe("team-cache");
 	});
 
+	it("projects the Turn model's image capability into the vision guidelines", async () => {
+		const composer = new CodingAgentModelCallFrameComposer({
+			resolveSystemPromptOptions: () => ({ customPrompt: "test", cwd: "C:/workspace" }),
+		});
+		const extractTool = {
+			name: "extract_text_from_img",
+			label: "extract_text_from_img",
+			description: "Extract text from a single image",
+			inputSchema: { type: "object" },
+			async execute() {
+				return { content: [] };
+			},
+		};
+		const composeFor = (input: ("text" | "image")[]) =>
+			composer.compose({
+				sessionId: "session-1",
+				turnId: "turn-1",
+				signal: new AbortController().signal,
+				messages: [],
+				modelBinding: { model: { ...MODEL, input } },
+				frame: { instructions: [], tools: new Map([["extract_text_from_img", extractTool]]) },
+			});
+
+		// 纯文本模型：不再教 read-first 摸图片，改指 OCR 工具（image-cache 修复的配套改进）。
+		const textOnly = (await composeFor(["text"])).instructions[0]?.content ?? "";
+		expect(textOnly).toContain("cannot view images");
+		expect(textOnly).toContain("`extract_text_from_img`");
+		expect(textOnly).not.toContain("if you have vision capabilities");
+
+		// 视觉模型保留原指引。
+		const vision = (await composeFor(["text", "image"])).instructions[0]?.content ?? "";
+		expect(vision).toContain("if you have vision capabilities");
+		expect(vision).not.toContain("cannot view images");
+	});
+
 	it("projects the complete final Tool surface and maps model-only input before execution", async () => {
 		let executedInput: Readonly<Record<string, unknown>> | undefined;
 		const baseTool = {
