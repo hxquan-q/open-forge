@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0489` | `ready` | — | [普通会话删除失败反馈与副作用顺序](TASK-0489-session-delete-failure-feedback.md)：BUG-0191合同已落盘；两次实现派发均宿主侧中断零源码改动，待实施。 |
 | `TASK-0488` | `verifying` | — | [文件路径策略拒绝结构化错误](TASK-0488-file-policy-error-result.md)：BUG-0190，红4→绿4文件75/75，独立审查无阻断；权限/既有止损不变，全仓check既有阻断，候选pending。 |
 | `TASK-0487` | `verifying` | — | [Provider逐事件取消监听配对释放](TASK-0487-provider-abort-listener-cleanup.md)：BUG-0189，红监听35≠1→绿5文件83/83，独立审查无阻断；全仓check仍既有问题阻断，本地候选pending，不改重试预算。 |
 | `TASK-0486` | `verifying` | — | [自适应流水线 P2 委任机制](TASK-0486-delegation-mechanism.md)：REQ-0034；两提交 30a3dadb0+b0b04534a 定向全绿；件4降级（LLM 读域描述）；待实机验收+用户自跑 impact/完整 check；serial。 |
