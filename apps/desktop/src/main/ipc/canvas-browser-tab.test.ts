@@ -18,6 +18,11 @@ vi.mock("../window-manager.js", () => ({
 	getMainWindow: () => null,
 }));
 
+// 裁剪截图的持久化走 image-cache；mock 掉以在 IPC 测试里避免真实磁盘写入。
+vi.mock("../image-cache/image-cache-service.js", () => ({
+	persistImageFileCache: vi.fn(async () => [{ path: "C:/cache/el.png", width: 3, height: 4 }]),
+}));
+
 const { registerBrowserTabIpc } = await import("./browser-tab.js");
 const { registerCanvasIpc } = await import("./canvas.js");
 const { resetInAppBrowserSessionControllerForTests } = await import(
@@ -185,5 +190,34 @@ describe("canvas and browser-tab IPC stubs", () => {
 		).resolves.toMatchObject({ ok: false, code: "no_browser_session" });
 		teardown();
 		expect(mocks.removeHandler).toHaveBeenCalledTimes(4);
+	});
+
+	it("crop-screenshot 出口不向渲染层泄漏模型内联用的图片本体（data）", async () => {
+		const { getInAppBrowserSessionController } = await import("../browser-automation/webview-session-controller.js");
+		const controller = getInAppBrowserSessionController();
+		const image = {
+			getSize: () => ({ width: 200, height: 80 }),
+			crop: () => image,
+			resize: () => image,
+			toPNG: () => Buffer.from("png"),
+		};
+		controller.attachWebContents("ws-1", {
+			id: 42,
+			isDestroyed: () => false,
+			getURL: () => "https://example.com",
+			getTitle: () => "Example",
+			executeJavaScript: async () => undefined,
+			capturePage: async () => image,
+		});
+		const teardown = registerBrowserTabIpc();
+		const cropHandler = mocks.handlers.get("vetta:browser-tab:crop-screenshot");
+		const result = (await cropHandler?.(
+			{},
+			{ workspaceId: "ws-1", rect: { x: 10, y: 20, width: 20, height: 8 }, devicePixelRatio: 1 },
+		)) as Record<string, unknown>;
+		expect(result.ok).toBe(true);
+		expect(result.attachmentId).toEqual(expect.any(String));
+		expect("data" in result).toBe(false);
+		teardown();
 	});
 });

@@ -155,6 +155,49 @@ describe("browser_tab 单一判定入口", () => {
 	});
 });
 
+describe("browser_tab screenshot 模型可见性（BUG：截图对模型不可见）", () => {
+	it("screenshot 成功结果内联 image 块，vision 模型无需另走 read", () => {
+		const result = formatBrowserTabToolResult({
+			ok: true,
+			action: "screenshot",
+			screenshotAttachmentId: "browser-shot-abc",
+			screenshotImage: { data: "aVnBmd2hhdA==", mimeType: "image/png" },
+			pageRevision: 3,
+		});
+		expect(result.content).toEqual([
+			{ type: "text", text: expect.stringContaining("screenshot captured") },
+			{ type: "image", data: "aVnBmd2hhdA==", mimeType: "image/png" },
+		]);
+		expect(result.isError).toBeUndefined();
+	});
+
+	it("details 不携带图片本体，保持旧 UI 消费形状（attachmentId 仍在）", () => {
+		const result = formatBrowserTabToolResult({
+			ok: true,
+			action: "screenshot",
+			screenshotAttachmentId: "browser-shot-abc",
+			screenshotImage: { data: "aVnBmd2hhdA==", mimeType: "image/png" },
+			pageRevision: 3,
+		});
+		expect(result.details).toEqual({
+			ok: true,
+			action: "screenshot",
+			screenshotAttachmentId: "browser-shot-abc",
+			pageRevision: 3,
+		});
+	});
+
+	it("宿主未回传图片时退回纯文本，不报错（兼容旧宿主）", () => {
+		const result = formatBrowserTabToolResult({
+			ok: true,
+			action: "screenshot",
+			screenshotAttachmentId: "browser-shot-abc",
+			pageRevision: 3,
+		});
+		expect(result.content).toEqual([{ type: "text", text: expect.stringContaining("screenshot captured") }]);
+	});
+});
+
 describe("browser_tab error shape", () => {
 	it("接受 stale_reference / no_browser_session / policy_denied", () => {
 		expect(

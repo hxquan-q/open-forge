@@ -15,7 +15,6 @@ import { toDisposable } from "@vetta/toolkit";
 import type {
 	DesktopBrowserAnnotationLabels,
 	DesktopBrowserCropRect,
-	DesktopBrowserCropScreenshotResult,
 	DesktopBrowserLiveEditAction,
 	DesktopBrowserTabEventEnvelope,
 	DesktopBrowserTabLiveEditResult,
@@ -51,6 +50,22 @@ export interface InAppBrowserWebContents {
 }
 
 export type InAppBrowserEventSink = (envelope: DesktopBrowserTabEventEnvelope) => void;
+
+/**
+ * 主进程侧截图捕获结果：成功分支在 renderer IPC 合同之上多一份 base64 `data`，
+ * 供 `browser_tab screenshot` 把 PNG 内联进模型上下文；IPC 出口负责投影掉再回渲染层。
+ */
+export type InAppBrowserCropScreenshotResult =
+	| {
+			readonly ok: true;
+			readonly attachmentId: string;
+			readonly mimeType: typeof BROWSER_SCREENSHOT_FORMAT;
+			readonly width: number;
+			readonly height: number;
+			readonly path: string;
+			readonly data: string;
+	  }
+	| { readonly ok: false; readonly code: "no_browser_session" | "crop_failed"; readonly message: string };
 
 type PickerOutcome = "picked" | "cancelled" | "idle";
 
@@ -215,7 +230,7 @@ export class InAppBrowserSessionController {
 		workspaceId: string,
 		rect: DesktopBrowserCropRect,
 		devicePixelRatio: number,
-	): Promise<DesktopBrowserCropScreenshotResult> {
+	): Promise<InAppBrowserCropScreenshotResult> {
 		const session = this.sessions.get(workspaceId);
 		const contents = session?.webContents;
 		if (!session || !contents || contents.isDestroyed()) {
@@ -251,6 +266,7 @@ export class InAppBrowserSessionController {
 				width: persisted[0]?.width ?? size.width,
 				height: persisted[0]?.height ?? size.height,
 				path,
+				data: png.toString("base64"),
 			};
 		} catch {
 			return { ok: false, code: "crop_failed", message: "could not capture element" };
@@ -265,7 +281,16 @@ export class InAppBrowserSessionController {
 		workspaceId: string,
 		fullPage: boolean,
 	): Promise<
-		| { ok: true; attachmentId: string; mimeType: string; width?: number; height?: number; path: string }
+		| {
+				ok: true;
+				attachmentId: string;
+				mimeType: string;
+				width?: number;
+				height?: number;
+				path: string;
+				/** PNG 的 base64；供 `browser_tab screenshot` 内联进模型上下文，不跨 IPC 下发。 */
+				data: string;
+		  }
 		| { ok: false; code: string; message: string }
 	> {
 		const session = this.sessions.get(workspaceId);
@@ -299,6 +324,7 @@ export class InAppBrowserSessionController {
 				width: persisted[0]?.width ?? size.width,
 				height: persisted[0]?.height ?? size.height,
 				path,
+				data: png.toString("base64"),
 			};
 		} catch {
 			return { ok: false, code: "capture_failed", message: "could not capture page" };
