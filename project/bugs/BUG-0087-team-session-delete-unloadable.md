@@ -126,3 +126,15 @@ updated: 2026-11-18
 - 未覆盖仍不承诺：不恢复已缺失的聊天内容；全局配置文档本身损坏导致的侧栏读取失败属另一根因；
   删除非跨文件原子事务，租约/权限/I/O 冲突继续明确拒绝；普通单 Agent 删除失败反馈见 BUG-0191。
 - `integration_status: pending` 属任务侧字段，本条改动尚未合入 `origin/dev`。
+
+## 2026-11-18 门禁事实更正
+
+- 本记录状态说明「完整检查仍有仓库既有阻断」、2026-11-16 轮「最终完整 `bun run check` 仍 exit 1」
+  及 2026-11-18 关闭节「完整 `bun run check` 仍受 WAIVER-0011/0012 过期与未修改路径类型错误影响……
+  不宣称全仓门禁已绿」的表述已过期。
+- 事实：用户 2026-11-18 在 `chenxvhua` 实跑 `bun run check` → exit 0。lint 5310 文件、
+  types（root/cli/desktop/docs/mobile）全部 0、guards 全过（`[waivers] all waivers valid
+  and unexpired`、修改声明头 `missing=0`）、mobile-lint 0。
+- `WAIVER-0011` / `WAIVER-0012` 现为 `resolved`（非续期）。
+- 范围：本节只更正门禁事实，不改写前述交付结论；本条剩余项仍见上（`integration_status: pending`
+  属任务侧字段，改动尚未合入 `origin/dev`；「未覆盖仍不承诺」各条），本节不改变上述剩余项。

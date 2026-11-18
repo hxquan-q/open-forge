@@ -191,3 +191,15 @@ updated: 2026-11-18
 - 保持 `integration_status: pending`：改动尚未合入 `origin/dev`，与人工验收无关。
 - 范围外：普通单 Agent 删除失败无反馈属独立缺陷（BUG-0191 / TASK-0489）；全局配置文档本身损坏导致侧栏
   读不出属另一根因；删除不是跨文件原子事务，租约/权限/I/O 冲突仍明确拒绝，不承诺恢复已缺失聊天。
+
+## 2026-11-18 门禁事实更正
+
+- 本记录 2026-11-16 轮「最终完整 `bun run check`：exit 1」及 2026-11-18 收口节
+  「完整 `bun run check` 的既有阻断……不宣称全仓门禁已绿」的表述已过期。
+- 事实：用户 2026-11-18 在 `chenxvhua` 实跑 `bun run check` → exit 0。lint 5310 文件、
+  types（root/cli/desktop/docs/mobile）全部 0、guards 全过（`[waivers] all waivers valid
+  and unexpired`、修改声明头 `missing=0`）、mobile-lint 0。
+- `WAIVER-0011` / `WAIVER-0012` 现为 `resolved`（非续期）。
+- 范围：本节只更正门禁事实，不改写前述交付结论、不表示人工验收完成；本任务剩余项仍见上
+  （`integration_status: pending`，改动尚未合入 `origin/dev`；收口节「范围外」各条），
+  本节不改变上述剩余项。
