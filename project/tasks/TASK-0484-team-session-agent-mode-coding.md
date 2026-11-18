@@ -1,7 +1,7 @@
 ---
 id: TASK-0484
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement: REQ-0030
@@ -38,7 +38,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-12
-updated: 2026-11-17
+updated: 2026-11-18
 base_commit: 393611e2a9a4e9daef69692ea0a403503cc0cbea
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -124,3 +124,11 @@ base_commit: 393611e2a9a4e9daef69692ea0a403503cc0cbea
 - `activeTeamSessionAtom` 语境随重启重置（用户需重新进入团队会话后再开授权页）。
 
 2026-11-17 后续维护：上方「预存类型错误」中的 `useSessionEventController.terminal-settle.test.tsx` 一项已在专项纠偏提交（`fix(test): 对齐两份测试的事件/请求类型`）中清零——去掉 `as SessionEvent` 强转、按当前 `@vetta/runtime-core` 事件联合成员重构测试内对象（`tool.end` 不再携带生产类型中不存在的 `args`）；断言与测试场景无变化，本任务状态不动。
+
+## 2026-11-18 人工验收通过
+
+- 用户明确反馈「验证过了可用」，人工功能验收通过，本任务转 done。验收方式即前文约定的完整重启 `bun run dev` 后重跑团队彩排。
+- 验收覆盖：团队会话新建与恢复两轴均为 `coding`（`agentMode` + `capabilityProfile` 同值）、成员按 `coding.md` 先验行为、团队语境下 computer-use 授权主体、Allstar 版块团队会话归卡与路由高亮。
+- 工程证据沿用前文（三片红→绿、定向 28+41+40 用例、`check:quick` 对改动文件全绿）；未重跑影响面与 E2E。
+- 已知限制不变：存量团队会话的 Memory/Journal 不自动迁移；团队会话被空闲逐出后 `isKnownTeamSession` 为 false；`activeTeamSessionAtom` 语境随重启重置。
+- `integration_status` 仍为 `pending`：本地候选在 `chenxvhua`，尚未合入 `origin/dev`；未 push、未发布。
