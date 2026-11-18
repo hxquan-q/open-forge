@@ -1,7 +1,7 @@
 ---
 id: TASK-0226
 type: task
-status: in_progress
+status: done
 priority: P1
 owner: apps/desktop
 requirement:
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-12
-updated: 2026-11-16
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -179,3 +179,15 @@ updated: 2026-11-16
 - 提交前核实：当前仍在 task/TASK-0486-delegation-mechanism、HEAD e518a9af0c200c4b3bd96725f750ac50c06cc432；源码/测试与已通过 9 文件 71/71 的候选一致，没有新增实现改动，复用该定向结果及完整 check 的真实失败记录，不为本次文档补记重复跑行为测试/全仓检查。
 - 仅逐路径暂存本任务 15 个文件，保留既有 bun.lock 改动在工作树、不纳入提交；不切分支、不绕过提交钩子、不操作任何远端。承载本记录的提交即为本次本地保存绑定，不额外追加只写 hash 的记录提交。
 - 工程完整门禁尚未满足，Task/Bug 保持 in_progress、integration_status=pending；用户本次正向黑盒反馈已记录，但不自动关闭整个任务或扩大验收范围。
+
+## 2026-11-18 收口
+
+- 用户明确指示收口（「0226收吧」）。判据：实现已随 `4fb65a823`（`fix(desktop): 修复团队历史会话的安全删除`）
+  进入 `chenxvhua` 历史；定向 9 文件 71/71（删除回归 26/26）；用户已实机黑盒反馈会话删除未遇问题。
+- **不计入阻塞的项**：完整 `bun run check` 的既有阻断（WAIVER-0011/0012 于 2026-11-11 过期、root
+  `spawn-agent-resident-guard` 与 desktop `delegationTeamId` / readonly push / `terminal-settle` 类型错误、
+  3 个未修改文件缺声明头）均不在本任务修改路径，属仓库既有债；按 11-16 记录「不扩修」处理，不作为本任务
+  未完成的判据，但也不宣称全仓门禁已绿。
+- 保持 `integration_status: pending`：改动尚未合入 `origin/dev`，与人工验收无关。
+- 范围外：普通单 Agent 删除失败无反馈属独立缺陷（BUG-0191 / TASK-0489）；全局配置文档本身损坏导致侧栏
+  读不出属另一根因；删除不是跨文件原子事务，租约/权限/I/O 冲突仍明确拒绝，不承诺恢复已缺失聊天。
