@@ -162,10 +162,10 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0262` | `verifying` | — | [压缩提交前排空在途追加并刷新版本，消除与事件循环的版本竞态](TASK-0262-compaction-version-race.md) |
 | `TASK-0261` | `verifying` | — | [续跑条改用 runtime session id：拆开门控与宿主调用的语义](TASK-0261-resume-bar-runtime-id-seam.md) |
 | `TASK-0260` | `verifying` | — | [团队会话删除改为删除优先：清理失败降级记录、不再掀翻删除](TASK-0260-team-session-delete-robust-cleanup.md) |
-| `TASK-0259` | `verifying` | — | [品牌档位相关测试断言改为引用品牌事实源](TASK-0259-brand-profile-test-assertion.md) |
-| `TASK-0252` | `verifying` | — | [Desktop i18n 组合词归一与防回退门禁](TASK-0252-desktop-i18n-brand-composition-guard.md) |
-| `TASK-0251` | `verifying` | — | [系统插件文案与导出产物使用宿主品牌](TASK-0251-system-plugin-brand-copy.md) |
-| `TASK-0250` | `verifying` | — | [runtime-node 用户可见报错与工具描述去遗留品牌名](TASK-0250-runtime-user-visible-brand-strings.md) |
+| `TASK-0259` | `done` | — | [品牌档位相关测试断言改为引用品牌事实源](TASK-0259-brand-profile-test-assertion.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认 `DESKTOP_BRAND.displayName` 断言在树、文件不钉档位；纯测试修复无人工验收入口，收口；未重跑测试，候选 integration pending。 |
+| `TASK-0252` | `done` | — | [Desktop i18n 组合词归一与防回退门禁](TASK-0252-desktop-i18n-brand-composition-guard.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认 `legacyProductNames` 顺序、句末句号边界规则与全量 locale 守卫（递归遍历 `resources.ts` 15 命名空间 × zh/en，`main-resources` 为真子集）均成立；界面语序未目验，候选 integration pending。 |
+| `TASK-0251` | `done` | — | [系统插件文案与导出产物使用宿主品牌](TASK-0251-system-plugin-brand-copy.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认宿主 i18n 出口套用 `replaceDesktopBrandText`、名单唯一来源品牌事实源；`mockup/render.ts` 水印与 plugin-cli 文案按决策保留，候选 integration pending。 |
+| `TASK-0250` | `done` | — | [runtime-node 用户可见报错与工具描述去遗留品牌名](TASK-0250-runtime-user-visible-brand-strings.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认报错/描述文案全改、`runtime-node` 内 `\bVetta\b` 仅 5 处且均为冻结标识与注释；勘误：兜底路径已由 TASK-0441 指向 OpenForge（该 Task 仍 verifying），候选 integration pending。 |
 | `TASK-0249` | `in_progress` | — | [agent 身份行与 CLI 指引按品牌档位渲染](TASK-0249-agent-identity-and-cli-guidance-brand.md) |
 | `TASK-0248` | `verifying` | — | [dev:electron 启动前校验并自愈 Electron 二进制](TASK-0248-electron-binary-dev-guard.md) |
 | `TASK-0241` | `verifying` | — | [修复团队会话失败终态的同步渲染循环（BUG-0101）](TASK-0241-team-error-state-update-loop.md) |
@@ -205,7 +205,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0125` | `blocked` | PLAN-0013 | [团队编排效率回归实测：rebase 上游 + 阶段 1 后同任务量化对比](TASK-0125-team-orchestration-rebaseline.md)<br>chenxvhua 补充（状态 `blocked`；Plan ``PLAN-0013``）：rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
 | `TASK-0107` | `verifying` | PLAN-0010 | [后台进程统一健康/重启/记账契约 + unresponsive 栈采样](TASK-0107-background-process-health-contract.md)<br>chenxvhua 补充（状态 `verifying`；Plan ``PLAN-0010``）：后台进程统一健康记账（ProcessRoleContract + crash/restart/pid 归因入 perf 快照与诊断包）+ unresponsive JS 栈采样已落地并过定向测试；缺真实 Desktop 上 kill sidecar/模拟 unresponsive 的冒烟证据。 |
 | `TASK-0050` | `verifying` | PLAN-0002 | [transcript 窗口化第 2 步：beforeEntry 游标分页](TASK-0050-transcript-cursor-pagination.md)<br>chenxvhua 补充（状态 `verifying`；Plan ``PLAN-0002``）：transcript 窗口化第 2 步（`beforeEntry` 游标分页）三阶段全落地：Main 页合同、viewer 增量订阅、renderer 窗口化（上滚翻页/尾页刷新/整窗重置/导出排空）+ 乐观气泡尾对齐；缺真实 Desktop 大历史冒烟。 |
-| `TASK-0048` | `in_progress` | PLAN-0003 | [公开文档站品牌、正文与发现入口迁移](TASK-0048-docs-site-brand-migration.md)<br>chenxvhua 补充（状态 `in_progress`；Plan `PLAN-0003`）：公开文档站品牌、正文与 SEO/LLM 发现入口迁移；尚未实施，缺口最大（docs-site 内容为主）。 |
+| `TASK-0048` | `done` | PLAN-0003 | [公开文档站品牌、正文与发现入口迁移](TASK-0048-docs-site-brand-migration.md)<br>chenxvhua 补充（状态 `done`；Plan `PLAN-0003`）：2026-11-18 状态对齐——三片交付早已落树，`logoPath` 已指 `open-forge-icon.png`（旧图已删）、站点代码层 `docs.openvetta.com` 0 命中，前文两处待定项均已消解；未部署、未重跑 build，候选 integration pending。 |
 | `TASK-0047` | `verifying` | PLAN-0003 | [仓库文档与协作入口品牌迁移](TASK-0047-repository-docs-brand-migration.md)<br>chenxvhua 补充（状态 `verifying`；Plan `PLAN-0003`）：第八片：中英根入口与文档导航重写，继承宣传/社区入口清理，旧草案与 15 份素材独立归档；35 项站点测试、10 项 impact、113 页构建、6 项 HTTP、299 个引用和完整 check 通过；main 串行本地提交，待用户审阅。 |
 | `TASK-0042` | `verifying` | PLAN-0002 | [powerMonitor 定向清理：suspend/lock-screen 免费收缩点](TASK-0042-powermonitor-suspend-trim.md)<br>chenxvhua 补充（状态 `verifying`；Plan `PLAN-0002`）：suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿）；随 TASK-0196 批次推 dev（ca6c9df9d）合入 main；实机峰谷差待用户验收——2026-10-08 用户选择自行实测（不由 Agent 触发真实电源事件），步骤与日志字段清单（`power working-set trim` 的 `reason/trimmed/beforeKb/afterKb/deltaKb`、`power event observed` 的 `workingSetKb`，落点 `<vettaHome>/desktop-app/logs/`）已写入 Task，待回贴读数。 |
 

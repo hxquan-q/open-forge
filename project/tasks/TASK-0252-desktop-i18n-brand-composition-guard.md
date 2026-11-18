@@ -1,7 +1,7 @@
 ---
 id: TASK-0252
 type: task
-status: verifying
+status: done
 priority: P1
 owner: Desktop i18n / 品牌层
 requirement: REQ-0013
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -113,3 +113,14 @@ updated: 2026-10-14
 - 剩余风险：
   - 归一仍是按名单逐词替换，未做语义级品牌化；新增「品牌词 + 后缀」组合时需同步补名单（守卫会立刻报出漏项）。
   - 系统插件（TASK-0251）与 plugin-cli 的文案不在本守卫覆盖范围。
+
+## 2026-11-18 静态核查后收口
+
+- 依据：只读静态核查逐条核对，三处关键主张全部在树——
+  1. `src/shared/desktop-brand.json` 与 `desktop-brand.distribution.json` 的 `legacyProductNames` 均含 `Vetta Desktop` 且排在 `Vetta` 之前，组合词整段归一成立；
+  2. `src/shared/desktop-brand.ts` 的点号边界规则存在：点号默认排除在边界外（保护 `Vetta.exe`、域名），点号后非单词字符（句末句号）算边界；
+  3. `desktop-brand.test.ts` 含组合词断言，以及「递归收集全部 locale 字符串值、`self`/`distribution` × zh/en 逐条断言不含 `\bVetta\b`」的守卫。
+- 守卫覆盖面无空洞：`collectLocaleStrings` 递归遍历 `resources.ts` 的 15 个命名空间 × zh/en 两份 catalog 事实源，`main-resources` 是其真子集，不存在「只挑了部分 key」的假覆盖——这是本任务最易自欺的一处，已单独验证。
+- 界面文案的实际观感（组合词拼接后的语序）未做人工目验，属可选补充；守卫已保证不再出现遗留品牌名，不影响本任务收口。
+- 本次未重跑测试：绿灯证据沿用前文（`desktop-brand.test.ts` 18/18、品牌层四文件 26 例、守卫在旧实现下必然失败）。
+- `integration_status` 保持 `pending`：未合入 `origin/dev`，未 push、未发布。

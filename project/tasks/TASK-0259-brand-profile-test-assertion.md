@@ -1,7 +1,7 @@
 ---
 id: TASK-0259
 type: task
-status: verifying
+status: done
 priority: P2
 owner: Desktop 渲染层测试
 requirement:
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -103,3 +103,10 @@ updated: 2026-10-14
 - 未运行及原因：无（纯测试断言修复，无用户界面入口，人工验收不适用）。
 - Worktree：不拆出（main 串行）
 - 剩余风险：无已知风险；该文件仍不钉档位，断言随默认档变化而成立，这正是修复目的。
+
+## 2026-11-18 静态核查后收口
+
+- 依据：只读静态核查（逐条证伪交付记录，证据定位到 `文件:行`）确认改动与断言均在树——`plugin-official-models.test.ts` 已导入 `DESKTOP_BRAND`、断言为 `` `${DESKTOP_BRAND.displayName} Go` ``，文件内无写死的品牌名；该文件不钉档位，断言随默认档变化仍成立，与修复目的相符。
+- 收口口径：本任务是纯测试断言修复，无用户界面入口，人工功能验收不适用；静态可核项全部命中，故由 `verifying` 转 `done`。
+- 本次未重跑测试：绿灯证据沿用前文（默认档 4/4、`VETTA_BRAND_PROFILE=self` 4/4、`bun run check` exit 0），本次核查只验证断言存在性与方向，不冒充复跑结果。
+- `integration_status` 保持 `pending`：改动未合入 `origin/dev`，未 push、未发布。
