@@ -439,7 +439,7 @@ describe("detached review candidate", () => {
 			},
 		});
 		expect(() => exportEvidence(context.store, context.token.runId, context.policy)).not.toThrow();
-	});
+	}, 15000); // Adapter runs, detached worktree review and verification spawn real subprocesses.
 	it("fails the attempt without recording a review when the reviewer dirties the candidate", async (test) => {
 		const context = test.fixture;
 		const repo = context.repo;
