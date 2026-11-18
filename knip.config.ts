@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Knip config for optional dead-code / unused-export reporting.
  *

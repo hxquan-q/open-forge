@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execFile } from "node:child_process";
 import { accessSync, constants } from "node:fs";
 import { access, chmod, copyFile, mkdir, open, readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";

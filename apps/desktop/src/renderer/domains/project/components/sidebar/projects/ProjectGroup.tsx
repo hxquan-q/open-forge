@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Project } from "@shared/store/atoms";
 import { ProjectGroupView, SessionRowView } from "@vetta-org/theme-ui/project";
 import { memo, useCallback } from "react";

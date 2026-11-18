@@ -150,6 +150,7 @@ describe("InAppBrowserSessionController", () => {
 				ok: true,
 				path: "C:/cache/el.png",
 				mimeType: "png",
+				data: Buffer.from("png").toString("base64"),
 			},
 		);
 		const miss = new InAppBrowserSessionController(
@@ -167,6 +168,32 @@ describe("InAppBrowserSessionController", () => {
 				code: "no_browser_session",
 			},
 		);
+	});
+
+	it("captureScreenshot returns inline PNG bytes for the model while still persisting to the cache", async () => {
+		const persisted: unknown[] = [];
+		const controller = new InAppBrowserSessionController(
+			() => undefined,
+			async (_sessionId, images) => {
+				persisted.push(images);
+				return [{ path: "C:/cache/shot.png", width: 200, height: 80 }];
+			},
+		);
+		controller.attachWebContents("ws-1", fakeContents());
+		const shot = await controller.captureScreenshot("ws-1", false);
+		expect(shot).toMatchObject({
+			ok: true,
+			mimeType: "png",
+			path: "C:/cache/shot.png",
+			data: Buffer.from("png").toString("base64"),
+		});
+		// 缓存落盘合同不变：持久化仍收到同一份 PNG bytes。
+		expect(persisted).toHaveLength(1);
+		const [images] = persisted as Array<Array<{ mimeType: string; source: { kind: string; data: ArrayBuffer } }>>;
+		expect(images).toHaveLength(1);
+		expect(images[0]?.mimeType).toBe("image/png");
+		expect(images[0]?.source.kind).toBe("bytes");
+		expect(Buffer.from(images[0]!.source.data).toString("base64")).toBe(Buffer.from("png").toString("base64"));
 	});
 
 	describe("liveEdit（TASK-0085 页面内即时预览）", () => {

@@ -112,7 +112,7 @@ function toolCall(options: { readonly id: string; readonly arguments: Record<str
 	return { type: "toolCall", id: options.id, name: "browser_tab", arguments: options.arguments };
 }
 
-function failingTool(): { readonly tool: RuntimeToolDefinition; executions: () => number } {
+function failingTool(code = "invalid_input"): { readonly tool: RuntimeToolDefinition; executions: () => number } {
 	let executions = 0;
 	const tool: RuntimeToolDefinition = {
 		name: "browser_tab",
@@ -121,8 +121,8 @@ function failingTool(): { readonly tool: RuntimeToolDefinition; executions: () =
 		async execute(): Promise<RuntimeToolResult> {
 			executions += 1;
 			return {
-				content: [{ type: "text", text: "invalid_input: elementRef must be the opaque token" }],
-				details: { ok: false, code: "invalid_input" },
+				content: [{ type: "text", text: `${code}: operation rejected` }],
+				details: { ok: false, code },
 				isError: true,
 			};
 		},
@@ -148,13 +148,14 @@ function runWith(
 }
 
 describe("executeRuntimeToolCalls 与止损", () => {
-	it("相同失败连续 3 次后停止自动重试，返回 AGENT_TOOL_CALL_STOPPED", async () => {
+	it.each(["invalid_input", "policy_denied"])("相同 %s 连续 3 次后止损，改参数恢复", async (code) => {
 		const guard = createToolFailureGuard();
-		const { tool, executions } = failingTool();
+		const { tool, executions } = failingTool(code);
 
 		for (const id of ["c1", "c2", "c3"]) {
 			const attempt = await runWith(tool, [toolCall({ id, arguments: brokenInput })], guard);
-			expect(attempt.results[0]?.details).toMatchObject({ code: "invalid_input" });
+			expect(attempt.results[0]?.isError).toBe(true);
+			expect(attempt.results[0]?.details).toMatchObject({ code });
 		}
 		expect(executions()).toBe(3);
 
@@ -163,10 +164,14 @@ describe("executeRuntimeToolCalls 与止损", () => {
 		expect(stopped.results[0]?.isError).toBe(true);
 		expect(stopped.results[0]?.details).toMatchObject({
 			code: AGENT_TOOL_CALL_STOPPED,
-			stoppedErrorCode: "invalid_input",
+			stoppedErrorCode: code,
 			attempts: 3,
 		});
 		expect(String((stopped.results[0]?.content[0] as { text: string }).text)).toContain("Change the arguments");
+
+		const changed = await runWith(tool, [toolCall({ id: "changed", arguments: { action: "snapshot" } })], guard);
+		expect(changed.results[0]?.details).toMatchObject({ code });
+		expect(executions()).toBe(4);
 	});
 
 	it("改参数后恢复执行", async () => {
@@ -259,8 +264,8 @@ async function collect(events: AsyncIterable<AgentExecutionEvent>): Promise<Agen
 }
 
 describe("runAgentTurn 每回合重置止损", () => {
-	it("同回合第 4 次相同调用被止损，新回合恢复执行", async () => {
-		const { tool, executions } = failingTool();
+	it.each(["invalid_input", "policy_denied"])("同回合第 4 次 %s 被止损，新回合恢复执行", async (code) => {
+		const { tool, executions } = failingTool(code);
 		const repeated = (id: string) => streamResponse(assistantMessage([modelToolCall(id, brokenInput)], "toolUse"));
 
 		const first = runAgentTurn(

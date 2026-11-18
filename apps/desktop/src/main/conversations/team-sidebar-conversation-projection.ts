@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { dirname } from "node:path";
 import type { AgentTeamDocument, TeamSessionListItem } from "@vetta/agent-team";
 import { teamMemberAvatarUrls } from "../../shared/agent-team-avatar.js";
@@ -10,14 +11,29 @@ import { sameProjectPath } from "../projects/project-path.js";
 
 export interface TeamSidebarConversationProjectionDependencies {
 	readonly readDocument: () => Promise<AgentTeamDocument>;
+	readonly listHistoryTeamIds: () => Promise<readonly string[]>;
 	readonly listSessions: (teamId: string) => Promise<readonly TeamSessionListItem[]>;
 	readonly listProjectPaths: () => Promise<readonly string[]>;
 }
 
+/**
+ * placement 解析用的项目名单：普通项目册 + 开发册（allstarProjects）。
+ * 开发册项目下的团队会话也要解析出 project placement（对齐 team-workspace 的
+ * BUG-0163 名单），否则一律落 default 分组，项目侧栏看不到该项目下的团队会话。
+ */
+export async function readSidebarProjectPaths(): Promise<readonly string[]> {
+	const config = await readDesktopConfig();
+	return [
+		...config.projects.map((project) => project.path),
+		...(config.allstarProjects ?? []).map((project) => project.path),
+	];
+}
+
 const defaultDependencies: TeamSidebarConversationProjectionDependencies = {
 	readDocument: () => agentTeamStore.read(),
+	listHistoryTeamIds: () => agentTeamSessionService.listHistoryTeamIds(),
 	listSessions: (teamId) => agentTeamSessionService.listSessions(teamId),
-	listProjectPaths: async () => (await readDesktopConfig()).projects.map((project) => project.path),
+	listProjectPaths: readSidebarProjectPaths,
 };
 
 /**
@@ -27,17 +43,24 @@ const defaultDependencies: TeamSidebarConversationProjectionDependencies = {
 export async function listTeamSidebarConversations(
 	dependencies: TeamSidebarConversationProjectionDependencies = defaultDependencies,
 ): Promise<readonly DesktopTeamSidebarConversation[]> {
-	const [document, projectPaths] = await Promise.all([dependencies.readDocument(), dependencies.listProjectPaths()]);
+	const [document, projectPaths, historyTeamIds] = await Promise.all([
+		dependencies.readDocument(),
+		dependencies.listProjectPaths(),
+		dependencies.listHistoryTeamIds(),
+	]);
+	const teamsById = new Map(document.teams.map((team) => [team.id, team]));
+	const teamIds = [...new Set([...teamsById.keys(), ...historyTeamIds])];
 	const agentsById = new Map(document.agents.map((agent) => [agent.id, agent]));
 	const blueprintsById = new Map(agentBlueprintRegistry.list().map((blueprint) => [blueprint.id, blueprint]));
 	const projected = (
 		await Promise.all(
-			document.teams.map(async (team) => {
+			teamIds.map(async (teamId) => {
+				const team = teamsById.get(teamId);
 				// 头像随人设走，人设由提供方维护：blueprint 解析得到才画得出提供方那张图。
-				const avatarUrls = teamMemberAvatarUrls(team, agentsById, blueprintsById);
-				return (await dependencies.listSessions(team.id)).map((session) => ({
+				const avatarUrls = team ? teamMemberAvatarUrls(team, agentsById, blueprintsById) : [];
+				return (await dependencies.listSessions(teamId)).map((session) => ({
 					kind: "agent-team" as const,
-					teamId: team.id,
+					teamId,
 					teamSessionId: session.id,
 					coordinationSessionPath: session.coordinationSessionPath,
 					cwd: session.cwd ?? dirname(session.coordinationSessionPath),

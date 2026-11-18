@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-node
 
 Vetta Runtime 协议的共享 Node.js 实现层。

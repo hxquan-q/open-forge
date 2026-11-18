@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { defaultConversationFilterAtom, tagConversationFilter } from "@shared/store/atoms";
 import { renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -40,7 +41,7 @@ vi.mock("../../../../hooks/useProjects", () => ({
 		loadSessions: vi.fn(),
 	}),
 }));
-vi.mock("../../../../hooks/useTeamSidebarConversations", () => ({
+vi.mock("@shared/hooks/useTeamSidebarConversations", () => ({
 	useTeamSidebarConversations: () => ({ conversations: [], loading: false }),
 }));
 

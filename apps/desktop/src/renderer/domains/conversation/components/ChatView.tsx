@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import {
 	activeSessionAtom,
+	activeSessionHotTrackingAtom,
 	pageHeaderLeftSlotAtom,
 	pageHeaderRightSlotAtom,
 	type WorkspaceMode,
@@ -44,6 +45,7 @@ export function ChatView(props: ChatViewProps): JSX.Element {
 	const { actions, model } = useChatViewModel();
 	const { mode: projectMode } = useWorkspaceMode(model.cwd);
 	const activeSession = useAtomValue(activeSessionAtom);
+	const hotTracking = useAtomValue(activeSessionHotTrackingAtom);
 	// 右栏布局跟随会话自身的工具面（capabilityProfile 创建时固化）；项目档位只决定新会话
 	// 页的默认档。若仍按项目档位取值，进入「Allstar自主开发」版块（档位=coding）后，同一
 	// 项目的已有研究会话右栏会被翻成执行面板。折叠口径与 main 侧一致：profile 缺失/未知按
@@ -89,6 +91,7 @@ export function ChatView(props: ChatViewProps): JSX.Element {
 			messages={model.messages}
 			workspace={workspace}
 			workspaceMode={workspaceMode}
+			hotTracking={hotTracking}
 			rootClassName={model.rootClassName}
 			exportState={model.exporting ? { title: model.exportTitle, onFinished: actions.finishExport } : undefined}
 		>

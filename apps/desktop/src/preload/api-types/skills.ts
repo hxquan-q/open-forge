@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SkillPresentation, SkillPresentationSurface, SkillVisibility } from "@vetta-org/capability-sdk";
 
 export type { SkillPresentation, SkillPresentationSurface, SkillVisibility };
@@ -18,6 +19,8 @@ export interface SkillInfo {
 	presentation?: SkillPresentation;
 	/** 插件贡献的 skill 来源插件 ID；其它来源未定义。 */
 	sourcePluginId?: string;
+	/** 产品定义的会话模式可见标签；未声明表示两种模式均可见。 */
+	workspaceMode?: "work" | "coding";
 	type: "skill" | "scene";
 	/**
 	 * 已解析的本地展示图标（若有）：Skill 自身声明优先，其次继承 Provider；

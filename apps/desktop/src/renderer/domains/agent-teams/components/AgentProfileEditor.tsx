@@ -1,4 +1,11 @@
-import type { AgentAbilitySelection, AgentBlueprint, AgentProfile, AgentProfileUpdateImpact } from "@vetta/agent-team";
+// Modified by The Open Forge contributors.
+import type {
+	AgentAbilitySelection,
+	AgentBlueprint,
+	AgentProfile,
+	AgentProfileLifecycle,
+	AgentProfileUpdateImpact,
+} from "@vetta/agent-team";
 import { Button, cn, Input, Switch } from "@vetta-org/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -80,6 +87,7 @@ export function AgentProfileEditor({
 	const [abilities, setAbilities] = useState<AgentAbilitySelection>(() =>
 		normalizeAgentAbilitySelection(agent.abilities, capabilities),
 	);
+	const [lifecycle, setLifecycle] = useState<AgentProfileLifecycle | undefined>(agent.lifecycle);
 	const [uncontrolledTab, setUncontrolledTab] = useState<AgentProfileTab>("basic");
 	const activeTab = controlledTab ?? uncontrolledTab;
 	const setActiveTab = onActiveTabChange ?? setUncontrolledTab;
@@ -95,6 +103,7 @@ export function AgentProfileEditor({
 		setSystemPrompt(agent.systemPrompt ?? inheritedPrompt);
 		setAvatarOverride(agent.avatar);
 		setAbilities(normalizeAgentAbilitySelection(agent.abilities, capabilities));
+		setLifecycle(agent.lifecycle);
 		setPendingImpact(undefined);
 		setSaved(false);
 		setError(undefined);
@@ -116,8 +125,9 @@ export function AgentProfileEditor({
 			...(avatarOverride ? { avatar: avatarOverride } : {}),
 			mentionHandle: agent.mentionHandle,
 			abilities,
+			...(lifecycle ? { lifecycle } : {}),
 		});
-	}, [abilities, agent.mentionHandle, avatarOverride, description, name, onDraftChange, promptOverride]);
+	}, [abilities, agent.mentionHandle, avatarOverride, description, lifecycle, name, onDraftChange, promptOverride]);
 
 	useEffect(() => {
 		onSavingChange?.(saving);
@@ -148,6 +158,7 @@ export function AgentProfileEditor({
 				...(avatarOverride ? { avatar: avatarOverride } : {}),
 				mentionHandle: agent.mentionHandle,
 				abilities,
+				...(lifecycle ? { lifecycle } : {}),
 			});
 			onSaveComplete?.();
 			setPendingImpact(undefined);
@@ -201,6 +212,8 @@ export function AgentProfileEditor({
 								className="min-h-20 w-full resize-none rounded-xl border border-border/60 bg-background/50 px-3.5 py-2.5 text-[12px] leading-relaxed text-foreground caret-primary outline-none transition-colors placeholder:text-muted-foreground/50 hover:border-border focus:border-primary/50 focus:bg-background"
 							/>
 						</label>
+
+						<LifecycleField value={lifecycle} onChange={setLifecycle} readOnly={readOnly} />
 					</div>
 				)}
 
@@ -386,6 +399,7 @@ export function AgentProfileEditor({
 										className="min-h-24 w-full cursor-text resize-y rounded-xl border border-border/60 bg-background/50 px-3.5 py-2.5 text-xs text-foreground caret-primary outline-none transition-all placeholder:text-muted-foreground/50 hover:border-border focus:border-primary/50 focus:bg-background"
 									/>
 								</label>
+								<LifecycleField value={lifecycle} onChange={setLifecycle} readOnly={readOnly} />
 							</div>
 						</div>
 					)}
@@ -483,6 +497,7 @@ export function AgentProfileEditor({
 								className="min-h-24 w-full resize-y rounded-xl border border-border/60 bg-background/50 px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground/50 hover:border-border focus:border-primary/50 focus:bg-background"
 							/>
 						</label>
+						<LifecycleField value={lifecycle} onChange={setLifecycle} readOnly={readOnly} />
 						<label className="text-sm">
 							<span className="mb-1.5 block text-xs font-semibold tracking-wider uppercase text-muted-foreground/80">
 								{t("profile.systemPrompt")}
@@ -543,6 +558,78 @@ export function AgentProfileEditor({
 				)}
 			</div>
 		</div>
+	);
+}
+
+/**
+ * 委任方式三选一：决定这个智能体被选为新会话对象时怎么工作。
+ * 用户语言讲后果（接管对话 / 作为机组成员被调度），不暴露 lifecycle 枚举值。
+ * 原生 radio + label：语义归浏览器，选中态与禁用态不需要手写状态机。
+ */
+function LifecycleField({
+	value,
+	onChange,
+	readOnly = false,
+}: {
+	readonly value: AgentProfileLifecycle | undefined;
+	readonly onChange: (value: AgentProfileLifecycle | undefined) => void;
+	readonly readOnly?: boolean;
+}): JSX.Element {
+	const { t } = useTranslation("agent-teams");
+	const options: readonly {
+		readonly key: "takeover" | "resident" | "oneshot";
+		readonly value: AgentProfileLifecycle | undefined;
+	}[] = [
+		{ key: "takeover", value: undefined },
+		{ key: "resident", value: "resident" },
+		{ key: "oneshot", value: "oneshot" },
+	];
+	return (
+		<fieldset className="block text-sm" disabled={readOnly}>
+			<legend className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+				{t("profile.lifecycle.label")}
+			</legend>
+			<p className="mb-2 text-[11px] text-muted-foreground/80">{t("profile.lifecycle.hint")}</p>
+			<div className="flex flex-col gap-2">
+				{options.map((option) => {
+					const selected = value === option.value;
+					return (
+						<label
+							key={option.key}
+							className={cn(
+								"flex min-w-0 cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-2.5 transition-colors has-[:focus-visible]:border-ring/60",
+								selected
+									? "border-primary/40 bg-primary/10"
+									: "border-border/50 bg-background/40 hover:border-border hover:bg-muted/30",
+							)}
+						>
+							<input
+								type="radio"
+								name="agent-profile-lifecycle"
+								checked={selected}
+								onChange={() => onChange(option.value)}
+								className="sr-only"
+							/>
+							<span
+								aria-hidden
+								className={cn(
+									"mt-1 h-2 w-2 shrink-0 rounded-full",
+									selected ? "bg-primary" : "bg-muted-foreground/30",
+								)}
+							/>
+							<span className="min-w-0">
+								<span className="block text-[12px] font-medium text-foreground">
+									{t(`profile.lifecycle.option.${option.key}`)}
+								</span>
+								<span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground/80">
+									{t(`profile.lifecycle.option.${option.key}Hint`)}
+								</span>
+							</span>
+						</label>
+					);
+				})}
+			</div>
+		</fieldset>
 	);
 }
 

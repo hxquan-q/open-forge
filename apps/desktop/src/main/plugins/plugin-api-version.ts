@@ -11,8 +11,11 @@
  * - 2.10.0：底部面板实例的 `openTerminal` / `revealInstance` 与 `terminal.run` 权限。
  * - 2.11.0：智能体与团队的档位归属声明（`agent.agents[].mode` / `agent.teams[].mode`，
  *   `work` / `coding`；缺省两档可见）。
+ * - 2.12.0：Skill 展示策略可声明工作区模式归属；只过滤 `/` 候选列表，不影响 Skill 加载或调用。
+ * - 2.13.0：智能体委任生命周期标记（`agent.agents[].lifecycle`，`resident` / `oneshot`）：
+ *   声明即 worker 型（默认会话保持驾驶+按域委派），缺省 = 主控/接管型（现状）。
  *
  * 清单校验对未知字段 fail-closed。作者把 `pluginApiVersion` 写成用到的那一档，
  * 旧宿主才能给出明确的版本错误。
  */
-export const PLUGIN_API_VERSION = "2.11.0";
+export const PLUGIN_API_VERSION = "2.13.0";

@@ -16,6 +16,15 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0192` | code 会话热追踪跟随 AI 工作区文件时右栏预览报「无法读取此文件」；会话解析注册工作区授权根，红 2→绿 23/23，待实机验收 | verifying | P1 | REQ-0031 |
+| `BUG-0191` | 普通会话删除失败无反馈且标记/导航先于删除结果；合同已登记TASK-0489，实现未开始 | investigating | P1 | — |
+| `BUG-0190` | read/write拒绝返回结构化policy_denied；红4→绿75/75，独立审查无阻断，完整门禁既有阻断，候选待验 | verifying | P1 | — |
+| `BUG-0189` | Provider逐事件abort/timer配对释放，红35≠1→绿83/83、独立审查无阻断；完整门禁既有阻断，候选待验 | verifying | P1 | — |
+| `BUG-0186` | 电脑操作回执/观察缺少前台窗口与 IME 状态；已补只读反馈，先红后绿、原生 31/31，待用户黑盒复验 | verifying | P1 | PLAN-0031 |
+| `BUG-0185` | 电脑操作一次动作失败即 paused 死锁、AI 无法 observe 自恢复；失败不再暂停会话，红 3→绿，computer-use 47/47，待实机复验 | verifying | P1 | PLAN-0031 |
+| `BUG-0184` | 电脑操作观察截图与动作输入画面不一致；已改为观察时捕获排除 Vetta（旧系统回退截图隐藏），红 5→绿，computer-use 44/44，待实机复验 | verifying | P1 | PLAN-0031 |
+| `BUG-0183` | 开发态电脑操作后端资源路径错误；已改为 cwd 定位、打包路径不变，回归 2/2 + 相关测试 31/31，待 dev 实机复验 | verifying | P1 | PLAN-0031 |
+| `BUG-0182` | 已有会话增量模式漏收及旧列表回填回滚；两轮红3→绿9/9，相关流程27/27 | verifying | P2 | PLAN-0027 |
 | `BUG-0181` | runtime-node 远端 POSIX 路径测试使用 Windows-safe TEMP 夹具；3 个 Windows `/tmp` 失败修复，7/7 | verifying | P2 | — |
 | `BUG-0180` | plugin-vite React sharing 测试误选 Federation bootstrap chunk；已修选择器，plugin-vite 46/46 | verifying | P2 | — |
 | `BUG-0179` | Windows TEMP 8.3 短路径使 Agent Git 根校验误拒绝真实仓库；已修，默认 TEMP Git/integration 28/28 | verifying | P2 | — |
@@ -105,7 +114,7 @@
 | `BUG-0090` | Windows Inno 打包版通用 updater 检查确定性失败：`app-update.yml` 缺失与 feed 404 | verifying | P2 | — |
 | `BUG-0089` | Windows 打包版每次启动安装 CLI shim 因目标文件被占用报 `EPERM: copyfile` | verifying | P2 | — |
 | `BUG-0088` | allstar-coding ac-fence 审计日志缺 `fs.write` 权限声明，fence-log 追加必被拒 | verifying | P2 | — |
-| `BUG-0087` | Team 会话 coordination 文档不可读时 delete-session 同样失败，僵尸会话无法清理 | verifying | P1 | — |
+| `BUG-0087` | Team 历史删除与缺定义后的管理入口已修，含真实存储/租约/并发回归；用户黑盒暂未遇问题，按请求本地保存；完整门禁既有阻断仍在、未集成 | in_progress | P1 | — |
 | `BUG-0086` | 内置浏览器指针穿透调用落在 `WebContents` 上，`setIgnoreMouseEvents` 每次必抛 TypeError | verifying | P1 | — |
 | `BUG-0085` | provider 连接被切断后回合长时间不进终态：停滞重试级联把 30 分钟预算烧在死连接上 | verifying | P1 | — |
 | `BUG-0084` | team 会话引用文件后输入框反复重建内容：中文输入法组字被打断、光标闪烁无法输入 | verifying | P1 | — |

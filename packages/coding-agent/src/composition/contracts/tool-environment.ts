@@ -6,6 +6,10 @@ export interface CodingAgentToolEnvironmentContext {
 	readonly cwd: string;
 	readonly agentDir?: string;
 	readonly scenario: ConversationScenario;
+	readonly agentMode?: string;
+	readonly projectIdentity?: string;
+	readonly projectAiWorkspaceRoot?: string;
+	readonly projectAiWorkspaceToolRoot?: string;
 	readonly configurationSource?: RuntimeConfigurationSnapshotSource;
 	/**
 	 * 当前会话真实可调用的技能名。二进制读提示据此决定「能不能点名某个技能」；

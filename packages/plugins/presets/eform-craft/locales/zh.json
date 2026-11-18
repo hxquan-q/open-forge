@@ -1,12 +1,16 @@
 {
 	"plugin.name": "电子表单工坊",
-	"plugin.description": "三成员团队：上传图片、PDF、Excel、Word 表单原件，还原为可交互的电子表单应用（列表页 + 表单页 + 数据生命周期），按需注入电子签名与操作审计组件，逐字段核对确认，支持自然语言修改。",
-	"agent.eform.name": "表单匠",
-	"agent.eform.description": "团队队长与唯一入口：识别原件布局与字段标记，生成列表页+表单页的表单应用与数据生命周期，守护字段级确认门，按 schema 能力参数派工签名与审计。",
-	"agent.esign.name": "电子签师",
-	"agent.esign.description": "电子签名专员：向表单页注入签名组件——身份验证弹窗、手写笔迹录入、未生效可清空重签、审核通过后锁定不可改。",
-	"agent.eaudit.name": "审计员",
-	"agent.eaudit.description": "操作审计专员：向表单应用注入审计组件——审计开关参数化启用，创建/保存/审核/打印/导出全量记日志，仅可查看不可删除。",
+	"plugin.description": "面向 AIMES CustomDev 二开的五角色团队：主控、需求（原型）、开发、测试、部署。从已确认规格推进真实工程开发与 dev 测试环境验收；原型不替代实现，电子签/审计按明确需求触发，不含生产部署。",
+	"agent.eform.name": "主控",
+	"agent.eform.description": "保留 @eform 主入口：环境预检、用户交互、范围判断、调度并辅助成员；区分已核实事实与待验证项，不猜项目规则。",
+	"agent.requirements.name": "需求（原型）",
+	"agent.requirements.description": "澄清需求与字段取值逻辑，按需解析实体表单附件并产出原型/展示稿；材料进入需求闭环，不替代正式工程实现。",
+	"agent.developer.name": "开发",
+	"agent.developer.description": "依据确认需求与 CustomDev 实际项目合同完成前后端、API、配置、SQL 和必要行为测试，不照搬 Workshop 或旧 Demo。",
+	"agent.tester.name": "测试",
+	"agent.tester.description": "按风险组合黑盒/白盒、行为测试与构建验证；computer-use 可用且获准时尽量采用，记录缺口并验收完整 dev 集成包。",
+	"agent.deployer.name": "部署",
+	"agent.deployer.description": "仅限 dev 测试服务器：核实制品、目录、目标服务与回滚路径后更新/重启并支持验收；能力或资料不足时交付制品与步骤，不做生产部署。",
 	"team.studio.name": "电子表单工坊",
-	"team.studio.description": "表单生成 → 电子签注入 → 操作审计注入的三版块工坊：队长按表单能力参数调度两位专员，共享锚点契约保证组件注入不破坏页面结构。"
+	"team.studio.description": "AIMES CustomDev 五角色二开团队：环境预检 → 需求 → 开发 → 本地测试 → 校验占位跳过 → dev 集成包 → 测试服务器验收。Skills 为插件级共享，按职责与触发条件调用。"
 }

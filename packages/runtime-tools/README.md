@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-tools
 
 Vetta 平台无关的 Coding Tool 协议包。包根与 `@vetta/runtime-tools/coding` 暴露同一套合同。

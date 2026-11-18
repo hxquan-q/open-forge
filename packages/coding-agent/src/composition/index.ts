@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export {
 	type CodingAgentSessionSetup,
 	createCodingAgentSessionSetupSeedInitializer,
@@ -11,6 +12,14 @@ export {
 	CODING_AGENT_COMPACTION_PREFIRE_OBSERVATION,
 	type CodingAgentCompactionPrefireObservation,
 } from "./contracts/context-observability.js";
+export {
+	type CodingAgentDelegatedMember,
+	type CodingAgentDelegatedMemberLifecycle,
+	DELEGATED_MEMBER_TYPE_PREFIX,
+	delegatedMemberTypeId,
+	MAX_DELEGATED_MEMBERS_PER_SESSION,
+	parseDelegatedMembers,
+} from "./contracts/delegated-members.js";
 export {
 	CODING_AGENT_LIFECYCLE_ISSUE_OBSERVATION,
 	type CodingAgentLifecycleIssueObservation,

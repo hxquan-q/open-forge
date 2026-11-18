@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Desktop session archive export/import. Uses @vetta/runtime-storage portable format.
  * IPC and UI stay thin; this module owns file I/O and conflict policy.

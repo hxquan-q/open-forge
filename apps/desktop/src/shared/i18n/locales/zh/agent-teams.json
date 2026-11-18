@@ -102,7 +102,19 @@
     "descriptionPlaceholder": "简短描述该智能体的职责定位与日常目标…",
     "systemPromptHint": "设定该智能体的身份背景、思考策略与输出规范",
     "systemPromptPlaceholder": "为该智能体定义人设目标、专业原则、拆解步骤与输出规范，支持 Markdown…",
-    "clearPrompt": "清空"
+    "clearPrompt": "清空",
+    "lifecycle": {
+      "label": "会话方式",
+      "hint": "决定在新会话里选中这个智能体时，由谁驾驶对话、任务怎么交给它。",
+      "option": {
+        "takeover": "接管对话",
+        "takeoverHint": "默认。选中后由它的人格驱动整个会话。",
+        "resident": "机组成员 · 常驻",
+        "residentHint": "默认助手保持驾驶，域内任务委派给它；同一成员的任务排队顺序执行，不重复开实例。",
+        "oneshot": "机组成员 · 一次性",
+        "oneshotHint": "默认助手保持驾驶，每个落在它域内的任务单独派给它一次。"
+      }
+    }
   },
   "teams": {
     "title": "智能体团队",

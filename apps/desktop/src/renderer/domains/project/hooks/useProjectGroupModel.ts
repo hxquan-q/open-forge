@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { pathBasename } from "@shared/lib/utils";
 import type { Project, ProjectType } from "@shared/store/atoms";

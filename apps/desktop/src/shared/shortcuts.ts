@@ -11,13 +11,27 @@ export interface ShortcutActionDef {
 	descriptionKey: string;
 	defaultShortcut: string;
 	/** app 动作进入全局 scope；editor 动作只由输入组件消费。 */
-	scope: "app" | "editor";
+	scope: "app" | "editor" | "system";
 }
 
 export const FILE_EDITOR_SAVE_EVENT = "vetta:file-editor-save";
 
 /** 可配置的全局快捷键动作（白名单）。as const 保留字面量类型。 */
 export const SHORTCUT_ACTIONS = [
+	{
+		id: "computer-use-stop",
+		labelKey: "shortcutComputerUseStopLabel",
+		descriptionKey: "shortcutComputerUseStopDesc",
+		defaultShortcut: "mod+alt+q",
+		scope: "system",
+	},
+	{
+		id: "computer-use-recall",
+		labelKey: "shortcutComputerUseRecallLabel",
+		descriptionKey: "shortcutComputerUseRecallDesc",
+		defaultShortcut: "mod+alt+v",
+		scope: "system",
+	},
 	{
 		id: "new-session",
 		labelKey: "shortcutNewSessionLabel",

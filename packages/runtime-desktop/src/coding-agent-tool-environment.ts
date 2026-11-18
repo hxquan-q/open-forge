@@ -1,7 +1,8 @@
 // Modified by The Open Forge contributors.
 import { homedir, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, posix, relative, resolve } from "node:path";
 import {
+	type CodingAgentSessionExecutionEnvironmentContext,
 	type CodingAgentSessionExecutionEnvironmentFactory,
 	type CodingAgentToolEnvironmentFactory,
 	createCodingAgentEditPathPolicy,
@@ -33,6 +34,9 @@ import { NodeScopedTextStorage } from "@vetta/runtime-node/host";
 import { clearSessionGrants } from "@vetta/runtime-node/sandbox";
 import { createSshCodingToolEnvironment, createSshPathPolicies } from "@vetta/runtime-ssh";
 import { parseProjectLocation } from "@vetta/ssh-transport";
+import { resolveCodeProjectAiWorkspace } from "./code-project-ai-workspace.js";
+import { ensureCodeProjectAiWorkspace } from "./code-project-ai-workspace-storage.js";
+import { createCodeProjectFilePolicies } from "./code-project-file-policy.js";
 import { resolveProjectSettingsPath } from "./project-settings-path.js";
 import { getDesktopReviewSnapshotStore, registerDesktopReviewSnapshotSession } from "./review-snapshot-runtime.js";
 import { resolveDesktopSshConnection } from "./ssh-connection-resolver.js";
@@ -43,31 +47,45 @@ import { resolveDesktopSshConnection } from "./ssh-connection-resolver.js";
  * 远程项目（cwd 是 `ssh://<hostId>/<路径>`）换成 SSH 实现，工具逻辑仍是同一份；
  * 传进去的是解析出来的远端绝对路径，而不是 URI——工具内部所有相对路径解析都基于它。
  */
-export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironmentFactory = (context) => {
+export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironmentFactory = async (context) => {
+	const workspace = await resolveSessionCodeWorkspace(context);
 	const location = parseProjectLocation(context.cwd);
 	if (location.kind === "ssh") {
-		const policies = createSshPathPolicies(location.remotePath);
+		const policies = createSshPathPolicies(location.remotePath, {
+			workspaceToolRoot: workspace?.toolRoot,
+		});
 		return createSshCodingToolEnvironment({
 			connection: resolveDesktopSshConnection(location.hostId),
 			remoteCwd: location.remotePath,
 			editPathPolicy: policies.editPathPolicy,
 			writePathPolicy: policies.writePathPolicy,
+			readPathPolicy: policies.readPathPolicy,
+			searchPathPolicy: policies.searchPathPolicy,
+			localWorkspaceRoot: workspace?.directory,
+			localWorkspaceToolRoot: workspace?.toolRoot,
 			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
-			localReadRoots: resolveLocalReadRoots(context.agentDir),
+			localReadRoots: workspace ? [workspace.directory] : resolveLocalReadRoots(context.agentDir),
 			// PDF / OCR / 文档转换依赖本机的引擎：远端文件取回本机处理，产物再传回去。
 			createLocalFileToolRegistrations: (localCwd, { ocrExecutionGate }) =>
 				createNodeSpecializedToolRegistrations(localCwd, { executionGate: ocrExecutionGate }),
 		});
 	}
 	const host = createDesktopNodeToolHost(context.cwd, context.agentDir);
+	const filePolicies = workspace
+		? createCodeProjectFilePolicies(context.cwd, workspace.directory, {
+				edit: host.editPathPolicy,
+				write: host.writePathPolicy,
+			})
+		: undefined;
 	return createNodeHostCodingToolEnvironment({
 		cwd: context.cwd,
 		toolsDirectory: host.toolsDirectory,
 		resolveShell: host.resolveShell,
 		environment: host.environment,
 		protectedDirectories: host.protectedCommandDirectories,
-		editPathPolicy: host.editPathPolicy,
-		writePathPolicy: host.writePathPolicy,
+		editPathPolicy: filePolicies?.edit ?? host.editPathPolicy,
+		writePathPolicy: filePolicies?.write ?? host.writePathPolicy,
+		readPathPolicy: filePolicies?.read,
 		configurationSource: context.configurationSource,
 		readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 	});
@@ -80,78 +98,142 @@ export const createDesktopCodingAgentToolEnvironment: CodingAgentToolEnvironment
  * 任何作用。这里返回与工具环境同一套 SSH 实现并且**不提供** sandbox，宁可让上层在
  * 需要沙箱时失败，也不给出一个名义上开着、实际不设防的沙箱。
  */
-export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSessionExecutionEnvironmentFactory = (
-	context,
-) => {
-	const location = parseProjectLocation(context.cwd);
-	if (location.kind === "ssh") {
-		const policies = createSshPathPolicies(location.remotePath);
-		const environment = createSshCodingToolEnvironment({
-			connection: resolveDesktopSshConnection(location.hostId),
-			remoteCwd: location.remotePath,
-			editPathPolicy: policies.editPathPolicy,
-			writePathPolicy: policies.writePathPolicy,
-			readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
-			localReadRoots: resolveLocalReadRoots(context.agentDir),
+export const createDesktopCodingAgentSessionExecutionEnvironment: CodingAgentSessionExecutionEnvironmentFactory =
+	async (context) => {
+		const workspace = await resolveSessionCodeWorkspace(context);
+		const location = parseProjectLocation(context.cwd);
+		if (location.kind === "ssh") {
+			const policies = createSshPathPolicies(location.remotePath, {
+				workspaceToolRoot: workspace?.toolRoot,
+			});
+			const environment = createSshCodingToolEnvironment({
+				connection: resolveDesktopSshConnection(location.hostId),
+				remoteCwd: location.remotePath,
+				editPathPolicy: policies.editPathPolicy,
+				writePathPolicy: policies.writePathPolicy,
+				readPathPolicy: policies.readPathPolicy,
+				searchPathPolicy: policies.searchPathPolicy,
+				readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
+				localWorkspaceRoot: workspace?.directory,
+				localWorkspaceToolRoot: workspace?.toolRoot,
+				localReadRoots: workspace ? [workspace.directory] : resolveLocalReadRoots(context.agentDir),
+			});
+			return {
+				registrations: environment.registrations,
+				backgroundService: environment.backgroundService,
+				// 返回一个不提供工具集的沙箱，而不是假装沙箱存在：本机的 seatbelt/bubblewrap
+				// 对远端命令毫无作用，给出「名义上开着、实际不设防」的沙箱比明确没有更危险。
+				sandbox: { createToolSet: () => undefined },
+				dispose: () => environment.dispose(),
+			};
+		}
+		const host = createDesktopNodeToolHost(context.cwd, context.agentDir);
+		const filePolicies = workspace
+			? createCodeProjectFilePolicies(context.cwd, workspace.directory, {
+					edit: host.editPathPolicy,
+					write: host.writePathPolicy,
+				})
+			: undefined;
+		// 审查快照只挂本机会话执行环境：远端项目的 before 字节在远端机器上，
+		// 本机快照库回滚时写不回去，宁可不产出 review 也不给出不可回滚的假入口。
+		registerDesktopReviewSnapshotSession(context.sessionId, context.agentDir);
+		const reviewSnapshots = {
+			store: getDesktopReviewSnapshotStore(context.agentDir),
+			sessionId: context.sessionId,
+		};
+		const command = createNodeHostSessionCommandEnvironment({
+			cwd: context.cwd,
+			resolveShell: host.resolveShell,
+			environment: host.environment,
+			sessionEnvironment: createCodingAgentSessionCommandEnvironment(context.sessionId, context.env),
+			protectedDirectories: host.protectedCommandDirectories,
 		});
 		return {
-			registrations: environment.registrations,
-			backgroundService: environment.backgroundService,
-			// 返回一个不提供工具集的沙箱，而不是假装沙箱存在：本机的 seatbelt/bubblewrap
-			// 对远端命令毫无作用，给出「名义上开着、实际不设防」的沙箱比明确没有更危险。
-			sandbox: { createToolSet: () => undefined },
-			dispose: () => environment.dispose(),
-		};
-	}
-	const host = createDesktopNodeToolHost(context.cwd, context.agentDir);
-	// 审查快照只挂本机会话执行环境：远端项目的 before 字节在远端机器上，
-	// 本机快照库回滚时写不回去，宁可不产出 review 也不给出不可回滚的假入口。
-	registerDesktopReviewSnapshotSession(context.sessionId, context.agentDir);
-	const reviewSnapshots = {
-		store: getDesktopReviewSnapshotStore(context.agentDir),
-		sessionId: context.sessionId,
-	};
-	const command = createNodeHostSessionCommandEnvironment({
-		cwd: context.cwd,
-		resolveShell: host.resolveShell,
-		environment: host.environment,
-		sessionEnvironment: createCodingAgentSessionCommandEnvironment(context.sessionId, context.env),
-		protectedDirectories: host.protectedCommandDirectories,
-	});
-	return {
-		registrations: [
-			...createNodeFileToolRegistrations({
-				cwd: context.cwd,
-				editPathPolicy: host.editPathPolicy,
-				writePathPolicy: host.writePathPolicy,
-				configurationSource: context.configurationSource,
-				readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
-				reviewSnapshots,
-			}),
-			...command.registrations,
-		],
-		backgroundService: command.backgroundService,
-		sandbox: {
-			createToolSet: (options) =>
-				createNodeSandboxCodingToolEnvironment({
-					...options,
+			registrations: [
+				...createNodeFileToolRegistrations({
 					cwd: context.cwd,
-					resolveShell: host.resolveShell,
-					environment: command.commandEnvironment,
-					protectedDirectories: host.protectedCommandDirectories,
-					editPathPolicy: host.editPathPolicy,
-					writePathPolicy: host.writePathPolicy,
+					editPathPolicy: filePolicies?.edit ?? host.editPathPolicy,
+					writePathPolicy: filePolicies?.write ?? host.writePathPolicy,
+					readPathPolicy: filePolicies?.read,
 					configurationSource: context.configurationSource,
 					readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
 					reviewSnapshots,
 				}),
-			// ADR-0133 §5(TM-07):mode flip 时清掉本会话 grant 缓存。
-			// 远程分支不提供本机沙箱,自然也没有可清的 grant。
-			clearSessionGrants,
-		},
-		dispose: () => command.dispose(),
+				...command.registrations,
+			],
+			backgroundService: command.backgroundService,
+			sandbox: {
+				createToolSet: (options) =>
+					createNodeSandboxCodingToolEnvironment({
+						...options,
+						cwd: context.cwd,
+						resolveShell: host.resolveShell,
+						environment: command.commandEnvironment,
+						protectedDirectories: host.protectedCommandDirectories,
+						editPathPolicy: filePolicies?.edit ?? host.editPathPolicy,
+						writePathPolicy: filePolicies?.write ?? host.writePathPolicy,
+						readPathPolicy: filePolicies?.read,
+						configurationSource: context.configurationSource,
+						readOptions: { ...CODING_AGENT_READ_TOOL_OPTIONS, availableSkillNames: context.availableSkillNames },
+						reviewSnapshots,
+					}),
+				// ADR-0133 §5(TM-07):mode flip 时清掉本会话 grant 缓存。
+				// 远程分支不提供本机沙箱,自然也没有可清的 grant。
+				clearSessionGrants,
+			},
+			dispose: () => command.dispose(),
+		};
 	};
-};
+
+async function resolveSessionCodeWorkspace(
+	context: Pick<
+		CodingAgentSessionExecutionEnvironmentContext,
+		"cwd" | "agentMode" | "projectIdentity" | "projectAiWorkspaceRoot" | "projectAiWorkspaceToolRoot"
+	>,
+) {
+	if (context.agentMode !== "coding") return undefined;
+	const identity = context.projectIdentity ?? context.cwd;
+	const resolved = resolveCodeProjectAiWorkspace(identity);
+	const expectedToolRoot = parseProjectLocation(identity).kind === "ssh" ? resolved.toolRoot : resolved.directory;
+	if (
+		(context.projectAiWorkspaceRoot !== undefined &&
+			resolve(resolved.directory) !== resolve(context.projectAiWorkspaceRoot)) ||
+		(context.projectAiWorkspaceToolRoot !== undefined && expectedToolRoot !== context.projectAiWorkspaceToolRoot)
+	) {
+		throw new Error("Code session project AI workspace does not match its project identity");
+	}
+	assertSessionCwdWithinProject(identity, context.cwd);
+	await ensureCodeProjectAiWorkspace(identity);
+	return resolved;
+}
+
+function assertSessionCwdWithinProject(projectIdentity: string, sessionCwd: string): void {
+	const project = parseProjectLocation(projectIdentity);
+	const session = parseProjectLocation(sessionCwd);
+	if (project.kind !== session.kind) throw new Error("Code session cwd does not match its project identity");
+	if (project.kind === "ssh" && session.kind === "ssh") {
+		const relativePath = posix.relative(project.remotePath, session.remotePath);
+		if (
+			project.hostId !== session.hostId ||
+			(relativePath !== "" &&
+				(relativePath === ".." || relativePath.startsWith("../") || posix.isAbsolute(relativePath)))
+		) {
+			throw new Error("Code session cwd is outside its project identity");
+		}
+		return;
+	}
+	if (project.kind === "local" && session.kind === "local") {
+		const relativePath = relative(resolve(project.path), resolve(session.path));
+		if (
+			relativePath !== "" &&
+			(relativePath === ".." ||
+				relativePath.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) ||
+				isAbsolute(relativePath))
+		) {
+			throw new Error("Code session cwd is outside its project identity");
+		}
+	}
+}
 
 /**
  * Desktop 侧受管编码工具（fd/rg）缓存目录的唯一事实源：会话工厂与诊断导出共用。

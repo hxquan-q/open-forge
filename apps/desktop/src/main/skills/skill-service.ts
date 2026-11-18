@@ -28,7 +28,12 @@ import { getAppLanguage } from "../i18n/index.js";
 import { getAppLogger } from "../logger.js";
 import { listPlugins, pluginAgentContributionService } from "../plugins/plugin-catalog.js";
 import { shouldListSkill } from "./skill-list-policy.js";
-import { buildPluginSkillSources, findPluginSkillSource, resolvePluginSkillPresentation } from "./skill-provenance.js";
+import {
+	buildPluginSkillSources,
+	findPluginSkillSource,
+	resolvePluginSkillPresentation,
+	resolvePluginSkillWorkspaceMode,
+} from "./skill-provenance.js";
 
 const skillsLog = getAppLogger("skills");
 const skillsBaseDir = join(getVettaHomePath(), "skills");
@@ -71,6 +76,8 @@ export interface ListedSkill {
 	provenance?: SkillProvenance;
 	/** 插件贡献的 skill 来源插件 ID；其它来源未定义。 */
 	sourcePluginId?: string;
+	/** 产品定义的会话模式可见标签；未声明表示两种模式均可见。 */
+	workspaceMode?: "work" | "coding";
 	/** 产品界面的展示策略；不影响运行时加载与调用。 */
 	presentation?: SkillPresentation;
 	type: InstalledSkillType;
@@ -190,6 +197,9 @@ export class SkillService {
 								return placeholder && resolved === placeholder[1] ? undefined : resolved;
 							})
 						: undefined;
+				const workspaceMode = sourcePlugin
+					? resolvePluginSkillWorkspaceMode(sourcePlugin.agent?.skillPresentation, skill.name)
+					: undefined;
 				let declaredIcon: string | undefined;
 				// 远端技能在这个消费面上仍是 `ssh://<hostId>/…`：图标解析走本机 readFileSync，
 				// 拿它当本机路径只会 ENOENT 并刷告警。本 Task 不新增远端取图能力，显式跳过，
@@ -228,6 +238,7 @@ export class SkillService {
 							: (skill.provenance ?? { kind: "native", scope: skill.source }),
 					...(presentation ? { presentation } : {}),
 					...(pluginSource ? { sourcePluginId: pluginSource.pluginId } : {}),
+					...(workspaceMode ? { workspaceMode } : {}),
 					type: skill.type,
 					...(icon ? { icon } : {}),
 				};

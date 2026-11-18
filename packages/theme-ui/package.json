@@ -5,6 +5,10 @@
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
 	"exports": {
+		"./computer-use": {
+			"types": "./src/computer-use/index.ts",
+			"import": "./src/computer-use/index.ts"
+		},
 		"./markdown": {
 			"types": "./src/markdown/index.ts",
 			"import": "./src/markdown/index.ts"

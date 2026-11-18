@@ -117,7 +117,9 @@ describe("Amazon Bedrock message conversion", () => {
 				toolUseId: "call-1",
 				content: [
 					{ text: "Read image file [image/png]" },
-					{ text: "Image content omitted because the current model does not support image input." },
+					{
+						text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
+					},
 				],
 				status: "success",
 			},

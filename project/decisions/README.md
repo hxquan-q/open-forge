@@ -10,4 +10,6 @@
 3. 在相关 Requirement 或 Plan 中链接 ADR；
 4. 不把“计划中的架构”写成“已实现行为”。
 
+- [ADR-0154：Windows 电脑操作随包后端与授权控制面](../../docs/adr/0154-windows-computer-use-bundled-backend.md) — REQ-0033 / TASK-0482；私有运行时、结构化动作、取消回执与窗口恢复。
+
 [`waivers/`](waivers/) 存放 Policy 级规则的到期豁免登记（TASK-0111），格式与校验见 `waivers/README.md`；由 `scripts/quality/check-waivers.mjs` 机械校验。

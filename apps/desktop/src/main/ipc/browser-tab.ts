@@ -81,7 +81,11 @@ export function registerBrowserTabIpc(): () => void {
 	ipcMain.handle(CHANNELS.CROP_SCREENSHOT, async (_event, request: DesktopBrowserCropScreenshotRequest) => {
 		const parsed = readCropRequest(request);
 		if (!parsed) return { ok: false as const, code: "crop_failed" as const, message: "invalid crop request" };
-		return controller.cropScreenshot(parsed.workspaceId, parsed.rect, parsed.devicePixelRatio);
+		const captured = await controller.cropScreenshot(parsed.workspaceId, parsed.rect, parsed.devicePixelRatio);
+		// 主进程结果多一份给模型上下文的 base64 `data`；渲染层合同保持不含图片本体。
+		if (!captured.ok) return captured;
+		const { data: _imageData, ...rendererResult } = captured;
+		return rendererResult;
 	});
 	ipcMain.handle(CHANNELS.LIVE_EDIT, async (_event, request: DesktopBrowserTabLiveEditRequest) => {
 		const workspaceId = readWorkspaceId(request);

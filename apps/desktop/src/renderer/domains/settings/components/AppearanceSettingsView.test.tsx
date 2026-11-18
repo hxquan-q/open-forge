@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 外观设置页的「新会话页装饰」这块区域：装饰件与纹理收在同一块里，

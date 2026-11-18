@@ -250,6 +250,39 @@ describe("browser_tab 宿主函数", () => {
 		expect(result).toMatchObject({ ok: true, action: "screenshot", screenshotAttachmentId: expect.any(String) });
 	});
 
+	it("整页截图把 PNG base64 随结果带回（模型可见性：不依赖 image-cache 路径）", async () => {
+		const { deps } = makeDeps(fakeContents());
+		const result = await invokeDesktopBrowserTab(
+			request({ action: "screenshot", fullPage: true }),
+			new AbortController().signal,
+			deps,
+		);
+		// fakeImage().toPNG() = Buffer.from("png") → base64 "cG5n"。
+		expect(result).toMatchObject({
+			ok: true,
+			action: "screenshot",
+			screenshotAttachmentId: expect.stringMatching(/^browser-shot-/),
+			screenshotImage: { data: "cG5n", mimeType: "image/png" },
+		});
+	});
+
+	it("元素裁剪截图同样带回 PNG base64，attachmentId 走 browser-el- 前缀", async () => {
+		const { deps } = makeDeps(snapshottingContents());
+		const snapshot = await snapshotFirst(deps);
+		const elementRef = snapshot.ok ? snapshot.nodes![0]!.elementRef : undefined;
+		const result = await invokeDesktopBrowserTab(
+			request({ action: "screenshot", elementRef }),
+			new AbortController().signal,
+			deps,
+		);
+		expect(result).toMatchObject({
+			ok: true,
+			action: "screenshot",
+			screenshotAttachmentId: expect.stringMatching(/^browser-el-/),
+			screenshotImage: { data: "cG5n", mimeType: "image/png" },
+		});
+	});
+
 	it("publishes workspace-scoped activity while the real host action runs and clears it on success", async () => {
 		let finish: ((value: unknown) => void) | undefined;
 		const contents = fakeContents({

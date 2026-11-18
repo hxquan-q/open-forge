@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 import {
 	type AgentAbilitySelection,
 	type AgentProfile,
 	type AgentProfileDeleteImpact,
+	type AgentProfileLifecycle,
 	listLibraryAgentProfiles,
 } from "@vetta/agent-team";
 import { useCallback, useMemo } from "react";
@@ -63,6 +65,7 @@ export function useAgentLibraryModel(resources: AgentTeamResources, copy: AgentL
 				mentionHandle: input.mentionHandle,
 				systemPrompt: input.systemPrompt,
 				abilities: input.abilities,
+				...(input.lifecycle ? { lifecycle: input.lifecycle } : {}),
 			});
 			setDocument((current) =>
 				current
@@ -107,4 +110,6 @@ export interface AgentProfileEditInput {
 	readonly mentionHandle: string;
 	readonly systemPrompt?: string;
 	readonly abilities: AgentAbilitySelection;
+	/** 委任生命周期标记；缺省表示清除（回到主控/接管型）。 */
+	readonly lifecycle?: AgentProfileLifecycle;
 }

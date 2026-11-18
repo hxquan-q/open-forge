@@ -1,4 +1,8 @@
 {
+	"computerUse": {
+		"stop": "Stop computer use and restore windows",
+		"restore": "Restore hidden application windows"
+	},
 	"browserAnnotation": {
 		"placeholder": "How should this element change?",
 		"send": "Send to Agent",

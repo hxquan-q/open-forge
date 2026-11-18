@@ -1,4 +1,8 @@
 {
+	"computerUse": {
+		"stop": "停止电脑操作并恢复窗口",
+		"restore": "找回隐藏的应用窗口"
+	},
 	"browserAnnotation": {
 		"placeholder": "要怎么改这个元素",
 		"send": "发送给 Agent",

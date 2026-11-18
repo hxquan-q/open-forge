@@ -162,3 +162,56 @@ describe("TeamSessionStateRepository persist", () => {
 		await expect(repository.persist(orphan)).rejects.toThrow("Team coordination conversation is unavailable");
 	});
 });
+
+describe("TeamSessionStateRepository runtime 反向索引（BUG-0187 授权主体）", () => {
+	function memberRuntimeState(sessionId: string): TeamSessionDocument["memberRuntime"][string] {
+		return {
+			sessionId,
+			sessionPath: `C:/sessions/${sessionId}.jsonl`,
+			agentProfileId: "profile-1",
+			agentProfileRevision: 1,
+			deliveredEventIds: [],
+		};
+	}
+
+	it("set 登记成员与协调 runtime，可 O(1) 反查所属团队会话", () => {
+		const { repository } = createHarness();
+		repository.set(
+			createSession({
+				memberRuntime: {
+					leader: memberRuntimeState("rt-leader"),
+					worker: memberRuntimeState("rt-worker"),
+				},
+			}),
+		);
+
+		expect(repository.teamSessionIdForRuntimeSession("rt-leader")).toBe("team-session-1");
+		expect(repository.teamSessionIdForRuntimeSession("rt-worker")).toBe("team-session-1");
+		expect(repository.teamSessionIdForRuntimeSession("coordination-1")).toBe("team-session-1");
+		expect(repository.teamSessionIdForRuntimeSession("rt-unknown")).toBeUndefined();
+	});
+
+	it("换员/重配导致 runtimeId 漂移时旧键被摘除，不留幽灵授权主体", () => {
+		const { repository } = createHarness();
+		repository.set(createSession({ memberRuntime: { leader: memberRuntimeState("rt-old") } }));
+		expect(repository.teamSessionIdForRuntimeSession("rt-old")).toBe("team-session-1");
+
+		repository.set(createSession({ memberRuntime: { leader: memberRuntimeState("rt-new") } }));
+		expect(repository.teamSessionIdForRuntimeSession("rt-old")).toBeUndefined();
+		expect(repository.teamSessionIdForRuntimeSession("rt-new")).toBe("team-session-1");
+	});
+
+	it("remove 与 removeCached 都摘除该会话的全部 runtime 键", () => {
+		const { repository } = createHarness();
+		repository.set(createSession({ memberRuntime: { leader: memberRuntimeState("rt-leader") } }));
+		expect(repository.teamSessionIdForRuntimeSession("rt-leader")).toBe("team-session-1");
+
+		repository.removeCached("team-session-1");
+		expect(repository.teamSessionIdForRuntimeSession("rt-leader")).toBeUndefined();
+		expect(repository.teamSessionIdForRuntimeSession("coordination-1")).toBeUndefined();
+
+		repository.set(createSession({ memberRuntime: { leader: memberRuntimeState("rt-leader") } }));
+		repository.remove("team-session-1");
+		expect(repository.teamSessionIdForRuntimeSession("rt-leader")).toBeUndefined();
+	});
+});

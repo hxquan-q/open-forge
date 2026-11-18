@@ -93,6 +93,7 @@ import { getOrCreateSharedModelRuntime, readDesktopMcpDebug } from "./host-servi
 import { DesktopMcpResourceManager } from "./mcp-resource-manager.js";
 import type { DesktopMcpResourceScope } from "./mcp-resource-scope.js";
 import { createDesktopMcpSupervisor } from "./mcp-supervisor.js";
+import { resolveDesktopMemoryJournalPaths } from "./memory-journal-paths.js";
 import { getDesktopProviderObservationRuntime } from "./provider-observation.js";
 import { createDesktopPromptRuntimeSources } from "./resource-runtime.js";
 import { createRuntimeLifecycleLogPort } from "./runtime-lifecycle-log-port.js";
@@ -218,14 +219,14 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 				researchScope: { scanSources: scanLocalSources },
 				// 数据集剖析只读用户显式选择的文件；不修改源文件、不联网。
 				datasetProfile: { profileDataset: profileDatasetFile },
-				createMemoryRolloverRuntime: (options) => {
-					const memoryFile = options.memoryFile ?? join(options.cwd, "MEMORY.md");
+				createMemoryRolloverRuntime: (options, sessionOptions) => {
+					const paths = resolveDesktopMemoryJournalPaths(options, sessionOptions);
 					return createCodingAgentMemoryRolloverRuntime({
 						cwd: options.cwd,
-						memoryFile,
+						memoryFile: paths.memoryFile,
 						memoryCharLimit: options.memoryCharLimit,
-						memoryStorage: new NodeTextFileStorage(memoryFile),
-						journalStorage: new NodeTextFileStorage(join(options.cwd, "JOURNAL.md")),
+						memoryStorage: new NodeTextFileStorage(paths.memoryFile),
+						journalStorage: new NodeTextFileStorage(paths.journalFile),
 					});
 				},
 				// 新结构化记忆（TASK-0375）：memoryPolicy 活跃时装配；策略关闭时返回

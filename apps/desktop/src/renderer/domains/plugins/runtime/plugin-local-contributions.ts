@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { InstalledPlugin } from "@preload/api";
 import type { RegisteredArtifactRenderer } from "@shared/store/atoms";
 import type {

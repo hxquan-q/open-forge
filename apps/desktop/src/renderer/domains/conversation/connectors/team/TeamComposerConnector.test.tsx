@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { pendingQuestionsAtom } from "@shared/store/atoms";
@@ -74,8 +75,8 @@ function model(overrides: Partial<TeamChatViewModel> = {}): TeamChatViewModel {
 		history: ["Previous"],
 		attachments: [{ path: "C:/workspace/brief.md", name: "brief.md", kind: "file" }],
 		members: [
-			{ id: "member-1", kind: "agent", name: "Research", handle: "research", blueprintId: "researcher", selected: false, status: "working" },
-			{ id: "member-2", kind: "agent", name: "Build", handle: "build", blueprintId: "builder", selected: false, status: "idle" },
+			{ id: "member-1", kind: "agent", name: "Research", handle: "research", blueprintId: "researcher", workspaceMode: "coding", selected: false, status: "working" },
+			{ id: "member-2", kind: "agent", name: "Build", handle: "build", blueprintId: "builder", workspaceMode: "work", selected: false, status: "idle" },
 			{ id: "member-3", kind: "agent", name: "", handle: "custom", blueprintId: "custom", selected: false, status: "idle" },
 		],
 		leaderMemberId: "member-1",
@@ -122,7 +123,9 @@ describe("TeamComposerConnector", () => {
 			expect.objectContaining({ kind: "team-member", name: "Build", insertText: "@build " }),
 		expect.objectContaining({ kind: "team-member", name: "@custom", insertText: "@custom " }),
 		]);
-		inputModel.commands?.onAtSelect(inputModel.commands.atItems?.[0] ?? {
+		expect(inputModel.workspaceMode).toBe("coding");
+			expect(inputModel.commands?.atItems?.map((item) => item.workspaceMode)).toEqual(["coding", "work", undefined]);
+			inputModel.commands?.onAtSelect(inputModel.commands.atItems?.[0] ?? {
 			kind: "team-member",
 			id: "fallback",
 			name: "Fallback",

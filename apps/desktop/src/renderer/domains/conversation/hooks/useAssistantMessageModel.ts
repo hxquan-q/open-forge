@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { resolveConversationAgentText, type TextBlock } from "@shared/conversation";
 import type { ChatAgentMessageViewModel } from "@shared/store/atoms";
 import { pluginToolCallSlotsAtom } from "@shared/store/atoms";

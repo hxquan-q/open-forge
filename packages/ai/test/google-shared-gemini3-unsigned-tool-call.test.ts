@@ -100,7 +100,9 @@ describe("google-shared convertMessages", () => {
 
 		expect(contents[0]?.parts).toEqual([
 			{ text: "inspect" },
-			{ text: "Image content omitted because the current model does not support image input." },
+			{
+				text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
+			},
 		]);
 	});
 
@@ -137,7 +139,7 @@ describe("google-shared convertMessages", () => {
 			name: "read",
 			response: {
 				output:
-					"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
+					"Read image file [image/png]\nImage content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 			},
 		});
 		expect(contents[0]?.parts?.[0]?.functionResponse).not.toHaveProperty("parts");

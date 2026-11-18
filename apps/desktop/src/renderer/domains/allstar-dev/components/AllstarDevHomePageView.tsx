@@ -8,6 +8,7 @@ import {
 	SelectValue,
 } from "@shared/components/ui/select";
 import { Spin } from "@vetta-org/ui";
+import { AllstarProjectConfigDialog } from "./AllstarProjectConfigDialog";
 import type { AllstarDevHomePageModel, AllstarDevProjectCard } from "../hooks/useAllstarDevHomePageModel";
 
 /**
@@ -25,7 +26,10 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 		);
 	}
 	return (
-		<div className="flex h-full flex-col gap-5 px-8 pb-8 pt-6">
+		// min-w-0：卡片行里的卡片是 shrink-0，其 min-content 宽度会沿 flex 链把本根节点
+		// 顶到远超内容区（18 张卡实测 4588px），底部新建会话区按整行宽度居中后推出视口。
+		// 宽度收缩在这里断链，溢出由卡片行自己的 overflow-x-auto 消化（BUG-0188）。
+		<div className="flex h-full min-w-0 flex-col gap-5 px-8 pb-8 pt-6">
 			<p className="text-[13px] text-muted-foreground">{model.labels.intro}</p>
 			<section className="flex min-h-0 flex-1 flex-col gap-3">
 				<h2 className="text-[15px] font-medium text-foreground">{model.labels.projectsTitle}</h2>
@@ -43,6 +47,7 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 								card={card}
 								labels={model.labels}
 								onOpenSession={model.onOpenSession}
+								onConfigureProject={model.onConfigureProject}
 							/>
 						))}
 						{/* ADR-0151 决策 7：一键归入版块的空卡片（打开已有项目入口）。 */}
@@ -79,6 +84,7 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 					{model.labels.newSession}
 				</Button>
 			</div>
+			<AllstarProjectConfigDialog configuration={model.projectConfig} labels={model.labels} />
 		</div>
 	);
 }
@@ -87,17 +93,29 @@ function AllstarDevProjectCardView({
 	card,
 	labels,
 	onOpenSession,
+	onConfigureProject,
 }: {
 	card: AllstarDevProjectCard;
 	labels: AllstarDevHomePageModel["labels"];
 	onOpenSession: AllstarDevHomePageModel["onOpenSession"];
+	onConfigureProject: AllstarDevHomePageModel["onConfigureProject"];
 }): JSX.Element {
 	const hiddenCount = card.totalSessions - card.sessions.length;
 	return (
 		<article className="flex w-60 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40">
 			<header className="flex items-baseline justify-between gap-2 px-3.5 pb-2 pt-3">
-				<h3 className="truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
-				<span className="shrink-0 text-xs text-muted-foreground">{card.totalSessions}</span>
+				<h3 className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
+				<div className="flex shrink-0 items-center gap-1.5">
+					<span className="text-xs text-muted-foreground">{card.totalSessions}</span>
+					<Button
+						variant="ghost"
+						size="xs"
+						title={labels.configureProject}
+						onClick={() => onConfigureProject(card.cwd, card.projectName)}
+					>
+						{labels.configureProject}
+					</Button>
+				</div>
 			</header>
 			{card.sessions.length === 0 ? (
 				<p className="border-t border-border/40 px-3.5 py-4 text-xs text-muted-foreground">
@@ -110,8 +128,15 @@ function AllstarDevProjectCardView({
 							<Button
 								variant="ghost"
 								className="h-auto w-full justify-start rounded-none px-3.5 py-2 text-left font-normal"
-								onClick={() => onOpenSession(card.cwd, session.path)}
+								title={session.kind === "team" ? labels.teamSession : undefined}
+								onClick={() => onOpenSession(card.cwd, session)}
 							>
+								{session.kind === "team" && (
+									<span
+										aria-hidden
+										className="icon-[solar--users-group-rounded-linear] mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+									/>
+								)}
 								<span className="truncate text-[13px] text-foreground">{session.title}</span>
 							</Button>
 						</li>

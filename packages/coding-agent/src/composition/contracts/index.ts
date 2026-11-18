@@ -1,10 +1,19 @@
 // Modified by The Open Forge contributors.
+
 export type {
 	CodingAgentConversationPersistence,
 	CodingAgentConversationPersistenceFactory,
 	CodingAgentConversationPersistenceFactoryContext,
 	CodingAgentConversationSessionPathAssessment,
 } from "./conversation-persistence.js";
+export {
+	type CodingAgentDelegatedMember,
+	type CodingAgentDelegatedMemberLifecycle,
+	DELEGATED_MEMBER_TYPE_PREFIX,
+	delegatedMemberTypeId,
+	MAX_DELEGATED_MEMBERS_PER_SESSION,
+	parseDelegatedMembers,
+} from "./delegated-members.js";
 export type {
 	CodingAgentObservationHubOptions,
 	CodingAgentObservationRoute,
@@ -60,6 +69,7 @@ export type {
 	CodingAgentSubagentChildFactoryContext,
 	CodingAgentSubagentChildRequest,
 	CodingAgentSubagentContextPolicy,
+	CodingAgentSubagentDelegationPolicy,
 	CodingAgentSubagentMcpPolicy,
 	CodingAgentSubagentProfile,
 	CodingAgentSubagentSkillPolicy,

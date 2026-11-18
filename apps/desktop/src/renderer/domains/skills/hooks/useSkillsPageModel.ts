@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { InstalledSkill, SkillInfo } from "@preload/api";
 import { i18n } from "@shared/i18n";
 import type { MarketAbility } from "@shared/lib/api";
@@ -210,6 +211,7 @@ export function useSkillsPageModel(): SkillsPageModel {
 						needsUpdate: false,
 						isAgent: true,
 						source: s.source,
+						...(s.workspaceMode ? { workspaceMode: s.workspaceMode } : {}),
 						downloadCount: 0,
 						license: "",
 					})),

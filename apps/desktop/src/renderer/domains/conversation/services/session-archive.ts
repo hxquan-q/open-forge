@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /** Thin conversation-domain helpers around the main-process session archive API. */
 
 export async function exportPortableSessionArchive(input: {

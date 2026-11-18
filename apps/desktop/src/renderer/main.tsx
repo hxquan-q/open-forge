@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { AppBootLoadingView } from "@vetta-org/theme-ui/app-boot";
 import { createRoot } from "react-dom/client";
 import { waitForCommittedPaint } from "./shared/lib/committed-paint";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { memo, type JSX } from "react";
 
 /**
@@ -13,6 +14,8 @@ export interface InputBarToolbarButtonProps {
 	disabled?: boolean;
 	onClick?: () => void;
 	active?: boolean;
+	"aria-label"?: string;
+	"aria-pressed"?: boolean;
 }
 
 export const InputBarToolbarButton = memo(function InputBarToolbarButton({
@@ -21,11 +24,15 @@ export const InputBarToolbarButton = memo(function InputBarToolbarButton({
 	disabled,
 	onClick,
 	active,
+	"aria-label": ariaLabel,
+	"aria-pressed": ariaPressed,
 }: InputBarToolbarButtonProps): JSX.Element {
 	return (
 		<button
 			type="button"
 			title={title}
+			aria-label={ariaLabel}
+			aria-pressed={ariaPressed}
 			disabled={disabled}
 			onClick={onClick}
 			className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-30 ${

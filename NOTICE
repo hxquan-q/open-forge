@@ -125,6 +125,24 @@ License; the build tooling carries its own license. See the upstream project
 for details.
 
 --------------------------------------------------------------------------------
+Windows Computer Use
+--------------------------------------------------------------------------------
+The Windows x64 installer includes a private CPython 3.12.10 embeddable runtime
+from python.org (Python Software Foundation License), separate from the optional
+python-build-standalone runtime above. It also includes restricted UIA/input
+primitives derived from WinHands 0.4.1, commit
+4fa71b1be751de997aae63d64fe5f5d787d6615b.
+WinHands Copyright (c) 2026 Rodolfo Obreque; licensed under MIT.
+Source: https://github.com/zredo19/winhands
+
+The private runtime includes uiautomation 2.0.29 (Apache-2.0), comtypes 1.4.17
+(MIT), and Pillow 12.0.0 (MIT-CMU). Full runtime/WinHands license texts are in
+Resources/computer-use/licenses/. Original dependency license files are retained
+in Resources/computer-use/runtime/Lib/site-packages/*.dist-info/.
+No user-installed Python, global WinHands installation, or first-use dependency
+download is required for Computer Use.
+
+--------------------------------------------------------------------------------
 Node.js
 --------------------------------------------------------------------------------
 Copyright (c) Node.js contributors

@@ -8,6 +8,7 @@
 			"skills": "Skills & Connectors",
 			"agents": "Agents",
 			"weknora": "Customer Service",
+			"computerUse": "Computer Use",
 			"scenes": "Scenes",
 			"plugins": "Plugins",
 			"modelSettings": "Model Settings",
@@ -350,12 +351,28 @@
 				"more": "{{count}} more",
 				"openProject": "Open project"
 			},
+			"teamSession": "Team session",
 			"empty": {
 				"title": "No dev sessions yet",
 				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",
 				"cardHint": "No dev sessions yet — select this project below to start one",
 				"projectLabel": "Choose a project"
 			}
+		},
+		"projectConfig": {
+			"configure": "Project config",
+			"title": "Project configuration",
+			"description": "Save project notes for you and coding sessions to revisit. These notes are informational; they do not execute commands or connect to services.",
+			"contentLabel": "Configuration notes",
+			"template": "# Project configuration\n\n## Git\n\n## Test environment\n\n## Test server\n\n## Database\n\n## Other\n",
+			"privacyWarning": "This file is stored in the project and can be read by its coding sessions. Do not include passwords, tokens, private keys, or other secrets.",
+			"loading": "Reading project configuration…",
+			"loadFailed": "Could not read the project configuration. Check the project folder or remote host connection and try again.",
+			"save": "Save configuration",
+			"saving": "Saving…",
+			"saved": "Saved",
+			"saveFailed": "Could not save the configuration. Check project folder permissions and try again.",
+			"cancel": "Cancel"
 		}
 	}
 }

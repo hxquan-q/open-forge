@@ -420,31 +420,37 @@ async function nextAttemptStep(
 ): Promise<AttemptStep> {
 	const contenders: Promise<AttemptStep>[] = [iterator.next()];
 	let timer: ReturnType<typeof setTimeout> | undefined;
-	if (idleTimeoutMs > 0) {
-		contenders.push(
-			new Promise<typeof STREAM_IDLE_STALLED>((resolve) => {
-				timer = setTimeout(() => resolve(STREAM_IDLE_STALLED), idleTimeoutMs);
-			}),
-		);
+	let onAbort: (() => void) | undefined;
+	try {
+		if (idleTimeoutMs > 0) {
+			contenders.push(
+				new Promise<typeof STREAM_IDLE_STALLED>((resolve) => {
+					timer = setTimeout(() => resolve(STREAM_IDLE_STALLED), idleTimeoutMs);
+				}),
+			);
+		}
+		if (signal && !signal.aborted) {
+			contenders.push(
+				new Promise<typeof CALLER_ABORTED>((resolve) => {
+					onAbort = () => resolve(CALLER_ABORTED);
+					signal.addEventListener("abort", onAbort, { once: true });
+				}),
+			);
+		}
+		const raced = await Promise.race(contenders);
+		if (raced === STREAM_IDLE_STALLED || raced === CALLER_ABORTED) {
+			// The pending next() belongs to the abandoned attempt; swallow its late
+			// settlement so it cannot become an unhandled rejection.
+			void contenders[0].then(
+				() => undefined,
+				() => undefined,
+			);
+		}
+		return raced;
+	} finally {
+		clearTimeout(timer);
+		if (onAbort) signal?.removeEventListener("abort", onAbort);
 	}
-	if (signal && !signal.aborted) {
-		contenders.push(
-			new Promise<typeof CALLER_ABORTED>((resolve) => {
-				signal.addEventListener("abort", () => resolve(CALLER_ABORTED), { once: true });
-			}),
-		);
-	}
-	const raced = await Promise.race(contenders);
-	clearTimeout(timer);
-	if (raced === STREAM_IDLE_STALLED || raced === CALLER_ABORTED) {
-		// The pending next() belongs to the abandoned attempt; swallow its late
-		// settlement so it cannot become an unhandled rejection.
-		void contenders[0].then(
-			() => undefined,
-			() => undefined,
-		);
-	}
-	return raced;
 }
 
 function drainAbandonedStream(iterator: AsyncIterator<AssistantMessageEvent>): void {

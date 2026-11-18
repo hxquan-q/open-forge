@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { statSync } from "node:fs";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RuntimeToolDefinition, RuntimeToolResult } from "@vetta/runtime-core/kernel";
@@ -12,6 +13,7 @@ import {
 } from "../../shared/path-resolution.js";
 import { spawnLocalToolProcess, type ToolProcessSpawner } from "../../shared/tool-process.js";
 import { formatSize, type TruncationResult, truncateHead } from "../../shared/truncation.js";
+import type { ReadPathPolicy } from "../read/index.js";
 import { GLOB_TOOL_DESCRIPTION } from "./description.js";
 
 const DEFAULT_LIMIT = 100;
@@ -59,6 +61,7 @@ export interface GlobOperations {
 
 export interface GlobToolOptions {
 	readonly operations?: GlobOperations;
+	readonly pathPolicy?: ReadPathPolicy;
 	readonly rgPath?: string;
 	readonly executableResolver?: CodingToolExecutableResolver;
 	/** 路径在哪台机器上解析；缺省为本机。 */
@@ -247,6 +250,8 @@ export function createGlobTool(cwd: string, options: GlobToolOptions = {}): Runt
 					pattern = extracted.relativePattern;
 				}
 			}
+			const rejectionReason = options.pathPolicy?.getRejectionReason(searchPath);
+			if (rejectionReason !== undefined) throw new Error(rejectionReason);
 			const operations = customOps ?? defaultGlobOperations;
 			let isDirectory: boolean;
 			try {

@@ -102,7 +102,19 @@
     "descriptionPlaceholder": "Briefly describe what this agent is responsible for…",
     "systemPromptHint": "Define this agent's background, reasoning strategy and output rules",
     "systemPromptPlaceholder": "Define the persona, principles, breakdown steps and output format. Markdown supported…",
-    "clearPrompt": "Clear"
+    "clearPrompt": "Clear",
+    "lifecycle": {
+      "label": "Session style",
+      "hint": "Chooses who drives the conversation and how tasks reach this agent when it is picked for a new session.",
+      "option": {
+        "takeover": "Take over the chat",
+        "takeoverHint": "Default. Its persona drives the whole session.",
+        "resident": "Crew member · resident",
+        "residentHint": "The default assistant keeps driving and delegates in-domain tasks to it; tasks queue in order with a single instance.",
+        "oneshot": "Crew member · one-shot",
+        "oneshotHint": "The default assistant keeps driving; each in-domain task is dispatched to it once."
+      }
+    }
   },
   "teams": {
     "title": "Agent Teams",

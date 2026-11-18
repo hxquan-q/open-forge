@@ -504,6 +504,25 @@ describe("DesktopConversationService agent binding", () => {
 		expect(runtime.createSession).not.toHaveBeenCalled();
 	});
 
+	it("rejects a new delegation session whose team was deleted while the picker was stale", async () => {
+		const cwd = await createTemporaryRoot();
+		const runtime = createRuntime(join(cwd, "session-1.conversation.jsonl"));
+		const service = new DesktopConversationService(runtime, undefined, undefined, async () =>
+			createAgentTeamDocument([]),
+		);
+
+		const error = await service
+			.createSession({ cwd, delegationTeamId: "team-1" }, "other", "interactive")
+			.catch((reason: unknown) => reason);
+
+		// 详情必须带 delegationTeamId（与配置字段同名），渲染层据此定位失效选项。
+		expect(error).toMatchObject<Partial<DesktopConversationError>>({
+			code: "AGENT_PROFILE_UNAVAILABLE",
+			details: { delegationTeamId: "team-1" },
+		});
+		expect(runtime.createSession).not.toHaveBeenCalled();
+	});
+
 	it("reopens a session bound to a deleted Agent as a plain conversation instead of failing", async () => {
 		const cwd = await createTemporaryRoot();
 		const sessionPath = join(cwd, "session-1.conversation.jsonl");

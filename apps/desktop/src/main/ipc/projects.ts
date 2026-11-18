@@ -1,5 +1,10 @@
 // Modified by The Open Forge contributors.
 import { ipcMain } from "electron";
+import {
+	deleteCodeProjectAiWorkspace,
+	readCodeProjectConfig,
+	writeCodeProjectConfig,
+} from "../projects/code-project-ai-workspace.js";
 import { getDesktopProjectService } from "../projects/project-service-instance.js";
 
 const CHANNELS = {
@@ -13,6 +18,9 @@ const CHANNELS = {
 	/** ADR-0151：把已存在目录登记进版块册（allstarProjects，第二册）。 */
 	OPEN_ALLSTAR: "vetta:projects:open-allstar",
 	REMOVE_ALLSTAR: "vetta:projects:remove-allstar",
+	READ_CODE_CONFIG: "vetta:projects:read-code-config",
+	WRITE_CODE_CONFIG: "vetta:projects:write-code-config",
+	DELETE_CODE_WORKSPACE: "vetta:projects:delete-code-workspace",
 } as const;
 
 function asString(value: unknown): string {
@@ -21,6 +29,16 @@ function asString(value: unknown): string {
 
 function asOptionalString(value: unknown): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function requireNonEmptyString(value: unknown, field: string): string {
+	if (typeof value !== "string" || value.trim().length === 0) throw new Error(`Invalid ${field}`);
+	return value;
+}
+
+function requireString(value: unknown, field: string): string {
+	if (typeof value !== "string") throw new Error(`Invalid ${field}`);
+	return value;
 }
 
 /**
@@ -62,6 +80,23 @@ export function registerProjectsIpc(): () => void {
 
 	ipcMain.handle(CHANNELS.REMOVE_ALLSTAR, (_event, path: unknown) =>
 		getDesktopProjectService().remove(asString(path), "allstar"),
+	);
+
+	ipcMain.handle(CHANNELS.READ_CODE_CONFIG, (_event, projectCwd: unknown) =>
+		readCodeProjectConfig(requireNonEmptyString(projectCwd, "projectCwd")),
+	);
+
+	ipcMain.handle(CHANNELS.WRITE_CODE_CONFIG, (_event, input: unknown) => {
+		if (typeof input !== "object" || input === null) throw new Error("Invalid Code project config");
+		const record = input as Record<string, unknown>;
+		return writeCodeProjectConfig(
+			requireNonEmptyString(record.projectCwd, "projectCwd"),
+			requireString(record.content, "content"),
+		);
+	});
+
+	ipcMain.handle(CHANNELS.DELETE_CODE_WORKSPACE, (_event, projectCwd: unknown) =>
+		deleteCodeProjectAiWorkspace(requireNonEmptyString(projectCwd, "projectCwd")),
 	);
 
 	return () => {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer } from "electron";
 import { decodeSessionEvent } from "../../shared/session-event-codec.js";
 import type { DesktopApi } from "../api.js";

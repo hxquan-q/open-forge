@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, pendingSessionOpenAtom, type SessionInfo } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -35,7 +36,7 @@ const useProjectsMock = vi.fn();
 vi.mock("../../../../hooks/useProjects", () => ({
 	useProjects: () => useProjectsMock(),
 }));
-vi.mock("../../../../hooks/useTeamSidebarConversations", () => ({
+vi.mock("@shared/hooks/useTeamSidebarConversations", () => ({
 	useTeamSidebarConversations: () => ({ conversations: [], loading: false }),
 }));
 

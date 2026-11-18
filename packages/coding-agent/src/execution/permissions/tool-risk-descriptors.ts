@@ -1,4 +1,5 @@
 // Copyright The Open Forge contributors.
+// Modified by The Open Forge contributors.
 import type { ToolRiskDescriptor } from "@vetta/runtime-core/task";
 
 /**
@@ -34,6 +35,14 @@ const SHELL: ToolRiskDescriptor = Object.freeze({
 
 const EXTERNAL_TOOL: ToolRiskDescriptor = Object.freeze({
 	defaultLevel: "L3",
+	executionClass: "exclusive",
+	irreversible: false,
+	externalSideEffect: true,
+	requiredScopes: [],
+});
+
+const COMPUTER_USE: ToolRiskDescriptor = Object.freeze({
+	defaultLevel: "L0",
 	executionClass: "exclusive",
 	irreversible: false,
 	externalSideEffect: true,
@@ -89,6 +98,11 @@ const BUILT_IN: Readonly<Record<string, ToolRiskDescriptor>> = Object.freeze({
 	todo: LIGHTWEIGHT,
 	artifact: LOCAL_WRITE,
 	browser_tab: READ_ONLY,
+	computer_observe: COMPUTER_USE,
+	computer_click: COMPUTER_USE,
+	computer_press: COMPUTER_USE,
+	computer_type: COMPUTER_USE,
+	computer_scroll: COMPUTER_USE,
 	memory: LIGHTWEIGHT,
 	im_send_attachment: LOCAL_WRITE,
 	bg_task_output: READ_ONLY,

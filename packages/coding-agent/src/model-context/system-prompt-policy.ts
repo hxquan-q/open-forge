@@ -162,6 +162,18 @@ const DELIVERABLES_GUIDANCE =
 const URL_LINK_GUIDANCE =
 	"Render web URLs in your prose as markdown links with descriptive text, e.g. [Vite docs](https://vitejs.dev), instead of bare URLs. Keep URLs as-is inside code blocks and shell examples.";
 
+/** 视觉模型的图片指引（模型能力未知时也保守使用：read-first 的条件措辞自行兜底）。 */
+const VISION_GUIDANCE =
+	"When the user sends images inline in their message, analyze them directly using your vision capabilities. Do NOT try to locate or read them from disk - the image data is already embedded in the message. When an image is provided as a file path, use `read` first if you have vision capabilities; it returns the image for direct inspection, including visible text. Use image OCR only when you need machine-extracted text/metadata or cannot inspect the image directly";
+
+/** 纯文本模型 + OCR 工具可用：指引直接落到可执行的提取动作，不再教 read-first。 */
+const TEXT_MODEL_IMAGE_OCR_GUIDANCE =
+	"The current model cannot view images; do not call `read` on image files expecting to see their content. To read the text inside an image file, use the `extract_text_from_img` tool with its file path";
+
+/** 纯文本模型且无 OCR 工具：诚实说明能力边界，避免模型在图片上反复盲试。 */
+const TEXT_MODEL_IMAGE_FALLBACK_GUIDANCE =
+	"The current model cannot view images. When image content is essential to the task, ask the user to describe it or paste the relevant text instead of trying to view it";
+
 export interface McpToolInfo {
 	name: string;
 	description: string;
@@ -226,6 +238,13 @@ export interface BuildSystemPromptOptions {
 	 * MCP 段落改为引导经 tool_search 检索激活。
 	 */
 	mcpDeferred?: boolean;
+	/**
+	 * 当前 Turn 的模型是否声明图片输入能力（`model.input` 含 `"image"`）。
+	 * 视觉指引段按此分支：纯文本模型不再教「有视觉就先 read 图片」（必然被
+	 * provider 能力门禁降级），改指 OCR 工具或求助用户；undefined = 未知
+	 * （SDK 直调 / 无模型绑定的预览路径），保守保留旧合并指引。
+	 */
+	modelSupportsImageInput?: boolean;
 }
 
 export function renderMcpToolsSection(mcpTools: McpToolInfo[], markdownTools: boolean, mcpDeferred = false): string {
@@ -286,7 +305,7 @@ function buildDateTime(): string {
 	});
 }
 
-function buildGuidelines(tools: string[], scenario?: ConversationScenario): string {
+function buildGuidelines(tools: string[], scenario?: ConversationScenario, modelSupportsImageInput?: boolean): string {
 	const guidelinesList: string[] = [INSTRUCTION_PRECEDENCE_GUIDANCE];
 	if (tools.length > 0) guidelinesList.push(TOOL_SELECTION_GUIDANCE);
 	// 渲染契约（徽章/产物块/URL 链接）只对有 UI 渲染的场景有意义；cli 场景剔除。
@@ -377,9 +396,15 @@ function buildGuidelines(tools: string[], scenario?: ConversationScenario): stri
 		}
 		guidelinesList.push(URL_LINK_GUIDANCE);
 	}
-	guidelinesList.push(
-		"When the user sends images inline in their message, analyze them directly using your vision capabilities. Do NOT try to locate or read them from disk - the image data is already embedded in the message. When an image is provided as a file path, use `read` first if you have vision capabilities; it returns the image for direct inspection, including visible text. Use image OCR only when you need machine-extracted text/metadata or cannot inspect the image directly",
-	);
+	if (modelSupportsImageInput === false) {
+		// 纯文本模型：provider 门禁会把图片替换为 notice，教 read-first 只会让模型
+		// 多跑一轮才碰壁；有 OCR 工具就直接给出可执行的提取路径。
+		guidelinesList.push(
+			tools.includes("extract_text_from_img") ? TEXT_MODEL_IMAGE_OCR_GUIDANCE : TEXT_MODEL_IMAGE_FALLBACK_GUIDANCE,
+		);
+	} else {
+		guidelinesList.push(VISION_GUIDANCE);
+	}
 
 	return guidelinesList.map((guideline) => `- ${guideline}`).join("\n");
 }
@@ -433,6 +458,7 @@ export function buildSystemPromptDraft(options: BuildSystemPromptOptions = {}): 
 		agentPlugins,
 		scenario,
 		mcpDeferred,
+		modelSupportsImageInput,
 		brandName = DEFAULT_BRAND_NAME,
 	} = options;
 	const resolvedCwd = cwd ?? ".";
@@ -457,7 +483,14 @@ export function buildSystemPromptDraft(options: BuildSystemPromptOptions = {}): 
 	// 不再渲染 `core.tools` 工具清单：其 `- name: description` 与 params.tools 中每个 tool 的
 	// description 是同一份字符串，模型会读到两遍。增量信息只有下面的 guidelines。
 	blocks.push(coreBlock("core.mcp", "mcp", renderMcpToolsSection(mcpTools, false, mcpDeferred), 250));
-	blocks.push(coreBlock("core.guidelines", "guidelines", `Guidelines:\n${buildGuidelines(tools, scenario)}\n`, 300));
+	blocks.push(
+		coreBlock(
+			"core.guidelines",
+			"guidelines",
+			`Guidelines:\n${buildGuidelines(tools, scenario, modelSupportsImageInput)}\n`,
+			300,
+		),
+	);
 	blocks.push(coreBlock("core.append", "append", appendSystemPrompt ?? "", 400));
 	blocks.push(coreBlock("core.context", "context", renderContextSection(workspaceFacts, contextFiles), 500));
 	blocks.push(coreBlock("core.memory", "memory", memory ?? "", 600));

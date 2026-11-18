@@ -284,6 +284,7 @@ function presetAgentProfile(
 		scope: { kind: "library" },
 		source: { kind: "plugin", pluginId: preset.pluginId, ...preset.profileTextKeys },
 		...(preset.mode ? { mode: preset.mode } : {}),
+		...(preset.lifecycle ? { lifecycle: preset.lifecycle } : {}),
 		createdAt: current?.createdAt ?? now,
 		updatedAt: now,
 	};

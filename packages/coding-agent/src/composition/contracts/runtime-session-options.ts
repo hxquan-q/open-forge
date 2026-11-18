@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Message } from "@vetta/ai";
 import type { SessionConfig, SessionExecutionMode } from "@vetta/runtime-core";
 import type { SessionExtensionFunctionSource } from "@vetta/runtime-core/session-extensions";
@@ -21,6 +22,8 @@ import type {
 	CodingAgentRuntimeToolRegistration,
 	CodingAgentSessionToolRegistration,
 } from "../../runtime-contracts/index.js";
+import type { CodingAgentDelegatedMember } from "./delegated-members.js";
+import { parseDelegatedMembers } from "./delegated-members.js";
 
 export type CodingAgentInitialTodoLockSource = "scene";
 
@@ -28,6 +31,10 @@ export interface CodingAgentRuntimeSessionOptions {
 	readonly sessionId: string;
 	readonly scenario?: ConversationScenario;
 	readonly cwd?: string;
+	/** Host-resolved roots for Code-mode project file access; never accepted from the renderer directly. */
+	readonly projectIdentity?: string;
+	readonly projectAiWorkspaceRoot?: string;
+	readonly projectAiWorkspaceToolRoot?: string;
 	readonly model?: NonNullable<SessionConfig["model"]>;
 	readonly thinkingLevel?: NonNullable<SessionConfig["thinkingLevel"]>;
 	readonly agentMode?: string;
@@ -87,6 +94,11 @@ export interface CodingAgentRuntimeSessionOptions {
 	readonly sessionTools?: readonly CodingAgentSessionToolRegistration[];
 	/** 仅由产品宿主为单个 Session 注入的中立 Runtime Tool 注册。 */
 	readonly sessionRuntimeTools?: readonly CodingAgentRuntimeToolRegistration[];
+	/**
+	 * 委任成员定义（REQ-0034）：声明即按成员定义动态注册子代理类型（`member:<id>`），
+	 * 驾驶会话可按域委派。声明式数据，边界结构校验；缺省不注册任何成员。
+	 */
+	readonly delegatedMembers?: readonly CodingAgentDelegatedMember[];
 }
 
 /** RuntimeHost 创建前可用的 Coding Agent 产品配置；Session id 可由后端按路径解析。 */
@@ -111,6 +123,9 @@ export function parseCodingAgentRuntimeSessionConfiguration(value: unknown): Cod
 		value.agentConfiguration === undefined ? undefined : parseAgentConfigurationSelection(value.agentConfiguration);
 	assertOptionalStringFields(value, [
 		"cwd",
+		"projectIdentity",
+		"projectAiWorkspaceRoot",
+		"projectAiWorkspaceToolRoot",
 		"scenario",
 		"thinkingLevel",
 		"agentMode",
@@ -153,6 +168,7 @@ export function parseCodingAgentRuntimeSessionConfiguration(value: unknown): Cod
 		"knowledgePageWriter",
 		"memoryPolicy",
 	]);
+	const delegatedMembers = parseDelegatedMembers(value.delegatedMembers);
 	const memoryPolicy =
 		value.memoryPolicy === undefined ? undefined : parseMemoryPolicyConfiguration(value.memoryPolicy);
 	if (value.env !== undefined) {
@@ -164,6 +180,7 @@ export function parseCodingAgentRuntimeSessionConfiguration(value: unknown): Cod
 		...value,
 		...(agentConfiguration ? { agentConfiguration } : {}),
 		...(memoryPolicy ? { memoryPolicy } : {}),
+		...(delegatedMembers.length > 0 ? { delegatedMembers } : {}),
 	} as CodingAgentRuntimeSessionConfiguration;
 }
 

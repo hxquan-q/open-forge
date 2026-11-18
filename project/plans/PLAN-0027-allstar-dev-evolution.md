@@ -6,12 +6,12 @@ priority: P1
 owner: desktop
 source: REQ-0030
 related_requirement: [REQ-0030]
-related_tasks: [TASK-0422, TASK-0423]
+related_tasks: [TASK-0422, TASK-0423, TASK-0478]
 related_issues: []
 related_bugs: []
 depends_on: []
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-03
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -47,7 +47,7 @@ updated: 2026-10-26
 | 阶段 | 区间 | 发布 | 内容 | 状态 |
 |---|---|---|---|---|
 | M0 入口 | 10-26 | 0.1.3 | TASK-0422（已交付） | done |
-| M1 版块壳 | 10-26 ~ 11-06 | 0.1.4 | TASK-0423：/allstar 路由+首页、项目空间、会话列表、配置 v1、存量迁移 | ready |
+| M1 版块壳 | 10-26 ~ 11-06 | 0.1.4 | TASK-0423：/allstar 路由+首页、项目空间、会话列表、配置 v1、存量迁移 | in_progress |
 | M2 流水线并入 | 11-09 ~ 11-19 | 0.2.0 | ADR 并入路径 → 能力合入+插件退役 → 驾驶舱读面 → 围栏/角色可视化+精简写面（Task 实施前再建） | 排期 |
 | M3-core 内置 git | 11-20 ~ 11-26 | 0.2.1 | ADR 权限模型 → 便携 git 运行时 → git MCP（背景轨：制品选型 11-02 起） | 排期 |
 | M4' 补齐 | 12-01 起 | 0.2.x | 数据库 MCP、环境声明+缺项安装、配置 v2、深度写面、backlog 池 | 池 |

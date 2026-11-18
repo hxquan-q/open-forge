@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button, cn } from "@vetta-org/ui";
 import { SegmentedControl } from "@vetta-org/theme-ui/shared";
 import { getMcpAuthorization, setMcpAuthorization } from "./mcp-authorization-header";
+import { getBuiltinMcpPresetByName } from "../mcp/builtin-mcp-presets";
 import { CheckboxField, InputField, TextareaField } from "@vetta-org/theme-ui/settings";
 import type { McpServerToolList } from "@preload/api.js";
 import {
@@ -74,6 +75,7 @@ export function McpServerFields({
 	serverTools?: McpServerToolList | null;
 }): JSX.Element {
 	const { t } = useTranslation("settings");
+	const workspaceMode = getBuiltinMcpPresetByName(form.name)?.workspaceMode;
 	const [advancedOpen, setAdvancedOpen] = useState(() => hasAdvancedValues(form));
 
 	return (
@@ -113,7 +115,9 @@ export function McpServerFields({
 				)}
 			</div>
 
-			{serverTools !== undefined && <McpToolsSection serverTools={serverTools} setForm={setForm} />}
+			{serverTools !== undefined && (
+					<McpToolsSection serverTools={serverTools} setForm={setForm} workspaceMode={workspaceMode} />
+				)}
 
 			{/* 高级选项：系统折叠触发器与对称网格 */}
 			<div className="space-y-3 pt-1">
@@ -221,11 +225,14 @@ export function McpServerFields({
 function McpToolsSection({
 	serverTools,
 	setForm,
+	workspaceMode,
 }: {
 	serverTools: McpServerToolList | null;
 	setForm: React.Dispatch<React.SetStateAction<McpServerFormState>>;
+	workspaceMode?: "work" | "coding";
 }): JSX.Element {
 	const { t } = useTranslation("settings");
+	const modeLabel = workspaceMode ? t(`agentMode.${workspaceMode}`) : t("agentMode.both");
 	return (
 		<div className="space-y-1.5">
 			<span className="block text-xs font-medium text-foreground/85">{t("mcpServerTools")}</span>
@@ -252,6 +259,9 @@ function McpToolsSection({
 									}
 									label={tool.name}
 								/>
+								<span className="shrink-0 rounded-full bg-accent/50 px-1.5 py-0.5 text-[10px] text-muted-foreground/70">
+									{modeLabel}
+								</span>
 								{tool.stale ? (
 									<span className="text-[10px] text-muted-foreground">{t("mcpServerToolStale")}</span>
 								) : null}

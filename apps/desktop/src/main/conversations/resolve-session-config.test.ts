@@ -1,8 +1,10 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parseCodingAgentRuntimeSessionConfiguration } from "@vetta/coding-agent/composition";
 import type { CodingAgentRuntimeToolRegistration } from "@vetta/coding-agent/runtime";
+import { resolveCodeProjectAiWorkspace } from "@vetta/runtime-desktop";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /** 可变的 desktop-config 桩：模拟用户在新会话页改「默认工作模式」。 */
@@ -21,10 +23,15 @@ vi.mock("../logger.js", () => ({
 	}),
 }));
 
-vi.mock("../ipc/fs.js", () => ({
-	allowProjectRoot: () => undefined,
-	readDesktopConfig: async () => desktopConfig,
-}));
+vi.mock("../ipc/fs.js", async () => {
+	// BUG-0192：allowProjectRoot 换真实实现，让会话解析真正注册 filesystem-service 的
+	// 授权根，供边界断言消费；readDesktopConfig 保持桩，默认档位由测试控制。
+	const { allowProjectRoot } = await import("../filesystem/filesystem-service.js");
+	return {
+		allowProjectRoot,
+		readDesktopConfig: async () => desktopConfig,
+	};
+});
 
 vi.mock("../plugins/plugin-catalog.js", () => ({
 	pluginAgentContributionService: {
@@ -32,6 +39,7 @@ vi.mock("../plugins/plugin-catalog.js", () => ({
 	},
 }));
 
+import { assertFilesystemPathWithinProject, readEditableTextFile } from "../filesystem/filesystem-service.js";
 import { resolveDesktopSessionConfig } from "./resolve-session-config.js";
 import { recordSessionAgentMode } from "./session-agent-mode-store.js";
 
@@ -155,6 +163,43 @@ describe("能力 Profile 固化（TASK-0078）", () => {
 	});
 });
 
+describe("恢复链 agentMode 回落次序（BUG-0187）", () => {
+	it("恢复无固化记录的会话采纳显式请求的 agentMode（团队 Runtime 契约）", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "team-member.jsonl");
+		// 团队会话绕过 desktop-conversation-service 创建，agent-modes.json 永无记录；
+		// 恢复请求必须靠显式声明把档位钉回 coding，而不是回落 LEGACY 的 work。
+		const resumed = await resolveDesktopSessionConfig(
+			{ cwd: root, sessionPath, agentMode: "coding", capabilityProfile: "coding" },
+			"other",
+			"interactive",
+		);
+		expect(resumed.agentMode).toBe("coding");
+		expect(resumed.capabilityProfile).toBe("coding");
+	});
+
+	it("恢复有固化记录的会话仍忽略请求 agentMode，记录优先", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "pinned-work.jsonl");
+		await recordSessionAgentMode(sessionPath, "work");
+
+		const resumed = await resolveDesktopSessionConfig(
+			{ cwd: root, sessionPath, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		expect(resumed.agentMode).toBe("work");
+	});
+
+	it("普通会话恢复不携带 agentMode 时仍回落 LEGACY 的 work", async () => {
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "legacy.jsonl");
+
+		const resumed = await resolveDesktopSessionConfig({ cwd: root, sessionPath }, "conversation", "interactive");
+		expect(resumed.agentMode).toBe("work");
+	});
+});
+
 describe("Profile 默认工具清单随会话下发（BUG-0014）", () => {
 	it("折算 work 默认工具时把同一清单作为软默认证据随会话下发", async () => {
 		const root = await createTemporaryRoot();
@@ -259,6 +304,122 @@ describe("会话注入工具（TASK-0095）", () => {
 			| { sessionRuntimeTools?: readonly unknown[] }
 			| undefined;
 		expect(sessionConfiguration?.sessionRuntimeTools).toHaveLength(1);
+	});
+});
+
+describe("Code 项目 AI 工作区会话上下文（TASK-0479）", () => {
+	it("只为 coding 会话注入宿主解析的项目身份、AI 工作区路径和落点规则", async () => {
+		const root = await createTemporaryRoot();
+		const coding = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		const codingOptions = parseCodingAgentRuntimeSessionConfiguration(coding.config.agent?.sessionConfiguration);
+		expect(codingOptions.projectIdentity).toBe(resolve(root));
+		expect(codingOptions.projectAiWorkspaceRoot).toContain("workspace");
+		expect(codingOptions.projectAiWorkspaceToolRoot).toBe(codingOptions.projectAiWorkspaceRoot);
+		expect(codingOptions.systemPromptVolatileAddon).toContain("project-config.md");
+		expect(codingOptions.systemPromptVolatileAddon).toContain("Keep source, tests");
+
+		const sameProjectMember = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		const memberOptions = parseCodingAgentRuntimeSessionConfiguration(
+			sameProjectMember.config.agent?.sessionConfiguration,
+		);
+		expect(memberOptions.projectAiWorkspaceRoot).toBe(codingOptions.projectAiWorkspaceRoot);
+
+		const work = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "work", capabilityProfile: "work" },
+			"conversation",
+			"interactive",
+		);
+		const workOptions = parseCodingAgentRuntimeSessionConfiguration(work.config.agent?.sessionConfiguration);
+		expect(workOptions.projectIdentity).toBeUndefined();
+		expect(workOptions.projectAiWorkspaceRoot).toBeUndefined();
+	});
+});
+
+describe("AI 工作区 fs 授权（BUG-0192）", () => {
+	// allowedRoots 是 filesystem-service 的模块级全局状态且无清理接口：正向用例各自用
+	// 全新临时项目根（唯一 hash 工作区），负向用例只断言从未注册过的独立目录，用例间
+	// 不依赖清理顺序。
+	it("coding 会话解析后其 AI 工作区文件通过可编辑文本读取边界", async () => {
+		const root = await createTemporaryRoot();
+		const coding = await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		const workspaceDir = parseCodingAgentRuntimeSessionConfiguration(
+			coding.config.agent?.sessionConfiguration,
+		).projectAiWorkspaceRoot;
+		if (typeof workspaceDir !== "string") throw new Error("coding session should expose projectAiWorkspaceRoot");
+		const workspaceFile = join(workspaceDir, "pipeline", "2026-11-18-form", "requirements.md");
+		await mkdir(dirname(workspaceFile), { recursive: true });
+		await writeFile(workspaceFile, "# 清场原始记录表\n", "utf8");
+		// 旧实现：AI 工作区从未注册进 allowedRoots，此处抛
+		// "Path is outside any known project directory"，右栏预览报「无法读取此文件」。
+		const snapshot = await readEditableTextFile(workspaceFile);
+		expect(snapshot.content).toBe("# 清场原始记录表\n");
+	});
+
+	it("恢复链首个解析（header cwd 重算）同样注册工作区", async () => {
+		// 会话重启恢复/历史会话重开：resolveDesktopSessionConfig 读 sessionPath
+		// header cwd 重算 projectAiWorkspace；本用例让恢复成为该项目的第一次解析，
+		// 证明注册不依赖「先新建过」。
+		const root = await createTemporaryRoot();
+		const sessionPath = await createSessionFile(root, "bug-0192-resume.jsonl");
+		await recordSessionAgentMode(sessionPath, "coding");
+		const resumed = await resolveDesktopSessionConfig({ cwd: root, sessionPath }, "conversation", "interactive");
+		expect(resumed.agentMode).toBe("coding");
+		const workspaceDir = parseCodingAgentRuntimeSessionConfiguration(
+			resumed.config.agent?.sessionConfiguration,
+		).projectAiWorkspaceRoot;
+		if (typeof workspaceDir !== "string")
+			throw new Error("resumed coding session should expose projectAiWorkspaceRoot");
+		const workspaceFile = join(workspaceDir, "pipeline", "notes.md");
+		await mkdir(dirname(workspaceFile), { recursive: true });
+		await writeFile(workspaceFile, "resume\n", "utf8");
+		const snapshot = await readEditableTextFile(workspaceFile);
+		expect(snapshot.content).toBe("resume\n");
+	});
+
+	it("work 档会话不注册 AI 工作区，工作区路径仍被边界拒绝", async () => {
+		const root = await createTemporaryRoot();
+		await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "work", capabilityProfile: "work" },
+			"conversation",
+			"interactive",
+		);
+		const workspaceFile = join(resolveCodeProjectAiWorkspace(resolve(root)).directory, "pipeline", "notes.md");
+		expect(() => assertFilesystemPathWithinProject(workspaceFile)).toThrowError(
+			"Path is outside any known project directory",
+		);
+	});
+
+	it("边界不回归：他项目工作区 hash 目录与无关目录仍被拒绝", async () => {
+		const root = await createTemporaryRoot();
+		await resolveDesktopSessionConfig(
+			{ cwd: root, agentMode: "coding", capabilityProfile: "coding" },
+			"conversation",
+			"interactive",
+		);
+		// 伪造他项目工作区：同一 code-projects 父目录下的另一个 hash 目录——注册的必须是
+		// 精确工作区目录而不是父目录，否则任意项目工作区互信。
+		const otherProjectRoot = join(await createTemporaryRoot(), "other-project");
+		const otherWorkspaceFile = join(resolveCodeProjectAiWorkspace(otherProjectRoot).directory, "pipeline", "x.md");
+		expect(() => assertFilesystemPathWithinProject(otherWorkspaceFile)).toThrowError(
+			"Path is outside any known project directory",
+		);
+		// 无关目录：从未注册的独立临时目录。
+		const unrelatedFile = join(await createTemporaryRoot(), "innocent.md");
+		expect(() => assertFilesystemPathWithinProject(unrelatedFile)).toThrowError(
+			"Path is outside any known project directory",
+		);
 	});
 });
 

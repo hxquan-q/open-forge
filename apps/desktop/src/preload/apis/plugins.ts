@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer, IpcRendererEvent, WebUtils } from "electron";
 import { PLUGIN_CAPABILITY_CHANNELS, PLUGIN_SYSTEM_CHANNELS } from "../../shared/plugin-capability-ipc.js";
 import {

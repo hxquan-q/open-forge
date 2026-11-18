@@ -20,6 +20,7 @@ import {
 	truncateHead,
 	truncateLine,
 } from "../../shared/truncation.js";
+import type { ReadPathPolicy } from "../read/index.js";
 import { GREP_TOOL_DESCRIPTION } from "./description.js";
 
 const DEFAULT_LIMIT = 100;
@@ -66,6 +67,7 @@ export interface GrepOperations {
 
 export interface GrepToolOptions {
 	readonly operations?: GrepOperations;
+	readonly pathPolicy?: ReadPathPolicy;
 	readonly rgPath?: string;
 	readonly executableResolver?: CodingToolExecutableResolver;
 	/** 路径在哪台机器上解析；缺省为本机。 */
@@ -134,6 +136,8 @@ export function createGrepTool(cwd: string, options: GrepToolOptions = {}): Runt
 			}
 
 			const searchPath = resolveExistingPath(request.input.path ?? ".", cwd, pathHost);
+			const rejectionReason = options.pathPolicy?.getRejectionReason(searchPath);
+			if (rejectionReason !== undefined) throw new Error(rejectionReason);
 			let isDirectory: boolean;
 			try {
 				isDirectory = await operations.isDirectory(searchPath);

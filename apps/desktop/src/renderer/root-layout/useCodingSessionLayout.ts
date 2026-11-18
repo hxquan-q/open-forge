@@ -26,9 +26,9 @@ function decodeRouteCwd(value: string | undefined): string | null {
 }
 
 /** 哪条规则命中了版块态：决定初始化走意图还是保留的边沿语境；contextCwd 用于页签偏好重置。 */
-type CodingLayoutContext = "session" | "team" | "new-session" | null;
+export type CodingLayoutContext = "session" | "team" | "new-session" | null;
 
-function useCodingLayoutState(): { active: boolean; context: CodingLayoutContext; contextCwd: string | null } {
+export function useCodingLayoutState(): { active: boolean; context: CodingLayoutContext; contextCwd: string | null } {
 	const matches = useMatches();
 	const lastMatch = matches[matches.length - 1];
 	const currentPath = lastMatch?.pathname ?? "/";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SendInteractionContext } from "../input-bar/types";
 import { CONVERSATION_TARGET_KEY, type NewSessionTargetKey } from "./target";
 
@@ -23,6 +24,12 @@ export function createNewSessionTargetStrategyRegistry(input: {
 	/** 单 Agent 走普通会话链路，只是创建时多带一个 Agent 身份。 */
 	readonly agentDispatch: NewSessionDispatch;
 	readonly agentKey: NewSessionTargetKey | null;
+	/**
+	 * 无主控团队（REQ-0034）：也走普通会话链路（newSessionSend 带 delegationTeamId），
+	 * 由默认会话保持驾驶、成员按域委派；不进 Team 编排。
+	 */
+	readonly workerTeamDispatch?: NewSessionDispatch;
+	readonly workerTeamKey?: NewSessionTargetKey | null;
 }): NewSessionTargetStrategyRegistry {
 	const conversation: NewSessionTargetStrategy = {
 		key: CONVERSATION_TARGET_KEY,
@@ -31,6 +38,9 @@ export function createNewSessionTargetStrategyRegistry(input: {
 	const strategies = new Map<string, NewSessionTargetStrategy>([[conversation.key, conversation]]);
 	if (input.teamKey) strategies.set(input.teamKey, { key: input.teamKey, dispatch: input.teamDispatch });
 	if (input.agentKey) strategies.set(input.agentKey, { key: input.agentKey, dispatch: input.agentDispatch });
+	if (input.workerTeamKey && input.workerTeamDispatch) {
+		strategies.set(input.workerTeamKey, { key: input.workerTeamKey, dispatch: input.workerTeamDispatch });
+	}
 	return {
 		resolve: (targetKey) => {
 			const key = targetKey ?? CONVERSATION_TARGET_KEY;
