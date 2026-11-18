@@ -1,7 +1,7 @@
 ---
 id: TASK-0431
 type: task
-status: verifying
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0030
@@ -35,7 +35,7 @@ depends_on: [TASK-0427]
 conflicts_with: []
 integration_status: pending
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -95,3 +95,11 @@ feed 条目按事件自身键（toolCallId / 团队会话前缀键）结算，�
 - 未运行及原因：完整 check 与 impact 留批次收尾；团队切走红测未单列（同构提升 + 全量回归覆盖，见 BUG-0170 记录）。
 - Worktree：未拆出（主检出串行）。
 - 剩余风险：feed 仍为全局混流（F05 已接受限制）；切走后 start 仍不投屏（维持现状，见任务不做项）。
+
+## 2026-11-18 批次收尾：impact 与完整 check 已具备
+
+- 本任务此前唯一未跑项是「完整 check 与 impact 留批次收尾」，2026-11-18 两项均已有结论，故 `verifying` → `done`。
+- impact（用户实跑 `bun run test:impact`，范围是相对 `xquan` 的全量分支差异，覆盖本批次 desktop 改动）：49 包中 47 包绿，desktop 1487s 通过。两处失败为 `packages/plugins/presets/vetta-ui-design` 与 `packages/ssh-transport`——`git diff --stat xquan...HEAD` 与 `git log xquan..HEAD` 对两包均为空，失败与本变更无关；已反证为本机环境限制（TEMP 8.3 短名、无 symlink 权限），换长名 TEMP 后对应用例 2/2 通过，两包内部其余用例全过（ssh 234、vetta-ui-design 927）。**不记为「impact 全绿」**。
+- 完整 check：用户同日实跑 `bun run check` exit 0（lint 5310 文件、types 五路全 0、guards 全过、声明头 `missing=0`、mobile-lint 0）。
+- 团队切走红测仍未单列：按前文口径由「同构提升 + 全量回归覆盖」承担，本次 impact 的 desktop 段全绿即为该判断的支撑证据之一。
+- `integration_status` 保持 `pending`：未合入 `origin/dev`，未 push、未发布。

@@ -77,8 +77,8 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0434` | `verifying` | PLAN-0028 | [LLM 行为热追踪收敛为 code 模式独有（REQ-0030 / 报告 §11.3）](TASK-0434-hot-tracking-code-only.md) |
 | `TASK-0433` | `verifying` | PLAN-0028 | [新建 code 会话恢复四页签默认（BUG-0172）](TASK-0433-new-session-tab-defaults.md) |
 | `TASK-0432` | `verifying` | PLAN-0028 | [新建 code 会话意图驱动布局初始化（BUG-0171）](TASK-0432-coding-create-intent.md) |
-| `TASK-0431` | `verifying` | PLAN-0028 | [终端条目完成结算与聊天闸门解耦（BUG-0170）](TASK-0431-terminal-entry-stuck-running.md) |
-| `TASK-0430` | `verifying` | PLAN-0028 | [coding 增量行侧栏漏过滤修复（BUG-0169）](TASK-0430-incremental-coding-sidebar-leak.md) |
+| `TASK-0431` | `done` | PLAN-0028 | [终端条目完成结算与聊天闸门解耦（BUG-0170）](TASK-0431-terminal-entry-stuck-running.md)<br>chenxvhua 补充（状态 `done`；Plan `PLAN-0028`）：2026-11-18 批次收尾——用户实跑 impact（相对 xquan 全量差异）47/49 包绿，两处失败包零改动且反证为本机环境；完整 check exit 0；`verifying` → `done`，候选 integration pending。 |
+| `TASK-0430` | `done` | PLAN-0028 | [coding 增量行侧栏漏过滤修复（BUG-0169）](TASK-0430-incremental-coding-sidebar-leak.md)<br>chenxvhua 补充（状态 `done`；Plan `PLAN-0028`）：2026-11-18 批次收尾——impact 47/49 包绿（失败包零改动，环境所致）、完整 check exit 0，本任务实机不适用；`verifying` → `done`，候选 integration pending。 |
 | `TASK-0429` | `verifying` | PLAN-0028 | [同一 AI 文件再次编辑跟回内嵌预览（BUG-0168）](TASK-0429-ai-file-edit-refollow.md) |
 | `TASK-0428` | `verifying` | PLAN-0028 | [开发册项目闭环：候选与补拉以版块册为事实源（BUG-0167）](TASK-0428-allstar-book-project-closure.md) |
 | `TASK-0427` | `verifying` | PLAN-0028 | [修复终端输出摘要内存保留（BUG-0166）](TASK-0427-terminal-output-retention.md) |
