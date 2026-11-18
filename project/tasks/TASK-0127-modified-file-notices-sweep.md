@@ -128,6 +128,25 @@ updated: 2026-11-18
 - 未运行及原因：未跑 impact／全量测试（按仓库约定需用户决定，本任务不主动启动）；未启动
   `bun run dev` 与 UI 验证（只新增注释行与门禁配置，无可观察行为变化）。
 - 剩余风险：门禁不再有存量抵扣，任何修改文件缺声明头立即判负，并行会话提交前须先跑该审计；
-  原 `--baseline` 分支的「无 `upstream` remote 时回落基线 sha、仍不可用则告警放行」兜底随基线
-  删除失效，环境缺 `upstream/dev` 时守卫直接报错；`dependents.md` 的声明头按新增口径写
-  `Copyright`，守卫只校验 `The Open Forge contributors` 标记，口径差异不影响判定。
+  `dependents.md` 的声明头按新增口径写 `Copyright`，守卫只校验 `The Open Forge contributors`
+  标记，口径差异不影响判定。原「无 `upstream` remote 时回落基线 sha」的兜底已随基线删除失效，
+  已由下方「后续修补」以回落 `origin/dev` 补回。
+
+## 后续修补（2026-11-18，CI 回归）
+
+- 问题：删除 `--baseline` 后，守卫在没有 `upstream` remote 的环境里直接抛错。CI 正是这种环境
+  （`actions/checkout` 只建 `origin`，且 `quality.yml:35`、`desktop-release.yml:287` 都跑
+  `bun run check`），意味着切硬门禁后每次 push 都会红在与代码无关的环境问题上。
+- 修法：`scripts/quality/check-modified-file-notices.mjs` 的 `resolveMergeBase()` 改为四级解析
+  `upstream/dev` → 基线快照 → `origin/dev` → 硬失败；回落时打 warn，并在输出行如实标注实际
+  使用的 ref（避免日志里出现「upstream/dev@origin 的 sha」这种错标）。同时移除原先
+  `mergeBase === null → exit 0` 的静默跳过路径——降级只能是换 ref 继续审计，不能是假装通过。
+- 依据：本仓 `upstream` 与 `origin` 同一 URL，`origin/dev` 与 `upstream/dev` 历史相同、
+  merge-base 等价，因此回落不掉严格度。该前提已写进脚本注释；若将来 `upstream` 指向真正的
+  上游项目，CI 必须显式 fetch 上游，否则只覆盖「相对 fork dev」的范围。
+- 验证：`scripts/quality/quality-gates.test.mjs` 新增 6 项（先红后绿，113 项全通过）；
+  另建临时仓库（只有 `refs/remotes/origin/dev`、无任何 remote）实测输出
+  `baseline: origin/dev@…` 且缺失判定与退出码正常；主检出（有 `upstream`）仍打印
+  `baseline: upstream/dev@…`，行为不变。
+- 未验证：未在真实 CI 上跑一轮（本地无法复现 `actions/checkout` 环境），首次 push 时应观察
+  quality 工作流确认。

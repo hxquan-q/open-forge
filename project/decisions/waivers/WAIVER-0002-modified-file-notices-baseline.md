@@ -35,7 +35,7 @@ expires: 2027-03-31
 - 门禁切换：删除 `scripts/quality/baselines/modified-file-notices.txt`；
   `scripts/quality/check-guards.mjs` 中该守卫去掉 `--baseline` 参数，改为纯审计运行，
   `missing!=0` 即非零退出。本 waiver 不再作为任何门禁放行依据。
-- 残余风险：门禁失去 ratchet 抵扣后，任何修改文件缺声明头立即判负；同时失去
-  `--baseline` 分支里「无 `upstream` remote 时回落基线 sha、仍不可用则告警放行」的兜底，
-  环境缺少 `upstream/dev` 时守卫会直接报错而非跳过，需要在有 `upstream` 的主检出或先
-  `git fetch upstream` 后运行。
+- 残余风险：门禁失去 ratchet 抵扣后，任何修改文件缺声明头立即判负。原先
+  `--baseline` 分支里「无 `upstream` remote 时回落基线 sha」的兜底已随基线删除失效，改由
+  TASK-0127 后续修补回落 `origin/dev`（本仓与 `origin` 同源，merge-base 等价）并在回落时告警，
+  CI 与外部贡献者环境不再因缺 `upstream` 而报错。
