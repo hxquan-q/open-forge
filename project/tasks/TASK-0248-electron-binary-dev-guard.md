@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -121,4 +121,16 @@ updated: 2026-10-14
   - 解压为何提前结束的触发机制仍未定位（BUG-0102 记为待确认）；本改动只保证「不完整 → 自愈或明确报错」，不阻止再次发生。
   - 自愈需要网络：缓存未命中时会重新下载约 130 MB；离线且无缓存时仍失败，但错误文本已给出 `ELECTRON_MIRROR` / `ELECTRON_OVERRIDE_DIST_PATH` 两条出路。
   - `start`、`test:e2e`、`verify:ui:*` 等其它 electron 入口未接线，仍会以上游原始文案失败（见「不做」）。
+
+## 2026-11-18 门禁事实更正
+
+- 本记录交付记录中「完整 `bun run check` 的 `lint` 唯一红属 TASK-0247 在途未提交改动」的表述已过期。
+- 事实：用户 2026-11-18 在 `chenxvhua` 实跑 `bun run check` → exit 0。lint 5310 文件、
+  types（root/cli/desktop/docs/mobile）全部 0、guards 全过（`[waivers] all waivers valid
+  and unexpired`、修改声明头 `missing=0`）、mobile-lint 0。
+- `WAIVER-0011` / `WAIVER-0012` 现为 `resolved`（非续期）。
+- 范围：本节只更正门禁事实，不改写前述交付结论、不表示人工验收完成；本任务剩余项仍见上
+  （`integration_status: pending`、验收反馈待用户），本节不改变上述剩余项。当轮 `test:impact`
+  记录的既有红（window-manager `process.resourcesPath` 4 套件、`plugin-official-models.test.ts`
+  1 例）属行为测试，完整 check 不运行测试，本节不推断其已消失。
 

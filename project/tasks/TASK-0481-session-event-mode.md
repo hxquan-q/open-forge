@@ -33,7 +33,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-09
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -118,3 +118,17 @@ updated: 2026-11-17
 - 人工功能接受：待用户。确认真实项目中已有会话在收到明确coding信息后从普通侧栏隐藏并在开发项目历史出现；无信息事件不抹归属。
 - 未运行：真实Electron/E2E/Provider/SSH/数据库、开发服务、应用打包与部署（未授权且该确定性投影缺陷可由Hook集成层覆盖）。影响测试要求的库依赖准备已实际执行，不等于应用打包。
 - 剩余风险：历史目标会话是否具有错误缓存模式尚未证明，OBS-ALLSTAR-ATTR-001仍待归因；无有效首条消息事件的既有处理范围、cwd/bucket校正、Team配置链及未归册冷启动发现未扩展。工程通过不代表用户运行实例已应用或历史故障已消失。
+
+## 2026-11-18 门禁事实更正
+
+- 本记录 2026-11-17 切片验证节「完整 check 受既有问题阻断，不能记为工程完成」「完整 `bun run check`：
+  exit 1（既有 WAIVER-0011/0012 于 11-11 过期、3 份无关测试文件缺声明头、
+  `spawn-agent-resident-guard.test.ts` 请求缺 sessionId/turnId/signal、Desktop 委任代码类型错误）」
+  的表述已过期。
+- 事实：用户 2026-11-18 在 `chenxvhua` 实跑 `bun run check` → exit 0。lint 5310 文件、
+  types（root/cli/desktop/docs/mobile）全部 0、guards 全过（`[waivers] all waivers valid
+  and unexpired`、修改声明头 `missing=0`）、mobile-lint 0。
+- `WAIVER-0011` / `WAIVER-0012` 现为 `resolved`（非续期）。
+- 范围：本节只更正门禁事实，不改写前述交付结论、不表示人工验收完成；本任务剩余项仍见上
+  （实机增量消费与人工功能接受待用户、`integration_status: pending`、OBS-ALLSTAR-ATTR-001
+  历史归属个案未关闭），本节不改变上述剩余项。
