@@ -31,13 +31,13 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
 | `TASK-0489` | `ready` | — | [普通会话删除失败反馈与副作用顺序](TASK-0489-session-delete-failure-feedback.md)：BUG-0191合同已落盘；两次实现派发均宿主侧中断零源码改动，待实施。 |
-| `TASK-0488` | `verifying` | — | [文件路径策略拒绝结构化错误](TASK-0488-file-policy-error-result.md)：BUG-0190，红4→绿4文件75/75，独立审查无阻断；权限/既有止损不变，全仓check既有阻断，候选pending。 |
-| `TASK-0487` | `verifying` | — | [Provider逐事件取消监听配对释放](TASK-0487-provider-abort-listener-cleanup.md)：BUG-0189，红监听35≠1→绿5文件83/83，独立审查无阻断；全仓check仍既有问题阻断，本地候选pending，不改重试预算。 |
+| `TASK-0488` | `done` | — | [文件路径策略拒绝结构化错误](TASK-0488-file-policy-error-result.md)：BUG-0190，红4→绿4文件75/75，独立审查无阻断；用户 2026-11-18 实机验收通过；候选仍 integration pending（未合 dev）。 |
+| `TASK-0487` | `done` | — | [Provider逐事件取消监听配对释放](TASK-0487-provider-abort-listener-cleanup.md)：BUG-0189，红监听35≠1→绿5文件83/83，独立审查无阻断；2026-11-18 工程核对 `nextAttemptStep` 具名回调+finally 配对释放且定向 36/36，经用户同意按工程合同验收；候选仍 integration pending。 |
 | `TASK-0486` | `verifying` | — | [自适应流水线 P2 委任机制](TASK-0486-delegation-mechanism.md)：REQ-0034；两提交 30a3dadb0+b0b04534a 定向全绿；件4降级（LLM 读域描述）；待实机验收+用户自跑 impact/完整 check；serial。 |
 | `TASK-0483` | `verifying` | — | [Code 会话热追踪开关](TASK-0483-session-hot-tracking-toggle.md)：默认开、runtimeId 内存态、生产消费同源；定向 52/52、impact 1328/1329（1 例 session-switch 存疑待分诊）；完整 check 按用户指示跳过；serial，本地 Task 分支，不动团队域与远程 Git。 |
-| `TASK-0482` | `verifying` | PLAN-0031 | [Windows 电脑操作](TASK-0482-windows-computer-use.md)：BUG-0186 已补回执/观察的前台窗口与 IME 只读反馈；先红后绿、原生 31/31、资源同步核验通过；`check:quick` 仅被过期 WAIVER-0011/0012 阻断。serial，完整 check 与黑盒验收待用户。 |
+| `TASK-0482` | `done` | PLAN-0031 | [Windows 电脑操作](TASK-0482-windows-computer-use.md)：BUG-0186 已补回执/观察的前台窗口与 IME 只读反馈；先红后绿、原生 31/31、资源同步核验通过；用户 2026-11-18 实机验收通过（含全桌面操作与停止/找回）；候选仍 integration pending，未发布安装包。 |
 | `TASK-0481` | `verifying` | PLAN-0027 | [已有会话增量模式更新](TASK-0481-session-event-mode.md)：11-17续修F09测试合同，红5→绿4文件22/22，独立审查无本项阻断；完整check受既有类型/声明头/过期waiver阻断，本地Task候选、integration pending，未宣称工程完成。 |
-| `TASK-0480` | `verifying` | — | [eform-craft AIMES CustomDev 五角色团队改造](TASK-0480-eform-craft-customdev-team.md)：REQ-0032；五角色/19 Skills 完成，合同 14/14、包内 tsc、定向 Biome/守卫通过；构建包 41 文件与源码清单一致，旧七资产已按用户授权清理；v0.1.5 待发碎片已写，用户补充授权本地原子提交，不推送/部署，待实机验收；serial。 |
+| `TASK-0480` | `done` | — | [eform-craft AIMES CustomDev 五角色团队改造](TASK-0480-eform-craft-customdev-team.md)：REQ-0032；五角色/19 Skills 完成，合同 14/14、包内 tsc、定向 Biome/守卫通过；构建包 41 文件与源码清单一致；用户 2026-11-18 实机验收通过；候选仍 integration pending，未发布。 |
 | `TASK-0470` | `done` | PLAN-0029 | [会话标题与建议子域迁移](TASK-0470-session-title-host-domain.md) |
 | `TASK-0471` | `done` | PLAN-0029 | [会话 plan-mode 子域迁移](TASK-0471-session-plan-mode-host-domain.md) |
 | `TASK-0472` | `done` | PLAN-0029 | [会话执行模式与全局设置子域迁移](TASK-0472-session-execution-host-domain.md) |
@@ -213,7 +213,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0479` | `verifying` | PLAN-0030 | [Code 项目 AI 工作区隔离与 Memory/Journal 迁移](TASK-0479-code-project-ai-workspace-isolation.md)：11-17配置优先窄续修，红2→绿3文件50/50、生成一致性通过、独立审查无阻断；全仓check受既有问题阻断，本地候选integration pending，真实模型行为未验收。 |
+| `TASK-0479` | `done` | PLAN-0030 | [Code 项目 AI 工作区隔离与 Memory/Journal 迁移](TASK-0479-code-project-ai-workspace-isolation.md)：11-17 配置优先窄续修，红2→绿3文件50/50、生成一致性通过、独立审查无阻断；用户 2026-11-18 实机验收通过；候选仍 integration pending（未合 dev）。 |
 | `TASK-0478` | `verifying` | PLAN-0027 | [显式调用候选项按会话模式显示](TASK-0478-invocation-candidates-mode-visibility.md)：REQ-0030/TASK-0423/TASK-0424；`/` Skill/连接器与 `@` Agent 候选仅作用户层模式筛选，缺省两档可见，实际工具调用不变；定向测试、SDK 合同测试与完整 check 通过；impact 因未修改的 vetta-ui-design HMR fixture 失败退出，待用户实机验收；serial，main 主检出。 |
 | `TASK-0447` | `done` | PLAN-0027 | [Allstar 自主开发改为标准侧栏导航项](TASK-0447-allstar-sidebar-standard-nav-item.md)：REQ-0030；默认排在原型设计后，接入置顶/更多/拖拽布局并将容量提升至 6；定向 40/40+1/1、影响面过，用户实机确认默认位置（2026-11-02）；完整 check 仅被既有 WAIVER-0006/0007 阻断；`5e3a3774f` 已推 origin/chenxvhua；serial，main 主检出。 |
 | `TASK-0424` | `done` | PLAN-0027 | [Agent/团队所属模式](TASK-0424-agent-team-mode-attribution.md)：清单 mode + 严格单向档位过滤（未标注默认归 work 档）交付并验收；含 f19ead604 文档校验修复；遗留：用户自建 agent 的模式编辑入口（backlog）、ISSUE-0036 定位重合讨论。 |

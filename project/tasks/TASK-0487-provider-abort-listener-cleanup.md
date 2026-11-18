@@ -1,7 +1,7 @@
 ---
 id: TASK-0487
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/ai
 requirement: []
@@ -31,7 +31,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -69,3 +69,11 @@ updated: 2026-11-17
 - 完整 `bun run check` 实跑并回收exit 1：全仓Biome、Task合同/索引、生成一致性、CLI/docs/mobile类型和mobile lint通过；失败仍为既有WAIVER-0011/0012过期、三份无关测试声明头、spawn request夹具缺字段、Desktop委任代码及旧terminal-settle测试类型错误，未见本项路径报错。保持未完成全仓验收，不修无关路径或擅自续期waiver。
 - 发布碎片：`.github/release-notes/fragments/v0.1.5/task-0487-provider-abort-listener-cleanup.md`。不升版、不改已发布说明或汇编发布。
 - 未运行impact/全包/全量/live测试、构建、UI、服务或真实Provider；TEMP/TMP定向授权工作区。证据仅证明资源配对与既有软件合同，不量化内存/取消延迟/性能收益，不关闭旧OOM或特定慢任务个案。
+
+## 2026-11-18 验收：工程核对通过 + 人工接受
+
+- 用户说明监听残留黑盒难以观察，要求工程核对无问题即通过；本轮按工程合同验收，不再要求真实实例观察 `MaxListeners` 数值。
+- 代码核对（2026-11-18 直读 `packages/ai/src/provider-kit/provider-retry.ts`）：`nextAttemptStep` 用具名 `onAbort` 注册 `signal` 的 `abort` 监听，并在 `try/finally` 中成对执行 `clearTimeout(timer)` 与 `removeEventListener("abort", onAbort)`；正常返回、idle 超时、caller 取消、iterator 抛错四条出口均经 `finally` 释放，无提前 `return` 绕过。放弃 attempt 的 `iterator.next()` 以 `void ...then(ok, err)` 吞掉迟到结算，`drainAbandonedStream` 保留原 drain 语义；未发现新的监听累积路径，也未用提高 `MaxListeners` 掩盖。
+- 复核运行：`cd packages/ai && bun ../../scripts/quality/run-vitest.mjs --run test/provider-retry.test.ts` → 1 文件 **36/36 通过**（2026-11-18 11:50 实跑，5.42s）。
+- 结论：实现与合同一致，验收通过，转 done。真实模型取消延迟、内存与旧 OOM 个案仍不在本任务证明范围。
+- `integration_status` 仍为 `pending`：本地候选在 `xquan`，尚未合入 `origin/dev`；未 push、未发布。

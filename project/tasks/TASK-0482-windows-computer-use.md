@@ -1,7 +1,7 @@
 ---
 id: TASK-0482
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement: REQ-0033
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-10
-updated: 2026-11-12
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -152,3 +152,11 @@ updated: 2026-11-12
 - 质量：限定 11 文件 `check:quick` 实跑 **exit 1**，仅存量过期 WAIVER-0011/0012，其他守卫通过且 ratchet `new=0`；Biome 对 Python/Markdown 匹配 0 文件，不报告 Python lint 通过。技术评审为本会话自审，不声称独立评审或完整门禁全绿。
 - 未跑：未动 TS 合同，因此不触发 TS 定向/增量类型检查；完整 check 需用户先同意，未运行；未跑全量/大规模测试、UI 验证、真实桌面或真实模型。新反馈仅是采样时前台与默认 IME open 状态，不证明历史路由、控件焦点、输入语言或预编辑内容。
 - 状态：本片实现与定向验证完成，BUG-0186 / TASK-0482 保持 **verifying**、integration pending，待用户黑盒确认模型能从回执识别异常并改道；不切分支、不集成 main、不远程操作。既有 3 个未跟踪文件原样保留，不纳入本片提交。
+
+## 2026-11-18 人工验收通过
+
+- 用户明确反馈「验证过了可用」，人工功能验收通过，本任务转 done；上文「保持 verifying、待用户黑盒确认」为 2026-11-12 当片交付时的状态，现已由本次验收关闭。
+- 验收范围以用户实机使用为准：电脑操作入口开启与当前对话授权、全局桌面观察、键鼠输入、暂停/停止与输入释放、主窗口显隐/置顶、隐藏窗口找回，以及失败后回执中的前台窗口/IME 反馈。
+- 工程证据沿用前文（Desktop 定向 85/85、Agent 合同 18/18、原生 31/31、资源构建 6/6、最终 `bun run check` exit 0）；未重跑全量，`test:changed` 中三例既有环境/夹具失败结论不变。
+- 已知限制不变：DPI/多屏/UAC、具体软件隐藏兼容与完整新安装包体验未逐项覆盖；「允许继续」不自动创建模型回合。
+- `integration_status` 仍为 `pending`：本地候选在 `xquan`，尚未合入 `origin/dev`；未 push、未发布，安装包未产出。

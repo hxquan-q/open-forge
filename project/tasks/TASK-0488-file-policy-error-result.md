@@ -1,7 +1,7 @@
 ---
 id: TASK-0488
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/runtime-node
 requirement: []
@@ -33,7 +33,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -68,3 +68,10 @@ updated: 2026-11-17
 - 保持verifying/integration pending，仅保存本地候选。既有全仓门禁需owner治理事项按用户允许的跳过机制记录后继续队列，不宣称工程完成/已集成/发布。
 - 完整bun run check已回收exit 1，仍为既有WAIVER-0011/0012过期、三份无关测试声明头、spawn请求夹具/委任代码/旧terminal-settle测试类型错误；未见本项路径报错。全仓Biome、Task合同/索引和CLI/docs/mobile类型通过，不擅自治理waiver或夹带其他Bug，不宣称完整门禁通过。
 - 发布碎片：`.github/release-notes/fragments/v0.1.5/task-0488-file-policy-error-result.md`，不升版/汇编/发布，不改已发布说明。
+
+## 2026-11-18 人工验收通过
+
+- 用户明确反馈「验证过了可用」，人工功能验收通过，本任务转 done。
+- 验收范围以用户实机使用为准：Code 模式文件工具越界/策略拒绝时模型可见结果为结构化失败（`isError: true`、`details.code: policy_denied`），而非伪成功；同 Turn 同参数三次拒绝后的止损与改参数恢复。
+- 工程证据沿用前文（runtime-node 41、runtime-core 21、agent 13，共 4 文件 75/75，exit 0）；未重跑影响面。
+- `integration_status` 仍为 `pending`：本地候选在 `xquan`，尚未合入 `origin/dev`；未 push、未发布。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0479
 type: task
-status: verifying
+status: done
 priority: P1
 owner: desktop
 requirement: REQ-0031
@@ -53,7 +53,7 @@ depends_on: []
 conflicts_with: [TASK-0423]
 integration_status: pending
 created: 2026-11-05
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -170,3 +170,10 @@ updated: 2026-11-17
 - 提交：四个原子提交本地落盘（fd1617700 runtime / 7cb67c39f desktop / 46f70a24b 声明头清扫 / 硬删除接线），未 push。
 - 硬删除清理（原阻塞项）：2026-11-06 用户授权后补齐——恢复 `deleteCodeProjectAiWorkspace` 并新增 `vetta:projects:delete-code-workspace` IPC；`deleteProjectFromDisk` 在会话/登记/项目目录清理完成后一并删除该项目 AI 工作区，归档与仅移除登记不经过此路径。存储隔离（只删本项目、ghost 幂等）、IPC 校验、渲染层顺序合同共 15/15 通过。旧 Renderer 路径 helper 已随 7cb67c39f 删除。
 - 剩余风险：真实 Desktop/SSH/模型行为未实测（未授权）；`bun run check` 仍被三条既有过期 waiver（0014/0015/0016）阻断，属仓库存量待治理，不由本任务处置。rg 已随系统安装消除（新开 shell 自动生效；本任务会话内为等价 PATH 前置验证）。
+
+## 2026-11-18 人工验收通过
+
+- 用户明确反馈「验证过了可用」，人工功能验收通过，本任务转 done。
+- 验收范围以用户实机使用为准：Allstar 项目配置入口、Code 单 Agent / Team 会话的项目根与 AI 工作区落点、Memory/Journal 迁移及跨项目隔离。
+- 工程证据沿用前文（定向合同、runtime-desktop 30/30、SSH 45 通过 / 2 skip 等），未新增或重跑影响面测试。
+- `integration_status` 仍为 `pending`：本地候选在 `xquan`，尚未合入 `origin/dev`；未 push、未发布。

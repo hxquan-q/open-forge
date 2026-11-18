@@ -1,7 +1,7 @@
 ---
 id: TASK-0485
 type: task
-status: verifying
+status: done
 priority: P1
 owner: apps/desktop
 requirement: REQ-0030
@@ -26,7 +26,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-18
 base_commit: 6fa648704d62087d3dfd1f2337880d5da7127d22
 ---
 <!-- Copyright The Open Forge contributors. -->
@@ -78,3 +78,10 @@ base_commit: 6fa648704d62087d3dfd1f2337880d5da7127d22
 ### 已知风险与限制
 
 - 若未来重构把 `min-w-0` 移到其他层级或改用 CSS grid（DESIGN.md 的 auto-fill+minmax 方案），需重新验证宽度断链位置；注释已锁定成因。
+
+## 2026-11-18 人工验收通过
+
+- 用户明确反馈「验证过了可用」，`/allstar` 版块首页底部新建会话功能区稳定可见，本任务转 done。
+- 前文红→绿实测（页面根 4588→1308px、卡片行滚动收回行内、底栏居中）为本次验收的对照基线，未重跑。
+- 遗留项不变：无自动化布局不变量（jsdom 无布局引擎）、`l.on is not a function` 与 `Blocked aria-hidden` 另行分诊、WAIVER-0011/0012 由 owner 治理。
+- `integration_status` 仍为 `pending`：本地候选在 `xquan`，尚未合入 `origin/dev`；未 push、未发布。

@@ -1,7 +1,7 @@
 ---
 id: TASK-0480
 type: task
-status: verifying
+status: done
 priority: P1
 owner: packages/plugins/presets/eform-craft
 requirement: REQ-0032
@@ -40,7 +40,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -131,3 +131,10 @@ updated: 2026-11-06
 - 发布说明：沿用仓库已有 v0.1.5 待发碎片批次（与 TASK-0479 同口径），已写 `.github/release-notes/fragments/v0.1.5/task-0480-eform-craft-customdev-team.md`；保留已发布 v0.1.4，不改 Desktop 版本、不汇编/发布。preset 版本保持 0.2.0，发行准备时需考虑 Agent/Skill 迁移的不兼容性。
 - Worktree：未拆出；单一 preset 写域串行。补充授权后的本地提交与本记录一同落在 chenxvhua，不单独追加 Hash 回执提交；未集成 main、未推送。
 - 剩余风险：文本合同测试不证明任意真实模型遵循；`@esign`/`@eaudit` 与旧 Skill 使用者需迁移自建配置，旧会话不自动转换。具体新字段 API/DTO/列映射、实际 qiankun 注册、组织授权、电子签/审计接口、Codeup/服务器操作资料仍需后续授权核实；没有自行将 Workshop/Practice 或 Demo 行为升级成已确认 CustomDev 能力。
+
+## 2026-11-18 人工验收通过
+
+- 用户明确反馈「验证过了可用」，人工功能验收通过，本任务转 done。
+- 验收范围以用户实机使用为准：五角色团队装配、`@eform` 主入口与 `@eform-*` 成员 handle、19 个共享 Skills 的触发与分工、旧 Demo 合同清除。
+- 前文「真实模型行为需后续验收」一项由本次用户实机使用覆盖；工程证据与包构建结论沿用前文，未重跑。
+- `integration_status` 仍为 `pending`：本地候选在 `xquan`，尚未合入 `origin/dev`；未 push、未发布，preset 版本仍为 0.2.0。
