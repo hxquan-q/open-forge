@@ -227,6 +227,14 @@ export async function resolveDesktopSessionConfig(
 	const projectLocation = parseProjectLocation(projectCwd);
 	const projectRootForPrompt = projectLocation.kind === "ssh" ? projectLocation.remotePath : projectLocation.path;
 	const projectAiWorkspace = agentMode === "coding" ? resolveCodeProjectAiWorkspace(projectCwd) : undefined;
+	if (projectAiWorkspace) {
+		// BUG-0192：fs 可编辑读取/保存边界（assertFilesystemPathWithinProject）只认
+		// allowProjectRoot 注册的授权根，AI 工作区从未注册，热追踪跟随到工作区文件时
+		// 右栏预览被当越界路径拒绝。与上面项目根同一机制注册，且只注册当前会话项目的
+		// 这一个工作区目录——directory 恒为本机路径（SSH 项目不涉远端边界），不注册
+		// code-projects 父目录，避免任意项目工作区互信。
+		allowProjectRoot(projectAiWorkspace.directory);
+	}
 	const projectAiWorkspaceToolRoot = projectAiWorkspace
 		? projectLocation.kind === "ssh"
 			? projectAiWorkspace.toolRoot
