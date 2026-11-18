@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
 import stripAnsi from "strip-ansi";
 import { createNodeCodingToolEnvironment, type NodeCodingToolEnvironment } from "../node-tool-environment.js";

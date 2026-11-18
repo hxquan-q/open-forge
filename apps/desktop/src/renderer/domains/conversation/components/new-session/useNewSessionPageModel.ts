@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { useWorkspaceMode } from "@domains/workspace-mode";
 import { i18n } from "@shared/i18n";

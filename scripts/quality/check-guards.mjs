@@ -31,11 +31,7 @@ const steps = [
 	["scripts/quality/check-source-path-maps.mjs"],
 	["scripts/quality/check-task-worktrees.mjs"],
 	["scripts/quality/check-waivers.mjs"],
-	[
-		"scripts/quality/check-modified-file-notices.mjs",
-		"--baseline",
-		"scripts/quality/baselines/modified-file-notices.txt",
-	],
+	["scripts/quality/check-modified-file-notices.mjs"],
 	["scripts/quality/check-session-event-tombstones.mjs"],
 	["scripts/quality/check-protocol-suites.mjs"],
 	["scripts/quality/check-project-indexes.mjs"],
