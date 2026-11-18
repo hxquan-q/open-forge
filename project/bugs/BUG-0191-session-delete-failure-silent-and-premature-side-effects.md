@@ -13,7 +13,7 @@ related_tasks: [TASK-0489, TASK-0226]
 related_issues: []
 related_bugs: [BUG-0114, BUG-0087]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -44,3 +44,15 @@ P1反馈与状态一致性缺陷：删除失败零反馈且标记丢失、被导
 ## 修复与验证范围
 
 TASK-0489先红后绿：组件/组合Hook层真实菜单+panel+useProjects装配，仅IPC外部边界fake。覆盖主删除拒绝、延迟成功、非活动目标、等待期切换会话、失败后重试、清理失败部分完成、批量分支、Team保护、取消确认。动态红灯待执行，不冒充已测；实际结果由TASK-0489补记。
+
+## 复核记录（2026-11-18）
+
+复核动机：确认既有「会话删除」修复是否已兼带覆盖本条。结论：**未覆盖**，本条在 `chenxvhua @ 3bf801063` 仍成立，证据与登记时一致。
+
+- 普通分支 `useProjectsPanelModel.ts:303-304`：`void deleteSession(...)` 后立即 `goToProjectDetail`，无 catch/Toast，导航先行。
+- 批量分支 `:298-299`：`void deleteBatchTask(...)` 同样无 catch 且先导航。
+- `useProjectsPanelMenusModel.ts:54-56`：确认即清 `conversationTags` 与 `archivedSessions` 标记，早于删除结果。
+- `useProjects.ts:406-433`：`session.delete` 拒绝直接抛出，后续清理与摘行不执行，`void` 调用无人承接 → unhandled rejection。
+- 既有修复边界：`a263429c1`（BUG-0114）仅给 `agent-team` 分支加 catch+Toast，测试只构造团队会话；`4fb65a823`（BUG-0087 / TASK-0226）仅改主进程团队删除服务。普通/批量分支零改动。
+- 复用条件：失败文案 `sidebar.dialogs.deleteSessionFailedToast` 已存在（zh/en），修复时无需新增 key。
+- 状态不变（`investigating`）：合同与派发均落在 TASK-0489（`ready`，两次派发被宿主中断、零源码改动），实现尚未开始。

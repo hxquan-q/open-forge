@@ -30,7 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0489` | `ready` | — | [普通会话删除失败反馈与副作用顺序](TASK-0489-session-delete-failure-feedback.md)：BUG-0191合同已落盘；两次实现派发均宿主侧中断零源码改动，待实施。 |
+| `TASK-0489` | `ready` | — | [普通会话删除失败反馈与副作用顺序](TASK-0489-session-delete-failure-feedback.md)：BUG-0191合同已落盘；两次实现派发均宿主侧中断零源码改动；2026-11-18 复核确认未被 BUG-0114/0087 的团队删除修复兼带覆盖（普通/批量分支仍无 catch、导航先行），待实施。 |
 | `TASK-0488` | `done` | — | [文件路径策略拒绝结构化错误](TASK-0488-file-policy-error-result.md)：BUG-0190，红4→绿4文件75/75，独立审查无阻断；用户 2026-11-18 实机验收通过；候选仍 integration pending（未合 dev）。 |
 | `TASK-0487` | `done` | — | [Provider逐事件取消监听配对释放](TASK-0487-provider-abort-listener-cleanup.md)：BUG-0189，红监听35≠1→绿5文件83/83，独立审查无阻断；2026-11-18 工程核对 `nextAttemptStep` 具名回调+finally 配对释放且定向 36/36，经用户同意按工程合同验收；候选仍 integration pending。 |
 | `TASK-0486` | `verifying` | — | [自适应流水线 P2 委任机制](TASK-0486-delegation-mechanism.md)：REQ-0034；两提交 30a3dadb0+b0b04534a 定向全绿；件4降级（LLM 读域描述）；待实机验收+用户自跑 impact/完整 check；serial。 |
@@ -201,7 +201,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0165` | `verifying` | — | [修复 ssh2 新主机交互认证：握手预算与 KI 口令回退](TASK-0165-ssh2-interactive-auth-budget.md)<br>chenxvhua 补充（状态 `verifying`；Plan `—`）：主树实现已提交 925868a08；工程复验通过，人工功能验收待完成，批次推送见 TASK-0171。 |
 | `TASK-0153` | `verifying` | PLAN-0014 | [SSH 本地进程组取消的选择性适配](TASK-0153-ssh-selective-transport.md) |
 | `TASK-0130` | `verifying` | — | [托管 runtime 的 zip 解压改走内置解压器，不再依赖外部 tar](TASK-0130-runtime-zip-extract-without-tar.md)<br>chenxvhua 补充（状态 `verifying`；Plan `—`）：修复 BUG-0046：runtime zip 解压改走内置 safe-zip-extract，不再依赖外部 tar；已集成（`9d6981fac`），定向回归 9/1skip 通过，待人工 dev 冒烟复装 Node runtime。 |
-| `TASK-0127` | `blocked` | — | [修改声明头存量缺失一次性 sweep](TASK-0127-modified-file-notices-sweep.md)<br>chenxvhua 补充（状态 `blocked`；Plan `—`）：修改声明头存量缺失一次性 `--write` sweep（ISSUE-0023 A 阶段收尾）；等无并行代码线的安静窗口，执行后删除 ratchet 基线并关闭 WAIVER-0002。 |
+| `TASK-0127` | `archived` | — | [修改声明头存量缺失一次性 sweep](TASK-0127-modified-file-notices-sweep.md)<br>chenxvhua 补充（状态 `archived`；Plan `—`）：原 651 条存量已修复 644 条（后续分批 sweep 与基线收缩），剩 7 条含内核会话域文件与机器生成的 `dependents.md`，越出可写范围；2026-11-18 归档，尾量由 `WAIVER-0002` ratchet 跟踪至 2027-03-31，切硬门禁需另开 Task。 |
 | `TASK-0125` | `blocked` | PLAN-0013 | [团队编排效率回归实测：rebase 上游 + 阶段 1 后同任务量化对比](TASK-0125-team-orchestration-rebaseline.md)<br>chenxvhua 补充（状态 `blocked`；Plan ``PLAN-0013``）：rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
 | `TASK-0107` | `verifying` | PLAN-0010 | [后台进程统一健康/重启/记账契约 + unresponsive 栈采样](TASK-0107-background-process-health-contract.md)<br>chenxvhua 补充（状态 `verifying`；Plan ``PLAN-0010``）：后台进程统一健康记账（ProcessRoleContract + crash/restart/pid 归因入 perf 快照与诊断包）+ unresponsive JS 栈采样已落地并过定向测试；缺真实 Desktop 上 kill sidecar/模拟 unresponsive 的冒烟证据。 |
 | `TASK-0050` | `verifying` | PLAN-0002 | [transcript 窗口化第 2 步：beforeEntry 游标分页](TASK-0050-transcript-cursor-pagination.md)<br>chenxvhua 补充（状态 `verifying`；Plan ``PLAN-0002``）：transcript 窗口化第 2 步（`beforeEntry` 游标分页）三阶段全落地：Main 页合同、viewer 增量订阅、renderer 窗口化（上滚翻页/尾页刷新/整窗重置/导出排空）+ 乐观气泡尾对齐；缺真实 Desktop 大历史冒烟。 |

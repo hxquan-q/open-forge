@@ -38,7 +38,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -73,3 +73,10 @@ updated: 2026-11-17
 ## 交付
 
 - 2026-11-17派发记录：宿主原生实现子代理两次派发（fix-delete、fix-delete-2）均在写入任何源码前因宿主侧中断退出且无交付；Coordinator核实三份生产文件无diff、无task-0489验证日志、无未回收后台任务，非产品失败。合同保持ready待后续实施，不预写通过结果。
+- 2026-11-18复核（`chenxvhua` @ `3bf801063`）：确认**未被既有会话删除修复兼带覆盖**，缺陷仍在当前 HEAD 成立，状态保持 `ready`。
+  - `useProjectsPanelModel.ts:303-304`：普通分支 `void deleteSession(session.cwd, session.path)` 无 catch、无 Toast，且紧接着 `goToProjectDetail` —— 导航/清活动会话先于删除结果，失败后用户已被带离。
+  - `:298-299`：批量分支 `void deleteBatchTask(...)` 同样无 catch，且 `goToProjectDetail` 立即执行。
+  - `useProjectsPanelMenusModel.ts:54-56`：确认对话框 onConfirm 里先 `conversationTags.forgetConversations` / `archivedSessions.forget` 再调删除，主删除失败即丢标记。
+  - `useProjects.ts:406-433`：`await window.vetta.session.delete()` 拒绝直接抛出，后续 `removePinnedSessions`/scheduler 清理/摘行均不执行；上游调用方是 `void`，无人承接 → unhandled rejection。
+  - 既有修复边界：`a263429c1`（BUG-0114）只给 `agent-team` 分支补 `catch` + 失败 Toast（该文件仅 +7 行），其测试 `useProjectsPanelModel.deleteSession.test.tsx` 只构造 `kind: "agent-team"`；`4fb65a823`（BUG-0087/TASK-0226）只改主进程团队删除服务。普通/批量分支零改动。
+  - 复用条件：i18n 文案 `sidebar.dialogs.deleteSessionFailedToast` 已在 zh/en `project.json:77` 存在，无需新增 key；合同其余条款与 `write_paths` 不变。
