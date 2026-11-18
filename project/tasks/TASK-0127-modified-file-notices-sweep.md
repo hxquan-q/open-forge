@@ -1,7 +1,7 @@
 ---
 id: TASK-0127
 type: task
-status: archived
+status: done
 priority: P2
 owner: scripts/quality
 requirement: []
@@ -80,3 +80,54 @@ updated: 2026-11-18
   未改基线快照与 `check-guards` 门禁配置（清零前动手会让门禁失去 ratchet 保护）。
 - 剩余风险：7 条存量声明头仍缺失，Apache-2.0 §4(b) 合规面在该 7 个文件上不完整；
   风险由 `WAIVER-0002` 显式承担并设到期日。
+
+## 归档撤销（2026-11-18）
+
+归档前提是「尾量越出本任务可写范围」：`useNewSessionPageModel.ts` 属内核会话域，
+`dependents.md` 是机器生成产物。本轮执行方具备内核域写权限，该前提不再成立，
+7 条尾量全部落在可处理范围内，`archived` 状态撤销，按原「范围」条款完成收尾。
+
+尾量处置方式与归档记录里的判断一致，未手改生成产物：
+
+- `docs/architecture/dependents.md`：改事实源 `scripts/quality/context-boundary-lib.mjs` 的
+  `renderDependents()`，在机器生成提示行之后多输出一行
+  `<!-- Copyright The Open Forge contributors. -->`，再以
+  `bun run scripts/quality/check-context-boundaries.mjs --write-dependents` 重生成；
+- 其余 6 个文件由 `node scripts/quality/check-modified-file-notices.mjs --write` 各插入一行
+  声明头（首行均为 `import`，无 shebang 与指令序言，插入位置为文件首行）；
+- 清零后删除基线快照，`check-guards` 该守卫去掉 `--baseline` 切为纯审计，`WAIVER-0002` 置
+  `resolved`。
+
+## 交付记录（2026-11-18）
+
+- 实际修改：
+  - 7 个文件各新增 1 行声明头：`apps/desktop/src/main/agent-teams/team-runtime-manager.ts`、
+    `apps/desktop/src/main/cli/agent-rpc-command.ts`、
+    `packages/coding-agent/src/composition/contracts/tool-environment.ts`、
+    `packages/runtime-node/src/coding/host/tool-environment.ts`、
+    `packages/coding-agent/test/runtime-core/turn-capability-session-assembly.test.ts`、
+    `apps/desktop/src/renderer/domains/conversation/components/new-session/useNewSessionPageModel.ts` 由
+    `--write` 写入；`docs/architecture/dependents.md` 由生成器写入；
+  - `scripts/quality/context-boundary-lib.mjs`：`renderDependents()` 的 `lines` 数组加 1 行，另因本次
+    修改补自身声明头 1 行；
+  - `scripts/quality/check-guards.mjs`：`check-modified-file-notices` 步骤由三元素数组改为
+    单元素数组，去掉 `--baseline` 与基线路径，改为纯审计（`missing!=0` 即非零退出）；
+  - 删除 `scripts/quality/baselines/modified-file-notices.txt`（651 条快照）；
+  - `WAIVER-0002` 置 `resolved` 并补销账记录。
+- 实际运行：
+  - 改动前 `node scripts/quality/check-modified-file-notices.mjs` →
+    `changed=3128 covered=2872 excluded=249 missing=7 unclassified=0`；带基线
+    `ratchet: waived=7 new=0`；基线 651 条已修复 644 条；
+  - 补完声明头后同命令 → `missing=0 unclassified=0`；带基线 → `waived=0 new=0`（651 条全部修复）；
+  - 删除基线后 → `changed=3129 covered=2881 excluded=248 missing=0 unclassified=0`；
+  - `bun run check:quick` 全绿（含 `check-guards`、`check-waivers`）；
+  - `node scripts/quality/check-project-indexes.mjs`、`check-task-worktrees.mjs`（481 task，0 warning）、
+    `check-context-boundaries.mjs`（`dependents.md` 不 stale）、`check-waivers.mjs` 均通过；
+  - `bun scripts/quality/run-vitest.mjs --run packages/coding-agent/test/runtime-core/turn-capability-session-assembly.test.ts`
+    → 1 文件 7 项全通过，证明插入注释未影响运行时。
+- 未运行及原因：未跑 impact／全量测试（按仓库约定需用户决定，本任务不主动启动）；未启动
+  `bun run dev` 与 UI 验证（只新增注释行与门禁配置，无可观察行为变化）。
+- 剩余风险：门禁不再有存量抵扣，任何修改文件缺声明头立即判负，并行会话提交前须先跑该审计；
+  原 `--baseline` 分支的「无 `upstream` remote 时回落基线 sha、仍不可用则告警放行」兜底随基线
+  删除失效，环境缺 `upstream/dev` 时守卫直接报错；`dependents.md` 的声明头按新增口径写
+  `Copyright`，守卫只校验 `The Open Forge contributors` 标记，口径差异不影响判定。
