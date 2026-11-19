@@ -75,3 +75,11 @@ updated: 2026-11-19
 
 - 卡片行与弹窗行现在共用 `AllstarSessionRow`，若后续要给弹窗加「时间」列，应改这一处而非两处。
 - 置顶 / 归档若日后在版块内有了承载面（例如版块自己的归档视图），再考虑补进菜单。
+
+## 2026-11-19 修正：第二项动作的落点
+
+用户反馈「打开的是项目目录，我还以为打开的是会话数据目录」。确认是我的语义取错：照抄了侧栏右键菜单的 `showInFolder(session.cwd)`，而版块里这一项应回答「这条会话存在哪」。
+
+- `onRevealSession` 改为接收整条会话，定位 `session.path`（chat 为 JSONL，团队为协调会话文件），落到会话数据目录并在文件管理器中选中该文件。
+- 文案改为独立的 `allstarDev.home.sessions.reveal`（zh「打开会话数据目录」/ en「Open session data folder」），与卡片级「在文件夹中打开」（项目目录）刻意区分，避免同一个说法指向两个位置。
+- 测试断言同步为 `toHaveBeenCalledWith(session)`；20/20 仍绿。

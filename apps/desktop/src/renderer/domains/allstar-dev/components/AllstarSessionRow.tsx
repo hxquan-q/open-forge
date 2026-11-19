@@ -37,7 +37,7 @@ export function AllstarSessionRow({
 	onOpen: () => void;
 	onRename: (cwd: string, session: AllstarDevCardSession, name: string) => void;
 	onDelete: (cwd: string, session: AllstarDevCardSession) => void;
-	onReveal: (cwd: string) => void;
+	onReveal: (session: AllstarDevCardSession) => void;
 }): JSX.Element {
 	const [draft, setDraft] = useState<string | null>(null);
 	// Enter 提交后输入框失焦还会再触发一次 onBlur，用 ref 保证只提交一次。
@@ -108,7 +108,7 @@ export function AllstarSessionRow({
 							<span aria-hidden className="icon-[solar--pen-2-linear] h-3.5 w-3.5" />
 							{labels.renameSession}
 						</DropdownMenuItem>
-						<DropdownMenuItem onSelect={() => onReveal(cwd)}>
+						<DropdownMenuItem onSelect={() => onReveal(session)}>
 							<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
 							{labels.revealSessionInFolder}
 						</DropdownMenuItem>

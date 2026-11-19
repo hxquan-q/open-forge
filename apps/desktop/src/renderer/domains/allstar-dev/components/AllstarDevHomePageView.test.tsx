@@ -61,7 +61,7 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	removeFromBoard: "remove from board",
 	sessionActions: "session actions",
 	renameSession: "rename session",
-	revealSessionInFolder: "reveal session in folder",
+	revealSessionInFolder: "reveal session data folder",
 	deleteSession: "delete session",
 	cardNewSession: "new session",
 	projectConfigTitle: "project configuration",
@@ -552,7 +552,7 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		// 核心回归：点 ··· 不再冒泡成「打开会话」。
 		expect(onOpenSession).not.toHaveBeenCalled();
 		expect(within(row).getByRole("menuitem", { name: "rename session" })).toBeDefined();
-		expect(within(row).getByRole("menuitem", { name: "reveal session in folder" })).toBeDefined();
+		expect(within(row).getByRole("menuitem", { name: "reveal session data folder" })).toBeDefined();
 		expect(within(row).getByRole("menuitem", { name: "delete session" })).toBeDefined();
 	});
 
@@ -576,8 +576,8 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		);
 
 		const row = sessionRowOf(screen.getByRole("button", { name: session.title }));
-		await user.click(within(row).getByRole("menuitem", { name: "reveal session in folder" }));
-		expect(onRevealSession).toHaveBeenCalledWith("/proj/a");
+		await user.click(within(row).getByRole("menuitem", { name: "reveal session data folder" }));
+		expect(onRevealSession).toHaveBeenCalledWith(session);
 
 		await user.click(within(row).getByRole("menuitem", { name: "delete session" }));
 		expect(onDeleteSession).toHaveBeenCalledWith("/proj/a", session);

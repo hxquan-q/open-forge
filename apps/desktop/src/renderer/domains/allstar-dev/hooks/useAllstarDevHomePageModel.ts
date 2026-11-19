@@ -116,8 +116,8 @@ export interface AllstarDevHomePageModel {
 	onRevealProject: (cwd: string) => void;
 	/** 会话行菜单：重命名（chat 走会话文件改名，团队走团队级改名）。 */
 	onRenameSession: (cwd: string, session: AllstarDevCardSession, name: string) => void;
-	/** 会话行菜单：在系统文件管理器中显示所属项目目录。 */
-	onRevealSession: (cwd: string) => void;
+	/** 会话行菜单：在系统文件管理器中定位该会话的数据文件（落到会话数据目录，不是项目目录）。 */
+	onRevealSession: (session: AllstarDevCardSession) => void;
 	/** 会话行菜单：删除会话（确认后按会话种类分派）。 */
 	onDeleteSession: (cwd: string, session: AllstarDevCardSession) => void;
 	/** 从版块册移除登记（不删除磁盘上的任何内容）。 */
@@ -361,8 +361,11 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		[loadSessions, t],
 	);
 
-	const onRevealSession = useCallback((cwd: string) => {
-		void window.vetta.shell.showItemInFolder(cwd);
+	// 定位会话自己的数据文件（JSONL / 团队协调会话文件），不是项目源码目录：
+	// 这里回答的是「这条会话存在哪」，与卡片的「在文件夹中打开」（项目目录）是两件事。
+	const onRevealSession = useCallback((session: AllstarDevCardSession) => {
+		if (!session.path) return;
+		void window.vetta.shell.showItemInFolder(session.path);
 	}, []);
 
 	const onDeleteSession = useCallback(
@@ -429,7 +432,8 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			sessionActions: t("allstarDev.home.sessions.actions"),
 			// 与侧栏会话右键菜单共用同一批动作名，避免两处说法不一致。
 			renameSession: t("contextMenu.rename"),
-			revealSessionInFolder: t("allstarDev.home.projects.revealInFolder"),
+			// 这里定位的是会话数据文件，不是项目目录：文案与卡片的「在文件夹中打开」刻意区分。
+			revealSessionInFolder: t("allstarDev.home.sessions.reveal"),
 			deleteSession: t("contextMenu.delete"),
 			cardNewSession: t("allstarDev.home.projects.cardNewSession"),
 			sessionsDialogDescription: t("allstarDev.sessionsDialog.description"),

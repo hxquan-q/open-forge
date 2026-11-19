@@ -359,6 +359,7 @@
 				"cardNewSession": "New session",
 				"sessions": {
 					"actions": "Session actions",
+					"reveal": "Open session data folder",
 					"renameFailed": "Couldn't rename the session. Please try again later."
 				}
 			},
