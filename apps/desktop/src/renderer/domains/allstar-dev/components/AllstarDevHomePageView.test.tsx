@@ -198,7 +198,7 @@ describe("AllstarDevHomePageView", () => {
 		);
 		const grid = container.querySelector<HTMLElement>("div.grid");
 		expect(grid).not.toBeNull();
-		expect(grid?.className).toContain("grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]");
+		expect(grid?.className).toContain("grid-cols-[repeat(auto-fill,minmax(16.25rem,1fr))]");
 		expect(grid?.className).not.toContain("overflow-x-auto");
 		const articles = container.querySelectorAll("article");
 		expect(articles).toHaveLength(2);

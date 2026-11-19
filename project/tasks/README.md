@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0491` | `verifying` | — | [版块首页卡片放大 125% 并拉开左右间距](TASK-0491-allstar-home-card-density.md)：REQ-0030，列宽 13rem→16.25rem、`gap-x` 12→32px，契约测试 18/18 + `check:quick` 全绿，待用户目视。 |
 | `TASK-0490` | `verifying` | — | [Allstar 版块首页未撑满内容区宽度](TASK-0490-allstar-home-width-fill.md)：BUG-0193，页面根补 `w-full`（与 `min-w-0` 并存），定向测试 22/22 + `check:quick` 全绿，待用户实机走查。 |
 | `TASK-0489` | `ready` | — | [普通会话删除失败反馈与副作用顺序](TASK-0489-session-delete-failure-feedback.md)：BUG-0191合同已落盘；两次实现派发均宿主侧中断零源码改动；2026-11-18 复核确认未被 BUG-0114/0087 的团队删除修复兼带覆盖（普通/批量分支仍无 catch、导航先行），待实施。 |
 | `TASK-0488` | `done` | — | [文件路径策略拒绝结构化错误](TASK-0488-file-policy-error-result.md)：BUG-0190，红4→绿4文件75/75，独立审查无阻断；用户 2026-11-18 实机验收通过；候选仍 integration pending（未合 dev）。 |

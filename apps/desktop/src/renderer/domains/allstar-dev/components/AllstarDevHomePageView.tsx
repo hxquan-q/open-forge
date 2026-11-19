@@ -98,7 +98,14 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 						<p className="text-xs text-muted-foreground">{model.labels.emptyHint}</p>
 					</div>
 				) : (
-					<div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3 overflow-y-auto pb-1">
+					/*
+					 * 列宽 16.25rem（260px）：在 13rem 的基线上按用户要求放大 125%，卡片里
+					 * 一句会话标题与「N 个会话 + ···」不再挤成一团。
+					 * gap-x-8（32px）：用户要求卡片左右各留 10px 余量（12+10+10），比
+					 * DESIGN.md 的 gap-5 上限更宽，是有意的版块特例；纵向仍用 gap-3 保持行距节奏。
+					 */
+					<div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(16.25rem,1fr))] gap-x-8 gap-y-3 overflow-y-auto pb-1">
+
 						{model.projectCards.map((card) => (
 							<AllstarDevProjectCardView
 								key={card.cwd}
