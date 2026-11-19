@@ -11,6 +11,7 @@
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type {
@@ -72,6 +73,10 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	projectConfigSaved: "config saved",
 	projectConfigSaveFailed: "save failed",
 	projectConfigCancel: "cancel config",
+	sessionsDialogDescription: "all dev sessions",
+	sessionsDialogSearchPlaceholder: "search sessions",
+	sessionsDialogNoResults: "no matching sessions",
+	sessionsDialogClose: "close dialog",
 };
 
 function model(overrides: Partial<AllstarDevHomePageModel> = {}): AllstarDevHomePageModel {
@@ -84,6 +89,8 @@ function model(overrides: Partial<AllstarDevHomePageModel> = {}): AllstarDevHome
 		onStartNewSession: vi.fn(),
 		onOpenExistingProject: vi.fn(),
 		onOpenAllSessions: vi.fn(),
+		onCloseSessions: vi.fn(),
+		sessionsDialog: { open: false, cwd: null },
 		onRevealProject: vi.fn(),
 		onRemoveFromBoard: vi.fn(),
 		projectConfig: {
@@ -109,6 +116,28 @@ function chatSession(index: number, cwd = "a"): AllstarDevCardSession {
 		title: `${cwd} 会话 ${index}`,
 		modifiedAt: index,
 	};
+}
+
+/**
+ * 全部会话弹窗的有状态装配：真实 model 的弹窗状态 { open, cwd } 驻留在 hook 里，
+ * 这里用等价的 useState 模拟 open/close 行为，验证 View → 弹窗的完整接线
+ * （点「全部 N 个」打开、关闭回调复位）。
+ */
+function renderHomePageWithSessionsDialog(overrides: Partial<AllstarDevHomePageModel> = {}): void {
+	function SessionsDialogHarness(): JSX.Element {
+		const [dialog, setDialog] = useState<{ open: boolean; cwd: string | null }>({
+			open: false,
+			cwd: null,
+		});
+		const viewmodel = model({
+			...overrides,
+			sessionsDialog: dialog,
+			onOpenAllSessions: (cwd: string) => setDialog({ open: true, cwd }),
+			onCloseSessions: () => setDialog({ open: false, cwd: null }),
+		});
+		return <AllstarDevHomePageView model={viewmodel} />;
+	}
+	render(<SessionsDialogHarness />);
 }
 
 describe("AllstarDevHomePageView", () => {
@@ -340,5 +369,167 @@ describe("AllstarDevHomePageView", () => {
 		expect(changeContent).toHaveBeenLastCalledWith("## Git\nmain branch");
 		await user.click(screen.getByRole("button", { name: "save config" }));
 		expect(save).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
+	/**
+	 * 弹窗行用标题作为可访问名；标题混排英文/中文以覆盖大小写不敏感过滤。
+	 * 会话数必须 > 4：「全部 N 个」入口只在超过卡片直显条数（4）时渲染。
+	 */
+	function dialogSessions(): AllstarDevCardSession[] {
+		return [
+			{
+				kind: "chat",
+				path: "/shard/a/login.jsonl",
+				title: "Fix Login Bug",
+				modifiedAt: 6,
+			},
+			{
+				kind: "chat",
+				path: "/shard/a/api.jsonl",
+				title: "Refactor API client",
+				modifiedAt: 5,
+			},
+			{
+				kind: "chat",
+				path: "/shard/a/style.jsonl",
+				title: "登录页样式",
+				modifiedAt: 4,
+			},
+			{
+				kind: "chat",
+				path: "/shard/a/docs.jsonl",
+				title: "Update docs",
+				modifiedAt: 3,
+			},
+			{
+				kind: "chat",
+				path: "/shard/a/misc.jsonl",
+				title: "杂项清理",
+				modifiedAt: 2,
+			},
+			{
+				kind: "chat",
+				path: "/shard/a/init.jsonl",
+				title: "项目初始化",
+				modifiedAt: 1,
+			},
+		];
+	}
+
+	function oneCardProject(
+		sessions: readonly AllstarDevCardSession[],
+	): AllstarDevHomePageModel["projectCards"] {
+		return [{ cwd: "/proj/a", registered: true, projectName: "a", sessions, totalSessions: sessions.length }];
+	}
+
+	it("「全部 N 个」打开弹窗：列出全部会话（含团队行，不按 4 条截断），焦点落搜索框", async () => {
+		const user = userEvent.setup();
+		const teamSession: AllstarDevCardSession = {
+			kind: "team",
+			path: "C:/sessions/coord.jsonl",
+			title: "团队彩排",
+			modifiedAt: 7,
+			teamId: "team-1",
+			teamSessionId: "ts-1",
+		};
+		const chatOnly = Array.from({ length: 6 }, (_, index) => chatSession(6 - index));
+		const sessions = [teamSession, ...chatOnly];
+		renderHomePageWithSessionsDialog({ projectCards: oneCardProject(sessions) });
+
+		await user.click(screen.getByRole("button", { name: "all 7" }));
+
+		const dialog = screen.getByRole("dialog");
+		// head：项目名 + body-top 计数；弹窗内平铺全部 7 条（卡片只直显 4 条）。
+		expect(within(dialog).getByText("a")).toBeDefined();
+		expect(within(dialog).getByText("7 sessions")).toBeDefined();
+		expect(within(dialog).getByTitle("team session")).toBeDefined();
+		for (let index = 1; index <= 6; index += 1) {
+			expect(within(dialog).getByRole("button", { name: `a 会话 ${index}` })).toBeDefined();
+		}
+		expect(within(dialog).getByRole("button", { name: "团队彩排" })).toBeDefined();
+		// 打开后焦点落在搜索框，可直接键入过滤。
+		const search = within(dialog).getByPlaceholderText("search sessions");
+		expect(document.activeElement).toBe(search);
+	});
+
+	it("搜索按标题过滤（去首尾空格、大小写不敏感）；无匹配显示提示", async () => {
+		const user = userEvent.setup();
+		renderHomePageWithSessionsDialog({ projectCards: oneCardProject(dialogSessions()) });
+		await user.click(screen.getByRole("button", { name: "all 6" }));
+		let dialog = screen.getByRole("dialog");
+		const search = within(dialog).getByPlaceholderText("search sessions");
+
+		// 关键词带首尾空格且大小写与标题不一致：仍应命中标题含 "API" 的那一行。
+		await user.type(search, "  API  ");
+		expect(within(dialog).queryByRole("button", { name: "Refactor API client" })).toBeDefined();
+		expect(within(dialog).queryByRole("button", { name: "Fix Login Bug" })).toBeNull();
+		expect(within(dialog).queryByRole("button", { name: "登录页样式" })).toBeNull();
+
+		await user.clear(search);
+		await user.type(search, "不存在的词");
+		dialog = screen.getByRole("dialog");
+		expect(within(dialog).getByText("no matching sessions")).toBeDefined();
+		expect(within(dialog).queryByRole("button", { name: "Fix Login Bug" })).toBeNull();
+	});
+
+	it("点击弹窗行把卡片 cwd 与整条会话对象交给 onOpenSession（分派逻辑仍在 model）", async () => {
+		const user = userEvent.setup();
+		const onOpenSession = vi.fn();
+		const sessions = dialogSessions();
+		renderHomePageWithSessionsDialog({ onOpenSession, projectCards: oneCardProject(sessions) });
+		await user.click(screen.getByRole("button", { name: "all 6" }));
+
+		await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Fix Login Bug" }));
+		expect(onOpenSession).toHaveBeenCalledWith("/proj/a", sessions[0]);
+	});
+
+	it("「新建会话」先关弹窗再跳转：onStartNewSession 携带 cwd 且弹窗消失", async () => {
+		const user = userEvent.setup();
+		const onStartNewSession = vi.fn();
+		renderHomePageWithSessionsDialog({
+			onStartNewSession,
+			projectCards: oneCardProject(dialogSessions()),
+		});
+		await user.click(screen.getByRole("button", { name: "all 6" }));
+
+		const dialog = screen.getByRole("dialog");
+		await user.click(within(dialog).getByRole("button", { name: "new session" }));
+		expect(onStartNewSession).toHaveBeenCalledWith("/proj/a");
+		expect(screen.queryByRole("dialog")).toBeNull();
+	});
+
+	it("× 与 Esc 都能关闭；重新打开后搜索关键字已清空", async () => {
+		const user = userEvent.setup();
+		renderHomePageWithSessionsDialog({ projectCards: oneCardProject(dialogSessions()) });
+		await user.click(screen.getByRole("button", { name: "all 6" }));
+		let dialog = screen.getByRole("dialog");
+		await user.type(within(dialog).getByPlaceholderText("search sessions"), "login");
+
+		await user.click(within(dialog).getByRole("button", { name: "close dialog" }));
+		expect(screen.queryByRole("dialog")).toBeNull();
+
+		// 重新打开：关键字随弹窗卸载清空。
+		await user.click(screen.getByRole("button", { name: "all 6" }));
+		dialog = screen.getByRole("dialog");
+		expect(within(dialog).getByPlaceholderText("search sessions")).toHaveProperty("value", "");
+
+		// Esc 同样走关闭链路。
+		await user.type(within(dialog).getByPlaceholderText("search sessions"), "api");
+		fireEvent.keyDown(dialog, { key: "Escape" });
+		expect(screen.queryByRole("dialog")).toBeNull();
+	});
+
+	it("按 cwd 找不到卡片（版块册刷新/项目被移出）：弹窗不渲染、不抛错", () => {
+		render(
+			<AllstarDevHomePageView
+				model={model({
+					sessionsDialog: { open: true, cwd: "/proj/gone" },
+					projectCards: oneCardProject(dialogSessions()),
+				})}
+			/>,
+		);
+		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 });

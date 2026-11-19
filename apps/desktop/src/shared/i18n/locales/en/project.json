@@ -365,6 +365,12 @@
 				"cardHint": "No dev sessions yet — start one with \"New session\" below"
 			}
 		},
+		"sessionsDialog": {
+			"description": "All dev sessions of this project",
+			"searchPlaceholder": "Search sessions",
+			"noResults": "No matching sessions",
+			"close": "Close"
+		},
 		"projectConfig": {
 			"configure": "Project config",
 			"title": "Project configuration",

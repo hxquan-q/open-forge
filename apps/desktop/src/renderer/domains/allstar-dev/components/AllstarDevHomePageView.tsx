@@ -9,32 +9,12 @@ import {
 } from "@shared/components/ui/dropdown-menu";
 import { cn, Spin } from "@vetta-org/ui";
 import { AllstarProjectConfigDialog } from "./AllstarProjectConfigDialog";
+import { AllstarDevSessionsDialog } from "./AllstarDevSessionsDialog";
+import { projectAvatarStyle, projectInitial } from "./projectAvatar";
 import type { AllstarDevHomePageModel, AllstarDevProjectCard } from "../hooks/useAllstarDevHomePageModel";
 
 /** 卡片直显会话条数；更多走「全部 N 个」（第二批：会话弹窗）。 */
 const CARD_VISIBLE_SESSIONS = 4;
-
-/** 项目首字母块的浅色 token 组；按项目名 hash 稳定取色，同名恒定同色。 */
-const PROJECT_AVATAR_STYLES = [
-	"bg-chart-1/15 text-chart-1",
-	"bg-chart-2/15 text-chart-2",
-	"bg-chart-3/15 text-chart-3",
-	"bg-chart-4/15 text-chart-4",
-	"bg-chart-5/15 text-chart-5",
-] as const;
-
-function projectAvatarStyle(projectName: string): string {
-	let hash = 0;
-	for (let index = 0; index < projectName.length; index += 1) {
-		hash = (hash * 31 + projectName.charCodeAt(index)) | 0;
-	}
-	return PROJECT_AVATAR_STYLES[Math.abs(hash) % PROJECT_AVATAR_STYLES.length];
-}
-
-function projectInitial(projectName: string): string {
-	const first = projectName.trim().charAt(0);
-	return first.toUpperCase() || "·";
-}
 
 /**
  * 版块首页的纯展示层：只消费 {@link AllstarDevHomePageModel} 的稳定 view model，
@@ -129,6 +109,8 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 				)}
 			</section>
 			<AllstarProjectConfigDialog configuration={model.projectConfig} labels={model.labels} />
+			{/* 第二批：卡片「全部 N 个 →」打开的会话弹窗；关闭或项目失配时自身不渲染。 */}
+			<AllstarDevSessionsDialog model={model} />
 		</div>
 	);
 }

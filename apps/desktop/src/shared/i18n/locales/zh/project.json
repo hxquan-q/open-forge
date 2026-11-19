@@ -364,6 +364,12 @@
 				"cardHint": "尚无开发会话，点下方「新建会话」开始"
 			}
 		},
+		"sessionsDialog": {
+			"description": "该项目的全部开发会话",
+			"searchPlaceholder": "搜索会话",
+			"noResults": "没有匹配的会话",
+			"close": "关闭"
+		},
 		"projectConfig": {
 			"configure": "项目配置",
 			"title": "项目配置信息",

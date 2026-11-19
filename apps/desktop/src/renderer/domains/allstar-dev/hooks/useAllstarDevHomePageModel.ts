@@ -70,6 +70,14 @@ export interface AllstarDevHomePageModel {
 		readonly removeFromBoard: string;
 		/** 卡片底部「+ 新建会话」。 */
 		readonly cardNewSession: string;
+		/** 全部会话弹窗的 sr-only 语义描述（DialogDescription）。 */
+		readonly sessionsDialogDescription: string;
+		/** 全部会话弹窗的搜索占位文案。 */
+		readonly sessionsDialogSearchPlaceholder: string;
+		/** 全部会话弹窗搜索无结果的提示。 */
+		readonly sessionsDialogNoResults: string;
+		/** 全部会话弹窗关闭按钮的 aria-label。 */
+		readonly sessionsDialogClose: string;
 		readonly projectConfigTitle: string;
 		readonly projectConfigDescription: string;
 		readonly projectConfigFieldLabel: string;
@@ -92,8 +100,12 @@ export interface AllstarDevHomePageModel {
 	onStartNewSession: (cwd: string) => void;
 	/** ADR-0151 决策 7：打开已有项目 = 在版块册登记（弹系统目录选择器）。 */
 	onOpenExistingProject: () => void;
-	/** 打开项目的全部会话列表（第二批：会话弹窗）。 */
+	/** 打开项目的全部会话弹窗：只携带状态 { open, cwd }，会话数据由 View 按 cwd 从 projectCards 查。 */
 	onOpenAllSessions: (cwd: string) => void;
+	/** 关闭全部会话弹窗（×、Esc、遮罩点击与跳转前收口共用）。 */
+	onCloseSessions: () => void;
+	/** 全部会话弹窗状态：open + 目标项目 cwd；不走路由、不进全局 store。 */
+	readonly sessionsDialog: { readonly open: boolean; readonly cwd: string | null };
 	/** 在系统文件管理器中显示项目目录。 */
 	onRevealProject: (cwd: string) => void;
 	/** 从版块册移除登记（不删除磁盘上的任何内容）。 */
@@ -284,8 +296,19 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		});
 	}, [refreshAllstar]);
 
-	const onOpenAllSessions = useCallback((_cwd: string) => {
-		// TODO(第二批): 打开项目全部会话弹窗
+	// 全部会话弹窗（第二批）：状态只存 { open, cwd }；会话数据不复制第二份，
+	// View 按 cwd 从 projectCards 现查（找得到就渲染，找不到静默不渲染）。
+	const [sessionsDialog, setSessionsDialog] = useState<{ open: boolean; cwd: string | null }>({
+		open: false,
+		cwd: null,
+	});
+
+	const onOpenAllSessions = useCallback((cwd: string) => {
+		setSessionsDialog({ open: true, cwd });
+	}, []);
+
+	const onCloseSessions = useCallback(() => {
+		setSessionsDialog({ open: false, cwd: null });
 	}, []);
 
 	const onRevealProject = useCallback((cwd: string) => {
@@ -324,6 +347,10 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			revealInFolder: t("allstarDev.home.projects.revealInFolder"),
 			removeFromBoard: t("allstarDev.home.projects.removeFromBoard"),
 			cardNewSession: t("allstarDev.home.projects.cardNewSession"),
+			sessionsDialogDescription: t("allstarDev.sessionsDialog.description"),
+			sessionsDialogSearchPlaceholder: t("allstarDev.sessionsDialog.searchPlaceholder"),
+			sessionsDialogNoResults: t("allstarDev.sessionsDialog.noResults"),
+			sessionsDialogClose: t("allstarDev.sessionsDialog.close"),
 			projectConfigTitle: t("allstarDev.projectConfig.title"),
 			projectConfigDescription: t("allstarDev.projectConfig.description"),
 			projectConfigFieldLabel: t("allstarDev.projectConfig.contentLabel"),
@@ -343,6 +370,8 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		onStartNewSession,
 		onOpenExistingProject,
 		onOpenAllSessions,
+		onCloseSessions,
+		sessionsDialog,
 		onRevealProject,
 		onRemoveFromBoard,
 		projectConfig,

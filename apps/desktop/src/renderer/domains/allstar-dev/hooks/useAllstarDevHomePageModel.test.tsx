@@ -135,3 +135,21 @@ it("团队会话落在未登记项目 cwd 下时按 cwd 自成卡片（不依赖
 		expect(result.current.projectCards.some((card) => card.cwd === "/proj/b")).toBe(true);
 	});
 });
+
+it("onOpenAllSessions/onCloseSessions 维护全部会话弹窗状态 { open, cwd }", async () => {
+	stubWindow([]);
+	const { result } = renderHook(() => useAllstarDevHomePageModel());
+	await waitFor(() => {
+		expect(result.current.projectCards.some((card) => card.cwd === "/proj/a")).toBe(true);
+	});
+
+	act(() => {
+		result.current.onOpenAllSessions("/proj/a");
+	});
+	expect(result.current.sessionsDialog).toEqual({ open: true, cwd: "/proj/a" });
+
+	act(() => {
+		result.current.onCloseSessions();
+	});
+	expect(result.current.sessionsDialog).toEqual({ open: false, cwd: null });
+});
