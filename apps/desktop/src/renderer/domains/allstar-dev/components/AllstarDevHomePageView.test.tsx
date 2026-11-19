@@ -444,7 +444,8 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		// head：项目名 + body-top 计数；弹窗内平铺全部 7 条（卡片只直显 4 条）。
 		expect(within(dialog).getByText("a")).toBeDefined();
 		expect(within(dialog).getByText("7 sessions")).toBeDefined();
-		expect(within(dialog).getByTitle("team session")).toBeDefined();
+		// 团队行不做特质化标识（与普通行一视同仁）；行结构一致性见独立用例。
+		expect(within(dialog).queryByTitle("team session")).toBeNull();
 		for (let index = 1; index <= 6; index += 1) {
 			expect(within(dialog).getByRole("button", { name: `a 会话 ${index}` })).toBeDefined();
 		}
@@ -452,6 +453,35 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		// 打开后焦点落在搜索框，可直接键入过滤。
 		const search = within(dialog).getByPlaceholderText("search sessions");
 		expect(document.activeElement).toBe(search);
+	});
+
+	it("弹窗中团队会话与普通会话行结构一致：无团队图标、无团队 title，只有标题 + ··· 占位", async () => {
+		const user = userEvent.setup();
+		const teamSession: AllstarDevCardSession = {
+			kind: "team",
+			path: "C:/sessions/coord.jsonl",
+			title: "团队彩排",
+			modifiedAt: 7,
+			teamId: "team-1",
+			teamSessionId: "ts-1",
+		};
+		const chatOnly = Array.from({ length: 4 }, (_, index) => chatSession(4 - index));
+		renderHomePageWithSessionsDialog({
+			projectCards: oneCardProject([teamSession, ...chatOnly]),
+		});
+		await user.click(screen.getByRole("button", { name: "all 5" }));
+
+		const dialog = screen.getByRole("dialog");
+		const teamRow = within(dialog).getByRole("button", { name: "团队彩排" });
+		const chatRow = within(dialog).getByRole("button", { name: "a 会话 4" });
+		for (const row of [teamRow, chatRow]) {
+			// 行内只有标题 span 与行尾 ··· 占位；无 users-group 图标、无 team title。
+			expect(row.getAttribute("title")).toBeNull();
+			expect(row.querySelector(".icon-\\[solar--users-group-rounded-linear\\]")).toBeNull();
+			expect(row.children).toHaveLength(2);
+			expect(row.firstElementChild?.className).toContain("truncate");
+			expect(row.lastElementChild?.className).toContain("menu-dots");
+		}
 	});
 
 	it("搜索按标题过滤（去首尾空格、大小写不敏感）；无匹配显示提示", async () => {

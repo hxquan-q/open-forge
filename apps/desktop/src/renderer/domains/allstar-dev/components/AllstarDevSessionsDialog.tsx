@@ -128,13 +128,13 @@ function AllstarDevSessionsDialogBody({
 						visibleSessions.map((session) => (
 							<li key={session.path}>
 								{/*
-								 * 与卡片行同构：div role=button（行尾 ··· 占位是并列子节点，
-								 * button 嵌 button 非法），点击/Enter 复用 onOpenSession 分派。
+								 * div role=button（行尾 ··· 占位是并列子节点，button 嵌 button 非法）。
+								 * 团队会话不做任何特质化标识（用户口径：列表内一视同仁），
+								 * 打开目标的种类分派全部留在 model 的 onOpenSession。
 								 */}
 								<div
 									role="button"
 									tabIndex={0}
-									title={session.kind === "team" ? labels.teamSession : undefined}
 									onClick={() => model.onOpenSession(card.cwd, session)}
 									onKeyDown={(event) => {
 										if (event.key !== "Enter" && event.key !== " ") return;
@@ -143,12 +143,6 @@ function AllstarDevSessionsDialogBody({
 									}}
 									className="group/row flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50"
 								>
-									{session.kind === "team" && (
-										<span
-											aria-hidden
-											className="icon-[solar--users-group-rounded-linear] h-3.5 w-3.5 shrink-0 text-muted-foreground"
-										/>
-									)}
 									<span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{session.title}</span>
 									{/* SessionContextMenu 预留位（第三批）：纯视觉占位，不可聚焦不可点。 */}
 									<span
