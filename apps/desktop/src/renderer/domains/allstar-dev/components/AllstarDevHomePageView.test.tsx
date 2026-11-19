@@ -59,6 +59,10 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	sessionCount: (count: number) => `${count} sessions`,
 	revealInFolder: "reveal in folder",
 	removeFromBoard: "remove from board",
+	sessionActions: "session actions",
+	renameSession: "rename session",
+	revealSessionInFolder: "reveal session in folder",
+	deleteSession: "delete session",
 	cardNewSession: "new session",
 	projectConfigTitle: "project configuration",
 	projectConfigDescription: "project config description",
@@ -91,6 +95,9 @@ function model(overrides: Partial<AllstarDevHomePageModel> = {}): AllstarDevHome
 		onCloseSessions: vi.fn(),
 		sessionsDialog: { open: false, cwd: null },
 		onRevealProject: vi.fn(),
+		onRenameSession: vi.fn(),
+		onRevealSession: vi.fn(),
+		onDeleteSession: vi.fn(),
 		onRemoveFromBoard: vi.fn(),
 		projectConfig: {
 			open: false,
@@ -106,6 +113,16 @@ function model(overrides: Partial<AllstarDevHomePageModel> = {}): AllstarDevHome
 		onConfigureProject: vi.fn(),
 		...overrides,
 	};
+}
+
+/**
+ * 会话标题按钮所在的行容器：行结构断言与行内菜单寻址都用它，
+ * 避免把「标题按钮」误当成「整行」。
+ */
+function sessionRowOf(titleButton: HTMLElement): HTMLElement {
+	const row = titleButton.parentElement;
+	if (!row) throw new Error("session row container not found");
+	return row;
 }
 
 function chatSession(index: number, cwd = "a"): AllstarDevCardSession {
@@ -456,7 +473,7 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		expect(document.activeElement).toBe(search);
 	});
 
-	it("弹窗中团队会话与普通会话行结构一致：无团队图标、无团队 title，只有标题 + ··· 占位", async () => {
+	it("弹窗中团队会话与普通会话行结构一致：无团队图标、无团队 title，只有标题按钮 + ··· 菜单", async () => {
 		const user = userEvent.setup();
 		const teamSession: AllstarDevCardSession = {
 			kind: "team",
@@ -473,15 +490,15 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		await user.click(screen.getByRole("button", { name: "all 5" }));
 
 		const dialog = screen.getByRole("dialog");
-		const teamRow = within(dialog).getByRole("button", { name: "团队彩排" });
-		const chatRow = within(dialog).getByRole("button", { name: "a 会话 4" });
+		const teamRow = sessionRowOf(within(dialog).getByRole("button", { name: "团队彩排" }));
+		const chatRow = sessionRowOf(within(dialog).getByRole("button", { name: "a 会话 4" }));
 		for (const row of [teamRow, chatRow]) {
-			// 行内只有标题 span 与行尾 ··· 占位；无 users-group 图标、无 team title。
+			// 行内只有标题按钮与行尾 ··· 菜单；无 users-group 图标、无 team title。
 			expect(row.getAttribute("title")).toBeNull();
 			expect(row.querySelector(".icon-\\[solar--users-group-rounded-linear\\]")).toBeNull();
 			expect(row.children).toHaveLength(2);
-			expect(row.firstElementChild?.className).toContain("truncate");
-			expect(row.lastElementChild?.className).toContain("menu-dots");
+			expect(row.querySelector(".truncate")).not.toBeNull();
+			expect(within(row).getByRole("button", { name: "session actions" })).toBeDefined();
 		}
 	});
 
@@ -501,17 +518,77 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 		});
 
 		// 弹窗打开前，「团队彩排」行只存在于卡片（卡片直显前 4 条）。
-		const cardRow = screen.getByRole("button", { name: "团队彩排" });
+		const cardRow = sessionRowOf(screen.getByRole("button", { name: "团队彩排" }));
 		expect(cardRow.getAttribute("title")).toBeNull();
 		expect(cardRow.querySelector(".icon-\\[solar--users-group-rounded-linear\\]")).toBeNull();
 		expect(cardRow.children).toHaveLength(2);
 
 		await user.click(screen.getByRole("button", { name: "all 5" }));
-		const dialogRow = within(screen.getByRole("dialog")).getByRole("button", { name: "团队彩排" });
-		// 两处行结构（标题 span + ··· 占位的类名序列）完全一致。
+		const dialogRow = sessionRowOf(within(screen.getByRole("dialog")).getByRole("button", { name: "团队彩排" }));
+		// 两处行结构（标题按钮 + ··· 菜单按钮的类名序列）完全一致。
 		const childClassNames = (row: HTMLElement) =>
 			Array.from(row.children, (child) => (child as HTMLElement).className);
 		expect(childClassNames(dialogRow)).toEqual(childClassNames(cardRow));
+	});
+
+	it("行尾「···」是独立菜单入口：点它不打开会话，只展开三项动作", async () => {
+		const user = userEvent.setup();
+		const session = chatSession(1);
+		const onOpenSession = vi.fn();
+		render(
+			<AllstarDevHomePageView
+				model={model({
+					projectCards: [
+						{ cwd: "/proj/a", registered: true, projectName: "a", sessions: [session], totalSessions: 1 },
+					],
+					onOpenSession,
+				})}
+			/>,
+		);
+
+		const row = sessionRowOf(screen.getByRole("button", { name: session.title }));
+		await user.click(within(row).getByRole("button", { name: "session actions" }));
+
+		// 核心回归：点 ··· 不再冒泡成「打开会话」。
+		expect(onOpenSession).not.toHaveBeenCalled();
+		expect(within(row).getByRole("menuitem", { name: "rename session" })).toBeDefined();
+		expect(within(row).getByRole("menuitem", { name: "reveal session in folder" })).toBeDefined();
+		expect(within(row).getByRole("menuitem", { name: "delete session" })).toBeDefined();
+	});
+
+	it("会话菜单三项各自回调：重命名（Enter 提交）、在文件夹中打开、删除", async () => {
+		const user = userEvent.setup();
+		const session = chatSession(1);
+		const onRenameSession = vi.fn();
+		const onRevealSession = vi.fn();
+		const onDeleteSession = vi.fn();
+		render(
+			<AllstarDevHomePageView
+				model={model({
+					projectCards: [
+						{ cwd: "/proj/a", registered: true, projectName: "a", sessions: [session], totalSessions: 1 },
+					],
+					onRenameSession,
+					onRevealSession,
+					onDeleteSession,
+				})}
+			/>,
+		);
+
+		const row = sessionRowOf(screen.getByRole("button", { name: session.title }));
+		await user.click(within(row).getByRole("menuitem", { name: "reveal session in folder" }));
+		expect(onRevealSession).toHaveBeenCalledWith("/proj/a");
+
+		await user.click(within(row).getByRole("menuitem", { name: "delete session" }));
+		expect(onDeleteSession).toHaveBeenCalledWith("/proj/a", session);
+
+		await user.click(within(row).getByRole("menuitem", { name: "rename session" }));
+		const editor = within(row).getByRole("textbox", { name: "rename session" });
+		await user.clear(editor);
+		await user.type(editor, "新标题{Enter}");
+		expect(onRenameSession).toHaveBeenCalledWith("/proj/a", session, "新标题");
+		// 提交后退出编辑态，标题恢复成按钮。
+		expect(within(row).getByRole("button", { name: session.title })).toBeDefined();
 	});
 
 	it("搜索按标题过滤（去首尾空格、大小写不敏感）；无匹配显示提示", async () => {

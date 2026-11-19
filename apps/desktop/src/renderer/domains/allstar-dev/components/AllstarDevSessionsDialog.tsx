@@ -9,6 +9,7 @@ import {
 } from "@shared/components/ui/dialog";
 import { Input } from "@shared/components/ui/input";
 import { cn } from "@vetta-org/ui";
+import { AllstarSessionRow } from "./AllstarSessionRow";
 import { projectAvatarStyle, projectInitial } from "./projectAvatar";
 import type {
 	AllstarDevHomePageModel,
@@ -127,29 +128,15 @@ function AllstarDevSessionsDialogBody({
 					) : (
 						visibleSessions.map((session) => (
 							<li key={session.path}>
-								{/*
-								 * div role=button（行尾 ··· 占位是并列子节点，button 嵌 button 非法）。
-								 * 团队会话不做任何特质化标识（用户口径：列表内一视同仁），
-								 * 打开目标的种类分派全部留在 model 的 onOpenSession。
-								 */}
-								<div
-									role="button"
-									tabIndex={0}
-									onClick={() => model.onOpenSession(card.cwd, session)}
-									onKeyDown={(event) => {
-										if (event.key !== "Enter" && event.key !== " ") return;
-										event.preventDefault();
-										model.onOpenSession(card.cwd, session);
-									}}
-									className="group/row flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50"
-								>
-									<span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{session.title}</span>
-									{/* SessionContextMenu 预留位（第三批）：纯视觉占位，不可聚焦不可点。 */}
-									<span
-										aria-hidden
-										className="icon-[solar--menu-dots-bold] h-4 w-4 shrink-0 text-muted-foreground opacity-30 transition-opacity group-hover/row:opacity-100"
-									/>
-								</div>
+								<AllstarSessionRow
+									cwd={card.cwd}
+									session={session}
+									labels={labels}
+									onOpen={() => model.onOpenSession(card.cwd, session)}
+									onRename={model.onRenameSession}
+									onDelete={model.onDeleteSession}
+									onReveal={model.onRevealSession}
+								/>
 							</li>
 						))
 					)}

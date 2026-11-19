@@ -1,18 +1,21 @@
 // Modified by The Open Forge contributors.
 
 import { useProjectActions } from "@domains/project/hooks/useProjects";
+import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { useOpenProjectSession } from "@shared/app-shell/session-open-context";
 import { useTeamSidebarConversations } from "@shared/hooks/useTeamSidebarConversations";
 import {
 	beginCodingSessionCreation,
+	confirmDialogAtom,
 	defaultConversationCwdAtom,
 	getProjectDisplayName,
 	projectsInitializedAtom,
 	sessionDisplayLabel,
 	sessionsMapAtom,
+	showToast,
 } from "@shared/store/atoms";
 import { useNavigate } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type AllstarProjectConfigModel, useAllstarProjectConfig } from "./useAllstarProjectConfig";
@@ -66,6 +69,11 @@ export interface AllstarDevHomePageModel {
 		readonly sessionCount: (count: number) => string;
 		readonly revealInFolder: string;
 		readonly removeFromBoard: string;
+		/** 会话行「···」菜单的 aria-label 与三项动作名（第三批）。 */
+		readonly sessionActions: string;
+		readonly renameSession: string;
+		readonly revealSessionInFolder: string;
+		readonly deleteSession: string;
 		/** 卡片底部「+ 新建会话」。 */
 		readonly cardNewSession: string;
 		/** 全部会话弹窗的 sr-only 语义描述（DialogDescription）。 */
@@ -106,6 +114,12 @@ export interface AllstarDevHomePageModel {
 	readonly sessionsDialog: { readonly open: boolean; readonly cwd: string | null };
 	/** 在系统文件管理器中显示项目目录。 */
 	onRevealProject: (cwd: string) => void;
+	/** 会话行菜单：重命名（chat 走会话文件改名，团队走团队级改名）。 */
+	onRenameSession: (cwd: string, session: AllstarDevCardSession, name: string) => void;
+	/** 会话行菜单：在系统文件管理器中显示所属项目目录。 */
+	onRevealSession: (cwd: string) => void;
+	/** 会话行菜单：删除会话（确认后按会话种类分派）。 */
+	onDeleteSession: (cwd: string, session: AllstarDevCardSession) => void;
 	/** 从版块册移除登记（不删除磁盘上的任何内容）。 */
 	onRemoveFromBoard: (cwd: string) => void;
 	readonly projectConfig: AllstarProjectConfigModel;
@@ -313,6 +327,75 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		void window.vetta.shell.showItemInFolder(cwd);
 	}, []);
 
+	/**
+	 * 会话行 `···` 菜单（第三批）三项动作。全部复用既有 IPC 事实源：
+	 * chat 会话走 `session.rename/delete`（与项目侧栏同链路），团队会话走
+	 * `agentTeams.*`（团队级改名/删除，普通删除链路会拒绝团队会话）。
+	 * 失败必须落地成用户可见反馈，否则就是静默丢失一次用户动作。
+	 */
+	const setConfirm = useSetAtom(confirmDialogAtom);
+
+	const onRenameSession = useCallback(
+		(cwd: string, session: AllstarDevCardSession, name: string) => {
+			const nextName = name.trim();
+			if (!nextName || nextName === session.title) return;
+			const failed = (error: unknown): void => {
+				console.error("[allstar-dev] rename session failed", error);
+				showToast({ variant: "error", message: t("allstarDev.home.sessions.renameFailed") });
+			};
+			if (session.kind === "team" && session.teamId && session.teamSessionId) {
+				const teamId = session.teamId;
+				const teamSessionId = session.teamSessionId;
+				void window.vetta.agentTeams
+					.renameSession({ id: teamSessionId, coordinationSessionPath: session.path }, nextName)
+					.then(() => notifyTeamSessionsChanged(teamId))
+					.catch(failed);
+				return;
+			}
+			// chat 会话：改名落盘后重拉本项目会话，卡片与弹窗共用同一份 sessionsMap 随之刷新。
+			void window.vetta.session
+				.rename(session.path, nextName)
+				.then(() => loadSessions(cwd))
+				.catch(failed);
+		},
+		[loadSessions, t],
+	);
+
+	const onRevealSession = useCallback((cwd: string) => {
+		void window.vetta.shell.showItemInFolder(cwd);
+	}, []);
+
+	const onDeleteSession = useCallback(
+		(cwd: string, session: AllstarDevCardSession) => {
+			setConfirm({
+				title: t("sidebar.dialogs.deleteSessionTitle"),
+				message: t("sidebar.dialogs.deleteSessionMessage", { name: session.title }),
+				confirmLabel: t("sidebar.dialogs.deleteConfirm"),
+				variant: "danger",
+				onConfirm: () => {
+					const failed = (error: unknown): void => {
+						console.error("[allstar-dev] delete session failed", error);
+						showToast({ variant: "error", message: t("sidebar.dialogs.deleteSessionFailedToast") });
+					};
+					if (session.kind === "team" && session.teamId && session.teamSessionId) {
+						const teamId = session.teamId;
+						const teamSessionId = session.teamSessionId;
+						void window.vetta.agentTeams
+							.deleteSession({ id: teamSessionId, coordinationSessionPath: session.path })
+							.then(() => notifyTeamSessionsChanged(teamId))
+							.catch(failed);
+						return;
+					}
+					void window.vetta.session
+						.delete(session.path)
+						.then(() => loadSessions(cwd))
+						.catch(failed);
+				},
+			});
+		},
+		[loadSessions, setConfirm, t],
+	);
+
 	// 只移除版块册登记，不动磁盘内容；移除后刷新册清单让卡片即时消失/重算。
 	const onRemoveFromBoard = useCallback(
 		(cwd: string) => {
@@ -343,6 +426,11 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			sessionCount: (count: number) => t("allstarDev.home.projects.sessionCount", { count }),
 			revealInFolder: t("allstarDev.home.projects.revealInFolder"),
 			removeFromBoard: t("allstarDev.home.projects.removeFromBoard"),
+			sessionActions: t("allstarDev.home.sessions.actions"),
+			// 与侧栏会话右键菜单共用同一批动作名，避免两处说法不一致。
+			renameSession: t("contextMenu.rename"),
+			revealSessionInFolder: t("allstarDev.home.projects.revealInFolder"),
+			deleteSession: t("contextMenu.delete"),
 			cardNewSession: t("allstarDev.home.projects.cardNewSession"),
 			sessionsDialogDescription: t("allstarDev.sessionsDialog.description"),
 			sessionsDialogSearchPlaceholder: t("allstarDev.sessionsDialog.searchPlaceholder"),
@@ -370,6 +458,9 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		onCloseSessions,
 		sessionsDialog,
 		onRevealProject,
+		onRenameSession,
+		onRevealSession,
+		onDeleteSession,
 		onRemoveFromBoard,
 		projectConfig,
 		onConfigureProject: projectConfig.openForProject,
