@@ -24,16 +24,19 @@ const CARD_VISIBLE_SESSIONS = 4;
 export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageModel }): JSX.Element {
 	if (model.loading) {
 		return (
-			<div className="flex h-full items-center justify-center gap-2.5 px-8 pb-8">
+			<div className="flex h-full w-full items-center justify-center gap-2.5 px-8 pb-8">
 				<Spin size="md" className="text-primary" />
 				<span className="text-[13px] text-muted-foreground">{model.labels.loading}</span>
 			</div>
 		);
 	}
 	return (
+		// w-full：父级是 MainContentFrame 内容区的行向 flex 容器，主轴方向不自动 stretch，
+		// 不声明宽度的子项会退化成「页头文案 + 按钮组」的 max-content（实测约 700px），
+		// 网格只排得下 3 列、右侧留大片空白，且窗口越宽空白越大（BUG-0193）。
 		// min-w-0：断开 flex 链上的 min-content 宽度传导，让网格在窄窗口下由
 		// 自身 auto-fill 列宽消化宽度收缩（BUG-0188 教训的网格版）。
-		<div className="flex h-full min-w-0 flex-col gap-5 px-8 pb-8 pt-6">
+		<div className="flex h-full w-full min-w-0 flex-col gap-5 px-8 pb-8 pt-6">
 			<header className="flex items-start justify-between gap-4">
 				<div className="flex min-w-0 flex-col gap-1">
 					<h1 className="text-[15px] font-medium text-foreground">{model.labels.title}</h1>
