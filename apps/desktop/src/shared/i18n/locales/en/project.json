@@ -358,7 +358,6 @@
 				"removeFromBoard": "Remove from board",
 				"cardNewSession": "New session"
 			},
-			"teamSession": "Team session",
 			"empty": {
 				"title": "No dev sessions yet",
 				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",

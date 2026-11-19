@@ -55,8 +55,6 @@ export interface AllstarDevHomePageModel {
 		readonly projectCount: (count: number) => string;
 		readonly newSession: string;
 		readonly moreSessions: (count: number) => string;
-		/** 卡片上团队会话行的标识（与普通 code 会话行区分）。 */
-		readonly teamSession: string;
 		readonly emptyTitle: string;
 		readonly emptyHint: string;
 		/** 已登记项目的空卡片文案（项目在册但尚无 coding 会话）。 */
@@ -336,7 +334,6 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			projectCount: (count: number) => t("allstarDev.home.projects.count", { count }),
 			newSession: t("allstarDev.home.projects.newSession"),
 			moreSessions: (count: number) => t("allstarDev.home.projects.more", { count }),
-			teamSession: t("allstarDev.home.teamSession"),
 			emptyTitle: t("allstarDev.home.empty.title"),
 			emptyHint: t("allstarDev.home.empty.hint"),
 			emptyCardHint: t("allstarDev.home.empty.cardHint"),

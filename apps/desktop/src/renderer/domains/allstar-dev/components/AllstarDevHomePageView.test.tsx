@@ -50,7 +50,6 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	projectCount: (count: number) => `${count} projects`,
 	newSession: "new dev session",
 	moreSessions: (count: number) => `all ${count}`,
-	teamSession: "team session",
 	emptyTitle: "no sessions",
 	emptyHint: "pick a project above",
 	emptyCardHint: "no dev sessions on this card",
@@ -313,7 +312,7 @@ describe("AllstarDevHomePageView", () => {
 		expect(onStartNewSession).toHaveBeenCalledWith("/proj/a");
 	});
 
-	it("团队会话行带标识展示，点击把整条会话对象交给打开回调（由 model 分派团队路由）", async () => {
+	it("团队会话行不做特质化展示，点击把整条会话对象交给打开回调（由 model 分派团队路由）", async () => {
 		const user = userEvent.setup();
 		const onOpenSession = vi.fn();
 		const teamSession = {
@@ -334,7 +333,9 @@ describe("AllstarDevHomePageView", () => {
 				})}
 			/>,
 		);
-		expect(screen.getByTitle("team session")).toBeDefined();
+		// 团队会话行与普通行一视同仁：无 team title、无团队图标（与弹窗口径一致）。
+		expect(screen.queryByTitle("team session")).toBeNull();
+		expect(screen.queryByText("eform 五角色彩排")).toBeDefined();
 		await user.click(screen.getByRole("button", { name: "eform 五角色彩排" }));
 		expect(onOpenSession).toHaveBeenCalledWith("/proj/a", teamSession);
 	});
@@ -482,6 +483,35 @@ describe("AllstarDevSessionsDialog（全部会话弹窗）", () => {
 			expect(row.firstElementChild?.className).toContain("truncate");
 			expect(row.lastElementChild?.className).toContain("menu-dots");
 		}
+	});
+
+	it("卡片行与弹窗行结构一致：同一会话在两处的子元素类名序列完全相同", async () => {
+		const user = userEvent.setup();
+		const teamSession: AllstarDevCardSession = {
+			kind: "team",
+			path: "C:/sessions/coord.jsonl",
+			title: "团队彩排",
+			modifiedAt: 7,
+			teamId: "team-1",
+			teamSessionId: "ts-1",
+		};
+		const chatOnly = Array.from({ length: 4 }, (_, index) => chatSession(4 - index));
+		renderHomePageWithSessionsDialog({
+			projectCards: oneCardProject([teamSession, ...chatOnly]),
+		});
+
+		// 弹窗打开前，「团队彩排」行只存在于卡片（卡片直显前 4 条）。
+		const cardRow = screen.getByRole("button", { name: "团队彩排" });
+		expect(cardRow.getAttribute("title")).toBeNull();
+		expect(cardRow.querySelector(".icon-\\[solar--users-group-rounded-linear\\]")).toBeNull();
+		expect(cardRow.children).toHaveLength(2);
+
+		await user.click(screen.getByRole("button", { name: "all 5" }));
+		const dialogRow = within(screen.getByRole("dialog")).getByRole("button", { name: "团队彩排" });
+		// 两处行结构（标题 span + ··· 占位的类名序列）完全一致。
+		const childClassNames = (row: HTMLElement) =>
+			Array.from(row.children, (child) => (child as HTMLElement).className);
+		expect(childClassNames(dialogRow)).toEqual(childClassNames(cardRow));
 	});
 
 	it("搜索按标题过滤（去首尾空格、大小写不敏感）；无匹配显示提示", async () => {
