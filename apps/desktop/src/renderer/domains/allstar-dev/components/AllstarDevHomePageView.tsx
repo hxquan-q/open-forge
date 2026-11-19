@@ -1,15 +1,40 @@
 // Modified by The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@shared/components/ui/select";
-import { Spin } from "@vetta-org/ui";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@shared/components/ui/dropdown-menu";
+import { cn, Spin } from "@vetta-org/ui";
 import { AllstarProjectConfigDialog } from "./AllstarProjectConfigDialog";
 import type { AllstarDevHomePageModel, AllstarDevProjectCard } from "../hooks/useAllstarDevHomePageModel";
+
+/** 卡片直显会话条数；更多走「全部 N 个」（第二批：会话弹窗）。 */
+const CARD_VISIBLE_SESSIONS = 4;
+
+/** 项目首字母块的浅色 token 组；按项目名 hash 稳定取色，同名恒定同色。 */
+const PROJECT_AVATAR_STYLES = [
+	"bg-chart-1/15 text-chart-1",
+	"bg-chart-2/15 text-chart-2",
+	"bg-chart-3/15 text-chart-3",
+	"bg-chart-4/15 text-chart-4",
+	"bg-chart-5/15 text-chart-5",
+] as const;
+
+function projectAvatarStyle(projectName: string): string {
+	let hash = 0;
+	for (let index = 0; index < projectName.length; index += 1) {
+		hash = (hash * 31 + projectName.charCodeAt(index)) | 0;
+	}
+	return PROJECT_AVATAR_STYLES[Math.abs(hash) % PROJECT_AVATAR_STYLES.length];
+}
+
+function projectInitial(projectName: string): string {
+	const first = projectName.trim().charAt(0);
+	return first.toUpperCase() || "·";
+}
 
 /**
  * 版块首页的纯展示层：只消费 {@link AllstarDevHomePageModel} 的稳定 view model，
@@ -26,13 +51,63 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 		);
 	}
 	return (
-		// min-w-0：卡片行里的卡片是 shrink-0，其 min-content 宽度会沿 flex 链把本根节点
-		// 顶到远超内容区（18 张卡实测 4588px），底部新建会话区按整行宽度居中后推出视口。
-		// 宽度收缩在这里断链，溢出由卡片行自己的 overflow-x-auto 消化（BUG-0188）。
+		// min-w-0：断开 flex 链上的 min-content 宽度传导，让网格在窄窗口下由
+		// 自身 auto-fill 列宽消化宽度收缩（BUG-0188 教训的网格版）。
 		<div className="flex h-full min-w-0 flex-col gap-5 px-8 pb-8 pt-6">
-			<p className="text-[13px] text-muted-foreground">{model.labels.intro}</p>
+			<header className="flex items-start justify-between gap-4">
+				<div className="flex min-w-0 flex-col gap-1">
+					<h1 className="text-[15px] font-medium text-foreground">{model.labels.title}</h1>
+					<p className="text-[13px] text-muted-foreground">{model.labels.intro}</p>
+				</div>
+				<div className="flex shrink-0 items-center gap-2.5">
+					<Button
+						variant="outline"
+						onClick={model.onOpenExistingProject}
+						title={model.labels.openProject}
+					>
+						<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
+						{model.labels.openProject}
+					</Button>
+					{model.projects.length <= 1 ? (
+						// 唯一候选：点按即建，不必再弹选择层；无候选时禁用（走「打开已有项目」登记）。
+						<Button
+							variant="primary"
+							disabled={model.projects.length === 0}
+							onClick={() => model.onStartNewSession(model.projects[0]?.cwd ?? "")}
+						>
+							<span aria-hidden className="icon-[solar--add-circle-linear] h-3.5 w-3.5" />
+							{model.labels.newSession}
+						</Button>
+					) : (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="primary">
+									<span aria-hidden className="icon-[solar--add-circle-linear] h-3.5 w-3.5" />
+									{model.labels.newSession}
+									<span aria-hidden className="icon-[solar--alt-arrow-down-linear] h-3 w-3 opacity-60" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								{model.projects.map((project) => (
+									<DropdownMenuItem
+										key={project.cwd}
+										onSelect={() => model.onStartNewSession(project.cwd)}
+									>
+										{project.name}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					)}
+				</div>
+			</header>
 			<section className="flex min-h-0 flex-1 flex-col gap-3">
-				<h2 className="text-[15px] font-medium text-foreground">{model.labels.projectsTitle}</h2>
+				<div className="flex items-baseline gap-2">
+					<h2 className="text-[13px] font-medium text-foreground">{model.labels.projectsTitle}</h2>
+					<span className="text-xs text-muted-foreground">
+						{model.labels.projectCount(model.projectCards.length)}
+					</span>
+				</div>
 				{model.projectCards.length === 0 ? (
 					<div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-border/50 px-3.5 py-10">
 						<span aria-hidden className="icon-[solar--code-linear] h-10 w-10 text-muted-foreground/60" />
@@ -40,14 +115,12 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 						<p className="text-xs text-muted-foreground">{model.labels.emptyHint}</p>
 					</div>
 				) : (
-					<div className="flex gap-3 overflow-x-auto pb-1">
+					<div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3 overflow-y-auto pb-1">
 						{model.projectCards.map((card) => (
 							<AllstarDevProjectCardView
 								key={card.cwd}
 								card={card}
-								labels={model.labels}
-								onOpenSession={model.onOpenSession}
-								onConfigureProject={model.onConfigureProject}
+								model={model}
 							/>
 						))}
 						{/* ADR-0151 决策 7：一键归入版块的空卡片（打开已有项目入口）。 */}
@@ -55,99 +128,117 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 					</div>
 				)}
 			</section>
-			<div className="flex items-center justify-center gap-2.5 border-t border-border/40 pt-4">
-				<Button
-					variant="outline"
-					onClick={model.onOpenExistingProject}
-					title={model.labels.openProject}
-				>
-					<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
-					{model.labels.openProject}
-				</Button>
-				<Select value={model.selectedCwd} onValueChange={model.onSelectProject}>
-					<SelectTrigger className="w-64" aria-label={model.labels.emptyProjectLabel}>
-						<SelectValue placeholder={model.labels.emptyProjectLabel} />
-					</SelectTrigger>
-					<SelectContent>
-						{model.projects.map((project) => (
-							<SelectItem key={project.cwd} value={project.cwd}>
-								{project.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Button
-					variant="primary"
-					disabled={!model.selectedCwd}
-					onClick={() => model.onStartNewSession(model.selectedCwd)}
-				>
-					{model.labels.newSession}
-				</Button>
-			</div>
 			<AllstarProjectConfigDialog configuration={model.projectConfig} labels={model.labels} />
 		</div>
 	);
 }
 
-function AllstarDevProjectCardView({
-	card,
-	labels,
-	onOpenSession,
-	onConfigureProject,
-}: {
-	card: AllstarDevProjectCard;
-	labels: AllstarDevHomePageModel["labels"];
-	onOpenSession: AllstarDevHomePageModel["onOpenSession"];
-	onConfigureProject: AllstarDevHomePageModel["onConfigureProject"];
-}): JSX.Element {
-	const hiddenCount = card.totalSessions - card.sessions.length;
+function AllstarDevProjectCardView({ card, model }: { card: AllstarDevProjectCard; model: AllstarDevHomePageModel }): JSX.Element {
+	const { labels } = model;
+	// 卡片只直显最近 4 条；完整列表走「全部 N 个」（onOpenAllSessions，第二批弹窗）。
+	const visibleSessions = card.sessions.slice(0, CARD_VISIBLE_SESSIONS);
 	return (
-		<article className="flex w-60 shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40">
-			<header className="flex items-baseline justify-between gap-2 px-3.5 pb-2 pt-3">
-				<h3 className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
-				<div className="flex shrink-0 items-center gap-1.5">
-					<span className="text-xs text-muted-foreground">{card.totalSessions}</span>
-					<Button
-						variant="ghost"
-						size="xs"
-						title={labels.configureProject}
-						onClick={() => onConfigureProject(card.cwd, card.projectName)}
+		<article className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 transition-colors duration-200 hover:border-primary/40 hover:bg-accent/30">
+			<header className="flex items-start justify-between gap-1">
+				<div className="flex min-w-0 flex-1 items-center gap-2">
+					<span
+						aria-hidden
+						className={cn(
+							"flex size-6 shrink-0 items-center justify-center rounded-lg text-[13px] font-medium",
+							projectAvatarStyle(card.projectName),
+						)}
 					>
-						{labels.configureProject}
-					</Button>
+						{projectInitial(card.projectName)}
+					</span>
+					<div className="flex min-w-0 flex-col">
+						<h3 className="min-w-0 truncate text-[13px] font-medium text-foreground">{card.projectName}</h3>
+						<span className="text-xs text-muted-foreground">{labels.sessionCount(card.totalSessions)}</span>
+					</div>
 				</div>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							aria-label={labels.projectActions}
+							className="opacity-70 transition-opacity group-hover:opacity-100"
+						>
+							<span aria-hidden className="icon-[solar--menu-dots-bold] h-3.5 w-3.5" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onSelect={() => model.onConfigureProject(card.cwd, card.projectName)}>
+							<span aria-hidden className="icon-[solar--settings-linear] h-3.5 w-3.5" />
+							{labels.configureProject}
+						</DropdownMenuItem>
+						<DropdownMenuItem onSelect={() => model.onRevealProject(card.cwd)}>
+							<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
+							{labels.revealInFolder}
+						</DropdownMenuItem>
+						{/* 移除放最后并分隔：只撤销版块登记，不删磁盘内容，文案刻意不写「删除」。 */}
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onSelect={() => model.onRemoveFromBoard(card.cwd)}>
+							<span aria-hidden className="icon-[solar--trash-bin-trash-linear] h-3.5 w-3.5" />
+							{labels.removeFromBoard}
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</header>
-			{card.sessions.length === 0 ? (
-				<p className="border-t border-border/40 px-3.5 py-4 text-xs text-muted-foreground">
+			{visibleSessions.length === 0 ? (
+				<p className="flex min-h-0 flex-1 items-center text-xs text-muted-foreground">
 					{labels.emptyCardHint}
 				</p>
 			) : (
-				<ul className="flex-1 border-t border-border/40">
-					{card.sessions.map((session) => (
-						<li key={session.path} className="border-b border-border/40 last:border-b-0">
-							<Button
-								variant="ghost"
-								className="h-auto w-full justify-start rounded-none px-3.5 py-2 text-left font-normal"
+				<ul className="flex min-h-0 flex-1 flex-col">
+					{visibleSessions.map((session) => (
+						<li key={session.path}>
+							{/*
+							 * 整行是列表选择项；不能用 Button——行尾的 ··· 占位与第二批的
+							 * SessionContextMenu 会成为并列子节点，button 嵌 button 既非法
+							 * 也会让点击冒泡误触打开会话。
+							 */}
+							<div
+								role="button"
+								tabIndex={0}
 								title={session.kind === "team" ? labels.teamSession : undefined}
-								onClick={() => onOpenSession(card.cwd, session)}
+								onClick={() => model.onOpenSession(card.cwd, session)}
+								onKeyDown={(event) => {
+									if (event.key !== "Enter" && event.key !== " ") return;
+									event.preventDefault();
+									model.onOpenSession(card.cwd, session);
+								}}
+								className="group/row flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50"
 							>
 								{session.kind === "team" && (
 									<span
 										aria-hidden
-										className="icon-[solar--users-group-rounded-linear] mr-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+										className="icon-[solar--users-group-rounded-linear] h-3.5 w-3.5 shrink-0 text-muted-foreground"
 									/>
 								)}
-								<span className="truncate text-[13px] text-foreground">{session.title}</span>
-							</Button>
+								<span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{session.title}</span>
+								{/* SessionContextMenu 预留位（第二批）：纯视觉占位，不可聚焦不可点。 */}
+								<span
+									aria-hidden
+									className="icon-[solar--menu-dots-bold] h-4 w-4 shrink-0 text-muted-foreground opacity-30 transition-opacity group-hover/row:opacity-100"
+								/>
+							</div>
 						</li>
 					))}
-					{hiddenCount > 0 && (
-						<li className="border-t border-border/40 px-3.5 py-1.5 text-xs text-muted-foreground">
-							{labels.moreSessions(hiddenCount)}
-						</li>
-					)}
 				</ul>
 			)}
+			{/* mt-auto：会话不足 4 条时不留空行占位，底部操作行贴卡片底。 */}
+			<footer className="mt-auto flex items-center justify-between gap-2 pt-1">
+				<Button variant="ghost" size="xs" onClick={() => model.onStartNewSession(card.cwd)}>
+					<span aria-hidden className="icon-[solar--add-circle-linear] h-3.5 w-3.5" />
+					{labels.cardNewSession}
+				</Button>
+				{card.totalSessions > CARD_VISIBLE_SESSIONS && (
+					<Button variant="ghost" size="xs" onClick={() => model.onOpenAllSessions(card.cwd)}>
+						{labels.moreSessions(card.totalSessions)}
+						<span aria-hidden className="icon-[solar--alt-arrow-right-linear] h-3 w-3" />
+					</Button>
+				)}
+			</footer>
 		</article>
 	);
 }
@@ -162,7 +253,7 @@ function AllstarDevAddProjectCardView({
 	return (
 		<Button
 			variant="outline"
-			className="flex h-auto w-60 shrink-0 flex-col items-center justify-center gap-2 border-dashed px-3.5 py-6 text-muted-foreground"
+			className="flex h-auto min-h-24 w-full flex-col items-center justify-center gap-2 border-dashed px-3.5 py-6 text-muted-foreground"
 			onClick={onClick}
 		>
 			<span aria-hidden className="icon-[solar--add-folder-linear] h-8 w-8 text-muted-foreground/60" />

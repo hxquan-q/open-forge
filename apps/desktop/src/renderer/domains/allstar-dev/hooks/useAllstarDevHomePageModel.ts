@@ -17,9 +17,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type AllstarProjectConfigModel, useAllstarProjectConfig } from "./useAllstarProjectConfig";
 
-/** 每张项目卡片直接展示的会话条数；完整列表由项目空间（M1-3/4）承载。 */
-const CARD_SESSIONS_LIMIT = 5;
-
 export interface AllstarDevCardSession {
 	/** 会话种类（BUG-0187）：团队会话打开走团队路由，不是 JSONL 打开链路。 */
 	readonly kind: "chat" | "team";
@@ -29,6 +26,8 @@ export interface AllstarDevCardSession {
 	 */
 	readonly path: string;
 	readonly title: string;
+	/** 最近更新时间（ms）：卡片列表按其降序排列，第二批会话弹窗沿用。 */
+	readonly modifiedAt: number;
 	/** 团队会话专属：打开目标 /agent-teams/$teamId/sessions/$sessionId。 */
 	readonly teamId?: string;
 	readonly teamSessionId?: string;
@@ -40,17 +39,20 @@ export interface AllstarDevProjectCard {
 	/** ADR-0151：是否已登记版块册（allstarProjects）。false = 仅有 coding 会话但未归册。 */
 	readonly registered: boolean;
 	readonly projectName: string;
+	/** 该项目全部开发会话，按 modifiedAt 降序；卡片截取展示由 View 决定。 */
 	readonly sessions: readonly AllstarDevCardSession[];
-	/** 该项目的 coding 会话总数（超过展示上限时用于「还有 N 条」）。 */
+	/** 该项目的开发会话总数（= sessions.length，「全部 N 个」入口的口径）。 */
 	readonly totalSessions: number;
 }
 
 export interface AllstarDevHomePageModel {
 	readonly loading: boolean;
 	readonly labels: {
+		readonly title: string;
 		readonly intro: string;
 		readonly loading: string;
 		readonly projectsTitle: string;
+		readonly projectCount: (count: number) => string;
 		readonly newSession: string;
 		readonly moreSessions: (count: number) => string;
 		/** 卡片上团队会话行的标识（与普通 code 会话行区分）。 */
@@ -59,9 +61,15 @@ export interface AllstarDevHomePageModel {
 		readonly emptyHint: string;
 		/** 已登记项目的空卡片文案（项目在册但尚无 coding 会话）。 */
 		readonly emptyCardHint: string;
-		readonly emptyProjectLabel: string;
 		readonly openProject: string;
 		readonly configureProject: string;
+		/** 卡片「···」菜单的 aria-label。 */
+		readonly projectActions: string;
+		readonly sessionCount: (count: number) => string;
+		readonly revealInFolder: string;
+		readonly removeFromBoard: string;
+		/** 卡片底部「+ 新建会话」。 */
+		readonly cardNewSession: string;
 		readonly projectConfigTitle: string;
 		readonly projectConfigDescription: string;
 		readonly projectConfigFieldLabel: string;
@@ -79,13 +87,17 @@ export interface AllstarDevHomePageModel {
 	readonly projectCards: readonly AllstarDevProjectCard[];
 	/** 新建开发会话的项目候选：版块册条目（ADR-0151 决策 7）；空 = 册为空，走「打开已有项目」登记。 */
 	readonly projects: readonly { cwd: string; name: string }[];
-	readonly selectedCwd: string;
-	onSelectProject: (cwd: string) => void;
 	/** 打开卡片上的会话：chat 会话走 openProjectSession，团队会话分派团队路由。 */
 	onOpenSession: (cwd: string, session: AllstarDevCardSession) => void;
 	onStartNewSession: (cwd: string) => void;
 	/** ADR-0151 决策 7：打开已有项目 = 在版块册登记（弹系统目录选择器）。 */
 	onOpenExistingProject: () => void;
+	/** 打开项目的全部会话列表（第二批：会话弹窗）。 */
+	onOpenAllSessions: (cwd: string) => void;
+	/** 在系统文件管理器中显示项目目录。 */
+	onRevealProject: (cwd: string) => void;
+	/** 从版块册移除登记（不删除磁盘上的任何内容）。 */
+	onRemoveFromBoard: (cwd: string) => void;
 	readonly projectConfig: AllstarProjectConfigModel;
 	onConfigureProject: (cwd: string, projectName: string) => void;
 }
@@ -146,7 +158,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 	const projectCards = useMemo<AllstarDevProjectCard[]>(() => {
 		interface Group {
 			readonly projectName: string;
-			readonly sessions: Array<AllstarDevCardSession & { modifiedAt: number }>;
+			readonly sessions: AllstarDevCardSession[];
 			latestModifiedAt: number;
 		}
 		const registeredSet = new Set(allstarProjects.map((p) => p.cwd));
@@ -200,10 +212,8 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 				cwd,
 				projectName: group.projectName,
 				registered: registeredSet.has(cwd),
-				sessions: [...group.sessions]
-					.sort((left, right) => right.modifiedAt - left.modifiedAt)
-					.slice(0, CARD_SESSIONS_LIMIT)
-					.map(({ modifiedAt: _modifiedAt, ...item }) => item),
+				// 全量按 modifiedAt 降序交给 View 截取展示；不再剥离 modifiedAt（第二批会话弹窗沿用）。
+				sessions: [...group.sessions].sort((left, right) => right.modifiedAt - left.modifiedAt),
 				totalSessions: group.sessions.length,
 				latestModifiedAt: group.latestModifiedAt,
 			}))
@@ -222,16 +232,6 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		[allstarProjects, defaultConversationCwd],
 	);
 
-	const [selectedCwd, setSelectedCwd] = useState("");
-	// 空态引导默认选默认项目 / 首个项目，保证「新建开发会话」始终可用。
-	useEffect(() => {
-		if (projectOptions.length === 0) return;
-		if (projectOptions.some((option) => option.cwd === selectedCwd)) return;
-		const fallback =
-			projectOptions.find((option) => option.cwd === defaultConversationCwd)?.cwd ?? projectOptions[0].cwd;
-		setSelectedCwd(fallback);
-	}, [defaultConversationCwd, projectOptions, selectedCwd]);
-
 	// 列表加载：ui-first-async——页面壳先渲染，会话数据 effect 内补齐（loadSessions 自带
 	// 去重，与侧栏共用同一份请求）。项目清单变化（新增/移除）时对新 cwd 补拉。
 	const projectCwds = useMemo(() => projectOptions.map((option) => option.cwd).join("\n"), [projectOptions]);
@@ -244,10 +244,6 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		// sessionsMap 不进 deps：回填后重跑没有意义（已加载的 cwd 由 loadSessions 去重），
 		// 加载只由项目清单与初始化状态驱动。
 	}, [loadSessions, projectCwds, projectsInitialized, sessionsMap]);
-
-	const onSelectProject = useCallback((cwd: string) => {
-		setSelectedCwd(cwd);
-	}, []);
 
 	const onOpenSession = useCallback(
 		(cwd: string, session: AllstarDevCardSession) => {
@@ -288,21 +284,46 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		});
 	}, [refreshAllstar]);
 
+	const onOpenAllSessions = useCallback((_cwd: string) => {
+		// TODO(第二批): 打开项目全部会话弹窗
+	}, []);
+
+	const onRevealProject = useCallback((cwd: string) => {
+		void window.vetta.shell.showItemInFolder(cwd);
+	}, []);
+
+	// 只移除版块册登记，不动磁盘内容；移除后刷新册清单让卡片即时消失/重算。
+	const onRemoveFromBoard = useCallback(
+		(cwd: string) => {
+			void window.vetta.project
+				.removeAllstar(cwd)
+				.then(refreshAllstar)
+				.catch(() => undefined);
+		},
+		[refreshAllstar],
+	);
+
 	return {
 		loading: !projectsInitialized,
 		labels: {
+			title: t("allstarDev.home.title"),
 			intro: t("allstarDev.home.intro"),
 			loading: t("allstarDev.home.loading"),
 			projectsTitle: t("allstarDev.home.projects.title"),
+			projectCount: (count: number) => t("allstarDev.home.projects.count", { count }),
 			newSession: t("allstarDev.home.projects.newSession"),
 			moreSessions: (count: number) => t("allstarDev.home.projects.more", { count }),
 			teamSession: t("allstarDev.home.teamSession"),
 			emptyTitle: t("allstarDev.home.empty.title"),
 			emptyHint: t("allstarDev.home.empty.hint"),
 			emptyCardHint: t("allstarDev.home.empty.cardHint"),
-			emptyProjectLabel: t("allstarDev.home.empty.projectLabel"),
 			openProject: t("allstarDev.home.projects.openProject"),
 			configureProject: t("allstarDev.projectConfig.configure"),
+			projectActions: t("allstarDev.home.projects.projectActions"),
+			sessionCount: (count: number) => t("allstarDev.home.projects.sessionCount", { count }),
+			revealInFolder: t("allstarDev.home.projects.revealInFolder"),
+			removeFromBoard: t("allstarDev.home.projects.removeFromBoard"),
+			cardNewSession: t("allstarDev.home.projects.cardNewSession"),
 			projectConfigTitle: t("allstarDev.projectConfig.title"),
 			projectConfigDescription: t("allstarDev.projectConfig.description"),
 			projectConfigFieldLabel: t("allstarDev.projectConfig.contentLabel"),
@@ -318,11 +339,12 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		},
 		projectCards,
 		projects: projectOptions,
-		selectedCwd,
-		onSelectProject,
 		onOpenSession,
 		onStartNewSession,
 		onOpenExistingProject,
+		onOpenAllSessions,
+		onRevealProject,
+		onRemoveFromBoard,
 		projectConfig,
 		onConfigureProject: projectConfig.openForProject,
 	};

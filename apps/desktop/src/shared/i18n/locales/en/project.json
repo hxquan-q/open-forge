@@ -343,20 +343,26 @@
 	},
 	"allstarDev": {
 		"home": {
+			"title": "Allstar Dev",
 			"intro": "Your autonomous development workspace: enter dev projects and coding sessions from here.",
 			"loading": "Loading…",
 			"projects": {
 				"title": "Dev projects",
+				"count": "{{count}} projects",
 				"newSession": "New dev session",
-				"more": "{{count}} more",
-				"openProject": "Open project"
+				"more": "All {{count}}",
+				"openProject": "Open project",
+				"projectActions": "Project actions",
+				"sessionCount": "{{count}} sessions",
+				"revealInFolder": "Reveal in folder",
+				"removeFromBoard": "Remove from board",
+				"cardNewSession": "New session"
 			},
 			"teamSession": "Team session",
 			"empty": {
 				"title": "No dev sessions yet",
 				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",
-				"cardHint": "No dev sessions yet — select this project below to start one",
-				"projectLabel": "Choose a project"
+				"cardHint": "No dev sessions yet — start one with \"New session\" below"
 			}
 		},
 		"projectConfig": {
