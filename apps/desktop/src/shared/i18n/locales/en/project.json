@@ -356,12 +356,12 @@
 				"sessionCount": "{{count}} sessions",
 				"revealInFolder": "Reveal in folder",
 				"removeFromBoard": "Remove from board",
-				"cardNewSession": "New session",
-				"sessions": {
-					"actions": "Session actions",
-					"reveal": "Open session data folder",
-					"renameFailed": "Couldn't rename the session. Please try again later."
-				}
+				"cardNewSession": "New session"
+			},
+			"sessions": {
+				"actions": "Session actions",
+				"reveal": "Open session data folder",
+				"renameFailed": "Couldn't rename the session. Please try again later."
 			},
 			"empty": {
 				"title": "No dev sessions yet",

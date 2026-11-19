@@ -66,6 +66,7 @@ updated: 2026-11-19
 - 修复：抽出 `AllstarSessionRow`，卡片与弹窗共用；整行改为普通容器，标题本身是打开会话的按钮，行尾 `···` 是独立的 DropdownMenu 触发器；重命名走行内输入框（Enter 提交 / Esc 取消 / 失焦提交）。
 - 动作范围：只接重命名 / 打开会话数据目录 / 删除三项——置顶与归档在侧栏没有承载面（代码会话不进普通侧栏列表），放进去会是新的假动作。
 - 「打开会话数据目录」定位的是 `session.path`（chat 为 JSONL、团队为协调会话文件），不是项目目录；文案因此与卡片级「在文件夹中打开」区分（用户 2026-11-19 反馈首版打开了项目目录）。
+- 同一菜单的文案键首版插错层级（落在 `allstarDev.home.projects.sessions.*`，代码取 `allstarDev.home.sessions.*`），菜单项直接显示原始 key；已归位，详见 `TASK-0492` 的修正记录。
 - 检查：`run-vitest.mjs --run AllstarDevHomePageView.test.tsx`（20/20）、`useAllstarDevHomePageModel.test.tsx`（4/4）；`bun run check:quick -- <改动文件>` 全绿（含 DESIGN D03：标题按钮改用共享 `Button`）。
 - 未运行及原因：真实浏览器目视与删除/改名的真机闭环需当次授权，未执行。
 - 剩余风险：删除与改名复用既有 IPC 链路（`session.rename/delete`、`agentTeams.renameSession/deleteSession`），其失败反馈依赖 toast；普通会话删除失败的用户可见性另有 `BUG-0191` 在跟。

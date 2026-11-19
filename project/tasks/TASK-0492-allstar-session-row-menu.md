@@ -83,3 +83,12 @@ updated: 2026-11-19
 - `onRevealSession` 改为接收整条会话，定位 `session.path`（chat 为 JSONL，团队为协调会话文件），落到会话数据目录并在文件管理器中选中该文件。
 - 文案改为独立的 `allstarDev.home.sessions.reveal`（zh「打开会话数据目录」/ en「Open session data folder」），与卡片级「在文件夹中打开」（项目目录）刻意区分，避免同一个说法指向两个位置。
 - 测试断言同步为 `toHaveBeenCalledWith(session)`；20/20 仍绿。
+
+## 2026-11-19 修正：新增文案键插错层级
+
+用户截图反馈菜单第二项直接显示 `allstarDev.home.sessions.reveal`（原始 key）。
+
+- 根因：`55e820005` 与 `c8dc223b8` 两次插入都落在 `allstarDev.home.projects.sessions.*`（`projects` 对象闭合括号之前），而代码取 `allstarDev.home.sessions.*`；i18next 取不到键时回退显示原始 key。同批受影响但当时不可见的还有 `actions`（`···` 按钮 aria-label）与 `renameFailed`（改名失败 toast）。
+- 修复：`sessions` 块移到 `allstarDev.home` 下（zh + en 各一份），`home.projects.sessions` 归零。
+- 为什么没被拦住（可复现证据）：`check:quick` 不含类型检查（`scripts/quality/check-quick.mjs` 里没有任何 tsc/tsgo 调用），而 i18n 键类型由 `renderer/shared/i18n/i18next.d.ts` 从 zh 资源推导，只在 `bun run check` 的 types 阶段校验。用旧 JSON 临时回灌后跑 `typecheck:incremental`，tsc 报 `TS2345 … Did you mean "allstarDev.home.projects.sessions.actions"?`，即完整 check 本来就能拦住。
+- 本次交付改为跑完整门禁：`bun run check` 全绿（lint 5311 文件、types 五路 0、guards 全过、mobile-lint 通过）+ 定向测试 24/24。

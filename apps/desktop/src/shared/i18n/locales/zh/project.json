@@ -355,12 +355,12 @@
 				"sessionCount": "{{count}} 个会话",
 				"revealInFolder": "在文件夹中打开",
 				"removeFromBoard": "从版块移除",
-				"cardNewSession": "新建会话",
-				"sessions": {
-					"actions": "会话操作",
-					"reveal": "打开会话数据目录",
-					"renameFailed": "会话重命名失败，请稍后重试。"
-				}
+				"cardNewSession": "新建会话"
+			},
+			"sessions": {
+				"actions": "会话操作",
+				"reveal": "打开会话数据目录",
+				"renameFailed": "会话重命名失败，请稍后重试。"
 			},
 			"empty": {
 				"title": "还没有开发会话",
