@@ -104,8 +104,11 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 					 * 一句会话标题与「N 个会话 + ···」不再挤成一团。
 					 * gap-x-8（32px）：用户要求卡片左右各留 10px 余量（12+10+10），比
 					 * DESIGN.md 的 gap-5 上限更宽，是有意的版块特例；纵向仍用 gap-3 保持行距节奏。
+					 * content-start（align-content: start，BUG-0197）：网格经 flex-1 拿到确定高度，
+					 * 默认 stretch 会把多余高度摊给行——只剩一行时卡片被拉到撑满剩余视口；
+					 * start 让行高回归内容自然高度，多余空间留在容器底部。
 					 */
-					<div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(16.25rem,1fr))] gap-x-8 gap-y-3 overflow-y-auto pb-1">
+					<div className="grid min-h-0 flex-1 content-start grid-cols-[repeat(auto-fill,minmax(16.25rem,1fr))] gap-x-8 gap-y-3 overflow-y-auto pb-1">
 
 						{model.projectCards.map((card) => (
 							<AllstarDevProjectCardView

@@ -203,7 +203,7 @@ describe("AllstarDevHomePageView", () => {
 		expect(onStartNewSession).toHaveBeenCalledWith("/proj/b");
 	});
 
-	it("卡片网格自适应布局：minmax 列宽，不再横向滚动、无固定窄卡宽", () => {
+	it("卡片网格自适应布局：minmax 列宽、行高不被拉伸，不再横向滚动、无固定窄卡宽", () => {
 		const { container } = render(
 			<AllstarDevHomePageView
 				model={model({
@@ -217,6 +217,9 @@ describe("AllstarDevHomePageView", () => {
 		const grid = container.querySelector<HTMLElement>("div.grid");
 		expect(grid).not.toBeNull();
 		expect(grid?.className).toContain("grid-cols-[repeat(auto-fill,minmax(16.25rem,1fr))]");
+		// BUG-0197：网格拿到确定高度后，默认 align-content: stretch 会把多余高度摊给行，
+		// 一行时卡片撑满剩余视口；content-start 让行高回归内容自然高度。
+		expect(grid?.className).toContain("content-start");
 		expect(grid?.className).not.toContain("overflow-x-auto");
 		const articles = container.querySelectorAll("article");
 		expect(articles).toHaveLength(2);
