@@ -1,7 +1,7 @@
 ---
 id: BUG-0195
 type: bug
-status: in_progress
+status: fixed
 priority: P1
 owner: apps/desktop
 requirement: REQ-0030
@@ -13,7 +13,7 @@ related_tasks: []
 related_issues: []
 related_bugs: [BUG-0087, BUG-0194]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -112,10 +112,28 @@ updated: 2026-11-19
 
 ## 修复与验证
 
-- 修复：未开始。候选方向（待定，不在本记录内实现）——列表侧对账剔除或标记文件已不存在的登记；重命名侧对「文件缺失」降级为只更新索引标题并返回可读原因，与删除降级对齐。
-- 测试：未编写。
-- 检查：未运行。
-- 未运行及原因：用户尚未授权修改主仓实现；本轮仅只读调查与建档。
+修复（2026-11-20，用户已定的三项决策）：
+
+- **决策 1——重命名改为管理操作**：`AgentTeamSessionService.renameSession` 二分处理。已驻留内存走原内存路径（内存是事实源：改 title/revision/updatedAt → persist → requestSessionUpdate，不再过 roster 对账）；未驻留走零 runtime 离线路径（新增 `team-session-offline-rename.ts`）：`FileConversationRepository` 文件锁内读协调文档 → 取最新 `agent-team.session-state.v1` 条目 → 校验 `session.id` → 改 title/revision/updatedAt → `custom.append` 落盘（带读到的 revision 做 CAS，并发追加触发 `DOCUMENT_VERSION_CONFLICT` 时锁内重读重写，上限 3 轮）→ 写后复核最新状态条目正是本次写入 → `registerAgentTeamSessionOwnership` 同步所有权索引的 title/updatedAt。协调文件 ENOENT 抛稳定文案锚点 `Team session data file is missing: <path>`（不建 runtime、不伪造成功、不写缓存），渲染端按锚点归类（`shared/agent-teams/team-session-rename-failure.ts`，范式同 resume-failure.ts）落到「只能删除」文案。服务返回值改为 `TeamSessionSnapshot`，IPC 层不再对未驻留会话二次取快照。作废方案「协调 runtime 单侧读写」未实现。
+- **决策 2——列表标记不可用（不静默隐藏）**：`TeamSessionListItem`/`DesktopTeamSidebarConversation` 增可选字段 `dataFileMissing`（缺省视为可用，兼容旧 catalog 记录）；`listSessions` 用 `lstat` 只认 ENOENT 实测填值（EACCES/EBUSY 等按可用，照 `resolveSessionDeletion` 纪律）。版块与项目侧栏（项目分组 + 默认列表）对不可用条目置灰（theme-ui 两个行视图各加可选 `dimmed`）、点击不再导航进必败会话、右键/行内菜单只保留「删除」（置顶/归档/重命名/打开文件夹/标签全收起，theme-ui 菜单视图加可选 `canPin`）。顺手补齐版块 `AllstarSessionRow` 团队标题空值兜底（与侧栏 `sidebar.session.untitledTeam` 同口径）。
+- 决策 3：协调 runtime 单侧读写方案不实现（作废）。
+
+已钉住的回归测试（修复前对旧实现全部先红）：
+
+1. 服务级：登记在、盘空 → 抛带 ENOENT 锚点的可读错误，且 `createSession` 零调用（旧实现抛 `Team session could not be loaded`）。
+2. 服务级：协调文件在、未驻留 → 改名成功、标题真实落盘、catalog title/updatedAt 同步；断言未调 `restoreMembers`/`recoverRestoredSession`、未写 sessionState 缓存。
+3. 服务级：团队定义已从文档删除、成员 handle 已变更 → 改名仍成功（离线路径不读团队文档）。
+4. 模块级（`team-session-offline-rename.test.ts`）：锚点错误文案、身份不匹配拒绝、CAS 冲突锁内重读后在最新状态之上改名、写后复核发现被反超即放弃。
+5. 投影级：`listSessions` 缺失条目带 `dataFileMissing: true`、在盘条目输出不变（对照）；主进程侧栏投影透传该字段、在盘条目不携带（对照）。
+6. 渲染端：锚点错误 → 「只能删除」i18n 文案；普通失败 → 既有「重命名失败，请稍后重试」；改名成功 → 派发列表刷新事件。版块会话行组件覆盖不可用（置灰禁开、菜单只剩删除）、标题兜底与「菜单 → 重命名 → 输入 → Enter → onRename」连续路径；侧栏右键菜单门控（缺失条目只留删除、在盘条目能力不变对照）。
+7. 删除合同回归：`team-session-delete.test.ts` 的「删除等待在途改名事务」用例同步点从 readDocument 迁到 appendSessionMetadataEntry（改名不再读团队文档），删除不复活历史的合同保持。
+
+验证（2026-11-20）：
+
+- 定向测试全绿：`team-session-service.test.ts`（21）、`team-session-offline-rename.test.ts`（5）、`team-session-delete.test.ts`（26）、`team-sidebar-conversation-projection.test.ts`（5）、`useAllstarDevHomePageModel.test.tsx`（7）、`AllstarSessionRow.test.tsx`（3）、`AllstarDevHomePageView.test.tsx` + `useSessionContextMenuModel.data-file-missing.test.tsx`（22）、相邻既有投影/面板/归档测试（31）。
+- `bun run check:quick`（改动文件）与完整 `bun run check` 通过。
+- impact / 全量测试：按用户意愿单独发起，本轮未跑。
+- 实机验收：待用户在真实数据目录上复验（本机存量 34 条缺失条目应变为置灰、可删除、改名不再报内核错误）。
 
 ## 相邻缺陷（未单独建档）
 
