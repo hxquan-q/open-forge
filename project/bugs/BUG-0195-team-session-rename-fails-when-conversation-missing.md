@@ -132,7 +132,10 @@ updated: 2026-11-20
 
 - 定向测试全绿：`team-session-service.test.ts`（21）、`team-session-offline-rename.test.ts`（5）、`team-session-delete.test.ts`（26）、`team-sidebar-conversation-projection.test.ts`（5）、`useAllstarDevHomePageModel.test.tsx`（7）、`AllstarSessionRow.test.tsx`（3）、`AllstarDevHomePageView.test.tsx` + `useSessionContextMenuModel.data-file-missing.test.tsx`（22）、相邻既有投影/面板/归档测试（31）。
 - `bun run check:quick`（改动文件）与完整 `bun run check` 通过。
-- impact / 全量测试：按用户意愿单独发起，本轮未跑。
+- impact / 全量测试：按用户意愿以 `xquan` 为基线重跑（`bun run test:impact --base xquan`）。quality 套件通过；desktop 全包 1148 个测试文件 / 6538 个用例通过（4 个文件、19 个用例跳过），包含本修复的定向用例与 `useProjects.sessionsChanged.test.tsx` 的 9 个用例。受影响包中除下列两处外全部通过，`test:impact` 因这两处仍以 code 1 退出：
+  - `packages/ssh-transport`：1 个用例失败，`src/ssh-connection.loopback.test.ts:135` 明确抛出「本机无符号链接权限：符号链接用例未执行……需要开发者模式或以管理员运行」；同包其余 234 个用例通过。该包相对 xquan 的唯一差异是 `package.json` 版本号 `0.1.4 → 0.1.5`，与符号链接测试无关，非 BUG-0195 改动引入。
+  - `packages/plugins/presets/vetta-ui-design`：1 个用例失败，`test/engine-hmr.test.ts` 在 TEMP 8.3 短名路径 `C:/Users/CHENXU~1/AppData/Local/Temp/open-forge-design-hmr-e12y5J/src/styles.css` 上加载 CSS 失败；同包其余 927 个用例通过。该包不在本轮变更集内，失败与本机 TEMP 短名/路径解析有关，非 BUG-0195 改动引入。
+  - 结论：两处均为本机环境限制，不记为全绿，也不构成本次修复回归；BUG-0195 相关代码链路（agent-teams / allstar-dev / 侧栏 / theme-ui / i18n）全部通过。
 - 实机验收：待用户在真实数据目录上复验（本机存量 34 条缺失条目应变为置灰、可删除、改名不再报内核错误）。
 
 ## 相邻缺陷（未单独建档）
