@@ -404,7 +404,15 @@ describe("AgentTeamSessionService.deleteSession（BUG-0087 降级清理）", () 
 				getSessionPath: (id: string) =>
 					id === "history-coordination" ? f.paths[0] : id === "history-member" ? f.paths[1] : undefined,
 				readSessionDocument: () => ({ entries: [], activeLeafId: null, revision: 0 }),
-				appendSessionMetadataEntry: vi.fn(async () => undefined),
+				// read 的闸门在 readDocument（roster 对账），rename 的闸门在持久化：
+				// BUG-0195 起改名是管理操作，不再读团队文档。
+				appendSessionMetadataEntry:
+					operation === "rename"
+						? vi.fn(async () => {
+								entered.resolve();
+								await release.promise;
+							})
+						: vi.fn(async () => undefined),
 				abort: vi.fn(async () => undefined),
 			};
 			const service = new AgentTeamSessionService({
@@ -412,7 +420,7 @@ describe("AgentTeamSessionService.deleteSession（BUG-0087 降级清理）", () 
 				repository: createLegacyTeamSessionRepository(f.legacyRoot),
 				ownershipCatalog: f.catalog,
 				readDocument: async () => {
-					entered.resolve();
+					if (operation === "read") entered.resolve();
 					await release.promise;
 					return f.store.read();
 				},

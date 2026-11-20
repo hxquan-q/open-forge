@@ -41,6 +41,7 @@ const ProjectSessionRow = memo(function ProjectSessionRow({
 			scheduled={item.scheduled}
 			trailingAvatarUrls={item.trailingAvatarUrls}
 			titleExtra={item.titleExtra}
+			dimmed={item.dimmed}
 			onOpenContextMenu={handleContextMenu}
 			onRename={handleRename}
 			onRenameDone={onRenameDone}

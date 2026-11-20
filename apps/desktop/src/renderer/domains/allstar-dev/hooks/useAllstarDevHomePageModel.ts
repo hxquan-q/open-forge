@@ -2,6 +2,7 @@
 
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
+import { classifyTeamSessionRenameFailure } from "@shared/agent-teams/team-session-rename-failure";
 import { useOpenProjectSession } from "@shared/app-shell/session-open-context";
 import { useTeamSidebarConversations } from "@shared/hooks/useTeamSidebarConversations";
 import {
@@ -34,6 +35,11 @@ export interface AllstarDevCardSession {
 	/** 团队会话专属：打开目标 /agent-teams/$teamId/sessions/$sessionId。 */
 	readonly teamId?: string;
 	readonly teamSessionId?: string;
+	/**
+	 * 团队会话专属：协调会话数据文件已丢失（BUG-0195）。行置灰、不可打开，
+	 * 菜单只保留「删除」；打开与改名对该条目必失败。
+	 */
+	readonly dataFileMissing?: boolean;
 }
 
 export interface AllstarDevProjectCard {
@@ -69,11 +75,13 @@ export interface AllstarDevHomePageModel {
 		readonly sessionCount: (count: number) => string;
 		readonly revealInFolder: string;
 		readonly removeFromBoard: string;
-		/** 会话行「···」菜单的 aria-label 与三项动作名（第三批）。 */
+		/** 会话行「···」菜单的 aria-label 与动作名（第三批）。 */
 		readonly sessionActions: string;
 		readonly renameSession: string;
 		readonly revealSessionInFolder: string;
 		readonly deleteSession: string;
+		/** 团队会话标题为空时的兜底名（BUG-0195）。 */
+		readonly untitledTeamSession: string;
 		/** 卡片底部「+ 新建会话」。 */
 		readonly cardNewSession: string;
 		/** 全部会话弹窗的 sr-only 语义描述（DialogDescription）。 */
@@ -229,6 +237,7 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 				teamId: conversation.teamId,
 				teamSessionId: conversation.teamSessionId,
 				modifiedAt: conversation.updatedAt,
+				...(conversation.dataFileMissing ? { dataFileMissing: true } : {}),
 			});
 		}
 		return Array.from(groups.entries())
@@ -339,9 +348,17 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 		(cwd: string, session: AllstarDevCardSession, name: string) => {
 			const nextName = name.trim();
 			if (!nextName || nextName === session.title) return;
+			// BUG-0195：数据文件缺失的主进程错误带稳定文案锚点，IPC 只保 message，
+			// 在此按锚点归类成「只能删除」的可行动文案；其余失败维持通用提示。
 			const failed = (error: unknown): void => {
 				console.error("[allstar-dev] rename session failed", error);
-				showToast({ variant: "error", message: t("allstarDev.home.sessions.renameFailed") });
+				showToast({
+					variant: "error",
+					message:
+						session.kind === "team" && classifyTeamSessionRenameFailure(error) === "data_file_missing"
+							? t("allstarDev.home.sessions.renameFailedDataMissing")
+							: t("allstarDev.home.sessions.renameFailed"),
+				});
 			};
 			if (session.kind === "team" && session.teamId && session.teamSessionId) {
 				const teamId = session.teamId;
@@ -435,6 +452,8 @@ export function useAllstarDevHomePageModel(): AllstarDevHomePageModel {
 			// 这里定位的是会话数据文件，不是项目目录：文案与卡片的「在文件夹中打开」刻意区分。
 			revealSessionInFolder: t("allstarDev.home.sessions.reveal"),
 			deleteSession: t("contextMenu.delete"),
+			// 团队会话标题为空时的兜底名，与侧栏（sidebar.session.untitledTeam）同口径。
+			untitledTeamSession: t("sidebar.session.untitledTeam"),
 			cardNewSession: t("allstarDev.home.projects.cardNewSession"),
 			sessionsDialogDescription: t("allstarDev.sessionsDialog.description"),
 			sessionsDialogSearchPlaceholder: t("allstarDev.sessionsDialog.searchPlaceholder"),

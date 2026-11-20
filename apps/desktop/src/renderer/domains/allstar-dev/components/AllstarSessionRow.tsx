@@ -1,4 +1,4 @@
-// Copyright The Open Forge contributors.
+// Modified by The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import {
 	DropdownMenu,
@@ -42,10 +42,15 @@ export function AllstarSessionRow({
 	const [draft, setDraft] = useState<string | null>(null);
 	// Enter 提交后输入框失焦还会再触发一次 onBlur，用 ref 保证只提交一次。
 	const committedRef = useRef(false);
+	// BUG-0195：协调会话数据文件缺失的团队会话置灰、不可打开，菜单只保留「删除」
+	// （打开与改名对该条目必失败，删除是唯一出口——删除链路已有 BUG-0087 降级）。
+	const dataFileMissing = session.dataFileMissing === true;
+	// 团队会话可能尚未生成标题（自动标题未落或登记为空）：与侧栏同口径的兜底名。
+	const displayTitle = session.title || labels.untitledTeamSession;
 
 	const startRename = (): void => {
 		committedRef.current = false;
-		setDraft(session.title);
+		setDraft(displayTitle);
 	};
 	const cancelRename = (): void => {
 		committedRef.current = true;
@@ -63,11 +68,12 @@ export function AllstarSessionRow({
 			{draft === null ? (
 				<Button
 					variant="ghost"
-					onClick={onOpen}
-					title={session.title}
-					className="h-auto min-w-0 flex-1 justify-start border-0 bg-transparent px-0 py-0 text-left text-[13px] font-normal text-foreground hover:bg-transparent focus-visible:border-0"
+					onClick={dataFileMissing ? undefined : onOpen}
+					disabled={dataFileMissing}
+					title={displayTitle}
+					className="h-auto min-w-0 flex-1 justify-start border-0 bg-transparent px-0 py-0 text-left text-[13px] font-normal text-foreground hover:bg-transparent focus-visible:border-0 aria-disabled:opacity-60"
 				>
-					<span className="min-w-0 truncate">{session.title}</span>
+					<span className="min-w-0 truncate">{displayTitle}</span>
 				</Button>
 			) : (
 				<Input
@@ -104,16 +110,20 @@ export function AllstarSessionRow({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
-						<DropdownMenuItem onSelect={startRename}>
-							<span aria-hidden className="icon-[solar--pen-2-linear] h-3.5 w-3.5" />
-							{labels.renameSession}
-						</DropdownMenuItem>
-						<DropdownMenuItem onSelect={() => onReveal(session)}>
-							<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
-							{labels.revealSessionInFolder}
-						</DropdownMenuItem>
-						{/* 删除与整理类动作之间留一道分隔，误点的代价不对等。 */}
-						<DropdownMenuSeparator />
+						{dataFileMissing ? null : (
+							<>
+								<DropdownMenuItem onSelect={startRename}>
+									<span aria-hidden className="icon-[solar--pen-2-linear] h-3.5 w-3.5" />
+									{labels.renameSession}
+								</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => onReveal(session)}>
+									<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
+									{labels.revealSessionInFolder}
+								</DropdownMenuItem>
+								{/* 删除与整理类动作之间留一道分隔，误点的代价不对等。 */}
+								<DropdownMenuSeparator />
+							</>
+						)}
 						<DropdownMenuItem onSelect={() => onDelete(cwd, session)}>
 							<span aria-hidden className="icon-[solar--trash-bin-trash-linear] h-3.5 w-3.5" />
 							{labels.deleteSession}

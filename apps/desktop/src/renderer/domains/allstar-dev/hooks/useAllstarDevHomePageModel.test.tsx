@@ -29,8 +29,14 @@ vi.mock("./useAllstarProjectConfig", () => ({
 	}),
 }));
 
-import { projectsInitializedAtom, sessionsMapAtom } from "@shared/store/atoms";
+import { projectsInitializedAtom, sessionsMapAtom, showToast } from "@shared/store/atoms";
+import { TEAM_SESSIONS_CHANGED_EVENT } from "@shared/agent-teams/team-session-events";
 import { useAllstarDevHomePageModel } from "./useAllstarDevHomePageModel";
+
+vi.mock("@shared/store/atoms", async (importOriginal) => {
+	const original = await importOriginal<typeof import("@shared/store/atoms")>();
+	return { ...original, showToast: vi.fn() };
+});
 
 const store = getDefaultStore();
 
@@ -65,6 +71,7 @@ function teamConversation(overrides: Record<string, unknown> = {}): Record<strin
 
 beforeEach(() => {
 	navigate.mockClear();
+	vi.mocked(showToast).mockClear();
 	store.set(projectsInitializedAtom, true);
 	store.set(sessionsMapAtom, new Map());
 	stubWindow([]);
@@ -152,4 +159,76 @@ it("onOpenAllSessions/onCloseSessions 维护全部会话弹窗状态 { open, cwd
 		result.current.onCloseSessions();
 	});
 	expect(result.current.sessionsDialog).toEqual({ open: false, cwd: null });
+});
+
+it("数据文件缺失的团队会话并入卡片时携带 dataFileMissing 标记（BUG-0195）", async () => {
+	stubWindow([teamConversation({ dataFileMissing: true })]);
+	const { result } = renderHook(() => useAllstarDevHomePageModel());
+	await waitFor(() => {
+		const teamRow = result.current.projectCards[0]?.sessions.find((session) => session.kind === "team");
+		expect(teamRow).toMatchObject({ teamSessionId: "ts-1", dataFileMissing: true });
+	});
+});
+
+async function renderWithTeamRow() {
+	const { result } = renderHook(() => useAllstarDevHomePageModel());
+	await waitFor(() => {
+		expect(result.current.projectCards[0]?.sessions.some((session) => session.kind === "team")).toBe(true);
+	});
+	const teamRow = result.current.projectCards[0]?.sessions.find((session) => session.kind === "team");
+	if (!teamRow) throw new Error("team session row is missing");
+	return { result, teamRow };
+}
+
+function stubRenameSession(implementation: (reference: unknown, name: string) => Promise<unknown>): void {
+	const agentTeams = window.vetta.agentTeams as unknown as {
+		renameSession: (reference: unknown, name: string) => Promise<unknown>;
+	};
+	agentTeams.renameSession = implementation;
+}
+
+it("团队改名失败按锚点归类：数据文件缺失落到「只能删除」文案（BUG-0195）", async () => {
+	stubWindow([teamConversation()]);
+	stubRenameSession(async () => {
+		throw new Error("Team session data file is missing: C:/sessions/coord.jsonl");
+	});
+	const { result, teamRow } = await renderWithTeamRow();
+
+	act(() => {
+		result.current.onRenameSession("/proj/a", teamRow, "新名字");
+	});
+
+	await waitFor(() => {
+		expect(showToast).toHaveBeenCalledWith(
+			expect.objectContaining({ variant: "error", message: "allstarDev.home.sessions.renameFailedDataMissing" }),
+		);
+	});
+});
+
+it("团队改名普通失败维持「稍后重试」文案；成功后派发列表刷新事件", async () => {
+	stubWindow([teamConversation()]);
+	const renameSession = vi.fn(async () => undefined);
+	stubRenameSession(renameSession);
+	const dispatch = vi.spyOn(window, "dispatchEvent");
+	const { result, teamRow } = await renderWithTeamRow();
+
+	act(() => {
+		result.current.onRenameSession("/proj/a", teamRow, "新名字");
+	});
+	await waitFor(() => {
+		const names = dispatch.mock.calls.map(([event]) => (event as Event).type);
+		expect(names).toContain(TEAM_SESSIONS_CHANGED_EVENT);
+	});
+	expect(showToast).not.toHaveBeenCalled();
+
+	renameSession.mockRejectedValueOnce(new Error("boom"));
+	dispatch.mockClear();
+	act(() => {
+		result.current.onRenameSession("/proj/a", { ...teamRow, title: "另一个名字" }, "更新的名字");
+	});
+	await waitFor(() => {
+		expect(showToast).toHaveBeenCalledWith(
+			expect.objectContaining({ variant: "error", message: "allstarDev.home.sessions.renameFailed" }),
+		);
+	});
 });

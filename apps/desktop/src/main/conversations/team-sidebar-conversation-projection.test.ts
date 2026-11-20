@@ -163,4 +163,42 @@ describe("listTeamSidebarConversations", () => {
 			}),
 		]);
 	});
+
+	it("数据文件缺失的团队会话透传 dataFileMissing 标记，文件在的条目不携带该字段（BUG-0195）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("missing Team fixture");
+		const result = await listTeamSidebarConversations({
+			listHistoryTeamIds: async () => [team.id],
+			readDocument: async () => document,
+			listProjectPaths: async () => [],
+			listSessions: async () => [
+				{
+					id: "session-missing",
+					coordinationSessionPath: "C:/sessions/missing.jsonl",
+					title: "丢文件",
+					createdAt: 1,
+					updatedAt: 5,
+					workspaceKind: "project",
+					cwd: "C:/Projects/A",
+					dataFileMissing: true,
+				},
+				{
+					id: "session-alive",
+					coordinationSessionPath: "C:/sessions/alive.jsonl",
+					title: "在盘",
+					createdAt: 1,
+					updatedAt: 3,
+					workspaceKind: "project",
+					cwd: "C:/Projects/A",
+				},
+			],
+		});
+
+		expect(result).toEqual([
+			expect.objectContaining({ teamSessionId: "session-missing", dataFileMissing: true }),
+			expect.objectContaining({ teamSessionId: "session-alive" }),
+		]);
+		expect("dataFileMissing" in (result[1] ?? {})).toBe(false);
+	});
 });

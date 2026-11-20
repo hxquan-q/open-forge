@@ -15,6 +15,8 @@ export type SidebarConversationInfo =
 			readonly teamSessionId: string;
 			readonly memberAvatarUrls: readonly string[];
 			readonly sessionTitle: string;
+			/** 协调会话数据文件已丢失（BUG-0195）：置灰、菜单只留删除；缺省视为可用。 */
+			readonly dataFileMissing?: boolean;
 	  };
 
 export type SidebarConversationPlacement =
@@ -61,6 +63,7 @@ export function projectSidebarConversations(
 				teamSessionId: session.teamSessionId,
 				memberAvatarUrls: session.memberAvatarUrls,
 				sessionTitle: session.sessionTitle,
+				...(session.dataFileMissing ? { dataFileMissing: true } : {}),
 			}),
 		),
 	].sort((left, right) => right.modifiedAt - left.modifiedAt);
@@ -87,7 +90,8 @@ export function sidebarConversationIdentity(
 		label: session.sessionTitle || labels.untitledTeamLabel,
 		iconClassName: "icon-[solar--users-group-rounded-linear]",
 		trailingAvatarUrls: session.memberAvatarUrls,
-		mutable: true,
+		// 数据文件缺失的团队会话不可行内重命名（BUG-0195）：改名必败，只有删除是出口。
+		mutable: !session.dataFileMissing,
 	};
 }
 

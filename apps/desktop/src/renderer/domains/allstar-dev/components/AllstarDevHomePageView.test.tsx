@@ -63,6 +63,7 @@ const LABELS: AllstarDevHomePageModel["labels"] = {
 	renameSession: "rename session",
 	revealSessionInFolder: "reveal session data folder",
 	deleteSession: "delete session",
+	untitledTeamSession: "untitled team session",
 	cardNewSession: "new session",
 	projectConfigTitle: "project configuration",
 	projectConfigDescription: "project config description",

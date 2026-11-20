@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
+import { classifyTeamSessionRenameFailure } from "@shared/agent-teams/team-session-rename-failure";
 import type { DefaultConversationFilter } from "@shared/store/atoms";
 import {
 	archivedSessionPathsAtom,
@@ -12,6 +13,7 @@ import {
 	sessionContextMenuAtom,
 	sessionDisplayLabel,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -57,6 +59,8 @@ export interface DefaultSessionListItemView {
 	trailingAvatarUrls?: readonly string[];
 	titleExtra?: string;
 	tagColors?: readonly string[];
+	/** 数据文件缺失的团队会话（BUG-0195）：置灰呈现。 */
+	dimmed?: boolean;
 	session: SidebarConversationInfo;
 }
 
@@ -177,6 +181,7 @@ export function useDefaultSessionListModel({
 				trailingAvatarUrls: identity.trailingAvatarUrls,
 				titleExtra: identity.titleExtra,
 				tagColors: tagFilterId === null ? sessionTagColors(tags, tagColorById, session.path) : undefined,
+				...(session.kind === "agent-team" && session.dataFileMissing ? { dimmed: true } : {}),
 				session,
 			};
 		});
@@ -224,9 +229,21 @@ export function useDefaultSessionListModel({
 				.renameSession({ id: session.teamSessionId, coordinationSessionPath: session.path }, name)
 				.then(() => {
 					notifyTeamSessionsChanged(session.teamId);
+				})
+				.catch((error: unknown) => {
+					// IPC rejection 无出口会升级成 unhandled rejection（BUG-0114）；
+					// 数据文件缺失按锚点归类成「只能删除」（BUG-0195）。
+					console.error("[default-session-list] rename team session failed", error);
+					showToast({
+						variant: "error",
+						message:
+							classifyTeamSessionRenameFailure(error) === "data_file_missing"
+								? t("allstarDev.home.sessions.renameFailedDataMissing")
+								: t("sidebar.session.renameFailed"),
+					});
 				});
 		},
-		[cwd, onRenameSession],
+		[cwd, onRenameSession, t],
 	);
 	const renameDone = useCallback(() => setRenamingSessionPath(null), [setRenamingSessionPath]);
 	const select = useCallback(

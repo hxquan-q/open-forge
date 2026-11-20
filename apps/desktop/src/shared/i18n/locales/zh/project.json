@@ -56,7 +56,8 @@
 		},
 		"session": {
 			"forkedTooltip": "由其他会话分叉而来",
-			"untitledTeam": "新团队会话"
+			"untitledTeam": "新团队会话",
+			"renameFailed": "会话重命名失败，请稍后重试。"
 		},
 		"dialogs": {
 			"deleteSessionTitle": "确认删除会话",
@@ -360,7 +361,8 @@
 			"sessions": {
 				"actions": "会话操作",
 				"reveal": "打开会话数据目录",
-				"renameFailed": "会话重命名失败，请稍后重试。"
+				"renameFailed": "会话重命名失败，请稍后重试。",
+				"renameFailedDataMissing": "该会话的数据文件已丢失，无法重命名；只能删除该条目。"
 			},
 			"empty": {
 				"title": "还没有开发会话",

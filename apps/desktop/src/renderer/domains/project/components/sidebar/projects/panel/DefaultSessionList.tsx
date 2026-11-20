@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DefaultConversationFilter } from "@shared/store/atoms";
 import { DefaultSessionListView, DefaultSessionRowView } from "@vetta-org/theme-ui/project";
 import { memo, useCallback } from "react";
@@ -51,6 +52,7 @@ const DefaultSessionRow = memo(function DefaultSessionRow({
 			tagColors={item.tagColors}
 			trailingAvatarUrls={item.trailingAvatarUrls}
 			titleExtra={item.titleExtra}
+			dimmed={item.dimmed}
 			onOpenContextMenu={handleContextMenu}
 			onRename={handleRename}
 			onRenameDone={onRenameDone}

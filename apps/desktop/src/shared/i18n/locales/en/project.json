@@ -56,7 +56,8 @@
 		},
 		"session": {
 			"forkedTooltip": "Forked from another session",
-			"untitledTeam": "New team conversation"
+			"untitledTeam": "New team conversation",
+			"renameFailed": "Couldn't rename the session. Please try again later."
 		},
 		"dialogs": {
 			"deleteSessionTitle": "Delete session",
@@ -361,7 +362,8 @@
 			"sessions": {
 				"actions": "Session actions",
 				"reveal": "Open session data folder",
-				"renameFailed": "Couldn't rename the session. Please try again later."
+				"renameFailed": "Couldn't rename the session. Please try again later.",
+				"renameFailedDataMissing": "This session's data file is missing, so it can't be renamed. The only option left is to delete it."
 			},
 			"empty": {
 				"title": "No dev sessions yet",

@@ -400,6 +400,11 @@ export interface TeamSessionListItem extends TeamSessionReference {
 	readonly workspaceKind?: TeamSessionWorkspaceKind;
 	readonly workspaceId?: string;
 	readonly cwd?: string;
+	/**
+	 * 协调会话数据文件已丢失（BUG-0195）：listSessions 时按 ENOENT 实测填充，不落盘。
+	 * 缺省视为可用——旧调用方与旧记录反序列化天然兼容。
+	 */
+	readonly dataFileMissing?: boolean;
 }
 
 /** Safe renderer-facing updates plus product-neutral ordinary message events. */
