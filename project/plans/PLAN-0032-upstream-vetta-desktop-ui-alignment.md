@@ -97,9 +97,9 @@ related_tasks: [TASK-0160, TASK-0193]
 
 ### P1 工程门禁（无前置，小到中）
 
-- 移植测试卫生与断言深度守卫（[c629e7242](https://github.com/openvetta/open-vetta/commit/c629e7242)）：`check-test-hygiene.mjs`、`check-test-assertion-depth.mjs` 及棘轮基线。基线用本地现有测试重建，接入 `check:guards`、`check:quick` 与 `test:quality`；棘轮只允许变好。
-- 插件宿主转发清单合同测试（[dde5bfb2a](https://github.com/openvetta/open-vetta/commit/dde5bfb2a)、[58d368a56](https://github.com/openvetta/open-vetta/commit/58d368a56)）：P2 新增的组件开放给插件前，先让清单缺口在门禁中失败。
-- 双语发布说明（[06b431c3c](https://github.com/openvetta/open-vetta/commit/06b431c3c)）只借鉴机械校验思路，评估是否给本地 `release-notes.mjs` 加格式校验，不换结构。
+- ✅ 移植测试卫生与断言深度守卫（[c629e7242](https://github.com/openvetta/open-vetta/commit/c629e7242)）：`check-test-hygiene.mjs`、`check-test-assertion-depth.mjs` 及棘轮基线（753 文件存量快照）。接入 `check:guards` 与 `test:quality`；棘轮只允许变好。（TASK-0495）
+- ✅ 插件宿主转发清单合同测试（[dde5bfb2a](https://github.com/openvetta/open-vetta/commit/dde5bfb2a)、[58d368a56](https://github.com/openvetta/open-vetta/commit/58d368a56)）：`plugin-protocol.ts` → `plugin-protocol-contract.test.ts` 显式映射已进 `test:impact`（vitest `related` 无法覆盖 `readFileSync` 类契约测试）；清单与真实导出当前同步，无缺口。（TASK-0495）
+- ✅ 双语发布说明（[06b431c3c](https://github.com/openvetta/open-vetta/commit/06b431c3c)）只借鉴机械校验思路：`release-notes-format.mjs` 按本地四段格式重写判定集——非允许 `##`/小节外条目/占位记号/空小节判负，超长/内部引用/工程黑话打 warning 不判负。存量 7 份说明 0 problems，~144 条 warning 留待清理专项。（TASK-0496）
 
 ### P2 UI SDK 底座（依赖 P1、D1、D2；1–2k 行）
 
