@@ -85,7 +85,9 @@ description: 为 Open Forge 的功能、缺陷、重构、UI/协议/CI 合同及
 - 对纯逻辑的多组边界输入优先使用表驱动测试；对用户流程保留可读的独立场景。
 - 时间、随机数、并发和重试使用可控时钟、固定输入或显式同步点；不要用任意 `sleep` 等待。
 - 每个测试独立建立和清理状态，释放计时器、订阅、进程、临时文件和数据库连接，不依赖执行顺序。
-- 快照只用于稳定且整体形状本身就是合同的输出；不要用大面积快照掩盖关键断言。
+- 快照断言（`toMatchSnapshot`/`toMatchInlineSnapshot`）由 `check-test-hygiene` 机械禁止；稳定形状改为断言具体字段、数值或用户可见结果。
+- `.only`、`it.skip`/`it.todo`、空用例体同样被门禁拦截；live/凭据类测试确需保留 skip 时登记 `check-test-hygiene.mjs` 的 `ALLOWED_SKIPS`（带 `reviewBy`），到期复查。
+- `toHaveBeenCalled*` 断言只许降不许升，存量计入 `scripts/quality/baselines/test-assertion-baseline.json`；新增超基线须说明理由。
 
 ## Mock 与测试替身
 

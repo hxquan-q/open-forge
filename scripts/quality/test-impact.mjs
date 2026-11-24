@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Fast, task-scoped test selection for local development and coding agents.
  * CI keeps using test:changed so cross-package and cross-platform coverage stays conservative.
@@ -37,6 +38,14 @@ const PUBLIC_CONTRACT_PATTERN = /(?:^|\/)src\/(?:index\.[cm]?[jt]sx?|public-api\
 const CONTRACT_DIRECTORY_PATTERN = /(?:^|\/)(?:contracts?|runtime-contracts)(?:\/|$)/i;
 const PACKAGE_CONFIG_PATTERN =
 	/(?:^|\/)(?:package\.json|vitest\.config\.[cm]?[jt]s|vite\.config\.[cm]?[jt]s|tsconfig(?:\.[^.]+)?\.json)$/i;
+
+// 源文件 → 不通过 import 图可达、但必须随其变更运行的测试（例如 readFileSync 读源码文本的契约测试）。
+// vitest `related` 只会选 import 该文件的测试，选不中这类文件。
+const EXPLICIT_SOURCE_TESTS = new Map([
+	// 宿主向插件转发的导出清单是手写字符串：漏列会让插件在 load-definition 阶段整份失败，
+	// 契约测试比对清单与真实导出的全集。
+	["apps/desktop/src/main/plugins/plugin-protocol.ts", "src/main/plugins/plugin-protocol-contract.test.ts"],
+]);
 
 function workspaceForFile(file) {
 	return [...WORKSPACE_PACKAGES]
@@ -122,7 +131,11 @@ export function createImpactTestPlan(files, pathExists = (file) => existsSync(jo
 			continue;
 		}
 		if (TEST_FILE_PATTERN.test(relativeFile)) target.directTests.push(relativeFile);
-		else target.relatedSources.push(relativeFile);
+		else if (EXPLICIT_SOURCE_TESTS.has(file)) {
+			const explicitTest = EXPLICIT_SOURCE_TESTS.get(file);
+			if (pathExists(join(workspace.dir, explicitTest))) target.directTests.push(explicitTest);
+			else target.relatedSources.push(relativeFile);
+		} else target.relatedSources.push(relativeFile);
 	}
 
 	return {

@@ -54,6 +54,8 @@ scripts/quality/
                                Coding Agent 当前架构依赖与公开面
   run-vitest.mjs               用 Node 启动 Vitest（Windows 上禁止 Bun 拉起 worker）
   check-vitest-runner.mjs      package.json 测试脚本必须走 run-vitest.mjs
+  check-test-hygiene.mjs       禁止快照/.only/空用例体/未豁免 skip（ALLOWED_SKIPS 带 reviewBy 到期复查）
+  check-test-assertion-depth.mjs toHaveBeenCalled* 只许降不许升，基线在 baselines/test-assertion-baseline.json
   check-turbo-config.mjs       Turbo 输入、环境、入口与 Remote Cache 安全合同
   check-source-path-maps.mjs   根 tsconfig path map 必须显式覆盖 workspace 包的 types 子路径导出
   check-task-worktrees.mjs     Task ↔ Worktree 结构与活动并行范围合同
@@ -83,7 +85,7 @@ knip.config.ts                 Knip（可选）
 | `check:lint` / `check:lint:fix` | 对显式源码根执行 Biome 只读检查 / 写回，避免扫描无关目录 |
 | `check:types` | 并行执行根 `tsgo`、CLI 显式 `tsgo`、通过当前 Bun（`bun x tsc`）执行带持久增量缓存的 desktop `tsc`、docs check 与 Expo Mobile `tsc` |
 | `check:types:build-surfaces` | 使用 CLI build config 验证上游 workspace `dist/*.d.ts` 的真实消费面；要求先生成当前声明 |
-| `check:guards` | 并行执行私钥、冲突标记、包边界、Task/Project 索引与并行范围合同、当前版本 Release Notes 存在性等全量守卫 |
+| `check:guards` | 并行执行私钥、冲突标记、包边界、测试卫生与断言深度、Task/Project 索引与并行范围合同、当前版本 Release Notes 存在性等全量守卫 |
 | `check:staged` | 仅 staged Biome |
 | `check:precommit` | husky 使用的快路径 |
 | `check:quick` | 变更文件 Biome + 全量 guards；Biome 配置变化时自动回退全量 Biome |

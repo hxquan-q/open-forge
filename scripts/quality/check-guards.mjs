@@ -28,6 +28,8 @@ const steps = [
 	["scripts/quality/check-autonomy.mjs"],
 	["scripts/quality/check-glossary.mjs"],
 	["scripts/quality/check-vitest-runner.mjs"],
+	["scripts/quality/check-test-hygiene.mjs"],
+	["scripts/quality/check-test-assertion-depth.mjs"],
 	["scripts/quality/check-source-path-maps.mjs"],
 	["scripts/quality/check-task-worktrees.mjs"],
 	["scripts/quality/check-waivers.mjs"],

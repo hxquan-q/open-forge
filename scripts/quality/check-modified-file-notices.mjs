@@ -122,6 +122,7 @@ const EXCLUDED_PATH_RULES = [
 	{ pattern: /(^|\/)LICENSE$/, reason: "许可证正文" },
 	{ pattern: /^docs\/legal\//, reason: "法务原文" },
 	{ pattern: /^temp\//, reason: "未入库草稿与资产暂存" },
+	{ pattern: /^ui\//, reason: "OpenPen 界面原型草稿（JSON 设计稿，非源码）" },
 ];
 
 const NON_COMMENTABLE_EXTENSIONS = new Set([
