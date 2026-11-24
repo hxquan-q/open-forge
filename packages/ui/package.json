@@ -20,6 +20,14 @@
 		"./button-group": {
 			"types": "./src/button-group.tsx",
 			"import": "./src/button-group.tsx"
+		},
+		"./step-slider": {
+			"types": "./src/step-slider.tsx",
+			"import": "./src/step-slider.tsx"
+		},
+		"./stepper": {
+			"types": "./src/stepper.tsx",
+			"import": "./src/stepper.tsx"
 		}
 	},
 	"files": ["src"],

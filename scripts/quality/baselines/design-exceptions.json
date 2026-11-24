@@ -12,6 +12,9 @@
 			"D03": 1,
 			"D05": 1,
 			"D07": 1
+		},
+		"packages/ui/src/stepper.tsx": {
+			"D03": 2
 		}
 	}
 }

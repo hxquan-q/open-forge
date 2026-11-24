@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 开放给**插件**的宿主 UI 组件（`@vetta-org/theme-ui/plugin-ui`）。
  *
