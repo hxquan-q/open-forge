@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";

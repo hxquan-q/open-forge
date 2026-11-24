@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { brandIconUrl } from "@shared/brand-assets";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

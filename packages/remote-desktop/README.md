@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/remote-desktop
 
 Platform-neutral contracts and browser WebRTC orchestration for Vetta screen viewing and remote input.

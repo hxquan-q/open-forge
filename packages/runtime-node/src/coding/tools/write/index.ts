@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export { WRITE_TOOL_DESCRIPTION } from "./description.js";
 export { createWriteToolRegistration } from "./registration.js";
 export {

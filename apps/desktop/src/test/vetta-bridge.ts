@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * 测试环境的 window.vetta 桥基线。
  *

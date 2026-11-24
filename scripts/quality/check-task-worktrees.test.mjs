@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { parseTaskDocument } from "../worktree/contract.mjs";
 import { findTaskTreeProblemsFromTasks } from "./check-task-worktrees.mjs";

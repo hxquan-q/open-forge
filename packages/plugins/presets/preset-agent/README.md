@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # @vetta/plugin-preset-agent
 
 ## Context Boundary

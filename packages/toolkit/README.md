@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/toolkit
 
 Monorepo-wide **Node utilities** — not product business logic.

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ChildProcess } from "node:child_process";
 import { setImmediate } from "node:timers";
 import { attributeProcessPid, recordProcessCrash, registerProcessRole } from "../app-monitor/process-health.js";

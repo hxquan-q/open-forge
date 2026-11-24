@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { getTodoItemsForSession, todoItemsBySessionAtom } from "@shared/store/atoms";
 import type { TodoItem } from "@shared/store/todo-atoms";
 import type { TodoTabPanelViewLabels } from "@vetta-org/theme-ui/activity";

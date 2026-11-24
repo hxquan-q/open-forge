@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export interface PlaywrightAttachFailureDetails {
   sessionName: string;
   status: number | null;

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Enforce repository-wide Vitest infrastructure policy:
  * - test scripts launch through Node via scripts/quality/run-vitest.mjs

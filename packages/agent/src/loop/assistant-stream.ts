@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type AssistantMessage, type Context, type EventStream, type Message, streamSimple } from "@vetta/ai";
 import { salvageTextToolCalls } from "../salvage-text-tool-calls.js";
 import { isSilentAssistantMessage } from "../silent-turn.js";

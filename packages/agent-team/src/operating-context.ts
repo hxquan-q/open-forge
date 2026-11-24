@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TeamRosterSnapshot } from "./collaboration.js";
 import { stableTeamEventId } from "./context-projector.js";
 

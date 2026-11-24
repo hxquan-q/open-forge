@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export type { ActivityStatusDotProps, ActivityStatusDotTone } from "./ActivityStatusDot";
 export { ACTIVITY_STATUS_DOT_CSS, ActivityStatusDot, ActivityStatusDotStyles } from "./ActivityStatusDot";
 export type { AvatarStackViewProps } from "./AvatarStackView";

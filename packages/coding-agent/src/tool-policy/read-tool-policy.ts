@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 const SKILL_MARKDOWN_FILENAME = "SKILL.md";
 const SKILL_DIRECTORY_SEGMENT = "skills";
 

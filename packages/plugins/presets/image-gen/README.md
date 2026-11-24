@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 图像生成（image-gen）
 
 类 Grok 的文生图 / 图改图系统插件。

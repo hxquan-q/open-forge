@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";

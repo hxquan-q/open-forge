@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AbilityItem, AbilityScope } from "../types";
 import { isMarketAbilityListed } from "./merge-ability-catalogs";
 

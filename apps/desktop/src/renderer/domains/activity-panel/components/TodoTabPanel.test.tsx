@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { todoItemsBySessionAtom } from "@shared/store/atoms";

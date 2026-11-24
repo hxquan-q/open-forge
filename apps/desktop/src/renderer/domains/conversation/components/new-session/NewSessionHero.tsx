@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { motion } from "motion/react";
 import { cn } from "@shared/lib/utils";
 import { useThemeComponent } from "@vetta-org/theme-sdk";

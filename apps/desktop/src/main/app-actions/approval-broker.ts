@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import type { WebContents } from "electron";
 import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";

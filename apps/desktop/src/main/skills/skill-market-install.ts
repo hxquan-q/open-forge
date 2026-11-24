@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 从 Open Forge 能力市场按 slug 下载并安装 skill/scene。
  * 市场下载可匿名；有登录 token 时附带 Authorization。

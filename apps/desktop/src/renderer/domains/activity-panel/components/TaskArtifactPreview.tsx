@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import type { DesktopArtifactView } from "@preload/api-types/task";
 import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";

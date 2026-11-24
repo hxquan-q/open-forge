@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Kanban 看板
 
 跨项目、跨会话的需求总览与派单入口。外置插件（external），构建 zip 后由用户安装。

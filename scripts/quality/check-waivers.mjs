@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Validate rule waivers in project/decisions/waivers/ (TASK-0111).
  *

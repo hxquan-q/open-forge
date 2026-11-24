@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: Runtime
 
 > 本包属于 **Runtime Team**，是平台无关的 MCP 协议与状态协调层。

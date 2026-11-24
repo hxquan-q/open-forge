@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";

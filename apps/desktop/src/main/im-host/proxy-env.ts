@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Proxy configuration for the im-gateway sidecar.
  *

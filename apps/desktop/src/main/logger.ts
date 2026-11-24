@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join, parse } from "node:path";
 import { inspect } from "node:util";

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: AI Core
 
 > 本包属于 AI Core，所有修改同时服从根 `AGENTS.md` 与 ADR-0077。

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import { createTeamListMembersTool } from "../src/runtime-tools.js";
 import { createTeamReadSharedHistoryTool } from "../src/shared-history-tool.js";

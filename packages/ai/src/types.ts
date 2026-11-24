@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Api, Context, ModelCapabilities, Provider, ThinkingBudgets, ThinkingLevel } from "./protocol/index.js";
 import type { AssistantMessageEventStream } from "./utils/event-stream.js";
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { atom } from "jotai";
 import type { ExecutionModeOverride, SelectedSkill, SessionExecutionMode } from "./chat-atoms";
 

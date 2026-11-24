@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
 import type { McpAppExecutionHost } from "../apps/index.js";
 import { isMcpAppToolVisibleToModel } from "../protocol/index.js";

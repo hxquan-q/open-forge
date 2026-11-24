@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { StreamFn } from "@vetta/agent-core";
 import {
 	type Api,

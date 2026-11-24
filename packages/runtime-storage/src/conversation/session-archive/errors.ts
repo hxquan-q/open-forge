@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { CONVERSATION_STORAGE_ERROR_CODES, ConversationStorageError } from "../errors.js";
 
 export const SESSION_ARCHIVE_ERROR_CODES = {

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { Type } from "@sinclair/typebox";
 import type { CodingAgentSessionToolDefinition } from "@vetta/coding-agent/sdk";
 

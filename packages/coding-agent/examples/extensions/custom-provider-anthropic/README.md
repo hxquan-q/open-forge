@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # vetta-extension-custom-provider-anthropic
 
 ## Context Boundary

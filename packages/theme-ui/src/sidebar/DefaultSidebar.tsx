@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 import { useThemeComponent } from "@vetta-org/theme-sdk";
 import type { SidebarClassNames, SidebarModel } from "@vetta-org/theme-sdk/sidebar";

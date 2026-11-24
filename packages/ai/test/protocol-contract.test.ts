@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
 	AI_ERROR_CODES,

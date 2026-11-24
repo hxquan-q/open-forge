@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { cn } from "@shared/lib/utils";
 import { AgentAvatarView } from "@vetta-org/theme-ui/chat";
 import { useId, useState } from "react";

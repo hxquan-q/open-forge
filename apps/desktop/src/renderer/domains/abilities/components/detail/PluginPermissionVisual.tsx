@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginPermission } from "@preload/api";
 import { cn } from "@vetta-org/ui";
 import { useTranslation } from "react-i18next";

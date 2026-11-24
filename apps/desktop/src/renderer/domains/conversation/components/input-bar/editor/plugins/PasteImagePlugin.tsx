@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { activeSessionAtom } from "@shared/store/atoms";
 import { recordInputImagesAdded } from "@shared/lib/app-monitor-events";

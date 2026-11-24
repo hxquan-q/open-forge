@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export const RENDER_CHART_TOOL_DESCRIPTION =
 	"Render one to four interactive Chart.js charts below the current conversation message. " +
 	"Use when the user asks to draw, plot, or visualize numbers/trends in chat (for example monthly trends), " +

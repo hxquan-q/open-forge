@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import { AI_ERROR_CODES, AIError, getAIErrorDetails } from "@vetta/ai";
 import { describe, expect, it } from "vitest";

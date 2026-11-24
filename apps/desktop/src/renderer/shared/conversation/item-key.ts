@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Returns the stable DOM key for a rendered conversation item.
  *

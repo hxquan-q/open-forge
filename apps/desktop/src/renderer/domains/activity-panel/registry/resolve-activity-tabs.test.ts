@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { applyTabOrder, isPluginTabOnBar, pluginAttachKey, resolveActivityTabs } from "./resolve-activity-tabs";
 import type { ActivityTabDefinition, ActivityTabMeta } from "./types";

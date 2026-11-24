@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { MessageFeedNavigationRecipe } from "@shared/components/message-feed/MessageFeedNavigationRecipe";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

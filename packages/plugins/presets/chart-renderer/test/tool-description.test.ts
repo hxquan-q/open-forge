@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { RENDER_CHART_TOOL_DESCRIPTION } from "../src/tool-description";
 

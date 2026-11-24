@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { constants } from "node:fs";
 import { access, readFile, writeFile } from "node:fs/promises";
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";

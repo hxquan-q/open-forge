@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { SegmentedControl } from "@vetta-org/theme-ui/shared";
 import { Button } from "@vetta-org/ui";
 import { motion, useReducedMotion } from "motion/react";

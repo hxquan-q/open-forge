@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { loadToolRoutingGoldens, type ToolRoutingGolden } from "./goldens.js";
 import { isolationViolations } from "./isolation.js";
 import { firstToolViolates } from "./project-trace.js";

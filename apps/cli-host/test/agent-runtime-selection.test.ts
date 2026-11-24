@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";

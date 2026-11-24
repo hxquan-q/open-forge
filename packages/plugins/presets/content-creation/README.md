@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 内容创作（content-creation）
 
 Vetta 的系统 preset 插件，用节点画布组织提示词、素材生成与处理流程，并通过可扩展编排工作区完成内容创作。

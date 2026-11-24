@@ -22,7 +22,8 @@ function readModeFile(file: string): { id: string; body: string } {
 	const id = /^id:\s*(\S+)$/m.exec(frontmatter)?.[1];
 	if (!id) throw new Error(`${file} 缺少 id`);
 	// 与 build-agent-modes 一致：开发声明头与 partial 引用都在此展开/剥离后再比对。
-	const stripNotice = (text: string) => text.replace(/^\s*<!-- Modified by The Open Forge contributors\. -->\s*/, "");
+	const stripNotice = (text: string) =>
+		text.replace(/^\s*<!-- (?:Modified|Copyright)(?: by)? The Open Forge contributors\. -->\s*/, "");
 	const body = stripNotice(normalized.slice(end + 4)).replace(/^\{\{>\s*([a-z0-9-]+)\s*\}\}$/gm, (_match, name) =>
 		stripNotice(readFileSync(join(modesDir, "partials", `${name}.md`), "utf-8")).trim(),
 	);

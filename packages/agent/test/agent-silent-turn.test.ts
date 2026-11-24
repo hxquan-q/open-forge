@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { AssistantMessage, Context } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import { agentLoop } from "../src/agent-loop.js";

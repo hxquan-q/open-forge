@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";

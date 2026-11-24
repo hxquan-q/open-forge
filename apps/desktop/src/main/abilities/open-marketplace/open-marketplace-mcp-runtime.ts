@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { chmod, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";

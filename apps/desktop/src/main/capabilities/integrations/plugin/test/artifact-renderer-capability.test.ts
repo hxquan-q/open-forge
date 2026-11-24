@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordingAccessFactory } from "./helpers/recording-access-factory.js";
 

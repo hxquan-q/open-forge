@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Global Slot Demo Plugin
 
 This example demonstrates a trusted desktop UI plugin that renders through Vetta's global slot.

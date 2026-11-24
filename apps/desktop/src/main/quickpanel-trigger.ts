@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 全局键盘手势共享监听器（uiohook 宿主 worker 线程的消费者管理）。
 // Electron globalShortcut 无法监听裸功能键的双击/双键同按，这里用 uiohook-napi 做原生全局键盘监听。
 // uIOhook 不在主线程运行：uiohook-napi ≤1.5.5 的 hook_enable() 存在启动竞态死锁，会把**调用

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { DeepSeekModel } from "deepeval/models";
 import { evalBaseUrl, evalJudgeModelId } from "./env.js";
 

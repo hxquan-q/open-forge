@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: Desktop Runtime
 
 > 本包是 Desktop 平台宿主层，不属于宿主无关的 `runtime-*` 协议包。

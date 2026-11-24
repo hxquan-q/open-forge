@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * renderer 侧 Open Forge 云服务 UI 入口。
  *

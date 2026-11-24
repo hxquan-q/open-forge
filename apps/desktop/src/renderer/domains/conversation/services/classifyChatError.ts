@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 把 provider / 网关吐出来的原始错误串归成有限几类，供消息流里的错误卡选择
  * 图标、人话文案与恢复动作。

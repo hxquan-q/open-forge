@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { JSX } from "react";
 import { lazy, Suspense } from "react";
 import type { AchievementPromotionBadge3DProps } from "./AchievementPromotionBadge3D";

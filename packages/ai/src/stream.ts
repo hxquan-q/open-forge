@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import "./providers/register-builtins.js";
 import "./utils/http-proxy.js";
 

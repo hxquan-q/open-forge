@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
 import { SkillTypeIcon } from "@vetta-org/theme-ui/skills";
 import { motion } from "motion/react";

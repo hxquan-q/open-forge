@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 新增 Monorepo 包（TypeScript workspace）
 
 先确定归属：可交付的应用放 `apps/*`，可复用模块放 `packages/*`（见 [`AGENTS.md`](../AGENTS.md) 的目录约定）。本文以新增 `packages/*` 下的 `@vetta/*` 包为例；放到 `apps/*` 时把下文路径中的 `packages` 换成 `apps` 即可。

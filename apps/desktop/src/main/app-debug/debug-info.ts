@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { z } from "zod";
 import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import type { DebugDefinition, JsonValue } from "./types.js";

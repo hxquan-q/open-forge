@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { McpClientHandle } from "@vetta/runtime-mcp/client";
 import {
 	isStdioServerConfig,

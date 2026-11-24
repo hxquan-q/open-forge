@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { AnimatePresence, motion } from "motion/react";
 import type { JSX } from "react";
 import { Popover, PopoverContent, PopoverTrigger, cn } from "@vetta-org/ui";

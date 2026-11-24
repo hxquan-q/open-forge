@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { SESSION_ARCHIVE_ERROR_CODES, SessionArchiveError } from "./errors.js";
 
 export interface SafePathOptions {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createConversationAgentMessage, type ErrorBlock } from "@shared/conversation";
 import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 

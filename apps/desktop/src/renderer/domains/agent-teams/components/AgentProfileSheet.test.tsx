@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
 import type { AgentBlueprint, AgentProfile } from "@vetta/agent-team";

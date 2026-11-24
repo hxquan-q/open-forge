@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { isAutomationHostEventName } from "@vetta/coding-agent/runtime";
 import { ipcMain, type WebContents } from "electron";
 import { emitAutomationHostEvent } from "../scheduler/automation-event-dispatcher.js";

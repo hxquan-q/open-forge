@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { updateProfile } from "@shared/lib/api";
 import { authTokenAtom, authUserAtom, subscriptionStatusAtom } from "@shared/store/auth-atoms";
 import { useAtom, useAtomValue } from "jotai";

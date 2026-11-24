@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Provider } from "./identity.js";
 
 export const AI_ERROR_CODES = {

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { PerfSessionSwitchProfiler } from "@shared/lib/perf-session-switch-profiler";
 import { activeSessionAtom } from "@shared/store/atoms";
 import { RendererMarkdownScope } from "@shared/components/RendererMarkdownScope";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import type { ImBridgeConfig } from "@preload/api";
 import { render } from "@testing-library/react";

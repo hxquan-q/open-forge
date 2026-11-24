@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/ecosystem-adapter
 
 外部 Agent 生态兼容层。包内的通用能力与具体生态 profile 分离：

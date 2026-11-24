@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Development-only Agent eval sidecar.
  * Does not run during check / test:changed / husky.

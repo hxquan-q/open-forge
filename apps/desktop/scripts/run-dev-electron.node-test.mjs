@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveDevPluginIds, resolveDevProcessEnvironment } from "./run-dev-electron.mjs";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * TypeScript counterpart of vetta-im-gateway/internal/hostproto.
  *

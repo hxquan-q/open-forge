@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionExecutionMode } from "@vetta/runtime-core";
 import type { ExecutionModeOverride, SelectedSkillRef } from "./shared.js";
 

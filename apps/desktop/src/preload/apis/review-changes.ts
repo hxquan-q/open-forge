@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { IpcRenderer } from "electron";
 import type { DesktopApi } from "../api.js";
 

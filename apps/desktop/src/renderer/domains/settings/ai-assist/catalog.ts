@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Surfaces that offer the “Let Open Forge configure for you” entry.
  * Includes settings tabs and main feature pages (knowledge base, batch tasks, automation).

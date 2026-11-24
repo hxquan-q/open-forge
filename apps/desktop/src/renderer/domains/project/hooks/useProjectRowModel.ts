@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Project, ProjectType } from "@shared/store/atoms";
 import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
 import type { ProjectRowViewProps } from "@vetta-org/theme-ui/project";

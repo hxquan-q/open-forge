@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 export interface ProjectedToolCall {
 	readonly name: string;
 	readonly input: Record<string, unknown>;

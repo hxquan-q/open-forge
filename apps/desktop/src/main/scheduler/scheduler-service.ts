@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { stat } from "node:fs/promises";
 import { normalizeAutomationTaskTrigger, normalizeUnattendedPermissionTiers } from "@vetta/coding-agent/runtime";
 import type { RuntimeHost } from "@vetta/runtime-core";

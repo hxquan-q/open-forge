@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import { ChatHeaderActions } from "@vetta-org/theme-ui/chat";
 import { BackgroundTasksBadge } from "../BackgroundTasksBadge";

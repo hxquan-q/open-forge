@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TFunction } from "i18next";
 import { describe, expect, it } from "vitest";
 import type { PluginAbility, SkillAbility } from "../types";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createConversationUserMessage, resolveConversationAgentText } from "@shared/conversation";
 import type { ChatTimelineItem, ErrorBlock } from "@shared/store/atoms";
 import type { AssistantMessage } from "@vetta/ai";

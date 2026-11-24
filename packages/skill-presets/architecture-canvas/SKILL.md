@@ -2,6 +2,7 @@
 name: architecture-canvas
 description: Draw an architecture, module, or system diagram as a Canvas HTML artifact with inline SVG. Use when the user asks for 架构图, 模块图, architecture diagram, or system map — not for live page inspection or a design mockup that should become product code.
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Architecture canvas
 

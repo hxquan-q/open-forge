@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/markdown
 
 博客正文的共享 Markdown 渲染器。`apps/admin` 的编辑预览与 `apps/site` 的公众页共用同一份实现与样式，保证后台看到的效果就是线上效果。

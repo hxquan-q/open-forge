@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useBottomPanelInstance } from "../registry/instance-context";
 import { TerminalSurface } from "../terminal/TerminalSurface";
 import type { BottomPanelBuiltin } from "./types";

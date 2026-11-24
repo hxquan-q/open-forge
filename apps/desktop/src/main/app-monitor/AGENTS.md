@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # App Monitor Rules
 
 > 本目录规则适用于应用监控实现。监控不是日志记录，也不是业务流程的一部分。

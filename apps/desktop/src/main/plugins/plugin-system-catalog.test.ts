@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";

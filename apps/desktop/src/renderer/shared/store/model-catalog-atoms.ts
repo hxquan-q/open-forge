@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ModelsConfigData } from "@preload/api";
 import { atom } from "jotai";
 

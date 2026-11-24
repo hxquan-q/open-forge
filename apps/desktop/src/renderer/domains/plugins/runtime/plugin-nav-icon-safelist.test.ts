@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";

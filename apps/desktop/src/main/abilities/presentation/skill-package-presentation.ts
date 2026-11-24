@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFileSync, statSync } from "node:fs";
 import { parse } from "yaml";
 import { extractFrontmatter } from "../../skills/skill-frontmatter.js";

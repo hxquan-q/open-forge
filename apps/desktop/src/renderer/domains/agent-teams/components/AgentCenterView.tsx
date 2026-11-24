@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";
 import { Button } from "@vetta-org/ui";
 import { useCallback, useEffect, useMemo } from "react";

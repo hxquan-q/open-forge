@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 指引浮条里「不再提示」曾嵌在正文按钮内部，命中 axe `nested-interactive`

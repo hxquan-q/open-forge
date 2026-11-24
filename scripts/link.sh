@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified by The Open Forge contributors.
 
 set -euo pipefail
 

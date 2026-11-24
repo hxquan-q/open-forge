@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { SidebarTopBar as ThemeSidebarTopBar } from "@vetta-org/theme-ui/sidebar";
 import { useTranslation } from "react-i18next";
 import { brandIconUrl } from "@shared/brand-assets";

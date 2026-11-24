@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { toArrayBufferBacked } from "./bytes.js";
 import { SESSION_ARCHIVE_ERROR_CODES, SessionArchiveError } from "./errors.js";
 import { DEFAULT_SCRYPT_PARAMS, type ScryptParams, scrypt } from "./scrypt.js";

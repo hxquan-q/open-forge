@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 空态主 CTA 是调用方下发的行为合同：过滤中 →「清除筛选」（宿主持有过滤态时回调

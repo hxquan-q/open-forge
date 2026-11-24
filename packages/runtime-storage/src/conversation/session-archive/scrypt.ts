@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * RFC 7914 scrypt (platform-neutral). Used only to derive AES-256 keys for archives.
  */

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
 import type { ToolCallBlock } from "@shared/store/atoms";

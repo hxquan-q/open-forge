@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # App Actions 开发说明
 
 ## Action 的作用

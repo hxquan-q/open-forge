@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: Coding Agent
 
 > 本包是 Coding Agent 的产品组合层。所有修改必须同时服从仓库根 `AGENTS.md`；本文件只补充本包的架构与长期演进约束。

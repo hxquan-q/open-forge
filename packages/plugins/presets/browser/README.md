@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 浏览器操作（Browser Use）
 
 Browser Use 为 Agent 提供低上下文的 `agent-browser` CLI Skill，并提供运行时安装与状态面板。插件代码仍可通过 Desktop 的 `ctx.browser` API 使用宿主浏览器能力；Agent CLI 与 Plugin API 不共享活跃 session。

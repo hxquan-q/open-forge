@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # im-gateway
 
 > Drive your local vetta coding-agent from IM platforms (Feishu first).

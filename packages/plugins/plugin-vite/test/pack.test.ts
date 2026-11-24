@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";

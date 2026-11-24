@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: AI Core
 
 > 本包属于 **AI Core Team**，同组包：`packages/agent`、`packages/tui`、`packages/web-ui`

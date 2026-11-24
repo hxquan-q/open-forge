@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import type { McpConfigData } from "../../preload/api-types/mcp.js";
 import { McpSettingsService } from "./mcp-settings-service.js";

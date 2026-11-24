@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type AIErrorDetails, AIStreamProtocolError } from "./errors.js";
 import type { FailedStopReason, SuccessfulStopReason } from "./finish-reason.js";
 import type { AssistantMessage } from "./message.js";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { decodeSessionEvent } from "../../shared/session-event-codec.js";

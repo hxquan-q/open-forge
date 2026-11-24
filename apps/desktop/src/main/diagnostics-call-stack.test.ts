@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import { sampleJavaScriptCallStack } from "./diagnostics.js";
 

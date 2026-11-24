@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 侧边栏整栏内容的 landmark 合同：axe `region`（BUG-0039）要求可见内容落在地标内。

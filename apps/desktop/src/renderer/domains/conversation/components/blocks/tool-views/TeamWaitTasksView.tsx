@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { ToolCallBlock } from "@shared/store/atoms";
 import type { TeamSessionActivity } from "@vetta/agent-team";
 import { useTranslation } from "react-i18next";

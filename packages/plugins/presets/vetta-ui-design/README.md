@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # @vetta/plugin-vetta-ui-design
 
 ## Context Boundary

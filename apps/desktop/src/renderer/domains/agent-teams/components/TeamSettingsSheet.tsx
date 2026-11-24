@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useAgentAvatarResolver } from "@shared/agent-teams/agent-avatar";
 import { ModelSelect } from "@shared/components/ModelSelect";
 import { useModelOptions } from "@shared/components/ModelSelect/useModelOptions";

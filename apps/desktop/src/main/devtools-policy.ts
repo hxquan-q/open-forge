@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 生产环境 DevTools 门禁的唯一事实源。
 //
 // 打包版把 DevTools 入口暴露给终端用户会形成 self-XSS 面：renderer 虽然开了

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Plugin Development Rules
 
 本目录中的包统一属于仓库根 workspace。创建或修改以下内容时，必须遵守本文件：

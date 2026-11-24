@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { DesktopMcpAppSurface } from "@preload/api";
 import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 

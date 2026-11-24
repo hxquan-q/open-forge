@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: Runtime
 
 > 本包属于 Runtime 能力域，所有修改同时服从根 `AGENTS.md` 与 ADR-0077。

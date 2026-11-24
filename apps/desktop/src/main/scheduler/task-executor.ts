@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createCodingAgentRuntimeSessionSelection } from "@vetta/coding-agent/composition";
 import type { RuntimeHost, SessionEvent } from "@vetta/runtime-core";
 import { formatScheduleSessionName } from "../../shared/scheduled-session.js";

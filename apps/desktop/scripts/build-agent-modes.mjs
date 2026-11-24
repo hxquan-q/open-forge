@@ -26,7 +26,7 @@ function parseMd(raw) {
 
 /** 开发声明头不进入产品提示词（等价于 TS 文件的注释声明）。 */
 function stripNotice(body) {
-	return body.replace(/^\s*<!-- Modified by The Open Forge contributors\. -->\s*/, "");
+	return body.replace(/^\s*<!-- (?:Modified|Copyright)(?: by)? The Open Forge contributors\. -->\s*/, "");
 }
 
 const files = readdirSync(modesDir)

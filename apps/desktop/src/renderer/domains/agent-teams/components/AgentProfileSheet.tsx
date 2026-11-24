@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useAgentAvatarResolver } from "@shared/agent-teams/agent-avatar";
 import type { AgentBlueprint, AgentProfile, AgentProfileUpdateImpact } from "@vetta/agent-team";
 import { AgentAvatarView } from "@vetta-org/theme-ui/chat";

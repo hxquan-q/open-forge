@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Security Probe Plugin
 
 外置安全探针插件，用于审计 Desktop 插件系统的信任边界、权限门控与隔离缺陷。

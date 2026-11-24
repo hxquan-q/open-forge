@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SubscriptionStatus } from "@preload/api.js";
 import { logoutOnServer } from "@shared/lib/api";
 import { atom } from "jotai";

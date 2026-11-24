@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { ROUTING_EVAL_TOOL_NAMES } from "./fake-tools.js";
 
 export interface EvalIsolationSnapshot {

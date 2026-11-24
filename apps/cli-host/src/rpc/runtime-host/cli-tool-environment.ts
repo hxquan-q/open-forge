@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {

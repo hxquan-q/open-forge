@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { readFile, rm, stat } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";

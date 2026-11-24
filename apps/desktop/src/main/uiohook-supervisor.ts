@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // uiohook 宿主 worker 线程的监督器：spawn / 看门狗 / 重试 / terminate。
 // 背景见 uiohook-worker.ts 头注释——uiohook-napi 启动竞态死锁只会冻结 worker 线程，
 // 这里以「启动超时即终止重拉」兜底，Electron 主线程 UI 永不因此阻塞。

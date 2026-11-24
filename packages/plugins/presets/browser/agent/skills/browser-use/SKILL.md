@@ -2,6 +2,7 @@
 name: browser-use
 description: Install and operate the agent-browser CLI for interactive pages, forms, dashboards, and multi-account media workflows.
 ---
+<!-- Modified by The Open Forge contributors. -->
 
 # Browser Use
 

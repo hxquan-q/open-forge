@@ -1,3 +1,4 @@
+# Copyright The Open Forge contributors.
 """MASEval sidecar: system-as-unit wrap of the isolated Desktop Agent session.
 
 The Python adapter shells out to the shared Bun case runner. It does not import

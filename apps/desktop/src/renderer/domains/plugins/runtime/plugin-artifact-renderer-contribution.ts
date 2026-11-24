@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { InstalledPlugin } from "@preload/api";
 import type { ArtifactRendererResourceBinding, RegisteredArtifactRenderer } from "@shared/store/atoms";
 import type { PluginArtifactRendererContribution, PluginArtifactRendererSource } from "@vetta-org/plugin-sdk";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DefaultSidebar as ThemeDefaultSidebar } from "@vetta-org/theme-ui/sidebar";
 import { useTranslation } from "react-i18next";
 import type { SidebarModel, SidebarProps } from "./types";

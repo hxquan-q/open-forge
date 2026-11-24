@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

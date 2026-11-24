@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeObservationPublisher, RuntimeSessionValueIndex } from "@vetta/runtime-core";
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
 import type { ModelCallContributionContext } from "@vetta/runtime-core/kernel";

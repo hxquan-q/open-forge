@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";

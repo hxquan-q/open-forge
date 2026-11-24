@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Enforce conformance-suite coverage for cross-boundary protocols (TASK-0112).
  *

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join, normalize, resolve } from "node:path";
 import AdmZip from "adm-zip";

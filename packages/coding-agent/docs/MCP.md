@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # MCP
 
 连接外部 MCP server，工具自动进入模型 tool list。

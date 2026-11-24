@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DEFAULT_IM_CONVERSATION_CWD } from "../ipc/fs.js";
 import { getAppLogger } from "../logger.js";
 import { probeModelProvider } from "../models/probe.js";

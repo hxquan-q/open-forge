@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ToolResultReview } from "@vetta/runtime-storage/conversation";
 import type { ToolPathHost } from "../../shared/path-resolution.js";
 import type { ReviewSnapshotBinding } from "../../shared/review-capture.js";

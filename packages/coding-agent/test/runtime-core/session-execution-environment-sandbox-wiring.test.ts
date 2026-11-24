@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // ADR-0133 §5(TM-07):mode flip 时 session runtime 调 sandbox.clearSessionGrants 清本会话
 // grant 缓存。session-execution-runtime.test.ts 的 fixture 手工覆盖了 sandbox 字段,锁定不到
 // Node SDK 环境的这处生产接线——若有人从 node-session-execution-environment.ts 删掉它,

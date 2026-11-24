@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Toolkit Development Rules
 
 本文件适用于 `packages/toolkit/` 及其全部子目录。

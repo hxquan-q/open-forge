@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 列表分组：按分类聚合，另把随 App 分发的内置能力单独成组。
  *

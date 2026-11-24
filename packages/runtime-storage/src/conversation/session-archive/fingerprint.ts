@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Canonical JSON fingerprint with identity-key aliasing.
  * `sessionId` / `conversationId` collapse to `__session__` so the same

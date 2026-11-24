@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { afterAll, expect, it } from "vitest";
 import { isLiveEvalEnabled, requireLiveEvalKey } from "../harness/env.js";
 import { loadToolRoutingGoldens } from "../harness/goldens.js";

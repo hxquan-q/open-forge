@@ -2,6 +2,7 @@
 name: report-canvas
 description: Produce a standalone report, audit board, or long-form analysis as a Canvas artifact. Use when the user asks for a report, 报告, 审计看板, or a deliverable that should live beside chat — not when they only want a short chat answer or to inspect a live web page.
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Canvas report
 

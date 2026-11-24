@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-telemetry
 
 Minimal telemetry contract for runtime and host packages.

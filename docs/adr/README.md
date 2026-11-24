@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 架构决策记录（ADR）
 
 ## 编号规则

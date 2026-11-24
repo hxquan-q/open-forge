@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * ADR-0133 §2 fail-closed:沙箱不可用时要落到哪一种问题,便于按 kind 分流诊断。
  * 只保留 createToolSet 装配阶段实际可达的两种;tool 执行期的 spawn/授权失败

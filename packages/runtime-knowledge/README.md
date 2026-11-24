@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-knowledge
 
 Runtime-owned Knowledge capability for Agent hosts.

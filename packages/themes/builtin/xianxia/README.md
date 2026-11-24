@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # @vetta/theme-xianxia
 
 ## Context Boundary

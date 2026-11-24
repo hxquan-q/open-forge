@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeResourceContext, RuntimeSessionObservationEvent } from "@vetta/runtime-core";
 import type { AgentSession, ModelCallContributionContext, SessionContextRecord } from "@vetta/runtime-core/kernel";
 import { createNodeSandboxCodingToolEnvironment, type ForegroundCommandOperations } from "@vetta/runtime-node/coding";

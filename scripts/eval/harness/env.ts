@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { loadEvalDotEnv } from "./load-dotenv.js";
 
 // Allow suites launched outside run.mjs to pick up scripts/eval/.env.

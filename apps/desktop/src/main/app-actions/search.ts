@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DESKTOP_BRAND } from "../../shared/desktop-brand.js";
 import type { ActionDefinition, ActionSearchResult, JsonValue } from "./types.js";
 

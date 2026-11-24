@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { access } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";

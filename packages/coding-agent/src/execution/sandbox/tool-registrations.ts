@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { CodingToolRegistration } from "@vetta/runtime-tools";
 import type { CodingAgentSandboxEnvironment } from "../../composition/contracts/session-execution-environment.js";
 import type { CodingAgentSandboxAuthorizationPort } from "./authorization-contract.js";

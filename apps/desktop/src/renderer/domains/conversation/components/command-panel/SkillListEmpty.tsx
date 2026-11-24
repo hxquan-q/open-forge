@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Button } from "@shared/components/ui/button";
 import { motion } from "motion/react";
 import type { SkillListEmptyAction, SkillListLabels } from "./types";

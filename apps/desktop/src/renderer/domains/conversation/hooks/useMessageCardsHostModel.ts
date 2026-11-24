@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ContentBlock, ConversationAgentMessageViewModel } from "@shared/conversation";
 import { resolveConversationAgentText } from "@shared/conversation";
 import { resolvePluginIconNode } from "@shared/lib/plugin-icon";

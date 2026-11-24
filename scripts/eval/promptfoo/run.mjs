@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Promptfoo sidecar: assertion matrix over the isolated coding-agent session.
  * Does not share traces, write ~/.promptfoo, or login to Promptfoo Cloud.

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 This is a Kotlin Multiplatform project targeting Android.
 
 * [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.

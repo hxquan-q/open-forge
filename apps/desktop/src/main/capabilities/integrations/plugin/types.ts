@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { CapabilityAccessHandle } from "@vetta-org/capability-sdk";
 
 export const PLUGIN_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ChatConversationItem, ChatTimelineItem } from "@shared/store/atoms";
 import { reconcileHistoryWithLiveTerminalErrors } from "./terminal-error-reconciliation";
 

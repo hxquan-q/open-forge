@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ToolResultReview } from "@vetta/runtime-storage/conversation";
 
 export interface ToolEventInputBase {

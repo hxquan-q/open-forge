@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 import { cn } from "@vetta-org/ui";
 import { isMac } from "../utils/platform";

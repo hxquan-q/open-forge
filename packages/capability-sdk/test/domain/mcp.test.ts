@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { CAPABILITY_ERROR_CODES, CAPABILITY_PREFIXES } from "../../src/contracts.js";
 import { DOMAIN_MCP_CAPABILITIES, DOMAIN_MCP_CAPABILITY_CATALOG, MCP_SERVER_TYPES } from "../../src/domain.js";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";

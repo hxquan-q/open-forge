@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";

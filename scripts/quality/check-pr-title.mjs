@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Validate a PR title against `<type>(<scope>): <description>` (TASK-0114).
  *

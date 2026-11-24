@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # @vetta/plugin-media-viewer
 
 ## Context Boundary

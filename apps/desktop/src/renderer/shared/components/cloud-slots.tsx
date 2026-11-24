@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Open Forge 云服务 UI 挂载点（宿主侧）。
  *

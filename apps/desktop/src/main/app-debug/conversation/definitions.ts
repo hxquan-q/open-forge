@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionHistoryInfo } from "@vetta/runtime-core";
 import { DESKTOP_BRAND } from "../../../shared/desktop-brand.js";
 import {

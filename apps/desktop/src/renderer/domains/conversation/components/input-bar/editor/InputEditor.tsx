@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { ConversationEditorView } from "@shared/components/conversation-editor/ConversationEditorView";
 import type { InputSegment } from "@shared/lib/input-tokens";
 import { memo, type MouseEvent } from "react";

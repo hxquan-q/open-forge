@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 package signalcli
 
 // Managed signal-cli lifecycle: locating the executable the user already

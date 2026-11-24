@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 

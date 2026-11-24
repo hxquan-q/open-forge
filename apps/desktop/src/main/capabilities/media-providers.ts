@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { bindCapability, type CapabilityRegistry } from "@vetta/capability-runtime";
 import { type Disposable, DOMAIN_MEDIA_CAPABILITIES } from "@vetta-org/capability-sdk";
 import { isCloudBuildEnabled } from "../../shared/feature-flags.js";

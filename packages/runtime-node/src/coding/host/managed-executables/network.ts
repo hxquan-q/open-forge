@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { writeFile } from "node:fs/promises";
 import { Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";

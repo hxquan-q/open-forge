@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 ## Canvas artifacts
 When the user wants a standalone report, architecture diagram, audit board, or any visual deliverable that should live beside the chat:
 

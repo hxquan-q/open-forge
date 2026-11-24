@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 市场 MCP 的添加闭环：mcp.json 落盘 → 台账补记 → 卡片状态，

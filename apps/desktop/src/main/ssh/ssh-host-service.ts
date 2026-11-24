@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { normalizeSshHostInput, type SshHost, type SshHostInput } from "@vetta/ssh-transport";
 
 export interface SshHostServiceDependencies {

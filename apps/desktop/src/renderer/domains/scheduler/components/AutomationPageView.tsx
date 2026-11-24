@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ScheduledTask } from "@shared/store/scheduler-atoms";
 import {
 	AutomationPageView as ThemeAutomationPageView,

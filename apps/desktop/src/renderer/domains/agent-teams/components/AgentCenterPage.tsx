@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { teamDisplayName } from "@shared/agent-teams/agent-team-presentation";
 import { confirmDialogAtom, pageHeaderTitleHiddenAtom } from "@shared/store/atoms";
 import { useNavigate, useSearch } from "@tanstack/react-router";

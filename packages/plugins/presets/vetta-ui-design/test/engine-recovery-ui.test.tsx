@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginCommandSpawnExit } from "@vetta-org/plugin-sdk";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

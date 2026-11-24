@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import { createCodingAgentCodingToolResultPolicy } from "@vetta/coding-agent/composition";
 import { createMcpToolResultPolicy, type McpToolResultPolicy } from "@vetta/runtime-mcp";

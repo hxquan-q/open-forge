@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { classifyPlanModeCommand } from "./plan-mode-command-policy.js";
 
 export const CODING_AGENT_EXIT_PLAN_MODE_TOOL_NAME = "exit_plan_mode";

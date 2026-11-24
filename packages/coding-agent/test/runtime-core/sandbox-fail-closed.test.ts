@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // ADR-0133 §2 fail-closed 语义回归。
 //
 // 每条都用 Given/When/Then 锁定一个"出问题时用户该看到什么":

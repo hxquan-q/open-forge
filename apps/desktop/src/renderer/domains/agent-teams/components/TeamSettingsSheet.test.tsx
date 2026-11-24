@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";

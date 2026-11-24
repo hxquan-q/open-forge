@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cloudEnabled } from "@shared/components/cloud-slots";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { VettaGatewayRequest, VettaGatewayResponse } from "../cloud-bridge.js";
 import { DEFAULT_SERVER_URL } from "../constants.js";
 import { readSettings } from "../ipc/settings.js";

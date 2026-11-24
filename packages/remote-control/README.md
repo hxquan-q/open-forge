@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/remote-control
 
 Platform-neutral remote control protocol, connection lifecycle, diagnostics contract, and deterministic fake transport.

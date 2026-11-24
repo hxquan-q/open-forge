@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
 import { type ShortcutBinding, useShortcutScope } from "@shared/shortcuts";
 import { useNavigate } from "@tanstack/react-router";

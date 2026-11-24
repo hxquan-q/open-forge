@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { i18n } from "@shared/i18n";
 import type { ChatTimelineItem } from "@shared/store/atoms";
 import { authUserAtom } from "@shared/store/auth-atoms";

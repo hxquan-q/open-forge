@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * 项目行左侧的图标按钮只画一个图标：没有可访问名称时读屏用户听到的是无名按钮

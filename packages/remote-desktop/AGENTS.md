@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Remote Desktop Agent Guide
 
 This package owns the platform-neutral WebRTC signaling, browser peer orchestration, and remote input DataChannel contract.

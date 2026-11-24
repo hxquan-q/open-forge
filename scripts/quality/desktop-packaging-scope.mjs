@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { changedFiles } from "./lib.mjs";

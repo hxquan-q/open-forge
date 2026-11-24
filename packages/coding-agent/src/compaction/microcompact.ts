@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Layer 1: Microcompact — lightweight context pruning.
  *

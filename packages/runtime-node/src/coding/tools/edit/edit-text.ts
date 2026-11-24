@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { anchorLineHash, stripAnchorPrefixes } from "../../shared/anchors.js";
 
 // 展示 diff 实现已上移到 shared/display-diff.js，供 Write/Edit 审查统计共用；此处保留再导出不破既有调用方。

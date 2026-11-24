@@ -2,6 +2,7 @@
 name: chart-renderer
 description: 创建适用于图表渲染插件的 Chart.js 图表。当用户要求把数据做成图表、可视化趋势、比较分类或展示占比时使用。不要用它在网站/项目里实现图表组件——那种情况应改项目代码。
 ---
+<!-- Modified by The Open Forge contributors. -->
 
 # Chart.js 图表渲染
 

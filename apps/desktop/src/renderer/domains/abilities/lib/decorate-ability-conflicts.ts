@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AbilityItem } from "../types";
 
 function normalizedName(item: AbilityItem): string {

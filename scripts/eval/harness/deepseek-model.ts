@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { Model } from "@vetta/ai";
 import { evalBaseUrl, evalSubjectModelId } from "./env.js";
 

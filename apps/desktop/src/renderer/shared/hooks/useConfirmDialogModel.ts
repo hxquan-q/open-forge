@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useShortcutScope } from "@shared/shortcuts";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

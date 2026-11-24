@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Remote Relay Agent Guide
 
 This application owns the Cloudflare Worker and Durable Object relay implementation.

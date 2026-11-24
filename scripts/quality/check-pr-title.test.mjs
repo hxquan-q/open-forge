@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { collectPrTitleScopes, validatePrTitle } from "./check-pr-title.mjs";
 

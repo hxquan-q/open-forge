@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-mcp
 
 Vetta 平台无关的 MCP 协议、Port 与 Runtime 状态协调层。

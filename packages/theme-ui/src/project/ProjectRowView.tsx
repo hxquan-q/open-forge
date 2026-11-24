@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@vetta-org/ui";
 import type { JSX, Ref } from "react";
 import { RunningPulseDot } from "../sidebar/RunningPulseDot";

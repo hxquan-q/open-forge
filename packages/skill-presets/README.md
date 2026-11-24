@@ -1,3 +1,4 @@
+<!-- Copyright The Open Forge contributors. -->
 # @vetta/skill-presets
 
 ## 数据库问数与分析

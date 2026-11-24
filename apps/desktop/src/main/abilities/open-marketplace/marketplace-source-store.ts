@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";

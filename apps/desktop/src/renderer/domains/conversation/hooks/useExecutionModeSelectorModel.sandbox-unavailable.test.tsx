@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 //
 // BUG-0022：当前安装没有内置沙盒 host 时，执行模式选择器只把「沙盒受限」置灰，

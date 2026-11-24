@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createServer, type Server, type ServerResponse } from "node:http";

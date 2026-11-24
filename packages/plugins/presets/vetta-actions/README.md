@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Vetta Actions
 
 Open Forge 官方 App Action 插件（插件 id 仍为 `vetta-actions`）。当前已迁移 Desktop 全部 App Action 域：

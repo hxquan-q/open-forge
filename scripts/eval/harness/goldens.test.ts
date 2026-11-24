@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { ROUTING_EVAL_TOOL_NAMES } from "./fake-tools.js";
 import { loadToolRoutingGoldens } from "./goldens.js";

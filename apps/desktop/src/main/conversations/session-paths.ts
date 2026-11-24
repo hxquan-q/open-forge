@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import { type FileHandle, mkdir, open } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";

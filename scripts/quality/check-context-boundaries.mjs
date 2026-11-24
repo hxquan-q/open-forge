@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Arch test for the per-module `## Context Boundary` declarations (TASK-0110).
  *

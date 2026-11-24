@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { EMPTY_ISOLATION } from "./isolation.js";
 import { parseRunCaseArgs, serializeRoutingCase } from "./run-case.js";

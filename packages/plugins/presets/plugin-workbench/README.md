@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 插件工作台（plugin-workbench）
 
 系统插件：帮助用户通过对话 + 面板自举 Vetta 用户插件。

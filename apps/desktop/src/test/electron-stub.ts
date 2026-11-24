@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 

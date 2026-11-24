@@ -2,6 +2,7 @@
 name: chart-canvas
 description: Render a trend or comparison chart as a Canvas artifact using the declarative chart contract. Use when the user asks for a chart, 趋势图, 折线图, 柱状图, 饼图, 占比, or a visual comparison of numbers — not for prose reports (report-canvas) or module diagrams (architecture-canvas).
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Canvas chart
 

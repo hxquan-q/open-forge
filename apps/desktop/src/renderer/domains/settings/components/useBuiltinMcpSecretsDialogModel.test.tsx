@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 /**
  * universal-db 预设的条件必填：DB_TYPE 驱动 sqlite 与网络库两套必填集，

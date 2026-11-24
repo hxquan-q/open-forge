@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Team: Capability
 
 本文件适用于 `packages/capability-runtime/` 及其全部子目录。

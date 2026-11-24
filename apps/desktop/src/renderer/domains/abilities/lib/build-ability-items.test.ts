@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { InstalledPlugin, McpStdioServerConfigData } from "@preload/api";
 import type { AbilityMember, MarketAbility } from "@shared/lib/api";
 import type { TFunction } from "i18next";

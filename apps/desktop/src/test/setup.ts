@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 import { installVettaBridge } from "./vetta-bridge.js";

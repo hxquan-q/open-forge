@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // Package discord implements transport.Transport for Discord using the
 // bwmarrin/discordgo gateway (websocket) connection.
 //

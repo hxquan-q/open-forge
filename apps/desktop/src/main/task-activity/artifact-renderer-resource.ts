@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { open, realpath, stat } from "node:fs/promises";
 import { isAbsolute, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";

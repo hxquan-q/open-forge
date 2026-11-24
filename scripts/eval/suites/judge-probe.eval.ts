@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { expect, it } from "vitest";
 import { isLiveEvalEnabled, requireLiveEvalKey } from "../harness/env.js";
 import { scoreWithJudge } from "../harness/score-case.js";

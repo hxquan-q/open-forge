@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 部分 OpenAI 兼容网关（包括把请求转发到 Gemini 的网关）会把 tools 翻成另一种
 // OpenAPI 方言。它们把每个 anyOf/oneOf 分支当独立 Schema 校验，只带约束关键字、
 // 没有结构关键字的分支（如 `{ "required": ["a"] }`）会让整个请求 400 —— 一个工具

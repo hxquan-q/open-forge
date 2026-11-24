@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { type AssistantMessage, AssistantMessageEventStream, type Model, type UserMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {

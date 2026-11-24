@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Project, ProjectType } from "@shared/store/atoms";
 import { ProjectRowView } from "@vetta-org/theme-ui/project";
 import { useProjectRowModel } from "../../../hooks/useProjectRowModel";

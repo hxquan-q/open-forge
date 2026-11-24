@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Open Forge 云服务的登录会话（主进程侧）：token 持久化 / refresh 单飞 / 带鉴权的服务端请求。
  *

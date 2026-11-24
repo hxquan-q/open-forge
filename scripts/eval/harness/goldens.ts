@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { recordInputFilesAdded } from "@shared/lib/app-monitor-events";
 import { pathBasename } from "@shared/lib/utils";

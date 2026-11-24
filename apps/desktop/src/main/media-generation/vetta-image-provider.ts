@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { randomUUID } from "node:crypto";
 import type { MediaDimensions, MediaFailure, MediaProviderJob } from "@vetta-org/capability-sdk";
 import { MEDIA_PROTOCOL_VERSION } from "@vetta-org/capability-sdk";

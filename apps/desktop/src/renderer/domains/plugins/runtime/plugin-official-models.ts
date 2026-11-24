@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { remoteProvidersAtom } from "@shared/store/atoms";
 import type {
 	PluginOfficialApi,

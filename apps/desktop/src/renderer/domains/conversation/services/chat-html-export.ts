@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { brandIconUrl } from "@shared/brand-assets";
 import { i18n } from "@shared/i18n";
 

@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # IPC Directory Rules
 
 本目录只负责 Electron IPC 桥接层。这里的代码应保持薄、可审计，不能承载业务能力。

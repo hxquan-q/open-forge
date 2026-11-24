@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 失败重发去重的判据（ADR-0060 第 5 条）。
  *

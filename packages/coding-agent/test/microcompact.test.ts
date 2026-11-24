@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { AgentMessage } from "@vetta/agent-core";
 import type { AssistantMessage, ToolResultMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";

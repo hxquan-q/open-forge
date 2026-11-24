@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";
 import { useCallback, useMemo, useState } from "react";
 import type { AgentCapabilityOption } from "../lib/capability-options";

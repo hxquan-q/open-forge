@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";
 
 const AVATAR_DIRECTORY = "./agent-team-avatars";

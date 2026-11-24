@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/action-rpc
 
 Localhost HTTP JSON RPC transport for Vetta Desktop capabilities.

@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // ADR-0133 §3 ALS 失败边界。这些 case 决定了"读到了不该读到的 grant"的主要路径。
 //
 // ALS-1 (顺序两次 grant) 已由 node-sandbox-host.test.ts 覆盖,这里不再重复;

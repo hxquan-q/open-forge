@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ConversationScenario } from "@vetta-org/plugin-sdk";
 import type { ComponentType, ReactNode } from "react";
 

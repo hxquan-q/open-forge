@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { ReviewRollbackOutcome } from "@vetta/runtime-storage/conversation";
 
 export interface ReviewChangeRollbackInput {

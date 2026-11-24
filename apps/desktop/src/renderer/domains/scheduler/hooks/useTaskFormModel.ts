@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ExecutionModeOverride, ScheduledTask, ScheduledTaskPermissionTiers } from "@shared/store/atoms";
 import { defaultConversationCwdAtom, projectsAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";

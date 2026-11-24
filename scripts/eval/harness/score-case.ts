@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { DeepSeekModel } from "deepeval/models";
 
 export interface JudgeScoreRequest {

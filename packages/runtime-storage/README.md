@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-storage
 
 Platform-neutral conversation storage contracts, errors, and persisted record schemas.

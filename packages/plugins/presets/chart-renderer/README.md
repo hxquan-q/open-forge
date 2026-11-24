@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 图表渲染（chart-renderer）
 
 随 Vetta Desktop 发布的**系统插件**。Agent 调用 `render_chart` 工具传入标准

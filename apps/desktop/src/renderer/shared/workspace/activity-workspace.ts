@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Stable identity, filesystem root and runtime scope for an activity workspace.
  *

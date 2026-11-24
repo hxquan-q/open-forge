@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	type Disposable,

@@ -2,6 +2,7 @@
 name: review-canvas
 description: Present a multi-file code review as a Canvas diff artifact. Use when the user asks for a review, 代码评审, 变更审查, or a cross-file summary of changes — not for a single edit (the chat diff card already shows it) or a prose report (report-canvas).
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # Canvas code review
 

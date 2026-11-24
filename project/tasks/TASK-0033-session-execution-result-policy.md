@@ -20,6 +20,7 @@ integration_status: integrated（forge/dev 主工作区；实现与 351 行测�
 created: 2026-09-23
 updated: 2026-09-23
 ---
+<!-- Copyright The Open Forge contributors. -->
 
 # 会话执行运行时核心工具的结果策略旁路
 

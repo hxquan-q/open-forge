@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { AgentProfile, TeamDefinition } from "@vetta/agent-team";
 import { describe, expect, it } from "vitest";
 import {

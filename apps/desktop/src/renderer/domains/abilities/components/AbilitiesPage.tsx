@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { pageHeaderTitleHiddenAtom } from "@shared/store/atoms";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useSetAtom } from "jotai";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 按作用域隔离的输入草稿 + 已发送历史。
  *

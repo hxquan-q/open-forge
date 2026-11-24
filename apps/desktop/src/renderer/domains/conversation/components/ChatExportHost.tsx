@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ChatTimelineItem } from "@shared/store/atoms";
 import { ChatExportHostView } from "@vetta-org/theme-ui/chat";
 import { useChatExportHostModel } from "../hooks/useChatExportHostModel";

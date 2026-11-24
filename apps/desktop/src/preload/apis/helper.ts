@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 
 export function onIpcEvent<T>(ipc: IpcRenderer, channel: string, handler: (data: T) => void): () => void {

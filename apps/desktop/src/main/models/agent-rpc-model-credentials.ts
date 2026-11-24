@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 把桌面保险库里的自定义 provider API Key 注入 agent-rpc 子进程的 AuthStorage。
  *

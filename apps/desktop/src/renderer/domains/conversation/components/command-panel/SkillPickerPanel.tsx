@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SkillInfo } from "@preload/api";
 import { ThemeSurface } from "@vetta-org/theme-ui/appearance";
 import { useThemeComponent } from "@vetta-org/theme-sdk";

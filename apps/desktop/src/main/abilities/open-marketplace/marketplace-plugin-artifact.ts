@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createHash } from "node:crypto";
 import { parsePluginManifest } from "@vetta-org/plugin-sdk/manifest";
 import AdmZip from "adm-zip";

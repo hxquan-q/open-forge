@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Structural guard: theme-ui sources must stay free of desktop private imports.
  * Run: bun packages/theme-ui/scripts/verify-purity.mjs

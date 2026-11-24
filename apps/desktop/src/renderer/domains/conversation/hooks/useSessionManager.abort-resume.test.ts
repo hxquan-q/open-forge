@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { resolveConversationAgentText } from "@shared/conversation";

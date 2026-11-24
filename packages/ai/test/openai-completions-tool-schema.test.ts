@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import { resolveOpenAICompletionsCompat } from "../src/providers/openai-completions/compatibility.js";
 import { convertTools } from "../src/providers/openai-completions/messages.js";

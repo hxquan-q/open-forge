@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # SVG Viewer Plugin
 
 A trusted Vetta **system plugin** (ADR-0024) that previews `.svg` files in the

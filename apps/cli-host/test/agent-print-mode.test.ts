@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { spawn } from "node:child_process";
 import { chmod, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // Command im-gateway is the entry point for the IM gateway sidecar process.
 //
 // User-facing entry (driven by desktop-app):

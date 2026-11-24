@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import { createCapabilityCatalog } from "../catalog.js";
 import { CAPABILITY_LAYERS, defineCapability } from "../contracts.js";

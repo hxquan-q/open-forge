@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/runtime-core
 
 Runtime contracts and host integration for Agent sessions.

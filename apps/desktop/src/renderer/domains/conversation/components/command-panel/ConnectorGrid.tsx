@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useId } from "react";
 import type { ConnectorGridItem } from "../../hooks/useConnectorGrid";
 

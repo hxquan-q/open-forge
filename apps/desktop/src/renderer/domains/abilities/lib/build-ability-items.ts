@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * 市场行 + 本地状态 → AbilityItem。全部为纯函数，便于单独推理与测试。
  * installed / localVersion / needsUpdate 一律以安装台账为准（ADR-0049），

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { conversationItemRenderKey, resolveConversationAgentText } from "@shared/conversation";
 import type { ContentBlock } from "@shared/store/atoms";
 import type { SizeFunction } from "react-virtuoso";

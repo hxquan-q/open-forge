@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ProjectType } from "@shared/store/project-atoms";
 import { useCallback, useEffect, useRef, useState } from "react";
 

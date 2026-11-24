@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it } from "vitest";
 import { createNodeBackgroundCommandHost, createNodeForegroundCommandHost } from "../../src/coding/host/index.js";
 import { createBackgroundCommandService } from "../../src/coding/shared/background-command-lifecycle.js";

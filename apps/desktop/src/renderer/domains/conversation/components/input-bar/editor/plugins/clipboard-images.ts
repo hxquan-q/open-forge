@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { extractVettaUserMessageClipboardImages } from "@/shared/clipboard";
 import type { Base64Image } from "../persistImages";
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // 主线程用到的 uiohook keycode 常量（uiohook-napi 的 UiohookKey 子集）。
 //
 // 为什么复制而不是从 uiohook-napi import：`require("uiohook-napi")` 顶层就会

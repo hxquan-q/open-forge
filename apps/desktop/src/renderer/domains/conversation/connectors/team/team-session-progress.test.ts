@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 import type { TeamSessionActivity } from "@vetta/agent-team";
 import type { AssistantMessage } from "@vetta/ai";
 import type { HistoryEntry } from "@vetta/runtime-core";

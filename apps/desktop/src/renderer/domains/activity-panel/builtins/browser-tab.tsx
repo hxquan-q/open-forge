@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "react-i18next";
 import { BrowserPanel } from "../components/BrowserPanel";
 import type { ActivityTabDefinition } from "../registry/types";

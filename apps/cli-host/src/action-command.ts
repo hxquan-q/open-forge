@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { writeSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { ActionRpcError, createActionRpcClient, readActionRpcEndpoint } from "@vetta/action-rpc";

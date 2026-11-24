@@ -1,3 +1,4 @@
+// Copyright The Open Forge contributors.
 /**
  * Guard the Task ↔ Worktree development contract (`project/collaboration/README.md`).
  *

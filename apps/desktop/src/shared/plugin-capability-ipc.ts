@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 export const PLUGIN_CAPABILITY_CHANNELS = {
 	OPEN_SESSION: "vetta:plugins:capabilities:open-session",
 	CLOSE_SESSION: "vetta:plugins:capabilities:close-session",
