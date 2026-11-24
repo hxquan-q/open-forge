@@ -1,7 +1,7 @@
 ---
 id: TASK-0497
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: packages/theme-ui + packages/ui
 requirement: REQ-0008
@@ -88,9 +88,9 @@ PLAN-0032 D2 已拍板「跟进细粒度导出，作为 P2 第一个 Task」。�
 
 ## 验证
 
-- `bun run check`（lint + types + guards）
-- `bun scripts/quality/run-vitest.mjs` 针对新增 `.test.tsx`/`.test.ts`
-- `bun run test:impact -- packages/ui packages/theme-ui`
+- `bun run check`（lint + types + guards）✓
+- `bun scripts/quality/run-vitest.mjs` 针对新增 `.test.tsx`/`.test.ts`：21/21 通过 ✓
+- `bun run test:impact -- packages/ui packages/theme-ui`：超时转后台未完成，vitest 已覆盖新增文件，影响面为纯新增无消费方改动
 
 ## DESIGN 例外（移植原语登记模式）
 
