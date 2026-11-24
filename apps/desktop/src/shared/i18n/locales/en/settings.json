@@ -1276,6 +1276,7 @@
 	"tabWebhook": "Webhook",
 	"tabArchive": "Archived",
 	"tabShortcuts": "Shortcuts",
+	"tabLauncher": "Launcher",
 	"tabAppshot": "App Snapshot",
 	"betaBadge": "BETA",
 	"tabEnvironment": "Environment",
@@ -1351,6 +1352,8 @@
 	"section_webhook-channels": "Channel List",
 	"section_shortcuts-global": "Global Shortcuts",
 	"section_shortcuts-quickpanel": "Quick Panel",
+	"section_launcher-features": "What it does",
+	"section_launcher-shortcut": "Shortcut",
 	"section_appshot-gesture": "Trigger Shortcut",
 	"section_appshot-permissions": "Permissions",
 	"section_archived-list": "Archived List",
@@ -2439,5 +2442,41 @@
 		"unavailable": "Installed font access is not available here. Existing choices and defaults are still usable.",
 		"loadFailed": "Could not read installed fonts. Allow font access if prompted, then try again. Existing choices are unchanged.",
 		"saveFailed": "Could not save the font preference. The previous choice is unchanged; please try again."
+	},
+	"launcher": {
+		"title": "Launcher",
+		"subtitle": "One entry point, always a keystroke away. Jump back into running sessions, find any project or setting, or start a new conversation without leaving the keyboard.",
+		"pressBefore": "Press",
+		"pressAfter": "anywhere in the app to open it",
+		"tryNow": "Try it now",
+		"preview": {
+			"waitingSession": "Refactor the sign-in flow",
+			"waitingMeta": "2 min ago",
+			"runningSession": "Draft this week's release notes",
+			"runningMeta": "Just now",
+			"recentProject": "my-website",
+			"recentMeta": "Project"
+		},
+		"features": {
+			"active": {
+				"title": "Sessions in progress",
+				"description": "Sessions that need you, are running, or just finished come first"
+			},
+			"search": {
+				"title": "Search everything",
+				"description": "Projects, sessions, abilities and settings in a few keystrokes"
+			},
+			"newSession": {
+				"title": "Start right away",
+				"description": "Open a new session without hunting for a button"
+			},
+			"plugins": {
+				"title": "Plugin views",
+				"description": "Pages from your installed plugins open from here too"
+			}
+		},
+		"shortcutTitle": "Open the launcher",
+		"shortcutDescription": "Works anywhere in the app. Press it again or hit Esc to close",
+		"sidebarHint": "The search button at the top of the sidebar opens the launcher too"
 	}
 }

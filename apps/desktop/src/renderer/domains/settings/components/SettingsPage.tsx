@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { PluginWorkspaceViewSurface } from "@domains/plugins/components/PluginWorkspaceViewRoute";
 import { useThemeSurface } from "@vetta-org/theme-sdk/appearance";
 import type { SettingsTab } from "@shared/store/atoms";
@@ -19,6 +20,7 @@ const SETTINGS_CONTENT: Record<Exclude<SettingsTab, "mcp">, LazyExoticComponent<
 	im: lazy(SETTINGS_TAB_LOADERS.im),
 	webhook: lazy(SETTINGS_TAB_LOADERS.webhook),
 	shortcuts: lazy(SETTINGS_TAB_LOADERS.shortcuts),
+	launcher: lazy(SETTINGS_TAB_LOADERS.launcher),
 	appshot: lazy(SETTINGS_TAB_LOADERS.appshot),
 	archive: lazy(SETTINGS_TAB_LOADERS.archive),
 	team: lazy(SETTINGS_TAB_LOADERS.team),

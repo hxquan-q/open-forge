@@ -13,6 +13,7 @@ export type SettingsTabLabelKey =
 	| "tabWebhook"
 	| "tabArchive"
 	| "tabShortcuts"
+	| "tabLauncher"
 	| "tabAppshot"
 	| "tabEnvironment"
 	| "tabExtensions"
@@ -67,6 +68,7 @@ export const SETTINGS_TABS: readonly SettingsTabRegistration[] = [
 	// { key: "team", label: "团队管理", labelKey: "tabTeam", icon: "icon-[mdi--account-group-outline]", personalOnly: true },
 	{ key: "archive", label: "已归档", labelKey: "tabArchive", icon: "icon-[mdi--archive-outline]" },
 	{ key: "shortcuts", label: "快捷键", labelKey: "tabShortcuts", icon: "icon-[mdi--keyboard-outline]" },
+	{ key: "launcher", label: "启动器", labelKey: "tabLauncher", icon: "icon-[solar--rocket-2-linear]" },
 	{
 		key: "appshot",
 		label: "应用快照",
@@ -142,6 +144,8 @@ export const SETTINGS_SECTIONS = [
 	{ tab: "webhook", id: "webhook-channels", title: "渠道列表", titleKey: "section_webhook-channels" },
 	{ tab: "shortcuts", id: "shortcuts-global", title: "全局快捷键", titleKey: "section_shortcuts-global" },
 	{ tab: "shortcuts", id: "shortcuts-quickpanel", title: "快捷面板", titleKey: "section_shortcuts-quickpanel" },
+	{ tab: "launcher", id: "launcher-features", title: "能做什么", titleKey: "section_launcher-features" },
+	{ tab: "launcher", id: "launcher-shortcut", title: "快捷键", titleKey: "section_launcher-shortcut" },
 	{ tab: "appshot", id: "appshot-gesture", title: "触发快捷键", titleKey: "section_appshot-gesture" },
 	{ tab: "appshot", id: "appshot-permissions", title: "权限", titleKey: "section_appshot-permissions" },
 	{ tab: "archive", id: "archived-list", title: "已归档项目", titleKey: "section_archived-list" },
