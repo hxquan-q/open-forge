@@ -1,0 +1,17 @@
+{
+	"version": 1,
+	"description": "DESIGN 例外基线（逐文件逐规则平账，非只许降棘轮）。移植的上游原语沿用上游视觉语言，与本地 D 规则结构性冲突；登记格式 { \"<path>\": { \"<rule>\": <允许计数> } }。改写组件回归本地设计时应删除条目；超出计数的新增 token 仍判负。每条目须在 apps/desktop/DESIGN.md「已知例外」有对应说明。",
+	"exemptedTokens": {
+		"packages/theme-ui/src/shared/VettaKbd.tsx": {
+			"D02": 2,
+			"D05": 4
+		},
+		"packages/ui/src/button-group.tsx": {
+			"D01": 2,
+			"D02": 1,
+			"D03": 1,
+			"D05": 1,
+			"D07": 1
+		}
+	}
+}

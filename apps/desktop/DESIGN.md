@@ -405,6 +405,8 @@ Size：`default`(h-8) / `xs`(h-6) / `sm`(h-7) / `lg`(h-9) / `icon`(size-8) / `ic
 - **SegmentedControl**（`@vetta-org/theme-ui/shared`）：容器 `rounded-[8px] bg-black/[0.06] p-[2px] dark:bg-white/[0.08]`，项 `rounded-[6px] text-[11px] font-medium`，指示器用 `motion/react` spring（`stiffness:480, damping:32, mass:0.8`），tap scale 0.93。
 
 > **已知例外**：`SegmentedControl` 容器与指示器使用 `bg-black/[0.06]`、`dark:bg-white/[0.08]`、`shadow-[0_1px_2px_rgba(0,0,0,0.06),...]` 等字面色值与任意阴影，违反 The Token-Only Rule 与 The Flat-By-Default Rule。它是分段控件的物理惯性所需（需要一个"凹槽"底），改动时优先用 token 表达，但不要为了合规把它改坏。
+>
+> **已知例外**：`ButtonGroup`（`@vetta-org/ui`）与 `VettaKbd`（`@vetta-org/theme-ui/shared`）是从上游 open-vetta 移植的原语，**沿用上游视觉语言**，与本地 D01/D02/D03/D05/D07 结构性冲突：任意阴影刻浮雕、字面色 `bg-red-500` 做角标、`rounded-[4px~10px]` 调键帽/药丸曲率、原语层直接用 `<button>`（组件本身就是按钮的封装，D03 在此是误报）、`text-[9px]` 做角标数字。已在 `scripts/quality/baselines/design-exceptions.json` 逐条登记；改写回归本地设计时删除对应条目，超出计数的新增 token 仍判负。
 
 ### TabBar
 

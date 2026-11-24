@@ -12,6 +12,14 @@
 		"./utils": {
 			"types": "./src/utils.ts",
 			"import": "./src/utils.ts"
+		},
+		"./button": {
+			"types": "./src/button.tsx",
+			"import": "./src/button.tsx"
+		},
+		"./button-group": {
+			"types": "./src/button-group.tsx",
+			"import": "./src/button-group.tsx"
 		}
 	},
 	"files": ["src"],

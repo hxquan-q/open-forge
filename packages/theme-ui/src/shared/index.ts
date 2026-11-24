@@ -13,6 +13,8 @@ export type { CollapsePanelProps } from "./CollapsePanel";
 export { CollapsePanel } from "./CollapsePanel";
 export type { ContextMenuNode, ContextMenuViewProps } from "./ContextMenuView";
 export { ContextMenuView } from "./ContextMenuView";
+export type { VettaKbdKey, VettaKbdPlatform } from "./kbd-keys";
+export { describeKbdKeys, detectKbdPlatform, resolveKbdKey, resolveKbdKeys, splitKbdKeys } from "./kbd-keys";
 export {
 	evaluateLargeObjectDegradation,
 	LARGE_OBJECT_LIMITS,
@@ -51,3 +53,5 @@ export { TabBar } from "./TabBar";
 export type { TimePickerProps } from "./TimePicker";
 export { TimePicker } from "./TimePicker";
 export { useDelayedUnmount } from "./useDelayedUnmount";
+export type { VettaKbdProps, VettaKbdSize, VettaKbdVariant } from "./VettaKbd";
+export { VettaKbd } from "./VettaKbd";

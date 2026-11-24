@@ -2,11 +2,15 @@
 import ts from "typescript";
 
 export const isUIPath = (path) =>
-	/^(?:apps\/desktop\/src\/renderer|packages\/(?:ui|theme-ui)\/src)\/.*\.(?:tsx|css)$/u.test(path);
+	/^(?:apps\/desktop\/src\/renderer|packages\/(?:ui|theme-ui)\/src)\/.*\.(?:tsx|css)$/u.test(path) &&
+	!/\.(?:test|spec|node-test)\.(?:ts|tsx|mts|mjs|cts|cjs)$/u.test(path);
 const RULES = [
 	[
 		"D01",
 		/(?:\b(?:bg|text|border|ring|fill|stroke)-(?:slate|zinc|sky|violet|pink|orange|red|blue|green)-\d|#[\da-f]{3,8}\b|\brgba?\()/iu,
+		// 任意值里的 rgb()/rgba() 是合法写法（shadow-[...rgb()...]、ring-[color-mix(...)] 等，
+		// 上游与本地 SegmentedControl 均有先例）；只对未包在 [] 里的裸调用计 D01。
+		(value) => /\[[^\]]*\brgba?\(/u.test(value),
 	],
 	["D02", /shadow-\[/u],
 	["D04", /(?:^|:)(?:border-(?:2|4)|outline-2|border-\[\d+px\])(?:$|\s)/u],
@@ -40,8 +44,16 @@ function tokens(path, body) {
 	return { entries, unknown: file.parseDiagnostics.length > 0 };
 }
 
-/** Checks only added occurrences. This source audit never claims visual or behavioral acceptance. */
-export function auditDesign(changes) {
+/**
+ * Checks only added occurrences. This source audit never claims visual or behavioral acceptance.
+ *
+ * `exemptions`（可选）逐文件逐规则豁免移植进来的原语 token：`{ "<path>": { "<rule>": <count> } }`。
+ * 移植的上游原语（ButtonGroup、VettaKbd）沿用上游视觉语言，与本地 DESIGN 规则结构性冲突；
+ * 不改写上游设计（会偏离移植目标），改为在 `scripts/quality/baselines/design-exceptions.json`
+ * 登记并在 DESIGN.md「已知例外」说明。与 assertion-depth 棘轮不同，这里是**平账**不是只许降：
+ * 改写组件回归本地设计时应删除条目，新增 token 仍按超出豁免计数判负。
+ */
+export function auditDesign(changes, exemptions = {}) {
 	const findings = [];
 	const affected = [];
 	const gaps = new Set();
@@ -59,18 +71,26 @@ export function auditDesign(changes) {
 			const key = `${entry.tag}:${entry.value}`;
 			counts.set(key, (counts.get(key) ?? 0) + 1);
 		}
+		const exempted = { ...(exemptions[path] ?? {}) };
 		for (const entry of current.entries) {
 			const key = `${entry.tag}:${entry.value}`;
 			if ((counts.get(key) ?? 0) > 0) {
 				counts.set(key, counts.get(key) - 1);
 				continue;
 			}
-			const add = (rule) => findings.push({ rule, file: path, line: entry.line, value: entry.value });
+			const add = (rule) => {
+				if ((exempted[rule] ?? 0) > 0) {
+					exempted[rule] -= 1;
+					return;
+				}
+				findings.push({ rule, file: path, line: entry.line, value: entry.value });
+			};
 			if (entry.tag) {
 				if (["button", "motion.button"].includes(entry.value)) add("D03");
 				continue;
 			}
-			for (const [rule, expression] of RULES) if (expression.test(entry.value)) add(rule);
+			for (const [rule, expression, exempt] of RULES)
+				if (expression.test(entry.value) && !exempt?.(entry.value)) add(rule);
 			const font = /(?:^|:)text-\[(\d+)px\]$/u.exec(entry.value);
 			if (font && !([10, 11, 12, 13, 14, 15].includes(Number(font[1])) || Number(font[1]) >= 20)) add("D07");
 			if (/(?:^|:)text-(?:base|lg)$/u.test(entry.value))

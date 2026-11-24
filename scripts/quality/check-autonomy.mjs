@@ -52,6 +52,22 @@ export function designChanges(root, base) {
 	});
 }
 
+/**
+ * DESIGN 例外基线：`{ "<path>": { "<rule>": <count> } }`。
+ * 移植的上游原语（ButtonGroup、VettaKbd 等）沿用上游视觉语言，与本地 D 规则结构性冲突；
+ * 不改写上游设计（偏离移植目标），登记此处并在 DESIGN.md「已知例外」说明。
+ * 改写组件回归本地设计时应删除条目；超出登记数的新增 token 仍判负。
+ */
+function loadDesignExemptions(root) {
+	const file = join(root, "scripts/quality/baselines/design-exceptions.json");
+	if (!existsSync(file)) return {};
+	const parsed = JSON.parse(readFileSync(file, "utf8"));
+	const entries = parsed.exemptedTokens ?? {};
+	if (typeof entries !== "object" || entries === null || Array.isArray(entries))
+		throw new Error("[autonomy] design-exceptions.json 缺少 exemptedTokens 对象");
+	return entries;
+}
+
 function baseline(root) {
 	if (process.env.GITHUB_EVENT_PATH) {
 		const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
@@ -66,7 +82,7 @@ function baseline(root) {
 
 export function main(root = process.cwd()) {
 	const problems = autonomyProblems(root);
-	const audit = auditDesign(designChanges(root, baseline(root)));
+	const audit = auditDesign(designChanges(root, baseline(root)), loadDesignExemptions(root));
 	for (const finding of audit.findings)
 		problems.push(`${finding.file}:${finding.line} DESIGN ${finding.rule}: ${finding.value}`);
 	for (const gap of audit.gaps.filter((entry) => /unreadable|parse failed/u.test(entry))) problems.push(gap);
