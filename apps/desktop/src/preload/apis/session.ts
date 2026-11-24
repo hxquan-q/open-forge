@@ -2,6 +2,12 @@ import { HOST_PROTOCOL_ERROR_CODES, HostProtocolError } from "@vetta/host-protoc
 import type { SessionEvent } from "@vetta/runtime-core";
 import type { IpcRenderer } from "electron";
 import { decodeSessionEvent } from "../../shared/session-event-codec.js";
+import {
+	decodeSessionGlobalEvent,
+	type RunningChangedEvent,
+	type SessionGlobalEvent,
+	type SessionsChangedEvent,
+} from "../../shared/session-global-event-codec.js";
 import type { DesktopApi } from "../api.js";
 import type { DesktopSessionApi } from "../api-types/session.js";
 import { createDesktopHostClient, type DesktopHostClient } from "../host-transport.js";
@@ -10,7 +16,6 @@ import { subscribeSessionSearch } from "./session-search.js";
 
 const CHANNELS = {
 	CREATE: "vetta:session:create",
-	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	INTERRUPTED_STARTUP: "vetta:session:interrupted-startup",
@@ -36,7 +41,6 @@ const CHANNELS = {
 	SANDBOX_GRANTS_REVOKE: "vetta:session:sandbox-grants-revoke",
 	SANDBOX_GRANTS_REVOKE_ALL: "vetta:session:sandbox-grants-revoke-all",
 	DISPOSE: "vetta:session:dispose",
-	RUNNING_CHANGED: "vetta:session:running-changed",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
 	CLEAR_DEFAULT_ARTIFACTS: "vetta:session:clear-default-artifacts",
 	VIEWER_OPEN: "vetta:session:viewer-open",
@@ -105,15 +109,97 @@ async function subscribeSessionEvents(
 	};
 }
 
+/**
+ * 进程级会话推送订阅（TASK-0479）：sessions-changed 与 running-changed 共用一条
+ * `session.subscribeGlobal` 连接级订阅，首个监听者触发建立；窗口生命周期内不主动退订，
+ * 避免订阅重建期间丢事件。payload 以 `kind` 分流到各监听集合，解码容错与旧通道一致。
+ * 建立失败只记录一次并复位，后续监听注册可重试；端口关闭后重试必然失败，属于预期降级。
+ */
+function createSessionGlobalSubscription(
+	host: DesktopHostClient,
+): Pick<DesktopSessionApi, "onSessionsChanged" | "onRunningChanged"> {
+	const sessionsChangedHandlers = new Set<(event: SessionsChangedEvent) => void>();
+	const runningChangedHandlers = new Set<(event: RunningChangedEvent) => void>();
+	// 两类事件共用一条端口事件流，解码失败按整体连续计数，协议异常时统一停止容忍。
+	let consecutiveDecodeFailures = 0;
+	let started = false;
+	let starting = false;
+
+	const deliver = (payload: unknown): void => {
+		let event: SessionGlobalEvent;
+		try {
+			event = decodeSessionGlobalEvent(payload);
+		} catch (error) {
+			consecutiveDecodeFailures += 1;
+			const stopTolerating = consecutiveDecodeFailures >= MAX_CONSECUTIVE_DECODE_FAILURES;
+			console.error(
+				stopTolerating
+					? `[host] session.subscribeGlobal 连续 ${consecutiveDecodeFailures} 条载荷无法解码，视为协议不匹配`
+					: "[host] 丢弃一条无法解码的 session.subscribeGlobal 载荷",
+				error,
+			);
+			if (stopTolerating) throw error;
+			return;
+		}
+		consecutiveDecodeFailures = 0;
+		if (event.kind === "sessions-changed") {
+			for (const handler of sessionsChangedHandlers) handler(event.event);
+		} else {
+			for (const handler of runningChangedHandlers) handler(event.event);
+		}
+	};
+
+	const ensureStarted = (): void => {
+		if (started || starting) return;
+		starting = true;
+		void (async () => {
+			try {
+				if (!(await host.whenPortReady())) {
+					throw new HostProtocolError(
+						HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE,
+						"session.subscribeGlobal 需要 Host MessagePort，端口未建立或已关闭",
+					);
+				}
+				const { subscriptionId } = await host.call("session.subscribeGlobal", {});
+				if (!host.onHostEvent(subscriptionId, deliver)) {
+					throw new HostProtocolError(
+						HOST_PROTOCOL_ERROR_CODES.HOST_UNAVAILABLE,
+						"Host 端口在事件处理器注册前关闭，session.subscribeGlobal 订阅已失效",
+					);
+				}
+				started = true;
+			} catch (error) {
+				console.error("[host] session.subscribeGlobal 订阅建立失败，后续监听注册时重试", error);
+			} finally {
+				starting = false;
+			}
+		})();
+	};
+
+	const subscribe = <T>(handlers: Set<(event: T) => void>, handler: (event: T) => void): (() => void) => {
+		handlers.add(handler);
+		ensureStarted();
+		return () => {
+			handlers.delete(handler);
+		};
+	};
+
+	return {
+		onSessionsChanged: (handler) => subscribe(sessionsChangedHandlers, handler),
+		onRunningChanged: (handler) => subscribe(runningChangedHandlers, handler),
+	};
+}
+
 export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> {
 	const host = createDesktopHostClient(ipc);
+	const globalEvents = createSessionGlobalSubscription(host);
 	return {
 		session: {
 			create: (config, kind, traceContext) => ipc.invoke(CHANNELS.CREATE, config, kind, traceContext),
 			listProjects: () => host.call("session.listProjects", {}),
 			listSessions: (cwd) => host.call("session.listSessions", { cwd }),
 			searchSessions: (request, onEvent) => subscribeSessionSearch(ipc, request, onEvent),
-			onSessionsChanged: (handler) => onIpcEvent(ipc, CHANNELS.SESSIONS_CHANGED, handler),
+			onSessionsChanged: (handler) => globalEvents.onSessionsChanged(handler),
 			prompt: (sessionId, request, traceContext) => ipc.invoke(CHANNELS.PROMPT, sessionId, request, traceContext),
 			continue: async (sessionId) => {
 				await host.call("session.continue", { sessionId });
@@ -236,7 +322,7 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			dispose: (sessionId) => ipc.invoke(CHANNELS.DISPOSE, sessionId),
 			listRunning: () => host.call("session.listRunning", {}),
 			listRunningCwds: () => host.call("session.listRunningCwds", {}),
-			onRunningChanged: (handler) => onIpcEvent(ipc, CHANNELS.RUNNING_CHANGED, handler),
+			onRunningChanged: (handler) => globalEvents.onRunningChanged(handler),
 			clearDefaultConversation: (scope) => ipc.invoke(CHANNELS.CLEAR_DEFAULT_CONVERSATION, scope),
 			clearDefaultArtifacts: (scope) => ipc.invoke(CHANNELS.CLEAR_DEFAULT_ARTIFACTS, scope),
 			openViewer: ((path: string, options?: unknown) =>

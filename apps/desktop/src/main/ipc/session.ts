@@ -33,7 +33,6 @@ import {
 } from "../agent-runtime/session-interrupt-watch-registry.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
 import { stopMonitoringRuntimeSession } from "../app-monitor/app-monitor-service.js";
-import { onConversationListChanged } from "../conversations/conversation-list-events.js";
 import { getDesktopConversationService } from "../conversations/desktop-conversation-service.js";
 import { desktopSessionSearch } from "../conversations/desktop-session-search.js";
 import {
@@ -136,7 +135,6 @@ const pluginLog = getAppLogger("plugin");
 
 const CHANNELS = {
 	CREATE: "vetta:session:create",
-	SESSIONS_CHANGED: "vetta:session:sessions-changed",
 	PROMPT: "vetta:session:prompt",
 	/** 默认工作模式已变更；仅用于各窗口新会话页 toggle 的显示同步，不改变任何活跃会话的行为。 */
 	AGENT_MODE_CHANGED: "vetta:session:agent-mode-changed",
@@ -304,9 +302,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const mcpTaskRegistry = getDesktopMcpTaskRegistry();
 	const mcpAppRegistry = getDesktopMcpAppRegistry();
 	const sandboxAuthorizationBroker = getDesktopSandboxAuthorizationBroker();
-	const unsubscribeConversationListChanged = onConversationListChanged((event) => {
-		broadcastToAllWindows(CHANNELS.SESSIONS_CHANGED, event);
-	});
 	const mcpElicitationMap = new Map<string, (result: DesktopMcpElicitationResponse) => void>();
 	const sandboxGrantMap = new Map<string, (decision: CodingAgentSandboxAuthorizationDecision) => void>();
 	const pluginToolMap = new Map<string, (result: unknown) => void>();
@@ -838,7 +833,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	);
 
 	// 目录四通道（list-projects/list-sessions/list-running/list-running-cwds）
-	// 已迁到 Host 合同 session.*（TASK-0474；sessions-changed 推送事件仍走旧 IPC）。
+	// 已迁到 Host 合同 session.*（TASK-0474）；sessions-changed 推送改走
+	// session.subscribeGlobal（TASK-0479），不再有旧 IPC 通道。
 
 	ipcMain.handle(SESSION_SEARCH_CHANNELS.start, (event, requestId: unknown, request: unknown) => {
 		desktopSessionSearch.start(event.sender, requestId, request);
@@ -875,7 +871,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	// interrupt-draft 已迁到 Host 合同 session.setInterruptDraftNonEmpty（TASK-0473）。
 
 	// 输入队列管理（ADR-0060）：薄桥接，能力全部在 RuntimeHost。
-	// 输入队列七通道已迁到 Host 合同 session.*（TASK-0467；queue-state 推送事件仍走旧 IPC）。
+	// 输入队列七通道已迁到 Host 合同 session.*（TASK-0467）；队列态由
+	// session.getQueueState 拉取，没有推送通道。
 
 	// goal 五通道与 clear-todos 已迁到 Host 合同 session.*（TASK-0469；
 	// goal 编排保留在 DesktopGoalController，Host 侧经同一编排点桥接）。
@@ -1012,11 +1009,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		sessionId?: string;
 		reason?: "agent_end" | "aborted" | "error";
 	}) => {
-		// 主窗口（订阅方）原样投递，保持既有行为。
-		if (!webContents.isDestroyed()) {
-			webContents.send(CHANNELS.RUNNING_CHANGED, payload);
-		}
-		// 并行广播给其它窗口（如独立的快捷面板窗口），让它们也能跟随运行态。
+		// 主窗口经 Host 事件面 session.subscribeGlobal 收运行态（TASK-0479），
+		// 这里只投递给共享旧通道的其它窗口（如独立的快捷面板窗口）。
 		for (const win of BrowserWindow.getAllWindows()) {
 			if (win.isDestroyed()) continue;
 			const wc = win.webContents;
@@ -1263,7 +1257,6 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 
 	return () => {
 		stopInterruptMonitor();
-		unsubscribeConversationListChanged();
 		detachPluginHostNavigation();
 		webContents.removeListener("render-process-gone", onRenderGone);
 		pluginToolRendererHost.dispose();

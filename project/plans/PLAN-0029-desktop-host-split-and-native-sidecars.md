@@ -174,3 +174,4 @@ depends_on: []
 24. [TASK-0476](../tasks/TASK-0476-session-mcp-tasks-host-domain.md)：MCP 任务与待答清单子域（mcp-tasks-{list,cancel,clear-finished}/mcp-elicitation-list-pending 4 通道）迁移，done（实现提交 `f3c3335a6`，quality 42393835326 已核实；IPC 632→628）。
 25. [TASK-0477](../tasks/TASK-0477-session-event-subscription-primitive.md)：会话事件订阅原语（port 事件帧 + session.subscribe/unsubscribe，TASK-0465 组 2 解锁件），done（本地 main 三步完成；IPC 628→626，event 为 `webContents.send` 推送不计 `ipcMain.handle` 口径，实际减 2）。
 26. [TASK-0478](../tasks/TASK-0478-session-interaction-host-domain.md)：问答与计划评审应答子域（question-list-pending/question-response/plan-review-list-pending/plan-review-response 4 通道）迁移，done（本地 main，前置重构 `ad033ff5d`；IPC 626→622，五个推送面保留旧 IPC 待事件面另片）。
+27. [TASK-0479](../tasks/TASK-0479-session-global-event-push.md)：全局会话事件推送迁移到 Host 事件面（`session.subscribeGlobal`，TASK-0465 组 2 推送面第 1 片），done（本地 main；IPC 保持 622，推送不计 `ipcMain.handle` 口径）。

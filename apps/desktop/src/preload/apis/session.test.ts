@@ -428,4 +428,171 @@ describe("createSessionApi event subscription", () => {
 			errorSpy.mockRestore();
 		}
 	});
+
+	it("shares one global subscription across both push kinds and dispatches by tag", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const sessionsChanged = vi.fn();
+		const runningChanged = vi.fn();
+
+		const removeSessions = session.onSessionsChanged(sessionsChanged);
+		const removeRunning = session.onRunningChanged(runningChanged);
+		fake.deliverPort(port);
+		await flush();
+
+		// 两类推送共用一条连接级订阅：首个监听者建立，第二个监听者不再重复请求。
+		expect(port.frames).toHaveLength(1);
+		const request = port.frames[0];
+		expect(request?.request).toEqual({ method: "session.subscribeGlobal", params: {} });
+		port.emitFrame({ id: request?.id ?? -1, response: { ok: true, result: { subscriptionId: "global:sub" } } });
+		await flush();
+
+		const sessionsEvent = { cwd: "C:/workspace", sessionPath: "C:/workspace/s1.jsonl" };
+		port.emitFrame({
+			id: 10,
+			event: { subscriptionId: "global:sub", payload: { kind: "sessions-changed", event: sessionsEvent } },
+		});
+		expect(sessionsChanged).toHaveBeenCalledWith(sessionsEvent);
+		expect(runningChanged).not.toHaveBeenCalled();
+
+		port.emitFrame({
+			id: 11,
+			event: {
+				subscriptionId: "global:sub",
+				payload: {
+					kind: "running-changed",
+					event: { sessionPath: "C:/workspace/s1.jsonl", running: true, sessionId: "s1", reason: "agent_end" },
+				},
+			},
+		});
+		expect(runningChanged).toHaveBeenCalledWith({
+			sessionPath: "C:/workspace/s1.jsonl",
+			running: true,
+			sessionId: "s1",
+			reason: "agent_end",
+		});
+		expect(sessionsChanged).toHaveBeenCalledTimes(1);
+
+		// 摘除单个监听只影响该类事件；窗口生命周期内不退订连接级订阅，避免重建期间丢事件。
+		removeSessions();
+		removeRunning();
+		port.emitFrame({
+			id: 12,
+			event: { subscriptionId: "global:sub", payload: { kind: "sessions-changed", event: sessionsEvent } },
+		});
+		expect(sessionsChanged).toHaveBeenCalledTimes(1);
+		expect(port.frames).toHaveLength(1);
+	});
+
+	it("logs and retries global subscription setup when the first port wait times out", async () => {
+		vi.useFakeTimers();
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			const fake = fakeIpc();
+			const port = fakePort();
+			const session = createSessionApi(fake.ipc).session;
+			const sessionsChanged = vi.fn();
+			const runningChanged = vi.fn();
+
+			// 首个监听者注册即尝试建立订阅；端口迟迟不到只记录，不向调用方抛错。
+			expect(session.onSessionsChanged(sessionsChanged)).toBeTypeOf("function");
+			await vi.advanceTimersByTimeAsync(1500);
+			expect(errorSpy).toHaveBeenCalledWith(
+				"[host] session.subscribeGlobal 订阅建立失败，后续监听注册时重试",
+				expect.objectContaining({ code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE }),
+			);
+
+			// 端口之后才建立：再次注册监听触发重试，建立后两类事件共用同一订阅。
+			fake.deliverPort(port);
+			session.onRunningChanged(runningChanged);
+			await vi.advanceTimersByTimeAsync(0);
+
+			expect(port.frames).toHaveLength(1);
+			const request = port.frames[0];
+			expect(request?.request).toEqual({ method: "session.subscribeGlobal", params: {} });
+			port.emitFrame({ id: request?.id ?? -1, response: { ok: true, result: { subscriptionId: "global:sub" } } });
+			await vi.advanceTimersByTimeAsync(0);
+
+			port.emitFrame({
+				id: 10,
+				event: {
+					subscriptionId: "global:sub",
+					payload: { kind: "running-changed", event: { sessionPath: "C:/workspace/s1.jsonl", running: false } },
+				},
+			});
+			expect(runningChanged).toHaveBeenCalledTimes(1);
+			expect(sessionsChanged).not.toHaveBeenCalled();
+		} finally {
+			errorSpy.mockRestore();
+			vi.useRealTimers();
+		}
+	});
+
+	it("logs when the port closes before the global handler registers", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			session.onSessionsChanged(vi.fn());
+			fake.deliverPort(port);
+			await flush();
+			port.emitFrame({
+				id: port.frames[0]?.id ?? -1,
+				response: { ok: true, result: { subscriptionId: "global:sub" } },
+			});
+			port.emitClose();
+			await flush();
+
+			expect(errorSpy).toHaveBeenCalledWith(
+				"[host] session.subscribeGlobal 订阅建立失败，后续监听注册时重试",
+				expect.objectContaining({ code: HOST_PROTOCOL_ERROR_CODES.HOST_UNAVAILABLE }),
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it("shares decode-failure tolerance across global push kinds and stops tolerating", async () => {
+		const fake = fakeIpc();
+		const port = fakePort();
+		const session = createSessionApi(fake.ipc).session;
+		const handler = vi.fn();
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			session.onRunningChanged(handler);
+			fake.deliverPort(port);
+			await flush();
+			port.emitFrame({
+				id: port.frames[0]?.id ?? -1,
+				response: { ok: true, result: { subscriptionId: "global:sub" } },
+			});
+			await flush();
+
+			let frameId = 10;
+			const emitBad = (): void => {
+				port.emitFrame({
+					id: frameId++,
+					event: { subscriptionId: "global:sub", payload: { kind: "unknown" } },
+				});
+			};
+			for (let index = 0; index < MAX_CONSECUTIVE_DECODE_FAILURES - 1; index += 1) emitBad();
+			expect(handler).not.toHaveBeenCalled();
+
+			// 成功解码重置共享计数：偶发坏包不会累计成协议错误。
+			port.emitFrame({
+				id: frameId++,
+				event: {
+					subscriptionId: "global:sub",
+					payload: { kind: "running-changed", event: { sessionPath: "C:/workspace/s1.jsonl", running: false } },
+				},
+			});
+			expect(handler).toHaveBeenCalledTimes(1);
+			for (let index = 0; index < MAX_CONSECUTIVE_DECODE_FAILURES - 1; index += 1) emitBad();
+			expect(() => emitBad()).toThrow(TypeError);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
 });

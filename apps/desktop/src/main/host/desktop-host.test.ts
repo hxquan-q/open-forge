@@ -1,7 +1,8 @@
 // Copyright The Open Forge contributors.
 import { HOST_PROTOCOL_ERROR_CODES, type HostEventSink } from "@vetta/host-protocol";
-import type { SessionEvent } from "@vetta/runtime-core";
+import type { RunningChangedReason, SessionEvent } from "@vetta/runtime-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { emitConversationListChanged } from "../conversations/conversation-list-events.js";
 import { SLIM_ASSISTANT_PARTIAL } from "../conversations/slim-session-event-for-ipc.js";
 
 let document: Record<string, unknown>;
@@ -47,6 +48,10 @@ const sharedRuntime = {
 	abort: vi.fn(async () => undefined),
 	deleteSession: vi.fn(async () => undefined),
 	subscribe: vi.fn((_sessionId: string, _handler: (event: SessionEvent) => void) => () => {}),
+	onRunningChanged: vi.fn(
+		(_handler: (sessionPath: string, running: boolean, sessionId?: string, reason?: RunningChangedReason) => void) =>
+			() => {},
+	),
 	getState: vi.fn(() => ({ activeToolNames: ["read"] as string[] })),
 };
 vi.mock("../runtime.js", () => ({ getSharedRuntime: () => sharedRuntime }));
@@ -97,9 +102,13 @@ const sessionQuery = {
 	]),
 };
 vi.mock("../conversations/session-query-service.js", () => sessionQuery);
-vi.mock("../agent-teams/team-session-service.js", () => ({
-	agentTeamSessionService: { getRunningCoordinationSessionPaths: () => ["C:\\team\\t1.jsonl"] },
+const agentTeamSessionServiceMock = vi.hoisted(() => ({
+	getRunningCoordinationSessionPaths: () => ["C:\\team\\t1.jsonl"],
+	onRunningChanged: vi.fn(
+		(_listener: (sessionPath: string, running: boolean, teamSessionId: string) => void) => () => {},
+	),
 }));
+vi.mock("../agent-teams/team-session-service.js", () => ({ agentTeamSessionService: agentTeamSessionServiceMock }));
 const lifecycleDeps = {
 	stopSessionBackgroundWork: vi.fn(async () => undefined),
 	forgetMessageAnnotations: vi.fn(async () => undefined),
@@ -536,6 +545,7 @@ describe("desktop host registration and session defaults domain", () => {
 			"session.setPlanModePermissionMode",
 			"session.startGoal",
 			"session.subscribe",
+			"session.subscribeGlobal",
 			"session.switchBranch",
 			"session.unsubscribe",
 			"session.updateSettings",
@@ -1083,6 +1093,7 @@ describe("desktop host session events domain", () => {
 	beforeEach(() => {
 		for (const fn of Object.values(sharedRuntime)) fn.mockClear();
 		sharedRuntime.invokeSessionExtension.mockResolvedValue(true);
+		agentTeamSessionServiceMock.onRunningChanged.mockClear();
 	});
 
 	function fakeEvents(): {
@@ -1116,6 +1127,94 @@ describe("desktop host session events domain", () => {
 			error: { code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE },
 		});
 		expect(sharedRuntime.subscribe).not.toHaveBeenCalled();
+	});
+
+	it("rejects subscribeGlobal when the connection has no event channel", async () => {
+		const host = createDesktopHost();
+		await expect(host.handle({ method: "session.subscribeGlobal", params: {} })).resolves.toMatchObject({
+			ok: false,
+			error: { code: HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE },
+		});
+		expect(sharedRuntime.onRunningChanged).not.toHaveBeenCalled();
+		expect(agentTeamSessionServiceMock.onRunningChanged).not.toHaveBeenCalled();
+	});
+
+	it("fans out conversation-list and running-set changes as tagged global events", async () => {
+		const { events, emitted } = fakeEvents();
+		let runtimeHandler:
+			| ((sessionPath: string, running: boolean, sessionId?: string, reason?: RunningChangedReason) => void)
+			| undefined;
+		sharedRuntime.onRunningChanged.mockImplementationOnce((handler) => {
+			runtimeHandler = handler;
+			return () => {};
+		});
+		let teamHandler: ((sessionPath: string, running: boolean, teamSessionId: string) => void) | undefined;
+		agentTeamSessionServiceMock.onRunningChanged.mockImplementationOnce((listener) => {
+			teamHandler = listener;
+			return () => {};
+		});
+
+		const host = createDesktopHost();
+		const response = await host.handle({ method: "session.subscribeGlobal", params: {} }, { events });
+		if (!response.ok) throw new Error("subscribeGlobal should succeed");
+		const { subscriptionId } = response.result as { subscriptionId: string };
+		expect(subscriptionId).toMatch(/^global:/);
+		// 全局订阅不回放快照：初值由 renderer 自行拉取。
+		expect(emitted).toEqual([]);
+
+		const sessionsChanged = {
+			cwd: "C:\\proj",
+			sessionPath: "C:\\proj\\s1.jsonl",
+			session: { id: "s1", cwd: "C:\\proj", firstMessage: "hi", modifiedAt: 1 },
+		};
+		emitConversationListChanged(sessionsChanged);
+		runtimeHandler?.("C:\\proj\\s1.jsonl", false, "s1", "agent_end");
+		teamHandler?.("C:\\team\\t1.jsonl", true, "team-1");
+		expect(emitted).toEqual([
+			{ subscriptionId, payload: { kind: "sessions-changed", event: sessionsChanged } },
+			{
+				subscriptionId,
+				payload: {
+					kind: "running-changed",
+					event: { sessionPath: "C:\\proj\\s1.jsonl", running: false, sessionId: "s1", reason: "agent_end" },
+				},
+			},
+			{
+				subscriptionId,
+				payload: {
+					kind: "running-changed",
+					event: { sessionPath: "C:\\team\\t1.jsonl", running: true, sessionId: "team-1" },
+				},
+			},
+		]);
+
+		await expect(
+			host.handle({ method: "session.unsubscribe", params: { subscriptionId } }, { events }),
+		).resolves.toEqual({ ok: true, result: null });
+		emitConversationListChanged(sessionsChanged);
+		expect(emitted).toHaveLength(3);
+	});
+
+	it("detaches global listeners when the connection closes", async () => {
+		const { events, emitted, close } = fakeEvents();
+		const runtimeUnsubscribe = vi.fn();
+		const teamUnsubscribe = vi.fn();
+		sharedRuntime.onRunningChanged.mockReturnValueOnce(runtimeUnsubscribe);
+		agentTeamSessionServiceMock.onRunningChanged.mockReturnValueOnce(teamUnsubscribe);
+
+		const host = createDesktopHost();
+		const response = await host.handle({ method: "session.subscribeGlobal", params: {} }, { events });
+		if (!response.ok) throw new Error("subscribeGlobal should succeed");
+		close();
+		expect(runtimeUnsubscribe).toHaveBeenCalledTimes(1);
+		expect(teamUnsubscribe).toHaveBeenCalledTimes(1);
+
+		// 端口关闭已摘除订阅，随后到达的 unsubscribe 不应重复调用。
+		const { subscriptionId } = response.result as { subscriptionId: string };
+		await host.handle({ method: "session.unsubscribe", params: { subscriptionId } }, { events });
+		expect(runtimeUnsubscribe).toHaveBeenCalledTimes(1);
+		expect(teamUnsubscribe).toHaveBeenCalledTimes(1);
+		expect(emitted).toEqual([]);
 	});
 
 	it("replays background tasks, active tools and subagents before streaming runtime events", async () => {

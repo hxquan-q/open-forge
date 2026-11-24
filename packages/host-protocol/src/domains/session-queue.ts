@@ -4,7 +4,7 @@ import { defineHostMethod, type HostMethodSignatures } from "../method.js";
 
 /**
  * 会话输入队列子域合同（PLAN-0029 Phase 3 领域迁移，TASK-0467；ADR-0060 队列能力）。
- * 纯请求/响应：`vetta:session:queue-state` 推送事件不在本合同，仍走旧 IPC（TASK-0465 事件原语）。
+ * 纯请求/响应：队列态由 `session.getQueueState` 拉取，没有独立的推送通道。
  */
 
 const SessionIdParams = Type.Object({ sessionId: Type.String({ minLength: 1 }) }, { additionalProperties: false });

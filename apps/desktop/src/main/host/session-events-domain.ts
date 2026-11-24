@@ -15,6 +15,9 @@ import {
 } from "@vetta/host-protocol";
 import type { SessionEvent } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
+import type { RunningChangedEvent, SessionGlobalEvent } from "../../shared/session-global-event-codec.js";
+import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
+import { onConversationListChanged } from "../conversations/conversation-list-events.js";
 import { recordSessionEventForDebug } from "../conversations/session-debug-recorder.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
 import { getSharedRuntime } from "../runtime.js";
@@ -24,6 +27,10 @@ import { getSharedRuntime } from "../runtime.js";
  * `ctx.events` 下发；端口关闭时摘除该连接的全部 runtime 订阅。三份快照回放与旧
  * IPC handler 同序同形——后台任务、激活工具、subagent——renderer 刷新期间不丢状态。
  * invoke 回退通道没有事件面（`ctx.events` 缺省），此时拒绝订阅由 preload 回退旧通道。
+ *
+ * subscribeGlobal（TASK-0479）把进程级推送（会话列表变化、运行态变化）接到同一事件面：
+ * 每条连接持一条全局订阅，payload 以 `kind` 区分来源；订阅随 `session.unsubscribe`
+ * 或端口关闭摘除，不回放快照（renderer 自行拉取初值）。
  */
 
 type ConnectionSubscriptions = Map<string, () => void>;
@@ -110,6 +117,38 @@ export const sessionEventsHostDomain: HostDomainImplementation<typeof SESSION_EV
 			});
 		}
 
+		return { subscriptionId };
+	},
+	subscribeGlobal: async (_params, ctx) => {
+		const events = ctx.events;
+		if (!events) {
+			throw new HostProtocolError(
+				HOST_PROTOCOL_ERROR_CODES.CAPABILITY_UNAVAILABLE,
+				"session.subscribeGlobal requires a host event channel",
+			);
+		}
+		const subscriptionId = `global:${randomUUID()}`;
+		const emit = (payload: SessionGlobalEvent): void => {
+			events.emitEvent(subscriptionId, payload);
+		};
+		const unsubscribeConversationList = onConversationListChanged((event) => {
+			emit({ kind: "sessions-changed", event });
+		});
+		const runtime = getSharedRuntime();
+		const unsubscribeRuntime = runtime.onRunningChanged((sessionPath, running, sessionId, reason) => {
+			const event: RunningChangedEvent = { sessionPath, running };
+			if (sessionId !== undefined) event.sessionId = sessionId;
+			if (reason !== undefined) event.reason = reason;
+			emit({ kind: "running-changed", event });
+		});
+		const unsubscribeTeam = agentTeamSessionService.onRunningChanged((sessionPath, running, sessionId) => {
+			emit({ kind: "running-changed", event: { sessionPath, running, sessionId } });
+		});
+		subscriptionsFor(events).set(subscriptionId, () => {
+			unsubscribeConversationList();
+			unsubscribeRuntime();
+			unsubscribeTeam();
+		});
 		return { subscriptionId };
 	},
 	unsubscribe: ({ subscriptionId }, ctx) => {
