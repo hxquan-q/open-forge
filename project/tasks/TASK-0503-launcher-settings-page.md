@@ -1,7 +1,7 @@
 ---
 id: TASK-0503
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: apps/desktop + packages/theme-ui
 requirement: REQ-0008
@@ -78,4 +78,4 @@ updated: 2026-11-25
 
 - 适配点补充：本地 `ShortcutRecorderView` 比上游多一个必填 `formatShortcut` prop（格式化持久化快捷键的展示），故 `LauncherSettingsView` 增加 `formatShortcut` 透传，model 从 `@shared/lib/platform` 引入，测试桩补 `formatShortcut: (s) => s`。其余与上游逐字一致。
 - 验证：`LauncherSettingsView.test.tsx` 3/3 绿；`apps/desktop` settings 域 vitest 41 文件 202 用例全绿；`check:quick` 与 `bun run check` 全过（release-notes 既有 advisory 不计入失败）。
-- 提交：见本切片 feat 提交。
+- 提交：`1642a4a`。
