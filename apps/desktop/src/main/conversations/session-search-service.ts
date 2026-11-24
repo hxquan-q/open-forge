@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { resolve } from "node:path";
 import type { HistoryEntry, SessionExecutionMode } from "@vetta/runtime-core";
 import type { DesktopSessionHistoryInfo } from "../../shared/session-access.js";
@@ -68,7 +69,10 @@ export class SessionSearchService {
 		);
 		let newest: DesktopSessionSearchResult[] = [];
 		let skipped = 0;
-		if (!query) return { limited: false, skipped };
+		const activePaths = new Set((request.activePaths ?? []).map((path) => resolve(path)));
+		if (!query && activePaths.size === 0) return { limited: false, skipped };
+		// 空查询 + activePaths：只列出这些会话本身，不做任何文本匹配。
+		const listActiveOnly = !query;
 		const seen = new Set<string>();
 		const candidates: { session: DesktopSessionHistoryInfo; source: SessionSearchSource }[] = [];
 		const canEnterResults = (session: DesktopSessionHistoryInfo) =>
@@ -137,6 +141,10 @@ export class SessionSearchService {
 				)
 					continue;
 				const title = session.name?.trim() ?? "";
+				if (listActiveOnly) {
+					if (activePaths.has(path)) emit(session, source, { field: "title", snippet: title });
+					continue;
+				}
 				if (normalizeSearchText(title).includes(query)) {
 					emit(session, source, { field: "title", snippet: createSearchSnippet(title, query) });
 				} else candidates.push({ session, source });

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionExecutionMode } from "@vetta/runtime-core";
 import type { DesktopSessionHistoryInfo } from "./session-access.js";
 
@@ -28,6 +29,12 @@ export interface DesktopSessionSearchRequest {
 	readonly modifiedFrom?: number;
 	/** Exclusive upper bound; the renderer converts an inclusive end date to the next local midnight. */
 	readonly modifiedBefore?: number;
+	/**
+	 * Sessions the caller is watching (running / waiting for the user). With an empty query these are
+	 * listed as-is so the command menu can show them before anything is typed; with a query they only
+	 * appear when they match, like any other session.
+	 */
+	readonly activePaths?: readonly string[];
 }
 
 export interface DesktopSessionSearchSource {
