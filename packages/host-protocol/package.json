@@ -1,6 +1,6 @@
 {
 	"name": "@vetta/host-protocol",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"private": true,
 	"description": "Transport-neutral Host request contracts: method definitions, envelopes, stable errors, owner slots and snapshot/delta streams",
 	"type": "module",

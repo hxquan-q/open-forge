@@ -154,7 +154,9 @@ it.each([undefined, "work"])(
 			await vi.advanceTimersByTimeAsync(300);
 		});
 		expect(listSessions).toHaveBeenCalledWith(cached.cwd);
-		expect(result.current.projectCards[0]?.sessions).toEqual([{ kind: "chat", path: cached.path, title: "构建项目" }]);
+		expect(result.current.projectCards[0]?.sessions).toEqual([
+			{ kind: "chat", path: cached.path, title: "构建项目", modifiedAt: 2 },
+		]);
 	},
 );
 
@@ -267,7 +269,9 @@ it.each(["missing-mode", "old-mode", "missing-row"])(
 		const updated = store.get(sessionsMapAtom).get(cached.cwd) ?? [];
 		expect(updated).toMatchObject([{ path: cached.path, agentMode: "coding" }]);
 		expect(projectSidebarConversations(updated, [], { kind: "project", projectPath: cached.cwd })).toEqual([]);
-		expect(result.current.home.projectCards[0]?.sessions).toEqual([{ kind: "chat", path: cached.path, title: "已有消息" }]);
+		expect(result.current.home.projectCards[0]?.sessions).toEqual([
+			{ kind: "chat", path: cached.path, title: "已有消息", modifiedAt: 2 },
+		]);
 
 		listSessions.mockResolvedValue([cached]);
 		await act(async () => {

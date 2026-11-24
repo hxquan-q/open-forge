@@ -56,7 +56,8 @@
 		},
 		"session": {
 			"forkedTooltip": "Forked from another session",
-			"untitledTeam": "New team conversation"
+			"untitledTeam": "New team conversation",
+			"renameFailed": "Couldn't rename the session. Please try again later."
 		},
 		"dialogs": {
 			"deleteSessionTitle": "Delete session",
@@ -343,21 +344,38 @@
 	},
 	"allstarDev": {
 		"home": {
+			"title": "Allstar Dev",
 			"intro": "Your autonomous development workspace: enter dev projects and coding sessions from here.",
 			"loading": "Loading…",
 			"projects": {
 				"title": "Dev projects",
+				"count": "{{count}} projects",
 				"newSession": "New dev session",
-				"more": "{{count}} more",
-				"openProject": "Open project"
+				"more": "All {{count}}",
+				"openProject": "Open project",
+				"projectActions": "Project actions",
+				"sessionCount": "{{count}} sessions",
+				"revealInFolder": "Reveal in folder",
+				"removeFromBoard": "Remove from board",
+				"cardNewSession": "New session"
 			},
-			"teamSession": "Team session",
+			"sessions": {
+				"actions": "Session actions",
+				"reveal": "Open session data folder",
+				"renameFailed": "Couldn't rename the session. Please try again later.",
+				"renameFailedDataMissing": "This session's data file is missing, so it can't be renamed. The only option left is to delete it."
+			},
 			"empty": {
 				"title": "No dev sessions yet",
 				"hint": "Use \"Open project\" to register a directory as a dev project, then start a dev session from here",
-				"cardHint": "No dev sessions yet — select this project below to start one",
-				"projectLabel": "Choose a project"
+				"cardHint": "No dev sessions yet — start one with \"New session\" below"
 			}
+		},
+		"sessionsDialog": {
+			"description": "All dev sessions of this project",
+			"searchPlaceholder": "Search sessions",
+			"noResults": "No matching sessions",
+			"close": "Close"
 		},
 		"projectConfig": {
 			"configure": "Project config",

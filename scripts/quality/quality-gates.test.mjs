@@ -1,9 +1,10 @@
 // Modified by The Open Forge contributors.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import desktopVitestConfig from "../../apps/desktop/vitest.config.ts";
-import { styleForPath } from "./check-modified-file-notices.mjs";
+import { resolveMergeBase, styleForPath } from "./check-modified-file-notices.mjs";
 import { findPackageBoundaryViolations, findPackageManifestBoundaryViolations } from "./check-package-boundaries.mjs";
 import { batchPaths, createQuickCheckPlan, isBiomeGlobalTrigger } from "./check-quick.mjs";
 import { findSkillFrontmatterProblems } from "./check-skill-frontmatter.mjs";
@@ -1574,6 +1575,106 @@ describe("VS Code workspace modification notices", () => {
 		expect(style.render("Modified by The Open Forge contributors.")).toBe(
 			"// Modified by The Open Forge contributors.",
 		);
+	});
+});
+
+describe("修改声明头守卫的 merge-base 解析", () => {
+	const sha = "0123456789abcdef0123456789abcdef01234567";
+	const fakeGit =
+		({ refs = {}, objects = [] } = {}) =>
+		(args) => {
+			if (args[0] === "merge-base") {
+				const value = refs[args[1]];
+				if (!value) throw new Error(`unknown revision ${args[1]}`);
+				return `${value}\n`;
+			}
+			if (args[0] === "cat-file") {
+				const recorded = String(args[2]).replace(/\^\{commit\}$/u, "");
+				if (!objects.includes(recorded)) throw new Error("missing object");
+				return "";
+			}
+			throw new Error(`unexpected git ${args.join(" ")}`);
+		};
+
+	it("没有 upstream remote 时回落 origin/dev 并告警，而不是硬失败", () => {
+		const warnings = [];
+		const base = resolveMergeBase({
+			runGit: fakeGit({ refs: { "origin/dev": sha } }),
+			warn: (message) => warnings.push(message),
+		});
+
+		expect(base).toEqual({ sha, ref: "origin/dev" });
+		expect(warnings).toHaveLength(1);
+		expect(warnings[0]).toContain("origin/dev");
+	});
+
+	it("upstream/dev 可用时优先使用且不告警", () => {
+		const upstreamSha = "f".repeat(40);
+		const warnings = [];
+		const base = resolveMergeBase({
+			runGit: fakeGit({ refs: { "upstream/dev": upstreamSha, "origin/dev": sha } }),
+			warn: (message) => warnings.push(message),
+		});
+
+		expect(base).toEqual({ sha: upstreamSha, ref: "upstream/dev" });
+		expect(warnings).toEqual([]);
+	});
+
+	it("两个 ref 都不可用时硬失败，不静默跳过审计", () => {
+		expect(() => resolveMergeBase({ runGit: fakeGit(), warn: () => {} })).toThrow(/merge-base/u);
+	});
+
+	it("带基线时优先沿用基线记录的 merge-base", () => {
+		const dir = mkdtempSync(join(tmpdir(), "notices-baseline-"));
+		const baselinePath = join(dir, "modified-file-notices.txt");
+		writeFileSync(baselinePath, `# merge-base: ${sha}\npackages/ai/src/a.ts\n`);
+		try {
+			const base = resolveMergeBase({
+				baselinePath,
+				runGit: fakeGit({ objects: [sha], refs: { "origin/dev": "e".repeat(40) } }),
+				warn: () => {},
+			});
+
+			expect(base).toEqual({ sha, ref: "baseline 快照" });
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("基线记录的 merge-base 不在对象库时降级到 origin/dev 并告警", () => {
+		const dir = mkdtempSync(join(tmpdir(), "notices-stale-"));
+		const baselinePath = join(dir, "modified-file-notices.txt");
+		writeFileSync(baselinePath, `# merge-base: ${sha}\n`);
+		const originSha = "d".repeat(40);
+		const warnings = [];
+		try {
+			const base = resolveMergeBase({
+				baselinePath,
+				runGit: fakeGit({ refs: { "origin/dev": originSha } }),
+				warn: (message) => warnings.push(message),
+			});
+
+			expect(base).toEqual({ sha: originSha, ref: "origin/dev" });
+			expect(warnings.join("\n")).toContain("origin/dev");
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("默认参数指向真实 git，且基线文件缺失时不崩溃", () => {
+		const dir = mkdtempSync(join(tmpdir(), "notices-missing-"));
+		const baselinePath = join(dir, "absent.txt");
+		try {
+			const base = resolveMergeBase({
+				baselinePath,
+				runGit: fakeGit({ refs: { "origin/dev": sha } }),
+				warn: () => {},
+			});
+
+			expect(base).toEqual({ sha, ref: "origin/dev" });
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
 

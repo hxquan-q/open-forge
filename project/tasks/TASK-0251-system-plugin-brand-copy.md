@@ -1,7 +1,7 @@
 ---
 id: TASK-0251
 type: task
-status: verifying
+status: done
 priority: P1
 owner: 系统插件 / 设计画布
 requirement: REQ-0013
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -122,3 +122,11 @@ updated: 2026-10-14
   - 导出 mockup 的水印与署名（`vetta-ui-design/src/mockup/render.ts` 的 `BRAND_NAME` / `BRAND_TAGLINE`、`brand-logo.ts`）仍写旧品牌名——产物内品牌需要宿主品牌值，按用户决策不新增 SDK 接口。
   - 不经过插件 i18n 的静态标签：分享包保存对话框过滤器名（`export/export-design.ts` 的 `Vetta Design`）、生成 DESIGN.md 的出处行（`gallery/start-from-system.ts`）。
   - plugin-cli 开发者文案与生成模板（`Vetta plugin manager`、`install:vetta` 等）按范围约定不动。
+
+## 2026-11-18 静态核查后收口
+
+- 依据：只读静态核查逐条核对，主张全部在树——`plugin-host-apis.ts` 的 `createI18nApi().t()` 与 `resolvePluginDisplayText()` 出口都套用 `replaceDesktopBrandText`；替换名单唯一来源于品牌事实源（`desktop-brand.ts` / `desktop-brand*.json`），无第二份硬编码；`notes.author.agent` key 在 zh/en locales 均存在；`action-usage.ts` 37 处已改「桌面应用」且测试断言同步；`content-creation` / `plugin-workbench` 文案已换且扩展名 `vettapkg` 未动；`plugin-host-apis.brand.test.ts` 的断言能区分新旧实现。
+- 声明遗留经复核全部仍在，按用户决策保留，不视为缺口：`vetta-ui-design/src/mockup/render.ts:5-6` 的 `BRAND_NAME = "Vetta"` / `Designed By Vetta`、`brand-logo.ts`、`export/export-design.ts` 的 `Vetta Design`、`gallery/start-from-system.ts` 出处行、plugin-cli 模板文案。理由是产物内品牌需宿主品牌值，为此扩 Plugin SDK 公共接口不划算；plugin-cli 属冻结命令名与包名。
+- 未启动 dev 做设计画布人工目验：本次改动为文案字面量与 i18n key 替换，静态核查以源码与 diff 为据；画布视觉属可选补充。
+- 本次未重跑测试：绿灯证据沿用前文（`plugin-host-apis.brand.test.ts` + `desktop-brand.test.ts` 20 例、`presets/vetta-actions` 8/8、`vetta-ui-design` 688 例、`content-creation` 通过）。
+- `integration_status` 保持 `pending`：未合入 `origin/dev`，未 push、未发布。

@@ -95,3 +95,21 @@ it("only observes known startup stages and tolerates observation failure", () =>
 		"route-content-committed",
 	]);
 });
+
+it("resolves the modules-loaded wait on the renderer-module-loaded phase", async () => {
+	const lifecycle = registerAppLifecycleIpc();
+	const waiting = lifecycle.waitForRendererModulesLoaded(100);
+	ipc.listeners.get(APP_LIFECYCLE_RENDERER_STARTUP_PHASE_CHANNEL)?.({}, "renderer-module-loaded");
+	await expect(waiting).resolves.toBe("painted");
+	// 迟到/无关 phase 不改变已解析的结果，也不会重复等待。
+	ipc.listeners.get(APP_LIFECYCLE_RENDERER_STARTUP_PHASE_CHANNEL)?.({}, "route-content-committed");
+	await expect(lifecycle.waitForRendererModulesLoaded(100)).resolves.toBe("painted");
+	expect(vi.getTimerCount()).toBe(0);
+});
+
+it("keeps a bounded modules-loaded wait with a timeout fallback", async () => {
+	const lifecycle = registerAppLifecycleIpc();
+	const waiting = lifecycle.waitForRendererModulesLoaded(100);
+	await vi.advanceTimersByTimeAsync(100);
+	await expect(waiting).resolves.toBe("timeout");
+});

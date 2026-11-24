@@ -16,6 +16,10 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0196` | 版块「从版块移除」成功后卡片不消失（会话池仍聚合建卡），再点即静默 `Project not found`；菜单未按 `registered` 收口、移除非幂等 | in_progress | P2 | REQ-0030 |
+| `BUG-0195` | 团队会话协调文件缺失后重命名必失败并抛 `No RuntimeHost session backend owns`：列表不校验文件、重命名无降级（删除已有）；文件消失成因待调查 | in_progress | P1 | REQ-0030 |
+| `BUG-0194` | 版块会话行尾「···」点了直接打开会话而非展开菜单（占位图标冒泡到整行打开回调）；已抽 `AllstarSessionRow` 接三项菜单，待实机走查 | verifying | P2 | REQ-0030 |
+| `BUG-0193` | Allstar 版块首页只占内容区约一半宽度、右侧大片空白（页面根缺 `w-full`，宽度被页头文案 max-content 锁死）；已补宽度声明，待实机走查 | verifying | P2 | REQ-0030 |
 | `BUG-0192` | code 会话热追踪跟随 AI 工作区文件时右栏预览报「无法读取此文件」；会话解析注册工作区授权根，红 2→绿 23/23，待实机验收 | verifying | P1 | REQ-0031 |
 | `BUG-0191` | 普通会话删除失败无反馈且标记/导航先于删除结果；合同已登记TASK-0489，实现未开始；2026-11-18 复核确认未被 BUG-0114/0087 的团队删除修复兼带覆盖 | investigating | P1 | — |
 | `BUG-0190` | read/write拒绝返回结构化policy_denied；红4→绿75/75，独立审查无阻断，完整门禁既有阻断，候选待验 | verifying | P1 | — |
@@ -114,7 +118,7 @@
 | `BUG-0090` | Windows Inno 打包版通用 updater 检查确定性失败：`app-update.yml` 缺失与 feed 404 | verifying | P2 | — |
 | `BUG-0089` | Windows 打包版每次启动安装 CLI shim 因目标文件被占用报 `EPERM: copyfile` | verifying | P2 | — |
 | `BUG-0088` | allstar-coding ac-fence 审计日志缺 `fs.write` 权限声明，fence-log 追加必被拒 | verifying | P2 | — |
-| `BUG-0087` | Team 历史删除与缺定义后的管理入口已修，含真实存储/租约/并发回归；用户黑盒暂未遇问题，按请求本地保存；完整门禁既有阻断仍在、未集成 | in_progress | P1 | — |
+| `BUG-0087` | Team 历史删除与缺定义后的管理入口已修，含真实存储/租约/并发回归；用户黑盒未遇问题，11-18 随 TASK-0226 收口；完整门禁既有阻断非本路径、未集成 | done | P1 | — |
 | `BUG-0086` | 内置浏览器指针穿透调用落在 `WebContents` 上，`setIgnoreMouseEvents` 每次必抛 TypeError | verifying | P1 | — |
 | `BUG-0085` | provider 连接被切断后回合长时间不进终态：停滞重试级联把 30 分钟预算烧在死连接上 | verifying | P1 | — |
 | `BUG-0084` | team 会话引用文件后输入框反复重建内容：中文输入法组字被打断、光标闪烁无法输入 | verifying | P1 | — |

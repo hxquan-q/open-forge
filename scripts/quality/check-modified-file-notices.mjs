@@ -194,18 +194,30 @@ function git(args) {
 	return execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 }
 
-export function upstreamMergeBase() {
+function mergeBaseWith(ref, runGit) {
 	try {
-		return git(["merge-base", "upstream/dev", "HEAD"]).trim();
+		return runGit(["merge-base", ref, "HEAD"]).trim();
 	} catch {
-		throw new Error("无法解析 upstream/dev 的 merge-base；先运行 git fetch upstream");
+		return null;
 	}
+}
+
+export function upstreamMergeBase() {
+	const base = mergeBaseWith("upstream/dev", git);
+	if (!base) throw new Error("无法解析 upstream/dev 的 merge-base；先运行 git fetch upstream");
+	return base;
 }
 
 const BASELINE_SHA_PREFIX = "# merge-base: ";
 
 function readBaselineSha(baselinePath) {
-	const content = readFileSync(baselinePath, "utf8");
+	let content;
+	try {
+		content = readFileSync(baselinePath, "utf8");
+	} catch {
+		// 基线尚未生成（首次 --write-baseline）时按无记录处理。
+		return null;
+	}
 	for (const line of content.split("\n")) {
 		if (line.startsWith(BASELINE_SHA_PREFIX)) return line.slice(BASELINE_SHA_PREFIX.length).trim();
 	}
@@ -299,42 +311,46 @@ function argValue(flag) {
 	return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-function resolveMergeBase(baselinePath) {
-	try {
-		return upstreamMergeBase();
-	} catch (error) {
-		if (!baselinePath) throw error;
-		// 门禁环境下可能没有 upstream remote（外部贡献者/CI 浅克隆）：
-		// 回落到基线文件记录的 sha；commit 对象不在则放行并告警。
+export function resolveMergeBase({ baselinePath, runGit = git, warn = console.warn } = {}) {
+	const upstream = mergeBaseWith("upstream/dev", runGit);
+	if (upstream) return { sha: upstream, ref: "upstream/dev" };
+	// ratchet 快照记录的是写入时的 merge-base：换成别的 ref 会改变快照语义，故基线优先生效。
+	if (baselinePath) {
 		const recorded = readBaselineSha(baselinePath);
-		if (!recorded) throw error;
-		try {
-			git(["cat-file", "-e", `${recorded}^{commit}`]);
-		} catch {
-			console.warn(
-				`[modified-file-notices] upstream merge-base 与基线 sha 均不可用，跳过审计（请先 git fetch upstream）`,
-			);
-			return null;
+		if (recorded) {
+			try {
+				runGit(["cat-file", "-e", `${recorded}^{commit}`]);
+				return { sha: recorded, ref: "baseline 快照" };
+			} catch {
+				warn(
+					`[modified-file-notices] 基线记录的 merge-base ${recorded.slice(0, 12)} 不在本地对象库，改试 origin/dev`,
+				);
+			}
 		}
-		return recorded;
 	}
+	// 外部贡献者与 CI 通常没有 upstream remote（actions/checkout 只建 origin）。本仓 upstream 与 origin
+	// 同源，两个 dev 分支历史相同、merge-base 等价，因此回落 origin/dev 不掉严格度。若将来 upstream
+	// 指向真正的上游项目，CI 必须显式 fetch 上游，否则此处只覆盖「相对 fork dev」的范围（较窄），
+	// 届时应把这个守卫拆成「上游合规」与「分支内合规」两级。
+	const origin = mergeBaseWith("origin/dev", runGit);
+	if (origin) {
+		warn("[modified-file-notices] 未配置 upstream remote，回落 origin/dev 作为 merge-base");
+		return { sha: origin, ref: "origin/dev" };
+	}
+	throw new Error("无法解析 merge-base：upstream/dev 与 origin/dev 均不可用；先运行 git fetch");
 }
 
 function main() {
 	const write = process.argv.includes("--write");
 	const baselinePath = argValue("--baseline");
 	const writeBaselinePath = argValue("--write-baseline");
-	const mergeBase = resolveMergeBase(baselinePath ?? writeBaselinePath);
-	if (mergeBase === null) {
-		process.exitCode = 0;
-		return;
-	}
+	const { sha: mergeBase, ref: mergeBaseRef } = resolveMergeBase({ baselinePath: baselinePath ?? writeBaselinePath });
 	const changes = listForkChanges(mergeBase);
 	const { entries, missing, unclassified } = audit(changes);
 	const covered = entries.filter((entry) => entry.status === "covered");
 	const excluded = entries.filter((entry) => entry.status === "excluded");
 
-	console.log(`baseline: upstream/dev@${mergeBase.slice(0, 12)}`);
+	console.log(`baseline: ${mergeBaseRef}@${mergeBase.slice(0, 12)}`);
 	console.log(
 		`changed=${changes.length} covered=${covered.length} excluded=${excluded.length} missing=${missing.length} unclassified=${unclassified.length}`,
 	);

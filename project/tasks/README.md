@@ -30,6 +30,9 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0492` | `verifying` | — | [版块会话行接入三项操作菜单](TASK-0492-allstar-session-row-menu.md)：BUG-0194，抽 `AllstarSessionRow`（标题按钮 + `···` 菜单：重命名/在文件夹打开/删除），20/20 + 4/4 + `check:quick` 全绿，待实机走查。 |
+| `TASK-0491` | `verifying` | — | [版块首页卡片放大 125% 并拉开左右间距](TASK-0491-allstar-home-card-density.md)：REQ-0030，列宽 13rem→16.25rem、`gap-x` 12→32px，契约测试 18/18 + `check:quick` 全绿，待用户目视。 |
+| `TASK-0490` | `verifying` | — | [Allstar 版块首页未撑满内容区宽度](TASK-0490-allstar-home-width-fill.md)：BUG-0193，页面根补 `w-full`（与 `min-w-0` 并存），定向测试 22/22 + `check:quick` 全绿，待用户实机走查。 |
 | `TASK-0489` | `ready` | — | [普通会话删除失败反馈与副作用顺序](TASK-0489-session-delete-failure-feedback.md)：BUG-0191合同已落盘；两次实现派发均宿主侧中断零源码改动；2026-11-18 复核确认未被 BUG-0114/0087 的团队删除修复兼带覆盖（普通/批量分支仍无 catch、导航先行），待实施。 |
 | `TASK-0488` | `done` | — | [文件路径策略拒绝结构化错误](TASK-0488-file-policy-error-result.md)：BUG-0190，红4→绿4文件75/75，独立审查无阻断；用户 2026-11-18 实机验收通过；候选仍 integration pending（未合 dev）。 |
 | `TASK-0487` | `done` | — | [Provider逐事件取消监听配对释放](TASK-0487-provider-abort-listener-cleanup.md)：BUG-0189，红监听35≠1→绿5文件83/83，独立审查无阻断；2026-11-18 工程核对 `nextAttemptStep` 具名回调+finally 配对释放且定向 36/36，经用户同意按工程合同验收；候选仍 integration pending。 |
@@ -77,8 +80,8 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0434` | `verifying` | PLAN-0028 | [LLM 行为热追踪收敛为 code 模式独有（REQ-0030 / 报告 §11.3）](TASK-0434-hot-tracking-code-only.md) |
 | `TASK-0433` | `verifying` | PLAN-0028 | [新建 code 会话恢复四页签默认（BUG-0172）](TASK-0433-new-session-tab-defaults.md) |
 | `TASK-0432` | `verifying` | PLAN-0028 | [新建 code 会话意图驱动布局初始化（BUG-0171）](TASK-0432-coding-create-intent.md) |
-| `TASK-0431` | `verifying` | PLAN-0028 | [终端条目完成结算与聊天闸门解耦（BUG-0170）](TASK-0431-terminal-entry-stuck-running.md) |
-| `TASK-0430` | `verifying` | PLAN-0028 | [coding 增量行侧栏漏过滤修复（BUG-0169）](TASK-0430-incremental-coding-sidebar-leak.md) |
+| `TASK-0431` | `done` | PLAN-0028 | [终端条目完成结算与聊天闸门解耦（BUG-0170）](TASK-0431-terminal-entry-stuck-running.md)<br>chenxvhua 补充（状态 `done`；Plan `PLAN-0028`）：2026-11-18 批次收尾——用户实跑 impact（相对 xquan 全量差异）47/49 包绿，两处失败包零改动且反证为本机环境；完整 check exit 0；`verifying` → `done`，候选 integration pending。 |
+| `TASK-0430` | `done` | PLAN-0028 | [coding 增量行侧栏漏过滤修复（BUG-0169）](TASK-0430-incremental-coding-sidebar-leak.md)<br>chenxvhua 补充（状态 `done`；Plan `PLAN-0028`）：2026-11-18 批次收尾——impact 47/49 包绿（失败包零改动，环境所致）、完整 check exit 0，本任务实机不适用；`verifying` → `done`，候选 integration pending。 |
 | `TASK-0429` | `verifying` | PLAN-0028 | [同一 AI 文件再次编辑跟回内嵌预览（BUG-0168）](TASK-0429-ai-file-edit-refollow.md) |
 | `TASK-0428` | `verifying` | PLAN-0028 | [开发册项目闭环：候选与补拉以版块册为事实源（BUG-0167）](TASK-0428-allstar-book-project-closure.md) |
 | `TASK-0427` | `verifying` | PLAN-0028 | [修复终端输出摘要内存保留（BUG-0166）](TASK-0427-terminal-output-retention.md) |
@@ -162,10 +165,10 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0262` | `verifying` | — | [压缩提交前排空在途追加并刷新版本，消除与事件循环的版本竞态](TASK-0262-compaction-version-race.md) |
 | `TASK-0261` | `verifying` | — | [续跑条改用 runtime session id：拆开门控与宿主调用的语义](TASK-0261-resume-bar-runtime-id-seam.md) |
 | `TASK-0260` | `verifying` | — | [团队会话删除改为删除优先：清理失败降级记录、不再掀翻删除](TASK-0260-team-session-delete-robust-cleanup.md) |
-| `TASK-0259` | `verifying` | — | [品牌档位相关测试断言改为引用品牌事实源](TASK-0259-brand-profile-test-assertion.md) |
-| `TASK-0252` | `verifying` | — | [Desktop i18n 组合词归一与防回退门禁](TASK-0252-desktop-i18n-brand-composition-guard.md) |
-| `TASK-0251` | `verifying` | — | [系统插件文案与导出产物使用宿主品牌](TASK-0251-system-plugin-brand-copy.md) |
-| `TASK-0250` | `verifying` | — | [runtime-node 用户可见报错与工具描述去遗留品牌名](TASK-0250-runtime-user-visible-brand-strings.md) |
+| `TASK-0259` | `done` | — | [品牌档位相关测试断言改为引用品牌事实源](TASK-0259-brand-profile-test-assertion.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认 `DESKTOP_BRAND.displayName` 断言在树、文件不钉档位；纯测试修复无人工验收入口，收口；未重跑测试，候选 integration pending。 |
+| `TASK-0252` | `done` | — | [Desktop i18n 组合词归一与防回退门禁](TASK-0252-desktop-i18n-brand-composition-guard.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认 `legacyProductNames` 顺序、句末句号边界规则与全量 locale 守卫（递归遍历 `resources.ts` 15 命名空间 × zh/en，`main-resources` 为真子集）均成立；界面语序未目验，候选 integration pending。 |
+| `TASK-0251` | `done` | — | [系统插件文案与导出产物使用宿主品牌](TASK-0251-system-plugin-brand-copy.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认宿主 i18n 出口套用 `replaceDesktopBrandText`、名单唯一来源品牌事实源；`mockup/render.ts` 水印与 plugin-cli 文案按决策保留，候选 integration pending。 |
+| `TASK-0250` | `done` | — | [runtime-node 用户可见报错与工具描述去遗留品牌名](TASK-0250-runtime-user-visible-brand-strings.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：2026-11-18 静态核查确认报错/描述文案全改、`runtime-node` 内 `\bVetta\b` 仅 5 处且均为冻结标识与注释；勘误：兜底路径已由 TASK-0441 指向 OpenForge（该 Task 仍 verifying），候选 integration pending。 |
 | `TASK-0249` | `in_progress` | — | [agent 身份行与 CLI 指引按品牌档位渲染](TASK-0249-agent-identity-and-cli-guidance-brand.md) |
 | `TASK-0248` | `verifying` | — | [dev:electron 启动前校验并自愈 Electron 二进制](TASK-0248-electron-binary-dev-guard.md) |
 | `TASK-0241` | `verifying` | — | [修复团队会话失败终态的同步渲染循环（BUG-0101）](TASK-0241-team-error-state-update-loop.md) |
@@ -183,7 +186,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0229` | `verifying` | — | [内置浏览器 detached view 上限 + LRU 驱逐](TASK-0229-browser-view-lru-eviction.md) |
 | `TASK-0228` | `verifying` | — | [team 成员 runtime 恢复按成员隔离失败：成功保留、失败留旧条目、自身半成品回收](TASK-0228-team-member-restore-isolation.md) |
 | `TASK-0227` | `verifying` | — | [recovery_required 的入坞恢复：存首因 + 下一次 admission 经 resumeSession 原地收敛](TASK-0227-session-recovery-admission.md) |
-| `TASK-0226` | `in_progress` | — | [team 历史会话安全删除](TASK-0226-team-session-degraded-delete.md)：11-16 已实现配置/恢复独立删除及历史管理入口，真实存储/租约/并发回归通过；用户黑盒暂未遇问题，按新请求本地保存；完整check既有阻断仍在，serial、未集成。 |
+| `TASK-0226` | `done` | — | [team 历史会话安全删除](TASK-0226-team-session-degraded-delete.md)：11-16 实现配置/恢复独立删除及历史管理入口，真实存储/租约/并发回归通过；11-18 用户指示收口（`4fb65a823` 已入 chenxvhua、定向 9 文件 71/71、黑盒未遇问题）；完整 check 既有阻断非本路径，未集成。 |
 | `TASK-0225` | `verifying` | — | [内置浏览器拖拽穿透：Electron 无 per-view ignore-mouse，穿透期改由隐藏 view 让位](TASK-0225-browser-view-passthrough-target.md) |
 | `TASK-0224` | `verifying` | — | [dev 与打包默认品牌口径切换为外部分发（Allstr ai / 小爱ai）](TASK-0224-brand-profile-default-distribution.md) |
 | `TASK-0223` | `verifying` | — | [给流式停滞加专用重试上限：死 provider 连接不再烧满 30 分钟瞬态预算](TASK-0223-turn-terminal-stall-bound.md) |
@@ -201,11 +204,11 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | `TASK-0165` | `verifying` | — | [修复 ssh2 新主机交互认证：握手预算与 KI 口令回退](TASK-0165-ssh2-interactive-auth-budget.md)<br>chenxvhua 补充（状态 `verifying`；Plan `—`）：主树实现已提交 925868a08；工程复验通过，人工功能验收待完成，批次推送见 TASK-0171。 |
 | `TASK-0153` | `verifying` | PLAN-0014 | [SSH 本地进程组取消的选择性适配](TASK-0153-ssh-selective-transport.md) |
 | `TASK-0130` | `verifying` | — | [托管 runtime 的 zip 解压改走内置解压器，不再依赖外部 tar](TASK-0130-runtime-zip-extract-without-tar.md)<br>chenxvhua 补充（状态 `verifying`；Plan `—`）：修复 BUG-0046：runtime zip 解压改走内置 safe-zip-extract，不再依赖外部 tar；已集成（`9d6981fac`），定向回归 9/1skip 通过，待人工 dev 冒烟复装 Node runtime。 |
-| `TASK-0127` | `archived` | — | [修改声明头存量缺失一次性 sweep](TASK-0127-modified-file-notices-sweep.md)<br>chenxvhua 补充（状态 `archived`；Plan `—`）：原 651 条存量已修复 644 条（后续分批 sweep 与基线收缩），剩 7 条含内核会话域文件与机器生成的 `dependents.md`，越出可写范围；2026-11-18 归档，尾量由 `WAIVER-0002` ratchet 跟踪至 2027-03-31，切硬门禁需另开 Task。 |
+| `TASK-0127` | `done` | — | [修改声明头存量缺失一次性 sweep](TASK-0127-modified-file-notices-sweep.md)<br>chenxvhua 补充（状态 `done`；Plan `—`）：归档前提（内核域文件与机器生成产物越界）已不成立，撤销归档后清零尾量 7 条——`dependents.md` 改 `renderDependents()` 生成器补头、其余 6 个文件各插一行声明头；651 条基线全部修复并删除 `modified-file-notices.txt`，`check-guards` 切纯审计硬门禁，`WAIVER-0002` 置 `resolved`；实测 `missing=0 unclassified=0`、`waived=0 new=0`，候选 integration pending（未推远程）。 |
 | `TASK-0125` | `blocked` | PLAN-0013 | [团队编排效率回归实测：rebase 上游 + 阶段 1 后同任务量化对比](TASK-0125-team-orchestration-rebaseline.md)<br>chenxvhua 补充（状态 `blocked`；Plan ``PLAN-0013``）：rebase 上游+阶段 1 后同任务复跑量化对比（Verification 收口）；depends_on TASK-0122，需 commit 887017560 与真实 ~45min 团队会话复跑。 |
 | `TASK-0107` | `verifying` | PLAN-0010 | [后台进程统一健康/重启/记账契约 + unresponsive 栈采样](TASK-0107-background-process-health-contract.md)<br>chenxvhua 补充（状态 `verifying`；Plan ``PLAN-0010``）：后台进程统一健康记账（ProcessRoleContract + crash/restart/pid 归因入 perf 快照与诊断包）+ unresponsive JS 栈采样已落地并过定向测试；缺真实 Desktop 上 kill sidecar/模拟 unresponsive 的冒烟证据。 |
 | `TASK-0050` | `verifying` | PLAN-0002 | [transcript 窗口化第 2 步：beforeEntry 游标分页](TASK-0050-transcript-cursor-pagination.md)<br>chenxvhua 补充（状态 `verifying`；Plan ``PLAN-0002``）：transcript 窗口化第 2 步（`beforeEntry` 游标分页）三阶段全落地：Main 页合同、viewer 增量订阅、renderer 窗口化（上滚翻页/尾页刷新/整窗重置/导出排空）+ 乐观气泡尾对齐；缺真实 Desktop 大历史冒烟。 |
-| `TASK-0048` | `in_progress` | PLAN-0003 | [公开文档站品牌、正文与发现入口迁移](TASK-0048-docs-site-brand-migration.md)<br>chenxvhua 补充（状态 `in_progress`；Plan `PLAN-0003`）：公开文档站品牌、正文与 SEO/LLM 发现入口迁移；尚未实施，缺口最大（docs-site 内容为主）。 |
+| `TASK-0048` | `done` | PLAN-0003 | [公开文档站品牌、正文与发现入口迁移](TASK-0048-docs-site-brand-migration.md)<br>chenxvhua 补充（状态 `done`；Plan `PLAN-0003`）：2026-11-18 状态对齐——三片交付早已落树，`logoPath` 已指 `open-forge-icon.png`（旧图已删）、站点代码层 `docs.openvetta.com` 0 命中，前文两处待定项均已消解；未部署、未重跑 build，候选 integration pending。 |
 | `TASK-0047` | `verifying` | PLAN-0003 | [仓库文档与协作入口品牌迁移](TASK-0047-repository-docs-brand-migration.md)<br>chenxvhua 补充（状态 `verifying`；Plan `PLAN-0003`）：第八片：中英根入口与文档导航重写，继承宣传/社区入口清理，旧草案与 15 份素材独立归档；35 项站点测试、10 项 impact、113 页构建、6 项 HTTP、299 个引用和完整 check 通过；main 串行本地提交，待用户审阅。 |
 | `TASK-0042` | `verifying` | PLAN-0002 | [powerMonitor 定向清理：suspend/lock-screen 免费收缩点](TASK-0042-powermonitor-suspend-trim.md)<br>chenxvhua 补充（状态 `verifying`；Plan `PLAN-0002`）：suspend/lock-screen 一次性 working-set trim + 前后峰谷观测已落地（7 例定向+impact 绿）；随 TASK-0196 批次推 dev（ca6c9df9d）合入 main；实机峰谷差待用户验收——2026-10-08 用户选择自行实测（不由 Agent 触发真实电源事件），步骤与日志字段清单（`power working-set trim` 的 `reason/trimmed/beforeKb/afterKb/deltaKb`、`power event observed` 的 `workingSetKb`，落点 `<vettaHome>/desktop-app/logs/`）已写入 Task，待回贴读数。 |
 

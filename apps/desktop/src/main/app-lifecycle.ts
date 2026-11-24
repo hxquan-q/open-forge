@@ -9,6 +9,8 @@ import {
 } from "../shared/app-lifecycle-ipc.js";
 
 const DEFAULT_BOOT_PAINT_TIMEOUT_MS = 10_000;
+// renderer 模块加载信号的兜底：正常 2.5s 内到达，此值仅在 renderer 异常卡死时保证插件 dev server 最终仍会启动。
+const DEFAULT_MODULES_LOADED_TIMEOUT_MS = 30_000;
 
 function waitForPaint(
 	readResult: () => RendererPaintResult | undefined,
@@ -43,6 +45,7 @@ export function logRendererPaintResult(
 export interface AppLifecycleController {
 	waitForRendererBootPaint(timeoutMs?: number): Promise<RendererPaintResult>;
 	waitForRendererContentPaint(timeoutMs?: number): Promise<RendererPaintResult>;
+	waitForRendererModulesLoaded(timeoutMs?: number): Promise<RendererPaintResult>;
 	markReady(): void;
 }
 
@@ -52,9 +55,11 @@ export function registerAppLifecycleIpc(
 	let isReady = false;
 	let bootResult: RendererPaintResult | undefined;
 	let contentResult: RendererPaintResult | undefined;
+	let modulesLoadedResult: RendererPaintResult | undefined;
 	let resolveReady: (() => void) | undefined;
 	let resolveRendererBootPainted: ((result: RendererPaintResult) => void) | undefined;
 	let resolveRendererContentPainted: ((result: RendererPaintResult) => void) | undefined;
+	let resolveRendererModulesLoaded: ((result: RendererPaintResult) => void) | undefined;
 
 	const readyPromise = new Promise<void>((resolve) => {
 		resolveReady = resolve;
@@ -64,6 +69,9 @@ export function registerAppLifecycleIpc(
 	});
 	const rendererContentPaintedPromise = new Promise<RendererPaintResult>((resolve) => {
 		resolveRendererContentPainted = resolve;
+	});
+	const rendererModulesLoadedPromise = new Promise<RendererPaintResult>((resolve) => {
+		resolveRendererModulesLoaded = resolve;
 	});
 
 	const parseResult = (value: unknown): RendererPaintResult | undefined =>
@@ -89,6 +97,10 @@ export function registerAppLifecycleIpc(
 	ipcMain.on(APP_LIFECYCLE_RENDERER_CONTENT_PAINTED_CHANNEL, handleRendererContentPainted);
 	ipcMain.on(APP_LIFECYCLE_RENDERER_STARTUP_PHASE_CHANNEL, (_event, phase: unknown) => {
 		if (phase !== "app-ready" && phase !== "renderer-module-loaded" && phase !== "route-content-committed") return;
+		if (phase === "renderer-module-loaded" && modulesLoadedResult === undefined) {
+			modulesLoadedResult = "painted";
+			resolveRendererModulesLoaded?.("painted");
+		}
 		try {
 			options.onPhase?.(phase);
 		} catch {
@@ -105,6 +117,9 @@ export function registerAppLifecycleIpc(
 		},
 		waitForRendererContentPaint(timeoutMs = DEFAULT_BOOT_PAINT_TIMEOUT_MS) {
 			return waitForPaint(() => contentResult, rendererContentPaintedPromise, timeoutMs);
+		},
+		waitForRendererModulesLoaded(timeoutMs = DEFAULT_MODULES_LOADED_TIMEOUT_MS) {
+			return waitForPaint(() => modulesLoadedResult, rendererModulesLoadedPromise, timeoutMs);
 		},
 		markReady() {
 			if (isReady) return;

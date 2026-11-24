@@ -56,7 +56,8 @@
 		},
 		"session": {
 			"forkedTooltip": "由其他会话分叉而来",
-			"untitledTeam": "新团队会话"
+			"untitledTeam": "新团队会话",
+			"renameFailed": "会话重命名失败，请稍后重试。"
 		},
 		"dialogs": {
 			"deleteSessionTitle": "确认删除会话",
@@ -342,21 +343,38 @@
 	},
 	"allstarDev": {
 		"home": {
+			"title": "Allstar 自主开发",
 			"intro": "面向自主开发的工作区：从这里进入开发项目与代码模式会话。",
 			"loading": "正在加载…",
 			"projects": {
 				"title": "开发项目",
+				"count": "{{count}} 个项目",
 				"newSession": "新建开发会话",
-				"more": "还有 {{count}} 条",
-				"openProject": "打开已有项目"
+				"more": "全部 {{count}} 个",
+				"openProject": "打开已有项目",
+				"projectActions": "项目操作",
+				"sessionCount": "{{count}} 个会话",
+				"revealInFolder": "在文件夹中打开",
+				"removeFromBoard": "从版块移除",
+				"cardNewSession": "新建会话"
 			},
-			"teamSession": "团队会话",
+			"sessions": {
+				"actions": "会话操作",
+				"reveal": "打开会话数据目录",
+				"renameFailed": "会话重命名失败，请稍后重试。",
+				"renameFailedDataMissing": "该会话的数据文件已丢失，无法重命名；只能删除该条目。"
+			},
 			"empty": {
 				"title": "还没有开发会话",
 				"hint": "用「打开已有项目」把一个目录登记为开发项目，再从这里新建开发会话",
-				"cardHint": "尚无开发会话，可从下方选择该项目新建",
-				"projectLabel": "选择项目"
+				"cardHint": "尚无开发会话，点下方「新建会话」开始"
 			}
+		},
+		"sessionsDialog": {
+			"description": "该项目的全部开发会话",
+			"searchPlaceholder": "搜索会话",
+			"noResults": "没有匹配的会话",
+			"close": "关闭"
 		},
 		"projectConfig": {
 			"configure": "项目配置",

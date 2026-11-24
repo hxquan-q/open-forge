@@ -234,6 +234,9 @@ export function useProjectsPanelModel({
 	const selectSidebarSession = useCallback(
 		(cwd: string, session: SidebarConversationInfo) => {
 			if (session.kind === "agent-team") {
+				// 数据文件缺失的团队会话打开必败：不导航（BUG-0195）。项目区与默认区
+				// 的行选择都在此收口，置灰行点击后什么都不发生。
+				if (session.dataFileMissing) return;
 				selectAfterPaint({ kind: "agent-team", sessionId: session.teamSessionId }, () =>
 					navigate({
 						to: "/agent-teams/$teamId/sessions/$sessionId",

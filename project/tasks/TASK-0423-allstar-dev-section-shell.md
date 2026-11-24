@@ -39,7 +39,7 @@ depends_on: [TASK-0422]
 conflicts_with: []
 integration_status: pending
 created: 2026-10-26
-updated: 2026-11-03
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -135,3 +135,18 @@ updated: 2026-11-03
   - 未运行：`test:impact`、`test:check`（按用户要求留待用户收尾时决定）；未启动 `bun run dev` / Electron，未做真实模型读取验证。
   - 发布说明碎片写入 `.github/release-notes/fragments/v0.1.5/allstar-project-config.md`；本地 `v0.1.4` 已打标签，未改已发布说明，未汇编未来版本。
 - 剩余范围：各项目单独配置 v1 的默认执行档、围栏默认 scope、MCP 集字段占位及 `versioned-config` 落盘仍待做；显式调用候选模式可见性独立见 TASK-0478。收尾验证链（`check:quick` → `test:impact` → 完整 `bun run check`，需 WAIVER-0006/0007 核销后过全量）与 0.1.5 发布收口（2026-11-06 前）。
+
+## 2026-11-18 现状复核（对交付记录的纠偏）
+
+- 用户实机反馈：版块现在只有「新开会话」与「引入新项目」两个动作，**没有删除功能**。
+- 代码核对（`apps/desktop/src/renderer/domains/allstar-dev/`）：域内仅
+  `AllstarDevHomePage(View)` 与 `AllstarProjectConfigDialog` 两组组件，对
+  `delete|archive` 零命中；首页可用动作只有「打开已有项目」「新建开发会话」「项目配置」。
+  即：无项目删除、无会话删除、无归档、无版块内会话列表管理。
+- 纠偏：11-02 对账写作「版块会话列表与归档/删除沿用既有基础设施」，与实况不符——那些入口在
+  对话侧与项目侧，版块内并不存在；本复核为准，原表述不再作为已完成证据。
+- 由此补入剩余范围（原条目未覆盖）：
+  1. 版块内会话列表：按版块项目列出开发会话，支持删除与归档；
+  2. 版块内项目管理：移除已登记 Allstar 项目（沿用第二册登记与既有删除语义，不得误删普通项目）；
+  3. 各项目单独配置 v1：默认执行档、围栏默认 scope、MCP 集占位、`versioned-config` 落盘。
+- 口径不变：普通对话/研究侧行为零变化；项目配置信息仍只作说明，不自动执行、不连接环境。

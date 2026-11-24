@@ -69,6 +69,11 @@ import { TeamRuntimeManager } from "./team-runtime-manager.js";
 import { TeamSessionDisplayService } from "./team-session-display-service.js";
 import { TeamSessionEventHub } from "./team-session-event-hub.js";
 import { readTeamConversationDocument, resolveTeamConversationSessionId } from "./team-session-file-reader.js";
+import {
+	isTeamSessionDataFileMissing,
+	renameTeamSessionWithoutRuntime,
+	teamSessionDataFileMissingError,
+} from "./team-session-offline-rename.js";
 import { type LegacyTeamSessionRepository, legacyTeamSessionRepository } from "./team-session-repository.js";
 import { TeamSessionStateRepository } from "./team-session-state-repository.js";
 import { TeamSessionUpdatePublisher } from "./team-session-update-publisher.js";
@@ -828,20 +833,26 @@ export class AgentTeamSessionService {
 	async listSessions(teamId: string): Promise<readonly TeamSessionListItem[]> {
 		if (!this.ownershipCatalog) return [];
 		await ensureLegacyAgentTeamOwnershipCatalog(this.repository, this.ownershipCatalog);
-		const records = await this.ownershipCatalog.listByTeam(teamId);
-		return records
-			.filter((record) => record.owner.role === "coordination")
-			.map((record) => ({
-				id: record.owner.teamSessionId,
-				coordinationSessionPath: record.sessionPath,
-				title: record.title,
-				createdAt: record.createdAt,
-				updatedAt: record.updatedAt,
-				...(record.workspaceKind ? { workspaceKind: record.workspaceKind } : {}),
-				...(record.workspaceId ? { workspaceId: record.workspaceId } : {}),
-				...(record.cwd ? { cwd: record.cwd } : {}),
-			}))
-			.sort((left, right) => right.updatedAt - left.updatedAt);
+		const records = (await this.ownershipCatalog.listByTeam(teamId)).filter(
+			(record) => record.owner.role === "coordination",
+		);
+		// BUG-0195：按 ENOENT 实测标记数据文件缺失的条目；其余 stat 失败（EACCES/EBUSY 等）
+		// 一律视为可用，瞬时不可 stat 不能把侧栏条目误标成不可用。
+		return (
+			await Promise.all(
+				records.map(async (record) => ({
+					id: record.owner.teamSessionId,
+					coordinationSessionPath: record.sessionPath,
+					title: record.title,
+					createdAt: record.createdAt,
+					updatedAt: record.updatedAt,
+					...(record.workspaceKind ? { workspaceKind: record.workspaceKind } : {}),
+					...(record.workspaceId ? { workspaceId: record.workspaceId } : {}),
+					...(record.cwd ? { cwd: record.cwd } : {}),
+					...((await isTeamSessionDataFileMissing(record.sessionPath)) ? { dataFileMissing: true } : {}),
+				})),
+			)
+		).sort((left, right) => right.updatedAt - left.updatedAt);
 	}
 
 	async updateModelSettings(id: string, settings: UpdateTeamSessionModelSettingsInput): Promise<TeamSessionDocument> {
@@ -1199,28 +1210,60 @@ export class AgentTeamSessionService {
 		return this.turnCoordinator.abort(sessionId);
 	}
 
+	/**
+	 * 改名是管理操作，不依赖整队恢复（BUG-0195 决策 1）：依赖集只有「协调会话文件
+	 * 可读 + 能写盘 + 所有权索引可写」，团队文档、成员 runtime、roster 对账、恢复
+	 * 工作流一律不进本路径。驻留与否在 lane 内判定才作数——冷加载走同一 per-session
+	 * 队列，判定后、写盘前不会被并发加载插队把旧标题带回内存。
+	 */
 	async renameSession(
 		reference: TeamSessionReference | { readonly id: string; readonly coordinationSessionPath?: string } | string,
 		name: string,
-	): Promise<TeamSessionDocument> {
+	): Promise<TeamSessionSnapshot> {
 		const sessionReference = teamSessionReferenceParts(reference);
 		const nextTitle = name.trim();
 		if (!nextTitle) throw new Error("Team session title must not be empty");
-		return this.coordinate(
-			sessionReference.id,
-			async (session) => {
-				const next: TeamSessionDocument = {
-					...session,
-					title: nextTitle,
-					revision: session.revision + 1,
-					updatedAt: Date.now(),
-				};
-				await this.persist(next);
-				this.requestSessionUpdate(next);
-				return next;
-			},
-			sessionReference.coordinationSessionPath,
-		);
+		return this.sessionState.runManagement(sessionReference.id, async () => {
+			const cached = this.sessionState.get(sessionReference.id);
+			if (cached) {
+				// 内存路径（内存是事实源）：文件在应用运行期间被删也同样只指引删除。
+				const coordinationPath = cached.coordinationRuntime?.sessionPath;
+				if (coordinationPath && (await isTeamSessionDataFileMissing(coordinationPath))) {
+					throw teamSessionDataFileMissingError(coordinationPath);
+				}
+				// 缓存命中不代表协调 runtime 还在内存（空闲逐出），先按需自愈再改名。
+				const session = await this.ensureCoordinationRuntimeLoaded(cached);
+				return this.renameLoadedSession(session, nextTitle);
+			}
+			const coordinationSessionPath =
+				sessionReference.coordinationSessionPath ?? this.sessionState.coordinationPath(sessionReference.id);
+			if (!coordinationSessionPath) {
+				// 无路径（非 IPC 入口）：维持「整队恢复后在内存改名」的原语义。
+				return this.renameLoadedSession(await this.readInternal(sessionReference.id, undefined), nextTitle);
+			}
+			// 未驻留：零 runtime 离线改名；文件缺失抛稳定文案锚点，不建任何 runtime。
+			const { session, coordinationDocument } = await renameTeamSessionWithoutRuntime({
+				id: sessionReference.id,
+				coordinationSessionPath,
+				title: nextTitle,
+				...(this.ownershipCatalog ? { ownershipCatalog: this.ownershipCatalog } : {}),
+			});
+			// 不把离线读到的文档写进 sessionState 缓存；快照直接用刚读的协调文档计算。
+			return this.snapshot(session, coordinationDocument);
+		});
+	}
+
+	/** 内存路径改名：改 title/revision/updatedAt → persist → 请求发布 session-updated。 */
+	private async renameLoadedSession(session: TeamSessionDocument, title: string): Promise<TeamSessionSnapshot> {
+		const next: TeamSessionDocument = {
+			...session,
+			title,
+			revision: session.revision + 1,
+			updatedAt: Date.now(),
+		};
+		await this.persist(next);
+		this.requestSessionUpdate(next);
+		return this.snapshot(next);
 	}
 
 	async deleteSession(

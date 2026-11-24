@@ -69,6 +69,7 @@ export async function listTeamSidebarConversations(
 					createdAt: session.createdAt,
 					updatedAt: session.updatedAt,
 					placement: resolvePlacement(session, projectPaths),
+					...(session.dataFileMissing ? { dataFileMissing: true } : {}),
 				}));
 			}),
 		)

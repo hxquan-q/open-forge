@@ -24,6 +24,11 @@ export interface SessionContextMenuViewProps {
 	 */
 	canOpenInFolder?: boolean;
 	canRename: boolean;
+	/**
+	 * False 隐藏「置顶/取消置顶」（BUG-0195：数据文件缺失的团队会话只保留删除，
+	 * 置顶一个必败条目没有意义）。Defaults to true.
+	 */
+	canPin?: boolean;
 	labels: SessionContextMenuViewLabels;
 	/** 挂在「重命名」之后的附加节点，例如标签二级菜单。 */
 	extraItems?: readonly ContextMenuNode[];
@@ -43,6 +48,7 @@ export function SessionContextMenuView({
 	canDelete,
 	canOpenInFolder = true,
 	canRename,
+	canPin = true,
 	labels,
 	extraItems,
 	onArchive,
@@ -54,10 +60,17 @@ export function SessionContextMenuView({
 	x,
 	y,
 }: SessionContextMenuViewProps): JSX.Element {
-	const items: ContextMenuNode[] = [
-		{ kind: "item", id: "pin", label: labels.pin, iconClassName: "icon-[solar--pin-linear]", onSelect: onTogglePin },
-	];
+	const items: ContextMenuNode[] = [];
 	// 归档与置顶同属「列表整理」，紧挨着放，别混进重命名/删除那组。
+	if (canPin) {
+		items.push({
+			kind: "item",
+			id: "pin",
+			label: labels.pin,
+			iconClassName: "icon-[solar--pin-linear]",
+			onSelect: onTogglePin,
+		});
+	}
 	if (canArchive) {
 		items.push({
 			kind: "item",

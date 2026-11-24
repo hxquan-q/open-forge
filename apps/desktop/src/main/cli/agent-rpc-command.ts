@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import type { RunAgentRuntimeCliOptions } from "@vetta/cli-host";
 import { app } from "electron";

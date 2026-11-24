@@ -1,7 +1,11 @@
 // Modified by The Open Forge contributors.
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	AGENT_TEAM_MEMBER_TOOL_EXECUTION,
 	AGENT_TEAM_PUBLICATION_LIFECYCLE,
+	type AgentTeamDocument,
 	createAgentTeamExtensionRegistry,
 	createAgentTeamFixture,
 	type TeamSessionDocument,
@@ -14,13 +18,14 @@ import type {
 	SessionConfig,
 	SessionEvent,
 } from "@vetta/runtime-core";
-import type { ConversationMessageRecord } from "@vetta/runtime-core/conversation";
+import type { ConversationDocument, ConversationMessageRecord } from "@vetta/runtime-core/conversation";
 import {
 	createRuntimeObservationPublisher,
 	type RuntimeObservationContext,
 	type RuntimeObservationRecord,
 } from "@vetta/runtime-core/observation";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FileConversationRepository } from "@vetta/runtime-node/conversation";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DesktopTeamSessionStreamEvent } from "../../preload/api-types/team-conversation-display.js";
 import type {
 	ConversationOwnershipCatalogPort,
@@ -47,6 +52,14 @@ vi.mock("./team-session-file-reader.js", async (importOriginal) => {
 		readTeamConversationDocument: vi.fn(original.readTeamConversationDocument),
 		readTeamConversationHistory: vi.fn(async () => []),
 	};
+});
+
+const temporaryDirectories: string[] = [];
+
+afterEach(async () => {
+	await Promise.all(
+		temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+	);
 });
 
 describe("AgentTeamSessionService streaming contract", () => {
@@ -253,6 +266,8 @@ describe("AgentTeamSessionService streaming contract", () => {
 				workspaceKind: "team-default",
 				workspaceId: `agent-team:${team.id}`,
 				cwd: "C:/legacy-workspace",
+				// 本用例的会话路径是虚构的，磁盘上不存在：BUG-0195 起按 ENOENT 如实标记。
+				dataFileMissing: true,
 			},
 		]);
 		await service.listSessions(team.id);
@@ -1478,6 +1493,325 @@ describe("AgentTeamSessionService streaming contract", () => {
 		},
 	);
 });
+
+describe("AgentTeamSessionService renameSession（BUG-0195：管理操作，不依赖整队恢复）", () => {
+	beforeEach(() => registerPresetPluginBlueprints());
+
+	beforeEach(() => vi.clearAllMocks());
+
+	const missingRuntime = () =>
+		({
+			createSession: vi.fn(async () => {
+				throw new Error("No RuntimeHost session backend owns the requested path");
+			}),
+			getSessionPath: vi.fn(() => undefined),
+			readSessionDocument: vi.fn(() => ({ entries: [], activeLeafId: null, revision: 0 })),
+			appendSessionMetadataEntry: vi.fn(async () => undefined),
+		}) as unknown as RuntimeHost;
+
+	function catalogFixture(initial: readonly ConversationOwnershipRecord[]): {
+		readonly catalog: ConversationOwnershipCatalogPort;
+		readonly records: ConversationOwnershipRecord[];
+	} {
+		const records: ConversationOwnershipRecord[] = [...initial];
+		return {
+			records,
+			catalog: {
+				register: async (next) => {
+					const byPath = new Map(records.map((record) => [record.sessionPath, record]));
+					for (const record of next) byPath.set(record.sessionPath, { ...record, owner: { ...record.owner } });
+					records.length = 0;
+					records.push(...byPath.values());
+				},
+				list: async () => records.map((record) => ({ ...record, owner: { ...record.owner } })),
+				listByTeam: async (teamId) =>
+					records
+						.filter((record) => record.owner.teamId === teamId)
+						.map((record) => ({ ...record, owner: { ...record.owner } })),
+				getOwner: async () => undefined,
+				filterUserSessions: async (sessions) => [...sessions],
+			},
+		};
+	}
+
+	/** 真实落盘一条团队会话状态，返回协调文件绝对路径。 */
+	async function writeCoordinationFile(
+		directory: string,
+		session: Omit<TeamSessionDocument, "coordinationRuntime">,
+	): Promise<{ path: string; session: TeamSessionDocument }> {
+		const repository = new FileConversationRepository({ rootDir: directory });
+		try {
+			await repository.create({ sessionId: session.id, createdAt: 1 });
+			const path = repository.resolveConversationPath(session.id);
+			const full: TeamSessionDocument = {
+				...session,
+				coordinationRuntime: { sessionId: session.id, sessionPath: path },
+			};
+			await repository.execute(session.id, null, {
+				type: "custom.append",
+				entryId: "state-entry",
+				customType: "agent-team.session-state.v1",
+				data: { customType: "agent-team.session-state.v1", session: full },
+				timestamp: new Date(1).toISOString(),
+			});
+			return { path, session: full };
+		} finally {
+			await repository.close();
+		}
+	}
+
+	function sessionFixture(
+		team: NonNullable<ReturnType<typeof createAgentTeamFixture>["teams"][number]>,
+		id: string,
+	): Omit<TeamSessionDocument, "coordinationRuntime"> {
+		const member = team.members[0];
+		if (!member) throw new Error("built-in Agent Team fixture is missing a member");
+		return {
+			schemaVersion: 1,
+			revision: 4,
+			id,
+			teamId: team.id,
+			workspaceId: `agent-team:${team.id}`,
+			workspaceKind: "team-default",
+			executionMode: "full-access",
+			teamRevision: team.revision,
+			title: "旧标题",
+			name: team.name,
+			cwd: "C:/workspace",
+			leaderMemberId: member.id,
+			activeMemberIds: [member.id],
+			memberHandles: { [member.id]: member.handle },
+			createdAt: 1,
+			updatedAt: 2,
+			runtimeStatus: "preparing",
+			events: [],
+			memberRuntime: {},
+		};
+	}
+
+	it("协调文件缺失时抛稳定文案锚点错误，且不创建任何 runtime 会话", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const directory = await mkdtemp(join(tmpdir(), "vetta-bug-0195-missing-"));
+		temporaryDirectories.push(directory);
+		const shard = join(directory, "shard");
+		await mkdir(shard, { recursive: true });
+		const missingPath = new FileConversationRepository({ rootDir: shard }).resolveConversationPath(
+			"orphan-team-session",
+		);
+		const { catalog } = catalogFixture([
+			{
+				sessionPath: missingPath,
+				owner: { kind: "agent-team", teamId: team.id, teamSessionId: "orphan-team-session", role: "coordination" },
+				title: "登记还在的会话",
+				createdAt: 1,
+				updatedAt: 2,
+				workspaceKind: "team-default",
+				workspaceId: `agent-team:${team.id}`,
+				cwd: "C:/workspace",
+			},
+		]);
+		const runtime = missingRuntime();
+		const service = new AgentTeamSessionService({
+			runtime,
+			repository: { read: vi.fn(), list: vi.fn(async () => []) },
+			readDocument: async () => document,
+			ownershipCatalog: catalog,
+		});
+
+		await expect(
+			service.renameSession({ id: "orphan-team-session", coordinationSessionPath: missingPath }, "新名字"),
+		).rejects.toThrow(/Team session data file is missing/);
+		expect(runtime.createSession).not.toHaveBeenCalled();
+	});
+
+	it("未驻留且协调文件在：离线改名成功、标题落盘、catalog 同步，且零 runtime 零恢复", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const directory = await mkdtemp(join(tmpdir(), "vetta-bug-0195-rename-"));
+		temporaryDirectories.push(directory);
+		const { path, session } = await writeCoordinationFile(directory, sessionFixture(team, "team-session-live"));
+		const { catalog, records } = catalogFixture([
+			{
+				sessionPath: path,
+				owner: { kind: "agent-team", teamId: team.id, teamSessionId: "team-session-live", role: "coordination" },
+				title: "旧标题",
+				createdAt: 1,
+				updatedAt: 2,
+				workspaceKind: "team-default",
+				workspaceId: `agent-team:${team.id}`,
+				cwd: "C:/workspace",
+			},
+			{
+				sessionPath: join(directory, "member.jsonl"),
+				owner: { kind: "agent-team", teamId: team.id, teamSessionId: "team-session-live", role: "member" },
+				title: "旧标题",
+				createdAt: 1,
+				updatedAt: 2,
+			},
+		]);
+		const runtime = missingRuntime();
+		const service = new AgentTeamSessionService({
+			runtime,
+			repository: { read: vi.fn(), list: vi.fn(async () => []) },
+			readDocument: async () => document,
+			ownershipCatalog: catalog,
+		});
+		const internal = service as unknown as {
+			readonly runtimeManager: { restoreMembers: () => Promise<unknown> };
+			recoverRestoredSession(session: TeamSessionDocument): Promise<void>;
+			readonly sessionState: { get(sessionId: string): TeamSessionDocument | undefined };
+		};
+		const restoreSpy = vi.spyOn(internal.runtimeManager, "restoreMembers");
+		const recoverSpy = vi.spyOn(internal, "recoverRestoredSession");
+
+		const snapshot = await service.renameSession(
+			{ id: "team-session-live", coordinationSessionPath: path },
+			"新名字",
+		);
+
+		expect(snapshot.session.title).toBe("新名字");
+		expect(snapshot.session.revision).toBe(session.revision + 1);
+		expect(runtime.createSession).not.toHaveBeenCalled();
+		expect(restoreSpy).not.toHaveBeenCalled();
+		expect(recoverSpy).not.toHaveBeenCalled();
+		expect(internal.sessionState.get("team-session-live")).toBeUndefined();
+		const persisted = readTeamSessionStateFromDocument(
+			"team-session-live",
+			await readTeamConversationDocument("team-session-live", path),
+		);
+		expect(persisted.title).toBe("新名字");
+		expect(persisted.revision).toBe(session.revision + 1);
+		expect(persisted.updatedAt).toBeGreaterThan(session.updatedAt);
+		const coordinationRecord = records.find(
+			(record) => record.owner.teamSessionId === "team-session-live" && record.owner.role === "coordination",
+		);
+		expect(coordinationRecord).toMatchObject({ title: "新名字" });
+		expect(coordinationRecord?.updatedAt).toBeGreaterThan(session.updatedAt);
+	});
+
+	it("团队定义已从文档删除或成员已变更：改名仍成功（不读团队文档）", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const member = team.members[0];
+		if (!member) throw new Error("built-in Agent Team fixture is missing a member");
+		const directory = await mkdtemp(join(tmpdir(), "vetta-bug-0195-roster-"));
+		temporaryDirectories.push(directory);
+		const { path } = await writeCoordinationFile(directory, sessionFixture(team, "team-session-gone"));
+		const { catalog } = catalogFixture([
+			{
+				sessionPath: path,
+				owner: { kind: "agent-team", teamId: team.id, teamSessionId: "team-session-gone", role: "coordination" },
+				title: "旧标题",
+				createdAt: 1,
+				updatedAt: 2,
+			},
+		]);
+		const runtime = missingRuntime();
+		const service = new AgentTeamSessionService({
+			runtime,
+			repository: { read: vi.fn(), list: vi.fn(async () => []) },
+			readDocument: async () => ({ ...document, teams: [] }),
+			ownershipCatalog: catalog,
+		});
+
+		await expect(
+			service.renameSession({ id: "team-session-gone", coordinationSessionPath: path }, "定义已删仍可改名"),
+		).resolves.toMatchObject({ session: { title: "定义已删仍可改名" } });
+
+		const memberRenamed: AgentTeamDocument = {
+			...document,
+			teams: [{ ...team, members: [{ ...member, handle: "renamed-handle" }] }],
+		};
+		const renamedService = new AgentTeamSessionService({
+			runtime,
+			repository: { read: vi.fn(), list: vi.fn(async () => []) },
+			readDocument: async () => memberRenamed,
+			ownershipCatalog: catalog,
+		});
+		await expect(
+			renamedService.renameSession({ id: "team-session-gone", coordinationSessionPath: path }, "成员已变仍可改名"),
+		).resolves.toMatchObject({ session: { title: "成员已变仍可改名" } });
+	});
+
+	it("listSessions 按文件是否缺失标记 dataFileMissing，文件在的条目输出不变", async () => {
+		const document = createAgentTeamFixture();
+		const team = document.teams[0];
+		if (!team) throw new Error("built-in Agent Team fixture is missing");
+		const directory = await mkdtemp(join(tmpdir(), "vetta-bug-0195-list-"));
+		temporaryDirectories.push(directory);
+		const { path } = await writeCoordinationFile(directory, sessionFixture(team, "team-session-listed"));
+		const missingPath = new FileConversationRepository({ rootDir: directory }).resolveConversationPath(
+			"team-session-missing",
+		);
+		const { catalog } = catalogFixture([
+			{
+				sessionPath: path,
+				owner: { kind: "agent-team", teamId: team.id, teamSessionId: "team-session-listed", role: "coordination" },
+				title: "在盘",
+				createdAt: 1,
+				updatedAt: 3,
+				workspaceKind: "team-default",
+				workspaceId: `agent-team:${team.id}`,
+				cwd: "C:/workspace",
+			},
+			{
+				sessionPath: missingPath,
+				owner: { kind: "agent-team", teamId: team.id, teamSessionId: "team-session-missing", role: "coordination" },
+				title: "丢文件",
+				createdAt: 1,
+				updatedAt: 5,
+				workspaceKind: "team-default",
+				workspaceId: `agent-team:${team.id}`,
+				cwd: "C:/workspace",
+			},
+		]);
+		const service = new AgentTeamSessionService({
+			runtime: missingRuntime(),
+			repository: { read: vi.fn(), list: vi.fn(async () => []) },
+			readDocument: async () => document,
+			ownershipCatalog: catalog,
+		});
+
+		await expect(service.listSessions(team.id)).resolves.toEqual([
+			{
+				id: "team-session-missing",
+				coordinationSessionPath: missingPath,
+				title: "丢文件",
+				createdAt: 1,
+				updatedAt: 5,
+				workspaceKind: "team-default",
+				workspaceId: `agent-team:${team.id}`,
+				cwd: "C:/workspace",
+				dataFileMissing: true,
+			},
+			{
+				id: "team-session-listed",
+				coordinationSessionPath: path,
+				title: "在盘",
+				createdAt: 1,
+				updatedAt: 3,
+				workspaceKind: "team-default",
+				workspaceId: `agent-team:${team.id}`,
+				cwd: "C:/workspace",
+			},
+		]);
+	});
+});
+
+function readTeamSessionStateFromDocument(id: string, document: ConversationDocument): TeamSessionDocument {
+	for (let index = document.entries.length - 1; index >= 0; index -= 1) {
+		const entry = document.entries[index];
+		if (entry?.type !== "custom" || entry.customType !== "agent-team.session-state.v1") continue;
+		const data = entry.data as { session?: unknown };
+		if (typeof data.session !== "object" || data.session === null) continue;
+		return data.session as TeamSessionDocument;
+	}
+	throw new Error(`Team session state is missing from coordination Conversation: ${id}`);
+}
 
 function installWaitingPrompt(runtime: RuntimeHost): void {
 	Object.assign(runtime, {
