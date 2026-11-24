@@ -1,7 +1,7 @@
 ---
 id: TASK-0501
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: apps/desktop
 requirement: REQ-0008
@@ -80,3 +80,10 @@ updated: 2026-11-25
 | `types.ts` | 56 | 79 | +23（新 kind 与组名） |
 | `CommandMenu.tsx` | 45 | 48 | +3（视觉增量在 P3b） |
 | `lib/sidebar-sessions.{ts,test.ts}` | — | 69/43 | 上游 662dd4c7b 新增 |
+
+## 交付记录
+
+- Commit `e77ba3fbd`：行为层 model——activePaths 检索、进行中/最近打开分组、刚完成保留、⌘N 新会话、侧栏直取（`findSidebarSessions`）。
+- Commit `7a4304c`：本切片——分组常量与契约字段、状态优先级排序、行渲染（状态图标/未读点/标签色点/强调 badge）、视图接入快捷键键帽与新会话按钮、i18n、行为测试（21 例）+ 设计例外登记。
+- 范围边界落实：玻璃质感/按钮组 P3b、启动器设置页 P3c、双击唤出删除 P3d 均未动；默认键仍为 mod+k / mod+n（D6）。
+- 未做的上游增量（后续阶段再取）：`spacesAtom` 工作区标签 + 工作区切换（本仓无 spaces 基础设施，model 中已留 `// TODO(spaces)`）；`SplashPanel`/`SplashParts`/`ButtonGroup` 玻璃外壳（P3b，本地视图沿用现有壳）。
