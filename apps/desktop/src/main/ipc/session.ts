@@ -41,6 +41,7 @@ import {
 	reconcileIdleInteractiveSessions,
 } from "../conversations/idle-session-residency.js";
 import { getDesktopMcpElicitationBroker } from "../conversations/mcp-elicitation-broker.js";
+import { PendingInteractions } from "../conversations/pending-interactions.js";
 import { getDesktopPlanReviewBroker } from "../conversations/plan-review-broker.js";
 import { parsePromptRequest } from "../conversations/prompt-request-schema.js";
 import type { DesktopCodingAgentSessionConfig } from "../conversations/resolve-session-config.js";
@@ -164,6 +165,8 @@ const CHANNELS = {
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
 	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
 	PENDING_QUESTION_CHANGED: "vetta:session:pending-question-changed",
+	/** 仍在等用户处理的会话快照；窗口重载后用它收敛，事件只带增量。 */
+	PENDING_QUESTION_LIST: "vetta:session:pending-question-list",
 	CLEAR_DEFAULT_CONVERSATION: "vetta:session:clear-default-conversation",
 	CLEAR_DEFAULT_ARTIFACTS: "vetta:session:clear-default-artifacts",
 	// Read-only viewer for sessions we don't want to (or can't) take the
@@ -198,18 +201,28 @@ function broadcastToAllWindows(channel: string, payload: unknown): void {
  * 各 session 当前是否有待回答的 ask_user_question。模块级（跨 registerSessionIpc 调用共享），
  * 状态变化时广播给所有窗口——侧栏与快捷面板据此显示「待答」。
  */
-const pendingQuestionPaths = new Set<string>();
+/**
+ * 所有窗口共享的「这条会话在等用户」账本（模块级，跨 `registerSessionIpc` 调用存活）。
+ * 账本本身只管记账，广播在下面这个包装里统一发。
+ */
+const pendingInteractions = new PendingInteractions();
 
-function setPendingQuestion(sessionPath: string, hasPendingQuestion: boolean): void {
-	const had = pendingQuestionPaths.has(sessionPath);
-	if (hasPendingQuestion) {
-		if (had) return;
-		pendingQuestionPaths.add(sessionPath);
-	} else {
-		if (!had) return;
-		pendingQuestionPaths.delete(sessionPath);
-	}
-	broadcastToAllWindows(CHANNELS.PENDING_QUESTION_CHANGED, { sessionPath, hasPendingQuestion });
+/**
+ * `sessionPath` 上某个交互请求开始/结束等待，并把最新计数广播给所有窗口。
+ * 广播字段沿用 `hasPendingQuestion`，兼容快捷面板既有订阅。
+ */
+function setPendingInteraction(sessionPath: string, requestId: string, pending: boolean): void {
+	const changed = pending
+		? pendingInteractions.begin(sessionPath, requestId)
+		: pendingInteractions.end(sessionPath, requestId);
+	if (!changed) return;
+	const count = pendingInteractions.countOf(sessionPath);
+	broadcastToAllWindows(CHANNELS.PENDING_QUESTION_CHANGED, { sessionPath, hasPendingQuestion: count > 0, count });
+}
+
+/** 当前仍在等用户处理的会话快照；增量事件在窗口重载期间会丢，靠它收敛。 */
+function listPendingInteractions(): { sessionPath: string; count: number }[] {
+	return pendingInteractions.list();
 }
 
 function assertNonEmptyString(value: unknown, fieldName: string): asserts value is string {
@@ -408,7 +421,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			webContents.send(CHANNELS.QUESTION_REQUEST, request);
 			// 广播「待答」给所有窗口（侧栏 + 快捷面板）。
 			const sessionPath = runtime.getSessionPath(request.sessionId);
-			if (sessionPath) setPendingQuestion(sessionPath, true);
+			if (sessionPath) setPendingInteraction(sessionPath, `question:${request.requestId}`, true);
 			// 同时发系统通知「有问题待确认」（点击跳转该 session）；前台看着该 session 时自动抑制。
 			const cwd = sessionCwdMap.get(request.sessionId);
 			if (sessionPath && cwd) {
@@ -419,7 +432,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const unregisterQuestionResolved = questionBroker.onQuestionResolved((event) => {
 		// 问答结束（提交/取消/中断）后清掉「待答」标记并广播。
 		const sessionPath = runtime.getSessionPath(event.sessionId);
-		if (sessionPath) setPendingQuestion(sessionPath, false);
+		if (sessionPath) setPendingInteraction(sessionPath, `question:${event.requestId}`, false);
 		if (webContents.isDestroyed()) return;
 		try {
 			webContents.send(CHANNELS.QUESTION_RESOLVED, event);
@@ -440,12 +453,12 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			webContents.send(CHANNELS.PLAN_REVIEW_REQUEST, request);
 			const sessionPath = runtime.getSessionPath(request.sessionId);
 			const cwd = sessionCwdMap.get(request.sessionId);
-			if (sessionPath) setPendingQuestion(sessionPath, true);
+			if (sessionPath) setPendingInteraction(sessionPath, `plan-review:${request.requestId}`, true);
 			if (sessionPath && cwd) void notify({ type: "agent-question-pending", sessionPath, cwd });
 		},
 		resolved: (event) => {
 			const sessionPath = runtime.getSessionPath(event.sessionId);
-			if (sessionPath) setPendingQuestion(sessionPath, false);
+			if (sessionPath) setPendingInteraction(sessionPath, `plan-review:${event.requestId}`, false);
 			if (!webContents.isDestroyed()) webContents.send(CHANNELS.PLAN_REVIEW_RESOLVED, event);
 		},
 	});
@@ -453,9 +466,12 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	const unregisterMcpElicitationHandler = mcpElicitationBroker.setInteractiveHandler((request, signal) => {
 		if (webContents.isDestroyed()) return Promise.resolve({ action: "cancel" });
 		return new Promise<DesktopMcpElicitationResponse>((resolve) => {
+			const sessionPath = runtime.getSessionPath(request.sessionId);
+			const waitingKey = `mcp-elicitation:${request.requestId}`;
 			const finish = (result: DesktopMcpElicitationResponse): void => {
 				mcpElicitationMap.delete(request.requestId);
 				signal?.removeEventListener("abort", onAbort);
+				if (sessionPath) setPendingInteraction(sessionPath, waitingKey, false);
 				resolve(result);
 			};
 			const onAbort = (): void => finish({ action: "cancel" });
@@ -466,6 +482,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			signal?.addEventListener("abort", onAbort, { once: true });
 			mcpElicitationMap.set(request.requestId, finish);
 			webContents.send(CHANNELS.MCP_ELICITATION_REQUEST, request);
+			if (sessionPath) setPendingInteraction(sessionPath, waitingKey, true);
 		});
 	});
 	const unregisterMcpElicitationResolved = mcpElicitationBroker.onResolved((event) => {
@@ -481,9 +498,12 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 	): Promise<CodingAgentSandboxAuthorizationDecision> => {
 		if (webContents.isDestroyed()) return Promise.resolve("deny");
 		return new Promise<CodingAgentSandboxAuthorizationDecision>((resolve) => {
+			const sessionPath = runtime.getSessionPath(request.sessionId);
+			const waitingKey = `sandbox-authorization:${request.requestId}`;
 			const finish = (decision: CodingAgentSandboxAuthorizationDecision): void => {
 				sandboxGrantMap.delete(request.requestId);
 				if (signal) signal.removeEventListener("abort", onAbort);
+				if (sessionPath) setPendingInteraction(sessionPath, waitingKey, false);
 				resolve(decision);
 			};
 			const onAbort = (): void => finish("deny");
@@ -494,6 +514,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			if (signal) signal.addEventListener("abort", onAbort, { once: true });
 			sandboxGrantMap.set(request.requestId, finish);
 			webContents.send(CHANNELS.SANDBOX_GRANT_REQUEST, request);
+			if (sessionPath) setPendingInteraction(sessionPath, waitingKey, true);
 		});
 	};
 	const unregisterSandboxAuthorizationHandler =
@@ -1136,6 +1157,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		assertNonEmptyString(sessionId, "sessionId");
 		return runtime.revokeAllSandboxGrants(sessionId);
 	});
+
+	ipcMain.handle(CHANNELS.PENDING_QUESTION_LIST, () => listPendingInteractions());
 
 	// 后台任务三通道（clear-finished/kill/subagent-interrupt）已迁到 Host 合同
 	// session.*（TASK-0473）。

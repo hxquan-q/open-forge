@@ -26,6 +26,8 @@ const CHANNELS = {
 	GET_FULL_HISTORY: "vetta:session:get-full-history",
 	QUESTION_REQUEST: "vetta:session:question-request",
 	QUESTION_RESOLVED: "vetta:session:question-resolved",
+	PENDING_QUESTION_CHANGED: "vetta:session:pending-question-changed",
+	PENDING_QUESTION_LIST: "vetta:session:pending-question-list",
 	PLAN_REVIEW_REQUEST: "vetta:session:plan-review-request",
 	PLAN_REVIEW_RESOLVED: "vetta:session:plan-review-resolved",
 	MCP_ELICITATION_REQUEST: "vetta:session:mcp-elicitation-request",
@@ -237,6 +239,8 @@ export function createSessionApi(ipc: IpcRenderer): Pick<DesktopApi, "session"> 
 			respondToQuestion: async (requestId, result) => {
 				await host.call("session.respondToQuestion", { requestId, result });
 			},
+			onPendingQuestionChanged: (handler) => onIpcEvent(ipc, CHANNELS.PENDING_QUESTION_CHANGED, handler),
+			listPendingQuestionPaths: () => ipc.invoke(CHANNELS.PENDING_QUESTION_LIST),
 			getPlanModeState: (sessionId) => host.call("session.getPlanModeState", { sessionId }),
 			setPermissionMode: (sessionId, permissionMode) =>
 				host.call("session.setPlanModePermissionMode", { sessionId, permissionMode }),

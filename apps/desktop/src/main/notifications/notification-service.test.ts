@@ -20,10 +20,11 @@ const mocks = vi.hoisted(() => {
 		readConfigSync: vi.fn(),
 		isFocused: vi.fn(() => false),
 		send: vi.fn(),
+		dock: { setBadge: vi.fn(), bounce: vi.fn() },
 	};
 });
 
-vi.mock("electron", () => ({ Notification: mocks.Notification }));
+vi.mock("electron", () => ({ Notification: mocks.Notification, app: { dock: mocks.dock } }));
 vi.mock("../ipc/fs.js", () => ({ readConfigSync: mocks.readConfigSync }));
 vi.mock("../i18n/index.js", () => ({ mainT: (key: string) => key }));
 vi.mock("../window-manager.js", () => ({

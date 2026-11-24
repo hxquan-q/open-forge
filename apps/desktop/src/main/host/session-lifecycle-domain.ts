@@ -12,6 +12,7 @@ import { isConversationSubCwd, readSessionCwdFromHeader } from "../conversations
 import { listSessionHistory } from "../conversations/session-query-service.js";
 import { getAppLogger } from "../logger.js";
 import { forgetMessageAnnotations } from "../message-annotations/host.js";
+import { forgetDeletedSessionAttention } from "../notifications/index.js";
 import { getSharedRuntime } from "../runtime.js";
 
 const sessionLog = getAppLogger("session");
@@ -45,6 +46,7 @@ export const sessionLifecycleHostDomain: HostDomainImplementation<typeof SESSION
 		const runtime = getSharedRuntime();
 		await runtime.deleteSession(sessionPath);
 		await forgetMessageAnnotations(sessionPath);
+		forgetDeletedSessionAttention((path) => path === sessionPath);
 		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
 			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
 				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);
@@ -53,8 +55,14 @@ export const sessionLifecycleHostDomain: HostDomainImplementation<typeof SESSION
 		return null;
 	},
 	deleteAllForCwd: async ({ cwd }) => {
+		// `purge` 的 `deleted` 只是计数；记下它实际尝试过的路径，成功删掉的才移出 Dock 角标。
+		let purgedPaths: readonly string[] = [];
 		const result = await purgeProjectSessions(cwd, {
-			listSessions: (target) => listSessionHistory(target),
+			listSessions: async (target) => {
+				const sessions = await listSessionHistory(target);
+				purgedPaths = sessions.map((s) => s.path);
+				return sessions;
+			},
 			deleteSession: (sessionPath) => getSharedRuntime().deleteSession(sessionPath),
 			// 分片目录是新会话的落点；`<项目>/.vetta/sessions` 是存量兼容位置，随项目目录
 			// 一起消失，这里不重复处理（见 composition.resolveDesktopRuntimeSessionRoots）。
@@ -62,6 +70,9 @@ export const sessionLifecycleHostDomain: HostDomainImplementation<typeof SESSION
 			removeDirectory: (dir) => rm(dir, { recursive: true, force: true }),
 			logError: (message, ...args) => sessionLog.error(message, ...args),
 		});
+		const failedSet = new Set(result.failed);
+		const deletedPaths = new Set(purgedPaths.filter((p) => !failedSet.has(p)));
+		forgetDeletedSessionAttention((path) => deletedPaths.has(path));
 		return { deleted: result.deleted, failed: [...result.failed] };
 	},
 };

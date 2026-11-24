@@ -7,6 +7,7 @@ import { resolveExecutionMode } from "../execution-mode.js";
 import { DEFAULT_CONVERSATION_CWD, DEFAULT_CONVERSATION_SESSION_DIR, readDesktopConfig } from "../ipc/fs.js";
 import { emitTaskEvent, emitTaskStreamEvent } from "../ipc/scheduler.js";
 import { ensureConversationSubCwd } from "../ipc/session.js";
+import { recordSessionAttention } from "../notifications/index.js";
 import { assertSandboxAvailableForMode } from "../sandbox/capability.js";
 import type { ScheduledTask, TaskExecutionRecord } from "./task-storage";
 import { createRecord, generateId, updateRecordMetadata, updateTaskLastRun } from "./task-storage";
@@ -224,6 +225,9 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 
 					await updateRecordMetadata(record);
 					await updateTaskLastRun(task.id, event.phase === "aborted" ? "failed" : "success");
+					if (event.phase === "aborted" && record.sessionPath) {
+						recordSessionAttention(record.sessionPath, "unread-result");
+					}
 					executingTasks.delete(task.id);
 					unbindUnattendedPermissionTiers(sessionId);
 					// 解除订阅，避免用户后续在同一 session 继续对话时误触发本
@@ -271,6 +275,7 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 		record.durationMs = record.completedAt - record.startedAt;
 		await createRecord(record);
 		await updateTaskLastRun(task.id, "failed");
+		if (record.sessionPath) recordSessionAttention(record.sessionPath, "unread-result");
 		executingTasks.delete(task.id);
 
 		emitTaskEvent({

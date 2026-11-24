@@ -17,8 +17,10 @@ import { useSessionManager } from "../domains/conversation/hooks/useSessionManag
 import { useDesktopNotificationSound } from "../domains/message/hooks/useDesktopNotificationSound";
 import { useNotificationInit } from "../domains/message/hooks/useNotificationInit";
 import { useProjectActions } from "../domains/project/hooks/useProjects";
+import { useAttentionSessionsSync } from "../shared/hooks/useAttentionSessionsSync";
 import { useModelCatalogSync } from "../shared/hooks/useModelCatalogSync";
 import { useNarrowScreen } from "../shared/hooks/useNarrowScreen";
+import { usePendingInteractionsSync } from "../shared/hooks/usePendingInteractionsSync";
 import { useRunningSessionsSync } from "../shared/hooks/useRunningSessionsSync";
 import { useGlobalShortcuts } from "../shared/hooks/useShortcuts";
 import { useUpdaterInit } from "../shared/hooks/useUpdaterInit";
@@ -44,6 +46,7 @@ import {
 	sidebarCollapsedAtom,
 	sidebarWidthAtom,
 } from "../shared/store/atoms";
+import { recordRecentSessionVisitAtom } from "../shared/store/recent-sessions-atoms";
 import { showToast } from "../shared/store/toast-atoms";
 import { shouldShowChatRoutePending } from "./chat-route-pending";
 import { syncPendingInteractions } from "./pending-interaction-sync";
@@ -118,6 +121,11 @@ export function useRootLayoutModel(): RootLayoutModel {
 	// 全局 running-sessions 订阅必须挂在始终挂载的 App 上：它是 streaming 状态真值
 	// 来源之一，挂在会被卸载的 Sidebar 上会在卸载期间丢 RUNNING_CHANGED 事件。
 	useRunningSessionsSync();
+	const recordRecentSessionVisit = useSetAtom(recordRecentSessionVisitAtom);
+	// 「需要回来看的会话」与 Dock 角标共用一份主进程真值；与待处理列表一样必须
+	// 挂在常驻根组件上，窗口重载期间丢的事件靠快照收敛。
+	useAttentionSessionsSync();
+	usePendingInteractionsSync();
 	// 队列的出队/续发已收归主进程 kernel（ADR-0060）：followUp 在 turn 自然停止点
 	// 接力消费，renderer 不再需要全局出队调度器。
 	// 会话打开/发送的唯一挂载点。ChatPage 与新会话页走模块级 ref，避免再挂一份。
@@ -172,10 +180,12 @@ export function useRootLayoutModel(): RootLayoutModel {
 
 	// 上报「聊天页当前所在 session」给主进程：仅在聊天路由 "/" 且有 activeSession
 	// 时报其 sessionPath，否则 null。主进程据此 + 窗口聚焦态做系统通知抑制判定。
+	// 同一时机记一次「最近打开」：命令面板据此把打开过的会话排在前面。
 	useEffect(() => {
 		const sessionPath = currentPath === "/" ? activeSession?.sessionPath || null : null;
 		void window.vetta.notification.setForegroundSession(sessionPath);
-	}, [currentPath, activeSession]);
+		if (sessionPath) recordRecentSessionVisit(sessionPath);
+	}, [currentPath, activeSession, recordRecentSessionVisit]);
 
 	// 点击系统通知 → 主进程已前台化窗口，这里把对应 session 打开并路由到聊天页。
 	useEffect(() => {

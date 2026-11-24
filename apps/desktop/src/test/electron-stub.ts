@@ -53,7 +53,7 @@ export const app = {
 	setAppUserModelId: noop,
 	setAsDefaultProtocolClient: noop,
 	commandLine: { appendSwitch: noop, appendArgument: noop },
-	dock: { hide: noop, show: async () => {}, setIcon: noop },
+	dock: { hide: noop, show: async () => {}, setIcon: noop, setBadge: noop, bounce: noop },
 	setLoginItemSettings: noop,
 	getLoginItemSettings: () => ({ openAtLogin: false }),
 };
