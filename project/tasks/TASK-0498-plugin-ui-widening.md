@@ -1,7 +1,7 @@
 ---
 id: TASK-0498
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: packages/theme-ui
 requirement: REQ-0008
